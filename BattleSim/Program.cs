@@ -294,8 +294,8 @@ static IEnumerable<List<T>> Permute<T>(List<T> items)
 // 発動しない）/ セロは原則後列（狙撃化）/ ヒサの隣接で最大HPがカドになること（標的が逸れる）。
 static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
 {
-    // ボルグの巻き込みが隣のムドを育てる。セロは後2で狙撃化、ネルは守られる中衛（layout 1位）
-    ("速攻 (ボルグ×ムド)",   Formation.Build(front1: UnitCatalog.Borg, front2: UnitCatalog.Mudo, front3: UnitCatalog.Gald, mid: UnitCatalog.Nel, back2: UnitCatalog.Sero)),
+    // 中衛ボルグの巻き込みが縦隣接の後2ムドを育てる。ボルグ自身も中衛で守られ、セロは後1で狙撃化
+    ("速攻 (ボルグ×ムド)",   Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Nel, mid: UnitCatalog.Borg, back1: UnitCatalog.Sero, back2: UnitCatalog.Mudo)),
     // 脆いムグ・ゾトを前で死なせて連鎖を起こす。中衛ゴルムの吸いが隣のゾトを破裂まで運ぶ（layout 1位）
     ("死の連鎖 (リィカ軸)",  Formation.Build(front1: UnitCatalog.Mug, front2: UnitCatalog.Zoto, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Vel)),
     // スィドは前3の孤立席で毒漏れを消す。ガルドが前1で庇う（layout 1位）
@@ -334,15 +334,15 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     ("反撃改2 (ガン×カド)",  Formation.Build(front1: UnitCatalog.Ban, front2: UnitCatalog.Kado, front3: UnitCatalog.Hisa, mid: UnitCatalog.Gan, back1: UnitCatalog.Doha)),
     // ヒサ(前1)の隣接は後1のカドだけ。ガルドは前3で庇い、ハギは後2で延命（layout 4位、Gald前列の最良）
     ("反撃改3 (カド×ハギ)",  Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Gald, mid: UnitCatalog.Gan, back1: UnitCatalog.Kado, back2: UnitCatalog.Hagi)),
-    // ハギとミオを後列に逃がし、壁2枚が受ける。ハギの追い打ちは位置不問（layout 1位）
-    ("追撃×毒 (ハギ×グザ)",  Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Golm, mid: UnitCatalog.Guza, back1: UnitCatalog.Hagi, back2: UnitCatalog.Mio)),
+    // ハギは守られる中衛から追い打つ（位置不問）。前列3枚が受け、ミオは後1（layout: ガルド前列の最良）
+    ("追撃×毒 (ハギ×グザ)",  Formation.Build(front1: UnitCatalog.Guza, front2: UnitCatalog.Gald, front3: UnitCatalog.Golm, mid: UnitCatalog.Hagi, back1: UnitCatalog.Mio)),
     // 死の連鎖にハギを足した形。ムグは後2で最後に死んで胞子を残す（layout 1位）
     ("追撃×死 (ハギ×リィカ)", Formation.Build(front1: UnitCatalog.Hagi, front2: UnitCatalog.Zoto, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Mug)),
     // 空き枠で孤立を作る散開の幾何。ササ(前1)とガルド(前3)が孤立して-35%を受ける（layout 1位）
     ("移動改2 (ササ×ヨミ)",  Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald, mid: UnitCatalog.Basa, back2: UnitCatalog.Yomi)),
     // 同じく孤立の幾何。ドハの分かちは全体に効くので中衛でよい（layout 1位）
     ("散開耐久 (ササ×ドハ)", Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald, mid: UnitCatalog.Doha, back2: UnitCatalog.Dolga)),
-    // セッキは後列でないと庇えない。中衛セッキの1位(82%)は特性が死ぬので採らない（layout 3位）
+    // セッキは後列でないと庇えない。中衛セッキの探索1位は特性が死ぬので採らない（layout 3位）
     ("死の連鎖+後備え", Formation.Build(front1: UnitCatalog.Zoto, front2: UnitCatalog.Golm, mid: UnitCatalog.Rica, back1: UnitCatalog.Sekki, back2: UnitCatalog.Vel)),
     // セロとセッキが後列に並ぶ。セッキが貫き以外の後列狙いを45%で肩代わりして狙撃を守る（layout 2位）
     ("後衛特化+後備え", Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Golm, mid: UnitCatalog.Dolga, back1: UnitCatalog.Sekki, back2: UnitCatalog.Sero)),
