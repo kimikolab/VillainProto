@@ -211,11 +211,26 @@ public sealed class Formation
         return f;
     }
 
-    public static Formation Of(params UnitDef?[] defs)
+    /// <summary>
+    /// スロットを名前で指定して編成を作る。
+    /// front1..front3 → スロット0..2（前列）、mid → スロット3（中列）、back1..back2 → スロット4..5（後列）。
+    ///
+    /// 旧 Of(params) は引数の並びとスロット番号の対応が暗黙で、
+    /// 盤面の形が変わったときに黙って別物の編成になった（5枠→6枠で後列1枚目が全部中列に落ちた）。
+    /// 編成定義では必ずこちらを使うこと。
+    /// </summary>
+    public static Formation Build(
+        UnitDef? front1 = null, UnitDef? front2 = null, UnitDef? front3 = null,
+        UnitDef? mid = null,
+        UnitDef? back1 = null, UnitDef? back2 = null)
     {
         var f = new Formation();
-        for (int i = 0; i < defs.Length && i < FormationRules.TotalSlots; i++)
-            f[i] = defs[i];
+        f[0] = front1;
+        f[1] = front2;
+        f[2] = front3;
+        f[3] = mid;
+        f[4] = back1;
+        f[5] = back2;
         return f;
     }
 }

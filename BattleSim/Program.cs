@@ -17,33 +17,33 @@ if (focusId == "compare")
 {
     var builds = new (string Name, Formation F)[]
     {
-        ("速攻 (ボルグ×ムド)",   Formation.Of(UnitCatalog.Borg, UnitCatalog.Mudo, UnitCatalog.Gald, UnitCatalog.Sero, UnitCatalog.Nel)),
-        ("死の連鎖 (リィカ軸)",  Formation.Of(UnitCatalog.Golm, UnitCatalog.Zoto, UnitCatalog.Mug, UnitCatalog.Vel, UnitCatalog.Rica)),
-        ("毒 (グザ×ミオ×ラウ)", Formation.Of(UnitCatalog.Gald, UnitCatalog.Guza, UnitCatalog.Sid, UnitCatalog.Mio, UnitCatalog.Rau)),
-        ("毒+耐久 (ベニ×トウ)",  Formation.Of(UnitCatalog.Gald, UnitCatalog.Guza, UnitCatalog.Tou, UnitCatalog.Mio, UnitCatalog.Beni)),
-        ("反撃 (ヒサ×カド)",     Formation.Of(UnitCatalog.Hisa, UnitCatalog.Kado, UnitCatalog.Gald, UnitCatalog.Nono, UnitCatalog.Nel)),
-        ("惨禍×被弾強化",        Formation.Of(UnitCatalog.Kado, UnitCatalog.Mudo, UnitCatalog.Hisa, UnitCatalog.Nono, UnitCatalog.Sero)),
-        ("惨禍×死の連鎖",        Formation.Of(UnitCatalog.Kado, UnitCatalog.Zoto, UnitCatalog.Golm, UnitCatalog.Vel, UnitCatalog.Rica)),
-        ("耐久 (ガルド×ノノ)",   Formation.Of(UnitCatalog.Gald, UnitCatalog.Golm, UnitCatalog.Dolga, UnitCatalog.Nono, UnitCatalog.Sero)),
-        ("溜め (ガン×ドルガ×カド)", Formation.Of(UnitCatalog.Kado, UnitCatalog.Dolga, UnitCatalog.Gald, UnitCatalog.Gan, UnitCatalog.Hisa)),
-        ("毒→被弾強化 (グザ×ムド)", Formation.Of(UnitCatalog.Borg, UnitCatalog.Mudo, UnitCatalog.Gald, UnitCatalog.Guza, UnitCatalog.Sero)),
-        ("澱み喰い (グザ×ヴィオ)", Formation.Of(UnitCatalog.Gald, UnitCatalog.Vio, UnitCatalog.Guza, UnitCatalog.Sid, UnitCatalog.Mio)),
-        ("隊列崩し (バサ×ヨミ×セロ)", Formation.Of(UnitCatalog.Yomi, UnitCatalog.Gald, UnitCatalog.Basa, UnitCatalog.Sero, UnitCatalog.Gan)),
-        ("突き出し (セロ×ヨミ)",  Formation.Of(UnitCatalog.Gald, UnitCatalog.Sero, UnitCatalog.Golm, UnitCatalog.Yomi, UnitCatalog.Nel)),
-        ("溜め改 (クグ×バン×ガン)", Formation.Of(UnitCatalog.Dolga, UnitCatalog.Kado, UnitCatalog.Ban, UnitCatalog.Gan, UnitCatalog.Kugu)),
-        ("移動改 (バサ×ヨミ×シオ)", Formation.Of(UnitCatalog.Yomi, UnitCatalog.Gald, UnitCatalog.Basa, UnitCatalog.Shio, UnitCatalog.Sero)),
-        ("逆しま (ネル×ウツ)",   Formation.Of(UnitCatalog.Utsu, UnitCatalog.Gald, UnitCatalog.Golm, UnitCatalog.Nel, UnitCatalog.Sero)),
-        ("逆しま改 (クビ×ウツ)", Formation.Of(UnitCatalog.Gald, UnitCatalog.Utsu, UnitCatalog.Golm, UnitCatalog.Nel, UnitCatalog.Kubi)),
-        ("反撃改 (ドハ×カド)",   Formation.Of(UnitCatalog.Hisa, UnitCatalog.Kado, UnitCatalog.Doha, UnitCatalog.Nono, UnitCatalog.Nel)),
-        ("反撃改2 (ガン×カド)",  Formation.Of(UnitCatalog.Kado, UnitCatalog.Hisa, UnitCatalog.Ban, UnitCatalog.Gan, UnitCatalog.Doha)),
-        ("反撃改3 (カド×ハギ)",  Formation.Of(UnitCatalog.Kado, UnitCatalog.Hisa, UnitCatalog.Gald, UnitCatalog.Gan, UnitCatalog.Hagi)),
-        ("追撃×毒 (ハギ×グザ)",  Formation.Of(UnitCatalog.Gald, UnitCatalog.Guza, UnitCatalog.Golm, UnitCatalog.Mio, UnitCatalog.Hagi)),
-        ("追撃×死 (ハギ×リィカ)", Formation.Of(UnitCatalog.Golm, UnitCatalog.Zoto, UnitCatalog.Mug, UnitCatalog.Rica, UnitCatalog.Hagi)),
-        ("移動改2 (ササ×ヨミ)",  Formation.Of(UnitCatalog.Yomi, null, UnitCatalog.Gald, UnitCatalog.Basa, UnitCatalog.Sasa)),
-        ("散開耐久 (ササ×ドハ)", Formation.Of(UnitCatalog.Gald, null, UnitCatalog.Dolga, UnitCatalog.Doha, UnitCatalog.Sasa)),
-        ("死の連鎖+後備え", Formation.Of(UnitCatalog.Golm, UnitCatalog.Zoto, UnitCatalog.Vel, UnitCatalog.Sekki, UnitCatalog.Rica)),
-        ("後衛特化+後備え", Formation.Of(UnitCatalog.Gald, UnitCatalog.Golm, UnitCatalog.Dolga, UnitCatalog.Sekki, UnitCatalog.Sero)),
-        ("逆しま+後備え",   Formation.Of(UnitCatalog.Gald, UnitCatalog.Golm, UnitCatalog.Kubi, UnitCatalog.Sekki, UnitCatalog.Utsu))
+        ("速攻 (ボルグ×ムド)",   Formation.Build(front1: UnitCatalog.Borg, front2: UnitCatalog.Mudo, front3: UnitCatalog.Gald, mid: UnitCatalog.Sero, back1: UnitCatalog.Nel)),
+        ("死の連鎖 (リィカ軸)",  Formation.Build(front1: UnitCatalog.Golm, front2: UnitCatalog.Zoto, front3: UnitCatalog.Mug, mid: UnitCatalog.Vel, back1: UnitCatalog.Rica)),
+        ("毒 (グザ×ミオ×ラウ)", Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Guza, front3: UnitCatalog.Sid, mid: UnitCatalog.Mio, back1: UnitCatalog.Rau)),
+        ("毒+耐久 (ベニ×トウ)",  Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Guza, front3: UnitCatalog.Tou, mid: UnitCatalog.Mio, back1: UnitCatalog.Beni)),
+        ("反撃 (ヒサ×カド)",     Formation.Build(front1: UnitCatalog.Hisa, front2: UnitCatalog.Kado, front3: UnitCatalog.Gald, mid: UnitCatalog.Nono, back1: UnitCatalog.Nel)),
+        ("惨禍×被弾強化",        Formation.Build(front1: UnitCatalog.Kado, front2: UnitCatalog.Mudo, front3: UnitCatalog.Hisa, mid: UnitCatalog.Nono, back1: UnitCatalog.Sero)),
+        ("惨禍×死の連鎖",        Formation.Build(front1: UnitCatalog.Kado, front2: UnitCatalog.Zoto, front3: UnitCatalog.Golm, mid: UnitCatalog.Vel, back1: UnitCatalog.Rica)),
+        ("耐久 (ガルド×ノノ)",   Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Golm, front3: UnitCatalog.Dolga, mid: UnitCatalog.Nono, back1: UnitCatalog.Sero)),
+        ("溜め (ガン×ドルガ×カド)", Formation.Build(front1: UnitCatalog.Kado, front2: UnitCatalog.Dolga, front3: UnitCatalog.Gald, mid: UnitCatalog.Gan, back1: UnitCatalog.Hisa)),
+        ("毒→被弾強化 (グザ×ムド)", Formation.Build(front1: UnitCatalog.Borg, front2: UnitCatalog.Mudo, front3: UnitCatalog.Gald, mid: UnitCatalog.Guza, back1: UnitCatalog.Sero)),
+        ("澱み喰い (グザ×ヴィオ)", Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Vio, front3: UnitCatalog.Guza, mid: UnitCatalog.Sid, back1: UnitCatalog.Mio)),
+        ("隊列崩し (バサ×ヨミ×セロ)", Formation.Build(front1: UnitCatalog.Yomi, front2: UnitCatalog.Gald, front3: UnitCatalog.Basa, mid: UnitCatalog.Sero, back1: UnitCatalog.Gan)),
+        ("突き出し (セロ×ヨミ)",  Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Sero, front3: UnitCatalog.Golm, mid: UnitCatalog.Yomi, back1: UnitCatalog.Nel)),
+        ("溜め改 (クグ×バン×ガン)", Formation.Build(front1: UnitCatalog.Dolga, front2: UnitCatalog.Kado, front3: UnitCatalog.Ban, mid: UnitCatalog.Gan, back1: UnitCatalog.Kugu)),
+        ("移動改 (バサ×ヨミ×シオ)", Formation.Build(front1: UnitCatalog.Yomi, front2: UnitCatalog.Gald, front3: UnitCatalog.Basa, mid: UnitCatalog.Shio, back1: UnitCatalog.Sero)),
+        ("逆しま (ネル×ウツ)",   Formation.Build(front1: UnitCatalog.Utsu, front2: UnitCatalog.Gald, front3: UnitCatalog.Golm, mid: UnitCatalog.Nel, back1: UnitCatalog.Sero)),
+        ("逆しま改 (クビ×ウツ)", Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Utsu, front3: UnitCatalog.Golm, mid: UnitCatalog.Nel, back1: UnitCatalog.Kubi)),
+        ("反撃改 (ドハ×カド)",   Formation.Build(front1: UnitCatalog.Hisa, front2: UnitCatalog.Kado, front3: UnitCatalog.Doha, mid: UnitCatalog.Nono, back1: UnitCatalog.Nel)),
+        ("反撃改2 (ガン×カド)",  Formation.Build(front1: UnitCatalog.Kado, front2: UnitCatalog.Hisa, front3: UnitCatalog.Ban, mid: UnitCatalog.Gan, back1: UnitCatalog.Doha)),
+        ("反撃改3 (カド×ハギ)",  Formation.Build(front1: UnitCatalog.Kado, front2: UnitCatalog.Hisa, front3: UnitCatalog.Gald, mid: UnitCatalog.Gan, back1: UnitCatalog.Hagi)),
+        ("追撃×毒 (ハギ×グザ)",  Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Guza, front3: UnitCatalog.Golm, mid: UnitCatalog.Mio, back1: UnitCatalog.Hagi)),
+        ("追撃×死 (ハギ×リィカ)", Formation.Build(front1: UnitCatalog.Golm, front2: UnitCatalog.Zoto, front3: UnitCatalog.Mug, mid: UnitCatalog.Rica, back1: UnitCatalog.Hagi)),
+        ("移動改2 (ササ×ヨミ)",  Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, mid: UnitCatalog.Basa, back1: UnitCatalog.Sasa)),
+        ("散開耐久 (ササ×ドハ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, mid: UnitCatalog.Doha, back1: UnitCatalog.Sasa)),
+        ("死の連鎖+後備え", Formation.Build(front1: UnitCatalog.Golm, front2: UnitCatalog.Zoto, front3: UnitCatalog.Vel, mid: UnitCatalog.Sekki, back1: UnitCatalog.Rica)),
+        ("後衛特化+後備え", Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Golm, front3: UnitCatalog.Dolga, mid: UnitCatalog.Sekki, back1: UnitCatalog.Sero)),
+        ("逆しま+後備え",   Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Golm, front3: UnitCatalog.Kubi, mid: UnitCatalog.Sekki, back1: UnitCatalog.Utsu))
     };
 
     const int CompareSeeds = 200;
@@ -121,12 +121,12 @@ Console.WriteLine($"対象ステージ: {stage.Name}\n");
 // demo モード: 特定の編成のログだけを見る
 if (focusId == "demo")
 {
-    var build = Formation.Of(
-        UnitCatalog.Kado,   // 反撃。範囲で返す
-        UnitCatalog.Hisa,   // 標的を付けてカドに殴らせる
-        UnitCatalog.Gald,   // 壁
-        UnitCatalog.Gan,    // 号令。動かないカドの攻撃を積む
-        UnitCatalog.Hagi    // 追い打ち。誰かが倒すと割り込む
+    var build = Formation.Build(
+        front1: UnitCatalog.Kado,   // 反撃。範囲で返す
+        front2: UnitCatalog.Hisa,   // 標的を付けてカドに殴らせる
+        front3: UnitCatalog.Gald,   // 壁
+        mid:    UnitCatalog.Gan,    // 号令。動かないカドの攻撃を積む
+        back1:  UnitCatalog.Hagi    // 追い打ち。誰かが倒すと割り込む
     );
     BattleResult demo = BattleEngine.Run(build, stage.Enemy, seed: 7, verbose: true);
     foreach (LogLine line in demo.Log) Console.WriteLine(line);

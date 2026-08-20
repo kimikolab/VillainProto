@@ -521,24 +521,24 @@ public static class EnemyCatalog
     {
         // 前列に固まると斧の薙ぎに巻かれる。範囲攻撃の存在をここで教える。
         new Stage("第一波 / 物見の兵",
-            Formation.Of(Recruit, Axeman, Recruit, null, null)),
+            Formation.Build(front1: Recruit, front2: Axeman, front3: Recruit)),
 
         new Stage("第二波 / 巡礼騎士団",
-            Formation.Of(Knight, Knight, Recruit, Priest, Archer)),
+            Formation.Build(front1: Knight, front2: Knight, front3: Recruit, mid: Priest, back1: Archer)),
 
         // 貫きは強烈なので1枚まで。2枚置くと後列に支援を置く編成が全滅する。
         new Stage("第三波 / 討伐隊本隊",
-            Formation.Of(Knight, Hero, Knight, Axeman, Archer)),
+            Formation.Build(front1: Knight, front2: Hero, front3: Knight, mid: Axeman, back1: Archer)),
 
         // 一撃は軽いが硬い。決着まで時間がかかるので、
         // 積み上げ系が立ち上がる余地があるかを確かめるためのステージ。
         // 全体攻撃は1枚まで。2枚置くと支援型の駒が編成から消える。
         new Stage("第四波 / 城塞守備隊",
-            Formation.Of(Warden, Warden, Warden, Priest, Chanter)),
+            Formation.Build(front1: Warden, front2: Warden, front3: Warden, mid: Priest, back1: Chanter)),
 
         // 前列に薙ぎ、後列に貫きと全体。4種の攻撃パターンが同時に飛んでくる。
         // 単体前提の防御（庇う・標的）だけでは支えられない構成にしてある。
         new Stage("第五波 / 異端審問団",
-            Formation.Of(Axeman2, Hero2, Knight2, Lancer, Seer))
+            Formation.Build(front1: Axeman2, front2: Hero2, front3: Knight2, mid: Lancer, back1: Seer))
     };
 }
