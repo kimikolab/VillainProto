@@ -496,12 +496,12 @@ public static class EnemyCatalog
 
     // ここから第二波用。共有定義を触ると第一・三・四波が一緒に動くので、Id を変えて別定義にする。
     // 調整は Attack のみ。HP を触ると決着ターン数が変わり、積み上げ系の成立可否まで動く。
-    public static readonly UnitDef KnightG = Make("knight_g", "巡礼騎士", 75, 15, 7);
+    public static readonly UnitDef KnightG = Make("knight_g", "巡礼騎士", 75, 24, 7);
     public static readonly UnitDef PriestG = Make("priest_g", "従軍司祭", 40, 9, 8);
     public static readonly UnitDef RecruitG = Make("recruit_g", "討伐隊の新兵", 45, 11, 6);
     public static readonly UnitDef ArcherG = new()
     {
-        Id = "archer_g", Name = "狙撃手", MaxHp = 38, Attack = 14, Speed = 11,
+        Id = "archer_g", Name = "狙撃手", MaxHp = 38, Attack = 18, Speed = 11,
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Pierce
     };
 
