@@ -478,6 +478,11 @@ public sealed class BattleContext
 
         void Notify(UnitState u, Row from)
         {
+            // 後ろへ動いた事実を記録する。自分から逃げたか突き飛ばされたかは問わない。
+            // どちらの場合も「味方が矢面に立つ」という代償は発生している。
+            if (FormationRules.DepthOf(u.Row) > FormationRules.DepthOf(from))
+                u.HasFallenBack = true;
+
             foreach (Trait t in u.Traits.ToList())
                 t.OnMoved(this, u, from, u.Row);
 

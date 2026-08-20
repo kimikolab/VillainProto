@@ -70,6 +70,13 @@ public sealed class UnitState
     /// <summary>特性が自由に使えるカウンタ置き場。特性ごとにキーを分ける。</summary>
     public Dictionary<string, int> Counters { get; } = new();
 
+    /// <summary>
+    /// 戦闘中に一度でも後ろの列へ動かされたか。
+    /// 「下がってから本領を発揮する」性質を、初期配置ではなく実績で判定するために使う。
+    /// これが無いと、最初から後列に置くだけで代償を踏まずに後退後の性能が手に入る。
+    /// </summary>
+    public bool HasFallenBack { get; set; }
+
     public bool IsAlive => Hp > 0;
     public Row Row => FormationRules.RowOf(Slot);
 

@@ -15,7 +15,7 @@ public enum TraitId
 
     // --- プラス側 ---
     Rage,        // 被弾強化: ダメージを受けるたび攻撃力が上がる
-    Sniper,      // 後衛特化: 後列にいるとき攻撃力2倍
+    Sniper,      // 後衛特化: 一度後退してから後列にいると攻撃力2倍＋貫き化
     Curse,       // 呪詛: 開始時に敵全体の攻撃力を下げる（隣接味方にも漏れる）
     Guardian,    // 庇う: 味方への攻撃を肩代わりする
     Necro,       // 墓守: 味方が倒れるたび強化される
@@ -236,18 +236,24 @@ public sealed class RageTrait : Trait
 }
 
 /// <summary>
-/// 後衛特化。後列にいるときだけ攻撃力2倍になり、攻撃が貫きに変わる。
-/// 中列では発動しない。前 → 中 → 後 と二段下がって初めて本領を出す。
+/// 後衛特化。一度後退してから後列にいるときだけ攻撃力2倍になり、攻撃が貫きに変わる。
 /// 「逃げてから本領を発揮する」の実装。
 /// </summary>
 public sealed class SniperTrait : Trait
 {
     public override TraitId Id => TraitId.Sniper;
 
-    public override int ModifyAttack(UnitState self, int atk) => self.Row == Row.Back ? atk * 2 : atk;
+    /// <summary>
+    /// 後列にいるだけでは足りない。戦闘中に実際に後退したことが条件。
+    /// 初期配置で後列に置くと、逃げる先が無いので代償が一度も掛からずに済んでしまう。
+    /// 位置ではなく履歴で判定することで、「下がってから本領を発揮する」が実際に起きる。
+    /// </summary>
+    private static bool Ready(UnitState self) => self.Row == Row.Back && self.HasFallenBack;
+
+    public override int ModifyAttack(UnitState self, int atk) => Ready(self) ? atk * 2 : atk;
 
     public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
-        => self.Row == Row.Back ? AttackPattern.Pierce : p;
+        => Ready(self) ? AttackPattern.Pierce : p;
 }
 
 /// <summary>呪詛。敵全体を弱体化するが、隣接する味方にも漏れる。Stoic の隣なら漏れが無効。</summary>
