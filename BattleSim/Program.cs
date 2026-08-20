@@ -7,7 +7,9 @@ int stageIndex = args.Length > 0 && int.TryParse(args[0], out int s) ? s : 1;
 string focusId = args.Length > 1 ? args[1] : "";
 EnemyCatalog.Stage stage = EnemyCatalog.Stages[stageIndex];
 
-Console.WriteLine($"対象ステージ: {stage.Name}\n");
+// compare / dump は docs/ に貼る Markdown をそのまま吐くので、
+// 「対象ステージ」の見出しはこの2モードの分岐を抜けた後で出す。
+// （compare はステージ引数を無視して全ステージを回すため、内容としても誤りになる）
 
 // compare モード: 代表的な編成を全ステージで比較する。
 // 総当たりは駒が増えるほど爆発するので、系統ごとの当たり外れはこちらで見る。
@@ -41,18 +43,31 @@ if (focusId == "compare")
         ("散開耐久 (ササ×ドハ)", Formation.Of(UnitCatalog.Gald, null, UnitCatalog.Dolga, UnitCatalog.Doha, UnitCatalog.Sasa))
     };
 
-    Console.WriteLine($"{"編成",-24}" + string.Concat(EnemyCatalog.Stages.Select((st, i) => $"  第{i + 1}波")));
+    const int CompareSeeds = 200;
+
+    // そのまま docs/balance.md になるので、見出しと注意書きもここで吐く。
+    // 手で足した文章はリダイレクトのたびに消えるため、文書の体裁ごと生成物にする。
+    Console.WriteLine("# 勝率表");
+    Console.WriteLine();
+    Console.WriteLine("`dotnet run --project BattleSim -c Release 0 compare > docs/balance.md` の出力。手で編集しない。");
+    Console.WriteLine($"代表編成 × 全ステージ、seed 0..{CompareSeeds - 1} の {CompareSeeds} 試行。");
+    Console.WriteLine();
+
+    // 列はステージ数から作るので、ステージを足しても勝手に増える。
+    // 固定幅で揃えるのはやめた。全角の編成名では桁が合わない（`,-24` は表示幅ではなく文字数を数える）。
+    Console.WriteLine("| 編成 |" + string.Concat(EnemyCatalog.Stages.Select((st, i) => $" 第{i + 1}波 |")));
+    Console.WriteLine("|---|" + string.Concat(EnemyCatalog.Stages.Select(_ => "---:|")));
     foreach (var (name, f) in builds)
     {
         var cells = new List<string>();
         foreach (EnemyCatalog.Stage st in EnemyCatalog.Stages)
         {
             int wins = 0;
-            for (int seed = 0; seed < 200; seed++)
+            for (int seed = 0; seed < CompareSeeds; seed++)
                 if (BattleEngine.Run(f, st.Enemy, seed, verbose: false).PlayerWon) wins++;
-            cells.Add($"{wins / 2.0,6:F1}%");
+            cells.Add($" {wins * 100.0 / CompareSeeds:F1}% |");
         }
-        Console.WriteLine($"{name,-24}" + string.Concat(cells));
+        Console.WriteLine($"| {name} |" + string.Concat(cells));
     }
     return;
 }
@@ -65,11 +80,19 @@ if (focusId == "dump")
         AttackPattern.Sweep => "薙ぎ", AttackPattern.Pierce => "貫き",
         AttackPattern.All => "全体", _ => "単体"
     };
+    Console.WriteLine("# ユニット・特性・ステージ一覧");
+    Console.WriteLine();
+    Console.WriteLine("`dotnet run --project BattleSim -c Release 0 dump > docs/units.md` の出力。手で編集しない。");
+    Console.WriteLine();
+    Console.WriteLine("## ユニット");
+    Console.WriteLine();
     Console.WriteLine("| 名前 | HP | 攻 | 速 | 型 | プラス | マイナス | 由来 |");
     Console.WriteLine("|---|---:|---:|---:|---|---|---|---|");
     foreach (UnitDef u in UnitCatalog.All.Where(u => u.Id != "spore"))
         Console.WriteLine($"| **{u.Name}** | {u.MaxHp} | {u.Attack} | {u.Speed} | {Pat(u.Pattern)} | {u.PlusText} | {u.MinusText} | {u.Flavor} |");
 
+    Console.WriteLine();
+    Console.WriteLine("## 特性");
     Console.WriteLine();
     Console.WriteLine("| 特性 | 保持者 |");
     Console.WriteLine("|---|---|");
@@ -80,6 +103,8 @@ if (focusId == "dump")
     }
 
     Console.WriteLine();
+    Console.WriteLine("## ステージ");
+    Console.WriteLine();
     foreach (EnemyCatalog.Stage st in EnemyCatalog.Stages)
     {
         var e = st.Enemy.Occupied().Select(x => $"{x.Def.Name}(HP{x.Def.MaxHp}/攻{x.Def.Attack}/{Pat(x.Def.Pattern)})");
@@ -87,6 +112,8 @@ if (focusId == "dump")
     }
     return;
 }
+
+Console.WriteLine($"対象ステージ: {stage.Name}\n");
 
 // demo モード: 特定の編成のログだけを見る
 if (focusId == "demo")

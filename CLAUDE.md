@@ -14,8 +14,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project PrototypeApp                       # 編成UI（Windows / WPF）
     dotnet run --project BattleSim -c Release <n>           # ステージ n (0-3) を総当たり
     dotnet run --project BattleSim -c Release <n> <unitId>  # 指定ユニットを含む編成に絞る（例: rica）
-    dotnet run --project BattleSim -c Release 0 compare     # 代表編成 × 全ステージの勝率比較
-    dotnet run --project BattleSim -c Release 0 dump        # ユニット・特性・ステージ一覧を Markdown で出力
+    dotnet run --project BattleSim -c Release 0 compare > docs/balance.md  # 代表編成 × 全ステージの勝率比較
+    dotnet run --project BattleSim -c Release 0 dump > docs/units.md      # ユニット・特性・ステージ一覧
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
 
 BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project BattleSim` はどの OS でも通る）。
@@ -23,15 +23,21 @@ BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project Ba
 ### バランス調整のたびにやること（CONTRIBUTING.md より）
 
 1. 数値や特性を変える
-2. `dotnet run --project BattleSim -c Release 0 compare` で全系統の勝率を見る
-3. `dotnet run --project BattleSim -c Release 0 dump` で一覧を吐き直す（飛ばすと説明文と挙動がずれる。過去3回発生）
-4. 勝率表をコミットメッセージに残してコミットする
+2. `... 0 compare > docs/balance.md` で勝率を測り直す（飛ばすと勝率表が嘘になる）
+3. `... 0 dump > docs/units.md` で一覧を吐き直す（飛ばすと説明文と挙動がずれる。過去3回発生）
+4. `git diff docs/` で何が動いたかを確認する
+5. docs/ の差分も含めてコミットし、動いた行をコミットメッセージにも書く
+
+`docs/` の2ファイルは BattleSim の出力そのもの。**手で編集しない**（次の生成で消える）。
+差分が出ないこと自体が「触ったがバランスは動いていない」という情報になるので、
+変えていないと思っても必ず測り直す。
 
 ## 構成と絶対のルール
 
     BattleCore/     戦闘ロジック。net8.0 素のクラスライブラリ。UI を一切参照しない
     BattleSim/      コンソール総当たりシミュレータ（テスト代わり）
     PrototypeApp/   WPF (net8.0-windows)。編成を組んで結果を眺めるだけ
+    docs/           BattleSim が吐く生成物（balance.md / units.md）。手で編集しない
 
 - **BattleCore に UI の参照を足さない**。`INotifyPropertyChanged` も `ObservableCollection` も不可。本番を Godot / Unity にする場合にそのまま持っていくため。
 - **PrototypeApp に戦闘ルールを書かない**。ViewModel やコードビハインドにダメージ計算が漏れた瞬間に移植できなくなる。
@@ -69,5 +75,7 @@ BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project Ba
 `LogLine` は `LogKind` を持ち、UI は種類で色を引くだけで文字列は一切解析しない。新しい種類を足すときは `LogKind` に列挙子を追加し、`MainWindow.xaml.cs` の `Palette` に1行足す。見せ場（`Highlight` = 破裂・覚醒）だけを浮かせ、それ以外は静かに保つ。
 
 ## 設計判断の蓄積
+
+**現在のバランス状況は `docs/balance.md`**（代表編成24通り × 全ステージの勝率）。数値をいじる前にまずここを見て、どの系統が壊れているかを把握する。ユニットと特性の現物一覧は `docs/units.md`。どちらも BattleSim の出力なので、コードと必ず一致している。
 
 README.md の「調整メモ」「検証で分かったこと」「未解決の課題」に、バランス調整の理由と過去の失敗例が蓄積されている。数値や特性をいじる前に必ず読むこと（例: 増幅は必ず加算にする — 乗算にしたら毒が発散して戦闘が30ターン上限に張り付いた）。

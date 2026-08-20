@@ -8,6 +8,7 @@
     BattleCore/     戦闘ロジック。UI を一切参照しない
     BattleSim/      コンソール総当たりシミュレータ（Windows以外でも動く）
     PrototypeApp/   WPF。編成を組んで結果を眺めるだけ
+    docs/           BattleSim が吐く生成物。手で編集しない
 
 BattleCore は net8.0 の素のクラスライブラリで、
 INotifyPropertyChanged も ObservableCollection も入っていない。
@@ -19,7 +20,7 @@ INotifyPropertyChanged も ObservableCollection も入っていない。
 ## 動かす
 
     dotnet run --project PrototypeApp        # 編成UI（Windows）
-    dotnet run --project BattleSim -c Release 1   # 総当たり（引数はステージ番号 0-2）
+    dotnet run --project BattleSim -c Release 1   # 総当たり（引数はステージ番号 0-3）
 
 ## 特性を足すには
 
@@ -40,7 +41,7 @@ Traits.cs で Trait を継承し、TraitId に列挙子を足して TraitCatalog
 
     dotnet run --project BattleSim -c Release 2          # 第三波を総当たり
     dotnet run --project BattleSim -c Release 2 rica     # リィカを含む編成に絞る
-    dotnet run --project BattleSim -c Release 2 demo     # ゾンビ編成のログだけ見る
+    dotnet run --project BattleSim -c Release 2 demo     # 固定編成（反撃: カド×ヒサ×ガン×ハギ）のログだけ見る
 
 ## 仕込んである噛み合わせ
 
@@ -80,20 +81,20 @@ TickStatuses に処理を書けば、特性側は「カウンタを積む」だ�
 
 ## 系統ごとの比較
 
-    dotnet run --project BattleSim -c Release 0 compare
-
 総当たりは駒が増えるほど爆発するので、系統の当たり外れはこちらで見る。
-現状（200回試行）:
 
-    編成                     第1波   第2波   第3波   第4波
-    速攻 (ボルグ×ムド)       100.0%  100.0%   75.0%  100.0%
-    死の連鎖 (リィカ軸)      100.0%  100.0%   76.5%  100.0%
-    毒 (グザ×ミオ×ラウ)     100.0%  100.0%   14.5%  100.0%
-    毒+耐久 (ベニ×トウ)      100.0%  100.0%   95.5%  100.0%
-    反撃 (ヒサ×カド)         100.0%  100.0%    0.0%  100.0%
-    惨禍×被弾強化            100.0%   84.0%    0.0%    0.5%
-    惨禍×死の連鎖            100.0%   98.0%   66.0%   20.5%
-    耐久 (ガルド×ノノ)       100.0%  100.0%   68.0%   96.5%
+    dotnet run --project BattleSim -c Release 0 compare > docs/balance.md
+
+**最新の勝率表は [docs/balance.md](docs/balance.md)。** ここには貼らない。
+2箇所に置くと必ず片方が腐るため（この節には長らく8編成分の古い表が残っていて、
+コード側に24編成あることに誰も気付かなかった）。
+
+同じく、ユニット・特性・ステージの一覧は [docs/units.md](docs/units.md)。
+
+    dotnet run --project BattleSim -c Release 0 dump > docs/units.md
+
+どちらも BattleSim の出力そのものなので、手で編集しない。
+更新手順は [CONTRIBUTING.md](CONTRIBUTING.md) を参照。
 
 ## 検証で分かったこと
 

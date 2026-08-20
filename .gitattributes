@@ -1,0 +1,4 @@
+# docs/ は BattleSim の出力をリダイレクトした生成物。
+# 差分そのものが「何が動いたか」の記録なので、行末の違いで嘘の差分が出ないよう LF に固定する。
+# （Windows の Console.WriteLine は CRLF を吐くため、core.autocrlf の設定次第で全行が差分になる）
+docs/*.md text eol=lf
