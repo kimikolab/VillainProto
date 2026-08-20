@@ -494,6 +494,17 @@ public static class EnemyCatalog
     };
     public static readonly UnitDef Hero = Make("hero", "勇者候補", 95, 20, 14, TraitId.Executioner);
 
+    // ここから第二波用。共有定義を触ると第一・三・四波が一緒に動くので、Id を変えて別定義にする。
+    // 調整は Attack のみ。HP を触ると決着ターン数が変わり、積み上げ系の成立可否まで動く。
+    public static readonly UnitDef KnightG = Make("knight_g", "巡礼騎士", 75, 15, 7);
+    public static readonly UnitDef PriestG = Make("priest_g", "従軍司祭", 40, 9, 8);
+    public static readonly UnitDef RecruitG = Make("recruit_g", "討伐隊の新兵", 45, 11, 6);
+    public static readonly UnitDef ArcherG = new()
+    {
+        Id = "archer_g", Name = "狙撃手", MaxHp = 38, Attack = 14, Speed = 11,
+        Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Pierce
+    };
+
     // ここから第五波用。既存3体の数値違いは Id を変えて別定義にする（第一〜三波を動かさないため）。
     public static readonly UnitDef Axeman2 = new()
     {
@@ -523,8 +534,10 @@ public static class EnemyCatalog
         new Stage("第一波 / 物見の兵",
             Formation.Build(front1: Recruit, front2: Axeman, front3: Recruit)),
 
+        // 回復役の司祭はレーン0の奥行き2（騎士→司祭）。貫きで撃てば75%で届く。
+        // 教えること:「支援役はレーンを選べば潰せる」。第一波の次に来る狙い撃ちの練習台。
         new Stage("第二波 / 巡礼騎士団",
-            Formation.Build(front1: Knight, front2: Knight, front3: Recruit, mid: Priest, back1: Archer)),
+            Formation.Build(front1: KnightG, front2: KnightG, front3: RecruitG, mid: ArcherG, back1: PriestG)),
 
         // 貫きは強烈なので1枚まで。2枚置くと後列に支援を置く編成が全滅する。
         // 射手はレーン1の最深部（勇者→斧→射手の奥行き3）。貫きでも50%まで減衰する。
