@@ -178,8 +178,8 @@ public sealed class BattleContext
 
     /// <summary>
     /// レーン上の生存者を前から後ろの順に並べる。
-    /// 増援が死んだ駒の枠に入り、その駒が蘇生されると1枠に2体が立つことがある。
-    /// 稀だが起きるので、スロットの一意性は前提にしないこと。
+    /// 増援は死者の枠に入らなくなった（Summon 参照）ので通常は1枠1体だが、
+    /// スロットの一意性は今後も前提にしないこと。ここが落ちると全戦闘が落ちる。
     /// </summary>
     private static List<UnitState> LaneOccupants(IEnumerable<UnitState> members, int lane)
     {
@@ -385,10 +385,14 @@ public sealed class BattleContext
         }
     }
 
-    /// <summary>空きスロットに増援を出す。空きが無ければ何も起きない。</summary>
+    /// <summary>
+    /// 空きスロットに増援を出す。空きが無ければ何も起きない。
+    /// 空きの判定は生死を問わない。死者の枠を「空き」と見なすと、
+    /// 増援がそこへ入った後に蘇生が走って1枠に2体が立つため。
+    /// </summary>
     public UnitState? Summon(UnitDef def, int teamId)
     {
-        var taken = LivingMembers(teamId).Select(u => u.Slot).ToHashSet();
+        var taken = _units.Where(u => u.TeamId == teamId).Select(u => u.Slot).ToHashSet();
         int slot = -1;
         for (int i = 0; i < FormationRules.TotalSlots; i++)
             if (!taken.Contains(i)) { slot = i; break; }
