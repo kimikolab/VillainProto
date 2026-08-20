@@ -1,9 +1,10 @@
 namespace BattleCore;
 
-/// <summary>列。前列は狙われやすく、後列は前列が生きている間は狙われにくい。</summary>
+/// <summary>列。前ほど狙われやすく、後ろは前が生きている間は狙われにくい。</summary>
 public enum Row
 {
     Front,
+    Mid,
     Back
 }
 
@@ -18,7 +19,10 @@ public enum AttackPattern
     Single,
     /// <summary>薙ぎ。狙った敵と、その両隣（同じ列）にも当たる。</summary>
     Sweep,
-    /// <summary>貫き。前列を無視して後列を直接狙える。庇えず、標的にも釣られない。</summary>
+    /// <summary>
+    /// 貫き。レーン（縦一列）を前から後ろへ走り抜け、並んでいる敵すべてに当たる。
+    /// 奥へ進むほど威力が落ちる。庇えず、標的にも釣られない。
+    /// </summary>
     Pierce,
     /// <summary>全体。敵全員に当たる。</summary>
     All
@@ -52,7 +56,7 @@ public sealed class UnitState
     public required UnitDef Def { get; init; }
     public required int TeamId { get; init; }
 
-    /// <summary>0..4。0,1,2 が前列、3,4 が後列。臆病などで戦闘中に変化する。</summary>
+    /// <summary>0..5。配置は FormationRules を参照。臆病などで戦闘中に変化する。</summary>
     public int Slot { get; set; }
 
     public int Hp { get; set; }
@@ -67,7 +71,7 @@ public sealed class UnitState
     public Dictionary<string, int> Counters { get; } = new();
 
     public bool IsAlive => Hp > 0;
-    public Row Row => Slot < FormationRules.FrontSlots ? Row.Front : Row.Back;
+    public Row Row => FormationRules.RowOf(Slot);
 
     /// <summary>
     /// いま実際に使う攻撃パターン。定義上のパターンを特性が状況で書き換える。
@@ -105,20 +109,79 @@ public sealed class UnitState
     public void SetCounter(string key, int v) => Counters[key] = v;
 }
 
+/// <summary>
+/// 盤面の形。前列3・中列1・後列2 の6枠。
+///
+///     後1(4)          前1(0)      レーン0 … 奥行き2
+///     後2(5)  中(3)   前2(1)      レーン1 … 奥行き3
+///                     前3(2)      レーン2 … 奥行き1
+///
+/// レーンごとに奥行きが違うのが要。深いレーンは減衰で守られ、浅いレーンは直撃を受ける。
+/// 「同じ駒でも置き方で結果が変わる」を、貫きに対しても成立させるための形。
+/// </summary>
 public static class FormationRules
 {
-    public const int TotalSlots = 5;
-    public const int FrontSlots = 3;
+    public const int TotalSlots = 6;
+    public const int LaneCount = 3;
 
-    public static Row RowOf(int slot) => slot < FrontSlots ? Row.Front : Row.Back;
+    /// <summary>中列のスロット番号。盤面でただ一つしかない席。</summary>
+    public const int MidSlot = 3;
 
-    /// <summary>同じ列で隣り合っているか。巻き込み系の判定に使う。</summary>
-    public static bool AreAdjacent(int a, int b)
+    private static readonly Row[] RowTable =
+        { Row.Front, Row.Front, Row.Front, Row.Mid, Row.Back, Row.Back };
+
+    private static readonly int[] LaneTable = { 0, 1, 2, 1, 0, 1 };
+
+    /// <summary>各レーンを前から後ろへ並べたもの。貫きの走査順そのもの。</summary>
+    private static readonly int[][] LaneTracks =
     {
-        if (a == b) return false;
-        if (RowOf(a) != RowOf(b)) return false;
-        return Math.Abs(a - b) == 1;
+        new[] { 0, 4 },
+        new[] { 1, 3, 5 },
+        new[] { 2 }
+    };
+
+    public static Row RowOf(int slot) => RowTable[slot];
+    public static int LaneOf(int slot) => LaneTable[slot];
+    public static IReadOnlyList<int> LaneTrack(int lane) => LaneTracks[lane];
+
+    /// <summary>前ほど小さい。押し出しと後退の向きを比べるために使う。</summary>
+    public static int DepthOf(Row row) => row switch
+    {
+        Row.Front => 0,
+        Row.Mid => 1,
+        _ => 2
+    };
+
+    public static IEnumerable<int> SlotsOfRow(Row row)
+    {
+        for (int i = 0; i < TotalSlots; i++)
+            if (RowTable[i] == row) yield return i;
     }
+
+    /// <summary>同じ列で左右に並んでいるか。範囲攻撃が横へ広がる範囲。</summary>
+    public static bool AreLateralNeighbors(int a, int b)
+        => a != b && RowTable[a] == RowTable[b] && Math.Abs(LaneTable[a] - LaneTable[b]) == 1;
+
+    /// <summary>同じレーンで前後に並んでいるか。</summary>
+    public static bool AreDepthNeighbors(int a, int b)
+    {
+        if (a == b || LaneTable[a] != LaneTable[b]) return false;
+        int[] track = LaneTracks[LaneTable[a]];
+        return Math.Abs(Array.IndexOf(track, a) - Array.IndexOf(track, b)) == 1;
+    }
+
+    /// <summary>
+    /// 隣接。左右と前後の両方を含む。
+    ///
+    /// 味方に及ぶもの（巻き込み・生贄・囃し立て・散開）は必ずこちらを見ること。
+    /// 敵に及ぶもの（薙ぎの巻き込み・反撃の返し）は AreLateralNeighbors を見ること。
+    /// この線引きを崩すと、範囲攻撃が縦へ広がって貫きと区別がつかなくなる。
+    ///
+    /// この定義により中列は前後2枠と接続する。通常攻撃からは守られるが、
+    /// 味方のマイナスは一身に浴びる席になる。「隣接デメリットの捨て場」を作らないための措置。
+    /// </summary>
+    public static bool AreAdjacent(int a, int b)
+        => AreLateralNeighbors(a, b) || AreDepthNeighbors(a, b);
 }
 
 /// <summary>編成。スロットに UnitDef を入れる。null は空きスロット。</summary>

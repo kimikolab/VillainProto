@@ -129,7 +129,7 @@ public sealed class CowardTrait : Trait
         ctx.SwapSlots(self, dest.Value);
 
         if (pushed is null)
-            ctx.Log($"    {self.Name} は耐えきれず後列へ下がった", LogKind.Trigger);
+            ctx.Log($"    {self.Name} は耐えきれず一列後ろへ下がった", LogKind.Trigger);
         else
             ctx.Log($"    {self.Name} が {pushed.Name} を突き飛ばして後ろへ逃げた", LogKind.FriendlyFire);
     }
@@ -225,7 +225,8 @@ public sealed class RageTrait : Trait
 
 /// <summary>
 /// 後衛特化。後列にいるときだけ攻撃力2倍になり、攻撃が貫きに変わる。
-/// 前列にいる間はただの兵。「逃げてから本領を発揮する」の実装。
+/// 中列では発動しない。前 → 中 → 後 と二段下がって初めて本領を出す。
+/// 「逃げてから本領を発揮する」の実装。
 /// </summary>
 public sealed class SniperTrait : Trait
 {
@@ -491,7 +492,8 @@ public sealed class ThornsTrait : Trait
             foreach (UnitState other in ctx.LivingMembers(source.TeamId))
             {
                 if (other == source) continue;
-                if (!FormationRules.AreAdjacent(source.Slot, other.Slot)) continue;
+                // 敵に及ぶ範囲なので横のみ。味方に及ぶものと定義を分けている。
+                if (!FormationRules.AreLateralNeighbors(source.Slot, other.Slot)) continue;
                 ctx.ApplyDamage(other, Math.Max(1, back * SplashPercent / 100), self);
             }
         });
@@ -744,7 +746,8 @@ public sealed class DisplacedTrait : Trait
 
     public override void OnMoved(BattleContext ctx, UnitState self, Row from, Row to)
     {
-        int gain = (from == Row.Back && to == Row.Front) ? PushedToFrontGain : Gain;
+        bool pushedForward = FormationRules.DepthOf(to) < FormationRules.DepthOf(from);
+        int gain = pushedForward ? PushedToFrontGain : Gain;
         self.AtkBonus += gain;
         ctx.Log($"    {self.Name} は突き飛ばされるほど据わる（攻撃 +{gain} → {self.CurrentAttack}）", LogKind.Trigger);
     }

@@ -33,18 +33,24 @@
         <DockPanel Grid.Column="0" Margin="0,0,14,0">
 
             <StackPanel DockPanel.Dock="Top">
-                <TextBlock Text="前列（狙われやすい）" Style="{StaticResource SectionHeader}"/>
+                <TextBlock Text="前列（狙われやすい）　前1 / 前2 / 前3" Style="{StaticResource SectionHeader}"/>
                 <ComboBox x:Name="Slot0"/>
                 <ComboBox x:Name="Slot1"/>
                 <ComboBox x:Name="Slot2"/>
 
-                <TextBlock Text="後列（前列が生きている間は守られる）"
+                <TextBlock Text="中列（前列が倒れるまで狙われない）　中"
                            Style="{StaticResource SectionHeader}" Margin="0,10,0,6"/>
                 <ComboBox x:Name="Slot3"/>
-                <ComboBox x:Name="Slot4"/>
 
-                <TextBlock Text="隣り合うスロット同士だけが「隣接」扱い。列をまたぐと隣接しない。"
-                           Foreground="#7E786E" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,12"/>
+                <TextBlock Text="後列（最も守られる）　後1 / 後2"
+                           Style="{StaticResource SectionHeader}" Margin="0,10,0,6"/>
+                <ComboBox x:Name="Slot4"/>
+                <ComboBox x:Name="Slot5"/>
+
+                <TextBlock Text="レーン0: 前1→後1 ／ レーン1: 前2→中→後2 ／ レーン2: 前3　　貫きはレーンを走り、1体貫くごとに威力が25%落ちる。"
+                           Foreground="#7E786E" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,4"/>
+                <TextBlock Text="「隣接」は左右と前後の両方。中列は前2と後2に隣接する。薙ぎの巻き込みだけは左右のみ。"
+                           Foreground="#7E786E" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
 
                 <TextBlock Text="ステージ" Style="{StaticResource SectionHeader}"/>
                 <ComboBox x:Name="StageBox"/>

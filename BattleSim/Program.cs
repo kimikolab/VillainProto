@@ -198,11 +198,9 @@ return;
 
 static string Describe(UnitDef?[] slots)
 {
-    string front = string.Join("/", Enumerable.Range(0, FormationRules.FrontSlots)
+    string Row(Row r) => string.Join("/", FormationRules.SlotsOfRow(r)
         .Select(i => slots[i]?.Name ?? "空"));
-    string back = string.Join("/", Enumerable.Range(FormationRules.FrontSlots, 2)
-        .Select(i => slots[i]?.Name ?? "空"));
-    return $"前[{front}] 後[{back}]";
+    return $"前[{Row(BattleCore.Row.Front)}] 中[{Row(BattleCore.Row.Mid)}] 後[{Row(BattleCore.Row.Back)}]";
 }
 
 static IEnumerable<List<T>> Combinations<T>(IReadOnlyList<T> source, int k)
@@ -222,13 +220,16 @@ static IEnumerable<List<T>> Combinations<T>(IReadOnlyList<T> source, int k)
 
 static IEnumerable<UnitDef?[]> SlotPermutations(List<UnitDef> members)
 {
+    int blanks = FormationRules.TotalSlots - members.Count;
+
     foreach (var order in Permute(members))
-        for (int empty = 0; empty < FormationRules.TotalSlots; empty++)
+        foreach (var empty in Combinations(Enumerable.Range(0, FormationRules.TotalSlots).ToList(), blanks))
         {
+            var skip = empty.ToHashSet();
             var slots = new UnitDef?[FormationRules.TotalSlots];
             int m = 0;
             for (int i = 0; i < FormationRules.TotalSlots; i++)
-                slots[i] = i == empty ? null : order[m++];
+                slots[i] = skip.Contains(i) ? null : order[m++];
             yield return slots;
         }
 }

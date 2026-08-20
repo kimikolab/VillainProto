@@ -102,18 +102,13 @@ public sealed class BattleContext
 
         AttackPattern pattern = attacker.CurrentPattern;
 
-        List<UnitState> pool;
         if (pattern == AttackPattern.Pierce)
-        {
-            // 貫きは後列を優先して狙う。前列で守る、という原則への回答。
-            List<UnitState> back = foes.Where(f => f.Row == Row.Back).ToList();
-            pool = back.Count > 0 ? back : foes;
-        }
-        else
-        {
-            List<UnitState> front = foes.Where(f => f.Row == Row.Front).ToList();
-            pool = front.Count > 0 ? front : foes;
-        }
+            return SelectPierceEntry(foes);
+
+        // 前から順に、生き残っている最も前の列を狙う。
+        List<UnitState> pool = foes.Where(f => f.Row == Row.Front).ToList();
+        if (pool.Count == 0) pool = foes.Where(f => f.Row == Row.Mid).ToList();
+        if (pool.Count == 0) pool = foes;
 
         UnitState target = pool[Roll(pool.Count)];
 
@@ -122,8 +117,8 @@ public sealed class BattleContext
 
         if (pattern != AttackPattern.Single)
         {
-            // 後備えだけは範囲・貫きにも割り込む。貫きへの唯一の防御手段にするため。
-            if (target.Row == Row.Back && rearAny is not null
+            // 後備えは範囲攻撃にも割り込む。貫きはレーン単位で解決するのでここを通らない。
+            if (target.Row != Row.Front && rearAny is not null
                 && Roll(100) < RearGuardTrait.RedirectPercent)
             {
                 Log($"    {rearAny.Name} が後列の {target.Name} の前に入った", LogKind.Trigger);
@@ -142,7 +137,7 @@ public sealed class BattleContext
         UnitState? rear = foes.FirstOrDefault(
             f => f.HasTrait(TraitId.RearGuard) && f.Row == Row.Back && f != target);
 
-        if (target.Row == Row.Back && rear is not null && Roll(100) < RearGuardTrait.RedirectPercent)
+        if (target.Row != Row.Front && rear is not null && Roll(100) < RearGuardTrait.RedirectPercent)
         {
             Log($"    {rear.Name} が後列の {target.Name} の前に入った", LogKind.Trigger);
             return rear;
@@ -158,6 +153,41 @@ public sealed class BattleContext
         }
 
         return target;
+    }
+
+    /// <summary>
+    /// 貫きが撃ち込むレーンを選び、その先頭（最も前の生存者）を返す。
+    /// 後ろに誰かがいるレーンを優先する。「後ろに隠れる」への回答という役割を残すため。
+    /// 隠れる者がいなければ、どのレーンでも構わない。
+    /// </summary>
+    private UnitState SelectPierceEntry(List<UnitState> foes)
+    {
+        var lanes = Enumerable.Range(0, FormationRules.LaneCount)
+            .Where(l => foes.Any(f => FormationRules.LaneOf(f.Slot) == l))
+            .ToList();
+
+        var deep = lanes
+            .Where(l => foes.Any(f => FormationRules.LaneOf(f.Slot) == l && f.Row != Row.Front))
+            .ToList();
+
+        List<int> pick = deep.Count > 0 ? deep : lanes;
+        int lane = pick[Roll(pick.Count)];
+
+        return LaneOccupants(foes, lane)[0];
+    }
+
+    /// <summary>
+    /// レーン上の生存者を前から後ろの順に並べる。
+    /// 増援が死んだ駒の枠に入り、その駒が蘇生されると1枠に2体が立つことがある。
+    /// 稀だが起きるので、スロットの一意性は前提にしないこと。
+    /// </summary>
+    private static List<UnitState> LaneOccupants(IEnumerable<UnitState> members, int lane)
+    {
+        var alive = members.Where(m => m.IsAlive).ToList();
+        var line = new List<UnitState>();
+        foreach (int slot in FormationRules.LaneTrack(lane))
+            line.AddRange(alive.Where(u => u.Slot == slot));
+        return line;
     }
 
     /// <summary>
@@ -181,19 +211,13 @@ public sealed class BattleContext
         };
         Log($"{prefix}{actor.Name} → {target.Name} (攻撃 {atk}{label})");
 
-        // 貫きは前列を突き抜けて後列を狙うので、立ちはだかる前列の数だけ威力が落ちる。
-        // これが無いと、前列を並べることが貫きに対して何の意味も持たない。
-        int dealt = atk;
-        if (actor.CurrentPattern == AttackPattern.Pierce && target.Row == Row.Back)
+        if (actor.CurrentPattern == AttackPattern.Pierce)
         {
-            int wall = LivingMembers(target.TeamId).Count(u => u.Row == Row.Front);
-            if (wall > 0)
-            {
-                dealt = Math.Max(1, atk * Math.Max(PierceFloorPercent, 100 - PierceDecayPercent * wall) / 100);
-                Log($"    前列 {wall} 体を貫いて威力が落ちた（{atk} → {dealt}）", LogKind.Action);
-            }
+            ResolvePierce(actor, target, atk);
+            return;
         }
 
+        int dealt = atk;
         ApplyDamage(target, dealt, actor);
 
         foreach (UnitState extra in SecondaryTargets(actor, target))
@@ -212,11 +236,41 @@ public sealed class BattleContext
     /// <summary>副次目標のダメージ倍率（%）。範囲は「敵の数 × 値」で効くので、必ず割り引く。</summary>
     public const int SecondaryPercent = 60;
 
-    /// <summary>貫きが前列1体につき失う威力（%）。</summary>
-    public const int PierceDecayPercent = 12;
+    /// <summary>貫きが1体貫くごとに失う威力（%）。</summary>
+    public const int PierceDecayPercent = 25;
 
-    /// <summary>貫きの威力の下限（%）。前列を並べても無力化はできない。</summary>
-    public const int PierceFloorPercent = 60;
+    /// <summary>
+    /// 貫きを解決する。レーンを前から後ろへ走り、並んでいる敵すべてに当たる。
+    /// 奥へ行くほど威力が落ちるので、レーンを厚くすることが後ろを守る手段になる。
+    /// 逆に、誰も並んでいないレーンは減衰ゼロの直撃を受ける。
+    /// </summary>
+    private void ResolvePierce(UnitState actor, UnitState entry, int atk)
+    {
+        int lane = FormationRules.LaneOf(entry.Slot);
+        List<UnitState> line = LaneOccupants(LivingMembers(entry.TeamId), lane);
+
+        int passed = 0;
+        int primaryDealt = 0;
+
+        foreach (UnitState u in line)
+        {
+            // 途中で倒れた駒はもう立ちはだかっていないので、減衰の数に入れない。
+            if (!u.IsAlive) continue;
+
+            int dmg = Math.Max(1, atk * Math.Max(0, 100 - PierceDecayPercent * passed) / 100);
+            if (passed > 0)
+                Log($"    刃は {u.Name} まで貫いた（威力 {dmg}）", LogKind.Damage);
+
+            ApplyDamage(u, dmg, actor);
+            if (u == entry) primaryDealt = dmg;
+            passed++;
+        }
+
+        // 特性の発動は攻撃1回につき1度、レーンの先頭に対してのみ。
+        // 貫いた全員に毒や巻き込みが乗ると、貫き持ちが即座に壊れる。
+        foreach (Trait t in actor.Traits.ToList())
+            t.OnAfterAttack(this, actor, entry, primaryDealt);
+    }
 
     /// <summary>主目標以外に巻き添えになる敵。</summary>
     public IReadOnlyList<UnitState> SecondaryTargets(UnitState attacker, UnitState primary)
@@ -226,8 +280,9 @@ public sealed class BattleContext
 
         return attacker.CurrentPattern switch
         {
+            // 薙ぎは横へ広がる。前後へ広げると貫きと区別がつかなくなる。
             AttackPattern.Sweep => foes
-                .Where(f => FormationRules.AreAdjacent(primary.Slot, f.Slot)).ToList(),
+                .Where(f => FormationRules.AreLateralNeighbors(primary.Slot, f.Slot)).ToList(),
             AttackPattern.All => foes,
             _ => Array.Empty<UnitState>()
         };
@@ -376,12 +431,24 @@ public sealed class BattleContext
     /// </summary>
     public int? FindBackSlotFor(UnitState self)
     {
+        // 一度に下がれるのは一列だけ。前 → 中 → 後 と段階を踏む。
+        Row? next = self.Row switch
+        {
+            Row.Front => Row.Mid,
+            Row.Mid => Row.Back,
+            _ => null
+        };
+        if (next is null) return null;
+
         var team = LivingMembers(self.TeamId).ToList();
+        var slots = FormationRules.SlotsOfRow(next.Value).ToList();
 
-        UnitState? victim = team.FirstOrDefault(u => u.Row == Row.Back && u != self);
-        if (victim is not null) return victim.Slot;
+        // 味方がいるなら必ず入れ替える（＝前へ押し出す）。
+        // 空きへ逃げるだけだと誰も損をせず、逃亡が純粋な利益になってしまう。
+        foreach (int slot in slots)
+            if (team.Any(u => u.Slot == slot && u != self)) return slot;
 
-        for (int slot = FormationRules.FrontSlots; slot < FormationRules.TotalSlots; slot++)
+        foreach (int slot in slots)
             if (team.All(u => u.Slot != slot)) return slot;
 
         return null;

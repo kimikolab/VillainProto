@@ -20,7 +20,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        _slots = new[] { Slot0, Slot1, Slot2, Slot3, Slot4 };
+        _slots = new[] { Slot0, Slot1, Slot2, Slot3, Slot4, Slot5 };
 
         foreach (ComboBox cb in _slots)
         {
@@ -36,12 +36,14 @@ public partial class MainWindow : Window
         StageBox.SelectedIndex = 0;
         StageBox.SelectionChanged += (_, _) => UpdateUnitInfo();
 
-        // 初期配置: ボルグの隣にムドを置いた、噛み合う例
-        Slot0.SelectedItem = UnitCatalog.Borg;
-        Slot1.SelectedItem = UnitCatalog.Mudo;
-        Slot2.SelectedItem = UnitCatalog.Gald;
-        Slot3.SelectedItem = UnitCatalog.Sero;
+        // 初期配置: 前2のボルグは前1・前3・中に隣接する盤面のハブ。
+        // その隣接先にムドを置いて、巻き添えを燃料に変える例。
+        Slot0.SelectedItem = UnitCatalog.Gald;
+        Slot1.SelectedItem = UnitCatalog.Borg;
+        Slot2.SelectedItem = UnitCatalog.Golm;
+        Slot3.SelectedItem = UnitCatalog.Mudo;
         Slot4.SelectedItem = UnitCatalog.Nel;
+        Slot5.SelectedItem = UnitCatalog.Sero;
 
         UpdateUnitInfo();
     }
@@ -65,8 +67,8 @@ public partial class MainWindow : Window
 
     private static string PatternLabel(AttackPattern p) => p switch
     {
-        AttackPattern.Sweep => "薙ぎ（両隣も）",
-        AttackPattern.Pierce => "貫き（後列を狙う）",
+        AttackPattern.Sweep => "薙ぎ（左右も）",
+        AttackPattern.Pierce => "貫き（レーンを貫通）",
         AttackPattern.All => "全体",
         _ => "単体"
     };
@@ -91,7 +93,12 @@ public partial class MainWindow : Window
         sb.AppendLine("──── 敵編成 ────");
         foreach ((int slot, UnitDef e) in stage.Enemy.Occupied())
         {
-            string row = slot < FormationRules.FrontSlots ? "前" : "後";
+            string row = FormationRules.RowOf(slot) switch
+            {
+                Row.Front => "前",
+                Row.Mid => "中",
+                _ => "後"
+            };
             sb.AppendLine($"[{row}] {e.Name}   HP {e.MaxHp} / 攻 {e.Attack} / {PatternLabel(e.Pattern)}");
         }
 
