@@ -481,6 +481,27 @@ public static class EnemyCatalog
     };
     public static readonly UnitDef Hero = Make("hero", "勇者候補", 95, 20, 14, TraitId.Executioner);
 
+    // ここから第五波用。既存3体の数値違いは Id を変えて別定義にする（第一〜三波を動かさないため）。
+    public static readonly UnitDef Axeman2 = new()
+    {
+        Id = "axeman_v", Name = "戦斧兵", MaxHp = 52, Attack = 11, Speed = 5,
+        Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Sweep
+    };
+    public static readonly UnitDef Hero2 = Make("hero_v", "勇者候補", 90, 18, 14);
+    public static readonly UnitDef Knight2 = Make("knight_v", "巡礼騎士", 71, 14, 7);
+    public static readonly UnitDef Lancer = new()
+    {
+        Id = "lancer", Name = "槍騎兵", MaxHp = 66, Attack = 16, Speed = 12,
+        Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Pierce
+    };
+    public static readonly UnitDef Seer = new()
+    {
+        Id = "seer", Name = "審問官", MaxHp = 76, Attack = 10, Speed = 10,
+        Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.All
+    };
+    // 第五波では使わない。第六波以降の素材として置いておく。
+    public static readonly UnitDef Champion = Make("champion", "聖騎士長", 130, 22, 9, TraitId.Executioner);
+
     public sealed record Stage(string Name, Formation Enemy);
 
     public static IReadOnlyList<Stage> Stages { get; } = new[]
@@ -500,6 +521,11 @@ public static class EnemyCatalog
         // 積み上げ系が立ち上がる余地があるかを確かめるためのステージ。
         // 全体攻撃は1枚まで。2枚置くと支援型の駒が編成から消える。
         new Stage("第四波 / 城塞守備隊",
-            Formation.Of(Warden, Warden, Warden, Priest, Chanter))
+            Formation.Of(Warden, Warden, Warden, Priest, Chanter)),
+
+        // 前列に薙ぎ、後列に貫きと全体。4種の攻撃パターンが同時に飛んでくる。
+        // 単体前提の防御（庇う・標的）だけでは支えられない構成にしてある。
+        new Stage("第五波 / 異端審問団",
+            Formation.Of(Axeman2, Hero2, Knight2, Lancer, Seer))
     };
 }

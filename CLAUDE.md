@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
     dotnet build                                            # 全体ビルド（WPF を含むので Windows のみ）
     dotnet run --project PrototypeApp                       # 編成UI（Windows / WPF）
-    dotnet run --project BattleSim -c Release <n>           # ステージ n (0-3) を総当たり
+    dotnet run --project BattleSim -c Release <n>           # ステージ n (0-4) を総当たり
     dotnet run --project BattleSim -c Release <n> <unitId>  # 指定ユニットを含む編成に絞る（例: rica）
     dotnet run --project BattleSim -c Release 0 compare > docs/balance.md  # 代表編成 × 全ステージの勝率比較
     dotnet run --project BattleSim -c Release 0 dump > docs/units.md      # ユニット・特性・ステージ一覧
