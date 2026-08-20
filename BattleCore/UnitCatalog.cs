@@ -527,14 +527,17 @@ public static class EnemyCatalog
             Formation.Build(front1: Knight, front2: Knight, front3: Recruit, mid: Priest, back1: Archer)),
 
         // 貫きは強烈なので1枚まで。2枚置くと後列に支援を置く編成が全滅する。
+        // 射手はレーン1の最深部（勇者→斧→射手の奥行き3）。貫きでも50%まで減衰する。
+        // 教えること:「奥行きが深いレーンは狙撃では崩せない。前から割れ」。
         new Stage("第三波 / 討伐隊本隊",
-            Formation.Build(front1: Knight, front2: Hero, front3: Knight, mid: Axeman, back1: Archer)),
+            Formation.Build(front1: Knight, front2: Hero, front3: Knight, mid: Axeman, back2: Archer)),
 
         // 一撃は軽いが硬い。決着まで時間がかかるので、
         // 積み上げ系が立ち上がる余地があるかを確かめるためのステージ。
         // 全体攻撃は1枚まで。2枚置くと支援型の駒が編成から消える。
+        // 支援2枚はどちらもレーン1の奥（中と後2）。壁を割り切るまで全体攻撃が止まらない。
         new Stage("第四波 / 城塞守備隊",
-            Formation.Build(front1: Warden, front2: Warden, front3: Warden, mid: Priest, back1: Chanter)),
+            Formation.Build(front1: Warden, front2: Warden, front3: Warden, mid: Priest, back2: Chanter)),
 
         // 前列に薙ぎ、後列に貫きと全体。4種の攻撃パターンが同時に飛んでくる。
         // 単体前提の防御（庇う・標的）だけでは支えられない構成にしてある。
