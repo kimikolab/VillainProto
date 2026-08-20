@@ -1,0 +1,14 @@
+# build output
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# rider / vscode
+.idea/
+.vscode/
+
+# シミュレーション結果の一時ファイル
+*.log
+/out/

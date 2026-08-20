@@ -1,0 +1,11 @@
+<Application x:Class="PrototypeApp.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <!--
+      暗色前提だが、暗黙スタイルで TextBlock を一括着色すると
+      ComboBox のポップアップ（既定は明色）まで巻き込んで読めなくなる。
+      色は MainWindow 側で個別に指定する。
+    -->
+    <Application.Resources/>
+</Application>

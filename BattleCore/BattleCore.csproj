@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>BattleCore</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    このプロジェクトは意図的に UI を一切参照しない。
+    WPF / Godot / Unity / テストコード のどこからでも同じものを使えるようにするため。
+    ここに INotifyPropertyChanged や ObservableCollection を持ち込まないこと。
+  -->
+
+</Project>

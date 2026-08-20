@@ -1,0 +1,88 @@
+<Window x:Class="PrototypeApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="編成プロトタイプ" Height="760" Width="1180"
+        Background="#1B1A18">
+
+    <Window.Resources>
+        <Style TargetType="ComboBox">
+            <Setter Property="Margin" Value="0,2,0,6"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#C9A227"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="14">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="330"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 左: 編成 -->
+        <DockPanel Grid.Column="0" Margin="0,0,14,0">
+
+            <StackPanel DockPanel.Dock="Top">
+                <TextBlock Text="前列（狙われやすい）" Style="{StaticResource SectionHeader}"/>
+                <ComboBox x:Name="Slot0"/>
+                <ComboBox x:Name="Slot1"/>
+                <ComboBox x:Name="Slot2"/>
+
+                <TextBlock Text="後列（前列が生きている間は守られる）"
+                           Style="{StaticResource SectionHeader}" Margin="0,10,0,6"/>
+                <ComboBox x:Name="Slot3"/>
+                <ComboBox x:Name="Slot4"/>
+
+                <TextBlock Text="隣り合うスロット同士だけが「隣接」扱い。列をまたぐと隣接しない。"
+                           Foreground="#7E786E" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,12"/>
+
+                <TextBlock Text="ステージ" Style="{StaticResource SectionHeader}"/>
+                <ComboBox x:Name="StageBox"/>
+
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <TextBlock Text="シード" VerticalAlignment="Center"
+                               Foreground="#9A948A" Margin="0,0,8,0"/>
+                    <TextBox x:Name="SeedBox" Text="1234" Width="80" Padding="4,3"/>
+                </StackPanel>
+
+                <WrapPanel Margin="0,12,0,0">
+                    <Button x:Name="RunButton" Content="1回戦う" Click="RunButton_Click"/>
+                    <Button x:Name="BatchButton" Content="200回試して勝率を見る" Click="BatchButton_Click"/>
+                </WrapPanel>
+            </StackPanel>
+
+            <Border DockPanel.Dock="Bottom" Background="#232120" CornerRadius="3"
+                    Padding="10" Margin="0,12,0,0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <TextBlock x:Name="UnitInfo" TextWrapping="Wrap"
+                               FontSize="12" Foreground="#C4BEB4" LineHeight="19"/>
+                </ScrollViewer>
+            </Border>
+        </DockPanel>
+
+        <!-- 右: ログ -->
+        <DockPanel Grid.Column="1">
+            <TextBlock x:Name="ResultLine" DockPanel.Dock="Top"
+                       FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"
+                       Foreground="#E6E1D8" Text="編成を組んで「1回戦う」を押す"/>
+
+            <Border Background="#141312" CornerRadius="3" Padding="10">
+                <ScrollViewer x:Name="LogScroll" VerticalScrollBarVisibility="Auto">
+                    <TextBlock x:Name="LogText" FontFamily="Consolas, MS Gothic"
+                               FontSize="12.5" LineHeight="19"
+                               TextWrapping="NoWrap"/>
+                </ScrollViewer>
+            </Border>
+        </DockPanel>
+    </Grid>
+</Window>
