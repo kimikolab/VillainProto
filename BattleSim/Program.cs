@@ -40,7 +40,10 @@ if (focusId == "compare")
         ("追撃×毒 (ハギ×グザ)",  Formation.Of(UnitCatalog.Gald, UnitCatalog.Guza, UnitCatalog.Golm, UnitCatalog.Mio, UnitCatalog.Hagi)),
         ("追撃×死 (ハギ×リィカ)", Formation.Of(UnitCatalog.Golm, UnitCatalog.Zoto, UnitCatalog.Mug, UnitCatalog.Rica, UnitCatalog.Hagi)),
         ("移動改2 (ササ×ヨミ)",  Formation.Of(UnitCatalog.Yomi, null, UnitCatalog.Gald, UnitCatalog.Basa, UnitCatalog.Sasa)),
-        ("散開耐久 (ササ×ドハ)", Formation.Of(UnitCatalog.Gald, null, UnitCatalog.Dolga, UnitCatalog.Doha, UnitCatalog.Sasa))
+        ("散開耐久 (ササ×ドハ)", Formation.Of(UnitCatalog.Gald, null, UnitCatalog.Dolga, UnitCatalog.Doha, UnitCatalog.Sasa)),
+        ("死の連鎖+後備え", Formation.Of(UnitCatalog.Golm, UnitCatalog.Zoto, UnitCatalog.Vel, UnitCatalog.Sekki, UnitCatalog.Rica)),
+        ("後衛特化+後備え", Formation.Of(UnitCatalog.Gald, UnitCatalog.Golm, UnitCatalog.Dolga, UnitCatalog.Sekki, UnitCatalog.Sero)),
+        ("逆しま+後備え",   Formation.Of(UnitCatalog.Gald, UnitCatalog.Golm, UnitCatalog.Kubi, UnitCatalog.Sekki, UnitCatalog.Utsu))
     };
 
     const int CompareSeeds = 200;

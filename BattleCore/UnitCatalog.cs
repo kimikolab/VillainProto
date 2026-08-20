@@ -411,6 +411,19 @@ public static class UnitCatalog
         Flavor = "止めを刺した者の背後から現れる。手柄だけを持っていく。"
     };
 
+    public static readonly UnitDef Sekki = new()
+    {
+        Id = "sekki",
+        Name = "後備えのセッキ",
+        MaxHp = 70,
+        Attack = 2,
+        Speed = 2,
+        Traits = new[] { TraitId.RearGuard, TraitId.Rage },
+        PlusText = "後列の味方への攻撃を肩代わりする。庇うたびに攻撃力が上がる",
+        MinusText = "素の攻撃力はほぼ無い。前列は一切守らず、狙われなければ育たない",
+        Flavor = "前に出ろと言われても決して出ない。背中しか守らない。"
+    };
+
     /// <summary>ムグの死骸から湧く駒。編成には選べない。</summary>
     public static readonly UnitDef Spore = new()
     {
@@ -440,7 +453,7 @@ public static class UnitCatalog
 
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);
@@ -487,11 +500,11 @@ public static class EnemyCatalog
         Id = "axeman_v", Name = "戦斧兵", MaxHp = 52, Attack = 11, Speed = 5,
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Sweep
     };
-    public static readonly UnitDef Hero2 = Make("hero_v", "勇者候補", 90, 18, 14);
-    public static readonly UnitDef Knight2 = Make("knight_v", "巡礼騎士", 71, 14, 7);
+    public static readonly UnitDef Hero2 = Make("hero_v", "勇者候補", 90, 20, 14);
+    public static readonly UnitDef Knight2 = Make("knight_v", "巡礼騎士", 71, 15, 7);
     public static readonly UnitDef Lancer = new()
     {
-        Id = "lancer", Name = "槍騎兵", MaxHp = 66, Attack = 16, Speed = 12,
+        Id = "lancer", Name = "槍騎兵", MaxHp = 66, Attack = 17, Speed = 12,
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Pierce
     };
     public static readonly UnitDef Seer = new()

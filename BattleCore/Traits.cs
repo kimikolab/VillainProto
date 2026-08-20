@@ -45,7 +45,8 @@ public enum TraitId
     Sharer,      // 分かち: 味方の被ダメージを肩代わりする（型を問わない）
     Loose,       // 散開: 隣に味方がいない駒を硬くする
     Cower,       // 萎縮: 味方全体の攻撃を下げ、代わりに被ダメージを下げる
-    Pursuer      // 追い打ち: 味方が敵を倒すと、ターン外に割り込んで攻撃する
+    Pursuer,     // 追い打ち: 味方が敵を倒すと、ターン外に割り込んで攻撃する
+    RearGuard    // 後備え: 後列の味方への攻撃を肩代わりする。貫きにも割り込む
 }
 
 /// <summary>
@@ -913,6 +914,16 @@ public sealed class PursuerTrait : Trait
     }
 }
 
+/// <summary>
+/// 後備え。後列の味方への攻撃を肩代わりする。「庇う（Guardian）」が単体攻撃しか止められないのに対し、
+/// こちらは貫きにも割り込む。後列に稼ぎ頭を隠す編成に対する唯一の防御手段。
+/// </summary>
+public sealed class RearGuardTrait : Trait
+{
+    public const int RedirectPercent = 45;
+    public override TraitId Id => TraitId.RearGuard;
+}
+
 public static class TraitCatalog
 {
     private static readonly Dictionary<TraitId, Trait> Map = new Trait[]
@@ -957,7 +968,8 @@ public static class TraitCatalog
         new SharerTrait(),
         new LooseTrait(),
         new CowerTrait(),
-        new PursuerTrait()
+        new PursuerTrait(),
+        new RearGuardTrait()
     }.ToDictionary(t => t.Id);
 
     public static Trait Get(TraitId id) => Map[id];

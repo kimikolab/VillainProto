@@ -117,13 +117,35 @@ public sealed class BattleContext
 
         UnitState target = pool[Roll(pool.Count)];
 
-        if (pattern != AttackPattern.Single) return target;
+        UnitState? rearAny = foes.FirstOrDefault(
+            f => f.HasTrait(TraitId.RearGuard) && f.Row == Row.Back && f != target);
+
+        if (pattern != AttackPattern.Single)
+        {
+            // 後備えだけは範囲・貫きにも割り込む。貫きへの唯一の防御手段にするため。
+            if (target.Row == Row.Back && rearAny is not null
+                && Roll(100) < RearGuardTrait.RedirectPercent)
+            {
+                Log($"    {rearAny.Name} が後列の {target.Name} の前に入った", LogKind.Trigger);
+                return rearAny;
+            }
+            return target;
+        }
 
         UnitState? marked = foes.FirstOrDefault(f => f.Counter(StatusKeys.Marked) > 0);
         if (marked is not null && marked != target && Roll(100) < MarkPullPercent)
         {
             Log($"    敵は {marked.Name} に気を取られた", LogKind.Trigger);
             return marked;
+        }
+
+        UnitState? rear = foes.FirstOrDefault(
+            f => f.HasTrait(TraitId.RearGuard) && f.Row == Row.Back && f != target);
+
+        if (target.Row == Row.Back && rear is not null && Roll(100) < RearGuardTrait.RedirectPercent)
+        {
+            Log($"    {rear.Name} が後列の {target.Name} の前に入った", LogKind.Trigger);
+            return rear;
         }
 
         UnitState? guardian = foes.FirstOrDefault(
@@ -158,23 +180,43 @@ public sealed class BattleContext
             _ => ""
         };
         Log($"{prefix}{actor.Name} → {target.Name} (攻撃 {atk}{label})");
-        ApplyDamage(target, atk, actor);
+
+        // 貫きは前列を突き抜けて後列を狙うので、立ちはだかる前列の数だけ威力が落ちる。
+        // これが無いと、前列を並べることが貫きに対して何の意味も持たない。
+        int dealt = atk;
+        if (actor.CurrentPattern == AttackPattern.Pierce && target.Row == Row.Back)
+        {
+            int wall = LivingMembers(target.TeamId).Count(u => u.Row == Row.Front);
+            if (wall > 0)
+            {
+                dealt = Math.Max(1, atk * Math.Max(PierceFloorPercent, 100 - PierceDecayPercent * wall) / 100);
+                Log($"    前列 {wall} 体を貫いて威力が落ちた（{atk} → {dealt}）", LogKind.Action);
+            }
+        }
+
+        ApplyDamage(target, dealt, actor);
 
         foreach (UnitState extra in SecondaryTargets(actor, target))
         {
             if (!extra.IsAlive) continue;
             Log($"    刃が {extra.Name} まで届く", LogKind.Damage);
-            ApplyDamage(extra, Math.Max(1, atk * SecondaryPercent / 100), actor);
+            ApplyDamage(extra, Math.Max(1, dealt * SecondaryPercent / 100), actor);
         }
 
         // 特性の発動は攻撃1回につき1度、主目標に対してのみ。
         // 範囲攻撃のたびに巻き込みや毒が複数回発動すると、範囲持ちが即座に壊れる。
         foreach (Trait t in actor.Traits.ToList())
-            t.OnAfterAttack(this, actor, target, atk);
+            t.OnAfterAttack(this, actor, target, dealt);
     }
 
     /// <summary>副次目標のダメージ倍率（%）。範囲は「敵の数 × 値」で効くので、必ず割り引く。</summary>
     public const int SecondaryPercent = 60;
+
+    /// <summary>貫きが前列1体につき失う威力（%）。</summary>
+    public const int PierceDecayPercent = 12;
+
+    /// <summary>貫きの威力の下限（%）。前列を並べても無力化はできない。</summary>
+    public const int PierceFloorPercent = 60;
 
     /// <summary>主目標以外に巻き添えになる敵。</summary>
     public IReadOnlyList<UnitState> SecondaryTargets(UnitState attacker, UnitState primary)
