@@ -158,7 +158,7 @@ public static class UnitCatalog
         Attack = 11,
         Speed = 4,
         Traits = new[] { TraitId.Thorns, TraitId.Immobile, TraitId.Havoc },
-        PlusText = "殴られると、自分の攻撃力の2倍を返す",
+        PlusText = "殴られると、自分の攻撃力の2倍を敵に返す。反撃は隣の敵にも届く",
         MinusText = "自分からは決して攻撃しない / 味方全体の受けるダメージが5割増える",
         Flavor = "命令しても動かない。そばにいる者の傷がなぜか深くなる。"
     };
@@ -397,6 +397,20 @@ public static class UnitCatalog
         Flavor = "怯えが伝染する。隊が生き延びても、戦果は上がらなくなる。"
     };
 
+    public static readonly UnitDef Hagi = new()
+    {
+        Id = "hagi",
+        Name = "追い打ちのハギ",
+        MaxHp = 62,
+        Attack = 16,
+        Speed = 7,
+        Traits = new[] { TraitId.Pursuer },
+        Pattern = AttackPattern.Sweep,
+        PlusText = "味方が敵を倒すと、ターン順を無視して薙ぎ払う（1ターン1回）",
+        MinusText = "自分の手番では決して動かない。味方が誰も倒せなければ置物",
+        Flavor = "止めを刺した者の背後から現れる。手柄だけを持っていく。"
+    };
+
     /// <summary>ムグの死骸から湧く駒。編成には選べない。</summary>
     public static readonly UnitDef Spore = new()
     {
@@ -426,7 +440,7 @@ public static class UnitCatalog
 
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

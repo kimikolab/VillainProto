@@ -138,6 +138,41 @@ public sealed class BattleContext
         return target;
     }
 
+    /// <summary>
+    /// 一回の攻撃を最後まで解決する。通常のターン進行からも、追撃のようなターン外の割り込みからも呼ぶ。
+    /// ターン順のループに攻撃処理を直書きすると、割り込み系の特性が一切書けなくなる。
+    /// </summary>
+    public void PerformAttack(UnitState actor, string prefix = "  ")
+    {
+        if (!actor.IsAlive) return;
+
+        UnitState? target = SelectTarget(actor);
+        if (target is null) return;
+
+        int atk = actor.CurrentAttack;
+        string label = actor.CurrentPattern switch
+        {
+            AttackPattern.Sweep => " 薙ぎ",
+            AttackPattern.Pierce => " 貫き",
+            AttackPattern.All => " 全体",
+            _ => ""
+        };
+        Log($"{prefix}{actor.Name} → {target.Name} (攻撃 {atk}{label})");
+        ApplyDamage(target, atk, actor);
+
+        foreach (UnitState extra in SecondaryTargets(actor, target))
+        {
+            if (!extra.IsAlive) continue;
+            Log($"    刃が {extra.Name} まで届く", LogKind.Damage);
+            ApplyDamage(extra, Math.Max(1, atk * SecondaryPercent / 100), actor);
+        }
+
+        // 特性の発動は攻撃1回につき1度、主目標に対してのみ。
+        // 範囲攻撃のたびに巻き込みや毒が複数回発動すると、範囲持ちが即座に壊れる。
+        foreach (Trait t in actor.Traits.ToList())
+            t.OnAfterAttack(this, actor, target, atk);
+    }
+
     /// <summary>副次目標のダメージ倍率（%）。範囲は「敵の数 × 値」で効くので、必ず割り引く。</summary>
     public const int SecondaryPercent = 60;
 
@@ -411,33 +446,7 @@ public static class BattleEngine
                     continue;
                 }
 
-                UnitState? target = ctx.SelectTarget(actor);
-                if (target is null) continue;
-
-                int atk = actor.CurrentAttack;
-                string label = actor.CurrentPattern switch
-                {
-                    AttackPattern.Sweep => " 薙ぎ",
-                    AttackPattern.Pierce => " 貫き",
-                    AttackPattern.All => " 全体",
-                    _ => ""
-                };
-                ctx.Log($"  {actor.Name} → {target.Name} (攻撃 {atk}{label})");
-                ctx.ApplyDamage(target, atk, actor);
-
-                // 副次目標は割引ダメージ。主目標より先に列挙しておく（死亡で隣接が変わるため）。
-                foreach (UnitState extra in ctx.SecondaryTargets(actor, target))
-                {
-                    if (!extra.IsAlive) continue;
-                    ctx.Log($"    刃が {extra.Name} まで届く", LogKind.Damage);
-                    ctx.ApplyDamage(extra, Math.Max(1, atk * BattleContext.SecondaryPercent / 100), actor);
-                }
-
-                // 特性の発動は攻撃1回につき1度、主目標に対してのみ。
-                // 範囲攻撃のたびに巻き込みや毒が複数回発動すると、
-                // 範囲パターンを持つ駒すべてが即座に壊れる。
-                foreach (Trait t in actor.Traits.ToList())
-                    t.OnAfterAttack(ctx, actor, target, atk);
+                ctx.PerformAttack(actor);
             }
         }
 

@@ -34,6 +34,9 @@ if (focusId == "compare")
         ("逆しま改 (クビ×ウツ)", Formation.Of(UnitCatalog.Gald, UnitCatalog.Utsu, UnitCatalog.Golm, UnitCatalog.Nel, UnitCatalog.Kubi)),
         ("反撃改 (ドハ×カド)",   Formation.Of(UnitCatalog.Hisa, UnitCatalog.Kado, UnitCatalog.Doha, UnitCatalog.Nono, UnitCatalog.Nel)),
         ("反撃改2 (ガン×カド)",  Formation.Of(UnitCatalog.Kado, UnitCatalog.Hisa, UnitCatalog.Ban, UnitCatalog.Gan, UnitCatalog.Doha)),
+        ("反撃改3 (カド×ハギ)",  Formation.Of(UnitCatalog.Kado, UnitCatalog.Hisa, UnitCatalog.Gald, UnitCatalog.Gan, UnitCatalog.Hagi)),
+        ("追撃×毒 (ハギ×グザ)",  Formation.Of(UnitCatalog.Gald, UnitCatalog.Guza, UnitCatalog.Golm, UnitCatalog.Mio, UnitCatalog.Hagi)),
+        ("追撃×死 (ハギ×リィカ)", Formation.Of(UnitCatalog.Golm, UnitCatalog.Zoto, UnitCatalog.Mug, UnitCatalog.Rica, UnitCatalog.Hagi)),
         ("移動改2 (ササ×ヨミ)",  Formation.Of(UnitCatalog.Yomi, null, UnitCatalog.Gald, UnitCatalog.Basa, UnitCatalog.Sasa)),
         ("散開耐久 (ササ×ドハ)", Formation.Of(UnitCatalog.Gald, null, UnitCatalog.Dolga, UnitCatalog.Doha, UnitCatalog.Sasa))
     };
@@ -89,11 +92,11 @@ if (focusId == "dump")
 if (focusId == "demo")
 {
     var build = Formation.Of(
+        UnitCatalog.Kado,   // 反撃。範囲で返す
+        UnitCatalog.Hisa,   // 標的を付けてカドに殴らせる
         UnitCatalog.Gald,   // 壁
-        UnitCatalog.Sero,   // 前で殴られ、逃げてから貫きに変わる
-        UnitCatalog.Golm,   // 壁
-        UnitCatalog.Yomi,   // セロに突き飛ばされて前へ
-        UnitCatalog.Nel     // 呪詛
+        UnitCatalog.Gan,    // 号令。動かないカドの攻撃を積む
+        UnitCatalog.Hagi    // 追い打ち。誰かが倒すと割り込む
     );
     BattleResult demo = BattleEngine.Run(build, stage.Enemy, seed: 7, verbose: true);
     foreach (LogLine line in demo.Log) Console.WriteLine(line);

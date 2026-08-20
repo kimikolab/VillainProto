@@ -44,7 +44,8 @@ public enum TraitId
     Perverse,    // 逆しま: 強化されると弱くなり、弱体化されると強くなる
     Sharer,      // 分かち: 味方の被ダメージを肩代わりする（型を問わない）
     Loose,       // 散開: 隣に味方がいない駒を硬くする
-    Cower        // 萎縮: 味方全体の攻撃を下げ、代わりに被ダメージを下げる
+    Cower,       // 萎縮: 味方全体の攻撃を下げ、代わりに被ダメージを下げる
+    Pursuer      // 追い打ち: 味方が敵を倒すと、ターン外に割り込んで攻撃する
 }
 
 /// <summary>
@@ -464,6 +465,7 @@ public sealed class ImmobileTrait : Trait
 public sealed class ThornsTrait : Trait
 {
     public const int Multiplier = 2;
+    public const int SplashPercent = 60;
 
     public override TraitId Id => TraitId.Thorns;
 
@@ -477,8 +479,21 @@ public sealed class ThornsTrait : Trait
         if (ctx.InReaction) return;   // 反撃の連鎖を止める
 
         int back = Math.Max(1, self.CurrentAttack * Multiplier);
-        ctx.Log($"    {self.Name} の棘が {source.Name} を刺し返す", LogKind.Trigger);
-        ctx.Reaction(() => ctx.ApplyDamage(source, back, self));
+
+        // 反撃は範囲。自分から攻撃できず打点が自分しかない駒なので、
+        // 見返りをここまで大きくして初めて軸として成立する。
+        ctx.Reaction(() =>
+        {
+            ctx.Log($"    {self.Name} の棘が {source.Name} を刺し返す", LogKind.Trigger);
+            ctx.ApplyDamage(source, back, self);
+
+            foreach (UnitState other in ctx.LivingMembers(source.TeamId))
+            {
+                if (other == source) continue;
+                if (!FormationRules.AreAdjacent(source.Slot, other.Slot)) continue;
+                ctx.ApplyDamage(other, Math.Max(1, back * SplashPercent / 100), self);
+            }
+        });
     }
 }
 
@@ -875,6 +890,29 @@ public sealed class CowerTrait : Trait
     }
 }
 
+/// <summary>
+/// 追い打ち。味方が敵を倒したとき、ターン順を無視して攻撃する。
+/// カドが「受けに回る火力」なのに対し、こちらは「割り込む火力」。
+/// 1ターン1回に制限しないと、連鎖して盤面が一方的に終わる。
+/// </summary>
+public sealed class PursuerTrait : Trait
+{
+    public override TraitId Id => TraitId.Pursuer;
+
+    public override bool CanAct(BattleContext ctx, UnitState self) => false;
+
+    public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
+    {
+        if (dead.TeamId == self.TeamId) return;
+        if (!self.IsAlive) return;
+        if (self.Counter("pursued") >= ctx.Turn) return;   // 1ターン1回
+
+        self.SetCounter("pursued", ctx.Turn);
+        ctx.Log($"    {self.Name} が倒れた隙に踏み込む", LogKind.Highlight);
+        ctx.PerformAttack(self, "    ");
+    }
+}
+
 public static class TraitCatalog
 {
     private static readonly Dictionary<TraitId, Trait> Map = new Trait[]
@@ -918,7 +956,8 @@ public static class TraitCatalog
         new PerverseTrait(),
         new SharerTrait(),
         new LooseTrait(),
-        new CowerTrait()
+        new CowerTrait(),
+        new PursuerTrait()
     }.ToDictionary(t => t.Id);
 
     public static Trait Get(TraitId id) => Map[id];
