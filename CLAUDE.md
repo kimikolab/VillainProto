@@ -16,6 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release <n> <unitId>  # 指定ユニットを含む編成に絞る（例: rica）
     dotnet run --project BattleSim -c Release 0 compare > docs/balance.md  # 代表編成 × 全ステージの勝率比較
     dotnet run --project BattleSim -c Release 0 dump > docs/units.md      # ユニット・特性・ステージ一覧
+    dotnet run --project BattleSim -c Release 0 layout      # 代表編成の全配置総当たり（並列・決定的、約2分）
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
 
 BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project BattleSim` はどの OS でも通る）。
@@ -68,7 +69,9 @@ BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project Ba
 
 ### 隊列と攻撃パターン（Models.cs）
 
-スロットは5つ（0-2 が前列、3-4 が後列）。`AttackPattern` は Single / Sweep / Pierce / All の4つで、**増やしても4つまで**。1つ増えるたびに庇う・標的・巻き込みなど既存の全特性との相互作用を監査する必要がある。庇う・標的の介入は Single にしか効かない（薙ぎ・全体は止められず、貫きは前列を素通りする）という非対称が設計の中核。
+スロットは6つ（0-2 が前列、3 が中衛、4-5 が後列）。レーンは3本で、レーン0={前1,後1}・レーン1={前2,中,後2}・レーン2={前3}と奥行きが違う。貫きはレーンを前から走り、1体貫くごとに威力が25%落ちる。`AttackPattern` は Single / Sweep / Pierce / All の4つで、**増やしても4つまで**。1つ増えるたびに庇う・標的・巻き込みなど既存の全特性との相互作用を監査する必要がある。庇う・標的の介入は Single にしか効かない（薙ぎ・全体は止められず、貫きはレーン単位で解決されて割り込めない）という非対称が設計の中核。編成の定義は `Formation.Build`（名前付き引数）で書く。
+
+配置を決めるときは人手の勘ではなく `layout` モードで測る。編成の狙い（隣接ペア・後列必須など）と探索1位が食い違ったら狙いを優先し、理由をコメントに残す。
 
 ### ログ（LogKind）
 
@@ -76,6 +79,6 @@ BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project Ba
 
 ## 設計判断の蓄積
 
-**現在のバランス状況は `docs/balance.md`**（代表編成24通り × 全ステージの勝率）。数値をいじる前にまずここを見て、どの系統が壊れているかを把握する。ユニットと特性の現物一覧は `docs/units.md`。どちらも BattleSim の出力なので、コードと必ず一致している。
+**現在のバランス状況は `docs/balance.md`**（代表編成27通り × 全ステージの勝率）。数値をいじる前にまずここを見て、どの系統が壊れているかを把握する。ユニットと特性の現物一覧は `docs/units.md`。どちらも BattleSim の出力なので、コードと必ず一致している。
 
 README.md の「調整メモ」「検証で分かったこと」「未解決の課題」に、バランス調整の理由と過去の失敗例が蓄積されている。数値や特性をいじる前に必ず読むこと（例: 増幅は必ず加算にする — 乗算にしたら毒が発散して戦闘が30ターン上限に張り付いた）。
