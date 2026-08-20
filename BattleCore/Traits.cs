@@ -209,17 +209,29 @@ public sealed class FrailTrait : Trait
 // プラス特性
 // ---------------------------------------------------------------
 
-/// <summary>被弾強化。誰に殴られたかは問わない。味方の事故もすべて燃料。</summary>
+/// <summary>
+/// 被弾強化。誰に殴られたかは問わない。味方の事故もすべて燃料。
+///
+/// 増加量は被弾の重さに比例する。回数ベースにすると、毒の1ダメージと
+/// 一撃30ダメージが等価になり、後衛に隠れて細かい被弾を稼ぐのが
+/// 最適解になってしまう。ここではリスクを負った側が伸びる。
+///
+/// 上限は意図的に設けない。天井はこの駒自身のHPが担う。
+/// 大きく殴られれば大きく育つが、何度も殴られる前に倒れる。
+/// </summary>
 public sealed class RageTrait : Trait
 {
-    public const int Gain = 5;
+    /// <summary>被ダメージ何点につき攻撃力+1か</summary>
+    public const int DamagePerGain = 2;
+
     public override TraitId Id => TraitId.Rage;
 
     public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
     {
         if (dmg <= 0 || !self.IsAlive) return;
-        self.AtkBonus += Gain;
-        ctx.Log($"    {self.Name} の怒りが増した（攻撃 +{Gain} → {self.CurrentAttack}）", LogKind.Trigger);
+        int gain = Math.Max(1, dmg / DamagePerGain);
+        self.AtkBonus += gain;
+        ctx.Log($"    {self.Name} の怒りが増した（攻撃 +{gain} → {self.CurrentAttack}）", LogKind.Trigger);
     }
 }
 

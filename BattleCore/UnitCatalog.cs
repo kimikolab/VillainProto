@@ -28,7 +28,7 @@ public static class UnitCatalog
         Attack = 3,
         Speed = 5,
         Traits = new[] { TraitId.Rage },
-        PlusText = "ダメージを受けるたび攻撃力が上がる",
+        PlusText = "受けたダメージに応じて攻撃力が上がる",
         MinusText = "素の攻撃力がほぼ無い",
         Flavor = "殴られないと働かないので、誰も連れて行きたがらない。"
     };
@@ -419,7 +419,7 @@ public static class UnitCatalog
         Attack = 2,
         Speed = 2,
         Traits = new[] { TraitId.RearGuard, TraitId.Rage },
-        PlusText = "後列の味方への攻撃を肩代わりする。庇うたびに攻撃力が上がる",
+        PlusText = "後列の味方への攻撃を肩代わりする。庇って受けたダメージに応じて攻撃力が上がる",
         MinusText = "素の攻撃力はほぼ無い。前列は一切守らず、狙われなければ育たない",
         Flavor = "前に出ろと言われても決して出ない。背中しか守らない。"
     };
