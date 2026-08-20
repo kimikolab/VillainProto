@@ -4,7 +4,7 @@ public enum TraitId
 {
     // --- マイナス側 ---
     Splash,      // 巻き込み: 攻撃が隣接する味方にも当たる
-    Coward,      // 臆病: 半分削られると後列へ逃げる
+    Coward,      // 臆病: 3分の1削られると後列へ逃げる
     Stoic,       // 支援拒否: 回復も強化も呪いも一切受け付けない
     Sacrifice,   // 生贄: 戦闘開始時に味方全体を削る
     Drain,       // 大食い: 毎ターン味方からHPを吸う
@@ -112,7 +112,7 @@ public sealed class SplashTrait : Trait
     }
 }
 
-/// <summary>臆病。HPが半分を切ると後列へ下がる。Sniper と組むと「逃げること」が正解になる。</summary>
+/// <summary>臆病。HPが3分の2を切ると後列へ下がる。Sniper と組むと「逃げること」が正解になる。</summary>
 public sealed class CowardTrait : Trait
 {
     public override TraitId Id => TraitId.Coward;
@@ -120,7 +120,9 @@ public sealed class CowardTrait : Trait
     public override void OnTurnStart(BattleContext ctx, UnitState self)
     {
         if (self.Row == Row.Back) return;
-        if (self.Hp * 2 > self.MaxHp) return;
+        // 半分まで待つと、後列へ着いた時点で命が残らない。
+        // 早く逃げたほうが臆病らしくもある。
+        if (self.Hp * 3 > self.MaxHp * 2) return;
 
         int? dest = ctx.FindBackSlotFor(self);
         if (dest is null) return;

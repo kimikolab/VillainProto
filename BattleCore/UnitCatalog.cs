@@ -42,7 +42,7 @@ public static class UnitCatalog
         Speed = 12,
         Traits = new[] { TraitId.Sniper, TraitId.Coward },
         PlusText = "戦闘中に一度後退してから後列にいると攻撃力2倍になり、敵の後列を狙い撃つ貫きに変わる（最初から後列に置いても発動しない）",
-        MinusText = "半分削られると後列の味方を突き飛ばして逃げる（味方が矢面に立つ）",
+        MinusText = "3分の1削られると後列の味方を突き飛ばして逃げる（味方が矢面に立つ）",
         Flavor = "敵前逃亡二回。三度目は無いと言われて処分場に送られた。"
     };
 
