@@ -520,7 +520,7 @@ public static class EnemyCatalog
     };
     public static readonly UnitDef Seer = new()
     {
-        Id = "seer", Name = "審問官", MaxHp = 76, Attack = 10, Speed = 10,
+        Id = "seer", Name = "審問官", MaxHp = 76, Attack = 12, Speed = 10,
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.All
     };
     // 第五波では使わない。第六波以降の素材として置いておく。
