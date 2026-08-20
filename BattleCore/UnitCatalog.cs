@@ -486,10 +486,10 @@ public static class EnemyCatalog
         Id = "archer", Name = "狙撃手", MaxHp = 38, Attack = 14, Speed = 11,
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Pierce
     };
-    public static readonly UnitDef Warden = Make("warden", "城塞の重装兵", 145, 8, 3);
+    public static readonly UnitDef Warden = Make("warden", "城塞の重装兵", 145, 12, 3);
     public static readonly UnitDef Chanter = new()
     {
-        Id = "chanter", Name = "詠唱兵", MaxHp = 70, Attack = 7, Speed = 5,
+        Id = "chanter", Name = "詠唱兵", MaxHp = 70, Attack = 8, Speed = 5,
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.All
     };
     public static readonly UnitDef Hero = Make("hero", "勇者候補", 95, 20, 14, TraitId.Executioner);
