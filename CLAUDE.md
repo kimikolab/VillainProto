@@ -16,8 +16,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release <n> <unitId>  # 指定ユニットを含む編成に絞る（例: rica）
     dotnet run --project BattleSim -c Release 0 compare > docs/balance.md  # 代表編成 × 全ステージの勝率比較
     dotnet run --project BattleSim -c Release 0 dump > docs/units.md      # ユニット・特性・ステージ一覧
-    dotnet run --project BattleSim -c Release 0 layout      # 代表編成の全配置総当たり（並列・決定的、約2分）
+    dotnet run --project BattleSim -c Release 0 layout      # 代表編成の全配置総当たり（並列・決定的、1コアで約19分）
+    dotnet run --project BattleSim -c Release 0 reseat [skip] [take] > docs/reseat.md  # 配置候補を seed 200 で測り直す
+    dotnet run --project BattleSim -c Release 0 confirm     # 差し替え候補を別 seed で追試する
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
+
+`layout` は「どう置くか」の粗い当たりを付ける道具で、その値で採否を決めてはいけない。
+seed 50 の 720通りの最大なので上位は運で入れ替わり、狙い（ガルド前列・セッキ後列）も無視する。
+`reseat` で狙いを満たす候補を含めて測り直し、`confirm` で選定に使っていない seed に当てて採否を決める。
+`reseat` は `skip` / `take` で対象を切り出せる。長時間ジョブを分割して回すためのもの（下記）。
+
+**長時間ジョブは前景で待ち切ること。** 背景に回すと、起動したコマンドが返った時点で刈られる。
+`nohup` を付けても、同じターンの中で次のコマンドに移っただけでも死ぬ。
+`layout` のように分割できないものは、一回の呼び出しで走り切れるかを先に確かめる。
 
 BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project BattleSim` はどの OS でも通る）。
 

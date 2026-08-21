@@ -49,6 +49,190 @@ if (focusId == "compare")
 // 全ステージ平均勝率で並べる。「この編成をどう置くか」を人手の勘で決めないための道具。
 // 編成名が示す狙い（隣接ペア・後列必須など）との突き合わせは人がやる。上位だけでなく
 // 現行配置の順位も出すのはそのため。
+// reseat モード: 指定した編成だけを全配置に展開し、候補を seed 200 で測り直す。
+// layout の上位5件は seed 50 の値で並んでいるうえ、「ガルドは前列」「セッキは後列」のような
+// 狙いの制約を無視するので、制約下の最良が表に載らないことがある。
+// ここでは 全体上位 / 制約を満たす上位 / 現行 を混ぜたプールを作り、seed 200 で並べ直す。
+// confirm モード: 配置差し替えの採否を「選定に使っていない seed」で確かめる。
+// reseat の値は 20〜30 件の候補から最大を採ったものなので、選択バイアスで必ず上振れする。
+// 実際 2026-08-21 の差し替えでは 逆しま+後備え が in-sample +0.9pt → out-of-sample -0.1pt と符号ごと反転し、
+// この1件だけ不採用になった。旧配置もここに直書きしてあるのは、採用後に走らせても
+// 全部 0 になって記録として役に立たなくなるのを避けるため。
+if (focusId == "confirm")
+{
+    IReadOnlyList<EnemyCatalog.Stage> stages = EnemyCatalog.Stages;
+    const int Base = 200, Seeds = 400;   // 選定に使った seed 0..199 とは重ならない範囲
+    const double Threshold = 2.0;        // これ未満は誤差とみなして据え置く
+
+    // (編成名, 旧配置, 候補配置)。候補は reseat の「狙いを満たす最良」。
+    var picks = new (string Name, Formation Old, Formation New)[]
+    {
+        ("毒 (グザ×ミオ×ラウ)",
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Rau),
+            Formation.Build(front2: UnitCatalog.Guza, front3: UnitCatalog.Gald, mid: UnitCatalog.Mio, back1: UnitCatalog.Sid, back2: UnitCatalog.Rau)),
+        ("反撃 (ヒサ×カド)",
+            Formation.Build(front2: UnitCatalog.Nono, front3: UnitCatalog.Gald, mid: UnitCatalog.Nel, back1: UnitCatalog.Hisa, back2: UnitCatalog.Kado),
+            Formation.Build(front1: UnitCatalog.Hisa, front2: UnitCatalog.Kado, front3: UnitCatalog.Gald, mid: UnitCatalog.Nono, back2: UnitCatalog.Nel)),
+        ("惨禍×被弾強化",
+            Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Kado, front3: UnitCatalog.Hisa, mid: UnitCatalog.Sero, back2: UnitCatalog.Nono),
+            Formation.Build(front1: UnitCatalog.Hisa, front2: UnitCatalog.Kado, front3: UnitCatalog.Mudo, mid: UnitCatalog.Sero, back1: UnitCatalog.Nono)),
+        ("惨禍×死の連鎖",
+            Formation.Build(front2: UnitCatalog.Kado, front3: UnitCatalog.Golm, mid: UnitCatalog.Rica, back1: UnitCatalog.Vel, back2: UnitCatalog.Zoto),
+            Formation.Build(front2: UnitCatalog.Golm, front3: UnitCatalog.Kado, mid: UnitCatalog.Vel, back1: UnitCatalog.Rica, back2: UnitCatalog.Zoto)),
+        ("溜め (ガン×ドルガ×カド)",
+            Formation.Build(front1: UnitCatalog.Kado, front2: UnitCatalog.Gald, front3: UnitCatalog.Dolga, mid: UnitCatalog.Gan, back1: UnitCatalog.Hisa),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, mid: UnitCatalog.Hisa, back1: UnitCatalog.Gan, back2: UnitCatalog.Kado)),
+        ("溜め改 (クグ×バン×ガン)",
+            Formation.Build(front1: UnitCatalog.Kado, front2: UnitCatalog.Kugu, mid: UnitCatalog.Ban, back1: UnitCatalog.Dolga, back2: UnitCatalog.Gan),
+            Formation.Build(front2: UnitCatalog.Kado, front3: UnitCatalog.Kugu, mid: UnitCatalog.Gan, back1: UnitCatalog.Ban, back2: UnitCatalog.Dolga)),
+        ("逆しま改 (クビ×ウツ)",
+            Formation.Build(front1: UnitCatalog.Nel, front2: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Utsu, back1: UnitCatalog.Kubi),
+            Formation.Build(front2: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back2: UnitCatalog.Utsu)),
+        ("反撃改2 (ガン×カド)",
+            Formation.Build(front1: UnitCatalog.Ban, front2: UnitCatalog.Kado, front3: UnitCatalog.Hisa, mid: UnitCatalog.Gan, back1: UnitCatalog.Doha),
+            Formation.Build(front1: UnitCatalog.Doha, front2: UnitCatalog.Kado, front3: UnitCatalog.Ban, mid: UnitCatalog.Hisa, back1: UnitCatalog.Gan)),
+        ("反撃改3 (カド×ハギ)",
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Gald, mid: UnitCatalog.Gan, back1: UnitCatalog.Kado, back2: UnitCatalog.Hagi),
+            Formation.Build(front2: UnitCatalog.Gan, front3: UnitCatalog.Gald, mid: UnitCatalog.Hisa, back1: UnitCatalog.Hagi, back2: UnitCatalog.Kado)),
+        ("追撃×死 (ハギ×リィカ)",
+            Formation.Build(front1: UnitCatalog.Hagi, front2: UnitCatalog.Zoto, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Mug),
+            Formation.Build(front2: UnitCatalog.Hagi, front3: UnitCatalog.Zoto, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Mug)),
+        ("散開耐久 (ササ×ドハ)",
+            Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald, mid: UnitCatalog.Doha, back2: UnitCatalog.Dolga),
+            Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Gald, mid: UnitCatalog.Dolga, back1: UnitCatalog.Sasa)),
+        ("逆しま+後備え",
+            Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Golm, mid: UnitCatalog.Kubi, back1: UnitCatalog.Sekki, back2: UnitCatalog.Utsu),
+            Formation.Build(front2: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Kubi, back1: UnitCatalog.Sekki, back2: UnitCatalog.Utsu))
+    };
+
+    Console.WriteLine("## 採用候補の追試");
+    Console.WriteLine();
+    Console.WriteLine($"seed {Base}..{Base + Seeds - 1} の {Seeds} 試行。選定に使った seed 0..199 とは重ならない。");
+    Console.WriteLine($"差が {Threshold:F0}pt 未満なら誤差とみなして据え置く。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 旧配置 | 候補 | 差 | 採否 |" + string.Concat(stages.Select((_, i) => $" 第{i + 1}波差 |")));
+    Console.WriteLine("|---|--:|--:|--:|:-:|" + string.Concat(stages.Select(_ => "---:|")));
+
+    foreach (var (name, oldF, newF) in picks)
+    {
+        double[] o = stages.Select(st => Rate(oldF, st.Enemy)).ToArray();
+        double[] n = stages.Select(st => Rate(newF, st.Enemy)).ToArray();
+        double gap = n.Average() - o.Average();
+        Console.WriteLine($"| {name} | {o.Average():F1}% | {n.Average():F1}% | {gap:+0.0;-0.0}pt | {(gap >= Threshold ? "採用" : "据え置き")} |"
+            + string.Concat(Enumerable.Range(0, stages.Count).Select(i => $" {n[i] - o[i]:+0.0;-0.0} |")));
+        Console.Out.Flush();
+    }
+    return;
+
+    double Rate(Formation f, Formation enemy)
+    {
+        int wins = 0;
+        for (int seed = Base; seed < Base + Seeds; seed++)
+            if (BattleEngine.Run(f, enemy, seed, verbose: false).PlayerWon) wins++;
+        return wins * 100.0 / Seeds;
+    }
+}
+
+if (focusId == "reseat")
+{
+    var all = CompareBuilds();
+    IReadOnlyList<EnemyCatalog.Stage> stages = EnemyCatalog.Stages;
+    const int ScanSeeds = 50;    // 候補を絞るための粗い探索。layout と揃える
+    const int VerifySeeds = 200; // 採否を決める測り直し。compare と揃える
+    const int TopOverall = 20;
+    const int TopConstrained = 10;
+
+    // 現行配置が6位以下だった編成（前回セッションの layout より）。
+    var targets = new[]
+    {
+        "毒 (グザ×ミオ×ラウ)", "反撃 (ヒサ×カド)", "惨禍×被弾強化", "惨禍×死の連鎖",
+        "溜め (ガン×ドルガ×カド)", "溜め改 (クグ×バン×ガン)", "逆しま改 (クビ×ウツ)",
+        "反撃改2 (ガン×カド)", "反撃改3 (カド×ハギ)", "追撃×毒 (ハギ×グザ)",
+        "追撃×死 (ハギ×リィカ)", "散開耐久 (ササ×ドハ)", "死の連鎖+後備え", "逆しま+後備え"
+    };
+
+    // 長時間ジョブは前景で待ち切るしかない（背景に回すと起動元のコマンド終了で刈られる）。
+    // 一回の呼び出しに収まる分だけを回せるよう、対象を切り出せるようにしてある。
+    int skip = args.Length > 2 && int.TryParse(args[2], out int sk) ? sk : 0;
+    int take = args.Length > 3 && int.TryParse(args[3], out int tk) ? tk : targets.Length;
+    targets = targets.Skip(skip).Take(take).ToArray();
+
+    Console.WriteLine("# 配置の測り直し");
+    Console.WriteLine();
+    Console.WriteLine($"seed 0..{ScanSeeds - 1} の全配置探索で候補を絞り、seed 0..{VerifySeeds - 1} で測り直した。");
+    Console.WriteLine("`狙`列: ガルドが前列 / セッキが後列 を満たすか（その駒を含む編成のみ）。");
+
+    foreach (string name in targets)
+    {
+        var build = all.First(b => b.Name == name);
+        var members = build.F.Occupied().Select(x => x.Def).ToList();
+
+        var perms = new List<Formation>();
+        foreach (int[] assign in SlotAssignments(members.Count))
+        {
+            var f = new Formation();
+            for (int m = 0; m < members.Count; m++) f[assign[m]] = members[m];
+            perms.Add(f);
+        }
+
+        var scan = new int[perms.Count];
+        for (int i = 0; i < perms.Count; i++)
+        {
+            int wins = 0;
+            foreach (EnemyCatalog.Stage st in stages)
+                for (int seed = 0; seed < ScanSeeds; seed++)
+                    if (BattleEngine.Run(perms[i], st.Enemy, seed, verbose: false).PlayerWon) wins++;
+            scan[i] = wins;
+        }
+
+        var order = Enumerable.Range(0, perms.Count).OrderByDescending(i => scan[i]).ThenBy(i => i).ToList();
+        var pool = order.Take(TopOverall)
+            .Concat(order.Where(i => MeetsIntent(perms[i])).Take(TopConstrained))
+            .Append(order.First(i => SameFormation(perms[i], build.F)))
+            .Distinct().ToList();
+
+        var verified = pool.Select(i =>
+        {
+            var cells = stages.Select(st =>
+            {
+                int wins = 0;
+                for (int seed = 0; seed < VerifySeeds; seed++)
+                    if (BattleEngine.Run(perms[i], st.Enemy, seed, verbose: false).PlayerWon) wins++;
+                return wins * 100.0 / VerifySeeds;
+            }).ToArray();
+            return (Idx: i, Cells: cells, Avg: cells.Average());
+        }).OrderByDescending(x => x.Avg).ToList();
+
+        Console.WriteLine();
+        Console.WriteLine($"## {name}");
+        Console.WriteLine();
+        Console.WriteLine("| 粗順 | 狙 | 前1/前2/前3 | 中 | 後1/後2 | 平均 |"
+            + string.Concat(stages.Select((_, i) => $" 第{i + 1}波 |")));
+        Console.WriteLine("|--:|:-:|---|---|---|--:|" + string.Concat(stages.Select(_ => "---:|")));
+        foreach (var v in verified)
+        {
+            Formation f = perms[v.Idx];
+            static string N(UnitDef? d) => d?.Name ?? "−";
+            bool isCur = SameFormation(f, build.F);
+            string rank = $"{order.IndexOf(v.Idx) + 1}" + (isCur ? "★現行" : "");
+            Console.WriteLine($"| {rank} | {(MeetsIntent(f) ? "○" : "×")} | {N(f[0])}/{N(f[1])}/{N(f[2])} | {N(f[3])} "
+                + $"| {N(f[4])}/{N(f[5])} | {v.Avg:F1}% |" + string.Concat(v.Cells.Select(c => $" {c:F1}% |")));
+        }
+        Console.Out.Flush();
+
+        bool MeetsIntent(Formation f)
+        {
+            foreach (var (slot, def) in f.Occupied())
+            {
+                if (ReferenceEquals(def, UnitCatalog.Gald) && FormationRules.RowOf(slot) != Row.Front) return false;
+                if (ReferenceEquals(def, UnitCatalog.Sekki) && FormationRules.RowOf(slot) != Row.Back) return false;
+            }
+            return true;
+        }
+    }
+    return;
+}
+
 if (focusId == "layout")
 {
     var builds = CompareBuilds();
@@ -373,15 +557,19 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     ("毒+耐久 (ベニ×トウ)",  Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Tou, back1: UnitCatalog.Mio, back2: UnitCatalog.Beni)),
     // ヒサの隣接はカドだけ（後1↔後2）。ガルド(HP100>カド96)を隣に置くと標的が逸れる（layout 1位）
     ("反撃 (ヒサ×カド)",     Formation.Build(front2: UnitCatalog.Nono, front3: UnitCatalog.Gald, mid: UnitCatalog.Nel, back1: UnitCatalog.Hisa, back2: UnitCatalog.Kado)),
-    // ヒサ(前3)の隣接はカドだけ（前3はレーンが浅く縦隣接を持たない）。ムドは前1で敵の攻撃と惨禍を浴びて育ち、
-    // セロは中衛から被弾後退して貫きに変わる（layout 1位）
-    ("惨禍×被弾強化",        Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Kado, front3: UnitCatalog.Hisa, mid: UnitCatalog.Sero, back2: UnitCatalog.Nono)),
-    // 中衛リィカの生贄が隣のカドとゾトを削り、惨禍込みの死の密度で墓守が積む（layout 1位）
-    ("惨禍×死の連鎖",        Formation.Build(front2: UnitCatalog.Kado, front3: UnitCatalog.Golm, mid: UnitCatalog.Rica, back1: UnitCatalog.Vel, back2: UnitCatalog.Zoto)),
+    // ヒサを前1へ回すと隣接はカドとノノになるが、標的は最大HPで選ばれるのでカドのままで狙いは崩れない。
+    // カドを前2の中央に置くと巻き込みがヒサ・ムド・セロの3枚へ広がり、成長が速くなる（+7.1pt / 第5波 +19.3）。
+    // 旧配置（ムド前1・ヒサ前3）はヒサの隣接をカドだけに絞る形だったが、カドの巻き込み先が2枚に減っていた（reseat 追試）
+    ("惨禍×被弾強化",        Formation.Build(front1: UnitCatalog.Hisa, front2: UnitCatalog.Kado, front3: UnitCatalog.Mudo, mid: UnitCatalog.Sero, back1: UnitCatalog.Nono)),
+    // 惨禍（味方全体の被ダメ5割増）は位置を問わないので、死の密度は隣接に頼らなくても出る。
+    // リィカを後1へ下げて生贄をゾト1枚に絞り、中衛はヴェルに。リィカが開幕で自陣を削りすぎる形をやめた（+19.1pt / 第4波 +57.0）。
+    // 旧配置（中衛リィカがカドとゾトを削る）は狙いとしては筋が通っていたが、第4波で 25% まで落ちていた（reseat 追試）
+    ("惨禍×死の連鎖",        Formation.Build(front2: UnitCatalog.Golm, front3: UnitCatalog.Kado, mid: UnitCatalog.Vel, back1: UnitCatalog.Rica, back2: UnitCatalog.Zoto)),
     // ガルドは前列でないと庇えない。前1を空けてガルドとゴルムを前2・前3へ寄せた形が探索1位。セロは中衛から被弾後退（layout 1位）
     ("耐久 (ガルド×ノノ)",   Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Golm, mid: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back2: UnitCatalog.Nono)),
-    // 動かないカドを前1に置き、ヒサは後1から深さ隣接でカドだけを指す（layout 1位）
-    ("溜め (ガン×ドルガ×カド)", Formation.Build(front1: UnitCatalog.Kado, front2: UnitCatalog.Gald, front3: UnitCatalog.Dolga, mid: UnitCatalog.Gan, back1: UnitCatalog.Hisa)),
+    // ヒサを中衛に置くと横隣接が無く、深さ隣接の後2だけを指す。そこにカドを置けば標的は確定する。
+    // カドを後2へ下げても囃し立てで被弾は来るので棘は回り、前列はガルドとドルガが受ける（+3.6pt / 第5波 +15.5）
+    ("溜め (ガン×ドルガ×カド)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, mid: UnitCatalog.Hisa, back1: UnitCatalog.Gan, back2: UnitCatalog.Kado)),
     // グザの瘴気（味方全体に毒）は位置不問。ムドは前1で敵の攻撃も浴びて育ち、ガルドは前3で庇う。セロは中衛から被弾後退（layout 1位）
     ("毒→被弾強化 (グザ×ムド)", Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Guza, front3: UnitCatalog.Gald, mid: UnitCatalog.Sero, back1: UnitCatalog.Borg)),
     // ヴィオの吸い上げは全体対象で位置不問。スィドの毒漏れはむしろ燃料なので孤立させない（layout 1位）
@@ -393,21 +581,25 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 旧狙いの二段逃げ型（セロ前列→中のヨミ→後）は割り込み後も 48.8% 止まり（83位）。前列へ突き出されたヨミが削られるだけなので捨てた。
     // 探索1〜3位はガルド後列で庇いが死ぬので採らない（layout 4位）
     ("突き出し (セロ×ヨミ)",  Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Sero, back1: UnitCatalog.Yomi, back2: UnitCatalog.Nel)),
-    // 溜め役3体を敵から遠い後列と中衛へ。カドとクグの前列が受け止める（layout 1位）
-    ("溜め改 (クグ×バン×ガン)", Formation.Build(front1: UnitCatalog.Kado, front2: UnitCatalog.Kugu, mid: UnitCatalog.Ban, back1: UnitCatalog.Dolga, back2: UnitCatalog.Gan)),
+    // 溜め役3体を敵から遠い後列と中衛へ、という狙いはそのまま。前1を空けてカド・クグを前2/前3へ寄せ、
+    // 中衛をガンに替えた形が上（+2.1pt）。カドの巻き込み先はクグとガンで変わらない
+    ("溜め改 (クグ×バン×ガン)", Formation.Build(front2: UnitCatalog.Kado, front3: UnitCatalog.Kugu, mid: UnitCatalog.Gan, back1: UnitCatalog.Ban, back2: UnitCatalog.Dolga)),
     // 軋みの割り込み攻撃の追加後に再探索。セロは前1から中のバサ、次に後1のヨミを順に突き飛ばして貫きに変わり、
     // 逃亡もバサの入れ替えも全部シオとヨミの燃料になる（layout 1位）
     ("移動改 (バサ×ヨミ×シオ)", Formation.Build(front1: UnitCatalog.Sero, front2: UnitCatalog.Shio, front3: UnitCatalog.Gald, mid: UnitCatalog.Basa, back1: UnitCatalog.Yomi)),
     // 呪詛は全体に漏れるのでウツの位置は不問。探索上位4件(80.8%)はガルド後列で庇いが死ぬので採らない。セロは中衛から被弾後退（layout 5位）
     ("逆しま (ネル×ウツ)",   Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Sero, back1: UnitCatalog.Nel, back2: UnitCatalog.Utsu)),
-    // 萎縮も呪詛も全体に効く。ウツだけ守られる中衛に置き、ガルドは前列で庇う（layout 52位）
-    ("逆しま改 (クビ×ウツ)", Formation.Build(front1: UnitCatalog.Nel, front2: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Utsu, back1: UnitCatalog.Kubi)),
+    // 萎縮も呪詛も全体に効くので、守るべきは中衛のクビの方。ネルとウツを後列へ下げた（+3.1pt / 第5波 +14.5）。
+    // 全体1位はガルドを後1に置く形（99.4%）だが庇いが死ぬので採らない。この差 +11.5pt は庇いの監査結果そのもの（README 参照）
+    ("逆しま改 (クビ×ウツ)", Formation.Build(front2: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back2: UnitCatalog.Utsu)),
     // 旧配置がそのまま全配置1位。ヒサの隣接（カド・ネル）で最大HPはカド（layout 1位）
     ("反撃改 (ドハ×カド)",   Formation.Build(front1: UnitCatalog.Hisa, front2: UnitCatalog.Kado, front3: UnitCatalog.Doha, mid: UnitCatalog.Nono, back1: UnitCatalog.Nel)),
-    // ヒサ(前3)の横はカドだけ＝標的が確実にカドへ。溜め役のガンとドハは奥（layout 1位）
-    ("反撃改2 (ガン×カド)",  Formation.Build(front1: UnitCatalog.Ban, front2: UnitCatalog.Kado, front3: UnitCatalog.Hisa, mid: UnitCatalog.Gan, back1: UnitCatalog.Doha)),
-    // ヒサ(前1)の隣接は後1のカドだけ。ガルドは前3で庇い、ハギは後2で延命（layout 4位、Gald前列の最良）
-    ("反撃改3 (カド×ハギ)",  Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Gald, mid: UnitCatalog.Gan, back1: UnitCatalog.Kado, back2: UnitCatalog.Hagi)),
+    // ヒサを中衛へ。横隣接が無いので深さ隣接の前2＝カドだけを指す。前列3枚が受け、カドの巻き込みはドハ・バン・ヒサへ広がる
+    // （+12.2pt / 第3波 +39.0）。旧配置はヒサ前3で標的は同じだが、前列が2枚しかなく第3波が 36% だった
+    ("反撃改2 (ガン×カド)",  Formation.Build(front1: UnitCatalog.Doha, front2: UnitCatalog.Kado, front3: UnitCatalog.Ban, mid: UnitCatalog.Hisa, back1: UnitCatalog.Gan)),
+    // ヒサを中衛へ。隣接はガン(前2)とカド(後2)だが、標的は最大HPで選ばれるのでカド。ガルドは前3で庇う
+    // （+7.4pt / 第3波 +23.3）。ガルド前列の制約を外すと 73.1% まで伸びるが、差は +0.5pt なので制約を保つ側を採った
+    ("反撃改3 (カド×ハギ)",  Formation.Build(front2: UnitCatalog.Gan, front3: UnitCatalog.Gald, mid: UnitCatalog.Hisa, back1: UnitCatalog.Hagi, back2: UnitCatalog.Kado)),
     // ハギは守られる中衛から追い打つ（位置不問）。前列3枚が受け、ミオは後1（layout: ガルド前列の最良）
     ("追撃×毒 (ハギ×グザ)",  Formation.Build(front1: UnitCatalog.Guza, front2: UnitCatalog.Gald, front3: UnitCatalog.Golm, mid: UnitCatalog.Hagi, back1: UnitCatalog.Mio)),
     // 死の連鎖にハギを足した形。ムグは後2で最後に死んで胞子を残す（layout 1位）
@@ -415,8 +607,9 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 軋みの割り込み攻撃の追加後に再探索。空き枠で孤立を作る散開の幾何はそのまま、ガルド(前1)とササ(前3)が孤立して-35%を受ける
     // （旧配置の左右鏡像 / layout 1位）
     ("移動改2 (ササ×ヨミ)",  Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sasa, mid: UnitCatalog.Basa, back2: UnitCatalog.Yomi)),
-    // 同じく孤立の幾何。ドハの分かちは全体に効くので中衛でよい（layout 1位）
-    ("散開耐久 (ササ×ドハ)", Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald, mid: UnitCatalog.Doha, back2: UnitCatalog.Dolga)),
+    // 孤立を2枚作る幾何は同じだが、孤立させる相手をガルドとドルガに替えた（旧配置はササ自身とガルド）。
+    // ササは自分が孤立している必要がない。分かちは全体に効くのでドハは前1でよい（+2.8pt）
+    ("散開耐久 (ササ×ドハ)", Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Gald, mid: UnitCatalog.Dolga, back1: UnitCatalog.Sasa)),
     // セッキは後列でないと庇えない。探索上位は前列セッキで特性が死ぬので、後列制約下の最良を採る（layout 18位）
     ("死の連鎖+後備え", Formation.Build(front2: UnitCatalog.Zoto, front3: UnitCatalog.Golm, mid: UnitCatalog.Vel, back1: UnitCatalog.Rica, back2: UnitCatalog.Sekki)),
     // セロは中衛から後1のドルガを突き飛ばして逃げ込み、セッキが貫き以外の後列狙いを肩代わりして狙撃を守る。
