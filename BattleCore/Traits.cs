@@ -67,6 +67,18 @@ public abstract class Trait
     public virtual bool CanAct(BattleContext ctx, UnitState self) => true;
 
     /// <summary>
+    /// <see cref="CanAct"/> が false のとき、それが「差し出したターン」なのか
+    /// 「もともと持っていないターン」なのか。
+    ///
+    /// 号令（ガン）や据え（バン）は「動かなかった味方」を資源に変えるが、
+    /// 不動（カド）や追い打ち（ハギ）はそもそも自分のターンに振らない型なので、
+    /// 差し出すものが無い。ここを区別しないと、**編成時に一度払っただけの静的なマイナスが
+    /// 毎ターンの収入に化ける**（カドは第五波で号令から無償で +8/ターンを受け取り続けていた）。
+    /// のろま（ドルガ）は毎ターン実際にターンを失うので true のままでよい。
+    /// </summary>
+    public virtual bool SurrendersTurn => true;
+
+    /// <summary>
     /// ターン外の攻撃（割り込み・追い打ち）ができるか。
     ///
     /// <see cref="CanAct"/> と分けているのは、あれが二つの別物を兼ねているため。
@@ -499,6 +511,9 @@ public sealed class ImmobileTrait : Trait
     public override TraitId Id => TraitId.Immobile;
 
     public override bool CanAct(BattleContext ctx, UnitState self) => false;
+
+    // 最初から振らない型なので、差し出したターンとして数えない
+    public override bool SurrendersTurn => false;
 }
 
 /// <summary>棘。受けたダメージの一部を殴り返す。反撃で反撃が起きない制御は engine 側。</summary>
@@ -506,6 +521,15 @@ public sealed class ThornsTrait : Trait
 {
     public const int Multiplier = 2;
     public const int SplashPercent = 60;
+
+    /// 味方への巻き込み量。基礎攻撃力（Def.Attack）に対する割合で、CurrentAttack を参照しない。
+    /// ここを現在攻撃力にすると「上昇量が現在値に比例する」形になり、増分が増分を生む。
+    /// 惨禍を自分で持っているぶん締まりが速く、隣接味方のHPという小さな有限プールに
+    /// 指数を当てることになるので、何も起きないか2ターンで自壊するかの二極化になる。
+    public const int FriendlySplashPercent = 50;
+
+    /// 巻き込んだ実ダメージのうち、攻撃力に変わる割合の逆数。ムドの被弾強化（dmg/2）と揃えてある。
+    public const int GainDivisor = 2;
 
     public override TraitId Id => TraitId.Thorns;
 
@@ -533,6 +557,31 @@ public sealed class ThornsTrait : Trait
                 // 敵に及ぶ範囲なので横のみ。味方に及ぶものと定義を分けている。
                 if (!FormationRules.AreLateralNeighbors(source.Slot, other.Slot)) continue;
                 ctx.ApplyDamage(other, Math.Max(1, back * SplashPercent / 100), self);
+            }
+
+            // 棘は味方も巻き込み、巻き込んだぶんだけ据わる。
+            // 上昇源を「味方に与えた実ダメージ」だけに限っているのは、隣の味方が全員倒れたあとも
+            // 敵ダメージで無償に伸び続ける穴を作らないため（号令がカドに毎ターン +8 を
+            // 無償で払っていたのと同じ形になる）。代金は常に隣接味方のHPで支払われる。
+            // 味方に及ぶ範囲は前後を含む（ボルグと同じ AreAdjacent）。敵に及ぶ範囲の左右のみとは定義を分けている。
+            int spill = Math.Max(1, self.Def.Attack * FriendlySplashPercent / 100);
+            int gained = 0;
+
+            foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+            {
+                if (ally == self) continue;
+                if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+
+                int before = ally.Hp;
+                ctx.Log($"    余波: {self.Name} の棘が {ally.Name} を巻き込む", LogKind.FriendlyFire);
+                ctx.ApplyDamage(ally, spill, self, isFriendlyFire: true);
+                gained += (before - ally.Hp) / GainDivisor;
+            }
+
+            if (gained > 0)
+            {
+                self.AtkBonus += gained;
+                ctx.Log($"    {self.Name} は巻き込むほど据わる（攻撃 +{gained} → {self.CurrentAttack}）", LogKind.Trigger);
             }
         });
     }
@@ -737,6 +786,11 @@ public sealed class RallyTrait : Trait
 
             int idle = ally.Counter(StatusKeys.IdleTurn);
             if (idle <= 0 || idle != ctx.Turn - 1) continue;
+
+            // 差し出したターンにだけ払う。不動（カド）は最初から振らない型で、
+            // 差し出すものが無い。ここを見ないと静的なマイナスが毎ターンの収入になる。
+            // 据え（Bulwark）は積み上がらない一定の減衰なので、こちらの制限はかけない。
+            if (ally.Traits.Where(t => !t.CanAct(ctx, ally)).Any(t => !t.SurrendersTurn)) continue;
 
             ally.AtkBonus += Gain;
             ctx.Log($"    {self.Name} の号令で {ally.Name} の溜めが乗った（攻撃 +{Gain}）", LogKind.Trigger);
@@ -971,6 +1025,9 @@ public sealed class PursuerTrait : Trait
     public override TraitId Id => TraitId.Pursuer;
 
     public override bool CanAct(BattleContext ctx, UnitState self) => false;
+
+    // 割り込みで振るのが役割。自分のターンを差し出したわけではない
+    public override bool SurrendersTurn => false;
 
     public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
     {

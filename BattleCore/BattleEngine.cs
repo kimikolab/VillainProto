@@ -590,8 +590,9 @@ public static class BattleEngine
                 bool canAct = actor.Traits.All(t => t.CanAct(ctx, actor));
                 if (!canAct)
                 {
-                    // 動けなかったことを記録する。理由（のろま・不動・麻痺）は問わない。
-                    // 「動かなかった味方」を資源に変える駒が、これを見て働く。
+                    // 動けなかったことを記録する。ただし「差し出したターン」だけを数える。
+                    // 不動（カド）・追い打ち（ハギ）は最初から自分のターンに振らない型なので、
+                    // ここで数えると号令・据えが無償の毎ターン収入になる（Trait.SurrendersTurn 参照）。
                     actor.SetCounter(StatusKeys.IdleTurn, turn);
                     continue;
                 }

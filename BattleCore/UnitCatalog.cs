@@ -158,8 +158,8 @@ public static class UnitCatalog
         Attack = 11,
         Speed = 4,
         Traits = new[] { TraitId.Thorns, TraitId.Immobile, TraitId.Havoc },
-        PlusText = "殴られると、自分の攻撃力の2倍を敵に返す。反撃は隣の敵にも届く",
-        MinusText = "自分からは決して攻撃しない / 味方全体の受けるダメージが5割増える",
+        PlusText = "殴られると、自分の攻撃力の2倍を敵に返す。反撃は隣の敵にも届き、巻き込んだ味方のダメージ分だけ自分の攻撃力が上がる",
+        MinusText = "自分からは決して攻撃しない / 反撃が隣の味方も巻き込む / 味方全体の受けるダメージが5割増える",
         Flavor = "命令しても動かない。そばにいる者の傷がなぜか深くなる。"
     };
 
