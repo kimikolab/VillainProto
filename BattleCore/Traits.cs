@@ -63,7 +63,20 @@ public abstract class Trait
 
     public virtual void OnBattleStart(BattleContext ctx, UnitState self) { }
     public virtual void OnTurnStart(BattleContext ctx, UnitState self) { }
+    /// <summary>自分のターンに動くか。false は「自分からは動かない」という設計であって、無力化とは限らない。</summary>
     public virtual bool CanAct(BattleContext ctx, UnitState self) => true;
+
+    /// <summary>
+    /// ターン外の攻撃（割り込み・追い打ち）ができるか。
+    ///
+    /// <see cref="CanAct"/> と分けているのは、あれが二つの別物を兼ねているため。
+    /// 不動（カド）や追い打ち（ハギ）の CanAct=false は「自分のターンには振らない」という
+    /// 設計上の型であって、割り込みこそが役割そのもの。ここで CanAct を流用すると両方が無価値になる。
+    /// 一方で痺れ・のろまは無力化なので、ターン外の攻撃も止まらないと
+    /// 「動かされれば縛められていても振れる」ことになり、マイナス特性が配置で消える。
+    /// </summary>
+    public virtual bool CanReact(BattleContext ctx, UnitState self) => true;
+
     public virtual int ModifyAttack(UnitState self, int atk) => atk;
 
     /// <summary>攻撃パターンを状況で書き換える。後列でだけ貫きになる、など。</summary>
@@ -198,6 +211,11 @@ public sealed class SluggishTrait : Trait
         if (!act) ctx.Log($"    {self.Name} はまだ動き出せない", LogKind.Action);
         return act;
     }
+
+    // 割り込みでも動けない。のろまは「自分からは振らない」型ではなく無力化なので、
+    // 動かされたからといって偶数ターンに振れてはいけない。
+    // 現ロスターにのろま＋割り込みの同居はないため、この行は将来の穴を塞ぐためのもの。
+    public override bool CanReact(BattleContext ctx, UnitState self) => ctx.Turn % 2 == 1;
 }
 
 /// <summary>脆弱。受けるダメージが5割増し。</summary>
@@ -783,7 +801,11 @@ public sealed class DisplacedTrait : Trait
         // 再入だけ止めれば、将来「被弾したら味方と入れ替わる」ような駒が入っても無限ループにならない。
         // フラグは Trait（共有シングルトン）ではなく BattleContext 側に持つ。static にすると
         // layout モードの並列実行で別の戦闘同士が干渉する（BattleContext.Interrupt 参照）。
-        if (!self.IsAlive || ctx.InInterrupt) return;
+        if (ctx.InInterrupt) return;
+
+        // 痺れ・のろまで無力化されている間は振れない。攻撃力の上昇は残す
+        // （動かされた事実は起きているので、縛めが解けた後にまとめて振る形になる）。
+        if (!ctx.CanActOutOfTurn(self)) return;
 
         // 毒のティックで敵が全滅した直後のターン開始に動かされることがある。振る相手がいなければ見せ場のログも出さない。
         if (!ctx.TeamAlive(ctx.Opponent(self.TeamId))) return;
@@ -953,7 +975,7 @@ public sealed class PursuerTrait : Trait
     public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
     {
         if (dead.TeamId == self.TeamId) return;
-        if (!self.IsAlive) return;
+        if (!ctx.CanActOutOfTurn(self)) return;            // 縛められている間は追い打てない
         if (self.Counter("pursued") >= ctx.Turn) return;   // 1ターン1回
 
         self.SetCounter("pursued", ctx.Turn);

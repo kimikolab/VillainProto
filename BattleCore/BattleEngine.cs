@@ -37,6 +37,17 @@ public sealed class BattleContext
     /// </summary>
     public bool InInterrupt { get; private set; }
 
+    /// <summary>
+    /// ターン外の攻撃（割り込み・追い打ち）が通るか。無力化されている駒はターン外でも振れない。
+    ///
+    /// 痺れカウンタはここでは消費しない。割り込みは相手のターン中に起きるので、
+    /// ここで消すと本人のターンが回ってくる前に縛めが解けてしまう。
+    /// </summary>
+    public bool CanActOutOfTurn(UnitState u)
+        => u.IsAlive
+           && u.Counter(StatusKeys.Stun) == 0
+           && u.Traits.All(t => t.CanReact(this, u));
+
     public void Interrupt(Action body)
     {
         if (InInterrupt) return;
@@ -501,15 +512,18 @@ public sealed class BattleContext
             if (FormationRules.DepthOf(u.Row) > FormationRules.DepthOf(from))
                 u.HasFallenBack = true;
 
-            foreach (Trait t in u.Traits.ToList())
-                t.OnMoved(this, u, from, u.Row);
-
+            // 味方の反応を先に流す。OnMoved は割り込み攻撃まで含むので、逆順だと
+            // シオの強化が「振った後」に乗る（軋みが +5 を載せずに振ってしまう）。
+            // 支援が先・本人の反応が後、という順序をここで固定する。
             foreach (UnitState ally in LivingMembers(u.TeamId))
             {
                 if (ally == u) continue;
                 foreach (Trait t in ally.Traits.ToList())
                     t.OnAllyMoved(this, ally, u);
             }
+
+            foreach (Trait t in u.Traits.ToList())
+                t.OnMoved(this, u, from, u.Row);
         }
     }
 }

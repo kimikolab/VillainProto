@@ -55,6 +55,10 @@ if (focusId == "layout")
     IReadOnlyList<EnemyCatalog.Stage> stages = EnemyCatalog.Stages;
     const int LayoutSeeds = 50;
     const int TopN = 5;
+    const int VerifySeeds = 200;   // 探索で選んだ配置を測り直すときの試行数。compare と揃える
+
+    // 波別最良の一覧を最後にまとめて出すための控え。[編成, 波] → (現行, 最良)
+    var bestByStage = new (double Cur, double Best)[builds.Length, stages.Count];
 
     // ジョブ表は「編成の並び順 → 配置の辞書式昇順」で逐次構築する。
     // 各ジョブは results[自分の添字] にしか書かないので、回収に同期は要らず、
@@ -111,8 +115,71 @@ if (focusId == "layout")
 
         int cur = ranked.FindIndex(i => SameFormation(jobs[i].F, builds[bb].F));
         Console.WriteLine(LayoutRow($"現行({cur + 1}位)", jobs[ranked[cur]].F, results[ranked[cur]], LayoutSeeds));
+
+        // 波別最良。上の表は全ステージ平均を最大化する「一つの配置」を選ぶが、
+        // 実プレイは波ごとに組み替えられる。この差を出さないと、平均最良の配置が
+        // たまたま苦手な波で出した勝率を「その編成の限界」と読み違える（§2-10）。
+        Console.WriteLine();
+        Console.WriteLine("| 波 | 前1/前2/前3 | 中 | 後1/後2 | 現行 | 波別最良 |");
+        Console.WriteLine("|---|---|---|---|--:|--:|");
+        for (int st = 0; st < stages.Count; st++)
+        {
+            int sx = st;
+
+            // seed 50 の探索は 720 通りの最大を取るので、上位は運で入れ替わる。
+            // 1位だけを測り直すと「波別最良が現行より低い」という原理的にありえない行が出る
+            // （実測で最大 8pt の逆転が出た）。候補を上位数件に広げ、現行も必ず混ぜて、
+            // seed 200 で測り直した中の最良を採る。これで表は必ず単調になる。
+            const int Candidates = 8;
+            var pool = ranked.OrderByDescending(i => results[i][sx])
+                             .ThenBy(i => jobs[i].PermIdx)
+                             .Take(Candidates)
+                             .Append(ranked[cur])
+                             .Distinct()
+                             .ToList();
+
+            double curRate = Rate(jobs[ranked[cur]].F, stages[sx].Enemy);
+            int best = ranked[cur];
+            double bestRate = curRate;
+            foreach (int i in pool)
+            {
+                double r = Rate(jobs[i].F, stages[sx].Enemy);
+                if (r > bestRate) { bestRate = r; best = i; }
+            }
+            bestByStage[bb, sx] = (curRate, bestRate);
+
+            Formation bf = jobs[best].F;
+            Console.WriteLine($"| 第{sx + 1}波 | {NameOf(bf[0])}/{NameOf(bf[1])}/{NameOf(bf[2])} | {NameOf(bf[3])} "
+                + $"| {NameOf(bf[4])}/{NameOf(bf[5])} | {curRate:F1}% | {bestRate:F1}% |");
+        }
+    }
+
+    // 一覧。docs/balance.md（現行配置で固定）と並べて読むためのもの。
+    Console.WriteLine();
+    Console.WriteLine("## 波別最良の一覧");
+    Console.WriteLine();
+    Console.WriteLine($"各セルは「現行配置 → その波だけの最良配置」。どちらも seed 0..{VerifySeeds - 1} で測り直した値。");
+    Console.WriteLine("勝率表（`compare`）は現行配置に固定した値なので、左の数字がそちらと対応する。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 |" + string.Concat(stages.Select((_, i) => $" 第{i + 1}波 |")));
+    Console.WriteLine("|---|" + string.Concat(stages.Select(_ => "---:|")));
+    for (int b = 0; b < builds.Length; b++)
+    {
+        var cells = Enumerable.Range(0, stages.Count)
+            .Select(st => $" {bestByStage[b, st].Cur:F1} → {bestByStage[b, st].Best:F1} |");
+        Console.WriteLine($"| {builds[b].Name} |" + string.Concat(cells));
     }
     return;
+
+    double Rate(Formation f, Formation enemy)
+    {
+        int wins = 0;
+        for (int seed = 0; seed < VerifySeeds; seed++)
+            if (BattleEngine.Run(f, enemy, seed, verbose: false).PlayerWon) wins++;
+        return wins * 100.0 / VerifySeeds;
+    }
+
+    static string NameOf(UnitDef? d) => d?.Name ?? "−";
 }
 
 // dump モード: カタログから資料を吐く。手書きの一覧とコードがずれないようにするため。
