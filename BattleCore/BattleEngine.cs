@@ -352,7 +352,11 @@ public sealed class BattleContext
         if (amount <= 0) return;
 
         // 分かち: 型を問わず肩代わりする。庇うと違い、薙ぎや全体でも働く。
-        if (!isFriendlyFire && !target.HasTrait(TraitId.Sharer))
+        // 味方同士の巻き込み（isFriendlyFire）も引き受ける。ここを除外していたとき、
+        // ドハはカドの代金（敵からの被弾）だけを4割肩代わりして守り、収入源（味方への巻き込み）は
+        // 満額通していた。都合のいい側だけを助ける形になっていたので条件を外した。
+        // 肩代わり先が自分自身になる再帰は下の HasTrait(Sharer) で止まる。
+        if (!target.HasTrait(TraitId.Sharer))
         {
             UnitState? sharer = teammates.FirstOrDefault(u => u.HasTrait(TraitId.Sharer) && u != target);
             if (sharer is not null)
@@ -363,6 +367,18 @@ public sealed class BattleContext
                     amount -= taken;
                     Log($"    {sharer.Name} が {target.Name} の痛みを引き受けた", LogKind.Trigger);
                     ApplyDamage(sharer, taken, source, isFriendlyFire: true);
+
+                    // 痛みを取り上げられた者は腕がなまる。肩代わり量に比例させているので、
+                    // 代金はドハのHPという有限プールから払われる（SharerTrait.DullDivisor 参照）。
+                    // 切り捨てのままにしてあるのは、Math.Max(1, ...) にすると小さいダメージの
+                    // 連打で比例関係が崩れ、下げ幅が肩代わり量から切り離されるため。
+                    int dull = taken / SharerTrait.DullDivisor;
+                    if (dull > 0)
+                    {
+                        target.AtkBonus -= dull;
+                        Log($"    痛みを取り上げられた {target.Name} の腕がなまる（攻撃 -{dull}）",
+                            LogKind.FriendlyFire);
+                    }
                 }
             }
         }
