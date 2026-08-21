@@ -483,20 +483,38 @@ public sealed class EphemeralTrait : Trait
     public override TraitId Id => TraitId.Ephemeral;
 }
 
-/// <summary>毒撃。即効性は無いが、長い戦闘ほど効く。硬い敵への回答になる。</summary>
+/// <summary>
+/// 毒撃。殴られると、殴ってきた相手に毒を積む。毒袋が破れる形。
+///
+/// もとは「攻撃した相手に毒を積む」だったが、それだと瘴気（グザ）の下位互換にしかならなかった。
+/// グザは毎ターン敵全体に +2 を撒き、澱み（ミオ）は「毒が積まれた敵の数」に比例して増やすので、
+/// 広さはグザが押さえている。スィドが1体に +3 を足しても、第三波の総層数33のうち3しか出ていなかった。
+/// 敵の両隣へ拡散させる案も測ったが、グザがいる限り広さは飽和していて動かない（第3波 2% → 4%）。
+///
+/// 重複しない役割は「濃さ」と「体」しか残っていない。被弾を層に変えると両方が同時に成立する。
+/// 殴られ続けるほど殴ってきた敵1体に層が集まり、疫み（ラウ）がその死体から撒き直す。
+/// 硬くて一撃が軽い波（第四波）では、耐えている時間がそのまま収入になるので、
+/// 長期戦が毒軸にとって不利ではなく有利に反転する。実際 第四波は 0% → 84% で、
+/// 決着は5ターン全滅から7ターン勝利に変わった。
+///
+/// 隣接味方への漏れは残してある。ここが澱み喰い（ヴィオ）の燃料になる。
+/// 配置探索でも、澱み喰いはスィドを中衛に置いて漏れをわざとミオに当てにいく形が最良だった。
+/// </summary>
 public sealed class VenomTrait : Trait
 {
-    public const int StackPerHit = 3;
+    public const int StackPerHit = 4;
 
     public override TraitId Id => TraitId.Venom;
 
-    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
     {
-        if (!target.IsAlive) return;
-        target.SetCounter(StatusKeys.Poison, target.Counter(StatusKeys.Poison) + StackPerHit);
-        ctx.Log($"    {target.Name} の毒が {target.Counter(StatusKeys.Poison)} 層になった", LogKind.Status);
+        if (source is null || source.TeamId == self.TeamId) return;
+        if (!source.IsAlive) return;
 
-        // 扱いが雑なので隣の味方にもかかる
+        source.SetCounter(StatusKeys.Poison, source.Counter(StatusKeys.Poison) + StackPerHit);
+        ctx.Log($"    {source.Name} の毒が {source.Counter(StatusKeys.Poison)} 層になった", LogKind.Status);
+
+        // 扱いが雑なので隣の味方にもかかる。漏れは前後を含む隣接（味方に及ぶものの定義）。
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
             if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;

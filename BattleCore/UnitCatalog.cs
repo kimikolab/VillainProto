@@ -141,13 +141,13 @@ public static class UnitCatalog
     {
         Id = "sid",
         Name = "毒吐きのスィド",
-        MaxHp = 40,
+        MaxHp = 84,
         Attack = 4,
         Speed = 9,
         Traits = new[] { TraitId.Venom },
-        PlusText = "攻撃した相手に毒を積む（毒は毎ターン層の分だけ削る）",
-        MinusText = "毒が隣接する味方にもかかる。自身の攻撃力はほぼ無い",
-        Flavor = "決着が長引く戦しか勝てないので、遅い、と切られた。"
+        PlusText = "殴られると、殴ってきた相手に毒を積む（毒は毎ターン層の分だけ削る）",
+        MinusText = "自分からは毒を積めない。毒が隣接する味方にも漏れる。攻撃力もほぼ無い",
+        Flavor = "袋が破れるまで役に立たない。誰も隣に立ちたがらない。"
     };
 
     public static readonly UnitDef Kado = new()
