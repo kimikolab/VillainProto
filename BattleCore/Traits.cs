@@ -46,7 +46,8 @@ public enum TraitId
     Loose,       // 散開: 隣に味方がいない駒を硬くする
     Cower,       // 萎縮: 味方全体の攻撃を下げ、代わりに被ダメージを下げる
     Pursuer,     // 追い打ち: 味方が敵を倒すと、ターン外に割り込んで攻撃する
-    RearGuard    // 後備え: 後列の味方への攻撃を肩代わりする。貫きにも割り込む
+    RearGuard,   // 後備え: 後列の味方への攻撃を肩代わりする。貫きにも割り込む
+    Condemn      // 断罪: 反撃してきた相手を痺れさせる（敵側の語彙）
 }
 
 /// <summary>
@@ -755,6 +756,45 @@ public sealed class ParalyzeTrait : Trait
     }
 }
 
+/// <summary>
+/// 断罪。反撃で殴られたとき、反撃してきた相手を痺れさせる。敵側の語彙。
+///
+/// 反撃役（カド）の盤面への関与は反撃しかない。攻撃力が閾値を超えれば敵を倒し切って
+/// ほぼ無傷で勝ち、超えなければ何もできないまま負ける。中間の勝率が構造的に存在せず、
+/// 係数をどう刻んでも崖にしかならないことは4軸で測定済み（README 参照）。
+///
+/// なので値ではなく「反撃そのものに代金を請求する」形にする。刺し返すたびに痺れるので、
+/// **反撃の回数が多い編成ほど多く払う。** 反撃しない編成には何も起きない。
+///
+/// 痺れをただ撒く敵（審問官に痺れを持たせる案）は却下した。支配している編成が無傷のまま
+/// （反撃(ヒサ×カド) が -0.5pt）周辺だけが全滅する、裾野を刈るだけの形になる。
+/// 痺れは棘・割り込み・追い打ちの門（CanActOutOfTurn）を閉じるので、
+/// ターン外に動く駒だけが代金を払う。ターンを持たないカドが「痺れで失うものが無い」
+/// 状態だったのを塞いだ 98f8947 と対になる変更。
+/// </summary>
+public sealed class CondemnTrait : Trait
+{
+    // トウ（痺れ粉）の ParalyzeTrait.Chance とは別勘定。同じ値だが連動させないこと。
+    // 敵側の代金の頻度を刻むためにプレイヤー側の駒が動くと、前回の「係数が別勘定に漏れる」失敗に戻る。
+    public const int Chance = 45;
+
+    public override TraitId Id => TraitId.Condemn;
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        if (source is null || source.TeamId == self.TeamId) return;
+
+        // 反撃で殴られたときだけ。自分のターンの殴り合いに反応させると
+        // ただの痺れ撒きに戻り、ターン外に動かない編成まで巻き込む。
+        if (!ctx.InReaction) return;
+        if (!source.IsAlive) return;
+        if (ctx.Roll(100) >= Chance) return;
+
+        source.SetCounter(StatusKeys.Stun, 1);
+        ctx.Log($"    {self.Name} が {source.Name} の反撃を断罪した", LogKind.Status);
+    }
+}
+
 /// <summary>毒喰らい。敵に積まれた毒の量に応じて味方を癒す。毒が無ければ何もしない。</summary>
 public sealed class DevourTrait : Trait
 {
@@ -1131,7 +1171,8 @@ public static class TraitCatalog
         new LooseTrait(),
         new CowerTrait(),
         new PursuerTrait(),
-        new RearGuardTrait()
+        new RearGuardTrait(),
+        new CondemnTrait()
     }.ToDictionary(t => t.Id);
 
     public static Trait Get(TraitId id) => Map[id];

@@ -86,6 +86,7 @@
 | `Cower` | 萎縮のクビ |
 | `Pursuer` | 追い打ちのハギ |
 | `RearGuard` | 後備えのセッキ |
+| `Condemn` | - |
 
 ## ステージ
 

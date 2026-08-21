@@ -511,7 +511,10 @@ public static class EnemyCatalog
         Id = "axeman_v", Name = "戦斧兵", MaxHp = 52, Attack = 11, Speed = 5,
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Sweep
     };
-    public static readonly UnitDef Hero2 = Make("hero_v", "勇者候補", 90, 20, 14);
+    // 断罪は審問官と勇者候補の2体で持つ。1体だとカドの反撃が担い手を先に殺して罰が消える
+    // （審問官 HP76 / 単独だと配置を変えるだけで第5波 97.5% まで戻った）。
+    // 3体にすると今度はカド系が全部20%台まで落ちて逆の崖になる。数ではなく担い手の数が摘み。
+    public static readonly UnitDef Hero2 = Make("hero_v", "勇者候補", 90, 20, 14, TraitId.Condemn);
     public static readonly UnitDef Knight2 = Make("knight_v", "巡礼騎士", 71, 15, 7);
     public static readonly UnitDef Lancer = new()
     {
@@ -521,7 +524,7 @@ public static class EnemyCatalog
     public static readonly UnitDef Seer = new()
     {
         Id = "seer", Name = "審問官", MaxHp = 76, Attack = 12, Speed = 10,
-        Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.All
+        Traits = new[] { TraitId.Condemn }, Pattern = AttackPattern.All
     };
     // 第五波では使わない。第六波以降の素材として置いておく。
     public static readonly UnitDef Champion = Make("champion", "聖騎士長", 130, 22, 9, TraitId.Executioner);
@@ -554,6 +557,10 @@ public static class EnemyCatalog
 
         // 前列に薙ぎ、後列に貫きと全体。4種の攻撃パターンが同時に飛んでくる。
         // 単体前提の防御（庇う・標的）だけでは支えられない構成にしてある。
+        //
+        // 審問官と勇者候補は断罪を持つ。反撃してきた相手を痺れさせるので、
+        // ターン外に動く駒（棘・割り込み・追い打ち）だけが代金を払う。
+        // 反撃しない編成には何も起きない（19編成すべて ±0.0 で確認済み）。
         new Stage("第五波 / 異端審問団",
             Formation.Build(front1: Axeman2, front2: Hero2, front3: Knight2, mid: Lancer, back1: Seer))
     };
