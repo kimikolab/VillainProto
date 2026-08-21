@@ -36,7 +36,7 @@ public enum TraitId
     Devour,      // 毒喰らい: 敵に積まれた毒の量だけ味方を癒す
     Rally,       // 号令: 前のターンに動かなかった味方を強化する
     Blightfed,   // 澱み喰い: 味方が負った毒を吸い取り、その分だけ強くなる
-    Displaced,   // 軋み: 隊列を動かされるほど強くなる
+    Displaced,   // 軋み: 隊列を動かされるほど強くなり、動かされた直後に割り込んで攻撃する
     Shuffler,    // 喧噪: 毎ターン味方2体の位置を入れ替える
     Bind,        // 縛め: 味方1体を動けなくする代わりに大きく強化する
     Bulwark,     // 据え: 動かなかった味方の被ダメージを半減する
@@ -754,8 +754,15 @@ public sealed class BlightfedTrait : Trait
 }
 
 /// <summary>
-/// 軋み。隊列を動かされるたびに強くなる。前へ突き出されたときは特に大きい。
+/// 軋み。隊列を動かされるたびに強くなり、動かされた直後にその場で割り込んで攻撃する。
+/// 前へ突き出されたときの上昇は特に大きい。
 /// 逃亡・喧噪・庇いなど「隊列を乱す」挙動すべてが起点になる。
+///
+/// 割り込み攻撃は「積み上げた攻撃力を振る機会」そのもの。移動を累積ボーナスにしか変換しないと、
+/// 動かし役を増やすほど火力枠が消えて、育てても振る回数が増えない
+/// （移動改2 はヨミを攻撃70まで育てながら第四波 15%）。火力ではなく機会を足す変更。
+/// 回数制限は設けず再入禁止のみ。移動は他駒のターン開始時にしか起きないので、
+/// 供給量の上限は「盤面に何枚の動かし役を置けるか」で自然に決まる。
 /// </summary>
 public sealed class DisplacedTrait : Trait
 {
@@ -770,6 +777,24 @@ public sealed class DisplacedTrait : Trait
         int gain = pushedForward ? PushedToFrontGain : Gain;
         self.AtkBonus += gain;
         ctx.Log($"    {self.Name} は突き飛ばされるほど据わる（攻撃 +{gain} → {self.CurrentAttack}）", LogKind.Trigger);
+
+        // 割り込み攻撃の最中に起きた移動は、さらなる割り込みを生まない（再入禁止）。
+        // 回数制限ではなく再入禁止にしているのは「連続で動かされたらそのぶん攻撃できる」設計を残すため。
+        // 再入だけ止めれば、将来「被弾したら味方と入れ替わる」ような駒が入っても無限ループにならない。
+        // フラグは Trait（共有シングルトン）ではなく BattleContext 側に持つ。static にすると
+        // layout モードの並列実行で別の戦闘同士が干渉する（BattleContext.Interrupt 参照）。
+        if (!self.IsAlive || ctx.InInterrupt) return;
+
+        // 毒のティックで敵が全滅した直後のターン開始に動かされることがある。振る相手がいなければ見せ場のログも出さない。
+        if (!ctx.TeamAlive(ctx.Opponent(self.TeamId))) return;
+
+        // 喧噪で自分が「動かす側」になった場合、この時点では押し出された相手のスロットがまだ更新されていない
+        // （SwapSlots 参照）。敵を殴るだけなので味方側のスロットは見ないが、入れ替えの途中で振っていることは覚えておくこと。
+        ctx.Interrupt(() =>
+        {
+            ctx.Log($"    {self.Name} はよろけた勢いのまま振り抜く", LogKind.Highlight);
+            ctx.PerformAttack(self, "    ");
+        });
     }
 }
 

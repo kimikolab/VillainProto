@@ -288,7 +288,7 @@ public static class UnitCatalog
         Attack = 6,
         Speed = 5,
         Traits = new[] { TraitId.Displaced },
-        PlusText = "隊列を動かされるたび攻撃力上昇。前へ突き出されると特に大きい",
+        PlusText = "隊列を動かされるたび攻撃力が上がり、その場で割り込んで攻撃する。前へ突き出されると上昇が特に大きい",
         MinusText = "自分では動かない。誰も乱してくれなければ置物",
         Flavor = "どこに置いても文句を言わない。だから誰も気に留めなかった。"
     };

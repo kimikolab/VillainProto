@@ -27,6 +27,24 @@ public sealed class BattleContext
         finally { InReaction = false; }
     }
 
+    /// <summary>
+    /// 割り込み攻撃（ターン外の攻撃）の最中か。割り込みの中で起きた移動が
+    /// さらなる割り込みを生む再入を止めるために見る。反撃（Reaction）とは別の連鎖なので別フラグ。
+    ///
+    /// 戦闘ごとの状態として BattleContext に置く。Trait は全戦闘で共有されるシングルトンで、
+    /// static に持つと layout モード（Parallel.For で戦闘を並列実行）で別の戦闘同士が
+    /// 互いの割り込みを止め合い、結果が非決定的になる。
+    /// </summary>
+    public bool InInterrupt { get; private set; }
+
+    public void Interrupt(Action body)
+    {
+        if (InInterrupt) return;
+        InInterrupt = true;
+        try { body(); }
+        finally { InInterrupt = false; }   // 例外で立ちっぱなしになると以後の割り込みが永久に止まる
+    }
+
     /// <summary>毒などの継続ダメージ。ターン開始時に engine から呼ばれる。</summary>
     public void TickStatuses()
     {
