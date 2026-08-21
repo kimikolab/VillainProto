@@ -142,19 +142,19 @@ if (focusId == "reseat")
     const int TopOverall = 20;
     const int TopConstrained = 10;
 
-    // 現行配置が6位以下だった編成（前回セッションの layout より）。
-    var targets = new[]
-    {
-        "毒 (グザ×ミオ×ラウ)", "反撃 (ヒサ×カド)", "惨禍×被弾強化", "惨禍×死の連鎖",
-        "溜め (ガン×ドルガ×カド)", "溜め改 (クグ×バン×ガン)", "逆しま改 (クビ×ウツ)",
-        "反撃改2 (ガン×カド)", "反撃改3 (カド×ハギ)", "追撃×毒 (ハギ×グザ)",
-        "追撃×死 (ハギ×リィカ)", "散開耐久 (ササ×ドハ)", "死の連鎖+後備え", "逆しま+後備え"
-    };
+    // 対象は既定では compare の全編成。args[2] にカンマ区切りの部分一致を渡すと絞れる。
+    // 固定リストにしていた頃は「いつ作ったリストか」が読めず、盤面や波を変えたあとも
+    // 古い顔ぶれのまま回してしまう。絞り込みは呼び出し側で明示する。
+    string filter = args.Length > 2 ? args[2] : "";
+    var targets = all.Select(b => b.Name)
+        .Where(n => filter.Length == 0
+                    || filter.Split(',').Any(k => n.Contains(k.Trim())))
+        .ToArray();
 
     // 長時間ジョブは前景で待ち切るしかない（背景に回すと起動元のコマンド終了で刈られる）。
     // 一回の呼び出しに収まる分だけを回せるよう、対象を切り出せるようにしてある。
-    int skip = args.Length > 2 && int.TryParse(args[2], out int sk) ? sk : 0;
-    int take = args.Length > 3 && int.TryParse(args[3], out int tk) ? tk : targets.Length;
+    int skip = args.Length > 3 && int.TryParse(args[3], out int sk) ? sk : 0;
+    int take = args.Length > 4 && int.TryParse(args[4], out int tk) ? tk : targets.Length;
     targets = targets.Skip(skip).Take(take).ToArray();
 
     Console.WriteLine("# 配置の測り直し");
