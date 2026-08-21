@@ -319,15 +319,18 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     ("毒→被弾強化 (グザ×ムド)", Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Guza, front3: UnitCatalog.Gald, mid: UnitCatalog.Sero, back1: UnitCatalog.Borg)),
     // ヴィオの吸い上げは全体対象で位置不問。スィドの毒漏れはむしろ燃料なので孤立させない（layout 1位）
     ("澱み喰い (グザ×ヴィオ)", Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Gald, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Vio)),
-    // バサの入れ替えとセロの後退が全員を動かしてヨミが育つ。セロは中衛から後1のヨミを突き飛ばして貫きに変わる（layout 1位）
-    ("隊列崩し (バサ×ヨミ×セロ)", Formation.Build(front1: UnitCatalog.Basa, front2: UnitCatalog.Gan, front3: UnitCatalog.Gald, mid: UnitCatalog.Sero, back1: UnitCatalog.Yomi)),
-    // セロが前3から中のヨミへ逃げ込み、ヨミを前へ突き出す(+22)。この編成だけが「二段逃げ」を狙いにしているので探索順位では選ばない。
-    // セロ中衛型(76.4%)は逃げが一段で終わり、ヨミもネルも動かないまま終わる（layout 119位）
-    ("突き出し (セロ×ヨミ)",  Formation.Build(front1: UnitCatalog.Golm, front2: UnitCatalog.Gald, front3: UnitCatalog.Sero, mid: UnitCatalog.Yomi, back1: UnitCatalog.Nel)),
+    // 軋みの割り込み攻撃の追加後に再探索。セロが前1から中のヨミへ逃げ込んでヨミを前へ突き出し(+22)、その場で振らせる。
+    // 以後はバサの入れ替えが割り込みを重ね、セロは二段目で後1のバサを突き飛ばして貫きに変わる（layout 1位）
+    ("隊列崩し (バサ×ヨミ×セロ)", Formation.Build(front1: UnitCatalog.Sero, front2: UnitCatalog.Gan, front3: UnitCatalog.Gald, mid: UnitCatalog.Yomi, back1: UnitCatalog.Basa)),
+    // 軋みの割り込み攻撃の追加後に再探索。セロが中衛から後1のヨミを突き飛ばして逃げ、ヨミは中衛へ突き出されて(+22)その場で振る。
+    // 旧狙いの二段逃げ型（セロ前列→中のヨミ→後）は割り込み後も 48.8% 止まり（83位）。前列へ突き出されたヨミが削られるだけなので捨てた。
+    // 探索1〜3位はガルド後列で庇いが死ぬので採らない（layout 4位）
+    ("突き出し (セロ×ヨミ)",  Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Sero, back1: UnitCatalog.Yomi, back2: UnitCatalog.Nel)),
     // 溜め役3体を敵から遠い後列と中衛へ。カドとクグの前列が受け止める（layout 1位）
     ("溜め改 (クグ×バン×ガン)", Formation.Build(front1: UnitCatalog.Kado, front2: UnitCatalog.Kugu, mid: UnitCatalog.Ban, back1: UnitCatalog.Dolga, back2: UnitCatalog.Gan)),
-    // セロの逃亡もバサの入れ替えも全部シオとヨミの燃料になる。ガルドを前1に置いてセロを前2へ（layout 1位）
-    ("移動改 (バサ×ヨミ×シオ)", Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Sero, front3: UnitCatalog.Shio, mid: UnitCatalog.Basa, back1: UnitCatalog.Yomi)),
+    // 軋みの割り込み攻撃の追加後に再探索。セロは前1から中のバサ、次に後1のヨミを順に突き飛ばして貫きに変わり、
+    // 逃亡もバサの入れ替えも全部シオとヨミの燃料になる（layout 1位）
+    ("移動改 (バサ×ヨミ×シオ)", Formation.Build(front1: UnitCatalog.Sero, front2: UnitCatalog.Shio, front3: UnitCatalog.Gald, mid: UnitCatalog.Basa, back1: UnitCatalog.Yomi)),
     // 呪詛は全体に漏れるのでウツの位置は不問。探索上位4件(80.8%)はガルド後列で庇いが死ぬので採らない。セロは中衛から被弾後退（layout 5位）
     ("逆しま (ネル×ウツ)",   Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Sero, back1: UnitCatalog.Nel, back2: UnitCatalog.Utsu)),
     // 萎縮も呪詛も全体に効く。ウツだけ守られる中衛に置き、ガルドは前列で庇う（layout 52位）
@@ -342,8 +345,9 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     ("追撃×毒 (ハギ×グザ)",  Formation.Build(front1: UnitCatalog.Guza, front2: UnitCatalog.Gald, front3: UnitCatalog.Golm, mid: UnitCatalog.Hagi, back1: UnitCatalog.Mio)),
     // 死の連鎖にハギを足した形。ムグは後2で最後に死んで胞子を残す（layout 1位）
     ("追撃×死 (ハギ×リィカ)", Formation.Build(front1: UnitCatalog.Hagi, front2: UnitCatalog.Zoto, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Mug)),
-    // 空き枠で孤立を作る散開の幾何。ササ(前1)とガルド(前3)が孤立して-35%を受ける（layout 1位）
-    ("移動改2 (ササ×ヨミ)",  Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald, mid: UnitCatalog.Basa, back2: UnitCatalog.Yomi)),
+    // 軋みの割り込み攻撃の追加後に再探索。空き枠で孤立を作る散開の幾何はそのまま、ガルド(前1)とササ(前3)が孤立して-35%を受ける
+    // （旧配置の左右鏡像 / layout 1位）
+    ("移動改2 (ササ×ヨミ)",  Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sasa, mid: UnitCatalog.Basa, back2: UnitCatalog.Yomi)),
     // 同じく孤立の幾何。ドハの分かちは全体に効くので中衛でよい（layout 1位）
     ("散開耐久 (ササ×ドハ)", Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald, mid: UnitCatalog.Doha, back2: UnitCatalog.Dolga)),
     // セッキは後列でないと庇えない。探索上位は前列セッキで特性が死ぬので、後列制約下の最良を採る（layout 18位）
