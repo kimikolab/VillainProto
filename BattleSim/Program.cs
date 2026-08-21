@@ -102,7 +102,14 @@ if (focusId == "confirm")
             Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Gald, mid: UnitCatalog.Dolga, back1: UnitCatalog.Sasa)),
         ("逆しま+後備え",
             Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Golm, mid: UnitCatalog.Kubi, back1: UnitCatalog.Sekki, back2: UnitCatalog.Utsu),
-            Formation.Build(front2: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Kubi, back1: UnitCatalog.Sekki, back2: UnitCatalog.Utsu))
+            Formation.Build(front2: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Kubi, back1: UnitCatalog.Sekki, back2: UnitCatalog.Utsu)),
+        // ここからスィドの改修（被弾で毒を積む形）に伴う再探索ぶん。
+        ("毒 (グザ×ミオ×ラウ)",
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Rau),
+            Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Sid, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Rau)),
+        ("澱み喰い (グザ×ヴィオ)",
+            Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Gald, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Vio),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Sid, back1: UnitCatalog.Vio, back2: UnitCatalog.Mio))
     };
 
     Console.WriteLine("## 採用候補の追試");
@@ -411,6 +418,66 @@ EnemyCatalog.Stage stage = EnemyCatalog.Stages[stageIndex];
 Console.WriteLine($"対象ステージ: {stage.Name}\n");
 
 // demo モード: 特定の編成のログだけを見る
+// ptrace モード: 毒軸の立ち上がりを見る。層は減衰しないので累積ダメージは時間の二乗で効く。
+// 「間に合っていないのか、そもそも足りないのか」を切り分けるための道具。
+// 各ターンの敵の総層数・敵の残数・味方の残数を並べ、決着ターンと突き合わせる。
+if (focusId == "ptrace")
+{
+    string want = args.Length > 2 ? args[2] : "毒 (グザ";
+    var builds = CompareBuilds();
+    var (name, f) = builds.First(b => b.Name.Contains(want));
+
+    Console.WriteLine($"# 毒の立ち上がり: {name}");
+    for (int st = 0; st < EnemyCatalog.Stages.Count; st++)
+    {
+        Console.WriteLine();
+        Console.WriteLine($"## {EnemyCatalog.Stages[st].Name}");
+        Console.WriteLine();
+        Console.WriteLine("| ターン | 敵の総層数 | 敵残 | 味方残 | 味方の総層数 |");
+        Console.WriteLine("|--:|--:|--:|--:|--:|");
+
+        BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed: 0, verbose: true);
+        var enemyNames = EnemyCatalog.Stages[st].Enemy.Occupied().Select(x => x.Def.Name).ToHashSet();
+        var allyNames = f.Occupied().Select(x => x.Def.Name).ToHashSet();
+
+        int turn = 0, ep = 0, ap = 0;
+        var deadE = new HashSet<string>();
+        var deadA = new HashSet<string>();
+        int nE = EnemyCatalog.Stages[st].Enemy.Count, nA = f.Count;
+
+        void Flush()
+        {
+            if (turn > 0)
+                Console.WriteLine($"| {turn} | {ep} | {nE - deadE.Count} | {nA - deadA.Count} | {ap} |");
+        }
+
+        foreach (LogLine line in r.Log)
+        {
+            string ln = line.ToString();
+            if (ln.Contains("--- ターン ")) { Flush(); turn++; ep = 0; ap = 0; continue; }
+            if (ln.Contains("は毒に蝕まれている"))
+            {
+                int a = ln.IndexOf('（'), b = ln.IndexOf('）');
+                if (a >= 0 && b > a && int.TryParse(ln[(a + 1)..b], out int n))
+                {
+                    if (enemyNames.Any(e => ln.Contains(e + " は毒"))) ep += n;
+                    else if (allyNames.Any(e => ln.Contains(e + " は毒"))) ap += n;
+                }
+                continue;
+            }
+            if (ln.Contains("倒れた") || ln.Contains("死亡"))
+            {
+                foreach (string e in enemyNames) if (ln.Contains(e)) deadE.Add(e);
+                foreach (string e in allyNames) if (ln.Contains(e)) deadA.Add(e);
+            }
+        }
+        Flush();
+        Console.WriteLine();
+        Console.WriteLine($"結果: {(r.PlayerWon ? "勝利" : "敗北")} / {r.Turns}ターン");
+    }
+    return;
+}
+
 if (focusId == "demo")
 {
     var build = Formation.Build(
@@ -551,8 +618,10 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     ("速攻 (ボルグ×ムド)",   Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Sero, front3: UnitCatalog.Gald, mid: UnitCatalog.Nel, back1: UnitCatalog.Borg)),
     // 脆いムグ・ゾトを前で死なせて連鎖を起こす。中衛ゴルムの吸いが隣のゾトを破裂まで運ぶ（layout 1位）
     ("死の連鎖 (リィカ軸)",  Formation.Build(front1: UnitCatalog.Mug, front2: UnitCatalog.Zoto, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Vel)),
-    // スィドは前3の孤立席で毒漏れを消す。ガルドが前1で庇う（layout 1位）
-    ("毒 (グザ×ミオ×ラウ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Rau)),
+    // スィドは前3。被弾で毒を積む形になったので前列に出す必要があり、孤立席なので味方漏れも消える。
+    // 前1を空けてガルドを前2に寄せた形が上（+2.1pt / 第3波 +21.8）。
+    // 注: この配置はスィドの味方漏れを完全に無効化している。ガルド・セッキと同じ「配置でマイナスが消える」形（README）
+    ("毒 (グザ×ミオ×ラウ)", Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Sid, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Rau)),
     // 支援2枚を後列に下げ、痺れ粉は守られる中衛から撒く（layout 1位）
     ("毒+耐久 (ベニ×トウ)",  Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Tou, back1: UnitCatalog.Mio, back2: UnitCatalog.Beni)),
     // ヒサの隣接はカドだけ（後1↔後2）。ガルド(HP100>カド96)を隣に置くと標的が逸れる（layout 1位）
@@ -572,8 +641,9 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     ("溜め (ガン×ドルガ×カド)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, mid: UnitCatalog.Hisa, back1: UnitCatalog.Gan, back2: UnitCatalog.Kado)),
     // グザの瘴気（味方全体に毒）は位置不問。ムドは前1で敵の攻撃も浴びて育ち、ガルドは前3で庇う。セロは中衛から被弾後退（layout 1位）
     ("毒→被弾強化 (グザ×ムド)", Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Guza, front3: UnitCatalog.Gald, mid: UnitCatalog.Sero, back1: UnitCatalog.Borg)),
-    // ヴィオの吸い上げは全体対象で位置不問。スィドの毒漏れはむしろ燃料なので孤立させない（layout 1位）
-    ("澱み喰い (グザ×ヴィオ)", Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Gald, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Vio)),
+    // ヴィオの吸い上げは全体対象で位置不問。スィドの毒漏れはむしろ燃料なので、中衛に置いて
+    // 前後の隣接（後2のミオ）へわざと当てにいく。漏れを利益に反転する側と噛ませた形（+7.8pt / 第5波 +38.8）
+    ("澱み喰い (グザ×ヴィオ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Sid, back1: UnitCatalog.Vio, back2: UnitCatalog.Mio)),
     // 軋みの割り込み攻撃の追加後に再探索。セロが前1から中のヨミへ逃げ込んでヨミを前へ突き出し(+22)、その場で振らせる。
     // 以後はバサの入れ替えが割り込みを重ね、セロは二段目で後1のバサを突き飛ばして貫きに変わる（layout 1位）
     ("隊列崩し (バサ×ヨミ×セロ)", Formation.Build(front1: UnitCatalog.Sero, front2: UnitCatalog.Gan, front3: UnitCatalog.Gald, mid: UnitCatalog.Yomi, back1: UnitCatalog.Basa)),
