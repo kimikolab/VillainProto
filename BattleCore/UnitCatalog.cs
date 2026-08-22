@@ -210,7 +210,7 @@ public static class UnitCatalog
         Attack = 5,
         Speed = 7,
         Traits = new[] { TraitId.Contagion },
-        PlusText = "毒に侵された敵が倒れると、残りの敵へ毒が飛ぶ",
+        PlusText = "毒に侵された駒が倒れると、残りの敵へ毒が飛ぶ（味方の死骸からも飛ぶ）",
         MinusText = "自分では毒を与えられない",
         Flavor = "死体を運ばせると必ず疫病が出るので、隊列から外された。"
     };

@@ -698,20 +698,40 @@ public sealed class AmplifierTrait : Trait
     }
 }
 
-/// <summary>疫。毒に侵された敵が倒れると、残りの敵へ毒が飛ぶ。死の連鎖と毒が交差する点。</summary>
+/// <summary>
+/// 疫み。毒に侵された駒が倒れると、残った敵へ毒が飛ぶ。**敵味方どちらの死骸からでも飛ぶ。**
+///
+/// もとは敵の死でしか発火せず、第三波以降は一度も発火していなかった。瘴気（グザ）は全体へ
+/// 均等に撒くので敵はほぼ同時に瀕死になり、最初の一体が落ちる前に味方が全滅していたため。
+/// 発火条件のほうが噛み合っていなかった。
+///
+/// 味方の死でも飛ぶようにすると、**これまで最悪の出来事だった味方の全滅が拡散の起点に変わる。**
+/// 第五波は3ターン目に味方が一斉に落ちる波なので、そこが一番効く（第5波 6% → 34%）。
+/// 死の密度が高い編成ほど働くので、墓守（リィカ）や破裂（ゾト）と直接つながる
+/// （毒×死の連鎖の第2波 18% → 49%）。「死体を運ばせると必ず疫病が出る」という由来にも合う。
+///
+/// 却下: 拡散先を敵味方の区別なしにする案。拡散量は死んだ駒の層の半分で、終盤の敵は
+/// 1体あたり20〜60層まで積む。その半分がミオ(HP42)やラウ(HP50)に乗ると、毒ダメージは
+/// 層の数そのものなので1〜2ティックで溶ける（毒軸の第2波 90% → 14%）。
+/// 反対側だけ 1/8 に落とすと今度はほぼ無害になり(82%)、痛いか無害かの二択にしかならなかった。
+///
+/// 却下: 隣接する味方に毒を移す案（毎ターン+1 / 拡散時に同量）。どちらも毒軸を素直に下げる
+/// だけだが（第4波 84% → 60% / 26%）、澱み喰い（ヴィオ）がいる編成では逆に上がる（+7pt）。
+/// ヴィオはターン開始時に味方の毒を全部吸い上げるので、マイナスが燃料に反転する。
+/// 形としては正しいが量が大きすぎ、「ヴィオを入れるかどうか」の二択になって判断にならない。
+/// </summary>
 public sealed class ContagionTrait : Trait
 {
     public override TraitId Id => TraitId.Contagion;
 
     public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
     {
-        if (dead.TeamId == self.TeamId) return;
-
         int carried = dead.Counter(StatusKeys.Poison);
         if (carried <= 0) return;
 
+        // 撒く先は常に敵側。味方の死骸から飛ぶときも、疫病が向かうのは敵。
         int spread = Math.Max(1, carried / 2);
-        foreach (UnitState foe in ctx.LivingMembers(dead.TeamId))
+        foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
             foe.SetCounter(StatusKeys.Poison, foe.Counter(StatusKeys.Poison) + spread);
 
         ctx.Log($"    {dead.Name} の死骸から毒が撒き散らされた（+{spread}）", LogKind.Highlight);
