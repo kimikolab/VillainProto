@@ -10,8 +10,34 @@ public static class StatusKeys
     public const string Marked = "marked";
     public const string Stun = "stun";
 
+    /// <summary>燃焼の残りターン。毒と違い「量」ではなく「時間」を持つ。</summary>
+    public const string Burn = "burn";
+
     /// <summary>そのターン行動できなかった駒に記録されるターン番号。</summary>
     public const string IdleTurn = "idleTurn";
+}
+
+/// <summary>
+/// 燃焼の規則。毒と対になる「積み上がらない持続ダメージ」。
+///
+/// 毒が層を積んで二次関数で伸びるのに対し、燃焼は固定量・非スタックで残りターンだけを持つ。
+/// 再付与は量ではなく持続を更新する。
+///
+/// **非スタックにしたのは、これを「低火力の駒でも払い続けられる上限つきのコスト」に
+/// するため。** 味方に毒を積む案は二度とも壊滅している（ミオの検証で 毒+耐久 が
+/// 94/98/99/78 → 23/12/0/0、グザ×ムド は第4波以降 0%）。どちらも層が減衰せず、
+/// 味方側の累積が二次関数で伸びたのが原因。燃焼はその形を構造的に避ける。
+///
+/// **持続を必ず持たせること。** 永続にすると撒いた時点で盤面が飽和し、出力が
+/// 「撒き役がいるかどうか」だけで決まる。ミオの澱みが没になったのと同じ穴になる。
+/// </summary>
+public static class BurnRules
+{
+    /// <summary>1ターンあたりの固定ダメージ。層に依存しない。</summary>
+    public const int Damage = 6;
+
+    /// <summary>着火時に設定される残りターン。再付与でここまで戻る（加算しない）。</summary>
+    public const int Turns = 3;
 }
 
 public sealed class BattleContext
@@ -74,6 +100,35 @@ public sealed class BattleContext
             Log($"    {u.Name} は毒に蝕まれている（{poison}）", LogKind.Status);
             ApplyDamage(u, poison, null);
         }
+
+        // 燃焼は毒とは別のループで回す。固定量なので増幅も変換もされず、
+        // 残りターンを減らすだけ。毒の後に置いてあるのは、同じターンに両方を負った駒が
+        // 「積み上がる方」で先に落ちるようにするため（燃焼のほうが後から効く）。
+        foreach (UnitState u in _units.Where(x => x.IsAlive).ToList())
+        {
+            int left = u.Counter(StatusKeys.Burn);
+            if (left <= 0) continue;
+
+            u.SetCounter(StatusKeys.Burn, left - 1);
+            Log($"    {u.Name} が燃えている（残り {left - 1}）", LogKind.Status);
+            ApplyDamage(u, BurnRules.Damage, null);
+        }
+    }
+
+    /// <summary>
+    /// 着火。非スタックなので、量ではなく残りターンを更新する。
+    /// 既に燃えている相手への再付与は持続のリセットにしかならない（ダメージは増えない）。
+    /// </summary>
+    public void Ignite(UnitState target, bool friendly = false)
+    {
+        if (!target.IsAlive) return;
+
+        bool relit = target.Counter(StatusKeys.Burn) > 0;
+        target.SetCounter(StatusKeys.Burn, BurnRules.Turns);
+        Log(relit
+                ? $"    {target.Name} の火が煽られた（残り {BurnRules.Turns}）"
+                : $"    {target.Name} に火が点いた（残り {BurnRules.Turns}）",
+            friendly ? LogKind.FriendlyFire : LogKind.Status);
     }
 
     public const int MarkPullPercent = 75;

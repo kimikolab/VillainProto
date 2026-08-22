@@ -13,10 +13,10 @@ public static class UnitCatalog
         MaxHp = 60,
         Attack = 18,
         Speed = 8,
-        Traits = new[] { TraitId.Splash },
+        Traits = new[] { TraitId.Splash, TraitId.Cinder },
         Pattern = AttackPattern.Sweep,
-        PlusText = "火力が高く、薙ぎ払いが敵の両隣にも届く",
-        MinusText = "同じ一振りが、自分の両隣の味方も巻き込む",
+        PlusText = "火力が高く、薙ぎ払いが敵の両隣にも届く。斬った相手に燃焼を移す",
+        MinusText = "同じ一振りが、自分の両隣の味方も巻き込み、隣の味方にも火が移る",
         Flavor = "三度、味方の部隊を半壊させて追い出された。"
     };
 
@@ -451,9 +451,22 @@ public static class UnitCatalog
         Flavor = "強い。ただ遅い。それだけの理由で外された。"
     };
 
+    public static readonly UnitDef Hota = new()
+    {
+        Id = "hota",
+        Name = "熾のホタ",
+        MaxHp = 78,
+        Attack = 6,
+        Speed = 7,
+        Traits = new[] { TraitId.Pyre },
+        PlusText = "自分が燃えている間、攻撃力が4倍になり、攻撃が薙ぎに変わる",
+        MinusText = "火が消えればただの湿った薪。自分では火を点けられない",
+        Flavor = "焚きつけられている間だけ働く。誰かが火を放つのを待っている。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

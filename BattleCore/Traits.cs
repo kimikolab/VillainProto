@@ -47,6 +47,8 @@ public enum TraitId
     Cower,       // 萎縮: 味方全体の攻撃を下げ、代わりに被ダメージを下げる
     Pursuer,     // 追い打ち: 味方が敵を倒すと、ターン外に割り込んで攻撃する
     RearGuard,   // 後備え: 後列の味方への攻撃を肩代わりする。貫きにも割り込む
+    Cinder,      // 火の粉: 攻撃した相手に燃焼を付け、隣接する味方にも燃え移る
+    Pyre,        // 熾火: 自分が燃えている間だけ本領を発揮する
     Condemn      // 断罪: 反撃してきた相手を痺れさせる（敵側の語彙）
 }
 
@@ -1202,6 +1204,62 @@ public sealed class RearGuardTrait : Trait
     public override TraitId Id => TraitId.RearGuard;
 }
 
+/// <summary>
+/// 火の粉。攻撃した相手に燃焼を付け、自分に隣接する味方にも燃え移る。
+///
+/// ボルグの巻き込み（<see cref="SplashTrait"/>）と同じ隣接規則に乗せてある。
+/// 同じ一振りが敵を焼き、隣に立った味方にも移る、という一つの動作として読める形。
+///
+/// **主目標にしか付かないのは engine の規則（攻撃1回につき特性は1度）に従ったもの。**
+/// 薙ぎで3体まとめて撒けるようにすると、範囲持ちが燃焼の供給を独占して
+/// 「誰に着火役をやらせるか」という判断が消える。
+/// </summary>
+public sealed class CinderTrait : Trait
+{
+    public override TraitId Id => TraitId.Cinder;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (dealt <= 0) return;
+
+        ctx.Ignite(target);
+
+        // 味方に及ぶものなので前後を含む隣接を見る（Models.cs の AreAdjacent の但し書き）。
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            ctx.Ignite(ally, friendly: true);
+        }
+    }
+}
+
+/// <summary>
+/// 熾火。自分が燃えている間だけ本領を発揮し、火が消えるとほぼ無力になる。
+///
+/// 毒の変換役（ヴィオ・ラウ＝量を読む / ベニ・ミオ＝数を読む）とは読むものが違う。
+/// **燃焼は非スタックなので「量」が存在せず、「数」を読むと撒いた時点で飽和する**
+/// （ミオが没になった形）。残るのは時間・事象・自分の状態で、これは自分の状態を読む型。
+///
+/// 自分では着火できないので条件を自給できない。ボルグの火の粉は隣接した味方にしか
+/// 移らないため、**ボルグの隣に置くという配置判断**が発動条件そのものになる。
+/// 「配置でマイナスが消える」（庇い・後備え）の逆で、配置で条件を満たしにいく形。
+///
+/// 代金は燃焼ダメージ＋着火役の巻き込みで、実HPから毎ターン払う。
+/// 燃焼が上限つきだからこそ低火力の駒でも払い続けられる、というのがこの軸の要。
+/// </summary>
+public sealed class PyreTrait : Trait
+{
+    public const int Multiplier = 4;
+
+    public override TraitId Id => TraitId.Pyre;
+
+    public override int ModifyAttack(UnitState self, int atk)
+        => self.Counter(StatusKeys.Burn) > 0 ? atk * Multiplier : atk;
+
+    public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
+        => self.Counter(StatusKeys.Burn) > 0 ? AttackPattern.Sweep : p;
+}
+
 public static class TraitCatalog
 {
     private static readonly Dictionary<TraitId, Trait> Map = new Trait[]
@@ -1248,6 +1306,8 @@ public static class TraitCatalog
         new CowerTrait(),
         new PursuerTrait(),
         new RearGuardTrait(),
+        new CinderTrait(),
+        new PyreTrait(),
         new CondemnTrait()
     }.ToDictionary(t => t.Id);
 
