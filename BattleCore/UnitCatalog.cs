@@ -366,7 +366,7 @@ public static class UnitCatalog
         Attack = 4,
         Speed = 3,
         Traits = new[] { TraitId.Sharer },
-        PlusText = "味方が受けるダメージの4割を肩代わりする。薙ぎでも全体でも効く",
+        PlusText = "味方が受けるダメージの4割を肩代わりする（薙ぎでも全体でも効く）。肩代わり込みで受けた痛みに応じて自分の攻撃力も上がる",
         MinusText = "自分の火力はほぼ無く、味方が多いほど早く尽きる",
         Flavor = "他人の痛みを勝手に引き受ける。感謝はされず、ただ先に倒れる。"
     };

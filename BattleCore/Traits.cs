@@ -1076,6 +1076,26 @@ public sealed class PerverseTrait : Trait
 /// 分かち。味方が受けたダメージの一部を肩代わりする。
 /// 庇う（Guardian）が単体攻撃しか止められないのに対し、こちらは薙ぎでも全体でも働く。
 /// 範囲攻撃に対する唯一の耐久手段なので、配りすぎないこと。
+///
+/// 見返り（2026-08-22 追加、測定済み）: 肩代わり込みで受けたダメージに応じて攻撃力が上がる。
+/// Rage（ムド）と同じ DamagePerGain=2 を流用（耐えるほど育つ、という同じ設計言語）。
+/// 追加前は自分の火力もなく、肩代わりした分を取り返す経路が一枚もなかった
+/// （「耐久役には必ず見返りの経路を付けろ」README参照、ドハはそこで名指しされていた張本人）。
+///
+/// 単体4編成の全配置探索（reseat）で現行配置が既に最良と確認済みなので、
+/// 散開耐久が沈んでいたのは配置ではなく特性の欠陥だった。
+///
+/// | DamagePerGain | 散開耐久 (ササ×ドハ) 第1〜5波 | 反撃改 第5波 |
+/// |---|---|--:|
+/// | なし（旧仕様） | 100/65.5/5.0/0.0/0.0 | 33.5% |
+/// | 3 | 100/96.5/49.0/19.5/7.0 | 39.5% |
+/// | **2（採用）** | **100/98.5/79.5/44.5/14.5** | **40.5%** |
+/// | 1 | 100/100/94.0/95.5/47.0 | 42.5% |
+///
+/// 1 まで下げると伸びすぎる（反撃改の他、単体で見ても入れ得に近づく）。2 は Rage と同じ比率で、
+/// 「殴られて死にかけながら追いつく」Mudo の着地感と揃う。反撃改（カド×ドハ）は元から機能していた
+/// 編成なので、そちらの動きは小さいことも確認済み（+7.0pt、他の波は無変化）。
+/// この変更は Sharer 特性にしか触れていないので、ドハを含まない27編成は無変化（compare で確認済み）。
 /// </summary>
 public sealed class SharerTrait : Trait
 {
@@ -1096,7 +1116,18 @@ public sealed class SharerTrait : Trait
     /// 支払い元が尽きた時点で効果も止まるので、無償の毎ターン収入にはならない。
     public const int DullDivisor = 4;
 
+    /// <summary>被ダメージ何点につき攻撃力+1か（Rage と同じ比率）。</summary>
+    public const int DamagePerGain = 2;
+
     public override TraitId Id => TraitId.Sharer;
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        if (dmg <= 0 || !self.IsAlive) return;
+        int gain = Math.Max(1, dmg / DamagePerGain);
+        self.AtkBonus += gain;
+        ctx.Log($"    {self.Name} が痛みを飲み込んだ（攻撃 +{gain} → {self.CurrentAttack}）", LogKind.Trigger);
+    }
 }
 
 /// <summary>
