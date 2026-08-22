@@ -109,7 +109,11 @@ if (focusId == "confirm")
             Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Sid, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Rau)),
         ("澱み喰い (グザ×ヴィオ)",
             Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Gald, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Vio),
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Sid, back1: UnitCatalog.Vio, back2: UnitCatalog.Mio))
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Sid, back1: UnitCatalog.Vio, back2: UnitCatalog.Mio)),
+        // ここからベニのマイナス（味方の毒が2倍に効く）追加に伴う再探索ぶん。
+        ("毒+耐久 (ベニ×トウ)",
+            Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Tou, back1: UnitCatalog.Mio, back2: UnitCatalog.Beni),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Mio, back1: UnitCatalog.Beni, back2: UnitCatalog.Tou))
     };
 
     Console.WriteLine("## 採用候補の追試");
@@ -623,7 +627,9 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 注: この配置はスィドの味方漏れを完全に無効化している。ガルド・セッキと同じ「配置でマイナスが消える」形（README）
     ("毒 (グザ×ミオ×ラウ)", Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Sid, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Rau)),
     // 支援2枚を後列に下げ、痺れ粉は守られる中衛から撒く（layout 1位）
-    ("毒+耐久 (ベニ×トウ)",  Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Tou, back1: UnitCatalog.Mio, back2: UnitCatalog.Beni)),
+    // ベニのマイナス（味方の毒が2倍に効く）が入った分、毒を浴びる位置関係が変わった。
+    // ミオを中衛へ上げ、ベニとトウを後列に下げた形が上（+4.0pt / 第5波 +15.8）
+    ("毒+耐久 (ベニ×トウ)",  Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Mio, back1: UnitCatalog.Beni, back2: UnitCatalog.Tou)),
     // 毒+耐久 の92%はベニ単独でもトウ単独でも出ない（ベニのみ 100/25/5/89/2、トウのみ 100/0/0/0/0）。
     // 効いているのは「毒の供給＋耐える手段」という型で、耐える側はトウでなくてもよい。
     // その裏を取るためのエントリ。トウをラウに差し替えた形。

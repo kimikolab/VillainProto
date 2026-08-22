@@ -250,7 +250,7 @@ public static class UnitCatalog
         Speed = 6,
         Traits = new[] { TraitId.Devour },
         PlusText = "毒に侵された敵の数だけ味方全体を癒す",
-        MinusText = "毒が積まれていなければ何もしない",
+        MinusText = "毒が積まれていなければ何もしない。味方が負った毒は2倍に効く",
         Flavor = "戦場の澱みを啜って生きている。同席したい者はいない。"
     };
 

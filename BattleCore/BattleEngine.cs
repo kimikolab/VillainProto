@@ -63,6 +63,14 @@ public sealed class BattleContext
         {
             int poison = u.Counter(StatusKeys.Poison);
             if (poison <= 0) continue;
+
+            // 毒喰らい（ベニ）は澱みを啜って癒す代わりに、味方が負った毒をより深く効かせる。
+            // 回復量は「毒に侵された敵の数」に比例するので敵が減るほど落ちるが、
+            // 味方の毒は瘴気で積み上がり続ける。**時間が経つほど収支が反転する。**
+            // 減衰を外から与えなくても、二つの伸びる量の競争として自然に出る形。
+            // 浄化（増分と引き算する）と違って閾値で全ゼロにならず、倍率が傾斜として効く。
+            if (_units.Any(x => x.IsAlive && x.TeamId == u.TeamId && x.HasTrait(TraitId.Devour)))
+                poison *= DevourTrait.AllyPoisonMultiplier;
             Log($"    {u.Name} は毒に蝕まれている（{poison}）", LogKind.Status);
             ApplyDamage(u, poison, null);
         }

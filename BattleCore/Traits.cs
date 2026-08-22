@@ -836,6 +836,13 @@ public sealed class CondemnTrait : Trait
 /// <summary>毒喰らい。敵に積まれた毒の量に応じて味方を癒す。毒が無ければ何もしない。</summary>
 public sealed class DevourTrait : Trait
 {
+    /// <summary>
+    /// 味方が負った毒のダメージ倍率。安定しすぎるのを止めるための代金。
+    /// x1.5 では 毒+耐久 の第5波が 92% → 90% とほぼ動かず、x3 では 18% まで落ちる。
+    /// x2（92% → 66%）を採った。ベニを含まない27編成はどの倍率でも ±0.0。
+    /// </summary>
+    public const int AllyPoisonMultiplier = 2;
+
     public override TraitId Id => TraitId.Devour;
 
     public override void OnTurnStart(BattleContext ctx, UnitState self)
