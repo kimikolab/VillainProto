@@ -113,7 +113,11 @@ if (focusId == "confirm")
         // ここからベニのマイナス（味方の毒が2倍に効く）追加に伴う再探索ぶん。
         ("毒+耐久 (ベニ×トウ)",
             Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Tou, back1: UnitCatalog.Mio, back2: UnitCatalog.Beni),
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Mio, back1: UnitCatalog.Beni, back2: UnitCatalog.Tou))
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Mio, back1: UnitCatalog.Beni, back2: UnitCatalog.Tou)),
+        // ここから燃焼軸（熾のホタ）追加に伴う探索ぶん。
+        ("燃焼 (ボルグ×ホタ)",
+            Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Hota, front3: UnitCatalog.Mudo, mid: UnitCatalog.Borg, back1: UnitCatalog.Nono),
+            Formation.Build(front1: UnitCatalog.Nono, front2: UnitCatalog.Gald, front3: UnitCatalog.Mudo, back1: UnitCatalog.Hota, back2: UnitCatalog.Borg))
     };
 
     Console.WriteLine("## 採用候補の追試");
@@ -701,9 +705,11 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // ウツとセッキが後列、クビは守られる中衛。探索上位はセッキ前列＋ガルド中衛で両特性が死ぬので、制約下の最良を採る（layout 37位）
     ("逆しま+後備え",   Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Golm, mid: UnitCatalog.Kubi, back1: UnitCatalog.Sekki, back2: UnitCatalog.Utsu)),
     // 燃焼軸の受け皿編成。ホタ（熾火）は自分では着火できないので、ボルグの火の粉が唯一の火種。
-    // ボルグを中衛に置くと隣接は前2と後2だけになり、前2のホタにだけ確実に火が回る（後2は空き）。
-    // 「新しい状態異常を足す前に、受け皿編成を先に立てて測る」（README の判定基準）に従って先に置く。
-    ("燃焼 (ボルグ×ホタ)", Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Hota, front3: UnitCatalog.Mudo, mid: UnitCatalog.Borg, back1: UnitCatalog.Nono))
+    // 後1ホタと後2ボルグは同じ列で左右に隣接するので火は確実に回る。前列はノノとガルドで受け、
+    // 火種と受け皿をまとめて後列に下げる形。reseat 1位を confirm で追試して採用
+    // （seed 200..599 で +2.1pt / seed 600..1399 で +2.3pt）。
+    // 中身は第4波を約3pt 差し出して第5波を約13pt 買う入れ替えで、全体が一様に伸びたわけではない。
+    ("燃焼 (ボルグ×ホタ)", Formation.Build(front1: UnitCatalog.Nono, front2: UnitCatalog.Gald, front3: UnitCatalog.Mudo, back1: UnitCatalog.Hota, back2: UnitCatalog.Borg))
 };
 
 // メンバーをスロット 0..5 へ重複なく割り当てる全順列を、
