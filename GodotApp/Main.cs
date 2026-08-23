@@ -87,10 +87,27 @@ public partial class Main : Control
     {
         public PanelContainer Root = null!;
         public StyleBoxFlat Style = null!;
-        public Label Name = null!, Pat = null!, Hp = null!;
+        public Label Name = null!, Pat = null!, Hp = null!, Status = null!;
         public ProgressBar Bar = null!;
         public StyleBoxFlat Fill = null!;
     }
+
+    /// <summary>
+    /// 「誰が誰を叩いたか」の筋。ダメージが通るたびに1本積んで、時間で薄れる。
+    ///
+    /// <c>Attack</c> ではなく <c>Damage</c> を起点にしているのは、そちらのほうが読めるものが多いため。
+    /// 薙ぎなら巻き込んだ数だけ、貫きならレーンを走った数だけ本数が出るので、
+    /// **攻撃パターンの形がそのまま線の形になる。** 棘の反撃のように
+    /// <c>PerformAttack</c> を通らない干渉も同じように出る。
+    /// </summary>
+    struct Shot
+    {
+        public int FromTeam, FromSlot, ToTeam, ToSlot;
+        public bool Friendly;
+        public double Life;
+    }
+
+    const double ShotLife = 0.55;
 
     // ---- 状態 -----------------------------------------------------------
 
@@ -98,6 +115,8 @@ public partial class Main : Control
     BattleResult _result = null!;
     List<Piece> _roster = new();
     readonly Dictionary<(int Team, int Slot), Card> _cards = new();
+    readonly List<Shot> _shots = new();
+    ShotOverlay _overlay = null!;
 
     int _idx;
     bool _playing;
@@ -154,7 +173,54 @@ public partial class Main : Control
 
         root.AddChild(BuildTransport());
 
+        // 攻撃の筋を描く層。カードより後に足すことでカードの上に乗る。
+        _overlay = new ShotOverlay { Painter = PaintShots };
+        _overlay.SetAnchorsPreset(LayoutPreset.FullRect);
+        AddChild(_overlay);
+
         Load(0, 4);
+    }
+
+    // ---- 攻撃の筋 -------------------------------------------------------
+
+    void PaintShots(ShotOverlay layer)
+    {
+        Transform2D inv = layer.GetGlobalTransform().AffineInverse();
+
+        foreach (Shot s in _shots)
+        {
+            if (!_cards.TryGetValue((s.FromTeam, s.FromSlot), out Card? a)) continue;
+            if (!_cards.TryGetValue((s.ToTeam, s.ToSlot), out Card? b)) continue;
+
+            Vector2 from = inv * a.Root.GetGlobalRect().GetCenter();
+            Vector2 to = inv * b.Root.GetGlobalRect().GetCenter();
+
+            float k = (float)(s.Life / ShotLife);
+            Color c = s.Friendly ? CFf : CDmg;
+            c.A = k * 0.9f;
+
+            layer.DrawLine(from, to, c, 2f * k + 1f, antialiased: true);
+
+            // 着弾側に印を置く。線だけだと向きが読めない。
+            layer.DrawCircle(to, 4f * k + 2f, c);
+        }
+    }
+
+    /// <summary>直前に適用したイベントが干渉なら、筋を1本積む。</summary>
+    void PushShot(BattleEvent e, Dictionary<int, Piece> units)
+    {
+        if (e.Kind != BattleEventKind.Damage) return;
+        if (e.ActorId is not { } aid || e.TargetId is not { } tid) return;
+        if (!units.TryGetValue(aid, out Piece? a) || !units.TryGetValue(tid, out Piece? b)) return;
+        if (a == b) return;   // 反動（追い打ちの踏み込みすぎ）は自分から自分なので線にならない
+
+        _shots.Add(new Shot
+        {
+            FromTeam = a.Team, FromSlot = a.Slot,
+            ToTeam = b.Team, ToSlot = b.Slot,
+            Friendly = e.FriendlyFire || a.Team == b.Team,
+            Life = ShotLife,
+        });
     }
 
     // ---- UI 組み立て ----------------------------------------------------
@@ -332,8 +398,13 @@ public partial class Main : Control
         c.Bar.AddThemeStyleboxOverride("fill", c.Fill);
         v.AddChild(c.Bar);
 
+        var bottom = new HBoxContainer();
         c.Hp = Text("", 10, CDim);
-        v.AddChild(c.Hp);
+        c.Hp.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        bottom.AddChild(c.Hp);
+        c.Status = Text("", 10, CAccent);
+        bottom.AddChild(c.Status);
+        v.AddChild(bottom);
         return c;
     }
 
@@ -449,19 +520,22 @@ public partial class Main : Control
         _syncing = false;
 
         _idx = 0;
+        _shots.Clear();
         SetPlaying(false);
         Redraw();
     }
 
     // ---- 台本を適用して盤面を作る ---------------------------------------
 
-    Dictionary<int, Piece> BuildState(int upto, out int turn, out int kills, out int best)
+    Dictionary<int, Piece> BuildState(int upto, out int turn, out int kills, out int best,
+                                      Dictionary<(int Id, string Key), int>? statuses = null)
     {
         var units = _roster.ToDictionary(
             p => p.Id,
             p => new Piece { Id = p.Id, Team = p.Team, Slot = p.Slot, Name = p.Name,
                              Hp = p.MaxHp, MaxHp = p.MaxHp, Attack = p.Attack, Pattern = p.Pattern });
         turn = 0; kills = 0; best = 0;
+        statuses?.Clear();
 
         for (int i = 0; i < upto; i++)
         {
@@ -472,6 +546,12 @@ public partial class Main : Control
             {
                 case BattleEventKind.TurnStart:
                     turn = e.Turn; kills = 0;
+                    // 継続効果はターン頭のスナップショットで組み直す。持ち越さない。
+                    statuses?.Clear();
+                    break;
+                case BattleEventKind.StatusSnapshot:
+                    if (statuses is not null && e.TargetId is { } stid && e.Text is { } skey)
+                        statuses[(stid, skey)] = e.Amount;
                     break;
                 case BattleEventKind.Damage:
                 case BattleEventKind.Heal:
@@ -507,9 +587,11 @@ public partial class Main : Control
         return units;
     }
 
+    readonly Dictionary<(int Id, string Key), int> _statuses = new();
+
     void Redraw()
     {
-        Dictionary<int, Piece> units = BuildState(_idx, out _, out int kills, out int best);
+        Dictionary<int, Piece> units = BuildState(_idx, out _, out int kills, out int best, _statuses);
 
         for (int team = 0; team <= 1; team++)
         {
@@ -519,14 +601,27 @@ public partial class Main : Control
                 if (!_cards.TryGetValue((team, slot), out Card? c)) continue;
                 if (!bySlot.TryGetValue(slot, out Piece? u))
                 {
-                    c.Root.Visible = false;
+                    // 空きスロットも枠として残す。
+                    // **Visible=false にすると Container が畳んでレーンの深さが崩れ、
+                    // 接敵面が揃わなくなる。** 盤面の幾何が読めることがこの画面の要点。
+                    // 空き枠自体も情報（散開は隣に味方がいないことが条件、5体を6枠に入れる限り必ず1つ空く）。
+                    c.Name.Text = "";
+                    c.Pat.Text = "";
+                    c.Hp.Text = "";
+                    c.Status.Text = "";
+                    c.Bar.Value = 0;
+                    c.Style.BgColor = new Color(0, 0, 0, 0);
+                    c.Style.BorderColor = CLine;
+                    c.Root.Modulate = new Color(1, 1, 1, 0.4f);
                     continue;
                 }
-                c.Root.Visible = true;
+                c.Style.BgColor = CGround;
+                c.Style.BorderColor = team == 1 ? CEnemy : CPlayer;
                 c.Name.Text = u.Name;
                 c.Pat.Text = PatternLabel(u.Pattern);
                 c.Bar.Value = u.MaxHp == 0 ? 0 : Math.Clamp((double)u.Hp / u.MaxHp, 0, 1);
                 c.Hp.Text = $"{Math.Max(0, u.Hp)}/{u.MaxHp}   攻{u.Attack}";
+                c.Status.Text = StatusText(u.Id);
                 c.Root.Modulate = u.Alive ? Colors.White : new Color(1, 1, 1, 0.28f);
             }
         }
@@ -538,6 +633,10 @@ public partial class Main : Control
         _lChainNote.Text = $"ここまでの最大 {best} / この戦闘の最大 {_result.MaxEnemyKillsInOneTurn}";
 
         RedrawFeed(units);
+
+        // 直前に適用したイベントが干渉なら筋を積む。位置は「そのとき」の盤面から取る。
+        if (_idx > 0) PushShot(_result.Events[_idx - 1], units);
+        _overlay.QueueRedraw();
 
         _lPos.Text = $"{_idx} / {_result.Events.Count}";
         _bPlay.Text = _playing ? "停止" : "再生";
@@ -590,6 +689,16 @@ public partial class Main : Control
         };
     }
 
+    /// <summary>その駒がいま負っている継続効果を1行にまとめる。</summary>
+    string StatusText(int id)
+    {
+        var parts = new List<string>();
+        foreach (((int Id, string Key) k, int v) in _statuses)
+            if (k.Id == id && v > 0) parts.Add($"{k.Key}{v}");
+        parts.Sort(StringComparer.Ordinal);   // 並びを安定させる（毎フレーム入れ替わると読めない）
+        return string.Join(" ", parts);
+    }
+
     static string PatternLabel(AttackPattern p) => p switch
     {
         AttackPattern.Sweep => "薙ぎ",
@@ -625,6 +734,20 @@ public partial class Main : Control
 
     public override void _Process(double delta)
     {
+        // 筋は再生していなくても薄れさせる（コマ送りでも1本ずつ確かめられる）。
+        // 速度に比例して薄れるので、4× でも線が渋滞しない。
+        if (_shots.Count > 0)
+        {
+            for (int i = _shots.Count - 1; i >= 0; i--)
+            {
+                Shot s = _shots[i];
+                s.Life -= delta * Math.Max(1.0, _speed);
+                if (s.Life <= 0) _shots.RemoveAt(i);
+                else _shots[i] = s;
+            }
+            _overlay.QueueRedraw();
+        }
+
         if (!_playing) return;
         if (_idx >= _result.Events.Count) { SetPlaying(false); Redraw(); return; }
 

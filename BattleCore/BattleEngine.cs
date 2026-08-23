@@ -256,6 +256,42 @@ public sealed class BattleContext
     internal void EmitTurnStart()
         => Emit(new BattleEvent { Kind = BattleEventKind.TurnStart, Turn = _turn });
 
+    /// <summary>
+    /// そのターン頭に各駒が負っている継続効果を、値ごと台本へ写す。
+    /// 再生側は TurnStart で持っている状態を捨て、これで組み直す（0 のものは出さない）。
+    /// </summary>
+    internal void EmitStatusSnapshot()
+    {
+        if (!_verbose) return;
+
+        foreach (UnitState u in _units)
+        {
+            if (!u.IsAlive) continue;
+            foreach ((string key, string label) in StatusLabels)
+            {
+                int v = u.Counter(key);
+                if (v <= 0) continue;
+                Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.StatusSnapshot,
+                    Turn = _turn,
+                    TargetId = u.InstanceId,
+                    Amount = v,
+                    Text = label,
+                });
+            }
+        }
+    }
+
+    /// <summary>スナップショットに出す継続効果と、その表示名。</summary>
+    private static readonly (string Key, string Label)[] StatusLabels =
+    {
+        (StatusKeys.Poison, "毒"),
+        (StatusKeys.Burn, "燃"),
+        (StatusKeys.Stun, "痺"),
+        (StatusKeys.Marked, "標"),
+    };
+
     public int Roll(int maxExclusive) => _rng.Next(maxExclusive);
 
     /// <summary>攻撃対象を選ぶ。前列が生きている限り後列は狙われない。庇うはここで割り込む。</summary>
@@ -815,6 +851,7 @@ public static class BattleEngine
             ctx.Log($"--- ターン {turn} ---", LogKind.Turn);
             ctx.EmitTurnStart();
             ctx.TickStatuses();
+            ctx.EmitStatusSnapshot();   // 削った後の残量を写す。表示用で、盤面には触らない
 
             foreach (UnitState u in ctx.AllUnits.Where(x => x.IsAlive).ToList())
                 foreach (Trait t in u.Traits.ToList())
