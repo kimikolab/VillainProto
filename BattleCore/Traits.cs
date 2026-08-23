@@ -19,7 +19,7 @@ public enum TraitId
     Curse,       // 呪詛: 開始時に敵全体の攻撃力を下げる（隣接味方にも漏れる）
     Guardian,    // 庇う: 味方への攻撃を肩代わりする
     Necro,       // 墓守: 味方が倒れるたび強化される
-    Colossus,    // 巨躯: 最大HPが極めて高い（数値で表現済み、フラグ用）
+    Colossus,    // 巨躯: 自分より後ろの列にいる味方への攻撃を、型を問わず肩代わりする
     Executioner, // 処刑: とどめを刺すと攻撃力が上がる
     Reviver,     // 継ぎ接ぎ: 倒れた味方を回数制限つきで戦線に戻す
     Ephemeral,   // 儚い: 湧いて出た駒。分裂しないし蘇生対象にもならない
@@ -193,25 +193,52 @@ public sealed class SacrificeTrait : Trait
     }
 }
 
-/// <summary>大食い。毎ターン味方からHPを吸う。Necro と組むと味方の死が資源になる。</summary>
+/// <summary>
+/// 大食い。毎ターン味方からHPを吸う。<b>傷ついているほど吸う量が増える</b>（自己修復）。
+///
+/// <para>巨躯（壁）の代金として働かせるための形。壁の見返りは肩代わりした量に比例して
+/// 増えるのに、代金が固定だと**守るほど実質無料**になる。README が繰り返し記録している
+/// 「積み上げは積んだ量に比例するコストを持つべき」（溜めのコストはテンポで積んだ量と
+/// 独立だったため、最も長い波で無料になった）と同じ穴。</para>
+///
+/// <para>肩代わり量に直接比例させるのではなく<b>欠けたHPに比例</b>させているのは、
+/// そのほうが「守った履歴の累積」になるため。壁として立ち続けた結果としてHPが減り、
+/// 減った分だけ維持費が上がる。フレーバー（維持費が高すぎる。連れて行くと部隊が保たない）
+/// にもそのまま乗る。</para>
+///
+/// <para>副産物として<b>回復役に仕事が生まれる</b>。壁を繕えば維持費が下がるので、
+/// 継ぎ当て（ノノ）がゴルムを癒す意味ができる。固定コストのときは
+/// 耐久(ガルド×ノノ) だけが一貫して悪化していた。</para>
+/// </summary>
 public sealed class DrainTrait : Trait
 {
+    /// <summary>無傷のときに味方1体から吸う量。</summary>
     public const int Amount = 4;
+
+    /// <summary>HPが尽きかけたときに上乗せされる最大量。欠けたHPの割合で線形に効く。</summary>
+    public const int WoundedExtra = 6;
+
     public override TraitId Id => TraitId.Drain;
+
+    /// <summary>いま味方1体から吸う量。無傷で <see cref="Amount"/>、瀕死で +<see cref="WoundedExtra"/>。</summary>
+    public static int DrawOf(UnitState self)
+        => Amount + WoundedExtra * Math.Max(0, self.MaxHp - self.Hp) / Math.Max(1, self.MaxHp);
 
     public override void OnTurnStart(BattleContext ctx, UnitState self)
     {
+        int draw = DrawOf(self);
         int gained = 0;
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId).ToList())
         {
             if (ally == self) continue;
-            ctx.ApplyDamage(ally, Amount, self, isFriendlyFire: true);
-            gained += Amount;
+            ctx.ApplyDamage(ally, draw, self, isFriendlyFire: true);
+            gained += draw;
         }
         if (gained > 0)
         {
             ctx.Heal(self, gained);
-            ctx.Log($"    {self.Name} が味方から精気を吸った（+{gained}）", LogKind.FriendlyFire);
+            ctx.Log($"    {self.Name} が味方から精気を吸った（1体あたり {draw} / 計 +{gained}）",
+                    LogKind.FriendlyFire);
         }
     }
 }
@@ -437,8 +464,29 @@ public sealed class NecroTrait : Trait
 }
 
 /// <summary>巨躯。フラグ用。実効性能は MaxHp の数値側で表現する。</summary>
+/// <summary>
+/// 巨躯。<b>自分より後ろの列にいる味方</b>への攻撃を、型を問わず肩代わりする。
+///
+/// <para>もとは <c>Id</c> を返すだけの空のフラグで、「圧倒的な耐久」の実体は HP150 という
+/// 数字だけだった。壁役のつもりで置かれているのに防御機構を1つも持たず、
+/// それでいて大喰らいで毎ターン味方を削るので、測ると3方向から同じ結論が出ていた
+/// （ablate で逆しま改から抜くと +4.4pt / pulse で全11編成とも味方への与ダメが敵向きを上回る /
+/// そもそも実装が空）。文字通り壁として働かせる。</para>
+///
+/// <para><b>肩代わりは damage の層で解決する。</b> 庇う（Guardian）や後備え（RearGuard）は
+/// <c>SelectTarget</c> で主目標を差し替えるだけなので、範囲攻撃の巻き込みには触れない。
+/// ここは <c>ApplyDamage</c> の中なので薙ぎ・全体・貫きの一発ずつを拾える。</para>
+///
+/// <para><b>列の前後で効き目が変わる。</b> 前列に置けば中衛と後列を守り、中衛なら後列だけ、
+/// 後列に置けば誰も守らない。5体を6枠に入れる限り必ず1枠空くので
+/// 「デメリットの隣を空ける」が常に最適解になる、という既存の穴（README の未解決の課題）に対して、
+/// **置き場所そのものが効き目を決める**駒になっている。</para>
+/// </summary>
 public sealed class ColossusTrait : Trait
 {
+    /// <summary>後ろの味方への攻撃を何割引き受けるか。</summary>
+    public const int Percent = 90;
+
     public override TraitId Id => TraitId.Colossus;
 }
 

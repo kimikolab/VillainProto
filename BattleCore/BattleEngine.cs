@@ -568,6 +568,35 @@ public sealed class BattleContext
 
         if (amount <= 0) return;
 
+        // 巨躯: 自分より前の列に立つ壁が、後ろの味方への攻撃を引き受ける。
+        // 標的選択（庇う・後備え）と違って damage の層なので、薙ぎ・全体・貫きの一発ずつを拾える。
+        //
+        // 前後の判定は DepthOf で厳密に「より前」だけを見る。同じ列は守らない
+        // （横に並んでいるだけの駒を守れると、前列に3枚並べるだけで壁が3重になる）。
+        // 壁自身への攻撃は自分より前に自分がいないので自然に外れ、
+        // 壁が複数いても HasTrait(Colossus) で受け側を除外しているため多段の肩代わりは起きない。
+        if (!target.HasTrait(TraitId.Colossus))
+        {
+            int targetDepth = FormationRules.DepthOf(target.Row);
+            // **壁自身が出どころのダメージは肩代わりしない。** 自分で殴っておいて
+            // 自分で庇うと打ち消しになる。大喰らいの吸いがここを通っていて、
+            // 味方が受ける味方由来ダメージが 23〜29 → 7 まで落ちていた（＝代金が消えていた）。
+            UnitState? wall = teammates.FirstOrDefault(
+                u => u.HasTrait(TraitId.Colossus) && u != target && u != source
+                     && FormationRules.DepthOf(u.Row) < targetDepth);
+
+            if (wall is not null)
+            {
+                int blocked = amount * ColossusTrait.Percent / 100;
+                if (blocked > 0)
+                {
+                    amount -= blocked;
+                    Log($"    {wall.Name} が {target.Name} の前に立ちはだかる", LogKind.Trigger);
+                    ApplyDamage(wall, blocked, source, isFriendlyFire: true);
+                }
+            }
+        }
+
         // 分かち: 型を問わず肩代わりする。庇うと違い、薙ぎや全体でも働く。
         // 味方同士の巻き込み（isFriendlyFire）も引き受ける。ここを除外していたとき、
         // ドハはカドの代金（敵からの被弾）だけを4割肩代わりして守り、収入源（味方への巻き込み）は
