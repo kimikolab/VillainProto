@@ -1028,7 +1028,17 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 火種と受け皿をまとめて後列に下げる形。reseat 1位を confirm で追試して採用
     // （seed 200..599 で +2.1pt / seed 600..1399 で +2.3pt）。
     // 中身は第4波を約3pt 差し出して第5波を約13pt 買う入れ替えで、全体が一様に伸びたわけではない。
-    ("燃焼 (ボルグ×ホタ)", Formation.Build(front1: UnitCatalog.Nono, front2: UnitCatalog.Gald, front3: UnitCatalog.Mudo, back1: UnitCatalog.Hota, back2: UnitCatalog.Borg))
+    ("燃焼 (ボルグ×ホタ)", Formation.Build(front1: UnitCatalog.Nono, front2: UnitCatalog.Gald, front3: UnitCatalog.Mudo, back1: UnitCatalog.Hota, back2: UnitCatalog.Borg)),
+    // 範囲耐性。砕け盾のヒビ（範囲を浴びて破片を配る）を軸に据えた編成。
+    // ガルドは Stoic で回復も強化も受け付けないが、破片は damage 側で消費されるので届く。
+    // ドルガ（攻38・薙ぎだが2ターンに1回）は「強い。ただ遅い」という理由で外された駒で、
+    // 守られて初めて完走できる。ablate でヒビを抜くと 92.2% → 大きく落ちる。
+    //
+    // 配置は reseat 1位（94.7%）ではなく狙いを優先して据え置き（92.2%）。
+    // ヒビを前列に置き、ボルグと横に隣接させることが狙い。ボルグの薙ぎは味方も巻き込むが、
+    // その巻き込みも CurrentPattern != Single なのでヒビの変換対象になる。
+    // 探索1位はボルグを後列へ回してこの噛み合わせを捨てる形なので採らない。
+    ("範囲耐性 (ヒビ×ボルグ)", Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Hibi, front3: UnitCatalog.Borg, mid: UnitCatalog.Dolga, back1: UnitCatalog.Rica))
 };
 
 // メンバーをスロット 0..5 へ重複なく割り当てる全順列を、

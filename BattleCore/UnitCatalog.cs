@@ -464,9 +464,31 @@ public static class UnitCatalog
         Flavor = "焚きつけられている間だけ働く。誰かが火を放つのを待っている。"
     };
 
+    /// <summary>
+    /// 砕け盾のヒビ。範囲攻撃に対する唯一の受け手。
+    ///
+    /// 庇う（ガルド）が標的選択の層で単体だけを止めるのに対し、こちらは damage の層にいて
+    /// 薙ぎ・全体・貫きだけを拾う。実測で敵の攻撃力に占める範囲の割合は第五波で53%あり、
+    /// そこが丸ごと素通りしていた（後備えは主目標を差し替えるだけで巻き込みには触れない）。
+    ///
+    /// 脆弱は罰ではなく燃料。浴びる量が増えるほど配れる破片も増える。
+    /// </summary>
+    public static readonly UnitDef Hibi = new()
+    {
+        Id = "hibi",
+        Name = "砕け盾のヒビ",
+        MaxHp = 55,
+        Attack = 5,
+        Speed = 3,
+        Traits = new[] { TraitId.Shatter, TraitId.Frail },
+        PlusText = "範囲攻撃を受けると、その4分の1を破片として味方全員に配る（HPの前に削られる／回復を受け付けない味方にも届く）",
+        MinusText = "受けるダメージが5割増し / 単体攻撃しか飛んでこない相手には何も起きない",
+        Flavor = "盾として不良品と判定された。割れながら破片を撒くので周りが危ないとも書かれている。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

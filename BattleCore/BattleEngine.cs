@@ -15,6 +15,19 @@ public static class StatusKeys
 
     /// <summary>そのターン行動できなかった駒に記録されるターン番号。</summary>
     public const string IdleTurn = "idleTurn";
+
+    /// <summary>
+    /// 破片（アーマー）。HP の前に削られるプール。
+    ///
+    /// **回復とは別資源**にしてあるのが要点。`ctx.Heal` は `AcceptsSupport` を見るので
+    /// 廃棄聖騎士ガルド（`Stoic`＝回復も強化も受け付けない）には一切届かないが、
+    /// これは damage 側で消費されるだけなので届く。
+    /// 「誰の助けも届かない」駒に唯一届く支援、という位置づけ。
+    ///
+    /// 減衰も上限も持たせていない。供給源が「砕け盾のヒビが範囲攻撃を浴びること」だけに
+    /// 限られていて、ヒビのHPという有限プールがそのまま天井になるため。
+    /// </summary>
+    public const string Armor = "armor";
 }
 
 /// <summary>
@@ -301,6 +314,7 @@ public sealed class BattleContext
         (StatusKeys.Burn, "燃"),
         (StatusKeys.Stun, "痺"),
         (StatusKeys.Marked, "標"),
+        (StatusKeys.Armor, "盾"),
     };
 
     public int Roll(int maxExclusive) => _rng.Next(maxExclusive);
@@ -584,6 +598,25 @@ public sealed class BattleContext
                     }
                 }
             }
+        }
+
+        // 破片（アーマー）は HP の前に削られる。
+        //
+        // **プールにしてあるのが要点。** 「1発を完全に吸う」形にすると、敵の一撃を
+        // 超えるか超えないかで効果が二値になる（README の浄化と同じ「引き算は崖」の穴で、
+        // あちらは -4 という最小の刻みで毒軸の第2波が 98% → 0% に落ちた）。
+        // 超過分は素通りさせることで、崖ではなく傾斜にしてある。
+        int armor = target.Counter(StatusKeys.Armor);
+        if (armor > 0)
+        {
+            int soak = Math.Min(armor, amount);
+            target.SetCounter(StatusKeys.Armor, armor - soak);
+            amount -= soak;
+            Log($"    {target.Name} の破片が {soak} 防いだ（残り {armor - soak}）", LogKind.Trigger);
+
+            // 破片で受け切ったなら「何も起きなかった」と扱う。被弾強化も反撃も走らせない。
+            // ここを通すと、削られていない駒が削られた駒と同じ収入を得る。
+            if (amount <= 0) return;
         }
 
         if (!lethal) amount = Math.Min(amount, Math.Max(0, target.Hp - 1));

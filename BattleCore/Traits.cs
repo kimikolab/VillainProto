@@ -49,7 +49,8 @@ public enum TraitId
     RearGuard,   // 後備え: 後列の味方への攻撃を肩代わりする。貫きにも割り込む
     Cinder,      // 火の粉: 攻撃した相手に燃焼を付け、隣接する味方にも燃え移る
     Pyre,        // 熾火: 自分が燃えている間だけ本領を発揮する
-    Condemn      // 断罪: 反撃してきた相手を痺れさせる（敵側の語彙）
+    Condemn,     // 断罪: 反撃してきた相手を痺れさせる（敵側の語彙）
+    Shatter      // 砕け: 範囲攻撃を浴びると、その分を破片（アーマー）にして味方へ配る
 }
 
 /// <summary>
@@ -1144,6 +1145,79 @@ public sealed class PerverseTrait : Trait
 /// 編成なので、そちらの動きは小さいことも確認済み（+7.0pt、他の波は無変化）。
 /// この変更は Sharer 特性にしか触れていないので、ドハを含まない27編成は無変化（compare で確認済み）。
 /// </summary>
+/// <summary>
+/// 砕け。範囲攻撃を浴びると、受けた分の半分を破片（アーマー）にして味方全員へ配る。
+///
+/// <para><b>庇う（Guardian）のちょうど裏返し。</b> 庇う・標的の介入は
+/// <c>SelectTarget</c>（標的選択）で働くので Single にしか効かず、薙ぎ・全体の巻き込みや
+/// レーンを走る貫きには一切触れない。実測で敵の攻撃力に占める範囲の割合は
+/// 第四波15% / <b>第五波53%</b>で、そこが丸ごと素通りしていた。
+/// こちらは damage の層にいるので、その素通りしていた側だけを拾う。
+/// 代わりに単体攻撃には何も起きない。</para>
+///
+/// <para><b>見返りは味方に配る。</b> README の「純粋な防御役は編成の火力を殺す」
+/// （RearGuard 単独で 26.0% → 12.0%）を踏まえると、引き受けるだけの駒は必ず沈む。
+/// ただし攻撃力に変える形（ガルド・カド）はロスターに既に9箇所ある自己強化の10番目に
+/// なるだけで、支援の穴（他人を癒せるのはノノ1体、駒ごとの被ダメ軽減はゼロ）は埋まらない。
+/// 破片は回復とも攻撃力とも別の資源なので、そのどちらとも競合しない。</para>
+///
+/// <para><b>マイナスは脆弱（受けるダメージ5割増し）。</b> 罰ではなく燃料で、
+/// 浴びる量が増えるぶん配れる量も増える。代金は自分のHPという有限プールから払われる。
+/// 「積み上げは積んだ量に比例するコストを持つべき」（README）を、
+/// コスト側を先に決めることで満たしている。</para>
+/// </summary>
+public sealed class ShatterTrait : Trait
+{
+    /// <summary>
+    /// 浴びた量のうち破片に変わる割合。
+    ///
+    /// 感度は急峻ではないが、上下とも壁がある（README に表）。
+    /// 50 だと総合98.8%で全編成中2位に立ち、新軸が既存を押しのける。
+    /// 15 まで下げると第四波が 96% → 40% と崖になる（第四波は範囲が15%しかなく、
+    /// ここを下回るとドルガが完走できなくなる）。
+    ///
+    /// **25 を採ったのは勝率の最大化ではない。** 持続的な範囲攻撃の波を
+    /// タンク1枚で凌ぎ切れてしまうと、回復役を足す余地が消える。
+    /// 残存が中位（3.1/5）に留まるのは不足ではなく、支援役をもう1枚置ける幅として意図している。
+    /// </summary>
+    public const int ConvertPercent = 25;
+
+    // 破片に上限は設けていない。供給が「ヒビが浴びた量」に縛られていて、
+    // ヒビのHPという有限プールがそのまま天井になるため（実測で1戦の被弾110、
+    // 配れる破片は味方1体あたり30弱）。上限20/12/30 を振っても差が出なかったので、
+    // 効いていない定数を残すより外した。変換率を50まで上げると初めて効き始める。
+
+    public override TraitId Id => TraitId.Shatter;
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        // 範囲攻撃のときだけ働く。source の型を見れば足りるので ApplyDamage の引数を増やさずに済む。
+        // 毒・燃焼の継続ダメージは source が null なので自然に外れる（あれは範囲攻撃ではない）。
+        if (source is null || source.CurrentPattern == AttackPattern.Single) return;
+
+        int shards = dmg * ConvertPercent / 100;
+        if (shards <= 0) return;
+
+        int given = 0;
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            // **自分には配らない。** 配ると自分の被弾を自分で吸ってしまい、
+            // 「浴びた量 = 配れる量」という関係が切れる（実測で変換が目に見えて鈍った）。
+            // 庇う（ガルド）が自分を庇えないのと同じ形。
+            if (ally == self) continue;
+
+            // **AcceptsSupport を見ない。** 破片は回復でも強化でもなく damage 側で消費される
+            // だけなので、Stoic（ガルドの「回復も強化も一切受け付けない」）を貫通する。
+            // 「誰の助けも届かない」駒に唯一届く支援、というのがこの駒の存在理由。
+            ally.SetCounter(StatusKeys.Armor, ally.Counter(StatusKeys.Armor) + shards);
+            given += shards;
+        }
+
+        if (given > 0)
+            ctx.Log($"    ★ {self.Name} が砕けて破片が飛んだ（味方へ {shards} ずつ）", LogKind.Highlight);
+    }
+}
+
 public sealed class SharerTrait : Trait
 {
     public const int Percent = 40;
@@ -1381,6 +1455,7 @@ public static class TraitCatalog
         new DrifterTrait(),
         new PerverseTrait(),
         new SharerTrait(),
+        new ShatterTrait(),
         new LooseTrait(),
         new CowerTrait(),
         new PursuerTrait(),

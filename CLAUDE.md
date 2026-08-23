@@ -105,6 +105,8 @@ BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project Ba
 - 死亡通知の順序は固定: killer の `OnKill` → 本人の `OnDeath`（分裂など）→ 全員の `OnAnyDeath`（墓守）→ 味方の `OnAllyDeath`（蘇生）。「墓守が強化を得た後に蘇生が走る」という順序依存がある。
 - 反撃は `ctx.Reaction(...)` で包む。包まないと反撃が反撃を呼んで無限に落ちる。
 - ターン外の割り込み攻撃（軋み）は `ctx.Interrupt(...)` で包む。割り込みの中で起きた移動が更なる割り込みを生む再入を止める。反撃とは別の連鎖なので `Reaction` とは別フラグ。再入禁止フラグを Trait の static に置かないこと（Trait は共有シングルトンで、layout モードは戦闘を並列実行する）。
+- **割り込み（庇う・後備え・標的）はすべて `SelectTarget` で働く。主目標を差し替えるだけ**なので、範囲攻撃の巻き込み（`PerformAttack` が個別に `ApplyDamage` する）には触れない。貫きは `ResolvePierce` がレーンを直接走るので標的選択自体を通らない。範囲に対処する駒は damage の層（`ApplyDamage` / `OnDamaged`）に置くこと。範囲かどうかは `source.CurrentPattern != Single` で取れるので引数を増やす必要はない（毒・燃焼は `source` が null なので自然に外れる）。
+- 破片（`StatusKeys.Armor`）は HP の前に削られるプール。**回復とは別資源**で、`ctx.Heal` が見る `AcceptsSupport` を通らないので `Stoic`（ガルド）にも届く。「1発を完全に吸う」ではなく超過分を素通りさせるプールにしてあるのは、二値にすると README の浄化と同じ「引き算は崖」の穴に落ちるため。
 - 状態異常は `StatusKeys` のカウンタで持ち、`TickStatuses` がターン開始時にまとめて処理する。新しい状態異常はキーを1つ足して `TickStatuses` に処理を書くだけでよく、特性側は「カウンタを積む」だけになる。
 - `LivingMembers` は必ずスナップショット（`ToList`）を返す。特性の中から召喚・蘇生が呼ばれるので、遅延評価のままだと列挙中に盤面が変わって落ちる。
 - 特性の発動（`OnAfterAttack`）は攻撃1回につき1度、主目標に対してのみ。範囲攻撃のたびに複数回発動させると範囲パターンの駒が即座に壊れる。
