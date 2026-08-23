@@ -1,0 +1,22 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!--
+    BattleCore をそのまま参照する。これが成立するのは BattleCore が net8.0 の
+    素のクラスライブラリで、UI を一切参照していないため（CLAUDE.md の「絶対のルール」）。
+    Godot 4.7.2 の GodotSharp も net8.0 なので、BattleCore 側は1行も変えずに載る。
+
+    このプロジェクトは VillainProto.sln に**入れない**。
+    root の `dotnet build` は Windows 以外でも通る必要があり（BattleCore + BattleSim）、
+    ここを混ぜると Godot.NET.Sdk の解決が要る。編成の検証は今まで通り BattleSim で行う。
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\BattleCore\BattleCore.csproj" />
+  </ItemGroup>
+
+</Project>

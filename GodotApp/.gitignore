@@ -1,0 +1,7 @@
+# Godot が生成するもの
+.godot/
+.mono/
+export_presets.cfg
+
+# Godot が自動生成する csproj/sln（GodotApp.csproj は手で書いたので追跡する）
+GodotApp.sln
