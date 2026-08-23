@@ -406,7 +406,7 @@ public static class UnitCatalog
         Speed = 7,
         Traits = new[] { TraitId.Pursuer },
         Pattern = AttackPattern.Sweep,
-        PlusText = "味方が敵を倒すと、ターン順を無視して薙ぎ払う（1ターン1回）",
+        PlusText = "味方が敵を倒すと、ターン順を無視して薙ぎ払う（同じターンに続けて踏み込むほど自分が傷つく）",
         MinusText = "自分の手番では決して動かない。味方が誰も倒せなければ置物",
         Flavor = "止めを刺した者の背後から現れる。手柄だけを持っていく。"
     };
