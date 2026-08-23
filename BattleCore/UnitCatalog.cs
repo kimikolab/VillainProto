@@ -67,7 +67,7 @@ public static class UnitCatalog
         Attack = 9,
         Speed = 4,
         Traits = new[] { TraitId.Guardian, TraitId.Stoic },
-        PlusText = "味方への攻撃を肩代わりする / 呪いや弱体を受け付けない",
+        PlusText = "味方への攻撃を肩代わりし、その傷のぶん強くなる / 呪いや弱体を受け付けない",
         MinusText = "回復も強化も一切受け付けない",
         Flavor = "誓約が壊れていて、もう誰の助けも届かない。"
     };

@@ -324,11 +324,50 @@ public sealed class CurseTrait : Trait
     }
 }
 
-/// <summary>庇う。前列にいるとき、味方への攻撃を一定確率で肩代わりする。</summary>
+/// <summary>
+/// 庇う。前列にいるとき、味方への攻撃を一定確率で肩代わりする。
+/// 肩代わりして受けた分だけ攻撃力が伸びる（ドハの分かちと同じ見返りの経路）。
+///
+/// 見返りが無かった頃、庇うは**プラスの顔をしたコスト**だった。
+/// 2026-08-21 の監査では、ガルドを前列に置く制約を外すと試した8編成すべてで勝率が上がり、
+/// 例外がひとつも無かった（逆しま+後備え +16.7、逆しま改 +11.5、死の連鎖+後備え +9.1 ほか）。
+/// 肩代わりした分だけ早く落ちるだけで、払った代金の行き先が無かったため。
+///
+/// 伸びるのは**肩代わりした被弾だけ**で、素で殴られたぶんは対象外。
+/// ここを区別しないと「前列のHP100が殴られ続ける」だけで育ち、庇うとの結び付きが切れる。
+/// engine 側は肩代わりの成立時に <see cref="PendingKey"/> を立て、ここで消費する。
+///
+/// 上限は設けない。天井はガルド自身のHPが担う（Rage と同じ考え方）。
+/// なお第五波は4種の攻撃パターンが同時に出るので庇う自体がほとんど発動しない。
+/// この見返りは第二〜四波にしか入らない。第五波の反転は波の作り直しで見ること。
+/// </summary>
 public sealed class GuardianTrait : Trait
 {
     public const int RedirectPercent = 50;
+
+    /// <summary>被ダメージ何点につき攻撃力+1か（Rage・分かちと同じ比率）。</summary>
+    public const int DamagePerGain = 2;
+
+    /// <summary>engine が肩代わりの成立を伝えるための印。次の被弾1回で消費する。</summary>
+    public const string PendingKey = "guardPending";
+
     public override TraitId Id => TraitId.Guardian;
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        bool guarded = self.Counter(PendingKey) > 0;
+        self.SetCounter(PendingKey, 0);
+
+        // source が null の継続ダメージ（毒・燃焼）では育たない。
+        // 印が立ったまま肩代わりが0ダメージで流れた場合に、次の毒の刻みを
+        // 肩代わりと取り違えるのを防ぐ。
+        if (!guarded || dmg <= 0 || source is null || !self.IsAlive) return;
+
+        int gain = Math.Max(1, dmg / DamagePerGain);
+        self.AtkBonus += gain;
+        ctx.Log($"    {self.Name} が受けた傷が誓いを思い出させる（攻撃 +{gain} → {self.CurrentAttack}）",
+            LogKind.Trigger);
+    }
 }
 
 /// <summary>墓守。味方が倒れるたびに強くなり、回復する。</summary>

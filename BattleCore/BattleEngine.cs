@@ -241,6 +241,8 @@ public sealed class BattleContext
         if (guardian is not null && Roll(100) < GuardianTrait.RedirectPercent)
         {
             Log($"    {guardian.Name} が {target.Name} を庇った", LogKind.Trigger);
+            // 肩代わりで受けた分だけ伸びる（GuardianTrait 参照）。素の被弾と区別するための印。
+            guardian.SetCounter(GuardianTrait.PendingKey, 1);
             return guardian;
         }
 
