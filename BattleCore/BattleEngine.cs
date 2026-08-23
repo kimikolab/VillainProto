@@ -161,6 +161,19 @@ public sealed class BattleContext
 
     internal Dictionary<string, int> DamageByUnit { get; } = new();
 
+    /// <summary>
+    /// 駒ごとの働きの内訳。**verbose に関係なく数える**（一括シミュレーションで平均を取るため）。
+    /// 盤面には触らないので、数えることで戦闘が変わることはない。
+    /// </summary>
+    internal Dictionary<string, UnitTally> TallyByUnit { get; } = new();
+
+    private UnitTally TallyOf(UnitState u)
+    {
+        if (!TallyByUnit.TryGetValue(u.Def.Id, out UnitTally? t))
+            TallyByUnit[u.Def.Id] = t = new UnitTally();
+        return t;
+    }
+
     private int _turn;
     private int _enemyKillsThisTurn;
 
@@ -368,6 +381,10 @@ public sealed class BattleContext
             AttackPattern.All => " 全体",
             _ => ""
         };
+        // 手番の1回だけでなく、反撃・追い打ちのような手番外の攻撃もここを通る。
+        // 「1ターンあたり何回振ったか」が、手番でしか動かない駒と反応する駒を分ける。
+        TallyOf(actor).Attacks++;
+
         Log($"{prefix}{actor.Name} → {target.Name} (攻撃 {atk}{label})");
         Emit(new BattleEvent
         {
@@ -545,6 +562,21 @@ public sealed class BattleContext
             DamageByUnit[source.Def.Id] = prev + amount;
         }
 
+        // 与ダメージは敵と味方を分けて数える。混ぜると破裂・生贄・吸いのような
+        // 「味方を削ることで仕事をする駒」が出力の大きい優等生に見えてしまう。
+        if (source is not null)
+        {
+            UnitTally st = TallyOf(source);
+            st.Interventions++;
+            if (isFriendlyFire || source.TeamId == target.TeamId) st.DamageToAlly += amount;
+            else st.DamageToEnemy += amount;
+        }
+
+        UnitTally tt = TallyOf(target);
+        tt.DamageTaken += amount;
+        if (source is not null && (isFriendlyFire || source.TeamId == target.TeamId))
+            tt.TakenFromAlly += amount;
+
         foreach (Trait t in target.Traits.ToList())
             t.OnDamaged(this, target, amount, source);
 
@@ -555,6 +587,9 @@ public sealed class BattleContext
     private void HandleDeath(UnitState dead, UnitState? killer)
     {
         dead.Hp = 0;
+        TallyOf(dead).Deaths++;
+        if (killer is not null && killer.TeamId != dead.TeamId) TallyOf(killer).Kills++;
+
         Log($"    {dead.Name} は倒れた", LogKind.Death);
         Emit(new BattleEvent
         {
@@ -832,6 +867,7 @@ public static class BattleEngine
             Log = ctx.Log_.ToList(),
             PlayerSurvivors = ctx.LivingMembers(BattleContext.PlayerTeam).Count(),
             DamageByUnit = new Dictionary<string, int>(ctx.DamageByUnit),
+            TallyByUnit = new Dictionary<string, UnitTally>(ctx.TallyByUnit),
             MaxEnemyKillsInOneTurn = ctx.MaxEnemyKillsInOneTurn,
             Events = ctx.Events.ToList()
         };

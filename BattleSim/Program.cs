@@ -10,6 +10,108 @@ string focusId = args.Length > 1 ? args[1] : "";
 // 「対象ステージ」の見出しと stageIndex の解決はこの3モードの分岐を抜けた後で行う。
 // （3モードともステージ引数を無視して全ステージを回すため、内容としても誤りになる）
 
+// pulse モード: 駒ごとの「働きの内訳」を測る。
+//
+// compare は編成の勝ち負けしか見ないので、**編成の中で誰が仕事をしていたか**が分からない。
+// ablate は1体抜いた勝率差を見るが、抜けるのは勝率という1つの数字だけで、
+// 「出力で効いているのか、場を作って効いているのか」は区別できない。
+//
+// ここで見たいのは体験の側。カド（殴られるたび反撃）と ウツ（開幕に数値が決まって
+// あとは殴るだけ）は、勝率では並ぶのに手触りが全く違う。その差は
+// 「1ターンあたり何回振ったか」に出る（`攻/T`）。
+//
+//     ~1.0  自分の手番でしか動かない = 数値であって出来事ではない
+//     >1.0  手番外に反応している（反撃・追い打ち）= 噛み合いが起きている
+//     ~0    置物。手番を差し出す型か、発火条件が満たされていない
+//
+//     dotnet run --project BattleSim -c Release 0 pulse [絞り込み] > docs/pulse.md
+if (focusId == "pulse")
+{
+    var all = CompareBuilds();
+    IReadOnlyList<EnemyCatalog.Stage> stages = EnemyCatalog.Stages;
+    const int PulseSeeds = 200;
+
+    string filter = args.Length > 2 ? args[2] : "";
+    var targets = all
+        .Where(b => filter.Length == 0 || filter.Split(',').Any(k => b.Name.Contains(k.Trim())))
+        .ToArray();
+
+    Console.WriteLine("# 活動量");
+    Console.WriteLine();
+    Console.WriteLine("`dotnet run --project BattleSim -c Release 0 pulse > docs/pulse.md` の出力。手で編集しない。");
+    Console.WriteLine($"代表編成 × 全ステージ、seed 0..{PulseSeeds - 1}。数字は**1戦あたりの平均**。");
+    Console.WriteLine();
+    Console.WriteLine("**`振/T` と `干渉/T` のズレが体験の密度を測っている。** どちらも1ターンあたりの回数。");
+    Console.WriteLine();
+    Console.WriteLine("- `振/T` は攻撃を振った回数（`PerformAttack` を通った回数）");
+    Console.WriteLine("- `干渉/T` は実際にダメージを通した回数。攻撃・反撃・破裂・毒のどれでも、");
+    Console.WriteLine("  その駒が起点になって盤面が動いた回数");
+    Console.WriteLine();
+    Console.WriteLine("| 形 | 読み方 |");
+    Console.WriteLine("|---|---|");
+    Console.WriteLine("| 振 ≒ 干渉 ≒ 1.0 | 自分の手番で殴るだけ。数値であって出来事ではない |");
+    Console.WriteLine("| 振 ≒ 0 / 干渉 大 | **反応型。** 手番を持たず、起きたことに反応して盤面を動かす |");
+    Console.WriteLine("| 振 大 / 干渉 ≒ 0 | **空振り。** 毎ターン振っているのに何も起きていない |");
+    Console.WriteLine("| 振 ≒ 0 / 干渉 ≒ 0 | 置物。発火条件が満たされていない |");
+    Console.WriteLine();
+    Console.WriteLine("分母は**戦闘の全ターン数**（その駒が生きていたターン数ではない）ので、");
+    Console.WriteLine("早く落ちる駒は下がる。`落ちた` 列と合わせて読む。");
+    Console.WriteLine();
+    Console.WriteLine("> **`干渉 0` は「価値が無い」ではない。** 呪詛（ネル）・萎縮（クビ）・庇い（ガルド）は");
+    Console.WriteLine("> ダメージを経由せずに盤面を変えるので、この列には最初から出ない。");
+    Console.WriteLine("> ここで測れるのは**体験の密度**であって貢献度ではない。");
+    Console.WriteLine("> 貢献度は `ablate`（抜いたときの勝率差）の側で見ること。");
+    Console.WriteLine("> この表だけを見て駒を消すと、静かに効いている駒から先に消える。");
+    Console.WriteLine();
+    Console.WriteLine("`与ダメ(味)` は味方に与えたダメージ。破裂・生贄・吸いはここに出る。");
+    Console.WriteLine("敵味方を混ぜて数えると、**味方を削ることで仕事をする駒が出力の大きい優等生に見える**。");
+    Console.WriteLine("`被(味)` は受けたダメージのうち味方由来のぶん。ここが `被ダメ` の過半を占める駒は、");
+    Console.WriteLine("敵ではなく編成に殺されている。");
+
+    foreach (var (name, formation) in targets)
+    {
+        // 駒ごとに全戦闘の集計を足し込む。Def.Id で引くので、胞子のような増援もまとまる。
+        var sum = new Dictionary<string, UnitTally>();
+        int battles = 0, totalTurns = 0;
+
+        foreach (EnemyCatalog.Stage st in stages)
+            for (int seed = 0; seed < PulseSeeds; seed++)
+            {
+                BattleResult r = BattleEngine.Run(formation, st.Enemy, seed, verbose: false);
+                battles++;
+                totalTurns += r.Turns;
+                foreach ((string id, UnitTally t) in r.TallyByUnit)
+                {
+                    if (!sum.TryGetValue(id, out UnitTally? acc)) sum[id] = acc = new UnitTally();
+                    acc.Add(t);
+                }
+            }
+
+        Console.WriteLine();
+        Console.WriteLine($"## {name}");
+        Console.WriteLine();
+        Console.WriteLine($"{battles} 戦 / 平均 {(double)totalTurns / battles:F1} ターン");
+        Console.WriteLine();
+        Console.WriteLine("| 駒 | 振/T | 干渉/T | 与ダメ(敵) | 与ダメ(味) | 被ダメ | 被(味) | 撃破 | 落ちた |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|");
+
+        // 味方の駒だけを、編成の並び順で出す。敵は編成ごとに変わらないので混ぜない。
+        foreach ((int _, UnitDef def) in formation.Occupied())
+        {
+            UnitTally t = sum.TryGetValue(def.Id, out UnitTally? x) ? x : new UnitTally();
+            double swings = totalTurns == 0 ? 0 : (double)t.Attacks / totalTurns;
+            double acts = totalTurns == 0 ? 0 : (double)t.Interventions / totalTurns;
+            Console.WriteLine(
+                $"| {def.Name} | {swings:F2} | {acts:F2} | {(double)t.DamageToEnemy / battles:F0} "
+                + $"| {(double)t.DamageToAlly / battles:F0} | {(double)t.DamageTaken / battles:F0} "
+                + $"| {(double)t.TakenFromAlly / battles:F0} | {(double)t.Kills / battles:F2} "
+                + $"| {(double)t.Deaths / battles:F2} |");
+        }
+        Console.Out.Flush();
+    }
+    return;
+}
+
 // replay モード: 1戦ぶんの台本を JSON で吐く。戦闘画面（ビューア）が読む。
 //
 // BattleEngine.Run は seed 決定的な純関数で戦闘を丸ごと計算し切るので、

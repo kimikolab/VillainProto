@@ -270,6 +270,57 @@ public sealed record LogLine(LogKind Kind, int Indent, string Text)
 }
 
 /// <summary>
+/// 1体の駒が1戦で何をしたかの集計。
+///
+/// ログや BattleEvent と違い <b>verbose に関係なく数える</b>。
+/// 200 seed × 全ステージの一括シミュレーションで平均を取るのが用途なので、
+/// ここを verbose で切ると測りたいときに測れない。
+/// 盤面には一切影響しない（ただの足し算）。
+/// </summary>
+public sealed class UnitTally
+{
+    /// <summary>
+    /// 攻撃を振った回数（<c>PerformAttack</c> を通った回数）。
+    /// 反撃（棘）はここを通らない。反撃は <c>ApplyDamage</c> を直接呼ぶので
+    /// <see cref="Interventions"/> の側に出る。この2つのズレ自体が情報になる
+    /// （振らないのに干渉する＝反応型、振るのに干渉しない＝空振り）。
+    /// </summary>
+    public int Attacks;
+
+    /// <summary>
+    /// 実際にダメージを通した回数。攻撃・反撃・破裂・毒のどれでも、
+    /// この駒が起点になって盤面が動いた回数を数える。**これが活動量の本体。**
+    /// </summary>
+    public int Interventions;
+
+    /// <summary>敵に与えたダメージ。</summary>
+    public int DamageToEnemy;
+
+    /// <summary>味方に与えたダメージ。破裂・生贄・吸いはここに出る。</summary>
+    public int DamageToAlly;
+
+    /// <summary>受けたダメージ（敵味方を問わない）。</summary>
+    public int DamageTaken;
+
+    /// <summary>受けたダメージのうち味方由来のぶん。</summary>
+    public int TakenFromAlly;
+
+    /// <summary>とどめを刺した敵の数。</summary>
+    public int Kills;
+
+    /// <summary>倒れた回数。蘇生されて再度倒れると2になる。</summary>
+    public int Deaths;
+
+    public void Add(UnitTally o)
+    {
+        Attacks += o.Attacks; Interventions += o.Interventions;
+        DamageToEnemy += o.DamageToEnemy; DamageToAlly += o.DamageToAlly;
+        DamageTaken += o.DamageTaken; TakenFromAlly += o.TakenFromAlly;
+        Kills += o.Kills; Deaths += o.Deaths;
+    }
+}
+
+/// <summary>
 /// 構造化された戦闘イベントの種類。
 ///
 /// LogLine（人が読む文字列）と対になる、機械が読む側の記録。
@@ -344,6 +395,13 @@ public sealed class BattleResult
 
     /// <summary>ユニットIDごとの与ダメージ合計。誰が働いたかを機械的に見るため。</summary>
     public required IReadOnlyDictionary<string, int> DamageByUnit { get; init; }
+
+    /// <summary>
+    /// ユニットIDごとの働きの内訳。「勝ったかどうか」ではなく「誰が何をしたか」を見る。
+    /// 与ダメージだけだと、蘇生・萎縮のような出力を持たない駒が全員ゼロに潰れて
+    /// 区別がつかない（`docs/pulse.md`）。
+    /// </summary>
+    public required IReadOnlyDictionary<string, UnitTally> TallyByUnit { get; init; }
 
     /// <summary>1ターンのうちに味方が倒した敵の数の最大値。「連鎖の深さ」の代理指標。</summary>
     public required int MaxEnemyKillsInOneTurn { get; init; }

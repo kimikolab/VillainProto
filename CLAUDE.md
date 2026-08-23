@@ -21,6 +21,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 confirm     # 差し替え候補を別 seed で追試する
     dotnet run --project BattleSim -c Release 0 chain > docs/chain.md    # 勝率だけでは見えない「連鎖の深さ」（最大同時撃破数・決着ターン数）
     dotnet run --project BattleSim -c Release 0 ablate [絞り込み] > docs/ablation.md  # 編成から1体ずつ抜いた勝率変化（入れ得の検出）
+    dotnet run --project BattleSim -c Release 0 pulse [絞り込み] > docs/pulse.md      # 駒ごとの活動量（振/干渉）と与被ダメージの内訳
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
     dotnet run --project BattleSim -c Release <n> replay "編成名" <seed>  # 1戦を再生用JSON（台本）で吐く
 
@@ -35,6 +36,19 @@ seed 50 の 720通りの最大なので上位は運で入れ替わり、狙い�
 メンバーを1体ずつ抜いて勝率の下がり方を見る道具で、差がほぼ無い・あるいはプラス（抜いた方が
 強い）なら、そのメンバーは入れ得の疑いがある。`ablate` の絞り込みは `reseat` と同じ書式
 （カンマ区切りの部分一致、省略で compare の全編成、全編成だと30秒前後かかる）。
+
+`pulse` は編成の中で**誰が仕事をしていたか**を見る。compare は編成の勝ち負けしか見ず、
+ablate は1体抜いた勝率差しか見ないので、どちらも「出力で効いているのか、場を作って効いているのか」
+を区別しない。`振/T`（攻撃を振った回数）と `干渉/T`（実際にダメージを通した回数）のズレが形を示す。
+
+    振 ≒ 干渉 ≒ 1.0   自分の手番で殴るだけ。数値であって出来事ではない
+    振 ≒ 0 / 干渉 大   反応型。手番を持たず、起きたことに反応して盤面を動かす（カド）
+    振 大 / 干渉 ≒ 0   空振り。毎ターン振っているのに何も起きていない（クビ・ネル・ヒサ・ノノ）
+    振 ≒ 0 / 干渉 ≒ 0  置物。発火条件が満たされていない
+
+**`干渉 0` は「価値が無い」ではない。** 呪詛・萎縮・庇いはダメージを経由せずに盤面を変えるので
+この列に出ない。`pulse` が測るのは**体験の密度**であって貢献度ではなく、貢献度は `ablate` の側で見る。
+この表だけで駒を消すと、静かに効いている駒から先に消える。
 
 `replay` は戦闘1戦を「台本」（初期盤面＋時間順のイベント列）として JSON で吐く。
 勝率・連鎖深度が数字で答えてくれない「畳みかけて見えるか」を目で確かめるための道具で、
