@@ -1,0 +1,29 @@
+# このリポジトリは C# もドキュメントも **4スペース・LF・UTF-8** で揃えてある。
+# 揃っていないと git diff が「何が動いたか」の記録にならなくなる（.gitattributes の注記も参照）。
+#
+# 注意: **Godot の内蔵スクリプトエディタはこの設定を読まない。**
+# 既定がタブなので、Godot で .cs を開いて保存すると全行がタブに変換され、
+# 中身は同じなのに全行差分になる（実際に GodotApp/Main.cs で1回起きた）。
+# Godot 側は エディター → エディター設定 → テキストエディタ → 動作 → インデント で
+# 「型 = スペース / サイズ = 4」に変えること。
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.md]
+# Markdown は行末2スペースが改行の意味を持つので削らない
+trim_trailing_whitespace = false
+
+[*.{yml,yaml,json}]
+indent_size = 2
+
+[*.godot]
+# Godot が書き出す。手で整形しない
+indent_style = tab
