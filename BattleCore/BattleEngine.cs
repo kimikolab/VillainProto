@@ -267,6 +267,7 @@ public sealed class BattleContext
         foreach (UnitState u in _units)
         {
             if (!u.IsAlive) continue;
+
             foreach ((string key, string label) in StatusLabels)
             {
                 int v = u.Counter(key);
@@ -280,6 +281,16 @@ public sealed class BattleContext
                     Text = label,
                 });
             }
+
+            // 積み上げ系は素の値から大きく離れる（墓守は層の三角数で伸びる）。
+            // 素の攻撃力だけ見せると、盤面で何が起きているか読めない。
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.StatSnapshot,
+                Turn = _turn,
+                TargetId = u.InstanceId,
+                Amount = u.CurrentAttack,
+            });
         }
     }
 

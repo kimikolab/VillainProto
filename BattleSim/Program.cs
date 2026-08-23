@@ -250,8 +250,13 @@ if (focusId == "chain")
     Console.WriteLine("`連鎖深度`は1ターンで味方が倒した敵の数の最大値（全試行平均 / 最大値）。");
     Console.WriteLine("`決着T`は勝利した試行だけの平均ターン数（短いほど速攻で畳んでいる）。");
     Console.WriteLine();
-    Console.WriteLine("| 編成 | 勝率 | 連鎖深度(平均) | 連鎖深度(最大) | 決着T(勝利時平均) |");
-    Console.WriteLine("|---|--:|--:|--:|--:|");
+    Console.WriteLine("`残存`は**勝った試行だけ**の生存数（平均 / 出撃数）。**勝ち方の質**を測る列で、");
+    Console.WriteLine("低いほど「なんとか勝った」になる。勝率が同じでも、5体残して勝つ編成と");
+    Console.WriteLine("1体残して勝つ編成は別物だが、勝率表では区別がつかない。");
+    Console.WriteLine("`全滅勝ち`は生存1体での勝率（勝った試行のうち何%がぎりぎりだったか）。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 勝率 | 連鎖深度(平均) | 連鎖深度(最大) | 決着T(勝利時平均) | 残存 | 全滅勝ち |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|");
 
     foreach (var (name, f) in builds)
     {
@@ -259,6 +264,9 @@ if (focusId == "chain")
         double killSum = 0;
         int killMax = 0;
         double turnSumOnWin = 0;
+        double survSumOnWin = 0;
+        int narrowWins = 0;
+        int party = f.Occupied().Count();
 
         foreach (EnemyCatalog.Stage st in EnemyCatalog.Stages)
         {
@@ -268,14 +276,23 @@ if (focusId == "chain")
                 trials++;
                 killSum += r.MaxEnemyKillsInOneTurn;
                 if (r.MaxEnemyKillsInOneTurn > killMax) killMax = r.MaxEnemyKillsInOneTurn;
-                if (r.PlayerWon) { wins++; turnSumOnWin += r.Turns; }
+                if (r.PlayerWon)
+                {
+                    wins++;
+                    turnSumOnWin += r.Turns;
+                    survSumOnWin += r.PlayerSurvivors;
+                    if (r.PlayerSurvivors <= 1) narrowWins++;
+                }
             }
         }
 
         double winRate = wins * 100.0 / trials;
         double killAvg = killSum / trials;
         double turnAvgOnWin = wins > 0 ? turnSumOnWin / wins : 0;
-        Console.WriteLine($"| {name} | {winRate:F1}% | {killAvg:F2} | {killMax} | {turnAvgOnWin:F1} |");
+        double survAvg = wins > 0 ? survSumOnWin / wins : 0;
+        double narrow = wins > 0 ? narrowWins * 100.0 / wins : 0;
+        Console.WriteLine($"| {name} | {winRate:F1}% | {killAvg:F2} | {killMax} | {turnAvgOnWin:F1} "
+            + $"| {survAvg:F1}/{party} | {narrow:F0}% |");
     }
     return;
 }

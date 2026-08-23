@@ -350,7 +350,15 @@ public enum BattleEventKind
     /// **ターン中に積まれたぶんは次のターンの頭まで出ない。** 効き始めるのもそのときなので、
     /// 表示としてはむしろ揃っている。
     /// </summary>
-    StatusSnapshot
+    StatusSnapshot,
+
+    /// <summary>
+    /// ターン開始時点の攻撃力（<see cref="UnitState.CurrentAttack"/>）。
+    /// 積み上げ系（墓守の三角数、溜め、被弾強化）は素の値から大きく離れるので、
+    /// 素の値だけ見せると盤面で何が起きているか読めない。
+    /// <see cref="StatusSnapshot"/> と同じ理由で、ターン頭に1回だけ写す。
+    /// </summary>
+    StatSnapshot
 }
 
 /// <summary>

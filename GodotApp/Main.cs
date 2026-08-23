@@ -87,6 +87,8 @@ public partial class Main : Control
     sealed class Piece
     {
         public int Id, Team, Slot, Hp, MaxHp, Attack;
+        /// <summary>カタログ上の素の攻撃力。<see cref="Attack"/>（現在値）と並べて出す。</summary>
+        public int BaseAttack;
         public string Name = "";
         public AttackPattern Pattern;
         public bool Alive = true;
@@ -505,7 +507,8 @@ public partial class Main : Control
                 _roster.Add(new Piece
                 {
                     Id = id++, Team = team, Slot = slot, Name = def.Name,
-                    Hp = def.MaxHp, MaxHp = def.MaxHp, Attack = def.Attack, Pattern = def.Pattern,
+                    Hp = def.MaxHp, MaxHp = def.MaxHp,
+                    Attack = def.Attack, BaseAttack = def.Attack, Pattern = def.Pattern,
                 });
 
         _lPlayer.Text = $"味方 — {name}";
@@ -544,7 +547,8 @@ public partial class Main : Control
         var units = _roster.ToDictionary(
             p => p.Id,
             p => new Piece { Id = p.Id, Team = p.Team, Slot = p.Slot, Name = p.Name,
-                             Hp = p.MaxHp, MaxHp = p.MaxHp, Attack = p.Attack, Pattern = p.Pattern });
+                             Hp = p.MaxHp, MaxHp = p.MaxHp,
+                             Attack = p.Attack, BaseAttack = p.BaseAttack, Pattern = p.Pattern });
         turn = 0; kills = 0; best = 0;
         statuses?.Clear();
 
@@ -563,6 +567,9 @@ public partial class Main : Control
                 case BattleEventKind.StatusSnapshot:
                     if (statuses is not null && e.TargetId is { } stid && e.Text is { } skey)
                         statuses[(stid, skey)] = e.Amount;
+                    break;
+                case BattleEventKind.StatSnapshot:
+                    if (t is not null) t.Attack = e.Amount;
                     break;
                 case BattleEventKind.Damage:
                 case BattleEventKind.Heal:
@@ -583,7 +590,8 @@ public partial class Main : Control
                         {
                             Id = sid, Team = e.Team ?? 0, Slot = e.Slot, Name = e.Text ?? "?",
                             Hp = e.HpAfter, MaxHp = def?.MaxHp ?? e.HpAfter,
-                            Attack = def?.Attack ?? 0, Pattern = def?.Pattern ?? AttackPattern.Single,
+                            Attack = def?.Attack ?? 0, BaseAttack = def?.Attack ?? 0,
+                            Pattern = def?.Pattern ?? AttackPattern.Single,
                         };
                     }
                     break;
@@ -631,7 +639,9 @@ public partial class Main : Control
                 c.Name.Text = u.Name;
                 c.Pat.Text = PatternLabel(u.Pattern);
                 c.Bar.Value = u.MaxHp == 0 ? 0 : Math.Clamp((double)u.Hp / u.MaxHp, 0, 1);
-                c.Hp.Text = $"{Math.Max(0, u.Hp)}/{u.MaxHp}   攻{u.Attack}";
+                // 積み上げ系は素の値から離れるので、変わっていたら 素→現在 で出す。
+                string atk = u.Attack == u.BaseAttack ? $"攻{u.Attack}" : $"攻{u.BaseAttack}→{u.Attack}";
+                c.Hp.Text = $"{Math.Max(0, u.Hp)}/{u.MaxHp}   {atk}";
                 c.Status.Text = StatusText(u.Id);
                 c.Root.Modulate = u.Alive ? Colors.White : new Color(1, 1, 1, 0.28f);
             }
@@ -664,6 +674,8 @@ public partial class Main : Control
         for (int i = from; i < _idx; i++)
         {
             BattleEvent e = _result.Events[i];
+            // スナップショットは表示用の配管。出来事ではないので一覧には出さない。
+            if (e.Kind is BattleEventKind.StatusSnapshot or BattleEventKind.StatSnapshot) continue;
             Color c = e.Kind switch
             {
                 BattleEventKind.Death => CDmg,
