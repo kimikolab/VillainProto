@@ -71,6 +71,15 @@ public partial class Main : Control
             mid: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back2: UnitCatalog.Utsu)),
         ("死の連鎖 (リィカ軸)", Formation.Build(front2: UnitCatalog.Zoto, front3: UnitCatalog.Mug,
             mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Vel)),
+
+        // ここから継続効果が見える編成。上の4つはどれも毒も燃焼も持たないので、
+        // 状態異常の表示を確かめるには別の軸が要る。
+        ("毒 (グザ×ミオ×ラウ)", Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Sid,
+            mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Rau)),
+        ("毒+ベニ+ラウ", Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Sid,
+            mid: UnitCatalog.Guza, back1: UnitCatalog.Rau, back2: UnitCatalog.Beni)),
+        ("燃焼 (ボルグ×ホタ)", Formation.Build(front1: UnitCatalog.Nono, front2: UnitCatalog.Gald,
+            front3: UnitCatalog.Mudo, back1: UnitCatalog.Hota, back2: UnitCatalog.Borg)),
     };
 
     // ---- 駒の状態（台本を適用して組み立てる）----------------------------
@@ -255,8 +264,10 @@ public partial class Main : Control
         var left = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         left.AddChild(Text("戦闘再生装置", 18, CInk));
 
-        var picker = new HBoxContainer();
-        picker.AddThemeConstantOverride("separation", 6);
+        // 編成が増えると1行に収まらないので折り返す。
+        var picker = new HFlowContainer();
+        picker.AddThemeConstantOverride("h_separation", 6);
+        picker.AddThemeConstantOverride("v_separation", 4);
         var builds = Builds();
         for (int i = 0; i < builds.Length; i++)
         {

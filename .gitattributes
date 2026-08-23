@@ -1,4 +1,25 @@
+# 行末は全ファイル LF に固定する。
+#
+# このリポジトリの運用は「git diff が何が動いたかの記録である」ことに全面的に乗っている
+# （CONTRIBUTING.md の受け入れ条件、docs/ の差分確認、コミットメッセージに動いた行だけ書く）。
+# 行末が混ざると全ファイルが全行差分になり、その運用が丸ごと成立しなくなる。
+#
+# 実際に3回起きている。いずれも Windows でパッチを当てた直後に25ファイル前後が
+# 「変更あり」になり、中身は1文字も違わなかった（git diff --ignore-all-space が空）。
+# core.autocrlf の設定に依存させず、リポジトリ側で決め切るためにここで固定する。
+#
+# text=auto  … テキストと判定したファイルを、インデックスでは必ず LF にする
+# eol=lf     … 作業ツリーへ書き出すときも LF にする（Windows でも CRLF にしない）
+* text=auto eol=lf
+
 # docs/ は BattleSim の出力をリダイレクトした生成物。
-# 差分そのものが「何が動いたか」の記録なので、行末の違いで嘘の差分が出ないよう LF に固定する。
-# （Windows の Console.WriteLine は CRLF を吐くため、core.autocrlf の設定次第で全行が差分になる）
+# 上の全体指定に含まれるが、ここが最初に事故った場所なので明示を残す。
+# （Windows の Console.WriteLine は CRLF を吐く）
 docs/*.md text eol=lf
+
+# 判定に任せないもの
+*.png binary
+*.jpg binary
+*.ico binary
+*.ttf binary
+*.otf binary
