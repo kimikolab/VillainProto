@@ -220,7 +220,11 @@ if (focusId == "confirm")
         // ここから燃焼軸（熾のホタ）追加に伴う探索ぶん。
         ("燃焼 (ボルグ×ホタ)",
             Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Hota, front3: UnitCatalog.Mudo, mid: UnitCatalog.Borg, back1: UnitCatalog.Nono),
-            Formation.Build(front1: UnitCatalog.Nono, front2: UnitCatalog.Gald, front3: UnitCatalog.Mudo, back1: UnitCatalog.Hota, back2: UnitCatalog.Borg))
+            Formation.Build(front1: UnitCatalog.Nono, front2: UnitCatalog.Gald, front3: UnitCatalog.Mudo, back1: UnitCatalog.Hota, back2: UnitCatalog.Borg)),
+        // ここからリィカの覚醒（3層以上で攻撃が薙ぎに変わる）追加に伴う再探索ぶん。
+        ("死の連鎖 (リィカ軸)",
+            Formation.Build(front1: UnitCatalog.Mug, front2: UnitCatalog.Zoto, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Vel),
+            Formation.Build(front2: UnitCatalog.Zoto, front3: UnitCatalog.Mug, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Vel))
     };
 
     Console.WriteLine("## 採用候補の追試");
@@ -728,7 +732,9 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 探索1位はガルド中衛で庇いが死ぬので採らない（layout 2位）
     ("速攻 (ボルグ×ムド)",   Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Sero, front3: UnitCatalog.Gald, mid: UnitCatalog.Nel, back1: UnitCatalog.Borg)),
     // 脆いムグ・ゾトを前で死なせて連鎖を起こす。中衛ゴルムの吸いが隣のゾトを破裂まで運ぶ（layout 1位）
-    ("死の連鎖 (リィカ軸)",  Formation.Build(front1: UnitCatalog.Mug, front2: UnitCatalog.Zoto, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Vel)),
+    // リィカの覚醒（薙ぎ化）追加に伴い reseat で再探索。ムグを前1→前3、ゾトを前2のまま前1を空ける形が上
+    // （confirm 追試 +2.2pt、第5波 +10.8。第5波は元々連鎖の畳みかけが弱かった波）。
+    ("死の連鎖 (リィカ軸)",  Formation.Build(front2: UnitCatalog.Zoto, front3: UnitCatalog.Mug, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Vel)),
     // スィドは前3。被弾で毒を積む形になったので前列に出す必要があり、孤立席なので味方漏れも消える。
     // 前1を空けてガルドを前2に寄せた形が上（+2.1pt / 第3波 +21.8）。
     // 注: この配置はスィドの味方漏れを完全に無効化している。ガルド・セッキと同じ「配置でマイナスが消える」形（README）

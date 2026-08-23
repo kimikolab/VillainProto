@@ -80,7 +80,7 @@ public static class UnitCatalog
         Attack = 5,
         Speed = 7,
         Traits = new[] { TraitId.Necro, TraitId.Sacrifice },
-        PlusText = "味方が倒れるたび累積で強化される（層は毎ターン1つ薄れる）",
+        PlusText = "味方が倒れるたび累積で強化される（層は毎ターン1つ薄れる）／3層以上で攻撃が薙ぎに変わる",
         MinusText = "戦闘開始時に隣接する味方を削る",
         Flavor = "味方の死を待っている顔をする、と report に書かれた。"
     };

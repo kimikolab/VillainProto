@@ -416,6 +416,12 @@ public sealed class NecroTrait : Trait
         if (stack == AwakenAt) ctx.Log($"    ★ {self.Name} の目の色が変わった", LogKind.Highlight);
     }
 
+    // 覚醒後（AwakenAt層以上）は攻撃が薙ぎに変わる。
+    // 追い打ち（ハギ）と組んだとき「1体倒す→層が増えて薙ぎになる→薙ぎで複数体を巻き込んで倒す→さらに増える」
+    // という連鎖が回るようになる。単体攻撃のままだと層は伸びても手数が増えないので連鎖が続かなかった。
+    public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
+        => self.Counter("necro") >= AwakenAt ? AttackPattern.Sweep : p;
+
     /// <summary>層に応じた累積ボーナスを再計算して差分だけ反映する。</summary>
     private static void SetStack(BattleContext ctx, UnitState self, int stack, bool decayed)
     {
