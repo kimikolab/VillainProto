@@ -1210,10 +1210,32 @@ public sealed class CowerTrait : Trait
 /// <summary>
 /// 追い打ち。味方が敵を倒したとき、ターン順を無視して攻撃する。
 /// カドが「受けに回る火力」なのに対し、こちらは「割り込む火力」。
-/// 1ターン1回に制限しないと、連鎖して盤面が一方的に終わる。
+///
+/// 2026-08-23: 「時間の上限」（1ターン1回）から「有限の代金」へ置き換えた。
+/// そのターン最初の1発は無料。2発目以降は連続するたびに ChainCost の反動ダメージを払う。
+/// `ApplyDamage` を通すのは、庇う・分かちなどの肩代わり規則と、被弾で育つ特性の両方に
+/// 等しく反応させるため（CLAUDE.md の「ApplyDamage がダメージ処理の単一窓口」の原則）。
+/// 上限は「生きている敵の数」と「自分のHP」がそのまま担う。`PerformAttack` は死んだ actor と
+/// 空の盤面をそれぞれ弾いて自然に止まるので、別途カウンタで打ち切る必要はない。
+///
+/// **ChainCost は0（完全無料）が最も勝率が高いが、あえて5を採る（測定済み）。**
+/// 反撃改3・追撃×毒で 0/5/10/15/20/30 を振ると、コストが上がるほど単調に勝率が落ちた
+/// （反撃改3 平均 80.5%→78.7%→76.4%→73.5%→72.9%→70.9%）。「無制限にすると連鎖して
+/// 盤面が一方的に終わる」という旧コメントの懸念は、この規模（敵5〜7体）では確認されなかった
+/// （コスト0でも第五波は反撃改3 19.5%・追撃×毒 1.5%止まりで、全30編成中17位・21位が上限）。
+/// **数字だけならコスト0が正解だが、それは「反動」という有限資源の縛りを実質無くすことに
+/// なり、連鎖に自制を持たせるという設計意図そのものが消える。** コスト5はコスト0との差が
+/// 1〜3pt程度（反撃改3 78.7% / 追撃×毒 75.3%）に収まるので、勝率をほぼ落とさずに
+/// 「反動」というフレーバーと制約を残せる帯として採用した。
+/// なお「追撃×死 (ハギ×リィカ)」はコストを何に振っても完全に無風（55.3%固定）。
+/// この編成は1ターンに複数体を同時に葬れる火力源を持たないため、連鎖の引き金
+/// （2体目以降の撃破）自体がほぼ発生しない。ChainCost の値の話ではなく、
+/// 「連鎖を機能させるには、まず複数体同時撃破の種が要る」という構造の問題として残る。
 /// </summary>
 public sealed class PursuerTrait : Trait
 {
+    public const int ChainCost = 5;
+
     public override TraitId Id => TraitId.Pursuer;
 
     public override bool CanAct(BattleContext ctx, UnitState self) => false;
@@ -1221,13 +1243,25 @@ public sealed class PursuerTrait : Trait
     // 割り込みで振るのが役割。自分のターンを差し出したわけではない
     public override bool SurrendersTurn => false;
 
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        self.SetCounter("pursuit_chain", 0);
+    }
+
     public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
     {
         if (dead.TeamId == self.TeamId) return;
-        if (!ctx.CanActOutOfTurn(self)) return;            // 縛められている間は追い打てない
-        if (self.Counter("pursued") >= ctx.Turn) return;   // 1ターン1回
+        if (!ctx.CanActOutOfTurn(self)) return;   // 縛められている間は追い打てない
 
-        self.SetCounter("pursued", ctx.Turn);
+        int chain = self.Counter("pursuit_chain");
+        if (chain > 0)
+        {
+            ctx.Log($"    {self.Name} は踏み込みすぎて体勢を崩す", LogKind.FriendlyFire);
+            ctx.ApplyDamage(self, ChainCost, null, isFriendlyFire: true);
+            if (!self.IsAlive) return;   // 反動で力尽きたらそこで打ち止め
+        }
+        self.SetCounter("pursuit_chain", chain + 1);
+
         ctx.Log($"    {self.Name} が倒れた隙に踏み込む", LogKind.Highlight);
         ctx.PerformAttack(self, "    ");
     }
