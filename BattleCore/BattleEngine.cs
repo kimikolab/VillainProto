@@ -143,7 +143,21 @@ public sealed class BattleContext
 
     internal Dictionary<string, int> DamageByUnit { get; } = new();
 
-    public int Turn { get; internal set; }
+    private int _turn;
+    private int _enemyKillsThisTurn;
+
+    /// <summary>
+    /// 1ターンのうちに味方が倒した敵の数の最大値。「連鎖の深さ」の代理指標として使う。
+    /// 撃破のたびに次の反応（追い打ち・墓守の層など）が起きるかどうかは特性ごとに違うが、
+    /// 「1ターンで何体畳みかけたか」は特性を問わず一様に測れるので、まずここから見る。
+    /// </summary>
+    public int MaxEnemyKillsInOneTurn { get; private set; }
+
+    public int Turn
+    {
+        get => _turn;
+        internal set { _turn = value; _enemyKillsThisTurn = 0; }
+    }
 
     public BattleContext(int seed, bool verbose)
     {
@@ -473,6 +487,12 @@ public sealed class BattleContext
         dead.Hp = 0;
         Log($"    {dead.Name} は倒れた", LogKind.Death);
 
+        if (dead.TeamId == EnemyTeam)
+        {
+            _enemyKillsThisTurn++;
+            if (_enemyKillsThisTurn > MaxEnemyKillsInOneTurn) MaxEnemyKillsInOneTurn = _enemyKillsThisTurn;
+        }
+
         if (killer is not null && killer.IsAlive)
             foreach (Trait t in killer.Traits.ToList())
                 t.OnKill(this, killer, dead);
@@ -693,7 +713,8 @@ public static class BattleEngine
             Turns = Math.Min(turn, MaxTurns),
             Log = ctx.Log_.ToList(),
             PlayerSurvivors = ctx.LivingMembers(BattleContext.PlayerTeam).Count(),
-            DamageByUnit = new Dictionary<string, int>(ctx.DamageByUnit)
+            DamageByUnit = new Dictionary<string, int>(ctx.DamageByUnit),
+            MaxEnemyKillsInOneTurn = ctx.MaxEnemyKillsInOneTurn
         };
     }
 

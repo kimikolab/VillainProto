@@ -19,6 +19,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 layout      # 代表編成の全配置総当たり（並列・決定的、1コアで約19分）
     dotnet run --project BattleSim -c Release 0 reseat [絞り込み] [skip] [take]  # 配置候補を seed 200 で測り直す
     dotnet run --project BattleSim -c Release 0 confirm     # 差し替え候補を別 seed で追試する
+    dotnet run --project BattleSim -c Release 0 chain > docs/chain.md    # 勝率だけでは見えない「連鎖の深さ」（最大同時撃破数・決着ターン数）
+    dotnet run --project BattleSim -c Release 0 ablate [絞り込み] > docs/ablation.md  # 編成から1体ずつ抜いた勝率変化（入れ得の検出）
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
 
 `layout` は「どう置くか」の粗い当たりを付ける道具で、その値で採否を決めてはいけない。
@@ -26,6 +28,12 @@ seed 50 の 720通りの最大なので上位は運で入れ替わり、狙い�
 `reseat` で狙いを満たす候補を含めて測り直し、`confirm` で選定に使っていない seed に当てて採否を決める。
 `reseat` の第1引数はカンマ区切りの部分一致（省略で compare の全編成）。`skip` / `take` で更に切り出せる。
 長時間ジョブを分割して回すためのもの（下記）。
+
+`chain`/`ablate` は勝率表（compare）が見落とす軸を測る道具。`chain` は「2枚で人並みに勝つ」編成と
+「5枚が畳みかけて無双する」編成を区別する（勝率だけだと同じ100%に見える）。`ablate` は編成から
+メンバーを1体ずつ抜いて勝率の下がり方を見る道具で、差がほぼ無い・あるいはプラス（抜いた方が
+強い）なら、そのメンバーは入れ得の疑いがある。`ablate` の絞り込みは `reseat` と同じ書式
+（カンマ区切りの部分一致、省略で compare の全編成、全編成だと30秒前後かかる）。
 
 **長時間ジョブは前景で待ち切ること。** 背景に回すと、起動したコマンドが返った時点で刈られる。
 `nohup` を付けても、同じターンの中で次のコマンドに移っただけでも死ぬ。

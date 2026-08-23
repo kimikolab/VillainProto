@@ -45,6 +45,112 @@ if (focusId == "compare")
     return;
 }
 
+// chain モード: 勝率だけでは見えない「連鎖の深さ」を測る。
+// 「2枚で人並みに勝つ」編成と「5枚が畳みかけて無双する」編成は、勝率だけ見ると同じ100%になる。
+// MaxEnemyKillsInOneTurn（1ターンで味方が何体倒したかの最大値）と、勝利時の決着ターン数を
+// compare と同じ代表編成×全ステージで測って区別する。数値が大きいほど「畳みかけている」。
+if (focusId == "chain")
+{
+    var builds = CompareBuilds();
+    const int ChainSeeds = 200;
+
+    Console.WriteLine("# 連鎖の深さ");
+    Console.WriteLine();
+    Console.WriteLine("`dotnet run --project BattleSim -c Release 0 chain > docs/chain.md` の出力。手で編集しない。");
+    Console.WriteLine($"代表編成 × 全ステージ、seed 0..{ChainSeeds - 1} の {ChainSeeds} 試行。全ステージ通算。");
+    Console.WriteLine("`連鎖深度`は1ターンで味方が倒した敵の数の最大値（全試行平均 / 最大値）。");
+    Console.WriteLine("`決着T`は勝利した試行だけの平均ターン数（短いほど速攻で畳んでいる）。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 勝率 | 連鎖深度(平均) | 連鎖深度(最大) | 決着T(勝利時平均) |");
+    Console.WriteLine("|---|--:|--:|--:|--:|");
+
+    foreach (var (name, f) in builds)
+    {
+        int wins = 0, trials = 0;
+        double killSum = 0;
+        int killMax = 0;
+        double turnSumOnWin = 0;
+
+        foreach (EnemyCatalog.Stage st in EnemyCatalog.Stages)
+        {
+            for (int seed = 0; seed < ChainSeeds; seed++)
+            {
+                var r = BattleEngine.Run(f, st.Enemy, seed, verbose: false);
+                trials++;
+                killSum += r.MaxEnemyKillsInOneTurn;
+                if (r.MaxEnemyKillsInOneTurn > killMax) killMax = r.MaxEnemyKillsInOneTurn;
+                if (r.PlayerWon) { wins++; turnSumOnWin += r.Turns; }
+            }
+        }
+
+        double winRate = wins * 100.0 / trials;
+        double killAvg = killSum / trials;
+        double turnAvgOnWin = wins > 0 ? turnSumOnWin / wins : 0;
+        Console.WriteLine($"| {name} | {winRate:F1}% | {killAvg:F2} | {killMax} | {turnAvgOnWin:F1} |");
+    }
+    return;
+}
+
+// ablate モード: 編成からメンバーを1体ずつ抜いたときの勝率低下を測る。
+// 「完成した5体 − 重要駒を1体抜いた編成」の差が大きいほど、強さが個々の性能ではなく
+// 組み合わせから生まれている証拠になる（README「受け皿を足したら供給役を抜いた対照を必ず測る」の一般化）。
+// 差が小さい、あるいはマイナス（抜いたほうが勝率が上がる）なら、そのメンバーは入れ得の疑いがある。
+// 対象は既定では compare の全編成。reseat と同じ書式でカンマ区切りの部分一致で絞れる。
+if (focusId == "ablate")
+{
+    var all = CompareBuilds();
+    IReadOnlyList<EnemyCatalog.Stage> abStages = EnemyCatalog.Stages;
+    const int AblateSeeds = 200;
+
+    string filter = args.Length > 2 ? args[2] : "";
+    var targets = all.Where(b => filter.Length == 0
+                    || filter.Split(',').Any(k => b.Name.Contains(k.Trim())))
+        .ToArray();
+
+    double WinRate(Formation f)
+    {
+        int wins = 0, trials = 0;
+        foreach (EnemyCatalog.Stage st in abStages)
+            for (int seed = 0; seed < AblateSeeds; seed++)
+            {
+                trials++;
+                if (BattleEngine.Run(f, st.Enemy, seed, verbose: false).PlayerWon) wins++;
+            }
+        return wins * 100.0 / trials;
+    }
+
+    Console.WriteLine("# アブレーション（1体抜いた時の勝率変化）");
+    Console.WriteLine();
+    Console.WriteLine("`dotnet run --project BattleSim -c Release 0 ablate > docs/ablation.md` の出力。手で編集しない。");
+    Console.WriteLine($"全ステージ通算、seed 0..{AblateSeeds - 1} の {AblateSeeds} 試行。");
+    Console.WriteLine("差が大きいほど「そのメンバーが編成の強さの源」。差が0に近い、またはプラス（抜いたほうが勝率が上がる）なら入れ得の疑い。");
+    Console.WriteLine();
+
+    foreach (var (name, full) in targets)
+    {
+        double fullRate = WinRate(full);
+        var members = full.Occupied().ToList();
+
+        Console.WriteLine($"## {name}（フル編成 {fullRate:F1}%）");
+        Console.WriteLine();
+        Console.WriteLine("| 抜いた駒 | 抜いた後 | 差 |");
+        Console.WriteLine("|---|--:|--:|");
+
+        foreach (var (slot, def) in members)
+        {
+            var ablated = new Formation();
+            foreach (var (mSlot, mDef) in members)
+                if (mSlot != slot) ablated[mSlot] = mDef;
+
+            double rate = WinRate(ablated);
+            string sign = rate - fullRate >= 0 ? "+" : "";
+            Console.WriteLine($"| {def.Name} | {rate:F1}% | {sign}{rate - fullRate:F1}pt |");
+        }
+        Console.WriteLine();
+    }
+    return;
+}
+
 // layout モード: compare の各編成についてメンバー固定のまま6スロットへの全配置を試し、
 // 全ステージ平均勝率で並べる。「この編成をどう置くか」を人手の勘で決めないための道具。
 // 編成名が示す狙い（隣接ペア・後列必須など）との突き合わせは人がやる。上位だけでなく

@@ -274,4 +274,7 @@ public sealed class BattleResult
 
     /// <summary>ユニットIDごとの与ダメージ合計。誰が働いたかを機械的に見るため。</summary>
     public required IReadOnlyDictionary<string, int> DamageByUnit { get; init; }
+
+    /// <summary>1ターンのうちに味方が倒した敵の数の最大値。「連鎖の深さ」の代理指標。</summary>
+    public required int MaxEnemyKillsInOneTurn { get; init; }
 }
