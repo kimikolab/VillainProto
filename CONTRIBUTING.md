@@ -49,6 +49,10 @@
 - `BattleCore` に UI の参照を足さない。`INotifyPropertyChanged` も `ObservableCollection` も不可
 - `PrototypeApp` に戦闘ルールを書かない。ここに書いた瞬間 Godot / Unity へ運べなくなる
 - `Def.Pattern` を直接読まない。必ず `UnitState.CurrentPattern` を経由する
+- `BattleEvent` を積む処理の中で盤面を変えない。イベントは記録であって戦闘の一部ではない。
+  変えた瞬間 `verbose` の有無で結果が変わり、`compare`（verbose=false）と `replay`（verbose=true）が
+  別の戦闘を見ることになる。**受け入れ確認は「`compare` の差分がゼロ」で、
+  純粋な追加のはずの変更で1ptでも動いたら挙動を変えている**
 - `docs/balance.md` と `docs/units.md` を手で書き換えない。BattleSim の出力をそのまま置く場所
 - `docs/chain.md`（連鎖の深さ）と `docs/ablation.md`（アブレーション）も同様。ただしこの2つは
   「数値や特性を変えるたび」の定型手順には含めない。ablate は全編成だと30秒前後かかる診断ツールで、

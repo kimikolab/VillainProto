@@ -98,6 +98,14 @@ public sealed class BattleContext
             if (_units.Any(x => x.IsAlive && x.TeamId == u.TeamId && x.HasTrait(TraitId.Devour)))
                 poison *= DevourTrait.AllyPoisonMultiplier;
             Log($"    {u.Name} は毒に蝕まれている（{poison}）", LogKind.Status);
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.Status,
+                Turn = _turn,
+                TargetId = u.InstanceId,
+                Amount = poison,
+                Text = "毒"
+            });
             ApplyDamage(u, poison, null);
         }
 
@@ -111,6 +119,14 @@ public sealed class BattleContext
 
             u.SetCounter(StatusKeys.Burn, left - 1);
             Log($"    {u.Name} が燃えている（残り {left - 1}）", LogKind.Status);
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.Status,
+                Turn = _turn,
+                TargetId = u.InstanceId,
+                Amount = BurnRules.Damage,
+                Text = "燃焼"
+            });
             ApplyDamage(u, BurnRules.Damage, null);
         }
     }
@@ -138,8 +154,10 @@ public sealed class BattleContext
 
     private readonly List<UnitState> _units = new();
     private readonly List<LogLine> _log = new();
+    private readonly List<BattleEvent> _events = new();
     private readonly Random _rng;
     private readonly bool _verbose;
+    private int _nextInstanceId;
 
     internal Dictionary<string, int> DamageByUnit { get; } = new();
 
@@ -166,7 +184,17 @@ public sealed class BattleContext
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
-    internal void Add(UnitState u) => _units.Add(u);
+
+    /// <summary>
+    /// 盤面に駒を加える。増援・蘇生もここを通す（InstanceId を必ず振るため）。
+    /// ID は verbose に関係なく振る。verbose のときだけ振ると、
+    /// 一括シミュレーションと再生とで盤面の同一性が変わってしまう。
+    /// </summary>
+    internal void Add(UnitState u)
+    {
+        u.InstanceId = _nextInstanceId++;
+        _units.Add(u);
+    }
 
     public int Opponent(int teamId) => teamId == PlayerTeam ? EnemyTeam : PlayerTeam;
 
@@ -180,17 +208,40 @@ public sealed class BattleContext
     public bool TeamAlive(int teamId) => LivingMembers(teamId).Any();
 
     public IReadOnlyList<LogLine> Log_ => _log;
+    public IReadOnlyList<BattleEvent> Events => _events;
 
     /// <summary>
     /// 行頭の空白をインデント段数として取り込む。
     /// 呼び出し側は今まで通り空白付きの文字列を渡せばよい。
+    ///
+    /// 見せ場（Highlight）だけは構造化イベントにも流す。特性側は今まで通り
+    /// ctx.Log を呼ぶだけでよく、演出の差し込み位置が自動的に台本へ乗る。
     /// </summary>
     public void Log(string line, LogKind kind = LogKind.Action)
     {
         if (!_verbose) return;
         int spaces = line.Length - line.TrimStart().Length;
-        _log.Add(new LogLine(kind, spaces / 2, line.Trim()));
+        string text = line.Trim();
+        _log.Add(new LogLine(kind, spaces / 2, text));
+
+        if (kind == LogKind.Highlight)
+            Emit(new BattleEvent { Kind = BattleEventKind.Highlight, Turn = _turn, Text = text });
     }
+
+    /// <summary>
+    /// 構造化イベントを積む。ログと同じく verbose のときだけ。
+    /// 一括シミュレーション（compare / layout は数百万戦を回す）で積むと確保だけで効いてくる。
+    /// **ここは盤面を一切変えない。** 変えた瞬間、verbose の有無で戦闘結果が変わる。
+    /// </summary>
+    private void Emit(BattleEvent e)
+    {
+        if (!_verbose) return;
+        _events.Add(e);
+    }
+
+    /// <summary>ターンの区切りを台本に打つ。再生側はここで間を置く。</summary>
+    internal void EmitTurnStart()
+        => Emit(new BattleEvent { Kind = BattleEventKind.TurnStart, Turn = _turn });
 
     public int Roll(int maxExclusive) => _rng.Next(maxExclusive);
 
@@ -318,6 +369,15 @@ public sealed class BattleContext
             _ => ""
         };
         Log($"{prefix}{actor.Name} → {target.Name} (攻撃 {atk}{label})");
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Attack,
+            Turn = _turn,
+            ActorId = actor.InstanceId,
+            TargetId = target.InstanceId,
+            Amount = atk,
+            Pattern = actor.CurrentPattern
+        });
 
         if (actor.CurrentPattern == AttackPattern.Pierce)
         {
@@ -468,6 +528,16 @@ public sealed class BattleContext
         target.Hp -= amount;
         Log($"    {target.Name} に {amount} ダメージ (残り {Math.Max(0, target.Hp)})",
             isFriendlyFire ? LogKind.FriendlyFire : LogKind.Damage);
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Damage,
+            Turn = _turn,
+            ActorId = source?.InstanceId,
+            TargetId = target.InstanceId,
+            Amount = amount,
+            HpAfter = Math.Max(0, target.Hp),
+            FriendlyFire = isFriendlyFire
+        });
 
         if (source is not null && !isFriendlyFire)
         {
@@ -486,6 +556,14 @@ public sealed class BattleContext
     {
         dead.Hp = 0;
         Log($"    {dead.Name} は倒れた", LogKind.Death);
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Death,
+            Turn = _turn,
+            ActorId = killer?.InstanceId,
+            TargetId = dead.InstanceId,
+            Slot = dead.Slot
+        });
 
         if (dead.TeamId == EnemyTeam)
         {
@@ -537,8 +615,18 @@ public sealed class BattleContext
             MaxHp = def.MaxHp,
             Traits = TraitCatalog.Resolve(def.Traits)
         };
-        _units.Add(unit);
+        Add(unit);
         Log($"    {def.Name} が現れた", LogKind.Summon);
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Summon,
+            Turn = _turn,
+            TargetId = unit.InstanceId,
+            Slot = slot,
+            HpAfter = unit.Hp,
+            Team = teamId,
+            Text = def.Name
+        });
         return unit;
     }
 
@@ -549,13 +637,33 @@ public sealed class BattleContext
         target.Hp = Math.Max(1, hp);
         target.AtkBonus = 0;
         Log($"    {target.Name} が繋ぎ直された（HP {target.Hp}）", LogKind.Summon);
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Revive,
+            Turn = _turn,
+            TargetId = target.InstanceId,
+            Slot = target.Slot,
+            HpAfter = target.Hp
+        });
     }
 
     public void Heal(UnitState target, int amount)
     {
         if (!target.IsAlive || amount <= 0) return;
         if (!target.AcceptsSupport) return;
+
+        int before = target.Hp;
         target.Hp = Math.Min(target.MaxHp, target.Hp + amount);
+        if (target.Hp == before) return;
+
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Heal,
+            Turn = _turn,
+            TargetId = target.InstanceId,
+            Amount = target.Hp - before,
+            HpAfter = target.Hp
+        });
     }
 
     /// <summary>後列に空きか入れ替え先があれば返す。</summary>
@@ -608,6 +716,15 @@ public sealed class BattleContext
 
         void Notify(UnitState u, Row from)
         {
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.Move,
+                Turn = _turn,
+                TargetId = u.InstanceId,
+                Slot = u.Slot,
+                HpAfter = u.Hp
+            });
+
             // 後ろへ動いた事実を記録する。自分から逃げたか突き飛ばされたかは問わない。
             // どちらの場合も「味方が矢面に立つ」という代償は発生している。
             if (FormationRules.DepthOf(u.Row) > FormationRules.DepthOf(from))
@@ -661,6 +778,7 @@ public static class BattleEngine
                 break;
 
             ctx.Log($"--- ターン {turn} ---", LogKind.Turn);
+            ctx.EmitTurnStart();
             ctx.TickStatuses();
 
             foreach (UnitState u in ctx.AllUnits.Where(x => x.IsAlive).ToList())
@@ -714,7 +832,8 @@ public static class BattleEngine
             Log = ctx.Log_.ToList(),
             PlayerSurvivors = ctx.LivingMembers(BattleContext.PlayerTeam).Count(),
             DamageByUnit = new Dictionary<string, int>(ctx.DamageByUnit),
-            MaxEnemyKillsInOneTurn = ctx.MaxEnemyKillsInOneTurn
+            MaxEnemyKillsInOneTurn = ctx.MaxEnemyKillsInOneTurn,
+            Events = ctx.Events.ToList()
         };
     }
 

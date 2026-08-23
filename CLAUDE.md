@@ -22,6 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 chain > docs/chain.md    # 勝率だけでは見えない「連鎖の深さ」（最大同時撃破数・決着ターン数）
     dotnet run --project BattleSim -c Release 0 ablate [絞り込み] > docs/ablation.md  # 編成から1体ずつ抜いた勝率変化（入れ得の検出）
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
+    dotnet run --project BattleSim -c Release <n> replay "編成名" <seed>  # 1戦を再生用JSON（台本）で吐く
 
 `layout` は「どう置くか」の粗い当たりを付ける道具で、その値で採否を決めてはいけない。
 seed 50 の 720通りの最大なので上位は運で入れ替わり、狙い（ガルド前列・セッキ後列）も無視する。
@@ -34,6 +35,10 @@ seed 50 の 720通りの最大なので上位は運で入れ替わり、狙い�
 メンバーを1体ずつ抜いて勝率の下がり方を見る道具で、差がほぼ無い・あるいはプラス（抜いた方が
 強い）なら、そのメンバーは入れ得の疑いがある。`ablate` の絞り込みは `reseat` と同じ書式
 （カンマ区切りの部分一致、省略で compare の全編成、全編成だと30秒前後かかる）。
+
+`replay` は戦闘1戦を「台本」（初期盤面＋時間順のイベント列）として JSON で吐く。
+勝率・連鎖深度が数字で答えてくれない「畳みかけて見えるか」を目で確かめるための道具で、
+出力は repo に置かない（盤面を触るたび腐るし diff が読めない）。使うときにその場で吐く。
 
 **長時間ジョブは前景で待ち切ること。** 背景に回すと、起動したコマンドが返った時点で刈られる。
 `nohup` を付けても、同じターンの中で次のコマンドに移っただけでも死ぬ。
@@ -97,6 +102,20 @@ BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project Ba
 ### ログ（LogKind）
 
 `LogLine` は `LogKind` を持ち、UI は種類で色を引くだけで文字列は一切解析しない。新しい種類を足すときは `LogKind` に列挙子を追加し、`MainWindow.xaml.cs` の `Palette` に1行足す。見せ場（`Highlight` = 破裂・覚醒）だけを浮かせ、それ以外は静かに保つ。
+
+### 構造化イベント（BattleEvent）
+
+`LogLine`（人が読む文字列）と対に、`BattleEvent`（機械が読む記録）が `BattleResult.Events` に入る。
+戦闘画面は「誰が誰に何をしたか」を必要とするが、文字列からは復元できないので分けてある。
+**文字列を解析して画面を作らないこと**（LogKind の原則と同じ）。
+
+- 駒を指すのは `UnitState.InstanceId`（`BattleContext.Add` が振る連番）。胞子のように同じ
+  `UnitDef` の駒が複数立つので、`Def.Id` では駒を指せない。増援・蘇生も必ず `Add` を通す。
+- **イベントを積む処理は盤面を一切変えてはいけない。** 変えた瞬間、verbose の有無で戦闘結果が変わる。
+  受け入れ確認は「`compare` の差分がゼロであること」。1ptでも動いていたら挙動を変えている。
+- ログと同じく `verbose=false` では積まない（compare / layout は数百万戦を回すので確保だけで効く）。
+- 見せ場は `ctx.Log(..., LogKind.Highlight)` が自動で `Highlight` イベントも流す。特性側は
+  今まで通り Log を呼ぶだけでよく、演出の差し込み位置が勝手に台本へ乗る。
 
 ## 設計判断の蓄積
 

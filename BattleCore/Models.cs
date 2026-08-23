@@ -56,6 +56,13 @@ public sealed class UnitState
     public required UnitDef Def { get; init; }
     public required int TeamId { get; init; }
 
+    /// <summary>
+    /// この戦闘の中でだけ一意な連番。BattleContext.Add が振る。
+    /// 胞子のように同じ UnitDef の駒が複数立つので、Def.Id では駒を指せない。
+    /// 構造化イベント（BattleEvent）が「どの駒か」を指すための唯一の手段。
+    /// </summary>
+    public int InstanceId { get; internal set; }
+
     /// <summary>0..5。配置は FormationRules を参照。臆病などで戦闘中に変化する。</summary>
     public int Slot { get; set; }
 
@@ -262,6 +269,69 @@ public sealed record LogLine(LogKind Kind, int Indent, string Text)
     public override string ToString() => new string(' ', Indent * 2) + Text;
 }
 
+/// <summary>
+/// 構造化された戦闘イベントの種類。
+///
+/// LogLine（人が読む文字列）と対になる、機械が読む側の記録。
+/// 戦闘画面は「誰が誰に何をしたか」を必要とするが、文字列からは復元できないので分けてある。
+/// **文字列を解析して画面を作ってはいけない**（LogKind の原則と同じ）。
+/// </summary>
+public enum BattleEventKind
+{
+    TurnStart,   // ターンの区切り
+    Attack,      // 振った（当たったかどうかとは別）
+    Damage,      // 実際に減った
+    Heal,
+    Death,
+    Summon,      // 新しい駒が盤面に出た
+    Revive,      // 倒れていた駒が戻った
+    Move,        // スロットが変わった
+    Status,      // 毒・燃焼・痺れなどの継続効果が働いた
+    Highlight    // 見せ場（覚醒・破裂）。演出を差し込む位置の指示
+}
+
+/// <summary>
+/// 戦闘中に起きた一つの出来事。時間順に並んだこの列が、そのまま再生用の台本になる。
+///
+/// BattleEngine.Run は seed 決定的な純関数で戦闘を丸ごと計算し切るので、
+/// 戦闘画面はリアルタイムのシミュレーションではなく**この列の再生**として書ける。
+/// </summary>
+public sealed class BattleEvent
+{
+    public required BattleEventKind Kind { get; init; }
+    public required int Turn { get; init; }
+
+    /// <summary>行為者の InstanceId。盤面全体に関わる出来事では null。</summary>
+    public int? ActorId { get; init; }
+
+    /// <summary>対象の InstanceId。</summary>
+    public int? TargetId { get; init; }
+
+    /// <summary>ダメージ量・回復量など。種類によって意味が変わる。</summary>
+    public int Amount { get; init; }
+
+    /// <summary>対象のこの出来事の直後のHP。バーの補間に使う。</summary>
+    public int HpAfter { get; init; }
+
+    /// <summary>味方への巻き込みか。色を変えるため。</summary>
+    public bool FriendlyFire { get; init; }
+
+    /// <summary>Move / Summon の行き先スロット。</summary>
+    public int Slot { get; init; }
+
+    /// <summary>
+    /// Summon で新しく出た駒の陣営。
+    /// 増援は初期盤面に載っていないので、再生側はこのイベントだけで駒を組み立てる必要がある。
+    /// </summary>
+    public int? Team { get; init; }
+
+    /// <summary>Attack のときに実際に使われたパターン。</summary>
+    public AttackPattern? Pattern { get; init; }
+
+    /// <summary>Highlight / Status のフレーバー。演出の中身ではなく添え物として扱う。</summary>
+    public string? Text { get; init; }
+}
+
 /// <summary>戦闘結果。UIはこれを表示するだけでよい。</summary>
 public sealed class BattleResult
 {
@@ -277,4 +347,10 @@ public sealed class BattleResult
 
     /// <summary>1ターンのうちに味方が倒した敵の数の最大値。「連鎖の深さ」の代理指標。</summary>
     public required int MaxEnemyKillsInOneTurn { get; init; }
+
+    /// <summary>
+    /// 構造化された出来事の列。再生用の台本。
+    /// Log と同じく verbose=false のときは空（一括シミュレーションで積むと遅くなるため）。
+    /// </summary>
+    public required IReadOnlyList<BattleEvent> Events { get; init; }
 }

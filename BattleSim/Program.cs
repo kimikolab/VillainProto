@@ -10,6 +10,93 @@ string focusId = args.Length > 1 ? args[1] : "";
 // 「対象ステージ」の見出しと stageIndex の解決はこの3モードの分岐を抜けた後で行う。
 // （3モードともステージ引数を無視して全ステージを回すため、内容としても誤りになる）
 
+// replay モード: 1戦ぶんの台本を JSON で吐く。戦闘画面（ビューア）が読む。
+//
+// BattleEngine.Run は seed 決定的な純関数で戦闘を丸ごと計算し切るので、
+// ビューアはシミュレーションを持たず、この列を再生するだけでよい。
+// ここが JSON を吐く唯一の場所。docs/ と違って生成物を repo に置かない
+// （盤面が変わるたび腐るし、diff が読めない）。
+//
+//     dotnet run --project BattleSim -c Release <stage> replay [編成の部分一致] [seed]
+if (focusId == "replay")
+{
+    string want = args.Length > 2 ? args[2] : "";
+    int replaySeed = args.Length > 3 && int.TryParse(args[3], out int rs) ? rs : 0;
+
+    var (buildName, playerF) = CompareBuilds()
+        .FirstOrDefault(b => want.Length == 0 || b.Name.Contains(want));
+    if (playerF is null)
+    {
+        Console.Error.WriteLine($"編成が見つからない: {want}");
+        return;
+    }
+
+    EnemyCatalog.Stage st = EnemyCatalog.Stages[stageIndex];
+    BattleResult res = BattleEngine.Run(playerF, st.Enemy, replaySeed, verbose: true);
+
+    // 初期盤面は Run の前の状態が要るが、Run は編成を書き換えないので
+    // ここで Formation から組み直せる。InstanceId は Deploy の順（味方→敵、スロット昇順）で
+    // 振られるので、同じ順で数えれば一致する。
+    var roster = new List<object>();
+    int id = 0;
+    foreach (var (team, f) in new[] { (0, playerF), (1, st.Enemy) })
+        foreach (var (slot, def) in f.Occupied())
+            roster.Add(new
+            {
+                id = id++,
+                team,
+                slot,
+                name = def.Name,
+                maxHp = def.MaxHp,
+                attack = def.Attack,
+                speed = def.Speed,
+                pattern = def.Pattern.ToString(),
+                plus = def.PlusText,
+                minus = def.MinusText
+            });
+
+    // 増援・蘇生で後から出る駒は roster に無いので、ビューアは Summon イベントで足す。
+    // その駒の見た目に要る情報をイベント側からは引けないため、カタログ全体も併せて渡す。
+    var catalog = UnitCatalog.All.ToDictionary(
+        u => u.Name,
+        u => (object)new { maxHp = u.MaxHp, attack = u.Attack, pattern = u.Pattern.ToString() });
+
+    var payload = new
+    {
+        build = buildName,
+        stage = st.Name,
+        stageIndex,
+        seed = replaySeed,
+        playerWon = res.PlayerWon,
+        turns = res.Turns,
+        maxChain = res.MaxEnemyKillsInOneTurn,
+        roster,
+        catalog,
+        events = res.Events.Select(e => new
+        {
+            kind = e.Kind.ToString(),
+            turn = e.Turn,
+            actor = e.ActorId,
+            target = e.TargetId,
+            amount = e.Amount,
+            hpAfter = e.HpAfter,
+            friendly = e.FriendlyFire,
+            slot = e.Slot,
+            team = e.Team,
+            pattern = e.Pattern?.ToString(),
+            text = e.Text
+        }).ToList()
+    };
+
+    Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(payload,
+        new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = false,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        }));
+    return;
+}
+
 // compare モード: 代表的な編成を全ステージで比較する。
 // 総当たりは駒が増えるほど爆発するので、系統ごとの当たり外れはこちらで見る。
 if (focusId == "compare")
