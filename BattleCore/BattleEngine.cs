@@ -222,6 +222,37 @@ public sealed class BattleContext
         _units.Add(u);
     }
 
+    /// <summary>
+    /// 支援・弱体の宛先を解く。**ばら撒き型（味方全体を回す種類）専用。**
+    ///
+    /// <para>拡散持ち（誓約が壊れたガルド）は自分では受け取らず、<b>隣接する味方へそのまま渡す</b>。
+    /// 無効化のままだとマイナスがその駒の中で閉じてしまい、噛み合う余地が生まれない
+    /// （README の分かち＝ドハで記録済みの穴と同じ形）。渡すことで
+    /// 「ガルドの隣に誰を置くか」が初めて編成の判断になる。</para>
+    ///
+    /// <para><b>割り算はしない。</b>隣接それぞれが満額を受け取る。率で割ると、毎ターン走る
+    /// ばら撒き（号令・萎縮）では端数の扱いが比例関係を壊す（分かちの腕なまりで
+    /// 切り捨てを選んだのと同じ理由）。代わりに隣接の数＝配置が量を決める。
+    /// 隣接は前3なら1枠・前2なら3枠なので、<b>置き場所が拡散の形そのものになる</b>。</para>
+    ///
+    /// <para>渡した先が更に拡散することはない（渡す相手を <c>AcceptsSupport</c> で絞っている）。
+    /// ばら撒きが元から全員を回るので、隣接した味方は<b>直接ぶんと拡散ぶんで二重に受ける</b>。
+    /// これが狙いで、逆しま（ウツ）を隣に置くと弱体が二重に乗って大きく伸びる。</para>
+    ///
+    /// <para>対象を1体選ぶ型（継ぎ当て・縛め・移り木）はここを通さない。あちらは
+    /// ガルドを選択候補から外したままにしてある。候補に戻すと「最も傷ついた味方」を
+    /// 壁役が独占して、回復が常に隣へ流れ続ける形になりかねないため。</para>
+    /// </summary>
+    public IReadOnlyList<UnitState> SupportTargets(UnitState u)
+    {
+        if (u.AcceptsSupport) return new[] { u };
+        if (!u.HasTrait(TraitId.Stoic)) return Array.Empty<UnitState>();
+
+        return LivingMembers(u.TeamId)
+            .Where(a => a != u && a.AcceptsSupport && FormationRules.AreAdjacent(u.Slot, a.Slot))
+            .ToList();
+    }
+
     public int Opponent(int teamId) => teamId == PlayerTeam ? EnemyTeam : PlayerTeam;
 
     /// <summary>

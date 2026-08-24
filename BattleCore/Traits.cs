@@ -167,6 +167,17 @@ public sealed class CowardTrait : Trait
 }
 
 /// <summary>支援拒否。回復も強化も通らない代わりに、呪いや弱体も通らない。</summary>
+/// <summary>
+/// 誓約が壊れている。味方全体に配られる強化・弱体を自分では受け取らず、
+/// <b>隣接する味方へそのまま渡す</b>（<see cref="BattleContext.SupportTargets"/>）。
+///
+/// もとは単なる無効化だった。マイナスがその駒の中で閉じていて、隣に誰を置いても何も起きず、
+/// 「マイナスを利益に変える駒と組む余地が無い」という分かち（ドハ）と同じ穴だった。
+/// 渡す形にすると隣接の選択が編成の判断になる。特に逆しま（ウツ）を隣に置くと、
+/// 弱体が直接ぶんと拡散ぶんで二重に乗る。
+///
+/// 対象を1体選ぶ支援（継ぎ当て・縛め・移り木）は今まで通り受け取らない。
+/// </summary>
 public sealed class StoicTrait : Trait
 {
     public override TraitId Id => TraitId.Stoic;
@@ -341,12 +352,8 @@ public sealed class CurseTrait : Trait
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
             if (ally == self) continue;
-            if (!ally.AcceptsSupport)
-            {
-                ctx.Log($"    {ally.Name} は呪詛を受け付けなかった", LogKind.Trigger);
-                continue;
-            }
-            ally.AtkBonus -= AllyLeak;
+            foreach (UnitState t in ctx.SupportTargets(ally))
+                t.AtkBonus -= AllyLeak;
         }
         ctx.Log($"    呪詛は味方にも漏れた（攻撃 -{AllyLeak}）", LogKind.FriendlyFire);
     }
@@ -972,8 +979,9 @@ public sealed class RallyTrait : Trait
     {
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
-            if (ally == self || !ally.AcceptsSupport) continue;
-            ally.AtkBonus += OpeningGain;
+            if (ally == self) continue;
+            foreach (UnitState t in ctx.SupportTargets(ally))
+                t.AtkBonus += OpeningGain;
         }
         ctx.Log($"  {self.Name} が鬨を上げた（味方全体 攻撃 +{OpeningGain}）", LogKind.Trigger);
     }
@@ -982,7 +990,7 @@ public sealed class RallyTrait : Trait
     {
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
-            if (ally == self || !ally.AcceptsSupport) continue;
+            if (ally == self) continue;
 
             int idle = ally.Counter(StatusKeys.IdleTurn);
             if (idle <= 0 || idle != ctx.Turn - 1) continue;
@@ -992,7 +1000,10 @@ public sealed class RallyTrait : Trait
             // 据え（Bulwark）は積み上がらない一定の減衰なので、こちらの制限はかけない。
             if (ally.Traits.Where(t => !t.CanAct(ctx, ally)).Any(t => !t.SurrendersTurn)) continue;
 
-            ally.AtkBonus += Gain;
+            // 条件（差し出したターンかどうか）は ally 側で見て、乗せる先は拡散を通す。
+            // 拡散持ちは自分では受け取らないが、差し出した事実は本人のものなので判定は動かさない。
+            foreach (UnitState t in ctx.SupportTargets(ally))
+                t.AtkBonus += Gain;
             ctx.Log($"    {self.Name} の号令で {ally.Name} の溜めが乗った（攻撃 +{Gain}）", LogKind.Trigger);
         }
     }
@@ -1328,8 +1339,9 @@ public sealed class CowerTrait : Trait
     {
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
-            if (ally == self || !ally.AcceptsSupport) continue;
-            ally.AtkBonus -= AttackPenalty;
+            if (ally == self) continue;
+            foreach (UnitState t in ctx.SupportTargets(ally))
+                t.AtkBonus -= AttackPenalty;
         }
         ctx.Log($"  {self.Name} の怯えが伝染した（味方全体 攻撃 -{AttackPenalty} / 被ダメージ -{ReductionPercent}%）", LogKind.FriendlyFire);
     }
