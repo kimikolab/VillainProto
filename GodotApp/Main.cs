@@ -8,9 +8,11 @@ using System.Linq;
 /// 戦闘画面のプロトタイプ。
 ///
 /// <para><b>この画面は戦闘の判定を一切していない。</b>
-/// <see cref="BattleEngine.Run"/> は seed 決定的な純関数で戦闘を丸ごと計算し切るので、
-/// ここでやるのは戻ってきた <see cref="BattleResult.Events"/> を時間に展開して見せることだけ。
-/// リアルタイムのシミュレーションループを持たない。</para>
+/// <see cref="EngagementEngine.Run"/> は seed 決定的な純関数で会戦（5部隊連戦・持ち越しあり）を
+/// 丸ごと計算し切るので、ここでやるのは戻ってきた各 Battle の
+/// <see cref="BattleResult.Events"/> を時間に展開して見せることだけ。
+/// 盤面の初期値も <see cref="BattleOpening"/>（持ち越した HP・攻撃力を含む開始盤面）から
+/// 組むだけで、リアルタイムのシミュレーションループを持たない。</para>
 ///
 /// <para>BattleSim の <c>replay</c>（JSON）を経由しないのは、Godot からは BattleCore を
 /// 直接参照できるため。JSON は HTML ビューア用の経路として残してある。</para>
@@ -122,8 +124,11 @@ public partial class Main : Control
 
     // ---- 状態 -----------------------------------------------------------
 
-    int _buildIdx, _stageIdx = 4;
-    BattleResult _result = null!;
+    int _buildIdx;
+    string _playerName = "";
+    EngagementResult _eng = null!;
+    int _battleIdx;
+    BattleResult _result = null!;   // いま再生している Battle（_eng.Battles[_battleIdx]）
     List<Piece> _roster = new();
     readonly Dictionary<(int Team, int Slot), Card> _cards = new();
     readonly List<Shot> _shots = new();
@@ -136,6 +141,11 @@ public partial class Main : Control
 
     Label _lVerdict = null!, _lTurns = null!, _lChain = null!, _lPos = null!;
     Label _lEnemy = null!, _lPlayer = null!, _lChainBig = null!, _lChainNote = null!;
+    Label _lProgress = null!, _lEngVerdict = null!, _lBanner = null!;
+
+    /// <summary>バナー表示の残り時間。>0 の間は再生を止めて、次の Battle への切り替えを待たせる。</summary>
+    double _banner;
+    const double BannerTime = 1.4;
     Button _bPlay = null!;
     HSlider _scrub = null!;
     RichTextLabel _feed = null!;
@@ -189,7 +199,15 @@ public partial class Main : Control
         _overlay.SetAnchorsPreset(LayoutPreset.FullRect);
         AddChild(_overlay);
 
-        Load(0, 4);
+        // 部隊戦の切れ目に出すバナー（ENEMY REINFORCEMENTS / 2ND SQUAD）。最前面。
+        _lBanner = Text("", 30, CAccent);
+        _lBanner.SetAnchorsPreset(LayoutPreset.FullRect);
+        _lBanner.HorizontalAlignment = HorizontalAlignment.Center;
+        _lBanner.VerticalAlignment = VerticalAlignment.Center;
+        _lBanner.Visible = false;
+        AddChild(_lBanner);
+
+        Load(0);
     }
 
     // ---- 攻撃の筋 -------------------------------------------------------
@@ -276,26 +294,17 @@ public partial class Main : Control
             int captured = i;
             var b = new Button { Text = builds[i].Name };
             b.AddThemeFontSizeOverride("font_size", 12);
-            b.Pressed += () => Load(captured, _stageIdx);
+            b.Pressed += () => Load(captured);
             picker.AddChild(b);
         }
         left.AddChild(picker);
 
-        var stages = new HBoxContainer();
-        stages.AddThemeConstantOverride("separation", 6);
-        stages.AddChild(Text("波", 11, CFaint));
-        for (int i = 0; i < EnemyCatalog.Stages.Count; i++)
-        {
-            int captured = i;
-            var b = new Button { Text = $"{i + 1}" };
-            b.AddThemeFontSizeOverride("font_size", 12);
-            b.CustomMinimumSize = new Vector2(30, 0);
-            b.Pressed += () => Load(_buildIdx, captured);
-            stages.AddChild(b);
-        }
-        left.AddChild(stages);
+        // 波の選択ボタンは会戦の進行表示に置き換えた。どの波と戦うかは会戦が決める。
+        _lProgress = Text("", 12, CDim);
+        left.AddChild(_lProgress);
         row.AddChild(left);
 
+        row.AddChild(Stat("会戦", out _lEngVerdict));
         row.AddChild(Stat("決着", out _lVerdict));
         row.AddChild(Stat("ターン", out _lTurns));
         row.AddChild(Stat("連鎖深度", out _lChain));
@@ -461,6 +470,15 @@ public partial class Main : Control
         nextT.Pressed += NextTurn;
         row.AddChild(nextT);
 
+        // スクラブは Battle 内なので、Battle の行き来はここで。
+        var prevB = new Button { Text = "◀部隊" };
+        prevB.Pressed += () => JumpBattle(-1);
+        row.AddChild(prevB);
+
+        var nextB = new Button { Text = "部隊▶" };
+        nextB.Pressed += () => JumpBattle(1);
+        row.AddChild(nextB);
+
         _scrub = new HSlider { SizeFlagsHorizontal = SizeFlags.ExpandFill, MinValue = 0, Step = 1 };
         _scrub.ValueChanged += v =>
         {
@@ -488,31 +506,49 @@ public partial class Main : Control
 
     // ---- 読み込み -------------------------------------------------------
 
-    void Load(int buildIdx, int stageIdx)
+    void Load(int buildIdx)
     {
         _buildIdx = buildIdx;
-        _stageIdx = stageIdx;
 
         var (name, player) = Builds()[buildIdx];
-        EnemyCatalog.Stage stage = EnemyCatalog.Stages[stageIdx];
+        _playerName = name;
 
-        // ここが全部。判定はエンジンが済ませて返す。
-        _result = BattleEngine.Run(player, stage.Enemy, seed: 0, verbose: true);
+        // ここが全部。判定はエンジンが済ませて返す。会戦のルール（持ち越し・部隊交代）も
+        // BattleCore 側（EngagementEngine）に閉じていて、この画面は Battles[b] の台本を
+        // 再生するだけ。味方は当面1部隊（コンセプトメモの複数部隊はまず敵側だけで試す）。
+        _eng = EngagementEngine.Run(new[] { player }, EnemyCatalog.EngagementColumn,
+                                    seed: 0, verbose: true);
 
-        // InstanceId は Deploy の順（味方 → 敵、スロット昇順）で振られるので、同じ順で数えれば一致する。
+        LoadBattle(0);
+        SetPlaying(false);
+    }
+
+    /// <summary>
+    /// 会戦の中の1つの Battle を再生対象に据える。盤面は Formation からではなく
+    /// Openings[b]（持ち越した HP・攻撃力・パターンを含む開始盤面）から組む。
+    /// Formation から def.MaxHp で組み直すと持ち越しが表示に出ない。
+    /// </summary>
+    void LoadBattle(int battleIdx)
+    {
+        _battleIdx = battleIdx;
+        _result = _eng.Battles[battleIdx];
+        (int pi, int ei) = _eng.Pairings[battleIdx];
+
         _roster.Clear();
-        int id = 0;
-        foreach ((int team, Formation f) in new[] { (0, player), (1, stage.Enemy) })
-            foreach ((int slot, UnitDef def) in f.Occupied())
-                _roster.Add(new Piece
-                {
-                    Id = id++, Team = team, Slot = slot, Name = def.Name,
-                    Hp = def.MaxHp, MaxHp = def.MaxHp,
-                    Attack = def.Attack, BaseAttack = def.Attack, Pattern = def.Pattern,
-                });
+        foreach (BattleOpening o in _eng.Openings[battleIdx])
+            _roster.Add(new Piece
+            {
+                Id = o.InstanceId, Team = o.TeamId, Slot = o.Slot, Name = o.Name,
+                Hp = o.Hp, MaxHp = o.MaxHp,
+                Attack = o.Attack, BaseAttack = o.BaseAttack, Pattern = o.Pattern,
+            });
 
-        _lPlayer.Text = $"味方 — {name}";
-        _lEnemy.Text = $"敵 — {stage.Name}";
+        _lPlayer.Text = $"味方 — {_playerName}（第{pi + 1}部隊）";
+        _lEnemy.Text = $"敵 — {EnemyCatalog.Stages[ei].Name}";
+        _lProgress.Text = $"敵部隊 {ei + 1}/{EnemyCatalog.EngagementColumn.Count} ・ "
+            + $"突破 {_eng.EnemySquadsCleared} ・ Battle {battleIdx + 1}/{_eng.Battles.Count}";
+        _lEngVerdict.Text = _eng.PlayerWon ? "勝利" : "敗北";
+        _lEngVerdict.AddThemeColorOverride("font_color", _eng.PlayerWon ? CHeal : CDmg);
         _lVerdict.Text = _result.PlayerWon ? "勝利" : "敗北";
         _lVerdict.AddThemeColorOverride("font_color", _result.PlayerWon ? CHeal : CDmg);
         _lTurns.Text = _result.Turns.ToString();
@@ -535,8 +571,16 @@ public partial class Main : Control
 
         _idx = 0;
         _shots.Clear();
-        SetPlaying(false);
+        _banner = 0;
+        _lBanner.Visible = false;
         Redraw();
+    }
+
+    void JumpBattle(int delta)
+    {
+        SetPlaying(false);
+        int b = Math.Clamp(_battleIdx + delta, 0, _eng.Battles.Count - 1);
+        if (b != _battleIdx) LoadBattle(b);
     }
 
     // ---- 台本を適用して盤面を作る ---------------------------------------
@@ -544,10 +588,12 @@ public partial class Main : Control
     Dictionary<int, Piece> BuildState(int upto, out int turn, out int kills, out int best,
                                       Dictionary<(int Id, string Key), int>? statuses = null)
     {
+        // 複製の初期HPは p.Hp（Opening の持ち越しHP）。p.MaxHp にすると
+        // 前の Battle で削られたぶんが巻き戻り、持ち越しが画面に出ない。
         var units = _roster.ToDictionary(
             p => p.Id,
             p => new Piece { Id = p.Id, Team = p.Team, Slot = p.Slot, Name = p.Name,
-                             Hp = p.MaxHp, MaxHp = p.MaxHp,
+                             Hp = p.Hp, MaxHp = p.MaxHp,
                              Attack = p.Attack, BaseAttack = p.BaseAttack, Pattern = p.Pattern });
         turn = 0; kills = 0; best = 0;
         statuses?.Clear();
@@ -771,8 +817,25 @@ public partial class Main : Control
             _overlay.QueueRedraw();
         }
 
+        // 部隊戦の切れ目。バナーを一拍見せてから次の Battle をロードして続ける。
+        if (_banner > 0)
+        {
+            _banner -= delta * _speed;
+            if (_banner <= 0)
+            {
+                bool keep = _playing;
+                LoadBattle(_battleIdx + 1);
+                SetPlaying(keep);   // LoadBattle は状態を触らないが、明示して再生を継ぐ
+            }
+            return;
+        }
+
         if (!_playing) return;
-        if (_idx >= _result.Events.Count) { SetPlaying(false); Redraw(); return; }
+        if (_idx >= _result.Events.Count)
+        {
+            if (_battleIdx + 1 < _eng.Battles.Count) { ShowInterlude(); return; }
+            SetPlaying(false); Redraw(); return;
+        }
 
         _wait -= delta * _speed;
         if (_wait > 0) return;
@@ -782,6 +845,26 @@ public partial class Main : Control
         _wait = Dur.TryGetValue(e.Kind, out double d) ? d : 0.26;
         Redraw();
     }
+
+    /// <summary>
+    /// Battle の末尾。敵が替わるなら増援、味方が替わるなら次の部隊のバナーを見せる。
+    /// 相打ちなら両方出る。左の生存駒は動かさない——持ち越し駒は前の Battle を終えた
+    /// スロットのまま次の Opening に載るので、同じカード位置に表示され続ける。
+    /// </summary>
+    void ShowInterlude()
+    {
+        (int pi, int ei) = _eng.Pairings[_battleIdx];
+        (int npi, int nei) = _eng.Pairings[_battleIdx + 1];
+
+        var parts = new List<string>();
+        if (nei != ei) parts.Add("ENEMY REINFORCEMENTS");
+        if (npi != pi) parts.Add($"{Ordinal(npi + 1)} SQUAD");
+        _lBanner.Text = string.Join("  /  ", parts);
+        _lBanner.Visible = true;
+        _banner = BannerTime;
+    }
+
+    static string Ordinal(int n) => n switch { 1 => "1ST", 2 => "2ND", 3 => "3RD", _ => $"{n}TH" };
 
     public override void _UnhandledInput(InputEvent @event)
     {
