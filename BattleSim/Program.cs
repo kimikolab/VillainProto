@@ -1407,6 +1407,13 @@ if (focusId == "bridge")
         // 境目で結果に出た」のか「安い波は範囲持ちに有利なだけ」なのかを分ける。
         ("平坦列(低)", "1b 農兵5(+3.1pt) / 2b / 巡礼6。反転列(低) の群差の対照",
             new[] { W1Levy5, W2Mixed, W3Pilgrim6 }),
+        // 第10期 Phase AB-0。上の6列には全体持ちも貫き持ちも1体もいないので、
+        // チャージ化の前後でこの表が1つも動かない。測定台の骨格を保ったまま
+        // 貫き1枚・全体1枚だけ入れ替えた列を足す（中身は ChargeBench() に寄せてある）。
+        // この列の 単体−範囲 は -1.9pt しかないので**向きの判定には使えない**。
+        // 測るのは時間軸（チャージ化の前後）で、第6〜8期の軸ではない。
+        ("チャージ台", "H2a 裸5 / 2b の斧→狙撃手(貫き) / 巡礼3+詠唱兵(全体)・合計 116.6%。チャージ化の前後を測る台",
+            ChargeBench()),
     };
 
     Console.WriteLine($"# 向きは序列を動かすか（seed 0..{BridgeSeeds - 1} の {BridgeSeeds} 試行）");
@@ -1910,6 +1917,127 @@ if (focusId == "bill")
     }
     Console.WriteLine();
     Console.WriteLine($"**差の絶対値の最大 = {maxGapCost:F1}pt。**");
+    return;
+}
+
+// charge モード: 大技の発火率を測る診断（第10期 Phase AC）。
+// チャージ化の最初の失敗の形は「周期が長すぎて大技が1回も出ないまま決着し、波がただ
+// 半額になる」なので、代金や突破度より先に**実際に何回発火したか**を見る必要がある。
+// 発火数は編成によって変わる——速攻編成は大技が来る前に終わらせるので、これは敵の性質
+// ではなく編成の性質として出る。それがこの期の仮説そのもの。
+//
+// UnitTally.BigAttacks（倍率つきで振った回数）と Charges（溜めた回数）を数える。
+// どちらも verbose 非依存なので 200 seed × 全編成をそのまま回せる。
+// tally は Def.Id で引くので敵側の Id だけを拾う（bill と同じ検算を通す）。
+// 診断用で docs/ には置かない（seats / handoff / cost / bill と同じ扱い）。
+//
+//     dotnet run --project BattleSim -c Release 0 charge [絞り込み]
+if (focusId == "charge")
+{
+    var all = CompareBuilds();
+    const int ChargeSeeds = 200;
+
+    string filter = args.Length > 2 ? args[2] : "";
+    var targets = all
+        .Where(b => filter.Length == 0 || filter.Split(',').Any(k => b.Name.Contains(k.Trim())))
+        .ToArray();
+
+    Formation[] bench = ChargeBench();
+
+    Console.WriteLine($"# 大技の発火率（seed 0..{ChargeSeeds - 1} の {ChargeSeeds} 試行）");
+    Console.WriteLine();
+    Console.WriteLine("`発火/戦` は1戦あたり敵が倍率つきで振った回数、`溜め/戦` は溜めた回数。");
+    Console.WriteLine("**全編成で発火が 0 に近いなら周期が長すぎる**——大技が出ないまま決着していて、");
+    Console.WriteLine("波がただ半額になっただけになる（第10期 §4-3）。");
+    Console.WriteLine();
+    Console.WriteLine("`溜め` が立っているのに `発火` が 0 なら、溜めた次の手番が来る前に倒されている。");
+    Console.WriteLine("チャージ化していない状態では両方 0 になる（この表は前後で比べるためのもの）。");
+    Console.WriteLine();
+
+    // --- 既存5波（独立戦） ---
+    Console.WriteLine("## 既存5波（単独戦）");
+    Console.WriteLine();
+    Console.WriteLine("cost と同じ単独戦。チャージを持つ敵が出る波だけが動く。");
+    Console.WriteLine();
+
+    var waves = EnemyCatalog.Stages.Select((st, i) => (Name: $"第{i + 1}波", Enemy: st.Enemy)).ToList();
+
+    Console.Write("| 編成 |");
+    foreach (var (wn, _) in waves) Console.Write($" {wn} 発火/戦 |");
+    Console.Write(" 平均ターン |");
+    Console.WriteLine();
+    Console.Write("|---|");
+    foreach (var _ in waves) Console.Write("--:|");
+    Console.WriteLine("--:|");
+
+    foreach (var (name, f) in targets)
+    {
+        Console.Write($"| {name} |");
+        double turnSum = 0;
+        int turnN = 0;
+        foreach (var (_, enemy) in waves)
+        {
+            var ids = enemy.Occupied().Select(x => x.Def.Id).ToHashSet();
+            double big = 0;
+            for (int seed = 0; seed < ChargeSeeds; seed++)
+            {
+                BattleResult r = BattleEngine.Run(f, enemy, seed, verbose: false);
+                foreach ((string id, UnitTally t) in r.TallyByUnit)
+                    if (ids.Contains(id)) big += t.BigAttacks;
+                turnSum += r.Turns; turnN++;
+            }
+            Console.Write($" {big / ChargeSeeds:F2} |");
+        }
+        Console.WriteLine($" {turnSum / Math.Max(1, turnN):F2} |");
+        Console.Out.Flush();
+    }
+    Console.WriteLine();
+
+    // --- チャージ台（会戦・味方1部隊） ---
+    Console.WriteLine("## チャージ台（会戦・味方1部隊）");
+    Console.WriteLine();
+    Console.WriteLine("bridge の7列目と同じ列（ChargeBench）。会戦なので3つの部隊戦を通算する。");
+    Console.WriteLine("`到達` はその部隊戦まで会戦が続いた試行数で、発火はそこへ到達した試行の中の平均。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 発火/戦 | 溜め/戦 | 平均ターン | 第1戦 発火 | 第2戦 発火 | 第3戦 発火 | 第3戦 到達 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|");
+
+    // 味方と敵で Def.Id が衝突していると敵の発火に味方の分が混ざる。bill と同じ検算。
+    var enemyIds = bench.SelectMany(w => w.Occupied().Select(x => x.Def.Id)).ToHashSet();
+    var clash = targets.SelectMany(t => t.F.Occupied().Select(x => x.Def.Id))
+                       .Where(enemyIds.Contains).Distinct().ToList();
+    if (clash.Count > 0)
+        Console.WriteLine($"| **Def.Id 衝突: {string.Join(", ", clash)} — この表は読めない** | | | | | | | |");
+
+    foreach (var (name, f) in targets)
+    {
+        double big = 0, chg = 0, turns = 0;
+        var bigB = new double[bench.Length];
+        var reached = new int[bench.Length];
+        for (int seed = 0; seed < ChargeSeeds; seed++)
+        {
+            EngagementResult r = EngagementEngine.Run(new[] { f }, bench, seed, verbose: false);
+            for (int b = 0; b < r.Battles.Count; b++)
+            {
+                double e = 0;
+                foreach ((string id, UnitTally t) in r.Battles[b].TallyByUnit)
+                {
+                    if (!enemyIds.Contains(id)) continue;
+                    e += t.BigAttacks; chg += t.Charges;
+                }
+                big += e; turns += r.Battles[b].Turns;
+                if (b < bench.Length) { reached[b]++; bigB[b] += e; }
+            }
+        }
+        int battles = reached.Sum();
+        Console.WriteLine($"| {name} | {big / Math.Max(1, battles):F2} | {chg / Math.Max(1, battles):F2} "
+            + $"| {turns / Math.Max(1, battles):F2} "
+            + string.Concat(Enumerable.Range(0, bench.Length)
+                .Select(b => $"| {(reached[b] == 0 ? 0 : bigB[b] / reached[b]):F2} "))
+            + $"| {reached[^1] * 100.0 / ChargeSeeds:F0}% |");
+        Console.Out.Flush();
+    }
+    Console.WriteLine();
     return;
 }
 
@@ -2855,6 +2983,42 @@ static Formation[] BenchColumn113() => new[]
     Formation.Build(front1: EnemyCatalog.ZealotPilgrim, front2: EnemyCatalog.ZealotPilgrim,
                     front3: EnemyCatalog.ZealotPilgrim, mid: EnemyCatalog.ZealotPilgrim,
                     back1: EnemyCatalog.ZealotPilgrim, back2: EnemyCatalog.ZealotPilgrim),
+};
+
+// チャージ台（第10期 Phase AB-0）。**測定台 113% には全体持ちも貫き持ちも1体もいない**
+// （裸5 / 新兵・騎士・戦斧兵 / 巡礼6）。第9期までは敵の攻撃型が測定の交絡になるので
+// わざと外してあったが、第10期はその2種にチャージを付ける期なので、あの台の上で測ると
+// チャージ化の前後で数字が1つも動かない。
+//
+// そこで測定台の骨格（第1波 裸5 / 第3波 巡礼者・合計代金 113% 帯）を保ったまま、
+// 貫きを1枚（第2波の戦斧兵→狙撃手）、全体を1枚（第3波の巡礼者1体→詠唱兵）だけ入れ替えた列を
+// 別に作る。**入れ替えであって追加ではない**ので、ステージ設計の「貫き1枚まで／全体1枚まで」
+// （UnitCatalog.cs の第三波・第四波のコメント）を跨がない。
+//
+// 入れ替えで代金が上がった（巡礼6のまま詠唱兵を入れると合計 128.7%）ので、第3波の体数を
+// 6→4 に削って 116.6% に戻してある。**攻撃値は触らない**（第8期 Phase V の作法。攻撃を
+// 振ると「安さの効果」と「一撃圏を跨いだ効果」が混ざる）。実測 116.6% は 113% 帯の
+// 上端だが、突破率(1) = 39.1%・同値塊 3 と、測定台 113%（25.9% / 同値塊 8）より
+// 分解能が高い。チャージは火力を塊にするぶん突破率を下げる方向に効くので、
+// 前が 39% なのは帯の中へ降りてくる余地としてちょうどよい。
+//
+// **この列で「向き」（単体−範囲）は測れない**（-1.9pt しかなく、bridge 自身の注記の
+// -4pt 基準を下回る）。第6〜8期の軸ではなく時間軸を測るための台なので、それでよい。
+//
+// BenchColumn113 は触らない。あちらを据え置くことで、第9期の bill / bridge の数字が
+// そのまま比較対象として残り、かつ「チャージ化で動いてはいけない列」が検出器になる。
+static Formation[] ChargeBench() => new[]
+{
+    Formation.Build(front1: EnemyCatalog.ZealotBare, front2: EnemyCatalog.ZealotBare,
+                    front3: EnemyCatalog.ZealotBare, mid: EnemyCatalog.ZealotBare,
+                    back1: EnemyCatalog.ZealotBare),
+    // 2b 騎士混成 の戦斧兵（薙ぎ）を狙撃手（貫き）に。スロットはそのまま中衛。
+    Formation.Build(front1: EnemyCatalog.Recruit, front2: EnemyCatalog.Knight,
+                    front3: EnemyCatalog.Recruit, mid: EnemyCatalog.Archer),
+    // 巡礼者を詠唱兵（全体）入りに。既存の第四波と同じくレーン1の最深部（後2）に置く。
+    // 体数 4 は合計代金を 113% 帯へ戻すための刻み（上のコメント参照）。
+    Formation.Build(front1: EnemyCatalog.ZealotPilgrim, front2: EnemyCatalog.ZealotPilgrim,
+                    front3: EnemyCatalog.ZealotPilgrim, back2: EnemyCatalog.Chanter),
 };
 
 // 代金の分解（第9期 Phase X）。味方1部隊で列を1回走らせ、失った HP を
