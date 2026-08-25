@@ -19,6 +19,25 @@ public sealed record BattleOpening(int InstanceId, int TeamId, string UnitId, st
                                    int Slot, int Hp, int MaxHp, int Attack, int BaseAttack,
                                    AttackPattern Pattern);
 
+/// <summary>
+/// 部隊戦に入る時点の片側の戦力。<see cref="EngagementResult.Openings"/> と違い
+/// verbose に関係なく積む（勝率計測は verbose=false で回すため、そちらからも読める）。
+///
+/// <para><c>MaxHpSum</c>（現在の最大HP＝継ぎ接ぎの損耗が乗った値）と <c>DefMaxHpSum</c>
+/// （定義上の最大HP）を分けるのは、損耗した駒ほど Hp/MaxHp 比が健康に見えるため。
+/// ヴェルは 46→11 まで削れるので、比率だけ見ると満タンに化ける。</para>
+///
+/// <para>注意: どのフィールドも「その戦闘に入った駒」だけの合計なので、死んだ駒は
+/// 分子と分母から一緒に抜ける。部隊全体に対する残存戦力を出すときは、この record の
+/// <c>DefMaxHpSum</c> ではなく編成側の定義上総最大HP（不変値）を分母に取ること
+/// （BattleSim の engage がそうしている。1体だけ全快で残った部隊を 100% に見せないため）。</para>
+/// </summary>
+public sealed record SquadEntry(
+    int Alive,        // 生存数
+    int HpSum,        // 現在HPの合計
+    int MaxHpSum,     // 現在の最大HPの合計（継ぎ接ぎの損耗が乗った値）
+    int DefMaxHpSum); // 定義上の最大HPの合計（損耗前）
+
 /// <summary>会戦の結果。UI はこれを再生するだけでよい（BattleResult と同じ思想）。</summary>
 public sealed class EngagementResult
 {
@@ -30,6 +49,13 @@ public sealed class EngagementResult
 
     /// <summary>各 Battle で戦った (味方部隊番号, 敵部隊番号)。Battles と同じ長さ。</summary>
     public required IReadOnlyList<(int PlayerSquad, int EnemySquad)> Pairings { get; init; }
+
+    /// <summary>各 Battle の開始時点の味方戦力。Battles と同じ長さ。verbose=false でも積む。</summary>
+    public required IReadOnlyList<SquadEntry> PlayerEntries { get; init; }
+
+    /// <summary>同じく敵側。持ち越された敵部隊がどれだけ削れていたかを見る。
+    /// 味方1部隊の計測では敵は毎回新規投入なので常に無傷のはず（検算に使う）。</summary>
+    public required IReadOnlyList<SquadEntry> EnemyEntries { get; init; }
 
     public required int EnemySquadsCleared { get; init; }
     public required int PlayerSquadsLost { get; init; }
@@ -70,6 +96,8 @@ public static class EngagementEngine
         var battles = new List<BattleResult>();
         var openings = new List<IReadOnlyList<BattleOpening>>();
         var pairings = new List<(int, int)>();
+        var playerEntries = new List<SquadEntry>();
+        var enemyEntries = new List<SquadEntry>();
 
         int pi = 0, ei = 0;
         int cleared = 0, lost = 0, draws = 0;
@@ -90,6 +118,11 @@ public static class EngagementEngine
                                   Pattern: u.CurrentPattern))
                     .ToList()
                 : null;
+
+            // 入場戦力は Openings と違い verbose に関係なく積む（勝率計測が読む集計）。
+            // 読むだけで盤面には一切触らない（受け入れ条件: compare 差分ゼロ）。
+            playerEntries.Add(Snapshot(current));
+            enemyEntries.Add(Snapshot(enemyCur));
 
             BattleResult r = BattleEngine.Run(current, enemyCur, DeriveSeed(seed, battleIndex), verbose);
 
@@ -153,12 +186,23 @@ public static class EngagementEngine
             Battles = battles,
             Openings = openings,
             Pairings = pairings,
+            PlayerEntries = playerEntries,
+            EnemyEntries = enemyEntries,
             EnemySquadsCleared = cleared,
             PlayerSquadsLost = lost,
             FirstBattleAttrition = firstAttrition,
             Draws = draws,
         };
     }
+
+    /// <summary>入場時点の戦力の写し。読むだけで UnitState には一切触らない。
+    /// 投入直後（Materialize / CarryOver の直後）に呼ぶので全員生存のはずだが、
+    /// 生存数は仮定せず数える（前提が崩れたとき集計側で気づけるように）。</summary>
+    private static SquadEntry Snapshot(List<UnitState> squad) => new(
+        Alive: squad.Count(u => u.IsAlive),
+        HpSum: squad.Sum(u => u.Hp),
+        MaxHpSum: squad.Sum(u => u.MaxHp),
+        DefMaxHpSum: squad.Sum(u => u.Def.MaxHp));
 
     /// <summary>
     /// 部隊戦の境界。状態異常（StatusKeys の全キー、破片も含む）と AtkBonus を一律に消し、

@@ -275,12 +275,29 @@ if (focusId == "engage")
     Console.WriteLine("|---|--:|--:|--:|--:|"
         + string.Concat(Enumerable.Range(0, squads + 1).Select(_ => "--:|")) + "--:|");
 
+    // 入場戦力は同じ走行から集計するが表が別なので、行を控えて後からまとめて吐く。
+    // 敵側は表にせず検算の1行だけ（味方1部隊では敵は毎回新規投入＝削れ 0% になるはず）。
+    var entryRows = new List<string>();
+    var enemyEroded = new double[squads];
+    var enemyReached = new int[squads];
+
+    // HP割合の分母は**編成全体**の定義上総最大HP（不変値）。SquadEntry.DefMaxHpSum を
+    // そのまま分母にする案は却下した——あれは「その戦闘に入った駒」だけの合計なので、
+    // 死んだ駒が分子と分母から一緒に抜け、% が「部隊の残存戦力」ではなく「生き残りの
+    // 健康度」に化ける（1体だけ全快で残った部隊が 100% に見える）。§2.4 の判定閾値は
+    // 部隊全体に対する割合で読む前提なので、分母は編成から取って固定する。
+    var enemyDefTotal = column.Select(e => e.Occupied().Sum(x => x.Def.MaxHp)).ToArray();
+
     foreach (var (name, f) in targets)
     {
         var playerColumn = new[] { f };
+        int playerDefTotal = f.Occupied().Sum(x => x.Def.MaxHp);
         var dist = new int[squads + 1];
         int full = 0, drawSum = 0;
         double clearedSum = 0, attrSum = 0;
+        var aliveSum = new double[squads];
+        var hpRatioSum = new double[squads];
+        var reached = new int[squads];
 
         for (int seed = 0; seed < EngageSeeds; seed++)
         {
@@ -290,6 +307,21 @@ if (focusId == "engage")
             clearedSum += r.EnemySquadsCleared;
             attrSum += r.FirstBattleAttrition;
             drawSum += r.Draws;
+
+            // 味方1部隊なので Battle の並びは敵部隊の並びと 1:1（負けた時点で会戦が終わる）。
+            // 第 i 戦の入場戦力 = PlayerEntries[i]。分母に現在の最大HPを使わないのは、
+            // 継ぎ接ぎで最大HPが半減した駒が満タンに化けるため（SquadEntry のコメント参照）。
+            for (int b = 0; b < r.PlayerEntries.Count && b < squads; b++)
+            {
+                aliveSum[b] += r.PlayerEntries[b].Alive;
+                hpRatioSum[b] += (double)r.PlayerEntries[b].HpSum / playerDefTotal;
+                reached[b]++;
+
+                // 敵側の分母はその戦闘の敵部隊の定義上総最大HP（味方1部隊では ei = b）
+                enemyEroded[b] += 1.0 - (double)r.EnemyEntries[b].HpSum
+                    / enemyDefTotal[r.Pairings[b].EnemySquad];
+                enemyReached[b]++;
+            }
         }
 
         // 独立積は docs/balance.md を読まずにその場で測り直す（docs/ は出力先であって入力ではない。
@@ -307,7 +339,31 @@ if (focusId == "engage")
             + $"| {clearedSum / EngageSeeds:F2} | {attrSum * 100 / EngageSeeds:F0}% |"
             + string.Concat(dist.Select(d => $" {d} |")) + $" {drawSum} |");
         Console.Out.Flush();
+
+        entryRows.Add($"| {name} |" + string.Concat(Enumerable.Range(0, squads).Select(b =>
+            reached[b] == 0
+                ? $" — (0/{EngageSeeds}) |"
+                : $" {aliveSum[b] / reached[b]:F1}体 {hpRatioSum[b] * 100 / reached[b]:F0}%"
+                  + $" ({reached[b]}/{EngageSeeds}) |")));
     }
+
+    Console.WriteLine();
+    Console.WriteLine("### 入場戦力（味方）");
+    Console.WriteLine();
+    Console.WriteLine("各部隊戦に入る時点の味方の生存数と HP（**編成全体の定義上の**総最大HPに対する割合。");
+    Console.WriteLine("死んだ駒の枠も分母に残るので、% は部隊の残存戦力を表す。生き残りの健康度ではない）。");
+    Console.WriteLine("到達しなかった試行は分母から外す（到達した試行だけの平均）。**到達率も併記する**——");
+    Console.WriteLine("平均だけだと「第N戦に着いた少数の強い試行」で数字が持ち上がり、壁の位置を見誤る。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 |" + string.Concat(Enumerable.Range(0, squads).Select(b => $" 第{b + 1}戦 |")));
+    Console.WriteLine("|---|" + string.Concat(Enumerable.Range(0, squads).Select(_ => "---|")));
+    foreach (string row in entryRows) Console.WriteLine(row);
+    Console.WriteLine();
+    Console.WriteLine("持ち越された敵部隊が削れていた割合の平均（全編成・全試行）: "
+        + string.Join(" / ", Enumerable.Range(0, squads).Select(b => enemyReached[b] == 0
+            ? $"第{b + 1}戦 —"
+            : $"第{b + 1}戦 {enemyEroded[b] * 100 / enemyReached[b]:F0}%"))
+        + "（味方1部隊では敵は毎回新規投入なので全戦 0%＝入場HP 100% のはず。ずれていたら実装がおかしい）");
     return;
 }
 
