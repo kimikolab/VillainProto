@@ -24,6 +24,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 pulse [絞り込み] > docs/pulse.md      # 駒ごとの活動量（振/干渉）と与被ダメージの内訳
     dotnet run --project BattleSim -c Release 0 engage [絞り込み] > docs/engage.md    # 会戦（部隊列3本: 順路・逆順・地点）の突破分布・入場戦力
     dotnet run --project BattleSim -c Release 0 engage2 [絞り込み]  # 同一編成2部隊の会戦（診断用。docs/ に置かない）
+    dotnet run --project BattleSim -c Release 0 seats [絞り込み]    # 会戦の隊列持ち越し診断（診断用。docs/ に置かない）
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
     dotnet run --project BattleSim -c Release <n> replay "編成名" <seed>  # 1戦を再生用JSON（台本）で吐く
 
@@ -67,6 +68,8 @@ ablate は1体抜いた勝率差しか見ないので、どちらも「出力で
 全編成必勝で一律 100% になり無情報）。`入場戦力` は各部隊戦に入る時点の生存数と HP割合
 （分母は編成全体の定義上総最大HP）で、壁がどの戦いに、どんな消耗で立っているかを示す。
 `engage2` は同一編成を2部隊にした会戦で、突破数の非線形性（第2部隊が削り残しを拾えるか）を見る。
+`seats` は会戦の隊列持ち越し診断。第2戦・第3戦の入場スロットが初期配置からどれだけずれているかを
+編成ごとに集計する（D5「Slot は維持」が移動系編成に課す代金の可視化。同定は UnitId で行う）。
 
 `replay` は戦闘1戦を「台本」（初期盤面＋時間順のイベント列）として JSON で吐く。
 勝率・連鎖深度が数字で答えてくれない「畳みかけて見えるか」を目で確かめるための道具で、

@@ -13,11 +13,16 @@ namespace BattleCore;
 /// <para>会戦を跨いで駒を同定する手段は (TeamId, Slot)。持ち越された駒は前の Battle を
 /// **終えたときのスロット**のまま次の Opening に載る（境界で再配置しない）ので、
 /// 前の Battle の Move イベントを再生し切った後の位置と 1:1 に対応する。
-/// UnitId では足りない——敵部隊は同じ UnitDef の駒を複数含む（第一波の新兵×2 など）。</para>
+/// UnitId では足りない——敵部隊は同じ UnitDef の駒を複数含む（第一波の新兵×2 など）。
+/// これは再生側（敵を含む全駒）の話。BattleSim の seats 診断は味方限定＋UnitId 重複ガード付きで
+/// UnitId 同定する——「Slot がずれたか」を測る診断で Slot を同定キーに使えないため。</para>
+///
+/// <para><c>HasFallenBack</c> も入場時の値（Run の前に控える）。会戦を跨いで維持される（判断 D6）
+/// ので、第2戦以降の開幕から立っている駒がどれだけあるかを診断で数えられる。</para>
 /// </summary>
 public sealed record BattleOpening(int InstanceId, int TeamId, string UnitId, string Name,
                                    int Slot, int Hp, int MaxHp, int Attack, int BaseAttack,
-                                   AttackPattern Pattern);
+                                   AttackPattern Pattern, bool HasFallenBack);
 
 /// <summary>
 /// 部隊戦に入る時点の片側の戦力。<see cref="EngagementResult.Openings"/> と違い
@@ -112,10 +117,12 @@ public static class EngagementEngine
             // Opening は Run の前に値を控え、Run の後に組む。InstanceId は Run の中の
             // ctx.Add が振るので、先に record にすると前の Battle の ID が写ってしまうし、
             // 振り順を外から推測して複製するのは前提の二重化になる。
+            // HasFallenBack もここで控える。Run の後に Unit から読むと「その戦闘で下がったか」が
+            // 混ざり、「入場時に立っていたか」でなくなる（Hp・Slot と同じ扱い）。
             var pending = verbose
                 ? current.Concat(enemyCur)
                     .Select(u => (Unit: u, u.Hp, u.MaxHp, Attack: u.CurrentAttack, u.Slot,
-                                  Pattern: u.CurrentPattern))
+                                  Pattern: u.CurrentPattern, u.HasFallenBack))
                     .ToList()
                 : null;
 
@@ -132,7 +139,7 @@ public static class EngagementEngine
                 ? Array.Empty<BattleOpening>()
                 : pending.Select(p => new BattleOpening(p.Unit.InstanceId, p.Unit.TeamId,
                     p.Unit.Def.Id, p.Unit.Def.Name, p.Slot, p.Hp, p.MaxHp, p.Attack,
-                    p.Unit.Def.Attack, p.Pattern)).ToList());
+                    p.Unit.Def.Attack, p.Pattern, p.HasFallenBack)).ToList());
 
             if (battleIndex == 0)
             {
