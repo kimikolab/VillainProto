@@ -58,6 +58,19 @@ public sealed class EngagementResult
     /// <summary>各 Battle の開始時点の味方戦力。Battles と同じ長さ。verbose=false でも積む。</summary>
     public required IReadOnlyList<SquadEntry> PlayerEntries { get; init; }
 
+    /// <summary>
+    /// 各 Battle を<b>終えた</b>時点の味方戦力（倒れた駒は Hp 0 のまま数に入る）。
+    /// Battles と同じ長さ。verbose=false でも積む。
+    ///
+    /// <para>入場側（<see cref="PlayerEntries"/>）だけでは会戦の最後の Battle の後が読めない
+    /// ——次の入場が無いので、払った HP の総額が最終戦だけ欠ける。代金の分解（第9期 bill）が
+    /// 「失った HP = 定義上の総最大HP − 残 HP」を出すために足したもの。</para>
+    ///
+    /// <para>敵側は足していない。敵は味方1部隊の計測では毎回新規投入で、退場時の残 HP は
+    /// <see cref="LastBattleAttrition"/> が既に割合で持っている。</para>
+    /// </summary>
+    public required IReadOnlyList<SquadEntry> PlayerExits { get; init; }
+
     /// <summary>同じく敵側。持ち越された敵部隊がどれだけ削れていたかを見る。
     /// 味方1部隊の計測では敵は毎回新規投入なので常に無傷のはず（検算に使う）。</summary>
     public required IReadOnlyList<SquadEntry> EnemyEntries { get; init; }
@@ -118,6 +131,7 @@ public static class EngagementEngine
         var openings = new List<IReadOnlyList<BattleOpening>>();
         var pairings = new List<(int, int)>();
         var playerEntries = new List<SquadEntry>();
+        var playerExits = new List<SquadEntry>();
         var enemyEntries = new List<SquadEntry>();
 
         int pi = 0, ei = 0;
@@ -155,6 +169,9 @@ public static class EngagementEngine
 
             battles.Add(r);
             pairings.Add((pi, ei));
+            // 退場戦力は CarryOver の前に取る。境界は HP に触らないが、
+            // 触るようになったときにここが黙って意味を変えないよう、Run の直後に固定する。
+            playerExits.Add(Snapshot(current));
             openings.Add(pending is null
                 ? Array.Empty<BattleOpening>()
                 : pending.Select(p => new BattleOpening(p.Unit.InstanceId, p.Unit.TeamId,
@@ -218,6 +235,7 @@ public static class EngagementEngine
             Openings = openings,
             Pairings = pairings,
             PlayerEntries = playerEntries,
+            PlayerExits = playerExits,
             EnemyEntries = enemyEntries,
             EnemySquadsCleared = cleared,
             PlayerSquadsLost = lost,

@@ -838,6 +838,12 @@ public sealed class BattleContext
         target.Hp = Math.Min(target.MaxHp, target.Hp + amount);
         if (target.Hp == before) return;
 
+        // 実際に増えた分だけを数える（上限で切られた分は「払い戻し」になっていない）。
+        // 代金の分解（第9期 bill）が差し引く側の資源。回復役の側ではなく
+        // **回復された駒**に付けるのは、代金が駒ごとの HP の増減だからで、
+        // 「誰が回復したか」を見たいときは Interventions / DamageToAlly の側を見る。
+        TallyOf(target).Healed += target.Hp - before;
+
         Emit(new BattleEvent
         {
             Kind = BattleEventKind.Heal,

@@ -305,6 +305,13 @@ public sealed class UnitTally
     /// <summary>受けたダメージのうち味方由来のぶん。</summary>
     public int TakenFromAlly;
 
+    /// <summary>
+    /// 回復で実際に増えた HP（<c>ctx.Heal</c> が動かした分だけ。上限で切られた分は入らない）。
+    /// 代金の分解（第9期 bill）が「払った HP」から差し引くために足したもので、
+    /// <b>既存の出力には出さない</b>——pulse の表に列を増やすと第8期以前の出力と diff が出る。
+    /// </summary>
+    public int Healed;
+
     /// <summary>とどめを刺した敵の数。</summary>
     public int Kills;
 
@@ -316,6 +323,7 @@ public sealed class UnitTally
         Attacks += o.Attacks; Interventions += o.Interventions;
         DamageToEnemy += o.DamageToEnemy; DamageToAlly += o.DamageToAlly;
         DamageTaken += o.DamageTaken; TakenFromAlly += o.TakenFromAlly;
+        Healed += o.Healed;
         Kills += o.Kills; Deaths += o.Deaths;
     }
 }
