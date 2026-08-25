@@ -2532,10 +2532,18 @@ if (focusId == "dump")
     Console.WriteLine();
     Console.WriteLine("## ユニット");
     Console.WriteLine();
-    Console.WriteLine("| 名前 | HP | 攻 | 速 | 型 | プラス | マイナス | 由来 |");
-    Console.WriteLine("|---|---:|---:|---:|---|---|---|---|");
+    // 行動列は「説明文と挙動のズレ」を防ぐための列（過去4回発生）。Actions を持たない駒は
+    // 空欄——味方は全員そちらなので、この表の見た目は第9期までと変わらない。
+    static string Acts(UnitDef u) => u.Actions is null
+        ? ""
+        : string.Join(" → ", u.Actions.Select(a => a.Kind == ActionKind.Charge
+            ? (a.Label ?? "溜め")
+            : a.AttackPercent == 100 ? "攻撃" : $"攻撃×{a.AttackPercent}%"));
+
+    Console.WriteLine("| 名前 | HP | 攻 | 速 | 型 | 行動 | プラス | マイナス | 由来 |");
+    Console.WriteLine("|---|---:|---:|---:|---|---|---|---|---|");
     foreach (UnitDef u in UnitCatalog.All.Where(u => u.Id != "spore"))
-        Console.WriteLine($"| **{u.Name}** | {u.MaxHp} | {u.Attack} | {u.Speed} | {Pat(u.Pattern)} | {u.PlusText} | {u.MinusText} | {u.Flavor} |");
+        Console.WriteLine($"| **{u.Name}** | {u.MaxHp} | {u.Attack} | {u.Speed} | {Pat(u.Pattern)} | {Acts(u)} | {u.PlusText} | {u.MinusText} | {u.Flavor} |");
 
     Console.WriteLine();
     Console.WriteLine("## 特性");
@@ -2553,7 +2561,9 @@ if (focusId == "dump")
     Console.WriteLine();
     foreach (EnemyCatalog.Stage st in EnemyCatalog.Stages)
     {
-        var e = st.Enemy.Occupied().Select(x => $"{x.Def.Name}(HP{x.Def.MaxHp}/攻{x.Def.Attack}/{Pat(x.Def.Pattern)})");
+        var e = st.Enemy.Occupied().Select(x =>
+            $"{x.Def.Name}(HP{x.Def.MaxHp}/攻{x.Def.Attack}/{Pat(x.Def.Pattern)}"
+            + (x.Def.Actions is null ? "" : $"/{Acts(x.Def)}") + ")");
         Console.WriteLine($"- **{st.Name}**: {string.Join("、", e)}");
     }
     return;

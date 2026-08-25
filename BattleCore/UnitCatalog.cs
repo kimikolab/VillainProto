@@ -516,16 +516,44 @@ public static class EnemyCatalog
     };
     public static readonly UnitDef Knight = Make("knight", "巡礼騎士", 75, 15, 7);
     public static readonly UnitDef Priest = Make("priest", "従軍司祭", 40, 9, 8);
+    // 溜めてから撃つ（第10期 Phase AB）。**平均火力は変えない**——2周期の 200% は
+    // (0 + 2) / 2 = 1.0 で、毎ターン 14 を振るのと総量が同じ。変えたのは配り方だけで、
+    // 「何ターンで終わらせるか」が代金を決めるようにするのが狙い（第10期 §0）。
+    //
+    // 3周期案（通常 → 溜め → 強貫き）は測って却下した。平均火力は同じく 1.0 だが、
+    // 戦闘長 3.9〜5.6 ターンに対して長すぎて、発火数が 反撃3(カド×ハギ) で 0.00、
+    // 惨禍×被弾強化 で 0.06——**大技が一度も出ないまま終わる編成が出る**。
+    // そうなると波はただ 67% 引きになるだけで、溜めを見て合わせるという体験が成立しない。
+    // 2周期なら全31編成が最低 1.00 回は浴びる（発火 平均 2.15 / 最小 1.00 / 最大 3.69）。
+    //
+    // 倍率は 180 / 200 / 220 を振って残存で確かめた。どれも「浴びて全滅」は起こさない
+    // （220% でも勝率 -1.4pt・残存 3.14→3.09）ので、平均火力を保つ 200 を採る。
+    // 180 は波が 10% 安くなり、220 は 10% 高くなる——どちらも代金を静かに動かして
+    // 計測の交絡になる。
     public static readonly UnitDef Archer = new()
     {
         Id = "archer", Name = "狙撃手", MaxHp = 38, Attack = 14, Speed = 11,
-        Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Pierce
+        Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Pierce,
+        Actions = new UnitAction[]
+        {
+            new(ActionKind.Charge, Label: "狙いを定めている"),
+            new(ActionKind.Attack, 200),
+        }
     };
     public static readonly UnitDef Warden = Make("warden", "城塞の重装兵", 145, 12, 3);
+    // 溜めてから撃つ（第10期 Phase AB）。狙撃手と同じ 2周期 200%（理由は上）。
+    // 全体 16 は味方後列の HP（40〜55 前後）を1発では抜かない。第四波は決着が遅い波
+    // （積み上げ系の立ち上がりを見るための波）なので発火 平均 2.68 と多いが、
+    // 残存は 3.14 → 3.10 しか動かない。
     public static readonly UnitDef Chanter = new()
     {
         Id = "chanter", Name = "詠唱兵", MaxHp = 70, Attack = 8, Speed = 5,
-        Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.All
+        Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.All,
+        Actions = new UnitAction[]
+        {
+            new(ActionKind.Charge, Label: "魔力を集めている"),
+            new(ActionKind.Attack, 200),
+        }
     };
     public static readonly UnitDef Hero = Make("hero", "勇者候補", 95, 20, 14, TraitId.Executioner);
 
@@ -534,6 +562,9 @@ public static class EnemyCatalog
     public static readonly UnitDef KnightG = Make("knight_g", "巡礼騎士", 75, 24, 7);
     public static readonly UnitDef PriestG = Make("priest_g", "従軍司祭", 40, 9, 8);
     public static readonly UnitDef RecruitG = Make("recruit_g", "討伐隊の新兵", 45, 11, 6);
+    // 第10期でもチャージを付けない。第二波は練習用の波で、ここを溜めさせると
+    // 「支援役はレーンを選べば潰せる」という教える内容の手前に、溜めの読み合いが挟まる。
+    // 易しい波の性格が変わると第1波・第2波の代金の基準も動く。
     public static readonly UnitDef ArcherG = new()
     {
         Id = "archer_g", Name = "狙撃手", MaxHp = 38, Attack = 18, Speed = 11,
