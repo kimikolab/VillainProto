@@ -1650,6 +1650,122 @@ if (focusId == "bridge")
     }
     Console.WriteLine();
     Console.WriteLine("範囲持ちの Δ が単体のみの Δ より**大きい**（＝損が小さい）なら、向きが結果に届いている。");
+
+    // --- 群を「範囲/単体」から「自傷率」へ入れ替える（第9期 Phase Y） ---
+    //
+    // 第6〜8期で、攻撃パターンによる代金の向きは結果に届かないと分かった（代金では ±8pt
+    // 開くのに突破度の順位相関は 0.83〜0.94、群差は境目でだけ +0.125 波）。**列も物差しも
+    // 変えず、群の定義だけを差し替える**——比較可能性を保つため、ここから上の出力は1行も動かさない。
+    //
+    // 群分けの連続量は自傷率（= 自傷分 ÷ (敵由来 + 自傷分)。第9期 Phase X の bill と同じ
+    // 計算で、測定台 113% の上で測る）。攻撃パターンと違って**編成の内部構造に課金する軸**で、
+    // 第5期に目視で見えた「自傷の固定費」がその正体かどうかをここで確かめる。
+    Formation[] bench = BenchColumn113();
+    bool benchOk = bench.Length == columns[4].Squads.Length
+        && Enumerable.Range(0, bench.Length).All(i => SameFormation(bench[i], columns[4].Squads[i]));
+
+    Console.WriteLine();
+    Console.WriteLine("## 自傷率で群分けし直す（第9期 Phase Y）");
+    Console.WriteLine();
+    Console.WriteLine("**列も物差しも第8期のまま。群の定義だけを 範囲/単体 → 自傷率 に差し替えたもの。**");
+    Console.WriteLine("自傷率 = 自傷分 ÷ (敵由来 + 自傷分)。測定台 113%（反転列(低)）で味方1部隊の会戦を");
+    Console.WriteLine($"seed 0..{BridgeSeeds - 1} 回して測る（`bill` と同じ計算）。");
+    Console.WriteLine();
+    Console.WriteLine(benchOk
+        ? "**検算（測定台）: 自傷率を測った列は 反転列(低) と完全に同一。**"
+        : "**測定台が 反転列(低) と違う。自傷率と Δ が別の列の上で測られているので読んではいけない。**");
+    Console.WriteLine();
+
+    var selfHarm = Enumerable.Range(0, nT)
+        .Select(t => MeasureBill(targets[t].F, bench, BridgeSeeds).SelfHarmRate * 100)
+        .ToArray();
+
+    // 地力: 平坦列(低) の突破度(1)。自傷率と地力が交絡していると
+    // 「自傷型が弱い」のが自傷のせいなのかたまたま弱い編成なのかを分けられない（§3-3）。
+    var grit = Enumerable.Range(0, nT).Select(t => deg1[5, t]).ToArray();
+
+    var sorted = Enumerable.Range(0, nT).OrderByDescending(t => selfHarm[t]).ToArray();
+    int third = nT / 3;
+    var tier = new int[nT];                       // 0=高自傷 / 1=中 / 2=低
+    for (int k = 0; k < nT; k++) tier[sorted[k]] = k < third ? 0 : k < nT - third ? 1 : 2;
+
+    Console.WriteLine("### 自傷率の分布");
+    Console.WriteLine();
+    var shSorted = selfHarm.OrderBy(x => x).ToArray();
+    double shMean = shSorted.Average();
+    double shSd = Math.Sqrt(shSorted.Average(x => (x - shMean) * (x - shMean)));
+    Console.WriteLine($"編成数 {nT} / 最小 {shSorted[0]:F1}% / 中央 {shSorted[nT / 2]:F1}% / 最大 {shSorted[^1]:F1}% "
+        + $"/ 平均 {shMean:F1}% / 標準偏差 {shSd:F1}pt / ちょうど 0% の編成 {selfHarm.Count(x => x == 0)}");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 範 | 自傷率 | 三分位 | 地力（平坦列(低) 突破度） | Δ突破度 反転列(低) |");
+    Console.WriteLine("|---|:-:|--:|:-:|--:|--:|");
+    foreach (int t in sorted)
+        Console.WriteLine($"| {targets[t].Name} | {(HasAoe(targets[t].F) ? "○" : "")} | {selfHarm[t]:F1}% "
+            + $"| {(tier[t] == 0 ? "高" : tier[t] == 1 ? "中" : "低")} | {grit[t]:F3} "
+            + $"| {deg1[4, t] - deg1[0, t]:+0.000;-0.000} |");
+    Console.WriteLine();
+    Console.WriteLine("**一様（標準偏差が小さい）なら群分けは意味を持たない。**三分位は自傷率の降順で");
+    Console.WriteLine($"上から {third} / {nT - 2 * third} / {third} 編成に切る（自傷率 0% が同数以上あると下位群は同値塊になる）。");
+
+    // --- 三分位の群差（第8期の 範囲/単体 の表と同じ形。直接並べて読めるようにする） ---
+    Console.WriteLine();
+    Console.WriteLine("### 突破度の変化 Δ（自傷率の三分位。上の 範囲持ち/単体のみ の表と同じ形）");
+    Console.WriteLine();
+    Console.WriteLine("| 群 | 編成数 | 自傷率 平均 |"
+        + string.Concat(Enumerable.Range(1, nCol - 1).Select(c => $" Δ {columns[c].Name} |")));
+    Console.WriteLine("|---|--:|--:|" + string.Concat(Enumerable.Range(1, nCol - 1).Select(_ => "--:|")));
+    for (int g = 0; g < 3; g++)
+    {
+        var grp = Enumerable.Range(0, nT).Where(t => tier[t] == g).ToArray();
+        Console.WriteLine($"| {(g == 0 ? "高自傷" : g == 1 ? "中" : "低自傷")} | {grp.Length} "
+            + $"| {grp.Average(t => selfHarm[t]):F1}% |"
+            + string.Concat(Enumerable.Range(1, nCol - 1)
+                .Select(c => $" {grp.Average(t => deg1[c, t] - deg1[0, t]):+0.000;-0.000} |")));
+    }
+    Console.WriteLine();
+    var hi = Enumerable.Range(0, nT).Where(t => tier[t] == 0).ToArray();
+    var lo = Enumerable.Range(0, nT).Where(t => tier[t] == 2).ToArray();
+    double gap113 = hi.Average(t => deg1[4, t] - deg1[0, t]) - lo.Average(t => deg1[4, t] - deg1[0, t]);
+    Console.WriteLine($"**測定台 113%（反転列(低)）での 高自傷 − 低自傷 = {gap113:+0.000;-0.000} 波。**");
+    Console.WriteLine("第8期の 範囲持ち − 単体のみ は同じ列で **+0.125 波**（0.237 − 0.112）。この2つを並べて読む。");
+
+    // --- 連続量どうしの相関（群平均より情報量が多い） ---
+    Console.WriteLine();
+    Console.WriteLine("### 自傷率と Δ突破度の相関（値のピアソン相関。群に潰さない）");
+    Console.WriteLine();
+    Console.WriteLine("| 列 | 自傷率 × Δ突破度(1部隊) | 自傷率 × Δ突破度(2部隊) | 自傷率 × その列の突破度(1) |");
+    Console.WriteLine("|---|--:|--:|--:|");
+    for (int c = 1; c < nCol; c++)
+    {
+        var d1 = Enumerable.Range(0, nT).Select(t => deg1[c, t] - deg1[0, t]).ToArray();
+        var d2 = Enumerable.Range(0, nT).Select(t => deg2[c, t] - deg2[0, t]).ToArray();
+        var lv = Enumerable.Range(0, nT).Select(t => deg1[c, t]).ToArray();
+        Console.WriteLine($"| {columns[c].Name} | {Pearson(selfHarm, d1):F2} | {Pearson(selfHarm, d2):F2} "
+            + $"| {Pearson(selfHarm, lv):F2} |");
+    }
+
+    // --- 交絡（§3-3）。自傷型が弱いのは自傷のせいか、たまたま弱い編成が自傷型なだけか ---
+    // Δ を使っているのは地力を引くためだが、引き切れているかは偏相関で確かめる。
+    Console.WriteLine();
+    Console.WriteLine("### 自傷率と地力の交絡");
+    Console.WriteLine();
+    var gritFlat = Enumerable.Range(0, nT).Select(t => deg1[0, t]).ToArray();
+    Console.WriteLine($"- 自傷率 × 地力（平坦列(低) の突破度(1)）: **{Pearson(selfHarm, grit):F2}**");
+    Console.WriteLine($"- 自傷率 × 地力（平坦列 の突破度(1)。Δ の基準側）: {Pearson(selfHarm, gritFlat):F2}");
+    Console.WriteLine();
+    Console.WriteLine("| 列 | 自傷率 × Δ突破度 | 地力 × Δ突破度 | 地力を制御した偏相関（自傷率 × Δ） |");
+    Console.WriteLine("|---|--:|--:|--:|");
+    for (int c = 1; c < nCol; c++)
+    {
+        var d = Enumerable.Range(0, nT).Select(t => deg1[c, t] - deg1[0, t]).ToArray();
+        double rSG = Pearson(selfHarm, grit), rSD = Pearson(selfHarm, d), rGD = Pearson(grit, d);
+        double denom = (1 - rSG * rSG) * (1 - rGD * rGD);
+        double partial = denom <= 0 ? double.NaN : (rSD - rSG * rGD) / Math.Sqrt(denom);
+        Console.WriteLine($"| {columns[c].Name} | {rSD:F2} | {rGD:F2} | **{partial:F2}** |");
+    }
+    Console.WriteLine();
+    Console.WriteLine("自傷率 × 地力 の絶対値が大きいなら、群差は自傷の効果ではなく地力の差を見ている");
+    Console.WriteLine("かもしれない。Δ は地力を引くための差分だが、引き切れているかは偏相関で確かめる。");
     return;
 }
 
