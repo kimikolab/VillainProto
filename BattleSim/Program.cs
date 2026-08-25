@@ -234,6 +234,135 @@ if (focusId == "compare")
     return;
 }
 
+// engage モード: 会戦（5部隊連戦・持ち越しあり）で測る。
+//
+// compare は5波を独立した5戦として測るが、会戦は勝った部隊が生存駒の状態
+// （HP・最大HPの損耗・蘇生回数・墓守の層-1）を持ち越して次の波と戦う。
+// 難度の源泉が「敵の強さ」から「消耗」へ移ったかどうかは、
+// 独立5戦の勝率の積（理論上の全抜き率）と実際の突破率の差に出る。
+//
+//     dotnet run --project BattleSim -c Release 0 engage [絞り込み] > docs/engage.md
+if (focusId == "engage")
+{
+    var all = CompareBuilds();
+    IReadOnlyList<Formation> column = EnemyCatalog.EngagementColumn;
+    int squads = column.Count;
+    const int EngageSeeds = 200;
+
+    string filter = args.Length > 2 ? args[2] : "";
+    var targets = all
+        .Where(b => filter.Length == 0 || filter.Split(',').Any(k => b.Name.Contains(k.Trim())))
+        .ToArray();
+
+    Console.WriteLine("# 会戦（5部隊連戦）");
+    Console.WriteLine();
+    Console.WriteLine("`dotnet run --project BattleSim -c Release 0 engage > docs/engage.md` の出力。手で編集しない。");
+    Console.WriteLine($"各編成（味方1部隊）を既存5波の部隊列にぶつけ、seed 0..{EngageSeeds - 1} の {EngageSeeds} 試行。");
+    Console.WriteLine();
+    Console.WriteLine("勝った部隊は生存駒の HP・最大HPの損耗・蘇生回数・墓守の層(-1) を持ち越して次の波と戦う。");
+    Console.WriteLine("状態異常（毒・燃焼・痺れ・標的・破片）と攻撃力の一時変動は波の境界で消える。");
+    Console.WriteLine();
+    Console.WriteLine("- `突破率` は5部隊すべて抜いた試行の割合。`独立積` は同じ seed 群で各波を独立に");
+    Console.WriteLine("  戦った勝率の積（＝持ち越しが無かった場合の理論全抜き率）。**この2列の差が会戦の効き目。**");
+    Console.WriteLine("- `第1削り` は最初の Battle で敵第1部隊の総 MaxHp を削った割合。**勝てなくても削れる編成**");
+    Console.WriteLine("  （特攻隊）はここに出る。突破 0 でもこの列が高ければ、第2部隊への繋ぎとして価値がある。");
+    Console.WriteLine("- `突破分布` は 0〜5 部隊抜きの試行数。「第2部隊で落ちる」と「第5部隊で落ちる」を区別する。");
+    Console.WriteLine("- `引分` は 30ターン到達（味方が退く扱い）の総回数。独立5戦では一度も起きないが、");
+    Console.WriteLine("  消耗した部隊同士は膠着し得るので数えている。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 突破率 | 独立積 | 期待突破数 | 第1削り |"
+        + string.Concat(Enumerable.Range(0, squads + 1).Select(i => $" {i} |")) + " 引分 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|"
+        + string.Concat(Enumerable.Range(0, squads + 1).Select(_ => "--:|")) + "--:|");
+
+    foreach (var (name, f) in targets)
+    {
+        var playerColumn = new[] { f };
+        var dist = new int[squads + 1];
+        int full = 0, drawSum = 0;
+        double clearedSum = 0, attrSum = 0;
+
+        for (int seed = 0; seed < EngageSeeds; seed++)
+        {
+            EngagementResult r = EngagementEngine.Run(playerColumn, column, seed, verbose: false);
+            dist[r.EnemySquadsCleared]++;
+            if (r.PlayerWon) full++;
+            clearedSum += r.EnemySquadsCleared;
+            attrSum += r.FirstBattleAttrition;
+            drawSum += r.Draws;
+        }
+
+        // 独立積は docs/balance.md を読まずにその場で測り直す（docs/ は出力先であって入力ではない。
+        // パースすると balance.md の書式に縛られ、生成物どうしが暗黙に依存し合う）。
+        double indep = 1.0;
+        foreach (Formation enemy in column)
+        {
+            int wins = 0;
+            for (int seed = 0; seed < EngageSeeds; seed++)
+                if (BattleEngine.Run(f, enemy, seed, verbose: false).PlayerWon) wins++;
+            indep *= wins / (double)EngageSeeds;
+        }
+
+        Console.WriteLine($"| {name} | {full * 100.0 / EngageSeeds:F1}% | {indep * 100:F1}% "
+            + $"| {clearedSum / EngageSeeds:F2} | {attrSum * 100 / EngageSeeds:F0}% |"
+            + string.Concat(dist.Select(d => $" {d} |")) + $" {drawSum} |");
+        Console.Out.Flush();
+    }
+    return;
+}
+
+// engage2 モード: 同一編成を2部隊にして会戦へ。診断用で docs/ には置かない。
+//
+// 「1部隊で2.3抜ける編成」と「2部隊で4.6抜ける編成」は同じではない——第2部隊は
+// 第1部隊が削り残した敵から始められる。この非線形性（2部隊の突破数 vs 1部隊の2倍）を見る。
+// 組み合わせ（別編成×別編成）は多すぎるので複製だけを測る。
+if (focusId == "engage2")
+{
+    var all = CompareBuilds();
+    IReadOnlyList<Formation> column = EnemyCatalog.EngagementColumn;
+    int squads = column.Count;
+    const int EngageSeeds = 200;
+
+    string filter = args.Length > 2 ? args[2] : "";
+    var targets = all
+        .Where(b => filter.Length == 0 || filter.Split(',').Any(k => b.Name.Contains(k.Trim())))
+        .ToArray();
+
+    Console.WriteLine("# 会戦: 同一編成2部隊");
+    Console.WriteLine();
+    Console.WriteLine($"同じ編成を2部隊並べて5波の部隊列へ。seed 0..{EngageSeeds - 1} の {EngageSeeds} 試行。");
+    Console.WriteLine("`1部隊` は engage と同じ条件の期待突破数。2部隊がその2倍を超えるなら、");
+    Console.WriteLine("第1部隊の削りを第2部隊が拾えている（非線形に噛み合っている）。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 突破率(2部隊) | 期待突破数(2部隊) | 期待突破数(1部隊) |"
+        + string.Concat(Enumerable.Range(0, squads + 1).Select(i => $" {i} |")));
+    Console.WriteLine("|---|--:|--:|--:|"
+        + string.Concat(Enumerable.Range(0, squads + 1).Select(_ => "--:|")));
+
+    foreach (var (name, f) in targets)
+    {
+        var dist = new int[squads + 1];
+        int full = 0;
+        double clearedTwo = 0, clearedOne = 0;
+
+        for (int seed = 0; seed < EngageSeeds; seed++)
+        {
+            EngagementResult two = EngagementEngine.Run(new[] { f, f }, column, seed, verbose: false);
+            dist[two.EnemySquadsCleared]++;
+            if (two.PlayerWon) full++;
+            clearedTwo += two.EnemySquadsCleared;
+
+            clearedOne += EngagementEngine.Run(new[] { f }, column, seed, verbose: false)
+                .EnemySquadsCleared;
+        }
+
+        Console.WriteLine($"| {name} | {full * 100.0 / EngageSeeds:F1}% | {clearedTwo / EngageSeeds:F2} "
+            + $"| {clearedOne / EngageSeeds:F2} |" + string.Concat(dist.Select(d => $" {d} |")));
+        Console.Out.Flush();
+    }
+    return;
+}
+
 // chain モード: 勝率だけでは見えない「連鎖の深さ」を測る。
 // 「2枚で人並みに勝つ」編成と「5枚が畳みかけて無双する」編成は、勝率だけ見ると同じ100%になる。
 // MaxEnemyKillsInOneTurn（1ターンで味方が何体倒したかの最大値）と、勝利時の決着ターン数を

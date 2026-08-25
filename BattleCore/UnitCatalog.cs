@@ -599,4 +599,13 @@ public static class EnemyCatalog
         new Stage("第五波 / 異端審問団",
             Formation.Build(front1: Axeman2, front2: Hero2, front3: Knight2, mid: Lancer, back1: Seer))
     };
+
+    /// <summary>
+    /// 会戦（Engagement）の敵部隊列の第1号。既存の5波をそのまま順に並べたもの。
+    /// 「5波を独立に戦う」と「5波を持ち越して戦う」の差が、そのまま会戦導入の効き目になる。
+    /// 新しい敵は作らない（会戦の計測が敵の変更と混ざると効き目が読めなくなる）。
+    /// 宣言は Stages より後ろに置くこと（静的初期化子は上から順に走る）。
+    /// </summary>
+    public static IReadOnlyList<Formation> EngagementColumn { get; } =
+        Stages.Select(s => s.Enemy).ToList();
 }
