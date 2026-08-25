@@ -564,6 +564,27 @@ public static class EnemyCatalog
     // 第五波では使わない。第六波以降の素材として置いておく。
     public static readonly UnitDef Champion = Make("champion", "聖騎士長", 130, 22, 9, TraitId.Executioner);
 
+    // ここから第5期・勾配列（design/ENGAGEMENT_PLAN_5.md）の候補素材。既存の波が参照しない限り
+    // 何も動かない（compare 差分ゼロが受け入れ条件）。採用が決まるまで Stages / Columns には
+    // 足さない。候補波の編成は BattleSim の gradient モードがローカルに組む。
+
+    // 駆り出された農兵:「数だけ多い雑兵」の波の素体。第一波の新兵(45/11)より個体を明確に
+    // 弱くし、体数で総圧を作る。HP 30 は味方の主な単体打点(14〜20)の2発圏・ドルガの薙ぎ(38)や
+    // 育った駒の1発圏で、「範囲・高打点なら1手で複数落ちるが、素の単体では1体2手」の境目に
+    // 置いた値。攻撃 8 は6体並べて 48/T——第一波(34/T)を上回るが、1体落ちるごとに 8 ずつ
+    // 急落するので「早く減らした編成ほど安く抜けられる」勾配を作る。速さ 6 は新兵と同じ
+    // （この波の個性は数だけ。速度で個性を作らない）。
+    public static readonly UnitDef Levy = Make("levy", "駆り出された農兵", 30, 8, 6);
+
+    // 従軍司祭長: 精鋭波の「回復役入り」候補のための、実際に回復する司祭。
+    // 既存の従軍司祭(priest)は回復役という設定コメントだけで特性を持たない（素の 40/9/8）ので、
+    // 「回復役を入れると波の性格が変わるか」（第5期 §3-3）はこの def でしか測れない。
+    // 回復は継ぎ当て（Mender: 毎ターン、最も傷ついた味方を 14 回復し、同量だけ自分が減る）。
+    // 等価交換なので回復総量は自分の HP が上限——HP 62 は精鋭1体の被弾4〜5ターン分を
+    // 肩代わりする量で、無限に支えて浄化と同じ崖（README「引き算は崖」）を作らないための刻み。
+    // 攻撃 7 はほぼ飾り。速さ 8 は既存の司祭と同じ。
+    public static readonly UnitDef Chaplain = Make("chaplain", "従軍司祭長", 62, 7, 8, TraitId.Mender);
+
     public sealed record Stage(string Name, Formation Enemy);
 
     public static IReadOnlyList<Stage> Stages { get; } = new[]
