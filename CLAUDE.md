@@ -22,8 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 chain > docs/chain.md    # 勝率だけでは見えない「連鎖の深さ」（最大同時撃破数・決着ターン数）
     dotnet run --project BattleSim -c Release 0 ablate [絞り込み] > docs/ablation.md  # 編成から1体ずつ抜いた勝率変化（入れ得の検出）
     dotnet run --project BattleSim -c Release 0 pulse [絞り込み] > docs/pulse.md      # 駒ごとの活動量（振/干渉）と与被ダメージの内訳
-    dotnet run --project BattleSim -c Release 0 engage [絞り込み] > docs/engage.md    # 会戦（部隊列3本: 順路・逆順・地点）の突破分布・入場戦力
-    dotnet run --project BattleSim -c Release 0 engage2 [絞り込み]  # 同一編成2部隊の会戦（診断用。docs/ に置かない）
+    dotnet run --project BattleSim -c Release 0 engage [絞り込み] > docs/engage.md    # 会戦（地点主表: 突破率・期待突破数×投入部隊数1-3・非線形・入場戦力・第1削り）
     dotnet run --project BattleSim -c Release 0 seats [絞り込み]    # 会戦の隊列持ち越し診断（診断用。docs/ に置かない）
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
     dotnet run --project BattleSim -c Release <n> replay "編成名" <seed>  # 1戦を再生用JSON（台本）で吐く
@@ -59,15 +58,17 @@ ablate は1体抜いた勝率差しか見ないので、どちらも「出力で
 この列に出ない。`pulse` が測るのは**体験の密度**であって貢献度ではなく、貢献度は `ablate` の側で見る。
 この表だけで駒を消すと、静かに効いている駒から先に消える。
 
-`engage` は会戦（`EngagementEngine`）で測る。compare が5波を独立した5戦として測るのに対し、
+`engage` は会戦（`EngagementEngine`）で測る。compare が各波を独立した1戦として測るのに対し、
 勝った部隊は生存駒の HP・最大HPの損耗・蘇生回数・墓守の層(-1) を持ち越して次の波と戦う。
-状態異常と攻撃力の一時変動は波の境界で消える。**`突破率` と `独立積`（独立勝率の積）の差が
-会戦導入の効き目そのもの。** 部隊列は `EnemyCatalog.Columns` の3本（順路＝既存5波・
-逆順＝強い波が先頭・地点＝先頭3波）を1回の実行で全部測り、1ファイルに列ごとの節で出す。
-`第1削り` は勝てない編成の価値（特攻隊）を測る列で、**逆順で読む**（順路は第一波が
-全編成必勝で一律 100% になり無情報）。`入場戦力` は各部隊戦に入る時点の生存数と HP割合
-（分母は編成全体の定義上総最大HP）で、壁がどの戦いに、どんな消耗で立っているかを示す。
-`engage2` は同一編成を2部隊にした会戦で、突破数の非線形性（第2部隊が削り残しを拾えるか）を見る。
+状態異常と攻撃力の一時変動は波の境界で消える。部隊列は `EnemyCatalog.Columns` の3本
+（順路＝既存5波・逆順＝強い波が先頭・地点＝先頭3波）を1回の実行で全部測り、1ファイルに
+節で出す。**主表は地点（3波）× 投入部隊数 1〜3**（同一編成の複製。5波の順路では全編成が
+突破 0% に潰れるが、地点は部隊数を積むと突破率が 0〜100% に散る——第3期で切り替え）。
+`非線形`（期待突破数(2部隊) ÷ 期待突破数(1部隊)×2）が 1.00 を超えるなら、第1部隊の削りを
+第2部隊が拾えている。順路は参考で、第二波が代金になる消耗の位置を `入場戦力`（各部隊戦に
+入る時点の生存数と HP割合。分母は編成全体の定義上総最大HP）で読む。逆順は `第1削り`
+（勝てない編成＝特攻隊の価値）専用。突破数の表は載せない（逆順は初戦＝第五波の勝敗しか
+測らず、第五波の独立勝率の測り直しにしかならないため）。
 `seats` は会戦の隊列持ち越し診断。第2戦・第3戦の入場スロットが初期配置からどれだけずれているかを
 編成ごとに集計する（D5「Slot は維持」が移動系編成に課す代金の可視化。同定は UnitId で行う）。
 
