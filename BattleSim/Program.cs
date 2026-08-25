@@ -673,6 +673,46 @@ if (focusId == "handoff")
     return;
 }
 
+// cost モード: 波の「代金」を測る診断（第5期 Phase M）。
+// compare / engage は「勝てるか」しか測っておらず、「いくら払ったか」の列が無い。
+// 無傷の1部隊がその波「だけ」と戦ったとき（単独列 [i..i] 相当。会戦として組む必要は
+// 無いので BattleEngine.Run を直接呼ぶ）、勝った試行に何が残るか（残体数・残HP%）を測り、
+// 代金 = 100% − 残HP% と読む。負けた試行は代金が定義できないので集計から外す（勝率を併記）。
+//
+// 波間の差は代金の平均で、編成間の差は代金の標準偏差で見る。標準偏差が一律に小さいなら
+// 「どの波もどの編成にも同じ値段」で、波をいくら安くしても投入部隊数の配分判断を生まない
+// （第5期 §0。勾配のある部隊列を設計する動機の裏付けを取る診断）。
+// 診断用で docs/ には置かない（seats / handoff と同じ扱い。標準出力で読むだけ）。
+//
+//     dotnet run --project BattleSim -c Release 0 cost [絞り込み]
+if (focusId == "cost")
+{
+    var all = CompareBuilds();
+    const int CostSeeds = 200;
+
+    string filter = args.Length > 2 ? args[2] : "";
+    var targets = all
+        .Where(b => filter.Length == 0 || filter.Split(',').Any(k => b.Name.Contains(k.Trim())))
+        .ToArray();
+
+    var waves = EnemyCatalog.Stages
+        .Select((st, i) => (Name: $"第{i + 1}波", Enemy: st.Enemy))
+        .ToList();
+
+    Console.WriteLine($"# 波の代金診断（単独戦・seed 0..{CostSeeds - 1} の {CostSeeds} 試行）");
+    Console.WriteLine();
+    Console.WriteLine("無傷の1部隊が各波「だけ」と戦ったときの勝率と、勝った試行の残存（体数・HP%）。");
+    Console.WriteLine("**代金 = 100% − 残HP%**。残HP% の分母は編成の定義上の総最大HP");
+    Console.WriteLine("（engage の入場戦力と同じ判断。生存駒だけを分母にすると全快1体が 100% に化ける）。");
+    Console.WriteLine();
+    Console.WriteLine("検算: 第1波の残HP% は docs/engage.md 順路の「第2戦の入場戦力」とおおむね一致するはず");
+    Console.WriteLine("（順路の第1戦は第1波単独と同じ状況で、境界の CarryOver は HP に触らない。");
+    Console.WriteLine("大きくずれたら CarryOver が残存に何かしている——止まって報告する。第5期 §2-2）。");
+    Console.WriteLine();
+    EmitCostTables(targets, waves, CostSeeds);
+    return;
+}
+
 // chain モード: 勝率だけでは見えない「連鎖の深さ」を測る。
 // 「2枚で人並みに勝つ」編成と「5枚が畳みかけて無双する」編成は、勝率だけ見ると同じ100%になる。
 // MaxEnemyKillsInOneTurn（1ターンで味方が何体倒したかの最大値）と、勝利時の決着ターン数を
@@ -1533,4 +1573,96 @@ static string LayoutRow(string rank, Formation f, int[] wins, int seeds)
     double avg = wins.Sum() * 100.0 / (wins.Length * seeds);
     string cells = string.Concat(wins.Select(w => $" {w * 100.0 / seeds:F1}% |"));
     return $"| {rank} | {N(f[0])}/{N(f[1])}/{N(f[2])} | {N(f[3])} | {N(f[4])}/{N(f[5])} | {avg:F1}% |{cells}";
+}
+
+// ---- 波の代金診断（第5期 cost / gradient が共有） ----
+
+// 1編成 × 1波の単独戦を seed 0..seeds-1 で回し、勝った試行だけの残存を平均する。
+// Formation 版の Run ではなく Materialize + UnitState 版を使うのは、戦闘後の残HPを
+// 読むため（BattleResult は生存数しか持たず、残HPは持ち越し側の量なので UnitState にある）。
+// 残HP割合の分母は編成の定義上の総最大HP（engage の入場戦力と同じ判断）。
+static (double WinRate, double AvgAlive, double AvgHpPct, int Wins) MeasureCost(
+    Formation f, Formation enemy, int seeds)
+{
+    int defTotal = f.Occupied().Sum(x => x.Def.MaxHp);
+    int wins = 0;
+    double aliveSum = 0, hpPctSum = 0;
+    for (int seed = 0; seed < seeds; seed++)
+    {
+        List<UnitState> mine = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
+        List<UnitState> foes = BattleEngine.Materialize(enemy, BattleContext.EnemyTeam);
+        if (!BattleEngine.Run(mine, foes, seed, verbose: false).PlayerWon) continue;
+        wins++;
+        aliveSum += mine.Count(u => u.IsAlive);
+        hpPctSum += (double)mine.Where(u => u.IsAlive).Sum(u => u.Hp) / defTotal;
+    }
+    return (wins * 100.0 / seeds,
+            wins == 0 ? 0 : aliveSum / wins,
+            wins == 0 ? 0 : hpPctSum / wins, wins);
+}
+
+// 代金の表（編成 × 波）と、波ごとのばらつきの表を吐く。計測値は呼び出し側にも返す
+// （gradient が候補選定の集計に使う）。
+static (double WinRate, double AvgAlive, double AvgHpPct, int Wins)[,] EmitCostTables(
+    (string Name, Formation F)[] targets,
+    IReadOnlyList<(string Name, Formation Enemy)> waves, int seeds)
+{
+    Console.WriteLine("### 代金の表（勝った試行だけの集計）");
+    Console.WriteLine();
+    Console.WriteLine("セルは `勝率 / 残体数 残HP%`。勝率 0% の波は残存が定義できないので `—`。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 |" + string.Concat(waves.Select(w => $" {w.Name} |")));
+    Console.WriteLine("|---|" + string.Concat(waves.Select(_ => "---|")));
+
+    var cells = new (double WinRate, double AvgAlive, double AvgHpPct, int Wins)[targets.Length, waves.Count];
+    for (int t = 0; t < targets.Length; t++)
+    {
+        var row = new List<string>();
+        for (int w = 0; w < waves.Count; w++)
+        {
+            cells[t, w] = MeasureCost(targets[t].F, waves[w].Enemy, seeds);
+            row.Add(cells[t, w].Wins == 0
+                ? $" {cells[t, w].WinRate:F0}% / — |"
+                : $" {cells[t, w].WinRate:F0}% / 残{cells[t, w].AvgAlive:F1} {cells[t, w].AvgHpPct * 100:F0}% |");
+        }
+        Console.WriteLine($"| {targets[t].Name} |" + string.Concat(row));
+        Console.Out.Flush();
+    }
+
+    // ばらつきの表。波間の差は平均で、編成間の差は標準偏差で見る（第5期 §2-1）。
+    // 代金は勝率 > 0% の編成だけで集計する（負けた試行しか無い編成は代金が定義できない）。
+    Console.WriteLine();
+    Console.WriteLine("### 代金のばらつき");
+    Console.WriteLine();
+    Console.WriteLine("| 波 | 勝率の中央値 | 代金の平均 | 代金の最小（編成名） | 代金の最大（編成名） | 代金の標準偏差 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|");
+    for (int w = 0; w < waves.Count; w++)
+    {
+        var rates = Enumerable.Range(0, targets.Length)
+            .Select(t => cells[t, w].WinRate).OrderBy(x => x).ToArray();
+        double median = rates.Length % 2 == 1
+            ? rates[rates.Length / 2]
+            : (rates[rates.Length / 2 - 1] + rates[rates.Length / 2]) / 2;
+
+        var costs = Enumerable.Range(0, targets.Length)
+            .Where(t => cells[t, w].Wins > 0)
+            .Select(t => (targets[t].Name, Cost: (1 - cells[t, w].AvgHpPct) * 100))
+            .ToList();
+        if (costs.Count == 0)
+        {
+            Console.WriteLine($"| {waves[w].Name} | {median:F1}% | — | — | — | — |");
+            continue;
+        }
+        double mean = costs.Average(c => c.Cost);
+        double sd = Math.Sqrt(costs.Average(c => (c.Cost - mean) * (c.Cost - mean)));
+        var lo = costs.OrderBy(c => c.Cost).First();
+        var hi = costs.OrderByDescending(c => c.Cost).First();
+        Console.WriteLine($"| {waves[w].Name} | {median:F1}% | {mean:F1}% | {lo.Cost:F1}%（{lo.Name}） "
+            + $"| {hi.Cost:F1}%（{hi.Name}） | {sd:F1}pt |");
+    }
+    Console.WriteLine();
+    Console.WriteLine("代金の集計対象（勝率 > 0% の編成数）: "
+        + string.Join(" / ", Enumerable.Range(0, waves.Count).Select(w =>
+            $"{waves[w].Name} {Enumerable.Range(0, targets.Length).Count(t => cells[t, w].Wins > 0)}/{targets.Length}")));
+    return cells;
 }
