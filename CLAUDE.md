@@ -27,6 +27,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
     dotnet run --project BattleSim -c Release <n> replay "編成名" <seed>  # 1戦を再生用JSON（台本）で吐く
 
+第4〜10期に足した診断モード。**どれも docs/ には置かない**（標準出力で読むだけ）。
+所要は全編成でおおむね 10〜30秒、`bridge` だけ 30秒前後。
+
+    dotnet run --project BattleSim -c Release 0 handoff [絞り込み]  # 会戦の部隊引き継ぎ（第4期 Phase K）
+    dotnet run --project BattleSim -c Release 0 cost [絞り込み]     # 波の「代金」= 100% − 勝った試行の残HP%（第5期 Phase M）
+    dotnet run --project BattleSim -c Release 0 gradient [絞り込み] # 勾配のある部隊列の候補を測る（第5期 Phase N）
+    dotnet run --project BattleSim -c Release 0 aim [絞り込み]      # 安い波の再設計・素体候補（第6期 Phase P）
+    dotnet run --project BattleSim -c Release 0 flip [絞り込み]     # 代金の「向き」を作れるか（第7期 Phase R）
+    dotnet run --project BattleSim -c Release 0 bridge [絞り込み]   # 向きは序列を動かすか（第7期 Phase S〜第10期）
+    dotnet run --project BattleSim -c Release 0 bill [絞り込み]     # 代金を 敵由来/自傷/回復/残差 に割る（第9期 Phase X）
+    dotnet run --project BattleSim -c Release 0 charge [絞り込み]   # 大技の発火率とチャージ化の前後（第10期 Phase AC）
+    dotnet run --project BattleSim -c Release 0 ptrace [絞り込み]   # 毒の立ち上がり診断
+
 `layout` は「どう置くか」の粗い当たりを付ける道具で、その値で採否を決めてはいけない。
 seed 50 の 720通りの最大なので上位は運で入れ替わり、狙い（ガルド前列・セッキ後列）も無視する。
 `reseat` で狙いを満たす候補を含めて測り直し、`confirm` で選定に使っていない seed に当てて採否を決める。
@@ -71,6 +84,13 @@ ablate は1体抜いた勝率差しか見ないので、どちらも「出力で
 測らず、第五波の独立勝率の測り直しにしかならないため）。
 `seats` は会戦の隊列持ち越し診断。第2戦・第3戦の入場スロットが初期配置からどれだけずれているかを
 編成ごとに集計する（D5「Slot は維持」が移動系編成に課す代金の可視化。同定は UnitId で行う）。
+
+`charge` は**大技の発火率**と、チャージ化の前後を同じ実行の中で突き合わせる（第10期）。
+「前」は同じ敵から `Actions` だけを剥がした複製なので、git を戻さずに前後が読める。
+発火率を先に見るのは、チャージ化の最初の失敗の形が「周期が長すぎて大技が1回も出ないまま
+決着し、波がただ半額になる」だから。代金や突破度より前に、**実際に何回発火したか**を確かめる。
+この診断が使う台（`ChargeBench`）は測定台 113% とは別物——**測定台には全体持ちも貫き持ちも
+1体もいない**ので、あの上で測るとチャージ化の前後で数字が1つも動かない。
 
 `replay` は戦闘1戦を「台本」（初期盤面＋時間順のイベント列）として JSON で吐く。
 勝率・連鎖深度が数字で答えてくれない「畳みかけて見えるか」を目で確かめるための道具で、

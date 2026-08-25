@@ -2038,6 +2038,112 @@ if (focusId == "charge")
         Console.Out.Flush();
     }
     Console.WriteLine();
+
+    // --- チャージ化の前後（同じ実行の中で両方測る） -------------------------
+    // 「前」は同じ敵の Actions を剥がした複製で作る。git を戻して測り直す運用にすると、
+    // 前後の数字が別々の実行から来ることになり、後から再現できなくなる
+    // （bridge が列の合計代金を自分の実行の中で測り直しているのと同じ判断）。
+    //
+    // Def.Id は複製しても同じ。会戦を別々に回すので tally が混ざることはない。
+    Console.WriteLine("## チャージ化の前後（同じ台・同じ seed）");
+    Console.WriteLine();
+    Console.WriteLine("`前` は同じ敵から Actions だけを剥がした複製（毎ターン通常攻撃）。");
+    Console.WriteLine("**平均火力は前後で同じ**（2周期 200% は (0+2)/2 = 1.0）なので、動いたぶんは");
+    Console.WriteLine("すべて「火力の配り方」の効果——これが第10期の仮説そのもの。");
+    Console.WriteLine();
+
+    Formation[] plain = bench.Select(w =>
+    {
+        Formation c = w.Clone();
+        foreach (var (slot, d) in w.Occupied()) c[slot] = StripActions(d);
+        return c;
+    }).ToArray();
+
+    var degBefore = new double[targets.Length];
+    var degAfter = new double[targets.Length];
+    var turnBefore = new double[targets.Length];
+    var turnAfter = new double[targets.Length];
+    for (int t = 0; t < targets.Length; t++)
+    {
+        Formation[] one = { targets[t].F };
+        for (int seed = 0; seed < ChargeSeeds; seed++)
+        {
+            EngagementResult b = EngagementEngine.Run(one, plain, seed, verbose: false);
+            EngagementResult a = EngagementEngine.Run(one, bench, seed, verbose: false);
+            degBefore[t] += BreakthroughDegree(b, plain.Length);
+            degAfter[t] += BreakthroughDegree(a, bench.Length);
+            turnBefore[t] += b.Battles.Sum(x => x.Turns);
+            turnAfter[t] += a.Battles.Sum(x => x.Turns);
+        }
+        degBefore[t] /= ChargeSeeds; degAfter[t] /= ChargeSeeds;
+        turnBefore[t] /= ChargeSeeds; turnAfter[t] /= ChargeSeeds;
+    }
+
+    Console.WriteLine("| 編成 | 範 | 前 突破度 | 後 突破度 | Δ | 前 順位 | 後 順位 | 順位差 | 前 総T | 後 総T |");
+    Console.WriteLine("|---|:-:|--:|--:|--:|--:|--:|--:|--:|--:|");
+    double[] rb = AverageRanksDesc(degBefore), ra = AverageRanksDesc(degAfter);
+    for (int t = 0; t < targets.Length; t++)
+        Console.WriteLine($"| {targets[t].Name} | {(HasAoe(targets[t].F) ? "○" : "")} "
+            + $"| {degBefore[t]:F3} | {degAfter[t]:F3} | {degAfter[t] - degBefore[t]:+0.000;-0.000} "
+            + $"| {rb[t]:F1} | {ra[t]:F1} | {rb[t] - ra[t]:+0.0;-0.0} "
+            + $"| {turnBefore[t]:F2} | {turnAfter[t]:F2} |");
+    Console.WriteLine();
+
+    // 順位相関の計算方法は第7期から変えない（スピアマン＝平均順位の列にピアソン）。
+    // **1.0 に近いほど「順位が動いていない」＝ 9期分と同じ壁**。
+    Console.WriteLine($"**前後の順位相関（スピアマン）= {Pearson(rb, ra):F2}**"
+        + $"　値の相関 = {Pearson(degBefore, degAfter):F2}");
+    Console.WriteLine();
+    Console.WriteLine($"突破度の平均 {degBefore.Average():F3} → {degAfter.Average():F3}"
+        + $"（{degAfter.Average() - degBefore.Average():+0.000;-0.000}）、"
+        + $"編成間の SD {Sd(degBefore):F3} → {Sd(degAfter):F3}。");
+    Console.WriteLine($"会戦の総ターン数 {turnBefore.Average():F2} → {turnAfter.Average():F2}"
+        + $"（{turnAfter.Average() - turnBefore.Average():+0.00;-0.00}）。**大きく伸びていたら間延び**。");
+    Console.WriteLine();
+
+    // --- 群別（速攻 / 耐久 / 回復持ち。第10期 §4-2 の5番目） ---------------
+    // 既存の区分は HasAoe（第5期〜）と自傷率の三分位（第9期）の2つしか無いので新しく定義する。
+    //   速攻   = チャージ化前の会戦の総ターン数が短い側 1/3
+    //   耐久   = 編成の定義上の総最大HP が大きい側 1/3（速攻と重なることはあり得る）
+    //   回復持ち = 回復する特性を1つでも持つ駒を含む編成
+    // 区分が重なるので排他にはしない（同じ編成が複数の群に出る）。
+    Console.WriteLine("## 群別の代金（速攻 / 耐久 / 回復持ち）");
+    Console.WriteLine();
+    Console.WriteLine("区分はこの期で新しく定義したもの（既存は HasAoe と自傷率の三分位しか無い）。");
+    Console.WriteLine("**排他ではない**——同じ編成が複数の群に出る。");
+    Console.WriteLine();
+    Console.WriteLine("- `速攻`: チャージ化前の会戦の総ターン数が短い側 1/3");
+    Console.WriteLine("- `耐久`: 編成の定義上の総最大HP が大きい側 1/3");
+    Console.WriteLine("- `回復持ち`: 味方を癒す／戻す特性（継ぎ当て・毒喰らい・移り木・継ぎ接ぎ）を持つ駒を含む編成");
+    Console.WriteLine();
+
+    int third = Math.Max(1, targets.Length / 3);
+    var fast = Enumerable.Range(0, targets.Length).OrderBy(t => turnBefore[t]).Take(third).ToHashSet();
+    var tanky = Enumerable.Range(0, targets.Length)
+        .OrderByDescending(t => targets[t].F.Occupied().Sum(x => x.Def.MaxHp)).Take(third).ToHashSet();
+    var healer = Enumerable.Range(0, targets.Length)
+        .Where(t => targets[t].F.Occupied().Any(x => x.Def.Traits.Any(id =>
+            id is TraitId.Mender or TraitId.Devour or TraitId.Drifter or TraitId.Reviver))).ToHashSet();
+
+    Console.WriteLine("| 群 | 編成数 | 前 突破度 | 後 突破度 | Δ | 前 総T | 後 総T |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|");
+    void Group(string name, ICollection<int> ix)
+    {
+        if (ix.Count == 0) { Console.WriteLine($"| {name} | 0 | — | — | — | — | — |"); return; }
+        double b = ix.Average(t => degBefore[t]), a = ix.Average(t => degAfter[t]);
+        Console.WriteLine($"| {name} | {ix.Count} | {b:F3} | {a:F3} | {a - b:+0.000;-0.000} "
+            + $"| {ix.Average(t => turnBefore[t]):F2} | {ix.Average(t => turnAfter[t]):F2} |");
+    }
+    Group("速攻", fast);
+    Group("耐久", tanky);
+    Group("回復持ち", healer);
+    Group("どれでもない",
+        Enumerable.Range(0, targets.Length).Where(t => !fast.Contains(t) && !tanky.Contains(t) && !healer.Contains(t)).ToList());
+    Group("全編成", Enumerable.Range(0, targets.Length).ToList());
+    Console.WriteLine();
+    Console.WriteLine("**速攻と耐久で Δ の符号が割れるなら、時間軸が編成を割っている**（第10期 §4-3）。");
+    Console.WriteLine("どの群も同じ向きに同じだけ動いているなら、チャージは全編成に一律の値引き／値上げでしかない。");
+    Console.WriteLine();
     return;
 }
 
@@ -3096,6 +3202,24 @@ static (double Lost, double Enemy, double Ally, double Heal, double Residual, do
             Enumerable.Range(0, n).Select(b => reached[b] == 0 ? 0 : allyB[b] * 100.0 / (reached[b] * (double)defTotal)).ToArray(),
             Enumerable.Range(0, n).Select(b => reached[b] == 0 ? 0 : enemyB[b] * 100.0 / (reached[b] * (double)defTotal)).ToArray(),
             reached, wonFirst, wonFirst == 0 ? 0 : firstWinCost / wonFirst);
+}
+
+// Actions だけを剥がした複製。charge 診断が「溜めない同じ敵」を同じ実行の中で
+// 作るために使う（git を戻して測り直すと、前後の数字が別の実行から来ることになる）。
+// Id も含めて他は全て同じ。前後を別々の会戦で回すので tally は混ざらない。
+static UnitDef StripActions(UnitDef d) => d.Actions is null ? d : new UnitDef
+{
+    Id = d.Id, Name = d.Name, MaxHp = d.MaxHp, Attack = d.Attack, Speed = d.Speed,
+    Traits = d.Traits, Pattern = d.Pattern,
+    PlusText = d.PlusText, MinusText = d.MinusText, Flavor = d.Flavor,
+};
+
+// 母標準偏差。cost の代金のばらつきと同じ物差し。
+static double Sd(IReadOnlyList<double> v)
+{
+    if (v.Count == 0) return 0;
+    double m = v.Average();
+    return Math.Sqrt(v.Sum(x => (x - m) * (x - m)) / v.Count);
 }
 
 // 突破度 = 突破した部隊数 + 最後に負けた部隊戦での削り割合（0.0 〜 列長。第8期 Phase U）。
