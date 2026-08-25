@@ -280,10 +280,12 @@ HP 減少合計（死亡は MaxHp 全額）。胞子は敵側に存在しない�
 
 ## 7. チェックリスト（指示書 §7 に本計画の追加分を含めたもの）
 
-- [ ] A: `Materialize` 切り出し、`Run(IReadOnlyList<UnitState>,…)` 追加、旧 `Run` はラッパー。compare/chain/pulse/dump 差分ゼロ
-- [ ] B: `Engagement.cs`（`BattleOpening`+`BaseAttack` / `EngagementResult` / `EngagementEngine` 2フラグ分岐）、`StatusKeys.All`、`Trait.OnCarryOver`、`NecroTrait.OnCarryOver`（層-1・帳簿リセット・`lastDeathTurn=0`、理由コメントは §0-5）、`GuardianTrait.OnCarryOver`（`PendingKey=0`）。差分ゼロ・決定性・verbose 不変・リィカ持ち越しの目視確認
-- [ ] C: `EngagementColumn`、`engage`（独立積・引き分け列つき）、`docs/engage.md`、CLAUDE.md / CONTRIBUTING.md のコマンド一覧、（任意）`engage2`
-- [ ] C: 報告4点＋α を README「検証で分かったこと」へ
-- [ ] D: GodotApp が `EngagementResult` を再生。`Openings` から盤面（持ち越しHPで初期化）。バナー・進行表示
-- [ ] README「調整メモ」会戦の項 / 「未解決の課題」に §3.3 + Revive/necroBonus 帳簿ずれ
-- [ ] `design/` に3文書（指示書の移動を含む）、CLAUDE.md の構成に design/ と GodotApp、状態異常手順に `StatusKeys.All`
+2026-08-25 実装完了（コミット ad54cd7 → f5b5137）。
+
+- [x] A: `Materialize` 切り出し、`Run(IReadOnlyList<UnitState>,…)` 追加、旧 `Run` はラッパー。compare/chain/pulse/dump 差分ゼロ（ad54cd7）
+- [x] B: `Engagement.cs`（`BattleOpening`+`BaseAttack` / `EngagementResult` / `EngagementEngine` 2フラグ分岐）、`StatusKeys.All`、`Trait.OnCarryOver`、`NecroTrait.OnCarryOver`（層-1・帳簿リセット・`lastDeathTurn=0`、理由コメントは §0-5）、`GuardianTrait.OnCarryOver`（`PendingKey=0`）。差分ゼロ・決定性・verbose 不変・リィカ持ち越し（第2 Battle: 攻5→35・薙ぎ・HP51/55）を確認（25b3e82）
+- [x] C: `EngagementColumn`、`engage`（独立積・引き分け列つき）、`docs/engage.md`、CLAUDE.md / CONTRIBUTING.md のコマンド一覧、`engage2`（7c35311）
+- [x] C: 報告4点＋α を README「検証で分かったこと」へ（f5b5137）
+- [x] D: GodotApp が `EngagementResult` を再生。`Openings` から盤面（持ち越しHPで初期化）。バナー・進行表示（decf26c）。ビルドとデータ検証は済み。**Godot エディタでの目視は未実施**——起動して「死の連鎖」を選び、第2 Battle 開幕でリィカの HP・攻撃力が持ち越されて見えることを確かめる
+- [x] README「調整メモ」会戦の項 / 「未解決の課題」に §3.3 + Revive/necroBonus 帳簿ずれ（f5b5137）
+- [x] `design/` に3文書（指示書の移動を含む）、CLAUDE.md の構成に design/ と GodotApp、状態異常手順に `StatusKeys.All`（f5b5137）
