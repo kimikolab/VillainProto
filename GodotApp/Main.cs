@@ -56,6 +56,8 @@ public partial class Main : Control
         [BattleEventKind.Highlight] = 0.76, [BattleEventKind.Heal] = 0.24,
         [BattleEventKind.Status] = 0.26, [BattleEventKind.Move] = 0.34,
         [BattleEventKind.Summon] = 0.46, [BattleEventKind.Revive] = 0.52,
+        // 溜めは「何も起きないターン」なので、間を長めに取らないと予告として読めない。
+        [BattleEventKind.Charge] = 0.70,
     };
 
     // ---- 見るための編成 -------------------------------------------------
@@ -726,6 +728,7 @@ public partial class Main : Control
             {
                 BattleEventKind.Death => CDmg,
                 BattleEventKind.Highlight => CAccent,
+                BattleEventKind.Charge => CAccent,   // 予告は見せ場と同じ重さで浮かせる
                 BattleEventKind.TurnStart => CInk,
                 _ => e.FriendlyFire ? CFf : CDim,
             };
@@ -754,6 +757,11 @@ public partial class Main : Control
             BattleEventKind.Move => $"{N(e.TargetId)} が動いた",
             BattleEventKind.Status => $"{N(e.TargetId)} — {e.Text} {e.Amount}",
             BattleEventKind.Highlight => e.Text ?? "",
+            // 次に何が来るかを添える。溜めを見て回復や速攻を合わせるのが狙いなので、
+            // 「溜めた」だけでは情報が足りない（Amount = 次の倍率、Pattern = 次の攻撃型）。
+            BattleEventKind.Charge =>
+                $"{N(e.ActorId)} は{e.Text ?? "力を溜めている"}"
+                + $"（次: {PatternLabel(e.Pattern ?? AttackPattern.Single)} ×{e.Amount}%）",
             _ => e.Kind.ToString(),
         };
     }

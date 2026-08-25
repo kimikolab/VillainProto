@@ -270,6 +270,10 @@ public static class EngagementEngine
         {
             foreach (string key in StatusKeys.All) u.Counters.Remove(key);
             u.AtkBonus = 0;
+            // 行動周期は Battle スコープ。溜めかけたまま波が変わると、次の部隊戦の初手に
+            // 大技が落ちる（「溜めを見てから合わせる」という体験が成立しなくなる）。
+            // ターン番号に紐づくカウンタを境界で 0 に戻す NecroTrait.OnCarryOver と同じ扱い。
+            u.ActionIndex = 0;
             foreach (Trait t in u.Traits) t.OnCarryOver(u);
         }
         return survivors.OrderBy(u => u.Slot).ToList();

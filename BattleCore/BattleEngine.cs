@@ -187,7 +187,8 @@ public sealed class BattleContext
     /// </summary>
     internal Dictionary<string, UnitTally> TallyByUnit { get; } = new();
 
-    private UnitTally TallyOf(UnitState u)
+    /// <summary>internal なのは、ターンループ（BattleEngine 側）が溜めを数えるため。</summary>
+    internal UnitTally TallyOf(UnitState u)
     {
         if (!TallyByUnit.TryGetValue(u.Def.Id, out UnitTally? t))
             TallyByUnit[u.Def.Id] = t = new UnitTally();
@@ -308,6 +309,22 @@ public sealed class BattleContext
         => Emit(new BattleEvent { Kind = BattleEventKind.TurnStart, Turn = _turn });
 
     /// <summary>
+    /// 溜めを台本に打つ。**次の手番に何が来るかをこの1件で読めること**が要件
+    /// （溜めは画面上「何も起きないターン」なので、予告が無いとただの空白になる）。
+    /// 次の行動が攻撃型を上書きしないなら、いま実際に使う型（CurrentPattern）を載せる。
+    /// </summary>
+    internal void EmitCharge(UnitState actor, UnitAction charging, UnitAction? next)
+        => Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Charge,
+            Turn = _turn,
+            ActorId = actor.InstanceId,
+            Text = charging.Label,
+            Amount = next?.AttackPercent ?? 100,
+            Pattern = next?.PatternOverride ?? actor.CurrentPattern,
+        });
+
+    /// <summary>
     /// そのターン頭に各駒が負っている継続効果を、値ごと台本へ写す。
     /// 再生側は TurnStart で持っている状態を捨て、これで組み直す（0 のものは出さない）。
     /// </summary>
@@ -364,12 +381,16 @@ public sealed class BattleContext
     /// 薙ぎや全体を体で止めることはできず、貫きは前列そのものを素通りする。
     /// この非対称が、単体高火力とそれ以外の使い分けを生む。
     /// </summary>
-    public UnitState? SelectTarget(UnitState attacker)
+    /// <param name="patternOverride">
+    /// 行動（<see cref="UnitAction"/>）がこの手番だけ攻撃型を差し替える場合の型。
+    /// null なら <see cref="UnitState.CurrentPattern"/>（＝従来と完全に同じ挙動）。
+    /// </param>
+    public UnitState? SelectTarget(UnitState attacker, AttackPattern? patternOverride = null)
     {
         List<UnitState> foes = LivingMembers(Opponent(attacker.TeamId)).ToList();
         if (foes.Count == 0) return null;
 
-        AttackPattern pattern = attacker.CurrentPattern;
+        AttackPattern pattern = patternOverride ?? attacker.CurrentPattern;
 
         if (pattern == AttackPattern.Pierce)
             return SelectPierceEntry(foes);
@@ -465,15 +486,30 @@ public sealed class BattleContext
     /// 一回の攻撃を最後まで解決する。通常のターン進行からも、追撃のようなターン外の割り込みからも呼ぶ。
     /// ターン順のループに攻撃処理を直書きすると、割り込み系の特性が一切書けなくなる。
     /// </summary>
-    public void PerformAttack(UnitState actor, string prefix = "  ")
+    /// <param name="attackPercent">
+    /// 攻撃力の倍率（百分率）。行動（<see cref="UnitAction"/>）に属する値なので、
+    /// **反撃・追い打ちのような手番外の攻撃には掛からない**（呼び出し側が渡さない＝100）。
+    /// </param>
+    /// <param name="patternOverride">この攻撃だけ攻撃型を差し替える。null なら CurrentPattern。</param>
+    public void PerformAttack(UnitState actor, string prefix = "  ",
+                              int attackPercent = 100, AttackPattern? patternOverride = null)
     {
         if (!actor.IsAlive) return;
 
-        UnitState? target = SelectTarget(actor);
+        AttackPattern pattern = patternOverride ?? actor.CurrentPattern;
+
+        UnitState? target = SelectTarget(actor, patternOverride);
         if (target is null) return;
 
-        int atk = actor.CurrentAttack;
-        string label = actor.CurrentPattern switch
+        // CurrentAttack 自体は変えない。AtkBonus と混ぜると会戦の境界処理（第1期 D2/D3）や
+        // 墓守の層の再適用と衝突する。
+        // 100 のときに分岐を残してあるのは、攻撃力 0 の駒を 0 のまま通すため
+        // （素の値をそのまま返す経路が、倍率導入前と1命令も違わないことの保証にもなる）。
+        int atk = attackPercent == 100
+            ? actor.CurrentAttack
+            : actor.CurrentAttack * attackPercent / 100;
+
+        string label = pattern switch
         {
             AttackPattern.Sweep => " 薙ぎ",
             AttackPattern.Pierce => " 貫き",
@@ -483,6 +519,7 @@ public sealed class BattleContext
         // 手番の1回だけでなく、反撃・追い打ちのような手番外の攻撃もここを通る。
         // 「1ターンあたり何回振ったか」が、手番でしか動かない駒と反応する駒を分ける。
         TallyOf(actor).Attacks++;
+        if (attackPercent > 100) TallyOf(actor).BigAttacks++;   // 大技の発火数（Attacks の内数）
 
         Log($"{prefix}{actor.Name} → {target.Name} (攻撃 {atk}{label})");
         Emit(new BattleEvent
@@ -492,10 +529,10 @@ public sealed class BattleContext
             ActorId = actor.InstanceId,
             TargetId = target.InstanceId,
             Amount = atk,
-            Pattern = actor.CurrentPattern
+            Pattern = pattern
         });
 
-        if (actor.CurrentPattern == AttackPattern.Pierce)
+        if (pattern == AttackPattern.Pierce)
         {
             ResolvePierce(actor, target, atk);
             return;
@@ -504,7 +541,7 @@ public sealed class BattleContext
         int dealt = atk;
         ApplyDamage(target, dealt, actor);
 
-        foreach (UnitState extra in SecondaryTargets(actor, target))
+        foreach (UnitState extra in SecondaryTargets(actor, target, patternOverride))
         {
             if (!extra.IsAlive) continue;
             Log($"    刃が {extra.Name} まで届く", LogKind.Damage);
@@ -557,12 +594,14 @@ public sealed class BattleContext
     }
 
     /// <summary>主目標以外に巻き添えになる敵。</summary>
-    public IReadOnlyList<UnitState> SecondaryTargets(UnitState attacker, UnitState primary)
+    /// <param name="patternOverride">SelectTarget と同じ。null なら CurrentPattern。</param>
+    public IReadOnlyList<UnitState> SecondaryTargets(UnitState attacker, UnitState primary,
+                                                    AttackPattern? patternOverride = null)
     {
         List<UnitState> foes = LivingMembers(Opponent(attacker.TeamId))
             .Where(f => f != primary).ToList();
 
-        return attacker.CurrentPattern switch
+        return (patternOverride ?? attacker.CurrentPattern) switch
         {
             // 薙ぎは横へ広がる。前後へ広げると貫きと区別がつかなくなる。
             AttackPattern.Sweep => foes
@@ -1019,7 +1058,31 @@ public static class BattleEngine
                     continue;
                 }
 
-                ctx.PerformAttack(actor);
+                UnitAction? act = actor.CurrentAction;
+                if (act is null)
+                {
+                    ctx.PerformAttack(actor);   // 従来経路。Actions を持たない駒はここしか通らない
+                    continue;
+                }
+
+                // 周期を進めるのは「手番が回ってきたとき」だけ。痺れ・CanAct 偽で飛ばされた
+                // ターンでは進めない。飛ばされたのは行動ではなく手番そのものなので、
+                // 溜めの途中で痺れても溜めは解けず、続きから再開する。
+                actor.ActionIndex++;
+
+                if (act.Kind == ActionKind.Charge)
+                {
+                    // **IdleTurn を立てない。** 溜めは「行動できない」ではなく
+                    // 「構造的に行動しない」——痺れ・鈍足と同じ扱いにすると、据え・号令が
+                    // 溜めを無償の毎ターン収入として拾う（上の :1015 と同じ問題が敵側で再現する）。
+                    ctx.EmitCharge(actor, act, actor.CurrentAction);
+                    ctx.TallyOf(actor).Charges++;
+                    ctx.Log($"  {actor.Name} は{act.Label ?? "力を溜めている"}", LogKind.Status);
+                    continue;
+                }
+
+                ctx.PerformAttack(actor, attackPercent: act.AttackPercent,
+                                  patternOverride: act.PatternOverride);
             }
         }
 

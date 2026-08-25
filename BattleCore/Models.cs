@@ -28,6 +28,40 @@ public enum AttackPattern
     All
 }
 
+/// <summary>
+/// 手番に何をするか。攻撃型（<see cref="AttackPattern"/>）とは別軸で、あちらが
+/// 「攻撃がどう届くか」を表すのに対し、こちらは「その手番に攻撃するのかどうか」を表す。
+///
+/// パッシブ（Trait の反応）とは分離してある。特性は起きたことへの反応で、
+/// こちらは手番そのもの。溜めている駒も特性は普通に反応する。
+/// </summary>
+public enum ActionKind
+{
+    /// <summary>攻撃する。倍率と攻撃型の上書きが乗る。</summary>
+    Attack,
+    /// <summary>溜める。攻撃せず、周期だけ進める。次の手番に大技が来る。</summary>
+    Charge
+}
+
+/// <summary>
+/// 手番の1回ぶん。<see cref="UnitDef.Actions"/> に並べた順に繰り返す。
+///
+/// 倍率を double ではなく int の百分率にしてあるのは、ダメージ計算が
+/// <see cref="BattleEngine.SecondaryPercent"/>（60）や
+/// <see cref="BattleEngine.PierceDecayPercent"/>（25）と同じ <c>x * pct / 100</c> の
+/// 整数演算で一貫して書かれているため。ここに double を1本だけ通すと、
+/// 丸めの規則がこの1箇所だけ違うものになる。
+/// </summary>
+/// <param name="Kind">攻撃するのか溜めるのか。</param>
+/// <param name="AttackPercent">攻撃力の倍率（百分率）。100 なら素の値をそのまま使う。</param>
+/// <param name="PatternOverride">この手番だけ攻撃型を差し替える。null なら CurrentPattern。</param>
+/// <param name="Label">ログと台本に出す名前（「魔力集中」など）。</param>
+public sealed record UnitAction(
+    ActionKind Kind,
+    int AttackPercent = 100,
+    AttackPattern? PatternOverride = null,
+    string? Label = null);
+
 /// <summary>ユニットの定義（不変データ）。カタログから読み込まれる想定。</summary>
 public sealed class UnitDef
 {
@@ -41,6 +75,13 @@ public sealed class UnitDef
     public required IReadOnlyList<TraitId> Traits { get; init; }
 
     public AttackPattern Pattern { get; init; } = AttackPattern.Single;
+
+    /// <summary>
+    /// 手番の行動を順に繰り返す。**null なら従来どおり毎ターン通常攻撃**で、
+    /// ターンループは分岐前とまったく同じ経路を通る（第10期 Phase AA の受け入れ条件）。
+    /// 周期の位置は <see cref="UnitState.ActionIndex"/> が持つ。
+    /// </summary>
+    public IReadOnlyList<UnitAction>? Actions { get; init; }
 
     /// <summary>編成画面で見せる説明文。</summary>
     public string PlusText { get; init; } = "";
@@ -84,6 +125,16 @@ public sealed class UnitState
     /// </summary>
     public bool HasFallenBack { get; set; }
 
+    /// <summary>
+    /// 行動周期のどこにいるか（<see cref="UnitDef.Actions"/> の添字。剰余で回す）。
+    ///
+    /// Counters ではなく専用プロパティに置いてある。Counters のキーは特性の私有物
+    /// （Engagement.CarryOver 参照）で、どの特性にも属さない周期の位置をそこへ入れると
+    /// 会戦の境界処理が「エンジンはホワイトリストを持たない」原則を破ることになる。
+    /// Slot・HasFallenBack と同格に置き、境界の扱いを engine 側の明示的な1行にした。
+    /// </summary>
+    public int ActionIndex { get; set; }
+
     public bool IsAlive => Hp > 0;
     public Row Row => FormationRules.RowOf(Slot);
 
@@ -101,6 +152,15 @@ public sealed class UnitState
             return p;
         }
     }
+    /// <summary>
+    /// この手番に実行する行動。<c>Actions</c> を持たない駒（既存の全ユニット）では null で、
+    /// 呼び出し側は従来どおり通常攻撃へ落ちる。
+    /// </summary>
+    public UnitAction? CurrentAction
+        => Def.Actions is null || Def.Actions.Count == 0
+            ? null
+            : Def.Actions[ActionIndex % Def.Actions.Count];
+
     public string Name => Def.Name;
 
     /// <summary>支援・妨害を受け付けるか。受け付けない場合、バフもデバフも回復も通らない。</summary>
@@ -312,6 +372,20 @@ public sealed class UnitTally
     /// </summary>
     public int Healed;
 
+    /// <summary>
+    /// 溜めた回数（<see cref="ActionKind.Charge"/> の手番を消費した回数）。
+    /// </summary>
+    public int Charges;
+
+    /// <summary>
+    /// 倍率つきで振った回数（大技の発火数）。<see cref="Attacks"/> の内数。
+    ///
+    /// <see cref="Healed"/> と同じく<b>既存の出力には出さない</b>——pulse の表に列を増やすと
+    /// 第9期以前の出力と diff が出る。第10期の charge 診断だけが読む。
+    /// verbose 非依存なのは、発火率を 200 seed × 全編成で測るため。
+    /// </summary>
+    public int BigAttacks;
+
     /// <summary>とどめを刺した敵の数。</summary>
     public int Kills;
 
@@ -324,6 +398,7 @@ public sealed class UnitTally
         DamageToEnemy += o.DamageToEnemy; DamageToAlly += o.DamageToAlly;
         DamageTaken += o.DamageTaken; TakenFromAlly += o.TakenFromAlly;
         Healed += o.Healed;
+        Charges += o.Charges; BigAttacks += o.BigAttacks;
         Kills += o.Kills; Deaths += o.Deaths;
     }
 }
@@ -347,6 +422,15 @@ public enum BattleEventKind
     Move,        // スロットが変わった
     Status,      // 毒・燃焼・痺れなどの継続効果が「働いた」（そのターン実際に削った量）
     Highlight,   // 見せ場（覚醒・破裂）。演出を差し込む位置の指示
+
+    /// <summary>
+    /// 溜めた（<see cref="ActionKind.Charge"/>）。攻撃していないので Attack とは別。
+    ///
+    /// **次の手番に何が来るかをこのイベントだけで読めるようにしてある**
+    /// （<c>Amount</c> = 次の倍率、<c>Pattern</c> = 次の攻撃型、<c>Text</c> = 溜めの名前）。
+    /// 再生側が「次のターンに大技が来る」を予告できないと、溜めは画面上ただの空白になる。
+    /// </summary>
+    Charge,
 
     /// <summary>
     /// ターン開始時点で駒が負っている継続効果の「残量」。<see cref="Status"/> とは意味が違う
