@@ -22,7 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 chain > docs/chain.md    # 勝率だけでは見えない「連鎖の深さ」（最大同時撃破数・決着ターン数）
     dotnet run --project BattleSim -c Release 0 ablate [絞り込み] > docs/ablation.md  # 編成から1体ずつ抜いた勝率変化（入れ得の検出）
     dotnet run --project BattleSim -c Release 0 pulse [絞り込み] > docs/pulse.md      # 駒ごとの活動量（振/干渉）と与被ダメージの内訳
-    dotnet run --project BattleSim -c Release 0 engage [絞り込み] > docs/engage.md    # 会戦（5部隊連戦・持ち越しあり）の突破率・期待突破数・第1削り
+    dotnet run --project BattleSim -c Release 0 engage [絞り込み] > docs/engage.md    # 会戦（部隊列3本: 順路・逆順・地点）の突破分布・入場戦力
     dotnet run --project BattleSim -c Release 0 engage2 [絞り込み]  # 同一編成2部隊の会戦（診断用。docs/ に置かない）
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
     dotnet run --project BattleSim -c Release <n> replay "編成名" <seed>  # 1戦を再生用JSON（台本）で吐く
@@ -60,8 +60,12 @@ ablate は1体抜いた勝率差しか見ないので、どちらも「出力で
 
 `engage` は会戦（`EngagementEngine`）で測る。compare が5波を独立した5戦として測るのに対し、
 勝った部隊は生存駒の HP・最大HPの損耗・蘇生回数・墓守の層(-1) を持ち越して次の波と戦う。
-状態異常と攻撃力の一時変動は波の境界で消える。**`突破率` と `独立積`（独立5戦勝率の積）の差が
-会戦導入の効き目そのもの。** `第1削り` は勝てない編成の価値（特攻隊）を測る列。
+状態異常と攻撃力の一時変動は波の境界で消える。**`突破率` と `独立積`（独立勝率の積）の差が
+会戦導入の効き目そのもの。** 部隊列は `EnemyCatalog.Columns` の3本（順路＝既存5波・
+逆順＝強い波が先頭・地点＝先頭3波）を1回の実行で全部測り、1ファイルに列ごとの節で出す。
+`第1削り` は勝てない編成の価値（特攻隊）を測る列で、**逆順で読む**（順路は第一波が
+全編成必勝で一律 100% になり無情報）。`入場戦力` は各部隊戦に入る時点の生存数と HP割合
+（分母は編成全体の定義上総最大HP）で、壁がどの戦いに、どんな消耗で立っているかを示す。
 `engage2` は同一編成を2部隊にした会戦で、突破数の非線形性（第2部隊が削り残しを拾えるか）を見る。
 
 `replay` は戦闘1戦を「台本」（初期盤面＋時間順のイベント列）として JSON で吐く。

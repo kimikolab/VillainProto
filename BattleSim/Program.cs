@@ -234,19 +234,19 @@ if (focusId == "compare")
     return;
 }
 
-// engage モード: 会戦（5部隊連戦・持ち越しあり）で測る。
+// engage モード: 会戦（部隊連戦・持ち越しあり）で測る。
 //
-// compare は5波を独立した5戦として測るが、会戦は勝った部隊が生存駒の状態
+// compare は各波を独立した1戦として測るが、会戦は勝った部隊が生存駒の状態
 // （HP・最大HPの損耗・蘇生回数・墓守の層-1）を持ち越して次の波と戦う。
 // 難度の源泉が「敵の強さ」から「消耗」へ移ったかどうかは、
-// 独立5戦の勝率の積（理論上の全抜き率）と実際の突破率の差に出る。
+// 独立勝率の積（理論上の全抜き率）と実際の突破率の差に出る。
+// 部隊列は EnemyCatalog.Columns の3本（順路・逆順・地点）を1回の実行で全部測り、
+// 1つのファイルに列ごとの節として出す（CONTRIBUTING の手順を増やさないため、コマンドは増やさない）。
 //
 //     dotnet run --project BattleSim -c Release 0 engage [絞り込み] > docs/engage.md
 if (focusId == "engage")
 {
     var all = CompareBuilds();
-    IReadOnlyList<Formation> column = EnemyCatalog.EngagementColumn;
-    int squads = column.Count;
     const int EngageSeeds = 200;
 
     string filter = args.Length > 2 ? args[2] : "";
@@ -254,116 +254,142 @@ if (focusId == "engage")
         .Where(b => filter.Length == 0 || filter.Split(',').Any(k => b.Name.Contains(k.Trim())))
         .ToArray();
 
-    Console.WriteLine("# 会戦（5部隊連戦）");
+    Console.WriteLine("# 会戦");
     Console.WriteLine();
     Console.WriteLine("`dotnet run --project BattleSim -c Release 0 engage > docs/engage.md` の出力。手で編集しない。");
-    Console.WriteLine($"各編成（味方1部隊）を既存5波の部隊列にぶつけ、seed 0..{EngageSeeds - 1} の {EngageSeeds} 試行。");
+    Console.WriteLine($"各編成（味方1部隊）を3本の部隊列にぶつけ、それぞれ seed 0..{EngageSeeds - 1} の {EngageSeeds} 試行。");
     Console.WriteLine();
     Console.WriteLine("勝った部隊は生存駒の HP・最大HPの損耗・蘇生回数・墓守の層(-1) を持ち越して次の波と戦う。");
     Console.WriteLine("状態異常（毒・燃焼・痺れ・標的・破片）と攻撃力の一時変動は波の境界で消える。");
     Console.WriteLine();
-    Console.WriteLine("- `突破率` は5部隊すべて抜いた試行の割合。`独立積` は同じ seed 群で各波を独立に");
+    Console.WriteLine("部隊列は3本。敵の中身はどれも既存5波のままで、並びと長さだけが違う。");
+    Console.WriteLine();
+    foreach (EnemyCatalog.Column c in EnemyCatalog.Columns)
+        Console.WriteLine($"- **{c.Name}**（{c.Squads.Count}部隊） — {c.Note}");
+    Console.WriteLine();
+    Console.WriteLine("### 表の読み方");
+    Console.WriteLine();
+    Console.WriteLine("- `突破率` は列の全部隊を抜いた試行の割合。`独立積` は同じ seed 群で各波を独立に");
     Console.WriteLine("  戦った勝率の積（＝持ち越しが無かった場合の理論全抜き率）。**この2列の差が会戦の効き目。**");
-    Console.WriteLine("- `第1削り` は最初の Battle で敵第1部隊の総 MaxHp を削った割合。**勝てなくても削れる編成**");
-    Console.WriteLine("  （特攻隊）はここに出る。突破 0 でもこの列が高ければ、第2部隊への繋ぎとして価値がある。");
-    Console.WriteLine("- `突破分布` は 0〜5 部隊抜きの試行数。「第2部隊で落ちる」と「第5部隊で落ちる」を区別する。");
+    Console.WriteLine("  波ごとの独立勝率は1回だけ測って列間で共有するので、順路と逆順の独立積は必ず一致する");
+    Console.WriteLine("  （積は順序に依らない。ずれていたら実装がおかしい）。");
+    Console.WriteLine("- `第1削り` は最初の Battle で敵の先頭部隊の総 MaxHp を削った割合。**勝てなくても削れる編成**");
+    Console.WriteLine("  （特攻隊）はここに出る。順路では第一波が全編成必勝で一律 100% になり無情報なので、");
+    Console.WriteLine("  この列は逆順で読む。突破 0 でも削りが高ければ、後続部隊への繋ぎとして価値がある。");
+    Console.WriteLine("- `突破分布` は 0〜N 部隊抜きの試行数。「第2部隊で落ちる」と「最後の部隊で落ちる」を区別する。");
     Console.WriteLine("- `引分` は 30ターン到達（味方が退く扱い）の総回数。独立5戦では一度も起きないが、");
     Console.WriteLine("  消耗した部隊同士は膠着し得るので数えている。");
-    Console.WriteLine();
-    Console.WriteLine("| 編成 | 突破率 | 独立積 | 期待突破数 | 第1削り |"
-        + string.Concat(Enumerable.Range(0, squads + 1).Select(i => $" {i} |")) + " 引分 |");
-    Console.WriteLine("|---|--:|--:|--:|--:|"
-        + string.Concat(Enumerable.Range(0, squads + 1).Select(_ => "--:|")) + "--:|");
+    Console.WriteLine("- `入場戦力` は各部隊戦に入る時点の味方の生存数と HP（**編成全体の定義上の**総最大HPに");
+    Console.WriteLine("  対する割合。死んだ駒の枠も分母に残るので、% は部隊の残存戦力を表す。生き残りの健康度");
+    Console.WriteLine("  ではない）。到達しなかった試行は分母から外す（到達した試行だけの平均）。**到達率も");
+    Console.WriteLine("  併記する**——平均だけだと「第N戦に着いた少数の強い試行」で数字が持ち上がり、壁の位置を見誤る。");
 
-    // 入場戦力は同じ走行から集計するが表が別なので、行を控えて後からまとめて吐く。
-    // 敵側は表にせず検算の1行だけ（味方1部隊では敵は毎回新規投入＝削れ 0% になるはず）。
-    var entryRows = new List<string>();
-    var enemyEroded = new double[squads];
-    var enemyReached = new int[squads];
-
-    // HP割合の分母は**編成全体**の定義上総最大HP（不変値）。SquadEntry.DefMaxHpSum を
-    // そのまま分母にする案は却下した——あれは「その戦闘に入った駒」だけの合計なので、
-    // 死んだ駒が分子と分母から一緒に抜け、% が「部隊の残存戦力」ではなく「生き残りの
-    // 健康度」に化ける（1体だけ全快で残った部隊が 100% に見える）。§2.4 の判定閾値は
-    // 部隊全体に対する割合で読む前提なので、分母は編成から取って固定する。
-    var enemyDefTotal = column.Select(e => e.Occupied().Sum(x => x.Def.MaxHp)).ToArray();
-
-    foreach (var (name, f) in targets)
+    // 波ごとの独立勝率は (編成, 敵部隊) で1回だけ測って列間で共有する。列ごとに測り直すと
+    // 同じ波を最大3回測って遅いだけでなく、「順路と逆順の独立積が一致する」という検算まで
+    // 自明に壊れる。Formation は参照等価なのでタプルキーでよい。
+    var waveCache = new Dictionary<(Formation, Formation), double>();
+    double WaveRate(Formation f, Formation enemy)
     {
-        var playerColumn = new[] { f };
-        int playerDefTotal = f.Occupied().Sum(x => x.Def.MaxHp);
-        var dist = new int[squads + 1];
-        int full = 0, drawSum = 0;
-        double clearedSum = 0, attrSum = 0;
-        var aliveSum = new double[squads];
-        var hpRatioSum = new double[squads];
-        var reached = new int[squads];
-
+        if (waveCache.TryGetValue((f, enemy), out double cached)) return cached;
+        int wins = 0;
         for (int seed = 0; seed < EngageSeeds; seed++)
-        {
-            EngagementResult r = EngagementEngine.Run(playerColumn, column, seed, verbose: false);
-            dist[r.EnemySquadsCleared]++;
-            if (r.PlayerWon) full++;
-            clearedSum += r.EnemySquadsCleared;
-            attrSum += r.FirstBattleAttrition;
-            drawSum += r.Draws;
-
-            // 味方1部隊なので Battle の並びは敵部隊の並びと 1:1（負けた時点で会戦が終わる）。
-            // 第 i 戦の入場戦力 = PlayerEntries[i]。分母に現在の最大HPを使わないのは、
-            // 継ぎ接ぎで最大HPが半減した駒が満タンに化けるため（SquadEntry のコメント参照）。
-            for (int b = 0; b < r.PlayerEntries.Count && b < squads; b++)
-            {
-                aliveSum[b] += r.PlayerEntries[b].Alive;
-                hpRatioSum[b] += (double)r.PlayerEntries[b].HpSum / playerDefTotal;
-                reached[b]++;
-
-                // 敵側の分母はその戦闘の敵部隊の定義上総最大HP（味方1部隊では ei = b）
-                enemyEroded[b] += 1.0 - (double)r.EnemyEntries[b].HpSum
-                    / enemyDefTotal[r.Pairings[b].EnemySquad];
-                enemyReached[b]++;
-            }
-        }
-
-        // 独立積は docs/balance.md を読まずにその場で測り直す（docs/ は出力先であって入力ではない。
-        // パースすると balance.md の書式に縛られ、生成物どうしが暗黙に依存し合う）。
-        double indep = 1.0;
-        foreach (Formation enemy in column)
-        {
-            int wins = 0;
-            for (int seed = 0; seed < EngageSeeds; seed++)
-                if (BattleEngine.Run(f, enemy, seed, verbose: false).PlayerWon) wins++;
-            indep *= wins / (double)EngageSeeds;
-        }
-
-        Console.WriteLine($"| {name} | {full * 100.0 / EngageSeeds:F1}% | {indep * 100:F1}% "
-            + $"| {clearedSum / EngageSeeds:F2} | {attrSum * 100 / EngageSeeds:F0}% |"
-            + string.Concat(dist.Select(d => $" {d} |")) + $" {drawSum} |");
-        Console.Out.Flush();
-
-        entryRows.Add($"| {name} |" + string.Concat(Enumerable.Range(0, squads).Select(b =>
-            reached[b] == 0
-                ? $" — (0/{EngageSeeds}) |"
-                : $" {aliveSum[b] / reached[b]:F1}体 {hpRatioSum[b] * 100 / reached[b]:F0}%"
-                  + $" ({reached[b]}/{EngageSeeds}) |")));
+            if (BattleEngine.Run(f, enemy, seed, verbose: false).PlayerWon) wins++;
+        return waveCache[(f, enemy)] = wins / (double)EngageSeeds;
     }
 
-    Console.WriteLine();
-    Console.WriteLine("### 入場戦力（味方）");
-    Console.WriteLine();
-    Console.WriteLine("各部隊戦に入る時点の味方の生存数と HP（**編成全体の定義上の**総最大HPに対する割合。");
-    Console.WriteLine("死んだ駒の枠も分母に残るので、% は部隊の残存戦力を表す。生き残りの健康度ではない）。");
-    Console.WriteLine("到達しなかった試行は分母から外す（到達した試行だけの平均）。**到達率も併記する**——");
-    Console.WriteLine("平均だけだと「第N戦に着いた少数の強い試行」で数字が持ち上がり、壁の位置を見誤る。");
-    Console.WriteLine();
-    Console.WriteLine("| 編成 |" + string.Concat(Enumerable.Range(0, squads).Select(b => $" 第{b + 1}戦 |")));
-    Console.WriteLine("|---|" + string.Concat(Enumerable.Range(0, squads).Select(_ => "---|")));
-    foreach (string row in entryRows) Console.WriteLine(row);
-    Console.WriteLine();
-    Console.WriteLine("持ち越された敵部隊が削れていた割合の平均（全編成・全試行）: "
-        + string.Join(" / ", Enumerable.Range(0, squads).Select(b => enemyReached[b] == 0
-            ? $"第{b + 1}戦 —"
-            : $"第{b + 1}戦 {enemyEroded[b] * 100 / enemyReached[b]:F0}%"))
-        + "（味方1部隊では敵は毎回新規投入なので全戦 0%＝入場HP 100% のはず。ずれていたら実装がおかしい）");
+    foreach (EnemyCatalog.Column col in EnemyCatalog.Columns)
+    {
+        IReadOnlyList<Formation> column = col.Squads;
+        int squads = column.Count;
+
+        Console.WriteLine();
+        Console.WriteLine($"## {col.Name} — {col.Note}");
+        Console.WriteLine();
+        Console.WriteLine("### 突破分布");
+        Console.WriteLine();
+        Console.WriteLine("| 編成 | 突破率 | 独立積 | 期待突破数 | 第1削り |"
+            + string.Concat(Enumerable.Range(0, squads + 1).Select(i => $" {i} |")) + " 引分 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|"
+            + string.Concat(Enumerable.Range(0, squads + 1).Select(_ => "--:|")) + "--:|");
+
+        // 入場戦力は同じ走行から集計するが表が別なので、行を控えて後からまとめて吐く。
+        // 敵側は表にせず検算の1行だけ（味方1部隊では敵は毎回新規投入＝削れ 0% になるはず）。
+        var entryRows = new List<string>();
+        var enemyEroded = new double[squads];
+        var enemyReached = new int[squads];
+
+        // HP割合の分母は**編成全体**の定義上総最大HP（不変値）。SquadEntry.DefMaxHpSum を
+        // そのまま分母にする案は却下した——あれは「その戦闘に入った駒」だけの合計なので、
+        // 死んだ駒が分子と分母から一緒に抜け、% が「部隊の残存戦力」ではなく「生き残りの
+        // 健康度」に化ける（1体だけ全快で残った部隊が 100% に見える）。
+        var enemyDefTotal = column.Select(e => e.Occupied().Sum(x => x.Def.MaxHp)).ToArray();
+
+        foreach (var (name, f) in targets)
+        {
+            var playerColumn = new[] { f };
+            int playerDefTotal = f.Occupied().Sum(x => x.Def.MaxHp);
+            var dist = new int[squads + 1];
+            int full = 0, drawSum = 0;
+            double clearedSum = 0, attrSum = 0;
+            var aliveSum = new double[squads];
+            var hpRatioSum = new double[squads];
+            var reached = new int[squads];
+
+            for (int seed = 0; seed < EngageSeeds; seed++)
+            {
+                EngagementResult r = EngagementEngine.Run(playerColumn, column, seed, verbose: false);
+                dist[r.EnemySquadsCleared]++;
+                if (r.PlayerWon) full++;
+                clearedSum += r.EnemySquadsCleared;
+                attrSum += r.FirstBattleAttrition;
+                drawSum += r.Draws;
+
+                // 味方1部隊なので Battle の並びは敵部隊の並びと 1:1（負けた時点で会戦が終わる）。
+                // 第 i 戦の入場戦力 = PlayerEntries[i]。分母に現在の最大HPを使わないのは、
+                // 継ぎ接ぎで最大HPが半減した駒が満タンに化けるため（SquadEntry のコメント参照）。
+                for (int b = 0; b < r.PlayerEntries.Count && b < squads; b++)
+                {
+                    aliveSum[b] += r.PlayerEntries[b].Alive;
+                    hpRatioSum[b] += (double)r.PlayerEntries[b].HpSum / playerDefTotal;
+                    reached[b]++;
+
+                    // 敵側の分母はその戦闘の敵部隊の定義上総最大HP（味方1部隊では ei = b）
+                    enemyEroded[b] += 1.0 - (double)r.EnemyEntries[b].HpSum
+                        / enemyDefTotal[r.Pairings[b].EnemySquad];
+                    enemyReached[b]++;
+                }
+            }
+
+            // 独立積は docs/balance.md を読まずにその場で測り直す（docs/ は出力先であって入力ではない。
+            // パースすると balance.md の書式に縛られ、生成物どうしが暗黙に依存し合う）。
+            double indep = 1.0;
+            foreach (Formation enemy in column) indep *= WaveRate(f, enemy);
+
+            Console.WriteLine($"| {name} | {full * 100.0 / EngageSeeds:F1}% | {indep * 100:F1}% "
+                + $"| {clearedSum / EngageSeeds:F2} | {attrSum * 100 / EngageSeeds:F0}% |"
+                + string.Concat(dist.Select(d => $" {d} |")) + $" {drawSum} |");
+            Console.Out.Flush();
+
+            entryRows.Add($"| {name} |" + string.Concat(Enumerable.Range(0, squads).Select(b =>
+                reached[b] == 0
+                    ? $" — (0/{EngageSeeds}) |"
+                    : $" {aliveSum[b] / reached[b]:F1}体 {hpRatioSum[b] * 100 / reached[b]:F0}%"
+                      + $" ({reached[b]}/{EngageSeeds}) |")));
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("### 入場戦力（味方）");
+        Console.WriteLine();
+        Console.WriteLine("| 編成 |" + string.Concat(Enumerable.Range(0, squads).Select(b => $" 第{b + 1}戦 |")));
+        Console.WriteLine("|---|" + string.Concat(Enumerable.Range(0, squads).Select(_ => "---|")));
+        foreach (string row in entryRows) Console.WriteLine(row);
+        Console.WriteLine();
+        Console.WriteLine("持ち越された敵部隊が削れていた割合の平均（全編成・全試行）: "
+            + string.Join(" / ", Enumerable.Range(0, squads).Select(b => enemyReached[b] == 0
+                ? $"第{b + 1}戦 —"
+                : $"第{b + 1}戦 {enemyEroded[b] * 100 / enemyReached[b]:F0}%"))
+            + "（味方1部隊では敵は毎回新規投入なので全戦 0%＝入場HP 100% のはず。ずれていたら実装がおかしい）");
+    }
     return;
 }
 
@@ -371,12 +397,10 @@ if (focusId == "engage")
 //
 // 「1部隊で2.3抜ける編成」と「2部隊で4.6抜ける編成」は同じではない——第2部隊は
 // 第1部隊が削り残した敵から始められる。この非線形性（2部隊の突破数 vs 1部隊の2倍）を見る。
-// 組み合わせ（別編成×別編成）は多すぎるので複製だけを測る。
+// 組み合わせ（別編成×別編成）は多すぎるので複製だけを測る。列は engage と同じ3本。
 if (focusId == "engage2")
 {
     var all = CompareBuilds();
-    IReadOnlyList<Formation> column = EnemyCatalog.EngagementColumn;
-    int squads = column.Count;
     const int EngageSeeds = 200;
 
     string filter = args.Length > 2 ? args[2] : "";
@@ -386,35 +410,44 @@ if (focusId == "engage2")
 
     Console.WriteLine("# 会戦: 同一編成2部隊");
     Console.WriteLine();
-    Console.WriteLine($"同じ編成を2部隊並べて5波の部隊列へ。seed 0..{EngageSeeds - 1} の {EngageSeeds} 試行。");
+    Console.WriteLine($"同じ編成を2部隊並べて部隊列へ。seed 0..{EngageSeeds - 1} の {EngageSeeds} 試行。");
     Console.WriteLine("`1部隊` は engage と同じ条件の期待突破数。2部隊がその2倍を超えるなら、");
     Console.WriteLine("第1部隊の削りを第2部隊が拾えている（非線形に噛み合っている）。");
-    Console.WriteLine();
-    Console.WriteLine("| 編成 | 突破率(2部隊) | 期待突破数(2部隊) | 期待突破数(1部隊) |"
-        + string.Concat(Enumerable.Range(0, squads + 1).Select(i => $" {i} |")));
-    Console.WriteLine("|---|--:|--:|--:|"
-        + string.Concat(Enumerable.Range(0, squads + 1).Select(_ => "--:|")));
 
-    foreach (var (name, f) in targets)
+    foreach (EnemyCatalog.Column col in EnemyCatalog.Columns)
     {
-        var dist = new int[squads + 1];
-        int full = 0;
-        double clearedTwo = 0, clearedOne = 0;
+        IReadOnlyList<Formation> column = col.Squads;
+        int squads = column.Count;
 
-        for (int seed = 0; seed < EngageSeeds; seed++)
+        Console.WriteLine();
+        Console.WriteLine($"## {col.Name} — {col.Note}");
+        Console.WriteLine();
+        Console.WriteLine("| 編成 | 突破率(2部隊) | 期待突破数(2部隊) | 期待突破数(1部隊) |"
+            + string.Concat(Enumerable.Range(0, squads + 1).Select(i => $" {i} |")));
+        Console.WriteLine("|---|--:|--:|--:|"
+            + string.Concat(Enumerable.Range(0, squads + 1).Select(_ => "--:|")));
+
+        foreach (var (name, f) in targets)
         {
-            EngagementResult two = EngagementEngine.Run(new[] { f, f }, column, seed, verbose: false);
-            dist[two.EnemySquadsCleared]++;
-            if (two.PlayerWon) full++;
-            clearedTwo += two.EnemySquadsCleared;
+            var dist = new int[squads + 1];
+            int full = 0;
+            double clearedTwo = 0, clearedOne = 0;
 
-            clearedOne += EngagementEngine.Run(new[] { f }, column, seed, verbose: false)
-                .EnemySquadsCleared;
+            for (int seed = 0; seed < EngageSeeds; seed++)
+            {
+                EngagementResult two = EngagementEngine.Run(new[] { f, f }, column, seed, verbose: false);
+                dist[two.EnemySquadsCleared]++;
+                if (two.PlayerWon) full++;
+                clearedTwo += two.EnemySquadsCleared;
+
+                clearedOne += EngagementEngine.Run(new[] { f }, column, seed, verbose: false)
+                    .EnemySquadsCleared;
+            }
+
+            Console.WriteLine($"| {name} | {full * 100.0 / EngageSeeds:F1}% | {clearedTwo / EngageSeeds:F2} "
+                + $"| {clearedOne / EngageSeeds:F2} |" + string.Concat(dist.Select(d => $" {d} |")));
+            Console.Out.Flush();
         }
-
-        Console.WriteLine($"| {name} | {full * 100.0 / EngageSeeds:F1}% | {clearedTwo / EngageSeeds:F2} "
-            + $"| {clearedOne / EngageSeeds:F2} |" + string.Concat(dist.Select(d => $" {d} |")));
-        Console.Out.Flush();
     }
     return;
 }

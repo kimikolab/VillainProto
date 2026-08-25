@@ -600,12 +600,38 @@ public static class EnemyCatalog
             Formation.Build(front1: Axeman2, front2: Hero2, front3: Knight2, mid: Lancer, back1: Seer))
     };
 
+    /// <summary>会戦（Engagement）の敵部隊列。名前と「なぜこの並びを測るのか」のメモを持つ。</summary>
+    public sealed record Column(string Name, string Note, IReadOnlyList<Formation> Squads);
+
     /// <summary>
-    /// 会戦（Engagement）の敵部隊列の第1号。既存の5波をそのまま順に並べたもの。
-    /// 「5波を独立に戦う」と「5波を持ち越して戦う」の差が、そのまま会戦導入の効き目になる。
+    /// 会戦で測る部隊列。敵の中身はどれも既存5波のままで、並びと長さだけが違う。
     /// 新しい敵は作らない（会戦の計測が敵の変更と混ざると効き目が読めなくなる）。
     /// 宣言は Stages より後ろに置くこと（静的初期化子は上から順に走る）。
     /// </summary>
-    public static IReadOnlyList<Formation> EngagementColumn { get; } =
-        Stages.Select(s => s.Enemy).ToList();
+    public static IReadOnlyList<Column> Columns { get; } = new[]
+    {
+        // 既存5波をそのまま並べたもの。初回計測（2026-08-25）の基準列。
+        new Column("順路", "既存5波の並び順。第1期の基準",
+            Stages.Select(s => s.Enemy).ToList()),
+
+        // 逆順。**第1削りを情報のある列にするための列。**
+        // 順路では第一波が全編成必勝で `第1削り` が一律 100% になり、特攻隊（勝てないが削る編成）を
+        // 判別できなかった（README 未解決の課題）。敵を新造せず、並べ替えだけで測定条件を作る。
+        // ステージ定義のコメントにある教育的意図（範囲攻撃をここで教える等）は独立5戦の
+        // 提示順の話で、Stages 自体は触っていないから矛盾しない。この列は計測専用。
+        new Column("逆順", "強い波が先頭。特攻隊（勝てないが削る編成）の測定用",
+            Stages.Reverse().Select(s => s.Enemy).ToList()),
+
+        // 3部隊。コンセプト上、マップ上の1地点は敵1〜3部隊（design/concept_wave_engagement.md §7）。
+        // 順路の先頭3つを切り出す——**長さだけを変数にする**ため、中身も順序も順路と同じにしてある。
+        new Column("地点", "順路の先頭3波。1地点の想定サイズ",
+            Stages.Take(3).Select(s => s.Enemy).ToList()),
+    };
+
+    /// <summary>
+    /// 会戦の敵部隊列の第1号（＝Columns[0]「順路」）。「5波を独立に戦う」と「5波を持ち越して
+    /// 戦う」の差が、そのまま会戦導入の効き目になる。GodotApp が使っているので削除しない。
+    /// 列を選べるようにするのは、どの列を標準にするかを計測結果で決めてから（別作業）。
+    /// </summary>
+    public static IReadOnlyList<Formation> EngagementColumn => Columns[0].Squads;
 }
