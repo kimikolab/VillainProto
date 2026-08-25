@@ -1330,6 +1330,238 @@ if (focusId == "flip")
     return;
 }
 
+// bridge モード: 代金の向きは編成の序列を動かすか（第7期 Phase S）。
+//
+// 代金に向きが出ても、突破数の序列が動くとは限らない。**第4期の逆順列がまさにそれ**で、
+// 指標は大きく動いたのに実体は「第五波の独立勝率の測り直し」だった。同じ轍を踏まないために、
+// 向きのある波を実際に列として組み、engage と同じ物差し（期待突破数・突破率、1部隊・2部隊）で
+// 全編成を測って**順位が入れ替わるか**を見る。
+//
+// | 列 | 第1波 | 第2波 | 第3波 | 性格 |
+// |---|---|---|---|---|
+// | 平坦列 | 1b 農兵5（+3.1pt） | 2b 騎士混成 | 3a 精鋭3（-0.5pt） | 向きがほぼ無い（第5期の推奨列） |
+// | 反転列 | H2a 裸5（+8.7pt） | 2b 騎士混成 | R11 従卒6（-8.4pt） | 列の中で符号が反転する |
+//
+// 第2波は両列で同じもの（2b 固定）にして交絡を減らす。反転列は2本測る——主表は指示書
+// どおり H2a（+8.7pt・第6期の最大値）だが、H2a の代金は 29.8% で 1b の 27.3% より
+// 2.5pt 高い。列全体の難度がずれると順位相関に床/天井の効きが混ざるので、代金が 1b と
+// ほぼ同額（27.2%）で向きだけが違う H2d（+7.4pt）を**難度をそろえた対照**として並べる。
+//
+// 順位相関はスピアマン（同順位は平均順位で処理し、順位列のピアソン相関を取る）。
+// 判定（第7期 §3-3）: 0.7 未満かつ範囲持ちが反転列で上がっていれば橋が架かった。
+// 0.9 以上なら「代金には出たが結果には出ていない」＝第4期の逆順列と同じ形。
+//
+// 診断用で docs/ には置かない（seats / handoff / cost / gradient / aim / flip と同じ扱い）。
+//
+//     dotnet run --project BattleSim -c Release 0 bridge [絞り込み]
+if (focusId == "bridge")
+{
+    var all = CompareBuilds();
+    const int BridgeSeeds = 200;   // gradient / aim / flip と同じ。平坦列の検算が成立する条件
+
+    string filter = args.Length > 2 ? args[2] : "";
+    var targets = all
+        .Where(b => filter.Length == 0 || filter.Split(',').Any(k => b.Name.Contains(k.Trim())))
+        .ToArray();
+
+    // 波はすべて gradient / aim / flip のローカル定義をそのまま写したもの（同じ並び・同じ配置）。
+    // 値が動いたら測り方が変わった証拠なので、平坦列の期待突破数(1) = 2.05 / 突破率(1) = 6.4%
+    // （第5期の推奨列）と突き合わせて止まる。
+    Formation W1Levy5 = Formation.Build(front1: EnemyCatalog.Levy, front2: EnemyCatalog.Levy,
+                                        front3: EnemyCatalog.Levy, mid: EnemyCatalog.Levy, back1: EnemyCatalog.Levy);
+    Formation W1ZealotBare5 = Formation.Build(front1: EnemyCatalog.ZealotBare, front2: EnemyCatalog.ZealotBare,
+                                              front3: EnemyCatalog.ZealotBare, mid: EnemyCatalog.ZealotBare,
+                                              back1: EnemyCatalog.ZealotBare);
+    Formation W1ZealotLeather4 = Formation.Build(front1: EnemyCatalog.ZealotLeather, front2: EnemyCatalog.ZealotLeather,
+                                                 front3: EnemyCatalog.ZealotLeather, mid: EnemyCatalog.ZealotLeather);
+    Formation W2Mixed = Formation.Build(front1: EnemyCatalog.Recruit, front2: EnemyCatalog.Knight,
+                                        front3: EnemyCatalog.Recruit, mid: EnemyCatalog.Axeman);
+    Formation W3Elite3 = Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.Champion,
+                                         front3: EnemyCatalog.Warden);
+    Formation W3Squire6 = Formation.Build(front1: EnemyCatalog.ZealotSquire, front2: EnemyCatalog.ZealotSquire,
+                                          front3: EnemyCatalog.ZealotSquire, mid: EnemyCatalog.ZealotSquire,
+                                          back1: EnemyCatalog.ZealotSquire, back2: EnemyCatalog.ZealotSquire);
+
+    var columns = new (string Name, string Note, Formation[] Squads)[]
+    {
+        ("平坦列", "1b 農兵5(+3.1pt) / 2b 騎士混成 / 3a 精鋭3(-0.5pt)。第5期の推奨列",
+            new[] { W1Levy5, W2Mixed, W3Elite3 }),
+        ("反転列", "H2a 裸5(+8.7pt) / 2b 騎士混成 / R11 従卒6(-8.4pt)。列の中で符号が反転する",
+            new[] { W1ZealotBare5, W2Mixed, W3Squire6 }),
+        ("反転列(難度そろえ)", "H2d 革4(+7.4pt・代金 27.2% は 1b とほぼ同額) / 2b / R11 従卒6",
+            new[] { W1ZealotLeather4, W2Mixed, W3Squire6 }),
+    };
+
+    Console.WriteLine($"# 向きは序列を動かすか（seed 0..{BridgeSeeds - 1} の {BridgeSeeds} 試行）");
+    Console.WriteLine();
+    Console.WriteLine("向きのある波を列として組み、engage と同じ物差し（期待突破数・突破率、投入部隊数 1〜2）で");
+    Console.WriteLine("全編成を測ったもの。**見たいのは値の大小ではなく順位の入れ替わり**——第4期の逆順列は");
+    Console.WriteLine("指標が大きく動いたのに中身が「第五波の独立勝率の測り直し」だった。");
+    Console.WriteLine();
+    Console.WriteLine("**検算: 平坦列の 期待突破数(1) = 2.05 / 突破率(1) = 6.4%**（第5期の推奨列 1b/2b/3a）。");
+    Console.WriteLine("一致しなければこの表は読めない。");
+    Console.WriteLine();
+    foreach (var (name, note, _) in columns) Console.WriteLine($"- **{name}**: {note}");
+    Console.WriteLine();
+
+    // --- 計測 ---
+    int nCol = columns.Length, nT = targets.Length;
+    var exp1 = new double[nCol, nT];
+    var full1 = new double[nCol, nT];
+    var exp2 = new double[nCol, nT];
+    var full2 = new double[nCol, nT];
+    for (int c = 0; c < nCol; c++)
+        for (int t = 0; t < nT; t++)
+        {
+            Formation[] one = { targets[t].F };
+            Formation[] two = { targets[t].F, targets[t].F };
+            double e1 = 0, e2 = 0;
+            int w1 = 0, w2 = 0;
+            for (int seed = 0; seed < BridgeSeeds; seed++)
+            {
+                EngagementResult r1 = EngagementEngine.Run(one, columns[c].Squads, seed, verbose: false);
+                e1 += r1.EnemySquadsCleared;
+                if (r1.PlayerWon) w1++;
+                EngagementResult r2 = EngagementEngine.Run(two, columns[c].Squads, seed, verbose: false);
+                e2 += r2.EnemySquadsCleared;
+                if (r2.PlayerWon) w2++;
+            }
+            exp1[c, t] = e1 / BridgeSeeds;
+            full1[c, t] = w1 * 100.0 / BridgeSeeds;
+            exp2[c, t] = e2 / BridgeSeeds;
+            full2[c, t] = w2 * 100.0 / BridgeSeeds;
+        }
+
+    Console.WriteLine("### 列ごとの全編成平均（検算はこの表の平坦列を見る）");
+    Console.WriteLine();
+    Console.WriteLine("| 列 | 期待突破数(1) | 突破率(1) | 期待突破数(2) | 突破率(2) | 非線形 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|");
+    for (int c = 0; c < nCol; c++)
+    {
+        double a1 = Avg(c, exp1), a2 = Avg(c, exp2);
+        Console.WriteLine($"| {columns[c].Name} | {a1:F2} | {Avg(c, full1):F1}% | {a2:F2} | {Avg(c, full2):F1}% "
+            + $"| {(a1 == 0 ? "—" : $"{a2 / (2 * a1):F2}")} |");
+    }
+    double Avg(int c, double[,] m) => Enumerable.Range(0, nT).Average(t => m[c, t]);
+
+    // --- 順位 ---
+    // 期待突破数(1) の降順で順位を付ける（同値は平均順位）。1部隊で見るのは、2部隊だと
+    // 突破率が 92〜100% に飽和して序列が潰れるため（第5期の持ち越し論点(2)）。
+    var rank1 = new double[nCol][];
+    var rank2 = new double[nCol][];
+    for (int c = 0; c < nCol; c++)
+    {
+        rank1[c] = AverageRanksDesc(Enumerable.Range(0, nT).Select(t => exp1[c, t]).ToArray());
+        rank2[c] = AverageRanksDesc(Enumerable.Range(0, nT).Select(t => exp2[c, t]).ToArray());
+    }
+
+    Console.WriteLine();
+    Console.WriteLine("### 編成別の期待突破数と順位（1部隊。順位は期待突破数(1) の降順・同値は平均順位）");
+    Console.WriteLine();
+    Console.WriteLine("`範` は Def.Pattern に薙ぎ/全体を含む編成（HasAoe。cost 以来ずっと同じ区分）。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 範 | 平坦 期待 | 平坦 順位 | 反転 期待 | 反転 順位 | 順位差 |");
+    Console.WriteLine("|---|:-:|--:|--:|--:|--:|--:|");
+    foreach (int t in Enumerable.Range(0, nT).OrderBy(t => rank1[0][t]))
+        Console.WriteLine($"| {targets[t].Name} | {(HasAoe(targets[t].F) ? "○" : "")} "
+            + $"| {exp1[0, t]:F2} | {rank1[0][t]:F1} | {exp1[1, t]:F2} | {rank1[1][t]:F1} "
+            + $"| {rank1[0][t] - rank1[1][t]:+0.0;-0.0} |");
+    Console.WriteLine();
+    Console.WriteLine("順位差はプラスが「反転列で上がった」（順位の数字が小さくなった）。");
+
+    // --- 順位相関 ---
+    Console.WriteLine();
+    Console.WriteLine("### 順位相関（スピアマン。同順位は平均順位、順位列のピアソン相関）");
+    Console.WriteLine();
+    Console.WriteLine("| 比較 | 1部隊 | 2部隊 | 順位差の絶対値の平均(1部隊) |");
+    Console.WriteLine("|---|--:|--:|--:|");
+    for (int c = 1; c < nCol; c++)
+        Console.WriteLine($"| 平坦列 × {columns[c].Name} | {Pearson(rank1[0], rank1[c]):F2} | {Pearson(rank2[0], rank2[c]):F2} "
+            + $"| {Enumerable.Range(0, nT).Average(t => Math.Abs(rank1[0][t] - rank1[c][t])):F1} |");
+    Console.WriteLine();
+    Console.WriteLine("判定の目安（第7期 §3-3）: 0.7 未満かつ範囲持ちが反転列で上がっていれば**橋が架かった**。");
+    Console.WriteLine("0.9 以上なら**代金には出たが結果には出ていない**（第4期の逆順列と同じ形）。");
+
+    // --- 同値塊の大きさ（順位相関を額面で読んではいけない理由） ---
+    // 期待突破数は「ちょうど2波抜けて3波目で尽きる」に張り付く編成が多い。同値塊の中の
+    // 並びは平均順位で潰してあるが、塊の外に1編成出入りするだけで塊全体の順位が動くので、
+    // **順位相関は塊の大きさに引きずられる**。塊の頭数と値の幅を必ず併記する。
+    Console.WriteLine();
+    Console.WriteLine("### 指標の分解能（順位相関を額面で読まないための注記）");
+    Console.WriteLine();
+    Console.WriteLine("| 列 | 期待突破数がちょうど 2.00 の編成数 | 最小 | 最大 | 幅 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|");
+    for (int c = 0; c < nCol; c++)
+    {
+        var v = Enumerable.Range(0, nT).Select(t => exp1[c, t]).ToArray();
+        Console.WriteLine($"| {columns[c].Name} | {v.Count(x => x == 2.0)} | {v.Min():F2} | {v.Max():F2} | {v.Max() - v.Min():F2} |");
+    }
+
+    // --- 値そのものの相関（同値塊の影響を受けない側） ---
+    // 順位は塊で暴れるが、期待突破数の値は暴れない。順位相関が低くて値相関が高いなら、
+    // 「序列が入れ替わった」のではなく「分解能が無い指標を順位に潰した」だけ。
+    Console.WriteLine();
+    Console.WriteLine("| 比較 | 期待突破数(1) の値の相関 | 期待突破数(2) の値の相関 |");
+    Console.WriteLine("|---|--:|--:|");
+    for (int c = 1; c < nCol; c++)
+    {
+        var a1 = Enumerable.Range(0, nT).Select(t => exp1[0, t]).ToArray();
+        var b1 = Enumerable.Range(0, nT).Select(t => exp1[c, t]).ToArray();
+        var a2 = Enumerable.Range(0, nT).Select(t => exp2[0, t]).ToArray();
+        var b2 = Enumerable.Range(0, nT).Select(t => exp2[c, t]).ToArray();
+        Console.WriteLine($"| 平坦列 × {columns[c].Name} | {Pearson(a1, b1):F2} | {Pearson(a2, b2):F2} |");
+    }
+
+    // --- 動いた編成 上位5つ ---
+    Console.WriteLine();
+    Console.WriteLine("### 順位が最も動いた編成 上位5つ（平坦列 → 反転列）");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 範 | 平坦 順位 | 反転 順位 | 動き |");
+    Console.WriteLine("|---|:-:|--:|--:|---|");
+    foreach (int t in Enumerable.Range(0, nT).OrderByDescending(t => Math.Abs(rank1[0][t] - rank1[1][t])).Take(5))
+    {
+        double d = rank1[0][t] - rank1[1][t];
+        Console.WriteLine($"| {targets[t].Name} | {(HasAoe(targets[t].F) ? "○" : "")} "
+            + $"| {rank1[0][t]:F1} | {rank1[1][t]:F1} | {(d > 0 ? "↑" : "↓")}{Math.Abs(d):F1} |");
+    }
+
+    // --- 範囲持ちが反転列で上がっているか（狙いどおりの向きに動いたか） ---
+    // 順位が動いても、動いたのが範囲/単体と無関係なら「向きではない別の要因」（地力・
+    // 自傷の固定費など）が動かしている。第7期 §3-3 の3行目を判別するための表。
+    Console.WriteLine();
+    Console.WriteLine("### 範囲持ち / 単体のみ の平均順位（狙いどおりの向きに動いたか）");
+    Console.WriteLine();
+    Console.WriteLine("| 群 | 編成数 | 平坦 平均順位 | 反転 平均順位 | 差 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|");
+    foreach (bool aoe in new[] { true, false })
+    {
+        var grp = Enumerable.Range(0, nT).Where(t => HasAoe(targets[t].F) == aoe).ToArray();
+        double a = grp.Average(t => rank1[0][t]), b = grp.Average(t => rank1[1][t]);
+        Console.WriteLine($"| {(aoe ? "範囲持ち" : "単体のみ")} | {grp.Length} | {a:F1} | {b:F1} | {a - b:+0.0;-0.0} |");
+    }
+    Console.WriteLine();
+    Console.WriteLine("差がプラスなら反転列で順位が上がっている（順位の数字が小さくなった）。");
+
+    // 値そのもので同じことを見る。順位は同値塊で暴れるが、期待突破数の差は暴れない。
+    // 「範囲持ちだけが得をした」なら群間で Δ に差が出るはずで、出ないなら動かしたのは
+    // 向きではない（第7期 §3-3 の3行目）。
+    Console.WriteLine();
+    Console.WriteLine("### 期待突破数の変化 Δ（反転列 − 平坦列。値なので同値塊の影響を受けない）");
+    Console.WriteLine();
+    Console.WriteLine("| 群 | 編成数 |" + string.Concat(Enumerable.Range(1, nCol - 1).Select(c => $" Δ {columns[c].Name} |")));
+    Console.WriteLine("|---|--:|" + string.Concat(Enumerable.Range(1, nCol - 1).Select(_ => "--:|")));
+    foreach (bool aoe in new[] { true, false })
+    {
+        var grp = Enumerable.Range(0, nT).Where(t => HasAoe(targets[t].F) == aoe).ToArray();
+        Console.WriteLine($"| {(aoe ? "範囲持ち" : "単体のみ")} | {grp.Length} |"
+            + string.Concat(Enumerable.Range(1, nCol - 1)
+                .Select(c => $" {grp.Average(t => exp1[c, t] - exp1[0, t]):+0.000;-0.000} |")));
+    }
+    Console.WriteLine();
+    Console.WriteLine("範囲持ちの Δ が単体のみの Δ より**大きい**（＝損が小さい）なら、向きが結果に届いている。");
+    return;
+}
+
 // chain モード: 勝率だけでは見えない「連鎖の深さ」を測る。
 // 「2枚で人並みに勝つ」編成と「5枚が畳みかけて無双する」編成は、勝率だけ見ると同じ100%になる。
 // MaxEnemyKillsInOneTurn（1ターンで味方が何体倒したかの最大値）と、勝利時の決着ターン数を
@@ -2236,6 +2468,37 @@ static bool HasAoe(Formation f)
 // 向きが出た候補について枚数で単調に下がるかを見る（第6期 §2-4）。
 static int AoeCount(Formation f)
     => f.Occupied().Count(x => x.Def.Pattern is AttackPattern.Sweep or AttackPattern.All);
+
+// 降順の平均順位（1 が最良）。同値は平均順位にする——編成の期待突破数は 0.00 や 3.00 で
+// 並ぶことがあり、入力順で順位を割ると順位相関が入力順の産物になる（第7期 Phase S）。
+static double[] AverageRanksDesc(double[] v)
+{
+    int n = v.Length;
+    var idx = Enumerable.Range(0, n).OrderByDescending(i => v[i]).ToArray();
+    var r = new double[n];
+    for (int k = 0; k < n;)
+    {
+        int j = k;
+        while (j + 1 < n && v[idx[j + 1]] == v[idx[k]]) j++;
+        double avg = (k + j) / 2.0 + 1;   // 0 始まりの位置の平均 → 1 始まりの順位
+        for (int m = k; m <= j; m++) r[idx[m]] = avg;
+        k = j + 1;
+    }
+    return r;
+}
+
+// ピアソン相関。順位列に当てるとスピアマンの順位相関になる（同順位は平均順位で処理済み）。
+static double Pearson(double[] a, double[] b)
+{
+    double ma = a.Average(), mb = b.Average();
+    double cov = 0, va = 0, vb = 0;
+    for (int i = 0; i < a.Length; i++)
+    {
+        double da = a[i] - ma, db = b[i] - mb;
+        cov += da * db; va += da * da; vb += db * db;
+    }
+    return va == 0 || vb == 0 ? double.NaN : cov / Math.Sqrt(va * vb);
+}
 
 // 代金の表（編成 × 波）と、波ごとのばらつきの表を吐く。計測値は呼び出し側にも返す
 // （gradient が候補選定の集計に使う）。
