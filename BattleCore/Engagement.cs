@@ -69,6 +69,22 @@ public sealed class EngagementResult
     public required double FirstBattleAttrition { get; init; }
 
     /// <summary>
+    /// 最後の Battle で、そのとき相手にしていた敵部隊の総 MaxHp のうち削った割合（0..1）。
+    /// 突破数が整数に潰れて向きの差を吸収してしまうため、部分点として足す（第8期 Phase U）。
+    ///
+    /// <para>分母は<b>その敵部隊を投入した時点の定義上の MaxHp 合計</b>（Def.MaxHp の和）。
+    /// 持ち越しで目減りした分母（死んだ駒が抜けた後の合計や、継ぎ接ぎで縮んだ MaxHp）は
+    /// 使わない——「この部隊をどれだけ削ったか」を列全体で通した一つの尺度にしたいので、
+    /// 分母が戦闘ごとに動くと部分点の意味が Battle ごとに変わってしまう。分子も同じ理由で
+    /// 「その Battle で削った分」ではなく「投入時からの累計」を取る。</para>
+    ///
+    /// <para>最後の Battle に勝っている（＝全抜き）試行では 1.0 になる。突破度を組む側は
+    /// そのまま足さず列長ちょうどに揃えること（列長を超えさせない）。列長1の会戦では
+    /// <see cref="FirstBattleAttrition"/> と一致するはずで、これは検算に使える。</para>
+    /// </summary>
+    public required double LastBattleAttrition { get; init; }
+
+    /// <summary>
     /// MaxTurns 到達の引き分けが起きた回数。引き分けは「味方部隊が退く」扱い（仮置き T1）で、
     /// 独立5戦では一度も観測されていないが、消耗した部隊同士の Battle では膠着し得るので数える。
     /// </summary>
@@ -111,6 +127,10 @@ public static class EngagementEngine
         List<UnitState> current = BattleEngine.Materialize(playerSquads[0], BattleContext.PlayerTeam);
         List<UnitState> enemyCur = BattleEngine.Materialize(enemySquads[0], BattleContext.EnemyTeam);
         int enemyFirstMaxHp = enemyCur.Sum(u => u.MaxHp);
+        // 今の敵部隊を投入した時点の定義上の総最大HP。部隊を入れ替えたときだけ更新する
+        // （持ち越した部隊では分母を動かさない。LastBattleAttrition の分母の判断）。
+        int enemyDefMaxHp = enemyCur.Sum(u => u.Def.MaxHp);
+        double lastAttrition = 0;
 
         for (int battleIndex = 0; battleIndex < MaxBattles; battleIndex++)
         {
@@ -141,11 +161,14 @@ public static class EngagementEngine
                     p.Unit.Def.Id, p.Unit.Def.Name, p.Slot, p.Hp, p.MaxHp, p.Attack,
                     p.Unit.Def.Attack, p.Pattern, p.HasFallenBack)).ToList());
 
+            int enemyLeft = enemyCur.Sum(u => Math.Max(0, u.Hp));
+            lastAttrition = enemyDefMaxHp == 0
+                ? 0 : (double)(enemyDefMaxHp - enemyLeft) / enemyDefMaxHp;
+
             if (battleIndex == 0)
             {
-                int left = enemyCur.Sum(u => Math.Max(0, u.Hp));
                 firstAttrition = enemyFirstMaxHp == 0
-                    ? 0 : (double)(enemyFirstMaxHp - left) / enemyFirstMaxHp;
+                    ? 0 : (double)(enemyFirstMaxHp - enemyLeft) / enemyFirstMaxHp;
             }
 
             // 勝敗の分岐は「会戦が投入した駒」の生死で判定する。戦闘中に湧いた駒（胞子）は
@@ -183,6 +206,7 @@ public static class EngagementEngine
             enemyCur = clearedE
                 ? BattleEngine.Materialize(enemySquads[ei], BattleContext.EnemyTeam)
                 : CarryOver(aliveE);
+            if (clearedE) enemyDefMaxHp = enemyCur.Sum(u => u.Def.MaxHp);
         }
 
         return Build(playerWon: false);
@@ -198,6 +222,7 @@ public static class EngagementEngine
             EnemySquadsCleared = cleared,
             PlayerSquadsLost = lost,
             FirstBattleAttrition = firstAttrition,
+            LastBattleAttrition = lastAttrition,
             Draws = draws,
         };
     }

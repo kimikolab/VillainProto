@@ -1410,36 +1410,56 @@ if (focusId == "bridge")
     var full1 = new double[nCol, nT];
     var exp2 = new double[nCol, nT];
     var full2 = new double[nCol, nT];
+    var deg1 = new double[nCol, nT];   // 突破度（第8期 Phase U）
+    var deg2 = new double[nCol, nT];
     for (int c = 0; c < nCol; c++)
         for (int t = 0; t < nT; t++)
         {
             Formation[] one = { targets[t].F };
             Formation[] two = { targets[t].F, targets[t].F };
-            double e1 = 0, e2 = 0;
+            double e1 = 0, e2 = 0, d1 = 0, d2 = 0;
             int w1 = 0, w2 = 0;
             for (int seed = 0; seed < BridgeSeeds; seed++)
             {
                 EngagementResult r1 = EngagementEngine.Run(one, columns[c].Squads, seed, verbose: false);
                 e1 += r1.EnemySquadsCleared;
+                d1 += BreakthroughDegree(r1, columns[c].Squads.Length);
                 if (r1.PlayerWon) w1++;
                 EngagementResult r2 = EngagementEngine.Run(two, columns[c].Squads, seed, verbose: false);
                 e2 += r2.EnemySquadsCleared;
+                d2 += BreakthroughDegree(r2, columns[c].Squads.Length);
                 if (r2.PlayerWon) w2++;
             }
             exp1[c, t] = e1 / BridgeSeeds;
             full1[c, t] = w1 * 100.0 / BridgeSeeds;
             exp2[c, t] = e2 / BridgeSeeds;
             full2[c, t] = w2 * 100.0 / BridgeSeeds;
+            deg1[c, t] = d1 / BridgeSeeds;
+            deg2[c, t] = d2 / BridgeSeeds;
         }
+
+    // --- 突破度の検算（列長1では最終戦＝初戦なので両者が一致するはず。第8期 §2-3） ---
+    // 一致しなければ分母か更新位置がずれている。表を読む前にここで止まれるよう先に出す。
+    double maxGap = 0;
+    for (int t = 0; t < nT; t++)
+        for (int seed = 0; seed < 20; seed++)
+        {
+            EngagementResult r = EngagementEngine.Run(new[] { targets[t].F }, new[] { W3Elite3 }, seed, verbose: false);
+            maxGap = Math.Max(maxGap, Math.Abs(r.LastBattleAttrition - r.FirstBattleAttrition));
+        }
+    Console.WriteLine($"**検算（列長1）: |LastBattleAttrition − FirstBattleAttrition| の最大 = {maxGap:F6}**"
+        + $"（{nT} 編成 × seed 0..19。0 でなければ突破度の分母がずれている）");
+    Console.WriteLine();
 
     Console.WriteLine("### 列ごとの全編成平均（検算はこの表の平坦列を見る）");
     Console.WriteLine();
-    Console.WriteLine("| 列 | 期待突破数(1) | 突破率(1) | 期待突破数(2) | 突破率(2) | 非線形 |");
-    Console.WriteLine("|---|--:|--:|--:|--:|--:|");
+    Console.WriteLine("| 列 | 期待突破数(1) | 突破度(1) | 突破率(1) | 期待突破数(2) | 突破度(2) | 突破率(2) | 非線形 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|");
     for (int c = 0; c < nCol; c++)
     {
         double a1 = Avg(c, exp1), a2 = Avg(c, exp2);
-        Console.WriteLine($"| {columns[c].Name} | {a1:F2} | {Avg(c, full1):F1}% | {a2:F2} | {Avg(c, full2):F1}% "
+        Console.WriteLine($"| {columns[c].Name} | {a1:F2} | {Avg(c, deg1):F2} | {Avg(c, full1):F1}% "
+            + $"| {a2:F2} | {Avg(c, deg2):F2} | {Avg(c, full2):F1}% "
             + $"| {(a1 == 0 ? "—" : $"{a2 / (2 * a1):F2}")} |");
     }
     double Avg(int c, double[,] m) => Enumerable.Range(0, nT).Average(t => m[c, t]);
@@ -1449,10 +1469,14 @@ if (focusId == "bridge")
     // 突破率が 92〜100% に飽和して序列が潰れるため（第5期の持ち越し論点(2)）。
     var rank1 = new double[nCol][];
     var rank2 = new double[nCol][];
+    var rankD1 = new double[nCol][];   // 突破度での順位（第8期 Phase U）
+    var rankD2 = new double[nCol][];
     for (int c = 0; c < nCol; c++)
     {
         rank1[c] = AverageRanksDesc(Enumerable.Range(0, nT).Select(t => exp1[c, t]).ToArray());
         rank2[c] = AverageRanksDesc(Enumerable.Range(0, nT).Select(t => exp2[c, t]).ToArray());
+        rankD1[c] = AverageRanksDesc(Enumerable.Range(0, nT).Select(t => deg1[c, t]).ToArray());
+        rankD2[c] = AverageRanksDesc(Enumerable.Range(0, nT).Select(t => deg2[c, t]).ToArray());
     }
 
     Console.WriteLine();
@@ -1460,23 +1484,28 @@ if (focusId == "bridge")
     Console.WriteLine();
     Console.WriteLine("`範` は Def.Pattern に薙ぎ/全体を含む編成（HasAoe。cost 以来ずっと同じ区分）。");
     Console.WriteLine();
-    Console.WriteLine("| 編成 | 範 | 平坦 期待 | 平坦 順位 | 反転 期待 | 反転 順位 | 順位差 |");
-    Console.WriteLine("|---|:-:|--:|--:|--:|--:|--:|");
+    Console.WriteLine("| 編成 | 範 | 平坦 期待 | 平坦 順位 | 反転 期待 | 反転 順位 | 順位差 "
+        + "| 平坦 突破度 | 反転 突破度 | 突破度の順位差 |");
+    Console.WriteLine("|---|:-:|--:|--:|--:|--:|--:|--:|--:|--:|");
     foreach (int t in Enumerable.Range(0, nT).OrderBy(t => rank1[0][t]))
         Console.WriteLine($"| {targets[t].Name} | {(HasAoe(targets[t].F) ? "○" : "")} "
             + $"| {exp1[0, t]:F2} | {rank1[0][t]:F1} | {exp1[1, t]:F2} | {rank1[1][t]:F1} "
-            + $"| {rank1[0][t] - rank1[1][t]:+0.0;-0.0} |");
+            + $"| {rank1[0][t] - rank1[1][t]:+0.0;-0.0} "
+            + $"| {deg1[0, t]:F3} | {deg1[1, t]:F3} | {rankD1[0][t] - rankD1[1][t]:+0.0;-0.0} |");
     Console.WriteLine();
     Console.WriteLine("順位差はプラスが「反転列で上がった」（順位の数字が小さくなった）。");
+    Console.WriteLine("突破度は**突破した部隊数 + 最後に負けた部隊戦での削り割合**（全抜きは列長ちょうど）。");
 
     // --- 順位相関 ---
     Console.WriteLine();
     Console.WriteLine("### 順位相関（スピアマン。同順位は平均順位、順位列のピアソン相関）");
     Console.WriteLine();
-    Console.WriteLine("| 比較 | 1部隊 | 2部隊 | 順位差の絶対値の平均(1部隊) |");
-    Console.WriteLine("|---|--:|--:|--:|");
+    Console.WriteLine("| 比較 | 期待突破数 1部隊 | 期待突破数 2部隊 | **突破度 1部隊** | **突破度 2部隊** "
+        + "| 順位差の絶対値の平均(期待・1部隊) |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|");
     for (int c = 1; c < nCol; c++)
         Console.WriteLine($"| 平坦列 × {columns[c].Name} | {Pearson(rank1[0], rank1[c]):F2} | {Pearson(rank2[0], rank2[c]):F2} "
+            + $"| {Pearson(rankD1[0], rankD1[c]):F2} | {Pearson(rankD2[0], rankD2[c]):F2} "
             + $"| {Enumerable.Range(0, nT).Average(t => Math.Abs(rank1[0][t] - rank1[c][t])):F1} |");
     Console.WriteLine();
     Console.WriteLine("判定の目安（第7期 §3-3）: 0.7 未満かつ範囲持ちが反転列で上がっていれば**橋が架かった**。");
@@ -1489,13 +1518,21 @@ if (focusId == "bridge")
     Console.WriteLine();
     Console.WriteLine("### 指標の分解能（順位相関を額面で読まないための注記）");
     Console.WriteLine();
-    Console.WriteLine("| 列 | 期待突破数がちょうど 2.00 の編成数 | 最小 | 最大 | 幅 |");
-    Console.WriteLine("|---|--:|--:|--:|--:|");
+    Console.WriteLine("| 列 | 期待突破数がちょうど 2.00 の編成数 | 期待の同値編成数 | 最小 | 最大 | 幅 "
+        + "| 突破度が整数の編成数 | 突破度の同値編成数 | 突破度 最小 | 最大 | 幅 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
     for (int c = 0; c < nCol; c++)
     {
         var v = Enumerable.Range(0, nT).Select(t => exp1[c, t]).ToArray();
-        Console.WriteLine($"| {columns[c].Name} | {v.Count(x => x == 2.0)} | {v.Min():F2} | {v.Max():F2} | {v.Max() - v.Min():F2} |");
+        var d = Enumerable.Range(0, nT).Select(t => deg1[c, t]).ToArray();
+        Console.WriteLine($"| {columns[c].Name} | {v.Count(x => x == 2.0)} | {nT - v.Distinct().Count()} "
+            + $"| {v.Min():F2} | {v.Max():F2} | {v.Max() - v.Min():F2} "
+            + $"| {d.Count(x => x == Math.Floor(x))} | {nT - d.Distinct().Count()} "
+            + $"| {d.Min():F3} | {d.Max():F3} | {d.Max() - d.Min():F3} |");
     }
+    Console.WriteLine();
+    Console.WriteLine("`同値編成数` は「他の編成と値がぴったり並んでいる編成の数」（編成数 − 相異なる値の数）。");
+    Console.WriteLine("順位相関はこの塊の大きさに引きずられるので、突破度で塊が消えているかをここで見る。");
 
     // --- 値そのものの相関（同値塊の影響を受けない側） ---
     // 順位は塊で暴れるが、期待突破数の値は暴れない。順位相関が低くて値相関が高いなら、
@@ -1556,6 +1593,19 @@ if (focusId == "bridge")
         Console.WriteLine($"| {(aoe ? "範囲持ち" : "単体のみ")} | {grp.Length} |"
             + string.Concat(Enumerable.Range(1, nCol - 1)
                 .Select(c => $" {grp.Average(t => exp1[c, t] - exp1[0, t]):+0.000;-0.000} |")));
+    }
+
+    Console.WriteLine();
+    Console.WriteLine("### 突破度の変化 Δ（同じ表を突破度で。整数に潰れない分だけ細かく出る）");
+    Console.WriteLine();
+    Console.WriteLine("| 群 | 編成数 |" + string.Concat(Enumerable.Range(1, nCol - 1).Select(c => $" Δ {columns[c].Name} |")));
+    Console.WriteLine("|---|--:|" + string.Concat(Enumerable.Range(1, nCol - 1).Select(_ => "--:|")));
+    foreach (bool aoe in new[] { true, false })
+    {
+        var grp = Enumerable.Range(0, nT).Where(t => HasAoe(targets[t].F) == aoe).ToArray();
+        Console.WriteLine($"| {(aoe ? "範囲持ち" : "単体のみ")} | {grp.Length} |"
+            + string.Concat(Enumerable.Range(1, nCol - 1)
+                .Select(c => $" {grp.Average(t => deg1[c, t] - deg1[0, t]):+0.000;-0.000} |")));
     }
     Console.WriteLine();
     Console.WriteLine("範囲持ちの Δ が単体のみの Δ より**大きい**（＝損が小さい）なら、向きが結果に届いている。");
@@ -2468,6 +2518,16 @@ static bool HasAoe(Formation f)
 // 向きが出た候補について枚数で単調に下がるかを見る（第6期 §2-4）。
 static int AoeCount(Formation f)
     => f.Occupied().Count(x => x.Def.Pattern is AttackPattern.Sweep or AttackPattern.All);
+
+// 突破度 = 突破した部隊数 + 最後に負けた部隊戦での削り割合（0.0 〜 列長。第8期 Phase U）。
+// 期待突破数は整数の平均なので、「あと一歩まで削った」と「初戦で溶けた」が同じ 2.00 に潰れる。
+// 部分点を足して連続量にすると、代金の向きが結果に届いているかを順位で見られるようになる。
+// 全抜き（列を抜き切った）試行は最終戦にも勝っていて LastBattleAttrition が 1.0 になるので、
+// そのまま足すと列長を超える。列長ちょうどに揃える。
+static double BreakthroughDegree(EngagementResult r, int columnLength)
+    => r.EnemySquadsCleared >= columnLength
+        ? columnLength
+        : r.EnemySquadsCleared + r.LastBattleAttrition;
 
 // 降順の平均順位（1 が最良）。同値は平均順位にする——編成の期待突破数は 0.00 や 3.00 で
 // 並ぶことがあり、入力順で順位を割ると順位相関が入力順の産物になる（第7期 Phase S）。
