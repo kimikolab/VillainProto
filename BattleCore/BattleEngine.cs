@@ -930,11 +930,25 @@ public static class BattleEngine
     /// verbose=false にするとログを作らないので、一括シミュレーションが速い。
     /// </summary>
     public static BattleResult Run(Formation player, Formation enemy, int seed, bool verbose = true)
+        => Run(Materialize(player, BattleContext.PlayerTeam),
+               Materialize(enemy, BattleContext.EnemyTeam),
+               seed, verbose);
+
+    /// <summary>
+    /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
+    /// そのまま次の戦闘へ投入するための入り口。
+    ///
+    /// InstanceId は ctx.Add がここで渡された順（味方リスト → 敵リスト）に振り直す。
+    /// 再生側（GodotApp / replay）は「Deploy の順で数えれば一致する」前提を持っているので、
+    /// 渡す側はリストの並びを決定的に保つこと（Materialize はスロット昇順で返す）。
+    /// </summary>
+    public static BattleResult Run(IReadOnlyList<UnitState> player, IReadOnlyList<UnitState> enemy,
+                                   int seed, bool verbose = true)
     {
         var ctx = new BattleContext(seed, verbose);
 
-        Deploy(ctx, player, BattleContext.PlayerTeam);
-        Deploy(ctx, enemy, BattleContext.EnemyTeam);
+        foreach (UnitState u in player) ctx.Add(u);
+        foreach (UnitState u in enemy) ctx.Add(u);
 
         ctx.Log("=== 戦闘開始 ===", LogKind.System);
 
@@ -1014,11 +1028,17 @@ public static class BattleEngine
         };
     }
 
-    private static void Deploy(BattleContext ctx, Formation formation, int teamId)
+    /// <summary>
+    /// 編成から新品の UnitState 群を作る（スロット昇順）。旧 Deploy の切り出し。
+    /// 盤面には触らない（Add は Run 側でやる）ので、会戦が「部隊列から次の部隊を起こす」
+    /// 用途にそのまま使える。
+    /// </summary>
+    public static List<UnitState> Materialize(Formation formation, int teamId)
     {
+        var units = new List<UnitState>();
         foreach ((int slot, UnitDef def) in formation.Occupied())
         {
-            ctx.Add(new UnitState
+            units.Add(new UnitState
             {
                 Def = def,
                 TeamId = teamId,
@@ -1028,5 +1048,6 @@ public static class BattleEngine
                 Traits = TraitCatalog.Resolve(def.Traits)
             });
         }
+        return units;
     }
 }
