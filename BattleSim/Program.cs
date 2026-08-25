@@ -1381,6 +1381,13 @@ if (focusId == "bridge")
     Formation W3Squire6 = Formation.Build(front1: EnemyCatalog.ZealotSquire, front2: EnemyCatalog.ZealotSquire,
                                           front3: EnemyCatalog.ZealotSquire, mid: EnemyCatalog.ZealotSquire,
                                           back1: EnemyCatalog.ZealotSquire, back2: EnemyCatalog.ZealotSquire);
+    // 第8期 Phase V。第3波の代金だけを振る（体数・個体HP は R11 と同じで攻撃だけが違う）。
+    Formation W3Porter6 = Formation.Build(front1: EnemyCatalog.ZealotPorter, front2: EnemyCatalog.ZealotPorter,
+                                          front3: EnemyCatalog.ZealotPorter, mid: EnemyCatalog.ZealotPorter,
+                                          back1: EnemyCatalog.ZealotPorter, back2: EnemyCatalog.ZealotPorter);
+    Formation W3Pilgrim6 = Formation.Build(front1: EnemyCatalog.ZealotPilgrim, front2: EnemyCatalog.ZealotPilgrim,
+                                           front3: EnemyCatalog.ZealotPilgrim, mid: EnemyCatalog.ZealotPilgrim,
+                                           back1: EnemyCatalog.ZealotPilgrim, back2: EnemyCatalog.ZealotPilgrim);
 
     var columns = new (string Name, string Note, Formation[] Squads)[]
     {
@@ -1390,6 +1397,16 @@ if (focusId == "bridge")
             new[] { W1ZealotBare5, W2Mixed, W3Squire6 }),
         ("反転列(難度そろえ)", "H2d 革4(+7.4pt・代金 27.2% は 1b とほぼ同額) / 2b / R11 従卒6",
             new[] { W1ZealotLeather4, W2Mixed, W3Squire6 }),
+        // 第8期 Phase V。反転列と第1波・第2波は同じで、第3波の代金だけが違う3点。
+        ("反転列(中)", "H2a 裸5 / 2b / 荷駄6(90/攻7・代金 54%)。合計を下げて境目に近づける",
+            new[] { W1ZealotBare5, W2Mixed, W3Porter6 }),
+        ("反転列(低)", "H2a 裸5 / 2b / 巡礼6(90/攻4・代金 42%)。**向きは -2.2pt しか無い**",
+            new[] { W1ZealotBare5, W2Mixed, W3Pilgrim6 }),
+        // 低の群差の対照。第1波だけを向きの無い 1b に戻した以外は反転列(低)と同じ。
+        // 反転列(低) で範囲持ちの Δ が開いたとき、それが「列の向き（第1波 +8.7pt）が
+        // 境目で結果に出た」のか「安い波は範囲持ちに有利なだけ」なのかを分ける。
+        ("平坦列(低)", "1b 農兵5(+3.1pt) / 2b / 巡礼6。反転列(低) の群差の対照",
+            new[] { W1Levy5, W2Mixed, W3Pilgrim6 }),
     };
 
     Console.WriteLine($"# 向きは序列を動かすか（seed 0..{BridgeSeeds - 1} の {BridgeSeeds} 試行）");
@@ -1437,6 +1454,30 @@ if (focusId == "bridge")
             deg1[c, t] = d1 / BridgeSeeds;
             deg2[c, t] = d2 / BridgeSeeds;
         }
+
+    // --- 列ごとの合計代金と、第3波の向き（第8期 Phase V §3-1・§3-3） ---
+    // 波の代金は cost / gradient / aim / flip と同じ物差し（勝った試行の残HP% → 代金 =
+    // 100% − 残HP%、区分は HasAoe）で、ここで測り直す。列の合計代金と突破度を同じ
+    // 実行の中で並べないと、「境目に近づけたら相関が動いたか」を突き合わせられない。
+    // **向きの無い列で橋を測っても判定にならない**ので、単体−範囲 を必ず併記する（§5-7）。
+    Console.WriteLine("### 列の合計代金と、第3波の向き（同じ実行で測り直したもの）");
+    Console.WriteLine();
+    Console.WriteLine("代金は cost / aim / flip と同じ物差し（勝った試行の残HP% → 代金 = 100% − 残HP%）。");
+    Console.WriteLine("`合計代金` は3波の代金の和で、部隊の容量（約 100%）と比べて読む。");
+    Console.WriteLine();
+    Console.WriteLine("| 列 | 第1波 | 第2波 | 第3波 | 合計代金 | 第3波の 単体−範囲 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|");
+    foreach (var (name, _, squads) in columns)
+    {
+        var costs = squads.Select(w => WaveCost(targets, w, BridgeSeeds)).ToArray();
+        Console.WriteLine($"| {name} | {costs[0].Mean:F1}% | {costs[1].Mean:F1}% | {costs[2].Mean:F1}% "
+            + $"| {costs.Sum(c => c.Mean):F1}% | {costs[2].Split:+0.0;-0.0}pt |");
+        Console.Out.Flush();
+    }
+    Console.WriteLine();
+    Console.WriteLine("`単体−範囲` がマイナスなら範囲持ちに高くつく（反転している）。**-4pt を下回ると");
+    Console.WriteLine("向きが編成間のばらつき（SD 13pt 前後）に埋もれる**ので、その列は向きの判定に使えない。");
+    Console.WriteLine();
 
     // --- 突破度の検算（列長1では最終戦＝初戦なので両者が一致するはず。第8期 §2-3） ---
     // 一致しなければ分母か更新位置がずれている。表を読む前にここで止まれるよう先に出す。
@@ -2518,6 +2559,25 @@ static bool HasAoe(Formation f)
 // 向きが出た候補について枚数で単調に下がるかを見る（第6期 §2-4）。
 static int AoeCount(Formation f)
     => f.Occupied().Count(x => x.Def.Pattern is AttackPattern.Sweep or AttackPattern.All);
+
+// 1波の代金（勝った試行の残HP% → 代金 = 100% − 残HP%）と、その向き（単体のみ − 範囲持ち）。
+// flip の候補まとめが出しているものと同じ計算で、bridge が列の合計代金を出すために使う
+// （第8期 Phase V）。勝率 0% の編成は代金が定義できないので両群とも集計から外す
+// ——外した編成が偏ると打ち切りバイアスが乗るので、使う側は勝率 0% の数も見ること。
+static (double Mean, double Split) WaveCost((string Name, Formation F)[] targets, Formation wave, int seeds)
+{
+    var live = new List<(bool Aoe, double Cost)>();
+    foreach (var (_, f) in targets)
+    {
+        var m = MeasureCost(f, wave, seeds);
+        if (m.Wins > 0) live.Add((HasAoe(f), (1 - m.AvgHpPct) * 100));
+    }
+    if (live.Count == 0) return (double.NaN, double.NaN);
+    var byGroup = live.GroupBy(x => x.Aoe).ToDictionary(g => g.Key, g => g.Average(x => x.Cost));
+    double aoe = byGroup.TryGetValue(true, out double a) ? a : double.NaN;
+    double single = byGroup.TryGetValue(false, out double b) ? b : double.NaN;
+    return (live.Average(x => x.Cost), single - aoe);
+}
 
 // 突破度 = 突破した部隊数 + 最後に負けた部隊戦での削り割合（0.0 〜 列長。第8期 Phase U）。
 // 期待突破数は整数の平均なので、「あと一歩まで削った」と「初戦で溶けた」が同じ 2.00 に潰れる。

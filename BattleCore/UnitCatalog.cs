@@ -661,6 +661,27 @@ public static class EnemyCatalog
     // 全編成が勝ち切れる範囲に収められる。HP 90・速さ 5 は重甲と同値（軸を1つだけ動かす）。
     public static readonly UnitDef ZealotSquire = Make("zealot_squire", "重甲の従卒", 90, 10, 5);
 
+    // ここから第8期・合計代金を振る（design/ENGAGEMENT_PLAN_8.md Phase V）の候補素材。
+    // 狙いは「第3波を安くしつつ、範囲に高くつく向きを保つ」こと。
+    //
+    // 指示書は体数を減らして安くする案だったが、測ると**向きが体数と一緒に消える**——
+    // 従卒6(90/攻10) -8.4pt / 従卒5 -3.6pt / 重甲3 +2.6pt。第7期の結論どおり体数が向きの
+    // 源泉なので、体数・代金・向きが1本の軸に乗ってしまい、体数では分離できない。
+    // 残る軸は**1体あたり攻撃**（第7期で 単体−範囲 との相関 r=+0.93 を測った軸）で、
+    // 攻撃を下げると代金だけが落ちて体数6・HP90（一撃圏の外）はそのまま残せる。
+    // HP 90・速さ 5・単体攻撃は重甲の従卒と同値（動かす軸は攻撃だけ）。
+    //
+    // 実測（flip と同じ物差し・seed 200・31編成）: 攻10 → 67.9%/-8.4pt、攻7 → 53.9%/-4.5pt、
+    // 攻5 → 46.1%/-2.9pt、攻4 → 42.4%/-2.2pt。**安くするほど向きも薄くなる**ので、
+    // 攻4 の列は「向きの列」ではなく「合計代金だけを下げた列」として読むこと（第8期 §3-3）。
+    //
+    // 却下した案: 総HPを下げて安くする（板金従卒6＝60/攻7 で 42.3%）。同じ 42% 帯で
+    // 向きは -2.9pt と攻4 より僅かに濃いが、HP 60 は上位1割の打点でも1発では落ちない
+    // とはいえ一撃圏の縁で、**代金を下げた効果と一撃圏を跨いだ効果が混ざる**。
+    // 攻撃だけを振れば HP 軸は第7期のまま固定でき、安さの効果を単独で読める。
+    public static readonly UnitDef ZealotPorter = Make("zealot_porter", "重甲の荷駄兵", 90, 7, 5);
+    public static readonly UnitDef ZealotPilgrim = Make("zealot_pilgrim", "重甲の巡礼者", 90, 4, 5);
+
     public sealed record Stage(string Name, Formation Enemy);
 
     public static IReadOnlyList<Stage> Stages { get; } = new[]
