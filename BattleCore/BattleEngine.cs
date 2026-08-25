@@ -28,6 +28,13 @@ public static class StatusKeys
     /// 限られていて、ヒビのHPという有限プールがそのまま天井になるため。
     /// </summary>
     public const string Armor = "armor";
+
+    /// <summary>
+    /// 全キーの一覧。会戦（Engagement）が部隊戦の境界で状態異常を一律に消すために使う
+    /// （状態異常は Battle スコープ、という寿命規則。Armor も含めて消す——破片は
+    /// Battle 内の供給に依存するプール）。**新しいキーを足したら必ずここにも足すこと。**
+    /// </summary>
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor };
 }
 
 /// <summary>

@@ -114,6 +114,15 @@ public abstract class Trait
 
     /// <summary>味方の誰かが動かされたとき。移動を支援に変える駒が見る。</summary>
     public virtual void OnAllyMoved(BattleContext ctx, UnitState self, UnitState moved) { }
+
+    /// <summary>
+    /// 会戦（Engagement）の部隊戦境界で呼ばれる。エンジンが StatusKeys の全カウンタと
+    /// AtkBonus を一律に消した後に走るので、**持ち越したい状態だけ**をここで再構成する。
+    /// 既定は何もしない（Counters に残した特性私有のカウンタはそのまま持ち越される。
+    /// 継ぎ接ぎの charges / sewn が会戦スコープになるのはこの既定の帰結）。
+    /// BattleContext は渡さない——ログもイベントも無く、次の盤面はまだ存在しない場所。
+    /// </summary>
+    public virtual void OnCarryOver(UnitState self) { }
 }
 
 // ---------------------------------------------------------------
@@ -403,6 +412,13 @@ public sealed class GuardianTrait : Trait
         ctx.Log($"    {self.Name} が受けた傷が誓いを思い出させる（攻撃 +{gain} → {self.CurrentAttack}）",
             LogKind.Trigger);
     }
+
+    /// <summary>
+    /// 部隊戦の境界で肩代わりの印を消す。印は StatusKeys に無いので境界の一律掃除では
+    /// 消えない。立ったまま持ち越すと（破片が全額吸って OnDamaged まで届かなかった場合
+    /// など）、次の Battle の最初の被弾を肩代わりと取り違えて育ってしまう。
+    /// </summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(PendingKey, 0);
 }
 
 /// <summary>墓守。味方が倒れるたびに強くなり、回復する。</summary>
@@ -460,13 +476,38 @@ public sealed class NecroTrait : Trait
     /// <summary>層に応じた累積ボーナスを再計算して差分だけ反映する。</summary>
     private static void SetStack(BattleContext ctx, UnitState self, int stack, bool decayed)
     {
+        stack = ApplyStack(self, stack);
+        if (decayed) ctx.Log($"    {self.Name} の層が薄れた（{stack}層）", LogKind.Status);
+    }
+
+    /// <summary>SetStack の純計算部。OnCarryOver（ログの無い場所）と共用する。</summary>
+    private static int ApplyStack(UnitState self, int stack)
+    {
         stack = Math.Max(0, stack);
         int applied = self.Counter("necroBonus");
         int desired = AllyStep * stack * (stack + 1) / 2;
         self.AtkBonus += desired - applied;
         self.SetCounter("necro", stack);
         self.SetCounter("necroBonus", desired);
-        if (decayed) ctx.Log($"    {self.Name} の層が薄れた（{stack}層）", LogKind.Status);
+        return stack;
+    }
+
+    /// <summary>
+    /// 部隊戦の境界。層を1つ落として持ち越す（ターン減衰と同じ「連鎖が途切れたら罰する」
+    /// 思想の境界版）。AtkBonus はエンジンが一律 0 にした後なので、帳簿（necroBonus）も
+    /// 0 に戻してから層ぶんを再適用する。敵撃破の EnemyGain は帳簿に載っていないので
+    /// ここで自然に消える（会戦中に単調増加する量を作らないため）。
+    ///
+    /// lastDeathTurn も 0 に戻す。前の Battle のターン番号 T が残ると、次の Battle の
+    /// ターン 2..T+1 で「前ターンに死があった」と誤判定されて減衰が止まる
+    /// （味方が誰も死んでいないのに層がタダで保つ）。ターン1は counter >= 0 が常に
+    /// 成立してもともと減衰しないので、これは二重減衰の防止ではなく偽の連鎖判定の防止。
+    /// </summary>
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter("necroBonus", 0);
+        ApplyStack(self, self.Counter("necro") - 1);
+        self.SetCounter("lastDeathTurn", 0);
     }
 }
 
