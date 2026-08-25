@@ -91,7 +91,10 @@ BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project Ba
     BattleCore/     戦闘ロジック。net8.0 素のクラスライブラリ。UI を一切参照しない
     BattleSim/      コンソール総当たりシミュレータ（テスト代わり）
     PrototypeApp/   WPF (net8.0-windows)。編成を組んで結果を眺めるだけ
+    GodotApp/       Godot 4 (C#) の戦闘再生装置。sln には入っておらず単独ビルド。
+                    会戦の台本（Events / Openings）を再生するだけで、判定は一切しない
     docs/           BattleSim が吐く生成物（balance.md / units.md）。手で編集しない
+    design/         設計文書（コンセプトメモ・会戦計画）。生成物ではないので手で編集する
 
 - **BattleCore に UI の参照を足さない**。`INotifyPropertyChanged` も `ObservableCollection` も不可。本番を Godot / Unity にする場合にそのまま持っていくため。
 - **PrototypeApp に戦闘ルールを書かない**。ViewModel やコードビハインドにダメージ計算が漏れた瞬間に移植できなくなる。
@@ -116,7 +119,8 @@ BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project Ba
 - **割り込み（庇う・後備え・標的）はすべて `SelectTarget` で働く。主目標を差し替えるだけ**なので、範囲攻撃の巻き込み（`PerformAttack` が個別に `ApplyDamage` する）には触れない。貫きは `ResolvePierce` がレーンを直接走るので標的選択自体を通らない。範囲に対処する駒は damage の層（`ApplyDamage` / `OnDamaged`）に置くこと。範囲かどうかは `source.CurrentPattern != Single` で取れるので引数を増やす必要はない（毒・燃焼は `source` が null なので自然に外れる）。
 - 肩代わり（分かち・巨躯）を `ApplyDamage` に足すときは **`u != source` を必ず入れる**。自分が出どころのダメージまで肩代わりすると打ち消しになる。巨躯で実際に踏んだ（大喰らいの吸いを壁が9割引き受けて、代金が消えていた）。症状は `pulse` の `被(味)` が不自然に小さくなること。
 - 破片（`StatusKeys.Armor`）は HP の前に削られるプール。**回復とは別資源**で、`ctx.Heal` が見る `AcceptsSupport` を通らないので `Stoic`（ガルド）にも届く。「1発を完全に吸う」ではなく超過分を素通りさせるプールにしてあるのは、二値にすると README の浄化と同じ「引き算は崖」の穴に落ちるため。
-- 状態異常は `StatusKeys` のカウンタで持ち、`TickStatuses` がターン開始時にまとめて処理する。新しい状態異常はキーを1つ足して `TickStatuses` に処理を書くだけでよく、特性側は「カウンタを積む」だけになる。
+- 状態異常は `StatusKeys` のカウンタで持ち、`TickStatuses` がターン開始時にまとめて処理する。新しい状態異常はキーを1つ足して `TickStatuses` に処理を書くだけでよく、特性側は「カウンタを積む」だけになる。**キーは `StatusKeys.All` にも必ず足す**（会戦が部隊戦の境界で消す一覧。漏らすとその状態異常だけが会戦を跨ぐ）。
+- 会戦（`Engagement.cs`）は Battle を連結し、勝った側の生存駒を持ち越す。境界で `StatusKeys.All` と `AtkBonus` を一律に消し、持ち越したい状態は各特性の `Trait.OnCarryOver` が再構成する（エンジンはホワイトリストを持たない。`Counters` のキーは特性の私有物）。戦闘中に湧いた駒（胞子）は持ち越さない。判断の全文は design/ENGAGEMENT_PLAN.md。
 - `LivingMembers` は必ずスナップショット（`ToList`）を返す。特性の中から召喚・蘇生が呼ばれるので、遅延評価のままだと列挙中に盤面が変わって落ちる。
 - 特性の発動（`OnAfterAttack`）は攻撃1回につき1度、主目標に対してのみ。範囲攻撃のたびに複数回発動させると範囲パターンの駒が即座に壊れる。
 
