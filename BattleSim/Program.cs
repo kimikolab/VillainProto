@@ -2677,6 +2677,13 @@ if (focusId == "power")
     Console.WriteLine("編成ほど戦闘数が増えるので、seed 数で割ると「長く戦った」だけで値が膨らむ。");
     Console.WriteLine("`撃破/戦` が 0 の編成では `与ダメ効率` が定義できないので `—` を出す。");
     Console.WriteLine();
+    Console.WriteLine("> **毒・燃焼の削りは `与ダメ/戦`・`撃破/戦`・`干渉/戦` のどれにも出ない。**");
+    Console.WriteLine("> `TickStatuses` は `ApplyDamage(u, poison, null)` と source を渡さずに呼ぶので、");
+    Console.WriteLine("> 出どころの駒に与ダメも干渉も撃破も付かない（`ApplyDamage` の `source is not null` 分岐、");
+    Console.WriteLine("> `HandleDeath` の `killer is not null` 分岐）。**毒軸の編成は出力が構造的に過小に出る。**");
+    Console.WriteLine("> これは第12期で見つけた不整合だが、直すと `pulse` の表が動くので触っていない（記録のみ）。");
+    Console.WriteLine("> 残差の上位に毒軸が並ぶのは、その分だけ第一近似が毒軸を低く予測しているため。");
+    Console.WriteLine();
 
     // 主の台の突破度の降順で並べる。序列そのものが読みたいものなので、
     // 表の並びを目的変数に揃えておく（相関の計算順には影響しない）。
@@ -2708,6 +2715,168 @@ if (focusId == "power")
         Console.WriteLine();
         Console.Out.Flush();
     }
+
+    // ================= Phase CB: 分解 =================
+    //
+    // n = 31 しかない。多変量回帰を回すと確実に過学習するので、単相関 → 第一近似 →
+    // 残差 → 残差との相関の1段だけ。多変量は2変数まで（§4-1）。
+    //
+    // **因果は主張しない。** 「総HPが高い編成が強い」は「総HPを上げれば強くなる」を
+    // 意味しない。ここで出るのは相関だけで、推測は推測と書く。
+
+    // 特徴量を1本の並びにまとめる（静的8 + 動的7 = 15）。静的は台に依らないので
+    // どちらの台でも同じ値が入る。
+    int nS = statics.Length, nF = statics.Length + dynNames.Length;
+    string[] featNames = statics.Select(s => s.Name).Concat(dynNames.Select(d => d.Name)).ToArray();
+    bool[] isStatic = Enumerable.Range(0, nF).Select(k => k < nS).ToArray();
+    var feat = new double[nB][][];   // [台][特徴量][編成]
+    for (int b = 0; b < nB; b++)
+    {
+        feat[b] = new double[nF][];
+        for (int k = 0; k < nF; k++)
+            feat[b][k] = Enumerable.Range(0, nT)
+                .Select(t => k < nS ? stat[t][k] : dyn[b][t][k - nS]).ToArray();
+    }
+
+    var ordered = new (int K, double R, double Rho, int N)[nB][];
+
+    for (int b = 0; b < nB; b++)
+    {
+        Console.WriteLine($"## 分解: {benches[b].Tag}の台（{benches[b].Name}）");
+        Console.WriteLine();
+
+        // 目的変数が天井に張り付いていると、そこの編成同士の差が測れない。
+        // 相関を読む前に何編成が飽和しているかを出す（列長ちょうど = 全抜き）。
+        int ceil = Enumerable.Range(0, nT).Count(t => deg[b][t] >= benches[b].Squads.Count - 1e-9);
+        if (ceil > 0)
+        {
+            Console.WriteLine($"> **注意: {ceil} 編成が突破度の天井（{benches[b].Squads.Count}.000 = 全抜き）に"
+                + $"張り付いている。** その {ceil} 編成の間の差はこの台では測れていない——"
+                + "相関の上限がその分だけ下がる。");
+            Console.WriteLine();
+        }
+
+        // --- 1. 単相関の全一覧 ---
+        ordered[b] = Enumerable.Range(0, nF)
+            .Select(k => { var c = Correlate(feat[b][k], deg[b]); return (K: k, c.R, c.Rho, c.N); })
+            .OrderByDescending(x => Math.Abs(x.R)).ToArray();
+
+        Console.WriteLine("### 単相関（全15特徴量 × 突破度。|r| の降順）");
+        Console.WriteLine();
+        Console.WriteLine("`r` はピアソン（突破度は連続量なので生の値で当てる）、`ρ` はスピアマン");
+        Console.WriteLine("（同順位は平均順位。第8期以降の順位相関と同じ計算）。`n` は点の数——");
+        Console.WriteLine("撃破 0 で与ダメ効率が定義できない編成はその行から落ちる。");
+        Console.WriteLine();
+        Console.WriteLine("| 順位 | 区分 | 特徴量 | r | ρ | n |");
+        Console.WriteLine("|--:|:-:|---|--:|--:|--:|");
+        for (int i = 0; i < nF; i++)
+        {
+            var x = ordered[b][i];
+            Console.WriteLine($"| {i + 1} | {(isStatic[x.K] ? "静" : "動")} | {featNames[x.K]} "
+                + $"| {x.R:+0.00;-0.00} | {x.Rho:+0.00;-0.00} | {x.N} |");
+        }
+        Console.WriteLine();
+
+        // --- 2. 第一近似と残差 ---
+        int first = ordered[b][0].K;
+        double[] pred = LinearFit(feat[b][first], deg[b]);
+        double[] resid = Enumerable.Range(0, nT).Select(t => deg[b][t] - pred[t]).ToArray();
+        double r2 = ordered[b][0].R * ordered[b][0].R;
+
+        Console.WriteLine($"### 第一近似 = **{featNames[first]}**（r = {ordered[b][0].R:+0.00;-0.00} / "
+            + $"r² = {r2:F2}。突破度のばらつきの {r2 * 100:F0}% を1変数で説明する）");
+        Console.WriteLine();
+        Console.WriteLine("残差 = 実測の突破度 − この1変数からの線形予測。**残差が大きい編成が、");
+        Console.WriteLine("地力以外の何かを持っている編成**——次に設計する効果の入口はここにある。");
+        Console.WriteLine();
+
+        // --- 3. 残差と他の特徴量の相関（1段だけ） ---
+        var rcors = Enumerable.Range(0, nF).Where(k => k != first)
+            .Select(k => { var c = Correlate(feat[b][k], resid); return (K: k, c.R, c.N); })
+            .OrderByDescending(x => Math.Abs(x.R)).ToArray();
+
+        Console.WriteLine("#### 残差と他の特徴量の相関（1段のみ。|r| の降順・上位8）");
+        Console.WriteLine();
+        Console.WriteLine("| 区分 | 特徴量 | 残差との r |");
+        Console.WriteLine("|:-:|---|--:|");
+        foreach (var x in rcors.Take(8))
+            Console.WriteLine($"| {(isStatic[x.K] ? "静" : "動")} | {featNames[x.K]} | {x.R:+0.00;-0.00} |");
+        Console.WriteLine();
+        Console.WriteLine($"2変数（{featNames[first]} + 残差との相関1位の {featNames[rcors[0].K]}）の R² = "
+            + $"**{R2Two(ordered[b][0].R, Correlate(feat[b][rcors[0].K], deg[b]).R, Correlate(feat[b][first], feat[b][rcors[0].K]).R):F2}**"
+            + $"（1変数の {r2:F2} から）。**3変数以上は n = {nT} では意味を持たないのでやらない。**");
+        Console.WriteLine();
+
+        // --- 4. 残差の上位・下位5編成 ---
+        var byResid = Enumerable.Range(0, nT).Where(t => !double.IsNaN(resid[t]))
+            .OrderByDescending(t => resid[t]).ToArray();
+        Console.WriteLine("#### 残差の上位・下位5編成");
+        Console.WriteLine();
+        Console.WriteLine("| 向き | 編成 | 実測 | 予測 | 残差 |");
+        Console.WriteLine("|---|---|--:|--:|--:|");
+        foreach (int t in byResid.Take(5))
+            Console.WriteLine($"| 予測より**強い** | {targets[t].Name} | {deg[b][t]:F3} | {pred[t]:F3} | {resid[t]:+0.000;-0.000} |");
+        foreach (int t in byResid.Reverse().Take(5))
+            Console.WriteLine($"| 予測より**弱い** | {targets[t].Name} | {deg[b][t]:F3} | {pred[t]:F3} | {resid[t]:+0.000;-0.000} |");
+        Console.WriteLine();
+
+        // --- 5. 静的だけでどこまで説明できるか ---
+        // 「編成を組んだ時点で結果がほぼ決まっている」かどうかは設計上とても重いので、
+        // 動的を混ぜた値とは別に、静的だけの説明力をはっきり出す（§4-2）。
+        var bestS = ordered[b].First(x => isStatic[x.K]);
+        var statPairs = new List<(int A, int B, double R2)>();
+        for (int i = 0; i < nS; i++)
+            for (int j = i + 1; j < nS; j++)
+                statPairs.Add((i, j, R2Two(Correlate(feat[b][i], deg[b]).R,
+                                       Correlate(feat[b][j], deg[b]).R,
+                                       Correlate(feat[b][i], feat[b][j]).R)));
+        var topPairs = statPairs.OrderByDescending(p => p.R2).Take(3).ToArray();
+
+        Console.WriteLine("#### 静的だけの説明力（戦わずにどこまで分かるか）");
+        Console.WriteLine();
+        Console.WriteLine($"- 静的1変数の最良: **{featNames[bestS.K]}** r = {bestS.R:+0.00;-0.00} / r² = {bestS.R * bestS.R:F2}");
+        foreach (var p in topPairs)
+            Console.WriteLine($"- 静的2変数: {featNames[p.A]} + {featNames[p.B]} → R² = **{p.R2:F2}**");
+        Console.WriteLine();
+        Console.WriteLine("**静的だけで 0.8 以上説明できるなら、編成を組んだ時点で結果がほぼ決まっている**");
+        Console.WriteLine("ことになる（§4-2）。良し悪しの評価ではなく、事実としてこの数字を読む。");
+        Console.WriteLine();
+        Console.Out.Flush();
+    }
+
+    // --- 6. 台による違い ---
+    Console.WriteLine("## 台による違い（第一近似は入れ替わるか）");
+    Console.WriteLine();
+    Console.WriteLine("入れ替わるなら、**「地力」は台ごとに違うものを指していた**ことになる（§4-2）。");
+    Console.WriteLine();
+    Console.WriteLine("| 順位 |" + string.Concat(benches.Select(x => $" {x.Tag}: {x.Name} | r |")));
+    Console.WriteLine("|--:|" + string.Concat(benches.Select(_ => "---|--:|")));
+    for (int i = 0; i < 5; i++)
+        Console.WriteLine($"| {i + 1} |" + string.Concat(Enumerable.Range(0, nB)
+            .Select(b => $" {featNames[ordered[b][i].K]} | {ordered[b][i].R:+0.00;-0.00} |")));
+    Console.WriteLine();
+    var degCor = Correlate(deg[0], deg[1]);
+    Console.WriteLine($"**突破度そのものの台間相関: r = {degCor.R:F2} / ρ = {degCor.Rho:F2}**"
+        + "（1.00 に近いほど、台を替えても同じ序列が出てくる = 第4〜11期が当たり続けた壁そのもの）。");
+    Console.WriteLine();
+
+    // --- 7. 与ダメ効率（オーバーキル）の位置 ---
+    // 閾値仮説（「一撃圏を跨ぐかどうかで結果が変わる」）が正しければ、無駄撃ちの指標が
+    // 上位に来るはず。来なければ仮説の側を疑う材料になる（§4-2）。
+    int over = Array.IndexOf(featNames, "与ダメ効率");
+    Console.WriteLine("## 与ダメ効率（オーバーキル）の位置");
+    Console.WriteLine();
+    Console.WriteLine("| 台 | 単相関の順位 | r | ρ |");
+    Console.WriteLine("|---|--:|--:|--:|");
+    for (int b = 0; b < nB; b++)
+    {
+        int pos = Array.FindIndex(ordered[b], x => x.K == over);
+        Console.WriteLine($"| {benches[b].Tag}: {benches[b].Name} | {pos + 1} / {nF} "
+            + $"| {ordered[b][pos].R:+0.00;-0.00} | {ordered[b][pos].Rho:+0.00;-0.00} |");
+    }
+    Console.WriteLine();
+    Console.WriteLine("**閾値仮説が正しければここが上位に来るはず。** 来なければ仮説の再考が要る。");
+    Console.WriteLine();
 
     return;
 }
@@ -3884,6 +4053,50 @@ static double Pearson(double[] a, double[] b)
         cov += da * db; va += da * da; vb += db * db;
     }
     return va == 0 || vb == 0 ? double.NaN : cov / Math.Sqrt(va * vb);
+}
+
+// 特徴量と目的変数の相関（第12期 Phase CB）。ピアソンとスピアマンを両方返す。
+// 目的変数（突破度）は連続量なのでピアソンが素直だが、第8期以降の測定はすべて
+// スピアマンの順位相関で報告されているので、突き合わせられるよう両方出す（§4-3）。
+//
+// 片方が NaN の点は落とす。撃破 0 の編成では与ダメ効率が定義できず、0 で埋めると
+// 「無駄が無い」側に化けて相関を汚す。落とした結果は N で分かるようにする。
+static (double R, double Rho, int N) Correlate(double[] x, double[] y)
+{
+    var px = new List<double>();
+    var py = new List<double>();
+    for (int i = 0; i < x.Length; i++)
+        if (!double.IsNaN(x[i]) && !double.IsNaN(y[i])) { px.Add(x[i]); py.Add(y[i]); }
+    if (px.Count < 3) return (double.NaN, double.NaN, px.Count);
+    double[] ax = px.ToArray(), ay = py.ToArray();
+    return (Pearson(ax, ay), Pearson(AverageRanksDesc(ax), AverageRanksDesc(ay)), px.Count);
+}
+
+// 単回帰の予測値（第12期 Phase CB）。残差 = 実測 − これ。
+// x に NaN が混じる点は予測できないので NaN を返す（残差の順位付けから落ちる）。
+static double[] LinearFit(double[] x, double[] y)
+{
+    var idx = Enumerable.Range(0, x.Length).Where(i => !double.IsNaN(x[i]) && !double.IsNaN(y[i])).ToArray();
+    if (idx.Length < 2) return x.Select(_ => double.NaN).ToArray();
+    double mx = idx.Average(i => x[i]), my = idx.Average(i => y[i]);
+    double sxy = idx.Sum(i => (x[i] - mx) * (y[i] - my));
+    double sxx = idx.Sum(i => (x[i] - mx) * (x[i] - mx));
+    double slope = sxx == 0 ? 0 : sxy / sxx;
+    return x.Select(v => double.IsNaN(v) ? double.NaN : my + slope * (v - mx)).ToArray();
+}
+
+// 2変数の重相関の二乗（第12期 Phase CB）。r1 / r2 は各説明変数と目的変数の相関、
+// r12 は説明変数同士の相関。**2変数で止めるのは n = 31 だから**——3変数以上は
+// 過学習して「説明できた」という数字だけが残る（§4-1）。
+//
+// 説明変数同士がほぼ同一（|r12| ≒ 1）だと分母が 0 に落ちて発散するので、
+// その場合は単変量の良い方を返す（2本目に情報が無いので、それが正しい答えでもある）。
+static double R2Two(double r1, double r2, double r12)
+{
+    if (double.IsNaN(r1) || double.IsNaN(r2) || double.IsNaN(r12)) return double.NaN;
+    double denom = 1 - r12 * r12;
+    if (denom < 1e-9) return Math.Max(r1 * r1, r2 * r2);
+    return Math.Min(1.0, (r1 * r1 + r2 * r2 - 2 * r1 * r2 * r12) / denom);
 }
 
 // 代金の表（編成 × 波）と、波ごとのばらつきの表を吐く。計測値は呼び出し側にも返す
