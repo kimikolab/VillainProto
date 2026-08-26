@@ -27,7 +27,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
     dotnet run --project BattleSim -c Release <n> replay "編成名" <seed>  # 1戦を再生用JSON（台本）で吐く
 
-第4〜12期に足した診断モード。**どれも docs/ には置かない**（標準出力で読むだけ）。
+第4〜13期に足した診断モード。**どれも docs/ には置かない**（標準出力で読むだけ）。
 所要は全編成でおおむね 10〜30秒、`bridge` だけ 30秒前後。
 
     dotnet run --project BattleSim -c Release 0 handoff [絞り込み]  # 会戦の部隊引き継ぎ（第4期 Phase K）
@@ -40,6 +40,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 charge [絞り込み]   # 大技の発火率とチャージ化の前後（第10期 Phase AC）
     dotnet run --project BattleSim -c Release 0 timing [絞り込み]   # 味方の行動パターンの変種（第11期 Phase BC）
     dotnet run --project BattleSim -c Release 0 power [絞り込み]    # 「地力」の分解（第12期 CA/CB・第13期 DA）
+    dotnet run --project BattleSim -c Release 0 bench [絞り込み]    # 台をまたぐ入れ替わりは構造的か（第13期 Phase DB）
     dotnet run --project BattleSim -c Release 0 ptrace [絞り込み]   # 毒の立ち上がり診断
 
 `layout` は「どう置くか」の粗い当たりを付ける道具で、その値で採否を決めてはいけない。
@@ -121,6 +122,17 @@ ablate は1体抜いた勝率差しか見ないので、どちらも「出力で
 対比表に出す（別の実行から引くと、動いたのが定義のせいか実行のせいか決まらない）。
 `干渉/戦` だけは味方側のまま——毒は出どころを持たないので受け手側に対応物が無く、
 毒軸の `干渉/戦` は依然として過小（`docs/pulse.md` も同じ）。
+
+`bench` は**台をまたぐ入れ替わりが構造的か**を判定する（第13期）。台間の相関が 1.00 未満でも、
+乱数のばらつきだけでそうなるので、**「どれくらいなら動いたと言えるか」の基準が先に要る。**
+同じ台を seed で半分に割って（前半後半 / 偶奇の2通り）両半分の相関を取ると、それが
+**同じ条件を2回測ったときの一致度＝測定の信頼性の上限**になる。台間の相関はこれと比べて読む。
+
+台は 2×2 の格子（長さ3/5 × 主構成/従構成）を診断のローカルで組む。主↔従は格子の**対角線**で
+長さと構成が同時に動いているので、そのままでは何が入れ替わりを生んだか分からない。
+
+**長さの辺は「振ったつもり」になりやすい。** 誰も届かない波を足しても測定は1ミリも動かない——
+`4波目に入った試行` の列がそれを検出する（0% に近ければ、その辺は情報を持たない）。
 
 `replay` は戦闘1戦を「台本」（初期盤面＋時間順のイベント列）として JSON で吐く。
 勝率・連鎖深度が数字で答えてくれない「畳みかけて見えるか」を目で確かめるための道具で、
