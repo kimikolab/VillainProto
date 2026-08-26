@@ -1,4 +1,4 @@
-namespace BattleCore;
+﻿namespace BattleCore;
 
 public enum TraitId
 {
@@ -263,7 +263,29 @@ public sealed class DrainTrait : Trait
     }
 }
 
-/// <summary>のろま。奇数ターンしか動かない。</summary>
+/// <summary>
+/// のろま。奇数ターンしか動かない。
+///
+/// **却下: <c>Actions = [Attack, Charge]</c> への移行（第11期 Phase BA）。**
+/// 見た目は溜めそのものだが、仕組みでは表現できないと分かったので特性のまま残す。
+/// 位相自体は合っている（<c>[Attack, Charge]</c> で T1 に振る。逆順ではない）が、
+/// 溜めと のろま は**別の意味**で、次の2つが同時にずれる。
+///
+/// 1. <b>ターンを差し出すかどうか。</b> のろまは <see cref="Trait.SurrendersTurn"/> が真
+///    ——毎ターン実際にターンを失うので、号令（ガン）と据え（バン）が買い取る。
+///    <see cref="ActionKind.Charge"/> は逆に <c>IdleTurn</c> を立てない（第10期 AA。
+///    溜めは「行動できない」ではなく「構造的に行動しない」）。移すとこの収入が消え、
+///    溜め (ガン×ドルガ×カド) が 第3波 99.0→98.0 / 第4波 99.5→99.0 / 第5波 40.5→37.5。
+/// 2. <b>周期の進み方。</b> のろまは <c>ctx.Turn</c> の偶奇（絶対時刻）で決まるが、
+///    <see cref="UnitState.ActionIndex"/> は手番が回ってきたときにしか進まない
+///    （第10期 AA。溜めの途中で痺れても続きから再開する）。縛め（クグ）に縛られると
+///    のろまは振る番を失うのに、Actions は振る番を取っておく。1 を潰しても
+///    溜め改 (クグ×バン×ガン) だけは残り、むしろ広がった（第3波 85.5→88.5 / 第5波 27.0→29.5）。
+///
+/// 差分ゼロにするには <see cref="UnitAction"/> にフラグが2つ要る。1つの特性のために
+/// 第10期 AA の設計判断をユニット単位で覆すことになるので、**移さないほうを採った。**
+/// のろま＝無力化、溜め＝構造的不行動。似ているのは形だけで、中身は反対のもの。
+/// </summary>
 public sealed class SluggishTrait : Trait
 {
     public override TraitId Id => TraitId.Sluggish;
