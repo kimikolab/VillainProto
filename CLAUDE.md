@@ -38,6 +38,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 bridge [絞り込み]   # 向きは序列を動かすか（第7期 Phase S〜第10期）
     dotnet run --project BattleSim -c Release 0 bill [絞り込み]     # 代金を 敵由来/自傷/回復/残差 に割る（第9期 Phase X）
     dotnet run --project BattleSim -c Release 0 charge [絞り込み]   # 大技の発火率とチャージ化の前後（第10期 Phase AC）
+    dotnet run --project BattleSim -c Release 0 timing [絞り込み]   # 味方の行動パターンの変種（第11期 Phase BC）
     dotnet run --project BattleSim -c Release 0 ptrace [絞り込み]   # 毒の立ち上がり診断
 
 `layout` は「どう置くか」の粗い当たりを付ける道具で、その値で採否を決めてはいけない。
@@ -91,6 +92,15 @@ ablate は1体抜いた勝率差しか見ないので、どちらも「出力で
 決着し、波がただ半額になる」だから。代金や突破度より前に、**実際に何回発火したか**を確かめる。
 この診断が使う台（`ChargeBench`）は測定台 113% とは別物——**測定台には全体持ちも貫き持ちも
 1体もいない**ので、あの上で測るとチャージ化の前後で数字が1つも動かない。
+
+`timing` は**味方側**の行動パターンの変種を測る（第11期）。`charge` が敵の周期を前後で比べるのに対し、
+こちらは同じ敵に対して**味方の周期だけ**を差し替える。変種は `UnitCatalog` を書き換えずに
+診断のローカルで組む（`gradient` / `aim` と同じやり方）ので、`UnitCatalog` は基準の形のまま。
+台は2種（チャージ台と既存5波）で、片方だけでは第8期の「136% で測ると何も見えない」に嵌まる。
+
+**この診断の要は V1 と V3 の対照。** 周期が同じ（隔ターン）で位相だけ逆なので、
+「何回撃ったか」と「いつ撃ったか」を分けて読める。片方だけ（V0/V1/V2）だと、
+周期を伸ばしたときに落ちたのが回数のせいか位相のせいかが決まらない。
 
 `replay` は戦闘1戦を「台本」（初期盤面＋時間順のイベント列）として JSON で吐く。
 勝率・連鎖深度が数字で答えてくれない「畳みかけて見えるか」を目で確かめるための道具で、
