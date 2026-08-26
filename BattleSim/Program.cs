@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 
 // 総当たりシミュレータ。WPF を通さず戦闘ロジックだけを叩く。
 // 手動プレイでは見つからない「強すぎる組み合わせ」と「死に駒」を機械的に洗い出す。
@@ -2642,9 +2642,12 @@ if (focusId == "dump")
     // 空欄——味方は全員そちらなので、この表の見た目は第9期までと変わらない。
     static string Acts(UnitDef u) => u.Actions is null
         ? ""
-        : string.Join(" → ", u.Actions.Select(a => a.Kind == ActionKind.Charge
-            ? (a.Label ?? "溜め")
-            : a.AttackPercent == 100 ? "攻撃" : $"攻撃×{a.AttackPercent}%"));
+        : string.Join(" → ", u.Actions.Select(a => a.Kind switch
+        {
+            ActionKind.Charge => a.Label ?? "溜め",
+            ActionKind.Skill => a.Label ?? "術",
+            _ => a.AttackPercent == 100 ? "攻撃" : $"攻撃×{a.AttackPercent}%"
+        }));
 
     Console.WriteLine("| 名前 | HP | 攻 | 速 | 型 | 行動 | プラス | マイナス | 由来 |");
     Console.WriteLine("|---|---:|---:|---:|---|---|---|---|---|");

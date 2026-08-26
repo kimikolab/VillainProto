@@ -1,4 +1,4 @@
-namespace BattleCore;
+﻿namespace BattleCore;
 
 /// <summary>
 /// 戦闘中の盤面。特性はこれを通してのみ盤面に触る。
@@ -322,6 +322,20 @@ public sealed class BattleContext
             Text = charging.Label,
             Amount = next?.AttackPercent ?? 100,
             Pattern = next?.PatternOverride ?? actor.CurrentPattern,
+        });
+
+    /// <summary>
+    /// 術の手番を台本に打つ。効果そのもの（回復・毒の濃縮）は各特性が自分のイベントを
+    /// 出すので、ここは「誰がその手番に何を撃ったか」だけを置く。
+    /// **空振りでも必ず打つ**（理由は <see cref="BattleEventKind.Skill"/>）。
+    /// </summary>
+    internal void EmitSkill(UnitState actor, UnitAction skill)
+        => Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Skill,
+            Turn = _turn,
+            ActorId = actor.InstanceId,
+            Text = skill.Label,
         });
 
     /// <summary>
@@ -1078,6 +1092,22 @@ public static class BattleEngine
                     ctx.EmitCharge(actor, act, actor.CurrentAction);
                     ctx.TallyOf(actor).Charges++;
                     ctx.Log($"  {actor.Name} は{act.Label ?? "力を溜めている"}", LogKind.Status);
+                    continue;
+                }
+
+                if (act.Kind == ActionKind.Skill)
+                {
+                    // **攻撃を消費する。** 攻撃もして効果も出すなら、いつ撃つかに意味は出ない
+                    // （OnTurnStart を別の場所へ書き写しただけになる。第11期 Phase BB）。
+                    //
+                    // IdleTurn は立てない。振ってはいないが手番は使っているので、
+                    // 号令・据えが買い取る「差し出したターン」ではない（溜めと同じ扱い）。
+                    // 先にイベントとログを置いてから効果を流す。特性側のログが下に入って、
+                    // 台本でも「撃った → 何が起きた」の順に読める。
+                    ctx.EmitSkill(actor, act);
+                    ctx.Log($"  {actor.Name} は{act.Label ?? "術を使った"}", LogKind.Action);
+                    foreach (Trait t in actor.Traits.ToList())
+                        t.OnAction(ctx, actor, act);
                     continue;
                 }
 

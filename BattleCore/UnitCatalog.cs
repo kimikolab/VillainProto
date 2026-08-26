@@ -1,4 +1,4 @@
-namespace BattleCore;
+﻿namespace BattleCore;
 
 /// <summary>
 /// 主人公に押し付けられた「使えない」駒たち。
@@ -184,8 +184,11 @@ public static class UnitCatalog
         Attack = 3,
         Speed = 6,
         Traits = new[] { TraitId.Mender },
+        // 繕いを手番の行動そのものにする（第11期 Phase BB）。攻撃3 は出なくなる。
+        // [Skill] 1つだけの周期で移すのは、挙動の差を「攻撃が出ない」だけに絞るため。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "傷を繕っている") },
         PlusText = "毎ターン、最も傷ついた味方を繕う",
-        MinusText = "繕った分だけ自分が減る。支える相手が多いほど早く尽きる",
+        MinusText = "繕った分だけ自分が減る。攻撃はしない（繕いが手番そのもの）",
         Flavor = "自分の身を削ることをやめられず、隊の資産を食い潰した。"
     };
 
@@ -197,8 +200,10 @@ public static class UnitCatalog
         Attack = 2,
         Speed = 8,
         Traits = new[] { TraitId.Amplifier },
+        // 濃縮を手番の行動そのものにする（第11期 Phase BB）。攻撃2 は出なくなる。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "水を濁らせている") },
         PlusText = "毎ターン、敵に積まれた毒を濃くする（+4層）",
-        MinusText = "毒が積まれていなければ完全に無意味",
+        MinusText = "毒が積まれていなければ完全に無意味。攻撃はしない",
         Flavor = "水を濁らせることしかできない。それ単体では兵器にならない。"
     };
 

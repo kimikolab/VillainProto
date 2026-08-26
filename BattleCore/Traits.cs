@@ -67,6 +67,34 @@ public abstract class Trait
 
     public virtual void OnBattleStart(BattleContext ctx, UnitState self) { }
     public virtual void OnTurnStart(BattleContext ctx, UnitState self) { }
+
+    /// <summary>
+    /// 手番の <see cref="ActionKind.Skill"/> で呼ばれる。
+    ///
+    /// <see cref="OnTurnStart"/>（ターン頭に全員ぶん・毎ターン無条件）と違い、
+    /// **行動パターンに載った駒だけが、載せたタイミングで**実行する。しかもその手番は
+    /// 攻撃に使えない。「いつ撃つか」を選べるのはこちらだけで、あちらは選択肢を持たない。
+    ///
+    /// 発火が遅くなることに注意。ターン頭ではなく素早さ順の自分の番なので、
+    /// 自分より速い味方が殴られた後になる（第11期 Phase BB。意図した仕様変更）。
+    /// </summary>
+    public virtual void OnAction(BattleContext ctx, UnitState self, UnitAction action) { }
+
+    /// <summary>
+    /// この駒が特性を<b>手番の行動として</b>撃つか（行動パターンに
+    /// <see cref="ActionKind.Skill"/> を載せているか）。
+    ///
+    /// 能動的な特性を <see cref="OnTurnStart"/> から <see cref="OnAction"/> へ移すときの
+    /// 分岐に使う。**同じ特性を持つ駒を全部まとめて移すことはできない**——継ぎ当て（Mender）は
+    /// 味方のノノと敵の従軍司祭長が共有していて、司祭長は行動パターンを持たない。
+    /// 無条件に移すと司祭長の回復だけが静かに消える（gradient / aim の候補波 3b がそれを踏んだ）。
+    ///
+    /// 移行が終わっていない駒はターン頭の無条件発火のまま、載せた駒だけが手番で撃つ。
+    /// アクティブ/パッシブの全面分離が済めばこの分岐は要らなくなる（第11期の残件）。
+    /// </summary>
+    protected static bool ActsOnPattern(UnitState self)
+        => self.Def.Actions is { } acts && acts.Any(a => a.Kind == ActionKind.Skill);
+
     /// <summary>自分のターンに動くか。false は「自分からは動かない」という設計であって、無力化とは限らない。</summary>
     public virtual bool CanAct(BattleContext ctx, UnitState self) => true;
 
@@ -824,7 +852,19 @@ public sealed class MenderTrait : Trait
 
     public override TraitId Id => TraitId.Mender;
 
+    // 手番の行動として撃つ（第11期 Phase BB）。ターン頭の無条件発火から移したので、
+    // ノノ（速さ6）より速い味方が殴られた**後**に繕いが入る。痺れ・縛めで手番を
+    // 失えばその周期の繕いも出ない。どちらも意図した仕様変更。
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Mend(ctx, self);
+
+    // 行動パターンを持たない保持者（敵の従軍司祭長）は従来どおりターン頭に繕う。
+    // 理由は Trait.ActsOnPattern を参照。
     public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Mend(ctx, self);
+    }
+
+    private static void Mend(BattleContext ctx, UnitState self)
     {
         if (!self.IsAlive || self.Hp <= 1) return;
 
@@ -848,7 +888,19 @@ public sealed class AmplifierTrait : Trait
 
     public override TraitId Id => TraitId.Amplifier;
 
+    // 手番の行動として撃つ（第11期 Phase BB）。毒の判定（TickStatuses）との前後は
+    // 変わらない——tick はターン頭、濃縮はその後ろ、という関係は移す前と同じ。
+    // 変わるのは**同じターンに味方が積んだ毒まで拾えるようになる**ことで、
+    // 毒のダメージがターンごとずれるわけではない。
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Thicken(ctx, self);
+
+    // 保持者はいま澱みのミオだけだが、Mender と同じ形に揃えておく（Trait.ActsOnPattern）。
     public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Thicken(ctx, self);
+    }
+
+    private static void Thicken(BattleContext ctx, UnitState self)
     {
         foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
         {

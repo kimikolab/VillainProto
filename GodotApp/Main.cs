@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using BattleCore;
 using System;
 using System.Collections.Generic;
@@ -58,6 +58,8 @@ public partial class Main : Control
         [BattleEventKind.Summon] = 0.46, [BattleEventKind.Revive] = 0.52,
         // 溜めは「何も起きないターン」なので、間を長めに取らないと予告として読めない。
         [BattleEventKind.Charge] = 0.70,
+        // 術は直後に効果のイベントが続くので、溜めほど間を取らない。
+        [BattleEventKind.Skill] = 0.34,
     };
 
     // ---- 見るための編成 -------------------------------------------------
@@ -762,6 +764,7 @@ public partial class Main : Control
             BattleEventKind.Charge =>
                 $"{N(e.ActorId)} は{e.Text ?? "力を溜めている"}"
                 + $"（次: {PatternLabel(e.Pattern ?? AttackPattern.Single)} ×{e.Amount}%）",
+            BattleEventKind.Skill => $"{N(e.ActorId)} は{e.Text ?? "術を使った"}",
             _ => e.Kind.ToString(),
         };
     }

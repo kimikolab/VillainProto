@@ -1,4 +1,4 @@
-namespace BattleCore;
+﻿namespace BattleCore;
 
 /// <summary>列。前ほど狙われやすく、後ろは前が生きている間は狙われにくい。</summary>
 public enum Row
@@ -40,7 +40,16 @@ public enum ActionKind
     /// <summary>攻撃する。倍率と攻撃型の上書きが乗る。</summary>
     Attack,
     /// <summary>溜める。攻撃せず、周期だけ進める。次の手番に大技が来る。</summary>
-    Charge
+    Charge,
+
+    /// <summary>
+    /// 術を使う。攻撃せず、<see cref="Trait.OnAction"/> を持つ特性がその場で効果を出す。
+    ///
+    /// **手番を消費するのが要点。** 攻撃もして効果も出すなら、いつ撃つかに意味は出ない
+    /// ——それは <c>OnTurnStart</c>（毎ターン無条件）をただ別の場所へ書き写しただけになる。
+    /// 「回復と攻撃のどちらを取るか」があって初めてタイミングが選択になる。
+    /// </summary>
+    Skill
 }
 
 /// <summary>
@@ -52,7 +61,7 @@ public enum ActionKind
 /// 整数演算で一貫して書かれているため。ここに double を1本だけ通すと、
 /// 丸めの規則がこの1箇所だけ違うものになる。
 /// </summary>
-/// <param name="Kind">攻撃するのか溜めるのか。</param>
+/// <param name="Kind">攻撃するのか、溜めるのか、術を使うのか。</param>
 /// <param name="AttackPercent">攻撃力の倍率（百分率）。100 なら素の値をそのまま使う。</param>
 /// <param name="PatternOverride">この手番だけ攻撃型を差し替える。null なら CurrentPattern。</param>
 /// <param name="Label">ログと台本に出す名前（「魔力集中」など）。</param>
@@ -450,7 +459,17 @@ public enum BattleEventKind
     /// 素の値だけ見せると盤面で何が起きているか読めない。
     /// <see cref="StatusSnapshot"/> と同じ理由で、ターン頭に1回だけ写す。
     /// </summary>
-    StatSnapshot
+    StatSnapshot,
+
+    /// <summary>
+    /// 術を使った（<see cref="ActionKind.Skill"/>）。攻撃していないので Attack とは別。
+    ///
+    /// 効果そのもの（回復・毒の濃縮）は各特性が自分のイベントを出すので、こちらは
+    /// 「誰がその手番に何を撃ったか」だけを持つ。**空振りした手番（繕う相手がいない・
+    /// 毒が積まれていない）はこの1件しか残らない**が、残らないと画面上は手番を飛ばした
+    /// のと区別が付かない。溜めと同じ理由で、条件を付けずに必ず打つ。
+    /// </summary>
+    Skill
 }
 
 /// <summary>
