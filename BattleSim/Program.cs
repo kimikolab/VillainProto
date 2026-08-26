@@ -2594,12 +2594,18 @@ if (focusId == "power")
 
     // 動的特徴量。**既存の UnitTally だけで足りることを確認した**（§3-2。足りなければ
     // 足す前に報告する、が指示だった）。既存の出力には列を増やしていない。
+    //
+    // 第13期 Phase DA で `与ダメ/戦`・`撃破/戦`・`与ダメ効率` の3つを**受け手側**へ移した。
+    // 残る4つは味方側のままでよい——`被ダメ/戦`・`回復/戦`・`自傷率` はそもそも
+    // 味方が受け手なので穴が無く、`干渉/戦` は「誰が起点になったか」を数える量なので
+    // 受け手側に対応物が無い（毒は出どころを持たないので、干渉は依然として過小のまま。
+    // これは診断の限界として残る）。
     var dynNames = new (string Name, string Def)[]
     {
-        ("与ダメ/戦",  "DamageToEnemy の編成合計 ÷ 部隊戦数"),
+        ("与ダメ/戦",  "**敵**の DamageTaken 合計 − 敵の TakenFromAlly ÷ 部隊戦数（受け手側。過剰殺傷を含む）"),
         ("被ダメ/戦",  "DamageTaken の合計 ÷ 部隊戦数"),
-        ("撃破/戦",    "Kills の合計 ÷ 部隊戦数"),
-        ("干渉/戦",    "Interventions の合計 ÷ 部隊戦数（**活動量の本体**）"),
+        ("撃破/戦",    "**敵の死亡数** ÷ 部隊戦数（誰が仕留めたかを問わない）"),
+        ("干渉/戦",    "Interventions の合計 ÷ 部隊戦数（**活動量の本体**。味方側のまま）"),
         ("回復/戦",    "Healed の合計 ÷ 部隊戦数"),
         ("自傷率",     "TakenFromAlly ÷ DamageTaken（第9期の定義そのまま）"),
         ("与ダメ効率", "与ダメ ÷ 撃破数。**オーバーキルの指標**（大きいほど1体を落とすのに無駄が多い）"),
@@ -2619,15 +2625,22 @@ if (focusId == "power")
     int nB = benches.Length;
     var deg = new double[nB][];
     var dyn = new double[nB][][];   // [台][編成][特徴量]
+    var leg = new double[nB][][];   // [台][編成][旧定義3種]。第12期との対比だけが読む
+    long foeFromAlly = 0;           // 敵同士の巻き込み。0 のはず（第13期 §3-1）
+    int deathGaps = 0;              // 敵が DamageTaken を経由せずに死んだ疑いの件数
     for (int b = 0; b < nB; b++)
     {
         deg[b] = new double[nT];
         dyn[b] = new double[nT][];
+        leg[b] = new double[nT][];
         for (int t = 0; t < nT; t++)
         {
             var m = MeasurePower(targets[t].F, benches[b].Squads, PowerSeeds);
             deg[b][t] = m.Degree;
             dyn[b][t] = m.Dynamics;
+            leg[b][t] = m.Legacy;
+            foeFromAlly += m.FoeTakenFromAlly;
+            deathGaps += m.DeathGaps;
         }
     }
     var stat = new double[nT][];
@@ -2663,6 +2676,16 @@ if (focusId == "power")
                             : $" ← **混入している**: {string.Join(" / ", clash.Take(5))}"));
     Console.WriteLine($"- **突破度（列長1）: |LastBattleAttrition − FirstBattleAttrition| の最大 = {maxGap:F6}**"
         + $"（{nT} 編成 × seed 0..19。0 でなければ分母がずれている）");
+    // 受け手側から測るための2つの前提（第13期 §3-1・§6）。どちらも「0 のはず」で、
+    // 0 でなければ方法のほうが間違っている。
+    Console.WriteLine($"- **敵の TakenFromAlly の総和: {foeFromAlly}**"
+        + (foeFromAlly == 0
+            ? "（0 = 敵側に巻き込みが無い。与ダメから引いた量も 0）"
+            : " ← **敵同士の巻き込みがある。** 与ダメからこの量を引いている"));
+    Console.WriteLine($"- **勝った部隊戦で敵の死亡数が投入数と合わなかった件数: {deathGaps}**"
+        + (deathGaps == 0
+            ? "（0 = 敵は必ず `DamageTaken` を経由して死んでいる）"
+            : " ← **`DamageTaken` を経由しない死亡経路がある。受け手側の撃破は信用できない**"));
     Console.WriteLine();
 
     // --- 特徴量の定義 ---
@@ -2677,12 +2700,16 @@ if (focusId == "power")
     Console.WriteLine("編成ほど戦闘数が増えるので、seed 数で割ると「長く戦った」だけで値が膨らむ。");
     Console.WriteLine("`撃破/戦` が 0 の編成では `与ダメ効率` が定義できないので `—` を出す。");
     Console.WriteLine();
-    Console.WriteLine("> **毒・燃焼の削りは `与ダメ/戦`・`撃破/戦`・`干渉/戦` のどれにも出ない。**");
+    Console.WriteLine("> **`与ダメ/戦` と `撃破/戦` は受け手側（敵の tally）から取っている**（第13期 Phase DA）。");
     Console.WriteLine("> `TickStatuses` は `ApplyDamage(u, poison, null)` と source を渡さずに呼ぶので、");
-    Console.WriteLine("> 出どころの駒に与ダメも干渉も撃破も付かない（`ApplyDamage` の `source is not null` 分岐、");
-    Console.WriteLine("> `HandleDeath` の `killer is not null` 分岐）。**毒軸の編成は出力が構造的に過小に出る。**");
-    Console.WriteLine("> これは第12期で見つけた不整合だが、直すと `pulse` の表が動くので触っていない（記録のみ）。");
-    Console.WriteLine("> 残差の上位に毒軸が並ぶのは、その分だけ第一近似が毒軸を低く予測しているため。");
+    Console.WriteLine("> 毒・燃焼の削りは出どころの駒の `DamageToEnemy` にも `Kills` にも載らない");
+    Console.WriteLine("> （`ApplyDamage` の `source is not null` 分岐、`HandleDeath` の `killer is not null` 分岐）。");
+    Console.WriteLine("> 第12期はこれを味方側から合計していたので、**毒軸の編成の出力が構造的に過小に出ていた。**");
+    Console.WriteLine("> どの経路で削っても敵の `DamageTaken` には必ず載るので、敵側から数えれば穴が塞がる。");
+    Console.WriteLine("> **`BattleCore` は1行も触っていない**——エンジンではなく読み方を変えただけ。");
+    Console.WriteLine(">");
+    Console.WriteLine("> **`干渉/戦` は味方側のまま**（毒は出どころを持たないので受け手側に対応物が無い）。");
+    Console.WriteLine("> 毒軸の編成の `干渉/戦` は依然として過小で、`docs/pulse.md` の毒軸の行も同じく過小のまま。");
     Console.WriteLine();
 
     // 主の台の突破度の降順で並べる。序列そのものが読みたいものなので、
@@ -2738,6 +2765,24 @@ if (focusId == "power")
                 .Select(t => k < nS ? stat[t][k] : dyn[b][t][k - nS]).ToArray();
     }
 
+    // 旧定義（第12期・味方側）の特徴量行列。**差し替えた3つだけを入れ替えた写し**で、
+    // 残る12個には同じ値が入る（したがって突破度との r も動かない。動くのは順位のほうで、
+    // それ自体が「何が第一近似になるか」の答えを変える）。
+    // 同じ実行・同じ seed から作っているので、新旧の差は定義の差だけになる。
+    int[] swapped = { 0, 2, 6 };   // dynNames 内の位置。Legacy の並びは 与ダメ・撃破・効率
+    var featOld = new double[nB][][];
+    for (int b = 0; b < nB; b++)
+    {
+        featOld[b] = new double[nF][];
+        for (int k = 0; k < nF; k++)
+        {
+            int sw = k < nS ? -1 : Array.IndexOf(swapped, k - nS);
+            featOld[b][k] = sw >= 0
+                ? Enumerable.Range(0, nT).Select(t => leg[b][t][sw]).ToArray()
+                : feat[b][k];
+        }
+    }
+
     var ordered = new (int K, double R, double Rho, int N)[nB][];
 
     for (int b = 0; b < nB; b++)
@@ -2774,6 +2819,54 @@ if (focusId == "power")
             var x = ordered[b][i];
             Console.WriteLine($"| {i + 1} | {(isStatic[x.K] ? "静" : "動")} | {featNames[x.K]} "
                 + $"| {x.R:+0.00;-0.00} | {x.Rho:+0.00;-0.00} | {x.N} |");
+        }
+        Console.WriteLine();
+
+        // --- 1b. 第12期（味方側）との対比 ---
+        // 指示は「第12期の値と並べて、どれがどれだけ動いたかを出す」（§3-3）。
+        // 別の実行から数字を引いてくると、動いたのが定義のせいか実行のせいかが決まらないので、
+        // 同じ実行の中で旧定義も計算して並べる。
+        var orderedOld = Enumerable.Range(0, nF)
+            .Select(k => { var c = Correlate(featOld[b][k], deg[b]); return (K: k, c.R, c.Rho, c.N); })
+            .OrderByDescending(x => Math.Abs(x.R)).ToArray();
+
+        Console.WriteLine("#### 第12期（味方側）との対比 — 単相関はどう動いたか");
+        Console.WriteLine();
+        Console.WriteLine("**値が動くのは受け手側へ移した3つだけ**（`与ダメ/戦`・`撃破/戦`・`与ダメ効率`）。");
+        Console.WriteLine("残る12個は同じ値・同じ r で、**順位だけがその3つに押されて動く**。");
+        Console.WriteLine("突破度は新旧で完全に同じ（測り方を変えただけで盤面は動かない）。");
+        Console.WriteLine();
+        Console.WriteLine("| 区分 | 特徴量 | 旧 r | 旧順位 | 新 r | 新順位 | Δr | 順位の動き |");
+        Console.WriteLine("|:-:|---|--:|--:|--:|--:|--:|--:|");
+        for (int i = 0; i < nF; i++)
+        {
+            var x = ordered[b][i];
+            int oldPos = Array.FindIndex(orderedOld, y => y.K == x.K);
+            double dr = x.R - orderedOld[oldPos].R;
+            int move = oldPos - i;   // 正なら順位が上がった
+            Console.WriteLine($"| {(isStatic[x.K] ? "静" : "動")} | {featNames[x.K]} "
+                + $"| {orderedOld[oldPos].R:+0.00;-0.00} | {oldPos + 1} "
+                + $"| {x.R:+0.00;-0.00} | {i + 1} | {dr:+0.00;-0.00} "
+                + $"| {(move == 0 ? "—" : $"{move:+0;-0}")} |");
+        }
+        Console.WriteLine();
+
+        // 値そのものの動き。相関の変化だけだと「どの編成が過小だったのか」が見えない——
+        // 穴が毒軸に集中していたという主張は、ここの倍率で確かめる。
+        Console.WriteLine("#### 受け手側へ移して値がどう動いたか（倍率の降順）");
+        Console.WriteLine();
+        Console.WriteLine("`旧` は味方の `DamageToEnemy` / `Kills` の合計、`新` は敵の `DamageTaken`（− 敵の");
+        Console.WriteLine("`TakenFromAlly`）/ 敵の死亡数。**差はそのまま「帰属を持たない削り」の量**");
+        Console.WriteLine("（毒・燃焼、および胞子のように編成の定義に無い駒が通した削り）。");
+        Console.WriteLine();
+        Console.WriteLine("| 編成 | 与ダメ 旧 | 与ダメ 新 | 倍率 | 撃破 旧 | 撃破 新 | 倍率 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|");
+        foreach (int t in Enumerable.Range(0, nT)
+                     .OrderByDescending(t => leg[b][t][0] == 0 ? double.PositiveInfinity : dyn[b][t][0] / leg[b][t][0]))
+        {
+            string Ratio(double n, double o) => o == 0 ? "—" : $"×{n / o:F2}";
+            Console.WriteLine($"| {targets[t].Name} | {leg[b][t][0]:F0} | {dyn[b][t][0]:F0} | {Ratio(dyn[b][t][0], leg[b][t][0])} "
+                + $"| {leg[b][t][1]:F2} | {dyn[b][t][2]:F2} | {Ratio(dyn[b][t][2], leg[b][t][1])} |");
         }
         Console.WriteLine();
 
@@ -3937,53 +4030,111 @@ static (double Lost, double Enemy, double Ally, double Heal, double Residual, do
             reached, wonFirst, wonFirst == 0 ? 0 : firstWinCost / wonFirst);
 }
 
-// 編成の動的特徴量（第12期 Phase CA）。味方1部隊で列を1回走らせ、突破度と
-// UnitTally の集計を返す。**新しい tally フィールドは足していない**（§3-2）。
+// 編成の動的特徴量（第12期 Phase CA。第13期 Phase DA で与ダメ・撃破の出どころを差し替え）。
+// 味方1部隊で列を1回走らせ、突破度と UnitTally の集計を返す。
+// **新しい tally フィールドは足していない**（第12期 §3-2 / 第13期 §3-1）。
 //
-// tally は Def.Id で引くので味方の Def.Id だけを拾う（MeasureBill と同じ作法。
-// 胞子のような湧いた駒は編成の定義に無いので自然に外れる）。敵との Id 衝突は
-// 呼び出し側が検算する——power はそれを実際に数えて出す。
+// **与ダメと撃破は受け手側＝敵の tally から取る。** TickStatuses は
+// `ApplyDamage(u, poison, null)` と source を渡さずに呼ぶので、毒・燃焼の削りは
+// 出どころの駒の `DamageToEnemy` にも `Kills` にも載らない。味方側から合計すると
+// 毒軸の編成の出力が構造的に過小に出る（第12期で見つけた穴）。どの経路で削っても
+// 敵の `DamageTaken` には必ず載るので、敵側から数えれば帰属を持たない削りも拾える。
+//
+//     与ダメ = 敵全員の DamageTaken − 敵の TakenFromAlly
+//     撃破   = 敵の死亡数（誰が仕留めたかを問わない）
+//
+// `TakenFromAlly` を引くのは敵同士の巻き込みを編成の手柄にしないため。**引いた量は
+// 呼び出し側に返して報告する**（0 なら敵側に巻き込みが無いことの確認になる）。
+//
+// **どちらも振り切った量・回数を数える**（過剰殺傷を含む）。HP は 0 で止まるが tally は
+// 超過分も数える（第9期 bill の残差分析で確認済み）。味方側の `DamageToEnemy` も
+// `ApplyDamage` の同じ行で同じ `amount` を足しているので、**過剰分の扱いは新旧で変わらない**
+// ——`与ダメ効率 = 与ダメ ÷ 撃破数` はオーバーキルの指標なので、過剰分が入っているほうが正しい。
+//
+// 却下した案: 毒の出どころを `UnitState` / `StatusKeys` に持たせて駒単位の帰属を復元する。
+// 「部隊で協力して撒いて拡散して濃くする」がコンセプトなので駒単位の帰属は粒度が細かすぎるうえ、
+// `BattleCore` に触ることになる（第13期 §2「やらないこと」）。編成単位で足りる。
+//
+// 味方側の値（旧定義）も同時に返す。第12期の数字と**同じ seed・同じ実行の中で**
+// 並べられるようにするため（別の実行から引いてくると、動いたのが定義のせいか実行のせいかが
+// 決まらない）。
+//
+// tally は Def.Id で引く。味方は編成の Def.Id、敵は列の Def.Id で拾う——胞子のような
+// 湧いた駒はどちらの集合にも無いので、味方側の集計からは自然に外れる。ただし
+// **胞子が敵に通した削りは敵の `DamageTaken` に載るので、受け手側の与ダメには入る。**
+// 編成が盤面に出した出力の総量としてはそのほうが正しい（新旧で意味が変わる点）。
+// 味方と敵の Def.Id 衝突は呼び出し側が検算する——power はそれを実際に数えて出す。
 //
 // 分母は seed 数ではなく**部隊戦の数**。会戦は深く抜いた編成ほど Battle が増えるので、
 // seed 数で割ると「長く戦った」ぶんだけ値が膨らみ、突破度と機械的に相関してしまう
 // （地力の第一近似を探す診断でそれをやると、測りたいものの写しが特徴量側に入る）。
-static (double Degree, double[] Dynamics) MeasurePower(
-    Formation f, IReadOnlyList<Formation> column, int seeds)
+//
+// 突破度は seed ごとの生値も返す。第13期 Phase DB の半割（seed を2つに分けて同じ台を
+// 2回測る）が、同じ計測を2度走らせずに済むようにするため。
+static (double Degree, double[] PerSeed, double[] Dynamics, double[] Legacy,
+        long FoeTakenFromAlly, int DeathGaps)
+    MeasurePower(Formation f, IReadOnlyList<Formation> column, int seeds)
 {
     var ids = f.Occupied().Select(x => x.Def.Id).ToHashSet();
-    double deg = 0;
+    var foeIds = column.SelectMany(s => s.Occupied()).Select(x => x.Def.Id).ToHashSet();
+    var perSeed = new double[seeds];
     long battles = 0;
     long dmgOut = 0, dmgIn = 0, fromAlly = 0, kills = 0, acts = 0, heal = 0;
+    long foeTaken = 0, foeFromAlly = 0, foeDeaths = 0;
+    int deathGaps = 0;
 
     for (int seed = 0; seed < seeds; seed++)
     {
         EngagementResult r = EngagementEngine.Run(new[] { f }, column, seed, verbose: false);
-        deg += BreakthroughDegree(r, column.Count);
-        foreach (BattleResult b in r.Battles)
+        perSeed[seed] = BreakthroughDegree(r, column.Count);
+        for (int i = 0; i < r.Battles.Count; i++)
         {
+            BattleResult b = r.Battles[i];
             battles++;
+            long deathsHere = 0;
             foreach ((string id, UnitTally t) in b.TallyByUnit)
             {
-                if (!ids.Contains(id)) continue;
-                dmgOut += t.DamageToEnemy;
-                dmgIn += t.DamageTaken;
-                fromAlly += t.TakenFromAlly;
-                kills += t.Kills;
-                acts += t.Interventions;
-                heal += t.Healed;
+                if (ids.Contains(id))
+                {
+                    dmgOut += t.DamageToEnemy;
+                    dmgIn += t.DamageTaken;
+                    fromAlly += t.TakenFromAlly;
+                    kills += t.Kills;
+                    acts += t.Interventions;
+                    heal += t.Healed;
+                }
+                else if (foeIds.Contains(id))
+                {
+                    foeTaken += t.DamageTaken;
+                    foeFromAlly += t.TakenFromAlly;
+                    foeDeaths += t.Deaths;
+                    deathsHere += t.Deaths;
+                }
             }
+            // 勝った部隊戦では敵は全滅している。死亡数が投入した敵駒の数と合わなければ、
+            // **`DamageTaken` を経由せずに死ぬ経路がある**ことになる（第13期 §6 の停止条件）。
+            // 味方1部隊なので負けた時点で会戦が終わり、勝った戦の敵部隊は必ず新品
+            // （敵の持ち越しは起きない）——期待値は部隊の定義上の駒数でよい。
+            if (b.PlayerWon && deathsHere != column[r.Pairings[i].EnemySquad].Occupied().Count())
+                deathGaps++;
         }
     }
 
     double Per(long v) => battles == 0 ? 0 : (double)v / battles;
-    return (deg / seeds, new[]
+    long foeDmg = foeTaken - foeFromAlly;
+    return (perSeed.Average(), perSeed, new[]
     {
-        Per(dmgOut), Per(dmgIn), Per(kills), Per(acts), Per(heal),
+        Per(foeDmg), Per(dmgIn), Per(foeDeaths), Per(acts), Per(heal),
         dmgIn == 0 ? 0 : (double)fromAlly / dmgIn,
         // 撃破 0 の編成では与ダメ効率が定義できない。0 で埋めると「無駄が無い」側に
         // 化けて相関を汚すので NaN を返し、相関の側で点ごと落とす。
+        foeDeaths == 0 ? double.NaN : (double)foeDmg / foeDeaths,
+    }, new[]
+    {
+        // 旧定義（味方側）。対比表だけが読む。並びは 与ダメ/戦・撃破/戦・与ダメ効率。
+        Per(dmgOut), Per(kills),
         kills == 0 ? double.NaN : (double)dmgOut / kills,
-    });
+    }, foeFromAlly, deathGaps);
 }
 
 // Actions だけを剥がした複製。charge 診断が「溜めない同じ敵」を同じ実行の中で

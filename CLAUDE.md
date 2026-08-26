@@ -39,7 +39,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 bill [絞り込み]     # 代金を 敵由来/自傷/回復/残差 に割る（第9期 Phase X）
     dotnet run --project BattleSim -c Release 0 charge [絞り込み]   # 大技の発火率とチャージ化の前後（第10期 Phase AC）
     dotnet run --project BattleSim -c Release 0 timing [絞り込み]   # 味方の行動パターンの変種（第11期 Phase BC）
-    dotnet run --project BattleSim -c Release 0 power [絞り込み]    # 「地力」の分解（第12期 Phase CA/CB）
+    dotnet run --project BattleSim -c Release 0 power [絞り込み]    # 「地力」の分解（第12期 CA/CB・第13期 DA）
     dotnet run --project BattleSim -c Release 0 ptrace [絞り込み]   # 毒の立ち上がり診断
 
 `layout` は「どう置くか」の粗い当たりを付ける道具で、その値で採否を決めてはいけない。
@@ -112,6 +112,15 @@ ablate は1体抜いた勝率差しか見ないので、どちらも「出力で
 **この診断は何も直さない。純粋な測定で、盤面は1つも動かない。** n=31 しかないので多変量は2変数まで
 （3変数以上は過学習）。相関は因果ではない——「総HPが高い編成が強い」は「総HPを上げれば強くなる」を
 意味しない。読み方は README「地力の分解」を見ること。
+
+**与ダメと撃破は受け手側（敵の tally）から取る**（第13期 Phase DA）。`TickStatuses` は
+`ApplyDamage(u, poison, null)` と source を渡さないので、毒・燃焼の削りは出どころの駒の
+`DamageToEnemy` にも `Kills` にも載らない——味方側から合計すると毒軸の編成の出力が構造的に
+過小になる。どの経路で削っても敵の `DamageTaken` には必ず載るので、敵側から数えれば穴が塞がる。
+**エンジンは触らない。読み方を変えるだけで済む。** 第12期の味方側の値も同じ実行の中で計算して
+対比表に出す（別の実行から引くと、動いたのが定義のせいか実行のせいか決まらない）。
+`干渉/戦` だけは味方側のまま——毒は出どころを持たないので受け手側に対応物が無く、
+毒軸の `干渉/戦` は依然として過小（`docs/pulse.md` も同じ）。
 
 `replay` は戦闘1戦を「台本」（初期盤面＋時間順のイベント列）として JSON で吐く。
 勝率・連鎖深度が数字で答えてくれない「畳みかけて見えるか」を目で確かめるための道具で、
