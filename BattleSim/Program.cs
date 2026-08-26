@@ -2523,6 +2523,195 @@ if (focusId == "timing")
     return;
 }
 
+// power モード: 編成の「地力」を分解する（第12期 Phase CA）。
+//
+// 第4〜11期はどれも「地力とは別の2本目の軸」を探して失敗した——部隊列の順序・攻撃パターンの
+// 向き・自傷率・敵のチャージ・味方スキルのタイミング。**何を作っても編成の序列が同じ順位で
+// 出てくる**（順位相関 0.83〜1.00）。支配的な次元が1本あることは分かっている。
+//
+// ところがその1本を一度も測っていない。総HPなのか、総攻撃力なのか、その積なのか、
+// 特定の駒の存在なのか、盤面配置なのか——分からないまま2本目を探しても、
+// **何に対して直交させたいのかが決められない。**
+//
+// ここは純粋な測定で、数値も特性もパターンも一切変えない。編成ごとに
+//   静的（Formation / UnitDef から計算できる。戦わなくても分かる）8種
+//   動的（UnitTally から。既存フィールドだけで足りる）7種
+// を出す。目的変数は突破度（第8期 Phase U）。
+//
+// 台は2種。主 = チャージ台（bridge の7列目 = ChargeBench。第10期 AB-0）、
+// 従 = 既存5波（順路）。第8期の「136% で測ると何も見えない」が効くので、片方だけでは
+// 判定できない——主で出た第一近似が従で入れ替わるなら、「地力」は台ごとに違うものを
+// 指していたことになる。
+//
+// 却下した案: 多変量回帰で一気に説明する。n = 31 しかないので3変数以上は確実に過学習する
+// （§4-1）。単相関 → 第一近似 → 残差 → 残差との相関の1段だけ、多変量は2変数まで。
+// 却下した案: 目的変数を勝率にする。2部隊だと突破率が飽和して序列が潰れるのと同じ理由で、
+// 勝率は上下端に張り付いて特徴量との差を吸収する（第5期の持ち越し論点(2)）。
+//
+// 診断用で docs/ には置かない（seats / bill / charge / timing と同じ扱い）。
+//
+//     dotnet run --project BattleSim -c Release 0 power [絞り込み]
+if (focusId == "power")
+{
+    const int PowerSeeds = 200;   // bridge / bill / charge / timing と同じ
+    var all = CompareBuilds();
+
+    string filter = args.Length > 2 ? args[2] : "";
+    var targets = all
+        .Where(b => filter.Length == 0 || filter.Split(',').Any(k => b.Name.Contains(k.Trim())))
+        .ToArray();
+    int nT = targets.Length;
+
+    // 台。列は Name で引く（Columns の並び順は GodotApp の EngagementColumn が使うので
+    // 当てにしない。engage / seats と同じ作法）。
+    var benches = new (string Tag, string Name, string Note, IReadOnlyList<Formation> Squads)[]
+    {
+        ("主", "チャージ台", "bridge の7列目。3波・合計代金 116.6%・突破率(1) 39.1%", ChargeBench()),
+        ("従", "既存5波", "順路。第1期からの基準列", EnemyCatalog.Columns.First(c => c.Name == "順路").Squads),
+    };
+
+    // 静的特徴量。**定義値だけから取る**——会戦中の目減り（継ぎ接ぎの最大HP半減）は
+    // 動的側の話で、ここに混ぜると「戦わずに分かる量」でなくなる（§3-2）。
+    var statics = new (string Name, string Def, Func<Formation, double> Get)[]
+    {
+        ("体数",     "編成の駒数（4 or 5）",
+            f => f.Count),
+        ("総HP",     "Def.MaxHp の合計",
+            f => f.Occupied().Sum(x => x.Def.MaxHp)),
+        ("総攻",     "Def.Attack の合計",
+            f => f.Occupied().Sum(x => x.Def.Attack)),
+        ("積",       "総HP × 総攻",
+            f => (double)f.Occupied().Sum(x => x.Def.MaxHp) * f.Occupied().Sum(x => x.Def.Attack)),
+        ("最薄HP",   "編成中いちばん低い Def.MaxHp。閾値仮説の候補",
+            f => f.Occupied().Min(x => x.Def.MaxHp)),
+        ("後列HP",   "後列（slot 4/5）の Def.MaxHp 合計",
+            f => f.Occupied().Where(x => FormationRules.RowOf(x.Slot) == Row.Back).Sum(x => x.Def.MaxHp)),
+        ("平均速度", "Def.Speed の平均",
+            f => f.Occupied().Average(x => x.Def.Speed)),
+        ("範囲枚数", "Def.Pattern が薙ぎ/全体の駒数（AoeCount。cost 以来ずっと同じ区分）",
+            f => AoeCount(f)),
+    };
+
+    // 動的特徴量。**既存の UnitTally だけで足りることを確認した**（§3-2。足りなければ
+    // 足す前に報告する、が指示だった）。既存の出力には列を増やしていない。
+    var dynNames = new (string Name, string Def)[]
+    {
+        ("与ダメ/戦",  "DamageToEnemy の編成合計 ÷ 部隊戦数"),
+        ("被ダメ/戦",  "DamageTaken の合計 ÷ 部隊戦数"),
+        ("撃破/戦",    "Kills の合計 ÷ 部隊戦数"),
+        ("干渉/戦",    "Interventions の合計 ÷ 部隊戦数（**活動量の本体**）"),
+        ("回復/戦",    "Healed の合計 ÷ 部隊戦数"),
+        ("自傷率",     "TakenFromAlly ÷ DamageTaken（第9期の定義そのまま）"),
+        ("与ダメ効率", "与ダメ ÷ 撃破数。**オーバーキルの指標**（大きいほど1体を落とすのに無駄が多い）"),
+    };
+
+    Console.WriteLine($"# 地力の分解（seed 0..{PowerSeeds - 1} の {PowerSeeds} 試行）");
+    Console.WriteLine();
+    Console.WriteLine("編成ごとの特徴量と突破度を並べたもの。**測定だけで、盤面は何も変えていない。**");
+    Console.WriteLine("突破度は突破した部隊数 + 最後に負けた部隊戦での削り割合（0.0 〜 列長。第8期 Phase U）。");
+    Console.WriteLine("投入部隊数は 1——2部隊だと突破率が飽和して序列が潰れる。");
+    Console.WriteLine();
+    foreach (var (tag, name, note, squads) in benches)
+        Console.WriteLine($"- **{tag}: {name}**（{squads.Count}波）: {note}");
+    Console.WriteLine();
+
+    // --- 計測 ---
+    int nB = benches.Length;
+    var deg = new double[nB][];
+    var dyn = new double[nB][][];   // [台][編成][特徴量]
+    for (int b = 0; b < nB; b++)
+    {
+        deg[b] = new double[nT];
+        dyn[b] = new double[nT][];
+        for (int t = 0; t < nT; t++)
+        {
+            var m = MeasurePower(targets[t].F, benches[b].Squads, PowerSeeds);
+            deg[b][t] = m.Degree;
+            dyn[b][t] = m.Dynamics;
+        }
+    }
+    var stat = new double[nT][];
+    for (int t = 0; t < nT; t++)
+        stat[t] = statics.Select(s => s.Get(targets[t].F)).ToArray();
+
+    // --- 検算 ---
+    // (1) tally は Def.Id で引くので、味方と敵で Id が衝突していると敵の被弾が
+    //     味方の動的特徴量に混ざる（MeasureBill の注記と同じ穴。あちらは「呼び出し側が
+    //     検算する」と書いてあるだけだったので、ここで実際に検算する）。
+    var clash = new List<string>();
+    foreach (var (_, bench, _, squads) in benches)
+    {
+        var foeIds = squads.SelectMany(s => s.Occupied()).Select(x => x.Def.Id).ToHashSet();
+        foreach (var (name, f) in targets)
+            foreach (string id in f.Occupied().Select(x => x.Def.Id).Where(foeIds.Contains))
+                clash.Add($"{bench} × {name}: {id}");
+    }
+    // (2) 列長1では最終戦＝初戦なので突破度の2つの削り割合が一致するはず（第8期 §2-3）。
+    double maxGap = 0;
+    Formation lastWave = benches[0].Squads[^1];
+    for (int t = 0; t < nT; t++)
+        for (int seed = 0; seed < 20; seed++)
+        {
+            EngagementResult r = EngagementEngine.Run(new[] { targets[t].F }, new[] { lastWave }, seed, verbose: false);
+            maxGap = Math.Max(maxGap, Math.Abs(r.LastBattleAttrition - r.FirstBattleAttrition));
+        }
+
+    Console.WriteLine("### 検算");
+    Console.WriteLine();
+    Console.WriteLine($"- **味方と敵の Def.Id の衝突: {clash.Count} 件**"
+        + (clash.Count == 0 ? "（0 でなければ動的特徴量に敵の数字が混ざっている）"
+                            : $" ← **混入している**: {string.Join(" / ", clash.Take(5))}"));
+    Console.WriteLine($"- **突破度（列長1）: |LastBattleAttrition − FirstBattleAttrition| の最大 = {maxGap:F6}**"
+        + $"（{nT} 編成 × seed 0..19。0 でなければ分母がずれている）");
+    Console.WriteLine();
+
+    // --- 特徴量の定義 ---
+    Console.WriteLine("### 特徴量の定義");
+    Console.WriteLine();
+    Console.WriteLine("| 区分 | 特徴量 | 定義 |");
+    Console.WriteLine("|---|---|---|");
+    foreach (var (name, def, _) in statics) Console.WriteLine($"| 静的 | {name} | {def} |");
+    foreach (var (name, def) in dynNames) Console.WriteLine($"| 動的 | {name} | {def} |");
+    Console.WriteLine();
+    Console.WriteLine("動的の分母「戦」は**部隊戦の数**（会戦の中の Battle の総数）。会戦は深く抜いた");
+    Console.WriteLine("編成ほど戦闘数が増えるので、seed 数で割ると「長く戦った」だけで値が膨らむ。");
+    Console.WriteLine("`撃破/戦` が 0 の編成では `与ダメ効率` が定義できないので `—` を出す。");
+    Console.WriteLine();
+
+    // 主の台の突破度の降順で並べる。序列そのものが読みたいものなので、
+    // 表の並びを目的変数に揃えておく（相関の計算順には影響しない）。
+    int[] order = Enumerable.Range(0, nT).OrderByDescending(t => deg[0][t]).ToArray();
+
+    Console.WriteLine("### 静的特徴量（戦わなくても分かる量。台に依らない）");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 |" + string.Concat(statics.Select(s => $" {s.Name} |")));
+    Console.WriteLine("|---|" + string.Concat(statics.Select(_ => "--:|")));
+    foreach (int t in order)
+        Console.WriteLine($"| {targets[t].Name} |"
+            + $" {stat[t][0]:F0} | {stat[t][1]:F0} | {stat[t][2]:F0} | {stat[t][3]:F0} |"
+            + $" {stat[t][4]:F0} | {stat[t][5]:F0} | {stat[t][6]:F1} | {stat[t][7]:F0} |");
+    Console.WriteLine();
+
+    for (int b = 0; b < nB; b++)
+    {
+        Console.WriteLine($"### {benches[b].Tag}の台（{benches[b].Name}・列長 {benches[b].Squads.Count}）: 突破度と動的特徴量");
+        Console.WriteLine();
+        Console.WriteLine("| 編成 | 突破度 |" + string.Concat(dynNames.Select(d => $" {d.Name} |")));
+        Console.WriteLine("|---|--:|" + string.Concat(dynNames.Select(_ => "--:|")));
+        foreach (int t in order)
+        {
+            double[] d = dyn[b][t];
+            Console.WriteLine($"| {targets[t].Name} | {deg[b][t]:F3} |"
+                + $" {d[0]:F0} | {d[1]:F0} | {d[2]:F2} | {d[3]:F2} | {d[4]:F0} |"
+                + $" {d[5] * 100:F1}% | {(double.IsNaN(d[6]) ? "—" : $"{d[6]:F1}")} |");
+        }
+        Console.WriteLine();
+        Console.Out.Flush();
+    }
+
+    return;
+}
+
 if (focusId == "chain")
 {
     var builds = CompareBuilds();
@@ -3577,6 +3766,55 @@ static (double Lost, double Enemy, double Ally, double Heal, double Residual, do
             Enumerable.Range(0, n).Select(b => reached[b] == 0 ? 0 : allyB[b] * 100.0 / (reached[b] * (double)defTotal)).ToArray(),
             Enumerable.Range(0, n).Select(b => reached[b] == 0 ? 0 : enemyB[b] * 100.0 / (reached[b] * (double)defTotal)).ToArray(),
             reached, wonFirst, wonFirst == 0 ? 0 : firstWinCost / wonFirst);
+}
+
+// 編成の動的特徴量（第12期 Phase CA）。味方1部隊で列を1回走らせ、突破度と
+// UnitTally の集計を返す。**新しい tally フィールドは足していない**（§3-2）。
+//
+// tally は Def.Id で引くので味方の Def.Id だけを拾う（MeasureBill と同じ作法。
+// 胞子のような湧いた駒は編成の定義に無いので自然に外れる）。敵との Id 衝突は
+// 呼び出し側が検算する——power はそれを実際に数えて出す。
+//
+// 分母は seed 数ではなく**部隊戦の数**。会戦は深く抜いた編成ほど Battle が増えるので、
+// seed 数で割ると「長く戦った」ぶんだけ値が膨らみ、突破度と機械的に相関してしまう
+// （地力の第一近似を探す診断でそれをやると、測りたいものの写しが特徴量側に入る）。
+static (double Degree, double[] Dynamics) MeasurePower(
+    Formation f, IReadOnlyList<Formation> column, int seeds)
+{
+    var ids = f.Occupied().Select(x => x.Def.Id).ToHashSet();
+    double deg = 0;
+    long battles = 0;
+    long dmgOut = 0, dmgIn = 0, fromAlly = 0, kills = 0, acts = 0, heal = 0;
+
+    for (int seed = 0; seed < seeds; seed++)
+    {
+        EngagementResult r = EngagementEngine.Run(new[] { f }, column, seed, verbose: false);
+        deg += BreakthroughDegree(r, column.Count);
+        foreach (BattleResult b in r.Battles)
+        {
+            battles++;
+            foreach ((string id, UnitTally t) in b.TallyByUnit)
+            {
+                if (!ids.Contains(id)) continue;
+                dmgOut += t.DamageToEnemy;
+                dmgIn += t.DamageTaken;
+                fromAlly += t.TakenFromAlly;
+                kills += t.Kills;
+                acts += t.Interventions;
+                heal += t.Healed;
+            }
+        }
+    }
+
+    double Per(long v) => battles == 0 ? 0 : (double)v / battles;
+    return (deg / seeds, new[]
+    {
+        Per(dmgOut), Per(dmgIn), Per(kills), Per(acts), Per(heal),
+        dmgIn == 0 ? 0 : (double)fromAlly / dmgIn,
+        // 撃破 0 の編成では与ダメ効率が定義できない。0 で埋めると「無駄が無い」側に
+        // 化けて相関を汚すので NaN を返し、相関の側で点ごと落とす。
+        kills == 0 ? double.NaN : (double)dmgOut / kills,
+    });
 }
 
 // Actions だけを剥がした複製。charge 診断が「溜めない同じ敵」を同じ実行の中で

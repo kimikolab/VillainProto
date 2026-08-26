@@ -27,7 +27,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
     dotnet run --project BattleSim -c Release <n> replay "編成名" <seed>  # 1戦を再生用JSON（台本）で吐く
 
-第4〜10期に足した診断モード。**どれも docs/ には置かない**（標準出力で読むだけ）。
+第4〜12期に足した診断モード。**どれも docs/ には置かない**（標準出力で読むだけ）。
 所要は全編成でおおむね 10〜30秒、`bridge` だけ 30秒前後。
 
     dotnet run --project BattleSim -c Release 0 handoff [絞り込み]  # 会戦の部隊引き継ぎ（第4期 Phase K）
@@ -39,6 +39,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 bill [絞り込み]     # 代金を 敵由来/自傷/回復/残差 に割る（第9期 Phase X）
     dotnet run --project BattleSim -c Release 0 charge [絞り込み]   # 大技の発火率とチャージ化の前後（第10期 Phase AC）
     dotnet run --project BattleSim -c Release 0 timing [絞り込み]   # 味方の行動パターンの変種（第11期 Phase BC）
+    dotnet run --project BattleSim -c Release 0 power [絞り込み]    # 「地力」の分解（第12期 Phase CA/CB）
     dotnet run --project BattleSim -c Release 0 ptrace [絞り込み]   # 毒の立ち上がり診断
 
 `layout` は「どう置くか」の粗い当たりを付ける道具で、その値で採否を決めてはいけない。
@@ -101,6 +102,16 @@ ablate は1体抜いた勝率差しか見ないので、どちらも「出力で
 **この診断の要は V1 と V3 の対照。** 周期が同じ（隔ターン）で位相だけ逆なので、
 「何回撃ったか」と「いつ撃ったか」を分けて読める。片方だけ（V0/V1/V2）だと、
 周期を伸ばしたときに落ちたのが回数のせいか位相のせいかが決まらない。
+
+`power` は編成の**「地力」の中身**を測る（第12期）。第4〜11期の測定は、何を作っても編成の序列が
+同じ順位で出てくる壁に当たり続けた（順位相関 0.83〜1.00）。支配的な次元が1本あるのは分かっていたが、
+**その1本を一度も測っていなかった。** 編成ごとに静的8種（体数・総HP・総攻・積・最薄HP・後列HP・
+平均速度・範囲枚数。戦わなくても分かる）と動的7種（`UnitTally` から。新しいフィールドは足していない）を
+出し、突破度との単相関で並べる。台は `timing` と同じ2種。
+
+**この診断は何も直さない。純粋な測定で、盤面は1つも動かない。** n=31 しかないので多変量は2変数まで
+（3変数以上は過学習）。相関は因果ではない——「総HPが高い編成が強い」は「総HPを上げれば強くなる」を
+意味しない。読み方は README「地力の分解」を見ること。
 
 `replay` は戦闘1戦を「台本」（初期盤面＋時間順のイベント列）として JSON で吐く。
 勝率・連鎖深度が数字で答えてくれない「畳みかけて見えるか」を目で確かめるための道具で、
