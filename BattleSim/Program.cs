@@ -5529,6 +5529,527 @@ if (focusId == "dissect")
     return;
 }
 
+// output モード: 編成の「出力の実体」を、目的変数から独立に測る（第17期 Phase HA/HB）。
+//
+// 第16期の最後に障害が1本に絞られた。**`総攻` が反撃軸・毒軸の出力を桁で外している**
+// （溜め改は S4 で打点の 78% が手番外＝カドの反撃から出て、毒軸は `総攻` 20〜22 で
+// 毎ターン 45〜127 を削っている）。第12期以来ずっと使ってきた**編成側の唯一の出力特徴量**が、
+// このゲームの主要な出力経路（反撃・毒・破裂・反射）をまるごと取りこぼしていた。
+//
+// **循環に注意。** 目的変数（波ごとの勝率）と同じ戦闘から出力を取ると、第14期の同語反復と
+// 同じ問題になる——敵を削り切ることが勝ちなので、その戦闘での与ダメは勝率の言い換え。
+// したがって **固定の参照台で1回だけ測り、その値を全波に対する特徴量として使う。**
+//
+// 却下した案: `power` の動的特徴量（`与ダメ/戦`）をそのまま使う。あれは目的変数と同じ戦闘から
+// 取っているので、波ごとの勝率に当てた瞬間に循環する（第15期 §9-1 が `与ダメ/戦` を分子経路
+// として外したのと同じ理由）。**参照台が要るのは、この循環を切るため。**
+//
+// 却下した案: 参照台を `WaveCatalog()` の波から選ぶ。候補波は「代金の帯」や「体数 × 個体HP の
+// 格子」を狙って作った的で、**中立ではない**（その波の性格が特徴量に混入する）。
+// 単一の def を並べただけの的を別に組む。**新しい `UnitDef` は作らない**（計画書 §2）。
+//
+// 診断用で docs/ には置かない（wave / power / bench / dissect と同じ扱い）。
+//
+//     dotnet run --project BattleSim -c Release 0 output [絞り込み]
+if (focusId == "output")
+{
+    const int OutSeeds = 200;   // wave / dissect / compare / power / bench と同じ
+
+    var all = CompareBuilds();
+    string filter = args.Length > 2 ? args[2] : "";
+    var targets = all
+        .Where(b => filter.Length == 0 || filter.Split(',').Any(k => b.Name.Contains(k.Trim())))
+        .ToArray();
+    int nT = targets.Length;
+
+    // 表示桁でゼロに丸まる負の値を `-+0.0` と出さないための丸め（`dissect` と同じ理由）。
+    double Sg(double v, int dp) => double.IsNaN(v) ? v : Math.Round(v, dp) + 0.0;
+
+    Console.WriteLine("# 出力の実体を測る — 参照台と出力特徴量（第17期）");
+    Console.WriteLine();
+    Console.WriteLine("第16期で障害が1本に絞られた。**`総攻` が反撃軸・毒軸の出力を桁で外している**");
+    Console.WriteLine("——溜め改は S4 で打点の 78% が手番外（カドの反撃）から出て、毒軸は `総攻` 20〜22 で");
+    Console.WriteLine("毎ターン 45〜127 を削っている。第12期以来ずっと使ってきた**編成側の唯一の出力特徴量**が、");
+    Console.WriteLine("このゲームの主要な出力経路（反撃・毒・破裂・反射）をまるごと取りこぼしていた。");
+    Console.WriteLine();
+    Console.WriteLine("**測定だけで、盤面は1つも動かしていない**（`BattleCore` 無変更・`EnemyCatalog` 無変更）。");
+    Console.WriteLine();
+
+    // ================= Phase HA: 参照台 =================
+    //
+    // 要件は3つ（計画書 §3-1）。
+    //   1. 全編成が同じ条件で殴れること
+    //   2. 決着しないこと、または十分長いこと（**甲乙の分割そのものが時間の話**なので、
+    //      出力が育つ時間を確保しないと甲群の値が取れない）
+    //   3. 中立であること（波の性質が特徴量に混入しない）
+    //
+    // **ここが設計の核心。** 「殴られること」で出力する編成があるので、殴り返さない的では
+    // 反撃・被弾強化の出力が 0 になる。かといって殴り返しが強すぎると味方が先に落ちて
+    // 時間が取れない。**硬くて攻撃力が低い的**を、既存の def から選ぶ。
+    Console.WriteLine("## 1. 参照台の要件");
+    Console.WriteLine();
+    Console.WriteLine("参照台は**編成の出力を測るための的**であって、勝敗を測る場ではない。");
+    Console.WriteLine();
+    Console.WriteLine("| # | 要件 | なぜ |");
+    Console.WriteLine("|--:|---|---|");
+    Console.WriteLine("| 1 | 全編成が同じ条件で殴れる | 特定の編成だけが有利／不利にならない |");
+    Console.WriteLine("| 2 | 決着しない、または十分長い | **甲乙の分割そのものが時間の話**。早く倒すと「出力が時間で育つ」甲群の値が取れない |");
+    Console.WriteLine("| 3 | 中立 | 波の性質が特徴量に混入しない |");
+    Console.WriteLine();
+    Console.WriteLine("**要件2と「殴り返し」は綱引きになる。** 殴り返さない的では被弾駆動の出力");
+    Console.WriteLine("（反撃・被弾強化・自傷）が 0 になり、甲群の出力がまるごと消える。かといって");
+    Console.WriteLine("殴り返しが強すぎると味方が先に落ちて時間が取れない。**硬くて攻撃力が低い的**が要る。");
+    Console.WriteLine();
+    Console.WriteLine("台は**単一の def を並べただけ**にする。混成にすると「どの駒に当たったか」で");
+    Console.WriteLine("編成ごとに条件が変わり、要件1が崩れる。**新しい `UnitDef` は作らない**");
+    Console.WriteLine("（計画書 §2「やらないこと」）ので、既存の `EnemyCatalog` から選ぶ。");
+    Console.WriteLine();
+
+    // 候補は 2 家族 × 3 刻みの格子。**片方の家族だけだと、決着しなかった理由が
+    // 「硬いから」か「殴ってこないから」か決まらない。**
+    //   巡礼 / 荷駄 / 従卒 は 個体HP 90 × 6 体で固定し、**1体あたり攻だけ**を 4 → 7 → 10 と振る
+    //   重装 3 / 4 / 6 は 個体HP 145 で固定し、**体数だけ**を振る
+    Formation Stack(UnitDef d, int n)
+    {
+        var f = new Formation();
+        for (int i = 0; i < n; i++) f[i] = d;   // スロット昇順（前1→前2→前3→中→後1→後2）
+        return f;
+    }
+    var cands = new (string Tag, string Name, string Family, Formation F)[]
+    {
+        ("B1", "巡礼6",  "個体90固定・攻を振る", Stack(EnemyCatalog.ZealotPilgrim, 6)),
+        ("B2", "荷駄6",  "個体90固定・攻を振る", Stack(EnemyCatalog.ZealotPorter, 6)),
+        ("B3", "従卒6",  "個体90固定・攻を振る", Stack(EnemyCatalog.ZealotSquire, 6)),
+        ("B4", "重装3",  "個体145固定・体数を振る", Stack(EnemyCatalog.Warden, 3)),
+        ("B5", "重装4",  "個体145固定・体数を振る", Stack(EnemyCatalog.Warden, 4)),
+        ("B6", "重装6",  "個体145固定・体数を振る", Stack(EnemyCatalog.Warden, 6)),
+    };
+    int nB = cands.Length;
+
+    Console.WriteLine("## 2. 候補の下見");
+    Console.WriteLine();
+    Console.WriteLine("候補は **2 家族 × 3 刻み**。片方の家族だけだと、決着しなかった理由が");
+    Console.WriteLine("「硬いから」か「殴ってこないから」か決まらない。");
+    Console.WriteLine();
+    Console.WriteLine("- **個体90 固定・攻を振る**（巡礼 / 荷駄 / 従卒 × 6体）— 1体あたり攻 4 → 7 → 10");
+    Console.WriteLine("- **個体145 固定・体数を振る**（重装 × 3 / 4 / 6体）— 総HP 435 → 580 → 870");
+    Console.WriteLine();
+    Console.WriteLine("どれも**単体攻撃のみ・特性なし**（薙ぎ・貫き・全体・処刑を持つ def は外した）。");
+    Console.WriteLine("攻撃型が入ると、範囲耐性・後列配置といった**編成側の性質と噛み合ってしまう**");
+    Console.WriteLine("——要件1（全編成が同じ条件で殴れる）が崩れる。");
+    Console.WriteLine();
+    Console.WriteLine("| 台 | 中身 | 家族 | 体数 | 総HP | 総攻 | 個体HP | 1体攻 | 速度 |");
+    Console.WriteLine("|:-:|---|---|--:|--:|--:|--:|--:|--:|");
+    foreach (var (tag, name, fam, bf) in cands)
+        Console.WriteLine($"| **{tag}** | {name} | {fam} | {bf.Count} "
+            + $"| {bf.Occupied().Sum(x => x.Def.MaxHp)} | {bf.Occupied().Sum(x => x.Def.Attack)} "
+            + $"| {bf.Occupied().Max(x => x.Def.MaxHp)} | {bf.Occupied().Average(x => x.Def.Attack):F0} "
+            + $"| {bf.Occupied().Average(x => x.Def.Speed):F0} |");
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 計測 ---
+    // seed ごとの打点・ターン数・T1..T5 の累積を丸ごと持つ。半割は同じ計測から取り出すだけで済む
+    // （2回走らせると、半割の値そのものに実行間のばらつきが乗る。`bench` と同じ作法）。
+    var tr = new OutputTrace[nB][];
+    for (int b = 0; b < nB; b++)
+    {
+        tr[b] = new OutputTrace[nT];
+        for (int t = 0; t < nT; t++) tr[b][t] = MeasureOutput(targets[t].F, cands[b].F, OutSeeds);
+        Console.Out.Flush();
+    }
+
+    // --- 検算 ---
+    //
+    // (1) イベントから数えた打点と、敵の tally から数えた打点（第13期の受け手側測定）が一致するか。
+    //     ずれたら、どちらかが取りこぼしている。
+    // (2) 敵同士の巻き込みが 0 であること（受け手側から与ダメを取るための前提。第13期 §3-1）。
+    // (3) 味方と敵の Def.Id が衝突していないこと（power / wave と同じ穴）。
+    Console.WriteLine("### 2-1. 検算");
+    Console.WriteLine();
+    double maxGap = 0;
+    long totalFromAlly = 0;
+    for (int b = 0; b < nB; b++)
+        for (int t = 0; t < nT; t++)
+        {
+            maxGap = Math.Max(maxGap, Math.Abs(tr[b][t].Damage.Sum() - tr[b][t].TallyDamage));
+            totalFromAlly += tr[b][t].FoeFromAlly;
+        }
+    var clash = targets.SelectMany(x => x.F.Occupied().Select(y => y.Def.Id))
+        .Intersect(cands.SelectMany(c => c.F.Occupied().Select(y => y.Def.Id))).ToArray();
+    Console.WriteLine($"- **イベント集計と敵 tally の差**: 最大 {maxGap:F0}（{nB * nT} 組）。"
+        + "**0 でなければ、どちらかが打点を取りこぼしている**");
+    Console.WriteLine($"- **敵同士の巻き込み（`TakenFromAlly`）**: {totalFromAlly}。"
+        + "0 でなければ受け手側から与ダメを取る前提が崩れる");
+    Console.WriteLine($"- **味方と敵の `Def.Id` 衝突**: {clash.Length} 件"
+        + (clash.Length == 0 ? "" : $"（{string.Join(" / ", clash)}）"));
+    Console.WriteLine();
+    Console.WriteLine("イベント側は `Damage` イベントを直接足している（`Status` の量は**適用前の値**なので、");
+    Console.WriteLine("破片で吸われたぶん・非致死で丸めたぶんが実際の削りと食い違う。`dissect` の `毒燃/戦` は");
+    Console.WriteLine("`Status` から取っているので、あちらとは数字が微妙に違う——**こちらが実測**）。");
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 2-2. 要件を満たしているか ---
+    //
+    // 計画書 §6-7 の停止条件そのもの。**決着してしまい甲群の時間が取れないなら、
+    // 台の硬さを上げる前に何ターンで決着したかを報告する。**
+    Console.WriteLine("### 2-2. 要件を満たしているか（全編成の平均。計画書 §6-7 の停止条件）");
+    Console.WriteLine();
+    Console.WriteLine("| 量 | 読み方 |");
+    Console.WriteLine("|---|---|");
+    Console.WriteLine("| `決着T` | 全試行の平均ターン数。**30.0 なら誰も削り切れていない**（要件2 が最も強く成立） |");
+    Console.WriteLine("| `T5未満%` | ターン数が 5 未満だった試行の割合。**ここが高いと (B) の立ち上がりが測れない** |");
+    Console.WriteLine("| `味方全滅%` | 味方が削られ切った試行の割合。**高いと出力が途中で止まる** |");
+    Console.WriteLine("| `敵全滅%` | 味方が削り切った試行の割合（＝この台での味方の勝率） |");
+    Console.WriteLine("| `手番外%` | 打点のうち手番の振り以外（反撃・破裂・毒燃）から出たぶん。**0 なら被弾駆動が死んでいる** |");
+    Console.WriteLine();
+    Console.WriteLine("| 台 | 決着T | T5未満% | 味方全滅% | 敵全滅% | 手番外%（平均） | 手番外% 0 の編成 |");
+    Console.WriteLine("|:-:|--:|--:|--:|--:|--:|--:|");
+    for (int b = 0; b < nB; b++)
+    {
+        double turns = Enumerable.Range(0, nT).Average(t => tr[b][t].Turns.Average());
+        double shortRun = Enumerable.Range(0, nT).Average(t => tr[b][t].Short * 100.0 / OutSeeds);
+        double wipe = Enumerable.Range(0, nT).Average(t => tr[b][t].AllyWipe * 100.0 / OutSeeds);
+        double clear = Enumerable.Range(0, nT).Average(t => tr[b][t].FoeWipe * 100.0 / OutSeeds);
+        double off = Enumerable.Range(0, nT).Average(t => tr[b][t].OffTurnPct);
+        int zero = Enumerable.Range(0, nT).Count(t => tr[b][t].OffTurnPct <= 1e-9);
+        Console.WriteLine($"| **{cands[b].Tag}** {cands[b].Name} | {turns:F1} | {shortRun:F1}% | {wipe:F1}% "
+            + $"| {clear:F1}% | {off:F1}% | {zero} / {nT} |");
+    }
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 3. 参照台の門と、選んだ2台 ---
+    //
+    // **§2-2 の下見だけでは台を選べない。** 「決着T が長い」は要件2 に適うように見えるが、
+    // **敵が一度も攻撃を通せていないから長い**のかもしれない——それは要件2 を満たした台では
+    // なく、計画書 §3-2 が名指しで警告した「殴り返さない的」そのもので、
+    // 被弾駆動の出力（反撃・被弾強化・自傷）がまるごと 0 になる。
+    //
+    // 門は数字で置ける。**呪詛（ネル）は開幕に敵全体の攻撃力を −6 する**
+    // （`CurseTrait.EnemyDebuff`）。1体あたり攻がこれ以下の def を並べると、呪詛入りの編成に
+    // 対しては攻撃が 0 以下に潰れ、`ApplyDamage` の `if (amount <= 0) return;` で
+    // **1ダメージも通らない**。反撃も被弾強化も、`OnDamaged` が呼ばれないので走らない。
+    Console.WriteLine("## 3. 参照台の門と、選んだ2台");
+    Console.WriteLine();
+    Console.WriteLine("### 3-1. 門 — 台は本当に殴り返しているか");
+    Console.WriteLine();
+    Console.WriteLine("**§2-2 の下見だけでは台を選べない。** 「決着T が長い」は要件2 に適うように見えるが、");
+    Console.WriteLine("**敵が一度も攻撃を通せていないから長い**のかもしれない——それは計画書 §3-2 が名指しで");
+    Console.WriteLine("警告した「殴り返さない的」で、被弾駆動の出力がまるごと 0 になる。");
+    Console.WriteLine();
+    Console.WriteLine($"門は数字で置ける。**呪詛（ネル）は開幕に敵全体の攻撃力を −{CurseTrait.EnemyDebuff} する**");
+    Console.WriteLine("（`CurseTrait.EnemyDebuff`）。1体あたり攻がこれ以下の def を並べると、呪詛入りの編成に");
+    Console.WriteLine("対しては攻撃が 0 以下に潰れ、`ApplyDamage` の `if (amount <= 0) return;` で");
+    Console.WriteLine("**1ダメージも通らない**——`OnDamaged` が呼ばれないので反撃も被弾強化も走らない。");
+    Console.WriteLine("（味方側の弱体である萎縮（クビ・−9）は味方にしか効かないので、門には効かない。）");
+    Console.WriteLine();
+    Console.WriteLine($"**門: 1体あたり攻 > {CurseTrait.EnemyDebuff}。**");
+    Console.WriteLine();
+    Console.WriteLine("| 台 | 1体攻 | 呪詛後 | 門 | 手番外% 0 の編成 | 反撃軸2編成の決着T | 同 手番外% |");
+    Console.WriteLine("|:-:|--:|--:|:-:|--:|--:|--:|");
+    // 反撃軸（カド入り）の2編成。**名指しで固定する**——「手番外% が最低の編成」を毎回探すと、
+    // 編成集合が動くたびに門の説明が別の編成に移る（`dissect` の pairSpec と同じ作法）。
+    int[] kado = Enumerable.Range(0, nT)
+        .Where(t => targets[t].Name.StartsWith("反撃 (") || targets[t].Name.StartsWith("反撃改 (")).ToArray();
+    var gate = new bool[nB];
+    for (int b = 0; b < nB; b++)
+    {
+        double each = cands[b].F.Occupied().Average(x => x.Def.Attack);
+        gate[b] = each > CurseTrait.EnemyDebuff;
+        int zero = Enumerable.Range(0, nT).Count(t => tr[b][t].OffTurnPct <= 1e-9);
+        string kt = kado.Length == 0 ? "—" : $"{kado.Average(t => tr[b][t].Turns.Average()):F1}";
+        string ko = kado.Length == 0 ? "—" : $"{kado.Average(t => tr[b][t].OffTurnPct):F1}%";
+        Console.WriteLine($"| **{cands[b].Tag}** {cands[b].Name} | {each:F0} | {each - CurseTrait.EnemyDebuff:F0} "
+            + $"| {(gate[b] ? "○" : "**×**")} | {zero} / {nT} | {kt} | {ko} |");
+    }
+    Console.WriteLine();
+    Console.WriteLine("**門を落ちるのは B1 巡礼6（攻4）だけ。** 反撃軸2編成の決着T が 30.0（＝引き分けの上限に");
+    Console.WriteLine("張り付いている）で、`手番外%` は 0.0%——**カドは一度も刺し返していない。**");
+    Console.WriteLine("下見の表で B1 が「味方全滅 0.0%・決着 9.1T」と最も要件2 に適って見えたのは、");
+    Console.WriteLine("**呪詛入りの編成に対して的が無力化されていたから**だった。");
+    Console.WriteLine();
+    Console.WriteLine("> **この門は下見の表からは読めない。** `決着T` も `味方全滅%` も、殴り返しの強さと");
+    Console.WriteLine("> 「攻撃が通っているか」を区別しない。**`手番外%` を下見に入れてあるのはこのため。**");
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 3-2. 選定 ---
+    //
+    // **性質の違う2台が要る**（計画書 §3-3）。出力が台に依存する量なら、単一の特徴量には
+    // できない——それを確かめる方法が「性質の違う的で測って順位が一致するか」しかない。
+    // 選定は門を通った 5 台の中から、下見の表を見て機械的に:
+    //   要件2 → `味方全滅%` が低い（出力が途中で止まらない）・`T5未満%` が低い
+    //   要件3 → 2台で**個体HP と 体数**が違う（第16期の「2つの時計」の軸）
+    //
+    // **探索で選ばない**（`dissect` の pairSpec と同じ）。「一致する組み合わせ」を探すと、
+    // 中立性の検定が「一致する台を選んだ」の言い換えになる。
+    int[] pick = { 1, 4 };   // B2 荷駄6 / B5 重装4
+    Console.WriteLine("### 3-2. 選んだ2台");
+    Console.WriteLine();
+    Console.WriteLine("**門を通った 5 台から選ぶ。探索で選ばない**（`dissect` の解剖ペアと同じ作法）");
+    Console.WriteLine("——「一致する組み合わせ」を探した時点で、中立性の検定が");
+    Console.WriteLine("「一致する台を選んだ」の言い換えになる。");
+    Console.WriteLine();
+    Console.WriteLine("| 役 | 台 | 中身 | 体数 | 総HP | 総攻 | 個体HP | 1体攻 | 性質 |");
+    Console.WriteLine("|:-:|:-:|---|--:|--:|--:|--:|--:|---|");
+    foreach (int b in pick)
+    {
+        Formation bf = cands[b].F;
+        Console.WriteLine($"| {(b == pick[0] ? "主" : "従")} | **{cands[b].Tag}** | {cands[b].Name} | {bf.Count} "
+            + $"| {bf.Occupied().Sum(x => x.Def.MaxHp)} | {bf.Occupied().Sum(x => x.Def.Attack)} "
+            + $"| {bf.Occupied().Max(x => x.Def.MaxHp)} | {bf.Occupied().Average(x => x.Def.Attack):F0} "
+            + $"| {(b == pick[0] ? "**多数・中個体HP**" : "**少数・高個体HP**")} |");
+    }
+    Console.WriteLine();
+    Console.WriteLine("選定の理由:");
+    Console.WriteLine();
+    Console.WriteLine("- **総HP がほぼ同じ（540 / 580）のに、個体HP と 体数が正反対**（90×6 / 145×4）。");
+    Console.WriteLine("  第16期が「波の性格は 個体HP と 総攻の2軸」と結論した、その片方だけを振ってある");
+    Console.WriteLine("  ——**的の量は揃えて、形だけ変える**のが中立性の検定として最も強い形。");
+    Console.WriteLine("- 味方全滅が 0.2% / 3.7% と低い。**出力が途中で止まらない。**");
+    Console.WriteLine("- どちらも門を通っている（1体攻 7 / 12）。**被弾駆動の出力が生きている。**");
+    Console.WriteLine();
+    Console.WriteLine("**却下した案。**");
+    Console.WriteLine();
+    Console.WriteLine("- **B1 巡礼6** — §3-1 の門を落ちる。**呪詛入りの編成に対しては殴り返さない的**になり、");
+    Console.WriteLine("  反撃軸の出力が 0 になる。計画書 §3-2 が名指しで警告した失敗そのもの。");
+    Console.WriteLine("- **B6 重装6（総HP 870）** — いちばん硬いので要件2 には最も適うが、**味方全滅 75.0%**。");
+    Console.WriteLine("  出力が育つ前に測定側が止まる。**硬さと殴り返しは同じ def では分けられない**");
+    Console.WriteLine("  （攻撃の低い高HP の def が `EnemyCatalog` に無い）。");
+    Console.WriteLine("- **B4 重装3** — 味方全滅 0% だが総HP 435 と最も薄く、`T5未満%` が高い。的が足りない。");
+    Console.WriteLine("- **B3 従卒6** — B2 と個体HP・体数が同じで攻だけ違う。**2台目としては「性質が違う」に");
+    Console.WriteLine("  足りない**（第16期の2軸のうちどちらも動かない）。§4-2 の辺としては使う。");
+    Console.WriteLine();
+
+    // --- 3-3. 決着してしまっていないか（計画書 §6-7 の停止条件） ---
+    //
+    // **台の硬さを上げる前に、何ターンで決着したかを報告する。** 要件2 は
+    // 「決着しないこと、**または十分長いこと**」なので、決着すること自体は停止条件ではない
+    // ——甲群の立ち上がり（T1/T3/T5）が測れるかどうかが線。
+    Console.WriteLine("### 3-3. 決着してしまっていないか（計画書 §6-7）");
+    Console.WriteLine();
+    Console.WriteLine("**要件2 は「決着しない、または十分長い」。** 決着すること自体は停止条件ではなく、");
+    Console.WriteLine($"**(B) の立ち上がり（T1/T3/T{OutputTrace.Ramp}）が測れるか**が線になる。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 |" + string.Concat(pick.Select(b => $" {cands[b].Tag} 決着T | {cands[b].Tag} T5未満% |")));
+    Console.WriteLine("|---|" + string.Concat(pick.Select(_ => "--:|--:|")));
+    foreach (int t in Enumerable.Range(0, nT).OrderBy(t => tr[pick[0]][t].Turns.Average()))
+        Console.WriteLine($"| {targets[t].Name} |"
+            + string.Concat(pick.Select(b => $" {tr[b][t].Turns.Average():F1} | {tr[b][t].Short * 100.0 / OutSeeds:F1}% |")));
+    Console.WriteLine();
+    var tooShort = Enumerable.Range(0, nT)
+        .Where(t => pick.Any(b => tr[b][t].Turns.Average() < OutputTrace.Ramp)).ToArray();
+    Console.WriteLine(tooShort.Length == 0
+        ? $"**平均決着Tが {OutputTrace.Ramp} を下回る編成は 0 件。** どの編成でも T1〜T{OutputTrace.Ramp} の窓は開いている。"
+        : $"> **平均決着Tが {OutputTrace.Ramp} を下回る編成が {tooShort.Length} 件ある**（どちらかの台で）: "
+          + string.Join(" / ", tooShort.Select(t => targets[t].Name))
+          + $"。**この編成の (B) は「育たなかった」ではなく「窓が閉じた」を測っている。**"
+          + "門を通した結果、反撃軸は的を 3〜5T で削り切るようになった——**殴り返す台にすると"
+          + "反撃軸が速くなり、立ち上がりを測る時間が消える**という綱引きが残る（計画書 §6-7 の3番目）。");
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 4. 中立性の確認 ---
+    //
+    // **計画書 §3-3 の必須項目。** 出力が台に依存しない量なら単一の特徴量にしてよく、
+    // 依存するなら**単一の特徴量にはできない**（その場合は止まって報告する）。
+    //
+    // 台間の相関は、それだけでは読めない。**乱数のばらつきだけでも 1.00 は割る**ので、
+    // 「どれくらいなら動いたと言えるか」の基準が先に要る（第13期 `bench` の作法）。
+    // 同じ台を seed で半分に割った一致度が**測定の信頼性の上限**で、台間の相関はこれと比べる。
+    Console.WriteLine("## 4. 中立性の確認（計画書 §3-3）");
+    Console.WriteLine();
+    Console.WriteLine("**出力が台に依存する量なら、単一の特徴量にはできない。** 判定は「性質の違う2台で");
+    Console.WriteLine("編成の順位が一致するか」で、比べる相手は**半割（測定の信頼性の上限）**");
+    Console.WriteLine("——台間の相関は乱数のばらつきだけでも 1.00 を割るので、上限が無いと読めない");
+    Console.WriteLine("（第13期 `bench` の作法。目的変数が突破度から (A) に変わっているので**上限は測り直す**）。");
+    Console.WriteLine();
+    Console.WriteLine("測る量は **(A) 実効打点/ターン**（総打点 ÷ 総ターン数）。**平均の平均ではない**");
+    Console.WriteLine("——試行ごとに長さが違うので、比の平均を取ると短い試行に重みが寄る。");
+    Console.WriteLine();
+
+    double[] RateOf(int b, Func<int, bool> take) =>
+        Enumerable.Range(0, nT).Select(t => tr[b][t].Rate(take)).ToArray();
+    var full = Enumerable.Range(0, nB).Select(b => RateOf(b, _ => true)).ToArray();
+
+    Console.WriteLine("### 4-1. 半割 — 測定の信頼性の上限");
+    Console.WriteLine();
+    Console.WriteLine("| 台 | 前後半 r | 前後半 ρ | 偶奇 r | 偶奇 ρ | 補正後 r | **補正後 ρ** |");
+    Console.WriteLine("|:-:|--:|--:|--:|--:|--:|--:|");
+    var capR = new double[nB];
+    var capRho = new double[nB];
+    for (int b = 0; b < nB; b++)
+    {
+        var h1 = Correlate(RateOf(b, s => s < OutSeeds / 2), RateOf(b, s => s >= OutSeeds / 2));
+        var h2 = Correlate(RateOf(b, s => s % 2 == 0), RateOf(b, s => s % 2 == 1));
+        double SB(double r) => 2 * r / (1 + r);   // Spearman-Brown
+        capR[b] = SB((h1.R + h2.R) / 2);
+        capRho[b] = SB((h1.Rho + h2.Rho) / 2);
+        Console.WriteLine($"| **{cands[b].Tag}** {cands[b].Name} | {h1.R:F3} | {h1.Rho:F3} "
+            + $"| {h2.R:F3} | {h2.Rho:F3} | {capR[b]:F3} | **{capRho[b]:F3}** |");
+    }
+    Console.WriteLine();
+    Console.WriteLine("補正は Spearman-Brown `r(2n) = 2r(n) / (1 + r(n))`（半割は 100 seed 同士なので");
+    Console.WriteLine("200 seed の測定より一致度が低く出る）。**補正は「両半分が同等・誤差が独立」を");
+    Console.WriteLine("仮定するので、生の値も併記してある。** 上限がほぼ 1.00 なので、**台間の相関の");
+    Console.WriteLine("低さは全部が「実物の入れ替わり」になる**——ばらつきでは 1ミリも説明が付かない。");
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 4-2. 候補6台の総当たり ---
+    //
+    // **主従2台だけを見ると、一致しなかった理由が「攻が違うから」か「体数が違うから」か
+    // 決まらない**（第13期 `bench` が主↔従の対角線で嵌まったのと同じ形）。
+    // 候補は最初から 2 家族 × 3 刻みの格子に組んであるので、**辺を1本ずつ読める。**
+    Console.WriteLine("### 4-2. 候補6台の総当たり（下三角 r / 上三角 ρ・対角は半割の補正後）");
+    Console.WriteLine();
+    Console.WriteLine("**主従2台だけを見ると、一致しなかった理由が「攻が違うから」か「体数が違うから」か");
+    Console.WriteLine("決まらない。** 候補は 2 家族 × 3 刻みの格子に組んであるので、**辺を1本ずつ読める。**");
+    Console.WriteLine();
+    Console.WriteLine("|  |" + string.Concat(cands.Select(x => $" {x.Tag} |")));
+    Console.WriteLine("|:-:|" + string.Concat(cands.Select(_ => "--:|")));
+    for (int i = 0; i < nB; i++)
+    {
+        var row = new List<string>();
+        for (int j = 0; j < nB; j++)
+            row.Add(i == j ? $"*{capR[i]:F2} / {capRho[i]:F2}*"
+                : $"{(j > i ? Correlate(full[i], full[j]).Rho : Correlate(full[i], full[j]).R):F2}");
+        Console.WriteLine($"| **{cands[i].Tag}** | {string.Join(" | ", row)} |");
+    }
+    Console.WriteLine();
+
+    var edges = new (string Label, int A, int B, string Axis)[]
+    {
+        ("B1 ↔ B2", 0, 1, "**敵の1体攻** 4 → 7（体数・個体HP は同じ）"),
+        ("B2 ↔ B3", 1, 2, "**敵の1体攻** 7 → 10（同上）"),
+        ("B1 ↔ B3", 0, 2, "**敵の1体攻** 4 → 10（同上・振り幅最大）"),
+        ("B4 ↔ B5", 3, 4, "**敵の体数** 3 → 4（個体HP・1体攻は同じ）"),
+        ("B5 ↔ B6", 4, 5, "**敵の体数** 4 → 6（同上）"),
+        ("B4 ↔ B6", 3, 5, "**敵の体数** 3 → 6（同上・振り幅最大）"),
+        ("B2 ↔ B5", 1, 4, "**個体HP と 体数**（主 ↔ 従。§3-2 で選んだ対）"),
+        ("B1 ↔ B5", 0, 4, "参考: **門を落ちた台**を主にした場合（§3-1）"),
+    };
+    Console.WriteLine("`上限` は両端の台の半割（補正後 ρ）の低いほう。`余地` = 上限 − ρ が");
+    Console.WriteLine("**測定のばらつきでは説明できない入れ替わりの量**（第13期・第15期と同じ定義）。");
+    Console.WriteLine();
+    Console.WriteLine("| 対 | 動いた変数 | r | ρ | 上限(ρ) | **余地** | 平均\\|順位差\\| | 最大\\|順位差\\| |");
+    Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|");
+    var ranks = Enumerable.Range(0, nB).Select(b => AverageRanksDesc(full[b])).ToArray();
+    foreach (var (label, a, b, axis) in edges)
+    {
+        var c = Correlate(full[a], full[b]);
+        double cp = Math.Min(capRho[a], capRho[b]);
+        var g = Enumerable.Range(0, nT).Select(t => Math.Abs(ranks[a][t] - ranks[b][t])).ToArray();
+        Console.WriteLine($"| {label} | {axis} | {c.R:F2} | {c.Rho:F2} | {cp:F2} "
+            + $"| **{cp - c.Rho:F2}** | {g.Average():F1} | {g.Max():F1} |");
+    }
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 4-3. 判定 ---
+    //
+    // 線は**第15期の裏返し**をそのまま使う（線を新しく作らない）。第15期は
+    // 「ρ < 0.90 かつ 余地 ≥ 0.05」を**入れ替わりが実在する**の線にした。
+    // 中立ならその否定、すなわち「ρ ≥ 0.90 かつ 余地 < 0.05」。
+    const double NeutralRho = 0.90, NeutralRoom = 0.05;
+    var cross = Correlate(full[pick[0]], full[pick[1]]);
+    double cap = Math.Min(capRho[pick[0]], capRho[pick[1]]);
+    double room = cap - cross.Rho;
+    // **連言の否定は選言。** 第15期の線は「ρ < 0.90 かつ 余地 ≥ 0.05」なので、
+    // その否定は「ρ ≥ 0.90 **または** 余地 < 0.05」になる。ここを連言にすると
+    // 第15期より厳しい線を黙って作ることになる。
+    bool neutral = cross.Rho >= NeutralRho || room < NeutralRoom;
+
+    Console.WriteLine("### 4-3. 判定");
+    Console.WriteLine();
+    Console.WriteLine($"線は**第15期の裏返し**をそのまま使う（線を新しく作らない）——第15期は");
+    Console.WriteLine($"「`ρ < {NeutralRho:F2}` かつ `余地 ≥ {NeutralRoom:F2}`」を**入れ替わりが実在する**の線にした。");
+    Console.WriteLine($"中立ならその**否定**——連言の否定は選言なので、"
+        + $"**`ρ ≥ {NeutralRho:F2}` または `余地 < {NeutralRoom:F2}`** になる。");
+    Console.WriteLine();
+    Console.WriteLine(neutral
+        ? $"**判定: 中立。** ρ = {cross.Rho:F3}（上限 {cap:F3}・余地 {room:F3}）で、"
+          + "**性質が正反対の2台で編成の順位が一致する。** (A) は台に依存しない量なので、"
+          + "**単一の特徴量にしてよい**（計画書 §3-3 の1行目）。"
+        : $"> **判定: 中立ではない。** ρ = {cross.Rho:F3}（上限 {cap:F3}・**余地 {room:F3}**）。"
+          + "**出力は台に依存する量で、単一の特徴量にはできない**（計画書 §3-3 の2行目）。"
+          + "**計画書 §6-7 の停止条件に当たるので、Phase HB へ進む前にここで止まる。**");
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 4-4. 誰が動かしているか ---
+    //
+    // **「一致しなかった」で止めると報告にならない。** どの編成が動いたか、そして
+    // その編成に共通する性質は何かまで出す。§4-2 の辺と突き合わせると、動いている軸が読める。
+    var rk0 = ranks[pick[0]];
+    var rk1 = ranks[pick[1]];
+    Console.WriteLine("### 4-4. 誰が動かしているか");
+    Console.WriteLine();
+    Console.WriteLine($"`順位差` = 順位({cands[pick[0]].Tag}) − 順位({cands[pick[1]].Tag})。"
+        + $"**正なら {cands[pick[1]].Tag}（殴り返しの強い台）で順位が上がる**（順位は 1 が最良）。");
+    Console.WriteLine();
+    Console.WriteLine("`手番外%` は打点のうち手番の振り以外（反撃・破裂・追い打ち・毒燃）から出たぶん。");
+    Console.WriteLine("**反撃軸はここが高い。**");
+    Console.WriteLine();
+    Console.WriteLine($"| 編成 | 総攻 | {cands[pick[0]].Tag} (A) | 順位 | {cands[pick[1]].Tag} (A) | 順位 | 順位差 "
+        + $"| {cands[pick[0]].Tag} 手番外% | {cands[pick[1]].Tag} 手番外% |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|");
+    foreach (int t in Enumerable.Range(0, nT).OrderByDescending(t => Math.Abs(rk0[t] - rk1[t])))
+        Console.WriteLine($"| {targets[t].Name} | {targets[t].F.Occupied().Sum(x => x.Def.Attack)} "
+            + $"| {full[pick[0]][t]:F1} | {rk0[t]:F1} | {full[pick[1]][t]:F1} | {rk1[t]:F1} "
+            + $"| {Sg(rk0[t] - rk1[t], 1):+0.0;-0.0} "
+            + $"| {tr[pick[0]][t].OffTurnPct:F0}% | {tr[pick[1]][t].OffTurnPct:F0}% |");
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 4-5. 一致しなかった量はどこに集まっているか ---
+    //
+    // **2つの疑いを数字で潰す。**
+    //   (1) 台が早く落ちた編成（要件2 を満たしていない）が作った見かけの不一致ではないか
+    //   (2) 反撃軸（手番外% が高い編成）だけが動かしているのではないか
+    // どちらも「外した部分集合で ρ を取り直す」ことで測れる。**外すのは診断であって
+    // 直しではない**——外して一致したからといって、その編成の出力が測れたことにはならない。
+    Console.WriteLine("### 4-5. 一致しなかった量はどこに集まっているか");
+    Console.WriteLine();
+    Console.WriteLine("**2つの疑いを数字で潰す。** どちらも部分集合で ρ を取り直すだけで測れる。");
+    Console.WriteLine("**外すのは診断であって直しではない**——外して一致しても、その編成の出力が");
+    Console.WriteLine("測れたことにはならない。");
+    Console.WriteLine();
+    double[] Sub(double[] v, int[] ix) => ix.Select(t => v[t]).ToArray();
+    var allIx = Enumerable.Range(0, nT).ToArray();
+    var longIx = allIx.Where(t => pick.All(b => tr[b][t].Turns.Average() >= OutputTrace.Ramp)).ToArray();
+    var moved = allIx.OrderByDescending(t => Math.Abs(rk0[t] - rk1[t])).ToArray();
+    var subsets = new (string Name, int[] Ix, string Note)[]
+    {
+        ("全編成", allIx, "§4-3 の判定に使った集合"),
+        ($"平均決着T ≥ {OutputTrace.Ramp} の編成", longIx,
+            "**要件2 を満たしている編成だけ。** 台が早く落ちた編成を外しても残るか"),
+        ("順位差 上位2件を外す", moved.Skip(2).ToArray(),
+            $"**{targets[moved[0]].Name} / {targets[moved[1]].Name} を外す**"),
+        ("順位差 上位4件を外す", moved.Skip(4).ToArray(), "同上・4件版"),
+        ("手番外% < 50 の編成（従台で判定）", allIx.Where(t => tr[pick[1]][t].OffTurnPct < 50).ToArray(),
+            "**反撃軸を外した集合。** 手番外% は打点のうち振り以外から出たぶん"),
+    };
+    Console.WriteLine("| 部分集合 | n | ρ | 上限(ρ) | 余地 | 備考 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|---|");
+    foreach (var (name, ix, note) in subsets)
+    {
+        if (ix.Length < 3) { Console.WriteLine($"| {name} | {ix.Length} | — | — | — | {note}（n が足りない） |"); continue; }
+        var c = Correlate(Sub(full[pick[0]], ix), Sub(full[pick[1]], ix));
+        Console.WriteLine($"| {name} | {ix.Length} | {c.Rho:F3} | {cap:F3} | **{cap - c.Rho:F3}** | {note} |");
+    }
+    Console.WriteLine();
+    Console.WriteLine("> **順位は部分集合の中で取り直している**（AverageRanksDesc ではなく Spearman の中で）ので、");
+    Console.WriteLine("> 外した編成のぶんだけ順位が詰まる。**部分集合どうしの ρ を直接比べてよい**のは");
+    Console.WriteLine("> 上限が n にほとんど依らないほど高い（0.99 台）ためで、そうでなければ");
+    Console.WriteLine("> 部分集合ごとに半割を取り直す必要がある。");
+    Console.WriteLine();
+    Console.Out.Flush();
+    return;
+}
+
 if (focusId == "chain")
 {
     var builds = CompareBuilds();
@@ -6996,6 +7517,132 @@ static WaveTrace MeasureTrace(Formation f, Formation enemy, int seeds)
     };
 }
 
+
+// 参照台1つ × 編成1つの出力を測る（第17期 Phase HA）。
+//
+// **目的変数から独立に編成の出力量を取るための関数。** 波ごとの勝率と同じ戦闘から与ダメを
+// 取ると第14期の同語反復（分子経路）にそのまま当たるので、固定の的で1回だけ測る。
+//
+// **BattleCore は触らない。** 材料は `BattleResult.Events`（verbose: true）で、
+// 振りへの帰属の切り方は `MeasureTrace`（第16期 Phase GA）と同一
+// ——「Attack イベントから、同じ手番の同じ actor が出した Damage まで」。
+// 反撃（actor が違う）も毒（actor が null）も追加のフラグ無しで外れる。
+//
+// **打点は `Damage` イベントから取る。`Status` からは取らない。** `Status` が持つのは
+// 適用**前**の量なので、破片で吸われたぶん・非致死で丸めたぶんが実際の削りとずれる
+// （`dissect` の `毒燃/戦` は `Status` から取っていて、そこだけ流儀が違う）。
+// 一致は呼び出し側が敵の tally（第13期の受け手側測定）と突き合わせて検算する。
+//
+// seed ごとの値を配列で返すのは、**半割（測定の信頼性の上限）を同じ計測から取り出す**ため。
+// 2回走らせると半割の値そのものに実行間のばらつきが乗る（`bench` 第13期と同じ作法）。
+static OutputTrace MeasureOutput(Formation f, Formation bench, int seeds)
+{
+    var foeIds = bench.Occupied().Select(x => x.Def.Id).ToHashSet();
+
+    var damage = new double[seeds];
+    var turns = new double[seeds];
+    var cum = new double[seeds][];
+    double swing = 0, direct = 0, dot = 0, tally = 0;
+    long foeFromAlly = 0;
+    int shortRun = 0, allyWipe = 0, foeWipe = 0;
+
+    for (int seed = 0; seed < seeds; seed++)
+    {
+        BattleResult r = BattleEngine.Run(f, bench, seed, verbose: true);
+
+        // 陣営の台帳。InstanceId は Deploy の順（味方 → 敵、スロット昇順）で振られる
+        // （`MeasureTrace` / `replay` の roster と同じ組み立て）。
+        var team = new Dictionary<int, int>();
+        int id = 0;
+        foreach (var (tm, fm) in new[] { (BattleContext.PlayerTeam, f), (BattleContext.EnemyTeam, bench) })
+            foreach (var (_, _) in fm.Occupied()) { team[id] = tm; id++; }
+
+        var perTurn = new double[OutputTrace.Ramp];
+        double total = 0;
+        int curActor = -1, curTurn = -1;
+        bool curAlly = false;
+
+        foreach (BattleEvent e in r.Events)
+        {
+            switch (e.Kind)
+            {
+                case BattleEventKind.TurnStart:
+                    curActor = -1;
+                    break;
+
+                case BattleEventKind.Summon:
+                    // 胞子のように湧いた駒。台帳に足さないと、その駒の打点が陣営不明で落ちる。
+                    if (e.TargetId is int nid && e.Team is int ntm) team[nid] = ntm;
+                    break;
+
+                case BattleEventKind.Attack:
+                    curActor = e.ActorId ?? -1;
+                    curTurn = e.Turn;
+                    curAlly = curActor >= 0 && team.TryGetValue(curActor, out int atm)
+                              && atm == BattleContext.PlayerTeam;
+                    break;
+
+                case BattleEventKind.Damage:
+                {
+                    int tgt = e.TargetId ?? -1;
+                    if (tgt < 0 || !team.TryGetValue(tgt, out int ttm)
+                        || ttm != BattleContext.EnemyTeam) break;
+                    // 敵同士の巻き込みは外す（受け手側測定の前提。第13期 §3-1）。
+                    if (e.ActorId is int src
+                        && (e.FriendlyFire
+                            || (team.TryGetValue(src, out int stm) && stm == BattleContext.EnemyTeam)))
+                        break;
+
+                    total += e.Amount;
+                    if (e.Turn >= 1 && e.Turn <= OutputTrace.Ramp) perTurn[e.Turn - 1] += e.Amount;
+                    if (e.ActorId is null)
+                    {
+                        dot += e.Amount;   // 毒・燃焼。ApplyDamage が source を渡さないので actor が無い
+                    }
+                    else
+                    {
+                        direct += e.Amount;
+                        // 同じ手番の同じ actor だけを「振り」に帰属させる。反撃は actor が違う。
+                        if (curAlly && e.ActorId == curActor && e.Turn == curTurn) swing += e.Amount;
+                    }
+                    break;
+                }
+            }
+        }
+
+        // 敵の tally からも同じ量を出す（第13期の受け手側測定）。呼び出し側が突き合わせる。
+        foreach ((string tid, UnitTally t) in r.TallyByUnit)
+            if (foeIds.Contains(tid)) { tally += t.DamageTaken - t.TakenFromAlly; foeFromAlly += t.TakenFromAlly; }
+
+        damage[seed] = total;
+        turns[seed] = r.Turns;
+        var c = new double[OutputTrace.Ramp];
+        double acc = 0;
+        for (int t = 0; t < OutputTrace.Ramp; t++) { acc += perTurn[t]; c[t] = acc; }
+        cum[seed] = c;
+
+        if (r.Turns < OutputTrace.Ramp) shortRun++;
+        if (r.PlayerWon) foeWipe++;
+        else if (r.PlayerSurvivors == 0) allyWipe++;
+    }
+
+    return new OutputTrace
+    {
+        Seeds = seeds,
+        Damage = damage,
+        Turns = turns,
+        Cum = cum,
+        Swing = swing,
+        Direct = direct,
+        Dot = dot,
+        Short = shortRun,
+        AllyWipe = allyWipe,
+        FoeWipe = foeWipe,
+        TallyDamage = tally,
+        FoeFromAlly = foeFromAlly,
+    };
+}
+
 // Actions だけを剥がした複製。charge 診断が「溜めない同じ敵」を同じ実行の中で
 // 作るために使う（git を戻して測り直すと、前後の数字が別の実行から来ることになる）。
 // Id も含めて他は全て同じ。前後を別々の会戦で回すので tally は混ざらない。
@@ -7320,6 +7967,91 @@ static (string Tag, string Era, string Name, Formation Enemy)[] WaveCatalog()
     };
 
 
+
+
+/// <summary>
+/// 参照台1つ × 編成1つぶんの出力（第17期 Phase HA）。<see cref="MeasureOutput"/> が埋める。
+///
+/// **seed ごとの生の値を持っているのが要点。** 半割（測定の信頼性の上限）を
+/// 同じ計測から取り出すために要る——2回走らせると、半割の値そのものに実行間の
+/// ばらつきが乗る（第13期 <c>bench</c> と同じ作法）。
+///
+/// **どの列も盤面には一切影響しない。** verbose=true の <c>Events</c> を読み直しているだけ。
+/// </summary>
+sealed class OutputTrace
+{
+    /// <summary>立ち上がりを見る範囲。T1 / T3 / T5 を取るので 5 で足りる。</summary>
+    public const int Ramp = 5;
+
+    public required int Seeds { get; init; }
+
+    /// <summary>seed ごとの、敵に通した総打点（直接 + 毒燃。敵同士の巻き込みは除く）。</summary>
+    public required double[] Damage { get; init; }
+    /// <summary>seed ごとのターン数。</summary>
+    public required double[] Turns { get; init; }
+    /// <summary>seed ごとの T1..T5 の**累積**打点。決着後は増えないので、そのまま頭打ちになる。</summary>
+    public required double[][] Cum { get; init; }
+
+    /// <summary>手番の振りに帰属した打点の合計（全 seed）。</summary>
+    public required double Swing { get; init; }
+    /// <summary>出どころのある打点の合計（振り + 反撃・破裂・追い打ち・生贄）。</summary>
+    public required double Direct { get; init; }
+    /// <summary>毒・燃焼の打点の合計。<c>ApplyDamage</c> が source を渡さないので出どころが無い。</summary>
+    public required double Dot { get; init; }
+
+    /// <summary>ターン数が <see cref="Ramp"/> 未満だった試行数。**(B) が測れているかの検定。**</summary>
+    public required int Short { get; init; }
+    public required int AllyWipe { get; init; }
+    public required int FoeWipe { get; init; }
+
+    /// <summary>検算用。敵の tally から数えた同じ量（第13期の受け手側測定）。</summary>
+    public required double TallyDamage { get; init; }
+    /// <summary>検算用。敵同士の巻き込み。参照台は単一 def の単体攻撃なので 0 のはず。</summary>
+    public required long FoeFromAlly { get; init; }
+
+    /// <summary>
+    /// **(A) 実効打点/ターン。** seed の部分集合で取れるようにしてあるのは半割のため。
+    /// 平均の平均ではなく**総打点 ÷ 総ターン数**（試行ごとの長さが違うので、
+    /// 比の平均を取ると短い試行に重みが寄る）。
+    /// </summary>
+    public double Rate(Func<int, bool> take)
+    {
+        double d = 0, t = 0;
+        for (int s = 0; s < Seeds; s++) if (take(s)) { d += Damage[s]; t += Turns[s]; }
+        return t <= 0 ? double.NaN : d / t;
+    }
+
+    /// <summary>(A) 全 seed 版。</summary>
+    public double RateAll => Rate(_ => true);
+
+    /// <summary>T 番目（1 起点）までの累積打点の試行平均。</summary>
+    public double CumAt(int turn) => Cum.Average(c => c[turn - 1]);
+
+    /// <summary>
+    /// **(B) 立ち上がりの傾き。** `(T5 − T3) ÷ 2` は T4〜T5 の1ターンあたり打点、
+    /// `T1` は初手の1ターンあたり打点。**その比**なので 1.0 が「まったく育たない」。
+    /// 甲群（出力が時間で育つ）は 1 を大きく超え、乙群（一撃圏に縛られる）は 1 付近になるはず。
+    /// </summary>
+    public double Ramp15 => CumAt(1) <= 0 ? double.NaN : ((CumAt(5) - CumAt(3)) / 2) / CumAt(1);
+
+    /// <summary>
+    /// **(C) 手番外率（%）。** 打点のうち手番の振り以外（反撃・破裂・追い打ち・生贄・毒燃）
+    /// から出たぶん。**近似ではなく実測**——計画書 §4-1 は `総攻 × 手番数` を引く近似を
+    /// 示していたが、`Events` から振りの範囲を切れるので引き算の近似は要らない。
+    /// </summary>
+    public double OffTurnPct => Direct + Dot <= 0 ? double.NaN : (Direct + Dot - Swing) * 100.0 / (Direct + Dot);
+
+    /// <summary>
+    /// (C) の直接ダメージだけ版。**`dissect` の `振に帰属%` の裏返し**（100 − あれ）なので、
+    /// 第16期の「溜め改 S4 で 78%」と直接突き合わせられる。
+    /// </summary>
+    public double OffTurnDirectPct => Direct <= 0 ? double.NaN : (Direct - Swing) * 100.0 / Direct;
+
+    /// <summary>打点の内訳（%）。振り / 手番外の直接 / 毒燃。</summary>
+    public double SwingPct => Direct + Dot <= 0 ? double.NaN : Swing * 100.0 / (Direct + Dot);
+    public double ReactPct => Direct + Dot <= 0 ? double.NaN : (Direct - Swing) * 100.0 / (Direct + Dot);
+    public double DotPct => Direct + Dot <= 0 ? double.NaN : Dot * 100.0 / (Direct + Dot);
+}
 
 /// <summary>
 /// 1事例（編成 × 波）ぶんの解剖材料（第16期 Phase GA）。<see cref="MeasureTrace"/> が埋める。
