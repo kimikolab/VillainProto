@@ -3206,6 +3206,137 @@ if (focusId == "power")
     Console.WriteLine();
     Console.Out.Flush();
 
+    // ================= Phase EB: 反撃軸の残差（第14期） =================
+    //
+    // 第13期の残差で、穴を塞いだ後も沈んだままだったのが反撃軸（惨禍×被弾強化 −0.307 /
+    // 反撃改2 −0.297）。反撃は `ctx.ApplyDamage(source, back, self)` と source 付きなので
+    // 受け手側へ移しても 1pt も動かない——**与ダメも撃破も出ているのに突破度に届いていない。**
+    //
+    // 仮説（§4-1）: 反撃軸は出力を HP で買っている。HP は会戦を跨ぐ唯一の持ち越し資源なので、
+    // 単発戦の額面ほど会戦では価値が無い。正しければ **自傷率と残差が負に相関する**はず。
+    //
+    // **§4-3 が要になる。** 第9期で 逆しま改 は自傷率 61.6% で上位だが強い編成なので、
+    // 自傷率が高いこと自体は弱さの原因ではない。反撃軸だけが沈んでいるなら、原因は
+    // 「HP で買っているから」ではなく**反撃という出力の出し方に固有の何か**を指す。
+    //
+    // 新しい計測は足さない。`bill`（第9期・測定台113%・HP ベースの自傷率）と単発戦の勝率
+    // （`docs/balance.md` と同じ計算）を**同じ実行の中で**取り直して突き合わせるだけ。
+    // 別の実行から数字を引くと、動いたのが定義のせいか実行のせいか決まらない（第13期の作法）。
+    var bill113 = BenchColumn113();
+    var billRate = targets.Select(t => MeasureBill(t.F, bill113, PowerSeeds).SelfHarmRate * 100).ToArray();
+    var soloWin = new double[nT];
+    for (int t = 0; t < nT; t++)
+    {
+        double sum = 0;
+        foreach (EnemyCatalog.Stage st in EnemyCatalog.Stages)
+        {
+            int wins = 0;
+            for (int seed = 0; seed < PowerSeeds; seed++)
+                if (BattleEngine.Run(targets[t].F, st.Enemy, seed, verbose: false).PlayerWon) wins++;
+            sum += wins * 100.0 / PowerSeeds;
+        }
+        soloWin[t] = sum / EnemyCatalog.Stages.Count;
+    }
+    double[] soloRank = AverageRanksDesc(soloWin);
+    var degRank = Enumerable.Range(0, nB).Select(b => AverageRanksDesc(deg[b])).ToArray();
+    // 第13期の残差（`撃破/戦` からの残差）。仮説が語っていたのはこちらの残差なので併記する。
+    var resid13 = new double[nB][];
+    for (int b = 0; b < nB; b++)
+    {
+        double[] p13 = LinearFit(feat[b][ordered[b][0].K], deg[b]);
+        resid13[b] = Enumerable.Range(0, nT).Select(t => deg[b][t] - p13[t]).ToArray();
+    }
+
+    Console.WriteLine("## 反撃軸の残差（第14期 Phase EB）");
+    Console.WriteLine();
+    Console.WriteLine("第13期の残差で、穴を塞いだ後も沈んだままだったのが反撃軸。反撃は");
+    Console.WriteLine("`ctx.ApplyDamage(source, back, self)` と source 付きなので受け手側へ移しても 1pt も動かない");
+    Console.WriteLine("——**与ダメも撃破も出ているのに突破度に届いていない。**");
+    Console.WriteLine();
+    Console.WriteLine("仮説: **反撃軸は出力を HP で買っている。** HP は会戦を跨ぐ唯一の持ち越し資源なので、");
+    Console.WriteLine("単発戦の額面ほど会戦では価値が無い。正しければ**自傷率と残差が負に相関する**はず。");
+    Console.WriteLine();
+    Console.WriteLine("`bill 自傷率` は第9期の定義（測定台113%・失った HP のうち自分で削った割合）、");
+    Console.WriteLine("`power 自傷率` は同じ台の tally 比（`TakenFromAlly ÷ DamageTaken`）。**台も定義も違う**ので");
+    Console.WriteLine("両方出す——片方だけだと、出た/出なかったのが定義のせいか台のせいか決まらない。");
+    Console.WriteLine();
+
+    Console.WriteLine("### 1. 自傷率と残差の相関");
+    Console.WriteLine();
+    Console.WriteLine("残差は **Phase EA の残差**（同語反復を除いた第一近似からの残差）。");
+    Console.WriteLine("第13期の残差（`撃破/戦` からの残差）も並べる——仮説が語っていたのはそちらの残差なので。");
+    Console.WriteLine();
+    Console.WriteLine("| 台 | 自傷率 | EA 残差との r | 第13期 残差との r |");
+    Console.WriteLine("|---|---|--:|--:|");
+    for (int b = 0; b < nB; b++)
+    {
+        double[] pw = Enumerable.Range(0, nT).Select(t => dyn[b][t][5] * 100).ToArray();
+        Console.WriteLine($"| {benches[b].Tag}: {benches[b].Name} | bill（測定台113%） "
+            + $"| {Correlate(billRate, residEa[b]).R:+0.00;-0.00} | {Correlate(billRate, resid13[b]).R:+0.00;-0.00} |");
+        Console.WriteLine($"| {benches[b].Tag}: {benches[b].Name} | power（同台の tally 比） "
+            + $"| {Correlate(pw, residEa[b]).R:+0.00;-0.00} | {Correlate(pw, resid13[b]).R:+0.00;-0.00} |");
+    }
+    Console.WriteLine();
+    Console.WriteLine("**仮説が正しければ全部が負。** 符号が揃わないなら、自傷率は残差の説明になっていない。");
+    Console.WriteLine();
+
+    // 名指しの表。**4編成は必ず出す**（§4-2 の2）。反撃改3 も同じ軸なので添える。
+    var ebRows = new (string Group, string Key)[]
+    {
+        ("反撃軸", "惨禍×被弾強化"), ("反撃軸", "反撃 ("), ("反撃軸", "反撃改 ("),
+        ("反撃軸", "反撃改2"), ("反撃軸", "反撃改3"),
+        ("逆しま系", "逆しま ("), ("逆しま系", "逆しま改"), ("逆しま系", "逆しま+後備え"),
+    };
+    Console.WriteLine("### 2. 反撃軸と逆しま系の名指しの表");
+    Console.WriteLine();
+    Console.WriteLine("**逆しま系を同じ表に並べるのが要点**（§4-3）。第9期で 逆しま改 は自傷率 61.6% で上位");
+    Console.WriteLine("だったが強い編成なので、**自傷率が高いこと自体は弱さの原因ではない。**");
+    Console.WriteLine("反撃軸だけが沈んでいるなら、原因は自傷率ではなく反撃そのものにある。");
+    Console.WriteLine();
+    Console.WriteLine("| 軸 | 編成 | bill 自傷率 | power 自傷率(主) | 被ダメ/戦(主) | 与ダメ効率(主) | 突破度(主) | EA 残差(主) | 第13期 残差(主) | 突破度(従) | EA 残差(従) |");
+    Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+    foreach (var (group, key) in ebRows)
+    {
+        int[] hit = Enumerable.Range(0, nT).Where(t => targets[t].Name.Contains(key)).ToArray();
+        if (hit.Length != 1)
+        {
+            Console.WriteLine($"| {group} | `{key}` に一致する編成が {hit.Length} 件 | — | — | — | — | — | — | — | — | — |");
+            continue;
+        }
+        int t2 = hit[0];
+        Console.WriteLine($"| {group} | {targets[t2].Name} | {billRate[t2]:F1}% | {dyn[0][t2][5] * 100:F1}% "
+            + $"| {dyn[0][t2][1]:F0} | {dyn[0][t2][6]:F1} | {deg[0][t2]:F3} | {residEa[0][t2]:+0.000;-0.000} "
+            + $"| {resid13[0][t2]:+0.000;-0.000} | {deg[1][t2]:F3} | {residEa[1][t2]:+0.000;-0.000} |");
+    }
+    Console.WriteLine();
+
+    Console.WriteLine("### 3. 単発戦と会戦の順位");
+    Console.WriteLine();
+    Console.WriteLine($"`単発戦` は全 {EnemyCatalog.Stages.Count} ステージの独立勝率の平均（`docs/balance.md` と");
+    Console.WriteLine($"同じ計算・同じ seed 0..{PowerSeeds - 1}）。会戦は突破度。**順位は 1 が最良。**");
+    Console.WriteLine("反撃軸が単発戦で強く会戦で弱いなら、順位の差がプラスに大きく出る。");
+    Console.WriteLine();
+    Console.WriteLine("| 軸 | 編成 | 単発戦 平均勝率 | 単発戦 順位 | 突破度 順位(主) | 差(主) | 突破度 順位(従) | 差(従) |");
+    Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|");
+    foreach (var (group, key) in ebRows)
+    {
+        int[] hit = Enumerable.Range(0, nT).Where(t => targets[t].Name.Contains(key)).ToArray();
+        if (hit.Length != 1) continue;
+        int t2 = hit[0];
+        Console.WriteLine($"| {group} | {targets[t2].Name} | {soloWin[t2]:F1}% | {soloRank[t2]:F1} "
+            + $"| {degRank[0][t2]:F1} | {degRank[0][t2] - soloRank[t2]:+0.0;-0.0} "
+            + $"| {degRank[1][t2]:F1} | {degRank[1][t2] - soloRank[t2]:+0.0;-0.0} |");
+    }
+    Console.WriteLine();
+    var solo0 = Correlate(soloWin, deg[0]);
+    var solo1 = Correlate(soloWin, deg[1]);
+    Console.WriteLine($"**全 {nT} 編成での単発戦 × 突破度: 主 r = {solo0.R:F2} / ρ = {solo0.Rho:F2}、"
+        + $"従 r = {solo1.R:F2} / ρ = {solo1.Rho:F2}。**");
+    Console.WriteLine("単発戦の平均勝率と突破度の相関がそもそも高ければ、「単発戦では強いのに会戦で弱い」は");
+    Console.WriteLine("編成の一般的な性質ではなく、名指しの編成に固有の話になる。");
+    Console.WriteLine();
+    Console.Out.Flush();
+
     return;
 }
 
