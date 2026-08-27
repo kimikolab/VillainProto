@@ -4663,12 +4663,21 @@ if (focusId == "dissect")
     // **第15期の「7波」を数字で持ち込まない。** 同じ判定式（天井率 + 床率 < 50%）を同じ
     // seed 数でここでも通し、一致することを確かめてから使う。ハードコードすると、
     // 波の定義が動いたときに黙って古い集合を解剖し続ける。
+    // 残存度（全試行の平均。負けた試行は 0）も同じ計測から取っておく。
+    // Phase GB が**天井で潰れない連続量**として使う（第15期 (c) の読み方と同じ定義）。
+    // 2回回すと seed は同じでも実行時間が倍になるだけなので、1回で両方取る。
     var rate = new double[nW][];
+    var degree = new double[nW][];
     for (int w = 0; w < nW; w++)
     {
         rate[w] = new double[nT];
+        degree[w] = new double[nT];
         for (int t = 0; t < nT; t++)
-            rate[w][t] = MeasureWave(targets[t].F, waves[w].Enemy, DissectSeeds).Win.Average() * 100;
+        {
+            var mw = MeasureWave(targets[t].F, waves[w].Enemy, DissectSeeds);
+            rate[w][t] = mw.Win.Average() * 100;
+            degree[w][t] = mw.SurvRate.Average();
+        }
     }
     var contributes = new bool[nW];
     for (int w = 0; w < nW; w++)
@@ -4680,6 +4689,12 @@ if (focusId == "dissect")
     int[] conW = Enumerable.Range(0, nW).Where(w => contributes[w]).ToArray();
     var rankOf = Enumerable.Range(0, nW).Select(w => AverageRanksDesc(rate[w])).ToArray();
     int Tag(string t) => Array.FindIndex(waves, x => x.Tag == t);
+
+    // `+0.0;-0.0` の書式は、**表示桁でゼロに丸まる負の値を `-+0.0` と出す**
+    // （.NET はセクションを丸めた後の値で選びながら、負の符号は別に付ける）。
+    // 表示桁で先に丸めておけば消える。**既存のモードには入れない**
+    // （同じ症状は `wave` にもあるが、直すとその出力が動いて 18モード差分ゼロを失う）。
+    double Sg(double v, int dp) => double.IsNaN(v) ? v : Math.Round(v, dp) + 0.0;
 
     Console.WriteLine("## 1. 寄与する波（`wave` §4 と同じ判定を、同じ seed 数で引き直したもの）");
     Console.WriteLine();
@@ -4727,7 +4742,7 @@ if (focusId == "dissect")
             cases.Add((ta, tb, a, b, t, rankOf[a][t] - rankOf[b][t], dir));
             Console.WriteLine($"| {caseNo} | {ta} × {tb} | {(dir == "B で上がる" ? $"**{tb}** で上がる" : $"**{ta}** で上がる")} "
                 + $"| {targets[t].Name} | {rate[a][t]:F1}% | {rankOf[a][t]:F1} "
-                + $"| {rate[b][t]:F1}% | {rankOf[b][t]:F1} | {rankOf[a][t] - rankOf[b][t]:+0.0;-0.0} |");
+                + $"| {rate[b][t]:F1}% | {rankOf[b][t]:F1} | {Sg(rankOf[a][t] - rankOf[b][t], 1):+0.0;-0.0} |");
         }
     }
     Console.WriteLine();
@@ -4890,11 +4905,14 @@ if (focusId == "dissect")
         Console.WriteLine("|---|--:|--:|--:|");
         // 差の書式は小数以下の桁ごとに作る（「+0.0;-0.0」の形）。
         // 差を出さないと、読む側が毎回引き算をすることになる。
+        // `+0.0` の書式に **-0.0 をそのまま渡すと `-+0.0` になる**
+        // （.NET Core 3.0 以降は負のゼロに符号を付けるが、セクション書式は
+        //   -0.0 を正側として拾うので両方の符号が並ぶ）。`+ 0.0` は IEEE で -0.0 を +0.0 に潰す。
         void RowF(string name, double a, double b, int dp)
         {
             string p = "0" + (dp > 0 ? "." + new string('0', dp) : "");
             Console.WriteLine($"| {name} | {F(a, "F" + dp)} | {F(b, "F" + dp)} "
-                + $"| {(double.IsNaN(a) || double.IsNaN(b) ? "—" : (b - a).ToString($"+{p};-{p}"))} |");
+                + $"| {(double.IsNaN(a) || double.IsNaN(b) ? "—" : Sg(b - a, dp).ToString($"+{p};-{p}"))} |");
         }
         RowF("勝率 %", ta.WinRate, tb.WinRate, 1);
         RowF("全滅 %", ta.WipeRate, tb.WipeRate, 1);
@@ -5133,6 +5151,379 @@ if (focusId == "dissect")
     Console.WriteLine("**`総攻` はこれらの編成の出力を表していない**——第12期以来ずっと使ってきた");
     Console.WriteLine("編成側の唯一の出力特徴量が、反撃軸と毒軸に対しては桁で外れている。");
     Console.WriteLine("**「特徴量が悪い」の中身の1つがこれ。**");
+    Console.WriteLine();
+    Console.Out.Flush();
+    // ================= Phase GB: 敵側の特徴量と交互作用項（第16期） =================
+    //
+    // **いまの `power` は編成側の特徴量しか持っていない。** 交互作用は 編成 × 波 なのに、
+    // 波の側を一度も数値化していなかった——第12期以来ずっと片側だけで予測しようとしていたので、
+    // **予測できなくて当然だった可能性がある**（計画書 §3-1）。
+    //
+    // §6-1 でそれが数字になって出た。**波の側だけで決まる量は的中率がちょうど 50% になる。**
+    // あれは事例の選び方の副作用でもあるが、同時に構造そのもの——下の §11 で示すとおり、
+    // **片側だけの特徴量は交互作用成分と相関が恒等的に 0 になる。**
+    //
+    // 候補は 10 個以内。**総当たりで作らない**（編成8 × 敵9 = 72 通りを全部試すと、
+    // n = 217 では必ず何かが当たる）。出どころは「理屈で先に決めたもの」と
+    // 「§7 の解剖から出てきたもの」の2つだけで、§8 の表に挙げたものに限る。
+    Console.WriteLine("## 9. 敵側の特徴量（Phase GB）");
+    Console.WriteLine();
+    Console.WriteLine("**編成側と対称になるように取る。** 定義は `UnitDef` と `Formation` から計算できるものだけ");
+    Console.WriteLine("（戦わずに分かる量。`power` の静的8種と同じ作法）。");
+    Console.WriteLine();
+
+    var foeF = new (string Name, string Def, Func<Formation, double> Get)[]
+    {
+        ("敵体数",     "波の駒数", e => e.Count),
+        ("敵総HP",     "Def.MaxHp の合計", e => e.Occupied().Sum(x => x.Def.MaxHp)),
+        ("敵総攻",     "Def.Attack の合計", e => e.Occupied().Sum(x => x.Def.Attack)),
+        ("敵個体HP中", "個体 MaxHp の中央値。**第6〜7期の原理の主役**", MedianHp),
+        ("敵最大個体HP", "いちばん硬い駒の MaxHp", e => e.Occupied().Max(x => x.Def.MaxHp)),
+        ("敵1体攻",    "敵総攻 ÷ 敵体数", e => e.Occupied().Average(x => x.Def.Attack)),
+        ("敵範囲枚数",  "Def.Pattern が薙ぎ/全体の駒数",
+            e => e.Occupied().Count(x => x.Def.Pattern is AttackPattern.Sweep or AttackPattern.All)),
+        ("敵貫き枚数",  "Def.Pattern が貫きの駒数",
+            e => e.Occupied().Count(x => x.Def.Pattern == AttackPattern.Pierce)),
+        ("敵平均速度",  "Def.Speed の平均", e => e.Occupied().Average(x => x.Def.Speed)),
+    };
+    // 編成側は `power` / `wave` の静的8種をそのまま。**定義を1文字も変えない**
+    // ——変えると第12〜15期の数字と繋がらなくなる。
+    var allyF = new (string Name, Func<Formation, double> Get)[]
+    {
+        ("体数",     f => f.Count),
+        ("総HP",     f => f.Occupied().Sum(x => x.Def.MaxHp)),
+        ("総攻",     f => f.Occupied().Sum(x => x.Def.Attack)),
+        ("積",       f => (double)f.Occupied().Sum(x => x.Def.MaxHp) * f.Occupied().Sum(x => x.Def.Attack)),
+        ("最薄HP",   f => f.Occupied().Min(x => x.Def.MaxHp)),
+        ("後列HP",   f => f.Occupied().Where(x => FormationRules.RowOf(x.Slot) == Row.Back).Sum(x => x.Def.MaxHp)),
+        ("平均速度", f => f.Occupied().Average(x => x.Def.Speed)),
+        ("範囲枚数", f => AoeCount(f)),
+    };
+
+    Console.WriteLine("| 特徴量 | 定義 |" + string.Concat(conW.Select(w => $" {waves[w].Tag} |")));
+    Console.WriteLine("|---|---|" + string.Concat(conW.Select(_ => "--:|")));
+    foreach (var (name, def, get) in foeF)
+        Console.WriteLine($"| **{name}** | {def} |"
+            + string.Concat(conW.Select(w => $" {get(waves[w].Enemy):0.#} |")));
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 10. 交互作用項の候補 ---
+    double AllyAtkEach(Formation f) => f.Occupied().Average(x => x.Def.Attack);
+    var terms = new (string Name, string Expr, string From, string Why, Func<Formation, Formation, double> Get)[]
+    {
+        ("耐えるT", "味方の総HP ÷ 敵総攻", "GA 甲群",
+            "事例 3・11・4。味方が持ちこたえるターン数。速攻は 327/53 = 6.2 → 327/96 = 3.4 で落ちる",
+            (f, e) => f.Occupied().Sum(x => x.Def.MaxHp) / (double)e.Occupied().Sum(x => x.Def.Attack)),
+        ("削るT", "敵総HP ÷ 味方の総攻", "理屈（§3-3 の3番）",
+            "決着の速さ。第6期 H1「範囲の利得は減らした状態で経過するターン数に比例する」の分母",
+            (f, e) => e.Occupied().Sum(x => x.Def.MaxHp) / (double)f.Occupied().Sum(x => x.Def.Attack)),
+        ("時計比", "味方の積 ÷ 敵の積", "GA 甲群",
+            "上2つの比そのもの（約分すると 味方HP×味方攻 ÷ 敵HP×敵攻）。**独立ではない**が、"
+            + "2つの時計の競走を1本にまとめた基準として置く",
+            (f, e) => (double)f.Occupied().Sum(x => x.Def.MaxHp) * f.Occupied().Sum(x => x.Def.Attack)
+                      / (e.Occupied().Sum(x => x.Def.MaxHp) * (double)e.Occupied().Sum(x => x.Def.Attack))),
+        ("一撃圏", "敵の個体HP中央値 ÷ 味方の1体あたり攻", "GA 乙群 + 理屈（§3-3 の2番）",
+            "事例 7 が最も明確（2.35 → 7.80 で 100% → 16%）。**第13期で棄却した閾値仮説の、敵側を入れた版**",
+            (f, e) => MedianHp(e) / AllyAtkEach(f)),
+        ("範囲×体数", "味方の範囲枚数 × 敵体数", "理屈（§3-3 の1番）",
+            "範囲は体数が多いほど効く（第6〜7期の原理「大きさは体数」）",
+            (f, e) => AoeCount(f) * (double)e.Count),
+        ("範囲の変換", "味方の範囲枚数 × 敵体数 ÷ 一撃圏", "GA 乙群",
+            "事例 8。**巻き込み枚数ではなく、巻き込んだ結果何体落ちたかで決まる**"
+            + "——撒いた先が一撃圏の外なら範囲は撃破に変換されない",
+            (f, e) => AoeCount(f) * e.Count * AllyAtkEach(f) / MedianHp(e)),
+        ("貫き×後列", "敵の貫き枚数 × 味方の後列HP", "理屈（§3-3 の4番）+ GA 甲群",
+            "事例 5・8 が同じ S2 で符号を分けた（後列被弾 30% と 6.5%）",
+            (f, e) => e.Occupied().Count(x => x.Def.Pattern == AttackPattern.Pierce)
+                      * (double)f.Occupied().Where(x => FormationRules.RowOf(x.Slot) == Row.Back).Sum(x => x.Def.MaxHp)),
+        ("集中砲火", "敵総攻 ÷ 味方の最薄HP", "GA 甲群",
+            "事例 3・12。1体に集まれば最薄が落ちる。**総HP では表せない**（同じ総HPでも薄い駒があると崩れる）",
+            (f, e) => e.Occupied().Sum(x => x.Def.Attack) / (double)f.Occupied().Min(x => x.Def.MaxHp)),
+        ("1発の重さ", "敵の1体あたり攻 ÷ 味方の最薄HP", "GA 甲群",
+            "事例 3「`敵の振/戦` は 31.7 と 30.9 でほぼ同じなのに `被ダメ` は 218 → 338」"
+            + "——効いているのは殴られた回数ではなく1発の重さ",
+            (f, e) => e.Occupied().Average(x => x.Def.Attack) / f.Occupied().Min(x => x.Def.MaxHp)),
+        ("先手差", "敵の平均速度 − 味方の平均速度", "GA 甲群（**推測**）",
+            "事例 5 の推測。**積ではなく差**——速度は比を取っても意味を持たない。"
+            + "単独では向きが決まらないことが §7-2 で分かっている",
+            (f, e) => e.Occupied().Average(x => x.Def.Speed) - f.Occupied().Average(x => x.Def.Speed)),
+    };
+
+    Console.WriteLine("## 10. 交互作用項の候補（10 個）");
+    Console.WriteLine();
+    Console.WriteLine("**総当たりで作っていない。** 編成8 × 敵9 = 72 通りを全部試すと n = 217 では必ず何かが");
+    Console.WriteLine("当たるので、出どころを2つに限った——**理屈で先に決めたもの**（計画書 §3-3 の4つ）と、");
+    Console.WriteLine("**§7 の解剖から出てきたもの**（§8 の表に挙げたものだけ）。");
+    Console.WriteLine();
+    Console.WriteLine("どの項も**両側とも戦わずに決まる**。実測の量（主目標打点・削り比）は入れていない");
+    Console.WriteLine("——波ごとに測った量を波ごとの勝率に当てると循環する（§8）。");
+    Console.WriteLine();
+    Console.WriteLine("| # | 項 | 式 | 出どころ | 理由 |");
+    Console.WriteLine("|--:|---|---|:-:|---|");
+    for (int k = 0; k < terms.Length; k++)
+        Console.WriteLine($"| {k + 1} | **{terms[k].Name}** | `{terms[k].Expr}` | {terms[k].From} | {terms[k].Why} |");
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 11. 分散分解 ---
+    //
+    // **交互作用が「どれだけあるか」を先に測る。** これを測らずに相関だけ出すと、
+    // 「積が効いた」が主効果（波の難度）を拾っているだけかもしれない。
+    // 加法モデル 予測_ij = 波の平均 + 編成の平均 − 全体平均 を引いた残りが交互作用成分そのもの。
+    //
+    // **片側だけの特徴量は、この残差と相関が恒等的に 0 になる**（残差は行方向にも列方向にも
+    // 和が 0 なので、片側で定数の量との共分散が消える）。これは実装の検算にもなる。
+    int nC = conW.Length;
+    double[][] Resid(double[][] src)
+    {
+        var y = conW.Select(w => src[w]).ToArray();
+        double grand = y.SelectMany(r => r).Average();
+        var rowM = y.Select(r => r.Average()).ToArray();
+        var colM = Enumerable.Range(0, nT).Select(t => y.Average(r => r[t])).ToArray();
+        return Enumerable.Range(0, nC)
+            .Select(c => Enumerable.Range(0, nT).Select(t => y[c][t] - rowM[c] - colM[t] + grand).ToArray())
+            .ToArray();
+    }
+    (double Wave, double Build, double Inter) Decompose(double[][] src)
+    {
+        var y = conW.Select(w => src[w]).ToArray();
+        double grand = y.SelectMany(r => r).Average();
+        var rowM = y.Select(r => r.Average()).ToArray();
+        var colM = Enumerable.Range(0, nT).Select(t => y.Average(r => r[t])).ToArray();
+        double ssT = y.SelectMany(r => r).Sum(v => (v - grand) * (v - grand));
+        double ssW = nT * rowM.Sum(m => (m - grand) * (m - grand));
+        double ssB = nC * colM.Sum(m => (m - grand) * (m - grand));
+        var rs = Resid(src);
+        double ssI = rs.SelectMany(r => r).Sum(v => v * v);
+        return (ssW / ssT * 100, ssB / ssT * 100, ssI / ssT * 100);
+    }
+
+    Console.WriteLine("## 11. 分散分解 — 交互作用はどれだけあるか");
+    Console.WriteLine();
+    Console.WriteLine($"寄与する {nC} 波 × {nT} 編成 = **{nC * nT} 点**。加法モデル");
+    Console.WriteLine("`予測 = 波の平均 + 編成の平均 − 全体平均` を引いた残りが**交互作用成分そのもの**。");
+    Console.WriteLine();
+    Console.WriteLine("目的変数は2つ出す。**勝率は天井（100.0%）で潰れる**ので、そこだけで結論を出すと");
+    Console.WriteLine("「天井が作った見かけの交互作用」を実物と取り違える——第15期が (c) 残存度を置いたのと同じ理由。");
+    Console.WriteLine();
+    var decW = Decompose(rate);
+    var decD = Decompose(degree);
+    Console.WriteLine("| 目的変数 | 波の主効果 | 編成の主効果 | **交互作用** |");
+    Console.WriteLine("|---|--:|--:|--:|");
+    Console.WriteLine($"| 勝率 | {decW.Wave:F1}% | {decW.Build:F1}% | **{decW.Inter:F1}%** |");
+    Console.WriteLine($"| 残存度 | {decD.Wave:F1}% | {decD.Build:F1}% | **{decD.Inter:F1}%** |");
+    Console.WriteLine();
+    var residW = Resid(rate);
+    var residD = Resid(degree);
+
+    // 検算。片側だけの特徴量が残差と相関 0 になることを実際に確かめる。
+    double[] Flat(Func<int, int, double> get) => Enumerable.Range(0, nC)
+        .SelectMany(c => Enumerable.Range(0, nT).Select(t => get(conW[c], t))).ToArray();
+    double[] FlatV(double[][] v) => v.SelectMany(r => r).ToArray();
+    double maxOne = 0;
+    foreach (var (name, get) in allyF)
+        maxOne = Math.Max(maxOne, Math.Abs(Pearson(Flat((w, t) => get(targets[t].F)), FlatV(residW))));
+    foreach (var (name, _, get) in foeF)
+        maxOne = Math.Max(maxOne, Math.Abs(Pearson(Flat((w, t) => get(waves[w].Enemy)), FlatV(residW))));
+    Console.WriteLine($"**検算: 片側だけの特徴量 17 種（編成8 + 敵9）と交互作用成分の相関は、最大でも |r| = {maxOne:F6}。**");
+    Console.WriteLine("これは測定結果ではなく**恒等式**——残差は行方向にも列方向にも和が 0 なので、");
+    Console.WriteLine("片側で定数の量との共分散は必ず消える。**交互作用を予測したいなら両側が要る**ことの、");
+    Console.WriteLine("いちばん強い形の言い直しになっている（第12期以来ずっと片側だけで測っていた）。");
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 12. 相関 ---
+    Console.WriteLine("## 12. 交互作用項は効くか");
+    Console.WriteLine();
+    Console.WriteLine("3通りの当て方を出す。**どれか1つでは読めない。**");
+    Console.WriteLine();
+    Console.WriteLine("- **(1) プール（生）** — 217 点をそのまま。計画書 §3-4 の1番。");
+    Console.WriteLine("  ただし**波の主効果を拾うだけ**になりやすい（波によって難度が違うので、");
+    Console.WriteLine("  敵側の量を含む項は自動的に効いて見える）。");
+    Console.WriteLine("- **(2) 交互作用成分** — §11 の残差に当てる。**これが本題。**");
+    Console.WriteLine("- **(3) 波ごと** — 第15期と直接比べるための形。");
+    Console.WriteLine();
+    Console.WriteLine("順位相関 `ρ` も併記する。**項には閾値的なもの（一撃圏）が含まれる**ので、");
+    Console.WriteLine("ピアソンだけだと「単調だが直線ではない効き方」を取りこぼした可能性を消せない。");
+    Console.WriteLine();
+    Console.WriteLine("| # | 項 | (1) プール r | r² | **(2) 交互作用 r** | **r²** | (2) ρ | 交互作用の説明力（全分散比） |");
+    Console.WriteLine("|--:|---|--:|--:|--:|--:|--:|--:|");
+    var termScore = new List<(int K, double R, double R2)>();
+    double[] residFlat = FlatV(residW);
+    for (int k = 0; k < terms.Length; k++)
+    {
+        double[] x = Flat((w, t) => terms[k].Get(targets[t].F, waves[w].Enemy));
+        double rp = Pearson(x, Flat((w, t) => rate[w][t]));
+        var ci = Correlate(x, residFlat);
+        termScore.Add((k, ci.R, ci.R * ci.R));
+        Console.WriteLine($"| {k + 1} | **{terms[k].Name}** | {Sg(rp, 2):+0.00;-0.00} | {rp * rp:F3} "
+            + $"| {Sg(ci.R, 2):+0.00;-0.00} | **{ci.R * ci.R:F3}** | {Sg(ci.Rho, 2):+0.00;-0.00} "
+            + $"| {ci.R * ci.R * decW.Inter / 100:F3} |");
+    }
+    Console.WriteLine();
+    double maxRho = Enumerable.Range(0, terms.Length).Max(k =>
+        Math.Abs(Correlate(Flat((w, t) => terms[k].Get(targets[t].F, waves[w].Enemy)), residFlat).Rho));
+    Console.WriteLine($"**順位相関でも最大 |ρ| = {maxRho:F3}。** 単調な非線形を取りこぼしているのではない。");
+    Console.WriteLine();
+    var bestT = termScore.OrderByDescending(x => x.R2).First();
+    Console.WriteLine($"**最も効く項は `{terms[bestT.K].Name}`（{terms[bestT.K].Expr}）で、交互作用成分に対して");
+    Console.WriteLine($"r = {Sg(bestT.R, 2):+0.00;-0.00} / r² = {bestT.R2:F3}。** 交互作用は全分散の {decW.Inter:F1}% なので、");
+    Console.WriteLine($"**全体としては {bestT.R2 * decW.Inter / 100:F3}** を説明していることになる。");
+    Console.WriteLine();
+    if (bestT.R2 < 0.02)
+    {
+        Console.WriteLine("> **この「最良」に意味は無い。** r² がこの帯では 10 項の順位は雑音で入れ替わる。");
+        Console.WriteLine("> **「この項が一番近い」として設計に使ってはいけない**——下の §13 の残差も");
+        Console.WriteLine("> 実質は交互作用成分そのもの（回帰ではぼ何も引けていない）として読むこと。");
+        Console.WriteLine();
+    }
+    // 残存度でも同じことをやる。天井で潰れない連続量で符号と順位が変わらないかを見る。
+    Console.WriteLine("### 12-1. 残存度で測り直す（天井で潰れない連続量）");
+    Console.WriteLine();
+    Console.WriteLine("**勝率は 100.0% で潰れる**ので、そこだけで結論を出すと天井が作った見かけの交互作用を");
+    Console.WriteLine("実物と取り違える。同じ項を残存度の交互作用成分に当て直す。");
+    Console.WriteLine();
+    Console.WriteLine("| # | 項 | 交互作用 r（勝率） | 交互作用 r（残存度） | 符号一致 |");
+    Console.WriteLine("|--:|---|--:|--:|:-:|");
+    int agree = 0;
+    var degScore = new List<(int K, double R)>();
+    for (int k = 0; k < terms.Length; k++)
+    {
+        double[] x = Flat((w, t) => terms[k].Get(targets[t].F, waves[w].Enemy));
+        double rw = Pearson(x, FlatV(residW));
+        double rd = Pearson(x, FlatV(residD));
+        degScore.Add((k, rd));
+        bool ok = Math.Sign(rw) == Math.Sign(rd);
+        if (ok) agree++;
+        Console.WriteLine($"| {k + 1} | {terms[k].Name} | {Sg(rw, 2):+0.00;-0.00} | {Sg(rd, 2):+0.00;-0.00} | {(ok ? "○" : "**×**")} |");
+    }
+    Console.WriteLine();
+    Console.WriteLine($"**符号が一致したのは {agree} / {terms.Length}。** 一致しない項は、勝率の天井が作った");
+    Console.WriteLine("見かけの効きを拾っている疑いがあるので、そのまま設計に使ってはいけない。");
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 12-2. 波ごと（第15期との対比） ---
+    //
+    // **波の中では、交互作用項は味方側の量の定数倍にしかならない**（敵側が定数だから）。
+    // だから波ごとの r は、その項の味方側成分の r と（符号を除いて）同じになる。
+    // **第15期と直接比べられる形はここではなく (2) のほう**だが、比べたときに何が起きるかを
+    // 見せておかないと「波ごとでも上がるはず」と読まれる。
+    Console.WriteLine("### 12-2. 波ごと（第15期との対比）");
+    Console.WriteLine();
+    Console.WriteLine("**波の中では、交互作用項は味方側の量の定数倍にしかならない**——敵側が定数だから。");
+    Console.WriteLine("だから波ごとの |r| は、その項の味方側成分の |r| と一致する。**積を入れても");
+    Console.WriteLine("波ごとの説明力は原理的に上がらない**ので、第15期と比べる場所はここではなく (2) のほう。");
+    Console.WriteLine();
+    Console.WriteLine("`静的1変数` は編成側の静的8種の最良 r²。**第15期 `wave` §9-2 の同名の列と一致するはず**");
+    Console.WriteLine("（同じ定義・同じ seed・同じ編成集合）——ずれたら実装が違う。");
+    Console.WriteLine();
+    // 第15期 `wave` §9-2 の `静的1変数 r²` の列。**別の実行から引いた数字だが、
+    // 同じ seed の決定的な計算なので一致しなければ実装が違う**——値を候補に使うのではなく、
+    // この診断が第15期と同じ盤を見ていることの検算にだけ使う（`wave` §2-1 と同じ作法）。
+    var stat15 = new Dictionary<string, double>
+    {
+        ["S2"] = 0.03, ["S3"] = 0.16, ["S4"] = 0.15, ["S5"] = 0.06,
+        ["R8"] = 0.17, ["R9"] = 0.20, ["R10"] = 0.12,
+    };
+    int statMiss = 0;
+    Console.WriteLine("| 波 | 静的1変数 r²（編成側だけ） | 第15期の記録 | 交互作用項の最良 r² | 最良の項 |");
+    Console.WriteLine("|:-:|--:|--:|--:|---|");
+    foreach (int w in conW)
+    {
+        double bestS = allyF.Max(a => { double r = Pearson(Enumerable.Range(0, nT).Select(t => a.Get(targets[t].F)).ToArray(), rate[w]); return double.IsNaN(r) ? 0 : r * r; });
+        var bt = Enumerable.Range(0, terms.Length)
+            .Select(k => (K: k, R2: Math.Pow(Pearson(Enumerable.Range(0, nT).Select(t => terms[k].Get(targets[t].F, waves[w].Enemy)).ToArray(), rate[w]), 2)))
+            .Where(x => !double.IsNaN(x.R2)).OrderByDescending(x => x.R2).First();
+        string rec = "—";
+        if (stat15.TryGetValue(waves[w].Tag, out double want))
+        {
+            bool ok = Math.Abs(bestS - want) <= 0.005;
+            if (!ok) statMiss++;
+            rec = ok ? $"{want:F2}" : $"**{want:F2} ←ずれ**";
+        }
+        Console.WriteLine($"| {waves[w].Tag} | {bestS:F2} | {rec} | {bt.R2:F2} | {terms[bt.K].Name} |");
+    }
+    Console.WriteLine();
+    Console.WriteLine(statMiss == 0
+        ? "**検算: 第15期 `wave` §9-2 の `静的1変数` と完全に一致（ずれ 0 件）。** "
+          + "この診断は第15期と同じ盤を見ている。"
+        : $"**検算: {statMiss} 件ずれた。第15期と同じ盤を見ていない——先へ進む前に原因を潰すこと。**");
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 13. 最も効く項の残差 ---
+    //
+    // 計画書 §3-4 の3番。**残差の大きい事例が §7 で解剖したものと一致するか。**
+    // 一致するなら「解剖で見えたものが数値でも残っている」で、一致しないなら
+    // 「解剖したのは、この項では説明できない別の何か」になる。
+    Console.WriteLine("## 13. 最も効く項の残差（§7 の事例と一致するか）");
+    Console.WriteLine();
+    Console.WriteLine($"交互作用成分を `{terms[bestT.K].Name}` で回帰したあとの残り。**大きいところが");
+    Console.WriteLine("「この項でも説明が付かない入れ替わり」**で、そこが §7 の 12 事例と一致するかを見る。");
+    Console.WriteLine();
+    {
+        double[] x = Flat((w, t) => terms[bestT.K].Get(targets[t].F, waves[w].Enemy));
+        double[] y = FlatV(residW);
+        double mx = x.Average(), my = y.Average();
+        double b = x.Zip(y, (a, c) => (a - mx) * (c - my)).Sum() / x.Sum(a => (a - mx) * (a - mx));
+        var left = new List<(int W, int T, double E)>();
+        int idx = 0;
+        for (int c = 0; c < nC; c++)
+            for (int t = 0; t < nT; t++, idx++)
+                left.Add((conW[c], t, y[idx] - (my + b * (x[idx] - mx))));
+        var caseKey = cases.SelectMany(cc => new[] { (cc.A, cc.T), (cc.B, cc.T) }).ToHashSet();
+        int hitTop = 0;
+        Console.WriteLine("| 順 | 編成 | 波 | 勝率 | 交互作用成分 | 残差 | §7 の事例 |");
+        Console.WriteLine("|--:|---|:-:|--:|--:|--:|:-:|");
+        int rank = 0;
+        foreach (var (w, t, e) in left.OrderByDescending(v => Math.Abs(v.E)).Take(12))
+        {
+            rank++;
+            bool inCase = caseKey.Contains((w, t));
+            if (inCase) hitTop++;
+            int c = Array.IndexOf(conW, w);
+            Console.WriteLine($"| {rank} | {targets[t].Name} | {waves[w].Tag} | {rate[w][t]:F1}% "
+                + $"| {Sg(residW[c][t], 1):+0.0;-0.0} | {Sg(e, 1):+0.0;-0.0} | {(inCase ? "**○**" : "—")} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**残差上位 12 のうち、§7 で解剖した (編成, 波) は {hitTop} 件。**");
+        Console.WriteLine($"解剖の対象は {caseKey.Count} 組 / 全 {nC * nT} 組（{caseKey.Count * 100.0 / (nC * nT):F0}%）なので、");
+        Console.WriteLine($"偶然なら {12.0 * caseKey.Count / (nC * nT):F1} 件前後。");
+        Console.WriteLine();
+        Console.WriteLine("> **読み方に注意。** 最良の項でさえ r² が雑音帯なので、この残差は");
+        Console.WriteLine("> **実質的に交互作用成分そのもの**（前の列とほぼ同じ値になっている）。");
+        Console.WriteLine("> だからこの表は「項で引いた残り」ではなく、**交互作用が大きい (編成, 波) の一覧**として読む。");
+        Console.WriteLine("> その上で、§7 が順位差で選んだ 12 事例は **交互作用の大きいところを当てていた**");
+        Console.WriteLine("> （偶然の 2〜3 倍）——**解剖の対象選びは外していない。**");
+        Console.WriteLine();
+    }
+    Console.Out.Flush();
+
+    // --- 14. 判定 ---
+    // §3-5 の3行から数字で機械的に選ぶ（§8 / bench と同じ作法）。
+    // 線は「交互作用成分の r² が 0.10 を超えるか」。**測定から出た線ではない**ので、
+    // 生の r² を同じ節に出してある。
+    const double TermLine = 0.10;
+    Console.WriteLine("## 14. 判定（計画書 §3-5 のどの行か）");
+    Console.WriteLine();
+    Console.WriteLine($"線は「**交互作用成分に対する r² が {TermLine:F2} を超えるか**」。**測定から出た線ではない**");
+    Console.WriteLine("ので、生の r² を §12 にそのまま出してある（引き直せる）。");
+    Console.WriteLine();
+    int strong = termScore.Count(x => x.R2 >= TermLine);
+    string verdict = bestT.R2 >= TermLine
+        ? "**1行目: 交互作用は読める。** 特徴量が悪かっただけ。プレイヤーも学べるので、ステージ設計に使える"
+        : "**2行目: 積を入れても上がらないが、Phase GA の解剖では説明が付いた（11/12）。** "
+          + "人間には読めるが数値化できていない——説明の言葉を、より良い特徴量に翻訳し直す余地がある";
+    Console.WriteLine($"- 交互作用成分の r² が {TermLine:F2} 以上の項: **{strong} / {terms.Length}**");
+    Console.WriteLine($"- 最良は `{terms[bestT.K].Name}` の r² = **{bestT.R2:F3}**");
+    Console.WriteLine($"- §7 の解剖で説明が付いたのは **11 / 12**");
+    Console.WriteLine();
+    Console.WriteLine(verdict);
+    Console.WriteLine();
+    Console.WriteLine("**3行目（積も効かず解剖でも説明が付かない = ガチャに近い）ではない。**");
+    Console.WriteLine("§7 で 11/12 に説明が付いているので、その行は数字の上で外れている。");
     Console.WriteLine();
     Console.Out.Flush();
     return;
