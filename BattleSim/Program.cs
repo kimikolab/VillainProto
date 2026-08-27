@@ -3686,6 +3686,681 @@ if (focusId == "bench")
     return;
 }
 
+// wave モード: 編成 × 波の交互作用を、単発戦の勝率で測る（第15期 Phase FA）。
+//
+// **方針の変更が前提にある**（design/SINGLE_BATTLE_PLAN.md §0）。基本（メイン）は単発戦で、
+// 会戦は「もありえる」の位置づけになった。**代金（払った HP の割合）は会戦でしか意味を持たない**
+// ——単発戦では HP が毎回リセットされるので、90% 削られて勝つのと 20% で勝つのは同じ価値で、
+// 代金という概念そのものが成立しない。第5〜9期・第12〜14期は捨てないが、**主の物差しではなかった。**
+//
+// 単発が主なら狙うものも変わる。配分判断ではなく **波によって最適な編成が違うこと**
+// （編成 × 波の交互作用）。「この波にはこの編成」が成立すれば、それだけで編成パズルになる。
+// 第6〜8期がずっと探していた「向き」は、**突破度ではなく波ごとの勝率に対して測るべきだった。**
+//
+// 出発点は docs/balance.md の天井率（勝率 100.0% の編成数）: 第1波 31/31、第2〜4波が 13〜14/31、
+// 第5波だけが 2/31。**第1波は評価に一切寄与していない。**
+//
+// ここで測るのは既存5波 + 第5〜10期に診断のローカルへ散らばっていた候補波の全部。
+// **代金ではなく勝率で測り直す**——第5〜7期はすべて代金で評価していたので、
+// 勝敗の観点では一度も見ていない。
+//
+// 却下した案: 候補波を `EnemyCatalog.Stages` / `Columns` へ足してから測る。採用が決まって
+// いない波をカタログに入れると `compare` / `dump` が動いて docs/ に差分が出る（第5期以来の方針。
+// 波の採用決定はこの作業では**しない**）。集約先はこのモードのローカル1箇所にする。
+//
+// 診断用で docs/ には置かない（power / bench / timing と同じ扱い）。
+//
+//     dotnet run --project BattleSim -c Release 0 wave [絞り込み]
+if (focusId == "wave")
+{
+    const int WaveSeeds = 200;   // compare / power / bench と同じ
+    var all = CompareBuilds();
+
+    string filter = args.Length > 2 ? args[2] : "";
+    var targets = all
+        .Where(b => filter.Length == 0 || filter.Split(',').Any(k => b.Name.Contains(k.Trim())))
+        .ToArray();
+    int nT = targets.Length;
+
+    // --- 候補波の集約（1箇所） ---
+    //
+    // 出どころは6つ。**どれも定義を1文字も変えずに写している**——値が動いたら集め方が
+    // 間違っている証拠なので、下の「再現の検算」で 代金・向き・ターン数 を突き合わせる
+    // （§5-7 の停止条件）。
+    //
+    //   既存5波   EnemyCatalog.Stages（compare / chain / pulse が測っている盤面そのもの）
+    //   第5期     gradient の w1 / w2 / w3
+    //   第6期     aim の H1 系・H2 系・M1（1a/1b/1c は gradient と同一なので重複させない）
+    //   第7期     flip の R0〜R12（3a/3b/3c は gradient と同一なので重複させない）
+    //   第8期     bridge の 荷駄6 / 巡礼6（第3波の代金だけを振った点。攻10 は R11 と同じ）
+    //   第10期    ChargeBench の第2波・第3波（第1波は H2a と同一なので重複させない）
+    //
+    // **現物が無くて入れられなかった候補が2つある。** 第8期に測った「攻5 版」（90/攻5）と
+    // 「板金従卒6」（60/攻7）は `UnitCatalog` に `UnitDef` が残っていない（攻5 は刻みとして
+    // 測っただけ、板金従卒は「却下した案」として文章にだけ残っている）。BattleCore を触らない
+    // 作業なので**新しい敵は作らない**——集めるのは現物のある波だけにして、無い2つは出力に明記する。
+    var waves = new (string Tag, string Era, string Name, Formation Enemy)[]
+    {
+        ("S1",  "既存",   "第一波 / 物見の兵",      EnemyCatalog.Stages[0].Enemy),
+        ("S2",  "既存",   "第二波 / 巡礼騎士団",    EnemyCatalog.Stages[1].Enemy),
+        ("S3",  "既存",   "第三波 / 討伐隊本隊",    EnemyCatalog.Stages[2].Enemy),
+        ("S4",  "既存",   "第四波 / 城塞守備隊",    EnemyCatalog.Stages[3].Enemy),
+        ("S5",  "既存",   "第五波 / 異端審問団",    EnemyCatalog.Stages[4].Enemy),
+
+        // 第5期 gradient の w1 / w2 / w3。
+        ("G1a", "第5期",  "1a 農兵6",
+            Formation.Build(front1: EnemyCatalog.Levy, front2: EnemyCatalog.Levy, front3: EnemyCatalog.Levy,
+                            mid: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back2: EnemyCatalog.Levy)),
+        ("G1b", "第5期",  "1b 農兵5",
+            Formation.Build(front1: EnemyCatalog.Levy, front2: EnemyCatalog.Levy, front3: EnemyCatalog.Levy,
+                            mid: EnemyCatalog.Levy, back1: EnemyCatalog.Levy)),
+        ("G1c", "第5期",  "1c 農兵5+斧",
+            Formation.Build(front1: EnemyCatalog.Levy, front2: EnemyCatalog.Axeman, front3: EnemyCatalog.Levy,
+                            mid: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back2: EnemyCatalog.Levy)),
+        ("G2a", "第5期",  "2a 新兵3+斧",
+            Formation.Build(front1: EnemyCatalog.Recruit, front2: EnemyCatalog.Recruit,
+                            front3: EnemyCatalog.Recruit, mid: EnemyCatalog.Axeman)),
+        ("G2b", "第5期",  "2b 騎士混成",
+            Formation.Build(front1: EnemyCatalog.Recruit, front2: EnemyCatalog.Knight,
+                            front3: EnemyCatalog.Recruit, mid: EnemyCatalog.Axeman)),
+        ("G2c", "第5期",  "2c 騎士2+狙撃",
+            Formation.Build(front1: EnemyCatalog.Knight, front2: EnemyCatalog.Knight,
+                            front3: EnemyCatalog.Recruit, mid: EnemyCatalog.Archer)),
+        ("G3a", "第5期",  "3a 精鋭3",
+            Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.Champion, front3: EnemyCatalog.Warden)),
+        ("G3b", "第5期",  "3b 精鋭+司祭長",
+            Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.Champion, mid: EnemyCatalog.Chaplain)),
+        ("G3c", "第5期",  "3c 精鋭2",
+            Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.Champion)),
+
+        // 第6期 aim。H1 系（高HP低攻）・H2 系（低HP高攻）・M1（中間点）。
+        ("H1a", "第6期",  "H1a 人足6",
+            Formation.Build(front1: EnemyCatalog.Laborer, front2: EnemyCatalog.Laborer, front3: EnemyCatalog.Laborer,
+                            mid: EnemyCatalog.Laborer, back1: EnemyCatalog.Laborer, back2: EnemyCatalog.Laborer)),
+        ("H1b", "第6期",  "H1b 人足5",
+            Formation.Build(front1: EnemyCatalog.Laborer, front2: EnemyCatalog.Laborer, front3: EnemyCatalog.Laborer,
+                            mid: EnemyCatalog.Laborer, back1: EnemyCatalog.Laborer)),
+        ("H1c", "第6期",  "H1c 人足4",
+            Formation.Build(front1: EnemyCatalog.Laborer, front2: EnemyCatalog.Laborer, front3: EnemyCatalog.Laborer,
+                            mid: EnemyCatalog.Laborer)),
+        ("H2a", "第6期",  "H2a 裸5(16)",
+            Formation.Build(front1: EnemyCatalog.ZealotBare, front2: EnemyCatalog.ZealotBare,
+                            front3: EnemyCatalog.ZealotBare, mid: EnemyCatalog.ZealotBare,
+                            back1: EnemyCatalog.ZealotBare)),
+        ("H2b", "第6期",  "H2b 革5(24)",
+            Formation.Build(front1: EnemyCatalog.ZealotLeather, front2: EnemyCatalog.ZealotLeather,
+                            front3: EnemyCatalog.ZealotLeather, mid: EnemyCatalog.ZealotLeather,
+                            back1: EnemyCatalog.ZealotLeather)),
+        ("H2c", "第6期",  "H2c 鎖5(32)",
+            Formation.Build(front1: EnemyCatalog.ZealotMail, front2: EnemyCatalog.ZealotMail,
+                            front3: EnemyCatalog.ZealotMail, mid: EnemyCatalog.ZealotMail,
+                            back1: EnemyCatalog.ZealotMail)),
+        ("H2d", "第6期",  "H2d 革4(24)",
+            Formation.Build(front1: EnemyCatalog.ZealotLeather, front2: EnemyCatalog.ZealotLeather,
+                            front3: EnemyCatalog.ZealotLeather, mid: EnemyCatalog.ZealotLeather)),
+        ("M1",  "第6期",  "M1 傭兵5",
+            Formation.Build(front1: EnemyCatalog.Drifter, front2: EnemyCatalog.Drifter, front3: EnemyCatalog.Drifter,
+                            mid: EnemyCatalog.Drifter, back1: EnemyCatalog.Drifter)),
+
+        // 第7期 flip。R0〜R6・R8〜R12 は 体数 × 個体HP の格子、R7 は処刑なしの対照。
+        ("R0",  "第7期",  "R0 鎖4(32)",
+            Formation.Build(front1: EnemyCatalog.ZealotMail, front2: EnemyCatalog.ZealotMail,
+                            front3: EnemyCatalog.ZealotMail, mid: EnemyCatalog.ZealotMail)),
+        ("R1",  "第7期",  "R1 板金4(60)",
+            Formation.Build(front1: EnemyCatalog.ZealotPlate, front2: EnemyCatalog.ZealotPlate,
+                            front3: EnemyCatalog.ZealotPlate, mid: EnemyCatalog.ZealotPlate)),
+        ("R2",  "第7期",  "R2 板金3(60)",
+            Formation.Build(front1: EnemyCatalog.ZealotPlate, front2: EnemyCatalog.ZealotPlate,
+                            front3: EnemyCatalog.ZealotPlate)),
+        ("R3",  "第7期",  "R3 板金2(60)",
+            Formation.Build(front1: EnemyCatalog.ZealotPlate, front2: EnemyCatalog.ZealotPlate)),
+        ("R4",  "第7期",  "R4 重甲4(90)",
+            Formation.Build(front1: EnemyCatalog.ZealotGreat, front2: EnemyCatalog.ZealotGreat,
+                            front3: EnemyCatalog.ZealotGreat, mid: EnemyCatalog.ZealotGreat)),
+        ("R5",  "第7期",  "R5 重甲3(90)",
+            Formation.Build(front1: EnemyCatalog.ZealotGreat, front2: EnemyCatalog.ZealotGreat,
+                            front3: EnemyCatalog.ZealotGreat)),
+        ("R6",  "第7期",  "R6 重甲2(90)",
+            Formation.Build(front1: EnemyCatalog.ZealotGreat, front2: EnemyCatalog.ZealotGreat)),
+        ("R7",  "第7期",  "R7 精鋭3・処刑なし（3a と数値は同じ）",
+            Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.ChampionPlain, front3: EnemyCatalog.Warden)),
+        ("R8",  "第7期",  "R8 重甲5(90)",
+            Formation.Build(front1: EnemyCatalog.ZealotGreat, front2: EnemyCatalog.ZealotGreat,
+                            front3: EnemyCatalog.ZealotGreat, mid: EnemyCatalog.ZealotGreat,
+                            back1: EnemyCatalog.ZealotGreat)),
+        ("R9",  "第7期",  "R9 重甲6(90)",
+            Formation.Build(front1: EnemyCatalog.ZealotGreat, front2: EnemyCatalog.ZealotGreat,
+                            front3: EnemyCatalog.ZealotGreat, mid: EnemyCatalog.ZealotGreat,
+                            back1: EnemyCatalog.ZealotGreat, back2: EnemyCatalog.ZealotGreat)),
+        ("R10", "第7期",  "R10 板金6(60)",
+            Formation.Build(front1: EnemyCatalog.ZealotPlate, front2: EnemyCatalog.ZealotPlate,
+                            front3: EnemyCatalog.ZealotPlate, mid: EnemyCatalog.ZealotPlate,
+                            back1: EnemyCatalog.ZealotPlate, back2: EnemyCatalog.ZealotPlate)),
+        ("R11", "第7期",  "R11 従卒6(90/攻10)",
+            Formation.Build(front1: EnemyCatalog.ZealotSquire, front2: EnemyCatalog.ZealotSquire,
+                            front3: EnemyCatalog.ZealotSquire, mid: EnemyCatalog.ZealotSquire,
+                            back1: EnemyCatalog.ZealotSquire, back2: EnemyCatalog.ZealotSquire)),
+        ("R12", "第7期",  "R12 従卒5(90/攻10)",
+            Formation.Build(front1: EnemyCatalog.ZealotSquire, front2: EnemyCatalog.ZealotSquire,
+                            front3: EnemyCatalog.ZealotSquire, mid: EnemyCatalog.ZealotSquire,
+                            back1: EnemyCatalog.ZealotSquire)),
+
+        // 第8期 bridge。R11 と体数・個体HP は同じで攻撃だけが違う（代金を振った軸）。
+        ("P6",  "第8期",  "荷駄6(90/攻7)",
+            Formation.Build(front1: EnemyCatalog.ZealotPorter, front2: EnemyCatalog.ZealotPorter,
+                            front3: EnemyCatalog.ZealotPorter, mid: EnemyCatalog.ZealotPorter,
+                            back1: EnemyCatalog.ZealotPorter, back2: EnemyCatalog.ZealotPorter)),
+        ("Q6",  "第8期",  "巡礼6(90/攻4)",
+            Formation.Build(front1: EnemyCatalog.ZealotPilgrim, front2: EnemyCatalog.ZealotPilgrim,
+                            front3: EnemyCatalog.ZealotPilgrim, mid: EnemyCatalog.ZealotPilgrim,
+                            back1: EnemyCatalog.ZealotPilgrim, back2: EnemyCatalog.ZealotPilgrim)),
+
+        // 第10期 ChargeBench の第2波・第3波。**候補波の中で貫き・全体を持つのはここだけ**
+        // （第6期以降の候補は「敵の攻撃型は測定の交絡になる」として単体で揃えてある）。
+        ("C2",  "第10期", "チャージ台2波 新兵2+騎士+狙撃(貫き)", ChargeBench()[1]),
+        ("C3",  "第10期", "チャージ台3波 巡礼3+詠唱兵(全体)",   ChargeBench()[2]),
+    };
+    int nW = waves.Length;
+
+    Console.WriteLine($"# 編成 × 波の交互作用（単発戦・seed 0..{WaveSeeds - 1} の {WaveSeeds} 試行）");
+    Console.WriteLine();
+    Console.WriteLine("**単発戦の勝率で測る。** 会戦（`engage` / `power` / `bench`）の突破度でも代金でもない");
+    Console.WriteLine("——代金は HP を持ち越す会戦でしか意味を持たず、単発では 90% 削られて勝つのと 20% で");
+    Console.WriteLine("勝つのが同じ価値になる。第5〜7期の候補波は**すべて代金で評価していた**ので、");
+    Console.WriteLine("勝敗の観点ではここが初めての測定になる。");
+    Console.WriteLine();
+    Console.WriteLine("見たいのは値の大小ではなく **「波によって最適な編成が違うか」**（編成 × 波の交互作用）。");
+    Console.WriteLine("成立すれば、それだけで編成パズルになる。");
+    Console.WriteLine();
+    Console.WriteLine("**測定だけで、盤面は何も変えていない。** `EnemyCatalog.Stages` / `Columns` にも足していない。");
+    Console.WriteLine();
+
+    // --- 1. 候補波の定義 ---
+    Console.WriteLine("## 1. 候補波の定義（ここが1箇所）");
+    Console.WriteLine();
+    Console.WriteLine($"既存5波 + 候補 {nW - 5} = **{nW} 波**。定義はどれも出どころのローカル定義を1文字も");
+    Console.WriteLine("変えずに写したもの（§2 の検算で突き合わせる）。");
+    Console.WriteLine();
+    Console.WriteLine("> **現物が無くて入れられなかった候補が2つある。** 第8期に測った「攻5 版」（90/攻5）と");
+    Console.WriteLine("> 「板金従卒6」（60/攻7）は `UnitCatalog` に `UnitDef` が残っていない（前者は刻みとして");
+    Console.WriteLine("> 測っただけ、後者は「却下した案」として文章にだけ残っている）。**BattleCore を触らない**");
+    Console.WriteLine("> 作業なので新しい敵は作らず、集めるのは現物のある波だけにした。");
+    Console.WriteLine();
+    Console.WriteLine("| タグ | 出どころ | 波 | 体数 | 総HP | 総攻 | 中身（HP/攻/速/型） |");
+    Console.WriteLine("|:-:|:-:|---|--:|--:|--:|---|");
+    foreach (var (tag, era, name, enemy) in waves)
+    {
+        string[] seat = { "前1", "前2", "前3", "中", "後1", "後2" };
+        var members = enemy.Occupied().Select(x =>
+        {
+            string pat = x.Def.Pattern switch
+            {
+                AttackPattern.Sweep => "薙ぎ", AttackPattern.Pierce => "貫き",
+                AttackPattern.All => "全体", _ => "単体"
+            };
+            return $"{seat[x.Slot]}={x.Def.Name}({x.Def.MaxHp}/{x.Def.Attack}/速{x.Def.Speed}/{pat})";
+        });
+        Console.WriteLine($"| **{tag}** | {era} | {name} | {enemy.Count} "
+            + $"| {enemy.Occupied().Sum(x => x.Def.MaxHp)} | {enemy.Occupied().Sum(x => x.Def.Attack)} "
+            + $"| {string.Join("、", members)} |");
+    }
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 2. 検算 ---
+    //
+    // (1) **再現の検算**（§5-7 の停止条件）。集め方が間違っていれば、代金・向き・ターン数が
+    //     gradient / aim / flip / bridge と食い違う。`MeasureCost` を**同じ関数のまま呼び直す**
+    //     ので、一致しなければ写し間違い以外の説明が付かない。
+    // (2) 味方と敵の Def.Id が衝突していると、敵の被弾が味方の動的特徴量に混ざる（power と同じ穴）。
+    // (3) 敵同士の巻き込みが無いこと（受け手側から与ダメを取るための前提。第13期 §3-1）。
+    Console.WriteLine("## 2. 検算");
+    Console.WriteLine();
+
+    var cost = new (double WinRate, double AvgAlive, double AvgHpPct, int Wins, double AvgTurns)[nW, nT];
+    for (int w = 0; w < nW; w++)
+        for (int t = 0; t < nT; t++)
+            cost[w, t] = MeasureCost(targets[t].F, waves[w].Enemy, WaveSeeds);
+
+    // 記録されている値（**現行 master での** gradient / aim / flip / bridge の出力）。
+    // 第5〜7期当時の値ではない——第10・11期でチャージとスキルの行動化が入っているので
+    // 当時の数字とは合わない（合わないこと自体は集め方の誤りではない）。突き合わせるのは
+    // 「同じ master で同じ波を測ったら同じ値が出るか」で、そこがずれたら写し間違いになる。
+    var recorded = new Dictionary<string, (double Cost, double Split, double Turns, string From)>
+    {
+        ["G1a"] = (31.8, +2.9, 4.1, "gradient / aim"), ["G1b"] = (27.4, +3.0, 3.9, "gradient / aim"),
+        ["G1c"] = (36.7, +2.3, 4.3, "gradient / aim"),
+        ["G2a"] = (36.0, +1.7, double.NaN, "gradient"), ["G2b"] = (41.4, +2.3, double.NaN, "gradient"),
+        ["G2c"] = (50.9, +2.8, double.NaN, "gradient"),
+        ["G3a"] = (61.4, -0.4, 6.6, "gradient / flip"), ["G3b"] = (52.8, -0.1, 5.8, "gradient / flip"),
+        ["G3c"] = (44.7, +2.7, 5.3, "gradient / flip"),
+        ["H1a"] = (33.2, -2.6, 5.7, "aim"), ["H1b"] = (28.4, -2.3, 5.3, "aim"), ["H1c"] = (21.7, -2.8, 5.4, "aim"),
+        ["H2a"] = (30.0, +8.9, 3.1, "aim / bridge"), ["H2b"] = (36.1, +7.6, 3.5, "aim"),
+        ["H2c"] = (42.5, +5.6, 4.0, "aim"), ["H2d"] = (27.7, +6.8, 3.2, "aim / bridge"),
+        ["M1"] = (36.2, +3.2, 4.1, "aim"),
+        ["R0"] = (33.2, +7.0, 3.5, "flip"), ["R1"] = (47.7, +1.4, 4.8, "flip"),
+        ["R2"] = (35.8, +2.6, 4.1, "flip"), ["R3"] = (23.8, +1.9, 3.5, "flip"),
+        ["R4"] = (62.3, -2.9, 6.4, "flip"), ["R5"] = (46.6, +2.4, 5.1, "flip"), ["R6"] = (31.7, +2.7, 4.3, "flip"),
+        ["R7"] = (60.3, -0.2, 6.6, "flip"), ["R8"] = (79.7, -7.9, 8.2, "flip"), ["R9"] = (86.8, -4.3, 7.7, "flip"),
+        ["R10"] = (74.7, -6.7, 6.6, "flip"), ["R11"] = (68.3, -8.8, 7.7, "flip / bridge"),
+        ["R12"] = (57.8, -4.0, 6.9, "flip"),
+        ["P6"] = (54.2, -4.9, double.NaN, "bridge"), ["Q6"] = (42.5, -2.4, double.NaN, "bridge"),
+        ["C2"] = (44.6, double.NaN, double.NaN, "bridge"), ["C3"] = (43.9, -2.8, double.NaN, "bridge"),
+    };
+
+    var costMean = new double[nW];
+    var costSplit = new double[nW];
+    var costTurns = new double[nW];
+    var zeroWin = new int[nW];
+    int mismatch = 0;
+    Console.WriteLine("### 2-1. 再現（`MeasureCost` を同じ関数のまま呼び直したもの）");
+    Console.WriteLine();
+    Console.WriteLine("`記録` は**現行 master での** gradient / aim / flip / bridge の出力。第5〜7期当時の");
+    Console.WriteLine("数字ではない（第10・11期でチャージとスキルの行動化が入っているので当時とは合わない）。");
+    Console.WriteLine("ここで確かめたいのは「同じ master で同じ波を測ったら同じ値が出るか」だけ。");
+    Console.WriteLine("**0.1 を超えてずれたら写し間違い**なので、先へ進まずに止まる（§5-7）。");
+    Console.WriteLine();
+    Console.WriteLine("| タグ | 出典 | 代金平均 | 記録 | 単体−範囲 | 記録 | 平均ターン数 | 記録 | 勝率0%の編成数 |");
+    Console.WriteLine("|:-:|---|--:|--:|--:|--:|--:|--:|--:|");
+    for (int w = 0; w < nW; w++)
+    {
+        var live = Enumerable.Range(0, nT).Where(t => cost[w, t].Wins > 0).ToArray();
+        zeroWin[w] = nT - live.Length;
+        double Cost(int t) => (1 - cost[w, t].AvgHpPct) * 100;
+        costMean[w] = live.Length == 0 ? double.NaN : live.Average(Cost);
+        costTurns[w] = live.Length == 0 ? double.NaN : live.Average(t => cost[w, t].AvgTurns);
+        var groups = live.GroupBy(t => HasAoe(targets[t].F)).ToDictionary(g => g.Key, g => g.Average(Cost));
+        double aoe = groups.TryGetValue(true, out double a) ? a : double.NaN;
+        double single = groups.TryGetValue(false, out double b) ? b : double.NaN;
+        costSplit[w] = single - aoe;
+
+        if (!recorded.TryGetValue(waves[w].Tag, out var rec))
+        {
+            Console.WriteLine($"| {waves[w].Tag} | （既存5波・突き合わせ先なし） | {costMean[w]:F1}% | — "
+                + $"| {costSplit[w]:+0.0;-0.0}pt | — | {costTurns[w]:F1} | — | {zeroWin[w]} |");
+            continue;
+        }
+        string Chk(double got, double want)
+        {
+            if (double.IsNaN(want)) return "—";
+            bool ok = Math.Abs(got - want) <= 0.1;
+            if (!ok) mismatch++;
+            return ok ? $"{want:F1}" : $"**{want:F1} ←ずれ**";
+        }
+        string c1 = Chk(costMean[w], rec.Cost), c2 = Chk(costSplit[w], rec.Split), c3 = Chk(costTurns[w], rec.Turns);
+        Console.WriteLine($"| {waves[w].Tag} | {rec.From} | {costMean[w]:F1}% | {c1} "
+            + $"| {costSplit[w]:+0.0;-0.0}pt | {c2} | {costTurns[w]:F1} | {c3} | {zeroWin[w]} |");
+        Console.Out.Flush();
+    }
+    Console.WriteLine();
+    Console.WriteLine(mismatch == 0
+        ? "**再現: 一致（ずれ 0 件）。** 集め方は写しになっている。"
+        : $"**再現: {mismatch} 件ずれた。集め方が間違っている（§5-7 の停止条件）。**");
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 計測本体 ---
+    // seed ごとの勝敗と残存率を丸ごと持つ。半割（§4）は同じ計測から取り出すだけで済む
+    // （2回走らせると、半割の値そのものに実行間のばらつきが乗る。bench と同じ作法）。
+    var win = new double[nW][][];    // [波][編成][seed] 0/1
+    var surv = new double[nW][][];   // [波][編成][seed] 生存数 ÷ 出撃数
+    var dyn = new double[nW][][];    // [波][編成][動的特徴量]
+    long foeFromAlly = 0;
+    for (int w = 0; w < nW; w++)
+    {
+        win[w] = new double[nT][];
+        surv[w] = new double[nT][];
+        dyn[w] = new double[nT][];
+        for (int t = 0; t < nT; t++)
+        {
+            var m = MeasureWave(targets[t].F, waves[w].Enemy, WaveSeeds);
+            win[w][t] = m.Win;
+            surv[w][t] = m.SurvRate;
+            dyn[w][t] = m.Dynamics;
+            foeFromAlly += m.FoeTakenFromAlly;
+        }
+    }
+
+    var clash = new List<string>();
+    foreach (var (tag, _, _, enemy) in waves)
+    {
+        var foeIds = enemy.Occupied().Select(x => x.Def.Id).ToHashSet();
+        foreach (var (name, f) in targets)
+            foreach (string id in f.Occupied().Select(x => x.Def.Id).Where(foeIds.Contains))
+                clash.Add($"{tag} × {name}: {id}");
+    }
+
+    Console.WriteLine("### 2-2. 動的特徴量の前提（Phase FB が読む）");
+    Console.WriteLine();
+    Console.WriteLine($"- **味方と敵の Def.Id の衝突: {clash.Count} 件**"
+        + (clash.Count == 0 ? "（0 でなければ動的特徴量に敵の数字が混ざっている）"
+                            : $" ← **混入している**: {string.Join(" / ", clash.Take(5))}"));
+    Console.WriteLine($"- **敵の TakenFromAlly の総和: {foeFromAlly}**"
+        + (foeFromAlly == 0
+            ? "（0 = 敵側に巻き込みが無い。受け手側の与ダメから引いた量も 0）"
+            : " ← **敵同士の巻き込みがある。** 与ダメからこの量を引いている"));
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 3. 編成 × 波の勝率表 ---
+    double[] winRate(int w) => Enumerable.Range(0, nT).Select(t => win[w][t].Average() * 100).ToArray();
+    var rate = Enumerable.Range(0, nW).Select(winRate).ToArray();
+    // 残存度 = 全試行の平均（生存数 ÷ 出撃数）。**負けた試行は 0 になる**ので勝率を内包しつつ、
+    // 勝率が天井に張り付いた波でも「何体残して勝ったか」で編成が割れる。
+    // `chain` の `残存`（勝った試行だけの平均生存数）とは分母が違う——あちらは勝ち方の質、
+    // こちらは天井を割るための連続量。**両方出して、どちらを使ったかを明記する**（§2-2）。
+    var degree = Enumerable.Range(0, nW)
+        .Select(w => Enumerable.Range(0, nT).Select(t => surv[w][t].Average()).ToArray()).ToArray();
+    var aliveOnWin = Enumerable.Range(0, nW).Select(w => Enumerable.Range(0, nT).Select(t =>
+    {
+        int wins = win[w][t].Count(x => x > 0);
+        return wins == 0 ? 0.0 : Enumerable.Range(0, WaveSeeds).Where(s => win[w][t][s] > 0)
+            .Sum(s => surv[w][t][s]) / wins;
+    }).ToArray()).ToArray();
+
+    Console.WriteLine("## 3. 編成 × 波の勝率表");
+    Console.WriteLine();
+    Console.WriteLine("列は §1 のタグ。`S1`〜`S5` が既存5波（この5列は `docs/balance.md` と同じ値になる）。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 |" + string.Concat(waves.Select(x => $" {x.Tag} |")));
+    Console.WriteLine("|---|" + string.Concat(waves.Select(_ => "--:|")));
+    for (int t = 0; t < nT; t++)
+        Console.WriteLine($"| {targets[t].Name} |"
+            + string.Concat(Enumerable.Range(0, nW).Select(w => $" {rate[w][t]:F1} |")));
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 4. 波ごとの要約 ---
+    // **天井に張り付いた波は評価に寄与しない。** 全滅する波（床）も同じ。
+    // 線は「天井率 + 床率 ≥ 50%」に置いた——**これは測定から出た線ではない**ので、
+    // 生の天井率・床率を同じ表に出して、線を引き直せるようにしてある。
+    const double DeadZone = 50.0;
+    var ceilPct = new double[nW];
+    var floorPct = new double[nW];
+    var contributes = new bool[nW];
+    Console.WriteLine("## 4. 波ごとの要約（どの波が評価に寄与しているか）");
+    Console.WriteLine();
+    Console.WriteLine("`天井` は勝率 100.0% の編成数、`床` は 0.0% の編成数。**どちらも同値塊**で、");
+    Console.WriteLine("その中の編成同士は区別できない——天井だけの波・床だけの波は評価に寄与しない。");
+    Console.WriteLine();
+    Console.WriteLine("`残存(勝時)` は勝った試行の平均生存数 ÷ 出撃数（`chain` の `残存` と同じ定義）。");
+    Console.WriteLine("`残存度` は**全試行**の平均（生存数 ÷ 出撃数。負けた試行は 0）で、勝率を内包しつつ");
+    Console.WriteLine("天井で潰れない連続量。§6 の第2の読み方がこれを使う。");
+    Console.WriteLine();
+    Console.WriteLine($"`寄与` は **天井率 + 床率 < {DeadZone:F0}%** を満たすか。**この線は測定から出たものではない**");
+    Console.WriteLine("ので、生の天井・床の数字を同じ表に出してある（線を引き直したければここから読み直せる）。");
+    Console.WriteLine();
+    Console.WriteLine("| タグ | 波 | 平均勝率 | 勝率SD | 天井 | 床 | 天井+床 | 残存(勝時) | 残存度 | 残存度SD | 寄与 |");
+    Console.WriteLine("|:-:|---|--:|--:|--:|--:|--:|--:|--:|--:|:-:|");
+    for (int w = 0; w < nW; w++)
+    {
+        int ceil = rate[w].Count(v => v >= 100.0 - 1e-9);
+        int floor = rate[w].Count(v => v <= 1e-9);
+        ceilPct[w] = ceil * 100.0 / nT;
+        floorPct[w] = floor * 100.0 / nT;
+        contributes[w] = ceilPct[w] + floorPct[w] < DeadZone;
+        Console.WriteLine($"| **{waves[w].Tag}** | {waves[w].Name} | {rate[w].Average():F1}% | {Sd(rate[w]):F1}pt "
+            + $"| {ceil}/{nT} | {floor}/{nT} | {ceilPct[w] + floorPct[w]:F0}% "
+            + $"| {aliveOnWin[w].Average():F2} | {degree[w].Average():F3} | {Sd(degree[w]):F3} "
+            + $"| {(contributes[w] ? "○" : "×")} |");
+    }
+    Console.WriteLine();
+    int nContrib = contributes.Count(x => x);
+    int allCeil = Enumerable.Range(0, nW).Count(w => ceilPct[w] >= 100.0 - 1e-9);
+    Console.WriteLine($"**寄与している波は {nContrib} / {nW}。** 既存5波では "
+        + $"{Enumerable.Range(0, 5).Count(w => contributes[w])} / 5。");
+    Console.WriteLine();
+    Console.WriteLine($"うち **{allCeil} 波は {nT} 編成すべてが勝率 100.0%**（完全な天井）。候補波"
+        + $"（既存5波を除く {nW - 5} 波）に限ると、寄与するのは "
+        + $"{Enumerable.Range(5, nW - 5).Count(w => contributes[w])} 波しかない。");
+    Console.WriteLine();
+    Console.WriteLine("**第5〜8期の候補波は、単発戦としては全編成が勝ち切ってしまう。** 理屈は読める——");
+    Console.WriteLine("あれは会戦の3波列の1本として設計した波で、狙いは「1部隊の容量（約 100%）を");
+    Console.WriteLine("3波で使い切る」ことだった。1波あたりの代金 25〜60% は**会戦では3波ぶんが積み上がって");
+    Console.WriteLine("部隊を殺す**が、単発では HP が毎回戻るので**ただの「6割削られて勝つ」**にしかならない。");
+    Console.WriteLine("**代金の帯を狙って作った波は、単発戦の物差しでは全部が天井の同じ場所に並ぶ。**");
+    Console.WriteLine("寄与しているのは、代金ではなく難度で作られた波（既存の第2〜5波）と、第7期に");
+    Console.WriteLine("**打ち切りバイアスを理由に一度は捨てた重い波**（R8 / R9 / R10）だけ。");
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // --- 5. 半割 = 測定の信頼性の上限 ---
+    //
+    // 波をまたいだ順位相関が 1.00 未満なのは当たり前で、**乱数のばらつきだけでもそうなる。**
+    // 「どれくらいなら動いたと言えるか」の基準を先に測る（第13期 bench の作法をそのまま持ってくる）。
+    // 第13期の突破度での値は 0.985〜0.995 / 補正後 0.99 だったが、**目的変数が違うので測り直す**
+    // ——単発の勝率は 200 試行の二項比率なので、突破度よりばらつきが大きい可能性がある。
+    double SB(double r) => 2 * r / (1 + r);
+    double[] MeanOver(double[][] v, Func<int, bool> take) => Enumerable.Range(0, nT)
+        .Select(t => Enumerable.Range(0, WaveSeeds).Where(take).Average(s => v[t][s])).ToArray();
+    var capR = new double[nW];
+    var capRho = new double[nW];
+    var capDegRho = new double[nW];
+    Console.WriteLine("## 5. 半割 — 測定の信頼性の上限");
+    Console.WriteLine();
+    Console.WriteLine("**同じ波を seed で半分に割り、両半分で勝率の相関を取る。** 割り方は2種類:");
+    Console.WriteLine();
+    Console.WriteLine($"- **前後半**: 前半 = seed 0..{WaveSeeds / 2 - 1} / 後半 = seed {WaveSeeds / 2}..{WaveSeeds - 1}");
+    Console.WriteLine("- **偶奇**: 偶数 seed / 奇数 seed");
+    Console.WriteLine();
+    Console.WriteLine("相関は**編成の並び**に対して取る（seed の並びではない）。半割は 100 試行同士なので");
+    Console.WriteLine("200 試行の測定より一致度が低く出る——Spearman-Brown の補正 `r(2n) = 2r(n) / (1 + r(n))`");
+    Console.WriteLine("を掛けた値を併記する（**補正は「両半分が同等・誤差が独立」を仮定するので生の値も併記**）。");
+    Console.WriteLine();
+    Console.WriteLine("第13期は突破度で 0.985〜0.995 / 補正後 0.99 だった。**目的変数が違うので測り直している。**");
+    Console.WriteLine("勝率が天井・床に潰れた波では順位が同値塊になり、半割そのものが計算できない（`—`）。");
+    Console.WriteLine();
+    Console.WriteLine("| タグ | 前後半 r | 前後半 ρ | 偶奇 r | 偶奇 ρ | 補正後 r | **補正後 ρ** | 残存度 補正後 ρ |");
+    Console.WriteLine("|:-:|--:|--:|--:|--:|--:|--:|--:|");
+    for (int w = 0; w < nW; w++)
+    {
+        var h1 = Correlate(MeanOver(win[w], s => s < WaveSeeds / 2), MeanOver(win[w], s => s >= WaveSeeds / 2));
+        var h2 = Correlate(MeanOver(win[w], s => s % 2 == 0), MeanOver(win[w], s => s % 2 == 1));
+        var d1 = Correlate(MeanOver(surv[w], s => s < WaveSeeds / 2), MeanOver(surv[w], s => s >= WaveSeeds / 2));
+        var d2 = Correlate(MeanOver(surv[w], s => s % 2 == 0), MeanOver(surv[w], s => s % 2 == 1));
+        capR[w] = SB((h1.R + h2.R) / 2);
+        capRho[w] = SB((h1.Rho + h2.Rho) / 2);
+        capDegRho[w] = SB((d1.Rho + d2.Rho) / 2);
+        string F(double v) => double.IsNaN(v) ? "—" : $"{v:F3}";
+        Console.WriteLine($"| {waves[w].Tag} | {F(h1.R)} | {F(h1.Rho)} | {F(h2.R)} | {F(h2.Rho)} "
+            + $"| {F(capR[w])} | **{F(capRho[w])}** | {F(capDegRho[w])} |");
+    }
+    Console.WriteLine();
+    var okCap = Enumerable.Range(0, nW).Where(w => !double.IsNaN(capRho[w])).ToArray();
+    Console.WriteLine($"**補正後 ρ の中央値 {okCap.Select(w => capRho[w]).OrderBy(x => x).ElementAt(okCap.Length / 2):F3}"
+        + $"（最小 {okCap.Min(w => capRho[w]):F3} / 最大 {okCap.Max(w => capRho[w]):F3}）。**");
+    Console.WriteLine("波をまたいだ相関はこれを超えられない。**超えられない量が「余地」で、余地こそが");
+    Console.WriteLine("測定のばらつきでは説明できない入れ替わりの量になる。**");
+    Console.WriteLine();
+    Console.Out.Flush();
+    // --- 6. 波ペアの順位相関（本題） ---
+    //
+    // **順位が入れ替わる波のペアが複数あれば、編成 × 波の交互作用が実在する。**
+    // 判定は §2-4 の3行のどれか:
+    //   1行目 入れ替わるペアが複数ある      → 交互作用が実在。単発戦のステージ設計の骨格になる
+    //   2行目 どの波でも順位がほぼ同じ      → 波の側では差が作れない。編成側で作るしかない
+    //   3行目 天井・床を外すとペアが残らない → 実質「勝てる波」と「勝てない波」の一次元
+    //
+    // 天井・床の扱いで結論が変わりうるので、**3通り全部を出す**（§5-7）:
+    //   (a) 全波・勝率           天井・床をそのまま含める
+    //   (b) 寄与する波だけ・勝率  §4 の線で切る
+    //   (c) 全波・残存度         天井の波も残存で割れるので、切らずに済む読み方
+    const double Slack = 0.05;    // bench §6 と同じ線。**測定から出た線ではない**
+    const double Flat = 0.90;     // §2-4 の2行目「相関 0.9 以上」
+
+    var rankRate = Enumerable.Range(0, nW).Select(w => AverageRanksDesc(rate[w])).ToArray();
+    var rankDeg = Enumerable.Range(0, nW).Select(w => AverageRanksDesc(degree[w])).ToArray();
+
+    Console.WriteLine("## 6. 波ペアの順位相関（本題）");
+    Console.WriteLine();
+    Console.WriteLine("`ρ` はスピアマン（同順位は平均順位。第8期以降の順位相関と同じ計算）。");
+    Console.WriteLine($"`余地` = min(両端の半割 補正後 ρ) − ρ。**{Slack:F2} 未満なら測定のばらつきで説明が付く**");
+    Console.WriteLine("（bench §6 と同じ線。これも測定から出た線ではない）。");
+    Console.WriteLine();
+    Console.WriteLine("### 6-1. 順位相関の行列（勝率・全波）");
+    Console.WriteLine();
+    Console.WriteLine("対角は半割の補正後 ρ（＝その波自身との一致度の上限）。**行を横に読めば、");
+    Console.WriteLine("その波の上限と、他の波との一致度が同じ行に並ぶ。** `—` は同値塊で相関が計算できない波。");
+    Console.WriteLine();
+    Console.WriteLine("|  |" + string.Concat(waves.Select(x => $" {x.Tag} |")));
+    Console.WriteLine("|:-:|" + string.Concat(waves.Select(_ => "--:|")));
+    for (int i = 0; i < nW; i++)
+    {
+        var row = new List<string>();
+        for (int j = 0; j < nW; j++)
+        {
+            double v = i == j ? capRho[i] : Correlate(rate[i], rate[j]).Rho;
+            row.Add(double.IsNaN(v) ? "—" : (i == j ? $"*{v:F2}*" : $"{v:F2}"));
+        }
+        Console.WriteLine($"| **{waves[i].Tag}** | {string.Join(" | ", row)} |");
+    }
+    Console.WriteLine();
+    Console.Out.Flush();
+
+    // ペアの一覧を作る。3通りの読み方が同じ関数を共有するので、
+    // 「扱いを変えたら結論が変わった」が扱いの差だけから出ることが保証される。
+    (int A, int B, double Rho, double Cap, double Slk, double MeanGap, double MaxGap)[] Pairs(
+        double[][] v, double[][] rk, double[] cap, Func<int, bool> use)
+    {
+        var list = new List<(int, int, double, double, double, double, double)>();
+        for (int i = 0; i < nW; i++)
+            for (int j = i + 1; j < nW; j++)
+            {
+                if (!use(i) || !use(j)) continue;
+                double rho = Correlate(v[i], v[j]).Rho;
+                double c = Math.Min(cap[i], cap[j]);
+                if (double.IsNaN(rho) || double.IsNaN(c)) continue;
+                var gaps = Enumerable.Range(0, nT).Select(t => Math.Abs(rk[i][t] - rk[j][t])).ToArray();
+                list.Add((i, j, rho, c, c - rho, gaps.Average(), gaps.Max()));
+            }
+        return list.OrderByDescending(x => x.Item5).ToArray();
+    }
+
+    void EmitPairs(string head, string[] notes,
+        (int A, int B, double Rho, double Cap, double Slk, double MeanGap, double MaxGap)[] ps, int take)
+    {
+        Console.WriteLine(head);
+        Console.WriteLine();
+        foreach (string line in notes) Console.WriteLine(line);
+        Console.WriteLine();
+        int swaps = ps.Count(x => x.Slk >= Slack && x.Rho < Flat);
+        Console.WriteLine($"ペア総数 {ps.Length}、うち **ρ < {Flat:F2} かつ 余地 ≥ {Slack:F2}** が **{swaps}** 組。");
+        Console.WriteLine();
+        Console.WriteLine("| 波 | 波 | ρ | 上限 | 余地 | 平均\\|順位差\\| | 最大\\|順位差\\| |");
+        Console.WriteLine("|:-:|:-:|--:|--:|--:|--:|--:|");
+        foreach (var x in ps.Take(take))
+            Console.WriteLine($"| {waves[x.A].Tag} | {waves[x.B].Tag} | {x.Rho:F2} | {x.Cap:F2} "
+                + $"| **{x.Slk:F2}** | {x.MeanGap:F1} | {x.MaxGap:F1} |");
+        Console.WriteLine();
+        Console.Out.Flush();
+    }
+
+    var pAll = Pairs(rate, rankRate, capRho, _ => true);
+    var pCon = Pairs(rate, rankRate, capRho, w => contributes[w]);
+    var pDeg = Pairs(degree, rankDeg, capDegRho, _ => true);
+
+    // 全編成が勝率 100% で並ぶ波は順位が完全な同値塊になり、半割そのものが計算できない
+    // （分散 0）。上限が取れない波はペアから落ちるので、(a) は「全波」ではなく
+    // **「半割が計算できた波」**の読み方になる。落ちた数を出す。
+    int capOk = Enumerable.Range(0, nW).Count(w => !double.IsNaN(capRho[w]));
+    int capOkCon = Enumerable.Range(0, nW).Count(w => contributes[w] && !double.IsNaN(capRho[w]));
+    int capOkDeg = Enumerable.Range(0, nW).Count(w => !double.IsNaN(capDegRho[w]));
+
+    EmitPairs($"### 6-2. (a) 半割が計算できた波・勝率（{capOk} / {nW} 波）— 入れ替わりの大きいペア上位25",
+        new[]
+        {
+            $"天井・床の波もそのまま入れた読み方。残る {nW - capOk} 波は**全編成が勝率 100% で並んで",
+            "順位が完全な同値塊**になり、半割（上限）が計算できないのでペアから落ちている。",
+            "",
+            "> **この読み方は当てにならない。** 天井の波の順位はほぼ全部が同値塊なので、半割 ρ が",
+            "> 1.00 に張り付き（30編成が同値で1編成だけ外れる、といった形）、他の波との ρ は同値塊の",
+            "> せいで 0 付近まで落ちる。結果として `余地` が 1.0 を超える——**上限を超えて一致しない**",
+            "> という意味不明な値で、これは入れ替わりではなく同値塊の副作用。(b) を置いてあるのはこのため。",
+        }, pAll, 25);
+    EmitPairs($"### 6-3. (b) 寄与する波だけ・勝率（{nContrib} 波・うち半割が取れたのは {capOkCon} 波）"
+        + " — 入れ替わりの大きいペア全件",
+        new[]
+        {
+            $"§4 の線（天井率 + 床率 < {DeadZone:F0}%）で切ったあと。**同値塊を外しても入れ替わりが残るか**が",
+            "§2-4 の1行目と3行目を分ける。**判定はこの表で読む。**",
+        }, pCon, 25);
+    EmitPairs($"### 6-4. (c) 全波・残存度（{capOkDeg} / {nW} 波）— 入れ替わりの大きいペア上位25",
+        new[]
+        {
+            "**天井の波も残存で割れるので、波を1つも捨てずに済む読み方。** 勝率が 100% で並ぶ編成同士も",
+            "「何体残して勝ったか」で順位が付くので、半割はどの波でも計算できる。",
+        }, pDeg, 25);
+
+// --- 7. 名指し: いちばん遠いペアで誰が入れ替わったか ---
+    // 相関の数字だけだと「入れ替わった」が抽象のまま残る。**どの編成がどちらの波で強いのか**を
+    // 名前で出さないと、次にステージを設計する材料にならない。
+    if (pCon.Length > 0)
+    {
+        var top = pCon[0];
+        Console.WriteLine($"## 7. 名指し — 寄与する波のうちいちばん遠いペア（{waves[top.A].Tag} × {waves[top.B].Tag}・ρ = {top.Rho:F2}）");
+        Console.WriteLine();
+        Console.WriteLine($"- **{waves[top.A].Tag}**: {waves[top.A].Name}");
+        Console.WriteLine($"- **{waves[top.B].Tag}**: {waves[top.B].Name}");
+        Console.WriteLine();
+        Console.WriteLine("`順位差` = 順位(A) − 順位(B)。**正なら B の波で順位が上がる**（順位は 1 が最良）。");
+        Console.WriteLine();
+        Console.WriteLine($"| 向き | 編成 | {waves[top.A].Tag} 勝率 | 順位 | {waves[top.B].Tag} 勝率 | 順位 | 順位差 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|");
+        var byGap = Enumerable.Range(0, nT)
+            .OrderByDescending(t => rankRate[top.A][t] - rankRate[top.B][t]).ToArray();
+        foreach (int t in byGap.Take(5))
+            Console.WriteLine($"| {waves[top.B].Tag} で**上がる** | {targets[t].Name} | {rate[top.A][t]:F1}% "
+                + $"| {rankRate[top.A][t]:F1} | {rate[top.B][t]:F1}% | {rankRate[top.B][t]:F1} "
+                + $"| {rankRate[top.A][t] - rankRate[top.B][t]:+0.0;-0.0} |");
+        foreach (int t in byGap.Reverse().Take(5))
+            Console.WriteLine($"| {waves[top.A].Tag} で**上がる** | {targets[t].Name} | {rate[top.A][t]:F1}% "
+                + $"| {rankRate[top.A][t]:F1} | {rate[top.B][t]:F1}% | {rankRate[top.B][t]:F1} "
+                + $"| {rankRate[top.A][t] - rankRate[top.B][t]:+0.0;-0.0} |");
+        Console.WriteLine();
+        Console.Out.Flush();
+    }
+
+    // --- 8. 判定 ---
+    // §2-4 の表のどの行に当たるかを、数字から機械的に選ぶ（bench §6 と同じ作法）。
+    // 文章で判定すると「読み方によってはこうも取れる」が残る。
+    string Verdict(int swapAll, int swapCon)
+        => swapCon >= 2
+            ? "**1行目: 編成 × 波の交互作用が実在する。** 単発戦のステージ設計の骨格になる"
+            : swapAll >= 2
+                ? "**3行目: 入れ替わるが、天井・床を外すとペアがほとんど残らない。** 実質「勝てる波」と"
+                  + "「勝てない波」しか無く、難度の一次元に潰れている"
+                : $"**2行目: どの波でも順位がほぼ同じ（ρ {Flat:F2} 以上）。** 波を何種類作っても編成パズルに"
+                  + "ならない——波の側では差が作れないので、編成側（特性・スキル）で作るしかない";
+
+    int swAll = pAll.Count(x => x.Slk >= Slack && x.Rho < Flat);
+    int swCon = pCon.Count(x => x.Slk >= Slack && x.Rho < Flat);
+    int swDeg = pDeg.Count(x => x.Slk >= Slack && x.Rho < Flat);
+    int swDegCon = pDeg.Count(x => x.Slk >= Slack && x.Rho < Flat && contributes[x.A] && contributes[x.B]);
+
+    Console.WriteLine("## 8. 判定（§2-4 のどの行か）");
+    Console.WriteLine();
+    Console.WriteLine($"**入れ替わったペア** = ρ < {Flat:F2} かつ 余地 ≥ {Slack:F2}（測定のばらつきで説明が付かない）。");
+    Console.WriteLine();
+    Console.WriteLine("| 天井・床の扱い | ペア総数 | 入れ替わったペア |");
+    Console.WriteLine("|---|--:|--:|");
+    Console.WriteLine($"| (a) 半割が計算できた波・勝率 | {pAll.Length} | {swAll} |");
+    Console.WriteLine($"| (b) 寄与する波だけ・勝率 | {pCon.Length} | {swCon} |");
+    Console.WriteLine($"| (c) 全波・残存度 | {pDeg.Length} | {swDeg}（うち寄与する波同士 {swDegCon}） |");
+    Console.WriteLine();
+    Console.WriteLine("判定は (a) と (b) の両方から決める——**(b) だけで 2 組以上残れば 1行目**、");
+    Console.WriteLine("(a) には出るが (b) で消えるなら 3行目、どちらにも出なければ 2行目（§2-4）。");
+    Console.WriteLine();
+    Console.WriteLine($"- 勝率での判定: {Verdict(swAll, swCon)}");
+    Console.WriteLine($"- 残存度での判定: {Verdict(swDeg, swDegCon)}");
+    Console.WriteLine();
+    Console.WriteLine(Verdict(swAll, swCon) == Verdict(swDeg, swDegCon)
+        ? "**天井・床の扱いを変えても判定は変わらない。**"
+        : "> **警告: 天井・床の扱いで判定が変わる。** どちらか一方を選ばず、両方の結果を報告すること（§5-7）。");
+    Console.WriteLine();
+    Console.Out.Flush();
+    return;
+}
+
 if (focusId == "chain")
 {
     var builds = CompareBuilds();
@@ -4852,6 +5527,69 @@ static (double Degree, double[] PerSeed, double[] Dynamics, double[] Legacy,
         Per(dmgOut), Per(kills),
         kills == 0 ? double.NaN : (double)dmgOut / kills,
     }, foeFromAlly, deathGaps, (double)battles / seeds);
+}
+
+// 単発戦1波ぶんを seed 0..seeds-1 で回し、勝敗・生存率・動的特徴量をまとめて返す（第15期 Phase FA）。
+//
+// MeasurePower（会戦）との違いは**分母**。単発では部隊戦が必ず1回なので、動的特徴量の分母
+// 「戦」は seed 数そのものになる——第14期の分母経路（味方1部隊では 部隊戦数 = 突破数 + 1）は
+// ここには存在しない。**分母が定数なので `/戦` は「平均を取る」以上の意味を持たない。**
+//
+// 与ダメ・撃破・与ダメ効率は**受け手側（敵の tally）から取る**（第13期 Phase DA と同じ理由。
+// TickStatuses は ApplyDamage(u, poison, null) と source を渡さないので、毒・燃焼の削りは
+// 出どころの駒の DamageToEnemy にも Kills にも載らない）。`干渉/戦` だけは味方側のまま
+// ——毒は出どころを持たないので受け手側に対応物が無い。
+//
+// 生存率の分母は**編成の定義上の駒数**。r.PlayerSurvivors は胞子のように湧いた駒も数えるので
+// 1.0 を超えることがある（chain の `残存` と同じ定義。あちらも同じ性質を持つ）。
+//
+// 残HP（代金）はここでは測らない。MeasureCost が測る量をこの関数でも定義すると、
+// gradient / aim / flip との再現の検算がこの関数の正しさにも依存してしまう。
+static (double[] Win, double[] SurvRate, double[] Dynamics, long FoeTakenFromAlly)
+    MeasureWave(Formation f, Formation enemy, int seeds)
+{
+    var ids = f.Occupied().Select(x => x.Def.Id).ToHashSet();
+    var foeIds = enemy.Occupied().Select(x => x.Def.Id).ToHashSet();
+    int party = f.Occupied().Count();
+
+    var win = new double[seeds];
+    var surv = new double[seeds];
+    long dmgIn = 0, fromAlly = 0, acts = 0, heal = 0;
+    long foeTaken = 0, foeFromAlly = 0, foeDeaths = 0;
+
+    for (int seed = 0; seed < seeds; seed++)
+    {
+        BattleResult r = BattleEngine.Run(f, enemy, seed, verbose: false);
+        win[seed] = r.PlayerWon ? 1 : 0;
+        surv[seed] = (double)r.PlayerSurvivors / party;
+        foreach ((string id, UnitTally t) in r.TallyByUnit)
+        {
+            if (ids.Contains(id))
+            {
+                dmgIn += t.DamageTaken;
+                fromAlly += t.TakenFromAlly;
+                acts += t.Interventions;
+                heal += t.Healed;
+            }
+            else if (foeIds.Contains(id))
+            {
+                foeTaken += t.DamageTaken;
+                foeFromAlly += t.TakenFromAlly;
+                foeDeaths += t.Deaths;
+            }
+        }
+    }
+
+    double Per(long v) => (double)v / seeds;
+    long foeDmg = foeTaken - foeFromAlly;
+    return (win, surv, new[]
+    {
+        Per(foeDmg), Per(dmgIn), Per(foeDeaths), Per(acts), Per(heal),
+        dmgIn == 0 ? 0 : (double)fromAlly / dmgIn,
+        // 撃破 0 の編成では与ダメ効率が定義できない。0 で埋めると「無駄が無い」側に化けて
+        // 相関を汚すので NaN を返し、相関の側で点ごと落とす（MeasurePower と同じ判断）。
+        foeDeaths == 0 ? double.NaN : (double)foeDmg / foeDeaths,
+    }, foeFromAlly);
 }
 
 // Actions だけを剥がした複製。charge 診断が「溜めない同じ敵」を同じ実行の中で
