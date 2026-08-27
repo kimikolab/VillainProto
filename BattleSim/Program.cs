@@ -2626,6 +2626,7 @@ if (focusId == "power")
     var deg = new double[nB][];
     var dyn = new double[nB][][];   // [台][編成][特徴量]
     var leg = new double[nB][][];   // [台][編成][旧定義3種]。第12期との対比だけが読む
+    var bps = new double[nB][];     // [台][編成] 部隊戦数 ÷ 試行。第14期 EA の同語反復の検査が読む
     long foeFromAlly = 0;           // 敵同士の巻き込み。0 のはず（第13期 §3-1）
     int deathGaps = 0;              // 敵が DamageTaken を経由せずに死んだ疑いの件数
     for (int b = 0; b < nB; b++)
@@ -2633,12 +2634,14 @@ if (focusId == "power")
         deg[b] = new double[nT];
         dyn[b] = new double[nT][];
         leg[b] = new double[nT][];
+        bps[b] = new double[nT];
         for (int t = 0; t < nT; t++)
         {
             var m = MeasurePower(targets[t].F, benches[b].Squads, PowerSeeds);
             deg[b][t] = m.Degree;
             dyn[b][t] = m.Dynamics;
             leg[b][t] = m.Legacy;
+            bps[b][t] = m.BattlesPerSeed;
             foeFromAlly += m.FoeTakenFromAlly;
             deathGaps += m.DeathGaps;
         }
@@ -2799,6 +2802,8 @@ if (focusId == "power")
     }
 
     var ordered = new (int K, double R, double Rho, int N)[nB][];
+    // 第12期（味方側）の並びも台ごとに残す。第14期 Phase EA の三期対比表が読む。
+    var orderedOldAll = new (int K, double R, double Rho, int N)[nB][];
 
     for (int b = 0; b < nB; b++)
     {
@@ -2844,6 +2849,7 @@ if (focusId == "power")
         var orderedOld = Enumerable.Range(0, nF)
             .Select(k => { var c = Correlate(featOld[b][k], deg[b]); return (K: k, c.R, c.Rho, c.N); })
             .OrderByDescending(x => Math.Abs(x.R)).ToArray();
+        orderedOldAll[b] = orderedOld;
 
         Console.WriteLine("#### 第12期（味方側）との対比 — 単相関はどう動いたか");
         Console.WriteLine();
@@ -2985,6 +2991,220 @@ if (focusId == "power")
     Console.WriteLine();
     Console.WriteLine("**閾値仮説が正しければここが上位に来るはず。** 来なければ仮説の再考が要る。");
     Console.WriteLine();
+
+    // ================= Phase EA: 同語反復を除いた分解（第14期） =================
+    //
+    // 第13期で毒の穴を塞いだ結果、第一近似は `撃破/戦` r² = 0.90 になった。
+    // **これは発見ではなく算術。** 部隊を全滅させることがその部隊を突破することなので、
+    // 味方1部隊では 部隊戦数 = 突破数 + 1 になり、全抜きした編成の `撃破/戦` は例外なく
+    // 13 ÷ 3 = 4.33 に落ちる（上の警告の通り）。
+    //
+    // 同じ理屈は第12期の r² 0.41 にも効く。あれは「地力の説明力が4割」ではなく
+    // **「言い換えのはずの量が、毒の穴のせいで4割まで落ちていた」**——だから第12期の
+    // 「地力は単一の量ではない」という結論は根拠を失っている。**分解はやり直しになる。**
+    //
+    // ここでやるのは**候補集合だけを変えた測り直し**で、手順も計算方法も第12期・第13期と同じ。
+    // 説明力が落ちるのは失敗ではない——落ちた値のほうが本当の説明力（§3-3）。
+    // **数字を上げるために候補を戻さない。**
+    //
+    // 却下した案: 目的変数のほうを言い換えから遠い量に取り替える（勝率・残HP など）。
+    // 目的変数を替えると第8期以降の測定すべてと繋がらなくなるうえ、勝率は上下端に張り付いて
+    // 序列を潰す（第5期の持ち越し論点(2)）。**動かすのは候補集合の側だけ。**
+
+    // 同語反復の判定。**基準は「突破という結果の言い換えになっていないか」の1本だけ**にする。
+    // 「信頼できるか」は混ぜない——混ぜると基準が二重になり、次に特徴量を足すときに使えない。
+    //
+    // 言い換えが入り込む経路は2つある。
+    //   分子経路 — 量そのものが突破の定義に含まれる（部隊を全滅させる＝その部隊を突破する）
+    //   分母経路 — 味方1部隊では **部隊戦数 = 突破数 + 1**（全抜き時だけ = 突破数）なので、
+    //              `/戦` で割る量はすべて「目的変数 + 1」で割っている
+    // **外すのは分子経路だけ。** 分母経路は「平均を取る」操作であって、量の中身を突破の写しに
+    // 変えるわけではない。ただし言い張らずに、下の検査表で分母が実際にどれだけ突破度を
+    // 運んでいるかを測って出す。比（自傷率・与ダメ効率）は分子分母が同じ部隊戦数で
+    // 割られているので、**分母経路が丸ごと打ち消える**。
+    var taut = new (bool Excluded, string Reason)[]
+    {
+        // 与ダメ/戦
+        (true,  "**分子経路。** 敵の総HPを削り切ることが突破なので、突破した部隊の数だけ分子が積み上がる。突破度の小数部（最終戦で削った割合）も分子そのもの"),
+        // 被ダメ/戦
+        (false, "分子は「敵に殴られた量」で、突破の定義に入らない。**分母経路だけ**——最後の1戦（負け戦）が高く、勝ち戦を重ねるほど薄まる構造はあるので、平均として読む"),
+        // 撃破/戦
+        (true,  "**分子経路。もっとも露骨な言い換え。** 部隊の全滅＝突破。全抜きした編成の値は 13 ÷ 3 = 4.33 に固定され、これは測定結果ではなく算術"),
+        // 干渉/戦
+        (false, "分子は「誰が起点になったか」の回数で、突破の定義に入らない。**毒軸で構造的に過小**（第13期の残る穴）だが、それは信頼性の問題であって同語反復ではない——**基準を混ぜないので残す。** 単相関は下位帯なので、外しても入れても第一近似は動かない"),
+        // 回復/戦
+        (false, "分子は味方の回復量で、突破の定義に入らない。**分母経路だけ**"),
+        // 自傷率
+        (false, "**比なので分母経路が打ち消える**（分子分母とも同じ部隊戦数で割られる）。分子は味方同士の削りで、突破の写しではない"),
+        // 与ダメ効率
+        (false, "分子・分母とも分子経路の量だが、**比を取ると言い換えの部分がそのまま打ち消える**——`与ダメ ÷ 撃破` は「1体倒すのに振った量」で、部隊戦数も消える。**台で符号が反転することが証拠**（下の検査表）: 言い換えなら符号は反転しない"),
+    };
+
+    Console.WriteLine("## 同語反復の除外（第14期 Phase EA）");
+    Console.WriteLine();
+    Console.WriteLine("**第13期の第一近似 `撃破/戦` r² 0.90 は発見ではなく算術だった。** ここでは");
+    Console.WriteLine("「突破という結果の言い換えになっている量」を候補から外して、**同じ手順・同じ計算方法で**");
+    Console.WriteLine("分解をやり直す。目的変数も台も seed も変えていない——動かしたのは候補集合だけ。");
+    Console.WriteLine();
+    Console.WriteLine("### 判定の基準");
+    Console.WriteLine();
+    Console.WriteLine("基準は「**突破という結果の言い換えになっていないか**」の1本だけ。");
+    Console.WriteLine("**「信頼できるか」は混ぜない**（混ぜると基準が二重になり、次に特徴量を足すときに使えない）。");
+    Console.WriteLine();
+    Console.WriteLine("言い換えが入り込む経路は2つある。");
+    Console.WriteLine();
+    Console.WriteLine("- **分子経路** — 量そのものが突破の定義に含まれる（部隊を全滅させる＝その部隊を突破する）");
+    Console.WriteLine("- **分母経路** — 味方1部隊では `部隊戦数 = 突破数 + 1`（全抜き時だけ `= 突破数`）なので、");
+    Console.WriteLine("  `/戦` で割る量はすべて「目的変数 + 1」で割っている");
+    Console.WriteLine();
+    Console.WriteLine("**外すのは分子経路だけ。** 分母経路は平均を取る操作であって、量の中身を突破の写しに");
+    Console.WriteLine("変えるわけではない。比（`自傷率`・`与ダメ効率`）は分子分母が同じ部隊戦数で割られているので、");
+    Console.WriteLine("**分母経路が丸ごと打ち消える**。静的特徴量はどちらの経路も持たない（戦わずに決まる量なので）。");
+    Console.WriteLine();
+
+    // 分母経路が実際にどれだけ目的変数を運んでいるか。言葉ではなく数字で出す。
+    Console.WriteLine("### 検算: 分母（部隊戦数）はどれだけ突破度を運んでいるか");
+    Console.WriteLine();
+    Console.WriteLine("`部隊戦数 ÷ 試行` そのものを突破度に当てる。**算術の恒等式なので 1.00 に近いはず**——");
+    Console.WriteLine("近ければ「`/戦` の分母は目的変数そのもの」であることの確認になり、");
+    Console.WriteLine("分母経路を残す判断はその上での判断になる。");
+    Console.WriteLine();
+    Console.WriteLine("| 台 | 部隊戦数/試行 × 突破度 の r | ρ |");
+    Console.WriteLine("|---|--:|--:|");
+    for (int b = 0; b < nB; b++)
+    {
+        var c = Correlate(bps[b], deg[b]);
+        Console.WriteLine($"| {benches[b].Tag}: {benches[b].Name} | {c.R:+0.000;-0.000} | {c.Rho:+0.000;-0.000} |");
+    }
+    Console.WriteLine();
+
+    Console.WriteLine("### 判定表（動的7種。静的8種はすべて残す）");
+    Console.WriteLine();
+    Console.WriteLine("`部隊戦数 r` は特徴量と分母の相関——**これが ±1 に近い特徴量は、中身が分母そのもの**。");
+    Console.WriteLine();
+    Console.WriteLine("| 特徴量 | 突破度 r 主 | 突破度 r 従 | 部隊戦数 r 主 | 部隊戦数 r 従 | 判定 | 理由 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|:-:|---|");
+    for (int k = 0; k < dynNames.Length; k++)
+    {
+        var col = Enumerable.Range(0, nB)
+            .Select(b => Enumerable.Range(0, nT).Select(t => dyn[b][t][k]).ToArray()).ToArray();
+        Console.WriteLine($"| {dynNames[k].Name} "
+            + $"| {Correlate(col[0], deg[0]).R:+0.00;-0.00} | {Correlate(col[1], deg[1]).R:+0.00;-0.00} "
+            + $"| {Correlate(col[0], bps[0]).R:+0.00;-0.00} | {Correlate(col[1], bps[1]).R:+0.00;-0.00} "
+            + $"| {(taut[k].Excluded ? "**除外**" : "残す")} | {taut[k].Reason} |");
+    }
+    Console.WriteLine();
+
+    bool[] keep = Enumerable.Range(0, nF).Select(k => k < nS || !taut[k - nS].Excluded).ToArray();
+    int[] cand = Enumerable.Range(0, nF).Where(k => keep[k]).ToArray();
+    Console.WriteLine($"**除外後の候補は {cand.Length} 種**（静的 {nS} + 動的 {cand.Length - nS}）。"
+        + $"外したのは {string.Join(" / ", Enumerable.Range(0, nF).Where(k => !keep[k]).Select(k => "`" + featNames[k] + "`"))}。");
+    Console.WriteLine();
+
+    // --- 除外後の分解（第12期・第13期と同じ手順） ---
+    var orderedEa = new (int K, double R, double Rho, int N)[nB][];
+    var residEa = new double[nB][];
+    var r2Ea = new double[nB];
+    for (int b = 0; b < nB; b++)
+    {
+        orderedEa[b] = cand
+            .Select(k => { var c = Correlate(feat[b][k], deg[b]); return (K: k, c.R, c.Rho, c.N); })
+            .OrderByDescending(x => Math.Abs(x.R)).ToArray();
+
+        Console.WriteLine($"### 除外後の分解: {benches[b].Tag}の台（{benches[b].Name}）");
+        Console.WriteLine();
+        Console.WriteLine($"#### 単相関（{cand.Length} 特徴量 × 突破度。|r| の降順）");
+        Console.WriteLine();
+        Console.WriteLine("| 順位 | 区分 | 特徴量 | r | ρ | n |");
+        Console.WriteLine("|--:|:-:|---|--:|--:|--:|");
+        for (int i = 0; i < orderedEa[b].Length; i++)
+        {
+            var x = orderedEa[b][i];
+            Console.WriteLine($"| {i + 1} | {(isStatic[x.K] ? "静" : "動")} | {featNames[x.K]} "
+                + $"| {x.R:+0.00;-0.00} | {x.Rho:+0.00;-0.00} | {x.N} |");
+        }
+        Console.WriteLine();
+
+        int first = orderedEa[b][0].K;
+        double[] pred = LinearFit(feat[b][first], deg[b]);
+        residEa[b] = Enumerable.Range(0, nT).Select(t => deg[b][t] - pred[t]).ToArray();
+        r2Ea[b] = orderedEa[b][0].R * orderedEa[b][0].R;
+        double r2Old = ordered[b][0].R * ordered[b][0].R;
+
+        Console.WriteLine($"#### 第一近似 = **{featNames[first]}**（r = {orderedEa[b][0].R:+0.00;-0.00} / "
+            + $"**r² = {r2Ea[b]:F3}**）");
+        Console.WriteLine();
+        Console.WriteLine($"第13期の第一近似は `{featNames[ordered[b][0].K]}` で r² = {r2Old:F3} だった。"
+            + $"**差の {r2Old - r2Ea[b]:F3} は言い換えが持っていた分**で、地力の説明力ではない。");
+        Console.WriteLine();
+        if (r2Ea[b] < 0.30)
+        {
+            Console.WriteLine("> **停止条件（§6-7）に触れている: 除外後の最良が r² 0.30 を下回った。**");
+            Console.WriteLine("> この台では **「地力は既存の特徴量では表せない」**——15種のうち言い換えでない");
+            Console.WriteLine($"> {cand.Length}種を当てても、突破度のばらつきの3割を説明できない。");
+            Console.WriteLine("> 次に何を測るべきかが変わるので、先へ進む前に報告すること。");
+            Console.WriteLine();
+        }
+
+        var rcors = cand.Where(k => k != first)
+            .Select(k => { var c = Correlate(feat[b][k], residEa[b]); return (K: k, c.R, c.N); })
+            .OrderByDescending(x => Math.Abs(x.R)).ToArray();
+        Console.WriteLine("#### 残差と他の特徴量の相関（1段のみ。|r| の降順・上位8）");
+        Console.WriteLine();
+        Console.WriteLine("| 区分 | 特徴量 | 残差との r |");
+        Console.WriteLine("|:-:|---|--:|");
+        foreach (var x in rcors.Take(8))
+            Console.WriteLine($"| {(isStatic[x.K] ? "静" : "動")} | {featNames[x.K]} | {x.R:+0.00;-0.00} |");
+        Console.WriteLine();
+        Console.WriteLine($"2変数（{featNames[first]} + {featNames[rcors[0].K]}）の R² = "
+            + $"**{R2Two(orderedEa[b][0].R, Correlate(feat[b][rcors[0].K], deg[b]).R, Correlate(feat[b][first], feat[b][rcors[0].K]).R):F3}**"
+            + $"（1変数の {r2Ea[b]:F3} から）。**3変数以上は n = {nT} では意味を持たないのでやらない。**");
+        Console.WriteLine();
+
+        var byResid = Enumerable.Range(0, nT).Where(t => !double.IsNaN(residEa[b][t]))
+            .OrderByDescending(t => residEa[b][t]).ToArray();
+        Console.WriteLine("#### 残差の上位・下位5編成");
+        Console.WriteLine();
+        Console.WriteLine("| 向き | 編成 | 実測 | 予測 | 残差 |");
+        Console.WriteLine("|---|---|--:|--:|--:|");
+        foreach (int t in byResid.Take(5))
+            Console.WriteLine($"| 予測より**強い** | {targets[t].Name} | {deg[b][t]:F3} | {pred[t]:F3} | {residEa[b][t]:+0.000;-0.000} |");
+        foreach (int t in byResid.Reverse().Take(5))
+            Console.WriteLine($"| 予測より**弱い** | {targets[t].Name} | {deg[b][t]:F3} | {pred[t]:F3} | {residEa[b][t]:+0.000;-0.000} |");
+        Console.WriteLine();
+        Console.Out.Flush();
+    }
+
+    // --- 第12期・第13期・第14期の対比 ---
+    // 静的だけの説明力は3期とも同じ値になる（静的特徴量は一度も定義を変えていない）。
+    // **それ自体が答えの一部**——同語反復を外しても静的の数字は動かないので、
+    // 「静的では 0.35 / 0.16 しか説明できない」は第12期からずっと変わらない事実だった。
+    Console.WriteLine("### 第12期・第13期・第14期の対比");
+    Console.WriteLine();
+    Console.WriteLine("| 台 | 期 | 候補 | 第一近似 | r | r² | 静的1変数 r² | 静的2変数 R² |");
+    Console.WriteLine("|---|---|--:|---|--:|--:|--:|--:|");
+    for (int b = 0; b < nB; b++)
+    {
+        var bestS = ordered[b].First(x => isStatic[x.K]);
+        double bestPair = 0;
+        for (int i = 0; i < nS; i++)
+            for (int j = i + 1; j < nS; j++)
+                bestPair = Math.Max(bestPair, R2Two(Correlate(feat[b][i], deg[b]).R,
+                                                    Correlate(feat[b][j], deg[b]).R,
+                                                    Correlate(feat[b][i], feat[b][j]).R));
+        void Row(string era, int n, (int K, double R, double Rho, int N) x) =>
+            Console.WriteLine($"| {benches[b].Tag}: {benches[b].Name} | {era} | {n} | {featNames[x.K]} "
+                + $"| {x.R:+0.00;-0.00} | **{x.R * x.R:F3}** | {bestS.R * bestS.R:F2} | {bestPair:F2} |");
+        Row("第12期（味方側）", nF, orderedOldAll[b][0]);
+        Row("第13期（受け手側）", nF, ordered[b][0]);
+        Row("**第14期（言い換え除外）**", cand.Length, orderedEa[b][0]);
+    }
+    Console.WriteLine();
+    Console.WriteLine("**静的だけの説明力は3期とも同じ値**——静的特徴量は一度も定義を変えていないので");
+    Console.WriteLine("動きようがない。**それ自体が答えの一部**で、「編成を組んだ時点ではほとんど決まっていない」");
+    Console.WriteLine("という第12期の観察は、同語反復とは無関係に最初から正しかった。");
+    Console.WriteLine();
+    Console.Out.Flush();
 
     return;
 }
@@ -4432,8 +4652,13 @@ static (double Lost, double Enemy, double Ally, double Heal, double Residual, do
 //
 // 突破度は seed ごとの生値も返す。第13期 Phase DB の半割（seed を2つに分けて同じ台を
 // 2回測る）が、同じ計測を2度走らせずに済むようにするため。
+//
+// 分母そのもの（`部隊戦数 ÷ 試行`）も返す。味方1部隊では **部隊戦数 = 突破数 + 1**
+// （全抜き時だけ = 突破数）なので、`/戦` の量はすべて「目的変数 + 1」で割っている。
+// 第14期 Phase EA の同語反復の判定は、この分母が実際にどれだけ突破度を運んでいるかを
+// 測って根拠にする（言葉で言い張らずに数字で出す）。
 static (double Degree, double[] PerSeed, double[] Dynamics, double[] Legacy,
-        long FoeTakenFromAlly, int DeathGaps)
+        long FoeTakenFromAlly, int DeathGaps, double BattlesPerSeed)
     MeasurePower(Formation f, IReadOnlyList<Formation> column, int seeds)
 {
     var ids = f.Occupied().Select(x => x.Def.Id).ToHashSet();
@@ -4495,7 +4720,7 @@ static (double Degree, double[] PerSeed, double[] Dynamics, double[] Legacy,
         // 旧定義（味方側）。対比表だけが読む。並びは 与ダメ/戦・撃破/戦・与ダメ効率。
         Per(dmgOut), Per(kills),
         kills == 0 ? double.NaN : (double)dmgOut / kills,
-    }, foeFromAlly, deathGaps);
+    }, foeFromAlly, deathGaps, (double)battles / seeds);
 }
 
 // Actions だけを剥がした複製。charge 診断が「溜めない同じ敵」を同じ実行の中で
