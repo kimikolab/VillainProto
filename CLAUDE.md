@@ -39,7 +39,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 bill [絞り込み]     # 代金を 敵由来/自傷/回復/残差 に割る（第9期 Phase X）
     dotnet run --project BattleSim -c Release 0 charge [絞り込み]   # 大技の発火率とチャージ化の前後（第10期 Phase AC）
     dotnet run --project BattleSim -c Release 0 timing [絞り込み]   # 味方の行動パターンの変種（第11期 Phase BC）
-    dotnet run --project BattleSim -c Release 0 power [絞り込み]    # 「地力」の分解（第12期 CA/CB・第13期 DA）
+    dotnet run --project BattleSim -c Release 0 power [絞り込み]    # 「地力」の分解（第12期 CA/CB・第13期 DA・第14期 EA/EB）
     dotnet run --project BattleSim -c Release 0 bench [絞り込み]    # 台をまたぐ入れ替わりは構造的か（第13期 Phase DB）
     dotnet run --project BattleSim -c Release 0 ptrace [絞り込み]   # 毒の立ち上がり診断
 
@@ -122,6 +122,19 @@ ablate は1体抜いた勝率差しか見ないので、どちらも「出力で
 対比表に出す（別の実行から引くと、動いたのが定義のせいか実行のせいか決まらない）。
 `干渉/戦` だけは味方側のまま——毒は出どころを持たないので受け手側に対応物が無く、
 毒軸の `干渉/戦` は依然として過小（`docs/pulse.md` も同じ）。
+
+**特徴量を足すときは同語反復の判定を先に通す**（第14期 Phase EA）。第13期に穴を塞いだら
+第一近似が `撃破/戦` r² 0.90 になったが、**部隊の全滅＝突破なのでこれは算術**だった
+（全抜きした編成の値は例外なく 13÷3 = 4.33）。基準は「**突破という結果の言い換えに
+なっていないか**」の1本だけで、**「信頼できるか」を混ぜない。** 言い換えの経路は
+分子経路（量そのものが突破の定義に含まれる）と分母経路（`部隊戦数 = 突破数 + 1`）の2つで、
+**外すのは分子経路だけ**——比（`自傷率`・`与ダメ効率`）は分母経路ごと打ち消える。
+除外後（候補13種）の第一近似は 主 `総攻` r² 0.308 / 従 `与ダメ効率` r² 0.242 で、
+**台で第一近似が入れ替わる。** 判定の全表と根拠は README「同語反復を候補から外す基準」。
+
+Phase EB は反撃軸の残差を第9期 `bill` の自傷率と突き合わせる。**新しい計測は足していない**
+——`MeasureBill` と `BattleEngine.Run`（単発戦の勝率＝`compare` と同じ計算）を同じ実行の
+中で呼び直すだけ。別の実行から引くと、動いたのが定義のせいか実行のせいか決まらない。
 
 `bench` は**台をまたぐ入れ替わりが構造的か**を判定する（第13期）。台間の相関が 1.00 未満でも、
 乱数のばらつきだけでそうなるので、**「どれくらいなら動いたと言えるか」の基準が先に要る。**
