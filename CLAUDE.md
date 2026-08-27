@@ -27,7 +27,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
     dotnet run --project BattleSim -c Release <n> replay "編成名" <seed>  # 1戦を再生用JSON（台本）で吐く
 
-第4〜13期に足した診断モード。**どれも docs/ には置かない**（標準出力で読むだけ）。
+第4〜15期に足した診断モード。**どれも docs/ には置かない**（標準出力で読むだけ）。
 所要は全編成でおおむね 10〜30秒、`bridge` だけ 30秒前後。
 
     dotnet run --project BattleSim -c Release 0 handoff [絞り込み]  # 会戦の部隊引き継ぎ（第4期 Phase K）
@@ -41,6 +41,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 timing [絞り込み]   # 味方の行動パターンの変種（第11期 Phase BC）
     dotnet run --project BattleSim -c Release 0 power [絞り込み]    # 「地力」の分解（第12期 CA/CB・第13期 DA・第14期 EA/EB）
     dotnet run --project BattleSim -c Release 0 bench [絞り込み]    # 台をまたぐ入れ替わりは構造的か（第13期 Phase DB）
+    dotnet run --project BattleSim -c Release 0 wave [絞り込み]     # 編成 × 波の交互作用（単発戦。第15期 FA/FB）
     dotnet run --project BattleSim -c Release 0 ptrace [絞り込み]   # 毒の立ち上がり診断
 
 `layout` は「どう置くか」の粗い当たりを付ける道具で、その値で採否を決めてはいけない。
@@ -146,6 +147,25 @@ Phase EB は反撃軸の残差を第9期 `bill` の自傷率と突き合わせ�
 
 **長さの辺は「振ったつもり」になりやすい。** 誰も届かない波を足しても測定は1ミリも動かない——
 `4波目に入った試行` の列がそれを検出する（0% に近ければ、その辺は情報を持たない）。
+
+`wave` は**編成 × 波の交互作用**を単発戦の勝率で測る（第15期）。**主の物差しが単発戦に
+変わった**ので（README 冒頭「主の物差しは単発戦」）、波の評価も突破度・代金ではなく勝率でやる
+——代金は HP を持ち越す会戦でしか意味を持たない。既存5波 + 第5〜10期に `gradient` / `aim` /
+`flip` / `bridge` のローカルへ散らばっていた候補波 34 を**1箇所（`waves` 配列）に集めてある**。
+`EnemyCatalog` には足さない（採用が決まっていない波を入れると `compare` / `dump` が動く）。
+
+**集め方が写しであることを毎回検算する。** `MeasureCost` を同じ関数のまま呼び直して
+`gradient` / `aim` / `flip` / `bridge` の 代金・向き・ターン数 と突き合わせ、ずれ 0 件を確認する。
+
+**天井・床の波は評価に寄与しない。** 勝率 100.0%（天井）や 0.0%（床）で並ぶと順位が同値塊に
+なり、その中の編成は区別できない。**39 波のうち寄与するのは 7 波だけ**で、候補34波では 3 本
+（R8/R9/R10）しかない——**代金の帯を狙って作った波は、単発の物差しでは全部が天井に並ぶ**。
+判定は3通り（(a) 半割が取れた波・勝率 / (b) 寄与する波だけ・勝率 / (c) 全波・残存度）を
+必ず全部出す。**(a) は当てにならない**（同値塊のせいで `余地` が 1.0 を超える）。
+
+Phase FB は同じ実行の中で地力の分解を単発版でやり直す。**同語反復の判定は目的変数ごとに
+引き直す**——単発では分母経路が消え、`被ダメ/戦` が分子経路（味方の全滅＝敗北）に回るので
+候補は 13 → 12 種。第14期の突破度の数字も同じ実行の中で `MeasurePower` を呼び直して並べる。
 
 `replay` は戦闘1戦を「台本」（初期盤面＋時間順のイベント列）として JSON で吐く。
 勝率・連鎖深度が数字で答えてくれない「畳みかけて見えるか」を目で確かめるための道具で、
