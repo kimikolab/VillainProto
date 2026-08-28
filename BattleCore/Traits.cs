@@ -1184,7 +1184,12 @@ public sealed class MiasmaTrait : Trait
 /// </summary>
 public sealed class HavocTrait : Trait
 {
-    public const int Percent = 50;
+    // 惨禍の自己適用を外した（9f94aea）ぶんの代金を、本人ではなく味方側で取り戻す。
+    // カドのHPを下げると寿命の制約に逆戻りして、閉じたばかりの崖が再び開く。
+    // HP減は自己完結したマイナスだが、Percent 増は味方が払う＝盤面レベルの代金で、
+    // 惨禍を燃料にする編成（被弾強化・死の連鎖）とそうでない編成に傾斜が付く。
+    // **値は暫定**（50 → 75 は代金1.5倍の1点目）。
+    public const int Percent = 75;
     public override TraitId Id => TraitId.Havoc;
 
     public override void OnBattleStart(BattleContext ctx, UnitState self)
