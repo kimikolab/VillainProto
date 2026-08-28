@@ -50,7 +50,8 @@ public enum TraitId
     Cinder,      // 火の粉: 攻撃した相手に燃焼を付け、隣接する味方にも燃え移る
     Pyre,        // 熾火: 自分が燃えている間だけ本領を発揮する
     Condemn,     // 断罪: 反撃してきた相手を痺れさせる（敵側の語彙）
-    Shatter      // 砕け: 範囲攻撃を浴びると、その分を破片（アーマー）にして味方へ配る
+    Shatter,     // 砕け: 範囲攻撃を浴びると、その分を破片（アーマー）にして味方へ配る
+    ThornGuard   // 棘守り: 前か横の味方への単体攻撃を身代わりし、その味方と位置を入れ替える
 }
 
 /// <summary>
@@ -837,6 +838,142 @@ public sealed class ThornsTrait : Trait
                 ctx.Log($"    {self.Name} は巻き込むほど据わる（攻撃 +{gained} → {self.CurrentAttack}）", LogKind.Trigger);
             }
         });
+    }
+}
+
+/// <summary>
+/// 棘守り。<b>自分の「前」か「横」にいる味方への単体攻撃を身代わりし、その味方と位置を入れ替える。</b>
+///
+/// <para><b>なぜ足したか。</b> 棘（<see cref="ThornsTrait"/>）だけのカドは、盤面への関与が
+/// 反撃という<b>単一の閾値挙動</b>しか無かった。敵の攻撃力が閾値を超えれば反撃で圧勝、
+/// 超えなければ何も起きない——中間の勝率が構造的に存在しない（<see cref="CondemnTrait"/> の
+/// コメントに記録がある）。係数をいじっても崖の位置が動くだけなので、<b>第2の関与経路</b>を
+/// 与える。加えて、これは手番を消費する（<see cref="ActionKind.Skill"/>）ので、カドが
+/// 「手番を1つも使わないまま号令・据えの収入だけ受け取る」という穴も構造的に閉じる。</para>
+///
+/// <para><b>却下した案 1: 棘を隣の味方に移植する。</b> 「隣接する味方1体に棘を分け与え、
+/// その味方が殴られても刺し返す」という形。<b>トリガーが移るだけで盤面の状態が1つも変わらない</b>
+/// ——誰がどこに立っているかも、誰のHPが何点かも動かず、反撃の出どころが変わるだけ。
+/// 「捨てられた駒を噛み合わせる」ための情報がプレイヤーに1つも増えないので採らなかった。</para>
+///
+/// <para><b>却下した案 2: 構える（自己回復・被ダメ減）。</b> 手番を使って自分を硬くする形。
+/// <b>自己完結していて隣に何が立っているかを見ない</b>のが第一の難点で、第二に
+/// <b>被ダメ減はカドの経済そのものを壊す</b>——カドの攻撃力は「巻き込んだ味方のダメージ」と
+/// 「自分が受けた傷」から生えるので、硬くすることは収入を絞ることと同じ。
+/// 崖を潰すつもりで、崖の低い側だけを更に低くすることになる。</para>
+///
+/// <para><b>肩代わりは 100%（確率判定なし）。</b> 庇う（<see cref="GuardianTrait"/> 50%）と
+/// 揃えなかったのは、<b>身代わりになった相手が結局ダメージを受けるのは形として悪い</b>から。
+/// 「前に出た」のに半分の確率で後ろの味方が斬られるなら、それは身代わりではなく確率の抽選になる。
+/// 代金は確率ではなく<b>巻き込み（下記）という別勘定</b>で受け取る。</para>
+///
+/// <para><b>意図した挙動なので直さないこと。</b> 入れ替えたあと両者は必ず隣接しているので、
+/// 庇われた味方は<b>カドの反撃の巻き込みを必ず受ける</b>
+/// （<see cref="ThornsTrait.FriendlySplashPercent"/>。実数で <c>11 × 50% = 5</c>、惨禍で 7）。
+/// 敵の攻が低い波では、庇うことで盤面全体の被害がむしろ増える。<b>これは欠陥ではなく設計の中心。</b>
+/// 失った味方HPの半分がカドの <c>AtkBonus</c> になり、反撃は攻撃力×2 で返るので、
+/// 損ではなく「味方HP → カドの攻撃力 → 撃破」への変換になっている。敵の攻が高い波では本物の
+/// 肩代わり、低い波では自傷変換装置——<b>同じスキルが波によって災厄と資産に化ける</b>（可変コスト型）。</para>
+///
+/// <para><b>配置が意味を持つ。</b> スロットごとに隣接数が違うので、カドをどこで止めたいかが
+/// 編成の判断になる。前2（lane2）は隣接1で巻き込み最小だが、lane2 は奥行き1で貫きの直撃レーン。
+/// 前0 / 中3 / 後4 / 後5 は隣接2、前1 は隣接3で代金が最大。前進の経路は
+/// 後4 → 前0 ／ 後5 → 中3 → 前1 で、前列に着いたあとは 0⇔1⇔2 の横滑りになる。
+/// 前2 へは横滑りでしか到達できない。<b>後退する経路は構造上存在しない</b>ので
+/// 「後ろへ移動しない」を別途書く必要はない。</para>
+/// </summary>
+public sealed class ThornGuardTrait : Trait
+{
+    /// <summary>構えている印。スキルの手番に立て、1回の肩代わりで消費する。</summary>
+    public const string PendingKey = "thornGuardPending";
+
+    /// <summary>
+    /// 肩代わりした相手のスロット。<b>+1 して格納し、0 を「なし」とする</b>
+    /// （<see cref="UnitState.Counters"/> は int で、未設定と スロット0 が区別できないため）。
+    /// </summary>
+    public const string PartnerKey = "thornGuardPartner";
+
+    public override TraitId Id => TraitId.ThornGuard;
+
+    /// <summary>
+    /// 守れる位置か。<b>横</b>＝同じ列の隣、<b>前</b>＝同じレーンの1つ手前。
+    ///
+    /// <see cref="FormationRules"/> の既存の関数だけで書く。<b>新しい幾何関数を足さない</b>
+    /// ——盤面の形は1箇所（FormationRules）にしか無い、という前提を崩すと
+    /// 「隣接とは何か」の定義が特性ごとに散る。
+    /// </summary>
+    public static bool Covers(UnitState self, UnitState ally)
+    {
+        if (FormationRules.AreLateralNeighbors(self.Slot, ally.Slot)) return true;
+
+        // 前だけ。同じレーンの後ろにいる味方は守らない（守れると後列から前列を
+        // 素通しで守れることになり、隊列の意味が消える）。
+        return FormationRules.AreDepthNeighbors(self.Slot, ally.Slot)
+               && FormationRules.DepthOf(ally.Row) < FormationRules.DepthOf(self.Row);
+    }
+
+    /// <summary>
+    /// 手番の <see cref="ActionKind.Skill"/> で構え直す。周期は1要素なので毎ターン。
+    ///
+    /// 消費されずに残った肩代わりの記録もここで捨てる。破片（アーマー）が
+    /// 全額吸って <see cref="OnDamaged"/> まで届かなかった場合に記録が残り、
+    /// 次の無関係な被弾で入れ替えが走るのを防ぐ（庇うの <c>guardPending</c> と同じ穴）。
+    /// </summary>
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        self.SetCounter(PendingKey, 1);
+        self.SetCounter(PartnerKey, 0);
+    }
+
+    /// <summary>
+    /// 入れ替えはここで実行する。<b><see cref="BattleContext.SelectTarget"/> の中で
+    /// <see cref="BattleContext.SwapSlots"/> を呼んではいけない。</b>
+    /// SwapSlots は <see cref="Trait.OnMoved"/> を通知し、ヨミの
+    /// <see cref="DisplacedTrait"/> が割り込み攻撃を起こす。標的選択の途中でこれが走ると、
+    /// <b>攻撃が着弾する前に攻撃者や標的が死にうる</b>。
+    ///
+    /// <para>順序は「入れ替え → 反撃」。カドの <c>Traits</c> 配列で棘守りを棘より前に
+    /// 置いてあるので（<see cref="UnitCatalog.Kado"/>）、ここが
+    /// <see cref="ThornsTrait.OnDamaged"/> より先に走る。<c>ApplyDamage</c> の通知は
+    /// <c>target.Traits</c> の順、<c>TraitCatalog.Resolve</c> は <c>Def.Traits</c> の順を
+    /// そのまま保つ（Select().ToList()）ので、配列の順序が実行順になる。</para>
+    ///
+    /// <para>「前に出て身代わりになり、その位置から刺し返す」という絵が一貫し、
+    /// 反撃の巻き込み対象が<b>移動後の隣接</b>になるので位置の意味が強くなる。</para>
+    ///
+    /// <para>再入は既存の <see cref="BattleContext.InInterrupt"/> に任せる。
+    /// <b>新しい static フラグを作らないこと</b>——Trait は全戦闘で共有されるシングルトンで、
+    /// layout モードの並列実行で別の戦闘同士が干渉する。</para>
+    /// </summary>
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        int stored = self.Counter(PartnerKey);
+        if (stored == 0) return;
+        self.SetCounter(PartnerKey, 0);
+
+        // 庇ったその一撃で倒れたなら前に出る者がいない
+        if (!self.IsAlive) return;
+
+        int dest = stored - 1;
+        UnitState? partner = ctx.LivingMembers(self.TeamId)
+            .FirstOrDefault(u => u != self && u.Slot == dest);
+
+        // 入れ替え相手が既に死んでいる（巻き込み・毒で先に落ちた）ならそのまま。
+        // 空席へ滑り込ませないのは、それが「誰も押しのけずに前へ出る」＝代金の無い前進になるため。
+        if (partner is null) return;
+
+        ctx.Log($"    {self.Name} は {partner.Name} を押しのけて前に出た", LogKind.Trigger);
+        ctx.SwapSlots(self, dest);
+    }
+
+    /// <summary>
+    /// 部隊戦の境界で印を消す。印は <see cref="StatusKeys"/> に無いので境界の一律掃除では
+    /// 消えない（庇うの <c>guardPending</c> と同じ理由）。
+    /// </summary>
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(PendingKey, 0);
+        self.SetCounter(PartnerKey, 0);
     }
 }
 
@@ -1665,7 +1802,8 @@ public static class TraitCatalog
         new RearGuardTrait(),
         new CinderTrait(),
         new PyreTrait(),
-        new CondemnTrait()
+        new CondemnTrait(),
+        new ThornGuardTrait()
     }.ToDictionary(t => t.Id);
 
     public static Trait Get(TraitId id) => Map[id];

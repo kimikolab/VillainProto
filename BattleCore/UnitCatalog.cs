@@ -157,10 +157,17 @@ public static class UnitCatalog
         MaxHp = 96,
         Attack = 11,
         Speed = 4,
-        Traits = new[] { TraitId.Thorns, TraitId.Immobile, TraitId.Havoc },
-        PlusText = "殴られると、自分の攻撃力の2倍を敵に返す。反撃は隣の敵にも届き、巻き込んだ味方のダメージ分だけ自分の攻撃力が上がる",
-        MinusText = "自分からは決して攻撃しない / 反撃が隣の味方も巻き込む / 味方全体の受けるダメージが5割増える",
-        Flavor = "命令しても動かない。そばにいる者の傷がなぜか深くなる。"
+        // **ThornGuard を Thorns より前に置く。** ApplyDamage は target.Traits の順に
+        // OnDamaged を通知し、TraitCatalog.Resolve は Def.Traits の順をそのまま保つので、
+        // この配列の順序がそのまま「入れ替え → 反撃」の実行順になる
+        // （ThornGuardTrait.OnDamaged 参照）。逆にすると、移動前の隣接に対して刺し返す。
+        Traits = new[] { TraitId.ThornGuard, TraitId.Thorns, TraitId.Immobile, TraitId.Havoc },
+        // 棘を張り直すのが手番そのもの（不動は攻撃だけを禁じるので、術の手番は通る）。
+        // 1要素なので毎ターン構え直す＝構えは常に張られている状態になる。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "棘を外へ向けて構えている") },
+        PlusText = "殴られると、自分の攻撃力の2倍を敵に返す。反撃は隣の敵にも届き、巻き込んだ味方のダメージ分だけ自分の攻撃力が上がる / 毎ターン構え、前か横の味方への単体攻撃を身代わりして、その味方と位置を入れ替える",
+        MinusText = "自分からは決して攻撃しない / 反撃が隣の味方も巻き込む（身代わりした相手は入れ替え後も必ず隣にいるので、必ず巻き込む）/ 味方全体の受けるダメージが5割増える",
+        Flavor = "命令しても動かない。庇われた者は、庇われたことを後で悔やむ。"
     };
 
     public static readonly UnitDef Hisa = new()

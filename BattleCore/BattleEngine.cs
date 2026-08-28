@@ -458,6 +458,29 @@ public sealed class BattleContext
             return guardian;
         }
 
+        // 棘守り（カド）。**鎖の最後に置く。** 庇う（ガルド）は 50% の確率判定を持つ
+        // 専任の防御役で、100% のカドを先に置くと常にガルドを差し置いてしまう。
+        // ガルドに先の権利を与え、カドが残りを拾う。
+        //
+        // 守れるのは「前」か「横」だけ（ThornGuardTrait.Covers）。構えている印は
+        // スキルの手番に立ち、ここで1回消費する。入れ替え相手のスロットを記録するだけで、
+        // **SwapSlots はここで呼ばない**——移動は OnMoved を通じて割り込み攻撃を起こすので、
+        // 標的選択の途中でやると攻撃が着弾する前に攻撃者や標的が死にうる
+        // （実行は ThornGuardTrait.OnDamaged。「入れ替え → 反撃」の順）。
+        UnitState? thornGuard = foes.FirstOrDefault(
+            f => f.HasTrait(TraitId.ThornGuard) && f != target
+                 && f.Counter(ThornGuardTrait.PendingKey) > 0
+                 && ThornGuardTrait.Covers(f, target));
+
+        if (thornGuard is not null)
+        {
+            Log($"    {thornGuard.Name} が {target.Name} の前に棘を差し出した", LogKind.Trigger);
+            thornGuard.SetCounter(ThornGuardTrait.PendingKey, 0);
+            // スロット + 1 を格納し、0 を「なし」とする（スロット0 と未設定の区別）
+            thornGuard.SetCounter(ThornGuardTrait.PartnerKey, target.Slot + 1);
+            return thornGuard;
+        }
+
         return target;
     }
 
