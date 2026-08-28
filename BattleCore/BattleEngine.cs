@@ -1062,17 +1062,28 @@ public static class BattleEngine
                     continue;
                 }
 
-                bool canAct = actor.Traits.All(t => t.CanAct(ctx, actor));
+                // **行動種別を先に決めてから CanAct を問う。** 「動けない」には二種類あって、
+                // 無力化（痺れ・のろま）は何をするのも止めるが、不動（カド）が止めているのは
+                // 攻撃だけ。何をしようとしているかが分からないと、この二つを区別できない。
+                // Actions を持たない駒は Attack で問われるので従来とまったく同じ答えになる。
+                UnitAction? act = actor.CurrentAction;
+                ActionKind kind = act?.Kind ?? ActionKind.Attack;
+
+                bool canAct = actor.Traits.All(t => t.CanAct(ctx, actor, kind));
                 if (!canAct)
                 {
                     // 動けなかったことを記録する。ただし「差し出したターン」だけを数える。
                     // 不動（カド）・追い打ち（ハギ）は最初から自分のターンに振らない型なので、
                     // ここで数えると号令・据えが無償の毎ターン収入になる（Trait.SurrendersTurn 参照）。
+                    //
+                    // **種別依存で弾かれたターンは周期を進めない**（下の ActionIndex++ は
+                    // CanAct 通過後）。したがって `Actions` に「その駒が永久に実行できない種別」を
+                    // 混ぜると無限に停止する——不動の駒に `Attack` を含む `Actions` を
+                    // 与えてはいけない。周期がその要素で止まり、二度と先へ進まない。
                     actor.SetCounter(StatusKeys.IdleTurn, turn);
                     continue;
                 }
 
-                UnitAction? act = actor.CurrentAction;
                 if (act is null)
                 {
                     ctx.PerformAttack(actor);   // 従来経路。Actions を持たない駒はここしか通らない

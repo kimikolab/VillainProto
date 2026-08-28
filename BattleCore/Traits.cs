@@ -95,8 +95,19 @@ public abstract class Trait
     protected static bool ActsOnPattern(UnitState self)
         => self.Def.Actions is { } acts && acts.Any(a => a.Kind == ActionKind.Skill);
 
-    /// <summary>自分のターンに動くか。false は「自分からは動かない」という設計であって、無力化とは限らない。</summary>
-    public virtual bool CanAct(BattleContext ctx, UnitState self) => true;
+    /// <summary>
+    /// 自分のターンに動くか。false は「自分からは動かない」という設計であって、無力化とは限らない。
+    ///
+    /// <paramref name="kind"/> は<b>その手番に何をしようとしているか</b>。
+    /// 「動けない」には二種類あって、無力化（痺れ・のろま）は何をするのも止めるが、
+    /// 不動（カド）が止めているのは<b>攻撃だけ</b>——「自分からは決して攻撃しない」であって
+    /// 「手番を持たない」ではない。種別を渡さないと、この二つを同じ false でしか表現できず、
+    /// 不動の駒に能動スキルを持たせられない（棘守り＝<see cref="ThornGuardTrait"/> がそれを要る）。
+    ///
+    /// <see cref="UnitDef.Actions"/> を持たない駒は <see cref="ActionKind.Attack"/> で問われるので、
+    /// 種別を無視する実装は従来とまったく同じ答えを返す。
+    /// </summary>
+    public virtual bool CanAct(BattleContext ctx, UnitState self, ActionKind kind) => true;
 
     /// <summary>
     /// <see cref="CanAct"/> が false のとき、それが「差し出したターン」なのか
@@ -318,7 +329,9 @@ public sealed class SluggishTrait : Trait
 {
     public override TraitId Id => TraitId.Sluggish;
 
-    public override bool CanAct(BattleContext ctx, UnitState self)
+    // 種別は見ない。のろまは無力化なので、溜めでも術でも偶数ターンには動けない
+    // （不動＝「攻撃だけ断る」との違いがここ。Trait.CanAct の説明を参照）。
+    public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
     {
         bool act = ctx.Turn % 2 == 1;
         if (!act) ctx.Log($"    {self.Name} はまだ動き出せない", LogKind.Action);
@@ -718,12 +731,20 @@ public sealed class VenomTrait : Trait
     }
 }
 
-/// <summary>自分からは攻撃しない。反撃役に持たせて「殴られなければ無価値」を成立させる。</summary>
+/// <summary>
+/// 自分からは攻撃しない。反撃役に持たせて「殴られなければ無価値」を成立させる。
+///
+/// <b>止めているのは攻撃だけ。</b> 溜めも術も通す。名前のとおり「不動」ではなく
+/// 「自分からは決して攻撃しない」がこの特性の意味で、手番そのものを奪ってはいない。
+/// 分解する前は <c>CanAct</c> が種別を持たず、攻撃を断ることと手番を失うことが
+/// 同じ false に潰れていたので、不動の駒は能動的な関与経路を1つも持てなかった。
+/// </summary>
 public sealed class ImmobileTrait : Trait
 {
     public override TraitId Id => TraitId.Immobile;
 
-    public override bool CanAct(BattleContext ctx, UnitState self) => false;
+    public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
+        => kind != ActionKind.Attack;
 
     // 最初から振らない型なので、差し出したターンとして数えない
     public override bool SurrendersTurn => false;
@@ -1113,7 +1134,12 @@ public sealed class RallyTrait : Trait
             // 差し出したターンにだけ払う。不動（カド）は最初から振らない型で、
             // 差し出すものが無い。ここを見ないと静的なマイナスが毎ターンの収入になる。
             // 据え（Bulwark）は積み上がらない一定の減衰なので、こちらの制限はかけない。
-            if (ally.Traits.Where(t => !t.CanAct(ctx, ally)).Any(t => !t.SurrendersTurn)) continue;
+            // 種別は Attack 固定で問う。号令はターン開始に走るので ally.ActionIndex は
+            // すでに次の行動へ進んでいて、そこの周期を読んでも「先ほど手番を差し出したか」の
+            // 答えにはならない。ここが訊いているのは「その駒が通常の手番で殴りに行く型か」
+            // なので、周期の現在位置ではなく種別の固定が正しい。
+            if (ally.Traits.Where(t => !t.CanAct(ctx, ally, ActionKind.Attack))
+                           .Any(t => !t.SurrendersTurn)) continue;
 
             // 条件（差し出したターンかどうか）は ally 側で見て、乗せる先は拡散を通す。
             // 拡散持ちは自分では受け取らないが、差し出した事実は本人のものなので判定は動かさない。
@@ -1493,7 +1519,9 @@ public sealed class PursuerTrait : Trait
 
     public override TraitId Id => TraitId.Pursuer;
 
-    public override bool CanAct(BattleContext ctx, UnitState self) => false;
+    // 種別を問わず false。追い打ちは「自分の手番を丸ごと割り込みに賭ける」型なので、
+    // 攻撃だけでなく手番そのものを持たない（不動とはここが違う）。
+    public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind) => false;
 
     // 割り込みで振るのが役割。自分のターンを差し出したわけではない
     public override bool SurrendersTurn => false;
