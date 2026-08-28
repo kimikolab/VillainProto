@@ -847,6 +847,7 @@ public sealed class BattleContext
     {
         dead.Hp = 0;
         TallyOf(dead).Deaths++;
+        TallyOf(dead).LastActiveTurn = _turn;   // 蘇生されて再度倒れると上書きされる（後の値が勝つ）
         if (killer is not null && killer.TeamId != dead.TeamId) TallyOf(killer).Kills++;
 
         Log($"    {dead.Name} は倒れた", LogKind.Death);
@@ -1190,6 +1191,12 @@ public static class BattleEngine
                          && !ctx.TeamAlive(BattleContext.EnemyTeam);
 
         ctx.Log(playerWon ? "=== 勝利 ===" : "=== 敗北 ===", LogKind.System);
+
+        // 生き残った駒の「最後に活動していたターン」は決着ターン。
+        // 集計（life 診断）専用で、誰もこの値を読んで分岐しない。
+        int settled = Math.Min(turn, MaxTurns);
+        foreach (UnitState u in ctx.AllUnits)
+            if (u.IsAlive) ctx.TallyOf(u).LastActiveTurn = settled;
 
         return new BattleResult
         {

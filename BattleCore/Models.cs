@@ -395,6 +395,19 @@ public sealed class UnitTally
     /// </summary>
     public int BigAttacks;
 
+    /// <summary>
+    /// この駒が最後に生存していたターン。倒れた時点のターン番号。
+    /// 生き残った場合は決着ターン。
+    ///
+    /// <see cref="Healed"/> / <see cref="BigAttacks"/> と同じく<b>既存の出力には出さない</b>。
+    /// pulse・compare・docs に列を足すと過去の出力と diff が出る。life 診断だけが読む。
+    /// verbose 非依存（200 seed × 全編成で稼働率を測るため）。
+    ///
+    /// 蘇生された場合は上書きされる（後の値が勝つ）。<see cref="Deaths"/> が
+    /// 「倒れた回数」で2以上になりうるのと同じ扱いで、欲しいのは最後に活動していたターン。
+    /// </summary>
+    public int LastActiveTurn;
+
     /// <summary>とどめを刺した敵の数。</summary>
     public int Kills;
 
@@ -409,6 +422,10 @@ public sealed class UnitTally
         Healed += o.Healed;
         Charges += o.Charges; BigAttacks += o.BigAttacks;
         Kills += o.Kills; Deaths += o.Deaths;
+        // LastActiveTurn は**加算しない**。ターン番号は足しても意味を持たない。
+        // Math.Max を取るのは、合算の順序に依存しない（可換・結合的）ため——
+        // 「最後の値を残す」方式は Add を呼ぶ順で答えが変わる。
+        LastActiveTurn = Math.Max(LastActiveTurn, o.LastActiveTurn);
     }
 }
 
