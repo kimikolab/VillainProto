@@ -27,7 +27,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
     dotnet run --project BattleSim -c Release <n> replay "編成名" <seed>  # 1戦を再生用JSON（台本）で吐く
 
-第4〜17期に足した診断モード。**どれも docs/ には置かない**（標準出力で読むだけ）。
+第4〜18期に足した診断モード。**どれも docs/ には置かない**（標準出力で読むだけ）。
 所要は全編成でおおむね 10〜30秒、`bridge` だけ 30秒前後。
 
     dotnet run --project BattleSim -c Release 0 handoff [絞り込み]  # 会戦の部隊引き継ぎ（第4期 Phase K）
@@ -44,6 +44,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 wave [絞り込み]     # 編成 × 波の交互作用（単発戦。第15期 FA/FB）
     dotnet run --project BattleSim -c Release 0 dissect [絞り込み]  # 交互作用の個別事例の解剖 + 敵側の特徴量（第16期 GA/GB）
     dotnet run --project BattleSim -c Release 0 output [絞り込み]   # 参照台と出力特徴量 (A)(B)(C)（第17期 HA/HB）
+    dotnet run --project BattleSim -c Release 0 convert [絞り込み]  # 個体HP だけを振った台の系列と変換率（第18期 IA）
     dotnet run --project BattleSim -c Release 0 ptrace [絞り込み]   # 毒の立ち上がり診断
 
 `layout` は「どう置くか」の粗い当たりを付ける道具で、その値で採否を決めてはいけない。
@@ -225,6 +226,18 @@ def を並べると呪詛入りの編成には 1ダメージも通らず、**反
 「窓が閉じた」を測るので、`到達%` と一緒に読む。**打点は `Damage` イベントから取る**
 （`Status` の量は適用**前**なので、破片で吸われたぶんと食い違う。`dissect` の `毒燃/戦` は
 `Status` 側で、そこだけ流儀が違う）。
+
+`convert` は**出力が撃破に変換されるか**を、参照台を**個体HP だけ変えて**測る（第18期）。
+変換率 β = `d ln((A)) ÷ d ln(個体HP)`（刻み全部を使った log-log の傾き）。
+
+**個体HP は単独では振れない。** 総HP ＝ 個体HP × 体数 なので、体数を止めれば総HP（＝戦闘長）が動き、
+総HP を止めれば体数と総攻が動く。**2つの系列は逆を向く**（ρ −0.53）ので、**どちらを主に採ったかを
+必ず書く**——`convert` は「振るのは個体HP だけ」に文字どおり従う**系列P（体数6固定）**を主にし、
+食い違いが体数の辺で説明が付くかを**辺（系列R・個体HP 固定で体数だけを振る）**で検算している。
+
+**(A) はオーバーキルを含む。** `ApplyDamage` は残HPで切り詰めない（`Amount` は素の量、`HpAfter` が
+0 止まり）ので、**(A) は「敵のHPに変換された量」ではなく「振り下ろした量」。** 変換率は
+「硬い的で出力がどう変わるか」を測るが、**「その出力が無駄になっているか」は測っていない。**
 
 `replay` は戦闘1戦を「台本」（初期盤面＋時間順のイベント列）として JSON で吐く。
 勝率・連鎖深度が数字で答えてくれない「畳みかけて見えるか」を目で確かめるための道具で、
