@@ -668,8 +668,6 @@ public sealed class BattleContext
         //
         // 守った相手が既に倒れている（巻き込み・毒で先に落ちた）なら中継先が無いので、
         // カドが全額を受ける＝上限なしの従来挙動に落ちる。
-        if (target.HasTrait(TraitId.ThornGuard) && target.Counter(ThornGuardTrait.PartnerKey) > 0)
-
         if (amount > ThornGuardTrait.AbsorbCap
             && target.HasTrait(TraitId.ThornGuard)
             && target.Counter(ThornGuardTrait.PartnerKey) > 0)
