@@ -699,7 +699,9 @@ public sealed class BattleContext
         // 惨禍は「本人ではなく味方全体」に効くので、駒の特性ではなく盤面側で解決する。
         var teammates = LivingMembers(target.TeamId);
 
-        if (teammates.Any(u => u.HasTrait(TraitId.Havoc)))
+        // u != target ＝ 惨禍は本人には乗らない（HavocTrait のコメント参照）。
+        // 「カドを名指しで除外」ではなく関係で書いてあるので、惨禍持ちが2体並べば互いに増幅し合う。
+        if (teammates.Any(u => u != target && u.HasTrait(TraitId.Havoc)))
             amount += amount * HavocTrait.Percent / 100;
 
         // 据え: このターン動けなかった駒は硬くなる
