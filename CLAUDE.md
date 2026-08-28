@@ -46,6 +46,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 output [絞り込み]   # 参照台と出力特徴量 (A)(B)(C)（第17期 HA/HB）
     dotnet run --project BattleSim -c Release 0 convert [絞り込み]  # 個体HP だけを振った台の系列と変換率（第18期 IA）
     dotnet run --project BattleSim -c Release 0 ptrace [絞り込み]   # 毒の立ち上がり診断
+    dotnet run --project BattleSim -c Release 0 life [絞り込み] [駒Id]  # 駒の寿命と稼働率（第19期。既定は kado）
 
 `layout` は「どう置くか」の粗い当たりを付ける道具で、その値で採否を決めてはいけない。
 seed 50 の 720通りの最大なので上位は運で入れ替わり、狙い（ガルド前列・セッキ後列）も無視する。
