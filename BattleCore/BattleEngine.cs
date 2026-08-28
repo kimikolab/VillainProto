@@ -657,6 +657,42 @@ public sealed class BattleContext
     {
         if (!target.IsAlive || amount <= 0) return;
 
+        // 棘守り（カド）の肩代わり上限。**素の入力ダメージを ThornGuardTrait.AbsorbCap で切り、
+        // 超過分を守った相手へ素のまま中継する。** 惨禍・据え・散開・萎縮より前に置いてあるのは、
+        // 上限が「鎧の厚み」というカド固有の性質で、味方全体にかかる増減とは独立であるべきだから
+        // （UnitCatalog に書かれた敵の攻撃力の数字とそのまま突き合わせて読める。後に切ると
+        // 分割の前後で増幅が二重にかかりうる）。増幅はカド側・相手側の ApplyDamage で1回ずつ乗る。
+        //
+        // 中継先はカドではないので肩代わりの判定に再入しない。再入の抑止は既存の
+        // ctx.InInterrupt に任せる（新しい static フラグを作らない。Trait は共有シングルトン）。
+        //
+        // 守った相手が既に倒れている（巻き込み・毒で先に落ちた）なら中継先が無いので、
+        // カドが全額を受ける＝上限なしの従来挙動に落ちる。
+        if (target.HasTrait(TraitId.ThornGuard) && target.Counter(ThornGuardTrait.PartnerKey) > 0)
+
+        if (amount > ThornGuardTrait.AbsorbCap
+            && target.HasTrait(TraitId.ThornGuard)
+            && target.Counter(ThornGuardTrait.PartnerKey) > 0)
+        {
+            int covered = target.Counter(ThornGuardTrait.PartnerKey) - 1;
+            UnitState? behind = LivingMembers(target.TeamId)
+                .FirstOrDefault(u => u != target && u.Slot == covered);
+
+            if (behind is null)
+            {
+                Log($"    {target.Name} の棘は独りで受け止めた（庇った相手はもういない）", LogKind.Trigger);
+            }
+            else
+            {
+                int overflow = amount - ThornGuardTrait.AbsorbCap;
+                amount = ThornGuardTrait.AbsorbCap;
+                Log($"    {target.Name} の鎧は貫かれ、{behind.Name} にも {overflow} 届いた", LogKind.Trigger);
+                // 出どころは元の攻撃者のまま。中継で相手が倒れた場合、入れ替え（SwapSlots）は
+                // ThornGuardTrait.OnDamaged 側の「相手が既に死んでいるならそのまま」で自然に落ちる。
+                ApplyDamage(behind, overflow, source);
+            }
+        }
+
         foreach (Trait t in target.Traits)
             amount = t.ModifyIncomingDamage(target, amount);
 
