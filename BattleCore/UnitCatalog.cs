@@ -474,7 +474,7 @@ public static class UnitCatalog
         Attack = 6,
         Speed = 7,
         Traits = new[] { TraitId.Pyre },
-        PlusText = "自分が燃えている間、攻撃力が4倍になり、攻撃が薙ぎに変わる",
+        PlusText = "自分が燃えている間、攻撃力が4倍になり、攻撃が貫きに変わる",
         MinusText = "火が消えればただの湿った薪。自分では火を点けられない",
         Flavor = "焚きつけられている間だけ働く。誰かが火を放つのを待っている。"
     };

@@ -1854,6 +1854,22 @@ public sealed class CinderTrait : Trait
 ///
 /// 代金は燃焼ダメージ＋着火役の巻き込みで、実HPから毎ターン払う。
 /// 燃焼が上限つきだからこそ低火力の駒でも払い続けられる、というのがこの軸の要。
+///
+/// 燃焼中の形は**薙ぎではなく貫き**。ボルグと軸が完全に重複していたため縦へ割った
+/// （<see cref="CinderTrait"/> が隣接味方を点火するので、この2体は必ず同じターンに
+/// 同じ形の面を出していた。スィドをグザの下位互換にした失敗と同型）。
+/// 新しい能力を足すのではなく既にある形を差し替えたので、代金は既に払われている
+/// （「自分では火を点けられない」＝点火役を編成に入れる、が条件として立っている）。
+/// 総量は同等で（横に並ぶ敵には薙ぎが、奥行きのあるレーンには貫きが勝つ）、
+/// **波によって優劣が逆転する**のが狙い。
+///
+/// 却下した案:
+/// - **貫きをアクティブスキルとして足す**: ホタは既に「燃えている間だけ」という外部条件を
+///   持つので、周期を重ねると二重条件になる（セロの後退＋後列、クグの2周期案と同じ稼働率不足）。
+///   加えて押しのける対象が燃焼中の主力出力そのもの（ablate で -57.5pt）で押しのけ量が大きすぎる
+/// - **燃焼にカウンタを持たせて資源化**: 燃焼は非スタックで「量」が存在しない（上記の結論をそのまま適用）
+/// - **ボルグ側を貫きにする**: 散開＋火の粉は横に広がることを前提に設計されているので、
+///   縦にすると点火の配り方ごと壊れる
 /// </summary>
 public sealed class PyreTrait : Trait
 {
@@ -1865,7 +1881,7 @@ public sealed class PyreTrait : Trait
         => self.Counter(StatusKeys.Burn) > 0 ? atk * Multiplier : atk;
 
     public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
-        => self.Counter(StatusKeys.Burn) > 0 ? AttackPattern.Sweep : p;
+        => self.Counter(StatusKeys.Burn) > 0 ? AttackPattern.Pierce : p;
 }
 
 public static class TraitCatalog
