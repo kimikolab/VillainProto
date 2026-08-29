@@ -123,6 +123,22 @@ public abstract class Trait
     public virtual bool SurrendersTurn => true;
 
     /// <summary>
+    /// その駒の <see cref="StatusKeys.IdleTurn"/> が「差し出された本物の空き」か。
+    /// 号令（<see cref="RallyTrait"/>）も据え（<see cref="BulwarkTrait"/>）もここを通す。
+    ///
+    /// **2箇所にコピーしない。** 以前は号令だけがこの判定を持ち、据えは持っていなかったので、
+    /// ハギ（<see cref="PursuerTrait"/>）が据えの −50% を無償で受け取っていた。
+    /// 片方だけが直されて食い違うのを防ぐために、条件はここ1箇所に置く。
+    ///
+    /// 種別は <see cref="ActionKind.Attack"/> 固定で問う。訊いているのは
+    /// 「その駒が通常の手番で殴りに行く型か」であって周期の現在位置ではない
+    /// （号令はターン開始に走るので <c>ActionIndex</c> はすでに次の行動へ進んでいる）。
+    /// </summary>
+    public static bool SurrenderedTurn(BattleContext ctx, UnitState u)
+        => !u.Traits.Where(t => !t.CanAct(ctx, u, ActionKind.Attack))
+                    .Any(t => !t.SurrendersTurn);
+
+    /// <summary>
     /// ターン外の攻撃（割り込み・追い打ち）ができるか。
     ///
     /// <see cref="CanAct"/> と分けているのは、あれが二つの別物を兼ねているため。
@@ -1315,13 +1331,17 @@ public sealed class RallyTrait : Trait
 
             // 差し出したターンにだけ払う。不動（カド）は最初から振らない型で、
             // 差し出すものが無い。ここを見ないと静的なマイナスが毎ターンの収入になる。
+            //
             // 据え（Bulwark）は積み上がらない一定の減衰なので、こちらの制限はかけない。
-            // 種別は Attack 固定で問う。号令はターン開始に走るので ally.ActionIndex は
-            // すでに次の行動へ進んでいて、そこの周期を読んでも「先ほど手番を差し出したか」の
-            // 答えにはならない。ここが訊いているのは「その駒が通常の手番で殴りに行く型か」
-            // なので、周期の現在位置ではなく種別の固定が正しい。
-            if (ally.Traits.Where(t => !t.CanAct(ctx, ally, ActionKind.Attack))
-                           .Any(t => !t.SurrendersTurn)) continue;
+            // （2026-08-28 変更）据えにも同じ制限をかけた。規則の趣旨を
+            // 「収入が雪だるまにならないこと」から「差し出した者だけが報酬を受け取れる」に
+            // 統一したため。暴走防止は「加算であって乗算ではない」が別に担当しており、
+            // IdleTurn の会計に2つの仕事を兼ねさせない（CanAct が2つの役割を担っていて
+            // 分離したのと同じ理由）。積み上がらなくとも、ハギは毎ターン確実に −50% を
+            // 受け取る＝実質HPが常時2倍になるので、恒久的な収入であることに変わりはない。
+            //
+            // 判定そのものは Trait.SurrenderedTurn に切り出してある（据え側と共有）。
+            if (!SurrenderedTurn(ctx, ally)) continue;
 
             // 条件（差し出したターンかどうか）は ally 側で見て、乗せる先は拡散を通す。
             // 拡散持ちは自分では受け取らないが、差し出した事実は本人のものなので判定は動かさない。

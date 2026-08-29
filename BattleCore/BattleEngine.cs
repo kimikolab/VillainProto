@@ -702,8 +702,12 @@ public sealed class BattleContext
         if (teammates.Any(u => u != target && u.HasTrait(TraitId.Havoc)))
             amount += amount * HavocTrait.Percent / 100;
 
-        // 据え: このターン動けなかった駒は硬くなる
+        // 据え: このターン差し出された駒は硬くなる。
+        // 「動けなかった」ではなく「差し出した」を見る（Trait.SurrenderedTurn。号令と同じ判定）。
+        // ハギ（追い打ち）のように最初から自分の手番を持たない型は差し出すものが無いので、
+        // ここを見ないと静的なマイナスが毎ターンの −50% に化ける。
         if (target.Counter(StatusKeys.IdleTurn) >= Turn
+            && Trait.SurrenderedTurn(this, target)
             && teammates.Any(u => u.HasTrait(TraitId.Bulwark)))
             amount -= amount * BulwarkTrait.ReductionPercent / 100;
 
