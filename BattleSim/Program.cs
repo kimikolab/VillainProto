@@ -8606,7 +8606,20 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 全員が自分の手番で殴る型——縛られた1体が失うのは実際の1振りで、誰もその空きを買わない。
     // 「味方の縛りがほぼ純粋な損」という要件を、収入側の特性をひとつも置かないことで満たす。
     // ガルドは前列（庇いの制約）、セロは中衛（狙撃化には戦闘中に後退した実績が要る）
-    ("縛め非収入型 (クグ×速攻)", Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Gald, front3: UnitCatalog.Borg, mid: UnitCatalog.Sero, back1: UnitCatalog.Kugu))
+    ("縛め非収入型 (クグ×速攻)", Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Gald, front3: UnitCatalog.Borg, mid: UnitCatalog.Sero, back1: UnitCatalog.Kugu)),
+    // 据え（バン）とハギ（追い打ち）の同居。31編成に1本も無い組み合わせなので、
+    // `IdleTurn` の会計を据え側で直しても compare が1行も動かず、変更が効いたことを
+    // 確認できない。その対照として置く。ハギは `SurrendersTurn == false`（自分の手番を
+    // 持たない型）なので、据えを無償で受け取っているかどうかがここに出る。
+    //
+    // 土台は 追撃×死 (ハギ×リィカ) で、前2のゾトをバンに差し替えただけ。
+    // 残り3枠（ゴルム・リィカ・ヴェル）を土台のまま据え置いたのは、ハギが「味方が敵を倒す」
+    // ことでしか動かない駒だから——撃破の供給源（リィカの生贄とヴェルの蘇生による死体の倍加）を
+    // 崩すとハギが置物になり、据えの受け取り量そのものが測れなくなる。
+    // 抜く枠にゾトを選んだのは、ヴェルを外すと第2波が 98.0% → 32.5% まで落ちることが
+    // 測定済み（2026-08-23）で、ゴルムは前列の受けを兼ねているため。
+    // バンは前2。据えは位置を問わないが、ゾトの空けた席をそのまま使えば土台との差が1枠で済む。
+    ("追撃×据え (ハギ×バン)", Formation.Build(front1: UnitCatalog.Hagi, front2: UnitCatalog.Ban, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Vel))
 };
 
 // メンバーをスロット 0..5 へ重複なく割り当てる全順列を、
