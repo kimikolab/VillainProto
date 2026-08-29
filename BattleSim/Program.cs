@@ -8592,7 +8592,21 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // ヒビを前列に置き、ボルグと横に隣接させることが狙い。ボルグの薙ぎは味方も巻き込むが、
     // その巻き込みも CurrentPattern != Single なのでヒビの変換対象になる。
     // 探索1位はボルグを後列へ回してこの噛み合わせを捨てる形なので採らない。
-    ("範囲耐性 (ヒビ×ボルグ)", Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Hibi, front3: UnitCatalog.Borg, mid: UnitCatalog.Dolga, back1: UnitCatalog.Rica))
+    ("範囲耐性 (ヒビ×ボルグ)", Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Hibi, front3: UnitCatalog.Borg, mid: UnitCatalog.Dolga, back1: UnitCatalog.Rica)),
+    // 縛め（クグ）の測定用。既存でクグを含むのは 溜め改 だけで、そこにはカドが入っている——
+    // カドの改修と交絡していて、クグの設計の中心（編成によって縛りの意味が反転する）が測れない。
+    // 以下の2本はその対照。片方は縛りの空きを買う駒を揃え、もう片方は誰も買わない。
+    //
+    // 収入型。溜め改 からカドだけを抜き、同じ前2にガルド（庇い。前列でないと働かない）を入れた形。
+    // クグ・ガン（号令）・バン（据え）が揃うので、縛られた味方1体の空きに +16 / +8 / −50% が同時に払われる。
+    // 残り枠は 溜め改 と同じドルガ（遅いが攻38の薙ぎ。守られて完走する側）を据え置き、
+    // カドの有無だけが 溜め改 との差になるようにした
+    ("縛め収入型 (クグ×バン×ガン)", Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Kugu, mid: UnitCatalog.Gan, back1: UnitCatalog.Ban, back2: UnitCatalog.Dolga)),
+    // 非収入型。号令・据え・カドのいずれも含まない。残り4枠は 速攻 (ボルグ×ムド) の攻撃役で、
+    // 全員が自分の手番で殴る型——縛られた1体が失うのは実際の1振りで、誰もその空きを買わない。
+    // 「味方の縛りがほぼ純粋な損」という要件を、収入側の特性をひとつも置かないことで満たす。
+    // ガルドは前列（庇いの制約）、セロは中衛（狙撃化には戦闘中に後退した実績が要る）
+    ("縛め非収入型 (クグ×速攻)", Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Gald, front3: UnitCatalog.Borg, mid: UnitCatalog.Sero, back1: UnitCatalog.Kugu))
 };
 
 // メンバーをスロット 0..5 へ重複なく割り当てる全順列を、
