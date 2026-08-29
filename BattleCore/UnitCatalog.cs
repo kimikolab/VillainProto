@@ -326,8 +326,15 @@ public static class UnitCatalog
         Attack = 3,
         Speed = 10,
         Traits = new[] { TraitId.Bind },
-        PlusText = "毎ターン味方1体を縛り、その味方の攻撃+16",
-        MinusText = "縛る相手は選べない。縛られた味方はそのターン動けない",
+        // 縄は1本。攻撃のターンは味方を縛り、大縛りのターンは代わりに敵を縛る。
+        // 代金は振り（攻3）ではなく味方の縛り1回ぶんで、収入の有無で意味が反転する（BindTrait）。
+        Actions = new UnitAction[]
+        {
+            new(ActionKind.Attack),
+            new(ActionKind.Skill, Label: "大縛りの縄を敵へ投げた"),
+        },
+        PlusText = "攻撃のターンは味方1体を縛り、その味方の攻撃+16。次のターンは大縛りで最も速い敵1体を縛る",
+        MinusText = "縛る味方は選べない。縛られた味方はそのターン動けない。大縛りのターンは攻撃せず、味方の縛りも起きない",
         Flavor = "味方を縛り上げる癖が抜けず、何度も牢に入れられた。"
     };
 

@@ -1433,6 +1433,16 @@ public sealed class ShufflerTrait : Trait
 /// <summary>
 /// 縛め。毎ターン味方1体を動けなくする代わりに大きく強化する。
 /// 「動かない」を偶然ではなく意図的に作り出すので、溜め軸のエンジンになる。
+///
+/// <b>縄は1本しかない。</b> 大縛り（<see cref="ActionKind.Skill"/> の手番）は、
+/// 味方を縛る代わりに敵を縛る。新しい <see cref="TraitId"/> を作らず
+/// <see cref="OnAction"/> をこの特性に足してあるのは、縄が1本であることを
+/// 特性が1つであることで表すため。
+///
+/// 代金は攻撃ではなく<b>味方の縛り1回ぶん</b>。クグの攻は3で、振りを捨てても代金にならない。
+/// 号令・据えのある編成では +16 / +8 / −50% の収入を1ターン捨てることになり、
+/// 号令も据えも無い編成では味方の縛りはほぼ純粋な損なので、敵へ向け直すのはほぼ無料になる。
+/// 同じスキルが編成によって正反対の意味を持つのが狙い。
 /// </summary>
 public sealed class BindTrait : Trait
 {
@@ -1440,6 +1450,21 @@ public sealed class BindTrait : Trait
     public override TraitId Id => TraitId.Bind;
 
     public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        // スキルのターンは縄を敵に使う。味方は縛らない（縄は1本）。
+        // OnTurnStart は ActionIndex が進む前に走るので、CurrentAction は
+        // 「このターンに実行する行動」を指す（BattleEngine の周期の進め方を参照）。
+        //
+        // ActsOnPattern を条件に含めるのは、将来この特性を周期を持たない駒に付けたときに
+        // 従来どおり毎ターン発火させるため（現在の保持者はクグのみ）。理由は Trait.ActsOnPattern。
+        if (ActsOnPattern(self) && self.CurrentAction?.Kind == ActionKind.Skill) return;
+        BindAlly(ctx, self);
+    }
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+        => BindEnemy(ctx, self);
+
+    private static void BindAlly(BattleContext ctx, UnitState self)
     {
         var candidates = ctx.LivingMembers(self.TeamId)
             .Where(u => u != self && u.AcceptsSupport && u.Counter(StatusKeys.Stun) == 0)
@@ -1450,6 +1475,29 @@ public sealed class BindTrait : Trait
         victim.SetCounter(StatusKeys.Stun, 1);
         victim.AtkBonus += Gain;
         ctx.Log($"    {self.Name} が {victim.Name} を縛りつけた（動けない / 攻撃 +{Gain}）", LogKind.FriendlyFire);
+    }
+
+    /// <summary>
+    /// 大縛り。最も速い敵を確定で縛る。無作為ではなく最速を選ぶのは読めるから——
+    /// 敵ロスター最速は勇者候補（速14・撃破ごとに雪だるま）なので、
+    /// 「クグは勇者候補を止められる」がプレイヤーの学べる交互作用になる。
+    ///
+    /// 味方側の +16 は「縛られて力を溜める」意味なので敵には移さない。敵へは拘束のみ。
+    /// </summary>
+    private static void BindEnemy(BattleContext ctx, UnitState self)
+    {
+        var living = ctx.LivingMembers(ctx.Opponent(self.TeamId))
+            .Where(u => u.Counter(StatusKeys.Stun) == 0)   // 既に縛られている敵に重ねても無駄
+            .ToList();
+        if (living.Count == 0) return;
+
+        int top = living.Max(u => u.Def.Speed);
+        var fastest = living.Where(u => u.Def.Speed == top).ToList();
+
+        // 同速が複数なら無作為。スロット順で選ぶと位置バイアスが入る（既存の標的選択の作法）。
+        UnitState victim = fastest[ctx.Roll(fastest.Count)];
+        victim.SetCounter(StatusKeys.Stun, 1);
+        ctx.Log($"    {self.Name} が {victim.Name} を縛り上げた（動けない）", LogKind.Trigger);
     }
 }
 
