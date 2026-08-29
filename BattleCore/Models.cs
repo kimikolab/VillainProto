@@ -193,39 +193,147 @@ public sealed class UnitState
 }
 
 /// <summary>
-/// 盤面の形。前列3・中列1・後列2 の6枠。
+/// 盤面の形。X字に並ぶ編成5枠 + 召喚専用4枠の9枠。
 ///
-///     後1(4)          前1(0)      レーン0 … 奥行き2
-///     後2(5)  中(3)   前2(1)      レーン1 … 奥行き3
-///                     前3(2)      レーン2 … 奥行き1
+///         後   中   前          ■ 編成スロット（0-4・常に5体）
+///     1   ■   ○   ■          ○ 召喚専用（5-8・プレイヤーは置けない）
+///     2   ○   ■   ○
+///     3   ■   ○   ■
 ///
-/// レーンごとに奥行きが違うのが要。深いレーンは減衰で守られ、浅いレーンは直撃を受ける。
-/// 「同じ駒でも置き方で結果が変わる」を、貫きに対しても成立させるための形。
+///     0 前1   1 前3   2 中央   3 後1   4 後3
+///     5 ○中1（後1-前1 の間）   6 ○中3（後3-前3 の間）
+///     7 ○前2（中央の前）       8 ○後2（中央の後ろ）
+///
+/// 貫きの経路は2本で、どちらも奥行きが等しい（前X → 中央 →〔○中X〕→ 後X）。
+/// 編成スロットだけを見れば、角4つ（前1・前3・後1・後3）は全員が隣接次数2
+/// （レーン相手＋中央）で完全に等価。中央のみ次数4。これが対称化の本体。
+///
+/// 旧盤面（前3・中1・後2 の6枠／レーンの奥行き 2/3/1）では、前3が「隣接次数1」かつ
+/// 「後列に1体でも置けば貫きの対象から完全に外れる」逃げ場になっていた。
+/// 奥行きを揃えることで、その2つを同時に潰してある。
+///
+/// 召喚が湧くと角の次数は最大4まで増えるが、これは戦闘中に生じる非対称なので許容する。
 /// </summary>
 public static class FormationRules
 {
-    public const int TotalSlots = 6;
-    public const int LaneCount = 3;
+    public const int TotalSlots = 9;
 
-    /// <summary>中列のスロット番号。盤面でただ一つしかない席。</summary>
-    public const int MidSlot = 3;
+    /// <summary>プレイヤーが置ける枠の数。編成は常にこの数ちょうどで埋まる。</summary>
+    public const int PlayableSlotCount = 5;
+
+    public const int LaneCount = 2;
+
+    /// <summary>プレイヤーが置ける枠。</summary>
+    public static readonly int[] PlayableSlots = { 0, 1, 2, 3, 4 };
+
+    /// <summary>
+    /// 召喚専用の枠。<b>この並びが Summon の走査順そのもの</b>で、調整ノブになっている。
+    /// 貫き経路に入る 中1・中3 から先に埋めるので、召喚駒が盾として機能しやすい。
+    /// </summary>
+    public static readonly int[] SummonSlots = { 5, 6, 7, 8 };
+
+    /// <summary>
+    /// 席の名前。UI と診断はここを見ること。
+    /// <b>各所で配列を手写ししない</b>——召喚枠が増えたとき、写した側だけが添字範囲外で落ちる。
+    /// </summary>
+    public static readonly string[] SeatNames =
+        { "前1", "前3", "中央", "後1", "後3", "○中1", "○中3", "○前2", "○後2" };
 
     private static readonly Row[] RowTable =
-        { Row.Front, Row.Front, Row.Front, Row.Mid, Row.Back, Row.Back };
-
-    private static readonly int[] LaneTable = { 0, 1, 2, 1, 0, 1 };
-
-    /// <summary>各レーンを前から後ろへ並べたもの。貫きの走査順そのもの。</summary>
-    private static readonly int[][] LaneTracks =
     {
-        new[] { 0, 4 },
-        new[] { 1, 3, 5 },
-        new[] { 2 }
+        Row.Front, Row.Front, Row.Mid, Row.Back, Row.Back,   // 編成 0-4
+        Row.Mid, Row.Mid, Row.Front, Row.Back                // 召喚 5-8
+    };
+
+    /// <summary>
+    /// 貫きの走査順そのもの。前から後ろへ。
+    ///
+    /// <b>中央は両方の経路に属する</b>ので「スロット → レーン」は単数では表せない
+    /// （<see cref="LanesOf"/> を使うこと）。○中X はそこに召喚駒が立っているときだけ
+    /// 経路に加わる（空席は占有者0で自然に飛ぶ）。召喚駒はもう1体ぶんの減衰として働き、
+    /// 後列を守る——「実態があるなら遮る」という判断からの帰結。
+    /// </summary>
+    private static readonly int[][] LanePaths =
+    {
+        new[] { 0, 2, 5, 3 },
+        new[] { 1, 2, 6, 4 }
+    };
+
+    /// <summary>
+    /// 召喚枠を除いた経路。<see cref="IsLanePredecessor"/> 専用。
+    /// 守備範囲が「そのとき召喚駒が湧いているか」で変わってはいけないので、
+    /// 貫きの走査順とは分けてある。
+    /// </summary>
+    private static readonly int[][] CorePaths =
+    {
+        new[] { 0, 2, 3 },
+        new[] { 1, 2, 4 }
+    };
+
+    /// <summary>
+    /// 隣接表。<b>幾何計算で導出しない。</b>X字の隣接は不規則で、
+    /// 「同じ列の左右」と「同じレーンの前後」の和には分解できない
+    /// （前1と後1は隣接するが、貫き経路では間に中央が入る）。
+    ///
+    /// 味方に及ぶもの（巻き込み・生贄・囃し立て・散開・毒漏れ・火の粉）は必ずこちらを見ること。
+    /// 敵に及ぶもの（薙ぎの巻き込み・反撃の返し）は <see cref="SweepTargets"/> を見ること。
+    /// この線引きを崩すと、範囲攻撃が縦へ広がって貫きと区別がつかなくなる。
+    ///
+    /// 中央は編成5枠すべてと接続する。通常攻撃からは守られるが、味方のマイナスは一身に浴びる席。
+    /// 「隣接デメリットの捨て場」を作らないための措置（旧盤面の中列と同じ役割）。
+    /// </summary>
+    private static readonly int[][] AdjacencyTable =
+    {
+        new[] { 2, 3, 5, 7 },        // 0 前1
+        new[] { 2, 4, 6, 7 },        // 1 前3
+        new[] { 0, 1, 3, 4, 7, 8 },  // 2 中央
+        new[] { 0, 2, 5, 8 },        // 3 後1
+        new[] { 1, 2, 6, 8 },        // 4 後3
+        new[] { 0, 3 },              // 5 ○中1
+        new[] { 1, 4 },              // 6 ○中3
+        new[] { 0, 1, 2 },           // 7 ○前2
+        new[] { 2, 3, 4 }            // 8 ○後2
+    };
+
+    /// <summary>
+    /// 薙ぎの巻き込み先。「標的と同じ列の全員 + 中列の駒」。
+    ///
+    /// <b>対称な述語では書けない。</b>前1を薙げば中央まで巻き込むが、中央を薙いでも前列へは
+    /// 広がらない（召喚が無ければ中央は自分だけ）。前列が削れるほど薙ぎが痩せる、という
+    /// 非対称が要。旧盤面の AreLateralNeighbors（対称）はこの形を表現できない。
+    /// </summary>
+    private static readonly int[][] SweepTable =
+    {
+        new[] { 1, 2, 7 },   // 0 前1 → 前列の相方・中央・○前2
+        new[] { 0, 2, 7 },   // 1 前3
+        new[] { 5, 6 },      // 2 中央 → 中列の召喚枠のみ（召喚が無ければ巻き込みゼロ）
+        new[] { 2, 4, 8 },   // 3 後1 → 後列の相方・中央・○後2
+        new[] { 2, 3, 8 },   // 4 後3
+        new[] { 2, 6 },      // 5 ○中1
+        new[] { 2, 5 },      // 6 ○中3
+        new[] { 0, 1, 2 },   // 7 ○前2
+        new[] { 2, 3, 4 }    // 8 ○後2
     };
 
     public static Row RowOf(int slot) => RowTable[slot];
-    public static int LaneOf(int slot) => LaneTable[slot];
-    public static IReadOnlyList<int> LaneTrack(int lane) => LaneTracks[lane];
+
+    /// <summary>召喚専用の枠か。プレイヤーはここに置けない。</summary>
+    public static bool IsSummonSlot(int slot) => slot >= PlayableSlotCount;
+
+    /// <summary>貫きが走る経路。前から後ろの順。</summary>
+    public static IReadOnlyList<int> LanePath(int lane) => LanePaths[lane];
+
+    /// <summary>
+    /// そのスロットが属するレーン。<b>中央は2本に属し、○前2・○後2 はどこにも属さない。</b>
+    /// 単数を返す旧 LaneOf ではこの盤面を表せない。
+    /// </summary>
+    public static IReadOnlyList<int> LanesOf(int slot)
+    {
+        var lanes = new List<int>(LaneCount);
+        for (int l = 0; l < LaneCount; l++)
+            if (Array.IndexOf(LanePaths[l], slot) >= 0) lanes.Add(l);
+        return lanes;
+    }
 
     /// <summary>前ほど小さい。押し出しと後退の向きを比べるために使う。</summary>
     public static int DepthOf(Row row) => row switch
@@ -241,36 +349,50 @@ public static class FormationRules
             if (RowTable[i] == row) yield return i;
     }
 
-    /// <summary>同じ列で左右に並んでいるか。範囲攻撃が横へ広がる範囲。</summary>
-    public static bool AreLateralNeighbors(int a, int b)
-        => a != b && RowTable[a] == RowTable[b] && Math.Abs(LaneTable[a] - LaneTable[b]) == 1;
-
-    /// <summary>同じレーンで前後に並んでいるか。</summary>
-    public static bool AreDepthNeighbors(int a, int b)
+    /// <summary>
+    /// その列のうちプレイヤーが置ける枠だけ。<b>逃亡・後退の行き先はこちらを使うこと。</b>
+    /// 召喚枠を含めると、空いている ○中1 へ逃げ込んで誰も押しのけないことになり、
+    /// 逃亡が純粋な利益になる（<c>BattleContext.FindBackSlotFor</c> 参照）。
+    /// </summary>
+    public static IEnumerable<int> PlayableSlotsOfRow(Row row)
     {
-        if (a == b || LaneTable[a] != LaneTable[b]) return false;
-        int[] track = LaneTracks[LaneTable[a]];
-        return Math.Abs(Array.IndexOf(track, a) - Array.IndexOf(track, b)) == 1;
+        for (int i = 0; i < PlayableSlotCount; i++)
+            if (RowTable[i] == row) yield return i;
     }
 
-    /// <summary>
-    /// 隣接。左右と前後の両方を含む。
-    ///
-    /// 味方に及ぶもの（巻き込み・生贄・囃し立て・散開）は必ずこちらを見ること。
-    /// 敵に及ぶもの（薙ぎの巻き込み・反撃の返し）は AreLateralNeighbors を見ること。
-    /// この線引きを崩すと、範囲攻撃が縦へ広がって貫きと区別がつかなくなる。
-    ///
-    /// この定義により中列は前後2枠と接続する。通常攻撃からは守られるが、
-    /// 味方のマイナスは一身に浴びる席になる。「隣接デメリットの捨て場」を作らないための措置。
-    /// </summary>
+    /// <summary>隣接。味方に及ぶものは必ずこちらを見ること。</summary>
     public static bool AreAdjacent(int a, int b)
-        => AreLateralNeighbors(a, b) || AreDepthNeighbors(a, b);
+        => a != b && Array.IndexOf(AdjacencyTable[a], b) >= 0;
+
+    /// <summary>薙ぎが巻き込む席。敵に及ぶ範囲はこちらを見ること。</summary>
+    public static IReadOnlyList<int> SweepTargets(int slot) => SweepTable[slot];
+
+    /// <summary>「横」＝同じ列に並ぶ相方。編成スロットでは 前1↔前3 と 後1↔後3 の2組だけ。</summary>
+    public static bool AreSameRowPair(int a, int b) => a != b && RowTable[a] == RowTable[b];
+
+    /// <summary>
+    /// 「前」＝ <paramref name="a"/> が <paramref name="b"/> の同じレーンの1つ手前か。
+    /// <see cref="CorePaths"/>（召喚枠抜き）で数えるので、○中1 が空でも
+    /// 後1の駒は中央を「1つ手前」と見なせる。
+    /// </summary>
+    public static bool IsLanePredecessor(int a, int b)
+    {
+        for (int l = 0; l < LaneCount; l++)
+        {
+            int ia = Array.IndexOf(CorePaths[l], a);
+            int ib = Array.IndexOf(CorePaths[l], b);
+            if (ia >= 0 && ib >= 0 && ib - ia == 1) return true;
+        }
+        return false;
+    }
 }
 
 /// <summary>編成。スロットに UnitDef を入れる。null は空きスロット。</summary>
 public sealed class Formation
 {
-    private readonly UnitDef?[] _slots = new UnitDef?[FormationRules.TotalSlots];
+    // 長さは編成枠のぶんだけ。召喚枠まで確保すると、そこへ黙って書けてしまい
+    // Materialize が「プレイヤーが置けないはずの席に立つ駒」を作る。
+    private readonly UnitDef?[] _slots = new UnitDef?[FormationRules.PlayableSlotCount];
 
     public UnitDef? this[int slot]
     {
@@ -296,24 +418,26 @@ public sealed class Formation
 
     /// <summary>
     /// スロットを名前で指定して編成を作る。
-    /// front1..front3 → スロット0..2（前列）、mid → スロット3（中列）、back1..back2 → スロット4..5（後列）。
+    /// front1 → 0、front3 → 1、center → 2、back1 → 3、back3 → 4。
     ///
     /// 旧 Of(params) は引数の並びとスロット番号の対応が暗黙で、
     /// 盤面の形が変わったときに黙って別物の編成になった（5枠→6枠で後列1枚目が全部中列に落ちた）。
     /// 編成定義では必ずこちらを使うこと。
+    ///
+    /// X字化のとき旧引数名（front2 / mid / back2）は残さなかった。残すと呼び出し側の
+    /// 移行漏れが見えなくなる——コンパイルエラーが移行のチェックリストになっている。
     /// </summary>
     public static Formation Build(
-        UnitDef? front1 = null, UnitDef? front2 = null, UnitDef? front3 = null,
-        UnitDef? mid = null,
-        UnitDef? back1 = null, UnitDef? back2 = null)
+        UnitDef? front1 = null, UnitDef? front3 = null,
+        UnitDef? center = null,
+        UnitDef? back1 = null, UnitDef? back3 = null)
     {
         var f = new Formation();
         f[0] = front1;
-        f[1] = front2;
-        f[2] = front3;
-        f[3] = mid;
-        f[4] = back1;
-        f[5] = back2;
+        f[1] = front3;
+        f[2] = center;
+        f[3] = back1;
+        f[4] = back3;
         return f;
     }
 }

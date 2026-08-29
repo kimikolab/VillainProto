@@ -751,28 +751,36 @@ public static class EnemyCatalog
     public static IReadOnlyList<Stage> Stages { get; } = new[]
     {
         // 前列に固まると斧の薙ぎに巻かれる。範囲攻撃の存在をここで教える。
+        // 斧は前3。前1・前3 を薙がれると中央まで巻き込まれるので、
+        // 前に固めるほど1発で全員に届く。
         new Stage("第一波 / 物見の兵",
-            Formation.Build(front1: Recruit, front2: Axeman, front3: Recruit)),
+            Formation.Build(front1: Recruit, front3: Axeman, center: Recruit)),
 
-        // 施しの司祭長はレーン0の奥行き2（騎士→司祭長）。HP36 は減衰後の貫き2発でちょうど落ちる。
-        // 自分は減らずに毎ターン14を配るので、放置すると戦闘長ぶん（約70）が敵の実効HPに乗る。
-        // 通常攻撃は後列に届かないので、潰せるのは後列に届く手段を持つ編成だけ。
-        // 教えること:「支援役はレーンを選べば潰せる」——今度は本当に潰す価値がある。
+        // 施しの司祭長は後1。自分は減らずに毎ターン14を配るので、放置すると戦闘長ぶん（約70）が
+        // 敵の実効HPに乗る。通常攻撃は後列に届かないので、潰せるのは後列に届く手段を持つ編成だけ。
+        //
+        // X字化で2本のレーンは奥行きが等しくなった（前X → 中央 →〔○中X〕→ 後X）ので、
+        // 「浅いレーンを選べば安く届く」という抜け道は無い。司祭長は貫きの3体目に当たり
+        // 50%まで減衰する（旧盤面のレーン0では2体目＝75%だった。ここは意図して重くなっている）。
+        // 教えること:「どちらの列も同じ深さ。選ぶのは深さではなく、その列に誰がいるか」。
         new Stage("第二波 / 巡礼騎士団",
-            Formation.Build(front1: KnightG, front2: KnightG, front3: RecruitG, mid: ArcherG, back1: Almoner)),
+            Formation.Build(front1: KnightG, front3: KnightG, center: RecruitG, back1: Almoner, back3: ArcherG)),
 
         // 貫きは強烈なので1枚まで。2枚置くと後列に支援を置く編成が全滅する。
-        // 射手はレーン1の最深部（勇者→斧→射手の奥行き3）。貫きでも50%まで減衰する。
-        // 教えること:「奥行きが深いレーンは狙撃では崩せない。前から割れ」。
+        // 勇者候補（断罪持ち・攻20）は前3。旧盤面の前2と同じく最初から狙える位置に置く。
+        // 中央に隠すと単体軸の編成が本命に一度も触れないまま決着し、波が別物になる。
+        // 後列に届くまでに削るHPは 75+95+75=245 で旧前列と同じ。
+        // 教えること:「狙撃手は最奥。前から割るか、貫きで減衰を飲むか」。
         new Stage("第三波 / 討伐隊本隊",
-            Formation.Build(front1: Knight, front2: Hero, front3: Knight, mid: Axeman, back2: Archer)),
+            Formation.Build(front1: Knight, front3: Hero, center: Knight, back1: Archer, back3: Axeman)),
 
         // 一撃は軽いが硬い。決着まで時間がかかるので、
         // 積み上げ系が立ち上がる余地があるかを確かめるためのステージ。
         // 全体攻撃は1枚まで。2枚置くと支援型の駒が編成から消える。
-        // 支援2枚はどちらもレーン1の奥（中と後2）。壁を割り切るまで全体攻撃が止まらない。
+        // 支援2枚は後列に並ぶ。重装3枚が 前1・中央・前3 を埋めるので、どちらの列を貫いても
+        // 必ず中央の重装を通る（＝2経路とも減衰が満額かかる）。壁を割り切るまで全体攻撃が止まらない。
         new Stage("第四波 / 城塞守備隊",
-            Formation.Build(front1: Warden, front2: Warden, front3: Warden, mid: Priest, back2: Chanter)),
+            Formation.Build(front1: Warden, front3: Warden, center: Warden, back1: Chanter, back3: Priest)),
 
         // 前列に薙ぎ、後列に貫きと全体。4種の攻撃パターンが同時に飛んでくる。
         // 単体前提の防御（庇う・標的）だけでは支えられない構成にしてある。
@@ -781,7 +789,7 @@ public static class EnemyCatalog
         // ターン外に動く駒（棘・割り込み・追い打ち）だけが代金を払う。
         // 反撃しない編成には何も起きない（19編成すべて ±0.0 で確認済み）。
         new Stage("第五波 / 異端審問団",
-            Formation.Build(front1: Axeman2, front2: Hero2, front3: Knight2, mid: Lancer, back1: Seer))
+            Formation.Build(front1: Axeman2, front3: Hero2, center: Knight2, back1: Seer, back3: Lancer))
     };
 
     /// <summary>会戦（Engagement）の敵部隊列。名前と「なぜこの並びを測るのか」のメモを持つ。</summary>

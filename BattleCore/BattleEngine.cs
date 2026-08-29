@@ -400,14 +400,27 @@ public sealed class BattleContext
     /// null なら <see cref="UnitState.CurrentPattern"/>（＝従来と完全に同じ挙動）。
     /// </param>
     public UnitState? SelectTarget(UnitState attacker, AttackPattern? patternOverride = null)
+        => SelectTargetCore(attacker, patternOverride, out _);
+
+    /// <summary>
+    /// 標的選択の本体。貫きのときは<b>選んだレーンも返す</b>（それ以外は -1）。
+    ///
+    /// 新盤面では中央が2本のレーンに属するので、entry のスロットからレーンを逆算できない
+    /// （前1・前3 が両方落ちた局面で entry が中央になる）。かといって選び直すと
+    /// <see cref="Roll"/> を二重に消費し、ログに出した entry と実際に貫く列が食い違う。
+    /// <b>1回の攻撃につきここを呼ぶのは1度だけ。</b>
+    /// </summary>
+    private UnitState? SelectTargetCore(UnitState attacker, AttackPattern? patternOverride, out int lane)
     {
+        lane = -1;
+
         List<UnitState> foes = LivingMembers(Opponent(attacker.TeamId)).ToList();
         if (foes.Count == 0) return null;
 
         AttackPattern pattern = patternOverride ?? attacker.CurrentPattern;
 
         if (pattern == AttackPattern.Pierce)
-            return SelectPierceEntry(foes);
+            return SelectPierceEntry(foes, out lane);
 
         // 前から順に、生き残っている最も前の列を狙う。
         List<UnitState> pool = foes.Where(f => f.Row == Row.Front).ToList();
@@ -488,19 +501,31 @@ public sealed class BattleContext
     /// 貫きが撃ち込むレーンを選び、その先頭（最も前の生存者）を返す。
     /// 後ろに誰かがいるレーンを優先する。「後ろに隠れる」への回答という役割を残すため。
     /// 隠れる者がいなければ、どのレーンでも構わない。
+    ///
+    /// <b>X字化でこの優先は編成が満席なら実質無効になった。</b>2本のレーンはどちらも
+    /// 後X を終点に持つので、5体が埋まっていれば deep が常に両方を拾う。前3が
+    /// 「後列に1体でも置けば貫きの対象から外れる」逃げ場だった穴を潰した結果であって、
+    /// 狙いどおり。ただし「後ろに隠れるへの回答」という元の役割はここでは失われている。
     /// </summary>
-    private UnitState SelectPierceEntry(List<UnitState> foes)
+    private UnitState SelectPierceEntry(List<UnitState> foes, out int lane)
     {
+        lane = -1;
+
         var lanes = Enumerable.Range(0, FormationRules.LaneCount)
-            .Where(l => foes.Any(f => FormationRules.LaneOf(f.Slot) == l))
+            .Where(l => foes.Any(f => FormationRules.LanesOf(f.Slot).Contains(l)))
             .ToList();
 
+        // ○前2・○後2 はどのレーンにも属さないので、生き残りがそこだけになると
+        // 走る列が無くなる。落とさずに単体として1体だけ刺す（lane = -1）。
+        if (lanes.Count == 0) return foes[Roll(foes.Count)];
+
         var deep = lanes
-            .Where(l => foes.Any(f => FormationRules.LaneOf(f.Slot) == l && f.Row != Row.Front))
+            .Where(l => foes.Any(f => FormationRules.LanesOf(f.Slot).Contains(l)
+                                      && f.Row != Row.Front))
             .ToList();
 
         List<int> pick = deep.Count > 0 ? deep : lanes;
-        int lane = pick[Roll(pick.Count)];
+        lane = pick[Roll(pick.Count)];
 
         return LaneOccupants(foes, lane)[0];
     }
@@ -514,7 +539,7 @@ public sealed class BattleContext
     {
         var alive = members.Where(m => m.IsAlive).ToList();
         var line = new List<UnitState>();
-        foreach (int slot in FormationRules.LaneTrack(lane))
+        foreach (int slot in FormationRules.LanePath(lane))
             line.AddRange(alive.Where(u => u.Slot == slot));
         return line;
     }
@@ -535,7 +560,7 @@ public sealed class BattleContext
 
         AttackPattern pattern = patternOverride ?? actor.CurrentPattern;
 
-        UnitState? target = SelectTarget(actor, patternOverride);
+        UnitState? target = SelectTargetCore(actor, patternOverride, out int pierceLane);
         if (target is null) return;
 
         // CurrentAttack 自体は変えない。AtkBonus と混ぜると会戦の境界処理（第1期 D2/D3）や
@@ -571,7 +596,7 @@ public sealed class BattleContext
 
         if (pattern == AttackPattern.Pierce)
         {
-            ResolvePierce(actor, target, atk);
+            ResolvePierce(actor, pierceLane, target, atk);
             return;
         }
 
@@ -602,10 +627,16 @@ public sealed class BattleContext
     /// 奥へ行くほど威力が落ちるので、レーンを厚くすることが後ろを守る手段になる。
     /// 逆に、誰も並んでいないレーンは減衰ゼロの直撃を受ける。
     /// </summary>
-    private void ResolvePierce(UnitState actor, UnitState entry, int atk)
+    /// <param name="lane">
+    /// <see cref="SelectPierceEntry"/> が選んだ列。<b>entry のスロットから逆算してはいけない</b>
+    /// ——中央は2本のレーンに属するので、そこが先頭になった局面で列が決まらない。
+    /// -1 は「どのレーンにも属さない席（○前2・○後2）だけが残った」で、entry 1体で終わる。
+    /// </param>
+    private void ResolvePierce(UnitState actor, int lane, UnitState entry, int atk)
     {
-        int lane = FormationRules.LaneOf(entry.Slot);
-        List<UnitState> line = LaneOccupants(LivingMembers(entry.TeamId), lane);
+        List<UnitState> line = lane < 0
+            ? new List<UnitState> { entry }
+            : LaneOccupants(LivingMembers(entry.TeamId), lane);
 
         int passed = 0;
         int primaryDealt = 0;
@@ -640,9 +671,11 @@ public sealed class BattleContext
 
         return (patternOverride ?? attacker.CurrentPattern) switch
         {
-            // 薙ぎは横へ広がる。前後へ広げると貫きと区別がつかなくなる。
+            // 薙ぎは標的と同じ列 + 中列へ広がる。レーンに沿って前後へ広げると貫きと区別がつかなくなる。
+            // 表は非対称（前1を薙げば中央まで届くが、中央を薙いでも前列へは戻らない）なので、
+            // 標的の側から引く。前列が削れるほど薙ぎが痩せる、というのがこの形の要。
             AttackPattern.Sweep => foes
-                .Where(f => FormationRules.AreLateralNeighbors(primary.Slot, f.Slot)).ToList(),
+                .Where(f => FormationRules.SweepTargets(primary.Slot).Contains(f.Slot)).ToList(),
             AttackPattern.All => foes,
             _ => Array.Empty<UnitState>()
         };
@@ -901,7 +934,10 @@ public sealed class BattleContext
     {
         var taken = _units.Where(u => u.TeamId == teamId).Select(u => u.Slot).ToHashSet();
         int slot = -1;
-        for (int i = 0; i < FormationRules.TotalSlots; i++)
+        // 召喚専用の枠だけを走る。編成枠へ入れると、5体で満席の盤面では一度も湧かない。
+        // **走査順（FormationRules.SummonSlots）は調整ノブ。** 貫き経路に入る 中1・中3 から
+        // 埋めるので、湧いた駒が減衰1段ぶんの盾として働く。
+        foreach (int i in FormationRules.SummonSlots)
             if (!taken.Contains(i)) { slot = i; break; }
         if (slot < 0) return null;
 
@@ -988,7 +1024,9 @@ public sealed class BattleContext
         if (next is null) return null;
 
         var team = LivingMembers(self.TeamId).ToList();
-        var slots = FormationRules.SlotsOfRow(next.Value).ToList();
+        // **編成枠だけ。** 召喚枠を含めると、空いている ○中1 へ逃げ込んで誰も押しのけないので、
+        // 下の「味方がいるなら必ず入れ替える」が空振りして逃亡が純粋な利益になる。
+        var slots = FormationRules.PlayableSlotsOfRow(next.Value).ToList();
 
         // 味方がいるなら必ず入れ替える（＝前へ押し出す）。
         // 空きへ逃げるだけだと誰も損をせず、逃亡が純粋な利益になってしまう。

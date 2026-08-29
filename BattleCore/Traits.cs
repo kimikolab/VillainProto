@@ -825,8 +825,8 @@ public sealed class ThornsTrait : Trait
             foreach (UnitState other in ctx.LivingMembers(source.TeamId))
             {
                 if (other == source) continue;
-                // 敵に及ぶ範囲なので横のみ。味方に及ぶものと定義を分けている。
-                if (!FormationRules.AreLateralNeighbors(source.Slot, other.Slot)) continue;
+                // 敵に及ぶ範囲なので薙ぎと同じ表を引く。味方に及ぶものと定義を分けている。
+                if (!FormationRules.SweepTargets(source.Slot).Contains(other.Slot)) continue;
                 ctx.ApplyDamage(other, Math.Max(1, back * SplashPercent / 100), self);
             }
 
@@ -834,7 +834,7 @@ public sealed class ThornsTrait : Trait
             // 上昇源を「味方に与えた実ダメージ」だけに限っているのは、隣の味方が全員倒れたあとも
             // 敵ダメージで無償に伸び続ける穴を作らないため（号令がカドに毎ターン +8 を
             // 無償で払っていたのと同じ形になる）。代金は常に隣接味方のHPで支払われる。
-            // 味方に及ぶ範囲は前後を含む（ボルグと同じ AreAdjacent）。敵に及ぶ範囲の左右のみとは定義を分けている。
+            // 味方に及ぶ範囲は隣接表（ボルグと同じ AreAdjacent）。敵に及ぶ範囲の薙ぎ表とは定義を分けている。
             int spill = Math.Max(1, self.Def.Attack * FriendlySplashPercent / 100);
             int gained = 0;
 
@@ -938,20 +938,27 @@ public sealed class ThornGuardTrait : Trait
     public override TraitId Id => TraitId.ThornGuard;
 
     /// <summary>
-    /// 守れる位置か。<b>横</b>＝同じ列の隣、<b>前</b>＝同じレーンの1つ手前。
+    /// 守れる位置か。<b>横</b>＝同じ列の相方、<b>前</b>＝同じレーンの1つ手前。
     ///
     /// <see cref="FormationRules"/> の既存の関数だけで書く。<b>新しい幾何関数を足さない</b>
     /// ——盤面の形は1箇所（FormationRules）にしか無い、という前提を崩すと
     /// 「隣接とは何か」の定義が特性ごとに散る。
+    ///
+    /// <para>X字盤面での実際の守備範囲（旧盤面の定義をそのまま移したもの）:</para>
+    /// <code>
+    /// 前1のカド → 前3          中央のカド → 前1・前3
+    /// 前3のカド → 前1          後1のカド → 後3・中央    後3のカド → 後1・中央
+    /// </code>
+    /// <para><see cref="FormationRules.IsLanePredecessor"/> は召喚枠を除いた経路で数えるので、
+    /// ○中1 に胞子が湧いていても後1のカドの守備範囲は変わらない。</para>
     /// </summary>
     public static bool Covers(UnitState self, UnitState ally)
     {
-        if (FormationRules.AreLateralNeighbors(self.Slot, ally.Slot)) return true;
+        if (FormationRules.AreSameRowPair(self.Slot, ally.Slot)) return true;
 
         // 前だけ。同じレーンの後ろにいる味方は守らない（守れると後列から前列を
         // 素通しで守れることになり、隊列の意味が消える）。
-        return FormationRules.AreDepthNeighbors(self.Slot, ally.Slot)
-               && FormationRules.DepthOf(ally.Row) < FormationRules.DepthOf(self.Row);
+        return FormationRules.IsLanePredecessor(ally.Slot, self.Slot);
     }
 
     /// <summary>

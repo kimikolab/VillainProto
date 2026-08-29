@@ -457,7 +457,7 @@ if (focusId == "seats")
     // 列は Name で引く（Columns の並び順に依存しない）。診断は順路のみ——知りたいのは
     // 「第2戦の開始時点でどこに居るか」で、どの列に当てても D5 の挙動は同じ。
     IReadOnlyList<Formation> route = EnemyCatalog.Columns.First(c => c.Name == "順路").Squads;
-    string[] seatName = { "前1", "前2", "前3", "中", "後1", "後2" }; // Formation.Build の引数と同じ 0..5
+    string[] seatName = FormationRules.SeatNames;
 
     Console.WriteLine($"# 会戦の隊列持ち越し診断（順路・seed 0..{SeatSeeds - 1} の {SeatSeeds} 試行）");
     Console.WriteLine();
@@ -745,24 +745,18 @@ if (focusId == "gradient")
     // 範囲/単体の割れが「体数」由来か「敵の攻撃パターン」由来かを切り分ける対照。
     var w1 = new (string Name, Formation Enemy)[]
     {
-        ("1a 農兵6", Formation.Build(front1: EnemyCatalog.Levy, front2: EnemyCatalog.Levy, front3: EnemyCatalog.Levy,
-                                     mid: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back2: EnemyCatalog.Levy)),
-        ("1b 農兵5", Formation.Build(front1: EnemyCatalog.Levy, front2: EnemyCatalog.Levy, front3: EnemyCatalog.Levy,
-                                     mid: EnemyCatalog.Levy, back1: EnemyCatalog.Levy)),
-        ("1c 農兵5+斧", Formation.Build(front1: EnemyCatalog.Levy, front2: EnemyCatalog.Axeman, front3: EnemyCatalog.Levy,
-                                        mid: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back2: EnemyCatalog.Levy)),
+        ("1a 農兵5", Formation.Build(front1: EnemyCatalog.Levy, front3: EnemyCatalog.Levy, center: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back3: EnemyCatalog.Levy)),
+        ("1b 農兵5", Formation.Build(front1: EnemyCatalog.Levy, front3: EnemyCatalog.Levy, center: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back3: EnemyCatalog.Levy)),
+        ("1c 農兵5+斧", Formation.Build(front1: EnemyCatalog.Levy, front3: EnemyCatalog.Axeman, center: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back3: EnemyCatalog.Levy)),
     };
 
     // 第2波: 既存 def の再利用だけで第一波と第二波の中間を作る（中間に新造の個性は要らない）。
     // 2a→2c の順に重くなる。2c の狙撃手は貫き1枚の上限内。
     var w2 = new (string Name, Formation Enemy)[]
     {
-        ("2a 新兵3+斧", Formation.Build(front1: EnemyCatalog.Recruit, front2: EnemyCatalog.Recruit, front3: EnemyCatalog.Recruit,
-                                        mid: EnemyCatalog.Axeman)),
-        ("2b 騎士混成", Formation.Build(front1: EnemyCatalog.Recruit, front2: EnemyCatalog.Knight, front3: EnemyCatalog.Recruit,
-                                        mid: EnemyCatalog.Axeman)),
-        ("2c 騎士2+狙撃", Formation.Build(front1: EnemyCatalog.Knight, front2: EnemyCatalog.Knight, front3: EnemyCatalog.Recruit,
-                                          mid: EnemyCatalog.Archer)),
+        ("2a 新兵3+斧", Formation.Build(front1: EnemyCatalog.Recruit, front3: EnemyCatalog.Recruit, center: EnemyCatalog.Recruit, back1: EnemyCatalog.Axeman)),
+        ("2b 騎士混成", Formation.Build(front1: EnemyCatalog.Recruit, front3: EnemyCatalog.Knight, center: EnemyCatalog.Recruit, back1: EnemyCatalog.Axeman)),
+        ("2c 騎士2+狙撃", Formation.Build(front1: EnemyCatalog.Knight, front3: EnemyCatalog.Knight, center: EnemyCatalog.Recruit, back1: EnemyCatalog.Archer)),
     };
 
     // 第3波: 少数高HP の精鋭。聖騎士長（第六波以降の素材・処刑持ち）と重装兵が素体。
@@ -770,10 +764,9 @@ if (focusId == "gradient")
     // 3c は2体の下限案（体数が減るほど範囲攻撃の意味が消え、単体火力有利が立つはず）。
     var w3 = new (string Name, Formation Enemy)[]
     {
-        ("3a 精鋭3", Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.Champion, front3: EnemyCatalog.Warden)),
-        ("3b 精鋭+司祭長", Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.Champion,
-                                           mid: EnemyCatalog.Chaplain)),
-        ("3c 精鋭2", Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.Champion)),
+        ("3a 精鋭3", Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.Champion, center: EnemyCatalog.Warden)),
+        ("3b 精鋭+司祭長", Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.Champion, center: EnemyCatalog.Chaplain)),
+        ("3c 精鋭2", Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.Champion)),
     };
 
     var cand = w1.Concat(w2).Concat(w3).ToList();
@@ -791,7 +784,7 @@ if (focusId == "gradient")
                 AttackPattern.Sweep => "薙ぎ", AttackPattern.Pierce => "貫き",
                 AttackPattern.All => "全体", _ => "単体"
             };
-            string[] seat = { "前1", "前2", "前3", "中", "後1", "後2" };
+            string[] seat = FormationRules.SeatNames;
             return $"{seat[x.Slot]}={x.Def.Name}({x.Def.MaxHp}/{x.Def.Attack}/速{x.Def.Speed}/{pat})";
         });
         Console.WriteLine($"- **{name}**: {string.Join("、", members)}");
@@ -949,46 +942,35 @@ if (focusId == "aim")
     // 制約は第5期と同じ（1波6体まで / 貫き1枚まで / 全体1枚まで / AttackPattern を増やさない）。
     // 加えて第6期は**新候補に範囲持ちの敵を入れない**——敵側の攻撃型は測定の交絡になる
     // （1c で斧を入れたのは第5期の判断。今回は向きを測るのが目的なので敵は単体で揃える）。
-    // 配置は前1→前2→前3→中→後1→後2 の順に詰める（農兵候補と同じ規則）。
+    // 配置は前1→前3→中央→後1→後3 の順に詰める（農兵候補と同じ規則）。
     //
     // 対照3案（1a/1b/1c）は gradient の w1 をそのまま写したもの。値が動いたら測り方が
     // 変わった証拠なので、先へ進まずに止まる（第6期 §2-5 の検算）。
     var cand = new (string Name, Formation Enemy)[]
     {
-        ("1a 農兵6（対照）", Formation.Build(front1: EnemyCatalog.Levy, front2: EnemyCatalog.Levy, front3: EnemyCatalog.Levy,
-                                             mid: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back2: EnemyCatalog.Levy)),
-        ("1b 農兵5（対照）", Formation.Build(front1: EnemyCatalog.Levy, front2: EnemyCatalog.Levy, front3: EnemyCatalog.Levy,
-                                             mid: EnemyCatalog.Levy, back1: EnemyCatalog.Levy)),
-        ("1c 農兵5+斧（対照）", Formation.Build(front1: EnemyCatalog.Levy, front2: EnemyCatalog.Axeman, front3: EnemyCatalog.Levy,
-                                                mid: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back2: EnemyCatalog.Levy)),
+        ("1a 農兵5（対照）", Formation.Build(front1: EnemyCatalog.Levy, front3: EnemyCatalog.Levy, center: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back3: EnemyCatalog.Levy)),
+        ("1b 農兵5（対照）", Formation.Build(front1: EnemyCatalog.Levy, front3: EnemyCatalog.Levy, center: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back3: EnemyCatalog.Levy)),
+        ("1c 農兵5+斧（対照）", Formation.Build(front1: EnemyCatalog.Levy, front3: EnemyCatalog.Axeman, center: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back3: EnemyCatalog.Levy)),
 
         // H1 系: 高HP低攻。体数で総HPを積んで戦闘を伸ばす。H1a→H1c は体数だけの差で、
-        // 総HP 270 / 225 / 180 と落ちる（H1c は農兵6と総HPが同じで総攻だけ半分の対照）。
-        ("H1a 人足6", Formation.Build(front1: EnemyCatalog.Laborer, front2: EnemyCatalog.Laborer, front3: EnemyCatalog.Laborer,
-                                      mid: EnemyCatalog.Laborer, back1: EnemyCatalog.Laborer, back2: EnemyCatalog.Laborer)),
-        ("H1b 人足5", Formation.Build(front1: EnemyCatalog.Laborer, front2: EnemyCatalog.Laborer, front3: EnemyCatalog.Laborer,
-                                      mid: EnemyCatalog.Laborer, back1: EnemyCatalog.Laborer)),
-        ("H1c 人足4", Formation.Build(front1: EnemyCatalog.Laborer, front2: EnemyCatalog.Laborer, front3: EnemyCatalog.Laborer,
-                                      mid: EnemyCatalog.Laborer)),
+        // 総HP 270 / 225 / 180 と落ちる（H1c は農兵5と総HPが同じで総攻だけ半分の対照）。
+        ("H1a 人足5", Formation.Build(front1: EnemyCatalog.Laborer, front3: EnemyCatalog.Laborer, center: EnemyCatalog.Laborer, back1: EnemyCatalog.Laborer, back3: EnemyCatalog.Laborer)),
+        ("H1b 人足5", Formation.Build(front1: EnemyCatalog.Laborer, front3: EnemyCatalog.Laborer, center: EnemyCatalog.Laborer, back1: EnemyCatalog.Laborer, back3: EnemyCatalog.Laborer)),
+        ("H1c 人足4", Formation.Build(front1: EnemyCatalog.Laborer, front3: EnemyCatalog.Laborer, center: EnemyCatalog.Laborer, back1: EnemyCatalog.Laborer)),
 
         // H2 系: 低HP高攻。H2a/H2b/H2c は体数5・総攻 80/T を固定して**個体HPだけ**を
         // 16 / 24 / 32 と振った軸（実測打点中央値の 2 / 3 / 4 発圏）。向きが出るとしたら
         // 「範囲で1手に複数落ちる」HP から出るはずで、その閾値を測定で挟む形。
         // H2d は体数を4に減らした案——向きが出たときに「体数を減らして代金の帯へ戻せるか」
         // （第6期 §3.3-3）を同じ実行で読むために置く。
-        ("H2a 裸5(16)", Formation.Build(front1: EnemyCatalog.ZealotBare, front2: EnemyCatalog.ZealotBare, front3: EnemyCatalog.ZealotBare,
-                                        mid: EnemyCatalog.ZealotBare, back1: EnemyCatalog.ZealotBare)),
-        ("H2b 革5(24)", Formation.Build(front1: EnemyCatalog.ZealotLeather, front2: EnemyCatalog.ZealotLeather, front3: EnemyCatalog.ZealotLeather,
-                                        mid: EnemyCatalog.ZealotLeather, back1: EnemyCatalog.ZealotLeather)),
-        ("H2c 鎖5(32)", Formation.Build(front1: EnemyCatalog.ZealotMail, front2: EnemyCatalog.ZealotMail, front3: EnemyCatalog.ZealotMail,
-                                        mid: EnemyCatalog.ZealotMail, back1: EnemyCatalog.ZealotMail)),
-        ("H2d 革4(24)", Formation.Build(front1: EnemyCatalog.ZealotLeather, front2: EnemyCatalog.ZealotLeather, front3: EnemyCatalog.ZealotLeather,
-                                        mid: EnemyCatalog.ZealotLeather)),
+        ("H2a 裸5(16)", Formation.Build(front1: EnemyCatalog.ZealotBare, front3: EnemyCatalog.ZealotBare, center: EnemyCatalog.ZealotBare, back1: EnemyCatalog.ZealotBare, back3: EnemyCatalog.ZealotBare)),
+        ("H2b 革5(24)", Formation.Build(front1: EnemyCatalog.ZealotLeather, front3: EnemyCatalog.ZealotLeather, center: EnemyCatalog.ZealotLeather, back1: EnemyCatalog.ZealotLeather, back3: EnemyCatalog.ZealotLeather)),
+        ("H2c 鎖5(32)", Formation.Build(front1: EnemyCatalog.ZealotMail, front3: EnemyCatalog.ZealotMail, center: EnemyCatalog.ZealotMail, back1: EnemyCatalog.ZealotMail, back3: EnemyCatalog.ZealotMail)),
+        ("H2d 革4(24)", Formation.Build(front1: EnemyCatalog.ZealotLeather, front3: EnemyCatalog.ZealotLeather, center: EnemyCatalog.ZealotLeather, back1: EnemyCatalog.ZealotLeather)),
 
         // 中間点: 総HP × 1体あたり攻撃 の2軸で4点目を取る（低HP低攻=農兵 / 高HP低攻=H1 /
         // 低HP高攻=H2 / 中間=これ）。向きが軸のどちら側から出るかを単調性で読むための点。
-        ("M1 傭兵5", Formation.Build(front1: EnemyCatalog.Drifter, front2: EnemyCatalog.Drifter, front3: EnemyCatalog.Drifter,
-                                     mid: EnemyCatalog.Drifter, back1: EnemyCatalog.Drifter)),
+        ("M1 傭兵5", Formation.Build(front1: EnemyCatalog.Drifter, front3: EnemyCatalog.Drifter, center: EnemyCatalog.Drifter, back1: EnemyCatalog.Drifter, back3: EnemyCatalog.Drifter)),
     };
 
     Console.WriteLine($"# 安い波の候補診断・代金の向き（seed 0..{AimSeeds - 1} の {AimSeeds} 試行）");
@@ -1010,7 +992,7 @@ if (focusId == "aim")
                 AttackPattern.Sweep => "薙ぎ", AttackPattern.Pierce => "貫き",
                 AttackPattern.All => "全体", _ => "単体"
             };
-            string[] seat = { "前1", "前2", "前3", "中", "後1", "後2" };
+            string[] seat = FormationRules.SeatNames;
             return $"{seat[x.Slot]}={x.Def.Name}({x.Def.MaxHp}/{x.Def.Attack}/速{x.Def.Speed}/{pat})";
         });
         Console.WriteLine($"- **{name}**: {string.Join("、", members)}");
@@ -1125,7 +1107,7 @@ if (focusId == "flip")
 
     // --- 候補波（第3波の位置だけ。第1波・第2波は第6期・第5期のまま触らない） ---
     // 制約は第5期・第6期と同じ（1波6体まで / 貫き1枚まで / 全体1枚まで / AttackPattern を
-    // 増やさない / 新候補に範囲持ちの敵を入れない）。配置は前1→前2→前3→中→後1→後2 の順。
+    // 増やさない / 新候補に範囲持ちの敵を入れない）。配置は前1→前3→中央→後1→後3 の順。
     //
     // 対照3案（3a/3b/3c）は gradient の w3 をそのまま写したもの。代金が第5期の
     // 61.0% / 52.5% / 44.3% と一致しなければ測り方が変わった証拠なので、先へ進まずに止まる。
@@ -1134,61 +1116,43 @@ if (focusId == "flip")
     // HP 軸 32 → 60 → 90 を1回の実行で繋ぐための橋（体数を4に揃えてある）。
     var cand = new (string Name, Formation Enemy)[]
     {
-        ("3a 精鋭3（対照）", Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.Champion,
-                                             front3: EnemyCatalog.Warden)),
-        ("3b 精鋭+司祭長（対照）", Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.Champion,
-                                                   mid: EnemyCatalog.Chaplain)),
-        ("3c 精鋭2（対照）", Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.Champion)),
+        ("3a 精鋭3（対照）", Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.Champion, center: EnemyCatalog.Warden)),
+        ("3b 精鋭+司祭長（対照）", Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.Champion, center: EnemyCatalog.Chaplain)),
+        ("3c 精鋭2（対照）", Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.Champion)),
 
         // HP 軸の起点。第6期 H2c（鎖5）の体数を4にしたもの。ここは +5.8pt 側（範囲に安い）
         // のはずで、そこから HP を厚くして符号が返るかを見る。
-        ("R0 鎖4(32)", Formation.Build(front1: EnemyCatalog.ZealotMail, front2: EnemyCatalog.ZealotMail,
-                                       front3: EnemyCatalog.ZealotMail, mid: EnemyCatalog.ZealotMail)),
+        ("R0 鎖4(32)", Formation.Build(front1: EnemyCatalog.ZealotMail, front3: EnemyCatalog.ZealotMail, center: EnemyCatalog.ZealotMail, back1: EnemyCatalog.ZealotMail)),
 
         // 個体HP 60（上位1割の打点 51.1 でも1発では落ちない最初の刻み）× 体数 4 / 3 / 2。
-        ("R1 板金4(60)", Formation.Build(front1: EnemyCatalog.ZealotPlate, front2: EnemyCatalog.ZealotPlate,
-                                         front3: EnemyCatalog.ZealotPlate, mid: EnemyCatalog.ZealotPlate)),
-        ("R2 板金3(60)", Formation.Build(front1: EnemyCatalog.ZealotPlate, front2: EnemyCatalog.ZealotPlate,
-                                         front3: EnemyCatalog.ZealotPlate)),
-        ("R3 板金2(60)", Formation.Build(front1: EnemyCatalog.ZealotPlate, front2: EnemyCatalog.ZealotPlate)),
+        ("R1 板金4(60)", Formation.Build(front1: EnemyCatalog.ZealotPlate, front3: EnemyCatalog.ZealotPlate, center: EnemyCatalog.ZealotPlate, back1: EnemyCatalog.ZealotPlate)),
+        ("R2 板金3(60)", Formation.Build(front1: EnemyCatalog.ZealotPlate, front3: EnemyCatalog.ZealotPlate, center: EnemyCatalog.ZealotPlate)),
+        ("R3 板金2(60)", Formation.Build(front1: EnemyCatalog.ZealotPlate, front3: EnemyCatalog.ZealotPlate)),
 
         // 個体HP 90（上位1割の2発圏。最大打点 90.1 でようやく1発）× 体数 4 / 3 / 2。
-        ("R4 重甲4(90)", Formation.Build(front1: EnemyCatalog.ZealotGreat, front2: EnemyCatalog.ZealotGreat,
-                                         front3: EnemyCatalog.ZealotGreat, mid: EnemyCatalog.ZealotGreat)),
-        ("R5 重甲3(90)", Formation.Build(front1: EnemyCatalog.ZealotGreat, front2: EnemyCatalog.ZealotGreat,
-                                         front3: EnemyCatalog.ZealotGreat)),
-        ("R6 重甲2(90)", Formation.Build(front1: EnemyCatalog.ZealotGreat, front2: EnemyCatalog.ZealotGreat)),
+        ("R4 重甲4(90)", Formation.Build(front1: EnemyCatalog.ZealotGreat, front3: EnemyCatalog.ZealotGreat, center: EnemyCatalog.ZealotGreat, back1: EnemyCatalog.ZealotGreat)),
+        ("R5 重甲3(90)", Formation.Build(front1: EnemyCatalog.ZealotGreat, front3: EnemyCatalog.ZealotGreat, center: EnemyCatalog.ZealotGreat)),
+        ("R6 重甲2(90)", Formation.Build(front1: EnemyCatalog.ZealotGreat, front3: EnemyCatalog.ZealotGreat)),
 
         // 体数の上側（初回の格子を測ってから足した点）。初回は「体数を減らす」という
         // 鏡像の原理に従って 2〜4 体を測ったが、**結果は逆**だった——HP90 で
         // 2体 +2.8pt / 3体 +2.6pt / 4体 -2.5pt。体数が多いほど反転側へ動く。
         // 理屈は読める——体数が少ないと範囲攻撃は単体と同じになるだけで損をしない。
         // 損をするのは「倒しきれない相手がたくさん並んでいる」とき。その向きに伸ばして頑張る。
-        ("R8 重甲5(90)", Formation.Build(front1: EnemyCatalog.ZealotGreat, front2: EnemyCatalog.ZealotGreat,
-                                         front3: EnemyCatalog.ZealotGreat, mid: EnemyCatalog.ZealotGreat,
-                                         back1: EnemyCatalog.ZealotGreat)),
-        ("R9 重甲6(90)", Formation.Build(front1: EnemyCatalog.ZealotGreat, front2: EnemyCatalog.ZealotGreat,
-                                         front3: EnemyCatalog.ZealotGreat, mid: EnemyCatalog.ZealotGreat,
-                                         back1: EnemyCatalog.ZealotGreat, back2: EnemyCatalog.ZealotGreat)),
+        ("R8 重甲5(90)", Formation.Build(front1: EnemyCatalog.ZealotGreat, front3: EnemyCatalog.ZealotGreat, center: EnemyCatalog.ZealotGreat, back1: EnemyCatalog.ZealotGreat, back3: EnemyCatalog.ZealotGreat)),
+        ("R9 重甲5(90)", Formation.Build(front1: EnemyCatalog.ZealotGreat, front3: EnemyCatalog.ZealotGreat, center: EnemyCatalog.ZealotGreat, back1: EnemyCatalog.ZealotGreat, back3: EnemyCatalog.ZealotGreat)),
         // 体数の上側を HP60 側でも取る（体数と個体HP のどちらが効いているかの分離）。
-        ("R10 板金6(60)", Formation.Build(front1: EnemyCatalog.ZealotPlate, front2: EnemyCatalog.ZealotPlate,
-                                          front3: EnemyCatalog.ZealotPlate, mid: EnemyCatalog.ZealotPlate,
-                                          back1: EnemyCatalog.ZealotPlate, back2: EnemyCatalog.ZealotPlate)),
+        ("R10 板金5(60)", Formation.Build(front1: EnemyCatalog.ZealotPlate, front3: EnemyCatalog.ZealotPlate, center: EnemyCatalog.ZealotPlate, back1: EnemyCatalog.ZealotPlate, back3: EnemyCatalog.ZealotPlate)),
 
         // 3軸（体数↑・個体HP↑・1体あたり攻撃↓）を全部重ねた点。攻撃だけを 16 → 10 に
-        // 下げてある——R9（重甲6体・攻16）が 10編成を勝率 0% に落として打ち切りバイアスを
+        // 下げてある——R9（重甲5体・攻16）が 10編成を勝率 0% に落として打ち切りバイアスを
         // 拾ったので、同じ盤面を全編成が勝ち切れる高さに戻すための一手。
-        ("R11 従卒6(90/攻10)", Formation.Build(front1: EnemyCatalog.ZealotSquire, front2: EnemyCatalog.ZealotSquire,
-                                               front3: EnemyCatalog.ZealotSquire, mid: EnemyCatalog.ZealotSquire,
-                                               back1: EnemyCatalog.ZealotSquire, back2: EnemyCatalog.ZealotSquire)),
-        ("R12 従卒5(90/攻10)", Formation.Build(front1: EnemyCatalog.ZealotSquire, front2: EnemyCatalog.ZealotSquire,
-                                               front3: EnemyCatalog.ZealotSquire, mid: EnemyCatalog.ZealotSquire,
-                                               back1: EnemyCatalog.ZealotSquire)),
+        ("R11 従卒5(90/攻10)", Formation.Build(front1: EnemyCatalog.ZealotSquire, front3: EnemyCatalog.ZealotSquire, center: EnemyCatalog.ZealotSquire, back1: EnemyCatalog.ZealotSquire, back3: EnemyCatalog.ZealotSquire)),
+        ("R12 従卒5(90/攻10)", Formation.Build(front1: EnemyCatalog.ZealotSquire, front3: EnemyCatalog.ZealotSquire, center: EnemyCatalog.ZealotSquire, back1: EnemyCatalog.ZealotSquire, back3: EnemyCatalog.ZealotSquire)),
 
         // 処刑ありなしの対照（第7期 §2-4）。3a と数値は完全に同じで、聖騎士長の特性だけを
         // 落としてある。差が出れば「反転の一部は処刑が作っている」ことになる。
-        ("R7 精鋭3・処刑なし（対照）", Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.ChampionPlain,
-                                                       front3: EnemyCatalog.Warden)),
+        ("R7 精鋭3・処刑なし（対照）", Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.ChampionPlain, center: EnemyCatalog.Warden)),
     };
 
     Console.WriteLine($"# 高い波の候補診断・代金の向きの反転（seed 0..{FlipSeeds - 1} の {FlipSeeds} 試行）");
@@ -1210,7 +1174,7 @@ if (focusId == "flip")
                 AttackPattern.Sweep => "薙ぎ", AttackPattern.Pierce => "貫き",
                 AttackPattern.All => "全体", _ => "単体"
             };
-            string[] seat = { "前1", "前2", "前3", "中", "後1", "後2" };
+            string[] seat = FormationRules.SeatNames;
             return $"{seat[x.Slot]}={x.Def.Name}({x.Def.MaxHp}/{x.Def.Attack}/速{x.Def.Speed}/{pat})";
         });
         Console.WriteLine($"- **{name}**: {string.Join("、", members)}");
@@ -1340,7 +1304,7 @@ if (focusId == "flip")
 // | 列 | 第1波 | 第2波 | 第3波 | 性格 |
 // |---|---|---|---|---|
 // | 平坦列 | 1b 農兵5（+3.1pt） | 2b 騎士混成 | 3a 精鋭3（-0.5pt） | 向きがほぼ無い（第5期の推奨列） |
-// | 反転列 | H2a 裸5（+8.7pt） | 2b 騎士混成 | R11 従卒6（-8.4pt） | 列の中で符号が反転する |
+// | 反転列 | H2a 裸5（+8.7pt） | 2b 騎士混成 | R11 従卒5（-8.4pt） | 列の中で符号が反転する |
 //
 // 第2波は両列で同じもの（2b 固定）にして交絡を減らす。反転列は2本測る——主表は指示書
 // どおり H2a（+8.7pt・第6期の最大値）だが、H2a の代金は 29.8% で 1b の 27.3% より
@@ -1367,46 +1331,34 @@ if (focusId == "bridge")
     // 波はすべて gradient / aim / flip のローカル定義をそのまま写したもの（同じ並び・同じ配置）。
     // 値が動いたら測り方が変わった証拠なので、平坦列の期待突破数(1) = 2.05 / 突破率(1) = 6.4%
     // （第5期の推奨列）と突き合わせて止まる。
-    Formation W1Levy5 = Formation.Build(front1: EnemyCatalog.Levy, front2: EnemyCatalog.Levy,
-                                        front3: EnemyCatalog.Levy, mid: EnemyCatalog.Levy, back1: EnemyCatalog.Levy);
-    Formation W1ZealotBare5 = Formation.Build(front1: EnemyCatalog.ZealotBare, front2: EnemyCatalog.ZealotBare,
-                                              front3: EnemyCatalog.ZealotBare, mid: EnemyCatalog.ZealotBare,
-                                              back1: EnemyCatalog.ZealotBare);
-    Formation W1ZealotLeather4 = Formation.Build(front1: EnemyCatalog.ZealotLeather, front2: EnemyCatalog.ZealotLeather,
-                                                 front3: EnemyCatalog.ZealotLeather, mid: EnemyCatalog.ZealotLeather);
-    Formation W2Mixed = Formation.Build(front1: EnemyCatalog.Recruit, front2: EnemyCatalog.Knight,
-                                        front3: EnemyCatalog.Recruit, mid: EnemyCatalog.Axeman);
-    Formation W3Elite3 = Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.Champion,
-                                         front3: EnemyCatalog.Warden);
-    Formation W3Squire6 = Formation.Build(front1: EnemyCatalog.ZealotSquire, front2: EnemyCatalog.ZealotSquire,
-                                          front3: EnemyCatalog.ZealotSquire, mid: EnemyCatalog.ZealotSquire,
-                                          back1: EnemyCatalog.ZealotSquire, back2: EnemyCatalog.ZealotSquire);
+    Formation W1Levy5 = Formation.Build(front1: EnemyCatalog.Levy, front3: EnemyCatalog.Levy, center: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back3: EnemyCatalog.Levy);
+    Formation W1ZealotBare5 = Formation.Build(front1: EnemyCatalog.ZealotBare, front3: EnemyCatalog.ZealotBare, center: EnemyCatalog.ZealotBare, back1: EnemyCatalog.ZealotBare, back3: EnemyCatalog.ZealotBare);
+    Formation W1ZealotLeather4 = Formation.Build(front1: EnemyCatalog.ZealotLeather, front3: EnemyCatalog.ZealotLeather, center: EnemyCatalog.ZealotLeather, back1: EnemyCatalog.ZealotLeather);
+    Formation W2Mixed = Formation.Build(front1: EnemyCatalog.Recruit, front3: EnemyCatalog.Knight, center: EnemyCatalog.Recruit, back1: EnemyCatalog.Axeman);
+    Formation W3Elite3 = Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.Champion, center: EnemyCatalog.Warden);
+    Formation W3Squire5 = Formation.Build(front1: EnemyCatalog.ZealotSquire, front3: EnemyCatalog.ZealotSquire, center: EnemyCatalog.ZealotSquire, back1: EnemyCatalog.ZealotSquire, back3: EnemyCatalog.ZealotSquire);
     // 第8期 Phase V。第3波の代金だけを振る（体数・個体HP は R11 と同じで攻撃だけが違う）。
-    Formation W3Porter6 = Formation.Build(front1: EnemyCatalog.ZealotPorter, front2: EnemyCatalog.ZealotPorter,
-                                          front3: EnemyCatalog.ZealotPorter, mid: EnemyCatalog.ZealotPorter,
-                                          back1: EnemyCatalog.ZealotPorter, back2: EnemyCatalog.ZealotPorter);
-    Formation W3Pilgrim6 = Formation.Build(front1: EnemyCatalog.ZealotPilgrim, front2: EnemyCatalog.ZealotPilgrim,
-                                           front3: EnemyCatalog.ZealotPilgrim, mid: EnemyCatalog.ZealotPilgrim,
-                                           back1: EnemyCatalog.ZealotPilgrim, back2: EnemyCatalog.ZealotPilgrim);
+    Formation W3Porter5 = Formation.Build(front1: EnemyCatalog.ZealotPorter, front3: EnemyCatalog.ZealotPorter, center: EnemyCatalog.ZealotPorter, back1: EnemyCatalog.ZealotPorter, back3: EnemyCatalog.ZealotPorter);
+    Formation W3Pilgrim5 = Formation.Build(front1: EnemyCatalog.ZealotPilgrim, front3: EnemyCatalog.ZealotPilgrim, center: EnemyCatalog.ZealotPilgrim, back1: EnemyCatalog.ZealotPilgrim, back3: EnemyCatalog.ZealotPilgrim);
 
     var columns = new (string Name, string Note, Formation[] Squads)[]
     {
         ("平坦列", "1b 農兵5(+3.1pt) / 2b 騎士混成 / 3a 精鋭3(-0.5pt)。第5期の推奨列",
             new[] { W1Levy5, W2Mixed, W3Elite3 }),
-        ("反転列", "H2a 裸5(+8.7pt) / 2b 騎士混成 / R11 従卒6(-8.4pt)。列の中で符号が反転する",
-            new[] { W1ZealotBare5, W2Mixed, W3Squire6 }),
-        ("反転列(難度そろえ)", "H2d 革4(+7.4pt・代金 27.2% は 1b とほぼ同額) / 2b / R11 従卒6",
-            new[] { W1ZealotLeather4, W2Mixed, W3Squire6 }),
+        ("反転列", "H2a 裸5(+8.7pt) / 2b 騎士混成 / R11 従卒5(-8.4pt)。列の中で符号が反転する",
+            new[] { W1ZealotBare5, W2Mixed, W3Squire5 }),
+        ("反転列(難度そろえ)", "H2d 革4(+7.4pt・代金 27.2% は 1b とほぼ同額) / 2b / R11 従卒5",
+            new[] { W1ZealotLeather4, W2Mixed, W3Squire5 }),
         // 第8期 Phase V。反転列と第1波・第2波は同じで、第3波の代金だけが違う3点。
-        ("反転列(中)", "H2a 裸5 / 2b / 荷駄6(90/攻7・代金 54%)。合計を下げて境目に近づける",
-            new[] { W1ZealotBare5, W2Mixed, W3Porter6 }),
-        ("反転列(低)", "H2a 裸5 / 2b / 巡礼6(90/攻4・代金 42%)。**向きは -2.2pt しか無い**",
-            new[] { W1ZealotBare5, W2Mixed, W3Pilgrim6 }),
+        ("反転列(中)", "H2a 裸5 / 2b / 荷駄5(90/攻7・代金 54%)。合計を下げて境目に近づける",
+            new[] { W1ZealotBare5, W2Mixed, W3Porter5 }),
+        ("反転列(低)", "H2a 裸5 / 2b / 巡礼5(90/攻4・代金 42%)。**向きは -2.2pt しか無い**",
+            new[] { W1ZealotBare5, W2Mixed, W3Pilgrim5 }),
         // 低の群差の対照。第1波だけを向きの無い 1b に戻した以外は反転列(低)と同じ。
         // 反転列(低) で範囲持ちの Δ が開いたとき、それが「列の向き（第1波 +8.7pt）が
         // 境目で結果に出た」のか「安い波は範囲持ちに有利なだけ」なのかを分ける。
-        ("平坦列(低)", "1b 農兵5(+3.1pt) / 2b / 巡礼6。反転列(低) の群差の対照",
-            new[] { W1Levy5, W2Mixed, W3Pilgrim6 }),
+        ("平坦列(低)", "1b 農兵5(+3.1pt) / 2b / 巡礼5。反転列(低) の群差の対照",
+            new[] { W1Levy5, W2Mixed, W3Pilgrim5 }),
         // 第10期 Phase AB-0。上の6列には全体持ちも貫き持ちも1体もいないので、
         // チャージ化の前後でこの表が1つも動かない。測定台の骨格を保ったまま
         // 貫き1枚・全体1枚だけ入れ替えた列を足す（中身は ChargeBench() に寄せてある）。
@@ -1813,7 +1765,7 @@ if (focusId == "bill")
 
     Console.WriteLine($"# 代金の分解（測定台 113% = 反転列(低)・味方1部隊・seed 0..{BillSeeds - 1}）");
     Console.WriteLine();
-    Console.WriteLine("列は 第8期の 反転列(低)（H2a 裸5 / 2b 騎士混成 / 巡礼6）。合計代金 113% の測定台。");
+    Console.WriteLine("列は 第8期の 反転列(低)（H2a 裸5 / 2b 騎士混成 / 巡礼5）。合計代金 113% の測定台。");
     Console.WriteLine("**失ったHP = 敵由来 + 自傷分 − 回復 + 残差**、分母はすべて編成の定義上の総最大HP。");
     Console.WriteLine("`代金合計` は会戦を終えた時点で失っていた HP の割合（勝敗を問わず全試行の平均。");
     Console.WriteLine("cost の代金が「勝った試行だけ」なのと違う——負けた試行を外すと自傷型が");
@@ -3749,7 +3701,7 @@ if (focusId == "wave")
     Console.WriteLine("変えずに写したもの（§2 の検算で突き合わせる）。");
     Console.WriteLine();
     Console.WriteLine("> **現物が無くて入れられなかった候補が2つある。** 第8期に測った「攻5 版」（90/攻5）と");
-    Console.WriteLine("> 「板金従卒6」（60/攻7）は `UnitCatalog` に `UnitDef` が残っていない（前者は刻みとして");
+    Console.WriteLine("> 「板金従卒5」（60/攻7）は `UnitCatalog` に `UnitDef` が残っていない（前者は刻みとして");
     Console.WriteLine("> 測っただけ、後者は「却下した案」として文章にだけ残っている）。**BattleCore を触らない**");
     Console.WriteLine("> 作業なので新しい敵は作らず、集めるのは現物のある波だけにした。");
     Console.WriteLine();
@@ -3757,7 +3709,7 @@ if (focusId == "wave")
     Console.WriteLine("|:-:|:-:|---|--:|--:|--:|---|");
     foreach (var (tag, era, name, enemy) in waves)
     {
-        string[] seat = { "前1", "前2", "前3", "中", "後1", "後2" };
+        string[] seat = FormationRules.SeatNames;
         var members = enemy.Occupied().Select(x =>
         {
             string pat = x.Def.Pattern switch
@@ -5615,22 +5567,23 @@ if (focusId == "output")
 
     // 候補は 2 家族 × 3 刻みの格子。**片方の家族だけだと、決着しなかった理由が
     // 「硬いから」か「殴ってこないから」か決まらない。**
-    //   巡礼 / 荷駄 / 従卒 は 個体HP 90 × 6 体で固定し、**1体あたり攻だけ**を 4 → 7 → 10 と振る
-    //   重装 3 / 4 / 6 は 個体HP 145 で固定し、**体数だけ**を振る
+    //   巡礼 / 荷駄 / 従卒 は 個体HP 90 × 5 体で固定し、**1体あたり攻だけ**を 4 → 7 → 10 と振る
+    //   重装 3 / 4 / 5 は 個体HP 145 で固定し、**体数だけ**を振る
+    // （X字化で編成枠が5つになったので、旧6体の台は全部5体に詰めてある）
     Formation Stack(UnitDef d, int n)
     {
         var f = new Formation();
-        for (int i = 0; i < n; i++) f[i] = d;   // スロット昇順（前1→前2→前3→中→後1→後2）
+        for (int i = 0; i < n; i++) f[i] = d;   // スロット昇順（前1→前3→中央→後1→後3）
         return f;
     }
     var cands = new (string Tag, string Name, string Family, Formation F)[]
     {
-        ("B1", "巡礼6",  "個体90固定・攻を振る", Stack(EnemyCatalog.ZealotPilgrim, 6)),
-        ("B2", "荷駄6",  "個体90固定・攻を振る", Stack(EnemyCatalog.ZealotPorter, 6)),
-        ("B3", "従卒6",  "個体90固定・攻を振る", Stack(EnemyCatalog.ZealotSquire, 6)),
+        ("B1", "巡礼5",  "個体90固定・攻を振る", Stack(EnemyCatalog.ZealotPilgrim, 5)),
+        ("B2", "荷駄5",  "個体90固定・攻を振る", Stack(EnemyCatalog.ZealotPorter, 5)),
+        ("B3", "従卒5",  "個体90固定・攻を振る", Stack(EnemyCatalog.ZealotSquire, 5)),
         ("B4", "重装3",  "個体145固定・体数を振る", Stack(EnemyCatalog.Warden, 3)),
         ("B5", "重装4",  "個体145固定・体数を振る", Stack(EnemyCatalog.Warden, 4)),
-        ("B6", "重装6",  "個体145固定・体数を振る", Stack(EnemyCatalog.Warden, 6)),
+        ("B6", "重装5",  "個体145固定・体数を振る", Stack(EnemyCatalog.Warden, 5)),
     };
     int nB = cands.Length;
 
@@ -5773,7 +5726,7 @@ if (focusId == "output")
             + $"| {(gate[b] ? "○" : "**×**")} | {zero} / {nT} | {kt} | {ko} |");
     }
     Console.WriteLine();
-    Console.WriteLine("**門を落ちるのは B1 巡礼6（攻4）だけ。** 反撃軸2編成の決着T が 30.0（＝引き分けの上限に");
+    Console.WriteLine("**門を落ちるのは B1 巡礼5（攻4）だけ。** 反撃軸2編成の決着T が 30.0（＝引き分けの上限に");
     Console.WriteLine("張り付いている）で、`手番外%` は 0.0%——**カドは一度も刺し返していない。**");
     Console.WriteLine("下見の表で B1 が「味方全滅 0.0%・決着 9.1T」と最も要件2 に適って見えたのは、");
     Console.WriteLine("**呪詛入りの編成に対して的が無力化されていたから**だった。");
@@ -5793,7 +5746,7 @@ if (focusId == "output")
     //
     // **探索で選ばない**（`dissect` の pairSpec と同じ）。「一致する組み合わせ」を探すと、
     // 中立性の検定が「一致する台を選んだ」の言い換えになる。
-    int[] pick = { 1, 4 };   // B2 荷駄6 / B5 重装4
+    int[] pick = { 1, 4 };   // B2 荷駄5 / B5 重装4
     Console.WriteLine("### 3-2. 選んだ2台");
     Console.WriteLine();
     Console.WriteLine("**門を通った 5 台から選ぶ。探索で選ばない**（`dissect` の解剖ペアと同じ作法）");
@@ -5821,13 +5774,13 @@ if (focusId == "output")
     Console.WriteLine();
     Console.WriteLine("**却下した案。**");
     Console.WriteLine();
-    Console.WriteLine("- **B1 巡礼6** — §3-1 の門を落ちる。**呪詛入りの編成に対しては殴り返さない的**になり、");
+    Console.WriteLine("- **B1 巡礼5** — §3-1 の門を落ちる。**呪詛入りの編成に対しては殴り返さない的**になり、");
     Console.WriteLine("  反撃軸の出力が 0 になる。計画書 §3-2 が名指しで警告した失敗そのもの。");
     Console.WriteLine("- **B6 重装6（総HP 870）** — いちばん硬いので要件2 には最も適うが、**味方全滅 75.0%**。");
     Console.WriteLine("  出力が育つ前に測定側が止まる。**硬さと殴り返しは同じ def では分けられない**");
     Console.WriteLine("  （攻撃の低い高HP の def が `EnemyCatalog` に無い）。");
     Console.WriteLine("- **B4 重装3** — 味方全滅 0% だが総HP 435 と最も薄く、`T5未満%` が高い。的が足りない。");
-    Console.WriteLine("- **B3 従卒6** — B2 と個体HP・体数が同じで攻だけ違う。**2台目としては「性質が違う」に");
+    Console.WriteLine("- **B3 従卒5** — B2 と個体HP・体数が同じで攻だけ違う。**2台目としては「性質が違う」に");
     Console.WriteLine("  足りない**（第16期の2軸のうちどちらも動かない）。§4-2 の辺としては使う。");
     Console.WriteLine();
 
@@ -6720,24 +6673,26 @@ if (focusId == "convert")
     Formation Line(UnitDef d, int n)
     {
         var f = new Formation();
-        for (int i = 0; i < n; i++) f[i] = d;   // スロット昇順（前1→前2→前3→中→後1→後2）
+        for (int i = 0; i < n; i++) f[i] = d;   // スロット昇順（前1→前3→中央→後1→後3）
         return f;
     }
 
-    // 系列P（主）: **体数 6 固定**・個体HP だけを 30 → 220。総HP は揃わない（180 → 1320）。
-    // 系列Q（従）: **総HP 540 固定**・体数で調整（6 → 2）。個体HP 90 → 270。
-    // P90 と Q90 は**同一の台**（荷駄6 = 第17期の主台）なので、測り直さず同じ計測を共有する。
+    // X字化で編成枠が5つになったので、台は全部5体以下に組み直してある。
+    // 系列P（主）: **体数 5 固定**・個体HP だけを 30 → 220。総HP は揃わない（150 → 1100）。
+    // 系列Q（従）: **総HP 450 固定**・体数で調整（5 → 2）。個体HP 90 → 225。
+    //   体数4 は 450/4 が整数にならないので刻みから外してある（3点になる）。
+    // P90 と Q90 は**同一の台**（荷駄5 = 第17期の主台）なので、測り直さず同じ計測を共有する。
     var benches = new (string Tag, int Hp, int N)[]
     {
-        ("P30",  30, 6), ("P60",  60, 6), ("P90",  90, 6), ("P145", 145, 6), ("P220", 220, 6),
-        ("Q135", 135, 4), ("Q180", 180, 3), ("Q270", 270, 2),
+        ("P30",  30, 5), ("P60",  60, 5), ("P90",  90, 5), ("P145", 145, 5), ("P220", 220, 5),
+        ("Q150", 150, 3), ("Q225", 225, 2),
         ("R2",    90, 2), ("R3",    90, 3), ("R4",    90, 4),
     };
     int nB = benches.Length;
     var benchF = benches.Select(b => Line(HpStep(b.Hp), b.N)).ToArray();
     int[] serP = { 0, 1, 2, 3, 4 };
-    int[] serQ = { 2, 5, 6, 7 };      // 先頭は P90（= Q90。荷駄6 そのもの）
-    int[] serR = { 8, 9, 10, 2 };     // 体数だけを振る辺（個体HP 90 固定）。末尾は P90
+    int[] serQ = { 2, 5, 6 };         // 先頭は P90（= Q90。荷駄5 そのもの）
+    int[] serR = { 7, 8, 9, 2 };      // 体数だけを振る辺（個体HP 90 固定）。末尾は P90
     int mainB = 2;                    // 主刻み = P90 = 第17期の主台
 
     Console.WriteLine("## 1. 台の系列");
@@ -6754,8 +6709,8 @@ if (focusId == "convert")
     Console.WriteLine();
     Console.WriteLine("| 系列 | 固定するもの | 動くもの | 役 |");
     Console.WriteLine("|:-:|---|---|---|");
-    Console.WriteLine("| **P** | 体数 6・1体攻 7・**総攻 42** | 個体HP 30〜220・総HP 180〜1320（＝戦闘長） | **主** |");
-    Console.WriteLine("| **Q** | **総HP 540**・1体攻 7 | 個体HP 90〜270・体数 6→2・**総攻 42→14** | 従 |");
+    Console.WriteLine("| **P** | 体数 5・1体攻 7・**総攻 35** | 個体HP 30〜220・総HP 150〜1100（＝戦闘長） | **主** |");
+    Console.WriteLine("| **Q** | **総HP 450**・1体攻 7 | 個体HP 90〜225・体数 5→2・**総攻 35→14** | 従 |");
     Console.WriteLine("| **R** | **個体HP 90**・1体攻 7 | 体数 2〜6・総HP 180〜540・総攻 14→42 | 辺（検算用） |");
     Console.WriteLine();
     Console.WriteLine("**系列R は変換率を測る台ではない。** P と Q の食い違いを説明できるかを確かめるための");
@@ -6765,15 +6720,15 @@ if (focusId == "convert")
     Console.WriteLine();
     Console.WriteLine("**揃えないほうを主に採った理由は2つ。**");
     Console.WriteLine();
-    Console.WriteLine("- **全域では原理的に揃えられない。** スロットは6つしかない（`FormationRules.TotalSlots`）ので、");
+    Console.WriteLine("- **全域では原理的に揃えられない。** プレイヤーが置ける枠は5つしかない（`FormationRules.PlayableSlotCount`）ので、");
     Console.WriteLine("  個体HP 30 の台の総HP は最大 180、個体HP 220 の台は最小 220——**重ならない。**");
     Console.WriteLine("  総HP を揃えると刻みの範囲が 90〜270 に狭まり、**味方の実測打点（第6期の `pulse.md` から");
     Console.WriteLine("  中央値 10.6 / 四分位 4.4〜20.4 / 上位1割 51.1）を跨げない**——一撃圏の内と外を跨ぐことが");
     Console.WriteLine("  この測定の目的そのものなので、跨げない系列は主にできない。");
-    Console.WriteLine("- **揃えると総攻が動く。** 体数で調整する以上 総攻 42 → 14 まで落ちるので、");
+    Console.WriteLine("- **揃えると総攻が動く。** 体数で調整する以上 総攻 35 → 14 まで落ちるので、");
     Console.WriteLine("  **殴り返しの量が同時に変わる。** 反撃軸の出力は殴られた量にほぼ比例するから、");
     Console.WriteLine("  系列Q の変換率は「個体HP の効果」と「総攻の効果」の和になる。");
-    Console.WriteLine("  系列P は 総攻 42 が全刻みで一定なので、**動いているのは個体HP と戦闘長だけ。**");
+    Console.WriteLine("  系列P は 総攻 35 が全刻みで一定なので、**動いているのは個体HP と戦闘長だけ。**");
     Console.WriteLine();
     Console.WriteLine("**却下した案: 総攻も揃える**（体数を減らすぶん1体あたり攻を上げる。6体攻7 → 2体攻21）。");
     Console.WriteLine("総攻は揃うが**1体あたり攻が 7 → 21 に動く**ので、今度は反撃1回あたりの量と");
@@ -6799,9 +6754,9 @@ if (focusId == "convert")
     }
     Console.WriteLine();
     Console.WriteLine($"**門（1体あたり攻 > {CurseTrait.EnemyDebuff}）は全刻みが通る。** 攻を振っていないので当然だが、");
-    Console.WriteLine("**第17期はここで巡礼6（攻4）を落としている**ので毎回確認する（`手番外%` は §3 で見る）。");
+    Console.WriteLine("**第17期はここで巡礼5（攻4）を落としている**ので毎回確認する（`手番外%` は §3 で見る）。");
     Console.WriteLine();
-    Console.WriteLine($"**P90 は第17期の主台そのもの**（荷駄6）。同じ計測を系列Q・系列R の端としても使う");
+    Console.WriteLine($"**P90 は第17期の主台そのもの**（荷駄5）。同じ計測を系列Q・系列R の端としても使う");
     Console.WriteLine("——2回測ると、系列間の一致の値そのものに実行間のばらつきが乗る。");
     Console.WriteLine();
     Console.Out.Flush();
@@ -6846,7 +6801,7 @@ if (focusId == "convert")
         ("惨禍×被弾強化", 263.9, 92), ("毒 (グザ×ミオ×ラウ)", 170.4, 92), ("耐久 (ガルド×ノノ)", 51.3, 0),
     };
     int miss17 = 0;
-    Console.WriteLine("**第17期の主台との一致**（P90 = 荷駄6）。値は `output` §5-2 から:");
+    Console.WriteLine("**第17期の主台との一致**（P90 = 荷駄5）。値は `output` §5-2 から:");
     Console.WriteLine();
     Console.WriteLine("| 編成 | 第17期 (A) | ここでの (A) | 第17期 (C) | ここでの (C) |");
     Console.WriteLine("|---|--:|--:|--:|--:|");
@@ -6982,7 +6937,7 @@ if (focusId == "convert")
     Console.WriteLine("決着で潰れたときにそれを丸ごと拾う。傾きなら中間の刻みが効く。比の側（`端点比`）も");
     Console.WriteLine("併記してあるので、読み手はどちらでも読める。");
     Console.WriteLine();
-    Console.WriteLine("### 4-1. 編成 × 個体HP の (A)（系列P・体数6固定）");
+    Console.WriteLine("### 4-1. 編成 × 個体HP の (A)（系列P・体数5固定）");
     Console.WriteLine();
     Console.WriteLine("**β の降順**。`端点比` = (A)(P220) ÷ (A)(P30)。`βQ` は総HP を揃えた系列（§5）。");
     Console.WriteLine();
@@ -7065,8 +7020,8 @@ if (focusId == "convert")
     Console.WriteLine();
     Console.WriteLine("| 系列 | 刻み | 補正後 r | **補正後 ρ** |");
     Console.WriteLine("|:-:|--:|--:|--:|");
-    Console.WriteLine($"| **P**（体数6固定・主） | {serP.Length} | {capP.R:F3} | **{capP.Rho:F3}** |");
-    Console.WriteLine($"| **Q**（総HP 540固定） | {serQ.Length} | {capQ.R:F3} | **{capQ.Rho:F3}** |");
+    Console.WriteLine($"| **P**（体数5固定・主） | {serP.Length} | {capP.R:F3} | **{capP.Rho:F3}** |");
+    Console.WriteLine($"| **Q**（総HP 450固定） | {serQ.Length} | {capQ.R:F3} | **{capQ.Rho:F3}** |");
     Console.WriteLine($"| **P 高刻みだけ**（90/145/220） | {serHi.Length} | {capHi.R:F3} | **{capHi.Rho:F3}** |");
     Console.WriteLine();
     Console.WriteLine("補正は Spearman-Brown `r(2n) = 2r(n) / (1 + r(n))`。**上限はほぼ 1.00**なので、");
@@ -7743,77 +7698,22 @@ if (focusId == "confirm")
     const double Threshold = 2.0;        // これ未満は誤差とみなして据え置く
 
     // (編成名, 旧配置, 候補配置)。候補は reseat の「狙いを満たす最良」。
+    // X字化(盤面の対称化)に伴う振り直しぶん。旧盤面の座標で書かれた過去の追試は
+    // 座標ごと無効になったので、ここでは持ち越していない。
     var picks = new (string Name, Formation Old, Formation New)[]
     {
         ("毒 (グザ×ミオ×ラウ)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Rau),
-            Formation.Build(front2: UnitCatalog.Guza, front3: UnitCatalog.Gald, mid: UnitCatalog.Mio, back1: UnitCatalog.Sid, back2: UnitCatalog.Rau)),
-        ("反撃 (ヒサ×カド)",
-            Formation.Build(front2: UnitCatalog.Nono, front3: UnitCatalog.Gald, mid: UnitCatalog.Nel, back1: UnitCatalog.Hisa, back2: UnitCatalog.Kado),
-            Formation.Build(front1: UnitCatalog.Hisa, front2: UnitCatalog.Kado, front3: UnitCatalog.Gald, mid: UnitCatalog.Nono, back2: UnitCatalog.Nel)),
-        ("惨禍×被弾強化",
-            Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Kado, front3: UnitCatalog.Hisa, mid: UnitCatalog.Sero, back2: UnitCatalog.Nono),
-            Formation.Build(front1: UnitCatalog.Hisa, front2: UnitCatalog.Kado, front3: UnitCatalog.Mudo, mid: UnitCatalog.Sero, back1: UnitCatalog.Nono)),
-        ("惨禍×死の連鎖",
-            Formation.Build(front2: UnitCatalog.Kado, front3: UnitCatalog.Golm, mid: UnitCatalog.Rica, back1: UnitCatalog.Vel, back2: UnitCatalog.Zoto),
-            Formation.Build(front2: UnitCatalog.Golm, front3: UnitCatalog.Kado, mid: UnitCatalog.Vel, back1: UnitCatalog.Rica, back2: UnitCatalog.Zoto)),
-        ("溜め (ガン×ドルガ×カド)",
-            Formation.Build(front1: UnitCatalog.Kado, front2: UnitCatalog.Gald, front3: UnitCatalog.Dolga, mid: UnitCatalog.Gan, back1: UnitCatalog.Hisa),
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, mid: UnitCatalog.Hisa, back1: UnitCatalog.Gan, back2: UnitCatalog.Kado)),
-        ("溜め改 (クグ×バン×ガン)",
-            Formation.Build(front1: UnitCatalog.Kado, front2: UnitCatalog.Kugu, mid: UnitCatalog.Ban, back1: UnitCatalog.Dolga, back2: UnitCatalog.Gan),
-            Formation.Build(front2: UnitCatalog.Kado, front3: UnitCatalog.Kugu, mid: UnitCatalog.Gan, back1: UnitCatalog.Ban, back2: UnitCatalog.Dolga)),
-        ("逆しま改 (クビ×ウツ)",
-            Formation.Build(front1: UnitCatalog.Nel, front2: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Utsu, back1: UnitCatalog.Kubi),
-            Formation.Build(front2: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back2: UnitCatalog.Utsu)),
-        ("反撃改2 (ガン×カド)",
-            Formation.Build(front1: UnitCatalog.Ban, front2: UnitCatalog.Kado, front3: UnitCatalog.Hisa, mid: UnitCatalog.Gan, back1: UnitCatalog.Doha),
-            Formation.Build(front1: UnitCatalog.Doha, front2: UnitCatalog.Kado, front3: UnitCatalog.Ban, mid: UnitCatalog.Hisa, back1: UnitCatalog.Gan)),
-        ("反撃改3 (カド×ハギ)",
-            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Gald, mid: UnitCatalog.Gan, back1: UnitCatalog.Kado, back2: UnitCatalog.Hagi),
-            Formation.Build(front2: UnitCatalog.Gan, front3: UnitCatalog.Gald, mid: UnitCatalog.Hisa, back1: UnitCatalog.Hagi, back2: UnitCatalog.Kado)),
-        ("散開耐久 (ササ×ドハ)",
-            Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald, mid: UnitCatalog.Doha, back2: UnitCatalog.Dolga),
-            Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Gald, mid: UnitCatalog.Dolga, back1: UnitCatalog.Sasa)),
-        ("逆しま+後備え",
-            Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Golm, mid: UnitCatalog.Kubi, back1: UnitCatalog.Sekki, back2: UnitCatalog.Utsu),
-            Formation.Build(front2: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Kubi, back1: UnitCatalog.Sekki, back2: UnitCatalog.Utsu)),
-        // ここからスィドの改修（被弾で毒を積む形）に伴う再探索ぶん。
-        ("毒 (グザ×ミオ×ラウ)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Rau),
-            Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Sid, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Rau)),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: UnitCatalog.Mio, back3: UnitCatalog.Rau),
+            Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Gald, center: UnitCatalog.Guza, back1: UnitCatalog.Mio, back3: UnitCatalog.Rau)),
         ("澱み喰い (グザ×ヴィオ)",
-            Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Gald, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Vio),
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Sid, back1: UnitCatalog.Vio, back2: UnitCatalog.Mio)),
-        // ここからベニのマイナス（味方の毒が2倍に効く）追加に伴う再探索ぶん。
-        ("毒+耐久 (ベニ×トウ)",
-            Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Tou, back1: UnitCatalog.Mio, back2: UnitCatalog.Beni),
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Mio, back1: UnitCatalog.Beni, back2: UnitCatalog.Tou)),
-        // ここから燃焼軸（熾のホタ）追加に伴う探索ぶん。
-        ("燃焼 (ボルグ×ホタ)",
-            Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Hota, front3: UnitCatalog.Mudo, mid: UnitCatalog.Borg, back1: UnitCatalog.Nono),
-            Formation.Build(front1: UnitCatalog.Nono, front2: UnitCatalog.Gald, front3: UnitCatalog.Mudo, back1: UnitCatalog.Hota, back2: UnitCatalog.Borg)),
-        // ここからリィカの覚醒（3層以上で攻撃が薙ぎに変わる）追加に伴う再探索ぶん。
-        ("死の連鎖 (リィカ軸)",
-            Formation.Build(front1: UnitCatalog.Mug, front2: UnitCatalog.Zoto, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Vel),
-            Formation.Build(front2: UnitCatalog.Zoto, front3: UnitCatalog.Mug, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Vel)),
-        // ここからガルドの「拡散」（味方全体に配られる強化・弱体を隣接へ流す）に伴う再探索ぶん。
-        // 旧配置はどれも「拡散が空振りする」置き方だった（受け手が隣接していない）。
-        ("速攻 (ボルグ×ムド)",
-            Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Sero, front3: UnitCatalog.Gald, mid: UnitCatalog.Nel, back1: UnitCatalog.Borg),
-            Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Nel, front3: UnitCatalog.Gald, mid: UnitCatalog.Borg, back1: UnitCatalog.Sero)),
-        ("逆しま+後備え",
-            Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Golm, mid: UnitCatalog.Kubi, back1: UnitCatalog.Sekki, back2: UnitCatalog.Utsu),
-            Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Golm, front3: UnitCatalog.Kubi, back1: UnitCatalog.Utsu, back2: UnitCatalog.Sekki)),
-        ("隊列崩し (バサ×ヨミ×セロ)",
-            Formation.Build(front1: UnitCatalog.Sero, front2: UnitCatalog.Gan, front3: UnitCatalog.Gald, mid: UnitCatalog.Yomi, back1: UnitCatalog.Basa),
-            Formation.Build(front1: UnitCatalog.Sero, front2: UnitCatalog.Gald, front3: UnitCatalog.Gan, mid: UnitCatalog.Yomi, back1: UnitCatalog.Basa)),
-        ("溜め (ガン×ドルガ×カド)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, mid: UnitCatalog.Hisa, back1: UnitCatalog.Gan, back2: UnitCatalog.Kado),
-            Formation.Build(front1: UnitCatalog.Dolga, front2: UnitCatalog.Gald, front3: UnitCatalog.Gan, mid: UnitCatalog.Kado, back2: UnitCatalog.Hisa)),
-        ("反撃改3 (カド×ハギ)",
-            Formation.Build(front2: UnitCatalog.Gan, front3: UnitCatalog.Gald, mid: UnitCatalog.Hisa, back1: UnitCatalog.Hagi, back2: UnitCatalog.Kado),
-            Formation.Build(front1: UnitCatalog.Gan, front2: UnitCatalog.Gald, front3: UnitCatalog.Hagi, mid: UnitCatalog.Kado, back2: UnitCatalog.Hisa))
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Sid, back1: UnitCatalog.Vio, back3: UnitCatalog.Mio),
+            Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Gald, center: UnitCatalog.Guza, back1: UnitCatalog.Mio, back3: UnitCatalog.Vio)),
+        ("追撃×毒 (ハギ×グザ)",
+            Formation.Build(front1: UnitCatalog.Guza, front3: UnitCatalog.Gald, center: UnitCatalog.Golm, back1: UnitCatalog.Mio, back3: UnitCatalog.Hagi),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Golm, center: UnitCatalog.Guza, back1: UnitCatalog.Hagi, back3: UnitCatalog.Mio)),
+        ("範囲耐性 (ヒビ×ボルグ)",
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Hibi, center: UnitCatalog.Borg, back1: UnitCatalog.Rica, back3: UnitCatalog.Dolga),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Hibi, back1: UnitCatalog.Borg, back3: UnitCatalog.Rica)),
     };
 
     Console.WriteLine("## 採用候補の追試");
@@ -7917,7 +7817,7 @@ if (focusId == "reseat")
         Console.WriteLine();
         Console.WriteLine($"## {name}");
         Console.WriteLine();
-        Console.WriteLine("| 粗順 | 狙 | 前1/前2/前3 | 中 | 後1/後2 | 平均 |"
+        Console.WriteLine("| 粗順 | 狙 | 前1/前3 | 中央 | 後1/後3 | 平均 |"
             + string.Concat(stages.Select((_, i) => $" 第{i + 1}波 |")));
         Console.WriteLine("|--:|:-:|---|---|---|--:|" + string.Concat(stages.Select(_ => "---:|")));
         foreach (var v in verified)
@@ -7926,8 +7826,8 @@ if (focusId == "reseat")
             static string N(UnitDef? d) => d?.Name ?? "−";
             bool isCur = SameFormation(f, build.F);
             string rank = $"{order.IndexOf(v.Idx) + 1}" + (isCur ? "★現行" : "");
-            Console.WriteLine($"| {rank} | {(MeetsIntent(f) ? "○" : "×")} | {N(f[0])}/{N(f[1])}/{N(f[2])} | {N(f[3])} "
-                + $"| {N(f[4])}/{N(f[5])} | {v.Avg:F1}% |" + string.Concat(v.Cells.Select(c => $" {c:F1}% |")));
+            Console.WriteLine($"| {rank} | {(MeetsIntent(f) ? "○" : "×")} | {N(f[0])}/{N(f[1])} | {N(f[2])} "
+                + $"| {N(f[3])}/{N(f[4])} | {v.Avg:F1}% |" + string.Concat(v.Cells.Select(c => $" {c:F1}% |")));
         }
         Console.Out.Flush();
 
@@ -7986,7 +7886,7 @@ if (focusId == "layout")
     Console.WriteLine("# 配置探索");
     Console.WriteLine();
     Console.WriteLine("`dotnet run --project BattleSim -c Release 0 layout` の出力。");
-    Console.WriteLine($"compare の各編成をメンバー固定で全配置（5体=720通り / 4体=360通り）に展開し、");
+    Console.WriteLine($"compare の各編成をメンバー固定で全配置（5体=120通り / 4体=120通り）に展開し、");
     Console.WriteLine($"全{stages.Count}ステージ × seed 0..{LayoutSeeds - 1} の平均勝率で並べた上位{TopN}件と現行配置。");
     Console.WriteLine($"検証した配置: {jobs.Count:N0} 通り（{(long)jobs.Count * stages.Count * LayoutSeeds:N0} 戦）");
 
@@ -8002,7 +7902,7 @@ if (focusId == "layout")
         Console.WriteLine();
         Console.WriteLine($"## {builds[b].Name}");
         Console.WriteLine();
-        Console.WriteLine("| 順位 | 前1/前2/前3 | 中 | 後1/後2 | 平均 |"
+        Console.WriteLine("| 順位 | 前1/前3 | 中央 | 後1/後3 | 平均 |"
             + string.Concat(stages.Select((_, i) => $" 第{i + 1}波 |")));
         Console.WriteLine("|--:|---|---|---|--:|" + string.Concat(stages.Select(_ => "---:|")));
         for (int rank = 0; rank < TopN && rank < ranked.Count; rank++)
@@ -8015,7 +7915,7 @@ if (focusId == "layout")
         // 実プレイは波ごとに組み替えられる。この差を出さないと、平均最良の配置が
         // たまたま苦手な波で出した勝率を「その編成の限界」と読み違える（§2-10）。
         Console.WriteLine();
-        Console.WriteLine("| 波 | 前1/前2/前3 | 中 | 後1/後2 | 現行 | 波別最良 |");
+        Console.WriteLine("| 波 | 前1/前3 | 中央 | 後1/後3 | 現行 | 波別最良 |");
         Console.WriteLine("|---|---|---|---|--:|--:|");
         for (int st = 0; st < stages.Count; st++)
         {
@@ -8044,8 +7944,8 @@ if (focusId == "layout")
             bestByStage[bb, sx] = (curRate, bestRate);
 
             Formation bf = jobs[best].F;
-            Console.WriteLine($"| 第{sx + 1}波 | {NameOf(bf[0])}/{NameOf(bf[1])}/{NameOf(bf[2])} | {NameOf(bf[3])} "
-                + $"| {NameOf(bf[4])}/{NameOf(bf[5])} | {curRate:F1}% | {bestRate:F1}% |");
+            Console.WriteLine($"| 第{sx + 1}波 | {NameOf(bf[0])}/{NameOf(bf[1])} | {NameOf(bf[2])} "
+                + $"| {NameOf(bf[3])}/{NameOf(bf[4])} | {curRate:F1}% | {bestRate:F1}% |");
         }
     }
 
@@ -8357,10 +8257,10 @@ if (focusId == "demo")
 {
     var build = Formation.Build(
         front1: UnitCatalog.Kado,   // 反撃。範囲で返す
-        front2: UnitCatalog.Hisa,   // 標的を付けてカドに殴らせる
-        front3: UnitCatalog.Gald,   // 壁
-        mid:    UnitCatalog.Gan,    // 号令。動かないカドの攻撃を積む
-        back1:  UnitCatalog.Hagi    // 追い打ち。誰かが倒すと割り込む
+        front3: UnitCatalog.Hisa,   // 標的を付けてカドに殴らせる
+        center: UnitCatalog.Gald,   // 壁。中央は前列が割れるまで単体攻撃が届かない席
+        back1:  UnitCatalog.Hagi,   // 追い打ち。誰かが倒すと割り込む
+        back3:  UnitCatalog.Gan     // 号令。動かないカドの攻撃を積む
     );
     BattleResult demo = BattleEngine.Run(build, stage.Enemy, seed: 7, verbose: true);
     foreach (LogLine line in demo.Log) Console.WriteLine(line);
@@ -8380,7 +8280,7 @@ foreach (var combo in Combinations(units, 4))
     foreach (var slots in SlotPermutations(combo))
     {
         var f = new Formation();
-        for (int i = 0; i < FormationRules.TotalSlots; i++) f[i] = slots[i];
+        for (int i = 0; i < FormationRules.PlayableSlotCount; i++) f[i] = slots[i];
 
         int wins = 0;
         for (int seed = 0; seed < SeedsPerFormation; seed++)
@@ -8432,7 +8332,8 @@ return;
 
 static string Describe(UnitDef?[] slots)
 {
-    string Row(Row r) => string.Join("/", FormationRules.SlotsOfRow(r)
+    // 編成枠だけ。SlotsOfRow は召喚枠(5-8)まで返すので、5要素の slots を添字越えで落とす。
+    string Row(Row r) => string.Join("/", FormationRules.PlayableSlotsOfRow(r)
         .Select(i => slots[i]?.Name ?? "空"));
     return $"前[{Row(BattleCore.Row.Front)}] 中[{Row(BattleCore.Row.Mid)}] 後[{Row(BattleCore.Row.Back)}]";
 }
@@ -8454,15 +8355,15 @@ static IEnumerable<List<T>> Combinations<T>(IReadOnlyList<T> source, int k)
 
 static IEnumerable<UnitDef?[]> SlotPermutations(List<UnitDef> members)
 {
-    int blanks = FormationRules.TotalSlots - members.Count;
+    int blanks = FormationRules.PlayableSlotCount - members.Count;
 
     foreach (var order in Permute(members))
-        foreach (var empty in Combinations(Enumerable.Range(0, FormationRules.TotalSlots).ToList(), blanks))
+        foreach (var empty in Combinations(Enumerable.Range(0, FormationRules.PlayableSlotCount).ToList(), blanks))
         {
             var skip = empty.ToHashSet();
-            var slots = new UnitDef?[FormationRules.TotalSlots];
+            var slots = new UnitDef?[FormationRules.PlayableSlotCount];
             int m = 0;
-            for (int i = 0; i < FormationRules.TotalSlots; i++)
+            for (int i = 0; i < FormationRules.PlayableSlotCount; i++)
                 slots[i] = skip.Contains(i) ? null : order[m++];
             yield return slots;
         }
@@ -8482,107 +8383,117 @@ static IEnumerable<List<T>> Permute<T>(List<T> items)
 
 // compare / layout が共有する代表編成。系統ごとの当たり外れを見るための固定リスト。
 //
-// 配置は layout モード（6枠化後・全配置総当たり）の結果から、編成の狙いを壊さない最良を採った。
+// **配置は X字盤面（編成5枠）への移行で作り直した。** 旧6枠からは機械的な規則で写してある
+// （旧 front を 前1→前3→中央 の順に詰め、旧 back を 後1→後3 へ、中列はあふれた先へ下げる）。
+// 編成ごとの手による最適化はしていない。ただし写した結果 0% に潰れた編成と、下で宣言している
+// 制約を破った編成だけは reseat で振り直し、confirm（seed 200..599）で追試して採った。
+//
 // 守った制約: ガルドは前列（庇うは前列でしか発動しない）/ セッキは後列（後備えは後列でしか
 // 発動しない）/ セロは前〜中（狙撃化には戦闘中に後退した実績が要る。最初から後列では発動しない）/
 // ヒサの隣接で最大HPがカドになること（標的が逸れる）。
+//
+// **個々のエントリのコメントは、下記の「X字化に伴う振り直し」と書いてあるもの以外は
+// 旧6枠での経緯を述べている。** 席の名前（前2・後2）や増減 pt はその頃の値。
 static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
 {
-    // セロは前2から中→後ろへ二段逃げて実績つきの貫きに変わる。ボルグは後1で前1ムドと縦隣接を保ち、巻き込みで育てる。
-    // 探索1位はガルド中衛で庇いが死ぬので採らない（layout 2位）
-    ("速攻 (ボルグ×ムド)",   Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Nel, front3: UnitCatalog.Gald, mid: UnitCatalog.Borg, back1: UnitCatalog.Sero)),
+    // X字化に伴う振り直し。機械的な写しではガルドが中央に落ちて庇うが死に、全波 0〜3% に潰れていた。
+    // ガルドを前1へ戻し、ネルを中央、ボルグを後3へ（reseat 2位＝狙いを満たす最良 / confirm +21.8pt）
+    ("速攻 (ボルグ×ムド)",   Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Sero, back3: UnitCatalog.Borg)),
     // 脆いムグ・ゾトを前で死なせて連鎖を起こす。中衛ゴルムの吸いが隣のゾトを破裂まで運ぶ（layout 1位）
     // リィカの覚醒（薙ぎ化）追加に伴い reseat で再探索。ムグを前1→前3、ゾトを前2のまま前1を空ける形が上
     // （confirm 追試 +2.2pt、第5波 +10.8。第5波は元々連鎖の畳みかけが弱かった波）。
-    ("死の連鎖 (リィカ軸)",  Formation.Build(front2: UnitCatalog.Zoto, front3: UnitCatalog.Mug, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Vel)),
-    // スィドは前3。被弾で毒を積む形になったので前列に出す必要があり、孤立席なので味方漏れも消える。
-    // 前1を空けてガルドを前2に寄せた形が上（+2.1pt / 第3波 +21.8）。
-    // 注: この配置はスィドの味方漏れを完全に無効化している。ガルド・セッキと同じ「配置でマイナスが消える」形（README）
-    ("毒 (グザ×ミオ×ラウ)", Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Sid, mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Rau)),
+    ("死の連鎖 (リィカ軸)",  Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Mug, center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
+    // X字化に伴う振り直し。**旧盤面でスィドの味方漏れを消していた「孤立席（前3）」は消滅した**
+    // ——編成5体が0-4を必ず埋めるので、どの席も隣接を持つ。漏れは常に発生する。
+    // スィドを前1・ガルドを前3にした形が狙いを満たす最良（reseat 15位 / confirm +6.5pt / 第4波 +21.5）
+    ("毒 (グザ×ミオ×ラウ)", Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Gald, center: UnitCatalog.Guza, back1: UnitCatalog.Mio, back3: UnitCatalog.Rau)),
     // 支援2枚を後列に下げ、痺れ粉は守られる中衛から撒く（layout 1位）
     // ベニのマイナス（味方の毒が2倍に効く）が入った分、毒を浴びる位置関係が変わった。
     // ミオを中衛へ上げ、ベニとトウを後列に下げた形が上（+4.0pt / 第5波 +15.8）
-    ("毒+耐久 (ベニ×トウ)",  Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Mio, back1: UnitCatalog.Beni, back2: UnitCatalog.Tou)),
+    ("毒+耐久 (ベニ×トウ)",  Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Mio, back1: UnitCatalog.Beni, back3: UnitCatalog.Tou)),
     // 毒+耐久 の92%はベニ単独でもトウ単独でも出ない（ベニのみ 100/25/5/89/2、トウのみ 100/0/0/0/0）。
     // 効いているのは「毒の供給＋耐える手段」という型で、耐える側はトウでなくてもよい。
     // その裏を取るためのエントリ。トウをラウに差し替えた形。
-    ("毒+ベニ+ラウ",       Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Sid, mid: UnitCatalog.Guza, back1: UnitCatalog.Rau, back2: UnitCatalog.Beni)),
+    ("毒+ベニ+ラウ",       Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: UnitCatalog.Rau, back3: UnitCatalog.Beni)),
     // ヴィオはターン開始時に味方の毒を全部吸い上げて攻撃力に変える。スィドの漏れとラウの拡散が
     // そのまま燃料になる形。ヴィオを2編成目に載せて、吸い上げが何を消しているかを見えるようにする。
-    ("毒爆弾 (ラウ×ヴィオ)", Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Sid, mid: UnitCatalog.Guza, back1: UnitCatalog.Vio, back2: UnitCatalog.Rau)),
+    ("毒爆弾 (ラウ×ヴィオ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: UnitCatalog.Vio, back3: UnitCatalog.Rau)),
     // ヒサの隣接はカドだけ（後1↔後2）。ガルド(HP100>カド96)を隣に置くと標的が逸れる（layout 1位）
-    ("反撃 (ヒサ×カド)",     Formation.Build(front2: UnitCatalog.Nono, front3: UnitCatalog.Gald, mid: UnitCatalog.Nel, back1: UnitCatalog.Hisa, back2: UnitCatalog.Kado)),
+    ("反撃 (ヒサ×カド)",     Formation.Build(front1: UnitCatalog.Nono, front3: UnitCatalog.Gald, center: UnitCatalog.Nel, back1: UnitCatalog.Hisa, back3: UnitCatalog.Kado)),
     // ヒサを前1へ回すと隣接はカドとノノになるが、標的は最大HPで選ばれるのでカドのままで狙いは崩れない。
     // カドを前2の中央に置くと巻き込みがヒサ・ムド・セロの3枚へ広がり、成長が速くなる（+7.1pt / 第5波 +19.3）。
     // 旧配置（ムド前1・ヒサ前3）はヒサの隣接をカドだけに絞る形だったが、カドの巻き込み先が2枚に減っていた（reseat 追試）
-    ("惨禍×被弾強化",        Formation.Build(front1: UnitCatalog.Hisa, front2: UnitCatalog.Kado, front3: UnitCatalog.Mudo, mid: UnitCatalog.Sero, back1: UnitCatalog.Nono)),
+    ("惨禍×被弾強化",        Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Kado, center: UnitCatalog.Mudo, back1: UnitCatalog.Nono, back3: UnitCatalog.Sero)),
     // 惨禍（味方全体の被ダメ5割増）は位置を問わないので、死の密度は隣接に頼らなくても出る。
     // リィカを後1へ下げて生贄をゾト1枚に絞り、中衛はヴェルに。リィカが開幕で自陣を削りすぎる形をやめた（+19.1pt / 第4波 +57.0）。
     // 旧配置（中衛リィカがカドとゾトを削る）は狙いとしては筋が通っていたが、第4波で 25% まで落ちていた（reseat 追試）
-    ("惨禍×死の連鎖",        Formation.Build(front2: UnitCatalog.Golm, front3: UnitCatalog.Kado, mid: UnitCatalog.Vel, back1: UnitCatalog.Rica, back2: UnitCatalog.Zoto)),
+    ("惨禍×死の連鎖",        Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Kado, center: UnitCatalog.Vel, back1: UnitCatalog.Rica, back3: UnitCatalog.Zoto)),
     // ガルドは前列でないと庇えない。前1を空けてガルドとゴルムを前2・前3へ寄せた形が探索1位。セロは中衛から被弾後退（layout 1位）
-    ("耐久 (ガルド×ノノ)",   Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Golm, mid: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back2: UnitCatalog.Nono)),
+    ("耐久 (ガルド×ノノ)",   Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Golm, center: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back3: UnitCatalog.Nono)),
     // ヒサを中衛に置くと横隣接が無く、深さ隣接の後2だけを指す。そこにカドを置けば標的は確定する。
     // カドを後2へ下げても囃し立てで被弾は来るので棘は回り、前列はガルドとドルガが受ける（+3.6pt / 第5波 +15.5）
-    ("溜め (ガン×ドルガ×カド)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, mid: UnitCatalog.Hisa, back1: UnitCatalog.Gan, back2: UnitCatalog.Kado)),
-    // グザの瘴気（味方全体に毒）は位置不問。ムドは前1で敵の攻撃も浴びて育ち、ガルドは前3で庇う。セロは中衛から被弾後退（layout 1位）
-    ("毒→被弾強化 (グザ×ムド)", Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Guza, front3: UnitCatalog.Gald, mid: UnitCatalog.Sero, back1: UnitCatalog.Borg)),
+    ("溜め (ガン×ドルガ×カド)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Hisa, back1: UnitCatalog.Gan, back3: UnitCatalog.Kado)),
+    // グザの瘴気（味方全体に毒）は位置不問。ムドは前1で敵の攻撃も浴びて育ち、ガルドは前3で庇う。セロは中央から被弾後退。
+    // X字化に伴う振り直し: 後列のグザとボルグを入れ替えた（reseat 1位＝狙いを満たす最良 / confirm +19.6pt / 第2波 +57.8）
+    ("毒→被弾強化 (グザ×ムド)", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Guza, back3: UnitCatalog.Borg)),
     // ヴィオの吸い上げは全体対象で位置不問。スィドの毒漏れはむしろ燃料なので、中衛に置いて
     // 前後の隣接（後2のミオ）へわざと当てにいく。漏れを利益に反転する側と噛ませた形（+7.8pt / 第5波 +38.8）
-    ("澱み喰い (グザ×ヴィオ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, mid: UnitCatalog.Sid, back1: UnitCatalog.Vio, back2: UnitCatalog.Mio)),
+    ("澱み喰い (グザ×ヴィオ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Sid, back1: UnitCatalog.Vio, back3: UnitCatalog.Mio)),
     // 軋みの割り込み攻撃の追加後に再探索。セロが前1から中のヨミへ逃げ込んでヨミを前へ突き出し(+22)、その場で振らせる。
     // 以後はバサの入れ替えが割り込みを重ね、セロは二段目で後1のバサを突き飛ばして貫きに変わる（layout 1位）
-    ("隊列崩し (バサ×ヨミ×セロ)", Formation.Build(front1: UnitCatalog.Sero, front2: UnitCatalog.Gald, front3: UnitCatalog.Gan, mid: UnitCatalog.Yomi, back1: UnitCatalog.Basa)),
+    ("隊列崩し (バサ×ヨミ×セロ)", Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Gan, back1: UnitCatalog.Basa, back3: UnitCatalog.Yomi)),
     // 軋みの割り込み攻撃の追加後に再探索。セロが中衛から後1のヨミを突き飛ばして逃げ、ヨミは中衛へ突き出されて(+22)その場で振る。
     // 旧狙いの二段逃げ型（セロ前列→中のヨミ→後）は割り込み後も 48.8% 止まり（83位）。前列へ突き出されたヨミが削られるだけなので捨てた。
     // 探索1〜3位はガルド後列で庇いが死ぬので採らない（layout 4位）
-    ("突き出し (セロ×ヨミ)",  Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Sero, back1: UnitCatalog.Yomi, back2: UnitCatalog.Nel)),
+    ("突き出し (セロ×ヨミ)",  Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Yomi, back3: UnitCatalog.Nel)),
     // 溜め役3体を敵から遠い後列と中衛へ、という狙いはそのまま。前1を空けてカド・クグを前2/前3へ寄せ、
     // 中衛をガンに替えた形が上（+2.1pt）。カドの巻き込み先はクグとガンで変わらない
-    ("溜め改 (クグ×バン×ガン)", Formation.Build(front2: UnitCatalog.Kado, front3: UnitCatalog.Kugu, mid: UnitCatalog.Gan, back1: UnitCatalog.Ban, back2: UnitCatalog.Dolga)),
+    ("溜め改 (クグ×バン×ガン)", Formation.Build(front1: UnitCatalog.Kado, front3: UnitCatalog.Kugu, center: UnitCatalog.Gan, back1: UnitCatalog.Ban, back3: UnitCatalog.Dolga)),
     // 軋みの割り込み攻撃の追加後に再探索。セロは前1から中のバサ、次に後1のヨミを順に突き飛ばして貫きに変わり、
     // 逃亡もバサの入れ替えも全部シオとヨミの燃料になる（layout 1位）
-    ("移動改 (バサ×ヨミ×シオ)", Formation.Build(front1: UnitCatalog.Sero, front2: UnitCatalog.Shio, front3: UnitCatalog.Gald, mid: UnitCatalog.Basa, back1: UnitCatalog.Yomi)),
+    ("移動改 (バサ×ヨミ×シオ)", Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.Yomi, back3: UnitCatalog.Basa)),
     // 呪詛は全体に漏れるのでウツの位置は不問。探索上位4件(80.8%)はガルド後列で庇いが死ぬので採らない。セロは中衛から被弾後退（layout 5位）
-    ("逆しま (ネル×ウツ)",   Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Sero, back1: UnitCatalog.Nel, back2: UnitCatalog.Utsu)),
+    ("逆しま (ネル×ウツ)",   Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Nel, back3: UnitCatalog.Utsu)),
     // 萎縮も呪詛も全体に効くので、守るべきは中衛のクビの方。ネルとウツを後列へ下げた（+3.1pt / 第5波 +14.5）。
     // 全体1位はガルドを後1に置く形（99.4%）だが庇いが死ぬので採らない。この差 +11.5pt は庇いの監査結果そのもの（README 参照）
-    ("逆しま改 (クビ×ウツ)", Formation.Build(front2: UnitCatalog.Golm, front3: UnitCatalog.Gald, mid: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back2: UnitCatalog.Utsu)),
+    ("逆しま改 (クビ×ウツ)", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, center: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back3: UnitCatalog.Utsu)),
     // 旧配置がそのまま全配置1位。ヒサの隣接（カド・ネル）で最大HPはカド（layout 1位）
-    ("反撃改 (ドハ×カド)",   Formation.Build(front1: UnitCatalog.Hisa, front2: UnitCatalog.Kado, front3: UnitCatalog.Doha, mid: UnitCatalog.Nono, back1: UnitCatalog.Nel)),
+    ("反撃改 (ドハ×カド)",   Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Kado, center: UnitCatalog.Doha, back1: UnitCatalog.Nel, back3: UnitCatalog.Nono)),
     // ヒサを中衛へ。横隣接が無いので深さ隣接の前2＝カドだけを指す。前列3枚が受け、カドの巻き込みはドハ・バン・ヒサへ広がる
     // （+12.2pt / 第3波 +39.0）。旧配置はヒサ前3で標的は同じだが、前列が2枚しかなく第3波が 36% だった
-    ("反撃改2 (ガン×カド)",  Formation.Build(front1: UnitCatalog.Doha, front2: UnitCatalog.Kado, front3: UnitCatalog.Ban, mid: UnitCatalog.Hisa, back1: UnitCatalog.Gan)),
+    ("反撃改2 (ガン×カド)",  Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Kado, center: UnitCatalog.Ban, back1: UnitCatalog.Gan, back3: UnitCatalog.Hisa)),
     // ヒサを中衛へ。隣接はガン(前2)とカド(後2)だが、標的は最大HPで選ばれるのでカド。ガルドは前3で庇う
     // （+7.4pt / 第3波 +23.3）。ガルド前列の制約を外すと 73.1% まで伸びるが、差は +0.5pt なので制約を保つ側を採った
-    ("反撃改3 (カド×ハギ)",  Formation.Build(front1: UnitCatalog.Gan, front2: UnitCatalog.Gald, front3: UnitCatalog.Hagi, mid: UnitCatalog.Kado, back2: UnitCatalog.Hisa)),
-    // ハギは守られる中衛から追い打つ（位置不問）。前列3枚が受け、ミオは後1（layout: ガルド前列の最良）
-    ("追撃×毒 (ハギ×グザ)",  Formation.Build(front1: UnitCatalog.Guza, front2: UnitCatalog.Gald, front3: UnitCatalog.Golm, mid: UnitCatalog.Hagi, back1: UnitCatalog.Mio)),
+    ("反撃改3 (カド×ハギ)",  Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.Gald, center: UnitCatalog.Hagi, back1: UnitCatalog.Hisa, back3: UnitCatalog.Kado)),
+    // ハギは追い打ちなので位置不問。X字化に伴う振り直しで、グザを中央（瘴気は位置不問）、
+    // 前列をガルドとゴルムの受け2枚に、ハギとミオを後列へ（reseat 2位 / confirm +7.5pt / 第2波 +44.0）
+    ("追撃×毒 (ハギ×グザ)",  Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Golm, center: UnitCatalog.Guza, back1: UnitCatalog.Hagi, back3: UnitCatalog.Mio)),
     // 死の連鎖にハギを足した形。2026-08-23 修正: 旧版はムグを残しヴェルを抜いていたため、
     // 死の連鎖の心臓部（継ぎ接ぎヴェルの蘇生による死体供給の倍加）が消えて第2波 98.0% → 32.5% まで
     // 落ちていた（原因はハギの1ターン1回制限ではなく、ヴェルを外したことそのもの）。
     // ムグを抜いてヴェルを残すと 95.0% まで戻る（分裂ムグの寄与は約3pt）。ハギの前列配置自体は
     // ほぼ無関係（ヴェルを残したままハギを前1に置いても95.0%）。配置は原型のスロットをそのまま流用。
-    ("追撃×死 (ハギ×リィカ)", Formation.Build(front1: UnitCatalog.Hagi, front2: UnitCatalog.Zoto, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Vel)),
-    // 軋みの割り込み攻撃の追加後に再探索。空き枠で孤立を作る散開の幾何はそのまま、ガルド(前1)とササ(前3)が孤立して-35%を受ける
-    // （旧配置の左右鏡像 / layout 1位）
-    ("移動改2 (ササ×ヨミ)",  Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sasa, mid: UnitCatalog.Basa, back2: UnitCatalog.Yomi)),
-    // 孤立を2枚作る幾何は同じだが、孤立させる相手をガルドとドルガに替えた（旧配置はササ自身とガルド）。
-    // ササは自分が孤立している必要がない。分かちは全体に効くのでドハは前1でよい（+2.8pt）
-    ("散開耐久 (ササ×ドハ)", Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Gald, mid: UnitCatalog.Dolga, back1: UnitCatalog.Sasa)),
+    ("追撃×死 (ハギ×リィカ)", Formation.Build(front1: UnitCatalog.Hagi, front3: UnitCatalog.Zoto, center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
+    // ササ入りの2編成（「移動改2 (ササ×ヨミ)」「散開耐久 (ササ×ドハ)」）は X字化で外した。
+    // 散開（Loose）は「隣に味方がいない駒」を硬くするが、新盤面は編成5体が 0-4 を必ず埋め、
+    // 角4つは全員が中央と隣接し中央は全員と隣接するので、**発火する席が原理的に存在しない**。
+    // トレイトは消していない。盤面が固まってから別議題として扱う
+    // （中央の性格「単体に強く範囲に弱い」に絡めるのが素直、というところまでが現時点の見立て）。
     // セッキは後列でないと庇えない。探索上位は前列セッキで特性が死ぬので、後列制約下の最良を採る（layout 18位）
-    ("死の連鎖+後備え", Formation.Build(front2: UnitCatalog.Zoto, front3: UnitCatalog.Golm, mid: UnitCatalog.Vel, back1: UnitCatalog.Rica, back2: UnitCatalog.Sekki)),
+    ("死の連鎖+後備え", Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Golm, center: UnitCatalog.Vel, back1: UnitCatalog.Rica, back3: UnitCatalog.Sekki)),
     // セロは中衛から後1のドルガを突き飛ばして逃げ込み、セッキが貫き以外の後列狙いを肩代わりして狙撃を守る。
     // セッキを後1に置く探索1位(86.0%)はセロがセッキを突き飛ばして後備えごと失うので採らない（layout 3位）
-    ("後衛特化+後備え", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Golm, mid: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back2: UnitCatalog.Sekki)),
+    ("後衛特化+後備え", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Golm, center: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sekki)),
     // ウツとセッキが後列、クビは守られる中衛。探索上位はセッキ前列＋ガルド中衛で両特性が死ぬので、制約下の最良を採る（layout 37位）
-    ("逆しま+後備え",   Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Golm, front3: UnitCatalog.Kubi, back1: UnitCatalog.Utsu, back2: UnitCatalog.Sekki)),
+    ("逆しま+後備え",   Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Golm, center: UnitCatalog.Kubi, back1: UnitCatalog.Utsu, back3: UnitCatalog.Sekki)),
     // 燃焼軸の受け皿編成。ホタ（熾火）は自分では着火できないので、ボルグの火の粉が唯一の火種。
     // 後1ホタと後2ボルグは同じ列で左右に隣接するので火は確実に回る。前列はノノとガルドで受け、
     // 火種と受け皿をまとめて後列に下げる形。reseat 1位を confirm で追試して採用
     // （seed 200..599 で +2.1pt / seed 600..1399 で +2.3pt）。
     // 中身は第4波を約3pt 差し出して第5波を約13pt 買う入れ替えで、全体が一様に伸びたわけではない。
-    ("燃焼 (ボルグ×ホタ)", Formation.Build(front1: UnitCatalog.Nono, front2: UnitCatalog.Gald, front3: UnitCatalog.Mudo, back1: UnitCatalog.Hota, back2: UnitCatalog.Borg)),
+    // X字化に伴う振り直し。機械的な写しではホタが後列でボルグの火種が届かず 7/0/0/0 に潰れていた。
+    // ホタを中央（ボルグの隣）へ上げた（reseat 1位＝狙いを満たす最良 / confirm +57.5pt）
+    ("燃焼 (ボルグ×ホタ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Nono, center: UnitCatalog.Hota, back1: UnitCatalog.Mudo, back3: UnitCatalog.Borg)),
     // 範囲耐性。砕け盾のヒビ（範囲を浴びて破片を配る）を軸に据えた編成。
     // ガルドは Stoic で回復も強化も受け付けないが、破片は damage 側で消費されるので届く。
     // ドルガ（攻38・薙ぎだが2ターンに1回）は「強い。ただ遅い」という理由で外された駒で、
@@ -8592,7 +8503,9 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // ヒビを前列に置き、ボルグと横に隣接させることが狙い。ボルグの薙ぎは味方も巻き込むが、
     // その巻き込みも CurrentPattern != Single なのでヒビの変換対象になる。
     // 探索1位はボルグを後列へ回してこの噛み合わせを捨てる形なので採らない。
-    ("範囲耐性 (ヒビ×ボルグ)", Formation.Build(front1: UnitCatalog.Gald, front2: UnitCatalog.Hibi, front3: UnitCatalog.Borg, mid: UnitCatalog.Dolga, back1: UnitCatalog.Rica)),
+    // X字化に伴う振り直し。ヒビは中央に置く——2本の貫き経路・薙ぎ・隣接次数4が全部そこへ入るので、
+    // 範囲を浴びて破片を配る駒の指定席になる（reseat 1位 / confirm +36.8pt / 第4波 +87.0）
+    ("範囲耐性 (ヒビ×ボルグ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Hibi, back1: UnitCatalog.Borg, back3: UnitCatalog.Rica)),
     // 縛め（クグ）の測定用。既存でクグを含むのは 溜め改 だけで、そこにはカドが入っている——
     // カドの改修と交絡していて、クグの設計の中心（編成によって縛りの意味が反転する）が測れない。
     // 以下の2本はその対照。片方は縛りの空きを買う駒を揃え、もう片方は誰も買わない。
@@ -8601,12 +8514,14 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // クグ・ガン（号令）・バン（据え）が揃うので、縛られた味方1体の空きに +16 / +8 / −50% が同時に払われる。
     // 残り枠は 溜め改 と同じドルガ（遅いが攻38の薙ぎ。守られて完走する側）を据え置き、
     // カドの有無だけが 溜め改 との差になるようにした
-    ("縛め収入型 (クグ×バン×ガン)", Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Kugu, mid: UnitCatalog.Gan, back1: UnitCatalog.Ban, back2: UnitCatalog.Dolga)),
+    ("縛め収入型 (クグ×バン×ガン)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kugu, center: UnitCatalog.Gan, back1: UnitCatalog.Ban, back3: UnitCatalog.Dolga)),
     // 非収入型。号令・据え・カドのいずれも含まない。残り4枠は 速攻 (ボルグ×ムド) の攻撃役で、
     // 全員が自分の手番で殴る型——縛られた1体が失うのは実際の1振りで、誰もその空きを買わない。
     // 「味方の縛りがほぼ純粋な損」という要件を、収入側の特性をひとつも置かないことで満たす。
     // ガルドは前列（庇いの制約）、セロは中衛（狙撃化には戦闘中に後退した実績が要る）
-    ("縛め非収入型 (クグ×速攻)", Formation.Build(front1: UnitCatalog.Mudo, front2: UnitCatalog.Gald, front3: UnitCatalog.Borg, mid: UnitCatalog.Sero, back1: UnitCatalog.Kugu)),
+    // X字化に伴う振り直し。機械的な写しではボルグが中央に落ち、味方4枚へ毎ターン巻き込みを撒いていた
+    // （中央は編成5枠すべてと隣接する）。ボルグを後3へ、セロを中央へ（reseat 1位 / confirm +10.7pt）
+    ("縛め非収入型 (クグ×速攻)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kugu, center: UnitCatalog.Sero, back1: UnitCatalog.Mudo, back3: UnitCatalog.Borg)),
     // 据え（バン）とハギ（追い打ち）の同居。31編成に1本も無い組み合わせなので、
     // `IdleTurn` の会計を据え側で直しても compare が1行も動かず、変更が効いたことを
     // 確認できない。その対照として置く。ハギは `SurrendersTurn == false`（自分の手番を
@@ -8619,22 +8534,23 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 抜く枠にゾトを選んだのは、ヴェルを外すと第2波が 98.0% → 32.5% まで落ちることが
     // 測定済み（2026-08-23）で、ゴルムは前列の受けを兼ねているため。
     // バンは前2。据えは位置を問わないが、ゾトの空けた席をそのまま使えば土台との差が1枠で済む。
-    ("追撃×据え (ハギ×バン)", Formation.Build(front1: UnitCatalog.Hagi, front2: UnitCatalog.Ban, mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Vel))
+    ("追撃×据え (ハギ×バン)", Formation.Build(front1: UnitCatalog.Hagi, front3: UnitCatalog.Ban, center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel))
 };
 
-// メンバーをスロット 0..5 へ重複なく割り当てる全順列を、
+// メンバーを編成スロット 0..4 へ重複なく割り当てる全順列を、
+// **召喚枠(5-8)は含めない**——プレイヤーが置けない席に駒を置く配置を数えることになる。
 // 割り当てタプルの辞書式昇順で列挙する（各深さでスロットを昇順に試すため）。
 // layout モードの決定性（同点タイブレーク＝列挙順の若い方）はこの順序に依存している。
 static IEnumerable<int[]> SlotAssignments(int memberCount)
 {
     var assign = new int[memberCount];
-    var used = new bool[FormationRules.TotalSlots];
+    var used = new bool[FormationRules.PlayableSlotCount];
     return Rec(0);
 
     IEnumerable<int[]> Rec(int depth)
     {
         if (depth == memberCount) { yield return (int[])assign.Clone(); yield break; }
-        for (int slot = 0; slot < FormationRules.TotalSlots; slot++)
+        for (int slot = 0; slot < FormationRules.PlayableSlotCount; slot++)
         {
             if (used[slot]) continue;
             used[slot] = true;
@@ -8647,7 +8563,7 @@ static IEnumerable<int[]> SlotAssignments(int memberCount)
 
 static bool SameFormation(Formation a, Formation b)
 {
-    for (int i = 0; i < FormationRules.TotalSlots; i++)
+    for (int i = 0; i < FormationRules.PlayableSlotCount; i++)
         if (!ReferenceEquals(a[i], b[i])) return false;
     return true;
 }
@@ -8657,7 +8573,7 @@ static string LayoutRow(string rank, Formation f, int[] wins, int seeds)
     static string N(UnitDef? d) => d?.Name ?? "−";
     double avg = wins.Sum() * 100.0 / (wins.Length * seeds);
     string cells = string.Concat(wins.Select(w => $" {w * 100.0 / seeds:F1}% |"));
-    return $"| {rank} | {N(f[0])}/{N(f[1])}/{N(f[2])} | {N(f[3])} | {N(f[4])}/{N(f[5])} | {avg:F1}% |{cells}";
+    return $"| {rank} | {N(f[0])}/{N(f[1])} | {N(f[2])} | {N(f[3])}/{N(f[4])} | {avg:F1}% |{cells}";
 }
 
 // ---- 波の代金診断（第5期 cost / gradient が共有） ----
@@ -8726,24 +8642,19 @@ static (double Mean, double Split) WaveCost((string Name, Formation F)[] targets
 
 // 測定台（第9期 §0）。**合計代金 113% が、結果が敏感になる唯一の帯**——136% で測ると
 // 全編成が突破 0% に潰れて何も見えない（第6〜8期の結論）。中身は第8期 bridge の
-// 反転列(低) と同一（H2a 裸5 / 2b 騎士混成 / 巡礼6）で、bill（代金の分解）と
+// 反転列(低) と同一（H2a 裸5 / 2b 騎士混成 / 巡礼5）で、bill（代金の分解）と
 // bridge（自傷率での群分け）が同じ台の上で測るために1箇所へ寄せてある。
 // bridge 側は列の定義を自分で持ったまま、この関数と一致することを検算する
 // （列の定義を bridge から取り上げると第8期の出力との突き合わせが読めなくなる）。
 static Formation[] BenchColumn113() => new[]
 {
-    Formation.Build(front1: EnemyCatalog.ZealotBare, front2: EnemyCatalog.ZealotBare,
-                    front3: EnemyCatalog.ZealotBare, mid: EnemyCatalog.ZealotBare,
-                    back1: EnemyCatalog.ZealotBare),
-    Formation.Build(front1: EnemyCatalog.Recruit, front2: EnemyCatalog.Knight,
-                    front3: EnemyCatalog.Recruit, mid: EnemyCatalog.Axeman),
-    Formation.Build(front1: EnemyCatalog.ZealotPilgrim, front2: EnemyCatalog.ZealotPilgrim,
-                    front3: EnemyCatalog.ZealotPilgrim, mid: EnemyCatalog.ZealotPilgrim,
-                    back1: EnemyCatalog.ZealotPilgrim, back2: EnemyCatalog.ZealotPilgrim),
+    Formation.Build(front1: EnemyCatalog.ZealotBare, front3: EnemyCatalog.ZealotBare, center: EnemyCatalog.ZealotBare, back1: EnemyCatalog.ZealotBare, back3: EnemyCatalog.ZealotBare),
+    Formation.Build(front1: EnemyCatalog.Recruit, front3: EnemyCatalog.Knight, center: EnemyCatalog.Recruit, back1: EnemyCatalog.Axeman),
+    Formation.Build(front1: EnemyCatalog.ZealotPilgrim, front3: EnemyCatalog.ZealotPilgrim, center: EnemyCatalog.ZealotPilgrim, back1: EnemyCatalog.ZealotPilgrim, back3: EnemyCatalog.ZealotPilgrim),
 };
 
 // チャージ台（第10期 Phase AB-0）。**測定台 113% には全体持ちも貫き持ちも1体もいない**
-// （裸5 / 新兵・騎士・戦斧兵 / 巡礼6）。第9期までは敵の攻撃型が測定の交絡になるので
+// （裸5 / 新兵・騎士・戦斧兵 / 巡礼5）。第9期までは敵の攻撃型が測定の交絡になるので
 // わざと外してあったが、第10期はその2種にチャージを付ける期なので、あの台の上で測ると
 // チャージ化の前後で数字が1つも動かない。
 //
@@ -8752,7 +8663,7 @@ static Formation[] BenchColumn113() => new[]
 // 別に作る。**入れ替えであって追加ではない**ので、ステージ設計の「貫き1枚まで／全体1枚まで」
 // （UnitCatalog.cs の第三波・第四波のコメント）を跨がない。
 //
-// 入れ替えで代金が上がった（巡礼6のまま詠唱兵を入れると合計 128.7%）ので、第3波の体数を
+// 入れ替えで代金が上がった（巡礼5のまま詠唱兵を入れると合計 128.7%）ので、第3波の体数を
 // 6→4 に削って 116.6% に戻してある。**攻撃値は触らない**（第8期 Phase V の作法。攻撃を
 // 振ると「安さの効果」と「一撃圏を跨いだ効果」が混ざる）。実測 116.6% は 113% 帯の
 // 上端だが、突破率(1) = 39.1%・同値塊 3 と、測定台 113%（25.9% / 同値塊 8）より
@@ -8766,16 +8677,12 @@ static Formation[] BenchColumn113() => new[]
 // そのまま比較対象として残り、かつ「チャージ化で動いてはいけない列」が検出器になる。
 static Formation[] ChargeBench() => new[]
 {
-    Formation.Build(front1: EnemyCatalog.ZealotBare, front2: EnemyCatalog.ZealotBare,
-                    front3: EnemyCatalog.ZealotBare, mid: EnemyCatalog.ZealotBare,
-                    back1: EnemyCatalog.ZealotBare),
+    Formation.Build(front1: EnemyCatalog.ZealotBare, front3: EnemyCatalog.ZealotBare, center: EnemyCatalog.ZealotBare, back1: EnemyCatalog.ZealotBare, back3: EnemyCatalog.ZealotBare),
     // 2b 騎士混成 の戦斧兵（薙ぎ）を狙撃手（貫き）に。スロットはそのまま中衛。
-    Formation.Build(front1: EnemyCatalog.Recruit, front2: EnemyCatalog.Knight,
-                    front3: EnemyCatalog.Recruit, mid: EnemyCatalog.Archer),
+    Formation.Build(front1: EnemyCatalog.Recruit, front3: EnemyCatalog.Knight, center: EnemyCatalog.Recruit, back1: EnemyCatalog.Archer),
     // 巡礼者を詠唱兵（全体）入りに。既存の第四波と同じくレーン1の最深部（後2）に置く。
     // 体数 4 は合計代金を 113% 帯へ戻すための刻み（上のコメント参照）。
-    Formation.Build(front1: EnemyCatalog.ZealotPilgrim, front2: EnemyCatalog.ZealotPilgrim,
-                    front3: EnemyCatalog.ZealotPilgrim, back2: EnemyCatalog.Chanter),
+    Formation.Build(front1: EnemyCatalog.ZealotPilgrim, front3: EnemyCatalog.ZealotPilgrim, center: EnemyCatalog.ZealotPilgrim, back1: EnemyCatalog.Chanter),
 };
 
 // 代金の分解（第9期 Phase X）。味方1部隊で列を1回走らせ、失った HP を
@@ -9469,6 +9376,10 @@ static double[] AverageRanksDesc(double[] v)
 // ピアソン相関。順位列に当てるとスピアマンの順位相関になる（同順位は平均順位で処理済み）。
 static double Pearson(double[] a, double[] b)
 {
+    // 標本が無い／1点しかないときは NaN。呼び出し側はどこも NaN を「測れなかった」として
+    // 扱っているので、ここで落とさない。**天井と床の波しか残らないと実際に空になる**
+    // （寄与する波が2本未満だと、波どうしのペアが1つも作れない）。
+    if (a.Length < 2 || b.Length < 2) return double.NaN;
     double ma = a.Average(), mb = b.Average();
     double cov = 0, va = 0, vb = 0;
     for (int i = 0; i < a.Length; i++)
@@ -9603,11 +9514,11 @@ static (double WinRate, double AvgAlive, double AvgHpPct, int Wins, double AvgTu
 //   第5期     gradient の w1 / w2 / w3
 //   第6期     aim の H1 系・H2 系・M1（1a/1b/1c は gradient と同一なので重複させない）
 //   第7期     flip の R0〜R12（3a/3b/3c は gradient と同一なので重複させない）
-//   第8期     bridge の 荷駄6 / 巡礼6（第3波の代金だけを振った点。攻10 は R11 と同じ）
+//   第8期     bridge の 荷駄5 / 巡礼5（第3波の代金だけを振った点。攻10 は R11 と同じ）
 //   第10期    ChargeBench の第2波・第3波（第1波は H2a と同一なので重複させない）
 //
 // **現物が無くて入れられなかった候補が2つある。** 第8期に測った「攻5 版」（90/攻5）と
-// 「板金従卒6」（60/攻7）は `UnitCatalog` に `UnitDef` が残っていない（攻5 は刻みとして
+// 「板金従卒5」（60/攻7）は `UnitCatalog` に `UnitDef` が残っていない（攻5 は刻みとして
 // 測っただけ、板金従卒は「却下した案」として文章にだけ残っている）。BattleCore を触らない
 // 作業なので**新しい敵は作らない**——集めるのは現物のある波だけにして、無い2つは出力に明記する。
 static (string Tag, string Era, string Name, Formation Enemy)[] WaveCatalog()
@@ -9620,112 +9531,76 @@ static (string Tag, string Era, string Name, Formation Enemy)[] WaveCatalog()
         ("S5",  "既存",   "第五波 / 異端審問団",    EnemyCatalog.Stages[4].Enemy),
 
         // 第5期 gradient の w1 / w2 / w3。
-        ("G1a", "第5期",  "1a 農兵6",
-            Formation.Build(front1: EnemyCatalog.Levy, front2: EnemyCatalog.Levy, front3: EnemyCatalog.Levy,
-                            mid: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back2: EnemyCatalog.Levy)),
+        ("G1a", "第5期",  "1a 農兵5",
+            Formation.Build(front1: EnemyCatalog.Levy, front3: EnemyCatalog.Levy, center: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back3: EnemyCatalog.Levy)),
         ("G1b", "第5期",  "1b 農兵5",
-            Formation.Build(front1: EnemyCatalog.Levy, front2: EnemyCatalog.Levy, front3: EnemyCatalog.Levy,
-                            mid: EnemyCatalog.Levy, back1: EnemyCatalog.Levy)),
+            Formation.Build(front1: EnemyCatalog.Levy, front3: EnemyCatalog.Levy, center: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back3: EnemyCatalog.Levy)),
         ("G1c", "第5期",  "1c 農兵5+斧",
-            Formation.Build(front1: EnemyCatalog.Levy, front2: EnemyCatalog.Axeman, front3: EnemyCatalog.Levy,
-                            mid: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back2: EnemyCatalog.Levy)),
+            Formation.Build(front1: EnemyCatalog.Levy, front3: EnemyCatalog.Axeman, center: EnemyCatalog.Levy, back1: EnemyCatalog.Levy, back3: EnemyCatalog.Levy)),
         ("G2a", "第5期",  "2a 新兵3+斧",
-            Formation.Build(front1: EnemyCatalog.Recruit, front2: EnemyCatalog.Recruit,
-                            front3: EnemyCatalog.Recruit, mid: EnemyCatalog.Axeman)),
+            Formation.Build(front1: EnemyCatalog.Recruit, front3: EnemyCatalog.Recruit, center: EnemyCatalog.Recruit, back1: EnemyCatalog.Axeman)),
         ("G2b", "第5期",  "2b 騎士混成",
-            Formation.Build(front1: EnemyCatalog.Recruit, front2: EnemyCatalog.Knight,
-                            front3: EnemyCatalog.Recruit, mid: EnemyCatalog.Axeman)),
+            Formation.Build(front1: EnemyCatalog.Recruit, front3: EnemyCatalog.Knight, center: EnemyCatalog.Recruit, back1: EnemyCatalog.Axeman)),
         ("G2c", "第5期",  "2c 騎士2+狙撃",
-            Formation.Build(front1: EnemyCatalog.Knight, front2: EnemyCatalog.Knight,
-                            front3: EnemyCatalog.Recruit, mid: EnemyCatalog.Archer)),
+            Formation.Build(front1: EnemyCatalog.Knight, front3: EnemyCatalog.Knight, center: EnemyCatalog.Recruit, back1: EnemyCatalog.Archer)),
         ("G3a", "第5期",  "3a 精鋭3",
-            Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.Champion, front3: EnemyCatalog.Warden)),
+            Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.Champion, center: EnemyCatalog.Warden)),
         ("G3b", "第5期",  "3b 精鋭+司祭長",
-            Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.Champion, mid: EnemyCatalog.Chaplain)),
+            Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.Champion, center: EnemyCatalog.Chaplain)),
         ("G3c", "第5期",  "3c 精鋭2",
-            Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.Champion)),
+            Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.Champion)),
 
         // 第6期 aim。H1 系（高HP低攻）・H2 系（低HP高攻）・M1（中間点）。
-        ("H1a", "第6期",  "H1a 人足6",
-            Formation.Build(front1: EnemyCatalog.Laborer, front2: EnemyCatalog.Laborer, front3: EnemyCatalog.Laborer,
-                            mid: EnemyCatalog.Laborer, back1: EnemyCatalog.Laborer, back2: EnemyCatalog.Laborer)),
+        ("H1a", "第6期",  "H1a 人足5",
+            Formation.Build(front1: EnemyCatalog.Laborer, front3: EnemyCatalog.Laborer, center: EnemyCatalog.Laborer, back1: EnemyCatalog.Laborer, back3: EnemyCatalog.Laborer)),
         ("H1b", "第6期",  "H1b 人足5",
-            Formation.Build(front1: EnemyCatalog.Laborer, front2: EnemyCatalog.Laborer, front3: EnemyCatalog.Laborer,
-                            mid: EnemyCatalog.Laborer, back1: EnemyCatalog.Laborer)),
+            Formation.Build(front1: EnemyCatalog.Laborer, front3: EnemyCatalog.Laborer, center: EnemyCatalog.Laborer, back1: EnemyCatalog.Laborer, back3: EnemyCatalog.Laborer)),
         ("H1c", "第6期",  "H1c 人足4",
-            Formation.Build(front1: EnemyCatalog.Laborer, front2: EnemyCatalog.Laborer, front3: EnemyCatalog.Laborer,
-                            mid: EnemyCatalog.Laborer)),
+            Formation.Build(front1: EnemyCatalog.Laborer, front3: EnemyCatalog.Laborer, center: EnemyCatalog.Laborer, back1: EnemyCatalog.Laborer)),
         ("H2a", "第6期",  "H2a 裸5(16)",
-            Formation.Build(front1: EnemyCatalog.ZealotBare, front2: EnemyCatalog.ZealotBare,
-                            front3: EnemyCatalog.ZealotBare, mid: EnemyCatalog.ZealotBare,
-                            back1: EnemyCatalog.ZealotBare)),
+            Formation.Build(front1: EnemyCatalog.ZealotBare, front3: EnemyCatalog.ZealotBare, center: EnemyCatalog.ZealotBare, back1: EnemyCatalog.ZealotBare, back3: EnemyCatalog.ZealotBare)),
         ("H2b", "第6期",  "H2b 革5(24)",
-            Formation.Build(front1: EnemyCatalog.ZealotLeather, front2: EnemyCatalog.ZealotLeather,
-                            front3: EnemyCatalog.ZealotLeather, mid: EnemyCatalog.ZealotLeather,
-                            back1: EnemyCatalog.ZealotLeather)),
+            Formation.Build(front1: EnemyCatalog.ZealotLeather, front3: EnemyCatalog.ZealotLeather, center: EnemyCatalog.ZealotLeather, back1: EnemyCatalog.ZealotLeather, back3: EnemyCatalog.ZealotLeather)),
         ("H2c", "第6期",  "H2c 鎖5(32)",
-            Formation.Build(front1: EnemyCatalog.ZealotMail, front2: EnemyCatalog.ZealotMail,
-                            front3: EnemyCatalog.ZealotMail, mid: EnemyCatalog.ZealotMail,
-                            back1: EnemyCatalog.ZealotMail)),
+            Formation.Build(front1: EnemyCatalog.ZealotMail, front3: EnemyCatalog.ZealotMail, center: EnemyCatalog.ZealotMail, back1: EnemyCatalog.ZealotMail, back3: EnemyCatalog.ZealotMail)),
         ("H2d", "第6期",  "H2d 革4(24)",
-            Formation.Build(front1: EnemyCatalog.ZealotLeather, front2: EnemyCatalog.ZealotLeather,
-                            front3: EnemyCatalog.ZealotLeather, mid: EnemyCatalog.ZealotLeather)),
+            Formation.Build(front1: EnemyCatalog.ZealotLeather, front3: EnemyCatalog.ZealotLeather, center: EnemyCatalog.ZealotLeather, back1: EnemyCatalog.ZealotLeather)),
         ("M1",  "第6期",  "M1 傭兵5",
-            Formation.Build(front1: EnemyCatalog.Drifter, front2: EnemyCatalog.Drifter, front3: EnemyCatalog.Drifter,
-                            mid: EnemyCatalog.Drifter, back1: EnemyCatalog.Drifter)),
+            Formation.Build(front1: EnemyCatalog.Drifter, front3: EnemyCatalog.Drifter, center: EnemyCatalog.Drifter, back1: EnemyCatalog.Drifter, back3: EnemyCatalog.Drifter)),
 
         // 第7期 flip。R0〜R6・R8〜R12 は 体数 × 個体HP の格子、R7 は処刑なしの対照。
         ("R0",  "第7期",  "R0 鎖4(32)",
-            Formation.Build(front1: EnemyCatalog.ZealotMail, front2: EnemyCatalog.ZealotMail,
-                            front3: EnemyCatalog.ZealotMail, mid: EnemyCatalog.ZealotMail)),
+            Formation.Build(front1: EnemyCatalog.ZealotMail, front3: EnemyCatalog.ZealotMail, center: EnemyCatalog.ZealotMail, back1: EnemyCatalog.ZealotMail)),
         ("R1",  "第7期",  "R1 板金4(60)",
-            Formation.Build(front1: EnemyCatalog.ZealotPlate, front2: EnemyCatalog.ZealotPlate,
-                            front3: EnemyCatalog.ZealotPlate, mid: EnemyCatalog.ZealotPlate)),
+            Formation.Build(front1: EnemyCatalog.ZealotPlate, front3: EnemyCatalog.ZealotPlate, center: EnemyCatalog.ZealotPlate, back1: EnemyCatalog.ZealotPlate)),
         ("R2",  "第7期",  "R2 板金3(60)",
-            Formation.Build(front1: EnemyCatalog.ZealotPlate, front2: EnemyCatalog.ZealotPlate,
-                            front3: EnemyCatalog.ZealotPlate)),
+            Formation.Build(front1: EnemyCatalog.ZealotPlate, front3: EnemyCatalog.ZealotPlate, center: EnemyCatalog.ZealotPlate)),
         ("R3",  "第7期",  "R3 板金2(60)",
-            Formation.Build(front1: EnemyCatalog.ZealotPlate, front2: EnemyCatalog.ZealotPlate)),
+            Formation.Build(front1: EnemyCatalog.ZealotPlate, front3: EnemyCatalog.ZealotPlate)),
         ("R4",  "第7期",  "R4 重甲4(90)",
-            Formation.Build(front1: EnemyCatalog.ZealotGreat, front2: EnemyCatalog.ZealotGreat,
-                            front3: EnemyCatalog.ZealotGreat, mid: EnemyCatalog.ZealotGreat)),
+            Formation.Build(front1: EnemyCatalog.ZealotGreat, front3: EnemyCatalog.ZealotGreat, center: EnemyCatalog.ZealotGreat, back1: EnemyCatalog.ZealotGreat)),
         ("R5",  "第7期",  "R5 重甲3(90)",
-            Formation.Build(front1: EnemyCatalog.ZealotGreat, front2: EnemyCatalog.ZealotGreat,
-                            front3: EnemyCatalog.ZealotGreat)),
+            Formation.Build(front1: EnemyCatalog.ZealotGreat, front3: EnemyCatalog.ZealotGreat, center: EnemyCatalog.ZealotGreat)),
         ("R6",  "第7期",  "R6 重甲2(90)",
-            Formation.Build(front1: EnemyCatalog.ZealotGreat, front2: EnemyCatalog.ZealotGreat)),
+            Formation.Build(front1: EnemyCatalog.ZealotGreat, front3: EnemyCatalog.ZealotGreat)),
         ("R7",  "第7期",  "R7 精鋭3・処刑なし（3a と数値は同じ）",
-            Formation.Build(front1: EnemyCatalog.Warden, front2: EnemyCatalog.ChampionPlain, front3: EnemyCatalog.Warden)),
+            Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.ChampionPlain, center: EnemyCatalog.Warden)),
         ("R8",  "第7期",  "R8 重甲5(90)",
-            Formation.Build(front1: EnemyCatalog.ZealotGreat, front2: EnemyCatalog.ZealotGreat,
-                            front3: EnemyCatalog.ZealotGreat, mid: EnemyCatalog.ZealotGreat,
-                            back1: EnemyCatalog.ZealotGreat)),
-        ("R9",  "第7期",  "R9 重甲6(90)",
-            Formation.Build(front1: EnemyCatalog.ZealotGreat, front2: EnemyCatalog.ZealotGreat,
-                            front3: EnemyCatalog.ZealotGreat, mid: EnemyCatalog.ZealotGreat,
-                            back1: EnemyCatalog.ZealotGreat, back2: EnemyCatalog.ZealotGreat)),
-        ("R10", "第7期",  "R10 板金6(60)",
-            Formation.Build(front1: EnemyCatalog.ZealotPlate, front2: EnemyCatalog.ZealotPlate,
-                            front3: EnemyCatalog.ZealotPlate, mid: EnemyCatalog.ZealotPlate,
-                            back1: EnemyCatalog.ZealotPlate, back2: EnemyCatalog.ZealotPlate)),
-        ("R11", "第7期",  "R11 従卒6(90/攻10)",
-            Formation.Build(front1: EnemyCatalog.ZealotSquire, front2: EnemyCatalog.ZealotSquire,
-                            front3: EnemyCatalog.ZealotSquire, mid: EnemyCatalog.ZealotSquire,
-                            back1: EnemyCatalog.ZealotSquire, back2: EnemyCatalog.ZealotSquire)),
+            Formation.Build(front1: EnemyCatalog.ZealotGreat, front3: EnemyCatalog.ZealotGreat, center: EnemyCatalog.ZealotGreat, back1: EnemyCatalog.ZealotGreat, back3: EnemyCatalog.ZealotGreat)),
+        ("R9",  "第7期",  "R9 重甲5(90)",
+            Formation.Build(front1: EnemyCatalog.ZealotGreat, front3: EnemyCatalog.ZealotGreat, center: EnemyCatalog.ZealotGreat, back1: EnemyCatalog.ZealotGreat, back3: EnemyCatalog.ZealotGreat)),
+        ("R10", "第7期",  "R10 板金5(60)",
+            Formation.Build(front1: EnemyCatalog.ZealotPlate, front3: EnemyCatalog.ZealotPlate, center: EnemyCatalog.ZealotPlate, back1: EnemyCatalog.ZealotPlate, back3: EnemyCatalog.ZealotPlate)),
+        ("R11", "第7期",  "R11 従卒5(90/攻10)",
+            Formation.Build(front1: EnemyCatalog.ZealotSquire, front3: EnemyCatalog.ZealotSquire, center: EnemyCatalog.ZealotSquire, back1: EnemyCatalog.ZealotSquire, back3: EnemyCatalog.ZealotSquire)),
         ("R12", "第7期",  "R12 従卒5(90/攻10)",
-            Formation.Build(front1: EnemyCatalog.ZealotSquire, front2: EnemyCatalog.ZealotSquire,
-                            front3: EnemyCatalog.ZealotSquire, mid: EnemyCatalog.ZealotSquire,
-                            back1: EnemyCatalog.ZealotSquire)),
+            Formation.Build(front1: EnemyCatalog.ZealotSquire, front3: EnemyCatalog.ZealotSquire, center: EnemyCatalog.ZealotSquire, back1: EnemyCatalog.ZealotSquire, back3: EnemyCatalog.ZealotSquire)),
 
         // 第8期 bridge。R11 と体数・個体HP は同じで攻撃だけが違う（代金を振った軸）。
-        ("P6",  "第8期",  "荷駄6(90/攻7)",
-            Formation.Build(front1: EnemyCatalog.ZealotPorter, front2: EnemyCatalog.ZealotPorter,
-                            front3: EnemyCatalog.ZealotPorter, mid: EnemyCatalog.ZealotPorter,
-                            back1: EnemyCatalog.ZealotPorter, back2: EnemyCatalog.ZealotPorter)),
-        ("Q6",  "第8期",  "巡礼6(90/攻4)",
-            Formation.Build(front1: EnemyCatalog.ZealotPilgrim, front2: EnemyCatalog.ZealotPilgrim,
-                            front3: EnemyCatalog.ZealotPilgrim, mid: EnemyCatalog.ZealotPilgrim,
-                            back1: EnemyCatalog.ZealotPilgrim, back2: EnemyCatalog.ZealotPilgrim)),
+        ("P6",  "第8期",  "荷駄5(90/攻7)",
+            Formation.Build(front1: EnemyCatalog.ZealotPorter, front3: EnemyCatalog.ZealotPorter, center: EnemyCatalog.ZealotPorter, back1: EnemyCatalog.ZealotPorter, back3: EnemyCatalog.ZealotPorter)),
+        ("Q6",  "第8期",  "巡礼5(90/攻4)",
+            Formation.Build(front1: EnemyCatalog.ZealotPilgrim, front3: EnemyCatalog.ZealotPilgrim, center: EnemyCatalog.ZealotPilgrim, back1: EnemyCatalog.ZealotPilgrim, back3: EnemyCatalog.ZealotPilgrim)),
 
         // 第10期 ChargeBench の第2波・第3波。**候補波の中で貫き・全体を持つのはここだけ**
         // （第6期以降の候補は「敵の攻撃型は測定の交絡になる」として単体で揃えてある）。

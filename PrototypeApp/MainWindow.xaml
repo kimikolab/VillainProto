@@ -1,4 +1,4 @@
-<Window x:Class="PrototypeApp.MainWindow"
+﻿<Window x:Class="PrototypeApp.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="編成プロトタイプ" Height="760" Width="1180"
@@ -33,23 +33,22 @@
         <DockPanel Grid.Column="0" Margin="0,0,14,0">
 
             <StackPanel DockPanel.Dock="Top">
-                <TextBlock Text="前列（狙われやすい）　前1 / 前2 / 前3" Style="{StaticResource SectionHeader}"/>
+                <TextBlock Text="前列（狙われやすい）　前1 / 前3" Style="{StaticResource SectionHeader}"/>
                 <ComboBox x:Name="Slot0"/>
                 <ComboBox x:Name="Slot1"/>
+
+                <TextBlock Text="中央（前列が倒れるまで狙われない。範囲は全部ここに入る）"
+                           Style="{StaticResource SectionHeader}" Margin="0,10,0,6"/>
                 <ComboBox x:Name="Slot2"/>
 
-                <TextBlock Text="中列（前列が倒れるまで狙われない）　中"
+                <TextBlock Text="後列（最も守られる）　後1 / 後3"
                            Style="{StaticResource SectionHeader}" Margin="0,10,0,6"/>
                 <ComboBox x:Name="Slot3"/>
-
-                <TextBlock Text="後列（最も守られる）　後1 / 後2"
-                           Style="{StaticResource SectionHeader}" Margin="0,10,0,6"/>
                 <ComboBox x:Name="Slot4"/>
-                <ComboBox x:Name="Slot5"/>
 
-                <TextBlock Text="レーン0: 前1→後1 ／ レーン1: 前2→中→後2 ／ レーン2: 前3　　貫きはレーンを走り、1体貫くごとに威力が25%落ちる。"
+                <TextBlock Text="レーン0: 前1→中央→後1 ／ レーン1: 前3→中央→後3　　2本とも奥行きは同じ。貫きはレーンを走り、1体貫くごとに威力が25%落ちる。召喚駒が中間に湧くともう1段減衰する。"
                            Foreground="#7E786E" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,4"/>
-                <TextBlock Text="「隣接」は左右と前後の両方。中列は前2と後2に隣接する。薙ぎの巻き込みだけは左右のみ。"
+                <TextBlock Text="「隣接」は角4つ（前1・前3・後1・後3）が2枠ずつ、中央だけが4枠。薙ぎの巻き込みは標的と同じ列の全員＋中央。"
                            Foreground="#7E786E" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,12"/>
 
                 <TextBlock Text="ステージ" Style="{StaticResource SectionHeader}"/>

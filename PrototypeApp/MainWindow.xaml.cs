@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -20,7 +20,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        _slots = new[] { Slot0, Slot1, Slot2, Slot3, Slot4, Slot5 };
+        _slots = new[] { Slot0, Slot1, Slot2, Slot3, Slot4 };
 
         foreach (ComboBox cb in _slots)
         {
@@ -36,14 +36,13 @@ public partial class MainWindow : Window
         StageBox.SelectedIndex = 0;
         StageBox.SelectionChanged += (_, _) => UpdateUnitInfo();
 
-        // 初期配置: 前2のボルグは前1・前3・中に隣接する盤面のハブ。
+        // 初期配置: 中央のボルグは編成5枠すべてに隣接する盤面のハブ（角は2枠ずつ）。
         // その隣接先にムドを置いて、巻き添えを燃料に変える例。
         Slot0.SelectedItem = UnitCatalog.Gald;
-        Slot1.SelectedItem = UnitCatalog.Borg;
-        Slot2.SelectedItem = UnitCatalog.Golm;
+        Slot1.SelectedItem = UnitCatalog.Golm;
+        Slot2.SelectedItem = UnitCatalog.Borg;
         Slot3.SelectedItem = UnitCatalog.Mudo;
-        Slot4.SelectedItem = UnitCatalog.Nel;
-        Slot5.SelectedItem = UnitCatalog.Sero;
+        Slot4.SelectedItem = UnitCatalog.Sero;
 
         UpdateUnitInfo();
     }

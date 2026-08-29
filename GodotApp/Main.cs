@@ -37,15 +37,20 @@ public partial class Main : Control
 
     // ---- 盤面の幾何 ---------------------------------------------------
     //
-    // スロット 0-2 が前列 / 3 が中衛 / 4-5 が後列。レーンは3本で奥行きが違う。
-    // レーン0={前1,後1} レーン1={前2,中,後2} レーン2={前3}（BattleCore の FormationRules と同じ）。
+    // 編成スロット 0-4 が X字（前1・前3 / 中央 / 後1・後3）、5-8 が召喚専用。
+    // レーンは2本で、どちらも 前X → 中央 →〔○中X〕→ 後X の奥行き（BattleCore の FormationRules と同じ）。
     //
     // 表示は「前列どうしが向かい合う」向きに揃える。敵は奥→手前、味方は手前→奥。
-    // 深さが揃わないぶんは -1（空き枠）で詰めて、接敵面が一直線になるようにする。
-    // **貫きがレーンを前から走る**という規則が目で分かることがこの画面の要点なので、
-    // ここを 3×2 の均等グリッドにしてはいけない。
-    static readonly int[][] EnemyLaneOrder = { new[] { -1, 4, 0 }, new[] { 5, 3, 1 }, new[] { -1, -1, 2 } };
-    static readonly int[][] PlayerLaneOrder = { new[] { 0, 4, -1 }, new[] { 1, 3, 5 }, new[] { 2, -1, -1 } };
+    // 内側の列（○中1・中央・○中3）が召喚枠を含む中間層で、ここに駒が湧くと貫きがもう1段減衰する。
+    // **貫きがレーンを前から走る**という規則が目で分かることがこの画面の要点。
+    //
+    // X字化で 3×3 の完全な格子になったので、旧盤面で必要だった -1（空き枠）の詰め物は消えた。
+    // それでも均等グリッドとして描いてはいけない——列の意味（前 / 中間 / 後）が読めなくなる。
+    //
+    //     列は 後 / 中間 / 前 の順、各列は上から 行1・行2・行3。
+    //     後1(3) ○後2(8) 後3(4) ／ ○中1(5) 中央(2) ○中3(6) ／ 前1(0) ○前2(7) 前3(1)
+    static readonly int[][] EnemyLaneOrder = { new[] { 3, 8, 4 }, new[] { 5, 2, 6 }, new[] { 0, 7, 1 } };
+    static readonly int[][] PlayerLaneOrder = { new[] { 0, 7, 1 }, new[] { 5, 2, 6 }, new[] { 3, 8, 4 } };
 
     // ---- 再生の間（イベント種ごと）------------------------------------
     // テンポそのものを見るための画面なので、ここが実質の演出設計。
@@ -69,23 +74,16 @@ public partial class Main : Control
     // （揃っていなくても勝率表は壊れないが、見ているものが別物になる）。
     static (string Name, Formation F)[] Builds() => new (string, Formation)[]
     {
-        ("追撃×死 (ハギ×リィカ)", Formation.Build(front1: UnitCatalog.Hagi, front2: UnitCatalog.Zoto,
-            mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Vel)),
-        ("反撃改 (ドハ×カド)", Formation.Build(front1: UnitCatalog.Hisa, front2: UnitCatalog.Kado,
-            front3: UnitCatalog.Doha, mid: UnitCatalog.Nono, back1: UnitCatalog.Nel)),
-        ("逆しま改 (クビ×ウツ)", Formation.Build(front2: UnitCatalog.Golm, front3: UnitCatalog.Gald,
-            mid: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back2: UnitCatalog.Utsu)),
-        ("死の連鎖 (リィカ軸)", Formation.Build(front2: UnitCatalog.Zoto, front3: UnitCatalog.Mug,
-            mid: UnitCatalog.Golm, back1: UnitCatalog.Rica, back2: UnitCatalog.Vel)),
+        ("追撃×死 (ハギ×リィカ)", Formation.Build(front1: UnitCatalog.Hagi, front3: UnitCatalog.Zoto, center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
+        ("反撃改 (ドハ×カド)", Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Kado, center: UnitCatalog.Doha, back1: UnitCatalog.Nel, back3: UnitCatalog.Nono)),
+        ("逆しま改 (クビ×ウツ)", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, center: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back3: UnitCatalog.Utsu)),
+        ("死の連鎖 (リィカ軸)", Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Mug, center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
 
         // ここから継続効果が見える編成。上の4つはどれも毒も燃焼も持たないので、
         // 状態異常の表示を確かめるには別の軸が要る。
-        ("毒 (グザ×ミオ×ラウ)", Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Sid,
-            mid: UnitCatalog.Guza, back1: UnitCatalog.Mio, back2: UnitCatalog.Rau)),
-        ("毒+ベニ+ラウ", Formation.Build(front2: UnitCatalog.Gald, front3: UnitCatalog.Sid,
-            mid: UnitCatalog.Guza, back1: UnitCatalog.Rau, back2: UnitCatalog.Beni)),
-        ("燃焼 (ボルグ×ホタ)", Formation.Build(front1: UnitCatalog.Nono, front2: UnitCatalog.Gald,
-            front3: UnitCatalog.Mudo, back1: UnitCatalog.Hota, back2: UnitCatalog.Borg)),
+        ("毒 (グザ×ミオ×ラウ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: UnitCatalog.Mio, back3: UnitCatalog.Rau)),
+        ("毒+ベニ+ラウ", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: UnitCatalog.Rau, back3: UnitCatalog.Beni)),
+        ("燃焼 (ボルグ×ホタ)", Formation.Build(front1: UnitCatalog.Nono, front3: UnitCatalog.Gald, center: UnitCatalog.Mudo, back1: UnitCatalog.Hota, back3: UnitCatalog.Borg)),
     };
 
     // ---- 駒の状態（台本を適用して組み立てる）----------------------------
@@ -673,7 +671,7 @@ public partial class Main : Control
                     // 空きスロットも枠として残す。
                     // **Visible=false にすると Container が畳んでレーンの深さが崩れ、
                     // 接敵面が揃わなくなる。** 盤面の幾何が読めることがこの画面の要点。
-                    // 空き枠自体も情報（散開は隣に味方がいないことが条件、5体を6枠に入れる限り必ず1つ空く）。
+                    // 空き枠自体も情報（召喚専用の4枠は、そこへ駒が湧くまで空いたままになる）。
                     c.Name.Text = "";
                     c.Pat.Text = "";
                     c.Hp.Text = "";
