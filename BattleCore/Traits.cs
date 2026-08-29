@@ -1434,35 +1434,37 @@ public sealed class ShufflerTrait : Trait
 /// 縛め。毎ターン味方1体を動けなくする代わりに大きく強化する。
 /// 「動かない」を偶然ではなく意図的に作り出すので、溜め軸のエンジンになる。
 ///
-/// <b>縄は1本しかない。</b> 大縛り（<see cref="ActionKind.Skill"/> の手番）は、
-/// 味方を縛る代わりに敵を縛る。新しい <see cref="TraitId"/> を作らず
-/// <see cref="OnAction"/> をこの特性に足してあるのは、縄が1本であることを
-/// 特性が1つであることで表すため。
+/// <b>縄は1本しかない。</b> 大縛りは<b>開戦時に1回だけ</b>敵の最速1体へ投げ、
+/// その代わり第1ターンは味方を縛らない。新しい <see cref="TraitId"/> を作らないのは、
+/// 縄が1本であることを特性が1つであることで表すため。
 ///
-/// 代金は攻撃ではなく<b>味方の縛り1回ぶん</b>。クグの攻は3で、振りを捨てても代金にならない。
-/// 号令・据えのある編成では +16 / +8 / −50% の収入を1ターン捨てることになり、
-/// 号令も据えも無い編成では味方の縛りはほぼ純粋な損なので、敵へ向け直すのはほぼ無料になる。
-/// 同じスキルが編成によって正反対の意味を持つのが狙い。
+/// <b>周期スキルは捨てた。</b> 2周期（攻撃→大縛り）で持たせた版は、稼働率が低い駒だと
+/// そもそも発動しない——部隊戦は3〜6ターンしかないので、2周期目が来る前に決着するか本人が落ちる。
+/// クグは第3波で 発火 0.12 回/戦（8戦に1回）だった。周期は「長く生きる駒」にだけ持たせる。
+/// カドで寿命が制約になったのと同じ壁（README「検証で分かったこと」）。
+///
+/// 代金は攻撃ではなく<b>味方の縛り1回ぶん</b>。しかも味方の縛りは <see cref="UnitState.AtkBonus"/> に
+/// 永続蓄積するので、<b>第1ターンの1回が最も価値が高い</b>（以降の全ターンに効く）。
+/// 号令・据えのある編成では +16 / +8 / −50% の収入の立ち上がりを1ターン遅らせることになり、
+/// 号令も据えも無い編成では味方の縛りはほぼ純粋な損なので、敵へ向け直すのはむしろ得になる。
+/// 同じ縄が編成によって正反対の意味を持つのが狙い。
 /// </summary>
 public sealed class BindTrait : Trait
 {
     public const int Gain = 16;
     public override TraitId Id => TraitId.Bind;
 
+    // 開戦時に縄を敵へ投げる。会戦では部隊戦ごとに1回走る（OnCarryOver は書かない——
+    // 1部隊につき1回で、ReviverTrait.charges のような回数の持ち越しとは性質が違う）。
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+        => BindEnemy(ctx, self);
+
     public override void OnTurnStart(BattleContext ctx, UnitState self)
     {
-        // スキルのターンは縄を敵に使う。味方は縛らない（縄は1本）。
-        // OnTurnStart は ActionIndex が進む前に走るので、CurrentAction は
-        // 「このターンに実行する行動」を指す（BattleEngine の周期の進め方を参照）。
-        //
-        // ActsOnPattern を条件に含めるのは、将来この特性を周期を持たない駒に付けたときに
-        // 従来どおり毎ターン発火させるため（現在の保持者はクグのみ）。理由は Trait.ActsOnPattern。
-        if (ActsOnPattern(self) && self.CurrentAction?.Kind == ActionKind.Skill) return;
+        // 第1ターンは味方を縛らない。縄はもう敵に使ってある（縄は1本）。
+        if (ctx.Turn == 1) return;
         BindAlly(ctx, self);
     }
-
-    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
-        => BindEnemy(ctx, self);
 
     private static void BindAlly(BattleContext ctx, UnitState self)
     {
