@@ -575,6 +575,8 @@ public static class EnemyCatalog
     // ここから第二波用。共有定義を触ると第一・三・四波が一緒に動くので、Id を変えて別定義にする。
     // 調整は Attack のみ。HP を触ると決着ターン数が変わり、積み上げ系の成立可否まで動く。
     public static readonly UnitDef KnightG = Make("knight_g", "巡礼騎士", 75, 24, 7);
+    // 第二波から外した（2026-08-28）。回復役という設定コメントだけで何も回復しないので、
+    // 実際に回復する Chaplain に差し替えた。第二波の性格を戻すときの対照として定義は残す。
     public static readonly UnitDef PriestG = Make("priest_g", "従軍司祭", 40, 9, 8);
     public static readonly UnitDef RecruitG = Make("recruit_g", "討伐隊の新兵", 45, 11, 6);
     // 第10期でもチャージを付けない。第二波は練習用の波で、ここを溜めさせると
@@ -629,6 +631,9 @@ public static class EnemyCatalog
     // 等価交換なので回復総量は自分の HP が上限——HP 62 は精鋭1体の被弾4〜5ターン分を
     // 肩代わりする量で、無限に支えて浄化と同じ崖（README「引き算は崖」）を作らないための刻み。
     // 攻撃 7 はほぼ飾り。速さ 8 は既存の司祭と同じ。
+    // 第二波で使用（2026-08-28）。ここを触ると第二波が動く——他の波が回復役を要るなら
+    // 新しい変異体を作ること。攻撃 7 には床がある: 呪詛（CurseTrait.EnemyDebuff = 6）で
+    // 7 → 1 になるが 0 にはならず ApplyDamage の早期 return に落ちない。> 6 を割らないこと。
     public static readonly UnitDef Chaplain = Make("chaplain", "従軍司祭長", 62, 7, 8, TraitId.Mender);
 
     // ここから第6期・安い波の再設計（design/ENGAGEMENT_PLAN_6.md）の候補素材。
@@ -739,7 +744,7 @@ public static class EnemyCatalog
         // 回復役の司祭はレーン0の奥行き2（騎士→司祭）。貫きで撃てば75%で届く。
         // 教えること:「支援役はレーンを選べば潰せる」。第一波の次に来る狙い撃ちの練習台。
         new Stage("第二波 / 巡礼騎士団",
-            Formation.Build(front1: KnightG, front2: KnightG, front3: RecruitG, mid: ArcherG, back1: PriestG)),
+            Formation.Build(front1: KnightG, front2: KnightG, front3: RecruitG, mid: ArcherG, back1: Chaplain)),
 
         // 貫きは強烈なので1枚まで。2枚置くと後列に支援を置く編成が全滅する。
         // 射手はレーン1の最深部（勇者→斧→射手の奥行き3）。貫きでも50%まで減衰する。
