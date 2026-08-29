@@ -16,7 +16,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release <n> <unitId>  # 指定ユニットを含む編成に絞る（例: rica）
     dotnet run --project BattleSim -c Release 0 compare > docs/balance.md  # 代表編成 × 全ステージの勝率比較
     dotnet run --project BattleSim -c Release 0 dump > docs/units.md      # ユニット・特性・ステージ一覧
-    dotnet run --project BattleSim -c Release 0 layout      # 代表編成の全配置総当たり（並列・決定的、1コアで約19分）
+    dotnet run --project BattleSim -c Release 0 layout      # 代表編成の全配置総当たり（並列・決定的）
     dotnet run --project BattleSim -c Release 0 reseat [絞り込み] [skip] [take]  # 配置候補を seed 200 で測り直す
     dotnet run --project BattleSim -c Release 0 confirm     # 差し替え候補を別 seed で追試する
     dotnet run --project BattleSim -c Release 0 chain > docs/chain.md    # 勝率だけでは見えない「連鎖の深さ」（最大同時撃破数・決着ターン数）
@@ -306,7 +306,15 @@ BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project Ba
 
 ### 隊列と攻撃パターン（Models.cs）
 
-スロットは6つ（0-2 が前列、3 が中衛、4-5 が後列）。レーンは3本で、レーン0={前1,後1}・レーン1={前2,中,後2}・レーン2={前3}と奥行きが違う。貫きはレーンを前から走り、1体貫くごとに威力が25%落ちる。`AttackPattern` は Single / Sweep / Pierce / All の4つで、**増やしても4つまで**。1つ増えるたびに庇う・標的・巻き込みなど既存の全特性との相互作用を監査する必要がある。庇う・標的の介入は Single にしか効かない（薙ぎ・全体は止められず、貫きはレーン単位で解決されて割り込めない）という非対称が設計の中核。編成の定義は `Formation.Build`（名前付き引数）で書く。
+スロットは9つ。**編成枠は 0-4 の5つで、プレイヤーはここにしか置けない**（0=前1・1=前3 が前列、2=中央、3=後1・4=後3 が後列）。**5-8 は召喚専用**（5=○中1・6=○中3・7=○前2・8=○後2）で、`Summon` がこの並び順に埋める。
+
+盤面はX字で、レーンは2本。レーン0={前1,中央,○中1,後1}・レーン1={前3,中央,○中3,後3} と**奥行きが等しい**。中央は両方のレーンに属するので、スロットからレーンは単数で引けない（`LanesOf` を使う。旧 `LaneOf` は無い）。貫きはレーンを前から走り、1体貫くごとに威力が25%落ちる。○中X に召喚駒が立っていればもう1段減衰する。
+
+隣接は**表**（`AdjacencyTable`）で持つ。幾何計算で導出しない——前1と後1は隣接するが貫き経路では間に中央が入るので、「同じ列の左右」と「同じレーンの前後」の和には分解できない。編成枠だけを見れば角4つ（前1・前3・後1・後3）は全員が次数2で等価、中央だけが次数4。薙ぎの巻き込みは別表（`SweepTargets`）で、「標的と同じ列の全員＋中列」の**非対称**な対応（前1を薙げば中央まで届くが、中央を薙いでも前列へは戻らない）。旧 `AreLateralNeighbors` / `AreDepthNeighbors` は無く、`AreSameRowPair`（横）と `IsLanePredecessor`（前）に分かれている。
+
+**逃亡・後退の行き先は `PlayableSlotsOfRow` を使うこと。** `SlotsOfRow` は召喚枠まで返すので、空の○中1へ逃げ込んで誰も押しのけない＝逃亡が純粋な利益になる。
+
+`AttackPattern` は Single / Sweep / Pierce / All の4つで、**増やしても4つまで**。1つ増えるたびに庇う・標的・巻き込みなど既存の全特性との相互作用を監査する必要がある。庇う・標的の介入は Single にしか効かない（薙ぎ・全体は止められず、貫きはレーン単位で解決されて割り込めない）という非対称が設計の中核。編成の定義は `Formation.Build`（名前付き引数）で書く。
 
 配置を決めるときは人手の勘ではなく `layout` モードで測る。編成の狙い（隣接ペア・後列必須など）と探索1位が食い違ったら狙いを優先し、理由をコメントに残す。
 
