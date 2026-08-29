@@ -636,6 +636,19 @@ public static class EnemyCatalog
     // 7 → 1 になるが 0 にはならず ApplyDamage の早期 return に落ちない。> 6 を割らないこと。
     public static readonly UnitDef Chaplain = Make("chaplain", "従軍司祭長", 62, 7, 8, TraitId.Mender);
 
+    // 施しの司祭長: 第二波の支援役（2026-08-30）。Chaplain（継ぎ当て）は消さずに対照として残す
+    // ——PriestG を残してあるのと同じ扱いで、第二波の性格を戻すときにここへ差し戻せる。
+    // 施し（Alms: 毎ターン、最も傷ついた味方を 14 回復する。**自分は減らない**）。
+    // 継ぎ当てのままでは「保持者に与えた1ダメージ ＝ 否定できる回復1」で価値が線形になり、
+    // 25% 減衰する貫きで狙うと正味の損になっていた（AlmsTrait のコメントに全文）。
+    // HP 36 = 減衰後の貫き（24 × 75% = 18）のちょうど2発。2ターンで落ちるので、否定できるのは
+    // 14 × 残り3ターン = 42（第二波の平均決着は約5ターン）。**払った 36 を上回るので、
+    // 初めて「潰す価値」が立つ**。通常攻撃は後列に届かないので、開くのは後列に届く手段
+    // （貫き・全体・毒）を持つ編成にだけ。
+    // 攻撃 7 は Chaplain から据え置き。床も同じ——呪詛（CurseTrait.EnemyDebuff = 6）で 7 → 1 に
+    // なるが 0 にはならず ApplyDamage の早期 return に落ちない。> 6 を割らないこと。速さ 8 も据え置き。
+    public static readonly UnitDef Almoner = Make("chaplain_g", "施しの司祭長", 36, 7, 8, TraitId.Alms);
+
     // ここから第6期・安い波の再設計（design/ENGAGEMENT_PLAN_6.md）の候補素材。
     // 第5期の農兵では代金の「向き」（範囲持ちの編成にだけ安い）が作れなかった
     // （単体 − 範囲 が +3.1pt で、編成間のばらつき 9.4pt に埋もれる）。原因の仮説は2つあり、
@@ -741,10 +754,12 @@ public static class EnemyCatalog
         new Stage("第一波 / 物見の兵",
             Formation.Build(front1: Recruit, front2: Axeman, front3: Recruit)),
 
-        // 回復役の司祭はレーン0の奥行き2（騎士→司祭）。貫きで撃てば75%で届く。
-        // 教えること:「支援役はレーンを選べば潰せる」。第一波の次に来る狙い撃ちの練習台。
+        // 施しの司祭長はレーン0の奥行き2（騎士→司祭長）。HP36 は減衰後の貫き2発でちょうど落ちる。
+        // 自分は減らずに毎ターン14を配るので、放置すると戦闘長ぶん（約70）が敵の実効HPに乗る。
+        // 通常攻撃は後列に届かないので、潰せるのは後列に届く手段を持つ編成だけ。
+        // 教えること:「支援役はレーンを選べば潰せる」——今度は本当に潰す価値がある。
         new Stage("第二波 / 巡礼騎士団",
-            Formation.Build(front1: KnightG, front2: KnightG, front3: RecruitG, mid: ArcherG, back1: Chaplain)),
+            Formation.Build(front1: KnightG, front2: KnightG, front3: RecruitG, mid: ArcherG, back1: Almoner)),
 
         // 貫きは強烈なので1枚まで。2枚置くと後列に支援を置く編成が全滅する。
         // 射手はレーン1の最深部（勇者→斧→射手の奥行き3）。貫きでも50%まで減衰する。

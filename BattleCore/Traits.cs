@@ -51,7 +51,8 @@ public enum TraitId
     Pyre,        // 熾火: 自分が燃えている間だけ本領を発揮する
     Condemn,     // 断罪: 反撃してきた相手を痺れさせる（敵側の語彙）
     Shatter,     // 砕け: 範囲攻撃を浴びると、その分を破片（アーマー）にして味方へ配る
-    ThornGuard   // 棘守り: 前か横の味方への単体攻撃を身代わりし、その味方と位置を入れ替える
+    ThornGuard,  // 棘守り: 前か横の味方への単体攻撃を身代わりし、その味方と位置を入れ替える
+    Alms         // 施し: 自分は減らずに味方を回復する（敵側の語彙）
 }
 
 /// <summary>
@@ -1080,6 +1081,54 @@ public sealed class MenderTrait : Trait
     }
 }
 
+/// <summary>
+/// 施し。毎ターン、最も傷ついた味方を回復する。**自分は減らない。**
+///
+/// 継ぎ当て（<see cref="MenderTrait"/>）とは別物として足してある。継ぎ当ては等価交換
+/// （14 回復して同量だけ自分が減る）なので、**保持者に与えた1ダメージ ＝ 敵が受け取れる回復が
+/// 1減る ＝ 前列を1殴ったのと完全に等価**になる。得も損も無い。貫きは 25% 減衰するので、
+/// 等価な取引を割引価格で行うぶんだけ正味の損になり、「支援役はレーンを選べば潰せる」という
+/// 第二波の主題が測定で**逆向き**に出ていた（司祭長レーン固定で残存 2.96、狙撃手レーン固定で 3.31）。
+///
+/// 自消費を外すと、保持者の HP は「否定できる回復量」と切り離される。倒すまでに払う量が
+/// HP で頭打ちになり、倒したあとに否定できる量は残りターン数に比例するので、初めて
+/// 「早く潰すほど得」という閾値が立つ。**意図的な崖だが、鍵のある崖**——後列に届く手段
+/// （貫き・全体・毒）を持つ編成にだけ開く。
+///
+/// 却下した案:
+/// - **継ぎ当てのまま HP を下げる**: 効かない。否定できる回復量が一緒に減るだけで、
+///   1ダメージ ＝ 回復1減、の線形性は変わらない
+/// - **比率を 2:1 にする（14 回復 / 自消費 7）**: 足りない。HP プール全体を先に払わされるので
+///   閾値が立たない（HP62 なら減衰後の貫き 18 で3ターン、否定できるのは 28。同じ3ターンで
+///   狙撃手 HP38 を消せば「止められない攻撃」36 が消える）
+/// - **チャージ持ちに差し替える**: 第二波は練習用の波なので、教える内容の手前に
+///   溜めの読み合いを挟まない（<c>UnitCatalog.ArcherG</c> のコメントが明示的に禁じている）
+/// </summary>
+public sealed class AlmsTrait : Trait
+{
+    public const int Amount = 14;
+
+    public override TraitId Id => TraitId.Alms;
+
+    // 保持者（敵の施しの司祭長）は Actions を持たないのでターン頭に配るだけでよく、
+    // MenderTrait のような ActsOnPattern の分岐は要らない。
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+
+        // 患者の選び方は MenderTrait.Mend と同じ（AcceptsSupport かつ Hp < MaxHp、HP割合の昇順）。
+        // 共有にしないのは、繕いが自消費のぶん Hp <= 1 で止まる必要があり、施しには要らないため。
+        UnitState? patient = ctx.LivingMembers(self.TeamId)
+            .Where(a => a != self && a.AcceptsSupport && a.Hp < a.MaxHp)
+            .OrderBy(a => a.Hp * 100 / Math.Max(1, a.MaxHp))
+            .FirstOrDefault();
+        if (patient is null) return;
+
+        ctx.Heal(patient, Amount);
+        ctx.Log($"    {self.Name} が {patient.Name} に施しを与えた（+{Amount}）", LogKind.Trigger);
+    }
+}
+
 /// <summary>澱み。既に積まれた毒を増幅する。毒が無ければ何もしない。</summary>
 public sealed class AmplifierTrait : Trait
 {
@@ -1910,6 +1959,7 @@ public static class TraitCatalog
         new ThornsTrait(),
         new MarkerTrait(),
         new MenderTrait(),
+        new AlmsTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),
