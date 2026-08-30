@@ -535,9 +535,32 @@ public static class UnitCatalog
         Flavor = "付いて来られる者だけを引き上げた。残りは、置いていくものだと思っていた。"
     };
 
+    /// <summary>
+    /// 責め苦のシガ。既存の「汚れ」（痺れ・IdleTurn）に付いた最初の読み手。
+    ///
+    /// 数値は仮置き。速さ3 は「遅いから捨てられた」層（ゴルム3・ドハ3）に合わせた
+    /// テーマ選択であって**機能要件ではない**——責め苦の判定が二重条件（Stun / IdleTurn）
+    /// なので、供給役より速くても遅くても読める（TormentTrait 参照）。
+    ///
+    /// 供給ゼロの編成では「1ターンおきにしか動けず、毎回 IdleTurn を差し出す駒」になる。
+    /// それも仕様で、差し出したターンは号令（ガン）・据え（バン）が買い取る。
+    /// </summary>
+    public static readonly UnitDef Shiga = new()
+    {
+        Id = "shiga",
+        Name = "責め苦のシガ",
+        MaxHp = 52,
+        Attack = 9,
+        Speed = 3,
+        Traits = new[] { TraitId.Torment },
+        PlusText = "動きを封じられた敵を殴ると、同じ重さの追い打ちを重ねる",
+        MinusText = "動ける敵を殴ると、怖気づいて自分が1ターン動けなくなる",
+        Flavor = "縛られた的しか殴れない臆病者。だからこそ、縛る者の隣でだけ牙になる。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

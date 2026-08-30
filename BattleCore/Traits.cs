@@ -54,6 +54,10 @@ public enum TraitId
     ThornGuard,  // 棘守り: 前か横の味方への単体攻撃を身代わりし、その味方と位置を入れ替える
     Forsake,     // 置き去り: 自分より速い味方を癒し、自分より遅い味方を削る（同速には何も起きない）
                  // プラスとマイナスが1つのルールの表と裏なので、どちらのブロックに入れても嘘になる
+    Torment,     // 責め苦: 動きを封じられた敵を殴ると追い打ち、動ける敵を殴ると自分が痺れる
+                 // 置き去りと同じく1つのルールの表と裏なので、どちらのブロックに入れても嘘になる
+    Avenge,      // 仇討ち: 標的にされた味方が殴られると割り込んで刺し返す。自分が殴られると怯む
+                 //（同上）
     Alms,        // 施し: 自分は減らずに味方を回復する（敵側の語彙）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -1377,6 +1381,52 @@ public sealed class ParalyzeTrait : Trait
 }
 
 /// <summary>
+/// 責め苦。痺れ（Stun / IdleTurn）に読み手を付ける特性。
+///
+/// **1つのルールの表と裏として書く**（置き去り・盤面ルール駒と同型）:
+/// 動きを封じられた敵を殴れば追い打ちが出る。動ける敵を殴れば、自分の動きが封じられる。
+/// 供給役（トウの痺れ粉・クグの大縛り）がいなければ、1ターンおきにしか動けない駒になる。
+/// それは仕様——差し出したターンは号令（ガン）・据え（バン）が買い取るので、
+/// **マイナスの側も売り物になる**（可変コスト型）。
+///
+/// **判定は二重条件**（Stun 持ち または IdleTurn == 現在ターン）。片方だけでは足りない:
+/// 痺れカウンタは**本人の手番が来た瞬間に消費される**（BattleEngine のターンループ）ので、
+/// シガより速い敵はシガの手番にはもうカウンタを持っておらず、痕跡は IdleTurn に変わっている。
+/// Stun だけを見ると「自分より遅い敵しか読めない」という速度順の罠が生まれ、
+/// クグの大縛り（最速の敵を縛る）が一生読めない。二重条件なら、トウの粉（速11で撒く）も
+/// クグの縛りも、シガの速さと無関係に全部読める。**原因ではなく結果で解決する**。
+///
+/// 追い打ちは倍率ではなく**加算**（同じ重さをもう1発）。倍率にすると強化を受けた瞬間に
+/// 二乗で伸びる（README「増幅は必ず加算にする」と同じ穴）。
+/// </summary>
+public sealed class TormentTrait : Trait
+{
+    public override TraitId Id => TraitId.Torment;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        // 死んでいても判定は同じ（結果で解決。例外を作らない）。
+        // 縛られた敵を殴り倒したなら追い打ちの条件は満たしている——出どころは既に消えているので
+        // ApplyDamage は生存判定で自然に空振りするが、「動ける敵を殴った」側の自傷は正しく走る。
+        bool bound = target.Counter(StatusKeys.Stun) > 0
+                     || target.Counter(StatusKeys.IdleTurn) == ctx.Turn;
+
+        if (bound)
+        {
+            // ApplyDamage の直呼びなので OnAfterAttack は再帰しない（追い打ちが追い打ちを呼ばない）。
+            ctx.Log($"    {self.Name} が動けない {target.Name} に追い打ちを重ねる", LogKind.Highlight);
+            ctx.ApplyDamage(target, Math.Max(1, self.CurrentAttack), self);
+            return;
+        }
+
+        // 動ける敵を殴ると怖気づく。痺れに乗せてあるので、次の手番が飛ぶ（→ IdleTurn → 号令・据え）
+        // だけでなく、CanActOutOfTurn が閉じてターン外の行動も止まる。
+        self.SetCounter(StatusKeys.Stun, 1);
+        ctx.Log($"    {self.Name} は動ける {target.Name} に怖気づいた", LogKind.FriendlyFire);
+    }
+}
+
+/// <summary>
 /// 断罪。反撃で殴られたとき、反撃してきた相手を痺れさせる。敵側の語彙。
 ///
 /// 反撃役（カド）の盤面への関与は反撃しかない。攻撃力が閾値を超えれば敵を倒し切って
@@ -2286,6 +2336,7 @@ public static class TraitCatalog
         new CondemnTrait(),
         new ThornGuardTrait(),
         new ForsakeTrait(),
+        new TormentTrait(),
         new InversionTrait(),
         new DroughtTrait(),
         new YokeTrait()
