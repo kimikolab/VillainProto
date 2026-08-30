@@ -7716,6 +7716,15 @@ if (focusId == "confirm")
         ("反撃改 (ドハ×カド)",
             Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Kado, center: UnitCatalog.Doha, back1: UnitCatalog.Nel, back3: UnitCatalog.Nono),
             Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Nel, center: UnitCatalog.Kado, back1: UnitCatalog.Doha, back3: UnitCatalog.Nono)),
+        // 置き去り（ナラ）の新2編成ぶん。仮置きは「ナラを中央」だったが、reseat の 120通り全探索で
+        // 中央はカドの席だと出た（被弾強化側は 42.1% → 91.7%）。速攻側は最良でも +1.4pt で、
+        // 仮置きとの差が閾値未満（この2本を1回の追試で並べるために、据え置き側も載せてある）。
+        ("置き去り×被弾強化",
+            Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Golm, center: UnitCatalog.Nara, back1: UnitCatalog.Kado, back3: UnitCatalog.Vel),
+            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Nara, center: UnitCatalog.Kado, back1: UnitCatalog.Mudo, back3: UnitCatalog.Vel)),
+        ("置き去り×速攻",
+            Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Borg, center: UnitCatalog.Nara, back1: UnitCatalog.Tou, back3: UnitCatalog.Sasa),
+            Formation.Build(front1: UnitCatalog.Tou, front3: UnitCatalog.Sasa, center: UnitCatalog.Sero, back1: UnitCatalog.Borg, back3: UnitCatalog.Nara)),
     };
 
     Console.WriteLine("## 採用候補の追試");
@@ -8545,7 +8554,26 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 抜く枠にゾトを選んだのは、ヴェルを外すと第2波が 98.0% → 32.5% まで落ちることが
     // 測定済み（2026-08-23）で、ゴルムは前列の受けを兼ねているため。
     // バンは前2。据えは位置を問わないが、ゾトの空けた席をそのまま使えば土台との差が1枠で済む。
-    ("追撃×据え (ハギ×バン)", Formation.Build(front1: UnitCatalog.Hagi, front3: UnitCatalog.Ban, center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel))
+    ("追撃×据え (ハギ×バン)", Formation.Build(front1: UnitCatalog.Hagi, front3: UnitCatalog.Ban, center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
+    // 置き去り（ナラ）の測定用。同じ1体が編成で正反対の駒になることを表で見えるようにする2本。
+    // **配置は仮置き**——採否を決める前に reseat（120通り全探索）→ confirm（seed 200..599）を回す。
+    //
+    // 削り側を燃料にする形。ムド（被弾強化）・カド（惨禍で削りが1.5倍）・ゴルム（巨躯で肩代わり）が
+    // 全員ナラより遅い＝毎ターン削られる側に来る。回復されるのはヴェル（速8）だけ。
+    // マイナスが収入になるかを見るためのエントリ。
+    // 配置は reseat 1位 → confirm +48.5pt で採用（仮置き＝ナラ中央は 43.0%）。
+    // 中央はナラではなくカドの席だった——棘鎧の身代わりは前か横の味方への単体攻撃に反応するので、
+    // 隣接次数4の中央に置くと反応先が5枠すべてになる。ナラは速さで対象を選ぶので席を選ばない。
+    ("置き去り×被弾強化", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Nara,
+                                     center: UnitCatalog.Kado, back1: UnitCatalog.Mudo,
+                                     back3: UnitCatalog.Vel)),
+    // 上の裏。全員がナラより速いので削りが一度も発火せず、ナラは純粋な回復役になる。
+    // **速さを揃えればマイナスが消える**という逃げ道が実際に成立するかの実証用。
+    // セロは前〜中に置くこと（狙撃化には戦闘中に後退した実績が要る）。
+    // reseat 1位でも +1.4pt（confirm 追試も +1.4pt）と閾値未満なので、仮置きのまま据え置き。
+    ("置き去り×速攻",     Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Borg,
+                                     center: UnitCatalog.Nara, back1: UnitCatalog.Tou,
+                                     back3: UnitCatalog.Sasa))
 };
 
 // メンバーを編成スロット 0..4 へ重複なく割り当てる全順列を、

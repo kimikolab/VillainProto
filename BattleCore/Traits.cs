@@ -52,6 +52,8 @@ public enum TraitId
     Condemn,     // 断罪: 反撃してきた相手を痺れさせる（敵側の語彙）
     Shatter,     // 砕け: 範囲攻撃を浴びると、その分を破片（アーマー）にして味方へ配る
     ThornGuard,  // 棘守り: 前か横の味方への単体攻撃を身代わりし、その味方と位置を入れ替える
+    Forsake,     // 置き去り: 自分より速い味方を癒し、自分より遅い味方を削る（同速には何も起きない）
+                 // プラスとマイナスが1つのルールの表と裏なので、どちらのブロックに入れても嘘になる
     Alms         // 施し: 自分は減らずに味方を回復する（敵側の語彙）
 }
 
@@ -1986,6 +1988,65 @@ public sealed class PyreTrait : Trait
         => self.Counter(StatusKeys.Burn) > 0 ? AttackPattern.Pierce : p;
 }
 
+/// <summary>
+/// 置き去り。自分の速さを境に味方を二分し、速い側を癒して遅い側を削る。
+/// **同速には何も起きない**——速さを揃えれば無効化できる、という編成側の逃げ道。
+///
+/// ロスターで唯一 Def.Speed を条件として読む駒（BindTrait は最速敵の選択にしか使わない）。
+/// 効き方を決めるのは保持者の速さそのもので、数値ではない。速さ7のナラなら
+/// 削り16体 / 無風6体 / 回復13体 に割れる。**調整ノブは Heal/Toll ではなく Nara.Speed。**
+///
+/// 符号の向きは意図的に「速い側が得」。逆向き（遅い側が得）にすると、削られる先が
+/// 速さ8以上の13体になり、そこに被弾変換器が1体もいない＝削りがただの損になる
+/// （ムド5 / ガルド4 / ドハ3 / セッキ2 / ムグ6 / ゾト7 / リィカ7 は全て速さ7以下）。
+///
+/// 削りは ApplyDamage を通す。惨禍で1.5倍になり、巨躯・庇う・分かち・後備えに
+/// 肩代わりされ、被弾強化の燃料になる——全て意図した帰結。「ApplyDamage が
+/// ダメージ処理の単一窓口」の原則（CLAUDE.md）から外れないこと。
+/// 棘（ThornsTrait）は同陣営の source を弾くので反撃は起きない（確認済み）。
+/// </summary>
+public sealed class ForsakeTrait : Trait
+{
+    public const int Heal = 5;
+    public const int Toll = 5;
+
+    public override TraitId Id => TraitId.Forsake;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+        => ctx.Log($"  {self.Name} は歩調を計った（速い味方 +{Heal} / 遅い味方 -{Toll}）", LogKind.Trigger);
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+
+        // スナップショットを取る。削りで味方が倒れると分裂・亡者・自爆・蘇生が
+        // 列挙の途中で盤面を触る（LivingMembers は既にスナップショットを返すが、
+        // 「この時点の生存者」で固定する意図をここで明示しておく）。
+        // 並びは Shuffled 側を使う。席順に効果を適用すると、同時に倒れうる駒の
+        // 死亡順が席番号で決まる（既存の作法：LivingMembersShuffled のコメント参照）。
+        var others = ctx.LivingMembersShuffled(self.TeamId)
+                        .Where(a => a != self)
+                        .ToList();
+
+        foreach (UnitState ally in others)
+        {
+            if (!ally.IsAlive) continue;          // 直前の削りの余波で落ちている場合がある
+
+            if (ally.Def.Speed > self.Def.Speed)
+            {
+                ctx.Heal(ally, Heal);             // AcceptsSupport の判定は ctx.Heal が持つ
+            }
+            else if (ally.Def.Speed < self.Def.Speed)
+            {
+                ctx.ApplyDamage(ally, Toll, self, isFriendlyFire: true, lethal: true);
+            }
+            // 同速は何もしない
+        }
+
+        ctx.Log($"    {self.Name} は隊列を置き去りにした", LogKind.FriendlyFire);
+    }
+}
+
 public static class TraitCatalog
 {
     private static readonly Dictionary<TraitId, Trait> Map = new Trait[]
@@ -2037,7 +2098,8 @@ public static class TraitCatalog
         new CinderTrait(),
         new PyreTrait(),
         new CondemnTrait(),
-        new ThornGuardTrait()
+        new ThornGuardTrait(),
+        new ForsakeTrait()
     }.ToDictionary(t => t.Id);
 
     public static Trait Get(TraitId id) => Map[id];

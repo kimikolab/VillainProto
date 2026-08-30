@@ -501,9 +501,34 @@ public static class UnitCatalog
         Flavor = "盾として不良品と判定された。割れながら破片を撒くので周りが危ないとも書かれている。"
     };
 
+    /// <summary>
+    /// 置き去りのナラ。速さを読む唯一の駒。
+    ///
+    /// 速さ7は味方35体の中央値。削り16体 / 無風6体（速さ7の帯：リィカ・ゾト・ラウ・
+    /// ヴィオ・ハギ・ホタ）/ 回復13体 に割れる。**速さ7の帯が丸ごと無風なのが気になる場合、
+    /// 最初に動かすノブはここ**——速さを8にすればその6体が削り側へ移る。
+    /// 規則そのものは触らないこと。
+    ///
+    /// 攻撃9・単体は「支援役だが殴りもする」帯。ノノ（攻3・攻撃しない）と違って
+    /// 手番を潰さないので、置き去りは OnTurnStart のパッシブのまま（第11期の
+    /// アクティブ移行の対象外）。
+    /// </summary>
+    public static readonly UnitDef Nara = new()
+    {
+        Id = "nara",
+        Name = "置き去りのナラ",
+        MaxHp = 62,
+        Attack = 9,
+        Speed = 7,
+        Traits = new[] { TraitId.Forsake },
+        PlusText = "毎ターン、自分より速い味方を癒す",
+        MinusText = "毎ターン、自分より遅い味方を削る。同じ速さの味方には何も起きない",
+        Flavor = "付いて来られる者だけを引き上げた。残りは、置いていくものだと思っていた。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);
