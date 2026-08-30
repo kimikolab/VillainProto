@@ -7702,18 +7702,36 @@ if (focusId == "confirm")
     // 座標ごと無効になったので、ここでは持ち越していない。
     var picks = new (string Name, Formation Old, Formation New)[]
     {
-        ("毒 (グザ×ミオ×ラウ)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: UnitCatalog.Mio, back3: UnitCatalog.Rau),
-            Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Gald, center: UnitCatalog.Guza, back1: UnitCatalog.Mio, back3: UnitCatalog.Rau)),
-        ("澱み喰い (グザ×ヴィオ)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Sid, back1: UnitCatalog.Vio, back3: UnitCatalog.Mio),
-            Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Gald, center: UnitCatalog.Guza, back1: UnitCatalog.Mio, back3: UnitCatalog.Vio)),
-        ("追撃×毒 (ハギ×グザ)",
-            Formation.Build(front1: UnitCatalog.Guza, front3: UnitCatalog.Gald, center: UnitCatalog.Golm, back1: UnitCatalog.Mio, back3: UnitCatalog.Hagi),
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Golm, center: UnitCatalog.Guza, back1: UnitCatalog.Hagi, back3: UnitCatalog.Mio)),
-        ("範囲耐性 (ヒビ×ボルグ)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Hibi, center: UnitCatalog.Borg, back1: UnitCatalog.Rica, back3: UnitCatalog.Dolga),
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Hibi, back1: UnitCatalog.Borg, back3: UnitCatalog.Rica)),
+        ("毒+耐久 (ベニ×トウ)",
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Mio, back1: UnitCatalog.Beni, back3: UnitCatalog.Tou),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Tou, back1: UnitCatalog.Mio, back3: UnitCatalog.Beni)),
+        ("反撃 (ヒサ×カド)",
+            Formation.Build(front1: UnitCatalog.Nono, front3: UnitCatalog.Gald, center: UnitCatalog.Nel, back1: UnitCatalog.Hisa, back3: UnitCatalog.Kado),
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Gald, center: UnitCatalog.Nel, back1: UnitCatalog.Kado, back3: UnitCatalog.Nono)),
+        ("惨禍×被弾強化",
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Kado, center: UnitCatalog.Mudo, back1: UnitCatalog.Nono, back3: UnitCatalog.Sero),
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Sero, center: UnitCatalog.Kado, back1: UnitCatalog.Mudo, back3: UnitCatalog.Nono)),
+        ("惨禍×死の連鎖",
+            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Kado, center: UnitCatalog.Vel, back1: UnitCatalog.Rica, back3: UnitCatalog.Zoto),
+            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Zoto, center: UnitCatalog.Kado, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
+        ("耐久 (ガルド×ノノ)",
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Golm, center: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back3: UnitCatalog.Nono),
+            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Nono, back3: UnitCatalog.Dolga)),
+        ("溜め (ガン×ドルガ×カド)",
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Hisa, back1: UnitCatalog.Gan, back3: UnitCatalog.Kado),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Gan, center: UnitCatalog.Hisa, back1: UnitCatalog.Kado, back3: UnitCatalog.Dolga)),
+        ("溜め改 (クグ×バン×ガン)",
+            Formation.Build(front1: UnitCatalog.Kado, front3: UnitCatalog.Kugu, center: UnitCatalog.Gan, back1: UnitCatalog.Ban, back3: UnitCatalog.Dolga),
+            Formation.Build(front1: UnitCatalog.Kugu, front3: UnitCatalog.Gan, center: UnitCatalog.Ban, back1: UnitCatalog.Kado, back3: UnitCatalog.Dolga)),
+        ("移動改 (バサ×ヨミ×シオ)",
+            Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.Yomi, back3: UnitCatalog.Basa),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sero, center: UnitCatalog.Shio, back1: UnitCatalog.Basa, back3: UnitCatalog.Yomi)),
+        ("反撃改2 (ガン×カド)",
+            Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Kado, center: UnitCatalog.Ban, back1: UnitCatalog.Gan, back3: UnitCatalog.Hisa),
+            Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Ban, center: UnitCatalog.Kado, back1: UnitCatalog.Hisa, back3: UnitCatalog.Gan)),
+        ("反撃改3 (カド×ハギ)",
+            Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.Gald, center: UnitCatalog.Hagi, back1: UnitCatalog.Hisa, back3: UnitCatalog.Kado),
+            Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.Gald, center: UnitCatalog.Kado, back1: UnitCatalog.Hagi, back3: UnitCatalog.Hisa)),
     };
 
     Console.WriteLine("## 採用候補の追試");
@@ -8383,14 +8401,14 @@ static IEnumerable<List<T>> Permute<T>(List<T> items)
 
 // compare / layout が共有する代表編成。系統ごとの当たり外れを見るための固定リスト。
 //
-// **配置は X字盤面（編成5枠）への移行で作り直した。** 旧6枠からは機械的な規則で写してある
-// （旧 front を 前1→前3→中央 の順に詰め、旧 back を 後1→後3 へ、中列はあふれた先へ下げる）。
-// 編成ごとの手による最適化はしていない。ただし写した結果 0% に潰れた編成と、下で宣言している
-// 制約を破った編成だけは reseat で振り直し、confirm（seed 200..599）で追試して採った。
+// **配置は X字盤面（編成5枠）で全32編成を振り直してある。** 5体が5枠を埋めるので
+// 全配置は 120 通りしかなく、reseat が編成ごとに全探索している。採否は confirm
+// （seed 200..599 / 選定に使った 0..199 とは重ならない・差 2pt 未満は据え置き）で決めた。
+// **横に並べたとき「編成の実力」と「配置を振ったかどうか」が混ざらない状態になっている。**
 //
 // 守った制約: ガルドは前列（庇うは前列でしか発動しない）/ セッキは後列（後備えは後列でしか
 // 発動しない）/ セロは前〜中（狙撃化には戦闘中に後退した実績が要る。最初から後列では発動しない）/
-// ヒサの隣接で最大HPがカドになること（標的が逸れる）。
+// ヒサの隣接で最大HPがカドになること（標的が逸れる）。探索は制約を満たす最良を採っている。
 //
 // **個々のエントリのコメントは、下記の「X字化に伴う振り直し」と書いてあるもの以外は
 // 旧6枠での経緯を述べている。** 席の名前（前2・後2）や増減 pt はその頃の値。
@@ -8410,7 +8428,8 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 支援2枚を後列に下げ、痺れ粉は守られる中衛から撒く（layout 1位）
     // ベニのマイナス（味方の毒が2倍に効く）が入った分、毒を浴びる位置関係が変わった。
     // ミオを中衛へ上げ、ベニとトウを後列に下げた形が上（+4.0pt / 第5波 +15.8）
-    ("毒+耐久 (ベニ×トウ)",  Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Mio, back1: UnitCatalog.Beni, back3: UnitCatalog.Tou)),
+    // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +4.7pt）
+    ("毒+耐久 (ベニ×トウ)",  Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Tou, back1: UnitCatalog.Mio, back3: UnitCatalog.Beni)),
     // 毒+耐久 の92%はベニ単独でもトウ単独でも出ない（ベニのみ 100/25/5/89/2、トウのみ 100/0/0/0/0）。
     // 効いているのは「毒の供給＋耐える手段」という型で、耐える側はトウでなくてもよい。
     // その裏を取るためのエントリ。トウをラウに差し替えた形。
@@ -8419,20 +8438,25 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // そのまま燃料になる形。ヴィオを2編成目に載せて、吸い上げが何を消しているかを見えるようにする。
     ("毒爆弾 (ラウ×ヴィオ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: UnitCatalog.Vio, back3: UnitCatalog.Rau)),
     // ヒサの隣接はカドだけ（後1↔後2）。ガルド(HP100>カド96)を隣に置くと標的が逸れる（layout 1位）
-    ("反撃 (ヒサ×カド)",     Formation.Build(front1: UnitCatalog.Nono, front3: UnitCatalog.Gald, center: UnitCatalog.Nel, back1: UnitCatalog.Hisa, back3: UnitCatalog.Kado)),
+    // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +27.7pt）
+    ("反撃 (ヒサ×カド)",     Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Gald, center: UnitCatalog.Nel, back1: UnitCatalog.Kado, back3: UnitCatalog.Nono)),
     // ヒサを前1へ回すと隣接はカドとノノになるが、標的は最大HPで選ばれるのでカドのままで狙いは崩れない。
     // カドを前2の中央に置くと巻き込みがヒサ・ムド・セロの3枚へ広がり、成長が速くなる（+7.1pt / 第5波 +19.3）。
     // 旧配置（ムド前1・ヒサ前3）はヒサの隣接をカドだけに絞る形だったが、カドの巻き込み先が2枚に減っていた（reseat 追試）
-    ("惨禍×被弾強化",        Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Kado, center: UnitCatalog.Mudo, back1: UnitCatalog.Nono, back3: UnitCatalog.Sero)),
+    // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +7.3pt）
+    ("惨禍×被弾強化",        Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Sero, center: UnitCatalog.Kado, back1: UnitCatalog.Mudo, back3: UnitCatalog.Nono)),
     // 惨禍（味方全体の被ダメ5割増）は位置を問わないので、死の密度は隣接に頼らなくても出る。
     // リィカを後1へ下げて生贄をゾト1枚に絞り、中衛はヴェルに。リィカが開幕で自陣を削りすぎる形をやめた（+19.1pt / 第4波 +57.0）。
     // 旧配置（中衛リィカがカドとゾトを削る）は狙いとしては筋が通っていたが、第4波で 25% まで落ちていた（reseat 追試）
-    ("惨禍×死の連鎖",        Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Kado, center: UnitCatalog.Vel, back1: UnitCatalog.Rica, back3: UnitCatalog.Zoto)),
+    // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +5.1pt）
+    ("惨禍×死の連鎖",        Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Zoto, center: UnitCatalog.Kado, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
     // ガルドは前列でないと庇えない。前1を空けてガルドとゴルムを前2・前3へ寄せた形が探索1位。セロは中衛から被弾後退（layout 1位）
-    ("耐久 (ガルド×ノノ)",   Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Golm, center: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back3: UnitCatalog.Nono)),
+    // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +4.4pt）
+    ("耐久 (ガルド×ノノ)",   Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Nono, back3: UnitCatalog.Dolga)),
     // ヒサを中衛に置くと横隣接が無く、深さ隣接の後2だけを指す。そこにカドを置けば標的は確定する。
     // カドを後2へ下げても囃し立てで被弾は来るので棘は回り、前列はガルドとドルガが受ける（+3.6pt / 第5波 +15.5）
-    ("溜め (ガン×ドルガ×カド)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Hisa, back1: UnitCatalog.Gan, back3: UnitCatalog.Kado)),
+    // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +10.6pt）
+    ("溜め (ガン×ドルガ×カド)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Gan, center: UnitCatalog.Hisa, back1: UnitCatalog.Kado, back3: UnitCatalog.Dolga)),
     // グザの瘴気（味方全体に毒）は位置不問。ムドは前1で敵の攻撃も浴びて育ち、ガルドは前3で庇う。セロは中央から被弾後退。
     // X字化に伴う振り直し: 後列のグザとボルグを入れ替えた（reseat 1位＝狙いを満たす最良 / confirm +19.6pt / 第2波 +57.8）
     ("毒→被弾強化 (グザ×ムド)", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Guza, back3: UnitCatalog.Borg)),
@@ -8448,7 +8472,8 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     ("突き出し (セロ×ヨミ)",  Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Yomi, back3: UnitCatalog.Nel)),
     // 溜め役3体を敵から遠い後列と中衛へ、という狙いはそのまま。前1を空けてカド・クグを前2/前3へ寄せ、
     // 中衛をガンに替えた形が上（+2.1pt）。カドの巻き込み先はクグとガンで変わらない
-    ("溜め改 (クグ×バン×ガン)", Formation.Build(front1: UnitCatalog.Kado, front3: UnitCatalog.Kugu, center: UnitCatalog.Gan, back1: UnitCatalog.Ban, back3: UnitCatalog.Dolga)),
+    // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +3.5pt）
+    ("溜め改 (クグ×バン×ガン)", Formation.Build(front1: UnitCatalog.Kugu, front3: UnitCatalog.Gan, center: UnitCatalog.Ban, back1: UnitCatalog.Kado, back3: UnitCatalog.Dolga)),
     // 軋みの割り込み攻撃の追加後に再探索。セロは前1から中のバサ、次に後1のヨミを順に突き飛ばして貫きに変わり、
     // 逃亡もバサの入れ替えも全部シオとヨミの燃料になる（layout 1位）
     ("移動改 (バサ×ヨミ×シオ)", Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.Yomi, back3: UnitCatalog.Basa)),
@@ -8461,10 +8486,12 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     ("反撃改 (ドハ×カド)",   Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Kado, center: UnitCatalog.Doha, back1: UnitCatalog.Nel, back3: UnitCatalog.Nono)),
     // ヒサを中衛へ。横隣接が無いので深さ隣接の前2＝カドだけを指す。前列3枚が受け、カドの巻き込みはドハ・バン・ヒサへ広がる
     // （+12.2pt / 第3波 +39.0）。旧配置はヒサ前3で標的は同じだが、前列が2枚しかなく第3波が 36% だった
-    ("反撃改2 (ガン×カド)",  Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Kado, center: UnitCatalog.Ban, back1: UnitCatalog.Gan, back3: UnitCatalog.Hisa)),
+    // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +9.3pt）
+    ("反撃改2 (ガン×カド)",  Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Ban, center: UnitCatalog.Kado, back1: UnitCatalog.Hisa, back3: UnitCatalog.Gan)),
     // ヒサを中衛へ。隣接はガン(前2)とカド(後2)だが、標的は最大HPで選ばれるのでカド。ガルドは前3で庇う
     // （+7.4pt / 第3波 +23.3）。ガルド前列の制約を外すと 73.1% まで伸びるが、差は +0.5pt なので制約を保つ側を採った
-    ("反撃改3 (カド×ハギ)",  Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.Gald, center: UnitCatalog.Hagi, back1: UnitCatalog.Hisa, back3: UnitCatalog.Kado)),
+    // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +19.1pt）
+    ("反撃改3 (カド×ハギ)",  Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.Gald, center: UnitCatalog.Kado, back1: UnitCatalog.Hagi, back3: UnitCatalog.Hisa)),
     // ハギは追い打ちなので位置不問。X字化に伴う振り直しで、グザを中央（瘴気は位置不問）、
     // 前列をガルドとゴルムの受け2枚に、ハギとミオを後列へ（reseat 2位 / confirm +7.5pt / 第2波 +44.0）
     ("追撃×毒 (ハギ×グザ)",  Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Golm, center: UnitCatalog.Guza, back1: UnitCatalog.Hagi, back3: UnitCatalog.Mio)),
