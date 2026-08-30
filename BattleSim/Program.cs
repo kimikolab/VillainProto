@@ -439,7 +439,9 @@ if (focusId == "swap")
 //   2. 波間の相関     別の波として並べているのに同じことを測っていないか。
 //                     第一波は全編成 100% で分散 0 なので相関は定義できない（—）
 //   3. 固有の勝者・敗者  その波でだけ 100%（他では 100% 未満）／その波でだけ 0%（他では 0% 超）
-//                     の編成。**これが波の個性の実体**で、ここが空の波は独立していない
+//                     の編成。**これが波の個性の実体**で、ここが空の波は独立していない。
+//                     **第一波は比較対象から外す**——全編成 100% を意図して維持している波なので、
+//                     比較に入れると第2〜5波の固有の勝者が恒等的に 0 になる
 //
 // 中間帯は **5 < x < 95 の狭義**。境界を含めると 5.0% ちょうどの編成（速攻の第二波）が
 // 「分離できている」側に入るが、あれは床に張り付いている。
@@ -524,21 +526,35 @@ if (focusId == "spread")
     Console.WriteLine("**固有の敗者** = その波でだけ 0%（他のどの波でも 0% 超）の編成。");
     Console.WriteLine("両方とも空の波は、独立した波として存在していない。");
     Console.WriteLine();
+    Console.WriteLine("**第一波は比較から外してある。** チュートリアル波として全編成 100% を意図的に");
+    Console.WriteLine("維持しているので、比較に入れると第2〜5波の固有の勝者が**恒等的に 0** になる");
+    Console.WriteLine("——第三波を何に作り替えても動かない指標だった。第一波自身も判定しない。");
+    Console.WriteLine();
     for (int w = 0; w < nw; w++)
     {
+        Console.WriteLine($"### 第{w + 1}波");
+        Console.WriteLine();
+        if (w == 0)
+        {
+            // 第一波は全編成 100%。「他のどの波でも 100% 未満」を要求する判定の比較対象に
+            // 入れると、第2〜5波の固有の勝者が恒等的に 0 になる（第20期 逆位の副産物）。
+            // ここを直さずに波を作り替えると、主判定が到達不能なまま前後比較をすることになる。
+            Console.WriteLine("- （比較対象外。全編成 100% のチュートリアル波）");
+            Console.WriteLine();
+            continue;
+        }
+
         var winners = new List<string>();
         var losers = new List<string>();
         for (int b = 0; b < nb; b++)
         {
             bool onlyTop = rate[w][b] >= 100.0
-                        && Enumerable.Range(0, nw).All(o => o == w || rate[o][b] < 100.0);
+                        && Enumerable.Range(1, nw - 1).All(o => o == w || rate[o][b] < 100.0);
             bool onlyBottom = rate[w][b] <= 0.0
-                           && Enumerable.Range(0, nw).All(o => o == w || rate[o][b] > 0.0);
+                           && Enumerable.Range(1, nw - 1).All(o => o == w || rate[o][b] > 0.0);
             if (onlyTop) winners.Add(spreadBuilds[b].Name);
             if (onlyBottom) losers.Add(spreadBuilds[b].Name);
         }
-        Console.WriteLine($"### 第{w + 1}波");
-        Console.WriteLine();
         Console.WriteLine($"- 固有の勝者 ({winners.Count}): " + (winners.Count == 0 ? "**なし**" : string.Join(" / ", winners)));
         Console.WriteLine($"- 固有の敗者 ({losers.Count}): " + (losers.Count == 0 ? "**なし**" : string.Join(" / ", losers)));
         Console.WriteLine();

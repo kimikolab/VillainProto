@@ -810,6 +810,17 @@ public static class EnemyCatalog
     // 第三波をどう作っても動かない（第一波を 100% のまま置く限り）。
 public static readonly UnitDef Inverter = Make("inverter", "逆位の祭司", 90, 10, 7, TraitId.Inversion);
 
+    // 渇きの祭司: **第三波の中央に採用した**（2026-08-30）。巡礼騎士1枚と差し替えてある。
+    // **数値は巡礼騎士（75/15/7）と1つも違わない。トレイトだけを足してある。**
+    // 逆位は HP を 75→90・攻を 15→10 と動かしたせいで「壁が変わったのか、ルールが効いたのか」
+    // の切り分けに追加測定が要った。今回は数値を固定したので、差分はルールだけに閉じ込まる
+    // ——同数値・トレイト無しの対照は 35編成すべてで現行と1桁も違わなかった（検算済み）。
+    //
+    // 測定（spread・seed 200・35編成）: 第三波の 100%編成 18 → 11 / 固有の敗者 0 → 2 /
+    // 中間帯 12 → 14 / 第2〜4波すべて100% 16 → 9 / 第2波との相関 +0.85 → +0.71。
+    // 平均は 80.5 → 70.0 なので**波としては難しくなっている**（逆位は易しくしていた）。
+    public static readonly UnitDef Droughter = Make("droughter", "渇きの祭司", 75, 15, 7, TraitId.Drought);
+
     public sealed record Stage(string Name, Formation Enemy);
 
     public static IReadOnlyList<Stage> Stages { get; } = new[]
@@ -838,8 +849,16 @@ public static readonly UnitDef Inverter = Make("inverter", "逆位の祭司", 90
         //
         // 中央を逆位の祭司（EnemyCatalog.Inverter）に差し替える案は測って**採らなかった**。
         // 理由は Inverter の宣言に全文（要するに「反転はこの波を易しくする方向に働く」）。
+        //
+        // **中央は渇きの祭司（Droughter）。** 巡礼騎士と数値は同一で、盤面ルールを1つ持つ
+        // ——生きている間、**両陣営の回復が一切通らない**。狙いは「後列に届くか」しか
+        // 問うていなかったこの波に、**持続資源という別の軸を1本足す**こと。
+        // 中央に置くのは逆位のときと同じ理由で、単体攻撃は前列2枚を割るまで届かず、
+        // 貫きなら2番目（減衰75%）で必ず当たる——「前から割るか、貫きで減衰を飲むか」という
+        // この波が既に教えている内容が、そのままルール駒への解答になる。
+        // 教えること:「回復を数えて編成を組んだなら、それが通らない盤面がある」。
         new Stage("第三波 / 討伐隊本隊",
-            Formation.Build(front1: Knight, front3: Hero, center: Knight, back1: Archer, back3: Axeman)),
+            Formation.Build(front1: Knight, front3: Hero, center: Droughter, back1: Archer, back3: Axeman)),
 
         // 一撃は軽いが硬い。決着まで時間がかかるので、
         // 積み上げ系が立ち上がる余地があるかを確かめるためのステージ。

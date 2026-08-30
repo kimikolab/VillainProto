@@ -1048,6 +1048,21 @@ public sealed class BattleContext
         if (!target.IsAlive || amount <= 0) return;
         if (!target.AcceptsSupport) return;
 
+        // 渇き（DroughtTrait）: 保持者が盤上に生きている間、回復は一切通らない。
+        // **両陣営にかかる。** ここ1箇所で止めれば足りるのは、ここが回復の単一窓口だから
+        // ——継ぎ当て・施し・毒喰らい・移り木・置き去りのすべてがこの入口を通る。
+        //
+        // **止めないもの（意図的）:**
+        //   蘇生（Revive）    Hp を直接書くのでこの窓口を通らない。**死軸には無風のまま**
+        //                     ——狙いは持続回復軸への課税で、死軸まで巻き込むと分離が粗くなる
+        //   破片（Armor）     ApplyDamage の側で消費されるプールで、回復とは別資源。
+        //                     「誰の助けも届かない駒に唯一届く支援」がこの波でもう一段強くなる
+        //   攻撃力の強化      回復ではない。号令・鬨・縛めは通常どおり
+        //
+        // ノノ（MenderTrait）は ctx.Heal の後に self.Hp -= amount を無条件で走らせるので、
+        // 渇き下では**一方的に減る**。これは意図した挙動（回復役を連れてきた代金だけが残る）。
+        if (AllUnits.Any(u => u.IsAlive && u.HasTrait(TraitId.Drought))) return;
+
         int before = target.Hp;
         target.Hp = Math.Min(target.MaxHp, target.Hp + amount);
         if (target.Hp == before) return;

@@ -58,7 +58,8 @@ public enum TraitId
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
-    Inversion    // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
+    Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
+    Drought      // 渇き: 保持者が生きている間、回復が一切通らない。**両陣営に等しくかかる**
 }
 
 /// <summary>
@@ -2083,6 +2084,36 @@ public sealed class InversionTrait : Trait
         => ctx.Log($"    {self.Name} が倒れ、次のターンから行動順が戻る", LogKind.Highlight);
 }
 
+/// <summary>
+/// 渇き: 保持者が盤上に生きている間、**回復が一切通らない**。両陣営に等しくかかる。
+///
+/// **判定は engine 側（<c>BattleContext.Heal</c> の入口）に置いてある。**
+/// この Trait 本体はログを出すだけ。回復が通るかどうかは盤面の状態であって、
+/// 回復される側の駒ごとのフックでは表現できない（逆位が order に置いてあるのと同じ理由）。
+/// 回復の単一窓口が <c>ctx.Heal</c> なので、止める場所は 1 箇所で足りる。
+///
+/// **止めないもの**（意図的。詳細は <c>BattleContext.Heal</c> のコメント）:
+/// 蘇生（<c>ctx.Revive</c> は Hp を直接書く）・破片（<c>StatusKeys.Armor</c> は
+/// <c>ApplyDamage</c> 側で消費される別資源）・攻撃力の強化（回復ではない）。
+/// 死軸と破片軸には無風のままにしてある——狙いは持続回復軸への課税で、
+/// そこまで巻き込むと「何に課税したのか」が分離できなくなる。
+///
+/// 保持者を倒せば回復は戻る。<c>Heal</c> は呼ばれるたびに評価するので、
+/// 逆位（order がターン頭に1回だけ組まれる）と違い**倒したその場から**戻る。
+/// </summary>
+public sealed class DroughtTrait : Trait
+{
+    public override TraitId Id => TraitId.Drought;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+        => ctx.Log($"  {self.Name} が盤面を渇かせた（両陣営の回復が通らなくなる）", LogKind.Highlight);
+
+    // HandleDeath は OnDeath の前に Hp = 0 を入れているので、この時点で保持者は既に
+    // 生存判定から外れている（＝この直後の Heal はもう通る）。
+    public override void OnDeath(BattleContext ctx, UnitState self)
+        => ctx.Log($"    {self.Name} が倒れ、回復が戻った", LogKind.Highlight);
+}
+
 public static class TraitCatalog
 {
     private static readonly Dictionary<TraitId, Trait> Map = new Trait[]
@@ -2136,7 +2167,8 @@ public static class TraitCatalog
         new CondemnTrait(),
         new ThornGuardTrait(),
         new ForsakeTrait(),
-        new InversionTrait()
+        new InversionTrait(),
+        new DroughtTrait()
     }.ToDictionary(t => t.Id);
 
     public static Trait Get(TraitId id) => Map[id];
