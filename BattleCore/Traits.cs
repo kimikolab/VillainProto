@@ -64,7 +64,8 @@ public enum TraitId
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
     Drought,     // 渇き: 保持者が生きている間、回復が一切通らない。**両陣営に等しくかかる**
-    Yoke         // 軛: 保持者が生きている間、1回のダメージが上限で切られる。**両陣営に等しくかかる**
+    Yoke,        // 軛: 保持者が生きている間、1回のダメージが上限で切られる。**両陣営に等しくかかる**
+    Hush         // 粛: 保持者が生きている間、ターン外の行動が一切通らない。**両陣営に等しくかかる**
 }
 
 /// <summary>
@@ -2368,6 +2369,76 @@ public readonly record struct YokeRule(int Cap, bool Active)
     public static YokeRule Default => new(YokeTrait.Cap, Active: true);
 }
 
+/// <summary>
+/// 粛: 保持者が盤上に生きている間、**ターン外の行動が一切通らない**。両陣営に等しくかかる。
+///
+/// <para><b>判定は engine 側（<c>BattleContext.CanActOutOfTurn</c>）に置いてある。</b>
+/// この Trait 本体はログを出すだけ。ターン外に振れるかどうかは全員に一度にかかる盤面の状態で、
+/// 振る側の駒ごとのフックでは表現できない（逆位が order に、渇きが <c>Heal</c> の入口に、
+/// 軛が <c>ApplyDamage</c> に置いてあるのと同じ理由）。
+/// ターン外の行動の単一窓口が <c>CanActOutOfTurn</c> なので、止める場所は 1 箇所で足りる。</para>
+///
+/// <para><b>この窓口を通る経路は 4 本だけ:</b>
+/// <list type="bullet">
+/// <item>棘（<see cref="ThornsTrait"/>・カド）: 殴られたら殴り返す</item>
+/// <item>仇討ち（<see cref="AvengeTrait"/>・ザン）: 標的の味方が殴られたら刺し返す</item>
+/// <item>軋み（<see cref="DisplacedTrait"/>・ヨミ）: 動かされた直後に割り込む</item>
+/// <item>追い打ち（<see cref="PursuerTrait"/>・ハギ）: 味方が敵を倒したら割り込む</item>
+/// </list></para>
+///
+/// <para><b>止めないもの</b>（意図的）:
+/// <list type="bullet">
+/// <item><b>肩代わり全種</b>（庇う・分かち・巨躯・後備え・棘守り）: これは<b>ダメージの再分配</b>で
+/// あって行動ではない。<c>CanActOutOfTurn</c> を通らないので粛の下でも普通に働く</item>
+/// <item><b>自分の手番内の追撃</b>: 責め苦（<see cref="TormentTrait"/>・シガ）は
+/// <c>OnAfterAttack</c> ＝自分の手番の中なので<b>無風</b>。
+/// **同じフェーズで作った読み手2体（ザン／シガ）が、この規則ひとつで割れる。**</item>
+/// <item>毒・燃焼の刻み: <c>TickStatuses</c> はターン頭にまとめて走るので窓口を通らない</item>
+/// </list></para>
+///
+/// <para>保持者を倒せばターン外の行動は戻る。<c>CanActOutOfTurn</c> は呼ばれるたびに評価するので、
+/// 逆位（order はターン頭に1回だけ組む）と違い<b>倒したその場から</b>戻る。
+/// 「早く割れば解禁される」という勾配が自己言及的に立つ——軛と同じ狙い。</para>
+/// </summary>
+public sealed class HushTrait : Trait
+{
+    public override TraitId Id => TraitId.Hush;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+    {
+        // 診断が規則を切っている版（hush の V1「壁のみ」）では何も起きないので、ログも出さない。
+        if (!ctx.Hush.Active) return;
+        ctx.Log($"  {self.Name} が盤面を鎮めた（両陣営のターン外の行動が通らなくなる）", LogKind.Highlight);
+    }
+
+    // HandleDeath は OnDeath の前に Hp = 0 を入れているので、この時点で保持者は既に
+    // 生存判定から外れている（＝この直後の CanActOutOfTurn はもう通る）。
+    public override void OnDeath(BattleContext ctx, UnitState self)
+    {
+        if (!ctx.Hush.Active) return;
+        ctx.Log($"    {self.Name} が倒れ、ターン外の行動が戻った", LogKind.Highlight);
+    }
+}
+
+/// <summary>
+/// 粛の規則。<b>診断（hush）が版を並べて 1 回の実行の中で比べるためだけに外から差せる。</b>
+/// 既定は <see cref="Default"/> ＝有効で、<b>これが本採用の規則</b>。渡さない限り盤面は常にこれ。
+///
+/// <para><b>調整ノブは持たない。</b> 軛の <c>Cap</c> に当たる連続量がここには無い
+/// ——「ターン外に振れるか」は二値なので、帯を振る余地が構造的に存在しない。
+/// 緩めるとしたら係数ではなく窓口の絞り込み（回数制限など）になるが、それは別の規則。</para>
+///
+/// <para><b>書き換え可能な static の調整ノブにしないこと。</b> Trait は共有シングルトンで、
+/// layout は戦闘を並列実行する（<see cref="ColossusRule"/> / <see cref="YokeRule"/> と同じ判断）。</para>
+///
+/// <para><see cref="Active"/> は<b>保持者を盤上に置いたまま規則だけを外す</b>ための切り替え。
+/// 「壁が変わったのか、ルールが効いたのか」の切り分けに要る。</para>
+/// </summary>
+public readonly record struct HushRule(bool Active)
+{
+    public static HushRule Default => new(Active: true);
+}
+
 public static class TraitCatalog
 {
     private static readonly Dictionary<TraitId, Trait> Map = new Trait[]
@@ -2425,7 +2496,8 @@ public static class TraitCatalog
         new AvengeTrait(),
         new InversionTrait(),
         new DroughtTrait(),
-        new YokeTrait()
+        new YokeTrait(),
+        new HushTrait()
     }.ToDictionary(t => t.Id);
 
     public static Trait Get(TraitId id) => Map[id];

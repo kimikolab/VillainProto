@@ -88,11 +88,24 @@ public sealed class BattleContext
     ///
     /// 痺れカウンタはここでは消費しない。割り込みは相手のターン中に起きるので、
     /// ここで消すと本人のターンが回ってくる前に縛めが解けてしまう。
+    ///
+    /// <para>粛（<see cref="HushTrait"/>）: 保持者が盤上に生きている間、ここが全員に対して閉じる。
+    /// <b>両陣営にかかる。</b> 非対称なのは「こちらはそのルールを知って編成を組めるが、
+    /// 敵は組めない」点だけ（逆位・渇き・軛と同じ）。</para>
+    ///
+    /// <para><b>保持者の探索を最後に置く</b>のは、既存の条件で落ちる場合に走らせないため
+    /// （<c>&amp;&amp;</c> は短絡する。layout は数百万戦を並列で回す）。軛が
+    /// <c>amount &gt; Cap</c> を先に見るのと同じ理由。</para>
+    ///
+    /// <para><b>止まるのはここを通る4本だけ</b>（棘・仇討ち・軋み・追い打ち）。肩代わり
+    /// （庇う・分かち・巨躯・後備え・棘守り）はダメージの再分配であって行動ではないので、
+    /// この窓口を通らない＝粛の下でも働く。責め苦（シガ）の追撃も自分の手番の中なので無風。</para>
     /// </summary>
     public bool CanActOutOfTurn(UnitState u)
         => u.IsAlive
            && u.Counter(StatusKeys.Stun) == 0
-           && u.Traits.All(t => t.CanReact(this, u));
+           && u.Traits.All(t => t.CanReact(this, u))
+           && !(Hush.Active && AllUnits.Any(x => x.IsAlive && x.HasTrait(TraitId.Hush)));
 
     public void Interrupt(Action body)
     {
@@ -223,12 +236,20 @@ public sealed class BattleContext
     /// </summary>
     public YokeRule Yoke { get; }
 
-    public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null)
+    /// <summary>
+    /// 粛の規則。<b>診断（hush）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="HushRule.Default"/>）。static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public HushRule Hush { get; }
+
+    public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null,
+                         HushRule? hush = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
         Colossus = colossus ?? ColossusRule.Default;
         Yoke = yoke ?? YokeRule.Default;
+        Hush = hush ?? HushRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -1261,10 +1282,11 @@ public static class BattleEngine
     /// verbose=false にするとログを作らないので、一括シミュレーションが速い。
     /// </summary>
     public static BattleResult Run(Formation player, Formation enemy, int seed, bool verbose = true,
-                                   ColossusRule? colossus = null, YokeRule? yoke = null)
+                                   ColossusRule? colossus = null, YokeRule? yoke = null,
+                                   HushRule? hush = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
-               seed, verbose, colossus, yoke);
+               seed, verbose, colossus, yoke, hush);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -1276,9 +1298,9 @@ public static class BattleEngine
     /// </summary>
     public static BattleResult Run(IReadOnlyList<UnitState> player, IReadOnlyList<UnitState> enemy,
                                    int seed, bool verbose = true, ColossusRule? colossus = null,
-                                   YokeRule? yoke = null)
+                                   YokeRule? yoke = null, HushRule? hush = null)
     {
-        var ctx = new BattleContext(seed, verbose, colossus, yoke);
+        var ctx = new BattleContext(seed, verbose, colossus, yoke, hush);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
