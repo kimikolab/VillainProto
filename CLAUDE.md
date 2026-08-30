@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -47,6 +47,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 convert [絞り込み]  # 個体HP だけを振った台の系列と変換率（第18期 IA）
     dotnet run --project BattleSim -c Release 0 ptrace [絞り込み]   # 毒の立ち上がり診断
     dotnet run --project BattleSim -c Release 0 life [絞り込み] [駒Id]  # 駒の寿命と稼働率（第19期。既定は kado）
+    dotnet run --project BattleSim -c Release 0 route             # 自傷の燃料は変換器まで届くか（第19期）
 
 `layout` は「どう置くか」の粗い当たりを付ける道具で、その値で採否を決めてはいけない。
 seed 50 の 720通りの最大なので上位は運で入れ替わり、狙い（ガルド前列・セッキ後列）も無視する。
@@ -239,6 +240,16 @@ def を並べると呪詛入りの編成には 1ダメージも通らず、**反
 **(A) はオーバーキルを含む。** `ApplyDamage` は残HPで切り詰めない（`Amount` は素の量、`HpAfter` が
 0 止まり）ので、**(A) は「敵のHPに変換された量」ではなく「振り下ろした量」。** 変換率は
 「硬い的で出力がどう変わるか」を測るが、**「その出力が無駄になっているか」は測っていない。**
+
+`route` は**自傷の燃料が変換器まで届く配置**を測る（第19期）。「置き去り×被弾強化」の
+メンバーを固定し、カドを中央に残したまま席だけを振った5変種を出す。`CompareBuilds()` は
+触らず、変種は診断のローカルに組む（`gradient` / `aim` と同じ扱い）。
+
+**V3 と V4 の対照が要。** 巨躯の被覆から出る方法は「壁と同じ深さか、より浅い列に立つ」しか
+ないので、素朴に組むと**被覆から出ることと前列に晒されることが同じ操作に潰れる**。
+V4（V3 のムド↔ヴェル）は被覆ゼロのまま変換器だけを後列に戻すので、この2つを割れる。
+割らずに V1〜V3 だけを読むと「肩代わり役が自傷軸を無効化している」という誤った一般則が出る
+（実際の差は燃料 +12 ではなく敵からの被弾 +66）。結論は README「自傷の燃料は変換器まで届く」。
 
 `replay` は戦闘1戦を「台本」（初期盤面＋時間順のイベント列）として JSON で吐く。
 勝率・連鎖深度が数字で答えてくれない「畳みかけて見えるか」を目で確かめるための道具で、
