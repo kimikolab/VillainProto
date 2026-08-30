@@ -172,6 +172,24 @@ public abstract class Trait
     public virtual void OnKill(BattleContext ctx, UnitState self, UnitState victim) { }
     public virtual void OnAllyDeath(BattleContext ctx, UnitState self, UnitState dead) { }
 
+    /// <summary>
+    /// 味方の誰かがダメージを受けたとき。<see cref="OnAllyDeath"/> の鏡で、
+    /// 発火点は <see cref="OnDamaged"/> の直後（本人以外の生存チームメイトへ通知）。
+    ///
+    /// <b>破片（Armor）で受け切った被弾では呼ばれない。</b> ApplyDamage が
+    /// 「何も起きなかった」として早期 return する位置より後ろにあるため——
+    /// 被弾強化も反撃もそこで止まる、という既存の規則にそのまま乗っている。
+    ///
+    /// 出どころ（敵か味方の事故か）で絞らずに全部流す。<see cref="OnDamaged"/> と同じ方針で、
+    /// 「敵からの被弾だけを見る」かどうかは受け手の特性が <paramref name="source"/> で決める。
+    /// ここで絞ると、味方の事故に反応する駒を後から足せなくなる。
+    ///
+    /// 死亡処理（HandleDeath）より<b>前</b>に走る。致命の一撃なら、味方が倒れる前に
+    /// 割り込みが刺さる（棘が自分の死の前に刺し返すのと同じ順序）。
+    /// </summary>
+    public virtual void OnAllyDamaged(BattleContext ctx, UnitState self, UnitState ally,
+                                      int dmg, UnitState? source) { }
+
     /// <summary>敵味方を問わず誰かが倒れたとき。自分自身の死でも呼ばれる。</summary>
     public virtual void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead) { }
 
@@ -1381,6 +1399,74 @@ public sealed class ParalyzeTrait : Trait
 }
 
 /// <summary>
+/// 仇討ち。標的（Marked）に初めて付いた読み手。
+///
+/// **1つのルールの表と裏**: 標的にされた味方が殴られると、殴った相手へ割り込んで刺し返す。
+/// 自分が殴られると怯んで（＝痺れて）次の手番を失う。
+///
+/// **マイナス側を痺れに乗せてあるのが要点。** これ1つで二つのことが同時に立つ:
+/// (a) 飛んだ手番は IdleTurn になるので、号令（ガン）・据え（バン）が買い取る。
+/// (b) 痺れている間は <see cref="BattleContext.CanActOutOfTurn"/> が閉じるので**反撃も止まる**
+///     ——「ザン本人を殴れば黙る」という攻略の語彙が、追加のコードなしで敵側に立つ。
+///
+/// **1ターンに1回まで。** 範囲攻撃で標的持ちが複数回削られたときの多重発火をここで塞ぐ
+/// （「蘇生は一回性効果を掛け算する」と同型の暴走の予防）。
+///
+/// 反撃量は**自分の攻撃力**。被ダメ量を参照する反射は棘（ThornsTrait）で不採用にした形で、
+/// 敵の火力が低い波では何も起きず高い波では先に死ぬ、という挟み撃ちから抜けられない。
+///
+/// **破片が怯みを止める**（コード追加ゼロの創発）: 破片で受け切った被弾は
+/// <see cref="OnDamaged"/> ごと走らないので、ヒビの破片を配られたザンは殴られても怯まない。
+/// 破片に初めて実質的な読み手が付く。
+///
+/// 標的の引き寄せは単体攻撃にしか効かない（SelectTarget）ので、主戦場は単体攻撃の波になる。
+/// </summary>
+public sealed class AvengeTrait : Trait
+{
+    /// <summary>この駒が最後に刺し返したターン。1ターン1回の頭打ちに使う。</summary>
+    private const string TurnKey = "avenge_turn";
+
+    public override TraitId Id => TraitId.Avenge;
+
+    public override void OnAllyDamaged(BattleContext ctx, UnitState self, UnitState ally,
+                                       int dmg, UnitState? source)
+    {
+        if (ally == self) return;
+        if (ally.Counter(StatusKeys.Marked) <= 0) return;               // 標的にされた味方だけ
+        if (source is null || source.TeamId == self.TeamId) return;     // 味方の事故には出ない
+        if (!source.IsAlive) return;
+        if (ctx.InReaction) return;                                     // 反撃の連鎖を止める
+
+        // 怯み（自傷の痺れ）はここで効く。棘・軋み・追い打ちと同じ門をくぐる。
+        if (!ctx.CanActOutOfTurn(self)) return;
+
+        // 範囲攻撃は標的持ちを何度でも削れる。ターン番号で頭打ちにして多重発火を塞ぐ。
+        if (self.Counter(TurnKey) == ctx.Turn) return;
+        self.SetCounter(TurnKey, ctx.Turn);
+
+        ctx.Reaction(() =>
+        {
+            ctx.Log($"    {self.Name} が {ally.Name} の仇を討つ", LogKind.Trigger);
+            ctx.ApplyDamage(source, Math.Max(1, self.CurrentAttack), self);
+        });
+    }
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        if (source is null || source.TeamId == self.TeamId) return;
+        if (dmg <= 0) return;
+
+        // 怯み。痺れに乗せているので、次の手番が飛ぶ（→ IdleTurn）だけでなく刺し返しも止まる。
+        self.SetCounter(StatusKeys.Stun, 1);
+        ctx.Log($"    {self.Name} は殴られて怯んだ", LogKind.FriendlyFire);
+    }
+
+    // ターンをまたぐカウンタは会戦の境界で消えない（Counters は特性の私有物）。
+    // avenge_turn はターン番号なので、次の部隊戦の第1ターンと衝突しないよう戻しておく。
+    public override void OnCarryOver(UnitState self) => self.SetCounter(TurnKey, 0);
+}
+
+/// <summary>
 /// 責め苦。痺れ（Stun / IdleTurn）に読み手を付ける特性。
 ///
 /// **1つのルールの表と裏として書く**（置き去り・盤面ルール駒と同型）:
@@ -2337,6 +2423,7 @@ public static class TraitCatalog
         new ThornGuardTrait(),
         new ForsakeTrait(),
         new TormentTrait(),
+        new AvengeTrait(),
         new InversionTrait(),
         new DroughtTrait(),
         new YokeTrait()

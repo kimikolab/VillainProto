@@ -558,9 +558,32 @@ public static class UnitCatalog
         Flavor = "縛られた的しか殴れない臆病者。だからこそ、縛る者の隣でだけ牙になる。"
     };
 
+    /// <summary>
+    /// 仇討ちのザン。標的（Marked）に初めて付いた読み手。
+    ///
+    /// 数値は仮置き。速さ5 は「反撃役だが手番も持つ」帯（カド＝不動とは違う）。
+    /// 標的の書き手はヒサ1体だけなので、**ヒサと同居しなければ完全に置物**——
+    /// プラス側が編成依存で、マイナス側（怯み）だけが必ず働く。それが値段。
+    ///
+    /// 怯みは痺れに乗っているので、破片（ヒビ）を配られていると受け切った被弾では
+    /// 怯まない（AvengeTrait 参照）。破片に初めて実質的な読み手が付く組み合わせ。
+    /// </summary>
+    public static readonly UnitDef Zan = new()
+    {
+        Id = "zan",
+        Name = "仇討ちのザン",
+        MaxHp = 56,
+        Attack = 10,
+        Speed = 5,
+        Traits = new[] { TraitId.Avenge },
+        PlusText = "標的にされた味方が殴られると、殴った者へ割り込んで刃を返す（1ターンに1回）",
+        MinusText = "自分が殴られると怖気づき、次の手番を失う。怯んでいる間は刃も返せない",
+        Flavor = "仲間が殴られた時だけ勇敢になれる。自分が殴られると、そこにはもう誰もいない。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

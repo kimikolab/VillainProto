@@ -1009,6 +1009,15 @@ public sealed class BattleContext
         foreach (Trait t in target.Traits.ToList())
             t.OnDamaged(this, target, amount, source);
 
+        // 味方への通知。OnAllyDeath の走査と同じ形で、本人以外の生存チームメイトへ流す。
+        // 破片で受け切った被弾はここより上の early return で自然に外れる。
+        foreach (UnitState ally in LivingMembers(target.TeamId))
+        {
+            if (ally == target) continue;
+            foreach (Trait t in ally.Traits.ToList())
+                t.OnAllyDamaged(this, ally, target, amount, source);
+        }
+
         if (target.Hp <= 0)
             HandleDeath(target, source);
     }
