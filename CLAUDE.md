@@ -25,6 +25,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 engage [絞り込み] > docs/engage.md    # 会戦（地点主表: 突破率・期待突破数×投入部隊数1-3・非線形・入場戦力・第1削り）
     dotnet run --project BattleSim -c Release 0 seats [絞り込み]    # 会戦の隊列持ち越し診断（診断用。docs/ に置かない）
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
+    dotnet run --project BattleSim -c Release <n> demo "編成名" [seed]  # compare の編成で1戦の詳細ログ
     dotnet run --project BattleSim -c Release <n> replay "編成名" <seed>  # 1戦を再生用JSON（台本）で吐く
 
 第4〜18期に足した診断モード。**どれも docs/ には置かない**（標準出力で読むだけ）。
@@ -351,6 +352,11 @@ README「波に『1発の上限』を置いたら、第四波が課税する資�
 `log` は1戦の監査。**ここもログの文字列を数えている**（`gullet log` と同じ理由）。
 **保持者の生死はターンではなくイベントの並びで割ること**——ターンで割ると、保持者が倒れた
 同じターンの後続のダメージが「上限を超えた」と誤検出される（実際に踏んだ）。
+
+`demo` に編成名（部分一致）を渡すと `CompareBuilds()` の編成をそのまま1戦流す（第26期に追加）。
+**新しい特性が発火しているかは勝率では読めない**——勝率は「発火したが足りなかった」と
+「一度も発火しなかった」を区別しないし、「狙いどおりの相手に付いた」と「別の駒に付いた」も
+区別しない（ヒサの標的が計画の席でノノに付いていたのはログでしか見えなかった）。
 
 `replay` は戦闘1戦を「台本」（初期盤面＋時間順のイベント列）として JSON で吐く。
 勝率・連鎖深度が数字で答えてくれない「畳みかけて見えるか」を目で確かめるための道具で、

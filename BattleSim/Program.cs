@@ -9581,6 +9581,23 @@ if (focusId == "confirm")
         ("置き去り×分散回復",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Nara, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa),
             Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Nara, back3: UnitCatalog.Dolga)),
+        // 物理軸の連鎖・第1弾の新3編成（第26期）。旧＝計画書の仮置き（メンバーは組み直し後で同じ）、
+        // 候補＝reseat 1位。3本とも狙い（ガルド前列）を満たす席が最良だったので、
+        // 「狙いを満たす最良」と全体1位が食い違う行は無い。
+        ("責め苦 (トウ×シガ)",
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Tou, center: UnitCatalog.Shiga, back1: UnitCatalog.Gan, back3: UnitCatalog.Dolga),
+            Formation.Build(front1: UnitCatalog.Tou, front3: UnitCatalog.Gald, center: UnitCatalog.Gan, back1: UnitCatalog.Shiga, back3: UnitCatalog.Dolga)),
+        // ヒサは中央でなくてよい、と出た行。中央に置くと隣接次数4で最大HPのガルドが確実に
+        // 標的になるが、reseat 1位はガンを前3へ上げてドルガを後3へ下げる形（標的はガルドのまま）。
+        ("仇討ち (ヒサ×ザン)",
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Hisa, back1: UnitCatalog.Zan, back3: UnitCatalog.Gan),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Gan, center: UnitCatalog.Hisa, back1: UnitCatalog.Zan, back3: UnitCatalog.Dolga)),
+        // 破片の検証台。候補ではヒビが中央（範囲の集まる席）、ゴルムが前3で後方を被覆し、
+        // ザンは後3——**ザンが殴られにくい席ほど刃が出る**という読みと一致する。
+        // 標的はヒサ(前1)の隣接＝中央ヒビ(55)と後1ドルガ(85)の最大でドルガに移る。
+        ("仇討ち×砕け (ヒビ×ザン)",
+            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hibi, center: UnitCatalog.Hisa, back1: UnitCatalog.Zan, back3: UnitCatalog.Dolga),
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Golm, center: UnitCatalog.Hibi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan)),
     };
 
     Console.WriteLine("## 採用候補の追試");
@@ -10122,6 +10139,23 @@ if (focusId == "ptrace")
 
 if (focusId == "demo")
 {
+    // 第3引数に編成名の部分一致を渡すと、compare の編成をそのまま1戦ぶん詳細ログで流す
+    // （`... <n> demo "仇討ち"`）。省略時は従来どおり下の固定編成。
+    // 新しい特性が**実際に発火しているか**はログの並びでしか読めない——勝率は
+    // 「発火したが足りなかった」と「一度も発火しなかった」を区別しない。
+    string demoWant = args.Length > 2 ? args[2] : "";
+    int demoSeed = args.Length > 3 && int.TryParse(args[3], out int ds) ? ds : 7;
+    if (demoWant.Length > 0)
+    {
+        var (demoName, demoF) = CompareBuilds().FirstOrDefault(b => b.Name.Contains(demoWant));
+        if (demoF is null) { Console.Error.WriteLine($"編成が見つからない: {demoWant}"); return; }
+        BattleResult picked = BattleEngine.Run(demoF, stage.Enemy, demoSeed, verbose: true);
+        Console.WriteLine($"# {demoName} / 第{stageIndex + 1}波 / seed {demoSeed}");
+        foreach (LogLine line in picked.Log) Console.WriteLine(line);
+        Console.WriteLine($"結果: {(picked.PlayerWon ? "勝利" : "敗北")} / {picked.Turns}ターン");
+        return;
+    }
+
     var build = Formation.Build(
         front1: UnitCatalog.Kado,   // 反撃。範囲で返す
         front3: UnitCatalog.Hisa,   // 標的を付けてカドに殴らせる
@@ -10129,7 +10163,7 @@ if (focusId == "demo")
         back1:  UnitCatalog.Hagi,   // 追い打ち。誰かが倒すと割り込む
         back3:  UnitCatalog.Gan     // 号令。動かないカドの攻撃を積む
     );
-    BattleResult demo = BattleEngine.Run(build, stage.Enemy, seed: 7, verbose: true);
+    BattleResult demo = BattleEngine.Run(build, stage.Enemy, demoSeed, verbose: true);
     foreach (LogLine line in demo.Log) Console.WriteLine(line);
     Console.WriteLine($"結果: {(demo.PlayerWon ? "勝利" : "敗北")} / {demo.Turns}ターン");
     return;
@@ -10460,7 +10494,49 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 土台で同じ席にいたゴルムの寄与（-25.5pt）と並べること。
     ("置き去り×死の連鎖", Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Nara,
                                        center: UnitCatalog.Vel, back1: UnitCatalog.Rica,
-                                       back3: UnitCatalog.Mug))
+                                       back3: UnitCatalog.Mug)),
+    // 物理軸の連鎖・第1弾（責め苦のシガ / 仇討ちのザン）。**配置は仮置き**——
+    // reseat（120通り全探索）→ confirm で採否を決める。
+    //
+    // **計画書の顔ぶれ（供援役だけを5枚並べた形）は 100/0/0/0/0 に潰れた。**
+    // reseat の120通りが全部 20.0% で、どこに置いても動かない＝1ビットも情報が出ない台
+    // （「置き去り×速攻」を差し替えたのと同じ理由）。原因は配置ではなく総攻で、
+    // 3本とも出力役を1枚入れて組み直してある。**特性・数値は触っていない。**
+    //
+    // 供給（痺れ）× 終端（責め苦）の最小形。トウ(速11) が粉を撒き、シガ(速3) が読む。
+    // シガの手番が回る頃には敵の Stun カウンタは消えているので、責め苦は IdleTurn も見る
+    // （TormentTrait の二重条件。第2波 seed 2 のログで巡礼騎士＝速7 に対して実測）。
+    // ガンは IdleTurn の買い手で、シガの自傷痺れとドルガののろまを両方買う。
+    // 出力はドルガ（攻38・薙ぎ・2ターンに1回）——縛め収入型と同じ「守られて完走する側」。
+    // 配置は reseat 1位 → confirm +10.9pt で採用（仮置き＝シガ中央は 41.9%）。
+    ("責め苦 (トウ×シガ)", Formation.Build(front1: UnitCatalog.Tou, front3: UnitCatalog.Gald,
+                                       center: UnitCatalog.Gan, back1: UnitCatalog.Shiga,
+                                       back3: UnitCatalog.Dolga)),
+    // 標的リレーの最小形。**ヒサは中央に置く**——隣接次数4なので編成5枠すべてが候補になり、
+    // 最大HP のガルド(100 > ドルガ85) が確実に標的になる。角に置くと次数2で、
+    // 計画書の席（前3）ではノノ(78)を指していた（狙いが外れることをログで確認済み）。
+    // ガルドは庇う（単体を肩代わり）＋標的で二重に敵を引き受け、ザンがそこへ刺し返す。
+    // 配置は reseat 1位 → confirm +22.8pt で採用（仮置き＝ドルガ前3・ガン後3 は 23.4%）。
+    ("仇討ち (ヒサ×ザン)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Gan,
+                                       center: UnitCatalog.Hisa, back1: UnitCatalog.Zan,
+                                       back3: UnitCatalog.Dolga)),
+    // 「破片が怯みを止める」の検証台。破片（Armor）で受け切った被弾は OnDamaged ごと
+    // 走らないので、破片を配られたザンは殴られても**怯まない＝刃が止まらない**。
+    // コード追加ゼロの創発（AvengeTrait 参照）。
+    //
+    // **勝率では測れなかった。** 仇討ち のガンをヒビに差し替えただけの対照を組むと、
+    // どの配置でも 100/0/0/0/0 に潰れる（reseat 120通りが全部 20.0%）——ヒサ・ザン・ヒビの
+    // 3枠が低出力なので、残り2枠では波を抜けない。ドルガ／ボルグ／リィカ／ゴルムの
+    // 総当たり（compare で6変種）でも最良が 35/0/0/0 で、**この顔ぶれで競争力のある行は作れない。**
+    // 採ったのは情報セルが2つ出る ゴルム＋ドルガ 版で、破片×怯みの実証そのものは
+    // 勝率ではなく1戦ログで取った（第26期・下記）。
+    //
+    // 配置は reseat 1位 → confirm +11.5pt で採用。ヒビが中央（範囲の集まる席）、
+    // ゴルムが前3で後方を被覆し、ザンは後3——**ザンが殴られにくい席ほど刃が出る**。
+    // 標的はヒサ(前1)の隣接＝中央ヒビ(55)と後1ドルガ(85)の最大でドルガに付く。
+    ("仇討ち×砕け (ヒビ×ザン)", Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Golm,
+                                          center: UnitCatalog.Hibi, back1: UnitCatalog.Dolga,
+                                          back3: UnitCatalog.Zan))
 };
 
 // メンバーを編成スロット 0..4 へ重複なく割り当てる全順列を、
