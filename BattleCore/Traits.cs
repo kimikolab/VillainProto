@@ -635,13 +635,50 @@ public sealed class ExecutionerTrait : Trait
 /// <summary>分裂。倒れると子が湧く。墓守にとっては「損失にならない死」の供給源。</summary>
 public sealed class SplitterTrait : Trait
 {
+    /// <summary>この体が既に一度崩れたか。<b>自分側に置く</b>（理由は <see cref="OnDeath"/>）。</summary>
+    public const string SplitKey = "split";
+
     public override TraitId Id => TraitId.Splitter;
 
+    /// <summary>
+    /// 倒れると胞子が2体湧く。<b>1体につき1回だけ。</b>
+    ///
+    /// <para>X字化で召喚専用4枠を作るまで、この制限は「6枠5体＝空き1」という枠数由来の
+    /// 暗黙の上限に隠されていた。枠が空いた結果、<b>ムグが倒れて2体 → ヴェル
+    /// （<see cref="ReviverTrait"/>）が縫い直した体が再び倒れて更に2体</b>で同時4体まで湧き、
+    /// 「死の連鎖 (リィカ軸)」から失敗の可能性が消えて計測器として死んでいた。
+    /// 問題は枠数ではなく<b>同じ骸から二度湧くこと</b>なので、ここで塞ぐ。</para>
+    ///
+    /// <para><b>判定は自分側のカウンタで行う。</b><see cref="ReviverTrait"/> が立てる
+    /// <c>sewn</c> を見る手もあるが、あれは <c>OnAllyDeath</c> の中で立つので
+    /// <c>OnDeath</c> との発火順に依存する（<c>OnAllyDeath</c> が先なら1回目の分裂まで止まる）。
+    /// 自分側なら順序に依存しない。</para>
+    ///
+    /// <para>却下した案:</para>
+    /// <list type="bullet">
+    /// <item>召喚スロットを2枠（○中1・○中3）に絞る——上限で殴るだけで二度湧きの経路は残り、
+    /// ○前2・○後2 が死に地形になる</item>
+    /// <item><c>ctx.Summon</c> が null を返したら諦める——既にそうなっている。枠が4つある以上効かない</item>
+    /// <item>胞子を 2 → 1 体にする——二度湧きが残るので上限は結局2のまま。しかも1回目の分裂まで
+    /// 弱くなり、「ムグ本体の死という有限で高い買い物の対価」という設計意図が痩せる</item>
+    /// </list>
+    /// </summary>
     public override void OnDeath(BattleContext ctx, UnitState self)
     {
+        if (self.Counter(SplitKey) > 0) return;   // 縫い直された体からは、もう胞子は出ない
+        self.SetCounter(SplitKey, 1);
+
         for (int i = 0; i < 2; i++)
             ctx.Summon(UnitCatalog.Spore, self.TeamId);
     }
+
+    /// <summary>
+    /// 部隊戦の境界で崩れた記録を捨てる。<b>持ち越さない。</b>
+    /// <see cref="ReviverTrait"/> の <c>charges</c> は持ち越す実装だが、あちらは
+    /// 「ヴェルというユニットの資源」で、こちらは「ムグ1体の体が既に一度崩れたか」という状態。
+    /// 戦闘が変われば体は元に戻っている、と読む。
+    /// </summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(SplitKey, 0);
 }
 
 /// <summary>自爆。決まったターンに自壊し、敵全体を巻き込む。死ぬタイミングが読める。</summary>
