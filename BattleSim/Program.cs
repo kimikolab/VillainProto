@@ -7698,40 +7698,17 @@ if (focusId == "confirm")
     const double Threshold = 2.0;        // これ未満は誤差とみなして据え置く
 
     // (編成名, 旧配置, 候補配置)。候補は reseat の「狙いを満たす最良」。
+    //
+    // **いまここに載っているのは、席番号タイブレークの乱数化後に全32編成を reseat し直して
+    // 出た唯一の候補（差 2pt 以上）で、追試の結果は +1.4pt の「据え置き」。**
+    // つまり乱数化の前後で採るべき配置は変わらなかった、という記録そのもの。
     // X字化(盤面の対称化)に伴う振り直しぶん。旧盤面の座標で書かれた過去の追試は
     // 座標ごと無効になったので、ここでは持ち越していない。
     var picks = new (string Name, Formation Old, Formation New)[]
     {
-        ("毒+耐久 (ベニ×トウ)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Mio, back1: UnitCatalog.Beni, back3: UnitCatalog.Tou),
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Tou, back1: UnitCatalog.Mio, back3: UnitCatalog.Beni)),
-        ("反撃 (ヒサ×カド)",
-            Formation.Build(front1: UnitCatalog.Nono, front3: UnitCatalog.Gald, center: UnitCatalog.Nel, back1: UnitCatalog.Hisa, back3: UnitCatalog.Kado),
-            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Gald, center: UnitCatalog.Nel, back1: UnitCatalog.Kado, back3: UnitCatalog.Nono)),
-        ("惨禍×被弾強化",
-            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Kado, center: UnitCatalog.Mudo, back1: UnitCatalog.Nono, back3: UnitCatalog.Sero),
-            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Sero, center: UnitCatalog.Kado, back1: UnitCatalog.Mudo, back3: UnitCatalog.Nono)),
-        ("惨禍×死の連鎖",
-            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Kado, center: UnitCatalog.Vel, back1: UnitCatalog.Rica, back3: UnitCatalog.Zoto),
-            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Zoto, center: UnitCatalog.Kado, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
-        ("耐久 (ガルド×ノノ)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Golm, center: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back3: UnitCatalog.Nono),
-            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Nono, back3: UnitCatalog.Dolga)),
-        ("溜め (ガン×ドルガ×カド)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Hisa, back1: UnitCatalog.Gan, back3: UnitCatalog.Kado),
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Gan, center: UnitCatalog.Hisa, back1: UnitCatalog.Kado, back3: UnitCatalog.Dolga)),
-        ("溜め改 (クグ×バン×ガン)",
-            Formation.Build(front1: UnitCatalog.Kado, front3: UnitCatalog.Kugu, center: UnitCatalog.Gan, back1: UnitCatalog.Ban, back3: UnitCatalog.Dolga),
-            Formation.Build(front1: UnitCatalog.Kugu, front3: UnitCatalog.Gan, center: UnitCatalog.Ban, back1: UnitCatalog.Kado, back3: UnitCatalog.Dolga)),
-        ("移動改 (バサ×ヨミ×シオ)",
-            Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.Yomi, back3: UnitCatalog.Basa),
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sero, center: UnitCatalog.Shio, back1: UnitCatalog.Basa, back3: UnitCatalog.Yomi)),
-        ("反撃改2 (ガン×カド)",
-            Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Kado, center: UnitCatalog.Ban, back1: UnitCatalog.Gan, back3: UnitCatalog.Hisa),
-            Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Ban, center: UnitCatalog.Kado, back1: UnitCatalog.Hisa, back3: UnitCatalog.Gan)),
-        ("反撃改3 (カド×ハギ)",
-            Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.Gald, center: UnitCatalog.Hagi, back1: UnitCatalog.Hisa, back3: UnitCatalog.Kado),
-            Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.Gald, center: UnitCatalog.Kado, back1: UnitCatalog.Hagi, back3: UnitCatalog.Hisa)),
+        ("反撃改 (ドハ×カド)",
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Kado, center: UnitCatalog.Doha, back1: UnitCatalog.Nel, back3: UnitCatalog.Nono),
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Nel, center: UnitCatalog.Kado, back1: UnitCatalog.Doha, back3: UnitCatalog.Nono)),
     };
 
     Console.WriteLine("## 採用候補の追試");
