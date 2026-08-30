@@ -315,6 +315,21 @@ if (focusId == "swap")
         ("S4 攻め（削り2 / 回復2・ガルド軸）", "4体（中央 空）",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald,
                             back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
+
+        // S5 は S4 と同じメンバーを、**compare へ採用した席**（reseat 1位）で測り直したもの。
+        // S4 の席（中央ナラ）と採用席では波別の形がまるで違うので（S4 100/34/4/34/0 に対し
+        // 採用席は 100/69/74.5/3.5/3.0）、**採用の根拠にした「波ごとの振れ」が
+        // 採用した席でも立っているかは、測らないと分からない。** 入れ替える枠は後1。
+        // 割れ方は S4 と同じ 削り2（ガルド4・ドルガ6）／回復2（ササ12・セロ12）。
+        ("S5 分散回復（採用席・削り2 / 回復2）", "ノノ",
+            Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald,
+                            center: UnitCatalog.Sero, back1: UnitCatalog.Nono, back3: UnitCatalog.Dolga)),
+        ("S5 分散回復（採用席・削り2 / 回復2）", "ナラ",
+            Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald,
+                            center: UnitCatalog.Sero, back1: UnitCatalog.Nara, back3: UnitCatalog.Dolga)),
+        ("S5 分散回復（採用席・削り2 / 回復2）", "4体（後1 空）",
+            Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald,
+                            center: UnitCatalog.Sero, back3: UnitCatalog.Dolga)),
     };
 
     Console.WriteLine("# ナラの回復側は成立するか（swap）");
@@ -8019,6 +8034,8 @@ if (focusId == "confirm")
         ("置き去り×被弾強化",
             Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Golm, center: UnitCatalog.Nara, back1: UnitCatalog.Kado, back3: UnitCatalog.Vel),
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Nara, center: UnitCatalog.Kado, back1: UnitCatalog.Mudo, back3: UnitCatalog.Vel)),
+        // **この編成は第21期に compare から外した**（100/0/0/0/0 で情報が出ていなかった）。
+        // 行は記録として残す——消すと「追試して据え置いた」事実まで消える。
         ("置き去り×速攻",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Borg, center: UnitCatalog.Nara, back1: UnitCatalog.Tou, back3: UnitCatalog.Sasa),
             Formation.Build(front1: UnitCatalog.Tou, front3: UnitCatalog.Sasa, center: UnitCatalog.Sero, back1: UnitCatalog.Borg, back3: UnitCatalog.Nara)),
@@ -8035,6 +8052,13 @@ if (focusId == "confirm")
         ("置き去り×死の連鎖",
             Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Mug, center: UnitCatalog.Nara, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel),
             Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Nara, center: UnitCatalog.Vel, back1: UnitCatalog.Rica, back3: UnitCatalog.Mug)),
+        // 第21期の差し替え行。仮置きは swap S4 の席そのまま（中央ナラ・34.4%）で、
+        // reseat 1位はセロを中央へ上げてナラを後1へ下げる形。3期続けて同じ結論——
+        // **ナラは席を選ばない**（速さで対象を選ぶので隣接も列も見ない）ので、
+        // 中央を要求する駒に譲るのが正しい。ここでは狙撃のセロが中央に上がる。
+        ("置き去り×分散回復",
+            Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Nara, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa),
+            Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Nara, back3: UnitCatalog.Dolga)),
     };
 
     Console.WriteLine("## 採用候補の追試");
@@ -8877,13 +8901,26 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     ("置き去り×被弾強化", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Nara,
                                      center: UnitCatalog.Kado, back1: UnitCatalog.Mudo,
                                      back3: UnitCatalog.Vel)),
-    // 上の裏。全員がナラより速いので削りが一度も発火せず、ナラは純粋な回復役になる。
-    // **速さを揃えればマイナスが消える**という逃げ道が実際に成立するかの実証用。
-    // セロは前〜中に置くこと（狙撃化には戦闘中に後退した実績が要る）。
-    // reseat 1位でも +1.4pt（confirm 追試も +1.4pt）と閾値未満なので、仮置きのまま据え置き。
-    ("置き去り×速攻",     Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Borg,
-                                     center: UnitCatalog.Nara, back1: UnitCatalog.Tou,
-                                     back3: UnitCatalog.Sasa)),
+    // 置き去りの**回復側**を測る編成（第21期）。`swap` S4 と同じメンバー。
+    // **ゴルムを入れていないのが要点**——巨躯は削りを吸って何も返さないうえ（route・第19期）、
+    // 回復の最大の受け手でもある（swap S3 でノノの回復 72 → 48）。自傷軸だけでなく回復軸も食う。
+    // ゴルム軸の S3 では ナラ -7.0pt、ガルド軸の S4 では +0.3pt と**符号が変わる。**
+    //
+    // 平均はノノ版と ±0.3pt だが、波ごとには 第2波 +14.0 / 第3波 -13.0 と振れる。
+    // **均されて ±0 になっているだけで無風ではない**——ここを見るための行。
+    //
+    // **この行は「置き去り×速攻」を差し替えたもの。** あちらは 100/0/0/0/0 で天井と床に
+    // 張り付き、ablate がどのメンバーを抜いても ±0.0pt だった（＝5波 × 200 seed を回して
+    // 情報が1ビットも出ない行）。担っていた「速さを揃えれば削りが消える」の実証は
+    // replay で済んでいて README に記録済みなので、行そのものは要らない。
+    // セロは前〜中（狙撃化には戦闘中に後退した実績が要る）／ガルドは前列（庇うの制約）。
+    // 配置は reseat 1位 → confirm +14.4pt で採用（仮置き＝swap S4 の席そのままは 35.3%）。
+    // 3期続けて同じ結論で、中央はナラの席ではない——ここでは狙撃のセロが中央に上がり、
+    // ナラは後1へ下がる。**割れ方はメンバーで決まるので配置では変わらない**
+    // （削り2＝ガルド4・ドルガ6 ／ 回復2＝セロ12・ササ12）。
+    ("置き去り×分散回復", Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald,
+                                       center: UnitCatalog.Sero, back1: UnitCatalog.Nara,
+                                       back3: UnitCatalog.Dolga)),
     // 削りを即時払いの変換器に繋ぐ形（第20期）。ゾト(7)・ムグ(6)・リィカ(7) が全員
     // ナラ(8)より遅い＝毎ターン削られる。ゾトは削られるほど早く破裂し、ムグは早く胞子になり、
     // リィカはその死をそのまま層に変える——どれも積み上げ時間を必要としない。
