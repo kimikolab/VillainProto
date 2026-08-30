@@ -1231,10 +1231,25 @@ public static class BattleEngine
             //
             // **毎ターン振り直す。**開戦時に1回だけ決めると、その後に生死や速さの前提が
             // 変わっても初回の順序を引きずる。
-            var order = ctx.AllUnits
+            //
+            // 逆位（InversionTrait）: 保持者が盤上に生きている間だけ、速さの**向き**が逆になる。
+            // **両陣営にかかる。** 非対称なのは「こちらはそのルールを知って編成を組めるが、
+            // 敵は組めない」点だけ。毎ターン評価するので、保持者を倒せば次のターンから戻る。
+            //
+            // 反転するのは速さの向き 1本だけ。以下は**一緒に反転させない**——
+            //   陣営タイブレーク（ThenBy(TeamId)）: 席番号とは無関係な設計上の順序で、
+            //     速さの向きとは別の話。一緒に反転すると変数が2つ動く
+            //   同速の中のシャッフル: 群の中の乱数化は席バイアス対策であって順序の話ではない
+            //   開戦時の通知順（opening）: あちらは生贄・呪詛の適用順で、目的が違う
+            bool inverted = ctx.AllUnits.Any(u => u.IsAlive && u.HasTrait(TraitId.Inversion));
+
+            var speedGroups = ctx.AllUnits
                 .Where(u => u.IsAlive)
-                .GroupBy(u => (u.Def.Speed, u.TeamId))
-                .OrderByDescending(g => g.Key.Speed)
+                .GroupBy(u => (u.Def.Speed, u.TeamId));
+
+            var order = (inverted
+                    ? speedGroups.OrderBy(g => g.Key.Speed)
+                    : speedGroups.OrderByDescending(g => g.Key.Speed))
                 .ThenBy(g => g.Key.TeamId)
                 .SelectMany(g =>
                 {

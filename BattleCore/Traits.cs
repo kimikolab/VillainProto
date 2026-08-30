@@ -54,7 +54,11 @@ public enum TraitId
     ThornGuard,  // 棘守り: 前か横の味方への単体攻撃を身代わりし、その味方と位置を入れ替える
     Forsake,     // 置き去り: 自分より速い味方を癒し、自分より遅い味方を削る（同速には何も起きない）
                  // プラスとマイナスが1つのルールの表と裏なので、どちらのブロックに入れても嘘になる
-    Alms         // 施し: 自分は減らずに味方を回復する（敵側の語彙）
+    Alms,        // 施し: 自分は減らずに味方を回復する（敵側の語彙）
+
+    // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
+    // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
+    Inversion    // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
 }
 
 /// <summary>
@@ -2047,6 +2051,38 @@ public sealed class ForsakeTrait : Trait
     }
 }
 
+/// <summary>
+/// 逆位。**保持者が盤上に生きている間だけ、行動順が速さ昇順になる。両陣営に等しくかかる。**
+///
+/// 他の特性と種類が違う。損得を持つ効果ではなく、盤面の読み方そのものを書き換える盤面ルールで、
+/// 保持者自身は何の得もしない（むしろ速さ7なので反転下では遅い側＝先に動く不利側に回る）。
+/// 非対称なのは「プレイヤーはこのルールを知って編成を組めるが、敵は組めない」点だけ。
+///
+/// **判定は engine 側（<c>BattleEngine.Run</c> の order を組む直前）に置いてある。**
+/// この Trait 本体はログを出すだけ。順序は全員に一度にかかる盤面の状態なので、
+/// 駒ごとのフックでは表現できない（ApplyDamage が肩代わりを解決するのと同じ理由）。
+///
+/// 毎ターン評価するので、保持者を倒せばルールは消える。ただし <c>order</c> はターン頭に
+/// 1回だけ組むので、**戻るのは倒したターンではなく次のターンから**。
+/// 速さが変わったときと同じ扱いで、ターンの途中で並びが変わることはない。
+///
+/// 既存特性との噛み合いは監査済み（design/ENEMY_REBUILD_PHASE2_PLAN.md §3）。
+/// **縛め（<see cref="BindTrait"/>）の「最も速い敵を縛る」は、反転下では「最後に動く敵を縛る」に
+/// 意味が裏返る。これは直さない**——波によって同じ駒の意味が変わるのが狙っている効果そのもの。
+/// </summary>
+public sealed class InversionTrait : Trait
+{
+    public override TraitId Id => TraitId.Inversion;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+        => ctx.Log($"  {self.Name} が盤面を逆さにした（行動順が速さの遅い順になる）", LogKind.Highlight);
+
+    // HandleDeath は OnDeath の前に Hp = 0 を入れているので、この時点で保持者は既に
+    // 生存判定から外れている（＝次のターンの order は正順で組まれる）。
+    public override void OnDeath(BattleContext ctx, UnitState self)
+        => ctx.Log($"    {self.Name} が倒れ、次のターンから行動順が戻る", LogKind.Highlight);
+}
+
 public static class TraitCatalog
 {
     private static readonly Dictionary<TraitId, Trait> Map = new Trait[]
@@ -2099,7 +2135,8 @@ public static class TraitCatalog
         new PyreTrait(),
         new CondemnTrait(),
         new ThornGuardTrait(),
-        new ForsakeTrait()
+        new ForsakeTrait(),
+        new InversionTrait()
     }.ToDictionary(t => t.Id);
 
     public static Trait Get(TraitId id) => Map[id];

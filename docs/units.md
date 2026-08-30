@@ -96,6 +96,7 @@
 | `ThornGuard` | 棘鎧のカド |
 | `Forsake` | 置き去りのナラ |
 | `Alms` | - |
+| `Inversion` | - |
 
 ## ステージ
 

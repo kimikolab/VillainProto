@@ -320,6 +320,12 @@ BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project Ba
 特性はすべて `Trait` を継承した「戦闘イベントへの反応」。`OnBattleStart` / `OnTurnStart` / `OnDamaged` / `OnDeath` / `OnMoved` などの virtual フックを上書きする。イベント駆動にしてあるので、意図していない組み合わせでも勝手に噛み合う。それが狙い。
 
 - 追加手順: `Trait` 継承クラスを書く → `TraitId` に列挙子を足す → `TraitCatalog` の配列に登録する。
+- **盤面ルール（`Inversion`）だけは例外で、判定が engine 側にある。** 行動順は全員に一度にかかる
+  盤面の状態で、駒ごとのフックでは表現できない（`ApplyDamage` が肩代わりを解決するのと同じ理由）。
+  `BattleEngine.Run` の `order` を組む直前1箇所で速さの向きだけを反転させ、Trait 本体はログを
+  出すだけ。**保持者がいなければ完全に不活性**（`compare` 差分ゼロで確認済み）。
+  逆位は測って採用しなかったので `Stages` には載っていない——経緯は README「盤面ルール（逆位）は
+  実在したが、波を分離しなかった」。
 - **Trait インスタンスは全ユニットで共有されるシングルトン**。インスタンスフィールドで状態を持ってはいけない。ユニットごとの状態は `UnitState.Counters`（文字列キーの int カウンタ）に置く。
 - 調整用の数値は各 Trait の `public const` に置く（`BattleEngine` 側からも参照される）。
 
