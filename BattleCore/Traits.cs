@@ -59,7 +59,8 @@ public enum TraitId
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
-    Drought      // 渇き: 保持者が生きている間、回復が一切通らない。**両陣営に等しくかかる**
+    Drought,     // 渇き: 保持者が生きている間、回復が一切通らない。**両陣営に等しくかかる**
+    Yoke         // 軛: 保持者が生きている間、1回のダメージが上限で切られる。**両陣営に等しくかかる**
 }
 
 /// <summary>
@@ -2149,6 +2150,89 @@ public sealed class DroughtTrait : Trait
         => ctx.Log($"    {self.Name} が倒れ、回復が戻った", LogKind.Highlight);
 }
 
+/// <summary>
+/// 軛: 保持者が盤上に生きている間、**1回のダメージで減る HP が上限（<see cref="Cap"/>）を超えない**。
+/// 両陣営に等しくかかる。
+///
+/// <para><b>判定は engine 側（<c>BattleContext.ApplyDamage</c> の、HP を引く直前）に置いてある。</b>
+/// この Trait 本体はログを出すだけ。1発の重さは全員に一度にかかる盤面の状態で、
+/// 受け手ごとのフックでは表現できない（逆位が order に、渇きが <c>Heal</c> の入口にあるのと同じ理由）。</para>
+///
+/// <para><b>切るのは増減が全部終わった後。</b> 入口で切ると惨禍（<see cref="HavocTrait"/> +50%）や
+/// 脆弱（<see cref="FrailTrait"/>）が上限を押し戻して「1発は Cap を超えない」が守られない。
+/// 増幅が無効化されているように見えるのは正しい——それがこの規則の意味。</para>
+///
+/// <para><b>切らないもの（意図的）:</b>
+/// <list type="bullet">
+/// <item>破片（<c>StatusKeys.Armor</c>）: 上限<b>より前</b>に引かれる別資源のプール。破片が 10 吸って
+/// 残り 30 なら切られるのは 30 → Cap で、<b>破片は上限の外側で効く</b>（ヒビの価値が上がる）</item>
+/// <item>肩代わりの各段: 巨躯・分かち・棘守り・後備えで分割された段はそれぞれ別の
+/// <c>ApplyDamage</c> 呼び出しなので、<b>段ごとに独立して切られる</b>＝分割は上限を回避する経路になる。
+/// これは意図した帰結で、「重い一撃は分けて受けろ」が肩代わり役の存在理由になる</item>
+/// <item>毒・燃焼の刻み: 除外しない。渇きが <c>source == null</c> を除外したのとは違い、こちらは
+/// <b>「1発の重さ」に課金する規則</b>なので出どころは関係ない（墓守の層のように伸びる削りは上限に当たる）</item>
+/// </list></para>
+///
+/// <para>保持者を倒せば上限は外れる。<c>ApplyDamage</c> は呼ばれるたびに評価するので、
+/// 逆位（order はターン頭に1回だけ組む）と違い<b>倒したその場から</b>戻る。
+/// 上限がかかっている間は保持者自身の HP も割りにくいので、
+/// 「早く割れば上限が外れる」という勾配が自己言及的に立つ。</para>
+/// </summary>
+public sealed class YokeTrait : Trait
+{
+    /// <summary>
+    /// 1回のダメージの上限。<b>唯一の調整ノブ</b>（保持者の数値 145/12/3 は触らない
+    /// ——逆位の失敗の直接の原因がそこだった）。
+    ///
+    /// <para><b>25 は計画（15）ではなく実測で選んだ。</b> `yoke sweep` で 12〜50 を振ると、
+    /// 12 は 21編成が 0%・15 は 16編成が 0%・20 でも第四波の平均が 87.0 → 45.6 と
+    /// <b>第五波（59.8）より難しい波</b>になる。25 なら平均 61.8 で波の並びが
+    /// 100 / 85.8 / 72.5 / 61.8 / 59.8 と単調に落ち、中間帯 7 → 11・固有の敗者 0 → 3・
+    /// 第2波との相関 +0.62 → +0.31 が同時に立つ。上げすぎ（40 以上）だと固有の敗者が消える。</para>
+    ///
+    /// <para>敵側の打点（重装 12・詠唱兵の溜め 16・従軍司祭 9）は全部この下なので、
+    /// <b>この波で課税されるのは味方の大打点だけ。</b></para>
+    /// </summary>
+    public const int Cap = 25;
+
+    public override TraitId Id => TraitId.Yoke;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+    {
+        // 診断が規則を切っている版（yoke の V1「壁のみ」）では何も起きないので、ログも出さない。
+        if (!ctx.Yoke.Active) return;
+        ctx.Log($"  {self.Name} が盤面に軛をかけた（1回のダメージが {ctx.Yoke.Cap} で切られる）",
+                LogKind.Highlight);
+    }
+
+    // HandleDeath は OnDeath の前に Hp = 0 を入れているので、この時点で保持者は既に
+    // 生存判定から外れている（＝この直後の ApplyDamage はもう切られない）。
+    public override void OnDeath(BattleContext ctx, UnitState self)
+    {
+        if (!ctx.Yoke.Active) return;
+        ctx.Log($"    {self.Name} が倒れ、軛が外れた", LogKind.Highlight);
+    }
+}
+
+/// <summary>
+/// 軛の規則。<b>診断（yoke）が版を並べて 1 回の実行の中で比べるためだけに外から差せる。</b>
+/// 既定は <see cref="Default"/> ＝ <see cref="YokeTrait.Cap"/> で有効、<b>これが本採用の規則</b>。
+/// 渡さない限り盤面は常にこの規則で動く。
+///
+/// <para><b>書き換え可能な static の調整ノブにしないこと。</b> Trait は共有シングルトンで、
+/// layout は戦闘を並列実行する——static に置くと版の切り替えが他のスレッドの戦闘へ漏れるし、
+/// <c>BattleEngine.Run</c> の「副作用も外部依存もない」もそこで壊れる
+/// （<see cref="ColossusRule"/> と同じ判断）。</para>
+///
+/// <para><see cref="Active"/> は<b>保持者を盤上に置いたまま規則だけを外す</b>ための切り替え。
+/// 「壁が変わったのか、ルールが効いたのか」の切り分けに要る——逆位はここを分けなかったせいで
+/// 追加測定が必要になった。</para>
+/// </summary>
+public readonly record struct YokeRule(int Cap, bool Active)
+{
+    public static YokeRule Default => new(YokeTrait.Cap, Active: true);
+}
+
 public static class TraitCatalog
 {
     private static readonly Dictionary<TraitId, Trait> Map = new Trait[]
@@ -2203,7 +2287,8 @@ public static class TraitCatalog
         new ThornGuardTrait(),
         new ForsakeTrait(),
         new InversionTrait(),
-        new DroughtTrait()
+        new DroughtTrait(),
+        new YokeTrait()
     }.ToDictionary(t => t.Id);
 
     public static Trait Get(TraitId id) => Map[id];

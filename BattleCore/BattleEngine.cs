@@ -217,11 +217,18 @@ public sealed class BattleContext
     /// </summary>
     public ColossusRule Colossus { get; }
 
-    public BattleContext(int seed, bool verbose, ColossusRule? colossus = null)
+    /// <summary>
+    /// 軛の規則。<b>診断（yoke）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="YokeRule.Default"/>）。static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public YokeRule Yoke { get; }
+
+    public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
         Colossus = colossus ?? ColossusRule.Default;
+        Yoke = yoke ?? YokeRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -940,6 +947,30 @@ public sealed class BattleContext
         if (!lethal) amount = Math.Min(amount, Math.Max(0, target.Hp - 1));
         if (amount <= 0) return;
 
+        // 軛（YokeTrait）: 保持者が盤上に生きている間、1回のダメージは上限で切られる。
+        // **両陣営にかかる。** 非対称なのは「こちらはそのルールを知って編成を組めるが、
+        // 敵は組めない」点だけ（逆位・渇きと同じ）。
+        //
+        // **HP を引く直前で切る。** 入口で切ると惨禍（HavocTrait +50%）や脆弱（Frail）が
+        // 上限を押し戻して「1発は Cap を超えない」が守られない。増幅が無効化されているように
+        // 見えるのは正しい——それがこの規則の意味。lethal: false の Hp-1 クランプより後に
+        // 置いてあるのは、あちらが「殺さない」という別の制約で、順序を入れ替えると
+        // 上限で切った後にもう一度切ることになるため（結果は同じだが意図が読めなくなる）。
+        //
+        // 破片（Armor）は**この上より前**で引かれる別資源なので、上限の外側で効く。
+        // 肩代わり（巨躯・分かち・後備え・棘守り）で分割された各段はそれぞれ別の ApplyDamage
+        // 呼び出しなので**段ごとに独立して切られる**——分割は上限を回避する経路になる。
+        // これは意図した帰結で、「重い一撃は分けて受けろ」が肩代わり役の存在理由になる。
+        //
+        // amount > Cap を先に見るのは、保持者の探索（AllUnits の走査）を毎回の被弾で
+        // 走らせないため。Math.Min の結果は変わらない（layout は数百万戦を並列で回す）。
+        if (Yoke.Active && amount > Yoke.Cap
+            && AllUnits.Any(u => u.IsAlive && u.HasTrait(TraitId.Yoke)))
+        {
+            Log($"    軛が {target.Name} への一撃を {amount} から {Yoke.Cap} に切った", LogKind.Trigger);
+            amount = Yoke.Cap;
+        }
+
         target.Hp -= amount;
         Log($"    {target.Name} に {amount} ダメージ (残り {Math.Max(0, target.Hp)})",
             isFriendlyFire ? LogKind.FriendlyFire : LogKind.Damage);
@@ -1221,10 +1252,10 @@ public static class BattleEngine
     /// verbose=false にするとログを作らないので、一括シミュレーションが速い。
     /// </summary>
     public static BattleResult Run(Formation player, Formation enemy, int seed, bool verbose = true,
-                                   ColossusRule? colossus = null)
+                                   ColossusRule? colossus = null, YokeRule? yoke = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
-               seed, verbose, colossus);
+               seed, verbose, colossus, yoke);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -1235,9 +1266,10 @@ public static class BattleEngine
     /// 渡す側はリストの並びを決定的に保つこと（Materialize はスロット昇順で返す）。
     /// </summary>
     public static BattleResult Run(IReadOnlyList<UnitState> player, IReadOnlyList<UnitState> enemy,
-                                   int seed, bool verbose = true, ColossusRule? colossus = null)
+                                   int seed, bool verbose = true, ColossusRule? colossus = null,
+                                   YokeRule? yoke = null)
     {
-        var ctx = new BattleContext(seed, verbose, colossus);
+        var ctx = new BattleContext(seed, verbose, colossus, yoke);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

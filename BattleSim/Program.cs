@@ -761,6 +761,554 @@ if (focusId == "gullet")
     return;
 }
 
+// yoke モード: 第四波に「軛」を置く（第25期）。1回のダメージ量に上限を課す盤面ルール。
+//
+// 第四波は 100% が 21/35・中間帯 7 で、**第一波を除けば最も飽和している波**だった。
+// 第22期 spread で作った物差しの上で、第三波を渇き（回復禁止）で分離させたのと同じことをここでやる。
+// 課金する資源は「**1発の重さ**」——第二波（後列到達力）・第三波（持続）・第五波（総合）の
+// どれとも重ならない。
+//
+// **敵側の打点は全部 15 以下**（重装 12・詠唱兵の溜め 16・従軍司祭 9）なので、
+// この波で課税されるのは味方の大打点だけ（ドルガ38・カドの反撃・セロの狙撃・墓守の層）。
+// 「硬いので大打点で押し切れない」は第四波の既存の性格と一貫していて、新しい教え事が要らない。
+//
+// **版は 5 つ。** 中央の1枚と Cap だけを動かす（gullet と同じく規則は引数で渡す）。
+//
+//     V0 現行    中央 城塞の重装兵。**差し替え前の docs/balance.md と一致するはず＝検算**
+//     V1 壁のみ  中央 軛の重装兵・規則は無効。**数値が同一なので V0 と一致するはず＝検算**
+//     V2 上限25  本命（採用した規則＝YokeTrait.Cap）
+//     V3 上限30  上限を緩めた側
+//     V4 上限20  上限を締めた側
+//
+// **Cap は計画（15）ではなく `yoke sweep` の実測で 25 に決めた。** 12〜50 を振ると、
+// 15 では 16編成・20 でも 12編成が 0% に落ち、第四波の平均が第五波（59.8）を下回る
+// ——「波を分離する」ではなく「波を壁にする」になっていた。帯の選び方は sweep の側を見ること。
+//
+// **V0 と V1 の対照が要。** 逆位（第20期）は保持者の数値を壁から動かしたせいで
+// 「壁が変わったのか、ルールが効いたのか」の切り分けに追加測定が要った。ここでは
+// 数値を1つも動かしていないので、V1 が V0 と1セルも違わないことがそのまま切り分けになる。
+//
+// **判定に使う編成は中間帯を持つものから選ぶ**（第24期 yield の教訓）。飽和した台では
+// 誰に何をしても増分が決着の短縮に消える。主表には `中` 列を出して、V0 の第四波が
+// 5% < x < 95% の編成を印してある——**100% に張り付いている編成は「落ちたかどうか」だけを見る。**
+//
+// 機構の確認は**ログの文字列ではなく tally** で行う。`敵被ダメ/戦`（＝味方の出力の総量）が
+// V1 → V2 でどれだけ削られたかが、そのまま「切られた量」になる。
+// `yoke log` は §2.3 の監査（破片・肩代わり・棘守り・惨禍・毒の刻み）で、
+// **そちらだけはログの文字列を数えている**（gullet log と同じ理由——「その行がどの順で出たか」
+// そのものを見たいので、盤面の値では代用できない）。
+//
+// docs/ には置かない（診断用）。
+//
+//     dotnet run --project BattleSim -c Release 0 yoke [sweep|log]
+if (focusId == "yoke")
+{
+    string yokeMode = args.Length > 2 ? args[2] : "";
+    var yokeBuilds = CompareBuilds();
+    const int YokeSeeds = 200;   // compare / spread / gullet と同じ。balance.md と突き合わせる
+    const int Wave4 = 3;         // 第四波（0 起点）
+
+    // 第四波の中央だけを差し替えた版を診断のローカルで組む（gradient / aim と同じ扱い）。
+    // 残り4枠も他の4波も EnemyCatalog のまま——**動く変数は中央の1枚と Cap だけ。**
+    Formation Wave4With(UnitDef center) => Formation.Build(
+        front1: EnemyCatalog.Warden, front3: EnemyCatalog.Warden, center: center,
+        back1: EnemyCatalog.Chanter, back3: EnemyCatalog.Priest);
+
+    // 第四波の敵の Def.Id。tally を敵味方に割るのに使う（味方の召喚駒まで正しく味方側に落ちる）。
+    var wave4EnemyIds = new HashSet<string>(new[]
+    {
+        EnemyCatalog.Warden.Id, EnemyCatalog.Yoker.Id, EnemyCatalog.Chanter.Id, EnemyCatalog.Priest.Id
+    });
+
+    // ---- sweep: Cap の帯を振る -----------------------------------------------------------
+    //
+    // 4版の対照（V0/V1/V2/V3/V4）で **Cap 15 も 20 も落としすぎる**ことが分かったので、
+    // 上限そのものを帯で振る。計画 §6 の「失敗の形」に書いてある手当（15 が当たりすぎたら 20 へ）を
+    // 実際に測ると 20 でも平均 87.0 → 45.6 まで落ちる——**第五波（59.8）より難しい波になる。**
+    //
+    // 他の4波は保持者が不在なので Cap をいくら振っても1セルも動かない（引数なしの実行で
+    // 560 セル 0 件を確認済み）。だから**基準の5波を1回だけ測って、第四波だけを Cap ごとに測り直す**。
+    // 固有の敗者・勝者の判定と第2波との相関は、その基準の他波と組み合わせて引く。
+    if (yokeMode == "sweep")
+    {
+        int[] caps = { 12, 15, 20, 25, 30, 35, 40, 50 };
+        int nbS = yokeBuilds.Length, nwS = EnemyCatalog.Stages.Count;
+
+        // 基準（V0 = 差し替え前の盤面）。他の4波はこの値をそのまま使い回す。
+        var basis = new double[nbS][];
+        for (int b = 0; b < nbS; b++)
+        {
+            basis[b] = new double[nwS];
+            for (int w = 0; w < nwS; w++)
+            {
+                Formation foe = w == Wave4 ? Wave4With(EnemyCatalog.Warden) : EnemyCatalog.Stages[w].Enemy;
+                int wins = 0;
+                for (int seed = 0; seed < YokeSeeds; seed++)
+                    if (BattleEngine.Run(yokeBuilds[b].F, foe, seed, verbose: false).PlayerWon) wins++;
+                basis[b][w] = wins * 100.0 / YokeSeeds;
+            }
+        }
+        Console.Error.WriteLine("  基準（軛なし）完了");
+
+        // Cap ごとの第四波。
+        var capRate = new double[caps.Length][];
+        for (int c = 0; c < caps.Length; c++)
+        {
+            capRate[c] = new double[nbS];
+            Formation foe = Wave4With(EnemyCatalog.Yoker);
+            var rule = new YokeRule(caps[c], Active: true);
+            for (int b = 0; b < nbS; b++)
+            {
+                int wins = 0;
+                for (int seed = 0; seed < YokeSeeds; seed++)
+                    if (BattleEngine.Run(yokeBuilds[b].F, foe, seed, verbose: false, null, rule).PlayerWon) wins++;
+                capRate[c][b] = wins * 100.0 / YokeSeeds;
+            }
+            Console.Error.WriteLine($"  Cap {caps[c]} 完了");
+        }
+
+        Console.WriteLine("# 軛の上限を振る（yoke sweep）");
+        Console.WriteLine();
+        Console.WriteLine($"代表編成 {nbS} × Cap {caps.Length} 通り、seed 0..{YokeSeeds - 1}。診断用なので docs/ には置かない。");
+        Console.WriteLine();
+        Console.WriteLine("第四波以外は保持者が不在で1セルも動かない（引数なしの `yoke` で確認済み）ので、");
+        Console.WriteLine("**基準の5波を1回測って、第四波だけを Cap ごとに測り直している。**");
+        Console.WriteLine();
+        Console.WriteLine("比較のための他波の現状値（`spread` と同じ計算）:");
+        Console.WriteLine();
+        Console.WriteLine("| 波 | 平均 | 100%の編成 | 0%の編成 | 中間帯 | 標準偏差 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|");
+        for (int w = 0; w < nwS; w++)
+        {
+            double[] col = Enumerable.Range(0, nbS).Select(b => basis[b][w]).ToArray();
+            double mean = col.Average();
+            double sd = Math.Sqrt(col.Select(x => (x - mean) * (x - mean)).Sum() / col.Length);
+            Console.WriteLine($"| 第{w + 1}波 | {mean:F1} | {col.Count(x => x >= 100.0)} / {nbS} "
+                + $"| {col.Count(x => x <= 0.0)} | {col.Count(x => x > 5.0 && x < 95.0)} | {sd:F1} |");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("## Cap ごとの第四波");
+        Console.WriteLine();
+        Console.WriteLine("**波の難度そのものを上げるのが目的ではない。** 見るのは 中間帯 と 固有の敗者 で、");
+        Console.WriteLine("平均は「第五波（59.8）より難しい波にしていないか」の歯止めとして読む。");
+        Console.WriteLine();
+        Console.WriteLine("| Cap | 平均 | 100%の編成 | 0%の編成 | 中間帯 | 標準偏差 | 固有の敗者 | 固有の勝者 | 第2波との相関 | 第2〜4波すべて100% |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+
+        double[] Col(int c) => c < 0
+            ? Enumerable.Range(0, nbS).Select(b => basis[b][Wave4]).ToArray()
+            : capRate[c];
+        double At(int c, int b, int w) => w == Wave4 ? Col(c)[b] : basis[b][w];
+
+        List<string> Losers(int c) => Enumerable.Range(0, nbS)
+            .Where(b => At(c, b, Wave4) <= 0.0
+                        && Enumerable.Range(1, nwS - 1).All(o => o == Wave4 || At(c, b, o) > 0.0))
+            .Select(b => yokeBuilds[b].Name).ToList();
+        List<string> Winners(int c) => Enumerable.Range(0, nbS)
+            .Where(b => At(c, b, Wave4) >= 100.0
+                        && Enumerable.Range(1, nwS - 1).All(o => o == Wave4 || At(c, b, o) < 100.0))
+            .Select(b => yokeBuilds[b].Name).ToList();
+
+        void Line(string label, int c)
+        {
+            double[] col = Col(c);
+            double mean = col.Average();
+            double sd = Math.Sqrt(col.Select(x => (x - mean) * (x - mean)).Sum() / col.Length);
+            double corr = Corr2(Enumerable.Range(0, nbS).Select(b => basis[b][1]).ToArray(), col);
+            int allTop = Enumerable.Range(0, nbS)
+                .Count(b => Enumerable.Range(1, 3).All(w => At(c, b, w) >= 100.0));
+            Console.WriteLine($"| {label} | {mean:F1} | {col.Count(x => x >= 100.0)} / {nbS} "
+                + $"| {col.Count(x => x <= 0.0)} | {col.Count(x => x > 5.0 && x < 95.0)} | {sd:F1} "
+                + $"| {Losers(c).Count} | {Winners(c).Count} "
+                + $"| {(double.IsNaN(corr) ? "—" : $"{corr:+0.00;-0.00}")} | {allTop} / {nbS} |");
+        }
+
+        Line("軛なし", -1);
+        for (int c = 0; c < caps.Length; c++) Line($"Cap {caps[c]}", c);
+
+        Console.WriteLine();
+        for (int c = 0; c < caps.Length; c++)
+        {
+            var lose = Losers(c);
+            Console.WriteLine($"- **Cap {caps[c]}** 固有の敗者 ({lose.Count}): "
+                + (lose.Count == 0 ? "**なし**" : string.Join(" / ", lose)));
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("## 編成 × Cap");
+        Console.WriteLine();
+        Console.WriteLine("`中` は軛なしの第四波が中間帯（5% < x < 95%）にある編成。");
+        Console.WriteLine();
+        Console.WriteLine("| 編成 | 中 | 軛なし |" + string.Concat(caps.Select(c => $" {c} |")));
+        Console.WriteLine("|---|:-:|---:|" + string.Concat(caps.Select(_ => "---:|")));
+        for (int b = 0; b < nbS; b++)
+        {
+            bool mid = basis[b][Wave4] > 5.0 && basis[b][Wave4] < 95.0;
+            Console.WriteLine($"| {yokeBuilds[b].Name} | {(mid ? "●" : "")} | {basis[b][Wave4]:F1} |"
+                + string.Concat(Enumerable.Range(0, caps.Length).Select(c => $" {capRate[c][b]:F1} |")));
+        }
+        return;
+    }
+
+    // ---- log: 計画 §2.3 の監査 -----------------------------------------------------------
+    if (yokeMode == "log")
+    {
+        Formation wave4 = EnemyCatalog.Stages[Wave4].Enemy;
+
+        void Audit(string title, string buildKey, int seed, string[] marks, string note)
+        {
+            var (name, f) = yokeBuilds.First(b => b.Name.Contains(buildKey));
+            BattleResult r = BattleEngine.Run(f, wave4, seed, verbose: true);
+
+            // 保持者の InstanceId。ctx.Add は 味方（スロット昇順）→ 敵（スロット昇順）の順に振る。
+            int id = f.Occupied().Count(), yokerId = -1;
+            foreach (var (_, def) in wave4.Occupied())
+            {
+                if (def.Id == EnemyCatalog.Yoker.Id) yokerId = id;
+                id++;
+            }
+            // **保持者の生死はターンではなくイベントの並びで割る。** 倒れたのと同じターンの
+            // 後続のダメージはもう上限の外側にあるので、ターンで割ると「上限を超えた」と誤検出する
+            // （実際に踏んだ: 反撃改2 の seed 0 で 78 が生存中に見えていた）。
+            var events = r.Events.ToList();
+            int deathAt = events.FindIndex(e => e.Kind == BattleEventKind.Death && e.TargetId == yokerId);
+            if (deathAt < 0) deathAt = events.Count;
+            int deathTurn = deathAt < events.Count ? events[deathAt].Turn : int.MaxValue;
+
+            int maxUnder = events.Take(deathAt)
+                .Where(e => e.Kind == BattleEventKind.Damage).Select(e => e.Amount).DefaultIfEmpty(0).Max();
+            int maxAfter = events.Skip(deathAt)
+                .Where(e => e.Kind == BattleEventKind.Damage).Select(e => e.Amount).DefaultIfEmpty(0).Max();
+            var text = r.Log.Select(l => l.Text).ToList();
+            int cuts = text.Count(t => t.Contains("軛が") && t.Contains("切った"));
+
+            Console.WriteLine();
+            Console.WriteLine($"## {title}");
+            Console.WriteLine();
+            Console.WriteLine(note);
+            Console.WriteLine();
+            Console.WriteLine($"{name} / 第四波 / seed {seed} / {(r.PlayerWon ? "勝利" : "敗北")} {r.Turns}ターン");
+            Console.WriteLine();
+            Console.WriteLine($"- 軛が切った回数: **{cuts} 回**");
+            Console.WriteLine("- 保持者が倒れたターン: "
+                + (deathTurn == int.MaxValue ? "**最後まで生存**" : $"**T{deathTurn}**"));
+            Console.WriteLine($"- 保持者の生存中の最大ダメージ: **{maxUnder}**"
+                + $"（**{YokeTrait.Cap} 以下でなければならない**）");
+            Console.WriteLine("- 保持者が倒れた後の最大ダメージ: "
+                + (deathTurn == int.MaxValue ? "—" : $"{maxAfter}") + "（上限が外れたことの確認）");
+
+            // 抜粋。前後に数行付けて順序が読めるようにする（破片 → 軛 → ダメージ の並び）。
+            foreach (string mark in marks)
+            {
+                // 上限との関係が読める箇所を優先する。無ければ最初の一致に落とす。
+                int at = Enumerable.Range(0, text.Count).FirstOrDefault(
+                    i => text[i].Contains(mark)
+                         && Enumerable.Range(i, Math.Min(4, text.Count - i)).Any(j => text[j].Contains("軛が")),
+                    -1);
+                if (at < 0) at = text.FindIndex(t => t.Contains(mark));
+                Console.WriteLine();
+                if (at < 0) { Console.WriteLine($"- `{mark}` を含む行は出なかった"); continue; }
+                Console.WriteLine($"- `{mark}` の周辺:");
+                Console.WriteLine();
+                Console.WriteLine("```");
+                for (int i = Math.Max(0, at - 1); i < Math.Min(text.Count, at + 4); i++)
+                    Console.WriteLine(text[i]);
+                Console.WriteLine("```");
+            }
+        }
+
+        // 2つの行が近接する事例を seed で探す。破片・肩代わりと上限の同時発火は
+        // 「起きるかどうか」自体が結果なので、**見つからなかったときは走査した seed 数を書く**
+        // （1戦だけ見て「出なかった」と書くと、偶然か構造かが分からない）。
+        void AuditPair(string title, string buildKey, string first, string second, int seeds, string note)
+        {
+            var (name, f) = yokeBuilds.First(b => b.Name.Contains(buildKey));
+            Console.WriteLine();
+            Console.WriteLine($"## {title}");
+            Console.WriteLine();
+            Console.WriteLine(note);
+
+            for (int seed = 0; seed < seeds; seed++)
+            {
+                var text = BattleEngine.Run(f, wave4, seed, verbose: true).Log.Select(l => l.Text).ToList();
+                int at = Enumerable.Range(0, text.Count).FirstOrDefault(
+                    i => text[i].Contains(first)
+                         && Enumerable.Range(i, Math.Min(3, text.Count - i)).Any(j => text[j].Contains(second)),
+                    -1);
+                if (at < 0) continue;
+
+                Console.WriteLine();
+                Console.WriteLine($"{name} / 第四波 / seed {seed} で `{first}` と `{second}` が同時に出た:");
+                Console.WriteLine();
+                Console.WriteLine("```");
+                for (int i = Math.Max(0, at - 1); i < Math.Min(text.Count, at + 4); i++)
+                    Console.WriteLine(text[i]);
+                Console.WriteLine("```");
+                return;
+            }
+
+            Console.WriteLine();
+            Console.WriteLine($"{name} / 第四波 / seed 0..{seeds - 1} を走査したが、"
+                + $"`{first}` と `{second}` が同時に出る事例は **0 件**。");
+        }
+
+        Console.WriteLine("# 軛の監査（yoke log）");
+        Console.WriteLine();
+        Console.WriteLine("受け入れ基準 3（計画 §2.3）を1戦ずつ確かめる。"
+            + $"規則は既定（`YokeRule.Default` / Cap {YokeTrait.Cap}）。");
+        Console.WriteLine();
+        Console.WriteLine("**ここだけはログの文字列を数えている。** UI は `LogKind` を見るという規約に");
+        Console.WriteLine("反して見えるが、確かめたいのは「その行がどの順で出たか」そのもので、");
+        Console.WriteLine("盤面の値では代用できない（`gullet log` と同じ理由）。");
+
+        AuditPair("A. 破片は上限の外側で効くか", "範囲耐性", "破片が", "軛が", 50,
+              "破片（`StatusKeys.Armor`）は上限**より前**に引かれる別資源。"
+            + "破片が吸った後の残りが上限で切られる。"
+            + "**破片が付くのは味方だけ**なので、この波では同時に働くには"
+            + "味方が 25 を超える一撃（＝味方由来の巻き込み）を浴びる必要がある。");
+
+        AuditPair("B. 肩代わりの各段は独立に切られるか", "耐久 (ガルド", "立ちはだかる", "軛が", 50,
+              "巨躯で分割された段はそれぞれ別の `ApplyDamage` 呼び出しなので、段ごとに切られる。"
+            + "**分割は上限を回避する経路**——意図した帰結（重い一撃は分けて受けろ）。"
+            + "肩代わりは味方への攻撃にしか働かないので、これも味方が 25 超えを浴びたときだけ出る。");
+
+        Audit("C. 棘守りの二重上限 / 惨禍の増幅", "反撃改2", 0, new[] { "鎧は貫かれ", "軛が" },
+              "棘守り（カド）は `AbsorbCap` で既に別の上限を持つ。中継先への超過分は"
+            + "別の呼び出しなので独立に切られる。惨禍（+50%）は**増幅が先・上限が後**なので、"
+            + "増幅は上限の下で消える（意図どおり）。");
+
+        Audit("D. 毒の刻みも切られるか", "毒 (グザ", 0, new[] { "毒に蝕まれている" },
+              "毒は除外しない。渇きが `source == null` を外したのとは違い、こちらは"
+            + "**「1発の重さ」に課金する規則**なので出どころは関係ない。");
+
+        Audit("E. 墓守の層は上限に当たるか", "死の連鎖 (リィカ", 0, new[] { "軛が" },
+              "リィカの層は攻撃力が三角数で伸びる（実測 5 → 35 → 64）。**上層が潰れる**のがここ。");
+        return;
+    }
+
+    // ---- 版の並び ------------------------------------------------------------------------
+    var versions = new (string Name, string Note, UnitDef Center, YokeRule Rule)[]
+    {
+        ("V0 現行",   "中央 城塞の重装兵（軛なし）＝**差し替え前の盤面**",
+            EnemyCatalog.Warden, YokeRule.Default),
+        ("V1 壁のみ", "中央 軛の重装兵・**規則は無効**（数値は V0 と同一）",
+            EnemyCatalog.Yoker, new YokeRule(YokeTrait.Cap, Active: false)),
+        ("V2 上限25", $"中央 軛の重装兵・Cap {YokeTrait.Cap}（**本命＝採用した規則**）",
+            EnemyCatalog.Yoker, YokeRule.Default),
+        ("V3 上限30", "Cap 30（上限を緩めた側）",
+            EnemyCatalog.Yoker, new YokeRule(30, Active: true)),
+        ("V4 上限20", "Cap 20（上限を締めた側。**ここから下は波が壁になる**）",
+            EnemyCatalog.Yoker, new YokeRule(20, Active: true)),
+    };
+
+    int nv = versions.Length, nb = yokeBuilds.Length, nw = EnemyCatalog.Stages.Count;
+
+    // 版ごとの敵5波。第四波以外は EnemyCatalog のものをそのまま指す。
+    var board = new Formation[nv][];
+    for (int v = 0; v < nv; v++)
+    {
+        board[v] = new Formation[nw];
+        for (int w = 0; w < nw; w++)
+            board[v][w] = w == Wave4 ? Wave4With(versions[v].Center) : EnemyCatalog.Stages[w].Enemy;
+    }
+
+    var rate = new double[nv][][];          // rate[版][編成][波] = 勝率(%)
+    var outFoe = new double[nv][];          // 第四波・1戦あたりの「敵が受けたダメージ」＝味方の出力
+    var outAlly = new double[nv][];         // 第四波・1戦あたりの「味方が受けたダメージ」
+    var turns4 = new double[nv][];          // 第四波・決着ターン
+
+    for (int v = 0; v < nv; v++)
+    {
+        rate[v] = new double[nb][];
+        outFoe[v] = new double[nb];
+        outAlly[v] = new double[nb];
+        turns4[v] = new double[nb];
+
+        for (int b = 0; b < nb; b++)
+        {
+            rate[v][b] = new double[nw];
+            for (int w = 0; w < nw; w++)
+            {
+                int wins = 0;
+                long foe = 0, ally = 0, turns = 0;
+                for (int seed = 0; seed < YokeSeeds; seed++)
+                {
+                    BattleResult r = BattleEngine.Run(yokeBuilds[b].F, board[v][w], seed,
+                                                      verbose: false, null, versions[v].Rule);
+                    if (r.PlayerWon) wins++;
+                    if (w != Wave4) continue;
+
+                    turns += r.Turns;
+                    // **与ダメは受け手側から取る**（第13期 Phase DA）。毒・燃焼は source が
+                    // null なので味方側から合計すると毒軸の出力が構造的に過小になる。
+                    foreach ((string id, UnitTally t) in r.TallyByUnit)
+                        if (wave4EnemyIds.Contains(id)) foe += t.DamageTaken;
+                        else ally += t.DamageTaken;
+                }
+                rate[v][b][w] = wins * 100.0 / YokeSeeds;
+                if (w != Wave4) continue;
+                outFoe[v][b] = (double)foe / YokeSeeds;
+                outAlly[v][b] = (double)ally / YokeSeeds;
+                turns4[v][b] = (double)turns / YokeSeeds;
+            }
+        }
+        Console.Error.WriteLine($"  {versions[v].Name} 完了");
+    }
+
+    Console.WriteLine("# 第四波の軛（yoke）");
+    Console.WriteLine();
+    Console.WriteLine($"代表編成 {nb} × 全 {nw} 波 × {nv} 版、seed 0..{YokeSeeds - 1}。"
+        + "診断用なので docs/ には置かない。");
+    Console.WriteLine();
+    foreach (var vv in versions) Console.WriteLine($"- **{vv.Name}**: {vv.Note}");
+
+    // --- 検算 1: V0 が差し替え前の balance.md と一致するか --------------------------------
+    Console.WriteLine();
+    Console.WriteLine("## 検算 1: V0 × 全編成");
+    Console.WriteLine();
+    Console.WriteLine("**このセルは差し替え前の `docs/balance.md`（`git show HEAD:docs/balance.md`）と");
+    Console.WriteLine("一致しなければならない。** ずれていたら診断の組み方（seed 帯・台・編成リスト）が");
+    Console.WriteLine("balance.md と揃っていない。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 |" + string.Concat(Enumerable.Range(1, nw).Select(i => $" 第{i}波 |")));
+    Console.WriteLine("|---|" + string.Concat(Enumerable.Range(0, nw).Select(_ => "---:|")));
+    for (int b = 0; b < nb; b++)
+        Console.WriteLine($"| {yokeBuilds[b].Name} |" + string.Concat(rate[0][b].Select(x => $" {x:F1}% |")));
+
+    // --- 検算 2: V1（壁のみ）は V0 と一致するか -------------------------------------------
+    Console.WriteLine();
+    Console.WriteLine("## 検算 2: V1（壁のみ）= V0");
+    Console.WriteLine();
+    Console.WriteLine("軛の重装兵は城塞の重装兵と**数値が1つも違わない**ので、規則を切れば盤面は完全に同じになる。");
+    Console.WriteLine("**ここが 0 件でなければ、差し替えが数値も動かしている**（逆位の失敗の直接の原因）。");
+    Console.WriteLine();
+    var v1stray = new List<string>();
+    for (int b = 0; b < nb; b++)
+        for (int w = 0; w < nw; w++)
+            if (Math.Abs(rate[1][b][w] - rate[0][b][w]) > 1e-9)
+                v1stray.Add($"{yokeBuilds[b].Name} / 第{w + 1}波: {rate[0][b][w]:F1}% → {rate[1][b][w]:F1}%");
+    Console.WriteLine($"{nb} 編成 × {nw} 波 = {nb * nw} セル中、**食い違い {v1stray.Count} 件**。");
+    foreach (string x in v1stray.Take(40)) Console.WriteLine($"- {x}");
+
+    // --- 検算 3: 第四波以外は全版で動かないか ---------------------------------------------
+    Console.WriteLine();
+    Console.WriteLine("## 検算 3: 第一・二・三・五波は全版 ±0.0");
+    Console.WriteLine();
+    Console.WriteLine("軛の保持者は第四波にしかいないので、他の4波は Cap を振っても1セルも動いてはいけない");
+    Console.WriteLine("（受け入れ基準 1）。**動いていたら規則が保持者の不在下でも効いている。**");
+    Console.WriteLine();
+    var otherStray = new List<string>();
+    for (int v = 1; v < nv; v++)
+        for (int b = 0; b < nb; b++)
+            for (int w = 0; w < nw; w++)
+                if (w != Wave4 && Math.Abs(rate[v][b][w] - rate[0][b][w]) > 1e-9)
+                    otherStray.Add($"{yokeBuilds[b].Name} / {versions[v].Name} / 第{w + 1}波: "
+                                   + $"{rate[0][b][w]:F1}% → {rate[v][b][w]:F1}%");
+    Console.WriteLine($"{nb} 編成 × {nv - 1} 版 × {nw - 1} 波 = {nb * (nv - 1) * (nw - 1)} セル中、"
+                      + $"**食い違い {otherStray.Count} 件**。");
+    foreach (string x in otherStray.Take(40)) Console.WriteLine($"- {x}");
+
+    // --- 主表: 第四波 ---------------------------------------------------------------------
+    bool Mid(int b) => rate[0][b][Wave4] > 5.0 && rate[0][b][Wave4] < 95.0;
+
+    Console.WriteLine();
+    Console.WriteLine("## 主表: 第四波の勝率 × 各版");
+    Console.WriteLine();
+    Console.WriteLine("`中` は **V0 の第四波が中間帯（5% < x < 95%）にある編成**＝この台で増分が読める編成");
+    Console.WriteLine("（第24期 yield の教訓。飽和したセルでは誰に何をしても 0 に潰れる）。");
+    Console.WriteLine("100% に張り付いている編成は「落ちたかどうか」だけを見る。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 中 |" + string.Concat(versions.Select(v => $" {v.Name} |"))
+                      + " V2−V0 | V3−V0 | V4−V0 |");
+    Console.WriteLine("|---|:-:|" + string.Concat(versions.Select(_ => "---:|")) + "---:|---:|---:|");
+    for (int b = 0; b < nb; b++)
+        Console.WriteLine($"| {yokeBuilds[b].Name} | {(Mid(b) ? "●" : "")} |"
+            + string.Concat(Enumerable.Range(0, nv).Select(v => $" {rate[v][b][Wave4]:F1}% |"))
+            + $" {rate[2][b][Wave4] - rate[0][b][Wave4]:+0.0;-0.0} |"
+            + $" {rate[3][b][Wave4] - rate[0][b][Wave4]:+0.0;-0.0} |"
+            + $" {rate[4][b][Wave4] - rate[0][b][Wave4]:+0.0;-0.0} |");
+
+    // --- 判定（計画 §6 の表）--------------------------------------------------------------
+    List<string> UniqueLosers(int v, int w) => Enumerable.Range(0, nb)
+        .Where(b => rate[v][b][w] <= 0.0
+                    && Enumerable.Range(1, nw - 1).All(o => o == w || rate[v][b][o] > 0.0))
+        .Select(b => yokeBuilds[b].Name).ToList();
+    List<string> UniqueWinners(int v, int w) => Enumerable.Range(0, nb)
+        .Where(b => rate[v][b][w] >= 100.0
+                    && Enumerable.Range(1, nw - 1).All(o => o == w || rate[v][b][o] < 100.0))
+        .Select(b => yokeBuilds[b].Name).ToList();
+
+    Console.WriteLine();
+    Console.WriteLine("## 判定（計画 §6）");
+    Console.WriteLine();
+    Console.WriteLine("`spread` の (1)(2)(3) を第四波について版ごとに引き直したもの。");
+    Console.WriteLine("**固有の敗者/勝者は第一波を比較から外して数える**（第22期 Phase 2b。");
+    Console.WriteLine("第一波は全編成 100% を意図して維持しているので、入れると恒等的に 0 になる）。");
+    Console.WriteLine();
+    Console.WriteLine("| 版 | 平均 | 100%の編成 | 0%の編成 | 中間帯 | 標準偏差 | 固有の敗者 | 固有の勝者 | 第2波との相関 | 第2〜4波すべて100% |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+    for (int v = 0; v < nv; v++)
+    {
+        double[] col = Enumerable.Range(0, nb).Select(b => rate[v][b][Wave4]).ToArray();
+        double mean = col.Average();
+        double sd = Math.Sqrt(col.Select(x => (x - mean) * (x - mean)).Sum() / col.Length);
+        double corr = Corr2(Enumerable.Range(0, nb).Select(b => rate[v][b][1]).ToArray(), col);
+        int allTop = Enumerable.Range(0, nb)
+            .Count(b => Enumerable.Range(1, 3).All(w => rate[v][b][w] >= 100.0));
+        Console.WriteLine($"| {versions[v].Name} | {mean:F1} | {col.Count(x => x >= 100.0)} / {nb} "
+            + $"| {col.Count(x => x <= 0.0)} | {col.Count(x => x > 5.0 && x < 95.0)} | {sd:F1} "
+            + $"| {UniqueLosers(v, Wave4).Count} | {UniqueWinners(v, Wave4).Count} "
+            + $"| {(double.IsNaN(corr) ? "—" : $"{corr:+0.00;-0.00}")} | {allTop} / {nb} |");
+    }
+    Console.WriteLine();
+    for (int v = 0; v < nv; v++)
+    {
+        var lose = UniqueLosers(v, Wave4);
+        var win = UniqueWinners(v, Wave4);
+        Console.WriteLine($"- **{versions[v].Name}** 固有の敗者 ({lose.Count}): "
+            + (lose.Count == 0 ? "**なし**" : string.Join(" / ", lose))
+            + $" ／ 固有の勝者 ({win.Count}): " + (win.Count == 0 ? "なし" : string.Join(" / ", win)));
+    }
+
+    // --- 動いた編成 -----------------------------------------------------------------------
+    Console.WriteLine();
+    Console.WriteLine("## 動いた編成（V2−V0 の順）");
+    Console.WriteLine();
+    Console.WriteLine("計画 §5 の予測（大打点を持つ編成から落ちる）と突き合わせる列。");
+    Console.WriteLine("**`中` が付いていない行の 0.0 は「無風」ではなく「読めない」**——飽和したセルなので。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 中 | V0 | V2 | 差 | 敵被ダメ/戦 V1→V2 | 味方被ダメ/戦 V1→V2 | 決着T V1→V2 |");
+    Console.WriteLine("|---|:-:|--:|--:|--:|--:|--:|--:|");
+    foreach (int b in Enumerable.Range(0, nb).OrderBy(b => rate[2][b][Wave4] - rate[0][b][Wave4]))
+        Console.WriteLine($"| {yokeBuilds[b].Name} | {(Mid(b) ? "●" : "")} | {rate[0][b][Wave4]:F1} "
+            + $"| {rate[2][b][Wave4]:F1} | {rate[2][b][Wave4] - rate[0][b][Wave4]:+0.0;-0.0} "
+            + $"| {outFoe[1][b]:F0} → {outFoe[2][b]:F0} ({outFoe[2][b] - outFoe[1][b]:+0;-0}) "
+            + $"| {outAlly[1][b]:F0} → {outAlly[2][b]:F0} ({outAlly[2][b] - outAlly[1][b]:+0;-0}) "
+            + $"| {turns4[1][b]:F1} → {turns4[2][b]:F1} |");
+
+    Console.WriteLine();
+    Console.WriteLine("`敵被ダメ/戦` は**受け手側から数えた味方の出力**（第13期 Phase DA。毒・燃焼は");
+    Console.WriteLine("`source` が null なので味方側から合計すると毒軸が構造的に過小になる）。");
+    Console.WriteLine("V1 → V2 の減りが、そのまま**上限で切られた量**。ここが動いていない編成は、");
+    Console.WriteLine("そもそも上限に当たる打点を持っていない。");
+    return;
+
+    // ピアソン相関。片方の分散が 0 なら定義できないので NaN を返す（呼び出し側で — に置く）。
+    static double Corr2(double[] a, double[] b)
+    {
+        double ma = a.Average(), mb = b.Average();
+        double num = 0, da = 0, db = 0;
+        for (int i = 0; i < a.Length; i++)
+        {
+            num += (a[i] - ma) * (b[i] - mb);
+            da += (a[i] - ma) * (a[i] - ma);
+            db += (b[i] - mb) * (b[i] - mb);
+        }
+        return da <= 0 || db <= 0 ? double.NaN : num / Math.Sqrt(da * db);
+    }
+}
+
 // spread モード: **波の側**の分離度を測る（第22期 Phase 1）。
 //
 // 既存モードは全部「編成の側」を見ている（どの編成が強いか）。ここで見たいのは逆で、
