@@ -388,6 +388,38 @@ public sealed class BattleContext
 
     public int Roll(int maxExclusive) => _rng.Next(maxExclusive);
 
+    /// <summary>
+    /// 同値の候補から1体選ぶ。<b>席番号の若い順で決めないための唯一の窓口。</b>
+    ///
+    /// <para>X字化で盤面のグラフは自己同型になった（前1↔前3 / 後1↔後3 / ○中1↔○中3）が、
+    /// 候補を <c>FirstOrDefault</c> で拾うとリストの並び＝実質スロット昇順に落ちるので、
+    /// 鏡像の配置が同値にならない。実測で最大 24.1pt ずれていた。</para>
+    ///
+    /// <para><b>決定的なまま対称にする案は採らない。</b>「レーン内の位置で決める」なども
+    /// 結局どこかで席番号に落ちる。乱数で割る。</para>
+    ///
+    /// <para><c>Roll</c> の消費は候補数に対して決定的（0個・1個なら消費しない）。</para>
+    /// </summary>
+    public UnitState? PickOne(IReadOnlyList<UnitState> candidates) => candidates.Count switch
+    {
+        0 => null,
+        1 => candidates[0],
+        _ => candidates[Roll(candidates.Count)]
+    };
+
+    /// <summary>
+    /// Fisher-Yates。<b>消費する <c>Roll</c> は必ず <c>Count - 1</c> 回</b>で、
+    /// 中身に依存しない。<c>OrderBy(_ => Roll(...))</c> は消費回数が読めないので使わない。
+    /// </summary>
+    public void Shuffle<T>(IList<T> list)
+    {
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = Roll(i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
+    }
+
     /// <summary>攻撃対象を選ぶ。前列が生きている限り後列は狙われない。庇うはここで割り込む。</summary>
     /// <summary>
     /// 主目標を選ぶ。
@@ -1030,11 +1062,16 @@ public sealed class BattleContext
 
         // 味方がいるなら必ず入れ替える（＝前へ押し出す）。
         // 空きへ逃げるだけだと誰も損をせず、逃亡が純粋な利益になってしまう。
-        foreach (int slot in slots)
-            if (team.Any(u => u.Slot == slot && u != self)) return slot;
+        // **この優先順位は維持する。**乱数化するのは「同じ段の中で誰を押しのけるか」だけ。
+        //
+        // 昇順に走って最初の1つを返していたので、後退先が常に 後1 へ偏っていた。
+        // 後1 と 後3 は等価なはずなので、鏡像の配置が同値にならない原因になっていた
+        // （逃亡兵セロを含む編成で鏡像差が最大 24.1pt）。
+        var occupied = slots.Where(s => team.Any(u => u.Slot == s && u != self)).ToList();
+        if (occupied.Count > 0) return occupied[Roll(occupied.Count)];
 
-        foreach (int slot in slots)
-            if (team.All(u => u.Slot != slot)) return slot;
+        var empty = slots.Where(s => team.All(u => u.Slot != s)).ToList();
+        if (empty.Count > 0) return empty[Roll(empty.Count)];
 
         return null;
     }
@@ -1120,7 +1157,20 @@ public static class BattleEngine
 
         ctx.Log("=== 戦闘開始 ===", LogKind.System);
 
-        foreach (UnitState u in ctx.AllUnits.OrderByDescending(u => u.Def.Speed).ToList())
+        // 開戦時の通知順。ThenBy が無いので同速は _units の並び＝実質スロット昇順に落ちる。
+        // ターン順と同じ扱いにして、同速の群だけを混ぜる（生贄・呪詛の適用順が席番号で決まらない）。
+        var opening = ctx.AllUnits
+            .GroupBy(u => u.Def.Speed)
+            .OrderByDescending(g => g.Key)
+            .SelectMany(g =>
+            {
+                var tie = g.ToList();
+                ctx.Shuffle(tie);
+                return tie;
+            })
+            .ToList();
+
+        foreach (UnitState u in opening)
         {
             if (!u.IsAlive) continue;
             foreach (Trait t in u.Traits.ToList())
@@ -1143,12 +1193,25 @@ public static class BattleEngine
                 foreach (Trait t in u.Traits.ToList())
                     t.OnTurnStart(ctx, u);
 
-            // 素早さ順。同値はチーム→スロットで安定させる（再現性のため）
+            // 素早さ順。同値はチームで割り、**その中は毎ターン乱数で混ぜる**。
+            //
+            // 以前は .ThenBy(u => u.Slot) で安定させていたが、これが席番号の偏りの本体だった。
+            // X字盤面では前1と前3（後1と後3）は等価なはずなのに、同速なら常に若い席が先に動く。
+            // 陣営間のタイブレーク（TeamId）は席番号とは無関係な設計上の順序なので残す。
+            //
+            // **毎ターン振り直す。**開戦時に1回だけ決めると、その後に生死や速さの前提が
+            // 変わっても初回の順序を引きずる。
             var order = ctx.AllUnits
                 .Where(u => u.IsAlive)
-                .OrderByDescending(u => u.Def.Speed)
-                .ThenBy(u => u.TeamId)
-                .ThenBy(u => u.Slot)
+                .GroupBy(u => (u.Def.Speed, u.TeamId))
+                .OrderByDescending(g => g.Key.Speed)
+                .ThenBy(g => g.Key.TeamId)
+                .SelectMany(g =>
+                {
+                    var tie = g.ToList();
+                    ctx.Shuffle(tie);      // 同速・同陣営の中だけ。群をまたいで混ぜない
+                    return tie;
+                })
                 .ToList();
 
             foreach (UnitState actor in order)
