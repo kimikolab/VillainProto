@@ -616,6 +616,16 @@ public sealed class NecroTrait : Trait
 /// <c>SelectTarget</c> で主目標を差し替えるだけなので、範囲攻撃の巻き込みには触れない。
 /// ここは <c>ApplyDamage</c> の中なので薙ぎ・全体・貫きの一発ずつを拾える。</para>
 ///
+/// <para><b>飲み込んだ分は「守った相手」に返す（吐き戻し）。</b> 肩代わり4種のうち見返りを
+/// 持たないのは巨躯だけで、90% を後方全員から引き受けてそこで価値が消えていた
+/// （第19期 route: ナラの削り7のうち6をゴルムが食い、ムドの Rage が +1 に潰れる /
+/// 第21期 swap: ノノの回復の最大の受け手がゴルム / 第22期: 大喰らいが隠れた回復経路）。
+/// <b>見返りをゴルム自身ではなく守った相手に返す</b>ので、肩代わりは価値を消さず経路を変えるだけになり、
+/// 「後ろに誰を置くか」が初めて判断になる。実装は <c>BattleContext.ApplyDamage</c> の巨躯の分岐。</para>
+///
+/// <para><b>ゴルム自身は育たない。</b> 分かち方式（全被弾に反応）にすると、前列でHP150・素の被弾が
+/// 膨大なので「壁だから育つ」になって巨躯との結び付きが切れる（GuardianTrait のコメントが同じ失敗を記録している）。</para>
+///
 /// <para><b>列の前後で効き目が変わる。</b> 前列に置けば中衛と後列を守り、中衛なら後列だけ、
 /// 後列に置けば誰も守らない。5体を6枠に入れる限り必ず1枠空くので
 /// 「デメリットの隣を空ける」が常に最適解になる、という既存の穴（README の未解決の課題）に対して、
@@ -626,7 +636,32 @@ public sealed class ColossusTrait : Trait
     /// <summary>後ろの味方への攻撃を何割引き受けるか。</summary>
     public const int Percent = 90;
 
+    /// <summary>
+    /// 飲み込んだダメージ何点につき、<b>庇った相手</b>の攻撃力+1 か（吐き戻し）。
+    ///
+    /// <para>怒り（Rage）・庇う（Guardian）・分かち（Sharer）は 2 だが、巨躯は
+    /// 90% × 後方全員で、庇う50%単体・分かち40%の<b>およそ2倍を吸う</b>ので
+    /// 半分の効率にしてある。<b>ここが最初に振る調整ノブ</b>で、
+    /// 上がりすぎたら 4 → 6, 8 と振る（ゴルムの数値 150/10/3 は触らない）。</para>
+    /// </summary>
+    public const int DamagePerGain = 4;
+
     public override TraitId Id => TraitId.Colossus;
+}
+
+/// <summary>
+/// 巨躯の規則。<b>診断（gullet）が版を並べて 1 回の実行の中で比べるためだけに外から差せる。</b>
+/// 既定は <see cref="Default"/> ＝ <see cref="ColossusTrait"/> の const ＋ 吐き戻し有効で、
+/// <b>これが本採用の規則</b>。渡さない限り盤面は常にこの規則で動く。
+///
+/// <para><b>書き換え可能な static の調整ノブにしないこと。</b> Trait は共有シングルトンで、
+/// layout は戦闘を並列実行する——static に置くと版の切り替えが他のスレッドの戦闘へ漏れるし、
+/// <c>BattleEngine.Run</c> の「副作用も外部依存もない」もそこで壊れる。引数で渡せば決定性がそのまま残る。</para>
+/// </summary>
+public readonly record struct ColossusRule(int Percent, int DamagePerGain, bool Regurgitate)
+{
+    public static ColossusRule Default =>
+        new(ColossusTrait.Percent, ColossusTrait.DamagePerGain, Regurgitate: true);
 }
 
 /// <summary>処刑。とどめを刺すたびに攻撃力が上がる。</summary>

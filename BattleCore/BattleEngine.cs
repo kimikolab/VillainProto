@@ -211,10 +211,17 @@ public sealed class BattleContext
         internal set { _turn = value; _enemyKillsThisTurn = 0; }
     }
 
-    public BattleContext(int seed, bool verbose)
+    /// <summary>
+    /// 巨躯の規則。<b>診断（gullet）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="ColossusRule.Default"/>）。static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public ColossusRule Colossus { get; }
+
+    public BattleContext(int seed, bool verbose, ColossusRule? colossus = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
+        Colossus = colossus ?? ColossusRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -834,11 +841,45 @@ public sealed class BattleContext
 
             if (wall is not null)
             {
-                int blocked = amount * ColossusTrait.Percent / 100;
+                int blocked = amount * Colossus.Percent / 100;
                 if (blocked > 0)
                 {
                     amount -= blocked;
                     Log($"    {wall.Name} が {target.Name} の前に立ちはだかる", LogKind.Trigger);
+
+                    // 吐き戻し: 飲み込んだ分を、庇った相手の力に変える。
+                    // **肩代わりは価値を消さず、経路を変えるだけ**にするのが狙い。
+                    // 見返りを壁自身ではなく守った相手に返すので、第19期 route の
+                    // 「ナラの削り7のうち6をゴルムが食い、ムドの Rage が +3 のはずが +1 に潰れる」
+                    // に出口が付く（燃料がムドへ戻る）。第21期 swap の回復の吸い込みも同じ形。
+                    //
+                    // **ゴルム自身は育たない。** 分かち方式（全被弾に反応）にしないこと。
+                    // 前列でHP150、素の被弾が膨大なので「壁だから育つ」になって巨躯との結び付きが切れる
+                    // （GuardianTrait のコメントが同じ失敗を記録している）。
+                    //
+                    // source が null の継続ダメージ（毒・燃焼の刻み）では返さない。
+                    // 庇う（GuardianTrait.OnDamaged）が同じ除外を持っているのと同じ理由で、
+                    // 刻みまで拾うと「立っているだけで育つ」になる。
+                    //
+                    // **強化なので SupportTargets を通す。** 支援拒否（ガルド）へは届かず隣へ漏れ、
+                    // 逆しま（ウツ）に対しては強化がそのまま弱体として働く——どちらも意図した帰結。
+                    //
+                    // 返すのは redirect の**前**。ApplyDamage(wall, ...) で壁が倒れると
+                    // 死亡トリガーが走って盤面が動くので、その前に確定させる。
+                    if (Colossus.Regurgitate && source is not null)
+                    {
+                        // 宛先が空（隣接する生存者がいない拡散持ち）なら何も起きていない。
+                        // ログも出さない——「返した」と書いてあるのに数字が動かない行になる。
+                        IReadOnlyList<UnitState> back = SupportTargets(target);
+                        if (back.Count > 0)
+                        {
+                            int gain = Math.Max(1, blocked / Colossus.DamagePerGain);
+                            foreach (UnitState t in back) t.AtkBonus += gain;
+                            Log($"    {wall.Name} が飲み込んだ力を {target.Name} へ返した（攻撃 +{gain}）",
+                                LogKind.Trigger);
+                        }
+                    }
+
                     ApplyDamage(wall, blocked, source, isFriendlyFire: true);
                 }
             }
@@ -1179,10 +1220,11 @@ public static class BattleEngine
     /// 編成を2つ渡すと戦闘結果が返る。それだけ。副作用も外部依存もない。
     /// verbose=false にするとログを作らないので、一括シミュレーションが速い。
     /// </summary>
-    public static BattleResult Run(Formation player, Formation enemy, int seed, bool verbose = true)
+    public static BattleResult Run(Formation player, Formation enemy, int seed, bool verbose = true,
+                                   ColossusRule? colossus = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
-               seed, verbose);
+               seed, verbose, colossus);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -1193,9 +1235,9 @@ public static class BattleEngine
     /// 渡す側はリストの並びを決定的に保つこと（Materialize はスロット昇順で返す）。
     /// </summary>
     public static BattleResult Run(IReadOnlyList<UnitState> player, IReadOnlyList<UnitState> enemy,
-                                   int seed, bool verbose = true)
+                                   int seed, bool verbose = true, ColossusRule? colossus = null)
     {
-        var ctx = new BattleContext(seed, verbose);
+        var ctx = new BattleContext(seed, verbose, colossus);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

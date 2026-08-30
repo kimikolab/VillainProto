@@ -424,6 +424,343 @@ if (focusId == "swap")
         => sum.TryGetValue(id, out UnitTally? x) ? x : new UnitTally();
 }
 
+// gullet モード: 巨躯の「吐き戻し」は肩代わりに価値を運ばせるか（第23期）。
+//
+// 肩代わり4種のうち、**見返りを持たないのは巨躯だけ**だった（庇う＝肩代わりした分だけ攻撃+/
+// 分かち＝被弾に応じて攻撃+/ 後備え＝保持者が Rage を併せ持つ）。ゴルムは後方全員への攻撃を
+// 90% 引き受けて、**そこで価値が消える**。第19期 route（ナラの削り7のうち6をゴルムが食い、
+// ムドの Rage が +3 のはずが +1 に潰れた）・第21期 swap（ノノの回復の最大の受け手がゴルム）・
+// 第22期 渇き（大喰らいが隠れた ctx.Heal 経路だった）と、3期続けて同じ吸い込み口が出ている。
+//
+// **見返りはゴルムではなく「守った相手」に返す。** ゴルム自身に返す形（庇う・分かちと同経路）だと
+// route の問題は直らないし、後ろに誰を置くかも判断にならない。
+//
+// **4版の対照を最初から組む。** 逆位（第22期）で「効いていたのは壁で、ルールではない」を
+// 後から切り分ける羽目になったため。V0/V2 が肩代わり率だけの辺、V1/V3 が吐き戻しの辺。
+//
+//   V0  90% / 吐き戻し無し   baseline。**現行の docs/balance.md と一致するはず＝検算**
+//   V1  90% / 吐き戻し有り   本命（＝既定。ColossusRule.Default）
+//   V2  60% / 吐き戻し無し   引き下げ単独の効果
+//   V3  60% / 吐き戻し有り   両方
+//
+// 版は ColossusRule を Run に渡して切り替える。**書き換え可能な static のノブは置いていない**
+// （Trait は共有シングルトンで layout は並列実行する。理由は ColossusRule の doc を参照）。
+//
+// **CompareBuilds() / Stages を触らない**ので docs/ の差分はゼロ。診断用なので docs/ には置かない。
+//
+//     dotnet run --project BattleSim -c Release 0 gullet        # 4版の対照
+//     dotnet run --project BattleSim -c Release 0 gullet gain   # DamagePerGain を 2/4/6/8 で振る
+//     dotnet run --project BattleSim -c Release 0 gullet log    # 1戦の監査（受け入れ基準 3〜5）
+if (focusId == "gullet")
+{
+    string gulletMode = args.Length > 2 ? args[2] : "";
+    var gulletBuilds = CompareBuilds();
+    IReadOnlyList<EnemyCatalog.Stage> gulletStages = EnemyCatalog.Stages;
+    const int GulletSeeds = 200;   // compare / spread と同じ。balance.md と突き合わせるので変えない
+
+    bool HasGolm(Formation f) => f.Occupied().Any(o => o.Item2.Id == UnitCatalog.Golm.Id);
+
+    // ---- log: 1戦ずつの監査 --------------------------------------------------------------
+    //
+    // **ここだけはログの文字列を数えている。** UI は LogKind を見るという規約（README）に
+    // 反しているように見えるが、確かめたいのは「その行が出たか／出なかったか」そのもので、
+    // 盤面の値では代用できない（発火しなかったことは数値に痕跡を残さない）。
+    if (gulletMode == "log")
+    {
+        const string Blocked = "の前に立ちはだかる";
+        const string Regurg = "飲み込んだ力を";
+
+        void Audit(string title, string buildKey, int stage, int seed, string[] watch)
+        {
+            var (name, f) = gulletBuilds.First(b => b.Name.Contains(buildKey));
+            BattleResult r = BattleEngine.Run(f, gulletStages[stage].Enemy, seed,
+                                              verbose: true, ColossusRule.Default);
+
+            var text = r.Log.Select(l => l.Text).ToList();
+            int blocked = text.Count(t => t.Contains(Blocked));
+            int regurg = text.Count(t => t.Contains(Regurg));
+
+            Console.WriteLine();
+            Console.WriteLine($"## {title}");
+            Console.WriteLine();
+            Console.WriteLine($"{name} / 第{stage + 1}波 / seed {seed} / {(r.PlayerWon ? "勝利" : "敗北")} {r.Turns}ターン");
+            Console.WriteLine();
+            Console.WriteLine($"- 立ちはだかった: **{blocked} 回**");
+            Console.WriteLine($"- 吐き戻した: **{regurg} 回**（差 {blocked - regurg} = source が null の刻み等）");
+
+            // 受け手の内訳。ゴルム自身がここに出てはいけない（**ゴルムは育たない**）。
+            Console.WriteLine("- 受け手の内訳:");
+            foreach (var (_, def) in f.Occupied())
+            {
+                int n = text.Count(t => t.Contains($"{Regurg} {def.Name} へ返した"));
+                if (n > 0 || def.Id == UnitCatalog.Golm.Id)
+                    Console.WriteLine($"    - {def.Name}: {n} 回"
+                        + (def.Id == UnitCatalog.Golm.Id ? "  ← **0 でなければならない**" : ""));
+            }
+
+            // 攻撃力の推移は StatSnapshot（文字列ではなく構造化イベント）から取る。
+            // InstanceId は Deploy の順に振られるので、味方はスロット昇順で 0 から数えれば引ける。
+            var idOf = new Dictionary<string, int>();
+            int id = 0;
+            foreach (var (_, def) in f.Occupied()) idOf[def.Name] = id++;
+
+            foreach (string w in watch)
+            {
+                var (_, def) = f.Occupied().First(o => o.Item2.Name.Contains(w));
+                var series = r.Events
+                    .Where(e => e.Kind == BattleEventKind.StatSnapshot && e.TargetId == idOf[def.Name])
+                    .Select(e => e.Amount).ToList();
+                Console.WriteLine($"- {def.Name} の攻撃力（素 {def.Attack}）: "
+                    + string.Join(" → ", series));
+            }
+        }
+
+        Console.WriteLine("# 吐き戻しの監査（gullet log）");
+        Console.WriteLine();
+        Console.WriteLine("受け入れ基準 3〜5 を1戦ずつ確かめる。規則は既定（`ColossusRule.Default`）。");
+
+        // 3. ウツに対しては強化が弱体として働く（Perverse は AtkBonus > 0 で攻撃が半減する）
+        Audit("A. ウツへの吐き戻しは弱体として働くか", "逆しま (ネル×ウツ)", 4, 0,
+              new[] { "ウツ", "ゴルム" });
+
+        // 4. 毒・燃焼の刻み（source が null）では発火しない。
+        //    立ちはだかりは刻みでも起きるので、**2つの回数の差**がそのまま除外できた件数になる。
+        Audit("B. 毒の刻みでは発火しないか", "追撃×毒 (ハギ×グザ)", 2, 0,
+              new[] { "グザ", "ゴルム" });
+
+        // 5. 燃料の経路（第19期 route の対象編成）
+        Audit("C. 燃料はムドまで届くか", "置き去り×被弾強化", 4, 0,
+              new[] { "ムド", "ゴルム" });
+        return;
+    }
+
+    // ---- 版の並び ------------------------------------------------------------------------
+    (string Name, string Note, ColossusRule Rule)[] versions;
+    (string Label, int Hi, int Lo)[] deltas;
+    int detail;   // 「波ごとの内訳」で並べる版（先頭版 → この版）
+
+    if (gulletMode == "gain")
+    {
+        // 上がりすぎたときに最初に振るノブ（計画 §5 の失敗の形）。
+        // **肩代わり率は 90% に固定**して、返す効率だけを動かす。
+        versions = new (string, string, ColossusRule)[]
+        {
+            ("g∞ 返し無し", "90% / 吐き戻し無し", new ColossusRule(90, 4, Regurgitate: false)),
+            ("g2",  "90% / 2点につき攻撃+1", new ColossusRule(90, 2, Regurgitate: true)),
+            ("g4",  "90% / 4点につき攻撃+1（既定）", new ColossusRule(90, 4, Regurgitate: true)),
+            ("g6",  "90% / 6点につき攻撃+1", new ColossusRule(90, 6, Regurgitate: true)),
+            ("g8",  "90% / 8点につき攻撃+1", new ColossusRule(90, 8, Regurgitate: true)),
+        };
+        deltas = new[] { ("g4−無", 2, 0), ("g6−無", 3, 0), ("g8−無", 4, 0) };
+        detail = 2;
+    }
+    else
+    {
+        versions = new (string, string, ColossusRule)[]
+        {
+            ("V0 現行",     "90% / 吐き戻し無し",
+                new ColossusRule(90, ColossusTrait.DamagePerGain, Regurgitate: false)),
+            ("V1 吐き戻し", "90% / 吐き戻し有り（本命＝既定）",
+                new ColossusRule(90, ColossusTrait.DamagePerGain, Regurgitate: true)),
+            ("V2 60%",      "60% / 吐き戻し無し",
+                new ColossusRule(60, ColossusTrait.DamagePerGain, Regurgitate: false)),
+            ("V3 60%+返し", "60% / 吐き戻し有り",
+                new ColossusRule(60, ColossusTrait.DamagePerGain, Regurgitate: true)),
+        };
+        deltas = new[] { ("V1−V0", 1, 0), ("V3−V2", 3, 2) };
+        detail = 1;
+    }
+
+    // 燃料の行き先を見る先。route（第19期）が未解決のまま置いていった編成。
+    const string FuelBuild = "置き去り×被弾強化";
+
+    int nv = versions.Length, nb = gulletBuilds.Length, nw = gulletStages.Count;
+
+    var rate = new double[nv][][];                 // rate[版][編成][波] = 勝率(%)
+    var fuel = new UnitTally[nv];                  // FuelBuild のムドだけ集計する
+    var fuelGolm = new UnitTally[nv];
+    var fuelBattles = new int[nv];
+    var fuelTurns = new long[nv];
+
+    for (int v = 0; v < nv; v++)
+    {
+        rate[v] = new double[nb][];
+        fuel[v] = new UnitTally();
+        fuelGolm[v] = new UnitTally();
+
+        for (int b = 0; b < nb; b++)
+        {
+            rate[v][b] = new double[nw];
+            bool track = gulletBuilds[b].Name == FuelBuild;
+
+            // gain 版は検算（ゴルム不在の編成が動かないこと）を既に既定版で済ませているので、
+            // ゴルム入りだけを回す。全編成を回しても結果は同じで、時間だけ4倍かかる。
+            if (gulletMode == "gain" && !HasGolm(gulletBuilds[b].F)) continue;
+
+            for (int w = 0; w < nw; w++)
+            {
+                int wins = 0;
+                for (int seed = 0; seed < GulletSeeds; seed++)
+                {
+                    BattleResult r = BattleEngine.Run(gulletBuilds[b].F, gulletStages[w].Enemy,
+                                                      seed, verbose: false, versions[v].Rule);
+                    if (r.PlayerWon) wins++;
+                    if (!track) continue;
+
+                    fuelBattles[v]++;
+                    fuelTurns[v] += r.Turns;
+                    if (r.TallyByUnit.TryGetValue(UnitCatalog.Mudo.Id, out UnitTally? mt)) fuel[v].Add(mt);
+                    if (r.TallyByUnit.TryGetValue(UnitCatalog.Golm.Id, out UnitTally? gt)) fuelGolm[v].Add(gt);
+                }
+                rate[v][b][w] = wins * 100.0 / GulletSeeds;
+            }
+        }
+        Console.Error.WriteLine($"  {versions[v].Name} 完了");
+    }
+
+    double Avg(int v, int b) => rate[v][b].Average();
+
+    Console.WriteLine("# 巨躯の吐き戻し（gullet）");
+    Console.WriteLine();
+    Console.WriteLine($"代表編成 × 全ステージ、seed 0..{GulletSeeds - 1}。診断用なので docs/ には置かない。");
+    Console.WriteLine();
+    foreach (var vv in versions) Console.WriteLine($"- **{vv.Name}**: {vv.Note}");
+
+    if (gulletMode != "gain")
+    {
+        // --- 検算 1: V0 が現行の balance.md と一致するか -------------------------------
+        Console.WriteLine();
+        Console.WriteLine("## 検算: V0 × 全編成");
+        Console.WriteLine();
+        Console.WriteLine("**このセルは `docs/balance.md`（吐き戻し導入前の世代）と一致しなければならない。**");
+        Console.WriteLine("ずれていたら診断の組み方（seed 帯・台・編成リスト）が balance.md と揃っていない。");
+        Console.WriteLine();
+        Console.WriteLine("| 編成 |" + string.Concat(gulletStages.Select((_, i) => $" 第{i + 1}波 |")));
+        Console.WriteLine("|---|" + string.Concat(gulletStages.Select(_ => "---:|")));
+        for (int b = 0; b < nb; b++)
+            Console.WriteLine($"| {gulletBuilds[b].Name} |"
+                + string.Concat(rate[0][b].Select(x => $" {x:F1}% |")));
+
+        // --- 検算 2: ゴルムを含まない編成は動かないか ----------------------------------
+        Console.WriteLine();
+        Console.WriteLine("## 検算: ゴルムを含まない編成");
+        Console.WriteLine();
+        Console.WriteLine("吐き戻しは巨躯の分岐の中にしかないので、**ゴルム不在の編成は全波 ±0.0 でなければならない**");
+        Console.WriteLine("（受け入れ条件）。ここが 0 件でなければ、規則が意図しない場所から漏れている。");
+        Console.WriteLine();
+        var strays = new List<string>();
+        int noGolm = 0;
+        for (int b = 0; b < nb; b++)
+        {
+            if (HasGolm(gulletBuilds[b].F)) continue;
+            noGolm++;
+            for (int v = 1; v < nv; v++)
+                for (int w = 0; w < nw; w++)
+                    if (Math.Abs(rate[v][b][w] - rate[0][b][w]) > 1e-9)
+                        strays.Add($"{gulletBuilds[b].Name} / {versions[v].Name} / 第{w + 1}波: "
+                                   + $"{rate[0][b][w]:F1}% → {rate[v][b][w]:F1}%");
+        }
+        Console.WriteLine($"ゴルム不在 {noGolm} 編成 × {nv - 1}版 × {nw} 波 = {noGolm * (nv - 1) * nw} セル中、"
+                          + $"**V0 と食い違ったセル {strays.Count} 件**。");
+        if (strays.Count > 0)
+        {
+            Console.WriteLine();
+            foreach (string x in strays.Take(40)) Console.WriteLine($"- {x}");
+        }
+    }
+
+    // --- 主表: ゴルム入りの編成 -----------------------------------------------------------
+    Console.WriteLine();
+    Console.WriteLine("## 主表: ゴルムを含む編成 × 各版");
+    Console.WriteLine();
+    Console.WriteLine("セルは全波の単純平均。**第一波は全編成 100% なので平均は 20pt ぶん薄まっている**");
+    Console.WriteLine("——動いた波は次節で見る。");
+    Console.WriteLine();
+    Console.WriteLine("**予測は両方向。** 逆しま系3本は落ちる（`Perverse` は `AtkBonus > 0` で攻撃が半減する");
+    Console.WriteLine("＝ウツにとって吐き戻しは毒）／死の連鎖系は上がる。**片方向しか出なければ、");
+    Console.WriteLine("予測の立て方かウツの扱いを読み違えている。**");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 |" + string.Concat(versions.Select(v => $" {v.Name} |"))
+                      + string.Concat(deltas.Select(d => $" {d.Label} |")) + " ゴルムの席 |");
+    Console.WriteLine("|---|" + string.Concat(versions.Select(_ => "---:|"))
+                      + string.Concat(deltas.Select(_ => "---:|")) + "---|");
+    for (int b = 0; b < nb; b++)
+    {
+        Formation f = gulletBuilds[b].F;
+        if (!HasGolm(f)) continue;
+        string seat = string.Join("", f.Occupied()
+            .Where(o => o.Item2.Id == UnitCatalog.Golm.Id)
+            .Select(o => FormationRules.SeatNames[o.Item1]));
+        Console.WriteLine($"| {gulletBuilds[b].Name} |"
+            + string.Concat(Enumerable.Range(0, nv).Select(v => $" {Avg(v, b):F1}% |"))
+            + string.Concat(deltas.Select(d => $" {Avg(d.Hi, b) - Avg(d.Lo, b):+0.0;-0.0}pt |"))
+            + $" {seat} |");
+    }
+
+    // --- 波ごとの内訳 ---------------------------------------------------------------------
+    Console.WriteLine();
+    Console.WriteLine($"## 波ごとの内訳（{versions[0].Name} → {versions[detail].Name}）");
+    Console.WriteLine();
+    Console.WriteLine("**第三波は第22期に渇きを置いて初めて分離した波**なので、ここが天井へ押し上げられて");
+    Console.WriteLine("いないかを併せて見る（波の分離度は `spread` の側で測り直す）。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 |" + string.Concat(gulletStages.Select((_, i) => $" 第{i + 1}波 |")));
+    Console.WriteLine("|---|" + string.Concat(gulletStages.Select(_ => "---:|")));
+    for (int b = 0; b < nb; b++)
+    {
+        if (!HasGolm(gulletBuilds[b].F)) continue;
+        Console.WriteLine($"| {gulletBuilds[b].Name} |"
+            + string.Concat(Enumerable.Range(0, nw).Select(w =>
+                $" {rate[0][b][w]:F1} → {rate[detail][b][w]:F1} "
+                + $"({rate[detail][b][w] - rate[0][b][w]:+0.0;-0.0}) |")));
+    }
+
+    // --- 燃料の行き先 ---------------------------------------------------------------------
+    Console.WriteLine();
+    Console.WriteLine($"## 燃料の行き先（{FuelBuild} のムド）");
+    Console.WriteLine();
+    Console.WriteLine("第19期 `route` の未解決がここで解ける、というのが主眼。**勝率ではなく");
+    Console.WriteLine("`ムド 与ダメ(敵)` が上がるかを先に見る。** 動かないなら、吐き戻しの量が小さすぎるか、");
+    Console.WriteLine("ムドが先に落ちている（`落ちた` 列と合わせて読む）。");
+    Console.WriteLine();
+    Console.WriteLine("`ゴルム 与ダメ(敵)` は**ゴルム自身が育っていないこと**の検算。吐き戻しは");
+    Console.WriteLine("守った相手にしか返さないので、版をまたいで大きく動いてはいけない。");
+    Console.WriteLine();
+    Console.WriteLine("**`決着T` を必ず並べて読む。** 数字は1戦あたりの平均なので、");
+    Console.WriteLine("早く決着するようになると与ダメの総量は据え置きに見える（1ターンあたりでは増えている）。");
+    Console.WriteLine();
+    Console.WriteLine("| 版 | ムド 与ダメ(敵) | ムド 与ダメ/T | ムド 撃破 | ムド 被(味) | ムド 被ダメ | ムド 落ちた | ゴルム 与ダメ(敵) | ゴルム 被(味) | 決着T |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+    for (int v = 0; v < nv; v++)
+    {
+        double n = Math.Max(1, fuelBattles[v]);
+        double turns = Math.Max(1, fuelTurns[v]);
+        Console.WriteLine($"| {versions[v].Name} | {fuel[v].DamageToEnemy / n:F0} "
+            + $"| {fuel[v].DamageToEnemy / turns:F2} | {fuel[v].Kills / n:F2} "
+            + $"| {fuel[v].TakenFromAlly / n:F0} | {fuel[v].DamageTaken / n:F0} | {fuel[v].Deaths / n:F2} "
+            + $"| {fuelGolm[v].DamageToEnemy / n:F0} | {fuelGolm[v].TakenFromAlly / n:F0} "
+            + $"| {fuelTurns[v] / n:F1} |");
+    }
+
+    // --- 全5波 100% の編成数 ---------------------------------------------------------------
+    Console.WriteLine();
+    Console.WriteLine("## 全波 100% の編成数");
+    Console.WriteLine();
+    Console.WriteLine("`spread` の (1) と同じ見方。増えていたら上がりすぎ——まず `DamagePerGain` を");
+    Console.WriteLine("4 → 6, 8 と振る（`gullet gain`。ゴルムの数値 150/10/3 は触らない）。");
+    Console.WriteLine();
+    Console.WriteLine("| 版 | 全波100% | 該当編成 |");
+    Console.WriteLine("|---|--:|---|");
+    for (int v = 0; v < nv; v++)
+    {
+        var perfect = Enumerable.Range(0, nb)
+            .Where(b => (gulletMode != "gain" || HasGolm(gulletBuilds[b].F)) && rate[v][b].All(x => x >= 100.0))
+            .Select(b => gulletBuilds[b].Name).ToList();
+        Console.WriteLine($"| {versions[v].Name} | {perfect.Count} | {string.Join(" / ", perfect)} |");
+    }
+    return;
+}
+
 // spread モード: **波の側**の分離度を測る（第22期 Phase 1）。
 //
 // 既存モードは全部「編成の側」を見ている（どの編成が強いか）。ここで見たいのは逆で、
