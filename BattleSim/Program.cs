@@ -424,6 +424,142 @@ if (focusId == "swap")
         => sum.TryGetValue(id, out UnitTally? x) ? x : new UnitTally();
 }
 
+// spread モード: **波の側**の分離度を測る（第22期 Phase 1）。
+//
+// 既存モードは全部「編成の側」を見ている（どの編成が強いか）。ここで見たいのは逆で、
+// **5つ並べた波が、互いに違うことを測っているか**。第19〜21期は3期続けて土台が
+// 飽和して止まった（19: 第1〜3波 100% / 20: 全5波 100.0% / 21: 全版 100/0/0/0/0）。
+// 新しい機構を測る台が無いという同じ壁なので、波を触る前に**まず物差しを作って
+// 現状値を固定する**。これが無いと「作り直して良くなったか」が主観になる。
+//
+// 出す表は3つ。
+//
+//   1. 波ごとの飽和   平均・100%の編成数・0%の編成数・中間帯の数・標準偏差。
+//                     100% と 0% で埋まった波は、その編成たちを区別していない
+//   2. 波間の相関     別の波として並べているのに同じことを測っていないか。
+//                     第一波は全編成 100% で分散 0 なので相関は定義できない（—）
+//   3. 固有の勝者・敗者  その波でだけ 100%（他では 100% 未満）／その波でだけ 0%（他では 0% 超）
+//                     の編成。**これが波の個性の実体**で、ここが空の波は独立していない
+//
+// 中間帯は **5 < x < 95 の狭義**。境界を含めると 5.0% ちょうどの編成（速攻の第二波）が
+// 「分離できている」側に入るが、あれは床に張り付いている。
+// 「分散」列は**母標準偏差**（勝率と同じ pt 単位で読めるようにするため。分散だと pt² になる）。
+//
+// **docs/ には出さない**（診断用）。ただしこの3つの表は README に貼って残す
+// ——作り直しの前後で比べる基準値になる。
+//
+//     dotnet run --project BattleSim -c Release 0 spread
+if (focusId == "spread")
+{
+    var spreadBuilds = CompareBuilds();
+    IReadOnlyList<EnemyCatalog.Stage> spreadStages = EnemyCatalog.Stages;
+    const int SpreadSeeds = 200;   // compare と同じ。数字を突き合わせるので変えない
+
+    int nb = spreadBuilds.Length, nw = spreadStages.Count;
+
+    // rate[波][編成] = 勝率(%)。compare と同じ計算（同じ seed 帯・同じ Run）なので
+    // docs/balance.md の表とセルが一致する。ずれたらどちらかの集計が間違っている。
+    var rate = new double[nw][];
+    for (int w = 0; w < nw; w++)
+    {
+        rate[w] = new double[nb];
+        for (int b = 0; b < nb; b++)
+        {
+            int wins = 0;
+            for (int seed = 0; seed < SpreadSeeds; seed++)
+                if (BattleEngine.Run(spreadBuilds[b].F, spreadStages[w].Enemy, seed, verbose: false).PlayerWon) wins++;
+            rate[w][b] = wins * 100.0 / SpreadSeeds;
+        }
+    }
+
+    Console.WriteLine("# 波の分離度（spread）");
+    Console.WriteLine();
+    Console.WriteLine($"代表編成 {nb} × 全 {nw} 波、seed 0..{SpreadSeeds - 1} の {SpreadSeeds} 試行。");
+    Console.WriteLine("compare と同じ計算なので、セルは docs/balance.md と一致する。");
+    Console.WriteLine();
+
+    Console.WriteLine("## 1. 波ごとの飽和");
+    Console.WriteLine();
+    Console.WriteLine("| 波 | 平均 | 100%の編成 | 0%の編成 | 中間帯(5〜95%) | 標準偏差 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|");
+    var sd = new double[nw];
+    for (int w = 0; w < nw; w++)
+    {
+        double[] v = rate[w];
+        double mean = v.Average();
+        sd[w] = Math.Sqrt(v.Select(x => (x - mean) * (x - mean)).Sum() / v.Length);
+        int top = v.Count(x => x >= 100.0), bottom = v.Count(x => x <= 0.0);
+        int mid = v.Count(x => x > 5.0 && x < 95.0);
+        Console.WriteLine($"| 第{w + 1}波 | {mean:F1} | {top} / {nb} | {bottom} | {mid} | {sd[w]:F1} |");
+    }
+    Console.WriteLine();
+    int allTop = Enumerable.Range(0, nb).Count(b => Enumerable.Range(1, Math.Max(0, nw - 2)).All(w => rate[w][b] >= 100.0));
+    Console.WriteLine($"第2〜{nw - 1}波すべて 100% の編成: **{allTop} / {nb}**"
+                    + "（この編成たちにとって、中間の波は存在しないのと同じ）");
+    Console.WriteLine();
+
+    Console.WriteLine("## 2. 波間の相関");
+    Console.WriteLine();
+    Console.WriteLine("編成ごとの勝率を波の間で相関させる。高いほど「同じ資源に課金している」。");
+    Console.WriteLine("分散 0 の波（全編成が同じ勝率）は相関が定義できないので `—`。");
+    Console.WriteLine();
+    Console.WriteLine("| |" + string.Concat(Enumerable.Range(1, nw - 1).Select(w => $" 第{w + 1}波 |")));
+    Console.WriteLine("|---|" + string.Concat(Enumerable.Range(1, nw - 1).Select(_ => "--:|")));
+    for (int i = 0; i < nw - 1; i++)
+    {
+        var cells = new List<string>();
+        for (int j = 1; j < nw; j++)
+        {
+            if (j <= i) { cells.Add(" |"); continue; }   // 下三角は空欄（対称なので上だけ出す）
+            double r = Corr(rate[i], rate[j]);
+            cells.Add(double.IsNaN(r) ? " — |" : $" {r:+0.00;-0.00} |");
+        }
+        Console.WriteLine($"| **第{i + 1}波** |" + string.Concat(cells));
+    }
+    Console.WriteLine();
+
+    Console.WriteLine("## 3. 固有の勝者・敗者");
+    Console.WriteLine();
+    Console.WriteLine("**固有の勝者** = その波でだけ 100%（他のどの波でも 100% 未満）の編成。");
+    Console.WriteLine("**固有の敗者** = その波でだけ 0%（他のどの波でも 0% 超）の編成。");
+    Console.WriteLine("両方とも空の波は、独立した波として存在していない。");
+    Console.WriteLine();
+    for (int w = 0; w < nw; w++)
+    {
+        var winners = new List<string>();
+        var losers = new List<string>();
+        for (int b = 0; b < nb; b++)
+        {
+            bool onlyTop = rate[w][b] >= 100.0
+                        && Enumerable.Range(0, nw).All(o => o == w || rate[o][b] < 100.0);
+            bool onlyBottom = rate[w][b] <= 0.0
+                           && Enumerable.Range(0, nw).All(o => o == w || rate[o][b] > 0.0);
+            if (onlyTop) winners.Add(spreadBuilds[b].Name);
+            if (onlyBottom) losers.Add(spreadBuilds[b].Name);
+        }
+        Console.WriteLine($"### 第{w + 1}波");
+        Console.WriteLine();
+        Console.WriteLine($"- 固有の勝者 ({winners.Count}): " + (winners.Count == 0 ? "**なし**" : string.Join(" / ", winners)));
+        Console.WriteLine($"- 固有の敗者 ({losers.Count}): " + (losers.Count == 0 ? "**なし**" : string.Join(" / ", losers)));
+        Console.WriteLine();
+    }
+    return;
+
+    // ピアソン相関。片方の分散が 0 なら定義できないので NaN を返す（呼び出し側で — に置く）。
+    static double Corr(double[] a, double[] b)
+    {
+        double ma = a.Average(), mb = b.Average();
+        double num = 0, da = 0, db = 0;
+        for (int i = 0; i < a.Length; i++)
+        {
+            num += (a[i] - ma) * (b[i] - mb);
+            da += (a[i] - ma) * (a[i] - ma);
+            db += (b[i] - mb) * (b[i] - mb);
+        }
+        return da <= 0 || db <= 0 ? double.NaN : num / Math.Sqrt(da * db);
+    }
+}
+
 // replay モード: 1戦ぶんの台本を JSON で吐く。戦闘画面（ビューア）が読む。
 //
 // BattleEngine.Run は seed 決定的な純関数で戦闘を丸ごと計算し切るので、
