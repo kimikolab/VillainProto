@@ -1409,8 +1409,18 @@ public sealed class ParalyzeTrait : Trait
 /// (b) 痺れている間は <see cref="BattleContext.CanActOutOfTurn"/> が閉じるので**反撃も止まる**
 ///     ——「ザン本人を殴れば黙る」という攻略の語彙が、追加のコードなしで敵側に立つ。
 ///
-/// **1ターンに1回まで。** 範囲攻撃で標的持ちが複数回削られたときの多重発火をここで塞ぐ
-/// （「蘇生は一回性効果を掛け算する」と同型の暴走の予防）。
+/// **「1ターンに1回」は撤去した（第26期の追補）。** あれは範囲攻撃で標的持ちが**複数**
+/// 削れたときの多重発火を塞ぐ予防だったが、**標的の書き手はヒサ1体で付く標的は常に1つ**
+/// ——塞いだ穴はロスター上どこにも存在しなかった。一方で実害は出ていた: 標的役には敵の
+/// 単体攻撃が集中する（それが囃し立ての機能）ので、標的が1ターンに複数回殴られるのは
+/// 例外ではなく常態で、その2発目以降を黙って捨てていた。
+///
+/// **再導入の条件**: 標的の書き手が2つ目以降現れたとき（味方側の新特性でも、敵側からの
+/// 標的付与でも）、多重発火の前提が復活するのでそのとき改めて検討する。
+///
+/// 上限を外しても暴走はしない——連鎖は <see cref="BattleContext.InReaction"/> が止め、
+/// 過熱の対抗手段は怯み（被弾 → 痺れ → CanActOutOfTurn 閉鎖）と断罪（第五波）が既に担う。
+/// 残る増分は「標的が殴られた回数ぶん刺し返す」という当初設計そのもの。
 ///
 /// 反撃量は**自分の攻撃力**。被ダメ量を参照する反射は棘（ThornsTrait）で不採用にした形で、
 /// 敵の火力が低い波では何も起きず高い波では先に死ぬ、という挟み撃ちから抜けられない。
@@ -1423,9 +1433,6 @@ public sealed class ParalyzeTrait : Trait
 /// </summary>
 public sealed class AvengeTrait : Trait
 {
-    /// <summary>この駒が最後に刺し返したターン。1ターン1回の頭打ちに使う。</summary>
-    private const string TurnKey = "avenge_turn";
-
     public override TraitId Id => TraitId.Avenge;
 
     public override void OnAllyDamaged(BattleContext ctx, UnitState self, UnitState ally,
@@ -1439,10 +1446,6 @@ public sealed class AvengeTrait : Trait
 
         // 怯み（自傷の痺れ）はここで効く。棘・軋み・追い打ちと同じ門をくぐる。
         if (!ctx.CanActOutOfTurn(self)) return;
-
-        // 範囲攻撃は標的持ちを何度でも削れる。ターン番号で頭打ちにして多重発火を塞ぐ。
-        if (self.Counter(TurnKey) == ctx.Turn) return;
-        self.SetCounter(TurnKey, ctx.Turn);
 
         ctx.Reaction(() =>
         {
@@ -1460,10 +1463,6 @@ public sealed class AvengeTrait : Trait
         self.SetCounter(StatusKeys.Stun, 1);
         ctx.Log($"    {self.Name} は殴られて怯んだ", LogKind.FriendlyFire);
     }
-
-    // ターンをまたぐカウンタは会戦の境界で消えない（Counters は特性の私有物）。
-    // avenge_turn はターン番号なので、次の部隊戦の第1ターンと衝突しないよう戻しておく。
-    public override void OnCarryOver(UnitState self) => self.SetCounter(TurnKey, 0);
 }
 
 /// <summary>

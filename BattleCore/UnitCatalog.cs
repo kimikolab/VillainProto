@@ -576,7 +576,7 @@ public static class UnitCatalog
         Attack = 10,
         Speed = 5,
         Traits = new[] { TraitId.Avenge },
-        PlusText = "標的にされた味方が殴られると、殴った者へ割り込んで刃を返す（1ターンに1回）",
+        PlusText = "標的にされた味方が殴られるたび、殴った者へ割り込んで刃を返す",
         MinusText = "自分が殴られると怖気づき、次の手番を失う。怯んでいる間は刃も返せない",
         Flavor = "仲間が殴られた時だけ勇敢になれる。自分が殴られると、そこにはもう誰もいない。"
     };

@@ -9598,6 +9598,14 @@ if (focusId == "confirm")
         ("仇討ち×砕け (ヒビ×ザン)",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hibi, center: UnitCatalog.Hisa, back1: UnitCatalog.Zan, back3: UnitCatalog.Dolga),
             Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Golm, center: UnitCatalog.Hibi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan)),
+        // ザンの「1ターンに1回」撤去に伴う振り直し（第26期の追補）。**規則を変えたら席も測り直す**
+        // ——上限があった頃は「殴られる回数」が出力に乗らなかったので、標的を誰に付けるかの
+        // 価値が潰れていた。撤去後は**巨躯ゴルム(150)を中央に置いてそこへ標的を集める**形が
+        // 最良になる（ヒサは前1で隣接＝中央ゴルムと後1ドルガ、最大HPはゴルム）。
+        // 仇討ち (ヒサ×ザン) の方は撤去後も現行が「狙いを満たす最良」のままなので候補なし。
+        ("仇討ち×砕け (ヒビ×ザン) / 上限撤去後",
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Golm, center: UnitCatalog.Hibi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan),
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Hibi, center: UnitCatalog.Golm, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan)),
     };
 
     Console.WriteLine("## 採用候補の追試");
@@ -10531,11 +10539,14 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 採ったのは情報セルが2つ出る ゴルム＋ドルガ 版で、破片×怯みの実証そのものは
     // 勝率ではなく1戦ログで取った（第26期・下記）。
     //
-    // 配置は reseat 1位 → confirm +11.5pt で採用。ヒビが中央（範囲の集まる席）、
-    // ゴルムが前3で後方を被覆し、ザンは後3——**ザンが殴られにくい席ほど刃が出る**。
-    // 標的はヒサ(前1)の隣接＝中央ヒビ(55)と後1ドルガ(85)の最大でドルガに付く。
-    ("仇討ち×砕け (ヒビ×ザン)", Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Golm,
-                                          center: UnitCatalog.Hibi, back1: UnitCatalog.Dolga,
+    // **配置は「1ターンに1回」の撤去に伴って振り直した**（reseat 1位 → confirm +20.0pt）。
+    // 上限があった頃はヒビが中央で 50.0%——刺し返しが1回で頭打ちなので「標的が何回
+    // 殴られるか」が出力に乗らず、標的を誰に付けるかの価値が潰れていた。撤去後は
+    // **巨躯ゴルム(150)を中央に置いて標的をそこへ集める**形が最良になる（72.5%）。
+    // ヒサは前1で隣接＝中央ゴルム(150)と後1ドルガ(85)、最大HPのゴルムに標的が付く。
+    // ゴルムは後方も被覆するので、ザン(後3)は殴られにくい＝怯みにくい。
+    ("仇討ち×砕け (ヒビ×ザン)", Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Hibi,
+                                          center: UnitCatalog.Golm, back1: UnitCatalog.Dolga,
                                           back3: UnitCatalog.Zan))
 };
 
