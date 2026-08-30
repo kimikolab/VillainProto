@@ -196,7 +196,7 @@ public sealed class SplashTrait : Trait
         if (dealt <= 0) return;
         int spill = Math.Max(1, dealt / 2);
 
-        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        foreach (UnitState ally in ctx.LivingMembersShuffled(self.TeamId))
         {
             if (ally == self) continue;
             if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
@@ -261,7 +261,7 @@ public sealed class SacrificeTrait : Trait
     {
         // 全体ではなく隣接のみ。誰を削るかがプレイヤーの選択になる。
         // 被弾強化の駒を隣に置けば、コストがそのまま起動スイッチに変わる。
-        foreach (UnitState ally in ctx.LivingMembers(self.TeamId).ToList())
+        foreach (UnitState ally in ctx.LivingMembersShuffled(self.TeamId))
         {
             if (ally == self) continue;
             if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
@@ -306,7 +306,9 @@ public sealed class DrainTrait : Trait
     {
         int draw = DrawOf(self);
         int gained = 0;
-        foreach (UnitState ally in ctx.LivingMembers(self.TeamId).ToList())
+        // 吸う順を混ぜる。席番号順だと、途中で誰かが落ちたときに
+        // 「誰が吸われる前に落ちたか」が席番号で決まる（LivingMembersShuffled 参照）。
+        foreach (UnitState ally in ctx.LivingMembersShuffled(self.TeamId))
         {
             if (ally == self) continue;
             ctx.ApplyDamage(ally, draw, self, isFriendlyFire: true);
@@ -697,11 +699,11 @@ public sealed class BomberTrait : Trait
     {
         ctx.Log($"    {self.Name} が破裂した", LogKind.Highlight);
 
-        foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        foreach (UnitState foe in ctx.LivingMembersShuffled(ctx.Opponent(self.TeamId)))
             ctx.ApplyDamage(foe, EnemyBlast, self);
 
         // 味方も巻き込む。これが他の駒の起点になる。
-        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        foreach (UnitState ally in ctx.LivingMembersShuffled(self.TeamId))
         {
             if (ally == self) continue;
             ctx.ApplyDamage(ally, AllyBlast, self, isFriendlyFire: true);
@@ -860,7 +862,7 @@ public sealed class ThornsTrait : Trait
             ctx.Log($"    {self.Name} の棘が {source.Name} を刺し返す", LogKind.Trigger);
             ctx.ApplyDamage(source, back, self);
 
-            foreach (UnitState other in ctx.LivingMembers(source.TeamId))
+            foreach (UnitState other in ctx.LivingMembersShuffled(source.TeamId))
             {
                 if (other == source) continue;
                 // 敵に及ぶ範囲なので薙ぎと同じ表を引く。味方に及ぶものと定義を分けている。
@@ -876,7 +878,7 @@ public sealed class ThornsTrait : Trait
             int spill = Math.Max(1, self.Def.Attack * FriendlySplashPercent / 100);
             int gained = 0;
 
-            foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+            foreach (UnitState ally in ctx.LivingMembersShuffled(self.TeamId))
             {
                 if (ally == self) continue;
                 if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;

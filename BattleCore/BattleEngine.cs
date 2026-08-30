@@ -270,6 +270,24 @@ public sealed class BattleContext
     public IReadOnlyList<UnitState> LivingMembers(int teamId)
         => _units.Where(u => u.TeamId == teamId && u.IsAlive).ToList();
 
+    /// <summary>
+    /// 生存中の味方を<b>並びを混ぜて</b>返す。**味方全員に順に効果を適用する処理はこちらを使う。**
+    ///
+    /// <para><see cref="LivingMembers"/> は <c>_units</c> の並び＝実質スロット昇順なので、
+    /// 「途中で誰かが落ちるとその後の適用が変わる」種類の処理（吸い・巻き込み・破裂）は
+    /// 席番号順に解決していた。X字盤面では前1と前3（後1と後3）が等価なはずなので、
+    /// これが残っていると鏡像の配置が同値にならない
+    /// （ゴルムの吸い × セロの逃亡で、鏡像差が独立 seed でも 6.6pt 残っていた）。</para>
+    ///
+    /// <para>数える・探す用途では使わないこと。<c>Roll</c> を <c>Count - 1</c> 回消費する。</para>
+    /// </summary>
+    public IReadOnlyList<UnitState> LivingMembersShuffled(int teamId)
+    {
+        var list = _units.Where(u => u.TeamId == teamId && u.IsAlive).ToList();
+        Shuffle(list);
+        return list;
+    }
+
     public bool TeamAlive(int teamId) => LivingMembers(teamId).Any();
 
     public IReadOnlyList<LogLine> Log_ => _log;
