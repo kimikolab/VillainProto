@@ -5346,9 +5346,12 @@ if (focusId == "dissect")
         double rw = Pearson(x, FlatV(residW));
         double rd = Pearson(x, FlatV(residD));
         degScore.Add((k, rd));
-        bool ok = Math.Sign(rw) == Math.Sign(rd);
+        // 相関が取れない列（分散0・標本不足）は NaN。Math.Sign は NaN で例外を投げるので、
+        // 「判定不能」として扱う（他の場所と同じく NaN は測れなかったの意）。
+        bool known = !double.IsNaN(rw) && !double.IsNaN(rd);
+        bool ok = known && Math.Sign(rw) == Math.Sign(rd);
         if (ok) agree++;
-        Console.WriteLine($"| {k + 1} | {terms[k].Name} | {Sg(rw, 2):+0.00;-0.00} | {Sg(rd, 2):+0.00;-0.00} | {(ok ? "○" : "**×**")} |");
+        Console.WriteLine($"| {k + 1} | {terms[k].Name} | {Sg(rw, 2):+0.00;-0.00} | {Sg(rd, 2):+0.00;-0.00} | {(known ? (ok ? "○" : "**×**") : "—")} |");
     }
     Console.WriteLine();
     Console.WriteLine($"**符号が一致したのは {agree} / {terms.Length}。** 一致しない項は、勝率の天井が作った");
@@ -6504,12 +6507,14 @@ if (focusId == "output")
         double rp = Pearson(x, Flat((w, t) => rate[w][t]));
         var ci = Correlate(x, residFlat);
         double rd = Pearson(x, FlatV(residD));
-        bool ok = Math.Sign(ci.R) == Math.Sign(rd);
+        // NaN（分散0・標本不足）は判定不能。Math.Sign は NaN で例外を投げる。
+        bool known = !double.IsNaN(ci.R) && !double.IsNaN(rd);
+        bool ok = known && Math.Sign(ci.R) == Math.Sign(rd);
         if (ok) agree++;
         score.Add((k, ci.R * ci.R));
         Console.WriteLine($"| {k + 1} | **{terms[k].Name}** | {Sg(rp, 2):+0.00;-0.00} | {rp * rp:F3} "
             + $"| {Sg(ci.R, 2):+0.00;-0.00} | **{ci.R * ci.R:F3}** | {Sg(ci.Rho, 2):+0.00;-0.00} "
-            + $"| {Sg(rd, 2):+0.00;-0.00} | {(ok ? "○" : "**×**")} |");
+            + $"| {Sg(rd, 2):+0.00;-0.00} | {(known ? (ok ? "○" : "**×**") : "—")} |");
     }
     Console.WriteLine();
     var best = score.OrderByDescending(x => x.R2).First();
@@ -7490,12 +7495,14 @@ if (focusId == "convert")
         double rp = Pearson(x, Flat((w, t) => rate[w][t]));
         var ci = Correlate(x, residFlat);
         double rd = Pearson(x, residDFlat);
-        bool ok = Math.Sign(ci.R) == Math.Sign(rd);
+        // NaN（分散0・標本不足）は判定不能。Math.Sign は NaN で例外を投げる。
+        bool known = !double.IsNaN(ci.R) && !double.IsNaN(rd);
+        bool ok = known && Math.Sign(ci.R) == Math.Sign(rd);
         if (ok) agree++;
         score.Add((k, ci.R * ci.R));
         Console.WriteLine($"| {k + 1} | **{terms[k].Name}** | {Sg(rp, 2):+0.00;-0.00} | {rp * rp:F3} "
             + $"| {Sg(ci.R, 2):+0.00;-0.00} | **{ci.R * ci.R:F3}** | {Sg(ci.Rho, 2):+0.00;-0.00} "
-            + $"| {Sg(rd, 2):+0.00;-0.00} | {(ok ? "○" : "**×**")} |");
+            + $"| {Sg(rd, 2):+0.00;-0.00} | {(known ? (ok ? "○" : "**×**") : "—")} |");
     }
     Console.WriteLine();
     var best = score.OrderByDescending(x => x.R2).First();
