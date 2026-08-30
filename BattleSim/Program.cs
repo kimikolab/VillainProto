@@ -7868,6 +7868,12 @@ if (focusId == "confirm")
         ("置き去り×被弾強化 (route V4)",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Nara, center: UnitCatalog.Kado, back1: UnitCatalog.Mudo, back3: UnitCatalog.Vel),
             Formation.Build(front1: UnitCatalog.Vel, front3: UnitCatalog.Nara, center: UnitCatalog.Kado, back1: UnitCatalog.Golm, back3: UnitCatalog.Mudo)),
+        // 第20期の新1編成。仮置き（ナラ中央）は 86.8% で、reseat 1位はヴェルを中央に上げる形。
+        // 「置き去り×被弾強化」で中央がカドの席だったのと同じで、**ナラは席を選ばない**
+        // （速さで対象を選ぶので隣接も列も見ない）から、中央を要求する駒に譲るのが正しい。
+        ("置き去り×死の連鎖",
+            Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Mug, center: UnitCatalog.Nara, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel),
+            Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Nara, center: UnitCatalog.Vel, back1: UnitCatalog.Rica, back3: UnitCatalog.Mug)),
     };
 
     Console.WriteLine("## 採用候補の追試");
@@ -8716,7 +8722,25 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // reseat 1位でも +1.4pt（confirm 追試も +1.4pt）と閾値未満なので、仮置きのまま据え置き。
     ("置き去り×速攻",     Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Borg,
                                      center: UnitCatalog.Nara, back1: UnitCatalog.Tou,
-                                     back3: UnitCatalog.Sasa))
+                                     back3: UnitCatalog.Sasa)),
+    // 削りを即時払いの変換器に繋ぐ形（第20期）。ゾト(7)・ムグ(6)・リィカ(7) が全員
+    // ナラ(8)より遅い＝毎ターン削られる。ゾトは削られるほど早く破裂し、ムグは早く胞子になり、
+    // リィカはその死をそのまま層に変える——どれも積み上げ時間を必要としない。
+    // **ヴェル(8) は同速なので無風。** 回復対象は0で、この編成のナラは純粋なマイナスになる。
+    // 既存の「死の連鎖 (リィカ軸)」から中央のゴルムをナラに差し替えた形で、
+    // **巨躯がいないので削りが減衰なしで届く**（route で見たとおり、巨躯は燃料を吸って何も返さない）。
+    // 配置は reseat 1位 → confirm +12.1pt で採用（仮置き＝ナラ中央は 86.6%）。
+    // 「置き去り×被弾強化」で中央がカドの席だったのと同じ形——**ナラは席を選ばない**
+    // （速さで対象を選ぶので隣接も列も見ない）ので、中央を要求する駒に譲るのが正しい。
+    // ここではヴェル（蘇生。守られて完走する側）が中央に上がる。
+    //
+    // **この編成は計測器としては天井に張り付いている。** 土台の 死の連鎖 (リィカ軸) が
+    // ナラ抜きで既に全5波 100.0% なので、削りが効いても勝率が上がる余地が無い
+    // （98.8% は土台より下）。ナラの寄与を読むときは ablate の絶対値ではなく、
+    // 土台で同じ席にいたゴルムの寄与（-25.5pt）と並べること。
+    ("置き去り×死の連鎖", Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Nara,
+                                       center: UnitCatalog.Vel, back1: UnitCatalog.Rica,
+                                       back3: UnitCatalog.Mug))
 };
 
 // メンバーを編成スロット 0..4 へ重複なく割り当てる全順列を、
