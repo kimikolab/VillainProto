@@ -222,7 +222,8 @@ public sealed class CowardTrait : Trait
         int? dest = ctx.FindBackSlotFor(self);
         if (dest is null) return;
 
-        UnitState? pushed = ctx.LivingMembers(self.TeamId).FirstOrDefault(u => u.Slot == dest.Value);
+        UnitState? pushed = ctx.PickOne(
+            ctx.LivingMembers(self.TeamId).Where(u => u.Slot == dest.Value).ToList());
         ctx.SwapSlots(self, dest.Value);
 
         if (pushed is null)
@@ -1041,8 +1042,8 @@ public sealed class ThornGuardTrait : Trait
         if (!self.IsAlive) return;
 
         int dest = stored - 1;
-        UnitState? partner = ctx.LivingMembers(self.TeamId)
-            .FirstOrDefault(u => u != self && u.Slot == dest);
+        UnitState? partner = ctx.PickOne(ctx.LivingMembers(self.TeamId)
+            .Where(u => u != self && u.Slot == dest).ToList());
 
         // 入れ替え相手が既に死んでいる（巻き込み・毒で先に落ちた）ならそのまま。
         // 空席へ滑り込ませないのは、それが「誰も押しのけずに前へ出る」＝代金の無い前進になるため。
@@ -1073,10 +1074,12 @@ public sealed class MarkerTrait : Trait
 
     public override void OnBattleStart(BattleContext ctx, UnitState self)
     {
-        UnitState? mark = ctx.LivingMembers(self.TeamId)
-            .Where(a => a != self && FormationRules.AreAdjacent(self.Slot, a.Slot))
-            .OrderByDescending(a => a.MaxHp)
-            .FirstOrDefault();
+        // OrderByDescending は安定ソートなので、最大HP が同値だと元の並び＝席番号順に落ちる。
+        // 同値の中は乱数で割る（鏡像の配置を同値にするため。PickOne 参照）。
+        var adj = ctx.LivingMembers(self.TeamId)
+            .Where(a => a != self && FormationRules.AreAdjacent(self.Slot, a.Slot)).ToList();
+        int topHp = adj.Count == 0 ? 0 : adj.Max(a => a.MaxHp);
+        UnitState? mark = ctx.PickOne(adj.Where(a => a.MaxHp == topHp).ToList());
 
         if (mark is null)
         {
@@ -1112,10 +1115,12 @@ public sealed class MenderTrait : Trait
     {
         if (!self.IsAlive || self.Hp <= 1) return;
 
-        UnitState? patient = ctx.LivingMembers(self.TeamId)
-            .Where(a => a != self && a.AcceptsSupport && a.Hp < a.MaxHp)
-            .OrderBy(a => a.Hp * 100 / Math.Max(1, a.MaxHp))
-            .FirstOrDefault();
+        // HP割合が同値なら席番号順に落ちていた（安定ソート）。同値の中は乱数で割る。
+        var hurt = ctx.LivingMembers(self.TeamId)
+            .Where(a => a != self && a.AcceptsSupport && a.Hp < a.MaxHp).ToList();
+        int worst = hurt.Count == 0 ? 0 : hurt.Min(a => a.Hp * 100 / Math.Max(1, a.MaxHp));
+        UnitState? patient = ctx.PickOne(
+            hurt.Where(a => a.Hp * 100 / Math.Max(1, a.MaxHp) == worst).ToList());
         if (patient is null) return;
 
         int amount = Math.Min(Amount, self.Hp - 1);
@@ -1162,10 +1167,12 @@ public sealed class AlmsTrait : Trait
 
         // 患者の選び方は MenderTrait.Mend と同じ（AcceptsSupport かつ Hp < MaxHp、HP割合の昇順）。
         // 共有にしないのは、繕いが自消費のぶん Hp <= 1 で止まる必要があり、施しには要らないため。
-        UnitState? patient = ctx.LivingMembers(self.TeamId)
-            .Where(a => a != self && a.AcceptsSupport && a.Hp < a.MaxHp)
-            .OrderBy(a => a.Hp * 100 / Math.Max(1, a.MaxHp))
-            .FirstOrDefault();
+        // HP割合が同値なら席番号順に落ちていた（安定ソート）。同値の中は乱数で割る。
+        var hurt = ctx.LivingMembers(self.TeamId)
+            .Where(a => a != self && a.AcceptsSupport && a.Hp < a.MaxHp).ToList();
+        int worst = hurt.Count == 0 ? 0 : hurt.Min(a => a.Hp * 100 / Math.Max(1, a.MaxHp));
+        UnitState? patient = ctx.PickOne(
+            hurt.Where(a => a.Hp * 100 / Math.Max(1, a.MaxHp) == worst).ToList());
         if (patient is null) return;
 
         ctx.Heal(patient, Amount);

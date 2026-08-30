@@ -461,12 +461,17 @@ public sealed class BattleContext
 
         UnitState target = pool[Roll(pool.Count)];
 
-        UnitState? rearAny = foes.FirstOrDefault(
-            f => f.HasTrait(TraitId.RearGuard) && f.Row == Row.Back && f != target);
+        // 以下、割り込む側は **PickOne**（同じ資格の駒が複数いたら乱数で選ぶ）。
+        // FirstOrDefault のままだと常に席番号の若い駒が割り込むので、鏡像の配置が同値にならない。
+        // **優先順位の鎖（標的 → 後備え → 庇う → 棘守り）は変えていない。**
+        // 乱数化するのは「同じ段の中で誰が割り込むか」だけ。
 
         if (pattern != AttackPattern.Single)
         {
             // 後備えは範囲攻撃にも割り込む。貫きはレーン単位で解決するのでここを通らない。
+            UnitState? rearAny = PickOne(foes.Where(
+                f => f.HasTrait(TraitId.RearGuard) && f.Row == Row.Back && f != target).ToList());
+
             if (target.Row != Row.Front && rearAny is not null
                 && Roll(100) < RearGuardTrait.RedirectPercent)
             {
@@ -476,15 +481,15 @@ public sealed class BattleContext
             return target;
         }
 
-        UnitState? marked = foes.FirstOrDefault(f => f.Counter(StatusKeys.Marked) > 0);
+        UnitState? marked = PickOne(foes.Where(f => f.Counter(StatusKeys.Marked) > 0).ToList());
         if (marked is not null && marked != target && Roll(100) < MarkPullPercent)
         {
             Log($"    敵は {marked.Name} に気を取られた", LogKind.Trigger);
             return marked;
         }
 
-        UnitState? rear = foes.FirstOrDefault(
-            f => f.HasTrait(TraitId.RearGuard) && f.Row == Row.Back && f != target);
+        UnitState? rear = PickOne(foes.Where(
+            f => f.HasTrait(TraitId.RearGuard) && f.Row == Row.Back && f != target).ToList());
 
         if (target.Row != Row.Front && rear is not null && Roll(100) < RearGuardTrait.RedirectPercent)
         {
@@ -492,8 +497,8 @@ public sealed class BattleContext
             return rear;
         }
 
-        UnitState? guardian = foes.FirstOrDefault(
-            f => f.HasTrait(TraitId.Guardian) && f.Row == Row.Front && f != target);
+        UnitState? guardian = PickOne(foes.Where(
+            f => f.HasTrait(TraitId.Guardian) && f.Row == Row.Front && f != target).ToList());
 
         if (guardian is not null && Roll(100) < GuardianTrait.RedirectPercent)
         {
@@ -512,10 +517,10 @@ public sealed class BattleContext
         // **SwapSlots はここで呼ばない**——移動は OnMoved を通じて割り込み攻撃を起こすので、
         // 標的選択の途中でやると攻撃が着弾する前に攻撃者や標的が死にうる
         // （実行は ThornGuardTrait.OnDamaged。「入れ替え → 反撃」の順）。
-        UnitState? thornGuard = foes.FirstOrDefault(
+        UnitState? thornGuard = PickOne(foes.Where(
             f => f.HasTrait(TraitId.ThornGuard) && f != target
                  && f.Counter(ThornGuardTrait.PendingKey) > 0
-                 && ThornGuardTrait.Covers(f, target));
+                 && ThornGuardTrait.Covers(f, target)).ToList());
 
         if (thornGuard is not null)
         {
@@ -635,7 +640,11 @@ public sealed class BattleContext
         int dealt = atk;
         ApplyDamage(target, dealt, actor);
 
-        foreach (UnitState extra in SecondaryTargets(actor, target, patternOverride))
+        // 適用順を混ぜる。同じ一振りで2体以上落ちるとき、死亡順（墓守の層・破裂の連鎖）が
+        // 席番号で決まっていた。巻き込む相手の顔ぶれは変わらない——順番だけ。
+        var extras = SecondaryTargets(actor, target, patternOverride).ToList();
+        Shuffle(extras);
+        foreach (UnitState extra in extras)
         {
             if (!extra.IsAlive) continue;
             Log($"    刃が {extra.Name} まで届く", LogKind.Damage);
@@ -738,8 +747,8 @@ public sealed class BattleContext
             && target.Counter(ThornGuardTrait.PartnerKey) > 0)
         {
             int covered = target.Counter(ThornGuardTrait.PartnerKey) - 1;
-            UnitState? behind = LivingMembers(target.TeamId)
-                .FirstOrDefault(u => u != target && u.Slot == covered);
+            UnitState? behind = PickOne(LivingMembers(target.TeamId)
+                .Where(u => u != target && u.Slot == covered).ToList());
 
             if (behind is null)
             {
@@ -800,9 +809,10 @@ public sealed class BattleContext
             // **壁自身が出どころのダメージは肩代わりしない。** 自分で殴っておいて
             // 自分で庇うと打ち消しになる。大喰らいの吸いがここを通っていて、
             // 味方が受ける味方由来ダメージが 23〜29 → 7 まで落ちていた（＝代金が消えていた）。
-            UnitState? wall = teammates.FirstOrDefault(
+            // 資格のある壁が複数いたら乱数で選ぶ（席番号の若い方に偏らせない）。
+            UnitState? wall = PickOne(teammates.Where(
                 u => u.HasTrait(TraitId.Colossus) && u != target && u != source
-                     && FormationRules.DepthOf(u.Row) < targetDepth);
+                     && FormationRules.DepthOf(u.Row) < targetDepth).ToList());
 
             if (wall is not null)
             {
@@ -823,7 +833,8 @@ public sealed class BattleContext
         // 肩代わり先が自分自身になる再帰は下の HasTrait(Sharer) で止まる。
         if (!target.HasTrait(TraitId.Sharer))
         {
-            UnitState? sharer = teammates.FirstOrDefault(u => u.HasTrait(TraitId.Sharer) && u != target);
+            UnitState? sharer = PickOne(
+                teammates.Where(u => u.HasTrait(TraitId.Sharer) && u != target).ToList());
             if (sharer is not null)
             {
                 int taken = amount * SharerTrait.Percent / 100;
@@ -1082,7 +1093,8 @@ public sealed class BattleContext
     /// </summary>
     public void SwapSlots(UnitState self, int destSlot)
     {
-        UnitState? occupant = LivingMembers(self.TeamId).FirstOrDefault(u => u.Slot == destSlot);
+        UnitState? occupant = PickOne(
+            LivingMembers(self.TeamId).Where(u => u.Slot == destSlot).ToList());
         int origin = self.Slot;
         Row selfFrom = self.Row;
 
