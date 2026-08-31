@@ -887,6 +887,20 @@ public static class EnemyCatalog
     // 3体にすると今度はカド系が全部20%台まで落ちて逆の崖になる。数ではなく担い手の数が摘み。
     public static readonly UnitDef Hero2 = Make("hero_v", "勇者候補", 90, 20, 14, TraitId.Condemn);
     public static readonly UnitDef Knight2 = Make("knight_v", "巡礼騎士", 71, 15, 7);
+
+    // 告発人（第40期）。**第五波の中央に置く。巡礼騎士（Knight2）と数値・型・速さが1つも違わない。**
+    // 差分は曝き（Expose）を1つ足しただけ——渇き・軛・粛・殉教と同じ形で、対照を成立させるため。
+    // Knight2 は削除せず残してある（差し替えれば盤面が完全に元へ戻ることの対照になる）。
+    //
+    // **ロスターで初めて「敵から味方へ状態を書く」経路になる。** それまで敵側から味方へ届くのは
+    // 断罪（審問官・勇者候補の「反撃してきた相手を痺れさせる」）1本だけで、味方側には
+    // 入力を資産に変える読み手（被弾強化・逆しま・澱み喰い・軋み・責め苦・移り木）が
+    // 揃っているのに供給源が無かった。撒くものに移動を選んだのは、直接の読み手が最も多く
+    // （後衛特化・軋み・移り木の3枚）、かつ**同じ1つの規則で駒の符号が反転する**ため。
+    //
+    // 中央を選ぶのは渇き・軛・粛と同じ理由——**どちらの列を貫いても必ず通る**位置だから。
+    // 詳細と符号反転の実測は ExposeTrait の宣言と design/PHASE40_EXPOSE.md。
+    public static readonly UnitDef Accuser = Make("accuser", "告発人", 71, 15, 7, TraitId.Expose);
     public static readonly UnitDef Lancer = new()
     {
         Id = "lancer", Name = "槍騎兵", MaxHp = 66, Attack = 17, Speed = 12,
@@ -1279,7 +1293,7 @@ public static readonly UnitDef Inverter = Make("inverter", "逆位の祭司", 90
         // 上がった。**波の作りではなく規則の性質**なので、次に反転を使うなら
         // 「易しくなること自体を利用する波」（下限を切る波）に置く。
         new Stage("第五波 / 異端審問団",
-            Formation.Build(front1: Martyr, front3: Hero2, center: Knight2, back1: Seer, back3: Lancer))
+            Formation.Build(front1: Martyr, front3: Hero2, center: Accuser, back1: Seer, back3: Lancer))
     };
 
     /// <summary>会戦（Engagement）の敵部隊列。名前と「なぜこの並びを測るのか」のメモを持つ。</summary>

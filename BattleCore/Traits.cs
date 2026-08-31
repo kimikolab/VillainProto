@@ -71,6 +71,7 @@ public enum TraitId
                  // 繕うたび、糸を通した敵の傷がひとつ塞がる
                  //（同上。糸は開いた傷にしか通らない／通した糸を引けばその傷は塞がる）
     Alms,        // 施し: 自分は減らずに味方を回復する（敵側の語彙）
+    Expose,      // 曝き: 攻撃したあと、敵陣の後列でいちばん無傷な駒を、前列でいちばん傷ついた枠へ引き出す（敵側の語彙）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -1437,6 +1438,110 @@ public sealed class AlmsTrait : Trait
         ctx.Heal(patient, Amount);
         ctx.Log($"    {self.Name} が {patient.Name} に施しを与えた（+{Amount}）", LogKind.Trigger);
     }
+}
+
+/// <summary>
+/// 曝き（第40期）。保持者が攻撃を1回終えるたびに、<b>敵陣の後列でいちばん無傷な駒を、
+/// 前列でいちばん傷ついた枠へ引きずり出す</b>（<see cref="BattleContext.SwapSlots"/> 1回）。
+///
+/// <para><b>ロスターで初めて「敵から味方へ状態を書く」経路になる。</b> それまで敵側から
+/// 味方へ届くのは断罪（<see cref="CondemnTrait"/>・反撃してきた相手を痺れさせる）1本だけで、
+/// 味方側には入力を資産に変える読み手（被弾強化・逆しま・澱み喰い・軋み・責め苦・移り木）が
+/// 揃っているのに供給源が無かった。撒くものに移動を選んだのは、直接の読み手が最も多く
+/// （後衛特化・軋み・移り木の3枚）、かつ<b>同じ1つの規則で駒の符号が反転する</b>ため。</para>
+///
+/// <para><b>盤面ルール（逆位・渇き・軛・粛）ではない。</b> あちらは両陣営に等しくかかるが、
+/// 曝きは敵陣の駒だけを動かす一方向の効果なので、殉教・断罪・施しと同じ
+/// 「敵側の語彙のプラス特性」として扱う。判定も engine ではなくここに置く。</para>
+///
+/// <para><b>発火点は <see cref="OnAfterAttack"/>。</b> ターン頭の無条件発火にしないのは、
+/// 保持者の手番に紐づけると「保持者を早く割れば止まる」という勾配が自己言及的に立つから
+/// （渇き・軛・粛と同じ狙い）。攻撃はそのまま行うので、<b>同数値の対照に対する差分が
+/// 特性1つだけに閉じる</b>——巡礼騎士（Knight2）に戻せば盤面は完全に元へ戻る。</para>
+///
+/// <para><b>選び方は決定的にする。乱数で選ばない。</b> プレイヤーが「後列でいちばん無傷な駒が
+/// 出される」と読めることが、この機構の価値の半分を占める。同値が並んだときだけ
+/// <see cref="BattleContext.PickOne"/>（席バイアスを作らないための既存の窓口）に従う。</para>
+///
+/// <para><b><see cref="BattleContext.SwapSlots"/> には手を入れていない。</b> 移動の通知
+/// （<see cref="Trait.OnMoved"/> / <see cref="Trait.OnAllyMoved"/>）・<c>HasFallenBack</c> の記録・
+/// <c>Move</c> イベントの発行は既にあちらで正しく行われている。SwapSlots はチーム非依存
+/// （占有者を <c>self.TeamId</c> で引く）なので、敵の特性から味方側の駒に対して呼んでよい。</para>
+///
+/// <para><b>入れ替えであって一方向の移動ではない。</b> 引き出された駒が前へ来る代わりに、
+/// 前列の駒が後ろへ下がる。<b>後列は空かない。</b>下がった駒に <c>HasFallenBack</c> が立つのが
+/// 符号反転の片側で、後衛特化（<see cref="SniperTrait"/>）はここで無償に起動する。</para>
+///
+/// <para><b>召喚枠を含める。</b> <c>Row.Back</c> には ○後2（スロット8）も入る。実態があるなら
+/// 盤面の一部として扱う、という既存の判断（貫きのレーン経路・巨躯の被覆）に揃えた。</para>
+///
+/// <para>強度は <see cref="ExposeRule"/> で外から差す（既定は無効）。書き換え可能な static の
+/// ノブは置かない——Trait は共有シングルトンで layout は戦闘を並列実行する
+/// （<see cref="ColossusRule"/> / <see cref="YokeRule"/> / <see cref="HushRule"/> /
+/// <see cref="MartyrRule"/> と同じ判断）。回数は保持者ではなく<b>戦闘単位</b>で数えるので、
+/// 残数は <see cref="BattleContext"/> 側が持つ（保持者が複数いても合算される）。</para>
+/// </summary>
+public sealed class ExposeTrait : Trait
+{
+    public override TraitId Id => TraitId.Expose;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        // 既定（MaxPerBattle = 0）では走査を1回も走らせない。
+        // layout は数百万戦を並列で回すので、軛の Cap 判定と同じ作法で先に落とす。
+        if (ctx.ExposesLeft <= 0) return;
+
+        var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId));
+
+        // 引き出す駒＝いちばん隠れている駒＝後列で現在HPが最も高い1体。
+        var hidden = foes.Where(f => f.Row == Row.Back).ToList();
+        if (hidden.Count == 0) { ctx.ExposeMissed++; return; }
+
+        // 引き出す先＝いちばん先に落ちる枠＝前列で現在HPが最も低い1体。
+        // 矢面の意味が最大になる席へ出す。
+        var exposedTo = foes.Where(f => f.Row == Row.Front).ToList();
+        if (exposedTo.Count == 0) { ctx.ExposeMissed++; return; }
+
+        int most = hidden.Max(f => f.Hp);
+        UnitState? victim = ctx.PickOne(hidden.Where(f => f.Hp == most).ToList());
+
+        int least = exposedTo.Min(f => f.Hp);
+        UnitState? seat = ctx.PickOne(exposedTo.Where(f => f.Hp == least).ToList());
+
+        if (victim is null || seat is null) { ctx.ExposeMissed++; return; }
+
+        // 同じ駒が両方に選ばれることはない（Row.Back と Row.Front は排他）。
+        ctx.ExposeCount++;
+        ctx.Log($"    {self.Name} が {victim.Name} を {seat.Name} の前へ引きずり出した", LogKind.Trigger);
+        ctx.SwapSlots(victim, seat.Slot);
+    }
+}
+
+/// <summary>
+/// 曝きの強度。<b>診断（expose）が版を差し替えるためだけの窓口</b>で、
+/// 既定（<see cref="Default"/>）は<b>無効</b>。
+///
+/// <para><paramref name="MaxPerBattle"/> は1戦あたりの引きずり出しの上限回数で、
+/// <c>0</c> なら完全に無効（<see cref="ExposeTrait"/> の走査が1回も走らない）。
+/// <b>回数は保持者ではなく戦闘単位で数える</b>ので、保持者が複数いても合算される。</para>
+///
+/// <para><b>このノブは盤面の総HPを1も動かさない</b>（駒の席を入れ替えるだけで
+/// HP も攻撃力も1点も変わらない）ので、掃引しても対照は1本で足りる——第34期の
+/// 殉教者のHP掃引が「介入が効いた」と「ただ硬くなった」を分けるのに各点の対照を
+/// 要したのとは、そこが違う。</para>
+///
+/// <para><b>採用値は 3</b>（第40期。0 / 1 / 2 / 3 / 無制限 の5点で掃引した）。
+/// 3 と無制限は第五波の平均で 0.2pt しか違わない（40.5 対 40.3）——**曝きの実測は
+/// 2.05 回/戦**なので、上限 3 が縛るのは長引いた戦闘だけ。それでも 3 を採ったのは、
+/// <b>第五波が固有の勝者を持つのが 3 以上でだけ</b>だから（上限 1・2 では 0 行、
+/// 3 以上で `突き出し (セロ×ヨミ)` の1行。CLAUDE.md「ここが空の波は独立した波として
+/// 存在していない」）。上限 1 の方が平均は高い（42.3）が、そこは歯止め（40.0）を
+/// 割らない限り調整目標ではない。</para>
+/// </summary>
+public readonly record struct ExposeRule(int MaxPerBattle)
+{
+    /// <summary>採用値。1戦あたり最大3回まで引きずり出す（第40期）。</summary>
+    public static ExposeRule Default => new(3);
 }
 
 /// <summary>澱み。既に積まれた毒を増幅する。毒が無ければ何もしない。</summary>
@@ -3192,6 +3297,7 @@ public static class TraitCatalog
         new MarkerTrait(),
         new MenderTrait(),
         new AlmsTrait(),
+        new ExposeTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

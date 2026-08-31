@@ -262,8 +262,30 @@ public sealed class BattleContext
     /// </summary>
     public MartyrRule Martyr { get; }
 
+    /// <summary>
+    /// 曝きの規則。<b>診断（expose）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="ExposeRule.Default"/> ＝ 無効）。static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public ExposeRule Expose { get; }
+
+    /// <summary>
+    /// この戦闘で実際に引きずり出した回数。<b>保持者ではなく戦闘単位で数える</b>ので、
+    /// 保持者が複数いても合算される（<see cref="ExposeRule.MaxPerBattle"/> の残数はここから引く）。
+    /// 駒ごとの <c>Counters</c> に置くと合算にならないため、盤面側で持つ。
+    /// </summary>
+    public int ExposeCount { get; internal set; }
+
+    /// <summary>
+    /// 後列または前列が 0 体で何もしなかった回数（空振り）。上限は消費しない。
+    /// **発火しなかったことは盤面の値に痕跡を残さない**ので、診断が読むためだけに数える。
+    /// </summary>
+    public int ExposeMissed { get; internal set; }
+
+    /// <summary>残りの引きずり出し回数。既定（MaxPerBattle = 0）では常に 0 で、走査に入らない。</summary>
+    public int ExposesLeft => Expose.MaxPerBattle - ExposeCount;
+
     public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null,
-                         HushRule? hush = null, MartyrRule? martyr = null)
+                         HushRule? hush = null, MartyrRule? martyr = null, ExposeRule? expose = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -271,6 +293,7 @@ public sealed class BattleContext
         Yoke = yoke ?? YokeRule.Default;
         Hush = hush ?? HushRule.Default;
         Martyr = martyr ?? MartyrRule.Default;
+        Expose = expose ?? ExposeRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -1443,10 +1466,11 @@ public static class BattleEngine
     /// </summary>
     public static BattleResult Run(Formation player, Formation enemy, int seed, bool verbose = true,
                                    ColossusRule? colossus = null, YokeRule? yoke = null,
-                                   HushRule? hush = null, MartyrRule? martyr = null)
+                                   HushRule? hush = null, MartyrRule? martyr = null,
+                                   ExposeRule? expose = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
-               seed, verbose, colossus, yoke, hush, martyr);
+               seed, verbose, colossus, yoke, hush, martyr, expose);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -1459,9 +1483,9 @@ public static class BattleEngine
     public static BattleResult Run(IReadOnlyList<UnitState> player, IReadOnlyList<UnitState> enemy,
                                    int seed, bool verbose = true, ColossusRule? colossus = null,
                                    YokeRule? yoke = null, HushRule? hush = null,
-                                   MartyrRule? martyr = null)
+                                   MartyrRule? martyr = null, ExposeRule? expose = null)
     {
-        var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr);
+        var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -1666,7 +1690,9 @@ public static class BattleEngine
             DamageByUnit = new Dictionary<string, int>(ctx.DamageByUnit),
             TallyByUnit = new Dictionary<string, UnitTally>(ctx.TallyByUnit),
             MaxEnemyKillsInOneTurn = ctx.MaxEnemyKillsInOneTurn,
-            Events = ctx.Events.ToList()
+            Events = ctx.Events.ToList(),
+            ExposeCount = ctx.ExposeCount,
+            ExposeMissed = ctx.ExposeMissed
         };
     }
 

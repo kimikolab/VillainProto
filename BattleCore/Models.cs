@@ -718,4 +718,16 @@ public sealed class BattleResult
     /// Log と同じく verbose=false のときは空（一括シミュレーションで積むと遅くなるため）。
     /// </summary>
     public required IReadOnlyList<BattleEvent> Events { get; init; }
+
+    /// <summary>
+    /// 曝き（第40期）が実際に引きずり出した回数と、後列／前列が 0 体で何もしなかった回数。
+    ///
+    /// <para><b>ログからは数えられないので結果に載せる。</b> 空振りはログを1行も出さない
+    /// （出すと「何も起きていない」ことがログの主役になる）ので、盤面にも文字列にも痕跡が残らない。
+    /// <b>verbose に依存しない</b>——診断は verbose=false で数百戦回すため。</para>
+    ///
+    /// <para>既定（<c>ExposeRule.Default</c> ＝ 無効）では常に 0。</para>
+    /// </summary>
+    public required int ExposeCount { get; init; }
+    public required int ExposeMissed { get; init; }
 }
