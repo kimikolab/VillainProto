@@ -93,7 +93,7 @@ public static class UnitCatalog
         Attack = 10,
         Speed = 3,
         Traits = new[] { TraitId.Colossus, TraitId.Drain },
-        PlusText = "後ろの味方への攻撃を型を問わず肩代わりし、飲み込んだ力をその味方へ返す",
+        PlusText = "後ろの味方への攻撃を型を問わず肩代わりし、飲み込んだ力をその味方へ返す／倒れるとき、飲み込んだ量の一部が生存味方の回復になる（1戦に1度）",
         MinusText = "毎ターン味方から精気を吸う",
         Flavor = "維持費が高すぎる。連れて行くと部隊が保たない。"
     };

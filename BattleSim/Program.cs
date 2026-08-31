@@ -472,13 +472,17 @@ if (focusId == "gullet")
     //     dotnet run --project BattleSim -c Release 0 gullet belly4
     if (gulletMode == "belly4")
     {
-        ColossusRule Base = ColossusRule.Default;
+        // **V0 は明示的に両方を切る。** 第36期の採用手順で `ColossusRule.Default` は
+        // 還し有効になったので、Default をそのまま V0 に使うと梯子が崩れる
+        // （V0 と V3 が同じものになる）。逆に **V3 が現在の既定と一致する**ので、
+        // 検算の相手は V0 ではなく V3 になった。
+        ColossusRule Base = ColossusRule.Default with { Slumber = false, Refund = false };
         var vers = new (string Name, string Note, ColossusRule Rule)[]
         {
-            ("V0 現行",     "腹の出口なし（＝既定）", Base),
+            ("V0 腹なし",   "腹の出口なし（第35期までの盤面）", Base),
             ("V2 まどろみ", $"腹 {ColossusTrait.SlumberThreshold} で手番を失う",
                 Base with { Slumber = true }),
-            ("V3 還し",     $"倒れたとき腹の {ColossusTrait.RefundPercent}% を分配",
+            ("V3 還し",     $"倒れたとき腹の {ColossusTrait.RefundPercent}% を分配（＝**現在の既定**）",
                 Base with { Refund = true }),
             ("V4 両方",     "眠りが腹を食い、残りを還す", Base with { Slumber = true, Refund = true }),
         };
@@ -556,16 +560,19 @@ if (focusId == "gullet")
 
         // --- 検算 1: V0 が balance.md と一致するか ------------------------------------------
         Console.WriteLine();
-        Console.WriteLine("## 検算1: V0 × 全編成");
+        Console.WriteLine("## 検算1: V3 × 全編成（V3 ＝ 現在の既定）");
         Console.WriteLine();
-        Console.WriteLine("**このセルは `docs/balance.md` と1つ残らず一致しなければならない**");
-        Console.WriteLine("（V0 ＝ `ColossusRule.Default` ＝ 何も渡さない状態）。");
+        Console.WriteLine("**このセルは `docs/balance.md` と1つ残らず一致しなければならない。**");
+        Console.WriteLine("第36期の採用手順で `ColossusRule.Default` が還し有効になったので、");
+        Console.WriteLine("**検算の相手は V0 ではなく V3**（V0 は第35期までの盤面）。");
         Console.WriteLine();
-        Console.WriteLine("| 編成 |" + string.Concat(gulletStages.Select((_, i) => $" 第{i + 1}波 |")));
-        Console.WriteLine("|---|" + string.Concat(gulletStages.Select(_ => "---:|")));
+        Console.WriteLine("| 編成 |" + string.Concat(gulletStages.Select((_, i) => $" 第{i + 1}波 |"))
+                          + " V0（第35期まで） |");
+        Console.WriteLine("|---|" + string.Concat(gulletStages.Select(_ => "---:|")) + "---|");
         for (int b = 0; b < bnb; b++)
             Console.WriteLine($"| {gulletBuilds[b].Name} |"
-                + string.Concat(brate[0][b].Select(x => $" {x:F1}% |")));
+                + string.Concat(brate[2][b].Select(x => $" {x:F1}% |"))
+                + " " + string.Join(" / ", brate[0][b].Select(x => $"{x:F1}")) + " |");
 
         // --- 検算 2: ゴルムを含まない行は動かないか ------------------------------------------
         Console.WriteLine();
@@ -791,24 +798,29 @@ if (focusId == "gullet")
         Console.WriteLine("## ログ実例");
 
         string golmName = UnitCatalog.Golm.Name;
-        // A は**探して出す**。売却は 眠り 0.09回/戦 の中の一部でしか起きないので、
-        // seed を決め打ちすると「起きなかった戦」を貼ることになる。
-        // 探索は決定的（波→seed の昇順で最初の1件）なので、盤面を触らない限り同じ戦が出る。
+        // A は**探して出す**。売却は眠りのうちの一部でしか起きないので、seed を決め打ちすると
+        // 「起きなかった戦」を貼ることになる。探索は決定的（行→波→seed の昇順で最初の1件）。
+        //
+        // **試験行「腹×号令」は第36期の採用手順で compare から外した**（まどろみの棄却で
+        // 目的を失ったため）。ここは買い手を持つ行を総当たりするので、行が消えても動く。
         {
-            var (tname, tf) = gulletBuilds.First(x => x.Name.Contains("腹×号令"));
             string want = $"の号令で {golmName} の溜めが乗った";
-            (int W, int S) hit = (-1, -1);
-            for (int w = 0; w < bnw && hit.W < 0; w++)
-                for (int seed = 0; seed < GulletSeeds && hit.W < 0; seed++)
-                {
-                    BattleResult r = BattleEngine.Run(tf, gulletStages[w].Enemy, seed,
-                                                      verbose: true, vers[3].Rule);
-                    if (r.Log.Any(l => l.Text.Contains(want))) hit = (w, seed);
-                }
-            if (hit.W >= 0)
-                Excerpt("A. まどろみが売れる（V4 / 試験行・売却の起きた最初の戦）",
-                    "腹が満ちて手番を失い、**据えがそのターンの被弾を、号令が次のターンの攻撃を買う**。",
-                    "腹×号令", hit.W, hit.S, vers[3].Rule,
+            (int B, int W, int S) hit = (-1, -1, -1);
+            foreach (int b in saleRows)
+            {
+                for (int w = 0; w < bnw && hit.B < 0; w++)
+                    for (int seed = 0; seed < GulletSeeds && hit.B < 0; seed++)
+                    {
+                        BattleResult r = BattleEngine.Run(gulletBuilds[b].F, gulletStages[w].Enemy,
+                                                          seed, verbose: true, vers[3].Rule);
+                        if (r.Log.Any(l => l.Text.Contains(want))) hit = (b, w, seed);
+                    }
+                if (hit.B >= 0) break;
+            }
+            if (hit.B >= 0)
+                Excerpt("A. まどろみが売れる（V4 / 売却の起きた最初の戦）",
+                    "腹が満ちて手番を失い、**号令が次のターンの攻撃を買う**。",
+                    gulletBuilds[hit.B].Name, hit.W, hit.S, vers[3].Rule,
                     new[] { "腹が満ちてまどろんだ", $"の号令で {golmName}",
                             $"据えが差し出した {golmName}", "が飲み込んだものが還った",
                             $"{golmName} は倒れた" });
@@ -821,6 +833,35 @@ if (focusId == "gullet")
             + "（規則は engine の1箇所のまま、特性側は判定を1文字も持っていない）。",
             "置き去り×被弾強化", 2, 0, vers[2].Rule,
             new[] { "が飲み込んだものが還った", "は倒れた" });
+
+        // D は**探して出す**。第三波は「渇きの祭司が生きている間だけ」封じられるので、
+        // 祭司を先に割った戦では還しが解禁される——これが `spread` で
+        // 第三波の勝率が 18行中1行だけ動いた（逆しま +1.5pt）の正体。
+        // **渇きが「回避可能な課税」として働いた初の実例**なので、診断に据えて再現可能にしてある。
+        {
+            (int B, int S) hitD = (-1, -1);
+            foreach (int b in golmIdx)
+            {
+                for (int seed = 0; seed < GulletSeeds && hitD.B < 0; seed++)
+                {
+                    BattleResult r = BattleEngine.Run(gulletBuilds[b].F, gulletStages[2].Enemy,
+                                                      seed, verbose: true, vers[2].Rule);
+                    if (r.Log.Any(l => l.Text.Contains("が飲み込んだものが還った")
+                                       && !l.Text.Contains("/ 届いた 0）"))) hitD = (b, seed);
+                }
+                if (hitD.B >= 0) break;
+            }
+            if (hitD.B >= 0)
+                Excerpt("D. 第三波でも、祭司を先に割れば還しは解禁される（V3）",
+                    "渇きは**保持者が生きている間だけ**効く（`ctx.Heal` の入口で `Drought` の生存を見る）。"
+                    + "祭司を先に倒した戦では回復が戻るので、還しが届く。"
+                    + "**渇きが「回避可能な課税」として働いた初の実例。**",
+                    gulletBuilds[hitD.B].Name, 2, hitD.S, vers[2].Rule,
+                    new[] { "が飲み込んだものが還った", "渇きの祭司 は倒れた",
+                            $"{golmName} は倒れた" });
+            else
+                Console.WriteLine("### D. 祭司を先に割った戦 —— **1件も見つからなかった**");
+        }
 
         Excerpt("C. 同じ行の第五波では届く（V3 / 渇きなし）",
             "同じ編成・同じ規則で、渇きの無い波なら回復が通る。**Bとの差は波だけ。**",
@@ -12049,27 +12090,7 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 「広く薄く撒く供給源」と「1体へ積み上げる供給源」の差になる。
     ("刻み×抉り (ノミ×エグ)", Formation.Build(front1: UnitCatalog.Egu, front3: UnitCatalog.Golm,
                                         center: UnitCatalog.Nomi, back1: UnitCatalog.Dolga,
-                                        back3: UnitCatalog.Vel)),
-    // まどろみ（第36期）の売り先を測るための行。**この行は診断用の台**で、競争力を狙っていない。
-    //
-    // 買い手は号令（ガン・前ターンに差し出した味方へ 攻撃+8）と据え（バン・そのターン差し出した
-    // 味方の被ダメ -50%）の2枚。ゴルムは前1でバン(中央)・ガン(後1)・ドルガ(後3)を被覆し、
-    // 出力はドルガ（攻38・薙ぎ）。
-    // **売り手はドルガののろまとゴルムのまどろみだけ**——縛め（クグ）を入れていないのは、
-    // IdleTurn の供給源を2つに絞って「まどろみが供給を作れるか」を読めるようにするため。
-    //
-    // 5枚目は ablate で選んだ（第36期 Phase 0-3・規則7）。カド版は 100/42.5/100/100/98 で
-    // 中間帯が1波しか無く、セロ・ガルド・ヴェル・ボルグ・ムド・リィカ版も同様に天井へ寄る。
-    // ムグ版だけが中間帯（5% < x < 95%）を複数持ち、抜きの寄与も -45.5 〜 -59.2pt で入れ得が無い。
-    //
-    // **配置は reseat 1位（81.4%）。** 一度は6位（79.2%・中間帯が3波）を採ったが、
-    // あちらは**ガンが前3＝ゴルムの被覆の外**で、買い手が先に落ちて売り物が現金化されない
-    // （号令の払い 0.09回/戦 に対し、この配置では 1.78回/戦）。
-    // **買い手が生き残らない台では「売れるか」を測れない**ので、勝率の中間帯より
-    // 買い手の生存を優先した。経緯は design/PHASE36_GOLM_BELLY.md。
-    ("腹×号令 (ゴルム×ガン×バン)", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Mug,
-                                        center: UnitCatalog.Ban, back1: UnitCatalog.Gan,
-                                        back3: UnitCatalog.Dolga))
+                                        back3: UnitCatalog.Vel))
 };
 
 // メンバーを編成スロット 0..4 へ重複なく割り当てる全順列を、

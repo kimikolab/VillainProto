@@ -861,16 +861,24 @@ public sealed class ColossusTrait : Trait
 /// </summary>
 /// <para><b>第36期の4つは既定値つきで足してある。</b> 第23期の <c>gullet</c> が組む4版
 /// （<c>new ColossusRule(90, 4, Regurgitate: false)</c> など）を1文字も書き換えずに済ませるため——
-/// あの4版は「吐き戻しの前後」を測る対照で、腹の有無とは無関係。既定は<b>どちらも無効</b>なので、
-/// 明示しない限り盤面は第35期のまま動く。</para>
+/// あの4版は「吐き戻しの前後」を測る対照で、腹の有無とは無関係。
+/// <b>パラメータの既定値はどちらも無効</b>なので、明示しない限り第35期の盤面が出る。
+/// <c>Default</c>（＝本採用の規則）だけが <c>Refund</c> を立てる。</para>
 public readonly record struct ColossusRule(int Percent, int DamagePerGain, bool Regurgitate,
                                            bool Slumber = false,
                                            int SlumberThreshold = ColossusTrait.SlumberThreshold,
                                            bool Refund = false,
                                            int RefundPercent = ColossusTrait.RefundPercent)
 {
+    /// <summary>
+    /// 本採用の規則。<b>還しは有効・まどろみは無効</b>（第36期の測定で決めた）。
+    ///
+    /// <para><b>まどろみを規則として残してあるのは対照のため</b>で、逆位
+    /// （<see cref="InversionTrait"/>・測って採らなかった盤面ルール）と同じ扱い。
+    /// <c>Slumber: true</c> を渡した版は <c>gullet belly4</c> がいつでも組み直せる。</para>
+    /// </summary>
     public static ColossusRule Default =>
-        new(ColossusTrait.Percent, ColossusTrait.DamagePerGain, Regurgitate: true);
+        new(ColossusTrait.Percent, ColossusTrait.DamagePerGain, Regurgitate: true, Refund: true);
 }
 
 /// <summary>処刑。とどめを刺すたびに攻撃力が上がる。</summary>
