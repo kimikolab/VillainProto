@@ -550,9 +550,7 @@ public sealed class BattleContext
             return SelectPierceEntry(foes, out lane);
 
         // 前から順に、生き残っている最も前の列を狙う。
-        List<UnitState> pool = foes.Where(f => f.Row == Row.Front).ToList();
-        if (pool.Count == 0) pool = foes.Where(f => f.Row == Row.Mid).ToList();
-        if (pool.Count == 0) pool = foes;
+        List<UnitState> pool = PoolOf(foes);
 
         // 執着（ノミ）。**pool から無作為に選ぶ直前**が唯一の窓口で、攻撃者側の標的選択には
         // Trait のフックが無いので engine 側に置く（庇う・後備え・標的・棘守りと同じ層）。
@@ -567,12 +565,29 @@ public sealed class BattleContext
             ? FixateTrait.Remembered(attacker, pool)
             : null;
 
-        // 執着が効いている手番は **Roll を消費しない**。ここで引くと、執着している間と
-        // していない間で以降の乱数列がずれる。
-        UnitState target = fixated ?? pool[Roll(pool.Count)];
+        // 断ち（ナタ）。**執着と同じ窓口**（pool から無作為に選ぶ直前）に置く攻撃者側の選好で、
+        // pool そのものは1体も足さない・引かない——「前列が生きている限り後列は狙われない」は
+        // 執着と同じく pool 経由で守られる。候補の中で傷がいちばん深い駒を選ぶだけ。
+        //
+        // **候補集合は SeverTrait.CanAct と共有する**（PoolOf / TargetPool の1箇所）。
+        // 「傷持ちが1体もいなければ振らない」と「傷がいちばん深い相手を狙う」が別々の集合を
+        // 数えると、振ると決めた手番で狙う相手がいない（あるいはその逆）が起こりうる。
+        //
+        // 保持者の走査は既存条件の後ろ（&& ではなく三項の条件側だが同じ短絡）。
+        // 貫きは手前で分岐して pool を作らないので、この段は通らない（執着と同じ）。
+        UnitState? severed = attacker.HasTrait(TraitId.Sever)
+            ? SeverTrait.Preferred(this, pool)
+            : null;
+
+        // 執着・断ちが効いている手番は **Roll を消費しない**。ここで引くと、効いている間と
+        // いない間で以降の乱数列がずれる。同数のタイブレークは Preferred の中の PickOne
+        // （候補 0 個・1 個では Roll を消費しない）。
+        UnitState target = fixated ?? severed ?? pool[Roll(pool.Count)];
 
         if (fixated is not null)
             Log($"    {attacker.Name} は {fixated.Name} から目を離せない", LogKind.Trigger);
+        else if (severed is not null)
+            Log($"    {attacker.Name} は {severed.Name} の傷口を見定めた", LogKind.Trigger);
 
         // 以下、割り込む側は **PickOne**（同じ資格の駒が複数いたら乱数で選ぶ）。
         // FirstOrDefault のままだと常に席番号の若い駒が割り込むので、鏡像の配置が同値にならない。
@@ -667,6 +682,25 @@ public sealed class BattleContext
         }
 
         return target;
+    }
+
+    /// <summary>
+    /// 狙える敵（前列 → 中列 → 全員）。<b>標的選択と断ち（<see cref="SeverTrait"/>）の
+    /// 候補判定はこの1箇所を共有する。</b> 2箇所で別の集合を数えると、
+    /// 「振ると決めた手番に狙う相手がいない」が起こりうる。
+    ///
+    /// <para>貫きは <see cref="SelectPierceEntry"/> がレーンを直接走るのでこの pool を使わない
+    /// ——貫き型の駒が断ちを持っても選好は働かない（執着とまったく同じ非対称）。</para>
+    /// </summary>
+    public List<UnitState> TargetPool(UnitState attacker)
+        => PoolOf(LivingMembers(Opponent(attacker.TeamId)).ToList());
+
+    private static List<UnitState> PoolOf(List<UnitState> foes)
+    {
+        List<UnitState> pool = foes.Where(f => f.Row == Row.Front).ToList();
+        if (pool.Count == 0) pool = foes.Where(f => f.Row == Row.Mid).ToList();
+        if (pool.Count == 0) pool = foes;
+        return pool;
     }
 
     /// <summary>

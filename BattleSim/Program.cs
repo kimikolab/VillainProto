@@ -2291,6 +2291,249 @@ if (focusId == "hush")
 // docs/ には置かない（診断用）。
 //
 //     dotnet run --project BattleSim -c Release 0 guard
+// sever モード（第37期・使い捨ての診断）: 断ち（ナタ）の発火と手番の放棄を数える。
+//
+// **ここもログの文字列を数えている**（`gullet log` / `yoke log` / `hush` と同じ理由）。
+// 断ちの上乗せは `ApplyDamage` を1回通るだけなので与ダメの総量に溶けてしまうし、
+// **振らなかったこと（手番の放棄）は盤面の値に痕跡を1つも残さない**——
+// 「その行が出たか／何回出たか」を数える以外に発火を捕まえる方法が無い。
+//
+// **`docs/` には置かない。** 標準出力で読むだけ。
+//
+//     dotnet run --project BattleSim -c Release 0 sever [絞り込み]
+if (focusId == "sever")
+{
+    var sevBuilds = CompareBuilds();
+    IReadOnlyList<EnemyCatalog.Stage> sevStages = EnemyCatalog.Stages;
+    const int SevSeeds = 50;
+    string sevSub = args.Length > 2 ? args[2] : "";
+    string nata = UnitCatalog.Nata.Name;
+
+    // ---- sale: 捨てた手番は売り物になっていないか（1-1 (c) の受け入れ）------------------
+    //
+    // **第37期の2台には号令も据えも入っていない**ので、`SurrendersTurn => false` は
+    // 本編の測定では一度も試されない。第36期の教訓（買い手を持たない台では機構の発火を
+    // 1件も観測できない）と同じ穴なので、**買い手を揃えた台を診断のローカルに組んで**測る。
+    //
+    // 台は「供給源が1枚も無い」形——ナタは毎ターン振れないので、`SurrendersTurn` が
+    // true なら号令（次のターン 攻撃+8）と据え（そのターン 被ダメ-50%）の**無償の収入源**になる。
+    // **陽性対照はドルガ**（のろま。`SurrendersTurn` は true なので買われるはず）で、
+    // 同じ台の同じ号令が働いていることをここで確かめる——これが 0 なら台が壊れている。
+    //
+    //     dotnet run --project BattleSim -c Release 0 sever sale
+    if (sevSub == "sale")
+    {
+        var sale = Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Dolga,
+                                   center: UnitCatalog.Gan, back1: UnitCatalog.Ban,
+                                   back3: UnitCatalog.Nata);
+        string gan = UnitCatalog.Gan.Name, dolga = UnitCatalog.Dolga.Name;
+
+        Console.WriteLine("# 断ちの捨てた手番は売れるか（第37期・診断。docs/ には置かない）");
+        Console.WriteLine();
+        Console.WriteLine("台は **供給源ゼロ**（ゴルム／ドルガ／ガン＝号令／バン＝据え／ナタ）。");
+        Console.WriteLine("ナタは傷持ちを一度も狙えないので毎ターン手番を捨てる。");
+        Console.WriteLine($"`SurrendersTurn` が true なら、この台でナタは毎ターン 攻撃+{RallyTrait.Gain} と");
+        Console.WriteLine($"被ダメ-{BulwarkTrait.ReductionPercent}% を無償で受け取る。**陽性対照はドルガ**（のろま＝true）。");
+        Console.WriteLine();
+        Console.WriteLine("| 波 | ナタの放棄/戦 | 号令→ナタ | 据え→ナタ | 号令→ドルガ（陽性対照） | 据え→ドルガ |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|");
+        for (int w = 0; w < sevStages.Count; w++)
+        {
+            double idle = 0, rn = 0, bn = 0, rd = 0, bd = 0, n = 0;
+            for (int seed = 0; seed < SevSeeds; seed++)
+            {
+                BattleResult res = BattleEngine.Run(sale, sevStages[w].Enemy, seed, verbose: true);
+                n++;
+                int turn = 0, last = -1;
+                foreach (LogLine l in res.Log)
+                {
+                    string t = l.Text;
+                    if (l.Kind == LogKind.Turn) { turn++; continue; }
+                    if (t.Contains($"{nata} は閉じた肌に刃を下ろさない"))
+                    { if (turn != last) { idle++; last = turn; } continue; }
+                    if (t.Contains($"{gan} の号令で {nata} の溜めが乗った")) rn++;
+                    else if (t.Contains($"{gan} の号令で {dolga} の溜めが乗った")) rd++;
+                    else if (t.Contains($"据えが差し出した {nata} の被弾を")) bn++;
+                    else if (t.Contains($"据えが差し出した {dolga} の被弾を")) bd++;
+                }
+            }
+            Console.WriteLine($"| 第{w + 1}波 | {idle / n:0.00} | {rn / n:0.00} | {bn / n:0.00} | {rd / n:0.00} | {bd / n:0.00} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("ナタ側が 0 / ドルガ側が正なら、**同じ号令・同じ据えが働いている台で");
+        Console.WriteLine("ナタの手番だけが売り物になっていない**＝ 1-1 (c) が効いている。");
+        return;
+    }
+
+    string sevFilter = args.Length > 2 && args[2].Length > 0
+        ? args[2] : "断ち,裂き (キリ×エグ),刻み×抉り";
+    var sevRows = sevBuilds
+        .Where(x => sevFilter.Split(',').Any(k => x.Name.Contains(k.Trim())))
+        .ToList();
+
+    string nomi = UnitCatalog.Nomi.Name;
+    string egu = UnitCatalog.Egu.Name;
+
+    // 「（傷 w → +x）」の w を取り出す。書式は裂き・抉り・刻み・断ちで共通。
+    static int WoundOf(string text)
+    {
+        int a = text.IndexOf("（傷 ", StringComparison.Ordinal);
+        if (a < 0) return 0;
+        a += 3;
+        int b = text.IndexOf(' ', a);
+        return b > a && int.TryParse(text[a..b], out int w) ? w : 0;
+    }
+
+    // 0 発火 / 1 消費傷の総和 / 2 放棄ターン / 3 ナタの振り / 4 逸れた振り
+    // 5 空振り（振ったが断てなかった）/ 6 軛で切られた発火 / 7 w>=6 の発火
+    // 8 逸れた振りの基礎打点 / 9 ノミのなぞり発火 / 10 ノミのなぞり上乗せ総量
+    // 11 エグのこじ開け発火 / 12 エグの上乗せ総量 / 13 戦数
+    var acc = new Dictionary<(int Row, int Wave), double[]>();
+
+    for (int r = 0; r < sevRows.Count; r++)
+        for (int w = 0; w < sevStages.Count; w++)
+        {
+            var a = new double[14];
+            for (int seed = 0; seed < SevSeeds; seed++)
+            {
+                BattleResult res = BattleEngine.Run(sevRows[r].F, sevStages[w].Enemy, seed, verbose: true);
+                a[13]++;
+
+                int turn = 0, lastIdleTurn = -1;
+                string intended = "", swungAt = "";
+                bool swinging = false, fired = false, cutPending = false;
+                int swungAtk = 0;
+
+                void CloseSwing()
+                {
+                    if (!swinging) return;
+                    if (!fired) a[5]++;
+                    if (intended.Length > 0 && swungAt.Length > 0 && intended != swungAt)
+                    {
+                        a[4]++;
+                        a[8] += swungAtk;
+                    }
+                    swinging = false; fired = false; intended = ""; swungAt = ""; swungAtk = 0;
+                }
+
+                foreach (LogLine l in res.Log)
+                {
+                    string t = l.Text;
+                    if (l.Kind == LogKind.Turn) { turn++; CloseSwing(); continue; }
+
+                    if (t.Contains($"{nata} は閉じた肌に刃を下ろさない"))
+                    {
+                        // **1ターンに1回だけ数える。** CanAct は Trait.SurrenderedTurn からも
+                        // 呼ばれるので（据えの判定。のろまの「まだ動き出せない」と同じ既存の作法）、
+                        // 同じ手番に2行出ることがある。数えたいのは失った手番の数。
+                        if (turn != lastIdleTurn) { a[2]++; lastIdleTurn = turn; }
+                        continue;
+                    }
+
+                    if (t.Contains($"{nata} は ") && t.Contains(" の傷口を見定めた"))
+                    {
+                        int p1 = t.IndexOf($"{nata} は ", StringComparison.Ordinal) + nata.Length + 3;
+                        int p2 = t.IndexOf(" の傷口を見定めた", StringComparison.Ordinal);
+                        intended = p2 > p1 ? t[p1..p2] : "";
+                        continue;
+                    }
+
+                    if (t.Contains($"{nata} → "))
+                    {
+                        CloseSwing();
+                        swinging = true;
+                        a[3]++;
+                        int p1 = t.IndexOf($"{nata} → ", StringComparison.Ordinal) + nata.Length + 3;
+                        int p2 = t.IndexOf(" (攻撃", p1, StringComparison.Ordinal);
+                        swungAt = p2 > p1 ? t[p1..p2] : "";
+                        int q = t.IndexOf("(攻撃 ", StringComparison.Ordinal);
+                        if (q >= 0)
+                        {
+                            q += 4;
+                            int q2 = t.IndexOfAny(new[] { ')', ' ' }, q);
+                            if (q2 > q) int.TryParse(t[q..q2], out swungAtk);
+                        }
+                        continue;
+                    }
+
+                    if (t.Contains($"{nata} が ") && t.Contains("の傷をまとめて断つ"))
+                    {
+                        int wd = WoundOf(t);
+                        a[0]++; a[1] += wd; fired = true;
+                        if (wd >= SeverTrait.PerWound + 1) a[7]++;
+                        cutPending = true;
+                        continue;
+                    }
+
+                    // 軛の行が断ちの直後に出たら、その発火が切られている
+                    if (cutPending && t.Contains("軛が") && t.Contains("に切った")) { a[6]++; cutPending = false; continue; }
+                    cutPending = false;
+
+                    if (t.Contains($"{nomi} が ") && t.Contains("の古い傷をなぞる"))
+                    { a[9]++; a[10] += CarveTrait.PerWound * WoundOf(t); continue; }
+
+                    if (t.Contains($"{egu} が ") && t.Contains("の傷をこじ開ける"))
+                    { a[11]++; a[12] += GougeTrait.PerWound * WoundOf(t); continue; }
+                }
+                CloseSwing();
+            }
+            acc[(r, w)] = a;
+        }
+
+    Console.WriteLine("# 断ち（第37期・診断。docs/ には置かない）");
+    Console.WriteLine();
+    Console.WriteLine($"seed 0..{SevSeeds - 1} × 全波、verbose のログ行を数えた。数字は**1戦あたり**。");
+    Console.WriteLine();
+    Console.WriteLine("- `振` ナタが攻撃を振った回数 / `放棄` 傷持ちが狙えず手番を捨てた回数");
+    Console.WriteLine("- `断ち` 上乗せが発火した回数 / `傷/断ち` 1発でまとめて断った傷の平均数");
+    Console.WriteLine("- `逸れ` 見定めた相手と実際に殴った相手が違った振り（介入の鎖が上書きした）");
+    Console.WriteLine("- `空振` 振ったが断てなかった回数（逸れの多くはここに落ちる）");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 波 | 振 | 放棄 | 断ち | 傷/断ち | 上乗せ | 逸れ | 空振 | 軛切 | w≥6 |");
+    Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+    for (int r = 0; r < sevRows.Count; r++)
+        for (int w = 0; w < sevStages.Count; w++)
+        {
+            double[] a = acc[(r, w)];
+            double n = a[13];
+            string per = a[0] > 0 ? $"{a[1] / a[0]:0.00}" : "—";
+            Console.WriteLine($"| {sevRows[r].Name} | 第{w + 1}波 | {a[3] / n:0.00} | {a[2] / n:0.00} | "
+                + $"{a[0] / n:0.00} | {per} | {SeverTrait.PerWound * a[1] / n:0.0} | "
+                + $"{a[4] / n:0.00} | {a[5] / n:0.00} | {a[6] / n:0.00} | {a[7] / n:0.00} |");
+        }
+
+    Console.WriteLine();
+    Console.WriteLine("## 資源の取り合い（ノミの「なぞり」・エグの「こじ開け」）");
+    Console.WriteLine();
+    Console.WriteLine("同じ傷を誰が読んだか。**ナタが断つと傷は 0 に戻る**ので、");
+    Console.WriteLine("同じ台にナタを入れた版のなぞり／こじ開けは削られるはず。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 波 | なぞり回 | なぞり量 | こじ開け回 | こじ開け量 |");
+    Console.WriteLine("|---|---|--:|--:|--:|--:|");
+    for (int r = 0; r < sevRows.Count; r++)
+        for (int w = 0; w < sevStages.Count; w++)
+        {
+            double[] a = acc[(r, w)];
+            double n = a[13];
+            Console.WriteLine($"| {sevRows[r].Name} | 第{w + 1}波 | {a[9] / n:0.00} | {a[10] / n:0.0} | "
+                + $"{a[11] / n:0.00} | {a[12] / n:0.0} |");
+        }
+
+    Console.WriteLine();
+    Console.WriteLine("## 第五波（殉教者 p=75）の介入");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 振 | 逸れ | 逸れ率 | 逸れが殉教者へ渡した基礎打点/戦 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|");
+    for (int r = 0; r < sevRows.Count; r++)
+    {
+        double[] a = acc[(r, sevStages.Count - 1)];
+        double n = a[13];
+        string rate = a[3] > 0 ? $"{100.0 * a[4] / a[3]:0.0}%" : "—";
+        Console.WriteLine($"| {sevRows[r].Name} | {a[3] / n:0.00} | {a[4] / n:0.00} | {rate} | {a[8] / n:0.0} |");
+    }
+    return;
+}
+
 if (focusId == "guard")
 {
     string guardMode = args.Length > 2 ? args[2] : "";
@@ -11078,6 +11321,19 @@ if (focusId == "confirm")
         ("刻み×抉り (ノミ×エグ)",
             Formation.Build(front1: UnitCatalog.Nomi, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.Vel, back3: UnitCatalog.Egu),
             Formation.Build(front1: UnitCatalog.Egu, front3: UnitCatalog.Golm, center: UnitCatalog.Nomi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Vel)),
+        // 傷軸・第4弾の試験台2本（第37期）。旧＝仮置き（既存行のエグ1枚をナタに差し替えただけ）、
+        // 候補＝reseat 1位。どちらもガルド・セッキを含まないので「狙いを満たす最良」と全体1位が一致する。
+        //
+        // **どちらの候補もナタを前列へ出す形。** ナタは傷を追って標的を選ぶので隣接も列も読まないが、
+        // 第30期の「中央を要求しない駒は完走する側に譲る」とは逆に出た——ナタは**傷持ちがいない間は
+        // 手番を捨てる**ので、後列で長く立っても振る回数が増えない。増えるのは供給が回っている
+        // 時間の側で、そこは書き手（キリ・ノミ）の生存で決まる。
+        ("断ち (キリ×ナタ)",
+            Formation.Build(front1: UnitCatalog.Kiri, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.Vel, back3: UnitCatalog.Nata),
+            Formation.Build(front1: UnitCatalog.Nata, front3: UnitCatalog.Golm, center: UnitCatalog.Vel, back1: UnitCatalog.Kiri, back3: UnitCatalog.Dolga)),
+        ("刻み×断ち (ノミ×ナタ)",
+            Formation.Build(front1: UnitCatalog.Nata, front3: UnitCatalog.Golm, center: UnitCatalog.Nomi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Vel),
+            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Nata, center: UnitCatalog.Dolga, back1: UnitCatalog.Vel, back3: UnitCatalog.Nomi)),
     };
 
     Console.WriteLine("## 採用候補の追試");
@@ -12089,6 +12345,24 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // キリ↔ノミ の1体だけ**（土台の3枚は同じ）なので、2行の差がそのまま
     // 「広く薄く撒く供給源」と「1体へ積み上げる供給源」の差になる。
     ("刻み×抉り (ノミ×エグ)", Formation.Build(front1: UnitCatalog.Egu, front3: UnitCatalog.Golm,
+                                        center: UnitCatalog.Nomi, back1: UnitCatalog.Dolga,
+                                        back3: UnitCatalog.Vel)),
+    // 傷軸・第4弾（第37期）。**断ちのナタ**＝傷の消費型の終端。土台は 刻み×抉り と同じで、
+    // **エグ1枚をナタに差し替えただけ**——2行の差がそのまま「維持して読み続ける」と
+    // 「畳んで一撃で使う」の差になる（同じ資源に2つの使い方を並べて編成に選ばせる）。
+    //
+    // **もう1本（断ち (キリ×ナタ)）は測って落とした。** 41.1% / 情報セル1つ /
+    // ablate のナタ寄与 -8.3pt で、3つの基準すべてでこちらに負けた
+    // （こちらは 89.6% / 情報セル3つ / -49.2pt）。**落ちた理由は機構ではなく供給の細さ**
+    // ——キリは1ターンに傷1つを撒くだけなので、キリが落ちた瞬間にナタは永久に沈黙する
+    // （放棄 3.7回/戦。ノミ台では 0.5回/戦）。定義（SeverTrait / Nata）は残してあるので、
+    // 供給を厚くした台で組み直せばいつでも戻せる。詳細は design/PHASE37_SEVER.md。
+    //
+    // 配置は仮置き（エグの席にナタを置いただけ）のまま。reseat 1位はナタを前3へ出す形だが、
+    // confirm（seed 200..599）で +0.3pt と閾値未満だったので据え置き。
+    // **reseat の帯そのものは 60.5〜91.3% と広い**——値段は「前列にナタを出すかドルガを出すか」に
+    // 集中していて、ドルガを前に出す8通りは第4波が 4〜6% に落ちる。
+    ("刻み×断ち (ノミ×ナタ)", Formation.Build(front1: UnitCatalog.Nata, front3: UnitCatalog.Golm,
                                         center: UnitCatalog.Nomi, back1: UnitCatalog.Dolga,
                                         back3: UnitCatalog.Vel))
 };

@@ -677,9 +677,40 @@ public static class UnitCatalog
         Flavor = "同じ場所を彫り続けることしかできない。彫り上がる頃には、戦は終わっている。"
     };
 
+    /// <summary>
+    /// 断ちのナタ。傷（Wound）の**消費型の終端**。エグ（維持読み）と同じ資源に、
+    /// 「畳んで一撃で使う」もう1つの使い方を並べる（第37期）。
+    ///
+    /// **速さ5 は機能要件**——エグ（6）より確実に遅い。同じ傷をエグが読んでからナタが断つ順を、
+    /// 配置ではなく速度で固定する（キリ12／エグ6 の対と同じ作法で、速さが条件タグとして
+    /// 機能する4例目）。キリ（12）・ノミ（7）より遅いので「書く → 断つ」も同時に立つ。
+    /// **エグ・キリ・ノミのいずれかを動かすと順序が崩れる**ので、3体と対で1つの要件。
+    ///
+    /// マイナス（傷を持つ敵が狙えない間は振らない）は<b>号令・据えに売れない</b>
+    /// （<see cref="SeverTrait.SurrendersTurn"/> が false）。売れてしまうと、供給源を
+    /// 1枚も持たない編成でナタが毎ターンの無償の収入源になり、マイナスが資産に化ける。
+    ///
+    /// **単体攻撃であることが標的選好の前提**（<see cref="SeverTrait"/> の窓口は
+    /// 貫きを通らない）。範囲型に変えると選好が「巻き込みの中心の固定」に意味を変える。
+    ///
+    /// 攻13/HP60 は出力役の帯。**精密な釣り合いは第37期の対象外**（探索フェーズ）。
+    /// </summary>
+    public static readonly UnitDef Nata = new()
+    {
+        Id = "nata",
+        Name = "断ちのナタ",
+        MaxHp = 60,
+        Attack = 13,
+        Speed = 5,
+        Traits = new[] { TraitId.Sever },
+        PlusText = "狙える敵のうち傷が最も深い相手を狙う。攻撃した相手の傷をすべて断ち、1つにつき5を上乗せする",
+        MinusText = "傷を持つ敵が狙えない間、刃を振るわず手番を捨てる",
+        Flavor = "断てる。だが、閉じた肌には刃が入らない。誰かが開くまで、鉈はただの鉄塊だった。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

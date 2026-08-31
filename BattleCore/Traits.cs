@@ -65,6 +65,8 @@ public enum TraitId
                  //（同上。刻めるのは断てないからで、プラスとマイナスが同じ一文から出る）
     Gouge,       // 抉り: 傷を持つ敵を攻撃すると傷1つにつき加算。敵を倒すと次の手番を失う
                  //（同上）
+    Sever,       // 断ち: 最も傷の深い敵を狙い、その傷をすべて消費して1つにつき加算。
+                 // 傷を持つ敵が狙えない間は手番を捨てる（同上。開いた傷しか断てない、の表と裏）
     Alms,        // 施し: 自分は減らずに味方を回復する（敵側の語彙）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -1908,6 +1910,126 @@ public sealed class CarveTrait : Trait
 }
 
 /// <summary>
+/// 断ち。傷（<see cref="StatusKeys.Wound"/>）の**消費型の読み手**。
+/// <see cref="GougeTrait"/>（抉り）が「維持して読み続ける」なら、こちらは「畳んで一撃で使う」。
+///
+/// **1つのルールの表と裏**（置き去り・責め苦・仇討ち・裂き・抉りと同型）:
+/// **開いた傷しか断てない。だから傷が無ければ振らない。** プラス（最も深い傷を狙って
+/// まとめて断つ）とマイナス（傷を持つ敵が狙えない間は手番を捨てる）が同じ一文から出る。
+///
+/// <para><b>温存を解いた根拠。</b> <see cref="GougeTrait"/> の doc が
+/// 「<i>傷は消費しない。消費型（溜めた傷を全部使って一撃）は連鎖が供給と変換だけで
+/// 立つかを先に見るために温存してある</i>」と書いていた条件は、第30期の実測
+/// （キリ×エグ と ノミ×エグ が別の行に並んだ＝傷の分布が出力に効いている）で満たされた。</para>
+///
+/// <para><b>上乗せは加算</b>（傷1つにつき +<see cref="PerWound"/>）。倍率にすると強化を
+/// 受けた瞬間に二乗で伸びる（README「増幅は必ず加算にする」）。抉り（+3）・刻み（+2）より
+/// 高い +5 なのは、**読んだ傷をその場で全部使い切る**から——次の手番の自分は同じ傷を
+/// 二度と読めない。維持読みとの差はここにある。</para>
+///
+/// <para><b>標的選好の窓口は engine 側（<c>SelectTargetChain</c>）。</b> 攻撃者側の標的選択に
+/// Trait のフックが無いので、執着（<see cref="FixateTrait"/>）とまったく同じ場所に置く。
+/// **素の候補集合（pool）は1体も足さない・引かない**ので、「前列が生きている限り後列は
+/// 狙われない」は破れない。**介入の鎖（標的 → 後備え → 庇う → 殉教 → 棘守り）は後段**なので、
+/// 選好は上書きされる——狙いを定めた相手が庇われたら、刃は庇い手に落ちる。</para>
+///
+/// <para><b><see cref="SurrendersTurn"/> は false（重要）。</b> 傷が無くて捨てた手番を
+/// 号令（ガン）・据え（バン）に**買わせない**。true のままだと、供給源を1枚も持たない編成で
+/// ナタが「毎ターン <see cref="StatusKeys.IdleTurn"/> を産む無償の収入源」になり、
+/// **マイナスが逆に資産化する**（<see cref="Trait.SurrendersTurn"/> の doc がまさにこの穴を
+/// 警告している——カドが第五波で号令から無償の +8/ターンを受け取り続けていた例）。
+/// のろま（ドルガ）が true でよいのは、あちらが**振れる相手がいるのに振れない**無力化だから。
+/// 断ちが振らないのは「振る対象が構造的に存在しない」ためで、**不動（カド）・追い打ち（ハギ）の側**。</para>
+///
+/// <para><b>候補集合は engine の1箇所（<c>BattleContext.TargetPool</c>）を共有する。</b>
+/// 選好（誰を狙うか）と放棄（そもそも振るか）が別々の集合を数えると、
+/// 「振ると決めた手番に狙う相手がいない」が起こりうる。</para>
+///
+/// <para><b>消費は着弾した相手の傷だけ。</b> 殉教者の介入で振りが逸れたら、上乗せは
+/// 殉教者の傷（＝ふつう 0）で計算され、意図した相手の傷はそのまま残る。
+/// **例外処理を書かない**——「原因ではなく結果で解決する」（裂き・抉りと同じ作法）。</para>
+///
+/// <para><b>ナタは傷を書かない。</b> 自給させるとマイナス（手番の放棄）が空文になる。
+/// 供給源（キリ＝広く薄く撒く／ノミ＝1体へ積み上げる）が要るのは設計そのもの。</para>
+///
+/// <para><b>エグとナタは同じ資源の維持読みと消費読み</b>なので、**併用すると資源の取り合いに
+/// なる**。ナタが断った後の相手は傷 0 で、エグの上乗せも・ノミの「なぞり」も消える。
+/// どちらを積むかを編成に選ばせるのが狙いで、両方積むのは足し算にならない。</para>
+///
+/// <para><c>ApplyDamage</c> の直呼びなので <c>OnAfterAttack</c> は再帰しない
+/// （シガ・エグ・ノミと同じ作法）。</para>
+/// </summary>
+public sealed class SeverTrait : Trait
+{
+    /// <summary>傷1つあたりの上乗せ。<b>加算</b>（倍率にしないこと。上の但し書き参照）。</summary>
+    public const int PerWound = 5;
+
+    public override TraitId Id => TraitId.Sever;
+
+    /// <summary>
+    /// 候補の中で <see cref="StatusKeys.Wound"/> がいちばん深い駒。傷持ちが1体もいなければ null。
+    /// 同数のタイブレークは <see cref="BattleContext.PickOne"/>（席番号の若い順にしないための唯一の窓口。
+    /// 候補 0 個・1 個では <c>Roll</c> を消費しない）。
+    /// </summary>
+    public static UnitState? Preferred(BattleContext ctx, IReadOnlyList<UnitState> pool)
+    {
+        int best = 0;
+        foreach (UnitState f in pool)
+        {
+            int w = f.Counter(StatusKeys.Wound);
+            if (w > best) best = w;
+        }
+        if (best <= 0) return null;
+
+        return ctx.PickOne(pool.Where(f => f.Counter(StatusKeys.Wound) == best).ToList());
+    }
+
+    /// <summary>
+    /// 狙える敵に傷持ちが1体でもいるか。**選好と同じ候補集合**を使う（上の但し書き）。
+    /// </summary>
+    public static bool HasPrey(BattleContext ctx, UnitState self)
+        => ctx.TargetPool(self).Any(f => f.Counter(StatusKeys.Wound) > 0);
+
+    /// <summary>
+    /// 止めているのは<b>攻撃だけ</b>（不動＝<see cref="ImmobileTrait"/> と同じ側）。
+    /// 溜めも術も通す——断ちが振れないのは対象が存在しないからで、無力化ではない。
+    ///
+    /// <para><b>ログを出すのは のろま（<see cref="SluggishTrait"/>）と同じ作法。</b>
+    /// <see cref="Trait.SurrenderedTurn"/> からも呼ばれるので同じターンに2行出ることがあるが、
+    /// この判定は副作用を持たない（盤面の値を1つも変えない）ので結果には影響しない。</para>
+    /// </summary>
+    public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
+    {
+        if (kind != ActionKind.Attack) return true;
+
+        bool prey = HasPrey(ctx, self);
+        if (!prey) ctx.Log($"    {self.Name} は閉じた肌に刃を下ろさない", LogKind.Action);
+        return prey;
+    }
+
+    /// <summary>
+    /// 捨てた手番は<b>売り物にならない</b>。理由はクラスの doc を参照（この1行が無いと
+    /// マイナスが号令・据えへの無償の収入に化ける）。
+    /// </summary>
+    public override bool SurrendersTurn => false;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        // **着弾した相手の傷だけを読む。** 介入で逸れたなら殉教者の傷（ふつう 0）を読んで空振りする。
+        int w = target.Counter(StatusKeys.Wound);
+        if (w <= 0) return;
+
+        // 生死は ApplyDamage に任せる（読み手側の作法。死体でも判定は同じ＝結果で解決する）。
+        ctx.Log($"    {self.Name} が {target.Name} の傷をまとめて断つ（傷 {w} → +{PerWound * w}）",
+            LogKind.Highlight);
+        ctx.ApplyDamage(target, PerWound * w, self);
+
+        // 消費。倒れていても 0 に戻すのは同じ（蘇生で戻ってきた駒が古い傷を抱えない）。
+        target.SetCounter(StatusKeys.Wound, 0);
+    }
+}
+
+/// <summary>
 /// 執着。<b>一度狙った敵が（狙える位置に）生きている限り、他の敵を狙えない。</b>
 ///
 /// **出力でも耐久でもなく「対象選択」を縛るマイナス**で、ロスター初。第29期の反証
@@ -2963,6 +3085,7 @@ public static class TraitCatalog
         new RendTrait(),
         new GougeTrait(),
         new CarveTrait(),
+        new SeverTrait(),
         new FixateTrait(),
         new MartyrTrait(),
         new InversionTrait(),
