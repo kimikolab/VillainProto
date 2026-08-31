@@ -768,4 +768,28 @@ public sealed class BattleResult
     public required int BearArmor { get; init; }
     public required int BearSoaked { get; init; }
     public required IReadOnlyDictionary<string, int> BearFrom { get; init; }
+
+    /// <summary>
+    /// 渡し（第43期）の計数。<b>窓口 <see cref="BattleContext.Dull"/> の中で
+    /// 味方から敵へ移った量</b>を数える。<b>ログからは数えられないものが混じる</b>
+    /// ——敵が全滅していて転嫁が起きなかった回も、肩代わりで代金が他人へ移った分も、
+    /// 文字列には痕跡が残らない。<b>verbose に依存しない</b>。
+    ///
+    /// <para><c>RelayTaken</c> 横取りした量 ／ <c>RelaySent</c> 敵へ流した量 ／
+    /// <c>RelayMaxSent</c> 1回の <c>Dull</c> で流した最大量（崖の検算） ／
+    /// <c>RelayZeroed</c> 転嫁で敵の <c>CurrentAttack</c> が 0 になった回数（崖の検算） ／
+    /// <c>RelayCost</c> 代金として <c>ApplyDamage</c> へ渡した総量 ／
+    /// <c>RelaySelfPaid</c> そのうち渡し役自身の身に実際に落ちた量 ／
+    /// <c>RelayFrom</c> 横取りした相手の内訳 ／ <c>RelayTo</c> 流し先の内訳。</para>
+    ///
+    /// <para>渡し役（<c>UnitCatalog.Wata</c>）を編成に入れなければ全部 0。</para>
+    /// </summary>
+    public required int RelayTaken { get; init; }
+    public required int RelaySent { get; init; }
+    public required int RelayMaxSent { get; init; }
+    public required int RelayZeroed { get; init; }
+    public required int RelayCost { get; init; }
+    public required int RelaySelfPaid { get; init; }
+    public required IReadOnlyDictionary<string, int> RelayFrom { get; init; }
+    public required IReadOnlyDictionary<string, int> RelayTo { get; init; }
 }

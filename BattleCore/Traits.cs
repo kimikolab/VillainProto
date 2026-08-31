@@ -80,6 +80,8 @@ public enum TraitId
                  // ただし勢い余って隣接する味方の体勢まで崩す（攻撃力が下がる）
     Bear,        // 引き受け: 隣接する味方が受ける攻撃力低下を代わりに背負い、その分だけ鎧になる。
                  // ただし自分の腕は落ち続ける（同上。1つの動作の表と裏）
+    Relay,       // 渡し: 隣の味方が受ける攻撃力低下を引き受け、最も強い敵へそのまま渡す。
+                 // ただし通り道になった自分の身が削れる（同上。1つの動作の表と裏）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -1713,13 +1715,15 @@ public enum DullRoute
     CurseEnemy,   // 呪詛: ネル → 敵全体・開戦時1回
     CurseLeak,    // 呪詛の味方漏れ: ネル → 味方全体（SupportTargets 経由）・開戦時1回
     Shove,        // 突き返しの Stagger: ハネ → 隣接味方・1ターン1回
-    Cower         // 萎縮: クビ → 味方全体（SupportTargets 経由）・開戦時1回
+    Cower,        // 萎縮: クビ → 味方全体（SupportTargets 経由）・開戦時1回
+    Relay         // 渡しの転嫁: ワタ → **敵陣**の最高攻撃力の駒・横取りのたび。
+                  // **窓口の中から窓口を呼ぶ唯一の経路**で、宛先が敵側なのもここだけ
 }
 
 /// <summary>経路の名前と本数。診断の表の見出しと配列長をここ1箇所から引く。</summary>
 public static class DullRoutes
 {
-    public static readonly string[] Names = { "その他", "なまり", "呪詛敵", "呪詛漏れ", "突き返し", "萎縮" };
+    public static readonly string[] Names = { "その他", "なまり", "呪詛敵", "呪詛漏れ", "突き返し", "萎縮", "渡し" };
     public static int Count => Names.Length;
 }
 
@@ -1779,6 +1783,78 @@ public sealed class BearTrait : Trait
 public readonly record struct BearRule(int ArmorPerDull)
 {
     public static BearRule Default => new(2);
+}
+
+
+/// <summary>
+/// 渡し（転嫁）。隣接する味方が受ける攻撃力低下を引き受け、<b>そのまま敵へ渡す</b>。
+/// ただし通り道になった自分の身が削れる——<b>プラスとマイナスが1つの動作の表と裏</b>なので、
+/// <see cref="TraitId"/> のどちらのブロックにも入らない（置き去り・突き返し・引き受けと同じ扱い）。
+///
+/// <para><b>弱体軸の三役目。</b> 第42期で窓口 <see cref="BattleContext.Dull"/> と読み手2枚が揃った。
+/// 逆しま（ウツ）は弱体を<b>攻撃力</b>（下げ幅の3倍）に、引き受け（ウケ）は<b>アーマー</b>に変える
+/// ——どちらも増幅がある代わりに<b>受け手1体で閉じる</b>。渡しは<b>増幅が無い代わりに
+/// 味方全体に効く</b>（敵の攻撃力が下がるので、殴られる全員が得をする）。
+/// 傷軸で抉り（+3/傷・維持）と断ち（+5/傷・全消費）が別の順位を作ったのと同じ形。</para>
+///
+/// <para><b>味方から敵へ状態を移す経路はロスターでこれが初めて。</b> 第40期の曝きが
+/// 「敵から味方へ」を作ったのの逆向きで、<c>Dull</c> が最初から両陣営を通るように
+/// 作ってあるので engine 側に足した規則はゼロ——<b>横取りして流し先を敵にするだけ</b>。</para>
+///
+/// <para><b>横取りの実装は <see cref="BattleContext.Dull"/> の中にある。</b>
+/// 集約（<see cref="BearTrait"/>）とまったく同じ条件で、<b>候補プールも共有する</b>
+/// ——隣接する生存味方／対象自身は除く／対象が横取り役（集約・渡し）なら横取りしない／
+/// 候補が複数なら <c>PickOne</c>。<b>優先順位を固定しない</b>のは、固定すると
+/// 片方が構造的に飢えるから（第41期「先に来る供給源だけが使われる」と同じ形）。
+/// この Trait 本体は札にすぎない。</para>
+///
+/// <para><b>流し先は決定的に選ぶ</b>——敵陣で <c>CurrentAttack</c> が最も高い生存駒。
+/// 乱数で選ぶと何に課金したのかが分離できない。<b>最高攻撃力を選ぶこと自体が
+/// 自己分散になる</b>: 削れば次は別の敵が最高になるので、1体を 0 まで削り切る前に
+/// 対象が移る（<c>CurrentAttack</c> の下限は 0 なので、崖を避けるための選び方でもある）。
+/// 同値が並んだ場合だけ <c>PickOne</c>。</para>
+///
+/// <para><b>代金はHPで払う。</b> <see cref="HpCostPerDull"/> はノブにしない（定数）。
+/// ウケの代金が <c>AtkBonus</c>（素の攻撃力 6 で底を打って止まる）なのに対し、
+/// <b>HP には底が無い</b>ので、供給が太いほど代金が線形に伸びて自壊する
+/// ——<b>可変コスト型</b>であることがこの駒のマイナスの本体。
+/// 代金は <see cref="BattleContext.ApplyDamage"/> を通す（直接HPを引かない）ので、
+/// 庇う・分かち・巨躯・後備え・棘守りが割り込む＝<b>「代金を誰かに肩代わりさせる」が
+/// 編成の選択肢になる</b>。そのぶん意図した代金が効かなくなるので、
+/// 診断（<c>relay</c>）は<b>自弁率</b>を必ず数える。</para>
+///
+/// <para><b>ワタ自身の攻撃力は落ちない。</b> 横取りした分の <c>AtkBonus</c> は
+/// 誰にも乗らない（味方側から消えて敵側へ移る）。ウケが背負って 6.0 → 0.0 になったのとは
+/// 天井の種類が違う。</para>
+/// </summary>
+public sealed class RelayTrait : Trait
+{
+    /// <summary>横取りした攻撃力1点あたりに自分が負うダメージ。<b>ノブにしない</b>（指示書 §2-1）。</summary>
+    public const int HpCostPerDull = 2;
+
+    public override TraitId Id => TraitId.Relay;
+}
+
+/// <summary>
+/// 渡しの強度。<b>診断（relay）が版を差し替えるためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない。
+///
+/// <para><paramref name="TransferPercent"/> は横取りした量のうち敵へ流す割合。
+/// <c>0</c> は<b>「横取りするが流さない」＝弱体がそこで消滅する</b>
+/// ——これは<b>除去役</b>そのもので、対照であると同時に
+/// <b>転嫁と除去を1つのノブで比較できる</b>（指示書 §2-2）。
+/// 横取り自体を止めるノブは置かない（それはワタを外した対照と同じで二重になる）。</para>
+///
+/// <para><b>既定を無効にしなくてよい。</b> 味方側の駒なので、
+/// <see cref="UnitCatalog.Wata"/> を編成に入れない限り既存47行は1バイトも動かない
+/// （それ自体が回帰チェックになる）。static のノブを置かない理由は
+/// <see cref="ColossusRule"/> / <see cref="YokeRule"/> / <see cref="ShoveRule"/> /
+/// <see cref="BearRule"/> と同じ。</para>
+/// </summary>
+public readonly record struct RelayRule(int TransferPercent)
+{
+    /// <summary>探索段階の初期値（第43期）。</summary>
+    public static RelayRule Default => new(100);
 }
 
 
@@ -3538,6 +3614,7 @@ public static class TraitCatalog
         new ExposeTrait(),
         new ShoveTrait(),
         new BearTrait(),
+        new RelayTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

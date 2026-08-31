@@ -352,9 +352,62 @@ public sealed class BattleContext
     public int BearSoaked { get; internal set; }
     public Dictionary<string, int> BearFrom { get; } = new();
 
+    /// <summary>
+    /// 渡し（転嫁）の強度。<b>診断（relay）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="RelayRule.Default"/>）。
+    /// static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public RelayRule Relay { get; }
+
+    /// <summary>
+    /// 渡し（<see cref="TraitId.Relay"/>）の計数。<b>発火しなかったことは盤面の値に痕跡を残さない</b>ので、
+    /// 診断が読むためだけに数える（<c>verbose</c> には依存しない）。盤面には一切影響しない。
+    ///
+    /// <para><c>RelayTaken</c> 横取りした量 ／ <c>RelaySent</c> 敵へ流した量 ／
+    /// <c>RelayMaxSent</c> <b>1回の <see cref="Dull"/> で流した最大量</b>（崖の検算） ／
+    /// <c>RelayZeroed</c> 転嫁で敵の <c>CurrentAttack</c> が 0 になった回数（崖の検算） ／
+    /// <c>RelayCost</c> 代金として <see cref="ApplyDamage"/> へ渡した総量 ／
+    /// <c>RelaySelfPaid</c> そのうち<b>渡し役自身の身に実際に落ちた量</b>（肩代わりされなかった分） ／
+    /// <c>RelayFrom</c> 横取りした相手の内訳 ／ <c>RelayTo</c> 流し先の内訳。</para>
+    ///
+    /// <para><b><c>RelaySelfPaid</c> は tally の差分で取る。</b> <c>ApplyDamage</c> は
+    /// 最終的な受け手の <c>UnitTally.DamageTaken</c> に加算するので、代金の前後で
+    /// 渡し役の tally を引き算すれば「庇う・分かち・巨躯・後備え・棘守りが割り込んだ後に
+    /// 本人へ落ちた量」がそのまま出る。<b>戻り値を足さないこと</b>——
+    /// <c>ApplyDamage</c> は割り込みの後の値を返さない。</para>
+    /// </summary>
+    public int RelayTaken { get; internal set; }
+    public int RelaySent { get; internal set; }
+    public int RelayMaxSent { get; internal set; }
+    public int RelayZeroed { get; internal set; }
+    public int RelayCost { get; internal set; }
+    public int RelaySelfPaid { get; internal set; }
+    public Dictionary<string, int> RelayFrom { get; } = new();
+    public Dictionary<string, int> RelayTo { get; } = new();
+
+    /// <summary>
+    /// 渡し（<see cref="RelayTrait"/>）の転嫁の最中か。転嫁は <see cref="Dull"/> の中から
+    /// <see cref="Dull"/> を呼ぶ<b>唯一の経路</b>で、<b>敵側に渡しを持たせた瞬間に無限往復する</b>
+    /// （こちらが敵を弱体化 → 敵の渡しがこちらへ返す → …）。現状は敵に誰もいないが、
+    /// 反撃・割り込み・突き返しと同じ形のガードを先に置く。
+    ///
+    /// <para><b>止めるのは渡しの横取りだけ</b>——転嫁の途中でも集約は働いてよい
+    /// （集約は流し先を作らないので往復しない）。<b>static に持たないこと</b>。</para>
+    /// </summary>
+    public bool InRelay { get; private set; }
+
+    public void Relaying(Action body)
+    {
+        if (InRelay) return;
+        InRelay = true;
+        try { body(); }
+        finally { InRelay = false; }   // 例外で立ちっぱなしになると以後の転嫁が永久に止まる
+    }
+
     public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null,
                          HushRule? hush = null, MartyrRule? martyr = null, ExposeRule? expose = null,
-                         ShoveRule? shove = null, BearRule? bear = null)
+                         ShoveRule? shove = null, BearRule? bear = null,
+                         RelayRule? relay = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -365,6 +418,7 @@ public sealed class BattleContext
         Expose = expose ?? ExposeRule.Default;
         Shove = shove ?? ShoveRule.Default;
         Bear = bear ?? BearRule.Default;
+        Relay = relay ?? RelayRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -1489,30 +1543,45 @@ public sealed class BattleContext
 
         UnitState receiver = target;
 
-        // 横取り。**対象が集約役自身なら横取りしない**（再帰を作らない）。
-        // **対象が集約役でも横取りしない**（分かちが !HasTrait(Sharer) で止めているのと同じ形。
-        // 集約役どうしが押し付け合う経路を消す）。
-        if (!target.HasTrait(TraitId.Bear))
+        // 横取り。**対象が横取り役（集約・渡し）自身なら横取りしない**（再帰を作らない）。
+        // **対象が横取り役でも横取りしない**（分かちが !HasTrait(Sharer) で止めているのと同じ形。
+        // 横取り役どうしが押し付け合う経路を消す）。
+        //
+        // **候補プールは集約と渡しで共有する**（第43期）。優先順位を固定すると
+        // 片方が構造的に飢える（第41期「先に来る供給源だけが使われる」と同じ形）ので、
+        // 両方を1つのプールに入れて PickOne に任せる。**同席する編成が現状ゼロなので
+        // 既存47行の乱数列は動かない**（候補が 0/1 個では Roll を消費しない）。
+        if (!target.HasTrait(TraitId.Bear) && !target.HasTrait(TraitId.Relay))
         {
-            UnitState? bearer = PickOne(
+            UnitState? taker = PickOne(
                 LivingMembers(target.TeamId)
-                    .Where(u => u != target && u.HasTrait(TraitId.Bear)
+                    .Where(u => u != target
+                                && (u.HasTrait(TraitId.Bear) || (u.HasTrait(TraitId.Relay) && !InRelay))
                                 && FormationRules.AreAdjacent(u.Slot, target.Slot))
                     .ToList());
-            if (bearer is not null)
+            if (taker is not null && taker.HasTrait(TraitId.Bear))
             {
-                receiver = bearer;
+                receiver = taker;
                 BearTaken += amount;
                 BearFrom[target.Name] = BearFrom.TryGetValue(target.Name, out int prev) ? prev + amount : amount;
 
                 int armor = amount * Bear.ArmorPerDull;
                 if (armor > 0)
                 {
-                    bearer.SetCounter(StatusKeys.Armor, bearer.Counter(StatusKeys.Armor) + armor);
+                    taker.SetCounter(StatusKeys.Armor, taker.Counter(StatusKeys.Armor) + armor);
                     BearArmor += armor;
                 }
-                Log($"    {bearer.Name} が {target.Name} の重荷を引き受けた（攻撃 -{amount} / 鎧 +{armor}）",
+                Log($"    {taker.Name} が {target.Name} の重荷を引き受けた（攻撃 -{amount} / 鎧 +{armor}）",
                     LogKind.Trigger);
+            }
+            else if (taker is not null)
+            {
+                // 渡し（第43期）。**味方側の AtkBonus は誰も引かない**——量はそのまま
+                // 敵陣へ移る。転嫁を先に済ませてから代金を払うのは、代金で渡し役が
+                // 倒れても転嫁そのものは成立させるため（巨躯の吐き戻しが redirect の前に
+                // 確定させているのと同じ順序）。
+                RelayThrough(taker, target, amount);
+                return;
             }
             else
             {
@@ -1525,6 +1594,59 @@ public sealed class BattleContext
         }
 
         receiver.AtkBonus -= amount;
+    }
+
+    /// <summary>
+    /// 渡し（<see cref="RelayTrait"/>）の転嫁と代金。<see cref="Dull"/> からのみ呼ばれる。
+    ///
+    /// <para>流し先は<b>敵陣で <c>CurrentAttack</c> が最も高い生存駒</b>で、決定的に選ぶ
+    /// （同値が並んだときだけ <c>PickOne</c>）。<b>敵が全滅していたら転嫁は起きないが、
+    /// 横取りは成立させて弱体をそのまま捨てる</b>——横取りを取り消すと
+    /// 「最後の1体を倒した瞬間だけ味方の腕が落ちる」という読めない挙動になる。
+    /// 代金も同じ理由で払う（通り道になった事実は敵の生死で変わらない）。</para>
+    ///
+    /// <para>転嫁は <see cref="Dull"/> を再び呼ぶので <see cref="Relaying"/> で包む。
+    /// 現状の敵ロスターに渡し持ちはいないが、置いた瞬間に無限往復する。</para>
+    /// </summary>
+    private void RelayThrough(UnitState relayer, UnitState target, int amount)
+    {
+        RelayTaken += amount;
+        RelayFrom[target.Name] = RelayFrom.TryGetValue(target.Name, out int prev) ? prev + amount : amount;
+
+        int sent = amount * Relay.TransferPercent / 100;
+        if (sent > 0)
+        {
+            IReadOnlyList<UnitState> foes = LivingMembers(Opponent(relayer.TeamId));
+            if (foes.Count > 0)
+            {
+                int top = foes.Max(u => u.CurrentAttack);
+                UnitState? victim = PickOne(foes.Where(u => u.CurrentAttack == top).ToList());
+                if (victim is not null)
+                {
+                    RelaySent += sent;
+                    RelayTo[victim.Name] = RelayTo.TryGetValue(victim.Name, out int t) ? t + sent : sent;
+                    if (sent > RelayMaxSent) RelayMaxSent = sent;
+
+                    int before = victim.CurrentAttack;
+                    Relaying(() => Dull(victim, sent, DullRoute.Relay));
+                    if (before > 0 && victim.CurrentAttack == 0) RelayZeroed++;
+
+                    Log($"    {relayer.Name} が {target.Name} の重荷を {victim.Name} へ渡した（攻撃 -{sent}）",
+                        LogKind.Trigger);
+                }
+            }
+        }
+
+        int cost = amount * RelayTrait.HpCostPerDull;
+        if (cost > 0)
+        {
+            // **自弁率は tally の差分で取る。** 肩代わり5種が割り込むと代金は他人へ移るので、
+            // 「渡した量 × 2」を払ったことにはならない。
+            int paidBefore = TallyOf(relayer).DamageTaken;
+            RelayCost += cost;
+            ApplyDamage(relayer, cost, null, isFriendlyFire: true);
+            RelaySelfPaid += TallyOf(relayer).DamageTaken - paidBefore;
+        }
     }
 
     public void Heal(UnitState target, int amount)
@@ -1667,10 +1789,10 @@ public static class BattleEngine
                                    ColossusRule? colossus = null, YokeRule? yoke = null,
                                    HushRule? hush = null, MartyrRule? martyr = null,
                                    ExposeRule? expose = null, ShoveRule? shove = null,
-                                   BearRule? bear = null)
+                                   BearRule? bear = null, RelayRule? relay = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
-               seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear);
+               seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -1684,9 +1806,10 @@ public static class BattleEngine
                                    int seed, bool verbose = true, ColossusRule? colossus = null,
                                    YokeRule? yoke = null, HushRule? hush = null,
                                    MartyrRule? martyr = null, ExposeRule? expose = null,
-                                   ShoveRule? shove = null, BearRule? bear = null)
+                                   ShoveRule? shove = null, BearRule? bear = null,
+                                   RelayRule? relay = null)
     {
-        var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear);
+        var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -1901,6 +2024,14 @@ public static class BattleEngine
             BearArmor = ctx.BearArmor,
             BearSoaked = ctx.BearSoaked,
             BearFrom = ctx.BearFrom,
+            RelayTaken = ctx.RelayTaken,
+            RelaySent = ctx.RelaySent,
+            RelayMaxSent = ctx.RelayMaxSent,
+            RelayZeroed = ctx.RelayZeroed,
+            RelayCost = ctx.RelayCost,
+            RelaySelfPaid = ctx.RelaySelfPaid,
+            RelayFrom = ctx.RelayFrom,
+            RelayTo = ctx.RelayTo,
             ShoveFired = ctx.ShoveFired,
             ShoveCapped = ctx.ShoveCapped,
             ShoveSwapped = ctx.ShoveSwapped,

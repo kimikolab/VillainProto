@@ -808,9 +808,38 @@ public static class UnitCatalog
         Flavor = "誰の痛みでも代わりに背負う。頼まれてもいないのに。"
     };
 
+    /// <summary>
+    /// 渡しのワタ。<b>味方の弱体を敵へ流す</b>——弱体軸の三役目（第43期）。
+    ///
+    /// <para><b>味方から敵へ状態を移す経路はロスターでこれが初めて。</b>
+    /// 第40期の曝き（告発人）が「敵から味方へ」を作ったのの逆向きで、
+    /// 窓口 <see cref="BattleContext.Dull"/> が最初から両陣営を通るように
+    /// 作ってあるので engine 側に足した規則はゼロ。</para>
+    ///
+    /// <para><b>逆しま（ウツ）・引き受け（ウケ）と同じ通貨を、3つ目の向きで使う。</b>
+    /// 前2枚は増幅がある代わりに<b>受け手1体で閉じる</b>（攻撃力3倍・アーマー2倍）。
+    /// 渡しは<b>増幅が無い代わりに味方全体に効く</b>——敵の攻撃力が下がるので
+    /// 殴られる全員が得をする。</para>
+    ///
+    /// <para>HP84・攻8・速7 は探索段階の初期値。<b>掃引の対象は
+    /// <see cref="RelayRule.TransferPercent"/> だけ</b>で、HP・攻・速は振らない。</para>
+    /// </summary>
+    public static readonly UnitDef Wata = new()
+    {
+        Id = "wata",
+        Name = "渡しのワタ",
+        MaxHp = 84,
+        Attack = 8,
+        Speed = 7,
+        Traits = new[] { TraitId.Relay },
+        PlusText = "隣の味方が受ける攻撃力低下を引き受け、最も強い敵へそのまま渡す",
+        MinusText = "渡した分だけ自分の身が削れる。隣に誰もいなければ何も起きない",
+        Flavor = "受け取った呪いを、そのまま向こうへ渡す。通り道の自分だけが削れていく。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);
