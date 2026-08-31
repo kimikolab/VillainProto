@@ -346,6 +346,29 @@ public sealed class BattleContext
 
     public bool TeamAlive(int teamId) => LivingMembers(teamId).Any();
 
+    /// <summary>
+    /// <b>「最も傷ついた味方」</b>（自分を除く・<see cref="UnitState.AcceptsSupport"/> を通る・
+    /// HP が満タンでない生存者のうち、HP割合が最小の駒）。該当が無ければ null。
+    ///
+    /// <para>継ぎ当て（<see cref="MenderTrait"/>）・施し（<see cref="AlmsTrait"/>）・
+    /// 縫い（<see cref="SutureTrait"/>）の3者が同じ選択を持つので、
+    /// <b>定義をここ1箇所に集めてある</b>（第39期に抽出。挙動は3者とも従来と1バイトも変えていない）。</para>
+    ///
+    /// <para>同値のタイブレークは <see cref="PickOne"/>。HP割合が同値なら席番号順に落ちるのを
+    /// 避けるための唯一の窓口で、候補 0 個・1 個では <c>Roll</c> を消費しない。</para>
+    ///
+    /// <para><b>回復量の上限（継ぎ当ての自消費）や封じ（渇き）はここでは見ない。</b>
+    /// 患者を選ぶことと、実際に何が届くかは別の層（<see cref="Heal"/>）の仕事。</para>
+    /// </summary>
+    public UnitState? MostHurtAlly(UnitState self)
+    {
+        var hurt = LivingMembers(self.TeamId)
+            .Where(a => a != self && a.AcceptsSupport && a.Hp < a.MaxHp).ToList();
+        int worst = hurt.Count == 0 ? 0 : hurt.Min(a => a.Hp * 100 / Math.Max(1, a.MaxHp));
+        return PickOne(hurt.Where(a => a.Hp * 100 / Math.Max(1, a.MaxHp) == worst).ToList());
+    }
+
+
     public IReadOnlyList<LogLine> Log_ => _log;
     public IReadOnlyList<BattleEvent> Events => _events;
 
@@ -565,7 +588,7 @@ public sealed class BattleContext
             ? FixateTrait.Remembered(attacker, pool)
             : null;
 
-        // 断ち（ナタ）。**執着と同じ窓口**（pool から無作為に選ぶ直前）に置く攻撃者側の選好で、
+        // 傷の選好（断ち＝ナタ / 縫い＝ハリ）。**執着と同じ窓口**（pool から無作為に選ぶ直前）に置く攻撃者側の選好で、
         // pool そのものは1体も足さない・引かない——「前列が生きている限り後列は狙われない」は
         // 執着と同じく pool 経由で守られる。候補の中で傷がいちばん深い駒を選ぶだけ。
         //
@@ -575,7 +598,11 @@ public sealed class BattleContext
         //
         // 保持者の走査は既存条件の後ろ（&& ではなく三項の条件側だが同じ短絡）。
         // 貫きは手前で分岐して pool を作らないので、この段は通らない（執着と同じ）。
-        UnitState? severed = attacker.HasTrait(TraitId.Sever)
+        //
+        // **第39期に利用者が2枚になった（ナタ＝断ち / ハリ＝縫い）が、段は増やさない。**
+        // 「傷がいちばん深い敵を狙う」という選好の定義は SeverTrait.Prefers / Preferred の
+        // 1箇所きりで、共有していないのは閾値（振るか捨てるか）だけ——あちらは CanAct の側。
+        UnitState? severed = SeverTrait.Prefers(attacker)
             ? SeverTrait.Preferred(this, pool)
             : null;
 

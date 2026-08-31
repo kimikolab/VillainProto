@@ -67,6 +67,9 @@ public enum TraitId
                  //（同上）
     Sever,       // 断ち: 最も傷の深い敵を狙い、その傷をすべて消費して1つにつき加算。
                  // 傷を持つ敵が狙えない間は手番を捨てる（同上。開いた傷しか断てない、の表と裏）
+    Suture,      // 縫い: 最も傷の深い敵を狙い、その傷1つにつき最も傷ついた味方を回復する。
+                 // 繕うたび、糸を通した敵の傷がひとつ塞がる
+                 //（同上。糸は開いた傷にしか通らない／通した糸を引けばその傷は塞がる）
     Alms,        // 施し: 自分は減らずに味方を回復する（敵側の語彙）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -1378,12 +1381,9 @@ public sealed class MenderTrait : Trait
     {
         if (!self.IsAlive || self.Hp <= 1) return;
 
-        // HP割合が同値なら席番号順に落ちていた（安定ソート）。同値の中は乱数で割る。
-        var hurt = ctx.LivingMembers(self.TeamId)
-            .Where(a => a != self && a.AcceptsSupport && a.Hp < a.MaxHp).ToList();
-        int worst = hurt.Count == 0 ? 0 : hurt.Min(a => a.Hp * 100 / Math.Max(1, a.MaxHp));
-        UnitState? patient = ctx.PickOne(
-            hurt.Where(a => a.Hp * 100 / Math.Max(1, a.MaxHp) == worst).ToList());
+        // 患者の選び方は施し・縫いと共有（BattleContext.MostHurtAlly。第39期に抽出）。
+        // HP割合が同値なら席番号順に落ちていたので、同値の中は乱数で割る——その窓口もあちら。
+        UnitState? patient = ctx.MostHurtAlly(self);
         if (patient is null) return;
 
         int amount = Math.Min(Amount, self.Hp - 1);
@@ -1428,14 +1428,10 @@ public sealed class AlmsTrait : Trait
     {
         if (!self.IsAlive) return;
 
-        // 患者の選び方は MenderTrait.Mend と同じ（AcceptsSupport かつ Hp < MaxHp、HP割合の昇順）。
-        // 共有にしないのは、繕いが自消費のぶん Hp <= 1 で止まる必要があり、施しには要らないため。
-        // HP割合が同値なら席番号順に落ちていた（安定ソート）。同値の中は乱数で割る。
-        var hurt = ctx.LivingMembers(self.TeamId)
-            .Where(a => a != self && a.AcceptsSupport && a.Hp < a.MaxHp).ToList();
-        int worst = hurt.Count == 0 ? 0 : hurt.Min(a => a.Hp * 100 / Math.Max(1, a.MaxHp));
-        UnitState? patient = ctx.PickOne(
-            hurt.Where(a => a.Hp * 100 / Math.Max(1, a.MaxHp) == worst).ToList());
+        // 患者の選び方は継ぎ当て・縫いと共有（BattleContext.MostHurtAlly。第39期に抽出）。
+        // **止まる条件だけが違う**——繕いは自消費のぶん Hp <= 1 で止まるが、施しには要らない。
+        // 止まる条件は呼び出し側に残し、選択そのものだけを1箇所に集めてある。
+        UnitState? patient = ctx.MostHurtAlly(self);
         if (patient is null) return;
 
         ctx.Heal(patient, Amount);
@@ -2034,6 +2030,18 @@ public sealed class SeverTrait : Trait
     }
 
     /// <summary>
+    /// <b>この選好（傷がいちばん深い敵を狙う）を使う駒か。</b> 第39期に2人目
+    /// （縫いのハリ＝<see cref="SutureTrait"/>）が増えたので、
+    /// <c>SelectTargetChain</c> の段を2つに割らずにここへ集めた。
+    ///
+    /// <para><b>閾値（<see cref="Threshold"/>）と手番の放棄は縫いには無い。</b>
+    /// 共有するのは「誰を狙うか」だけで、「そもそも振るか」（<see cref="CanAct"/>）は
+    /// 断ち固有——ハリは傷持ちがいなければ普通の標的を普通に殴る（繕いが出ないだけ）。</para>
+    /// </summary>
+    public static bool Prefers(UnitState u)
+        => u.HasTrait(TraitId.Sever) || u.HasTrait(TraitId.Suture);
+
+    /// <summary>
     /// 狙える敵に <see cref="Threshold"/> 以上の傷を負った駒がいるか。
     /// **選好と同じ候補集合**を使う（上の但し書き）。
     ///
@@ -2087,6 +2095,75 @@ public sealed class SeverTrait : Trait
 
         // 消費。倒れていても 0 に戻すのは同じ（蘇生で戻ってきた駒が古い傷を抱えない）。
         target.SetCounter(StatusKeys.Wound, 0);
+    }
+}
+
+/// <summary>
+/// 縫い。傷（<see cref="StatusKeys.Wound"/>）の<b>防御側の維持読み</b>で、傷軸の四役目（第39期）。
+///
+/// <para>供給2（裂き＝<see cref="RendTrait"/> / 刻み＝<see cref="CarveTrait"/>）に対し、
+/// 読み手はこれで3枚——**攻めの維持読み（抉り＝<see cref="GougeTrait"/>）／消費読み
+/// （断ち＝<see cref="SeverTrait"/>）／防御の維持読み（縫い）**。上乗せ量 +3 は抉りと同じで、
+/// <b>出力の代わりに回復に落ちる防御の鏡</b>になっている。</para>
+///
+/// <para><b>1つのルールの表と裏</b>（傷軸の作法）: 糸は開いた傷にしか通らない。
+/// 通した糸を引けば、その傷は塞がる。</para>
+///
+/// <para><b>窓口は必ず <see cref="BattleContext.Heal"/>。</b> 繕いが渇き（<see cref="DroughtTrait"/>）に
+/// 課税されることが第39期の目的そのもので、第三波はロスターの持続回復に課金する波なのに
+/// 買い手が薄かった（第22/31/36期の残件）。<see cref="UnitState.AcceptsSupport"/> の濾しも
+/// 窓口と <see cref="BattleContext.MostHurtAlly"/> に任せる——ここでは1つも判定を持たない。</para>
+///
+/// <para><b>塞ぎ（マイナス）は渇き下でも走る。</b> 繕いが封じられていても傷は 1 つ減る
+/// ——「Heal が通らなかったら塞がない」と親切にしない（原因ではなく結果で解決する、の作法）。
+/// <b>第三波はハリの編成に二重に課金する</b>（回復の封じ ＋ 傷という資源の目減り）。
+/// これは仕様であって不具合ではない。</para>
+///
+/// <para><b>定常在庫: 繕いは 3/T の定額になる。</b> 読んで1つ塞ぐので消費は 1/T。
+/// 供給1枚（キリ単独／ノミ単独）は 1/T なので在庫は 0↔1 に固定され、
+/// <c>傷/繕い</c> は 1.00 に張り付く（第38期に断ちで踏んだのと同じ算術で、
+/// **消費型かどうかは供給と消費の周期差で決まる**）。スケールさせるには供給2枚が要るが、
+/// それは第28期の予算壁——だから台は組まない。</para>
+///
+/// <para><b>ナタとは同居させない。</b> ハリの塞ぎ（1/T）が供給（1/T）と等速なので在庫が
+/// 天井 1 に張り付き、<see cref="SeverTrait.Threshold"/>（2）に構造的に届かない
+/// ＝ ナタが永久に沈黙する。**取り合いではなく飢餓**（エグとの取り合いとはここが違う）。</para>
+///
+/// <para><b>消費しない読み手（抉り）とは共存できる。</b> 塞ぎは 1 ずつしか引かないので、
+/// 同じターンに積まれた傷を抉りが読む余地は残る——ただし両方積むのは予算壁の側で止まる。</para>
+///
+/// <para>標的選好は<b>断ちと同じ段を共有する</b>（<see cref="SeverTrait.Prefers"/>）。
+/// 貫き型は <c>SelectPierceEntry</c> が手前で分岐するので選好が働かない
+/// ——執着・断ちとまったく同じ非対称。</para>
+/// </summary>
+public sealed class SutureTrait : Trait
+{
+    /// <summary>
+    /// 傷1つあたりの繕い量。<b>加算</b>（<see cref="GougeTrait.PerWound"/> の防御鏡で同値）。
+    /// 倍率にすると強化を受けた瞬間に二乗で伸びる（README「増幅は必ず加算にする」）。
+    /// </summary>
+    public const int PerWound = 3;
+
+    public override TraitId Id => TraitId.Suture;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        // **着弾した相手の傷だけを読む**（断ちと同じ）。介入で逸れたなら殉教者の傷を読んで空振りする。
+        int w = target.Counter(StatusKeys.Wound);
+        if (w <= 0) return;
+
+        // 糸は自分には通せない（MostHurtAlly が self を除く）。
+        UnitState? patient = ctx.MostHurtAlly(self);
+        if (patient is null) return;
+
+        ctx.Log($"    {self.Name} が {target.Name} の傷口から糸を引き、{patient.Name} を縫い戻した"
+            + $"（傷 {w} → +{PerWound * w}、傷 {w - 1} へ）", LogKind.Trigger);
+
+        // 渇き下ではこの1行が何も返さない。**それでも下の塞ぎは走る**（クラスの doc 参照）。
+        ctx.Heal(patient, PerWound * w);
+
+        // 塞ぎ。**1つだけ**引く（全部消すのは断ちの側の役で、こちらは維持読み）。
+        target.SetCounter(StatusKeys.Wound, w - 1);
     }
 }
 
@@ -3147,6 +3224,7 @@ public static class TraitCatalog
         new GougeTrait(),
         new CarveTrait(),
         new SeverTrait(),
+        new SutureTrait(),
         new FixateTrait(),
         new MartyrTrait(),
         new InversionTrait(),

@@ -713,9 +713,48 @@ public static class UnitCatalog
         Flavor = "断てる。だが、閉じた肌には刃が入らない。誰かが開くまで、鉈はただの鉄塊だった。"
     };
 
+    /// <summary>
+    /// 縫いのハリ。傷（Wound）の**防御側の維持読み**で、傷軸の四役目（第39期）。
+    ///
+    /// 供給2（キリ＝広く薄く／ノミ＝1体へ積む）に対し、読み手はこれで3枚——
+    /// **攻めの維持読み（エグ）／消費読み（ナタ）／防御の維持読み（ハリ）**。
+    /// 同じ資源から3つの違う出口が出ることで、傷が「汚れ」ではなく通貨になる。
+    ///
+    /// **回復が `ctx.Heal` を通ることが設計の中心**——第三波（渇きの祭司）は持続回復に
+    /// 課金する波なのに、ロスターに買い手が薄かった（第22/31/36期の残件）。
+    /// 第36期の還し（腹の払い戻し）は**死亡時の一回きり**なので波の途中の封じが痛くならず、
+    /// 第三波は17行中16行が ±0.0 だった。**足りなかったのは毎ターンの回復エンジン**で、
+    /// それを編成が採用したくなる軸（傷）に結合した形がハリ。
+    ///
+    /// **渇き下では二重に払う**（回復の封じ ＋ 塞ぎによる傷の目減り）。仕様であって不具合ではない
+    /// ——詳細は <see cref="SutureTrait"/> の doc。
+    ///
+    /// 速さ6 は**機能要件**——ノミ（7）より遅く＝書きの後に読む、ナタ（5）より速く＝消費の前に読む。
+    /// エグ（6）と同速だが、**維持読み同士は非破壊なので順序に意味が無い**（タイブレークは乱数のまま）。
+    /// 速さが条件タグとして機能する5例目（キリ12／エグ6／ノミ7／ナタ5 と対で1つの要件）。
+    ///
+    /// 攻10・HP54 は支援帯だが**攻撃はする**。ノノ（継ぎ当て）は手番を丸ごと繕いに使うのに対し、
+    /// ハリは殴った先の傷から繕う——**手番を1つも余分に使わない回復**がノノとの差別化。
+    ///
+    /// **ナタとは同居させない**（塞ぎ 1/T が供給 1/T と等速なので在庫が閾値 2 に届かず、
+    /// ナタが構造的に飢える）。エグとの同居は予算壁の側で止まる。計算は <see cref="SutureTrait"/>。
+    /// </summary>
+    public static readonly UnitDef Hari = new()
+    {
+        Id = "hari",
+        Name = "縫いのハリ",
+        MaxHp = 54,
+        Attack = 10,
+        Speed = 6,
+        Traits = new[] { TraitId.Suture },
+        PlusText = "傷が最も深い敵を狙い、その傷1つにつき最も傷ついた味方を3繕う",
+        MinusText = "繕うたび、糸を通した敵の傷がひとつ塞がる",
+        Flavor = "敵の傷口に糸を通して、味方を縫い戻す。敵まで塞ぐ針を、軍は疫病神と呼んで捨てた。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);
