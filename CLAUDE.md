@@ -52,6 +52,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 swap              # 同じ席で駒を入れ替えて比べる（第21期）
     dotnet run --project BattleSim -c Release 0 spread            # 波の分離度（飽和・波間相関・固有の勝者敗者）（第22期）
     dotnet run --project BattleSim -c Release 0 gullet [gain|log] # 巨躯の吐き戻し（4版の対照 / 返す効率の振り / 1戦の監査）（第23期）
+    dotnet run --project BattleSim -c Release 0 gullet belly      # 腹の規模の実測（閾値と還し率の導出。盤面は動かさない）（第36期）
+    dotnet run --project BattleSim -c Release 0 gullet belly4     # まどろみ／還しの4版対照（V0/V2/V3/V4）（第36期）
     dotnet run --project BattleSim -c Release 0 yield [絞り込み]  # 攻撃力1点は誰の手なら出力になるか（注入テスト）（第24期）
     dotnet run --project BattleSim -c Release 0 yoke [sweep|log]  # 第四波の軛（5版の対照 / 上限の振り / 1戦の監査）（第25期）
     dotnet run --project BattleSim -c Release 0 hush [log]        # 第二波の粛（3版の対照 / 1戦の監査）（第27期）
@@ -323,6 +325,32 @@ Trait は共有シングルトンで `layout` は並列実行するので、stat
 
 結果は README「肩代わりに見返りを付けた —— 巨躯の『吐き戻し』」。**主判定（ムドの与ダメ）は
 未達で、`route` の未解決は持ち越し**——経路は通ったが、出力の総量に変換される前に戦闘が終わる。
+
+`gullet belly` / `gullet belly4` は**腹**という通貨を測る（第36期）。腹は巨躯が肩代わりで
+飲み込んだ量の残高で、出口が2つある——**まどろみ**（腹が `SlumberThreshold`(60) に達した手番を
+失う → `IdleTurn` → 号令・据えが買う）と**還し**（倒れたとき腹の `RefundPercent`(25)% を
+生存味方へ `ctx.Heal` で分配。1戦1回）。**どちらも既定では不活性**（`ColossusRule` の
+`Slumber` / `Refund` はどちらも false）で、規則は `BattleEngine.Run` に引数で渡す。
+
+`belly` は Phase 0 の実測（盤面を1つも動かさない純粋な記録）。`belly4` が4版の対照で、
+**V0 が `docs/balance.md` と一致し、ゴルムを含まない25行が全版 ±0.0 であること**が検算。
+
+**まどろみは engine 側で `IdleTurn` を立てる（`CanAct` を偽にしない）。** `CanAct` で書くと
+`Trait.SurrenderedTurn` が偽になり、号令・据えが買わなくなる（不動のカド・追い打ちのハギと
+同じ扱いに落ちる）。手番だけを失い、肩代わり・吐き戻し・大喰らいの吸いは止まらない
+（`OnTurnStart` は行動順ループの外側）。
+
+**測って採用しなかった**——まどろみは発火するが売れない。理由は3段で、どれも係数では直せない:
+買い手が2枚しかなく**据えは構造的に買えない**（ゴルムが速さ3＝ほぼ最後に動くので
+`IdleTurn >= Turn` の窓が実質閉じている）／号令は**買い手がゴルムの被覆の中にいる配置**を要求する
+／売れても払い先が `SupportTargets(ゴルム)` ＝ゴルム自身で、**攻撃10の壁に +8**。
+還し（V3 単独）は +2.5pt で全行が上がるか不動、渇きが実際に課税する（第三波だけ発火最多・到達最少）。
+経緯と判定は design/PHASE36_GOLM_BELLY.md。
+
+**「売れる通貨」を作るには買い手が存在するだけでは足りない**——買い手が生き残る配置にいること・
+払い先が売り手以外であること・売り手が窓の開いている間に動けることの3つが要る。
+**`ablate` は入れ得を弾けるが「買い手が生き残るか」は弾けない**ので、測る対象が勝率ではなく
+機構の発火であるときは台の検査項目がもう1つ要る（第36期は試験台を一度組み直した）。
 
 `yield` は**攻撃力1点が誰の手なら出力になるか**を測る（第24期）。駒1体の `AtkBonus` に
 開戦時から +10 を注入し、味方全体の与ダメの増分 ÷ 注入量（`出力/点`）を出す。

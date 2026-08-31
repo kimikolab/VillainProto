@@ -532,6 +532,39 @@ public sealed class UnitTally
     /// </summary>
     public int LastActiveTurn;
 
+    /// <summary>
+    /// 巨躯（<see cref="TraitId.Colossus"/>）が肩代わりで飲み込んだ量の累計。
+    /// <c>ApplyDamage</c> の巨躯の分岐で <c>blocked</c> を数える——<b>吐き戻しの計上と同じ場所・同じ量</b>
+    /// なので、返した先の増分と突き合わせられる。壁が自分の減衰で実際に受けた量とは別物
+    /// （壁の被弾は <see cref="DamageTaken"/> の側）。
+    ///
+    /// <see cref="Healed"/> / <see cref="BigAttacks"/> / <see cref="LastActiveTurn"/> と同じく
+    /// <b>既存の出力には出さない</b>（pulse・compare・docs に列を足すと過去の出力と diff が出る）。
+    /// 第36期の gullet 診断だけが読む。verbose 非依存。
+    /// </summary>
+    public int Swallowed;
+
+    /// <summary>
+    /// まどろんだ回数（腹が満ちて手番を失った回数）。第36期。<see cref="Swallowed"/> と同じ扱いで
+    /// 既存の出力には出さない。
+    /// </summary>
+    public int Slumbers;
+
+    /// <summary>
+    /// 還しが発火した回数（1戦につき高々1回。<see cref="ColossusTrait.RefundSpentKey"/> が担保する）。
+    /// <b>届いたかどうかとは別</b>——渇き（第三波）の下では発火しても 0 点しか届かない。
+    /// 第36期。<see cref="Swallowed"/> と同じ扱いで既存の出力には出さない。
+    /// </summary>
+    public int Refunds;
+
+    /// <summary>
+    /// 還しで<b>実際に味方の HP が増えた量</b>の合計。額面（腹 × 率）ではない
+    /// ——渇き（<c>Drought</c>）・支援拒否（<c>Stoic</c>）・満タンで消えた分は入らない。
+    /// <see cref="Refunds"/> が 1 なのに 0 なら、その戦の還しは丸ごと封じられている。
+    /// 第36期。<see cref="Swallowed"/> と同じ扱いで既存の出力には出さない。
+    /// </summary>
+    public int Refunded;
+
     /// <summary>とどめを刺した敵の数。</summary>
     public int Kills;
 
@@ -545,6 +578,8 @@ public sealed class UnitTally
         DamageTaken += o.DamageTaken; TakenFromAlly += o.TakenFromAlly;
         Healed += o.Healed;
         Charges += o.Charges; BigAttacks += o.BigAttacks;
+        Swallowed += o.Swallowed; Slumbers += o.Slumbers;
+        Refunds += o.Refunds; Refunded += o.Refunded;
         Kills += o.Kills; Deaths += o.Deaths;
         // LastActiveTurn は**加算しない**。ターン番号は足しても意味を持たない。
         // Math.Max を取るのは、合算の順序に依存しない（可換・結合的）ため——

@@ -915,10 +915,19 @@ public sealed class BattleContext
         // 「動けなかった」ではなく「差し出した」を見る（Trait.SurrenderedTurn。号令と同じ判定）。
         // ハギ（追い打ち）のように最初から自分の手番を持たない型は差し出すものが無いので、
         // ここを見ないと静的なマイナスが毎ターンの −50% に化ける。
+        //
+        // **ログを1行出す。** 据えはロスターで唯一「無言で効く」買い手で、盤面の値にも痕跡を残さない
+        // （減った後の数字しか残らない）。まどろみ（第36期）が実際に売れたかを数える窓口がここしか
+        // 無いので、他の割り込みと同じように出来事として記録する。
+        // 引き算は `amount -= amount * p / 100` と1点も違わない（同じ式を変数に置いただけ）。
         if (target.Counter(StatusKeys.IdleTurn) >= Turn
             && Trait.SurrenderedTurn(this, target)
             && teammates.Any(u => u.HasTrait(TraitId.Bulwark)))
-            amount -= amount * BulwarkTrait.ReductionPercent / 100;
+        {
+            int eased = amount * BulwarkTrait.ReductionPercent / 100;
+            amount -= eased;
+            Log($"    据えが差し出した {target.Name} の被弾を {eased} 抑えた", LogKind.Trigger);
+        }
 
         // 散開: 同じ列に隣り合う味方がいない駒は硬くなる。薙ぎへの対策。
         if (teammates.Any(u => u.HasTrait(TraitId.Loose))
@@ -956,6 +965,14 @@ public sealed class BattleContext
                 {
                     amount -= blocked;
                     Log($"    {wall.Name} が {target.Name} の前に立ちはだかる", LogKind.Trigger);
+
+                    // 腹（第36期）。**吐き戻しと同じ場所・同じ量を積む**ので、
+                    // 「返した先の増分」と「腹に溜まった量」が定義上ずれない。
+                    // 大喰らいの吸いはここを通らない（あちらは ApplyDamage の呼び出し元）ので、
+                    // 腹は「殴られた誰かを庇ったとき」にだけ増える。
+                    wall.SetCounter(ColossusTrait.BellyKey,
+                                    wall.Counter(ColossusTrait.BellyKey) + blocked);
+                    TallyOf(wall).Swallowed += blocked;
 
                     // 吐き戻し: 飲み込んだ分を、庇った相手の力に変える。
                     // **肩代わりは価値を消さず、経路を変えるだけ**にするのが狙い。
@@ -1472,6 +1489,34 @@ public static class BattleEngine
                     actor.SetCounter(StatusKeys.Stun, 0);
                     actor.SetCounter(StatusKeys.IdleTurn, turn);
                     ctx.Log($"  {actor.Name} は痺れて動けない", LogKind.Status);
+                    continue;
+                }
+
+                // まどろみ（第36期）: 腹が満ちた壁は、その手番を失う。
+                //
+                // **痺れとまったく同じ形で立てる。** engine 側で IdleTurn を立てて continue するので
+                // CanAct を1つも false にしない ＝ Trait.SurrenderedTurn が true のまま通り、
+                // 号令（ガン・次のターンに攻撃+8）と据え（バン・そのターンの被ダメ-50%）が
+                // そのまま買い取る。**CanAct のオーバーライドで書いてはいけない**——
+                // 不動（カド）・追い打ち（ハギ）と同じ扱いになって買い手が消える（Trait.SurrendersTurn 参照）。
+                //
+                // **手番だけを失う。** 巨躯の肩代わり・吐き戻しは ApplyDamage の中、
+                // 大喰らいの吸いは OnTurnStart（この行動順ループの外側）なので、どれも止まらない。
+                // 眠りが壁機能を止めると、壁が眠るほど味方が削られて更に眠る自滅ループになる。
+                //
+                // 腹は閾値ぶんだけ引く（0 に戻さない）。溜まり過ぎた分を次の眠りへ繰り越すので、
+                // 飲み込みの総量と眠りの回数が線形に結びつく（floor(飲み込み / N) 回眠る）。
+                //
+                // ctx.Colossus.Slumber を先に見るのは、既定（V0）で HasTrait の走査を
+                // 1回も走らせないため（layout は数百万戦を並列で回す。軛の Cap 判定と同じ作法）。
+                if (ctx.Colossus.Slumber && actor.HasTrait(TraitId.Colossus)
+                    && actor.Counter(ColossusTrait.BellyKey) >= ctx.Colossus.SlumberThreshold)
+                {
+                    actor.SetCounter(ColossusTrait.BellyKey,
+                        actor.Counter(ColossusTrait.BellyKey) - ctx.Colossus.SlumberThreshold);
+                    actor.SetCounter(StatusKeys.IdleTurn, turn);
+                    ctx.TallyOf(actor).Slumbers++;
+                    ctx.Log($"  {actor.Name} は腹が満ちてまどろんだ", LogKind.Status);
                     continue;
                 }
 

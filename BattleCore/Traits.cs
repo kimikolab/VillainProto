@@ -743,7 +743,111 @@ public sealed class ColossusTrait : Trait
     /// </summary>
     public const int DamagePerGain = 4;
 
+    /// <summary>
+    /// 腹。<b>肩代わりで飲み込んだ量の残高</b>（第36期）。<c>ApplyDamage</c> の巨躯の分岐で、
+    /// 吐き戻しとまったく同じ場所・同じ量（<c>blocked</c>）を積む。
+    ///
+    /// <para><b>大喰らい（<see cref="DrainTrait"/>）で吸った分は数えない。</b> あれは毎ターン
+    /// 無条件に走るので、混ぜるとまどろみが盤面の出来事から切れてただの周期になる
+    /// （「毎ターン」→「〜したとき」への変換原則）。腹は<b>殴られた誰かを庇ったとき</b>にだけ増える。</para>
+    ///
+    /// <para><b>置き場は <see cref="StatusKeys"/> ではなく特性の私有カウンタ。</b>
+    /// engine が書いて特性が読むカウンタは既に <see cref="RedirectGainTrait.PendingKey"/> /
+    /// <see cref="ThornGuardTrait.PendingKey"/> が同じ形で、腹・まどろみ・還しは
+    /// <b>すべて巨躯の持ち物</b>なので定義を1箇所（この型）に集められる。
+    /// 会戦の境界は <see cref="OnCarryOver"/> で捨てる（<see cref="StatusKeys.All"/> の
+    /// 一律掃除には載らないので、こちらに書かないと腹が部隊戦をまたぐ）。</para>
+    /// </summary>
+    public const string BellyKey = "belly";
+
+    /// <summary>
+    /// 還しを1戦で使い切ったか。<b>蘇生（墓守・継ぎ接ぎ）で戻って再び倒れても二度は還さない。</b>
+    /// 腹を空にするだけでは担保にならない——戻った後に飲み込み直せばもう一度発火してしまう。
+    /// </summary>
+    public const string RefundSpentKey = "bellySpent";
+
+    /// <summary>
+    /// まどろみの閾値。腹がこの量に達した手番を失う（達した分だけ腹から引く）。
+    ///
+    /// <para><b>掃引ではなく実測から決めた</b>（第36期 Phase 0-1・<c>gullet belly</c>）。
+    /// 飲み込みの多い上位5行で 1戦あたり 1.09〜1.49 回眠る値。40 だと惨禍×死の連鎖が
+    /// 生存Tの 94%＝実質毎ターン眠り、80 だと上位5行のうち4行が 1.0 を割って「1〜2回」に届かない。
+    /// 全18行の総平均では 1.28 回 / 生存T 5.2 ＝ ゴルムが手番の約25%を失う。
+    /// 根拠は design/PHASE36_GOLM_BELLY.md。</para>
+    /// </summary>
+    public const int SlumberThreshold = 60;
+
+    /// <summary>
+    /// 還しで返す腹の割合（%）。<b>総量</b>で、生存味方の頭数で割って配る（1体あたりではない）。
+    ///
+    /// <para><b>実測から決めた</b>（第36期 Phase 0-1）。ゴルムが落ちた戦の腹は平均 81 なので
+    /// 81 × 25% ≒ 20 点 ＝ ノノの繕い（<see cref="MenderTrait.Amount"/> = 14）1.4 回ぶん。
+    /// 指示書の狙い「繕い1〜2回ぶん」＝ 14〜28 点の帯のちょうど中央。</para>
+    /// </summary>
+    public const int RefundPercent = 25;
+
     public override TraitId Id => TraitId.Colossus;
+
+    /// <summary>
+    /// 還し。<b>倒れたとき、腹の残りの一部を生存味方へ回復として配る（1戦1回）。</b>
+    ///
+    /// <para><b>経路は <c>ctx.Heal</c>。</b> 渇き（第三波）で封じられるのは<b>意図</b>で、
+    /// ロスターに回復供給を1つ増やす＝渇きが課税できる対象を増やす、というのが本期の狙いの半分。
+    /// ガルドの <c>Stoic</c> も弾く（<c>AcceptsSupport</c>）ので、ガルドを含む行では
+    /// <b>頭数では割られるのに受け取れない</b>＝取り分が虚空へ消える。
+    /// <b>吐き戻しとはここが違う</b>——あちらは <c>SupportTargets</c> を通すので隣へ漏れる。
+    /// ウツ（逆しま）には無風（<see cref="PerverseTrait"/> は <c>AtkBonus</c> しか読まない）。</para>
+    ///
+    /// <para><b>1戦1回は腹を空にするだけでは担保できない。</b> 蘇生（墓守・継ぎ接ぎ）で戻った後に
+    /// 飲み込み直せばもう一度発火してしまうので、<see cref="RefundSpentKey"/> を別に立てる。
+    /// 印は<b>配れたかどうかに関わらず</b>死んだ時点で立てる——「還す機会は1戦に1度」であって
+    /// 「還せるまで持ち越す」ではない。</para>
+    ///
+    /// <para><b>蘇生より先に走る。</b> <c>HandleDeath</c> の通知順は
+    /// <c>OnKill → OnDeath（ここ）→ OnAnyDeath（墓守）→ OnAllyDeath（蘇生）</c> なので、
+    /// この還しで縫い直された味方は受け取れない。既存の順序依存に乗っているだけで、動かさない。</para>
+    /// </summary>
+    public override void OnDeath(BattleContext ctx, UnitState self)
+    {
+        if (!ctx.Colossus.Refund) return;
+        if (self.Counter(RefundSpentKey) > 0) return;
+        self.SetCounter(RefundSpentKey, 1);
+
+        int belly = self.Counter(BellyKey);
+        self.SetCounter(BellyKey, 0);
+
+        int total = belly * ctx.Colossus.RefundPercent / 100;
+        var back = ctx.LivingMembers(self.TeamId).Where(u => u != self).ToList();
+        if (total <= 0 || back.Count == 0) return;
+
+        // 頭数で割る。**1体あたりに配るのではない**——体数で回復総量が変わると、
+        // 還しが「編成の枚数」を測る量になってしまう（号令の SupportTargets が
+        // 割り算をしないのとは逆の判断で、あちらは毎ターン走るばら撒き、こちらは1戦1回の分配）。
+        int each = total / back.Count;
+        if (each <= 0) return;   // 端数で全員 0 なら何も起きていない。ログも出さない（吐き戻しと同じ）
+
+        // **届いた量を実測する。** 額面（腹 × 率）をそのまま書くと、渇き（第三波）で
+        // 1点も通っていない戦が「還した」に数えられる。渇きの判定を**ここに書き写さない**のが要点
+        // ——回復を止める場所は ctx.Heal の入口1箇所、という規則をここでも守る（CLAUDE.md）。
+        int before = back.Sum(u => u.Hp);
+        foreach (UnitState u in back) ctx.Heal(u, each);
+        int gained = back.Sum(u => u.Hp) - before;
+
+        ctx.TallyOf(self).Refunds++;
+        ctx.TallyOf(self).Refunded += gained;
+        ctx.Log($"    {self.Name} が飲み込んだものが還った（各 +{each} / 届いた {gained}）",
+            LogKind.Trigger);
+    }
+
+    /// <summary>
+    /// 部隊戦の境界で腹を空にし、還しの使用済み印も落とす。腹は Battle スコープの資源
+    /// （<see cref="StatusKeys.All"/> の一律掃除には載らないので、ここで明示的に捨てる）。
+    /// </summary>
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(BellyKey, 0);
+        self.SetCounter(RefundSpentKey, 0);
+    }
 }
 
 /// <summary>
@@ -755,7 +859,15 @@ public sealed class ColossusTrait : Trait
 /// layout は戦闘を並列実行する——static に置くと版の切り替えが他のスレッドの戦闘へ漏れるし、
 /// <c>BattleEngine.Run</c> の「副作用も外部依存もない」もそこで壊れる。引数で渡せば決定性がそのまま残る。</para>
 /// </summary>
-public readonly record struct ColossusRule(int Percent, int DamagePerGain, bool Regurgitate)
+/// <para><b>第36期の4つは既定値つきで足してある。</b> 第23期の <c>gullet</c> が組む4版
+/// （<c>new ColossusRule(90, 4, Regurgitate: false)</c> など）を1文字も書き換えずに済ませるため——
+/// あの4版は「吐き戻しの前後」を測る対照で、腹の有無とは無関係。既定は<b>どちらも無効</b>なので、
+/// 明示しない限り盤面は第35期のまま動く。</para>
+public readonly record struct ColossusRule(int Percent, int DamagePerGain, bool Regurgitate,
+                                           bool Slumber = false,
+                                           int SlumberThreshold = ColossusTrait.SlumberThreshold,
+                                           bool Refund = false,
+                                           int RefundPercent = ColossusTrait.RefundPercent)
 {
     public static ColossusRule Default =>
         new(ColossusTrait.Percent, ColossusTrait.DamagePerGain, Regurgitate: true);
