@@ -730,4 +730,20 @@ public sealed class BattleResult
     /// </summary>
     public required int ExposeCount { get; init; }
     public required int ExposeMissed { get; init; }
+
+    /// <summary>
+    /// 突き返し（第41期）の計数。<b>ログからは数えられないものが混じるので結果に載せる。</b>
+    /// 1ターン1回の上限で弾かれた回（<c>ShoveCapped</c>）と、支援拒否で弾かれた回
+    /// （<c>ShoveBlocked</c>）は<b>ログを1行も出さない</b>——出すと「何も起きていない」ことが
+    /// ログの主役になる——ので、盤面にも文字列にも痕跡が残らない。
+    /// <b>verbose に依存しない</b>（診断は verbose=false で数百戦回すため）。
+    ///
+    /// <para>保持者（<c>UnitCatalog.Hane</c>）を編成に入れなければ全部 0。</para>
+    /// </summary>
+    public required int ShoveFired { get; init; }
+    public required int ShoveCapped { get; init; }
+    public required int ShoveSwapped { get; init; }
+    public required int ShoveNoRow { get; init; }
+    public required int ShoveStaggered { get; init; }
+    public required int ShoveBlocked { get; init; }
 }

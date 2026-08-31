@@ -752,9 +752,39 @@ public static class UnitCatalog
         Flavor = "敵の傷口に糸を通して、味方を縫い戻す。敵まで塞ぐ針を、軍は疫病神と呼んで捨てた。"
     };
 
+    /// <summary>
+    /// 突き返しのハネ。<b>移動を読み、弱体化を書く</b>変換器（第41期）。
+    ///
+    /// <para><b>ヨミに依存しない移動の読み手</b>として足した。第40期の曝きは移動の供給を
+    /// 大きく増やしたのに（<c>HasFallenBack</c> 0.26 → 2.15 回/戦）、恩恵を受けた 3 行は
+    /// 全部ヨミとガルドを共有する実質1クラスタだった。読み手を増やせば余剰が回収される。</para>
+    ///
+    /// <para><b>出口は弱体化。</b> <c>AtkBonus</c> を負にする経路はロスターに3つしかなく、
+    /// 2つは開戦時1回きり（呪詛の味方漏れ・萎縮）、残る1つ（分かちの「腕がなまる」）は
+    /// 現行 44 行でウツと同席していない。読み手（逆しま）の変換係数は3倍と大きいのに
+    /// <b>戦闘中の供給がゼロ</b>だったので、リィカの層やムドの怒りに相当する
+    /// 「弱体化を経由した成長」がロスターに存在しなかった。</para>
+    ///
+    /// <para>攻11・HP56・速8 は探索段階の初期値。<b>掃引の対象は
+    /// <see cref="ShoveRule.Penalty"/> だけ</b>で、HP・攻・速は振らない
+    /// （1変数を振るときに一緒に動かすものを増やさない）。</para>
+    /// </summary>
+    public static readonly UnitDef Hane = new()
+    {
+        Id = "hane",
+        Name = "突き返しのハネ",
+        MaxHp = 56,
+        Attack = 11,
+        Speed = 8,
+        Traits = new[] { TraitId.Shove },
+        PlusText = "味方が押しのけられるたび、敵の隊列を突き崩す",
+        MinusText = "勢い余って隣の味方の体勢まで崩す（攻撃力が下がる）",
+        Flavor = "押されたら押し返す。それしかできないし、加減も知らない。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

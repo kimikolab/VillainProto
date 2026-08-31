@@ -73,6 +73,12 @@ public enum TraitId
     Alms,        // 施し: 自分は減らずに味方を回復する（敵側の語彙）
     Expose,      // 曝き: 攻撃したあと、敵陣の後列でいちばん無傷な駒を、前列でいちばん傷ついた枠へ引き出す（敵側の語彙）
 
+    // --- プラスとマイナスが1つの動作の表と裏（どちらのブロックにも入らない） ---
+    // 置き去り・責め苦・仇討ち・裂き・抉り・断ち・縫いも本来はこちら側だが、
+    // 追加順の都合でプラス側のブロックに並んでいる（各列挙子のコメントに但し書きがある）。
+    Shove,       // 突き返し: 味方が動かされるたび、敵陣の隊列を突き崩す。
+                 // ただし勢い余って隣接する味方の体勢まで崩す（攻撃力が下がる）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -1491,29 +1497,15 @@ public sealed class ExposeTrait : Trait
         // layout は数百万戦を並列で回すので、軛の Cap 判定と同じ作法で先に落とす。
         if (ctx.ExposesLeft <= 0) return;
 
-        var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId));
+        // 選び方は突き返し（第41期・ShoveTrait）と共有（BattleContext.HaulOutPair の1箇所）。
+        // **止まる条件（上限）と空振りの計数だけが呼び出し側に残る**——第39期の
+        // MostHurtAlly と同じ扱いで、選択そのものの挙動は1バイトも変えていない。
+        if (ctx.HaulOutPair(ctx.Opponent(self.TeamId)) is not { } pair) { ctx.ExposeMissed++; return; }
 
-        // 引き出す駒＝いちばん隠れている駒＝後列で現在HPが最も高い1体。
-        var hidden = foes.Where(f => f.Row == Row.Back).ToList();
-        if (hidden.Count == 0) { ctx.ExposeMissed++; return; }
-
-        // 引き出す先＝いちばん先に落ちる枠＝前列で現在HPが最も低い1体。
-        // 矢面の意味が最大になる席へ出す。
-        var exposedTo = foes.Where(f => f.Row == Row.Front).ToList();
-        if (exposedTo.Count == 0) { ctx.ExposeMissed++; return; }
-
-        int most = hidden.Max(f => f.Hp);
-        UnitState? victim = ctx.PickOne(hidden.Where(f => f.Hp == most).ToList());
-
-        int least = exposedTo.Min(f => f.Hp);
-        UnitState? seat = ctx.PickOne(exposedTo.Where(f => f.Hp == least).ToList());
-
-        if (victim is null || seat is null) { ctx.ExposeMissed++; return; }
-
-        // 同じ駒が両方に選ばれることはない（Row.Back と Row.Front は排他）。
         ctx.ExposeCount++;
-        ctx.Log($"    {self.Name} が {victim.Name} を {seat.Name} の前へ引きずり出した", LogKind.Trigger);
-        ctx.SwapSlots(victim, seat.Slot);
+        ctx.Log($"    {self.Name} が {pair.Victim.Name} を {pair.Seat.Name} の前へ引きずり出した",
+                LogKind.Trigger);
+        ctx.SwapSlots(pair.Victim, pair.Seat.Slot);
     }
 }
 
@@ -1542,6 +1534,170 @@ public readonly record struct ExposeRule(int MaxPerBattle)
 {
     /// <summary>採用値。1戦あたり最大3回まで引きずり出す（第40期）。</summary>
     public static ExposeRule Default => new(3);
+}
+
+/// <summary>
+/// 突き返し（第41期）。<b>味方が動かされるたび、敵陣の隊列を突き崩す。ただし勢い余って
+/// 隣接する味方の体勢まで崩す（攻撃力が下がる）。</b>
+///
+/// <para><b>プラスとマイナスが1つの動作の表と裏</b>——置き去り・責め苦・仇討ち・裂き・
+/// 抉り・断ち・縫いと同じ形なので、<see cref="TraitId"/> のどちらのブロックにも入らない。</para>
+///
+/// <para><b>狙いは第40期が作った余剰の回収。</b> 曝き（<see cref="ExposeTrait"/>）は移動の供給を
+/// 大きく増やしたが（`HasFallenBack` 0.26 → 2.15 回/戦）、恩恵を受けたのは 44 行中 3 行だけで、
+/// しかもその3行はヨミとガルドを共有する実質1クラスタだった。<b>ヨミに依存しない移動の
+/// 読み手</b>を1枚足して、移動を<b>弱体化</b>という別の通貨に変換する。</para>
+///
+/// <para><b>弱体化を選んだのは供給が枯れているから。</b> <c>AtkBonus</c> を負にする経路は
+/// ロスターに3つしかない——呪詛の味方漏れ（<see cref="CurseTrait.AllyLeak"/>・開戦時1回）／
+/// 萎縮（<see cref="CowerTrait.AttackPenalty"/>・開戦時1回）／分かちの「腕がなまる」
+/// （<see cref="SharerTrait.DullDivisor"/>・被弾のたび）。読み手は逆しま
+/// （<see cref="PerverseTrait"/>）1枚きりで変換係数は3倍と大きいのに、
+/// <b>現行の 44 行にドハとウツが同席する行が1つも無い</b>ので、
+/// ウツの攻撃力は表の上では戦闘を通じて定数になっている。ここを開ける。</para>
+///
+/// <para><b>自分から移動を起こす手段は持たせない。</b> 供給が無ければ1回も発火しないこと
+/// 自体がこの駒のマイナス側の一部で、負の特性を自己完結させないための措置。供給元は4つ——
+/// 喧噪（<see cref="ShufflerTrait"/>）／臆病（<see cref="CowardTrait"/>）／
+/// 棘守り（<see cref="ThornGuardTrait"/>）／<b>敵の曝き</b>（第40期・第五波の告発人）。</para>
+///
+/// <para><b>1ターン1回まで。</b> <see cref="BattleContext.SwapSlots"/> は2体を動かすので
+/// 喧噪だけで <see cref="Trait.OnAllyMoved"/> が毎ターン2回走る。切らないと供給過多になる。
+/// 上限はターン境界でリセットせず、<b>「最後に突き返したターン」を持つ</b>ことで表す
+/// （据えの <see cref="StatusKeys.IdleTurn"/> と同じ作法。0 を「まだ一度も」に使うため +1 して入れる）。</para>
+///
+/// <para><b>効果Aを先に、効果Bを後に。</b> 効果Aは敵陣の駒を動かすので <see cref="Trait.OnAllyMoved"/> は
+/// 敵側にしか通知されず、味方の突き返しには戻ってこない（この時点では再帰しない）。ただし
+/// <b>将来敵側に突き返しを持たせると無限再帰する</b>ので、1ターン1回の上限だけに頼らず
+/// <see cref="BattleContext.Shoving"/> の再入ガードを通す。</para>
+///
+/// <para><b>効果Bが隣接<i>全員</i>なのは、隣接次数をそのまま値段にするため。</b>
+/// 対象を1体に絞ると「誰を隣に置くか」の判断が1回で終わる。全員にすると角（次数2）と
+/// 中央（次数4）で代金が倍違い、X字の隣接表が不規則なのでそのまま配置パズルになる。</para>
+///
+/// <para><b>ガルド（<see cref="StoicTrait"/>）は構造的に唯一の非被害者になる。</b>
+/// <c>AcceptsSupport</c> が偽なので効果Bを1点も払わない。<b>隣へ流さない</b>
+/// （呪詛・萎縮が <see cref="BattleContext.SupportTargets"/> を通すのとはここが違う）——
+/// 「ハネの隣をガルドで固める」が正当な配置解になる、という既存駒への payoff は潰さない。</para>
+///
+/// <para><b>弱体化のイベントは作らない。</b> <c>AtkBonus</c> は共通窓口を持たず、15箇所が
+/// 直接フィールドを叩いている。窓口を作るなら既存15箇所の監査を伴う独立した作業になる
+/// （第41期 §8）。効果Bもここで直に引く。</para>
+///
+/// <para>強度は <see cref="ShoveRule"/> で外から差す。書き換え可能な static のノブは置かない
+/// ——Trait は共有シングルトンで <c>layout</c> は戦闘を並列実行する
+/// （<see cref="ColossusRule"/> / <see cref="YokeRule"/> / <see cref="HushRule"/> /
+/// <see cref="MartyrRule"/> / <see cref="ExposeRule"/> と同じ判断）。</para>
+/// </summary>
+public sealed class ShoveTrait : Trait
+{
+    /// <summary>最後に突き返したターン + 1。<c>0</c> は「まだ一度も」。</summary>
+    public const string LastTurnKey = "shoveTurn";
+
+    public override TraitId Id => TraitId.Shove;
+
+    public override void OnMoved(BattleContext ctx, UnitState self, Row from, Row to) => Push(ctx, self);
+
+    public override void OnAllyMoved(BattleContext ctx, UnitState self, UnitState moved) => Push(ctx, self);
+
+    private static void Push(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+
+        // 再入ガードを先に見る。同じ発火の中から戻ってきた分を「上限で弾かれた」に
+        // 数えると、空振りの列が再帰の回数で膨らむ。
+        if (ctx.InShove) return;
+
+        if (self.Counter(LastTurnKey) == ctx.Turn + 1) { ctx.ShoveCapped++; return; }
+
+        ctx.Shoving(() =>
+        {
+            self.SetCounter(LastTurnKey, ctx.Turn + 1);
+            ctx.ShoveFired++;
+            ShoveOut(ctx, self);
+            Stagger(ctx, self);
+        });
+    }
+
+    /// <summary>
+    /// 効果A —— 敵陣を突き崩す。<b>選び方は曝きとまったく同じ</b>
+    /// （<see cref="BattleContext.HaulOutPair"/> の1箇所を共有する）。
+    /// プレイヤーが規則を1つ覚えれば両方読めることが狙い。
+    /// </summary>
+    private static void ShoveOut(BattleContext ctx, UnitState self)
+    {
+        if (ctx.HaulOutPair(ctx.Opponent(self.TeamId)) is not { } pair)
+        {
+            // 後列か前列が 0 体。効果Aだけが空振りで、効果Bは実行する。
+            ctx.ShoveNoRow++;
+            return;
+        }
+
+        ctx.ShoveSwapped++;
+        ctx.Log($"    {self.Name} の突き返しが {pair.Victim.Name} を {pair.Seat.Name} の前へ突き崩した",
+                LogKind.Trigger);
+        ctx.SwapSlots(pair.Victim, pair.Seat.Slot);
+    }
+
+    /// <summary>
+    /// 効果B —— 隣接する生存味方全員の攻撃力を下げる。<b>席は動かさない</b>
+    /// （移動を起こすのは効果Aだけ）。隣接は効果Aの<b>後</b>に取り直す
+    /// ——効果Aが起こした敵側の割り込み（軋み）で味方が落ちていることがある。
+    /// </summary>
+    private static void Stagger(BattleContext ctx, UnitState self)
+    {
+        int penalty = ctx.Shove.Penalty;
+        if (penalty <= 0) return;
+
+        var hit = new List<string>();
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            if (ally == self) continue;
+            if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+
+            // 支援拒否（ガルド）は弾く。**隣へ流さない**——呪詛・萎縮が SupportTargets を
+            // 通すのとはここが違う。ガルドを隣に置けば代金を1点も払わない。
+            if (!ally.AcceptsSupport) { ctx.ShoveBlocked++; continue; }
+
+            ally.AtkBonus -= penalty;
+            ctx.ShoveStaggered++;
+            hit.Add(ally.Name);
+        }
+
+        if (hit.Count == 0) return;
+        ctx.Log($"    勢い余って {string.Join("・", hit)} の体勢まで崩れた（攻撃 -{penalty}）",
+                LogKind.FriendlyFire);
+    }
+
+    /// <summary>
+    /// 部隊戦の境界で印を消す。印は <see cref="StatusKeys"/> に無いので境界の一律掃除では
+    /// 消えない（棘守りの <c>PendingKey</c>・庇うの <c>guardPending</c> と同じ理由）。
+    /// 残すと、次の部隊戦の同じターン番号で1回だけ突き返しが不発になる。
+    /// </summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(LastTurnKey, 0);
+}
+
+/// <summary>
+/// 突き返しの強度。<b>診断（shove）が版を差し替えるためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない。
+///
+/// <para><paramref name="Penalty"/> は効果Bで隣接味方から引く攻撃力。
+/// <c>0</c> なら効果Bが完全に無効になる（効果Aは走る）——掃引の基準に置く陽性対照。</para>
+///
+/// <para><b>既定を無効にしなくてよい。</b> 曝きが<b>敵側</b>の駒だったのに対し、突き返しは
+/// <b>味方側</b>の駒なので、<see cref="UnitCatalog.Hane"/> を編成に入れない限り
+/// 既存 44 行は1バイトも動かない。それ自体が回帰チェックになる。</para>
+///
+/// <para><b>天井は戦闘長そのもの</b>（1ターン1回 × 戦闘長）。<c>AtkBonus</c> に下限は無く
+/// 逆しまは <c>-b × 3</c> なので原理的には無限に伸びるが、<b>回数制限や上限値のような
+/// 別のノブは足さない</b>——上限を数値で切ると「戦闘が長引くほど伸びる」という読める規則が
+/// 但し書きで壊れる。会戦を跨がないことは <c>AtkBonus</c> をエンジンが境界で 0 にすることで
+/// 既に保証されている（<c>Engagement.cs</c> の <c>CarryOver</c>）。</para>
+/// </summary>
+public readonly record struct ShoveRule(int Penalty)
+{
+    /// <summary>探索段階の初期値（第41期）。</summary>
+    public static ShoveRule Default => new(2);
 }
 
 /// <summary>澱み。既に積まれた毒を増幅する。毒が無ければ何もしない。</summary>
@@ -3298,6 +3454,7 @@ public static class TraitCatalog
         new MenderTrait(),
         new AlmsTrait(),
         new ExposeTrait(),
+        new ShoveTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

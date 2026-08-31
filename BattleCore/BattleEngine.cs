@@ -129,6 +129,26 @@ public sealed class BattleContext
         finally { InInterrupt = false; }   // 例外で立ちっぱなしになると以後の割り込みが永久に止まる
     }
 
+    /// <summary>
+    /// 突き返し（<see cref="ShoveTrait"/>）の最中か。効果Aは<b>敵陣</b>を動かすので
+    /// 現状は再帰しないが、<b>敵側に突き返しを持たせた瞬間に無限再帰する</b>
+    /// （こちらが敵を動かす → 敵の突き返しがこちらを動かす → …）。
+    /// 1ターン1回の上限だけに頼らず、反撃・割り込みと同じ形のガードを1つ置く。
+    ///
+    /// <para>反撃（<see cref="InReaction"/>）とも割り込み（<see cref="InInterrupt"/>）とも
+    /// 別の連鎖なので別フラグ。<b>static に持たないこと</b>——Trait は全戦闘で共有される
+    /// シングルトンで、layout モードは戦闘を並列実行する。</para>
+    /// </summary>
+    public bool InShove { get; private set; }
+
+    public void Shoving(Action body)
+    {
+        if (InShove) return;
+        InShove = true;
+        try { body(); }
+        finally { InShove = false; }   // 例外で立ちっぱなしになると以後の突き返しが永久に止まる
+    }
+
     /// <summary>毒などの継続ダメージ。ターン開始時に engine から呼ばれる。</summary>
     public void TickStatuses()
     {
@@ -284,8 +304,33 @@ public sealed class BattleContext
     /// <summary>残りの引きずり出し回数。既定（MaxPerBattle = 0）では常に 0 で、走査に入らない。</summary>
     public int ExposesLeft => Expose.MaxPerBattle - ExposeCount;
 
+    /// <summary>
+    /// 突き返しの強度。<b>診断（shove）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="ShoveRule.Default"/>）。static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public ShoveRule Shove { get; }
+
+    /// <summary>
+    /// 突き返しの計数。<b>発火しなかったことは盤面の値に痕跡を1つも残さない</b>ので、
+    /// 診断が読むためだけに数える（<c>verbose</c> には依存しない）。
+    /// 保持者ではなく<b>戦闘単位</b>で数えるので、保持者が複数いても合算される。
+    ///
+    /// <para><c>ShoveFired</c> 実際に突き返した回数 ／ <c>ShoveCapped</c> 1ターン1回の上限で
+    /// 弾かれた回数 ／ <c>ShoveSwapped</c> 効果A（敵陣の突き崩し）が成立した回数 ／
+    /// <c>ShoveNoRow</c> 敵の後列か前列が 0 体で効果Aだけが空振りした回数 ／
+    /// <c>ShoveStaggered</c> 効果Bが当たった延べ体数 ／
+    /// <c>ShoveBlocked</c> 効果Bが <c>Stoic</c> で弾かれた延べ体数。</para>
+    /// </summary>
+    public int ShoveFired { get; internal set; }
+    public int ShoveCapped { get; internal set; }
+    public int ShoveSwapped { get; internal set; }
+    public int ShoveNoRow { get; internal set; }
+    public int ShoveStaggered { get; internal set; }
+    public int ShoveBlocked { get; internal set; }
+
     public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null,
-                         HushRule? hush = null, MartyrRule? martyr = null, ExposeRule? expose = null)
+                         HushRule? hush = null, MartyrRule? martyr = null, ExposeRule? expose = null,
+                         ShoveRule? shove = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -294,6 +339,7 @@ public sealed class BattleContext
         Hush = hush ?? HushRule.Default;
         Martyr = martyr ?? MartyrRule.Default;
         Expose = expose ?? ExposeRule.Default;
+        Shove = shove ?? ShoveRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -389,6 +435,50 @@ public sealed class BattleContext
             .Where(a => a != self && a.AcceptsSupport && a.Hp < a.MaxHp).ToList();
         int worst = hurt.Count == 0 ? 0 : hurt.Min(a => a.Hp * 100 / Math.Max(1, a.MaxHp));
         return PickOne(hurt.Where(a => a.Hp * 100 / Math.Max(1, a.MaxHp) == worst).ToList());
+    }
+
+    /// <summary>
+    /// <b>「引きずり出す駒」と「引きずり出す先の枠」</b>の組。<paramref name="teamId"/> の陣の
+    /// 生存駒から、<b>後列で現在HPが最も高い1体</b>と<b>前列で現在HPが最も低い1体</b>を選ぶ。
+    /// どちらかが 0 体なら null。
+    ///
+    /// <para>曝き（<see cref="ExposeTrait"/>・第40期）と突き返し（<see cref="ShoveTrait"/>・第41期）が
+    /// 同じ選択を持つので、<b>定義をここ1箇所に集めてある</b>（第39期の
+    /// <see cref="MostHurtAlly"/> と同じ扱い。挙動は曝き側と1バイトも変えていない）。
+    /// <b>選び方を揃えるのは意図的</b>——プレイヤーが規則を1つ覚えれば両方読める。
+    /// 片方だけ振りたくなった時点で分ければよい。</para>
+    ///
+    /// <para><b>決定的にする。乱数で選ばない。</b> 同値が並んだときだけ <see cref="PickOne"/>
+    /// （席バイアスを作らないための既存の窓口。候補 0 個・1 個では <c>Roll</c> を消費しない）。</para>
+    ///
+    /// <para><b>召喚枠を含める。</b> <c>Row.Back</c> には ○後2（スロット8）も入る。実態があるなら
+    /// 盤面の一部として扱う、という既存の判断（貫きのレーン経路・巨躯の被覆）に揃えた。</para>
+    ///
+    /// <para><b>止まる条件は呼び出し側に残す。</b> 上限（<see cref="ExposeRule.MaxPerBattle"/>）も
+    /// 空振りの計数も、選択そのものの一部ではない。</para>
+    /// </summary>
+    public (UnitState Victim, UnitState Seat)? HaulOutPair(int teamId)
+    {
+        var foes = LivingMembers(teamId);
+
+        // 引き出す駒＝いちばん隠れている駒＝後列で現在HPが最も高い1体。
+        var hidden = foes.Where(f => f.Row == Row.Back).ToList();
+        if (hidden.Count == 0) return null;
+
+        // 引き出す先＝いちばん先に落ちる枠＝前列で現在HPが最も低い1体。
+        // 矢面の意味が最大になる席へ出す。
+        var exposedTo = foes.Where(f => f.Row == Row.Front).ToList();
+        if (exposedTo.Count == 0) return null;
+
+        int most = hidden.Max(f => f.Hp);
+        UnitState? victim = PickOne(hidden.Where(f => f.Hp == most).ToList());
+
+        int least = exposedTo.Min(f => f.Hp);
+        UnitState? seat = PickOne(exposedTo.Where(f => f.Hp == least).ToList());
+
+        // 同じ駒が両方に選ばれることはない（Row.Back と Row.Front は排他）。
+        if (victim is null || seat is null) return null;
+        return (victim, seat);
     }
 
 
@@ -1467,10 +1557,10 @@ public static class BattleEngine
     public static BattleResult Run(Formation player, Formation enemy, int seed, bool verbose = true,
                                    ColossusRule? colossus = null, YokeRule? yoke = null,
                                    HushRule? hush = null, MartyrRule? martyr = null,
-                                   ExposeRule? expose = null)
+                                   ExposeRule? expose = null, ShoveRule? shove = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
-               seed, verbose, colossus, yoke, hush, martyr, expose);
+               seed, verbose, colossus, yoke, hush, martyr, expose, shove);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -1483,9 +1573,10 @@ public static class BattleEngine
     public static BattleResult Run(IReadOnlyList<UnitState> player, IReadOnlyList<UnitState> enemy,
                                    int seed, bool verbose = true, ColossusRule? colossus = null,
                                    YokeRule? yoke = null, HushRule? hush = null,
-                                   MartyrRule? martyr = null, ExposeRule? expose = null)
+                                   MartyrRule? martyr = null, ExposeRule? expose = null,
+                                   ShoveRule? shove = null)
     {
-        var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose);
+        var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -1692,7 +1783,13 @@ public static class BattleEngine
             MaxEnemyKillsInOneTurn = ctx.MaxEnemyKillsInOneTurn,
             Events = ctx.Events.ToList(),
             ExposeCount = ctx.ExposeCount,
-            ExposeMissed = ctx.ExposeMissed
+            ExposeMissed = ctx.ExposeMissed,
+            ShoveFired = ctx.ShoveFired,
+            ShoveCapped = ctx.ShoveCapped,
+            ShoveSwapped = ctx.ShoveSwapped,
+            ShoveNoRow = ctx.ShoveNoRow,
+            ShoveStaggered = ctx.ShoveStaggered,
+            ShoveBlocked = ctx.ShoveBlocked
         };
     }
 
