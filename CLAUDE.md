@@ -55,7 +55,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 yield [絞り込み]  # 攻撃力1点は誰の手なら出力になるか（注入テスト）（第24期）
     dotnet run --project BattleSim -c Release 0 yoke [sweep|log]  # 第四波の軛（5版の対照 / 上限の振り / 1戦の監査）（第25期）
     dotnet run --project BattleSim -c Release 0 hush [log]        # 第二波の粛（3版の対照 / 1戦の監査）（第27期）
-    dotnet run --project BattleSim -c Release 0 guard             # 殉教者の体の用量反応（HP 4点 × 庇うあり/なしの対照）（第34期）
+    dotnet run --project BattleSim -c Release 0 guard [percent]   # 殉教者の体（HP 4点）／介入の密度（p 3点）の掃引（第34・35期）
 
 `layout` は「どう置くか」の粗い当たりを付ける道具で、その値で採否を決めてはいけない。
 seed 50 の 720通りの最大なので上位は運で入れ替わり、狙い（ガルド前列・セッキ後列）も無視する。
@@ -376,10 +376,25 @@ README「波に『1発の上限』を置いたら、第四波が課税する資�
 ——**実測では 82% が後者**（介入の効果は全HP帯で −1.8〜−4.7 しかない）。
 **HP52 の対照が第32期差し戻し後の `docs/balance.md` と一致することが診断の検算。**
 
+`guard percent` は**介入の密度**（`MartyrRule.RedirectPercent`）を 50/75/100 で振る（第35期）。
+**HP を動かさないので波の総HPは1も動かず、対照は「庇うなし・HP52」1本で足りる**
+——第34期の交絡は HP が原因だった。**p75 を採用**（`MartyrTrait.DefaultPercent`）。
+p50 では庇うが作った固有の敗者が 0 行で対照と区別が付かず、p75 で 裂き が 11.5 → 9.5 と
+閾値10を割って**初めて介入に帰属できる行が出た**。p100 でも敗者は同じ1行きり。
+
 **窓を持つ機構は、窓を閉じる条件が2つ以上あると片方だけ伸ばしても伸びない。**
 庇いの窓は「庇い手が落ちる」と「守る相手が落ちる」の両方で閉じる（`f != target` を
 満たせなくなる）。体を厚くして伸びるのは前者だけで、実測では後者が律速だった
-——生存T 2.1倍に対して発火は 1.5倍で頭打ち。経緯は design/PHASE34_GUARDIAN_HP.md。
+——生存T 2.1倍に対して発火は 1.5倍で頭打ち。密度でも同じで、p を2倍にしても
+**勇者候補の生存Tは 3.02 → 3.09 しか動かない**（体でも密度でも律速は動かせなかった）。
+経緯は design/PHASE34_GUARDIAN_HP.md と design/PHASE35_MARTYR_PERCENT.md。
+
+**共有する定数は、片方だけ振りたくなった時点で分ける。** `GuardianTrait.RedirectPercent` は
+味方ガルドと共有だったので、そのまま振ると28行が一緒に動いて交絡が戻った。
+`TraitId.Martyr` を分けたうえで**挙動は `RedirectGainTrait`（共通の基底）に寄せてある**
+——`GuardianTrait` に残ったのは `RedirectPercent` と `Id` の2行だけ。
+**介入の鎖に段を足しても乱数はずれない**（`PickOne` は候補0個・1個で `Roll` を消費しない）ので、
+段を足す変更の受け入れ条件は「`compare` が1バイトも動かない」でよい。
 
 `demo` に編成名（部分一致）を渡すと `CompareBuilds()` の編成をそのまま1戦流す（第26期に追加）。
 **新しい特性が発火しているかは勝率では読めない**——勝率は「発火したが足りなかった」と

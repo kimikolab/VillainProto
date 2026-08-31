@@ -19,6 +19,7 @@ public enum TraitId
     Sniper,      // 後衛特化: 一度後退してから後列にいると攻撃力2倍＋貫き化
     Curse,       // 呪詛: 開始時に敵全体の攻撃力を下げる（隣接味方にも漏れる）
     Guardian,    // 庇う: 味方への攻撃を肩代わりする
+    Martyr,      // 殉教: 庇うと挙動同一。**割合をガルドと分けるためだけ**に別 Id にしてある（敵側の語彙）
     Necro,       // 墓守: 味方が倒れるたび強化される
     Colossus,    // 巨躯: 自分より後ろの列にいる味方への攻撃を、型を問わず肩代わりする
     Executioner, // 処刑: とどめを刺すと攻撃力が上がる
@@ -506,17 +507,32 @@ public sealed class CurseTrait : Trait
 /// なお第五波は4種の攻撃パターンが同時に出るので庇う自体がほとんど発動しない。
 /// この見返りは第二〜四波にしか入らない。第五波の反転は波の作り直しで見ること。
 /// </summary>
-public sealed class GuardianTrait : Trait
+public sealed class GuardianTrait : RedirectGainTrait
 {
     public const int RedirectPercent = 50;
 
+    public override TraitId Id => TraitId.Guardian;
+}
+
+/// <summary>
+/// 肩代わりで育つ介入役の共通部分。<b>庇う（ガルド）と殉教（敵の殉教者）で
+/// 1行も違わない</b>ので、ここに寄せてある——**定義は1箇所**（CLAUDE.md）。
+///
+/// <para>分けてあるのは <see cref="Trait.Id"/> と、engine が読む割合だけ。
+/// 割合を共有したままだと、殉教者の割合を振ったときに<b>味方ガルドを含む行が全部動いて
+/// 交絡が戻る</b>（第34期で HP が波の総HPを一緒に動かしたのと同じ形）。</para>
+///
+/// <para><c>PendingKey</c> は**両者で共有する**。engine の介入の鎖はどちらか一方しか
+/// 立てず（鎖は最初に成立した段で <c>return</c> する）、印は次の被弾1回で消費される。
+/// 別キーにすると「どちらの段で逸れたか」を engine が覚える必要が出て、窓口が増える。</para>
+/// </summary>
+public abstract class RedirectGainTrait : Trait
+{
     /// <summary>被ダメージ何点につき攻撃力+1か（Rage・分かちと同じ比率）。</summary>
     public const int DamagePerGain = 2;
 
     /// <summary>engine が肩代わりの成立を伝えるための印。次の被弾1回で消費する。</summary>
     public const string PendingKey = "guardPending";
-
-    public override TraitId Id => TraitId.Guardian;
 
     public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
     {
@@ -540,6 +556,57 @@ public sealed class GuardianTrait : Trait
     /// など）、次の Battle の最初の被弾を肩代わりと取り違えて育ってしまう。
     /// </summary>
     public override void OnCarryOver(UnitState self) => self.SetCounter(PendingKey, 0);
+}
+
+/// <summary>
+/// 殉教。<b>庇う（<see cref="GuardianTrait"/>）と挙動は1行も違わない。</b>
+/// 別の <see cref="TraitId"/> にしてあるのは<b>割合を味方ガルドと分けるためだけ</b>
+/// ——`RedirectPercent` を共有したままだと、殉教者の割合を振ったときに
+/// ガルドを含む行（42編成中28行）が全部動いて、何を測ったのか決まらなくなる。
+///
+/// <para>割合は <see cref="MartyrRule"/> で外から差す（既定 <see cref="DefaultPercent"/> = 50）。
+/// <b>書き換え可能な static のノブにしないこと</b>——Trait は共有シングルトンで
+/// layout は戦闘を並列実行する（ColossusRule / YokeRule / HushRule と同じ判断）。</para>
+///
+/// <para>判定は engine 側（<c>SelectTargetChain</c> の庇うの段の直後）。同じ
+/// <c>Row.Front</c> 条件・同じ <c>f != target</c> 条件で、<b>ガルドの段は1文字も触っていない</b>
+/// ——<c>PickOne</c> は候補 0 個・1 個では <c>Roll</c> を消費しないので、
+/// 段を1つ足しても乱数列は動かない（p=50 の同値検証がその証明）。</para>
+/// </summary>
+public sealed class MartyrTrait : RedirectGainTrait
+{
+    /// <summary>
+    /// 逸れる確率。**ガルドの 50% とは別勘定**（分けた理由は上の doc）。
+    ///
+    /// <para><b>75 は測って決めた</b>（第35期・`guard percent` で 50 / 75 / 100 を掃引）。
+    /// 50 では**庇うが作った固有の敗者が 0 行**で、同HP・庇うなしの対照と区別が付かなかった。
+    /// 75 で 裂き (キリ×エグ) が 11.5 → 9.5 と閾値 10 を割り、**この盤面で初めて
+    /// 「介入がその行を敗者にした」と帰属できる行が出た**（対照では 14.5 で敗者ではない）。
+    /// 100 でも敗者は同じ 1 行きりなので、<b>最小介入で 75 を採る</b>。</para>
+    ///
+    /// <para><b>上げても頭打ちになる。</b> 庇いの窓は「殉教者が落ちる」と「勇者候補が落ちる」の
+    /// 両方で閉じる。p を上げると逸れた被弾が殉教者に集中して**殉教者の生存Tはむしろ縮む**
+    /// （1.82 → 1.68 → 1.57）ので、発火は p に比例せず 1.12 → 1.56 → 1.95 と逓減する。
+    /// 律速の勇者候補の生存Tは 3.02 → 3.09 とほぼ動かない（第34期の結論の再確認）。</para>
+    /// </summary>
+    public const int DefaultPercent = 75;
+
+    public override TraitId Id => TraitId.Martyr;
+}
+
+/// <summary>
+/// 殉教の規則。<b>診断（guard）が割合を振るためだけに外から差せる。</b>
+/// 既定は <see cref="Default"/> ＝ <see cref="MartyrTrait.DefaultPercent"/>、
+/// <b>これが本採用の規則</b>。渡さない限り盤面は常にこの規則で動く。
+///
+/// <para><b>書き換え可能な static の調整ノブにしないこと。</b> Trait は共有シングルトンで、
+/// layout は戦闘を並列実行する——static に置くと版の切り替えが他のスレッドの戦闘へ漏れるし、
+/// <c>BattleEngine.Run</c> の「副作用も外部依存もない」もそこで壊れる
+/// （<see cref="ColossusRule"/> / <see cref="YokeRule"/> / <see cref="HushRule"/> と同じ判断）。</para>
+/// </summary>
+public readonly record struct MartyrRule(int RedirectPercent)
+{
+    public static MartyrRule Default => new(MartyrTrait.DefaultPercent);
 }
 
 /// <summary>墓守。味方が倒れるたびに強くなり、回復する。</summary>
@@ -2777,6 +2844,7 @@ public static class TraitCatalog
         new GougeTrait(),
         new CarveTrait(),
         new FixateTrait(),
+        new MartyrTrait(),
         new InversionTrait(),
         new DroughtTrait(),
         new YokeTrait(),

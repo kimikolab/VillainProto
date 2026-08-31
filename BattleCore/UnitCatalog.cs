@@ -797,7 +797,7 @@ public static class EnemyCatalog
     // 勇者候補が落ちると pool が {殉教者} だけになって庇いは走らなくなる。しかも庇うほど
     // HP52 の殉教者へ打点が集中するので、**庇うほど窓が早く閉じる自己終息型**。
     //
-    // **肩代わりで育つ**（GuardianTrait.DamagePerGain = 2）。逸れた被弾2につき攻撃+1 で、
+    // **肩代わりで育つ**（RedirectGainTrait.DamagePerGain = 2）。逸れた被弾2につき攻撃+1 で、
     // 殉教者は薙ぎなので前1・前3・中央 の3枠に返る——**単体の1発が大きいほど二重に払う**。
     // 素の攻11 は味方後列の HP を1発では抜かないが、伸びた分がそのまま3枠に乗る。
     // 育つのは肩代わりで受けた分だけ（PendingKey の印が立った被弾のみ）で、
@@ -805,7 +805,7 @@ public static class EnemyCatalog
     public static readonly UnitDef Martyr = new()
     {
         Id = "axeman_g", Name = "殉教者", MaxHp = 52, Attack = 11, Speed = 5,
-        Traits = new[] { TraitId.Guardian }, Pattern = AttackPattern.Sweep
+        Traits = new[] { TraitId.Martyr }, Pattern = AttackPattern.Sweep
     };
     // 断罪は審問官と勇者候補の2体で持つ。1体だとカドの反撃が担い手を先に殺して罰が消える
     // （審問官 HP76 / 単独だと配置を変えるだけで第5波 97.5% まで戻った）。

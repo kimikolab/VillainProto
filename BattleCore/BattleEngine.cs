@@ -256,14 +256,21 @@ public sealed class BattleContext
     /// </summary>
     public HushRule Hush { get; }
 
+    /// <summary>
+    /// 殉教の規則。<b>診断（guard）が割合を振るためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="MartyrRule.Default"/>）。static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public MartyrRule Martyr { get; }
+
     public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null,
-                         HushRule? hush = null)
+                         HushRule? hush = null, MartyrRule? martyr = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
         Colossus = colossus ?? ColossusRule.Default;
         Yoke = yoke ?? YokeRule.Default;
         Hush = hush ?? HushRule.Default;
+        Martyr = martyr ?? MartyrRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -612,6 +619,28 @@ public sealed class BattleContext
             // 肩代わりで受けた分だけ伸びる（GuardianTrait 参照）。素の被弾と区別するための印。
             guardian.SetCounter(GuardianTrait.PendingKey, 1);
             return guardian;
+        }
+
+        // 殉教（敵の殉教者）。**庇うと挙動は1行も違わない**——別の段にしてあるのは
+        // 割合（Martyr.RedirectPercent）を味方ガルドと分けるためだけ。共有したままだと
+        // 殉教者の割合を振ったときにガルドを含む行が全部動いて交絡が戻る（第35期）。
+        //
+        // **ガルドの段の直後に置く。** 前に置くと、味方が庇うを持つ盤面で殉教が
+        // ガルドを差し置くことになる（ガルドが 50% の専任である以上、先の権利は残す
+        // ——棘守りをガルドの後ろに置いたのと同じ理由）。実際には両陣営に同時に
+        // 立つ局面が無い（foes は攻撃者の相手陣営1つだけ）ので順序は観測不能だが、
+        // 規則としては既存の鎖の作法に合わせておく。
+        //
+        // **PickOne は候補 0 個・1 個では Roll を消費しない**ので、段を1つ足しても
+        // 乱数列は動かない（p=50 の同値検証がその証明）。
+        UnitState? martyr = PickOne(foes.Where(
+            f => f.HasTrait(TraitId.Martyr) && f.Row == Row.Front && f != target).ToList());
+
+        if (martyr is not null && Roll(100) < Martyr.RedirectPercent)
+        {
+            Log($"    {martyr.Name} が {target.Name} を庇った", LogKind.Trigger);
+            martyr.SetCounter(RedirectGainTrait.PendingKey, 1);
+            return martyr;
         }
 
         // 棘守り（カド）。**鎖の最後に置く。** 庇う（ガルド）は 50% の確率判定を持つ
@@ -1336,10 +1365,10 @@ public static class BattleEngine
     /// </summary>
     public static BattleResult Run(Formation player, Formation enemy, int seed, bool verbose = true,
                                    ColossusRule? colossus = null, YokeRule? yoke = null,
-                                   HushRule? hush = null)
+                                   HushRule? hush = null, MartyrRule? martyr = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
-               seed, verbose, colossus, yoke, hush);
+               seed, verbose, colossus, yoke, hush, martyr);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -1351,9 +1380,10 @@ public static class BattleEngine
     /// </summary>
     public static BattleResult Run(IReadOnlyList<UnitState> player, IReadOnlyList<UnitState> enemy,
                                    int seed, bool verbose = true, ColossusRule? colossus = null,
-                                   YokeRule? yoke = null, HushRule? hush = null)
+                                   YokeRule? yoke = null, HushRule? hush = null,
+                                   MartyrRule? martyr = null)
     {
-        var ctx = new BattleContext(seed, verbose, colossus, yoke, hush);
+        var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

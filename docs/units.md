@@ -66,6 +66,7 @@
 | `Sniper` | 逃亡兵セロ |
 | `Curse` | 呪詛官ネル |
 | `Guardian` | 廃棄聖騎士ガルド |
+| `Martyr` | - |
 | `Necro` | 墓守リィカ |
 | `Colossus` | 大喰らいゴルム |
 | `Executioner` | - |
