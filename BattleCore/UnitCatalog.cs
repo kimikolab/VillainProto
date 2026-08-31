@@ -581,9 +581,64 @@ public static class UnitCatalog
         Flavor = "仲間が殴られた時だけ勇敢になれる。自分が殴られると、そこにはもう誰もいない。"
     };
 
+    /// <summary>
+    /// 裂きのキリ。傷（Wound）の**供給源**。物理側に初めて置いた「盤面に残る汚れ」の書き手。
+    ///
+    /// 数値は仮置き。ただし**速さ12 は機能要件**——セロ・ササと同格の最速帯に置くことで
+    /// 「刻んでから読み手が動く」順序を配置ではなく速度で作る。第26期・第27期に続いて
+    /// **速さが条件タグとして機能する3例目**（トウの粉・ザンの帯に続く）。
+    ///
+    /// <c>Attack = 12</c> は <see cref="RendTrait.ModifyAttack"/> が引数ごと捨てるので
+    /// **盤面には一切効かない**——`docs/units.md` の一覧と PrototypeApp の表示にしか出ない。
+    /// 呪詛の床として要る、という読みは**誤り**（<c>ModifyAttack</c> は <c>Def.Attack + AtkBonus</c> を
+    /// 受け取ってから 1 を返すので、床は特性の側で閉じている）。0 にしても挙動は変わらないが、
+    /// 12 を置いてあるのは**キリが「斬れない駒」ではなく「斬れるが断てない駒」だから**
+    /// ——一覧で攻3のムドと並ぶと、捨てられた理由の系統が変わってしまう。
+    ///
+    /// 単独では毎ターン1ダメージしか出ない純粋な払い出しで、読み手（エグ）がいない編成では
+    /// ほぼ無価値。それが値段——シガ・ザンと同じ可変コスト型で、「この駒をどう使うんだ」が
+    /// 編成パズルそのものになる。
+    /// </summary>
+    public static readonly UnitDef Kiri = new()
+    {
+        Id = "kiri",
+        Name = "裂きのキリ",
+        MaxHp = 44,
+        Attack = 12,
+        Speed = 12,
+        Traits = new[] { TraitId.Rend },
+        PlusText = "攻撃した相手に傷を刻む",
+        MinusText = "刃が薄く、与えるダメージは常に1",
+        Flavor = "斬れるが、断てない。だから誰も戦力として数えなかった。"
+    };
+
+    /// <summary>
+    /// 抉りのエグ。傷（Wound）の**読み手**。キリが刻んだ汚れを出力に変える変換器。
+    ///
+    /// 速さ6 はキリ（12）より確実に遅い。**刻む→抉るの順序を配置ではなく速度で保証する**
+    /// （キリの速さ12 と対で1つの要件。どちらかだけ動かすと順序が崩れる）。
+    ///
+    /// マイナス（撃破すると次の手番を失う）は痺れ機構に乗せてあるので、
+    /// 飛んだ手番は IdleTurn として号令（ガン）・据え（バン）に売れる。
+    /// **エグ自身で倒し切るより、傷を積んで一撃で通すほうが強い**という勾配が
+    /// 自己言及的に立つ——トドメを他の駒に譲る配置判断がそこから出る。
+    /// </summary>
+    public static readonly UnitDef Egu = new()
+    {
+        Id = "egu",
+        Name = "抉りのエグ",
+        MaxHp = 58,
+        Attack = 12,
+        Speed = 6,
+        Traits = new[] { TraitId.Gouge },
+        PlusText = "傷を持つ敵を攻撃すると、傷1つにつき3を上乗せする",
+        MinusText = "敵を倒すと深追いし、次の手番を失う",
+        Flavor = "開いた傷にしか興味がない。塞がった肌はただの壁だと言う。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

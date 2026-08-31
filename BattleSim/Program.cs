@@ -10027,6 +10027,24 @@ if (focusId == "confirm")
         ("仇討ち×砕け (ヒビ×ザン) / 上限撤去後",
             Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Golm, center: UnitCatalog.Hibi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan),
             Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Hibi, center: UnitCatalog.Golm, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan)),
+        // 物理軸の連鎖・第2弾の新2編成（第28期）。旧＝計画書の仮置き（顔ぶれは組み直し後で同じ）、
+        // 候補＝reseat 1位。**どちらもガルド・セッキを含まないので狙いの制約が無く、
+        // 「狙いを満たす最良」と全体1位が一致する。**
+        //
+        // 裂き の旧は「ゴルム前3・ドルガ中央のまま キリとエグだけを入れ替えた形」。
+        // **速さの順序は入れ替えても崩れない**（12 対 6 で決まり、隣接も列も見ない）のに
+        // +15.1pt 動く——効いているのは順序ではなく受けの配り方で、キリが前1の的になり
+        // エグが後3のゴルムの被覆に入る側が上。**「席を選ばない駒」でも席で15pt動く。**
+        ("裂き (キリ×エグ)",
+            Formation.Build(front1: UnitCatalog.Egu, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.Vel, back3: UnitCatalog.Kiri),
+            Formation.Build(front1: UnitCatalog.Kiri, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.Vel, back3: UnitCatalog.Egu)),
+        // 中央をヴェル（蘇生。守られて完走する側）に譲る形が最良で +31.5pt。
+        // **リィカもエグも中央を要求しない**——墓守は死んだ味方の数だけを読み、抉りは
+        // 傷を持つ敵を読むので、どちらも隣接も列も見ない。中央を要求しない駒が並んだら、
+        // 完走することに価値がある駒に譲る（第20期・第21期のナラと同じ結論の3例目）。
+        ("裂き×責め苦 (キリ×エグ×シガ)",
+            Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Kiri, center: UnitCatalog.Rica, back1: UnitCatalog.Vel, back3: UnitCatalog.Egu),
+            Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Kiri, center: UnitCatalog.Vel, back1: UnitCatalog.Rica, back3: UnitCatalog.Egu)),
     };
 
     Console.WriteLine("## 採用候補の追試");
@@ -10968,7 +10986,48 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // ゴルムは後方も被覆するので、ザン(後3)は殴られにくい＝怯みにくい。
     ("仇討ち×砕け (ヒビ×ザン)", Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Hibi,
                                           center: UnitCatalog.Golm, back1: UnitCatalog.Dolga,
-                                          back3: UnitCatalog.Zan))
+                                          back3: UnitCatalog.Zan)),
+    // 物理軸の連鎖・第2弾（裂きのキリ / 抉りのエグ）。**配置は仮置き**——
+    // reseat（120通り全探索）→ confirm で採否を決める。
+    //
+    // 物理軸の連鎖・第2弾（裂きのキリ / 抉りのエグ）。
+    //
+    // **計画書の顔ぶれは 100/0/0/0/0 に潰れた**——reseat の120通りが 20.0〜20.3% に並び、
+    // どこに置いても動かない＝1ビットも情報が出ない台（第26期の3本とまったく同じ症状）。
+    // 原因は配置ではなく総攻で、**特性・数値は触らずに出力役を入れて組み直してある。**
+    //
+    // 供給（傷）× 変換（抉り）の最小形。キリ(速12)が刻み、エグ(速6)が同じターンの後で抉る
+    // ——順序は配置ではなく速度で保証されている。残り3枠は「守られて完走する側」の定番で、
+    // ゴルム（巨躯。前3から中央・後列を被覆）／ドルガ（攻38・薙ぎ・2ターンに1回）／
+    // ヴェル（蘇生）。**死の連鎖の台には載せていない**——墓守リィカを入れると層の二次関数が
+    // 支配して、傷の線形が表から読めなくなる（下の 裂き×責め苦 がその台なので、
+    // 2本を同じ土台にしない）。
+    // 配置は reseat 1位 → confirm +15.1pt で採用。**キリとエグの席は交換できない**
+    // ——2体を入れ替えただけの席は seed 200..599 で 40.0%（候補は 55.0%）。順序は速さ
+    // （12 対 6）で決まるので入れ替えても刻む→抉るの順は崩れないが、**キリは前1で
+    // 敵の的になり、エグは後3でゴルムの被覆に入る**という受けの配り方の方が効く。
+    ("裂き (キリ×エグ)", Formation.Build(front1: UnitCatalog.Kiri, front3: UnitCatalog.Golm,
+                                     center: UnitCatalog.Dolga, back1: UnitCatalog.Vel,
+                                     back3: UnitCatalog.Egu)),
+    // 第26期の読み手（責め苦のシガ）と噛むか。**答えは「噛まない」で、理由は機構ではなく
+    // 予算だった。** 狙いだった「痺れ＋傷の二重条件で同じ敵を殴る」形には痺れの供給役
+    // （トウ）が要るが、キリ・エグ・シガ・トウで4枠が払い出しになり、残り1枠に何を入れても
+    // 100/0/0/0/0 に潰れる（ドルガ 20.4% / ゴルム 20.0% / リィカ 20.4% / ヴェル 20.0% /
+    // ボルグ 20.0%。reseat の120通り全探索で測った）。**供給を2本同時には買えない。**
+    //
+    // なので供給役を落とし、読み手2体を同じ台に並べた形を採った。ここでシガの**プラス側は
+    // 一度も発火しない**（敵に Stun/IdleTurn を立てる駒がロスターにトウしかいない。
+    // demo の seed 1/2/3 で「追い打ちを重ねる」0回・「怖気づいた」を実測）。
+    // シガが払っているのはマイナス側だけで、**この行が測っているのは傷と責め苦の噛み合わせ
+    // ではなく、読み手を2枚積んだときの手番経済**——それでも情報セルが3つ出る。
+    // 台は死の連鎖（リィカ×ヴェル）。裂き 本体と土台を分けてあるので、2本の差は
+    // 「墓守の層が乗るかどうか」で読める。
+    // 配置は reseat 1位 → confirm +31.5pt で採用（中央をリィカにした席は 22.1%）。
+    // **中央はヴェル（蘇生）の席**——墓守も抉りも隣接や列を読まない（前者は死んだ味方の数、
+    // 後者は敵の傷だけを見る）ので、中央を要求しない駒同士なら守られて完走する側に譲るのが正しい。
+    ("裂き×責め苦 (キリ×エグ×シガ)", Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Kiri,
+                                             center: UnitCatalog.Vel, back1: UnitCatalog.Rica,
+                                             back3: UnitCatalog.Egu))
 };
 
 // メンバーを編成スロット 0..4 へ重複なく割り当てる全順列を、

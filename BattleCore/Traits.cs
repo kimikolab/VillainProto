@@ -58,6 +58,10 @@ public enum TraitId
                  // 置き去りと同じく1つのルールの表と裏なので、どちらのブロックに入れても嘘になる
     Avenge,      // 仇討ち: 標的にされた味方が殴られると割り込んで刺し返す。自分が殴られると怯む
                  //（同上）
+    Rend,        // 裂き: 攻撃した相手に傷を刻む。刃が薄く、与えるダメージは常に1
+                 //（同上。刻めるのは断てないからで、プラスとマイナスが同じ一文から出る）
+    Gouge,       // 抉り: 傷を持つ敵を攻撃すると傷1つにつき加算。敵を倒すと次の手番を失う
+                 //（同上）
     Alms,        // 施し: 自分は減らずに味方を回復する（敵側の語彙）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -1513,6 +1517,115 @@ public sealed class TormentTrait : Trait
 }
 
 /// <summary>
+/// 裂き。傷（<see cref="StatusKeys.Wound"/>）の供給源。物理側に初めて置いた「盤面に残る汚れ」。
+///
+/// **1つのルールの表と裏**（置き去り・責め苦・仇討ちと同型）: 刃が薄いから斬り口が残る。
+/// 薄いから断てない。プラスとマイナスが同じ一文から出る。
+///
+/// **刻む数はダメージ量に依存しない。** ドルガの38もキリの1も等価に傷1。
+/// 量に比例させた瞬間に「強い駒がもっと強くなる」乗算の道に入る（README「増幅は必ず加算にする」の
+/// 物理版で、比例させるなら結局は与ダメージをもう一度読むだけになる）。
+/// 「原因ではなく結果で解決する」——誰が刻んだ傷でも読み手は同じように読む。
+///
+/// <see cref="ModifyAttack"/> は**全経路で1に潰す**。反撃（棘）でも追い打ちでも割り込みでも
+/// 1になるのは意図どおりで、例外を作らない。<c>ModifyAttack</c> は攻撃力そのものを
+/// 書き換える窓口なので、ここで条件分岐を足すと「どの経路なら1でないか」を
+/// 呼び出し側ごとに覚える必要が出る。
+///
+/// 単独では毎ターン1ダメージしか出ない**純粋な払い出し**。読み手がいない編成では
+/// ほぼ無価値で、それが値段（可変コスト型。「この駒をどう使うんだ」が編成パズルそのもの）。
+/// </summary>
+public sealed class RendTrait : Trait
+{
+    /// <summary>1回の攻撃で刻む傷の数。**量ではなく回数**なので定数1。</summary>
+    public const int Wounds = 1;
+
+    public override TraitId Id => TraitId.Rend;
+
+    /// <summary>
+    /// 刃が薄い。<b>与えるダメージは常に1。</b>
+    ///
+    /// <para><c>atk</c> を**まったく読まない**のが要点。<see cref="UnitState.CurrentAttack"/> は
+    /// <c>Def.Attack + AtkBonus</c> を作ってからここへ渡すので、号令の +4 も呪詛の −6 も
+    /// 分かちの「腕がなまる」も全部この 1 に潰れる。**床も天井も要らない**
+    /// ——引数を読まない限り、上流に何が乗っても結果は動かない。</para>
+    ///
+    /// <para><b>0 を返さないこと。</b> <see cref="BattleContext.ApplyDamage"/> が
+    /// <c>amount &lt;= 0</c> で早期 return するので、ダメージも被弾強化も反撃も走らなくなる。
+    /// 一方で <c>OnAfterAttack</c> は <c>PerformAttack</c> の最後で必ず呼ばれるため
+    /// **傷だけは刻まれ続ける**——「1ダメージも通らないのに汚れだけ溜まる」という、
+    /// 説明のつかない駒になる。</para>
+    /// </summary>
+    public override int ModifyAttack(UnitState self, int atk) => 1;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        // 死体には刻まない（痺れ＝ParalyzeTrait と同じ書き手側の作法）。責め苦が
+        // 「死んでいても判定は同じ」にしているのは**読み手**だからで、あちらは倒した相手にも
+        // 追い打ちの条件が成立していたと数える。書き手側で同じことをすると、二度と殴られない
+        // 駒にカウンタを積んでログを濁すだけになる。
+        if (!target.IsAlive) return;
+
+        // **主目標のみ・攻撃1回に1度**（engine の規則）。薙ぎでも貫きでもここは1回しか
+        // 呼ばれないので、範囲持ちが供給を独占して非線形に伸びることが原理的に起きない。
+        // 毒で二度踏んだ穴（層が二次関数で伸びる）を構造的に避けているのがこの1行。
+        int w = target.Counter(StatusKeys.Wound) + Wounds;
+        target.SetCounter(StatusKeys.Wound, w);
+        ctx.Log($"    {self.Name} の刃が {target.Name} に傷を残した（傷 {w}）", LogKind.Status);
+    }
+}
+
+/// <summary>
+/// 抉り。傷（<see cref="StatusKeys.Wound"/>）の読み手。
+///
+/// **1つのルールの表と裏**: 開いた傷にしか興味がないので、傷を抉れば深く入る。
+/// 塞いだ（＝倒した）先へも踏み込みすぎて、次の手番を失う。
+///
+/// 上乗せは**加算**（傷1つにつき +<see cref="PerWound"/>）。倍率にすると強化を受けた瞬間に
+/// 二乗で伸びる（README「増幅は必ず加算にする」）。傷の側が線形にしか伸びないので、
+/// 加算で読む限り出力もターン数に対して線形に留まる。
+///
+/// **傷は消費しない。** 消費型（溜めた傷を全部使って一撃）は連鎖が供給と変換だけで
+/// 立つかを先に見るために温存してある。誰が刻んだ傷でも読むので、供給源が増えれば
+/// そのまま噛む（結果で解決する）。
+///
+/// <c>OnKill</c> は**味方側で初の実装**。痺れ機構に乗せてあるので、飛んだ手番は
+/// <see cref="StatusKeys.IdleTurn"/> になって号令（ガン）・据え（バン）が買い取る
+/// ——ザンの怯み・シガの怖気と同じ形で、これで3例目。
+///
+/// 「倒すほど止まる」ので、**エグ自身で倒し切るより傷を積んで一撃で通すほうが強い**という
+/// 勾配が自己言及的に立つ。トドメを他の駒に譲る配置判断がそこから出る。
+/// </summary>
+public sealed class GougeTrait : Trait
+{
+    /// <summary>傷1つあたりの上乗せ。<b>加算</b>（倍率にしないこと。上の但し書き参照）。</summary>
+    public const int PerWound = 3;
+
+    public override TraitId Id => TraitId.Gouge;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        int w = target.Counter(StatusKeys.Wound);
+        if (w <= 0) return;
+
+        // ApplyDamage の直呼びなので OnAfterAttack は再帰しない（シガの追い打ちと同じ作法）。
+        // 生死は ApplyDamage の生存判定に任せる——既に倒れているなら空振りするだけで、
+        // 「傷を抉った」という判定に例外を作らない（結果で解決する）。
+        ctx.Log($"    {self.Name} が {target.Name} の傷をこじ開ける（傷 {w} → +{PerWound * w}）",
+            LogKind.Highlight);
+        ctx.ApplyDamage(target, PerWound * w, self);
+    }
+
+    public override void OnKill(BattleContext ctx, UnitState self, UnitState victim)
+    {
+        // 深追い。痺れに乗せてあるので次の手番が飛び（→ IdleTurn → 号令・据え）、
+        // ターン外の行動も CanActOutOfTurn が閉じて止まる。
+        self.SetCounter(StatusKeys.Stun, 1);
+        ctx.Log($"    {self.Name} は {victim.Name} の裂け目に踏み込みすぎた", LogKind.FriendlyFire);
+    }
+}
+
+/// <summary>
 /// 断罪。反撃で殴られたとき、反撃してきた相手を痺れさせる。敵側の語彙。
 ///
 /// 反撃役（カド）の盤面への関与は反撃しかない。攻撃力が閾値を超えれば敵を倒し切って
@@ -2494,6 +2607,8 @@ public static class TraitCatalog
         new ForsakeTrait(),
         new TormentTrait(),
         new AvengeTrait(),
+        new RendTrait(),
+        new GougeTrait(),
         new InversionTrait(),
         new DroughtTrait(),
         new YokeTrait(),

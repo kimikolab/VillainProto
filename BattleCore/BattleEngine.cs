@@ -30,11 +30,25 @@ public static class StatusKeys
     public const string Armor = "armor";
 
     /// <summary>
+    /// 傷。攻撃1発につき1つ刻まれる。**ダメージ量に依存しない**（38の一撃も1の刺しも傷1）。
+    ///
+    /// 毒と違い自分では何もしない——読み手がいて初めて意味を持つ、純粋な盤面の記録。
+    /// <see cref="BattleContext.TickStatuses"/> には**何も足していない**。時間で進行しないことが
+    /// 毒との分岐点で、手数が無ければ完全に不活性なまま終わる。
+    ///
+    /// 減衰なし・上限なし。供給が「裂きの保持者が主目標を殴る」＝1ターン1つに限られるので、
+    /// 伸びは戦闘ターン数に対して線形。毒（層が二次関数で伸びる）と同じ穴には落ちない。
+    /// 量に比例させないのも同じ理由で、比例させた瞬間に「強い駒がもっと強くなる」乗算になる
+    /// （<see cref="PyreTrait"/> がロスター唯一の例外として記録されている形）。
+    /// </summary>
+    public const string Wound = "wound";
+
+    /// <summary>
     /// 全キーの一覧。会戦（Engagement）が部隊戦の境界で状態異常を一律に消すために使う
     /// （状態異常は Battle スコープ、という寿命規則。Armor も含めて消す——破片は
     /// Battle 内の供給に依存するプール）。**新しいキーを足したら必ずここにも足すこと。**
     /// </summary>
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor };
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound };
 }
 
 /// <summary>
@@ -437,6 +451,7 @@ public sealed class BattleContext
         (StatusKeys.Stun, "痺"),
         (StatusKeys.Marked, "標"),
         (StatusKeys.Armor, "盾"),
+        (StatusKeys.Wound, "傷"),
     };
 
     public int Roll(int maxExclusive) => _rng.Next(maxExclusive);
