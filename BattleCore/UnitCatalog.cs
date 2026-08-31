@@ -589,30 +589,34 @@ public static class UnitCatalog
     /// 3例目**（トウの粉・ザンの帯に続く）。エグ（速6）と対で1つの要件なので、
     /// どちらかだけ動かすと順序が崩れる。
     ///
-    /// <c>Attack = 12</c> は**第29期から実際に盤面へ効く**。初版のマイナス
-    /// （<c>RendTrait.ModifyAttack</c> が全経路で1に潰す）を撤回したため、号令の +4 も
-    /// 呪詛の −6 もそのまま乗るようになった。撤回の理由は <see cref="RendTrait"/> の
-    /// doc を参照——**機構ではなく5枠の予算**で、「単独での出力が 1/ターン」は
-    /// 供給と変換を別の駒に分けた傷軸に 1枠まるごとの出力ゼロを要求していた。
+    /// <c>Attack = 12</c> は <see cref="RendTrait.ModifyAttack"/> が引数ごと捨てるので
+    /// **盤面には一切効かない**——`docs/units.md` の一覧と PrototypeApp の表示にしか出ない。
+    /// 呪詛の床として要る、という読みは**誤り**（<c>ModifyAttack</c> は <c>Def.Attack + AtkBonus</c> を
+    /// 受け取ってから 1 を返すので、床は特性の側で閉じている）。0 にしても挙動は変わらないが、
+    /// 12 を置いてあるのは**キリが「斬れない駒」ではなく「斬れるが断てない駒」だから**
+    /// ——一覧で攻3のムドと並ぶと、捨てられた理由の系統が変わってしまう。
     ///
-    /// <c>MaxHp = 48</c> は差し替えに伴う手当（旧44）。マイナスが受けるダメージ1.5倍に
-    /// 移ったので**実効は 32 相当**——速さ12帯のセロ（42）・ササ（58）と同じ「先に動くが
-    /// 薄い」帯に置いた。**代金は出力ではなく配置に移してある**: 速さ12 で前に出やすく
-    /// 実効32 の駒が的にされるので、「刻み役を守る」判断が庇う（ガルド）・後備え（セッキ）・
-    /// 破片（ヒビ）と噛む。**それ以外は触っていない**——攻撃12・速さ12・傷の刻み方
-    /// （主目標のみ1つ）は初版のまま。
+    /// 単独では毎ターン1ダメージしか出ない純粋な払い出しで、読み手（エグ）がいない編成では
+    /// ほぼ無価値。それが値段——シガ・ザンと同じ可変コスト型で、「この駒をどう使うんだ」が
+    /// 編成パズルそのものになる。
+    ///
+    /// **第29期に 48/受けるダメージ1.5倍 へ差し替えて測り、不合格だったので戻した**
+    /// （経緯と反証は <see cref="RendTrait"/> の doc / README 第29期）。**この極端な
+    /// マイナスが配置の値段を作っている**ので、予算を理由に緩めてはいけない
+    /// ——緩めた版では席交換の価値が +15.1pt → +0.6pt に落ちた。
+    /// 予算の側は第30期に**別の駒**（刻みのノミ。供給と出力を1枠に畳んだ形）で解く。
     /// </summary>
     public static readonly UnitDef Kiri = new()
     {
         Id = "kiri",
         Name = "裂きのキリ",
-        MaxHp = 48,
+        MaxHp = 44,
         Attack = 12,
         Speed = 12,
         Traits = new[] { TraitId.Rend },
         PlusText = "攻撃した相手に傷を刻む",
-        MinusText = "刃と同じだけ身も薄く、受けるダメージが1.5倍になる",
-        Flavor = "刃を薄く削ぎ続けた結果、自分の身も薄くなった。"
+        MinusText = "刃が薄く、与えるダメージは常に1",
+        Flavor = "斬れるが、断てない。だから誰も戦力として数えなかった。"
     };
 
     /// <summary>
@@ -639,9 +643,43 @@ public static class UnitCatalog
         Flavor = "開いた傷にしか興味がない。塞がった肌はただの壁だと言う。"
     };
 
+    /// <summary>
+    /// 刻みのノミ。傷（Wound）の**2つ目の入口**で、キリ（供給）＋エグ（変換）を1枠に畳んだ形。
+    ///
+    /// キリが「読み手がいる編成専用の極端な供給源」なら、ノミは
+    /// **「単独でも回る代わりに連鎖が短い供給源」**。同じ資源に長い入口と短い入口を並べて、
+    /// 編成に選ばせる——第29期に確定した「傷軸の予算不足は駒の単価の総和ではなく、
+    /// **連鎖の長さが5枠に収まっていない**」への回答（README 第30期）。
+    ///
+    /// 上乗せは +2 で、エグ（+3）より低い。**畳んだぶんだけ単価を下げる。**
+    ///
+    /// マイナスは<b>対象選択の束縛</b>（<see cref="FixateTrait"/>）で、ロスター初の型。
+    /// 出力も耐久も削らないので予算を食わないまま、**代金は敵の編成に依存して変動する**
+    /// ——壁（軛の重装兵 145）に食いついたら他の敵に触れないままターンが流れる。
+    ///
+    /// 速さ7 は**エグ（6）より速くキリ（12）より遅い**。単騎で回る駒なので
+    /// 「刻む→読む」の順序要件は自分の中で閉じており、速さに機能要件は無い
+    /// ——キリ＋エグの順序（12 対 6）を壊さない帯に置いてあるだけ。
+    ///
+    /// **単体攻撃であることは執着の前提**。範囲型に変えると巻き込みの中心が固定されて
+    /// マイナスの意味が変わる（<see cref="FixateTrait"/> の但し書き）。
+    /// </summary>
+    public static readonly UnitDef Nomi = new()
+    {
+        Id = "nomi",
+        Name = "刻みのノミ",
+        MaxHp = 52,
+        Attack = 10,
+        Speed = 7,
+        Traits = new[] { TraitId.Carve, TraitId.Fixate },
+        PlusText = "攻撃した相手に傷を刻み、相手の傷1つにつき2を上乗せする",
+        MinusText = "一度狙った敵が倒れるまで、他の敵に目を向けられない",
+        Flavor = "同じ場所を彫り続けることしかできない。彫り上がる頃には、戦は終わっている。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

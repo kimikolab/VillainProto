@@ -10045,6 +10045,19 @@ if (focusId == "confirm")
         ("裂き×責め苦 (キリ×エグ×シガ)",
             Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Kiri, center: UnitCatalog.Rica, back1: UnitCatalog.Vel, back3: UnitCatalog.Egu),
             Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Kiri, center: UnitCatalog.Vel, back1: UnitCatalog.Rica, back3: UnitCatalog.Egu)),
+        // 傷軸・第3弾の新2編成（第30期）。旧＝仮置き（ノミを前1に出した形）、候補＝reseat 1位。
+        // どちらもガルド・セッキを含まないので「狙いを満たす最良」と全体1位が一致する。
+        //
+        // **どちらの候補もノミが中央**。刻みは供給と変換を1手に畳んでいるので隣接も列も読まないが、
+        // **執着（対象選択の束縛）は「殴り続けられること」が価値**なので、中央＝次数4の席で
+        // 巨躯ゴルムの被覆に入って長く立つ側が上に来る。第20期・第21期の「中央を要求しない駒が
+        // 並んだら完走する側に譲る」の系列だが、**譲られる理由が蘇生ではなく執着**なのが新しい。
+        ("刻み (ノミ単騎)",
+            Formation.Build(front1: UnitCatalog.Nomi, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.Vel, back3: UnitCatalog.Gan),
+            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gan, center: UnitCatalog.Nomi, back1: UnitCatalog.Vel, back3: UnitCatalog.Dolga)),
+        ("刻み×抉り (ノミ×エグ)",
+            Formation.Build(front1: UnitCatalog.Nomi, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.Vel, back3: UnitCatalog.Egu),
+            Formation.Build(front1: UnitCatalog.Egu, front3: UnitCatalog.Golm, center: UnitCatalog.Nomi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Vel)),
     };
 
     Console.WriteLine("## 採用候補の追試");
@@ -11002,15 +11015,16 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // ヴェル（蘇生）。**死の連鎖の台には載せていない**——墓守リィカを入れると層の二次関数が
     // 支配して、傷の線形が表から読めなくなる（下の 裂き×責め苦 がその台なので、
     // 2本を同じ土台にしない）。
-    // 配置は reseat 1位 → confirm +15.1pt で採用（第28期）。**この席の値段は第29期に
-    // ほぼ消えた**——キリのマイナスを「与ダメ常に1」から「受けるダメージ1.5倍」へ
-    // 差し替えたら、同じ confirm が +15.1pt → **+0.6pt（据え置き）** に落ちた
-    // （キリとエグを入れ替えた席が seed 200..599 で 40.0% → 55.2%、候補は 55.0% → 55.8%）。
-    // 第28期は「キリは前1で敵の的になり、エグは後3でゴルムの被覆に入る」受けの配り方が
-    // 効いていたと読んだが、それが成立していたのは**キリが前で殴られても失うものが
-    // 無かったから**で、キリが出力を持った途端に「どちらを晒すか」が等価になった。
-    // 席は測り直しても1位のままなので据え置き（第29期の全文は README「マイナスを
-    // 差し替えても、配置は意味を持たなかった」）。
+    // 配置は reseat 1位 → confirm +15.1pt で採用。**キリとエグの席は交換できない**
+    // ——2体を入れ替えただけの席は seed 200..599 で 40.0%（候補は 55.0%）。順序は速さ
+    // （12 対 6）で決まるので入れ替えても刻む→抉るの順は崩れないが、**キリは前1で
+    // 敵の的になり、エグは後3でゴルムの被覆に入る**という受けの配り方の方が効く。
+    //
+    // **この +15.1pt はキリのマイナス（与ダメ常に1）が作っている。** 第29期に
+    // 「受けるダメージ1.5倍」へ差し替えた版で同じ confirm を引くと +0.6pt（据え置き）まで
+    // 落ち、reseat 120通りの帯も二峰（56.5〜38.7%）から単峰（57.3〜51.9%）に縮んだ
+    // ——**失うものが無い駒だけが「的」の役を100%引き受けられる**。差し替えは
+    // 不合格として戻してあるが、この数字は反証として残す（README 第29期・第30期 §0）。
     ("裂き (キリ×エグ)", Formation.Build(front1: UnitCatalog.Kiri, front3: UnitCatalog.Golm,
                                      center: UnitCatalog.Dolga, back1: UnitCatalog.Vel,
                                      back3: UnitCatalog.Egu)),
@@ -11023,7 +11037,7 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // なので供給役を落とし、読み手2体を同じ台に並べた形を採った。ここでシガの**プラス側は
     // 一度も発火しない**（敵に Stun/IdleTurn を立てる駒がロスターにトウしかいない。
     // demo の seed 1/2/3 で「追い打ちを重ねる」0回・「怖気づいた」を実測）。
-    // **第29期にキリが殴れるようになっても 0回のまま**（全5波 × seed 1/2/3 の15戦で再測定）
+    // **第29期にキリを殴れるようにしても 0回のまま**（全5波 × seed 1/2/3 の15戦で再測定）
     // ——予算が浮けばトウが入る余地が出る、という読みは外れた。発火しないのは枠ではなく
     // 供給源の不在で、**枠を空けても供給源は湧かない。**
     // シガが払っているのはマイナス側だけで、**この行が測っているのは傷と責め苦の噛み合わせ
@@ -11031,12 +11045,32 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 台は死の連鎖（リィカ×ヴェル）。裂き 本体と土台を分けてあるので、2本の差は
     // 「墓守の層が乗るかどうか」で読める。
     // 配置は reseat 1位 → confirm +31.5pt で採用（中央をリィカにした席は 22.1%）。
-    // 第29期のキリ差し替え後も +32.0pt で、**こちらの席の値段は動いていない。**
+    // 第29期のキリ差し替え後も +32.0pt で、**こちらの席の値段は動いていない**
+    // （差し替えは不合格で戻したが、対照として値を残す）。
     // **中央はヴェル（蘇生）の席**——墓守も抉りも隣接や列を読まない（前者は死んだ味方の数、
     // 後者は敵の傷だけを見る）ので、中央を要求しない駒同士なら守られて完走する側に譲るのが正しい。
     ("裂き×責め苦 (キリ×エグ×シガ)", Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Kiri,
                                              center: UnitCatalog.Vel, back1: UnitCatalog.Rica,
-                                             back3: UnitCatalog.Egu))
+                                             back3: UnitCatalog.Egu)),
+    // 傷軸・第3弾の新2編成（第30期）。**土台は 裂き と同じ**（ゴルム／ドルガ／ヴェル）で、
+    // キリ＋エグの2枠に入っていたものだけを差し替えてある——同じ資源に「長い入口」と
+    // 「短い入口」を並べて、編成の側で選ばせるのが狙い（README 第30期）。
+    //
+    // ノミ単騎の第5枠はガン（号令）。**4枠すべてを素の出力役にすると台が飽和する**
+    // ——ボルグ版は reseat 最良 98.2%（100/100/97.5/96/97.5）で情報セルが1つも無く、
+    // 「単独で回るか」の答えは出ても compare の行としては測定にならない
+    // （ablate ではノミが -28.5pt 効いているので、飽和しているのは台であってノミではない）。
+    // カド版（棘鎧）は逆に**ノミが -5.9pt しか効かない入れ得**で、反撃軸が全部持っていく。
+    // ハギ版は追い打ち＝ターン外なので、第二波（粛）の予測がノミの側から読めなくなる。
+    ("刻み (ノミ単騎)", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gan,
+                                    center: UnitCatalog.Nomi, back1: UnitCatalog.Vel,
+                                    back3: UnitCatalog.Dolga)),
+    // 1体に積み上がった傷を、同じ読み手（エグ）が読む形。**裂き (キリ×エグ) との差は
+    // キリ↔ノミ の1体だけ**（土台の3枚は同じ）なので、2行の差がそのまま
+    // 「広く薄く撒く供給源」と「1体へ積み上げる供給源」の差になる。
+    ("刻み×抉り (ノミ×エグ)", Formation.Build(front1: UnitCatalog.Egu, front3: UnitCatalog.Golm,
+                                        center: UnitCatalog.Nomi, back1: UnitCatalog.Dolga,
+                                        back3: UnitCatalog.Vel))
 };
 
 // メンバーを編成スロット 0..4 へ重複なく割り当てる全順列を、

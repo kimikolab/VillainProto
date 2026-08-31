@@ -512,6 +512,26 @@ public sealed class BattleContext
     /// </summary>
     private UnitState? SelectTargetCore(UnitState attacker, AttackPattern? patternOverride, out int lane)
     {
+        UnitState? chosen = SelectTargetChain(attacker, patternOverride, out lane);
+
+        // 執着（ノミ）は**介入の鎖を通ったあとの相手**を覚える。庇われたら次の手番からは
+        // 庇った駒に執着が移る＝「庇うで執着を引き剥がす」（FixateTrait 参照）。
+        // 鎖の前で覚えると、毎ターン庇われ続けて執着が永久に動かない駒になる。
+        // 保持者の走査は既存条件の後ろ（&& の短絡）。効くのは単体攻撃だけ。
+        if (chosen is not null && attacker.HasTrait(TraitId.Fixate)
+            && (patternOverride ?? attacker.CurrentPattern) == AttackPattern.Single)
+            FixateTrait.Remember(attacker, chosen);
+
+        return chosen;
+    }
+
+    /// <summary>
+    /// 標的選択の鎖の本体（<see cref="SelectTargetCore"/> から1回だけ呼ばれる）。
+    /// 執着の記憶の書き込みは呼び出し側に置いてある——ここは戻り口が5つあり、
+    /// **鎖を通ったあとの相手**を覚えるには出口を1つに絞る必要があるため。
+    /// </summary>
+    private UnitState? SelectTargetChain(UnitState attacker, AttackPattern? patternOverride, out int lane)
+    {
         lane = -1;
 
         List<UnitState> foes = LivingMembers(Opponent(attacker.TeamId)).ToList();
@@ -527,7 +547,25 @@ public sealed class BattleContext
         if (pool.Count == 0) pool = foes.Where(f => f.Row == Row.Mid).ToList();
         if (pool.Count == 0) pool = foes;
 
-        UnitState target = pool[Roll(pool.Count)];
+        // 執着（ノミ）。**pool から無作為に選ぶ直前**が唯一の窓口で、攻撃者側の標的選択には
+        // Trait のフックが無いので engine 側に置く（庇う・後備え・標的・棘守りと同じ層）。
+        //
+        // 「pool に含まれるなら」が安全弁——**前列が生きている限り後列は狙われない**という
+        // 盤面の中核規則を執着に破らせない。記憶した敵が後列に取り残されたら執着は自然に解ける。
+        // 生存判定も兼ねている（pool は生存者からしか作られない）。
+        //
+        // **薙ぎ・全体もここを通る**ので pattern を明示的に見る（貫きだけが手前で分岐する）。
+        // 巻き込みの中心が固定されると、行動パターンで型が変わる駒と組んだときに意味が変わる。
+        UnitState? fixated = pattern == AttackPattern.Single && attacker.HasTrait(TraitId.Fixate)
+            ? FixateTrait.Remembered(attacker, pool)
+            : null;
+
+        // 執着が効いている手番は **Roll を消費しない**。ここで引くと、執着している間と
+        // していない間で以降の乱数列がずれる。
+        UnitState target = fixated ?? pool[Roll(pool.Count)];
+
+        if (fixated is not null)
+            Log($"    {attacker.Name} は {fixated.Name} から目を離せない", LogKind.Trigger);
 
         // 以下、割り込む側は **PickOne**（同じ資格の駒が複数いたら乱数で選ぶ）。
         // FirstOrDefault のままだと常に席番号の若い駒が割り込むので、鏡像の配置が同値にならない。
