@@ -2349,7 +2349,11 @@ if (focusId == "sever")
                 {
                     string t = l.Text;
                     if (l.Kind == LogKind.Turn) { turn++; continue; }
-                    if (t.Contains($"{nata} は閉じた肌に刃を下ろさない"))
+                    // 捨てた手番はどちらの理由でも1つ（第38期で待ちが2種に割れた）。
+                    // この台には供給源が1枚も無いので実際に出るのは「閉じた肌」だけだが、
+                    // 数えたいのは**失った手番の数**なので両方を拾う。
+                    if (t.Contains($"{nata} は閉じた肌に刃を下ろさない")
+                        || t.Contains($"{nata} は傷がまだ浅いと刃を上げない"))
                     { if (turn != last) { idle++; last = turn; } continue; }
                     if (t.Contains($"{gan} の号令で {nata} の溜めが乗った")) rn++;
                     else if (t.Contains($"{gan} の号令で {dolga} の溜めが乗った")) rd++;
@@ -2365,9 +2369,102 @@ if (focusId == "sever")
         return;
     }
 
+    // ---- reach: 到達可能性（第38期 Phase 0。閾値を決める前に数える）---------------------
+    //
+    // **問い: 現行の 刻み×断ち の盤面で、1体の敵の傷は 3 まで積み得るか。**
+    //
+    // 新ルール（閾値待ち）ではナタが待つ間ノミが書き続けるので、近似は
+    // 「ノミが同一の生存敵に刻んだ回数（＝その敵が抱える傷の深さ）の1戦あたり最大値」。
+    // **現行の盤面ではナタが断つたびに傷が 0 に戻る**ので、そのリセットを無視して数える
+    // ＝ 閾値を入れた後の在庫の下限の近似になる（待つぶん敵は長く生きるので、実際は増える側）。
+    //
+    // **ログではなく `Events` から数える。** 敵は同じ def が複数立つ波があり
+    // （名前が衝突する）、文字列では「同一の敵」を指せない。`InstanceId` は
+    // Deploy の順（味方スロット昇順 → 敵スロット昇順）で振られるので、ノミの席から引ける。
+    //
+    // **第38期の Phase 0 の値は閾値を入れる前に測った**（`SeverTrait.Threshold` 導入前）。
+    // いま走らせると閾値待ちの入った盤面を測るので数字は一致しない——ゲートの記録は
+    // design/PHASE38_SEVER_CADENCE.md 側にある。導入後に走らせると
+    // 「待たせたぶん在庫が実際に伸びたか」の事後確認になる（別の問い）。
+    //
+    //     dotnet run --project BattleSim -c Release 0 sever reach
+    if (sevSub == "reach")
+    {
+        var reachRow = sevBuilds.First(x => x.Name.Contains("刻み×断ち"));
+        // ノミの InstanceId ＝ 味方をスロット昇順に並べたときの位置（ctx.Add の順）。
+        int nomiId = reachRow.F.Occupied().Select((x, i) => (x.Def.Id, i))
+                             .First(t => t.Id == UnitCatalog.Nomi.Id).i;
+
+        Console.WriteLine("# 傷の到達可能性（第38期 Phase 0・診断。docs/ には置かない）");
+        Console.WriteLine();
+        Console.WriteLine($"台は `{reachRow.Name}`。seed 0..{SevSeeds - 1} × 全波。");
+        Console.WriteLine("**ナタの消費を無視して**、ノミが同一の生存敵に刻んだ回数を数えた");
+        Console.WriteLine("（敵が倒れたらその敵の計数は 0 に戻す）。1戦あたりの最大値の分布。");
+        Console.WriteLine();
+        Console.WriteLine("| 波 | 中央値 | 平均 | 最大 | ≥2 の戦 | ≥3 の戦 | ≥4 の戦 | ノミの振/戦 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|");
+        var reachMed = new double[sevStages.Count];
+        for (int w = 0; w < sevStages.Count; w++)
+        {
+            var peaks = new List<int>();
+            double swings = 0;
+            for (int seed = 0; seed < SevSeeds; seed++)
+            {
+                BattleResult res = BattleEngine.Run(reachRow.F, sevStages[w].Enemy, seed, verbose: true);
+                var depth = new Dictionary<int, int>();
+                int peak = 0;
+                foreach (BattleEvent e in res.Events)
+                {
+                    if (e.Kind == BattleEventKind.Attack && e.ActorId == nomiId && e.TargetId is { } t)
+                    {
+                        // 刻みは主目標にだけ・攻撃1回に1度。死体には刻まないので、
+                        // この直後に Death が来たら下の分岐が 0 に戻す（順序は 攻撃 → ダメージ → 死亡）。
+                        swings++;
+                        depth[t] = depth.GetValueOrDefault(t) + 1;
+                        if (depth[t] > peak) peak = depth[t];
+                    }
+                    else if (e.Kind == BattleEventKind.Death && e.TargetId is { } d)
+                    {
+                        depth[d] = 0;
+                    }
+                }
+                peaks.Add(peak);
+            }
+            peaks.Sort();
+            double med = peaks.Count % 2 == 1
+                ? peaks[peaks.Count / 2]
+                : (peaks[peaks.Count / 2 - 1] + peaks[peaks.Count / 2]) / 2.0;
+            reachMed[w] = med;
+            Console.WriteLine($"| 第{w + 1}波 | {med:0.0} | {peaks.Average():0.00} | {peaks.Max()} | "
+                + $"{peaks.Count(p => p >= 2)} | {peaks.Count(p => p >= 3)} | {peaks.Count(p => p >= 4)} | "
+                + $"{swings / SevSeeds:0.00} |");
+        }
+        Console.WriteLine();
+        int ge3 = 0, ge2 = 0;
+        for (int w = 1; w < sevStages.Count; w++) { if (reachMed[w] >= 3) ge3++; if (reachMed[w] >= 2) ge2++; }
+        Console.WriteLine($"**第2〜5波のうち 中央値 ≥3 は {ge3} 波 / ≥2 は {ge2} 波。**");
+        Console.WriteLine(ge3 >= 3 ? "→ `Threshold = 3` で Phase 1 へ。"
+            : ge2 >= 3 ? "→ 中央値 3 の波が過半に届かない。**`Threshold = 2` に落として** Phase 1 へ（事前承認済みのフォールバック）。"
+            : "→ 中央値が 2 にも届かない波が過半。**実装せず報告で止める。**");
+        return;
+    }
+
     string sevFilter = args.Length > 2 && args[2].Length > 0
         ? args[2] : "断ち,裂き (キリ×エグ),刻み×抉り";
+
+    // 第37期に compare から落とした対照（`断ち (キリ×ナタ)`）を**診断のローカルに組む**
+    // （`gradient` / `aim` / `route` と同じ扱い）。**`CompareBuilds()` には戻さない**
+    // ——戻すと `docs/balance.md` の行が増えて「既存42行 ±0.0」の分母が動く。
+    //
+    // 配置は `confirm` の `picks` に残してある旧配置と同じ。閾値待ち（第38期）が
+    // **供給の細い台に何をするか**の無料の対照で、キリは1ターンに傷を1つ撒くだけなので
+    // 「同じ相手に2つ目が乗る」機会そのものが構造的に少ない。
+    (string Name, Formation F) sevControl = ("断ち (キリ×ナタ)", Formation.Build(
+        front1: UnitCatalog.Kiri, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga,
+        back1: UnitCatalog.Vel, back3: UnitCatalog.Nata));
     var sevRows = sevBuilds
+        .Select(x => (Name: x.Name, F: x.F))
+        .Append(sevControl)
         .Where(x => sevFilter.Split(',').Any(k => x.Name.Contains(k.Trim())))
         .ToList();
 
@@ -2384,22 +2481,27 @@ if (focusId == "sever")
         return b > a && int.TryParse(text[a..b], out int w) ? w : 0;
     }
 
-    // 0 発火 / 1 消費傷の総和 / 2 放棄ターン / 3 ナタの振り / 4 逸れた振り
+    // 0 発火 / 1 消費傷の総和 / 2 放棄ターン（獲物なし）/ 3 ナタの振り / 4 逸れた振り
     // 5 空振り（振ったが断てなかった）/ 6 軛で切られた発火 / 7 w>=6 の発火
     // 8 逸れた振りの基礎打点 / 9 ノミのなぞり発火 / 10 ノミのなぞり上乗せ総量
     // 11 エグのこじ開け発火 / 12 エグの上乗せ総量 / 13 戦数
+    // 14 待ちターン（傷はあるが Threshold に届かない。第38期）
+    //
+    // **14 と 2 を分けるのが第38期の主眼**——どちらも「振らなかった手番」だが、
+    // 2 は供給が止まっている（書き手が落ちた／まだ誰も刻んでいない）、
+    // 14 は在庫が積み上がっている最中。合算すると周期が立ったのか供給が枯れたのかが決まらない。
     var acc = new Dictionary<(int Row, int Wave), double[]>();
 
     for (int r = 0; r < sevRows.Count; r++)
         for (int w = 0; w < sevStages.Count; w++)
         {
-            var a = new double[14];
+            var a = new double[15];
             for (int seed = 0; seed < SevSeeds; seed++)
             {
                 BattleResult res = BattleEngine.Run(sevRows[r].F, sevStages[w].Enemy, seed, verbose: true);
                 a[13]++;
 
-                int turn = 0, lastIdleTurn = -1;
+                int turn = 0, lastIdleTurn = -1, lastWaitTurn = -1;
                 string intended = "", swungAt = "";
                 bool swinging = false, fired = false, cutPending = false;
                 int swungAtk = 0;
@@ -2427,6 +2529,14 @@ if (focusId == "sever")
                         // 呼ばれるので（据えの判定。のろまの「まだ動き出せない」と同じ既存の作法）、
                         // 同じ手番に2行出ることがある。数えたいのは失った手番の数。
                         if (turn != lastIdleTurn) { a[2]++; lastIdleTurn = turn; }
+                        continue;
+                    }
+
+                    // 待ち（浅い）。**放棄と分けて数える**（上の但し書き）。
+                    // 1ターンに1回だけ数えるのは放棄と同じ理由（CanAct が2回呼ばれうる）。
+                    if (t.Contains($"{nata} は傷がまだ浅いと刃を上げない"))
+                    {
+                        if (turn != lastWaitTurn) { a[14]++; lastWaitTurn = turn; }
                         continue;
                     }
 
@@ -2484,13 +2594,17 @@ if (focusId == "sever")
     Console.WriteLine();
     Console.WriteLine($"seed 0..{SevSeeds - 1} × 全波、verbose のログ行を数えた。数字は**1戦あたり**。");
     Console.WriteLine();
-    Console.WriteLine("- `振` ナタが攻撃を振った回数 / `放棄` 傷持ちが狙えず手番を捨てた回数");
+    Console.WriteLine($"閾値は `SeverTrait.Threshold` = {SeverTrait.Threshold}（第38期）。");
+    Console.WriteLine();
+    Console.WriteLine("- `振` ナタが攻撃を振った回数");
+    Console.WriteLine("- `放棄` 傷持ちが1体も狙えず手番を捨てた回数（供給が止まっている）");
+    Console.WriteLine($"- `待ち` 傷はあるが最深が {SeverTrait.Threshold} に届かず捨てた回数（在庫を積んでいる最中）");
     Console.WriteLine("- `断ち` 上乗せが発火した回数 / `傷/断ち` 1発でまとめて断った傷の平均数");
     Console.WriteLine("- `逸れ` 見定めた相手と実際に殴った相手が違った振り（介入の鎖が上書きした）");
     Console.WriteLine("- `空振` 振ったが断てなかった回数（逸れの多くはここに落ちる）");
     Console.WriteLine();
-    Console.WriteLine("| 編成 | 波 | 振 | 放棄 | 断ち | 傷/断ち | 上乗せ | 逸れ | 空振 | 軛切 | w≥6 |");
-    Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+    Console.WriteLine("| 編成 | 波 | 振 | 放棄 | 待ち | 断ち | 傷/断ち | 上乗せ | 逸れ | 空振 | 軛切 | w≥6 |");
+    Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
     for (int r = 0; r < sevRows.Count; r++)
         for (int w = 0; w < sevStages.Count; w++)
         {
@@ -2498,6 +2612,7 @@ if (focusId == "sever")
             double n = a[13];
             string per = a[0] > 0 ? $"{a[1] / a[0]:0.00}" : "—";
             Console.WriteLine($"| {sevRows[r].Name} | 第{w + 1}波 | {a[3] / n:0.00} | {a[2] / n:0.00} | "
+                + $"{a[14] / n:0.00} | "
                 + $"{a[0] / n:0.00} | {per} | {SeverTrait.PerWound * a[1] / n:0.0} | "
                 + $"{a[4] / n:0.00} | {a[5] / n:0.00} | {a[6] / n:0.00} | {a[7] / n:0.00} |");
         }
@@ -11331,9 +11446,11 @@ if (focusId == "confirm")
         ("断ち (キリ×ナタ)",
             Formation.Build(front1: UnitCatalog.Kiri, front3: UnitCatalog.Golm, center: UnitCatalog.Dolga, back1: UnitCatalog.Vel, back3: UnitCatalog.Nata),
             Formation.Build(front1: UnitCatalog.Nata, front3: UnitCatalog.Golm, center: UnitCatalog.Vel, back1: UnitCatalog.Kiri, back3: UnitCatalog.Dolga)),
+        // 候補は**第38期の reseat 1位**（74.3%）に差し替えた。閾値待ちを入れて盤面が動いたので、
+        // 第37期の候補（ヴェル↔ノミ の入れ替わった形・72.5%）はもう1位ではない。
         ("刻み×断ち (ノミ×ナタ)",
             Formation.Build(front1: UnitCatalog.Nata, front3: UnitCatalog.Golm, center: UnitCatalog.Nomi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Vel),
-            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Nata, center: UnitCatalog.Dolga, back1: UnitCatalog.Vel, back3: UnitCatalog.Nomi)),
+            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Nata, center: UnitCatalog.Dolga, back1: UnitCatalog.Nomi, back3: UnitCatalog.Vel)),
     };
 
     Console.WriteLine("## 採用候補の追試");
@@ -12358,12 +12475,16 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // （放棄 3.7回/戦。ノミ台では 0.5回/戦）。定義（SeverTrait / Nata）は残してあるので、
     // 供給を厚くした台で組み直せばいつでも戻せる。詳細は design/PHASE37_SEVER.md。
     //
-    // 配置は仮置き（エグの席にナタを置いただけ）のまま。reseat 1位はナタを前3へ出す形だが、
-    // confirm（seed 200..599）で +0.3pt と閾値未満だったので据え置き。
-    // **reseat の帯そのものは 60.5〜91.3% と広い**——値段は「前列にナタを出すかドルガを出すか」に
-    // 集中していて、ドルガを前に出す8通りは第4波が 4〜6% に落ちる。
-    ("刻み×断ち (ノミ×ナタ)", Formation.Build(front1: UnitCatalog.Nata, front3: UnitCatalog.Golm,
-                                        center: UnitCatalog.Nomi, back1: UnitCatalog.Dolga,
+    // **配置は第38期に動いた。** 閾値待ち（SeverTrait.Threshold = 2）を入れるとナタが振る回数が
+    // 減り、代わりにノミが在庫を積む時間が価値になる——reseat 1位が「ノミを中央から後1へ、
+    // ドルガを中央へ」に変わり、confirm（seed 200..599）で +2.9pt と閾値 2.0pt を超えたので採用。
+    // 第37期の仮置き（エグの席にナタを置いただけ）はこれで卒業した。
+    //
+    // **値段は相変わらず「前列にナタを出すかノミを出すか」に集中している**——
+    // ノミを前に出す8通りは第3〜5波が 0〜4% に落ちる（reseat 40.3% 以下の塊）。
+    // 第37期は「ドルガを前に出す8通り」が下位だったので、**閾値待ちで落ちる駒が入れ替わった**。
+    ("刻み×断ち (ノミ×ナタ)", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Nata,
+                                        center: UnitCatalog.Dolga, back1: UnitCatalog.Nomi,
                                         back3: UnitCatalog.Vel))
 };
 

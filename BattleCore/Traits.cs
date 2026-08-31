@@ -1927,6 +1927,28 @@ public sealed class CarveTrait : Trait
 /// 高い +5 なのは、**読んだ傷をその場で全部使い切る**から——次の手番の自分は同じ傷を
 /// 二度と読めない。維持読みとの差はここにある。</para>
 ///
+/// <para><b>周期は「時計」ではなく「閾値」で作る（第38期）。</b> 第37期の実測では
+/// <c>傷/断ち</c> が 1.00 に張り付き、断ちは「畳んで一撃」ではなく
+/// 「傷を持つ相手への +5 の定額上乗せ」として動いていた。原因は速さではない——
+/// <b>維持読みは順序で立ち、消費読みは周期差で立つ。</b> 全消費の読み手が毎ターン振る限り、
+/// 在庫の天井は1ターンの供給量なので、順序を入れ替えても定常在庫は 1 のまま。
+/// そこで <see cref="Threshold"/> を置き、<b>在庫が閾値に達するまで振らない</b>ことで
+/// 供給と消費の周期差を作る。系として: <b>介入の税額は1振りに載せた在庫に比例する</b>
+/// （在庫 1 なら殉教者が逸らしても損は ±0。閾値を置いて初めて介入が税になる）。</para>
+///
+/// <para><b><c>Actions</c> の <see cref="ActionKind.Charge"/> 化は採らなかった</b>（第38期）。
+/// 次に消費型を作る人のための記録で、理由は3つ:
+/// <list type="number">
+/// <item><b>第36期の先例に正面から抵触する。</b> ゴルムの腹は「毎ターン無条件に溜まる経路を
+/// 混ぜると、腹が盤面の出来事から切れてただの周期になる」として時計型の蓄積を明示的に外した。
+/// Charge は絶対時刻の周期で、傷という<b>盤面の出来事</b>から蓄積を切り離してしまう。</item>
+/// <item><b>Charge の枠組みは増幅を内蔵している。</b> 実物は <c>[Charge, Attack(200)]</c>
+/// （狙撃手・詠唱兵）で、Attack 側のパーセントが溜めの払い出し。100 にして外すことはできるが、
+/// そのとき Charge は「何も溜まらない溜め」になり、説明がつかない駒になる。</item>
+/// <item><b>可動部が少ない。</b> 閾値はこのクラスの判定1つで書けて、engine・<c>Actions</c>・
+/// 周期スタック（種別依存の弾きは周期を進めない）のどれにも触らない。</item>
+/// </list></para>
+///
 /// <para><b>標的選好の窓口は engine 側（<c>SelectTargetChain</c>）。</b> 攻撃者側の標的選択に
 /// Trait のフックが無いので、執着（<see cref="FixateTrait"/>）とまったく同じ場所に置く。
 /// **素の候補集合（pool）は1体も足さない・引かない**ので、「前列が生きている限り後列は
@@ -1964,7 +1986,34 @@ public sealed class SeverTrait : Trait
     /// <summary>傷1つあたりの上乗せ。<b>加算</b>（倍率にしないこと。上の但し書き参照）。</summary>
     public const int PerWound = 5;
 
+    /// <summary>
+    /// 振り始める傷の深さ（第38期）。狙える敵の最深の傷がこれに満たない間は振らない。
+    /// <b>これが周期を作る唯一の可動部</b>——engine にも <c>Actions</c> にも触らない。
+    ///
+    /// <para>値 2 は第38期 Phase 0 の実測から。現行の <c>刻み×断ち</c> の盤面で
+    /// 「ノミが同一の生存敵に刻んだ回数」の1戦あたり最大値の中央値は
+    /// 第2波 2.0 / 第3波 2.0 / 第4波 3.0 / 第5波 2.0 で、<b>3 に届くのは第4波だけ</b>。
+    /// 3 にすると第2・3・5波でナタが永久に沈黙する（在庫が閾値に届かない）。</para>
+    /// </summary>
+    public const int Threshold = 2;
+
     public override TraitId Id => TraitId.Sever;
+
+    /// <summary>
+    /// 候補の中で <see cref="StatusKeys.Wound"/> がいちばん深い深さ。傷持ちが1体もいなければ 0。
+    /// <b>閾値の判定（<see cref="HasPrey"/>）と待ちのログの出し分けが同じ数を見る。</b>
+    /// 2箇所で別々に走査すると「振らないと決めた理由」とログが食い違う。
+    /// </summary>
+    public static int DeepestWound(BattleContext ctx, UnitState self)
+    {
+        int best = 0;
+        foreach (UnitState f in ctx.TargetPool(self))
+        {
+            int w = f.Counter(StatusKeys.Wound);
+            if (w > best) best = w;
+        }
+        return best;
+    }
 
     /// <summary>
     /// 候補の中で <see cref="StatusKeys.Wound"/> がいちばん深い駒。傷持ちが1体もいなければ null。
@@ -1985,10 +2034,14 @@ public sealed class SeverTrait : Trait
     }
 
     /// <summary>
-    /// 狙える敵に傷持ちが1体でもいるか。**選好と同じ候補集合**を使う（上の但し書き）。
+    /// 狙える敵に <see cref="Threshold"/> 以上の傷を負った駒がいるか。
+    /// **選好と同じ候補集合**を使う（上の但し書き）。
+    ///
+    /// <para><b>第38期に「1つでもあるか」から「Threshold 以上あるか」へ変えた。</b>
+    /// 変えたのはここ1箇所で、選好・消費・<see cref="SurrendersTurn"/> は触っていない。</para>
     /// </summary>
     public static bool HasPrey(BattleContext ctx, UnitState self)
-        => ctx.TargetPool(self).Any(f => f.Counter(StatusKeys.Wound) > 0);
+        => DeepestWound(ctx, self) >= Threshold;
 
     /// <summary>
     /// 止めているのは<b>攻撃だけ</b>（不動＝<see cref="ImmobileTrait"/> と同じ側）。
@@ -2002,9 +2055,17 @@ public sealed class SeverTrait : Trait
     {
         if (kind != ActionKind.Attack) return true;
 
-        bool prey = HasPrey(ctx, self);
-        if (!prey) ctx.Log($"    {self.Name} は閉じた肌に刃を下ろさない", LogKind.Action);
-        return prey;
+        // **待ちを2種に分ける**（第38期）。「獲物がいない」と「まだ浅い」は
+        // 同じ「振らない」でも意味が違う——前者は供給が止まっている（書き手が落ちた）、
+        // 後者は在庫が積み上がっている最中。診断が別に数えられないと、
+        // 周期が立ったのか供給が枯れたのかが決まらない。
+        int deepest = DeepestWound(ctx, self);
+        if (deepest >= Threshold) return true;
+
+        ctx.Log(deepest <= 0
+            ? $"    {self.Name} は閉じた肌に刃を下ろさない"
+            : $"    {self.Name} は傷がまだ浅いと刃を上げない", LogKind.Action);
+        return false;
     }
 
     /// <summary>
