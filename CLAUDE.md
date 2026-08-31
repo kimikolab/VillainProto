@@ -402,7 +402,11 @@ BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project Ba
     GodotApp/       Godot 4 (C#) の戦闘再生装置。sln には入っておらず単独ビルド。
                     会戦の台本（Events / Openings）を再生するだけで、判定は一切しない
     docs/           BattleSim が吐く生成物（balance.md / units.md）。手で編集しない
-    design/         設計文書（コンセプトメモ・会戦計画）。生成物ではないので手で編集する
+    design/         設計文書（コンセプトメモ・会戦計画・指示書・測定報告）。手で編集する
+
+**`docs/` は生成物のみ・手書き文書は `design/`。** 測定報告や指示書を `docs/` に置かない
+（生成物と手書きが混ざると「手で編集しない」が守れなくなる）。第31期の報告は一度
+`docs/` に置いて第32期に `design/` へ移した。
 
 - **BattleCore に UI の参照を足さない**。`INotifyPropertyChanged` も `ObservableCollection` も不可。本番を Godot / Unity にする場合にそのまま持っていくため。
 - **PrototypeApp に戦闘ルールを書かない**。ViewModel やコードビハインドにダメージ計算が漏れた瞬間に移植できなくなる。
