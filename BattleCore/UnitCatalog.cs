@@ -782,9 +782,35 @@ public static class UnitCatalog
         Flavor = "押されたら押し返す。それしかできないし、加減も知らない。"
     };
 
+    /// <summary>
+    /// 引き受けのウケ。<b>状態の肩代わり</b>——弱体を横取りしてアーマーに変える（第42期）。
+    ///
+    /// <para><b>肩代わりは5種あって全部ダメージだった</b>（庇う・分かち・巨躯・後備え・棘守り）。
+    /// 状態を肩代わりするものが1つも無かったので、ここが完全な空白地。</para>
+    ///
+    /// <para><b>同じ通貨をウツと逆向きに使う。</b> 逆しま（ウツ）は弱体を攻撃力
+    /// （下げ幅の3倍）に、引き受け（ウケ）はアーマーに変える。傷軸で維持攻（エグ）と
+    /// 維持防（ハリ）が波ごとに別の順位を作ったのと同じ形を、弱体で作る。</para>
+    ///
+    /// <para>HP90・攻6・速5 は探索段階の初期値。<b>掃引の対象は
+    /// <see cref="BearRule.ArmorPerDull"/> だけ</b>で、HP・攻・速は振らない。</para>
+    /// </summary>
+    public static readonly UnitDef Uke = new()
+    {
+        Id = "uke",
+        Name = "引き受けのウケ",
+        MaxHp = 90,
+        Attack = 6,
+        Speed = 5,
+        Traits = new[] { TraitId.Bear },
+        PlusText = "隣の味方が受ける攻撃力低下を代わりに背負い、その分だけ鎧になる",
+        MinusText = "背負った分だけ自分の腕は落ちる。隣に誰もいなければ何も起きない",
+        Flavor = "誰の痛みでも代わりに背負う。頼まれてもいないのに。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

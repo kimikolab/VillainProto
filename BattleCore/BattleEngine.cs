@@ -328,9 +328,33 @@ public sealed class BattleContext
     public int ShoveStaggered { get; internal set; }
     public int ShoveBlocked { get; internal set; }
 
+    /// <summary>
+    /// 集約（引き受け）の強度。<b>診断（dull）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="BearRule.Default"/>）。
+    /// static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public BearRule Bear { get; }
+
+    /// <summary>
+    /// 弱体（<see cref="Dull"/>）の計数。<b>発火しなかったことは盤面の値に痕跡を残さない</b>ので、
+    /// 診断が読むためだけに数える（<c>verbose</c> には依存しない）。盤面には一切影響しない。
+    ///
+    /// <para><c>DullTotal</c> 窓口を通った総量（両陣営） ／ <c>DullByRoute</c> 経路別の内訳 ／
+    /// <c>BearTaken</c> 集約役が引き受けた量 ／ <c>BearPassed</c> 横取りされずに素通りした量 ／
+    /// <c>BearArmor</c> 生成したアーマー量 ／ <c>BearSoaked</c> そのうち実際にダメージを吸った量 ／
+    /// <c>BearFrom</c> 引き受けた相手の内訳。</para>
+    /// </summary>
+    public int DullTotal { get; internal set; }
+    public int[] DullByRoute { get; } = new int[DullRoutes.Count];
+    public int BearTaken { get; internal set; }
+    public int BearPassed { get; internal set; }
+    public int BearArmor { get; internal set; }
+    public int BearSoaked { get; internal set; }
+    public Dictionary<string, int> BearFrom { get; } = new();
+
     public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null,
                          HushRule? hush = null, MartyrRule? martyr = null, ExposeRule? expose = null,
-                         ShoveRule? shove = null)
+                         ShoveRule? shove = null, BearRule? bear = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -340,6 +364,7 @@ public sealed class BattleContext
         Martyr = martyr ?? MartyrRule.Default;
         Expose = expose ?? ExposeRule.Default;
         Shove = shove ?? ShoveRule.Default;
+        Bear = bear ?? BearRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -1211,7 +1236,7 @@ public sealed class BattleContext
                     int dull = taken / SharerTrait.DullDivisor;
                     if (dull > 0)
                     {
-                        target.AtkBonus -= dull;
+                        Dull(target, dull, DullRoute.Sharer);
                         Log($"    痛みを取り上げられた {target.Name} の腕がなまる（攻撃 -{dull}）",
                             LogKind.FriendlyFire);
                     }
@@ -1231,6 +1256,12 @@ public sealed class BattleContext
             int soak = Math.Min(armor, amount);
             target.SetCounter(StatusKeys.Armor, armor - soak);
             amount -= soak;
+
+            // 集約が作った鎧が実際に吸った量。**砕け（ShatterTrait）の破片と混ざる**ので、
+            // Bear 持ちの駒に限って数える（診断の台に砕けを入れないことが前提）。
+            // 盤面には影響しない——生成量だけを見ると第23期の吐き戻し（経路は通ったが
+            // 出力に変換される前に戦闘が終わる）と同じ穴に落ちるので、吸った量を別に持つ。
+            if (target.HasTrait(TraitId.Bear)) BearSoaked += soak;
             Log($"    {target.Name} の破片が {soak} 防いだ（残り {armor - soak}）", LogKind.Trigger);
 
             // 破片で受け切ったなら「何も起きなかった」と扱う。被弾強化も反撃も走らせない。
@@ -1418,6 +1449,84 @@ public sealed class BattleContext
         });
     }
 
+    /// <summary>
+    /// 攻撃力を下げる唯一の窓口。<b><c>AtkBonus</c> を直接引かないこと。</b>
+    /// 集約（引き受け・<see cref="TraitId.Bear"/>）の横取りはここに立っている。
+    /// 回復に対する <see cref="Heal"/> と同じ位置づけで、渇きが <c>Heal</c> の入口に
+    /// 1つ立っているのと同じ形。
+    ///
+    /// <para><b>やることは2つだけ。</b> (1) 対象に隣接する生存味方に集約役がいれば
+    /// <paramref name="amount"/> をそちらへ移す。(2) 最終的な受け手の <c>AtkBonus</c> から引く。</para>
+    ///
+    /// <para><b>やらないこと（意図的）:</b></para>
+    /// <list type="bullet">
+    ///   <item><b><c>AcceptsSupport</c> の判定を入れない。</b> 5経路で扱いが揃っていない
+    ///   （なまりは無検査／呪詛の敵側と突き返しは自前で弾く／呪詛の漏れと萎縮は
+    ///   <see cref="SupportTargets"/> を通す）。ここで統一すると既存45行が動く。
+    ///   判定は呼び出し側に残したまま、<c>AtkBonus -=</c> の行だけを差し替えてある</item>
+    ///   <item><b><c>OnDebuffed</c> のようなフックを作らない。</b> 読み手が2枚
+    ///   （逆しま・引き受け）になっただけでイベントを作るのは早い</item>
+    ///   <item><b>ログの文言を変えない。</b> 各経路のログは呼び出し側に残す
+    ///   （「腕がなまる」「勢い余って体勢まで崩れた」は駒の個性であって窓口の責務ではない）</item>
+    /// </list>
+    ///
+    /// <para><b>5経路すべてを通す</b>——敵への呪詛も含む。集約は両陣営に等しく書けるべきで、
+    /// 将来敵側に集約役を置くときに窓口が分かれていると監査が二重になる。
+    /// 墓守の層の減衰（<c>desired - applied</c> が負になる）は<b>通していない</b>——
+    /// あれは自分で積んだ自分のボーナスの引き直しで、弱体化ではない。</para>
+    ///
+    /// <para><paramref name="route"/> は診断（<c>dull</c>）が経路別に数えるためだけの札で、
+    /// <b>盤面には一切影響しない</b>（<c>ShoveFired</c> 等と同じ扱いで verbose に依存しない）。
+    /// 経路をログの文字列から数え直すこともできるが、開戦時1回の3経路（呪詛×2・萎縮）は
+    /// 1行にまとめて出るので延べ体数が復元できない。</para>
+    /// </summary>
+    public void Dull(UnitState target, int amount, DullRoute route = DullRoute.Other)
+    {
+        if (amount <= 0) return;
+
+        DullTotal += amount;
+        DullByRoute[(int)route] += amount;
+
+        UnitState receiver = target;
+
+        // 横取り。**対象が集約役自身なら横取りしない**（再帰を作らない）。
+        // **対象が集約役でも横取りしない**（分かちが !HasTrait(Sharer) で止めているのと同じ形。
+        // 集約役どうしが押し付け合う経路を消す）。
+        if (!target.HasTrait(TraitId.Bear))
+        {
+            UnitState? bearer = PickOne(
+                LivingMembers(target.TeamId)
+                    .Where(u => u != target && u.HasTrait(TraitId.Bear)
+                                && FormationRules.AreAdjacent(u.Slot, target.Slot))
+                    .ToList());
+            if (bearer is not null)
+            {
+                receiver = bearer;
+                BearTaken += amount;
+                BearFrom[target.Name] = BearFrom.TryGetValue(target.Name, out int prev) ? prev + amount : amount;
+
+                int armor = amount * Bear.ArmorPerDull;
+                if (armor > 0)
+                {
+                    bearer.SetCounter(StatusKeys.Armor, bearer.Counter(StatusKeys.Armor) + armor);
+                    BearArmor += armor;
+                }
+                Log($"    {bearer.Name} が {target.Name} の重荷を引き受けた（攻撃 -{amount} / 鎧 +{armor}）",
+                    LogKind.Trigger);
+            }
+            else
+            {
+                BearPassed += amount;
+            }
+        }
+        else
+        {
+            BearPassed += amount;
+        }
+
+        receiver.AtkBonus -= amount;
+    }
+
     public void Heal(UnitState target, int amount)
     {
         if (!target.IsAlive || amount <= 0) return;
@@ -1557,10 +1666,11 @@ public static class BattleEngine
     public static BattleResult Run(Formation player, Formation enemy, int seed, bool verbose = true,
                                    ColossusRule? colossus = null, YokeRule? yoke = null,
                                    HushRule? hush = null, MartyrRule? martyr = null,
-                                   ExposeRule? expose = null, ShoveRule? shove = null)
+                                   ExposeRule? expose = null, ShoveRule? shove = null,
+                                   BearRule? bear = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
-               seed, verbose, colossus, yoke, hush, martyr, expose, shove);
+               seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -1574,9 +1684,9 @@ public static class BattleEngine
                                    int seed, bool verbose = true, ColossusRule? colossus = null,
                                    YokeRule? yoke = null, HushRule? hush = null,
                                    MartyrRule? martyr = null, ExposeRule? expose = null,
-                                   ShoveRule? shove = null)
+                                   ShoveRule? shove = null, BearRule? bear = null)
     {
-        var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove);
+        var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -1784,6 +1894,13 @@ public static class BattleEngine
             Events = ctx.Events.ToList(),
             ExposeCount = ctx.ExposeCount,
             ExposeMissed = ctx.ExposeMissed,
+            DullTotal = ctx.DullTotal,
+            DullByRoute = ctx.DullByRoute,
+            BearTaken = ctx.BearTaken,
+            BearPassed = ctx.BearPassed,
+            BearArmor = ctx.BearArmor,
+            BearSoaked = ctx.BearSoaked,
+            BearFrom = ctx.BearFrom,
             ShoveFired = ctx.ShoveFired,
             ShoveCapped = ctx.ShoveCapped,
             ShoveSwapped = ctx.ShoveSwapped,

@@ -746,4 +746,26 @@ public sealed class BattleResult
     public required int ShoveNoRow { get; init; }
     public required int ShoveStaggered { get; init; }
     public required int ShoveBlocked { get; init; }
+
+    /// <summary>
+    /// 弱体（第42期）の計数。<b>窓口 <see cref="BattleContext.Dull"/> を通った量を経路別に数える。</b>
+    /// 開戦時1回の3経路（呪詛×2・萎縮）はログを1行にまとめて出すので、
+    /// <b>文字列からは延べ体数が復元できない</b>——だから結果に載せる。
+    /// <b>verbose に依存しない</b>（診断は verbose=false で数百戦回すため）。
+    ///
+    /// <para><c>DullTotal</c> 総量（両陣営） ／ <c>DullByRoute</c> 経路別（<see cref="DullRoute"/> の順） ／
+    /// <c>BearTaken</c> 集約役が引き受けた量 ／ <c>BearPassed</c> 横取りされずに素通りした量 ／
+    /// <c>BearArmor</c> 生成したアーマー ／ <c>BearSoaked</c> そのうち実際に吸った量 ／
+    /// <c>BearFrom</c> 引き受けた相手の内訳（駒名 → 量）。</para>
+    ///
+    /// <para>集約役（<c>UnitCatalog.Uke</c>）を編成に入れなければ <c>Bear*</c> は全部 0。
+    /// <c>Dull*</c> は弱体源（ドハ／ネル／クビ／ハネ）がいなければ全部 0。</para>
+    /// </summary>
+    public required int DullTotal { get; init; }
+    public required IReadOnlyList<int> DullByRoute { get; init; }
+    public required int BearTaken { get; init; }
+    public required int BearPassed { get; init; }
+    public required int BearArmor { get; init; }
+    public required int BearSoaked { get; init; }
+    public required IReadOnlyDictionary<string, int> BearFrom { get; init; }
 }

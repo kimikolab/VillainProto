@@ -78,6 +78,8 @@ public enum TraitId
     // 追加順の都合でプラス側のブロックに並んでいる（各列挙子のコメントに但し書きがある）。
     Shove,       // 突き返し: 味方が動かされるたび、敵陣の隊列を突き崩す。
                  // ただし勢い余って隣接する味方の体勢まで崩す（攻撃力が下がる）
+    Bear,        // 引き受け: 隣接する味方が受ける攻撃力低下を代わりに背負い、その分だけ鎧になる。
+                 // ただし自分の腕は落ち続ける（同上。1つの動作の表と裏）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -486,7 +488,7 @@ public sealed class CurseTrait : Trait
         foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
         {
             if (!foe.AcceptsSupport) continue;
-            foe.AtkBonus -= EnemyDebuff;
+            ctx.Dull(foe, EnemyDebuff, DullRoute.CurseEnemy);
         }
         ctx.Log($"  {self.Name} の呪詛が敵全体を蝕む（攻撃 -{EnemyDebuff}）", LogKind.Trigger);
 
@@ -496,7 +498,7 @@ public sealed class CurseTrait : Trait
         {
             if (ally == self) continue;
             foreach (UnitState t in ctx.SupportTargets(ally))
-                t.AtkBonus -= AllyLeak;
+                ctx.Dull(t, AllyLeak, DullRoute.CurseLeak);
         }
         ctx.Log($"    呪詛は味方にも漏れた（攻撃 -{AllyLeak}）", LogKind.FriendlyFire);
     }
@@ -1659,7 +1661,7 @@ public sealed class ShoveTrait : Trait
             // 通すのとはここが違う。ガルドを隣に置けば代金を1点も払わない。
             if (!ally.AcceptsSupport) { ctx.ShoveBlocked++; continue; }
 
-            ally.AtkBonus -= penalty;
+            ctx.Dull(ally, penalty, DullRoute.Shove);
             ctx.ShoveStaggered++;
             hit.Add(ally.Name);
         }
@@ -1699,6 +1701,86 @@ public readonly record struct ShoveRule(int Penalty)
     /// <summary>探索段階の初期値（第41期）。</summary>
     public static ShoveRule Default => new(2);
 }
+
+/// <summary>
+/// 弱体の経路。<b>診断（<c>dull</c>）が経路別に数えるためだけの札</b>で、盤面には一切影響しない。
+/// <see cref="BattleContext.Dull"/> を通る5経路に1対1で対応する。
+/// </summary>
+public enum DullRoute
+{
+    Other,        // 札を付け忘れた呼び出し（現状ゼロ）
+    Sharer,       // 分かちの「腕がなまる」: ドハ → 守られた味方・肩代わりのたび
+    CurseEnemy,   // 呪詛: ネル → 敵全体・開戦時1回
+    CurseLeak,    // 呪詛の味方漏れ: ネル → 味方全体（SupportTargets 経由）・開戦時1回
+    Shove,        // 突き返しの Stagger: ハネ → 隣接味方・1ターン1回
+    Cower         // 萎縮: クビ → 味方全体（SupportTargets 経由）・開戦時1回
+}
+
+/// <summary>経路の名前と本数。診断の表の見出しと配列長をここ1箇所から引く。</summary>
+public static class DullRoutes
+{
+    public static readonly string[] Names = { "その他", "なまり", "呪詛敵", "呪詛漏れ", "突き返し", "萎縮" };
+    public static int Count => Names.Length;
+}
+
+/// <summary>
+/// 引き受け（集約）。隣接する味方が受ける攻撃力低下を代わりに背負い、その分だけ鎧になる。
+/// ただし自分の腕は落ち続ける——<b>プラスとマイナスが1つの動作の表と裏</b>なので、
+/// <see cref="TraitId"/> のどちらのブロックにも入らない（置き去り・突き返しと同じ扱い）。
+///
+/// <para><b>肩代わりで初めて「状態の肩代わり」になった。</b> 既存の肩代わりは5種
+/// （庇う・分かち・巨躯・後備え・棘守り）あって<b>全部ダメージ</b>で、
+/// 状態を肩代わりするものが1つも無かった。</para>
+///
+/// <para><b>同じ通貨をウツと逆向きに使う。</b> 逆しま（ウツ）は弱体を<b>攻撃力</b>
+/// （下げ幅の3倍）に変え、引き受け（ウケ）は<b>アーマー</b>に変える。傷軸で
+/// 維持攻（エグ）と維持防（ハリ）が波ごとに別の順位を作ったのと同じ形。</para>
+///
+/// <para><b>横取りの実装は <see cref="BattleContext.Dull"/> の中にある。</b>
+/// 「弱体が入る直前に横取りする」機構なので、駒ごとのフックでは表現できない
+/// （盤面ルールが engine 側に判定を持つのと同じ理由。ただし集約は盤面ルールではなく
+/// 片陣営の駒の効果で、両陣営に等しくはかからない）。この Trait 本体は札にすぎない。</para>
+///
+/// <para><b>隣接に限定するのが設計の中核。</b> 「味方全体」にすると配置の判断が消え、
+/// ウツと同居した瞬間に必ずウケが全部持っていく。隣接に限れば
+/// 「ウツをウケの隣に置かない」という配置解が残る——同じ供給を2枚の読み手が
+/// 配置で分け合う形になる。<b>召喚枠（スロット5〜8）も隣接表に含まれるので対象に入る</b>
+/// （貫きのレーン経路・巨躯の被覆と同じ扱い）。</para>
+///
+/// <para><b>攻撃力ではなくアーマーにするのは意図的。</b> 被ダメージを減算で直接下げると、
+/// 敵の一撃を下回った時点で無敵になって二値化する（アーマーがプールにしてある理由と同じ穴）。
+/// アーマーは既にプールとして実装されていて HP の前に削られるので、上限を数値で切らずに
+/// 崖を避けられる。<c>ModifyIncomingDamage</c> は<b>使わない</b>——実装が1つしかない
+/// フックなので増やしたくはあるが、そこに書くと減算になって崖が戻る。</para>
+///
+/// <para><b>逆しまと1枚に持たせないこと。</b> 供給→横取り→3倍変換が1体で完結して
+/// 自己完結したマイナスになり、<c>AtkBonus</c> に下限が無いので実質乗算になる
+/// （ホタの熾火に次ぐ2つ目の乗算フラグ）。</para>
+/// </summary>
+public sealed class BearTrait : Trait
+{
+    public override TraitId Id => TraitId.Bear;
+}
+
+/// <summary>
+/// 引き受けの強度。<b>診断（dull）が版を差し替えるためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない。
+///
+/// <para><paramref name="ArmorPerDull"/> は引き受けた攻撃力1点あたりに生成する
+/// アーマー。<c>0</c> なら<b>横取りだけを走らせて変換を止める</b>——
+/// 第41期が確立した形（「符号を測りたい効果は、その効果だけを 0 にできるノブと対にする」）。
+/// 横取り自体を止めるノブは置いていない（それはウケを外した対照と同じなので二重になる）。</para>
+///
+/// <para><b>既定を無効にしなくてよい。</b> 味方側の駒なので、
+/// <see cref="UnitCatalog.Uke"/> を編成に入れない限り既存45行は1バイトも動かない
+/// （それ自体が回帰チェックになる）。static のノブを置かない理由は
+/// <see cref="ColossusRule"/> / <see cref="YokeRule"/> / <see cref="ShoveRule"/> と同じ。</para>
+/// </summary>
+public readonly record struct BearRule(int ArmorPerDull)
+{
+    public static BearRule Default => new(2);
+}
+
 
 /// <summary>澱み。既に積まれた毒を増幅する。毒が無ければ何もしない。</summary>
 public sealed class AmplifierTrait : Trait
@@ -3002,7 +3084,7 @@ public sealed class CowerTrait : Trait
         {
             if (ally == self) continue;
             foreach (UnitState t in ctx.SupportTargets(ally))
-                t.AtkBonus -= AttackPenalty;
+                ctx.Dull(t, AttackPenalty, DullRoute.Cower);
         }
         ctx.Log($"  {self.Name} の怯えが伝染した（味方全体 攻撃 -{AttackPenalty} / 被ダメージ -{ReductionPercent}%）", LogKind.FriendlyFire);
     }
@@ -3455,6 +3537,7 @@ public static class TraitCatalog
         new AlmsTrait(),
         new ExposeTrait(),
         new ShoveTrait(),
+        new BearTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),
