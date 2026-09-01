@@ -950,5 +950,48 @@ public sealed class BattleResult
     public required int ScapegoatMarkPulls { get; init; }
     public required IReadOnlyDictionary<string, int> ScapegoatDotByUnit { get; init; }
     public required IReadOnlyDictionary<string, int> ScapegoatSkipByUnit { get; init; }
+
+    /// <summary>
+    /// 逸らし（第50期）の計数。<b>ロスターで初めて標（<c>StatusKeys.Marked</c>）を操作する駒</b>なので、
+    /// 外し・焦点・効き・代金をそれぞれ別に数える（<c>verbose</c> には依存しない）。
+    ///
+    /// <para><b>発火</b>: <c>DivertFires</c>（<b>0 になっていないことが受け入れ基準4</b>
+    /// ——配置探索が機構を無効化する席を選んでいないか）。</para>
+    ///
+    /// <para><b>外し</b>: <c>DivertStrips</c> 味方から外した回数 ／ <c>DivertStripFrom</c> 相手の内訳。</para>
+    ///
+    /// <para><b>焦点</b>: <c>DivertFocus</c> 敵に付けた回数 ／ <c>DivertFocusFresh</c> そのうち
+    /// 新しく標が付いた回数 ／ <c>DivertFocusTo</c> 相手の内訳 ／
+    /// <c>DivertMarkedFoeSum</c> ÷ <c>DivertFires</c> が<b>「標を持つ敵の数」の平均</b>
+    /// （敵の標は消えないので<b>焦点は自分で溶ける</b>——この列がその実測）。</para>
+    ///
+    /// <para><b>焦点の効き</b>（<b>付けた回数は成果ではない</b>）: <c>DivertAllyOnMarked</c> ÷
+    /// <c>DivertAllySingles</c> ＝ 味方の単体振りのうち標持ちに当たった割合。
+    /// <c>DivertAllyPulls</c> は engine の鎖が<b>実際に主目標を差し替えた</b>回数。</para>
+    ///
+    /// <para><b>代金</b>: <c>DivertFoeOnMarked</c> ÷ <c>DivertFoeSingles</c> ＝
+    /// 敵の単体振りのうち標持ちの味方に当たった割合。<c>DivertFoePulls</c> は差し替えた回数。</para>
+    ///
+    /// <para><b>撃破順</b>（<b>本命の指標</b>）: <c>DivertKillTurnByFoe</c> / <c>DivertKillCountByFoe</c>
+    /// は敵の駒ごとの撃破ターン。<b>標に依存しない切り方</b>なので素体の対照とそのまま引き算できる。</para>
+    ///
+    /// <para>保持者（<c>UnitCatalog.Sora</c>）を編成に入れず監査も切っていれば全部 0。</para>
+    /// </summary>
+    public required int DivertFires { get; init; }
+    public required int DivertStrips { get; init; }
+    public required int DivertFocus { get; init; }
+    public required int DivertFocusFresh { get; init; }
+    public required IReadOnlyDictionary<string, int> DivertStripFrom { get; init; }
+    public required IReadOnlyDictionary<string, int> DivertFocusTo { get; init; }
+    public required int DivertMarkedFoeSum { get; init; }
+    public required int DivertMarkedFoeMax { get; init; }
+    public required int DivertAllySingles { get; init; }
+    public required int DivertAllyOnMarked { get; init; }
+    public required int DivertFoeSingles { get; init; }
+    public required int DivertFoeOnMarked { get; init; }
+    public required int DivertAllyPulls { get; init; }
+    public required int DivertFoePulls { get; init; }
+    public required IReadOnlyDictionary<string, int> DivertKillTurnByFoe { get; init; }
+    public required IReadOnlyDictionary<string, int> DivertKillCountByFoe { get; init; }
 }
 

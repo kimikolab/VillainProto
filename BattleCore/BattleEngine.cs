@@ -715,12 +715,111 @@ public sealed class BattleContext
         u.SetCounter(owed, o - 1);
     }
 
+    /// <summary>
+    /// 逸らしの強度。<b>診断（divert）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="DivertRule.Default"/>）。static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public DivertRule Divert { get; }
+
+    /// <summary>
+    /// 盤上に逸らし（<see cref="TraitId.Divert"/>）の保持者が一度でも立ったか。
+    /// <b>計数のフックを短絡させるためだけ</b>のフラグ（layout は数百万戦を並列で回す）。
+    /// <see cref="DivertRule.Audit"/> でも立つ——診断が<b>素体の対照</b>でも
+    /// 撃破ターンと単体振りを同じ切り方で数えるため。<b>監査は盤面を1つも動かさない。</b>
+    /// </summary>
+    public bool DivertActive { get; private set; }
+
+    /// <summary>
+    /// 逸らし（<see cref="TraitId.Divert"/>）の計数。<b>発火しなかったことは盤面の値に痕跡を残さない</b>
+    /// ので、診断が読むためだけに数える（<c>verbose</c> には依存しない）。盤面には一切影響しない。
+    ///
+    /// <para><b>「焦点」と「焦点の効き」を分けてある。</b> 標を付けた回数は成果ではない
+    /// ——味方がそちらを殴らなければ意味がない。効きは <c>DivertAllyOnMarked</c> ÷
+    /// <c>DivertAllySingles</c>（味方の単体振りのうち標持ちに当たった割合）で測る。</para>
+    ///
+    /// <para><b>「焦点数」が指示書の仕様から出る落とし穴。</b> 外すのは味方の標だけなので、
+    /// <b>敵に付けた標は戦闘が終わるまで消えない</b>——焦点を浴びた敵のHPが下がると
+    /// 次のターンには別の敵が最高HPになり、そちらにも標が付く。<b>焦点は自分で溶ける。</b></para>
+    /// </summary>
+    public int DivertFires { get; internal set; }
+    public int DivertStrips { get; internal set; }
+    public int DivertFocus { get; internal set; }
+    /// <summary>焦点のうち<b>新しく標が付いた</b>回数（既に標持ちなら数えない）。</summary>
+    public int DivertFocusFresh { get; internal set; }
+    public Dictionary<string, int> DivertStripFrom { get; } = new();
+    public Dictionary<string, int> DivertFocusTo { get; } = new();
+    /// <summary>発火のたびの「標を持つ敵の数」の合計と最大（÷ <c>DivertFires</c> が平均）。</summary>
+    public int DivertMarkedFoeSum { get; internal set; }
+    public int DivertMarkedFoeMax { get; internal set; }
+
+    /// <summary>味方の単体振りの回数と、そのうち<b>標持ちの敵に当たった</b>回数（＝焦点の効き）。</summary>
+    public int DivertAllySingles { get; internal set; }
+    public int DivertAllyOnMarked { get; internal set; }
+    /// <summary>敵の単体振りの回数と、そのうち<b>標持ちの味方に当たった</b>回数（＝代金）。</summary>
+    public int DivertFoeSingles { get; internal set; }
+    public int DivertFoeOnMarked { get; internal set; }
+    /// <summary>engine の鎖が<b>実際に主目標を差し替えた</b>回数（陣営別）。</summary>
+    public int DivertAllyPulls { get; internal set; }
+    public int DivertFoePulls { get; internal set; }
+
+    /// <summary>
+    /// 敵の駒ごとの撃破ターン（<c>Def.Id</c> → 合計 / 件数）。<b>撃破順がこの期の本命の指標</b>で、
+    /// 素体の対照と直接引き算できるように<b>標に依存しない切り方</b>で数える。
+    /// </summary>
+    public Dictionary<string, int> DivertKillTurnByFoe { get; } = new();
+    public Dictionary<string, int> DivertKillCountByFoe { get; } = new();
+
+    internal void NoteDivertStrip(string from)
+    {
+        DivertStrips++;
+        DivertStripFrom[from] = DivertStripFrom.TryGetValue(from, out int a) ? a + 1 : 1;
+    }
+
+    internal void NoteDivertFocus(string to, bool fresh)
+    {
+        DivertFocus++;
+        if (fresh) DivertFocusFresh++;
+        DivertFocusTo[to] = DivertFocusTo.TryGetValue(to, out int a) ? a + 1 : 1;
+    }
+
+    internal void NoteDivertFire(int stripped, int focused, int markedFoes)
+    {
+        DivertFires++;
+        DivertMarkedFoeSum += markedFoes;
+        if (markedFoes > DivertMarkedFoeMax) DivertMarkedFoeMax = markedFoes;
+    }
+
+    /// <summary>単体振りの着地点を陣営別に数える。<b>盤面には触らない。</b></summary>
+    internal void NoteDivertSwing(UnitState actor, UnitState target)
+    {
+        bool marked = target.Counter(StatusKeys.Marked) > 0;
+        if (actor.TeamId == PlayerTeam)
+        {
+            DivertAllySingles++;
+            if (marked) DivertAllyOnMarked++;
+        }
+        else
+        {
+            DivertFoeSingles++;
+            if (marked) DivertFoeOnMarked++;
+        }
+    }
+
+    /// <summary>敵が倒れたターンを駒ごとに記録する。<b>盤面には触らない。</b></summary>
+    internal void NoteDivertKill(UnitState dead)
+    {
+        if (dead.TeamId == PlayerTeam) return;
+        string id = dead.Def.Id;
+        DivertKillTurnByFoe[id] = DivertKillTurnByFoe.TryGetValue(id, out int a) ? a + Turn : Turn;
+        DivertKillCountByFoe[id] = DivertKillCountByFoe.TryGetValue(id, out int b) ? b + 1 : 1;
+    }
+
     public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null,
                          HushRule? hush = null, MartyrRule? martyr = null, ExposeRule? expose = null,
                          ShoveRule? shove = null, BearRule? bear = null,
                          RelayRule? relay = null, SlanderRule? slander = null,
                          OverbearRule? overbear = null, ScaleRule? scale = null,
-                         ScapegoatRule? scapegoat = null)
+                         ScapegoatRule? scapegoat = null, DivertRule? divert = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -737,6 +836,8 @@ public sealed class BattleContext
         Scale = scale ?? ScaleRule.Default;
         Scapegoat = scapegoat ?? ScapegoatRule.Default;
         if (Scapegoat.Audit) ScapegoatActive = true;
+        Divert = divert ?? DivertRule.Default;
+        if (Divert.Audit) DivertActive = true;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -750,6 +851,7 @@ public sealed class BattleContext
     {
         // 業の計数フックを短絡させるためのフラグ（盤面には影響しない）。
         if (u.HasTrait(TraitId.Scapegoat)) ScapegoatActive = true;
+        if (u.HasTrait(TraitId.Divert)) DivertActive = true;
         u.InstanceId = _nextInstanceId++;
         u.Board = this;          // 「隣に誰がいるか」を読む特性のため（UnitState.Board の doc 参照）
         _units.Add(u);
@@ -1156,6 +1258,13 @@ public sealed class BattleContext
             // 「敵側に読み手がいない」＝「効かない」ではない（第48期の棚卸しが数えたのは駒）。
             if (ScapegoatActive && marked.Counter(ScapegoatTrait.OwedKey(StatusKeys.Marked)) > 0)
                 ScapegoatMarkPulls++;
+            // 逸らし（第50期）。**engine の鎖が実際に主目標を差し替えた回数**を陣営別に数える。
+            // ログの「気を取られた」と1対1で対応する（あちらは verbose のときしか出ない）。
+            if (DivertActive)
+            {
+                if (attacker.TeamId == PlayerTeam) DivertAllyPulls++;
+                else DivertFoePulls++;
+            }
             Log($"    敵は {marked.Name} に気を取られた", LogKind.Trigger);
             return marked;
         }
@@ -1312,6 +1421,10 @@ public sealed class BattleContext
 
         UnitState? target = SelectTargetCore(actor, patternOverride, out int pierceLane);
         if (target is null) return;
+
+        // 逸らし（第50期）。**焦点の効きは「付けた回数」ではなく「実際にそこへ振られた割合」。**
+        // 標は単体攻撃にしか効かないので、分母も単体振りだけで数える。
+        if (DivertActive && pattern == AttackPattern.Single) NoteDivertSwing(actor, target);
 
         // CurrentAttack 自体は変えない。AtkBonus と混ぜると会戦の境界処理（第1期 D2/D3）や
         // 墓守の層の再適用と衝突する。
@@ -1772,6 +1885,10 @@ public sealed class BattleContext
             Slot = dead.Slot
         });
 
+        // 逸らし（第50期）。**撃破順が本命の指標**なので、敵の駒ごとに倒れたターンを記録する。
+        // 標に依存しない切り方なので、素体の対照とそのまま引き算できる。
+        if (DivertActive) NoteDivertKill(dead);
+
         if (dead.TeamId == EnemyTeam)
         {
             _enemyKillsThisTurn++;
@@ -2158,11 +2275,12 @@ public static class BattleEngine
                                    ExposeRule? expose = null, ShoveRule? shove = null,
                                    BearRule? bear = null, RelayRule? relay = null,
                                    SlanderRule? slander = null, OverbearRule? overbear = null,
-                                   ScaleRule? scale = null, ScapegoatRule? scapegoat = null)
+                                   ScaleRule? scale = null, ScapegoatRule? scapegoat = null,
+                                   DivertRule? divert = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
-               overbear, scale, scapegoat);
+               overbear, scale, scapegoat, divert);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -2179,10 +2297,10 @@ public static class BattleEngine
                                    ShoveRule? shove = null, BearRule? bear = null,
                                    RelayRule? relay = null, SlanderRule? slander = null,
                                    OverbearRule? overbear = null, ScaleRule? scale = null,
-                                   ScapegoatRule? scapegoat = null)
+                                   ScapegoatRule? scapegoat = null, DivertRule? divert = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
-                                    relay, slander, overbear, scale, scapegoat);
+                                    relay, slander, overbear, scale, scapegoat, divert);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -2465,7 +2583,23 @@ public static class BattleEngine
             ScapegoatFoeSkips = ctx.ScapegoatFoeSkips,
             ScapegoatMarkPulls = ctx.ScapegoatMarkPulls,
             ScapegoatDotByUnit = ctx.ScapegoatDotByUnit,
-            ScapegoatSkipByUnit = ctx.ScapegoatSkipByUnit
+            ScapegoatSkipByUnit = ctx.ScapegoatSkipByUnit,
+            DivertFires = ctx.DivertFires,
+            DivertStrips = ctx.DivertStrips,
+            DivertFocus = ctx.DivertFocus,
+            DivertFocusFresh = ctx.DivertFocusFresh,
+            DivertStripFrom = ctx.DivertStripFrom,
+            DivertFocusTo = ctx.DivertFocusTo,
+            DivertMarkedFoeSum = ctx.DivertMarkedFoeSum,
+            DivertMarkedFoeMax = ctx.DivertMarkedFoeMax,
+            DivertAllySingles = ctx.DivertAllySingles,
+            DivertAllyOnMarked = ctx.DivertAllyOnMarked,
+            DivertFoeSingles = ctx.DivertFoeSingles,
+            DivertFoeOnMarked = ctx.DivertFoeOnMarked,
+            DivertAllyPulls = ctx.DivertAllyPulls,
+            DivertFoePulls = ctx.DivertFoePulls,
+            DivertKillTurnByFoe = ctx.DivertKillTurnByFoe,
+            DivertKillCountByFoe = ctx.DivertKillCountByFoe
         };
     }
 

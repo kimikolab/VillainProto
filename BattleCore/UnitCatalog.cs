@@ -975,9 +975,43 @@ public static class UnitCatalog
         Flavor = "他人の呪いを引き取って歩く。溜め込んだものは、いつか誰かに返す。"
     };
 
+    /// <summary>
+    /// 逸らしのソラ。<b>ロスターで初めて標（<c>StatusKeys.Marked</c>）を操作する駒</b>（第50期）。
+    ///
+    /// <para><b>標は engine が常時読んでいる強い通貨なのに、盤面での操作手段が無かった。</b>
+    /// 書き手は囃し立て（ヒサ）1枚で「隣接する最大HPの味方1体に開戦時1回」——選択の余地がゼロ。
+    /// <b>消す経路は1つも無い</b>（第50期 Phase 0-3）。engine の窓口
+    /// （<c>MarkPullPercent</c> = 75）は<b>すべての単体攻撃</b>で評価されるので、
+    /// 駒の読み手が1枚しかなくても盤面への影響は大きい。</para>
+    ///
+    /// <para><b>1つの動作の表と裏。</b> 毎ターン、味方の標を外し（プラス）、自分に付け（マイナス）、
+    /// 敵陣で現在HPが最も高い <c>DivertRule.TargetCount</c> 体へ付ける（プラス）。
+    /// <b>代金に特別な実装は無い</b>——標を負うこと自体が代金で、回避率も被ダメ軽減も持たせていない。</para>
+    ///
+    /// <para><b>標は鎖の最初にある</b>（標 → 後備え → 庇う → 殉教 → 棘守り）ので、
+    /// <b>敵に標を付けると庇い・後備え・殉教をすべて飛び越して狙い撃てる</b>
+    /// ——第五波の殉教者（庇う 75%）との干渉がこの駒の効き所。</para>
+    ///
+    /// <para>HP96・攻6・速8 は探索段階の初期値。<b>掃引の対象は
+    /// <c>DivertRule.TargetCount</c> だけ</b>で、HP・攻・速は振らない。
+    /// HP96 と厚めにしてあるのは、毎ターン標を負うため。</para>
+    /// </summary>
+    public static readonly UnitDef Sora = new()
+    {
+        Id = "sora",
+        Name = "逸らしのソラ",
+        MaxHp = 96,
+        Attack = 6,
+        Speed = 8,
+        Traits = new[] { TraitId.Divert },
+        PlusText = "毎ターン味方に向いた視線を引き剥がし、いちばん硬い敵へ向け直す",
+        MinusText = "引き剥がした視線は自分に刺さる。毎ターン狙われ続ける",
+        Flavor = "誰かが見られている限り、代わりに見られてやる。それしか取り柄がない。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata, Uro
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata, Uro, Sora
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

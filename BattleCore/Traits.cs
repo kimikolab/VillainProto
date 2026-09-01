@@ -89,6 +89,8 @@ public enum TraitId
                  // 振るたびに剥がれる（供給・発揮・消費の1サイクルが1枚に入る。同上）
     Scapegoat,   // 業: 味方の呪いを引き取って歩く。種類が揃うと、溜め込んだものを殴った相手に返す
                  // （引き取るほど自分が壊れる。1つの動作の表と裏）
+    Divert,      // 逸らし: 味方に向いた視線を引き剥がし、敵1体へ向け直す。
+                 // ただし引き剥がした視線は自分にも刺さる（1つの動作の表と裏）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -2439,6 +2441,151 @@ public readonly record struct ScapegoatRule(int Threshold, bool Audit)
     public static ScapegoatRule Default => new(3, false);
 }
 
+/// <summary>
+/// 逸らし。<b>ロスターで初めて標（<see cref="StatusKeys.Marked"/>）を操作する駒</b>（第50期）。
+///
+/// <para><b>標は engine が常時読んでいる強い通貨なのに、盤面での操作手段が無かった。</b>
+/// 書き手は囃し立て（ヒサ）1枚で「隣接する最大HPの味方1体に<b>開戦時1回</b>」——選択の余地がゼロ。
+/// <b>消す経路は1つも無い</b>（第50期 Phase 0-3。<c>SetCounter(Marked, 0)</c> は grep で 0 件）。
+/// 駒の読み手は仇討ち（ザン）1枚だが、<b>engine の窓口</b>
+/// （<see cref="BattleEngine.MarkPullPercent"/> = 75・<c>SelectTargetChain</c>）は
+/// <b>すべての単体攻撃</b>で評価される。</para>
+///
+/// <para><b>標が engine の鎖の中で持つ性質</b>（Phase 0-2。この駒の設計の前提）:</para>
+/// <list type="number">
+///   <item><b><c>75</c> は確率であって重みではない。</b> ただし「既に主目標が標持ちなら引かない」
+///     （<c>marked != target</c>）ので実効の被狙撃率は 75% より高い
+///     ——<c>1/n + (1 − 1/n) × 0.75</c>（標持ちが pool にいるとき）。</item>
+///   <item><b><c>foes</c> から選んでいる（<c>pool</c> ではない）。</b> つまり標は
+///     <b>「前列が生きている限り後列は狙われない」という盤面の中核規則を破る</b>
+///     ——ロスターで標だけが持つ性質（執着・断ちの選好は <c>pool</c> から選ぶので破らない）。</item>
+///   <item><b>標持ちが複数いると <c>PickOne</c> で1体に絞ってから 75% を引く。</b>
+///     引きは1回しか起きないが、標持ちが増えると <c>p_t</c>（無作為の主目標が既に標持ちである確率）が
+///     上がるので、標の集合が集める総量は <c>p_t + (1 − p_t) × 0.75</c> で<b>増える</b>
+///     （実測 81.9% → 95.4%）。1体あたりの取り分は逆に薄まる
+///     ——<see cref="DivertRule.TargetCount"/> は<b>「集中」と「被覆」を取り替えるノブ</b>。</item>
+///   <item><b>鎖の順序は 標 → 後備え → 庇う → 殉教 → 棘守り で、標がいちばん先。</b>
+///     標が引いた瞬間に <c>return</c> するので、<b>標は庇い・後備え・殉教をすべて飛び越す。</b></item>
+/// </list>
+///
+/// <para><b>1つの動作の表と裏</b>（置き去り・責め苦・仇討ち・突き返し・鱗と同型）。
+/// <see cref="OnTurnStart"/> の1回の発火で3つを順に行う:</para>
+/// <list type="bullet">
+///   <item><b>外す</b>（プラス）: 生存する味方（自分を除く）の標を全部 0 にする。
+///     <b>ロスターで初めて標を消す。</b> 囃し立てを打ち消す唯一の手段になる。</item>
+///   <item><b>自分に付ける</b>（マイナス）: 自分の標を 1 にする。
+///     <b>代金に特別な実装は無い</b>——標を負うこと自体が代金で、
+///     回避率も被ダメ軽減も持たせていない。</item>
+///   <item><b>敵に付ける</b>（プラス）: 敵陣の生存駒のうち<b>現在HPが最も高い順に
+///     <see cref="DivertRule.TargetCount"/> 体</b>へ標を 1 付ける。
+///     <b>選び方は決定的</b>（同値のみ <see cref="BattleContext.PickOne"/>）で、
+///     プレイヤーが「どの敵が焦点になるか」を読める。</item>
+/// </list>
+///
+/// <para><b>敵に付けた標は消さない（仕様）。</b> 外す対象は味方だけ。標には消す経路が無いので、
+/// <b>焦点を浴びた敵のHPが下がると次のターンには別の敵が最高HPになり、そちらにも標が付く</b>
+/// ——<b>焦点は放っておくと自分で溶ける。</b> これは設計の帰結であって取りこぼしではないが、
+/// <see cref="DivertRule.TargetCount"/> の掃引を鈍らせるので診断で数える（<c>焦点数</c>）。</para>
+///
+/// <para><b>味方に標が1つも無くても、自分と敵への付与は行う。</b>
+/// 外す対象が無いだけで、発火そのものは止めない
+/// ——止めると「味方が綺麗なら何も起きない」駒になり、代金だけが残る局面が作れなくなる。</para>
+///
+/// <para><b>単体攻撃にしか効かない</b>（engine の鎖が <c>pattern != Single</c> を手前で返す）。
+/// 薙ぎ・全体・貫きは標を1ビットも見ないので、<b>敵の攻撃型の構成がそのまま効き目の上限になる。</b></para>
+/// </summary>
+public sealed class DivertTrait : Trait
+{
+    public override TraitId Id => TraitId.Divert;
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+
+        // --- 外す（味方から。自分は除く）--------------------------------------------------
+        int stripped = 0;
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            if (ally == self || ally.Counter(StatusKeys.Marked) <= 0) continue;
+            ally.SetCounter(StatusKeys.Marked, 0);
+            ctx.NoteDivertStrip(ally.Def.Name);
+            stripped++;
+            ctx.Log($"    {self.Name} が {ally.Name} から視線を引き剥がした", LogKind.Trigger);
+        }
+
+        // --- 自分に付ける（代金）----------------------------------------------------------
+        // **`DivertRule.SelfMark` が偽なら付けない。** これは強度のノブではなく
+        // 「代金を分離するための対照」で、診断だけが偽を渡す（§4 の対照2）。
+        if (ctx.Divert.SelfMark && self.Counter(StatusKeys.Marked) <= 0)
+        {
+            self.SetCounter(StatusKeys.Marked, 1);
+            ctx.Log($"    {self.Name} が矢面に立った", LogKind.FriendlyFire);
+        }
+
+        // --- 敵に付ける（焦点）------------------------------------------------------------
+        // **現在HPが最も高い生存駒から順に TargetCount 体。** 同値のみ PickOne で割る
+        // （席番号の若い順で決めないための唯一の窓口。鏡像の配置を同値にする）。
+        var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId)).ToList();
+        int focused = 0;
+        for (int i = 0; i < ctx.Divert.TargetCount && foes.Count > 0; i++)
+        {
+            int top = foes.Max(f => f.Hp);
+            UnitState? pick = ctx.PickOne(foes.Where(f => f.Hp == top).ToList());
+            if (pick is null) break;
+            foes.Remove(pick);   // 同じ相手に2回付けない（TargetCount は「体数」）
+
+            bool fresh = pick.Counter(StatusKeys.Marked) <= 0;
+            pick.SetCounter(StatusKeys.Marked, 1);
+            ctx.NoteDivertFocus(pick.Def.Name, fresh);
+            focused++;
+            if (fresh)
+                ctx.Log($"    {self.Name} が {pick.Name} へ視線を向け直した", LogKind.Trigger);
+        }
+
+        ctx.NoteDivertFire(stripped, focused,
+            ctx.LivingMembers(ctx.Opponent(self.TeamId)).Count(f => f.Counter(StatusKeys.Marked) > 0));
+    }
+}
+
+/// <summary>
+/// 逸らしの強度のノブ。<b>診断（divert）が版を差し替えるためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない。
+///
+/// <para><paramref name="TargetCount"/> は敵に標を付ける体数。
+/// <b>これは強度ではなく「集中」と「被覆」を取り替えるノブ</b>——engine の鎖は標持ちを
+/// <c>PickOne</c> で1体に絞ってから 75% を引くが、標持ちが増えると
+/// <c>p_t</c>（無作為の主目標が既に標持ちである確率）が上がるので<b>総量は増え</b>
+/// （実測で味方の単体振りの 81.9% → 95.4% が標持ちに当たる）、<b>1体あたりの取り分は薄まる</b>。
+/// <b>勝率の掃引が平らなのは、この2つが打ち消し合うから</b>であって、
+/// ノブが機構を動かしていないからではない（第41期・第47期の空振りとはここが違う）。</para>
+///
+/// <para><paramref name="SelfMark"/> は<b>ノブではない</b>。
+/// 「味方の標を外す」効果と「自分が矢面に立つ」代金を分離するための<b>対照</b>で、
+/// 既定は常に <c>true</c>。診断の対照2だけが <c>false</c> を渡す。</para>
+///
+/// <para><paramref name="Audit"/> も<b>ノブではない</b>。計数のフックを走らせるだけのスイッチで、
+/// <b>素体の対照（特性なし・同数値）でも撃破ターンと単体振りを同じ切り方で数える</b>ために要る
+/// （第49期の <c>ScapegoatRule.Audit</c> と同型）。<b>盤面を1つも動かさない</b>ことは
+/// 診断 §0 が「監査あり」と「監査なし」を突き合わせて毎回検算する。</para>
+///
+/// <para><b>既定を無効にしなくてよい。</b> 味方側の駒なので、<see cref="UnitCatalog.Sora"/> を
+/// 編成に入れない限り既存の行は1バイトも動かない（それ自体が回帰チェックになる）。
+/// static のノブを置かない理由は <see cref="ShoveRule"/> / <see cref="BearRule"/> /
+/// <see cref="RelayRule"/> / <see cref="ScaleRule"/> / <see cref="ScapegoatRule"/> と同じ。</para>
+/// </summary>
+public readonly record struct DivertRule(int TargetCount, bool SelfMark, bool Audit)
+{
+    /// <summary>焦点の数だけを指定する。代金（自分への標）は払い、監査は切る＝通常の実行。</summary>
+    public DivertRule(int targetCount) : this(targetCount, true, false) { }
+
+    /// <summary>焦点の数と代金の有無を指定する（診断の対照2）。監査は切る。</summary>
+    public DivertRule(int targetCount, bool selfMark) : this(targetCount, selfMark, false) { }
+
+    /// <summary>探索段階の初期値（第50期）。</summary>
+    public static DivertRule Default => new(1, true, false);
+}
+
+
 
 
 
@@ -4207,6 +4354,7 @@ public static class TraitCatalog
         new OverbearTrait(),
         new ScaleTrait(),
         new ScapegoatTrait(),
+        new DivertTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),
