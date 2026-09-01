@@ -113,6 +113,24 @@ public sealed class UnitState
     /// </summary>
     public int InstanceId { get; internal set; }
 
+    /// <summary>
+    /// いま立っている盤面。<see cref="BattleContext.Add"/> が自分を指すように差す
+    /// （<see cref="InstanceId"/> と同じ1箇所）。
+    ///
+    /// <para><b>足した理由は1つだけ</b>——<see cref="Trait.ModifyAttack"/> が <c>self</c> しか
+    /// 受け取らないので、<b>「隣に誰がいるか」を攻撃力の条件にする特性が書けない</b>
+    /// （驕り・<see cref="TraitId.Overbear"/>・第46期）。隣接は盤面の量なので、
+    /// 隣接を読む条件を <c>Counters</c> のキャッシュに固定すると
+    /// <b>戦闘中の揺れ（味方が倒れて隣接が減る／隣が育って条件から外れる）が消える</b>。
+    /// 揺れそのものが第46期の主題なので、固定ではなく毎回読む形にした。</para>
+    ///
+    /// <para><b>窓口は増えていない。</b> 参照するのは <see cref="BattleContext"/> であって
+    /// 盤面の生データではない（CLAUDE.md「BattleContext = 盤面への唯一の窓口」）。
+    /// <b>盤面の外で作られた <see cref="UnitState"/> では <c>null</c></b> になるので、
+    /// 読む側は必ず null を「隣が1人もいない」と同じ扱いにすること。</para>
+    /// </summary>
+    internal BattleContext? Board { get; set; }
+
     /// <summary>0..5。配置は FormationRules を参照。臆病などで戦闘中に変化する。</summary>
     public int Slot { get; set; }
 
@@ -819,4 +837,31 @@ public sealed class BattleResult
     public required int SlanderFired { get; init; }
     public required int SlanderTotal { get; init; }
     public required IReadOnlyDictionary<string, int> SlanderTo { get; init; }
+
+    /// <summary>
+    /// 驕り（第46期）の計数。<b>隣接を「量」ではなく「誰がいるか」で読む初めての出力条件</b>で、
+    /// <b>発火しなかったことは盤面の値に痕跡を残さない</b>ので診断が読むためだけに数える
+    /// （<c>verbose</c> には依存しない）。盤面には一切影響しない。
+    ///
+    /// <para><c>OverbearFired</c> 削った延べ体数 ／ <c>OverbearTotal</c> 撒いた総量 ／
+    /// <c>OverbearTo</c> 削った相手の内訳（駒名 → 量） ／
+    /// <c>OverbearMetTurns</c> ターン頭に条件が成立していたターン数 ／
+    /// <c>OverbearTurns</c> 保持者が生きてターン頭を迎えた回数（成立率の分母） ／
+    /// <c>OverbearFirstTurn</c> 条件が初めて成立したターン（一度も成立しなければ 0） ／
+    /// <c>OverbearSwings</c> 保持者が振った回数 ／ <c>OverbearDoubled</c> そのうち2倍が乗った回数 ／
+    /// <c>OverbearBackfire</c> 削ったのに相手の <c>CurrentAttack</c> が<b>上がった</b>量
+    /// （逆しまの自己矛盾。<c>OverbearBackfireHits</c> がその回数）。</para>
+    ///
+    /// <para>保持者（<c>UnitCatalog.Ogo</c>）を編成に入れなければ全部 0。</para>
+    /// </summary>
+    public required int OverbearFired { get; init; }
+    public required int OverbearTotal { get; init; }
+    public required IReadOnlyDictionary<string, int> OverbearTo { get; init; }
+    public required int OverbearMetTurns { get; init; }
+    public required int OverbearTurns { get; init; }
+    public required int OverbearFirstTurn { get; init; }
+    public required int OverbearSwings { get; init; }
+    public required int OverbearDoubled { get; init; }
+    public required int OverbearBackfire { get; init; }
+    public required int OverbearBackfireHits { get; init; }
 }

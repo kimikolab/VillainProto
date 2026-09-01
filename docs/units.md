@@ -120,6 +120,7 @@
 | `Shove` | 突き返しのハネ |
 | `Bear` | 引き受けのウケ |
 | `Relay` | 渡しのワタ |
+| `Overbear` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

@@ -83,6 +83,8 @@ public enum TraitId
                  // ただし自分の腕は落ち続ける（同上。1つの動作の表と裏）
     Relay,       // 渡し: 隣の味方が受ける攻撃力低下を引き受け、最も強い敵へそのまま渡す。
                  // ただし通り道になった自分の身が削れる（同上。1つの動作の表と裏）
+    Overbear,    // 驕り: 隣の味方を見下して腕を鈍らせ、隣が全員自分より弱くなったとき本気を出す
+                 // （同上。削るのは常時、報われるのは条件を満たしたときだけ）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -1784,14 +1786,16 @@ public enum DullRoute
     Cower,        // 萎縮: クビ → 味方全体（SupportTargets 経由）・開戦時1回
     Relay,        // 渡しの転嫁: ワタ → **敵陣**の最高攻撃力の駒・横取りのたび。
                   // **窓口の中から窓口を呼ぶ唯一の経路**で、宛先が敵側なのもここだけ
-    Slander       // 誹り: 敵の保持者 → 殴った味方・攻撃のたび。
+    Slander,      // 誹り: 敵の保持者 → 殴った味方・攻撃のたび。
                   // **敵から味方へ弱体を撒く初めての経路**（第44期）。他の6本は味方が起点
+    Overbear      // 驕り: オゴ → 隣接する生存味方全員・毎ターン。
+                  // **撒いた本人が撒いた結果を出力条件として読む唯一の経路**（第46期）
 }
 
 /// <summary>経路の名前と本数。診断の表の見出しと配列長をここ1箇所から引く。</summary>
 public static class DullRoutes
 {
-    public static readonly string[] Names = { "その他", "なまり", "呪詛敵", "呪詛漏れ", "突き返し", "萎縮", "渡し", "誹り" };
+    public static readonly string[] Names = { "その他", "なまり", "呪詛敵", "呪詛漏れ", "突き返し", "萎縮", "渡し", "誹り", "驕り" };
     public static int Count => Names.Length;
 }
 
@@ -1923,6 +1927,182 @@ public readonly record struct RelayRule(int TransferPercent)
 {
     /// <summary>探索段階の初期値（第43期）。</summary>
     public static RelayRule Default => new(100);
+}
+
+/// <summary>
+/// 驕り（第46期）。<b>隣の味方を見下して腕を鈍らせ、隣が全員自分より弱くなったとき本気を出す。</b>
+///
+/// <para><b>プラスとマイナスが1つの動作の表と裏</b>——削るのは常時、報われるのは条件を
+/// 満たしたときだけ。置き去り・突き返し・引き受け・渡しと同じ形なので、
+/// <see cref="TraitId"/> のどちらのブロックにも入らない。</para>
+///
+/// <para><b>狙いは「隣接を非単調に読む」の n=2 化。</b> 第45期の調査は、隣接を
+/// <b>単調な量</b>（隣に何人いるか）で読む駒は席が定数になると結論した——編成5枠の次数は
+/// <c>{2, 4}</c> の2値しかないので、単調関数は2値の選好しか返せず、符号が決まった時点で
+/// 席が決まる（実測の最頻率 78〜100%）。唯一の例外がロスターで1枚だけの非単調な読み手
+/// （囃し立て・<see cref="MarkerTrait"/>＝隣で最大HPの1体を選ぶ）で、その1枚だけが
+/// 対照と同水準に分散した（62% 対 63.5%）。<b>n=1 を n=2 にするのがこの特性の役目。</b></para>
+///
+/// <para><b>なぜ非単調か。</b> 条件は隣接する味方<b>全員</b>に対する AND なので、
+/// <b>隣接数が増えるほど成立が遠のく</b>（中央は削る量が多い代わりに条件が厳しい）。
+/// さらに<b>「隣が誰か」で成立時刻が変わる</b>——ドルガ（攻38）の隣なら 13ターン、
+/// クビ（攻3）の隣なら即座。次数だけでは席が決まらない。</para>
+///
+/// <para><b>隣接する生存味方が 0 人のときは成立しない。</b> ここを成立にすると
+/// 「角に置くだけで無条件2倍」になり、第45期が指摘した二択に戻る。
+/// なお編成5枠は 0-4 を必ず埋めるので開幕は必ず 2 人以上いる——0 人は
+/// <b>隣が全滅した後</b>にしか起きない（そこで2倍が消えるのは意図した揺れ）。</para>
+///
+/// <para><b><see cref="BattleContext.Dull"/> を必ず通す。</b> <c>AtkBonus</c> を直に引くと
+/// ウケの横取り（アーマー化）もワタの転嫁（敵へ流す）も走らない。
+/// <b>弱体軸への戦闘中の供給になることがこの駒の価値の半分</b>で、それは窓口の中にしか無い。
+/// <c>AcceptsSupport</c>（ガルドの <c>Stoic</c>）は<b>見ない</b>——第44期の誹りと揃えた
+/// （第42期からの持ち越しで、5経路の扱いは元から揃っていない）。</para>
+///
+/// <para><b>召喚枠（スロット5〜8）も隣接に含む。</b> 隣接表がそう作られているので、
+/// 胞子が ○中1 に立てば削りの対象にも条件の判定にも入る（貫きのレーン経路・巨躯の被覆と同じ扱い）。</para>
+///
+/// <para><b>条件はフラグで固定しない。</b> 味方が倒れて隣接が減る／隣が育って条件から外れる、が
+/// この駒の非単調性そのもの。<see cref="ModifyAttack"/> は毎回 <see cref="UnitState.Board"/> から
+/// 隣接を読み直す（<c>Board</c> を足した理由はそこの doc を参照）。</para>
+///
+/// <para><b>隣の攻撃力は驕りを除いて評価する</b>（<see cref="PlainAttack"/>）。
+/// 驕り持ちが2枚隣り合うと <c>CurrentAttack</c> が互いを呼び合って無限再帰するため。
+/// 現行の編成に驕りは1枚しか入らないので<b>盤面の値は 1 も変わらない</b>が、
+/// 1ターン1回の上限だけに頼らない突き返しの再入ガードと同じ判断で先に置く。</para>
+///
+/// <para>強度は <see cref="OverbearRule"/> で外から差す。書き換え可能な static のノブは置かない
+/// （<see cref="ShoveRule"/> / <see cref="BearRule"/> / <see cref="RelayRule"/> と同じ判断）。</para>
+/// </summary>
+public sealed class OverbearTrait : Trait
+{
+    /// <summary>本気を出したときの倍率。<b>ノブにしない</b>（掃引の対象は <c>Drain</c> だけ）。</summary>
+    public const int Multiplier = 2;
+
+    public override TraitId Id => TraitId.Overbear;
+
+    /// <summary>
+    /// マイナス側 —— 常時。隣接する生存味方全員の腕を鈍らせる。
+    ///
+    /// <para><b>自分から移動を起こす手段は持たせない</b>（突き返しと同じ）。供給は毎ターンの
+    /// 手番頭で、<c>Drain = 0</c> なら窓口を1回も叩かない＝<b>プラス側だけを切る対照</b>になる
+    /// （削らなければ隣は弱くならないので条件が永遠に成立しない）。</para>
+    /// </summary>
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        int drain = ctx.Overbear.Drain;
+        var hit = new List<string>();
+
+        // Dull は横取り（集約・渡し）を走らせ、渡しは代金で駒を落とすので、
+        // 列挙中に盤面が変わりうる。LivingMembers はスナップショット（ToList）。
+        if (drain > 0)
+        {
+            foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+            {
+                if (ally == self || !ally.IsAlive) continue;
+                if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+
+                // 逆行の実測。**削ったのに相手が強くなった量**（逆しまの自己矛盾）を、
+                // 予測ではなく窓口の前後の差で取る。読むだけで盤面は動かさない。
+                int before = ally.CurrentAttack;
+                ctx.Dull(ally, drain, DullRoute.Overbear);
+                int after = ally.CurrentAttack;
+
+                ctx.OverbearFired++;
+                ctx.OverbearTotal += drain;
+                ctx.OverbearTo[ally.Name] =
+                    ctx.OverbearTo.TryGetValue(ally.Name, out int prev) ? prev + drain : drain;
+                if (after > before)
+                {
+                    ctx.OverbearBackfire += after - before;
+                    ctx.OverbearBackfireHits++;
+                }
+                hit.Add(ally.Name);
+            }
+
+            if (hit.Count > 0)
+                ctx.Log($"    {self.Name} が {string.Join("・", hit)} を見下した（攻撃 -{drain}）",
+                        LogKind.FriendlyFire);
+        }
+
+        // 成立率と成立時刻。**削った後**の盤面で測る（その手番の振りが受ける条件と揃える）。
+        ctx.OverbearTurns++;
+        if (Ready(self))
+        {
+            ctx.OverbearMetTurns++;
+            if (ctx.OverbearFirstTurn == 0) ctx.OverbearFirstTurn = ctx.Turn;
+        }
+    }
+
+    /// <summary>
+    /// プラス側 —— 条件を満たしたときだけ攻撃力2倍。<b>形は後衛特化
+    /// （<see cref="SniperTrait"/>）と同じ</b>で、位置ではなく状況で判定する。
+    /// </summary>
+    public override int ModifyAttack(UnitState self, int atk) => Ready(self, atk) ? atk * Multiplier : atk;
+
+    /// <summary>
+    /// 2倍が実際に乗った振りを数える。<b><see cref="ModifyAttack"/> の中では数えない</b>
+    /// ——あれは <c>CurrentAttack</c> を読むたびに走るので（<c>StatSnapshot</c> でも走る）、
+    /// 数えると「振った回数」ではなく「読まれた回数」になる。
+    /// </summary>
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        ctx.OverbearSwings++;
+        if (Ready(self)) ctx.OverbearDoubled++;
+    }
+
+    /// <summary>
+    /// 隣接する生存味方が1人以上いて、その全員が自分より弱いか。
+    /// <paramref name="atk"/> を渡さない呼び出し（計数側）は素の攻撃力で判定する。
+    /// </summary>
+    private static bool Ready(UnitState self, int? atk = null)
+    {
+        BattleContext? board = self.Board;
+        if (board is null) return false;   // 盤面の外で作られた駒。隣が1人もいないのと同じ扱い
+
+        int mine = atk ?? PlainAttack(self);
+        int seen = 0;
+
+        // LivingMembers ではなく AllUnits を走るのは、ModifyAttack が攻撃のたびに呼ばれるから
+        // （LivingMembers は ToList するので毎回の確保になる）。
+        foreach (UnitState a in board.AllUnits)
+        {
+            if (a == self || !a.IsAlive || a.TeamId != self.TeamId) continue;
+            if (!FormationRules.AreAdjacent(self.Slot, a.Slot)) continue;
+            if (PlainAttack(a) >= mine) return false;
+            seen++;
+        }
+        return seen > 0;
+    }
+
+    /// <summary>驕りを除いた <c>CurrentAttack</c>。驕り持ちどうしの相互再帰を切るためだけにある。</summary>
+    private static int PlainAttack(UnitState u)
+    {
+        int atk = u.Def.Attack + u.AtkBonus;
+        foreach (Trait t in u.Traits)
+            if (t.Id != TraitId.Overbear) atk = t.ModifyAttack(u, atk);
+        return Math.Max(0, atk);
+    }
+}
+
+/// <summary>
+/// 驕りの強度。<b>診断（overbear）が版を差し替えるためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない。
+///
+/// <para><paramref name="Drain"/> は毎ターン隣接する生存味方から引く攻撃力。
+/// <c>0</c> は<b>「削らない」＝条件が永遠に成立しない</b>ので、
+/// <b>プラス側だけを切る陽性対照</b>になる（マイナス側だけを切るノブは置かない——
+/// それは2倍を無条件にすることで、第45期が棄却した二択そのものになる）。</para>
+///
+/// <para><b>既定を無効にしなくてよい。</b> 味方側の駒なので、<see cref="UnitCatalog.Ogo"/> を
+/// 編成に入れない限り既存48行は1バイトも動かない（それ自体が回帰チェックになる）。
+/// static のノブを置かない理由は <see cref="ShoveRule"/> / <see cref="BearRule"/> /
+/// <see cref="RelayRule"/> と同じ。</para>
+/// </summary>
+public readonly record struct OverbearRule(int Drain)
+{
+    /// <summary>探索段階の初期値（第46期）。</summary>
+    public static OverbearRule Default => new(2);
 }
 
 
@@ -3684,6 +3864,7 @@ public static class TraitCatalog
         new ShoveTrait(),
         new BearTrait(),
         new RelayTrait(),
+        new OverbearTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

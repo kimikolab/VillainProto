@@ -837,6 +837,43 @@ public static class UnitCatalog
         Flavor = "受け取った呪いを、そのまま向こうへ渡す。通り道の自分だけが削れていく。"
     };
 
+    /// <summary>
+    /// 驕りのオゴ。<b>隣接を「量」ではなく「誰がいるか」で読む2枚目</b>（第46期）。
+    ///
+    /// <para><b>狙いは第45期の残件 B。</b> 第45期は「隣接を単調な量（隣に何人いるか）で読む駒は
+    /// 席が定数になる」と結論したが、反例はロスターに1枚しかない非単調な読み手
+    /// （囃し立てのヒサ＝隣で最大HPの1体を選ぶ）だけで、n=1 だった。
+    /// <b>オゴは条件を隣接する味方<i>全員</i>への AND にする</b>ので、次数が増えるほど成立が
+    /// 遠のき、しかも「隣が誰か」で成立時刻が変わる——単調な量では書けない形。</para>
+    ///
+    /// <para><b>出口は弱体化。</b> 削りは <see cref="BattleContext.Dull"/> を通るので、
+    /// ウケ（アーマー化）・ワタ（敵へ転嫁）と組めば「見下すこと」がそのまま収入になる。
+    /// ただし<b>ウツ（逆しま）を隣に置くと削るほど相手が強くなり、自分の条件から遠ざかる</b>
+    /// ——<b>同じ通貨の供給者と読み手が隣り合えない</b>という自己矛盾は設計として正しく、潰さない。</para>
+    ///
+    /// <para>攻12 は<b>ロスターの分水嶺</b>として選んだ値。12 未満が 40 枚、12 以上（＝隣に置くと
+    /// 条件を壊す駒）が キリ12・エグ12・ナタ13・ハギ16・ボルグ18・ドルガ38 の 6 枚になる。
+    /// HP62・速5 とあわせて探索段階の初期値で、<b>掃引の対象は
+    /// <see cref="OverbearRule.Drain"/> だけ</b>（1変数を振るときに一緒に動かすものを増やさない）。</para>
+    /// </summary>
+    /// <remarks>
+    /// <b><see cref="All"/> には載せていない。</b> 第46期は驕りを測って<b>採用しなかった</b>ので、
+    /// 定義だけを対照として残してある（逆位・まどろみ・誹りと同じ扱い）。
+    /// 診断 <c>overbear</c> が編成をローカルに組んで使う。
+    /// </remarks>
+    public static readonly UnitDef Ogo = new()
+    {
+        Id = "ogo",
+        Name = "驕りのオゴ",
+        MaxHp = 62,
+        Attack = 12,
+        Speed = 5,
+        Traits = new[] { TraitId.Overbear },
+        PlusText = "隣の味方が全員自分より弱いあいだ、攻撃力が2倍になる",
+        MinusText = "毎ターン隣の味方の腕を鈍らせる。隣に誰もいなければ本気も出せない",
+        Flavor = "自分より下がいないと力が出ない。だから下を作ることにした。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
         Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata

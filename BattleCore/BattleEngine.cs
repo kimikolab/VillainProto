@@ -443,10 +443,36 @@ public sealed class BattleContext
     public int SlanderTotal { get; internal set; }
     public Dictionary<string, int> SlanderTo { get; } = new();
 
+    /// <summary>
+    /// 驕りの強度。<b>診断（overbear）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="OverbearRule.Default"/>）。static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public OverbearRule Overbear { get; }
+
+    /// <summary>
+    /// 驕り（<see cref="TraitId.Overbear"/>）の計数。<b>発火しなかったことは盤面の値に痕跡を残さない</b>
+    /// ので、診断が読むためだけに数える（<c>verbose</c> には依存しない）。盤面には一切影響しない。
+    ///
+    /// <para><b>「成立時刻」がこの期の核心</b>なので、成立率（<c>MetTurns</c> / <c>Turns</c>）と
+    /// 初成立ターン（<c>FirstTurn</c>・一度も成立しなければ 0）を分けて持つ。
+    /// 平均だけでは「遅く成立した」と「半分の試行で成立しなかった」が区別できない。</para>
+    /// </summary>
+    public int OverbearFired { get; internal set; }
+    public int OverbearTotal { get; internal set; }
+    public Dictionary<string, int> OverbearTo { get; } = new();
+    public int OverbearMetTurns { get; internal set; }
+    public int OverbearTurns { get; internal set; }
+    public int OverbearFirstTurn { get; internal set; }
+    public int OverbearSwings { get; internal set; }
+    public int OverbearDoubled { get; internal set; }
+    public int OverbearBackfire { get; internal set; }
+    public int OverbearBackfireHits { get; internal set; }
+
     public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null,
                          HushRule? hush = null, MartyrRule? martyr = null, ExposeRule? expose = null,
                          ShoveRule? shove = null, BearRule? bear = null,
-                         RelayRule? relay = null, SlanderRule? slander = null)
+                         RelayRule? relay = null, SlanderRule? slander = null,
+                         OverbearRule? overbear = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -459,6 +485,7 @@ public sealed class BattleContext
         Bear = bear ?? BearRule.Default;
         Relay = relay ?? RelayRule.Default;
         Slander = slander ?? SlanderRule.Default;
+        Overbear = overbear ?? OverbearRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -471,6 +498,7 @@ public sealed class BattleContext
     internal void Add(UnitState u)
     {
         u.InstanceId = _nextInstanceId++;
+        u.Board = this;          // 「隣に誰がいるか」を読む特性のため（UnitState.Board の doc 参照）
         _units.Add(u);
     }
 
@@ -1841,10 +1869,11 @@ public static class BattleEngine
                                    HushRule? hush = null, MartyrRule? martyr = null,
                                    ExposeRule? expose = null, ShoveRule? shove = null,
                                    BearRule? bear = null, RelayRule? relay = null,
-                                   SlanderRule? slander = null)
+                                   SlanderRule? slander = null, OverbearRule? overbear = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
-               seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander);
+               seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
+               overbear);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -1859,10 +1888,11 @@ public static class BattleEngine
                                    YokeRule? yoke = null, HushRule? hush = null,
                                    MartyrRule? martyr = null, ExposeRule? expose = null,
                                    ShoveRule? shove = null, BearRule? bear = null,
-                                   RelayRule? relay = null, SlanderRule? slander = null)
+                                   RelayRule? relay = null, SlanderRule? slander = null,
+                                   OverbearRule? overbear = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
-                                    relay, slander);
+                                    relay, slander, overbear);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -2096,7 +2126,17 @@ public static class BattleEngine
             ShoveBlocked = ctx.ShoveBlocked,
             SlanderFired = ctx.SlanderFired,
             SlanderTotal = ctx.SlanderTotal,
-            SlanderTo = ctx.SlanderTo
+            SlanderTo = ctx.SlanderTo,
+            OverbearFired = ctx.OverbearFired,
+            OverbearTotal = ctx.OverbearTotal,
+            OverbearTo = ctx.OverbearTo,
+            OverbearMetTurns = ctx.OverbearMetTurns,
+            OverbearTurns = ctx.OverbearTurns,
+            OverbearFirstTurn = ctx.OverbearFirstTurn,
+            OverbearSwings = ctx.OverbearSwings,
+            OverbearDoubled = ctx.OverbearDoubled,
+            OverbearBackfire = ctx.OverbearBackfire,
+            OverbearBackfireHits = ctx.OverbearBackfireHits
         };
     }
 
