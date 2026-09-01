@@ -1810,6 +1810,40 @@ public static class DullRoutes
 }
 
 /// <summary>
+/// 強化の経路。<b>診断（<c>whet</c>）が経路別に数えるためだけの札</b>で、盤面には一切影響しない。
+/// <see cref="BattleContext.Whet"/> を通る6経路に1対1で対応する。
+///
+/// <para><b><see cref="DullRoute"/> と対になる。</b> 弱体側が第42期に窓口を持ってから
+/// 第44期（誹り）・第46期（驕り）・第52期（駆り立て）がすべてそこへ接続できたのに対し、
+/// 強化側は15箇所が <c>AtkBonus</c> を直に叩いていた（第52期 Phase 0-1 の持ち越し）。</para>
+///
+/// <para><b>通すのは「他者を強化する」6本だけ。</b> 自己強化の9本
+/// （怒り・庇う／殉教・墓守2本・処刑・棘・澱み喰い・軋み・分かち）は直叩きのまま残してある
+/// ——窓口は将来の横取りの立ち位置なので（<see cref="BattleContext.Dull"/> の中にウケとワタが
+/// 立っている）、<b>「自分の被弾で自分が強くなる」を他人が横取りできる形にしてはいけない。</b></para>
+/// </summary>
+public enum WhetRoute
+{
+    Other,          // 札を付け忘れた呼び出し（現状ゼロ）
+    Goad,           // 駆り立て: カリ → 隣接する CurrentAttack 最大の味方1体・毎ターン。
+                    // 候補を自前で AcceptsSupport 濾しする（隣へ漏らさない）
+    RallyOpening,   // 号令の鬨: ガン → 味方全体（SupportTargets 経由）・開戦時1回
+    RallyTurn,      // 号令の溜め: ガン → 手番を差し出した味方（SupportTargets 経由）・毎ターン
+    Bind,           // 縛め: クグ → 縛った味方1体・第2ターン以降の毎ターン。
+                    // **プラスとマイナスが1つの動作の表と裏**（痺れ+16）なので量が最大
+    Drifter,        // 移り木: シオ → 動かされた味方・移動のたび
+    Regurgitate     // 吐き戻し: ゴルム → 庇った相手（SupportTargets 経由）・肩代わりのたび。
+                    // **engine 側にある唯一の経路**で、Dull の「なまり」（同じく engine 側）と対称
+}
+
+/// <summary>経路の名前と本数。診断の表の見出しと配列長をここ1箇所から引く。</summary>
+public static class WhetRoutes
+{
+    public static readonly string[] Names = { "その他", "駆り立て", "号令開戦", "号令毎T", "縛め", "移り木", "吐き戻し" };
+    public static int Count => Names.Length;
+}
+
+/// <summary>
 /// 引き受け（集約）。隣接する味方が受ける攻撃力低下を代わりに背負い、その分だけ鎧になる。
 /// ただし自分の腕は落ち続ける——<b>プラスとマイナスが1つの動作の表と裏</b>なので、
 /// <see cref="TraitId"/> のどちらのブロックにも入らない（置き去り・突き返しと同じ扱い）。
@@ -2686,7 +2720,7 @@ public sealed class GoadTrait : Trait
 
         bool switched = prev is not null && !ReferenceEquals(prev, pick);
         if (ctx.Goad.Mark) pick.SetCounter(StatusKeys.Marked, 1);
-        pick.AtkBonus += ctx.Goad.Boost;
+        ctx.Whet(pick, ctx.Goad.Boost, WhetRoute.Goad);
         self.SetCounter(TargetKey, pick.InstanceId + 1);
 
         ctx.NoteGoadFire(pick, ctx.Goad.Boost, switched, lost);
@@ -3730,7 +3764,7 @@ public sealed class RallyTrait : Trait
         {
             if (ally == self) continue;
             foreach (UnitState t in ctx.SupportTargets(ally))
-                t.AtkBonus += OpeningGain;
+                ctx.Whet(t, OpeningGain, WhetRoute.RallyOpening);
         }
         ctx.Log($"  {self.Name} が鬨を上げた（味方全体 攻撃 +{OpeningGain}）", LogKind.Trigger);
     }
@@ -3761,7 +3795,7 @@ public sealed class RallyTrait : Trait
             // 条件（差し出したターンかどうか）は ally 側で見て、乗せる先は拡散を通す。
             // 拡散持ちは自分では受け取らないが、差し出した事実は本人のものなので判定は動かさない。
             foreach (UnitState t in ctx.SupportTargets(ally))
-                t.AtkBonus += Gain;
+                ctx.Whet(t, Gain, WhetRoute.RallyTurn);
             ctx.Log($"    {self.Name} の号令で {ally.Name} の溜めが乗った（攻撃 +{Gain}）", LogKind.Trigger);
         }
     }
@@ -3910,7 +3944,7 @@ public sealed class BindTrait : Trait
 
         UnitState victim = candidates[ctx.Roll(candidates.Count)];
         victim.SetCounter(StatusKeys.Stun, 1);
-        victim.AtkBonus += Gain;
+        ctx.Whet(victim, Gain, WhetRoute.Bind);
         ctx.Log($"    {self.Name} が {victim.Name} を縛りつけた（動けない / 攻撃 +{Gain}）", LogKind.FriendlyFire);
     }
 
@@ -3960,7 +3994,7 @@ public sealed class DrifterTrait : Trait
     {
         if (!moved.AcceptsSupport) return;
         ctx.Heal(moved, Heal);
-        moved.AtkBonus += Gain;
+        ctx.Whet(moved, Gain, WhetRoute.Drifter);
         ctx.Log($"    {self.Name} が流された {moved.Name} を拾い上げた（+{Heal} / 攻撃 +{Gain}）", LogKind.Trigger);
     }
 }

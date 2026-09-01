@@ -392,6 +392,32 @@ public sealed class BattleContext
     public Dictionary<string, int> BearFrom { get; } = new();
 
     /// <summary>
+    /// 強化（<see cref="Whet"/>）の計数。<see cref="DullTotal"/> と対になる（第56期）。
+    /// <b>発火しなかったことは盤面の値に痕跡を残さない</b>ので診断が読むためだけに数える
+    /// （<c>verbose</c> には依存しない）。盤面には一切影響しない。
+    ///
+    /// <para><c>WhetTotal</c> 窓口を通った総量（両陣営） ／ <c>WhetByRoute</c> 経路別の内訳。
+    /// <b>駒ごとの受取量は <see cref="UnitTally.Whetted"/> の側にある</b>——
+    /// 収支（<c>Whetted - Dulled</c>）と死蔵（受け取ったのに <c>Attacks</c> が 0）を
+    /// 同じ台帳の上で引くために、名前引きの辞書ではなく tally に置いた。</para>
+    /// </summary>
+    public int WhetTotal { get; internal set; }
+    public int[] WhetByRoute { get; } = new int[WhetRoutes.Count];
+
+    /// <summary>
+    /// 逆しま（<see cref="PerverseTrait"/>・ウツ）が受けた強化の量と、
+    /// <b>それで符号が正へ渡った回数</b>（<c>WhetPerverseFlips</c>）。
+    ///
+    /// <para><see cref="DullZeroed"/> の裏返しにあたる<b>崖の検算</b>。逆しまは
+    /// <c>AtkBonus</c> の<b>符号だけ</b>を読み、負なら3倍・正なら半減なので、
+    /// 「半減側へ落ちた瞬間」はここでしか観測できない（後から差分を取ると
+    /// 弱体で押し戻された往復に埋もれる）。第52期に駆り立てだけで観測された
+    /// 「カリはウツの呪いを『治して』殺す」を、<b>6経路すべてについて常時数える</b>。</para>
+    /// </summary>
+    public int WhetToPerverse { get; internal set; }
+    public int WhetPerverseFlips { get; internal set; }
+
+    /// <summary>
     /// 渡し（転嫁）の強度。<b>診断（relay）が版を差し替えるためだけの窓口</b>で、
     /// 通常の実行では誰も渡さない（既定は <see cref="RelayRule.Default"/>）。
     /// static のノブにしない理由は同型の doc を参照。
@@ -1893,7 +1919,7 @@ public sealed class BattleContext
                         if (back.Count > 0)
                         {
                             int gain = Math.Max(1, blocked / Colossus.DamagePerGain);
-                            foreach (UnitState t in back) t.AtkBonus += gain;
+                            foreach (UnitState t in back) Whet(t, gain, WhetRoute.Regurgitate);
                             Log($"    {wall.Name} が飲み込んだ力を {target.Name} へ返した（攻撃 +{gain}）",
                                 LogKind.Trigger);
                         }
@@ -2254,6 +2280,10 @@ public sealed class BattleContext
         // 崖の検算（第44期）。CurrentAttack は 0 で底を打つが AtkBonus は打たないので、
         // 「0 になった瞬間」はここでしか観測できない（後から差分を取ると沈んだ量に埋もれる）。
         int atkBefore = receiver.CurrentAttack;
+        // 駒ごとの受取量（第56期）。Whet の側と対にして収支（Whetted - Dulled）を引くために足した。
+        // **実際に AtkBonus が減った駒にだけ載る**——転嫁（RelayThrough）は上で return しており、
+        // 敵側で減る分は再帰した Dull がその受け手に載せる。**盤面には一切影響しない。**
+        TallyOf(receiver).Dulled += amount;
         receiver.AtkBonus -= amount;
         if (atkBefore > 0 && receiver.CurrentAttack == 0)
         {
@@ -2313,6 +2343,69 @@ public sealed class BattleContext
             RelayCost += cost;
             ApplyDamage(relayer, cost, null, isFriendlyFire: true);
             RelaySelfPaid += TallyOf(relayer).DamageTaken - paidBefore;
+        }
+    }
+
+    /// <summary>
+    /// 攻撃力を上げる唯一の窓口（<b>他者強化のみ</b>）。<b><c>AtkBonus</c> を直接足さないこと。</b>
+    /// <see cref="Dull"/> の対義で、コード上で一対に読めるように名前を <c>Whet</c>（研ぐ）にしてある。
+    ///
+    /// <para><b>やることは2つだけ</b>（<see cref="Dull"/> と対称）。(1) 集計を更新する。
+    /// (2) 受け手の <c>AtkBonus</c> に <paramref name="amount"/> を加算する。</para>
+    ///
+    /// <para><b>やらないこと（意図的）:</b></para>
+    /// <list type="bullet">
+    ///   <item><b><c>AcceptsSupport</c> の判定を入れない。</b> 6経路で扱いが揃っていない
+    ///   （駆り立て・縛め・移り木は自前で弾く／号令2本と吐き戻しは <see cref="SupportTargets"/> を
+    ///   通して隣へ漏らす）。ここで統一すると既存56行が動く。判定は呼び出し側に残したまま、
+    ///   <c>AtkBonus +=</c> の行だけを差し替えてある——<b><see cref="Dull"/> と同じ判断</b></item>
+    ///   <item><b>横取りの仕組みを作らない。</b> 強化の読み手は逆しま（ウツ）1枚しかいないので、
+    ///   ウケ・ワタに相当する駒はこの期では作らない。<b>ただし将来そこに立てられる位置は空けてある</b>
+    ///   （下の <c>receiver</c> のところが <see cref="Dull"/> で横取りが立っている位置）</item>
+    ///   <item><b><c>OnEmpowered</c> のようなフックを作らない。</b> 読み手が1枚の段階で
+    ///   イベントを作るのは早い（<see cref="Dull"/> が2枚でもまだ作っていない）</item>
+    ///   <item><b>ログの文言を変えない。</b> 各経路のログは呼び出し側に残す
+    ///   （「鬨を上げた」「縛りつけた」「飲み込んだ力を返した」は駒の個性であって窓口の責務ではない）</item>
+    /// </list>
+    ///
+    /// <para><b>自己強化の9本は通していない</b>（怒り・庇う／殉教・墓守2本・処刑・棘・澱み喰い・
+    /// 軋み・分かち）。窓口は将来の横取りの立ち位置になるので、<b>「自分の被弾で自分が強くなる」を
+    /// 他人が横取りできる形にしてはいけない</b>——第42期の <see cref="Dull"/> が通した5経路も
+    /// すべて他者への弱体で、自傷型は1本も無かった。<b>意図的な非対称</b>である。
+    /// 墓守の層の引き直し（<c>desired - applied</c>）を通していないのも
+    /// <see cref="Dull"/> 側と揃えた扱い（自分で積んだ自分のボーナスの再計算で、強化ではない）。</para>
+    ///
+    /// <para><b><see cref="Dull"/> と統合しない</b>（負の値を渡せる1本の関数にしない）。
+    /// 1つの関数が符号で挙動を変えると、<b>横取りの立ち位置が2つの意味を持つ</b>
+    /// ——同じ行にウケ（弱体を資産に変える）とその強化版が同居することになり、
+    /// どちらが走ったかを呼び出し側の符号から逆算する羽目になる。</para>
+    ///
+    /// <para><paramref name="route"/> は診断（<c>whet</c>）が経路別に数えるためだけの札で、
+    /// <b>盤面には一切影響しない</b>（<see cref="DullRoute"/> と同じ扱いで <c>verbose</c> に依存しない）。</para>
+    /// </summary>
+    public void Whet(UnitState target, int amount, WhetRoute route = WhetRoute.Other)
+    {
+        if (amount <= 0) return;
+
+        WhetTotal += amount;
+        WhetByRoute[(int)route] += amount;
+
+        // 横取りはまだ無い。**Dull はちょうどここに集約（ウケ）と転嫁（ワタ）を置いている**——
+        // 読み手を作る期が来たら receiver を差し替える形で同じ位置に立てられる。
+        UnitState receiver = target;
+
+        // 崖の検算（Dull の DullZeroed の裏返し）。逆しまは AtkBonus の**符号だけ**を読み、
+        // 負なら3倍・正なら半減なので、「半減側へ落ちた瞬間」はここでしか観測できない。
+        bool perverse = receiver.HasTrait(TraitId.Perverse);
+        int bonusBefore = receiver.AtkBonus;
+
+        TallyOf(receiver).Whetted += amount;
+        receiver.AtkBonus += amount;
+
+        if (perverse)
+        {
+            WhetToPerverse += amount;
+            if (bonusBefore <= 0 && receiver.AtkBonus > 0) WhetPerverseFlips++;
         }
     }
 
@@ -2702,6 +2795,10 @@ public static class BattleEngine
             DullTotal = ctx.DullTotal,
             DullByRoute = ctx.DullByRoute,
             DullTakenByRoute = ctx.DullTakenByRoute,
+            WhetTotal = ctx.WhetTotal,
+            WhetByRoute = ctx.WhetByRoute,
+            WhetToPerverse = ctx.WhetToPerverse,
+            WhetPerverseFlips = ctx.WhetPerverseFlips,
             DullZeroed = ctx.DullZeroed,
             DullZeroedWho = ctx.DullZeroedWho,
             BearTaken = ctx.BearTaken,

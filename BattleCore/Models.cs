@@ -583,6 +583,23 @@ public sealed class UnitTally
     /// </summary>
     public int Refunded;
 
+    /// <summary>
+    /// この駒が<b>他者から受け取った</b>強化・弱体の量（第56期）。
+    /// <c>Whetted</c> は <see cref="BattleContext.Whet"/> を、
+    /// <c>Dulled</c> は <see cref="BattleContext.Dull"/> を通った分だけ。
+    ///
+    /// <para><b>自己強化の9本は入らない</b>（怒り・庇う／殉教・墓守2本・処刑・棘・澱み喰い・
+    /// 軋み・分かち）。窓口を通っていないので、これは <c>AtkBonus</c> の総収支ではなく
+    /// <b>「他者から受け取った正味」</b>である。</para>
+    ///
+    /// <para><see cref="Healed"/> / <see cref="BigAttacks"/> と同じく
+    /// <b>既存の出力には出さない</b>（pulse の表に列を足すと過去の出力と diff が出る）。
+    /// 診断 <c>whet</c> だけが読む。<c>verbose</c> 非依存。
+    /// <see cref="Attacks"/> と組にすると<b>死蔵</b>（受け取ったのに一度も振らなかった駒）が引ける。</para>
+    /// </summary>
+    public int Whetted;
+    public int Dulled;
+
     /// <summary>とどめを刺した敵の数。</summary>
     public int Kills;
 
@@ -599,6 +616,7 @@ public sealed class UnitTally
         Swallowed += o.Swallowed; Slumbers += o.Slumbers;
         Refunds += o.Refunds; Refunded += o.Refunded;
         Kills += o.Kills; Deaths += o.Deaths;
+        Whetted += o.Whetted; Dulled += o.Dulled;
         // LastActiveTurn は**加算しない**。ターン番号は足しても意味を持たない。
         // Math.Max を取るのは、合算の順序に依存しない（可換・結合的）ため——
         // 「最後の値を残す」方式は Add を呼ぶ順で答えが変わる。
@@ -789,6 +807,23 @@ public sealed class BattleResult
     /// 経路ごとの割合が引けないので足した。
     /// </summary>
     public required IReadOnlyList<int> DullTakenByRoute { get; init; }
+
+    /// <summary>
+    /// 強化（第56期）の計数。<b>窓口 <see cref="BattleContext.Whet"/> を通った量を経路別に数える。</b>
+    /// <see cref="DullTotal"/> と対で、<b>他者強化の6経路だけ</b>が通る（自己強化の9本は直叩きのまま）。
+    /// <b>verbose に依存しない</b>。
+    ///
+    /// <para><c>WhetTotal</c> 総量（両陣営） ／ <c>WhetByRoute</c> 経路別（<see cref="WhetRoute"/> の順） ／
+    /// <c>WhetToPerverse</c> 逆しま（ウツ）が受けた量 ／
+    /// <c>WhetPerverseFlips</c> それで符号が正へ渡った回数（<b>半減側へ落ちた回数</b>）。</para>
+    ///
+    /// <para>強化源（カリ／ガン／クグ／シオ／ゴルム）がいなければ全部 0。
+    /// 駒ごとの受取量は <see cref="TallyByUnit"/> の <see cref="UnitTally.Whetted"/> 側。</para>
+    /// </summary>
+    public required int WhetTotal { get; init; }
+    public required IReadOnlyList<int> WhetByRoute { get; init; }
+    public required int WhetToPerverse { get; init; }
+    public required int WhetPerverseFlips { get; init; }
 
     /// <summary>
     /// 弱体で味方（正確には窓口の受け手）の <c>CurrentAttack</c> が 0 になった回数と駒の内訳。
