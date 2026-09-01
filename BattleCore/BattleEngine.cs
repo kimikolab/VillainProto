@@ -203,6 +203,10 @@ public sealed class BattleContext
             int left = u.Counter(StatusKeys.Burn);
             if (left <= 0) continue;
 
+            // 燃焼の計数（第57期）。**盤面には触らない。**
+            UnitTally bt = TallyOf(u);
+            bt.BurnTicks++;
+
             u.SetCounter(StatusKeys.Burn, left - 1);
             Log($"    {u.Name} が燃えている（残り {left - 1}）", LogKind.Status);
             Emit(new BattleEvent
@@ -214,7 +218,10 @@ public sealed class BattleContext
                 Text = "燃焼"
             });
             if (ScapegoatActive) NoteScapegoatDot(u, BurnRules.Damage, StatusKeys.Burn);
-            ApplyDamage(u, BurnRules.Damage, null);
+            // burnTick: この刻みが破片に吸われた量・HP を削った量を、
+            // 毒の刻み（同じく source が null）と混ぜずに数えるための札。**盤面には影響しない。**
+            ApplyDamage(u, BurnRules.Damage, null, burnTick: true);
+            if (!u.IsAlive) bt.BurnDeaths++;
         }
     }
 
@@ -227,6 +234,22 @@ public sealed class BattleContext
         if (!target.IsAlive) return;
 
         bool relit = target.Counter(StatusKeys.Burn) > 0;
+
+        // 燃焼の計数（第57期）。**盤面には触らない。**
+        // 「点いた」と「煽られた」を分けるのが要点——非スタックなので後者は
+        // 残ターンを 3 に戻すだけで、供給としては捨てられている。
+        UnitTally it = TallyOf(target);
+        if (relit)
+        {
+            it.BurnRelit++;
+        }
+        else
+        {
+            it.BurnLit++;
+            if (friendly) it.BurnLitAlly++;
+            if (it.FirstBurnTurn == 0) it.FirstBurnTurn = _turn;
+        }
+
         target.SetCounter(StatusKeys.Burn, BurnRules.Turns);
         Log(relit
                 ? $"    {target.Name} の火が煽られた（残り {BurnRules.Turns}）"
@@ -1654,6 +1677,8 @@ public sealed class BattleContext
         // 「1ターンあたり何回振ったか」が、手番でしか動かない駒と反応する駒を分ける。
         TallyOf(actor).Attacks++;
         if (attackPercent > 100) TallyOf(actor).BigAttacks++;   // 大技の発火数（Attacks の内数）
+        // 燃えている状態で振った回数（第57期・Attacks の内数）。熾火の稼働率の分子。
+        if (actor.Counter(StatusKeys.Burn) > 0) TallyOf(actor).BurnAttacks++;
 
         // 鱗（第47期）。**振った回数と、そのうち貫きだった回数を分けて数える。**
         // 「貫き」は成果ではないので、後列に当たった回数は ResolvePierce の側で別に数える。
@@ -1779,8 +1804,16 @@ public sealed class BattleContext
     /// ダメージ処理の単一窓口。味方からの巻き込みも生贄もここを通る。
     /// だから「被弾で強くなる」駒が、敵の攻撃でも味方の事故でも等しく反応する。
     /// </summary>
+    /// <param name="burnTick">
+    /// 燃焼の刻み（第57期）。<b>計数専用の札で、盤面の判断には一切使わない。</b>
+    /// 毒の刻みと同じく <paramref name="source"/> が <c>null</c> なので、
+    /// これが無いと「破片が吸ったのは毒か燃焼か」が割れない。
+    /// 肩代わり（巨躯・分かち・棘守り）が分割した各段にも引き継ぐ
+    /// ——分割された先で吸われた量も同じ刻みのぶんだから。
+    /// </param>
     public void ApplyDamage(UnitState target, int amount, UnitState? source,
-                            bool isFriendlyFire = false, bool lethal = true)
+                            bool isFriendlyFire = false, bool lethal = true,
+                            bool burnTick = false)
     {
         if (!target.IsAlive || amount <= 0) return;
 
@@ -1814,7 +1847,7 @@ public sealed class BattleContext
                 Log($"    {target.Name} の鎧は貫かれ、{behind.Name} にも {overflow} 届いた", LogKind.Trigger);
                 // 出どころは元の攻撃者のまま。中継で相手が倒れた場合、入れ替え（SwapSlots）は
                 // ThornGuardTrait.OnDamaged 側の「相手が既に死んでいるならそのまま」で自然に落ちる。
-                ApplyDamage(behind, overflow, source);
+                ApplyDamage(behind, overflow, source, burnTick: burnTick);
             }
         }
 
@@ -1925,7 +1958,7 @@ public sealed class BattleContext
                         }
                     }
 
-                    ApplyDamage(wall, blocked, source, isFriendlyFire: true);
+                    ApplyDamage(wall, blocked, source, isFriendlyFire: true, burnTick: burnTick);
                 }
             }
         }
@@ -1946,7 +1979,7 @@ public sealed class BattleContext
                 {
                     amount -= taken;
                     Log($"    {sharer.Name} が {target.Name} の痛みを引き受けた", LogKind.Trigger);
-                    ApplyDamage(sharer, taken, source, isFriendlyFire: true);
+                    ApplyDamage(sharer, taken, source, isFriendlyFire: true, burnTick: burnTick);
 
                     // 痛みを取り上げられた者は腕がなまる。肩代わり量に比例させているので、
                     // 代金はドハのHPという有限プールから払われる（SharerTrait.DullDivisor 参照）。
@@ -1981,6 +2014,9 @@ public sealed class BattleContext
             // 盤面には影響しない——生成量だけを見ると第23期の吐き戻し（経路は通ったが
             // 出力に変換される前に戦闘が終わる）と同じ穴に落ちるので、吸った量を別に持つ。
             if (target.HasTrait(TraitId.Bear)) BearSoaked += soak;
+
+            // 燃焼の刻みが破片に吸われた量（第57期）。**盤面には触らない。**
+            if (burnTick) TallyOf(target).BurnSoaked += soak;
 
             // 鱗（第47期）の**支出・被**。攻撃側の支出（ScaleSpentAttack）と分けて持つ
             // ——アーマーは被弾でも攻撃でも減る二重支出で、どちらが律速かで
@@ -2027,6 +2063,8 @@ public sealed class BattleContext
         }
 
         target.Hp -= amount;
+        // 燃焼の刻みが実際に削った量（第57期）。**すべての増減を通した後の値**。
+        if (burnTick) TallyOf(target).BurnTaken += amount;
         Log($"    {target.Name} に {amount} ダメージ (残り {Math.Max(0, target.Hp)})",
             isFriendlyFire ? LogKind.FriendlyFire : LogKind.Damage);
         Emit(new BattleEvent

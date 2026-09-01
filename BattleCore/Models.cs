@@ -600,6 +600,41 @@ public sealed class UnitTally
     public int Whetted;
     public int Dulled;
 
+    /// <summary>
+    /// 燃焼の計数（第57期）。<b>どれも誰も読んで分岐しない私有カウンタ</b>で、
+    /// 盤面には一切影響しない（<see cref="Whetted"/> と同じ扱いで <c>verbose</c> 非依存）。
+    /// 診断 <c>burn</c> だけが読む。
+    ///
+    /// <para><b>着火は「誰が付けたか」ではなく「誰に付いたか」で持つ。</b>
+    /// <see cref="BattleContext.Ignite"/> は付け手を受け取らないので、
+    /// 引数に足すと呼び出し規約が変わり「盤面を動かさない」という保証が弱くなる。</para>
+    ///
+    /// <list type="bullet">
+    /// <item><c>BurnLit</c> 火が<b>点いた</b>回数（<c>relit == false</c>）</item>
+    /// <item><c>BurnRelit</c> 火が<b>煽られた</b>回数（既燃への再付与＝<b>捨てられた供給</b>）</item>
+    /// <item><c>BurnLitAlly</c> <c>BurnLit</c> のうち <c>friendly: true</c> で点いた回数。
+    ///   陣営で分ける計数（受け手の Def.Id で引く）との<b>突き合わせ用</b></item>
+    /// <item><c>BurnTicks</c> 燃えたターンの延べ数（<c>TickStatuses</c> の燃焼ループを通った回数）</item>
+    /// <item><c>BurnTaken</c> 燃焼の刻みで<b>実際に HP を失った量</b>。
+    ///   <c>ApplyDamage</c> が <c>Hp -= amount</c> を実行した地点で数えるので、
+    ///   惨禍・据え・散開・萎縮・肩代わり・破片・軛をすべて通した後の量</item>
+    /// <item><c>BurnSoaked</c> 燃焼の刻みのうち<b>破片が吸った</b>量</item>
+    /// <item><c>BurnDeaths</c> 燃焼の刻みで倒れた回数（表A の「燃焼で落ちた」）</item>
+    /// <item><c>BurnAttacks</c> <b>燃えている状態で振った</b>回数（<see cref="Attacks"/> の内数）。
+    ///   表C の稼働率の分子</item>
+    /// <item><c>FirstBurnTurn</c> 最初に火が点いたターン。0 は「一度も点かなかった」</item>
+    /// </list>
+    /// </summary>
+    public int BurnLit;
+    public int BurnRelit;
+    public int BurnLitAlly;
+    public int BurnTicks;
+    public int BurnTaken;
+    public int BurnSoaked;
+    public int BurnDeaths;
+    public int BurnAttacks;
+    public int FirstBurnTurn;
+
     /// <summary>とどめを刺した敵の数。</summary>
     public int Kills;
 
@@ -617,6 +652,14 @@ public sealed class UnitTally
         Refunds += o.Refunds; Refunded += o.Refunded;
         Kills += o.Kills; Deaths += o.Deaths;
         Whetted += o.Whetted; Dulled += o.Dulled;
+        BurnLit += o.BurnLit; BurnRelit += o.BurnRelit; BurnLitAlly += o.BurnLitAlly;
+        BurnTicks += o.BurnTicks; BurnTaken += o.BurnTaken; BurnSoaked += o.BurnSoaked;
+        BurnDeaths += o.BurnDeaths; BurnAttacks += o.BurnAttacks;
+        // FirstBurnTurn は**加算しない**。0（一度も点かなかった）を除いた最小値を取る
+        // ——LastActiveTurn の Math.Max と同じく、合算の順序に依存しない形にする。
+        FirstBurnTurn = FirstBurnTurn == 0 ? o.FirstBurnTurn
+                      : o.FirstBurnTurn == 0 ? FirstBurnTurn
+                      : Math.Min(FirstBurnTurn, o.FirstBurnTurn);
         // LastActiveTurn は**加算しない**。ターン番号は足しても意味を持たない。
         // Math.Max を取るのは、合算の順序に依存しない（可換・結合的）ため——
         // 「最後の値を残す」方式は Add を呼ぶ順で答えが変わる。
