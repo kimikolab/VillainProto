@@ -24,6 +24,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 pulse [絞り込み] > docs/pulse.md      # 駒ごとの活動量（振/干渉）と与被ダメージの内訳
     dotnet run --project BattleSim -c Release 0 engage [絞り込み] > docs/engage.md    # 会戦（地点主表: 突破率・期待突破数×投入部隊数1-3・非線形・入場戦力・第1削り）
     dotnet run --project BattleSim -c Release 0 seats [絞り込み]    # 会戦の隊列持ち越し診断（診断用。docs/ に置かない）
+    dotnet run --project BattleSim -c Release 0 seats2 list         # 隣接／列を読む駒の一覧と行数（戦闘0回。第45期）
+    dotnet run --project BattleSim -c Release 0 seats2 degree       # 次数分布と、現行48行 × その鏡像の差（角の対称性）
+    dotnet run --project BattleSim -c Release 0 seats2 [skip] [take]  # 駒ごとに「編成が変わると席が変わるか」を測る（全48行で約7分）
     dotnet run --project BattleSim -c Release <n> demo      # 固定編成1戦の詳細ログを表示
     dotnet run --project BattleSim -c Release <n> demo "編成名" [seed]  # compare の編成で1戦の詳細ログ
     dotnet run --project BattleSim -c Release <n> replay "編成名" <seed>  # 1戦を再生用JSON（台本）で吐く
@@ -68,6 +71,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 relay [絞り込み]  # 転嫁の横取り・流し先・崖の検算・自弁率・効き・TransferPercent 掃引（陽性対照つき）（第43期）
     dotnet run --project BattleSim -c Release 0 relay kubi        # 変種Cだけを回す（萎縮との同居。主表と検算は重いので分けてある）
     dotnet run --project BattleSim -c Release 0 slander [絞り込み] # 誹りの発火・対象・横取り／素通り・攻ゼロ・早逝・Penalty 掃引・別 seed の追試（第44期・**採用しなかった**）
+
+`seats2` は**駒を単位に**席を測る（第45期）。`reseat` が「この編成をどう置くか」を測るのに対し、
+`seats2` は**同じ駒が編成をまたいで別の席に行くか**を測る。**盤面は1つも動かさない**
+（`Traits.cs` / `UnitCatalog.cs` / `Stages` / `CompareBuilds()` に差分ゼロが受け入れ条件）。
+探索は `reseat` の写しで、**検証プールに粗探索の最下位を1つ足してある**だけ
+——`幅`（1位と最下位の差）を 200 seed で測るために要る。実測 8.4 秒/行・全48行で約7分。
+
+**`reseat` の 1位 を採否の根拠にしてはいけない**（第45期の実測）。48行の実測で
+**1位と最下位の差は中央値 44.4pt** ある一方、**1位と5位の差は 2.15pt**しかなく、
+**その1位は別 seed 帯（200..599）では 48行中 28行で入れ替わる**。
+席の値段のほとんどは「やってはいけない置き方」の回避で、良い置き方どうしは平坦な面。
+**入れ替わるのは角どうしなので「次数」の割り当ては安定している**（追試一致率 98%）
+——採否に使うなら1位の配置ではなく**次数**を使う。
+
+**隣接を「隣に何人いるか」で読む機構は、配置の判断を生まない**（第45期）。
+編成5枠の次数は **{2, 4} の2値しかない**ので、隣接数の単調関数は2値の選好しか返せず、
+**符号が決まった時点で席が決まる**。実測でも 3値（前角/中央/後角）の最頻率は
+**隣接を読む駒 85% 対 隣接も列も読まない駒 65%** で、**隣接を読む駒のほうが席が固定されている。**
+
+    コスト型（ボルグ 巻き込み+火の粉 / リィカ 生贄 / スィド 毒漏れ）  → 角。最頻率 100%
+    利得型（カド 棘守り+棘）                                → 中央。中央率 82%
+    非単調（ヒサ 囃し立て＝隣で最大HPの1体を選ぶ）              → 最頻率 62%（対照と同水準）
+
+**ロスターで隣接を非単調に読むのはヒサ1枚だけで、その1枚だけが対照と同じだけ分散した。**
+n=1 なので断定はできないが、**次に隣接機構を作るなら「隣に何人いるか」ではなく
+「隣に誰がいるか」を読ませること。** 経緯は design/PHASE45_ADJACENCY.md。
+
+**新しい隣接機構は最初から2行以上に入れること。** 第41〜43期のハネ・ウケ・ワタは
+**3枚とも compare に1行しか無く**、`reseat` は編成内の席しか振らないので、
+**「編成によって席が変わるか」が原理的に観測できなかった**——
+3期連続の「配置の判断が生まれない」は、**測っていない量についての読み**だった。
 
 `layout` は「どう置くか」の粗い当たりを付ける道具で、その値で採否を決めてはいけない。
 seed 50 の 720通りの最大なので上位は運で入れ替わり、狙い（ガルド前列・セッキ後列）も無視する。
