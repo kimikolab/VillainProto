@@ -763,6 +763,21 @@ public sealed class BattleResult
     /// </summary>
     public required int DullTotal { get; init; }
     public required IReadOnlyList<int> DullByRoute { get; init; }
+
+    /// <summary>
+    /// そのうち横取り役（集約・渡し）に横取りされた量を<b>経路別に割ったもの</b>（第44期）。
+    /// <c>DullByRoute[r] - DullTakenByRoute[r]</c> がその経路の「素通り」。
+    /// 供給源が複数ある行では <c>BearTaken</c> / <c>BearPassed</c>（全経路の合算）から
+    /// 経路ごとの割合が引けないので足した。
+    /// </summary>
+    public required IReadOnlyList<int> DullTakenByRoute { get; init; }
+
+    /// <summary>
+    /// 弱体で味方（正確には窓口の受け手）の <c>CurrentAttack</c> が 0 になった回数と駒の内訳。
+    /// <b>崖の検算</b>用（第44期）。敵側の同型は <c>RelayZeroed</c>。
+    /// </summary>
+    public required int DullZeroed { get; init; }
+    public required IReadOnlyDictionary<string, int> DullZeroedWho { get; init; }
     public required int BearTaken { get; init; }
     public required int BearPassed { get; init; }
     public required int BearArmor { get; init; }
@@ -792,4 +807,16 @@ public sealed class BattleResult
     public required int RelaySelfPaid { get; init; }
     public required IReadOnlyDictionary<string, int> RelayFrom { get; init; }
     public required IReadOnlyDictionary<string, int> RelayTo { get; init; }
+
+    /// <summary>
+    /// 誹り（第44期）の計数。<b>敵から味方へ弱体を撒く初めての経路。</b>
+    /// <c>SlanderFired</c> 発火回数 ／ <c>SlanderTotal</c> 撒いた総量 ／
+    /// <c>SlanderTo</c> 誹られた相手の内訳（駒名 → 量）。
+    ///
+    /// <para>保持者（<c>EnemyCatalog.Slanderer</c>）が盤上にいないか
+    /// <c>SlanderRule.Penalty == 0</c> なら全部 0。<b>verbose に依存しない</b>。</para>
+    /// </summary>
+    public required int SlanderFired { get; init; }
+    public required int SlanderTotal { get; init; }
+    public required IReadOnlyDictionary<string, int> SlanderTo { get; init; }
 }

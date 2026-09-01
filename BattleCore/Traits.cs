@@ -72,6 +72,7 @@ public enum TraitId
                  //（同上。糸は開いた傷にしか通らない／通した糸を引けばその傷は塞がる）
     Alms,        // 施し: 自分は減らずに味方を回復する（敵側の語彙）
     Expose,      // 曝き: 攻撃したあと、敵陣の後列でいちばん無傷な駒を、前列でいちばん傷ついた枠へ引き出す（敵側の語彙）
+    Slander,     // 誹り: 攻撃した相手の攻撃力を下げる。口先で腕を鈍らせる（敵側の語彙）
 
     // --- プラスとマイナスが1つの動作の表と裏（どちらのブロックにも入らない） ---
     // 置き去り・責め苦・仇討ち・裂き・抉り・断ち・縫いも本来はこちら側だが、
@@ -1541,6 +1542,71 @@ public readonly record struct ExposeRule(int MaxPerBattle)
 }
 
 /// <summary>
+/// 誹り（第44期）。<b>攻撃した相手の攻撃力を下げる。</b>口先で腕を鈍らせる。
+///
+/// <para><b>敵側の語彙のプラス特性。</b> 殉教・断罪・施し・曝きと同じ場所に置く
+/// ——盤面ルール（逆位・渇き・軛・粛）のように両陣営へ等しくかかる規則ではなく、
+/// <b>保持者から相手陣営への一方向の効果</b>だから。engine 側の判定はゼロ。</para>
+///
+/// <para><b>狙いは弱体軸への「敵側からの供給」。</b> 第40期に同じことを検討して見送っている
+/// （見送り理由＝読み手がウツ1枚しかなく、新しく生まれる行が1〜2行で天井になる）。
+/// その条件は満たされた——読み手は<b>3枚</b>（逆しま＝攻撃力／引き受け＝アーマー／
+/// 渡し＝敵へ転嫁）になり、弱体を持つ行は 3行 → <b>7行</b>、そして第42期に共通窓口
+/// <see cref="BattleContext.Dull"/> が立った。</para>
+///
+/// <para><b>発火点は <see cref="Trait.OnAfterAttack"/>。</b> ターン頭の無条件発火にしない理由は
+/// 第40期の曝きと同じ2つ——(1) 保持者の手番に紐づくので<b>保持者を早く割れば止まる</b>という
+/// 勾配が自己言及的に立つ。(2) 攻撃はそのまま行うので、<b>同数値の対照に対する差分が
+/// 特性1つに閉じる</b>。</para>
+///
+/// <para><b><see cref="BattleContext.Dull"/> を必ず通す。</b> <c>AtkBonus</c> を直に引くと
+/// <b>この期の設計目的が丸ごと消える</b>——窓口を通ることで、ウケの横取り（アーマー化）と
+/// ワタの横取り（敵への転嫁）が自動的に走る。<b>敵が撒いた弱体を味方が資産に変換する経路</b>が
+/// この期の核心で、それは窓口の中にしか無い。</para>
+///
+/// <para><b><c>AcceptsSupport</c>（ガルドの <c>Stoic</c>）は見ない。</b> 第42期の窓口は
+/// 判定を呼び出し側に残す設計なので、<b>誹りは判定せずに <c>Dull</c> を呼ぶ</b>（＝ガルドにも通る）。
+/// 第43期までの5経路と扱いが揃わないが、揃えると既存48行が動くので、この期では揃えない
+/// （第42期からの持ち越し）。</para>
+/// </summary>
+public sealed class SlanderTrait : Trait
+{
+    public override TraitId Id => TraitId.Slander;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        // 既定（Penalty = 0）では窓口を1回も叩かない。Dull の中は横取りの走査があるので、
+        // 曝きの ExposesLeft・軛の Cap 判定と同じ作法で先に落とす（layout は数百万戦を並列で回す）。
+        int penalty = ctx.Slander.Penalty;
+        if (penalty <= 0) return;
+        if (!target.IsAlive) return;
+
+        ctx.SlanderFired++;
+        ctx.SlanderTotal += penalty;
+        ctx.SlanderTo[target.Name] =
+            ctx.SlanderTo.TryGetValue(target.Name, out int prev) ? prev + penalty : penalty;
+
+        ctx.Log($"    {self.Name} の誹りが {target.Name} の腕を鈍らせた（攻撃 -{penalty}）", LogKind.Trigger);
+        ctx.Dull(target, penalty, DullRoute.Slander);
+    }
+}
+
+/// <summary>
+/// 誹りの強度。<b>診断（slander）が版を差し替えるためだけの窓口</b>で、
+/// 既定（<see cref="Default"/>）は<b>無効</b>。static のノブにしない理由は同型の doc を参照。
+///
+/// <para><c>Penalty</c> は攻撃するたびに対象から引く攻撃力で、<c>0</c> なら完全に無効
+/// （<see cref="SlanderTrait"/> が窓口を1回も叩かない）。<b>既定を無効にしておくことで、
+/// 保持者を波に置いた状態で <c>compare</c> が現行の <c>docs/balance.md</c> と完全一致する</b>
+/// ——それが「差分が規則だけに閉じている」証明になる。</para>
+/// </summary>
+public readonly record struct SlanderRule(int Penalty)
+{
+    /// <summary>既定は<b>無効</b>（第44期の探索段階）。</summary>
+    public static SlanderRule Default => new(0);
+}
+
+/// <summary>
 /// 突き返し（第41期）。<b>味方が動かされるたび、敵陣の隊列を突き崩す。ただし勢い余って
 /// 隣接する味方の体勢まで崩す（攻撃力が下がる）。</b>
 ///
@@ -1716,14 +1782,16 @@ public enum DullRoute
     CurseLeak,    // 呪詛の味方漏れ: ネル → 味方全体（SupportTargets 経由）・開戦時1回
     Shove,        // 突き返しの Stagger: ハネ → 隣接味方・1ターン1回
     Cower,        // 萎縮: クビ → 味方全体（SupportTargets 経由）・開戦時1回
-    Relay         // 渡しの転嫁: ワタ → **敵陣**の最高攻撃力の駒・横取りのたび。
+    Relay,        // 渡しの転嫁: ワタ → **敵陣**の最高攻撃力の駒・横取りのたび。
                   // **窓口の中から窓口を呼ぶ唯一の経路**で、宛先が敵側なのもここだけ
+    Slander       // 誹り: 敵の保持者 → 殴った味方・攻撃のたび。
+                  // **敵から味方へ弱体を撒く初めての経路**（第44期）。他の6本は味方が起点
 }
 
 /// <summary>経路の名前と本数。診断の表の見出しと配列長をここ1箇所から引く。</summary>
 public static class DullRoutes
 {
-    public static readonly string[] Names = { "その他", "なまり", "呪詛敵", "呪詛漏れ", "突き返し", "萎縮", "渡し" };
+    public static readonly string[] Names = { "その他", "なまり", "呪詛敵", "呪詛漏れ", "突き返し", "萎縮", "渡し", "誹り" };
     public static int Count => Names.Length;
 }
 
@@ -3612,6 +3680,7 @@ public static class TraitCatalog
         new MenderTrait(),
         new AlmsTrait(),
         new ExposeTrait(),
+        new SlanderTrait(),
         new ShoveTrait(),
         new BearTrait(),
         new RelayTrait(),

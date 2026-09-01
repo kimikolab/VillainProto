@@ -346,6 +346,25 @@ public sealed class BattleContext
     /// </summary>
     public int DullTotal { get; internal set; }
     public int[] DullByRoute { get; } = new int[DullRoutes.Count];
+
+    /// <summary>
+    /// そのうち<b>横取り役（集約・渡し）に横取りされた量</b>を経路別に割ったもの（第44期）。
+    /// <c>DullByRoute[r] - DullTakenByRoute[r]</c> がその経路の「素通り」になる。
+    ///
+    /// <para><b>経路別に割る必要がここで初めて出た。</b> 既存の <c>BearTaken</c> /
+    /// <c>BearPassed</c> は全経路の合算なので、供給源が複数ある行（誹り＋なまり＋萎縮）では
+    /// 「敵が撒いたぶんの何割が資産に変わったか」が引けない。<b>盤面には一切影響しない</b>。</para>
+    /// </summary>
+    public int[] DullTakenByRoute { get; } = new int[DullRoutes.Count];
+
+    /// <summary>
+    /// 弱体で <c>CurrentAttack</c> が 0 になった回数と、その駒の内訳（<b>崖の検算</b>・第44期）。
+    /// <c>CurrentAttack</c> の下限は 0 だが <c>AtkBonus</c> に下限は無いので、
+    /// 0 を割ったぶんは<b>負の在庫として溜まる</b>（沈めた駒は同量の強化では戻らない）。
+    /// 敵側の同型は <c>RelayZeroed</c>（転嫁の分だけ）で、こちらは<b>窓口を通る全経路</b>を数える。
+    /// </summary>
+    public int DullZeroed { get; internal set; }
+    public Dictionary<string, int> DullZeroedWho { get; } = new();
     public int BearTaken { get; internal set; }
     public int BearPassed { get; internal set; }
     public int BearArmor { get; internal set; }
@@ -404,10 +423,30 @@ public sealed class BattleContext
         finally { InRelay = false; }   // 例外で立ちっぱなしになると以後の転嫁が永久に止まる
     }
 
+    /// <summary>
+    /// 誹りの強度。<b>診断（slander）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="SlanderRule.Default"/> ＝ 無効）。static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public SlanderRule Slander { get; }
+
+    /// <summary>
+    /// 誹り（<see cref="TraitId.Slander"/>）の計数。<b>発火しなかったことは盤面の値に痕跡を残さない</b>ので、
+    /// 診断が読むためだけに数える（<c>verbose</c> には依存しない）。盤面には一切影響しない。
+    ///
+    /// <para><c>SlanderFired</c> 発火回数 ／ <c>SlanderTotal</c> 撒いた総量 ／
+    /// <c>SlanderTo</c> 誹られた相手の内訳（駒名 → 量）。</para>
+    ///
+    /// <para><b>「撒いた量」は成果ではない。</b> 読み手に届いたかは
+    /// <see cref="DullTakenByRoute"/>（横取り）と、その差＝素通りで読む。</para>
+    /// </summary>
+    public int SlanderFired { get; internal set; }
+    public int SlanderTotal { get; internal set; }
+    public Dictionary<string, int> SlanderTo { get; } = new();
+
     public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null,
                          HushRule? hush = null, MartyrRule? martyr = null, ExposeRule? expose = null,
                          ShoveRule? shove = null, BearRule? bear = null,
-                         RelayRule? relay = null)
+                         RelayRule? relay = null, SlanderRule? slander = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -419,6 +458,7 @@ public sealed class BattleContext
         Shove = shove ?? ShoveRule.Default;
         Bear = bear ?? BearRule.Default;
         Relay = relay ?? RelayRule.Default;
+        Slander = slander ?? SlanderRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -1563,6 +1603,7 @@ public sealed class BattleContext
             {
                 receiver = taker;
                 BearTaken += amount;
+                DullTakenByRoute[(int)route] += amount;
                 BearFrom[target.Name] = BearFrom.TryGetValue(target.Name, out int prev) ? prev + amount : amount;
 
                 int armor = amount * Bear.ArmorPerDull;
@@ -1580,6 +1621,7 @@ public sealed class BattleContext
                 // 敵陣へ移る。転嫁を先に済ませてから代金を払うのは、代金で渡し役が
                 // 倒れても転嫁そのものは成立させるため（巨躯の吐き戻しが redirect の前に
                 // 確定させているのと同じ順序）。
+                DullTakenByRoute[(int)route] += amount;
                 RelayThrough(taker, target, amount);
                 return;
             }
@@ -1593,7 +1635,16 @@ public sealed class BattleContext
             BearPassed += amount;
         }
 
+        // 崖の検算（第44期）。CurrentAttack は 0 で底を打つが AtkBonus は打たないので、
+        // 「0 になった瞬間」はここでしか観測できない（後から差分を取ると沈んだ量に埋もれる）。
+        int atkBefore = receiver.CurrentAttack;
         receiver.AtkBonus -= amount;
+        if (atkBefore > 0 && receiver.CurrentAttack == 0)
+        {
+            DullZeroed++;
+            DullZeroedWho[receiver.Name] =
+                DullZeroedWho.TryGetValue(receiver.Name, out int z) ? z + 1 : 1;
+        }
     }
 
     /// <summary>
@@ -1789,10 +1840,11 @@ public static class BattleEngine
                                    ColossusRule? colossus = null, YokeRule? yoke = null,
                                    HushRule? hush = null, MartyrRule? martyr = null,
                                    ExposeRule? expose = null, ShoveRule? shove = null,
-                                   BearRule? bear = null, RelayRule? relay = null)
+                                   BearRule? bear = null, RelayRule? relay = null,
+                                   SlanderRule? slander = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
-               seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay);
+               seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -1807,9 +1859,10 @@ public static class BattleEngine
                                    YokeRule? yoke = null, HushRule? hush = null,
                                    MartyrRule? martyr = null, ExposeRule? expose = null,
                                    ShoveRule? shove = null, BearRule? bear = null,
-                                   RelayRule? relay = null)
+                                   RelayRule? relay = null, SlanderRule? slander = null)
     {
-        var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay);
+        var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
+                                    relay, slander);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -2019,6 +2072,9 @@ public static class BattleEngine
             ExposeMissed = ctx.ExposeMissed,
             DullTotal = ctx.DullTotal,
             DullByRoute = ctx.DullByRoute,
+            DullTakenByRoute = ctx.DullTakenByRoute,
+            DullZeroed = ctx.DullZeroed,
+            DullZeroedWho = ctx.DullZeroedWho,
             BearTaken = ctx.BearTaken,
             BearPassed = ctx.BearPassed,
             BearArmor = ctx.BearArmor,
@@ -2037,7 +2093,10 @@ public static class BattleEngine
             ShoveSwapped = ctx.ShoveSwapped,
             ShoveNoRow = ctx.ShoveNoRow,
             ShoveStaggered = ctx.ShoveStaggered,
-            ShoveBlocked = ctx.ShoveBlocked
+            ShoveBlocked = ctx.ShoveBlocked,
+            SlanderFired = ctx.SlanderFired,
+            SlanderTotal = ctx.SlanderTotal,
+            SlanderTo = ctx.SlanderTo
         };
     }
 
