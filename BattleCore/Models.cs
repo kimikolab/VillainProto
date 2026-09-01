@@ -864,4 +864,44 @@ public sealed class BattleResult
     public required int OverbearDoubled { get; init; }
     public required int OverbearBackfire { get; init; }
     public required int OverbearBackfireHits { get; init; }
+
+    /// <summary>
+    /// 鱗（第47期）の計数。<b>アーマー（<see cref="StatusKeys.Armor"/>）に初めて読み手が付いた</b>ので、
+    /// 供給・発揮・消費の3段をそれぞれ別に数える（<c>verbose</c> には依存しない）。盤面には一切影響しない。
+    ///
+    /// <para><b>獲得</b>: <c>ScaleGainDeath</c> 味方の死から ／ <c>ScaleGainShatter</c> 砕けの破片から ／
+    /// <c>ScaleGainBear</c> 集約の鎧から ／ <c>ScaleGainEphemeral</c> はそのうち儚い駒（胞子）の死から来たぶん
+    /// （<c>ScaleGainDeath</c> の内数） ／ <c>ScaleFirstTurn</c> 初めて纏ったターン（一度も纏わなければ 0）。</para>
+    ///
+    /// <para><b>纏い率</b>: <c>ScaleWornTurns</c> ÷ <c>ScaleAliveTurns</c>。分母は保持者が生きて
+    /// ターン頭を迎えた回数で、<b>戦闘の全ターン数ではない</b>（早く落ちる駒で率が下がらない）。</para>
+    ///
+    /// <para><b>発揮</b>: <c>ScaleSwings</c> 振った回数 ／ <c>ScalePierceSwings</c> そのうち貫きだった回数 ／
+    /// <c>ScaleBackHits</c> <b>貫きが後列の敵に当たった回数</b> ／ <c>ScaleBackDamage</c> その量（減衰後）。
+    /// <b>貫いた回数は成果ではない</b>——後列に敵がいなければ単体攻撃と同じである。</para>
+    ///
+    /// <para><b>消費</b>: <c>ScaleSpentAttack</c> 攻撃で消費した量 ／ <c>ScaleSpentHit</c> 被弾で吸われた量
+    /// （<b>二重支出</b>のどちらが律速かを読む） ／ <c>ScaleDepleted</c> 0 に戻った回数 ／
+    /// <c>ScaleLeftover</c> 決着時に残っていた量（＝死蔵） ／
+    /// <c>ScaleFullSoaks</c> 破片が被弾を受け切った回数（受け切ると <c>OnDamaged</c> が呼ばれない）。</para>
+    ///
+    /// <para>保持者（<c>UnitCatalog.Uro</c>）を編成に入れなければ全部 0。</para>
+    /// </summary>
+    public required int ScaleGainDeath { get; init; }
+    public required int ScaleGainShatter { get; init; }
+    public required int ScaleGainBear { get; init; }
+    public required int ScaleGainEphemeral { get; init; }
+    public required int ScaleFirstTurn { get; init; }
+    public required int ScaleAliveTurns { get; init; }
+    public required int ScaleWornTurns { get; init; }
+    public required int ScaleSwings { get; init; }
+    public required int ScalePierceSwings { get; init; }
+    public required int ScaleBackHits { get; init; }
+    public required int ScaleBackDamage { get; init; }
+    public required int ScaleSpentAttack { get; init; }
+    public required int ScaleSpentHit { get; init; }
+    public required int ScaleDepleted { get; init; }
+    public required int ScaleFullSoaks { get; init; }
+    public required int ScaleLeftover { get; init; }
 }
+

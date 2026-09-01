@@ -85,6 +85,8 @@ public enum TraitId
                  // ただし通り道になった自分の身が削れる（同上。1つの動作の表と裏）
     Overbear,    // 驕り: 隣の味方を見下して腕を鈍らせ、隣が全員自分より弱くなったとき本気を出す
                  // （同上。削るのは常時、報われるのは条件を満たしたときだけ）
+    Scale,       // 鱗: 倒れた味方の破片を拾って纏う。纏っているあいだ攻撃が貫きになるが、
+                 // 振るたびに剥がれる（供給・発揮・消費の1サイクルが1枚に入る。同上）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -2105,6 +2107,134 @@ public readonly record struct OverbearRule(int Drain)
     public static OverbearRule Default => new(2);
 }
 
+/// <summary>
+/// 鱗。<b>アーマー（<see cref="StatusKeys.Armor"/>）に初めての読み手を作る</b>（第47期）。
+///
+/// <para>アーマーは7つの盤面状態キーの中で<b>読み手が0枚だった唯一の資源</b>
+/// （書き手は砕け・集約の2つ、消費するのは <see cref="BattleContext.ApplyDamage"/> だけ）。
+/// しかも性質が他と違う——<b>回復とは別資源で、<c>AcceptsSupport</c> を貫通する</b>ので
+/// 「誰の助けも届かない」駒（ガルドの <see cref="TraitId.Stoic"/>）に唯一届く支援になっている。</para>
+///
+/// <para><b>隣接を1つも読まない。</b> 第45〜46期で隣接は2期かけて否定的な結論が出ている
+/// （隣接を読む駒の席の最頻率 85%、驕りに至っては 100%）。鱗が読むのは
+/// <b>自分が纏っている量</b>なので、席の問題から完全に外れる。</para>
+///
+/// <para><b>供給・発揮・消費の1サイクルが1枚に入っている。</b></para>
+/// <list type="bullet">
+///   <item><b>供給</b>（<see cref="OnAllyDeath"/>）: 味方が倒れるたび <see cref="GainPerDeath"/> を纏う。
+///     <b>自己完結させないために、供給の条件を「他人の身に起きる出来事」にしてある</b>
+///     ——自分では破片を作れない。</item>
+///   <item><b>発揮</b>（<see cref="ModifyPattern"/>）: 纏っているあいだ攻撃が<b>貫き</b>になる。
+///     ロスターに<b>常時の貫きは1枚も無い</b>（<c>Def.Pattern</c> は 単体43 / 薙ぎ3）ので、
+///     これは「アーマーを纏っているあいだだけ後列に手が届く」駒になる。</item>
+///   <item><b>消費</b>（<see cref="OnAfterAttack"/>）: 振るたび <c>ScaleRule.CostPerAttack</c> だけ剥がれる。
+///     <b>アーマーは被弾でも削られるので二重支出</b>で、供給が細ければすぐ枯れる。
+///     これがマイナス側で、「盾を削って刃にする」という1つの動作の表と裏になっている。</item>
+/// </list>
+///
+/// <para><b><c>AcceptsSupport</c> を見ない。</b> 砕け（<see cref="ShatterTrait"/>）と揃える
+/// ——アーマーは回復でも強化でもなく damage 側で消費されるプールなので、
+/// 弱体の窓口（<see cref="BattleContext.Dull"/>）の作法ではなく砕けの作法に従うのが正しい。
+/// 既存の <c>AcceptsSupport</c> の扱いが5経路で3通りに割れている件（第42期の持ち越し）には触らない。</para>
+///
+/// <para><b>召喚枠（胞子・亡骸）の死も通す。</b> <c>HandleDeath</c> は <c>OnAllyDeath</c> を
+/// 生存味方全員に流すので、<see cref="TraitId.Ephemeral"/> の駒が倒れても供給が湧く。
+/// <see cref="ReviverTrait"/> は同じ場所で儚い駒を除外しているが、あちらは
+/// 「一度きりの効果を持つ駒の価値を蘇生が無制限に掛け算する」ことを止めるための除外で、
+/// こちらは掛け算にならない——<b>胞子は胞子を産まないので供給は有限</b>（ムグ1体につき最大3件）。
+/// <b>除外せず、儚い駒の寄与を診断で別に数える</b>（<c>ScaleGainEphemeral</c>）。</para>
+///
+/// <para><b>フラグで固定しない。</b> <see cref="ModifyPattern"/> は攻撃のたびに評価されるので、
+/// 貫きは戦闘中に立ったり消えたりする（<see cref="SniperTrait"/> / <see cref="PyreTrait"/> と同じ形）。</para>
+/// </summary>
+public sealed class ScaleTrait : Trait
+{
+    /// <summary>
+    /// 味方1体が倒れるたびに纏う破片の量。<b>定数。振らない。</b>
+    /// 掃引の対象は <see cref="ScaleRule.CostPerAttack"/> だけで、
+    /// 1変数を振るときに一緒に動かすものを増やさない（第46期の作法）。
+    /// </summary>
+    public const int GainPerDeath = 4;
+
+    public override TraitId Id => TraitId.Scale;
+
+    /// <summary>
+    /// 纏い率の分母（保持者が生きてターン頭を迎えた回数）と分子（そのうち纏っていた回数）。
+    /// <b>盤面には一切触らない。計数だけ。</b>
+    /// </summary>
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        ctx.ScaleAliveTurns++;
+        if (self.Counter(StatusKeys.Armor) > 0) ctx.ScaleWornTurns++;
+    }
+
+    // --- 供給 ---------------------------------------------------------------------------------
+    // 自分の死では発火しない（HandleDeath は dead を除いて流すので構造的に来ないが、明示しておく）。
+    public override void OnAllyDeath(BattleContext ctx, UnitState self, UnitState dead)
+    {
+        if (!self.IsAlive || dead == self) return;
+
+        self.SetCounter(StatusKeys.Armor, self.Counter(StatusKeys.Armor) + GainPerDeath);
+        ctx.NoteScaleGain(GainPerDeath, ScaleSource.Death, dead.HasTrait(TraitId.Ephemeral));
+        ctx.Log($"    {self.Name} が {dead.Name} の欠片を拾った（破片 {self.Counter(StatusKeys.Armor)}）",
+                LogKind.Trigger);
+    }
+
+    // --- 発揮 ---------------------------------------------------------------------------------
+    public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
+        => self.Counter(StatusKeys.Armor) > 0 ? AttackPattern.Pierce : p;
+
+    // --- 消費 ---------------------------------------------------------------------------------
+    // 攻撃1回につき1度・主目標に対してのみ呼ばれる（貫きならレーンの先頭）。
+    // **振った回数を数えている**ので、範囲で複数体に当たっても支出は1回ぶん。
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dmg)
+    {
+        int cost = ctx.Scale.CostPerAttack;
+        if (cost <= 0) return;
+
+        int armor = self.Counter(StatusKeys.Armor);
+        if (armor <= 0) return;
+
+        int spent = Math.Min(armor, cost);
+        self.SetCounter(StatusKeys.Armor, armor - spent);
+        ctx.NoteScaleSpend(spent, armor - spent == 0);
+        ctx.Log($"    {self.Name} の鱗が剥がれた（破片 {armor - spent}）", LogKind.Status);
+    }
+}
+
+/// <summary>破片の出どころ。診断が獲得の内訳を割るためだけにある。</summary>
+public enum ScaleSource
+{
+    /// <summary>味方の死（鱗そのものの供給）。</summary>
+    Death,
+    /// <summary>砕け（ヒビ）が配った破片。</summary>
+    Shatter,
+    /// <summary>集約（ウケ）が弱体を変換した鎧。現行の台では発生しない。</summary>
+    Bear
+}
+
+/// <summary>
+/// 鱗の強度のノブ。<b>診断（scale）が版を差し替えるためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない。
+///
+/// <para><paramref name="CostPerAttack"/> は攻撃1回あたり剥がれる破片の量。
+/// <b><c>0</c> は「消費しない」＝維持型</b>で、纏った破片が被弾で削られるまで貫きが続く。
+/// つまりこのノブは強度ではなく<b>性質</b>（維持型か消費型か）を切り替える
+/// ——第41期の掃引が「比が全点で 2.30 で動かない＝ノブは強度しか変えない」に終わったので、
+/// 性質を動かすノブを選んである。</para>
+///
+/// <para><b>既定を無効にしなくてよい。</b> 味方側の駒なので、<see cref="UnitCatalog.Uro"/> を
+/// 編成に入れない限り既存の行は1バイトも動かない（それ自体が回帰チェックになる）。
+/// static のノブを置かない理由は <see cref="ShoveRule"/> / <see cref="BearRule"/> /
+/// <see cref="RelayRule"/> / <see cref="OverbearRule"/> と同じ。</para>
+/// </summary>
+public readonly record struct ScaleRule(int CostPerAttack)
+{
+    /// <summary>探索段階の初期値（第47期）。</summary>
+    public static ScaleRule Default => new(1);
+}
+
+
 
 /// <summary>澱み。既に積まれた毒を増幅する。毒が無ければ何もしない。</summary>
 public sealed class AmplifierTrait : Trait
@@ -3337,6 +3467,10 @@ public sealed class ShatterTrait : Trait
             // 「誰の助けも届かない」駒に唯一届く支援、というのがこの駒の存在理由。
             ally.SetCounter(StatusKeys.Armor, ally.Counter(StatusKeys.Armor) + shards);
             given += shards;
+
+            // 鱗（第47期）の獲得の内訳。**盤面には触らない**——読み手が2つ目の供給源から
+            // どれだけ受け取っているかを、死からの供給と分けて数えるためだけの1行。
+            if (ally.HasTrait(TraitId.Scale)) ctx.NoteScaleGain(shards, ScaleSource.Shatter);
         }
 
         if (given > 0)
@@ -3865,6 +3999,7 @@ public static class TraitCatalog
         new BearTrait(),
         new RelayTrait(),
         new OverbearTrait(),
+        new ScaleTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

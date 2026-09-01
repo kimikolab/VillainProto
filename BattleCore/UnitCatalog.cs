@@ -874,9 +874,48 @@ public static class UnitCatalog
         Flavor = "自分より下がいないと力が出ない。だから下を作ることにした。"
     };
 
+
+    /// <summary>
+    /// 鱗のウロ。<b>アーマーに初めての読み手を作る</b>（第47期）。
+    ///
+    /// <para><b>アーマー（<c>StatusKeys.Armor</c>）は7つの盤面状態キーの中で読み手が0枚だった
+    /// 唯一の資源。</b> 書き手は砕け（ヒビ）と集約（ウケ）の2つあるのに、消費するのは
+    /// <c>ApplyDamage</c> だけで、誰も条件として読んでいなかった（第47期 Phase 0-1 の表）。</para>
+    ///
+    /// <para><b>隣接を1つも読まない。</b> 第45〜46期で隣接は2期かけて否定的な結論が出ている
+    /// （隣接を読む駒の席の最頻率 85%、驕りは 100%）。ウロが読むのは<b>自分が纏っている量</b>
+    /// なので、席の問題から完全に外れる。</para>
+    ///
+    /// <para><b>供給・発揮・消費の1サイクルが1枚に入る。</b> 味方が倒れるたび破片を拾い
+    /// （<see cref="ScaleTrait.GainPerDeath"/> = 4）、纏っているあいだ攻撃が貫きになり、
+    /// 振るたび剥がれる。<b>アーマーは被弾でも削られるので二重支出</b>で、
+    /// これが「盾を削って刃にする」1つの動作の表と裏になっている。</para>
+    ///
+    /// <para><b>ロスターに常時の貫きは1枚も無い</b>（<c>Def.Pattern</c> は 単体43 / 薙ぎ3 /
+    /// 貫き0 / 全体0）。貫きは <c>ModifyPattern</c> を通してしか立たず、既存は3つとも
+    /// 外部条件付き（後衛特化＝後退済み かつ 後列／熾火＝燃えている間）。
+    /// ウロは4つ目で、条件が<b>資源の残高</b>である初めての例。</para>
+    ///
+    /// <para>HP70・攻9・速7 は探索段階の初期値。<b>掃引の対象は
+    /// <see cref="ScaleRule.CostPerAttack"/> だけ</b>で、HP・攻・速は振らない
+    /// （<see cref="ScaleTrait.GainPerDeath"/> も定数。1変数を振るときに一緒に動かすものを増やさない）。</para>
+    /// </summary>
+    public static readonly UnitDef Uro = new()
+    {
+        Id = "uro",
+        Name = "鱗のウロ",
+        MaxHp = 70,
+        Attack = 9,
+        Speed = 7,
+        Traits = new[] { TraitId.Scale },
+        PlusText = "味方が倒れるたび破片を纏う。纏っているあいだ攻撃が貫きになる",
+        MinusText = "振るたびに剥がれ、殴られても剥がれる。自分では破片を作れない",
+        Flavor = "倒れた者の欠片を拾って身に着ける。誰も惜しまないから、いくらでも拾える。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata, Uro
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

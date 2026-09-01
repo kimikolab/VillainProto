@@ -468,11 +468,80 @@ public sealed class BattleContext
     public int OverbearBackfire { get; internal set; }
     public int OverbearBackfireHits { get; internal set; }
 
+    /// <summary>
+    /// 鱗の強度。<b>診断（scale）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="ScaleRule.Default"/>）。static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public ScaleRule Scale { get; }
+
+    /// <summary>
+    /// 鱗（<see cref="TraitId.Scale"/>）の計数。<b>発火しなかったことは盤面の値に痕跡を残さない</b>
+    /// ので、診断が読むためだけに数える（<c>verbose</c> には依存しない）。盤面には一切影響しない。
+    ///
+    /// <para><b>「獲得」と「支出」を経路ごとに割るのがこの期の要。</b>
+    /// アーマーは被弾でも攻撃でも減るので<b>二重支出</b>で、どちらが律速かで
+    /// この駒が「攻撃型」なのか「防御型」なのかが決まる。</para>
+    ///
+    /// <para><b>「貫き」と「後列到達」を分ける。</b> 貫いた回数は成果ではない
+    /// ——後列に敵がいなければ単体攻撃と同じである。</para>
+    /// </summary>
+    public int ScaleGainDeath { get; internal set; }
+    public int ScaleGainShatter { get; internal set; }
+    public int ScaleGainBear { get; internal set; }
+    /// <summary>獲得のうち儚い駒（胞子・亡骸）の死から来たぶん。<c>ScaleGainDeath</c> の内数。</summary>
+    public int ScaleGainEphemeral { get; internal set; }
+    /// <summary>初めて破片を得たターン。一度も得なければ 0。</summary>
+    public int ScaleFirstTurn { get; internal set; }
+    /// <summary>保持者が生きてターン頭を迎えた回数（纏い率の分母）。</summary>
+    public int ScaleAliveTurns { get; internal set; }
+    /// <summary>そのうち <c>Armor &gt; 0</c> だったターン数。</summary>
+    public int ScaleWornTurns { get; internal set; }
+    /// <summary>保持者が振った回数。</summary>
+    public int ScaleSwings { get; internal set; }
+    /// <summary>そのうち貫きだった回数。</summary>
+    public int ScalePierceSwings { get; internal set; }
+    /// <summary>貫きが<b>後列の敵</b>に当たった回数（レーンの段ごとに1つ数える）。</summary>
+    public int ScaleBackHits { get; internal set; }
+    /// <summary>そのとき後列に振り下ろした量（減衰後）。</summary>
+    public int ScaleBackDamage { get; internal set; }
+    /// <summary>攻撃で消費した破片の量。</summary>
+    public int ScaleSpentAttack { get; internal set; }
+    /// <summary>被弾で吸われた破片の量。</summary>
+    public int ScaleSpentHit { get; internal set; }
+    /// <summary>破片が 0 に戻った回数（攻撃・被弾のどちらでも）。</summary>
+    public int ScaleDepleted { get; internal set; }
+    /// <summary>
+    /// 保持者の破片が被弾を<b>受け切った</b>回数。§7-1 の干渉
+    /// （受け切ると <c>OnDamaged</c> が呼ばれない＝被弾を条件にする特性が発火しない）の実測用。
+    /// </summary>
+    public int ScaleFullSoaks { get; internal set; }
+
+    /// <summary>鱗の獲得を記録する。<b>盤面には触らない。</b></summary>
+    internal void NoteScaleGain(int amount, ScaleSource src, bool ephemeral = false)
+    {
+        if (amount <= 0) return;
+        switch (src)
+        {
+            case ScaleSource.Death: ScaleGainDeath += amount; break;
+            case ScaleSource.Shatter: ScaleGainShatter += amount; break;
+            default: ScaleGainBear += amount; break;
+        }
+        if (ephemeral) ScaleGainEphemeral += amount;
+        if (ScaleFirstTurn == 0) ScaleFirstTurn = Turn;
+    }
+
+    /// <summary>鱗の支出（攻撃側）を記録する。<b>盤面には触らない。</b></summary>
+    internal void NoteScaleSpend(int amount, bool depleted)
+    {
+        ScaleSpentAttack += amount;
+        if (depleted) ScaleDepleted++;
+    }
+
     public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null,
                          HushRule? hush = null, MartyrRule? martyr = null, ExposeRule? expose = null,
                          ShoveRule? shove = null, BearRule? bear = null,
                          RelayRule? relay = null, SlanderRule? slander = null,
-                         OverbearRule? overbear = null)
+                         OverbearRule? overbear = null, ScaleRule? scale = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -486,6 +555,7 @@ public sealed class BattleContext
         Relay = relay ?? RelayRule.Default;
         Slander = slander ?? SlanderRule.Default;
         Overbear = overbear ?? OverbearRule.Default;
+        Scale = scale ?? ScaleRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -1076,6 +1146,14 @@ public sealed class BattleContext
         TallyOf(actor).Attacks++;
         if (attackPercent > 100) TallyOf(actor).BigAttacks++;   // 大技の発火数（Attacks の内数）
 
+        // 鱗（第47期）。**振った回数と、そのうち貫きだった回数を分けて数える。**
+        // 「貫き」は成果ではないので、後列に当たった回数は ResolvePierce の側で別に数える。
+        if (actor.HasTrait(TraitId.Scale))
+        {
+            ScaleSwings++;
+            if (pattern == AttackPattern.Pierce) ScalePierceSwings++;
+        }
+
         Log($"{prefix}{actor.Name} → {target.Name} (攻撃 {atk}{label})");
         Emit(new BattleEvent
         {
@@ -1146,6 +1224,16 @@ public sealed class BattleContext
             int dmg = Math.Max(1, atk * Math.Max(0, 100 - PierceDecayPercent * passed) / 100);
             if (passed > 0)
                 Log($"    刃は {u.Name} まで貫いた（威力 {dmg}）", LogKind.Damage);
+
+            // 鱗（第47期）の**後列到達**。当たった回数と、減衰後に振り下ろした量の両方を数える
+            // ——「貫いた回数」は成果ではない（後列に敵がいなければ単体攻撃と同じ）。
+            // 敵側に ApplyDamage 内の肩代わり（巨躯・分かち）は1枚も無いので、
+            // ここで数えた段はそのまま後列の駒に落ちる。
+            if (actor.HasTrait(TraitId.Scale) && FormationRules.RowOf(u.Slot) == Row.Back)
+            {
+                ScaleBackHits++;
+                ScaleBackDamage += dmg;
+            }
 
             ApplyDamage(u, dmg, actor);
             if (u == entry) primaryDealt = dmg;
@@ -1384,6 +1472,17 @@ public sealed class BattleContext
             // 盤面には影響しない——生成量だけを見ると第23期の吐き戻し（経路は通ったが
             // 出力に変換される前に戦闘が終わる）と同じ穴に落ちるので、吸った量を別に持つ。
             if (target.HasTrait(TraitId.Bear)) BearSoaked += soak;
+
+            // 鱗（第47期）の**支出・被**。攻撃側の支出（ScaleSpentAttack）と分けて持つ
+            // ——アーマーは被弾でも攻撃でも減る二重支出で、どちらが律速かで
+            // この駒が「攻撃型」なのか「防御型」なのかが決まる。
+            if (target.HasTrait(TraitId.Scale))
+            {
+                ScaleSpentHit += soak;
+                if (armor - soak == 0) ScaleDepleted++;
+                if (amount - soak <= 0) ScaleFullSoaks++;
+            }
+
             Log($"    {target.Name} の破片が {soak} 防いだ（残り {armor - soak}）", LogKind.Trigger);
 
             // 破片で受け切ったなら「何も起きなかった」と扱う。被弾強化も反撃も走らせない。
@@ -1639,6 +1738,8 @@ public sealed class BattleContext
                 {
                     taker.SetCounter(StatusKeys.Armor, taker.Counter(StatusKeys.Armor) + armor);
                     BearArmor += armor;
+                    // 鱗（第47期）の獲得の3本目の経路。現行の台では集約と同席しないので 0。
+                    if (taker.HasTrait(TraitId.Scale)) NoteScaleGain(armor, ScaleSource.Bear);
                 }
                 Log($"    {taker.Name} が {target.Name} の重荷を引き受けた（攻撃 -{amount} / 鎧 +{armor}）",
                     LogKind.Trigger);
@@ -1869,11 +1970,12 @@ public static class BattleEngine
                                    HushRule? hush = null, MartyrRule? martyr = null,
                                    ExposeRule? expose = null, ShoveRule? shove = null,
                                    BearRule? bear = null, RelayRule? relay = null,
-                                   SlanderRule? slander = null, OverbearRule? overbear = null)
+                                   SlanderRule? slander = null, OverbearRule? overbear = null,
+                                   ScaleRule? scale = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
-               overbear);
+               overbear, scale);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -1889,10 +1991,10 @@ public static class BattleEngine
                                    MartyrRule? martyr = null, ExposeRule? expose = null,
                                    ShoveRule? shove = null, BearRule? bear = null,
                                    RelayRule? relay = null, SlanderRule? slander = null,
-                                   OverbearRule? overbear = null)
+                                   OverbearRule? overbear = null, ScaleRule? scale = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
-                                    relay, slander, overbear);
+                                    relay, slander, overbear, scale);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -2136,7 +2238,27 @@ public static class BattleEngine
             OverbearSwings = ctx.OverbearSwings,
             OverbearDoubled = ctx.OverbearDoubled,
             OverbearBackfire = ctx.OverbearBackfire,
-            OverbearBackfireHits = ctx.OverbearBackfireHits
+            OverbearBackfireHits = ctx.OverbearBackfireHits,
+            ScaleGainDeath = ctx.ScaleGainDeath,
+            ScaleGainShatter = ctx.ScaleGainShatter,
+            ScaleGainBear = ctx.ScaleGainBear,
+            ScaleGainEphemeral = ctx.ScaleGainEphemeral,
+            ScaleFirstTurn = ctx.ScaleFirstTurn,
+            ScaleAliveTurns = ctx.ScaleAliveTurns,
+            ScaleWornTurns = ctx.ScaleWornTurns,
+            ScaleSwings = ctx.ScaleSwings,
+            ScalePierceSwings = ctx.ScalePierceSwings,
+            ScaleBackHits = ctx.ScaleBackHits,
+            ScaleBackDamage = ctx.ScaleBackDamage,
+            ScaleSpentAttack = ctx.ScaleSpentAttack,
+            ScaleSpentHit = ctx.ScaleSpentHit,
+            ScaleDepleted = ctx.ScaleDepleted,
+            ScaleFullSoaks = ctx.ScaleFullSoaks,
+            // 死蔵: 決着時に保持者がまだ纏っていた量（使われずに終わった破片）。
+            // **倒れた保持者も数える**——纏ったまま倒れた破片も「使われずに終わった」側。
+            ScaleLeftover = ctx.AllUnits
+                .Where(u => u.HasTrait(TraitId.Scale))
+                .Sum(u => u.Counter(StatusKeys.Armor))
         };
     }
 
