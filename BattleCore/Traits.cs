@@ -93,6 +93,8 @@ public enum TraitId
                  // ただし引き剥がした視線は自分にも刺さる（1つの動作の表と裏）
     Goad,        // 駆り立て: 隣のいちばん殴れる味方を前に押し出し、自分の力を全部渡す。
                  // 押し出された側は狙われる（1つの動作の表と裏。クグの縛め＋攻撃+16 と同じ構造）
+    Finisher,    // 止め: 誰かが指を差した敵に必ず食らいつき、倍の力で仕留める。
+                 // 仕留めると指差しは消える（供給と消費のサイクル。差されなければただの雑魚）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -2724,6 +2726,123 @@ public readonly record struct GoadRule(int Boost, bool Mark)
     public static GoadRule Default => new(4, true);
 }
 
+/// <summary>
+/// 止め。<b>ロスターで初めて「敵に付いた標」を読む駒</b>（第53期）。
+///
+/// <para><b>空白は敵側にあった。</b> 標（<see cref="StatusKeys.Marked"/>）の書き手は
+/// 第52期に3枚になった（囃し立て＝味方／逸らし＝自分と敵／駆り立て＝味方）のに、
+/// <b>駒の読み手は仇討ち（<see cref="AvengeTrait"/>）1枚だけ</b>で、しかもあちらが読むのは
+/// <b>味方</b>の標。<b>第50期にソラが敵へ標を付けられるようになったのに、それを読む駒がいなかった。</b></para>
+///
+/// <para><b>標には engine の鎖の中で特権がある</b>（第50期 Phase 0-2）。
+/// <c>SelectTargetChain</c> の標の段は <c>pool</c> ではなく <c>foes</c> から選ぶので、
+/// <b>標だけが「前列が生きている限り後列は狙われない」という盤面の中核規則を破る。</b>
+/// しかも鎖の1段目なので<b>庇い・後備え・殉教・棘守りをすべて飛び越す。</b>
+/// <b>この駒の価値は倍率ではなく、その経路を確実に使えることかもしれない</b>
+/// ——診断は「発火」と「列越え」を必ず分けて数える。</para>
+///
+/// <para><b>ザンとは「同じ通貨を、逆の陣営で、逆の手番の持ち方で」読む。</b>
+/// 仇討ちは <c>CanActOutOfTurn</c> を通る<b>ターン外</b>の駒なので粛（第二波）に封じられるが、
+/// <b>止めは自分の手番の <see cref="BattleContext.PerformAttack"/> の中でしか働かないので
+/// 粛の非対象</b>（第53期 Phase 0-4）。第51期の「効いているのは窓口ではなく手番の持ち方」に従う。</para>
+///
+/// <para><b>1つの動作の表と裏</b>（置き去り・責め苦・仇討ち・突き返し・鱗・逸らし・駆り立てと同型）。
+/// 3つが1つの動作から出る:</para>
+/// <list type="number">
+///   <item><b>対象の強制</b>（プラスとマイナスの両方）: 標を持つ生存中の敵がいれば<b>必ずそれを狙う</b>。
+///     複数いれば<b>現在HPが最も高い1体</b>（同値のみ <see cref="BattleContext.PickOne"/>）。
+///     <b>engine の 75% を 100% にし、選び方を決定的にする</b>だけで、窓口は増やしていない
+///     ——実装は <c>SelectTargetChain</c> の標の段（<see cref="Preferred"/> を呼ぶ1行）。
+///     <b>倒しきれない相手に食らいつくことがある</b>のがマイナス側。</item>
+///   <item><b>倍率</b>（プラス）: 標を持つ敵を殴るとき攻撃力が <see cref="FinisherRule.Multiplier"/> 倍。
+///     <b><see cref="Trait.ModifyAttack"/> では書けない</b>——あちらは対象を受け取らないので
+///     「相手が標を持つか」で分岐できない。<b>攻撃の解決時</b>（<c>PerformAttack</c> が
+///     <c>atk</c> を作った直後）に掛ける。<b>標を持たない敵を殴るときは素の攻12。</b></item>
+///   <item><b>消費</b>（マイナス）: 殴った後、その敵の標を 0 にする。
+///     <b>敵の標を消す初めての経路</b>（ソラ・カリは味方からしか外さない）。
+///     消すと engine の <c>MarkPullPercent</c> も切れるので、
+///     <b>味方全体の集中砲火を自分が終わらせてしまう。</b></item>
+/// </list>
+///
+/// <para><b>代金を軽くする細工はしていない。</b> 消費を止めたり、標が無いときも倍率を乗せたりすると、
+/// 供給とのサイクルが消えて単なる高打点の駒になる。<b>供給はソラ1枚しかない</b>
+/// （第47期のウロ＝砕け1枚と同じ形）ので、<b>ソラ抜きでは素の攻12として振る舞う。</b></para>
+///
+/// <para><b>消費は <see cref="OnAfterAttack"/>（駒側）に置き、倍率と対象の強制は engine に置いた。</b>
+/// 前者は駒ごとのフックで書けるが、後者2つは書けない（<c>ModifyAttack</c> は対象を知らず、
+/// 標的選択には Trait のフックが無い）——<b>engine に窓口があるのは「駒ごとのフックでは
+/// 書けない機構」だけ</b>という既存の作法に従う。</para>
+/// </summary>
+public sealed class FinisherTrait : Trait
+{
+    public override TraitId Id => TraitId.Finisher;
+
+    /// <summary>
+    /// 狙う相手。<b>標を持つ生存中の敵のうち現在HPが最も高い1体</b>（同値のみ <c>PickOne</c>）。
+    /// <b>候補は <c>pool</c> ではなく <c>foes</c></b>——標の段そのものの候補集合をそのまま使う
+    /// （ここを <c>pool</c> にすると列越えが消えて、この駒の主眼が測れなくなる）。
+    ///
+    /// <para><b>候補 0 個・1 個では <c>Roll</c> を消費しない</b>（<c>PickOne</c> の性質）ので、
+    /// 「標持ちが1体だけ」という通常の局面では乱数列が動かない。</para>
+    /// </summary>
+    public static UnitState? Preferred(BattleContext ctx, List<UnitState> foes)
+    {
+        List<UnitState> marked = foes.Where(f => f.Counter(StatusKeys.Marked) > 0).ToList();
+        if (marked.Count == 0) return null;
+        int top = marked.Max(f => f.Hp);
+        return ctx.PickOne(marked.Where(f => f.Hp == top).ToList());
+    }
+
+    /// <summary>
+    /// 殴った相手の標を消す。<b>敵側だけ</b>（味方の標はソラ・カリの領分）。
+    ///
+    /// <para><b>死んでいても消す。</b> 「仕留めると指差しは消える」は結果で解決する
+    /// ——生死で例外を作ると、倒し切れなかったときだけ標が残る非対称ができる。</para>
+    ///
+    /// <para><c>FinisherRule.Consume</c> が偽なら消さない。<b>これはノブではなく対照</b>
+    /// （§4 の対照2）で、既定は常に <c>true</c>。</para>
+    /// </summary>
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (target.TeamId == self.TeamId) return;
+        if (target.Counter(StatusKeys.Marked) <= 0) return;
+
+        ctx.NoteFinisherOutcome(target, !target.IsAlive);
+        if (!ctx.Finisher.Consume) return;
+
+        target.SetCounter(StatusKeys.Marked, 0);
+        ctx.NoteFinisherConsume();
+        ctx.Log($"    {self.Name} が {target.Name} を仕留めにかかり、指差しが消えた", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// 止めの強度のノブ。<b>診断（finisher）が版を差し替えるためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない（既定は <see cref="Default"/>）。
+/// static のノブにしない理由は同型の doc（<see cref="ColossusRule"/>）を参照。
+///
+/// <para><paramref name="Multiplier"/> は標を持つ敵への倍率。<b>動かす量は打点1本だけ</b>
+/// ——標の消費量も列越えの有無も <paramref name="Multiplier"/> に依存しないので、
+/// 第50期の <see cref="DivertRule.TargetCount"/> のような打ち消し（総量と取り分が逆を向く）は
+/// 構造上起きない。第52期の基準（<b>ノブが動かす量を1本にする</b>）に従って選んだ。</para>
+///
+/// <para><paramref name="Consume"/> は<b>ノブではない</b>。「標を倍で殴る」効果と
+/// 「味方の集中砲火を自分で止める」代金を分離するための<b>対照</b>で、既定は常に <c>true</c>。
+/// 診断の対照2だけが <c>false</c> を渡す——<b>差が小さければサイクルは代金として働いていない</b>
+/// （この駒は「標を倍で殴るだけ」の駒である）。</para>
+///
+/// <para><b>既定を無効にしなくてよい。</b> 味方側の駒なので、<see cref="UnitCatalog.Tome"/> を
+/// 編成に入れない限り既存の行は1バイトも動かない（それ自体が回帰チェックになる）。</para>
+/// </summary>
+public readonly record struct FinisherRule(int Multiplier, bool Consume)
+{
+    /// <summary>倍率だけを指定する。代金（標の消費）は払う＝通常の実行。</summary>
+    public FinisherRule(int multiplier) : this(multiplier, true) { }
+
+    /// <summary>探索段階の初期値（第53期）。</summary>
+    public static FinisherRule Default => new(2, true);
+}
+
 
 
 
@@ -4495,6 +4614,7 @@ public static class TraitCatalog
         new ScapegoatTrait(),
         new DivertTrait(),
         new GoadTrait(),
+        new FinisherTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

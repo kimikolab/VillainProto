@@ -1051,9 +1051,53 @@ public static class UnitCatalog
         Flavor = "前に出ろとしか言えない。言い方を知らないだけで、渡せるものは全部渡している。"
     };
 
+
+    /// <summary>
+    /// 止めのトメ。<b>ロスターで初めて「敵に付いた標」を読む駒</b>（第53期）。
+    ///
+    /// <para><b>標の書き手は第52期に3枚になったのに、読み手は仇討ち（ザン）1枚のままだった</b>
+    /// ——しかもザンが読むのは<b>味方</b>の標。第50期にソラが敵へ標を付けられるようになったのに、
+    /// <b>それを読む駒が1枚も無い</b>のがこの期に埋めた空白（第42期の弱体・第47期のアーマーと同じ形で、
+    /// どちらも供給が厚くなった直後に読み手を足して軸になった）。</para>
+    ///
+    /// <para><b>敵の標は「焦点」であり、列の壁を越えて届く経路。</b> engine の
+    /// <c>SelectTargetChain</c> は標の段だけを <c>pool</c> ではなく <c>foes</c> から選ぶので、
+    /// <b>標を持つ敵は前列が生きていても狙える</b>。トメはその段を 100%・決定的にする
+    /// ——<b>この駒の価値は倍率ではなく列越えのほうかもしれない</b>ので、
+    /// 診断は「発火」と「列越え」を必ず分けて数える。</para>
+    ///
+    /// <para><b>ザンと逆の手番の持ち方をする。</b> ザンは <c>CanActOutOfTurn</c> を通る
+    /// ターン外の駒なので粛（第二波）に封じられるが、<b>トメは自分の手番でしか働かないので
+    /// 粛の非対象</b>。第51期の「効いているのは窓口ではなく手番の持ち方」に従って、
+    /// <b>同じ通貨を、逆の陣営で、逆の手番の持ち方で読む</b>形にしてある。</para>
+    ///
+    /// <para><b>1つの動作の表と裏。</b> 標を持つ敵に必ず食らいつき（倒しきれない相手にも）、
+    /// 倍の力で殴り（プラス）、殴った後にその標を消す（マイナス）。
+    /// <b>消すと engine の <c>MarkPullPercent</c> も切れる</b>ので、
+    /// <b>味方全体の集中砲火を自分で終わらせてしまう</b>——これが倍率の見返りに対する代金。</para>
+    ///
+    /// <para><b>供給はソラ1枚しかない</b>（敵に標を付けられるのはソラだけ）ので、
+    /// <b>ソラ抜きでは素の攻12として振る舞う</b>——第47期のウロ（アーマーの供給が砕け1枚）と同型。</para>
+    ///
+    /// <para>HP58・攻12・速6 は探索段階の初期値。<b>掃引の対象は
+    /// <c>FinisherRule.Multiplier</c> だけ</b>で、HP・攻・速は振らない。</para>
+    /// </summary>
+    public static readonly UnitDef Tome = new()
+    {
+        Id = "tome",
+        Name = "止めのトメ",
+        MaxHp = 58,
+        Attack = 12,
+        Speed = 6,
+        Traits = new[] { TraitId.Finisher },
+        PlusText = "標的にされた敵を必ず狙い、倍の力で殴る（列の壁を越えて届く）",
+        MinusText = "殴ると標的が外れるので味方の集中砲火が止まる。誰も指差さなければただの雑魚",
+        Flavor = "誰かが指を差した相手にしか本気になれない。差されれば、確実に仕留める。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata, Uro, Sora, Kari
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata, Uro, Sora, Kari, Tome
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

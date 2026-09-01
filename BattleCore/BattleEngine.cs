@@ -853,13 +853,114 @@ public sealed class BattleContext
         GoadTargetTo[k] = GoadTargetTo.TryGetValue(k, out int a) ? a + 1 : 1;
     }
 
+    /// <summary>
+    /// 止めの強度。<b>診断（finisher）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="FinisherRule.Default"/>）。static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public FinisherRule Finisher { get; }
+
+    /// <summary>
+    /// 盤上に止め（<see cref="TraitId.Finisher"/>）の保持者が一度でも立ったか。
+    /// <b>計数のフックを短絡させるためだけ</b>のフラグ（layout は数百万戦を並列で回す）。
+    /// </summary>
+    public bool FinisherActive { get; private set; }
+
+    /// <summary>
+    /// 止め（<see cref="TraitId.Finisher"/>）の計数。<b>発火しなかったこと（空振り）は盤面の値に
+    /// 痕跡を残さない</b>ので、診断が読むためだけに数える（<c>verbose</c> には依存しない）。
+    ///
+    /// <para><b>「発火」と「列越え」を分けてある。</b> 標を持つ敵を殴った回数は成果ではない
+    /// ——<b>標が無ければ狙えなかった敵</b>（<c>pool</c> の外＝中列・後列）を殴れたかどうかが、
+    /// 第50期に判明した「標だけが列の壁を破る」性質を実際に使えているかの指標。</para>
+    ///
+    /// <para><b>「止めた砲火」が代金の実体。</b> 標を消すと engine の
+    /// <see cref="MarkPullPercent"/> も切れるので、<b>味方全体の集中砲火を自分で終わらせる</b>
+    /// ——消費したターンのうちに振った味方の単体攻撃で、盤上に標持ちが1体も残っていなかった回数。</para>
+    /// </summary>
+    public int FinisherFires { get; internal set; }
+    /// <summary>標を持つ敵が1体もいなくて通常の対象選択に戻った回数（＝空振り）。</summary>
+    public int FinisherIdle { get; internal set; }
+    /// <summary><b>標が無ければ狙えなかった敵</b>（<c>PoolOf</c> の外）を殴った回数。</summary>
+    public int FinisherCross { get; internal set; }
+    public int FinisherConsumed { get; internal set; }
+    /// <summary>標を持つ敵を殴って<b>実際に倒した</b>回数。</summary>
+    public int FinisherKills { get; internal set; }
+    public Dictionary<string, int> FinisherTargetTo { get; } = new();
+    /// <summary>標が付いてから止めが殴るまでのターン数の合計と件数（÷ が <b>遊休</b>）。</summary>
+    public int FinisherWaitSum { get; internal set; }
+    public int FinisherWaitCount { get; internal set; }
+    /// <summary>味方の単体振りの回数と、そのうち<b>止めが標を消した後で標が尽きていた</b>回数。</summary>
+    public int FinisherAllySingles { get; internal set; }
+    public int FinisherStarved { get; internal set; }
+
+    /// <summary>
+    /// 標が敵に付いたターンを記録するための私有キー。<b>盤面には一切影響しない</b>
+    /// （読むのは <see cref="NoteFinisherFire"/> の遊休の計算だけ）。
+    /// </summary>
+    internal const string FinisherSinceKey = "finisherSince";
+    private int _finisherConsumedTurn = -1;
+
+    /// <summary>
+    /// 標が付いた敵に「いつ付いたか」の印を立てる。<b>ターン頭の <c>OnTurnStart</c> の直後に
+    /// 1回だけ呼ぶ</b>——標の書き手（逸らし・駆り立て・囃し立て）はすべてそこまでに書き終わる。
+    /// <b>盤面は1つも動かさない</b>（私有カウンタを書くだけ）。
+    /// </summary>
+    internal void NoteFinisherMarkAges()
+    {
+        foreach (UnitState u in _units)
+        {
+            if (u.TeamId == PlayerTeam) continue;
+            if (!u.IsAlive || u.Counter(StatusKeys.Marked) <= 0) { u.SetCounter(FinisherSinceKey, 0); continue; }
+            if (u.Counter(FinisherSinceKey) == 0) u.SetCounter(FinisherSinceKey, Turn);
+        }
+    }
+
+    internal void NoteFinisherIdle() => FinisherIdle++;
+
+    internal void NoteFinisherFire(UnitState target, bool crossed)
+    {
+        FinisherFires++;
+        if (crossed) FinisherCross++;
+        int since = target.Counter(FinisherSinceKey);
+        if (since > 0) { FinisherWaitSum += Turn - since; FinisherWaitCount++; }
+        string k = target.Def.Name;
+        FinisherTargetTo[k] = FinisherTargetTo.TryGetValue(k, out int a) ? a + 1 : 1;
+    }
+
+    /// <summary>殴った結果（撃破したか）。<b>消費の有無に関わらず数える</b>（対照2 と揃えるため）。</summary>
+    internal void NoteFinisherOutcome(UnitState target, bool killed)
+    {
+        if (killed) FinisherKills++;
+    }
+
+    internal void NoteFinisherConsume()
+    {
+        FinisherConsumed++;
+        _finisherConsumedTurn = Turn;
+    }
+
+    /// <summary>
+    /// 味方の単体振りを数え、<b>止めが標を消したせいで焦点が無くなっていた振り</b>を拾う。
+    /// <b>盤面には触らない。</b> これが「止めた砲火」の推定値で、
+    /// 厳密な代金は診断が<b>対照2（消費なし版）との差</b>で取る。
+    /// </summary>
+    internal void NoteFinisherSwing(UnitState actor)
+    {
+        if (actor.TeamId != PlayerTeam) return;
+        FinisherAllySingles++;
+        if (_finisherConsumedTurn != Turn) return;
+        foreach (UnitState f in _units)
+            if (f.TeamId != PlayerTeam && f.IsAlive && f.Counter(StatusKeys.Marked) > 0) return;
+        FinisherStarved++;
+    }
+
     public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null,
                          HushRule? hush = null, MartyrRule? martyr = null, ExposeRule? expose = null,
                          ShoveRule? shove = null, BearRule? bear = null,
                          RelayRule? relay = null, SlanderRule? slander = null,
                          OverbearRule? overbear = null, ScaleRule? scale = null,
                          ScapegoatRule? scapegoat = null, DivertRule? divert = null,
-                         GoadRule? goad = null)
+                         GoadRule? goad = null, FinisherRule? finisher = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -879,6 +980,7 @@ public sealed class BattleContext
         Divert = divert ?? DivertRule.Default;
         if (Divert.Audit) DivertActive = true;
         Goad = goad ?? GoadRule.Default;
+        Finisher = finisher ?? FinisherRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -893,6 +995,7 @@ public sealed class BattleContext
         // 業の計数フックを短絡させるためのフラグ（盤面には影響しない）。
         if (u.HasTrait(TraitId.Scapegoat)) ScapegoatActive = true;
         if (u.HasTrait(TraitId.Divert)) DivertActive = true;
+        if (u.HasTrait(TraitId.Finisher)) FinisherActive = true;
         u.InstanceId = _nextInstanceId++;
         u.Board = this;          // 「隣に誰がいるか」を読む特性のため（UnitState.Board の doc 参照）
         _units.Add(u);
@@ -1292,9 +1395,25 @@ public sealed class BattleContext
             return target;
         }
 
-        UnitState? marked = PickOne(foes.Where(f => f.Counter(StatusKeys.Marked) > 0).ToList());
-        if (marked is not null && marked != target && Roll(100) < MarkPullPercent)
+        // 止め（第53期）。**標の段を 100%・決定的にするだけで、窓口は増やしていない。**
+        // 執着（pool から選ぶ直前）でも断ちの選好でもなく**この段**に置くのは、
+        // 標の候補集合が `foes`（＝列を無視する）だからで、`pool` に移すと
+        // **この駒の主眼である列越えが構造的に消える**（第50期 Phase 0-2）。
+        //
+        // **`Roll` を引かない**（執着・断ちと同じ）。候補が 2 体以上のときだけ Preferred の中の
+        // PickOne が引くが、それは「同じ資格の駒が複数いたら乱数で選ぶ」既存の作法そのもの。
+        bool finisher = attacker.HasTrait(TraitId.Finisher);
+        UnitState? marked = finisher
+            ? FinisherTrait.Preferred(this, foes)
+            : PickOne(foes.Where(f => f.Counter(StatusKeys.Marked) > 0).ToList());
+
+        // 止めのときは **`marked == target` でもここで返す**——標の段は鎖の1段目なので、
+        // 庇い・後備え・殉教・棘守りを飛び越すのは標が元から持つ性質。
+        // 「たまたま無作為の主目標が標持ちだった」ときだけ介入を許すのは非対称になる。
+        if (marked is not null && (finisher || (marked != target && Roll(100) < MarkPullPercent)))
         {
+            if (marked == target) return marked;   // 差し替えていないので鎖の計数は動かさない
+
             // 業（第49期）が敵へ書いた標が実際に引いた回数。**engine が標の読み手**なので、
             // 「敵側に読み手がいない」＝「効かない」ではない（第48期の棚卸しが数えたのは駒）。
             if (ScapegoatActive && marked.Counter(ScapegoatTrait.OwedKey(StatusKeys.Marked)) > 0)
@@ -1474,6 +1593,29 @@ public sealed class BattleContext
         int atk = attackPercent == 100
             ? actor.CurrentAttack
             : actor.CurrentAttack * attackPercent / 100;
+
+        // 止め（第53期）。**倍率は攻撃の解決時に掛ける**——`Trait.ModifyAttack` は対象を
+        // 受け取らないので「相手が標を持つか」で分岐できない（`ModifyAttack` に書くと
+        // 標の無い相手にも倍率が乗り、供給とのサイクルが消えて単なる高打点の駒になる）。
+        // **単体攻撃だけ**（薙ぎ・全体・貫きは engine の鎖が標を1ビットも見ない）。
+        //
+        // **「発火」と「列越え」を分けて数える。** 列越え＝`PoolOf` の外（中列・後列）を殴った回数で、
+        // 「標が無ければ狙えなかった敵」。標が持つ特権を実際に使えたかはこちらでしか読めない。
+        if (FinisherActive && pattern == AttackPattern.Single && actor.HasTrait(TraitId.Finisher))
+        {
+            if (target.Counter(StatusKeys.Marked) > 0)
+            {
+                atk *= Finisher.Multiplier;
+                NoteFinisherFire(target, !TargetPool(actor).Contains(target));
+            }
+            else
+            {
+                NoteFinisherIdle();
+            }
+        }
+
+        // 止めの代金（止めた砲火）の分母と拾い上げ。**盤面には触らない。**
+        if (FinisherActive && pattern == AttackPattern.Single) NoteFinisherSwing(actor);
 
         string label = pattern switch
         {
@@ -2317,11 +2459,12 @@ public static class BattleEngine
                                    BearRule? bear = null, RelayRule? relay = null,
                                    SlanderRule? slander = null, OverbearRule? overbear = null,
                                    ScaleRule? scale = null, ScapegoatRule? scapegoat = null,
-                                   DivertRule? divert = null, GoadRule? goad = null)
+                                   DivertRule? divert = null, GoadRule? goad = null,
+                                   FinisherRule? finisher = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
-               overbear, scale, scapegoat, divert, goad);
+               overbear, scale, scapegoat, divert, goad, finisher);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -2339,10 +2482,10 @@ public static class BattleEngine
                                    RelayRule? relay = null, SlanderRule? slander = null,
                                    OverbearRule? overbear = null, ScaleRule? scale = null,
                                    ScapegoatRule? scapegoat = null, DivertRule? divert = null,
-                                   GoadRule? goad = null)
+                                   GoadRule? goad = null, FinisherRule? finisher = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
-                                    relay, slander, overbear, scale, scapegoat, divert, goad);
+                                    relay, slander, overbear, scale, scapegoat, divert, goad, finisher);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -2384,6 +2527,11 @@ public static class BattleEngine
             foreach (UnitState u in ctx.AllUnits.Where(x => x.IsAlive).ToList())
                 foreach (Trait t in u.Traits.ToList())
                     t.OnTurnStart(ctx, u);
+
+            // 止め（第53期）の遊休（標が付いてから殴られるまで）を測るための印。
+            // 標の書き手（逸らし・駆り立て・囃し立て）はここまでに全部書き終わっている。
+            // **盤面は1つも動かさない**（私有カウンタを書くだけ）ので、保持者がいなければ走らない。
+            if (ctx.FinisherActive) ctx.NoteFinisherMarkAges();
 
             // 素早さ順。同値はチームで割り、**その中は毎ターン乱数で混ぜる**。
             //
@@ -2648,7 +2796,17 @@ public static class BattleEngine
             GoadSwitches = ctx.GoadSwitches,
             GoadMarkLost = ctx.GoadMarkLost,
             GoadToPerverse = ctx.GoadToPerverse,
-            GoadTargetTo = ctx.GoadTargetTo
+            GoadTargetTo = ctx.GoadTargetTo,
+            FinisherFires = ctx.FinisherFires,
+            FinisherIdle = ctx.FinisherIdle,
+            FinisherCross = ctx.FinisherCross,
+            FinisherConsumed = ctx.FinisherConsumed,
+            FinisherKills = ctx.FinisherKills,
+            FinisherWaitSum = ctx.FinisherWaitSum,
+            FinisherWaitCount = ctx.FinisherWaitCount,
+            FinisherAllySingles = ctx.FinisherAllySingles,
+            FinisherStarved = ctx.FinisherStarved,
+            FinisherTargetTo = ctx.FinisherTargetTo
         };
     }
 

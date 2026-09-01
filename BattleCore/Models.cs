@@ -1021,5 +1021,35 @@ public sealed class BattleResult
     public required int GoadMarkLost { get; init; }
     public required int GoadToPerverse { get; init; }
     public required IReadOnlyDictionary<string, int> GoadTargetTo { get; init; }
+
+    /// <summary>
+    /// 止め（第53期）の計数。<b>ロスターで初めて「敵に付いた標」を読む駒。</b>
+    ///
+    /// <para><b>発火</b>: <c>FinisherFires</c>（標を持つ敵を殴った回数。
+    /// <b>0 になっていないことが受け入れ基準3・4</b>）。<c>FinisherIdle</c> は<b>空振り</b>
+    /// （標を持つ敵が1体もいなくて通常の対象選択に戻った回数）。</para>
+    ///
+    /// <para><b>列越え</b>: <c>FinisherCross</c>（<b>標が無ければ狙えなかった敵</b>＝
+    /// <c>PoolOf</c> の外を殴った回数）。<b>発火は成果ではない</b>——標が持つ
+    /// 「前列の壁を破る」特権を実際に使えたかはこちらでしか読めない（受け入れ基準6）。</para>
+    ///
+    /// <para><b>止めた砲火</b>: <c>FinisherStarved</c> ÷ <c>FinisherAllySingles</c>。
+    /// 標を消すと engine の <c>MarkPullPercent</c> も切れるので、
+    /// <b>味方全体の集中砲火を自分で終わらせる</b>——これが代金の実体（受け入れ基準7）。
+    /// <b>推定値</b>なので、厳密な代金は診断が<b>対照2（消費なし版）との差</b>で取る。</para>
+    ///
+    /// <para><b>遊休</b>: <c>FinisherWaitSum</c> ÷ <c>FinisherWaitCount</c>
+    /// （標が付いてから止めが殴るまでの平均ターン数）。</para>
+    /// </summary>
+    public required int FinisherFires { get; init; }
+    public required int FinisherIdle { get; init; }
+    public required int FinisherCross { get; init; }
+    public required int FinisherConsumed { get; init; }
+    public required int FinisherKills { get; init; }
+    public required int FinisherWaitSum { get; init; }
+    public required int FinisherWaitCount { get; init; }
+    public required int FinisherAllySingles { get; init; }
+    public required int FinisherStarved { get; init; }
+    public required IReadOnlyDictionary<string, int> FinisherTargetTo { get; init; }
 }
 
