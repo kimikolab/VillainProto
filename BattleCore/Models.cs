@@ -993,5 +993,33 @@ public sealed class BattleResult
     public required int DivertFoePulls { get; init; }
     public required IReadOnlyDictionary<string, int> DivertKillTurnByFoe { get; init; }
     public required IReadOnlyDictionary<string, int> DivertKillCountByFoe { get; init; }
+
+    /// <summary>
+    /// 駆り立て（第52期）の計数。<b>ロスターで2枚目の標の書き手</b>（1枚目は囃し立て＝開戦時1回）で、
+    /// <b>毎ターン・最高攻撃力の隣接味方</b>に標と強化を同時に渡す。
+    ///
+    /// <para><b>発火</b>: <c>GoadFires</c>（<b>0 になっていないことが受け入れ基準4</b>
+    /// ——配置探索が機構を無効化する席を選んでいないか。第49期の業改の失敗）。
+    /// <c>GoadIdle</c> は<b>空振り</b>（隣接に候補がいなくて何もしなかった回数）。</para>
+    ///
+    /// <para><b>渡した量</b>: <c>GoadGiven</c>（<c>AtkBonus</c> の累積付与量）。
+    /// <b>これは成果ではない</b>——対象が渡した直後に死ぬならダメージに変わっていない。
+    /// <b>効きは診断が素体との差（対象の <c>DamageToEnemy</c>）で取る。</b></para>
+    ///
+    /// <para><b>対象</b>: <c>GoadTargetTo</c> が渡した相手の内訳、<c>GoadSwitches</c> が
+    /// 対象が入れ替わった回数。<b>強化するほどその駒が選ばれ続ける</b>設計なので、
+    /// <c>GoadSwitches</c> が小さいほど狙いどおり（強化と危険が1体に集中している）。</para>
+    ///
+    /// <para><b>干渉</b>: <c>GoadMarkLost</c> は付けた標が次の発火までに剥がされていた回数
+    /// （逸らし＝ソラが唯一の経路・<b>席番号の順序に依存</b>）、
+    /// <c>GoadToPerverse</c> は渡した先が逆しま（ウツ）だった回数（<b>強化が害になる</b>）。</para>
+    /// </summary>
+    public required int GoadFires { get; init; }
+    public required int GoadIdle { get; init; }
+    public required int GoadGiven { get; init; }
+    public required int GoadSwitches { get; init; }
+    public required int GoadMarkLost { get; init; }
+    public required int GoadToPerverse { get; init; }
+    public required IReadOnlyDictionary<string, int> GoadTargetTo { get; init; }
 }
 

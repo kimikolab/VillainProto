@@ -91,6 +91,8 @@ public enum TraitId
                  // （引き取るほど自分が壊れる。1つの動作の表と裏）
     Divert,      // 逸らし: 味方に向いた視線を引き剥がし、敵1体へ向け直す。
                  // ただし引き剥がした視線は自分にも刺さる（1つの動作の表と裏）
+    Goad,        // 駆り立て: 隣のいちばん殴れる味方を前に押し出し、自分の力を全部渡す。
+                 // 押し出された側は狙われる（1つの動作の表と裏。クグの縛め＋攻撃+16 と同じ構造）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -2585,6 +2587,143 @@ public readonly record struct DivertRule(int TargetCount, bool SelfMark, bool Au
     public static DivertRule Default => new(1, true, false);
 }
 
+/// <summary>
+/// 駆り立て。<b>隣のいちばん殴れる味方を前に押し出し、自分の力を渡す</b>（第52期）。
+///
+/// <para><b>設計の出発点は囃し立て（ヒサ）だった。</b> ヒサは <c>PlusText</c> が
+/// 「隣接する味方1体に敵の攻撃を集中させる」——<b>プラス欄に書いてあるのが味方への害</b>で、
+/// 発火は開戦時1回・対象は「隣接する最大HPの味方」に固定。盤上で何も起きず、拾う理由が無い。
+/// 対して縛め（クグ）は「毎ターン味方1体を縛る」という害の中に<b>「その味方の攻撃+16」</b>が
+/// 埋まっている。<b>この駒はクグ側の構造で作ってある</b>——矛先を集めると同時に、
+/// <b>集めた相手に力を渡す。</b></para>
+///
+/// <para><b>設計原則</b>: <b>マイナスは編成のフックであって、その駒を入れる動機ではない。</b>
+/// 味方を犠牲にするだけの駒は盤面を弱くするので打点で釣り合わせても「入れるほど損」になる。
+/// <b>害の中に見返りを埋めるのが、この盤面で機能している唯一の形</b>（クグが前例）。</para>
+///
+/// <para><b>1つの動作の表と裏</b>（置き去り・責め苦・仇討ち・突き返し・鱗・逸らしと同型）。
+/// <see cref="OnTurnStart"/> の1回の発火で以下を順に行う:</para>
+/// <list type="number">
+///   <item><b>前ターンの対象から標を外す</b>（<b>強化は残す</b>）。
+///     「一度渡した力は返らないが、矛先は移る」。</item>
+///   <item><b>選ぶ</b>: 隣接する生存味方のうち <c>CurrentAttack</c> が最も高い1体。
+///     同値のみ <see cref="BattleContext.PickOne"/>。<b>隣接に候補がいなければ何もしない</b>
+///     （＝空振り。自己完結しない）。</item>
+///   <item><b>標を付ける</b>（マイナス）: 選んだ相手の <see cref="StatusKeys.Marked"/> を 1 に。
+///     <b>代金に特別な実装は無い</b>——engine の鎖（<see cref="BattleEngine.MarkPullPercent"/> = 75）が
+///     敵の単体攻撃をそこへ引く。</item>
+///   <item><b>力を渡す</b>（プラス）: 選んだ相手の <see cref="UnitState.AtkBonus"/> に
+///     <see cref="GoadRule.Boost"/> を<b>加算</b>する。</item>
+/// </list>
+///
+/// <para><b>選び方を「最高攻撃力」にするのは意図的。</b> (1) 一番殴れる駒を前に出す、という
+/// 判断が1行で説明できる (2) ヒサ（最大HP）と対象条件が違う (3) <b>強化するほどその駒が
+/// 選ばれ続ける</b>ので、<b>強化と危険が同じ1体に集中する</b>——前線が1枚できる代わりに、
+/// その1枚が死ぬ。<b>素の <c>Def.Attack</c> ではなく <c>CurrentAttack</c> を読む</b>のがこの
+/// 固定を作る要で、<b>逆しま（ウツ）だけは自己修正する</b>——強化されると
+/// <see cref="PerverseTrait"/> が攻撃力を半減するので、渡した次のターンには選ばれにくくなる。</para>
+///
+/// <para><b>強化は累積し、上限を数値で切らない。</b> 天井は戦闘長
+/// （第41期の突き返し・第47期の鱗と同じ）。<b>対象が変わっても前の強化は消さない。</b></para>
+///
+/// <para><b>候補は <see cref="UnitState.AcceptsSupport"/> で絞る</b>——縛め
+/// （<see cref="BindTrait"/>）と揃えた。1つの動作なので<b>標と強化で候補集合を分けない</b>:
+/// 力を渡せない相手（誓約が壊れたガルド）は押し出しもしない。</para>
+///
+/// <para><b>代金を軽くする細工はしていない。</b> 押し出した相手への被害を肩代わりしたり、
+/// 標の効果を弱めたりすると、押し出しが無償の強化になって符号が反転しなくなる。</para>
+///
+/// <para><b>粛（<see cref="HushTrait"/>）に封じられない</b>（第52期 Phase 0-5）。
+/// <c>OnTurnStart</c> は行動順ループの<b>外側</b>で、<c>CanActOutOfTurn</c> を通らない。
+/// <b>介入ではないので肩代わりの網にも吸われない</b>——標は攻撃が発生する前の選択段で働く。</para>
+///
+/// <para><b>逸らし（<see cref="DivertTrait"/>）と打ち消し合う。</b> 両者とも
+/// <c>OnTurnStart</c> で標を操作し、<b>発火順は席番号の昇順</b>（engine は
+/// <c>ctx.AllUnits</c> ＝ 味方をスロット昇順に並べた順で回す）。ソラの席がカリより
+/// <b>後ろ</b>なら、カリが付けた標をその手番のうちにソラが剥がす。前なら残る。
+/// <b>順序に依存する挙動</b>で、診断が <c>標消え</c> の列で数える。</para>
+/// </summary>
+public sealed class GoadTrait : Trait
+{
+    /// <summary>前ターンに押し出した味方の <c>InstanceId + 1</c>。0 は未設定。</summary>
+    public const string TargetKey = "goadTarget";
+
+    public override TraitId Id => TraitId.Goad;
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+
+        // --- 前ターンの対象を引く（標を外すためだけ。強化は残す）--------------------------
+        UnitState? prev = null;
+        int id = self.Counter(TargetKey) - 1;
+        if (id >= 0)
+            foreach (UnitState u in ctx.AllUnits)
+                if (u.InstanceId == id) { prev = u; break; }
+
+        // **標が誰かに剥がされていたか**（ソラの逸らしが唯一の経路。第52期 Phase 0-3）。
+        // 代金なし版（Mark = false）では自分が付けていないので数えない。
+        bool lost = ctx.Goad.Mark && prev is not null && prev.IsAlive
+                    && prev.Counter(StatusKeys.Marked) <= 0;
+        prev?.SetCounter(StatusKeys.Marked, 0);
+
+        // --- 選ぶ（隣接する生存味方のうち CurrentAttack が最大の1体）----------------------
+        var adj = ctx.LivingMembers(self.TeamId)
+            .Where(a => a != self && a.AcceptsSupport
+                        && FormationRules.AreAdjacent(self.Slot, a.Slot)).ToList();
+        int top = adj.Count == 0 ? 0 : adj.Max(a => a.CurrentAttack);
+        UnitState? pick = ctx.PickOne(adj.Where(a => a.CurrentAttack == top).ToList());
+
+        if (pick is null)
+        {
+            self.SetCounter(TargetKey, 0);
+            ctx.NoteGoadIdle();
+            ctx.Log($"    {self.Name} は前に出せる味方がいなかった", LogKind.Action);
+            return;
+        }
+
+        bool switched = prev is not null && !ReferenceEquals(prev, pick);
+        if (ctx.Goad.Mark) pick.SetCounter(StatusKeys.Marked, 1);
+        pick.AtkBonus += ctx.Goad.Boost;
+        self.SetCounter(TargetKey, pick.InstanceId + 1);
+
+        ctx.NoteGoadFire(pick, ctx.Goad.Boost, switched, lost);
+        ctx.Log($"    {self.Name} が {pick.Name} を前へ押し出した"
+            + $"（攻撃 +{ctx.Goad.Boost} → {pick.CurrentAttack}{(ctx.Goad.Mark ? " / 狙われる" : "")}）",
+            LogKind.FriendlyFire);
+    }
+
+    /// <summary>
+    /// <c>InstanceId</c> は戦闘ごとに振り直されるので、部隊戦の境界で必ず捨てる
+    /// （執着の <see cref="FixateTrait.MemoryKey"/> と同じ理由）。
+    /// </summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(TargetKey, 0);
+}
+
+/// <summary>
+/// 駆り立ての強度のノブ。<b>診断（goad）が版を差し替えるためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない（既定は <see cref="Default"/>）。
+/// static のノブにしない理由は同型の doc（<see cref="ColossusRule"/>）を参照。
+///
+/// <para><paramref name="Boost"/> は1回に渡す攻撃力。<b>見返りの大きさを切るノブ</b>で、
+/// <b>標の危険は <paramref name="Boost"/> に依存しない</b>——第50期の
+/// <see cref="DivertRule.TargetCount"/> のような打ち消し（総量と取り分が逆を向く）は
+/// 構造上起きない。掃引が平らなら、それは「渡した力がダメージに変わっていない」の意。</para>
+///
+/// <para><paramref name="Mark"/> は<b>ノブではない</b>。「力を渡す」効果と
+/// 「矛先を集める」代金を分離するための<b>対照</b>で、既定は常に <c>true</c>。
+/// 診断の対照2だけが <c>false</c> を渡す——差が小さければ、
+/// <b>この駒は「害の中に見返りを埋めた」のではなく単なるバッファー</b>である。</para>
+/// </summary>
+public readonly record struct GoadRule(int Boost, bool Mark)
+{
+    /// <summary>見返りの大きさだけを指定する。代金（標）は払う＝通常の実行。</summary>
+    public GoadRule(int boost) : this(boost, true) { }
+
+    /// <summary>探索段階の初期値（第52期）。</summary>
+    public static GoadRule Default => new(4, true);
+}
+
 
 
 
@@ -4355,6 +4494,7 @@ public static class TraitCatalog
         new ScaleTrait(),
         new ScapegoatTrait(),
         new DivertTrait(),
+        new GoadTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

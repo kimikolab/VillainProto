@@ -1009,9 +1009,51 @@ public static class UnitCatalog
         Flavor = "誰かが見られている限り、代わりに見られてやる。それしか取り柄がない。"
     };
 
+
+    /// <summary>
+    /// 駆り立てのカリ。<b>ロスターで2枚目の標（<c>StatusKeys.Marked</c>）の書き手</b>（第52期）。
+    ///
+    /// <para><b>設計の出発点は囃し立てのヒサ（44/攻2/速10）だった。</b> ヒサは
+    /// <c>PlusText</c> が「隣接する味方1体に敵の攻撃を集中させる」——<b>プラス欄に書いてあるのが
+    /// 味方への害</b>で、発火は開戦時1回・対象は隣接する最大HPの味方に固定。盤上で何も起きず、
+    /// 拾う理由が無い。対して縛めのクグ（54/攻3/速10）は「毎ターン味方1体を縛る」という害の中に
+    /// <b>「その味方の攻撃+16」</b>が埋まっていて、`縛め収入型` という行が主判定に立っている。
+    /// <b>カリはクグ側の構造で作ってある。</b></para>
+    ///
+    /// <para><b>設計原則</b>: <b>マイナスは編成のフックであって、その駒を入れる動機ではない。
+    /// 動機は別に要る。</b> 味方を犠牲にするだけの駒は盤面を弱くするので、打点で釣り合わせても
+    /// 「入れるほど損」になりやすい——<b>害の中に見返りを埋めるのが、この盤面で機能している
+    /// 唯一の形</b>（クグが前例）。</para>
+    ///
+    /// <para><b>1つの動作の表と裏。</b> 毎ターン、隣接する生存味方のうち <c>CurrentAttack</c> が
+    /// 最も高い1体を選び、<b>標を付け（マイナス）、<c>GoadRule.Boost</c> を渡す（プラス）</b>。
+    /// 前ターンの対象からは標を外すが<b>強化は残す</b>——「一度渡した力は返らないが、矛先は移る」。
+    /// <b>隣に誰もいなければ何も起きない</b>（自己完結しない）。</para>
+    ///
+    /// <para><b>選び方が「最高攻撃力」なので、強化するほどその駒が選ばれ続ける</b>
+    /// ——強化と危険が同じ1体に集中し、前線が1枚できる代わりにその1枚が死ぬ。
+    /// <b>ただし逆しま（ウツ）だけは自己修正する</b>（強化されると <c>PerverseTrait</c> が
+    /// 攻撃力を半減するので、次のターンには選ばれにくくなる）。</para>
+    ///
+    /// <para>HP62・攻4・速9 は探索段階の初期値。<b>掃引の対象は <c>GoadRule.Boost</c> だけ</b>で、
+    /// HP・攻・速は振らない。<b>攻4 と低いのは、貢献が他人を強くすることだから。</b></para>
+    /// </summary>
+    public static readonly UnitDef Kari = new()
+    {
+        Id = "kari",
+        Name = "駆り立てのカリ",
+        MaxHp = 62,
+        Attack = 4,
+        Speed = 9,
+        Traits = new[] { TraitId.Goad },
+        PlusText = "毎ターン隣のいちばん殴れる味方に自分の力を渡す（攻撃力が上がり続ける）",
+        MinusText = "渡した相手を前に押し出すので、その味方は狙われる。隣に誰もいなければ何もできない",
+        Flavor = "前に出ろとしか言えない。言い方を知らないだけで、渡せるものは全部渡している。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata, Uro, Sora
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata, Uro, Sora, Kari
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

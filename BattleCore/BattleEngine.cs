@@ -814,12 +814,52 @@ public sealed class BattleContext
         DivertKillCountByFoe[id] = DivertKillCountByFoe.TryGetValue(id, out int b) ? b + 1 : 1;
     }
 
+    /// <summary>
+    /// 駆り立ての強度。<b>診断（goad）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="GoadRule.Default"/>）。static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public GoadRule Goad { get; }
+
+    /// <summary>
+    /// 駆り立て（<see cref="TraitId.Goad"/>）の計数。<b>発火しなかったこと（空振り）は盤面の値に
+    /// 痕跡を残さない</b>ので、診断が読むためだけに数える（<c>verbose</c> には依存しない）。
+    ///
+    /// <para><b>「渡した量」と「効き」は別の列。</b> <c>GoadGiven</c> は
+    /// <c>AtkBonus</c> の累積付与量で、<b>成果ではない</b>——対象が渡した直後に死ぬなら
+    /// ダメージに変わっていない。効きは診断が<b>素体との差</b>（対象の <c>DamageToEnemy</c>）で取る。</para>
+    ///
+    /// <para><c>GoadMarkLost</c> は<b>付けた標が次の発火までに剥がされていた回数</b>
+    /// ——逸らし（ソラ）が唯一の経路で、<b>席番号の順序に依存する</b>（<see cref="GoadTrait"/> の doc）。</para>
+    /// </summary>
+    public int GoadFires { get; internal set; }
+    public int GoadIdle { get; internal set; }
+    public int GoadGiven { get; internal set; }
+    public int GoadSwitches { get; internal set; }
+    public int GoadMarkLost { get; internal set; }
+    /// <summary>渡した先が逆しま（<see cref="TraitId.Perverse"/>）だった回数。<b>強化が害になる</b>。</summary>
+    public int GoadToPerverse { get; internal set; }
+    public Dictionary<string, int> GoadTargetTo { get; } = new();
+
+    internal void NoteGoadIdle() => GoadIdle++;
+
+    internal void NoteGoadFire(UnitState pick, int boost, bool switched, bool lost)
+    {
+        GoadFires++;
+        GoadGiven += boost;
+        if (switched) GoadSwitches++;
+        if (lost) GoadMarkLost++;
+        if (pick.HasTrait(TraitId.Perverse)) GoadToPerverse++;
+        string k = pick.Def.Name;
+        GoadTargetTo[k] = GoadTargetTo.TryGetValue(k, out int a) ? a + 1 : 1;
+    }
+
     public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null,
                          HushRule? hush = null, MartyrRule? martyr = null, ExposeRule? expose = null,
                          ShoveRule? shove = null, BearRule? bear = null,
                          RelayRule? relay = null, SlanderRule? slander = null,
                          OverbearRule? overbear = null, ScaleRule? scale = null,
-                         ScapegoatRule? scapegoat = null, DivertRule? divert = null)
+                         ScapegoatRule? scapegoat = null, DivertRule? divert = null,
+                         GoadRule? goad = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -838,6 +878,7 @@ public sealed class BattleContext
         if (Scapegoat.Audit) ScapegoatActive = true;
         Divert = divert ?? DivertRule.Default;
         if (Divert.Audit) DivertActive = true;
+        Goad = goad ?? GoadRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -2276,11 +2317,11 @@ public static class BattleEngine
                                    BearRule? bear = null, RelayRule? relay = null,
                                    SlanderRule? slander = null, OverbearRule? overbear = null,
                                    ScaleRule? scale = null, ScapegoatRule? scapegoat = null,
-                                   DivertRule? divert = null)
+                                   DivertRule? divert = null, GoadRule? goad = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
-               overbear, scale, scapegoat, divert);
+               overbear, scale, scapegoat, divert, goad);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -2297,10 +2338,11 @@ public static class BattleEngine
                                    ShoveRule? shove = null, BearRule? bear = null,
                                    RelayRule? relay = null, SlanderRule? slander = null,
                                    OverbearRule? overbear = null, ScaleRule? scale = null,
-                                   ScapegoatRule? scapegoat = null, DivertRule? divert = null)
+                                   ScapegoatRule? scapegoat = null, DivertRule? divert = null,
+                                   GoadRule? goad = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
-                                    relay, slander, overbear, scale, scapegoat, divert);
+                                    relay, slander, overbear, scale, scapegoat, divert, goad);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -2599,7 +2641,14 @@ public static class BattleEngine
             DivertAllyPulls = ctx.DivertAllyPulls,
             DivertFoePulls = ctx.DivertFoePulls,
             DivertKillTurnByFoe = ctx.DivertKillTurnByFoe,
-            DivertKillCountByFoe = ctx.DivertKillCountByFoe
+            DivertKillCountByFoe = ctx.DivertKillCountByFoe,
+            GoadFires = ctx.GoadFires,
+            GoadIdle = ctx.GoadIdle,
+            GoadGiven = ctx.GoadGiven,
+            GoadSwitches = ctx.GoadSwitches,
+            GoadMarkLost = ctx.GoadMarkLost,
+            GoadToPerverse = ctx.GoadToPerverse,
+            GoadTargetTo = ctx.GoadTargetTo
         };
     }
 
