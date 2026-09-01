@@ -903,5 +903,52 @@ public sealed class BattleResult
     public required int ScaleDepleted { get; init; }
     public required int ScaleFullSoaks { get; init; }
     public required int ScaleLeftover { get; init; }
+
+    /// <summary>
+    /// 業（第49期）の計数。<b>ロスターで初めて「状態異常の種類数」を読む駒</b>なので、
+    /// 引き取り・発揮・代金の3段をそれぞれ別に数える（<c>verbose</c> には依存しない）。
+    ///
+    /// <para><b>引き取り</b>: <c>ScapegoatTakes</c> 移した延べ量 ／ <c>ScapegoatTakeByKind</c> 種類別 ／
+    /// <c>ScapegoatTakeFrom</c> 取った相手の内訳 ／ <c>ScapegoatMissed</c> 引き取れる種類が
+    /// 盤面に無かった回数（空振り） ／ <c>ScapegoatFull</c> 全種類を既に背負っていた回数
+    /// （<b>空振りとは原因が違うので分ける</b>）。</para>
+    ///
+    /// <para><b>種類数と到達</b>: <c>ScapegoatKindMax</c> 最大 ／ <c>ScapegoatKindSum</c> ÷
+    /// <c>ScapegoatAliveTurns</c> が平均 ／ <c>ScapegoatMetTurns</c> ÷ <c>ScapegoatAliveTurns</c> が成立率 ／
+    /// <c>ScapegoatFirstTurn</c> 閾値に初めて達したターン（一度も達しなければ 0）。</para>
+    ///
+    /// <para><b>転写</b>: <c>ScapegoatSwings</c> 振った回数 ／ <c>ScapegoatFired</c> 転写した回数 ／
+    /// <c>ScapegoatWriteByKind</c> 書いた延べ数（種類別）。</para>
+    ///
+    /// <para><b>転写の効き</b>（<b>付けた回数は成果ではない</b>）: <c>ScapegoatFoeDot</c> 業が書いた
+    /// 毒・燃焼が実際に削った量 ／ <c>ScapegoatFoeSkips</c> 業が書いた痺れで敵が飛ばした手番 ／
+    /// <c>ScapegoatMarkPulls</c> 業が書いた標に味方の単体攻撃が引かれた回数。</para>
+    ///
+    /// <para><b>自傷と味方の救済</b>: <c>ScapegoatDotByUnit</c> / <c>ScapegoatSkipByUnit</c> は
+    /// <b>味方側の被害を駒ごと（<c>Def.Id</c>）に割ったもの</b>。<b>「保持者かどうか」で箱を
+    /// 分けていない</b>——分けると素体の対照（特性なし・同数値）が別の箱に落ちて引き算できない。
+    /// <b>帰属は素体との差で取る</b>——瘴気の毒は引き取らなくても味方全員に載るので、
+    /// 絶対値だけでは機構のぶんが割れない。</para>
+    ///
+    /// <para>保持者（<c>UnitCatalog.Gou</c>）を編成に入れなければ全部 0。</para>
+    /// </summary>
+    public required int ScapegoatTakes { get; init; }
+    public required IReadOnlyDictionary<string, int> ScapegoatTakeByKind { get; init; }
+    public required IReadOnlyDictionary<string, int> ScapegoatTakeFrom { get; init; }
+    public required int ScapegoatMissed { get; init; }
+    public required int ScapegoatFull { get; init; }
+    public required int ScapegoatAliveTurns { get; init; }
+    public required int ScapegoatMetTurns { get; init; }
+    public required int ScapegoatKindSum { get; init; }
+    public required int ScapegoatKindMax { get; init; }
+    public required int ScapegoatFirstTurn { get; init; }
+    public required int ScapegoatSwings { get; init; }
+    public required int ScapegoatFired { get; init; }
+    public required IReadOnlyDictionary<string, int> ScapegoatWriteByKind { get; init; }
+    public required int ScapegoatFoeDot { get; init; }
+    public required int ScapegoatFoeSkips { get; init; }
+    public required int ScapegoatMarkPulls { get; init; }
+    public required IReadOnlyDictionary<string, int> ScapegoatDotByUnit { get; init; }
+    public required IReadOnlyDictionary<string, int> ScapegoatSkipByUnit { get; init; }
 }
 

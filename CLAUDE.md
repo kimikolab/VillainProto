@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -53,7 +53,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 life [絞り込み] [駒Id]  # 駒の寿命と稼働率（第19期。既定は kado）
     dotnet run --project BattleSim -c Release 0 route             # 自傷の燃料は変換器まで届くか（第19期）
     dotnet run --project BattleSim -c Release 0 swap              # 同じ席で駒を入れ替えて比べる（第21期）
-    dotnet run --project BattleSim -c Release 0 spread            # 波の分離度（飽和・波間相関・固有の勝者敗者）（第22期）
+    dotnet run --project BattleSim -c Release 0 spread [除外語]   # 波の分離度（飽和・波間相関・固有の勝者敗者）（第22期。除外語で行を外して同じ行数で前後比較・第49期）
     dotnet run --project BattleSim -c Release 0 gullet [gain|log] # 巨躯の吐き戻し（4版の対照 / 返す効率の振り / 1戦の監査）（第23期）
     dotnet run --project BattleSim -c Release 0 gullet belly      # 腹の規模の実測（閾値と還し率の導出。盤面は動かさない）（第36期）
     dotnet run --project BattleSim -c Release 0 gullet belly4     # まどろみ／還しの4版対照（V0/V2/V3/V4）（第36期）
@@ -77,6 +77,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 scale sweep      # CostPerAttack 0/1/2 の掃引だけを回す
     dotnet run --project BattleSim -c Release 0 scale seats      # 席の分散（seats2 の写し）だけを回す
     dotnet run --project BattleSim -c Release 0 census           # 棚卸し: 員数・compare の出現数・特性の保持者一覧（戦闘0回。第48期）
+    dotnet run --project BattleSim -c Release 0 scapegoat [絞り込み] # 業の引き取り・種類数・到達／成立率・転写と転写の効き・自傷／味方（第49期・**採用しなかった**）
+    dotnet run --project BattleSim -c Release 0 scapegoat phase0  # 実装前の地図（味方に載る種類の分母 / 寿命 / 候補台）。戦闘は回すが盤面は動かさない
+    dotnet run --project BattleSim -c Release 0 scapegoat sweep   # Threshold 2/3/4 の掃引だけ
+    dotnet run --project BattleSim -c Release 0 scapegoat stun    # 痺のある台（引き取りと発揮が資源を奪い合う）だけ
+    dotnet run --project BattleSim -c Release 0 scapegoat confirm # 配置の追試（seed 200..599）だけ
+    dotnet run --project BattleSim -c Release 0 scapegoat alt     # 機構の帰属を別 seed 帯（200..599）で追試
 
 `census` は**駒と通貨の対応表を作るための素材**を出す（第48期）。**戦闘を1回も回さない。**
 ロスターの上限を **52体**（トランプ1組）と決めたので、新規追加の合否テストに
@@ -184,6 +190,46 @@ n=1 なので断定はできないが、**次に隣接機構を作るなら「�
 **破片で受け切った被弾は `OnDamaged` を呼ばない**ので、ウロの隣に被弾強化を置くと
 **3.21 回/戦ぶんの収入が消える**（アーマーが元から持つ性質だが、読み手ができて初めて編成の判断になる）。
 経緯は design/PHASE47_SCALE.md。
+
+**味方に載る状態異常は4種類しかない**（第49期 Phase 0-1・実測）——
+毒（瘴気の味方漏れ／毒撃の隣への漏れ）・標（囃し立て）・痺（縛め／怯み・怖気・深追い／敵の断罪2体）・
+燃（火の粉）。**傷は味方に載る経路が1つも無い**（裂き・刻み・断ち・縫いはすべて敵に書く）。
+しかも**既存 50 行で3種が同時に揃う行は 0 / 50、累積で3種に触れる行も 0 / 50**
+（`累種` の全行平均 0.49 種）。**「幅を読む駒」を作る前に、盤面に幅が無いことを先に数えること。**
+
+**engine も通貨の読み手である。** 第48期の棚卸しは「敵側の読み手は10通貨すべて 0」と数えたが、
+それは**駒**の読み手で、**engine の窓口は別に4つある**——`SelectTargetCore` の標
+（`MarkPullPercent` = 75・陣営を問わない）／行動順ループの痺／`TickStatuses` の毒・燃／
+`ApplyDamage` の破片。**「駒の読み手が 0」と「効かない」は別。**
+第49期はここで予測を外した（敵に標を付けても効かないと読んで、engine が読んでいた）。
+
+**掃引の全幅は「ノブが悪い」と「機構が小さい」の両方で小さくなる**（第49期）。
+第41期・第47期に続く3度目の全幅 2pt 未満だが、**診断が違う**——あの2回はノブが機構を
+動かさなかったのに対し、第49期は閾値 2 → 4 で**転写が 0.58 → 0.00 回/戦と完全に消える**のに
+勝率が 1.7pt しか動かない。**切り分けはノブが機構の計数（発火回数）を動かしたかで付く。**
+**全幅だけを見て「ノブを付ける項が悪い」と読まないこと。**
+
+**機構が負なら、配置探索はそれを無効化する席を選ぶ**（第49期）。`reseat` / `confirm` は
+勝率だけを最大化するので、マイナスの機構を持つ駒では「機構が働かない席」が最適解になる。
+実測で `業改` は confirm の1位に動かした結果**引き取りが 0.00 回/戦になり、素体と 25 セル完全一致**した
+（ゴウを中央に置くと囃し立ての標も火の粉の燃も最初から自分に載るので、引き取るものが残らない）。
+**新機構の測定と配置の最適化を同じ実行で回すと、測っているものが消える**
+——負の機構を測るときは**「機構が発火する席」での値を必ず併記すること。**
+
+**在庫から無作為に引く機構では、寿命の短い通貨が「引き当てハズレ」になる**（第49期）。
+痺は保持者の手番で消費されるので盤面に1ターンしか残らず、しかも
+**引き取ると `OnTurnStart` の後の行動順ループで自分の手番が飛ぶ**（引き取りと発揮が同じ資源を奪い合う）。
+痺の供給を足した台は**未達 100% / 成立率 0.0%**で、素体より −10.5pt。
+**溜める機構に無作為の選択を置くなら、溜まらない通貨を供給側で先に外す。**
+
+**「引き取り」が防御になるのは、引き取るものがダメージのときだけ**（第49期）。
+標のように「狙われやすさ」を移す呪いは、引き取った瞬間に自分の寿命を縮める
+——実測でゴウの継続ダメージは素体より**少なく**（早く落ちるので浴びる回数が減る）、
+縮んだのは寿命のほう（2.22 → 1.65T）。**代金は継続ダメージではなく寿命だった。**
+
+業は棄却したので `UnitCatalog.All` にも `CompareBuilds()` にも載っていない（逆位・まどろみ・
+誹り・驕りと同じ扱い）。**測った2編成は診断 `scapegoat` のローカル（`SgRows()`）にある**ので、
+`CompareBuilds()` を1行も動かさずに全部を測り直せる。経緯は design/PHASE49_SCAPEGOAT.md。
 
 **`OnAllyDeath` は召喚枠（`Ephemeral`）の死も通る。** 使うときは除外するかどうかを決めて書くこと。
 継ぎ接ぎ（ヴェル）は除外している（一度きりの効果を蘇生が無制限に掛け算するのを止めるため）が、
@@ -887,6 +933,16 @@ BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project Ba
   受け手（67.10/戦）なのに攻ゼロへの寄与は **+0.18** しかない——`RedirectGainTrait` が
   弱体を集めるのと同じ動作で弱体を打ち消している。見返りを持たないゴルムは +1.55 で、
   **「肩代わり役に弱体を撒く」は見返りの有無で結果が正反対になる。**
+- **状態異常そのものを移す経路は業（`ScapegoatTrait`・ゴウ）が初めて**（第49期・**棄却**）。
+  集約・転嫁が移すのは**弱体**（`AtkBonus`）、澱み喰いは**消すだけ**、疫みは**死体からの撒き直し**で、
+  **生きている味方から状態異常のカウンタを取り上げて自分に積む経路は 0 件だった。**
+  数える種類は `ScapegoatTrait.Kinds`＝`StatusKeys.All` から `Armor` と `IdleTurn` を**除いた形**で書く
+  ——アーマーは damage 側のプラスの資源（数えるとヒビ1枚で稼げる抜け道）、`IdleTurn` は
+  engine が痺れを振り替えて書くうえ**`0` に戻す箇所が1つも無い**（一度手番を落とせば永久に1種類を持つ）。
+  **「傷は味方に載らない」を規則として焼き付けない**（除外を並べる形なのでキーが増えれば自動で数に入る）。
+  **燃焼を `ctx.Ignite` に通さない**——`Ignite` は残ターンを `BurnRules.Turns`(3) に**設定**するので、
+  1 を移すつもりで呼ぶと味方 −1・自分 +3 ＝**複製**になる。種類を問わず一律にカウンタを 1 だけ動かす。
+  **`AcceptsSupport` を見ない**（呪いを引き取るのは支援ではない。ガルドから取り上げるのは筋が通る）。
 - **状態の肩代わりは引き受け（`BearTrait`・ウケ）が1本目**（第42期）。肩代わり5種
   （庇う・分かち・巨躯・後備え・棘守り）は全部ダメージだった。横取りの実装は
   **`Dull` の中**にある——「弱体が入る**直前**に横取りする」は駒ごとのフックでは書けないので、

@@ -123,6 +123,7 @@
 | `Relay` | 渡しのワタ |
 | `Overbear` | - |
 | `Scale` | 鱗のウロ |
+| `Scapegoat` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

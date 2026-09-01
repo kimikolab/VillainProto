@@ -87,6 +87,8 @@ public enum TraitId
                  // （同上。削るのは常時、報われるのは条件を満たしたときだけ）
     Scale,       // 鱗: 倒れた味方の破片を拾って纏う。纏っているあいだ攻撃が貫きになるが、
                  // 振るたびに剥がれる（供給・発揮・消費の1サイクルが1枚に入る。同上）
+    Scapegoat,   // 業: 味方の呪いを引き取って歩く。種類が揃うと、溜め込んだものを殴った相手に返す
+                 // （引き取るほど自分が壊れる。1つの動作の表と裏）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -2234,6 +2236,210 @@ public readonly record struct ScaleRule(int CostPerAttack)
     public static ScaleRule Default => new(1);
 }
 
+/// <summary>
+/// 業。<b>ロスターで初めて「状態異常の種類数」を読む駒</b>（第49期）。
+///
+/// <para>第48期の棚卸しで10通貨すべての厚みを数えたところ、<b>すべての軸が「同じ通貨を厚くする」
+/// 方向を向いていた</b>——毒5枚・死9枚・弱体5枚に対して、<b>幅を要求する駒が1枚もない</b>。
+/// 業はそこを埋める。</para>
+///
+/// <para><b>量ではなく種類を読む。</b> 量を読むと供給がいちばん厚い通貨（毒・死）に吸われて
+/// 実質そちらの軸の駒になる（第41期に突き返しが喧噪だけに食われたのと同じ形）。
+/// 種類なら、<b>マイナス特性の多様性そのものが力になる</b>。</para>
+///
+/// <para><b>数える種類は <see cref="StatusKeys.All"/> から <see cref="StatusKeys.Armor"/> と
+/// <see cref="StatusKeys.IdleTurn"/> を除いたもの</b>（<see cref="Kinds"/>）。除外は2つとも
+/// engine の実装から来ている:</para>
+/// <list type="bullet">
+///   <item><b>アーマー</b>は <c>ApplyDamage</c> が HP の前に削る<b>プラスの資源</b>。
+///     数えるとヒビ（砕け）1枚で種類数を稼げる抜け道になる。</item>
+///   <item><b><c>IdleTurn</c></b> は行動順ループが痺れを振り替えて書く
+///     （<c>Stun &gt; 0</c> → <c>SetCounter(Stun, 0)</c> / <c>SetCounter(IdleTurn, turn)</c>）。
+///     数えると1経路で2カウントになる。しかも<b><c>0</c> に戻す箇所が engine に1つも無い</b>ので、
+///     一度でも手番を落とした駒は以後ずっと1種類を持ち続けることになる。</item>
+/// </list>
+/// <para>残る5つのうち<b>傷（<see cref="StatusKeys.Wound"/>）は味方に載る経路が1つも無い</b>
+/// （裂き・刻み・断ち・縫いはすべて <c>target</c> ＝敵に書く。第49期 Phase 0-1 の実測でも
+/// 50行 × 5波 × 200試行で 0 件）。<b>それでも <see cref="Kinds"/> からは外していない</b>
+/// ——外すのは「今のロスターにその経路が無い」という一時的な事実で、
+/// 規則として書くと将来その経路が生えたときに静かに数え落とす。
+/// <b>実効の分母は 4</b>（毒・標・痺・燃）。</para>
+///
+/// <para><b>可動部は3つで、1枚の中で1サイクルが閉じる</b>（第47期の鱗＝供給・発揮・消費と同じ構成）。</para>
+/// <list type="bullet">
+///   <item><b>引き取り</b>（<see cref="OnTurnStart"/>）: 生存する味方（自分を除く）が持つ種類のうち、
+///     <b>自分がまだ持っていない種類を1つ</b>選んで<b>移す</b>。複製ではない
+///     ——味方からは減り、自分に増える。移す量は <see cref="TransferAmount"/>（= 1）。</item>
+///   <item><b>発揮</b>（<see cref="OnAfterAttack"/>）: 背負っている種類数が
+///     <c>ScapegoatRule.Threshold</c> 以上のとき、殴った相手に<b>背負っている全種類を1ずつ付ける</b>。
+///     種類を選ばない（選択を入れると可動部が増える）。閾値未満のときは何もしない（段を2つ作らない）。</item>
+///   <item><b>マイナス</b>: 特別な実装は無い。<b>引き取った呪いはそのまま自分に効く</b>
+///     ——毒は自分を削り、燃焼は自分を焼き、標は敵の攻撃を自分に集め、痺れは自分の手番を奪う。
+///     <b>代金を軽くする細工を一切していない</b>のがこの駒の設計。</item>
+/// </list>
+///
+/// <para><b>痺れは構造的に「使えない種類」。</b> <c>OnTurnStart</c> は行動順ループの<b>外側</b>で
+/// 全員ぶん先に流れるので、痺れを引き取ったターンのゴウは、その後の行動順ループで
+/// <c>Stun &gt; 0</c> に当たって手番を飛ばす——<b>痺れを持っているターンのゴウは必ず攻撃しない
+/// ＝転写できない</b>。引き取り（<c>OnTurnStart</c>）と発揮（<c>OnAfterAttack</c>）が
+/// 同じ資源を奪い合う形で、これは設計として正しい（潰さずに診断で測る）。</para>
+///
+/// <para><b><c>AcceptsSupport</c> を見ない。</b> 呪いを引き取るのは支援ではない
+/// ——回復でも強化でもなく、<b>相手のマイナスを自分に移す</b>操作なので、
+/// 支援を拒む駒（ガルドの <see cref="TraitId.Stoic"/>）から取り上げるのは筋が通る。
+/// 弱体の窓口（<see cref="BattleContext.Dull"/>）の作法にも従わない
+/// ——あちらは <c>AtkBonus</c> の話で、状態異常のカウンタとは資源が違う。
+/// 第42期からの「<c>AcceptsSupport</c> の扱いが5経路で3通りに割れている」件には触らない。</para>
+///
+/// <para><b>燃焼を <see cref="BattleContext.Ignite"/> に通していない。</b>
+/// <c>Ignite</c> は残ターンを <see cref="BurnRules.Turns"/>（= 3）に<b>設定</b>するので、
+/// 1 を移すつもりで呼ぶと味方は 1 減って自分は 3 増える＝<b>2 ターンぶんの燃焼が生まれる</b>。
+/// それは「移す」ではなく複製で、この駒の一文（引き取るほど自分が壊れる）を壊す。
+/// <b>種類を問わず一律にカウンタを 1 だけ動かす</b>のが正しい——燃焼だけ窓口を変えると、
+/// 「どの種類なら移すのが複製になるか」を呼び出し側ごとに覚えることになる。</para>
+///
+/// <para><b>隣接を1つも読まない。</b> 引き取りの候補は生存味方**全員**。第45〜47期で
+/// 隣接は3期かけて否定的な結論が出ている。ただし<b>供給の側は隣接で決まる</b>
+/// （火の粉はボルグの隣・囃し立てはヒサの隣）ので、席は第47期の鱗と同じく
+/// 「読まないのに分散しない」形になりうる——診断で測る。</para>
+/// </summary>
+public sealed class ScapegoatTrait : Trait
+{
+    /// <summary>1回に移すカウンタの量。<b>定数。振らない。</b>（掃引の対象は
+    /// <see cref="ScapegoatRule.Threshold"/> だけ。1変数を振るときに一緒に動かすものを増やさない。）</summary>
+    public const int TransferAmount = 1;
+
+    /// <summary>
+    /// 数える種類。<see cref="StatusKeys.All"/> から アーマー と <c>IdleTurn</c> を除いたもの。
+    /// <b>除外を並べる形で書いてある</b>ので、<c>StatusKeys</c> にキーが増えたら自動で数に入る
+    /// （「今のロスターに経路が無い」を規則として焼き付けない）。
+    /// </summary>
+    public static readonly string[] Kinds = StatusKeys.All
+        .Where(k => k != StatusKeys.Armor && k != StatusKeys.IdleTurn).ToArray();
+
+    /// <summary>
+    /// 業が<b>書いた</b>ぶんの控え（種類ごと）。<b>診断が「転写の効き」を帰属させるためだけにある。</b>
+    /// これを読んで分岐する規則は1つも無い（＝盤面は動かない）。
+    /// <c>Counters</c> のキーは特性の私有物、という規約に従って接頭辞で名前空間を切ってある。
+    /// </summary>
+    public static string OwedKey(string kind) => "sgOwed_" + kind;
+
+    public override TraitId Id => TraitId.Scapegoat;
+
+    // --- 引き取り -------------------------------------------------------------------------------
+    //
+    // **行動順ループの外側**（engine が全員ぶん先に流す）。だから同じターンのうちに
+    // 発揮（OnAfterAttack）まで到達できるし、痺れを引き取れば同じターンの手番が飛ぶ。
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+
+        // 引き取る前に一度も数えない。**このターンの種類集合は引き取りの後に確定する**ので、
+        // 成立率・到達・平均種類数はすべて引き取りの後で数える。
+        var missing = Kinds.Where(k => self.Counter(k) <= 0).ToList();
+
+        if (missing.Count == 0)
+        {
+            // 全種類を既に背負っている。**空振りとは別に数える**——
+            // 「引き取れる種類が盤面に無い」と「もう引き取る余地が無い」は原因が違う。
+            ctx.ScapegoatFull++;
+        }
+        else
+        {
+            var pool = new List<(UnitState Ally, string Kind)>();
+            foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+            {
+                if (ally == self) continue;
+                foreach (string k in missing)
+                    if (ally.Counter(k) > 0) pool.Add((ally, k));
+            }
+
+            if (pool.Count == 0)
+            {
+                ctx.ScapegoatMissed++;
+            }
+            else
+            {
+                // PickOne と同じ消費規則（候補1個では Roll を消費しない）。
+                // PickOne 本体は UnitState 専用なので、ここは組の上で同じ形を書く。
+                var pick = pool.Count == 1 ? pool[0] : pool[ctx.Roll(pool.Count)];
+
+                int take = Math.Min(TransferAmount, pick.Ally.Counter(pick.Kind));
+                pick.Ally.SetCounter(pick.Kind, pick.Ally.Counter(pick.Kind) - take);
+                self.SetCounter(pick.Kind, self.Counter(pick.Kind) + take);
+
+                ctx.NoteScapegoatTake(pick.Kind, pick.Ally.Def.Name, take);
+                ctx.Log($"    {self.Name} が {pick.Ally.Name} の{StatusKeys.LabelOf(pick.Kind)}を引き取った",
+                        LogKind.Trigger);
+            }
+        }
+
+        // 成立率・到達・種類数（引き取りの後の状態で数える）。**盤面には触らない。**
+        ctx.NoteScapegoatStand(Kinds.Count(k => self.Counter(k) > 0));
+    }
+
+    // --- 発揮 -----------------------------------------------------------------------------------
+    // 攻撃1回につき1度・主目標に対してのみ（engine の規則）。
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        ctx.ScapegoatSwings++;
+
+        int held = Kinds.Count(k => self.Counter(k) > 0);
+        if (held < ctx.Scapegoat.Threshold) return;
+        if (!target.IsAlive) return;
+
+        // **種類を選ばない。** 選択を入れると可動部が増える（第46期の教訓）。
+        // 自分からは減らさない——維持型。溜め込んだものは減らずに写る。
+        foreach (string k in Kinds)
+        {
+            if (self.Counter(k) <= 0) continue;
+            target.SetCounter(k, target.Counter(k) + TransferAmount);
+            target.SetCounter(OwedKey(k), target.Counter(OwedKey(k)) + TransferAmount);
+            ctx.NoteScapegoatWrite(k, TransferAmount);
+        }
+        ctx.ScapegoatFired++;
+        ctx.Log($"    {self.Name} が {target.Name} に溜め込んだものを返した（{held} 種）",
+                LogKind.Highlight);
+    }
+
+    /// <summary>
+    /// 部隊戦の境界で控えを捨てる。<see cref="OwedKey"/> は <see cref="StatusKeys"/> に無いので
+    /// 境界の一律掃除では消えない（庇うの <c>guardPending</c> と同じ理由）。
+    /// <b>持ち越すのは勝った側だけなので敵側では走らないが、味方に業が2枚並ぶ将来のために書いておく。</b>
+    /// </summary>
+    public override void OnCarryOver(UnitState self)
+    {
+        foreach (string k in Kinds) self.SetCounter(OwedKey(k), 0);
+    }
+}
+
+/// <summary>
+/// 業の強度のノブ。<b>診断（scapegoat）が版を差し替えるためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない。
+///
+/// <para><paramref name="Threshold"/> は発揮に必要な種類数。
+/// <b>これが律速項であることは実装の前に確かめてある</b>（第49期 Phase 0-7）——
+/// 引き取りの<b>量</b>を振っても種類数は動かない（1 カウント移せば種類は成立する）ので、
+/// 量のノブは到達時刻を1ターンも変えられない。閾値のほうは
+/// 「累積3種に届く台（未達 19.2%）」と「構造的に届かない台（未達 100%）」を
+/// そのまま分ける。第41期（<see cref="ShoveRule"/>）と第47期（<see cref="ScaleRule"/>）が
+/// <b>律速でない項にノブを付けて掃引の全幅 1pt 未満</b>に終わった轍を踏まないための選択。</para>
+///
+/// <para><b>既定を無効にしなくてよい。</b> 味方側の駒なので、<see cref="UnitCatalog.Gou"/> を
+/// 編成に入れない限り既存の行は1バイトも動かない（それ自体が回帰チェックになる）。
+/// static のノブを置かない理由は <see cref="ShoveRule"/> / <see cref="BearRule"/> /
+/// <see cref="RelayRule"/> / <see cref="OverbearRule"/> / <see cref="ScaleRule"/> と同じ。</para>
+/// </summary>
+public readonly record struct ScapegoatRule(int Threshold, bool Audit)
+{
+    /// <summary>閾値だけを指定する。監査は既定で切る（＝通常の実行）。</summary>
+    public ScapegoatRule(int threshold) : this(threshold, false) { }
+
+    /// <summary>探索段階の初期値（第49期）。</summary>
+    public static ScapegoatRule Default => new(3, false);
+}
+
+
 
 
 /// <summary>澱み。既に積まれた毒を増幅する。毒が無ければ何もしない。</summary>
@@ -4000,6 +4206,7 @@ public static class TraitCatalog
         new RelayTrait(),
         new OverbearTrait(),
         new ScaleTrait(),
+        new ScapegoatTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

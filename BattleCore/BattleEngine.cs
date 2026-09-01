@@ -49,6 +49,23 @@ public static class StatusKeys
     /// Battle 内の供給に依存するプール）。**新しいキーを足したら必ずここにも足すこと。**
     /// </summary>
     public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound };
+
+    /// <summary>
+    /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
+    /// <see cref="BattleContext"/> のスナップショット用ラベルと重複するが、あちらは
+    /// 「台本に載せる継続効果」の一覧で、こちらは全キーの索引——目的が違うので分けてある。
+    /// </summary>
+    public static string LabelOf(string key) => key switch
+    {
+        Poison => "毒",
+        Marked => "標",
+        Stun => "痺",
+        Burn => "燃",
+        IdleTurn => "手番",
+        Armor => "破片",
+        Wound => "傷",
+        _ => key
+    };
 }
 
 /// <summary>
@@ -173,6 +190,8 @@ public sealed class BattleContext
                 Amount = poison,
                 Text = "毒"
             });
+            // 業（第49期）の帰属。**保持者が盤上にいなければ1回も走らない**（短絡）。
+            if (ScapegoatActive) NoteScapegoatDot(u, poison, StatusKeys.Poison);
             ApplyDamage(u, poison, null);
         }
 
@@ -194,6 +213,7 @@ public sealed class BattleContext
                 Amount = BurnRules.Damage,
                 Text = "燃焼"
             });
+            if (ScapegoatActive) NoteScapegoatDot(u, BurnRules.Damage, StatusKeys.Burn);
             ApplyDamage(u, BurnRules.Damage, null);
         }
     }
@@ -537,11 +557,170 @@ public sealed class BattleContext
         if (depleted) ScaleDepleted++;
     }
 
+    /// <summary>
+    /// 業の強度。<b>診断（scapegoat）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="ScapegoatRule.Default"/>）。static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public ScapegoatRule Scapegoat { get; }
+
+    /// <summary>
+    /// 業（<see cref="TraitId.Scapegoat"/>）の計数フックを走らせるか。
+    /// <b>短絡のためだけ</b>のフラグで、盤面には一切影響しない（layout は数百万戦を並列で回すので、
+    /// 保持者がいない実行では毒・燃焼のたびに走らせたくない）。
+    ///
+    /// <para><see cref="Add"/> が保持者を見つけたときに立つ（蘇生・増援で湧いた保持者も拾う）。
+    /// <b><see cref="ScapegoatRule.Audit"/> でも立つ</b>——診断が<b>素体の対照</b>
+    /// （業と同数値で特性だけを持たない駒）でも自傷・味方の継続ダメージを数えるため。
+    /// <b>監査は計数だけで盤面を1つも動かさない</b>ことは、診断 §0 が
+    /// 「監査あり」と「監査なし」を突き合わせて毎回確かめる。</para>
+    /// </summary>
+    public bool ScapegoatActive { get; private set; }
+
+    /// <summary>
+    /// 業（<see cref="TraitId.Scapegoat"/>）の計数。<b>発火しなかったことは盤面の値に痕跡を残さない</b>
+    /// ので、診断が読むためだけに数える（<c>verbose</c> には依存しない）。盤面には一切影響しない。
+    ///
+    /// <para><b>「転写」と「転写の効き」を分けてある。</b> 付けた回数は成果ではない
+    /// ——敵が次のターンに死ぬなら毒を付けても意味がない。効きは
+    /// <c>ScapegoatFoeDot</c>（毒・燃焼が実際に削った量）／<c>ScapegoatFoeSkips</c>（痺れで飛ばした敵の手番）／
+    /// <c>ScapegoatMarkPulls</c>（標に味方の単体攻撃が引かれた回数）の3本で測る。</para>
+    ///
+    /// <para><b>「自傷」と「味方の救済」も分けてある。</b> この駒は引き取りが防御でもあり
+    /// 自壊でもあるので、収支がどちらに振れるかが性格を決める。
+    /// <b>どちらも素体との対照で帰属を取る</b>——瘴気の毒はゴウが引き取らなくても載るので、
+    /// 絶対値だけでは機構のぶんが割れない。</para>
+    /// </summary>
+    public int ScapegoatTakes { get; internal set; }
+    public Dictionary<string, int> ScapegoatTakeByKind { get; } = new();
+    public Dictionary<string, int> ScapegoatTakeFrom { get; } = new();
+    /// <summary>引き取れる種類が盤面に無くて何もしなかった回数（空振り）。</summary>
+    public int ScapegoatMissed { get; internal set; }
+    /// <summary>全種類を既に背負っていて引き取る余地が無かった回数。空振りとは原因が違う。</summary>
+    public int ScapegoatFull { get; internal set; }
+    /// <summary>保持者が生きてターン頭を迎えた回数（成立率の分母）。</summary>
+    public int ScapegoatAliveTurns { get; internal set; }
+    /// <summary>そのうち閾値を満たしていたターン数。</summary>
+    public int ScapegoatMetTurns { get; internal set; }
+    /// <summary>背負っている種類数の合計（÷ <c>ScapegoatAliveTurns</c> が平均）と最大。</summary>
+    public int ScapegoatKindSum { get; internal set; }
+    public int ScapegoatKindMax { get; internal set; }
+    /// <summary>閾値に初めて達したターン。一度も達しなければ 0。</summary>
+    public int ScapegoatFirstTurn { get; internal set; }
+    /// <summary>保持者が振った回数と、そのうち転写した回数。</summary>
+    public int ScapegoatSwings { get; internal set; }
+    public int ScapegoatFired { get; internal set; }
+    /// <summary>転写で敵に書いた延べ数（種類別）。</summary>
+    public Dictionary<string, int> ScapegoatWriteByKind { get; } = new();
+    /// <summary>転写の効き: 業が書いたぶんに帰属する毒・燃焼のダメージ。</summary>
+    public int ScapegoatFoeDot { get; internal set; }
+    /// <summary>転写の効き: 業が書いた痺れで敵が飛ばした手番の数。</summary>
+    public int ScapegoatFoeSkips { get; internal set; }
+    /// <summary>転写の効き: 業が書いた標に味方の単体攻撃が引かれた回数。</summary>
+    public int ScapegoatMarkPulls { get; internal set; }
+    /// <summary>
+    /// 味方側が毒・燃焼で受けたダメージと、痺れで失った手番を<b>駒ごとに</b>割ったもの
+    /// （キーは <c>Def.Id</c>）。
+    ///
+    /// <para><b>「保持者かどうか」で箱を分けていないのが要点。</b> 分けると
+    /// <b>素体の対照が成立しなくなる</b>——素体（特性なし・同数値）は保持者ではないので、
+    /// 同じ駒の同じ被害が別の箱に落ちて業版と引き算できない。
+    /// 駒ごとに割っておけば、診断が「5枚目の席の駒」と「残り4枚」を
+    /// <b>両方の版で同じ切り方</b>で数えられる。</para>
+    /// </summary>
+    public Dictionary<string, int> ScapegoatDotByUnit { get; } = new();
+    public Dictionary<string, int> ScapegoatSkipByUnit { get; } = new();
+
+    /// <summary>引き取りを記録する。<b>盤面には触らない。</b></summary>
+    internal void NoteScapegoatTake(string kind, string from, int amount)
+    {
+        ScapegoatTakes += amount;
+        ScapegoatTakeByKind[kind] = ScapegoatTakeByKind.TryGetValue(kind, out int a) ? a + amount : amount;
+        ScapegoatTakeFrom[from] = ScapegoatTakeFrom.TryGetValue(from, out int b) ? b + amount : amount;
+    }
+
+    /// <summary>そのターンの種類数を記録する。<b>盤面には触らない。</b></summary>
+    internal void NoteScapegoatStand(int kinds)
+    {
+        ScapegoatAliveTurns++;
+        ScapegoatKindSum += kinds;
+        if (kinds > ScapegoatKindMax) ScapegoatKindMax = kinds;
+        if (kinds >= Scapegoat.Threshold)
+        {
+            ScapegoatMetTurns++;
+            if (ScapegoatFirstTurn == 0) ScapegoatFirstTurn = Turn;
+        }
+    }
+
+    /// <summary>転写で書いた量を記録する。<b>盤面には触らない。</b></summary>
+    internal void NoteScapegoatWrite(string kind, int amount)
+        => ScapegoatWriteByKind[kind] =
+               ScapegoatWriteByKind.TryGetValue(kind, out int a) ? a + amount : amount;
+
+    /// <summary>
+    /// 毒・燃焼が削った量を、業から見た3つの箱（自分 / 味方 / 敵に書いたぶん）へ割る。
+    ///
+    /// <para><b>敵側だけは控え（<see cref="ScapegoatTrait.OwedKey"/>）で帰属を取る。</b>
+    /// 毒は層が混ざるので、そのターンの削りのうち控えの割合ぶんだけを数える。
+    /// 燃焼は残ターンなので、1ターン分を数えて控えを1つ減らす。
+    /// <b>控えは誰も読んで分岐しない私有カウンタ</b>なので、ここで書き換えても盤面は動かない
+    /// （受け入れ基準1で 250 セル 0 件を確認する）。</para>
+    /// </summary>
+    internal void NoteScapegoatDot(UnitState u, int dmg, string kind)
+    {
+        if (dmg <= 0) return;
+        if (u.TeamId == PlayerTeam)
+        {
+            string id = u.Def.Id;
+            ScapegoatDotByUnit[id] = ScapegoatDotByUnit.TryGetValue(id, out int d) ? d + dmg : dmg;
+            return;
+        }
+
+        string owed = ScapegoatTrait.OwedKey(kind);
+        int o = u.Counter(owed);
+        if (o <= 0) return;
+        if (kind == StatusKeys.Poison)
+        {
+            int stacks = u.Counter(StatusKeys.Poison);
+            if (stacks <= 0) return;
+            ScapegoatFoeDot += dmg * Math.Min(o, stacks) / stacks;
+        }
+        else
+        {
+            // 燃焼は層ではなく残ターンなので、業が足した 1 は**末尾の1ターンを延ばした**
+            // ことにあたる。だから帰属させるのは**最後の o ターンだけ**——
+            // 先頭の刻みを数えると、既に燃えていた相手（火の粉が3ターンで点けた相手）に
+            // 重ねただけで満額を取ってしまうし、延びた末尾に届く前に敵が落ちた場合に
+            // 「効かなかった」が記録されない。
+            // 呼ばれる時点で残ターンは既に 1 引かれている（`TickStatuses` の順序）。
+            if (u.Counter(StatusKeys.Burn) >= o) return;
+            ScapegoatFoeDot += dmg;
+            u.SetCounter(owed, o - 1);
+        }
+    }
+
+    /// <summary>痺れで飛んだ手番を同じ3つの箱へ割る。<b>控え以外の盤面には触らない。</b></summary>
+    internal void NoteScapegoatSkip(UnitState u)
+    {
+        if (u.TeamId == PlayerTeam)
+        {
+            string id = u.Def.Id;
+            ScapegoatSkipByUnit[id] = ScapegoatSkipByUnit.TryGetValue(id, out int d) ? d + 1 : 1;
+            return;
+        }
+
+        string owed = ScapegoatTrait.OwedKey(StatusKeys.Stun);
+        int o = u.Counter(owed);
+        if (o <= 0) return;
+        ScapegoatFoeSkips++;
+        u.SetCounter(owed, o - 1);
+    }
+
     public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null,
                          HushRule? hush = null, MartyrRule? martyr = null, ExposeRule? expose = null,
                          ShoveRule? shove = null, BearRule? bear = null,
                          RelayRule? relay = null, SlanderRule? slander = null,
-                         OverbearRule? overbear = null, ScaleRule? scale = null)
+                         OverbearRule? overbear = null, ScaleRule? scale = null,
+                         ScapegoatRule? scapegoat = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -556,6 +735,8 @@ public sealed class BattleContext
         Slander = slander ?? SlanderRule.Default;
         Overbear = overbear ?? OverbearRule.Default;
         Scale = scale ?? ScaleRule.Default;
+        Scapegoat = scapegoat ?? ScapegoatRule.Default;
+        if (Scapegoat.Audit) ScapegoatActive = true;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -567,6 +748,8 @@ public sealed class BattleContext
     /// </summary>
     internal void Add(UnitState u)
     {
+        // 業の計数フックを短絡させるためのフラグ（盤面には影響しない）。
+        if (u.HasTrait(TraitId.Scapegoat)) ScapegoatActive = true;
         u.InstanceId = _nextInstanceId++;
         u.Board = this;          // 「隣に誰がいるか」を読む特性のため（UnitState.Board の doc 参照）
         _units.Add(u);
@@ -969,6 +1152,10 @@ public sealed class BattleContext
         UnitState? marked = PickOne(foes.Where(f => f.Counter(StatusKeys.Marked) > 0).ToList());
         if (marked is not null && marked != target && Roll(100) < MarkPullPercent)
         {
+            // 業（第49期）が敵へ書いた標が実際に引いた回数。**engine が標の読み手**なので、
+            // 「敵側に読み手がいない」＝「効かない」ではない（第48期の棚卸しが数えたのは駒）。
+            if (ScapegoatActive && marked.Counter(ScapegoatTrait.OwedKey(StatusKeys.Marked)) > 0)
+                ScapegoatMarkPulls++;
             Log($"    敵は {marked.Name} に気を取られた", LogKind.Trigger);
             return marked;
         }
@@ -1971,11 +2158,11 @@ public static class BattleEngine
                                    ExposeRule? expose = null, ShoveRule? shove = null,
                                    BearRule? bear = null, RelayRule? relay = null,
                                    SlanderRule? slander = null, OverbearRule? overbear = null,
-                                   ScaleRule? scale = null)
+                                   ScaleRule? scale = null, ScapegoatRule? scapegoat = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
-               overbear, scale);
+               overbear, scale, scapegoat);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -1991,10 +2178,11 @@ public static class BattleEngine
                                    MartyrRule? martyr = null, ExposeRule? expose = null,
                                    ShoveRule? shove = null, BearRule? bear = null,
                                    RelayRule? relay = null, SlanderRule? slander = null,
-                                   OverbearRule? overbear = null, ScaleRule? scale = null)
+                                   OverbearRule? overbear = null, ScaleRule? scale = null,
+                                   ScapegoatRule? scapegoat = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
-                                    relay, slander, overbear, scale);
+                                    relay, slander, overbear, scale, scapegoat);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -2080,6 +2268,7 @@ public static class BattleEngine
 
                 if (actor.Counter(StatusKeys.Stun) > 0)
                 {
+                    if (ctx.ScapegoatActive) ctx.NoteScapegoatSkip(actor);
                     actor.SetCounter(StatusKeys.Stun, 0);
                     actor.SetCounter(StatusKeys.IdleTurn, turn);
                     ctx.Log($"  {actor.Name} は痺れて動けない", LogKind.Status);
@@ -2258,7 +2447,25 @@ public static class BattleEngine
             // **倒れた保持者も数える**——纏ったまま倒れた破片も「使われずに終わった」側。
             ScaleLeftover = ctx.AllUnits
                 .Where(u => u.HasTrait(TraitId.Scale))
-                .Sum(u => u.Counter(StatusKeys.Armor))
+                .Sum(u => u.Counter(StatusKeys.Armor)),
+            ScapegoatTakes = ctx.ScapegoatTakes,
+            ScapegoatTakeByKind = ctx.ScapegoatTakeByKind,
+            ScapegoatTakeFrom = ctx.ScapegoatTakeFrom,
+            ScapegoatMissed = ctx.ScapegoatMissed,
+            ScapegoatFull = ctx.ScapegoatFull,
+            ScapegoatAliveTurns = ctx.ScapegoatAliveTurns,
+            ScapegoatMetTurns = ctx.ScapegoatMetTurns,
+            ScapegoatKindSum = ctx.ScapegoatKindSum,
+            ScapegoatKindMax = ctx.ScapegoatKindMax,
+            ScapegoatFirstTurn = ctx.ScapegoatFirstTurn,
+            ScapegoatSwings = ctx.ScapegoatSwings,
+            ScapegoatFired = ctx.ScapegoatFired,
+            ScapegoatWriteByKind = ctx.ScapegoatWriteByKind,
+            ScapegoatFoeDot = ctx.ScapegoatFoeDot,
+            ScapegoatFoeSkips = ctx.ScapegoatFoeSkips,
+            ScapegoatMarkPulls = ctx.ScapegoatMarkPulls,
+            ScapegoatDotByUnit = ctx.ScapegoatDotByUnit,
+            ScapegoatSkipByUnit = ctx.ScapegoatSkipByUnit
         };
     }
 
