@@ -104,6 +104,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 finisher alt     # 機構の帰属を別 seed 帯で追試
     dotnet run --project BattleSim -c Release 0 wave2 [波番号 1-5]  # 波の解剖: 敵を1体ずつ空席にし、盤面ルールを切って関門を数える（第51期）
     dotnet run --project BattleSim -c Release 0 pace              # 勝率以外の物差し（決着T/残存数/被ダメ/与ダメ）の分離度を波ごとに比べる（第54期・調査）
+    dotnet run --project BattleSim -c Release 0 audit             # docs/ の生成物が現行の編成数と整合しているか（戦闘0回・1秒。第55期）
 
 `census` は**駒と通貨の対応表を作るための素材**を出す（第48期）。**戦闘を1回も回さない。**
 ロスターの上限を **52体**（トランプ1組）と決めたので、新規追加の合否テストに
@@ -1026,7 +1027,8 @@ BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project Ba
     PrototypeApp/   WPF (net8.0-windows)。編成を組んで結果を眺めるだけ
     GodotApp/       Godot 4 (C#) の戦闘再生装置。sln には入っておらず単独ビルド。
                     会戦の台本（Events / Openings）を再生するだけで、判定は一切しない
-    docs/           BattleSim が吐く生成物（balance.md / units.md）。手で編集しない
+    docs/           BattleSim が吐く生成物 8ファイル（balance / units / chain / ablation /
+                    pulse / engage / layout / reseat）。手で編集しない。整合は `audit` で見る
     design/         設計文書（コンセプトメモ・会戦計画・指示書・測定報告）。手で編集する
 
 **`docs/` は生成物のみ・手書き文書は `design/`。** 測定報告や指示書を `docs/` に置かない
