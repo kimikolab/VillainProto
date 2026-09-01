@@ -95,6 +95,8 @@ public enum TraitId
                  // 押し出された側は狙われる（1つの動作の表と裏。クグの縛め＋攻撃+16 と同じ構造）
     Finisher,    // 止め: 誰かが指を差した敵に必ず食らいつき、倍の力で仕留める。
                  // 仕留めると指差しは消える（供給と消費のサイクル。差されなければただの雑魚）
+    Kindle,      // 焚き付け: 燃えている味方の腕を上げ、自分の隣で燃えていない味方の腕を鈍らせる
+                 // （1つの動作の表と裏。プラスは位置を問わず・マイナスは位置で決まる）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -1798,14 +1800,17 @@ public enum DullRoute
                   // **窓口の中から窓口を呼ぶ唯一の経路**で、宛先が敵側なのもここだけ
     Slander,      // 誹り: 敵の保持者 → 殴った味方・攻撃のたび。
                   // **敵から味方へ弱体を撒く初めての経路**（第44期）。他の6本は味方が起点
-    Overbear      // 驕り: オゴ → 隣接する生存味方全員・毎ターン。
+    Overbear,     // 驕り: オゴ → 隣接する生存味方全員・毎ターン。
                   // **撒いた本人が撒いた結果を出力条件として読む唯一の経路**（第46期）
+    Kindle        // 焚き付けの鈍り: フイ → 隣接する生存味方のうち**燃えていない**者・毎ターン。
+                  // **状態異常を条件に宛先を選ぶ初めての弱体経路**（第58期）。
+                  // 同じ1回の発火が <see cref="WhetRoute.Kindle"/> の側も走らせる（表と裏）
 }
 
 /// <summary>経路の名前と本数。診断の表の見出しと配列長をここ1箇所から引く。</summary>
 public static class DullRoutes
 {
-    public static readonly string[] Names = { "その他", "なまり", "呪詛敵", "呪詛漏れ", "突き返し", "萎縮", "渡し", "誹り", "驕り" };
+    public static readonly string[] Names = { "その他", "なまり", "呪詛敵", "呪詛漏れ", "突き返し", "萎縮", "渡し", "誹り", "驕り", "焚き付け" };
     public static int Count => Names.Length;
 }
 
@@ -1832,14 +1837,17 @@ public enum WhetRoute
     Bind,           // 縛め: クグ → 縛った味方1体・第2ターン以降の毎ターン。
                     // **プラスとマイナスが1つの動作の表と裏**（痺れ+16）なので量が最大
     Drifter,        // 移り木: シオ → 動かされた味方・移動のたび
-    Regurgitate     // 吐き戻し: ゴルム → 庇った相手（SupportTargets 経由）・肩代わりのたび。
+    Regurgitate,    // 吐き戻し: ゴルム → 庇った相手（SupportTargets 経由）・肩代わりのたび。
                     // **engine 側にある唯一の経路**で、Dull の「なまり」（同じく engine 側）と対称
+    Kindle          // 焚き付け: フイ → **燃えている味方全員**（自分を除く）・毎ターン。**位置を問わない**。
+                    // 候補を自前で AcceptsSupport 濾しする（隣へ漏らさない＝駆り立てと同じ側）。
+                    // **状態異常を条件に宛先を選ぶ初めての強化経路**（第58期）
 }
 
 /// <summary>経路の名前と本数。診断の表の見出しと配列長をここ1箇所から引く。</summary>
 public static class WhetRoutes
 {
-    public static readonly string[] Names = { "その他", "駆り立て", "号令開戦", "号令毎T", "縛め", "移り木", "吐き戻し" };
+    public static readonly string[] Names = { "その他", "駆り立て", "号令開戦", "号令毎T", "縛め", "移り木", "吐き戻し", "焚き付け" };
     public static int Count => Names.Length;
 }
 
@@ -2876,6 +2884,139 @@ public readonly record struct FinisherRule(int Multiplier, bool Consume)
     /// <summary>探索段階の初期値（第53期）。</summary>
     public static FinisherRule Default => new(2, true);
 }
+
+/// <summary>
+/// 焚き付け。<b>燃えている味方の腕を上げ、自分の隣で燃えていない味方の腕を鈍らせる</b>（第58期）。
+///
+/// <para><b>出発点は第57期の実測</b>——燃焼は<b>盤面のどこにも繋がっていない閉じた2枚組</b>だった
+/// （表E の 18 セル＝9通貨 × 双方向がすべて 0。「燃えている」という事実を読んで分岐するのは
+/// engine の刻み1本と熾火＝<see cref="PyreTrait"/> 1枚の計2本で、engine の1本は燃焼そのものの実装）。
+/// しかも<b>着火の 52% は味方に付いていて</b>（味 2.40 対 敵 2.21 /戦）、
+/// <b>その味方側の燃焼を読む駒が1枚も無い</b>。<b>この駒はその在庫を読む2枚目の読み手である。</b></para>
+///
+/// <para><b>1つの動作の表と裏</b>（置き去り・責め苦・仇討ち・突き返し・鱗・逸らし・駆り立てと同型）。
+/// <see cref="OnTurnStart"/> の1回の発火で以下を順に行う:</para>
+/// <list type="number">
+///   <item><b>プラス</b>: <b>燃えている味方全員</b>（自分を除く）に
+///     <see cref="BattleContext.Whet"/>(<see cref="KindleRule.Gain"/>, <see cref="WhetRoute.Kindle"/>)。
+///     <b>位置を問わない。</b></item>
+///   <item><b>マイナス</b>: <b>隣接する味方のうち燃えていない者</b>に
+///     <see cref="BattleContext.Dull"/>(<see cref="KindleRule.Loss"/>, <see cref="DullRoute.Kindle"/>)。
+///     <b>位置で決まる。</b></item>
+/// </list>
+///
+/// <para><b>プラスを全体・マイナスを隣接にするのが要点。</b> 逆にすると
+/// 「隣に火があるかどうか」だけの二値になり、配置の判断が消える（第45期の
+/// 「隣に何人いるか」を読む機構が2値の選好しか返さなかったのと同じ穴）。この形なら
+/// <b>「火を全体に回すか、自分の隣を空けるか」</b>という2つの解き方が同時に立つ。</para>
+///
+/// <para><b>候補は両側とも自前で <see cref="UnitState.AcceptsSupport"/> 濾しする（隣へ漏らさない）。</b>
+/// <see cref="BattleContext.SupportTargets"/> は支援拒否の駒（ガルドの <c>Stoic</c>）の取り分を
+/// 隣へ流すが、<b>流した先が燃えているとは限らない</b>——「燃えている味方を強化する」という
+/// 規則そのものが破れるので採らない。<b>プラスとマイナスで濾し方を分けない</b>のは
+/// 駆り立て（<see cref="GoadTrait"/>）と同じ作法で、分けると
+/// <b>「強化されないのに鈍りもしない」駒</b>ができて「隣をガルドで固める」が
+/// 代金だけを消す配置解になる。</para>
+///
+/// <para><b>この駒は構造的に供給の1ターン後ろを歩く。</b> ターンの順序は
+/// <c>TickStatuses</c> → <c>OnTurnStart</c> → 行動順ループで、火の粉は <c>OnAfterAttack</c>
+/// ——つまり<b>第1ターンの発火時点では盤上の誰も燃えていない</b>（実測でホタの
+/// <c>CurrentAttack</c> は T1 が 6・T2 以降が 24）。<b>係数では詰められない構造の遅れ</b>で、
+/// 短い波ほど取り分が減る。</para>
+///
+/// <para><b>熾火（<see cref="PyreTrait"/>）に配ると 4 倍で入る。</b>
+/// <see cref="UnitState.CurrentAttack"/> は <c>Def.Attack + AtkBonus</c> を作ってから
+/// <c>ModifyAttack</c> を通すので、<b>強化は素の攻撃力と一緒に掛けられる</b>
+/// ——ロスター唯一の乗算フラグで、しかも同時に貫きへ変わるので与ダメの実効は 7.4 倍
+/// （第58期 Phase 0-1 の実測）。<b>これは仕様として許した</b>——理由は
+/// design/PHASE58_KINDLE.md の Q4。</para>
+///
+/// <para><b>粛（<see cref="HushTrait"/>）に封じられない。</b> <c>OnTurnStart</c> は
+/// 行動順ループの<b>外側</b>なので <c>CanActOutOfTurn</c> を通らない（駆り立て・逸らしと同じ）。</para>
+///
+/// <para><b>自分が燃えていても自分は強化しない</b>（<c>a != self</c>）。自己完結させると
+/// 「火の粉のそばに置く」以外の判断が消える。マイナス側は隣接の定義（<c>a != b</c>）から
+/// 自然に自分を含まない。</para>
+///
+/// <para><b>召喚枠（<see cref="TraitId.Ephemeral"/>）も対象に含める</b>（鱗・第47期と同じ扱い）。
+/// 胞子は <c>AcceptsSupport</c> を通るので、燃えていれば強化を受けるし、
+/// フイの隣（○中1 / ○中3 / ○前2 / ○後2 は編成枠と隣接する）にいて燃えていなければ鈍る。
+/// <b>掛け算にはならない</b>——胞子は火を撒かないので供給は増えない。</para>
+/// </summary>
+public sealed class KindleTrait : Trait
+{
+    public override TraitId Id => TraitId.Kindle;
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+
+        // **LivingMembers（スロット昇順・決定的）を使う。** LivingMembersShuffled は Shuffle が
+        // 乱数を消費するので、効果が順序に依存しないこの機構で使うと
+        // 「Gain = Loss = 0 の版が素体と1セルも違わない」という検算が壊れる。
+        var allies = ctx.LivingMembers(self.TeamId);
+
+        int gain = ctx.Kindle.Gain, loss = ctx.Kindle.Loss;
+        int whetted = 0, dulled = 0;
+
+        foreach (UnitState a in allies)
+        {
+            // LivingMembers はスナップショットなので、渡しの転嫁（自傷）で列挙中に
+            // 誰かが落ちうる。**死体に配らない。**
+            if (a == self || !a.IsAlive || !a.AcceptsSupport) continue;
+
+            if (a.Counter(StatusKeys.Burn) > 0)
+            {
+                // プラス側は位置を問わない。
+                whetted++;
+                ctx.Whet(a, gain, WhetRoute.Kindle);          // gain <= 0 なら Whet が即 return する
+            }
+            else if (FormationRules.AreAdjacent(self.Slot, a.Slot))
+            {
+                // マイナス側は隣接だけ。
+                dulled++;
+                ctx.Dull(a, loss, DullRoute.Kindle);          // loss <= 0 なら Dull が即 return する
+            }
+        }
+
+        // 空振り＝盤上に燃えている味方が1体もいなかった手番。**第1ターンは構造的にここへ落ちる。**
+        ctx.NoteKindle(whetted, dulled, whetted == 0 ? 1 : 0, gain * whetted, loss * dulled);
+
+        if (whetted > 0 || dulled > 0)
+            ctx.Log($"    {self.Name} が火のそばを贔屓した（燃 {whetted} 体に +{gain} / 隣の非燃 {dulled} 体に -{loss}）",
+                    LogKind.FriendlyFire);
+    }
+}
+
+/// <summary>
+/// 焚き付けの強度のノブ。<b>診断（kindle）が版を差し替えるためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない（既定は <see cref="Default"/>）。
+/// static のノブにしない理由は同型の doc（<see cref="ColossusRule"/>）を参照。
+///
+/// <para><paramref name="Gain"/> がプラス側（燃えている味方全員への強化量）、
+/// <paramref name="Loss"/> がマイナス側（隣接する非燃焼の味方への弱体量）。
+/// <b>2つを別のノブにしてある</b>のは、掃引で
+/// 「プラスを厚く」と「マイナスを厚く」を分けて測るため（指示書 §4 の V2 / V3）。</para>
+///
+/// <para><b><c>new KindleRule(0, 0)</c> は機構を完全に止める</b>
+/// ——<see cref="BattleContext.Whet"/> / <see cref="BattleContext.Dull"/> は
+/// <c>amount &lt;= 0</c> で即 return し、<see cref="KindleTrait"/> は乱数を1つも引かないので、
+/// <b>同数値・特性なしの素体に差し替えた版と1セルも違わない</b>。これが診断の検算になる。</para>
+/// </summary>
+public readonly record struct KindleRule(int Gain, int Loss)
+{
+    /// <summary>
+    /// 採用値（第58期）。<b>探索段階の初期値は指示書 §2-1 の <c>(2, 2)</c>（掃引の V1）だったが、
+    /// 掃引で <c>(4, 2)</c>（V2）を採った</b>——V1 は3行とも素体より下（−3.5 / −2.6 / −1.8pt）で、
+    /// V2 だけが2行で素体を上回る（+2.1 / +1.5 / −1.6pt）。
+    /// <b>見返りの側だけを厚くすると通る</b>のは、代金（<see cref="Loss"/>）が
+    /// <b>供給者と第1ターンの味方</b>という「構造的に非燃焼の相手」に落ちるからで、
+    /// そこは <see cref="Gain"/> をいくら上げても減らない（掃引で `撒いた` が <see cref="Gain"/> に
+    /// 対して完全に不動）。第25期の軛（計画 15 / 手当 20 → 実測で 25）と同じ形の採り方。
+    /// </summary>
+    public static KindleRule Default => new(4, 2);
+}
+
 
 
 
@@ -4649,6 +4790,7 @@ public static class TraitCatalog
         new DivertTrait(),
         new GoadTrait(),
         new FinisherTrait(),
+        new KindleTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),
