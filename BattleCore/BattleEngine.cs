@@ -1076,7 +1076,7 @@ public sealed class BattleContext
                          OverbearRule? overbear = null, ScaleRule? scale = null,
                          ScapegoatRule? scapegoat = null, DivertRule? divert = null,
                          GoadRule? goad = null, FinisherRule? finisher = null,
-                         KindleRule? kindle = null, BlazeRule? blaze = null)
+                         KindleRule? favor = null, BlazeRule? blaze = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -1097,7 +1097,7 @@ public sealed class BattleContext
         if (Divert.Audit) DivertActive = true;
         Goad = goad ?? GoadRule.Default;
         Finisher = finisher ?? FinisherRule.Default;
-        Kindle = kindle ?? KindleRule.Default;
+        Kindle = favor ?? KindleRule.Default;
         Blaze = blaze ?? BlazeRule.Default;
     }
 
@@ -2666,12 +2666,12 @@ public static class BattleEngine
                                    SlanderRule? slander = null, OverbearRule? overbear = null,
                                    ScaleRule? scale = null, ScapegoatRule? scapegoat = null,
                                    DivertRule? divert = null, GoadRule? goad = null,
-                                   FinisherRule? finisher = null, KindleRule? kindle = null,
+                                   FinisherRule? finisher = null, KindleRule? favor = null,
                                    BlazeRule? blaze = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
-               overbear, scale, scapegoat, divert, goad, finisher, kindle, blaze);
+               overbear, scale, scapegoat, divert, goad, finisher, favor, blaze);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -2690,11 +2690,11 @@ public static class BattleEngine
                                    OverbearRule? overbear = null, ScaleRule? scale = null,
                                    ScapegoatRule? scapegoat = null, DivertRule? divert = null,
                                    GoadRule? goad = null, FinisherRule? finisher = null,
-                                   KindleRule? kindle = null, BlazeRule? blaze = null)
+                                   KindleRule? favor = null, BlazeRule? blaze = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
-                                    kindle, blaze);
+                                    favor, blaze);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

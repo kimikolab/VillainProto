@@ -9747,6 +9747,63 @@ if (focusId == "spread")
         Console.WriteLine($"- 固有の敗者 ({losers.Count}): " + (losers.Count == 0 ? "**なし**" : string.Join(" / ", losers)));
         Console.WriteLine();
     }
+
+    // ---- 4. 主判定の固定行集合（第60期に確定）---------------------------------------
+    Console.WriteLine($"## 4. 主判定 {Baseline.PrimaryRows.Length} 行（歯止めはこの集合の上で測る）");
+    Console.WriteLine();
+    Console.WriteLine("**全行平均は行を足すたびに勝手に動く量である。** 第41〜59期の「歯止めを割った」は");
+    Console.WriteLine("すべて分母の話で、波そのものは第40期から1つも動いていない（第59期 9-4 → 第60期に確定）。");
+    Console.WriteLine("主判定は**軸の被覆**で選んだ固定集合なので、新機構の行を足しても分母が動かない。");
+    Console.WriteLine();
+    Console.WriteLine("**情報セルの定義はここだけ第59期 9-1 に揃えてある**——");
+    Console.WriteLine("`0 < x < 100` を**第2〜5波**で数える（§1 の中間帯は `5 < x < 95`。別の量なので混ぜない）。");
+    Console.WriteLine();
+    var primary = Baseline.PrimaryRows
+        .Select(n => Array.FindIndex(spreadBuilds, b => b.Name == n))
+        .Where(i => i >= 0).ToArray();
+    var missing = Baseline.PrimaryRows.Where(n => !spreadBuilds.Any(b => b.Name == n)).ToArray();
+    if (missing.Length > 0)
+    {
+        Console.WriteLine($"**警告: 主判定行のうち {missing.Length} 行が見つからない** —— "
+                        + string.Join(" / ", missing));
+        Console.WriteLine("（`CompareBuilds()` の行名を変えたら `Baseline.PrimaryRows` も直すこと）");
+        Console.WriteLine();
+    }
+    int Info59(int b) => Enumerable.Range(1, nw - 1).Count(w => rate[w][b] > 0.0 && rate[w][b] < 100.0);
+    Console.WriteLine("| # | 行 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | 情報セル |");
+    Console.WriteLine("|--:|---|--:|--:|--:|--:|--:|--:|");
+    for (int k = 0; k < primary.Length; k++)
+    {
+        int b = primary[k];
+        Console.WriteLine($"| {k + 1} | {spreadBuilds[b].Name} "
+                        + string.Concat(Enumerable.Range(0, nw).Select(w => $"| {rate[w][b]:0.0}% "))
+                        + $"| **{Info59(b)}** |");
+    }
+    Console.WriteLine();
+    string Fold(string tag, IEnumerable<int> idx)
+    {
+        int[] a = idx.ToArray();
+        int info = a.Sum(Info59);
+        return $"| {tag} " + string.Concat(Enumerable.Range(0, nw)
+                 .Select(w => $"| {a.Average(b => rate[w][b]):0.0}% "))
+             + $"| {info} / {info / (double)a.Length:0.00} |";
+    }
+    Console.WriteLine("| 分母 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | 情報セル 合計 / 平均 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|");
+    Console.WriteLine(Fold($"**主判定 {primary.Length} 行**", primary));
+    Console.WriteLine(Fold($"全 {nb} 行", Enumerable.Range(0, nb)));
+    Console.WriteLine();
+    double fifth = primary.Average(b => rate[nw - 1][b]);
+    Console.WriteLine($"**第五波: 主判定 {fifth:0.0}% / 全 {nb} 行 {rate[nw - 1].Average():0.0}%**");
+    Console.WriteLine($"**歯止め: 主判定 {Baseline.PrimaryFifthFloor:0.0}%** "
+                    + $"——確定時（第60期）の主判定の値 − 5.0pt。現在の余裕は "
+                    + $"**{fifth - Baseline.PrimaryFifthFloor:+0.0;-0.0;0.0}pt**。");
+    Console.WriteLine();
+    Console.WriteLine("**線は「明らかに成立しなくなる線」であって調整目標ではない。**");
+    Console.WriteLine("第59期の提案20行がちょうど 40.0 で線上に乗ったのは偶然で、**線上に置くのが一番まずい**");
+    Console.WriteLine("——だから確定時の値そのものではなく **−5.0pt** に置いてある。");
+    Console.WriteLine();
+
     return;
 
     // ピアソン相関。片方の分散が 0 なら定義できないので NaN を返す（呼び出し側で — に置く）。
@@ -10023,7 +10080,7 @@ if (focusId == "kindle")
         var z = new KdStat();
         for (int seed = 0; seed < KdSeeds; seed++)
         {
-            var r = BattleEngine.Run(f, enemy, seed, verbose: false, kindle: rule);
+            var r = BattleEngine.Run(f, enemy, seed, verbose: false, favor: rule);
             if (r.PlayerWon) z.Win++;
             z.Turns += r.Turns;
             z.Fires += r.KindleFires; z.Idle += r.KindleIdle;
@@ -10103,7 +10160,7 @@ if (focusId == "kindle")
         {
             int wins = 0;
             for (int seed = 0; seed < KdSeeds; seed++)
-                if (BattleEngine.Run(f, kdStages[w].Enemy, seed, false, kindle: rule).PlayerWon) wins++;
+                if (BattleEngine.Run(f, kdStages[w].Enemy, seed, false, favor: rule).PlayerWon) wins++;
             v[w] = wins * 100.0 / KdSeeds;
         }
         return v;
@@ -10119,7 +10176,7 @@ if (focusId == "kindle")
     static double KdGet(Dictionary<string, double> d, string k)
         => k.Length > 0 && d.TryGetValue(k, out double v) ? v : 0;
 
-    Console.WriteLine("# 焚き付け（kindle）");
+    Console.WriteLine("# 焚き付け（favor）");
     Console.WriteLine();
     Console.WriteLine("`dotnet run --project BattleSim -c Release 0 kindle [絞り込み]` の出力。");
     Console.WriteLine($"**docs/ には置かない**（標準出力で読むだけ）。seed 0..{KdSeeds - 1}。数字は特記なければ**1戦あたりの平均**。");
@@ -10152,9 +10209,9 @@ if (focusId == "kindle")
                 for (int seed = 0; seed < KdSeeds; seed++)
                 {
                     if (BattleEngine.Run(b.F, kdStages[w].Enemy, seed, false,
-                            kindle: new KindleRule(0, 0)).PlayerWon) a++;
+                            favor: new KindleRule(0, 0)).PlayerWon) a++;
                     if (BattleEngine.Run(b.F, kdStages[w].Enemy, seed, false,
-                            kindle: new KindleRule(9, 9)).PlayerWon) c++;
+                            favor: new KindleRule(9, 9)).PlayerWon) c++;
                 }
                 cells++;
                 if (a != c) diff++;
@@ -10171,7 +10228,7 @@ if (focusId == "kindle")
                 for (int seed = 0; seed < KdSeeds; seed++)
                 {
                     if (BattleEngine.Run(b.F, kdStages[w].Enemy, seed, false,
-                            kindle: new KindleRule(0, 0)).PlayerWon) a++;
+                            favor: new KindleRule(0, 0)).PlayerWon) a++;
                     if (BattleEngine.Run(KdPlain(b.F), kdStages[w].Enemy, seed, false).PlayerWon) c++;
                 }
                 c2++;
@@ -10452,7 +10509,7 @@ if (focusId == "kindle")
             {
                 int wins = 0;
                 for (int seed = AltFrom; seed < AltTo; seed++)
-                    if (BattleEngine.Run(f, kdStages[w].Enemy, seed, false, kindle: rule).PlayerWon) wins++;
+                    if (BattleEngine.Run(f, kdStages[w].Enemy, seed, false, favor: rule).PlayerWon) wins++;
                 v[w] = wins * 100.0 / (AltTo - AltFrom);
             }
             return v;
@@ -10576,6 +10633,471 @@ if (focusId == "kindle")
     return;
 }
 
+// turn モード: 焚き付けを**手番へ降ろす**（第60期）。
+//
+// 第58期 9-2 の実測が出発点。ターンの順序は `TickStatuses` → `OnTurnStart` → 行動順ループで、
+// 火の粉は `OnAfterAttack` ——つまり **`OnTurnStart` の機構は供給に対して構造的に1ターン遅れる**。
+// 第1ターンの発火時点では盤上の誰も燃えておらず、**強化するはずの熾のホタをそのターンだけ鈍らせていた**
+// （弱体の受け手に 2.00 量/戦 ＝ 第1ターンの1回 × `Loss` 2 がちょうど載っていた）。
+// **係数では詰められない**（`Gain` を上げてもこの1回は消えない）。
+//
+// **engine には何も足さない。** `KindleTrait` に `OnAction` と `ActsOnPattern` の分岐を置き
+// （継ぎ当て＝`MenderTrait` の形の踏襲）、版の切り替えは**駒の側**でやる
+// ——`ActsOnPattern` は `UnitDef.Actions` を読むので、規則（`Run` の引数）では切り替えられない。
+// 診断のローカルに `Actions = [Skill]` を持つフイの複製を組む（`gradient` / `aim` と同じ扱い）。
+//
+//     dotnet run --project BattleSim -c Release 0 turn phase0  # 実装前の地図（止めうる経路・粛・速さ・現在の出力）
+//     dotnet run --project BattleSim -c Release 0 turn          # 主表 V0/V1/V2/V3 × 4行 × 5波 と Q1〜Q6
+//     dotnet run --project BattleSim -c Release 0 turn sweep    # Gain/Loss の掃引 4点
+//     dotnet run --project BattleSim -c Release 0 turn alt      # 帰属の符号を別 seed 帯（200..599）で追試
+
+// フイの複製。**数値・型・速さ・特性は1つも変えず、`Actions` だけを足す**（V1）。
+// 素体（V2）は特性も落とす。どちらも `UnitCatalog` は1バイトも触らない。
+static UnitDef FvActingDef() => new()
+{
+    Id = "fui_act", Name = "焚き付けのフイ（手番）", MaxHp = UnitCatalog.Fui.MaxHp,
+    Attack = UnitCatalog.Fui.Attack, Speed = UnitCatalog.Fui.Speed,
+    Traits = UnitCatalog.Fui.Traits, Pattern = UnitCatalog.Fui.Pattern,
+    Actions = new UnitAction[] { new(ActionKind.Skill, Label: "火のそばを見ている") }
+};
+// V2 = **移設 + 素体**。`Actions` は持つが特性を持たない——移設は出力を捨てるので、
+// 攻撃を振る素体を対照にすると V1 との差に「攻5 が消えたぶん」が混ざる（指示書 §2-2）。
+static UnitDef FvPlainActDef() => new()
+{
+    Id = "fui_plain_act", Name = "素体のフイ（手番）", MaxHp = UnitCatalog.Fui.MaxHp,
+    Attack = UnitCatalog.Fui.Attack, Speed = UnitCatalog.Fui.Speed,
+    Traits = Array.Empty<TraitId>(), Pattern = UnitCatalog.Fui.Pattern,
+    Actions = new UnitAction[] { new(ActionKind.Skill, Label: "火のそばを見ている") }
+};
+// V3 = 移設前の素体（第58期の対照そのもの）。V0 − V3 が第58期の機構の帰属。
+static UnitDef FvPlainDef() => new()
+{
+    Id = "fui_plain", Name = "素体のフイ", MaxHp = UnitCatalog.Fui.MaxHp,
+    Attack = UnitCatalog.Fui.Attack, Speed = UnitCatalog.Fui.Speed,
+    Traits = Array.Empty<TraitId>(), Pattern = UnitCatalog.Fui.Pattern
+};
+static int FvCountTrait(Formation f, TraitId id) => f.Occupied().Count(o => o.Def.Traits.Contains(id));
+static Formation FvSwap(Formation f, UnitDef from, UnitDef to)
+{
+    var g = new Formation();
+    foreach ((int slot, UnitDef d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, from) ? to : d;
+    return g;
+}
+
+if (focusId == "turn" && (args.Length > 2 ? args[2] : "") == "phase0")
+{
+    var fpBuilds = CompareBuilds();
+    IReadOnlyList<EnemyCatalog.Stage> fpStages = EnemyCatalog.Stages;
+    const int FpSeeds = 200;   // compare / spread / whet / burn / favor と同じ帯
+
+    var fpRows = fpBuilds.Where(b => b.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Fui))).ToArray();
+
+    Console.WriteLine("# 焚き付けを手番へ降ろす前の地図（第60期 Phase 0）");
+    Console.WriteLine();
+    Console.WriteLine("**盤面は1つも動かさない。** 0-1〜0-3 と 0-5 は戦闘0回、0-4 と 0-6 は既存の経路を読むだけ。");
+    Console.WriteLine();
+
+    // ---- 0-5 を先に出す（以降の表の分母になる）---------------------------------------
+    Console.WriteLine("## 0-5. フイを含む行（数え直し）");
+    Console.WriteLine();
+    Console.WriteLine($"`CompareBuilds()` は **{fpBuilds.Count()} 行**。うちフイを含むのは **{fpRows.Length} 行**。");
+    Console.WriteLine();
+    Console.WriteLine("| # | 行 | 前1 | 前3 | 中央 | 後1 | 後3 | フイの席 | 次数 |");
+    Console.WriteLine("|--:|---|---|---|---|---|---|:-:|--:|");
+    for (int i = 0; i < fpRows.Length; i++)
+    {
+        Formation f = fpRows[i].F;
+        string Cell(int s) { UnitDef? d = f[s]; return d is null ? "—" : d.Name; }
+        int fs = f.Occupied().First(o => ReferenceEquals(o.Def, UnitCatalog.Fui)).Slot;
+        int deg = Enumerable.Range(0, FormationRules.PlayableSlotCount)
+                            .Count(s => s != fs && f[s] is not null && FormationRules.AreAdjacent(fs, s));
+        Console.WriteLine($"| {i + 1} | {fpRows[i].Name} | {Cell(0)} | {Cell(1)} | {Cell(2)} | {Cell(3)} | {Cell(4)} "
+                        + $"| **{FormationRules.SeatNames[fs]}** | {deg} |");
+    }
+    Console.WriteLine();
+
+    // ---- 0-1. 止めうる経路 -----------------------------------------------------------
+    Console.WriteLine("## 0-1. 移設後に焚き付けを止めうる経路（call-site の全数）");
+    Console.WriteLine();
+    Console.WriteLine("`BattleEngine` の行動順ループで手番が飛ぶ・行動が変わる箇所を上から全部挙げる。");
+    Console.WriteLine();
+    Console.WriteLine("| # | 経路 | 実装 | フイに効くか |");
+    Console.WriteLine("|--:|---|---|---|");
+    Console.WriteLine("| 1 | 痺れ（`StatusKeys.Stun`） | 行動順ループの先頭で `continue` | **効く**（下で数える） |");
+    Console.WriteLine("| 2 | まどろみ | `ctx.Colossus.Slumber && HasTrait(Colossus)` | **効かない**（規則の既定が `false`・保持者はゴルムだけ） |");
+    Console.WriteLine("| 3 | `CanAct` 偽 | `actor.Traits.All(t => t.CanAct(...))` | **効かない**（上書きは のろま／不動／断ち／追い打ちの4本で、フイは1つも持たない） |");
+    Console.WriteLine("| 4 | `ActionIndex` の周期 | `Actions` の要素を順に消費 | **効かない**（`[Skill]` の1要素。空回りしない） |");
+    Console.WriteLine("| 5 | 死亡 | `IsAlive` | 効く（移設前も同じ） |");
+    Console.WriteLine();
+    Console.WriteLine("**痺れの書き手は3本**（`SetCounter(StatusKeys.Stun, 1)` の全数から自傷を除いた）。");
+    Console.WriteLine();
+    Console.WriteLine("| 書き手 | 特性 | 誰に付くか | 移設後のフイに届くか |");
+    Console.WriteLine("|---|---|---|---|");
+    Console.WriteLine("| 縛め（クグ） | `BindTrait` | **味方**を無作為に1体（第2ターン以降） | 届く |");
+    Console.WriteLine("| 痺れ | `ParalyzeTrait` | 殴った**相手** | 届く（敵側の保持者がフイを殴ったとき） |");
+    Console.WriteLine("| 断罪 | `CondemnTrait` | 殴ってきた**攻撃者** | **移設で届かなくなる**（フイは `PerformAttack` を通らなくなる） |");
+    Console.WriteLine();
+    Console.WriteLine("**行ごとの供給者（味方）**と**波ごとの供給者（敵）**を数える。");
+    Console.WriteLine();
+    Console.WriteLine("| 行 | 味方の縛め | 味方の痺れ | 味方の断罪 |");
+    Console.WriteLine("|---|--:|--:|--:|");
+    foreach (var b in fpRows)
+        Console.WriteLine($"| {b.Name} | {FvCountTrait(b.F, TraitId.Bind)} | {FvCountTrait(b.F, TraitId.Paralyze)} | {FvCountTrait(b.F, TraitId.Condemn)} |");
+    Console.WriteLine();
+    Console.WriteLine("| 波 | 敵の痺れ | 敵の断罪 | 保持者 |");
+    Console.WriteLine("|---|--:|--:|---|");
+    for (int w = 0; w < fpStages.Count; w++)
+    {
+        Formation e = fpStages[w].Enemy;
+        var who = e.Occupied()
+            .Where(o => o.Def.Traits.Contains(TraitId.Paralyze) || o.Def.Traits.Contains(TraitId.Condemn))
+            .Select(o => o.Def.Name + (o.Def.Traits.Contains(TraitId.Paralyze) ? "（痺れ）" : "（断罪）"))
+            .ToList();
+        Console.WriteLine($"| 第{w + 1}波 | {FvCountTrait(e, TraitId.Paralyze)} | {FvCountTrait(e, TraitId.Condemn)} | "
+                        + (who.Count == 0 ? "—" : string.Join(" / ", who)) + " |");
+    }
+    Console.WriteLine();
+
+    // ---- 0-2. 粛との関係 -------------------------------------------------------------
+    Console.WriteLine("## 0-2. 粛（`Hush`）との関係（**予測**）");
+    Console.WriteLine();
+    Console.WriteLine("粛は `BattleContext.CanActOutOfTurn` の最後1箇所でターン外の行動を止める。");
+    Console.WriteLine("**行動順ループは `CanActOutOfTurn` を1度も呼ばない**（呼び出し元は特性側の4本＝棘・仇討ち・軋み・追い打ちだけ）。");
+    Console.WriteLine("`OnTurnStart` も行動順ループの外側なので、こちらも通らない。");
+    Console.WriteLine();
+    Console.WriteLine("> **予測: 移設の前後で粛の効きは変わらない。第2波は動かない。**");
+    Console.WriteLine("> `焚き付け無風型` の第2波 0.0% は不動のカドが粛の下で置物になる行の性質で、焚き付けとは無関係。");
+    Console.WriteLine();
+
+    // ---- 0-3. 速さの前後関係 ---------------------------------------------------------
+    Console.WriteLine("## 0-3. 速さの前後関係（フイは速6）");
+    Console.WriteLine();
+    Console.WriteLine("行動順は速さ降順 → チーム → スロット。**フイより速い味方は、フイが配る前にその手番を終えている。**");
+    Console.WriteLine();
+    Console.WriteLine("| 行 | フイより速い味方 | 同速 | フイより遅い味方 |");
+    Console.WriteLine("|---|---|---|---|");
+    foreach (var b in fpRows)
+    {
+        var others = b.F.Occupied().Where(o => !ReferenceEquals(o.Def, UnitCatalog.Fui)).Select(o => o.Def).ToList();
+        string Grp(Func<UnitDef, bool> p)
+        {
+            var l = others.Where(p).Select(d => $"{d.Name}({d.Speed})").ToList();
+            return l.Count == 0 ? "—" : string.Join(" / ", l);
+        }
+        Console.WriteLine($"| {b.Name} | {Grp(d => d.Speed > UnitCatalog.Fui.Speed)} | {Grp(d => d.Speed == UnitCatalog.Fui.Speed)} | {Grp(d => d.Speed < UnitCatalog.Fui.Speed)} |");
+    }
+    Console.WriteLine();
+    Console.WriteLine($"**ボルグ速{UnitCatalog.Borg.Speed} > フイ速{UnitCatalog.Fui.Speed}** ——移設すれば、フイの番が回る時点で火は既に点いている（これが移設の狙い）。");
+    Console.WriteLine($"**ホタ速{UnitCatalog.Hota.Speed} > フイ速{UnitCatalog.Fui.Speed}** ——**ホタはその手番に配られた強化を、そのターンには使えない。**");
+    Console.WriteLine();
+    Console.WriteLine("> **予測（P6・新しく生まれる遅れ）: 第58期の遅れは消えるのではなく形が変わる。**");
+    Console.WriteLine("> 移設前は `OnTurnStart` がホタの手番より前なので、配った強化は**そのターンから**乗っていた。");
+    Console.WriteLine("> 移設後はフイ（速6）がホタ（速7）より後に動くので、**乗るのは次のターンから**になる。");
+    Console.WriteLine("> **「第1ターンだけ鈍らせる」（1回）は消えるが、「1ターン遅れて乗る」（毎ターン）が新しく生まれる。**");
+    Console.WriteLine();
+
+    // ---- 0-4. フイの現在の出力 -------------------------------------------------------
+    Console.WriteLine("## 0-4. フイの現在の出力（移設で捨てる量）");
+    Console.WriteLine();
+    Console.WriteLine($"seed 0..{FpSeeds - 1}。`振り` は `PerformAttack` を通った回数、`与ダメ` は敵に通した量。");
+    Console.WriteLine("`空振り` は `KindleIdle`（盤上に燃えている味方が1体もいなかった手番）。");
+    Console.WriteLine();
+    Console.WriteLine("| 行 | 波 | 勝率 | 決着T | フイの振り/戦 | フイの与ダメ/戦 | 発火/戦 | 空振り/戦 |");
+    Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|");
+    double swSum = 0, dmgSum = 0; int nCell = 0;
+    foreach (var b in fpRows)
+    {
+        double swAll = 0, dmAll = 0, fiAll = 0, idAll = 0;
+        for (int w = 0; w < fpStages.Count; w++)
+        {
+            double win = 0, turns = 0, sw = 0, dm = 0, fi = 0, id = 0;
+            for (int seed = 0; seed < FpSeeds; seed++)
+            {
+                BattleResult r = BattleEngine.Run(b.F, fpStages[w].Enemy, seed, verbose: false);
+                if (r.PlayerWon) win++;
+                turns += r.Turns; fi += r.KindleFires; id += r.KindleIdle;
+                if (r.TallyByUnit.TryGetValue("fui", out UnitTally? t))
+                { sw += t.Attacks; dm += t.DamageToEnemy; }
+            }
+            double n = FpSeeds;
+            Console.WriteLine($"| {b.Name} | 第{w + 1}波 | {win * 100 / n:0.0}% | {turns / n:0.0} "
+                            + $"| {sw / n:0.00} | {dm / n:0.0} | {fi / n:0.00} | {id / n:0.00} |");
+            swAll += sw / n; dmAll += dm / n; fiAll += fi / n; idAll += id / n;
+            swSum += sw / n; dmgSum += dm / n; nCell++;
+        }
+        Console.WriteLine($"| | **5波平均** | | | **{swAll / 5:0.00}** | **{dmAll / 5:0.0}** | **{fiAll / 5:0.00}** | **{idAll / 5:0.00}** |");
+        Console.Out.Flush();
+    }
+    Console.WriteLine();
+    Console.WriteLine($"**移設で捨てる量は 20 セルの平均で 振り {swSum / nCell:0.00} 回/戦・与ダメ {dmgSum / nCell:0.0}/戦。**");
+    Console.WriteLine();
+
+    // ---- 0-6. 現在値 -----------------------------------------------------------------
+    Console.WriteLine("## 0-6. `docs/balance.md` の現在値（4行 × 5波）");
+    Console.WriteLine();
+    Console.WriteLine("| 行 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | 平均 | 情報セル |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|");
+    foreach (var b in fpRows)
+    {
+        var v = new double[fpStages.Count];
+        for (int w = 0; w < fpStages.Count; w++)
+        {
+            int win = 0;
+            for (int seed = 0; seed < FpSeeds; seed++)
+                if (BattleEngine.Run(b.F, fpStages[w].Enemy, seed, false).PlayerWon) win++;
+            v[w] = win * 100.0 / FpSeeds;
+        }
+        int info = v.Count(x => x > 5.0 && x < 95.0);   // 第22期の狭義の中間帯
+        Console.WriteLine($"| {b.Name} " + string.Concat(v.Select(x => $"| {x:0.0}% "))
+                        + $"| {v.Average():0.0}% | **{info}** |");
+        Console.Out.Flush();
+    }
+    Console.WriteLine();
+    Console.WriteLine("**情報セルは狭義の中間帯 5.0 < x < 95.0**（第22期）。Q5 はこの列で判定する。");
+    Console.WriteLine();
+    return;
+}
+
+// 上位3件だけを「名前 量」で返す（受け手の内訳。第56期 whet の作法）。
+static string FvTop(Dictionary<string, double> d)
+    => d.Count == 0 ? "—"
+     : string.Join(" / ", d.OrderByDescending(kv => kv.Value).Take(3)
+                           .Select(kv => $"{FvName(kv.Key)} {kv.Value:0.00}"));
+static string FvName(string id)
+    => UnitCatalog.All.Concat(EnemyCatalog.Stages.SelectMany(st => st.Enemy.Occupied().Select(o => o.Def)))
+                      .FirstOrDefault(d => d.Id == id)?.Name ?? id;
+
+if (focusId == "turn")
+{
+    var fvBuilds = CompareBuilds();
+    IReadOnlyList<EnemyCatalog.Stage> fvStages = EnemyCatalog.Stages;
+    string fvMode = args.Length > 2 ? args[2] : "";
+    bool fvAlt = fvMode == "alt";
+    int fvFrom = fvAlt ? 200 : 0;              // alt は別 seed 帯（200..599）
+    int fvSeeds = fvAlt ? 400 : 200;           // それ以外は compare と同じ帯
+
+    var fvRows = fvBuilds.Where(b => b.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Fui))).ToArray();
+
+    UnitDef fvAct = FvActingDef(), fvPlainAct = FvPlainActDef(), fvPlain = FvPlainDef();
+    Formation FvV0(Formation f) => f;
+    Formation FvV1(Formation f) => FvSwap(f, UnitCatalog.Fui, fvAct);
+    Formation FvV2(Formation f) => FvSwap(f, UnitCatalog.Fui, fvPlainAct);
+    Formation FvV3(Formation f) => FvSwap(f, UnitCatalog.Fui, fvPlain);
+
+    // 版ごとの計数。フイの id は版で変わるので、駒側の集計は「フイの席にいる駒」で引く。
+    var fvIds = new[] { "fui", "fui_act", "fui_plain_act", "fui_plain" };
+
+    FvStat FvMeasure(Formation f, Formation enemy, KindleRule? rule)
+    {
+        // 味方の総与ダメは**味方の `Def.Id` 集合**で割る（`TallyByUnit` は `Def.Id` で引くので
+        // `InstanceId` の範囲では割れない。第59期 `BzStat` と同じ作法）。
+        var mine = f.Occupied().Select(o => o.Def.Id).ToHashSet();
+        var z = new FvStat();
+        for (int seed = fvFrom; seed < fvFrom + fvSeeds; seed++)
+        {
+            BattleResult r = BattleEngine.Run(f, enemy, seed, verbose: false, favor: rule);
+            if (r.PlayerWon) z.Win++;
+            z.Turns += r.Turns;
+            z.Fires += r.KindleFires; z.Idle += r.KindleIdle;
+            z.Whetted += r.KindleWhetted; z.Dulled += r.KindleDulled;
+            z.Given += r.KindleGiven; z.Taken += r.KindleTaken; z.ToPyre += r.KindleToPyre;
+            foreach ((string k, int v) in r.KindleDullTo)
+                z.DullTo[k] = z.DullTo.TryGetValue(k, out double a) ? a + v : v;
+            foreach ((string k, int v) in r.KindleWhetTo)
+                z.WhetTo[k] = z.WhetTo.TryGetValue(k, out double a) ? a + v : v;
+            foreach (string id in fvIds)
+                if (r.TallyByUnit.TryGetValue(id, out UnitTally? t))
+                { z.Swings += t.Attacks; z.Dmg += t.DamageToEnemy; z.Life += t.LastActiveTurn; }
+            z.TeamDmg += r.TallyByUnit.Where(kv => mine.Contains(kv.Key)).Sum(kv => kv.Value.DamageToEnemy);
+        }
+        double n = fvSeeds;
+        z.Win = z.Win * 100 / n; z.Turns /= n; z.Fires /= n; z.Idle /= n;
+        z.Whetted /= n; z.Dulled /= n; z.Given /= n; z.Taken /= n; z.ToPyre /= n;
+        z.Swings /= n; z.Dmg /= n; z.Life /= n; z.TeamDmg /= n;
+        foreach (string k in z.DullTo.Keys.ToList()) z.DullTo[k] /= n;
+        foreach (string k in z.WhetTo.Keys.ToList()) z.WhetTo[k] /= n;
+        return z;
+    }
+    double[] FvWins(Formation f, KindleRule? rule)
+    {
+        var v = new double[fvStages.Count];
+        for (int w = 0; w < fvStages.Count; w++)
+        {
+            int win = 0;
+            for (int seed = fvFrom; seed < fvFrom + fvSeeds; seed++)
+                if (BattleEngine.Run(f, fvStages[w].Enemy, seed, false, favor: rule).PlayerWon) win++;
+            v[w] = win * 100.0 / fvSeeds;
+        }
+        return v;
+    }
+    static int FvInfo(double[] v) => v.Count(x => x > 5.0 && x < 95.0);
+    static string FvCells(double[] v) => string.Concat(v.Select(x => $"| {x:0.0}% "));
+
+    // ---- 掃引だけ --------------------------------------------------------------------
+    if (fvMode == "sweep")
+    {
+        Console.WriteLine("# 移設後の掃引（第60期 §4）");
+        Console.WriteLine();
+        Console.WriteLine("**4点だけ。** 移設で代金の相手の集合が変わっている可能性があるので、");
+        Console.WriteLine("`(4, 4)` が現行値 `(4, 2)` を上回るかどうかが「集合が縮んだ」ことの独立な検算になる。");
+        Console.WriteLine("**各点の対照は V2（素体）で足りる**（体の値段はノブで動かない）。");
+        Console.WriteLine();
+        var pts = new (string Tag, int G, int L)[] { ("現行 (4/2)", 4, 2), ("a (4/4)", 4, 4), ("b (6/2)", 6, 2), ("c (2/2)", 2, 2) };
+        Console.WriteLine("| 行 | 版 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | 平均 | 素体との差 | 配った | 撒いた | 情報セル |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        foreach (var b in fvRows)
+        {
+            double[] pv = FvWins(FvV2(b.F), null);
+            Console.WriteLine($"| {b.Name} | V2 素体（手番） {FvCells(pv)}| **{pv.Average():0.0}%** | — | — | — | {FvInfo(pv)} |");
+            foreach (var p in pts)
+            {
+                var rule = new KindleRule(p.G, p.L);
+                double[] v = FvWins(FvV1(b.F), rule);
+                double give = 0, take = 0;
+                for (int w = 0; w < fvStages.Count; w++)
+                {
+                    FvStat z = FvMeasure(FvV1(b.F), fvStages[w].Enemy, rule);
+                    give += z.Given / fvStages.Count; take += z.Taken / fvStages.Count;
+                }
+                Console.WriteLine($"| | {p.Tag} {FvCells(v)}| **{v.Average():0.0}%** | {v.Average() - pv.Average():+0.0;-0.0;0.0} "
+                                + $"| {give:0.00} | {take:0.00} | {FvInfo(v)} |");
+                Console.Out.Flush();
+            }
+        }
+        Console.WriteLine();
+        return;
+    }
+
+    // ---- 主表 ------------------------------------------------------------------------
+    Console.WriteLine(fvAlt ? "# 移設の主表（別 seed 帯 200..599 の追試）" : "# 移設の主表（第60期）");
+    Console.WriteLine();
+    Console.WriteLine($"seed {fvFrom}..{fvFrom + fvSeeds - 1}。V0 = 現行（`OnTurnStart`）／V1 = 移設（`Actions = [Skill]`）／");
+    Console.WriteLine("V2 = 移設 + 素体（同数値・特性なし。**体の値段**の分離）。");
+    Console.WriteLine("**`UnitCatalog` は1バイトも触っていない**——V1 / V2 は診断のローカルの `UnitDef`。");
+    Console.WriteLine();
+
+    Console.WriteLine("## 1. 勝率（4行 × 5波）");
+    Console.WriteLine();
+    Console.WriteLine("| 行 | 版 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | 平均 | 情報セル | V1−V0 | V1−V2 |");
+    Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+    var attr = new List<(string Name, double A, double B, int I0, int I1)>();
+    foreach (var b in fvRows)
+    {
+        double[] v0 = FvWins(FvV0(b.F), null);
+        double[] v1 = FvWins(FvV1(b.F), null);
+        double[] v2 = FvWins(FvV2(b.F), null);
+        double[] v3 = FvWins(FvV3(b.F), null);
+        Console.WriteLine($"| {b.Name} | V0 現行 {FvCells(v0)}| **{v0.Average():0.0}%** | {FvInfo(v0)} | — | — |");
+        Console.WriteLine($"| | **V1 移設** {FvCells(v1)}| **{v1.Average():0.0}%** | **{FvInfo(v1)}** "
+                        + $"| **{v1.Average() - v0.Average():+0.0;-0.0;0.0}** | **{v1.Average() - v2.Average():+0.0;-0.0;0.0}** |");
+        Console.WriteLine($"| | V2 素体（手番） {FvCells(v2)}| **{v2.Average():0.0}%** | {FvInfo(v2)} | — | — |");
+        Console.WriteLine($"| | V3 素体（現行） {FvCells(v3)}| **{v3.Average():0.0}%** | {FvInfo(v3)} "
+                        + $"| （V0−V3 = {v0.Average() - v3.Average():+0.0;-0.0;0.0}） | |");
+        attr.Add((b.Name, v1.Average() - v0.Average(), v1.Average() - v2.Average(), FvInfo(v0), FvInfo(v1)));
+        Console.Out.Flush();
+    }
+    Console.WriteLine();
+    Console.WriteLine($"**帰属（V1 − V0）の4行平均: {attr.Average(a => a.A):+0.0;-0.0;0.0}pt** "
+                    + $"／ **機構の帰属（V1 − V2）の4行平均: {attr.Average(a => a.B):+0.0;-0.0;0.0}pt**");
+    Console.WriteLine($"**情報セルの合計: V0 {attr.Sum(a => a.I0)} → V1 {attr.Sum(a => a.I1)}**");
+    Console.WriteLine();
+
+    // ---- 計数 ------------------------------------------------------------------------
+    Console.WriteLine("## 2. 計数（5波の平均）");
+    Console.WriteLine();
+    Console.WriteLine("`発火` は強化か弱体を1体でも配った手番、`空振り` は盤上に燃えている味方が1体もいなかった手番。");
+    Console.WriteLine("`燃体` / `非燃体` は延べ体数、`配った` / `撒いた` は量。`熾火へ` は乗算持ちへ配った量。");
+    Console.WriteLine();
+    Console.WriteLine("| 行 | 版 | 発火 | 空振り | 燃体 | 非燃体 | 配った | 撒いた | 熾火へ | フイ振り | フイ与ダメ | 味方総与ダメ | フイ寿命T |");
+    Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+    var q2 = new List<(string Name, double T0, double T1, double G0, double G1)>();
+    foreach (var b in fvRows)
+    {
+        var acc = new Dictionary<string, FvStat>();
+        foreach ((string tag, Formation f) in new[] { ("V0 現行", FvV0(b.F)), ("V1 移設", FvV1(b.F)) })
+        {
+            var agg = new FvStat();
+            for (int w = 0; w < fvStages.Count; w++)
+            {
+                FvStat z = FvMeasure(f, fvStages[w].Enemy, null);
+                agg.Fires += z.Fires / 5; agg.Idle += z.Idle / 5; agg.Whetted += z.Whetted / 5;
+                agg.Dulled += z.Dulled / 5; agg.Given += z.Given / 5; agg.Taken += z.Taken / 5;
+                agg.ToPyre += z.ToPyre / 5; agg.Swings += z.Swings / 5; agg.Dmg += z.Dmg / 5;
+                agg.TeamDmg += z.TeamDmg / 5; agg.Life += z.Life / 5;
+                foreach ((string k, double v) in z.DullTo)
+                    agg.DullTo[k] = agg.DullTo.TryGetValue(k, out double a) ? a + v / 5 : v / 5;
+                foreach ((string k, double v) in z.WhetTo)
+                    agg.WhetTo[k] = agg.WhetTo.TryGetValue(k, out double a) ? a + v / 5 : v / 5;
+            }
+            acc[tag] = agg;
+            Console.WriteLine($"| {(tag.StartsWith("V0") ? b.Name : "")} | {tag} | {agg.Fires:0.00} | {agg.Idle:0.00} "
+                            + $"| {agg.Whetted:0.00} | {agg.Dulled:0.00} | {agg.Given:0.00} | {agg.Taken:0.00} | {agg.ToPyre:0.00} "
+                            + $"| {agg.Swings:0.00} | {agg.Dmg:0.0} | {agg.TeamDmg:0.0} | {agg.Life:0.0} |");
+            Console.Out.Flush();
+        }
+        q2.Add((b.Name, acc["V0 現行"].Taken, acc["V1 移設"].Taken, acc["V0 現行"].Given, acc["V1 移設"].Given));
+
+        // 受け手の内訳（Q1）
+        Console.WriteLine($"| | **弱体の受け手 V0** | " + FvTop(acc["V0 現行"].DullTo) + " |");
+        Console.WriteLine($"| | **弱体の受け手 V1** | " + FvTop(acc["V1 移設"].DullTo) + " |");
+        Console.WriteLine($"| | 強化の受け手 V0 | " + FvTop(acc["V0 現行"].WhetTo) + " |");
+        Console.WriteLine($"| | 強化の受け手 V1 | " + FvTop(acc["V1 移設"].WhetTo) + " |");
+    }
+    Console.WriteLine();
+    Console.WriteLine("**Q2（`撒いた` の増減）**");
+    Console.WriteLine();
+    Console.WriteLine("| 行 | 撒いた V0 | 撒いた V1 | 差 | 配った V0 | 配った V1 | 差 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|");
+    foreach (var q in q2)
+        Console.WriteLine($"| {q.Name} | {q.T0:0.00} | {q.T1:0.00} | **{q.T1 - q.T0:+0.00;-0.00;0.00}** "
+                        + $"| {q.G0:0.00} | {q.G1:0.00} | **{q.G1 - q.G0:+0.00;-0.00;0.00}** |");
+    Console.WriteLine();
+
+    // ---- Q4: 止まった手番 -------------------------------------------------------------
+    Console.WriteLine("## 3. Q4 —— 移設で止まった手番（verbose・seed の先頭 50 本）");
+    Console.WriteLine();
+    Console.WriteLine("**痺れだけを数える。** 手番が飛ぶ経路は Phase 0-1 の5本で、フイに効きうるのは痺れと死亡だけ。");
+    Console.WriteLine("死亡と「決着して行動順ループが `break` した」は移設の前後で同じだけあるので、");
+    Console.WriteLine("**新しい交絡になりうるのは痺れ1本**——`StatusSnapshot` の `痺` を数える");
+    Console.WriteLine("（痺れは付いた次のターンの頭に立ち、その手番の先頭で消費される）。");
+    Console.WriteLine();
+    Console.WriteLine("| 行 | 波 | 痺れ V0/戦 | 痺れ V1/戦 | 生存T V1 | 撃った V1 | 差（死亡＋決着） |");
+    Console.WriteLine("|---|---|--:|--:|--:|--:|--:|");
+    double stun0All = 0, stun1All = 0;
+    foreach (var b in fvRows)
+    {
+        for (int w = 0; w < fvStages.Count; w++)
+        {
+            double st0 = 0, st1 = 0, alive = 0, cast = 0;
+            for (int seed = fvFrom; seed < fvFrom + 50; seed++)
+            {
+                var p0 = BattleEngine.Materialize(FvV0(b.F), BattleContext.PlayerTeam);
+                int i0 = p0.FindIndex(u => u.Def.Id == "fui");
+                BattleResult r0 = BattleEngine.Run(p0, BattleEngine.Materialize(fvStages[w].Enemy, BattleContext.EnemyTeam), seed, verbose: true);
+                st0 += r0.Events.Count(e => e.Kind == BattleEventKind.StatusSnapshot && e.TargetId == i0 && e.Text == "痺");
+
+                var p1 = BattleEngine.Materialize(FvV1(b.F), BattleContext.PlayerTeam);
+                int i1 = p1.FindIndex(u => u.Def.Id == "fui_act");
+                BattleResult r1 = BattleEngine.Run(p1, BattleEngine.Materialize(fvStages[w].Enemy, BattleContext.EnemyTeam), seed, verbose: true);
+                st1 += r1.Events.Count(e => e.Kind == BattleEventKind.StatusSnapshot && e.TargetId == i1 && e.Text == "痺");
+                alive += r1.Events.Count(e => e.Kind == BattleEventKind.StatSnapshot && e.TargetId == i1);
+                cast += r1.Events.Count(e => e.Kind == BattleEventKind.Skill && e.ActorId == i1);
+            }
+            Console.WriteLine($"| {(w == 0 ? b.Name : "")} | 第{w + 1}波 | {st0 / 50:0.00} | **{st1 / 50:0.00}** "
+                            + $"| {alive / 50:0.00} | {cast / 50:0.00} | {(alive - cast) / 50:0.00} |");
+            stun0All += st0 / 50; stun1All += st1 / 50;
+            Console.Out.Flush();
+        }
+    }
+    Console.WriteLine();
+    Console.WriteLine($"**20 セルの合計で痺れは V0 {stun0All:0.00} 回/戦 → V1 {stun1All:0.00} 回/戦。**");
+    Console.WriteLine("`差（死亡＋決着）` は移設に固有ではない——フイが自分の手番の前に落ちたか、");
+    Console.WriteLine("その手番が回る前に決着して `order` のループが `break` した回数。");
+    Console.WriteLine();
+    return;
+}
+
 // blaze モード: 破裂（ゾト）に着火を足す（第59期）。
 //
 // 燃焼は第57〜58期で「通貨」になったが、**書き手はボルグ1枚しかない**。
@@ -10597,7 +11119,7 @@ if (focusId == "blaze" && (args.Length > 2 ? args[2] : "") == "phase0")
 {
     var bpBuilds = CompareBuilds();
     IReadOnlyList<EnemyCatalog.Stage> bpStages = EnemyCatalog.Stages;
-    const int BpSeeds = 200;   // compare / spread / whet / burn / kindle と同じ帯
+    const int BpSeeds = 200;   // compare / spread / whet / burn / favor と同じ帯
 
     static bool BpHas(Formation f, UnitDef d) => f.Occupied().Any(o => ReferenceEquals(o.Def, d));
 
@@ -10807,7 +11329,7 @@ if (focusId == "blaze")
 {
     var bzBuilds = CompareBuilds();
     IReadOnlyList<EnemyCatalog.Stage> bzStages = EnemyCatalog.Stages;
-    const int BzSeeds = 200;   // compare / spread / whet / burn / kindle と同じ帯
+    const int BzSeeds = 200;   // compare / spread / whet / burn / favor と同じ帯
 
     string bzMode = args.Length > 2 ? args[2] : "";
     // 主版の既定は採用版（B）。`a` を渡すと A 案で回る。
@@ -23025,7 +23547,7 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 1行だけに入れると AND ゲート（燃焼軸の唯一の台）を再生産するので、性格の違う3行に置く。
     //
     // **どの行も「素体（HP70/攻5/速6・特性なし）を入れても勝率がほとんど動かない枠」を差し替えた**
-    // （`kindle phase0` の 0-3 で全枠を測ってから選んだ。第21期 swap の「5体目の体の値段」を
+    // （`favor phase0` の 0-3 で全枠を測ってから選んだ。第21期 swap の「5体目の体の値段」を
     // 最小にする）。**火種のボルグの枠は3行とも残してある。**
     //
     // (1) 乗算が最大になる台。`燃焼 (ボルグ×ホタ)` のノノ（前3・素体差 −0.1pt）をフイに。
@@ -24362,6 +24884,64 @@ sealed class GdStat
     public Dictionary<string, double> Taken = new();
     public Dictionary<string, double> Last = new();
     public Dictionary<string, double> Deaths = new();
+}
+
+// **主判定の固定行集合（19行）と歯止めの線。第60期に確定した**（第59期 9-4 の移行案への回答）。
+//
+// **歯止めは全61行の平均ではなくこの集合の上で測る。** 第41〜59期の「第五波が歯止めを割った」は
+// すべて**分母の話**で、波そのものは第40期（曝きの採用）から1つも動いていない
+// ——実測でも第58〜60期に行を5本足す間、この17〜19行の第五波平均は 1ビットも動いていない。
+//
+// 中身は第31期の16行 + `突き出し`（17行）から、第60期に**1行を差し替え・2行を足した**もの:
+//   差し替え `裂き (キリ×エグ)` → `裂き×責め苦 (キリ×エグ×シガ)`（情報セル 2 → 3）
+//   追加     `止め改 (トメ×薙ぎ)`   ——標の**敵側**の読み手（第53期）。#4 は味方側で無代表だった
+//   追加     `引き受け (ウケ×ドハ)` ——`ctx.Dull` を通る行が主判定に1つも無かった（第42期）
+// **`死軸×ホタ (ゾト×熾)` は保留**（第59期に作られたばかりで、席も「測れる席」を消極的に
+// 選んだ状態。計測器と測定対象を同時に動かさない）。次の棚卸しで入れるかを決める。
+//
+// **行名で引いている。** `CompareBuilds()` の行名を変えたらここも直すこと
+// （`spread` の §4 が見つからない行を警告として出す）。
+static class Baseline
+{
+    public static readonly string[] PrimaryRows =
+    {
+        "隊列崩し (バサ×ヨミ×セロ)",          // 移動
+        "燃焼 (ボルグ×ホタ)",                  // 燃焼（ボルグの毎ターン供給）
+        "縛め収入型 (クグ×バン×ガン)",        // 縛め
+        "仇討ち×砕け (ヒビ×ザン)",            // 標（味方側の読み手）
+        "刻み×抉り (ノミ×エグ)",              // 傷（ノミ入口）
+        "裂き×責め苦 (キリ×エグ×シガ)",      // 傷（キリ入口）**第60期に差し替え**
+        "耐久 (ガルド×ノノ)",                  // 耐久（第36期の申し送りは第59期に解消）
+        "溜め改 (クグ×バン×ガン)",            // 溜め
+        "逆しま (ネル×ウツ)",                  // 逆しま
+        "追撃×据え (ハギ×バン)",              // 追撃
+        "置き去り×分散回復",                   // 置き去り／回復
+        "毒+耐久 (ベニ×トウ)",                 // 毒
+        "速攻 (ボルグ×ムド)",                  // 速攻
+        "反撃改2 (ガン×カド)",                 // カウンター
+        "惨禍×死の連鎖",                       // 死（番人）
+        "後衛特化+後備え",                     // 後備え（番人。情報セルでは測らない）
+        "突き出し (セロ×ヨミ)",                // 移動（予備）
+        "止め改 (トメ×薙ぎ)",                  // 標（敵側の読み手）**第60期に追加**
+        "引き受け (ウケ×ドハ)",                // 弱体の窓口（`ctx.Dull` の横取り）**第60期に追加**
+    };
+
+    /// <summary>
+    /// 第五波の歯止め。<b>確定時（第60期）の主判定19行の第五波平均 38.2% − 5.0pt。</b>
+    /// **旧値の 40.0 を据え置かなかった**のは、あれが 42行時代の**全行平均**から来た数字で、
+    /// 第59期の提案20行がちょうど 40.0 で**線上に乗った**のが偶然だったため。
+    /// **線は「明らかに成立しなくなる線」であって調整目標ではない**ので、線上に置くのが一番まずい。
+    /// </summary>
+    public const double PrimaryFifthFloor = 33.2;
+}
+
+sealed class FvStat
+{
+    public double Win, Turns;
+    public double Fires, Idle, Whetted, Dulled, Given, Taken, ToPyre;
+    public double Swings, Dmg, Life, TeamDmg;
+    public Dictionary<string, double> WhetTo = new();
+    public Dictionary<string, double> DullTo = new();
 }
 
 sealed class KdStat

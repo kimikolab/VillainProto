@@ -1,4 +1,4 @@
-﻿namespace BattleCore;
+namespace BattleCore;
 
 public enum TraitId
 {
@@ -2996,6 +2996,13 @@ public readonly record struct FinisherRule(int Multiplier, bool Consume)
 /// <c>CurrentAttack</c> は T1 が 6・T2 以降が 24）。<b>係数では詰められない構造の遅れ</b>で、
 /// 短い波ほど取り分が減る。</para>
 ///
+/// <para><b>第60期に手番へ降ろして、この遅れを畳んだ。</b> フイ（速6）はボルグ（速8）より
+/// 遅いので、自分の番が回る時点で火は既に点いている。実測で<b>弱体の受け手から
+/// 熾のホタ 2.00 量/戦がちょうど消え</b>、<c>撒いた</c>（弱体の総量）は4行とも
+/// <b>−1.9〜−4.2 量/戦</b>下がった。<b>ただし遅れは消えたのではなく形が変わっている</b>
+/// ——ホタ（速7）はフイより<b>速い</b>ので、配った強化がホタの振りに乗るのは次のターンから。
+/// <b>代金の相手が「第1ターンの全員」から「自分より速い受け手」へ移った</b>（第60期 Q1）。</para>
+///
 /// <para><b>熾火（<see cref="PyreTrait"/>）に配ると 4 倍で入る。</b>
 /// <see cref="UnitState.CurrentAttack"/> は <c>Def.Attack + AtkBonus</c> を作ってから
 /// <c>ModifyAttack</c> を通すので、<b>強化は素の攻撃力と一緒に掛けられる</b>
@@ -3003,8 +3010,10 @@ public readonly record struct FinisherRule(int Multiplier, bool Consume)
 /// （第58期 Phase 0-1 の実測）。<b>これは仕様として許した</b>——理由は
 /// design/PHASE58_KINDLE.md の Q4。</para>
 ///
-/// <para><b>粛（<see cref="HushTrait"/>）に封じられない。</b> <c>OnTurnStart</c> は
-/// 行動順ループの<b>外側</b>なので <c>CanActOutOfTurn</c> を通らない（駆り立て・逸らしと同じ）。</para>
+/// <para><b>粛（<see cref="HushTrait"/>）に封じられない。</b> 手番へ降ろした後も同じで、
+/// <b>行動順ループは <c>CanActOutOfTurn</c> を1度も呼ばない</b>——呼び出し元は特性側の4本
+/// （棘・仇討ち・軋み・追い打ち）だけ。<c>OnTurnStart</c> はループの<b>外側</b>なので、
+/// こちらも通らない。<b>実測でも移設の前後で第2波は1セルも動いていない</b>（第60期 P5）。</para>
 ///
 /// <para><b>自分が燃えていても自分は強化しない</b>（<c>a != self</c>）。自己完結させると
 /// 「火の粉のそばに置く」以外の判断が消える。マイナス側は隣接の定義（<c>a != b</c>）から
@@ -3019,7 +3028,25 @@ public sealed class KindleTrait : Trait
 {
     public override TraitId Id => TraitId.Kindle;
 
+    // **手番の行動として撃つ**（第60期）。第58期は `OnTurnStart` に置いたが、ターンの順序が
+    // `TickStatuses` → `OnTurnStart` → 行動順ループなので、火の粉（`OnAfterAttack`）に対して
+    // **構造的に1ターン遅れる**——第1ターンの発火時点では盤上の誰も燃えておらず、
+    // 強化するはずの相手（熾のホタ）をそのターンだけ鈍らせていた（第58期 9-2）。
+    // 手番へ降ろすと、フイ（速6）の番が回る時点でボルグ（速8）が既に火を撒いている。
+    //
+    // **`ActsOnPattern` の分岐は保持者が1枚でも残す。** 継ぎ当て（`MenderTrait`）が
+    // 記録している事故（味方のノノと敵の従軍司祭長が同じ特性を共有していて、無条件に移すと
+    // 司祭長の回復だけが静かに消えた）と同じ形が、後で敵側にこの特性を配ったときに再発する。
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+        => Apply(ctx, self);
+
+    // 行動パターンを持たない保持者は従来どおりターン頭に発火する。理由は Trait.ActsOnPattern。
     public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Apply(ctx, self);
+    }
+
+    private static void Apply(BattleContext ctx, UnitState self)
     {
         if (!self.IsAlive) return;
 
