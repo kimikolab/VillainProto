@@ -1218,6 +1218,7 @@ public sealed class ThornsTrait : Trait
         if (!ctx.CanActOutOfTurn(self)) return;
 
         int back = Math.Max(1, self.CurrentAttack * Multiplier);
+        ctx.NoteAttackRead(self);   // 攻撃力を出力に変換した（第64期・死蔵の判定）
 
         // 反撃は範囲。自分から攻撃できず打点が自分しかない駒なので、
         // 見返りをここまで大きくして初めて軸として成立する。
@@ -3449,6 +3450,7 @@ public sealed class AvengeTrait : Trait
         ctx.Reaction(() =>
         {
             ctx.Log($"    {self.Name} が {ally.Name} の仇を討つ", LogKind.Trigger);
+            ctx.NoteAttackRead(self);   // 攻撃力を出力に変換した（第64期・死蔵の判定）
             ctx.ApplyDamage(source, Math.Max(1, self.CurrentAttack), self);
         });
     }
@@ -3499,6 +3501,7 @@ public sealed class TormentTrait : Trait
         {
             // ApplyDamage の直呼びなので OnAfterAttack は再帰しない（追い打ちが追い打ちを呼ばない）。
             ctx.Log($"    {self.Name} が動けない {target.Name} に追い打ちを重ねる", LogKind.Highlight);
+            ctx.NoteAttackRead(self);   // 攻撃力を出力に変換した（第64期・死蔵の判定）
             ctx.ApplyDamage(target, Math.Max(1, self.CurrentAttack), self);
             return;
         }

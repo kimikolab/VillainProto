@@ -499,6 +499,24 @@ public sealed class UnitTally
     public int Attacks;
 
     /// <summary>
+    /// <b>この駒の <c>CurrentAttack</c> が出力（ダメージ量）に変換された回数</b>（第64期）。
+    ///
+    /// <para><see cref="Attacks"/>（<c>PerformAttack</c> を通った回数）では
+    /// <b>「配った強化が無駄になったか」を判定できない</b>——棘（<see cref="ThornsTrait"/>・カド）は
+    /// <c>PerformAttack</c> を1度も通らないのに反撃量を自分の <c>CurrentAttack</c> で決めるので、
+    /// <c>Attacks == 0</c> を「死蔵」と読むと<b>符号を逆に読む</b>（第63期 §11-2 の実測）。</para>
+    ///
+    /// <para>逆に <see cref="Interventions"/>（ダメージの出どころになった回数）では
+    /// <b>広すぎる</b>——破裂・生贄・大喰らいの吸いは<b>固定量</b>で攻撃力を1ビットも読まない。</para>
+    ///
+    /// <para><b>加算する場所はロスター全体で4つだけ</b>（<c>CurrentAttack</c> を自分の出力量に
+    /// 変換している箇所の全部）: <c>PerformAttack</c> ／ 棘（<see cref="ThornsTrait"/>）／
+    /// 仇討ち（<see cref="AvengeTrait"/>）／ 責め苦の追撃（<see cref="TormentTrait"/>）。
+    /// <b>誰も読んで分岐しない。</b></para>
+    /// </summary>
+    public int AttackReads;
+
+    /// <summary>
     /// 実際にダメージを通した回数。攻撃・反撃・破裂・毒のどれでも、
     /// この駒が起点になって盤面が動いた回数を数える。**これが活動量の本体。**
     /// </summary>
@@ -1191,6 +1209,16 @@ public sealed class BattleResult
     public required int FunnelTaken { get; init; }
     public required IReadOnlyList<int> FunnelByRoute { get; init; }
     public required int FunnelDead { get; init; }
+
+    /// <summary>
+    /// <b>死蔵の新定義</b>（第64期）。回した先が <see cref="UnitTally.AttackReads"/> <c>== 0</c>
+    /// ＝ <b>その戦闘で攻撃力を出力に1度も変換しなかった</b>ぶんの量。
+    ///
+    /// <para><see cref="FunnelDead"/>（<c>Attacks == 0</c>）は<b>広すぎる</b>
+    /// ——棘（カド）は <c>PerformAttack</c> を1度も通らないのに反撃量を自分の
+    /// <c>CurrentAttack</c> で決めるので、強化は満額効く。第63期はこれで符号を逆に読んだ。</para>
+    /// </summary>
+    public required int FunnelDeadNew { get; init; }
     public required IReadOnlyDictionary<string, int> FunnelFrom { get; init; }
     public required IReadOnlyDictionary<string, int> FunnelTo { get; init; }
 

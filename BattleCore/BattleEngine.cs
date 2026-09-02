@@ -1137,6 +1137,18 @@ public sealed class BattleContext
     /// ——横取り（集約・転嫁）が宛先を書き換えた後の<b>実際の受け手</b>を数えるため。
     /// <b>盤面には一切影響しない。</b>
     /// </summary>
+    /// <summary>
+    /// <b>この駒の <c>CurrentAttack</c> を出力量に変換した</b>ことを1回数える（第64期）。
+    /// <see cref="UnitTally.AttackReads"/> の唯一の書き手で、<b>盤面には一切影響しない</b>
+    /// （誰も読んで分岐しない・<c>verbose</c> に依存しない）。
+    ///
+    /// <para>呼ぶのは<b>4箇所だけ</b>——<c>PerformAttack</c>（攻撃の解決）と、
+    /// <c>PerformAttack</c> を通らずに自分の攻撃力を打点に変える3本
+    /// （棘・仇討ち・責め苦の追撃）。<b>固定量の干渉（破裂・生贄・吸い・分裂・巻き込み）は
+    /// 攻撃力を読まないので呼ばない。</b></para>
+    /// </summary>
+    public void NoteAttackRead(UnitState u) => TallyOf(u).AttackReads++;
+
     internal void NoteFavorReceiver(UnitState receiver, int amount, bool whet)
     {
         Dictionary<string, int> d = whet ? FavorWhetTo : FavorDullTo;
@@ -1797,6 +1809,10 @@ public sealed class BattleContext
         int atk = attackPercent == 100
             ? actor.CurrentAttack
             : actor.CurrentAttack * attackPercent / 100;
+
+        // 攻撃力を出力に変換した回数（第64期）。**死蔵の判定に使う唯一の計数**で、
+        // 盤面には一切影響しない。`Attacks` との差は「振ったか」対「攻撃力を読んだか」。
+        NoteAttackRead(actor);
 
         // 止め（第53期）。**倍率は攻撃の解決時に掛ける**——`Trait.ModifyAttack` は対象を
         // 受け取らないので「相手が標を持つか」で分岐できない（`ModifyAttack` に書くと
@@ -3252,6 +3268,11 @@ public static class BattleEngine
             // 診断が `FunnelTo` の内訳で読む（第56期の死蔵の但し書きと同じ）。
             FunnelDead = ctx.FunnelTo
                 .Where(kv => ctx.TallyByUnit.TryGetValue(kv.Key, out UnitTally? t) && t.Attacks == 0)
+                .Sum(kv => kv.Value),
+            // 死蔵の新定義（第64期）。**回した先が攻撃力を出力に1度も変換しなかった**量。
+            // `Attacks == 0` は棘のような反応型を数え過ぎる（第63期 §11-2 で符号を逆に読んだ）。
+            FunnelDeadNew = ctx.FunnelTo
+                .Where(kv => ctx.TallyByUnit.TryGetValue(kv.Key, out UnitTally? t) && t.AttackReads == 0)
                 .Sum(kv => kv.Value),
             FunnelDullTaken = ctx.FunnelDullTaken,
             FunnelDullByRoute = ctx.FunnelDullByRoute,
