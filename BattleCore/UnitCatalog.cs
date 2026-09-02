@@ -120,7 +120,7 @@ public static class UnitCatalog
         Speed = 7,
         Traits = new[] { TraitId.Bomber },
         PlusText = "倒れたとき破裂し、敵全体に大ダメージ",
-        MinusText = "破裂は味方も巻き込む。生きている間はほぼ無力",
+        MinusText = "破裂は味方も巻き込み、巻き込んだ全員に火が点く。生きている間はほぼ無力",
         Flavor = "一度しか使えない駒を編成に入れる指揮官はいない。"
     };
 

@@ -974,6 +974,68 @@ public sealed class SplitterTrait : Trait
     public override void OnCarryOver(UnitState self) => self.SetCounter(SplitKey, 0);
 }
 
+/// <summary>
+/// 破裂の着火の対象（第59期）。
+///
+/// <para>第57〜58期で燃焼は通貨になったが、<b>書き手はボルグ1枚しかない</b>。
+/// 燃焼を読む駒はすべてボルグとの AND ゲートになり、燃焼が出る行はボルグを含む 11 行に閉じていた。
+/// ゾトを含む 7 行との<b>重複は 0</b> なので、破裂に火を足すと
+/// <b>燃焼が一度も発生していない 7 行にいきなり火が入る</b>（かつボルグ系の捨て札を増やさない）。</para>
+/// </summary>
+public enum BlazeTargets
+{
+    /// <summary>着火なし（現行の挙動）。<b>既定。</b></summary>
+    None,
+    /// <summary>味方の巻き込みを受けた者だけ。焚き付け・熾火が読む在庫を作る。敵側の打点は増えない。</summary>
+    AllyOnly,
+    /// <summary>破裂が当たった全員（敵も味方も）。</summary>
+    Both,
+
+    /// <summary>
+    /// 敵だけ。<b>ノブではなく対照</b>（<c>DivertRule.SelfMark</c> / <c>FinisherRule.Consume</c> と同じ扱い）。
+    ///
+    /// <para><see cref="Both"/> は「味方に在庫を作る」と「敵に打点を足す」という
+    /// <b>符号の違う2つの効果を1つの動作に持つ</b>ので、そのままでは
+    /// <c>ablate</c> でも <c>swap</c> でも2つが合算されて符号が消える（第41期の突き返しと同型）。
+    /// <b>味方側だけを 0 にできる版</b>を対にして初めて、
+    /// 「勝率が上がったのは層に乗ったからか、敵が燃えたからか」が割れる。</para>
+    /// </summary>
+    FoeOnly
+}
+
+/// <summary>
+/// 破裂の着火の強度（第59期）。<b>診断（blaze）が版を差し替えるためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない（既定は <see cref="Default"/> ＝ <see cref="BlazeTargets.None"/>）。
+///
+/// <para><b>書き換え可能な static のノブは置かない</b>（Trait は共有シングルトンで
+/// <c>layout</c> は戦闘を並列に回すため）。<see cref="BattleEngine.Run"/> に引数で渡す。</para>
+///
+/// <para><b><see cref="BlazeTargets.None"/> は現行と1セルも違わない</b>
+/// ——<see cref="BattleContext.Ignite"/> は乱数を1つも引かないので、
+/// 着火を既存のループの中に足しても乱数列は動かない。これが診断の検算になる
+/// （ゾトを含まない 52 行が <c>None</c> と <c>Both</c> で 0 件）。</para>
+/// </summary>
+public readonly record struct BlazeRule(BlazeTargets Targets)
+{
+    /// <summary>
+    /// 採用値（第59期）。<b>指示書 §2-1 の既定は <see cref="BlazeTargets.None"/> だったが、
+    /// 測って <see cref="BlazeTargets.Both"/>（B 案）を採った。</b>
+    ///
+    /// <para>A 案（味方だけ）は<b>7行すべてで負</b>（−2.9〜−24.1pt・別 seed 帯で再現）。
+    /// 味方側の着火は<b>燃焼で味方を 0.27〜0.69 体/戦 余分に倒し</b>、
+    /// 墓守の層（リィカの <c>AtkBonus</c>）を +4〜+14 押し上げるが、
+    /// <b>その層は勝率にならない</b>。B 案は既存7行の平均で +0.7pt・情報セルの合計が 17 → 17 で不変、
+    /// 試験行2本が +26.1 / +13.7pt。</para>
+    /// </summary>
+    public static BlazeRule Default => new(BlazeTargets.Both);
+
+    /// <summary>味方の巻き込みに火を乗せるか。</summary>
+    public bool Allies => Targets is BlazeTargets.AllyOnly or BlazeTargets.Both;
+
+    /// <summary>敵側の巻き込みに火を乗せるか。</summary>
+    public bool Foes => Targets is BlazeTargets.Both or BlazeTargets.FoeOnly;
+}
+
 /// <summary>自爆。決まったターンに自壊し、敵全体を巻き込む。死ぬタイミングが読める。</summary>
 public sealed class BomberTrait : Trait
 {
@@ -989,14 +1051,24 @@ public sealed class BomberTrait : Trait
     {
         ctx.Log($"    {self.Name} が破裂した", LogKind.Highlight);
 
+        // 火種（第59期）。**engine に新しい規則は足していない**——既存のループの中で
+        // `ctx.Ignite` を呼ぶだけ。`Ignite` は乱数を引かないので乱数列は動かない。
+        // 巻き込みで倒れた相手には点かない（`Ignite` が `IsAlive` で弾く）——意図どおりで、
+        // 「破裂で死ななかった者が燃える」が火種の形になる。
+        BlazeRule blaze = ctx.Blaze;
+
         foreach (UnitState foe in ctx.LivingMembersShuffled(ctx.Opponent(self.TeamId)))
+        {
             ctx.ApplyDamage(foe, EnemyBlast, self);
+            if (blaze.Foes) ctx.Ignite(foe);
+        }
 
         // 味方も巻き込む。これが他の駒の起点になる。
         foreach (UnitState ally in ctx.LivingMembersShuffled(self.TeamId))
         {
             if (ally == self) continue;
             ctx.ApplyDamage(ally, AllyBlast, self, isFriendlyFire: true);
+            if (blaze.Allies) ctx.Ignite(ally, friendly: true);
         }
     }
 }

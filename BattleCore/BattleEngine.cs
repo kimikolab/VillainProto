@@ -1062,6 +1062,13 @@ public sealed class BattleContext
         if (whet && receiver.HasTrait(TraitId.Pyre)) KindleToPyre += amount;
     }
 
+    /// <summary>
+    /// 破裂の着火の強度（第59期）。<b>診断（blaze）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="BlazeRule.Default"/> ＝ 着火なし）。
+    /// static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public BlazeRule Blaze { get; }
+
     public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null,
                          HushRule? hush = null, MartyrRule? martyr = null, ExposeRule? expose = null,
                          ShoveRule? shove = null, BearRule? bear = null,
@@ -1069,7 +1076,7 @@ public sealed class BattleContext
                          OverbearRule? overbear = null, ScaleRule? scale = null,
                          ScapegoatRule? scapegoat = null, DivertRule? divert = null,
                          GoadRule? goad = null, FinisherRule? finisher = null,
-                         KindleRule? kindle = null)
+                         KindleRule? kindle = null, BlazeRule? blaze = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -1091,6 +1098,7 @@ public sealed class BattleContext
         Goad = goad ?? GoadRule.Default;
         Finisher = finisher ?? FinisherRule.Default;
         Kindle = kindle ?? KindleRule.Default;
+        Blaze = blaze ?? BlazeRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -2658,11 +2666,12 @@ public static class BattleEngine
                                    SlanderRule? slander = null, OverbearRule? overbear = null,
                                    ScaleRule? scale = null, ScapegoatRule? scapegoat = null,
                                    DivertRule? divert = null, GoadRule? goad = null,
-                                   FinisherRule? finisher = null, KindleRule? kindle = null)
+                                   FinisherRule? finisher = null, KindleRule? kindle = null,
+                                   BlazeRule? blaze = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
-               overbear, scale, scapegoat, divert, goad, finisher, kindle);
+               overbear, scale, scapegoat, divert, goad, finisher, kindle, blaze);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -2681,11 +2690,11 @@ public static class BattleEngine
                                    OverbearRule? overbear = null, ScaleRule? scale = null,
                                    ScapegoatRule? scapegoat = null, DivertRule? divert = null,
                                    GoadRule? goad = null, FinisherRule? finisher = null,
-                                   KindleRule? kindle = null)
+                                   KindleRule? kindle = null, BlazeRule? blaze = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
-                                    kindle);
+                                    kindle, blaze);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
