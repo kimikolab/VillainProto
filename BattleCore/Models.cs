@@ -1131,30 +1131,30 @@ public sealed class BattleResult
     public required IReadOnlyDictionary<string, int> FinisherTargetTo { get; init; }
 
     /// <summary>
-    /// 焚き付け（第58期）の計数。<b>ロスターで初めて「味方に付いた燃焼」を読む駒。</b>
+    /// 火選り（第58期）の計数。<b>ロスターで初めて「味方に付いた燃焼」を読む駒。</b>
     ///
-    /// <para><b>発火</b>: <c>KindleFires</c>（強化か弱体を1体でも配った手番の数。
-    /// <b>0 になっていないことが受け入れ基準</b>）。<c>KindleIdle</c> は<b>空振り</b>
+    /// <para><b>発火</b>: <c>FavorFires</c>（強化か弱体を1体でも配った手番の数。
+    /// <b>0 になっていないことが受け入れ基準</b>）。<c>FavorIdle</c> は<b>空振り</b>
     /// （盤上に燃えている味方が1体もいなかった手番）で、<b>第1ターンは構造的にここへ落ちる</b>
     /// ——<c>OnTurnStart</c> は行動順ループの外側なので、火の粉（<c>OnAfterAttack</c>）より先に走る。</para>
     ///
-    /// <para><b>体数と量を分けてある</b>: <c>KindleWhetted</c> / <c>KindleDulled</c> が延べ体数、
-    /// <c>KindleGiven</c> / <c>KindleTaken</c> が量。掃引で <c>Gain</c> / <c>Loss</c> を振ると
+    /// <para><b>体数と量を分けてある</b>: <c>FavorWhetted</c> / <c>FavorDulled</c> が延べ体数、
+    /// <c>FavorGiven</c> / <c>FavorTaken</c> が量。掃引で <c>Gain</c> / <c>Loss</c> を振ると
     /// 量だけが動いて体数は動かない——<b>ノブが機構の計数を動かしたかの切り分け</b>
     /// （第49期・全幅が小さいときの読み方）にこの2本が要る。</para>
     ///
-    /// <para><b><c>KindleToPyre</c> が Q4 の分子。</b> 配った強化のうち熾火（乗算持ち）へ
+    /// <para><b><c>FavorToPyre</c> が Q4 の分子。</b> 配った強化のうち熾火（乗算持ち）へ
     /// 落ちた量で、<b>そこだけ実効 4 倍で入る</b>（<c>UnitState.CurrentAttack</c> は
     /// <c>Def.Attack + AtkBonus</c> を作ってから <c>ModifyAttack</c> を通す）。</para>
     /// </summary>
-    public required int KindleFires { get; init; }
-    public required int KindleIdle { get; init; }
-    public required int KindleWhetted { get; init; }
-    public required int KindleDulled { get; init; }
-    public required int KindleGiven { get; init; }
-    public required int KindleTaken { get; init; }
-    public required int KindleToPyre { get; init; }
-    public required IReadOnlyDictionary<string, int> KindleWhetTo { get; init; }
-    public required IReadOnlyDictionary<string, int> KindleDullTo { get; init; }
+    public required int FavorFires { get; init; }
+    public required int FavorIdle { get; init; }
+    public required int FavorWhetted { get; init; }
+    public required int FavorDulled { get; init; }
+    public required int FavorGiven { get; init; }
+    public required int FavorTaken { get; init; }
+    public required int FavorToPyre { get; init; }
+    public required IReadOnlyDictionary<string, int> FavorWhetTo { get; init; }
+    public required IReadOnlyDictionary<string, int> FavorDullTo { get; init; }
 }
 

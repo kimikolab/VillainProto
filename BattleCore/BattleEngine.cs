@@ -1004,49 +1004,49 @@ public sealed class BattleContext
     }
 
     /// <summary>
-    /// 焚き付けの強度。<b>診断（kindle）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
-    /// （既定は <see cref="KindleRule.Default"/>）。static のノブにしない理由は同型の doc を参照。
+    /// 火選りの強度。<b>診断（favor）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="FavorRule.Default"/>）。static のノブにしない理由は同型の doc を参照。
     /// </summary>
-    public KindleRule Kindle { get; }
+    public FavorRule Favor { get; }
 
     /// <summary>
-    /// 焚き付け（<see cref="TraitId.Kindle"/>）の計数。<b>空振り（盤上に燃えている味方が1体もいない
+    /// 火選り（<see cref="TraitId.Favor"/>）の計数。<b>空振り（盤上に燃えている味方が1体もいない
     /// 手番）は盤面の値に痕跡を残さない</b>ので、診断が読むためだけに数える
     /// （<c>verbose</c> には依存しない）。
     ///
-    /// <para><b>「配った量」と「効き」は別の列。</b> <c>KindleGiven</c> は付与量の累積で、
+    /// <para><b>「配った量」と「効き」は別の列。</b> <c>FavorGiven</c> は付与量の累積で、
     /// <b>成果ではない</b>——受け手が熾火なら 4 倍、不動のカドなら 0 になる。
     /// 効きは診断が<b>素体との差</b>で取る。</para>
     ///
-    /// <para><c>KindleIdle</c> は<b>第1ターンに構造的に 1 立つ</b>——ターンの順序が
+    /// <para><c>FavorIdle</c> は<b>第1ターンに構造的に 1 立つ</b>——ターンの順序が
     /// <c>TickStatuses</c> → <c>OnTurnStart</c> → 行動順ループで、火の粉は <c>OnAfterAttack</c>
-    /// なので、焚き付けの発火時点ではまだ誰も燃えていない。</para>
+    /// なので、火選りの発火時点ではまだ誰も燃えていない。</para>
     /// </summary>
-    public int KindleFires { get; internal set; }
+    public int FavorFires { get; internal set; }
     /// <summary>盤上に燃えている味方が1体もいなくて何も強化しなかった手番の数（＝空振り）。</summary>
-    public int KindleIdle { get; internal set; }
+    public int FavorIdle { get; internal set; }
     /// <summary>強化した延べ体数（＝燃えている味方の延べ数）。</summary>
-    public int KindleWhetted { get; internal set; }
+    public int FavorWhetted { get; internal set; }
     /// <summary>鈍らせた延べ体数（＝隣接する非燃焼の味方の延べ数）。</summary>
-    public int KindleDulled { get; internal set; }
+    public int FavorDulled { get; internal set; }
     /// <summary>配った強化の総量と、撒いた弱体の総量。</summary>
-    public int KindleGiven { get; internal set; }
-    public int KindleTaken { get; internal set; }
+    public int FavorGiven { get; internal set; }
+    public int FavorTaken { get; internal set; }
     /// <summary>強化の受け手の内訳（駒名）。<b>熾火に落ちた割合</b>を読むための列。</summary>
-    public Dictionary<string, int> KindleWhetTo { get; } = new();
+    public Dictionary<string, int> FavorWhetTo { get; } = new();
     /// <summary>弱体の受け手の内訳（駒名）。</summary>
-    public Dictionary<string, int> KindleDullTo { get; } = new();
+    public Dictionary<string, int> FavorDullTo { get; } = new();
     /// <summary>強化が<b>熾火（乗算持ち）</b>へ落ちた量。Q4（乗算の許容）の分子。</summary>
-    public int KindleToPyre { get; internal set; }
+    public int FavorToPyre { get; internal set; }
 
-    internal void NoteKindle(int whetted, int dulled, int idle, int given, int taken)
+    internal void NoteFavor(int whetted, int dulled, int idle, int given, int taken)
     {
-        if (whetted > 0 || dulled > 0) KindleFires++;
-        KindleIdle += idle;
-        KindleWhetted += whetted;
-        KindleDulled += dulled;
-        KindleGiven += given;
-        KindleTaken += taken;
+        if (whetted > 0 || dulled > 0) FavorFires++;
+        FavorIdle += idle;
+        FavorWhetted += whetted;
+        FavorDulled += dulled;
+        FavorGiven += given;
+        FavorTaken += taken;
     }
 
     /// <summary>
@@ -1054,12 +1054,12 @@ public sealed class BattleContext
     /// ——横取り（集約・転嫁）が宛先を書き換えた後の<b>実際の受け手</b>を数えるため。
     /// <b>盤面には一切影響しない。</b>
     /// </summary>
-    internal void NoteKindleReceiver(UnitState receiver, int amount, bool whet)
+    internal void NoteFavorReceiver(UnitState receiver, int amount, bool whet)
     {
-        Dictionary<string, int> d = whet ? KindleWhetTo : KindleDullTo;
+        Dictionary<string, int> d = whet ? FavorWhetTo : FavorDullTo;
         string k = receiver.Def.Name;
         d[k] = d.TryGetValue(k, out int a) ? a + amount : amount;
-        if (whet && receiver.HasTrait(TraitId.Pyre)) KindleToPyre += amount;
+        if (whet && receiver.HasTrait(TraitId.Pyre)) FavorToPyre += amount;
     }
 
     /// <summary>
@@ -1076,7 +1076,7 @@ public sealed class BattleContext
                          OverbearRule? overbear = null, ScaleRule? scale = null,
                          ScapegoatRule? scapegoat = null, DivertRule? divert = null,
                          GoadRule? goad = null, FinisherRule? finisher = null,
-                         KindleRule? favor = null, BlazeRule? blaze = null)
+                         FavorRule? favor = null, BlazeRule? blaze = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -1097,7 +1097,7 @@ public sealed class BattleContext
         if (Divert.Audit) DivertActive = true;
         Goad = goad ?? GoadRule.Default;
         Finisher = finisher ?? FinisherRule.Default;
-        Kindle = favor ?? KindleRule.Default;
+        Favor = favor ?? FavorRule.Default;
         Blaze = blaze ?? BlazeRule.Default;
     }
 
@@ -2391,9 +2391,9 @@ public sealed class BattleContext
         // **実際に AtkBonus が減った駒にだけ載る**——転嫁（RelayThrough）は上で return しており、
         // 敵側で減る分は再帰した Dull がその受け手に載せる。**盤面には一切影響しない。**
         TallyOf(receiver).Dulled += amount;
-        // 焚き付け（第58期）の受け手の内訳。**横取りが宛先を書き換えた後の実際の受け手**に載せる。
+        // 火選り（第58期）の受け手の内訳。**横取りが宛先を書き換えた後の実際の受け手**に載せる。
         // 盤面には一切影響しない（札で引くだけ・verbose 非依存）。
-        if (route == DullRoute.Kindle) NoteKindleReceiver(receiver, amount, whet: false);
+        if (route == DullRoute.Favor) NoteFavorReceiver(receiver, amount, whet: false);
         receiver.AtkBonus -= amount;
         if (atkBefore > 0 && receiver.CurrentAttack == 0)
         {
@@ -2510,9 +2510,9 @@ public sealed class BattleContext
         int bonusBefore = receiver.AtkBonus;
 
         TallyOf(receiver).Whetted += amount;
-        // 焚き付け（第58期）の受け手の内訳。強化側にはまだ横取りが無いので receiver == target だが、
+        // 火選り（第58期）の受け手の内訳。強化側にはまだ横取りが無いので receiver == target だが、
         // 立ち位置は Dull と揃えてある（横取りができたらそのまま正しく数える）。
-        if (route == WhetRoute.Kindle) NoteKindleReceiver(receiver, amount, whet: true);
+        if (route == WhetRoute.Favor) NoteFavorReceiver(receiver, amount, whet: true);
         receiver.AtkBonus += amount;
 
         if (perverse)
@@ -2666,7 +2666,7 @@ public static class BattleEngine
                                    SlanderRule? slander = null, OverbearRule? overbear = null,
                                    ScaleRule? scale = null, ScapegoatRule? scapegoat = null,
                                    DivertRule? divert = null, GoadRule? goad = null,
-                                   FinisherRule? finisher = null, KindleRule? favor = null,
+                                   FinisherRule? finisher = null, FavorRule? favor = null,
                                    BlazeRule? blaze = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
@@ -2690,7 +2690,7 @@ public static class BattleEngine
                                    OverbearRule? overbear = null, ScaleRule? scale = null,
                                    ScapegoatRule? scapegoat = null, DivertRule? divert = null,
                                    GoadRule? goad = null, FinisherRule? finisher = null,
-                                   KindleRule? favor = null, BlazeRule? blaze = null)
+                                   FavorRule? favor = null, BlazeRule? blaze = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
@@ -3020,15 +3020,15 @@ public static class BattleEngine
             FinisherAllySingles = ctx.FinisherAllySingles,
             FinisherStarved = ctx.FinisherStarved,
             FinisherTargetTo = ctx.FinisherTargetTo,
-            KindleFires = ctx.KindleFires,
-            KindleIdle = ctx.KindleIdle,
-            KindleWhetted = ctx.KindleWhetted,
-            KindleDulled = ctx.KindleDulled,
-            KindleGiven = ctx.KindleGiven,
-            KindleTaken = ctx.KindleTaken,
-            KindleToPyre = ctx.KindleToPyre,
-            KindleWhetTo = ctx.KindleWhetTo,
-            KindleDullTo = ctx.KindleDullTo
+            FavorFires = ctx.FavorFires,
+            FavorIdle = ctx.FavorIdle,
+            FavorWhetted = ctx.FavorWhetted,
+            FavorDulled = ctx.FavorDulled,
+            FavorGiven = ctx.FavorGiven,
+            FavorTaken = ctx.FavorTaken,
+            FavorToPyre = ctx.FavorToPyre,
+            FavorWhetTo = ctx.FavorWhetTo,
+            FavorDullTo = ctx.FavorDullTo
         };
     }
 

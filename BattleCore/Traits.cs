@@ -95,7 +95,7 @@ public enum TraitId
                  // 押し出された側は狙われる（1つの動作の表と裏。クグの縛め＋攻撃+16 と同じ構造）
     Finisher,    // 止め: 誰かが指を差した敵に必ず食らいつき、倍の力で仕留める。
                  // 仕留めると指差しは消える（供給と消費のサイクル。差されなければただの雑魚）
-    Kindle,      // 焚き付け: 燃えている味方の腕を上げ、自分の隣で燃えていない味方の腕を鈍らせる
+    Favor,      // 火選り: 燃えている味方の腕を上げ、自分の隣で燃えていない味方の腕を鈍らせる
                  // （1つの動作の表と裏。プラスは位置を問わず・マイナスは位置で決まる）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -986,7 +986,7 @@ public enum BlazeTargets
 {
     /// <summary>着火なし（現行の挙動）。<b>既定。</b></summary>
     None,
-    /// <summary>味方の巻き込みを受けた者だけ。焚き付け・熾火が読む在庫を作る。敵側の打点は増えない。</summary>
+    /// <summary>味方の巻き込みを受けた者だけ。火選り・熾火が読む在庫を作る。敵側の打点は増えない。</summary>
     AllyOnly,
     /// <summary>破裂が当たった全員（敵も味方も）。</summary>
     Both,
@@ -1874,15 +1874,15 @@ public enum DullRoute
                   // **敵から味方へ弱体を撒く初めての経路**（第44期）。他の6本は味方が起点
     Overbear,     // 驕り: オゴ → 隣接する生存味方全員・毎ターン。
                   // **撒いた本人が撒いた結果を出力条件として読む唯一の経路**（第46期）
-    Kindle        // 焚き付けの鈍り: フイ → 隣接する生存味方のうち**燃えていない**者・毎ターン。
+    Favor        // 火選りの鈍り: ヒヨ → 隣接する生存味方のうち**燃えていない**者・毎ターン。
                   // **状態異常を条件に宛先を選ぶ初めての弱体経路**（第58期）。
-                  // 同じ1回の発火が <see cref="WhetRoute.Kindle"/> の側も走らせる（表と裏）
+                  // 同じ1回の発火が <see cref="WhetRoute.Favor"/> の側も走らせる（表と裏）
 }
 
 /// <summary>経路の名前と本数。診断の表の見出しと配列長をここ1箇所から引く。</summary>
 public static class DullRoutes
 {
-    public static readonly string[] Names = { "その他", "なまり", "呪詛敵", "呪詛漏れ", "突き返し", "萎縮", "渡し", "誹り", "驕り", "焚き付け" };
+    public static readonly string[] Names = { "その他", "なまり", "呪詛敵", "呪詛漏れ", "突き返し", "萎縮", "渡し", "誹り", "驕り", "火選り" };
     public static int Count => Names.Length;
 }
 
@@ -1911,7 +1911,7 @@ public enum WhetRoute
     Drifter,        // 移り木: シオ → 動かされた味方・移動のたび
     Regurgitate,    // 吐き戻し: ゴルム → 庇った相手（SupportTargets 経由）・肩代わりのたび。
                     // **engine 側にある唯一の経路**で、Dull の「なまり」（同じく engine 側）と対称
-    Kindle          // 焚き付け: フイ → **燃えている味方全員**（自分を除く）・毎ターン。**位置を問わない**。
+    Favor          // 火選り: ヒヨ → **燃えている味方全員**（自分を除く）・毎ターン。**位置を問わない**。
                     // 候補を自前で AcceptsSupport 濾しする（隣へ漏らさない＝駆り立てと同じ側）。
                     // **状態異常を条件に宛先を選ぶ初めての強化経路**（第58期）
 }
@@ -1919,7 +1919,7 @@ public enum WhetRoute
 /// <summary>経路の名前と本数。診断の表の見出しと配列長をここ1箇所から引く。</summary>
 public static class WhetRoutes
 {
-    public static readonly string[] Names = { "その他", "駆り立て", "号令開戦", "号令毎T", "縛め", "移り木", "吐き戻し", "焚き付け" };
+    public static readonly string[] Names = { "その他", "駆り立て", "号令開戦", "号令毎T", "縛め", "移り木", "吐き戻し", "火選り" };
     public static int Count => Names.Length;
 }
 
@@ -2958,7 +2958,7 @@ public readonly record struct FinisherRule(int Multiplier, bool Consume)
 }
 
 /// <summary>
-/// 焚き付け。<b>燃えている味方の腕を上げ、自分の隣で燃えていない味方の腕を鈍らせる</b>（第58期）。
+/// 火選り。<b>燃えている味方の腕を上げ、自分の隣で燃えていない味方の腕を鈍らせる</b>（第58期）。
 ///
 /// <para><b>出発点は第57期の実測</b>——燃焼は<b>盤面のどこにも繋がっていない閉じた2枚組</b>だった
 /// （表E の 18 セル＝9通貨 × 双方向がすべて 0。「燃えている」という事実を読んで分岐するのは
@@ -2970,10 +2970,10 @@ public readonly record struct FinisherRule(int Multiplier, bool Consume)
 /// <see cref="OnTurnStart"/> の1回の発火で以下を順に行う:</para>
 /// <list type="number">
 ///   <item><b>プラス</b>: <b>燃えている味方全員</b>（自分を除く）に
-///     <see cref="BattleContext.Whet"/>(<see cref="KindleRule.Gain"/>, <see cref="WhetRoute.Kindle"/>)。
+///     <see cref="BattleContext.Whet"/>(<see cref="FavorRule.Gain"/>, <see cref="WhetRoute.Favor"/>)。
 ///     <b>位置を問わない。</b></item>
 ///   <item><b>マイナス</b>: <b>隣接する味方のうち燃えていない者</b>に
-///     <see cref="BattleContext.Dull"/>(<see cref="KindleRule.Loss"/>, <see cref="DullRoute.Kindle"/>)。
+///     <see cref="BattleContext.Dull"/>(<see cref="FavorRule.Loss"/>, <see cref="DullRoute.Favor"/>)。
 ///     <b>位置で決まる。</b></item>
 /// </list>
 ///
@@ -2996,11 +2996,11 @@ public readonly record struct FinisherRule(int Multiplier, bool Consume)
 /// <c>CurrentAttack</c> は T1 が 6・T2 以降が 24）。<b>係数では詰められない構造の遅れ</b>で、
 /// 短い波ほど取り分が減る。</para>
 ///
-/// <para><b>第60期に手番へ降ろして、この遅れを畳んだ。</b> フイ（速6）はボルグ（速8）より
+/// <para><b>第60期に手番へ降ろして、この遅れを畳んだ。</b> ヒヨ（速6）はボルグ（速8）より
 /// 遅いので、自分の番が回る時点で火は既に点いている。実測で<b>弱体の受け手から
 /// 熾のホタ 2.00 量/戦がちょうど消え</b>、<c>撒いた</c>（弱体の総量）は4行とも
 /// <b>−1.9〜−4.2 量/戦</b>下がった。<b>ただし遅れは消えたのではなく形が変わっている</b>
-/// ——ホタ（速7）はフイより<b>速い</b>ので、配った強化がホタの振りに乗るのは次のターンから。
+/// ——ホタ（速7）はヒヨより<b>速い</b>ので、配った強化がホタの振りに乗るのは次のターンから。
 /// <b>代金の相手が「第1ターンの全員」から「自分より速い受け手」へ移った</b>（第60期 Q1）。</para>
 ///
 /// <para><b>熾火（<see cref="PyreTrait"/>）に配ると 4 倍で入る。</b>
@@ -3021,18 +3021,18 @@ public readonly record struct FinisherRule(int Multiplier, bool Consume)
 ///
 /// <para><b>召喚枠（<see cref="TraitId.Ephemeral"/>）も対象に含める</b>（鱗・第47期と同じ扱い）。
 /// 胞子は <c>AcceptsSupport</c> を通るので、燃えていれば強化を受けるし、
-/// フイの隣（○中1 / ○中3 / ○前2 / ○後2 は編成枠と隣接する）にいて燃えていなければ鈍る。
+/// ヒヨの隣（○中1 / ○中3 / ○前2 / ○後2 は編成枠と隣接する）にいて燃えていなければ鈍る。
 /// <b>掛け算にはならない</b>——胞子は火を撒かないので供給は増えない。</para>
 /// </summary>
-public sealed class KindleTrait : Trait
+public sealed class FavorTrait : Trait
 {
-    public override TraitId Id => TraitId.Kindle;
+    public override TraitId Id => TraitId.Favor;
 
     // **手番の行動として撃つ**（第60期）。第58期は `OnTurnStart` に置いたが、ターンの順序が
     // `TickStatuses` → `OnTurnStart` → 行動順ループなので、火の粉（`OnAfterAttack`）に対して
     // **構造的に1ターン遅れる**——第1ターンの発火時点では盤上の誰も燃えておらず、
     // 強化するはずの相手（熾のホタ）をそのターンだけ鈍らせていた（第58期 9-2）。
-    // 手番へ降ろすと、フイ（速6）の番が回る時点でボルグ（速8）が既に火を撒いている。
+    // 手番へ降ろすと、ヒヨ（速6）の番が回る時点でボルグ（速8）が既に火を撒いている。
     //
     // **`ActsOnPattern` の分岐は保持者が1枚でも残す。** 継ぎ当て（`MenderTrait`）が
     // 記録している事故（味方のノノと敵の従軍司祭長が同じ特性を共有していて、無条件に移すと
@@ -3055,7 +3055,7 @@ public sealed class KindleTrait : Trait
         // 「Gain = Loss = 0 の版が素体と1セルも違わない」という検算が壊れる。
         var allies = ctx.LivingMembers(self.TeamId);
 
-        int gain = ctx.Kindle.Gain, loss = ctx.Kindle.Loss;
+        int gain = ctx.Favor.Gain, loss = ctx.Favor.Loss;
         int whetted = 0, dulled = 0;
 
         foreach (UnitState a in allies)
@@ -3068,18 +3068,18 @@ public sealed class KindleTrait : Trait
             {
                 // プラス側は位置を問わない。
                 whetted++;
-                ctx.Whet(a, gain, WhetRoute.Kindle);          // gain <= 0 なら Whet が即 return する
+                ctx.Whet(a, gain, WhetRoute.Favor);          // gain <= 0 なら Whet が即 return する
             }
             else if (FormationRules.AreAdjacent(self.Slot, a.Slot))
             {
                 // マイナス側は隣接だけ。
                 dulled++;
-                ctx.Dull(a, loss, DullRoute.Kindle);          // loss <= 0 なら Dull が即 return する
+                ctx.Dull(a, loss, DullRoute.Favor);          // loss <= 0 なら Dull が即 return する
             }
         }
 
         // 空振り＝盤上に燃えている味方が1体もいなかった手番。**第1ターンは構造的にここへ落ちる。**
-        ctx.NoteKindle(whetted, dulled, whetted == 0 ? 1 : 0, gain * whetted, loss * dulled);
+        ctx.NoteFavor(whetted, dulled, whetted == 0 ? 1 : 0, gain * whetted, loss * dulled);
 
         if (whetted > 0 || dulled > 0)
             ctx.Log($"    {self.Name} が火のそばを贔屓した（燃 {whetted} 体に +{gain} / 隣の非燃 {dulled} 体に -{loss}）",
@@ -3088,7 +3088,7 @@ public sealed class KindleTrait : Trait
 }
 
 /// <summary>
-/// 焚き付けの強度のノブ。<b>診断（kindle）が版を差し替えるためだけの窓口</b>で、
+/// 火選りの強度のノブ。<b>診断（favor）が版を差し替えるためだけの窓口</b>で、
 /// 通常の実行では誰も渡さない（既定は <see cref="Default"/>）。
 /// static のノブにしない理由は同型の doc（<see cref="ColossusRule"/>）を参照。
 ///
@@ -3097,12 +3097,12 @@ public sealed class KindleTrait : Trait
 /// <b>2つを別のノブにしてある</b>のは、掃引で
 /// 「プラスを厚く」と「マイナスを厚く」を分けて測るため（指示書 §4 の V2 / V3）。</para>
 ///
-/// <para><b><c>new KindleRule(0, 0)</c> は機構を完全に止める</b>
+/// <para><b><c>new FavorRule(0, 0)</c> は機構を完全に止める</b>
 /// ——<see cref="BattleContext.Whet"/> / <see cref="BattleContext.Dull"/> は
-/// <c>amount &lt;= 0</c> で即 return し、<see cref="KindleTrait"/> は乱数を1つも引かないので、
+/// <c>amount &lt;= 0</c> で即 return し、<see cref="FavorTrait"/> は乱数を1つも引かないので、
 /// <b>同数値・特性なしの素体に差し替えた版と1セルも違わない</b>。これが診断の検算になる。</para>
 /// </summary>
-public readonly record struct KindleRule(int Gain, int Loss)
+public readonly record struct FavorRule(int Gain, int Loss)
 {
     /// <summary>
     /// 採用値（第58期）。<b>探索段階の初期値は指示書 §2-1 の <c>(2, 2)</c>（掃引の V1）だったが、
@@ -3113,7 +3113,7 @@ public readonly record struct KindleRule(int Gain, int Loss)
     /// そこは <see cref="Gain"/> をいくら上げても減らない（掃引で `撒いた` が <see cref="Gain"/> に
     /// 対して完全に不動）。第25期の軛（計画 15 / 手当 20 → 実測で 25）と同じ形の採り方。
     /// </summary>
-    public static KindleRule Default => new(4, 2);
+    public static FavorRule Default => new(4, 2);
 }
 
 
@@ -4889,7 +4889,7 @@ public static class TraitCatalog
         new DivertTrait(),
         new GoadTrait(),
         new FinisherTrait(),
-        new KindleTrait(),
+        new FavorTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

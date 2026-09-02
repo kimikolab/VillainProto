@@ -1,5 +1,14 @@
 # 第58期 報告 —— 燃焼を強化へ繋ぐ駒（焚き付けのフイ）
 
+> **第60期に改名した。** この報告書の「焚き付け」は**火選り**、「フイ」は**ヒヨ**、
+> `TraitId.Kindle` / `KindleRule` / `WhetRoute.Kindle` / `DullRoute.Kindle` は
+> `Favor` / `FavorRule` / `WhetRoute.Favor` / `DullRoute.Favor`、
+> **診断モード `kindle` は `favor`** に変わっている（`kindle` はもう動かない）。
+> 理由は design/PHASE60_TURN.md §5——**点火しない駒に点火の名を付けたのが誤りだった。**
+> 同じ期に発火口を `OnTurnStart` から手番（`OnAction`）へ降ろしているので、
+> **この報告書の数字（`OnTurnStart` 版）は第60期の測り直しで置き換わっている。**
+
+
 指示書: `design/PHASE58_KINDLE_SPEC.md`
 起点: `89ae0a8`（第57期・燃焼の解剖）
 

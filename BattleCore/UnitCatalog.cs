@@ -1096,14 +1096,19 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 焚き付けのフイ。<b>ロスターで初めて「味方に付いた燃焼」を読む駒</b>（第58期）。
+    /// 火選りのヒヨ。<b>ロスターで初めて「味方に付いた燃焼」を読む駒</b>（第58期）。
+    ///
+    /// <para><b>第60期に改名した（旧「焚き付けのフイ」）。</b>「焚き付け」は<b>火を点けること</b>を
+    /// 意味するが、<b>この駒は火を点けない</b>——点けるのはボルグ（火の粉）とゾト（破裂の着火）で、
+    /// ヒヨは点いた火を見て態度を変えるだけ。<b>名前が能力を誤って説明していた。</b>
+    /// 同じ期に発火口も <c>OnTurnStart</c> から手番（<c>OnAction</c>）へ降ろしている。</para>
     ///
     /// <para><b>第57期の実測が出発点。</b> 燃焼は<b>他の9通貨と双方向とも接続 0</b> の閉じた2枚組で
     /// （表E の 18 セル）、しかも<b>着火の 52% は味方に付いている</b>（味 2.40 対 敵 2.21 /戦）。
     /// <b>その味方側の火を読む駒が1枚も無い</b>ので、ボルグを含む8行のうち3行では
     /// 火の粉が純粋な代金（−3.8〜−7.9pt）として払われっぱなしになっていた。
-    /// <b>この駒はその在庫を強化（<see cref="WhetRoute.Kindle"/>）と
-    /// 弱体（<see cref="DullRoute.Kindle"/>）へ変換する。</b></para>
+    /// <b>この駒はその在庫を強化（<see cref="WhetRoute.Favor"/>）と
+    /// 弱体（<see cref="DullRoute.Favor"/>）へ変換する。</b></para>
     ///
     /// <para><b>1枚で2箇所に接続する。</b> 強化の供給は第56期の実測で
     /// <b>48.3% が吐き戻し1本</b>＝「ゴルムを入れると勝手に付いてくる通貨」で、
@@ -1116,32 +1121,32 @@ public static class UnitCatalog
     /// 「火を全体に回すか、自分の隣を空けるか」の2つの解き方が同時に立つ。</para>
     ///
     /// <para>HP70・攻5・速6 は探索段階の初期値。<b>掃引の対象は
-    /// <see cref="KindleRule.Gain"/> / <see cref="KindleRule.Loss"/> だけ</b>で、HP・攻・速は振らない。
+    /// <see cref="FavorRule.Gain"/> / <see cref="FavorRule.Loss"/> だけ</b>で、HP・攻・速は振らない。
     /// <b>攻5 と低いのは意図的</b>——出力で効いてしまうと、接続が効いたのか体が効いたのかが
     /// 分からなくなる（第34期「1変数を振るときは、その変数が他に何を一緒に動かすかを先に数える」）。</para>
     /// </summary>
-    public static readonly UnitDef Fui = new()
+    public static readonly UnitDef Hiyo = new()
     {
-        Id = "fui",
-        Name = "焚き付けのフイ",
+        Id = "hiyo",
+        Name = "火選りのヒヨ",
         MaxHp = 70,
         Attack = 5,
         Speed = 6,
-        Traits = new[] { TraitId.Kindle },
+        Traits = new[] { TraitId.Favor },
         // **贔屓を手番の行動そのものにする**（第60期）。攻5 は出なくなる。
         // `OnTurnStart` に置くと火の粉（`OnAfterAttack`）に対して構造的に1ターン遅れ、
         // **第1ターンだけ熾のホタを鈍らせていた**（弱体の受け手に 2.00 量/戦）。
-        // 手番へ降ろすとフイ（速6）の番はボルグ（速8）の後なので、火は既に点いている。
+        // 手番へ降ろすとヒヨ（速6）の番はボルグ（速8）の後なので、火は既に点いている。
         // **[Skill] 1つだけの周期で移すのは、挙動の差を「攻撃が出ない」だけに絞るため**（ノノと同じ）。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "火のそばを見ている") },
         PlusText = "毎ターン、燃えている味方の攻撃力を上げる（位置を問わない）",
         MinusText = "自分の隣で燃えていない味方は、逆に腕が鈍る。攻撃はしない（贔屓が手番そのもの）",
-        Flavor = "火のそばにいる者しか目に入らない。えこひいきで隊を割った。"
+        Flavor = "人を見る基準はただ一つ。燃えているか、いないか。"
     };
 
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Fui
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);
