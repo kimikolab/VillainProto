@@ -133,6 +133,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     dotnet run --project BattleSim -c Release 0 funnel pick      # **試験行の選定規則のスキャン**（61行 × ablate + 5席の素体。結果を見る前に規則を固定するための道具）
     dotnet run --project BattleSim -c Release 0 funnel reseat    # 配置の粗探索＋追試（**第64期はこれを使わないと決めた**。理由は design/PHASE64_FUNNEL3.md §4-1）
     dotnet run --project BattleSim -c Release 0 funnel alt       # 同じ表を再現帯（0..199）で（第64期の主帯は 1000..1399）
+    dotnet run --project BattleSim -c Release 0 spend           # 強化の使い道: 7経路を1本ずつ落として帰属・到着・使用率・受け手（第65期・調査）
+    dotnet run --project BattleSim -c Release 0 spend map       # 判断の地図（**戦闘0回**。出力経路4本 / 行き先の決まり方 / 陰性対照の分母）
+    dotnet run --project BattleSim -c Release 0 spend alt       # 同じ表を再現帯（seed 200..599）で
 
 `census` は**駒と通貨の対応表を作るための素材**を出す（第48期）。**戦闘を1回も回さない。**
 ロスターの上限を **52体**（トランプ1組）と決めたので、新規追加の合否テストに

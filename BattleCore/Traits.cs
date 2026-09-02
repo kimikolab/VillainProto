@@ -1927,6 +1927,35 @@ public static class WhetRoutes
 }
 
 /// <summary>
+/// 強化の経路を1本ずつ窓口の入口で落とすノブ（第65期・<b>診断専用</b>）。
+///
+/// <para><b>既定は空＝現行。</b> 誰も渡さなければ <see cref="BattleContext.Whet"/> は
+/// 1命令も変わらない（受け入れ基準1: 引数なしの <c>compare</c> が 305 セル一致）。</para>
+///
+/// <para><b>落とすのは <c>AtkBonus</c> への加算だけで、計数は行う。</b>
+/// 経路別の総量・受け手・横流しの経路はそのまま数え、<b>盤面に入る量だけを 0 にする</b>
+/// ——「その経路を落とした版」の対照が「供給者の他の特性は残す」（指示書 §0-4）を
+/// 満たすため。縛めの痺れ・移り木の回復・吐き戻しのログのように、
+/// <b>同じ動作の他の効果には触れない。</b></para>
+///
+/// <para><b><see cref="BattleContext.Roll"/> の前後に置かない。</b> 判定は
+/// <c>Whet</c> の中の加算の直前1箇所だけで、横流しの <see cref="PickOne"/> より後ろにある
+/// ——乱数の消費を1ビットも変えないことを、位置で担保する。</para>
+///
+/// <para>自己強化の9本は窓口の外なので落とせない（第56期の意図的な非対称。この期の対象外）。</para>
+/// </summary>
+public sealed record WhetMask(int Bits)
+{
+    /// <summary>何も落とさない＝現行。</summary>
+    public static readonly WhetMask None = new(0);
+
+    /// <summary>経路1本だけを落とす。</summary>
+    public static WhetMask Of(WhetRoute route) => new(1 << (int)route);
+
+    public bool Blocks(WhetRoute route) => (Bits & (1 << (int)route)) != 0;
+}
+
+/// <summary>
 /// 引き受け（集約）。隣接する味方が受ける攻撃力低下を代わりに背負い、その分だけ鎧になる。
 /// ただし自分の腕は落ち続ける——<b>プラスとマイナスが1つの動作の表と裏</b>なので、
 /// <see cref="TraitId"/> のどちらのブロックにも入らない（置き去り・突き返しと同じ扱い）。

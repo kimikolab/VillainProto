@@ -429,6 +429,40 @@ public sealed class BattleContext
     public int[] WhetByRoute { get; } = new int[WhetRoutes.Count];
 
     /// <summary>
+    /// 強化の経路を1本ずつ落とすノブ（第65期・<b>診断専用</b>）。既定は
+    /// <see cref="WhetMask.None"/>＝現行で、通常の実行では誰も渡さない。
+    /// </summary>
+    public WhetMask WhetBlock { get; }
+
+    /// <summary>
+    /// <b>強化の「到着の時刻」と「その後使われたか」</b>（第65期）。
+    /// <b>誰も読んで分岐しない</b>・<c>verbose</c> に依存しない・盤面には一切影響しない。
+    ///
+    /// <para><c>WhetTurnSumByRoute</c> 経路別の Σ(量 × 到着ターン)（÷ 量 で<b>到着の平均ターン</b>） ／
+    /// <c>WhetFirstTurnSumByRoute</c> と <c>WhetFirstTurnCountByRoute</c> は
+    /// <b>1戦につき1回</b>その経路が最初に届いたターン（÷ で<b>初到着の平均</b>） ／
+    /// <c>WhetUsedByRoute</c> <b>受け手がその後 <see cref="NoteAttackRead"/> を1度でも通した量</b>
+    /// （÷ 供給量で<b>使用率</b>）。</para>
+    ///
+    /// <para>使用率は「受け取った<b>後</b>に攻撃力を出力へ変換したか」なので、
+    /// 死蔵（<c>AttackReads == 0</c>・第64期）より<b>厳しい</b>——最後の一撃の後に届いた強化は
+    /// 死蔵に数えられなくても使用率には乗らない。<b>遅さ（H3）を測るのはこちら。</b></para>
+    /// </summary>
+    public int[] WhetTurnSumByRoute { get; } = new int[WhetRoutes.Count];
+    public int[] WhetFirstTurnSumByRoute { get; } = new int[WhetRoutes.Count];
+    public int[] WhetFirstTurnCountByRoute { get; } = new int[WhetRoutes.Count];
+    public int[] WhetUsedByRoute { get; } = new int[WhetRoutes.Count];
+
+    /// <summary>
+    /// <b>経路ごとの受け手</b>（第65期。キーは <c>Def.Id</c>）。
+    /// <see cref="NoteFavorReceiver"/> が火選り1本だけについてやっていたことを、
+    /// <b>7経路すべてについて常時数える</b>——「行き先を決めているものは何か」（判断の地図）は
+    /// 経路別の受け手が無いと実測できない。<b>盤面には一切影響しない。</b>
+    /// </summary>
+    public Dictionary<string, int>[] WhetToByRoute { get; } =
+        Enumerable.Range(0, WhetRoutes.Count).Select(_ => new Dictionary<string, int>()).ToArray();
+
+    /// <summary>
     /// 逆しま（<see cref="PerverseTrait"/>・ウツ）が受けた強化の量と、
     /// <b>それで符号が正へ渡った回数</b>（<c>WhetPerverseFlips</c>）。
     ///
@@ -1147,7 +1181,18 @@ public sealed class BattleContext
     /// （棘・仇討ち・責め苦の追撃）。<b>固定量の干渉（破裂・生贄・吸い・分裂・巻き込み）は
     /// 攻撃力を読まないので呼ばない。</b></para>
     /// </summary>
-    public void NoteAttackRead(UnitState u) => TallyOf(u).AttackReads++;
+    public void NoteAttackRead(UnitState u)
+    {
+        UnitTally t = TallyOf(u);
+        t.AttackReads++;
+
+        // 到着と使用（第65期）。**受け取った後に1度でも攻撃力を出力へ変換したか**を、
+        // 経路ごとに「保留 → 使用済み」へ移して数える。**盤面には一切影響しない。**
+        if (t.WhetFirstTurn > 0) t.AttackReadsAfterWhet++;
+        if (t.WhetPendingByRoute is int[] pend)
+            for (int i = 0; i < pend.Length; i++)
+                if (pend[i] > 0) { WhetUsedByRoute[i] += pend[i]; pend[i] = 0; }
+    }
 
     internal void NoteFavorReceiver(UnitState receiver, int amount, bool whet)
     {
@@ -1172,7 +1217,7 @@ public sealed class BattleContext
                          ScapegoatRule? scapegoat = null, DivertRule? divert = null,
                          GoadRule? goad = null, FinisherRule? finisher = null,
                          FavorRule? favor = null, BlazeRule? blaze = null,
-                         FunnelRule? funnel = null)
+                         FunnelRule? funnel = null, WhetMask? whetMask = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -1196,6 +1241,7 @@ public sealed class BattleContext
         Favor = favor ?? FavorRule.Default;
         Blaze = blaze ?? BlazeRule.Default;
         Funnel = funnel ?? FunnelRule.Default;
+        WhetBlock = whetMask ?? WhetMask.None;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -2667,11 +2713,29 @@ public sealed class BattleContext
         bool perverse = receiver.HasTrait(TraitId.Perverse);
         int bonusBefore = receiver.AtkBonus;
 
-        TallyOf(receiver).Whetted += amount;
+        UnitTally rt = TallyOf(receiver);
+        rt.Whetted += amount;
         // 火選り（第58期）の受け手の内訳。強化側にはまだ横取りが無いので receiver == target だが、
         // 立ち位置は Dull と揃えてある（横取りができたらそのまま正しく数える）。
         if (route == WhetRoute.Favor) NoteFavorReceiver(receiver, amount, whet: true);
-        receiver.AtkBonus += amount;
+
+        // 到着の時刻と、その後使われたか（第65期）。**誰も読んで分岐しない。**
+        // 落とした経路（WhetBlock）でも数える——「その経路がいつどこへ届くはずだったか」は
+        // 落とした版でも変わらず読めたほうがよい（合否は盤面の側で取る）。
+        WhetTurnSumByRoute[(int)route] += amount * Turn;
+        if (WhetFirstTurnCountByRoute[(int)route] == 0)
+        {
+            WhetFirstTurnCountByRoute[(int)route] = 1;
+            WhetFirstTurnSumByRoute[(int)route] = Turn;
+        }
+        Dictionary<string, int> to = WhetToByRoute[(int)route];
+        to[receiver.Def.Id] = to.TryGetValue(receiver.Def.Id, out int had) ? had + amount : amount;
+        rt.WhetTurnSum += amount * Turn;
+        if (rt.WhetFirstTurn == 0) rt.WhetFirstTurn = Math.Max(1, Turn);
+        (rt.WhetPendingByRoute ??= new int[WhetRoutes.Count])[(int)route] += amount;
+
+        // **落とすのはこの1行だけ**（第65期）。計数も横流しも乱数の消費も一切変えない。
+        if (!WhetBlock.Blocks(route)) receiver.AtkBonus += amount;
 
         if (perverse)
         {
@@ -2888,11 +2952,12 @@ public static class BattleEngine
                                    ScaleRule? scale = null, ScapegoatRule? scapegoat = null,
                                    DivertRule? divert = null, GoadRule? goad = null,
                                    FinisherRule? finisher = null, FavorRule? favor = null,
-                                   BlazeRule? blaze = null, FunnelRule? funnel = null)
+                                   BlazeRule? blaze = null, FunnelRule? funnel = null,
+                                   WhetMask? whetMask = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
-               overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel);
+               overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -2912,11 +2977,11 @@ public static class BattleEngine
                                    ScapegoatRule? scapegoat = null, DivertRule? divert = null,
                                    GoadRule? goad = null, FinisherRule? finisher = null,
                                    FavorRule? favor = null, BlazeRule? blaze = null,
-                                   FunnelRule? funnel = null)
+                                   FunnelRule? funnel = null, WhetMask? whetMask = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
-                                    favor, blaze, funnel);
+                                    favor, blaze, funnel, whetMask);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -3135,6 +3200,11 @@ public static class BattleEngine
             DullTakenByRoute = ctx.DullTakenByRoute,
             WhetTotal = ctx.WhetTotal,
             WhetByRoute = ctx.WhetByRoute,
+            WhetTurnSumByRoute = ctx.WhetTurnSumByRoute,
+            WhetFirstTurnSumByRoute = ctx.WhetFirstTurnSumByRoute,
+            WhetFirstTurnCountByRoute = ctx.WhetFirstTurnCountByRoute,
+            WhetUsedByRoute = ctx.WhetUsedByRoute,
+            WhetToByRoute = ctx.WhetToByRoute,
             WhetToPerverse = ctx.WhetToPerverse,
             WhetPerverseFlips = ctx.WhetPerverseFlips,
             DullZeroed = ctx.DullZeroed,

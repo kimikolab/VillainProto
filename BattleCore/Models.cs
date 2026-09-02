@@ -517,6 +517,27 @@ public sealed class UnitTally
     public int AttackReads;
 
     /// <summary>
+    /// <b>強化を受け取った「後」に <see cref="AttackReads"/> を通した回数</b>（第65期）。
+    /// 死蔵（<c>AttackReads == 0</c>・第64期）は<b>受け取る前に振った</b>ぶんを数えてしまうので、
+    /// 「配った強化が実際に使われたか」を測るにはこちらが要る。
+    /// <b>誰も読んで分岐しない。</b>
+    /// </summary>
+    public int AttackReadsAfterWhet;
+
+    /// <summary>
+    /// 強化の到着（第65期）。<c>WhetTurnSum</c> は Σ(量 × 到着ターン)、
+    /// <c>WhetFirstTurn</c> は<b>初めて受け取ったターン</b>（0 = 一度も受けていない。
+    /// 開戦時＝ターン 0 の到着は <b>1 に丸める</b>——「受けたか」の判定を 0 で兼ねるため）。
+    /// <c>WhetPendingByRoute</c> は<b>まだ使われていない受取量</b>の経路別の保留で、
+    /// <see cref="BattleContext.NoteAttackRead"/> が使用済みへ移す（遅延評価にしているのは、
+    /// 「受け取った時点より後に振ったか」を1回の走査で判定するため）。
+    /// <b>どれも盤面には一切影響しない。</b>
+    /// </summary>
+    public int WhetTurnSum;
+    public int WhetFirstTurn;
+    public int[]? WhetPendingByRoute;
+
+    /// <summary>
     /// 実際にダメージを通した回数。攻撃・反撃・破裂・毒のどれでも、
     /// この駒が起点になって盤面が動いた回数を数える。**これが活動量の本体。**
     /// </summary>
@@ -885,6 +906,30 @@ public sealed class BattleResult
     public required IReadOnlyList<int> WhetByRoute { get; init; }
     public required int WhetToPerverse { get; init; }
     public required int WhetPerverseFlips { get; init; }
+
+    /// <summary>
+    /// 強化の<b>到着の時刻と使用</b>（第65期）。<see cref="WhetByRoute"/> と同じ並び。
+    ///
+    /// <para><c>WhetTurnSumByRoute</c> ÷ <see cref="WhetByRoute"/> = <b>到着の平均ターン</b> ／
+    /// <c>WhetFirstTurnSumByRoute</c> ÷ <c>WhetFirstTurnCountByRoute</c> = <b>初到着の平均ターン</b>
+    /// （<b>1戦につき1回</b>しか数えないので、量の多い経路に引っ張られない） ／
+    /// <c>WhetUsedByRoute</c> ÷ <see cref="WhetByRoute"/> = <b>使用率</b>
+    /// （受け取った<b>後</b>に受け手が攻撃力を出力へ変換した量の割合）。</para>
+    ///
+    /// <para><b>経路を落とした版でも数える</b>（落ちるのは <c>AtkBonus</c> への加算だけ）。
+    /// <b>誰も読んで分岐しない</b>・<c>verbose</c> に依存しない。</para>
+    /// </summary>
+    public required IReadOnlyList<int> WhetTurnSumByRoute { get; init; }
+    public required IReadOnlyList<int> WhetFirstTurnSumByRoute { get; init; }
+    public required IReadOnlyList<int> WhetFirstTurnCountByRoute { get; init; }
+    public required IReadOnlyList<int> WhetUsedByRoute { get; init; }
+
+    /// <summary>
+    /// <b>経路ごとの受け手</b>（第65期。キーは <c>Def.Id</c>・<see cref="WhetRoute"/> の順）。
+    /// 「行き先を決めているものは何か」を実測するための唯一の窓で、
+    /// <b>誰も読んで分岐しない</b>・<c>verbose</c> に依存しない。
+    /// </summary>
+    public required IReadOnlyList<IReadOnlyDictionary<string, int>> WhetToByRoute { get; init; }
 
     /// <summary>
     /// 弱体で味方（正確には窓口の受け手）の <c>CurrentAttack</c> が 0 になった回数と駒の内訳。
