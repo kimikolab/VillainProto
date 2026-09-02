@@ -10651,14 +10651,17 @@ if (focusId == "favor")
 //     dotnet run --project BattleSim -c Release 0 turn sweep    # Gain/Loss の掃引 4点
 //     dotnet run --project BattleSim -c Release 0 turn alt      # 帰属の符号を別 seed 帯（200..599）で追試
 
-// ヒヨの複製。**数値・型・速さ・特性は1つも変えず、`Actions` だけを足す**（V1）。
-// 素体（V2）は特性も落とす。どちらも `UnitCatalog` は1バイトも触らない。
-static UnitDef FvActingDef() => new()
+// ヒヨの複製。**移設は第60期に採用したので、`UnitCatalog.Hiyo` の側が V1（手番）である。**
+// 診断のローカルに置くのは**移設前の姿**（V0）と素体2種で、`UnitCatalog` は1バイトも触らない。
+//
+// **V1 が `docs/balance.md` と一致することが、この診断そのものの検算**
+// （採用で既定が動いたので、検算の相手は V0 ではなく V1。第36期 `gullet belly4` と同じ形）。
+static UnitDef FvTurnStartDef() => new()
 {
-    Id = "hiyo_act", Name = "火選りのヒヨ（手番）", MaxHp = UnitCatalog.Hiyo.MaxHp,
+    Id = "hiyo_ts", Name = "火選りのヒヨ（ターン頭）", MaxHp = UnitCatalog.Hiyo.MaxHp,
     Attack = UnitCatalog.Hiyo.Attack, Speed = UnitCatalog.Hiyo.Speed,
-    Traits = UnitCatalog.Hiyo.Traits, Pattern = UnitCatalog.Hiyo.Pattern,
-    Actions = new UnitAction[] { new(ActionKind.Skill, Label: "火のそばを見ている") }
+    Traits = UnitCatalog.Hiyo.Traits, Pattern = UnitCatalog.Hiyo.Pattern
+    // Actions を持たない ＝ ActsOnPattern が偽 ＝ FavorTrait.OnTurnStart が従来どおり発火する
 };
 // V2 = **移設 + 素体**。`Actions` は持つが特性を持たない——移設は出力を捨てるので、
 // 攻撃を振る素体を対照にすると V1 との差に「攻5 が消えたぶん」が混ざる（指示書 §2-2）。
@@ -10879,14 +10882,14 @@ if (focusId == "turn")
 
     var fvRows = fvBuilds.Where(b => b.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hiyo))).ToArray();
 
-    UnitDef fvAct = FvActingDef(), fvPlainAct = FvPlainActDef(), fvPlain = FvPlainDef();
-    Formation FvV0(Formation f) => f;
-    Formation FvV1(Formation f) => FvSwap(f, UnitCatalog.Hiyo, fvAct);
+    UnitDef fvTs = FvTurnStartDef(), fvPlainAct = FvPlainActDef(), fvPlain = FvPlainDef();
+    Formation FvV0(Formation f) => FvSwap(f, UnitCatalog.Hiyo, fvTs);   // 移設前（ターン頭）
+    Formation FvV1(Formation f) => f;                                    // 移設後（＝現行の盤面）
     Formation FvV2(Formation f) => FvSwap(f, UnitCatalog.Hiyo, fvPlainAct);
     Formation FvV3(Formation f) => FvSwap(f, UnitCatalog.Hiyo, fvPlain);
 
     // 版ごとの計数。ヒヨの id は版で変わるので、駒側の集計は「ヒヨの席にいる駒」で引く。
-    var fvIds = new[] { "hiyo", "hiyo_act", "hiyo_plain_act", "hiyo_plain" };
+    var fvIds = new[] { "hiyo", "hiyo_ts", "hiyo_plain_act", "hiyo_plain" };
 
     FvStat FvMeasure(Formation f, Formation enemy, FavorRule? rule)
     {
@@ -10972,9 +10975,10 @@ if (focusId == "turn")
     // ---- 主表 ------------------------------------------------------------------------
     Console.WriteLine(fvAlt ? "# 移設の主表（別 seed 帯 200..599 の追試）" : "# 移設の主表（第60期）");
     Console.WriteLine();
-    Console.WriteLine($"seed {fvFrom}..{fvFrom + fvSeeds - 1}。V0 = 現行（`OnTurnStart`）／V1 = 移設（`Actions = [Skill]`）／");
-    Console.WriteLine("V2 = 移設 + 素体（同数値・特性なし。**体の値段**の分離）。");
-    Console.WriteLine("**`UnitCatalog` は1バイトも触っていない**——V1 / V2 は診断のローカルの `UnitDef`。");
+    Console.WriteLine($"seed {fvFrom}..{fvFrom + fvSeeds - 1}。**V1（移設）は第60期に採用したので `UnitCatalog.Hiyo` そのもの**——");
+    Console.WriteLine("**V1 の5波が `docs/balance.md` と一致することがこの診断の検算**（第36期 `gullet belly4` と同じ形）。");
+    Console.WriteLine("V0 = 移設前（`OnTurnStart`）／V2 = 移設 + 素体（同数値・特性なし。**機構の帰属**）／");
+    Console.WriteLine("V3 = 移設前の素体（`V0 − V3` が第58期の機構の帰属）。**V0 / V2 / V3 は診断のローカルの `UnitDef`。**");
     Console.WriteLine();
 
     Console.WriteLine("## 1. 勝率（4行 × 5波）");
@@ -10988,11 +10992,11 @@ if (focusId == "turn")
         double[] v1 = FvWins(FvV1(b.F), null);
         double[] v2 = FvWins(FvV2(b.F), null);
         double[] v3 = FvWins(FvV3(b.F), null);
-        Console.WriteLine($"| {b.Name} | V0 現行 {FvCells(v0)}| **{v0.Average():0.0}%** | {FvInfo(v0)} | — | — |");
-        Console.WriteLine($"| | **V1 移設** {FvCells(v1)}| **{v1.Average():0.0}%** | **{FvInfo(v1)}** "
+        Console.WriteLine($"| {b.Name} | V0 移設前 {FvCells(v0)}| **{v0.Average():0.0}%** | {FvInfo(v0)} | — | — |");
+        Console.WriteLine($"| | **V1 移設（現行）** {FvCells(v1)}| **{v1.Average():0.0}%** | **{FvInfo(v1)}** "
                         + $"| **{v1.Average() - v0.Average():+0.0;-0.0;0.0}** | **{v1.Average() - v2.Average():+0.0;-0.0;0.0}** |");
         Console.WriteLine($"| | V2 素体（手番） {FvCells(v2)}| **{v2.Average():0.0}%** | {FvInfo(v2)} | — | — |");
-        Console.WriteLine($"| | V3 素体（現行） {FvCells(v3)}| **{v3.Average():0.0}%** | {FvInfo(v3)} "
+        Console.WriteLine($"| | V3 素体（移設前） {FvCells(v3)}| **{v3.Average():0.0}%** | {FvInfo(v3)} "
                         + $"| （V0−V3 = {v0.Average() - v3.Average():+0.0;-0.0;0.0}） | |");
         attr.Add((b.Name, v1.Average() - v0.Average(), v1.Average() - v2.Average(), FvInfo(v0), FvInfo(v1)));
         Console.Out.Flush();
@@ -11015,7 +11019,7 @@ if (focusId == "turn")
     foreach (var b in fvRows)
     {
         var acc = new Dictionary<string, FvStat>();
-        foreach ((string tag, Formation f) in new[] { ("V0 現行", FvV0(b.F)), ("V1 移設", FvV1(b.F)) })
+        foreach ((string tag, Formation f) in new[] { ("V0 移設前", FvV0(b.F)), ("V1 移設", FvV1(b.F)) })
         {
             var agg = new FvStat();
             for (int w = 0; w < fvStages.Count; w++)
@@ -11036,12 +11040,12 @@ if (focusId == "turn")
                             + $"| {agg.Swings:0.00} | {agg.Dmg:0.0} | {agg.TeamDmg:0.0} | {agg.Life:0.0} |");
             Console.Out.Flush();
         }
-        q2.Add((b.Name, acc["V0 現行"].Taken, acc["V1 移設"].Taken, acc["V0 現行"].Given, acc["V1 移設"].Given));
+        q2.Add((b.Name, acc["V0 移設前"].Taken, acc["V1 移設"].Taken, acc["V0 移設前"].Given, acc["V1 移設"].Given));
 
         // 受け手の内訳（Q1）
-        Console.WriteLine($"| | **弱体の受け手 V0** | " + FvTop(acc["V0 現行"].DullTo) + " |");
+        Console.WriteLine($"| | **弱体の受け手 V0** | " + FvTop(acc["V0 移設前"].DullTo) + " |");
         Console.WriteLine($"| | **弱体の受け手 V1** | " + FvTop(acc["V1 移設"].DullTo) + " |");
-        Console.WriteLine($"| | 強化の受け手 V0 | " + FvTop(acc["V0 現行"].WhetTo) + " |");
+        Console.WriteLine($"| | 強化の受け手 V0 | " + FvTop(acc["V0 移設前"].WhetTo) + " |");
         Console.WriteLine($"| | 強化の受け手 V1 | " + FvTop(acc["V1 移設"].WhetTo) + " |");
     }
     Console.WriteLine();
@@ -11073,12 +11077,12 @@ if (focusId == "turn")
             for (int seed = fvFrom; seed < fvFrom + 50; seed++)
             {
                 var p0 = BattleEngine.Materialize(FvV0(b.F), BattleContext.PlayerTeam);
-                int i0 = p0.FindIndex(u => u.Def.Id == "hiyo");
+                int i0 = p0.FindIndex(u => u.Def.Id == "hiyo_ts");
                 BattleResult r0 = BattleEngine.Run(p0, BattleEngine.Materialize(fvStages[w].Enemy, BattleContext.EnemyTeam), seed, verbose: true);
                 st0 += r0.Events.Count(e => e.Kind == BattleEventKind.StatusSnapshot && e.TargetId == i0 && e.Text == "痺");
 
                 var p1 = BattleEngine.Materialize(FvV1(b.F), BattleContext.PlayerTeam);
-                int i1 = p1.FindIndex(u => u.Def.Id == "hiyo_act");
+                int i1 = p1.FindIndex(u => u.Def.Id == "hiyo");
                 BattleResult r1 = BattleEngine.Run(p1, BattleEngine.Materialize(fvStages[w].Enemy, BattleContext.EnemyTeam), seed, verbose: true);
                 st1 += r1.Events.Count(e => e.Kind == BattleEventKind.StatusSnapshot && e.TargetId == i1 && e.Text == "痺");
                 alive += r1.Events.Count(e => e.Kind == BattleEventKind.StatSnapshot && e.TargetId == i1);
