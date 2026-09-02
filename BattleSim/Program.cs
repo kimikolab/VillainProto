@@ -12472,6 +12472,624 @@ if (focusId == "blaze")
     return;
 }
 
+// funnel モード: 強化の行き先を、編成が選べるようにする（第62期・横流しのヌキ）。
+//
+// **第56期の積み残し1。** 強化の供給の 47.1% は吐き戻し1本で（第62期 Phase 0-1・61行）、
+// 行き先は「ゴルムが庇った相手」＝**編成が選んでいない**。号令は味方全体、縛めは縛った相手、
+// 火選りは燃えている相手——**いずれも行き先は機構が決める**。
+//
+// **強化を増やす駒は作らない**（増やすだけなら吐き戻しの2本目で、偏りは薄まっても判断は増えない）。
+// 作るのは**来た強化を別の相手へ回す駒**で、実装は `BattleContext.Whet` の中の
+// `receiver` の位置——第56期がそこに席を空けてある。**engine に新しい窓口は1つも足していない。**
+//
+// 規則は1文:「**自分と隣の味方に来た強化を、すべて自分の隣で一番遅い味方へ回す。自分は育たない。**」
+// **量は加算のまま**（減衰も倍率も無い）。**強度のノブが無い**ので、振るのは選択子だけ:
+//   V1（本命） 隣で**一番遅い** / V2（対照） 隣で**一番速い**
+// 符号が反転すれば「遅さに流す」ことが本体、反転しなければ「集める」ことが本体（指示書 §4）。
+//
+// **`CompareBuilds()` / `Stages` / `UnitCatalog.All` は1行も動かさない。** 試験行4本は
+// このモードのローカル（`FnRows()`）に組んである（`ObRows()` / `SgRows()` と同型）。
+//
+//     dotnet run --project BattleSim -c Release 0 funnel [phase0|sweep|seats|confirm|alt|絞り込み]
+if (focusId == "funnel")
+{
+    IReadOnlyList<EnemyCatalog.Stage> fnStages = EnemyCatalog.Stages;
+    const int FnSeeds = 200;              // compare / spread / whet / favor と同じ帯
+    string fnMode = args.Length > 2 ? args[2] : "";
+
+    FunnelRule FnV1 = FunnelRule.Default;          // 隣で一番遅い（本命）
+    FunnelRule FnV2 = new(Slowest: false);         // 隣で一番速い（対照）
+
+    // **素体の対照。** ヌキと数値・型・速さが1つも違わず、特性だけを持たない駒。
+    // 「量を 0 にするノブ」が作れない機構なので、機構の帰属はここでしか取れない
+    // （第47期の鱗と同じ形）。
+    UnitDef FnPlainDef = new()
+    {
+        Id = "nuki_plain", Name = "素体のヌキ", MaxHp = UnitCatalog.Nuki.MaxHp,
+        Attack = UnitCatalog.Nuki.Attack, Speed = UnitCatalog.Nuki.Speed,
+        Traits = Array.Empty<TraitId>(), Pattern = UnitCatalog.Nuki.Pattern
+    };
+
+    Formation FnBuild(params (int Slot, UnitDef Def)[] xs)
+    {
+        var g = new Formation();
+        foreach ((int s, UnitDef d) in xs) g[s] = d;
+        return g;
+    }
+    Formation FnSwap(Formation f, UnitDef from, UnitDef to)
+    {
+        var g = new Formation();
+        foreach ((int slot, UnitDef d) in f.Occupied())
+            g[slot] = ReferenceEquals(d, from) ? to : d;
+        return g;
+    }
+    Formation FnPlain(Formation f) => FnSwap(f, UnitCatalog.Nuki, FnPlainDef);
+
+    // --- 試験行4本（第62期 Phase 0-6 で選定）。**差し替える枠は `ablate` で寄与が最小の1枚。**
+    //   1 吐き戻しが最大の行（`逸らし改 (ソラ×ノミ)` 26.8 量/戦）。ノミ（-23.6pt・最小）→ ヌキ。
+    //     **ゴルム（速3）が残る**ので、自己循環（P3）が立つかを測る唯一の行。
+    //   2 供給の総量が最大の行（`縛め収入型` 63.8 量/戦・**主判定 #3 なので複製**）。
+    //     バン（-38.0pt・2番目）→ ヌキ。クグ（最小 -35.3）を抜くと縛め 32.2 が消えて主題が壊れる。
+    //     **バンは速2 で最遅**なので、抜くと宛先の選択が縮退しない。
+    //   3 乗算に流せるか（`火選り (ヒヨ×ホタ)` 17.2 量/戦）。ガルド（-50.6pt・2番目）→ ヌキ。
+    //     ヒヨ（最小 -41.2）は供給源。**ガルドは `Stoic` で元から宛先の候補外**なので、
+    //     抜いても宛先の集合が変わらない。
+    //   4 罠行（`反撃改2 (ガン×カド)`）。ヒサ（-4.9pt・最小）→ ヌキ。
+    //     **配置だけは `reseat` で選ばない**——「一番遅い隣が不動のカド」を作るのが目的で、
+    //     勝率で採る行ではない（第49期の「機構が負なら配置探索はそれを無効化する席を選ぶ」の裏返し）。
+    (string Name, Formation F)[] FnRows() => new (string, Formation)[]
+    {
+        // **配置は `reseat` → `confirm`（seed 200..599）で振り直した**（仮置きは 33 / 26 / 49 位 / 120）。
+        // 3行とも上位5通りが現行より +14.0〜+35.0pt で、採否閾値 5.0pt（第46期）を大きく超える。
+        // **採ったのは「上位5の中で横流しがいちばん多い席」**（第53期の作法。上位5は全通り次数2＝角で、
+        // 1位と5位の差は 1.7 / 7.5 / 0.8pt）——**配置探索は機構を無効化する席を選ぶ**ので
+        // （第49期）、勝率だけの1位を採ると Q1 の分子が消える。
+        ("横流し×吐き戻し (ヌキ×ゴルム)",     // 粗5位・74.4%（1位 76.1 と 1.7pt 差）・横流し 65.6%
+            FnBuild((0, UnitCatalog.Golm), (1, UnitCatalog.Nuki), (2, UnitCatalog.Sora),
+                    (3, UnitCatalog.Dolga), (4, UnitCatalog.Egu))),
+        ("横流し×縛め (ヌキ×クグ×ガン)",     // 粗5位・58.2%（1位 65.7 と 7.5pt 差）・横流し 41.6%
+            FnBuild((0, UnitCatalog.Nuki), (1, UnitCatalog.Kugu), (2, UnitCatalog.Gan),
+                    (3, UnitCatalog.Dolga), (4, UnitCatalog.Gald))),
+        ("横流し×火選り (ヌキ×ホタ)",         // 粗1位・60.3%。**勝率も横流しも同時に最大**（宛先が熾のホタ）
+            FnBuild((0, UnitCatalog.Hiyo), (1, UnitCatalog.Nuki), (2, UnitCatalog.Hota),
+                    (3, UnitCatalog.Mudo), (4, UnitCatalog.Borg))),
+        ("横流し罠 (ヌキ×カド)",
+            FnBuild((0, UnitCatalog.Nuki), (1, UnitCatalog.Doha), (2, UnitCatalog.Kado),
+                    (3, UnitCatalog.Gan), (4, UnitCatalog.Ban))),
+    };
+
+    var fnAll = FnRows();
+    var fnTargets = fnAll;
+    if (fnMode.Length > 0 && fnMode != "phase0" && fnMode != "sweep"
+        && fnMode != "seats" && fnMode != "confirm" && fnMode != "alt")
+        fnTargets = fnAll.Where(b => fnMode.Split(',').Any(k => b.Name.Contains(k.Trim()))).ToArray();
+    // 主判定の3行（罠行は Q1・Q2・Q3・Q6 の分母に入れない）。
+    var fnMain3 = fnTargets.Where(b => !b.Name.Contains("罠")).ToArray();
+
+    string FnLabel(string id)
+    {
+        foreach (UnitDef d in UnitCatalog.All) if (d.Id == id) return d.Name;
+        if (id == UnitCatalog.Nuki.Id) return UnitCatalog.Nuki.Name;
+        if (id == FnPlainDef.Id) return FnPlainDef.Name;
+        foreach (EnemyCatalog.Stage st in fnStages)
+            foreach ((int _, UnitDef d) in st.Enemy.Occupied()) if (d.Id == id) return d.Name;
+        return id;
+    }
+    static int FnDeg(int slot)
+    {
+        int n = 0;
+        for (int i = 0; i < FormationRules.PlayableSlotCount; i++)
+            if (FormationRules.AreAdjacent(slot, i)) n++;
+        return n;
+    }
+    // 机上の宛先（盤面を動かさずに引ける。Phase 0 の地図と主表の見出しに使う）。
+    static UnitDef? FnDest(Formation f, bool slowest)
+    {
+        int nukiSlot = -1;
+        foreach ((int s, UnitDef d) in f.Occupied())
+            if (ReferenceEquals(d, UnitCatalog.Nuki)) nukiSlot = s;
+        if (nukiSlot < 0) return null;
+        var cands = f.Occupied()
+            .Where(o => o.Item1 != nukiSlot
+                        && !o.Item2.Traits.Contains(TraitId.Stoic)
+                        && !o.Item2.Traits.Contains(TraitId.Funnel)
+                        && FormationRules.AreAdjacent(nukiSlot, o.Item1))
+            .Select(o => o.Item2).ToList();
+        if (cands.Count == 0) return null;
+        int want = slowest ? cands.Min(u => u.Speed) : cands.Max(u => u.Speed);
+        return cands.First(u => u.Speed == want);
+    }
+
+    // ==========================================================================================
+    // Phase 0: 実装前の地図。**戦闘を1回も回さない。**
+    // ==========================================================================================
+    if (fnMode == "phase0")
+    {
+        Console.WriteLine("# 横流し Phase 0 —— 窓口・速さ表・宛先の地図（**戦闘0回**）");
+        Console.WriteLine();
+
+        Console.WriteLine("## 1. `Whet` の窓口を通る経路（横流しが横取りしうる供給）");
+        Console.WriteLine();
+        Console.WriteLine("| # | 経路 | 行き先を決めているもの |");
+        Console.WriteLine("|--:|---|---|");
+        string[] who =
+        {
+            "（札の付け忘れ）", "隣接する `CurrentAttack` 最大の味方（機構）",
+            "味方全体（機構）", "手番を差し出した味方（機構）", "縛った相手（機構）",
+            "動かされた味方（機構）", "**ゴルムが庇った相手（機構）**", "燃えている味方全員（機構）"
+        };
+        for (int i = 0; i < WhetRoutes.Count; i++)
+            Console.WriteLine($"| {i} | {WhetRoutes.Names[i]} | {who[i]} |");
+        Console.WriteLine();
+        Console.WriteLine("**7経路すべてで行き先を決めているのは機構であって編成ではない。**");
+        Console.WriteLine("横流しはこの列を「編成が選んだ席」に置き換える（量は1点も増やさない）。");
+        Console.WriteLine();
+
+        Console.WriteLine("## 2. 速さ表（味方51体・同速の組）");
+        Console.WriteLine();
+        Console.WriteLine("**`PickOne` で割れるのは同速が2枚以上「隣接して」いるときだけ。**");
+        Console.WriteLine("宛先の候補は隣接する味方だけなので、角なら2枚・中央なら4枚（＋召喚枠）。");
+        Console.WriteLine();
+        Console.WriteLine("| 速 | 枚数 | 駒（`Stoic` = 候補外 / 不動 = 振らない＝死蔵） |");
+        Console.WriteLine("|--:|--:|---|");
+        foreach (var g in UnitCatalog.All.GroupBy(d => d.Speed).OrderBy(g => g.Key))
+            Console.WriteLine($"| {g.Key} | {g.Count()} | "
+                + string.Join(" ・ ", g.Select(d => d.Name
+                    + (d.Traits.Contains(TraitId.Stoic) ? "（**`Stoic`・候補外**）" : "")
+                    + (d.Traits.Contains(TraitId.Immobile) ? "（**不動**）" : "")))
+                + " |");
+        Console.WriteLine();
+        Console.WriteLine($"ヌキ自身は速 {UnitCatalog.Nuki.Speed} だが**自分を候補から除く**ので選択子に影響しない。");
+        Console.WriteLine($"胞子は速 {UnitCatalog.Spore.Speed}（召喚枠 5〜8 は隣接表に載るので候補に入るが、遅い側には来ない）。");
+        Console.WriteLine();
+
+        Console.WriteLine("## 3. 試験行4本の宛先（**机上・盤面は動かさない**）");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | ヌキの席 | 次数 | 隣（速） | **V1 宛先（遅）** | V2 宛先（速） | 罠 |");
+        Console.WriteLine("|---|---|--:|---|---|---|---|");
+        foreach (var b in fnAll)
+        {
+            int ns = -1;
+            foreach ((int sl, UnitDef d) in b.F.Occupied())
+                if (ReferenceEquals(d, UnitCatalog.Nuki)) ns = sl;
+            var nb = b.F.Occupied().Where(o => FormationRules.AreAdjacent(ns, o.Item1))
+                     .Select(o => $"{o.Item2.Name}({o.Item2.Speed})"
+                                  + (o.Item2.Traits.Contains(TraitId.Stoic) ? "×" : "")).ToList();
+            UnitDef? d1 = FnDest(b.F, true), d2 = FnDest(b.F, false);
+            bool noSwing = d1 is not null
+                && (d1.Traits.Contains(TraitId.Immobile)
+                    || (d1.Actions is not null && d1.Actions.Count > 0
+                        && d1.Actions.All(a => a.Kind != ActionKind.Attack)));
+            Console.WriteLine($"| {b.Name} | {FormationRules.SeatNames[ns]} | {FnDeg(ns)} | "
+                + string.Join(" / ", nb) + $" | **{d1?.Name ?? "—"}** | {d2?.Name ?? "—"} | "
+                + (noSwing ? "**振らない＝100% 死蔵**" : "—") + " |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("`×` は `Stoic`（ガルド）＝**候補にすら入らない**。");
+        Console.WriteLine();
+
+        Console.WriteLine("## 4. 歯止めの自己検査 (c)");
+        Console.WriteLine();
+        int inPrimary = Baseline.PrimaryRows.Count(n => fnAll.Any(b => b.Name == n));
+        Console.WriteLine($"- **主判定 {Baseline.PrimaryRows.Length} 行のうちヌキを含む行: {inPrimary}**"
+            + "（試験行はすべて既存行の**複製**として作ってあるので、主判定19行は1枠も動かない）");
+        Console.WriteLine("- したがって **Q8 の最大変動幅は 0.00pt**——**歯止めは構造的に発動しない。**");
+        Console.WriteLine("  第61期の瘴気（0.24pt）に続いて2期連続。**Q8 は記録項目であって採否の条件ではない。**");
+        Console.WriteLine();
+        return;
+    }
+
+    // ==========================================================================================
+    // 計測器
+    // ==========================================================================================
+    FlStat MeasureFn(Formation f, Formation enemy, FunnelRule? rule, int from, int to)
+    {
+        var z = new FlStat();
+        for (int seed = from; seed < to; seed++)
+        {
+            BattleResult r = BattleEngine.Run(f, enemy, seed, verbose: false, funnel: rule);
+            if (r.PlayerWon) z.Win++;
+            z.Turns += r.Turns;
+            z.WhetTotal += r.WhetTotal;
+            z.Taken += r.FunnelTaken;
+            z.Dead += r.FunnelDead;
+            z.Perverse += r.WhetToPerverse;
+            z.Flips += r.WhetPerverseFlips;
+            for (int i = 0; i < WhetRoutes.Count; i++)
+            {
+                z.Route[i] += r.WhetByRoute[i];
+                z.TakenRoute[i] += r.FunnelByRoute[i];
+            }
+            foreach ((string k, int v) in r.FunnelFrom)
+                z.From[k] = z.From.TryGetValue(k, out double a) ? a + v : v;
+            foreach ((string k, int v) in r.FunnelTo)
+                z.To[k] = z.To.TryGetValue(k, out double a) ? a + v : v;
+            foreach ((string id, UnitTally t) in r.TallyByUnit)
+            {
+                if (!z.Got.ContainsKey(id)) { z.Got[id] = 0; z.Atk[id] = 0; z.Dmg[id] = 0; }
+                z.Got[id] += t.Whetted;
+                z.Atk[id] += t.Attacks;
+                z.Dmg[id] += t.DamageToEnemy;
+                if (t.Whetted > 0 && t.Attacks == 0) z.Hoard += t.Whetted;
+            }
+        }
+        double n = Math.Max(1, to - from);
+        z.Win = z.Win * 100 / n; z.Turns /= n;
+        z.WhetTotal /= n; z.Taken /= n; z.Dead /= n; z.Hoard /= n;
+        z.Perverse /= n; z.Flips /= n;
+        for (int i = 0; i < WhetRoutes.Count; i++) { z.Route[i] /= n; z.TakenRoute[i] /= n; }
+        foreach (string k in z.From.Keys.ToList()) z.From[k] /= n;
+        foreach (string k in z.To.Keys.ToList()) z.To[k] /= n;
+        foreach (string k in z.Got.Keys.ToList()) { z.Got[k] /= n; z.Atk[k] /= n; z.Dmg[k] /= n; }
+        return z;
+    }
+
+    (double[] Wins, FlStat Z) FnAll(Formation f, FunnelRule? rule, int from = 0, int to = FnSeeds)
+    {
+        var wins = new double[fnStages.Count];
+        var acc = new FlStat();
+        for (int w = 0; w < fnStages.Count; w++)
+        {
+            FlStat z = MeasureFn(f, fnStages[w].Enemy, rule, from, to);
+            wins[w] = z.Win;
+            acc.Turns += z.Turns; acc.WhetTotal += z.WhetTotal; acc.Taken += z.Taken;
+            acc.Dead += z.Dead; acc.Hoard += z.Hoard;
+            acc.Perverse += z.Perverse; acc.Flips += z.Flips;
+            for (int i = 0; i < WhetRoutes.Count; i++)
+            { acc.Route[i] += z.Route[i]; acc.TakenRoute[i] += z.TakenRoute[i]; }
+            foreach ((string k, double v) in z.From)
+                acc.From[k] = acc.From.TryGetValue(k, out double a) ? a + v : v;
+            foreach ((string k, double v) in z.To)
+                acc.To[k] = acc.To.TryGetValue(k, out double a) ? a + v : v;
+            foreach ((string k, double v) in z.Got)
+            {
+                if (!acc.Got.ContainsKey(k)) { acc.Got[k] = 0; acc.Atk[k] = 0; acc.Dmg[k] = 0; }
+                acc.Got[k] += v; acc.Atk[k] += z.Atk[k]; acc.Dmg[k] += z.Dmg[k];
+            }
+        }
+        double m = fnStages.Count;
+        acc.Win = wins.Average();
+        acc.Turns /= m; acc.WhetTotal /= m; acc.Taken /= m; acc.Dead /= m; acc.Hoard /= m;
+        acc.Perverse /= m; acc.Flips /= m;
+        for (int i = 0; i < WhetRoutes.Count; i++) { acc.Route[i] /= m; acc.TakenRoute[i] /= m; }
+        foreach (string k in acc.From.Keys.ToList()) acc.From[k] /= m;
+        foreach (string k in acc.To.Keys.ToList()) acc.To[k] /= m;
+        foreach (string k in acc.Got.Keys.ToList())
+        { acc.Got[k] /= m; acc.Atk[k] /= m; acc.Dmg[k] /= m; }
+        return (wins, acc);
+    }
+
+    static string FnCells(double[] w) => string.Concat(w.Select(x => $" {x:0.0}% |"));
+    static int FnInfo(double[] w)      // 情報セル: 第2〜5波のうち開区間 (0,100)
+        => Enumerable.Range(1, w.Length - 1).Count(i => w[i] > 0.0 && w[i] < 100.0);
+    static string FnSeats(Formation f)
+        => string.Join(" / ", f.Occupied()
+            .OrderBy(o => o.Item1)
+            .Select(o => $"{FormationRules.SeatNames[o.Item1]}:{o.Item2.Name}"));
+    string FnTop(Dictionary<string, double> d, int n = 3)
+    {
+        var parts = d.Where(x => x.Value > 0).OrderByDescending(x => x.Value).Take(n)
+            .Select(x => $"{FnLabel(x.Key)} {x.Value:0.00}").ToList();
+        return parts.Count == 0 ? "—" : string.Join(" / ", parts);
+    }
+
+    Console.WriteLine("# 横流し（funnel）—— 強化の行き先を編成が選ぶ（第62期）");
+    Console.WriteLine();
+    Console.WriteLine("`dotnet run --project BattleSim -c Release 0 funnel [モード]` の出力。");
+    Console.WriteLine($"**docs/ には置かない**（標準出力で読むだけ）。seed 0..{FnSeeds - 1}。数字は特記なければ**1戦あたりの平均**。");
+    Console.WriteLine();
+    Console.WriteLine("`Stages` / `CompareBuilds()` / `UnitCatalog.All` は1行も動かしていない。");
+    Console.WriteLine("試験行4本はこのモードのローカル（`FnRows()`）——`ObRows()` / `SgRows()` と同型。");
+    Console.WriteLine();
+    Console.WriteLine("| 列 | 中身 |");
+    Console.WriteLine("|---|---|");
+    Console.WriteLine("| 強化総量 | `Whet` の窓口を通った量/戦（**横流しは量を増やさないので版で動かないはず**） |");
+    Console.WriteLine("| **横流し** | 宛先を差し替えた量/戦。**`横流し ÷ 強化総量` が Q1** |");
+    Console.WriteLine("| **死蔵(横)** | 回した先が `PerformAttack` を1回も通らなかったぶん。**マイナスの本体・Q4** |");
+    Console.WriteLine("| 死蔵(全) | 編成全体の死蔵（受け取ったのに振らなかった駒への付与量） |");
+    Console.WriteLine("| 逆しま | 受け手がウツだった量 / 符号が正へ渡った回数（**Q5**） |");
+    Console.WriteLine("| 情報 | 第2〜5波のうち開区間 (0,100) のセル数（**Q6**） |");
+    Console.WriteLine();
+
+    // ==========================================================================================
+    // 1. 主表（V1 / V2 / 素体）
+    // ==========================================================================================
+    if (fnMode.Length == 0 || fnMode == "sweep" || fnTargets.Length < fnAll.Length)
+    {
+        Console.WriteLine("## 1. 主表 —— V1（一番遅い）/ V2（一番速い）/ 素体");
+        Console.WriteLine();
+        Console.WriteLine("**素体は同数値（64/4/5）・特性なし。** 「量を 0 にするノブ」が作れない機構なので、");
+        Console.WriteLine("機構の帰属はここでしか取れない（第47期の鱗と同じ形）。");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 版 | 宛先 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | 平均 | 帰属 | 情報 |");
+        Console.WriteLine("|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|");
+        foreach (var b in fnTargets)
+        {
+            var (wp, _) = FnAll(FnPlain(b.F), null);
+            foreach ((string nm, FunnelRule? rule, Formation f) in new (string, FunnelRule?, Formation)[]
+                     { ("V1 遅", FnV1, b.F), ("V2 速", FnV2, b.F), ("素体", null, FnPlain(b.F)) })
+            {
+                var (w, _) = FnAll(f, rule);
+                string dest = nm == "素体" ? "—" : (FnDest(b.F, nm == "V1 遅")?.Name ?? "—");
+                Console.WriteLine($"| {b.Name} | {nm} | {dest} |{FnCells(w)} {w.Average():0.0}% "
+                    + $"| {(nm == "素体" ? "—" : $"**{w.Average() - wp.Average():+0.0;-0.0;0.0}**")} "
+                    + $"| {FnInfo(w)} |");
+                Console.Out.Flush();
+            }
+        }
+        Console.WriteLine();
+        if (fnMode == "sweep") return;
+    }
+
+    // ==========================================================================================
+    // 2. 流量（Q1）・経路別・内訳
+    // ==========================================================================================
+    if (fnMode.Length == 0 || fnTargets.Length < fnAll.Length)
+    {
+        Console.WriteLine("## 2. 流量（**Q1**）と、取り上げた相手 / 回した先");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 版 | 強化総量 | **横流し** | **割合** | 死蔵(横) | 死蔵(全) | 取り上げた相手 | 回した先 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|---|---|");
+        foreach (var b in fnTargets)
+            foreach ((string nm, FunnelRule rule) in new[] { ("V1 遅", FnV1), ("V2 速", FnV2) })
+            {
+                var (_, z) = FnAll(b.F, rule);
+                Console.WriteLine($"| {b.Name} | {nm} | {z.WhetTotal:0.00} | **{z.Taken:0.00}** "
+                    + $"| **{(z.WhetTotal > 0 ? z.Taken * 100 / z.WhetTotal : 0):0.0}%** "
+                    + $"| {z.Dead:0.00} | {z.Hoard:0.00} | {FnTop(z.From)} | {FnTop(z.To)} |");
+                Console.Out.Flush();
+            }
+        Console.WriteLine();
+
+        Console.WriteLine("### 経路別（V1・どの供給を横取りしたか）");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | " + string.Join(" | ", WhetRoutes.Names.Skip(1)) + " |");
+        Console.WriteLine("|---" + string.Concat(Enumerable.Repeat("|--:", WhetRoutes.Count - 1)) + "|");
+        foreach (var b in fnTargets)
+        {
+            var (_, z) = FnAll(b.F, FnV1);
+            Console.WriteLine($"| {b.Name} | " + string.Join(" | ",
+                Enumerable.Range(1, WhetRoutes.Count - 1).Select(i =>
+                    z.Route[i] > 0 ? $"{z.TakenRoute[i]:0.0}/{z.Route[i]:0.0}" : "—")) + " |");
+            Console.Out.Flush();
+        }
+        Console.WriteLine();
+        Console.WriteLine("> 分数は `横取り / その経路の総量`。**`—` はその行にその供給が無い。**");
+        Console.WriteLine();
+
+        // --- P5: ヌキ自身は育たない ---
+        Console.WriteLine("### ヌキ自身の受け取り（**P5**）と、逆しま（**Q5**）");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 版 | ヌキが受けた強化 | ヌキが振った回数 | 逆しまへ | 符号反転 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|");
+        foreach (var b in fnTargets)
+            foreach ((string nm, FunnelRule rule) in new[] { ("V1 遅", FnV1), ("V2 速", FnV2) })
+            {
+                var (_, z) = FnAll(b.F, rule);
+                double got = z.Got.TryGetValue(UnitCatalog.Nuki.Id, out double g) ? g : 0;
+                double atk = z.Atk.TryGetValue(UnitCatalog.Nuki.Id, out double a) ? a : 0;
+                Console.WriteLine($"| {b.Name} | {nm} | {got:0.00} | {atk:0.00} | {z.Perverse:0.00} | {z.Flips:0.000} |");
+                Console.Out.Flush();
+            }
+        Console.WriteLine();
+        if (fnMode.Length > 0) return;
+    }
+
+    // ==========================================================================================
+    // 3. 席の帯（Q2・**この期の主判定**）
+    // ==========================================================================================
+    if (fnMode == "seats")
+    {
+        Console.WriteLine("## 3. 席の帯（**Q2・主判定**）—— `reseat` 120通り");
+        Console.WriteLine();
+        Console.WriteLine("粗探索（seed 0..49 × 全5波）の平均勝率を 10pt 刻みで数える。");
+        Console.WriteLine("**二峰なら「良い置き方」と「やってはいけない置き方」が分かれている**＝配置の判断が立っている。");
+        Console.WriteLine("**単峰なら配置の判断が立っていない**（第58期 Q6 と同じ読み方）。");
+        Console.WriteLine();
+        Console.WriteLine("**素体（同数値・特性なし）の帯を必ず並べる。** 帯の形は台そのものの");
+        Console.WriteLine("配置感度も含むので、素体と比べないと「**新しく**判断が生まれたか」が読めない");
+        Console.WriteLine("——第47期「その効果だけを 0 にできるノブが作れない機構では素体を対照に置く」の帯版。");
+        Console.WriteLine();
+        var fnBands = new Dictionary<string, double[]>();
+        var fnBest = new Dictionary<string, List<(Formation F, double W)>>();
+        double[] FnBand(Formation seed0)
+        {
+            var members = seed0.Occupied().Select(o => o.Item2).ToList();
+            var perms = new List<Formation>();
+            foreach (int[] assign in SlotAssignments(members.Count))
+            {
+                var g = new Formation();
+                for (int m = 0; m < members.Count; m++) g[assign[m]] = members[m];
+                perms.Add(g);
+            }
+            var scan = new int[perms.Count];
+            Parallel.For(0, perms.Count, i =>
+            {
+                int wins = 0;
+                foreach (EnemyCatalog.Stage st in fnStages)
+                    for (int sd = 0; sd < 50; sd++)
+                        if (BattleEngine.Run(perms[i], st.Enemy, sd, verbose: false).PlayerWon) wins++;
+                scan[i] = wins;
+            });
+            return scan.Select(v => v * 100.0 / (fnStages.Count * 50)).ToArray();
+        }
+        foreach (var b in fnMain3)
+        {
+            var members = b.F.Occupied().Select(o => o.Item2).ToList();
+            var perms = new List<Formation>();
+            foreach (int[] assign in SlotAssignments(members.Count))
+            {
+                var g = new Formation();
+                for (int m = 0; m < members.Count; m++) g[assign[m]] = members[m];
+                perms.Add(g);
+            }
+            var scan = new int[perms.Count];
+            Parallel.For(0, perms.Count, i =>
+            {
+                int wins = 0;
+                foreach (EnemyCatalog.Stage st in fnStages)
+                    for (int sd = 0; sd < 50; sd++)
+                        if (BattleEngine.Run(perms[i], st.Enemy, sd, verbose: false).PlayerWon) wins++;
+                scan[i] = wins;
+            });
+            var order = Enumerable.Range(0, perms.Count).OrderByDescending(i => scan[i]).ThenBy(i => i).ToList();
+            fnBands[b.Name] = scan.Select(v => v * 100.0 / (fnStages.Count * 50)).ToArray();
+            fnBands[b.Name + " ←素体"] = FnBand(FnPlain(b.F));
+            fnBest[b.Name] = order.Take(5)
+                .Select(i => (perms[i], scan[i] * 100.0 / (fnStages.Count * 50))).ToList();
+            int curIdx = order.First(i => SameFormation(perms[i], b.F));
+            Console.WriteLine($"- **{b.Name}**: 現行は {order.IndexOf(curIdx) + 1} / {perms.Count} 位"
+                + $"（幅 {(scan[order[0]] - scan[order[^1]]) * 100.0 / (fnStages.Count * 50):0.0}pt）");
+            Console.Out.Flush();
+        }
+        Console.WriteLine();
+        Console.WriteLine("| 行 | " + string.Join(" | ", Enumerable.Range(0, 10).Select(i => $"{i * 10}〜")) + " | 峰 |");
+        Console.WriteLine("|---" + string.Concat(Enumerable.Repeat("|--:", 11)) + "|");
+        foreach ((string bn, double[] band) in fnBands)
+        {
+            var hist = new int[10];
+            foreach (double v in band) hist[Math.Min(9, (int)(v / 10))]++;
+            int peaks = 0;
+            for (int i = 0; i < 10; i++)
+            {
+                if (hist[i] == 0) continue;
+                bool l = i == 0 || hist[i] > hist[i - 1];
+                bool r = i == 9 || hist[i] > hist[i + 1];
+                if (l && r) peaks++;
+            }
+            Console.WriteLine($"| {bn} | " + string.Join(" | ", hist.Select(h => h.ToString())) + $" | **{peaks}** |");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("### 上位5通りの宛先（**機構が発火する席かどうか**・第50期からの作法）");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 順位 | ヌキの席 | 次数 | **V1 宛先** | 粗探索 |");
+        Console.WriteLine("|---|--:|---|--:|---|--:|");
+        foreach ((string bn, var list) in fnBest)
+            for (int i = 0; i < list.Count; i++)
+            {
+                int ns = -1;
+                foreach ((int sl, UnitDef d) in list[i].F.Occupied())
+                    if (ReferenceEquals(d, UnitCatalog.Nuki)) ns = sl;
+                Console.WriteLine($"| {bn} | {i + 1} | {FormationRules.SeatNames[ns]} | {FnDeg(ns)} "
+                    + $"| {FnDest(list[i].F, true)?.Name ?? "**—（宛先なし＝機構が死ぬ席）**"} | {list[i].W:0.0}% |");
+            }
+        Console.WriteLine();
+
+        Console.WriteLine("### ヌキ1枚だけを振った5変種（他の4枚は元の相対順のまま詰める）");
+        Console.WriteLine();
+        Console.WriteLine("**素体（同数値・特性なし）を同じ席に置いた勝率を並べる。**");
+        Console.WriteLine("差（`帰属`）がその席での機構の値段で、**素体の側の振れが台そのものの配置感度**。");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | ヌキの席 | 次数 | 列 | **V1 宛先** | 横流し | 割合 | 死蔵(横) | 平均勝率 | 素体 | 帰属 |");
+        Console.WriteLine("|---|---|--:|---|---|--:|--:|--:|--:|--:|--:|");
+        foreach (var b in fnTargets)
+            for (int seat = 0; seat < FormationRules.PlayableSlotCount; seat++)
+            {
+                var others = b.F.Occupied().Where(o => !ReferenceEquals(o.Item2, UnitCatalog.Nuki))
+                              .Select(o => o.Item2).ToList();
+                var g = new Formation();
+                g[seat] = UnitCatalog.Nuki;
+                int k = 0;
+                for (int i = 0; i < FormationRules.PlayableSlotCount && k < others.Count; i++)
+                    if (i != seat) g[i] = others[k++];
+                var (w, z) = FnAll(g, FnV1);
+                var (wp2, _) = FnAll(FnPlain(g), null);
+                Console.WriteLine($"| {b.Name} | {FormationRules.SeatNames[seat]} | {FnDeg(seat)} "
+                    + $"| {FormationRules.RowOf(seat)} | {FnDest(g, true)?.Name ?? "—"} "
+                    + $"| {z.Taken:0.00} | {(z.WhetTotal > 0 ? z.Taken * 100 / z.WhetTotal : 0):0.0}% "
+                    + $"| {z.Dead:0.00} | {w.Average():0.0}% | {wp2.Average():0.0}% "
+                    + $"| **{w.Average() - wp2.Average():+0.0;-0.0;0.0}** |");
+                Console.Out.Flush();
+            }
+        Console.WriteLine();
+        return;
+    }
+
+    // ==========================================================================================
+    // 4. 配置の追試（seed 200..599）。**横流しが 0 の席を採らないための列つき**
+    // ==========================================================================================
+    if (fnMode == "confirm")
+    {
+        const int CFrom = 200, CTo = 600;
+        Console.WriteLine("## 4. 配置の追試（seed 200..599）—— **横流し / 死蔵の列つき**");
+        Console.WriteLine();
+        Console.WriteLine("**`reseat` / `confirm` は勝つ席を探す道具で、機構を活かす席を探す道具ではない**（第50期）。");
+        Console.WriteLine("**採用した配置で横流しが 0 になっていないこと**を毎回確かめる。");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 配置 | ヌキの席 | **V1 宛先** | 平均 | 現行との差 | 横流し | 割合 | 死蔵(横) | 並び |");
+        Console.WriteLine("|---|---|---|---|--:|--:|--:|--:|--:|---|");
+        foreach (var b in fnMain3)
+        {
+            var members = b.F.Occupied().Select(o => o.Item2).ToList();
+            var perms = new List<Formation>();
+            foreach (int[] assign in SlotAssignments(members.Count))
+            {
+                var g = new Formation();
+                for (int m = 0; m < members.Count; m++) g[assign[m]] = members[m];
+                perms.Add(g);
+            }
+            var scan = new int[perms.Count];
+            Parallel.For(0, perms.Count, i =>
+            {
+                int wins = 0;
+                foreach (EnemyCatalog.Stage st in fnStages)
+                    for (int seed = 0; seed < 50; seed++)
+                        if (BattleEngine.Run(perms[i], st.Enemy, seed, verbose: false).PlayerWon) wins++;
+                scan[i] = wins;
+            });
+            var order = Enumerable.Range(0, perms.Count).OrderByDescending(i => scan[i]).ThenBy(i => i).ToList();
+            var cand = new List<(string Tag, Formation F)> { ("現行", b.F) };
+            for (int i = 0; i < 5; i++) cand.Add(($"粗{i + 1}位", perms[order[i]]));
+            var (wCur, _) = FnAll(b.F, FnV1, CFrom, CTo);
+            double baseW = wCur.Average();
+            foreach ((string tag, Formation f) in cand)
+            {
+                int ns = -1;
+                foreach ((int sl, UnitDef d) in f.Occupied())
+                    if (ReferenceEquals(d, UnitCatalog.Nuki)) ns = sl;
+                var (w, z) = FnAll(f, FnV1, CFrom, CTo);
+                Console.WriteLine($"| {b.Name} | {tag} | {FormationRules.SeatNames[ns]} "
+                    + $"| {FnDest(f, true)?.Name ?? "**—**"} | {w.Average():0.0}% "
+                    + $"| {(tag == "現行" ? "—" : $"{w.Average() - baseW:+0.0;-0.0;0.0}")} "
+                    + $"| {z.Taken:0.00} | {(z.WhetTotal > 0 ? z.Taken * 100 / z.WhetTotal : 0):0.0}% "
+                    + $"| {z.Dead:0.00} | {FnSeats(f)} |");
+                Console.Out.Flush();
+            }
+        }
+        Console.WriteLine();
+        return;
+    }
+
+    // ==========================================================================================
+    // 5. 別 seed 帯の追試（Q3 の符号）
+    // ==========================================================================================
+    if (fnMode == "alt")
+    {
+        const int AFrom = 200, ATo = 600;
+        Console.WriteLine("## 5. 別 seed 帯の追試（seed 200..599）—— **帰属の符号の再現**");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 版 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | 平均 | 帰属 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|");
+        foreach (var b in fnTargets)
+        {
+            var (wp, _) = FnAll(FnPlain(b.F), null, AFrom, ATo);
+            foreach ((string nm, FunnelRule? rule, Formation f) in new (string, FunnelRule?, Formation)[]
+                     { ("V1 遅", FnV1, b.F), ("V2 速", FnV2, b.F), ("素体", null, FnPlain(b.F)) })
+            {
+                var (w, _) = FnAll(f, rule, AFrom, ATo);
+                Console.WriteLine($"| {b.Name} | {nm} |{FnCells(w)} {w.Average():0.0}% "
+                    + $"| {(nm == "素体" ? "—" : $"**{w.Average() - wp.Average():+0.0;-0.0;0.0}**")} |");
+                Console.Out.Flush();
+            }
+        }
+        Console.WriteLine();
+        return;
+    }
+
+    return;
+}
+
 // yield モード: 攻撃力1点は、誰の手なら出力になるか（第24期）。
 //
 // 「燃料が出力にならない」が3回続いている。**毎回、原因の候補を1つ潰して外している。**
@@ -25578,6 +26196,23 @@ sealed class FvStat
     public double Swings, Dmg, Life, TeamDmg;
     public Dictionary<string, double> WhetTo = new();
     public Dictionary<string, double> DullTo = new();
+}
+
+/// <summary>
+/// 横流し（第62期）の計数。<b>どの列も盤面には一切影響しない</b>
+/// ——<c>BattleResult</c> の計数を読み直しているだけ。
+/// </summary>
+sealed class FlStat
+{
+    public double Win, Turns;
+    public double WhetTotal, Taken, Dead, Hoard, Perverse, Flips;
+    public double[] Route = new double[WhetRoutes.Count];
+    public double[] TakenRoute = new double[WhetRoutes.Count];
+    public Dictionary<string, double> From = new();
+    public Dictionary<string, double> To = new();
+    public Dictionary<string, double> Got = new();
+    public Dictionary<string, double> Atk = new();
+    public Dictionary<string, double> Dmg = new();
 }
 
 sealed class KdStat

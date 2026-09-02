@@ -1171,5 +1171,27 @@ public sealed class BattleResult
     public required int PoisonBiteEnemy { get; init; }
     public required int PoisonTicksPlayer { get; init; }
     public required int PoisonTicksEnemy { get; init; }
+
+    /// <summary>
+    /// 横流し（第62期）の計数。<b>ロスターで初めて「強化の行き先」を書き換える駒。</b>
+    ///
+    /// <para><b>横流し量</b>: <c>FunnelTaken</c>（<see cref="BattleContext.Whet"/> の窓口で
+    /// 宛先を差し替えた総量）。<c>FunnelByRoute</c> は<b>どの供給経路を横取りしたか</b>で、
+    /// <c>WhetByRoute</c> から引けば「素通りした量」になる（<c>DullTakenByRoute</c> と同じ形）。</para>
+    ///
+    /// <para><b>死蔵</b>: <c>FunnelDead</c>（回した先が<b>一度も <c>PerformAttack</c> を
+    /// 通らなかった</b>ぶんの量）。<b>マイナスの本体はこの列</b>——一番遅い隣が不動のカドなら
+    /// 回した全部がここへ落ちる。<b>反撃・ターン外の振りは <c>Attacks</c> を通らない</b>ので、
+    /// 反応型の駒が出たら「死蔵」ではなく「振らずに干渉している」（第56期の但し書きと同じ）。</para>
+    ///
+    /// <para><c>FunnelFrom</c> / <c>FunnelTo</c> のキーは <b><c>Def.Id</c></b>
+    /// （<c>BearFrom</c> / <c>RelayTo</c> は <c>Name</c> だが、こちらは
+    /// <see cref="TallyByUnit"/> と突き合わせて死蔵を引くので同じキーで持つ）。</para>
+    /// </summary>
+    public required int FunnelTaken { get; init; }
+    public required IReadOnlyList<int> FunnelByRoute { get; init; }
+    public required int FunnelDead { get; init; }
+    public required IReadOnlyDictionary<string, int> FunnelFrom { get; init; }
+    public required IReadOnlyDictionary<string, int> FunnelTo { get; init; }
 }
 

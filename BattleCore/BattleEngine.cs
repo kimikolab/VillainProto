@@ -442,6 +442,40 @@ public sealed class BattleContext
     public int WhetPerverseFlips { get; internal set; }
 
     /// <summary>
+    /// 横流し（<see cref="TraitId.Funnel"/>）の強度＝<b>選択子</b>。
+    /// <b>診断（funnel）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="FunnelRule.Default"/>）。static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public FunnelRule Funnel { get; }
+
+    /// <summary>
+    /// 盤上に横流し役がいるか。<b>短絡のためだけのフラグ</b>で、盤面には一切影響しない
+    /// （<c>DivertActive</c> / <c>FinisherActive</c> と同じ扱い）。
+    /// <see cref="Add"/> が立てるので、蘇生・召喚で後から現れた保持者も拾う。
+    /// </summary>
+    public bool FunnelActive { get; internal set; }
+
+    /// <summary>
+    /// 横流し（<see cref="Whet"/> の横取り）の計数。<b>発火しなかったことは盤面の値に痕跡を残さない</b>ので、
+    /// 診断が読むためだけに数える（<c>verbose</c> には依存しない）。盤面には一切影響しない。
+    ///
+    /// <para><c>FunnelTaken</c> 横流しした総量 ／ <c>FunnelByRoute</c> <b>どの経路を横取りしたか</b> ／
+    /// <c>FunnelFrom</c> 取り上げた相手の内訳 ／ <c>FunnelTo</c> 回した先の内訳。</para>
+    ///
+    /// <para><b><c>WhetRoute</c> は足していない。</b> 横流しは供給ではなく横取りなので、
+    /// 経路の一覧（<see cref="WhetRoutes"/>）に列を増やすと「合計 = 供給の総和」が壊れる
+    /// ——<see cref="Dull"/> 側の <c>DullTakenByRoute</c> とまったく同じ扱いにしてある。</para>
+    ///
+    /// <para><b>2つの辞書のキーは <c>Def.Id</c>。</b> <c>BearFrom</c> / <c>RelayTo</c> は
+    /// <c>Name</c> を使っているが、こちらは<b>死蔵（<c>FunnelDead</c>）を
+    /// <see cref="TallyByUnit"/> と突き合わせて引く</b>ので、同じキーで持たないと結合できない。</para>
+    /// </summary>
+    public int FunnelTaken { get; internal set; }
+    public int[] FunnelByRoute { get; } = new int[WhetRoutes.Count];
+    public Dictionary<string, int> FunnelFrom { get; } = new();
+    public Dictionary<string, int> FunnelTo { get; } = new();
+
+    /// <summary>
     /// 渡し（転嫁）の強度。<b>診断（relay）が版を差し替えるためだけの窓口</b>で、
     /// 通常の実行では誰も渡さない（既定は <see cref="RelayRule.Default"/>）。
     /// static のノブにしない理由は同型の doc を参照。
@@ -1115,7 +1149,8 @@ public sealed class BattleContext
                          OverbearRule? overbear = null, ScaleRule? scale = null,
                          ScapegoatRule? scapegoat = null, DivertRule? divert = null,
                          GoadRule? goad = null, FinisherRule? finisher = null,
-                         FavorRule? favor = null, BlazeRule? blaze = null)
+                         FavorRule? favor = null, BlazeRule? blaze = null,
+                         FunnelRule? funnel = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -1138,6 +1173,7 @@ public sealed class BattleContext
         Finisher = finisher ?? FinisherRule.Default;
         Favor = favor ?? FavorRule.Default;
         Blaze = blaze ?? BlazeRule.Default;
+        Funnel = funnel ?? FunnelRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -1153,6 +1189,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Scapegoat)) ScapegoatActive = true;
         if (u.HasTrait(TraitId.Divert)) DivertActive = true;
         if (u.HasTrait(TraitId.Finisher)) FinisherActive = true;
+        if (u.HasTrait(TraitId.Funnel)) FunnelActive = true;
         u.InstanceId = _nextInstanceId++;
         u.Board = this;          // 「隣に誰がいるか」を読む特性のため（UnitState.Board の doc 参照）
         _units.Add(u);
@@ -2539,9 +2576,61 @@ public sealed class BattleContext
         WhetTotal += amount;
         WhetByRoute[(int)route] += amount;
 
-        // 横取りはまだ無い。**Dull はちょうどここに集約（ウケ）と転嫁（ワタ）を置いている**——
-        // 読み手を作る期が来たら receiver を差し替える形で同じ位置に立てられる。
+        // 横流し（第62期）。**Dull が集約（ウケ）と転嫁（ワタ）を置いているのと同じ位置・同じ形。**
+        // 第56期がここに空けておいた席にそのまま立っている——**engine に新しい窓口は足していない。**
+        //
+        // 規則は1文:「**自分と隣の味方に来た強化を、すべて自分の隣で一番遅い味方へ回す**」。
+        //   1. 対象自身が横流し役なら、その本人が起点（**自分に来た分も回す＝自分は育たない**）
+        //   2. そうでなければ、対象に隣接する横流し役を探す（複数なら PickOne）
+        //   3. 宛先は「横流し役に隣接する生存味方のうち、AcceptsSupport を通り、
+        //      **横流し役でない**（＝1ホップで止める）者の中で Def.Speed が最小（同速のみ PickOne）」
+        //   4. 宛先が元の対象と同じなら何もしない（消えない）
+        //
+        // **量は加算のまま**——減衰も倍率も付けない。「行き先が本体」という主題を係数で薄めない。
+        // **候補 0 / 1 個では Roll を消費しない**（PickOne）ので、**横流し役が盤上に1枚もいない行では
+        // 乱数列が1ビットも動かない**（第43期の渡しと同じ受け入れ基準）。
         UnitState receiver = target;
+
+        if (FunnelActive)
+        {
+            UnitState? funnel = target.HasTrait(TraitId.Funnel)
+                ? target
+                : PickOne(LivingMembers(target.TeamId)
+                          .Where(u => u != target
+                                      && u.HasTrait(TraitId.Funnel)
+                                      && FormationRules.AreAdjacent(u.Slot, target.Slot))
+                          .ToList());
+
+            if (funnel is not null && funnel.IsAlive)
+            {
+                // **AcceptsSupport は自前で濾す（隣へ漏らさない）。** SupportTargets を通すと
+                // 流した先が「一番遅い隣」とは限らず、規則そのものが破れる（第58期の火選りと同じ判断）。
+                var cands = LivingMembers(funnel.TeamId)
+                    .Where(u => u != funnel
+                                && u.AcceptsSupport
+                                && !u.HasTrait(TraitId.Funnel)
+                                && FormationRules.AreAdjacent(funnel.Slot, u.Slot))
+                    .ToList();
+
+                if (cands.Count > 0)
+                {
+                    int want = Funnel.Slowest ? cands.Min(u => u.Def.Speed) : cands.Max(u => u.Def.Speed);
+                    UnitState? dest = PickOne(cands.Where(u => u.Def.Speed == want).ToList());
+                    if (dest is not null && dest != target)
+                    {
+                        receiver = dest;
+                        FunnelTaken += amount;
+                        FunnelByRoute[(int)route] += amount;
+                        FunnelFrom[target.Def.Id] =
+                            FunnelFrom.TryGetValue(target.Def.Id, out int f) ? f + amount : amount;
+                        FunnelTo[dest.Def.Id] =
+                            FunnelTo.TryGetValue(dest.Def.Id, out int t) ? t + amount : amount;
+                        Log($"    {funnel.Name} が {target.Name} の取り分を {dest.Name} へ回した（攻撃 +{amount}）",
+                            LogKind.Trigger);
+                    }
+                }
+            }
+        }
 
         // 崖の検算（Dull の DullZeroed の裏返し）。逆しまは AtkBonus の**符号だけ**を読み、
         // 負なら3倍・正なら半減なので、「半減側へ落ちた瞬間」はここでしか観測できない。
@@ -2706,11 +2795,11 @@ public static class BattleEngine
                                    ScaleRule? scale = null, ScapegoatRule? scapegoat = null,
                                    DivertRule? divert = null, GoadRule? goad = null,
                                    FinisherRule? finisher = null, FavorRule? favor = null,
-                                   BlazeRule? blaze = null)
+                                   BlazeRule? blaze = null, FunnelRule? funnel = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
-               overbear, scale, scapegoat, divert, goad, finisher, favor, blaze);
+               overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -2729,11 +2818,12 @@ public static class BattleEngine
                                    OverbearRule? overbear = null, ScaleRule? scale = null,
                                    ScapegoatRule? scapegoat = null, DivertRule? divert = null,
                                    GoadRule? goad = null, FinisherRule? finisher = null,
-                                   FavorRule? favor = null, BlazeRule? blaze = null)
+                                   FavorRule? favor = null, BlazeRule? blaze = null,
+                                   FunnelRule? funnel = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
-                                    favor, blaze);
+                                    favor, blaze, funnel);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -3074,7 +3164,18 @@ public static class BattleEngine
             FavorTaken = ctx.FavorTaken,
             FavorToPyre = ctx.FavorToPyre,
             FavorWhetTo = ctx.FavorWhetTo,
-            FavorDullTo = ctx.FavorDullTo
+            FavorDullTo = ctx.FavorDullTo,
+            FunnelTaken = ctx.FunnelTaken,
+            FunnelByRoute = ctx.FunnelByRoute,
+            FunnelFrom = ctx.FunnelFrom,
+            FunnelTo = ctx.FunnelTo,
+            // 死蔵: **回した先が一度も振らなかった**ぶんの量（第62期）。
+            // `Attacks` は `PerformAttack` を通った回数なので、不動のカド（反撃しかしない）は
+            // 必ずここへ落ちる——**マイナスの本体がこの列**。反応型と本当の置物の切り分けは
+            // 診断が `FunnelTo` の内訳で読む（第56期の死蔵の但し書きと同じ）。
+            FunnelDead = ctx.FunnelTo
+                .Where(kv => ctx.TallyByUnit.TryGetValue(kv.Key, out UnitTally? t) && t.Attacks == 0)
+                .Sum(kv => kv.Value)
         };
     }
 

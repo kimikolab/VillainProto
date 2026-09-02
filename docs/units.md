@@ -132,6 +132,7 @@
 | `Goad` | 駆り立てのカリ |
 | `Finisher` | 止めのトメ |
 | `Favor` | 火選りのヒヨ |
+| `Funnel` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

@@ -1144,6 +1144,50 @@ public static class UnitCatalog
         Flavor = "人を見る基準はただ一つ。燃えているか、いないか。"
     };
 
+    /// <summary>
+    /// 横流しのヌキ。<b>ロスターで初めて「強化の行き先」を書き換える駒</b>（第62期）。
+    ///
+    /// <para><b>第56期の積み残し1がそのまま出発点。</b> 強化の供給の <b>47.1%</b> は
+    /// 吐き戻し1本で（第62期 Phase 0-1・61行の実測）、行き先は「ゴルムが庇った相手」＝
+    /// <b>編成が選んでいない</b>。号令は味方全体、縛めは縛った相手、火選りは燃えている相手
+    /// ——<b>どれも行き先は機構が決める</b>。<b>強化を増やす駒を作ると吐き戻しの2本目になり、
+    /// 偏りは薄まっても判断は増えない</b>ので、この駒は<b>量を1点も増やさず行き先だけを動かす</b>。</para>
+    ///
+    /// <para><b>実装は <see cref="BattleContext.Whet"/> の中</b>（<see cref="FunnelTrait"/> は札）。
+    /// 第56期が <c>receiver</c> の位置に空けておいた席で、<c>Dull</c> の集約・転嫁と同じ形。
+    /// <b>engine に新しい窓口は1つも足していない。</b></para>
+    ///
+    /// <para><b>選択子は「一番遅い隣」。</b> 駆り立て（隣接する <c>CurrentAttack</c> 最大）の
+    /// 逆側なので重ならず、遅い駒は手番が後ろなので<b>そのターンに配られた強化を振る前に受け取れる</b>。
+    /// <b>罠は盤上に既にある</b>——一番遅い隣が<b>不動のカド</b>なら 100% 死蔵、
+    /// <b>ゴルム（速3）</b>なら吐き戻しの出どころへ戻る自己循環、<b>ガルド</b>は
+    /// <c>Stoic</c> で候補にすら入らず、<b>ホタ</b>なら燃焼中ちょうど 4 倍。
+    /// <b>同じ1点が行き先で 0 倍にも 4 倍にもなる。</b></para>
+    ///
+    /// <para>HP64・攻4・速5 は探索段階の初期値。<b>振るのは選択子（<see cref="FunnelRule.Slowest"/>）
+    /// だけ</b>で、HP・攻・速は振らない。<b>攻4 と低いのは意図的</b>——出力で効いてしまうと、
+    /// 接続が効いたのか体が効いたのかが分からなくなる（第58期のヒヨと同じ理由）。
+    /// <b>速5 は選択子に影響しない</b>（自分を宛先の候補から除くため）。</para>
+    /// </summary>
+    /// <remarks>
+    /// <b><see cref="All"/> には載せていない。</b> 第62期は横流しを測って<b>採用しなかった</b>ので、
+    /// 定義だけを対照として残してある（逆位・まどろみ・誹り・驕り・業と同じ扱い）。
+    /// 診断 <c>funnel</c> が編成をローカルに組んで使う。**ロスターの最後の1枠は空いたまま。**
+    /// 棄却の理由は design/PHASE62_FUNNEL.md を参照。
+    /// </remarks>
+    public static readonly UnitDef Nuki = new()
+    {
+        Id = "nuki",
+        Name = "横流しのヌキ",
+        MaxHp = 64,
+        Attack = 4,
+        Speed = 5,
+        Traits = new[] { TraitId.Funnel },
+        PlusText = "隣の味方に来た強化を、一番遅い隣へすべて回す",
+        MinusText = "横取りされた味方も自分も育たない。回す先が振らない駒なら全部が無駄になる",
+        Flavor = "支給品が手元に残ったためしがない。どこへ消えたかは、いつも一番のろい奴が知っている。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
         Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo
