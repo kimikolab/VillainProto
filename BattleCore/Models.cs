@@ -1193,5 +1193,25 @@ public sealed class BattleResult
     public required int FunnelDead { get; init; }
     public required IReadOnlyDictionary<string, int> FunnelFrom { get; init; }
     public required IReadOnlyDictionary<string, int> FunnelTo { get; init; }
+
+    /// <summary>
+    /// 横流しの<b>弱体側</b>（V3・第63期）の計数。規則を対称にした版
+    /// （「隣で起きる攻撃力の上げ下げを、全部いちばん遅い隣に押し付ける」）でだけ 0 でなくなる。
+    ///
+    /// <para><b><c>FunnelDullDead</c> は「捨て場として成功した量」ではない</b>（第63期に実測で否定）。
+    /// 「回した先が一度も <c>PerformAttack</c> を通らなければ押し付けた弱体は盤面に出ない」は
+    /// <b>反撃型の駒に対して成り立たない</b>——棘（<see cref="ThornsTrait"/>・カド）の反撃量は
+    /// <b>自分の <c>CurrentAttack</c></b> で決まるので、<c>Attacks == 0</c> でも弱体は効く。
+    /// 実測でも宛先がカドの席は V3 − V1 が <b>−1.5 / −2.2pt</b>、宛先が据えのバン（普通に振る駒）の席は
+    /// <b>+1.3 / +1.9pt</b> と符号が逆になった。<b>この列は「振らなかった量」でしかない。</b></para>
+    ///
+    /// <para><c>FunnelDullByRoute</c> は <see cref="DullRoutes"/> の長さ
+    /// （強化側の <c>FunnelByRoute</c> は <see cref="WhetRoutes"/> の長さ）。<b>取り違えないこと。</b></para>
+    /// </summary>
+    public required int FunnelDullTaken { get; init; }
+    public required IReadOnlyList<int> FunnelDullByRoute { get; init; }
+    public required int FunnelDullDead { get; init; }
+    public required IReadOnlyDictionary<string, int> FunnelDullFrom { get; init; }
+    public required IReadOnlyDictionary<string, int> FunnelDullTo { get; init; }
 }
 

@@ -476,6 +476,16 @@ public sealed class BattleContext
     public Dictionary<string, int> FunnelTo { get; } = new();
 
     /// <summary>
+    /// 横流しの<b>弱体側</b>（V3・第63期）の計数。強化側と対になる。
+    /// <c>FunnelDullByRoute</c> は <see cref="DullRoutes"/> で割る（強化側は <see cref="WhetRoutes"/>）
+    /// ——<b>配列の長さが違うので取り違えないこと。</b> 盤面には一切影響しない。
+    /// </summary>
+    public int FunnelDullTaken { get; internal set; }
+    public int[] FunnelDullByRoute { get; } = new int[DullRoutes.Count];
+    public Dictionary<string, int> FunnelDullFrom { get; } = new();
+    public Dictionary<string, int> FunnelDullTo { get; } = new();
+
+    /// <summary>
     /// 渡し（転嫁）の強度。<b>診断（relay）が版を差し替えるためだけの窓口</b>で、
     /// 通常の実行では誰も渡さない（既定は <see cref="RelayRule.Default"/>）。
     /// static のノブにしない理由は同型の doc を参照。
@@ -2414,15 +2424,46 @@ public sealed class BattleContext
         // 片方が構造的に飢える（第41期「先に来る供給源だけが使われる」と同じ形）ので、
         // 両方を1つのプールに入れて PickOne に任せる。**同席する編成が現状ゼロなので
         // 既存47行の乱数列は動かない**（候補が 0/1 個では Roll を消費しない）。
-        if (!target.HasTrait(TraitId.Bear) && !target.HasTrait(TraitId.Relay))
+        //
+        // **横流し（第63期・V3）も同じプールに入る**（`FunnelRule.Both` が true のときだけ）。
+        // ただし1点だけ非対称で、**横流し役自身に来た弱体は横流し役自身が起点になる**
+        // ——集約・渡しは「自分の分は横取りしない」（自分に溜める駒だから）のに対し、
+        // 横流しは「**自分の手元には残らない**」が規則の本体なので、`Whet` 側と同じ形にする。
+        if (FunnelActive && Funnel.Both && target.HasTrait(TraitId.Funnel))
+        {
+            if (FunnelThrough(target, target, amount, (int)route, whet: false, ref receiver))
+            {
+                DullTakenByRoute[(int)route] += amount;
+            }
+            else
+            {
+                BearPassed += amount;
+            }
+        }
+        else if (!target.HasTrait(TraitId.Bear) && !target.HasTrait(TraitId.Relay))
         {
             UnitState? taker = PickOne(
                 LivingMembers(target.TeamId)
                     .Where(u => u != target
-                                && (u.HasTrait(TraitId.Bear) || (u.HasTrait(TraitId.Relay) && !InRelay))
+                                && (u.HasTrait(TraitId.Bear) || (u.HasTrait(TraitId.Relay) && !InRelay)
+                                    || (u.HasTrait(TraitId.Funnel) && Funnel.Both))
                                 && FormationRules.AreAdjacent(u.Slot, target.Slot))
                     .ToList());
-            if (taker is not null && taker.HasTrait(TraitId.Bear))
+            if (taker is not null && taker.HasTrait(TraitId.Funnel)
+                && !taker.HasTrait(TraitId.Bear) && !taker.HasTrait(TraitId.Relay))
+            {
+                // 横流し（第63期）。**量は移さない——宛先だけを差し替える**（集約のように
+                // 資産へ変換もしないし、転嫁のように陣営も変えない）。
+                if (FunnelThrough(taker, target, amount, (int)route, whet: false, ref receiver))
+                {
+                    DullTakenByRoute[(int)route] += amount;
+                }
+                else
+                {
+                    BearPassed += amount;
+                }
+            }
+            else if (taker is not null && taker.HasTrait(TraitId.Bear))
             {
                 receiver = taker;
                 BearTaken += amount;
@@ -2601,35 +2642,8 @@ public sealed class BattleContext
                                       && FormationRules.AreAdjacent(u.Slot, target.Slot))
                           .ToList());
 
-            if (funnel is not null && funnel.IsAlive)
-            {
-                // **AcceptsSupport は自前で濾す（隣へ漏らさない）。** SupportTargets を通すと
-                // 流した先が「一番遅い隣」とは限らず、規則そのものが破れる（第58期の火選りと同じ判断）。
-                var cands = LivingMembers(funnel.TeamId)
-                    .Where(u => u != funnel
-                                && u.AcceptsSupport
-                                && !u.HasTrait(TraitId.Funnel)
-                                && FormationRules.AreAdjacent(funnel.Slot, u.Slot))
-                    .ToList();
-
-                if (cands.Count > 0)
-                {
-                    int want = Funnel.Slowest ? cands.Min(u => u.Def.Speed) : cands.Max(u => u.Def.Speed);
-                    UnitState? dest = PickOne(cands.Where(u => u.Def.Speed == want).ToList());
-                    if (dest is not null && dest != target)
-                    {
-                        receiver = dest;
-                        FunnelTaken += amount;
-                        FunnelByRoute[(int)route] += amount;
-                        FunnelFrom[target.Def.Id] =
-                            FunnelFrom.TryGetValue(target.Def.Id, out int f) ? f + amount : amount;
-                        FunnelTo[dest.Def.Id] =
-                            FunnelTo.TryGetValue(dest.Def.Id, out int t) ? t + amount : amount;
-                        Log($"    {funnel.Name} が {target.Name} の取り分を {dest.Name} へ回した（攻撃 +{amount}）",
-                            LogKind.Trigger);
-                    }
-                }
-            }
+            if (funnel is not null)
+                FunnelThrough(funnel, target, amount, (int)route, whet: true, ref receiver);
         }
 
         // 崖の検算（Dull の DullZeroed の裏返し）。逆しまは AtkBonus の**符号だけ**を読み、
@@ -2648,6 +2662,69 @@ public sealed class BattleContext
             WhetToPerverse += amount;
             if (bonusBefore <= 0 && receiver.AtkBonus > 0) WhetPerverseFlips++;
         }
+    }
+
+    /// <summary>
+    /// 横流し（<see cref="TraitId.Funnel"/>）の宛先の差し替え。<see cref="Whet"/> と
+    /// <see cref="Dull"/> の両方から呼ばれる<b>唯一の実装</b>で、V1（強化だけ）と V3（両方）で
+    /// <b>選び方が1ビットも違わない</b>ことをコードの形で担保する。
+    ///
+    /// <para>宛先は「<paramref name="funnel"/> に隣接する生存味方のうち、
+    /// <see cref="UnitState.AcceptsSupport"/> を通り、<b>横流し役でない</b>者の中で
+    /// <c>Def.Speed</c> が最小（<see cref="FunnelRule.Slowest"/> が偽なら最大）」。
+    /// 同速が並んだときだけ <see cref="PickOne"/> ——<b>候補 0 / 1 個では <c>Roll</c> を消費しない</b>ので、
+    /// 横流し役が盤上にいない行の乱数列は1ビットも動かない。</para>
+    ///
+    /// <para><b>横流し役を候補から除くことで1ホップに止める</b>（回した先がさらに回さない）。
+    /// <b><c>AcceptsSupport</c> は自前で濾す（隣へ漏らさない）</b>——
+    /// <see cref="SupportTargets"/> を通すと流した先が「一番遅い隣」とは限らず、規則そのものが破れる
+    /// （第58期の火選りと同じ判断）。<b>強化側と弱体側で濾し方を分けない。</b></para>
+    ///
+    /// <para>戻り値は<b>宛先を差し替えたか</b>。<c>false</c> は「隣に流せる相手がいなかった」
+    /// （候補が空、または一番遅い隣が元の対象自身）で、そのとき量はそのまま元の対象に入る
+    /// ——<b>強化も弱体も消さない</b>（消える挙動のほうが読めない・第62期 §11-4）。</para>
+    /// </summary>
+    private bool FunnelThrough(UnitState funnel, UnitState target, int amount, int route,
+                               bool whet, ref UnitState receiver)
+    {
+        if (!funnel.IsAlive) return false;
+
+        var cands = LivingMembers(funnel.TeamId)
+            .Where(u => u != funnel
+                        && u.AcceptsSupport
+                        && !u.HasTrait(TraitId.Funnel)
+                        && FormationRules.AreAdjacent(funnel.Slot, u.Slot))
+            .ToList();
+        if (cands.Count == 0) return false;
+
+        int want = Funnel.Slowest ? cands.Min(u => u.Def.Speed) : cands.Max(u => u.Def.Speed);
+        UnitState? dest = PickOne(cands.Where(u => u.Def.Speed == want).ToList());
+        if (dest is null || dest == target) return false;
+
+        receiver = dest;
+        if (whet)
+        {
+            FunnelTaken += amount;
+            FunnelByRoute[route] += amount;
+            FunnelFrom[target.Def.Id] =
+                FunnelFrom.TryGetValue(target.Def.Id, out int f) ? f + amount : amount;
+            FunnelTo[dest.Def.Id] =
+                FunnelTo.TryGetValue(dest.Def.Id, out int t) ? t + amount : amount;
+            Log($"    {funnel.Name} が {target.Name} の取り分を {dest.Name} へ回した（攻撃 +{amount}）",
+                LogKind.Trigger);
+        }
+        else
+        {
+            FunnelDullTaken += amount;
+            FunnelDullByRoute[route] += amount;
+            FunnelDullFrom[target.Def.Id] =
+                FunnelDullFrom.TryGetValue(target.Def.Id, out int f) ? f + amount : amount;
+            FunnelDullTo[dest.Def.Id] =
+                FunnelDullTo.TryGetValue(dest.Def.Id, out int t) ? t + amount : amount;
+            Log($"    {funnel.Name} が {target.Name} の負担を {dest.Name} へ押し付けた（攻撃 -{amount}）",
+                LogKind.Trigger);
+        }
+        return true;
     }
 
     public void Heal(UnitState target, int amount)
@@ -3174,6 +3251,17 @@ public static class BattleEngine
             // 必ずここへ落ちる——**マイナスの本体がこの列**。反応型と本当の置物の切り分けは
             // 診断が `FunnelTo` の内訳で読む（第56期の死蔵の但し書きと同じ）。
             FunnelDead = ctx.FunnelTo
+                .Where(kv => ctx.TallyByUnit.TryGetValue(kv.Key, out UnitTally? t) && t.Attacks == 0)
+                .Sum(kv => kv.Value),
+            FunnelDullTaken = ctx.FunnelDullTaken,
+            FunnelDullByRoute = ctx.FunnelDullByRoute,
+            FunnelDullFrom = ctx.FunnelDullFrom,
+            FunnelDullTo = ctx.FunnelDullTo,
+            // 弱体側の死蔵（第63期）。**「捨て場として成功した量」ではない**（第63期に実測で否定）。
+            // `Attacks` は `PerformAttack` を通った回数なので、**棘の反撃は通らない**
+            // ——カドの反撃量は自分の `CurrentAttack` で決まるので、振らなくても弱体は効く。
+            // **この列は「振らなかった量」でしかない。**
+            FunnelDullDead = ctx.FunnelDullTo
                 .Where(kv => ctx.TallyByUnit.TryGetValue(kv.Key, out UnitTally? t) && t.Attacks == 0)
                 .Sum(kv => kv.Value)
         };

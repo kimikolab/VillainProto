@@ -3183,10 +3183,19 @@ public sealed class FunnelTrait : Trait
 /// static のノブにしない理由は同型の doc（<see cref="ColossusRule"/>）を参照。
 ///
 /// <para><b>強度のノブではない。</b> 横流しは量を1点も増減させないので、
-/// 振れるのは<b>宛先の選び方</b>だけ——<paramref name="Slowest"/> が <c>true</c> なら
-/// 隣で<b>一番遅い</b>味方（V1・本命）、<c>false</c> なら隣で<b>一番速い</b>味方（V2・対照）。
-/// <b>符号が反転すれば「遅さに流す」ことが本体</b>であり速さの順序と噛んでいる証拠、
-/// <b>反転しなければ「集める」ことが本体</b>で選択子はどれでもよい（指示書 §4）。</para>
+/// 振れるのは<b>宛先の選び方</b>と<b>何を流すか</b>だけ。</para>
+///
+/// <para><paramref name="Slowest"/> が <c>true</c> なら隣で<b>一番遅い</b>味方（V1・本命）、
+/// <c>false</c> なら隣で<b>一番速い</b>味方（V2・対照）。第62期の実測で
+/// <b>選択子の向きは本体ではなかった</b>（V1 → V2 で +1.8→−0.4 / +12.2→−3.4 / <b>+8.9→+10.4</b>
+/// と行ごとに符号が違う）——値段は<b>その端に誰が立っているか</b>で決まる。
+/// <b>第63期以降は <c>true</c> で固定</b>（フレーバー「遅さで捨てられた層に力を回す」で残す）。</para>
+///
+/// <para><paramref name="Both"/> が <c>true</c> なら<b>弱体も同じ宛先へ流す</b>（V3・第63期）。
+/// 規則が「隣で起きる攻撃力の上げ下げを、全部いちばん遅い隣に押し付ける」と対称になり、
+/// 1文のまま表と裏になる。<b>既定は <c>false</c>（強化だけ＝ V1）。</b>
+/// <c>false</c> のとき <see cref="BattleContext.Dull"/> の分岐は
+/// <b>候補プールの述語ごと元の形に畳まれる</b>ので、既存の行は1バイトも動かない。</para>
 ///
 /// <para><b>機構を 0 にするノブは置いていない。</b> 「量を 0 にする」ができない機構なので、
 /// 対照は<b>同数値・特性なしの素体</b>（<c>NukiPlain</c>・診断のローカルの <c>UnitDef</c>）で取る
@@ -3197,10 +3206,13 @@ public sealed class FunnelTrait : Trait
 /// <para><b>既定を無効にしなくてよい。</b> 味方側の駒なので、<c>UnitCatalog.Nuki</c> を
 /// 編成に入れない限り既存61行は1バイトも動かない（それ自体が回帰チェックになる）。</para>
 /// </summary>
-public readonly record struct FunnelRule(bool Slowest)
+public readonly record struct FunnelRule(bool Slowest, bool Both)
 {
-    /// <summary>本命（V1）＝隣で一番遅い味方へ回す。</summary>
-    public static FunnelRule Default => new(true);
+    /// <summary>選択子だけを指定する（強化だけを流す＝ V1）。</summary>
+    public FunnelRule(bool slowest) : this(slowest, false) { }
+
+    /// <summary>本命（V1）＝隣で一番遅い味方へ、<b>強化だけ</b>を回す。</summary>
+    public static FunnelRule Default => new(true, false);
 }
 
 
