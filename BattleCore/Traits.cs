@@ -3207,8 +3207,30 @@ public sealed class MiasmaTrait : Trait
 
     public override TraitId Id => TraitId.Miasma;
 
+    // **手番の行動として撒く**（第61期）。ターンの順序は
+    // `TickStatuses` → `OnTurnStart`（席順の昇順）→ 行動順ループなので、
+    // `OnTurnStart` に置くと**同じターン頭に発火する他の駒との前後が席順で決まる**。
+    // 一番大きいのは澱み喰い（`BlightfedTrait`・ヴィオ）で、グザの席がヴィオより前なら
+    // 撒いた毒はその場で吸い上げられて**味方は1点も払わない**——
+    // 「毒の代金を誰が払うか」が席の左右で切り替わる隠れた判断になっていた。
+    // 手番へ降ろすとヴィオが必ず先になり、味方は毎ターン必ず1回刻まれる。
+    //
+    // **`ActsOnPattern` の分岐は保持者が1枚でも残す**（`Trait.ActsOnPattern`）。
+    // 継ぎ当て（`MenderTrait`）が記録している事故——同じ特性を敵側の駒が共有していて、
+    // 無条件に移すとそちらの効果だけが静かに消える——と同じ形が後で再発する。
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+        => Spread(ctx, self);
+
+    // 行動パターンを持たない保持者は従来どおりターン頭に発火する。理由は Trait.ActsOnPattern。
     public override void OnTurnStart(BattleContext ctx, UnitState self)
     {
+        if (!ActsOnPattern(self)) Spread(ctx, self);
+    }
+
+    private static void Spread(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+
         var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId));
         if (foes.Count == 0) return;
 
@@ -3216,8 +3238,12 @@ public sealed class MiasmaTrait : Trait
             foe.SetCounter(StatusKeys.Poison, foe.Counter(StatusKeys.Poison) + PerTurn);
 
         // 瘴気は敵味方を選ばない。撒く側にも代償を負わせる。
-        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        var allies = ctx.LivingMembers(self.TeamId);
+        foreach (UnitState ally in allies)
             ally.SetCounter(StatusKeys.Poison, ally.Counter(StatusKeys.Poison) + AllyLeak);
+
+        // 第61期の計数。**盤面には触らない。**
+        ctx.NoteMiasma(foes.Count * PerTurn, allies.Count * AllyLeak);
 
         ctx.Log($"    {self.Name} が瘴気を撒いた（敵 毒 +{PerTurn} / 味方 毒 +{AllyLeak}）", LogKind.FriendlyFire);
     }

@@ -1156,5 +1156,20 @@ public sealed class BattleResult
     public required int FavorToPyre { get; init; }
     public required IReadOnlyDictionary<string, int> FavorWhetTo { get; init; }
     public required IReadOnlyDictionary<string, int> FavorDullTo { get; init; }
+
+    /// <summary>
+    /// 瘴気と毒の刻みの計数（第61期）。<b>誰も読んで分岐しない</b>ので盤面には影響しない。
+    /// <c>MiasmaFires</c> は瘴気が撒いた回数、<c>MiasmaToFoe</c> / <c>MiasmaToAlly</c> は
+    /// 撒いた層の総量（味方側は<b>撒いた本人を含む</b>）。
+    /// <c>PoisonBite*</c> は毒の刻みの<b>額面</b>を陣営で割ったもので、実際に減った HP ではない。
+    /// 診断 <c>miasma</c> だけが読む。
+    /// </summary>
+    public required int MiasmaFires { get; init; }
+    public required int MiasmaToFoe { get; init; }
+    public required int MiasmaToAlly { get; init; }
+    public required int PoisonBitePlayer { get; init; }
+    public required int PoisonBiteEnemy { get; init; }
+    public required int PoisonTicksPlayer { get; init; }
+    public required int PoisonTicksEnemy { get; init; }
 }
 

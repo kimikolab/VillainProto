@@ -192,6 +192,7 @@ public sealed class BattleContext
             });
             // 業（第49期）の帰属。**保持者が盤上にいなければ1回も走らない**（短絡）。
             if (ScapegoatActive) NoteScapegoatDot(u, poison, StatusKeys.Poison);
+            NotePoisonBite(u, poison);   // 第61期の計数。盤面には触らない
             ApplyDamage(u, poison, null);
         }
 
@@ -1038,6 +1039,44 @@ public sealed class BattleContext
     public Dictionary<string, int> FavorDullTo { get; } = new();
     /// <summary>強化が<b>熾火（乗算持ち）</b>へ落ちた量。Q4（乗算の許容）の分子。</summary>
     public int FavorToPyre { get; internal set; }
+
+    /// <summary>
+    /// 瘴気（<see cref="TraitId.Miasma"/>）と毒の刻みの計数（第61期）。
+    /// <b>どれも誰も読んで分岐しない</b>ので盤面には一切影響しない
+    /// （<c>FavorFires</c> と同じ扱いで <c>verbose</c> 非依存）。診断 <c>miasma</c> だけが読む。
+    ///
+    /// <para><b>撒いた量は「誰が撒いたか」ではなく総量で持つ。</b> 保持者は現状グザ1枚で、
+    /// 版によって <c>Def.Id</c> が変わる（診断のローカルの <c>UnitDef</c>）ので、
+    /// 駒側の <c>UnitTally</c> に置くと版をまたいだ突き合わせに id の一覧が要る。</para>
+    ///
+    /// <para><c>PoisonBite*</c> は毒の刻みの<b>額面</b>（毒喰らいの倍率を掛けた後・
+    /// 肩代わり／破片／軛を通す前）。<b>実際に減った HP ではない</b>
+    /// ——P3（味方の毒の刻みが増えるか）は額面で読むのが素直で、
+    /// 実害は勝率と <c>DamageTaken</c> の側に出る。</para>
+    /// </summary>
+    public int MiasmaFires { get; internal set; }
+    /// <summary>瘴気が敵へ撒いた毒の総量（層）。</summary>
+    public int MiasmaToFoe { get; internal set; }
+    /// <summary>瘴気が味方へ漏らした毒の総量（層）。<b>撒いた本人も含む。</b></summary>
+    public int MiasmaToAlly { get; internal set; }
+    /// <summary>毒の刻みの額面と回数を陣営で割ったもの。</summary>
+    public int PoisonBitePlayer { get; internal set; }
+    public int PoisonBiteEnemy { get; internal set; }
+    public int PoisonTicksPlayer { get; internal set; }
+    public int PoisonTicksEnemy { get; internal set; }
+
+    internal void NoteMiasma(int toFoe, int toAlly)
+    {
+        MiasmaFires++;
+        MiasmaToFoe += toFoe;
+        MiasmaToAlly += toAlly;
+    }
+
+    internal void NotePoisonBite(UnitState u, int amount)
+    {
+        if (u.TeamId == PlayerTeam) { PoisonBitePlayer += amount; PoisonTicksPlayer++; }
+        else { PoisonBiteEnemy += amount; PoisonTicksEnemy++; }
+    }
 
     internal void NoteFavor(int whetted, int dulled, int idle, int given, int taken)
     {
@@ -3022,6 +3061,13 @@ public static class BattleEngine
             FinisherTargetTo = ctx.FinisherTargetTo,
             FavorFires = ctx.FavorFires,
             FavorIdle = ctx.FavorIdle,
+            MiasmaFires = ctx.MiasmaFires,
+            MiasmaToFoe = ctx.MiasmaToFoe,
+            MiasmaToAlly = ctx.MiasmaToAlly,
+            PoisonBitePlayer = ctx.PoisonBitePlayer,
+            PoisonBiteEnemy = ctx.PoisonBiteEnemy,
+            PoisonTicksPlayer = ctx.PoisonTicksPlayer,
+            PoisonTicksEnemy = ctx.PoisonTicksEnemy,
             FavorWhetted = ctx.FavorWhetted,
             FavorDulled = ctx.FavorDulled,
             FavorGiven = ctx.FavorGiven,
