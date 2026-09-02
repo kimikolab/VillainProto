@@ -1209,6 +1209,45 @@ public sealed class BattleContext
     /// </summary>
     public BlazeRule Blaze { get; }
 
+    /// <summary>
+    /// 軋みが響く閾値（第66期）。<b>診断（creak）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="CreakRule.Default"/> ＝ 無効）。
+    /// static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public CreakRule Creak { get; }
+
+    /// <summary>
+    /// 軋み（第66期）の在庫の記録。<b>盤面には一切影響しない。</b>
+    /// <see cref="TraitId.Displaced"/> 保持者の <see cref="UnitState.AtkBonus"/> が動いた直後に呼ぶ
+    /// ——上げる経路は<b>軋み自身と <see cref="Whet"/> の2本だけ</b>（ヨミは自己強化を1つも持たない）。
+    /// <paramref name="selfGain"/> が真なら軋み由来、偽なら窓口経由。
+    /// </summary>
+    public void NoteCreakBonus(UnitState self, int amount, bool selfGain, bool regurgitate = false)
+    {
+        if (!self.HasTrait(TraitId.Displaced)) return;
+        UnitTally t = TallyOf(self);
+        if (selfGain) t.CreakSelfGain += amount;
+        else
+        {
+            t.CreakWhetGain += amount;
+            if (regurgitate) t.CreakRegurgGain += amount;
+        }
+        if (self.AtkBonus > t.CreakMaxBonus) t.CreakMaxBonus = self.AtkBonus;
+
+        int[] probe = t.CreakProbeTurn ??= new int[UnitTally.CreakProbes.Length];
+        int[] ps = t.CreakSelfAtProbe ??= new int[UnitTally.CreakProbes.Length];
+        int[] pw = t.CreakWhetAtProbe ??= new int[UnitTally.CreakProbes.Length];
+        int[] pr = t.CreakRegurgAtProbe ??= new int[UnitTally.CreakProbes.Length];
+        for (int i = 0; i < UnitTally.CreakProbes.Length; i++)
+        {
+            if (probe[i] != 0 || self.AtkBonus < UnitTally.CreakProbes[i]) continue;
+            probe[i] = Math.Max(1, Turn);   // 開戦時の到達は 1 に丸める（0 を「未到達」に使うため）
+            ps[i] = t.CreakSelfGain;
+            pw[i] = t.CreakWhetGain;
+            pr[i] = t.CreakRegurgGain;
+        }
+    }
+
     public BattleContext(int seed, bool verbose, ColossusRule? colossus = null, YokeRule? yoke = null,
                          HushRule? hush = null, MartyrRule? martyr = null, ExposeRule? expose = null,
                          ShoveRule? shove = null, BearRule? bear = null,
@@ -1217,7 +1256,8 @@ public sealed class BattleContext
                          ScapegoatRule? scapegoat = null, DivertRule? divert = null,
                          GoadRule? goad = null, FinisherRule? finisher = null,
                          FavorRule? favor = null, BlazeRule? blaze = null,
-                         FunnelRule? funnel = null, WhetMask? whetMask = null)
+                         FunnelRule? funnel = null, WhetMask? whetMask = null,
+                         CreakRule? creak = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -1242,6 +1282,7 @@ public sealed class BattleContext
         Blaze = blaze ?? BlazeRule.Default;
         Funnel = funnel ?? FunnelRule.Default;
         WhetBlock = whetMask ?? WhetMask.None;
+        Creak = creak ?? CreakRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -1894,6 +1935,14 @@ public sealed class BattleContext
         // 「1ターンあたり何回振ったか」が、手番でしか動かない駒と反応する駒を分ける。
         TallyOf(actor).Attacks++;
         if (attackPercent > 100) TallyOf(actor).BigAttacks++;   // 大技の発火数（Attacks の内数）
+        // 軋みが響く（第66期）。**分母は保持者が振った回数の全部**（手番も割り込みも）で、
+        // 分子は「素の型が単体なのに薙ぎで出た」回数。規則が無効なら分子は恒等的に 0。
+        if (actor.HasTrait(TraitId.Displaced) && patternOverride is null)
+        {
+            TallyOf(actor).CreakSwings++;
+            if (actor.Def.Pattern == AttackPattern.Single && pattern == AttackPattern.Sweep)
+                TallyOf(actor).CreakSweeps++;
+        }
         // 燃えている状態で振った回数（第57期・Attacks の内数）。熾火の稼働率の分子。
         if (actor.Counter(StatusKeys.Burn) > 0) TallyOf(actor).BurnAttacks++;
 
@@ -2737,6 +2786,9 @@ public sealed class BattleContext
         // **落とすのはこの1行だけ**（第65期）。計数も横流しも乱数の消費も一切変えない。
         if (!WhetBlock.Blocks(route)) receiver.AtkBonus += amount;
 
+        // 軋み（第66期）。**外の供給が同じ AtkBonus に積まれる**ことの記録で、盤面には触らない。
+        NoteCreakBonus(receiver, amount, selfGain: false, regurgitate: route == WhetRoute.Regurgitate);
+
         if (perverse)
         {
             WhetToPerverse += amount;
@@ -2953,11 +3005,12 @@ public static class BattleEngine
                                    DivertRule? divert = null, GoadRule? goad = null,
                                    FinisherRule? finisher = null, FavorRule? favor = null,
                                    BlazeRule? blaze = null, FunnelRule? funnel = null,
-                                   WhetMask? whetMask = null)
+                                   WhetMask? whetMask = null, CreakRule? creak = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
-               overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask);
+               overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
+               creak);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -2977,11 +3030,12 @@ public static class BattleEngine
                                    ScapegoatRule? scapegoat = null, DivertRule? divert = null,
                                    GoadRule? goad = null, FinisherRule? finisher = null,
                                    FavorRule? favor = null, BlazeRule? blaze = null,
-                                   FunnelRule? funnel = null, WhetMask? whetMask = null)
+                                   FunnelRule? funnel = null, WhetMask? whetMask = null,
+                                   CreakRule? creak = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
-                                    favor, blaze, funnel, whetMask);
+                                    favor, blaze, funnel, whetMask, creak);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

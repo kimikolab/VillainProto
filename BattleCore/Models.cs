@@ -680,6 +680,28 @@ public sealed class UnitTally
     /// <summary>倒れた回数。蘇生されて再度倒れると2になる。</summary>
     public int Deaths;
 
+    /// <summary>
+    /// 軋みが響く（第66期）の計数。<b>どれも誰も読んで分岐しない</b>
+    /// ——<c>verbose</c> にも依存しない（3行 × 4版 × 5波 × 200 seed を回すため）。
+    ///
+    /// <para><c>CreakSwings</c> は <see cref="TraitId.Displaced"/> 保持者が
+    /// <c>PerformAttack</c> を通った回数（分母。手番も割り込みも含む）、
+    /// <c>CreakSweeps</c> はそのうち<b>軋みの規則で薙ぎになった</b>回数。</para>
+    ///
+    /// <para><c>CreakMaxBonus</c> は戦闘中の <see cref="UnitState.AtkBonus"/> の最大値。
+    /// <c>CreakProbeTurn</c> は<b>閾値候補ごと</b>（<see cref="CreakProbes"/> ＝ 9 / 18 / 30）に
+    /// 初めてそこへ到達したターン（0 ＝ 未到達）で、<c>CreakSelfAtProbe</c> /
+    /// <c>CreakWhetAtProbe</c> / <c>CreakRegurgAtProbe</c> がその時点での
+    /// <b>出どころの内訳</b>（軋み自身 ／ 窓口経由の全経路 ／ そのうち吐き戻し）。
+    /// <b>規則を無効にしていても数える</b>ので、Phase 0 の分布は V0 の走査から読める。</para>
+    /// </summary>
+    public int CreakSwings, CreakSweeps, CreakMaxBonus;
+    public int CreakSelfGain, CreakWhetGain, CreakRegurgGain;
+    public int[]? CreakProbeTurn, CreakSelfAtProbe, CreakWhetAtProbe, CreakRegurgAtProbe;
+
+    /// <summary>閾値の候補（第66期 §2-2 の V9 / V18 / V30）。<b>計数の添字はこの並び。</b></summary>
+    public static readonly int[] CreakProbes = { 9, 18, 30 };
+
     public void Add(UnitTally o)
     {
         Attacks += o.Attacks; Interventions += o.Interventions;
@@ -703,6 +725,11 @@ public sealed class UnitTally
         // Math.Max を取るのは、合算の順序に依存しない（可換・結合的）ため——
         // 「最後の値を残す」方式は Add を呼ぶ順で答えが変わる。
         LastActiveTurn = Math.Max(LastActiveTurn, o.LastActiveTurn);
+        // 軋み（第66期）。回数は加算、最大値は Math.Max、到達ターンは FirstBurnTurn と同じ扱い。
+        CreakSwings += o.CreakSwings; CreakSweeps += o.CreakSweeps;
+        CreakSelfGain += o.CreakSelfGain; CreakWhetGain += o.CreakWhetGain;
+        CreakRegurgGain += o.CreakRegurgGain;
+        CreakMaxBonus = Math.Max(CreakMaxBonus, o.CreakMaxBonus);
     }
 }
 

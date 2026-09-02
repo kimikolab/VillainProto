@@ -4243,11 +4243,35 @@ public sealed class DisplacedTrait : Trait
 
     public override TraitId Id => TraitId.Displaced;
 
+    /// <summary>
+    /// 軋みが響く（第66期）。<b><c>AtkBonus</c> を読んで攻撃の型が変わる</b>——
+    /// 積み上がった軋みが閾値を越えると、単体の一撃が<b>薙ぎ</b>になる。
+    ///
+    /// <para><b>倍率も追加ダメージも足さない。</b> 変えるのは型だけで、
+    /// 量の側は既存の <c>AtkBonus</c>（軋み 9 / 突き出し 22）のまま。</para>
+    ///
+    /// <para><b>閾値は規則（<see cref="CreakRule"/>）で <c>Run</c> に渡す。</b>
+    /// static のノブを置かない理由は同型の doc を参照。<c>Threshold &lt;= 0</c> で完全に不活性
+    /// ——<c>Board</c> が null（盤面の外で作られた <see cref="UnitState"/>）でも同じ扱いにする。</para>
+    ///
+    /// <para><b>割り込み（<see cref="OnMoved"/> の攻撃）にも同じ規則が乗る。</b>
+    /// 割り込みは <c>ctx.PerformAttack</c> を通り、そこは <see cref="UnitState.CurrentPattern"/> を
+    /// 読むので、型の書き換えは自動で乗る（第66期 Phase 0-1 で確認）。</para>
+    /// </summary>
+    public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
+    {
+        int threshold = self.Board?.Creak.Threshold ?? 0;
+        if (threshold <= 0) return p;
+        return self.AtkBonus >= threshold ? AttackPattern.Sweep : p;
+    }
+
     public override void OnMoved(BattleContext ctx, UnitState self, Row from, Row to)
     {
         bool pushedForward = FormationRules.DepthOf(to) < FormationRules.DepthOf(from);
         int gain = pushedForward ? PushedToFrontGain : Gain;
         self.AtkBonus += gain;
+        // 軋み（第66期）の在庫の記録。**盤面には一切影響しない。**
+        ctx.NoteCreakBonus(self, gain, selfGain: true);
         ctx.Log($"    {self.Name} は突き飛ばされるほど据わる（攻撃 +{gain} → {self.CurrentAttack}）", LogKind.Trigger);
 
         // 割り込み攻撃の最中に起きた移動は、さらなる割り込みを生まない（再入禁止）。
@@ -4272,6 +4296,20 @@ public sealed class DisplacedTrait : Trait
             ctx.PerformAttack(self, "    ");
         });
     }
+}
+
+/// <summary>
+/// 軋みが響く強度（第66期）。<b>診断（creak）が版を差し替えるためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない。static のノブにしない理由は同型の doc を参照。
+///
+/// <para><c>Threshold</c> は <see cref="UnitState.AtkBonus"/> の閾値。
+/// <b><c>0</c> 以下で完全に不活性</b>——<see cref="DisplacedTrait.ModifyPattern"/> が
+/// 素通りするだけなので、<b>乱数も計数も盤面も1ビットも動かない</b>。これが検算になる。</para>
+/// </summary>
+public readonly record struct CreakRule(int Threshold)
+{
+    /// <summary>既定は<b>無効</b>（第66期は測定中）。採用したら採った閾値へ。</summary>
+    public static CreakRule Default => new(0);
 }
 
 /// <summary>
