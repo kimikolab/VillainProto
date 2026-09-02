@@ -140,6 +140,26 @@ public sealed class UnitState
     /// <summary>戦闘中に加算される攻撃力補正。バフ・デバフともにここへ入る。</summary>
     public int AtkBonus { get; set; }
 
+    /// <summary>
+    /// <b><see cref="BattleContext.Whet"/> 窓口を通って届いた強化の累計</b>（第67期）。
+    ///
+    /// <para><b>書くのは窓口の1箇所だけ</b>——<c>AtkBonus</c> に加算するのと同じ行で、
+    /// 同じ条件（<c>WhetBlock</c> で落とされた経路は届いていないので数えない）。
+    /// 自己強化の9本も、墓守の層の引き直しも通らない（<c>Whet</c> の非対称と同じ）。</para>
+    ///
+    /// <para><b><see cref="BattleContext.Dull"/> では減らさない。</b>
+    /// 閾値は<b>累積の床</b>であって在庫ではない——「外から何点押されたか」を条件にしたいので、
+    /// 後から弱体が来て正味が下がっても「押された」事実は消えない。
+    /// <b>却下した代案</b>: 正味（<c>Whet − Dull</c>）を読む形。これだと弱体を撒く敵の前で
+    /// 条件が引っ込み、<b>読んでいる量が「外の供給」ではなく「弱体との差」になる</b>
+    /// ——第63期「通貨を移す機構は読み手にとって奪う機構」を条件式の中に持ち込むことになる。</para>
+    ///
+    /// <para>寿命は <c>AtkBonus</c> と<b>完全に同じ</b>（蘇生 ＝ <c>Revive</c> と
+    /// 会戦の境界 ＝ <c>Engagement.CarryOver</c> の2箇所で 0 に戻す）。
+    /// 「配られた力」の帳簿なので、力そのものが消える場所で一緒に消えるのが筋。</para>
+    /// </summary>
+    public int WhetReceived { get; set; }
+
     public IReadOnlyList<Trait> Traits { get; init; } = Array.Empty<Trait>();
 
     /// <summary>特性が自由に使えるカウンタ置き場。特性ごとにキーを分ける。</summary>
@@ -699,8 +719,26 @@ public sealed class UnitTally
     public int CreakSelfGain, CreakWhetGain, CreakRegurgGain;
     public int[]? CreakProbeTurn, CreakSelfAtProbe, CreakWhetAtProbe, CreakRegurgAtProbe;
 
+    /// <summary>
+    /// 第67期。条件の出どころを <c>AtkBonus</c> から <see cref="UnitState.WhetReceived"/>
+    /// （<b><c>Whet</c> 窓口を通って届いた累計</b>）へ差し替えたので、
+    /// <b>到達の計数もそちら向きに1本足してある</b>。
+    ///
+    /// <para><c>CreakWhetMax</c> は戦闘中の <c>WhetReceived</c> の最大値（＝最終値）。
+    /// <c>CreakWhetProbeTurn</c> は <see cref="CreakWhetProbes"/> の各点へ初めて到達したターン
+    /// （0 ＝ 未到達）。<b>規則を無効にしていても数える</b>ので、閾値の候補は V0 の走査から引ける。</para>
+    /// </summary>
+    public int CreakWhetMax;
+    public int[]? CreakWhetProbeTurn;
+
     /// <summary>閾値の候補（第66期 §2-2 の V9 / V18 / V30）。<b>計数の添字はこの並び。</b></summary>
     public static readonly int[] CreakProbes = { 9, 18, 30 };
+
+    /// <summary>
+    /// 第67期の閾値の候補格子（<see cref="UnitState.WhetReceived"/> の側）。
+    /// <b>版の閾値はこの格子から採る</b>——外れた値を採ると主表の「初到達T」が引けなくなる。
+    /// </summary>
+    public static readonly int[] CreakWhetProbes = { 1, 2, 4, 6, 8, 12, 16, 24, 32 };
 
     public void Add(UnitTally o)
     {
@@ -730,6 +768,7 @@ public sealed class UnitTally
         CreakSelfGain += o.CreakSelfGain; CreakWhetGain += o.CreakWhetGain;
         CreakRegurgGain += o.CreakRegurgGain;
         CreakMaxBonus = Math.Max(CreakMaxBonus, o.CreakMaxBonus);
+        CreakWhetMax = Math.Max(CreakWhetMax, o.CreakWhetMax);
     }
 }
 

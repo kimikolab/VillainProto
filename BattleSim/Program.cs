@@ -8890,19 +8890,23 @@ if (focusId == "whet")
     return;
 }
 
-// 軋みが響く（第66期）。**駒は作らない。ロスターの最後の1枠は使わない。**
-// 既存駒（軋みのヨミ）の1文の続きとして `ModifyPattern` を1つ足し、
-// **`AtkBonus` を読んで攻撃の型が変わる**（単体 → 薙ぎ）を測る。
+// 軋みが響く（第66期 → **第67期に条件の出どころを差し替えた**）。
+// **駒は作らない。ロスターの最後の1枠は使わない。**
 //
-// 主題は第65期の積み残し1ダッシュ——**強化は供給 16 対 読み手 1（ウツ・符号だけ）の通貨**で、
-// 偏っているのは供給ではなく読み手の側。**読む駒を1枚足す。**
+// 第66期は `AtkBonus` を読んで単体 → 薙ぎにしたが、閾値 9 はヨミ自身の上昇（軋み 9 / 突き出し 22）
+// だけで満たされ、**条件ではなく起動スイッチ**になっていた（到達時点の内訳 軋み 21.8 対 窓口 8.0）。
+// 第67期は条件を **`UnitState.WhetReceived`（`Whet` 窓口を通って届いた累計）** に差し替える。
+// **軋み自身の上昇は条件に入らない**ので、これで初めて「強化の2枚目の読み手」になる
+// （第65期 積み残し1': 供給 16 対 読み手 1）。
 //
 // 自由度は構造的に消してある（第64期の教訓・自己検査 (e)）:
-//   行は選ばない（ヨミを含む**全3行**）／席は動かさない（`reseat` は帰属の器具ではない）／
-//   対象駒は指示書 §0-2 で固定／閾値の採り方は §2-2 で固定（Q1 を満たす版のうち帰属が最大・同点は高い方）。
+//   行は4本に固定（ヨミを含む全3行 ＋ 実演行 `軋み×吐き戻し`。**測定前の宣言**）／
+//   席は動かさない（`reseat` は帰属の器具ではない）／攻撃型は薙ぎで固定（第66期と同じ）／
+//   閾値は `UnitTally.CreakWhetProbes` の格子から3点、採り方は §2-2 で固定
+//   （Q1 を満たす版のうち帰属が最大・同点は高い方）。
 //
 //     dotnet run --project BattleSim -c Release 0 creak         # 主表（A 帯 seed 0..199）
-//     dotnet run --project BattleSim -c Release 0 creak phase0  # Phase 0（V0 の在庫の分布・重なり・実効レンジ）
+//     dotnet run --project BattleSim -c Release 0 creak phase0  # Phase 0（V0 の `WhetReceived` の分布）
 //     dotnet run --project BattleSim -c Release 0 creak alt     # 再現帯（seed 200..599）
 if (focusId == "creak")
 {
@@ -8919,27 +8923,39 @@ if (focusId == "creak")
     var ckRows = ckAll.Where(CkHasYomi).ToArray();
     var ckOther = ckAll.Where(b => !CkHasYomi(b)).ToArray();
 
-    // 実演行（§1-5）。**勝率で採る行ではない**（第62期の罠行と同じ扱い）。配置は手で固定し `reseat` しない。
-    // **指示書の「ヨミをゴルムの前に置く」は前提の訂正**——巨躯は `DepthOf(wall) < DepthOf(target)`、
-    // すなわち**ゴルムより後ろにいる味方**を庇うので、吐き戻しを受けるにはヨミが**後ろ**でなければならない。
-    // 狙い（外の供給が同じ `AtkBonus` に積まれるか）はこの向きでしか観測できない。
+    // 実演行（第66期 §1-5）。**第67期は「供給がある台」が主題なので採否にも使う**（指示書 §2-3・測定前の宣言）。
+    // 配置は手で固定し `reseat` しない。巨躯は `DepthOf(wall) < DepthOf(target)`＝**ゴルムより後ろ**を庇うので、
+    // 吐き戻しを受けるにはヨミが後ろでなければならない（第66期の前提の訂正）。
     var ckDemo = ("軋み×吐き戻し (ヨミ×ゴルム)",
         Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, center: UnitCatalog.Basa,
                         back1: UnitCatalog.Yomi, back3: UnitCatalog.Sero));
 
-    int[] ckVer = { 0, 9, 18, 30 };
-    string[] ckVerName = { "V0", "V9", "V18", "V30" };
+    // Q3ダッシュの器具（指示書 §1-4）。**ゴルムだけを同数値・特性なしの素体に落とす。他の4枚と席は動かさない。**
+    // 規則にノブを増やさず駒の側で塞ぐ（第47期・`gradient` / `aim` と同じ扱い）。
+    var ckPlainGolm = new UnitDef
+    {
+        Id = "golm_plain", Name = "素体（ゴルム同数値）",
+        MaxHp = 150, Attack = 10, Speed = 3, Traits = Array.Empty<TraitId>(),
+        PlusText = "", MinusText = "", Flavor = ""
+    };
+    var ckDemoPlain = ("軋み×吐き戻し（ゴルム素体）",
+        Formation.Build(front1: ckPlainGolm, front3: UnitCatalog.Gald, center: UnitCatalog.Basa,
+                        back1: UnitCatalog.Yomi, back3: UnitCatalog.Sero));
+
+    // 版と閾値（§2-2・**測る前に固定**）。Phase 0-3 の分布から `CreakWhetProbes` の格子上で3点を採る。
+    int[] ckVer = { 0, 2, 6, 12 };
+    string[] ckVerName = { "V0", "Va", "Vb", "Vc" };
 
     // 1行ぶんの器。**勝率と計数を同じ走査で取る。**
-    (double[] Win, double Sweeps, double Swings, double MaxBonus,
-     double[] ProbeT, double[] ProbeN, double[] Self, double[] Whet, double[] Regurg)
+    (double[] Win, double Sweeps, double Swings, double WhetMax,
+     double SelfGain, double WhetGain, double RegurgGain,
+     double[] ProbeT, double[] ProbeN)
     CkRun(Formation f, int threshold)
     {
-        int np = UnitTally.CreakProbes.Length;
+        int np = UnitTally.CreakWhetProbes.Length;
         var win = new double[ckStages.Count];
-        double sweeps = 0, swings = 0, maxb = 0;
+        double sweeps = 0, swings = 0, wmax = 0, sg = 0, wg = 0, rg = 0;
         var pt = new double[np]; var pn = new double[np];
-        var ps = new double[np]; var pw = new double[np]; var pr = new double[np];
 
         for (int w = 0; w < ckStages.Count; w++)
         {
@@ -8950,84 +8966,76 @@ if (focusId == "creak")
                                                   creak: new CreakRule(threshold));
                 if (r.PlayerWon) wins++;
                 if (!r.TallyByUnit.TryGetValue(UnitCatalog.Yomi.Id, out UnitTally? t)) continue;
-                sweeps += t.CreakSweeps; swings += t.CreakSwings; maxb += t.CreakMaxBonus;
-                if (t.CreakProbeTurn is null) continue;
+                sweeps += t.CreakSweeps; swings += t.CreakSwings; wmax += t.CreakWhetMax;
+                sg += t.CreakSelfGain; wg += t.CreakWhetGain; rg += t.CreakRegurgGain;
+                if (t.CreakWhetProbeTurn is null) continue;
                 for (int i = 0; i < np; i++)
                 {
-                    if (t.CreakProbeTurn[i] == 0) continue;
-                    pn[i]++; pt[i] += t.CreakProbeTurn[i];
-                    ps[i] += t.CreakSelfAtProbe![i];
-                    pw[i] += t.CreakWhetAtProbe![i];
-                    pr[i] += t.CreakRegurgAtProbe![i];
+                    if (t.CreakWhetProbeTurn[i] == 0) continue;
+                    pn[i]++; pt[i] += t.CreakWhetProbeTurn[i];
                 }
             }
             win[w] = wins * 100.0 / ckSeedN;
         }
         int n = ckStages.Count * ckSeedN;
-        return (win, sweeps / n, swings / n, maxb / n, pt, pn, ps, pw, pr);
+        return (win, sweeps / n, swings / n, wmax / n, sg / n, wg / n, rg / n, pt, pn);
     }
 
     var ckSw = System.Diagnostics.Stopwatch.StartNew();
 
-    // ---- phase0: V0 の在庫の分布と、判定式の実効レンジ --------------------------
+    // ---- phase0: V0 の `WhetReceived` の分布と、判定式の実効レンジ ----------------
     if (ckArg == "phase0")
     {
-        Console.WriteLine("# 軋みが響く —— Phase 0（第66期。**規則は無効のまま測る**）");
+        Console.WriteLine("# 軋みが響く（第67期） —— Phase 0（**規則は無効のまま測る**）");
         Console.WriteLine();
         Console.WriteLine($"seed {ckSeed0}..{ckSeed0 + ckSeedN - 1} × 5 波。**盤面は1つも動かない**"
                           + "（`CreakRule` 無効＝`ModifyPattern` が素通り）。");
         Console.WriteLine();
-        Console.WriteLine("## 0-1. 割り込みの経路（**コードを読んで固定。測っていない**）");
+        Console.WriteLine("## 0-3. ヨミの `WhetReceived` の分布（現行・V0）");
         Console.WriteLine();
-        Console.WriteLine("`DisplacedTrait.OnMoved` の割り込みは `ctx.Interrupt(() => ctx.PerformAttack(self))` で、");
-        Console.WriteLine("`PerformAttack` は `patternOverride ?? actor.CurrentPattern` を読む（`BattleEngine.cs`）。");
-        Console.WriteLine("`CurrentPattern` は `Def.Pattern` に全特性の `ModifyPattern` を通すので、");
-        Console.WriteLine("**割り込みにも薙ぎが乗る**（乗せないという選択は取っていない）。");
+        Console.WriteLine("`押され` は1戦あたり窓口経由で届いた累計の平均、`うち吐` はそのうち吐き戻し、");
+        Console.WriteLine("`軋み` は自前の上昇（**条件に入らない**）。各列は 5 波 × 試行のうちその点へ届いた割合で、");
+        Console.WriteLine("次の行が届いた試行だけの平均ターン。**閾値の候補はこの格子から採る。**");
         Console.WriteLine();
-        Console.WriteLine("## 0-2. ヨミの `AtkBonus` の分布（現行・V0）");
+        Console.Write("| 行 | 振/戦 | 押され | うち吐 | 軋み |");
+        foreach (int q in UnitTally.CreakWhetProbes) Console.Write($" {q} |");
         Console.WriteLine();
-        Console.WriteLine("`最大` は戦闘中の `AtkBonus` の最大値の平均。`到達%` は 200 試行 × 5 波のうち");
-        Console.WriteLine("その閾値へ届いた割合、`到達T` は届いた試行だけの平均ターン、");
-        Console.WriteLine("`軋み/窓口/吐` は**到達時点の出どころの内訳**（軋み自身 ／ 窓口経由の全経路 ／ そのうち吐き戻し）。");
+        Console.Write("|---|--:|--:|--:|--:|");
+        foreach (int _ in UnitTally.CreakWhetProbes) Console.Write("--:|");
         Console.WriteLine();
-        Console.WriteLine("| 行 | 振/戦 | 最大 | 閾値 | 到達% | 到達T | 軋み | 窓口 | 吐 |");
-        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|");
-        foreach ((string rn, Formation f) in ckRows.Append(ckDemo))
+        double ckDen = ckStages.Count * ckSeedN;
+        foreach ((string rn, Formation f) in ckRows.Append(ckDemo).Append(ckDemoPlain))
         {
             var g = CkRun(f, 0);
-            double denom = ckStages.Count * ckSeedN;
-            for (int i = 0; i < UnitTally.CreakProbes.Length; i++)
-            {
-                string head = i == 0 ? $"| {rn} | {g.Swings:F2} | {g.MaxBonus:F1} " : "|  |  |  ";
-                double pct = g.ProbeN[i] * 100.0 / denom;
-                string t = g.ProbeN[i] > 0 ? (g.ProbeT[i] / g.ProbeN[i]).ToString("F2") : "—";
-                string a = g.ProbeN[i] > 0 ? (g.Self[i] / g.ProbeN[i]).ToString("F1") : "—";
-                string b = g.ProbeN[i] > 0 ? (g.Whet[i] / g.ProbeN[i]).ToString("F1") : "—";
-                string c = g.ProbeN[i] > 0 ? (g.Regurg[i] / g.ProbeN[i]).ToString("F1") : "—";
-                Console.WriteLine($"{head}| {UnitTally.CreakProbes[i]} | {pct:F1}% | {t} | {a} | {b} | {c} |");
-            }
+            Console.Write($"| {rn} | {g.Swings:F2} | {g.WhetGain:F1} | {g.RegurgGain:F1} | {g.SelfGain:F1} |");
+            for (int i = 0; i < UnitTally.CreakWhetProbes.Length; i++)
+                Console.Write($" {g.ProbeN[i] * 100.0 / ckDen:F1}% |");
+            Console.WriteLine();
+            Console.Write("|  |  |  |  | 到達T |");
+            for (int i = 0; i < UnitTally.CreakWhetProbes.Length; i++)
+                Console.Write(g.ProbeN[i] > 0 ? $" {g.ProbeT[i] / g.ProbeN[i]:F2} |" : " — |");
+            Console.WriteLine();
         }
         Console.WriteLine();
-        Console.WriteLine("## 0-3. 主判定19行との重なりと、Q6 の実効レンジ（自己検査 (c)）");
+        Console.WriteLine("## 0-5. 主判定19行との重なりと、Q6 の実効レンジ（自己検査 (c)）");
         Console.WriteLine();
-        var ckPrimary = new HashSet<string>(Baseline.PrimaryRows);
-        var ckIn = ckRows.Where(b => ckPrimary.Contains(b.Name)).Select(b => b.Name).ToArray();
+        var ckPrimary0 = new HashSet<string>(Baseline.PrimaryRows);
+        var ckIn0 = ckRows.Where(b => ckPrimary0.Contains(b.Name)).Select(b => b.Name).ToArray();
         Console.WriteLine($"ヨミを含む行は **{ckRows.Length} 行**、うち主判定 {Baseline.PrimaryRows.Length} 行に "
-                          + $"**{ckIn.Length} 行**（{string.Join(" / ", ckIn)}）。");
+                          + $"**{ckIn0.Length} 行**（{string.Join(" / ", ckIn0)}）。");
         Console.WriteLine();
-        double[] ckFifth = Baseline.PrimaryRows
+        double[] ckFifth0 = Baseline.PrimaryRows
             .Select(n => Array.FindIndex(ckAll, b => b.Name == n)).Where(i => i >= 0)
             .Select(i => CkRun(ckAll[i].Item2, 0).Win[4]).ToArray();
-        double ckAvg = ckFifth.Average();
-        double ckSwing = ckIn.Select(n => CkRun(ckAll[Array.FindIndex(ckAll, b => b.Name == n)].Item2, 0).Win[4]).Sum()
-                         / ckFifth.Length;
-        Console.WriteLine($"主判定の第五波平均（現行）= **{ckAvg:F1}%**、歯止め {Baseline.PrimaryFifthFloor:F1}% との余裕 "
-                          + $"**{ckAvg - Baseline.PrimaryFifthFloor:F1}pt**。");
-        Console.WriteLine($"重なる {ckIn.Length} 行が第五波で 0.0% まで落ちても平均の低下は最大 **{ckSwing:F2}pt**"
-                          + "——**実効レンジがこの幅**なので、Q6 が構造的に拒否権として働きうるかはここで決まる");
-        Console.WriteLine("（第61期の瘴気は 1 行 4.5% ÷ 19 = 0.24pt で構造的に発動しなかった）。");
+        double ckAvg0 = ckFifth0.Average();
+        double ckSwing0 = ckIn0.Select(n => CkRun(ckAll[Array.FindIndex(ckAll, b => b.Name == n)].Item2, 0).Win[4]).Sum()
+                          / ckFifth0.Length;
+        Console.WriteLine($"主判定の第五波平均（現行）= **{ckAvg0:F1}%**、歯止め {Baseline.PrimaryFifthFloor:F1}% との余裕 "
+                          + $"**{ckAvg0 - Baseline.PrimaryFifthFloor:F1}pt**。");
+        Console.WriteLine($"重なる {ckIn0.Length} 行が第五波で 0.0% まで落ちても平均の低下は最大 **{ckSwing0:F2}pt**"
+                          + "——**実効レンジがこの幅**。");
         Console.WriteLine();
-        Console.WriteLine("## 0-4. 陰性対照の分母");
+        Console.WriteLine("## 0-6. 陰性対照の分母");
         Console.WriteLine();
         Console.WriteLine($"ヨミを含まない **{ckOther.Length} 行**（{ckOther.Length} × 5 波 = **{ckOther.Length * 5} セル**）。");
         Console.WriteLine();
@@ -9036,22 +9044,24 @@ if (focusId == "creak")
     }
 
     // ---- 主表 -------------------------------------------------------------------
-    Console.WriteLine($"# 軋みが響く —— 主表（第66期{(ckAlt ? "・再現帯" : "")}）");
+    Console.WriteLine($"# 軋みが響く（第67期） —— 主表{(ckAlt ? "・再現帯" : "")}");
     Console.WriteLine();
     Console.WriteLine($"seed {ckSeed0}..{ckSeed0 + ckSeedN - 1} × 5 波。帰属 = V_n − V0。");
-    Console.WriteLine("**席は現行のまま（`reseat` しない）／行は選ばない（ヨミを含む全行）。**");
+    Console.WriteLine("**席は現行のまま（`reseat` しない）／行は4本に固定（測定前の宣言）。**");
+    Console.WriteLine($"閾値は `WhetReceived`（窓口経由の累計）で **{ckVer[1]} / {ckVer[2]} / {ckVer[3]}**。");
     Console.WriteLine();
 
+    var ckMain = ckRows.Append(ckDemo).ToArray();
     var ckBase = new Dictionary<string, double[]>();
-    foreach ((string rn, Formation f) in ckRows.Append(ckDemo)) ckBase[rn] = CkRun(f, 0).Win;
+    foreach ((string rn, Formation f) in ckMain.Append(ckDemoPlain)) ckBase[rn] = CkRun(f, 0).Win;
 
     Console.WriteLine("## 1. 行 × 版（波ごとの勝率・平均・帰属・薙ぎ化率）");
     Console.WriteLine();
-    Console.WriteLine("| 行 | 版 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | 平均 | 帰属 | 薙ぎ化率 | 振/戦 | 初到達T |");
-    Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+    Console.WriteLine("| 行 | 版 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | 平均 | 帰属 | 薙ぎ化率 | 振/戦 | 押され | 初到達T |");
+    Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
     var ckAttr = new Dictionary<string, double[]>();
     var ckRate = new Dictionary<string, double[]>();
-    foreach ((string rn, Formation f) in ckRows.Append(ckDemo))
+    foreach ((string rn, Formation f) in ckMain)
     {
         var attr = new double[ckVer.Length];
         var rate = new double[ckVer.Length];
@@ -9061,12 +9071,12 @@ if (focusId == "creak")
             double avg = g.Win.Average();
             attr[v] = avg - ckBase[rn].Average();
             rate[v] = g.Swings > 0 ? g.Sweeps * 100.0 / g.Swings : 0;
-            int pi = Array.IndexOf(UnitTally.CreakProbes, ckVer[v]);
+            int pi = Array.IndexOf(UnitTally.CreakWhetProbes, ckVer[v]);
             string ft = pi >= 0 && g.ProbeN[pi] > 0 ? (g.ProbeT[pi] / g.ProbeN[pi]).ToString("F2") : "—";
             Console.WriteLine($"| {(v == 0 ? rn : "")} | {ckVerName[v]} | "
                               + string.Join(" | ", g.Win.Select(x => $"{x:F1}%"))
                               + $" | {avg:F1}% | {(v == 0 ? "—" : $"{attr[v]:+0.0;-0.0}")} "
-                              + $"| {rate[v]:F1}% | {g.Swings:F2} | {ft} |");
+                              + $"| {rate[v]:F1}% | {g.Swings:F2} | {g.WhetGain:F1} | {ft} |");
         }
         ckAttr[rn] = attr; ckRate[rn] = rate;
     }
@@ -9076,76 +9086,74 @@ if (focusId == "creak")
     Console.WriteLine("## 2. Q1（条件は条件か）と閾値の採用");
     Console.WriteLine();
     Console.WriteLine("**採る版は「Q1 を満たす版のうち帰属が最大のもの。同点は高い閾値」**（§2-2・測る前に固定）。");
-    Console.WriteLine("Q1 = 採る版で、**3行すべて**において薙ぎ化率が **10% 以上 90% 以下**。");
+    Console.WriteLine("Q1 = 採る版で、**4行中3行**の薙ぎ化率が **10% 以上 90% 以下**。**90% 超が1行でもあれば×。**");
     Console.WriteLine();
-    Console.WriteLine("| 版 | 薙ぎ化率（3行） | Q1 | 帰属（3行平均） |");
-    Console.WriteLine("|---|---|---|--:|");
+    Console.WriteLine("| 版 | 閾値 | 薙ぎ化率（4行） | 帯内 | 90%超 | Q1 | 帰属（4行平均） |");
+    Console.WriteLine("|---|--:|---|--:|--:|---|--:|");
     int ckPick = -1; double ckPickAttr = double.NegativeInfinity;
     for (int v = 1; v < ckVer.Length; v++)
     {
-        var rr = ckRows.Select(b => ckRate[b.Name][v]).ToArray();
-        bool q1 = rr.All(x => x >= 10.0 && x <= 90.0);
-        double aa = ckRows.Select(b => ckAttr[b.Name][v]).Average();
-        Console.WriteLine($"| {ckVerName[v]} | {string.Join(" / ", rr.Select(x => $"{x:F1}%"))} "
-                          + $"| {(q1 ? "○" : "×")} | {aa:+0.0;-0.0} |");
+        var rr = ckMain.Select(b => ckRate[b.Item1][v]).ToArray();
+        int inBand = rr.Count(x => x >= 10.0 && x <= 90.0);
+        int over = rr.Count(x => x > 90.0);
+        bool q1 = inBand >= 3 && over == 0;
+        double aa = ckMain.Select(b => ckAttr[b.Item1][v]).Average();
+        Console.WriteLine($"| {ckVerName[v]} | {ckVer[v]} | {string.Join(" / ", rr.Select(x => $"{x:F1}%"))} "
+                          + $"| {inBand} | {over} | {(q1 ? "○" : "×")} | {aa:+0.0;-0.0} |");
         if (q1 && aa >= ckPickAttr) { ckPickAttr = aa; ckPick = v; }
     }
     Console.WriteLine();
-    if (ckPick < 0)
+    if (ckPick < 0) Console.WriteLine("**Q1 を満たす版が1つも無い → 採らない（残置）。**");
+    else Console.WriteLine($"→ 採る版は **{ckVerName[ckPick]}（Threshold = {ckVer[ckPick]}）**。");
+    Console.WriteLine();
+
+    // ---- Q3ダッシュ（主判定・読み手か） ---------------------------------------------
+    Console.WriteLine("## 3. Q3'（**主判定**: 外の供給を読んでいるか）");
+    Console.WriteLine();
+    Console.WriteLine("`軋み×吐き戻し` のゴルムだけを同数値・特性なしの素体に落とす（他の4枚と席は動かさない）。");
+    Console.WriteLine("**薙ぎ化率が 1/5 以下に落ちること。**落ちなければ条件は外の供給を読んでいない。");
+    Console.WriteLine();
+    Console.WriteLine("| 版 | 閾値 | 現行の薙ぎ化率 | 素体の薙ぎ化率 | 比 | 押され（現行→素体） | 1/5 以下 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|---|---|");
+    for (int v = 1; v < ckVer.Length; v++)
     {
-        Console.WriteLine("**Q1 を満たす版が1つも無い → 採らない（残置）。**");
+        var gn = CkRun(ckDemo.Item2, ckVer[v]);
+        var gp = CkRun(ckDemoPlain.Item2, ckVer[v]);
+        double rn2 = gn.Swings > 0 ? gn.Sweeps * 100.0 / gn.Swings : 0;
+        double rp = gp.Swings > 0 ? gp.Sweeps * 100.0 / gp.Swings : 0;
+        double ratio = rn2 > 0 ? rp / rn2 : 0;
+        Console.WriteLine($"| {ckVerName[v]} | {ckVer[v]} | {rn2:F1}% | {rp:F1}% | {ratio:F2} "
+                          + $"| {gn.WhetGain:F1} → {gp.WhetGain:F1} | {(rn2 > 0 && ratio <= 0.2 ? "○" : "×")} |");
     }
-    else
+    Console.WriteLine();
+
+    // ---- Q2 ------------------------------------------------------------------------
+    if (ckPick >= 0)
     {
-        Console.WriteLine($"→ 採る版は **{ckVerName[ckPick]}（Threshold = {ckVer[ckPick]}）**。");
-        Console.WriteLine();
-        Console.WriteLine("## 3. Q2（帰属）");
+        Console.WriteLine("## 4. Q2（帰属）");
         Console.WriteLine();
         Console.WriteLine("| 行 | 帰属 | ≥ +1.5pt | ≥ −3.0pt |");
         Console.WriteLine("|---|--:|---|---|");
-        foreach ((string rn, Formation _) in ckRows)
+        foreach ((string rn, Formation _) in ckMain)
         {
             double a = ckAttr[rn][ckPick];
             Console.WriteLine($"| {rn} | {a:+0.0;-0.0} | {(a >= 1.5 ? "○" : "×")} | {(a >= -3.0 ? "○" : "**×**")} |");
         }
-        int okN = ckRows.Count(b => ckAttr[b.Name][ckPick] >= 1.5);
-        bool floorOk = ckRows.All(b => ckAttr[b.Name][ckPick] >= -3.0);
+        int okN = ckMain.Count(b => ckAttr[b.Item1][ckPick] >= 1.5);
+        bool floorOk = ckMain.All(b => ckAttr[b.Item1][ckPick] >= -3.0);
         Console.WriteLine();
-        Console.WriteLine($"**Q2 = {(okN >= 2 && floorOk ? "○" : "×")}**（+1.5pt 以上が {okN} / 3 行"
-                          + $"・下限を割った行 {ckRows.Count(b => ckAttr[b.Name][ckPick] < -3.0)}）。");
+        Console.WriteLine($"**Q2 = {(okN >= 2 && floorOk ? "○" : "×")}**（+1.5pt 以上が {okN} / 4 行"
+                          + $"・下限を割った行 {ckMain.Count(b => ckAttr[b.Item1][ckPick] < -3.0)}）。");
+        Console.WriteLine();
     }
-    Console.WriteLine();
 
-    // ---- Q3 / Q7: 実演行と初到達ターン ---------------------------------------------
-    Console.WriteLine("## 4. Q3（外の供給で響くか・**採否には使わない**）と Q7（絵）");
-    Console.WriteLine();
-    Console.WriteLine("| 行 | 閾値 | 到達% | 到達T | 軋み | 窓口 | 吐き戻し |");
-    Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|");
-    foreach ((string rn, Formation f) in ckRows.Append(ckDemo))
-    {
-        var g = CkRun(f, 0);
-        double denom = ckStages.Count * ckSeedN;
-        for (int i = 0; i < UnitTally.CreakProbes.Length; i++)
-        {
-            if (g.ProbeN[i] <= 0)
-            {
-                Console.WriteLine($"| {(i == 0 ? rn : "")} | {UnitTally.CreakProbes[i]} | 0.0% | — | — | — | — |");
-                continue;
-            }
-            Console.WriteLine($"| {(i == 0 ? rn : "")} | {UnitTally.CreakProbes[i]} | {g.ProbeN[i] * 100.0 / denom:F1}% "
-                              + $"| {g.ProbeT[i] / g.ProbeN[i]:F2} | {g.Self[i] / g.ProbeN[i]:F1} "
-                              + $"| {g.Whet[i] / g.ProbeN[i]:F1} | {g.Regurg[i] / g.ProbeN[i]:F2} |");
-        }
-    }
-    Console.WriteLine();
-
-    // ---- Q4 / Q5 / Q6 --------------------------------------------------------------
-    Console.WriteLine("## 5. Q4（情報セル）・Q5（陰性対照）・Q6（歯止め）");
+    // ---- Q4 / Q5 / Q6 / Q7 ---------------------------------------------------------
+    Console.WriteLine("## 5. Q4（情報セル）・Q5（陰性対照）・Q6（歯止め）・Q7（絵）");
     Console.WriteLine();
     int InfoCells(double[] w) => w.Skip(1).Count(x => x > 0.0 && x < 100.0);
     Console.WriteLine("| 行 | 情報セル V0 | " + string.Join(" | ", ckVerName.Skip(1).Select(n => $"情報セル {n}")) + " |");
     Console.WriteLine("|---|--:|--:|--:|--:|");
-    foreach ((string rn, Formation f) in ckRows)
+    foreach ((string rn, Formation f) in ckMain)
         Console.WriteLine($"| {rn} | {InfoCells(ckBase[rn])} | "
                           + string.Join(" | ", ckVer.Skip(1).Select(t => InfoCells(CkRun(f, t).Win).ToString())) + " |");
     Console.WriteLine();
@@ -9172,6 +9180,8 @@ if (focusId == "creak")
         Console.WriteLine($"**Q6**: 主判定 {ckPrimIdx.Length} 行の第五波平均（{ckVerName[v]}）= **{avg:F1}%**"
                           + $"、歯止め {Baseline.PrimaryFifthFloor:F1}% との余裕 **{avg - Baseline.PrimaryFifthFloor:F1}pt**。");
     }
+    Console.WriteLine();
+    Console.WriteLine("**Q7**（絵）: 初到達Tは §1 の最右列。第66期の 1.55〜2.55 より遅いことが条件。");
     Console.WriteLine();
     Console.WriteLine($"所要 {ckSw.Elapsed.TotalSeconds:F1} 秒。");
     return;

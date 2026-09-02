@@ -270,6 +270,8 @@ public static class EngagementEngine
         {
             foreach (string key in StatusKeys.All) u.Counters.Remove(key);
             u.AtkBonus = 0;
+            // 第67期。押された累計は配られた力と同じ寿命（AtkBonus と同じ行で消す）。
+            u.WhetReceived = 0;
             // 行動周期は Battle スコープ。溜めかけたまま波が変わると、次の部隊戦の初手に
             // 大技が落ちる（「溜めを見てから合わせる」という体験が成立しなくなる）。
             // ターン番号に紐づくカウンタを境界で 0 に戻す NecroTrait.OnCarryOver と同じ扱い。

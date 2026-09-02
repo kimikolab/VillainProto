@@ -1233,6 +1233,15 @@ public sealed class BattleContext
             if (regurgitate) t.CreakRegurgGain += amount;
         }
         if (self.AtkBonus > t.CreakMaxBonus) t.CreakMaxBonus = self.AtkBonus;
+        if (self.WhetReceived > t.CreakWhetMax) t.CreakWhetMax = self.WhetReceived;
+
+        // 第67期の条件の側（WhetReceived）の到達ターン。**規則を無効にしていても数える。**
+        int[] wp = t.CreakWhetProbeTurn ??= new int[UnitTally.CreakWhetProbes.Length];
+        for (int i = 0; i < UnitTally.CreakWhetProbes.Length; i++)
+        {
+            if (wp[i] != 0 || self.WhetReceived < UnitTally.CreakWhetProbes[i]) continue;
+            wp[i] = Math.Max(1, Turn);
+        }
 
         int[] probe = t.CreakProbeTurn ??= new int[UnitTally.CreakProbes.Length];
         int[] ps = t.CreakSelfAtProbe ??= new int[UnitTally.CreakProbes.Length];
@@ -2476,6 +2485,8 @@ public sealed class BattleContext
         if (target.IsAlive) return;
         target.Hp = Math.Max(1, hp);
         target.AtkBonus = 0;
+        // 第67期。配られた力が消える場所で「押された累計」も一緒に消す（寿命を AtkBonus に揃える）。
+        target.WhetReceived = 0;
         Log($"    {target.Name} が繋ぎ直された（HP {target.Hp}）", LogKind.Summon);
         Emit(new BattleEvent
         {
@@ -2784,7 +2795,13 @@ public sealed class BattleContext
         (rt.WhetPendingByRoute ??= new int[WhetRoutes.Count])[(int)route] += amount;
 
         // **落とすのはこの1行だけ**（第65期）。計数も横流しも乱数の消費も一切変えない。
-        if (!WhetBlock.Blocks(route)) receiver.AtkBonus += amount;
+        // 第67期: 「外から押された累計」（UnitState.WhetReceived）も**同じ行・同じ条件**で積む。
+        // 落とした経路は届いていないので数えない——帳簿ではなく実際に届いた力の累計である。
+        if (!WhetBlock.Blocks(route))
+        {
+            receiver.AtkBonus += amount;
+            receiver.WhetReceived += amount;
+        }
 
         // 軋み（第66期）。**外の供給が同じ AtkBonus に積まれる**ことの記録で、盤面には触らない。
         NoteCreakBonus(receiver, amount, selfGain: false, regurgitate: route == WhetRoute.Regurgitate);

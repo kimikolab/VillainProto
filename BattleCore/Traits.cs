@@ -4244,8 +4244,16 @@ public sealed class DisplacedTrait : Trait
     public override TraitId Id => TraitId.Displaced;
 
     /// <summary>
-    /// 軋みが響く（第66期）。<b><c>AtkBonus</c> を読んで攻撃の型が変わる</b>——
-    /// 積み上がった軋みが閾値を越えると、単体の一撃が<b>薙ぎ</b>になる。
+    /// 軋みが響く（第66期 → <b>第67期に条件の出どころを差し替えた</b>）。
+    /// <b><see cref="UnitState.WhetReceived"/>（<c>Whet</c> 窓口を通って届いた累計）を読んで
+    /// 攻撃の型が変わる</b>——<b>誰かに背中を押されたぶん</b>が閾値を越えると、
+    /// 単体の一撃が<b>薙ぎ</b>になる。
+    ///
+    /// <para><b>軋み自身の上昇（<see cref="OnMoved"/> の <c>AtkBonus +=</c>）は条件に入らない。</b>
+    /// 第66期は <c>AtkBonus</c> を読んだが、それは<b>この駒が自分で作れる値</b>で、
+    /// 上昇量が 9 / 22 の2段しかないので<b>閾値が「0回か1回以上か」の起動スイッチに潰れた</b>
+    /// （実測で閾値 9 の到達時点の内訳が 軋み 21.8 対 窓口 8.0、薙ぎ化率 85.9%）。
+    /// <b>自分で作れる値を条件に使うと、条件の粒度はその駒自身の上昇量が決める。</b></para>
     ///
     /// <para><b>倍率も追加ダメージも足さない。</b> 変えるのは型だけで、
     /// 量の側は既存の <c>AtkBonus</c>（軋み 9 / 突き出し 22）のまま。</para>
@@ -4262,7 +4270,7 @@ public sealed class DisplacedTrait : Trait
     {
         int threshold = self.Board?.Creak.Threshold ?? 0;
         if (threshold <= 0) return p;
-        return self.AtkBonus >= threshold ? AttackPattern.Sweep : p;
+        return self.WhetReceived >= threshold ? AttackPattern.Sweep : p;
     }
 
     public override void OnMoved(BattleContext ctx, UnitState self, Row from, Row to)
@@ -4302,7 +4310,7 @@ public sealed class DisplacedTrait : Trait
 /// 軋みが響く強度（第66期）。<b>診断（creak）が版を差し替えるためだけの窓口</b>で、
 /// 通常の実行では誰も渡さない。static のノブにしない理由は同型の doc を参照。
 ///
-/// <para><c>Threshold</c> は <see cref="UnitState.AtkBonus"/> の閾値。
+/// <para><c>Threshold</c> は <see cref="UnitState.WhetReceived"/> の閾値（第67期）。
 /// <b><c>0</c> 以下で完全に不活性</b>——<see cref="DisplacedTrait.ModifyPattern"/> が
 /// 素通りするだけなので、<b>乱数も計数も盤面も1ビットも動かない</b>。これが検算になる。</para>
 /// </summary>
