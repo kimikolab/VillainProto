@@ -1283,6 +1283,13 @@ public sealed class BattleContext
     public SeverRule Sever { get; }
 
     /// <summary>
+    /// 薄刃の払い方（第75期）。<b>診断（blade）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="ThinBladeRule.Default"/> ＝ 常に 1）。
+    /// static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public ThinBladeRule ThinBlade { get; }
+
+    /// <summary>
     /// 軋み（第66期）の在庫の記録。<b>盤面には一切影響しない。</b>
     /// <see cref="TraitId.Displaced"/> 保持者の <see cref="UnitState.AtkBonus"/> が動いた直後に呼ぶ
     /// ——上げる経路は<b>軋み自身と <see cref="Whet"/> の2本だけ</b>（ヨミは自己強化を1つも持たない）。
@@ -1332,7 +1339,8 @@ public sealed class BattleContext
                          GoadRule? goad = null, FinisherRule? finisher = null,
                          FavorRule? favor = null, BlazeRule? blaze = null,
                          FunnelRule? funnel = null, WhetMask? whetMask = null,
-                         CreakRule? creak = null, SeverRule? sever = null)
+                         CreakRule? creak = null, SeverRule? sever = null,
+                         ThinBladeRule? thinBlade = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -1359,6 +1367,7 @@ public sealed class BattleContext
         WhetBlock = whetMask ?? WhetMask.None;
         Creak = creak ?? CreakRule.Default;
         Sever = sever ?? SeverRule.Default;
+        ThinBlade = thinBlade ?? ThinBladeRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -1972,6 +1981,40 @@ public sealed class BattleContext
         int atk = attackPercent == 100
             ? actor.CurrentAttack
             : actor.CurrentAttack * attackPercent / 100;
+
+        // 薄刃の払い方（第75期）。**規則が V0（既定）なら最初の比較1つで抜ける**ので、
+        // 通常の実行では乱数も盤面も1ビットも動かない（`compare` 305 セル 0 件が検算）。
+        //
+        // **`Trait.ModifyAttack` には書けない**——「相手に傷があるか」は対象を見る条件で、
+        // あちらは `self` しか受け取らない。止め（第53期）の倍率とまったく同じ理由・同じ場所で、
+        // **`atk` を作った直後に払い直す**。`ThinBladeTrait.ModifyAttack` は常に 1 を返し続けるので、
+        // `CurrentAttack` を読む他の全員（駆り立ての選択・転嫁の流し先・StatSnapshot・
+        // 棘/仇討ち/責め苦の反撃量）から見たキリは版によらず攻撃力 1 のまま
+        // ——**版が動かすのは「この一振りの打点」だけ**である。
+        //
+        // **代金は消えていない。**条件が真の側は `atk` を読まずに 1 のまま通す（第29期の設計）。
+        // 主目標で判定するので薙ぎの巻き込み・貫きの後続も同じ値で解決される（キリは単体だが、
+        // 型を書き換える機構＝軋みが載った場合の挙動をここで決めてある）。
+        if (ThinBlade.Cost != ThinBladeCost.Always && actor.HasTrait(TraitId.ThinBlade))
+        {
+            bool pay = ThinBlade.Cost switch
+            {
+                // V1: 傷の無い相手には 1。**自分で開けた傷に自分で入る。**
+                ThinBladeCost.Unwounded => target.Counter(StatusKeys.Wound) <= 0,
+                // V2: 刻める攻撃だけ 1。刻めない＝この一撃で倒れる（死体には刻まない）。
+                // **判定は代金を払った価格で行う予測**——実際の生死は肩代わり・上限まで行かないと
+                // 決まらないので、破片が無く HP がこの打点以下のときだけ「刻めない」と読む。
+                ThinBladeCost.Carving => !(target.Counter(StatusKeys.Armor) <= 0 && target.Hp <= atk),
+                // V3: 自分より遅い相手には 1。**同速は「遅い」ではない。**
+                _ => target.Def.Speed < actor.Def.Speed,
+            };
+            if (!pay)
+            {
+                int raw = ThinBladeTrait.RawAttack(actor);
+                atk = attackPercent == 100 ? raw : raw * attackPercent / 100;
+                if (atk < 1) atk = 1;   // 払わない側が払う側より小さくならないこと（0 は返さない）
+            }
+        }
 
         // 攻撃力を出力に変換した回数（第64期）。**死蔵の判定に使う唯一の計数**で、
         // 盤面には一切影響しない。`Attacks` との差は「振ったか」対「攻撃力を読んだか」。
@@ -3100,12 +3143,12 @@ public static class BattleEngine
                                    FinisherRule? finisher = null, FavorRule? favor = null,
                                    BlazeRule? blaze = null, FunnelRule? funnel = null,
                                    WhetMask? whetMask = null, CreakRule? creak = null,
-                                   SeverRule? sever = null)
+                                   SeverRule? sever = null, ThinBladeRule? thinBlade = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
-               creak, sever);
+               creak, sever, thinBlade);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -3126,11 +3169,12 @@ public static class BattleEngine
                                    GoadRule? goad = null, FinisherRule? finisher = null,
                                    FavorRule? favor = null, BlazeRule? blaze = null,
                                    FunnelRule? funnel = null, WhetMask? whetMask = null,
-                                   CreakRule? creak = null, SeverRule? sever = null)
+                                   CreakRule? creak = null, SeverRule? sever = null,
+                                   ThinBladeRule? thinBlade = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
-                                    favor, blaze, funnel, whetMask, creak, sever);
+                                    favor, blaze, funnel, whetMask, creak, sever, thinBlade);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

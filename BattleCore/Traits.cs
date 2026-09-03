@@ -4139,7 +4139,97 @@ public sealed class ThinBladeTrait : Trait
 {
     public override TraitId Id => TraitId.ThinBlade;
 
+    /// <summary>
+    /// <b>代金の本体。</b> <c>atk</c> を読まないので上流に何が乗っても 1 に潰れる（doc 参照）。
+    ///
+    /// <para><b>第75期の払い方（<see cref="ThinBladeRule"/>）はここには書けない。</b>
+    /// 「相手に傷があるか」は対象を見る条件で、<see cref="Trait.ModifyAttack"/> は
+    /// <c>self</c> しか受け取らない——止め（<c>FinisherTrait</c>・第53期）とまったく同じ形なので、
+    /// <b>払い直しは <c>PerformAttack</c> が <c>atk</c> を作った直後</b>に置いてある。
+    /// ここは<b>常に 1 を返し続ける</b>ので、<c>CurrentAttack</c> を読む他の全員
+    /// （駆り立ての選択・転嫁の流し先・<c>StatSnapshot</c>・棘/仇討ち/責め苦の反撃量）から見た
+    /// キリは版によらず攻撃力 1 のまま——<b>版が動かすのは「この一振りの打点」だけ</b>である。</para>
+    /// </summary>
     public override int ModifyAttack(UnitState self, int atk) => 1;
+
+    /// <summary>
+    /// <b>薄刃を除いた <see cref="UnitState.CurrentAttack"/></b>（＝「素の打点」）。第75期。
+    /// 驕りの <c>AttackWithout</c>（第46期）と同型で、<b>自分の <see cref="TraitId.ThinBlade"/> だけ</b>を
+    /// 飛ばして残りの <c>ModifyAttack</c> は全部通す——号令の +4 も呪詛の −6 もここでは効く。
+    ///
+    /// <para><b>床は 1</b>（0 を返さない）。<see cref="BattleContext.ApplyDamage"/> が
+    /// <c>amount &lt;= 0</c> で早期 return するので、0 にすると被弾強化も反撃も走らないまま
+    /// 傷だけが刻まれる（<see cref="ThinBladeTrait"/> の doc の警告そのもの）。
+    /// <b>払わない側が払う側より小さくなることも無い</b>——代金を免除したのに弱くなるのは意味が通らない。</para>
+    /// </summary>
+    public static int RawAttack(UnitState u)
+    {
+        int atk = u.Def.Attack + u.AtkBonus;
+        foreach (Trait t in u.Traits)
+            if (t.Id != TraitId.ThinBlade) atk = t.ModifyAttack(u, atk);
+        return Math.Max(1, atk);
+    }
+}
+
+/// <summary>
+/// <b>薄刃の払い方（第75期）。</b> <see cref="ThinBladeTrait"/> の代金を<b>いつ払うか</b>だけを振る。
+///
+/// <para><b>どの版も代金を消していない。</b> キリは依然「斬れるが断てない駒」で、
+/// 条件が真の側では <c>atk</c> を1ビットも読まずに 1 を返す（第29期の「床も天井も要らない設計」を保つ）
+/// ——変わるのは<b>条件が偽のときに素の打点へ戻す</b>ことだけ。第74期のナタ
+/// （<see cref="SeverWait"/>）が「手番を捨てる」を「振ってから待つ」に変えたのと同じ方針で、
+/// <b>払う場面を絞るだけで代金そのものは残す。</b></para>
+///
+/// <para><b>診断（<c>blade</c>）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+/// （既定は <see cref="Default"/>）。static のノブにしない理由は同型の doc を参照
+/// ——Trait は共有シングルトンで、<c>layout</c> は戦闘を並列に回す。</para>
+///
+/// <para><b>3版とも測って採用しなかった</b>（第75期）。ドラフト台 Pw の傾きの改善は
+/// V1 <b>+0.99 / +0.96</b>・V3 +0.41 / +0.43・V2 +0.00 で、線 +2.0 に届かない
+/// （薄刃を丸ごと外す上限は +3.81 / +3.67）。<b>回収額は「解除率 × 単価」で決まり、
+/// 条件が何に接続しているかは値段を決めなかった</b>——解除率あたりの帰属は
+/// V1 0.175 / V3 0.190 pt per 1% でほぼ同じ。経緯は design/PHASE75_THINBLADE.md。</para>
+/// </summary>
+public enum ThinBladeCost
+{
+    /// <summary>V0（第29期〜）。<b>常に 1。</b>既定。</summary>
+    Always,
+
+    /// <summary>
+    /// V1（第75期の主判定）。<b>傷の無い相手には 1・傷のある相手には素の打点。</b>
+    /// <b>自分で開けた傷に自分で入る</b>——傷は消えないので、キリが一度触った相手は以後ずっと条件を満たす。
+    ///
+    /// <para><b>実測の解除率は 37.0%</b>（ドラフト台）。<b>キリは執着も断ちの選好も持たないので
+    /// 毎ターン pool を引き直し、しかも1戦に 3.9 回しか振らない</b>——
+    /// 「同じ相手を殴り続ける」は成立しない（同じ相手を2手番続けて引く確率は全波 50.0%）。</para>
+    /// </summary>
+    Unwounded,
+
+    /// <summary>
+    /// V2（対照）。<b>傷を刻める攻撃だけ 1。</b> 刻めない攻撃＝相手がこの一撃で倒れる攻撃
+    /// （<c>RendTrait.OnAfterAttack</c> は死体に刻まない）では素の打点になる。
+    ///
+    /// <para><b>判定は代金を払った価格（1）で行う予測</b>——実際に倒れるかは
+    /// <c>ApplyDamage</c> の中（肩代わり・破片・上限）まで行かないと決まらないので、
+    /// <c>Hp &lt;= atk</c> かつ破片なしを「刻めない見込み」と読む。
+    /// <b>これはほぼ発火しないはずの版</b>で、V1 との差から
+    /// 「効いたのは条件そのものか、1 になる回数が減っただけか」を割るためだけにある。</para>
+    /// </summary>
+    Carving,
+
+    /// <summary>
+    /// V3（対照）。<b>自分より遅い相手には 1・速い相手には素の打点。</b>
+    /// 代金を「誰を殴るか」に紐づけた版で、<b>条件の接続先を傷から速さへ移す</b>。
+    /// 同速は「遅い」ではないので素の打点側（境界の扱いは <c>blade phase0</c> が数える）。
+    /// </summary>
+    Slower
+}
+
+/// <summary>薄刃の払い方（第75期）。<see cref="ThinBladeCost"/> の doc を参照。</summary>
+public readonly record struct ThinBladeRule(ThinBladeCost Cost)
+{
+    /// <summary>既定は V0（常に 1）＝第29期からの現行。</summary>
+    public static ThinBladeRule Default => new(ThinBladeCost.Always);
 }
 
 /// <summary>
