@@ -788,6 +788,18 @@ public sealed class UnitTally
     /// </summary>
     public static readonly int[] CreakWhetProbes = { 1, 2, 4, 6, 8, 12, 16, 24, 32 };
 
+    /// <summary>
+    /// 第77期。条件の供給元を選択子にしたので（<see cref="CreakSource"/>）、
+    /// <c>Both</c>（<c>AtkBonus + WhetReceived</c>）の側にも到達ターンの計数を1本足した。
+    /// <b>格子は <see cref="CreakProbes"/> と同じ 9 / 18 / 30</b>
+    /// ——<c>Both</c> の版は第66期の V9 と同じ3点で振るので、初到達Tを同じ添字で引ける。
+    ///
+    /// <para><b>既存の2本（<see cref="CreakProbeTurn"/> / <see cref="CreakWhetProbeTurn"/>）には
+    /// 1ビットも触っていない</b>——第66・67期の表がそのまま再現することが検算になる。
+    /// <b>誰も読んで分岐しない</b>ので盤面には一切影響しない。</para>
+    /// </summary>
+    public int[]? CreakBothProbeTurn;
+
     // ------------------------------------------------------------------------------------
     // 第68期（棚卸し: 条件付き変質を載せられる駒はどれか）。
     // **どれも誰も読んで分岐しない私有カウンタで、盤面には一切影響しない**

@@ -1316,6 +1316,17 @@ public sealed class BattleContext
             wp[i] = Math.Max(1, Turn);
         }
 
+        // 第77期。供給元の選択子の `Both`（AtkBonus + WhetReceived）側の初到達ターン。
+        // **格子は CreakProbes と同じ 9 / 18 / 30**（`Both` の版はその3点で振る）。
+        // **既存の2本には触っていない。誰も読んで分岐しない。**
+        int[] bp = t.CreakBothProbeTurn ??= new int[UnitTally.CreakProbes.Length];
+        int both = self.AtkBonus + self.WhetReceived;
+        for (int i = 0; i < UnitTally.CreakProbes.Length; i++)
+        {
+            if (bp[i] != 0 || both < UnitTally.CreakProbes[i]) continue;
+            bp[i] = Math.Max(1, Turn);
+        }
+
         int[] probe = t.CreakProbeTurn ??= new int[UnitTally.CreakProbes.Length];
         int[] ps = t.CreakSelfAtProbe ??= new int[UnitTally.CreakProbes.Length];
         int[] pw = t.CreakWhetAtProbe ??= new int[UnitTally.CreakProbes.Length];

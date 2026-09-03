@@ -4515,10 +4515,11 @@ public sealed class DisplacedTrait : Trait
     public override TraitId Id => TraitId.Displaced;
 
     /// <summary>
-    /// 軋みが響く（第66期 → <b>第67期に条件の出どころを差し替えた</b>）。
-    /// <b><see cref="UnitState.WhetReceived"/>（<c>Whet</c> 窓口を通って届いた累計）を読んで
-    /// 攻撃の型が変わる</b>——<b>誰かに背中を押されたぶん</b>が閾値を越えると、
-    /// 単体の一撃が<b>薙ぎ</b>になる。
+    /// 軋みが響く（第66期 → <b>第67期に条件の出どころを差し替え</b>
+    /// → <b>第77期に供給元を選択子にした</b>）。条件の値が閾値を越えると、
+    /// 単体の一撃が<b>薙ぎ</b>になる。<b>何を読むかは <see cref="CreakRule.Source"/></b>
+    /// ——外から届いた累計（<see cref="UnitState.WhetReceived"/>・第67期の既定）／
+    /// 攻撃力の補正そのもの（<see cref="UnitState.AtkBonus"/>・第66期の V9）／その合計。
     ///
     /// <para><b>軋み自身の上昇（<see cref="OnMoved"/> の <c>AtkBonus +=</c>）は条件に入らない。</b>
     /// 第66期は <c>AtkBonus</c> を読んだが、それは<b>この駒が自分で作れる値</b>で、
@@ -4539,10 +4540,24 @@ public sealed class DisplacedTrait : Trait
     /// </summary>
     public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
     {
-        int threshold = self.Board?.Creak.Threshold ?? 0;
-        if (threshold <= 0) return p;
-        return self.WhetReceived >= threshold ? AttackPattern.Sweep : p;
+        CreakRule rule = self.Board?.Creak ?? CreakRule.Default;
+        if (rule.Threshold <= 0) return p;
+        return CreakValueOf(self, rule.Source) >= rule.Threshold ? AttackPattern.Sweep : p;
     }
+
+    /// <summary>
+    /// 条件が読む値（第77期に選択子を足した）。<b>盤面には一切影響しない読み取りだけ。</b>
+    /// <see cref="CreakSource"/> の3点は「自分で作れる値」「外から届いた値」「その合計」で、
+    /// <b>V9（第66期）と V67（第67期）を1本の規則の上に並べるためにある</b>
+    /// ——版の切り替えが駒の差し替えではなく規則の引数で済むので、
+    /// 同じ標本・同じ席・同じ乱数列のまま両者を比べられる。
+    /// </summary>
+    public static int CreakValueOf(UnitState self, CreakSource source) => source switch
+    {
+        CreakSource.Bonus => self.AtkBonus,
+        CreakSource.Both => self.AtkBonus + self.WhetReceived,
+        _ => self.WhetReceived,
+    };
 
     public override void OnMoved(BattleContext ctx, UnitState self, Row from, Row to)
     {
@@ -4581,14 +4596,38 @@ public sealed class DisplacedTrait : Trait
 /// 軋みが響く強度（第66期）。<b>診断（creak）が版を差し替えるためだけの窓口</b>で、
 /// 通常の実行では誰も渡さない。static のノブにしない理由は同型の doc を参照。
 ///
-/// <para><c>Threshold</c> は <see cref="UnitState.WhetReceived"/> の閾値（第67期）。
-/// <b><c>0</c> 以下で完全に不活性</b>——<see cref="DisplacedTrait.ModifyPattern"/> が
-/// 素通りするだけなので、<b>乱数も計数も盤面も1ビットも動かない</b>。これが検算になる。</para>
+/// <para><c>Threshold</c> は条件の閾値、<c>Source</c>（第77期）が<b>その閾値を何で測るか</b>
+/// （<see cref="CreakSource"/>）。<b><c>0</c> 以下で完全に不活性</b>
+/// ——<see cref="DisplacedTrait.ModifyPattern"/> が素通りするだけなので、
+/// <b>供給元が何であれ乱数も計数も盤面も1ビットも動かない</b>。これが検算になる。</para>
 /// </summary>
-public readonly record struct CreakRule(int Threshold)
+public readonly record struct CreakRule(int Threshold, CreakSource Source = CreakSource.Whet)
 {
-    /// <summary>既定は<b>無効</b>（第66期は測定中）。採用したら採った閾値へ。</summary>
-    public static CreakRule Default => new(0);
+    /// <summary>既定は<b>無効</b>（第66・67・77期とも測定中）。採用したら採った閾値と供給元へ。</summary>
+    public static CreakRule Default => new(0, CreakSource.Whet);
+}
+
+/// <summary>
+/// 軋みが響く条件の<b>供給元</b>（第77期）。<b>engine には何も足していない</b>
+/// ——<see cref="DisplacedTrait.ModifyPattern"/> が読む値を選ぶだけの選択子。
+///
+/// <para><see cref="Whet"/> が第67期の現行（<see cref="UnitState.WhetReceived"/> ＝
+/// <c>Whet</c> 窓口を通って外から届いた累計）、<see cref="Bonus"/> が第66期の V9
+/// （<see cref="UnitState.AtkBonus"/> ＝<b>軋み自身の上昇を含む</b>ので自分で満たせる）、
+/// <see cref="Both"/> はその合計（<b>自足しているうえに外の供給も乗る</b>形）。</para>
+///
+/// <para><b><see cref="Both"/> は二重計上である</b>——<c>Whet</c> 窓口を通った量は
+/// <c>AtkBonus</c> にも入っているので、外から届いたぶんだけ2回数える。
+/// <b>それが狙い</b>で、<see cref="Bonus"/> との差がそのまま「外部供給の上積み」になる。</para>
+/// </summary>
+public enum CreakSource
+{
+    /// <summary>外から届いた累計だけを読む（第67期・現行）。</summary>
+    Whet,
+    /// <summary>攻撃力の補正そのものを読む（第66期の V9。<b>軋みで自分で満たせる</b>）。</summary>
+    Bonus,
+    /// <summary>両方の合計（自足＋外部供給。<b>外から届いたぶんは二重に効く</b>）。</summary>
+    Both,
 }
 
 /// <summary>
