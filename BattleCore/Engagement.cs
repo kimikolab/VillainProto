@@ -1,4 +1,4 @@
-namespace BattleCore;
+﻿namespace BattleCore;
 
 /// <summary>
 /// 部隊戦の開始時点の盤面。持ち越した HP・攻撃力を再生側が知るための写し。verbose 時のみ。
@@ -269,7 +269,7 @@ public static class EngagementEngine
         foreach (UnitState u in survivors)
         {
             foreach (string key in StatusKeys.All) u.Counters.Remove(key);
-            u.AtkBonus = 0;
+            u.ResetAtkBonus();   // 第68期: 帳簿に載せずに戻す（AtkBonus = 0 と同じ効果）
             // 第67期。押された累計は配られた力と同じ寿命（AtkBonus と同じ行で消す）。
             u.WhetReceived = 0;
             // 行動周期は Battle スコープ。溜めかけたまま波が変わると、次の部隊戦の初手に

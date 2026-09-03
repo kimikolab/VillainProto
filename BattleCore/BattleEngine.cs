@@ -1181,6 +1181,65 @@ public sealed class BattleContext
     /// （棘・仇討ち・責め苦の追撃）。<b>固定量の干渉（破裂・生贄・吸い・分裂・巻き込み）は
     /// 攻撃力を読まないので呼ばない。</b></para>
     /// </summary>
+    /// <summary>
+    /// <b>外から届いた量</b>を1件数える（第68期）。<see cref="UnitTally.CarryAmount"/> /
+    /// <c>CarryCount</c> / <c>CarryProbeTurn</c> の唯一の書き手で、
+    /// <b>盤面には一切影響しない</b>（誰も読んで分岐しない・<c>verbose</c> にも依存しない）。
+    ///
+    /// <para>呼ぶのは<b>窓口だけ</b>——<see cref="Whet"/> ／ <see cref="Dull"/> ／
+    /// <see cref="ApplyDamage"/> ／ <see cref="SwapSlots"/> と、
+    /// <see cref="UnitState.SetCounter"/> から来る <see cref="NoteStatusGain"/>。
+    /// <b>特性の側には1行も足していない</b>ので、経路を追加しても数え漏らさない。</para>
+    /// </summary>
+    internal void NoteCarry(UnitState u, int key, int amount)
+    {
+        if (amount <= 0) return;
+        UnitTally t = TallyOf(u);
+        int[] amt = t.CarryAmount ??= new int[UnitTally.CarryKeys.Length];
+        int[] cnt = t.CarryCount ??= new int[UnitTally.CarryKeys.Length];
+        amt[key] += amount;
+        cnt[key]++;
+
+        int[][] pt = t.CarryProbeTurn ??= new int[UnitTally.CarryKeys.Length][];
+        int[] probe = pt[key] ??= new int[UnitTally.CarryProbes.Length];
+        for (int i = 0; i < UnitTally.CarryProbes.Length; i++)
+        {
+            if (probe[i] != 0 || amt[key] < UnitTally.CarryProbes[i]) continue;
+            probe[i] = Math.Max(1, Turn);   // 開戦時の到達は 1 に丸める（0 を「未到達」に使う）
+        }
+    }
+
+    /// <summary>
+    /// <see cref="UnitState.AtkBonus"/> が上がった分を数える（第68期）。
+    /// <b>窓口経由（<see cref="Whet"/>）も自己強化の9本もどちらもここへ来る</b>
+    /// ——差し引きで「自前」が引けるのが狙いで、<b>盤面には一切影響しない</b>。
+    /// </summary>
+    internal void NoteAtkGain(UnitState u, int delta) => TallyOf(u).CarryAtkGain += delta;
+
+    /// <summary>
+    /// <see cref="StatusKeys"/> のカウンタが増えた分を数える（第68期）。
+    /// <see cref="UnitState.SetCounter"/> からのみ来る。<b>7キー以外は捨てる</b>
+    /// （特性の私有キーは帳簿に載せない）。<b>盤面には一切影響しない。</b>
+    ///
+    /// <para><b>単位はキーで違う</b>（<see cref="UnitTally.CarryUnits"/>）。
+    /// 毒・破片は<b>増分</b>（層・量）、燃は<b>残ターンの増分</b>、
+    /// 痺・標・傷・手番は<b>回数</b>（0/1 のキーと、ターン番号を書く <c>IdleTurn</c> は
+    /// 増分に意味が無いので 1 で数える）。</para>
+    /// </summary>
+    internal void NoteStatusGain(UnitState u, string key, int delta)
+    {
+        switch (key)
+        {
+            case StatusKeys.Poison: NoteCarry(u, UnitTally.CarryPoison, delta); break;
+            case StatusKeys.Armor: NoteCarry(u, UnitTally.CarryArmor, delta); break;
+            case StatusKeys.Burn: NoteCarry(u, UnitTally.CarryBurn, delta); break;
+            case StatusKeys.Stun: NoteCarry(u, UnitTally.CarryStun, 1); break;
+            case StatusKeys.Marked: NoteCarry(u, UnitTally.CarryMark, 1); break;
+            case StatusKeys.Wound: NoteCarry(u, UnitTally.CarryWound, 1); break;
+            case StatusKeys.IdleTurn: NoteCarry(u, UnitTally.CarryIdle, 1); break;
+        }
+    }
+
     public void NoteAttackRead(UnitState u)
     {
         UnitTally t = TallyOf(u);
@@ -2371,6 +2430,8 @@ public sealed class BattleContext
 
         UnitTally tt = TallyOf(target);
         tt.DamageTaken += amount;
+        // 第68期。被弾は**回数**で数える（量は DamageTaken の側。格子は回数に当てる）。
+        NoteCarry(target, UnitTally.CarryHit, 1);
         if (source is not null && (isFriendlyFire || source.TeamId == target.TeamId))
             tt.TakenFromAlly += amount;
 
@@ -2484,7 +2545,7 @@ public sealed class BattleContext
     {
         if (target.IsAlive) return;
         target.Hp = Math.Max(1, hp);
-        target.AtkBonus = 0;
+        target.ResetAtkBonus();   // 第68期: 帳簿に載せずに戻す（負→0 を上昇として数えないため）
         // 第67期。配られた力が消える場所で「押された累計」も一緒に消す（寿命を AtkBonus に揃える）。
         target.WhetReceived = 0;
         Log($"    {target.Name} が繋ぎ直された（HP {target.Hp}）", LogKind.Summon);
@@ -2630,6 +2691,8 @@ public sealed class BattleContext
         // **実際に AtkBonus が減った駒にだけ載る**——転嫁（RelayThrough）は上で return しており、
         // 敵側で減る分は再帰した Dull がその受け手に載せる。**盤面には一切影響しない。**
         TallyOf(receiver).Dulled += amount;
+        // 第68期。**実際に AtkBonus が減った駒にだけ載る**（Dulled と同じ行・同じ条件）。
+        NoteCarry(receiver, UnitTally.CarryDull, amount);
         // 火選り（第58期）の受け手の内訳。**横取りが宛先を書き換えた後の実際の受け手**に載せる。
         // 盤面には一切影響しない（札で引くだけ・verbose 非依存）。
         if (route == DullRoute.Favor) NoteFavorReceiver(receiver, amount, whet: false);
@@ -2801,6 +2864,8 @@ public sealed class BattleContext
         {
             receiver.AtkBonus += amount;
             receiver.WhetReceived += amount;
+            // 第68期。**`WhetReceived` と同じ行・同じ条件**で外から届いた量の帳簿にも積む。
+            NoteCarry(receiver, UnitTally.CarryWhet, amount);
         }
 
         // 軋み（第66期）。**外の供給が同じ AtkBonus に積まれる**ことの記録で、盤面には触らない。
@@ -2982,6 +3047,10 @@ public sealed class BattleContext
                 Slot = u.Slot,
                 HpAfter = u.Hp
             });
+
+            // 第68期。動かされた回数。**動かした側ではなく動いた側**に載せる
+            // （読み手＝軋み・移り木・突き返しが読むのはこちら）。
+            NoteCarry(u, UnitTally.CarryMove, 1);
 
             // 後ろへ動いた事実を記録する。自分から逃げたか突き飛ばされたかは問わない。
             // どちらの場合も「味方が矢面に立つ」という代償は発生している。

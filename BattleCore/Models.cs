@@ -138,7 +138,38 @@ public sealed class UnitState
     public int MaxHp { get; set; }
 
     /// <summary>戦闘中に加算される攻撃力補正。バフ・デバフともにここへ入る。</summary>
-    public int AtkBonus { get; set; }
+    ///
+    /// <remarks>
+    /// 第68期に<b>自動プロパティから書き換えた</b>。理由は1つだけ——
+    /// <b>「外から届いた強化」と「自分で作った強化」を分けて数える</b>ため
+    /// （<see cref="WhetReceived"/> は前者しか持たず、自己強化の9本は窓口を通らないので
+    /// どこにも記録が無かった）。<b>上がった分だけ</b>を
+    /// <see cref="BattleContext.NoteAtkGain"/> へ流す（下がった分は流さない）。
+    ///
+    /// <para><b>盤面は1ビットも動かない。</b> 通知先は計数だけで、誰も読んで分岐しない。
+    /// 盤面の外で作られた <see cref="UnitState"/>（<c>Board</c> が null）では何も起きない。</para>
+    ///
+    /// <para><b>0 に戻す2箇所（蘇生・会戦の境界）は <see cref="ResetAtkBonus"/> を使う。</b>
+    /// あそこを通常の代入で書くと、負の補正を背負った駒を蘇生したときに
+    /// 「0 へ戻った」が<b>正の上昇として帳簿に載る</b>。</para>
+    /// </remarks>
+    public int AtkBonus
+    {
+        get => _atkBonus;
+        set
+        {
+            int delta = value - _atkBonus;
+            _atkBonus = value;
+            if (delta > 0) Board?.NoteAtkGain(this, delta);
+        }
+    }
+    private int _atkBonus;
+
+    /// <summary>
+    /// <see cref="AtkBonus"/> を<b>帳簿に載せずに</b> 0 へ戻す（第68期）。
+    /// 呼ぶのは寿命の2箇所だけ——<c>BattleEngine.Revive</c> と <c>Engagement.CarryOver</c>。
+    /// </summary>
+    internal void ResetAtkBonus() => _atkBonus = 0;
 
     /// <summary>
     /// <b><see cref="BattleContext.Whet"/> 窓口を通って届いた強化の累計</b>（第67期）。
@@ -227,7 +258,24 @@ public sealed class UnitState
     public bool HasTrait(TraitId id) => Traits.Any(t => t.Id == id);
 
     public int Counter(string key) => Counters.TryGetValue(key, out int v) ? v : 0;
-    public void SetCounter(string key, int v) => Counters[key] = v;
+
+    /// <summary>
+    /// カウンタを書く。第68期に<b>増えた分だけ</b>を
+    /// <see cref="BattleContext.NoteStatusGain"/> へ流すようにした
+    /// （<see cref="AtkBonus"/> の setter と同じ形・同じ理由）。
+    ///
+    /// <para><b>盤面は1ビットも動かない。</b> 受け取る側は
+    /// <see cref="StatusKeys.All"/> の7キー以外を捨てるので、
+    /// 特性の私有キー（<c>goadTarget</c> ・ <c>refundSpent</c> など）は帳簿に載らない。
+    /// 減った分（毒の吸い上げ・破片の消費・痺れの消費・境界の一括消去）は流さない
+    /// ——数えたいのは<b>外から届いた累計</b>であって在庫ではない。</para>
+    /// </summary>
+    public void SetCounter(string key, int v)
+    {
+        int delta = v - (Counters.TryGetValue(key, out int had) ? had : 0);
+        Counters[key] = v;
+        if (delta > 0) Board?.NoteStatusGain(this, key, delta);
+    }
 }
 
 /// <summary>
@@ -740,6 +788,63 @@ public sealed class UnitTally
     /// </summary>
     public static readonly int[] CreakWhetProbes = { 1, 2, 4, 6, 8, 12, 16, 24, 32 };
 
+    // ------------------------------------------------------------------------------------
+    // 第68期（棚卸し: 条件付き変質を載せられる駒はどれか）。
+    // **どれも誰も読んで分岐しない私有カウンタで、盤面には一切影響しない**
+    // （Whetted / Burn* と同じ扱いで verbose 非依存）。診断 `carry` だけが読む。
+    // ------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// <b>外から届いた量</b>のキー。<b>並びがそのまま計数の添字</b>。
+    ///
+    /// <para>第67期は「押された累計」を強化1本でしか持っていなかったので、
+    /// <b>同じ格子を全キーへ広げた</b>のがこの配列。<see cref="StatusKeys.All"/> の7キーに、
+    /// 窓口を持つ2つ（強化・弱体）と、engine が起こす2つ（被弾・移動）を足した形。</para>
+    ///
+    /// <para><b>単位は「量」と「回数」が混ざる</b>（下の <see cref="CarryUnits"/>）。
+    /// 混ぜたのは格子（<see cref="CarryProbes"/>）を全キーで共有するためで、
+    /// <b>被弾だけは「量」を格子に当てると全格子点が即座に飽和して情報を持たない</b>
+    /// （1発が 10〜38 で、格子の上限 32 を1〜2発で越える）ので<b>回数</b>を当てる。
+    /// 被弾の量そのものは <see cref="DamageTaken"/> に元からある。</para>
+    /// </summary>
+    public static readonly string[] CarryKeys =
+        { "強化", "弱体", "毒", "燃", "痺", "標", "破片", "傷", "手番", "被弾", "移動" };
+
+    /// <summary>各キーの単位。<b>格子はこの単位の累計に当てる。</b></summary>
+    public static readonly string[] CarryUnits =
+        { "量", "量", "層", "残T", "回", "回", "量", "回", "回", "回", "回" };
+
+    /// <summary>キーの添字（<see cref="CarryKeys"/> の並び）。</summary>
+    public const int CarryWhet = 0, CarryDull = 1, CarryPoison = 2, CarryBurn = 3,
+                     CarryStun = 4, CarryMark = 5, CarryArmor = 6, CarryWound = 7,
+                     CarryIdle = 8, CarryHit = 9, CarryMove = 10;
+
+    /// <summary>
+    /// 到達の格子。<b>第67期の <see cref="CreakWhetProbes"/> と同じ9点</b>
+    /// ——器具の検算（Q3: ヨミの再現）が成り立つように、値を1つも変えていない。
+    /// </summary>
+    public static readonly int[] CarryProbes = { 1, 2, 4, 6, 8, 12, 16, 24, 32 };
+
+    /// <summary>キーごとの届いた累計（単位は <see cref="CarryUnits"/>）。</summary>
+    public int[]? CarryAmount;
+
+    /// <summary>キーごとの届いた回数（＝窓口を通った回数）。</summary>
+    public int[]? CarryCount;
+
+    /// <summary>
+    /// キーごと・格子ごとの<b>初到達ターン</b>（0 ＝ 未到達）。添字は <c>[キー][格子]</c>。
+    /// 開戦時（ターン 0）の到達は 1 に丸める——0 を「未到達」に使うため
+    /// （<see cref="CreakWhetProbeTurn"/> と同じ作法）。
+    /// </summary>
+    public int[][]? CarryProbeTurn;
+
+    /// <summary>
+    /// 戦闘中に <see cref="UnitState.AtkBonus"/> が<b>上がった量の総和</b>。
+    /// <c>CarryAmount[CarryWhet]</c>（窓口経由＝外から）を引いた残りが<b>自前</b>
+    /// ——軋み・墓守の層・溜め・怒り・棘などの自己強化9本がここに出る。
+    /// </summary>
+    public int CarryAtkGain;
+
     public void Add(UnitTally o)
     {
         Attacks += o.Attacks; Interventions += o.Interventions;
@@ -769,6 +874,29 @@ public sealed class UnitTally
         CreakRegurgGain += o.CreakRegurgGain;
         CreakMaxBonus = Math.Max(CreakMaxBonus, o.CreakMaxBonus);
         CreakWhetMax = Math.Max(CreakWhetMax, o.CreakWhetMax);
+        // 第68期。量と回数は加算、初到達ターンは FirstBurnTurn と同じ扱い（0 を除いた最小値）。
+        CarryAtkGain += o.CarryAtkGain;
+        if (o.CarryAmount is not null)
+        {
+            CarryAmount ??= new int[CarryKeys.Length];
+            CarryCount ??= new int[CarryKeys.Length];
+            for (int i = 0; i < CarryKeys.Length; i++)
+            {
+                CarryAmount[i] += o.CarryAmount[i];
+                CarryCount[i] += o.CarryCount![i];
+            }
+        }
+        if (o.CarryProbeTurn is not null)
+        {
+            CarryProbeTurn ??= new int[CarryKeys.Length][];
+            for (int i = 0; i < CarryKeys.Length; i++)
+            {
+                if (o.CarryProbeTurn[i] is not int[] src) continue;
+                int[] dst = CarryProbeTurn[i] ??= new int[CarryProbes.Length];
+                for (int j = 0; j < CarryProbes.Length; j++)
+                    dst[j] = dst[j] == 0 ? src[j] : src[j] == 0 ? dst[j] : Math.Min(dst[j], src[j]);
+            }
+        }
     }
 }
 
