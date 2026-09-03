@@ -1194,6 +1194,52 @@ public static class UnitCatalog
         Flavor = "支給品が手元に残ったためしがない。どこへ消えたかは、いつも一番のろい奴が知っている。"
     };
 
+    /// <summary>
+    /// 首刈りのオノ。<b>第79期・最後の1枠（52枚目）の候補</b>。名前は仮（採否のあとに改名する）。
+    ///
+    /// <para><b>仕様は8期分の実測から出ている</b>（design/PHASE79_LASTSLOT_SPEC.md §0-1）——
+    /// <b>入口 0 ／ 特性2つ ／ 2枚目は代金 ／ 相方を要求しない ／ 数値で強くしない。</b>
+    /// 第78期の「入口の数はドラフト台で負に効く・入口 0 の 31 体のほうが強い」をそのまま駒の形にしたもので、
+    /// <b>奇をてらった駒にはならない</b>（既存ロスターの強い側と同じ形）。</para>
+    ///
+    /// <para><b>候補は空白の地図から規則で選んだ</b>（`lastslot phase0`）。1枚目は
+    /// <see cref="TraitId.Executioner"/>（処刑・<c>OnKill</c>）——味方側で <c>OnKill</c> を
+    /// 発火口に持つ駒は抉りのエグ（深追い）1体しかなく、<b>プラス側の <c>OnKill</c> は味方ロスターに 0 枚</b>。
+    /// 敵側の語彙（勇者候補・聖騎士長）を味方側へ持ち込む。撃破は 11 本のキーに無いので<b>入口は定義上 0</b>、
+    /// 供給は<b>自分の一振り</b>だけ（相方を要求しない）。</para>
+    ///
+    /// <para><b>2枚目は <see cref="TraitId.Stoic"/>（支援拒否）</b>。撃破を供給する特性はロスターに無いので
+    /// 2枚目は「自給の口」になれず<b>代金</b>で確定、代金の中では「保持者が最も少ない発火口を持つもの
+    /// （<c>BlocksSupport</c> はガルド1体）・同数なら <see cref="TraitId"/> の列挙順」で選んだ。
+    /// <b>「手柄は自分で取る。施しは受けない」</b>——処刑（自己強化・窓口を通らない）と支援拒否
+    /// （他者強化・回復を全部弾く）は<b>「育つ経路が自分の撃破だけ」</b>という1つの性質の表と裏になる。</para>
+    ///
+    /// <para><b>攻撃型は薙ぎ。</b> 処刑の燃料（撃破）は自分の一振りでしか作れず、攻6 の単体では
+    /// 削り切れる相手がほぼ出ない。薙ぎは同じ一振りで届く相手を3体にする＝<b>燃料を自分で増やす唯一の手段</b>
+    /// （機構が要求するときだけ単体以外にする、という規則で決めた。同点処理の「攻撃型が単体でないもの」に
+    /// 合わせて付けたのではない——付けた理由はこの段落）。</para>
+    ///
+    /// <para><b>HP60・攻6・速7 はロスターの中央値そのもの</b>（指示書 §1-5。第76期「数値で強くしない」）。
+    /// 攻は「6 以下」の指定を<b>中央値ちょうど</b>で固定した（自由度を残さないため）。</para>
+    /// </summary>
+    /// <remarks>
+    /// <b><see cref="All"/> には載せていない</b>（採否が決まるまで）。診断 <c>lastslot</c> が
+    /// 52 体のロスターと試験行をローカルに組んで使う。<b>新しい <see cref="TraitId"/> はゼロ・engine の変更もゼロ。</b>
+    /// </remarks>
+    public static readonly UnitDef Ono = new()
+    {
+        Id = "ono",
+        Name = "首刈りのオノ",
+        MaxHp = 60,
+        Attack = 6,
+        Speed = 7,
+        Traits = new[] { TraitId.Executioner, TraitId.Stoic },
+        Pattern = AttackPattern.Sweep,
+        PlusText = "とどめを刺すたびに攻撃力が上がる。薙ぎ払いが敵の両隣にも届く",
+        MinusText = "誰の助けも受けない（回復も強化も一切通らない）",
+        Flavor = "手柄は自分の斧で取るものだと言って、差し出された椀を全部伏せた。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
         Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo
