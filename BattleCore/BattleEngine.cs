@@ -1276,6 +1276,13 @@ public sealed class BattleContext
     public CreakRule Creak { get; }
 
     /// <summary>
+    /// 断ちの待ち方と閾値（第74期）。<b>診断（wcost）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="SeverRule.Default"/> ＝ 第38期の現行）。
+    /// static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public SeverRule Sever { get; }
+
+    /// <summary>
     /// 軋み（第66期）の在庫の記録。<b>盤面には一切影響しない。</b>
     /// <see cref="TraitId.Displaced"/> 保持者の <see cref="UnitState.AtkBonus"/> が動いた直後に呼ぶ
     /// ——上げる経路は<b>軋み自身と <see cref="Whet"/> の2本だけ</b>（ヨミは自己強化を1つも持たない）。
@@ -1325,7 +1332,7 @@ public sealed class BattleContext
                          GoadRule? goad = null, FinisherRule? finisher = null,
                          FavorRule? favor = null, BlazeRule? blaze = null,
                          FunnelRule? funnel = null, WhetMask? whetMask = null,
-                         CreakRule? creak = null)
+                         CreakRule? creak = null, SeverRule? sever = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -1351,6 +1358,7 @@ public sealed class BattleContext
         Funnel = funnel ?? FunnelRule.Default;
         WhetBlock = whetMask ?? WhetMask.None;
         Creak = creak ?? CreakRule.Default;
+        Sever = sever ?? SeverRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -3091,12 +3099,13 @@ public static class BattleEngine
                                    DivertRule? divert = null, GoadRule? goad = null,
                                    FinisherRule? finisher = null, FavorRule? favor = null,
                                    BlazeRule? blaze = null, FunnelRule? funnel = null,
-                                   WhetMask? whetMask = null, CreakRule? creak = null)
+                                   WhetMask? whetMask = null, CreakRule? creak = null,
+                                   SeverRule? sever = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
-               creak);
+               creak, sever);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -3117,11 +3126,11 @@ public static class BattleEngine
                                    GoadRule? goad = null, FinisherRule? finisher = null,
                                    FavorRule? favor = null, BlazeRule? blaze = null,
                                    FunnelRule? funnel = null, WhetMask? whetMask = null,
-                                   CreakRule? creak = null)
+                                   CreakRule? creak = null, SeverRule? sever = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
-                                    favor, blaze, funnel, whetMask, creak);
+                                    favor, blaze, funnel, whetMask, creak, sever);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

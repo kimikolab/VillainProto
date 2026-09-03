@@ -66,7 +66,8 @@ public enum TraitId
     Gouge,       // 抉り: 傷を持つ敵を攻撃すると傷1つにつき加算。敵を倒すと次の手番を失う
                  //（同上）
     Sever,       // 断ち: 最も傷の深い敵を狙い、その傷をすべて消費して1つにつき加算。
-                 // 傷を持つ敵が狙えない間は手番を捨てる（同上。開いた傷しか断てない、の表と裏）
+                 // 傷が閾値に届かない間は断てない（同上。開いた傷しか断てない、の表と裏）
+                 // **第74期に「手番を捨てる」から「振るが断てない」へ変えた**（SeverWait.Swing）
     Suture,      // 縫い: 最も傷の深い敵を狙い、その傷1つにつき最も傷ついた味方を回復する。
                  // 繕うたび、糸を通した敵の傷がひとつ塞がる
                  //（同上。糸は開いた傷にしか通らない／通した糸を引けばその傷は塞がる）
@@ -99,6 +100,21 @@ public enum TraitId
                  // （1つの動作の表と裏。プラスは位置を問わず・マイナスは位置で決まる）
     Funnel,     // 横流し: 自分と隣の味方に来た強化を、自分の隣で一番遅い味方へすべて回す。
                  // 自分も横取りされた側も育たない（1つの動作の表と裏。行き先が本体で量は増えない）
+
+    // --- 傷の5枚から切り出したマイナス（第74期・**器具**） ---
+    // どれも既存の駒に既定で付いたままで、**盤面は1ビットも変わらない**（受け入れ基準は
+    // `compare` 305 セル 0 件）。切り出した理由は1つだけ——**計量できるようにするため**。
+    // 第73期は「5枚のマイナスのうち独立に外せたのは執着（Fixate）1枚だけ」で詰まった。
+    // **前例はノミ**（刻み＝Carve と執着＝Fixate が最初から別の TraitId だったので、
+    // 第73期は執着だけを外して測れた）。**マイナスをプラスと同じ Trait クラスに書くと、
+    // 後から代金が測れない**——次にマイナスを書くときは、別の TraitId に切り出せるかを先に見ること。
+    ThinBlade,   // 薄刃: 刃が薄く、与えるダメージは常に1（裂き＝Rend の代金）
+    Overreach,   // 深追い: 敵を倒すと次の手番を失う（抉り＝Gouge の代金）
+    Await,       // 刃待ち: 狙える敵の傷が閾値に届くまで断ちの機会を捨てる（断ち＝Sever の代金）
+                 // **第74期に採用した V1 では手番は捨てない**（SeverWait / SeverRule を参照）
+    Seal,        // 塞ぎ: 繕うたび、糸を通した敵の傷がひとつ塞がる（縫い＝Suture の代金）
+                 // **これだけは札**（本体は SutureTrait の中）。引き受け＝BearTrait と同型で、
+                 // 理由は SealTrait の doc を参照（患者の選び直しが乱数と盤面を動かす）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -3603,21 +3619,10 @@ public sealed class RendTrait : Trait
     public override TraitId Id => TraitId.Rend;
 
     /// <summary>
-    /// 刃が薄い。<b>与えるダメージは常に1。</b>
-    ///
-    /// <para><c>atk</c> を**まったく読まない**のが要点。<see cref="UnitState.CurrentAttack"/> は
-    /// <c>Def.Attack + AtkBonus</c> を作ってからここへ渡すので、号令の +4 も呪詛の −6 も
-    /// 分かちの「腕がなまる」も全部この 1 に潰れる。**床も天井も要らない**
-    /// ——引数を読まない限り、上流に何が乗っても結果は動かない。</para>
-    ///
-    /// <para><b>0 を返さないこと。</b> <see cref="BattleContext.ApplyDamage"/> が
-    /// <c>amount &lt;= 0</c> で早期 return するので、ダメージも被弾強化も反撃も走らなくなる。
-    /// 一方で <c>OnAfterAttack</c> は <c>PerformAttack</c> の最後で必ず呼ばれるため
-    /// **傷だけは刻まれ続ける**——「1ダメージも通らないのに汚れだけ溜まる」という、
-    /// 説明のつかない駒になる。</para>
+    /// <b>刃が薄い（＝与ダメは常に1）は第74期に <see cref="ThinBladeTrait"/> へ切り出した。</b>
+    /// キリの <c>Traits</c> に <c>{ Rend, ThinBlade }</c> と並んでいるだけで**盤面は変わらない**
+    /// ——切り出した理由は代金を独立に計量できるようにするため（第73期の器具不足）。
     /// </summary>
-    public override int ModifyAttack(UnitState self, int atk) => 1;
-
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
         // 死体には刻まない（痺れ＝ParalyzeTrait と同じ書き手側の作法）。責め苦が
@@ -3676,13 +3681,9 @@ public sealed class GougeTrait : Trait
         ctx.ApplyDamage(target, PerWound * w, self);
     }
 
-    public override void OnKill(BattleContext ctx, UnitState self, UnitState victim)
-    {
-        // 深追い。痺れに乗せてあるので次の手番が飛び（→ IdleTurn → 号令・据え）、
-        // ターン外の行動も CanActOutOfTurn が閉じて止まる。
-        self.SetCounter(StatusKeys.Stun, 1);
-        ctx.Log($"    {self.Name} は {victim.Name} の裂け目に踏み込みすぎた", LogKind.FriendlyFire);
-    }
+    // **深追い（倒すと次の手番を失う）は第74期に OverreachTrait へ切り出した。**
+    // エグの Traits に { Gouge, Overreach } と並んでいるだけで**盤面は変わらない**
+    // ——切り出したのは代金を独立に計量できるようにするため（第73期の器具不足）。
 }
 
 /// <summary>
@@ -3749,8 +3750,18 @@ public sealed class CarveTrait : Trait
 /// <see cref="GougeTrait"/>（抉り）が「維持して読み続ける」なら、こちらは「畳んで一撃で使う」。
 ///
 /// **1つのルールの表と裏**（置き去り・責め苦・仇討ち・裂き・抉りと同型）:
-/// **開いた傷しか断てない。だから傷が無ければ振らない。** プラス（最も深い傷を狙って
-/// まとめて断つ）とマイナス（傷を持つ敵が狙えない間は手番を捨てる）が同じ一文から出る。
+/// **開いた傷しか断てない。** プラス（最も深い傷を狙ってまとめて断つ）とマイナス
+/// （傷が閾値に届かない間は断てない）が同じ一文から出る。
+///
+/// <para><b>第74期に待ち方を変えた（V1・<see cref="SeverWait.Swing"/>）。</b>
+/// 第38期〜第73期は「傷が無ければ<b>振らない</b>」で、決着の 26%（理想台 1.85 T/戦）・
+/// ドラフト台では 5.70T のうち <b>3.40T</b> を手番ごと捨てていた。
+/// V1 は<b>普通に振る</b>——断ちが下りるのは閾値に届いた傷にだけなので、
+/// <b>マイナスは消えていない。捨てるものが「手番」から「断ちの機会」に変わっただけ</b>である。
+/// 実測でも <c>傷/断ち</c> は 2.00 のまま（＝「畳んで一撃」は保たれている）で、
+/// 増えたのは<b>ナタが普通に殴った回数</b>（0.13 → 3.42 振/戦）。
+/// <b>ナタが強くなるのは傷が読めるからではなく、毎ターン殴るようになるからである</b>
+/// （第73期の申し送りの実証）。</para>
 ///
 /// <para><b>温存を解いた根拠。</b> <see cref="GougeTrait"/> の doc が
 /// 「<i>傷は消費しない。消費型（溜めた傷を全部使って一撃）は連鎖が供給と変換だけで
@@ -3881,51 +3892,23 @@ public sealed class SeverTrait : Trait
         => u.HasTrait(TraitId.Sever) || u.HasTrait(TraitId.Suture);
 
     /// <summary>
-    /// 狙える敵に <see cref="Threshold"/> 以上の傷を負った駒がいるか。
-    /// **選好と同じ候補集合**を使う（上の但し書き）。
-    ///
-    /// <para><b>第38期に「1つでもあるか」から「Threshold 以上あるか」へ変えた。</b>
-    /// 変えたのはここ1箇所で、選好・消費・<see cref="SurrendersTurn"/> は触っていない。</para>
+    /// <b>手番の放棄（傷が閾値に届くまで振らない）は第74期に <see cref="AwaitTrait"/> へ切り出した。</b>
+    /// <c>CanAct</c> と <see cref="Trait.SurrendersTurn"/> は<b>同じ Trait に載っていないと意味を持たない</b>
+    /// （<see cref="Trait.SurrenderedTurn"/> が「<c>CanAct</c> を偽にした Trait のうち
+    /// <c>SurrendersTurn</c> が偽のものがあるか」を見る）ので、2つまとめて移してある。
+    /// <b>選好（<see cref="Preferred"/> / <see cref="Prefers"/>）と消費はこちらに残す</b>
+    /// ——標的選択は出力の一部で、代金ではない（第74期 §1-1）。
     /// </summary>
-    public static bool HasPrey(BattleContext ctx, UnitState self)
-        => DeepestWound(ctx, self) >= Threshold;
-
-    /// <summary>
-    /// 止めているのは<b>攻撃だけ</b>（不動＝<see cref="ImmobileTrait"/> と同じ側）。
-    /// 溜めも術も通す——断ちが振れないのは対象が存在しないからで、無力化ではない。
-    ///
-    /// <para><b>ログを出すのは のろま（<see cref="SluggishTrait"/>）と同じ作法。</b>
-    /// <see cref="Trait.SurrenderedTurn"/> からも呼ばれるので同じターンに2行出ることがあるが、
-    /// この判定は副作用を持たない（盤面の値を1つも変えない）ので結果には影響しない。</para>
-    /// </summary>
-    public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
-    {
-        if (kind != ActionKind.Attack) return true;
-
-        // **待ちを2種に分ける**（第38期）。「獲物がいない」と「まだ浅い」は
-        // 同じ「振らない」でも意味が違う——前者は供給が止まっている（書き手が落ちた）、
-        // 後者は在庫が積み上がっている最中。診断が別に数えられないと、
-        // 周期が立ったのか供給が枯れたのかが決まらない。
-        int deepest = DeepestWound(ctx, self);
-        if (deepest >= Threshold) return true;
-
-        ctx.Log(deepest <= 0
-            ? $"    {self.Name} は閉じた肌に刃を下ろさない"
-            : $"    {self.Name} は傷がまだ浅いと刃を上げない", LogKind.Action);
-        return false;
-    }
-
-    /// <summary>
-    /// 捨てた手番は<b>売り物にならない</b>。理由はクラスの doc を参照（この1行が無いと
-    /// マイナスが号令・据えへの無償の収入に化ける）。
-    /// </summary>
-    public override bool SurrendersTurn => false;
-
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
         // **着弾した相手の傷だけを読む。** 介入で逸れたなら殉教者の傷（ふつう 0）を読んで空振りする。
         int w = target.Counter(StatusKeys.Wound);
         if (w <= 0) return;
+
+        // **待ち方 V1（第74期）。** 手番を捨てない版では、断ちは閾値に届いた傷にしか下りない
+        // ——**捨てるものが「手番」から「断ちの機会」に変わるだけ**でマイナスは消えていない。
+        // 既定（<see cref="SeverWait.Yield"/>）ではこの行は素通りするので、盤面は1ビットも変わらない。
+        if (ctx.Sever.Wait == SeverWait.Swing && w < ctx.Sever.Threshold) return;
 
         // 生死は ApplyDamage に任せる（読み手側の作法。死体でも判定は同じ＝結果で解決する）。
         ctx.Log($"    {self.Name} が {target.Name} の傷をまとめて断つ（傷 {w} → +{PerWound * w}）",
@@ -3995,14 +3978,19 @@ public sealed class SutureTrait : Trait
         UnitState? patient = ctx.MostHurtAlly(self);
         if (patient is null) return;
 
+        // **塞ぎは札（<see cref="TraitId.Seal"/>）で切り出してある**（第74期）。
+        // 既定ではハリが必ず持っているので、盤面も文字列も1バイトも変わらない。
+        bool seal = self.HasTrait(TraitId.Seal);
+
         ctx.Log($"    {self.Name} が {target.Name} の傷口から糸を引き、{patient.Name} を縫い戻した"
-            + $"（傷 {w} → +{PerWound * w}、傷 {w - 1} へ）", LogKind.Trigger);
+            + (seal ? $"（傷 {w} → +{PerWound * w}、傷 {w - 1} へ）" : $"（傷 {w} → +{PerWound * w}）"),
+            LogKind.Trigger);
 
         // 渇き下ではこの1行が何も返さない。**それでも下の塞ぎは走る**（クラスの doc 参照）。
         ctx.Heal(patient, PerWound * w);
 
         // 塞ぎ。**1つだけ**引く（全部消すのは断ちの側の役で、こちらは維持読み）。
-        target.SetCounter(StatusKeys.Wound, w - 1);
+        if (seal) target.SetCounter(StatusKeys.Wound, w - 1);
     }
 }
 
@@ -4075,6 +4063,199 @@ public sealed class FixateTrait : Trait
 
     /// <summary>InstanceId は戦闘ごとに振り直されるので、境界で必ず捨てる（上の但し書き）。</summary>
     public override void OnCarryOver(UnitState self) => self.SetCounter(MemoryKey, 0);
+}
+
+/// <summary>
+/// <b>断ちの待ち方（第74期）。</b> <see cref="AwaitTrait"/> と <see cref="SeverTrait"/> が読む。
+///
+/// <para><b>診断（<c>wcost</c>）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+/// （既定は <see cref="Default"/> ＝ 第38期の現行）。static のノブにしない理由は同型の doc を参照
+/// ——Trait は共有シングルトンで、<c>layout</c> は戦闘を並列に回す。</para>
+///
+/// <para><b>2つのノブは別のものを動かす。</b> <see cref="Wait"/> は<b>待ち方</b>
+/// （手番を捨てるか、振ってしまうか）、<see cref="Threshold"/> は<b>閾値</b>（第38期の周期の可動部）。
+/// 第74期 §3 の V1 は前者だけ・V2 は後者だけを動かす——<b>「効いたのは待ち方か閾値か」を割るための対</b>。</para>
+/// </summary>
+public enum SeverWait
+{
+    /// <summary>
+    /// V0（第38期〜第73期）。閾値に届くまで<b>手番を捨てる</b>。
+    /// <b>第74期に採用しなかった側</b>——診断 <c>wcost</c> の対照として残す。
+    /// </summary>
+    Yield,
+
+    /// <summary>
+    /// V1（第74期・<b>採用</b>）。<b>閾値未満でも普通に振る。</b>断ちは閾値に届いた傷にしか下りない
+    /// ——<b>マイナスは消えていない。捨てるものが「手番」から「断ちの機会」に変わるだけ</b>。
+    /// </summary>
+    Swing
+}
+
+/// <summary>断ちの待ち方と閾値（第74期）。<see cref="SeverWait"/> の doc を参照。</summary>
+public readonly record struct SeverRule(SeverWait Wait, int Threshold)
+{
+    /// <summary>
+    /// 既定は<b>第74期に採用した V1</b>（振るが、閾値に届いた傷にしか刃は下りない）。
+    /// 閾値は <see cref="SeverTrait.Threshold"/>（第38期の 2 のまま。第74期の V2 で 1 も測って採らなかった）。
+    ///
+    /// <para><b>採用の根拠</b>（design/PHASE74_WOUND_COST.md）: ドラフト台 Pw で傷の枚数効果の傾きが
+    /// <b>−15.6 → −10.4（改善 +5.15 / +5.16・両 seed 帯）</b>。線は +2.0、到達可能上限 +8.3 の 62%。
+    /// 閾値だけを下げる V2 は +1.46 / +1.47 しか戻さない——<b>直すべきは閾値ではなく待ち方だった。</b></para>
+    /// </summary>
+    public static SeverRule Default => new(SeverWait.Swing, SeverTrait.Threshold);
+}
+
+// =====================================================================================
+// 第74期に切り出したマイナス4枚（**器具**）。
+//
+// **どれも既定で保持者に付いたままで、盤面は1ビットも変わらない**（`compare` 305 セル 0 件）。
+// 切り出したのは「プラスを残してマイナスだけを落とした版」を `Traits.cs` を触らずに作れるように
+// するため——第73期はこれが無くて、5枚のうち1枚（ノミの執着）しか代金を計量できなかった。
+//
+// **前例は執着（`FixateTrait`）。** 刻み（`CarveTrait`）と最初から別の `TraitId` だったので、
+// 第73期は「`Traits = { Carve }` の版」を診断のローカルに置くだけで代金が測れた。
+// =====================================================================================
+
+/// <summary>
+/// 薄刃。<b>与えるダメージは常に1</b>——裂き（<see cref="RendTrait"/>）から切り出した代金。
+///
+/// <para><c>atk</c> を**まったく読まない**のが要点。<see cref="UnitState.CurrentAttack"/> は
+/// <c>Def.Attack + AtkBonus</c> を作ってからここへ渡すので、号令の +4 も呪詛の −6 も
+/// 分かちの「腕がなまる」も全部この 1 に潰れる。**床も天井も要らない**
+/// ——引数を読まない限り、上流に何が乗っても結果は動かない。</para>
+///
+/// <para><b>0 を返さないこと。</b> <see cref="BattleContext.ApplyDamage"/> が
+/// <c>amount &lt;= 0</c> で早期 return するので、ダメージも被弾強化も反撃も走らなくなる。
+/// 一方で <c>OnAfterAttack</c> は <c>PerformAttack</c> の最後で必ず呼ばれるため
+/// **傷だけは刻まれ続ける**——「1ダメージも通らないのに汚れだけ溜まる」という、
+/// 説明のつかない駒になる。</para>
+///
+/// <para><b>これがキリの寄与のほぼ全部である</b>（第73期）。素体(攻12) − 素体(攻1) で測った
+/// 「打点を潰す代金」がキリの寄与 −17.91 の **99%** を単独で説明し、
+/// **傷を書くこと自体の値段は測定精度の中でゼロだった。**
+/// 第74期はその代用（素体どうしの差）を、**本物の分割**に置き換える。</para>
+/// </summary>
+public sealed class ThinBladeTrait : Trait
+{
+    public override TraitId Id => TraitId.ThinBlade;
+
+    public override int ModifyAttack(UnitState self, int atk) => 1;
+}
+
+/// <summary>
+/// 深追い。<b>敵を倒すと次の手番を失う</b>——抉り（<see cref="GougeTrait"/>）から切り出した代金。
+///
+/// <para>痺れ機構に乗せてあるので、飛んだ手番は <see cref="StatusKeys.IdleTurn"/> になって
+/// 号令（ガン）・据え（バン）が買い取る——ザンの怯み・シガの怖気と同じ形。
+/// <c>OnKill</c> は**味方側で初の実装**だった（第28期）。</para>
+///
+/// <para>「倒すほど止まる」ので、**エグ自身で倒し切るより傷を積んで一撃で通すほうが強い**という
+/// 勾配が自己言及的に立つ。トドメを他の駒に譲る配置判断がそこから出る。</para>
+/// </summary>
+public sealed class OverreachTrait : Trait
+{
+    public override TraitId Id => TraitId.Overreach;
+
+    public override void OnKill(BattleContext ctx, UnitState self, UnitState victim)
+    {
+        // 深追い。痺れに乗せてあるので次の手番が飛び（→ IdleTurn → 号令・据え）、
+        // ターン外の行動も CanActOutOfTurn が閉じて止まる。
+        self.SetCounter(StatusKeys.Stun, 1);
+        ctx.Log($"    {self.Name} は {victim.Name} の裂け目に踏み込みすぎた", LogKind.FriendlyFire);
+    }
+}
+
+/// <summary>
+/// 刃待ち。<b>狙える敵の傷が閾値に届くまで手番を捨てる</b>
+/// ——断ち（<see cref="SeverTrait"/>）から切り出した代金。
+///
+/// <para><b><c>CanAct</c> と <see cref="Trait.SurrendersTurn"/> は必ず同じ Trait に載せる。</b>
+/// <see cref="Trait.SurrenderedTurn"/> は「<c>CanAct</c> を偽にした Trait の**うち**
+/// <c>SurrendersTurn</c> が偽のものがあるか」を見るので、2つを別の Trait に分けると
+/// **捨てた手番が号令・据えに売れるようになり、マイナスが逆に資産化する**
+/// （<see cref="Trait.SurrendersTurn"/> の doc がまさにこの穴を警告している）。</para>
+///
+/// <para><b>選好はここには無い</b>（<see cref="SeverTrait.Preferred"/> / <see cref="SeverTrait.Prefers"/>）。
+/// 標的選択は出力の一部であって代金ではないので、プラス側に残してある（第74期 §1-1）。
+/// ただし<b>候補集合は選好と共有する</b>（<c>BattleContext.TargetPool</c> の1箇所）
+/// ——2箇所で数えると「振ると決めた手番に狙う相手がいない」が起こりうる。</para>
+///
+/// <para><b>実額は決着の 26%</b>（第73期・理想台）。放棄 0.53 + 待ち 1.32 = 1.85 T/戦。
+/// **ナタの空振り率は 0.7% しかないが、それは在庫が足りている証拠ではなく
+/// 「足りない間は振らない」という設計の帰結**——空振りと手番の放棄は同じ不足の表と裏。</para>
+/// </summary>
+public sealed class AwaitTrait : Trait
+{
+    public override TraitId Id => TraitId.Await;
+
+    /// <summary>
+    /// 狙える敵に閾値以上の傷を負った駒がいるか。**選好と同じ候補集合**を使う。
+    ///
+    /// <para><b>閾値は規則（<see cref="SeverRule"/>）から引く</b>（第74期）。
+    /// <see cref="SeverTrait.Threshold"/> はその既定値で、<c>const</c> のまま残してある。</para>
+    /// </summary>
+    public static bool HasPrey(BattleContext ctx, UnitState self)
+        => SeverTrait.DeepestWound(ctx, self) >= ctx.Sever.Threshold;
+
+    /// <summary>
+    /// 止めているのは<b>攻撃だけ</b>（不動＝<see cref="ImmobileTrait"/> と同じ側）。
+    /// 溜めも術も通す——断ちが振れないのは対象が存在しないからで、無力化ではない。
+    ///
+    /// <para><b>ログを出すのは のろま（<see cref="SluggishTrait"/>）と同じ作法。</b>
+    /// <see cref="Trait.SurrenderedTurn"/> からも呼ばれるので同じターンに2行出ることがあるが、
+    /// この判定は副作用を持たない（盤面の値を1つも変えない）ので結果には影響しない。</para>
+    /// </summary>
+    public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
+    {
+        if (kind != ActionKind.Attack) return true;
+
+        // **V1（第74期）は手番を捨てない。** 断ちの側が閾値で発火を絞る
+        // （<see cref="SeverTrait.OnAfterAttack"/>）ので、マイナスは消えていない。
+        if (ctx.Sever.Wait == SeverWait.Swing) return true;
+
+        // **待ちを2種に分ける**（第38期）。「獲物がいない」と「まだ浅い」は
+        // 同じ「振らない」でも意味が違う——前者は供給が止まっている（書き手が落ちた）、
+        // 後者は在庫が積み上がっている最中。診断が別に数えられないと、
+        // 周期が立ったのか供給が枯れたのかが決まらない。
+        int deepest = SeverTrait.DeepestWound(ctx, self);
+        if (deepest >= ctx.Sever.Threshold) return true;
+
+        ctx.Log(deepest <= 0
+            ? $"    {self.Name} は閉じた肌に刃を下ろさない"
+            : $"    {self.Name} は傷がまだ浅いと刃を上げない", LogKind.Action);
+        return false;
+    }
+
+    /// <summary>
+    /// 捨てた手番は<b>売り物にならない</b>。理由はクラスの doc を参照（この1行が無いと
+    /// マイナスが号令・据えへの無償の収入に化ける）。
+    /// </summary>
+    public override bool SurrendersTurn => false;
+}
+
+/// <summary>
+/// 塞ぎ。<b>繕うたび、糸を通した敵の傷がひとつ塞がる</b>
+/// ——縫い（<see cref="SutureTrait"/>）から切り出した代金。
+///
+/// <para><b>これだけは札（marker）で、本体は <see cref="SutureTrait.OnAfterAttack"/> の中にある。</b>
+/// 引き受け（<see cref="BearTrait"/>）が「本体は <c>Dull</c> の中・Trait は空の札」なのと同型。
+/// **フックとして切り出せない理由は2つあり、どちらも挙動が変わる:**
+/// <list type="number">
+/// <item>塞ぎは<b>患者がいたときだけ</b>走る（<c>MostHurtAlly</c> が null なら繕いも塞ぎも起きない）。
+/// 別フックで書くには患者をもう一度引く必要があるが、<b>繕いで患者が満タンになると
+/// 2度目の <c>MostHurtAlly</c> は null を返す</b>ので、塞ぐ／塞がないが入れ替わる。</item>
+/// <item><c>MostHurtAlly</c> は同値のタイブレークに <c>PickOne</c> を使う。
+/// **2度引くと <c>Roll</c> を余分に消費して以降の乱数列がまるごとずれる。**</item>
+/// </list>
+/// <b>だから「分離した」とは書かない</b>（同じ動作の表と裏を切ると別の機構になる）。
+/// 札にすることで<b>計量だけができる</b>ようになっている——それがこの期の目的そのもの。</para>
+///
+/// <para><b>塞ぎは渇き下でも走る。</b> 繕いが封じられていても傷は 1 つ減る
+/// ——「Heal が通らなかったら塞がない」と親切にしない（原因ではなく結果で解決する、の作法）。</para>
+/// </summary>
+public sealed class SealTrait : Trait
+{
+    public override TraitId Id => TraitId.Seal;
 }
 
 /// <summary>
@@ -5128,6 +5309,10 @@ public static class TraitCatalog
         new SeverTrait(),
         new SutureTrait(),
         new FixateTrait(),
+        new ThinBladeTrait(),
+        new OverreachTrait(),
+        new AwaitTrait(),
+        new SealTrait(),
         new MartyrTrait(),
         new InversionTrait(),
         new DroughtTrait(),

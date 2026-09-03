@@ -613,7 +613,7 @@ public static class UnitCatalog
         MaxHp = 44,
         Attack = 12,
         Speed = 12,
-        Traits = new[] { TraitId.Rend },
+        Traits = new[] { TraitId.Rend, TraitId.ThinBlade },   // 薄刃＝代金（第74期に切り出した。挙動は同じ）
         PlusText = "攻撃した相手に傷を刻む",
         MinusText = "刃が薄く、与えるダメージは常に1",
         Flavor = "斬れるが、断てない。だから誰も戦力として数えなかった。"
@@ -637,7 +637,7 @@ public static class UnitCatalog
         MaxHp = 58,
         Attack = 12,
         Speed = 6,
-        Traits = new[] { TraitId.Gouge },
+        Traits = new[] { TraitId.Gouge, TraitId.Overreach },  // 深追い＝代金（同上）
         PlusText = "傷を持つ敵を攻撃すると、傷1つにつき3を上乗せする",
         MinusText = "敵を倒すと深追いし、次の手番を失う",
         Flavor = "開いた傷にしか興味がない。塞がった肌はただの壁だと言う。"
@@ -687,13 +687,19 @@ public static class UnitCatalog
     /// **エグ・キリ・ノミのいずれかを動かすと順序が崩れる**ので、3体と対で1つの要件。
     ///
     /// **待つのが仕様**（第38期）——狙える敵の最深の傷が <see cref="SeverTrait.Threshold"/>（2）に
-    /// 達するまで刃を上げない。第37期は「傷が1つでもあれば振る」だったので毎ターン振ってしまい、
+    /// 達するまで刃は下りない。第37期は「傷が1つでもあれば断つ」だったので毎ターン消費してしまい、
     /// 在庫が 1 のまま＝「消費型」なのに定額の上乗せとしてしか働かなかった
     /// （<c>傷/断ち</c> 1.00）。**待たせて初めて畳める**。
     ///
-    /// マイナス（狙える敵の傷が浅い間は振らない）は<b>号令・据えに売れない</b>
-    /// （<see cref="SeverTrait.SurrendersTurn"/> が false）。売れてしまうと、供給源を
-    /// 1枚も持たない編成でナタが毎ターンの無償の収入源になり、マイナスが資産に化ける。
+    /// **第74期に「待ち方」だけを変えた**（<see cref="SeverWait.Swing"/>）——
+    /// 第73期まではその間**手番ごと捨てて**いて、それが傷軸の傾き（−15.6）の最大の犯人だった
+    /// （帰属 +5.56 / +5.64・決着の 26〜60% を捨てていた）。V1 では**普通に殴る**。
+    /// 閾値そのものは 2 のまま（下げる V2 は +1.46 しか戻さない）で、<c>傷/断ち</c> も 2.00 のまま。
+    ///
+    /// マイナス（傷が浅い間は断てない）は<b>号令・据えに売れない</b>
+    /// （<see cref="AwaitTrait.SurrendersTurn"/> が false）。V1 では手番を捨てないので
+    /// そもそも <see cref="StatusKeys.IdleTurn"/> が立たないが、**規則を V0 に戻したときに
+    /// マイナスが資産へ化けないように、対で残してある**。
     ///
     /// **単体攻撃であることが標的選好の前提**（<see cref="SeverTrait"/> の窓口は
     /// 貫きを通らない）。範囲型に変えると選好が「巻き込みの中心の固定」に意味を変える。
@@ -707,10 +713,10 @@ public static class UnitCatalog
         MaxHp = 60,
         Attack = 13,
         Speed = 5,
-        Traits = new[] { TraitId.Sever },
+        Traits = new[] { TraitId.Sever, TraitId.Await },      // 刃待ち＝代金（同上）
         PlusText = "狙える敵のうち傷が最も深い相手を狙う。攻撃した相手の傷をすべて断ち、1つにつき5を上乗せする",
-        MinusText = "狙える敵の傷が2つ開くまで、刃を振るわず手番を捨てる",
-        Flavor = "断てる。だが、閉じた肌には刃が入らない。誰かが開くまで、鉈はただの鉄塊だった。"
+        MinusText = "狙える敵の傷が2つ開くまで、刃が下りない（殴りはするが断てない）",
+        Flavor = "断てる。だが、閉じた肌には刃が入らない。誰かが開くまで、鉈はただの鈍器だった。"
     };
 
     /// <summary>
@@ -746,7 +752,7 @@ public static class UnitCatalog
         MaxHp = 54,
         Attack = 10,
         Speed = 6,
-        Traits = new[] { TraitId.Suture },
+        Traits = new[] { TraitId.Suture, TraitId.Seal },      // 塞ぎ＝代金（同上。**札**）
         PlusText = "傷が最も深い敵を狙い、その傷1つにつき最も傷ついた味方を3繕う",
         MinusText = "繕うたび、糸を通した敵の傷がひとつ塞がる",
         Flavor = "敵の傷口に糸を通して、味方を縫い戻す。敵まで塞ぐ針を、軍は疫病神と呼んで捨てた。"
