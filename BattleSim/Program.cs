@@ -26894,9 +26894,13 @@ if (focusId == "gauge")
     // 版 v: 0 = 対照（**現行の既定と完全に同じ**）／ 1 = 本命／ 2・3 = 第85期の内訳（§8 の分岐用）
     BattleResult GgRun(Formation f, Formation e, int seed, bool verbose, int p, int v)
     {
+        // **3機構ぶんのノブを毎回すべて明示して渡す。** 第88期 §8 で `SutureRule` / `SpillWoundRule` の
+        // 既定が動いたので、省略すると第84・87期の測定が「当時の対照」でなくなり、自己検査 (b) が落ちる。
+        var pin = (su: new SutureRule(SutureSide.Foe), sp: new SpillWoundRule(false), th: new ThornRule(ThornWound.None));
         if (p == 84)
             return BattleEngine.Run(f, e, seed, verbose: verbose,
-                                    thorn: new ThornRule(v == 0 ? ThornWound.None : ThornWound.Foe));
+                                    thorn: new ThornRule(v == 0 ? ThornWound.None : ThornWound.Foe),
+                                    suture: pin.su, spillWound: pin.sp, woundIgnite: new IgniteRule(false));
         if (p == 85)
         {
             // W0 / W2 は第85期 `suture2` の `SuRulesOf` の写し。2・3 は **W2 の内訳**（§8 の分岐用）
@@ -26909,7 +26913,8 @@ if (focusId == "gauge")
             };
             return BattleEngine.Run(f, e, seed, verbose: verbose, thorn: th, suture: su, spillWound: sp);
         }
-        return BattleEngine.Run(f, e, seed, verbose: verbose, woundIgnite: new IgniteRule(v != 0));
+        return BattleEngine.Run(f, e, seed, verbose: verbose, woundIgnite: new IgniteRule(v != 0),
+                                thorn: pin.th, suture: pin.su, spillWound: pin.sp);
     }
     string GgVName(int p, int v) => p switch
     {
@@ -27822,8 +27827,9 @@ if (focusId == "gauge")
         Console.WriteLine($"**`compare` {cells2} セルが `docs/balance.md` と一致** → ずれ **{mism}** 件 → **{(mism == 0 && missing.Count == 0 ? "○" : "×")}**"
                           + (missing.Count > 0 ? "（balance.md に無い行: " + string.Join(" / ", missing) + "）" : "") + "。");
         Console.WriteLine();
-        Console.WriteLine("**この期は `UnitCatalog` / `Traits.cs` / `BattleEngine.cs` を1文字も触っていない**ので、"
-                          + "このずれが 0 なのは原理的な帰結（それでも毎回測る）。");
+        Console.WriteLine("**この期に動かしたのは `SutureRule` / `SpillWoundRule` の既定2つだけ**（§8 の採用）。"
+                          + "`docs/balance.md` は採用後に再生成してあるので、ここが 0 件なのは"
+                          + "「再生成した表と現行の盤面が一致している」ことの確認になる。");
         Console.WriteLine();
         Console.WriteLine($"所要 {ggSw.Elapsed.TotalSeconds:F1} 秒。");
         return;
