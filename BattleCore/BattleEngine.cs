@@ -1290,6 +1290,13 @@ public sealed class BattleContext
     public ThinBladeRule ThinBlade { get; }
 
     /// <summary>
+    /// 棘の傷（第84期）。<b>診断（thorn）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="ThornRule.Default"/>）。
+    /// static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public ThornRule Thorn { get; }
+
+    /// <summary>
     /// 軋み（第66期）の在庫の記録。<b>盤面には一切影響しない。</b>
     /// <see cref="TraitId.Displaced"/> 保持者の <see cref="UnitState.AtkBonus"/> が動いた直後に呼ぶ
     /// ——上げる経路は<b>軋み自身と <see cref="Whet"/> の2本だけ</b>（ヨミは自己強化を1つも持たない）。
@@ -1351,7 +1358,7 @@ public sealed class BattleContext
                          FavorRule? favor = null, BlazeRule? blaze = null,
                          FunnelRule? funnel = null, WhetMask? whetMask = null,
                          CreakRule? creak = null, SeverRule? sever = null,
-                         ThinBladeRule? thinBlade = null)
+                         ThinBladeRule? thinBlade = null, ThornRule? thorn = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -1379,6 +1386,7 @@ public sealed class BattleContext
         Creak = creak ?? CreakRule.Default;
         Sever = sever ?? SeverRule.Default;
         ThinBlade = thinBlade ?? ThinBladeRule.Default;
+        Thorn = thorn ?? ThornRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -3154,12 +3162,13 @@ public static class BattleEngine
                                    FinisherRule? finisher = null, FavorRule? favor = null,
                                    BlazeRule? blaze = null, FunnelRule? funnel = null,
                                    WhetMask? whetMask = null, CreakRule? creak = null,
-                                   SeverRule? sever = null, ThinBladeRule? thinBlade = null)
+                                   SeverRule? sever = null, ThinBladeRule? thinBlade = null,
+                                   ThornRule? thorn = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
-               creak, sever, thinBlade);
+               creak, sever, thinBlade, thorn);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -3181,11 +3190,11 @@ public static class BattleEngine
                                    FavorRule? favor = null, BlazeRule? blaze = null,
                                    FunnelRule? funnel = null, WhetMask? whetMask = null,
                                    CreakRule? creak = null, SeverRule? sever = null,
-                                   ThinBladeRule? thinBlade = null)
+                                   ThinBladeRule? thinBlade = null, ThornRule? thorn = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
-                                    favor, blaze, funnel, whetMask, creak, sever, thinBlade);
+                                    favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

@@ -1189,6 +1189,40 @@ public sealed class ImmobileTrait : Trait
 }
 
 /// <summary>棘。受けたダメージの一部を殴り返す。反撃で反撃が起きない制御は engine 側。</summary>
+/// <summary>
+/// 棘が刺し返した相手に傷を残すか（第84期）。<b>診断（thorn）が版を差し替えるためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない。static のノブにしない理由は <see cref="ColossusRule"/> と同じ
+/// （Trait は共有シングルトンで <c>layout</c> は並列実行する）。
+///
+/// <para><b>なぜ棘か。</b> 傷を書く経路は裂き（キリ）と刻み（ノミ）の2枚で、どちらも
+/// <c>OnAfterAttack</c> ＝ 自分の手番の主目標にしか刻まない。棘の反撃は<b>敵の手番に走る</b>
+/// （棘守りで隣の味方が殴られたときにも走る）ので、傷の供給が初めて被弾のクロックに乗る。
+/// カドは不動で自分からは決して攻撃しないので、<b>手番を1つも使わない傷の供給</b>になる。</para>
+///
+/// <para><b>数は定数 1</b>（<see cref="RendTrait.Wounds"/> と同じ作法）。打点に比例させない
+/// ——軛（第四波）が反撃の打点を切っても供給は 1 のまま残る。<b>主目標のみ</b>で、
+/// 薙ぎで巻き込んだ隣の敵には書かない（範囲持ちが供給を独占して非線形に伸びるのを構造的に避ける）。</para>
+/// </summary>
+public enum ThornWound
+{
+    /// <summary>V0（対照）。現行。傷を書かない。</summary>
+    None,
+    /// <summary>V1（本命）。刺し返した相手（<c>source</c>）に傷 1。</summary>
+    Foe,
+    /// <summary>
+    /// V2（自己検査）。V1 ＋ <b>巻き込んだ味方</b>にも傷 1。味方の傷を読む窓口はロスターに1本も無いので
+    /// 盤面は V1 と1セルも違わないはず（<c>thorn check</c> (c)）。**採用しない。**
+    /// </summary>
+    Both
+}
+
+/// <summary>棘の傷（第84期）。<see cref="ThornWound"/> の doc を参照。</summary>
+public readonly record struct ThornRule(ThornWound Wound)
+{
+    /// <summary>既定は V0（書かない）＝現行。</summary>
+    public static ThornRule Default => new(ThornWound.None);
+}
+
 public sealed class ThornsTrait : Trait
 {
     public const int Multiplier = 2;
@@ -1243,6 +1277,15 @@ public sealed class ThornsTrait : Trait
             ctx.Log($"    {self.Name} の棘が {source.Name} を刺し返す", LogKind.Trigger);
             ctx.ApplyDamage(source, back, self);
 
+            // 棘の傷（第84期）。**裂きの作法をそのまま踏む**——定数 1・主目標のみ・死体には書かない
+            // （ApplyDamage の後に生存を取り直す）。既定（ThornWound.None）ではこの行は素通りする。
+            if (ctx.Thorn.Wound != ThornWound.None && source.IsAlive)
+            {
+                int w = source.Counter(StatusKeys.Wound) + 1;
+                source.SetCounter(StatusKeys.Wound, w);
+                ctx.Log($"    {self.Name} の棘が {source.Name} に残る（傷 {w}）", LogKind.Status);
+            }
+
             foreach (UnitState other in ctx.LivingMembersShuffled(source.TeamId))
             {
                 if (other == source) continue;
@@ -1268,6 +1311,14 @@ public sealed class ThornsTrait : Trait
                 ctx.Log($"    余波: {self.Name} の棘が {ally.Name} を巻き込む", LogKind.FriendlyFire);
                 ctx.ApplyDamage(ally, spill, self, isFriendlyFire: true);
                 gained += (before - ally.Hp) / GainDivisor;
+
+                // V2（自己検査・第84期）。巻き込んだ味方にも傷 1。`gained` の計算には触らない。
+                if (ctx.Thorn.Wound == ThornWound.Both && ally.IsAlive)
+                {
+                    int w = ally.Counter(StatusKeys.Wound) + 1;
+                    ally.SetCounter(StatusKeys.Wound, w);
+                    ctx.Log($"    {self.Name} の棘が {ally.Name} に残る（傷 {w}）", LogKind.Status);
+                }
             }
 
             if (gained > 0)
