@@ -1233,17 +1233,17 @@ public readonly record struct ThornRule(ThornWound Wound)
 /// </summary>
 public enum SutureSide
 {
-    /// <summary>W0（対照）。現行。殴った相手の傷だけを読む。</summary>
+    /// <summary>W0（対照）。第87期までの現行。殴った相手の傷だけを読む。</summary>
     Foe,
-    /// <summary>W1・W2。殴った相手と、傷がいちばん深い味方（自分を除く）のうち深いほう。同数なら敵側。</summary>
+    /// <summary>W1・W2。<b>第88期からの既定。</b> 殴った相手と、傷がいちばん深い味方（自分を除く）のうち深いほう。同数なら敵側。</summary>
     Both
 }
 
 /// <summary>縫いの糸口（第85期）。<see cref="SutureSide"/> の doc を参照。</summary>
 public readonly record struct SutureRule(SutureSide Side)
 {
-    /// <summary>既定は W0（敵側だけ）＝現行。</summary>
-    public static SutureRule Default => new(SutureSide.Foe);
+    /// <summary>既定は W2（両側）＝**第88期に採用**（第85期は当時の線 +3.0pt で落ちていた）。</summary>
+    public static SutureRule Default => new(SutureSide.Both);
 }
 
 /// <summary>
@@ -1261,7 +1261,7 @@ public enum SpillScope
 }
 
 /// <summary>
-/// 巻き込み則（第85期・W2）。<c>ApplyDamage</c> で <b>味方の刃</b>（<c>isFriendlyFire</c> かつ
+/// 巻き込み則（第85期・W2。<b>第88期に採用して既定になった</b>）。<c>ApplyDamage</c> で <b>味方の刃</b>（<c>isFriendlyFire</c> かつ
 /// <c>source</c> が同陣営）のダメージが通り、対象が生きていれば傷を 1 つ書く。
 /// <para><b>書き手は6枚</b>——余波（ボルグ）／生贄（リィカ）／吸い（ゴルム）／破裂の味方巻き込み（ゾト）／
 /// 棘の巻き込み（カド）／置き去りの削り（ナラ）。<b>中継（巨躯・分かち・転嫁の代金・深追いの反動）は書かない</b>
@@ -1272,8 +1272,11 @@ public enum SpillScope
 /// </summary>
 public readonly record struct SpillWoundRule(bool Enabled, SpillScope Scope = SpillScope.All)
 {
-    /// <summary>既定は無効＝現行。</summary>
-    public static SpillWoundRule Default => new(false);
+    /// <summary>
+    /// 既定は<b>有効</b>＝**第88期に採用**（第85期は当時の線 +3.0pt で落ちていた）。
+    /// <b>味方に傷が載る経路はこれが初めて</b>——第49期の「傷は味方に載る経路が1つも無い」はここで終わる。
+    /// </summary>
+    public static SpillWoundRule Default => new(true);
 
     /// <summary><paramref name="source"/> の刃が書き手として採られるか（<see cref="Scope"/> の判定）。</summary>
     public bool Writes(UnitState source) =>
@@ -4207,14 +4210,17 @@ public sealed class SeverTrait : Trait
 /// 閾値到達は 0.00 → 0.01 回/戦（カド × ハリ × ナタ の専用台・弱い波）。飢餓の原因は塞ぎではなく、
 /// この台では傷を書く前に決着が付くこと（第3〜5波は 2.9〜4.0T）。</para>
 ///
-/// <para><b>両側読み（第85期・<see cref="SutureRule"/>・測って採用しなかった）。</b> 糸口の候補を
+/// <para><b>両側読み（第85期に測り、<u>第88期に採用した</u>）。</b> 糸口の候補を
 /// 「殴った相手」から「殴った相手か、傷がいちばん深い味方（自分を除く）か、深いほう」へ広げる版。
-/// 味方の傷の書き手（棘の巻き込み＝<see cref="ThornRule"/> ／ 巻き込み則＝<see cref="SpillWoundRule"/>）と
-/// 対にして 2×2 で測り、Δ相乗 は カド +1.10 / 6枚平均 +1.30pt で線 +3.0 に届かなかった。
-/// **紙のスループット（供給 6.5 回/戦 × 3 点 ＝ 総被ダメの 2〜6%）の時点で線 5% を挟んでいた**——
-/// 律速は供給でも在庫でも読み手でもなく**ハリの振り回数（2.15 回/戦）**で、
-/// 勝てる波では傷が積まれる前に決着し、負ける波ではハリが先に落ちる。既定は <see cref="SutureSide.Foe"/>（現行）のまま。
-/// 経緯は design/PHASE85_SUTURE2.md。</para>
+/// 味方の傷の書き手（巻き込み則＝<see cref="SpillWoundRule"/>）と対で初めて働く
+/// ——<b>両側読みだけを入れても盤面は1セルも動かない</b>（味方に傷が載る経路が他に無いので、
+/// 味方側の候補が常に空。第88期の実測で 50 体 × 128 台の Δ相乗 が全部ちょうど 0.00）。
+/// <b>第85期は当時の主判定（Δ相乗 の平均 ≥ +3.0pt）で落ちた</b>——6枚平均 +1.30pt。
+/// その線は第80期の<b>水準</b>の分布から誤って<b>増分</b>へ引いた線で、第88期に特異性の判定へ置き換えたところ
+/// <b>意図した6枚のうち上位2枚（吸いのゴルム +5.25 / 余波のボルグ +2.54）が 50 体の1位・2位を占め、
+/// 意図しない 44 体は1体もノイズ床を超えなかった</b>ので採った。
+/// 律速は依然として<b>ハリの振り回数（2.15 回/戦）</b>で、量そのものは小さい。
+/// 経緯は design/PHASE85_SUTURE2.md と design/PHASE88_GAUGE.md。</para>
 ///
 /// <para><b>消費しない読み手（抉り）とは共存できる。</b> 塞ぎは 1 ずつしか引かないので、
 /// 同じターンに積まれた傷を抉りが読む余地は残る——ただし両方積むのは予算壁の側で止まる。</para>
@@ -4244,7 +4250,9 @@ public sealed class SutureTrait : Trait
         // 同数のタイブレークだけ `PickOne`（候補 0 個・1 個では Roll を消費しない）。
         // **味方側の糸口に self を含めない**（ハリが巻き込まれて負った傷はハリ自身では引けない。配置の問いの本体）。
         // `AcceptsSupport` は見ない——傷を塞ぐのは支援ではなく、相手のマイナスを取り除く操作。
-        // 既定（`SutureSide.Foe`）ではこのブロックは素通りするので、盤面も乱数列も1ビットも動かない。
+        // `SutureSide.Foe`（第87期までの既定）ではこのブロックは素通りする。
+        // **第88期に `Both` が既定になった**——ただし単独では何も変えない（味方に傷が載る経路は
+        // `SpillWoundRule` だけで、そちらも同時に既定になっている）。
         bool fromAlly = false;
         if (ctx.Suture.Side == SutureSide.Both)
         {

@@ -753,7 +753,7 @@ public static class UnitCatalog
         Attack = 10,
         Speed = 6,
         Traits = new[] { TraitId.Suture, TraitId.Seal },      // 塞ぎ＝代金（同上。**札**）
-        PlusText = "傷が最も深い敵を狙い、その傷1つにつき最も傷ついた味方を3繕う",
+        PlusText = "傷が最も深い敵を狙い、敵と味方のうち傷が深いほうの傷口から糸を引き、その傷1つにつき最も傷ついた味方を3繕う",
         MinusText = "繕うたび、糸を通した敵の傷がひとつ塞がる",
         Flavor = "敵の傷口に糸を通して、味方を縫い戻す。敵まで塞ぐ針を、軍は疫病神と呼んで捨てた。"
     };
