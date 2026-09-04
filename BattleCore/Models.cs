@@ -867,6 +867,13 @@ public sealed class UnitTally
     public int SpillWoundsWritten;
 
     /// <summary>
+    /// 継ぎ当ての繕い（第86期・<c>MendRule</c>）。発火回数／そのうち患者に傷があった回数（<b>版に依らず観測する</b>）／観測した傷の総深さ／
+    /// 繕いが 1 点も届かなかった回数（渇き）／実際に増えた HP／自分が払った HP／患者が敵だった回数（0 のはず）。
+    /// <b>盤面には一切影響しない。</b>
+    /// </summary>
+    public int MendFires, MendWoundSeen, MendWoundDepth, MendDry, MendHealed, MendPaid, MendFoePatient;
+
+    /// <summary>
     /// 読まれないまま落ちた傷（第85期・自己検査 (j)）——倒れた時点で負っていた傷の数と、
     /// 戦闘終了時に生き残った駒が負っていた傷の数。<b>盤面には一切影響しない。</b>
     /// </summary>
@@ -876,6 +883,8 @@ public sealed class UnitTally
     {
         SutureFoe += o.SutureFoe; SutureAlly += o.SutureAlly; SutureDry += o.SutureDry; SutureHealed += o.SutureHealed;
         SpillWoundsWritten += o.SpillWoundsWritten;
+        MendFires += o.MendFires; MendWoundSeen += o.MendWoundSeen; MendWoundDepth += o.MendWoundDepth;
+        MendDry += o.MendDry; MendHealed += o.MendHealed; MendPaid += o.MendPaid; MendFoePatient += o.MendFoePatient;
         WoundsAtDeath += o.WoundsAtDeath; WoundsAtEnd += o.WoundsAtEnd;
         Attacks += o.Attacks; Interventions += o.Interventions;
         DamageToEnemy += o.DamageToEnemy; DamageToAlly += o.DamageToAlly;

@@ -1247,6 +1247,20 @@ public readonly record struct SutureRule(SutureSide Side)
 }
 
 /// <summary>
+/// 巻き込み則の書き手の絞り（第86期・X2）。<see cref="SpillWoundRule"/> の doc を参照。
+/// <para><b>「絞ると上がるか」を見る段</b>であって X1 の劣化版ではない——密度の低い書き手
+/// （生贄＝開戦1回／破裂＝死亡時／置き去り＝自分より遅い味方だけ）が<b>代金だけ払っている</b>なら
+/// こちらが上に出る（第85期の申し送り。第67期「長い周期の機構は短い窓の波で無価値」の供給側）。</para>
+/// </summary>
+public enum SpillScope
+{
+    /// <summary>X1。<c>isFriendlyFire</c> かつ <c>source</c> が同陣営の刃をすべて拾う（第85期の W2 と同一）。</summary>
+    All,
+    /// <summary>X2。<b>吸い（ゴルム）と余波（ボルグ）だけ</b>——毎ターン全味方／攻撃ごと隣接の、密度の高い2枚。</summary>
+    Dense
+}
+
+/// <summary>
 /// 巻き込み則（第85期・W2）。<c>ApplyDamage</c> で <b>味方の刃</b>（<c>isFriendlyFire</c> かつ
 /// <c>source</c> が同陣営）のダメージが通り、対象が生きていれば傷を 1 つ書く。
 /// <para><b>書き手は6枚</b>——余波（ボルグ）／生贄（リィカ）／吸い（ゴルム）／破裂の味方巻き込み（ゾト）／
@@ -1256,10 +1270,37 @@ public readonly record struct SutureRule(SutureSide Side)
 /// （中継は肩代わりであって刃ではない。実測でこの札が無いと、カドの巻き込みが巨躯に中継された段が二重に数えられた）。</para>
 /// <para>数は定数 1（打点に比例させない）。燃焼の刻み（<c>burnTick</c>）には書かない。</para>
 /// </summary>
-public readonly record struct SpillWoundRule(bool Enabled)
+public readonly record struct SpillWoundRule(bool Enabled, SpillScope Scope = SpillScope.All)
 {
     /// <summary>既定は無効＝現行。</summary>
     public static SpillWoundRule Default => new(false);
+
+    /// <summary><paramref name="source"/> の刃が書き手として採られるか（<see cref="Scope"/> の判定）。</summary>
+    public bool Writes(UnitState source) =>
+        Scope == SpillScope.All || source.HasTrait(TraitId.Drain) || source.HasTrait(TraitId.Splash);
+}
+
+/// <summary>
+/// 継ぎ当て（<see cref="MenderTrait"/>）が繕う相手の傷を読むか（第86期）。
+/// <para><b>読み手を手番の要らない駒に替える。</b> 縫い（ハリ）の発火は「手番がある <b>かつ</b> 殴った相手に傷がある」の
+/// 積だが、ノノの繕いは<b>手番そのもの</b>（<c>Actions = [Skill]</c>）なので条件が1つしかない
+/// ——第85期の律速（ハリの振り 2.15 回/戦）がここで外れるかを測る。</para>
+/// <para><b>代金は係数を足さずに済む。</b> ノノは繕った分だけ自分が減るので、
+/// 傷が深いほど繕いが増え、<b>同じだけ自分が早く尽きる</b>。上限は現行の <c>Math.Min(amount, self.Hp - 1)</c> のまま。</para>
+/// </summary>
+public enum MendSide
+{
+    /// <summary>X0（対照）。現行。傷を読まない（繕いは常に <see cref="MenderTrait.Amount"/>）。</summary>
+    Plain,
+    /// <summary>X1・X2。患者の傷 1 つにつき <see cref="MenderTrait.PerWound"/> だけ繕いが増え、傷はひとつ塞がる。</summary>
+    Wound
+}
+
+/// <summary>繕いの読み（第86期）。<see cref="MendSide"/> の doc を参照。</summary>
+public readonly record struct MendRule(MendSide Side)
+{
+    /// <summary>既定は X0（読まない）＝現行。</summary>
+    public static MendRule Default => new(MendSide.Plain);
 }
 
 public sealed class ThornsTrait : Trait
@@ -1565,10 +1606,27 @@ public sealed class MarkerTrait : Trait
     }
 }
 
-/// <summary>継ぎ当て。回復量と同じだけ自分が減る。等価交換なので無限には支えられない。</summary>
+/// <summary>継ぎ当て。回復量と同じだけ自分が減る。等価交換なので無限には支えられない。
+///
+/// <para><b>傷を読む版（第86期・<see cref="MendRule"/>）。</b> 患者に傷があれば
+/// 傷 1 つにつき <see cref="PerWound"/> だけ繕いが増え、<b>その傷はひとつ塞がる</b>
+/// （塞ぎは <see cref="TraitId.Seal"/> の札で計量する。第74期の作法で、どこを塞ぐかは本体が決める
+/// ——ハリは敵、ノノは患者）。<b>患者の選び方（<see cref="BattleContext.MostHurtAlly"/>）には傷を混ぜない</b>
+/// ——「最も傷ついた味方を繕う」の1文を保つ。</para>
+/// <para><b>代金は既存の式のまま。</b> 増えた繕いはそのまま自分の HP から出るので、
+/// 深い傷を読むほど早く尽きる（可変コスト型）。上限も現行の <c>Math.Min(..., self.Hp - 1)</c> を使い回す。
+/// <b>渇き（第三波）では <c>ctx.Heal</c> が 1 点も返さないのに <c>self.Hp -= amount</c> は無条件で走る</b>ので、
+/// 傷を読むぶんだけ一方的に速く尽きる（<c>BattleEngine.Heal</c> のコメントに明記のある意図した挙動）。</para>
+/// </summary>
 public sealed class MenderTrait : Trait
 {
     public const int Amount = 14;
+
+    /// <summary>
+    /// 傷1つあたりの上乗せ（第86期）。<b>加算</b>で、抉り（<see cref="GougeTrait.PerWound"/>）・
+    /// 縫い（<see cref="SutureTrait.PerWound"/>）と同値。<b>新しい数字を作らない。</b>
+    /// </summary>
+    public const int PerWound = 3;
 
     public override TraitId Id => TraitId.Mender;
 
@@ -1593,10 +1651,35 @@ public sealed class MenderTrait : Trait
         UnitState? patient = ctx.MostHurtAlly(self);
         if (patient is null) return;
 
-        int amount = Math.Min(Amount, self.Hp - 1);
+        // 傷を読む（第86期・MendRule.Wound）。既定（Plain）では w が常に 0 に落ちるので、
+        // 盤面も乱数列も文字列も1ビットも動かない（自己検査 (b) の根拠）。
+        // **観測（wSeen）は版に依らず取る**——紙のスループット（§1-1）を X1 を1戦も回さずに出すため。
+        // 計数専用で、盤面の判断には一切使わない。
+        int wSeen = patient.Counter(StatusKeys.Wound);
+        int w = ctx.Mend.Side == MendSide.Wound ? wSeen : 0;
+        bool seal = w > 0 && self.HasTrait(TraitId.Seal);
+
+        int amount = Math.Min(Amount + PerWound * w, self.Hp - 1);
+        int before = patient.Hp;
         ctx.Heal(patient, amount);
         self.Hp -= amount;
-        ctx.Log($"    {self.Name} が自分を裂いて {patient.Name} を繕った（+{amount}）", LogKind.Trigger);
+
+        // 計数（第86期）。**盤面には一切影響しない。**
+        UnitTally mt = ctx.TallyOf(self);
+        mt.MendFires++;
+        mt.MendWoundDepth += wSeen;
+        if (wSeen > 0) mt.MendWoundSeen++;
+        if (patient.Hp == before) mt.MendDry++;
+        mt.MendHealed += patient.Hp - before;
+        mt.MendPaid += amount;
+        if (patient.TeamId != self.TeamId) mt.MendFoePatient++;   // 起きないはず（MostHurtAlly は同陣営のみ）
+
+        ctx.Log($"    {self.Name} が自分を裂いて {patient.Name} を繕った（+{amount}）"
+            + (w > 0 ? seal ? $"【傷 {w} → 傷 {w - 1}】" : $"【傷 {w}】" : ""), LogKind.Trigger);
+
+        // 塞ぎ。**繕った相手**の傷を1つだけ引く（全部消すのは断ちの役）。
+        // 渇き下でも走る（第39期・ハリの塞ぎと同じ作法。原因ではなく結果で解決しない）。
+        if (seal) patient.SetCounter(StatusKeys.Wound, w - 1);
     }
 }
 

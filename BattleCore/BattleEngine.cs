@@ -1309,6 +1309,12 @@ public sealed class BattleContext
     public SpillWoundRule SpillWound { get; }
 
     /// <summary>
+    /// 繕いの読み（第86期）。<b>診断（mender）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="MendRule.Default"/> ＝ 読まない）。
+    /// </summary>
+    public MendRule Mend { get; }
+
+    /// <summary>
     /// 軋み（第66期）の在庫の記録。<b>盤面には一切影響しない。</b>
     /// <see cref="TraitId.Displaced"/> 保持者の <see cref="UnitState.AtkBonus"/> が動いた直後に呼ぶ
     /// ——上げる経路は<b>軋み自身と <see cref="Whet"/> の2本だけ</b>（ヨミは自己強化を1つも持たない）。
@@ -1371,7 +1377,8 @@ public sealed class BattleContext
                          FunnelRule? funnel = null, WhetMask? whetMask = null,
                          CreakRule? creak = null, SeverRule? sever = null,
                          ThinBladeRule? thinBlade = null, ThornRule? thorn = null,
-                         SutureRule? suture = null, SpillWoundRule? spillWound = null)
+                         SutureRule? suture = null, SpillWoundRule? spillWound = null,
+                         MendRule? mend = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -1402,6 +1409,7 @@ public sealed class BattleContext
         Thorn = thorn ?? ThornRule.Default;
         Suture = suture ?? SutureRule.Default;
         SpillWound = spillWound ?? SpillWoundRule.Default;
+        Mend = mend ?? MendRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -2550,7 +2558,7 @@ public sealed class BattleContext
         // **HP を引いた後・死亡判定の後**に置いてあるので、削りで倒れた味方には書かれない（死体には刻まない作法）。
         // 既定（無効）では素通りする。書くのは SetCounter だけなので、乱数列も他の窓口も動かさない。
         if (SpillWound.Enabled && isFriendlyFire && !burnTick && !relayed && source is not null
-            && source.TeamId == target.TeamId && target.IsAlive)
+            && source.TeamId == target.TeamId && target.IsAlive && SpillWound.Writes(source))
         {
             int w = target.Counter(StatusKeys.Wound) + 1;
             target.SetCounter(StatusKeys.Wound, w);
@@ -3204,12 +3212,12 @@ public static class BattleEngine
                                    WhetMask? whetMask = null, CreakRule? creak = null,
                                    SeverRule? sever = null, ThinBladeRule? thinBlade = null,
                                    ThornRule? thorn = null, SutureRule? suture = null,
-                                   SpillWoundRule? spillWound = null)
+                                   SpillWoundRule? spillWound = null, MendRule? mend = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
-               creak, sever, thinBlade, thorn, suture, spillWound);
+               creak, sever, thinBlade, thorn, suture, spillWound, mend);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -3232,12 +3240,13 @@ public static class BattleEngine
                                    FunnelRule? funnel = null, WhetMask? whetMask = null,
                                    CreakRule? creak = null, SeverRule? sever = null,
                                    ThinBladeRule? thinBlade = null, ThornRule? thorn = null,
-                                   SutureRule? suture = null, SpillWoundRule? spillWound = null)
+                                   SutureRule? suture = null, SpillWoundRule? spillWound = null,
+                                   MendRule? mend = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
-                                    suture, spillWound);
+                                    suture, spillWound, mend);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
