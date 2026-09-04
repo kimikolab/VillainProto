@@ -1223,6 +1223,45 @@ public readonly record struct ThornRule(ThornWound Wound)
     public static ThornRule Default => new(ThornWound.None);
 }
 
+/// <summary>
+/// 縫い（<see cref="SutureTrait"/>）が糸を引く先（第85期）。
+/// <para><b>1文は2文にならない。</b> 読む対象が2つに増えるのではなく、1つの選び方の候補が広がるだけ
+/// ——「殴った相手か、傷がいちばん深い味方か、深いほうの傷口から糸を引く」。
+/// 選べない（深いほうが自動）のが代金で、カドの隣では味方側が深くなり、敵の傷を塞げなくなる。</para>
+/// <para><b>標的選択（<see cref="SeverTrait.Prefers"/>）は触らない。</b> ハリは今までどおり傷が最も深い敵を狙う。
+/// 狙う先と糸を引く先がずれるのは意図した非対称。</para>
+/// </summary>
+public enum SutureSide
+{
+    /// <summary>W0（対照）。現行。殴った相手の傷だけを読む。</summary>
+    Foe,
+    /// <summary>W1・W2。殴った相手と、傷がいちばん深い味方（自分を除く）のうち深いほう。同数なら敵側。</summary>
+    Both
+}
+
+/// <summary>縫いの糸口（第85期）。<see cref="SutureSide"/> の doc を参照。</summary>
+public readonly record struct SutureRule(SutureSide Side)
+{
+    /// <summary>既定は W0（敵側だけ）＝現行。</summary>
+    public static SutureRule Default => new(SutureSide.Foe);
+}
+
+/// <summary>
+/// 巻き込み則（第85期・W2）。<c>ApplyDamage</c> で <b>味方の刃</b>（<c>isFriendlyFire</c> かつ
+/// <c>source</c> が同陣営）のダメージが通り、対象が生きていれば傷を 1 つ書く。
+/// <para><b>書き手は6枚</b>——余波（ボルグ）／生贄（リィカ）／吸い（ゴルム）／破裂の味方巻き込み（ゾト）／
+/// 棘の巻き込み（カド）／置き去りの削り（ナラ）。<b>中継（巨躯・分かち・転嫁の代金・深追いの反動）は書かない</b>
+/// ——転嫁・深追いの <c>source</c> は <c>null</c> なので「<c>source</c> が同陣営」で外れる。
+/// 巨躯・分かちの中継は<b>元の刃が味方なら <c>source</c> も同陣営になる</b>ので、中継の段に札（<c>relayed</c>）を付けて外す
+/// （中継は肩代わりであって刃ではない。実測でこの札が無いと、カドの巻き込みが巨躯に中継された段が二重に数えられた）。</para>
+/// <para>数は定数 1（打点に比例させない）。燃焼の刻み（<c>burnTick</c>）には書かない。</para>
+/// </summary>
+public readonly record struct SpillWoundRule(bool Enabled)
+{
+    /// <summary>既定は無効＝現行。</summary>
+    public static SpillWoundRule Default => new(false);
+}
+
 public sealed class ThornsTrait : Trait
 {
     public const int Multiplier = 2;
@@ -4000,7 +4039,19 @@ public sealed class SeverTrait : Trait
 ///
 /// <para><b>ナタとは同居させない。</b> ハリの塞ぎ（1/T）が供給（1/T）と等速なので在庫が
 /// 天井 1 に張り付き、<see cref="SeverTrait.Threshold"/>（2）に構造的に届かない
-/// ＝ ナタが永久に沈黙する。**取り合いではなく飢餓**（エグとの取り合いとはここが違う）。</para>
+/// ＝ ナタが永久に沈黙する。**取り合いではなく飢餓**（エグとの取り合いとはここが違う）。
+/// **第85期に両側読み（下記）で測り直しても崩れなかった**——糸口が味方側へ逸れて敵側の在庫は 0.57/T まで積むが、
+/// 閾値到達は 0.00 → 0.01 回/戦（カド × ハリ × ナタ の専用台・弱い波）。飢餓の原因は塞ぎではなく、
+/// この台では傷を書く前に決着が付くこと（第3〜5波は 2.9〜4.0T）。</para>
+///
+/// <para><b>両側読み（第85期・<see cref="SutureRule"/>・測って採用しなかった）。</b> 糸口の候補を
+/// 「殴った相手」から「殴った相手か、傷がいちばん深い味方（自分を除く）か、深いほう」へ広げる版。
+/// 味方の傷の書き手（棘の巻き込み＝<see cref="ThornRule"/> ／ 巻き込み則＝<see cref="SpillWoundRule"/>）と
+/// 対にして 2×2 で測り、Δ相乗 は カド +1.10 / 6枚平均 +1.30pt で線 +3.0 に届かなかった。
+/// **紙のスループット（供給 6.5 回/戦 × 3 点 ＝ 総被ダメの 2〜6%）の時点で線 5% を挟んでいた**——
+/// 律速は供給でも在庫でも読み手でもなく**ハリの振り回数（2.15 回/戦）**で、
+/// 勝てる波では傷が積まれる前に決着し、負ける波ではハリが先に落ちる。既定は <see cref="SutureSide.Foe"/>（現行）のまま。
+/// 経緯は design/PHASE85_SUTURE2.md。</para>
 ///
 /// <para><b>消費しない読み手（抉り）とは共存できる。</b> 塞ぎは 1 ずつしか引かないので、
 /// 同じターンに積まれた傷を抉りが読む余地は残る——ただし両方積むのは予算壁の側で止まる。</para>
@@ -4021,8 +4072,32 @@ public sealed class SutureTrait : Trait
 
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
-        // **着弾した相手の傷だけを読む**（断ちと同じ）。介入で逸れたなら殉教者の傷を読んで空振りする。
+        // **着弾した相手の傷を読む**（断ちと同じ）。介入で逸れたなら殉教者の傷を読んで空振りする。
+        UnitState donor = target;
         int w = target.Counter(StatusKeys.Wound);
+
+        // 両側読み（第85期・`SutureRule.Both`）。**糸口の候補が味方にも広がる**——
+        // 生存する味方のうち self を除いて傷がいちばん深い者。**深いほうを取り、同数なら敵側**（現行挙動を保つ）。
+        // 同数のタイブレークだけ `PickOne`（候補 0 個・1 個では Roll を消費しない）。
+        // **味方側の糸口に self を含めない**（ハリが巻き込まれて負った傷はハリ自身では引けない。配置の問いの本体）。
+        // `AcceptsSupport` は見ない——傷を塞ぐのは支援ではなく、相手のマイナスを取り除く操作。
+        // 既定（`SutureSide.Foe`）ではこのブロックは素通りするので、盤面も乱数列も1ビットも動かない。
+        bool fromAlly = false;
+        if (ctx.Suture.Side == SutureSide.Both)
+        {
+            var wounded = ctx.LivingMembers(self.TeamId)
+                .Where(a => a != self && a.Counter(StatusKeys.Wound) > 0).ToList();
+            if (wounded.Count > 0)
+            {
+                int best = wounded.Max(a => a.Counter(StatusKeys.Wound));
+                if (best > w)
+                {
+                    donor = ctx.PickOne(wounded.Where(a => a.Counter(StatusKeys.Wound) == best).ToList())!;
+                    w = best;
+                    fromAlly = true;
+                }
+            }
+        }
         if (w <= 0) return;
 
         // 糸は自分には通せない（MostHurtAlly が self を除く）。
@@ -4033,15 +4108,23 @@ public sealed class SutureTrait : Trait
         // 既定ではハリが必ず持っているので、盤面も文字列も1バイトも変わらない。
         bool seal = self.HasTrait(TraitId.Seal);
 
-        ctx.Log($"    {self.Name} が {target.Name} の傷口から糸を引き、{patient.Name} を縫い戻した"
+        // どちらから引いたかを必ず出す（第85期 Q3 の目視監査。計数は UnitTally の側）。
+        ctx.Log($"    {self.Name} が {(fromAlly ? "味方の " : "")}{donor.Name} の傷口から糸を引き、{patient.Name} を縫い戻した"
             + (seal ? $"（傷 {w} → +{PerWound * w}、傷 {w - 1} へ）" : $"（傷 {w} → +{PerWound * w}）"),
             LogKind.Trigger);
 
         // 渇き下ではこの1行が何も返さない。**それでも下の塞ぎは走る**（クラスの doc 参照）。
+        int before = patient.Hp;
         ctx.Heal(patient, PerWound * w);
 
-        // 塞ぎ。**1つだけ**引く（全部消すのは断ちの側の役で、こちらは維持読み）。
-        if (seal) target.SetCounter(StatusKeys.Wound, w - 1);
+        // 計数（第85期）。**盤面には一切影響しない**——糸口の内訳と「繕いは 0 だが塞ぎは走った」回数。
+        UnitTally st = ctx.TallyOf(self);
+        if (fromAlly) st.SutureAlly++; else st.SutureFoe++;
+        if (patient.Hp == before) st.SutureDry++;
+        st.SutureHealed += patient.Hp - before;
+
+        // 塞ぎ。**糸を通したほう**の傷を**1つだけ**引く（全部消すのは断ちの側の役で、こちらは維持読み）。
+        if (seal) donor.SetCounter(StatusKeys.Wound, w - 1);
     }
 }
 

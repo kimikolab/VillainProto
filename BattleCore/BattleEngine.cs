@@ -1297,6 +1297,18 @@ public sealed class BattleContext
     public ThornRule Thorn { get; }
 
     /// <summary>
+    /// 縫いの糸口（第85期）。<b>診断（suture2）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="SutureRule.Default"/> ＝ 敵側だけ）。
+    /// </summary>
+    public SutureRule Suture { get; }
+
+    /// <summary>
+    /// 巻き込み則（第85期・W2）。<b>診断（suture2）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="SpillWoundRule.Default"/> ＝ 無効）。
+    /// </summary>
+    public SpillWoundRule SpillWound { get; }
+
+    /// <summary>
     /// 軋み（第66期）の在庫の記録。<b>盤面には一切影響しない。</b>
     /// <see cref="TraitId.Displaced"/> 保持者の <see cref="UnitState.AtkBonus"/> が動いた直後に呼ぶ
     /// ——上げる経路は<b>軋み自身と <see cref="Whet"/> の2本だけ</b>（ヨミは自己強化を1つも持たない）。
@@ -1358,7 +1370,8 @@ public sealed class BattleContext
                          FavorRule? favor = null, BlazeRule? blaze = null,
                          FunnelRule? funnel = null, WhetMask? whetMask = null,
                          CreakRule? creak = null, SeverRule? sever = null,
-                         ThinBladeRule? thinBlade = null, ThornRule? thorn = null)
+                         ThinBladeRule? thinBlade = null, ThornRule? thorn = null,
+                         SutureRule? suture = null, SpillWoundRule? spillWound = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -1387,6 +1400,8 @@ public sealed class BattleContext
         Sever = sever ?? SeverRule.Default;
         ThinBlade = thinBlade ?? ThinBladeRule.Default;
         Thorn = thorn ?? ThornRule.Default;
+        Suture = suture ?? SutureRule.Default;
+        SpillWound = spillWound ?? SpillWoundRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -2215,9 +2230,15 @@ public sealed class BattleContext
     /// 肩代わり（巨躯・分かち・棘守り）が分割した各段にも引き継ぐ
     /// ——分割された先で吸われた量も同じ刻みのぶんだから。
     /// </param>
+    /// <param name="relayed">
+    /// 肩代わり（巨躯・分かち）が<b>元のダメージを分割して中継した段</b>であることの札（第85期）。
+    /// <b>計数と巻き込み則（<see cref="SpillWound"/>）の除外にだけ使い、盤面の判断には一切使わない。</b>
+    /// 元の攻撃者が味方（棘の巻き込み・吸い）だと <paramref name="source"/> が同陣営になるので、
+    /// 「中継は刃ではない」を <paramref name="source"/> だけでは書けない。
+    /// </param>
     public void ApplyDamage(UnitState target, int amount, UnitState? source,
                             bool isFriendlyFire = false, bool lethal = true,
-                            bool burnTick = false)
+                            bool burnTick = false, bool relayed = false)
     {
         if (!target.IsAlive || amount <= 0) return;
 
@@ -2362,7 +2383,7 @@ public sealed class BattleContext
                         }
                     }
 
-                    ApplyDamage(wall, blocked, source, isFriendlyFire: true, burnTick: burnTick);
+                    ApplyDamage(wall, blocked, source, isFriendlyFire: true, burnTick: burnTick, relayed: true);
                 }
             }
         }
@@ -2383,7 +2404,7 @@ public sealed class BattleContext
                 {
                     amount -= taken;
                     Log($"    {sharer.Name} が {target.Name} の痛みを引き受けた", LogKind.Trigger);
-                    ApplyDamage(sharer, taken, source, isFriendlyFire: true, burnTick: burnTick);
+                    ApplyDamage(sharer, taken, source, isFriendlyFire: true, burnTick: burnTick, relayed: true);
 
                     // 痛みを取り上げられた者は腕がなまる。肩代わり量に比例させているので、
                     // 代金はドハのHPという有限プールから払われる（SharerTrait.DullDivisor 参照）。
@@ -2479,7 +2500,8 @@ public sealed class BattleContext
             TargetId = target.InstanceId,
             Amount = amount,
             HpAfter = Math.Max(0, target.Hp),
-            FriendlyFire = isFriendlyFire
+            FriendlyFire = isFriendlyFire,
+            Relayed = relayed
         });
 
         if (source is not null && !isFriendlyFire)
@@ -2519,12 +2541,30 @@ public sealed class BattleContext
 
         if (target.Hp <= 0)
             HandleDeath(target, source);
+
+        // 巻き込み則（第85期・W2・SpillWoundRule）。**味方の刃**が通って対象が生きていれば傷 1。
+        // 「味方の刃」＝ isFriendlyFire かつ source が同陣営。転嫁の代金・深追いの反動（source は null）はこれで外れるが、
+        // **巨躯・分かちの中継は外れない**——元の刃が味方（棘の巻き込み・吸い）なら source も同陣営になるので、
+        // 中継の段には札（relayed）を付けて外す（中継は肩代わりであって刃ではない。W1 の棘の書き込みと同数になることが自己検査 (c)）。
+        // 燃焼の刻み（burnTick）にも書かない。数は定数 1（打点に比例させない）。
+        // **HP を引いた後・死亡判定の後**に置いてあるので、削りで倒れた味方には書かれない（死体には刻まない作法）。
+        // 既定（無効）では素通りする。書くのは SetCounter だけなので、乱数列も他の窓口も動かさない。
+        if (SpillWound.Enabled && isFriendlyFire && !burnTick && !relayed && source is not null
+            && source.TeamId == target.TeamId && target.IsAlive)
+        {
+            int w = target.Counter(StatusKeys.Wound) + 1;
+            target.SetCounter(StatusKeys.Wound, w);
+            TallyOf(source).SpillWoundsWritten++;
+            Log($"    巻き込みの傷: {source.Name} の刃が {target.Name} に残る（傷 {w}）", LogKind.Status);
+        }
     }
 
     private void HandleDeath(UnitState dead, UnitState? killer)
     {
         dead.Hp = 0;
         TallyOf(dead).Deaths++;
+        // 読まれないまま落ちた傷（第85期・自己検査 (j)）。**盤面には一切影響しない。**
+        TallyOf(dead).WoundsAtDeath += dead.Counter(StatusKeys.Wound);
         TallyOf(dead).LastActiveTurn = _turn;   // 蘇生されて再度倒れると上書きされる（後の値が勝つ）
         if (killer is not null && killer.TeamId != dead.TeamId) TallyOf(killer).Kills++;
 
@@ -3163,12 +3203,13 @@ public static class BattleEngine
                                    BlazeRule? blaze = null, FunnelRule? funnel = null,
                                    WhetMask? whetMask = null, CreakRule? creak = null,
                                    SeverRule? sever = null, ThinBladeRule? thinBlade = null,
-                                   ThornRule? thorn = null)
+                                   ThornRule? thorn = null, SutureRule? suture = null,
+                                   SpillWoundRule? spillWound = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
-               creak, sever, thinBlade, thorn);
+               creak, sever, thinBlade, thorn, suture, spillWound);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -3190,11 +3231,13 @@ public static class BattleEngine
                                    FavorRule? favor = null, BlazeRule? blaze = null,
                                    FunnelRule? funnel = null, WhetMask? whetMask = null,
                                    CreakRule? creak = null, SeverRule? sever = null,
-                                   ThinBladeRule? thinBlade = null, ThornRule? thorn = null)
+                                   ThinBladeRule? thinBlade = null, ThornRule? thorn = null,
+                                   SutureRule? suture = null, SpillWoundRule? spillWound = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
-                                    favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn);
+                                    favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
+                                    suture, spillWound);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -3394,7 +3437,12 @@ public static class BattleEngine
         // 集計（life 診断）専用で、誰もこの値を読んで分岐しない。
         int settled = Math.Min(turn, MaxTurns);
         foreach (UnitState u in ctx.AllUnits)
-            if (u.IsAlive) ctx.TallyOf(u).LastActiveTurn = settled;
+            if (u.IsAlive)
+            {
+                ctx.TallyOf(u).LastActiveTurn = settled;
+                // 読まれないまま戦闘が終わった傷（第85期・自己検査 (j)）。集計専用。
+                ctx.TallyOf(u).WoundsAtEnd += u.Counter(StatusKeys.Wound);
+            }
 
         return new BattleResult
         {

@@ -857,8 +857,26 @@ public sealed class UnitTally
     /// </summary>
     public int CarryAtkGain;
 
+    /// <summary>
+    /// 縫いの糸口（第85期）。敵から引いた回数／味方から引いた回数／繕いが 1 点も届かなかった回数
+    /// （渇きの下で塞ぎだけが走った）／繕いで実際に増えた HP。<b>盤面には一切影響しない。</b>
+    /// </summary>
+    public int SutureFoe, SutureAlly, SutureDry, SutureHealed;
+
+    /// <summary>巻き込み則（第85期・<c>SpillWoundRule</c>）で<b>この駒が味方に書いた</b>傷の回数。</summary>
+    public int SpillWoundsWritten;
+
+    /// <summary>
+    /// 読まれないまま落ちた傷（第85期・自己検査 (j)）——倒れた時点で負っていた傷の数と、
+    /// 戦闘終了時に生き残った駒が負っていた傷の数。<b>盤面には一切影響しない。</b>
+    /// </summary>
+    public int WoundsAtDeath, WoundsAtEnd;
+
     public void Add(UnitTally o)
     {
+        SutureFoe += o.SutureFoe; SutureAlly += o.SutureAlly; SutureDry += o.SutureDry; SutureHealed += o.SutureHealed;
+        SpillWoundsWritten += o.SpillWoundsWritten;
+        WoundsAtDeath += o.WoundsAtDeath; WoundsAtEnd += o.WoundsAtEnd;
         Attacks += o.Attacks; Interventions += o.Interventions;
         DamageToEnemy += o.DamageToEnemy; DamageToAlly += o.DamageToAlly;
         DamageTaken += o.DamageTaken; TakenFromAlly += o.TakenFromAlly;
@@ -997,6 +1015,13 @@ public sealed class BattleEvent
 
     /// <summary>味方への巻き込みか。色を変えるため。</summary>
     public bool FriendlyFire { get; init; }
+
+    /// <summary>
+    /// 肩代わり（巨躯・分かち）が元のダメージを分割して<b>中継した段</b>か（第85期）。
+    /// <see cref="FriendlyFire"/> が真でも、元の刃が味方ならこの段の <c>ActorId</c> は味方になる
+    /// ——「味方の刃が着弾した回数」を数えるときにこの段を外すための札。
+    /// </summary>
+    public bool Relayed { get; init; }
 
     /// <summary>Move / Summon の行き先スロット。</summary>
     public int Slot { get; init; }
