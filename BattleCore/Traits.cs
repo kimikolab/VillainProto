@@ -1303,6 +1303,31 @@ public readonly record struct MendRule(MendSide Side)
     public static MendRule Default => new(MendSide.Plain);
 }
 
+/// <summary>
+/// 傷口の着火（第87期）。<see cref="AmplifierTrait"/>（澱みのミオ）が、
+/// <b>毒を持たないが傷を持つ敵</b>に毒を <see cref="AmplifierTrait.IgniteAmount"/> 層だけ置く。
+///
+/// <para><b>ミオは相変わらず自分では何も供給しない純粋な読み手のまま。</b>
+/// 「毒が積まれていなければ完全に無意味」という条件が「毒か傷が無ければ無意味」に緩むだけで、
+/// <b>1文も増えない</b>——傷という別軸の在庫を、毒という自分の在庫の入口として読む。</para>
+///
+/// <para><b>払い出しが発火に比例しない初めての機構。</b> 第84〜86期に落ちた3案
+/// （棘 → 傷／縫いの両側読み／繕いの傷読み）は<b>持続係数が 1.0</b>——1回の発火で払い切って終わるので、
+/// 稼働率（発火 ÷ 決着T）35〜40% の天井がそのまま出力の天井になっていた。
+/// 毒は層が残って毎ターン刻むので、1回の着火の払い出しがその発火の回数に比例しない。</para>
+///
+/// <para><b>着火量は定数 1。傷の数に比例させない</b>——比例させると「傷 N 個 × 係数」型に戻り、
+/// 第84期の単価の壁に自分から入る。<b>傷は消費しない</b>（着火は敵1体につき事実上1回しか走らない）ので、
+/// 抉り・断ち・縫いと同じ傷を邪魔しない——<b>傷軸と毒軸を同居させるのがこの機構の目的</b>で、
+/// ここで取り合いを作らない。<b>着火したターンは濃くしない</b>（刻みの「足す前に読む」と同じ理由。
+/// 同じターンに +4 すると1発目から段が付く）。</para>
+/// </summary>
+public readonly record struct IgniteRule(bool Enabled)
+{
+    /// <summary>既定は Y0（現行）＝着火しない。</summary>
+    public static IgniteRule Default => new(false);
+}
+
 public sealed class ThornsTrait : Trait
 {
     public const int Multiplier = 2;
@@ -3444,6 +3469,25 @@ public sealed class AmplifierTrait : Trait
 {
     public const int Step = 4;
 
+    /// <summary>
+    /// 傷口の着火で置く層（第87期・<see cref="IgniteRule"/>）。<b>定数 1。傷の数に比例させない。</b>
+    /// </summary>
+    public const int IgniteAmount = 1;
+
+    /// <summary>
+    /// 「傷を持ち毒を持たない敵」を一度でも見た印（計数専用の私有キー）。
+    /// <b>版に依らず立てる</b>——実体数（<see cref="UnitTally.AmpIgnitableBodies"/>）を
+    /// <see cref="IgniteRule"/> を切ったままでも数えるため。<c>StatusKeys</c> ではないので帳簿にも載らない。
+    /// </summary>
+    public const string SeenKey = "ampSeen";
+
+    /// <summary>
+    /// 着火された印（計数専用の私有キー）。<see cref="BattleContext.TickStatuses"/> が、
+    /// この駒の以後の毒の刻みを<b>着火の下流</b>として数えるために読む（持続係数の分子）。
+    /// <b>盤面の判断には一切使わない。</b>
+    /// </summary>
+    public const string IgnitedKey = "ampIgnited";
+
     public override TraitId Id => TraitId.Amplifier;
 
     // 手番の行動として撃つ（第11期 Phase BB）。毒の判定（TickStatuses）との前後は
@@ -3460,15 +3504,43 @@ public sealed class AmplifierTrait : Trait
 
     private static void Thicken(BattleContext ctx, UnitState self)
     {
+        // 計数（第87期）。**盤面には一切影響しない。**
+        UnitTally at = ctx.TallyOf(self);
+        at.AmpFires++;
+
         foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
         {
             int poison = foe.Counter(StatusKeys.Poison);
-            if (poison <= 0) continue;
+            if (poison <= 0)
+            {
+                // 傷口の着火（第87期・IgniteRule）。**観測は版に依らず取る**——
+                // 「着火できる敵が何体いたか」は Y0（規則を切ったまま）でも数えられる（§1-2）。
+                int w = foe.Counter(StatusKeys.Wound);
+                if (w <= 0) continue;
+
+                at.AmpIgnitable++;
+                if (at.AmpFirstIgnitableTurn == 0) at.AmpFirstIgnitableTurn = Math.Max(1, ctx.Turn);
+                if (foe.Counter(SeenKey) == 0) { foe.SetCounter(SeenKey, 1); at.AmpIgnitableBodies++; }
+
+                if (!ctx.WoundIgnite.Enabled) continue;
+
+                foe.SetCounter(StatusKeys.Poison, IgniteAmount);
+                foe.SetCounter(IgnitedKey, 1);
+                at.AmpIgnited++;
+                at.AmpIgniteAmount += IgniteAmount;
+                at.AmpIgniteWoundBefore += w;
+                at.AmpIgniteWoundAfter += foe.Counter(StatusKeys.Wound);       // 傷は消費しない（自己検査 (g)）
+                at.AmpIgnitePoisonAfter += foe.Counter(StatusKeys.Poison);     // 1 のはず（自己検査 (e)）
+                if (at.AmpFirstIgniteTurn == 0) at.AmpFirstIgniteTurn = Math.Max(1, ctx.Turn);
+                ctx.Log($"    {foe.Name} の傷口に澱みが流れ込む（傷 {w} → 毒 {IgniteAmount}）", LogKind.Status);
+                continue;   // ★ 着火したターンは濃くしない
+            }
 
             // 加算にすること。乗算だと戦闘が長引くほど指数的に伸びて、
             // 後から数値で抑えるのが不可能になる。
             int grown = poison + Step;
             foe.SetCounter(StatusKeys.Poison, grown);
+            at.AmpThickened++;
             ctx.Log($"    {foe.Name} の毒が澱んで濃くなった（{poison} → {grown}）", LogKind.Status);
         }
     }
@@ -3851,6 +3923,14 @@ public sealed class GougeTrait : Trait
         // 「傷を抉った」という判定に例外を作らない（結果で解決する）。
         ctx.Log($"    {self.Name} が {target.Name} の傷をこじ開ける（傷 {w} → +{PerWound * w}）",
             LogKind.Highlight);
+
+        // 計数（第87期・持続係数の検算）。**盤面には一切影響しない。**
+        // 上乗せは**この呼び出しの中で払い切る**（残るものが盤面に無い）ので、
+        // 累積出力と即時出力が同じ1つの量になる＝持続係数が定義上 1.0。
+        UnitTally gt = ctx.TallyOf(self);
+        gt.GougeFires++;
+        gt.GougeOut += PerWound * w;
+
         ctx.ApplyDamage(target, PerWound * w, self);
     }
 

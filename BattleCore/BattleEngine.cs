@@ -193,6 +193,16 @@ public sealed class BattleContext
             // 業（第49期）の帰属。**保持者が盤上にいなければ1回も走らない**（短絡）。
             if (ScapegoatActive) NoteScapegoatDot(u, poison, StatusKeys.Poison);
             NotePoisonBite(u, poison);   // 第61期の計数。盤面には触らない
+
+            // 傷口の着火の帰属（第87期・持続係数の分子）。**盤面には触らない。**
+            // 着火の時点でこの駒の毒は 0 だったので、以後の刻みはすべて着火の下流にある。
+            if (u.Counter(AmplifierTrait.IgnitedKey) > 0)
+            {
+                UnitTally it = TallyOf(u);
+                it.IgnitePoisonDamage += poison;
+                it.IgnitePoisonTicks++;
+            }
+
             ApplyDamage(u, poison, null);
         }
 
@@ -1315,6 +1325,14 @@ public sealed class BattleContext
     public MendRule Mend { get; }
 
     /// <summary>
+    /// 傷口の着火（第87期）。<b>診断（blaze2）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="IgniteRule.Default"/> ＝ 着火しない）。
+    /// <para><b>名前が <c>Ignite</c> でないのは、<see cref="Ignite(UnitState, bool)"/>（燃焼の着火）と
+    /// 衝突するため。</b> 指示書 §2-2 の <c>ctx.Ignite.Enabled</c> はこの <c>ctx.WoundIgnite.Enabled</c>。</para>
+    /// </summary>
+    public IgniteRule WoundIgnite { get; }
+
+    /// <summary>
     /// 軋み（第66期）の在庫の記録。<b>盤面には一切影響しない。</b>
     /// <see cref="TraitId.Displaced"/> 保持者の <see cref="UnitState.AtkBonus"/> が動いた直後に呼ぶ
     /// ——上げる経路は<b>軋み自身と <see cref="Whet"/> の2本だけ</b>（ヨミは自己強化を1つも持たない）。
@@ -1378,7 +1396,7 @@ public sealed class BattleContext
                          CreakRule? creak = null, SeverRule? sever = null,
                          ThinBladeRule? thinBlade = null, ThornRule? thorn = null,
                          SutureRule? suture = null, SpillWoundRule? spillWound = null,
-                         MendRule? mend = null)
+                         MendRule? mend = null, IgniteRule? woundIgnite = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -1410,6 +1428,7 @@ public sealed class BattleContext
         Suture = suture ?? SutureRule.Default;
         SpillWound = spillWound ?? SpillWoundRule.Default;
         Mend = mend ?? MendRule.Default;
+        WoundIgnite = woundIgnite ?? IgniteRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -3212,12 +3231,13 @@ public static class BattleEngine
                                    WhetMask? whetMask = null, CreakRule? creak = null,
                                    SeverRule? sever = null, ThinBladeRule? thinBlade = null,
                                    ThornRule? thorn = null, SutureRule? suture = null,
-                                   SpillWoundRule? spillWound = null, MendRule? mend = null)
+                                   SpillWoundRule? spillWound = null, MendRule? mend = null,
+                                   IgniteRule? woundIgnite = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
-               creak, sever, thinBlade, thorn, suture, spillWound, mend);
+               creak, sever, thinBlade, thorn, suture, spillWound, mend, woundIgnite);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -3241,12 +3261,12 @@ public static class BattleEngine
                                    CreakRule? creak = null, SeverRule? sever = null,
                                    ThinBladeRule? thinBlade = null, ThornRule? thorn = null,
                                    SutureRule? suture = null, SpillWoundRule? spillWound = null,
-                                   MendRule? mend = null)
+                                   MendRule? mend = null, IgniteRule? woundIgnite = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
-                                    suture, spillWound, mend);
+                                    suture, spillWound, mend, woundIgnite);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

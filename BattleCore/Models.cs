@@ -879,6 +879,35 @@ public sealed class UnitTally
     /// </summary>
     public int WoundsAtDeath, WoundsAtEnd;
 
+    /// <summary>
+    /// 傷口の着火（第87期・<c>IgniteRule</c>）。澱み（<see cref="TraitId.Amplifier"/>）の側に載る。
+    /// <b>盤面には一切影響しない。</b>
+    /// <para><c>AmpFires</c> 濃縮の発火回数（＝ミオが手番を持てたターン数）／
+    /// <c>AmpThickened</c> 濃くした延べ体数／
+    /// <c>AmpIgnitable</c>「傷を持ち毒を持たない敵」を見た延べ回数（<b>版に依らず数える</b>）／
+    /// <c>AmpIgnitableBodies</c> 同・実体数（駒ごとに1度だけ）／
+    /// <c>AmpIgnited</c> 実際に着火した回数（Y1 のみ）／<c>AmpIgniteAmount</c> 置いた層の総和（自己検査 (f)）／
+    /// <c>AmpIgniteWoundBefore</c> / <c>AmpIgniteWoundAfter</c> 着火の前後の傷の深さの総和（自己検査 (g)）／
+    /// <c>AmpIgnitePoisonAfter</c> 着火直後の毒の総和（自己検査 (e)）／
+    /// <c>AmpFirstIgnitableTurn</c> / <c>AmpFirstIgniteTurn</c> 初出ターン。</para>
+    /// </summary>
+    public int AmpFires, AmpThickened, AmpIgnitable, AmpIgnitableBodies, AmpIgnited,
+               AmpIgniteAmount, AmpIgniteWoundBefore, AmpIgniteWoundAfter, AmpIgnitePoisonAfter,
+               AmpFirstIgnitableTurn, AmpFirstIgniteTurn;
+
+    /// <summary>
+    /// 着火された駒が<b>以後に受けた毒の刻み</b>（第87期・持続係数の分子）。着火された駒の側に載る。
+    /// 着火の時点で毒は 0 だったので、その駒がその後に受ける毒はすべて着火の下流にある。
+    /// <b>盤面には一切影響しない。</b>
+    /// </summary>
+    public int IgnitePoisonDamage, IgnitePoisonTicks;
+
+    /// <summary>
+    /// 抉り（<see cref="TraitId.Gouge"/>）の発火回数と上乗せの総量（第87期・持続係数の検算用）。
+    /// <b>盤面には一切影響しない。</b>
+    /// </summary>
+    public int GougeFires, GougeOut;
+
     public void Add(UnitTally o)
     {
         SutureFoe += o.SutureFoe; SutureAlly += o.SutureAlly; SutureDry += o.SutureDry; SutureHealed += o.SutureHealed;
@@ -886,6 +915,14 @@ public sealed class UnitTally
         MendFires += o.MendFires; MendWoundSeen += o.MendWoundSeen; MendWoundDepth += o.MendWoundDepth;
         MendDry += o.MendDry; MendHealed += o.MendHealed; MendPaid += o.MendPaid; MendFoePatient += o.MendFoePatient;
         WoundsAtDeath += o.WoundsAtDeath; WoundsAtEnd += o.WoundsAtEnd;
+        AmpFires += o.AmpFires; AmpThickened += o.AmpThickened; AmpIgnitable += o.AmpIgnitable;
+        AmpIgnitableBodies += o.AmpIgnitableBodies; AmpIgnited += o.AmpIgnited;
+        AmpIgniteAmount += o.AmpIgniteAmount; AmpIgniteWoundBefore += o.AmpIgniteWoundBefore;
+        AmpIgniteWoundAfter += o.AmpIgniteWoundAfter; AmpIgnitePoisonAfter += o.AmpIgnitePoisonAfter;
+        if (o.AmpFirstIgnitableTurn > 0 && (AmpFirstIgnitableTurn == 0 || o.AmpFirstIgnitableTurn < AmpFirstIgnitableTurn)) AmpFirstIgnitableTurn = o.AmpFirstIgnitableTurn;
+        if (o.AmpFirstIgniteTurn > 0 && (AmpFirstIgniteTurn == 0 || o.AmpFirstIgniteTurn < AmpFirstIgniteTurn)) AmpFirstIgniteTurn = o.AmpFirstIgniteTurn;
+        IgnitePoisonDamage += o.IgnitePoisonDamage; IgnitePoisonTicks += o.IgnitePoisonTicks;
+        GougeFires += o.GougeFires; GougeOut += o.GougeOut;
         Attacks += o.Attacks; Interventions += o.Interventions;
         DamageToEnemy += o.DamageToEnemy; DamageToAlly += o.DamageToAlly;
         DamageTaken += o.DamageTaken; TakenFromAlly += o.TakenFromAlly;
