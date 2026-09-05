@@ -28293,36 +28293,154 @@ if (focusId == "gather")
     // =====================================================================================
     if (gaArg == "seats")
     {
-        Console.WriteLine("# 第89期 表B —— (P2) 席");
-        Console.WriteLine();
-        Console.WriteLine("**`confirm`（`dotnet run --project BattleSim -c Release 0 confirm`）の出力をそのまま使う。**"
-                          + "この診断は席の探索を再実装しない——第45・46期の作法（粗探索 `reseat` seed 0..49 → 検証 seed 200..599・"
-                          + "採否閾値 5.0pt）は既存の実装が持っている。");
-        Console.WriteLine();
+        // **`confirm` は使わない。** `confirm` の候補表は **各期に提案された配置を焼き付けた台帳**で、
+        // 採用済みの行もそのまま残っている（実際 13 行が「採用」と出るが、**現行の `CompareBuilds()` は
+        // すでにその候補の席になっている**）。**あれは過去の決定を今の盤面で測り直した記録**であって、
+        // 「今この行の席が古いか」は1つも答えていない。
+        //
+        // 生きた判定は `docs/reseat.md`（`reseat` の出力・seed 0..199）から取る——第46期の3段の作法:
+        //   (1) 現行が上位5通りに入っていれば動かさない
+        //   (2) 入っていない行だけ seed 200..599 で測り直し、5.0pt 以上のときだけ動かす
+        //   (3) 採否は1位の配置ではなく**次数**で読む
+        const double GaSeatLine = 5.0;
+        const int GaSeatBase = 200, GaSeatSeeds = 400;
+        if (!File.Exists("docs/reseat.md")) { Console.WriteLine("docs/reseat.md が無い"); return; }
         var allRows = CompareBuilds();
+        var byName = allRows.ToDictionary(r => r.Name, r => r.F);
         var primary = new HashSet<string>(Baseline.PrimaryRows);
-        var cur = new double[allRows.Length][];
-        Parallel.For(0, allRows.Length, i =>
+
+        // ---- docs/reseat.md を節ごとに読む -------------------------------------------------------
+        var sections = new List<(string Name, List<(string Rank, bool Cur, string[] Slots, double Avg)> Rows)>();
         {
-            var res = new double[gaW];
+            string? cur = null;
+            List<(string, bool, string[], double)>? rows = null;
+            foreach (string line in File.ReadAllLines("docs/reseat.md"))
+            {
+                if (line.StartsWith("## "))
+                {
+                    if (cur is not null && rows is not null) sections.Add((cur, rows));
+                    cur = line[3..].Trim(); rows = new List<(string, bool, string[], double)>();
+                }
+                else if (line.StartsWith("| ") && rows is not null)
+                {
+                    var c = line.Split('|').Select(x => x.Trim()).ToArray();
+                    if (c.Length < 8 || c[1].Length == 0 || !char.IsDigit(c[1][0])) continue;
+                    if (!double.TryParse(c[6].TrimEnd('%'), out double avg)) continue;
+                    var fr = c[3].Split('/');
+                    var ba = c[5].Split('/');
+                    if (fr.Length != 2 || ba.Length != 2) continue;
+                    rows.Add((c[1], c[1].Contains("現行"), new[] { fr[0], fr[1], c[4], ba[0], ba[1] }, avg));
+                }
+            }
+            if (cur is not null && rows is not null) sections.Add((cur, rows));
+        }
+
+        Formation? SeatBuild(Formation baseF, string[] slots)
+        {
+            var members = baseF.Occupied().Select(o => o.Def).ToList();
+            var f = new Formation();
+            for (int k = 0; k < 5; k++)
+            {
+                if (slots[k].Length == 0) continue;
+                UnitDef? d = members.FirstOrDefault(m => m.Name == slots[k]);
+                if (d is null) return null;
+                f[k] = d;
+            }
+            return f;
+        }
+        bool SeatSame(Formation a, Formation b)
+        {
+            for (int k = 0; k < 5; k++)
+            {
+                UnitDef? x = a[k], y = b[k];
+                if ((x is null) != (y is null)) return false;
+                if (x is not null && y is not null && x.Id != y.Id) return false;
+            }
+            return true;
+        }
+        (double Avg, double[] W, int Info) SeatRate(Formation f)
+        {
+            var w = new double[gaW];
             for (int wv = 0; wv < gaW; wv++)
             {
                 int wins = 0;
-                for (int seed = 0; seed < 200; seed++)
-                    if (BattleEngine.Run(allRows[i].F, gaStages[wv].Enemy, seed, verbose: false).PlayerWon) wins++;
-                res[wv] = wins * 100.0 / 200;
+                for (int seed = GaSeatBase; seed < GaSeatBase + GaSeatSeeds; seed++)
+                    if (BattleEngine.Run(f, gaStages[wv].Enemy, seed, verbose: false).PlayerWon) wins++;
+                w[wv] = wins * 100.0 / GaSeatSeeds;
             }
-            cur[i] = res;
-        });
-        var pr = allRows.Select((rw, i) => (rw.Name, i)).Where(t => primary.Contains(t.Name)).ToArray();
-        Console.WriteLine($"**主判定 {pr.Length} 行の第五波平均 = {pr.Average(t => cur[t.i][4]):F1}%**"
-                          + $"（`Baseline.PrimaryFifthFloor` = {Baseline.PrimaryFifthFloor:F1}・確定時の値 − 5.0pt）。");
-        Console.WriteLine($"**全 {allRows.Length} 行の第五波平均 = {allRows.Select((_, i) => cur[i][4]).Average():F1}%**。");
+            int info = 0;
+            for (int wv = 1; wv < gaW; wv++) if (w[wv] > 0 && w[wv] < 100) info++;
+            return (w.Average(), w, info);
+        }
+
+        Console.WriteLine("# 第89期 表B —— (P2) 席");
         Console.WriteLine();
-        Console.WriteLine("| 主判定19行 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 |");
-        Console.WriteLine("|---|--:|--:|--:|--:|--:|");
-        foreach (var (name, i) in pr)
-            Console.WriteLine($"| {name} | " + string.Join(" | ", cur[i].Select(x => $"{x:F1}%")) + " |");
+        Console.WriteLine("**`confirm` は使っていない。** `confirm` の候補表は**各期に提案された配置を焼き付けた台帳**で、"
+                          + "**採用済みの行もそのまま残っている**——実際 13 行が「採用」と出るが、"
+                          + "**現行の `CompareBuilds()` はすでにその候補の席になっている**。"
+                          + "あれは過去の決定を今の盤面で測り直した記録であって、「今この行の席が古いか」は1つも答えていない"
+                          + "（**第88期の報告が `刻み×縫い +6.5pt` を「未適用の推奨」と読んだのは誤りで、この期に訂正する**）。");
+        Console.WriteLine();
+        Console.WriteLine($"生きた判定は `docs/reseat.md`（seed 0..199）から取る。第46期の3段の作法——"
+                          + $"(1) 現行が上位5通りに入っていれば動かさない ／ (2) 入っていない行だけ seed {GaSeatBase}..{GaSeatBase + GaSeatSeeds - 1} で"
+                          + $"測り直して {GaSeatLine:F1}pt 以上のときだけ動かす ／ (3) 採否は1位の配置ではなく**次数**で読む。");
+        Console.WriteLine();
+
+        int inTop5 = 0, outSmall = 0, parseFail = 0;
+        var cands = new List<(string Name, int Rank, int N, double Cur, double Best, string[][] Slots)>();
+        foreach (var (name, rows) in sections)
+        {
+            if (rows.Count == 0 || !byName.ContainsKey(name)) { parseFail++; continue; }
+            int ci = rows.FindIndex(r => r.Cur);
+            if (ci < 0) { parseFail++; continue; }
+            var ordered = rows.OrderByDescending(r => r.Avg).ToList();
+            int rank = ordered.FindIndex(r => r.Cur) + 1;
+            double best = ordered[0].Avg;
+            if (rank <= 5) { inTop5++; continue; }
+            if (best - rows[ci].Avg < GaSeatLine) { outSmall++; continue; }
+            // **候補は「平均1位」ではなく「情報セルを 2 以上に保つ最上位」**（第59期の作法）。
+            // `reseat` は勝つ席を探す道具であって測れる席を探す道具ではない（第50期）ので、
+            // `CompareBuilds()` の行に当てるときは情報セルの下限を先に置く。**9行すべてに同じ規則を当てる。**
+            cands.Add((name, rank, rows.Count, rows[ci].Avg, best,
+                       ordered.Where(r => !r.Cur).Select(r => r.Slots).ToArray()));
+        }
+        Console.WriteLine($"**{sections.Count} 節のうち 現行が上位5位以内 {inTop5} 行 ／ 外だが差 {GaSeatLine:F1}pt 未満 {outSmall} 行 ／ "
+                          + $"追試にかける行 {cands.Count} 行**{(parseFail > 0 ? $"（読めなかった節 {parseFail}）" : "")}。");
+        Console.WriteLine();
+        Console.WriteLine($"| 行 | 主判定 | 現行の順位 | 現行(0..199) | 1位(0..199) | 差 | **現行({GaSeatBase}..)** | **候補({GaSeatBase}..)** | **差** | 採否 | 情報セル 現行→候補 | 波ごとの差 |");
+        Console.WriteLine("|---|:-:|--:|--:|--:|--:|--:|--:|--:|:-:|--:|---|");
+        var accepted = new List<(string Name, string[] Slots)>();
+        foreach (var c in cands)
+        {
+            Formation curF = byName[c.Name];
+            var o = SeatRate(curF);
+            int tried = 0, skippedInfo = 0;
+            string[]? pick = null; (double Avg, double[] W, int Info) n = default; double gap = 0;
+            foreach (string[] slots in c.Slots)
+            {
+                Formation? f = SeatBuild(curF, slots);
+                if (f is null || SeatSame(curF, f)) continue;
+                tried++;
+                var r = SeatRate(f);
+                if (r.Avg - o.Avg < GaSeatLine) break;      // 平均の降順なので、ここから下は届かない
+                if (r.Info < 2) { skippedInfo++; continue; } // 情報セルの下限（第59期）
+                pick = slots; n = r; gap = r.Avg - o.Avg; break;
+            }
+            if (pick is not null) accepted.Add((c.Name, pick));
+            Console.WriteLine($"| {c.Name} | {(primary.Contains(c.Name) ? "○" : "")} | {c.Rank} / {c.N} | {c.Cur:F1}% | {c.Best:F1}% | {c.Best - c.Cur:F1}pt "
+                              + $"| {o.Avg:F1}% | {(pick is null ? "—" : n.Avg.ToString("F1") + "%")} | **{(pick is null ? "—" : gap.ToString("+0.0;-0.0") + "pt")}** "
+                              + $"| **{(pick is null ? "据え置き" : "採用")}** | {o.Info} → {(pick is null ? "—" : n.Info.ToString())} | "
+                              + (pick is null ? $"情報セル 2 未満で外した候補 {skippedInfo} 通り" 
+                                              : string.Join(" / ", Enumerable.Range(0, gaW).Select(wv => $"{n.W[wv] - o.W[wv]:+0.0;-0.0}"))
+                                                + (skippedInfo > 0 ? $"（情報セルで外した上位 {skippedInfo} 通り）" : "")) + " |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**採用 {accepted.Count} 行 / 追試 {cands.Count} 行。** 採用した行の新しい席:");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 前1 | 前3 | 中央 | 後1 | 後3 |");
+        Console.WriteLine("|---|---|---|---|---|---|");
+        foreach (var (name, slots) in accepted)
+            Console.WriteLine($"| {name} | " + string.Join(" | ", slots) + " |");
         Console.WriteLine();
         Console.WriteLine($"所要 {gaSw.Elapsed.TotalSeconds:F1} 秒。");
         return;
@@ -45865,7 +45983,7 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 脆いムグ・ゾトを前で死なせて連鎖を起こす。中衛ゴルムの吸いが隣のゾトを破裂まで運ぶ（layout 1位）
     // リィカの覚醒（薙ぎ化）追加に伴い reseat で再探索。ムグを前1→前3、ゾトを前2のまま前1を空ける形が上
     // （confirm 追試 +2.2pt、第5波 +10.8。第5波は元々連鎖の畳みかけが弱かった波）。
-    ("死の連鎖 (リィカ軸)",  Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Mug, center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
+    ("死の連鎖 (リィカ軸)",  Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Golm, center: UnitCatalog.Mug, back1: UnitCatalog.Vel, back3: UnitCatalog.Rica)),   // 第89期 (P2) で席を更新
     // X字化に伴う振り直し。**旧盤面でスィドの味方漏れを消していた「孤立席（前3）」は消滅した**
     // ——編成5体が0-4を必ず埋めるので、どの席も隣接を持つ。漏れは常に発生する。
     // スィドを前1・ガルドを前3にした形が狙いを満たす最良（reseat 15位 / confirm +6.5pt / 第4波 +21.5）
@@ -45901,7 +46019,7 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // ヒサを中衛に置くと横隣接が無く、深さ隣接の後2だけを指す。そこにカドを置けば標的は確定する。
     // カドを後2へ下げても囃し立てで被弾は来るので棘は回り、前列はガルドとドルガが受ける（+3.6pt / 第5波 +15.5）
     // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +10.6pt）
-    ("溜め (ガン×ドルガ×カド)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Gan, center: UnitCatalog.Hisa, back1: UnitCatalog.Kado, back3: UnitCatalog.Dolga)),
+    ("溜め (ガン×ドルガ×カド)", Formation.Build(front1: UnitCatalog.Kado, front3: UnitCatalog.Gald, center: UnitCatalog.Gan, back1: UnitCatalog.Hisa, back3: UnitCatalog.Dolga)),   // 第89期 (P2) で席を更新
     // グザの瘴気（味方全体に毒）は位置不問。ムドは前1で敵の攻撃も浴びて育ち、ガルドは前3で庇う。セロは中央から被弾後退。
     // X字化に伴う振り直し: 後列のグザとボルグを入れ替えた（reseat 1位＝狙いを満たす最良 / confirm +19.6pt / 第2波 +57.8）
     ("毒→被弾強化 (グザ×ムド)", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Guza, back3: UnitCatalog.Borg)),
@@ -45910,7 +46028,7 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     ("澱み喰い (グザ×ヴィオ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Sid, back1: UnitCatalog.Vio, back3: UnitCatalog.Mio)),
     // 軋みの割り込み攻撃の追加後に再探索。セロが前1から中のヨミへ逃げ込んでヨミを前へ突き出し(+22)、その場で振らせる。
     // 以後はバサの入れ替えが割り込みを重ね、セロは二段目で後1のバサを突き飛ばして貫きに変わる（layout 1位）
-    ("隊列崩し (バサ×ヨミ×セロ)", Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Gan, back1: UnitCatalog.Basa, back3: UnitCatalog.Yomi)),
+    ("隊列崩し (バサ×ヨミ×セロ)", Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.Sero, center: UnitCatalog.Gald, back1: UnitCatalog.Yomi, back3: UnitCatalog.Basa)),   // 第89期 (P2) で席を更新
     // 軋みの割り込み攻撃の追加後に再探索。セロが中衛から後1のヨミを突き飛ばして逃げ、ヨミは中衛へ突き出されて(+22)その場で振る。
     // 旧狙いの二段逃げ型（セロ前列→中のヨミ→後）は割り込み後も 48.8% 止まり（83位）。前列へ突き出されたヨミが削られるだけなので捨てた。
     // 探索1〜3位はガルド後列で庇いが死ぬので採らない（layout 4位）
@@ -45918,7 +46036,7 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 溜め役3体を敵から遠い後列と中衛へ、という狙いはそのまま。前1を空けてカド・クグを前2/前3へ寄せ、
     // 中衛をガンに替えた形が上（+2.1pt）。カドの巻き込み先はクグとガンで変わらない
     // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +3.5pt）
-    ("溜め改 (クグ×バン×ガン)", Formation.Build(front1: UnitCatalog.Kugu, front3: UnitCatalog.Gan, center: UnitCatalog.Ban, back1: UnitCatalog.Kado, back3: UnitCatalog.Dolga)),
+    ("溜め改 (クグ×バン×ガン)", Formation.Build(front1: UnitCatalog.Kado, front3: UnitCatalog.Kugu, center: UnitCatalog.Gan, back1: UnitCatalog.Dolga, back3: UnitCatalog.Ban)),   // 第89期 (P2) で席を更新
     // 軋みの割り込み攻撃の追加後に再探索。セロは前1から中のバサ、次に後1のヨミを順に突き飛ばして貫きに変わり、
     // 逃亡もバサの入れ替えも全部シオとヨミの燃料になる（layout 1位）
     ("移動改 (バサ×ヨミ×シオ)", Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.Yomi, back3: UnitCatalog.Basa)),
@@ -45945,7 +46063,7 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 落ちていた（原因はハギの1ターン1回制限ではなく、ヴェルを外したことそのもの）。
     // ムグを抜いてヴェルを残すと 95.0% まで戻る（分裂ムグの寄与は約3pt）。ハギの前列配置自体は
     // ほぼ無関係（ヴェルを残したままハギを前1に置いても95.0%）。配置は原型のスロットをそのまま流用。
-    ("追撃×死 (ハギ×リィカ)", Formation.Build(front1: UnitCatalog.Hagi, front3: UnitCatalog.Zoto, center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
+    ("追撃×死 (ハギ×リィカ)", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Zoto, center: UnitCatalog.Vel, back1: UnitCatalog.Hagi, back3: UnitCatalog.Rica)),   // 第89期 (P2) で席を更新
     // ササ入りの2編成（「移動改2 (ササ×ヨミ)」「散開耐久 (ササ×ドハ)」）は X字化で外した。
     // 散開（Loose）は「隣に味方がいない駒」を硬くするが、新盤面は編成5体が 0-4 を必ず埋め、
     // 角4つは全員が中央と隣接し中央は全員と隣接するので、**発火する席が原理的に存在しない**。
@@ -46054,9 +46172,9 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // ナラ抜きで既に全5波 100.0% なので、削りが効いても勝率が上がる余地が無い
     // （98.8% は土台より下）。ナラの寄与を読むときは ablate の絶対値ではなく、
     // 土台で同じ席にいたゴルムの寄与（-25.5pt）と並べること。
-    ("置き去り×死の連鎖", Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Nara,
-                                       center: UnitCatalog.Vel, back1: UnitCatalog.Rica,
-                                       back3: UnitCatalog.Mug)),
+    ("置き去り×死の連鎖", Formation.Build(front1: UnitCatalog.Nara, front3: UnitCatalog.Mug,   // 第89期 (P2) で席を更新
+                                       center: UnitCatalog.Zoto, back1: UnitCatalog.Rica,
+                                       back3: UnitCatalog.Vel)),
     // 物理軸の連鎖・第1弾（責め苦のシガ / 仇討ちのザン）。**配置は仮置き**——
     // reseat（120通り全探索）→ confirm で採否を決める。
     //
@@ -46079,9 +46197,9 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     // 計画書の席（前3）ではノノ(78)を指していた（狙いが外れることをログで確認済み）。
     // ガルドは庇う（単体を肩代わり）＋標的で二重に敵を引き受け、ザンがそこへ刺し返す。
     // 配置は reseat 1位 → confirm +22.8pt で採用（仮置き＝ドルガ前3・ガン後3 は 23.4%）。
-    ("仇討ち (ヒサ×ザン)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Gan,
-                                       center: UnitCatalog.Hisa, back1: UnitCatalog.Zan,
-                                       back3: UnitCatalog.Dolga)),
+    ("仇討ち (ヒサ×ザン)", Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.Hisa,   // 第89期 (P2) で席を更新
+                                       center: UnitCatalog.Gald, back1: UnitCatalog.Dolga,
+                                       back3: UnitCatalog.Zan)),
     // 「破片が怯みを止める」の検証台。破片（Armor）で受け切った被弾は OnDamaged ごと
     // 走らないので、破片を配られたザンは殴られても**怯まない＝刃が止まらない**。
     // コード追加ゼロの創発（AvengeTrait 参照）。
@@ -46435,8 +46553,8 @@ static (string Name, Formation F)[] CompareBuilds() => new (string, Formation)[]
     //     **両 seed 帯で情報セル 2 以上を保つ最上位は粗探索7位**で、
     //     その席と現行の差は **+4.8pt**——採否閾値 5.0pt に届かない。
     //     **勝率だけの reseat 1位は +6.8pt だが、その席は情報セル 1。**
-    ("死軸×ホタ (ゾト×熾)", Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Hota,
-                                          center: UnitCatalog.Golm, back1: UnitCatalog.Rica,
+    ("死軸×ホタ (ゾト×熾)", Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Golm,   // 第89期 (P2) で席を更新
+                                          center: UnitCatalog.Rica, back1: UnitCatalog.Hota,
                                           back3: UnitCatalog.Vel)),
     //     ヒヨ側は粗探索1位（+23.9pt・情報セル 3 のまま）。上位5通りのうち4通りが
     //     ヒヨを**次数2の後列角**に置く（マイナス＝隣接する非燃焼の味方を絞る側の席）。
