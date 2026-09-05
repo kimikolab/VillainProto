@@ -48092,6 +48092,8 @@ if (focusId == "cross")
         int xcQ1n = 0, xcQ3bad = 0;
         double xcRateSum = 0;
         var xcInfoN = new int[xcRows.Length];
+        var xcRateOf = new double[xcRows.Length];
+        var xcOk3 = new bool[xcRows.Length];
         for (int ri = 0; ri < xcRows.Length; ri++)
         {
             int info = 0;
@@ -48103,8 +48105,9 @@ if (focusId == "cross")
             double ca = Enumerable.Range(0, xcW).Average(w => xcCa[ri, w]);
             double cb = Enumerable.Range(0, xcW).Average(w => xcCb[ri, w]);
             double rate = tt > 0 ? mt / tt : 0;
-            xcRateSum += rate;
+            xcRateSum += rate; xcRateOf[ri] = rate;
             bool ok3 = mt > 0 && ca > 0 && cb > 0;
+            xcOk3[ri] = ok3;
             if (info >= 3) xcQ1n++;
             if (!ok3) xcQ3bad++;
             Console.WriteLine($"| {ri + 1} | {xcRows[ri].Name} | {(xcBlankRow[ri] ? "**○**" : "")} "
@@ -48112,6 +48115,9 @@ if (focusId == "cross")
                 + $"| {mt:F2} | {rate * 100:F1}% | {ca:F2} | {cb:F2} | {(ok3 ? "○" : "**×**")} |");
         }
         double xcRate = xcRateSum / xcRows.Length;
+        // §3 の「Q1〜Q3 が揃わない行は交差帯から外す」を当てた後の帯。
+        var xcKeep = Enumerable.Range(0, xcRows.Length).Where(i => xcInfoN[i] >= 3 && xcOk3[i]).ToArray();
+        double xcRateKeep = xcKeep.Length == 0 ? double.NaN : xcKeep.Average(i => xcRateOf[i]);
         Console.WriteLine();
 
         // ---- 61 行を同じ器具で測る（Q2 の比べる相手）------------------------------------------
@@ -48154,6 +48160,20 @@ if (focusId == "cross")
                           + $"| 61 行の同じ器具 {xcRate61Avg * 100:F1}%（{xc61ok.Length} 行） | **{(xcRate > xcRate61Avg ? "○" : "×")}** |");
         Console.WriteLine($"| **Q3** | 交差の両側が発火していない行 | **{xcQ3bad} 行** | 0 | **{(xcQ3bad == 0 ? "○" : "×")}** |");
         Console.WriteLine();
+        Console.WriteLine("### §3 の除外規則を当てた後（「Q1〜Q3 が揃わない行は交差帯から外す」）");
+        Console.WriteLine();
+        var xcOut = Enumerable.Range(0, xcRows.Length).Except(xcKeep).ToArray();
+        Console.WriteLine($"**外した行 {xcOut.Length}**: "
+            + (xcOut.Length == 0 ? "無し" : string.Join(" / ", xcOut.Select(i => $"{xcRows[i].Name}（情報セル {xcInfoN[i]}/5{(xcOk3[i] ? "" : "・両側の発火 0")}）"))));
+        Console.WriteLine();
+        Console.WriteLine("| | 内容 | 12 行のまま | 外した後（{0} 行） | 線 | 判定 |".Replace("{0}", xcKeep.Length.ToString()));
+        Console.WriteLine("|---|---|--:|--:|--:|:-:|");
+        Console.WriteLine($"| **Q2** | 交差帯の平均の稼働率 | {xcRate * 100:F1}% | **{xcRateKeep * 100:F1}%** "
+                          + $"| 61 行 {xcRate61Avg * 100:F1}% | **{(xcRateKeep > xcRate61Avg ? "○" : "×")}** |");
+        Console.WriteLine();
+        Console.WriteLine("> **この除外は §3 に書いてある規則をそのまま当てたもので、結果を見てから足した規則ではない。**"
+                          + "ただし**外した1行だけで Q2 の判定が反転する**ので、両方の値を並べてある（第64期の作法）。");
+        Console.WriteLine();
         Console.WriteLine($"> **Q2 の比べる相手について**: 第86期の「35〜40%」は**読み手の発火 ÷ 決着T**という別の器具の値なので、"
                           + "ここでは 61 行を**交差帯とまったく同じ器具**（出会い ÷ 決着T・その行が実際に持つ「撒く」軸の組で最大のもの）で"
                           + $"測り直して並べてある（2軸以上を持つ {xc61ok.Length} 行が分母。持たない行は交差が定義できない）。");
@@ -48164,8 +48184,11 @@ if (focusId == "cross")
         Console.WriteLine();
         Console.WriteLine("**採否閾値は 5.0pt**（第46期）。作法1（現行が上位5位以内）で終わる行は動かさない。");
         Console.WriteLine();
-        Console.WriteLine("| 行 | 現行の粗探索順位 | 現行(200) | 1位(200) | 差 | 判定 |");
-        Console.WriteLine("|---|--:|--:|--:|--:|:-:|");
+        Console.WriteLine("**席は「勝つ席」ではなく「測れる席」で選ぶ**（第50期・第59期・第64期）"
+                          + "——交差帯は測るための帯なので、`reseat` の1位が情報セルを減らすなら動かさない。");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 現行の粗探索順位 | 現行(200) | 情報セル | 1位(200) | 情報セル | 差 | 判定 | 理由 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|:-:|---|");
         const int XcScan = 50, XcTop = 12;
         var xcSeatLine = new string[xcRows.Length];
         Parallel.For(0, xcRows.Length, ri =>
@@ -48191,18 +48214,31 @@ if (focusId == "cross")
             int cur = order.First(i => SameFormation(perms[i], xcRows[ri].F));
             int curRank = order.IndexOf(cur) + 1;
             var pool = order.Take(XcTop).Append(cur).Distinct().ToList();
-            double Avg(int i) => xcStages.Average(st =>
+            (double A, int Info) Ver(int i)
             {
-                int wins = 0;
-                for (int seed = 0; seed < XcSeeds; seed++)
-                    if (BattleEngine.Run(perms[i], st.Enemy, seed, verbose: false).PlayerWon) wins++;
-                return wins * 100.0 / XcSeeds;
-            });
-            var ver = pool.Select(i => (I: i, A: Avg(i))).OrderByDescending(x => x.A).ToList();
-            double curA = ver.First(x => x.I == cur).A, topA = ver[0].A;
-            bool keep = curRank <= 5 || topA - curA < 5.0;
-            xcSeatLine[ri] = $"| {xcRows[ri].Name} | {curRank} / {perms.Count} | {curA:F1}% | {topA:F1}% "
-                             + $"| {topA - curA:F1} | {(keep ? "据え置き" : "**要差し替え**")} |";
+                double sum = 0; int info = 0;
+                foreach (EnemyCatalog.Stage st in xcStages)
+                {
+                    int wins = 0;
+                    for (int seed = 0; seed < XcSeeds; seed++)
+                        if (BattleEngine.Run(perms[i], st.Enemy, seed, verbose: false).PlayerWon) wins++;
+                    double x = wins * 100.0 / XcSeeds;
+                    sum += x;
+                    if (x > 0.0001 && x < 99.9999) info++;
+                }
+                return (sum / xcStages.Count, info);
+            }
+            var ver = pool.Select(i => { var v = Ver(i); return (I: i, v.A, v.Info); }).OrderByDescending(x => x.A).ToList();
+            var curV = ver.First(x => x.I == cur);
+            var topV = ver[0];
+            // **席は「勝つ席」ではなく「測れる席」で選ぶ**（第50期・第59期・第64期）。
+            // 交差帯は測るための帯なので、`reseat` の1位が情報セルを減らすなら動かさない。
+            bool keep = curRank <= 5 || topV.A - curV.A < 5.0 || curV.Info >= topV.Info;
+            string why = curRank <= 5 ? "上位5位以内" : topV.A - curV.A < 5.0 ? "差 < 5.0pt"
+                       : curV.Info >= topV.Info ? "**1位は情報セルが減る**" : "—";
+            xcSeatLine[ri] = $"| {xcRows[ri].Name} | {curRank} / {perms.Count} | {curV.A:F1}% | {curV.Info} "
+                             + $"| {topV.A:F1}% | {topV.Info} | {topV.A - curV.A:F1} "
+                             + $"| {(keep ? "据え置き" : "**要差し替え**")} | {why} |";
         });
         foreach (string l in xcSeatLine) Console.WriteLine(l);
         Console.WriteLine();
@@ -49568,33 +49604,33 @@ static (string Name, Formation F)[] CrossBuilds() => new (string, Formation)[]
     // 傷口の着火（ミオ・第87期）の2本が繋いでいるのに、61 行には1行も無い交差。
     // キリではなくノミを採ったのは規則2（キリ＋ミオは両方とも出力ゼロ・第87期の一般則）。
     // 執着で1体に食いつくので傷が積み上がり、そこにグザの瘴気が毎ターン重なる。
-    ("毒×傷 (ノミ×グザ×ミオ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Nomi, center: UnitCatalog.Mio, back1: UnitCatalog.Guza, back3: UnitCatalog.Dolga)),
+    ("毒×傷 (ノミ×グザ×ミオ)", Formation.Build(front1: UnitCatalog.Rau, front3: UnitCatalog.Nomi, center: UnitCatalog.Mio, back1: UnitCatalog.Guza, back3: UnitCatalog.Dolga)),
 
     // 傷 × 被弾。棘の傷（`ThornRule`・**第84期の残置**）／巻き込み則／引き取りの3本が繋いでいる。
     // **§4 の再判定2件はどちらもこの行で `compare` 差分を取る**——カド（棘の傷の書き手）と
     // ノノ（繕い＝`MendRule` の読み手）を同席させ、終端にハリ（縫い・両側読み）を置いてある。
-    ("傷×被弾 (カド×ハリ×ノノ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kado, center: UnitCatalog.Nono, back1: UnitCatalog.Hari, back3: UnitCatalog.Dolga)),
+    ("傷×被弾 (カド×ハリ×ノノ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kado, center: UnitCatalog.Nono, back1: UnitCatalog.Hari, back3: UnitCatalog.Egu)),
 
     // 弱体 × 破片。引き受け（ウケ）が隣の弱体を破片に変える。供給はネル（呪詛の味方漏れ・開戦時）と
     // ドハ（分かちのなまり・被弾ごと）で、**周期の違う2本**を並べてある（規則5）。ウケは中央（隣接4）。
-    ("弱体×破片 (ウケ×ネル×ドハ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Doha, center: UnitCatalog.Uke, back1: UnitCatalog.Nel, back3: UnitCatalog.Dolga)),
+    ("弱体×破片 (ウケ×ネル×ウロ)", Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Nel, center: UnitCatalog.Uke, back1: UnitCatalog.Uro, back3: UnitCatalog.Dolga)),
 
     // 弱体 × 燃。火選り（ヒヨ）は燃えていない隣を鈍らせる。その弱体をウツ（逆しま・下げ幅の3倍）が読む。
     // **ヒヨを前1（隣接＝中央・後1）に置き、ボルグを後3に置く**——供給者は自分の撒いた火を持たない（第58期）ので、
     // ボルグをヒヨの隣に置くと火種の腕を削る。中央のドルガが燃え、後1のウツが鈍る形にしてある。
-    ("弱体×燃 (ヒヨ×ボルグ×ウツ)", Formation.Build(front1: UnitCatalog.Hiyo, front3: UnitCatalog.Gald, center: UnitCatalog.Dolga, back1: UnitCatalog.Utsu, back3: UnitCatalog.Borg)),
+    ("弱体×燃 (ヒヨ×ボルグ×ウツ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Hiyo, back1: UnitCatalog.Utsu, back3: UnitCatalog.Dolga)),
 
     // 弱体 × 移動。突き返し（ハネ）は味方が押しのけられるたび隣の味方を鈍らせる。供給は喧噪（バサ・毎ターン）。
     // その弱体をウツが読む。**第41期に「使われるのは先に来る供給源だけ」と分かっている**ので供給は1本に絞った。
-    ("弱体×移動 (ハネ×バサ×ウツ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Hane, center: UnitCatalog.Basa, back1: UnitCatalog.Utsu, back3: UnitCatalog.Dolga)),
+    ("弱体×移動 (ハネ×バサ×ウツ)", Formation.Build(front1: UnitCatalog.Kado, front3: UnitCatalog.Hane, center: UnitCatalog.Basa, back1: UnitCatalog.Utsu, back3: UnitCatalog.Dolga)),
 
     // 弱体 × 被弾。分かち（ドハ）は肩代わりした被弾のぶん守った相手の腕をなまらせる。
     // カドの惨禍（味方全体の被ダメ5割増）が供給を増やし、ワタ（渡し）がその弱体を横取りして敵へ流す。
-    ("弱体×被弾 (ドハ×ワタ×カド)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kado, center: UnitCatalog.Doha, back1: UnitCatalog.Wata, back3: UnitCatalog.Dolga)),
+    ("弱体×被弾 (ドハ×ワタ×ヒビ)", Formation.Build(front1: UnitCatalog.Hibi, front3: UnitCatalog.Nel, center: UnitCatalog.Doha, back1: UnitCatalog.Wata, back3: UnitCatalog.Utsu)),
 
     // 強化 × 燃。火選り（ヒヨ）が燃えている味方を強化し、熾のホタ（燃えている間 攻4倍・貫き）が受ける。
     // **ロスター唯一の乗算**（第24期）なので、強化1点がちょうど4点になる（第58期の乗算監査）。
-    ("強化×燃 (ヒヨ×ホタ×ボルグ)", Formation.Build(front1: UnitCatalog.Hiyo, front3: UnitCatalog.Gald, center: UnitCatalog.Hota, back1: UnitCatalog.Dolga, back3: UnitCatalog.Borg)),
+    ("強化×燃 (ヒヨ×ホタ×ボルグ)", Formation.Build(front1: UnitCatalog.Hiyo, front3: UnitCatalog.Gald, center: UnitCatalog.Hota, back1: UnitCatalog.Mudo, back3: UnitCatalog.Borg)),
 
     // 強化 × 手番。のろま（ドルガ）が2ターンに1回捨てる手番を、号令（ガン・+8）と据え（バン・被ダメ半減）が買う。
     // **手番はロスターで唯一「書き手が1枚」の通貨**（第82期の拒否権3）。ハギは薙ぎの撃破に反応して出力を出す。
@@ -49611,11 +49647,11 @@ static (string Name, Formation F)[] CrossBuilds() => new (string, Formation)[]
 
     // 破片 × 被弾。砕け（ヒビ）は範囲攻撃を受けると4分の1を破片として味方全員に配り、
     // 鱗（ウロ）がそれを纏って貫きに変わる。カドの惨禍が被弾を増やして供給を厚くする。
-    ("破片×被弾 (ヒビ×ウロ×カド)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kado, center: UnitCatalog.Hibi, back1: UnitCatalog.Uro, back3: UnitCatalog.Dolga)),
+    ("破片×被弾 (ヒビ×ウロ×セロ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sero, center: UnitCatalog.Hibi, back1: UnitCatalog.Uro, back3: UnitCatalog.Dolga)),
 
     // 被弾 × 移動。棘守り（カド）が身代わりのたびに味方と位置を入れ替え、その移動を軋み（ヨミ）が読む。
     // セロの逃亡（3分の1削られると後列の味方を突き飛ばす）が2本目の供給。
-    ("被弾×移動 (カド×ヨミ×セロ)", Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Kado, back1: UnitCatalog.Yomi, back3: UnitCatalog.Dolga)),
+    ("被弾×移動 (カド×ヨミ×セロ)", Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Kado, back1: UnitCatalog.Yomi, back3: UnitCatalog.Basa)),
 };
 
 
