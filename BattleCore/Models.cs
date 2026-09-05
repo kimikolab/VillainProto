@@ -877,6 +877,31 @@ public sealed class UnitTally
     public int GatherGuards, GatherHadDonor, GatherTaken, GatherDepthSum, GatherDepthMax;
 
     /// <summary>
+    /// 滲み則（第90期・<c>SoakRule</c>）。<b>書き手の側に載る。盤面には一切影響しない。</b>
+    /// <para><c>SoakPoisonWrites</c> 毒の窓口を通った回数（分母）／
+    /// <c>SoakPoisonSeen</c> そのうち<b>相手が傷を持っていた</b>回数（<b>版に依らず数える</b>＝紙の分子）／
+    /// <c>SoakPoisonSeenAlly</c> 同・相手が同陣営（味方漏れ）だった回数／
+    /// <c>SoakPoisonAdded</c> 実際に層を +1 した回数（W1 のみ）／
+    /// <c>SoakBurn*</c> 燃焼の同じ4本。</para>
+    /// </summary>
+    public int SoakPoisonWrites, SoakPoisonSeen, SoakPoisonSeenAlly, SoakPoisonAdded;
+
+    /// <summary>滲み則（第90期）の燃焼側。<see cref="SoakPoisonWrites"/> の doc を参照。</summary>
+    public int SoakBurnWrites, SoakBurnSeen, SoakBurnSeenAlly, SoakBurnAdded;
+
+    /// <summary>
+    /// 滲み則の経路別（第90期・添字は <see cref="PoisonRoute"/>）。
+    /// 毒 5 経路 ＋ 燃焼 1 経路を1本の配列で持つ（末尾が燃焼）。<b>盤面には一切影響しない。</b>
+    /// </summary>
+    public int[]? SoakSeenByRoute;
+
+    /// <summary>
+    /// 自己給餌（第90期 §1-2 の 4）。<b>ボルグの巻き込み（余波）が味方に傷を書き、
+    /// その味方に同じ一振りの火の粉が滲み則で深く入った</b>回数。<b>盤面には一切影響しない。</b>
+    /// </summary>
+    public int SoakSelfFeed;
+
+    /// <summary>
     /// 継ぎ当ての繕い（第86期・<c>MendRule</c>）。発火回数／そのうち患者に傷があった回数（<b>版に依らず観測する</b>）／観測した傷の総深さ／
     /// 繕いが 1 点も届かなかった回数（渇き）／実際に増えた HP／自分が払った HP／患者が敵だった回数（0 のはず）。
     /// <b>盤面には一切影響しない。</b>
@@ -925,6 +950,17 @@ public sealed class UnitTally
         GatherGuards += o.GatherGuards; GatherHadDonor += o.GatherHadDonor; GatherTaken += o.GatherTaken;
         GatherDepthSum += o.GatherDepthSum; GatherDepthMax = Math.Max(GatherDepthMax, o.GatherDepthMax);
         SpillWoundsWritten += o.SpillWoundsWritten;
+        // 滲み則（第90期）。**盤面には一切影響しない。**
+        SoakPoisonWrites += o.SoakPoisonWrites; SoakPoisonSeen += o.SoakPoisonSeen;
+        SoakPoisonSeenAlly += o.SoakPoisonSeenAlly; SoakPoisonAdded += o.SoakPoisonAdded;
+        SoakBurnWrites += o.SoakBurnWrites; SoakBurnSeen += o.SoakBurnSeen;
+        SoakBurnSeenAlly += o.SoakBurnSeenAlly; SoakBurnAdded += o.SoakBurnAdded;
+        SoakSelfFeed += o.SoakSelfFeed;
+        if (o.SoakSeenByRoute is not null)
+        {
+            SoakSeenByRoute ??= new int[o.SoakSeenByRoute.Length];
+            for (int i = 0; i < o.SoakSeenByRoute.Length; i++) SoakSeenByRoute[i] += o.SoakSeenByRoute[i];
+        }
         MendFires += o.MendFires; MendWoundSeen += o.MendWoundSeen; MendWoundDepth += o.MendWoundDepth;
         MendDry += o.MendDry; MendHealed += o.MendHealed; MendPaid += o.MendPaid; MendFoePatient += o.MendFoePatient;
         WoundsAtDeath += o.WoundsAtDeath; WoundsAtEnd += o.WoundsAtEnd;

@@ -237,14 +237,90 @@ public sealed class BattleContext
     }
 
     /// <summary>
+    /// 毒を積む唯一の窓口（第90期）。<b>滲み則（<see cref="SoakRule"/>）の入口だけを担う。</b>
+    ///
+    /// <para><b>通すのは「加算の入口」だけ。</b> 減算（毒喰らいの啜り・澱み喰いの吸い上げ）や
+    /// 上書き（澱みの着火・増幅の <c>SetCounter</c>）は通さない
+    /// ——<b>ミオは第87期で既に傷を読んでいる</b>ので、ここを通すと二重取りになる（§0-4）。</para>
+    ///
+    /// <para><b>通る書き手は3枚だけ</b>——瘴気（グザ・敵と味方漏れの両方）／毒撃（スィド・被弾した相手と隣への漏れ）／
+    /// 疫み（ラウ）。<b>味方漏れも同じ窓口を通す</b>のが、両陣営に等しくかかるというこの規則の要点。</para>
+    ///
+    /// <para><b>足すのは定数 1。傷の数に比例させない</b>（自己検査 (c)）。
+    /// <b>ログの文言は各特性の側に残してある</b>——差分を読めるようにするため、
+    /// 滲みで深くなったときだけ1行足す。</para>
+    /// </summary>
+    /// <param name="writer">書いた駒（計数の帰属先。<b>盤面には一切影響しない</b>）。</param>
+    public void Poison(UnitState target, int amount, UnitState writer, PoisonRoute route)
+    {
+        if (!target.IsAlive || amount <= 0) return;
+
+        // **計数は規則の分岐より手前**（第86期の X1P と同じ作法）。紙の分子を W0 の実測から取るため、
+        // 「傷を持つ相手に書いた回数」は版に依らず数える。
+        UnitTally wt = TallyOf(writer);
+        wt.SoakPoisonWrites++;
+        bool wounded = target.Counter(StatusKeys.Wound) > 0;
+        if (wounded)
+        {
+            wt.SoakPoisonSeen++;
+            if (target.TeamId == writer.TeamId) wt.SoakPoisonSeenAlly++;
+            (wt.SoakSeenByRoute ??= new int[SoakRouteCount])[(int)route]++;
+        }
+
+        int add = amount;
+        if (Soak.Enabled && wounded) { add += 1; wt.SoakPoisonAdded++; }
+
+        target.SetCounter(StatusKeys.Poison, target.Counter(StatusKeys.Poison) + add);
+        if (add != amount)
+            Log($"    {target.Name} の傷口から毒が滲みた（+1）", LogKind.Status);
+    }
+
+    /// <summary><see cref="UnitTally.SoakSeenByRoute"/> の長さ（毒 5 経路 ＋ 燃焼 1）。</summary>
+    public const int SoakRouteCount = 6;
+
+    /// <summary>燃焼の経路の添字（<see cref="UnitTally.SoakSeenByRoute"/> の末尾）。</summary>
+    public const int SoakBurnRouteIx = 5;
+
+    /// <summary>
+    /// 巻き込み則（第85期）で最後にこの駒へ傷を書いた駒の <c>InstanceId + 1</c>（第90期の計数専用の札）。
+    /// <b>誰も読んで分岐しない。</b> 自己給餌（ボルグの余波 → 傷 → 深い火）の成立を数えるためだけにある。
+    /// </summary>
+    public const string SpillWoundFromKey = "soakSpillFrom";
+
+    /// <summary>
     /// 着火。非スタックなので、量ではなく残りターンを更新する。
     /// 既に燃えている相手への再付与は持続のリセットにしかならない（ダメージは増えない）。
+    /// <para><b>滲み則（第90期・<see cref="SoakRule"/>）はここ1箇所。</b> 相手が傷を持っていれば
+    /// 残ターンが +1 される（3 → 4）。<b>点け直しでも同じ</b>——戻す先が 4 になる。
+    /// <c>BurnRules.Turns</c> は書き換えない（局所的に +1 するだけ）。</para>
     /// </summary>
-    public void Ignite(UnitState target, bool friendly = false)
+    /// <param name="source">火を点けた駒（計数の帰属先。<b>盤面には一切影響しない</b>）。</param>
+    public void Ignite(UnitState target, bool friendly = false, UnitState? source = null)
     {
         if (!target.IsAlive) return;
 
         bool relit = target.Counter(StatusKeys.Burn) > 0;
+
+        // 滲み則の計数（第90期）。**規則の分岐より手前**なので版に依らない。
+        bool wounded = target.Counter(StatusKeys.Wound) > 0;
+        if (source is not null)
+        {
+            UnitTally st = TallyOf(source);
+            st.SoakBurnWrites++;
+            if (wounded)
+            {
+                st.SoakBurnSeen++;
+                if (target.TeamId == source.TeamId) st.SoakBurnSeenAlly++;
+                (st.SoakSeenByRoute ??= new int[SoakRouteCount])[SoakBurnRouteIx]++;
+                if (Soak.Enabled) st.SoakBurnAdded++;
+                // 自己給餌（§1-2 の 4）。**同じ駒が味方に傷を書き、その味方に深い火を点けた。**
+                if (target.TeamId == source.TeamId && target.Counter(SpillWoundFromKey) == source.InstanceId + 1)
+                    st.SoakSelfFeed++;
+            }
+        }
+
+        int turns = BurnRules.Turns;
+        if (Soak.Enabled && wounded) turns += 1;
 
         // 燃焼の計数（第57期）。**盤面には触らない。**
         // 「点いた」と「煽られた」を分けるのが要点——非スタックなので後者は
@@ -261,11 +337,13 @@ public sealed class BattleContext
             if (it.FirstBurnTurn == 0) it.FirstBurnTurn = _turn;
         }
 
-        target.SetCounter(StatusKeys.Burn, BurnRules.Turns);
+        target.SetCounter(StatusKeys.Burn, turns);
         Log(relit
-                ? $"    {target.Name} の火が煽られた（残り {BurnRules.Turns}）"
-                : $"    {target.Name} に火が点いた（残り {BurnRules.Turns}）",
+                ? $"    {target.Name} の火が煽られた（残り {turns}）"
+                : $"    {target.Name} に火が点いた（残り {turns}）",
             friendly ? LogKind.FriendlyFire : LogKind.Status);
+        if (turns != BurnRules.Turns)
+            Log($"    {target.Name} の傷口に火が回った（残り +1）", LogKind.Status);
     }
 
     public const int MarkPullPercent = 75;
@@ -1339,6 +1417,12 @@ public sealed class BattleContext
     public GatherRule Gather { get; }
 
     /// <summary>
+    /// 滲み則（第90期）。<b>診断（soak）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="SoakRule.Default"/> ＝ 滲まない）。
+    /// </summary>
+    public SoakRule Soak { get; }
+
+    /// <summary>
     /// 軋み（第66期）の在庫の記録。<b>盤面には一切影響しない。</b>
     /// <see cref="TraitId.Displaced"/> 保持者の <see cref="UnitState.AtkBonus"/> が動いた直後に呼ぶ
     /// ——上げる経路は<b>軋み自身と <see cref="Whet"/> の2本だけ</b>（ヨミは自己強化を1つも持たない）。
@@ -1403,7 +1487,7 @@ public sealed class BattleContext
                          ThinBladeRule? thinBlade = null, ThornRule? thorn = null,
                          SutureRule? suture = null, SpillWoundRule? spillWound = null,
                          MendRule? mend = null, IgniteRule? woundIgnite = null,
-                         GatherRule? gather = null)
+                         GatherRule? gather = null, SoakRule? soak = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -1437,6 +1521,7 @@ public sealed class BattleContext
         Mend = mend ?? MendRule.Default;
         WoundIgnite = woundIgnite ?? IgniteRule.Default;
         Gather = gather ?? GatherRule.Default;
+        Soak = soak ?? SoakRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -2589,6 +2674,9 @@ public sealed class BattleContext
         {
             int w = target.Counter(StatusKeys.Wound) + 1;
             target.SetCounter(StatusKeys.Wound, w);
+            // 自己給餌（第90期 §1-2 の 4）の札。**計数専用**——`StatusKeys` ではないので帳簿
+            // （`NoteCarry`）にも会戦の掃除にも載らず、誰も読んで分岐しない（`burnTick` と同じ扱い）。
+            target.SetCounter(SpillWoundFromKey, source.InstanceId + 1);
             TallyOf(source).SpillWoundsWritten++;
             Log($"    巻き込みの傷: {source.Name} の刃が {target.Name} に残る（傷 {w}）", LogKind.Status);
         }
@@ -3240,12 +3328,13 @@ public static class BattleEngine
                                    SeverRule? sever = null, ThinBladeRule? thinBlade = null,
                                    ThornRule? thorn = null, SutureRule? suture = null,
                                    SpillWoundRule? spillWound = null, MendRule? mend = null,
-                                   IgniteRule? woundIgnite = null, GatherRule? gather = null)
+                                   IgniteRule? woundIgnite = null, GatherRule? gather = null,
+                                   SoakRule? soak = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
-               creak, sever, thinBlade, thorn, suture, spillWound, mend, woundIgnite, gather);
+               creak, sever, thinBlade, thorn, suture, spillWound, mend, woundIgnite, gather, soak);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -3270,12 +3359,12 @@ public static class BattleEngine
                                    ThinBladeRule? thinBlade = null, ThornRule? thorn = null,
                                    SutureRule? suture = null, SpillWoundRule? spillWound = null,
                                    MendRule? mend = null, IgniteRule? woundIgnite = null,
-                                   GatherRule? gather = null)
+                                   GatherRule? gather = null, SoakRule? soak = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
-                                    suture, spillWound, mend, woundIgnite, gather);
+                                    suture, spillWound, mend, woundIgnite, gather, soak);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

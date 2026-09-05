@@ -607,7 +607,12 @@ public sealed class GuardianTrait : RedirectGainTrait
         if (!ctx.Gather.Enabled) return;
 
         int best = pool.Max(a => a.Counter(StatusKeys.Wound));
-        UnitState donor = ctx.PickOne(pool.Where(a => a.Counter(StatusKeys.Wound) == best).ToList())!;
+        // **同数のタイブレークは席番号の昇順**（第90期 §1-1・第89期の自己検査 (h) の訂正）。
+        // `ctx.PickOne` は候補が2個以上あると `Roll` を1つ消費するので、
+        // **傷を移すだけで誰も読まない行でも乱数列がずれた**（第89期の実測: `compare` 17セル/10行）。
+        // 機構の変更ではない——選び方を決定的にしただけ。
+        UnitState donor = pool.Where(a => a.Counter(StatusKeys.Wound) == best)
+                              .OrderBy(a => a.Slot).First();
         donor.SetCounter(StatusKeys.Wound, best - 1);
         int after = self.Counter(StatusKeys.Wound) + 1;
         self.SetCounter(StatusKeys.Wound, after);
@@ -1134,7 +1139,7 @@ public sealed class BomberTrait : Trait
         foreach (UnitState foe in ctx.LivingMembersShuffled(ctx.Opponent(self.TeamId)))
         {
             ctx.ApplyDamage(foe, EnemyBlast, self);
-            if (blaze.Foes) ctx.Ignite(foe);
+            if (blaze.Foes) ctx.Ignite(foe, source: self);
         }
 
         // 味方も巻き込む。これが他の駒の起点になる。
@@ -1142,7 +1147,7 @@ public sealed class BomberTrait : Trait
         {
             if (ally == self) continue;
             ctx.ApplyDamage(ally, AllyBlast, self, isFriendlyFire: true);
-            if (blaze.Allies) ctx.Ignite(ally, friendly: true);
+            if (blaze.Allies) ctx.Ignite(ally, friendly: true, source: self);
         }
     }
 }
@@ -1212,14 +1217,15 @@ public sealed class VenomTrait : Trait
         if (source is null || source.TeamId == self.TeamId) return;
         if (!source.IsAlive) return;
 
-        source.SetCounter(StatusKeys.Poison, source.Counter(StatusKeys.Poison) + StackPerHit);
+        // 毒の窓口（第90期）。滲み則の入口だけを担い、加算量もログも現行のまま。
+        ctx.Poison(source, StackPerHit, self, PoisonRoute.Venom);
         ctx.Log($"    {source.Name} の毒が {source.Counter(StatusKeys.Poison)} 層になった", LogKind.Status);
 
         // 扱いが雑なので隣の味方にもかかる。漏れは前後を含む隣接（味方に及ぶものの定義）。
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
             if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
-            ally.SetCounter(StatusKeys.Poison, ally.Counter(StatusKeys.Poison) + 1);
+            ctx.Poison(ally, 1, self, PoisonRoute.VenomLeak);
             ctx.Log($"    {ally.Name} にも毒がかかった", LogKind.FriendlyFire);
         }
     }
@@ -1355,8 +1361,52 @@ public readonly record struct SpillWoundRule(bool Enabled, SpillScope Scope = Sp
 /// </summary>
 public readonly record struct GatherRule(bool Enabled)
 {
-    /// <summary>既定は Z0（引き取らない）＝現行。</summary>
-    public static GatherRule Default => new(false);
+    /// <summary>
+    /// 既定は<b>引き取る</b>＝**第90期 (P1) に採用**（第89期は「紙のスループット ≥ 5%」という
+    /// <b>大きさの線を門に置いていた</b>ので 2×2 を1戦も回さずに落ちていた。第90期 §0-1 で門を
+    /// 「鎖が繋がっているか」に置き換え、第88期の特異性の規約で測り直して通った）。
+    /// </summary>
+    public static GatherRule Default => new(true);
+}
+
+/// <summary>
+/// 滲み則（第90期）。<b>傷を持つ相手には、状態異常が深く入る。</b>
+/// 毒は層が +1、燃焼は残ターンが +1（3 → 4）される。
+///
+/// <para><b>両陣営に等しくかかる。</b> 第85期の巻き込み則が既定になっているので味方も傷を負う
+/// ——傷を負った味方は瘴気の毒漏れ・火の粉を深く受ける。非対称なのは
+/// 「こちらはその規則を知って編成を組める」という一点だけで、<b>マイナスを別に足さない。</b></para>
+///
+/// <para><b>単価の壁を構造的に回避するのが狙い。</b> 第84・86・89期は3回とも
+/// 「傷1つ ＝ 3点」という<b>一撃で払い切る形</b>で落ちた。滲み則の払い出しは<b>層と残ターン</b>
+/// ——毎ターン刻む通貨なので、1回の書き込みが残りターン数ぶん払い出す
+/// （第87期＝ミオの着火が唯一その壁を越えて採用された形の一般化）。</para>
+///
+/// <para><b>足すのは定数 1。傷の数に比例させない</b>——比例させると「傷 N 個 × 係数」型に戻り、
+/// 第84期の単価の壁に自分から入る。<b>傷は消費しない。</b>
+/// <b>深さを持つ状態異常は毒と燃焼だけ</b>なので範囲はこの2つに閉じる
+/// （痺れは二値・破片は味方に書くもの・標は深さを持たない）。
+/// <b>ミオ（<see cref="AmplifierTrait"/>）は通さない</b>——増幅も着火も既に傷を読んでいる（第87期）ので二重取りになる。</para>
+/// </summary>
+public readonly record struct SoakRule(bool Enabled)
+{
+    /// <summary>既定は W0（滲まない）＝現行。</summary>
+    public static SoakRule Default => new(false);
+}
+
+/// <summary>毒を書いた経路（第90期の計数。<b>盤面には一切影響しない</b>）。</summary>
+public enum PoisonRoute
+{
+    /// <summary>瘴気（グザ・毎ターン敵全体）。</summary>
+    Miasma,
+    /// <summary>瘴気の味方漏れ（グザ・毎ターン味方全体）。</summary>
+    MiasmaLeak,
+    /// <summary>毒撃（スィド・被弾した相手へ）。</summary>
+    Venom,
+    /// <summary>毒撃の隣への漏れ（スィド・隣接味方）。</summary>
+    VenomLeak,
+    /// <summary>疫み（ラウ・死骸から敵全体へ）。</summary>
+    Contagion
 }
 
 /// <summary>
@@ -3663,7 +3713,7 @@ public sealed class ContagionTrait : Trait
         // 撒く先は常に敵側。味方の死骸から飛ぶときも、疫病が向かうのは敵。
         int spread = Math.Max(1, carried / 2);
         foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
-            foe.SetCounter(StatusKeys.Poison, foe.Counter(StatusKeys.Poison) + spread);
+            ctx.Poison(foe, spread, self, PoisonRoute.Contagion);   // 毒の窓口（第90期）
 
         ctx.Log($"    {dead.Name} の死骸から毒が撒き散らされた（+{spread}）", LogKind.Highlight);
     }
@@ -3708,12 +3758,13 @@ public sealed class MiasmaTrait : Trait
         if (foes.Count == 0) return;
 
         foreach (UnitState foe in foes)
-            foe.SetCounter(StatusKeys.Poison, foe.Counter(StatusKeys.Poison) + PerTurn);
+            ctx.Poison(foe, PerTurn, self, PoisonRoute.Miasma);      // 毒の窓口（第90期）
 
         // 瘴気は敵味方を選ばない。撒く側にも代償を負わせる。
+        // **味方漏れも同じ窓口を通す**——両陣営に等しくかかるのが滲み則の要点（第90期 §2-2）。
         var allies = ctx.LivingMembers(self.TeamId);
         foreach (UnitState ally in allies)
-            ally.SetCounter(StatusKeys.Poison, ally.Counter(StatusKeys.Poison) + AllyLeak);
+            ctx.Poison(ally, AllyLeak, self, PoisonRoute.MiasmaLeak);
 
         // 第61期の計数。**盤面には触らない。**
         ctx.NoteMiasma(foes.Count * PerTurn, allies.Count * AllyLeak);
@@ -5422,13 +5473,13 @@ public sealed class CinderTrait : Trait
     {
         if (dealt <= 0) return;
 
-        ctx.Ignite(target);
+        ctx.Ignite(target, source: self);
 
         // 味方に及ぶものなので前後を含む隣接を見る（Models.cs の AreAdjacent の但し書き）。
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
             if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
-            ctx.Ignite(ally, friendly: true);
+            ctx.Ignite(ally, friendly: true, source: self);
         }
     }
 }
