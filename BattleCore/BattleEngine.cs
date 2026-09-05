@@ -268,7 +268,7 @@ public sealed class BattleContext
         }
 
         int add = amount;
-        if (Soak.Enabled && wounded) { add += 1; wt.SoakPoisonAdded++; }
+        if (Soak.Poison && wounded) { add += 1; wt.SoakPoisonAdded++; }
 
         target.SetCounter(StatusKeys.Poison, target.Counter(StatusKeys.Poison) + add);
         if (add != amount)
@@ -312,7 +312,7 @@ public sealed class BattleContext
                 st.SoakBurnSeen++;
                 if (target.TeamId == source.TeamId) st.SoakBurnSeenAlly++;
                 (st.SoakSeenByRoute ??= new int[SoakRouteCount])[SoakBurnRouteIx]++;
-                if (Soak.Enabled) st.SoakBurnAdded++;
+                if (Soak.Burn) st.SoakBurnAdded++;
                 // 自己給餌（§1-2 の 4）。**同じ駒が味方に傷を書き、その味方に深い火を点けた。**
                 if (target.TeamId == source.TeamId && target.Counter(SpillWoundFromKey) == source.InstanceId + 1)
                     st.SoakSelfFeed++;
@@ -320,7 +320,7 @@ public sealed class BattleContext
         }
 
         int turns = BurnRules.Turns;
-        if (Soak.Enabled && wounded) turns += 1;
+        if (Soak.Burn && wounded) turns += 1;
 
         // 燃焼の計数（第57期）。**盤面には触らない。**
         // 「点いた」と「煽られた」を分けるのが要点——非スタックなので後者は
@@ -1418,7 +1418,8 @@ public sealed class BattleContext
 
     /// <summary>
     /// 滲み則（第90期）。<b>診断（soak）が版を差し替えるためだけの窓口</b>で、
-    /// 通常の実行では誰も渡さない（既定は <see cref="SoakRule.Default"/> ＝ 滲まない）。
+    /// 通常の実行では誰も渡さない（既定は <see cref="SoakRule.Default"/>）。
+    /// <b>第91期に通貨ごとに分かれた</b>——<c>Soak.Poison</c> は <see cref="Poison"/>、<c>Soak.Burn</c> は <see cref="Ignite"/> が見る。
     /// </summary>
     public SoakRule Soak { get; }
 

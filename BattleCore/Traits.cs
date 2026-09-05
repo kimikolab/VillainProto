@@ -1388,7 +1388,11 @@ public readonly record struct GatherRule(bool Enabled)
 /// （痺れは二値・破片は味方に書くもの・標は深さを持たない）。
 /// <b>ミオ（<see cref="AmplifierTrait"/>）は通さない</b>——増幅も着火も既に傷を読んでいる（第87期）ので二重取りになる。</para>
 /// </summary>
-public readonly record struct SoakRule(bool Enabled)
+/// <para><b>第91期に通貨ごとに分けた。</b> 燃焼は<b>非スタック</b>なので「量」が存在せず
+/// （第57期）、深さを足しても<b>点け直しで消える</b>——第90期の実測で燃焼側の滲みは
+/// 1.65 回/戦 発火して<b>紙の 2% しか払い出さない</b>のに、`compare` の 9 行を下げていた。
+/// <b>深さを足す設計は毒・傷のような「積む通貨」にしか効かない。</b></para>
+public readonly record struct SoakRule(bool Poison, bool Burn)
 {
     /// <summary>
     /// 既定は<b>滲む</b>＝**第90期に採用**（主判定は A ＝ キリ・ノミ の両方で通り、
@@ -1396,8 +1400,14 @@ public readonly record struct SoakRule(bool Enabled)
     /// <b>ただし理想61行では滲みの 100% が味方側に落ちる</b>——`compare` は 18 セル / 11 行が動き、
     /// うち `追撃×毒 (ハギ×グザ)` の第二波は 87.5 → 29.0（−58.5pt）。
     /// **主判定19行は1セルも動いていない**ので拒否権3 は構造的に立たなかった（第90期の報告書 §7）。
+    /// <para><b>第91期に燃焼側を切った。</b> 燃焼の滲みは 1.65 回/戦 発火するのに<b>紙の 2% しか払い出さず</b>、
+    /// それでも `compare` の 9 行を下げていた——**切ると 9 行とも第90期より前に完全に戻る**。
+    /// **毒側だけを残しても主判定は A ＝ キリ・ノミ の両方で通り**（どちらも 50 体中1位が瘴気袋のグザ）、
+    /// **拒否権は 61 行の分母（第91期の (G1)(G2)）でも立たない**——
+    /// −10.0pt 以上落ちたのは `追撃×毒 (ハギ×グザ)` の 1 行だけで、
+    /// **その5枚のどの駒も「他の行」の平均が −0.13 〜 +0.00pt** ＝ 組み合わせ固有の制約であって壊れではない。</para>
     /// </summary>
-    public static SoakRule Default => new(true);
+    public static SoakRule Default => new(Poison: true, Burn: false);
 }
 
 /// <summary>毒を書いた経路（第90期の計数。<b>盤面には一切影響しない</b>）。</summary>

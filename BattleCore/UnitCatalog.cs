@@ -16,7 +16,7 @@ public static class UnitCatalog
         Traits = new[] { TraitId.Splash, TraitId.Cinder },
         Pattern = AttackPattern.Sweep,
         PlusText = "火力が高く、薙ぎ払いが敵の両隣にも届く。斬った相手に燃焼を移す",
-        MinusText = "同じ一振りが、自分の両隣の味方も巻き込み、隣の味方にも火が移る（傷を負った味方には深く入る）",
+        MinusText = "同じ一振りが、自分の両隣の味方も巻き込み、隣の味方にも火が移る",
         Flavor = "三度、味方の部隊を半壊させて追い出された。"
     };
 
