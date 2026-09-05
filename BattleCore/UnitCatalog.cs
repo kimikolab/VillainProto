@@ -16,7 +16,7 @@ public static class UnitCatalog
         Traits = new[] { TraitId.Splash, TraitId.Cinder },
         Pattern = AttackPattern.Sweep,
         PlusText = "火力が高く、薙ぎ払いが敵の両隣にも届く。斬った相手に燃焼を移す",
-        MinusText = "同じ一振りが、自分の両隣の味方も巻き込み、隣の味方にも火が移る",
+        MinusText = "同じ一振りが、自分の両隣の味方も巻き込み、隣の味方にも火が移る（傷を負った味方には深く入る）",
         Flavor = "三度、味方の部隊を半壊させて追い出された。"
     };
 
@@ -146,7 +146,7 @@ public static class UnitCatalog
         Speed = 9,
         Traits = new[] { TraitId.Venom },
         PlusText = "殴られると、殴ってきた相手に毒を積む（毒は毎ターン層の分だけ削る）",
-        MinusText = "自分からは毒を積めない。毒が隣接する味方にも漏れる。攻撃力もほぼ無い",
+        MinusText = "自分からは毒を積めない。毒が隣接する味方にも漏れる（傷を負った味方には深く入る）。攻撃力もほぼ無い",
         Flavor = "袋が破れるまで役に立たない。誰も隣に立ちたがらない。"
     };
 
@@ -223,7 +223,7 @@ public static class UnitCatalog
         Speed = 7,
         Traits = new[] { TraitId.Contagion },
         PlusText = "毒に侵された駒が倒れると、残りの敵へ毒が飛ぶ（味方の死骸からも飛ぶ）",
-        MinusText = "自分では毒を与えられない",
+        MinusText = "自分では毒を与えられない。撒いた毒は傷を負った相手には深く入る",
         Flavor = "死体を運ばせると必ず疫病が出るので、隊列から外された。"
     };
 
@@ -236,7 +236,7 @@ public static class UnitCatalog
         Speed = 5,
         Traits = new[] { TraitId.Miasma },
         PlusText = "毎ターン、敵全体へ薄く毒を撒く",
-        MinusText = "瘴気は味方にも及ぶ（味方全体に毒+1）。攻撃力もほぼ無い",
+        MinusText = "瘴気は味方にも及ぶ（味方全体に毒+1）。傷を負った味方には深く入る。攻撃力もほぼ無い",
         Flavor = "近くにいるだけで具合が悪くなるので、天幕にすら入れてもらえない。"
     };
 

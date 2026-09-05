@@ -1390,8 +1390,14 @@ public readonly record struct GatherRule(bool Enabled)
 /// </summary>
 public readonly record struct SoakRule(bool Enabled)
 {
-    /// <summary>既定は W0（滲まない）＝現行。</summary>
-    public static SoakRule Default => new(false);
+    /// <summary>
+    /// 既定は<b>滲む</b>＝**第90期に採用**（主判定は A ＝ キリ・ノミ の両方で通り、
+    /// どちらも 50 体中1位が意図した相手の瘴気袋のグザ。拒否権1〜3 もすべて ○）。
+    /// <b>ただし理想61行では滲みの 100% が味方側に落ちる</b>——`compare` は 18 セル / 11 行が動き、
+    /// うち `追撃×毒 (ハギ×グザ)` の第二波は 87.5 → 29.0（−58.5pt）。
+    /// **主判定19行は1セルも動いていない**ので拒否権3 は構造的に立たなかった（第90期の報告書 §7）。
+    /// </summary>
+    public static SoakRule Default => new(true);
 }
 
 /// <summary>毒を書いた経路（第90期の計数。<b>盤面には一切影響しない</b>）。</summary>

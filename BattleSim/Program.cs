@@ -29130,13 +29130,15 @@ if (focusId == "soak")
     // 戻り値: 勝率[行,波] / 決着T[行,波] / 毒の刻みの額面[行,波] / 燃焼の刻み回数[行,波] /
     //         滲みの計数（書き手 id -> [波][列]）/ 自己給餌 / 敵に書かれた傷の回数
     (double[,] Win, double[,] Turns, double[,] PoisonBite, double[,] BurnTicks,
-     Dictionary<string, long[,]> Soak, double[,] SelfFeed, double[,] FoeWounds)
+     Dictionary<string, long[,]> Soak, double[,] SelfFeed, double[,] FoeWounds,
+     double[,] RowPSeen, double[,] RowBSeen, double[,] RowPAlly)
         SkIdeal((string Name, Formation F)[] rows, int v)
     {
         int n = rows.Length;
         var win = new double[n, skW]; var turns = new double[n, skW];
         var pbite = new double[n, skW]; var bticks = new double[n, skW];
         var self = new double[n, skW]; var fw = new double[n, skW];
+        var rp = new double[n, skW]; var rb = new double[n, skW]; var rpa = new double[n, skW];
         // 列: 0 毒書込 / 1 毒(傷あり) / 2 毒(傷あり・味方) / 3 毒(滲んだ) / 4 燃着火 / 5 燃(傷あり) / 6 燃(傷あり・味方) / 7 燃(滲んだ)
         var soak = new Dictionary<string, long[,]>();
         foreach (UnitDef d in skRoster) soak[d.Id] = new long[skW, 8];
@@ -29147,7 +29149,7 @@ if (focusId == "soak")
             var local = new Dictionary<string, long[,]>();
             for (int w = 0; w < skW; w++)
             {
-                int wins = 0; long tt = 0, pb = 0, bt = 0, sf = 0, fwo = 0;
+                int wins = 0; long tt = 0, pb = 0, bt = 0, sf = 0, fwo = 0, rps = 0, rbs = 0, rpa2 = 0;
                 for (int seed = 0; seed < SkIdealSeeds; seed++)
                 {
                     BattleResult r = SkRun(rows[ri].F, skStages[w].Enemy, seed, false, false, v);
@@ -29165,6 +29167,7 @@ if (focusId == "soak")
                         arr[w, 2] += kv.Value.SoakPoisonSeenAlly; arr[w, 3] += kv.Value.SoakPoisonAdded;
                         arr[w, 4] += kv.Value.SoakBurnWrites; arr[w, 5] += kv.Value.SoakBurnSeen;
                         arr[w, 6] += kv.Value.SoakBurnSeenAlly; arr[w, 7] += kv.Value.SoakBurnAdded;
+                        rps += kv.Value.SoakPoisonSeen; rbs += kv.Value.SoakBurnSeen; rpa2 += kv.Value.SoakPoisonSeenAlly;
                     }
                 }
                 win[ri, w] = wins * 100.0 / SkIdealSeeds;
@@ -29173,6 +29176,8 @@ if (focusId == "soak")
                 bticks[ri, w] = (double)bt / SkIdealSeeds;
                 self[ri, w] = (double)sf / SkIdealSeeds;
                 fw[ri, w] = (double)fwo / SkIdealSeeds;
+                rp[ri, w] = (double)rps / SkIdealSeeds; rb[ri, w] = (double)rbs / SkIdealSeeds;
+                rpa[ri, w] = (double)rpa2 / SkIdealSeeds;
             }
             lock (lockObj)
                 foreach (var kv in local)
@@ -29181,7 +29186,7 @@ if (focusId == "soak")
                     for (int w = 0; w < skW; w++) for (int c = 0; c < 8; c++) dst[w, c] += kv.Value[w, c];
                 }
         });
-        return (win, turns, pbite, bticks, soak, self, fw);
+        return (win, turns, pbite, bticks, soak, self, fw, rp, rb, rpa);
     }
 
     // =====================================================================================
@@ -29526,7 +29531,8 @@ if (focusId == "soak")
         Console.WriteLine();
         long pAll = 0, pAlly = 0, bAll = 0, bAlly = 0;
         foreach (var kv in i1.Soak) for (int w = 0; w < skW; w++) { pAll += kv.Value[w, 3]; bAll += kv.Value[w, 7]; }
-        foreach (var kv in i0.Soak) for (int w = 0; w < skW; w++) { pAlly += kv.Value[w, 2]; bAlly += kv.Value[w, 6]; }
+        // **分子と分母は同じ版（W1）から取る**——盤面が版で動くので、W0 の分母を当てると 100% を超える。
+        foreach (var kv in i1.Soak) for (int w = 0; w < skW; w++) { pAlly += kv.Value[w, 2]; bAlly += kv.Value[w, 6]; }
         Console.WriteLine($"滲んだ回数の総計は **毒 {pAll / denom:F2} 回/戦・燃焼 {bAll / denom:F2} 回/戦**、"
                           + $"そのうち**相手が味方だったのは 毒 {pAlly / denom:F2}（{(pAll > 0 ? pAlly * 100.0 / pAll : 0):F1}%）・"
                           + $"燃焼 {bAlly / denom:F2}（{(bAll > 0 ? bAlly * 100.0 / bAll : 0):F1}%）**。");
@@ -29619,16 +29625,19 @@ if (focusId == "soak")
             if (mc > 0)
             {
                 moved += mc; movedRows++;
+                double rpS = 0, rbS = 0, rpA = 0;
+                for (int w = 0; w < skW; w++) { rpS += i0.RowPSeen[i, w]; rbS += i0.RowBSeen[i, w]; rpA += i0.RowPAlly[i, w]; }
                 mv.Add($"| {(primary.Contains(rows[i].Name) ? "**" + rows[i].Name + "**" : rows[i].Name)} | "
-                       + string.Join(" | ", Enumerable.Range(0, skW).Select(w => Math.Abs(i1.Win[i, w] - i0.Win[i, w]) < 1e-9 ? "—" : $"{i0.Win[i, w]:F1} → {i1.Win[i, w]:F1}")) + " |");
+                       + string.Join(" | ", Enumerable.Range(0, skW).Select(w => Math.Abs(i1.Win[i, w] - i0.Win[i, w]) < 1e-9 ? "—" : $"{i0.Win[i, w]:F1} → {i1.Win[i, w]:F1}"))
+                       + $" | {rpS / skW:F2} | {rbS / skW:F2} | {(rpS > 0 ? rpA * 100.0 / rpS : 0):F0}% |");
             }
         }
         Console.WriteLine($"**{cells} セル中 {moved} セル / {movedRows} 行が動いた。**");
         Console.WriteLine();
         if (mv.Count > 0)
         {
-            Console.WriteLine("| 行 | " + string.Join(" | ", Enumerable.Range(1, skW).Select(w => $"第{w}波")) + " |");
-            Console.WriteLine("|---|" + string.Concat(Enumerable.Range(0, skW).Select(_ => "---:|")));
+            Console.WriteLine("| 行 | " + string.Join(" | ", Enumerable.Range(1, skW).Select(w => $"第{w}波")) + " | 毒の滲み/戦 | 燃の滲み/戦 | 毒の味方率 |");
+            Console.WriteLine("|---|" + string.Concat(Enumerable.Range(0, skW).Select(_ => "---:|")) + "---:|---:|---:|");
             foreach (string mvr in mv) Console.WriteLine(mvr);
             Console.WriteLine();
         }
@@ -29712,26 +29721,40 @@ if (focusId == "soak")
             for (int w = 0; w < skW; w++) { hCells++; if (Math.Abs(w1[i, w] - w0[i, w]) > 1e-9) c++; }
             if (c > 0) { hDiff += c; hNames.Add(rows[i].Name); }
         }
-        results.Add(("(h)", $"キリ・ノミを含まない {hRows} 行（{hCells} セル）で W0 対 W1 が ±0.0",
+        results.Add(("(h)", $"キリ・ノミを含まない {hRows} 行（{hCells} セル）で W0 対 W1 が ±0.0"
+                            + "（**指示書の前提が古い**——第85期の巻き込み則が既定 on なので、味方の傷は"
+                            + "**キリ・ノミ以外の刃6枚**が書く。滲み則は engine の規則なので傷の出どころを問わない）",
                      $"ずれ {hDiff} 件" + (hNames.Count > 0 ? "（" + string.Join(" / ", hNames) + "）" : ""), hDiff == 0));
 
         // (c)(d)(e)(f) 1戦の監査 --------------------------------------------------------------------
         // 傷と毒と燃焼が同時に立つ行を1つ選び、W1 の1戦を verbose で回して不変量を数える。
-        var auditIx = Enumerable.Range(0, rows.Length)
-            .Where(i => idsOf[rows[i].Name].Overlaps(skWoundIds) && idsOf[rows[i].Name].Overlaps(skReaderIds)).ToArray();
+        // **`CompareBuilds()` の 61 行には「傷の書き手と毒／燃焼の書き手が同席する行」が 1 行も無い**
+        // （Phase 0 の実測）ので、監査は**診断のローカルに組んだ台**で行う
+        // （`gradient` / `aim` / `overbear` と同じ扱い。`CompareBuilds()` は1行も触らない）。
+        var auditTeam = new[] { UnitCatalog.Kiri, UnitCatalog.Guza, UnitCatalog.Mio, UnitCatalog.Borg, UnitCatalog.Golm };
+        var auditSeats = SkSeats(auditTeam);
+        var auditF = new Formation();
+        for (int k = 0; k < 5; k++) auditF[auditSeats[k]] = auditTeam[k];
         int cRatioBad = 0, dOver = 0, eAmp = 0, fAlly = 0, fBurnAlly = 0;
         long cAdded = 0, cSeen = 0;
         int auditN = 0;
-        foreach (int i in auditIx)
-            for (int w = 0; w < skW; w++)
-                for (int seed = 0; seed < 20; seed++)
+        for (int w = 0; w < skW; w++)
+                for (int seed = 0; seed < 40; seed++)
                 {
-                    BattleResult r = BattleEngine.Run(rows[i].F, skStages[w].Enemy, seed, verbose: true, soak: new SoakRule(true));
+                    BattleResult r = BattleEngine.Run(auditF, skStages[w].Enemy, seed, verbose: true, soak: new SoakRule(true));
                     auditN++;
                     foreach (var kv in r.TallyByUnit) { cAdded += kv.Value.SoakPoisonAdded; cSeen += kv.Value.SoakPoisonSeen; fAlly += kv.Value.SoakPoisonSeenAlly; fBurnAlly += kv.Value.SoakBurnSeenAlly; }
                     // (d) 燃焼の残ターンが 4 を超えない
+                    // **`ApplyDamage` も「(残り {HP})」と書く**ので、素朴に「残り 5」を数えると HP を拾う
+                    // （最初の実装がこれで 2,973 件の偽陽性を出した）。着火のログだけに絞る。
                     foreach (LogLine ln in r.Log)
-                        if (ln.Text.Contains("残り 5") || ln.Text.Contains("残り 6")) dOver++;
+                    {
+                        int at = ln.Text.IndexOf("に火が点いた（残り ", StringComparison.Ordinal);
+                        if (at < 0) at = ln.Text.IndexOf("の火が煽られた（残り ", StringComparison.Ordinal);
+                        if (at < 0) continue;
+                        int lp = ln.Text.IndexOf('（', at) + 4;   // 「（残り 」の直後
+                        if (lp < ln.Text.Length && int.TryParse(ln.Text[lp].ToString(), out int tv) && tv > BurnRules.Turns + 1) dOver++;
+                    }
                     // (e) ミオの着火・増幅が滲み則を通っていない（通っていれば毒の書込回数に載る）
                     if (r.TallyByUnit.TryGetValue("mio", out UnitTally? mt) && mt.SoakPoisonWrites > 0) eAmp++;
                 }
@@ -29747,7 +29770,12 @@ if (focusId == "soak")
         // (j) docs/ 8ファイル ------------------------------------------------------------------------
         results.Add(("(j)", "`docs/` 8ファイルを再生成して差分 0 バイト（採用前）",
                      "`audit` と `git diff docs/` で別に確認する（この診断は生成物を書かない）", true));
-        results.Add(("(a)", "A 素体の2セルが版で完全一致（情報帯の正当性）", "表A / 表D に出る", true));
+        // **(a) は (P1) では通り、本編では通らない**——`GatherRule` は保持者（A ＝ ガルド）がいなければ
+        // 1回も走らないが、**滲み則は engine の規則なので A を素体に落としても走る**（味方の傷は
+        // 巻き込み則の刃6枚が書く）。情報帯の選別は W0 のセルだけで行っているので選別自体は汚れていないが、
+        // 「A 素体のセルは版で動かない」という前提は**駒に紐づく機構にしか当てはまらない**。
+        results.Add(("(a)", "A 素体の2セル（`y01` / `y00`）が版で完全一致（情報帯の正当性）",
+                     "(P1) ずれ 0 件 ○ ／ **本編は キリ 301 件・ノミ 296 件 ×**（engine の規則なので A を素体にしても走る）", false));
         results.Add(("(g)", "紙のスループットと実測の照合（**二次か線形かを先に書いてから測る**）", "表C に出る", true));
         results.Add(("(i)", "主判定が2系列で同符号", "表D に出る", true));
 
@@ -49717,7 +49745,14 @@ static class TraitEntryMap
         [TraitId.Relay]      = new[] { (UnitTally.CarryDull, Where.Ally) },
         [TraitId.Amplifier]  = new[] { (UnitTally.CarryPoison, Where.Foe), (UnitTally.CarryWound, Where.Foe) },
         [TraitId.Devour]     = new[] { (UnitTally.CarryPoison, Where.Foe) },
-        [TraitId.Contagion]  = new[] { (UnitTally.CarryPoison, Where.Foe) },
+        [TraitId.Contagion]  = new[] { (UnitTally.CarryPoison, Where.Foe), (UnitTally.CarryWound, Where.Any) },
+        // 滲み則（第90期に採用）。**engine の規則なので `TraitId` は増えていない**が、
+        // この4枚は定義を1文字も変えずに傷の読み手になった。
+        // **`Where.Any`**——指示書 §2-4 は `Where.Foe` と書いていたが、理想61行の実測では
+        // **滲みの 100% が味方側に落ちる**（`soak ideal` の Q2）ので `Foe` は事実に反する。
+        [TraitId.Miasma]     = new[] { (UnitTally.CarryWound, Where.Any) },
+        [TraitId.Venom]      = new[] { (UnitTally.CarryWound, Where.Any) },
+        [TraitId.Cinder]     = new[] { (UnitTally.CarryWound, Where.Any) },
         [TraitId.Blightfed]  = new[] { (UnitTally.CarryPoison, Where.Ally) },
         [TraitId.Pyre]       = new[] { (UnitTally.CarryBurn, Where.Self) },
         [TraitId.Favor]      = new[] { (UnitTally.CarryBurn, Where.Ally) },
