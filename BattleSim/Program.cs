@@ -2111,12 +2111,14 @@ if (focusId == "curse")
                 for (int seed = 0; seed < 200; seed++)
                 {
                     if (BattleEngine.Run(b.F, st.Enemy, seed, verbose: false).PlayerWon) w0++;
-                    if (CuRunV(b.F, st.Enemy, seed, false, 0).PlayerWon) w1++;
+                    if (CuRunV(b.F, st.Enemy, seed, false, CurseRule.Default.Enabled ? 1 : 0).PlayerWon) w1++;
                 }
                 tot++; if (w0 == w1) same++;
             }
-        Console.WriteLine($"- **(c)** 既定（引数を渡さない）と `CurseRule(false)` が一致するセル: "
-                          + $"**{same} / {tot}**{(same == tot ? "（○）" : "（×）")}");
+        Console.WriteLine($"- **(c)** 既定（引数を渡さない）と `CurseRule({CurseRule.Default.Enabled.ToString().ToLowerInvariant()})` が"
+                          + $"一致するセル: **{same} / {tot}**{(same == tot ? "（○）" : "（×）")}"
+                          + "——**明示して渡した版と既定が同じ盤面を出すこと**の検算"
+                          + "（採用の前後でどちらの版と比べるかが入れ替わる。第36期 `gullet belly4` と同型）");
 
         // (d) 規則が実際に発火すること（陽性対照）
         double fired = 0, dry = 0, kinds = 0, added = 0, dull0 = 0, dull1 = 0; int n = 0;
