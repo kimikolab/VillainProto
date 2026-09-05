@@ -3,6 +3,27 @@
 /// <summary>
 /// 戦闘中の盤面。特性はこれを通してのみ盤面に触る。
 /// </summary>
+/// <summary>
+/// 第94期 (T2) の観測子。<b>盤面には一切影響しない。</b>
+///
+/// <para><paramref name="trait"/> がいま実行中の特性、<paramref name="owner"/> がその持ち主、
+/// <paramref name="target"/> がカウンタを読み書きされた駒、<paramref name="key"/> がキー
+/// （<see cref="StatusKeys"/> か <see cref="UnitTally.CarryKeys"/> の名前）、
+/// <paramref name="delta"/> は <b>0 なら読み・正なら供給・負なら消費</b>。</para>
+/// </summary>
+public delegate void CounterProbe(TraitId trait, UnitState owner, UnitState target, string key, int delta);
+
+/// <summary>
+/// 第94期 (T2) の印。<b>いま実行中の特性とその持ち主</b>だけを持つ観測専用の値。
+/// <b>どの規則もこれを読まない</b>（`derive check` の自己検査 (d)）。
+/// </summary>
+public readonly struct TraitMark
+{
+    public TraitMark(TraitId id, UnitState? owner) { Id = id; Owner = owner; }
+    public TraitId Id { get; }
+    public UnitState? Owner { get; }
+}
+
 /// <summary>状態異常のカウンタ名。特性と engine の間の唯一の接点。</summary>
 public static class StatusKeys
 {
@@ -152,9 +173,27 @@ public sealed class BattleContext
     /// </summary>
     public bool CanActOutOfTurn(UnitState u)
         => u.IsAlive
-           && u.Counter(StatusKeys.Stun) == 0
-           && u.Traits.All(t => t.CanReact(this, u))
+           && u.RawCounter(StatusKeys.Stun) == 0
+           && u.Traits.All(t => CanReactProbed(t, u))
            && !(Hush.Active && AllUnits.Any(x => x.IsAlive && x.HasTrait(TraitId.Hush)));
+
+    /// <summary>第94期 (T2)。<see cref="Trait.CanReact"/> を印つきで問う。<b>答えは1ビットも変えない。</b></summary>
+    bool CanReactProbed(Trait t, UnitState u)
+    {
+        TraitMark m = BeginTrait(t.Id, u);
+        bool ok = t.CanReact(this, u);
+        EndTrait(m);
+        return ok;
+    }
+
+    /// <summary>第94期 (T2)。<see cref="Trait.CanAct"/> を印つきで問う。<b>答えは1ビットも変えない。</b></summary>
+    public bool CanActProbed(Trait t, UnitState u, ActionKind kind)
+    {
+        TraitMark m = BeginTrait(t.Id, u);
+        bool ok = t.CanAct(this, u, kind);
+        EndTrait(m);
+        return ok;
+    }
 
     public void Interrupt(Action body)
     {
@@ -189,7 +228,7 @@ public sealed class BattleContext
     {
         foreach (UnitState u in _units.Where(x => x.IsAlive).ToList())
         {
-            int poison = u.Counter(StatusKeys.Poison);
+            int poison = u.RawCounter(StatusKeys.Poison);
             if (poison <= 0) continue;
 
             // 毒喰らい（ベニ）は澱みを啜って癒す代わりに、味方が負った毒をより深く効かせる。
@@ -214,7 +253,7 @@ public sealed class BattleContext
 
             // 傷口の着火の帰属（第87期・持続係数の分子）。**盤面には触らない。**
             // 着火の時点でこの駒の毒は 0 だったので、以後の刻みはすべて着火の下流にある。
-            if (u.Counter(AmplifierTrait.IgnitedKey) > 0)
+            if (u.RawCounter(AmplifierTrait.IgnitedKey) > 0)
             {
                 UnitTally it = TallyOf(u);
                 it.IgnitePoisonDamage += poison;
@@ -229,7 +268,7 @@ public sealed class BattleContext
         // 「積み上がる方」で先に落ちるようにするため（燃焼のほうが後から効く）。
         foreach (UnitState u in _units.Where(x => x.IsAlive).ToList())
         {
-            int left = u.Counter(StatusKeys.Burn);
+            int left = u.RawCounter(StatusKeys.Burn);
             if (left <= 0) continue;
 
             // 燃焼の計数（第57期）。**盤面には触らない。**
@@ -282,11 +321,11 @@ public sealed class BattleContext
         (wt.WoundWritesByRoute ??= new int[WoundRouteCount])[(int)route] += amount;
 
         UnitTally tt = TallyOf(target);
-        int cur = target.Counter(StatusKeys.Wound);
+        int cur = target.RawCounter(StatusKeys.Wound);
         // §1-1 の門の 3: **すでに Bundle に達したことのある駒**にさらに書かれた回数（＝上乗せの機会）。
-        if (target.Counter(DeepRule.ReachedKey) > 0) tt.DeepOnTop++;
+        if (target.RawCounter(DeepRule.ReachedKey) > 0) tt.DeepOnTop++;
 
-        if (Deep.Enabled && target.Counter(StatusKeys.Deep) > 0)
+        if (Deep.Enabled && target.RawCounter(StatusKeys.Deep) > 0)
         {
             // 上乗せ。傷は溜まらず、その場でダメージになる。**巻き込み則を通さない**（閉じたループを作らない）。
             tt.DeepOverFires += amount;
@@ -333,6 +372,8 @@ public sealed class BattleContext
     /// 既定では辞書の参照回数も変わらない。</para>
     /// </summary>
     public int WoundDepthOf(UnitState u)
+        // **`Counter` を使う**（第94期 (T2)）——ここは engine の内部ではなく
+        // **傷の読み手が傷を読む窓口**なので、どの特性が読んだかを観測する。
         => u.Counter(StatusKeys.Wound) + (Deep.Enabled && u.Counter(StatusKeys.Deep) > 0 ? 1 : 0);
 
     /// <summary>
@@ -358,9 +399,9 @@ public sealed class BattleContext
     internal void NoteDeepAction(UnitState actor)
     {
         // §1-1 の門の 2（版に依らない）: **達した駒がその後に行動した回数** ＝ 自傷が払い出される機会。
-        if (actor.Counter(DeepRule.ReachedKey) > 0) TallyOf(actor).DeepActs++;
+        if (actor.RawCounter(DeepRule.ReachedKey) > 0) TallyOf(actor).DeepActs++;
 
-        if (!Deep.Enabled || !actor.IsAlive || actor.Counter(StatusKeys.Deep) <= 0) return;
+        if (!Deep.Enabled || !actor.IsAlive || actor.RawCounter(StatusKeys.Deep) <= 0) return;
 
         UnitTally t = TallyOf(actor);
         t.DeepBiteFires++;
@@ -374,7 +415,7 @@ public sealed class BattleContext
     /// </summary>
     internal void NoteDeepStalled(UnitState actor)
     {
-        if (Deep.Enabled && actor.Counter(StatusKeys.Deep) > 0) TallyOf(actor).DeepStalled++;
+        if (Deep.Enabled && actor.RawCounter(StatusKeys.Deep) > 0) TallyOf(actor).DeepStalled++;
     }
 
     /// <summary>
@@ -401,8 +442,8 @@ public sealed class BattleContext
         UnitTally wt = TallyOf(writer);
         wt.SoakPoisonWrites++;
         // 第93期: **深手も「傷を持っている」**（`WoundDepthOf` の二値版）。深手なら +1 ではなく +2。
-        bool deepW = Deep.Enabled && target.Counter(StatusKeys.Deep) > 0;
-        bool wounded = deepW || target.Counter(StatusKeys.Wound) > 0;
+        bool deepW = Deep.Enabled && target.RawCounter(StatusKeys.Deep) > 0;
+        bool wounded = deepW || target.RawCounter(StatusKeys.Wound) > 0;
         if (wounded)
         {
             wt.SoakPoisonSeen++;
@@ -414,7 +455,7 @@ public sealed class BattleContext
         // **深手の数に比例させない**（二値なので比例のしようが無いが、明記しておく）。
         if (Soak.Poison && wounded) { int bump = deepW ? 2 : 1; add += bump; wt.SoakPoisonAdded++; if (deepW) wt.DeepSoakDeeper++; }
 
-        target.SetCounter(StatusKeys.Poison, target.Counter(StatusKeys.Poison) + add);
+        target.SetCounter(StatusKeys.Poison, target.RawCounter(StatusKeys.Poison) + add);
         if (add != amount)
             Log($"    {target.Name} の{(deepW ? "深手" : "傷口")}から毒が滲みた（+{add - amount}）", LogKind.Status);
     }
@@ -443,12 +484,12 @@ public sealed class BattleContext
     {
         if (!target.IsAlive) return;
 
-        bool relit = target.Counter(StatusKeys.Burn) > 0;
+        bool relit = target.RawCounter(StatusKeys.Burn) > 0;
 
         // 滲み則の計数（第90期）。**規則の分岐より手前**なので版に依らない。
         // 第93期: **深手も「傷を持っている」**（`Soak.Burn` は既定 false なので盤面は動かない）。
-        bool wounded = target.Counter(StatusKeys.Wound) > 0
-                       || (Deep.Enabled && target.Counter(StatusKeys.Deep) > 0);
+        bool wounded = target.RawCounter(StatusKeys.Wound) > 0
+                       || (Deep.Enabled && target.RawCounter(StatusKeys.Deep) > 0);
         if (source is not null)
         {
             UnitTally st = TallyOf(source);
@@ -460,7 +501,7 @@ public sealed class BattleContext
                 (st.SoakSeenByRoute ??= new int[SoakRouteCount])[SoakBurnRouteIx]++;
                 if (Soak.Burn) st.SoakBurnAdded++;
                 // 自己給餌（§1-2 の 4）。**同じ駒が味方に傷を書き、その味方に深い火を点けた。**
-                if (target.TeamId == source.TeamId && target.Counter(SpillWoundFromKey) == source.InstanceId + 1)
+                if (target.TeamId == source.TeamId && target.RawCounter(SpillWoundFromKey) == source.InstanceId + 1)
                     st.SoakSelfFeed++;
             }
         }
@@ -1038,11 +1079,11 @@ public sealed class BattleContext
         }
 
         string owed = ScapegoatTrait.OwedKey(kind);
-        int o = u.Counter(owed);
+        int o = u.RawCounter(owed);
         if (o <= 0) return;
         if (kind == StatusKeys.Poison)
         {
-            int stacks = u.Counter(StatusKeys.Poison);
+            int stacks = u.RawCounter(StatusKeys.Poison);
             if (stacks <= 0) return;
             ScapegoatFoeDot += dmg * Math.Min(o, stacks) / stacks;
         }
@@ -1054,7 +1095,7 @@ public sealed class BattleContext
             // 重ねただけで満額を取ってしまうし、延びた末尾に届く前に敵が落ちた場合に
             // 「効かなかった」が記録されない。
             // 呼ばれる時点で残ターンは既に 1 引かれている（`TickStatuses` の順序）。
-            if (u.Counter(StatusKeys.Burn) >= o) return;
+            if (u.RawCounter(StatusKeys.Burn) >= o) return;
             ScapegoatFoeDot += dmg;
             u.SetCounter(owed, o - 1);
         }
@@ -1071,7 +1112,7 @@ public sealed class BattleContext
         }
 
         string owed = ScapegoatTrait.OwedKey(StatusKeys.Stun);
-        int o = u.Counter(owed);
+        int o = u.RawCounter(owed);
         if (o <= 0) return;
         ScapegoatFoeSkips++;
         u.SetCounter(owed, o - 1);
@@ -1154,7 +1195,7 @@ public sealed class BattleContext
     /// <summary>単体振りの着地点を陣営別に数える。<b>盤面には触らない。</b></summary>
     internal void NoteDivertSwing(UnitState actor, UnitState target)
     {
-        bool marked = target.Counter(StatusKeys.Marked) > 0;
+        bool marked = target.RawCounter(StatusKeys.Marked) > 0;
         if (actor.TeamId == PlayerTeam)
         {
             DivertAllySingles++;
@@ -1272,8 +1313,8 @@ public sealed class BattleContext
         foreach (UnitState u in _units)
         {
             if (u.TeamId == PlayerTeam) continue;
-            if (!u.IsAlive || u.Counter(StatusKeys.Marked) <= 0) { u.SetCounter(FinisherSinceKey, 0); continue; }
-            if (u.Counter(FinisherSinceKey) == 0) u.SetCounter(FinisherSinceKey, Turn);
+            if (!u.IsAlive || u.RawCounter(StatusKeys.Marked) <= 0) { u.SetCounter(FinisherSinceKey, 0); continue; }
+            if (u.RawCounter(FinisherSinceKey) == 0) u.SetCounter(FinisherSinceKey, Turn);
         }
     }
 
@@ -1283,7 +1324,7 @@ public sealed class BattleContext
     {
         FinisherFires++;
         if (crossed) FinisherCross++;
-        int since = target.Counter(FinisherSinceKey);
+        int since = target.RawCounter(FinisherSinceKey);
         if (since > 0) { FinisherWaitSum += Turn - since; FinisherWaitCount++; }
         string k = target.Def.Name;
         FinisherTargetTo[k] = FinisherTargetTo.TryGetValue(k, out int a) ? a + 1 : 1;
@@ -1312,7 +1353,7 @@ public sealed class BattleContext
         FinisherAllySingles++;
         if (_finisherConsumedTurn != Turn) return;
         foreach (UnitState f in _units)
-            if (f.TeamId != PlayerTeam && f.IsAlive && f.Counter(StatusKeys.Marked) > 0) return;
+            if (f.TeamId != PlayerTeam && f.IsAlive && f.RawCounter(StatusKeys.Marked) > 0) return;
         FinisherStarved++;
     }
 
@@ -1428,6 +1469,10 @@ public sealed class BattleContext
     internal void NoteCarry(UnitState u, int key, int amount)
     {
         if (amount <= 0) return;
+        // 第94期 (T2)。**供給の観測はここ1箇所**——`Whet` / `Dull` / `ApplyDamage` /
+        // `SwapSlots` / `NoteStatusGain` が全部ここへ来るので、11 キーを同じ器具で観測できる。
+        // **既定 null なので通常の実行では1行も走らない。**
+        if (Probe is not null) NoteProbeWrite(u, UnitTally.CarryKeys[key], amount);
         UnitTally t = TallyOf(u);
         int[] amt = t.CarryAmount ??= new int[UnitTally.CarryKeys.Length];
         int[] cnt = t.CarryCount ??= new int[UnitTally.CarryKeys.Length];
@@ -1642,9 +1687,10 @@ public sealed class BattleContext
                          SutureRule? suture = null, SpillWoundRule? spillWound = null,
                          MendRule? mend = null, IgniteRule? woundIgnite = null,
                          GatherRule? gather = null, SoakRule? soak = null,
-                         DeepRule? deep = null)
+                         DeepRule? deep = null, CounterProbe? probe = null)
     {
         _rng = new Random(seed);
+        Probe = probe;          // 第94期 (T2)。**既定 null。診断だけが渡す。**
         _verbose = verbose;
         Colossus = colossus ?? ColossusRule.Default;
         Yoke = yoke ?? YokeRule.Default;
@@ -1678,6 +1724,56 @@ public sealed class BattleContext
         Gather = gather ?? GatherRule.Default;
         Soak = soak ?? SoakRule.Default;
         Deep = deep ?? DeepRule.Default;
+    }
+
+    // =====================================================================================
+    // 第94期 (T2) —— 観測の印。**分岐に一切使わない。**
+    //
+    // `TraitEntryMap` / `TraitKeyMap`（BattleSim 側の手で作った表）は「特性 X がキー K を
+    // 読む／供給する」と書いてあるが、**ソースの静的解析では取れない**
+    // （`target.Counter(StatusKeys.Wound)` がどの特性の中で呼ばれたかは実行しないと分からない）。
+    // だから走らせて観測する。engine が特性のフックを呼ぶ直前に印を立て、直後に戻す。
+    //
+    // **盤面には一切影響しない**——`Probe` は既定 null（通常の実行では一度も呼ばれない）で、
+    // 印そのものはどの規則からも読まれない。乱数も1つも消費しない
+    // （`compare` 305 セルが `docs/balance.md` と 0 件であることが検算・第94期の Q3）。
+    // =====================================================================================
+
+    /// <summary>味方の刃（<c>isFriendlyFire</c>）を観測するための擬似キー。第94期 (T2)。</summary>
+    public const string FriendlyBladeKey = "味方の刃";
+
+    /// <summary>印が立っていない（＝engine の中継が出した）味方の刃。第94期 (T2)。</summary>
+    public const string FriendlyBladeEngineKey = "味方の刃(engine)";
+
+    /// <summary>いま実行中の特性（<see cref="Probe"/> 用の印）。<b>観測専用。</b></summary>
+    public TraitMark Mark { get; private set; }
+
+    /// <summary>観測子。<b>既定 null。</b>診断（`derive scan`）だけが立てる。</summary>
+    public CounterProbe? Probe { get; set; }
+
+    /// <summary>印を立て、直前の印を返す（呼び出し側が <see cref="EndTrait"/> へ戻す）。</summary>
+    public TraitMark BeginTrait(TraitId id, UnitState owner)
+    {
+        TraitMark prev = Mark;
+        Mark = new TraitMark(id, owner);
+        return prev;
+    }
+
+    /// <summary>印を戻す。</summary>
+    public void EndTrait(TraitMark prev) => Mark = prev;
+
+    /// <summary>カウンタの読みを1件観測する（<see cref="UnitState.Counter"/> から来る）。</summary>
+    internal void NoteProbeRead(UnitState u, string key)
+    {
+        if (Probe is null || Mark.Owner is null) return;
+        Probe(Mark.Id, Mark.Owner, u, key, 0);
+    }
+
+    /// <summary>書きを1件観測する。<paramref name="delta"/> は増減の符号つき（0 は読み）。</summary>
+    internal void NoteProbeWrite(UnitState u, string key, int delta)
+    {
+        if (Probe is null || Mark.Owner is null || delta == 0) return;
+        Probe(Mark.Id, Mark.Owner, u, key, delta);
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -1906,7 +2002,7 @@ public sealed class BattleContext
 
             foreach ((string key, string label) in StatusLabels)
             {
-                int v = u.Counter(key);
+                int v = u.RawCounter(key);
                 if (v <= 0) continue;
                 Emit(new BattleEvent
                 {
@@ -2104,7 +2200,7 @@ public sealed class BattleContext
         bool finisher = attacker.HasTrait(TraitId.Finisher);
         UnitState? marked = finisher
             ? FinisherTrait.Preferred(this, foes)
-            : PickOne(foes.Where(f => f.Counter(StatusKeys.Marked) > 0).ToList());
+            : PickOne(foes.Where(f => f.RawCounter(StatusKeys.Marked) > 0).ToList());
 
         // 止めのときは **`marked == target` でもここで返す**——標の段は鎖の1段目なので、
         // 庇い・後備え・殉教・棘守りを飛び越すのは標が元から持つ性質。
@@ -2115,7 +2211,7 @@ public sealed class BattleContext
 
             // 業（第49期）が敵へ書いた標が実際に引いた回数。**engine が標の読み手**なので、
             // 「敵側に読み手がいない」＝「効かない」ではない（第48期の棚卸しが数えたのは駒）。
-            if (ScapegoatActive && marked.Counter(ScapegoatTrait.OwedKey(StatusKeys.Marked)) > 0)
+            if (ScapegoatActive && marked.RawCounter(ScapegoatTrait.OwedKey(StatusKeys.Marked)) > 0)
                 ScapegoatMarkPulls++;
             // 逸らし（第50期）。**engine の鎖が実際に主目標を差し替えた回数**を陣営別に数える。
             // ログの「気を取られた」と1対1で対応する（あちらは verbose のときしか出ない）。
@@ -2181,7 +2277,7 @@ public sealed class BattleContext
         // （実行は ThornGuardTrait.OnDamaged。「入れ替え → 反撃」の順）。
         UnitState? thornGuard = PickOne(foes.Where(
             f => f.HasTrait(TraitId.ThornGuard) && f != target
-                 && f.Counter(ThornGuardTrait.PendingKey) > 0
+                 && f.RawCounter(ThornGuardTrait.PendingKey) > 0
                  && ThornGuardTrait.Covers(f, target)).ToList());
 
         if (thornGuard is not null)
@@ -2315,7 +2411,7 @@ public sealed class BattleContext
                 // V2: 刻める攻撃だけ 1。刻めない＝この一撃で倒れる（死体には刻まない）。
                 // **判定は代金を払った価格で行う予測**——実際の生死は肩代わり・上限まで行かないと
                 // 決まらないので、破片が無く HP がこの打点以下のときだけ「刻めない」と読む。
-                ThinBladeCost.Carving => !(target.Counter(StatusKeys.Armor) <= 0 && target.Hp <= atk),
+                ThinBladeCost.Carving => !(target.RawCounter(StatusKeys.Armor) <= 0 && target.Hp <= atk),
                 // V3: 自分より遅い相手には 1。**同速は「遅い」ではない。**
                 _ => target.Def.Speed < actor.Def.Speed,
             };
@@ -2340,7 +2436,7 @@ public sealed class BattleContext
         // 「標が無ければ狙えなかった敵」。標が持つ特権を実際に使えたかはこちらでしか読めない。
         if (FinisherActive && pattern == AttackPattern.Single && actor.HasTrait(TraitId.Finisher))
         {
-            if (target.Counter(StatusKeys.Marked) > 0)
+            if (target.RawCounter(StatusKeys.Marked) > 0)
             {
                 atk *= Finisher.Multiplier;
                 NoteFinisherFire(target, !TargetPool(actor).Contains(target));
@@ -2374,7 +2470,7 @@ public sealed class BattleContext
                 TallyOf(actor).CreakSweeps++;
         }
         // 燃えている状態で振った回数（第57期・Attacks の内数）。熾火の稼働率の分子。
-        if (actor.Counter(StatusKeys.Burn) > 0) TallyOf(actor).BurnAttacks++;
+        if (actor.RawCounter(StatusKeys.Burn) > 0) TallyOf(actor).BurnAttacks++;
 
         // 鱗（第47期）。**振った回数と、そのうち貫きだった回数を分けて数える。**
         // 「貫き」は成果ではないので、後列に当たった回数は ResolvePierce の側で別に数える。
@@ -2418,7 +2514,11 @@ public sealed class BattleContext
         // 特性の発動は攻撃1回につき1度、主目標に対してのみ。
         // 範囲攻撃のたびに巻き込みや毒が複数回発動すると、範囲持ちが即座に壊れる。
         foreach (Trait t in actor.Traits.ToList())
+        {
+            TraitMark m = this.BeginTrait(t.Id, actor);   // 第94期 (T2) の印
             t.OnAfterAttack(this, actor, target, dealt);
+            this.EndTrait(m);
+        }
     }
 
     /// <summary>副次目標のダメージ倍率（%）。範囲は「敵の数 × 値」で効くので、必ず割り引く。</summary>
@@ -2473,7 +2573,11 @@ public sealed class BattleContext
         // 特性の発動は攻撃1回につき1度、レーンの先頭に対してのみ。
         // 貫いた全員に毒や巻き込みが乗ると、貫き持ちが即座に壊れる。
         foreach (Trait t in actor.Traits.ToList())
+        {
+            TraitMark m = this.BeginTrait(t.Id, actor);   // 第94期 (T2) の印
             t.OnAfterAttack(this, actor, entry, primaryDealt);
+            this.EndTrait(m);
+        }
     }
 
     /// <summary>主目標以外に巻き添えになる敵。</summary>
@@ -2527,6 +2631,40 @@ public sealed class BattleContext
                             bool burnTick = false, bool relayed = false,
                             bool spillWound = true, bool deepBite = false)
     {
+        if (Probe is null)
+        {
+            ApplyDamageCore(target, amount, source, isFriendlyFire, lethal, burnTick, relayed, spillWound, deepBite);
+            return;
+        }
+
+        // 第94期 (T2)。**味方の刃の呼び出し口を、走らせて数える**（第85期に 6 → 10 とずれた表）。
+        // 擬似キーなので `StatusKeys` にも `UnitTally.CarryKeys` にも足していない
+        // ——観測子の側で名前で拾う。**既定 null なので通常の実行では走らない。**
+        if (isFriendlyFire && target.IsAlive && amount > 0)
+        {
+            if (Mark.Owner is not null) NoteProbeWrite(target, FriendlyBladeKey, 1);
+            else Probe(default, target, target, FriendlyBladeEngineKey, 1);   // 巨躯・分かちの中継
+        }
+
+        // **ここから先は engine の機構**（破片・据え・惨禍・肩代わり・巻き込み則）で、
+        // 殴った特性の挙動ではない。**印を降ろす**——降ろさないと、殴っただけの駒が
+        // 「傷を供給し、破片と手番を読んだ」ことになる（この期に実際に踏んだ）。
+        // 中で走る特性のフックは自分で印を立て直すので、そこは正しく付く。
+        TraitMark prev = Mark;
+        Mark = default;
+        try
+        {
+            ApplyDamageCore(target, amount, source, isFriendlyFire, lethal, burnTick, relayed, spillWound, deepBite);
+        }
+        finally { Mark = prev; }
+    }
+
+    /// <summary>ダメージ処理の本体。<see cref="ApplyDamage"/> だけが呼ぶ。</summary>
+    void ApplyDamageCore(UnitState target, int amount, UnitState? source,
+                         bool isFriendlyFire, bool lethal,
+                         bool burnTick, bool relayed,
+                         bool spillWound, bool deepBite)
+    {
         if (!target.IsAlive || amount <= 0) return;
 
         // 棘守り（カド）の肩代わり上限。**素の入力ダメージを ThornGuardTrait.AbsorbCap で切り、
@@ -2542,9 +2680,9 @@ public sealed class BattleContext
         // カドが全額を受ける＝上限なしの従来挙動に落ちる。
         if (amount > ThornGuardTrait.AbsorbCap
             && target.HasTrait(TraitId.ThornGuard)
-            && target.Counter(ThornGuardTrait.PartnerKey) > 0)
+            && target.RawCounter(ThornGuardTrait.PartnerKey) > 0)
         {
-            int covered = target.Counter(ThornGuardTrait.PartnerKey) - 1;
+            int covered = target.RawCounter(ThornGuardTrait.PartnerKey) - 1;
             UnitState? behind = PickOne(LivingMembers(target.TeamId)
                 .Where(u => u != target && u.Slot == covered).ToList());
 
@@ -2564,7 +2702,11 @@ public sealed class BattleContext
         }
 
         foreach (Trait t in target.Traits)
+        {
+            TraitMark m = this.BeginTrait(t.Id, target);   // 第94期 (T2) の印
             amount = t.ModifyIncomingDamage(target, amount);
+            this.EndTrait(m);
+        }
 
         // 惨禍は「本人ではなく味方全体」に効くので、駒の特性ではなく盤面側で解決する。
         var teammates = LivingMembers(target.TeamId);
@@ -2583,7 +2725,7 @@ public sealed class BattleContext
         // （減った後の数字しか残らない）。まどろみ（第36期）が実際に売れたかを数える窓口がここしか
         // 無いので、他の割り込みと同じように出来事として記録する。
         // 引き算は `amount -= amount * p / 100` と1点も違わない（同じ式を変数に置いただけ）。
-        if (target.Counter(StatusKeys.IdleTurn) >= Turn
+        if (target.RawCounter(StatusKeys.IdleTurn) >= Turn
             && Trait.SurrenderedTurn(this, target)
             && teammates.Any(u => u.HasTrait(TraitId.Bulwark)))
         {
@@ -2634,7 +2776,7 @@ public sealed class BattleContext
                     // 大喰らいの吸いはここを通らない（あちらは ApplyDamage の呼び出し元）ので、
                     // 腹は「殴られた誰かを庇ったとき」にだけ増える。
                     wall.SetCounter(ColossusTrait.BellyKey,
-                                    wall.Counter(ColossusTrait.BellyKey) + blocked);
+                                    wall.RawCounter(ColossusTrait.BellyKey) + blocked);
                     TallyOf(wall).Swallowed += blocked;
 
                     // 吐き戻し: 飲み込んだ分を、庇った相手の力に変える。
@@ -2664,7 +2806,11 @@ public sealed class BattleContext
                         if (back.Count > 0)
                         {
                             int gain = Math.Max(1, blocked / Colossus.DamagePerGain);
+                            // 第94期 (T2) の印。**engine に本体がある機構は、その特性の名前で観測する**
+                            // ——印が無いと吐き戻しが「壁を殴った側の特性」に付いてしまう。
+                            TraitMark cm = BeginTrait(TraitId.Colossus, wall);
                             foreach (UnitState t in back) Whet(t, gain, WhetRoute.Regurgitate);
+                            EndTrait(cm);
                             Log($"    {wall.Name} が飲み込んだ力を {target.Name} へ返した（攻撃 +{gain}）",
                                 LogKind.Trigger);
                         }
@@ -2719,7 +2865,7 @@ public sealed class BattleContext
         // 超えるか超えないかで効果が二値になる（README の浄化と同じ「引き算は崖」の穴で、
         // あちらは -4 という最小の刻みで毒軸の第2波が 98% → 0% に落ちた）。
         // 超過分は素通りさせることで、崖ではなく傾斜にしてある。
-        int armor = target.Counter(StatusKeys.Armor);
+        int armor = target.RawCounter(StatusKeys.Armor);
         if (armor > 0)
         {
             int soak = Math.Min(armor, amount);
@@ -2820,7 +2966,11 @@ public sealed class BattleContext
             tt.TakenFromAlly += amount;
 
         foreach (Trait t in target.Traits.ToList())
+        {
+            TraitMark m = this.BeginTrait(t.Id, target);   // 第94期 (T2) の印
             t.OnDamaged(this, target, amount, source);
+            this.EndTrait(m);
+        }
 
         // 味方への通知。OnAllyDeath の走査と同じ形で、本人以外の生存チームメイトへ流す。
         // 破片で受け切った被弾はここより上の early return で自然に外れる。
@@ -2828,7 +2978,11 @@ public sealed class BattleContext
         {
             if (ally == target) continue;
             foreach (Trait t in ally.Traits.ToList())
+            {
+                TraitMark m = this.BeginTrait(t.Id, ally);   // 第94期 (T2) の印
                 t.OnAllyDamaged(this, ally, target, amount, source);
+                this.EndTrait(m);
+            }
         }
 
         if (target.Hp <= 0)
@@ -2861,7 +3015,7 @@ public sealed class BattleContext
         dead.Hp = 0;
         TallyOf(dead).Deaths++;
         // 読まれないまま落ちた傷（第85期・自己検査 (j)）。**盤面には一切影響しない。**
-        TallyOf(dead).WoundsAtDeath += dead.Counter(StatusKeys.Wound);
+        TallyOf(dead).WoundsAtDeath += dead.RawCounter(StatusKeys.Wound);
         TallyOf(dead).LastActiveTurn = _turn;   // 蘇生されて再度倒れると上書きされる（後の値が勝つ）
         if (killer is not null && killer.TeamId != dead.TeamId) TallyOf(killer).Kills++;
 
@@ -2887,23 +3041,39 @@ public sealed class BattleContext
 
         if (killer is not null && killer.IsAlive)
             foreach (Trait t in killer.Traits.ToList())
+            {
+                TraitMark m = this.BeginTrait(t.Id, killer);   // 第94期 (T2) の印
                 t.OnKill(this, killer, dead);
+                this.EndTrait(m);
+            }
 
         // 本人の死亡時効果（分裂など）
         foreach (Trait t in dead.Traits.ToList())
+        {
+            TraitMark m = this.BeginTrait(t.Id, dead);   // 第94期 (T2) の印
             t.OnDeath(this, dead);
+            this.EndTrait(m);
+        }
 
         // 敵味方を問わない死亡通知。墓守はこちらを見る。
         foreach (UnitState u in _units.Where(u => u.IsAlive).ToList())
             foreach (Trait t in u.Traits.ToList())
+            {
+                TraitMark m = this.BeginTrait(t.Id, u);   // 第94期 (T2) の印
                 t.OnAnyDeath(this, u, dead);
+                this.EndTrait(m);
+            }
 
         // 味方限定の通知。蘇生はこちらで、墓守が強化を得た後に走る。
         foreach (UnitState ally in LivingMembers(dead.TeamId).ToList())
         {
             if (ally == dead) continue;
             foreach (Trait t in ally.Traits.ToList())
+            {
+                TraitMark m = this.BeginTrait(t.Id, ally);   // 第94期 (T2) の印
                 t.OnAllyDeath(this, ally, dead);
+                this.EndTrait(m);
+            }
         }
     }
 
@@ -3063,7 +3233,9 @@ public sealed class BattleContext
                 int armor = amount * Bear.ArmorPerDull;
                 if (armor > 0)
                 {
-                    taker.SetCounter(StatusKeys.Armor, taker.Counter(StatusKeys.Armor) + armor);
+                    TraitMark bm = BeginTrait(TraitId.Bear, taker);   // 第94期 (T2) の印
+                    taker.SetCounter(StatusKeys.Armor, taker.RawCounter(StatusKeys.Armor) + armor);
+                    EndTrait(bm);
                     BearArmor += armor;
                     // 鱗（第47期）の獲得の3本目の経路。現行の台では集約と同席しないので 0。
                     if (taker.HasTrait(TraitId.Scale)) NoteScaleGain(armor, ScaleSource.Bear);
@@ -3078,7 +3250,9 @@ public sealed class BattleContext
                 // 倒れても転嫁そのものは成立させるため（巨躯の吐き戻しが redirect の前に
                 // 確定させているのと同じ順序）。
                 DullTakenByRoute[(int)route] += amount;
+                TraitMark rm = BeginTrait(TraitId.Relay, taker);      // 第94期 (T2) の印
                 RelayThrough(taker, target, amount);
+                EndTrait(rm);
                 return;
             }
             else
@@ -3471,11 +3645,19 @@ public sealed class BattleContext
             {
                 if (ally == u) continue;
                 foreach (Trait t in ally.Traits.ToList())
+                {
+                    TraitMark m = this.BeginTrait(t.Id, ally);   // 第94期 (T2) の印
                     t.OnAllyMoved(this, ally, u);
+                    this.EndTrait(m);
+                }
             }
 
             foreach (Trait t in u.Traits.ToList())
+            {
+                TraitMark m = this.BeginTrait(t.Id, u);   // 第94期 (T2) の印
                 t.OnMoved(this, u, from, u.Row);
+                this.EndTrait(m);
+            }
         }
     }
 }
@@ -3503,12 +3685,14 @@ public static class BattleEngine
                                    ThornRule? thorn = null, SutureRule? suture = null,
                                    SpillWoundRule? spillWound = null, MendRule? mend = null,
                                    IgniteRule? woundIgnite = null, GatherRule? gather = null,
-                                   SoakRule? soak = null, DeepRule? deep = null)
+                                   SoakRule? soak = null, DeepRule? deep = null,
+                                   CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
-               creak, sever, thinBlade, thorn, suture, spillWound, mend, woundIgnite, gather, soak, deep);
+               creak, sever, thinBlade, thorn, suture, spillWound, mend, woundIgnite, gather, soak, deep,
+               probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -3534,12 +3718,12 @@ public static class BattleEngine
                                    SutureRule? suture = null, SpillWoundRule? spillWound = null,
                                    MendRule? mend = null, IgniteRule? woundIgnite = null,
                                    GatherRule? gather = null, SoakRule? soak = null,
-                                   DeepRule? deep = null)
+                                   DeepRule? deep = null, CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
-                                    suture, spillWound, mend, woundIgnite, gather, soak, deep);
+                                    suture, spillWound, mend, woundIgnite, gather, soak, deep, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -3563,7 +3747,11 @@ public static class BattleEngine
         {
             if (!u.IsAlive) continue;
             foreach (Trait t in u.Traits.ToList())
+            {
+                TraitMark m = ctx.BeginTrait(t.Id, u);   // 第94期 (T2) の印
                 t.OnBattleStart(ctx, u);
+                ctx.EndTrait(m);
+            }
         }
 
         int turn = 1;
@@ -3580,7 +3768,11 @@ public static class BattleEngine
 
             foreach (UnitState u in ctx.AllUnits.Where(x => x.IsAlive).ToList())
                 foreach (Trait t in u.Traits.ToList())
+                {
+                    TraitMark m = ctx.BeginTrait(t.Id, u);   // 第94期 (T2) の印
                     t.OnTurnStart(ctx, u);
+                    ctx.EndTrait(m);
+                }
 
             // 止め（第53期）の遊休（標が付いてから殴られるまで）を測るための印。
             // 標の書き手（逸らし・駆り立て・囃し立て）はここまでに全部書き終わっている。
@@ -3628,7 +3820,7 @@ public static class BattleEngine
                 if (!actor.IsAlive) continue;
                 if (!ctx.TeamAlive(ctx.Opponent(actor.TeamId))) break;
 
-                if (actor.Counter(StatusKeys.Stun) > 0)
+                if (actor.RawCounter(StatusKeys.Stun) > 0)
                 {
                     if (ctx.ScapegoatActive) ctx.NoteScapegoatSkip(actor);
                     // 第93期: 深手は**実際に行動したとき**だけ開く。止められた駒は延命する（§1 の予測）。
@@ -3657,10 +3849,10 @@ public static class BattleEngine
                 // ctx.Colossus.Slumber を先に見るのは、既定（V0）で HasTrait の走査を
                 // 1回も走らせないため（layout は数百万戦を並列で回す。軛の Cap 判定と同じ作法）。
                 if (ctx.Colossus.Slumber && actor.HasTrait(TraitId.Colossus)
-                    && actor.Counter(ColossusTrait.BellyKey) >= ctx.Colossus.SlumberThreshold)
+                    && actor.RawCounter(ColossusTrait.BellyKey) >= ctx.Colossus.SlumberThreshold)
                 {
                     actor.SetCounter(ColossusTrait.BellyKey,
-                        actor.Counter(ColossusTrait.BellyKey) - ctx.Colossus.SlumberThreshold);
+                        actor.RawCounter(ColossusTrait.BellyKey) - ctx.Colossus.SlumberThreshold);
                     actor.SetCounter(StatusKeys.IdleTurn, turn);
                     ctx.TallyOf(actor).Slumbers++;
                     if (ctx.DeepWatch) ctx.NoteDeepStalled(actor);   // 第93期（計数のみ）
@@ -3675,7 +3867,7 @@ public static class BattleEngine
                 UnitAction? act = actor.CurrentAction;
                 ActionKind kind = act?.Kind ?? ActionKind.Attack;
 
-                bool canAct = actor.Traits.All(t => t.CanAct(ctx, actor, kind));
+                bool canAct = actor.Traits.All(t => ctx.CanActProbed(t, actor, kind));
                 if (!canAct)
                 {
                     // 動けなかったことを記録する。ただし「差し出したターン」だけを数える。
@@ -3727,7 +3919,11 @@ public static class BattleEngine
                     ctx.EmitSkill(actor, act);
                     ctx.Log($"  {actor.Name} は{act.Label ?? "術を使った"}", LogKind.Action);
                     foreach (Trait t in actor.Traits.ToList())
+                    {
+                        TraitMark m = ctx.BeginTrait(t.Id, actor);   // 第94期 (T2) の印
                         t.OnAction(ctx, actor, act);
+                        ctx.EndTrait(m);
+                    }
                     if (ctx.DeepWatch) ctx.NoteDeepAction(actor);    // 第93期 §2-3
                     continue;
                 }
@@ -3751,7 +3947,7 @@ public static class BattleEngine
             {
                 ctx.TallyOf(u).LastActiveTurn = settled;
                 // 読まれないまま戦闘が終わった傷（第85期・自己検査 (j)）。集計専用。
-                ctx.TallyOf(u).WoundsAtEnd += u.Counter(StatusKeys.Wound);
+                ctx.TallyOf(u).WoundsAtEnd += u.RawCounter(StatusKeys.Wound);
             }
 
         return new BattleResult
@@ -3831,7 +4027,7 @@ public static class BattleEngine
             // **倒れた保持者も数える**——纏ったまま倒れた破片も「使われずに終わった」側。
             ScaleLeftover = ctx.AllUnits
                 .Where(u => u.HasTrait(TraitId.Scale))
-                .Sum(u => u.Counter(StatusKeys.Armor)),
+                .Sum(u => u.RawCounter(StatusKeys.Armor)),
             ScapegoatTakes = ctx.ScapegoatTakes,
             ScapegoatTakeByKind = ctx.ScapegoatTakeByKind,
             ScapegoatTakeFrom = ctx.ScapegoatTakeFrom,

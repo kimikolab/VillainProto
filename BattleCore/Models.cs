@@ -225,8 +225,13 @@ public sealed class UnitState
         get
         {
             AttackPattern p = Def.Pattern;
+            BattleContext? b = Board;
             foreach (Trait t in Traits)
+            {
+                TraitMark m = b?.BeginTrait(t.Id, this) ?? default;   // 第94期 (T2) の印
                 p = t.ModifyPattern(this, p);
+                b?.EndTrait(m);
+            }
             return p;
         }
     }
@@ -249,15 +254,35 @@ public sealed class UnitState
         get
         {
             int atk = Def.Attack + AtkBonus;
+            BattleContext? b = Board;
             foreach (Trait t in Traits)
+            {
+                TraitMark m = b?.BeginTrait(t.Id, this) ?? default;   // 第94期 (T2) の印
                 atk = t.ModifyAttack(this, atk);
+                b?.EndTrait(m);
+            }
             return Math.Max(0, atk);
         }
     }
 
     public bool HasTrait(TraitId id) => Traits.Any(t => t.Id == id);
 
-    public int Counter(string key) => Counters.TryGetValue(key, out int v) ? v : 0;
+    /// <summary>
+    /// 観測を通らない読み（第94期 (T2)）。<b>engine の内部はこちらを使う。</b>
+    ///
+    /// <para><see cref="Counter"/> は「いま実行中の特性がこのカウンタを読んだ」を観測するが、
+    /// <c>ApplyDamage</c> や <c>ctx.Poison</c> の中の読みは<b>engine の読み</b>であって
+    /// 特性の読みではない——そこを分けないと「殴った駒が破片と手番と傷を読んだ」ことになる。</para>
+    /// </summary>
+    public int RawCounter(string key) => Counters.TryGetValue(key, out int v) ? v : 0;
+
+    public int Counter(string key)
+    {
+        // 第94期 (T2) の観測。**既定 null なので通常の実行では null 検査1つで抜ける**
+        // （`Board?.Probe` はどの規則からも読まれない・乱数も1つも消費しない）。
+        if (Board?.Probe is not null) Board.NoteProbeRead(this, key);
+        return Counters.TryGetValue(key, out int v) ? v : 0;
+    }
 
     /// <summary>
     /// カウンタを書く。第68期に<b>増えた分だけ</b>を
@@ -275,6 +300,10 @@ public sealed class UnitState
         int delta = v - (Counters.TryGetValue(key, out int had) ? had : 0);
         Counters[key] = v;
         if (delta > 0) Board?.NoteStatusGain(this, key, delta);
+        // 第94期 (T2)。**減った分もここで観測する**——供給と消費を両方数えないと
+        // 「中継」（移すだけで盤面の総量を増やさない特性・ガルドの傷）が供給と区別できない。
+        // 増えた分は `NoteStatusGain` → `NoteCarry` の側で観測される（二重に数えない）。
+        if (delta < 0 && Board?.Probe is not null) Board.NoteProbeWrite(this, key, delta);
     }
 }
 
