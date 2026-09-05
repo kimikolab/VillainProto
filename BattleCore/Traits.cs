@@ -1417,6 +1417,58 @@ public readonly record struct SoakRule(bool Poison, bool Burn)
 }
 
 /// <summary>
+/// 呪い則（第95期）。<b>なまりは、相手が背負っている汚れの種類だけ重くなる。</b>
+///
+/// <para><b>新しいキーを作らない。</b> 呪いは<b>既存のなまり（弱体）軸そのもの</b>で、
+/// 増えるのは <c>Dull</c> が書く量だけ。だから
+/// <see cref="ScapegoatTrait.Kinds"/> の分母（<see cref="StatusKeys.All"/> から2本を除いた 6 本）は動かず、
+/// <c>AcceptsSupport</c> の扱いも <see cref="BattleContext.Dull"/> の既存の作法
+/// （呼び出し側が決める・第42期からの持ち越し）のまま変わらない。</para>
+///
+/// <para><b>既存駒が1文も増やさずに読み手になる</b>のが狙い（第90期の滲み則・第93期の自傷と同じ構造）。
+/// なまりの読み手は<b>3 枚</b>——逆しま（<see cref="TraitId.Perverse"/>・下げ幅の3倍）／
+/// 引き受け（<see cref="TraitId.Bear"/>・破片へ変換）／渡し（<see cref="TraitId.Relay"/>・敵へ転嫁）。
+/// <b>量を増やす行は横取りより前</b>に置くので、3枚とも増えた量をそのまま読む。</para>
+///
+/// <para><b>数える汚れは 毒・燃・痺・標・傷 の5つ。</b>
+/// <b>破片（<see cref="StatusKeys.Armor"/>）は数えない</b>——あれは damage 側の<b>正の</b>資源で
+/// （「誰の助けも届かない駒に唯一届く支援」）、汚れではない。
+/// <b>深手（<see cref="StatusKeys.Deep"/>）も数えない</b>——<see cref="DeepRule"/> が既定 <c>false</c> なので恒等的に 0。
+/// <b>なまり自身も数えない</b>——自己参照になるうえ <c>AtkBonus</c> はカウンタではない。</para>
+///
+/// <para><b>種類の数であって量ではない。</b> 毒の層が 10 でも 1 種は 1 種。
+/// 第84期の単価の壁（傷 N 個 × 係数）に自分から入らないため。
+/// <b>上限は 5</b>（種類の数そのもの）で、第95期 Phase 0 の実測は<b>平均 1.11 種</b>。</para>
+///
+/// <para><b>両陣営に等しくかかる。</b> 転嫁（<see cref="BattleContext.RelayThrough"/>）が
+/// 窓口の中から窓口を呼ぶので、敵側へ流れた量にも流し先の汚れの種類ぶんが乗る
+/// ——<b>意図した対称</b>で、再入ガード（<c>InRelay</c>）は元から立っている。</para>
+/// </summary>
+public readonly record struct CurseRule(bool Enabled, int PerKind = 1)
+{
+    /// <summary>数える汚れ。<b>除外ではなく列挙で書く</b>——
+    /// <see cref="StatusKeys.All"/> にキーが増えたときに黙って呪いが重くならないため
+    /// （<see cref="ScapegoatTrait.Kinds"/> とは逆の作法。あちらは「全部の呪い」が主題なので除外を並べる）。</summary>
+    public static readonly string[] Kinds =
+        { StatusKeys.Poison, StatusKeys.Burn, StatusKeys.Stun, StatusKeys.Marked, StatusKeys.Wound };
+
+    /// <summary>
+    /// 既定は<b>重くする</b>＝**第95期に採用**。
+    /// <para>2×2（A ＝ 呪詛官ネル・B ＝ 残り 50 体 × 128 台）の主判定で
+    /// <b>50 体中1位が意図した相手の縛めのクグ</b>（Δ相乗 +1.76pt・増分尺度のノイズ床 0.49pt・2系列とも
+    /// +1.51 / +2.00 で正）。**2位は +0.66pt** なので、1位は2位の 2.7 倍・床の 3.6 倍で立っている。
+    /// 拒否権1〜3 もすべて ○（主判定19行の第五波は 38.0% → **38.0%** で1ビットも動かず、
+    /// `compare` は **4 セル / 4 行**・−10.0pt 以上落ちた行は 0）。</para>
+    /// <para><b>盤面はほとんど動かない。</b> なまりの 74% は呪詛の開戦時1回で書かれ、
+    /// <b>その時点で盤面に汚れは1つも無い</b>——理想61行での発火は <b>2.28 回中 0.06 回（2.6%）</b>しかなく、
+    /// 弱体の総量は 8.42 → 8.48（+0.7%）。<b>効くのはドラフト台のように戦闘が長引く側で</b>、
+    /// そこでは発火 0.5〜3.2 回/戦・上乗せ 0.5〜3.3 量/戦になる。
+    /// <b>第88期の規約どおり、採否は大きさではなく並び方で決めた。</b></para>
+    /// </summary>
+    public static CurseRule Default => new(true);
+}
+
+/// <summary>
 /// 傷を書いた経路（第93期の計数。<b>盤面には一切影響しない</b>）。
 /// <b>加算だけが <see cref="BattleContext.Wound"/> を通る</b>ので、この enum は
 /// 「傷の供給の全数」そのものになる（減算＝断ちの 0 戻し・縫いと継ぎ当ての塞ぎ・

@@ -667,6 +667,13 @@ public sealed class BattleContext
     public int[] DullByRoute { get; } = new int[DullRoutes.Count];
 
     /// <summary>
+    /// 呪い則（第95期）の計数。<b>盤面には一切影響しない</b>（誰も読んで分岐しない・verbose 非依存）。
+    /// <c>CurseFired</c> 汚れが1種以上あって重くなった回数 ／ <c>CurseDry</c> 空振り（汚れ 0 種） ／
+    /// <c>CurseKinds</c> 種類数の総和（÷ <c>CurseFired</c> が倍率） ／ <c>CurseAdded</c> 上乗せした量。
+    /// </summary>
+    public int CurseFired, CurseDry, CurseKinds, CurseAdded;
+
+    /// <summary>
     /// そのうち<b>横取り役（集約・渡し）に横取りされた量</b>を経路別に割ったもの（第44期）。
     /// <c>DullByRoute[r] - DullTakenByRoute[r]</c> がその経路の「素通り」になる。
     ///
@@ -1622,6 +1629,13 @@ public sealed class BattleContext
     public DeepRule Deep { get; }
 
     /// <summary>
+    /// 呪い則（第95期）。<b>診断（curse）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="CurseRule.Default"/> ＝ 重くしない）。
+    /// 見るのは <see cref="Dull"/> の1箇所だけ。
+    /// </summary>
+    public CurseRule Curse { get; }
+
+    /// <summary>
     /// 軋み（第66期）の在庫の記録。<b>盤面には一切影響しない。</b>
     /// <see cref="TraitId.Displaced"/> 保持者の <see cref="UnitState.AtkBonus"/> が動いた直後に呼ぶ
     /// ——上げる経路は<b>軋み自身と <see cref="Whet"/> の2本だけ</b>（ヨミは自己強化を1つも持たない）。
@@ -1687,7 +1701,7 @@ public sealed class BattleContext
                          SutureRule? suture = null, SpillWoundRule? spillWound = null,
                          MendRule? mend = null, IgniteRule? woundIgnite = null,
                          GatherRule? gather = null, SoakRule? soak = null,
-                         DeepRule? deep = null, CounterProbe? probe = null)
+                         DeepRule? deep = null, CurseRule? curse = null, CounterProbe? probe = null)
     {
         _rng = new Random(seed);
         Probe = probe;          // 第94期 (T2)。**既定 null。診断だけが渡す。**
@@ -1724,6 +1738,7 @@ public sealed class BattleContext
         Gather = gather ?? GatherRule.Default;
         Soak = soak ?? SoakRule.Default;
         Deep = deep ?? DeepRule.Default;
+        Curse = curse ?? CurseRule.Default;
     }
 
     // =====================================================================================
@@ -3171,6 +3186,33 @@ public sealed class BattleContext
     {
         if (amount <= 0) return;
 
+        // 呪い則（第95期）。**なまりは、相手が背負っている汚れの種類だけ重くなる。**
+        //
+        // **横取りより前**に置く——ここで増やさないと、なまりの読み手3枚
+        // （逆しま・引き受け・渡し）が増えた量を読めず、
+        // 「既存駒が1文も増やさずに読み手になる」という設計そのものが成立しない。
+        // **`DullTotal` / `DullByRoute` / `NoteCarry` も増えた量を数える**
+        // ——呪いは弱体の別勘定ではなく、弱体そのものが重くなる形だから。
+        //
+        // **`target` の種類を数える**（`receiver` ではない）。横取りは「誰が払うか」を変える機構で、
+        // 呪いが読むのは「誰が汚れているか」のほう。分けないと、集約役の隣にいるだけで
+        // 呪いが宛先の汚れを読むことになって、第63期の「移す機構は読み手にとって奪う機構」を
+        // 呪いの側でもう一度作ることになる。
+        if (Curse.Enabled && Curse.PerKind > 0)
+        {
+            int kinds = 0;
+            foreach (string k in CurseRule.Kinds) if (target.RawCounter(k) > 0) kinds++;
+            if (kinds > 0)
+            {
+                int add = kinds * Curse.PerKind;
+                amount += add;
+                CurseFired++;
+                CurseKinds += kinds;
+                CurseAdded += add;
+            }
+            else CurseDry++;
+        }
+
         DullTotal += amount;
         DullByRoute[(int)route] += amount;
 
@@ -3686,13 +3728,13 @@ public static class BattleEngine
                                    SpillWoundRule? spillWound = null, MendRule? mend = null,
                                    IgniteRule? woundIgnite = null, GatherRule? gather = null,
                                    SoakRule? soak = null, DeepRule? deep = null,
-                                   CounterProbe? probe = null)
+                                   CurseRule? curse = null, CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, spillWound, mend, woundIgnite, gather, soak, deep,
-               probe);
+               curse, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -3718,12 +3760,12 @@ public static class BattleEngine
                                    SutureRule? suture = null, SpillWoundRule? spillWound = null,
                                    MendRule? mend = null, IgniteRule? woundIgnite = null,
                                    GatherRule? gather = null, SoakRule? soak = null,
-                                   DeepRule? deep = null, CounterProbe? probe = null)
+                                   DeepRule? deep = null, CurseRule? curse = null, CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
-                                    suture, spillWound, mend, woundIgnite, gather, soak, deep, probe);
+                                    suture, spillWound, mend, woundIgnite, gather, soak, deep, curse, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -3963,6 +4005,10 @@ public static class BattleEngine
             ExposeCount = ctx.ExposeCount,
             ExposeMissed = ctx.ExposeMissed,
             DullTotal = ctx.DullTotal,
+            CurseFired = ctx.CurseFired,
+            CurseDry = ctx.CurseDry,
+            CurseKinds = ctx.CurseKinds,
+            CurseAdded = ctx.CurseAdded,
             DullByRoute = ctx.DullByRoute,
             DullTakenByRoute = ctx.DullTakenByRoute,
             WhetTotal = ctx.WhetTotal,

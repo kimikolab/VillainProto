@@ -1298,6 +1298,17 @@ public sealed class BattleResult
     /// <c>Dull*</c> は弱体源（ドハ／ネル／クビ／ハネ）がいなければ全部 0。</para>
     /// </summary>
     public required int DullTotal { get; init; }
+
+    /// <summary>
+    /// 呪い則（第95期）の計数。<b>盤面には一切影響しない</b>（誰も読んで分岐しない・verbose 非依存）。
+    /// <c>CurseFired</c> 汚れが1種以上あって重くなった回数 ／ <c>CurseDry</c> 空振り（汚れ 0 種） ／
+    /// <c>CurseKinds</c> 種類数の総和 ／ <c>CurseAdded</c> 上乗せした量。
+    /// <b>既定（<see cref="CurseRule.Default"/>）では全部 0。</b>
+    /// </summary>
+    public required int CurseFired { get; init; }
+    public required int CurseDry { get; init; }
+    public required int CurseKinds { get; init; }
+    public required int CurseAdded { get; init; }
     public required IReadOnlyList<int> DullByRoute { get; init; }
 
     /// <summary>

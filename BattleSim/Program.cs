@@ -1137,10 +1137,10 @@ if (focusId == "curse")
         Console.WriteLine();
         Console.WriteLine("| # | 組 | 61行 | 12行 | 機構 |");
         Console.WriteLine("|--:|---|--:|--:|---|");
-        int cuIdx = 0;
+        int cuRank = 0;
         foreach (var p in cuBridgeList.Where(x => x.Trait.Length > 0 || x.Eng.Length > 0)
                                       .OrderByDescending(x => x.Rows))
-            Console.WriteLine($"| {++cuIdx} | **{CuK(p.A)} × {CuK(p.B)}** | {p.Rows} | {p.XRows} "
+            Console.WriteLine($"| {++cuRank} | **{CuK(p.A)} × {CuK(p.B)}** | {p.Rows} | {p.XRows} "
                               + $"| {string.Join(" / ", new[] { p.Trait, p.Eng }.Where(x => x.Length > 0))} |");
         Console.WriteLine();
 
@@ -1664,7 +1664,513 @@ if (focusId == "curse")
         return;
     }
 
-    Console.WriteLine("使い方: `curse grid` / `curse phase0` / `curse pick`");
+    // ---------------------------------------------------------------------------------
+    // (S4) —— 呪い則の測定（規約 (G8) の **甲**: 2×2 ＋ `compare` 61行 ＋ 交差帯12行 ＋ 自己検査）
+    //
+    //     curse run <v> [skip] [take]   # 2×2 を TSV へ（v = 0 対照 / 1 呪い則）
+    //     curse tables <v0.tsv> <v1.tsv>  # 表E（主判定）
+    //     curse veto                    # 拒否権（`compare` 61行・交差帯12行）
+    //     curse check                   # 自己検査
+    //
+    // 2×2 の定数は**第81期 `pairs2` の写し**（第82〜88期と1つも変えていない）。
+    // ---------------------------------------------------------------------------------
+    const int CuTableSeed = 9_500_000;        // **第88期の 8,100,000 とは別の標本**（第89期の作法）
+    const int CuK2 = 64, CuS2 = 2, CuBand = 0, CuM = 8;
+    const int CuStrong = 7, CuWeakPct = 60, CuDrawCap = 20000;
+    const double CuEps = 1e-9;
+    var cuInv = System.Globalization.CultureInfo.InvariantCulture;
+    var cuRoster = UnitCatalog.All.ToArray();
+    int cuRN = cuRoster.Length;
+    var cuIdx = new Dictionary<string, int>();
+    for (int u = 0; u < cuRN; u++) cuIdx[cuRoster[u].Id] = u;
+
+    // A ＝ 呪詛官ネル（規約 (G5)。弱体の供給の 74% を持つ。§4-2）
+    const string CuAId = "nel";
+    // 意図した相手（§4-1。**測る前に固定してある**）
+    string[] cuIntended = { "utsu", "uke", "wata",                    // なまりの読み手 3 枚
+                            "guza", "sid", "borg", "kugu", "hisa", "kiri", "nomi" };  // 汚れの書き手 7 枚
+
+    BattleResult CuRunV(Formation f, Formation e, int seed, bool verbose, int v)
+        => BattleEngine.Run(f, e, seed, verbose: verbose, curse: new CurseRule(v != 0));
+    string CuVName(int v) => v == 0 ? "V0（現行）" : "V1（呪い則）";
+
+    // 弱い波（敵 MaxHp 0.6 倍・第70期以降と同一。`Stages` は書き換えない）
+    var cuWeakCache = new Dictionary<string, UnitDef>();
+    UnitDef CuWeakOf(UnitDef d)
+    {
+        if (cuWeakCache.TryGetValue(d.Id, out UnitDef? w)) return w;
+        w = new UnitDef
+        {
+            Id = d.Id, Name = d.Name, MaxHp = d.MaxHp * CuWeakPct / 100,
+            Attack = d.Attack, Speed = d.Speed, Traits = d.Traits, Pattern = d.Pattern, Actions = d.Actions
+        };
+        cuWeakCache[d.Id] = w;
+        return w;
+    }
+    var cuWeak = cuStages.Select(st =>
+    {
+        var f = new Formation();
+        foreach ((int sl, UnitDef d) in st.Enemy.Occupied()) f[sl] = CuWeakOf(d);
+        return new EnemyCatalog.Stage(st.Name, f);
+    }).ToArray();
+
+    UnitDef CuPlain(UnitDef d) => new()
+    {
+        Id = d.Id + "_plain", Name = "素体の" + d.Name,
+        MaxHp = d.MaxHp, Attack = d.Attack, Speed = d.Speed,
+        Traits = Array.Empty<TraitId>(), Pattern = d.Pattern
+    };
+    var cuPlainMap = cuRoster.ToDictionary(d => d.Id, CuPlain);
+
+    UnitDef[] CuFill(UnitDef[] pool, int strong0, int seed)
+    {
+        int rn = pool.Length;
+        var rng = new Random(seed);
+        var idx = new int[rn];
+        for (int k = 0; k < rn; k++) idx[k] = k;
+        int remain = rn, strong = strong0;
+        var picked = new UnitDef[3];
+        for (int r = 0; r < 3; r++)
+        {
+            var offer = new UnitDef[3];
+            for (int t = 0; t < 3; t++)
+            {
+                int j = t + rng.Next(remain - t);
+                (idx[t], idx[j]) = (idx[j], idx[t]);
+                offer[t] = pool[idx[t]];
+            }
+            UnitDef sel = strong < 2
+                ? offer.OrderByDescending(x => x.Attack).ThenBy(x => x.Id, StringComparer.Ordinal).First()
+                : offer.OrderByDescending(x => x.MaxHp).ThenBy(x => x.Id, StringComparer.Ordinal).First();
+            picked[r] = sel;
+            if (sel.Attack >= CuStrong) strong++;
+            int pi = 0;
+            for (int t = 0; t < 3; t++) if (ReferenceEquals(pool[idx[t]], sel)) { pi = t; break; }
+            (idx[pi], idx[remain - 1]) = (idx[remain - 1], idx[pi]);
+            remain--;
+        }
+        return picked;
+    }
+    int CuDrawSeed(int pairIx, int draw)
+    {
+        ulong x = (ulong)CuTableSeed + (ulong)pairIx * 1_000_003UL + (ulong)draw * 7_919UL;
+        x += 0x9E3779B97F4A7C15UL;
+        x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9UL;
+        x = (x ^ (x >> 27)) * 0x94D049BB133111EBUL;
+        x ^= x >> 31;
+        return (int)(x & 0x7FFFFFFFUL);
+    }
+    int[] CuSeats(UnitDef[] u)
+    {
+        var all5 = new[] { 0, 1, 2, 3, 4 };
+        var front = all5.OrderByDescending(k => u[k].MaxHp)
+                        .ThenBy(k => u[k].Id, StringComparer.Ordinal).Take(2).ToArray();
+        var rest = all5.Where(k => k != front[0] && k != front[1]).ToArray();
+        var back = rest.OrderByDescending(k => u[k].Attack)
+                       .ThenBy(k => u[k].Id, StringComparer.Ordinal).Take(2).ToArray();
+        int center = rest.Single(k => k != back[0] && k != back[1]);
+        var r = new int[5];
+        r[front[0]] = 0; r[front[1]] = 1; r[center] = 2; r[back[0]] = 3; r[back[1]] = 4;
+        return r;
+    }
+    // TSV の添字: 0 = y11 ／ 1 = y01（**A 素体**）／ 2 = y10（**B 素体**）／ 3 = y00
+    Formation CuForm(UnitDef[] u, int[] seats, int cell)
+    {
+        var f = new Formation();
+        for (int k = 0; k < 5; k++)
+        {
+            bool plain = (k == 0 && (cell & 1) != 0) || (k == 1 && (cell & 2) != 0);
+            f[seats[k]] = plain ? cuPlainMap[u[k].Id] : u[k];
+        }
+        return f;
+    }
+    double CuRate(Formation f, int v)
+    {
+        double sum = 0;
+        for (int wi = 1; wi < cuStages.Count; wi++)
+        {
+            int wins = 0;
+            for (int seed = CuBand; seed < CuBand + CuM; seed++)
+                if (CuRunV(f, cuWeak[wi].Enemy, seed, false, v).PlayerWon) wins++;
+            sum += wins * 100.0 / CuM;
+        }
+        return sum / (cuStages.Count - 1);
+    }
+    var cuPairIxOf = new int[cuRN, cuRN];
+    {
+        int pi = 0;
+        for (int a = 0; a < cuRN; a++) for (int b = a + 1; b < cuRN; b++) { cuPairIxOf[a, b] = cuPairIxOf[b, a] = pi; pi++; }
+    }
+    List<UnitDef[]> CuFills(int a, int b)
+    {
+        var pool = cuRoster.Where((_, u) => u != a && u != b).ToArray();
+        int strong0 = (cuRoster[a].Attack >= CuStrong ? 1 : 0) + (cuRoster[b].Attack >= CuStrong ? 1 : 0);
+        var seen = new HashSet<(int, int, int)>();
+        var fills = new List<UnitDef[]>();
+        for (int draw = 0; fills.Count < CuS2 * CuK2 && draw < CuDrawCap; draw++)
+        {
+            var f = CuFill(pool, strong0, CuDrawSeed(cuPairIxOf[a, b], draw));
+            var t = f.Select(d => cuIdx[d.Id]).OrderBy(x => x).ToArray();
+            if (seen.Add((t[0], t[1], t[2]))) fills.Add(f);
+        }
+        return fills;
+    }
+
+    if (cuMode == "run")
+    {
+        int cuV = args.Length > 3 ? int.Parse(args[3]) : 0;
+        int cuSkip = args.Length > 4 ? int.Parse(args[4]) : 0;
+        int cuTake = args.Length > 5 ? int.Parse(args[5]) : int.MaxValue;
+        int a0 = cuIdx[CuAId];
+        var others = Enumerable.Range(0, cuRN).Where(u => u != a0).Skip(cuSkip).Take(cuTake).ToArray();
+        foreach (int b in others)
+        {
+            var fills = CuFills(a0, b);
+            var sb = new System.Text.StringBuilder();
+            sb.Append(95).Append('\t').Append(cuV).Append('\t').Append(a0).Append('\t').Append(b)
+              .Append('\t').Append(fills.Count);
+            for (int t = 0; t < fills.Count; t++)
+            {
+                var team = new[] { cuRoster[a0], cuRoster[b], fills[t][0], fills[t][1], fills[t][2] };
+                int[] seats = CuSeats(team);
+                for (int cell = 0; cell < 4; cell++)
+                    sb.Append('\t').Append(CuRate(CuForm(team, seats, cell), cuV).ToString("F6", cuInv));
+            }
+            Console.WriteLine(sb.ToString());
+        }
+        return;
+    }
+
+    if (cuMode == "tables")
+    {
+        (int V, int A, Dictionary<int, double[][]> D) CuRead(string path)
+        {
+            var d = new Dictionary<int, double[][]>();
+            int vv = -1, aa = -1;
+            foreach (string line in File.ReadAllLines(path))
+            {
+                if (line.Length == 0) continue;
+                var c = line.Split('\t');
+                int v = int.Parse(c[1]), a = int.Parse(c[2]), b = int.Parse(c[3]), nT = int.Parse(c[4]);
+                if (vv < 0) { vv = v; aa = a; }
+                else if (v != vv || a != aa) throw new InvalidOperationException($"{path}: 版／A が混ざっている");
+                var ys = new double[nT][];
+                int at = 5;
+                for (int t = 0; t < nT; t++) { ys[t] = new double[4]; for (int k = 0; k < 4; k++) ys[t][k] = double.Parse(c[at++], cuInv); }
+                d[b] = ys;
+            }
+            return (vv, aa, d);
+        }
+        double CuSyn(double[] y) => y[0] - y[2] - y[1] + y[3];
+        bool CuInfo(double[] y) => !(y[3] < CuEps && y[1] < CuEps) && !(y[3] > 100 - CuEps && y[1] > 100 - CuEps);
+        double CuPct(IReadOnlyList<double> xs, double q)
+        {
+            if (xs.Count == 0) return double.NaN;
+            var s = xs.OrderBy(v => v).ToArray();
+            if (s.Length == 1) return s[0];
+            double pos = q * (s.Length - 1);
+            int lo = (int)Math.Floor(pos), hi = Math.Min(lo + 1, s.Length - 1);
+            return s[lo] + (pos - lo) * (s[hi] - s[lo]);
+        }
+
+        var r0 = CuRead(args[3]);
+        var r1 = CuRead(args[4]);
+        if (r0.V != 0 || r1.V != 1) { Console.WriteLine("V0 の TSV を先に、V1 を後に渡すこと。"); return; }
+        int aIx = r0.A;
+        var bs = r0.D.Keys.Where(r1.D.ContainsKey).OrderBy(x => x).ToArray();
+
+        // Δ相乗（台ごと）と系列平均。**フィルタ無しが主判定**（規約 (G3)。engine の規則なので）。
+        var dAll = new Dictionary<int, double>();
+        var dSer = new Dictionary<int, double[]>();
+        var dInfo = new Dictionary<int, double>();
+        var nInfo = new Dictionary<int, int>();
+        int mism = 0, mismCells = 0;
+        foreach (int b in bs)
+        {
+            var y0 = r0.D[b]; var y1 = r1.D[b];
+            int n = Math.Min(y0.Length, y1.Length);
+            var all = new List<double>(); var s0 = new List<double>(); var s1 = new List<double>();
+            var inf = new List<double>();
+            for (int t = 0; t < n; t++)
+            {
+                double d = CuSyn(y1[t]) - CuSyn(y0[t]);
+                all.Add(d); (t % CuS2 == 0 ? s0 : s1).Add(d);
+                if (CuInfo(y0[t])) inf.Add(d);
+                // 自己検査: A を素体にしたセル（y01 / y00）は engine の規則なので**動いてよい**
+                for (int k = 1; k < 4; k += 2) if (Math.Abs(y0[t][k] - y1[t][k]) > CuEps) { mismCells++; break; }
+            }
+            if (all.Count == 0) continue;
+            dAll[b] = all.Average();
+            dSer[b] = new[] { s0.Count > 0 ? s0.Average() : double.NaN, s1.Count > 0 ? s1.Average() : double.NaN };
+            dInfo[b] = inf.Count > 0 ? inf.Average() : double.NaN;
+            nInfo[b] = inf.Count;
+            if (all.Count != n) mism++;
+        }
+
+        var intendedIx = cuIntended.Where(cuIdx.ContainsKey).Select(x => cuIdx[x]).ToHashSet();
+        var unintended = dAll.Keys.Where(b => !intendedIx.Contains(b)).ToArray();
+        double floor = CuPct(unintended.Select(b => Math.Abs(dAll[b])).ToArray(), 0.95);
+        var ranked = dAll.OrderByDescending(x => x.Value).ToArray();
+
+        Console.WriteLine("# 第95期 (S4) 表E —— 2×2 の主判定");
+        Console.WriteLine();
+        Console.WriteLine($"A ＝ {cuRoster[aIx].Name}（`{cuRoster[aIx].Id}`。規約 (G5)：弱体の供給の 74% を持つ）"
+                          + $" ／ B ＝ 残り {bs.Length} 体 × {CuK2 * CuS2} 台 × 4 セル × 4 波 × seed {CuBand}..{CuBand + CuM - 1}。");
+        Console.WriteLine();
+        Console.WriteLine("**規約 (G3) により、engine の規則なので主判定は情報帯フィルタ<u>無し</u>で行う**"
+                          + "（フィルタ有りは参考として併記する）。");
+        Console.WriteLine();
+        Console.WriteLine($"**増分尺度のノイズ床（第89期の規約：意図しない相手 {unintended.Length} 体の |Δ相乗| の 95%tile）"
+                          + $" ＝ {floor:F2}pt。**");
+        Console.WriteLine();
+        Console.WriteLine("| 順位 | B | 意図 | Δ相乗 | 系列1 | 系列2 | 2系列とも正 | 床超え | 参考: フィルタ有り |");
+        Console.WriteLine("|--:|---|:-:|--:|--:|--:|:-:|:-:|--:|");
+        for (int i = 0; i < ranked.Length; i++)
+        {
+            int b = ranked[i].Key;
+            bool both = dSer[b][0] > 0 && dSer[b][1] > 0;
+            bool over = Math.Abs(dAll[b]) > floor;
+            Console.WriteLine($"| {i + 1} | {cuRoster[b].Name} | {(intendedIx.Contains(b) ? "**○**" : "")} "
+                              + $"| {dAll[b]:+0.00;-0.00;0.00} | {dSer[b][0]:+0.00;-0.00;0.00} | {dSer[b][1]:+0.00;-0.00;0.00} "
+                              + $"| {(both ? "○" : "")} | {(over ? "○" : "")} "
+                              + $"| {(double.IsNaN(dInfo[b]) ? "—" : dInfo[b].ToString("+0.00;-0.00;0.00"))}（{nInfo[b]} 台） |");
+        }
+        Console.WriteLine();
+        var q11 = intendedIx.Where(dAll.ContainsKey)
+                            .Where(b => dSer[b][0] > 0 && dSer[b][1] > 0 && Math.Abs(dAll[b]) > floor).ToArray();
+        int q12 = unintended.Count(b => Math.Abs(dAll[b]) > floor);
+        Console.WriteLine($"**Q1-1（意図した相手のうち少なくとも1枚が 2系列とも正 かつ 床超え）: "
+                          + $"{q11.Length} / {intendedIx.Count(b => dAll.ContainsKey(b))} 枚**"
+                          + $"{(q11.Length > 0 ? "（" + string.Join("・", q11.Select(b => cuRoster[b].Name)) + "）" : "")}"
+                          + $" —— {(q11.Length > 0 ? "**○**" : "**×**")}");
+        Console.WriteLine();
+        Console.WriteLine($"**Q1-2（意図しない相手で床を超えた体数）: {q12} 体**"
+                          + $"（床は 95%tile なので構成上おおよそ {unintended.Length * 5 / 100} 体が必ず超える）");
+        Console.WriteLine();
+        int bestRank = ranked.Select((x, i) => (x.Key, i)).Where(x => intendedIx.Contains(x.Key))
+                             .Select(x => x.i + 1).DefaultIfEmpty(-1).Min();
+        Console.WriteLine($"**Q2（意図した組の最良順位）: {bestRank} 位 / {ranked.Length}**");
+        Console.WriteLine();
+        Console.WriteLine($"**自己検査: A を素体にしたセル（y01 / y00）が版で動いた台は {mismCells} 件。**"
+                          + "**engine の規則なので A を素体にしても規則は走る**ので、"
+                          + "これは実装のバグではない（第91期 (G3)・第90期の自己検査 (a)）。"
+                          + "**情報帯の選別に使っているのは V0 のセルだけ**なので、選別は汚れていない。");
+        Console.WriteLine();
+        return;
+    }
+
+    // なぜその B で立ったのか（**主判定の1位の因果を確かめる**）。
+    // 2×2 と同じ台・同じ席の `y11` セルだけを V1 で回して、呪いの発火を B ごとに数える。
+    if (cuMode == "why")
+    {
+        int a0 = cuIdx[CuAId];
+        Console.WriteLine("# 第95期 (S4) 表F —— なぜその相手で立ったのか（**2×2 の台の上で発火を数える**）");
+        Console.WriteLine();
+        Console.WriteLine($"A ＝ {cuRoster[a0].Name} 固定。2×2 の `y11` セル（両方とも本物）だけを V1 で回す。");
+        Console.WriteLine();
+        Console.WriteLine("| B | 意図 | 発火 回/戦 | 空振り 回/戦 | 発火率 | 倍率 | 上乗せ 量/戦 | 弱体 V0→V1 |");
+        Console.WriteLine("|---|:-:|--:|--:|--:|--:|--:|---|");
+        var intendedIx2 = cuIntended.Where(cuIdx.ContainsKey).Select(x => cuIdx[x]).ToHashSet();
+        var rows = new List<(string Name, bool Int, double F, double D, double K, double Ad, double D0, double D1)>();
+        foreach (int b in Enumerable.Range(0, cuRN).Where(u => u != a0))
+        {
+            var fills = CuFills(a0, b);
+            double f = 0, dr = 0, kk = 0, ad = 0, d0 = 0, d1 = 0; int n = 0;
+            foreach (var fill in fills)
+            {
+                var team = new[] { cuRoster[a0], cuRoster[b], fill[0], fill[1], fill[2] };
+                int[] seats = CuSeats(team);
+                Formation form = CuForm(team, seats, 0);
+                for (int wi = 1; wi < cuStages.Count; wi++)
+                    for (int seed = CuBand; seed < CuBand + CuM; seed++)
+                    {
+                        var r1 = CuRunV(form, cuWeak[wi].Enemy, seed, false, 1);
+                        var r0 = CuRunV(form, cuWeak[wi].Enemy, seed, false, 0);
+                        f += r1.CurseFired; dr += r1.CurseDry; kk += r1.CurseKinds; ad += r1.CurseAdded;
+                        d0 += r0.DullTotal; d1 += r1.DullTotal; n++;
+                    }
+            }
+            rows.Add((cuRoster[b].Name, intendedIx2.Contains(b), f / n, dr / n, kk / n, ad / n, d0 / n, d1 / n));
+        }
+        foreach (var r in rows.OrderByDescending(x => x.F))
+            Console.WriteLine($"| {r.Name} | {(r.Int ? "**○**" : "")} | **{r.F:F2}** | {r.D:F2} "
+                              + $"| {(r.F + r.D > 0 ? $"{r.F * 100 / (r.F + r.D):F1}%" : "—")} "
+                              + $"| {(r.F > 1e-9 ? r.K / r.F : 0):F2} "
+                              + $"| {r.Ad:F2} | {r.D0:F2} → {r.D1:F2} |");
+        Console.WriteLine();
+        return;
+    }
+
+    if (cuMode == "veto")
+    {
+        const int CuVetoSeeds = 200;
+        Console.WriteLine("# 第95期 (S4) —— 拒否権（`compare` 61行・交差帯12行）");
+        Console.WriteLine();
+        double[] CuRow(Formation f, int v)
+        {
+            var r = new double[cuStages.Count];
+            for (int st = 0; st < cuStages.Count; st++)
+            {
+                int w = 0;
+                for (int seed = 0; seed < CuVetoSeeds; seed++)
+                    if (CuRunV(f, cuStages[st].Enemy, seed, false, v).PlayerWon) w++;
+                r[st] = w * 100.0 / CuVetoSeeds;
+            }
+            return r;
+        }
+        var prim = new HashSet<string>(Baseline.PrimaryRows);
+        void CuBand2(string title, (string Name, Formation F)[] rows, bool primary)
+        {
+            Console.WriteLine($"## {title}");
+            Console.WriteLine();
+            Console.WriteLine("| 行 | 波 | V0 | V1 | Δ |");
+            Console.WriteLine("|---|---|--:|--:|--:|");
+            int cells = 0, movedRows = 0, big = 0;
+            double p5v0 = 0, p5v1 = 0; int p5n = 0;
+            var bigRows = new List<(string Name, int Wave, double D)>();
+            foreach (var (name, f) in rows)
+            {
+                var a = CuRow(f, 0); var b = CuRow(f, 1);
+                bool moved = false;
+                for (int st = 0; st < cuStages.Count; st++)
+                {
+                    if (Math.Abs(a[st] - b[st]) < CuEps) continue;
+                    cells++; moved = true;
+                    Console.WriteLine($"| {name} | {cuStages[st].Name} | {a[st]:F1}% | {b[st]:F1}% "
+                                      + $"| **{b[st] - a[st]:+0.0;-0.0;0.0}** |");
+                    if (b[st] - a[st] <= -10.0) { big++; bigRows.Add((name, st, b[st] - a[st])); }
+                }
+                if (moved) movedRows++;
+                if (primary && prim.Contains(name)) { p5v0 += a[^1]; p5v1 += b[^1]; p5n++; }
+            }
+            Console.WriteLine();
+            Console.WriteLine($"**動いたセル {cells} 件 / {rows.Length * cuStages.Count}・動いた行 {movedRows} / {rows.Length}。**");
+            if (primary)
+            {
+                Console.WriteLine();
+                Console.WriteLine($"**拒否権1（主判定 {p5n} 行の第五波平均）: {p5v0 / Math.Max(1, p5n):F1}% → "
+                                  + $"{p5v1 / Math.Max(1, p5n):F1}%（歯止め {Baseline.PrimaryFifthFloor:F1}）"
+                                  + $" —— {(p5v1 / Math.Max(1, p5n) >= Baseline.PrimaryFifthFloor ? "**○**" : "**×**")}**");
+                Console.WriteLine();
+                Console.WriteLine($"**拒否権3（(G1)(G2)：61 行の分母で −10.0pt 以上落ちたセル）: {big} 件**");
+                foreach (var x in bigRows)
+                    Console.WriteLine($"- {x.Name} / {cuStages[x.Wave].Name}: {x.D:+0.0;-0.0;0.0}pt");
+            }
+            Console.WriteLine();
+        }
+        CuBand2($"`compare` {cuCompare.Length} 行", cuCompare, true);
+        CuBand2($"交差帯 {cuCross.Length} 行", cuCross, false);
+        return;
+    }
+
+    if (cuMode == "check")
+    {
+        Console.WriteLine("# 第95期 (S4) —— 自己検査");
+        Console.WriteLine();
+        // 必須1: compare 305 セルが docs/balance.md と 0 件（**既定は無効なので動かない**）
+        string? root = Directory.GetCurrentDirectory();
+        while (root != null && !File.Exists(Path.Combine(root, "docs", "balance.md")))
+            root = Path.GetDirectoryName(root);
+        var cells = new List<string>();
+        foreach (var b in cuCompare)
+        {
+            var row = new List<string>();
+            foreach (var st in cuStages)
+            {
+                int w = 0;
+                for (int seed = 0; seed < 200; seed++)
+                    if (BattleEngine.Run(b.F, st.Enemy, seed, verbose: false).PlayerWon) w++;
+                row.Add($"{w * 100.0 / 200:F1}%");
+            }
+            cells.Add($"| {b.Name} | {string.Join(" | ", row)} |");
+        }
+        int diff = -1;
+        if (root is not null)
+        {
+            var doc = File.ReadAllLines(Path.Combine(root, "docs", "balance.md"))
+                          .Where(l => l.StartsWith("| ") && l.Contains('%')).ToArray();
+            diff = Math.Abs(doc.Length - cells.Count);
+            for (int i = 0; i < Math.Min(doc.Length, cells.Count); i++)
+                if (doc[i].Trim() != cells[i].Trim()) diff++;
+        }
+        Console.WriteLine($"- **(a)** `compare` {cuCompare.Length} 行 × {cuStages.Count} 波 ＝ "
+                          + $"{cuCompare.Length * cuStages.Count} セルを `docs/balance.md` と突き合わせ: "
+                          + $"**ずれ {diff} 行**{(diff == 0 ? "（○）" : "（×）")}");
+
+        // (b) 既定が無効であること
+        var def = CurseRule.Default;
+        Console.WriteLine($"- **(b)** `CurseRule.Default` = `{def}` —— "
+                          + $"{(def.Enabled ? "**有効（採用済み）**" : "**無効（既定では1行も走らない）**")}");
+
+        // (c) 規則を切った版と既定が1セルも違わないこと
+        int same = 0, tot = 0;
+        foreach (var b in cuCompare.Concat(cuCross))
+            foreach (var st in cuStages)
+            {
+                int w0 = 0, w1 = 0;
+                for (int seed = 0; seed < 200; seed++)
+                {
+                    if (BattleEngine.Run(b.F, st.Enemy, seed, verbose: false).PlayerWon) w0++;
+                    if (CuRunV(b.F, st.Enemy, seed, false, 0).PlayerWon) w1++;
+                }
+                tot++; if (w0 == w1) same++;
+            }
+        Console.WriteLine($"- **(c)** 既定（引数を渡さない）と `CurseRule(false)` が一致するセル: "
+                          + $"**{same} / {tot}**{(same == tot ? "（○）" : "（×）")}");
+
+        // (d) 規則が実際に発火すること（陽性対照）
+        double fired = 0, dry = 0, kinds = 0, added = 0, dull0 = 0, dull1 = 0; int n = 0;
+        var rt0 = new double[DullRoutes.Count];
+        var rt1 = new double[DullRoutes.Count];
+        foreach (var b in cuCompare.Concat(cuCross))
+            foreach (var st in cuStages)
+                for (int seed = 0; seed < 20; seed++)
+                {
+                    var r1 = CuRunV(b.F, st.Enemy, seed, false, 1);
+                    var r0 = CuRunV(b.F, st.Enemy, seed, false, 0);
+                    fired += r1.CurseFired; dry += r1.CurseDry; kinds += r1.CurseKinds; added += r1.CurseAdded;
+                    dull0 += r0.DullTotal; dull1 += r1.DullTotal; n++;
+                    for (int r = 0; r < DullRoutes.Count; r++)
+                    { rt0[r] += r0.DullByRoute[r]; rt1[r] += r1.DullByRoute[r]; }
+                }
+        Console.WriteLine($"- **(d)** 陽性対照: 発火 **{fired / n:F2} 回/戦** ／ 空振り {dry / n:F2} 回/戦 "
+                          + $"／ 倍率 **{(fired > 0 ? kinds / fired : 0):F2} 種** ／ 上乗せ **{added / n:F2} 量/戦**"
+                          + $"（弱体の総量 {dull0 / n:F2} → {dull1 / n:F2}・**+{(dull1 - dull0) * 100 / Math.Max(1, dull0):F1}%**）");
+        Console.WriteLine();
+        Console.WriteLine("**経路別**（呪いがどの経路に乗ったか。**開戦時1回の経路には汚れが1つも無い**）:");
+        Console.WriteLine();
+        Console.WriteLine("| 経路 | 周期 | V0 量/戦 | V1 量/戦 | 上乗せ |");
+        Console.WriteLine("|---|---|--:|--:|--:|");
+        for (int r = 0; r < DullRoutes.Count; r++)
+        {
+            if (rt0[r] < CuEps && rt1[r] < CuEps) continue;
+            TraitId? t = DullRoutes.Names[r] switch
+            {
+                "なまり" => TraitId.Sharer, "呪詛敵" => TraitId.Curse, "呪詛漏れ" => TraitId.Curse,
+                "突き返し" => TraitId.Shove, "萎縮" => TraitId.Cower, "渡し" => TraitId.Relay,
+                "誹り" => TraitId.Slander, "驕り" => TraitId.Overbear, "火選り" => TraitId.Favor, _ => null
+            };
+            Console.WriteLine($"| {DullRoutes.Names[r]} | {(t is null ? "—" : CuPeriodOf(t.Value))} "
+                              + $"| {rt0[r] / n:F2} | {rt1[r] / n:F2} | **{(rt1[r] - rt0[r]) / n:+0.00;-0.00;0.00}** |");
+        }
+
+        // (e) V0 で計数が全部 0
+        Console.WriteLine($"- **(e)** V0 で `CurseFired` が 0 であること: "
+                          + $"{(cuCompare.Take(5).All(b => cuStages.All(st => CuRunV(b.F, st.Enemy, 0, false, 0).CurseFired == 0)) ? "○" : "×")}");
+
+        // (f) ctx.PickOne を新たに使っていない
+        int pick = 0;
+        if (root is not null)
+            foreach (string f in Directory.GetFiles(Path.Combine(root, "BattleCore"), "*.cs"))
+                pick += System.Text.RegularExpressions.Regex.Matches(
+                    string.Join("\n", File.ReadAllLines(f).Where(l => !l.TrimStart().StartsWith("//"))),
+                    @"PickOne\(").Count;
+        Console.WriteLine($"- **(f)** `BattleCore` の `PickOne(` 呼び出し **{pick} 箇所**"
+                          + "（第95期は1つも足していない。`git diff` で確かめること）");
+        Console.WriteLine();
+        return;
+    }
+    Console.WriteLine("使い方: `curse grid` / `curse phase0` / `curse pick` / `curse run <v> [skip] [take]` / `curse tables <v0> <v1>` / `curse veto` / `curse check`");
     return;
 }
 
