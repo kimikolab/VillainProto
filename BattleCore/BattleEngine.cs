@@ -1333,6 +1333,12 @@ public sealed class BattleContext
     public IgniteRule WoundIgnite { get; }
 
     /// <summary>
+    /// 傷の引き取り（第89期）。<b>診断（gather）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="GatherRule.Default"/> ＝ 引き取らない）。
+    /// </summary>
+    public GatherRule Gather { get; }
+
+    /// <summary>
     /// 軋み（第66期）の在庫の記録。<b>盤面には一切影響しない。</b>
     /// <see cref="TraitId.Displaced"/> 保持者の <see cref="UnitState.AtkBonus"/> が動いた直後に呼ぶ
     /// ——上げる経路は<b>軋み自身と <see cref="Whet"/> の2本だけ</b>（ヨミは自己強化を1つも持たない）。
@@ -1396,7 +1402,8 @@ public sealed class BattleContext
                          CreakRule? creak = null, SeverRule? sever = null,
                          ThinBladeRule? thinBlade = null, ThornRule? thorn = null,
                          SutureRule? suture = null, SpillWoundRule? spillWound = null,
-                         MendRule? mend = null, IgniteRule? woundIgnite = null)
+                         MendRule? mend = null, IgniteRule? woundIgnite = null,
+                         GatherRule? gather = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -1429,6 +1436,7 @@ public sealed class BattleContext
         SpillWound = spillWound ?? SpillWoundRule.Default;
         Mend = mend ?? MendRule.Default;
         WoundIgnite = woundIgnite ?? IgniteRule.Default;
+        Gather = gather ?? GatherRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -3232,12 +3240,12 @@ public static class BattleEngine
                                    SeverRule? sever = null, ThinBladeRule? thinBlade = null,
                                    ThornRule? thorn = null, SutureRule? suture = null,
                                    SpillWoundRule? spillWound = null, MendRule? mend = null,
-                                   IgniteRule? woundIgnite = null)
+                                   IgniteRule? woundIgnite = null, GatherRule? gather = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
-               creak, sever, thinBlade, thorn, suture, spillWound, mend, woundIgnite);
+               creak, sever, thinBlade, thorn, suture, spillWound, mend, woundIgnite, gather);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -3261,12 +3269,13 @@ public static class BattleEngine
                                    CreakRule? creak = null, SeverRule? sever = null,
                                    ThinBladeRule? thinBlade = null, ThornRule? thorn = null,
                                    SutureRule? suture = null, SpillWoundRule? spillWound = null,
-                                   MendRule? mend = null, IgniteRule? woundIgnite = null)
+                                   MendRule? mend = null, IgniteRule? woundIgnite = null,
+                                   GatherRule? gather = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
-                                    suture, spillWound, mend, woundIgnite);
+                                    suture, spillWound, mend, woundIgnite, gather);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

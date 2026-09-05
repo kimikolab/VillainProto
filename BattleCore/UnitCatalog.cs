@@ -209,8 +209,8 @@ public static class UnitCatalog
         Traits = new[] { TraitId.Amplifier },
         // 濃縮を手番の行動そのものにする（第11期 Phase BB）。攻撃2 は出なくなる。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "水を濁らせている") },
-        PlusText = "毎ターン、敵に積まれた毒を濃くする（+4層）",
-        MinusText = "毒が積まれていなければ完全に無意味。攻撃はしない",
+        PlusText = "毎ターン、敵に積まれた毒を濃くする（+4層）。毒が無くても、傷のある敵には毒が回り始める",
+        MinusText = "毒も傷も盤面に無ければ完全に無意味。攻撃はしない",
         Flavor = "水を濁らせることしかできない。それ単体では兵器にならない。"
     };
 

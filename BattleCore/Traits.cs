@@ -561,6 +561,57 @@ public sealed class GuardianTrait : RedirectGainTrait
     public const int RedirectPercent = 50;
 
     public override TraitId Id => TraitId.Guardian;
+
+    /// <summary>
+    /// 傷の引き取り（第89期・<see cref="GatherRule"/>）。<b>庇いが成立した被弾のたび、
+    /// 隣接する味方のうち傷がいちばん深い者から傷をひとつ自分へ移す。</b>
+    ///
+    /// <para><b>ここに置いて <see cref="RedirectGainTrait"/> には置かない。</b>
+    /// 庇う（味方ガルド）と殉教（敵の殉教者）は基底で1行も違わない実装を共有しているので、
+    /// 基底に置くと<b>敵側にも生える</b>。<c>gather check</c> の自己検査 (d) が敵側 0 回を確認する。</para>
+    ///
+    /// <para><b>印（<see cref="RedirectGainTrait.PendingKey"/>）を <c>base</c> より先に読む。</b>
+    /// 基底の <c>OnDamaged</c> は<b>冒頭で印を読んで即座に 0 に落とす</b>ので、
+    /// 後から読むと庇いの成立が取れない（指示書 §2-2 の ★）。</para>
+    ///
+    /// <para><b>移すのであって増やさない。</b> 1回の庇いにつき 1 つ・傷の数にも <c>dmg</c> にも比例させない
+    /// （第84期の「傷1つの単価」の壁に自分から入らない）。盤面の傷の総量は保存する（自己検査 (b)）。
+    /// <c>ApplyDamage</c> を通さないので <see cref="UnitState.AtkBonus"/> は 1 も動かない（自己検査 (c)）。</para>
+    ///
+    /// <para><b>隣接の窓口は <c>FormationRules.AreAdjacent</c>（<c>Stoic</c> が使っているものと同じ）。</b>
+    /// 新しい隣接の読み方は作らない。<b><c>AcceptsSupport</c> は見ない</b>——取り上げるのは支援ではない
+    /// （引き受け＝<see cref="BearTrait"/>・業と同じ扱い）。</para>
+    ///
+    /// <para><b>ガルドは傷を1つも読まない。</b> 集めた傷を使うのは必ず他人（終端は縫いのハリ）。
+    /// しかも <c>Stoic</c> により <c>MostHurtAlly</c> の患者になれないので、
+    /// <b>傷を集めるが自分は治らない</b>（自己検査 (e)）。</para>
+    /// </summary>
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        bool guarded = self.Counter(PendingKey) > 0;      // ★ base より先に読む（base は冒頭で 0 に落とす）
+        base.OnDamaged(ctx, self, dmg, source);
+        if (!ctx.Gather.Enabled || !guarded || !self.IsAlive) return;
+
+        UnitTally t = ctx.TallyOf(self);
+        t.GatherGuards++;
+
+        var pool = ctx.LivingMembers(self.TeamId)
+            .Where(a => a != self && a.Counter(StatusKeys.Wound) > 0
+                        && FormationRules.AreAdjacent(self.Slot, a.Slot)).ToList();
+        if (pool.Count == 0) return;
+        t.GatherHadDonor++;
+
+        int best = pool.Max(a => a.Counter(StatusKeys.Wound));
+        UnitState donor = ctx.PickOne(pool.Where(a => a.Counter(StatusKeys.Wound) == best).ToList())!;
+        donor.SetCounter(StatusKeys.Wound, best - 1);
+        int after = self.Counter(StatusKeys.Wound) + 1;
+        self.SetCounter(StatusKeys.Wound, after);
+        t.GatherTaken++;
+        t.GatherDepthSum += after;
+        if (after > t.GatherDepthMax) t.GatherDepthMax = after;
+        ctx.Log($"    {self.Name} が {donor.Name} の傷を引き取った（傷 {best} → {best - 1} ／ {self.Name} の傷 {after}）",
+            LogKind.Trigger);
+    }
 }
 
 /// <summary>
@@ -1284,6 +1335,26 @@ public readonly record struct SpillWoundRule(bool Enabled, SpillScope Scope = Sp
 }
 
 /// <summary>
+/// 傷の引き取り（第89期）。廃棄聖騎士ガルド（<see cref="GuardianTrait"/>）が、
+/// <b>庇いが成立した被弾のたび、隣接する味方のうち傷がいちばん深い者から傷をひとつ自分へ移す。</b>
+///
+/// <para><b>浅く広い供給に深さを作る中継。</b> 第85期の採用で味方の傷は常設になったが、
+/// 供給（巻き込み則の6枚）は<b>広く浅い</b>——第86期の実測「一回きりの供給は広く浅く、毎ターンの供給は狭く深い」。
+/// 味方の傷を読む唯一の駒（縫いのハリ）は<b>深さを読む</b>（<c>PerWound</c> × 傷の数）ので、
+/// 浅い在庫は使えない。源（6枚）→ <b>中継（ガルド）</b> → 終端（ハリ）の3段の真ん中を埋める。</para>
+///
+/// <para><b>ガルドがその置き場に向いている理由は3つとも構造的。</b>
+/// (1) <c>Stoic</c> により1体を選ぶ回復を受け取れないので<b>ハリの繕い先には絶対にならない</b>
+/// ——集めた傷を使うのは必ず他人。(2) ガルド自身は傷を1つも読まない（自己完結しない）。
+/// (3) HP100 でロスター最高クラス——傷の貯蔵庫として落ちにくい。</para>
+/// </summary>
+public readonly record struct GatherRule(bool Enabled)
+{
+    /// <summary>既定は Z0（引き取らない）＝現行。</summary>
+    public static GatherRule Default => new(false);
+}
+
+/// <summary>
 /// 継ぎ当て（<see cref="MenderTrait"/>）が繕う相手の傷を読むか（第86期）。
 /// <para><b>読み手を手番の要らない駒に替える。</b> 縫い（ハリ）の発火は「手番がある <b>かつ</b> 殴った相手に傷がある」の
 /// 積だが、ノノの繕いは<b>手番そのもの</b>（<c>Actions = [Skill]</c>）なので条件が1つしかない
@@ -1327,8 +1398,12 @@ public readonly record struct MendRule(MendSide Side)
 /// </summary>
 public readonly record struct IgniteRule(bool Enabled)
 {
-    /// <summary>既定は Y0（現行）＝着火しない。</summary>
-    public static IgniteRule Default => new(false);
+    /// <summary>
+    /// 既定は<b>着火する</b>＝**第89期 (P1) に採用**（第87期は当時の線 +3.0pt で、第88期は
+    /// 「相乗（水準）の揺れ」から引いたノイズ床で落ちていた。**増分尺度のノイズ床**——同じ実験の中の
+    /// 意図しない相手の \|Δ相乗\| の 95%tile ——を規約に固定し、**別標本**で測り直して通った）。
+    /// </summary>
+    public static IgniteRule Default => new(true);
 }
 
 public sealed class ThornsTrait : Trait
