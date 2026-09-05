@@ -2217,12 +2217,19 @@ public sealed class BattleContext
 
             // 積み上げ系は素の値から大きく離れる（墓守は層の三角数で伸びる）。
             // 素の攻撃力だけ見せると、盤面で何が起きているか読めない。
+            //
+            // **攻撃型も一緒に写す（第98期 V1・表示専用）。** 戦闘中に型が変わる駒が5枚あり
+            // （逃亡兵セロ／墓守リィカ／熾のホタ／鱗のウロ／軋みのヨミ）、
+            // 開始時の型だけを見せると**画面と盤面が食い違う**——第97期の画面は
+            // `BattleOpening.Pattern` を1回読むだけだったので、下がったセロが単体のまま表示されていた。
+            // **新しいフィールドは足していない**（`BattleEvent.Pattern` は `Attack` / `Damage` が既に使っている）。
             Emit(new BattleEvent
             {
                 Kind = BattleEventKind.StatSnapshot,
                 Turn = _turn,
                 TargetId = u.InstanceId,
                 Amount = u.CurrentAttack,
+                Pattern = u.CurrentPattern,
             });
         }
     }

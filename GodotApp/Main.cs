@@ -183,9 +183,25 @@ public partial class Main : Control
 
     int _buildIdx;
     string _playerName = "";
-    EngagementResult _eng = null!;
+    Script _script = null!;
     int _battleIdx;
-    BattleResult _result = null!;   // いま再生している Battle（_eng.Battles[_battleIdx]）
+    BattleResult _result = null!;   // いま再生している Battle（_script.Battles[_battleIdx]）
+
+    /// <summary>単発モードか（第98期 V4）。既定は会戦（今までどおり）。</summary>
+    bool _single;
+    /// <summary>単発モードで見る波（<see cref="EnemyCatalog.Stages"/> の添字）。</summary>
+    int _stage;
+    /// <summary>戦闘 seed。`compare` は 0..199 を回すので、その中の1本を選ぶ。</summary>
+    int _seed;
+
+    /// <summary>
+    /// いま画面に出ている筋の「組」（第98期 V2）。1回の攻撃を1組として、
+    /// <b>組が変わったら前の組の線を消す</b>——溜めると何が起きたか読めなくなる。
+    /// </summary>
+    int _shotGroup = int.MinValue;
+
+    /// <summary>状態異常の細い線を出すか（第98期 V2）。**既定は切**。</summary>
+    bool _showGainLines;
     List<Piece> _roster = new();
     readonly Dictionary<(int Team, int Slot), Card> _cards = new();
     readonly List<Shot> _shots = new();
@@ -202,6 +218,8 @@ public partial class Main : Control
     Label _lEnemy = null!, _lPlayer = null!, _lChainBig = null!, _lChainNote = null!;
     Label _lProgress = null!, _lEngVerdict = null!, _lBanner = null!;
     OptionButton _pick = null!;
+    OptionButton _pickStage = null!, _pickSeed = null!;
+    Button _bPrevBattle = null!, _bNextBattle = null!, _bMode = null!, _bGainLines = null!;
 
     /// <summary>バナー表示の残り時間。>0 の間は再生を止めて、次の Battle への切り替えを待たせる。</summary>
     double _banner;
@@ -267,6 +285,7 @@ public partial class Main : Control
         _lBanner.Visible = false;
         AddChild(_lBanner);
 
+        SyncModeUi();
         Load(0);
     }
 
@@ -404,10 +423,42 @@ public partial class Main : Control
         _ => CDmg,
     };
 
+    /// <summary>
+    /// その <paramref name="idx"/> の出来事が属する「組」（第98期 V2）。
+    ///
+    /// <para><b>1回の攻撃が1組。</b> ダメージは直前の <c>Attack</c> の位置を組の番号にするので、
+    /// 薙ぎの巻き込みも貫きの各段も**同じ番号**になり、扇・数珠つなぎは崩れない。
+    /// <c>Attack</c> を持たない出来事（毒燃の刻み・状態異常・移動・反撃）は自分の位置が組になる
+    /// ——**1件ずつ独立して出る。**</para>
+    /// </summary>
+    int GroupOf(int idx)
+    {
+        if (_result.Events[idx].Kind != BattleEventKind.Damage) return idx;
+        int aid = _result.Events[idx].ActorId ?? -1;
+        for (int i = idx - 1; i >= 0; i--)
+        {
+            BattleEvent pe = _result.Events[i];
+            if (pe.Kind is BattleEventKind.TurnStart or BattleEventKind.Skill or BattleEventKind.Charge) break;
+            if (pe.Kind == BattleEventKind.Attack) return pe.ActorId == aid ? i : idx;
+        }
+        return idx;
+    }
+
     /// <summary>直前に適用したイベントを、筋・札・閃光のどれかに変える。</summary>
     void PushShot(int idx, Dictionary<int, Piece> units)
     {
         BattleEvent e = _result.Events[idx];
+
+        // **溜めない**（第98期 V2）。組が変わったら前の組の線と閃光を消す。
+        // 浮く札（数字）は消さない——重ならないよう段違いに出しているし、
+        // 「いま何点入ったか」は次の攻撃と一緒に読めたほうがいい。
+        int grp = GroupOf(idx);
+        if (grp != _shotGroup)
+        {
+            _shots.Clear();
+            _flashes.Clear();
+            _shotGroup = grp;
+        }
 
         switch (e.Kind)
         {
@@ -431,7 +482,7 @@ public partial class Main : Control
                 {
                     Color gc = CurrencyColor(key);
                     AddPop(g, $"+{StatusKeys.LabelOf(key)}{(e.Amount > 1 ? e.Amount.ToString() : "")}", gc);
-                    if (e.ActorId is { } aid2 && units.TryGetValue(aid2, out Piece? a2) && a2 != g)
+                    if (_showGainLines && e.ActorId is { } aid2 && units.TryGetValue(aid2, out Piece? a2) && a2 != g)
                         _shots.Add(new Shot
                         {
                             FromTeam = a2.Team, FromSlot = a2.Slot, ToTeam = g.Team, ToSlot = g.Slot,
@@ -572,6 +623,51 @@ public partial class Main : Control
         picker.AddChild(Text($"編成 {builds.Length} 行（compare {Presets.Compare.Length} ＋ 交差帯 {Presets.Cross.Length}）", 11, CFaint));
         left.AddChild(picker);
 
+        // モードの切り替え（第98期 V4）。
+        //
+        // **`compare` は各波を独立に測っているのに、画面は会戦しか再生できなかった。**
+        // 96 期ぶんの測定は全部「各波を単独で戦ったときの勝率」なので、
+        // 測っているものと見ている絵を突き合わせるには単発が要る。
+        var modes = new HBoxContainer();
+        modes.AddThemeConstantOverride("separation", 6);
+
+        _bMode = new Button { Text = "会戦", CustomMinimumSize = new Vector2(70, 0), ToggleMode = true };
+        _bMode.Pressed += () =>
+        {
+            _single = _bMode.ButtonPressed;
+            _bMode.Text = _single ? "単発" : "会戦";
+            SyncModeUi();
+            Load(_buildIdx);
+        };
+        modes.AddChild(_bMode);
+
+        _pickStage = new OptionButton { CustomMinimumSize = new Vector2(150, 0) };
+        _pickStage.AddThemeFontSizeOverride("font_size", 12);
+        for (int i = 0; i < EnemyCatalog.Stages.Count; i++) _pickStage.AddItem(EnemyCatalog.Stages[i].Name, i);
+        _pickStage.ItemSelected += id => { _stage = (int)id; Load(_buildIdx); };
+        modes.AddChild(_pickStage);
+
+        // seed は `compare` が回す 0..199 の中から選ぶ。既定 0。
+        _pickSeed = new OptionButton { CustomMinimumSize = new Vector2(90, 0) };
+        _pickSeed.AddThemeFontSizeOverride("font_size", 12);
+        foreach (int sd in new[] { 0, 1, 2, 3, 4, 5, 10, 25, 50, 100, 199 })
+            _pickSeed.AddItem($"seed {sd}", sd);
+        _pickSeed.ItemSelected += ix => { _seed = _pickSeed.GetItemId((int)ix); Load(_buildIdx); };
+        modes.AddChild(_pickSeed);
+
+        // 状態異常の細い線（第98期 V2）。**既定は切**——1回の攻撃で何本も伸びて線が読めなくなる。
+        _bGainLines = new Button { Text = "書き手の線", ToggleMode = true };
+        _bGainLines.AddThemeFontSizeOverride("font_size", 11);
+        _bGainLines.Pressed += () =>
+        {
+            _showGainLines = _bGainLines.ButtonPressed;
+            _shots.Clear();
+            _overlay.QueueRedraw();
+        };
+        modes.AddChild(_bGainLines);
+
+        left.AddChild(modes);
+
         // 波の選択ボタンは会戦の進行表示に置き換えた。どの波と戦うかは会戦が決める。
         _lProgress = Text("", 12, CDim);
         left.AddChild(_lProgress);
@@ -582,6 +678,16 @@ public partial class Main : Control
         row.AddChild(Stat("ターン", out _lTurns));
         row.AddChild(Stat("連鎖深度", out _lChain));
         return row;
+    }
+
+    /// <summary>
+    /// モードに応じて出す部品を切り替える（第98期 V4）。
+    /// 単発は 1 戦しか無いので部隊送りを隠し、会戦は波と seed を engine が決めるので隠す。
+    /// </summary>
+    void SyncModeUi()
+    {
+        _pickStage.Visible = _single;
+        if (_bPrevBattle is not null) { _bPrevBattle.Visible = !_single; _bNextBattle.Visible = !_single; }
     }
 
     static Control Stat(string label, out Label value)
@@ -673,6 +779,7 @@ public partial class Main : Control
         Chip("巻き込み", CFf);
         Chip("中継（破線）", CDmg);
         Chip("移動", CHeal);
+        flow.AddChild(Text("｜ 線は直前の1振りぶんだけ ／ 通貨の色 →", 10, CFaint));
         Chip("毒", CPoison);
         Chip("燃", CBurn);
         Chip("傷/深手", CWound);
@@ -680,6 +787,7 @@ public partial class Main : Control
         Chip("標", CMark);
         Chip("破片", CArmor);
         Chip("なまり", CDull);
+        flow.AddChild(Text("｜ 席の名前はカードの右上（前1/前3/中央/後1/後3）", 10, CFaint));
 
         return panel;
     }
@@ -774,30 +882,31 @@ public partial class Main : Control
         row.AddThemeConstantOverride("separation", 10);
         panel.AddChild(row);
 
-        _bPlay = new Button { Text = "再生", CustomMinimumSize = new Vector2(70, 0) };
-        _bPlay.Pressed += () => SetPlaying(!_playing);
-        row.AddChild(_bPlay);
-
-        var back = new Button { Text = "◀" };
+        // **手送りが主、自動再生が副**（第98期 V3）。左端に送りを置く。
+        var back = new Button { Text = "◀", CustomMinimumSize = new Vector2(40, 0) };
         back.Pressed += () => { SetPlaying(false); Step(-1); };
         row.AddChild(back);
 
-        var fwd = new Button { Text = "▶" };
+        var fwd = new Button { Text = "▶", CustomMinimumSize = new Vector2(40, 0) };
         fwd.Pressed += () => { SetPlaying(false); Step(1); };
         row.AddChild(fwd);
 
-        var nextT = new Button { Text = "次T" };
+        var nextA = new Button { Text = "次の攻撃" };
+        nextA.Pressed += NextAttack;
+        row.AddChild(nextA);
+
+        var nextT = new Button { Text = "次のターン" };
         nextT.Pressed += NextTurn;
         row.AddChild(nextT);
 
-        // スクラブは Battle 内なので、Battle の行き来はここで。
-        var prevB = new Button { Text = "◀部隊" };
-        prevB.Pressed += () => JumpBattle(-1);
-        row.AddChild(prevB);
+        // Battle の行き来（スクラブは Battle 内なので）。単発モードでは 1 戦しか無いので隠す。
+        _bPrevBattle = new Button { Text = "◀部隊" };
+        _bPrevBattle.Pressed += () => JumpBattle(-1);
+        row.AddChild(_bPrevBattle);
 
-        var nextB = new Button { Text = "部隊▶" };
-        nextB.Pressed += () => JumpBattle(1);
-        row.AddChild(nextB);
+        _bNextBattle = new Button { Text = "部隊▶" };
+        _bNextBattle.Pressed += () => JumpBattle(1);
+        row.AddChild(_bNextBattle);
 
         _scrub = new HSlider { SizeFlagsHorizontal = SizeFlags.ExpandFill, MinValue = 0, Step = 1 };
         _scrub.ValueChanged += v =>
@@ -813,7 +922,13 @@ public partial class Main : Control
         _lPos.CustomMinimumSize = new Vector2(80, 0);
         row.AddChild(_lPos);
 
-        foreach (double s in new[] { 0.5, 1.0, 2.0, 4.0 })
+        // 自動再生は副次機能。**既定は停止**（`Load` が `SetPlaying(false)` で入る）。
+        _bPlay = new Button { Text = "自動再生", CustomMinimumSize = new Vector2(80, 0) };
+        _bPlay.Pressed += () => SetPlaying(!_playing);
+        row.AddChild(_bPlay);
+
+        // 0.25× を足した（第98期 V3）。1イベントずつ目で追うには 0.5× でも速い。
+        foreach (double s in new[] { 0.25, 0.5, 1.0, 2.0, 4.0 })
         {
             double captured = s;
             var b = new Button { Text = $"{s}×" };
@@ -825,6 +940,82 @@ public partial class Main : Control
     }
 
     // ---- 読み込み -------------------------------------------------------
+
+    /// <summary>
+    /// 再生する台本（第98期 V4）。**会戦と単発の違いをここ1箇所に閉じる。**
+    ///
+    /// <para>会戦は <see cref="EngagementEngine"/> が5部隊ぶんまとめて返すが、単発は
+    /// <see cref="BattleEngine.Run(IReadOnlyList{UnitState}, IReadOnlyList{UnitState}, int, bool,
+    /// ColossusRule?, YokeRule?, HushRule?, MartyrRule?, ExposeRule?, ShoveRule?, BearRule?,
+    /// RelayRule?, SlanderRule?, OverbearRule?, ScaleRule?, ScapegoatRule?, DivertRule?, GoadRule?,
+    /// FinisherRule?, FavorRule?, BlazeRule?, FunnelRule?, WhetMask?, CreakRule?, SeverRule?,
+    /// ThinBladeRule?, ThornRule?, SutureRule?, SpillWoundRule?, MendRule?, IgniteRule?,
+    /// GatherRule?, SoakRule?, DeepRule?, CurseRule?, CounterProbe?)"/> の1戦きり。
+    /// <b>再生側から見ると「Battle の列と、その開始盤面の列」でしかない</b>ので、
+    /// そこだけを持つ型に揃えて、画面のコードを1本にする。</para>
+    /// </summary>
+    sealed class Script
+    {
+        public bool IsEngagement;
+        public List<BattleResult> Battles = new();
+        public List<IReadOnlyList<BattleOpening>> Openings = new();
+        /// <summary>各 Battle の敵の波（<see cref="EnemyCatalog.Stages"/> の添字）。</summary>
+        public List<int> StageIx = new();
+        /// <summary>各 Battle の味方部隊。単発は常に 0。</summary>
+        public List<int> SquadIx = new();
+        public bool Won;
+        public int Cleared;
+        public int Seed;
+    }
+
+    /// <summary>
+    /// 単発の1戦を台本にする（第98期 V4）。
+    ///
+    /// <para><b>`compare` と同じ呼び出し</b>——<c>BattleEngine.Run(編成, 波, seed)</c> の
+    /// <c>verbose</c> だけを真にする。他の引数は1つも渡さない（既定のノブで回る）ので、
+    /// <c>docs/balance.md</c> のセルとそのまま突き合わせられる。</para>
+    ///
+    /// <para>開始盤面は <see cref="EngagementEngine"/> と<b>同じ手順</b>で組む——
+    /// <c>Materialize</c> してから <c>Run</c> を呼び、<b>Run の後に</b> record にする。
+    /// <c>InstanceId</c> は <c>ctx.Add</c> が Run の中で振るので、先に組むと空になる。</para>
+    /// </summary>
+    static Script RunSingle(Formation player, int stageIx, int seed)
+    {
+        List<UnitState> p = BattleEngine.Materialize(player, BattleContext.PlayerTeam);
+        List<UnitState> e = BattleEngine.Materialize(EnemyCatalog.Stages[stageIx].Enemy, BattleContext.EnemyTeam);
+
+        // Run の前に控える（Hp・Slot・型・HasFallenBack は戦闘で動く）。
+        var pending = p.Concat(e)
+            .Select(u => (Unit: u, u.Hp, u.MaxHp, Attack: u.CurrentAttack, u.Slot,
+                          Pattern: u.CurrentPattern, u.HasFallenBack))
+            .ToList();
+
+        BattleResult r = BattleEngine.Run(p, e, seed, verbose: true);
+
+        var s = new Script { IsEngagement = false, Won = r.PlayerWon, Cleared = r.PlayerWon ? 1 : 0, Seed = seed };
+        s.Battles.Add(r);
+        s.Openings.Add(pending.Select(x => new BattleOpening(
+            x.Unit.InstanceId, x.Unit.TeamId, x.Unit.Def.Id, x.Unit.Def.Name,
+            x.Slot, x.Hp, x.MaxHp, x.Attack, x.Unit.Def.Attack, x.Pattern, x.HasFallenBack)).ToList());
+        s.StageIx.Add(stageIx);
+        s.SquadIx.Add(0);
+        return s;
+    }
+
+    /// <summary>会戦を台本にする（現行）。判定も持ち越しも <see cref="EngagementEngine"/> の中。</summary>
+    static Script RunEngagement(Formation player, int seed)
+    {
+        EngagementResult eng = EngagementEngine.Run(new[] { player }, EnemyCatalog.EngagementColumn,
+                                                    seed, verbose: true);
+        var s = new Script
+        {
+            IsEngagement = true, Won = eng.PlayerWon, Cleared = eng.EnemySquadsCleared, Seed = seed,
+            Battles = eng.Battles.ToList(), Openings = eng.Openings.ToList(),
+            StageIx = eng.Pairings.Select(x => x.Item2).ToList(),
+            SquadIx = eng.Pairings.Select(x => x.Item1).ToList(),
+        };
+        return s;
+    }
 
     void Load(int buildIdx)
     {
@@ -838,26 +1029,25 @@ public partial class Main : Control
         // ここが全部。判定はエンジンが済ませて返す。会戦のルール（持ち越し・部隊交代）も
         // BattleCore 側（EngagementEngine）に閉じていて、この画面は Battles[b] の台本を
         // 再生するだけ。味方は当面1部隊（コンセプトメモの複数部隊はまず敵側だけで試す）。
-        _eng = EngagementEngine.Run(new[] { player }, EnemyCatalog.EngagementColumn,
-                                    seed: 0, verbose: true);
+        _script = _single ? RunSingle(player, _stage, _seed) : RunEngagement(player, _seed);
 
         LoadBattle(0);
         SetPlaying(false);
     }
 
     /// <summary>
-    /// 会戦の中の1つの Battle を再生対象に据える。盤面は Formation からではなく
+    /// 台本の中の1つの Battle を再生対象に据える。盤面は Formation からではなく
     /// Openings[b]（持ち越した HP・攻撃力・パターンを含む開始盤面）から組む。
     /// Formation から def.MaxHp で組み直すと持ち越しが表示に出ない。
     /// </summary>
     void LoadBattle(int battleIdx)
     {
         _battleIdx = battleIdx;
-        _result = _eng.Battles[battleIdx];
-        (int pi, int ei) = _eng.Pairings[battleIdx];
+        _result = _script.Battles[battleIdx];
+        int pi = _script.SquadIx[battleIdx], ei = _script.StageIx[battleIdx];
 
         _roster.Clear();
-        foreach (BattleOpening o in _eng.Openings[battleIdx])
+        foreach (BattleOpening o in _script.Openings[battleIdx])
             _roster.Add(new Piece
             {
                 Id = o.InstanceId, Team = o.TeamId, Slot = o.Slot, Name = o.Name,
@@ -865,12 +1055,22 @@ public partial class Main : Control
                 Attack = o.Attack, BaseAttack = o.BaseAttack, Pattern = o.Pattern,
             });
 
-        _lPlayer.Text = $"味方 — {_playerName}（第{pi + 1}部隊）";
+        _lPlayer.Text = _script.IsEngagement
+            ? $"味方 — {_playerName}（第{pi + 1}部隊）"
+            : $"味方 — {_playerName}";
         _lEnemy.Text = $"敵 — {EnemyCatalog.Stages[ei].Name}";
-        _lProgress.Text = $"敵部隊 {ei + 1}/{EnemyCatalog.EngagementColumn.Count} ・ "
-            + $"突破 {_eng.EnemySquadsCleared} ・ Battle {battleIdx + 1}/{_eng.Battles.Count}";
-        _lEngVerdict.Text = _eng.PlayerWon ? "勝利" : "敗北";
-        _lEngVerdict.AddThemeColorOverride("font_color", _eng.PlayerWon ? CHeal : CDmg);
+
+        // **いま見ているものが `docs/balance.md` のどのセルか**（第98期 V4 の目的）。
+        _lProgress.Text = _script.IsEngagement
+            ? $"会戦 ・ 敵部隊 {ei + 1}/{EnemyCatalog.EngagementColumn.Count} ・ "
+              + $"突破 {_script.Cleared} ・ Battle {battleIdx + 1}/{_script.Battles.Count}"
+            : $"単発 ・ balance.md のセル: 「{_playerName}」 × {EnemyCatalog.Stages[ei].Name} ・ seed {_script.Seed}"
+              + $"（`compare` は seed 0..199 の 200 戦の勝率。これはその 1 戦）";
+
+        _lEngVerdict.Text = _script.IsEngagement
+            ? (_script.Won ? "勝利" : "敗北")
+            : (_script.Won ? "勝ち" : "負け");
+        _lEngVerdict.AddThemeColorOverride("font_color", _script.Won ? CHeal : CDmg);
         _lVerdict.Text = _result.PlayerWon ? "勝利" : "敗北";
         _lVerdict.AddThemeColorOverride("font_color", _result.PlayerWon ? CHeal : CDmg);
         _lTurns.Text = _result.Turns.ToString();
@@ -895,6 +1095,7 @@ public partial class Main : Control
         _shots.Clear();
         _pops.Clear();
         _flashes.Clear();
+        _shotGroup = int.MinValue;
         _banner = 0;
         _lBanner.Visible = false;
         Redraw();
@@ -903,7 +1104,7 @@ public partial class Main : Control
     void JumpBattle(int delta)
     {
         SetPlaying(false);
-        int b = Math.Clamp(_battleIdx + delta, 0, _eng.Battles.Count - 1);
+        int b = Math.Clamp(_battleIdx + delta, 0, _script.Battles.Count - 1);
         if (b != _battleIdx) LoadBattle(b);
     }
 
@@ -939,7 +1140,13 @@ public partial class Main : Control
                         statuses[(stid, skey)] = e.Amount;
                     break;
                 case BattleEventKind.StatSnapshot:
-                    if (t is not null) t.Attack = e.Amount;
+                    if (t is not null)
+                    {
+                        t.Attack = e.Amount;
+                        // 第98期 V1。**戦闘中に型が変わる駒が5枚ある**ので、開始時の型で固定すると
+                        // 画面と盤面が食い違う（下がったセロが単体のまま出ていた）。
+                        if (e.Pattern is { } np) t.Pattern = np;
+                    }
                     break;
                 case BattleEventKind.Damage:
                 case BattleEventKind.Heal:
@@ -995,7 +1202,7 @@ public partial class Main : Control
                     // 接敵面が揃わなくなる。** 盤面の幾何が読めることがこの画面の要点。
                     // 空き枠自体も情報（召喚専用の4枠は、そこへ駒が湧くまで空いたままになる）。
                     c.Name.Text = "";
-                    c.Pat.Text = "";
+                    c.Pat.Text = FormationRules.SeatNames[slot];
                     c.Hp.Text = "";
                     c.Status.Text = "";
                     c.Bar.Value = 0;
@@ -1007,7 +1214,11 @@ public partial class Main : Control
                 c.Style.BgColor = CGround;
                 c.Style.BorderColor = team == 1 ? CEnemy : CPlayer;
                 c.Name.Text = u.Name;
-                c.Pat.Text = PatternLabel(u.Pattern);
+                // **席の名前を型と並べて出す**（第98期 Phase 0-1）。盤面は敵と味方で
+                // 奥行きの向きが左右に反転しているので、カードの位置だけからは
+                // 「その駒が前列か後列か」が読めない（実際に読み違いが出ている）。
+                // 名前は `FormationRules.SeatNames` から引く——**各所で配列を手写ししない**（Models.cs の doc）。
+                c.Pat.Text = $"{FormationRules.SeatNames[slot]}・{PatternLabel(u.Pattern)}";
                 c.Bar.Value = u.MaxHp == 0 ? 0 : Math.Clamp((double)u.Hp / u.MaxHp, 0, 1);
                 // 積み上げ系は素の値から離れるので、変わっていたら 素→現在 で出す。
                 string atk = u.Attack == u.BaseAttack ? $"攻{u.Attack}" : $"攻{u.BaseAttack}→{u.Attack}";
@@ -1147,6 +1358,30 @@ public partial class Main : Control
         Redraw();
     }
 
+    /// <summary>
+    /// 次の一振りまで飛ぶ（第98期 V3）。<see cref="BattleEventKind.Attack"/> を1つ**適用した直後**で止める
+    /// ——止めた時点で線が出ていないと「次の攻撃へ」の意味が無い。
+    /// スナップショットは出来事ではないので飛ばす（そこで止まると盤面が動かない）。
+    /// </summary>
+    void NextAttack()
+    {
+        SetPlaying(false);
+        int i = _idx;
+        while (i < _result.Events.Count && _result.Events[i].Kind != BattleEventKind.Attack) i++;
+        // 見たいのは着弾なので、その振りの Damage までまとめて進める。
+        if (i < _result.Events.Count)
+        {
+            int j = i + 1;
+            while (j < _result.Events.Count
+                   && _result.Events[j].Kind is BattleEventKind.Damage or BattleEventKind.StatusGain
+                                             or BattleEventKind.Death or BattleEventKind.Heal
+                                             or BattleEventKind.Status or BattleEventKind.Highlight) j++;
+            _idx = j;
+        }
+        else _idx = _result.Events.Count;
+        Redraw();
+    }
+
     void SetPlaying(bool v)
     {
         _playing = v;
@@ -1202,7 +1437,7 @@ public partial class Main : Control
         if (!_playing) return;
         if (_idx >= _result.Events.Count)
         {
-            if (_battleIdx + 1 < _eng.Battles.Count) { ShowInterlude(); return; }
+            if (_battleIdx + 1 < _script.Battles.Count) { ShowInterlude(); return; }
             SetPlaying(false); Redraw(); return;
         }
 
@@ -1222,8 +1457,8 @@ public partial class Main : Control
     /// </summary>
     void ShowInterlude()
     {
-        (int pi, int ei) = _eng.Pairings[_battleIdx];
-        (int npi, int nei) = _eng.Pairings[_battleIdx + 1];
+        int pi = _script.SquadIx[_battleIdx], ei = _script.StageIx[_battleIdx];
+        int npi = _script.SquadIx[_battleIdx + 1], nei = _script.StageIx[_battleIdx + 1];
 
         var parts = new List<string>();
         if (nei != ei) parts.Add("ENEMY REINFORCEMENTS");
