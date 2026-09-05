@@ -1300,15 +1300,62 @@ public sealed class BattleResult
     public required int DullTotal { get; init; }
 
     /// <summary>
-    /// 呪い則（第95期）の計数。<b>盤面には一切影響しない</b>（誰も読んで分岐しない・verbose 非依存）。
-    /// <c>CurseFired</c> 汚れが1種以上あって重くなった回数 ／ <c>CurseDry</c> 空振り（汚れ 0 種） ／
-    /// <c>CurseKinds</c> 種類数の総和 ／ <c>CurseAdded</c> 上乗せした量。
-    /// <b>既定（<see cref="CurseRule.Default"/>）では全部 0。</b>
+    /// 滲み則のなまり（第95期。第96期 (R1) に <see cref="SoakRule"/> へ畳んだ）の計数。
+    /// <b>盤面には一切影響しない。</b>
+    /// <c>SoakDullFired</c> 汚れが1種以上あって重くなった回数 ／ <c>SoakDullDry</c> 空振り（汚れ 0 種） ／
+    /// <c>SoakDullKinds</c> 種類数の総和 ／ <c>SoakDullAdded</c> 上乗せした量。
+    /// <b>既定（<see cref="SoakRule.Default"/> ＝ <c>DullPerKind 1</c>）では走る</b>——
+    /// 切るのは <c>DullPerKind 0</c>。
     /// </summary>
-    public required int CurseFired { get; init; }
-    public required int CurseDry { get; init; }
-    public required int CurseKinds { get; init; }
-    public required int CurseAdded { get; init; }
+    public required int SoakDullFired { get; init; }
+    public required int SoakDullDry { get; init; }
+    public required int SoakDullKinds { get; init; }
+    public required int SoakDullAdded { get; init; }
+
+    /// <summary>
+    /// 呪い（第96期・<see cref="CurseRule"/>）の計数。<b>盤面には一切影響しない。</b>
+    ///
+    /// <para><b>門（§1-1）の3つ</b>——<c>HexHits*</c>（祟りの保持者が殴られた回数＝配れる機会）／
+    /// <c>HexPairTurn*</c>（同陣営に2体目の呪いが立ったターン。<b>0 ＝ 一度も立たなかった</b>）／
+    /// <c>HexShareHits</c>（単体攻撃が呪い持ちに入った回数）。
+    /// <b>3つとも 0 より大きくないと共有は1回も起きない。</b></para>
+    ///
+    /// <para><b>既定（<see cref="CurseRule.Default"/> ＝ 共有しない）では全部 0。</b>
+    /// 門を数えるときは <c>new CurseRule(true, 0)</c>（印は書くが共有量 0）を渡す。</para>
+    /// </summary>
+    public required int HexHits { get; init; }
+    public required int HexHitsFromFoe { get; init; }
+    public required int HexHitsFromAlly { get; init; }
+    public required int HexHitsNoSource { get; init; }
+    public required int HexMarks { get; init; }
+    public required int HexMarksOnPlayer { get; init; }
+    public required int HexMarksOnEnemy { get; init; }
+    public required int HexReMarkBlocked { get; init; }
+    public required int HexPairTurnPlayer { get; init; }
+    public required int HexPairTurnEnemy { get; init; }
+    public required int HexPairTurnsPlayer { get; init; }
+    public required int HexPairTurnsEnemy { get; init; }
+    public required int HexMaxCursedPlayer { get; init; }
+    public required int HexMaxCursedEnemy { get; init; }
+    public required int HexCensusTurns { get; init; }
+    public required int HexShareHits { get; init; }
+    public required int HexShareDry { get; init; }
+    public required int HexShares { get; init; }
+    public required int HexShareDamage { get; init; }
+    public required int HexSharesToPlayer { get; init; }
+    public required int HexShareDamageToPlayer { get; init; }
+    public required int HexShareTargets { get; init; }
+    public required long HexShareBase { get; init; }
+    public required long HexShareBaseTimesTargets { get; init; }
+    public required int HexMarksOnStoic { get; init; }
+    public required int HexHopBlocked { get; init; }
+    public required int HexNonSingleOnCursed { get; init; }
+    public required int HexCrossTeam { get; init; }
+    public required int HexSpillSuppressed { get; init; }
+    public required IReadOnlyDictionary<string, int> HexShareBySource { get; init; }
+    public required IReadOnlyDictionary<string, int> HexShareDamageBySource { get; init; }
+    public required IReadOnlyDictionary<string, int> HexHitByAlly { get; init; }
+    public required IReadOnlyDictionary<string, int> HexHitByFoe { get; init; }
     public required IReadOnlyList<int> DullByRoute { get; init; }
 
     /// <summary>

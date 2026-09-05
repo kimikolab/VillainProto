@@ -101,6 +101,10 @@ public enum TraitId
     Funnel,     // 横流し: 自分と隣の味方に来た強化を、自分の隣で一番遅い味方へすべて回す。
                  // 自分も横取りされた側も育たない（1つの動作の表と裏。行き先が本体で量は増えない）
 
+    // --- 第96期で足した札 ---
+    Hex,        // 祟り: 自分にダメージを与えた駒に呪いが1つ付く。**敵味方を問わない**
+                 // （命中した味方の刃も味方を呪う。共有するのは engine の段で、この札は付与だけ）
+
     // --- 傷の5枚から切り出したマイナス（第74期・**器具**） ---
     // どれも既存の駒に既定で付いたままで、**盤面は1ビットも変わらない**（受け入れ基準は
     // `compare` 305 セル 0 件）。切り出した理由は1つだけ——**計量できるようにするため**。
@@ -1376,8 +1380,15 @@ public readonly record struct GatherRule(bool Enabled)
 }
 
 /// <summary>
-/// 滲み則（第90期）。<b>傷を持つ相手には、状態異常が深く入る。</b>
-/// 毒は層が +1、燃焼は残ターンが +1（3 → 4）される。
+/// 滲み則（第90期）。<b>汚れている相手には、状態異常が深く入る。</b>
+/// 毒は層が +1（傷を持つ相手）、燃焼は残ターンが +1（3 → 4・<b>第91期に不採用</b>）、
+/// なまりは<b>相手が背負っている汚れの種類だけ</b>重くなる（<see cref="DullPerKind"/>・第95期）。
+///
+/// <para><b>第96期 (R1) に 3 本目を畳んだ。</b> 第95期は同じ形の機構を <c>CurseRule</c> という
+/// 別の型で持っていたが、実体は「汚れているとなまりが深く入る」で滲み則そのものだった
+/// ——<b>説明が1行で済む</b>ので畳み、空いた <c>CurseRule</c> の名前を第96期の呪い
+/// （<see cref="StatusKeys.Curse"/>・ダメージの共有）に渡した。
+/// <b>これは改名であって機構の変更ではない</b>（`compare` 305 セルと交差帯12行が全セル ±0.0）。</para>
 ///
 /// <para><b>両陣営に等しくかかる。</b> 第85期の巻き込み則が既定になっているので味方も傷を負う
 /// ——傷を負った味方は瘴気の毒漏れ・火の粉を深く受ける。非対称なのは
@@ -1398,8 +1409,20 @@ public readonly record struct GatherRule(bool Enabled)
 /// （第57期）、深さを足しても<b>点け直しで消える</b>——第90期の実測で燃焼側の滲みは
 /// 1.65 回/戦 発火して<b>紙の 2% しか払い出さない</b>のに、`compare` の 9 行を下げていた。
 /// <b>深さを足す設計は毒・傷のような「積む通貨」にしか効かない。</b></para>
-public readonly record struct SoakRule(bool Poison, bool Burn)
+public readonly record struct SoakRule(bool Poison, bool Burn, int DullPerKind = 1)
 {
+    /// <summary>
+    /// <b>なまりが読む汚れ</b>（第95期に <c>CurseRule.Kinds</c> として作り、第96期 (R1) でここへ畳んだ）。
+    /// <b>除外ではなく列挙で書く</b>—— <see cref="StatusKeys.All"/> にキーが増えたときに
+    /// 黙ってなまりが重くならないため（<see cref="ScapegoatTrait.Kinds"/> とは逆の作法。
+    /// あちらは「全部の呪い」が主題なので除外を並べる）。
+    /// <para><b>第96期の呪い（<see cref="StatusKeys.Curse"/>）はここに足していない</b>
+    /// ——呪いは「汚れ」ではなく<b>繋がりの記録</b>で、単体では何も起こさないから
+    /// （足すと (R1) が「改名であって機構の変更ではない」を破る）。</para>
+    /// </summary>
+    public static readonly string[] Kinds =
+        { StatusKeys.Poison, StatusKeys.Burn, StatusKeys.Stun, StatusKeys.Marked, StatusKeys.Wound };
+
     /// <summary>
     /// 既定は<b>滲む</b>＝**第90期に採用**（主判定は A ＝ キリ・ノミ の両方で通り、
     /// どちらも 50 体中1位が意図した相手の瘴気袋のグザ。拒否権1〜3 もすべて ○）。
@@ -1413,59 +1436,55 @@ public readonly record struct SoakRule(bool Poison, bool Burn)
     /// −10.0pt 以上落ちたのは `追撃×毒 (ハギ×グザ)` の 1 行だけで、
     /// **その5枚のどの駒も「他の行」の平均が −0.13 〜 +0.00pt** ＝ 組み合わせ固有の制約であって壊れではない。</para>
     /// </summary>
-    public static SoakRule Default => new(Poison: true, Burn: false);
+    public static SoakRule Default => new(Poison: true, Burn: false, DullPerKind: 1);
 }
 
 /// <summary>
-/// 呪い則（第95期）。<b>なまりは、相手が背負っている汚れの種類だけ重くなる。</b>
+/// 呪い（第96期）。<b>点で刺すと、繋がった駒にも届く。</b>
 ///
-/// <para><b>新しいキーを作らない。</b> 呪いは<b>既存のなまり（弱体）軸そのもの</b>で、
-/// 増えるのは <c>Dull</c> が書く量だけ。だから
-/// <see cref="ScapegoatTrait.Kinds"/> の分母（<see cref="StatusKeys.All"/> から2本を除いた 6 本）は動かず、
-/// <c>AcceptsSupport</c> の扱いも <see cref="BattleContext.Dull"/> の既存の作法
-/// （呼び出し側が決める・第42期からの持ち越し）のまま変わらない。</para>
+/// <para><b>付与</b>——泥人形ムド（<see cref="TraitId.Hex"/>）にダメージを与えた駒に呪いが1つ付く。
+/// <b>敵味方を問わない</b>ので、味方の刃（余波・棘・吸い・置き去り・生贄・破裂）がムドを叩けば
+/// 味方が呪われる。<b>マイナスを別に足さない。</b>
+/// ムドは「殴られないと働かない」という理由で捨てられた駒で、<b>その理由がそのまま供給のクロックになる。</b></para>
 ///
-/// <para><b>既存駒が1文も増やさずに読み手になる</b>のが狙い（第90期の滲み則・第93期の自傷と同じ構造）。
-/// なまりの読み手は<b>3 枚</b>——逆しま（<see cref="TraitId.Perverse"/>・下げ幅の3倍）／
-/// 引き受け（<see cref="TraitId.Bear"/>・破片へ変換）／渡し（<see cref="TraitId.Relay"/>・敵へ転嫁）。
-/// <b>量を増やす行は横取りより前</b>に置くので、3枚とも増えた量をそのまま読む。</para>
+/// <para><b>呪い単体では何も起こらない。</b> ダメージもデバフも無い純粋な盤面の記録（傷と同じ）で、
+/// <see cref="BattleContext.TickStatuses"/> には何も足していない。</para>
 ///
-/// <para><b>数える汚れは 毒・燃・痺・標・傷 の5つ。</b>
-/// <b>破片（<see cref="StatusKeys.Armor"/>）は数えない</b>——あれは damage 側の<b>正の</b>資源で
-/// （「誰の助けも届かない駒に唯一届く支援」）、汚れではない。
-/// <b>深手（<see cref="StatusKeys.Deep"/>）も数えない</b>——<see cref="DeepRule"/> が既定 <c>false</c> なので恒等的に 0。
-/// <b>なまり自身も数えない</b>——自己参照になるうえ <c>AtkBonus</c> はカウンタではない。</para>
+/// <para><b>共有</b>——<b>単体攻撃</b>（<see cref="AttackPattern.Single"/>）のダメージが呪い持ちに入ったとき、
+/// <b>同じ陣営の他の呪い持ち全員</b>に <see cref="SharePercent"/>% が届く。
+/// <b>単体攻撃を条件付きの範囲攻撃に変える</b>のが狙いで、味方46体の常時の攻撃型が
+/// <b>単体43／薙ぎ3／貫き0／全体0</b>——「同じ絵が46回流れている」に、駒を1体も足さずに効く。</para>
 ///
-/// <para><b>種類の数であって量ではない。</b> 毒の層が 10 でも 1 種は 1 種。
-/// 第84期の単価の壁（傷 N 個 × 係数）に自分から入らないため。
-/// <b>上限は 5</b>（種類の数そのもの）で、第95期 Phase 0 の実測は<b>平均 1.11 種</b>。</para>
+/// <list type="bullet">
+///   <item><b>範囲攻撃は共有しない。</b> 薙ぎ・貫き・全体まで共有すると<b>範囲が二乗で伸びる</b>。
+///   ここを切るのは調整ではなく構造で、「点で刺すと呪いが繋がる」という絵としても一貫する</item>
+///   <item><b>同じ陣営に限る。</b> 陣営をまたぐと、ムドが敵を呪う目的（殲滅）と
+///   味方が呪われる副作用が同じ経路で混ざって切り分けられなくなる</item>
+///   <item><b>1ホップ。</b> 共有で入ったダメージは、さらに共有を起こさない
+///   （<see cref="ThornsTrait"/> の <c>InReaction</c> と同じ形のガード）</item>
+///   <item><b>剥がれない。</b> 解除を同じ期に足すと変数が2つになる。
+///   ただし<b>呪い持ちが何体いるかで効果が変わる</b>ので、第93期の深手
+///   （一度なると効果が固定＝ただの減点）とはここが違う</item>
+///   <item><b>増幅は線形。</b> 共有は元の一撃を<b>割合で分ける</b>ので、呪い3体でも総量は 2.0 倍。
+///   状態異常の共有（複製）は二次になるので、この期では作らない</item>
+///   <item><b>ムド自身は呪いを読まない。</b> 得をするのは単体攻撃を振る駒全員であって、
+///   ムドではない（<b>自己完結しない</b>・第84期以降の原則）</item>
+/// </list>
 ///
-/// <para><b>両陣営に等しくかかる。</b> 転嫁（<see cref="BattleContext.RelayThrough"/>）が
-/// 窓口の中から窓口を呼ぶので、敵側へ流れた量にも流し先の汚れの種類ぶんが乗る
-/// ——<b>意図した対称</b>で、再入ガード（<c>InRelay</c>）は元から立っている。</para>
+/// <para><b><see cref="SharePercent"/> は振らない。</b> 掃引はこの期に無い。</para>
 /// </summary>
-public readonly record struct CurseRule(bool Enabled, int PerKind = 1)
+public readonly record struct CurseRule(bool Enabled, int SharePercent = 50)
 {
-    /// <summary>数える汚れ。<b>除外ではなく列挙で書く</b>——
-    /// <see cref="StatusKeys.All"/> にキーが増えたときに黙って呪いが重くならないため
-    /// （<see cref="ScapegoatTrait.Kinds"/> とは逆の作法。あちらは「全部の呪い」が主題なので除外を並べる）。</summary>
-    public static readonly string[] Kinds =
-        { StatusKeys.Poison, StatusKeys.Burn, StatusKeys.Stun, StatusKeys.Marked, StatusKeys.Wound };
-
     /// <summary>
-    /// 既定は<b>重くする</b>＝**第95期に採用**。
-    /// <para>2×2（A ＝ 呪詛官ネル・B ＝ 残り 50 体 × 128 台）の主判定で
-    /// <b>50 体中1位が意図した相手の縛めのクグ</b>（Δ相乗 +1.76pt・増分尺度のノイズ床 0.49pt・2系列とも
-    /// +1.51 / +2.00 で正）。**2位は +0.66pt** なので、1位は2位の 2.7 倍・床の 3.6 倍で立っている。
-    /// 拒否権1〜3 もすべて ○（主判定19行の第五波は 38.0% → **38.0%** で1ビットも動かず、
-    /// `compare` は **4 セル / 4 行**・−10.0pt 以上落ちた行は 0）。</para>
-    /// <para><b>盤面はほとんど動かない。</b> なまりの 74% は呪詛の開戦時1回で書かれ、
-    /// <b>その時点で盤面に汚れは1つも無い</b>——理想61行での発火は <b>2.28 回中 0.06 回（2.6%）</b>しかなく、
-    /// 弱体の総量は 8.42 → 8.48（+0.7%）。<b>効くのはドラフト台のように戦闘が長引く側で</b>、
-    /// そこでは発火 0.5〜3.2 回/戦・上乗せ 0.5〜3.3 量/戦になる。
-    /// <b>第88期の規約どおり、採否は大きさではなく並び方で決めた。</b></para>
+    /// 既定は<b>共有しない</b>——<b>測定中</b>（第96期）。
+    /// <para><b>付与（<see cref="HexTrait"/> の印）も既定では走らない</b>ので、
+    /// ムドに札を1枚足しても盤面は1ビットも動かない
+    /// （<c>compare</c> 305 セルが <c>docs/balance.md</c> と 0 件であることが検算）。
+    /// <b>門を数えるときは <c>new CurseRule(true, 0)</c> を使う</b>——印は書くが
+    /// 共有量が 0 なので <see cref="BattleContext.ApplyDamage"/> が即座に返り、
+    /// <b>盤面は W0 と完全に同一のまま計数だけが立つ</b>（第96期 §1-1 の「版に依らない計数」）。</para>
     /// </summary>
-    public static CurseRule Default => new(true);
+    public static CurseRule Default => new(false, 50);
 }
 
 /// <summary>
@@ -5944,6 +5963,53 @@ public sealed class HushTrait : Trait
 }
 
 /// <summary>
+/// 祟り（第96期・<see cref="CurseRule"/>）。<b>自分にダメージを与えた駒に呪いが1つ付く。</b>
+///
+/// <para><b>敵味方を問わない。</b> 味方の刃（余波・棘・吸い・置き去り・生贄・破裂）が
+/// 保持者を叩けば<b>味方が呪われる</b>——これがこの特性のマイナス側で、
+/// <b>マイナスを別に足していない</b>（1つの動作の表と裏）。</para>
+///
+/// <para><b>供給の周期が新しい。</b> 開戦時1回（呪詛・萎縮・生贄）／毎ターン（瘴気・吸い・縛め）／
+/// 攻撃ごと（裂き・刻み・余波）はあるが、<b>「殴られるごとに相手側へ書く」を持つ駒がいなかった</b>。
+/// 泥人形ムドの「殴られないと働かない」という捨てられた理由が、<b>そのまま供給のクロックになる。</b></para>
+///
+/// <para><b>保持者自身は呪いを読まない。</b> 得をするのは単体攻撃を振る駒全員であって、
+/// ムドではない（<b>自己完結しない</b>・第84期以降の原則）。
+/// <see cref="RageTrait"/>（被弾強化）の育ちには1文字も触っていない——
+/// ムドの1文は「受けたダメージに応じて攻撃力が上がる」で、呪いは別の話だから
+/// <b>同じ <c>TraitId</c> に入れず、札を1枚足した</b>（ムドは特性2つ。カドの4つに次ぐ）。</para>
+///
+/// <para><b>二値。重ねない</b>——共有の強さは呪い持ちの<b>体数</b>で決まるので、
+/// 同じ駒に2つ積んでも意味が無い。<b>剥がれない</b>（解除を同じ期に足すと変数が2つになる）。</para>
+///
+/// <para><b>倒れる一撃でも呪う。</b> <see cref="Trait.OnDamaged"/> は HP を引いた直後・
+/// 死亡判定の前に走るので、保持者を倒した駒にも付く——刃は届いたのだから。
+/// <b>出どころが自分自身（自傷）のときだけ除く。</b></para>
+/// </summary>
+public sealed class HexTrait : Trait
+{
+    public override TraitId Id => TraitId.Hex;
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        if (dmg <= 0) return;
+
+        // **版に依らない計数**（第96期 §1-1 の門の 1）。規則の有無に関わらず数える
+        // ——「配れる機会が何回あったか」は W0 でも W1 でも同じ量として読みたい。
+        ctx.NoteHexHit(self, source);
+
+        if (!ctx.Curse.Enabled) return;
+        if (source is null || ReferenceEquals(source, self)) return;   // 刻みと自傷では呪われない
+        if (!source.IsAlive) return;                                   // 死体に書かない作法
+        if (source.RawCounter(StatusKeys.Curse) > 0) { ctx.HexReMarkBlocked++; return; }   // 二値。重ねない
+
+        source.SetCounter(StatusKeys.Curse, 1);
+        ctx.NoteHexMark(source);
+        ctx.Log($"    {self.Name} の泥が {source.Name} に絡みつく（呪い）", LogKind.Trigger);
+    }
+}
+
+/// <summary>
 /// 粛の規則。<b>診断（hush）が版を並べて 1 回の実行の中で比べるためだけに外から差せる。</b>
 /// 既定は <see cref="Default"/> ＝有効で、<b>これが本採用の規則</b>。渡さない限り盤面は常にこれ。
 ///
@@ -6002,6 +6068,7 @@ public static class TraitCatalog
         new FinisherTrait(),
         new FavorTrait(),
         new FunnelTrait(),
+        new HexTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

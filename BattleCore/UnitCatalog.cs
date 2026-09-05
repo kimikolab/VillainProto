@@ -27,7 +27,7 @@ public static class UnitCatalog
         MaxHp = 80,
         Attack = 3,
         Speed = 5,
-        Traits = new[] { TraitId.Rage },
+        Traits = new[] { TraitId.Rage, TraitId.Hex },
         PlusText = "受けたダメージに応じて攻撃力が上がる",
         MinusText = "素の攻撃力がほぼ無い",
         Flavor = "殴られないと働かないので、誰も連れて行きたがらない。"

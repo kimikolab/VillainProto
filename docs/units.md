@@ -133,6 +133,7 @@
 | `Finisher` | 止めのトメ |
 | `Favor` | 火選りのヒヨ |
 | `Funnel` | - |
+| `Hex` | 泥人形ムド |
 | `ThinBlade` | 裂きのキリ |
 | `Overreach` | 抉りのエグ |
 | `Await` | 断ちのナタ |

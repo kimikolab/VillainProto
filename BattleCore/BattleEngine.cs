@@ -82,11 +82,29 @@ public static class StatusKeys
     public const string Deep = "deep";
 
     /// <summary>
+    /// 呪い（第96期・<see cref="CurseRule"/>）。<b>0 か 1 の二値。重ねない。</b>
+    ///
+    /// <para><b>単体では何も起こさない。</b> ダメージもデバフも無い純粋な盤面の記録で、
+    /// <see cref="BattleContext.TickStatuses"/> には<b>何も足していない</b>——時間で進行しない
+    /// （<see cref="Wound"/> と同じ分岐点）。<b>読み手は engine の共有の段1箇所だけ。</b></para>
+    ///
+    /// <para>意味は<b>「繋がっている」</b>であって「汚れている」ではない。だから
+    /// <see cref="SoakRule.Kinds"/>（なまりが読む汚れ 5 本）には<b>足していない</b>
+    /// ——足すと第96期 (R1) の「改名であって機構の変更ではない」が破れる。
+    /// 一方 <see cref="ScapegoatTrait.Kinds"/> は<b>除外を並べる作法</b>なので自動で 6 → 7 本になる
+    /// （業は <c>UnitCatalog.All</c> にも <c>EnemyCatalog.Stages</c> にも居ないので盤面は動かない）。</para>
+    ///
+    /// <para><b>剥がれない。</b> 解除を同じ期に足すと変数が2つになる。ただし
+    /// <b>呪い持ちが何体いるかで効果が変わる</b>ので、第93期の深手（一度なると効果が固定）とは違う。</para>
+    /// </summary>
+    public const string Curse = "curse";
+
+    /// <summary>
     /// 全キーの一覧。会戦（Engagement）が部隊戦の境界で状態異常を一律に消すために使う
     /// （状態異常は Battle スコープ、という寿命規則。Armor も含めて消す——破片は
     /// Battle 内の供給に依存するプール）。**新しいキーを足したら必ずここにも足すこと。**
     /// </summary>
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep };
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse };
 
     /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
@@ -103,6 +121,7 @@ public static class StatusKeys
         Armor => "破片",
         Wound => "傷",
         Deep => "深手",
+        Curse => "呪",
         _ => key
     };
 }
@@ -668,10 +687,114 @@ public sealed class BattleContext
 
     /// <summary>
     /// 呪い則（第95期）の計数。<b>盤面には一切影響しない</b>（誰も読んで分岐しない・verbose 非依存）。
-    /// <c>CurseFired</c> 汚れが1種以上あって重くなった回数 ／ <c>CurseDry</c> 空振り（汚れ 0 種） ／
-    /// <c>CurseKinds</c> 種類数の総和（÷ <c>CurseFired</c> が倍率） ／ <c>CurseAdded</c> 上乗せした量。
+    /// <c>SoakDullFired</c> 汚れが1種以上あって重くなった回数 ／ <c>SoakDullDry</c> 空振り（汚れ 0 種） ／
+    /// <c>SoakDullKinds</c> 種類数の総和（÷ <c>SoakDullFired</c> が倍率） ／ <c>SoakDullAdded</c> 上乗せした量。
     /// </summary>
-    public int CurseFired, CurseDry, CurseKinds, CurseAdded;
+    public int SoakDullFired, SoakDullDry, SoakDullKinds, SoakDullAdded;
+
+    // =====================================================================================
+    // 呪い（第96期・CurseRule）の計数。**盤面には一切影響しない**
+    // （誰も読んで分岐しない・verbose 非依存。`SoakDull*` / `ShoveFired` と同じ扱い）。
+    //
+    // **門（§1-1）は W0 では数えられない**——呪いが1つも書かれないので、
+    // 「同陣営に2体以上」が定義上 0 になる。だから門を数えるときは
+    // **`CurseRule(true, 0)`**（印は書くが共有量 0）を使う。
+    // `ApplyDamage` は `amount <= 0` で即座に返るので、**盤面は W0 と完全に同一のまま**。
+    // =====================================================================================
+
+    /// <summary>祟りの保持者（ムド）がダメージを受けた回数＝<b>呪いを配れる機会</b>。
+    /// 出どころで割る（敵 / 味方の刃 / 出どころ無し＝毒・燃焼の刻み）。<b>版に依らない。</b></summary>
+    public int HexHits, HexHitsFromFoe, HexHitsFromAlly, HexHitsNoSource;
+
+    /// <summary>祟りの保持者を叩いた駒の内訳（<b>味方の刃の全数</b>・敵の全数）。<b>版に依らない。</b></summary>
+    public readonly Dictionary<string, int> HexHitByAlly = new();
+    public readonly Dictionary<string, int> HexHitByFoe = new();
+
+    /// <summary>実際に呪いが<b>新しく</b>付いた回数（既に付いている相手は数えない）。陣営別。</summary>
+    public int HexMarks, HexMarksOnPlayer, HexMarksOnEnemy;
+
+    /// <summary>既に呪われている相手にもう一度書こうとして弾いた回数（自己検査 (b)。<b>二値の証拠</b>）。</summary>
+    public int HexReMarkBlocked;
+
+    /// <summary>陣営ごとの<b>2体目の呪いが立ったターン</b>（0 ＝ 一度も立たなかった）。</summary>
+    public int HexPairTurnPlayer, HexPairTurnEnemy;
+
+    /// <summary>ターン頭に呪い持ちの生存が2体以上だったターンの数（陣営別）と、その最大値。</summary>
+    public int HexPairTurnsPlayer, HexPairTurnsEnemy, HexMaxCursedPlayer, HexMaxCursedEnemy;
+
+    /// <summary>ターン頭の census を取った回数（＝ターン数。上の比の分母）。</summary>
+    public int HexCensusTurns;
+
+    /// <summary><b>単体攻撃</b>が呪い持ちに入った回数（＝共有の発火）と、
+    /// そのうち<b>同陣営に他の呪い持ちが1体もいなかった</b>回数（空振り）。</summary>
+    public int HexShareHits, HexShareDry;
+
+    /// <summary>実際に配った本数と量。<c>HexShareToPlayer</c> は味方側が受けた量（Q4）。</summary>
+    public int HexShares, HexShareDamage, HexSharesToPlayer, HexShareDamageToPlayer;
+
+    /// <summary>共有先の延べ体数（<b>版に依らない</b>——共有量が 0 でも数える）と、
+    /// 紙のスループットの材料（Σ 元の打点 ／ Σ 元の打点 × 共有先の体数）。</summary>
+    public int HexShareTargets;
+    public long HexShareBase, HexShareBaseTimesTargets;
+
+    /// <summary>支援拒否（<see cref="TraitId.Stoic"/>）持ちに呪いが付いた回数（§1-3 の 4）。</summary>
+    public int HexMarksOnStoic;
+
+    /// <summary>1ホップのガードが止めた回数（自己検査 (c)。<b>0 でないことが「ガードが働いている」</b>）。</summary>
+    public int HexHopBlocked;
+
+    /// <summary>薙ぎ・貫き・全体が呪い持ちに入った回数（自己検査 (d)。
+    /// <b>これが 0 より大きいのに共有が起きていない</b>ことが「範囲は反応しない」の証拠）。</summary>
+    public int HexNonSingleOnCursed;
+
+    /// <summary>陣営をまたいで配った回数（自己検査 (e)。<b>構成上つねに 0</b>）。</summary>
+    public int HexCrossTeam;
+
+    /// <summary>巻き込み則の傷を抑えた回数（自己検査 (f)。<c>spillWound: false</c> が無ければ書かれていた本数）。</summary>
+    public int HexSpillSuppressed;
+
+    /// <summary>共有を起こした単体攻撃の出どころ（Q3）。<b>駒の名前で数える。</b></summary>
+    public readonly Dictionary<string, int> HexShareBySource = new();
+    public readonly Dictionary<string, int> HexShareDamageBySource = new();
+
+    /// <summary>祟りの被弾（門の 1）。<b>規則の有無に依らず数える。</b></summary>
+    internal void NoteHexHit(UnitState self, UnitState? source)
+    {
+        HexHits++;
+        if (source is null) { HexHitsNoSource++; return; }
+        Dictionary<string, int> d;
+        if (source.TeamId == self.TeamId) { HexHitsFromAlly++; d = HexHitByAlly; }
+        else { HexHitsFromFoe++; d = HexHitByFoe; }
+        d.TryGetValue(source.Def.Name, out int n0);
+        d[source.Def.Name] = n0 + 1;
+    }
+
+    /// <summary>呪いが新しく付いた（門の 2 の分子）。</summary>
+    internal void NoteHexMark(UnitState marked)
+    {
+        HexMarks++;
+        bool player = marked.TeamId == PlayerTeam;
+        if (player) HexMarksOnPlayer++; else HexMarksOnEnemy++;
+        if (!marked.AcceptsSupport) HexMarksOnStoic++;   // §1-3 の 4。**呪いは支援ではないので弾かない**
+        int n = LivingMembers(marked.TeamId).Count(u => u.RawCounter(StatusKeys.Curse) > 0);
+        if (n >= 2)
+        {
+            if (player) { if (HexPairTurnPlayer == 0) HexPairTurnPlayer = Math.Max(1, _turn); }
+            else { if (HexPairTurnEnemy == 0) HexPairTurnEnemy = Math.Max(1, _turn); }
+        }
+    }
+
+    /// <summary>ターン頭の census（門の 2）。<b>盤面は読むだけ。</b></summary>
+    internal void NoteHexCensus()
+    {
+        HexCensusTurns++;
+        int p = LivingMembers(PlayerTeam).Count(u => u.RawCounter(StatusKeys.Curse) > 0);
+        int e = LivingMembers(EnemyTeam).Count(u => u.RawCounter(StatusKeys.Curse) > 0);
+        if (p >= 2) HexPairTurnsPlayer++;
+        if (e >= 2) HexPairTurnsEnemy++;
+        if (p > HexMaxCursedPlayer) HexMaxCursedPlayer = p;
+        if (e > HexMaxCursedEnemy) HexMaxCursedEnemy = e;
+    }
 
     /// <summary>
     /// そのうち<b>横取り役（集約・渡し）に横取りされた量</b>を経路別に割ったもの（第44期）。
@@ -1629,9 +1752,12 @@ public sealed class BattleContext
     public DeepRule Deep { get; }
 
     /// <summary>
-    /// 呪い則（第95期）。<b>診断（curse）が版を差し替えるためだけの窓口</b>で、
-    /// 通常の実行では誰も渡さない（既定は <see cref="CurseRule.Default"/> ＝ 重くしない）。
-    /// 見るのは <see cref="Dull"/> の1箇所だけ。
+    /// 呪い（第96期）。<b>診断（hex）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="CurseRule.Default"/> ＝ 共有しない）。
+    /// 見るのは <see cref="HexTrait"/>（付与）と <see cref="ApplyDamage"/> の共有の段（1箇所）だけ。
+    /// <para><b>第95期の「なまりが汚れの種類だけ重くなる」は同じ名前を取っていたが、
+    /// 実体は滲み則そのものだった</b>ので第96期 (R1) で <c>SoakRule.DullPerKind</c> へ畳んだ
+    /// ——名前の衝突を先に解いてから呪いを作っている。</para>
     /// </summary>
     public CurseRule Curse { get; }
 
@@ -2513,7 +2639,9 @@ public sealed class BattleContext
         }
 
         int dealt = atk;
-        ApplyDamage(target, dealt, actor);
+        // 呪いの共有（第96期）は**単体攻撃の一撃そのもの**にだけ札を付ける。
+        // 副次目標（薙ぎ・全体）と貫きの段には付けない——範囲が二乗で伸びるのを止める構造。
+        ApplyDamage(target, dealt, actor, singleHit: pattern == AttackPattern.Single);
 
         // 適用順を混ぜる。同じ一振りで2体以上落ちるとき、死亡順（墓守の層・破裂の連鎖）が
         // 席番号で決まっていた。巻き込む相手の顔ぶれは変わらない——順番だけ。
@@ -2641,14 +2769,28 @@ public sealed class BattleContext
     /// 深手の払い出し（第93期）であることの札。<b>計数専用で、盤面の判断には一切使わない</b>
     /// （<c>burnTick</c> と同じ扱い）。中継（巨躯・分かち）に拾われた回数を数えるためだけにある。
     /// </param>
+    /// <param name="singleHit">
+    /// この damage が<b>単体攻撃（<see cref="AttackPattern.Single"/>）の一撃そのもの</b>であることの札（第96期）。
+    /// <b>呪いの共有（<see cref="CurseRule"/>）だけが読む。</b> 既定は偽なので、
+    /// <see cref="PerformAttack"/> の単体の一振り以外の呼び出しは1つも変わらない。
+    /// <para><b>肩代わり（巨躯・分かち・棘守り）で分割された段には引き継がない</b>
+    /// ——<c>burnTick</c> とはここが違う。引き継ぐと同じ一撃が壁と後ろの味方の両方から共有を起こし、
+    /// <b>「1ホップ」が肩代わり役の枚数だけ増える</b>（測る前に固定した判断・§2-3）。</para>
+    /// </param>
+    /// <param name="hexShare">
+    /// 呪いの共有そのものであることの札（第96期）。<b>1ホップのガード</b>で、
+    /// これが真の段は共有を起こさない（<see cref="ThornsTrait"/> の <c>InReaction</c> と同じ形）。
+    /// 計数（<c>HexHopBlocked</c>）にも使う。
+    /// </param>
     public void ApplyDamage(UnitState target, int amount, UnitState? source,
                             bool isFriendlyFire = false, bool lethal = true,
                             bool burnTick = false, bool relayed = false,
-                            bool spillWound = true, bool deepBite = false)
+                            bool spillWound = true, bool deepBite = false,
+                            bool singleHit = false, bool hexShare = false)
     {
         if (Probe is null)
         {
-            ApplyDamageCore(target, amount, source, isFriendlyFire, lethal, burnTick, relayed, spillWound, deepBite);
+            ApplyDamageCore(target, amount, source, isFriendlyFire, lethal, burnTick, relayed, spillWound, deepBite, singleHit, hexShare);
             return;
         }
 
@@ -2669,7 +2811,7 @@ public sealed class BattleContext
         Mark = default;
         try
         {
-            ApplyDamageCore(target, amount, source, isFriendlyFire, lethal, burnTick, relayed, spillWound, deepBite);
+            ApplyDamageCore(target, amount, source, isFriendlyFire, lethal, burnTick, relayed, spillWound, deepBite, singleHit, hexShare);
         }
         finally { Mark = prev; }
     }
@@ -2678,7 +2820,8 @@ public sealed class BattleContext
     void ApplyDamageCore(UnitState target, int amount, UnitState? source,
                          bool isFriendlyFire, bool lethal,
                          bool burnTick, bool relayed,
-                         bool spillWound, bool deepBite)
+                         bool spillWound, bool deepBite,
+                         bool singleHit, bool hexShare)
     {
         if (!target.IsAlive || amount <= 0) return;
 
@@ -3023,6 +3166,71 @@ public sealed class BattleContext
             if (w >= 0)
                 Log($"    巻き込みの傷: {source.Name} の刃が {target.Name} に残る（傷 {w}）", LogKind.Status);
         }
+
+        // 呪いの共有（第96期・CurseRule）。**点で刺すと、繋がった駒にも届く。**
+        //
+        // **HP を引いた後・死亡判定の後**に置いてある。共有は「その一撃が呪い持ちに入った」
+        // という出来事に対する反応なので、**その一撃で相手が倒れても届く**
+        // （傷の「死体には刻まない」作法とは目的が違う——あちらは盤面に状態を書く話）。
+        //
+        // **share は入った量から1度だけ計算する。** 共有先のHPや防御で再計算しない
+        // ——受け手ごとに割り引くと「誰に繋がっているか」ではなく「誰が硬いか」の機構になる。
+        // 元の一撃を割合で分けるだけなので、**呪い3体でも総量は 2.0 倍で打ち止め（線形）。**
+        //
+        // 条件は4つ。**どれも構造で、係数ではない**（§0-4）:
+        //   `singleHit`  薙ぎ・貫き・全体は反応しない（範囲が二乗で伸びるのを止める）
+        //   `!hexShare`  1ホップ（共有が共有を呼ぶと往復する）
+        //   同じ陣営だけ  陣営をまたぐと、ムドが敵を呪う目的と味方が呪われる副作用が混ざる
+        //   `spillWound: false`  共有 → 傷 → 滲み の経路をこの期では作らない
+        if (Curse.Enabled && singleHit && target.RawCounter(StatusKeys.Curse) > 0)
+        {
+            if (hexShare)
+            {
+                HexHopBlocked++;                     // 自己検査 (c)。**ここで止まっている**
+            }
+            else
+            {
+                HexShareHits++;
+                int share = amount * Curse.SharePercent / 100;
+                var others = LivingMembers(target.TeamId)
+                    .Where(u => u != target && u.RawCounter(StatusKeys.Curse) > 0).ToList();
+                if (others.Count == 0) HexShareDry++;
+                // **紙の材料は共有量が 0 の版でも数える**（§1-2。門を数える `CurseRule(true, 0)` で
+                // 「もし配っていたらいくらになったか」を出すため）。
+                HexShareTargets += others.Count;
+                HexShareBase += amount;
+                HexShareBaseTimesTargets += (long)amount * others.Count;
+                foreach (UnitState other in others)
+                {
+                    if (other.TeamId != target.TeamId) HexCrossTeam++;   // 自己検査 (e)。構成上 0
+                    if (share <= 0) continue;
+                    // 出どころは元の攻撃者のまま。味方の刃が起点なら共有も味方の刃として数える
+                    // （`DamageToAlly` / `DamageToEnemy` の割り振りは陣営で決まるが、
+                    //  `isFriendlyFire` はログの色と巻き込み則の判定に効く）。
+                    bool ff = source is not null && source.TeamId == other.TeamId;
+                    if (ff && SpillWound.Enabled && !relayed && other.IsAlive
+                        && SpillWound.Writes(source!)) HexSpillSuppressed++;   // 自己検査 (f)
+                    HexShares++;
+                    HexShareDamage += share;
+                    if (other.TeamId == PlayerTeam) { HexSharesToPlayer++; HexShareDamageToPlayer += share; }
+                    if (source is not null)
+                    {
+                        HexShareBySource.TryGetValue(source.Def.Name, out int n0);
+                        HexShareBySource[source.Def.Name] = n0 + 1;
+                        HexShareDamageBySource.TryGetValue(source.Def.Name, out int a0);
+                        HexShareDamageBySource[source.Def.Name] = a0 + share;
+                    }
+                    Log($"    呪いが {target.Name} の痛みを {other.Name} へ渡す（{share}）", LogKind.Status);
+                    ApplyDamage(other, share, source, isFriendlyFire: ff,
+                                burnTick: burnTick, spillWound: false,
+                                singleHit: true, hexShare: true);
+                }
+            }
+        }
+        else if (Curse.Enabled && !singleHit && target.RawCounter(StatusKeys.Curse) > 0)
+        {
+            HexNonSingleOnCursed++;                  // 自己検査 (d)。**範囲は反応しない**
+        }
     }
 
     private void HandleDeath(UnitState dead, UnitState? killer)
@@ -3186,7 +3394,8 @@ public sealed class BattleContext
     {
         if (amount <= 0) return;
 
-        // 呪い則（第95期）。**なまりは、相手が背負っている汚れの種類だけ重くなる。**
+        // 滲み則のなまり（第95期に `CurseRule` として作り、第96期 (R1) で `SoakRule` へ畳んだ）。
+        // **なまりは、相手が背負っている汚れの種類だけ重くなる。**
         //
         // **横取りより前**に置く——ここで増やさないと、なまりの読み手3枚
         // （逆しま・引き受け・渡し）が増えた量を読めず、
@@ -3198,19 +3407,19 @@ public sealed class BattleContext
         // 呪いが読むのは「誰が汚れているか」のほう。分けないと、集約役の隣にいるだけで
         // 呪いが宛先の汚れを読むことになって、第63期の「移す機構は読み手にとって奪う機構」を
         // 呪いの側でもう一度作ることになる。
-        if (Curse.Enabled && Curse.PerKind > 0)
+        if (Soak.DullPerKind > 0)
         {
             int kinds = 0;
-            foreach (string k in CurseRule.Kinds) if (target.RawCounter(k) > 0) kinds++;
+            foreach (string k in SoakRule.Kinds) if (target.RawCounter(k) > 0) kinds++;
             if (kinds > 0)
             {
-                int add = kinds * Curse.PerKind;
+                int add = kinds * Soak.DullPerKind;
                 amount += add;
-                CurseFired++;
-                CurseKinds += kinds;
-                CurseAdded += add;
+                SoakDullFired++;
+                SoakDullKinds += kinds;
+                SoakDullAdded += add;
             }
-            else CurseDry++;
+            else SoakDullDry++;
         }
 
         DullTotal += amount;
@@ -3807,6 +4016,7 @@ public static class BattleEngine
             ctx.EmitTurnStart();
             ctx.TickStatuses();
             ctx.EmitStatusSnapshot();   // 削った後の残量を写す。表示用で、盤面には触らない
+            ctx.NoteHexCensus();        // 呪い（第96期）の門の 2。**盤面は読むだけ**
 
             foreach (UnitState u in ctx.AllUnits.Where(x => x.IsAlive).ToList())
                 foreach (Trait t in u.Traits.ToList())
@@ -4005,10 +4215,43 @@ public static class BattleEngine
             ExposeCount = ctx.ExposeCount,
             ExposeMissed = ctx.ExposeMissed,
             DullTotal = ctx.DullTotal,
-            CurseFired = ctx.CurseFired,
-            CurseDry = ctx.CurseDry,
-            CurseKinds = ctx.CurseKinds,
-            CurseAdded = ctx.CurseAdded,
+            SoakDullFired = ctx.SoakDullFired,
+            SoakDullDry = ctx.SoakDullDry,
+            SoakDullKinds = ctx.SoakDullKinds,
+            SoakDullAdded = ctx.SoakDullAdded,
+            HexHits = ctx.HexHits,
+            HexHitsFromFoe = ctx.HexHitsFromFoe,
+            HexHitsFromAlly = ctx.HexHitsFromAlly,
+            HexHitsNoSource = ctx.HexHitsNoSource,
+            HexMarks = ctx.HexMarks,
+            HexMarksOnPlayer = ctx.HexMarksOnPlayer,
+            HexMarksOnEnemy = ctx.HexMarksOnEnemy,
+            HexReMarkBlocked = ctx.HexReMarkBlocked,
+            HexPairTurnPlayer = ctx.HexPairTurnPlayer,
+            HexPairTurnEnemy = ctx.HexPairTurnEnemy,
+            HexPairTurnsPlayer = ctx.HexPairTurnsPlayer,
+            HexPairTurnsEnemy = ctx.HexPairTurnsEnemy,
+            HexMaxCursedPlayer = ctx.HexMaxCursedPlayer,
+            HexMaxCursedEnemy = ctx.HexMaxCursedEnemy,
+            HexCensusTurns = ctx.HexCensusTurns,
+            HexShareHits = ctx.HexShareHits,
+            HexShareDry = ctx.HexShareDry,
+            HexShares = ctx.HexShares,
+            HexShareDamage = ctx.HexShareDamage,
+            HexSharesToPlayer = ctx.HexSharesToPlayer,
+            HexShareDamageToPlayer = ctx.HexShareDamageToPlayer,
+            HexShareTargets = ctx.HexShareTargets,
+            HexShareBase = ctx.HexShareBase,
+            HexShareBaseTimesTargets = ctx.HexShareBaseTimesTargets,
+            HexMarksOnStoic = ctx.HexMarksOnStoic,
+            HexHopBlocked = ctx.HexHopBlocked,
+            HexNonSingleOnCursed = ctx.HexNonSingleOnCursed,
+            HexCrossTeam = ctx.HexCrossTeam,
+            HexSpillSuppressed = ctx.HexSpillSuppressed,
+            HexShareBySource = ctx.HexShareBySource,
+            HexShareDamageBySource = ctx.HexShareDamageBySource,
+            HexHitByAlly = ctx.HexHitByAlly,
+            HexHitByFoe = ctx.HexHitByFoe,
             DullByRoute = ctx.DullByRoute,
             DullTakenByRoute = ctx.DullTakenByRoute,
             WhetTotal = ctx.WhetTotal,
