@@ -1444,8 +1444,19 @@ public enum MendSide
 /// <summary>繕いの読み（第86期）。<see cref="MendSide"/> の doc を参照。</summary>
 public readonly record struct MendRule(MendSide Side)
 {
-    /// <summary>既定は X0（読まない）＝現行。</summary>
-    public static MendRule Default => new(MendSide.Plain);
+    /// <summary>
+    /// 既定は X1（読む）＝**第92期に採用**。
+    /// <para>第86期は<b>紙のスループット（紙 ÷ 総被ダメ ≥ 5%）という「大きさの線」を門に置いていた</b>ので
+    /// 2×2 を1戦も回さずに落ちていた（実測 2.0%）。第90期 §0-1 でその門を
+    /// 「鎖が繋がっているか」（供給・出会い・払い出しが 0 でないこと）に置き換えたので、
+    /// 第92期に**第88期の特異性の規約で測り直して通った**。</para>
+    /// <para>主判定は <b>50 体中1位が意図した相手の置き去りのナラ</b>（Δ相乗 +1.09pt・
+    /// 増分尺度のノイズ床 0.63pt・2系列とも正）。意図しない相手で床を超えたのは 3 / 44 体（線 3）。
+    /// 拒否権1〜3 もすべて ○（`compare` で動くのは 10 セル / 5 行・−10.0pt 以上落ちた行は 0）。</para>
+    /// <para><b>採用時にノノへ塞ぎ（<see cref="TraitId.Seal"/>）を足した</b>ので、
+    /// 採用版は測定版より辛い（繕った相手の傷がひとつ塞がる）。**採用後に測り直した表を報告書に併記してある。**</para>
+    /// </summary>
+    public static MendRule Default => new(MendSide.Wound);
 }
 
 /// <summary>

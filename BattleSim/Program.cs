@@ -48741,7 +48741,10 @@ if (focusId == "cross")
             string prog = File.ReadAllText(Path.Combine(root, "BattleSim", "Program.cs"));
             int st = prog.IndexOf("if (focusId == \"cross\")", StringComparison.Ordinal);
             int en = prog.IndexOf("if (focusId == \"ptrace\")", StringComparison.Ordinal);
-            if (st >= 0 && en > st) xcPick = prog.Substring(st, en - st).Split("PickOne").Length - 1;
+            // **呼び出しの形だけを数える。**探す文字列は実行時に組み立てる
+            // ——ソースに直に書くと、この検査自身の行が引っかかって必ず 1 以上になる（実際に踏んだ）。
+            string needle = "." + "PickOne" + "(";
+            if (st >= 0 && en > st) xcPick = prog.Substring(st, en - st).Split(needle).Length - 1;
         }
 
         Console.WriteLine("| | 内容 | 実測 | 判定 |");
@@ -51316,6 +51319,9 @@ static class TraitKeyMap
         [TraitId.Seal]       = Array.Empty<int>(),
         // 手番
         [TraitId.Bulwark]    = new[] { UnitTally.CarryIdle },
+        // 繕いの傷読み（第92期に採用）。**これでノノに初めてキーが立つ**
+        // ——第83期の「キーを1つも持たない駒は 8 / 51 体」は **7 / 51** になった（第80〜83期の派生値は動く）。
+        [TraitId.Mender]     = new[] { UnitTally.CarryWound },
         // 被弾（damage の層に立つ読み手・書き手）
         [TraitId.Rage]       = new[] { UnitTally.CarryHit },
         [TraitId.Thorns]     = new[] { UnitTally.CarryHit },
@@ -51494,6 +51500,8 @@ static class TraitEntryMap
         [TraitId.Bear]       = new[] { (UnitTally.CarryDull, Where.Ally) },
         [TraitId.Relay]      = new[] { (UnitTally.CarryDull, Where.Ally) },
         [TraitId.Amplifier]  = new[] { (UnitTally.CarryPoison, Where.Foe), (UnitTally.CarryWound, Where.Foe) },
+        // 繕いの傷読み（第92期に採用）。患者は必ず同陣営（`MostHurtAlly`）なので `Where.Ally`。
+        [TraitId.Mender]     = new[] { (UnitTally.CarryWound, Where.Ally) },
         [TraitId.Devour]     = new[] { (UnitTally.CarryPoison, Where.Foe) },
         [TraitId.Contagion]  = new[] { (UnitTally.CarryPoison, Where.Foe), (UnitTally.CarryWound, Where.Any) },
         // 滲み則（第90期に採用）。**engine の規則なので `TraitId` は増えていない**が、
