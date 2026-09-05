@@ -777,6 +777,897 @@ if (focusId == "derive")
     return;
 }
 
+// =====================================================================================
+// curse モード（第95期）—— 交差表を機械で引き直し、呪いの形を選ぶ
+//
+// 第94期が `TraitEntryMap` の 29 件を直した。**表は分類の器具なので、第92期の
+// 「交差の空白表」と「繋いでいる機構は 55 組中 12 組だけ」はその瞬間に動いている。**
+// そして 12 / 55 は第93期が「交差を1本引く」と決めた根拠そのものだった。
+// **根拠が動いた状態で次の機構を選ぶのは危ない**ので、選ぶ前に引き直す。
+//
+//     dotnet run --project BattleSim -c Release 0 curse grid    # (S1) 交差表の引き直し
+//     dotnet run --project BattleSim -c Release 0 curse phase0  # (S2) 呪いの数え物
+//     dotnet run --project BattleSim -c Release 0 curse pick    # (S3) 選定規則の適用
+//
+// **盤面は1ビットも動かない。** 観測は第94期 (T2) の印（`CounterProbe`）を**読み出すだけ**で、
+// `derive` のコードは1文字も書き換えていない（指示書 §5）。
+if (focusId == "curse")
+{
+    string cuMode = args.Length > 2 ? args[2] : "";
+    var cuStages = EnemyCatalog.Stages;
+    int cuNK = UnitTally.CarryKeys.Length;                   // 11
+    string CuK(int k) => UnitTally.CarryKeys[k];
+    var cuCompare = CompareBuilds();
+    var cuCross = CrossBuilds();
+    var cuRows = cuCompare.Concat(cuCross).ToArray();
+    const int CuSeeds = 20;                                  // `derive scan` と同じ
+
+    // ---------------------------------------------------------------------------------
+    // 観測（第94期 (T2) の写し。**印の立て方は engine 側にあるものをそのまま使う**）。
+    // ---------------------------------------------------------------------------------
+    int CuKeyOf(string key) => key switch
+    {
+        StatusKeys.Poison => UnitTally.CarryPoison,
+        StatusKeys.Burn => UnitTally.CarryBurn,
+        StatusKeys.Stun => UnitTally.CarryStun,
+        StatusKeys.Marked => UnitTally.CarryMark,
+        StatusKeys.Armor => UnitTally.CarryArmor,
+        StatusKeys.Wound => UnitTally.CarryWound,
+        StatusKeys.IdleTurn => UnitTally.CarryIdle,
+        StatusKeys.Deep => -1,
+        _ => Array.IndexOf(UnitTally.CarryKeys, key) is int i && i >= 0 ? i : -2
+    };
+
+    // 1つの版を走らせて (供給 / 消費 / 読み) の帳簿を返す。**盤面は読むだけ。**
+    (Dictionary<(TraitId T, int K, int W), (long N, long Amt)> Sup,
+     Dictionary<(TraitId T, int K, int W), (long N, long Amt)> Drain,
+     Dictionary<(TraitId T, int K, int W), long> Read,
+     double Battles, double Secs) CuObserve(
+        SoakRule? soak = null, SpillWoundRule? spill = null, GatherRule? gather = null,
+        IgniteRule? ignite = null, MendRule? mend = null, SutureRule? suture = null)
+    {
+        var obs = new Dictionary<(TraitId, int, int, int), (long N, long Amt)>();
+        void Probe(TraitId trait, UnitState owner, UnitState target, string key, int delta)
+        {
+            if (key == BattleContext.FriendlyBladeKey || key == BattleContext.FriendlyBladeEngineKey) return;
+            int k = CuKeyOf(key);
+            if (k < 0) return;                                // 深手（-1）と私有キー（-2）は 11 キーに無い
+            int w = ReferenceEquals(owner, target) ? 0 : owner.TeamId == target.TeamId ? 1 : 2;
+            int dir = delta == 0 ? 0 : delta > 0 ? 1 : -1;
+            var ky = (trait, k, w, dir);
+            var cur = obs.TryGetValue(ky, out var v) ? v : (0L, 0L);
+            obs[ky] = (cur.Item1 + 1, cur.Item2 + Math.Abs((long)delta));
+        }
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        foreach (var row in cuRows)
+            foreach (var st in cuStages)
+                for (int seed = 0; seed < CuSeeds; seed++)
+                    BattleEngine.Run(row.F, st.Enemy, seed, verbose: false,
+                                     suture: suture, spillWound: spill, mend: mend,
+                                     woundIgnite: ignite, gather: gather, soak: soak, probe: Probe);
+        sw.Stop();
+        var sup = new Dictionary<(TraitId, int, int), (long N, long Amt)>();
+        var drain = new Dictionary<(TraitId, int, int), (long N, long Amt)>();
+        var read = new Dictionary<(TraitId, int, int), long>();
+        foreach (var kv in obs)
+        {
+            var k = (kv.Key.Item1, kv.Key.Item2, kv.Key.Item3);
+            if (kv.Key.Item4 > 0) sup[k] = kv.Value;
+            else if (kv.Key.Item4 < 0) drain[k] = kv.Value;
+            else read[k] = kv.Value.N;
+        }
+        return (sup, drain, read, cuRows.Length * cuStages.Count * (double)CuSeeds, sw.Elapsed.TotalSeconds);
+    }
+
+    // 中継の判定（第94期 (T2) と同じ定義）: 同じ特性が同じキーで増と減を書き、増 ≤ 減。
+    HashSet<(TraitId, int)> CuRelays(Dictionary<(TraitId T, int K, int W), (long N, long Amt)> sup,
+                                     Dictionary<(TraitId T, int K, int W), (long N, long Amt)> drain)
+    {
+        var s = new Dictionary<(TraitId, int), long>();
+        var d = new Dictionary<(TraitId, int), long>();
+        foreach (var kv in sup) { var k = (kv.Key.T, kv.Key.K); s[k] = (s.TryGetValue(k, out long a) ? a : 0) + kv.Value.Amt; }
+        foreach (var kv in drain) { var k = (kv.Key.T, kv.Key.K); d[k] = (d.TryGetValue(k, out long a) ? a : 0) + kv.Value.Amt; }
+        return d.Where(x => x.Value > 0 && (!s.TryGetValue(x.Key, out long sa) || sa <= x.Value))
+                .Select(x => x.Key).ToHashSet();
+    }
+
+    // `Counter` を通らない4キー（読みが原理的に観測できない側）。
+    var cuUnobservableRead = new[] { UnitTally.CarryWhet, UnitTally.CarryDull,
+                                     UnitTally.CarryMove, UnitTally.CarryHit }.ToHashSet();
+
+    // 供給キー／読みキー。**観測 ∪ 表** で作る。
+    //
+    // **観測だけでは足りない**——第94期 (T2) が「未観測 13 件のうち 7 件は engine が窓口を持つ通貨」と
+    // 出したとおり、engine の段（`ApplyDamage` の中・`ctx.Poison` の中・行動順ループ）では
+    // 印が降りているので、その読み書きは**どの特性にも帰属しない**。
+    // のろまの手番（供給）・分かちのなまり（供給）・据えの手番（読み）・滲み則の傷（読み 4 枚）が
+    // まるごとこれに当たる。**観測を正とすると軸が2本まるごと消える**ので、表で補う。
+    // どちらから来たかは表の列（`観`／`表`）に出す。
+    Dictionary<TraitId, HashSet<int>> CuSupObs(
+        Dictionary<(TraitId T, int K, int W), (long N, long Amt)> sup, HashSet<(TraitId, int)> relay)
+    {
+        var m = new Dictionary<TraitId, HashSet<int>>();
+        foreach (var kv in sup)
+        {
+            if (relay.Contains((kv.Key.T, kv.Key.K))) continue;
+            if (!m.TryGetValue(kv.Key.T, out var h)) m[kv.Key.T] = h = new HashSet<int>();
+            h.Add(kv.Key.K);
+        }
+        return m;
+    }
+    Dictionary<TraitId, HashSet<int>> CuReadObs(Dictionary<(TraitId T, int K, int W), long> read)
+    {
+        var m = new Dictionary<TraitId, HashSet<int>>();
+        foreach (var kv in read)
+        {
+            if (!m.TryGetValue(kv.Key.T, out var h)) m[kv.Key.T] = h = new HashSet<int>();
+            h.Add(kv.Key.K);
+        }
+        return m;
+    }
+    Dictionary<TraitId, HashSet<int>> CuMergeTable(Dictionary<TraitId, HashSet<int>> obs, bool supplies)
+    {
+        var m = obs.ToDictionary(x => x.Key, x => new HashSet<int>(x.Value));
+        foreach (var kv in supplies ? TraitEntryMap.Supplies : TraitEntryMap.Reads)
+            foreach ((int k, _) in kv.Value)
+            {
+                if (!m.TryGetValue(kv.Key, out var h)) m[kv.Key] = h = new HashSet<int>();
+                h.Add(k);
+            }
+        return m;
+    }
+    Dictionary<TraitId, HashSet<int>> CuSupKeys(
+        Dictionary<(TraitId T, int K, int W), (long N, long Amt)> sup, HashSet<(TraitId, int)> relay)
+        => CuMergeTable(CuSupObs(sup, relay), true);
+    Dictionary<TraitId, HashSet<int>> CuReadKeys(Dictionary<(TraitId T, int K, int W), long> read)
+        => CuMergeTable(CuReadObs(read), false);
+
+    // engine の盤面規則が作る交差（**キーの読み ↔ キーの書き**）。
+    // **`docs/rules.md`（第94期の生成物）の 30 本を1本ずつ見て、キーを2本またぐものだけを並べた。**
+    // 印が降りている段なので観測には出ない——だから**書く側の量が規則を切ると動くこと**で検算する
+    // （下の 0-2）。読む側は規則の定義そのもの。
+    var cuEngineBridge = new (int Read, int Write, string Name, string Knob)[]
+    {
+        (UnitTally.CarryWound, UnitTally.CarryPoison, "滲み則", "`SoakRule { Poison = True }`"),
+        (UnitTally.CarryWound, UnitTally.CarryPoison, "傷口の着火", "`IgniteRule { Enabled = True }`"),
+        (UnitTally.CarryHit,   UnitTally.CarryWound,  "巻き込み則", "`SpillWoundRule { Enabled = True }`"),
+        (UnitTally.CarryHit,   UnitTally.CarryWound,  "傷の引き取り", "`GatherRule { Enabled = True }`"),
+        (UnitTally.CarryHit,   UnitTally.CarryWound,  "棘の傷（**残置**）", "`ThornRule { Wound = None }`"),
+    };
+
+    // ---------------------------------------------------------------------------------
+    // (S1) grid —— 交差の空白表を機械で引き直す
+    // ---------------------------------------------------------------------------------
+    if (cuMode.Length == 0 || cuMode == "grid")
+    {
+        var cuBase = CuObserve();
+        double cuGB = cuBase.Battles;
+        var cuBaseRelay = CuRelays(cuBase.Sup, cuBase.Drain);
+        var cuSupObs = CuSupObs(cuBase.Sup, cuBaseRelay);
+        var cuReadObs = CuReadObs(cuBase.Read);
+        var cuBaseSup = CuMergeTable(cuSupObs, true);
+        var cuBaseRead = CuMergeTable(cuReadObs, false);
+
+        Console.WriteLine("# 第95期 (S1) —— 交差の空白表を機械で引き直す");
+        Console.WriteLine();
+        Console.WriteLine($"台: `compare` {cuCompare.Length} 行 ＋ 交差帯 {cuCross.Length} 行 × 全 {cuStages.Count} 波 "
+                          + $"× seed 0..{CuSeeds - 1} ＝ {cuGB:N0} 戦（{cuBase.Secs:F1} 秒）。");
+        Console.WriteLine();
+        Console.WriteLine("**軸は 11 キー**（新しい軸の定義を作らない）。"
+                          + "**書き手・読み手は第94期 (T2) の観測 ∪ `TraitEntryMap`** で作る"
+                          + "——観測だけでは足りない（下の 0-0）。どちらから来たかは列に出す。");
+        Console.WriteLine();
+
+        // --- 0-0. 観測と表の食い違い ------------------------------------------------------
+        Console.WriteLine("## 0-0. 観測と表の食い違い（**器具の限界を先に出す**）");
+        Console.WriteLine();
+        Console.WriteLine("**印（`BattleContext.Mark`）は特性の実行中にしか立たない**ので、"
+                          + "engine の段で起きる読み書きはどの特性にも帰属しない。"
+                          + "**観測を正としてしまうと、手番の書き手が 0 枚になって軸が1本消える。**");
+        Console.WriteLine();
+        Console.WriteLine("| 種別 | 観測にあり表に無い | 表にあり観測に無い |");
+        Console.WriteLine("|---|--:|--:|");
+        int cuSupObsOnly = cuSupObs.Sum(kv => kv.Value.Count(k =>
+            !(TraitEntryMap.Supplies.TryGetValue(kv.Key, out var t) && t.Any(x => x.Key == k))));
+        int cuSupTabOnly = TraitEntryMap.Supplies.Sum(kv => kv.Value.Select(x => x.Key).Distinct()
+            .Count(k => !(cuSupObs.TryGetValue(kv.Key, out var o) && o.Contains(k))));
+        int cuReadObsOnly = cuReadObs.Sum(kv => kv.Value.Count(k =>
+            !(TraitEntryMap.Reads.TryGetValue(kv.Key, out var t) && t.Any(x => x.Key == k))));
+        int cuReadTabOnly = TraitEntryMap.Reads.Sum(kv => kv.Value.Select(x => x.Key).Distinct()
+            .Count(k => !(cuReadObs.TryGetValue(kv.Key, out var o) && o.Contains(k))));
+        Console.WriteLine($"| 供給（特性 × キー） | {cuSupObsOnly} | {cuSupTabOnly} |");
+        Console.WriteLine($"| 読み（特性 × キー） | {cuReadObsOnly} | {cuReadTabOnly} |");
+        Console.WriteLine();
+        Console.WriteLine("| 特性 | キー | 種別 | 側 | 理由 |");
+        Console.WriteLine("|---|---|---|---|---|");
+        foreach (var kv in TraitEntryMap.Supplies.OrderBy(x => x.Key.ToString(), StringComparer.Ordinal))
+            foreach (int k in kv.Value.Select(x => x.Key).Distinct().OrderBy(x => x))
+                if (!(cuSupObs.TryGetValue(kv.Key, out var o) && o.Contains(k)))
+                    Console.WriteLine($"| `{kv.Key}` | {CuK(k)} | 供給 | **表のみ** | 台に居ないか、engine の段で書いている |");
+        foreach (var kv in TraitEntryMap.Reads.OrderBy(x => x.Key.ToString(), StringComparer.Ordinal))
+            foreach (int k in kv.Value.Select(x => x.Key).Distinct().OrderBy(x => x))
+                if (!(cuReadObs.TryGetValue(kv.Key, out var o) && o.Contains(k)))
+                    Console.WriteLine($"| `{kv.Key}` | {CuK(k)} | 読み | **表のみ** "
+                        + $"| {(cuUnobservableRead.Contains(k) ? "**観測範囲外**（`Counter` を通らない）" : "台に居ないか、engine の段で読んでいる")} |");
+        Console.WriteLine();
+
+        // --- 0-1. 軸の書き手 --------------------------------------------------------------
+        HashSet<int> CuRowAxes(Formation f)
+        {
+            var s = new HashSet<int> { UnitTally.CarryHit };   // 被弾は敵が供給するので全行が持つ
+            foreach ((_, UnitDef d) in f.Occupied())
+                foreach (TraitId t in d.Traits)
+                    if (cuBaseSup.TryGetValue(t, out var h)) foreach (int k in h) s.Add(k);
+            return s;
+        }
+        var cuCmpAx = cuCompare.Select(r => CuRowAxes(r.F)).ToArray();
+        var cuCrAx = cuCross.Select(r => CuRowAxes(r.F)).ToArray();
+
+        Console.WriteLine("## 0-1. 軸の書き手（中継を除く。`観`＝観測された・`表`＝表にだけある）");
+        Console.WriteLine();
+        Console.WriteLine("| 軸 | 書き手（特性） | `compare` 61行 | 交差帯12行 |");
+        Console.WriteLine("|---|---|--:|--:|");
+        for (int k = 0; k < cuNK; k++)
+        {
+            var ws = cuBaseSup.Where(x => x.Value.Contains(k))
+                .Select(x => $"`{x.Key}`{(cuSupObs.TryGetValue(x.Key, out var o) && o.Contains(k) ? "" : "（表）")}")
+                .OrderBy(x => x, StringComparer.Ordinal).ToArray();
+            Console.WriteLine($"| {CuK(k)} | {(ws.Length == 0 ? "**0 枚**（敵が供給）" : string.Join("・", ws))} "
+                              + $"| {cuCmpAx.Count(s => s.Contains(k))} | {cuCrAx.Count(s => s.Contains(k))} |");
+        }
+        Console.WriteLine();
+
+        // --- 0-2. engine の規則の検算 -----------------------------------------------------
+        Console.WriteLine("## 0-2. engine の規則が作る交差（**書く側の量を切って検算する**）");
+        Console.WriteLine();
+        Console.WriteLine("engine の段は印が降りているので**観測に出ない**。だから"
+                          + "「その規則を切ると、書く側のキーの量が動くか」で実在を確かめる。"
+                          + "**読む側は規則の定義そのもの**（`docs/rules.md` の 30 本を1本ずつ見た）。");
+        Console.WriteLine();
+        double CuAmtOf(Dictionary<(TraitId T, int K, int W), (long N, long Amt)> sup, int key)
+            => sup.Where(x => x.Key.K == key).Sum(x => (double)x.Value.Amt);
+        Console.WriteLine("| 規則 | ノブ | 読む | 書く | 既定の 量/戦 | 切ると 量/戦 | 差 |");
+        Console.WriteLine("|---|---|---|---|--:|--:|--:|");
+        var cuEngOff = new (string Knob, Func<(Dictionary<(TraitId T, int K, int W), (long N, long Amt)> Sup,
+                                               Dictionary<(TraitId T, int K, int W), (long N, long Amt)> Drain,
+                                               Dictionary<(TraitId T, int K, int W), long> Read,
+                                               double Battles, double Secs)> Run)[]
+        {
+            ("`SoakRule { Poison = True }`", () => CuObserve(soak: new SoakRule(false, false))),
+            ("`IgniteRule { Enabled = True }`", () => CuObserve(ignite: new IgniteRule(false))),
+            ("`SpillWoundRule { Enabled = True }`", () => CuObserve(spill: new SpillWoundRule(false))),
+            ("`GatherRule { Enabled = True }`", () => CuObserve(gather: new GatherRule(false))),
+        };
+        var cuEngAmt = new Dictionary<string, Dictionary<(TraitId T, int K, int W), (long N, long Amt)>>();
+        foreach (var e in cuEngOff) cuEngAmt[e.Knob] = e.Run().Sup;
+        foreach (var b in cuEngineBridge)
+        {
+            double a = CuAmtOf(cuBase.Sup, b.Write) / cuGB;
+            string off = "—", diff = "**切れない**（既定が既に off）";
+            if (cuEngAmt.TryGetValue(b.Knob, out var s2))
+            {
+                double v = CuAmtOf(s2, b.Write) / cuGB;
+                off = $"{v:F2}"; diff = $"**{v - a:+0.00;-0.00;0.00}**";
+            }
+            Console.WriteLine($"| {b.Name} | {b.Knob} | {CuK(b.Read)} | {CuK(b.Write)} | {a:F2} | {off} | {diff} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("**差は「その規則を切ると盤面がどう動いたか」であって、規則が書いた量そのものではない**"
+                          + "——engine の段の書き込みは印が降りていて観測に出ないので、"
+                          + "ここで数えているのは**特性に帰属した書き込みの総量の変化**である。"
+                          + "**引き取り（`GatherRule`）は中継**（第94期）なので盤面の総量を増やさない"
+                          + "——それでも差が出るのは、傷の行き先が変わって戦闘そのものが動くため。");
+        Console.WriteLine();
+        Console.WriteLine("**engine の規則が作る交差は 2 組**"
+                          + $"（{CuK(UnitTally.CarryWound)} × {CuK(UnitTally.CarryPoison)} と "
+                          + $"{CuK(UnitTally.CarryHit)} × {CuK(UnitTally.CarryWound)}）。"
+                          + "**30 本のノブのうち、キーを2本またぐのはこの5本だけ**"
+                          + "——残りは1本のキーしか触らないか（`YokeRule` / `HushRule` / `MartyrRule` …）、"
+                          + "特性の側に本体がある（`BearRule` / `RelayRule` / `FavorRule` …）。");
+        Console.WriteLine();
+
+        // --- 交差の集計 -------------------------------------------------------------------
+        var cuBridge = new Dictionary<(int, int), List<(string What, bool Engine)>>();
+        void CuAdd(int a, int b, string what, bool eng)
+        {
+            if (a == b) return;
+            var p = a < b ? (a, b) : (b, a);
+            if (!cuBridge.TryGetValue(p, out var l)) cuBridge[p] = l = new List<(string, bool)>();
+            if (!l.Any(x => x.What == what)) l.Add((what, eng));
+        }
+        var cuTraitPairs = new Dictionary<TraitId, List<(int A, int B)>>();
+        foreach (TraitId t in Enum.GetValues<TraitId>())
+        {
+            if (!cuBaseRead.TryGetValue(t, out var rr) || !cuBaseSup.TryGetValue(t, out var ss)) continue;
+            var l = new List<(int A, int B)>();
+            foreach (int r in rr) foreach (int s2 in ss)
+            {
+                if (r == s2) continue;
+                var p = r < s2 ? (r, s2) : (s2, r);
+                if (!l.Contains(p)) l.Add(p);
+                CuAdd(r, s2, $"`{t}`", false);
+            }
+            if (l.Count > 0) cuTraitPairs[t] = l;
+        }
+        foreach (var b in cuEngineBridge) CuAdd(b.Read, b.Write, $"{b.Name} {b.Knob}", true);
+
+        Console.WriteLine("## 表A —— 交差の空白表（55 組）");
+        Console.WriteLine();
+        Console.WriteLine("`61行` はその組の両方の軸の書き手がいる `compare` の行数、`12行` は交差帯。");
+        Console.WriteLine();
+        Console.WriteLine("| 組 | 61行 | 12行 | 機構（特性由来） | 機構（engine 由来） |");
+        Console.WriteLine("|---|--:|--:|---|---|");
+        int cuBridged = 0, cuBlank = 0, cuBlankBridged = 0;
+        var cuBlankList = new List<(int A, int B)>();
+        var cuBridgeList = new List<(int A, int B, int Rows, int XRows, string Trait, string Eng)>();
+        for (int a = 0; a < cuNK; a++) for (int b = a + 1; b < cuNK; b++)
+        {
+            int n = cuCmpAx.Count(s => s.Contains(a) && s.Contains(b));
+            int xn = cuCrAx.Count(s => s.Contains(a) && s.Contains(b));
+            var l = cuBridge.TryGetValue((a, b), out var ll) ? ll : new List<(string What, bool Engine)>();
+            string tr = string.Join(" / ", l.Where(x => !x.Engine).Select(x => x.What));
+            string en = string.Join(" / ", l.Where(x => x.Engine).Select(x => x.What));
+            if (l.Count > 0) cuBridged++;
+            if (n == 0) { cuBlank++; cuBlankList.Add((a, b)); if (l.Count > 0) cuBlankBridged++; }
+            cuBridgeList.Add((a, b, n, xn, tr, en));
+            Console.WriteLine($"| {(l.Count > 0 ? "**" : "")}{CuK(a)} × {CuK(b)}{(l.Count > 0 ? "**" : "")} "
+                              + $"| {(n == 0 ? "**0**" : n.ToString())} | {xn} "
+                              + $"| {(tr.Length == 0 ? "—" : tr)} | {(en.Length == 0 ? "—" : en)} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**繋いでいる機構が実在する組: {cuBridged} / 55**"
+                          + $"（第92期は **12 / 55**）。");
+        Console.WriteLine($"**`compare` 61 行に1行も無い組（空白）: {cuBlank} / 55**"
+                          + $"（第92期は **12 / 55**）。**うち機構がある組: {cuBlankBridged}**"
+                          + "（第92期は **1**＝毒×傷）。");
+        Console.WriteLine();
+        Console.WriteLine("| # | 空白の組 | 交差帯12行 | 繋いでいる機構 |");
+        Console.WriteLine("|--:|---|--:|---|");
+        for (int i = 0; i < cuBlankList.Count; i++)
+        {
+            var p = cuBlankList[i];
+            var l = cuBridge.TryGetValue(p, out var ll) ? ll : new List<(string What, bool Engine)>();
+            int xn = cuCrAx.Count(s => s.Contains(p.A) && s.Contains(p.B));
+            Console.WriteLine($"| {i + 1} | {CuK(p.A)} × {CuK(p.B)} | {xn} "
+                              + $"| {(l.Count == 0 ? "**無し**" : string.Join(" / ", l.Select(x => x.What)))} |");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## 表A-2 —— 機構がある組の一覧（第92期の 12 組と突き合わせる材料）");
+        Console.WriteLine();
+        Console.WriteLine("| # | 組 | 61行 | 12行 | 機構 |");
+        Console.WriteLine("|--:|---|--:|--:|---|");
+        int cuIdx = 0;
+        foreach (var p in cuBridgeList.Where(x => x.Trait.Length > 0 || x.Eng.Length > 0)
+                                      .OrderByDescending(x => x.Rows))
+            Console.WriteLine($"| {++cuIdx} | **{CuK(p.A)} × {CuK(p.B)}** | {p.Rows} | {p.XRows} "
+                              + $"| {string.Join(" / ", new[] { p.Trait, p.Eng }.Where(x => x.Length > 0))} |");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表A-3 —— 1枚で軸をまたぐ特性の全数");
+        Console.WriteLine();
+        Console.WriteLine("| 特性 | 保持者（ロスター） | 供給キー | 読みキー | 作る交差 |");
+        Console.WriteLine("|---|---|---|---|---|");
+        var cuAll51g = UnitCatalog.All.ToArray();
+        foreach (var kv in cuTraitPairs.OrderByDescending(x => x.Value.Count)
+                                       .ThenBy(x => x.Key.ToString(), StringComparer.Ordinal))
+        {
+            var holders = cuAll51g.Where(d => d.Traits.Contains(kv.Key)).Select(d => d.Name).ToArray();
+            Console.WriteLine($"| `{kv.Key}` | {(holders.Length == 0 ? "**居ない**" : string.Join("・", holders))} "
+                + $"| {string.Join("・", (cuBaseSup.TryGetValue(kv.Key, out var sh) ? sh : new HashSet<int>()).OrderBy(x => x).Select(CuK))} "
+                + $"| {string.Join("・", (cuBaseRead.TryGetValue(kv.Key, out var rh) ? rh : new HashSet<int>()).OrderBy(x => x).Select(CuK))} "
+                + $"| {string.Join(" / ", kv.Value.Select(p => $"{CuK(p.A)}×{CuK(p.B)}"))} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**{cuTraitPairs.Count} 枚**が1枚で軸をまたぐ。");
+        Console.WriteLine();
+        return;
+    }
+    // ---------------------------------------------------------------------------------
+    // 共通: 特性が上書きしているフックを **reflection で** 引く（手で写した表を使わない）。
+    // 周期は「開戦時1回 / 毎ターン / 事象ごと」の3値で、フックの位置から決まる。
+    // ---------------------------------------------------------------------------------
+    string[] CuHooksOf(TraitId id)
+    {
+        Trait t;
+        try { t = TraitCatalog.Get(id); } catch { return Array.Empty<string>(); }
+        Type bt = typeof(Trait);
+        var names = new[] { "OnBattleStart", "OnTurnStart", "OnAction", "OnAfterAttack", "OnDamaged",
+                            "OnKill", "OnAllyDeath", "OnAllyDamaged", "OnAnyDeath", "OnDeath",
+                            "OnMoved", "OnAllyMoved", "CanAct", "CanReact", "ModifyAttack",
+                            "ModifyPattern", "ModifyIncomingDamage" };
+        var hit = new List<string>();
+        foreach (string n in names)
+        {
+            var mi = t.GetType().GetMethods().FirstOrDefault(m => m.Name == n && m.IsVirtual);
+            if (mi is not null && mi.DeclaringType != bt) hit.Add(n);
+        }
+        return hit.ToArray();
+    }
+    string CuPeriodOf(TraitId id)
+    {
+        var h = CuHooksOf(id);
+        if (h.Length == 0) return "**engine**（フックを1つも上書きしない札）";
+        if (h.Contains("OnTurnStart") || h.Contains("OnAction")) return "毎ターン";
+        if (h.Length == 1 && h[0] == "OnBattleStart") return "**開戦時1回**";
+        if (h.Contains("OnBattleStart")) return "開戦時1回 ＋ 事象ごと";
+        return "事象ごと";
+    }
+
+    // ---------------------------------------------------------------------------------
+    // (S2) phase0 —— 呪いの数え物（**結論を出さない**）
+    // ---------------------------------------------------------------------------------
+    if (cuMode == "phase0")
+    {
+        var cuP0 = CuObserve();
+        var cuP0Relay = CuRelays(cuP0.Sup, cuP0.Drain);
+        double cuB = cuP0.Battles;
+
+        Console.WriteLine("# 第95期 (S2) —— 呪いの Phase 0（数え物だけ。結論を出さない）");
+        Console.WriteLine();
+        Console.WriteLine($"台: `compare` {cuCompare.Length} 行 ＋ 交差帯 {cuCross.Length} 行 × 全 {cuStages.Count} 波 "
+                          + $"× seed 0..{CuSeeds - 1} ＝ {cuB:N0} 戦（{cuP0.Secs:F1} 秒）。");
+        Console.WriteLine();
+
+        // --- 1. §0-2 の4点を実装で確認する -------------------------------------------------
+        Console.WriteLine("## 1. 指示書 §0-2 の4点を実装で確認する");
+        Console.WriteLine();
+        var cuStatusFields = typeof(StatusKeys)
+            .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Where(f => f.FieldType == typeof(string) && f.IsLiteral)
+            .Select(f => (f.Name, Val: (string)(f.GetRawConstantValue() ?? "")))
+            .OrderBy(x => x.Name, StringComparer.Ordinal).ToArray();
+        Console.WriteLine($"**(1) `StatusKeys` の定数は {cuStatusFields.Length} 本**"
+                          + $"／ `StatusKeys.All` は **{StatusKeys.All.Length} 本**"
+                          + $"（{string.Join(" / ", StatusKeys.All.Select(k => $"`{k}`"))}）。");
+        Console.WriteLine();
+        Console.WriteLine("| 定数 | 値 | `All` に載る |");
+        Console.WriteLine("|---|---|:-:|");
+        foreach (var f in cuStatusFields)
+            Console.WriteLine($"| `{f.Name}` | `{f.Val}` | {(StatusKeys.All.Contains(f.Val) ? "○" : "")} |");
+        Console.WriteLine();
+        bool cuHasCurseKey = cuStatusFields.Any(f => f.Name.Contains("Curse") || f.Val.Contains("curse"));
+        Console.WriteLine($"**呪いのキーは {(cuHasCurseKey ? "**ある**" : "無い")}。**"
+                          + "**指示書は7本と書いているが実際は8本**——第93期の `Deep`（深手）が入っている"
+                          + "（`DeepRule` は既定 `false` だが、キーは `All` に載っている）。");
+        Console.WriteLine();
+
+        var cuAll51 = UnitCatalog.All.ToArray();
+        var cuFoes = cuStages.SelectMany(s => s.Enemy.Occupied().Select(x => x.Def))
+                             .GroupBy(d => d.Id).Select(g => g.First()).ToArray();
+        string CuHolders(TraitId t)
+        {
+            var a = cuAll51.Where(d => d.Traits.Contains(t)).Select(d => d.Name).ToArray();
+            var f = cuFoes.Where(d => d.Traits.Contains(t)).Select(d => d.Name).ToArray();
+            return (a.Length == 0 ? "—" : string.Join("・", a)) + (f.Length == 0 ? "" : $" ／ 敵: {string.Join("・", f)}");
+        }
+        Console.WriteLine($"**(2) `TraitId.Curse`（呪詛）の保持者**: {CuHolders(TraitId.Curse)}。"
+                          + $"フックは {string.Join(" / ", CuHooksOf(TraitId.Curse).Select(h => $"`{h}`"))}"
+                          + $"（周期 = {CuPeriodOf(TraitId.Curse)}）で、書いているのは"
+                          + $"**なまり（`Dull`）**——`EnemyDebuff` = {CurseTrait.EnemyDebuff} / "
+                          + $"`AllyLeak` = {CurseTrait.AllyLeak}。**状態異常は1つも書かない。**");
+        Console.WriteLine();
+        Console.WriteLine($"**(3) 泥人形ムド**: `Traits` = "
+                          + $"{string.Join(" / ", UnitCatalog.Mudo.Traits.Select(t => $"`{t}`"))}"
+                          + $"（HP {UnitCatalog.Mudo.MaxHp} / 攻 {UnitCatalog.Mudo.Attack} / 速 {UnitCatalog.Mudo.Speed}）。"
+                          + "**呪いとは無関係**。指示書の言うとおり「ムドの呪い」は未実装の構想。");
+        Console.WriteLine();
+
+        // --- 2. なまり（Dull）の書き手と読み手の全数 --------------------------------------
+        Console.WriteLine("## 2. 表C-1 —— なまり（`Dull`）の書き手の全数（**観測 ＋ 周期**）");
+        Console.WriteLine();
+        Console.WriteLine("`DullRoute` の列挙（計数の正本）と、観測された書き込みを突き合わせる。"
+                          + "**周期はフックの上書きを reflection で引いた**（手で写していない）。");
+        Console.WriteLine();
+        // 経路別の量は **`BattleResult.DullByRoute`（計数の正本）** から取る
+        // ——印は特性の単位なので、同じ特性が2本の経路を持つ呪詛（敵側／味方漏れ）を割れない。
+        var cuDullRoute = new double[DullRoutes.Count];
+        var cuDullTaken = new double[DullRoutes.Count];
+        foreach (var row in cuRows)
+            foreach (var st in cuStages)
+                for (int seed = 0; seed < CuSeeds; seed++)
+                {
+                    var rr = BattleEngine.Run(row.F, st.Enemy, seed, verbose: false);
+                    for (int r = 0; r < DullRoutes.Count; r++)
+                    {
+                        cuDullRoute[r] += rr.DullByRoute[r];
+                        cuDullTaken[r] += rr.DullTakenByRoute[r];
+                    }
+                }
+        Console.WriteLine("| 経路 | 特性 | 保持者 | 周期 | 量/戦 | うち横取り |");
+        Console.WriteLine("|---|---|---|---|--:|--:|");
+        var cuDullTraitOf = new Dictionary<string, TraitId?>
+        {
+            ["その他"] = null,
+            ["なまり"] = TraitId.Sharer,
+            ["呪詛敵"] = TraitId.Curse,
+            ["呪詛漏れ"] = TraitId.Curse,
+            ["突き返し"] = TraitId.Shove,
+            ["萎縮"] = TraitId.Cower,
+            ["渡し"] = TraitId.Relay,
+            ["誹り"] = TraitId.Slander,
+            ["驕り"] = TraitId.Overbear,
+            ["火選り"] = TraitId.Favor,
+        };
+        for (int r = 0; r < DullRoutes.Count; r++)
+        {
+            string rname = DullRoutes.Names[r];
+            TraitId? t = cuDullTraitOf.TryGetValue(rname, out var tt) ? tt : null;
+            Console.WriteLine($"| {rname} | {(t is null ? "—" : $"`{t}`")} "
+                              + $"| {(t is null ? "—" : CuHolders(t.Value))} "
+                              + $"| {(t is null ? "—" : CuPeriodOf(t.Value))} "
+                              + $"| {cuDullRoute[r] / cuB:F2} | {cuDullTaken[r] / cuB:F2} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**`DullRoute` は {DullRoutes.Count} 本**（`Other` を含む）。"
+                          + "**同じ特性が2本の経路を持つのは呪詛だけ**（敵側と味方漏れ）。");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表C-2 —— なまりの読み手の全数");
+        Console.WriteLine();
+        Console.WriteLine("**弱体の読みは `Counter` を通らない**（`AtkBonus` はカウンタではない）ので観測できない。"
+                          + "ここだけは表（`TraitEntryMap.Reads`）から引く——**指示書の「読み手は熊の横取り」は不足**。");
+        Console.WriteLine();
+        Console.WriteLine("| 特性 | 保持者 | 場所 | 周期 |");
+        Console.WriteLine("|---|---|---|---|");
+        foreach (var kv in TraitEntryMap.Reads.OrderBy(x => x.Key.ToString(), StringComparer.Ordinal))
+            foreach ((int k, TraitEntryMap.Where w) in kv.Value)
+            {
+                if (k != UnitTally.CarryDull) continue;
+                Console.WriteLine($"| `{kv.Key}` | {CuHolders(kv.Key)} | {w} | {CuPeriodOf(kv.Key)} |");
+            }
+        Console.WriteLine();
+
+        // --- 3. 減算の読み手の全数 ---------------------------------------------------------
+        Console.WriteLine("## 表C-3 —— 「他の汚れが消える」経路の全数（**観測**。形3の供給量そのもの）");
+        Console.WriteLine();
+        Console.WriteLine("観測のうち **`delta < 0`**（＝カウンタを減らした）ものを全部並べる。"
+                          + "**中継**（同じ特性が同じキーで増と減を書き、増 ≤ 減）は印を付けてある"
+                          + "——中継は盤面から汚れを消していない。");
+        Console.WriteLine();
+        Console.WriteLine("| 特性 | 保持者 | キー | 場所 | 周期 | 回/戦 | 量/戦 | 中継 |");
+        Console.WriteLine("|---|---|---|---|---|--:|--:|:-:|");
+        double cuDrainTotal = 0, cuDrainNonRelay = 0;
+        string[] cuWhereName = { "自分", "味方", "敵" };
+        foreach (var kv in cuP0.Drain.OrderByDescending(x => x.Value.N))
+        {
+            bool relay = cuP0Relay.Contains((kv.Key.T, kv.Key.K));
+            cuDrainTotal += kv.Value.N / cuB;
+            if (!relay) cuDrainNonRelay += kv.Value.N / cuB;
+            Console.WriteLine($"| `{kv.Key.T}` | {CuHolders(kv.Key.T)} | {CuK(kv.Key.K)} | {cuWhereName[kv.Key.W]} "
+                              + $"| {CuPeriodOf(kv.Key.T)} | {kv.Value.N / cuB:F2} | {kv.Value.Amt / cuB:F2} "
+                              + $"| {(relay ? "**中継**" : "")} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**減算は {cuP0.Drain.Count} 組 ＝ 合計 {cuDrainTotal:F2} 回/戦"
+                          + $"（中継を除くと {cuDrainNonRelay:F2} 回/戦）。**");
+        Console.WriteLine();
+
+        // --- 4. Stoic が何を弾くか ---------------------------------------------------------
+        Console.WriteLine("## 4. `Stoic`（ガルド）が何を弾くか");
+        Console.WriteLine();
+        Console.WriteLine("`BlocksSupport` を持つ特性を全数（reflection）で引き、**ガルドに実際に届いた量を観測で数える**。");
+        Console.WriteLine();
+        var cuBlockers = Enum.GetValues<TraitId>()
+            .Where(t => { try { return TraitCatalog.Get(t).BlocksSupport; } catch { return false; } }).ToArray();
+        Console.WriteLine($"`BlocksSupport` が真の特性: {string.Join(" / ", cuBlockers.Select(t => $"`{t}`"))}"
+                          + $"（保持者: {string.Join(" ／ ", cuBlockers.Select(CuHolders))}）。");
+        Console.WriteLine();
+        // ガルドに届いた量を観測する（別の走査。**印は駒ではなく特性なので、受け手側を数え直す**）。
+        var cuToStoic = new double[cuNK];
+        var cuToOther = new double[cuNK];
+        void CuStoicProbe(TraitId trait, UnitState owner, UnitState target, string key, int delta)
+        {
+            if (delta <= 0) return;
+            int k = CuKeyOf(key);
+            if (k < 0) return;
+            if (!target.AcceptsSupport) cuToStoic[k] += delta; else cuToOther[k] += delta;
+        }
+        foreach (var row in cuRows)
+            foreach (var st in cuStages)
+                for (int seed = 0; seed < CuSeeds; seed++)
+                    BattleEngine.Run(row.F, st.Enemy, seed, verbose: false, probe: CuStoicProbe);
+        Console.WriteLine("| キー | `AcceptsSupport` が偽の駒へ 量/戦 | それ以外へ 量/戦 | 偽の駒の取り分 |");
+        Console.WriteLine("|---|--:|--:|--:|");
+        for (int k = 0; k < cuNK; k++)
+        {
+            double a = cuToStoic[k] / cuB, b = cuToOther[k] / cuB;
+            Console.WriteLine($"| {CuK(k)} | {a:F2} | {b:F2} | {(a + b > 0 ? $"{a * 100 / (a + b):F1}%" : "—")} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("**`AcceptsSupport` を見るかどうかは呼び出し側が決めている**（第42期からの持ち越し。"
+                          + "窓口では揃えていない）ので、**新しい汚れを作るなら「見る／見ない」をその場で決めることになる。**");
+        Console.WriteLine();
+
+        // --- 5. 業（Scapegoat）の分母 ------------------------------------------------------
+        Console.WriteLine("## 5. 業（`Scapegoat`）の `Kinds` の分母");
+        Console.WriteLine();
+        Console.WriteLine($"`StatusKeys.All` = {StatusKeys.All.Length} 本 → `ScapegoatTrait.Kinds` = "
+                          + $"**{ScapegoatTrait.Kinds.Length} 本**"
+                          + $"（{string.Join(" / ", ScapegoatTrait.Kinds.Select(k => $"`{k}`"))}）。"
+                          + "**除外を並べる形なので、キーを1本足すと分母は自動で +1 になる。**");
+        Console.WriteLine();
+        bool cuSgRoster = cuAll51.Any(d => d.Traits.Contains(TraitId.Scapegoat));
+        bool cuSgFoe = cuFoes.Any(d => d.Traits.Contains(TraitId.Scapegoat));
+        Console.WriteLine($"業の保持者: ロスター（`UnitCatalog.All` {cuAll51.Length} 体）に "
+                          + $"**{(cuSgRoster ? "居る" : "居ない")}** ／ 敵の波（`Stages`）に "
+                          + $"**{(cuSgFoe ? "居る" : "居ない")}**。"
+                          + $"{(cuSgRoster || cuSgFoe ? "**盤面が動く。**" : "**したがって分母が動いても盤面への影響は無い**（診断 `scapegoat` のローカル台だけが動く）。")}");
+        Console.WriteLine();
+        return;
+    }
+    // ---------------------------------------------------------------------------------
+    // (S3) pick —— 形を選ぶ（**選定規則は測る前に固定してある。指示書 §3-2 をそのまま順に当てる**）
+    // ---------------------------------------------------------------------------------
+    if (cuMode == "pick")
+    {
+        // 汚れ ＝ 「駒に載る負の通貨」。**なまり（弱体）を含める**（指示書 §3-1 の形1 の一覧どおり）。
+        int[] cuDirt = { UnitTally.CarryPoison, UnitTally.CarryBurn, UnitTally.CarryStun,
+                         UnitTally.CarryMark, UnitTally.CarryArmor, UnitTally.CarryWound,
+                         UnitTally.CarryDull };
+        // 種類数を数えられるのは `Counter` を通る 6 キーだけ（なまりはカウンタではない）。
+        string[] cuDirtCounter = { StatusKeys.Poison, StatusKeys.Burn, StatusKeys.Stun,
+                                   StatusKeys.Marked, StatusKeys.Armor, StatusKeys.Wound };
+
+        // --- 供給の観測（engine 帰属つき）------------------------------------------------
+        // 「engine 由来」は grid と同じ定義: その規則を切ると1度も観測されない (特性, キー) の書き込み。
+        var cuPickVers = new (string Name, Func<(Dictionary<(TraitId T, int K, int W), (long N, long Amt)> Sup,
+                                                 Dictionary<(TraitId T, int K, int W), (long N, long Amt)> Drain,
+                                                 Dictionary<(TraitId T, int K, int W), long> Read,
+                                                 double Battles, double Secs)> Run)[]
+        {
+            ("既定", () => CuObserve()),
+            ("滲み則 `SoakRule`", () => CuObserve(soak: new SoakRule(false, false))),
+            ("巻き込み則 `SpillWoundRule`", () => CuObserve(spill: new SpillWoundRule(false))),
+            ("引き取り `GatherRule`", () => CuObserve(gather: new GatherRule(false))),
+            ("着火 `IgniteRule`", () => CuObserve(ignite: new IgniteRule(false))),
+        };
+        var cuPk = cuPickVers[0].Run();
+        double cuB2 = cuPk.Battles;
+        var cuPkRelay = CuRelays(cuPk.Sup, cuPk.Drain);
+        var cuEngineSup = new Dictionary<(TraitId, int), string>();
+        for (int v = 1; v < cuPickVers.Length; v++)
+        {
+            var r = cuPickVers[v].Run();
+            var seen = r.Sup.Keys.Select(x => (x.T, x.K)).ToHashSet();
+            foreach (var k in cuPk.Sup.Keys.Select(x => (x.T, x.K)).Distinct())
+                if (!seen.Contains(k))
+                    cuEngineSup[k] = cuEngineSup.TryGetValue(k, out string? o)
+                        ? o + " / " + cuPickVers[v].Name : cuPickVers[v].Name;
+        }
+
+        // 汚れの書き込み（回/戦）を 駒由来 / engine 由来 に割る。
+        //
+        // **観測（印）だけでは engine の段が 0 に見える**——印は特性の実行中にしか立たないので、
+        // `ApplyDamage` の中の巻き込み則も行動順ループも「誰の書き込みでもない」ことになる。
+        // そこで**全数は `UnitTally.CarryCount`（窓口 `NoteCarry` の唯一の帳簿）**から取り、
+        // **特性に帰属した分を引いた残りを engine 由来**とする。
+        var cuDirtTotalByKey = new double[cuNK];
+        foreach (var row in cuRows)
+            foreach (var st in cuStages)
+                for (int seed = 0; seed < CuSeeds; seed++)
+                {
+                    var rr = BattleEngine.Run(row.F, st.Enemy, seed, verbose: false);
+                    foreach (var t in rr.TallyByUnit.Values)
+                        if (t.CarryCount is not null)
+                            for (int k = 0; k < cuNK; k++) cuDirtTotalByKey[k] += t.CarryCount[k];
+                }
+        for (int k = 0; k < cuNK; k++) cuDirtTotalByKey[k] /= cuB2;
+        var cuDirtByKey = new double[cuNK];          // 特性に帰属した書き込み（観測）
+        foreach (var kv in cuPk.Sup)
+            if (cuDirt.Contains(kv.Key.K)) cuDirtByKey[kv.Key.K] += kv.Value.N / cuB2;
+        var cuDirtEngineByKey = new double[cuNK];
+        double cuDirtWritesUnit = 0, cuDirtWritesEngine = 0;
+        foreach (int k in cuDirt)
+        {
+            double eng = Math.Max(0, cuDirtTotalByKey[k] - cuDirtByKey[k]);
+            cuDirtEngineByKey[k] = eng;
+            cuDirtWritesUnit += cuDirtByKey[k];
+            cuDirtWritesEngine += eng;
+        }
+        // 減算（中継を除く）。形3 の供給。
+        double cuDrainUnit = 0, cuDrainEngine = 0;
+        var cuDrainKeys = new HashSet<int>();
+        foreach (var kv in cuPk.Drain)
+        {
+            if (cuPkRelay.Contains((kv.Key.T, kv.Key.K))) continue;
+            double n = kv.Value.N / cuB2;
+            cuDrainKeys.Add(kv.Key.K);
+            if (cuEngineSup.ContainsKey((kv.Key.T, kv.Key.K))) cuDrainEngine += n; else cuDrainUnit += n;
+        }
+
+        // --- 汚れの種類数（形1 の倍率）と分母 ---------------------------------------------
+        double cuKindSum = 0, cuKindN = 0, cuKindMax = 0;
+        var cuKindHist = new double[cuDirtCounter.Length + 1];
+        void CuKindProbe(TraitId trait, UnitState owner, UnitState target, string key, int delta)
+        {
+            if (delta <= 0) return;
+            int k = CuKeyOf(key);
+            if (k < 0 || !cuDirt.Contains(k)) return;
+            int kinds = cuDirtCounter.Count(x => target.Counter(x) > 0);
+            cuKindSum += kinds; cuKindN++;
+            if (kinds > cuKindMax) cuKindMax = kinds;
+            cuKindHist[Math.Min(kinds, cuDirtCounter.Length)]++;
+        }
+        double cuTaken = 0, cuTurns = 0, cuN = 0;
+        foreach (var row in cuRows)
+            foreach (var st in cuStages)
+                for (int seed = 0; seed < CuSeeds; seed++)
+                {
+                    var res = BattleEngine.Run(row.F, st.Enemy, seed, verbose: false, probe: CuKindProbe);
+                    cuTaken += res.TallyByUnit.Values.Sum(t => t.DamageTaken);
+                    cuTurns += res.Turns; cuN++;
+                }
+
+        Console.WriteLine("# 第95期 (S3) —— 形を選ぶ（選定規則を先に固定して当てる）");
+        Console.WriteLine();
+        Console.WriteLine($"台: `compare` {cuCompare.Length} 行 ＋ 交差帯 {cuCross.Length} 行 × 全 {cuStages.Count} 波 "
+                          + $"× seed 0..{CuSeeds - 1} ＝ {cuB2:N0} 戦。"
+                          + $"決着 {cuTurns / cuN:F2}T ／ 総被ダメ（両陣営）{cuTaken / cuN:F1} 点/戦。");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表D-1 —— 3形の供給の内訳（**観測**）");
+        Console.WriteLine();
+        Console.WriteLine("| 形 | 供給源 | 駒由来 回/戦 | engine 由来 回/戦 | engine の割合 |");
+        Console.WriteLine("|---|---|--:|--:|--:|");
+        double cuTot = cuDirtWritesUnit + cuDirtWritesEngine;
+        Console.WriteLine($"| **形1** 種類だけ重くなる | 汚れが載っていること（7 キー） | {cuDirtWritesUnit:F2} | {cuDirtWritesEngine:F2} "
+                          + $"| {(cuTot > 0 ? $"{cuDirtWritesEngine * 100 / cuTot:F1}%" : "—")} |");
+        Console.WriteLine($"| **形2** 書かれると隣へ伝播 | 汚れの**書き込み事象** | {cuDirtWritesUnit:F2} | {cuDirtWritesEngine:F2} "
+                          + $"| {(cuTot > 0 ? $"{cuDirtWritesEngine * 100 / cuTot:F1}%" : "—")} |");
+        double cuTot3 = cuDrainUnit + cuDrainEngine;
+        Console.WriteLine($"| **形3** 汚れが消えるとき | **減算の読み手**（中継を除く・観測のみ） | {cuDrainUnit:F2} | {cuDrainEngine:F2} "
+                          + $"| {(cuTot3 > 0 ? $"{cuDrainEngine * 100 / cuTot3:F1}%" : "—")} |");
+        Console.WriteLine();
+        Console.WriteLine("**キー別の内訳（汚れの書き込み・回/戦）**"
+                          + "——`全体` は `UnitTally.CarryCount`（窓口の全数）、"
+                          + "`特性` は印が立っていた分、`engine` はその差。");
+        Console.WriteLine();
+        Console.WriteLine("| キー | 全体 | 特性に帰属 | engine の段 | engine の割合 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|");
+        foreach (int k in cuDirt)
+            Console.WriteLine($"| {CuK(k)} | {cuDirtTotalByKey[k]:F2} | {cuDirtByKey[k]:F2} | {cuDirtEngineByKey[k]:F2} "
+                              + $"| {(cuDirtTotalByKey[k] > 0 ? $"{cuDirtEngineByKey[k] * 100 / cuDirtTotalByKey[k]:F1}%" : "—")} |");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表D-2 —— 汚れの種類数（**形1 の倍率そのもの**）");
+        Console.WriteLine();
+        Console.WriteLine($"汚れが書き込まれた瞬間の受け手が**既に**背負っている種類の数"
+                          + $"（`Counter` を通る 6 キーだけ。なまりは数えられない）。"
+                          + $"標本 {cuKindN / cuN:F2} 件/戦・平均 **{(cuKindN > 0 ? cuKindSum / cuKindN : 0):F2} 種**・最大 {cuKindMax:F0} 種。");
+        Console.WriteLine();
+        Console.WriteLine("| 種類数 | 割合 |");
+        Console.WriteLine("|--:|--:|");
+        for (int i = 0; i < cuKindHist.Length; i++)
+            if (cuKindHist[i] > 0)
+                Console.WriteLine($"| {i} | {cuKindHist[i] * 100 / Math.Max(1, cuKindN):F1}% |");
+        Console.WriteLine();
+        Console.WriteLine("> **第49期の「味方に載る状態異常は4種類しかない」の受け手側の再測定。**"
+                          + "**形1 の倍率が 1 に張り付くなら、形1 は「呪い」ではなく定数の弱体である。**");
+        Console.WriteLine();
+
+        // --- 増える交差（既存 55 組のうち、機構が新しく立つ組）-----------------------------
+        // grid と同じ器具を使う。**新しいキーを作る版は既存 55 組を1つも増やさない**
+        // ——新しい軸は 12 本目なので、増えるのは 11 本の「新しい組」のほうになる。
+        var cuSupK = CuSupKeys(cuPk.Sup, cuPkRelay);
+        var cuReadK = CuReadKeys(cuPk.Read);
+        var cuHave = new HashSet<(int, int)>();
+        foreach (TraitId t in Enum.GetValues<TraitId>())
+        {
+            if (!cuReadK.TryGetValue(t, out var rr) || !cuSupK.TryGetValue(t, out var ss)) continue;
+            foreach (int r in rr) foreach (int s2 in ss)
+                if (r != s2) cuHave.Add(r < s2 ? (r, s2) : (s2, r));
+        }
+        // 形ごとに「読むキーの集合」を出す。**書くのは呪い**。
+        var cuFormReads = new (string Name, int[] Reads)[]
+        {
+            ("形1 種類だけ重くなる", cuDirt),
+            ("形2 書かれると隣へ伝播", Array.Empty<int>()),     // 読むキーと書くキーが同じ＝交差にならない
+            ("形3 汚れが消えるとき", cuDrainKeys.OrderBy(x => x).ToArray()),
+        };
+        Console.WriteLine("## 表D-3 —— 増える交差（**既存 55 組**のうち、機構が新しく立つ組）");
+        Console.WriteLine();
+        Console.WriteLine("**「呪い」を新しいキーにするか、既存のなまり（弱体）軸にするかで答えが変わる**"
+                          + "（指示書 §0-2 の最初の判断）。新しいキーは 12 本目の軸なので、"
+                          + "**既存 55 組は1つも増えない**——増えるのは新しい軸との組のほう。");
+        Console.WriteLine();
+        Console.WriteLine("| 形 | 読むキー | 新キー版: 既存55組の増分 | なまり軸版: 既存55組の増分 | 新しく立つ組 |");
+        Console.WriteLine("|---|---|--:|--:|---|");
+        foreach (var f in cuFormReads)
+        {
+            var added = new List<(int, int)>();
+            foreach (int r in f.Reads)
+            {
+                if (r == UnitTally.CarryDull) continue;                 // 書くキーと同じ
+                var p = r < UnitTally.CarryDull ? (r, UnitTally.CarryDull) : (UnitTally.CarryDull, r);
+                if (!cuHave.Contains(p) && !added.Contains(p)) added.Add(p);
+            }
+            Console.WriteLine($"| **{f.Name}** "
+                + $"| {(f.Reads.Length == 0 ? "（書くキーと同じ）" : string.Join("・", f.Reads.Select(CuK)))} "
+                + $"| **0** | **{added.Count}** "
+                + $"| {(added.Count == 0 ? "—" : string.Join(" / ", added.Select(p => $"{CuK(p.Item1)}×{CuK(p.Item2)}")))} |");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## 表D-4 —— 読み手になる既存駒");
+        Console.WriteLine();
+        Console.WriteLine("**なまり軸版なら、既存の弱体の読み手がそのまま呪いの読み手になる**"
+                          + "（第90期の滲み則・第93期の自傷と同じ構造＝規則3）。");
+        Console.WriteLine();
+        Console.WriteLine("| 特性 | 保持者 | 何を読むか |");
+        Console.WriteLine("|---|---|---|");
+        var cuAll51b = UnitCatalog.All.ToArray();
+        foreach (var kv in TraitEntryMap.Reads.OrderBy(x => x.Key.ToString(), StringComparer.Ordinal))
+            foreach ((int k, TraitEntryMap.Where w) in kv.Value)
+            {
+                if (k != UnitTally.CarryDull) continue;
+                var holders = cuAll51b.Where(d => d.Traits.Contains(kv.Key)).Select(d => d.Name).ToArray();
+                Console.WriteLine($"| `{kv.Key}` | {(holders.Length == 0 ? "**ロスターに居ない**" : string.Join("・", holders))} "
+                                  + $"| 弱体（{w}） |");
+            }
+        Console.WriteLine();
+        Console.WriteLine("**新しいキーにするなら読み手は 0 枚から作ることになる**"
+                          + "——第57期の燃焼（書き手1・読み手1）と同じ AND ゲートに戻る。");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表D-5 —— 紙のスループット（**門ではなく出力**。規約 (G7)）");
+        Console.WriteLine();
+        Console.WriteLine("**分子について3つを先に書く**（規約 (G7)）:");
+        Console.WriteLine();
+        Console.WriteLine("| 形 | 線形か二次か | 門ではなく出力 | 分母を削るか | 発火/戦（上限） | 分子 = 発火 × 単価 |");
+        Console.WriteLine("|---|---|---|---|--:|---|");
+        double cuKindAvg = cuKindN > 0 ? cuKindSum / cuKindN : 0;
+        Console.WriteLine($"| **形1** | **線形**（種類数は上限 {cuDirtCounter.Length} で頭打ち） | 出力 = 弱体の量 "
+                          + $"| **削らない**（汚れは他人が撒く） | {cuDirtWritesUnit + cuDirtWritesEngine:F2} "
+                          + $"| 発火 × 単価 × {cuKindAvg:F2} |");
+        Console.WriteLine($"| **形2** | **二次**（伝播した汚れがまた伝播しうる。再入ガードが要る） | 出力 = 汚れの量 "
+                          + $"| **削らない** | {cuDirtWritesUnit + cuDirtWritesEngine:F2} | 発火 × 単価 |");
+        Console.WriteLine($"| **形3** | **線形** | 出力 = 弱体の量 "
+                          + $"| **削る**（呪いが出るのは汚れが消えるとき＝汚れの読み手の発火に食い込む） "
+                          + $"| {cuDrainUnit + cuDrainEngine:F2} | 発火 × 単価 |");
+        Console.WriteLine();
+        Console.WriteLine($"分母: 総被ダメ（両陣営）**{cuTaken / cuN:F1} 点/戦** ／ 決着 **{cuTurns / cuN:F2}T**。");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表D-6 —— 選定規則の適用（**上から順に当てる。数字を見てから動かさない**）");
+        Console.WriteLine();
+        Console.WriteLine("| 規則 | 形1 | 形2 | 形3 |");
+        Console.WriteLine("|---|---|---|---|");
+        bool r1a = cuDirtWritesEngine <= cuDirtWritesUnit;
+        bool r1c = cuDrainEngine <= cuDrainUnit;
+        Console.WriteLine($"| **1** 供給の過半が駒 | {(r1a ? "○" : "×")}（engine {(cuTot > 0 ? cuDirtWritesEngine * 100 / cuTot : 0):F1}%） "
+                          + $"| {(r1a ? "○" : "×")}（同上） "
+                          + $"| {(r1c ? "○" : "×")}（engine {(cuTot3 > 0 ? cuDrainEngine * 100 / cuTot3 : 0):F1}%） |");
+        int[] cuAdd = new int[3];
+        for (int i = 0; i < cuFormReads.Length; i++)
+        {
+            var added = new HashSet<(int, int)>();
+            foreach (int r in cuFormReads[i].Reads)
+            {
+                if (r == UnitTally.CarryDull) continue;
+                var p = r < UnitTally.CarryDull ? (r, UnitTally.CarryDull) : (UnitTally.CarryDull, r);
+                if (!cuHave.Contains(p)) added.Add(p);
+            }
+            cuAdd[i] = added.Count;
+        }
+        Console.WriteLine($"| **2** 交差が2本以上増える（なまり軸版） | {(cuAdd[0] >= 2 ? "○" : "×")}（{cuAdd[0]} 本） "
+                          + $"| {(cuAdd[1] >= 2 ? "○" : "×")}（{cuAdd[1]} 本） "
+                          + $"| {(cuAdd[2] >= 2 ? "○" : "×")}（{cuAdd[2]} 本） |");
+        int cuDullReaders = TraitEntryMap.Reads
+            .Count(kv => kv.Value.Any(x => x.Key == UnitTally.CarryDull)
+                         && cuAll51b.Any(d => d.Traits.Contains(kv.Key)));
+        Console.WriteLine($"| **3** 既存駒が1文も増やさずに読み手になる | ○（弱体の読み手 {cuDullReaders} 枚） "
+                          + $"| ○（同上） | ○（同上） |");
+        Console.WriteLine($"| **4** 新キーなら `Kinds` と `Stoic` を説明できる "
+                          + $"| **なまり軸版なら新キー無し**（`Kinds` {ScapegoatTrait.Kinds.Length} 本のまま） | 同左 | 同左 |");
+        Console.WriteLine();
+        return;
+    }
+
+    Console.WriteLine("使い方: `curse grid` / `curse phase0` / `curse pick`");
+    return;
+}
+
 // pulse モード: 駒ごとの「働きの内訳」を測る。
 //
 // compare は編成の勝ち負けしか見ないので、**編成の中で誰が仕事をしていたか**が分からない。
