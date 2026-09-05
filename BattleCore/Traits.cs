@@ -613,14 +613,20 @@ public sealed class GuardianTrait : RedirectGainTrait
         // 機構の変更ではない——選び方を決定的にしただけ。
         UnitState donor = pool.Where(a => a.Counter(StatusKeys.Wound) == best)
                               .OrderBy(a => a.Slot).First();
+        // **donor 側は窓口を通さない**（減算・第93期 §2-2）。**受け取る側は通す**（3 に届けば深手になる）。
+        // 深手を持つ駒はここでは donor に選ばれない——深手は別のキーなので移せない（§1 の予測）。
+        // Q5: 引き取りが**深手化の後**に走ったか（受け手が既に深手か）を数える。
+        if (self.Counter(StatusKeys.Deep) > 0) t.DeepGatherAfter++;
         donor.SetCounter(StatusKeys.Wound, best - 1);
-        int after = self.Counter(StatusKeys.Wound) + 1;
-        self.SetCounter(StatusKeys.Wound, after);
+        int after = ctx.Wound(self, 1, self, WoundRoute.Gather);
         t.GatherTaken++;
-        t.GatherDepthSum += after;
+        t.GatherDepthSum += Math.Max(after, 0);
         if (after > t.GatherDepthMax) t.GatherDepthMax = after;
-        ctx.Log($"    {self.Name} が {donor.Name} の傷を引き取った（傷 {best} → {best - 1} ／ {self.Name} の傷 {after}）",
-            LogKind.Trigger);
+        if (after >= 0)
+            ctx.Log($"    {self.Name} が {donor.Name} の傷を引き取った（傷 {best} → {best - 1} ／ {self.Name} の傷 {after}）",
+                LogKind.Trigger);
+        else
+            ctx.Log($"    {self.Name} が {donor.Name} の傷を引き取った（傷 {best} → {best - 1}）", LogKind.Trigger);
     }
 }
 
@@ -1410,6 +1416,77 @@ public readonly record struct SoakRule(bool Poison, bool Burn)
     public static SoakRule Default => new(Poison: true, Burn: false);
 }
 
+/// <summary>
+/// 傷を書いた経路（第93期の計数。<b>盤面には一切影響しない</b>）。
+/// <b>加算だけが <see cref="BattleContext.Wound"/> を通る</b>ので、この enum は
+/// 「傷の供給の全数」そのものになる（減算＝断ちの 0 戻し・縫いと継ぎ当ての塞ぎ・
+/// 引き取りの donor 側 は通らない）。
+/// </summary>
+public enum WoundRoute
+{
+    /// <summary>裂き（キリ・<see cref="RendTrait"/>・主目標に 1）。</summary>
+    Rend,
+    /// <summary>刻み（ノミ・<see cref="CarveTrait"/>・なぞってから 1）。</summary>
+    Carve,
+    /// <summary>巻き込み則（第85期・<c>SpillWoundRule</c>・味方の刃が通ると 1）。</summary>
+    Spill,
+    /// <summary>棘の傷（第84期・<c>ThornRule</c>・刺し返した相手に 1。既定は無効）。</summary>
+    Thorn,
+    /// <summary>棘の巻き込みの傷（第84期・<c>ThornWound.Both</c>・巻き込んだ味方に 1。既定は無効）。</summary>
+    ThornSplash,
+    /// <summary>
+    /// 傷の引き取り（第89期・<c>GatherRule</c>）の<b>受け取る側</b>。既定は無効。
+    /// <b>これだけは新しい供給ではなく中継</b>（盤面の総量を増やさない）——
+    /// 表に出すときは分けて数えること。
+    /// </summary>
+    Gather
+}
+
+/// <summary>
+/// 深手（第93期）。<b>傷が <see cref="Bundle"/> に達すると束ねられ、動くたびに傷口が開く。</b>
+///
+/// <para><b>1本の規則で交差を3本引く</b>のが狙い（第92期の答え——交差の空白は台の空白ではなく
+/// 機構の空白で、11キー55組のうち繋いでいる機構が実在するのは12組だけ）。
+/// 自傷が <c>lethal: true</c> なので<b>傷 × 被弾</b>（憤怒・庇い・分かち・後備え）と
+/// <b>傷 × 死</b>（墓守・継ぎ接ぎ・追い打ち・破裂・疫み）が繋がり、
+/// 滲み則が深手を +2 で読むので<b>傷 × 毒</b>が繋がる。
+/// <b>新しい <c>TraitId</c> ゼロ・駒ゼロ</b>——既存駒が定義を1文字も変えずに読み手になる
+/// （第90期の滲み則と同じ構造）。</para>
+///
+/// <para><b>両陣営に等しくかかる。</b> 第85期の巻き込み則が既定なので味方も傷を負う。
+/// 非対称なのは「こちらは規則を知って編成を組める」の一点だけで、マイナスを別に足さない
+/// （逆位・渇き・軛・粛と同じ作法）。</para>
+///
+/// <para><b>3期越しの予測</b>: 第87期（ミオの着火）と第91期（滲み則）はどちらも
+/// <b>キリ ≫ ノミ</b> だった——どちらも「傷を持つか」の<b>二値</b>を読むので、
+/// 撒くキリが有利で1体に積むノミは活きなかった。<b>深手は深さ 3 を要求する</b>ので、
+/// 執着（<see cref="FixateTrait"/>）で1体に食いつくノミだけが深手を作れるはず。
+/// <b>外れたら、執着の読みか閾値のどちらかが違う。</b></para>
+/// </summary>
+public readonly record struct DeepRule(bool Enabled)
+{
+    /// <summary>既定は<b>無効</b>（第93期の測定中）。</summary>
+    public static DeepRule Default => new(false);
+
+    /// <summary>束ねる傷の数。<b>振らない</b>（掃引は第93期に無い）。</summary>
+    public const int Bundle = 3;
+
+    /// <summary>
+    /// 自傷の量／上乗せの傷1つが化けるダメージ。<b>定数を2つ作らない。</b>
+    /// <para>根拠: 抉り（<see cref="GougeTrait.PerWound"/>）の単価が傷1つ = 3 点でロスターの基準値。
+    /// 深手は傷3つを束ねたものなので投資が大きく、<b>回収は行動回数ぶんに分割される</b>
+    /// ——決着までの残り行動が 2〜3 回なので、1回あたり 3〜4 点で投資に見合う。丸めて 4。</para>
+    /// </summary>
+    public const int DeepBite = 4;
+
+    /// <summary>
+    /// <b>傷が <see cref="Bundle"/> に達したことのある駒</b>の印（<b>計数専用</b>・版に依らない）。
+    /// 門（§1-1 の 2・3）を W0 で数えるためだけにあり、<b>誰も読んで分岐しない。</b>
+    /// <c>StatusKeys</c> ではないので会戦の一律掃除にも帳簿にも載らない（<c>burnTick</c> と同じ扱い）。
+    /// </summary>
+    public const string ReachedKey = "deepReached";
+}
+
 /// <summary>毒を書いた経路（第90期の計数。<b>盤面には一切影響しない</b>）。</summary>
 public enum PoisonRoute
 {
@@ -1546,9 +1623,8 @@ public sealed class ThornsTrait : Trait
             // （ApplyDamage の後に生存を取り直す）。既定（ThornWound.None）ではこの行は素通りする。
             if (ctx.Thorn.Wound != ThornWound.None && source.IsAlive)
             {
-                int w = source.Counter(StatusKeys.Wound) + 1;
-                source.SetCounter(StatusKeys.Wound, w);
-                ctx.Log($"    {self.Name} の棘が {source.Name} に残る（傷 {w}）", LogKind.Status);
+                int w = ctx.Wound(source, 1, self, WoundRoute.Thorn);   // 第93期: 加算は窓口を通す
+                if (w >= 0) ctx.Log($"    {self.Name} の棘が {source.Name} に残る（傷 {w}）", LogKind.Status);
             }
 
             foreach (UnitState other in ctx.LivingMembersShuffled(source.TeamId))
@@ -1580,9 +1656,8 @@ public sealed class ThornsTrait : Trait
                 // V2（自己検査・第84期）。巻き込んだ味方にも傷 1。`gained` の計算には触らない。
                 if (ctx.Thorn.Wound == ThornWound.Both && ally.IsAlive)
                 {
-                    int w = ally.Counter(StatusKeys.Wound) + 1;
-                    ally.SetCounter(StatusKeys.Wound, w);
-                    ctx.Log($"    {self.Name} の棘が {ally.Name} に残る（傷 {w}）", LogKind.Status);
+                    int w = ctx.Wound(ally, 1, self, WoundRoute.ThornSplash);   // 第93期: 加算は窓口を通す
+                    if (w >= 0) ctx.Log($"    {self.Name} の棘が {ally.Name} に残る（傷 {w}）", LogKind.Status);
                 }
             }
 
@@ -1840,7 +1915,9 @@ public sealed class MenderTrait : Trait
         // 盤面も乱数列も文字列も1ビットも動かない（自己検査 (b) の根拠）。
         // **観測（wSeen）は版に依らず取る**——紙のスループット（§1-1）を X1 を1戦も回さずに出すため。
         // 計数専用で、盤面の判断には一切使わない。
-        int wSeen = patient.Counter(StatusKeys.Wound);
+        // 第93期: **深手は「傷1つぶん」として読む**。塞ぎ（下）は raw の傷しか引けない。
+        int wRaw = patient.Counter(StatusKeys.Wound);
+        int wSeen = ctx.WoundDepthOf(patient);
         int w = ctx.Mend.Side == MendSide.Wound ? wSeen : 0;
         bool seal = w > 0 && self.HasTrait(TraitId.Seal);
 
@@ -1864,7 +1941,9 @@ public sealed class MenderTrait : Trait
 
         // 塞ぎ。**繕った相手**の傷を1つだけ引く（全部消すのは断ちの役）。
         // 渇き下でも走る（第39期・ハリの塞ぎと同じ作法。原因ではなく結果で解決しない）。
-        if (seal) patient.SetCounter(StatusKeys.Wound, w - 1);
+        // 第93期: **深手は塞げない**（解除はこの期に作らない）ので raw の傷が残っているときだけ引く。
+        // 深手が無ければ wRaw == w なので、既定では1ビットも違わない。
+        if (seal && wRaw > 0) patient.SetCounter(StatusKeys.Wound, wRaw - 1);
     }
 }
 
@@ -3675,7 +3754,7 @@ public sealed class AmplifierTrait : Trait
             {
                 // 傷口の着火（第87期・IgniteRule）。**観測は版に依らず取る**——
                 // 「着火できる敵が何体いたか」は Y0（規則を切ったまま）でも数えられる（§1-2）。
-                int w = foe.Counter(StatusKeys.Wound);
+                int w = ctx.WoundDepthOf(foe);   // 第93期: 深手も「傷1つぶん」
                 if (w <= 0) continue;
 
                 at.AmpIgnitable++;
@@ -3689,7 +3768,7 @@ public sealed class AmplifierTrait : Trait
                 at.AmpIgnited++;
                 at.AmpIgniteAmount += IgniteAmount;
                 at.AmpIgniteWoundBefore += w;
-                at.AmpIgniteWoundAfter += foe.Counter(StatusKeys.Wound);       // 傷は消費しない（自己検査 (g)）
+                at.AmpIgniteWoundAfter += ctx.WoundDepthOf(foe);                // 傷は消費しない（自己検査 (g)）
                 at.AmpIgnitePoisonAfter += foe.Counter(StatusKeys.Poison);     // 1 のはず（自己検査 (e)）
                 if (at.AmpFirstIgniteTurn == 0) at.AmpFirstIgniteTurn = Math.Max(1, ctx.Turn);
                 ctx.Log($"    {foe.Name} の傷口に澱みが流れ込む（傷 {w} → 毒 {IgniteAmount}）", LogKind.Status);
@@ -4040,9 +4119,9 @@ public sealed class RendTrait : Trait
         // **主目標のみ・攻撃1回に1度**（engine の規則）。薙ぎでも貫きでもここは1回しか
         // 呼ばれないので、範囲持ちが供給を独占して非線形に伸びることが原理的に起きない。
         // 毒で二度踏んだ穴（層が二次関数で伸びる）を構造的に避けているのがこの1行。
-        int w = target.Counter(StatusKeys.Wound) + Wounds;
-        target.SetCounter(StatusKeys.Wound, w);
-        ctx.Log($"    {self.Name} の刃が {target.Name} に傷を残した（傷 {w}）", LogKind.Status);
+        // 第93期: 加算は**傷の窓口**を通す（束ねの入口）。既定では1ビットも違わない。
+        int w = ctx.Wound(target, Wounds, self, WoundRoute.Rend);
+        if (w >= 0) ctx.Log($"    {self.Name} の刃が {target.Name} に傷を残した（傷 {w}）", LogKind.Status);
     }
 }
 
@@ -4076,7 +4155,7 @@ public sealed class GougeTrait : Trait
 
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
-        int w = target.Counter(StatusKeys.Wound);
+        int w = ctx.WoundDepthOf(target);   // 第93期: 深手も「傷1つぶん」
         if (w <= 0) return;
 
         // ApplyDamage の直呼びなので OnAfterAttack は再帰しない（シガの追い打ちと同じ作法）。
@@ -4142,7 +4221,8 @@ public sealed class CarveTrait : Trait
         if (!target.IsAlive) return;
 
         // **足す前に読む。** ここを入れ替えると自己給餌で二次関数に伸びる（上の但し書き）。
-        int w = target.Counter(StatusKeys.Wound);
+        // 第93期: **深手は「傷1つぶん」として読む**（`WoundDepthOf`）。
+        int w = ctx.WoundDepthOf(target);
         if (w > 0)
         {
             ctx.Log($"    {self.Name} が {target.Name} の古い傷をなぞる（傷 {w} → +{PerWound * w}）",
@@ -4153,9 +4233,8 @@ public sealed class CarveTrait : Trait
         // 上乗せで倒れたなら刻まない（上の生存判定と同じ理由。ApplyDamage を挟んだので取り直す）。
         if (!target.IsAlive) return;
 
-        int next = w + Wounds;
-        target.SetCounter(StatusKeys.Wound, next);
-        ctx.Log($"    {self.Name} の鑿が {target.Name} を彫り込む（傷 {next}）", LogKind.Status);
+        int next = ctx.Wound(target, Wounds, self, WoundRoute.Carve);
+        if (next >= 0) ctx.Log($"    {self.Name} の鑿が {target.Name} を彫り込む（傷 {next}）", LogKind.Status);
     }
 }
 
@@ -4269,7 +4348,7 @@ public sealed class SeverTrait : Trait
         int best = 0;
         foreach (UnitState f in ctx.TargetPool(self))
         {
-            int w = f.Counter(StatusKeys.Wound);
+            int w = ctx.WoundDepthOf(f);   // 第93期: 深手も「傷1つぶん」
             if (w > best) best = w;
         }
         return best;
@@ -4285,12 +4364,12 @@ public sealed class SeverTrait : Trait
         int best = 0;
         foreach (UnitState f in pool)
         {
-            int w = f.Counter(StatusKeys.Wound);
+            int w = ctx.WoundDepthOf(f);   // 第93期: 深手も「傷1つぶん」
             if (w > best) best = w;
         }
         if (best <= 0) return null;
 
-        return ctx.PickOne(pool.Where(f => f.Counter(StatusKeys.Wound) == best).ToList());
+        return ctx.PickOne(pool.Where(f => ctx.WoundDepthOf(f) == best).ToList());
     }
 
     /// <summary>
@@ -4316,7 +4395,8 @@ public sealed class SeverTrait : Trait
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
         // **着弾した相手の傷だけを読む。** 介入で逸れたなら殉教者の傷（ふつう 0）を読んで空振りする。
-        int w = target.Counter(StatusKeys.Wound);
+        // 第93期: **深手は「傷1つぶん」**。閾値 2 には深手だけでは届かない——**これは仕様**（§2-4）。
+        int w = ctx.WoundDepthOf(target);
         if (w <= 0) return;
 
         // **待ち方 V1（第74期）。** 手番を捨てない版では、断ちは閾値に届いた傷にしか下りない
@@ -4401,7 +4481,7 @@ public sealed class SutureTrait : Trait
     {
         // **着弾した相手の傷を読む**（断ちと同じ）。介入で逸れたなら殉教者の傷を読んで空振りする。
         UnitState donor = target;
-        int w = target.Counter(StatusKeys.Wound);
+        int w = ctx.WoundDepthOf(target);   // 第93期: 深手も「傷1つぶん」
 
         // 両側読み（第85期・`SutureRule.Both`）。**糸口の候補が味方にも広がる**——
         // 生存する味方のうち self を除いて傷がいちばん深い者。**深いほうを取り、同数なら敵側**（現行挙動を保つ）。
@@ -4415,13 +4495,13 @@ public sealed class SutureTrait : Trait
         if (ctx.Suture.Side == SutureSide.Both)
         {
             var wounded = ctx.LivingMembers(self.TeamId)
-                .Where(a => a != self && a.Counter(StatusKeys.Wound) > 0).ToList();
+                .Where(a => a != self && ctx.WoundDepthOf(a) > 0).ToList();
             if (wounded.Count > 0)
             {
-                int best = wounded.Max(a => a.Counter(StatusKeys.Wound));
+                int best = wounded.Max(a => ctx.WoundDepthOf(a));
                 if (best > w)
                 {
-                    donor = ctx.PickOne(wounded.Where(a => a.Counter(StatusKeys.Wound) == best).ToList())!;
+                    donor = ctx.PickOne(wounded.Where(a => ctx.WoundDepthOf(a) == best).ToList())!;
                     w = best;
                     fromAlly = true;
                 }
@@ -4454,7 +4534,9 @@ public sealed class SutureTrait : Trait
         st.SutureHealed += patient.Hp - before;
 
         // 塞ぎ。**糸を通したほう**の傷を**1つだけ**引く（全部消すのは断ちの側の役で、こちらは維持読み）。
-        if (seal) donor.SetCounter(StatusKeys.Wound, w - 1);
+        // 第93期: **深手は塞げない**ので raw の傷が残っているときだけ引く（既定では w と一致する）。
+        int donorRaw = donor.Counter(StatusKeys.Wound);
+        if (seal && donorRaw > 0) donor.SetCounter(StatusKeys.Wound, donorRaw - 1);
     }
 }
 

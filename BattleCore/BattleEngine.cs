@@ -44,11 +44,28 @@ public static class StatusKeys
     public const string Wound = "wound";
 
     /// <summary>
+    /// 深手（第93期・<see cref="DeepRule"/>）。<b>傷が <see cref="DeepRule.Bundle"/> に達すると
+    /// 傷を 0 に戻して立つ、0 か 1 の二値。</b>
+    ///
+    /// <para><b>「消えた」のではなく「器が変わった」。</b> だから<b>傷の読み手から見ると
+    /// 傷を1つ持っている扱い</b>にする（<see cref="BattleContext.WoundDepthOf"/>）——
+    /// これが無いと、深手化した瞬間に 抉り・断ち・縫い・継ぎ当て・ミオの着火・滲み則が
+    /// <b>全部止まる</b>（現象としても説明がつかない）。
+    /// <b>深さは 3 と数えない</b>——深手化した瞬間に読み手の出力が3倍になるのを避ける。</para>
+    ///
+    /// <para>払い出しは2つ。<b>自傷</b>（深手を持つ駒が実際に行動したら
+    /// <see cref="DeepRule.DeepBite"/> の自傷・<c>lethal: true</c>）と、
+    /// <b>上乗せ</b>（深手の上に新しく書かれた傷は溜まらず、その場で同じ量のダメージになる）。
+    /// <b>この期では解けない</b>（解除を同じ期に足すと変数が2つになる）。</para>
+    /// </summary>
+    public const string Deep = "deep";
+
+    /// <summary>
     /// 全キーの一覧。会戦（Engagement）が部隊戦の境界で状態異常を一律に消すために使う
     /// （状態異常は Battle スコープ、という寿命規則。Armor も含めて消す——破片は
     /// Battle 内の供給に依存するプール）。**新しいキーを足したら必ずここにも足すこと。**
     /// </summary>
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound };
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep };
 
     /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
@@ -64,6 +81,7 @@ public static class StatusKeys
         IdleTurn => "手番",
         Armor => "破片",
         Wound => "傷",
+        Deep => "深手",
         _ => key
     };
 }
@@ -237,6 +255,129 @@ public sealed class BattleContext
     }
 
     /// <summary>
+    /// 傷を積む唯一の窓口（第93期）。<b>束ね（<see cref="DeepRule"/>）の入口だけを担う。</b>
+    ///
+    /// <para><b>通すのは加算だけ。</b> 減算（断ちの 0 戻し・縫いと継ぎ当ての塞ぎ）と
+    /// 引き取り（<c>GatherRule</c>）の <b>donor 側</b>は通さない
+    /// ——<b>受け取る側は通す</b>（3 に届けば深手になる）。第90期の毒の窓口と同じ作法。</para>
+    ///
+    /// <para><b>計数は規則の分岐より手前。</b> 紙の分子（§1-1 の門）を W0 の実測から取るため、
+    /// 「傷が <see cref="DeepRule.Bundle"/> に達した回数」「達した駒にさらに書かれた回数」は
+    /// <b>版に依らず数える</b>（第86期の X1P・第90期の作法）。</para>
+    ///
+    /// <para><b>ログの文言は各特性の側に残す</b>——深手になったときだけここで1行足す。</para>
+    /// </summary>
+    /// <param name="writer">書いた駒（計数の帰属先。<b>盤面には一切影響しない</b>）。</param>
+    /// <returns>
+    /// 書き込み後の傷の数。<b>深手になった／上乗せに化けた場合は −1</b>
+    /// （呼び出し側は「傷 N」のログを出さない）。書けなかったときも −1。
+    /// </returns>
+    public int Wound(UnitState target, int amount, UnitState writer, WoundRoute route)
+    {
+        if (!target.IsAlive || amount <= 0) return -1;
+
+        // **計数は規則の分岐より手前**（版に依らない）。
+        UnitTally wt = TallyOf(writer);
+        wt.WoundWrites += amount;
+        (wt.WoundWritesByRoute ??= new int[WoundRouteCount])[(int)route] += amount;
+
+        UnitTally tt = TallyOf(target);
+        int cur = target.Counter(StatusKeys.Wound);
+        // §1-1 の門の 3: **すでに Bundle に達したことのある駒**にさらに書かれた回数（＝上乗せの機会）。
+        if (target.Counter(DeepRule.ReachedKey) > 0) tt.DeepOnTop++;
+
+        if (Deep.Enabled && target.Counter(StatusKeys.Deep) > 0)
+        {
+            // 上乗せ。傷は溜まらず、その場でダメージになる。**巻き込み則を通さない**（閉じたループを作らない）。
+            tt.DeepOverFires += amount;
+            tt.DeepOverOut += amount * DeepRule.DeepBite;
+            Log($"    {target.Name} の深手に {writer.Name} の刃がそのまま通る（{amount * DeepRule.DeepBite}）", LogKind.Status);
+            for (int i = 0; i < amount; i++)
+                ApplyDamage(target, DeepRule.DeepBite, writer, spillWound: false, deepBite: true);
+            return -1;
+        }
+
+        int w = cur + amount;
+        // §1-1 の門の 1: **Bundle に達した回数**（版に依らない。W0 でも数える）。
+        if (cur < DeepRule.Bundle && w >= DeepRule.Bundle)
+        {
+            tt.DeepReach++;
+            if (tt.DeepReachFirstTurn == 0) tt.DeepReachFirstTurn = Math.Max(1, Turn);
+            tt.DeepReachTurnSum += Math.Max(1, Turn);
+            target.SetCounter(DeepRule.ReachedKey, 1);
+            DeepWatch = true;
+        }
+
+        if (Deep.Enabled && w >= DeepRule.Bundle)
+        {
+            // **余りを繰り越さない**（深手は二値なので繰り越す先が無い）。
+            target.SetCounter(StatusKeys.Wound, 0);
+            target.SetCounter(StatusKeys.Deep, 1);
+            tt.DeepBundles++;
+            if (tt.DeepBundleFirstTurn == 0) tt.DeepBundleFirstTurn = Math.Max(1, Turn);
+            Log($"    {target.Name} の傷が束ねられて深手になった（傷 {w} → 深手）", LogKind.Highlight);
+            return -1;
+        }
+
+        target.SetCounter(StatusKeys.Wound, w);
+        return w;
+    }
+
+    /// <summary><see cref="UnitTally.WoundWritesByRoute"/> の長さ（<see cref="WoundRoute"/> の要素数）。</summary>
+    public const int WoundRouteCount = 6;
+
+    /// <summary>
+    /// 傷の読み手から見た深さ（第93期）。<b>深手は「傷1つぶん」として読む</b>
+    /// ——深さを 3 と数えると深手化した瞬間に読み手の出力が3倍になる。
+    /// <para><b>規則が無効なら <see cref="StatusKeys.Deep"/> を1度も引かない</b>ので、
+    /// 既定では辞書の参照回数も変わらない。</para>
+    /// </summary>
+    public int WoundDepthOf(UnitState u)
+        => u.Counter(StatusKeys.Wound) + (Deep.Enabled && u.Counter(StatusKeys.Deep) > 0 ? 1 : 0);
+
+    /// <summary>
+    /// 傷の読み手から見て「傷を持っているか」（第93期）。<see cref="WoundDepthOf"/> の二値版。
+    /// </summary>
+    public bool IsWounded(UnitState u)
+        => u.Counter(StatusKeys.Wound) > 0 || (Deep.Enabled && u.Counter(StatusKeys.Deep) > 0);
+
+    /// <summary>
+    /// 傷が <see cref="DeepRule.Bundle"/> に達した駒が1体でも出たか（<b>計数専用</b>・版に依らない）。
+    /// 行動順ループの計数（§1-1 の門の 2）を、何も起きていない戦闘では1度も走らせないための短絡。
+    /// </summary>
+    public bool DeepWatch;
+
+    /// <summary>
+    /// 深手の自傷（第93期・§2-3）。<b>その駒が実際に行動した直後</b>に呼ぶ
+    /// （<c>Attack</c> / <c>Skill</c> / <c>Charge</c> のいずれかを通ったときだけ）。
+    /// <para>痺れ・まどろみ・<c>CanAct</c> 偽で <c>IdleTurn</c> が立った駒は<b>自傷しない</b>
+    /// ——止められた駒が延命するのは意図した帰結で、回数を <see cref="UnitTally.DeepStalled"/> に出す。</para>
+    /// <para><c>lethal: true</c>（既定）。<c>isFriendlyFire</c> は<b>偽</b>——自分で自分を裂いているので
+    /// 味方の刃ではない。<c>spillWound: false</c> で<b>深手 → 自傷 → 傷 → 深手</b>の閉じたループを作らない。</para>
+    /// </summary>
+    internal void NoteDeepAction(UnitState actor)
+    {
+        // §1-1 の門の 2（版に依らない）: **達した駒がその後に行動した回数** ＝ 自傷が払い出される機会。
+        if (actor.Counter(DeepRule.ReachedKey) > 0) TallyOf(actor).DeepActs++;
+
+        if (!Deep.Enabled || !actor.IsAlive || actor.Counter(StatusKeys.Deep) <= 0) return;
+
+        UnitTally t = TallyOf(actor);
+        t.DeepBiteFires++;
+        t.DeepBiteOut += DeepRule.DeepBite;
+        Log($"    {actor.Name} は動くたびに深手が開く（{DeepRule.DeepBite}）", LogKind.Status);
+        ApplyDamage(actor, DeepRule.DeepBite, actor, spillWound: false, deepBite: true);
+    }
+
+    /// <summary>
+    /// 深手を持つ駒が手番を止められた回数（痺れ・まどろみ・<c>CanAct</c> 偽）。<b>盤面には一切影響しない。</b>
+    /// </summary>
+    internal void NoteDeepStalled(UnitState actor)
+    {
+        if (Deep.Enabled && actor.Counter(StatusKeys.Deep) > 0) TallyOf(actor).DeepStalled++;
+    }
+
+    /// <summary>
     /// 毒を積む唯一の窓口（第90期）。<b>滲み則（<see cref="SoakRule"/>）の入口だけを担う。</b>
     ///
     /// <para><b>通すのは「加算の入口」だけ。</b> 減算（毒喰らいの啜り・澱み喰いの吸い上げ）や
@@ -259,7 +400,9 @@ public sealed class BattleContext
         // 「傷を持つ相手に書いた回数」は版に依らず数える。
         UnitTally wt = TallyOf(writer);
         wt.SoakPoisonWrites++;
-        bool wounded = target.Counter(StatusKeys.Wound) > 0;
+        // 第93期: **深手も「傷を持っている」**（`WoundDepthOf` の二値版）。深手なら +1 ではなく +2。
+        bool deepW = Deep.Enabled && target.Counter(StatusKeys.Deep) > 0;
+        bool wounded = deepW || target.Counter(StatusKeys.Wound) > 0;
         if (wounded)
         {
             wt.SoakPoisonSeen++;
@@ -268,11 +411,12 @@ public sealed class BattleContext
         }
 
         int add = amount;
-        if (Soak.Poison && wounded) { add += 1; wt.SoakPoisonAdded++; }
+        // **深手の数に比例させない**（二値なので比例のしようが無いが、明記しておく）。
+        if (Soak.Poison && wounded) { int bump = deepW ? 2 : 1; add += bump; wt.SoakPoisonAdded++; if (deepW) wt.DeepSoakDeeper++; }
 
         target.SetCounter(StatusKeys.Poison, target.Counter(StatusKeys.Poison) + add);
         if (add != amount)
-            Log($"    {target.Name} の傷口から毒が滲みた（+1）", LogKind.Status);
+            Log($"    {target.Name} の{(deepW ? "深手" : "傷口")}から毒が滲みた（+{add - amount}）", LogKind.Status);
     }
 
     /// <summary><see cref="UnitTally.SoakSeenByRoute"/> の長さ（毒 5 経路 ＋ 燃焼 1）。</summary>
@@ -302,7 +446,9 @@ public sealed class BattleContext
         bool relit = target.Counter(StatusKeys.Burn) > 0;
 
         // 滲み則の計数（第90期）。**規則の分岐より手前**なので版に依らない。
-        bool wounded = target.Counter(StatusKeys.Wound) > 0;
+        // 第93期: **深手も「傷を持っている」**（`Soak.Burn` は既定 false なので盤面は動かない）。
+        bool wounded = target.Counter(StatusKeys.Wound) > 0
+                       || (Deep.Enabled && target.Counter(StatusKeys.Deep) > 0);
         if (source is not null)
         {
             UnitTally st = TallyOf(source);
@@ -1424,6 +1570,13 @@ public sealed class BattleContext
     public SoakRule Soak { get; }
 
     /// <summary>
+    /// 深手（第93期）。<b>診断（deep）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="DeepRule.Default"/> ＝ 束ねない）。
+    /// static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public DeepRule Deep { get; }
+
+    /// <summary>
     /// 軋み（第66期）の在庫の記録。<b>盤面には一切影響しない。</b>
     /// <see cref="TraitId.Displaced"/> 保持者の <see cref="UnitState.AtkBonus"/> が動いた直後に呼ぶ
     /// ——上げる経路は<b>軋み自身と <see cref="Whet"/> の2本だけ</b>（ヨミは自己強化を1つも持たない）。
@@ -1488,7 +1641,8 @@ public sealed class BattleContext
                          ThinBladeRule? thinBlade = null, ThornRule? thorn = null,
                          SutureRule? suture = null, SpillWoundRule? spillWound = null,
                          MendRule? mend = null, IgniteRule? woundIgnite = null,
-                         GatherRule? gather = null, SoakRule? soak = null)
+                         GatherRule? gather = null, SoakRule? soak = null,
+                         DeepRule? deep = null)
     {
         _rng = new Random(seed);
         _verbose = verbose;
@@ -1523,6 +1677,7 @@ public sealed class BattleContext
         WoundIgnite = woundIgnite ?? IgniteRule.Default;
         Gather = gather ?? GatherRule.Default;
         Soak = soak ?? SoakRule.Default;
+        Deep = deep ?? DeepRule.Default;
     }
 
     public IReadOnlyList<UnitState> AllUnits => _units;
@@ -1784,6 +1939,7 @@ public sealed class BattleContext
         (StatusKeys.Marked, "標"),
         (StatusKeys.Armor, "盾"),
         (StatusKeys.Wound, "傷"),
+        (StatusKeys.Deep, "深手"),   // 第93期。0 のものは出さないので、規則が無効なら1行も増えない
     };
 
     public int Roll(int maxExclusive) => _rng.Next(maxExclusive);
@@ -2155,7 +2311,7 @@ public sealed class BattleContext
             bool pay = ThinBlade.Cost switch
             {
                 // V1: 傷の無い相手には 1。**自分で開けた傷に自分で入る。**
-                ThinBladeCost.Unwounded => target.Counter(StatusKeys.Wound) <= 0,
+                ThinBladeCost.Unwounded => !IsWounded(target),   // 第93期: 深手も「傷あり」
                 // V2: 刻める攻撃だけ 1。刻めない＝この一撃で倒れる（死体には刻まない）。
                 // **判定は代金を払った価格で行う予測**——実際の生死は肩代わり・上限まで行かないと
                 // 決まらないので、破片が無く HP がこの打点以下のときだけ「刻めない」と読む。
@@ -2357,9 +2513,19 @@ public sealed class BattleContext
     /// 元の攻撃者が味方（棘の巻き込み・吸い）だと <paramref name="source"/> が同陣営になるので、
     /// 「中継は刃ではない」を <paramref name="source"/> だけでは書けない。
     /// </param>
+    /// <param name="spillWound">
+    /// 巻き込み則（<see cref="SpillWound"/>）をこの呼び出しで走らせるか（第93期）。
+    /// <b>既定は現行の挙動（走らせる）。</b> 深手の自傷と上乗せだけが偽を渡す
+    /// ——<b>深手 → 自傷 → 傷 → 深手</b>の閉じたループを構造的に作らないため（自己検査 (d)）。
+    /// </param>
+    /// <param name="deepBite">
+    /// 深手の払い出し（第93期）であることの札。<b>計数専用で、盤面の判断には一切使わない</b>
+    /// （<c>burnTick</c> と同じ扱い）。中継（巨躯・分かち）に拾われた回数を数えるためだけにある。
+    /// </param>
     public void ApplyDamage(UnitState target, int amount, UnitState? source,
                             bool isFriendlyFire = false, bool lethal = true,
-                            bool burnTick = false, bool relayed = false)
+                            bool burnTick = false, bool relayed = false,
+                            bool spillWound = true, bool deepBite = false)
     {
         if (!target.IsAlive || amount <= 0) return;
 
@@ -2504,6 +2670,10 @@ public sealed class BattleContext
                         }
                     }
 
+                    // 深手の自傷が中継に拾われた回数（第93期 §1-2 の 3）。**仕様として残す**
+                    // ——代金を誰かが肩代わりできるのは編成の選択肢。計数だけ出す。
+                    if (deepBite) TallyOf(target).DeepBiteRelayed++;
+
                     ApplyDamage(wall, blocked, source, isFriendlyFire: true, burnTick: burnTick, relayed: true);
                 }
             }
@@ -2525,6 +2695,7 @@ public sealed class BattleContext
                 {
                     amount -= taken;
                     Log($"    {sharer.Name} が {target.Name} の痛みを引き受けた", LogKind.Trigger);
+                    if (deepBite) TallyOf(target).DeepBiteRelayed++;   // 第93期 §1-2 の 3（計数のみ）
                     ApplyDamage(sharer, taken, source, isFriendlyFire: true, burnTick: burnTick, relayed: true);
 
                     // 痛みを取り上げられた者は腕がなまる。肩代わり量に比例させているので、
@@ -2670,16 +2841,18 @@ public sealed class BattleContext
         // 燃焼の刻み（burnTick）にも書かない。数は定数 1（打点に比例させない）。
         // **HP を引いた後・死亡判定の後**に置いてあるので、削りで倒れた味方には書かれない（死体には刻まない作法）。
         // 既定（無効）では素通りする。書くのは SetCounter だけなので、乱数列も他の窓口も動かさない。
-        if (SpillWound.Enabled && isFriendlyFire && !burnTick && !relayed && source is not null
+        if (SpillWound.Enabled && spillWound && isFriendlyFire && !burnTick && !relayed && source is not null
             && source.TeamId == target.TeamId && target.IsAlive && SpillWound.Writes(source))
         {
-            int w = target.Counter(StatusKeys.Wound) + 1;
-            target.SetCounter(StatusKeys.Wound, w);
+            // 第93期: 加算は**傷の窓口**を通す（束ねの入口）。既定（DeepRule 無効）では
+            // `SetCounter(Wound, cur + 1)` と1ビットも違わない。
+            int w = Wound(target, 1, source, WoundRoute.Spill);
             // 自己給餌（第90期 §1-2 の 4）の札。**計数専用**——`StatusKeys` ではないので帳簿
             // （`NoteCarry`）にも会戦の掃除にも載らず、誰も読んで分岐しない（`burnTick` と同じ扱い）。
             target.SetCounter(SpillWoundFromKey, source.InstanceId + 1);
             TallyOf(source).SpillWoundsWritten++;
-            Log($"    巻き込みの傷: {source.Name} の刃が {target.Name} に残る（傷 {w}）", LogKind.Status);
+            if (w >= 0)
+                Log($"    巻き込みの傷: {source.Name} の刃が {target.Name} に残る（傷 {w}）", LogKind.Status);
         }
     }
 
@@ -3330,12 +3503,12 @@ public static class BattleEngine
                                    ThornRule? thorn = null, SutureRule? suture = null,
                                    SpillWoundRule? spillWound = null, MendRule? mend = null,
                                    IgniteRule? woundIgnite = null, GatherRule? gather = null,
-                                   SoakRule? soak = null)
+                                   SoakRule? soak = null, DeepRule? deep = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
-               creak, sever, thinBlade, thorn, suture, spillWound, mend, woundIgnite, gather, soak);
+               creak, sever, thinBlade, thorn, suture, spillWound, mend, woundIgnite, gather, soak, deep);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -3360,12 +3533,13 @@ public static class BattleEngine
                                    ThinBladeRule? thinBlade = null, ThornRule? thorn = null,
                                    SutureRule? suture = null, SpillWoundRule? spillWound = null,
                                    MendRule? mend = null, IgniteRule? woundIgnite = null,
-                                   GatherRule? gather = null, SoakRule? soak = null)
+                                   GatherRule? gather = null, SoakRule? soak = null,
+                                   DeepRule? deep = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
-                                    suture, spillWound, mend, woundIgnite, gather, soak);
+                                    suture, spillWound, mend, woundIgnite, gather, soak, deep);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -3457,6 +3631,8 @@ public static class BattleEngine
                 if (actor.Counter(StatusKeys.Stun) > 0)
                 {
                     if (ctx.ScapegoatActive) ctx.NoteScapegoatSkip(actor);
+                    // 第93期: 深手は**実際に行動したとき**だけ開く。止められた駒は延命する（§1 の予測）。
+                    if (ctx.DeepWatch) ctx.NoteDeepStalled(actor);
                     actor.SetCounter(StatusKeys.Stun, 0);
                     actor.SetCounter(StatusKeys.IdleTurn, turn);
                     ctx.Log($"  {actor.Name} は痺れて動けない", LogKind.Status);
@@ -3487,6 +3663,7 @@ public static class BattleEngine
                         actor.Counter(ColossusTrait.BellyKey) - ctx.Colossus.SlumberThreshold);
                     actor.SetCounter(StatusKeys.IdleTurn, turn);
                     ctx.TallyOf(actor).Slumbers++;
+                    if (ctx.DeepWatch) ctx.NoteDeepStalled(actor);   // 第93期（計数のみ）
                     ctx.Log($"  {actor.Name} は腹が満ちてまどろんだ", LogKind.Status);
                     continue;
                 }
@@ -3510,12 +3687,14 @@ public static class BattleEngine
                     // 混ぜると無限に停止する——不動の駒に `Attack` を含む `Actions` を
                     // 与えてはいけない。周期がその要素で止まり、二度と先へ進まない。
                     actor.SetCounter(StatusKeys.IdleTurn, turn);
+                    if (ctx.DeepWatch) ctx.NoteDeepStalled(actor);   // 第93期（計数のみ）
                     continue;
                 }
 
                 if (act is null)
                 {
                     ctx.PerformAttack(actor);   // 従来経路。Actions を持たない駒はここしか通らない
+                    if (ctx.DeepWatch) ctx.NoteDeepAction(actor);    // 第93期 §2-3: 実際に行動した直後
                     continue;
                 }
 
@@ -3532,6 +3711,7 @@ public static class BattleEngine
                     ctx.EmitCharge(actor, act, actor.CurrentAction);
                     ctx.TallyOf(actor).Charges++;
                     ctx.Log($"  {actor.Name} は{act.Label ?? "力を溜めている"}", LogKind.Status);
+                    if (ctx.DeepWatch) ctx.NoteDeepAction(actor);    // 第93期 §2-3
                     continue;
                 }
 
@@ -3548,11 +3728,13 @@ public static class BattleEngine
                     ctx.Log($"  {actor.Name} は{act.Label ?? "術を使った"}", LogKind.Action);
                     foreach (Trait t in actor.Traits.ToList())
                         t.OnAction(ctx, actor, act);
+                    if (ctx.DeepWatch) ctx.NoteDeepAction(actor);    // 第93期 §2-3
                     continue;
                 }
 
                 ctx.PerformAttack(actor, attackPercent: act.AttackPercent,
                                   patternOverride: act.PatternOverride);
+                if (ctx.DeepWatch) ctx.NoteDeepAction(actor);        // 第93期 §2-3
             }
         }
 

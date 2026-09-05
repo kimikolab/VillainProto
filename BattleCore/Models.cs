@@ -869,6 +869,55 @@ public sealed class UnitTally
     /// <summary>巻き込み則（第85期・<c>SpillWoundRule</c>）で<b>この駒が味方に書いた</b>傷の回数。</summary>
     public int SpillWoundsWritten;
 
+    // ------------------------------------------------------------------------------------
+    // 第93期（深手）。**どれも誰も読んで分岐しない。盤面には一切影響しない。**
+    // 門（§1-1）の3本（DeepReach / DeepActs / DeepOnTop）と WoundWrites* は
+    // **規則の分岐より手前**にあるので版に依らない（第86期の X1P・第90期の作法）。
+    // ------------------------------------------------------------------------------------
+
+    /// <summary>傷の窓口（<c>BattleContext.Wound</c>）を通って<b>この駒が書いた</b>傷の量。<b>書き手の側に載る。</b></summary>
+    public int WoundWrites;
+
+    /// <summary>
+    /// 同・経路別（添字は <c>WoundRoute</c>）。<b>加算だけが窓口を通る</b>ので、これが傷の供給の全数になる。
+    /// <c>WoundRoute.Gather</c> だけは新しい供給ではなく中継（盤面の総量を増やさない）。
+    /// </summary>
+    public int[]? WoundWritesByRoute;
+
+    /// <summary>
+    /// 門（§1-1 の 1）。<b>この駒の傷が <c>DeepRule.Bundle</c> に達した回数</b>（＜Bundle → ≧Bundle の越え）。
+    /// <b>版に依らない</b>ので W0 で数えられる。<c>DeepReachFirstTurn</c> は初到達ターン、
+    /// <c>DeepReachTurnSum</c> は到達ターンの総和。
+    /// </summary>
+    public int DeepReach, DeepReachFirstTurn, DeepReachTurnSum;
+
+    /// <summary>門（§1-1 の 2）。<b>達した駒がその後に行動した回数</b>＝自傷が払い出される機会。<b>版に依らない。</b></summary>
+    public int DeepActs;
+
+    /// <summary>門（§1-1 の 3）。<b>達した駒にその後さらに傷が書かれた回数</b>＝上乗せの機会。<b>版に依らない。</b></summary>
+    public int DeepOnTop;
+
+    /// <summary>実際に<b>深手になった</b>回数と初回のターン（W1 のみ。二値なので 1 戦に何度も立つのは蘇生と会戦の境界だけ）。</summary>
+    public int DeepBundles, DeepBundleFirstTurn;
+
+    /// <summary>自傷（§2-3）の発火回数と額面（回数 × <c>DeepRule.DeepBite</c>）。</summary>
+    public int DeepBiteFires, DeepBiteOut;
+
+    /// <summary>自傷が中継（巨躯・分かち）に拾われた回数（§1-2 の 3）。<b>仕様として残してある。</b></summary>
+    public int DeepBiteRelayed;
+
+    /// <summary>上乗せ（§0-4 の 2）の発火回数（＝溜まらずに化けた傷の数）と額面。</summary>
+    public int DeepOverFires, DeepOverOut;
+
+    /// <summary>深手を持つ駒が手番を止められた回数（痺れ・まどろみ・<c>CanAct</c> 偽）。</summary>
+    public int DeepStalled;
+
+    /// <summary>滲み則が<b>深手</b>を読んで毒を +2 した回数（傷だけの +1 とは別に数える）。</summary>
+    public int DeepSoakDeeper;
+
+    /// <summary>引き取り（<c>GatherRule</c>）が走った時点で<b>受け手が既に深手だった</b>回数（Q5）。</summary>
+    public int DeepGatherAfter;
+
     /// <summary>
     /// 傷の引き取り（第89期・<c>GatherRule</c>）。庇いが成立した回数／そのうち隣に傷のある味方がいた回数／
     /// 実際に引き取った回数／引き取った直後の自分の傷の深さの総和／その最大。
@@ -950,6 +999,20 @@ public sealed class UnitTally
         GatherGuards += o.GatherGuards; GatherHadDonor += o.GatherHadDonor; GatherTaken += o.GatherTaken;
         GatherDepthSum += o.GatherDepthSum; GatherDepthMax = Math.Max(GatherDepthMax, o.GatherDepthMax);
         SpillWoundsWritten += o.SpillWoundsWritten;
+        // 深手（第93期）。**盤面には一切影響しない。**
+        WoundWrites += o.WoundWrites;
+        if (o.WoundWritesByRoute is not null)
+        {
+            WoundWritesByRoute ??= new int[o.WoundWritesByRoute.Length];
+            for (int i = 0; i < o.WoundWritesByRoute.Length; i++) WoundWritesByRoute[i] += o.WoundWritesByRoute[i];
+        }
+        DeepReach += o.DeepReach; DeepReachTurnSum += o.DeepReachTurnSum;
+        if (o.DeepReachFirstTurn > 0 && (DeepReachFirstTurn == 0 || o.DeepReachFirstTurn < DeepReachFirstTurn)) DeepReachFirstTurn = o.DeepReachFirstTurn;
+        DeepActs += o.DeepActs; DeepOnTop += o.DeepOnTop; DeepBundles += o.DeepBundles;
+        if (o.DeepBundleFirstTurn > 0 && (DeepBundleFirstTurn == 0 || o.DeepBundleFirstTurn < DeepBundleFirstTurn)) DeepBundleFirstTurn = o.DeepBundleFirstTurn;
+        DeepBiteFires += o.DeepBiteFires; DeepBiteOut += o.DeepBiteOut; DeepBiteRelayed += o.DeepBiteRelayed;
+        DeepOverFires += o.DeepOverFires; DeepOverOut += o.DeepOverOut;
+        DeepStalled += o.DeepStalled; DeepSoakDeeper += o.DeepSoakDeeper; DeepGatherAfter += o.DeepGatherAfter;
         // 滲み則（第90期）。**盤面には一切影響しない。**
         SoakPoisonWrites += o.SoakPoisonWrites; SoakPoisonSeen += o.SoakPoisonSeen;
         SoakPoisonSeenAlly += o.SoakPoisonSeenAlly; SoakPoisonAdded += o.SoakPoisonAdded;
