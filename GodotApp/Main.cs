@@ -52,13 +52,15 @@ public partial class Main : Control
     // レーンは2本で、どちらも 前X → 中央 →〔○中X〕→ 後X の奥行き（BattleCore の FormationRules と同じ）。
     //
     // 表示は「前列どうしが向かい合う」向きに揃える。敵は奥→手前、味方は手前→奥。
+    // **奥行きは縦**（第99期 W1 で入れ子を直した。それまでは横に転置していた）。
     // 内側の列（○中1・中央・○中3）が召喚枠を含む中間層で、ここに駒が湧くと貫きがもう1段減衰する。
     // **貫きがレーンを前から走る**という規則が目で分かることがこの画面の要点。
     //
     // X字化で 3×3 の完全な格子になったので、旧盤面で必要だった -1（空き枠）の詰め物は消えた。
     // それでも均等グリッドとして描いてはいけない——列の意味（前 / 中間 / 後）が読めなくなる。
     //
-    //     列は 後 / 中間 / 前 の順、各列は上から 行1・行2・行3。
+    //     **配列の1本が1行**（第99期 W1）。敵は上から 後列 / 中列 / 前列、味方は 前列 / 中列 / 後列。
+    //     行の中は左から 1・2・3。
     //     後1(3) ○後2(8) 後3(4) ／ ○中1(5) 中央(2) ○中3(6) ／ 前1(0) ○前2(7) 前3(1)
     static readonly int[][] EnemyLaneOrder = { new[] { 3, 8, 4 }, new[] { 5, 2, 6 }, new[] { 0, 7, 1 } };
     static readonly int[][] PlayerLaneOrder = { new[] { 0, 7, 1 }, new[] { 5, 2, 6 }, new[] { 3, 8, 4 } };
@@ -116,23 +118,21 @@ public partial class Main : Control
     }
 
     /// <summary>
-    /// 「誰が誰を叩いたか」の筋。ダメージが通るたびに1本積んで、時間で薄れる。
+    /// 「誰が誰を叩いたか」の筋。
     ///
-    /// <c>Attack</c> ではなく <c>Damage</c> を起点にしているのは、そちらのほうが読めるものが多いため。
-    /// 薙ぎなら巻き込んだ数だけ、貫きならレーンを走った数だけ本数が出るので、
-    /// **攻撃パターンの形がそのまま線の形になる。** 棘の反撃のように
-    /// <c>PerformAttack</c> を通らない干渉も同じように出る。
-    ///
-    /// <para>第97期 D1: <c>Damage</c> にも <c>Pattern</c> が載るようになったので、
-    /// 単体・薙ぎ・貫き・全体を線の形で描き分ける。<see cref="Prev"/> は
-    /// **同じ一振りの直前の着弾**で、薙ぎならそこを繋いで扇に、貫きならレーンを走る筋になる。</para>
+    /// <para><b>線は主目標への1本だけ（第99期 W2）。</b> 第97・98期は攻撃型を線の形
+    /// （扇・数珠つなぎ・太さ）で描き分けていたが、実際に見ると読めなかった——
+    /// 巻き込みが2体だと扇が2本にしかならず単体2回と区別が付かず、
+    /// 細1本／中太／極太の差はこの密度では判別できず、
+    /// <b>線が駒の脇を通ると当たっていない駒に当たったように見える</b>。
+    /// <b>型は線ではなく面（<see cref="Glow"/>）と名前（<see cref="Pop"/>）で示す。</b></para>
     /// </summary>
     struct Shot
     {
         public int FromTeam, FromSlot, ToTeam, ToSlot;
         public bool Friendly;
 
-        /// <summary>ターン外の反応（棘・仇討ち・軋み・追い打ち）。線の色を変える。</summary>
+        /// <summary>ターン外の反応（棘・仇討ち・軋み）。線の色を変える。</summary>
         public bool Reaction;
 
         /// <summary>肩代わりが分割して中継した段（第85期）。破線で描く。</summary>
@@ -142,21 +142,32 @@ public partial class Main : Control
         public bool Thin;
         public Color Tint;
 
-        /// <summary>攻撃型。null は「型なし」（反撃・毒燃の刻み・中継・共有）。</summary>
-        public AttackPattern? Pattern;
-
-        /// <summary>同じ一振りの直前の着弾（扇・貫きの連結）。無ければ <c>HasPrev</c> が偽。</summary>
-        public bool HasPrev;
-        public int PrevTeam, PrevSlot;
-
         public double Life;
     }
 
     /// <summary>
-    /// カードの上に浮いて消える札（第97期 D2 / D3 / D5）。
+    /// 当たった駒の枠を光らせる（第99期 W2）。<b>攻撃型はここで読ませる。</b>
+    ///
+    /// <para>薙ぎなら主目標＋巻き込み、貫きならレーンに並んだ全員、全体なら敵全員の枠が光る。
+    /// <b>線は主目標への1本だけ</b>なので、脇を通った線を「当たった」と読み違えることが無い。</para>
+    ///
+    /// <para><see cref="Strong"/> が主目標。巻き込み・後続は薄く出す
+    /// ——「何型か」と「誰を狙ったか」は別の情報で、両方要る。</para>
+    /// </summary>
+    struct Glow
+    {
+        public int Team, Slot;
+        public Color Color;
+        public bool Strong;
+        public double Life;
+    }
+
+    /// <summary>
+    /// カードの上に浮いて消える札（第97期 D2 / D3 / D5・第99期 W2 で型名を足した）。
     ///
     /// <para>毒・燃焼の刻みは<b>誰からでもない</b>ので線を引かない——数字だけをカードの上に出す。
-    /// 状態異常が付いた瞬間（<c>StatusGain</c>）は「+傷」のような短い札にする。</para>
+    /// 状態異常が付いた瞬間（<c>StatusGain</c>）は「+傷」のような短い札にする。
+    /// 攻撃した瞬間は<b>攻撃側のカードに型の名前</b>を出す。</para>
     /// </summary>
     struct Pop
     {
@@ -164,10 +175,11 @@ public partial class Main : Control
         public string Text;
         public Color Color;
         public int Stack;      // 同じカードに同時に複数出たときの段（重なって読めなくなるのを防ぐ）
+        public bool Boxed;     // 型名は枠付きで出す（数字と混ざらないように）
         public double Life;
     }
 
-    /// <summary>全体攻撃（<see cref="AttackPattern.All"/>）。線を引かず、その陣営の盤面を一瞬明るくする。</summary>
+    /// <summary>全体攻撃（<see cref="AttackPattern.All"/>）。その陣営の盤面を一瞬明るくする。</summary>
     struct Flash
     {
         public int Team;
@@ -176,8 +188,9 @@ public partial class Main : Control
     }
 
     const double ShotLife = 0.55;
-    const double PopLife = 0.4;
+    const double PopLife = 0.55;
     const double FlashLife = 0.35;
+    const double GlowLife = 0.55;
 
     // ---- 状態 -----------------------------------------------------------
 
@@ -207,6 +220,7 @@ public partial class Main : Control
     readonly List<Shot> _shots = new();
     readonly List<Pop> _pops = new();
     readonly List<Flash> _flashes = new();
+    readonly List<Glow> _glows = new();
     ShotOverlay _overlay = null!;
 
     int _idx;
@@ -347,7 +361,23 @@ public partial class Main : Control
             layer.DrawRect(area.Grow(6), c2);
         }
 
-        // (2) 筋。
+        // (2) 当たった駒の枠（第99期 W2）。**攻撃型はここで読ませる。**
+        foreach (Glow gl in _glows)
+        {
+            if (!_cards.TryGetValue((gl.Team, gl.Slot), out Card? gc)) continue;
+            Rect2 g = gc.Root.GetGlobalRect();
+            var r = new Rect2(inv * g.Position, g.Size);
+            float k = (float)(gl.Life / GlowLife);
+            Color c = gl.Color;
+            c.A = k * (gl.Strong ? 0.95f : 0.55f);
+            // 主目標は太い枠を2重に、巻き込み・後続は細い枠1本。
+            layer.DrawRect(r.Grow(2), c, filled: false, width: gl.Strong ? 3f : 2f);
+            if (gl.Strong) layer.DrawRect(r.Grow(5), new Color(c, c.A * 0.5f), filled: false, width: 2f);
+            // 面としても薄く塗る——枠だけだと隣のカードの枠と紛れる。
+            layer.DrawRect(r, new Color(c, k * (gl.Strong ? 0.16f : 0.08f)));
+        }
+
+        // (3) 筋。**主目標への1本だけ**（第99期 W2。扇・数珠つなぎはやめた）。
         foreach (Shot s in _shots)
         {
             if (!CardCenter(inv, s.FromTeam, s.FromSlot, out Vector2 from)) continue;
@@ -359,31 +389,16 @@ public partial class Main : Control
                     : s.Friendly ? CFf
                     : CDmg;
             c.A = k * (s.Thin ? 0.85f : 0.9f);
-
-            // 太さで型を出す。貫きはレーンを押し通るので一番太い。
-            float w = s.Thin ? 1.5f
-                    : s.Pattern switch
-                    {
-                        AttackPattern.Pierce => 5f * k + 2f,
-                        AttackPattern.Sweep => 3f * k + 1f,
-                        _ => 2f * k + 1f,
-                    };
+            float w = s.Thin ? 1.5f : 2.5f * k + 1.5f;
 
             if (s.Relayed) DrawDashed(layer, from, to, c, w);
             else layer.DrawLine(from, to, c, w, antialiased: true);
-
-            // 同じ一振りの直前の着弾へ繋ぐ。薙ぎは扇に、貫きはレーンを走る筋になる。
-            if (s.HasPrev && CardCenter(inv, s.PrevTeam, s.PrevSlot, out Vector2 prev))
-            {
-                Color cc = c; cc.A = k * 0.7f;
-                layer.DrawLine(prev, to, cc, Math.Max(1.5f, w * 0.8f), antialiased: true);
-            }
 
             if (s.Thin) layer.DrawCircle(to, 3f * k + 1.5f, c);
             else DrawHead(layer, from, to, c, 4f * k + 2.5f);
         }
 
-        // (3) 浮く札（毒・燃焼の刻み／状態異常が付いた瞬間／移動）。
+        // (4) 浮く札（型名／直撃・毒燃の数字／状態異常が付いた瞬間／移動）。
         Font font = layer.GetThemeDefaultFont();
         foreach (Pop p in _pops)
         {
@@ -393,6 +408,15 @@ public partial class Main : Control
             c.A = Math.Min(1f, k * 1.6f);
             // 上へ浮きながら消える。段（Stack）は同じカードに同時に出たぶんのずらし。
             Vector2 pos = at + new Vector2(-14, -18 - (1f - k) * 14f - p.Stack * 15f);
+
+            if (p.Boxed)
+            {
+                // 型名は枠付き。数字と混ざると「何点入ったか」と読めてしまう。
+                Vector2 size = font.GetStringSize(p.Text, HorizontalAlignment.Left, -1, 15);
+                var box = new Rect2(pos + new Vector2(-5, -size.Y + 1), size + new Vector2(10, 5));
+                layer.DrawRect(box, new Color(CGround, c.A * 0.85f));
+                layer.DrawRect(box, new Color(c, c.A), filled: false, width: 1.5f);
+            }
             layer.DrawString(font, pos + new Vector2(1, 1), p.Text,
                              HorizontalAlignment.Left, -1, 15, new Color(0, 0, 0, c.A * 0.7f));
             layer.DrawString(font, pos, p.Text, HorizontalAlignment.Left, -1, 15, c);
@@ -444,24 +468,33 @@ public partial class Main : Control
         return idx;
     }
 
-    /// <summary>直前に適用したイベントを、筋・札・閃光のどれかに変える。</summary>
+    /// <summary>直前に適用したイベントを、筋・枠・札・閃光のどれかに変える。</summary>
     void PushShot(int idx, Dictionary<int, Piece> units)
     {
         BattleEvent e = _result.Events[idx];
 
-        // **溜めない**（第98期 V2）。組が変わったら前の組の線と閃光を消す。
-        // 浮く札（数字）は消さない——重ならないよう段違いに出しているし、
-        // 「いま何点入ったか」は次の攻撃と一緒に読めたほうがいい。
+        // **溜めない**（第98期 V2）。組が変わったら前の組を丸ごと消す。
+        // 第99期 W2 で札（`_pops`）も一緒に消すようにした——**手送りで1回止めれば、
+        // いま画面に出ているものが「その一振りだけ」になる**のがこの画面の判断の目安。
         int grp = GroupOf(idx);
         if (grp != _shotGroup)
         {
             _shots.Clear();
             _flashes.Clear();
+            _glows.Clear();
+            _pops.Clear();
             _shotGroup = grp;
         }
 
         switch (e.Kind)
         {
+            // 攻撃した瞬間。**型の名前を攻撃側のカードに出す**（第99期 W2）。
+            // 当たったかどうかとは別の出来事なので、Damage が1件も出ない振りでも名前は出る。
+            case BattleEventKind.Attack:
+                if (e.ActorId is { } atid && units.TryGetValue(atid, out Piece? at))
+                    AddPop(at, PatternLabel(e.Pattern ?? at.Pattern), CInk, boxed: true);
+                break;
+
             case BattleEventKind.Damage:
                 PushDamage(idx, e, units);
                 // 直撃の数字。**色は赤のまま**にして、毒（緑）・燃焼（橙）と並べたときに
@@ -473,7 +506,11 @@ public partial class Main : Control
             // 毒・燃焼の刻み（第97期 D2）。**誰からでもないので線を引かない。**
             case BattleEventKind.Status:
                 if (e.TargetId is { } wid && units.TryGetValue(wid, out Piece? w))
-                    AddPop(w, $"-{e.Amount}", StatusWorkColor(e.Text));
+                {
+                    Color sc = StatusWorkColor(e.Text);
+                    AddPop(w, $"-{e.Amount}", sc);
+                    AddGlow(w, sc, strong: false);
+                }
                 break;
 
             // 状態異常が付いた瞬間（第97期 D3）。札を出し、書き手が分かれば細い線を引く。
@@ -503,10 +540,22 @@ public partial class Main : Control
                             Thin = true, Tint = CHeal, Life = ShotLife,
                         });
                     AddPop(m, "移動", CHeal);
+                    AddGlow(m, CHeal, strong: false);
                 }
                 break;
         }
     }
+
+    /// <summary>
+    /// その組の <see cref="BattleEventKind.Attack"/> の主目標（第99期 W2）。
+    /// <b>線を引くのはここだけ</b>で、他の着弾は枠を光らせるだけにする。
+    /// 反撃・毒燃の刻み・肩代わりの中継のように <c>Attack</c> を持たない段では null。
+    /// </summary>
+    int? MainTargetOf(int group)
+        => group >= 0 && group < _result.Events.Count
+           && _result.Events[group].Kind == BattleEventKind.Attack
+            ? _result.Events[group].TargetId
+            : null;
 
     void PushDamage(int idx, BattleEvent e, Dictionary<int, Piece> units)
     {
@@ -514,29 +563,21 @@ public partial class Main : Control
         if (!units.TryGetValue(aid, out Piece? a) || !units.TryGetValue(tid, out Piece? b)) return;
         if (a == b) return;   // 反動（追い打ちの踏み込みすぎ）は自分から自分なので線にならない
 
-        // 全体攻撃は線を引かない——5本の線が交差するだけで、型としてはむしろ読めなくなる。
-        if (e.Pattern == AttackPattern.All)
-        {
-            if (!_flashes.Any(f => f.Team == b.Team && f.Life > FlashLife * 0.8))
-                _flashes.Add(new Flash { Team = b.Team, Color = a.Team == b.Team ? CFf : CDmg, Life = FlashLife });
-            return;
-        }
+        Color c = e.FriendlyFire || a.Team == b.Team ? CFf : e.Reaction ? CCounter : CDmg;
 
-        // 同じ一振りの直前の着弾を探す。Attack より手前へは遡らない。
-        bool hasPrev = false; int prevTeam = 0, prevSlot = 0;
-        for (int i = idx - 1; i >= 0; i--)
-        {
-            BattleEvent pe = _result.Events[i];
-            if (pe.Kind is BattleEventKind.Attack or BattleEventKind.TurnStart
-                        or BattleEventKind.Skill or BattleEventKind.Charge) break;
-            if (pe.Kind == BattleEventKind.Damage && pe.ActorId == aid && pe.Pattern == e.Pattern
-                && pe.TargetId is { } ptid && units.TryGetValue(ptid, out Piece? pp) && pp != b)
-            {
-                hasPrev = true; prevTeam = pp.Team; prevSlot = pp.Slot;
-                break;
-            }
-        }
+        // 全体攻撃はその陣営の盤面をまるごと明るくする（枠は個別に光るので二重には見えない）。
+        if (e.Pattern == AttackPattern.All
+            && !_flashes.Any(f => f.Team == b.Team && f.Life > FlashLife * 0.8))
+            _flashes.Add(new Flash { Team = b.Team, Color = c, Life = FlashLife });
 
+        // **主目標だけに線を引く。** それ以外は枠だけ——線が駒の脇を通って
+        // 「当たっていない駒に当たったように見える」のを構造的に消す（第99期 W2）。
+        int? main = MainTargetOf(_shotGroup);
+        bool isMain = main is null || main == tid;
+
+        AddGlow(b, c, strong: isMain);
+
+        if (!isMain) return;
         _shots.Add(new Shot
         {
             FromTeam = a.Team, FromSlot = a.Slot,
@@ -544,18 +585,30 @@ public partial class Main : Control
             Friendly = e.FriendlyFire || a.Team == b.Team,
             Reaction = e.Reaction,
             Relayed = e.Relayed,
-            Pattern = e.Pattern,
-            HasPrev = hasPrev, PrevTeam = prevTeam, PrevSlot = prevSlot,
             Life = ShotLife,
         });
     }
 
+    /// <summary>当たった駒の枠を光らせる。同じ駒に2度来たら濃いほうを残す。</summary>
+    void AddGlow(Piece u, Color color, bool strong)
+    {
+        for (int i = 0; i < _glows.Count; i++)
+            if (_glows[i].Team == u.Team && _glows[i].Slot == u.Slot)
+            {
+                Glow old = _glows[i];
+                _glows[i] = new Glow { Team = u.Team, Slot = u.Slot, Color = color,
+                                       Strong = old.Strong || strong, Life = GlowLife };
+                return;
+            }
+        _glows.Add(new Glow { Team = u.Team, Slot = u.Slot, Color = color, Strong = strong, Life = GlowLife });
+    }
+
     /// <summary>同じカードに同時に出た札を段違いにする（重なると読めない）。</summary>
-    void AddPop(Piece u, string text, Color color)
+    void AddPop(Piece u, string text, Color color, bool boxed = false)
     {
         int stack = _pops.Count(q => q.Team == u.Team && q.Slot == u.Slot && q.Life > PopLife * 0.75);
         _pops.Add(new Pop { Team = u.Team, Slot = u.Slot, Text = text, Color = color,
-                            Stack = Math.Min(stack, 3), Life = PopLife });
+                            Stack = Math.Min(stack, 3), Boxed = boxed, Life = PopLife });
     }
 
     /// <summary>その駒が <paramref name="idx"/> の直前に居たスロット。移動の矢印の始点。</summary>
@@ -771,15 +824,17 @@ public partial class Main : Control
             flow.AddChild(h);
         }
 
-        Chip("単体 細1本", CDmg);
-        Chip("薙ぎ 中太＋扇", CDmg);
-        Chip("貫き 極太の連なり", CDmg);
-        Chip("全体 盤面が光る", CDmg);
+        // 第99期 W2。**線の形の説明を消して、枠の光り方の説明にした。**
+        // 型は線ではなく「攻撃側に出る型名」と「当たった駒の枠」で読む。
+        flow.AddChild(Text("型 → 攻撃側のカードに名前が出る（単体/薙ぎ/貫き/全体）", 10, CDim));
+        Chip("当たった駒の枠が光る（濃い＝主目標）", CDmg);
+        Chip("薄い枠＝巻き込み・貫きの後続", CDmg);
+        Chip("線は主目標への1本だけ", CDmg);
         Chip("反撃（棘・仇討ち・軋み。逆向き）", CCounter);
-        Chip("巻き込み", CFf);
+        Chip("味方の刃", CFf);
         Chip("中継（破線）", CDmg);
         Chip("移動", CHeal);
-        flow.AddChild(Text("｜ 線は直前の1振りぶんだけ ／ 通貨の色 →", 10, CFaint));
+        flow.AddChild(Text("｜ 出るのは直前の1振りぶんだけ ／ 通貨の色 →", 10, CFaint));
         Chip("毒", CPoison);
         Chip("燃", CBurn);
         Chip("傷/深手", CWound);
@@ -792,31 +847,52 @@ public partial class Main : Control
         return panel;
     }
 
+    /// <summary>
+    /// 片側の盤面を組む。
+    ///
+    /// <para><b>配列の1本が「行」になる（第99期 W1）。</b> 第97期までは入れ子が逆で、
+    /// <c>EnemyLaneOrder[0] = {3,8,4}</c> が<b>縦一列</b>になっていた——その結果
+    /// 敵の前列が右端・味方の前列が左端に来て、<b>「前列どうしが向かい合う」が成立していなかった</b>
+    /// （第98期に席名を出したことで「ムドが後1なのに前列に見える」として表面化した）。</para>
+    ///
+    /// <para><b><see cref="EnemyLaneOrder"/> / <see cref="PlayerLaneOrder"/> の中身は変えていない。</b>
+    /// 積み方だけを直した——中身を変えると、どちらが正しかったのか後から読めなくなる。</para>
+    ///
+    /// <para>これで奥行きが<b>縦</b>になり、<b>貫きがレーンを前から走る筋が縦に見える</b>。
+    /// 上下の並びは 敵 後→中→前 ／〔接敵面〕／ 味方 前→中→後 で、接敵面をはさんで前列が隣り合う。</para>
+    /// </summary>
     Control Side(int team)
     {
         int[][] order = team == 1 ? EnemyLaneOrder : PlayerLaneOrder;
-        var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
-        row.AddThemeConstantOverride("separation", 10);
+        var col = new VBoxContainer();
+        col.AddThemeConstantOverride("separation", 6);
 
         foreach (int[] lane in order)
         {
-            var col = new VBoxContainer();
-            col.AddThemeConstantOverride("separation", 6);
-            col.CustomMinimumSize = new Vector2(150, 0);
+            var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+            row.AddThemeConstantOverride("separation", 10);
+            // 行の名前。**席名（カードの右上）と突き合わせられること**が W1 の確認そのもの。
+            Label cap = Text(RowLabel(lane[0]), 10, CFaint);
+            cap.CustomMinimumSize = new Vector2(44, 0);
+            cap.HorizontalAlignment = HorizontalAlignment.Right;
+            row.AddChild(cap);
             foreach (int slot in lane)
             {
                 if (slot < 0)
                 {
-                    col.AddChild(new Control { CustomMinimumSize = new Vector2(0, 54) });
+                    // 空き枠も幅として残す。**Visible = false にすると Container が畳んで
+                    // レーンの深さが崩れる**（Redraw のコメントと同じ理由）。
+                    row.AddChild(new Control { CustomMinimumSize = new Vector2(150, 54) });
                     continue;
                 }
                 Card c = MakeCard(team);
+                c.Root.CustomMinimumSize = new Vector2(150, 54);
                 _cards[(team, slot)] = c;
-                col.AddChild(c.Root);
+                row.AddChild(c.Root);
             }
-            row.AddChild(col);
+            col.AddChild(row);
         }
-        return row;
+        return col;
     }
 
     Card MakeCard(int team)
@@ -1095,6 +1171,7 @@ public partial class Main : Control
         _shots.Clear();
         _pops.Clear();
         _flashes.Clear();
+        _glows.Clear();
         _shotGroup = int.MinValue;
         _banner = 0;
         _lBanner.Visible = false;
@@ -1333,6 +1410,14 @@ public partial class Main : Control
     /// <summary>手番の札。<b>手で書かない</b>——engine と同じ関数から引く。</summary>
     static readonly string IdleLabel = StatusKeys.LabelOf(StatusKeys.IdleTurn);
 
+    /// <summary>行の名前。<see cref="FormationRules.RowOf"/> から引く——**手写ししない**。</summary>
+    static string RowLabel(int slot) => FormationRules.RowOf(slot) switch
+    {
+        Row.Front => "前列",
+        Row.Back => "後列",
+        _ => "中列",
+    };
+
     static string PatternLabel(AttackPattern p) => p switch
     {
         AttackPattern.Sweep => "薙ぎ",
@@ -1394,7 +1479,10 @@ public partial class Main : Control
     {
         // 筋は再生していなくても薄れさせる（コマ送りでも1本ずつ確かめられる）。
         // 速度に比例して薄れるので、4× でも線が渋滞しない。
-        if (_shots.Count > 0 || _pops.Count > 0 || _flashes.Count > 0)
+        // **手送りのあいだは薄れさせない**（第99期 W2）。1回止めたときに画面へ残っているものが
+        // 「その一振りだけ」になるのがこの画面の判断の目安なので、止めた瞬間に消えては困る。
+        // 組が変わったときは `PushShot` が丸ごと消すので、溜まることは無い。
+        if (_playing && (_shots.Count > 0 || _pops.Count > 0 || _flashes.Count > 0 || _glows.Count > 0))
         {
             double fade = delta * Math.Max(1.0, _speed);
             for (int i = _shots.Count - 1; i >= 0; i--)
@@ -1417,6 +1505,13 @@ public partial class Main : Control
                 f.Life -= fade;
                 if (f.Life <= 0) _flashes.RemoveAt(i);
                 else _flashes[i] = f;
+            }
+            for (int i = _glows.Count - 1; i >= 0; i--)
+            {
+                Glow gl = _glows[i];
+                gl.Life -= fade;
+                if (gl.Life <= 0) _glows.RemoveAt(i);
+                else _glows[i] = gl;
             }
             _overlay.QueueRedraw();
         }
