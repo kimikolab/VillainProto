@@ -863,6 +863,9 @@ public sealed class UnitTally
     /// </summary>
     public int SutureFoe, SutureAlly, SutureDry, SutureHealed;
 
+    /// <summary>縫いが味方側から糸を引いたときの傷の深さの総和と最大（第89期）。<b>盤面には一切影響しない。</b></summary>
+    public int SutureAllyDepth, SutureAllyDepthMax;
+
     /// <summary>巻き込み則（第85期・<c>SpillWoundRule</c>）で<b>この駒が味方に書いた</b>傷の回数。</summary>
     public int SpillWoundsWritten;
 
@@ -918,6 +921,7 @@ public sealed class UnitTally
     public void Add(UnitTally o)
     {
         SutureFoe += o.SutureFoe; SutureAlly += o.SutureAlly; SutureDry += o.SutureDry; SutureHealed += o.SutureHealed;
+        SutureAllyDepth += o.SutureAllyDepth; SutureAllyDepthMax = Math.Max(SutureAllyDepthMax, o.SutureAllyDepthMax);
         GatherGuards += o.GatherGuards; GatherHadDonor += o.GatherHadDonor; GatherTaken += o.GatherTaken;
         GatherDepthSum += o.GatherDepthSum; GatherDepthMax = Math.Max(GatherDepthMax, o.GatherDepthMax);
         SpillWoundsWritten += o.SpillWoundsWritten;

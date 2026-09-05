@@ -590,8 +590,12 @@ public sealed class GuardianTrait : RedirectGainTrait
     {
         bool guarded = self.Counter(PendingKey) > 0;      // ★ base より先に読む（base は冒頭で 0 に落とす）
         base.OnDamaged(ctx, self, dmg, source);
-        if (!ctx.Gather.Enabled || !guarded || !self.IsAlive) return;
+        if (!guarded || !self.IsAlive) return;
 
+        // **ここから下の2つの計数は版に依らない**（第86期の X1P と同じ作法）。
+        // 紙のスループットの分子は Z0 の実測から取るので、規則の分岐より手前で数える。
+        // **`ctx.PickOne` だけは規則が有効なときにしか呼ばない**——候補が2個以上あると `Roll` を消費するので、
+        // ここで呼ぶと Z0 の乱数列が動いてしまう。
         UnitTally t = ctx.TallyOf(self);
         t.GatherGuards++;
 
@@ -600,6 +604,7 @@ public sealed class GuardianTrait : RedirectGainTrait
                         && FormationRules.AreAdjacent(self.Slot, a.Slot)).ToList();
         if (pool.Count == 0) return;
         t.GatherHadDonor++;
+        if (!ctx.Gather.Enabled) return;
 
         int best = pool.Max(a => a.Counter(StatusKeys.Wound));
         UnitState donor = ctx.PickOne(pool.Where(a => a.Counter(StatusKeys.Wound) == best).ToList())!;
@@ -4365,7 +4370,8 @@ public sealed class SutureTrait : Trait
 
         // 計数（第85期）。**盤面には一切影響しない**——糸口の内訳と「繕いは 0 だが塞ぎは走った」回数。
         UnitTally st = ctx.TallyOf(self);
-        if (fromAlly) st.SutureAlly++; else st.SutureFoe++;
+        if (fromAlly) { st.SutureAlly++; st.SutureAllyDepth += w; if (w > st.SutureAllyDepthMax) st.SutureAllyDepthMax = w; }
+        else st.SutureFoe++;
         if (patient.Hp == before) st.SutureDry++;
         st.SutureHealed += patient.Hp - before;
 

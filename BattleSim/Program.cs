@@ -28446,7 +28446,308 @@ if (focusId == "gather")
         return;
     }
 
-    Console.WriteLine("gather: 引数は redo87 / run87 <v> / seats / phase0 / run <z> / tables <z0> <z1> / check <z0> <z1>。");
+    // =====================================================================================
+    // phase0（§1-3）
+    // =====================================================================================
+    if (gaArg == "phase0")
+    {
+        var allRows = CompareBuilds();
+        bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
+        var galdRows = allRows.Where(r => Has(r.F, "gald")).ToArray();
+        var hariRows = allRows.Where(r => Has(r.F, "hari")).ToArray();
+        var bothRows = allRows.Where(r => Has(r.F, "gald") && Has(r.F, "hari")).ToArray();
+        var writerIds = new[] { "kado", "golm", "borg", "rica", "zoto", "nara" };
+
+        Console.WriteLine("# 第89期 Phase 0（§1-3）—— 傷を引き取る前の地図");
+        Console.WriteLine();
+        Console.WriteLine("## §1-3-1 —— `GuardianTrait` と `MartyrTrait` の関係（**戦闘0回**）");
+        Console.WriteLine();
+        Console.WriteLine("| | 実体 |");
+        Console.WriteLine("|---|---|");
+        Console.WriteLine("| 共有 | どちらも `RedirectGainTrait` を継承し、**基底の `OnDamaged` は1行も違わない**（印を読む → 0 に落とす → `dmg / 2` を `AtkBonus` へ） |");
+        Console.WriteLine("| 分けてあるもの | `Trait.Id` と、engine が読む割合（ガルド 50% / 殉教 `MartyrRule` 既定 75%）だけ |");
+        Console.WriteLine("| **引き取りの置き場** | **`GuardianTrait` の `OnDamaged` の override**。`RedirectGainTrait` には置かない |");
+        Console.WriteLine("| 置かない理由 | 基底に置くと**敵の殉教者にも生える**。敵側に味方の傷を書く手段は無いが、"
+                          + "**敵が味方の傷を引き取る経路が生えていないこと**を実測 0 回で確認する（自己検査 (d)） |");
+        Console.WriteLine();
+        Console.WriteLine($"`Stages` の敵で `Martyr` を持つ駒: "
+                          + string.Join(" / ", gaStages.SelectMany(st => st.Enemy.Occupied()).Select(o => o.Def)
+                              .Where(d => d.Traits.Contains(TraitId.Martyr)).Select(d => d.Name).Distinct().DefaultIfEmpty("（なし）"))
+                          + $"。味方で `Guardian` を持つ駒: "
+                          + string.Join(" / ", gaRoster.Where(d => d.Traits.Contains(TraitId.Guardian)).Select(d => d.Name).DefaultIfEmpty("（なし）")) + "。");
+        Console.WriteLine();
+
+        Console.WriteLine("## §1-3-2 —— `PendingKey`（`guardPending`）の読み順（**戦闘0回**）");
+        Console.WriteLine();
+        Console.WriteLine("`RedirectGainTrait.OnDamaged` は**冒頭で印を読んで即座に 0 に落とす**"
+                          + "（`bool guarded = self.Counter(PendingKey) > 0; self.SetCounter(PendingKey, 0);`）。");
+        Console.WriteLine();
+        Console.WriteLine("    guarded = self.Counter(PendingKey) > 0    ← ★ base より先に読む");
+        Console.WriteLine("    base.OnDamaged(...)                       ← ここで印が 0 に落ちる（現行の育ちはそのまま）");
+        Console.WriteLine("    if (!guarded || !self.IsAlive) return");
+        Console.WriteLine("    計数（庇い成立・隣に傷のある味方がいたか）  ← **版に依らない**（規則の分岐より手前）");
+        Console.WriteLine("    if (!ctx.Gather.Enabled) return           ← ここから下だけが Z1");
+        Console.WriteLine("    donor = 隣接する生存味方のうち Wound 最大（同数は ctx.PickOne）");
+        Console.WriteLine("    donor.Wound -= 1 ; self.Wound += 1");
+        Console.WriteLine();
+        Console.WriteLine("**`ctx.PickOne` は `Gather.Enabled` の内側にしか無い。** 候補が2個以上あると `Roll` を消費するので、"
+                          + "手前で呼ぶと Z0 の乱数列が動く。**計数を規則の手前に置いたのは第86期の X1P と同じ作法**"
+                          + "——紙のスループットの分子を Z0 の実測から取るため。");
+        Console.WriteLine();
+
+        Console.WriteLine("## §1-3-3 —— 隣接の窓口（**戦闘0回**）");
+        Console.WriteLine();
+        Console.WriteLine("`Stoic`（`BattleContext.SupportTargets`）が使っているのと**同じ `FormationRules.AreAdjacent(u.Slot, a.Slot)`**。"
+                          + "新しい隣接の読み方は作っていない。**`AcceptsSupport` は見ない**"
+                          + "——取り上げるのは支援ではないので、引き受け（`BearTrait`）・業と同じ扱い。");
+        Console.WriteLine();
+        Console.WriteLine("編成5枠の隣接次数は **中央 4 / 角 2 の2値**（第45期）。"
+                          + "**ガルドは34行すべてで角**という第68期の記録があるので、引き取りの供給口は原則2つ。");
+        Console.WriteLine();
+
+        Console.WriteLine("## §1-3-4 —— `compare` の行数（**指示書の数を信用せず数え直した**）");
+        Console.WriteLine();
+        Console.WriteLine("| | 行数 | 行 |");
+        Console.WriteLine("|---|--:|---|");
+        Console.WriteLine($"| 全行 | {allRows.Length} | |");
+        Console.WriteLine($"| ガルドを含む | **{galdRows.Length}** | |");
+        Console.WriteLine($"| ハリを含む | **{hariRows.Length}** | {string.Join(" / ", hariRows.Select(r => $"`{r.Name}`"))} |");
+        Console.WriteLine($"| **両方を含む** | **{bothRows.Length}** | {(bothRows.Length == 0 ? "**0 行**" : string.Join(" / ", bothRows.Select(r => $"`{r.Name}`")))} |");
+        Console.WriteLine($"| ガルド ∩ 巻き込み則の書き手 | {allRows.Count(r => Has(r.F, "gald") && writerIds.Any(w => Has(r.F, w)))} | |");
+        Console.WriteLine();
+        Console.WriteLine(bothRows.Length == 0
+            ? "**両方を含む行が 0 なので、拒否権は原理的に立たない。** 立たないこと自体を自己検査 (h) にする"
+              + "——**ガルドを含む行が `compare` で全セル ±0.0** になるはず（ガルドが傷を集めても、それを読む駒が同じ行にいない）。"
+            : "**両方を含む行がある。** 拒否権が立ちうるので `gather check` で必ず測る。");
+        Console.WriteLine();
+
+        Console.WriteLine("## §1-3-5 —— 紙のスループット（停止条件）");
+        Console.WriteLine();
+        Console.WriteLine("**分子は線形**（§3-6 で測る前に宣言済み）。1回の庇いにつき傷は 1 つしか動かず、"
+                          + "その 1 つが生む回復は**ハリが味方側から糸を引いたときに `PerWound` = "
+                          + $"{SutureTrait.PerWound} が1回だけ乗る**——第87期の毒の層のような累積（`2L² − L`）は生まれない。");
+        Console.WriteLine();
+        Console.WriteLine("    増分/戦（上限） = min(引き取り回数/戦, ハリが味方側から糸を引いた回数/戦) × PerWound");
+        Console.WriteLine();
+        Console.WriteLine($"分母は**その台の総被ダメージ/戦**。**停止条件: 増分/戦 ÷ 総被ダメージ/戦 ≥ {GaPaperFloor:F0}%。**");
+        Console.WriteLine();
+        Console.WriteLine("材料は **Z0（現行）の実測**から取る（第86期の X1P の作法）——"
+                          + "庇い成立回数と「隣に傷のある味方がいたか」は**規則の分岐より手前で数えている**ので版に依らない。");
+        Console.WriteLine();
+
+        // ---- 材料の実測（Z0 だけ。2×2 の台の cell 0＝両方本物）--------------------------------
+        var probeB = gaIntendedIds.Select(i => gaIdx[i]).ToArray();
+        var acc = new double[probeB.Length][];
+        Parallel.For(0, probeB.Length, bi =>
+        {
+            int b = probeB[bi];
+            double guards = 0, donor = 0, taken = 0, sutAlly = 0, sutAllyDepth = 0, sutFoe = 0, taken2 = 0, n = 0, turns = 0, spill = 0;
+            var fills = GaFills(GaTableSeed, gaGald, b);
+            foreach (var fill in fills)
+            {
+                var team = GaTeam(gaGald, b, fill);
+                int[] seats = GaSeats(team);
+                Formation f = GaForm(team, seats, 0);
+                for (int wv = 1; wv < gaW; wv++)
+                    for (int seed = GaBand; seed < GaBand + GaM; seed++)
+                    {
+                        BattleResult r = GaRun(f, gaWeak[wv].Enemy, seed, false, false, 0);
+                        n++; turns += r.Turns;
+                        foreach ((int sl, UnitDef d) in f.Occupied())
+                        {
+                            if (!r.TallyByUnit.TryGetValue(d.Id, out UnitTally? t)) continue;
+                            taken2 += t.DamageTaken;
+                            guards += t.GatherGuards; donor += t.GatherHadDonor; taken += t.GatherTaken;
+                            sutAlly += t.SutureAlly; sutAllyDepth += t.SutureAllyDepth; sutFoe += t.SutureFoe;
+                            spill += t.SpillWoundsWritten;
+                        }
+                    }
+            }
+            acc[bi] = new[] { n, guards, donor, taken, sutAlly, sutAllyDepth, sutFoe, taken2, turns, spill };
+        });
+
+        Console.WriteLine($"| B（意図した相手） | 戦数 | 決着T | ガルドの庇い成立/戦 | 隣に傷のある味方がいた率 | 巻き込み則の書込/戦 | ハリの味方糸口/戦 | （敵糸口/戦） | 総被ダメ/戦 | **紙の増分/戦** | **÷ 総被ダメ** |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        double sg = 0, sd = 0, sa = 0, st2 = 0, sn = 0, str_ = 0, ssp = 0, sfo = 0;
+        for (int bi = 0; bi < probeB.Length; bi++)
+        {
+            var a2 = acc[bi];
+            double n = a2[0], guards = a2[1], donor = a2[2], sutAlly = a2[4], sutFoe = a2[6], dmg = a2[7], turns = a2[8], spill = a2[9];
+            double paper = Math.Min(donor / n, sutAlly / n) * SutureTrait.PerWound;
+            sg += guards; sd += donor; sa += sutAlly; st2 += dmg; sn += n; str_ += turns; ssp += spill; sfo += sutFoe;
+            Console.WriteLine($"| {gaName[probeB[bi]]} | {n:N0} | {turns / n:F1} | {guards / n:F2} | {(guards > 0 ? donor * 100.0 / guards : 0):F1}% | {spill / n:F2} | {sutAlly / n:F2} | {sutFoe / n:F2} | {dmg / n:F1} | **{paper:F2}** | **{paper / (dmg / n) * 100:F2}%** |");
+        }
+        {
+            double paper = Math.Min(sd / sn, sa / sn) * SutureTrait.PerWound;
+            double spec = (sg / sn) * (sg > 0 ? sd / sg : 0) * (sa / sn) * SutureTrait.PerWound;
+            Console.WriteLine($"| **合計** | {sn:N0} | {str_ / sn:F1} | **{sg / sn:F2}** | **{(sg > 0 ? sd * 100.0 / sg : 0):F1}%** | {ssp / sn:F2} | **{sa / sn:F2}** | {sfo / sn:F2} | {st2 / sn:F1} | **{paper:F2}** | **{paper / (st2 / sn) * 100:F2}%** |");
+            Console.WriteLine();
+            Console.WriteLine($"**停止条件の判定: {paper / (st2 / sn) * 100:F2}% 対 線 {GaPaperFloor:F0}% → "
+                              + $"{(paper / (st2 / sn) * 100 >= GaPaperFloor ? "**通る（2×2 を回す）**" : "**落ちる（2×2 を回さずに閉じる）**")}**。");
+            Console.WriteLine();
+            Console.WriteLine($"**指示書 §1-3 の式**（庇い成立 × 隣に傷のある率 × ハリの味方糸口 × {SutureTrait.PerWound}）で計算すると **{spec:F2}/戦**"
+                              + $"（÷ 総被ダメ = {spec / (st2 / sn) * 100:F2}%）。**2つの回数の積になっていて次元が合わない**ので"
+                              + "（1戦あたりの回数 × 1戦あたりの回数 ＝ 1戦あたりの回数の2乗）、判定には上の線形の式を使う。**両方を表に残す。**");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"所要 {gaSw.Elapsed.TotalSeconds:F1} 秒。");
+        return;
+    }
+
+    // =====================================================================================
+    // ideal —— 鎖の3段が全部そろった台での上限（**紙で止まった原因の切り分け**）
+    // =====================================================================================
+    if (gaArg == "ideal")
+    {
+        // ドラフト台（A ＝ ガルド固定・B が1枚・埋め草3枚）では、**源・中継・終端の3枚がそろうのは
+        // B ＝ ハリ を引いたうえで埋め草に密な書き手が入ったときだけ**。
+        // 「中継が効かないのか、終端が1枚しかないのか」を分けるために、**3段を手で全部そろえた台**を作る。
+        // **`CompareBuilds()` は触らない**（診断のローカル。`gradient` / `aim` と同じ扱い）。
+        var rows = new (string Name, Formation F)[]
+        {
+            // **庇いは前列でしか成立しない**（`SelectTargetChain`: `f.Row == Row.Front`）。
+            // 前列は前1・前3 の2枠で、どちらも**次数2の角**——**中継の発火条件と供給口の広さは両立しない。**
+            // 中央（次数4）に置いた版を対照として残す（庇い成立 0.00 回/戦 になる）。
+            ("源=ゴルム / 中継=ガルド前1 / 終端=ハリ",
+                Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga,
+                                center: UnitCatalog.Golm, back1: UnitCatalog.Hari, back3: UnitCatalog.Vel)),
+            ("源=ゴルム / 中継=ガルド前1 / 終端=ハリ / 埋め草=ノミ",
+                Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Nomi,
+                                center: UnitCatalog.Golm, back1: UnitCatalog.Hari, back3: UnitCatalog.Vel)),
+            ("源=ゴルム+ボルグ / 中継=ガルド前1 / 終端=ハリ",
+                Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg,
+                                center: UnitCatalog.Golm, back1: UnitCatalog.Hari, back3: UnitCatalog.Vel)),
+            ("**終端なし**（ハリ → 素体・同数値）",
+                Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga,
+                                center: UnitCatalog.Golm, back1: gaPlainMap["hari"], back3: UnitCatalog.Vel)),
+            ("**中継なし**（ガルド → 素体・同数値）",
+                Formation.Build(front1: gaPlainMap["gald"], front3: UnitCatalog.Dolga,
+                                center: UnitCatalog.Golm, back1: UnitCatalog.Hari, back3: UnitCatalog.Vel)),
+            ("中継=ガルド**中央**（庇いの前列条件の対照）",
+                Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Dolga,
+                                center: UnitCatalog.Gald, back1: UnitCatalog.Hari, back3: UnitCatalog.Vel)),
+        };
+        const int IdealSeeds = 200;
+
+        Console.WriteLine("# 第89期 —— 鎖の3段をそろえた台（紙で止まった原因の切り分け）");
+        Console.WriteLine();
+        Console.WriteLine("ドラフト台（A ＝ ガルド固定・B が1枚・埋め草3枚）では、**源・中継・終端の3枚がそろうのは "
+                          + "B ＝ ハリ を引いたうえで埋め草に密な書き手が入ったときだけ**。"
+                          + "「中継が効かないのか、終端が1枚しかないのか」を分けるために、**3段を手で全部そろえた台**を作った。"
+                          + $"`Stages` の5波 × seed 0..{IdealSeeds - 1}。**`CompareBuilds()` は触っていない。**");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 版 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | 第2〜5波 | 庇い成立/戦 | 隣に傷のある率 | **引き取り/戦** | **ガルドの傷の深さ 平均/最大** | ハリの味方糸口/戦 | そのときの深さ | 味方傷の総量/戦 | ガルドの攻撃力補正/戦 | 総被ダメ/戦 | **紙の増分 ÷ 総被ダメ** | 縫いの回復/戦 | 敵の引き取り/戦 | 決着T |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        var res = new string[rows.Length][];
+        Parallel.For(0, rows.Length, i =>
+        {
+            var lines = new List<string>();
+            for (int z = 0; z < 2; z++)
+            {
+                var w = new double[gaW];
+                double guards = 0, donor = 0, taken = 0, depth = 0, depthMax = 0;
+                double sutAlly = 0, sutDepth = 0, spill = 0, atk = 0, n = 0, turns = 0, dmgTaken = 0, healed = 0, foeTaken = 0;
+                for (int wv = 0; wv < gaW; wv++)
+                {
+                    int wins = 0;
+                    for (int seed = 0; seed < IdealSeeds; seed++)
+                    {
+                        BattleResult r = GaRun(rows[i].F, gaStages[wv].Enemy, seed, false, false, z);
+                        if (r.PlayerWon) wins++;
+                        n++; turns += r.Turns;
+                        foreach ((int sl, UnitDef d) in rows[i].F.Occupied())
+                        {
+                            if (!r.TallyByUnit.TryGetValue(d.Id, out UnitTally? t)) continue;
+                            guards += t.GatherGuards; donor += t.GatherHadDonor; taken += t.GatherTaken;
+                            depth += t.GatherDepthSum; depthMax = Math.Max(depthMax, t.GatherDepthMax);
+                            sutAlly += t.SutureAlly; sutDepth += t.SutureAllyDepth;
+                            spill += t.SpillWoundsWritten; atk += t.CarryAtkGain; dmgTaken += t.DamageTaken;
+                            healed += t.SutureHealed;
+                        }
+                        foreach ((int sl, UnitDef d) in gaStages[wv].Enemy.Occupied())
+                        {
+                            if (!r.TallyByUnit.TryGetValue(d.Id, out UnitTally? et)) continue;
+                            foeTaken += et.GatherTaken;
+                        }
+                    }
+                    w[wv] = wins * 100.0 / IdealSeeds;
+                }
+                double m25 = 0; for (int wv = 1; wv < gaW; wv++) m25 += w[wv]; m25 /= gaW - 1;
+                lines.Add($"| {rows[i].Name} | Z{z} | " + string.Join(" | ", w.Select(x => $"{x:F1}%")) + $" | **{m25:F1}%** "
+                          + $"| {guards / n:F2} | {(guards > 0 ? donor * 100.0 / guards : 0):F1}% | **{taken / n:F2}** "
+                          + $"| **{(taken > 0 ? depth / taken : 0):F2} / {depthMax:F0}** | {sutAlly / n:F2} | {(sutAlly > 0 ? sutDepth / sutAlly : 0):F2} "
+                          + $"| {spill / n:F2} | {atk / n:F1} | {dmgTaken / n:F1} | **{Math.Min(taken / n, sutAlly / n) * SutureTrait.PerWound / (dmgTaken / n) * 100:F2}%** | **{healed / n:F1}** | {foeTaken / n:F2} | {turns / n:F1} |");
+            }
+            res[i] = lines.ToArray();
+        });
+        foreach (var r in res) foreach (var l in r) Console.WriteLine(l);
+        Console.WriteLine();
+        Console.WriteLine($"所要 {gaSw.Elapsed.TotalSeconds:F1} 秒。");
+        return;
+    }
+
+    // =====================================================================================
+    // check（自己検査 (d)(h)(j)）
+    // =====================================================================================
+    if (gaArg == "check")
+    {
+        var allRows = CompareBuilds();
+        bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
+        var c = new double[2][][];
+        for (int k = 0; k < 2; k++) c[k] = new double[allRows.Length][];
+        Parallel.For(0, allRows.Length * 2, k =>
+        {
+            int i2 = k / 2, z = k % 2;
+            var res = new double[gaW];
+            for (int wv = 0; wv < gaW; wv++)
+            {
+                int wins = 0;
+                for (int seed = 0; seed < 200; seed++)
+                    if (GaRun(allRows[i2].F, gaStages[wv].Enemy, seed, false, false, z).PlayerWon) wins++;
+                res[wv] = wins * 100.0 / 200;
+            }
+            c[z][i2] = res;
+        });
+        var bal = new Dictionary<string, double[]>();
+        if (File.Exists("docs/balance.md"))
+            foreach (string line in File.ReadAllLines("docs/balance.md"))
+            {
+                if (!line.StartsWith("| ")) continue;
+                var cells = line.Split('|').Select(cx => cx.Trim()).Where(cx => cx.Length > 0).ToArray();
+                if (cells.Length != gaW + 1 || !cells[1].EndsWith("%")) continue;
+                var v = new double[gaW];
+                bool ok = true;
+                for (int wv = 0; wv < gaW; wv++)
+                    if (!double.TryParse(cells[wv + 1].TrimEnd('%'), out v[wv])) { ok = false; break; }
+                if (ok) bal[cells[0]] = v;
+            }
+        int mismZ = 0, mismDoc = 0, cells2 = 0, movedGald = 0, movedOther = 0;
+        for (int i2 = 0; i2 < allRows.Length; i2++)
+        {
+            bool moved = false;
+            for (int wv = 0; wv < gaW; wv++)
+            {
+                if (Math.Abs(c[0][i2][wv] - c[1][i2][wv]) > 0.001) { mismZ++; moved = true; }
+                if (bal.TryGetValue(allRows[i2].Name, out double[]? b)) { cells2++; if (Math.Abs(b[wv] - c[0][i2][wv]) > 0.001) mismDoc++; }
+            }
+            if (moved) { if (Has(allRows[i2].F, "gald")) movedGald++; else movedOther++; }
+        }
+        Console.WriteLine("# 第89期 —— 自己検査（`gather check`）");
+        Console.WriteLine();
+        Console.WriteLine($"**(h) `compare` {allRows.Length} 行 × {gaW} 波が Z0 / Z1 で完全一致** → ずれ **{mismZ}** 件"
+                          + $"（動いた行: ガルドを含む {movedGald} / 含まない {movedOther}）→ **{(mismZ == 0 ? "○" : "×")}**。"
+                          + "ガルドを含む行は 34 あるが、**味方の傷を読む駒（ハリ）と同席する行が 0** なので、"
+                          + "引き取りは走っても盤面には出ない（Phase 0 §1-3-4 の予測どおり）。");
+        Console.WriteLine();
+        Console.WriteLine($"**(j) `docs/balance.md` と Z0 が一致** → {cells2} セル・ずれ **{mismDoc}** 件 → **{(mismDoc == 0 ? "○" : "×")}**。"
+                          + "**計数（`GatherGuards` / `GatherHadDonor`）を規則の分岐より手前に置いても盤面が動いていない**ことの検算"
+                          + "——`ctx.PickOne` だけは `Gather.Enabled` の内側にあるので、Z0 では `Roll` を1つも消費しない。");
+        Console.WriteLine();
+        Console.WriteLine($"所要 {gaSw.Elapsed.TotalSeconds:F1} 秒。");
+        return;
+    }
+
+    Console.WriteLine("gather: 引数は redo87 / run87 <v> / seats / phase0 / ideal / run <z> / tables <z0> <z1> / check <z0> <z1>。");
     return;
 }
 // 最後の1枠（52枚目）——空白の地図から規則で駒を1つ選び、両方の台で測る（第79期）。
