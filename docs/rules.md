@@ -24,7 +24,7 @@
 | 11 | `scale` | `ScaleRule` | `ScaleRule { CostPerAttack = 1 }` |  | `scale` / `scapegoat` / `divert` / `favor` / `miasma` / `goad` / `finisher` | 第47期〜第94期（11 期） | ○ |
 | 12 | `scapegoat` | `ScapegoatRule` | `ScapegoatRule { Threshold = 3, Audit = False }` |  | `scapegoat` | 第49期〜第52期（3 期） |  |
 | 13 | `divert` | `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` |  | `divert` | 第50期〜第59期（4 期） | ○ |
-| 14 | `goad` | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` |  | `guard` / `whet` / `goad` | 第52期〜第56期（3 期） | ○ |
+| 14 | `goad` | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` |  | `derive` / `guard` / `whet` / `goad` | 第52期〜第56期（3 期） | ○ |
 | 15 | `finisher` | `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` |  | `finisher` | 第53期〜第59期（2 期） | ○ |
 | 16 | `favor` | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` |  | `favor` / `turn` | 第58期〜第61期（3 期） | ○ |
 | 17 | `blaze` | `BlazeRule` | `BlazeRule { Targets = Both, Allies = True, Foes = True }` |  | `blaze` / `demo` | 第59期〜第60期（2 期） | ○ |
@@ -37,7 +37,7 @@
 | 24 | `suture` | `SutureRule` | `SutureRule { Side = Both }` |  | `suture2` / `mender` / `gauge` / `gather` / `soak` / `cross` | 第85期〜第94期（7 期） | ○ |
 | 25 | `spillWound` | `SpillWoundRule` | `SpillWoundRule { Enabled = True, Scope = All }` |  | `suture2` / `mender` / `gauge` / `gather` / `soak` / `cross` | 第85期〜第94期（7 期） | ○ |
 | 26 | `mend` | `MendRule` | `MendRule { Side = Wound }` |  | `mender` / `gauge` / `cross` / `demo` | 第86期〜第94期（7 期） | ○ |
-| 27 | `woundIgnite` | `IgniteRule` | `IgniteRule { Enabled = True }` |  | `audit` / `derive` / `mender` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `cross` | 第87期〜第94期（5 期） | ○ |
+| 27 | `woundIgnite` | `IgniteRule` | `IgniteRule { Enabled = True }` |  | `audit` / `derive` / `mender` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `cross` / `demo` | 第87期〜第94期（5 期） | ○ |
 | 28 | `gather` | `GatherRule` | `GatherRule { Enabled = True }` |  | `audit` / `derive` / `gather` / `deep` / `soak` / `cross` / `demo` | 第89期〜第94期（6 期） | ○ |
 | 29 | `soak` | `SoakRule` | `SoakRule { Poison = True, Burn = False }` |  | `derive` / `soak` / `cross` | 第90期〜第94期（5 期） | ○ |
 | 30 | `deep` | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `deep` | 第93期〜第94期（2 期） | ○ |
@@ -62,9 +62,9 @@
 | `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` | ○ | `finisher` | 第53期〜第59期（2 期） |
 | `FunnelRule` | `FunnelRule { Slowest = True, Both = False }` | ○ | `funnel` / `cross` | 第62期〜第93期（4 期） |
 | `GatherRule` | `GatherRule { Enabled = True }` | ○ | `audit` / `derive` / `gather` / `deep` / `soak` / `cross` / `demo` | 第89期〜第94期（6 期） |
-| `GoadRule` | `GoadRule { Boost = 4, Mark = True }` | ○ | `guard` / `whet` / `goad` | 第52期〜第56期（3 期） |
+| `GoadRule` | `GoadRule { Boost = 4, Mark = True }` | ○ | `derive` / `guard` / `whet` / `goad` | 第52期〜第56期（3 期） |
 | `HushRule` | `HushRule { Active = True }` | ○ | `yoke` / `hush` / `replay` / `wave2` | 第35期〜第94期（8 期） |
-| `IgniteRule` | `IgniteRule { Enabled = True }` | ○ | `audit` / `derive` / `mender` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `cross` | 第87期〜第94期（5 期） |
+| `IgniteRule` | `IgniteRule { Enabled = True }` | ○ | `audit` / `derive` / `mender` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `cross` / `demo` | 第87期〜第94期（5 期） |
 | `MartyrRule` | `MartyrRule { RedirectPercent = 75 }` | ○ | `guard` / `gather` | 第35期〜第42期（5 期） |
 | `MendRule` | `MendRule { Side = Wound }` | ○ | `mender` / `gauge` / `cross` / `demo` | 第86期〜第94期（7 期） |
 | `OverbearRule` | `OverbearRule { Drain = 2 }` | ○ | `slander` / `overbear` | 第46期 |

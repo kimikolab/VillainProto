@@ -433,6 +433,7 @@ if (focusId == "derive")
         bool DvCovered((int Key, TraitEntryMap.Where W)[] tab, int key, int w)
             => tab.Any(e => e.Key == key && (e.W == TraitEntryMap.Where.Any || (int)e.W == w));
 
+        (long N, long Amt) dvScaleNote = (0, 0);   // 鱗の破片（doc に明記された意図的な除外）
         var missSup = new List<(TraitId T, int K, int W, long N, long Amt)>();
         var missRead = new List<(TraitId T, int K, int W, long N)>();
         var overSup = new List<(TraitId T, int K, string W, long S, long D)>();
@@ -446,6 +447,9 @@ if (focusId == "derive")
             (TraitId t, int k, int w) = kv.Key;
             if (!dvSuppliable.Contains(k) || dvIntentional.Contains(t)) continue;
             if (DvIsRelay(t, k)) continue;                       // 中継は供給ではない（下の (3) で出す）
+            // **鱗の破片だけは doc に明記された意図的な除外**（`TraitEntryMap.Supplies` の doc）。
+            // 載せると自分の読み `(破片, 自分)` を打ち消して入口が 1 → 0 になり、第78期の定義が変わる。
+            if (t == TraitId.Scale && k == UnitTally.CarryArmor) { dvScaleNote = kv.Value; continue; }
             var tab = TraitEntryMap.Supplies.TryGetValue(t, out var ss)
                 ? ss : Array.Empty<(int, TraitEntryMap.Where)>();
             if (!DvCovered(tab, k, w)) missSup.Add((t, k, w, kv.Value.N, kv.Value.Amt));
@@ -522,6 +526,11 @@ if (focusId == "derive")
         Console.WriteLine();
         Console.WriteLine($"**供給の欠落 {missSup.Count} 件 ／ 読みの欠落 {missRead.Count} 件。**");
         Console.WriteLine();
+        Console.WriteLine($"**別扱い1件**: 鱗（`Scale`）の `(破片, 自分)` は {dvScaleNote.N / dvBattles:F2} 回/戦 "
+                          + $"観測されるが、**`Supplies` に載せないことが doc に明記された意図的な除外**"
+                          + "——載せると自分の読み `(破片, 自分)` を打ち消して入口が 1 → 0 になり、"
+                          + "第78期の「入口」の定義が変わる。**ここだけは観測より doc の側を採る。**");
+        Console.WriteLine();
 
         Console.WriteLine("## 表B-2. 表にあるが「中継」と観測された —— **過剰（表の誤り）**");
         Console.WriteLine();
@@ -573,21 +582,26 @@ if (focusId == "derive")
             Console.WriteLine($"| {DvK(g.Key)} | {g.Count()} |");
         Console.WriteLine();
 
-        Console.WriteLine("## 表C. Q1 —— 第92期が見つけた既知の誤りを検出したか");
+        Console.WriteLine("## 表C. Q1 —— 第92期が見つけた既知の誤り");
         Console.WriteLine();
-        Console.WriteLine("| 既知の誤り | 期待 | 検出 | 判定 |");
-        Console.WriteLine("|---|---|---|:-:|");
+        Console.WriteLine("**Q1 の判定は (T3) で表を直す<u>前</u>のコミットで行う**（指示書 §2-4）"
+                          + "——直した後は「出ない」が正しい答えなので、この表は"
+                          + "**直した後は「もう出ないこと」を確かめる回帰の表**として読む。");
+        Console.WriteLine();
+        Console.WriteLine("| 既知の誤り | 種別 | いま出るか |");
+        Console.WriteLine("|---|---|---|");
         bool q1a = missSup.Any(m => m.T == TraitId.Contagion && m.K == UnitTally.CarryPoison);
         bool q1b = missSup.Any(m => m.T == TraitId.Amplifier && m.K == UnitTally.CarryPoison);
         bool q1c = overSup.Any(o => o.T == TraitId.Guardian && o.K == UnitTally.CarryWound);
         Console.WriteLine($"| 疫み（ラウ・`Contagion`）が毒を置くのに `Supplies` に無い | 欠落 "
-                          + $"| {(q1a ? "**欠落として出た**" : "出ない")} | {(q1a ? "○" : "**×**")} |");
+                          + $"| {(q1a ? "**出る（未修正）**" : "出ない（修正済み）")} |");
         Console.WriteLine($"| 澱み（ミオ・`Amplifier`）が毒を置くのに `Supplies` に無い | 欠落 "
-                          + $"| {(q1b ? "**欠落として出た**" : "出ない")} | {(q1b ? "○" : "**×**")} |");
+                          + $"| {(q1b ? "**出る（未修正）**" : "出ない（修正済み）")} |");
         Console.WriteLine($"| ガルド（`Guardian`）の傷は**中継**であって供給ではない | 過剰 "
-                          + $"| {(q1c ? "**中継として出た**" : "出ない")} | {(q1c ? "○" : "**×**")} |");
+                          + $"| {(q1c ? "**出る（未修正）**" : "出ない（修正済み）")} |");
         Console.WriteLine();
-        Console.WriteLine($"**Q1: {(q1a && q1b && q1c ? "○（3件とも検出）" : "×")}**");
+        Console.WriteLine($"**いま出ているのは {(q1a ? 1 : 0) + (q1b ? 1 : 0) + (q1c ? 1 : 0)} / 3 件。**"
+                          + "（コミット `0489513`＝(T3) の前では **3 / 3** だった。それが Q1 の答え）");
         Console.WriteLine();
 
         Console.WriteLine("## 表B-5. `TraitKeyMap` の突き合わせ");
@@ -736,6 +750,10 @@ if (focusId == "derive")
         Console.WriteLine("|---|---|");
         foreach (var m in dvMarkLines)
             Console.WriteLine($"| `{m.File}:{m.Line}` | `{m.Text.Trim().Replace("|", @"\|")}` |");
+        Console.WriteLine();
+        Console.WriteLine("**`Traits.cs` の 4 行は別物**——`GoadRule.Mark`（第52期・駆り立てが標を付けるかのノブ）で、"
+                          + "観測の印とは名前が同じだけ。**`BattleContext.Mark` を読むのは `BattleEngine.cs` の "
+                          + "12 行だけで、そのすべてが記録か印の上げ下げである。**");
         Console.WriteLine();
 
         // (f) 表が BattleCore から参照されていないこと
@@ -53139,6 +53157,10 @@ static class TraitKeyMap
         // **どちらも空**で、`KeysOf` の和は動かない（ガルド＝Guardian・Stoic の値が変わらないことが検算）。
         [TraitId.Executioner] = Array.Empty<int>(),
         [TraitId.Stoic]       = Array.Empty<int>(),
+        // 敵側の2枚（第94期 (T2) の観測で出た欠落）。**`UnitCatalog.All` の 51 体は1枚も持たない**ので、
+        // 第80〜83期のロスター側の派生値は動かない（`KeysOf` が変わるのは敵の駒だけ）。
+        [TraitId.Condemn]     = new[] { UnitTally.CarryStun },     // 観測（断罪）
+        [TraitId.Expose]      = new[] { UnitTally.CarryMove },     // 観測（曝き）
     };
 
     /// <summary>その駒が書き手または読み手になっているキーの一覧（重複なし・昇順）。</summary>
@@ -53301,37 +53323,55 @@ static class TraitEntryMap
         [TraitId.Funnel]     = new[] { (UnitTally.CarryWhet, Where.Any) },
         [TraitId.Bear]       = new[] { (UnitTally.CarryDull, Where.Ally) },
         [TraitId.Relay]      = new[] { (UnitTally.CarryDull, Where.Ally) },
+        // 第94期 (T2) の観測で足した分は、行末に「観測」と書いてある。
+        // **走らせて観測した事実**（`derive scan`）で、手で読んで足したものは1件も無い。
+        [TraitId.Divert]     = new[] { (UnitTally.CarryMark, Where.Self), (UnitTally.CarryMark, Where.Ally),
+                                       (UnitTally.CarryMark, Where.Foe) },                  // 観測
+        [TraitId.Goad]       = new[] { (UnitTally.CarryMark, Where.Ally) },                 // 観測
+        [TraitId.Carve]      = new[] { (UnitTally.CarryWound, Where.Foe) },                 // 観測（なぞり）
+        [TraitId.Bind]       = new[] { (UnitTally.CarryStun, Where.Foe),
+                                       (UnitTally.CarryStun, Where.Ally) },                 // 観測（既に縛られているかを見る）
         [TraitId.Amplifier]  = new[] { (UnitTally.CarryPoison, Where.Foe), (UnitTally.CarryWound, Where.Foe) },
         // 繕いの傷読み（第92期に採用）。患者は必ず同陣営（`MostHurtAlly`）なので `Where.Ally`。
         [TraitId.Mender]     = new[] { (UnitTally.CarryWound, Where.Ally) },
         [TraitId.Devour]     = new[] { (UnitTally.CarryPoison, Where.Foe) },
-        [TraitId.Contagion]  = new[] { (UnitTally.CarryPoison, Where.Foe), (UnitTally.CarryWound, Where.Any) },
+        [TraitId.Contagion]  = new[] { (UnitTally.CarryPoison, Where.Foe), (UnitTally.CarryWound, Where.Any),
+                                       (UnitTally.CarryPoison, Where.Ally) },               // 観測（味方の死体からも撒く）
         // 滲み則（第90期に採用）。**engine の規則なので `TraitId` は増えていない**が、
         // この4枚は定義を1文字も変えずに傷の読み手になった。
         // **`Where.Any`**——指示書 §2-4 は `Where.Foe` と書いていたが、理想61行の実測では
         // **滲みの 100% が味方側に落ちる**（`soak ideal` の Q2）ので `Foe` は事実に反する。
         [TraitId.Miasma]     = new[] { (UnitTally.CarryWound, Where.Any) },
-        [TraitId.Venom]      = new[] { (UnitTally.CarryWound, Where.Any) },
+        [TraitId.Venom]      = new[] { (UnitTally.CarryWound, Where.Any),
+                                       (UnitTally.CarryPoison, Where.Foe) },                // 観測
         // **火の粉（`Cinder`）は第91期に外した**——燃焼は非スタックなので深さを足しても点け直しで消える。
         [TraitId.Blightfed]  = new[] { (UnitTally.CarryPoison, Where.Ally) },
         [TraitId.Pyre]       = new[] { (UnitTally.CarryBurn, Where.Self) },
         [TraitId.Favor]      = new[] { (UnitTally.CarryBurn, Where.Ally) },
-        [TraitId.Torment]    = new[] { (UnitTally.CarryStun, Where.Foe) },
+        [TraitId.Torment]    = new[] { (UnitTally.CarryStun, Where.Foe),
+                                       (UnitTally.CarryIdle, Where.Foe) },                  // 観測
         [TraitId.Avenge]     = new[] { (UnitTally.CarryMark, Where.Ally), (UnitTally.CarryHit, Where.Ally) },
         [TraitId.Finisher]   = new[] { (UnitTally.CarryMark, Where.Foe) },
         [TraitId.Scale]      = new[] { (UnitTally.CarryArmor, Where.Self) },
         [TraitId.Gouge]      = new[] { (UnitTally.CarryWound, Where.Foe) },
         [TraitId.Sever]      = new[] { (UnitTally.CarryWound, Where.Foe) },
-        [TraitId.Suture]     = new[] { (UnitTally.CarryWound, Where.Foe) },
+        // 縫いの両側読み（第85期に採用した `SutureSide.Both`）が**表に反映されていなかった**。
+        // 第94期 (T2) の観測で 0.69 回/戦（味方側の糸口）が出た。
+        [TraitId.Suture]     = new[] { (UnitTally.CarryWound, Where.Foe),
+                                       (UnitTally.CarryWound, Where.Ally) },                // 観測
         // 処刑（Executioner）は撃破を読むが撃破は 11 本のキーに無いので入口 0、支援拒否（Stoic）は読みを持たない。
         // **第79期の候補駒（オノ）はこの2枚だけなので、この表には載らない＝入口 0 が正しい答え**（第78期 (b) の注意）。
         // 被弾（敵が供給する）
         [TraitId.Rage]       = new[] { (UnitTally.CarryHit, Where.Self) },
         [TraitId.Thorns]     = new[] { (UnitTally.CarryHit, Where.Self) },
-        [TraitId.Shatter]    = new[] { (UnitTally.CarryHit, Where.Self) },
+        [TraitId.Shatter]    = new[] { (UnitTally.CarryHit, Where.Self),
+                                       (UnitTally.CarryArmor, Where.Ally) },                // 観測
         [TraitId.Condemn]    = new[] { (UnitTally.CarryHit, Where.Self) },
         [TraitId.Frail]      = new[] { (UnitTally.CarryHit, Where.Self) },
-        [TraitId.Guardian]   = new[] { (UnitTally.CarryHit, Where.Ally) },   // 傷の引き取り（第90期に採用）は Supplies の側
+        // 傷の引き取り（第90期に採用）は**供給ではなく中継**だった（第94期 (T2)。下の `Supplies` の注）。
+        // 引き取りは「隣の味方に傷があること」を要求するので、**読みの側にだけ立つ**。
+        [TraitId.Guardian]   = new[] { (UnitTally.CarryHit, Where.Ally),
+                                       (UnitTally.CarryWound, Where.Ally) },                // 観測
         [TraitId.Martyr]     = new[] { (UnitTally.CarryHit, Where.Ally) },
         [TraitId.RearGuard]  = new[] { (UnitTally.CarryHit, Where.Ally) },
         [TraitId.ThornGuard] = new[] { (UnitTally.CarryHit, Where.Ally) },
@@ -53342,40 +53382,70 @@ static class TraitEntryMap
                                        (UnitTally.CarryMark, Where.Ally), (UnitTally.CarryBurn, Where.Ally) },
     };
 
-    /// <summary>その特性が供給できる通貨と、その置き場所。<b>鱗は載せていない</b>（上の doc）。</summary>
+    /// <summary>
+    /// その特性が供給できる通貨と、その置き場所。
+    ///
+    /// <para><b>鱗（<see cref="TraitId.Scale"/>）だけは載せていない</b>（上の doc）。
+    /// 第94期 (T2) の観測は <c>(破片, 自分) 0.14 回/戦</c> を出すが、<b>これは意図的な除外である</b>
+    /// ——鱗は自分で破片を作るが、その供給は<b>味方の死</b>という外部の事象に縛られているので、
+    /// 自分の読み <c>(破片, 自分)</c> を打ち消させない。<b>載せると入口が 1 → 0 になり、
+    /// 第78期の「入口」の定義が変わる。</b> ここだけは観測より doc の側を採る。</para>
+    ///
+    /// <para><b>それ以外の欠落 13 件・過剰 1 件は、第94期 (T2) の観測どおりに直した</b>
+    /// （行末に「観測」と書いてある）。</para>
+    /// </summary>
     public static readonly Dictionary<TraitId, (int Key, Where W)[]> Supplies = new()
     {
         [TraitId.Carve]      = new[] { (UnitTally.CarryWound, Where.Foe) },
         [TraitId.Rend]       = new[] { (UnitTally.CarryWound, Where.Foe) },
-        // 傷の引き取り（第89期の `GatherRule`・**第90期 (P1) に採用**）。
-        // ガルドは隣の味方から傷を「移す」ので、盤面の傷の総量は増えないが、
-        // **自分の上に深さを作る**——終端（縫いのハリ）が読むのはその深さ。
-        [TraitId.Guardian]   = new[] { (UnitTally.CarryWound, Where.Self) },
-        [TraitId.Venom]      = new[] { (UnitTally.CarryPoison, Where.Foe) },
-        [TraitId.Miasma]     = new[] { (UnitTally.CarryPoison, Where.Foe), (UnitTally.CarryPoison, Where.Ally) },
+        // **傷の引き取り（`GatherRule`）はここから外した**（第94期 (T2)）。
+        // ガルドは隣の味方から傷を「移す」だけで**盤面の総量を1つも増やさない**
+        // ——`derive scan` の実測で **増 0.31 ／ 減 0.31 ／ 純増 0.00 回/戦**。
+        // 第92期が「ガルドの傷は中継であって供給ではない」と書いて別の期に送った1件で、
+        // **走らせた観測がそのまま同じ答えを出した**（Q1）。
+        // 要求の側（隣に傷があること）は `Reads` に立ててある。
+        [TraitId.Venom]      = new[] { (UnitTally.CarryPoison, Where.Foe),
+                                       (UnitTally.CarryPoison, Where.Ally) },               // 観測（毒撃の隣への漏れ）
+        [TraitId.Miasma]     = new[] { (UnitTally.CarryPoison, Where.Foe), (UnitTally.CarryPoison, Where.Ally),
+                                       (UnitTally.CarryPoison, Where.Self) },               // 観測
+        // **疫み（ラウ）と澱み（ミオ）が載っていなかった**（第92期が見つけて別の期に送った2件）。
+        // 疫みは死体の毒を撒き直し、澱みは第89期の `IgniteRule` で
+        // 「傷を持ち毒を持たない敵」に毒 1 を置く。**どちらも敵に毒を置いている。**
+        [TraitId.Contagion]  = new[] { (UnitTally.CarryPoison, Where.Foe) },                // 観測
+        [TraitId.Amplifier]  = new[] { (UnitTally.CarryPoison, Where.Foe) },                // 観測
         // 火の粉は自分には移らない（第58期）。だから熾火の (燃, Self) を打ち消さない。
         [TraitId.Cinder]     = new[] { (UnitTally.CarryBurn, Where.Foe), (UnitTally.CarryBurn, Where.Ally) },
         [TraitId.Bomber]     = new[] { (UnitTally.CarryBurn, Where.Foe), (UnitTally.CarryBurn, Where.Ally) },
         [TraitId.Paralyze]   = new[] { (UnitTally.CarryStun, Where.Foe) },
         [TraitId.Torment]    = new[] { (UnitTally.CarryStun, Where.Self) },
+        [TraitId.Avenge]     = new[] { (UnitTally.CarryStun, Where.Self) },                 // 観測（ターン外の行動の代金）
+        [TraitId.Condemn]    = new[] { (UnitTally.CarryStun, Where.Foe) },                  // 観測（敵側の断罪）
         [TraitId.Marker]     = new[] { (UnitTally.CarryMark, Where.Ally) },
         [TraitId.Goad]       = new[] { (UnitTally.CarryMark, Where.Ally), (UnitTally.CarryWhet, Where.Ally) },
         [TraitId.Divert]     = new[] { (UnitTally.CarryMark, Where.Foe), (UnitTally.CarryMark, Where.Self) },
-        [TraitId.Rally]      = new[] { (UnitTally.CarryWhet, Where.Ally) },
-        [TraitId.Bind]       = new[] { (UnitTally.CarryWhet, Where.Ally), (UnitTally.CarryStun, Where.Ally) },
+        [TraitId.Rally]      = new[] { (UnitTally.CarryWhet, Where.Ally),
+                                       (UnitTally.CarryWhet, Where.Self) },                 // 観測（号令は自分にも乗る）
+        // **大縛り（`BindEnemy`）が載っていなかった**——開戦時に最速の敵を確定で縛る。
+        [TraitId.Bind]       = new[] { (UnitTally.CarryWhet, Where.Ally), (UnitTally.CarryStun, Where.Ally),
+                                       (UnitTally.CarryStun, Where.Foe) },                  // 観測
         [TraitId.Drifter]    = new[] { (UnitTally.CarryWhet, Where.Ally) },
         [TraitId.Favor]      = new[] { (UnitTally.CarryWhet, Where.Ally), (UnitTally.CarryDull, Where.Ally) },
-        [TraitId.Colossus]   = new[] { (UnitTally.CarryWhet, Where.Ally) },
+        [TraitId.Colossus]   = new[] { (UnitTally.CarryWhet, Where.Ally),
+                                       (UnitTally.CarryWhet, Where.Self) },                 // 観測（吐き戻しは壁自身にも返る）
         [TraitId.Funnel]     = new[] { (UnitTally.CarryWhet, Where.Ally) },
-        [TraitId.Curse]      = new[] { (UnitTally.CarryDull, Where.Foe), (UnitTally.CarryDull, Where.Ally) },
-        [TraitId.Cower]      = new[] { (UnitTally.CarryDull, Where.Ally) },
+        [TraitId.Curse]      = new[] { (UnitTally.CarryDull, Where.Foe), (UnitTally.CarryDull, Where.Ally),
+                                       (UnitTally.CarryDull, Where.Self) },                 // 観測
+        [TraitId.Cower]      = new[] { (UnitTally.CarryDull, Where.Ally),
+                                       (UnitTally.CarryDull, Where.Self) },                 // 観測
+        [TraitId.Relay]      = new[] { (UnitTally.CarryDull, Where.Foe) },                  // 観測（転嫁の流し先）
         [TraitId.Sharer]     = new[] { (UnitTally.CarryDull, Where.Ally) },
         [TraitId.Slander]    = new[] { (UnitTally.CarryDull, Where.Foe) },
         [TraitId.Shove]      = new[] { (UnitTally.CarryDull, Where.Ally), (UnitTally.CarryMove, Where.Foe) },
         [TraitId.Bear]       = new[] { (UnitTally.CarryArmor, Where.Self) },
         [TraitId.Shatter]    = new[] { (UnitTally.CarryArmor, Where.Ally) },
         [TraitId.Shuffler]   = new[] { (UnitTally.CarryMove, Where.Ally) },
-        [TraitId.Coward]     = new[] { (UnitTally.CarryMove, Where.Self) },
+        [TraitId.Coward]     = new[] { (UnitTally.CarryMove, Where.Self),
+                                       (UnitTally.CarryMove, Where.Ally) },                 // 観測（押しのけた側も動く）
         [TraitId.ThornGuard] = new[] { (UnitTally.CarryMove, Where.Self), (UnitTally.CarryMove, Where.Ally) },
         [TraitId.Expose]     = new[] { (UnitTally.CarryMove, Where.Foe) },
         // のろまは SurrendersTurn を偽にしないので、捨てた手番が号令・据えに売れる。
