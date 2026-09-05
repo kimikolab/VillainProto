@@ -1159,6 +1159,22 @@ public enum BattleEventKind
     StatusSnapshot,
 
     /// <summary>
+    /// 状態異常が<b>付いた瞬間</b>（第97期・<b>表示専用</b>）。<see cref="StatusSnapshot"/> が
+    /// 「ターン頭にいくつ乗っているか」を写すのに対し、こちらは「いま書かれた」という出来事。
+    ///
+    /// <para><b>engine の窓口を持つ4通貨だけが出す</b>——傷（<c>BattleContext.Wound</c>）・
+    /// 毒（<c>BattleContext.Poison</c>）・燃焼（<c>BattleContext.Ignite</c>）・
+    /// なまり（<c>BattleContext.Dull</c>）。痺れ・標・破片は窓口が無いので出さない
+    /// （<see cref="StatusKeys"/> のカウンタは16箇所から直に書かれていて、
+    /// そこへ通知を挟むと Traits.cs を広く触ることになる）。</para>
+    ///
+    /// <para><c>ActorId</c> = 書き手（engine の規則が足したぶんは null）、
+    /// <c>Amount</c> = 付いた量、<c>Text</c> = <see cref="StatusKeys"/> のキー名。
+    /// <b>盤面には一切影響しない。</b></para>
+    /// </summary>
+    StatusGain,
+
+    /// <summary>
     /// ターン開始時点の攻撃力（<see cref="UnitState.CurrentAttack"/>）。
     /// 積み上げ系（墓守の三角数、溜め、被弾強化）は素の値から大きく離れるので、
     /// 素の値だけ見せると盤面で何が起きているか読めない。
@@ -1219,8 +1235,30 @@ public sealed class BattleEvent
     /// </summary>
     public int? Team { get; init; }
 
-    /// <summary>Attack のときに実際に使われたパターン。</summary>
+    /// <summary>
+    /// Attack のときに実際に使われたパターン。
+    ///
+    /// <para><b>Damage にも載せてある</b>（第97期・表示専用）——線を描くのは Damage の側なので、
+    /// Attack にしか無いと薙ぎと単体が同じ1本線になる。<b>攻撃型が分かる経路だけ</b>が入り、
+    /// 反撃・状態異常の刻み・肩代わりの中継・呪いの共有は <c>null</c> のまま
+    /// （「型なし」として描く）。</para>
+    /// </summary>
     public AttackPattern? Pattern { get; init; }
+
+    /// <summary>
+    /// この出来事が<b>ターン外の反応の中</b>で起きたか
+    /// （第97期・<b>表示専用</b>。<c>ctx.InReaction || ctx.InInterrupt</c> の写し）。
+    ///
+    /// <para>反撃は被弾側から刃側へ向かうので、<b>線の向きが手番の攻撃と逆になる</b>
+    /// ——それを描き分けるためだけにある。<b>どの規則も読まない。</b></para>
+    ///
+    /// <para><b>立つのは <c>ctx.Reaction</c> / <c>ctx.Interrupt</c> に包まれた段だけ</b>
+    /// ——棘・仇討ち（<c>Reaction</c>）と軋み（<c>Interrupt</c>）。
+    /// <b>追い打ち（ハギ）は立たない</b>：<c>OnAnyDeath</c> から <c>ctx.PerformAttack</c> を
+    /// 直に呼ぶので、台本の上では普通の一振りと区別が付かない
+    /// （<c>CanActOutOfTurn</c> は通るのでターン外ではある）。</para>
+    /// </summary>
+    public bool Reaction { get; init; }
 
     /// <summary>Highlight / Status のフレーバー。演出の中身ではなく添え物として扱う。</summary>
     public string? Text { get; init; }

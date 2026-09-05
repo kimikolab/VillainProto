@@ -35,6 +35,17 @@ public partial class Main : Control
     static readonly Color CEnemy = Color.FromHtml("#c07a68");
     static readonly Color CPlayer = Color.FromHtml("#6fa8b2");
 
+    // 通貨の色（第97期 D2 / D4）。**盤面の数字と、カード上の札で同じ色を使う**
+    // ——数字が浮いた瞬間に「どの通貨が働いたか」が色だけで読めるようにするため。
+    static readonly Color CPoison = Color.FromHtml("#7fbf5f");   // 毒
+    static readonly Color CBurn = Color.FromHtml("#e08a3c");     // 燃
+    static readonly Color CWound = Color.FromHtml("#c2506b");    // 傷・深手
+    static readonly Color CStun = Color.FromHtml("#b9a0d8");     // 痺
+    static readonly Color CMark = Color.FromHtml("#d6c04a");     // 標
+    static readonly Color CArmor = Color.FromHtml("#8fa3b8");    // 破片
+    static readonly Color CDull = Color.FromHtml("#9a7fb0");     // なまり
+    static readonly Color CCounter = Color.FromHtml("#e6c07a");  // 反撃（線の色）
+
     // ---- 盤面の幾何 ---------------------------------------------------
     //
     // 編成スロット 0-4 が X字（前1・前3 / 中央 / 後1・後3）、5-8 が召喚専用。
@@ -65,26 +76,23 @@ public partial class Main : Control
         [BattleEventKind.Charge] = 0.70,
         // 術は直後に効果のイベントが続くので、溜めほど間を取らない。
         [BattleEventKind.Skill] = 0.34,
+        // 状態異常が付いた瞬間（第97期 D3）。**札が読めるだけの間**で足りる
+        // ——1つの動作で何枚も付くので、ここを長く取ると盤面が止まって見える。
+        [BattleEventKind.StatusGain] = 0.20,
     };
 
     // ---- 見るための編成 -------------------------------------------------
     //
-    // **BattleSim の CompareBuilds からの写し。** ここは「見る」ためだけの一覧で、
-    // 勝率の検証は今まで通り BattleSim 側が正。編成を差し替えたら手で揃えること
-    // （揃っていなくても勝率表は壊れないが、見ているものが別物になる）。
-    static (string Name, Formation F)[] Builds() => new (string, Formation)[]
-    {
-        ("追撃×死 (ハギ×リィカ)", Formation.Build(front1: UnitCatalog.Hagi, front3: UnitCatalog.Zoto, center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
-        ("反撃改 (ドハ×カド)", Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Kado, center: UnitCatalog.Doha, back1: UnitCatalog.Nel, back3: UnitCatalog.Nono)),
-        ("逆しま改 (クビ×ウツ)", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, center: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back3: UnitCatalog.Utsu)),
-        ("死の連鎖 (リィカ軸)", Formation.Build(front1: UnitCatalog.Zoto, front3: UnitCatalog.Mug, center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
+    // **手写しをやめた（第97期 D6）。** BattleCore の <see cref="Presets"/> から
+    // `compare` 61 行と交差帯 12 行をそのまま引く（合計 73 行）。
+    // 写しを持つと必ずずれる——第94期に手写しの表で 29 件の誤りが出ている。
+    // **勝率の検証は今まで通り BattleSim が正で、ここは同じ定義を見るだけ。**
+    static (string Name, Formation F)[]? _builds;
 
-        // ここから継続効果が見える編成。上の4つはどれも毒も燃焼も持たないので、
-        // 状態異常の表示を確かめるには別の軸が要る。
-        ("毒 (グザ×ミオ×ラウ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: UnitCatalog.Mio, back3: UnitCatalog.Rau)),
-        ("毒+ベニ+ラウ", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: UnitCatalog.Rau, back3: UnitCatalog.Beni)),
-        ("燃焼 (ボルグ×ホタ)", Formation.Build(front1: UnitCatalog.Nono, front3: UnitCatalog.Gald, center: UnitCatalog.Mudo, back1: UnitCatalog.Hota, back3: UnitCatalog.Borg)),
-    };
+    static (string Name, Formation F)[] Builds() =>
+        _builds ??= Presets.Compare.Select(b => (Name: b.Name, F: b.F))
+            .Concat(Presets.Cross.Select(b => (Name: "交差 " + b.Name, F: b.F)))
+            .ToArray();
 
     // ---- 駒の状態（台本を適用して組み立てる）----------------------------
 
@@ -114,15 +122,62 @@ public partial class Main : Control
     /// 薙ぎなら巻き込んだ数だけ、貫きならレーンを走った数だけ本数が出るので、
     /// **攻撃パターンの形がそのまま線の形になる。** 棘の反撃のように
     /// <c>PerformAttack</c> を通らない干渉も同じように出る。
+    ///
+    /// <para>第97期 D1: <c>Damage</c> にも <c>Pattern</c> が載るようになったので、
+    /// 単体・薙ぎ・貫き・全体を線の形で描き分ける。<see cref="Prev"/> は
+    /// **同じ一振りの直前の着弾**で、薙ぎならそこを繋いで扇に、貫きならレーンを走る筋になる。</para>
     /// </summary>
     struct Shot
     {
         public int FromTeam, FromSlot, ToTeam, ToSlot;
         public bool Friendly;
+
+        /// <summary>ターン外の反応（棘・仇討ち・軋み・追い打ち）。線の色を変える。</summary>
+        public bool Reaction;
+
+        /// <summary>肩代わりが分割して中継した段（第85期）。破線で描く。</summary>
+        public bool Relayed;
+
+        /// <summary>刃ではなく「状態異常を書いた」筋（第97期 D3）。細い線で <see cref="Tint"/> の色。</summary>
+        public bool Thin;
+        public Color Tint;
+
+        /// <summary>攻撃型。null は「型なし」（反撃・毒燃の刻み・中継・共有）。</summary>
+        public AttackPattern? Pattern;
+
+        /// <summary>同じ一振りの直前の着弾（扇・貫きの連結）。無ければ <c>HasPrev</c> が偽。</summary>
+        public bool HasPrev;
+        public int PrevTeam, PrevSlot;
+
+        public double Life;
+    }
+
+    /// <summary>
+    /// カードの上に浮いて消える札（第97期 D2 / D3 / D5）。
+    ///
+    /// <para>毒・燃焼の刻みは<b>誰からでもない</b>ので線を引かない——数字だけをカードの上に出す。
+    /// 状態異常が付いた瞬間（<c>StatusGain</c>）は「+傷」のような短い札にする。</para>
+    /// </summary>
+    struct Pop
+    {
+        public int Team, Slot;
+        public string Text;
+        public Color Color;
+        public int Stack;      // 同じカードに同時に複数出たときの段（重なって読めなくなるのを防ぐ）
+        public double Life;
+    }
+
+    /// <summary>全体攻撃（<see cref="AttackPattern.All"/>）。線を引かず、その陣営の盤面を一瞬明るくする。</summary>
+    struct Flash
+    {
+        public int Team;
+        public Color Color;
         public double Life;
     }
 
     const double ShotLife = 0.55;
+    const double PopLife = 0.4;
+    const double FlashLife = 0.35;
 
     // ---- 状態 -----------------------------------------------------------
 
@@ -134,6 +189,8 @@ public partial class Main : Control
     List<Piece> _roster = new();
     readonly Dictionary<(int Team, int Slot), Card> _cards = new();
     readonly List<Shot> _shots = new();
+    readonly List<Pop> _pops = new();
+    readonly List<Flash> _flashes = new();
     ShotOverlay _overlay = null!;
 
     int _idx;
@@ -144,6 +201,7 @@ public partial class Main : Control
     Label _lVerdict = null!, _lTurns = null!, _lChain = null!, _lPos = null!;
     Label _lEnemy = null!, _lPlayer = null!, _lChainBig = null!, _lChainNote = null!;
     Label _lProgress = null!, _lEngVerdict = null!, _lBanner = null!;
+    OptionButton _pick = null!;
 
     /// <summary>バナー表示の残り時間。>0 の間は再生を止めて、次の Battle への切り替えを待たせる。</summary>
     double _banner;
@@ -212,46 +270,255 @@ public partial class Main : Control
         Load(0);
     }
 
-    // ---- 攻撃の筋 -------------------------------------------------------
+    // ---- 攻撃の筋・浮く札 -----------------------------------------------
 
+    /// <summary>そのカードの中心（overlay の座標系）。カードが無ければ偽を返す。</summary>
+    bool CardCenter(Transform2D inv, int team, int slot, out Vector2 p)
+    {
+        p = Vector2.Zero;
+        if (!_cards.TryGetValue((team, slot), out Card? c)) return false;
+        p = inv * c.Root.GetGlobalRect().GetCenter();
+        return true;
+    }
+
+    /// <summary>破線。肩代わりの中継（<c>Relayed</c>）はこれで描く。</summary>
+    static void DrawDashed(ShotOverlay layer, Vector2 from, Vector2 to, Color c, float w)
+    {
+        const float Dash = 7f, Gap = 5f;
+        float len = from.DistanceTo(to);
+        if (len < 0.5f) return;
+        Vector2 dir = (to - from) / len;
+        for (float t = 0; t < len; t += Dash + Gap)
+            layer.DrawLine(from + dir * t, from + dir * Math.Min(len, t + Dash), c, w, antialiased: true);
+    }
+
+    /// <summary>着弾側の印。向きが読めないと線は情報にならない。</summary>
+    static void DrawHead(ShotOverlay layer, Vector2 from, Vector2 to, Color c, float size)
+    {
+        Vector2 d = (to - from).Normalized();
+        if (d == Vector2.Zero) { layer.DrawCircle(to, size, c); return; }
+        Vector2 n = new(-d.Y, d.X);
+        layer.DrawColoredPolygon(new[] { to, to - d * size * 2f + n * size, to - d * size * 2f - n * size }, c);
+    }
+
+    /// <summary>
+    /// 筋・浮く札・全体攻撃の閃光を描く。
+    ///
+    /// <para><b>形と色が凡例（<see cref="BuildLegend"/>）と一致していること</b>が、
+    /// この画面が「何が起きたか」を伝えられるかどうかの全部。</para>
+    /// </summary>
     void PaintShots(ShotOverlay layer)
     {
         Transform2D inv = layer.GetGlobalTransform().AffineInverse();
 
+        // (1) 全体攻撃。線を引かず、その陣営の盤面をまるごと明るくする。
+        foreach (Flash f in _flashes)
+        {
+            Rect2? box = null;
+            for (int slot = 0; slot < FormationRules.TotalSlots; slot++)
+                if (_cards.TryGetValue((f.Team, slot), out Card? c))
+                {
+                    Rect2 g = c.Root.GetGlobalRect();
+                    Rect2 r = new(inv * g.Position, g.Size);
+                    box = box is { } bb ? bb.Merge(r) : r;
+                }
+            if (box is not { } area) continue;
+            Color c2 = f.Color;
+            c2.A = (float)(f.Life / FlashLife) * 0.30f;
+            layer.DrawRect(area.Grow(6), c2);
+        }
+
+        // (2) 筋。
         foreach (Shot s in _shots)
         {
-            if (!_cards.TryGetValue((s.FromTeam, s.FromSlot), out Card? a)) continue;
-            if (!_cards.TryGetValue((s.ToTeam, s.ToSlot), out Card? b)) continue;
-
-            Vector2 from = inv * a.Root.GetGlobalRect().GetCenter();
-            Vector2 to = inv * b.Root.GetGlobalRect().GetCenter();
+            if (!CardCenter(inv, s.FromTeam, s.FromSlot, out Vector2 from)) continue;
+            if (!CardCenter(inv, s.ToTeam, s.ToSlot, out Vector2 to)) continue;
 
             float k = (float)(s.Life / ShotLife);
-            Color c = s.Friendly ? CFf : CDmg;
-            c.A = k * 0.9f;
+            Color c = s.Thin ? s.Tint
+                    : s.Reaction ? CCounter
+                    : s.Friendly ? CFf
+                    : CDmg;
+            c.A = k * (s.Thin ? 0.85f : 0.9f);
 
-            layer.DrawLine(from, to, c, 2f * k + 1f, antialiased: true);
+            // 太さで型を出す。貫きはレーンを押し通るので一番太い。
+            float w = s.Thin ? 1.5f
+                    : s.Pattern switch
+                    {
+                        AttackPattern.Pierce => 5f * k + 2f,
+                        AttackPattern.Sweep => 3f * k + 1f,
+                        _ => 2f * k + 1f,
+                    };
 
-            // 着弾側に印を置く。線だけだと向きが読めない。
-            layer.DrawCircle(to, 4f * k + 2f, c);
+            if (s.Relayed) DrawDashed(layer, from, to, c, w);
+            else layer.DrawLine(from, to, c, w, antialiased: true);
+
+            // 同じ一振りの直前の着弾へ繋ぐ。薙ぎは扇に、貫きはレーンを走る筋になる。
+            if (s.HasPrev && CardCenter(inv, s.PrevTeam, s.PrevSlot, out Vector2 prev))
+            {
+                Color cc = c; cc.A = k * 0.7f;
+                layer.DrawLine(prev, to, cc, Math.Max(1.5f, w * 0.8f), antialiased: true);
+            }
+
+            if (s.Thin) layer.DrawCircle(to, 3f * k + 1.5f, c);
+            else DrawHead(layer, from, to, c, 4f * k + 2.5f);
+        }
+
+        // (3) 浮く札（毒・燃焼の刻み／状態異常が付いた瞬間／移動）。
+        Font font = layer.GetThemeDefaultFont();
+        foreach (Pop p in _pops)
+        {
+            if (!CardCenter(inv, p.Team, p.Slot, out Vector2 at)) continue;
+            float k = (float)(p.Life / PopLife);
+            Color c = p.Color;
+            c.A = Math.Min(1f, k * 1.6f);
+            // 上へ浮きながら消える。段（Stack）は同じカードに同時に出たぶんのずらし。
+            Vector2 pos = at + new Vector2(-14, -18 - (1f - k) * 14f - p.Stack * 15f);
+            layer.DrawString(font, pos + new Vector2(1, 1), p.Text,
+                             HorizontalAlignment.Left, -1, 15, new Color(0, 0, 0, c.A * 0.7f));
+            layer.DrawString(font, pos, p.Text, HorizontalAlignment.Left, -1, 15, c);
         }
     }
 
-    /// <summary>直前に適用したイベントが干渉なら、筋を1本積む。</summary>
-    void PushShot(BattleEvent e, Dictionary<int, Piece> units)
+    /// <summary>通貨（<see cref="StatusKeys"/> の札）の色。凡例とカードの札で同じ色を使う。</summary>
+    static Color CurrencyColor(string key) => key switch
     {
-        if (e.Kind != BattleEventKind.Damage) return;
+        StatusKeys.Poison => CPoison,
+        StatusKeys.Burn => CBurn,
+        StatusKeys.Wound or StatusKeys.Deep => CWound,
+        StatusKeys.Stun => CStun,
+        StatusKeys.Marked => CMark,
+        StatusKeys.Armor => CArmor,
+        BattleContext.DullKey => CDull,
+        _ => CAccent,
+    };
+
+    /// <summary>
+    /// 「その通貨が働いた」（<see cref="BattleEventKind.Status"/>）の色。
+    /// <c>Text</c> は engine が付けた日本語の札なので、そこから引く。
+    /// </summary>
+    static Color StatusWorkColor(string? label) => label switch
+    {
+        "燃焼" => CBurn,
+        "毒" => CPoison,
+        _ => CDmg,
+    };
+
+    /// <summary>直前に適用したイベントを、筋・札・閃光のどれかに変える。</summary>
+    void PushShot(int idx, Dictionary<int, Piece> units)
+    {
+        BattleEvent e = _result.Events[idx];
+
+        switch (e.Kind)
+        {
+            case BattleEventKind.Damage:
+                PushDamage(idx, e, units);
+                // 直撃の数字。**色は赤のまま**にして、毒（緑）・燃焼（橙）と並べたときに
+                // 「どの通貨が削ったか」が数字の色だけで読めるようにする（第97期 D2）。
+                if (e.TargetId is { } dtid && units.TryGetValue(dtid, out Piece? dt))
+                    AddPop(dt, $"-{e.Amount}", e.FriendlyFire ? CFf : e.Reaction ? CCounter : CDmg);
+                break;
+
+            // 毒・燃焼の刻み（第97期 D2）。**誰からでもないので線を引かない。**
+            case BattleEventKind.Status:
+                if (e.TargetId is { } wid && units.TryGetValue(wid, out Piece? w))
+                    AddPop(w, $"-{e.Amount}", StatusWorkColor(e.Text));
+                break;
+
+            // 状態異常が付いた瞬間（第97期 D3）。札を出し、書き手が分かれば細い線を引く。
+            case BattleEventKind.StatusGain:
+                if (e.TargetId is { } gid && units.TryGetValue(gid, out Piece? g) && e.Text is { } key)
+                {
+                    Color gc = CurrencyColor(key);
+                    AddPop(g, $"+{StatusKeys.LabelOf(key)}{(e.Amount > 1 ? e.Amount.ToString() : "")}", gc);
+                    if (e.ActorId is { } aid2 && units.TryGetValue(aid2, out Piece? a2) && a2 != g)
+                        _shots.Add(new Shot
+                        {
+                            FromTeam = a2.Team, FromSlot = a2.Slot, ToTeam = g.Team, ToSlot = g.Slot,
+                            Thin = true, Tint = gc, Life = ShotLife,
+                        });
+                }
+                break;
+
+            // 移動（第97期 D5）。旧位置 → 新位置の矢印を1本引く。
+            case BattleEventKind.Move:
+                if (e.TargetId is { } mid && units.TryGetValue(mid, out Piece? m))
+                {
+                    int was = SlotBefore(idx, mid);
+                    if (was >= 0 && was != m.Slot)
+                        _shots.Add(new Shot
+                        {
+                            FromTeam = m.Team, FromSlot = was, ToTeam = m.Team, ToSlot = m.Slot,
+                            Thin = true, Tint = CHeal, Life = ShotLife,
+                        });
+                    AddPop(m, "移動", CHeal);
+                }
+                break;
+        }
+    }
+
+    void PushDamage(int idx, BattleEvent e, Dictionary<int, Piece> units)
+    {
         if (e.ActorId is not { } aid || e.TargetId is not { } tid) return;
         if (!units.TryGetValue(aid, out Piece? a) || !units.TryGetValue(tid, out Piece? b)) return;
         if (a == b) return;   // 反動（追い打ちの踏み込みすぎ）は自分から自分なので線にならない
+
+        // 全体攻撃は線を引かない——5本の線が交差するだけで、型としてはむしろ読めなくなる。
+        if (e.Pattern == AttackPattern.All)
+        {
+            if (!_flashes.Any(f => f.Team == b.Team && f.Life > FlashLife * 0.8))
+                _flashes.Add(new Flash { Team = b.Team, Color = a.Team == b.Team ? CFf : CDmg, Life = FlashLife });
+            return;
+        }
+
+        // 同じ一振りの直前の着弾を探す。Attack より手前へは遡らない。
+        bool hasPrev = false; int prevTeam = 0, prevSlot = 0;
+        for (int i = idx - 1; i >= 0; i--)
+        {
+            BattleEvent pe = _result.Events[i];
+            if (pe.Kind is BattleEventKind.Attack or BattleEventKind.TurnStart
+                        or BattleEventKind.Skill or BattleEventKind.Charge) break;
+            if (pe.Kind == BattleEventKind.Damage && pe.ActorId == aid && pe.Pattern == e.Pattern
+                && pe.TargetId is { } ptid && units.TryGetValue(ptid, out Piece? pp) && pp != b)
+            {
+                hasPrev = true; prevTeam = pp.Team; prevSlot = pp.Slot;
+                break;
+            }
+        }
 
         _shots.Add(new Shot
         {
             FromTeam = a.Team, FromSlot = a.Slot,
             ToTeam = b.Team, ToSlot = b.Slot,
             Friendly = e.FriendlyFire || a.Team == b.Team,
+            Reaction = e.Reaction,
+            Relayed = e.Relayed,
+            Pattern = e.Pattern,
+            HasPrev = hasPrev, PrevTeam = prevTeam, PrevSlot = prevSlot,
             Life = ShotLife,
         });
+    }
+
+    /// <summary>同じカードに同時に出た札を段違いにする（重なると読めない）。</summary>
+    void AddPop(Piece u, string text, Color color)
+    {
+        int stack = _pops.Count(q => q.Team == u.Team && q.Slot == u.Slot && q.Life > PopLife * 0.75);
+        _pops.Add(new Pop { Team = u.Team, Slot = u.Slot, Text = text, Color = color,
+                            Stack = Math.Min(stack, 3), Life = PopLife });
+    }
+
+    /// <summary>その駒が <paramref name="idx"/> の直前に居たスロット。移動の矢印の始点。</summary>
+    int SlotBefore(int idx, int id)
+    {
+        for (int i = idx - 1; i >= 0; i--)
+        {
+            BattleEvent pe = _result.Events[i];
+            if (pe.TargetId != id) continue;
+            if (pe.Kind is BattleEventKind.Move or BattleEventKind.Revive or BattleEventKind.Summon)
+                return pe.Slot;
+        }
+        Piece? p = _roster.FirstOrDefault(r => r.Id == id);
+        return p?.Slot ?? -1;
     }
 
     // ---- UI 組み立て ----------------------------------------------------
@@ -286,19 +553,23 @@ public partial class Main : Control
         var left = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         left.AddChild(Text("戦闘再生装置", 18, CInk));
 
-        // 編成が増えると1行に収まらないので折り返す。
-        var picker = new HFlowContainer();
-        picker.AddThemeConstantOverride("h_separation", 6);
-        picker.AddThemeConstantOverride("v_separation", 4);
+        // 73 行あるのでボタンは並べない（第97期 D6）。名前で選べれば足りる。
+        var picker = new HBoxContainer();
+        picker.AddThemeConstantOverride("separation", 6);
         var builds = Builds();
-        for (int i = 0; i < builds.Length; i++)
-        {
-            int captured = i;
-            var b = new Button { Text = builds[i].Name };
-            b.AddThemeFontSizeOverride("font_size", 12);
-            b.Pressed += () => Load(captured);
-            picker.AddChild(b);
-        }
+        _pick = new OptionButton { CustomMinimumSize = new Vector2(420, 0) };
+        _pick.AddThemeFontSizeOverride("font_size", 12);
+        for (int i = 0; i < builds.Length; i++) _pick.AddItem($"{i + 1:00}  {builds[i].Name}", i);
+        _pick.ItemSelected += id => Load((int)id);
+        picker.AddChild(_pick);
+
+        var prevB2 = new Button { Text = "◀" };
+        prevB2.Pressed += () => Load(Math.Max(0, _buildIdx - 1));
+        picker.AddChild(prevB2);
+        var nextB2 = new Button { Text = "▶" };
+        nextB2.Pressed += () => Load(Math.Min(Builds().Length - 1, _buildIdx + 1));
+        picker.AddChild(nextB2);
+        picker.AddChild(Text($"編成 {builds.Length} 行（compare {Presets.Compare.Length} ＋ 交差帯 {Presets.Cross.Length}）", 11, CFaint));
         left.AddChild(picker);
 
         // 波の選択ボタンは会戦の進行表示に置き換えた。どの波と戦うかは会戦が決める。
@@ -362,6 +633,53 @@ public partial class Main : Control
         crow.AddChild(_lChainNote);
         chain.AddChild(crow);
         col.AddChild(chain);
+        col.AddChild(BuildLegend());
+
+        return panel;
+    }
+
+    /// <summary>
+    /// 凡例（第97期 D1）。<b>線の形と色が何を意味するかを画面の隅に置く。</b>
+    ///
+    /// <para>描き分けを足しても、意味の対応表が画面の外にあると読めない
+    /// ——この画面の目的は「何が起きたかが1目で区別できる」ことなので、凡例は演出ではなく本体。
+    /// 色は <see cref="CurrencyColor"/> と同じ定数から引いている（写しを作らない）。</para>
+    /// </summary>
+    Control BuildLegend()
+    {
+        var panel = new PanelContainer();
+        panel.AddThemeStyleboxOverride("panel", Box(CPanel2, CLine));
+
+        var flow = new HFlowContainer();
+        flow.AddThemeConstantOverride("h_separation", 14);
+        flow.AddThemeConstantOverride("v_separation", 2);
+        panel.AddChild(flow);
+
+        void Chip(string label, Color c)
+        {
+            var h = new HBoxContainer();
+            h.AddThemeConstantOverride("separation", 4);
+            h.AddChild(new ColorRect { Color = c, CustomMinimumSize = new Vector2(14, 3),
+                                       SizeFlagsVertical = SizeFlags.ShrinkCenter });
+            h.AddChild(Text(label, 10, CDim));
+            flow.AddChild(h);
+        }
+
+        Chip("単体 細1本", CDmg);
+        Chip("薙ぎ 中太＋扇", CDmg);
+        Chip("貫き 極太の連なり", CDmg);
+        Chip("全体 盤面が光る", CDmg);
+        Chip("反撃（棘・仇討ち・軋み。逆向き）", CCounter);
+        Chip("巻き込み", CFf);
+        Chip("中継（破線）", CDmg);
+        Chip("移動", CHeal);
+        Chip("毒", CPoison);
+        Chip("燃", CBurn);
+        Chip("傷/深手", CWound);
+        Chip("痺", CStun);
+        Chip("標", CMark);
+        Chip("破片", CArmor);
+        Chip("なまり", CDull);
 
         return panel;
     }
@@ -514,6 +832,8 @@ public partial class Main : Control
 
         var (name, player) = Builds()[buildIdx];
         _playerName = name;
+        // ◀▶ で送ったときも一覧の選択を合わせる（Selected の代入は ItemSelected を出さない）。
+        if (_pick is not null) _pick.Selected = buildIdx;
 
         // ここが全部。判定はエンジンが済ませて返す。会戦のルール（持ち越し・部隊交代）も
         // BattleCore 側（EngagementEngine）に閉じていて、この画面は Battles[b] の台本を
@@ -573,6 +893,8 @@ public partial class Main : Control
 
         _idx = 0;
         _shots.Clear();
+        _pops.Clear();
+        _flashes.Clear();
         _banner = 0;
         _lBanner.Visible = false;
         Redraw();
@@ -658,7 +980,7 @@ public partial class Main : Control
 
     void Redraw()
     {
-        Dictionary<int, Piece> units = BuildState(_idx, out _, out int kills, out int best, _statuses);
+        Dictionary<int, Piece> units = BuildState(_idx, out int turn, out int kills, out int best, _statuses);
 
         for (int team = 0; team <= 1; team++)
         {
@@ -690,7 +1012,7 @@ public partial class Main : Control
                 // 積み上げ系は素の値から離れるので、変わっていたら 素→現在 で出す。
                 string atk = u.Attack == u.BaseAttack ? $"攻{u.Attack}" : $"攻{u.BaseAttack}→{u.Attack}";
                 c.Hp.Text = $"{Math.Max(0, u.Hp)}/{u.MaxHp}   {atk}";
-                c.Status.Text = StatusText(u.Id);
+                c.Status.Text = StatusText(u.Id, turn);
                 c.Root.Modulate = u.Alive ? Colors.White : new Color(1, 1, 1, 0.28f);
             }
         }
@@ -704,7 +1026,7 @@ public partial class Main : Control
         RedrawFeed(units);
 
         // 直前に適用したイベントが干渉なら筋を積む。位置は「そのとき」の盤面から取る。
-        if (_idx > 0) PushShot(_result.Events[_idx - 1], units);
+        if (_idx > 0) PushShot(_idx - 1, units);
         _overlay.QueueRedraw();
 
         _lPos.Text = $"{_idx} / {_result.Events.Count}";
@@ -726,6 +1048,9 @@ public partial class Main : Control
             if (e.Kind is BattleEventKind.StatusSnapshot or BattleEventKind.StatSnapshot) continue;
             Color c = e.Kind switch
             {
+                // 第97期 D3/D4。通貨の色は盤面の札と揃える——別の色にすると対応が読めない。
+                BattleEventKind.StatusGain => CurrencyColor(e.Text ?? ""),
+                BattleEventKind.Status => StatusWorkColor(e.Text),
                 BattleEventKind.Death => CDmg,
                 BattleEventKind.Highlight => CAccent,
                 BattleEventKind.Charge => CAccent,   // 予告は見せ場と同じ重さで浮かせる
@@ -756,6 +1081,9 @@ public partial class Main : Control
             BattleEventKind.Revive => $"{N(e.TargetId)} が繋ぎ直された",
             BattleEventKind.Move => $"{N(e.TargetId)} が動いた",
             BattleEventKind.Status => $"{N(e.TargetId)} — {e.Text} {e.Amount}",
+            BattleEventKind.StatusGain =>
+                $"{(e.ActorId is null ? "" : N(e.ActorId) + " → ")}{N(e.TargetId)} に "
+                + $"{StatusKeys.LabelOf(e.Text ?? "")} +{e.Amount}",
             BattleEventKind.Highlight => e.Text ?? "",
             // 次に何が来るかを添える。溜めを見て回復や速攻を合わせるのが狙いなので、
             // 「溜めた」だけでは情報が足りない（Amount = 次の倍率、Pattern = 次の攻撃型）。
@@ -767,15 +1095,32 @@ public partial class Main : Control
         };
     }
 
-    /// <summary>その駒がいま負っている継続効果を1行にまとめる。</summary>
-    string StatusText(int id)
+    /// <summary>
+    /// その駒がいま負っている継続効果を1行にまとめる（第97期 D4）。
+    ///
+    /// <para>札の文字列は engine が <see cref="StatusKeys.LabelOf"/> で付けたものがそのまま入っている
+    /// （<c>StatusSnapshot</c> の <c>Text</c>）ので、ここで名前を作り直さない
+    /// ——<b>手写しの表を作らない</b>。キーが増えれば札も自動で増える。</para>
+    ///
+    /// <para><b>手番（<c>IdleTurn</c>）だけは量ではなくターン番号</b>で、0 に戻す箇所が engine に
+    /// 1つも無い。数として出すと「手番7」が最後まで残って読めないので、
+    /// <b>そのターンに立っているときだけ「休」</b>と出す。</para>
+    /// </summary>
+    string StatusText(int id, int turn)
     {
         var parts = new List<string>();
         foreach (((int Id, string Key) k, int v) in _statuses)
-            if (k.Id == id && v > 0) parts.Add($"{k.Key}{v}");
+        {
+            if (k.Id != id || v <= 0) continue;
+            if (k.Key == IdleLabel) { if (v >= turn) parts.Add("休"); continue; }
+            parts.Add($"{k.Key}{v}");
+        }
         parts.Sort(StringComparer.Ordinal);   // 並びを安定させる（毎フレーム入れ替わると読めない）
         return string.Join(" ", parts);
     }
+
+    /// <summary>手番の札。<b>手で書かない</b>——engine と同じ関数から引く。</summary>
+    static readonly string IdleLabel = StatusKeys.LabelOf(StatusKeys.IdleTurn);
 
     static string PatternLabel(AttackPattern p) => p switch
     {
@@ -814,14 +1159,29 @@ public partial class Main : Control
     {
         // 筋は再生していなくても薄れさせる（コマ送りでも1本ずつ確かめられる）。
         // 速度に比例して薄れるので、4× でも線が渋滞しない。
-        if (_shots.Count > 0)
+        if (_shots.Count > 0 || _pops.Count > 0 || _flashes.Count > 0)
         {
+            double fade = delta * Math.Max(1.0, _speed);
             for (int i = _shots.Count - 1; i >= 0; i--)
             {
                 Shot s = _shots[i];
-                s.Life -= delta * Math.Max(1.0, _speed);
+                s.Life -= fade;
                 if (s.Life <= 0) _shots.RemoveAt(i);
                 else _shots[i] = s;
+            }
+            for (int i = _pops.Count - 1; i >= 0; i--)
+            {
+                Pop q = _pops[i];
+                q.Life -= fade;
+                if (q.Life <= 0) _pops.RemoveAt(i);
+                else _pops[i] = q;
+            }
+            for (int i = _flashes.Count - 1; i >= 0; i--)
+            {
+                Flash f = _flashes[i];
+                f.Life -= fade;
+                if (f.Life <= 0) _flashes.RemoveAt(i);
+                else _flashes[i] = f;
             }
             _overlay.QueueRedraw();
         }

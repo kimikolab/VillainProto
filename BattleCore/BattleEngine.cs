@@ -374,10 +374,12 @@ public sealed class BattleContext
             tt.DeepBundles++;
             if (tt.DeepBundleFirstTurn == 0) tt.DeepBundleFirstTurn = Math.Max(1, Turn);
             Log($"    {target.Name} の傷が束ねられて深手になった（傷 {w} → 深手）", LogKind.Highlight);
+            EmitStatusGain(target, StatusKeys.Deep, 1, writer);   // 第97期・表示専用
             return -1;
         }
 
         target.SetCounter(StatusKeys.Wound, w);
+        EmitStatusGain(target, StatusKeys.Wound, amount, writer);   // 第97期・表示専用
         return w;
     }
 
@@ -475,6 +477,7 @@ public sealed class BattleContext
         if (Soak.Poison && wounded) { int bump = deepW ? 2 : 1; add += bump; wt.SoakPoisonAdded++; if (deepW) wt.DeepSoakDeeper++; }
 
         target.SetCounter(StatusKeys.Poison, target.RawCounter(StatusKeys.Poison) + add);
+        EmitStatusGain(target, StatusKeys.Poison, add, writer);   // 第97期・表示専用（滲みで増えたぶんも込み）
         if (add != amount)
             Log($"    {target.Name} の{(deepW ? "深手" : "傷口")}から毒が滲みた（+{add - amount}）", LogKind.Status);
     }
@@ -544,6 +547,7 @@ public sealed class BattleContext
         }
 
         target.SetCounter(StatusKeys.Burn, turns);
+        EmitStatusGain(target, StatusKeys.Burn, turns, source);   // 第97期・表示専用（量ではなく残ターン）
         Log(relit
                 ? $"    {target.Name} の火が煽られた（残り {turns}）"
                 : $"    {target.Name} に火が点いた（残り {turns}）",
@@ -551,6 +555,16 @@ public sealed class BattleContext
         if (turns != BurnRules.Turns)
             Log($"    {target.Name} の傷口に火が回った（残り +1）", LogKind.Status);
     }
+
+    /// <summary>
+    /// なまり（<c>AtkBonus</c> の負の側）を <see cref="BattleEventKind.StatusGain"/> に載せるときのキー
+    /// （第97期・<b>表示専用</b>）。
+    ///
+    /// <para><b><see cref="StatusKeys"/> には足していない</b>——なまりは <c>Counters</c> ではなく
+    /// <c>AtkBonus</c> に載る量で、キーを足すと会戦の境界の一括消去（<see cref="StatusKeys.All"/>）や
+    /// <c>ScapegoatTrait.Kinds</c> の分母が黙って動く。<b>ここは表示の札の名前でしかない。</b></para>
+    /// </summary>
+    public const string DullKey = "dull";
 
     public const int MarkPullPercent = 75;
 
@@ -2130,6 +2144,52 @@ public sealed class BattleContext
         });
 
     /// <summary>
+    /// 「条件が成立している駒がいま初めて出た」を1度だけ見せ場に打つ（第97期・<b>表示専用</b>）。
+    ///
+    /// <para><b>条件が成立していることを画面から読めるようにするためだけ</b>にある
+    /// ——散開・熾火・後衛特化はどれも「隣が空いた」「燃えている」「下がった」を engine が
+    /// <b>毎回その場で評価する</b>ので、成立の瞬間が出来事として1つも残らない
+    /// （第82期の実測で散開は +2.61pt 効いているのに、画面では装備と区別が付かない）。</para>
+    ///
+    /// <para><b>毎回打つと被弾のたびに出て読めない</b>ので、駒 × 条件 で1戦に1度だけ打つ。
+    /// 抑止の記憶（<see cref="_shown"/>）は <b>verbose のときしか触らない</b> フィールドで、
+    /// <c>Counters</c> には1文字も書かない——盤面にも計数にも一切影響しない。</para>
+    /// </summary>
+    private readonly HashSet<(int Id, string Key)> _shown = new();
+
+    internal void HighlightOnce(UnitState u, string key, string line)
+    {
+        if (!_verbose) return;
+        if (!_shown.Add((u.InstanceId, key))) return;
+        Log(line, LogKind.Highlight);
+    }
+
+    /// <summary>
+    /// 状態異常が付いた瞬間を台本に打つ（第97期・<b>表示専用</b>）。
+    ///
+    /// <para><b>engine の窓口を持つ4通貨だけが呼ぶ</b>——<see cref="Wound"/> / <see cref="Poison"/> /
+    /// <see cref="Ignite"/> / <see cref="Dull"/>。窓口の無い痺れ・標・破片は出さない
+    /// （出すには先に窓口が要る。第90・93期と同じ形）。</para>
+    ///
+    /// <para><see cref="Emit"/> は verbose のときしか積まないので、<c>compare</c>（verbose 偽）では
+    /// 1件も作られない。<b>盤面には一切影響しない</b>——<c>NoteStatusGain</c> の計数にも触っていない。</para>
+    /// </summary>
+    /// <param name="writer">書いた駒。engine の規則が足したぶんは null。</param>
+    internal void EmitStatusGain(UnitState target, string key, int amount, UnitState? writer)
+    {
+        if (!_verbose || amount <= 0) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.StatusGain,
+            Turn = _turn,
+            ActorId = writer?.InstanceId,
+            TargetId = target.InstanceId,
+            Amount = amount,
+            Text = key,
+        });
+    }
+
+    /// <summary>
     /// そのターン頭に各駒が負っている継続効果を、値ごと台本へ写す。
     /// 再生側は TurnStart で持っている状態を捨て、これで組み直す（0 のものは出さない）。
     /// </summary>
@@ -2167,17 +2227,25 @@ public sealed class BattleContext
         }
     }
 
-    /// <summary>スナップショットに出す継続効果と、その表示名。</summary>
+    /// <summary>
+    /// スナップショットに出す継続効果と、その表示名。
+    ///
+    /// <para><b>手で並べない</b>（第97期 D4）——<see cref="StatusKeys.All"/> を列挙して
+    /// <see cref="StatusKeys.LabelOf"/> を当てる。手で並べていた頃は 7 本で、
+    /// <c>IdleTurn</c> と <c>Curse</c> が<b>黙って落ちていた</b>
+    /// （第95期の「`StatusKeys` は 7 本ではなく 8 本」と同じ形の数え落とし）。
+    /// <b>これでキーを足せば札も自動で増える。</b></para>
+    ///
+    /// <para>札の文字列は <c>LabelOf</c> が正になったので <c>Armor</c> だけ「盾」→「破片」に変わる。
+    /// <b>診断が突き合わせている札は 毒・燃・痺・傷・深手 の5つで、どれも <c>LabelOf</c> と一致する</b>
+    /// （破片を名前で引いている診断は1つも無い）。</para>
+    ///
+    /// <para><c>IdleTurn</c> は<b>量ではなくターン番号</b>（そのターン動けなかった記録）で、
+    /// 0 に戻す箇所が1つも無い。<b>再生側がその意味で描くこと</b>——
+    /// 台本には落とさずに載せる、というのがここの責務。</para>
+    /// </summary>
     private static readonly (string Key, string Label)[] StatusLabels =
-    {
-        (StatusKeys.Poison, "毒"),
-        (StatusKeys.Burn, "燃"),
-        (StatusKeys.Stun, "痺"),
-        (StatusKeys.Marked, "標"),
-        (StatusKeys.Armor, "盾"),
-        (StatusKeys.Wound, "傷"),
-        (StatusKeys.Deep, "深手"),   // 第93期。0 のものは出さないので、規則が無効なら1行も増えない
-    };
+        StatusKeys.All.Select(k => (Key: k, Label: StatusKeys.LabelOf(k))).ToArray();
 
     public int Roll(int maxExclusive) => _rng.Next(maxExclusive);
 
@@ -2621,6 +2689,14 @@ public sealed class BattleContext
             if (pattern == AttackPattern.Pierce) ScalePierceSwings++;
         }
 
+        // 第97期・表示専用。**攻撃型と打点が化けた瞬間**を1度だけ見せ場に打つ。
+        // どちらも `ModifyAttack` / `ModifyPattern` が毎回その場で評価するので、
+        // 出来事としては1つも残らない（`ModifyAttack` は ctx を受け取らないので特性側では打てない）。
+        if (actor.HasTrait(TraitId.Pyre) && actor.RawCounter(StatusKeys.Burn) > 0)
+            HighlightOnce(actor, "pyre", $"  {actor.Name} は燃えたまま振り抜いた（攻 ×{PyreTrait.Multiplier}・貫き）");
+        if (actor.HasTrait(TraitId.Sniper) && actor.HasFallenBack && actor.Row == Row.Back)
+            HighlightOnce(actor, "sniper", $"  {actor.Name} は下がりきって狙いを定めた（攻 ×2・貫き）");
+
         Log($"{prefix}{actor.Name} → {target.Name} (攻撃 {atk}{label})");
         Emit(new BattleEvent
         {
@@ -2641,7 +2717,7 @@ public sealed class BattleContext
         int dealt = atk;
         // 呪いの共有（第96期）は**単体攻撃の一撃そのもの**にだけ札を付ける。
         // 副次目標（薙ぎ・全体）と貫きの段には付けない——範囲が二乗で伸びるのを止める構造。
-        ApplyDamage(target, dealt, actor, singleHit: pattern == AttackPattern.Single);
+        ApplyDamage(target, dealt, actor, singleHit: pattern == AttackPattern.Single, pattern: pattern);
 
         // 適用順を混ぜる。同じ一振りで2体以上落ちるとき、死亡順（墓守の層・破裂の連鎖）が
         // 席番号で決まっていた。巻き込む相手の顔ぶれは変わらない——順番だけ。
@@ -2651,7 +2727,7 @@ public sealed class BattleContext
         {
             if (!extra.IsAlive) continue;
             Log($"    刃が {extra.Name} まで届く", LogKind.Damage);
-            ApplyDamage(extra, Math.Max(1, dealt * SecondaryPercent / 100), actor);
+            ApplyDamage(extra, Math.Max(1, dealt * SecondaryPercent / 100), actor, pattern: pattern);
         }
 
         // 特性の発動は攻撃1回につき1度、主目標に対してのみ。
@@ -2708,7 +2784,7 @@ public sealed class BattleContext
                 ScaleBackDamage += dmg;
             }
 
-            ApplyDamage(u, dmg, actor);
+            ApplyDamage(u, dmg, actor, pattern: AttackPattern.Pierce);
             if (u == entry) primaryDealt = dmg;
             passed++;
         }
@@ -2782,15 +2858,24 @@ public sealed class BattleContext
     /// これが真の段は共有を起こさない（<see cref="ThornsTrait"/> の <c>InReaction</c> と同じ形）。
     /// 計数（<c>HexHopBlocked</c>）にも使う。
     /// </param>
+    /// <param name="pattern">
+    /// この damage を生んだ攻撃型（第97期・<b>表示専用</b>）。<see cref="BattleEvent.Pattern"/> に
+    /// そのまま載るだけで、<b>どの規則も読まない</b>（<c>burnTick</c> と同じ計数専用の札の系列だが、
+    /// こちらは計数にも使わない）。
+    /// <para><b>攻撃型が分かる経路だけが渡す</b>——<see cref="PerformAttack"/> の主目標と副次目標、
+    /// <see cref="ResolvePierce"/> の各段。反撃・状態異常の刻み・肩代わりの中継・呪いの共有は
+    /// 既定の <c>null</c> のままで、再生側は「型なし」として描く。</para>
+    /// </param>
     public void ApplyDamage(UnitState target, int amount, UnitState? source,
                             bool isFriendlyFire = false, bool lethal = true,
                             bool burnTick = false, bool relayed = false,
                             bool spillWound = true, bool deepBite = false,
-                            bool singleHit = false, bool hexShare = false)
+                            bool singleHit = false, bool hexShare = false,
+                            AttackPattern? pattern = null)
     {
         if (Probe is null)
         {
-            ApplyDamageCore(target, amount, source, isFriendlyFire, lethal, burnTick, relayed, spillWound, deepBite, singleHit, hexShare);
+            ApplyDamageCore(target, amount, source, isFriendlyFire, lethal, burnTick, relayed, spillWound, deepBite, singleHit, hexShare, pattern);
             return;
         }
 
@@ -2811,7 +2896,7 @@ public sealed class BattleContext
         Mark = default;
         try
         {
-            ApplyDamageCore(target, amount, source, isFriendlyFire, lethal, burnTick, relayed, spillWound, deepBite, singleHit, hexShare);
+            ApplyDamageCore(target, amount, source, isFriendlyFire, lethal, burnTick, relayed, spillWound, deepBite, singleHit, hexShare, pattern);
         }
         finally { Mark = prev; }
     }
@@ -2821,7 +2906,8 @@ public sealed class BattleContext
                          bool isFriendlyFire, bool lethal,
                          bool burnTick, bool relayed,
                          bool spillWound, bool deepBite,
-                         bool singleHit, bool hexShare)
+                         bool singleHit, bool hexShare,
+                         AttackPattern? pattern)
     {
         if (!target.IsAlive || amount <= 0) return;
 
@@ -2895,7 +2981,12 @@ public sealed class BattleContext
         // 散開: 同じ列に隣り合う味方がいない駒は硬くなる。薙ぎへの対策。
         if (teammates.Any(u => u.HasTrait(TraitId.Loose))
             && !teammates.Any(u => u != target && FormationRules.AreAdjacent(target.Slot, u.Slot)))
+        {
             amount -= amount * LooseTrait.ReductionPercent / 100;
+            // 第97期・表示専用。**隣が空くのは戦闘の途中**（味方が倒れる）なので、
+            // 成立の瞬間が見えないと「最初から付いている装備」と区別が付かない。
+            HighlightOnce(target, "loose", $"  {target.Name} の周りが空いた（散開 -{LooseTrait.ReductionPercent}%）");
+        }
 
         // 萎縮: 火力と引き換えの被ダメージ減
         if (teammates.Any(u => u.HasTrait(TraitId.Cower)))
@@ -3097,7 +3188,10 @@ public sealed class BattleContext
             Amount = amount,
             HpAfter = Math.Max(0, target.Hp),
             FriendlyFire = isFriendlyFire,
-            Relayed = relayed
+            Relayed = relayed,
+            // 第97期・表示専用。線の形（薙ぎの扇・貫きの矢印）と向き（反撃は逆）を描き分けるため。
+            Pattern = pattern,
+            Reaction = InReaction || InInterrupt
         });
 
         if (source is not null && !isFriendlyFire)
@@ -3528,6 +3622,9 @@ public sealed class BattleContext
         // 火選り（第58期）の受け手の内訳。**横取りが宛先を書き換えた後の実際の受け手**に載せる。
         // 盤面には一切影響しない（札で引くだけ・verbose 非依存）。
         if (route == DullRoute.Favor) NoteFavorReceiver(receiver, amount, whet: false);
+        // 第97期・表示専用。**実際に AtkBonus が減った駒**に出す（横取りが宛先を書き換えた後）。
+        // 書き手は engine の窓口を通る時点で分からない（`Dull` は writer を受け取らない）ので null。
+        EmitStatusGain(receiver, DullKey, amount, null);
         receiver.AtkBonus -= amount;
         if (atkBefore > 0 && receiver.CurrentAttack == 0)
         {
