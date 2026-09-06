@@ -1669,7 +1669,39 @@ public sealed class BattleContext
     /// <b>窓口経由（<see cref="Whet"/>）も自己強化の9本もどちらもここへ来る</b>
     /// ——差し引きで「自前」が引けるのが狙いで、<b>盤面には一切影響しない</b>。
     /// </summary>
-    internal void NoteAtkGain(UnitState u, int delta) => TallyOf(u).CarryAtkGain += delta;
+    /// <summary>
+    /// <see cref="UnitState.AtkBonus"/> が動いた分を1件だけ帳簿へ入れる（<b>setter の1箇所からのみ来る</b>）。
+    /// <b>盤面には一切影響しない</b>（誰も読んで分岐しない・<c>verbose</c> 非依存）。
+    ///
+    /// <para>第68期の <c>CarryAtkGain</c>（上がった分だけ）はそのまま。第106期 (T1) で
+    /// <b>4つ目の通貨（強化・弱体）</b>の3分割をここに足した——観測点が setter なので、
+    /// 窓口（<see cref="Whet"/> / <see cref="Dull"/>）を通らない自己強化の9本も数え漏らさない。
+    /// 帰属は第94期 (T2) の印（<see cref="Mark"/>）で、印が立っていない箇所からの増減は
+    /// <b>誰のものでもない出力</b>になる。</para>
+    /// </summary>
+    internal void NoteAtkMove(UnitState u, int delta)
+    {
+        UnitTally ut = TallyOf(u);
+        if (delta > 0) ut.CarryAtkGain += delta;
+
+        // 到達点と到達ターン（第106期 Q1）。setter の中なので `u.AtkBonus` は**更新後の値**。
+        if (u.AtkBonus > ut.AtkPeak) { ut.AtkPeak = u.AtkBonus; ut.AtkPeakTurn = Math.Max(1, Turn); }
+        int[] pr = ut.AtkProbeTurn ??= new int[UnitTally.AtkProbes.Length];
+        for (int i = 0; i < pr.Length; i++)
+            if (pr[i] == 0 && u.AtkBonus >= UnitTally.AtkProbes[i]) pr[i] = Math.Max(1, Turn);
+
+        int mag = Math.Abs(delta);
+        TurnBuffAll += mag;
+        UnitState? writer = Mark.Owner;
+        if (writer is null) TurnBuffNone += mag;
+        else if (InOwnTurn(writer)) { TallyOf(writer).BuffOutInTurn += mag; TurnBuffIn += mag; }
+        else { TallyOf(writer).BuffOutOffTurn += mag; TurnBuffOff += mag; }
+
+        // 経路の全数（Phase 0 §1）。**印が無ければ NoMark の桶へ。**
+        if (writer is null) { if (delta > 0) BuffGainNoMark += mag; else BuffLossNoMark += mag; }
+        else if (delta > 0) BuffGainByTrait[(int)Mark.Id] += mag;
+        else BuffLossByTrait[(int)Mark.Id] += mag;
+    }
 
     /// <summary>
     /// <see cref="StatusKeys"/> のカウンタが増えた分を数える（第68期）。
@@ -1821,6 +1853,22 @@ public sealed class BattleContext
     /// （<c>compare</c> 305 セルが 0 件であることが検算）。
     /// </summary>
     public EncoreRule Encore { get; }
+
+    // =====================================================================================
+    // 第106期 —— 保留の3枚のノブ。**既定は3つとも現行**（`compare` 305 セル 0 件が検算）。
+    // =====================================================================================
+
+    /// <summary>憤怒の育ち方（第106期 (T2)・<see cref="RageRule"/>）。</summary>
+    public RageRule Rage { get; }
+
+    /// <summary>繕いの代金（第106期 (T2)・<see cref="MenderCostRule"/>）。</summary>
+    public MenderCostRule MenderCost { get; }
+
+    /// <summary>散開の弾き（第106期 (T2)・<see cref="LooseRule"/>）。</summary>
+    public LooseRule Loose { get; }
+
+    /// <summary>憤怒の発火の内訳（<b>版に依らない</b>。Phase 0 で「1発と数える集合」を出すため）。</summary>
+    public int RageFiresFromFoe, RageFiresFromAlly, RageFiresNoSource;
 
     /// <summary>
     /// 再行動の中か（★ 1ホップ）。<b>再行動から生まれた撃破では、さらに再行動しない。</b>
@@ -2031,7 +2079,8 @@ public sealed class BattleContext
                          GatherRule? gather = null, SoakRule? soak = null,
                          DeepRule? deep = null, CurseRule? curse = null,
                          BetrayRule? betray = null, EncoreRule? encore = null,
-                         CounterProbe? probe = null)
+                         RageRule? rage = null, MenderCostRule? menderCost = null,
+                         LooseRule? loose = null, CounterProbe? probe = null)
     {
         _rng = new Random(seed);
         Probe = probe;          // 第94期 (T2)。**既定 null。診断だけが渡す。**
@@ -2071,6 +2120,9 @@ public sealed class BattleContext
         Curse = curse ?? CurseRule.Default;
         Betray = betray ?? BetrayRule.Default;
         Encore = encore ?? EncoreRule.Default;
+        Rage = rage ?? RageRule.Default;
+        MenderCost = menderCost ?? MenderCostRule.Default;
+        Loose = loose ?? LooseRule.Default;
     }
 
     // =====================================================================================
@@ -2214,6 +2266,18 @@ public sealed class BattleContext
     public long TurnDmgAll, TurnDmgIn, TurnDmgOff, TurnDmgNone;
     public long TurnHealAll, TurnHealIn, TurnHealOff, TurnHealNone;
     public long TurnStatusAll, TurnStatusIn, TurnStatusOff, TurnStatusNone;
+    /// <summary>4つ目の通貨（第106期 (T1)）。<c>AtkBonus</c> を動かした<b>絶対量</b>の3分割。</summary>
+    public long TurnBuffAll, TurnBuffIn, TurnBuffOff, TurnBuffNone;
+
+    /// <summary>
+    /// 4つ目の通貨を<b>特性ごとに</b>割った観測（第106期 Phase 0 §1）。添字は <c>(int)TraitId</c>。
+    /// <b>盤面には一切影響しない。</b>「<c>AtkBonus</c> を動かす経路の全数」を手で書かずに出す器具。
+    /// </summary>
+    public readonly long[] BuffGainByTrait = new long[TraitIdCount];
+    public readonly long[] BuffLossByTrait = new long[TraitIdCount];
+    public long BuffGainNoMark, BuffLossNoMark;
+
+    internal static readonly int TraitIdCount = Enum.GetValues(typeof(TraitId)).Length;
 
     /// <summary>ダメージ1件を3分割の帳簿へ入れる（<see cref="ApplyDamage"/> から。<b>盤面には影響しない</b>）。</summary>
     private void NoteTurnDamage(UnitState? source, int amount)
@@ -4615,13 +4679,15 @@ public static class BattleEngine
                                    IgniteRule? woundIgnite = null, GatherRule? gather = null,
                                    SoakRule? soak = null, DeepRule? deep = null,
                                    CurseRule? curse = null, BetrayRule? betray = null,
-                                   EncoreRule? encore = null, CounterProbe? probe = null)
+                                   EncoreRule? encore = null, RageRule? rage = null,
+                                   MenderCostRule? menderCost = null, LooseRule? loose = null,
+                                   CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, spillWound, mend, woundIgnite, gather, soak, deep,
-               curse, betray, encore, probe);
+               curse, betray, encore, rage, menderCost, loose, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -4649,13 +4715,14 @@ public static class BattleEngine
                                    GatherRule? gather = null, SoakRule? soak = null,
                                    DeepRule? deep = null, CurseRule? curse = null,
                                    BetrayRule? betray = null, EncoreRule? encore = null,
-                                   CounterProbe? probe = null)
+                                   RageRule? rage = null, MenderCostRule? menderCost = null,
+                                   LooseRule? loose = null, CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, spillWound, mend, woundIgnite, gather, soak, deep, curse,
-                                    betray, encore, probe);
+                                    betray, encore, rage, menderCost, loose, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -4839,6 +4906,12 @@ public static class BattleEngine
             TurnHealOff = ctx.TurnHealOff, TurnHealNone = ctx.TurnHealNone,
             TurnStatusAll = ctx.TurnStatusAll, TurnStatusIn = ctx.TurnStatusIn,
             TurnStatusOff = ctx.TurnStatusOff, TurnStatusNone = ctx.TurnStatusNone,
+            TurnBuffAll = ctx.TurnBuffAll, TurnBuffIn = ctx.TurnBuffIn,
+            TurnBuffOff = ctx.TurnBuffOff, TurnBuffNone = ctx.TurnBuffNone,
+            BuffGainByTrait = ctx.BuffGainByTrait, BuffLossByTrait = ctx.BuffLossByTrait,
+            BuffGainNoMark = ctx.BuffGainNoMark, BuffLossNoMark = ctx.BuffLossNoMark,
+            RageFiresFromFoe = ctx.RageFiresFromFoe, RageFiresFromAlly = ctx.RageFiresFromAlly,
+            RageFiresNoSource = ctx.RageFiresNoSource,
             EncoreAttack = ctx.EncoreAttack,
             EncoreSkill = ctx.EncoreSkill,
             EncoreCharge = ctx.EncoreCharge,

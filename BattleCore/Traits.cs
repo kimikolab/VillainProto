@@ -481,6 +481,56 @@ public sealed class FrailTrait : Trait
 /// 上限は意図的に設けない。天井はこの駒自身のHPが担う。
 /// 大きく殴られれば大きく育つが、何度も殴られる前に倒れる。
 /// </summary>
+public enum RageMode
+{
+    /// <summary>現行。受けた<b>量</b>で育つ（<c>max(1, dmg / 2)</c>）。</summary>
+    Amount,
+
+    /// <summary>第106期 (T2)。殴られた<b>回数</b>で育つ（1発ごとに一定量）。</summary>
+    Count,
+}
+
+/// <summary>
+/// 憤怒の育ち方（第106期 (T2)・§2-1）。<b>総量を変えず、速度だけを変える。</b>
+///
+/// <para><see cref="RageMode.Count"/> の1発あたり <see cref="RageRule.SpecGain"/> ＝ <b>3</b> は
+/// 第96期の実測（ムドの被弾 7.21 回/戦）から <c>7.21 × 3 ≒ 21.6</c> ＝
+/// 「現行の到達点は攻24」という前提のもとで<b>測る前に固定された</b>値。</para>
+///
+/// <para><b>その前提は第106期の Phase 0 で否定された。</b> 実測のムドは
+/// 発火 <b>7.03 回/戦・1発あたり 4.52</b> で、憤怒だけで <b>31.8</b> 積む
+/// （<c>AtkBonus</c> の到達点は他の供給も込みで <b>33.0</b> ＝ 攻 <b>36</b>）。
+/// <c>Gain = 3</c> は速度を上げると同時に<b>天井を3分の1ほど切る</b>ので、
+/// 「総量を変えず、速度だけを変える」にはなっていない。
+/// <b>結果を見てから緩めないので主判定（P1）は 3 のまま回し</b>、
+/// Phase 0 から引き直した <see cref="RageRule.MeasuredGain"/> ＝ 5 を<b>対照（P5）として並べる。</b></para>
+///
+/// <para><b>発火する集合は2つの版で完全に同一</b>——数える場所を式の分岐より手前に置き、
+/// 巻き込み・自傷・毒や燃焼の刻みの扱いを1ビットも変えていない。
+/// 「殴られた」の絵に合わせて味方の刃と刻みを外す案は<b>採らなかった</b>:
+/// 外すと「1発あたりの量」と「1発と数える集合」の<b>2つ</b>が同時に動き、
+/// P1 と P0 の差がどちらのせいか決まらなくなる（変数を1つに絞る）。
+/// 内訳は Phase 0 の実測で出す。</para>
+/// </summary>
+public readonly record struct RageRule(RageMode Mode, int Gain)
+{
+    /// <summary>
+    /// 指示書 §2-1 が<b>測る前に固定した</b>1発あたりの上昇。
+    /// <b>Phase 0 の実測で較正の前提が否定された</b>（下の doc を参照）が、
+    /// <b>結果を見てから緩めない</b>ので主判定はこの値のまま回す。
+    /// </summary>
+    public const int SpecGain = 3;
+
+    /// <summary>
+    /// Phase 0 の実測から引き直した値（対照）。ムドの憤怒だけで積む量は
+    /// <c>7.03 回/戦 × 4.52 = 31.8</c> なので、<c>31.8 / 7.03 = 4.52</c> をいちばん近い整数に丸めて <b>5</b>。
+    /// </summary>
+    public const int MeasuredGain = 5;
+
+    /// <summary>既定は現行（<see cref="RageMode.Amount"/>）。<c>Gain</c> は使われない。</summary>
+    public static RageRule Default => new(RageMode.Amount, SpecGain);
+}
+
 public sealed class RageTrait : Trait
 {
     /// <summary>被ダメージ何点につき攻撃力+1か</summary>
@@ -491,7 +541,17 @@ public sealed class RageTrait : Trait
     public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
     {
         if (dmg <= 0 || !self.IsAlive) return;
-        int gain = Math.Max(1, dmg / DamagePerGain);
+
+        // 計数は**式の分岐より手前**（版に依らない。自己検査 (b) の根拠）。
+        ctx.TallyOf(self).RageCountFires++;
+        if (source is null) ctx.RageFiresNoSource++;
+        else if (source.TeamId == self.TeamId) ctx.RageFiresFromAlly++;
+        else ctx.RageFiresFromFoe++;
+
+        int gain = ctx.Rage.Mode == RageMode.Count
+            ? ctx.Rage.Gain
+            : Math.Max(1, dmg / DamagePerGain);
+        ctx.TallyOf(self).RageGain += gain;
         self.AtkBonus += gain;
         ctx.Log($"    {self.Name} の怒りが増した（攻撃 +{gain} → {self.CurrentAttack}）", LogKind.Trigger);
     }
@@ -1697,6 +1757,30 @@ public enum MendSide
     Wound
 }
 
+/// <summary>
+/// 繕いの代金（第106期 (T2)・§2-2）。<b>癒す量は1点も変えない。引く量だけを <see cref="Percent"/>% にする。</b>
+///
+/// <para>現行（100）は<b>等価交換</b>——14 癒して 14 自分が減るので、チームの HP 総量が1点も増えない。
+/// 第105期の実測で<b>回復の 90.3% は手番の外</b>から出ており、ノノは手番を丸ごと使って回復する
+/// 数少ない駒なので、<b>手番の代金を既に払っている。そのうえ等価の HP まで払うのは二重の代金</b>。</para>
+///
+/// <para><b>上限がノノ自身の HP である構造は変わらない</b>——1回の癒しは今までどおり
+/// <c>self.Hp - 1</c> で切られる。1戦を通した天井が 2 倍になるだけ。</para>
+/// </summary>
+public readonly record struct MenderCostRule(int Percent)
+{
+    /// <summary>
+    /// 既定は<b>半額</b>——<b>第106期に採用した</b>。ノノを含む 9 行の第2〜5波平均が
+    /// <b>全行で上がり、平均 +3.67pt</b>（拒否権1 は 0 行・主判定19行の第五波 40.9 → 41.3%）。
+    /// 生存Tが 3.62 → 4.33・落率が 85.3% → 68.3% に下がり、
+    /// <b>繕いの回数そのものが 2.72 → 3.28 回/戦 に増える</b>（長く立つので手番が増える）。
+    ///
+    /// <para><b>癒す量は1点も変えていない</b>（自己検査 (c) の1戦監査で
+    /// 最初の繕いが両版とも <c>+14</c>）。増えたのは「同じ癒しを何回できるか」のほう。</para>
+    /// </summary>
+    public static MenderCostRule Default => new(50);
+}
+
 /// <summary>繕いの読み（第86期）。<see cref="MendSide"/> の doc を参照。</summary>
 public readonly record struct MendRule(MendSide Side)
 {
@@ -2103,7 +2187,10 @@ public sealed class MenderTrait : Trait
         int amount = Math.Min(Amount + PerWound * w, self.Hp - 1);
         int before = patient.Hp;
         ctx.Heal(patient, amount);
-        self.Hp -= amount;
+        // 第106期 (T2)。**引く量だけ**を割合にする（癒す量 amount は1点も変えない）。
+        // 既定（100）では paid == amount なので、盤面も乱数列も文字列も1ビットも動かない。
+        int paid = amount * ctx.MenderCost.Percent / 100;
+        self.Hp -= paid;
 
         // 計数（第86期）。**盤面には一切影響しない。**
         UnitTally mt = ctx.TallyOf(self);
@@ -2113,6 +2200,7 @@ public sealed class MenderTrait : Trait
         if (patient.Hp == before) mt.MendDry++;
         mt.MendHealed += patient.Hp - before;
         mt.MendPaid += amount;
+        mt.MendPaidRaw += paid;   // 第106期 (T2)。**実際に引いた量**（MendPaid は癒した量のまま）
         if (patient.TeamId != self.TeamId) mt.MendFoePatient++;   // 起きないはず（MostHurtAlly は同陣営のみ）
 
         ctx.Log($"    {self.Name} が自分を裂いて {patient.Name} を繕った（+{amount}）"
@@ -5639,13 +5727,101 @@ public sealed class SharerTrait : Trait
 /// 散開。同じ列で隣り合う味方がいない駒を硬くする。
 /// 薙ぎは「隣接」に当たるので、これは隊列を散らすこと自体が対策になるという設計。
 /// </summary>
+/// <summary>
+/// 散開を係数から事象へ降ろす（第106期 (T2)・§2-3）。
+/// <see cref="Shove"/> が真なら、被弾したとき隣接する味方1体を別の席へ弾く。
+/// <b>被ダメ −35% はそのまま残す</b>（現行の効果は1点も削っていない）。
+/// </summary>
+public readonly record struct LooseRule(bool Shove)
+{
+    /// <summary>
+    /// 既定は<b>弾く</b>——<b>第106期に採用した</b>。判定は勝率ではなく
+    /// <b>「第96期の分類 A（盤面に何も書かない完全な係数）から外れるか」</b>で、
+    /// 弾きは <b>2.23 回/戦</b> 立つ（P0 は 0.00）。
+    ///
+    /// <para><b>ローカル台で軋みのヨミと同席させると 13.5 → 92.4%</b>（+78.9pt）
+    /// ——動かされるたびに攻撃力が上がり、その場で割り込む駒に、毎ターンの餌が出る。
+    /// 喧噪のバサ −1.4 ／ 突き返しのハネ −0.8 ／ 怯みのシオ +4.5 で、
+    /// <b>移動軸の読み手なら誰でもいいわけではない。</b></para>
+    ///
+    /// <para><b>代金は実在する。</b> <c>CompareBuilds()</c> でササを含む唯一の行
+    /// <c>置き去り×分散回復</c> は 27.3 → 12.8（第2波 −54.0）。第91期 (G2) の分解では
+    /// 他の4枚の「他の行」が全部 ±0.00pt なので<b>組み合わせ固有＝制約</b>だが、
+    /// <b>ササ自身は他の行が 0 行なので、この分解はササについては成立しない</b>
+    /// （CLAUDE.md の但し書きどおり）。席の測り直しは別の作業。</para>
+    /// </summary>
+    public static LooseRule Default => new(true);
+}
+
 public sealed class LooseTrait : Trait
 {
     public const int ReductionPercent = 35;
+
+    /// <summary>最後に弾いたターン + 1。<c>0</c> は「まだ一度も」（突き返し ＝ <see cref="ShoveTrait.LastTurnKey"/> と同じ作法）。</summary>
+    public const string LastTurnKey = "looseTurn";
+
     public override TraitId Id => TraitId.Loose;
 
     public override void OnBattleStart(BattleContext ctx, UnitState self)
         => ctx.Log($"  {self.Name} が隊列を散らした（孤立した味方の被ダメージ -{ReductionPercent}%）", LogKind.Trigger);
+
+    /// <summary>
+    /// 第106期 (T2)・§2-3。<b>被弾したとき、隣接する味方1体を別の席へ弾く。</b>
+    /// 被ダメ −35% はそのまま残す（現行の効果は1点も削っていない）。
+    ///
+    /// <para><b>フレーバーがそのまま機構になる</b>——「誰かの隣に立つことができない。近づかれると錯乱する。」
+    /// 現行は「隣が空く」を<b>味方の死</b>に頼っていて、第97期の実測では 73行の会戦で一度も成立しない。
+    /// 被弾クロックにすると<b>自分で条件を作る</b>ようになり、同時に移動軸の読み手
+    /// （軋み・押し出し・突き返し・怯み）に毎ターンの餌が出る。</para>
+    ///
+    /// <para><b>弾く先の決め方（乱数を1つも引かない・<c>ctx.PickOne</c> を使わない）</b>:
+    /// 対象は<b>隣接する生存味方のうち席番号が最小の1体</b>。行き先は編成枠 0-4 のうち
+    /// 対象自身と保持者の席を除いた3つで、<b>(1) 保持者に隣接しない席を優先し、
+    /// (2) その中で空席を優先し、(3) 同じなら席番号が小さいほう</b>。
+    /// 保持者が中央にいると全ての枠が隣接するので (1) は空振りするが、
+    /// そのときも (2)(3) で必ず行き先が決まる——<b>「何もしない」を返す枝は作らない</b>
+    /// （中央に置いた瞬間に機構が消えると、席の判断ではなく席の禁止になる）。
+    /// 召喚枠（5-8）は行き先にしない（<c>PlayableSlots</c> だけを見る。逃亡・後退と同じ作法）。</para>
+    ///
+    /// <para><b>1ターン1回まで。</b> <see cref="BattleContext.SwapSlots"/> は <c>OnMoved</c> を通じて
+    /// 軋みの割り込み攻撃を起こし、その攻撃が保持者を殴り返すと再入する。上限は
+    /// <b><see cref="SwapSlots"/> を呼ぶ前に</b>立てるので、同じターンの再入はそこで止まる。</para>
+    /// </summary>
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        if (!ctx.Loose.Shove || dmg <= 0 || !self.IsAlive) return;
+
+        UnitTally t = ctx.TallyOf(self);
+        if (self.Counter(LastTurnKey) == ctx.Turn + 1) { t.LooseCapped++; return; }
+
+        UnitState? victim = null;
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            if (victim is null || ally.Slot < victim.Slot) victim = ally;
+        }
+        if (victim is null) { t.LooseNoTarget++; return; }
+
+        var taken = new HashSet<int>(ctx.LivingMembers(self.TeamId).Select(u => u.Slot));
+        int dest = -1;
+        int bestRank = int.MaxValue;
+        foreach (int slot in FormationRules.PlayableSlots)
+        {
+            if (slot == victim.Slot || slot == self.Slot) continue;
+            // 順位は「保持者に隣接しない」→「空席」→「席番号が小さい」。
+            int rank = (FormationRules.AreAdjacent(self.Slot, slot) ? 2 : 0) + (taken.Contains(slot) ? 1 : 0);
+            if (rank >= bestRank) continue;
+            bestRank = rank;
+            dest = slot;
+        }
+        if (dest < 0) { t.LooseNoTarget++; return; }
+
+        // **上限を先に立てる**（SwapSlots が起こす割り込みからの再入をここで止める）。
+        self.SetCounter(LastTurnKey, ctx.Turn + 1);
+        t.LooseShoves++;
+        ctx.Log($"    {self.Name} が錯乱して {victim.Name} を弾いた", LogKind.Trigger);
+        ctx.SwapSlots(victim, dest);
+    }
 }
 
 /// <summary>

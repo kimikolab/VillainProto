@@ -197,7 +197,7 @@ public static class UnitCatalog
         // [Skill] 1つだけの周期で移すのは、挙動の差を「攻撃が出ない」だけに絞るため。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "傷を繕っている") },
         PlusText = "毎ターン、最も傷ついた味方を繕う。その味方に傷があれば、傷1つにつき繕いが増える",
-        MinusText = "繕った分だけ自分が減る。繕うとその傷はひとつ塞がる。攻撃はしない（繕いが手番そのもの）",
+        MinusText = "繕った量の半分だけ自分が減る。繕うとその傷はひとつ塞がる。攻撃はしない（繕いが手番そのもの）",
         Flavor = "自分の身を削ることをやめられず、隊の資産を食い潰した。"
     };
 
@@ -396,8 +396,8 @@ public static class UnitCatalog
         Attack = 7,
         Speed = 12,
         Traits = new[] { TraitId.Loose },
-        PlusText = "隣に味方がいない駒の被ダメージを35%下げる",
-        MinusText = "隊列を詰める編成では何も起きない。空きスロットを強いる",
+        PlusText = "隣に味方がいない駒の被ダメージを35%下げる。被弾すると、隣の味方1体を別の席へ弾く（1ターン1回）",
+        MinusText = "弾く先は選べない。隊列を組み直され、詰める編成では被ダメージ減が何も起きない",
         Flavor = "誰かの隣に立つことができない。近づかれると錯乱する。"
     };
 

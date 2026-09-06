@@ -160,7 +160,10 @@ public sealed class UnitState
         {
             int delta = value - _atkBonus;
             _atkBonus = value;
-            if (delta > 0) Board?.NoteAtkGain(this, delta);
+            // 第106期 (T1)。**符号を問わず流す**——4つ目の通貨（強化・弱体）の帰属を
+            // ここ1箇所で取るため。上がった分だけを CarryAtkGain に載せる第68期の扱いは
+            // <see cref="BattleContext.NoteAtkMove"/> の中でそのまま続いている。
+            if (delta != 0) Board?.NoteAtkMove(this, delta);
         }
     }
     private int _atkBonus;
@@ -1106,6 +1109,36 @@ public sealed class UnitTally
     /// </summary>
     public int TurnsSurrendered;
 
+    // ------------------------------------------------------------------------------------
+    // 第106期 —— 保留の3枚のノブの計数。**どれも誰も読んで分岐しない。盤面には一切影響しない。**
+    // ------------------------------------------------------------------------------------
+
+    /// <summary>憤怒（<see cref="TraitId.Rage"/>）が発火した回数。<b>版に依らない</b>
+    /// ——数える場所は式の分岐より手前で、発火する集合は <c>Amount</c> / <c>Count</c> で同一。</summary>
+    public int RageCountFires;
+
+    /// <summary>憤怒が積んだ攻撃力の総量（自己検査 (b)。<c>÷ RageCountFires</c> が1発あたりの上昇）。</summary>
+    public int RageGain;
+
+    /// <summary>
+    /// 戦闘中の <see cref="UnitState.AtkBonus"/> の<b>到達点</b>と、そこへ最初に届いたターン。
+    /// <c>AtkProbeTurn[i]</c> は <see cref="AtkProbes"/>[i] に最初に届いたターン（0 ＝ 未到達）。
+    /// <b>観測専用</b>（<see cref="CreakMaxBonus"/> は軋みの窓口だけを見るので別物）。
+    /// </summary>
+    public int AtkPeak, AtkPeakTurn;
+    public int[]? AtkProbeTurn;
+
+    /// <summary>到達ターンを測る格子（第106期 Q1。<b>ムドの到達点 21 前後を挟む</b>）。</summary>
+    public static readonly int[] AtkProbes = { 6, 12, 18, 24 };
+
+    /// <summary>繕い（<see cref="TraitId.Mender"/>）が<b>実際に自分から引いた</b> HP の総量
+    /// （<see cref="MendPaid"/> は<b>癒した量</b>で、等価交換をやめると別の数になる）。</summary>
+    public int MendPaidRaw;
+
+    /// <summary>散開（<see cref="TraitId.Loose"/>）の弾き。<c>LooseShoves</c> 実際に弾いた回数 ／
+    /// <c>LooseCapped</c> 1ターン1回の上限で弾かれた回数 ／ <c>LooseNoTarget</c> 隣に味方がいなかった回数。</summary>
+    public int LooseShoves, LooseCapped, LooseNoTarget;
+
     /// <summary>敵に与えたダメージのうち、手番の中／外で生んだ分（<see cref="DamageToEnemy"/> の内訳）。</summary>
     public int DmgOutInTurn, DmgOutOffTurn;
 
@@ -1117,6 +1150,19 @@ public sealed class UnitTally
     /// <b>量ではなく回数</b>——キーごとに単位が違う（層／残T／回／量）ので足せない。
     /// </summary>
     public int StatusOutInTurn, StatusOutOffTurn;
+
+    /// <summary>
+    /// <b>4つ目の通貨（第106期 (T1)）</b>——この駒が動かした <see cref="UnitState.AtkBonus"/> の
+    /// <b>絶対量</b>のうち、手番の中／外の分。強化と弱体を1本にまとめてあるのは、
+    /// どちらも単位が「攻撃力の点」で足せるから（状態異常が回数なのと逆）。
+    ///
+    /// <para><b>窓口（<c>Whet</c> / <c>Dull</c>）だけでなく、自己強化の9本も入る</b>
+    /// ——観測点が <c>AtkBonus</c> の setter なので、経路を追加しても数え漏らさない。
+    /// <b>境界・蘇生の一括消去（<see cref="ResetAtkBonus"/>）は setter を通らないので入らない</b>
+    /// （第68期の判断をそのまま引き継ぐ）。逆しま（<c>ModifyAttack</c>）は
+    /// <c>AtkBonus</c> を1点も動かさないので、この通貨には現れない。</para>
+    /// </summary>
+    public int BuffOutInTurn, BuffOutOffTurn;
 
     public void Add(UnitTally o)
     {
@@ -1173,6 +1219,16 @@ public sealed class UnitTally
         DmgOutInTurn += o.DmgOutInTurn; DmgOutOffTurn += o.DmgOutOffTurn;
         HealOutInTurn += o.HealOutInTurn; HealOutOffTurn += o.HealOutOffTurn;
         StatusOutInTurn += o.StatusOutInTurn; StatusOutOffTurn += o.StatusOutOffTurn;
+        BuffOutInTurn += o.BuffOutInTurn; BuffOutOffTurn += o.BuffOutOffTurn;
+        RageCountFires += o.RageCountFires; RageGain += o.RageGain; MendPaidRaw += o.MendPaidRaw;
+        if (o.AtkPeak > AtkPeak) { AtkPeak = o.AtkPeak; AtkPeakTurn = o.AtkPeakTurn; }
+        if (o.AtkProbeTurn is not null)
+        {
+            int[] mine = AtkProbeTurn ??= new int[AtkProbes.Length];
+            for (int i = 0; i < mine.Length; i++)
+                if (mine[i] == 0 || (o.AtkProbeTurn[i] != 0 && o.AtkProbeTurn[i] < mine[i])) mine[i] = o.AtkProbeTurn[i];
+        }
+        LooseShoves += o.LooseShoves; LooseCapped += o.LooseCapped; LooseNoTarget += o.LooseNoTarget;
         Attacks += o.Attacks; Interventions += o.Interventions;
         DamageToEnemy += o.DamageToEnemy; DamageToAlly += o.DamageToAlly;
         DamageTaken += o.DamageTaken; TakenFromAlly += o.TakenFromAlly;
@@ -1555,6 +1611,29 @@ public sealed class BattleResult
     public long TurnStatusIn { get; init; }
     public long TurnStatusOff { get; init; }
     public long TurnStatusNone { get; init; }
+
+    /// <summary>
+    /// 4つ目の通貨（第106期 (T1)）——<c>AtkBonus</c> を動かした<b>絶対量</b>の3分割。
+    /// </summary>
+    public long TurnBuffAll { get; init; }
+    public long TurnBuffIn { get; init; }
+    public long TurnBuffOff { get; init; }
+    public long TurnBuffNone { get; init; }
+
+    /// <summary>
+    /// 4つ目の通貨を<b>特性ごとに</b>割った観測（第106期 Phase 0 §1）。
+    /// 添字は <c>(int)TraitId</c>。<c>*NoMark</c> は印が立っていない箇所からの増減。
+    /// <b>「AtkBonus を動かす経路の全数」を手で書かずに出すための器具。</b>
+    /// </summary>
+    public long[]? BuffGainByTrait { get; init; }
+    public long[]? BuffLossByTrait { get; init; }
+    public long BuffGainNoMark { get; init; }
+    public long BuffLossNoMark { get; init; }
+
+    /// <summary>憤怒の発火を出どころで割った観測（第106期 Phase 0 §2-1）。<b>版に依らない。</b></summary>
+    public int RageFiresFromFoe { get; init; }
+    public int RageFiresFromAlly { get; init; }
+    public int RageFiresNoSource { get; init; }
     /// <inheritdoc cref="EncoreWoundedDeaths"/>
     public required int EncoreAttack { get; init; }
     /// <inheritdoc cref="EncoreWoundedDeaths"/>
