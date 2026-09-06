@@ -43,6 +43,25 @@ public sealed record SquadEntry(
     int MaxHpSum,     // 現在の最大HPの合計（継ぎ接ぎの損耗が乗った値）
     int DefMaxHpSum); // 定義上の最大HPの合計（損耗前）
 
+/// <summary>
+/// 会戦の境界で味方を回復させる規則（第101期）。既定は <c>(0, false)</c> ＝ 現行（回復なし）。
+///
+/// <para><c>HpPercent</c>: 生き残った味方の HP を <c>MaxHp</c> の割合ぶん戻す（上限は MaxHp）。
+/// <c>ReviveDead</c>: 倒れた味方も MaxHp で復帰させる（スロットは元のまま。再配置しない）。</para>
+///
+/// <para><b>敵側には一切適用しない。</b> 敵は 1 部隊を抜くたび
+/// <see cref="BattleEngine.Materialize"/> で新品を投入するので、元から全快である
+/// （持ち越すのは味方が敵部隊を抜けなかったときの敵だけで、そこは味方が負けて会戦が終わる側）。</para>
+/// </summary>
+public readonly record struct RecoverRule(int HpPercent, bool ReviveDead)
+{
+    /// <summary>現行。境界に回復は 1 点も無い（第99期）。</summary>
+    public static RecoverRule Default => new(0, false);
+
+    /// <summary>この規則が盤面を 1 ビットでも動かしうるか。偽なら <c>CarryOver</c> は第100期と同一。</summary>
+    public bool Active => HpPercent > 0 || ReviveDead;
+}
+
 /// <summary>会戦の結果。UI はこれを再生するだけでよい（BattleResult と同じ思想）。</summary>
 public sealed class EngagementResult
 {
@@ -125,7 +144,8 @@ public static class EngagementEngine
 
     public static EngagementResult Run(IReadOnlyList<Formation> playerSquads,
                                        IReadOnlyList<Formation> enemySquads,
-                                       int seed, bool verbose = true)
+                                       int seed, bool verbose = true,
+                                       RecoverRule? recover = null)
     {
         var battles = new List<BattleResult>();
         var openings = new List<IReadOnlyList<BattleOpening>>();
@@ -133,6 +153,8 @@ public static class EngagementEngine
         var playerEntries = new List<SquadEntry>();
         var playerExits = new List<SquadEntry>();
         var enemyEntries = new List<SquadEntry>();
+
+        RecoverRule rec = recover ?? RecoverRule.Default;
 
         int pi = 0, ei = 0;
         int cleared = 0, lost = 0, draws = 0;
@@ -217,9 +239,10 @@ public static class EngagementEngine
                 return Build(enemyOut && !playerOut);
             }
 
+            // 味方だけが回復の対象。敵側は CarryOver(aliveE) に規則を渡さない（既定のまま）。
             current = lostP
                 ? BattleEngine.Materialize(playerSquads[pi], BattleContext.PlayerTeam)
-                : CarryOver(aliveP);
+                : CarryOver(aliveP, current, rec);
             enemyCur = clearedE
                 ? BattleEngine.Materialize(enemySquads[ei], BattleContext.EnemyTeam)
                 : CarryOver(aliveE);
@@ -264,8 +287,28 @@ public static class EngagementEngine
     /// 現スロット昇順に整列して返すのは、次の Run の Add 順＝InstanceId の振り順を
     /// 決定的に保つため（戦闘中の移動でリスト順と現在位置がずれている）。
     /// </summary>
-    private static List<UnitState> CarryOver(List<UnitState> survivors)
+    /// <param name="survivors">生き残った駒。回復なしのときはこれがそのまま次の部隊になる。</param>
+    /// <param name="deployed">
+    /// その戦闘へ投入した駒の全部（倒れた駒を含む）。<c>RecoverRule.ReviveDead</c> のときだけ読む。
+    /// 戦闘中に湧いた駒（胞子・亡者）はこのリストに入らないので、復帰の対象にならない
+    /// （儚い駒は持ち越さない、が現行の規則）。null なら復帰させない。
+    /// </param>
+    private static List<UnitState> CarryOver(List<UnitState> survivors,
+                                             List<UnitState>? deployed = null,
+                                             RecoverRule rec = default)
     {
+        // 第101期: 倒れた味方を戻す。状態異常の消去と OnCarryOver は生存側と同じ扱いにするため、
+        // 先にリストへ入れてから下のループを回す。Hp は下の回復の段では触らない（全快で戻す）。
+        if (rec.ReviveDead && deployed != null)
+        {
+            foreach (UnitState u in deployed)
+            {
+                if (u.IsAlive) continue;
+                u.Hp = u.MaxHp;
+                survivors.Add(u);
+            }
+        }
+
         foreach (UnitState u in survivors)
         {
             foreach (string key in StatusKeys.All) u.Counters.Remove(key);
@@ -277,6 +320,12 @@ public static class EngagementEngine
             // ターン番号に紐づくカウンタを境界で 0 に戻す NecroTrait.OnCarryOver と同じ扱い。
             u.ActionIndex = 0;
             foreach (Trait t in u.Traits) t.OnCarryOver(u);
+
+            // 第101期: 境界の回復。ctx.Heal は通さない——境界は戦闘の外で、渇き（第三波の
+            // 波ルール）も AcceptsSupport（支援拒否）も「戦闘中に味方が配るもの」に対する規則。
+            // 境界の手当ては誰かが配っているのではないので、Hp を直接足す。
+            if (rec.HpPercent > 0)
+                u.Hp = Math.Min(u.MaxHp, u.Hp + u.MaxHp * rec.HpPercent / 100);
         }
         return survivors.OrderBy(u => u.Slot).ToList();
     }

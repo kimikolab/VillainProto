@@ -70,6 +70,7 @@
 | `MartyrRule` | `MartyrRule { RedirectPercent = 75 }` | ○ | `curse` / `guard` / `gather` | 第35期〜（6 期） |
 | `MendRule` | `MendRule { Side = Wound }` | ○ | `curse` / `hex` / `mender` / `gauge` / `cross` | 第86期〜（8 期） |
 | `OverbearRule` | `OverbearRule { Drain = 2 }` | ○ | `slander` / `overbear` | 第46期〜（2 期） |
+| `RecoverRule` | `RecoverRule { HpPercent = 0, ReviveDead = False, Active = False }` |  | `chain` / `recover` | 第101期 |
 | `RelayRule` | `RelayRule { TransferPercent = 100 }` | ○ | `curse` / `dull` / `relay` | 第43期〜（3 期） |
 | `ScaleRule` | `ScaleRule { CostPerAttack = 1 }` | ○ | `scale` / `scapegoat` / `divert` / `favor` / `miasma` / `goad` / `finisher` | 第47期〜（11 期） |
 | `ScapegoatRule` | `ScapegoatRule { Threshold = 3, Audit = False }` | ○ | `scapegoat` | 第49期〜（4 期） |
@@ -84,7 +85,7 @@
 | `WhetMask` | `WhetMask { Bits = 0 }` | ○ | `creak3` / `spend` | 第65期〜（2 期） |
 | `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `replay` / `wave2` | 第35期〜（7 期） |
 
-31 型。
+32 型。
 
 ## 3. 規則が使う列挙型
 
