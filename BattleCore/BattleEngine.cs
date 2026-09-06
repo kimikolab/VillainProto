@@ -3341,6 +3341,9 @@ public sealed class BattleContext
         // 読まれないまま落ちた傷（第85期・自己検査 (j)）。**盤面には一切影響しない。**
         TallyOf(dead).WoundsAtDeath += dead.RawCounter(StatusKeys.Wound);
         TallyOf(dead).LastActiveTurn = _turn;   // 蘇生されて再度倒れると上書きされる（後の値が勝つ）
+        // 第102期。**純粋な記録で、誰も読んで分岐しない**（盤面は1ビットも動かない）。
+        // 会戦の境界の蘇生が「最後に倒れた駒」を選ぶためだけにある。
+        dead.LastDeathTurn = _turn;
         if (killer is not null && killer.TeamId != dead.TeamId) TallyOf(killer).Kills++;
 
         Log($"    {dead.Name} は倒れた", LogKind.Death);

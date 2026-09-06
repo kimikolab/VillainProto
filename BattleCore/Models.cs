@@ -169,7 +169,13 @@ public sealed class UnitState
     /// <see cref="AtkBonus"/> を<b>帳簿に載せずに</b> 0 へ戻す（第68期）。
     /// 呼ぶのは寿命の2箇所だけ——<c>BattleEngine.Revive</c> と <c>Engagement.CarryOver</c>。
     /// </summary>
-    internal void ResetAtkBonus() => _atkBonus = 0;
+    /// <param name="value">
+    /// 戻す先。既定の 0 が寿命の2箇所（蘇生・会戦の境界）の現行の動作。
+    /// 第102期の <c>BoundaryChoice.Carry</c> だけが 0 以外を渡す——境界で
+    /// 「消さなかったことにする」ために、既存の段をそのまま通した後で控えた値へ戻す
+    /// （帳簿を持つ特性〈墓守〉の <c>OnCarryOver</c> と二重計上しないための順序。理由は Engagement.cs）。
+    /// </param>
+    internal void ResetAtkBonus(int value = 0) => _atkBonus = value;
 
     /// <summary>
     /// <b><see cref="BattleContext.Whet"/> 窓口を通って届いた強化の累計</b>（第67期）。
@@ -215,6 +221,19 @@ public sealed class UnitState
 
     public bool IsAlive => Hp > 0;
     public Row Row => FormationRules.RowOf(Slot);
+
+    /// <summary>
+    /// 最後に倒れたターン番号（第102期）。<b>純粋な記録で、誰も読んで分岐しない</b>
+    /// ——盤面は1ビットも動かない（受け入れ条件: <c>compare</c> 305 セル 0 件）。
+    ///
+    /// <para>会戦の境界の蘇生（<see cref="BoundaryChoice.Revive"/>）が
+    /// 「最後に倒れた駒」を選ぶためだけにある。<c>BattleResult.Events</c> からは取れない
+    /// ——診断は verbose=false で数万戦回すのでイベントを積んでいない。</para>
+    ///
+    /// <para>蘇生されて再度倒れると上書きされる（後の値が勝つ）。
+    /// 生きている駒の値は読まれないので、境界でも蘇生でも 0 に戻していない。</para>
+    /// </summary>
+    public int LastDeathTurn { get; set; }
 
     /// <summary>
     /// いま実際に使う攻撃パターン。定義上のパターンを特性が状況で書き換える。

@@ -62,6 +62,72 @@ public readonly record struct RecoverRule(int HpPercent, bool ReviveDead)
     public bool Active => HpPercent > 0 || ReviveDead;
 }
 
+/// <summary>
+/// 会戦の境界で免除する罰（第102期）。<b>新しい機構は1つも作っていない。</b>
+/// 境界がしている3つのことを、<b>1つだけ免除する</b>形になっている。
+///
+/// <list type="table">
+/// <item><term><see cref="Revive"/></term><description>死者は戻らない → <b>体</b>を返す</description></item>
+/// <item><term><see cref="Heal"/></term><description>HP は削られたまま → <b>HP</b> を返す</description></item>
+/// <item><term><see cref="Carry"/></term><description>積み上げは全消し → <b>積み上げ</b>を返す（負も一緒に）</description></item>
+/// </list>
+/// </summary>
+public enum BoundaryChoice
+{
+    /// <summary>現行。境界は3つとも罰したまま。</summary>
+    None,
+
+    /// <summary><b>倒れた味方1体を <c>MaxHp / 2</c> で戻す。</b> 体は返すが HP は返さない
+    /// （3つの通貨を分離するため）。端数は切り捨て・最低 1。選ぶのは<b>最後に倒れた駒</b>で、
+    /// 同着はスロット昇順（<c>ctx.PickOne</c> を使わない・第89期 (h)）。
+    /// 召喚された駒（胞子・亡者）は候補に入らない——<c>deployed</c> にそもそも載らない。</summary>
+    Revive,
+
+    /// <summary><b>生存者を <c>MaxHp</c> まで全快。</b> 死者は戻らない
+    /// （第101期の <c>RecoverRule(100, false)</c> ＝ R100 と同じ処理）。</summary>
+    Heal,
+
+    /// <summary>
+    /// <b><see cref="StatusKeys.All"/> の消去と <c>ResetAtkBonus()</c> と <c>WhetReceived = 0</c> をしない。</b>
+    /// それ以外（<c>ActionIndex = 0</c> と <c>OnCarryOver</c>）は現行どおり。
+    ///
+    /// <para><b>負も一緒に持ち越す</b>のが要点——積み上げだけを持ち越すと常に得になり、
+    /// 選択にならない。毒まみれの部隊で持ち越せば自殺行為になる（可変コスト型の判断）。</para>
+    /// </summary>
+    Carry,
+}
+
+/// <summary>
+/// 境界の選択（第102期）。既定は <see cref="BoundaryChoice.None"/> ＝ 現行。
+///
+/// <para><b><see cref="RecoverRule"/>（第101期）とは併用しない。</b>
+/// <c>RecoverRule.Active</c> が真のときは<b>この規則を無視する</b>——
+/// どちらも同じ場所（境界の HP と体）を触るので、両方効かせると
+/// 「どちらが効いたのか」が原理的に割れない。</para>
+///
+/// <para><b>敵側には一切適用しない</b>（<c>RecoverRule</c> と同じ。敵は 1 部隊を抜くたび
+/// <see cref="BattleEngine.Materialize"/> で新品が投入されるので元から全快）。</para>
+/// </summary>
+/// <param name="Choice">全境界で使う選択。<paramref name="Plan"/> が無いときだけ読まれる。</param>
+/// <param name="Plan">
+/// 境界ごとの選択（0 番目 ＝ 第1戦の後）。<b>方策を「上限」として測るための窓口</b>で、
+/// 通常の実行では誰も渡さない。要素が足りない境界は <paramref name="Choice"/> に落ちる。
+/// </param>
+public readonly record struct BoundaryRule(BoundaryChoice Choice,
+                                           IReadOnlyList<BoundaryChoice>? Plan = null)
+{
+    /// <summary>現行。境界の免除は 1 つも無い。</summary>
+    public static BoundaryRule Default => new(BoundaryChoice.None);
+
+    /// <summary>この規則が盤面を 1 ビットでも動かしうるか。偽なら <c>CarryOver</c> は第101期と同一。</summary>
+    public bool Active => Choice != BoundaryChoice.None || (Plan is { Count: > 0 }
+        && Plan.Any(c => c != BoundaryChoice.None));
+
+    /// <summary><paramref name="boundaryIndex"/> 番目の境界（0 ＝ 第1戦の後）で使う選択。</summary>
+    public BoundaryChoice At(int boundaryIndex)
+        => Plan is not null && boundaryIndex < Plan.Count ? Plan[boundaryIndex] : Choice;
+}
+
 /// <summary>会戦の結果。UI はこれを再生するだけでよい（BattleResult と同じ思想）。</summary>
 public sealed class EngagementResult
 {
@@ -145,7 +211,8 @@ public static class EngagementEngine
     public static EngagementResult Run(IReadOnlyList<Formation> playerSquads,
                                        IReadOnlyList<Formation> enemySquads,
                                        int seed, bool verbose = true,
-                                       RecoverRule? recover = null)
+                                       RecoverRule? recover = null,
+                                       BoundaryRule? boundary = null)
     {
         var battles = new List<BattleResult>();
         var openings = new List<IReadOnlyList<BattleOpening>>();
@@ -155,6 +222,9 @@ public static class EngagementEngine
         var enemyEntries = new List<SquadEntry>();
 
         RecoverRule rec = recover ?? RecoverRule.Default;
+        // 第102期。**併用しない。** RecoverRule が既定でないときは BoundaryRule を無視する
+        // ——どちらも境界の HP と体を触るので、両方効かせると帰属が原理的に割れない。
+        BoundaryRule bnd = rec.Active ? BoundaryRule.Default : (boundary ?? BoundaryRule.Default);
 
         int pi = 0, ei = 0;
         int cleared = 0, lost = 0, draws = 0;
@@ -242,7 +312,7 @@ public static class EngagementEngine
             // 味方だけが回復の対象。敵側は CarryOver(aliveE) に規則を渡さない（既定のまま）。
             current = lostP
                 ? BattleEngine.Materialize(playerSquads[pi], BattleContext.PlayerTeam)
-                : CarryOver(aliveP, current, rec);
+                : CarryOver(aliveP, current, rec, bnd.At(battleIndex));
             enemyCur = clearedE
                 ? BattleEngine.Materialize(enemySquads[ei], BattleContext.EnemyTeam)
                 : CarryOver(aliveE);
@@ -295,8 +365,23 @@ public static class EngagementEngine
     /// </param>
     private static List<UnitState> CarryOver(List<UnitState> survivors,
                                              List<UnitState>? deployed = null,
-                                             RecoverRule rec = default)
+                                             RecoverRule rec = default,
+                                             BoundaryChoice choice = BoundaryChoice.None)
     {
+        // 第102期: 倒れた味方を1体だけ MaxHp/2 で戻す。RecoverRule.ReviveDead と同じ位置に置き、
+        // 状態異常の消去と OnCarryOver は生存側と同じ扱いにする（先にリストへ入れてからループを回す）。
+        // 選ぶのは「最後に倒れた駒」、同着はスロット昇順——ctx.PickOne を使わない（第89期 (h)）。
+        if (choice == BoundaryChoice.Revive && deployed != null)
+        {
+            UnitState? back = deployed.Where(u => !u.IsAlive)
+                .OrderByDescending(u => u.LastDeathTurn).ThenBy(u => u.Slot).FirstOrDefault();
+            if (back != null)
+            {
+                back.Hp = Math.Max(1, back.MaxHp / 2);
+                survivors.Add(back);
+            }
+        }
+
         // 第101期: 倒れた味方を戻す。状態異常の消去と OnCarryOver は生存側と同じ扱いにするため、
         // 先にリストへ入れてから下のループを回す。Hp は下の回復の段では触らない（全快で戻す）。
         if (rec.ReviveDead && deployed != null)
@@ -309,8 +394,27 @@ public static class EngagementEngine
             }
         }
 
+        bool carry = choice == BoundaryChoice.Carry;
+
         foreach (UnitState u in survivors)
         {
+            // 第102期 Carry。**既存の段は1文字も変えず、通した後で「消さなかったことにする」。**
+            // 順序が要る——消さずに OnCarryOver を呼ぶと、帳簿を持つ特性（墓守 NecroTrait）が
+            // 「AtkBonus はエンジンが 0 にした後」を前提に帳簿を 0 へ戻して層ぶんを積み直すので、
+            // 層のぶんが二重計上される（積み上げが発散する。CLAUDE.md の乗算の罠そのもの）。
+            var keptStatus = carry ? new Dictionary<string, int>() : null;
+            int keptBonus = 0, keptWhet = 0;
+            if (carry)
+            {
+                foreach (string key in StatusKeys.All)
+                {
+                    int v = u.RawCounter(key);
+                    if (v != 0) keptStatus![key] = v;
+                }
+                keptBonus = u.AtkBonus;
+                keptWhet = u.WhetReceived;
+            }
+
             foreach (string key in StatusKeys.All) u.Counters.Remove(key);
             u.ResetAtkBonus();   // 第68期: 帳簿に載せずに戻す（AtkBonus = 0 と同じ効果）
             // 第67期。押された累計は配られた力と同じ寿命（AtkBonus と同じ行で消す）。
@@ -326,6 +430,19 @@ public static class EngagementEngine
             // 境界の手当ては誰かが配っているのではないので、Hp を直接足す。
             if (rec.HpPercent > 0)
                 u.Hp = Math.Min(u.MaxHp, u.Hp + u.MaxHp * rec.HpPercent / 100);
+
+            // 第102期 Heal。生存者だけを全快（RecoverRule(100, false) ＝ R100 と同じ処理）。
+            // ここも ctx.Heal を通さない（境界は戦闘の外。理由は上のコメント）。
+            if (choice == BoundaryChoice.Heal) u.Hp = u.MaxHp;
+
+            // 第102期 Carry。控えた値へ戻す。ResetAtkBonus は帳簿に載せずに書く窓口
+            // （通常の代入だと境界の復元が「正の上昇」として NoteAtkGain に載る・第68期）。
+            if (carry)
+            {
+                foreach ((string key, int v) in keptStatus!) u.SetCounter(key, v);
+                u.ResetAtkBonus(keptBonus);
+                u.WhetReceived = keptWhet;
+            }
         }
         return survivors.OrderBy(u => u.Slot).ToList();
     }
