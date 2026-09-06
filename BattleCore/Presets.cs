@@ -205,9 +205,15 @@ public static class Presets
         // 3期続けて同じ結論で、中央はナラの席ではない——ここでは狙撃のセロが中央に上がり、
         // ナラは後1へ下がる。**割れ方はメンバーで決まるので配置では変わらない**
         // （削り2＝ガルド4・ドルガ6 ／ 回復2＝セロ12・ササ12）。
-        ("置き去り×分散回復", Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald,
-                                           center: UnitCatalog.Sero, back1: UnitCatalog.Nara,
-                                           back3: UnitCatalog.Dolga)),
+        //
+        // **第107期に動いた。** 散開の弾き（第106期）が入って現行席が reseat 13 位に落ちたので
+        // 追試（seed 200..599）にかけ、狙（ガルド前列）を満たし情報セルを 2 以上に保つ最上位が
+        // 29.9% → 35.4%（+5.6pt・閾値 5.0pt）で採用。**中央は逃亡兵セロのままで次数も動かない**
+        // ——動いたのは角4つの並びだけ（ササが後3・ドルガが後1・ナラが前3・ガルドが前1）。
+        // **狙を外せば 37.6% の席がある**（ガルドを中央へ上げる版）が、庇うの制約を壊すので採らない。
+        ("置き去り×分散回復", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Nara,
+                                           center: UnitCatalog.Sero, back1: UnitCatalog.Dolga,
+                                           back3: UnitCatalog.Sasa)),
         // 削りを即時払いの変換器に繋ぐ形（第20期）。ゾト(7)・ムグ(6)・リィカ(7) が全員
         // ナラ(8)より遅い＝毎ターン削られる。ゾトは削られるほど早く破裂し、ムグは早く胞子になり、
         // リィカはその死をそのまま層に変える——どれも積み上げ時間を必要としない。
@@ -361,9 +367,16 @@ public static class Presets
         // **値段は相変わらず「前列にナタを出すかノミを出すか」に集中している**——
         // ノミを前に出す8通りは第3〜5波が 0〜4% に落ちる（reseat 40.3% 以下の塊）。
         // 第37期は「ドルガを前に出す8通り」が下位だったので、**閾値待ちで落ちる駒が入れ替わった**。
-        ("刻み×断ち (ノミ×ナタ)", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Nata,
-                                            center: UnitCatalog.Dolga, back1: UnitCatalog.Nomi,
-                                            back3: UnitCatalog.Vel)),
+        //
+        // **第107期に動いた。** 第104期の再行動（刻んだ獲物が倒れたら刻み手がもう一度動く）で
+        // この行は 32.0 → 83.5（第4波）と大きく上がったが、**席はその前の盤面のまま**だった。
+        // 追試（seed 200..599）で 86.5% → 95.4%（+9.0pt）。**ナタが前列から後3へ下がり、
+        // 中央がドルガから継ぎ接ぎのヴェルに替わる**——閾値待ちをやめた第74期以降、
+        // ナタは毎ターン普通に振るので前へ出す理由が無くなっていた（第38期の席は
+        // 「振らないナタをどこに置くか」の答えだった）。情報セルは 3 のまま。
+        ("刻み×断ち (ノミ×ナタ)", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Dolga,
+                                            center: UnitCatalog.Vel, back1: UnitCatalog.Nomi,
+                                            back3: UnitCatalog.Nata)),
         // 傷軸・第5弾（第39期）。**縫いのハリ**＝傷の防御側の維持読み。第37期と同じ作法で、
         // **既存行のエグをハリに差し替えただけ**（土台のゴルム／ドルガ／ヴェルは動かさない）。
         // これで同じ土台に読み手の三役（エグ＝維持攻／ナタ＝消費／ハリ＝維持防）が並び、
@@ -382,9 +395,16 @@ public static class Presets
         // **ハリは後1で、ゴルムが前1。** ナタ（第37期・第38期）が前列へ出る形だったのと逆を向く
         // ——ハリは**傷持ちがいなくても普通に殴る**（閾値も手番の放棄も無い）ので、
         // 巨躯の被覆に入って長く立つほど繕いの機会が増える。第30期のノミと同じ側に戻る。
-        ("刻み×縫い (ノミ×ハリ)", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Nomi,
-                                            center: UnitCatalog.Dolga, back1: UnitCatalog.Hari,
-                                            back3: UnitCatalog.Vel)),
+        //
+        // **第107期に動いた。** 追試（seed 200..599）で 78.3% → 93.8%（+15.5pt・61行で最大）。
+        // **ノミが中央（次数4）へ上がり、ドルガが前1へ出る**——刻みは1体に食いつくので
+        // 次数は狙いに効かないが、第104期の再行動が入って「ノミが長く立つこと」の値段が上がった。
+        // **情報セルは 3 → 2 に減る**（第2〜4波が天井へ抜ける）。第59期の作法の線（2 以上）は
+        // 守っているが、**この行は (S3) でハリを測る唯一の compare 行**なので、
+        // 減った1つぶん測りにくくなったことを報告書に記録した（規約 (G9) により拒否はしない）。
+        ("刻み×縫い (ノミ×ハリ)", Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Golm,
+                                            center: UnitCatalog.Nomi, back1: UnitCatalog.Vel,
+                                            back3: UnitCatalog.Hari)),
         // 移動軸・弱体化軸（第41期）。**突き返しのハネ**＝移動を読み、弱体化を書く変換器。
         // 供給（バサの喧噪）→ 変換（ハネ）→ 読み手（ウツの逆しま）の3枚が要る最小形。
         //

@@ -40492,6 +40492,219 @@ if (focusId == "hold")
 
 
 //     dotnet run --project BattleSim -c Release 0 spread
+// ==================================================================================
+// 第107期 —— 保留を閉じる（席・ムド・ハリ）。指示書は design/PHASE107_HOLD2_SPEC.md。
+//
+// **既存の診断は1文字も書き換えていない。** (S1)(S2)(S3) をモードで分けてある
+// （報告書とコミットも別々にする——`docs/balance.md` の差分がどれの帰結か読めなくなるため）。
+// ==================================================================================
+if (focusId == "hold2")
+{
+    string h2Mode = args.Length > 2 ? args[2] : "tables";
+    var h2Compare = CompareBuilds();
+    var h2Cross = CrossBuilds();
+    var h2All = h2Compare.Concat(h2Cross).ToArray();
+    IReadOnlyList<EnemyCatalog.Stage> h2Stages = EnemyCatalog.Stages;
+
+    // `reseat` の狙（ガルドが前列 / セッキが後列）の写し。**判定は1文字も変えていない。**
+    static bool H2Intent(Formation f)
+    {
+        foreach (var (slot, def) in f.Occupied())
+        {
+            if (ReferenceEquals(def, UnitCatalog.Gald) && FormationRules.RowOf(slot) != Row.Front) return false;
+            if (ReferenceEquals(def, UnitCatalog.Sekki) && FormationRules.RowOf(slot) != Row.Back) return false;
+        }
+        return true;
+    }
+    static string H2N(UnitDef? d) => d?.Name ?? "−";
+    static string H2Seats(Formation f) => H2N(f[0]) + "/" + H2N(f[1]) + " | " + H2N(f[2]) + " | " + H2N(f[3]) + "/" + H2N(f[4]);
+
+    // 情報セル: `0 < x < 100` を**第2〜5波**で数える（第59期 9-1 の定義。規約 (G10)）。
+    static int H2Info(double[] cells)
+    {
+        int n = 0;
+        for (int i = 1; i < cells.Length; i++) if (cells[i] > 0.0 && cells[i] < 100.0) n++;
+        return n;
+    }
+
+    // ------------------------------------------------------------------------------
+    // (S1) 席。**`confirm` の候補表は使わない**——あれは焼き付けた台帳で、採用済みの行も
+    // 残っている（第89期の訂正）。**生きた判定は `reseat` の器具をその場で回して取る。**
+    // ------------------------------------------------------------------------------
+    if (h2Mode == "seats")
+    {
+        const int H2Scan = 50;       // 粗探索。`reseat` / `layout` と揃える
+        const int H2Verify = 200;    // 作法1・2 の帯（seed 0..199）。`compare` と揃える
+        const int H2CfBase = 200;    // 追試の帯（seed 200..599）。**選定に使っていない seed**
+        const int H2CfSeeds = 400;
+        const int H2TopOverall = 20, H2TopConstrained = 10;
+        const double H2Line = 5.0;   // 第46期の採否閾値
+
+        Console.WriteLine("# 第107期 (S1) —— 席");
+        Console.WriteLine();
+        Console.WriteLine("作法（第46期）: (1) 現行が `reseat` の上位5通りに入っていれば動かさない ／ "
+            + "(2) 入っていない行だけ追試（seed " + H2CfBase + ".." + (H2CfBase + H2CfSeeds - 1) + "）で測り、**"
+            + H2Line.ToString("F1") + "pt 以上**のときだけ動かす ／ (3) 採否は1位の配置ではなく**次数**で読む。");
+        Console.WriteLine();
+        Console.WriteLine("粗探索は seed 0.." + (H2Scan - 1) + "、作法1・2 の帯は seed 0.." + (H2Verify - 1) + "。"
+            + "**候補は「平均1位」ではなく、情報セル（`0 < x < 100`・第2〜5波）を 2 以上に保つ最上位を採る**（第59期）。");
+        Console.WriteLine();
+
+        var h2Stay1 = new List<string>();
+        var h2Stay2 = new List<(string Name, int Rank, double Cur, double Top)>();
+        var h2Cand = new List<(string Name, int Rank, double Cur, double Top)>();
+        var h2Detail = new List<string>();
+
+        foreach (var build in h2Compare)
+        {
+            var members = build.F.Occupied().Select(x => x.Def).ToList();
+            var perms = new List<Formation>();
+            foreach (int[] assign in SlotAssignments(members.Count))
+            {
+                var f = new Formation();
+                for (int m = 0; m < members.Count; m++) f[assign[m]] = members[m];
+                perms.Add(f);
+            }
+
+            var scan = new int[perms.Count];
+            Parallel.For(0, perms.Count, i =>
+            {
+                int wins = 0;
+                foreach (EnemyCatalog.Stage st in h2Stages)
+                    for (int seed = 0; seed < H2Scan; seed++)
+                        if (BattleEngine.Run(perms[i], st.Enemy, seed, verbose: false).PlayerWon) wins++;
+                scan[i] = wins;
+            });
+
+            var order = Enumerable.Range(0, perms.Count).OrderByDescending(i => scan[i]).ThenBy(i => i).ToList();
+            var pool = order.Take(H2TopOverall)
+                .Concat(order.Where(i => H2Intent(perms[i])).Take(H2TopConstrained))
+                .Append(order.First(i => SameFormation(perms[i], build.F)))
+                .Distinct().ToList();
+
+            var cellsA = new double[pool.Count][];
+            Parallel.For(0, pool.Count, k =>
+            {
+                cellsA[k] = h2Stages.Select(st =>
+                {
+                    int wins = 0;
+                    for (int seed = 0; seed < H2Verify; seed++)
+                        if (BattleEngine.Run(perms[pool[k]], st.Enemy, seed, verbose: false).PlayerWon) wins++;
+                    return wins * 100.0 / H2Verify;
+                }).ToArray();
+            });
+
+            var rankedA = Enumerable.Range(0, pool.Count).OrderByDescending(k => cellsA[k].Average()).ToList();
+            int curK = pool.FindIndex(i => SameFormation(perms[i], build.F));
+            int curRank = rankedA.IndexOf(curK) + 1;
+            double curAvg = cellsA[curK].Average(), topAvg = cellsA[rankedA[0]].Average();
+
+            if (curRank <= 5) { h2Stay1.Add(build.Name); continue; }
+            if (topAvg - curAvg < H2Line) { h2Stay2.Add((build.Name, curRank, curAvg, topAvg)); continue; }
+            h2Cand.Add((build.Name, curRank, curAvg, topAvg));
+
+            // ---- 追試（seed 200..599）。**情報セルの列を出す**（第59期の作法）
+            var cellsB = new double[pool.Count][];
+            Parallel.For(0, pool.Count, k =>
+            {
+                cellsB[k] = h2Stages.Select(st =>
+                {
+                    int wins = 0;
+                    for (int seed = H2CfBase; seed < H2CfBase + H2CfSeeds; seed++)
+                        if (BattleEngine.Run(perms[pool[k]], st.Enemy, seed, verbose: false).PlayerWon) wins++;
+                    return wins * 100.0 / H2CfSeeds;
+                }).ToArray();
+            });
+            var rankedB = Enumerable.Range(0, pool.Count).OrderByDescending(k => cellsB[k].Average()).ToList();
+            double curB = cellsB[curK].Average();
+            int curInfoB = H2Info(cellsB[curK]);
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine();
+            sb.AppendLine("### " + build.Name);
+            sb.AppendLine();
+            sb.AppendLine("作法1 で現行 **" + curRank + " 位**（" + curAvg.ToString("F1") + "% 対 1位 "
+                + topAvg.ToString("F1") + "%・差 **" + (topAvg - curAvg).ToString("+0.0;-0.0") + "pt**）なので追試へ。");
+            sb.AppendLine();
+            sb.AppendLine("| 追順 | 粗順 | 狙 | 前1/前3 | 中央 | 後1/後3 | 平均(400) | 情報セル |"
+                + string.Concat(h2Stages.Select((_, i) => " 第" + (i + 1) + "波 |")));
+            sb.AppendLine("|--:|--:|:-:|---|---|---|--:|--:|" + string.Concat(h2Stages.Select(_ => "---:|")));
+            for (int r = 0; r < Math.Min(10, rankedB.Count); r++)
+            {
+                int k = rankedB[r];
+                Formation f = perms[pool[k]];
+                sb.AppendLine("| " + (r + 1) + (k == curK ? "★現行" : "") + " | " + (order.IndexOf(pool[k]) + 1)
+                    + " | " + (H2Intent(f) ? "○" : "×") + " | " + H2Seats(f) + " | "
+                    + cellsB[k].Average().ToString("F1") + "% | " + H2Info(cellsB[k]) + " |"
+                    + string.Concat(cellsB[k].Select(c => " " + c.ToString("F1") + "% |")));
+            }
+            if (rankedB.IndexOf(curK) >= 10)
+                sb.AppendLine("| " + (rankedB.IndexOf(curK) + 1) + "★現行 | " + (order.IndexOf(pool[curK]) + 1)
+                    + " | " + (H2Intent(perms[pool[curK]]) ? "○" : "×") + " | " + H2Seats(perms[pool[curK]]) + " | "
+                    + curB.ToString("F1") + "% | " + curInfoB + " |"
+                    + string.Concat(cellsB[curK].Select(c => " " + c.ToString("F1") + "% |")));
+
+            // 採る席は**3つの条件の積**。無ければ据え置き。
+            //   (a) 情報セルを 2 以上に保つ（第59期。席は「勝つ席」ではなく「測れる席」で選ぶ）
+            //   (b) **狙（ガルドが前列 / セッキが後列）を満たす**
+            //       ——「編成の狙いと探索1位が食い違ったら狙いを優先し、理由をコメントに残す」（CONTRIBUTING.md）。
+            //       第107期の初版はこれを器具に入れ忘れていて、`置き去り×分散回復` の1位（ガルドが中央）を
+            //       採るところだった。**参考として狙を外した最上位も並べる**（緩めた版ではなく、外した版が
+            //       どれだけ上にあるかを読めるようにするため）。
+            //   (c) 現行との差が閾値以上（第46期）
+            int pick = -1, free = -1;
+            foreach (int k in rankedB) { if (free < 0 && H2Info(cellsB[k]) >= 2) free = k; }
+            foreach (int k in rankedB) { if (H2Info(cellsB[k]) >= 2 && H2Intent(perms[pool[k]])) { pick = k; break; } }
+            sb.AppendLine();
+            if (free >= 0 && free != pick)
+                sb.AppendLine("（参考）**狙を外した**最上位は 追順 **" + (rankedB.IndexOf(free) + 1) + " 位**（"
+                    + cellsB[free].Average().ToString("F1") + "% / 情報セル " + H2Info(cellsB[free]) + "）。**採らない。**");
+            if (pick < 0 || pick == curK)
+                sb.AppendLine("**判定: 据え置き** —— 狙を満たし情報セルを 2 以上に保つ最上位が現行（または該当なし）。");
+            else
+            {
+                double gain = cellsB[pick].Average() - curB;
+                Formation f = perms[pool[pick]];
+                sb.AppendLine("狙を満たし情報セルを 2 以上に保つ最上位は 追順 **" + (rankedB.IndexOf(pick) + 1) + " 位**（"
+                    + cellsB[pick].Average().ToString("F1") + "% / 情報セル " + H2Info(cellsB[pick])
+                    + "）で、現行（" + curB.ToString("F1") + "% / 情報セル " + curInfoB + "）との差は **"
+                    + gain.ToString("+0.0;-0.0") + "pt**。");
+                sb.AppendLine("次数: 中央（次数4）が **" + H2N(perms[pool[curK]][2]) + " → " + H2N(f[2]) + "**。");
+                sb.AppendLine("**判定: " + (gain >= H2Line ? "差し替え" : "据え置き") + "** —— 閾値 "
+                    + H2Line.ToString("F1") + "pt に対して " + gain.ToString("+0.0;-0.0") + "pt。");
+                if (gain >= H2Line)
+                    sb.AppendLine("採る配置: `front1: " + H2N(f[0]) + ", front3: " + H2N(f[1]) + ", center: " + H2N(f[2])
+                        + ", back1: " + H2N(f[3]) + ", back3: " + H2N(f[4]) + "`");
+            }
+            h2Detail.Add(sb.ToString());
+            Console.Error.WriteLine("[hold2 seats] " + build.Name + " 追試おわり");
+        }
+
+        Console.WriteLine("## 表A-1 —— 61 行の内訳");
+        Console.WriteLine();
+        Console.WriteLine("| 段 | 行数 |");
+        Console.WriteLine("|---|--:|");
+        Console.WriteLine("| 作法1（現行が上位5通り）で終わり | " + h2Stay1.Count + " |");
+        Console.WriteLine("| 作法2（差が " + H2Line.ToString("F1") + "pt 未満）で終わり | " + h2Stay2.Count + " |");
+        Console.WriteLine("| **追試にかかる** | **" + h2Cand.Count + "** |");
+        Console.WriteLine();
+        Console.WriteLine("### 作法2 で止まった行");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 現行の順位 | 現行(200) | 1位(200) | 差 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|");
+        foreach (var h2s in h2Stay2.OrderByDescending(h2s => h2s.Top - h2s.Cur))
+            Console.WriteLine("| " + h2s.Name + " | " + h2s.Rank + " | " + h2s.Cur.ToString("F1") + "% | "
+                + h2s.Top.ToString("F1") + "% | " + (h2s.Top - h2s.Cur).ToString("+0.0;-0.0") + "pt |");
+        Console.WriteLine();
+        Console.WriteLine("## 表A-2 —— 追試（seed 200..599）");
+        foreach (string d in h2Detail) Console.Write(d);
+        return;
+    }
+
+    Console.WriteLine("モード: seats / rage / suture / phase0 / tables / check");
+    return;
+}
+
 if (focusId == "spread")
 {
     var spreadBuilds = CompareBuilds();
