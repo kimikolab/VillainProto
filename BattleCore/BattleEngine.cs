@@ -1776,6 +1776,13 @@ public sealed class BattleContext
     public CurseRule Curse { get; }
 
     /// <summary>
+    /// 背かれの規則（第103期・<see cref="BetrayRule"/>）。
+    /// <b>既定は <see cref="BetrayRule.Default"/> ＝喚ばない</b>ので、
+    /// ロスターに 52 枚目を足しても盤面は1ビットも動かない。
+    /// </summary>
+    public BetrayRule Betray { get; }
+
+    /// <summary>
     /// 軋み（第66期）の在庫の記録。<b>盤面には一切影響しない。</b>
     /// <see cref="TraitId.Displaced"/> 保持者の <see cref="UnitState.AtkBonus"/> が動いた直後に呼ぶ
     /// ——上げる経路は<b>軋み自身と <see cref="Whet"/> の2本だけ</b>（ヨミは自己強化を1つも持たない）。
@@ -1841,7 +1848,8 @@ public sealed class BattleContext
                          SutureRule? suture = null, SpillWoundRule? spillWound = null,
                          MendRule? mend = null, IgniteRule? woundIgnite = null,
                          GatherRule? gather = null, SoakRule? soak = null,
-                         DeepRule? deep = null, CurseRule? curse = null, CounterProbe? probe = null)
+                         DeepRule? deep = null, CurseRule? curse = null,
+                         BetrayRule? betray = null, CounterProbe? probe = null)
     {
         _rng = new Random(seed);
         Probe = probe;          // 第94期 (T2)。**既定 null。診断だけが渡す。**
@@ -1879,6 +1887,72 @@ public sealed class BattleContext
         Soak = soak ?? SoakRule.Default;
         Deep = deep ?? DeepRule.Default;
         Curse = curse ?? CurseRule.Default;
+        Betray = betray ?? BetrayRule.Default;
+    }
+
+    // =====================================================================================
+    // 第103期 —— 背かれ（BetrayRule）の計数。**盤面には一切影響しない。**
+    //
+    // 既定（BetrayRule.Default ＝ 喚ばない）では `BetrayWatch` が偽なので、
+    // 走査も加算も1回も走らない（`compare` 305 セルが 0 件であることが検算）。
+    // =====================================================================================
+
+    /// <summary>背かれの計数を回すか。<b>規則が有効なときだけ。</b></summary>
+    public bool BetrayWatch => Betray.Enabled;
+
+    /// <summary>門の 1 —— 喚んだ回数 ／ 実際に湧いた回数 ／ 席が埋まっていて湧かなかった回数。</summary>
+    public int BetrayTries, BetraySummoned, BetrayBlocked;
+
+    /// <summary>自己検査 (c)(d)(e) —— 味方陣に湧いた回数 ／ ○前2 以外に湧いた回数 ／ 同時に生きていた最大数。</summary>
+    public int BetrayAllySide, BetrayWrongSlot, BetrayMaxAlive;
+
+    /// <summary>自己検査 (f) —— 餌の空き手番が「差し出された本物の空き」と判定された回数（0 のはず）。</summary>
+    public int BetrayIdleSellable;
+
+    /// <summary>自己検査 (g) —— 餌が蘇生された回数（0 のはず）。</summary>
+    public int BetrayRevived;
+
+    /// <summary>門の 2 —— 餌が倒された回数。</summary>
+    public int BetrayKilled;
+
+    /// <summary>
+    /// 門の 3 —— <b>餌の撃破で読み手が発火した量</b>。
+    /// <para><c>Attack</c> は餌の死の連鎖の中で走った <c>PerformAttack</c> の回数（＝ハギの追い打ち）、
+    /// <c>Poison</c> はその連鎖の中で盤面に増えた毒の層（＝ラウの拡散）、
+    /// <c>Overreach</c> は撃破者が深追いで痺れた回数（＝エグの手番喪失）。</para>
+    /// <para><b>連鎖の入れ子はそのまま外側に積む</b>——ハギの追い打ちが更に誰かを倒せば、
+    /// その分も「餌の死が引き起こしたもの」として数える。</para>
+    /// </summary>
+    public int BetrayFireAttack, BetrayFirePoison, BetrayFireOverreach;
+
+    /// <summary>
+    /// 代金（§2-3）—— <b>主目標が餌だった振りの回数</b>と、そのときの打点の総和。
+    /// <c>本物の敵に当たらなかった手番の数 × その手番の平均打点</c> の材料。
+    /// </summary>
+    public int BetrayHits, BetrayHitAtkSum;
+
+    /// <summary>喚び出しの1件を記録する（<paramref name="f"/> が null なら席が埋まっていた）。</summary>
+    public void NoteBetraySummon(UnitState self, UnitState? f)
+    {
+        BetrayTries++;
+        if (f is null) { BetrayBlocked++; return; }
+        BetraySummoned++;
+        if (f.TeamId == self.TeamId) BetrayAllySide++;                       // (c)
+        if (f.Slot != BetrayedTrait.FodderSlot) BetrayWrongSlot++;           // (d)
+        int alive = _units.Count(u => u.IsAlive && BetrayedTrait.IsFodder(u));
+        if (alive > BetrayMaxAlive) BetrayMaxAlive = alive;                  // (e)
+        // (f) 餌の空き手番が号令・据えに売れないこと。**Immobile の SurrendersTurn が偽**なので
+        // `Trait.SurrenderedTurn` は必ず偽になる——engine が立てる `IdleTurn` そのものは立つので、
+        // 見るのは生の counter ではなく<b>買い手が通す判定のほう</b>である。
+        if (Trait.SurrenderedTurn(this, f)) BetrayIdleSellable++;
+    }
+
+    /// <summary>餌に振られた1件を記録する（代金の材料）。</summary>
+    public void NoteBetrayHit(UnitState actor, UnitState target)
+    {
+        BetrayHits++;
+        BetrayHitAtkSum += actor.CurrentAttack;
+        TallyOf(actor).BetrayFodderHits++;
     }
 
     // =====================================================================================
@@ -2596,6 +2670,12 @@ public sealed class BattleContext
         // 逸らし（第50期）。**焦点の効きは「付けた回数」ではなく「実際にそこへ振られた割合」。**
         // 標は単体攻撃にしか効かないので、分母も単体振りだけで数える。
         if (DivertActive && pattern == AttackPattern.Single) NoteDivertSwing(actor, target);
+
+        // 第103期。**餌に吸われた手番**（＝本物の敵に当たらなかった手番）。
+        // 打点は `CurrentAttack` で取る——薄刃・止めの払い直しより手前なので、
+        // 「その手番が本物の敵に向いていたら出せたはずの量」の素直な代理になる。
+        // **盤面には一切影響しない。**
+        if (BetrayWatch && BetrayedTrait.IsFodder(target)) NoteBetrayHit(actor, target);
 
         // CurrentAttack 自体は変えない。AtkBonus と混ぜると会戦の境界処理（第1期 D2/D3）や
         // 墓守の層の再適用と衝突する。
@@ -3366,6 +3446,21 @@ public sealed class BattleContext
             if (_enemyKillsThisTurn > MaxEnemyKillsInOneTurn) MaxEnemyKillsInOneTurn = _enemyKillsThisTurn;
         }
 
+        // 第103期・門の 3。**餌の死で読み手が発火したか**を、連鎖の前後の差で測る。
+        // 特性側には1行も足していない（読み手を1枚も作らない設計なので、engine の1箇所で数える）。
+        // 既定では `BetrayWatch` が偽なので走らない。
+        bool betrayDeath = BetrayWatch && BetrayedTrait.IsFodder(dead);
+        int bfA = 0, bfP = 0, bfS = 0;
+        if (betrayDeath)
+        {
+            BetrayKilled++;
+            if (killer is not null) TallyOf(killer).BetrayFodderKills++;
+            bfA = _units.Sum(u => TallyOf(u).Attacks);
+            bfP = _units.Sum(u => u.RawCounter(StatusKeys.Poison));
+            bfS = killer is not null && killer.HasTrait(TraitId.Overreach)
+                ? killer.RawCounter(StatusKeys.Stun) : 0;
+        }
+
         if (killer is not null && killer.IsAlive)
             foreach (Trait t in killer.Traits.ToList())
             {
@@ -3402,22 +3497,57 @@ public sealed class BattleContext
                 this.EndTrait(m);
             }
         }
+
+        if (betrayDeath)
+        {
+            BetrayFireAttack += Math.Max(0, _units.Sum(u => TallyOf(u).Attacks) - bfA);
+            BetrayFirePoison += Math.Max(0, _units.Sum(u => u.RawCounter(StatusKeys.Poison)) - bfP);
+            if (killer is not null && killer.HasTrait(TraitId.Overreach)
+                && killer.RawCounter(StatusKeys.Stun) > bfS) BetrayFireOverreach++;
+        }
     }
 
     /// <summary>
     /// 空きスロットに増援を出す。空きが無ければ何も起きない。
     /// 空きの判定は生死を問わない。死者の枠を「空き」と見なすと、
     /// 増援がそこへ入った後に蘇生が走って1枠に2体が立つため。
+    ///
+    /// <para><paramref name="at"/> を渡すと<b>その席だけ</b>を見る（埋まっていれば null）。
+    /// 第103期に足した経路で、<b>既存の呼び出し（<paramref name="at"/> 省略）は
+    /// 1ビットも挙動が変わらない</b>——<c>FormationRules.SummonSlots</c> の走査順は
+    /// 「湧いた駒が減衰1段ぶんの盾として働く」という別の調整ノブなので、
+    /// 席を指定したい機構のためにそちらを書き換えることはしない
+    /// （背かれ＝<see cref="BetrayedTrait"/> は ○前2 に湧かないと、
+    /// 敵の前列が全滅するまで餌が食べられない）。</para>
     /// </summary>
-    public UnitState? Summon(UnitDef def, int teamId)
+    public UnitState? Summon(UnitDef def, int teamId, int? at = null, bool overCorpse = false)
     {
         var taken = _units.Where(u => u.TeamId == teamId).Select(u => u.Slot).ToHashSet();
         int slot = -1;
-        // 召喚専用の枠だけを走る。編成枠へ入れると、5体で満席の盤面では一度も湧かない。
-        // **走査順（FormationRules.SummonSlots）は調整ノブ。** 貫き経路に入る 中1・中3 から
-        // 埋めるので、湧いた駒が減衰1段ぶんの盾として働く。
-        foreach (int i in FormationRules.SummonSlots)
-            if (!taken.Contains(i)) { slot = i; break; }
+        if (at is int want)
+        {
+            // 席を指定する経路。**召喚枠の外は受け付けない**（編成枠を上書きしない）。
+            //
+            // <paramref name="overCorpse"/> が真なら<b>死者は席を塞がない</b>。
+            // 既定の走査（at 省略）は今までどおり生死を問わない——あちらは
+            // 「増援がそこへ入った後に蘇生が走って1枠に2体が立つ」のを避けるための規則で、
+            // 蘇生されない駒（Ephemeral）を湧かせる経路には当たらない。
+            // **死者と生者が同じ席に並びうるが、席を読む箇所は全部 LivingMembers で濾している**
+            // （SelectTargetChain の pool ／ LaneOccupants ／ SwapSlots ／ HaulOutPair ／
+            // 棘守りの被覆）ので、死体は盤面から見えない。
+            bool free = overCorpse
+                ? !_units.Any(u => u.TeamId == teamId && u.Slot == want && u.IsAlive)
+                : !taken.Contains(want);
+            if (FormationRules.IsSummonSlot(want) && free) slot = want;
+        }
+        else
+        {
+            // 召喚専用の枠だけを走る。編成枠へ入れると、5体で満席の盤面では一度も湧かない。
+            // **走査順（FormationRules.SummonSlots）は調整ノブ。** 貫き経路に入る 中1・中3 から
+            // 埋めるので、湧いた駒が減衰1段ぶんの盾として働く。
+            foreach (int i in FormationRules.SummonSlots)
+                if (!taken.Contains(i)) { slot = i; break; }
+        }
         if (slot < 0) return null;
 
         var unit = new UnitState
@@ -3448,6 +3578,7 @@ public sealed class BattleContext
     public void Revive(UnitState target, int hp)
     {
         if (target.IsAlive) return;
+        if (BetrayWatch && BetrayedTrait.IsFodder(target)) BetrayRevived++;   // 第103期・自己検査 (g)
         target.Hp = Math.Max(1, hp);
         target.ResetAtkBonus();   // 第68期: 帳簿に載せずに戻す（負→0 を上昇として数えないため）
         // 第67期。配られた力が消える場所で「押された累計」も一緒に消す（寿命を AtkBonus に揃える）。
@@ -4044,13 +4175,14 @@ public static class BattleEngine
                                    SpillWoundRule? spillWound = null, MendRule? mend = null,
                                    IgniteRule? woundIgnite = null, GatherRule? gather = null,
                                    SoakRule? soak = null, DeepRule? deep = null,
-                                   CurseRule? curse = null, CounterProbe? probe = null)
+                                   CurseRule? curse = null, BetrayRule? betray = null,
+                                   CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, spillWound, mend, woundIgnite, gather, soak, deep,
-               curse, probe);
+               curse, betray, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -4076,12 +4208,14 @@ public static class BattleEngine
                                    SutureRule? suture = null, SpillWoundRule? spillWound = null,
                                    MendRule? mend = null, IgniteRule? woundIgnite = null,
                                    GatherRule? gather = null, SoakRule? soak = null,
-                                   DeepRule? deep = null, CurseRule? curse = null, CounterProbe? probe = null)
+                                   DeepRule? deep = null, CurseRule? curse = null,
+                                   BetrayRule? betray = null, CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
-                                    suture, spillWound, mend, woundIgnite, gather, soak, deep, curse, probe);
+                                    suture, spillWound, mend, woundIgnite, gather, soak, deep, curse,
+                                    betray, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -4353,6 +4487,20 @@ public static class BattleEngine
             HexMarksOnStoic = ctx.HexMarksOnStoic,
             HexHopBlocked = ctx.HexHopBlocked,
             HexNonSingleOnCursed = ctx.HexNonSingleOnCursed,
+            BetrayTries = ctx.BetrayTries,
+            BetraySummoned = ctx.BetraySummoned,
+            BetrayBlocked = ctx.BetrayBlocked,
+            BetrayAllySide = ctx.BetrayAllySide,
+            BetrayWrongSlot = ctx.BetrayWrongSlot,
+            BetrayMaxAlive = ctx.BetrayMaxAlive,
+            BetrayIdleSellable = ctx.BetrayIdleSellable,
+            BetrayRevived = ctx.BetrayRevived,
+            BetrayKilled = ctx.BetrayKilled,
+            BetrayFireAttack = ctx.BetrayFireAttack,
+            BetrayFirePoison = ctx.BetrayFirePoison,
+            BetrayFireOverreach = ctx.BetrayFireOverreach,
+            BetrayHits = ctx.BetrayHits,
+            BetrayHitAtkSum = ctx.BetrayHitAtkSum,
             HexCrossTeam = ctx.HexCrossTeam,
             HexSpillSuppressed = ctx.HexSpillSuppressed,
             HexShareBySource = ctx.HexShareBySource,

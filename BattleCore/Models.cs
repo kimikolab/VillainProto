@@ -612,6 +612,13 @@ public sealed class UnitTally
     /// <see cref="Interventions"/> の側に出る。この2つのズレ自体が情報になる
     /// （振らないのに干渉する＝反応型、振るのに干渉しない＝空振り）。
     /// </summary>
+    /// <summary>
+    /// 第103期 —— <b>この駒が餌を倒した回数</b>（撃破者の内訳）と、
+    /// <b>この駒の振りの主目標が餌だった回数</b>（代金の内訳）。
+    /// <b>どちらも誰も読んで分岐しない。</b>
+    /// </summary>
+    public int BetrayFodderKills, BetrayFodderHits;
+
     public int Attacks;
 
     /// <summary>
@@ -1042,6 +1049,8 @@ public sealed class UnitTally
 
     public void Add(UnitTally o)
     {
+        // 第103期。**盤面には一切影響しない。**
+        BetrayFodderKills += o.BetrayFodderKills; BetrayFodderHits += o.BetrayFodderHits;
         SutureFoe += o.SutureFoe; SutureAlly += o.SutureAlly; SutureDry += o.SutureDry; SutureHealed += o.SutureHealed;
         SutureAllyDepth += o.SutureAllyDepth; SutureAllyDepthMax = Math.Max(SutureAllyDepthMax, o.SutureAllyDepthMax);
         GatherGuards += o.GatherGuards; GatherHadDonor += o.GatherHadDonor; GatherTaken += o.GatherTaken;
@@ -1407,6 +1416,25 @@ public sealed class BattleResult
     public required int HexMarksOnStoic { get; init; }
     public required int HexHopBlocked { get; init; }
     public required int HexNonSingleOnCursed { get; init; }
+
+    /// <summary>
+    /// 第103期 —— 背かれ（<c>BetrayRule</c>）の計数。<b>盤面には一切影響しない。</b>
+    /// 既定（喚ばない）では全部 0。意味は <c>BattleContext</c> 側の doc を参照。
+    /// </summary>
+    public required int BetrayTries { get; init; }
+    public required int BetraySummoned { get; init; }
+    public required int BetrayBlocked { get; init; }
+    public required int BetrayAllySide { get; init; }
+    public required int BetrayWrongSlot { get; init; }
+    public required int BetrayMaxAlive { get; init; }
+    public required int BetrayIdleSellable { get; init; }
+    public required int BetrayRevived { get; init; }
+    public required int BetrayKilled { get; init; }
+    public required int BetrayFireAttack { get; init; }
+    public required int BetrayFirePoison { get; init; }
+    public required int BetrayFireOverreach { get; init; }
+    public required int BetrayHits { get; init; }
+    public required int BetrayHitAtkSum { get; init; }
     public required int HexCrossTeam { get; init; }
     public required int HexSpillSuppressed { get; init; }
     public required IReadOnlyDictionary<string, int> HexShareBySource { get; init; }

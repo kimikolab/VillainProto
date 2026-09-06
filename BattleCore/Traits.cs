@@ -105,6 +105,10 @@ public enum TraitId
     Hex,        // 祟り: 自分にダメージを与えた駒に呪いが1つ付く。**敵味方を問わない**
                  // （命中した味方の刃も味方を呪う。共有するのは engine の段で、この札は付与だけ）
 
+    // --- 第103期で足した札 ---
+    Betrayed,   // 背かれ: 毎ターン、敵陣に喚び出す。喚ばれたものは背いて敵につき、敵の前列が埋まる
+                // （1つの動作の表と裏。撃破の読み手がいれば資産、いなければ手番を捨てて敵を守っただけ）
+
     // --- 傷の5枚から切り出したマイナス（第74期・**器具**） ---
     // どれも既存の駒に既定で付いたままで、**盤面は1ビットも変わらない**（受け入れ基準は
     // `compare` 305 セル 0 件）。切り出した理由は1つだけ——**計量できるようにするため**。
@@ -1559,6 +1563,62 @@ public readonly record struct DeepRule(bool Enabled)
 }
 
 /// <summary>毒を書いた経路（第90期の計数。<b>盤面には一切影響しない</b>）。</summary>
+/// <summary>
+/// 背かれ（第103期）。<b>餌を敵陣に置いて、爆発の燃料の符号を変える。</b>
+///
+/// <para><b>なぜ。</b> ロスターで一番大きい払い出し（墓守の層・破裂・分裂・継ぎ接ぎ）は
+/// <b>味方の死</b>が燃料になっている。<b>爆発の燃料が味方の死である限り、爆発は必ず劣勢で起きる</b>
+/// ——第99・100期の実測どおり「噛み合っても<b>なんとか勝った</b>にしかならない」
+/// （残存 2.47 ／ 圧勝率 17.8%）。敵の死を読む駒は既に盤面にある
+/// （追い打ちのハギ・疫みのラウ・抉りのエグ）ので、<b>足りないのは読み手ではなく供給</b>。</para>
+///
+/// <para><b>読み手を1枚も作らない。</b> 第88期 8-3（読み手を広げる規則と供給を作る規則は対で測る）に
+/// 照らすと、読み手側が既に盤面にあるので<b>ソムは単独で測れる</b>（第85期の巻き込み則と同じ状況）。</para>
+///
+/// <para><b>マイナスを別に足さない（可変コスト型）。</b> 標的選択は「前列が生きている限り
+/// 後列は狙われない」ので、餌が敵の前列に湧くと<b>前列の標的候補が {前1, 前3} から
+/// {前1, 前3, 餌} になり、本物の敵に当たる確率が 2/3 に落ちる</b>
+/// ——<b>餌を食べる手番は、本物の敵を殴らない手番</b>。撃破の読み手がいれば資産、
+/// いなければ手番を捨てて敵を守っただけになる。</para>
+///
+/// <para><b><see cref="Respawn"/> は「毎ターン」を成立させるための札。</b>
+/// <c>BattleContext.Summon</c> の空き判定は<b>生死を問わない</b>（死者の枠を空きと見なすと
+/// 蘇生と衝突するため）ので、素直に書くと<b>餌の死体が ○前2 を永久に塞いで
+/// 1戦に1体しか湧かない</b>——第103期の Phase 0 の門で実測した（湧 1.00 回/戦・塞 2〜6 回/戦）。
+/// それでは <c>PlusText</c> の「毎ターン」が嘘になるので、<b>餌にだけ「死者は席を塞がない」を許す</b>
+/// （餌は <see cref="TraitId.Ephemeral"/> で蘇生されないので、元の規則が避けている衝突は起きない）。
+/// <b><see cref="Respawn"/> = false は literal な対照として残してある</b>——
+/// 天井が 1 か毎ターンかで機構がどれだけ変わるかを同じ実行の中で読むため。</para>
+///
+/// <para><b>上限を数値で書かない。</b> 湧くのは ○前2（<see cref="BetrayedTrait.FodderSlot"/>）が
+/// 空いているときだけで、<b>盤の形が天井を決める</b>（同時に1体）。
+/// <c>FormationRules.SummonSlots</c> は1ビットも触っていない
+/// ——走査順（中1・中3 から埋める）は「湧いた駒が減衰1段ぶんの盾として働く」という
+/// 別の調整ノブなので、席を直接指定する経路（<c>BattleContext.Summon</c> の
+/// <c>slot</c> 引数）を足してある。<b>既存の呼び出しは1つも挙動が変わらない</b>。</para>
+///
+/// <para><b>書き換え可能な static のノブにしないこと。</b> Trait は共有シングルトンで、
+/// <c>layout</c> は戦闘を並列実行する（<see cref="ColossusRule"/> と同じ判断）。</para>
+/// </summary>
+public readonly record struct BetrayRule(bool Enabled, bool Respawn = true)
+{
+    /// <summary>
+    /// 既定は<b>喚ぶ</b>——<b>第103期に採用した</b>（主判定 Q1-1 は 51 体中1位が意図した相手の
+    /// 追い打ちのハギ・Δ相乗 +21.95pt・ノイズ床 10.26pt の 2.1 倍・2系列とも正、
+    /// Q1-2 は 3 体で線ちょうど、拒否権1・2 は<b>ソムが `compare` 61 行にも交差帯 12 行にも
+    /// 1体もいないので原理的に立たない</b>）。
+    ///
+    /// <para><b>採用しても盤面は1セルも動かない</b>——ソムはどの代表編成にも入っていない
+    /// （<c>compare</c> 305 セル・交差帯 12 行が 0 件であることが検算）。
+    /// 第90期の傷の引き取り（<c>GatherRule</c>）と同じ形で、
+    /// <b>読み手が増えれば後から動き始める</b>。</para>
+    ///
+    /// <para><b><see cref="Respawn"/> = false は対照として残してある</b>
+    /// ——§1-3 の擬似コードをそのまま写した版で、1戦に 1.00 体しか湧かない。</para>
+    /// </summary>
+    public static BetrayRule Default => new(true, true);
+}
+
 public enum PoisonRoute
 {
     /// <summary>瘴気（グザ・毎ターン敵全体）。</summary>
@@ -6010,6 +6070,56 @@ public sealed class HexTrait : Trait
 }
 
 /// <summary>
+/// 背かれ。<b>毎ターン、敵陣の ○前2 に「背いた獣」を喚び出す。</b>
+///
+/// <para>規則そのものの説明は <see cref="BetrayRule"/> を参照。ここは発火口だけ。</para>
+///
+/// <list type="bullet">
+///   <item><b>撃破を1つも読まない。</b> 得をするのは敵の死を読む駒（ハギ・ラウ・エグ）であって
+///   ソムではない（<b>自己完結しない</b>・第84期以降の原則）。第96期は「ムドは呪いを読まないのに
+///   最大の受益者だった」を踏んでいるので、<b>攻撃型と成長経路も確認する</b>
+///   ——ソムは単体・攻7・育たないので、受益者の輪郭（1体を過剰に殺す分が無駄になる駒）に入らない</item>
+///   <item><b>敵側には持たせない。</b> 味方陣に湧かせる版は作らない（対照を増やすと変数が2つになる）</item>
+///   <item><b>周期は毎ターン固定・湧く席は ○前2 固定。</b> この期では振らない</item>
+/// </list>
+/// </summary>
+public sealed class BetrayedTrait : Trait
+{
+    /// <summary>湧く席。○前2（<c>FormationRules.SummonSlots</c> の 3 番目）。</summary>
+    public const int FodderSlot = 7;
+
+    /// <summary>
+    /// その駒が餌か。<b>参照同値で見る</b>——餌は <see cref="UnitCatalog.Fodder"/> から
+    /// 実行時に湧くだけで、編成にも診断の素体・弱い波の複製にも一度も入らない。
+    /// </summary>
+    public static bool IsFodder(UnitState u) => ReferenceEquals(u.Def, UnitCatalog.Fodder);
+
+    public override TraitId Id => TraitId.Betrayed;
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ctx.Betray.Enabled) return;
+
+        int foe = ctx.Opponent(self.TeamId);
+
+        // **同時に1体**（§1-3）。席の判定だけでも現状は足りる（餌は動かないし、
+        // 敵陣を動かす駒＝曝きは後列しか引き出さない）が、**構造として書いておく**
+        // ——将来 敵陣の前列を動かす機構が入っても「同時に1体」が破れない。
+        if (ctx.AllUnits.Any(u => u.IsAlive && u.TeamId == foe && IsFodder(u)))
+        {
+            ctx.NoteBetraySummon(self, null);
+            return;
+        }
+
+        UnitState? f = ctx.Summon(UnitCatalog.Fodder, foe, FodderSlot,
+                                  overCorpse: ctx.Betray.Respawn);
+        ctx.NoteBetraySummon(self, f);
+        if (f is not null)
+            ctx.Log($"    {self.Name} が喚んだものは向こう側に立った", LogKind.Trigger);
+    }
+}
+
+/// <summary>
 /// 粛の規則。<b>診断（hush）が版を並べて 1 回の実行の中で比べるためだけに外から差せる。</b>
 /// 既定は <see cref="Default"/> ＝有効で、<b>これが本採用の規則</b>。渡さない限り盤面は常にこれ。
 ///
@@ -6069,6 +6179,7 @@ public static class TraitCatalog
         new FavorTrait(),
         new FunnelTrait(),
         new HexTrait(),
+        new BetrayedTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

@@ -441,6 +441,53 @@ public static class UnitCatalog
         Flavor = "前に出ろと言われても決して出ない。背中しか守らない。"
     };
 
+    /// <summary>
+    /// 背かれのソム（第103期・<b>最後の1枠</b>）。
+    /// <para>数値は<b>振らない</b>（指示書 §6）。出力を持たせているのは、第87期の
+    /// 「接続子が出力ゼロの軸は5枠盤で橋が架からない」に当たらないため。</para>
+    /// </summary>
+    public static readonly UnitDef Som = new()
+    {
+        Id = "som",
+        Name = "背かれのソム",
+        MaxHp = 54,
+        Attack = 7,
+        Speed = 6,
+        Traits = new[] { TraitId.Betrayed },
+        PlusText = "毎ターン、敵陣に喚び出す",
+        MinusText = "喚ばれたものは背いて敵につく。敵の前列が埋まる",
+        Flavor = "誰よりも召喚術に長け、誰よりも召喚獣に嫌われた。呼べば来る。ただし向こう側に立つ。"
+    };
+
+    /// <summary>
+    /// ソムが喚び出す駒（餌）。<b>編成には選べない</b>（胞子と同じ扱い）。
+    ///
+    /// <para><b>HP 12 の根拠</b>（測る前に固定・振らない）——<b>単体の一撃で確実に落ち、
+    /// 巻き込みでは落ちない</b>。餌に吸われた手番が必ず撃破イベントになり、
+    /// 「ついでに倒す」は成立しないので代金が残る。
+    /// ボルグの巻き込み（60%）10 は耐え、エグ 12 ／ ハギの薙ぎ 16 ／ ボルグの薙ぎ 18 ／
+    /// 燃えたホタ 24 で落ちる。</para>
+    ///
+    /// <para><b><see cref="TraitId.Immobile"/></b> は <c>SurrendersTurn =&gt; false</c> を持つ
+    /// ——餌の手番が号令・据えの無償収入にならない（カドで一度踏んだ穴）。
+    /// <b><see cref="TraitId.Ephemeral"/></b> は蘇生されず、会戦の境界を持ち越さない。</para>
+    ///
+    /// <para><b>倒れても何も起こさない。純粋な体。</b> 爆発させないのは、破裂（ゾト）と
+    /// 機構が重複するうえ、<b>餌が自分で払い出すと可変コスト型でなくなる</b>ため
+    /// （読み手がいなくても得になってしまう）。</para>
+    /// </summary>
+    public static readonly UnitDef Fodder = new()
+    {
+        Id = "fodder",
+        Name = "背いた獣",
+        MaxHp = 12,
+        Attack = 0,
+        Speed = 1,
+        Traits = new[] { TraitId.Ephemeral, TraitId.Immobile },
+        PlusText = "",
+        MinusText = ""
+    };
+
     /// <summary>ムグの死骸から湧く駒。編成には選べない。</summary>
     public static readonly UnitDef Spore = new()
     {
@@ -1244,7 +1291,7 @@ public static class UnitCatalog
 
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

@@ -212,7 +212,8 @@ public static class EngagementEngine
                                        IReadOnlyList<Formation> enemySquads,
                                        int seed, bool verbose = true,
                                        RecoverRule? recover = null,
-                                       BoundaryRule? boundary = null)
+                                       BoundaryRule? boundary = null,
+                                       BetrayRule? betray = null)
     {
         var battles = new List<BattleResult>();
         var openings = new List<IReadOnlyList<BattleOpening>>();
@@ -257,7 +258,11 @@ public static class EngagementEngine
             playerEntries.Add(Snapshot(current));
             enemyEntries.Add(Snapshot(enemyCur));
 
-            BattleResult r = BattleEngine.Run(current, enemyCur, DeriveSeed(seed, battleIndex), verbose);
+            // 第103期。**規則を1本だけ通す唯一の経路**——会戦は本来 Run に規則を渡していない
+            // （境界の規則は境界でしか効かない）ので、既定（null ＝ 喚ばない）では
+            // この行の意味は1ビットも変わらない。
+            BattleResult r = BattleEngine.Run(current, enemyCur, DeriveSeed(seed, battleIndex), verbose,
+                                              betray: betray);
 
             battles.Add(r);
             pairings.Add((pi, ei));
