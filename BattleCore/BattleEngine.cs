@@ -1637,6 +1637,18 @@ public sealed class BattleContext
         // `SwapSlots` / `NoteStatusGain` が全部ここへ来るので、11 キーを同じ器具で観測できる。
         // **既定 null なので通常の実行では1行も走らない。**
         if (Probe is not null) NoteProbeWrite(u, UnitTally.CarryKeys[key], amount);
+        // 第105期。**状態異常の書き込みを「回数」で書き手に帰属する**（計数のみ）。
+        // 数えるのは <see cref="StatusKeys"/> 由来の7キー（毒・燃・痺・標・破片・傷・手番）だけ
+        // ——強化／弱体には専用の窓口があり、被弾／移動は「書き込み」ではない。
+        // **量ではなく回数**なのは、キーごとに単位が違って足せないため（第68期 `CarryUnits`）。
+        if (key >= UnitTally.CarryPoison && key <= UnitTally.CarryIdle)
+        {
+            TurnStatusAll++;
+            UnitState? writer = Mark.Owner;
+            if (writer is null) TurnStatusNone++;
+            else if (InOwnTurn(writer)) { TallyOf(writer).StatusOutInTurn++; TurnStatusIn++; }
+            else { TallyOf(writer).StatusOutOffTurn++; TurnStatusOff++; }
+        }
         UnitTally t = TallyOf(u);
         int[] amt = t.CarryAmount ??= new int[UnitTally.CarryKeys.Length];
         int[] cnt = t.CarryCount ??= new int[UnitTally.CarryKeys.Length];
@@ -2162,6 +2174,55 @@ public sealed class BattleContext
     /// <summary>印を戻す。</summary>
     public void EndTrait(TraitMark prev) => Mark = prev;
 
+    // =====================================================================================
+    // 第105期（手番の値段）。**どれも観測専用で、どの規則もこれを読まない。**
+    // =====================================================================================
+
+    /// <summary>
+    /// いま <see cref="TakeTurn"/> の枠の中にいる駒（入れ子なら内側）。<b>観測専用。</b>
+    /// 再行動（第104期）は <c>HandleDeath</c> の中から <c>TakeTurn</c> を呼ぶので入れ子になる
+    /// ——だから1本の変数ではなく<b>退避して戻す</b>形で持つ。
+    /// </summary>
+    public UnitState? TurnActor { get; private set; }
+
+    /// <summary>
+    /// <b>その出力が「手番の中」で生まれたか。</b> 条件は3つの積で、
+    /// <b>この定義はここ1箇所にしか無い</b>（第105期 §2 の境界）:
+    /// <list type="number">
+    /// <item><see cref="TakeTurn"/> の枠の中であること</item>
+    /// <item><b>出どころがその枠の主であること</b>——棘の反撃は殴った側の枠の中で走るが
+    ///   出どころは棘の側なので外に落ちる</item>
+    /// <item>反撃（<see cref="InReaction"/>）・割り込み（<see cref="InInterrupt"/>）の中でないこと</item>
+    /// </list>
+    /// <c>OnTurnStart</c> は行動順ループの<b>外側</b>なので (1) で外れる。
+    /// </summary>
+    public bool InOwnTurn(UnitState? u)
+        => u is not null && ReferenceEquals(TurnActor, u) && !InReaction && !InInterrupt;
+
+    /// <summary>ログを一時的に黙らせる（売れた手番の判定が <c>CanAct</c> のログを二重に出さないため）。</summary>
+    private bool _quiet;
+
+    /// <summary>行動順ループが <see cref="TakeTurn"/> を呼んだ回数（自己検査 (c) の右辺）。</summary>
+    public int TurnLoopCalls;
+
+    /// <summary>
+    /// 出力の3分割の総計（自己検査 (d)）。<c>*All</c> は分割前の総量で、
+    /// <c>In + Off + None == All</c> が成り立つことを診断が検算する。
+    /// <c>None</c> は<b>誰のものでもない出力</b>——毒・燃焼の刻み（<c>source</c> が null）と、
+    /// 特性の印が立っていない箇所からの回復・状態異常の書き込み。
+    /// </summary>
+    public long TurnDmgAll, TurnDmgIn, TurnDmgOff, TurnDmgNone;
+    public long TurnHealAll, TurnHealIn, TurnHealOff, TurnHealNone;
+    public long TurnStatusAll, TurnStatusIn, TurnStatusOff, TurnStatusNone;
+
+    /// <summary>ダメージ1件を3分割の帳簿へ入れる（<see cref="ApplyDamage"/> から。<b>盤面には影響しない</b>）。</summary>
+    private void NoteTurnDamage(UnitState? source, int amount)
+    {
+        TurnDmgAll += amount;
+        if (source is null) { TurnDmgNone += amount; return; }
+        if (InOwnTurn(source)) TurnDmgIn += amount; else TurnDmgOff += amount;
+    }
+
     /// <summary>カウンタの読みを1件観測する（<see cref="UnitState.Counter"/> から来る）。</summary>
     internal void NoteProbeRead(UnitState u, string key)
     {
@@ -2334,7 +2395,7 @@ public sealed class BattleContext
     /// </summary>
     public void Log(string line, LogKind kind = LogKind.Action)
     {
-        if (!_verbose) return;
+        if (!_verbose || _quiet) return;
         int spaces = line.Length - line.TrimStart().Length;
         string text = line.Trim();
         _log.Add(new LogLine(kind, spaces / 2, text));
@@ -3460,12 +3521,18 @@ public sealed class BattleContext
 
         // 与ダメージは敵と味方を分けて数える。混ぜると破裂・生贄・吸いのような
         // 「味方を削ることで仕事をする駒」が出力の大きい優等生に見えてしまう。
+        NoteTurnDamage(source, amount);   // 第105期（3分割の総計。計数のみ）
         if (source is not null)
         {
             UnitTally st = TallyOf(source);
             st.Interventions++;
             if (isFriendlyFire || source.TeamId == target.TeamId) st.DamageToAlly += amount;
-            else st.DamageToEnemy += amount;
+            else
+            {
+                st.DamageToEnemy += amount;
+                // 第105期。**敵への与ダメだけを手番の中／外に割る**（味方への刃は出力ではない）。
+                if (InOwnTurn(source)) st.DmgOutInTurn += amount; else st.DmgOutOffTurn += amount;
+            }
         }
 
         UnitTally tt = TallyOf(target);
@@ -3610,6 +3677,41 @@ public sealed class BattleContext
     /// </returns>
     public TurnOutcome TakeTurn(UnitState actor)
     {
+        // 第105期。**中身は1文字も触っていない**——枠だけを被せて
+        // 「いま誰の手番か」を立て、帰ってきた種別を数える（観測専用）。
+        UnitState? prevActor = TurnActor;
+        TurnActor = actor;
+        UnitTally tt = TallyOf(actor);
+        tt.TurnsTaken++;
+        try
+        {
+            TurnOutcome outcome = TakeTurnCore(actor);
+            switch (outcome)
+            {
+                case TurnOutcome.Attack: tt.TurnAttacks++; break;
+                case TurnOutcome.Skill:  tt.TurnSkills++;  break;
+                case TurnOutcome.Charge: tt.TurnCharges++; break;
+                default:
+                    tt.TurnStalls++;
+                    // 「差し出した」かどうかは<b>買い手が通す判定</b>で見る（第103期の訂正）。
+                    // 印を落としてログを黙らせるのは、この問い合わせが観測を汚さないため
+                    // ——`CanAct` は Sluggish / Sever がログを出し、Sever は counter を読む。
+                    // **乱数は1つも引かない**（CanAct の4つの実装のどれも Roll を呼ばない）。
+                    TraitMark saveMark = Mark; Mark = default;
+                    bool wasQuiet = _quiet; _quiet = true;
+                    bool sold = Trait.SurrenderedTurn(this, actor);
+                    _quiet = wasQuiet; Mark = saveMark;
+                    if (sold) tt.TurnsSurrendered++;
+                    break;
+            }
+            return outcome;
+        }
+        finally { TurnActor = prevActor; }
+    }
+
+    /// <summary>手番の中身（第104期に切り出した本体。第105期に枠を被せた）。</summary>
+    private TurnOutcome TakeTurnCore(UnitState actor)
+    {
 
         if (actor.RawCounter(StatusKeys.Stun) > 0)
         {
@@ -3618,6 +3720,7 @@ public sealed class BattleContext
             if (DeepWatch) NoteDeepStalled(actor);
             actor.SetCounter(StatusKeys.Stun, 0);
             actor.SetCounter(StatusKeys.IdleTurn, Turn);
+            TallyOf(actor).StallStun++;   // 第105期（計数のみ）
             Log($"  {actor.Name} は痺れて動けない", LogKind.Status);
             return TurnOutcome.Stalled;
         }
@@ -3646,6 +3749,7 @@ public sealed class BattleContext
                 actor.RawCounter(ColossusTrait.BellyKey) - Colossus.SlumberThreshold);
             actor.SetCounter(StatusKeys.IdleTurn, Turn);
             TallyOf(actor).Slumbers++;
+            TallyOf(actor).StallSlumber++;           // 第105期（計数のみ）
             if (DeepWatch) NoteDeepStalled(actor);   // 第93期（計数のみ）
             Log($"  {actor.Name} は腹が満ちてまどろんだ", LogKind.Status);
             return TurnOutcome.Stalled;
@@ -3658,7 +3762,12 @@ public sealed class BattleContext
         UnitAction? act = actor.CurrentAction;
         ActionKind kind = act?.Kind ?? ActionKind.Attack;
 
-        bool canAct = actor.Traits.All(t => CanActProbed(t, actor, kind));
+        // 第105期。`All` の短絡とまったく同じ回数だけ `CanActProbed` を呼びつつ、
+        // **最初に否決した特性**を控える（潰れた内訳の「不動」を分けるため。計数のみ）。
+        Trait? vetoed = null;
+        foreach (Trait t in actor.Traits)
+            if (!CanActProbed(t, actor, kind)) { vetoed = t; break; }
+        bool canAct = vetoed is null;
         if (!canAct)
         {
             // 動けなかったことを記録する。ただし「差し出したターン」だけを数える。
@@ -3670,6 +3779,8 @@ public sealed class BattleContext
             // 混ぜると無限に停止する——不動の駒に `Attack` を含む `Actions` を
             // 与えてはいけない。周期がその要素で止まり、二度と先へ進まない。
             actor.SetCounter(StatusKeys.IdleTurn, Turn);
+            if (vetoed!.Id == TraitId.Immobile) TallyOf(actor).StallImmobile++;   // 第105期
+            else TallyOf(actor).StallCanAct++;
             if (DeepWatch) NoteDeepStalled(actor);   // 第93期（計数のみ）
             return TurnOutcome.Stalled;
         }
@@ -4356,6 +4467,19 @@ public sealed class BattleContext
         // 「誰が回復したか」を見たいときは Interventions / DamageToAlly の側を見る。
         TallyOf(target).Healed += target.Hp - before;
 
+        // 第105期。**配り手の側**にも同じ量を載せる（受け手側の <c>Healed</c> はそのまま）。
+        // 出どころは第94期 (T2) の印——`Heal` は源を引数で受け取らないので、
+        // 「いま実行中の特性の持ち主」が唯一の手掛かりになる。
+        // 印が立っていない箇所からの回復は<b>誰のものでもない出力</b>として数える。
+        {
+            int gained = target.Hp - before;
+            TurnHealAll += gained;
+            UnitState? healer = Mark.Owner;
+            if (healer is null) TurnHealNone += gained;
+            else if (InOwnTurn(healer)) { TallyOf(healer).HealOutInTurn += gained; TurnHealIn += gained; }
+            else { TallyOf(healer).HealOutOffTurn += gained; TurnHealOff += gained; }
+        }
+
         Emit(new BattleEvent
         {
             Kind = BattleEventKind.Heal,
@@ -4629,6 +4753,7 @@ public static class BattleEngine
                 if (!actor.IsAlive) continue;
                 if (!ctx.TeamAlive(ctx.Opponent(actor.TeamId))) break;
 
+                ctx.TurnLoopCalls++;   // 第105期・自己検査 (c)（計数のみ）
                 ctx.TakeTurn(actor);
             }
         }
@@ -4707,6 +4832,13 @@ public static class BattleEngine
             EncoreLiveWriters = ctx.EncoreLiveWriters,
             EncoreDeathsWithLiveWriter = ctx.EncoreDeathsWithLiveWriter,
             EncoreFired = ctx.EncoreFired,
+            TurnLoopCalls = ctx.TurnLoopCalls,
+            TurnDmgAll = ctx.TurnDmgAll, TurnDmgIn = ctx.TurnDmgIn,
+            TurnDmgOff = ctx.TurnDmgOff, TurnDmgNone = ctx.TurnDmgNone,
+            TurnHealAll = ctx.TurnHealAll, TurnHealIn = ctx.TurnHealIn,
+            TurnHealOff = ctx.TurnHealOff, TurnHealNone = ctx.TurnHealNone,
+            TurnStatusAll = ctx.TurnStatusAll, TurnStatusIn = ctx.TurnStatusIn,
+            TurnStatusOff = ctx.TurnStatusOff, TurnStatusNone = ctx.TurnStatusNone,
             EncoreAttack = ctx.EncoreAttack,
             EncoreSkill = ctx.EncoreSkill,
             EncoreCharge = ctx.EncoreCharge,

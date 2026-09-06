@@ -11,7 +11,7 @@
 
 | # | 引数名 | 型 | 既定値（実装） | `= default(T)` | 測った診断 | 期（design/） | CLAUDE.md |
 |--:|---|---|---|:-:|---|---|:-:|
-| 1 | `colossus` | `ColossusRule` | `ColossusRule { Percent = 90, DamagePerGain = 4, Regurgitate = True, Slumber = False, SlumberThreshold = 60, Refund = True, RefundPercent = 25 }` |  | `swap` / `gullet` / `guard` / `whet` / `miasma` | 第35期〜（10 期） | ○ |
+| 1 | `colossus` | `ColossusRule` | `ColossusRule { Percent = 90, DamagePerGain = 4, Regurgitate = True, Slumber = False, SlumberThreshold = 60, Refund = True, RefundPercent = 25 }` |  | `swap` / `gullet` / `guard` / `whet` / `miasma` | 第35期〜（11 期） | ○ |
 | 2 | `yoke` | `YokeRule` | `YokeRule { Cap = 25, Active = True }` |  | `curse` / `yoke` / `replay` / `wave2` | 第35期〜（7 期） | ○ |
 | 3 | `hush` | `HushRule` | `HushRule { Active = True }` |  | `curse` / `yoke` / `hush` / `replay` / `wave2` | 第35期〜（8 期） | ○ |
 | 4 | `martyr` | `MartyrRule` | `MartyrRule { RedirectPercent = 75 }` |  | `curse` / `guard` / `gather` | 第35期〜（6 期） | ○ |
@@ -40,10 +40,10 @@
 | 27 | `woundIgnite` | `IgniteRule` | `IgniteRule { Enabled = True }` |  | `audit` / `derive` / `curse` / `mender` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `cross` / `demo` | 第87期〜（6 期） | ○ |
 | 28 | `gather` | `GatherRule` | `GatherRule { Enabled = True }` |  | `audit` / `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `cross` / `demo` | 第89期〜（9 期） | ○ |
 | 29 | `soak` | `SoakRule` | `SoakRule { Poison = True, Burn = False, DullPerKind = 1 }` |  | `derive` / `curse` / `hex` / `soak` / `cross` | 第90期〜（8 期） | ○ |
-| 30 | `deep` | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` | 第93期〜（6 期） | ○ |
+| 30 | `deep` | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` | 第93期〜（7 期） | ○ |
 | 31 | `curse` | `CurseRule` | `CurseRule { Enabled = False, SharePercent = 50 }` |  | `curse` / `hex` | 第95期〜（2 期） | ○ |
-| 32 | `betray` | `BetrayRule` | `BetrayRule { Enabled = True, Respawn = True }` |  | `betray` | 第103期 | ○ |
-| 33 | `encore` | `EncoreRule` | `EncoreRule { Enabled = True }` |  | `encore` | 第104期 | ○ |
+| 32 | `betray` | `BetrayRule` | `BetrayRule { Enabled = True, Respawn = True }` |  | `betray` / `tempo` | 第103期〜（2 期） | ○ |
+| 33 | `encore` | `EncoreRule` | `EncoreRule { Enabled = True }` |  | `encore` / `tempo` | 第104期〜（2 期） | ○ |
 
 引数 33 本（`verbose` と観測子を除く）。
 
@@ -55,15 +55,15 @@
 | 型 | 既定値 | `Run` の引数 | 測った診断 | 期（design/） |
 |---|---|:-:|---|---|
 | `BearRule` | `BearRule { ArmorPerDull = 2 }` | ○ | `curse` / `dull` | 第42期〜（4 期） |
-| `BetrayRule` | `BetrayRule { Enabled = True, Respawn = True }` | ○ | `betray` | 第103期 |
+| `BetrayRule` | `BetrayRule { Enabled = True, Respawn = True }` | ○ | `betray` / `tempo` | 第103期〜（2 期） |
 | `BlazeRule` | `BlazeRule { Targets = Both, Allies = True, Foes = True }` | ○ | `blaze` | 第59期〜（4 期） |
 | `BoundaryRule` | `BoundaryRule { Choice = None, Plan = , Active = False }` |  | `chain` / `choice` | 第102期〜（2 期） |
-| `ColossusRule` | `ColossusRule { Percent = 90, DamagePerGain = 4, Regurgitate = True, Slumber = False, SlumberThreshold = 60, Refund = True, RefundPercent = 25 }` | ○ | `swap` / `gullet` / `guard` / `whet` / `miasma` | 第35期〜（10 期） |
+| `ColossusRule` | `ColossusRule { Percent = 90, DamagePerGain = 4, Regurgitate = True, Slumber = False, SlumberThreshold = 60, Refund = True, RefundPercent = 25 }` | ○ | `swap` / `gullet` / `guard` / `whet` / `miasma` | 第35期〜（11 期） |
 | `CreakRule` | `CreakRule { Threshold = 0, Source = Whet }` | ○ | `creak` / `traits` / `creak3` | 第66期〜（6 期） |
 | `CurseRule` | `CurseRule { Enabled = False, SharePercent = 50 }` | ○ | `curse` / `hex` | 第95期〜（2 期） |
-| `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` | 第93期〜（6 期） |
+| `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` | 第93期〜（7 期） |
 | `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` | ○ | `divert` | 第50期〜（5 期） |
-| `EncoreRule` | `EncoreRule { Enabled = True }` | ○ | `encore` | 第104期 |
+| `EncoreRule` | `EncoreRule { Enabled = True }` | ○ | `encore` / `tempo` | 第104期〜（2 期） |
 | `ExposeRule` | `ExposeRule { MaxPerBattle = 3 }` | ○ | `expose` / `creak3` | 第40期〜（6 期） |
 | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` | ○ | `curse` / `favor` / `turn` | 第58期〜（4 期） |
 | `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` | ○ | `finisher` | 第53期〜（3 期） |

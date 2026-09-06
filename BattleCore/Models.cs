@@ -1073,6 +1073,51 @@ public sealed class UnitTally
     /// </summary>
     public int GougeFires, GougeOut;
 
+    // ------------------------------------------------------------------------------------
+    // 第105期（手番の値段）。**どれも誰も読んで分岐しない。盤面には一切影響しない**
+    // （Whet* / Burn* / Carry* と同じ扱いで verbose 非依存）。診断 `tempo` だけが読む。
+    //
+    // **「手番の中」の定義は <see cref="BattleContext.InOwnTurn"/> の1箇所だけ**
+    // ——`TakeTurn` の枠の中で、かつ<b>その駒自身が出どころ</b>で、かつ反撃・割り込みの
+    // 中でないこと。棘の反撃は殴った側の `TakeTurn` の中で走るが出どころが違うので外、
+    // `OnTurnStart` は行動順ループの外側なので外になる。
+    // ------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// 回ってきた手番の数（<see cref="BattleContext.TakeTurn"/> を通った回数）。
+    /// <b>再行動（第104期・<c>EncoreRule</c>）を含む</b>——渡されているのは手番まるごとなので。
+    /// </summary>
+    public int TurnsTaken;
+
+    /// <summary>手番の内訳（<see cref="TurnOutcome"/> の4つ）。合計は <see cref="TurnsTaken"/>。</summary>
+    public int TurnAttacks, TurnSkills, TurnCharges, TurnStalls;
+
+    /// <summary>
+    /// 潰れた内訳。<c>StallStun</c> 痺れ／<c>StallSlumber</c> まどろみ／
+    /// <c>StallImmobile</c> 不動（<see cref="TraitId.Immobile"/> が拒んだ）／
+    /// <c>StallCanAct</c> それ以外の <c>CanAct</c> 偽。合計は <see cref="TurnStalls"/>。
+    /// </summary>
+    public int StallStun, StallSlumber, StallImmobile, StallCanAct;
+
+    /// <summary>
+    /// <b>売れた手番</b>——潰れた手番のうち <see cref="Trait.SurrenderedTurn"/> が真だった回数。
+    /// 第103期の訂正どおり、生の <c>IdleTurn</c> ではなく<b>買い手が通す判定のほう</b>を数える
+    /// （engine は <c>CanAct</c> が偽の駒にも <c>IdleTurn</c> を無条件に立てる）。
+    /// </summary>
+    public int TurnsSurrendered;
+
+    /// <summary>敵に与えたダメージのうち、手番の中／外で生んだ分（<see cref="DamageToEnemy"/> の内訳）。</summary>
+    public int DmgOutInTurn, DmgOutOffTurn;
+
+    /// <summary>この駒が回復させた HP（実際に増えた分）のうち、手番の中／外の分。<b>受け手ではなく配り手に載る。</b></summary>
+    public int HealOutInTurn, HealOutOffTurn;
+
+    /// <summary>
+    /// この駒が書いた状態異常の<b>回数</b>（毒・燃・痺・標・破片・傷・手番の7キー）のうち、手番の中／外の分。
+    /// <b>量ではなく回数</b>——キーごとに単位が違う（層／残T／回／量）ので足せない。
+    /// </summary>
+    public int StatusOutInTurn, StatusOutOffTurn;
+
     public void Add(UnitTally o)
     {
         // 第103期。**盤面には一切影響しない。**
@@ -1118,6 +1163,16 @@ public sealed class UnitTally
         if (o.AmpFirstIgniteTurn > 0 && (AmpFirstIgniteTurn == 0 || o.AmpFirstIgniteTurn < AmpFirstIgniteTurn)) AmpFirstIgniteTurn = o.AmpFirstIgniteTurn;
         IgnitePoisonDamage += o.IgnitePoisonDamage; IgnitePoisonTicks += o.IgnitePoisonTicks;
         GougeFires += o.GougeFires; GougeOut += o.GougeOut;
+        // 第105期。すべて単純加算（ターン番号を持つ列は1つも無い）。
+        TurnsTaken += o.TurnsTaken;
+        TurnAttacks += o.TurnAttacks; TurnSkills += o.TurnSkills;
+        TurnCharges += o.TurnCharges; TurnStalls += o.TurnStalls;
+        StallStun += o.StallStun; StallSlumber += o.StallSlumber;
+        StallImmobile += o.StallImmobile; StallCanAct += o.StallCanAct;
+        TurnsSurrendered += o.TurnsSurrendered;
+        DmgOutInTurn += o.DmgOutInTurn; DmgOutOffTurn += o.DmgOutOffTurn;
+        HealOutInTurn += o.HealOutInTurn; HealOutOffTurn += o.HealOutOffTurn;
+        StatusOutInTurn += o.StatusOutInTurn; StatusOutOffTurn += o.StatusOutOffTurn;
         Attacks += o.Attacks; Interventions += o.Interventions;
         DamageToEnemy += o.DamageToEnemy; DamageToAlly += o.DamageToAlly;
         DamageTaken += o.DamageTaken; TakenFromAlly += o.TakenFromAlly;
@@ -1475,6 +1530,31 @@ public sealed class BattleResult
     public required int EncoreDeathsWithLiveWriter { get; init; }
     /// <inheritdoc cref="EncoreWoundedDeaths"/>
     public required int EncoreFired { get; init; }
+
+    // ------------------------------------------------------------------------------------
+    // 第105期（手番の値段）。**required にしない**——既存の生成箇所を1つも触らないため。
+    // どれも観測専用で、どの規則もこれを読まない。
+    // ------------------------------------------------------------------------------------
+
+    /// <summary>行動順ループが <c>TakeTurn</c> を呼んだ回数（自己検査 (c) の右辺）。</summary>
+    public int TurnLoopCalls { get; init; }
+
+    /// <summary>
+    /// 出力の3分割の総計（自己検査 (d)）。<c>In + Off + None == All</c> が成り立つ。
+    /// ダメージ・回復は<b>量</b>、状態異常は<b>書き込みの回数</b>。
+    /// </summary>
+    public long TurnDmgAll { get; init; }
+    public long TurnDmgIn { get; init; }
+    public long TurnDmgOff { get; init; }
+    public long TurnDmgNone { get; init; }
+    public long TurnHealAll { get; init; }
+    public long TurnHealIn { get; init; }
+    public long TurnHealOff { get; init; }
+    public long TurnHealNone { get; init; }
+    public long TurnStatusAll { get; init; }
+    public long TurnStatusIn { get; init; }
+    public long TurnStatusOff { get; init; }
+    public long TurnStatusNone { get; init; }
     /// <inheritdoc cref="EncoreWoundedDeaths"/>
     public required int EncoreAttack { get; init; }
     /// <inheritdoc cref="EncoreWoundedDeaths"/>
