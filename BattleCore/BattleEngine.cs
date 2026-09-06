@@ -3414,6 +3414,141 @@ public sealed class BattleContext
         }
     }
 
+    /// <summary>
+    /// 1体ぶんの手番（第104期に <see cref="BattleEngine.Run"/> の行動順ループから切り出した）。
+    /// <b>痺れ／まどろみ／<c>CurrentAction</c>／<c>CanAct</c>／<c>PerformAttack</c>／
+    /// <c>Charge</c>／<c>OnAction</c> の分岐がここに全部ある。</b>
+    ///
+    /// <para><b>切り出しは挙動の変更を1つも含まない</b>——元の <c>continue</c> が <c>return</c> に、
+    /// ループ変数 <c>turn</c> が <see cref="Turn"/> に変わっただけ
+    /// （受け入れ条件: <c>compare</c> 305 セル 0 件）。</para>
+    ///
+    /// <para><b>ループ側に残したのは2つの番人だけ</b>——<c>!actor.IsAlive</c> の <c>continue</c> と、
+    /// 「相手チームが全滅したら <c>break</c>」。後者は<b>ループを抜ける</b>判断なので、
+    /// 手番の中身ではない。</para>
+    ///
+    /// <para><b>ここを外から呼ぶのは再行動（<c>EncoreRule</c>・第104期）だけ。</b>
+    /// 「通常攻撃をもう1回」ではなく<b>手番まるごと</b>を渡すのは、
+    /// 「素の通常攻撃しか振らない駒を減らす」方針があるため——
+    /// 現時点の刻み手（キリ・ノミ）は <c>Actions</c> を持たないので実質は通常攻撃1回だが、
+    /// あとで <c>Actions</c> を与えたときに<b>術も溜めもそのまま乗る</b>。</para>
+    /// </summary>
+    public void TakeTurn(UnitState actor)
+    {
+
+        if (actor.RawCounter(StatusKeys.Stun) > 0)
+        {
+            if (ScapegoatActive) NoteScapegoatSkip(actor);
+            // 第93期: 深手は**実際に行動したとき**だけ開く。止められた駒は延命する（§1 の予測）。
+            if (DeepWatch) NoteDeepStalled(actor);
+            actor.SetCounter(StatusKeys.Stun, 0);
+            actor.SetCounter(StatusKeys.IdleTurn, Turn);
+            Log($"  {actor.Name} は痺れて動けない", LogKind.Status);
+            return;
+        }
+
+        // まどろみ（第36期）: 腹が満ちた壁は、その手番を失う。
+        //
+        // **痺れとまったく同じ形で立てる。** engine 側で IdleTurn を立てて continue するので
+        // CanAct を1つも false にしない ＝ Trait.SurrenderedTurn が true のまま通り、
+        // 号令（ガン・次のターンに攻撃+8）と据え（バン・そのターンの被ダメ-50%）が
+        // そのまま買い取る。**CanAct のオーバーライドで書いてはいけない**——
+        // 不動（カド）・追い打ち（ハギ）と同じ扱いになって買い手が消える（Trait.SurrendersTurn 参照）。
+        //
+        // **手番だけを失う。** 巨躯の肩代わり・吐き戻しは ApplyDamage の中、
+        // 大喰らいの吸いは OnTurnStart（この行動順ループの外側）なので、どれも止まらない。
+        // 眠りが壁機能を止めると、壁が眠るほど味方が削られて更に眠る自滅ループになる。
+        //
+        // 腹は閾値ぶんだけ引く（0 に戻さない）。溜まり過ぎた分を次の眠りへ繰り越すので、
+        // 飲み込みの総量と眠りの回数が線形に結びつく（floor(飲み込み / N) 回眠る）。
+        //
+        // Colossus.Slumber を先に見るのは、既定（V0）で HasTrait の走査を
+        // 1回も走らせないため（layout は数百万戦を並列で回す。軛の Cap 判定と同じ作法）。
+        if (Colossus.Slumber && actor.HasTrait(TraitId.Colossus)
+            && actor.RawCounter(ColossusTrait.BellyKey) >= Colossus.SlumberThreshold)
+        {
+            actor.SetCounter(ColossusTrait.BellyKey,
+                actor.RawCounter(ColossusTrait.BellyKey) - Colossus.SlumberThreshold);
+            actor.SetCounter(StatusKeys.IdleTurn, Turn);
+            TallyOf(actor).Slumbers++;
+            if (DeepWatch) NoteDeepStalled(actor);   // 第93期（計数のみ）
+            Log($"  {actor.Name} は腹が満ちてまどろんだ", LogKind.Status);
+            return;
+        }
+
+        // **行動種別を先に決めてから CanAct を問う。** 「動けない」には二種類あって、
+        // 無力化（痺れ・のろま）は何をするのも止めるが、不動（カド）が止めているのは
+        // 攻撃だけ。何をしようとしているかが分からないと、この二つを区別できない。
+        // Actions を持たない駒は Attack で問われるので従来とまったく同じ答えになる。
+        UnitAction? act = actor.CurrentAction;
+        ActionKind kind = act?.Kind ?? ActionKind.Attack;
+
+        bool canAct = actor.Traits.All(t => CanActProbed(t, actor, kind));
+        if (!canAct)
+        {
+            // 動けなかったことを記録する。ただし「差し出したターン」だけを数える。
+            // 不動（カド）・追い打ち（ハギ）は最初から自分のターンに振らない型なので、
+            // ここで数えると号令・据えが無償の毎ターン収入になる（Trait.SurrendersTurn 参照）。
+            //
+            // **種別依存で弾かれたターンは周期を進めない**（下の ActionIndex++ は
+            // CanAct 通過後）。したがって `Actions` に「その駒が永久に実行できない種別」を
+            // 混ぜると無限に停止する——不動の駒に `Attack` を含む `Actions` を
+            // 与えてはいけない。周期がその要素で止まり、二度と先へ進まない。
+            actor.SetCounter(StatusKeys.IdleTurn, Turn);
+            if (DeepWatch) NoteDeepStalled(actor);   // 第93期（計数のみ）
+            return;
+        }
+
+        if (act is null)
+        {
+            PerformAttack(actor);   // 従来経路。Actions を持たない駒はここしか通らない
+            if (DeepWatch) NoteDeepAction(actor);    // 第93期 §2-3: 実際に行動した直後
+            return;
+        }
+
+        // 周期を進めるのは「手番が回ってきたとき」だけ。痺れ・CanAct 偽で飛ばされた
+        // ターンでは進めない。飛ばされたのは行動ではなく手番そのものなので、
+        // 溜めの途中で痺れても溜めは解けず、続きから再開する。
+        actor.ActionIndex++;
+
+        if (act.Kind == ActionKind.Charge)
+        {
+            // **IdleTurn を立てない。** 溜めは「行動できない」ではなく
+            // 「構造的に行動しない」——痺れ・鈍足と同じ扱いにすると、据え・号令が
+            // 溜めを無償の毎ターン収入として拾う（上の :1015 と同じ問題が敵側で再現する）。
+            EmitCharge(actor, act, actor.CurrentAction);
+            TallyOf(actor).Charges++;
+            Log($"  {actor.Name} は{act.Label ?? "力を溜めている"}", LogKind.Status);
+            if (DeepWatch) NoteDeepAction(actor);    // 第93期 §2-3
+            return;
+        }
+
+        if (act.Kind == ActionKind.Skill)
+        {
+            // **攻撃を消費する。** 攻撃もして効果も出すなら、いつ撃つかに意味は出ない
+            // （OnTurnStart を別の場所へ書き写しただけになる。第11期 Phase BB）。
+            //
+            // IdleTurn は立てない。振ってはいないが手番は使っているので、
+            // 号令・据えが買い取る「差し出したターン」ではない（溜めと同じ扱い）。
+            // 先にイベントとログを置いてから効果を流す。特性側のログが下に入って、
+            // 台本でも「撃った → 何が起きた」の順に読める。
+            EmitSkill(actor, act);
+            Log($"  {actor.Name} は{act.Label ?? "術を使った"}", LogKind.Action);
+            foreach (Trait t in actor.Traits.ToList())
+            {
+                TraitMark m = BeginTrait(t.Id, actor);   // 第94期 (T2) の印
+                t.OnAction(this, actor, act);
+                EndTrait(m);
+            }
+            if (DeepWatch) NoteDeepAction(actor);    // 第93期 §2-3
+            return;
+        }
+
+        PerformAttack(actor, attackPercent: act.AttackPercent,
+                          patternOverride: act.PatternOverride);
+        if (DeepWatch) NoteDeepAction(actor);        // 第93期 §2-3
+    }
+
     private void HandleDeath(UnitState dead, UnitState? killer)
     {
         dead.Hp = 0;
@@ -4313,117 +4448,7 @@ public static class BattleEngine
                 if (!actor.IsAlive) continue;
                 if (!ctx.TeamAlive(ctx.Opponent(actor.TeamId))) break;
 
-                if (actor.RawCounter(StatusKeys.Stun) > 0)
-                {
-                    if (ctx.ScapegoatActive) ctx.NoteScapegoatSkip(actor);
-                    // 第93期: 深手は**実際に行動したとき**だけ開く。止められた駒は延命する（§1 の予測）。
-                    if (ctx.DeepWatch) ctx.NoteDeepStalled(actor);
-                    actor.SetCounter(StatusKeys.Stun, 0);
-                    actor.SetCounter(StatusKeys.IdleTurn, turn);
-                    ctx.Log($"  {actor.Name} は痺れて動けない", LogKind.Status);
-                    continue;
-                }
-
-                // まどろみ（第36期）: 腹が満ちた壁は、その手番を失う。
-                //
-                // **痺れとまったく同じ形で立てる。** engine 側で IdleTurn を立てて continue するので
-                // CanAct を1つも false にしない ＝ Trait.SurrenderedTurn が true のまま通り、
-                // 号令（ガン・次のターンに攻撃+8）と据え（バン・そのターンの被ダメ-50%）が
-                // そのまま買い取る。**CanAct のオーバーライドで書いてはいけない**——
-                // 不動（カド）・追い打ち（ハギ）と同じ扱いになって買い手が消える（Trait.SurrendersTurn 参照）。
-                //
-                // **手番だけを失う。** 巨躯の肩代わり・吐き戻しは ApplyDamage の中、
-                // 大喰らいの吸いは OnTurnStart（この行動順ループの外側）なので、どれも止まらない。
-                // 眠りが壁機能を止めると、壁が眠るほど味方が削られて更に眠る自滅ループになる。
-                //
-                // 腹は閾値ぶんだけ引く（0 に戻さない）。溜まり過ぎた分を次の眠りへ繰り越すので、
-                // 飲み込みの総量と眠りの回数が線形に結びつく（floor(飲み込み / N) 回眠る）。
-                //
-                // ctx.Colossus.Slumber を先に見るのは、既定（V0）で HasTrait の走査を
-                // 1回も走らせないため（layout は数百万戦を並列で回す。軛の Cap 判定と同じ作法）。
-                if (ctx.Colossus.Slumber && actor.HasTrait(TraitId.Colossus)
-                    && actor.RawCounter(ColossusTrait.BellyKey) >= ctx.Colossus.SlumberThreshold)
-                {
-                    actor.SetCounter(ColossusTrait.BellyKey,
-                        actor.RawCounter(ColossusTrait.BellyKey) - ctx.Colossus.SlumberThreshold);
-                    actor.SetCounter(StatusKeys.IdleTurn, turn);
-                    ctx.TallyOf(actor).Slumbers++;
-                    if (ctx.DeepWatch) ctx.NoteDeepStalled(actor);   // 第93期（計数のみ）
-                    ctx.Log($"  {actor.Name} は腹が満ちてまどろんだ", LogKind.Status);
-                    continue;
-                }
-
-                // **行動種別を先に決めてから CanAct を問う。** 「動けない」には二種類あって、
-                // 無力化（痺れ・のろま）は何をするのも止めるが、不動（カド）が止めているのは
-                // 攻撃だけ。何をしようとしているかが分からないと、この二つを区別できない。
-                // Actions を持たない駒は Attack で問われるので従来とまったく同じ答えになる。
-                UnitAction? act = actor.CurrentAction;
-                ActionKind kind = act?.Kind ?? ActionKind.Attack;
-
-                bool canAct = actor.Traits.All(t => ctx.CanActProbed(t, actor, kind));
-                if (!canAct)
-                {
-                    // 動けなかったことを記録する。ただし「差し出したターン」だけを数える。
-                    // 不動（カド）・追い打ち（ハギ）は最初から自分のターンに振らない型なので、
-                    // ここで数えると号令・据えが無償の毎ターン収入になる（Trait.SurrendersTurn 参照）。
-                    //
-                    // **種別依存で弾かれたターンは周期を進めない**（下の ActionIndex++ は
-                    // CanAct 通過後）。したがって `Actions` に「その駒が永久に実行できない種別」を
-                    // 混ぜると無限に停止する——不動の駒に `Attack` を含む `Actions` を
-                    // 与えてはいけない。周期がその要素で止まり、二度と先へ進まない。
-                    actor.SetCounter(StatusKeys.IdleTurn, turn);
-                    if (ctx.DeepWatch) ctx.NoteDeepStalled(actor);   // 第93期（計数のみ）
-                    continue;
-                }
-
-                if (act is null)
-                {
-                    ctx.PerformAttack(actor);   // 従来経路。Actions を持たない駒はここしか通らない
-                    if (ctx.DeepWatch) ctx.NoteDeepAction(actor);    // 第93期 §2-3: 実際に行動した直後
-                    continue;
-                }
-
-                // 周期を進めるのは「手番が回ってきたとき」だけ。痺れ・CanAct 偽で飛ばされた
-                // ターンでは進めない。飛ばされたのは行動ではなく手番そのものなので、
-                // 溜めの途中で痺れても溜めは解けず、続きから再開する。
-                actor.ActionIndex++;
-
-                if (act.Kind == ActionKind.Charge)
-                {
-                    // **IdleTurn を立てない。** 溜めは「行動できない」ではなく
-                    // 「構造的に行動しない」——痺れ・鈍足と同じ扱いにすると、据え・号令が
-                    // 溜めを無償の毎ターン収入として拾う（上の :1015 と同じ問題が敵側で再現する）。
-                    ctx.EmitCharge(actor, act, actor.CurrentAction);
-                    ctx.TallyOf(actor).Charges++;
-                    ctx.Log($"  {actor.Name} は{act.Label ?? "力を溜めている"}", LogKind.Status);
-                    if (ctx.DeepWatch) ctx.NoteDeepAction(actor);    // 第93期 §2-3
-                    continue;
-                }
-
-                if (act.Kind == ActionKind.Skill)
-                {
-                    // **攻撃を消費する。** 攻撃もして効果も出すなら、いつ撃つかに意味は出ない
-                    // （OnTurnStart を別の場所へ書き写しただけになる。第11期 Phase BB）。
-                    //
-                    // IdleTurn は立てない。振ってはいないが手番は使っているので、
-                    // 号令・据えが買い取る「差し出したターン」ではない（溜めと同じ扱い）。
-                    // 先にイベントとログを置いてから効果を流す。特性側のログが下に入って、
-                    // 台本でも「撃った → 何が起きた」の順に読める。
-                    ctx.EmitSkill(actor, act);
-                    ctx.Log($"  {actor.Name} は{act.Label ?? "術を使った"}", LogKind.Action);
-                    foreach (Trait t in actor.Traits.ToList())
-                    {
-                        TraitMark m = ctx.BeginTrait(t.Id, actor);   // 第94期 (T2) の印
-                        t.OnAction(ctx, actor, act);
-                        ctx.EndTrait(m);
-                    }
-                    if (ctx.DeepWatch) ctx.NoteDeepAction(actor);    // 第93期 §2-3
-                    continue;
-                }
-
-                ctx.PerformAttack(actor, attackPercent: act.AttackPercent,
-                                  patternOverride: act.PatternOverride);
-                if (ctx.DeepWatch) ctx.NoteDeepAction(actor);        // 第93期 §2-3
+                ctx.TakeTurn(actor);
             }
         }
 
