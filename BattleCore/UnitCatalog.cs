@@ -663,7 +663,7 @@ public static class UnitCatalog
         Attack = 12,
         Speed = 12,
         Traits = new[] { TraitId.Rend, TraitId.ThinBlade },   // 薄刃＝代金（第74期に切り出した。挙動は同じ）
-        PlusText = "攻撃した相手に傷を刻む",
+        PlusText = "攻撃した相手に傷を刻み、刻んだ相手が倒れると、もう一度動く",
         MinusText = "刃が薄く、与えるダメージは常に1",
         Flavor = "斬れるが、断てない。だから誰も戦力として数えなかった。"
     };
@@ -721,7 +721,7 @@ public static class UnitCatalog
         Attack = 10,
         Speed = 7,
         Traits = new[] { TraitId.Carve, TraitId.Fixate },
-        PlusText = "攻撃した相手に傷を刻み、相手の傷1つにつき2を上乗せする",
+        PlusText = "攻撃した相手に傷を刻み、相手の傷1つにつき2を上乗せする。刻んだ相手が倒れると、もう一度動く",
         MinusText = "一度狙った敵が倒れるまで、他の敵に目を向けられない",
         Flavor = "同じ場所を彫り続けることしかできない。彫り上がる頃には、戦は終わっている。"
     };

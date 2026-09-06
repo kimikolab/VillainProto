@@ -149,6 +149,23 @@ public static class BurnRules
     public const int Turns = 3;
 }
 
+/// <summary>
+/// 1体ぶんの手番で何が起きたか（第104期）。<see cref="BattleContext.TakeTurn"/> の戻り値で、
+/// <b>盤面には一切影響しない</b>——再行動（<c>EncoreRule</c>）の内訳（§3-3 の Q4）を
+/// 前後の差分ではなく直接数えるためだけにある。
+/// </summary>
+public enum TurnOutcome
+{
+    /// <summary>痺れ・まどろみ・<c>CanAct</c> 偽で潰れた（手番を1つも使っていない）。</summary>
+    Stalled,
+    /// <summary>通常攻撃を振った（<c>Actions</c> 無しの従来経路と <c>ActionKind.Attack</c>）。</summary>
+    Attack,
+    /// <summary>術を撃った（<c>ActionKind.Skill</c>）。</summary>
+    Skill,
+    /// <summary>力を溜めた（<c>ActionKind.Charge</c>）。</summary>
+    Charge
+}
+
 public sealed class BattleContext
 {
     /// <summary>反撃処理の最中か。反撃が反撃を呼ぶ無限連鎖を止めるために見る。</summary>
@@ -375,11 +392,14 @@ public sealed class BattleContext
             if (tt.DeepBundleFirstTurn == 0) tt.DeepBundleFirstTurn = Math.Max(1, Turn);
             Log($"    {target.Name} の傷が束ねられて深手になった（傷 {w} → 深手）", LogKind.Highlight);
             EmitStatusGain(target, StatusKeys.Deep, 1, writer);   // 第97期・表示専用
+            // 第104期: **束ねは「書けた」側**（深手は WoundDepthOf / IsWounded が傷として読む）。
+            NoteWoundWriter(target, writer);
             return -1;
         }
 
         target.SetCounter(StatusKeys.Wound, w);
         EmitStatusGain(target, StatusKeys.Wound, amount, writer);   // 第97期・表示専用
+        NoteWoundWriter(target, writer);   // 第104期。**版に依らない記録。盤面には影響しない**
         return w;
     }
 
@@ -1783,6 +1803,155 @@ public sealed class BattleContext
     public BetrayRule Betray { get; }
 
     /// <summary>
+    /// 再行動の規則（第104期・<see cref="EncoreRule"/>）。
+    /// <b>既定は <see cref="EncoreRule.Default"/> ＝再行動しない</b>ので、
+    /// <see cref="NoteEncore"/> は計数だけを取って必ず即座に返る
+    /// （<c>compare</c> 305 セルが 0 件であることが検算）。
+    /// </summary>
+    public EncoreRule Encore { get; }
+
+    /// <summary>
+    /// 再行動の中か（★ 1ホップ）。<b>再行動から生まれた撃破では、さらに再行動しない。</b>
+    /// <see cref="Relaying"/> / <see cref="Shoving"/> と同じ形の再入ガードで、
+    /// <c>Trait</c> の static に置いてはいけない（Trait は共有シングルトンで
+    /// <c>layout</c> は戦闘を並列実行する）。
+    /// </summary>
+    public bool Encoring;
+
+    // =====================================================================================
+    // 第104期 —— 再行動（EncoreRule）の計数。**盤面には一切影響しない。**
+    //
+    // 門（§2-2）の 1・2 は**版に依らず数える**（第86期の X1P・第90期の作法）——
+    // 紙の分子を V0 の実測から取るため。3 以降は規則が有効なときだけ立つ。
+    // =====================================================================================
+
+    /// <summary>門 1 —— 傷を刻まれた駒が倒れた回数（味方側も含む全体）と、そのうち<b>敵</b>の駒。</summary>
+    public int EncoreWoundedDeaths, EncoreWoundedFoeDeaths;
+
+    /// <summary>
+    /// 門 2 —— そのとき<b>生存していて敵陣にいた</b>刻み手の延べ数と、
+    /// 1体以上いた死の件数。<b>0 なら再行動は起きない。</b>
+    /// </summary>
+    public int EncoreLiveWriters, EncoreDeathsWithLiveWriter;
+
+    /// <summary>門 3 —— 再行動が走った回数（<see cref="TakeTurn"/> を呼んだ回数）。</summary>
+    public int EncoreFired;
+
+    /// <summary>Q4 —— 再行動が何をしたかの内訳（通常攻撃／術／溜め／潰れた）。</summary>
+    public int EncoreAttack, EncoreSkill, EncoreCharge, EncoreStalled;
+
+    /// <summary>自己検査 (d) —— ★ 1ホップで抑えた回数。</summary>
+    public int EncoreBlockedHop;
+
+    /// <summary>自己検査 (g) —— <b>敵側</b>で再行動が起きた回数。<b>0 でなければならない。</b></summary>
+    public int EncoreOnEnemySide;
+
+    /// <summary>
+    /// 自己検査 (h) —— 再行動した駒のうち <c>Actions</c> を持っていた回数。
+    /// <b>持っていれば <c>ActionIndex</c> が1つ進む</b>（現行のキリ・ノミは持たないので 0）。
+    /// </summary>
+    public int EncoreWithActions;
+
+    /// <summary>死の連鎖の中で蘇ったので再行動させなかった回数。</summary>
+    public int EncoreRevivedSkip;
+
+    /// <summary>Q5 —— 餌（第103期）が刻まれて倒れた回数と、そこから走った再行動の回数。</summary>
+    public int EncoreFodderDeaths, EncoreFromFodder;
+
+    /// <summary>
+    /// 刻み手を記録する（第104期）。<b>版に依らない</b>——規則が無効でも記録は取る。
+    /// <para>挿入順・重複なし。<see cref="Wound"/> が<b>実際に傷を書いた</b>ときだけ呼ぶ。</para>
+    /// </summary>
+    private static void NoteWoundWriter(UnitState target, UnitState writer)
+    {
+        var list = target.WoundWriters ??= new List<UnitState>(2);
+        if (!list.Contains(writer)) list.Add(writer);
+    }
+
+    /// <summary>
+    /// 傷が減った箇所から呼ぶ（第104期）。<b>傷が 0 になったら刻んだ事実も消える。</b>
+    ///
+    /// <para>呼び出し口は<b>4つだけ</b>——断ち（<c>SeverTrait</c>・0 に戻す）／
+    /// 縫い（<c>SutureTrait</c> の塞ぎ・1 引く）／継ぎ当て（<c>MenderTrait</c> の塞ぎ・1 引く）／
+    /// 引き取り（<c>GatherTrait</c>）の <b>donor 側</b>（1 引く）。
+    /// 加算はすべて <see cref="Wound"/> を通るのでここには来ない。</para>
+    ///
+    /// <para><b>束ねられた深手は消さない</b>——<c>WoundDepthOf</c> / <c>IsWounded</c> が
+    /// 「傷を持っている」と読む側なので、記録もそちらに揃える。</para>
+    /// </summary>
+    public void NoteWoundDrop(UnitState u)
+    {
+        if (u.WoundWriters is null) return;
+        if (u.RawCounter(StatusKeys.Wound) > 0) return;
+        if (u.RawCounter(StatusKeys.Deep) > 0) return;
+        u.WoundWriters = null;
+    }
+
+    /// <summary>
+    /// 再行動（第104期）。<b>傷を刻まれた駒が倒れたら、刻み手が手番をもう一度得る。</b>
+    ///
+    /// <para><b>死亡通知の固定順（<c>OnKill</c> → <c>OnDeath</c> → <c>OnAnyDeath</c> →
+    /// <c>OnAllyDeath</c>）が全部終わってから走らせる</b>——連鎖の途中に手番を差し込むと、
+    /// 墓守・分裂・蘇生のあいだに不定な行動が挟まって固定順が壊れる。
+    /// 全部終わった後なら、再行動が見るのは「死の連鎖が解決し切った盤面」になる。</para>
+    ///
+    /// <para><b>順序はスロット昇順</b>（記録の挿入順ではない。決定的にするため）。
+    /// <b><c>ctx.PickOne</c> を使わない</b>——候補2個以上で <c>Roll</c> を消費して
+    /// 乱数列が動く（第89期 (h)）。</para>
+    ///
+    /// <para><b>傷は消費しない。</b> 倒れた駒の傷はどのみち消える。</para>
+    /// </summary>
+    private void NoteEncore(UnitState dead)
+    {
+        List<UnitState>? writers = dead.WoundWriters;
+        if (writers is null || writers.Count == 0) return;
+
+        // 門 1・2 は**版に依らない**（規則の分岐より手前）。
+        EncoreWoundedDeaths++;
+        if (dead.TeamId == EnemyTeam) EncoreWoundedFoeDeaths++;
+        bool fodder = BetrayedTrait.IsFodder(dead);
+        if (fodder) EncoreFodderDeaths++;
+
+        List<UnitState> live = writers
+            .Where(w => w.IsAlive && w.TeamId != dead.TeamId)
+            .OrderBy(w => w.Slot)
+            .ToList();
+        EncoreLiveWriters += live.Count;
+        if (live.Count > 0) EncoreDeathsWithLiveWriter++;
+
+        if (!Encore.Enabled || live.Count == 0) return;
+        if (dead.IsAlive) { EncoreRevivedSkip++; return; }   // 連鎖の中で蘇っていたら動かさない
+        if (Encoring) { EncoreBlockedHop += live.Count; return; }   // ★ 1ホップ
+
+        Encoring = true;
+        try
+        {
+            foreach (UnitState w in live)
+            {
+                if (!w.IsAlive) continue;                          // 連鎖の途中で落ちうる
+                if (!TeamAlive(Opponent(w.TeamId))) break;         // 行動順ループと同じ番人
+                EncoreFired++;
+                if (w.TeamId != PlayerTeam) EncoreOnEnemySide++;   // 自己検査 (g)
+                if (w.Def.Actions is { Count: > 0 }) EncoreWithActions++;   // 自己検査 (h)
+                if (fodder) EncoreFromFodder++;                    // Q5
+                TallyOf(w).EncoreFires++;
+                Log($"    {w.Name} は刻んだ獲物が倒れるのを見て、もう一度踏み込む", LogKind.Highlight);
+                switch (TakeTurn(w))
+                {
+                    case TurnOutcome.Attack: EncoreAttack++; break;
+                    case TurnOutcome.Skill:  EncoreSkill++;  break;
+                    case TurnOutcome.Charge: EncoreCharge++; break;
+                    default:
+                        EncoreStalled++;
+                        TallyOf(w).EncoreStalls++;
+                        break;
+                }
+            }
+        }
+        finally { Encoring = false; }
+    }
+
+    /// <summary>
     /// 軋み（第66期）の在庫の記録。<b>盤面には一切影響しない。</b>
     /// <see cref="TraitId.Displaced"/> 保持者の <see cref="UnitState.AtkBonus"/> が動いた直後に呼ぶ
     /// ——上げる経路は<b>軋み自身と <see cref="Whet"/> の2本だけ</b>（ヨミは自己強化を1つも持たない）。
@@ -1849,7 +2018,8 @@ public sealed class BattleContext
                          MendRule? mend = null, IgniteRule? woundIgnite = null,
                          GatherRule? gather = null, SoakRule? soak = null,
                          DeepRule? deep = null, CurseRule? curse = null,
-                         BetrayRule? betray = null, CounterProbe? probe = null)
+                         BetrayRule? betray = null, EncoreRule? encore = null,
+                         CounterProbe? probe = null)
     {
         _rng = new Random(seed);
         Probe = probe;          // 第94期 (T2)。**既定 null。診断だけが渡す。**
@@ -1888,6 +2058,7 @@ public sealed class BattleContext
         Deep = deep ?? DeepRule.Default;
         Curse = curse ?? CurseRule.Default;
         Betray = betray ?? BetrayRule.Default;
+        Encore = encore ?? EncoreRule.Default;
     }
 
     // =====================================================================================
@@ -3433,7 +3604,11 @@ public sealed class BattleContext
     /// 現時点の刻み手（キリ・ノミ）は <c>Actions</c> を持たないので実質は通常攻撃1回だが、
     /// あとで <c>Actions</c> を与えたときに<b>術も溜めもそのまま乗る</b>。</para>
     /// </summary>
-    public void TakeTurn(UnitState actor)
+    /// <returns>
+    /// その手番で何が起きたか（第104期に足した。<b>盤面には一切影響しない</b>——
+    /// 再行動（<c>EncoreRule</c>）の Q4 の内訳を、差分ではなく直接数えるため）。
+    /// </returns>
+    public TurnOutcome TakeTurn(UnitState actor)
     {
 
         if (actor.RawCounter(StatusKeys.Stun) > 0)
@@ -3444,7 +3619,7 @@ public sealed class BattleContext
             actor.SetCounter(StatusKeys.Stun, 0);
             actor.SetCounter(StatusKeys.IdleTurn, Turn);
             Log($"  {actor.Name} は痺れて動けない", LogKind.Status);
-            return;
+            return TurnOutcome.Stalled;
         }
 
         // まどろみ（第36期）: 腹が満ちた壁は、その手番を失う。
@@ -3473,7 +3648,7 @@ public sealed class BattleContext
             TallyOf(actor).Slumbers++;
             if (DeepWatch) NoteDeepStalled(actor);   // 第93期（計数のみ）
             Log($"  {actor.Name} は腹が満ちてまどろんだ", LogKind.Status);
-            return;
+            return TurnOutcome.Stalled;
         }
 
         // **行動種別を先に決めてから CanAct を問う。** 「動けない」には二種類あって、
@@ -3496,14 +3671,14 @@ public sealed class BattleContext
             // 与えてはいけない。周期がその要素で止まり、二度と先へ進まない。
             actor.SetCounter(StatusKeys.IdleTurn, Turn);
             if (DeepWatch) NoteDeepStalled(actor);   // 第93期（計数のみ）
-            return;
+            return TurnOutcome.Stalled;
         }
 
         if (act is null)
         {
             PerformAttack(actor);   // 従来経路。Actions を持たない駒はここしか通らない
             if (DeepWatch) NoteDeepAction(actor);    // 第93期 §2-3: 実際に行動した直後
-            return;
+            return TurnOutcome.Attack;
         }
 
         // 周期を進めるのは「手番が回ってきたとき」だけ。痺れ・CanAct 偽で飛ばされた
@@ -3520,7 +3695,7 @@ public sealed class BattleContext
             TallyOf(actor).Charges++;
             Log($"  {actor.Name} は{act.Label ?? "力を溜めている"}", LogKind.Status);
             if (DeepWatch) NoteDeepAction(actor);    // 第93期 §2-3
-            return;
+            return TurnOutcome.Charge;
         }
 
         if (act.Kind == ActionKind.Skill)
@@ -3541,12 +3716,13 @@ public sealed class BattleContext
                 EndTrait(m);
             }
             if (DeepWatch) NoteDeepAction(actor);    // 第93期 §2-3
-            return;
+            return TurnOutcome.Skill;
         }
 
         PerformAttack(actor, attackPercent: act.AttackPercent,
                           patternOverride: act.PatternOverride);
         if (DeepWatch) NoteDeepAction(actor);        // 第93期 §2-3
+        return TurnOutcome.Attack;
     }
 
     private void HandleDeath(UnitState dead, UnitState? killer)
@@ -3640,6 +3816,10 @@ public sealed class BattleContext
             if (killer is not null && killer.HasTrait(TraitId.Overreach)
                 && killer.RawCounter(StatusKeys.Stun) > bfS) BetrayFireOverreach++;
         }
+
+        // 再行動（第104期・EncoreRule）。**死亡通知の固定順が全部終わってから**走らせる。
+        // 既定では計数だけを取って即座に返る（`compare` 305 セル 0 件が検算）。
+        NoteEncore(dead);
     }
 
     /// <summary>
@@ -4311,13 +4491,13 @@ public static class BattleEngine
                                    IgniteRule? woundIgnite = null, GatherRule? gather = null,
                                    SoakRule? soak = null, DeepRule? deep = null,
                                    CurseRule? curse = null, BetrayRule? betray = null,
-                                   CounterProbe? probe = null)
+                                   EncoreRule? encore = null, CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, spillWound, mend, woundIgnite, gather, soak, deep,
-               curse, betray, probe);
+               curse, betray, encore, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -4344,13 +4524,14 @@ public static class BattleEngine
                                    MendRule? mend = null, IgniteRule? woundIgnite = null,
                                    GatherRule? gather = null, SoakRule? soak = null,
                                    DeepRule? deep = null, CurseRule? curse = null,
-                                   BetrayRule? betray = null, CounterProbe? probe = null)
+                                   BetrayRule? betray = null, EncoreRule? encore = null,
+                                   CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, spillWound, mend, woundIgnite, gather, soak, deep, curse,
-                                    betray, probe);
+                                    betray, encore, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -4521,6 +4702,21 @@ public static class BattleEngine
             BetrayIdleSellable = ctx.BetrayIdleSellable,
             BetrayRevived = ctx.BetrayRevived,
             BetrayKilled = ctx.BetrayKilled,
+            EncoreWoundedDeaths = ctx.EncoreWoundedDeaths,
+            EncoreWoundedFoeDeaths = ctx.EncoreWoundedFoeDeaths,
+            EncoreLiveWriters = ctx.EncoreLiveWriters,
+            EncoreDeathsWithLiveWriter = ctx.EncoreDeathsWithLiveWriter,
+            EncoreFired = ctx.EncoreFired,
+            EncoreAttack = ctx.EncoreAttack,
+            EncoreSkill = ctx.EncoreSkill,
+            EncoreCharge = ctx.EncoreCharge,
+            EncoreStalled = ctx.EncoreStalled,
+            EncoreBlockedHop = ctx.EncoreBlockedHop,
+            EncoreOnEnemySide = ctx.EncoreOnEnemySide,
+            EncoreWithActions = ctx.EncoreWithActions,
+            EncoreRevivedSkip = ctx.EncoreRevivedSkip,
+            EncoreFodderDeaths = ctx.EncoreFodderDeaths,
+            EncoreFromFodder = ctx.EncoreFromFodder,
             BetrayFireAttack = ctx.BetrayFireAttack,
             BetrayFirePoison = ctx.BetrayFirePoison,
             BetrayFireOverreach = ctx.BetrayFireOverreach,

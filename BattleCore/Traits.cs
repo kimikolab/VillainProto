@@ -626,6 +626,7 @@ public sealed class GuardianTrait : RedirectGainTrait
         // Q5: 引き取りが**深手化の後**に走ったか（受け手が既に深手か）を数える。
         if (self.Counter(StatusKeys.Deep) > 0) t.DeepGatherAfter++;
         donor.SetCounter(StatusKeys.Wound, best - 1);
+        ctx.NoteWoundDrop(donor);   // 第104期: 傷が 0 になったら刻んだ事実も消える
         int after = ctx.Wound(self, 1, self, WoundRoute.Gather);
         t.GatherTaken++;
         t.GatherDepthSum += Math.Max(after, 0);
@@ -1619,6 +1620,53 @@ public readonly record struct BetrayRule(bool Enabled, bool Respawn = true)
     public static BetrayRule Default => new(true, true);
 }
 
+/// <summary>
+/// 再行動（第104期）。<b>傷を刻まれた敵が倒れたら、その敵に傷を刻んだ駒が手番をもう一度得る。
+/// 倒したのが誰かは問わない。</b>
+///
+/// <para><b>精算は二値の鍵にする</b>（§0-2）——傷の深さにも数にも比例させない。
+/// 「数 × 係数」にすると単価の壁に当たる（第84・86・89期が3回落ちた場所）。
+/// 13期で唯一天井を越えた第87期の着火が<b>「傷があるかどうか」の二値の鍵</b>だったのに倣う。</para>
+///
+/// <para><b>傷は移らない。刻み手が動く。</b> 恩恵を受けるのが傷軸<b>本人</b>で、
+/// 強い駒に再行動権を渡す係にならない——キリは <c>ThinBlade</c> で与ダメが常に 1 なので
+/// 自分では倒せず、<b>キリが刻んで、誰かが仕留めて、キリがまた刻む</b>という受け渡しになる。</para>
+///
+/// <para><b>上限を付けない</b>（§0-4）。傷を書けるのは裂き（キリ）と刻み（ノミ）の2枚だけで、
+/// どちらも与ダメが 1〜2、刻む対象もそもそも少ない（在庫 0.47/T）。
+/// <b>上限は壊れてから付ける</b>——先に付けると効いているかどうかが分からなくなる
+/// （第85期の巻き込み則・第96期の呪いも上限なしで測って、どこで止まるかを実測から知った）。</para>
+///
+/// <para><b>1ホップ。</b> 再行動の中で起きた撃破からは、さらに再行動しない
+/// （<see cref="BattleContext.Encoring"/>。<c>ThornsTrait</c> の <c>InReaction</c> と同じ形）。</para>
+///
+/// <para><b>刻み手の記録（<see cref="UnitState.WoundWriters"/>）は版に依らず取る</b>
+/// ——門と紙の分子を V0 の実測から取るため（第86期の X1P・第90期の作法）。
+/// <b>盤面には一切影響しない</b>ので、既定では <c>compare</c> 305 セルが 0 件。</para>
+/// </summary>
+public readonly record struct EncoreRule(bool Enabled)
+{
+    /// <summary>
+    /// 既定は<b>再行動する</b>——<b>第104期に採用した</b>。
+    ///
+    /// <para>主判定 Q1-1 は <b>A ＝ キリで のろまの巨兵ドルガが 2 位・Δ相乗 +1.59pt</b>
+    /// （ノイズ床 1.57pt・2系列とも正 +1.81 / +1.37）。<b>ぎりぎりである</b>
+    /// ——A ＝ ノミ では 1 位（+5.25）だがノイズ床が 7.42pt に上がって届かない。
+    /// Q1-2 は両方 3 体で線ちょうど、Q2 は 2 位 / 1 位。
+    /// 拒否権1（−10.0pt 以上落ちた行）は 0 件、拒否権2 は第五波 38.0 → <b>40.9%</b>（歯止め 33.2）。</para>
+    ///
+    /// <para><b>採った本当の理由は Q2 のほう</b>——傷軸の 8 行のうち <b>6 行が動き</b>、
+    /// <c>刻み (ノミ単騎)</c> 75.9 → <b>97.9</b>、<c>刻み×抉り</c> 66.0 → <b>86.5</b>、
+    /// <c>刻み×断ち</c> 75.2 → <b>81.9</b>、<c>刻み×縫い</c> 69.4 → <b>74.9</b>。
+    /// <b>13期かけて動かなかった傷軸が、供給でも単価でもなく「手番」で動いた。</b></para>
+    ///
+    /// <para><b>キリの行だけが 1 ビットも動かない</b>（<c>裂き (キリ×エグ)</c> ±0.0）
+    /// ——薄刃で与ダメが常に 1 なので<b>自分が刻んだ敵を自分では倒せず</b>、
+    /// 相方のエグが倒す敵はキリが刻んだ相手とは限らない（再行動 0.00〜1.53 回/戦）。</para>
+    /// </summary>
+    public static EncoreRule Default => new(true);
+}
+
 public enum PoisonRoute
 {
     /// <summary>瘴気（グザ・毎ターン敵全体）。</summary>
@@ -2074,7 +2122,7 @@ public sealed class MenderTrait : Trait
         // 渇き下でも走る（第39期・ハリの塞ぎと同じ作法。原因ではなく結果で解決しない）。
         // 第93期: **深手は塞げない**（解除はこの期に作らない）ので raw の傷が残っているときだけ引く。
         // 深手が無ければ wRaw == w なので、既定では1ビットも違わない。
-        if (seal && wRaw > 0) patient.SetCounter(StatusKeys.Wound, wRaw - 1);
+        if (seal && wRaw > 0) { patient.SetCounter(StatusKeys.Wound, wRaw - 1); ctx.NoteWoundDrop(patient); }   // 第104期: 傷が 0 になったら刻んだ事実も消える
     }
 }
 
@@ -4542,6 +4590,7 @@ public sealed class SeverTrait : Trait
 
         // 消費。倒れていても 0 に戻すのは同じ（蘇生で戻ってきた駒が古い傷を抱えない）。
         target.SetCounter(StatusKeys.Wound, 0);
+        ctx.NoteWoundDrop(target);   // 第104期: 傷が 0 になったら刻んだ事実も消える
     }
 }
 
@@ -4667,7 +4716,7 @@ public sealed class SutureTrait : Trait
         // 塞ぎ。**糸を通したほう**の傷を**1つだけ**引く（全部消すのは断ちの側の役で、こちらは維持読み）。
         // 第93期: **深手は塞げない**ので raw の傷が残っているときだけ引く（既定では w と一致する）。
         int donorRaw = donor.Counter(StatusKeys.Wound);
-        if (seal && donorRaw > 0) donor.SetCounter(StatusKeys.Wound, donorRaw - 1);
+        if (seal && donorRaw > 0) { donor.SetCounter(StatusKeys.Wound, donorRaw - 1); ctx.NoteWoundDrop(donor); }   // 第104期: 傷が 0 になったら刻んだ事実も消える
     }
 }
 

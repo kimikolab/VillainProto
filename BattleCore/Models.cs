@@ -236,6 +236,25 @@ public sealed class UnitState
     public int LastDeathTurn { get; set; }
 
     /// <summary>
+    /// この駒に傷を書いた駒（第104期）。<b>挿入順の列で、重複は入れない。</b>
+    ///
+    /// <para><see cref="BattleContext.Wound"/> が<b>実際に傷を書いたときだけ</b>足す
+    /// （深手への上乗せ・書けなかった呼び出しでは足さない）。
+    /// <b>傷が 0 になったら記録も消える</b>——断ち（0 に戻す）／縫い（1 引く）／
+    /// 継ぎ当て（1 引く）／引き取りの donor 側（1 引く）の4箇所が
+    /// <see cref="BattleContext.NoteWoundDrop"/> を通す。</para>
+    ///
+    /// <para><b>戦闘をまたがない。</b> 傷は会戦の境界で消えるので記録も消える
+    /// （<c>Engagement</c> が <see cref="StatusKeys.All"/> を消すのと同じ行）。</para>
+    ///
+    /// <para><b>版に依らず記録する</b>（<c>EncoreRule.Enabled</c> を見ない）——
+    /// 門と紙の分子を V0 の実測から取るため（第86期の X1P・第90期の作法）。
+    /// <b>純粋な記録で、誰も読んで分岐しない</b>のは規則が無効なあいだだけで、
+    /// 有効なら再行動がここを読む。</para>
+    /// </summary>
+    public List<UnitState>? WoundWriters;
+
+    /// <summary>
     /// いま実際に使う攻撃パターン。定義上のパターンを特性が状況で書き換える。
     /// 参照は必ずこちらを使うこと。Def.Pattern を直接見ると状況変化が乗らない。
     /// </summary>
@@ -618,6 +637,13 @@ public sealed class UnitTally
     /// <b>どちらも誰も読んで分岐しない。</b>
     /// </summary>
     public int BetrayFodderKills, BetrayFodderHits;
+
+    /// <summary>
+    /// 再行動（第104期・<c>EncoreRule</c>）—— <b>この駒が刻んだ獲物が倒れて、もう一度動いた回数</b>。
+    /// <c>EncoreStalls</c> はそのうち痺れ・まどろみ・<c>CanAct</c> 偽で潰れた回数。
+    /// <b>どちらも誰も読んで分岐しない。</b>
+    /// </summary>
+    public int EncoreFires, EncoreStalls;
 
     public int Attacks;
 
@@ -1430,6 +1456,45 @@ public sealed class BattleResult
     public required int BetrayIdleSellable { get; init; }
     public required int BetrayRevived { get; init; }
     public required int BetrayKilled { get; init; }
+
+    /// <summary>
+    /// 再行動（第104期・<c>EncoreRule</c>）の計数。<b>誰も読んで分岐しない。</b>
+    /// <para>門 1 <c>EncoreWoundedDeaths</c> / <c>EncoreWoundedFoeDeaths</c>、
+    /// 門 2 <c>EncoreLiveWriters</c> / <c>EncoreDeathsWithLiveWriter</c>、
+    /// 門 3 <c>EncoreFired</c>。Q4 の内訳が <c>EncoreAttack</c> / <c>EncoreSkill</c> /
+    /// <c>EncoreCharge</c> / <c>EncoreStalled</c>、Q5 が <c>EncoreFodderDeaths</c> /
+    /// <c>EncoreFromFodder</c>、自己検査が <c>EncoreBlockedHop</c>（d）/
+    /// <c>EncoreOnEnemySide</c>（g）/ <c>EncoreWithActions</c>（h）/ <c>EncoreRevivedSkip</c>。</para>
+    /// </summary>
+    public required int EncoreWoundedDeaths { get; init; }
+    /// <inheritdoc cref="EncoreWoundedDeaths"/>
+    public required int EncoreWoundedFoeDeaths { get; init; }
+    /// <inheritdoc cref="EncoreWoundedDeaths"/>
+    public required int EncoreLiveWriters { get; init; }
+    /// <inheritdoc cref="EncoreWoundedDeaths"/>
+    public required int EncoreDeathsWithLiveWriter { get; init; }
+    /// <inheritdoc cref="EncoreWoundedDeaths"/>
+    public required int EncoreFired { get; init; }
+    /// <inheritdoc cref="EncoreWoundedDeaths"/>
+    public required int EncoreAttack { get; init; }
+    /// <inheritdoc cref="EncoreWoundedDeaths"/>
+    public required int EncoreSkill { get; init; }
+    /// <inheritdoc cref="EncoreWoundedDeaths"/>
+    public required int EncoreCharge { get; init; }
+    /// <inheritdoc cref="EncoreWoundedDeaths"/>
+    public required int EncoreStalled { get; init; }
+    /// <inheritdoc cref="EncoreWoundedDeaths"/>
+    public required int EncoreBlockedHop { get; init; }
+    /// <inheritdoc cref="EncoreWoundedDeaths"/>
+    public required int EncoreOnEnemySide { get; init; }
+    /// <inheritdoc cref="EncoreWoundedDeaths"/>
+    public required int EncoreWithActions { get; init; }
+    /// <inheritdoc cref="EncoreWoundedDeaths"/>
+    public required int EncoreRevivedSkip { get; init; }
+    /// <inheritdoc cref="EncoreWoundedDeaths"/>
+    public required int EncoreFodderDeaths { get; init; }
+    /// <inheritdoc cref="EncoreWoundedDeaths"/>
+    public required int EncoreFromFodder { get; init; }
     public required int BetrayFireAttack { get; init; }
     public required int BetrayFirePoison { get; init; }
     public required int BetrayFireOverreach { get; init; }

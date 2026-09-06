@@ -213,7 +213,8 @@ public static class EngagementEngine
                                        int seed, bool verbose = true,
                                        RecoverRule? recover = null,
                                        BoundaryRule? boundary = null,
-                                       BetrayRule? betray = null)
+                                       BetrayRule? betray = null,
+                                       EncoreRule? encore = null)
     {
         var battles = new List<BattleResult>();
         var openings = new List<IReadOnlyList<BattleOpening>>();
@@ -262,7 +263,7 @@ public static class EngagementEngine
             // （境界の規則は境界でしか効かない）ので、既定（null ＝ 喚ばない）では
             // この行の意味は1ビットも変わらない。
             BattleResult r = BattleEngine.Run(current, enemyCur, DeriveSeed(seed, battleIndex), verbose,
-                                              betray: betray);
+                                              betray: betray, encore: encore);
 
             battles.Add(r);
             pairings.Add((pi, ei));
@@ -421,6 +422,10 @@ public static class EngagementEngine
             }
 
             foreach (string key in StatusKeys.All) u.Counters.Remove(key);
+            // 第104期: 傷が消えるので、刻み手の記録も一緒に消す。**記録は戦闘をまたがない**
+            // ——Carry（第102期・既定では選ばれない）で傷そのものを持ち越した場合も記録は消す。
+            // 再行動は「この戦闘で刻んだ相手」に対する精算で、前の波の刻みを持ち込む筋合いが無い。
+            u.WoundWriters = null;
             u.ResetAtkBonus();   // 第68期: 帳簿に載せずに戻す（AtkBonus = 0 と同じ効果）
             // 第67期。押された累計は配られた力と同じ寿命（AtkBonus と同じ行で消す）。
             u.WhetReceived = 0;
