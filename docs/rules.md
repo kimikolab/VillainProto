@@ -38,7 +38,7 @@
 | 25 | `sutureFire` | `SutureFireRule` | `SutureFireRule { Fire = Swing }` | ○ | `taillight` / `hold2` | 第107期〜（2 期） | ○ |
 | 26 | `spillWound` | `SpillWoundRule` | `SpillWoundRule { Enabled = True, Scope = All }` |  | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `cross` | 第85期〜（9 期） | ○ |
 | 27 | `mend` | `MendRule` | `MendRule { Side = Wound }` |  | `curse` / `hex` / `mender` / `gauge` / `hold2` / `cross` | 第86期〜（10 期） | ○ |
-| 28 | `woundIgnite` | `IgniteRule` | `IgniteRule { Enabled = True }` |  | `audit` / `derive` / `curse` / `mender` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `cross` / `demo` | 第87期〜（7 期） | ○ |
+| 28 | `woundIgnite` | `IgniteRule` | `IgniteRule { Enabled = True }` |  | `audit` / `derive` / `curse` / `mender` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `cross` / `demo` | 第87期〜（8 期） | ○ |
 | 29 | `gather` | `GatherRule` | `GatherRule { Enabled = True }` |  | `audit` / `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `cross` / `demo` | 第89期〜（9 期） | ○ |
 | 30 | `soak` | `SoakRule` | `SoakRule { Poison = True, Burn = False, DullPerKind = 1 }` |  | `derive` / `curse` / `hex` / `soak` / `cross` | 第90期〜（9 期） | ○ |
 | 31 | `deep` | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` | 第93期〜（7 期） | ○ |
@@ -75,7 +75,7 @@
 | `GatherRule` | `GatherRule { Enabled = True }` | ○ | `audit` / `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `cross` / `demo` | 第89期〜（9 期） |
 | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` | ○ | `derive` / `guard` / `whet` / `goad` | 第52期〜（4 期） |
 | `HushRule` | `HushRule { Active = True }` | ○ | `curse` / `yoke` / `hush` / `replay` / `wave2` | 第35期〜（8 期） |
-| `IgniteRule` | `IgniteRule { Enabled = True }` | ○ | `audit` / `derive` / `curse` / `mender` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `cross` / `demo` | 第87期〜（7 期） |
+| `IgniteRule` | `IgniteRule { Enabled = True }` | ○ | `audit` / `derive` / `curse` / `mender` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `cross` / `demo` | 第87期〜（8 期） |
 | `LooseRule` | `LooseRule { Shove = True }` | ○ | `tempo` / `hold` / `hold2` | 第106期〜（2 期） |
 | `MartyrRule` | `MartyrRule { RedirectPercent = 75 }` | ○ | `curse` / `guard` / `gather` | 第35期〜（6 期） |
 | `MendRule` | `MendRule { Side = Wound }` | ○ | `curse` / `hex` / `mender` / `gauge` / `hold2` / `cross` | 第86期〜（10 期） |
