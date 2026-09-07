@@ -1292,7 +1292,8 @@ public static class UnitCatalog
     /// <summary>
     /// 尾灯のトモ（第108期）。<b>毎ターン、自分を除いて最も遅い味方に灯をともす</b>
     /// （攻撃力 +<see cref="TaillightTrait.Lumen"/>・累積）。<b>灯は1体にしか灯らない。</b>
-    /// 自分の手番より前に敵が倒れていたら、灯した味方に手番を譲る。<b>自分は動けない。</b>
+    /// <b>このターンか前のターンに敵が倒れていたら</b>、灯した味方に手番を譲る。<b>自分は動けない。</b>
+    /// （譲渡の条件は第110期に「このターン」から1ターンぶん広げた＝<see cref="YieldMode.OwnTurnWindow"/>。）
     ///
     /// <para><b>攻撃力 0 は「出力ゼロ」ではない。</b> 第87期の「接続子が両方とも出力ゼロの軸どうしは
     /// 5枠盤では橋を架けられない」に当たらない——<b>トモは強化（<see cref="WhetRoute.Taillight"/>）で
@@ -1312,9 +1313,10 @@ public static class UnitCatalog
     /// ——<see cref="Hane"/> と同じ判断）。単体は <c>Actions = [Skill]</c> なので
     /// <b>実質使われない</b>（<c>PerformAttack</c> を一度も通らない）。</para>
     ///
-    /// <para><b>第109期まで盤面に出さない</b>——<c>Presets.Compare</c> にも <c>Presets.Cross</c> にも
-    /// 入っていない。「行が変わったせい」と「駒が変わったせい」を切り分けるため（指示書 §0）。
-    /// 機構は診断 <c>taillight</c> のローカル台でだけ走る。</para>
+    /// <para><b>第110期でもまだ盤面に出していない</b>——<c>Presets.Compare</c> にも <c>Presets.Cross</c> にも
+    /// 入っていない。「行が変わったせい」と「駒が変わったせい」を切り分けるため（第109期の指示書 §0）。
+    /// 機構は診断 <c>taillight</c> / <c>tomo</c> / <c>tomo yield</c> のローカル台でだけ走る。
+    /// <b>盤面に出すかは第111期に決める。</b></para>
     /// </summary>
     public static readonly UnitDef Tomo = new()
     {
@@ -1328,7 +1330,7 @@ public static class UnitCatalog
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "灯をかざしている") },
         PlusText = "毎ターン、自分を除いて最も遅い味方に灯をともす（攻撃力 +5・累積）",
         MinusText = "灯は1体にしか灯らない。対象が変わると前の灯は消える。"
-                    + "自分の手番より前に敵が倒れていたら、灯した味方に手番を譲る。自分は動けない",
+                    + "このターンか前のターンに敵が倒れていたら、灯した味方に手番を譲る。自分は動けない",
         Flavor = "尾の灯は自分では見えない。照らせるのは、後ろにいる者だけ。"
     };
 

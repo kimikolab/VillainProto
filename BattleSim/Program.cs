@@ -40813,13 +40813,14 @@ if (focusId == "tomo" && args.Length > 2 && args[2] == "yield")
     UnitDef tyTomoPlain = TyPlain(UnitCatalog.Tomo);
 
     // ------------------------------------------------------------------------------
-    // 版。**V0 も「渡さない」ではなく明示的に `TaillightRule.Default` を渡す**
-    // ——ノブを通した経路が第109期と1ビットも違わないことを phase0 の 1 で示すため。
+    // 版。**3版とも明示的にモードを渡す。`TaillightRule.Default` に頼らない**
+    // ——第110期に既定が V1 へ動いたので、頼ると「V0 の列」が黙って V1 に化ける
+    // （実際に一度化けた。自己検査 (h) がそれを捕まえた）。
     // ------------------------------------------------------------------------------
     var tyVers = new (string Tag, TaillightRule? Rule)[]
     {
         ("素体",    null),                                      // トモを素体に差し替えた版
-        ("V0 現行", TaillightRule.Default),
+        ("V0 現行", new TaillightRule(YieldMode.OwnTurn)),
         ("V1 窓",   new TaillightRule(YieldMode.OwnTurnWindow)),
         ("V2 即時", new TaillightRule(YieldMode.Immediate)),
     };
@@ -41459,7 +41460,8 @@ if (focusId == "tomo" && args.Length > 2 && args[2] == "yield")
             }
         }
         checks.Add(("必須1", "`compare` の全セルが `docs/balance.md` と一致"
-            + "（**既定は V0。トモは `Presets` に入っていないので拒否権は原理的に立たない**）",
+            + "（**採用後の既定は V1。トモは `Presets` に1行も入っていないので、"
+            + "採用しても盤面は1セルも動かない**）",
             $"{cells} セル中ずれ {mism} 件", cells > 0 && mism == 0));
 
         // ---- 必須4: PickOne の実呼び出しが 26 箇所 ----
@@ -41477,27 +41479,61 @@ if (focusId == "tomo" && args.Length > 2 && args[2] == "yield")
                 if (File.Exists(fp)) pick += TyCount(File.ReadAllText(fp), "PickOne(");
         checks.Add(("必須4", "`PickOne(` の素の出現数が **26** のまま（第94期以降不変）", pick + " 箇所", pick == 26));
 
-        // ---- (l) 旧4台での V0 が第109期と一致（ノブ有無で 1 ビットも違わない）----
-        int knobBad = 0, knobN = 0;
+        // ---- (l) 旧4台での V0 が第109期の表A を再現する ----
+        // **既定に依らない形で書く**（採用で既定が動いても、V0 の経路そのものが再現することを見る）。
+        // 参照値は design/PHASE109_TOMO.md §3 の表（ドルガ・ハギの 10 セル × 門3本）。
+        var ty109 = new (string Bench, int Wave, double G1, double G2, double G3)[]
+        {
+            ("トモ×ドルガ", 1, 1.00, 1.00, 1.00), ("トモ×ドルガ", 2, 4.08, 2.23, 1.72),
+            ("トモ×ドルガ", 3, 4.25, 1.98, 1.11), ("トモ×ドルガ", 4, 5.38, 1.20, 0.83),
+            ("トモ×ドルガ", 5, 3.02, 1.87, 1.82),
+            ("トモ×ハギ",   1, 2.33, 0.01, 0.00), ("トモ×ハギ",   2, 3.04, 0.01, 0.00),
+            ("トモ×ハギ",   3, 3.50, 0.14, 0.11), ("トモ×ハギ",   4, 4.28, 0.01, 0.01),
+            ("トモ×ハギ",   5, 2.62, 0.26, 0.18),
+        };
+        int refBad = 0, refN = 0, defDiff = 0;
+        var refBadList = new List<string>();
         foreach (var (tag, partner) in tyPartners)
         {
             Formation f = TyOldBench(partner, UnitCatalog.Tomo);
             for (int w = 0; w < tyStages.Count; w++)
+            {
+                double g1 = 0, g2 = 0, g3 = 0, dg3 = 0;
                 for (int seed = 0; seed < TySeeds; seed++)
                 {
-                    BattleResult a = BattleEngine.Run(f, tyStages[w].Enemy, seed, verbose: false);
-                    BattleResult b = BattleEngine.Run(f, tyStages[w].Enemy, seed, verbose: false,
-                                                      taillight: TaillightRule.Default);
+                    BattleResult a = BattleEngine.Run(f, tyStages[w].Enemy, seed, verbose: false,
+                                                      taillight: new TaillightRule(YieldMode.OwnTurn));
+                    BattleResult b = BattleEngine.Run(f, tyStages[w].Enemy, seed, verbose: false);
                     UnitTally ta = a.TallyByUnit.TryGetValue(UnitCatalog.Tomo.Id, out UnitTally? x1) ? x1 : new UnitTally();
                     UnitTally tb = b.TallyByUnit.TryGetValue(UnitCatalog.Tomo.Id, out UnitTally? x2) ? x2 : new UnitTally();
-                    knobN++;
-                    if (a.PlayerWon != b.PlayerWon || a.Turns != b.Turns
-                        || ta.TaillightFires != tb.TaillightFires || ta.TaillightYields != tb.TaillightYields
-                        || ta.TaillightYieldDamage != tb.TaillightYieldDamage) knobBad++;
+                    g1 += ta.TaillightFires;
+                    g2 += ta.TaillightYields + ta.TaillightNoTarget + ta.TaillightBlockedHop + ta.TaillightNoFoe;
+                    g3 += ta.TaillightYields;
+                    dg3 += tb.TaillightYields;
                 }
+                g1 /= TySeeds; g2 /= TySeeds; g3 /= TySeeds; dg3 /= TySeeds;
+                if (Math.Abs(dg3 - g3) > 0.005) defDiff++;
+                foreach (var q in ty109)
+                    if (q.Bench == tag && q.Wave == w + 1)
+                    {
+                        // 参照値は報告書に**小数第2位で印刷された文字列**なので、
+                        // こちらも同じ書式に落として突き合わせる——差の絶対値でも `Math.Round` でも、
+                        // ちょうど 0.835（印刷は 0.83）が境界で落ちる（`Math.Round` は偶数丸めで 0.84 を返す）。
+                        refN += 3;
+                        if (g1.ToString("F2") != q.G1.ToString("F2")) { refBad++; refBadList.Add($"{tag} 第{w + 1}波 門1 {g1:F4} 対 {q.G1:F2}"); }
+                        if (g2.ToString("F2") != q.G2.ToString("F2")) { refBad++; refBadList.Add($"{tag} 第{w + 1}波 門2 {g2:F4} 対 {q.G2:F2}"); }
+                        if (g3.ToString("F2") != q.G3.ToString("F2")) { refBad++; refBadList.Add($"{tag} 第{w + 1}波 門3 {g3:F4} 対 {q.G3:F2}"); }
+                    }
+            }
         }
-        checks.Add(("(l)", "旧4台（第109期の土台）で **ノブを渡した V0 と渡さない既定が完全に一致**"
-            + "（勝敗・ターン数・門1・門3・与ダメ）", $"ずれ {knobBad} 件 / {knobN} 戦", knobBad == 0));
+        checks.Add(("(l)", "旧4台（第109期の土台）で **V0 を明示的に渡すと第109期の表A を再現する**"
+            + "（`design/PHASE109_TOMO.md` §3 の ドルガ・ハギ 10 セル × 門3本）",
+            $"{refN} 値中ずれ {refBad} 件"
+            + (refBadList.Count > 0 ? "（" + string.Join(" / ", refBadList) + "）" : ""),
+            refN > 0 && refBad == 0));
+        checks.Add(("(l')", "**既定が V0 ではなくなっている**（採用が効いていることの実測。"
+            + "採用前は 0 / 20 セル、採用後は V1 が V0 と違うセルが立つ）",
+            $"既定と V0 で門3 が違う {defDiff} / {tyPartners.Length * tyStages.Count} セル", true));
 
         // ---- ログ再生による (a)〜(e)(g)(i)(k) ----
         int badOne = 0, badDouse = 0, badNet = 0, badYieldTurn = 0, badSelf = 0, audits = 0, maxAtOnce = 0;

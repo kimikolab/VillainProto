@@ -6427,8 +6427,12 @@ public sealed class BetrayedTrait : Trait
 /// <summary>
 /// 尾灯のトモ（第108期）。<b>毎ターン、自分を除いて最も遅い味方1体に灯をともす</b>
 /// （攻撃力 +<see cref="Lumen"/>・累積）。<b>灯は1体にしか灯らない</b>——対象が変わると
-/// 前の灯は消える。そして<b>自分の手番より前にこのターン敵が倒れていたら、灯した味方に手番を譲る。
-/// 自分は動けない。</b>
+/// 前の灯は消える。そして<b>自分の手番より前に、このターンか前のターンに敵が倒れていたら、
+/// 灯した味方に手番を譲る。自分は動けない。</b>
+///
+/// <para><b>譲渡の条件は <see cref="TaillightRule"/> で切り替わる</b>（第110期）。
+/// 既定は <see cref="YieldMode.OwnTurnWindow"/>（窓）で、V0（このターンだけ）と
+/// V2（敵が倒れた瞬間にターン外で譲る）は対照として残置してある。</para>
 ///
 /// <para><b>1つの動作の表と裏</b>（<see cref="ShoveTrait"/> / <see cref="GoadTrait"/> と同じ形）
 /// ——渡すのは力と手番の2つだけで、この駒は自分では1点も出力しない
@@ -6497,7 +6501,11 @@ public sealed class TaillightTrait : Trait
     /// <summary>その味方に積んだ灯の累計（消すときに同じだけ引く）。</summary>
     public const string LitKey = "tomoLit";
 
-    /// <summary>このターン、自分の手番より前に敵が倒れていたら、そのターン番号。</summary>
+    /// <summary>
+    /// 自分の手番より前に敵が倒れていたら、そのターン番号。
+    /// <b>V1（窓・既定）は <c>Turn</c> と <c>Turn - 1</c> の両方を読む</b>ので、
+    /// 書き方は「ターン番号を書くだけ」のまま変えていない（読む側だけを広げる）。
+    /// </summary>
     public const string SawKey = "tomoSaw";
 
     /// <summary>
@@ -6605,7 +6613,8 @@ public sealed class TaillightTrait : Trait
 
     /// <summary>
     /// 手番（<c>Skill</c>）。<b>自分は動かない。</b>
-    /// このターン自分より前に敵が倒れていたときだけ、灯した味方に手番を1回譲る。
+    /// 自分より前に敵が倒れていたときだけ、灯した味方に手番を1回譲る
+    /// （読む窓は <see cref="TaillightRule"/>——既定はこのターンと前のターン）。
     /// </summary>
     public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
     {
@@ -6714,15 +6723,19 @@ public sealed class TaillightTrait : Trait
 /// 尾灯の譲渡条件（第110期）。<b>診断（<c>tomo yield</c>）が3つの版を1回の実行の中で
 /// 比べるためだけに外から差せる窓口</b>で、通常の実行では誰も渡さない。
 ///
-/// <para><b>既定は <see cref="YieldMode.OwnTurn"/> ＝ 第108期に作った現行の形</b>
-/// ——渡さない限り盤面は常にこれ（<c>compare</c> 305 セルが 0 件であることが検算）。</para>
+/// <para><b>既定は <see cref="YieldMode.OwnTurnWindow"/>（第110期に採用した窓）</b>
+/// ——渡さない限り盤面は常にこれ。**採用しても `compare` 305 セルは 0 件**（トモは
+/// <c>Presets</c> に1行も入っていないので、盤面は1セルも動かない。第90期の傷の引き取りと同じ形）。</para>
+
+/// <para><b>V0（<see cref="YieldMode.OwnTurn"/>）と V2（<see cref="YieldMode.Immediate"/>）は
+/// 削除せず対照として残置してある</b>（オゴ・ゴウ・ヌキ・オノ・`ThornRule` と同じ作法）。</para>
 ///
 /// <para><b>書き換え可能な static のノブにしないこと。</b> Trait は共有シングルトンで、
 /// <c>layout</c> は戦闘を並列実行する（<see cref="ColossusRule"/> / <see cref="YokeRule"/> と同じ判断）。</para>
 /// </summary>
 public readonly record struct TaillightRule(YieldMode Mode)
 {
-    public static TaillightRule Default => new(YieldMode.OwnTurn);
+    public static TaillightRule Default => new(YieldMode.OwnTurnWindow);
 }
 
 /// <summary>
@@ -6739,6 +6752,10 @@ public enum YieldMode
     /// <para>埋めるのは「決着が伸びる波ほど1ターンに倒れる敵が減る」穴（第109期 3-3）。
     /// <b>記録の書き方（<see cref="TaillightTrait.SawKey"/> にターン番号を書くだけ）は変えない</b>
     /// ——読む側で <c>Turn</c> か <c>Turn - 1</c> のどちらかを許すだけ。</para>
+    ///
+    /// <para><b>第110期に採用した既定。</b> 主判定 Q2（`トモ×ドルガ` の第四波で条件成立が
+    /// V0 + 0.5 回/戦 以上）を **2.17 → 2.88** で通し、4台すべてで門2・門3・帰属が V0 以上だった
+    /// ——<b>条件を緩めるだけなので単調</b>で、下がる余地が構造的に無い。</para>
     /// </summary>
     OwnTurnWindow,
 
@@ -6762,6 +6779,13 @@ public enum YieldMode
     /// (3) 軋み（ヨミ）は <c>OnMoved</c> で <c>InInterrupt</c> を読むので、包むと
     /// <b>譲られた手番の中でヨミが動かされても割り込めなくなる</b>——挙動を静かに変えることになる。
     /// 再入は <see cref="BattleContext.Yielding"/>（1ホップ）と1ターン1回の上限で足りる。</para>
+    ///
+    /// <para><b>第110期に測って採用しなかった。定義だけを対照として残置してある。</b>
+    /// 狙った穴（撃破を作る駒と組んでも譲れない）は埋まらなかった
+    /// ——`トモ×ハギ` の譲渡は 0.08 → <b>0.23</b> 回/戦（線は V0 + 0.5）で、
+    /// 「1つの撃破で追い打ちと譲渡が両方立った回数」も <b>0.09</b> 回/戦（線 0.5）。
+    /// <b>切れているのは譲渡の側ではなく撃破の側</b>——あの台では敵が
+    /// 0.13〜0.90 体/戦 しか倒れないので、即時にしても読むものが無い。</para>
     /// </summary>
     Immediate
 }
