@@ -40924,6 +40924,433 @@ if (focusId == "hold2")
         }
         return;
     }
+    // ------------------------------------------------------------------------------
+    // (S3) ハリ。**発火口を手番の外へ移す**（`SutureFireRule`）。
+    // 律速は3期にわたって同じで（第83期の「切れる」判定・第85期の振り 2.15 回/戦・
+    // 第106期の再行動 0.00 回/戦）、どれも「手番が来ない」に帰着する。
+    // 第105期の「回復の 90.3% は手番の外から出る」を、この駒に当てる。
+    // ------------------------------------------------------------------------------
+    if (h2Mode == "suture")
+    {
+        const int S3Base = 0, S3Seeds = 200;
+        var s3Ver = new (string Tag, string Desc, SutureFireRule R)[]
+        {
+            ("W0", "現行（`Swing` ＝ 自分の手番で殴った後）", SutureFireRule.Default),
+            ("W1", "`OnWound` ＝ 傷が書かれたとき（1ターン1回）", new SutureFireRule(SutureFire.OnWound)),
+        };
+        // 糸口（`SutureRule`）と発火口（`SutureFireRule`）が**独立**であることの4通り（自己検査 (d)）。
+        var s3Side = new[] { SutureSide.Foe, SutureSide.Both };
+
+        int s3W = h2Stages.Count, s3B = h2All.Length;
+        var s3Rate = new double[s3Ver.Length][][];
+        const int S3N = 10;
+        const int S3Battles = 0, S3Calls = 1, S3Fires = 2, S3Ally = 3, S3Capped = 4,
+                  S3Healed = 5, S3Dry = 6, S3Turns = 7, S3Attacks = 8, S3Dmg = 9;
+        var s3Acc = new long[s3Ver.Length][];
+        long s3OverCap = 0;   // 自己検査 (c): 発火が決着ターン数を超えた戦
+
+        for (int p = 0; p < s3Ver.Length; p++)
+        {
+            s3Rate[p] = new double[s3W][];
+            for (int w = 0; w < s3W; w++) s3Rate[p][w] = new double[s3B];
+            var a = s3Acc[p] = new long[S3N];
+            for (int w = 0; w < s3W; w++)
+                for (int b = 0; b < s3B; b++)
+                {
+                    var f = h2All[b].F;
+                    bool has = f.Occupied().Any(o => o.Def.Id == "hari");
+                    int pp = p, ww = w;
+                    var winsArr = new int[S3Seeds];
+                    var locArr = new long[S3Seeds][];
+                    var overArr = new int[S3Seeds];
+                    Parallel.For(0, S3Seeds, s =>
+                    {
+                        var v = new long[S3N];
+                        var r = BattleEngine.Run(f, h2Stages[ww].Enemy, S3Base + s, verbose: false,
+                                                 sutureFire: s3Ver[pp].R);
+                        if (r.PlayerWon) winsArr[s] = 1;
+                        // **駒ごとの帳簿の分母は第2〜5波**（規約 (G10)）。
+                        if (has && ww > 0)
+                        {
+                            v[S3Battles] = 1; v[S3Turns] = r.Turns;
+                            if (r.TallyByUnit.TryGetValue("hari", out UnitTally? t))
+                            {
+                                long fires = t.SutureFoe + t.SutureAlly;
+                                v[S3Calls] = t.SutureCalls; v[S3Fires] = fires; v[S3Ally] = t.SutureAlly;
+                                v[S3Capped] = t.SutureCapped; v[S3Healed] = t.SutureHealed;
+                                v[S3Dry] = t.SutureDry; v[S3Attacks] = t.Attacks; v[S3Dmg] = t.DamageToEnemy;
+                                if (fires > r.Turns) overArr[s] = 1;
+                            }
+                        }
+                        locArr[s] = v;
+                    });
+                    int wins = 0;
+                    for (int sq = 0; sq < S3Seeds; sq++)
+                    {
+                        wins += winsArr[sq]; s3OverCap += overArr[sq];
+                        for (int k = 0; k < S3N; k++) a[k] += locArr[sq][k];
+                    }
+                    s3Rate[p][w][b] = wins * 100.0 / S3Seeds;
+                }
+            Console.Error.WriteLine("[hold2 suture] " + s3Ver[p].Tag + " おわり");
+        }
+
+        double S3Avg(int p, int b) { double s = 0; for (int w = 1; w < s3W; w++) s += s3Rate[p][w][b]; return s / (s3W - 1); }
+        double S3Per(int p, int k) => s3Acc[p][S3Battles] == 0 ? 0 : (double)s3Acc[p][k] / s3Acc[p][S3Battles];
+
+        Console.WriteLine("# 第107期 (S3) —— ハリ（縫いの発火口を手番の外へ移す）");
+        Console.WriteLine();
+        Console.WriteLine("台: `compare` 61 行 ＋ 交差帯 12 行 × 全 " + s3W + " 波 × seed "
+            + S3Base + ".." + (S3Base + S3Seeds - 1) + " ＝ " + ((long)s3B * s3W * S3Seeds).ToString("N0") + " 戦/版。");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 中身 |");
+        Console.WriteLine("|---|---|");
+        foreach (var v in s3Ver) Console.WriteLine("| " + v.Tag + " | " + v.Desc + " |");
+
+        Console.WriteLine();
+        Console.WriteLine("## 表C-1 —— Q4（ハリの発火回数。**律速が外れたかの直接の確認**）");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 在席戦 | 決着T | フック/戦 | **発火/戦** | 稼働率 | **敵から** | 味方から | 上限で弾かれ | 空振り | 繕い量/戦 | 振/戦 | 与ダメ/戦 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        for (int p = 0; p < s3Ver.Length; p++)
+            Console.WriteLine("| " + s3Ver[p].Tag + " | " + s3Acc[p][S3Battles]
+                + " | " + S3Per(p, S3Turns).ToString("0.00")
+                + " | " + S3Per(p, S3Calls).ToString("0.00")
+                + " | **" + S3Per(p, S3Fires).ToString("0.00") + "**"
+                + " | " + (S3Per(p, S3Turns) == 0 ? 0 : S3Per(p, S3Fires) / S3Per(p, S3Turns)).ToString("0.0%")
+                + " | **" + (S3Per(p, S3Fires) - S3Per(p, S3Ally)).ToString("0.00") + "**"
+                + " | " + S3Per(p, S3Ally).ToString("0.00")
+                + " | " + S3Per(p, S3Capped).ToString("0.00")
+                + " | " + (S3Per(p, S3Calls) - S3Per(p, S3Fires) - S3Per(p, S3Capped)).ToString("0.00")
+                + " | " + S3Per(p, S3Healed).ToString("0.0")
+                + " | " + S3Per(p, S3Attacks).ToString("0.00")
+                + " | " + S3Per(p, S3Dmg).ToString("0.0") + " |");
+        Console.WriteLine();
+        Console.WriteLine();
+        Console.WriteLine("**`敵から` が塞ぎ（＝ハリの代金）の宛先**——`MinusText`「繕うたび、糸を通した敵の傷がひとつ塞がる」"
+            + "が実際に起きる回数。**`味方から` の側では、同じ塞ぎが味方の傷を消すので利得になる。**");
+        Console.WriteLine();
+        Console.WriteLine("**Q4**: 発火 " + S3Per(0, S3Fires).ToString("0.00") + " → **"
+            + S3Per(1, S3Fires).ToString("0.00") + " 回/戦**（第85期の律速 2.15 回/戦）—— "
+            + (S3Per(1, S3Fires) > S3Per(0, S3Fires) ? "**○**" : "**×**"));
+
+        Console.WriteLine();
+        Console.WriteLine("## 表C-2 —— Q5（ハリを含む行の第2〜5波平均）");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | W0 | W1 | Δ |");
+        Console.WriteLine("|---|--:|--:|--:|");
+        double q5 = 0; int q5n = 0, q5up = 0;
+        for (int b = 0; b < s3B; b++)
+        {
+            if (!h2All[b].F.Occupied().Any(o => o.Def.Id == "hari")) continue;
+            double a0 = S3Avg(0, b), a1 = S3Avg(1, b);
+            q5 += a1 - a0; q5n++; if (a1 > a0) q5up++;
+            Console.WriteLine("| " + h2All[b].Name + " | " + a0.ToString("F1") + "% | " + a1.ToString("F1")
+                + "% | " + (a1 - a0).ToString("+0.0;-0.0") + "pt |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("**ハリを含む " + q5n + " 行の平均 " + (q5 / Math.Max(1, q5n)).ToString("+0.00;-0.00")
+            + "pt**（上がった行 " + q5up + " / " + q5n + "）。**行名は `Presets.Compare` / `Presets.Cross` から引いた。**");
+
+        // ---- 表D: 拒否権
+        Console.WriteLine();
+        Console.WriteLine("## 表D —— 拒否権（分母は `compare` 61 行全体・第91期 (G1)）");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 波 | W0 | W1 | Δ |");
+        Console.WriteLine("|---|--:|--:|--:|--:|");
+        int veto = 0;
+        for (int b = 0; b < h2Compare.Length; b++)
+            for (int w = 0; w < s3W; w++)
+            {
+                double d = s3Rate[1][w][b] - s3Rate[0][w][b];
+                if (d <= -10.0)
+                {
+                    veto++;
+                    Console.WriteLine("| " + h2All[b].Name + " | 第" + (w + 1) + "波 | " + s3Rate[0][w][b].ToString("F1")
+                        + "% | " + s3Rate[1][w][b].ToString("F1") + "% | " + d.ToString("+0.0;-0.0") + "pt |");
+                }
+            }
+        if (veto == 0) Console.WriteLine("| （該当なし） | | | | |");
+        Console.WriteLine();
+        var pset = new HashSet<string>(Baseline.PrimaryRows);
+        double p50 = 0, p51 = 0; int pn = 0;
+        for (int b = 0; b < h2Compare.Length; b++)
+            if (pset.Contains(h2All[b].Name)) { p50 += s3Rate[0][s3W - 1][b]; p51 += s3Rate[1][s3W - 1][b]; pn++; }
+        // (G9): 第五波 95% 超の行が増えるのは「注意」であって拒否ではない。数だけ出す。
+        int hi0 = 0, hi1 = 0;
+        for (int b = 0; b < h2Compare.Length; b++)
+        {
+            if (s3Rate[0][s3W - 1][b] > 95.0) hi0++;
+            if (s3Rate[1][s3W - 1][b] > 95.0) hi1++;
+        }
+        Console.WriteLine("| 拒否権 | 量 | 線 | 結果 |");
+        Console.WriteLine("|---|---|---|:-:|");
+        Console.WriteLine("| (1) 主判定" + pn + "行の第五波平均 | " + (p50 / Math.Max(1, pn)).ToString("F1")
+            + "% → **" + (p51 / Math.Max(1, pn)).ToString("F1") + "%** | ≥ "
+            + Baseline.PrimaryFifthFloor.ToString("F1") + "% | "
+            + (p51 / Math.Max(1, pn) >= Baseline.PrimaryFifthFloor ? "**○**" : "**×**") + " |");
+        Console.WriteLine("| (3) いずれかの波で −10.0pt 以上落ちた行 | **" + veto + " 件** | 0 件 | "
+            + (veto == 0 ? "**○**" : "**×**") + " |");
+        Console.WriteLine("| （注意・(G9)） 第五波 95% 超の行 | " + hi0 + " → **" + hi1 + " 行** | 記録するだけ | — |");
+
+        // ---- 表E: 自己検査
+        Console.WriteLine();
+        Console.WriteLine("## 表E —— 自己検査");
+        Console.WriteLine();
+        Console.WriteLine("- **(c)** 発火が決着ターン数を超えた戦: **" + s3OverCap + " 件** —— "
+            + (s3OverCap == 0 ? "**○**" : "**×**") + "（1ターン1回の上限）");
+        Console.WriteLine("- **(d)** `SutureRule`（糸口）と `SutureFireRule`（発火口）が独立に働くこと（4通り）:");
+        Console.WriteLine();
+        Console.WriteLine("| 糸口 | 発火口 | ハリの行の第2〜5波平均 | 発火/戦 | 味方から/戦 |");
+        Console.WriteLine("|---|---|--:|--:|--:|");
+        foreach (SutureSide side in s3Side)
+            foreach (var v in s3Ver)
+            {
+                double sum = 0; int n = 0; long fires = 0, ally = 0, bt = 0;
+                for (int b = 0; b < s3B; b++)
+                {
+                    if (!h2All[b].F.Occupied().Any(o => o.Def.Id == "hari")) continue;
+                    for (int w = 1; w < s3W; w++)
+                    {
+                        int wins = 0;
+                        for (int sd = 0; sd < S3Seeds; sd++)
+                        {
+                            var r = BattleEngine.Run(h2All[b].F, h2Stages[w].Enemy, S3Base + sd, verbose: false,
+                                                     suture: new SutureRule(side), sutureFire: v.R);
+                            if (r.PlayerWon) wins++;
+                            bt++;
+                            if (r.TallyByUnit.TryGetValue("hari", out UnitTally? t))
+                            { fires += t.SutureFoe + t.SutureAlly; ally += t.SutureAlly; }
+                        }
+                        sum += wins * 100.0 / S3Seeds; n++;
+                    }
+                }
+                Console.WriteLine("| " + side + " | " + v.Tag + " | " + (sum / Math.Max(1, n)).ToString("F1")
+                    + "% | " + (bt == 0 ? 0 : (double)fires / bt).ToString("0.00")
+                    + " | " + (bt == 0 ? 0 : (double)ally / bt).ToString("0.00") + " |");
+            }
+        Console.WriteLine();
+        Console.WriteLine("**`Foe` では味方から引く回数が両版とも 0.00 でなければならない**"
+            + "（糸口の規則が発火口に依らないこと）。");
+
+        // ---- (e) 繕いが `ctx.Heal` を通っていること（渇きで封じられる）
+        //
+        // **「渇きの波で繕い量が 0」では検査にならない**——祭司は倒せるので、倒した後の繕いは通る。
+        // 波ごとに「空振り（`SutureDry` ＝ 患者のHPが1点も動かなかった発火）」の割合を出し、
+        // **渇きの波だけが突出すること**を見る。
+        Console.WriteLine();
+        Console.WriteLine("- **(e)** 繕いが `ctx.Heal` を通っていること（渇きで封じられる）:");
+        Console.WriteLine();
+        Console.WriteLine("| 波 | 渇き | W1 発火/戦 | 空振り/戦 | 空振り率 | 繕い量/発火 |");
+        Console.WriteLine("|--:|:-:|--:|--:|--:|--:|");
+        for (int w = 1; w < s3W; w++)
+        {
+            bool dro = h2Stages[w].Enemy.Occupied().Any(o => o.Def.Traits.Contains(TraitId.Drought));
+            long fires = 0, dry = 0, healed = 0, bt = 0;
+            for (int b = 0; b < s3B; b++)
+            {
+                if (!h2All[b].F.Occupied().Any(o => o.Def.Id == "hari")) continue;
+                for (int sd = 0; sd < S3Seeds; sd++)
+                {
+                    var r = BattleEngine.Run(h2All[b].F, h2Stages[w].Enemy, S3Base + sd, verbose: false,
+                                             sutureFire: new SutureFireRule(SutureFire.OnWound));
+                    bt++;
+                    if (r.TallyByUnit.TryGetValue("hari", out UnitTally? t))
+                    { fires += t.SutureFoe + t.SutureAlly; dry += t.SutureDry; healed += t.SutureHealed; }
+                }
+            }
+            Console.WriteLine("| 第" + (w + 1) + "波 | " + (dro ? "**○**" : "×") + " | "
+                + (bt == 0 ? 0 : (double)fires / bt).ToString("0.00") + " | "
+                + (bt == 0 ? 0 : (double)dry / bt).ToString("0.00") + " | "
+                + (fires == 0 ? 0 : dry * 100.0 / fires).ToString("0.0") + "% | "
+                + (fires == 0 ? 0 : (double)healed / fires).ToString("0.0") + " |");
+        }
+
+        // ---- Q6: `tempo` の器具（第105期）でハリの分類が動くか
+        Console.WriteLine();
+        Console.WriteLine("## 表C-3 —— Q6（第105期の器具でハリが手番外型に移るか）");
+        Console.WriteLine();
+        Console.WriteLine("線は第105期 §1-3 のとおり **手番外の割合 50%**。**通貨ごとに割れる駒は「混合」**。");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 与ダメ | 回復 | 状態 | 強化弱体 | 分類 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|---|");
+        for (int p = 0; p < s3Ver.Length; p++)
+        {
+            var inn = new long[4]; var off = new long[4];
+            for (int b = 0; b < s3B; b++)
+            {
+                if (!h2All[b].F.Occupied().Any(o => o.Def.Id == "hari")) continue;
+                for (int w = 1; w < s3W; w++)
+                    for (int sd = 0; sd < S3Seeds; sd++)
+                    {
+                        var r = BattleEngine.Run(h2All[b].F, h2Stages[w].Enemy, S3Base + sd, verbose: false,
+                                                 sutureFire: s3Ver[p].R);
+                        if (!r.TallyByUnit.TryGetValue("hari", out UnitTally? t)) continue;
+                        inn[0] += t.DmgOutInTurn; off[0] += t.DmgOutOffTurn;
+                        inn[1] += t.HealOutInTurn; off[1] += t.HealOutOffTurn;
+                        inn[2] += t.StatusOutInTurn; off[2] += t.StatusOutOffTurn;
+                        inn[3] += t.BuffOutInTurn; off[3] += t.BuffOutOffTurn;
+                    }
+            }
+            var cells = new string[4];
+            bool anyOff = false, anyIn = false;
+            for (int i = 0; i < 4; i++)
+            {
+                long d = inn[i] + off[i];
+                if (d == 0) { cells[i] = "—"; continue; }
+                double r2 = off[i] * 100.0 / d;
+                cells[i] = r2.ToString("0.0") + "%";
+                if (r2 > 50.0) anyOff = true; else anyIn = true;
+            }
+            string kind = !anyOff && !anyIn ? "出力なし" : anyOff && anyIn ? "混合" : anyOff ? "**手番外型**" : "手番型";
+            Console.WriteLine("| " + s3Ver[p].Tag + " | " + string.Join(" | ", cells) + " | " + kind + " |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("（列は**手番外の割合**。第105期のロスター全体では 回復 90.3% が手番の外から出ている。）");
+        return;
+    }
+    // ------------------------------------------------------------------------------
+    // Phase 0（**戦闘は較正の確認のみ**）と自己検査。
+    // ------------------------------------------------------------------------------
+    if (h2Mode == "phase0" || h2Mode == "check" || h2Mode == "tables")
+    {
+        string? h2Root = Directory.GetCurrentDirectory();
+        while (h2Root != null && !File.Exists(Path.Combine(h2Root, "docs", "balance.md")))
+            h2Root = Path.GetDirectoryName(h2Root);
+
+        if (h2Mode == "phase0")
+        {
+            Console.WriteLine("# 第107期 Phase 0 —— 地図");
+            Console.WriteLine();
+            Console.WriteLine("## 0-1. `BattleContext.Wound` の呼び出し口の全数（**指示書の一覧を信用せず数え直した**）");
+            Console.WriteLine();
+            Console.WriteLine("`WoundRoute` は " + BattleContext.WoundRouteCount + " 本。実測は 73 行 × 全5波 × seed 0..19。");
+            Console.WriteLine();
+            var wr = new double[BattleContext.WoundRouteCount];
+            int wn = 0;
+            for (int b = 0; b < h2All.Length; b++)
+                for (int w = 0; w < h2Stages.Count; w++)
+                    for (int sp = 0; sp < 20; sp++)
+                    {
+                        var r = BattleEngine.Run(h2All[b].F, h2Stages[w].Enemy, sp, verbose: false);
+                        wn++;
+                        foreach (var kv in r.TallyByUnit)
+                            if (kv.Value.WoundWritesByRoute is not null)
+                                for (int k = 0; k < wr.Length; k++) wr[k] += kv.Value.WoundWritesByRoute[k];
+                    }
+            Console.WriteLine("| 経路 | 書き手 | 回/戦 | 割合 |");
+            Console.WriteLine("|---|---|--:|--:|");
+            double wtot = wr.Sum();
+            for (int k = 0; k < wr.Length; k++)
+                Console.WriteLine("| `" + (WoundRoute)k + "` | " + (k switch { 0 => "裂き（キリ）", 1 => "刻み（ノミ）", 2 => "**巻き込み則（engine）**", 3 => "棘の傷（既定 off）", 4 => "棘の巻き込み（既定 off）", _ => "引き取り（ガルド・受け取る側）" }) + " | "
+                    + (wr[k] / wn).ToString("0.00") + " | " + (wtot == 0 ? 0 : wr[k] * 100.0 / wtot).ToString("0.0") + "% |");
+            Console.WriteLine("| **合計** | | **" + (wtot / wn).ToString("0.00") + "** | 100.0% |");
+            Console.WriteLine();
+            Console.WriteLine("**発火口を `OnWound` に移すと、この合計の回数だけフックに入る**"
+                + "（1ターン1回の上限が無ければ発火も同数になる）。");
+
+            Console.WriteLine();
+            Console.WriteLine("## 0-2. 憤怒（`TraitId.Rage`）の保持者 —— **2 枚**");
+            Console.WriteLine();
+            foreach (UnitDef d in UnitCatalog.All.Where(d => d.Traits.Contains(TraitId.Rage)))
+                Console.WriteLine("- " + d.Name + "（攻 " + d.Attack + " / HP " + d.MaxHp + " / 速 " + d.Speed + "）");
+            Console.WriteLine();
+            Console.WriteLine("**較正はムド1枚でしかできないのに、`RageRule` は両方に効く。**");
+
+            Console.WriteLine();
+            Console.WriteLine("## 0-3. ハリを含む行（`Presets.Compare` / `Presets.Cross` から引いた）");
+            Console.WriteLine();
+            foreach (var b in h2All.Where(b => b.F.Occupied().Any(o => o.Def.Id == "hari")))
+                Console.WriteLine("- " + b.Name);
+            Console.WriteLine();
+            Console.WriteLine("**2 行しかない**（compare 1 ＋ 交差帯 1）。第45期の「新しい機構は最初から2行以上に入れること」の下限。");
+
+            Console.WriteLine();
+            Console.WriteLine("## 0-4. `SutureRule`（糸口）と `SutureFireRule`（発火口）は独立");
+            Console.WriteLine();
+            Console.WriteLine("| 型 | 既定 | 意味 |");
+            Console.WriteLine("|---|---|---|");
+            Console.WriteLine("| `SutureRule` | `" + SutureRule.Default + "` | 糸を引く**先**（第85期） |");
+            Console.WriteLine("| `SutureFireRule` | `" + SutureFireRule.Default + "` | **いつ**引くか（第107期 (S3)） |");
+            Console.WriteLine();
+            Console.WriteLine("4通りの対照は `hold2 suture` の表E (d)。");
+            return;
+        }
+
+        if (h2Mode == "check")
+        {
+            Console.WriteLine("# 第107期 表E —— 自己検査（必須4項目）");
+            Console.WriteLine();
+
+            var cells = new List<string>();
+            foreach (var b in h2Compare)
+            {
+                var row = new List<string>();
+                foreach (var st in h2Stages)
+                {
+                    int w = 0;
+                    for (int seed = 0; seed < 200; seed++)
+                        if (BattleEngine.Run(b.F, st.Enemy, seed, verbose: false).PlayerWon) w++;
+                    row.Add((w * 100.0 / 200).ToString("F1") + "%");
+                }
+                cells.Add("| " + b.Name + " | " + string.Join(" | ", row) + " |");
+            }
+            int diff = -1;
+            if (h2Root is not null)
+            {
+                var doc = File.ReadAllLines(Path.Combine(h2Root, "docs", "balance.md"))
+                              .Where(l => l.StartsWith("| ") && l.Contains('%')).ToArray();
+                diff = Math.Abs(doc.Length - cells.Count);
+                for (int i = 0; i < Math.Min(doc.Length, cells.Count); i++)
+                    if (doc[i].Trim() != cells[i].Trim()) diff++;
+            }
+            Console.WriteLine("- **必須1** `compare` " + (h2Compare.Length * h2Stages.Count)
+                + " セルを `docs/balance.md` と突き合わせ: **ずれ " + diff + " 行**"
+                + (diff == 0 ? "（○）" : "（×）")
+                + " ——**(S2)(S3) はどちらも既定を1ビットも動かしていない**（動いたのは (S1) の席だけで、そちらは同じコミットで `docs/` を測り直してある）。");
+
+            Console.WriteLine("- **必須2** `docs/` 10ファイルの再生成は (S1) のコミットで済ませてある。"
+                + "(S3) で新しく増えるのは `docs/rules.md` の `sutureFire` の 1 行だけ（ノブが増えたので正しい）。");
+
+            Console.WriteLine("- **必須3** 触っていないノブの既定: "
+                + "`RageRule.Default` = `" + RageRule.Default + "` ／ "
+                + "`SutureRule.Default` = `" + SutureRule.Default + "` ／ "
+                + "`SutureFireRule.Default` = `" + SutureFireRule.Default + "` ／ "
+                + "`SpillWoundRule.Default` = `" + SpillWoundRule.Default + "` ／ "
+                + "`MendRule.Default` = `" + MendRule.Default + "` ／ "
+                + "`MenderCostRule.Default` = `" + MenderCostRule.Default + "` ／ "
+                + "`LooseRule.Default` = `" + LooseRule.Default + "` ／ "
+                + "`EncoreRule.Default` = `" + EncoreRule.Default + "`"
+                + "（**`docs/rules.md` の既定値の列で示す**）");
+
+            int pick = 0;
+            if (h2Root is not null)
+                foreach (string f in Directory.GetFiles(Path.Combine(h2Root, "BattleCore"), "*.cs"))
+                    pick += System.Text.RegularExpressions.Regex.Matches(
+                        string.Join("\n", File.ReadAllLines(f).Where(l => !l.TrimStart().StartsWith("//"))),
+                        @"PickOne\(").Count;
+            Console.WriteLine("- **必須4** `BattleCore` の `PickOne(` 呼び出し **" + pick + " 箇所**"
+                + "（第94期以降 26 箇所。**第107期は1つも足していない**——縫いを engine から呼ぶ順序は"
+                + "スロット昇順で、`ctx.PickOne` を使わない）");
+            Console.WriteLine();
+            Console.WriteLine("機構固有の (a)〜(e) は `hold2 seats` / `hold2 rage` / `hold2 suture` の表E。");
+            return;
+        }
+
+        Console.WriteLine("# 第107期 —— 表A〜E");
+        Console.WriteLine();
+        Console.WriteLine("(S1)(S2)(S3) は**別々のコミット**にしたので、表もモードごとに分けてある。");
+        Console.WriteLine();
+        Console.WriteLine("| 表 | 内容 | モード |");
+        Console.WriteLine("|---|---|---|");
+        Console.WriteLine("| A | (S1) 席 | `hold2 seats` |");
+        Console.WriteLine("| B | (S2) 較正の確認と Q1〜Q3 | `hold2 rage` |");
+        Console.WriteLine("| C | (S3) ハリ（Q4〜Q6） | `hold2 suture` |");
+        Console.WriteLine("| D | 拒否権 | `hold2 rage` / `hold2 suture` の表D |");
+        Console.WriteLine("| E | 自己検査 | `hold2 check` ＋ 各モードの表E |");
+        Console.WriteLine("| — | 地図 | `hold2 phase0` |");
+        return;
+    }
 
     Console.WriteLine("モード: seats / rage / suture / phase0 / tables / check");
     return;

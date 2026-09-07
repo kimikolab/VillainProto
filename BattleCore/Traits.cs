@@ -1384,6 +1384,38 @@ public readonly record struct SutureRule(SutureSide Side)
 }
 
 /// <summary>
+/// 縫い（<see cref="SutureTrait"/>）の<b>発火口</b>（第107期 (S3)）。
+/// <see cref="SutureRule"/>（糸を引く<b>先</b>）とは別の軸で、**独立に働く**（自己検査 (d) が4通りで確認する）。
+///
+/// <para><b>律速は3期にわたって同じだった</b>——第83期で唯一「切れる」判定・第85期で両側読みを
+/// 足しても救えず（律速は振り 2.15 回/戦）・第106期で第104期の再行動が <b>0.00 回/戦</b> しか届かない
+/// （再行動は傷の<b>書き手</b>に渡る機構で、ハリは<b>読み手</b>）。発火は
+/// 「手番があり、**かつ**殴った相手に傷がある」の積なので、手番の数が天井を決める。</para>
+///
+/// <para><b>第105期が答えを示している</b>——<b>回復の 90.3% は手番の外から出る。</b>
+/// ハリは回復を出す駒なのに手番型で、それがロスターで例外的な形だった。</para>
+/// </summary>
+public enum SutureFire
+{
+    /// <summary>現行。自分の手番で殴った後（<c>OnAfterAttack</c>）。</summary>
+    Swing,
+
+    /// <summary>
+    /// 第107期 (S3)。<b>傷が書かれたとき</b>（<see cref="BattleContext.Wound"/> が実際に書いた瞬間）。
+    /// <b>1ターン1回まで</b>——傷の書き込みは 8.4 回/戦 あるので（巻き込み則 8.09 ＋ 刻み 0.28 ＋ 裂き 0.07・
+    /// 第93期）、上限が無いと発火が4倍になる。**陣営も刃も問わない**（engine の窓口はどちらにも開いている）。
+    /// </summary>
+    OnWound,
+}
+
+/// <summary>縫いの発火口（第107期 (S3)）。<see cref="SutureFire"/> の doc を参照。</summary>
+public readonly record struct SutureFireRule(SutureFire Fire)
+{
+    /// <summary>既定は現行（<see cref="SutureFire.Swing"/>）。</summary>
+    public static SutureFireRule Default => new(SutureFire.Swing);
+}
+
+/// <summary>
 /// 巻き込み則の書き手の絞り（第86期・X2）。<see cref="SpillWoundRule"/> の doc を参照。
 /// <para><b>「絞ると上がるか」を見る段</b>であって X1 の劣化版ではない——密度の低い書き手
 /// （生贄＝開戦1回／破裂＝死亡時／置き去り＝自分より遅い味方だけ）が<b>代金だけ払っている</b>なら
@@ -4745,11 +4777,45 @@ public sealed class SutureTrait : Trait
 
     public override TraitId Id => TraitId.Suture;
 
+    /// <summary>最後に糸を通したターン + 1。<c>0</c> は「まだ一度も」（突き返し ＝ <see cref="ShoveTrait.LastTurnKey"/> と同じ作法）。
+    /// <b><see cref="SutureFire.OnWound"/> のときだけ使う</b>——現行（<see cref="SutureFire.Swing"/>）では1ビットも読まない。</summary>
+    public const string LastTurnKey = "sutureTurn";
+
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
+        // 第107期 (S3): 発火口を手番の外へ移した版（`SutureFire.OnWound`）では、ここは走らない。
+        // **現行（`Swing`）では分岐が1つ増えるだけで、下の本体は1文字も変えていない。**
+        if (ctx.SutureFire.Fire != SutureFire.Swing) return;
+        Fire(ctx, self, target);
+    }
+
+    /// <summary>
+    /// 本体（第107期 (S3) に切り出した。**挙動は現行と同一**）。
+    /// <paramref name="seed"/> は糸口の最初の候補——<see cref="SutureFire.Swing"/> なら殴った相手、
+    /// <see cref="SutureFire.OnWound"/> なら<b>傷が書かれた駒</b>。
+    /// </summary>
+    public void Fire(BattleContext ctx, UnitState self, UnitState seed)
+    {
+        // **生死は見ない**——`Swing` は engine の `OnAfterAttack` が、`OnWound` は
+        // `FireSutureOnWound` が呼ぶ前に濾している。ここで見ると**現行の挙動が変わる**
+        // （棘の反撃で殴った側が死んだ手番でも、今の縫いは走る）。
+        ctx.TallyOf(self).SutureCalls++;
+
+        // **1ターン1回**は `OnWound` のときだけ（`Swing` は engine の「攻撃1回に1度」で元から律速されている）。
+        // 空振りではターンを焼かない——突き返しと同じで、上限は「実際に糸を通した」ときだけ立てる。
+        bool capped = ctx.SutureFire.Fire == SutureFire.OnWound;
+        if (capped && self.Counter(LastTurnKey) == ctx.Turn + 1) { ctx.TallyOf(self).SutureCapped++; return; }
+
         // **着弾した相手の傷を読む**（断ちと同じ）。介入で逸れたなら殉教者の傷を読んで空振りする。
-        UnitState donor = target;
-        int w = ctx.WoundDepthOf(target);   // 第93期: 深手も「傷1つぶん」
+        // `OnWound` では seed が味方のことがある（巻き込み則の傷）ので、そのときは最初から味方側として数える。
+        // **自分に書かれた傷は自分では引けない**（下の味方側の走査が self を除くのと同じ理由）。
+        // **糸口（`SutureRule`）と発火口（`SutureFireRule`）は独立**（自己検査 (d)）——
+        // `Foe` は「敵の傷口からしか引かない」なので、`OnWound` で味方に傷が書かれた事象では
+        // 種を持たない（下の味方側の走査も `Foe` では素通りするので、そのまま空振りになる）。
+        bool seedIsAlly = seed.TeamId == self.TeamId;
+        UnitState? donor = seed == self || (seedIsAlly && ctx.Suture.Side == SutureSide.Foe) ? null : seed;
+        int w = donor is null ? 0 : ctx.WoundDepthOf(seed);   // 第93期: 深手も「傷1つぶん」
+        bool seedFromAlly = donor is not null && seedIsAlly;
 
         // 両側読み（第85期・`SutureRule.Both`）。**糸口の候補が味方にも広がる**——
         // 生存する味方のうち self を除いて傷がいちばん深い者。**深いほうを取り、同数なら敵側**（現行挙動を保つ）。
@@ -4759,7 +4825,7 @@ public sealed class SutureTrait : Trait
         // `SutureSide.Foe`（第87期までの既定）ではこのブロックは素通りする。
         // **第88期に `Both` が既定になった**——ただし単独では何も変えない（味方に傷が載る経路は
         // `SpillWoundRule` だけで、そちらも同時に既定になっている）。
-        bool fromAlly = false;
+        bool fromAlly = seedFromAlly;
         if (ctx.Suture.Side == SutureSide.Both)
         {
             var wounded = ctx.LivingMembers(self.TeamId)
@@ -4775,7 +4841,7 @@ public sealed class SutureTrait : Trait
                 }
             }
         }
-        if (w <= 0) return;
+        if (w <= 0 || donor is null) return;
 
         // 糸は自分には通せない（MostHurtAlly が self を除く）。
         UnitState? patient = ctx.MostHurtAlly(self);
@@ -4805,7 +4871,13 @@ public sealed class SutureTrait : Trait
         // 第93期: **深手は塞げない**ので raw の傷が残っているときだけ引く（既定では w と一致する）。
         int donorRaw = donor.Counter(StatusKeys.Wound);
         if (seal && donorRaw > 0) { donor.SetCounter(StatusKeys.Wound, donorRaw - 1); ctx.NoteWoundDrop(donor); }   // 第104期: 傷が 0 になったら刻んだ事実も消える
+
+        // **上限はここで初めて立てる**（空振りではターンを焼かない）。`Swing` では1ビットも書かない。
+        if (capped) self.SetCounter(LastTurnKey, ctx.Turn + 1);
     }
+
+    /// <summary>会戦の境界で上限の記録を捨てる（突き返し・散開と同じ作法）。</summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(LastTurnKey, 0);
 }
 
 /// <summary>

@@ -950,6 +950,14 @@ public sealed class UnitTally
     /// <summary>縫いが味方側から糸を引いたときの傷の深さの総和と最大（第89期）。<b>盤面には一切影響しない。</b></summary>
     public int SutureAllyDepth, SutureAllyDepthMax;
 
+    /// <summary>
+    /// 縫いの発火口（第107期 (S3)）。<c>SutureCalls</c> は<b>フックに入った回数</b>
+    /// （発火 ＝ <c>SutureFoe + SutureAlly</c>。差が空振り）、
+    /// <c>SutureCapped</c> は 1ターン1回の上限で弾かれた回数（<see cref="SutureFire.OnWound"/> のときだけ立つ）。
+    /// <b>盤面には一切影響しない。</b>
+    /// </summary>
+    public int SutureCalls, SutureCapped;
+
     /// <summary>巻き込み則（第85期・<c>SpillWoundRule</c>）で<b>この駒が味方に書いた</b>傷の回数。</summary>
     public int SpillWoundsWritten;
 
@@ -1170,6 +1178,7 @@ public sealed class UnitTally
         BetrayFodderKills += o.BetrayFodderKills; BetrayFodderHits += o.BetrayFodderHits;
         SutureFoe += o.SutureFoe; SutureAlly += o.SutureAlly; SutureDry += o.SutureDry; SutureHealed += o.SutureHealed;
         SutureAllyDepth += o.SutureAllyDepth; SutureAllyDepthMax = Math.Max(SutureAllyDepthMax, o.SutureAllyDepthMax);
+        SutureCalls += o.SutureCalls; SutureCapped += o.SutureCapped;
         GatherGuards += o.GatherGuards; GatherHadDonor += o.GatherHadDonor; GatherTaken += o.GatherTaken;
         GatherDepthSum += o.GatherDepthSum; GatherDepthMax = Math.Max(GatherDepthMax, o.GatherDepthMax);
         SpillWoundsWritten += o.SpillWoundsWritten;

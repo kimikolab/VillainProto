@@ -394,13 +394,58 @@ public sealed class BattleContext
             EmitStatusGain(target, StatusKeys.Deep, 1, writer);   // 第97期・表示専用
             // 第104期: **束ねは「書けた」側**（深手は WoundDepthOf / IsWounded が傷として読む）。
             NoteWoundWriter(target, writer);
+            FireSutureOnWound(target);   // 第107期 (S3)。既定（Swing）では素通りする
             return -1;
         }
 
         target.SetCounter(StatusKeys.Wound, w);
         EmitStatusGain(target, StatusKeys.Wound, amount, writer);   // 第97期・表示専用
         NoteWoundWriter(target, writer);   // 第104期。**版に依らない記録。盤面には影響しない**
+        FireSutureOnWound(target);   // 第107期 (S3)。既定（Swing）では素通りする
         return w;
+    }
+
+    /// <summary>
+    /// 縫いを<b>手番の外</b>から走らせる（第107期 (S3)・<see cref="SutureFire.OnWound"/>）。
+    /// <b><see cref="Wound"/> が実際に傷を書いたときだけ</b>呼ぶ——engine が傷を読む窓口
+    /// （第90期の滲み則）と同じ層で、<b>新しい窓口は1つも作っていない</b>。
+    ///
+    /// <para><b>順序はスロット昇順</b>（<c>ctx.PickOne</c> を使わない——候補2個以上で <c>Roll</c> を
+    /// 消費して乱数列が動く。第89期 (h)）。<b>陣営を問わない</b>——engine の窓口は両側に開いている。</para>
+    ///
+    /// <para><b>再入ガード</b>（<c>_suturingOnWound</c>）。縫いは <c>ctx.Heal</c> と塞ぎしか呼ばないので
+    /// 現状は再帰しないが、<b>将来「縫いが傷を書く」経路ができた瞬間に無限再帰する</b>ので、
+    /// 1ターン1回の上限だけに頼らない（突き返しの `Shoving` と同じ判断）。</para>
+    ///
+    /// <para><b>ログの但し書き</b>: 塞ぎが走ると呼び出し側が持っている <c>w</c> が1つ古くなる
+    /// （「傷 N」の行が実際より1多く出る）。<b>盤面には影響しない</b>——値は書いた瞬間の真値で、
+    /// 塞いだことは縫いの行に別に出る。<c>verbose</c> のときだけ見える表示上の順序の話。</para>
+    /// </summary>
+    private bool _suturingOnWound;
+
+    private void FireSutureOnWound(UnitState wounded)
+    {
+        // プロパティ名が列挙型名を隠すので `global::` で当てる（型を改名しないための1文字）。
+        if (SutureFire.Fire != BattleCore.SutureFire.OnWound) return;
+        if (_suturingOnWound) return;
+        _suturingOnWound = true;
+        try
+        {
+            foreach (UnitState u in AllUnits.Where(x => x.IsAlive && x.HasTrait(TraitId.Suture))
+                                            .OrderBy(x => x.TeamId).ThenBy(x => x.Slot).ToList())
+                foreach (Trait t in u.Traits.ToList())
+                    if (t is SutureTrait st)
+                    {
+                        // **第94期 (T2) の印を立ててから呼ぶ**——立てないと `ctx.Heal` の帰属が
+                        // 「誰のものでもない出力」に落ちて、第105期の器具（`tempo`）でハリの回復が
+                        // まるごと消える（Q6 が測れなくなる）。engine が特性を直に呼ぶ箇所は
+                        // すべてこの形（`CanReactProbed` / `CanActProbed` と同じ）。
+                        TraitMark m = BeginTrait(t.Id, u);
+                        try { st.Fire(this, u, wounded); }
+                        finally { EndTrait(m); }
+                    }
+        }
+        finally { _suturingOnWound = false; }
     }
 
     /// <summary><see cref="UnitTally.WoundWritesByRoute"/> の長さ（<see cref="WoundRoute"/> の要素数）。</summary>
@@ -1790,6 +1835,13 @@ public sealed class BattleContext
     public SutureRule Suture { get; }
 
     /// <summary>
+    /// 縫いの発火口（第107期 (S3)・<see cref="SutureFireRule"/>）。
+    /// <b>診断（hold2）が版を差し替えるためだけの窓口</b>で、通常の実行では誰も渡さない
+    /// （既定は <see cref="SutureFireRule.Default"/> ＝ 現行の <see cref="SutureFire.Swing"/>）。
+    /// </summary>
+    public SutureFireRule SutureFire { get; }
+
+    /// <summary>
     /// 巻き込み則（第85期・W2）。<b>診断（suture2）が版を差し替えるためだけの窓口</b>で、
     /// 通常の実行では誰も渡さない（既定は <see cref="SpillWoundRule.Default"/> ＝ 無効）。
     /// </summary>
@@ -2074,7 +2126,8 @@ public sealed class BattleContext
                          FunnelRule? funnel = null, WhetMask? whetMask = null,
                          CreakRule? creak = null, SeverRule? sever = null,
                          ThinBladeRule? thinBlade = null, ThornRule? thorn = null,
-                         SutureRule? suture = null, SpillWoundRule? spillWound = null,
+                         SutureRule? suture = null, SutureFireRule? sutureFire = null,
+                         SpillWoundRule? spillWound = null,
                          MendRule? mend = null, IgniteRule? woundIgnite = null,
                          GatherRule? gather = null, SoakRule? soak = null,
                          DeepRule? deep = null, CurseRule? curse = null,
@@ -2111,6 +2164,7 @@ public sealed class BattleContext
         ThinBlade = thinBlade ?? ThinBladeRule.Default;
         Thorn = thorn ?? ThornRule.Default;
         Suture = suture ?? SutureRule.Default;
+        SutureFire = sutureFire ?? SutureFireRule.Default;
         SpillWound = spillWound ?? SpillWoundRule.Default;
         Mend = mend ?? MendRule.Default;
         WoundIgnite = woundIgnite ?? IgniteRule.Default;
@@ -4675,6 +4729,7 @@ public static class BattleEngine
                                    WhetMask? whetMask = null, CreakRule? creak = null,
                                    SeverRule? sever = null, ThinBladeRule? thinBlade = null,
                                    ThornRule? thorn = null, SutureRule? suture = null,
+                                   SutureFireRule? sutureFire = null,
                                    SpillWoundRule? spillWound = null, MendRule? mend = null,
                                    IgniteRule? woundIgnite = null, GatherRule? gather = null,
                                    SoakRule? soak = null, DeepRule? deep = null,
@@ -4686,8 +4741,8 @@ public static class BattleEngine
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
-               creak, sever, thinBlade, thorn, suture, spillWound, mend, woundIgnite, gather, soak, deep,
-               curse, betray, encore, rage, menderCost, loose, probe);
+               creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
+               gather, soak, deep, curse, betray, encore, rage, menderCost, loose, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -4710,7 +4765,8 @@ public static class BattleEngine
                                    FunnelRule? funnel = null, WhetMask? whetMask = null,
                                    CreakRule? creak = null, SeverRule? sever = null,
                                    ThinBladeRule? thinBlade = null, ThornRule? thorn = null,
-                                   SutureRule? suture = null, SpillWoundRule? spillWound = null,
+                                   SutureRule? suture = null, SutureFireRule? sutureFire = null,
+                                   SpillWoundRule? spillWound = null,
                                    MendRule? mend = null, IgniteRule? woundIgnite = null,
                                    GatherRule? gather = null, SoakRule? soak = null,
                                    DeepRule? deep = null, CurseRule? curse = null,
@@ -4721,7 +4777,7 @@ public static class BattleEngine
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
-                                    suture, spillWound, mend, woundIgnite, gather, soak, deep, curse,
+                                    suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
