@@ -684,6 +684,33 @@ public sealed class UnitTally
     public int TaillightPeak, TaillightYieldAttack, TaillightYieldSkill, TaillightYieldCharge;
     public int TaillightYieldDamage, TaillightLitReceived, TaillightLitLumen;
 
+    /// <summary>
+    /// 尾灯の譲渡条件の版（第110期・<see cref="TaillightRule"/>）。<b>誰も読んで分岐しない計数。</b>
+    ///
+    /// <para><b>V2（即時）の段の表</b>（指示書 §1-3。どこで鎖が切れたかを段で数える）——
+    /// <c>TaillightSawDeath</c> 敵の死の通知が生きている自分に届いた回数 ／
+    /// <c>TaillightDeadTarget</c> そのうち灯した相手がいない・倒れていた回数 ／
+    /// <c>TaillightNoOutOfTurn</c> <see cref="BattleContext.CanActOutOfTurn"/> で止まった回数
+    /// （内訳 <c>TaillightOutHush</c> 粛 ／ <c>TaillightOutStun</c> 痺れ ／ <c>TaillightOutReact</c> <c>CanReact</c> 偽）／
+    /// <c>TaillightRepeat</c> このターン既に譲っていた回数（1ターン1回の上限）／
+    /// <c>TaillightNoFoe</c> 敵が全滅していて譲らなかった回数。</para>
+    ///
+    /// <para><c>TaillightPair</c> <b>1つの撃破で追い打ちと譲渡が両方立った回数</b>（指示書 Q3）。
+    /// 「その死亡通知の連鎖の中で、譲渡より前に味方の振りが走っていた」を数える
+    /// ——V0 / V1 は譲渡が <c>OnAction</c>（自分の手番）にあるので<b>構造的に 0</b>。</para>
+    ///
+    /// <para><c>TaillightStallStun</c> / <c>TaillightStallSlumber</c> / <c>TaillightStallCanAct</c>
+    /// 譲った手番が潰れた理由の内訳（譲られた駒の第105期の計数の差分で取る。
+    /// 合計は <c>TaillightYieldStalls</c>）。</para>
+    ///
+    /// <para><c>TaillightSaw2</c> V1（窓）で「前のターンの撃破」を読んで成立した回数
+    /// ——<c>TaillightYields</c> のうち V0 では立たなかったぶん。</para>
+    /// </summary>
+    public int TaillightSawDeath, TaillightDeadTarget, TaillightNoOutOfTurn;
+    public int TaillightOutHush, TaillightOutStun, TaillightOutReact;
+    public int TaillightRepeat, TaillightNoFoe, TaillightPair;
+    public int TaillightStallStun, TaillightStallSlumber, TaillightStallCanAct, TaillightSaw2;
+
     public int Attacks;
 
     /// <summary>

@@ -6500,6 +6500,12 @@ public sealed class TaillightTrait : Trait
     /// <summary>このターン、自分の手番より前に敵が倒れていたら、そのターン番号。</summary>
     public const string SawKey = "tomoSaw";
 
+    /// <summary>
+    /// V2（即時・第110期）で、最後に手番を譲ったターン番号。<b>1ターン1回の上限</b>。
+    /// <see cref="SawKey"/> と同じ作法（ターン番号を書くだけなので掃除が要らない）。
+    /// </summary>
+    public const string YieldedKey = "tomoYielded";
+
     public override TraitId Id => TraitId.Taillight;
 
     /// <summary>
@@ -6511,6 +6517,42 @@ public sealed class TaillightTrait : Trait
     {
         if (!self.IsAlive || dead.TeamId == self.TeamId) return;
         self.SetCounter(SawKey, Math.Max(1, ctx.Turn));
+
+        // ここから下は V2（即時・第110期）だけ。**既定（V0）では1行も走らない。**
+        if (!ctx.TaillightImmediate) return;
+
+        UnitTally t = ctx.TallyOf(self);
+        t.TaillightSawDeath++;                                   // 段 1 —— 死の通知が届いた
+
+        UnitState? lit = Lit(ctx, self);
+        if (lit is null || !lit.IsAlive) { t.TaillightDeadTarget++; return; }   // 段 2
+
+        // 段 3 —— **ターン外の行動なので `CanActOutOfTurn` を通す。**
+        // 問うのは `lit`（動くのは灯された味方であってトモではない）。
+        // 内訳は `CanActOutOfTurn` と同じ順で自分で引き直す（**答えは1ビットも変えない**）
+        // ——`CanReact` の実装はロスターでのろま（<see cref="SluggishTrait"/>）1枚だけで、
+        // ログも乱数も counter も触らないので、ここで直に問うても観測を汚さない。
+        if (!ctx.CanActOutOfTurn(lit))
+        {
+            t.TaillightNoOutOfTurn++;
+            if (lit.RawCounter(StatusKeys.Stun) > 0) t.TaillightOutStun++;
+            else if (!lit.Traits.All(x => x.CanReact(ctx, lit))) t.TaillightOutReact++;
+            else t.TaillightOutHush++;                           // 残るのは粛だけ
+            return;
+        }
+
+        if (ctx.Yielding) { t.TaillightBlockedHop++; return; }   // 段 4 —— 1ホップ
+
+        int now = Math.Max(1, ctx.Turn);
+        if (self.RawCounter(YieldedKey) == now) { t.TaillightRepeat++; return; }   // 段 5 —— 1ターン1回
+
+        // 段 6 —— 行動順ループと同じ番人。倒れたのが最後の1体なら譲らない。
+        if (!ctx.TeamAlive(ctx.Opponent(self.TeamId))) { t.TaillightNoFoe++; return; }
+
+        self.SetCounter(YieldedKey, now);
+        // 指示書 Q3 —— **この死亡通知の連鎖の中で、譲渡より前に味方の振りが走っていたか。**
+        // 追い打ち（ハギ）は同じ `OnAnyDeath` で、しかも席が若い（前1）ので先に走る。
+        Yield(ctx, self, lit, pair: ctx.TaillightChainSwung);
     }
 
     /// <summary>灯をともす。<b>行動順ループの外側</b>なので、その手番の前に全員へ効く。</summary>
@@ -6569,20 +6611,49 @@ public sealed class TaillightTrait : Trait
     {
         if (!self.IsAlive) return;
 
+        // V2（即時・第110期）は `OnAnyDeath` で譲るので、自分の手番では何もしない。
+        if (ctx.TaillightImmediate) return;
+
         UnitTally t = ctx.TallyOf(self);
-        if (self.RawCounter(SawKey) != Math.Max(1, ctx.Turn)) { t.TaillightNoDeath++; return; }
+        int now = Math.Max(1, ctx.Turn);
+        int saw = self.RawCounter(SawKey);
+        // V1（窓・第110期）は<b>前のターンの撃破も読む</b>。**記録の書き方は変えない**
+        // （`SawKey` はターン番号を書くだけ）——読む側で 1 ターンぶん広げるだけである。
+        bool window = ctx.Taillight.Mode == YieldMode.OwnTurnWindow && saw > 0 && saw == now - 1;
+        if (saw != now && !window) { t.TaillightNoDeath++; return; }
+        if (window) t.TaillightSaw2++;   // V0 では立たなかったぶん（計数のみ）
 
         UnitState? lit = Lit(ctx, self);
         if (lit is null || !lit.IsAlive) { t.TaillightNoTarget++; return; }
 
         // 1ホップ。譲った手番の中で敵が倒れても、そこから再度譲らない。
         if (ctx.Yielding) { t.TaillightBlockedHop++; return; }
-        if (!ctx.TeamAlive(ctx.Opponent(self.TeamId))) return;   // 行動順ループと同じ番人
+        // 行動順ループと同じ番人。第110期に計数を1本足した（**分岐は1ビットも変えていない**）
+        // ——門2（条件成立）を段の和として閉じるために要る。
+        if (!ctx.TeamAlive(ctx.Opponent(self.TeamId))) { t.TaillightNoFoe++; return; }
+
+        Yield(ctx, self, lit, pair: false);   // 自分の手番なので死亡通知の連鎖の中ではない
+    }
+
+    /// <summary>
+    /// 灯した味方に手番をまるごと渡す（V0〜V2 で共有する本体・第110期に切り出した）。
+    /// <b>版によって変わるのは呼ぶ場所と条件だけで、渡し方は1ビットも変えていない。</b>
+    ///
+    /// <para>潰れた理由の内訳は<b>譲られた駒の第105期の計数の差分</b>で取る
+    /// ——engine に1行も足さずに済む。<b>入れ子（譲られた手番の中で再行動が走る）では
+    /// そのぶんも混ざる</b>ので、厳密な分解ではないことを断って使うこと。</para>
+    /// </summary>
+    private static void Yield(BattleContext ctx, UnitState self, UnitState lit, bool pair)
+    {
+        UnitTally t = ctx.TallyOf(self);
+        UnitTally lt = ctx.TallyOf(lit);
+        int s0 = lt.StallStun, s1 = lt.StallSlumber, s2 = lt.StallImmobile + lt.StallCanAct;
 
         ctx.Yielding = true;
         try
         {
             t.TaillightYields++;
+            if (pair) t.TaillightPair++;
             ctx.Log($"    {self.Name} は前へ出ず、灯した {lit.Name} に道を譲る", LogKind.Highlight);
             // 第109期。**内訳を数えるだけ**（第104期の再行動と同じ形）。盤面には触らない。
             switch (ctx.TakeTurn(lit))
@@ -6592,6 +6663,9 @@ public sealed class TaillightTrait : Trait
                 case TurnOutcome.Charge: t.TaillightYieldCharge++; break;
                 default:                 t.TaillightYieldStalls++; break;
             }
+            t.TaillightStallStun    += lt.StallStun - s0;
+            t.TaillightStallSlumber += lt.StallSlumber - s1;
+            t.TaillightStallCanAct  += lt.StallImmobile + lt.StallCanAct - s2;
         }
         finally { ctx.Yielding = false; }
     }
@@ -6608,6 +6682,7 @@ public sealed class TaillightTrait : Trait
         self.SetCounter(TargetKey, 0);
         self.SetCounter(LitKey, 0);
         self.SetCounter(SawKey, 0);
+        self.SetCounter(YieldedKey, 0);   // 第110期（V2 の1ターン1回の印）
     }
 
     /// <summary>いま灯している味方（生死を問わず引く。倒れていれば呼び出し側が弾く）。</summary>
@@ -6633,6 +6708,62 @@ public sealed class TaillightTrait : Trait
         ctx.TallyOf(self).TaillightDoused += lit;
         ctx.Log($"    {prev.Name} の灯が消えた（攻撃 -{lit}）", LogKind.Status);
     }
+}
+
+/// <summary>
+/// 尾灯の譲渡条件（第110期）。<b>診断（<c>tomo yield</c>）が3つの版を1回の実行の中で
+/// 比べるためだけに外から差せる窓口</b>で、通常の実行では誰も渡さない。
+///
+/// <para><b>既定は <see cref="YieldMode.OwnTurn"/> ＝ 第108期に作った現行の形</b>
+/// ——渡さない限り盤面は常にこれ（<c>compare</c> 305 セルが 0 件であることが検算）。</para>
+///
+/// <para><b>書き換え可能な static のノブにしないこと。</b> Trait は共有シングルトンで、
+/// <c>layout</c> は戦闘を並列実行する（<see cref="ColossusRule"/> / <see cref="YokeRule"/> と同じ判断）。</para>
+/// </summary>
+public readonly record struct TaillightRule(YieldMode Mode)
+{
+    public static TaillightRule Default => new(YieldMode.OwnTurn);
+}
+
+/// <summary>
+/// 尾灯が手番を譲る条件（第110期）。<b>灯の対象選択は3版とも同一</b>——
+/// 条件と対象を同時に動かすと、どちらが効いたか読めない（指示書 §0-3）。
+/// </summary>
+public enum YieldMode
+{
+    /// <summary>V0（現行・第108期）。自分の手番で、<b>このターン</b>敵が倒れていたら譲る。</summary>
+    OwnTurn,
+
+    /// <summary>
+    /// V1（窓）。自分の手番で、<b>このターンか前のターン</b>に敵が倒れていたら譲る。
+    /// <para>埋めるのは「決着が伸びる波ほど1ターンに倒れる敵が減る」穴（第109期 3-3）。
+    /// <b>記録の書き方（<see cref="TaillightTrait.SawKey"/> にターン番号を書くだけ）は変えない</b>
+    /// ——読む側で <c>Turn</c> か <c>Turn - 1</c> のどちらかを許すだけ。</para>
+    /// </summary>
+    OwnTurnWindow,
+
+    /// <summary>
+    /// V2（即時）。<b>敵が倒れた瞬間</b>（<c>OnAnyDeath</c>）に、灯した味方へ
+    /// <b>ターン外で</b>手番を渡す。自分の手番では何もしない。<b>1ターン1回。</b>
+    ///
+    /// <para>埋めるのは「撃破が起きたターンに戦闘が終わる」穴（第109期 3-1）
+    /// ——トモは味方で最も遅いので、撃破と自分の手番のあいだにそのターンの残りが全部入る。</para>
+    ///
+    /// <para><b>ターン外の行動なので <see cref="BattleContext.CanActOutOfTurn"/> を通す</b>
+    /// ＝粛（第二波）で閉じる。これは欠陥ではなく読み手が1枚増える形で、
+    /// <b>止まる5本目</b>になる（既存は 棘・仇討ち・軋み・追い打ち）。
+    /// <b>問うのは <c>lit</c> のほう</b>——動くのは灯された味方であってトモではない。</para>
+    ///
+    /// <para><b><c>ctx.Interrupt</c> では包まない</b>（第110期 Phase 0 の 3）。理由は3つ:
+    /// (1) 前例は再行動（<c>EncoreRule</c>・第104期）で、あれも <c>HandleDeath</c> の中から
+    /// <c>TakeTurn</c> を呼ぶが包んでいない ／
+    /// (2) 包むと <c>InInterrupt</c> が立って <see cref="BattleContext.InOwnTurn"/> が偽になり、
+    /// <b>譲渡の与ダメ（<c>TaillightYieldDamage</c>・紙の分子）が丸ごと 0 に落ちる</b> ／
+    /// (3) 軋み（ヨミ）は <c>OnMoved</c> で <c>InInterrupt</c> を読むので、包むと
+    /// <b>譲られた手番の中でヨミが動かされても割り込めなくなる</b>——挙動を静かに変えることになる。
+    /// 再入は <see cref="BattleContext.Yielding"/>（1ホップ）と1ターン1回の上限で足りる。</para>
+    /// </summary>
+    Immediate
 }
 
 /// <summary>

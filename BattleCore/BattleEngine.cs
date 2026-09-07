@@ -1945,6 +1945,42 @@ public sealed class BattleContext
     public bool Yielding;
 
     // =====================================================================================
+    // 第110期 —— 尾灯の譲渡条件（TaillightRule）。**既定は V0 ＝現行**で、
+    // 渡さない限り `OnAnyDeath` の分岐も `_tlChainAtk` の走査も1回も走らない
+    // （`compare` 305 セルが 0 件であることが検算）。
+    // =====================================================================================
+
+    /// <summary>尾灯の譲渡条件（第110期・<see cref="TaillightRule"/>）。</summary>
+    public TaillightRule Taillight { get; }
+
+    /// <summary>V2（即時）のときだけ真。<b>短絡の作法</b>（軛の Cap・粛の保持者走査と同じ）。</summary>
+    public bool TaillightImmediate => Taillight.Mode == YieldMode.Immediate;
+
+    /// <summary>
+    /// いま処理中の死亡通知の連鎖に入った時点の「味方の振りの総数」（指示書 Q3 の材料）。
+    /// <b>観測専用で、誰も読んで分岐しない。</b> 入れ子（追い打ちが更に誰かを倒す）に備えて
+    /// <c>HandleDeath</c> が退避・復帰する。
+    /// </summary>
+    private int _tlChainAtk;
+
+    /// <summary>
+    /// 譲渡の時点で「この死亡通知の連鎖の中で、既に味方の振りが走っていたか」。
+    /// <b>追い打ち（ハギ）と譲渡が1つの撃破で両方立ったか</b>を数えるためだけにある。
+    /// </summary>
+    public bool TaillightChainSwung => _units.Sum(u => TallyOf(u).Attacks) > _tlChainAtk;
+
+    /// <summary>死亡通知の連鎖に入る（<c>HandleDeath</c> が呼ぶ）。戻り値を <see cref="EndTlChain"/> へ返す。</summary>
+    internal int BeginTlChain()
+    {
+        int prev = _tlChainAtk;
+        _tlChainAtk = _units.Sum(u => TallyOf(u).Attacks);
+        return prev;
+    }
+
+    /// <summary>死亡通知の連鎖から出る。</summary>
+    internal void EndTlChain(int prev) => _tlChainAtk = prev;
+
+    // =====================================================================================
     // 第104期 —— 再行動（EncoreRule）の計数。**盤面には一切影響しない。**
     //
     // 門（§2-2）の 1・2 は**版に依らず数える**（第86期の X1P・第90期の作法）——
@@ -2147,7 +2183,8 @@ public sealed class BattleContext
                          DeepRule? deep = null, CurseRule? curse = null,
                          BetrayRule? betray = null, EncoreRule? encore = null,
                          RageRule? rage = null, MenderCostRule? menderCost = null,
-                         LooseRule? loose = null, CounterProbe? probe = null)
+                         LooseRule? loose = null, TaillightRule? taillight = null,
+                         CounterProbe? probe = null)
     {
         _rng = new Random(seed);
         Probe = probe;          // 第94期 (T2)。**既定 null。診断だけが渡す。**
@@ -2191,6 +2228,7 @@ public sealed class BattleContext
         Rage = rage ?? RageRule.Default;
         MenderCost = menderCost ?? MenderCostRule.Default;
         Loose = loose ?? LooseRule.Default;
+        Taillight = taillight ?? TaillightRule.Default;
     }
 
     // =====================================================================================
@@ -4037,6 +4075,12 @@ public sealed class BattleContext
         }
 
         // 敵味方を問わない死亡通知。墓守はこちらを見る。
+        //
+        // 第110期。V2（即時）の譲渡はこの通知の中で走るので、**入る前に「味方の振りの総数」を
+        // 控えておく**——「1つの撃破で追い打ちと譲渡が両方立ったか」（指示書 Q3）は、
+        // 譲渡の時点でこの値が増えているかどうかで数える。**盤面には一切影響しない**うえ、
+        // 既定（V0）では `TaillightImmediate` が偽なので走査そのものが走らない。
+        int tlPrevChain = TaillightImmediate ? BeginTlChain() : 0;
         foreach (UnitState u in _units.Where(u => u.IsAlive).ToList())
             foreach (Trait t in u.Traits.ToList())
             {
@@ -4044,6 +4088,7 @@ public sealed class BattleContext
                 t.OnAnyDeath(this, u, dead);
                 this.EndTrait(m);
             }
+        if (TaillightImmediate) EndTlChain(tlPrevChain);
 
         // 味方限定の通知。蘇生はこちらで、墓守が強化を得た後に走る。
         foreach (UnitState ally in LivingMembers(dead.TeamId).ToList())
@@ -4755,13 +4800,14 @@ public static class BattleEngine
                                    CurseRule? curse = null, BetrayRule? betray = null,
                                    EncoreRule? encore = null, RageRule? rage = null,
                                    MenderCostRule? menderCost = null, LooseRule? loose = null,
+                                   TaillightRule? taillight = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
-               gather, soak, deep, curse, betray, encore, rage, menderCost, loose, probe);
+               gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -4791,13 +4837,14 @@ public static class BattleEngine
                                    DeepRule? deep = null, CurseRule? curse = null,
                                    BetrayRule? betray = null, EncoreRule? encore = null,
                                    RageRule? rage = null, MenderCostRule? menderCost = null,
-                                   LooseRule? loose = null, CounterProbe? probe = null)
+                                   LooseRule? loose = null, TaillightRule? taillight = null,
+                                   CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
-                                    betray, encore, rage, menderCost, loose, probe);
+                                    betray, encore, rage, menderCost, loose, taillight, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
