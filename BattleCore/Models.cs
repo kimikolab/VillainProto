@@ -648,6 +648,21 @@ public sealed class UnitTally
     /// </summary>
     public int EncoreFires, EncoreStalls;
 
+    /// <summary>
+    /// 尾灯（第108期・<see cref="TraitId.Taillight"/>）。<b>誰も読んで分岐しない計数。</b>
+    ///
+    /// <para><c>TaillightFires</c> 灯した回数 ／ <c>TaillightLumen</c> 灯した総量 ／
+    /// <c>TaillightSwitches</c> 対象が替わった回数 ／ <c>TaillightDoused</c> 消した総量 ／
+    /// <c>TaillightIdle</c> 照らす相手がいなかった回数（空振り）。</para>
+    ///
+    /// <para><c>TaillightYields</c> 手番を譲った回数 ／ <c>TaillightYieldStalls</c> 譲った手番が潰れた回数 ／
+    /// <c>TaillightNoDeath</c> 敵が倒れていなくて譲れなかった手番 ／
+    /// <c>TaillightNoTarget</c> 灯した相手がいない（または倒れていた）手番 ／
+    /// <c>TaillightBlockedHop</c> 1ホップで止めた回数（<see cref="BattleContext.Yielding"/>）。</para>
+    /// </summary>
+    public int TaillightFires, TaillightLumen, TaillightSwitches, TaillightDoused, TaillightIdle;
+    public int TaillightYields, TaillightYieldStalls, TaillightNoDeath, TaillightNoTarget, TaillightBlockedHop;
+
     public int Attacks;
 
     /// <summary>

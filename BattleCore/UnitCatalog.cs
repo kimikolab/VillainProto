@@ -1289,6 +1289,49 @@ public static class UnitCatalog
         Flavor = "手柄は自分の斧で取るものだと言って、差し出された椀を全部伏せた。"
     };
 
+    /// <summary>
+    /// 尾灯のトモ（第108期）。<b>毎ターン、自分を除いて最も遅い味方に灯をともす</b>
+    /// （攻撃力 +<see cref="TaillightTrait.Lumen"/>・累積）。<b>灯は1体にしか灯らない。</b>
+    /// 自分の手番より前に敵が倒れていたら、灯した味方に手番を譲る。<b>自分は動けない。</b>
+    ///
+    /// <para><b>攻撃力 0 は「出力ゼロ」ではない。</b> 第87期の「接続子が両方とも出力ゼロの軸どうしは
+    /// 5枠盤では橋を架けられない」に当たらない——<b>トモは強化（<see cref="WhetRoute.Taillight"/>）で
+    /// 出力を出す</b>。強化・弱体は第105〜106期に4つ目の通貨として数え直した本物の軸で、
+    /// <b>通貨が違うだけ</b>である。あわせて「素の通常攻撃しか振らない駒を減らす」方針に沿う
+    /// （実測で <c>Actions</c> を持たない駒は 48 / 52 枚 ＝ 92.3%・第105期）。</para>
+    ///
+    /// <para><b>速さ3 は機能要件。</b> 「自分を除いて最も遅い味方」を選ぶので、
+    /// <b>自分が遅いほど選択が絞られる</b>——速2 のバン・セッキ以外が同席したときは
+    /// 必ず自分より遅くない相手を照らすことになり、「後ろにいる者だけを照らす」という
+    /// フレーバーと選択規則が一致する。<b>速さ ≤ 5 の味方はロスターに 15 枚</b>
+    /// （バン2 / セッキ2 / ドハ3 / ゴルム3 / ヒビ3 / シガ3 / ガルド4 / カド4 / クビ4 /
+    /// グザ5 / ムド5 / ナタ5 / ウケ5 / ヨミ5 / ザン5。第108期 Phase 0 の実測）。</para>
+    ///
+    /// <para><b>HP54・攻0・速3・単体 は探索段階の初期値。</b>
+    /// <b>掃引はこの期ではやらない</b>（第109期。1変数を振るときに一緒に動かすものを増やさない
+    /// ——<see cref="Hane"/> と同じ判断）。単体は <c>Actions = [Skill]</c> なので
+    /// <b>実質使われない</b>（<c>PerformAttack</c> を一度も通らない）。</para>
+    ///
+    /// <para><b>第109期まで盤面に出さない</b>——<c>Presets.Compare</c> にも <c>Presets.Cross</c> にも
+    /// 入っていない。「行が変わったせい」と「駒が変わったせい」を切り分けるため（指示書 §0）。
+    /// 機構は診断 <c>taillight</c> のローカル台でだけ走る。</para>
+    /// </summary>
+    public static readonly UnitDef Tomo = new()
+    {
+        Id = "tomo",
+        Name = "尾灯のトモ",
+        MaxHp = 54,
+        Attack = 0,
+        Speed = 3,
+        Traits = new[] { TraitId.Taillight },
+        // 灯すことと道を譲ることが手番そのもの（第11期 Phase BB の作法）。攻撃は出ない。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "灯をかざしている") },
+        PlusText = "毎ターン、自分を除いて最も遅い味方に灯をともす（攻撃力 +5・累積）",
+        MinusText = "灯は1体にしか灯らない。対象が変わると前の灯は消える。"
+                    + "自分の手番より前に敵が倒れていたら、灯した味方に手番を譲る。自分は動けない",
+        Flavor = "尾の灯は自分では見えない。照らせるのは、後ろにいる者だけ。"
+    };
+
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
         Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som

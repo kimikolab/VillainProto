@@ -109,6 +109,11 @@ public enum TraitId
     Betrayed,   // 背かれ: 毎ターン、敵陣に喚び出す。喚ばれたものは背いて敵につき、敵の前列が埋まる
                 // （1つの動作の表と裏。撃破の読み手がいれば資産、いなければ手番を捨てて敵を守っただけ）
 
+    // --- 第108期で足した札 ---
+    Taillight,  // 尾灯: 毎ターン、自分を除いて最も遅い味方1体に灯をともす（攻撃力が積み上がる）。
+                // 灯は1体にしか灯らず、対象が変わると前の灯は消える。自分の手番より前に敵が倒れていたら、
+                // 灯した味方に手番を譲る（1つの動作の表と裏。渡すのは力と手番で、自分は何も取らない）
+
     // --- 傷の5枚から切り出したマイナス（第74期・**器具**） ---
     // どれも既存の駒に既定で付いたままで、**盤面は1ビットも変わらない**（受け入れ基準は
     // `compare` 305 セル 0 件）。切り出した理由は1つだけ——**計量できるようにするため**。
@@ -2666,15 +2671,18 @@ public enum WhetRoute
     Drifter,        // 移り木: シオ → 動かされた味方・移動のたび
     Regurgitate,    // 吐き戻し: ゴルム → 庇った相手（SupportTargets 経由）・肩代わりのたび。
                     // **engine 側にある唯一の経路**で、Dull の「なまり」（同じく engine 側）と対称
-    Favor          // 火選り: ヒヨ → **燃えている味方全員**（自分を除く）・毎ターン。**位置を問わない**。
+    Favor,         // 火選り: ヒヨ → **燃えている味方全員**（自分を除く）・毎ターン。**位置を問わない**。
                     // 候補を自前で AcceptsSupport 濾しする（隣へ漏らさない＝駆り立てと同じ側）。
                     // **状態異常を条件に宛先を選ぶ初めての強化経路**（第58期）
+    Taillight      // 尾灯: トモ → **自分を除いて最も遅い味方1体**・毎ターン。**位置を問わない**。
+                    // 候補を自前で AcceptsSupport 濾しする（隣へ漏らさない＝駆り立て・火選りと同じ側）。
+                    // **配ったぶんを後から引き上げる初めての強化経路**（第108期。灯は1体にしか灯らない）
 }
 
 /// <summary>経路の名前と本数。診断の表の見出しと配列長をここ1箇所から引く。</summary>
 public static class WhetRoutes
 {
-    public static readonly string[] Names = { "その他", "駆り立て", "号令開戦", "号令毎T", "縛め", "移り木", "吐き戻し", "火選り" };
+    public static readonly string[] Names = { "その他", "駆り立て", "号令開戦", "号令毎T", "縛め", "移り木", "吐き戻し", "火選り", "尾灯" };
     public static int Count => Names.Length;
 }
 
@@ -6417,6 +6425,203 @@ public sealed class BetrayedTrait : Trait
 }
 
 /// <summary>
+/// 尾灯のトモ（第108期）。<b>毎ターン、自分を除いて最も遅い味方1体に灯をともす</b>
+/// （攻撃力 +<see cref="Lumen"/>・累積）。<b>灯は1体にしか灯らない</b>——対象が変わると
+/// 前の灯は消える。そして<b>自分の手番より前にこのターン敵が倒れていたら、灯した味方に手番を譲る。
+/// 自分は動けない。</b>
+///
+/// <para><b>1つの動作の表と裏</b>（<see cref="ShoveTrait"/> / <see cref="GoadTrait"/> と同じ形）
+/// ——渡すのは力と手番の2つだけで、この駒は自分では1点も出力しない
+/// （攻撃力 0・<c>Actions = [Skill]</c> で <c>PerformAttack</c> を一度も通らない）。</para>
+///
+/// <para><b>自分は対象外</b>（第84期以降の原則。自己完結を避ける）。
+/// 自分を含めると「速さ3 の自分が最も遅い」局面で灯が自分に落ちて、
+/// 供給者と受け手が同じ駒の上で重なる（第96期のムドと同じ形）。</para>
+///
+/// <para><b>候補は自前で <see cref="UnitState.AcceptsSupport"/> 濾しする（隣へ漏らさない）。</b>
+/// 駆り立て（<see cref="GoadTrait"/>）・縛め・移り木・火選りと同じ側で、
+/// <c>SupportTargets</c> で漏らす号令・吐き戻しの側ではない
+/// ——漏らすと<b>「灯は1体にしか灯らない」という規則そのものが破れる。</b>
+/// 支援拒否（ガルド）が最も遅い側にいる局面では、<b>それを飛ばして次に遅い味方</b>へ灯る。</para>
+///
+/// <para><b><see cref="BattleContext.PickOne"/> を使わない</b>（第89期 (h)。候補2個以上で
+/// <c>Roll</c> を消費する）。同速は<b>席番号の昇順</b>で決定的に割る。</para>
+///
+/// <para><b>点けるのは窓口（<see cref="BattleContext.Whet"/>）、消すのは直接。</b>
+/// 実装の判断は3つ:</para>
+/// <list type="number">
+///   <item><b>点灯は <see cref="WhetRoute.Taillight"/> で窓口を通す。</b>
+///   他者強化の供給の観測（<c>NoteCarry</c> の強化キー）は <c>Whet</c> の中の1行にしかないので、
+///   <c>AtkBonus</c> を直に足すと <c>derive scan</c> からも <c>whet</c> / <c>carry</c> / <c>spend</c> からも
+///   この駒が見えなくなる（第94期に手写しの表で 29 件の誤りが出たのと同じ穴）</item>
+///   <item><b>消灯は <see cref="BattleContext.Dull"/> を通さない。</b> あそこは集約（ウケ）と
+///   転嫁（ワタ）の横取りが立っている窓口なので、通すと<b>「自分の灯を消した」が第三者の破片や
+///   敵への弱体に化ける</b>——尾灯が書くつもりのない通貨を書くことになる。しかも
+///   受け手は素の攻撃力より弱くなっていないので、弱体の供給者として数えるのも事実に反する。
+///   <b>前例は墓守の層の引き直し</b>（<see cref="NecroTrait"/> の <c>desired - applied</c>）で、
+///   あちらも「自分で積んだ自分のボーナスの再計算であって強化ではない」として両方の窓口を通さない。
+///   <b>4つ目の通貨（第106期）の観測点は <c>AtkBonus</c> の setter</b> なので、
+///   消灯もそこでは符号を問わず数えられている</item>
+///   <item><b><see cref="UnitState.WhetReceived"/> は消灯で減らさない。</b>
+///   第67期の明文の規則（「閾値は<b>累積の床</b>であって在庫ではない」）どおりで、
+///   <c>Dull</c> が減らさないのと同じ扱い</item>
+/// </list>
+///
+/// <para><b>帳簿は灯した本人（トモ）が持つ。</b> <c>Whet</c> は横流し
+/// （<see cref="TraitId.Funnel"/>）が宛先を差し替えうるが、<b>横流しの保持者は
+/// <c>UnitCatalog.All</c> に居ない</b>（第62〜64期に3度落ちて残置が決まったヌキ）ので
+/// <c>FunnelActive</c> は立たず、灯の帳簿と実際の受け手はずれない。
+/// <b>横流しをロスターへ戻すなら、ここを受け手側の帳簿に変える必要がある。</b></para>
+///
+/// <para><b>手番の譲渡は第104期に切り出した <see cref="BattleContext.TakeTurn"/> を使う。</b>
+/// 「通常攻撃をもう1回」ではなく<b>手番まるごと</b>——再行動（<c>EncoreRule</c>）と同じ理由で、
+/// 灯した相手が <c>Actions</c> を持っていれば術も溜めもそのまま乗る。
+/// <b>1ホップ</b>（<see cref="BattleContext.Yielding"/>）——譲った手番の中で敵が倒れても
+/// そこから再度譲らない。トモが2枚同席すると互いに譲り合って無限に往復するので、
+/// <b>再入ガードは1枚でも要る</b>（<c>Trait</c> の static に置いてはいけない。
+/// Trait は共有シングルトンで <c>layout</c> は戦闘を並列実行する）。</para>
+///
+/// <para><b>上限を数値で書かない。</b> 灯は累積するが、<b>対象が変わると消える</b>ことと
+/// <b>決着が 3〜7 ターン</b>であることで構造的に止まる（実質の天井は +15〜30）。
+/// 第104期の「上限は壊れてから付ける」に従う——ただし第104期の反省どおり、
+/// <b>根拠は第109期に数え直すこと</b>。</para>
+/// </summary>
+public sealed class TaillightTrait : Trait
+{
+    /// <summary>1ターンぶんの灯（攻撃力）。</summary>
+    public const int Lumen = 5;
+
+    /// <summary>いま灯している味方の <c>InstanceId + 1</c>。0 は未設定。</summary>
+    public const string TargetKey = "tomoTarget";
+
+    /// <summary>その味方に積んだ灯の累計（消すときに同じだけ引く）。</summary>
+    public const string LitKey = "tomoLit";
+
+    /// <summary>このターン、自分の手番より前に敵が倒れていたら、そのターン番号。</summary>
+    public const string SawKey = "tomoSaw";
+
+    public override TraitId Id => TraitId.Taillight;
+
+    /// <summary>
+    /// 「自分の手番より前に、このターン敵が倒れていたか」の記録。
+    /// <b>ターン番号を書くだけ</b>なので、次のターンには自動で失効する
+    /// ——0 へ戻す掃除が要らない（<see cref="ShoveTrait"/> の1ターン1回と同じ作法）。
+    /// </summary>
+    public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
+    {
+        if (!self.IsAlive || dead.TeamId == self.TeamId) return;
+        self.SetCounter(SawKey, Math.Max(1, ctx.Turn));
+    }
+
+    /// <summary>灯をともす。<b>行動順ループの外側</b>なので、その手番の前に全員へ効く。</summary>
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+
+        UnitState? prev = Lit(ctx, self);
+
+        // 自分を除く生存味方のうち Def.Speed が最小。**同速は Slot 昇順**（PickOne を使わない）。
+        // AcceptsSupport は自前で濾す——支援拒否の駒が最も遅い側にいたら、それを飛ばして次へ。
+        UnitState? pick = null;
+        foreach (UnitState a in ctx.LivingMembers(self.TeamId))
+        {
+            if (a == self || !a.AcceptsSupport) continue;
+            if (pick is null || a.Def.Speed < pick.Def.Speed
+                || (a.Def.Speed == pick.Def.Speed && a.Slot < pick.Slot)) pick = a;
+        }
+
+        if (pick is null)
+        {
+            Douse(ctx, self, prev);
+            ctx.TallyOf(self).TaillightIdle++;
+            ctx.Log($"    {self.Name} の灯は照らす相手がいない", LogKind.Action);
+            return;
+        }
+
+        // **対象が変わったときだけ消す。** 同じ相手なら積み上がる（灯は累積する）。
+        bool switched = prev is not null && !ReferenceEquals(prev, pick);
+        if (!ReferenceEquals(prev, pick)) Douse(ctx, self, prev);
+
+        ctx.Whet(pick, Lumen, WhetRoute.Taillight);
+        self.SetCounter(TargetKey, pick.InstanceId + 1);
+        self.SetCounter(LitKey, self.RawCounter(LitKey) + Lumen);
+
+        UnitTally t = ctx.TallyOf(self);
+        t.TaillightFires++;
+        t.TaillightLumen += Lumen;
+        if (switched) t.TaillightSwitches++;
+        ctx.Log($"    {self.Name} が {pick.Name} に灯をともした"
+            + $"（攻撃 +{Lumen} → {pick.CurrentAttack}）", LogKind.Trigger);
+    }
+
+    /// <summary>
+    /// 手番（<c>Skill</c>）。<b>自分は動かない。</b>
+    /// このターン自分より前に敵が倒れていたときだけ、灯した味方に手番を1回譲る。
+    /// </summary>
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+
+        UnitTally t = ctx.TallyOf(self);
+        if (self.RawCounter(SawKey) != Math.Max(1, ctx.Turn)) { t.TaillightNoDeath++; return; }
+
+        UnitState? lit = Lit(ctx, self);
+        if (lit is null || !lit.IsAlive) { t.TaillightNoTarget++; return; }
+
+        // 1ホップ。譲った手番の中で敵が倒れても、そこから再度譲らない。
+        if (ctx.Yielding) { t.TaillightBlockedHop++; return; }
+        if (!ctx.TeamAlive(ctx.Opponent(self.TeamId))) return;   // 行動順ループと同じ番人
+
+        ctx.Yielding = true;
+        try
+        {
+            t.TaillightYields++;
+            ctx.Log($"    {self.Name} は前へ出ず、灯した {lit.Name} に道を譲る", LogKind.Highlight);
+            if (ctx.TakeTurn(lit) == TurnOutcome.Stalled) t.TaillightYieldStalls++;
+        }
+        finally { ctx.Yielding = false; }
+    }
+
+    /// <summary>
+    /// <c>InstanceId</c> は戦闘ごとに振り直されるので、部隊戦の境界で必ず捨てる
+    /// （執着の <see cref="FixateTrait.MemoryKey"/> ・駆り立ての
+    /// <see cref="GoadTrait.TargetKey"/> と同じ理由）。
+    /// <b>灯の累計も一緒に捨てる</b>——境界は <c>AtkBonus</c> を一括で 0 に戻す
+    /// （<c>Engagement.CarryOver</c>）ので、持ち越すと消灯で二重に引くことになる。
+    /// </summary>
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(TargetKey, 0);
+        self.SetCounter(LitKey, 0);
+        self.SetCounter(SawKey, 0);
+    }
+
+    /// <summary>いま灯している味方（生死を問わず引く。倒れていれば呼び出し側が弾く）。</summary>
+    private static UnitState? Lit(BattleContext ctx, UnitState self)
+    {
+        int id = self.RawCounter(TargetKey) - 1;
+        if (id < 0) return null;
+        foreach (UnitState u in ctx.AllUnits) if (u.InstanceId == id) return u;
+        return null;
+    }
+
+    /// <summary>
+    /// 前の灯を消す。<b><see cref="BattleContext.Dull"/> を通さない</b>（上の doc の理由）。
+    /// 引くのは<b>自分が積んだぶんちょうど</b>で、他の経路が足した強化には触れない。
+    /// </summary>
+    private static void Douse(BattleContext ctx, UnitState self, UnitState? prev)
+    {
+        int lit = self.RawCounter(LitKey);
+        self.SetCounter(TargetKey, 0);
+        self.SetCounter(LitKey, 0);
+        if (prev is null || lit <= 0) return;
+        prev.AtkBonus -= lit;
+        ctx.TallyOf(self).TaillightDoused += lit;
+        ctx.Log($"    {prev.Name} の灯が消えた（攻撃 -{lit}）", LogKind.Status);
+    }
+}
+
+/// <summary>
 /// 粛の規則。<b>診断（hush）が版を並べて 1 回の実行の中で比べるためだけに外から差せる。</b>
 /// 既定は <see cref="Default"/> ＝有効で、<b>これが本採用の規則</b>。渡さない限り盤面は常にこれ。
 ///
@@ -6476,6 +6681,7 @@ public static class TraitCatalog
         new FavorTrait(),
         new FunnelTrait(),
         new HexTrait(),
+        new TaillightTrait(),
         new BetrayedTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),

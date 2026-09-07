@@ -136,6 +136,7 @@
 | `Funnel` | - |
 | `Hex` | 泥人形ムド |
 | `Betrayed` | 背かれのソム |
+| `Taillight` | - |
 | `ThinBlade` | 裂きのキリ |
 | `Overreach` | 抉りのエグ |
 | `Await` | 断ちのナタ |
