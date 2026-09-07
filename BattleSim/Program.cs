@@ -40700,6 +40700,230 @@ if (focusId == "hold2")
         foreach (string d in h2Detail) Console.Write(d);
         return;
     }
+    // ------------------------------------------------------------------------------
+    // (S2) ムドの再判定。**seed 帯を第106期（0..199）から変えてある**——
+    // 第106期が `Gain = 5` を対照として同じ帯で測っているので、そのまま比べると循環する
+    // （第89期 (P1) と同じ作法）。**較正 `+5` は測る前に固定した値**で、
+    // 33 ÷ 7.21 = 4.58 → 丸めて 5（指示書 §2-1）。結果を見てから選んだ値ではない。
+    // ------------------------------------------------------------------------------
+    if (h2Mode == "rage")
+    {
+        const int R2Base = 200, R2Seeds = 400;
+        var r2Ver = new (string Tag, string Desc, RageRule R)[]
+        {
+            ("R0", "現行（量で育つ・`max(1, dmg / 2)`）", RageRule.Default),
+            ("R1", "回数で育つ（`Gain = " + RageRule.MeasuredGain + "`）", new RageRule(RageMode.Count, RageRule.MeasuredGain)),
+        };
+
+        // 憤怒の保持者は**2枚**（`TraitId.Rage` の grep 全数）。ムドだけを見ると
+        // 後備えの行の変化を取り落とす（第106期の予測1の穴）。
+        string[] r2Holders = { "mudo", "sekki" };
+
+        int r2W = h2Stages.Count, r2B = h2All.Length;
+        var r2Rate = new double[r2Ver.Length][][];
+        var r2Tally = new Dictionary<string, long[]>[r2Ver.Length];
+        const int R2N = 12;
+        const int R2Battles = 0, R2Fires = 1, R2Gain = 2, R2Peak = 3, R2PeakT = 4,
+                  R2Reach = 5, R2ReachT = 6, R2Turns = 7, R2Dmg = 8, R2Live = 9;
+        // R2Reach / R2ReachT は `AtkProbes` の最後（+24）だけを見る。
+
+        for (int p = 0; p < r2Ver.Length; p++)
+        {
+            r2Rate[p] = new double[r2W][];
+            for (int w = 0; w < r2W; w++) r2Rate[p][w] = new double[r2B];
+            var acc = r2Tally[p] = new Dictionary<string, long[]>();
+            foreach (string id in r2Holders) acc[id] = new long[R2N];
+
+            for (int w = 0; w < r2W; w++)
+            {
+                var enemy = h2Stages[w].Enemy;
+                for (int b = 0; b < r2B; b++)
+                {
+                    var f = h2All[b].F;
+                    bool has = f.Occupied().Any(o => r2Holders.Contains(o.Def.Id));
+                    int wins = 0;
+                    int pp = p, ww = w;
+                    var winsArr = new int[R2Seeds];
+                    var locArr = new long[R2Seeds][];
+                    Parallel.For(0, R2Seeds, s =>
+                    {
+                        var v = new long[R2N * 2];
+                        var r = BattleEngine.Run(f, enemy, R2Base + s, verbose: false, rage: r2Ver[pp].R);
+                        if (r.PlayerWon) winsArr[s] = 1;
+                        // **駒ごとの帳簿の分母は第2〜5波**（規約 (G10)。第一波は教習波なので参考にしか使わない）。
+                        if (has && ww > 0)
+                            for (int h = 0; h < r2Holders.Length; h++)
+                            {
+                                if (!f.Occupied().Any(o => o.Def.Id == r2Holders[h])) continue;
+                                int o0 = h * R2N;
+                                v[o0 + R2Battles] = 1;
+                                v[o0 + R2Turns] = r.Turns;
+                                if (r.TallyByUnit.TryGetValue(r2Holders[h], out UnitTally? t))
+                                {
+                                    v[o0 + R2Fires] = t.RageCountFires;
+                                    v[o0 + R2Gain] = t.RageGain;
+                                    v[o0 + R2Peak] = t.AtkPeak;
+                                    v[o0 + R2PeakT] = t.AtkPeakTurn;
+                                    v[o0 + R2Dmg] = t.DamageToEnemy;
+                                    int last = UnitTally.AtkProbes.Length - 1;
+                                    if (t.AtkProbeTurn is not null && t.AtkProbeTurn[last] > 0)
+                                    { v[o0 + R2Reach] = 1; v[o0 + R2ReachT] = t.AtkProbeTurn[last]; }
+                                }
+                            }
+                        locArr[s] = v;
+                    });
+                    for (int sq = 0; sq < R2Seeds; sq++)
+                    {
+                        wins += winsArr[sq];
+                        if (!has) continue;
+                        for (int h = 0; h < r2Holders.Length; h++)
+                        {
+                            long[] a = acc[r2Holders[h]];
+                            for (int k = 0; k < R2N; k++) a[k] += locArr[sq][h * R2N + k];
+                        }
+                    }
+                    r2Rate[p][w][b] = wins * 100.0 / R2Seeds;
+                }
+                Console.Error.WriteLine("[hold2 rage] " + r2Ver[p].Tag + " 第" + (w + 1) + "波");
+            }
+        }
+
+        double R2Avg(int p, int b) { double s = 0; for (int w = 1; w < r2W; w++) s += r2Rate[p][w][b]; return s / (r2W - 1); }
+        double R2Per(long[] a, int k) => a[R2Battles] == 0 ? 0 : (double)a[k] / a[R2Battles];
+
+        Console.WriteLine("# 第107期 (S2) —— ムドの再判定（憤怒を回数で育てる）");
+        Console.WriteLine();
+        Console.WriteLine("台: `compare` 61 行 ＋ 交差帯 12 行 × 全 " + r2W + " 波 × seed "
+            + R2Base + ".." + (R2Base + R2Seeds - 1) + " ＝ " + ((long)r2B * r2W * R2Seeds).ToString("N0")
+            + " 戦/版。**帯は第106期（0..199）と重ならない。**");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 中身 |");
+        Console.WriteLine("|---|---|");
+        foreach (var v in r2Ver) Console.WriteLine("| " + v.Tag + " | " + v.Desc + " |");
+
+        // ---- 表B-1: Phase 0 の較正の確認
+        Console.WriteLine();
+        Console.WriteLine("## 表B-1 —— 較正の確認（Phase 0 の 1）");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 駒 | 在席戦 | 発火/戦 | 1発あたり | `AtkBonus` 到達点 | 到達T | +24 到達% | +24 到達T | 与ダメ/戦 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|");
+        for (int p = 0; p < r2Ver.Length; p++)
+            foreach (string id in r2Holders)
+            {
+                long[] a = r2Tally[p][id];
+                Console.WriteLine("| " + r2Ver[p].Tag + " | " + h2All.SelectMany(x => x.F.Occupied())
+                        .Where(o => o.Def.Id == id).Select(o => o.Def.Name).First()
+                    + " | " + a[R2Battles] + " | " + R2Per(a, R2Fires).ToString("0.00")
+                    + " | " + (a[R2Fires] == 0 ? 0 : (double)a[R2Gain] / a[R2Fires]).ToString("0.00")
+                    + " | " + R2Per(a, R2Peak).ToString("0.0")
+                    + " | " + R2Per(a, R2PeakT).ToString("0.00")
+                    + " | " + (a[R2Battles] == 0 ? 0 : a[R2Reach] * 100.0 / a[R2Battles]).ToString("0.0") + "%"
+                    + " | " + (a[R2Reach] == 0 ? 0 : (double)a[R2ReachT] / a[R2Reach]).ToString("0.00")
+                    + " | " + R2Per(a, R2Dmg).ToString("0.0") + " |");
+            }
+        Console.WriteLine();
+        {
+            long[] m0 = r2Tally[0]["mudo"];
+            Console.WriteLine("第96期の被弾 **7.21 回/戦** と第106期の到達点 **33** を再現するか: 発火 **"
+                + R2Per(m0, R2Fires).ToString("0.00") + " 回/戦**・到達点 **" + R2Per(m0, R2Peak).ToString("0.0")
+                + "**（素の攻 " + UnitCatalog.Mudo.Attack + " と合わせて **攻 "
+                + (UnitCatalog.Mudo.Attack + R2Per(m0, R2Peak)).ToString("0.0") + "**）。");
+        }
+
+        // ---- 表B-2: Q1（ムド／セッキを含む行）
+        Console.WriteLine();
+        Console.WriteLine("## 表B-2 —— Q1（保持者を含む行の第2〜5波平均）");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 保持者 | R0 | R1 | Δ |");
+        Console.WriteLine("|---|---|--:|--:|--:|");
+        double q1Sum = 0; int q1N = 0, q1Up = 0;
+        double q1SumM = 0; int q1NM = 0;
+        for (int b = 0; b < r2B; b++)
+        {
+            var ids = h2All[b].F.Occupied().Select(o => o.Def.Id).Where(i => r2Holders.Contains(i)).ToList();
+            if (ids.Count == 0) continue;
+            double a0 = R2Avg(0, b), a1 = R2Avg(1, b);
+            q1Sum += a1 - a0; q1N++; if (a1 > a0) q1Up++;
+            if (ids.Contains("mudo")) { q1SumM += a1 - a0; q1NM++; }
+            Console.WriteLine("| " + h2All[b].Name + " | " + string.Join("・", ids) + " | "
+                + a0.ToString("F1") + "% | " + a1.ToString("F1") + "% | "
+                + (a1 - a0).ToString("+0.0;-0.0") + "pt |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("**保持者を含む " + q1N + " 行の平均 " + (q1Sum / Math.Max(1, q1N)).ToString("+0.00;-0.00")
+            + "pt**（上がった行 " + q1Up + " / " + q1N + "）。うち**ムドの " + q1NM + " 行は "
+            + (q1SumM / Math.Max(1, q1NM)).ToString("+0.00;-0.00") + "pt**。");
+        {
+            long[] m0 = r2Tally[0]["mudo"], m1 = r2Tally[1]["mudo"];
+            double p0 = R2Per(m0, R2Peak), p1 = R2Per(m1, R2Peak);
+            double t0 = m0[R2Reach] == 0 ? 0 : (double)m0[R2ReachT] / m0[R2Reach];
+            double t1 = m1[R2Reach] == 0 ? 0 : (double)m1[R2ReachT] / m1[R2Reach];
+            Console.WriteLine();
+            Console.WriteLine("| 判定 | 量 | 線 | 結果 |");
+            Console.WriteLine("|---|---|---|:-:|");
+            Console.WriteLine("| **Q1** | ムドを含む行の第2〜5波平均 " + (q1SumM / Math.Max(1, q1NM)).ToString("+0.00;-0.00")
+                + "pt | 現行より上 | " + (q1SumM > 0 ? "**○**" : "**×**") + " |");
+            Console.WriteLine("| **Q2** | `AtkBonus` の到達点 " + p0.ToString("0.0") + " → " + p1.ToString("0.0")
+                + "（差 " + (p1 - p0).ToString("+0.0;-0.0") + "） | ±3 以内 | "
+                + (Math.Abs(p1 - p0) <= 3.0 ? "**○**" : "**×**") + " |");
+            Console.WriteLine("| **Q3** | +24 への到達T " + t0.ToString("0.00") + " → " + t1.ToString("0.00")
+                + "（到達率 " + (m0[R2Battles] == 0 ? 0 : m0[R2Reach] * 100.0 / m0[R2Battles]).ToString("0.0")
+                + "% → " + (m1[R2Battles] == 0 ? 0 : m1[R2Reach] * 100.0 / m1[R2Battles]).ToString("0.0")
+                + "%） | 現行より早い | " + (t1 < t0 && t1 > 0 ? "**○**" : "**×**") + " |");
+        }
+
+        // ---- 表D: 拒否権（分母は compare 61 行全体・第91期 (G1)）
+        Console.WriteLine();
+        Console.WriteLine("## 表D —— 拒否権（分母は `compare` 61 行全体・第91期 (G1)）");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 波 | R0 | R1 | Δ |");
+        Console.WriteLine("|---|--:|--:|--:|--:|");
+        int veto3 = 0;
+        for (int b = 0; b < h2Compare.Length; b++)
+            for (int w = 0; w < r2W; w++)
+            {
+                double d = r2Rate[1][w][b] - r2Rate[0][w][b];
+                if (d <= -10.0)
+                {
+                    veto3++;
+                    Console.WriteLine("| " + h2All[b].Name + " | 第" + (w + 1) + "波 | "
+                        + r2Rate[0][w][b].ToString("F1") + "% | " + r2Rate[1][w][b].ToString("F1") + "% | "
+                        + d.ToString("+0.0;-0.0") + "pt |");
+                }
+            }
+        if (veto3 == 0) Console.WriteLine("| （該当なし） | | | | |");
+        Console.WriteLine();
+        var primSet = new HashSet<string>(Baseline.PrimaryRows);
+        double f0 = 0, f1 = 0; int fn = 0;
+        for (int b = 0; b < h2Compare.Length; b++)
+            if (primSet.Contains(h2All[b].Name)) { f0 += r2Rate[0][r2W - 1][b]; f1 += r2Rate[1][r2W - 1][b]; fn++; }
+        Console.WriteLine("| 拒否権 | 量 | 線 | 結果 |");
+        Console.WriteLine("|---|---|---|:-:|");
+        Console.WriteLine("| (1) 主判定" + fn + "行の第五波平均 | " + (f0 / Math.Max(1, fn)).ToString("F1")
+            + "% → **" + (f1 / Math.Max(1, fn)).ToString("F1") + "%** | ≥ "
+            + Baseline.PrimaryFifthFloor.ToString("F1") + "% | "
+            + (f1 / Math.Max(1, fn) >= Baseline.PrimaryFifthFloor ? "**○**" : "**×**") + " |");
+        Console.WriteLine("| (3) いずれかの波で −10.0pt 以上落ちた行 | **" + veto3 + " 件** | 0 件 | "
+            + (veto3 == 0 ? "**○**" : "**×**") + " |");
+        Console.WriteLine();
+        Console.WriteLine("## 表E —— 自己検査（(b) 1発あたりの比）");
+        Console.WriteLine();
+        foreach (string id in r2Holders)
+        {
+            long[] a = r2Tally[1][id];
+            double ratio = a[R2Fires] == 0 ? 0 : (double)a[R2Gain] / a[R2Fires];
+            Console.WriteLine("- **(b)** " + id + ": `RageGain ÷ RageCountFires` = **" + ratio.ToString("0.00")
+                + "**（`Gain = " + RageRule.MeasuredGain + "` と一致すべき） —— "
+                + (Math.Abs(ratio - RageRule.MeasuredGain) < 1e-9 ? "**○**" : "**×**"));
+        }
+        for (int p = 0; p < r2Ver.Length; p++)
+        {
+            long f = r2Tally[p]["mudo"][R2Fires], b0 = r2Tally[p]["mudo"][R2Battles];
+            Console.WriteLine("- **(b')** " + r2Ver[p].Tag + " のムドの発火 **" + (b0 == 0 ? 0 : (double)f / b0).ToString("0.00")
+                + " 回/戦** —— **発火する集合は版に依らない**（計数は式の分岐より手前）。");
+        }
+        return;
+    }
 
     Console.WriteLine("モード: seats / rage / suture / phase0 / tables / check");
     return;
