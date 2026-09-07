@@ -1332,9 +1332,32 @@ public static class UnitCatalog
         Flavor = "尾の灯は自分では見えない。照らせるのは、後ろにいる者だけ。"
     };
 
+    /// <summary>
+    /// 編成に選べる 52 枚。<b>上限は 52 ＝ トランプ1組</b>で、第103期に確定した。
+    ///
+    /// <para><b>ロスターは「編成に選べる 52 枚」で定義する。内部の <see cref="UnitDef"/> が
+    /// それを超えていてよい</b>（第108期）——召喚専用（<see cref="Beast"/> / <see cref="Spore"/> /
+    /// <see cref="Fodder"/>）が既にそうなっている。</para>
+    ///
+    /// <para><b>第108期に <see cref="Hari"/>（縫いのハリ）を外し、<see cref="Tomo"/>（尾灯のトモ）を入れた。
+    /// 枚数は 52 のまま。</b> ハリを切った根拠は4期ぶん——第83期の3分の器具で唯一「切れる」判定、
+    /// 第85期の両側読み（律速は振り 2.15 回/戦）、第106期の再行動が 0.00 回/戦
+    /// （再行動は傷の<b>書き手</b>にしか渡らず、ハリは読み手）、第107期の発火口の移設
+    /// （傷の書き込みの 90.5% が巻き込み則＝味方側なので敵の傷を塞ぐ機会が消える）。
+    /// <b>3期にわたって律速が同じ場所（振り回数）で、発火口を移しても解けなかった。</b></para>
+    ///
+    /// <para><b><see cref="Hari"/> の <c>UnitDef</c> と <c>SutureTrait</c> / <c>SutureRule</c> /
+    /// <c>SutureFireRule</c> は削除していない</b>——測って採らなかった機構は対照として残す
+    /// （オゴ・ゴウ・ヌキ・オノ、および逆位・まどろみ・誹り・驕りと同じ扱い）。
+    /// <b>診断（`suture` / `mender` / `blaze2` / `deep` / `gauge` など）はそのまま回る。</b></para>
+    ///
+    /// <para><b>ハリは `Presets.Cross` の交差帯にはまだ残っている</b>
+    /// （`傷×被弾 (カド×ハリ×ノノ)`）。交差帯は<b>測定の器具</b>で、
+    /// 「計測器と測定対象を同時に動かさない」ため第108期では触っていない（報告書 §B）。</para>
+    /// </summary>
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Hari, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Tomo, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);
