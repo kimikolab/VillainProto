@@ -6550,6 +6550,13 @@ public sealed class TaillightTrait : Trait
         t.TaillightFires++;
         t.TaillightLumen += Lumen;
         if (switched) t.TaillightSwitches++;
+        // 第109期の観測。**到達点は総量では測れない**（対象が変わると消える）ので、
+        // いま1体に載っている累計の最大を控える。**盤面には触らない。**
+        if (self.RawCounter(LitKey) > t.TaillightPeak) t.TaillightPeak = self.RawCounter(LitKey);
+        // 受け手側の帳簿（第109期）。**「誰が照らされたか」の内訳はここでしか引けない。**
+        UnitTally rt = ctx.TallyOf(pick);
+        rt.TaillightLitReceived++;
+        rt.TaillightLitLumen += Lumen;
         ctx.Log($"    {self.Name} が {pick.Name} に灯をともした"
             + $"（攻撃 +{Lumen} → {pick.CurrentAttack}）", LogKind.Trigger);
     }
@@ -6577,7 +6584,14 @@ public sealed class TaillightTrait : Trait
         {
             t.TaillightYields++;
             ctx.Log($"    {self.Name} は前へ出ず、灯した {lit.Name} に道を譲る", LogKind.Highlight);
-            if (ctx.TakeTurn(lit) == TurnOutcome.Stalled) t.TaillightYieldStalls++;
+            // 第109期。**内訳を数えるだけ**（第104期の再行動と同じ形）。盤面には触らない。
+            switch (ctx.TakeTurn(lit))
+            {
+                case TurnOutcome.Attack: t.TaillightYieldAttack++; break;
+                case TurnOutcome.Skill:  t.TaillightYieldSkill++;  break;
+                case TurnOutcome.Charge: t.TaillightYieldCharge++; break;
+                default:                 t.TaillightYieldStalls++; break;
+            }
         }
         finally { ctx.Yielding = false; }
     }

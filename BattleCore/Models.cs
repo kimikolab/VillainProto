@@ -663,6 +663,27 @@ public sealed class UnitTally
     public int TaillightFires, TaillightLumen, TaillightSwitches, TaillightDoused, TaillightIdle;
     public int TaillightYields, TaillightYieldStalls, TaillightNoDeath, TaillightNoTarget, TaillightBlockedHop;
 
+    /// <summary>
+    /// 尾灯の続き（第109期に足した観測。<b>誰も読んで分岐しない計数。</b>）。
+    ///
+    /// <para><c>TaillightPeak</c> 1体に同時に載った灯の最大（＝到達点。指示書 Q3）。
+    /// <b>灯の総量ではない</b>——対象が変わると消えるので、総量では到達点が測れない。</para>
+    ///
+    /// <para><c>TaillightYieldAttack</c> / <c>TaillightYieldSkill</c> / <c>TaillightYieldCharge</c>
+    /// 譲った手番で相手が何をしたか（<see cref="TurnOutcome"/> の内訳。
+    /// 潰れたぶんは既存の <c>TaillightYieldStalls</c>）。</para>
+    ///
+    /// <para><c>TaillightYieldDamage</c> <b>譲られた駒がその手番で敵へ通した量</b>（指示書 Q2 の分子）。
+    /// トモ自身の1手番あたりの出力は 0（攻撃力 0・<c>Actions = [Skill]</c>）なので、
+    /// この値が正であることが Q2 の成立そのものになる。</para>
+    ///
+    /// <para><c>TaillightLitReceived</c> / <c>TaillightLitLumen</c>
+    /// <b>受け手の側の帳簿</b>——灯を受けた回数と量。上の5本はすべて<b>灯した本人（トモ）</b>が持つので、
+    /// 「誰が照らされたか」の内訳はこちらでしか引けない。</para>
+    /// </summary>
+    public int TaillightPeak, TaillightYieldAttack, TaillightYieldSkill, TaillightYieldCharge;
+    public int TaillightYieldDamage, TaillightLitReceived, TaillightLitLumen;
+
     public int Attacks;
 
     /// <summary>

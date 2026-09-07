@@ -3664,6 +3664,11 @@ public sealed class BattleContext
                 st.DamageToEnemy += amount;
                 // 第105期。**敵への与ダメだけを手番の中／外に割る**（味方への刃は出力ではない）。
                 if (InOwnTurn(source)) st.DmgOutInTurn += amount; else st.DmgOutOffTurn += amount;
+                // 第109期。**尾灯が譲った手番のぶんだけを切り出す**（指示書 Q2 の分子）。
+                // `Yielding` を先に見るのは、保持者が盤上にいなければ `InOwnTurn` を
+                // 1回も走らせないため（軛の Cap 判定・粛の保持者走査と同じ短絡の作法）。
+                // **誰も読んで分岐しない計数で、盤面には一切影響しない。**
+                if (Yielding && InOwnTurn(source)) st.TaillightYieldDamage += amount;
             }
         }
 

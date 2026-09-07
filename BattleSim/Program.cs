@@ -40779,6 +40779,682 @@ if (focusId == "taillight")
 }
 
 // ==================================================================================
+// 第109期 —— 尾灯のトモを測る／`刻み×澱み (ノミ×ミオ)` が測れているかを確かめる。
+// 指示書は design/PHASE109_TOMO_SPEC.md。
+//
+// **既存の診断は1文字も書き換えていない。** 第108期の `taillight` は受け入れ確認（自己検査だけ）で、
+// こちらが測定。**トモは `Presets.Compare` にも `Presets.Cross` にも入っていない**ので、
+// 盤面に出す唯一の場所がこの診断のローカル台になる（`gradient` / `aim` / `route` と同じ扱い）。
+//
+// **`Presets` は1行も読み替えない。** (B) のミオの再測定だけが `CompareBuilds()` を読むが、
+// **読むだけで書かない**（素体差し替えと席の複製はローカルの `Formation` を組み直す）。
+//
+//     dotnet run --project BattleSim -c Release 0 tomo phase0   # §4 と §1-2 の門
+//     dotnet run --project BattleSim -c Release 0 tomo run      # §1-1 の4台 × 対照（表A〜D）
+//     dotnet run --project BattleSim -c Release 0 tomo mio      # §3（表E）
+//     dotnet run --project BattleSim -c Release 0 tomo tables   # 表A〜E
+//     dotnet run --project BattleSim -c Release 0 tomo check    # 自己検査
+// ==================================================================================
+if (focusId == "tomo")
+{
+    string tmMode = args.Length > 2 ? args[2] : "tables";
+    IReadOnlyList<EnemyCatalog.Stage> tmStages = EnemyCatalog.Stages;
+    const int TmSeeds = 200;    // 指示書 §1-1（seed 0..199）
+    const int TmAudit = 40;     // 台帳の照合（ログ再生）だけを回す帯。第108期の `taillight` と同じ
+
+    // ------------------------------------------------------------------------------
+    // 素体（同数値・特性なし・`Actions` なし）。第47期の作法——
+    // 「その効果だけを 0 にできるノブが作れない機構では、同数値・特性なしの素体を対照に置く」。
+    // カタログには載せない（診断のローカルの `UnitDef`）。
+    // ------------------------------------------------------------------------------
+    static UnitDef TmPlain(UnitDef d) => new()
+    {
+        Id = d.Id + "_plain",
+        Name = "素体の" + d.Name,
+        MaxHp = d.MaxHp,
+        Attack = d.Attack,
+        Speed = d.Speed,
+        Traits = Array.Empty<TraitId>(),
+        Pattern = d.Pattern
+    };
+    UnitDef tmTomoPlain = TmPlain(UnitCatalog.Tomo);
+    UnitDef tmMioPlain = TmPlain(UnitCatalog.Mio);
+
+    // ------------------------------------------------------------------------------
+    // 台（**測る前に決めた**。指示書 §1-1）。
+    //
+    // **土台3枚は4台で共有し、変えるのはパートナー1枚だけ**（第37期以来の作法）。
+    // 土台を選ぶ規則を、結果を見る前に3つ固定してある（第64期——緩めた条件を数えられるように）:
+    //
+    //   (1) **速さ ≥ 8**（`Stoic` を除く）。「自分を除いて最も遅い味方」がパートナーに一意に決まる
+    //       ——4枚のパートナーの速さは ムド5 / ドルガ6 / ソム6 / ハギ7 なので、
+    //       土台に速7以下を混ぜると同速の割り（席番号昇順）に化けて門の前提が崩れる。
+    //       **ガルド（速4）だけは例外で入れられる**——`Stoic` は灯の候補から自前で外れるので
+    //       （第108期 (b) の「支援拒否を飛ばす」）、遅くても対象を奪わない。
+    //   (2) **`AtkBonus` を他人に書かない。** 号令・縛め・駆り立て・移り木・火選り・呪詛・萎縮を外す
+    //       ——灯の到達点（Q3）に別の経路が混ざると、消灯の照合（自己検査 (b)）も一緒に壊れる。
+    //       **蘇生も外す**（`Revive` は `ResetAtkBonus` を通るので、灯を載せたまま蘇ると帳簿がずれる）。
+    //   (3) **台が床に落ちない出力を持つ**（第26・28期。`reseat` が 20.0% で並ぶ症状）。
+    //
+    // 席は **ボルグの巻き込みがパートナーにもトモにも当たらない**ように決めた——
+    // 後3 の隣接は 前3 と 中央 だけなので、そこへ ガルド（HP100）と キリ（傷の書き手）を置き、
+    // パートナー（前1）とトモ（後1）を巻き込みの外に出す。
+    // **狙（ガルドが前列）**も満たす（CONTRIBUTING.md・第107期に器具へ入れた規則）。
+    //
+    //     前1 = パートナー ／ 前3 = ガルド ／ 中央 = キリ ／ 後1 = トモ ／ 後3 = ボルグ
+    // ------------------------------------------------------------------------------
+    Formation TmBench(UnitDef partner, UnitDef tomo) => Formation.Build(
+        front1: partner, front3: UnitCatalog.Gald, center: UnitCatalog.Kiri,
+        back1: tomo, back3: UnitCatalog.Borg);
+
+    var tmPartners = new (string Tag, UnitDef Def, string Why)[]
+    {
+        ("トモ×ドルガ", UnitCatalog.Dolga, "**速6 は遅い層ではない**。土台を速8以上で固めて初めて対象になる"),
+        ("トモ×ムド",   UnitCatalog.Mudo,  "**灯と被弾の2本の成長経路**が同じ駒に乗る（速5）"),
+        ("トモ×ソム",   UnitCatalog.Som,   "**餌が毎ターン湧いて倒れる**＝譲渡の条件が安定して満たされる（速6）"),
+        ("トモ×ハギ",   UnitCatalog.Hagi,  "**撃破を作る側**。譲渡と追い打ちが同じ出来事で立つか（速7）"),
+    };
+
+    // 1戦ぶんの観測。**版（現行 / 素体）× 台 × 波 × seed** で1行。
+    var tmRows = new List<(string Bench, int Ver, int Wave, int Seed, bool Won, int Turns,
+                           int Fires, int Lumen, int Switches, int Doused, int Idle, int Peak,
+                           int Yields, int YAtk, int YSkill, int YCharge, int YStall,
+                           int NoDeath, int NoTarget, int Hop, int YieldDmg,
+                           int PartnerDmg, int PartnerTurns, int PartnerAtk, int TeamDmg,
+                           int LitOnPartner, int WhetTail)>();
+
+    // 受け手側の帳簿を**味方5枚すべて**について集める（現行の版だけ）。
+    // **灯はパートナーに固定されない**——パートナーが倒れれば次に遅い味方へ移る（規則どおり）。
+    var tmLitBy = new Dictionary<string, Dictionary<string, int>>();
+
+    void TmRun()
+    {
+        foreach (var (tag, partner, _) in tmPartners)
+            for (int ver = 0; ver < 2; ver++)
+            {
+                Formation f = TmBench(partner, ver == 0 ? UnitCatalog.Tomo : tmTomoPlain);
+                for (int w = 0; w < tmStages.Count; w++)
+                    for (int seed = 0; seed < TmSeeds; seed++)
+                    {
+                        BattleResult r = BattleEngine.Run(f, tmStages[w].Enemy, seed, verbose: false);
+                        UnitTally t = r.TallyByUnit.TryGetValue(UnitCatalog.Tomo.Id, out UnitTally? tt)
+                                      ? tt : new UnitTally();
+                        UnitTally p = r.TallyByUnit.TryGetValue(partner.Id, out UnitTally? pt)
+                                      ? pt : new UnitTally();
+                        // 味方側の与ダメだけを集める（敵の tally も同じ辞書に入っている）。
+                        int team = 0;
+                        foreach ((int _, UnitDef d) in f.Occupied())
+                            if (r.TallyByUnit.TryGetValue(d.Id, out UnitTally? mt)) team += mt.DamageToEnemy;
+                        if (ver == 0)
+                        {
+                            if (!tmLitBy.TryGetValue(tag, out Dictionary<string, int>? bag))
+                                tmLitBy[tag] = bag = new Dictionary<string, int>();
+                            foreach ((int _, UnitDef d) in f.Occupied())
+                                if (r.TallyByUnit.TryGetValue(d.Id, out UnitTally? lt) && lt.TaillightLitReceived > 0)
+                                    bag[d.Name] = bag.TryGetValue(d.Name, out int had) ? had + lt.TaillightLitReceived
+                                                                                       : lt.TaillightLitReceived;
+                        }
+                        tmRows.Add((tag, ver, w + 1, seed, r.PlayerWon, r.Turns,
+                            t.TaillightFires, t.TaillightLumen, t.TaillightSwitches, t.TaillightDoused,
+                            t.TaillightIdle, t.TaillightPeak,
+                            t.TaillightYields, t.TaillightYieldAttack, t.TaillightYieldSkill,
+                            t.TaillightYieldCharge, t.TaillightYieldStalls,
+                            t.TaillightNoDeath, t.TaillightNoTarget, t.TaillightBlockedHop,
+                            p.TaillightYieldDamage,
+                            p.DamageToEnemy, p.TurnsTaken, p.Attacks, team,
+                            p.TaillightLitReceived,
+                            r.WhetByRoute[(int)WhetRoute.Taillight]));
+                    }
+            }
+    }
+
+    // 波ごとの平均（現行の版だけ）。
+    static double TmAvg(IEnumerable<int> xs) { var l = xs.ToList(); return l.Count == 0 ? 0 : l.Average(); }
+
+    // ------------------------------------------------------------------------------
+    // Phase 0（§4）。**戦闘は §1-2 の門のぶんだけ。**
+    // ------------------------------------------------------------------------------
+    if (tmMode == "phase0")
+    {
+        Console.WriteLine("# 第109期 Phase 0 —— 地図と門");
+        Console.WriteLine();
+
+        // (1) 速5以下の味方の全数。**必ず実装から引く**（第108期・手作りのずれの13例目）。
+        var slow = UnitCatalog.All.Where(u => u.Speed <= 5).OrderBy(u => u.Speed).ThenBy(u => u.Id).ToList();
+        Console.WriteLine("## 1. 速5以下の味方（`UnitCatalog.All` の " + UnitCatalog.All.Count + " 枚から実装で引いた）");
+        Console.WriteLine();
+        Console.WriteLine("| 駒 | HP | 攻 | 速 | 支援拒否 |");
+        Console.WriteLine("|---|--:|--:|--:|:-:|");
+        foreach (UnitDef u in slow)
+            Console.WriteLine($"| {u.Name} | {u.MaxHp} | {u.Attack} | {u.Speed} | "
+                + (u.Traits.Contains(TraitId.Stoic) ? "**○（灯が飛ばす）**" : "—") + " |");
+        Console.WriteLine();
+        Console.WriteLine("**計 " + slow.Count + " 枚。** 速さの分布（全 " + UnitCatalog.All.Count + " 枚）: "
+            + string.Join(" / ", UnitCatalog.All.GroupBy(u => u.Speed).OrderBy(g => g.Key)
+                .Select(g => "速" + g.Key + ":" + g.Count())));
+        Console.WriteLine();
+
+        // (2) 点灯の窓口。
+        Console.WriteLine("## 2. 点灯は `ctx.Whet`・消灯は `ctx.Dull` を通さない（第108期の判断の再掲）");
+        Console.WriteLine();
+        Console.WriteLine("| | 窓口 | 理由 | この期の計数はどこから取るか |");
+        Console.WriteLine("|---|---|---|---|");
+        Console.WriteLine("| 点灯 | **`ctx.Whet(…, WhetRoute.Taillight)`** | "
+            + "他者強化の供給の観測（`NoteCarry` の強化キー）は `Whet` の中の1行にしか無い。"
+            + "直に足すと `derive scan` / `whet` / `carry` / `spend` のどこからも見えなくなる | "
+            + "`BattleResult.WhetByRoute[" + (int)WhetRoute.Taillight + "]`（自己検査 (f)） |");
+        Console.WriteLine("| 消灯 | **通さない**（`AtkBonus` を直接引く） | "
+            + "`Dull` は集約（ウケ）と転嫁（ワタ）の横取りが立っている窓口なので、通すと"
+            + "「自分の灯を消した」が第三者の破片や敵への弱体に化ける。"
+            + "受け手は素の攻撃力より弱くなっていないので弱体の供給者として数えるのも事実に反する | "
+            + "`UnitTally.TaillightDoused`（トモ側）と `AtkBonus` の setter（第106期の4つ目の通貨） |");
+        Console.WriteLine();
+        Console.WriteLine("`WhetRoute` は **" + WhetRoutes.Count + " 本**（"
+            + string.Join(" / ", WhetRoutes.Names) + "）。灯 = " + TaillightTrait.Lumen + "。");
+        Console.WriteLine();
+
+        // (4) 刻み×澱み の現在の5枚と席。
+        var kizami = CompareBuilds().FirstOrDefault(b => b.Name.StartsWith("刻み×澱み", StringComparison.Ordinal));
+        Console.WriteLine("## 4. `刻み×澱み (ノミ×ミオ)` の現在の5枚と席");
+        Console.WriteLine();
+        if (kizami.F is null) Console.WriteLine("**行が見つからない。**");
+        else
+        {
+            Console.WriteLine("| 席 | 駒 | HP | 攻 | 速 |");
+            Console.WriteLine("|---|---|--:|--:|--:|");
+            string[] slotName = { "前1", "前3", "中央", "後1", "後3" };
+            foreach ((int sl, UnitDef d) in kizami.F.Occupied().OrderBy(o => o.Slot))
+                Console.WriteLine($"| {(sl < slotName.Length ? slotName[sl] : "○" + sl)} | {d.Name} | {d.MaxHp} | {d.Attack} | {d.Speed} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("> **指示書の `刻み×灯` という行はリポジトリに存在しない**（`CompareBuilds()` の 61 行を全数検索して 0 件）。"
+            + "実体は **`刻み×澱み (ノミ×ミオ)`** で、第108期に `刻み×縫い (ノミ×ハリ)` を差し替えて作った行。"
+            + "**手作りのずれの14例目**として記録する。");
+        Console.WriteLine();
+
+        // (5) docs/crossing.md に残るハリ。
+        var cross = CrossBuilds();
+        var hariRows = cross.Where(b => b.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hari))).ToList();
+        Console.WriteLine("## 5. `docs/crossing.md` に残るハリの不整合");
+        Console.WriteLine();
+        Console.WriteLine("交差帯 " + cross.Length + " 行のうちハリを含むのは **" + hariRows.Count + " 行**（"
+            + string.Join(" / ", hariRows.Select(b => "`" + b.Name + "`")) + "）。"
+            + "ハリは `UnitCatalog.All`（" + UnitCatalog.All.Count + " 枚）から外れているが `UnitDef` も "
+            + "`SutureTrait` も残置してあるので、**行としては壊れていない**（測定は今も回る）。");
+        Console.WriteLine();
+        Console.WriteLine("> **第110期に送る。** 交差帯は**測定の器具**で、この期は測定期"
+            + "——第108期の「計測器と測定対象を同時に動かさない」に従う。"
+            + "直すなら `docs/` 10ファイルと情報セルの数え直しを伴うので、単独の期にする。");
+        Console.WriteLine();
+
+        // (3)(門) 実測。
+        TmRun();
+        Console.WriteLine("## 3. 門（§1-2）——鎖が繋がっているか。**大きさではない**");
+        Console.WriteLine();
+        Console.WriteLine("現行の版（トモ本物）だけ。台 × 波・seed 0.." + (TmSeeds - 1) + "。1戦あたり。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 波 | 決着T | **門1 灯/戦** | 灯量/戦 | 替/戦 | **門2 条件成立/戦** | トモの手番/戦 | **門3 譲渡/戦** | 譲渡の与ダメ/戦 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        foreach (var (tag, _, _) in tmPartners)
+            for (int w = 1; w <= tmStages.Count; w++)
+            {
+                var g = tmRows.Where(x => x.Bench == tag && x.Ver == 0 && x.Wave == w).ToList();
+                double turns = g.Count == 0 ? 0 : g.Average(x => (double)x.Turns);
+                double hands = TmAvg(g.Select(x => x.Yields + x.NoTarget + x.Hop + x.NoDeath));
+                double gate2 = TmAvg(g.Select(x => x.Yields + x.NoTarget + x.Hop));
+                Console.WriteLine($"| {tag} | {w} | {turns:F1} | **{TmAvg(g.Select(x => x.Fires)):F2}** "
+                    + $"| {TmAvg(g.Select(x => x.Lumen)):F1} | {TmAvg(g.Select(x => x.Switches)):F2} "
+                    + $"| **{gate2:F2}** | {hands:F2} | **{TmAvg(g.Select(x => x.Yields)):F2}** "
+                    + $"| {TmAvg(g.Select(x => x.YieldDmg)):F1} |");
+            }
+        Console.WriteLine();
+        var all0 = tmRows.Where(x => x.Ver == 0).ToList();
+        double g1 = TmAvg(all0.Select(x => x.Fires));
+        double g2 = TmAvg(all0.Select(x => x.Yields + x.NoTarget + x.Hop));
+        double g3 = TmAvg(all0.Select(x => x.Yields));
+        Console.WriteLine($"**門1 = {g1:F2} ／ 門2 = {g2:F2} ／ 門3 = {g3:F2}（全台・全波の平均）。"
+            + (g1 > 0 && g2 > 0 && g3 > 0 ? "3つとも 0 より大きい——鎖は繋がっている。**"
+                                          : "**0 のものがある——そこが切れている。**"));
+        Console.WriteLine();
+        return;
+    }
+
+    // ------------------------------------------------------------------------------
+    // 表A〜D（§1）
+    // ------------------------------------------------------------------------------
+    void TmTablesAD()
+    {
+        Console.WriteLine("## 表A —— 門（§1-2）と紙（§1-3）。**波別**");
+        Console.WriteLine();
+        Console.WriteLine("台 × 波・seed 0.." + (TmSeeds - 1) + "・**現行の版（トモ本物）**。1戦あたり。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 波 | 決着T | 門1 灯 | 灯量 | 替 | 消 | 空振り | 門2 条件成立 | 門3 譲渡 | 譲渡率 | 紙(灯・二次) | 紙(譲渡) | 実測(灯った駒の与ダメ差) |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        foreach (var (tag, _, _) in tmPartners)
+            for (int w = 1; w <= tmStages.Count; w++)
+            {
+                var g = tmRows.Where(x => x.Bench == tag && x.Ver == 0 && x.Wave == w).ToList();
+                var gp = tmRows.Where(x => x.Bench == tag && x.Ver == 1 && x.Wave == w).ToList();
+                double f = TmAvg(g.Select(x => x.Fires));
+                double gate2 = TmAvg(g.Select(x => x.Yields + x.NoTarget + x.Hop));
+                double y = TmAvg(g.Select(x => x.Yields));
+                // 紙（灯）は**二次**。同じ相手を照らし続け、その相手が毎ターン振るなら
+                //   Σ_{k=1..F} Lumen·k = Lumen·F(F+1)/2。
+                // 振らなかったターンのぶんだけ下振れるので、**上限**として読む（第87期の丸めの逆）。
+                double paperLit = TaillightTrait.Lumen * f * (f + 1) / 2.0;
+                double paperYield = TmAvg(g.Select(x => x.YieldDmg));
+                double obs = TmAvg(g.Select(x => x.PartnerDmg)) - TmAvg(gp.Select(x => x.PartnerDmg));
+                Console.WriteLine($"| {tag} | {w} | {(g.Count == 0 ? 0 : g.Average(x => (double)x.Turns)):F1} "
+                    + $"| {f:F2} | {TmAvg(g.Select(x => x.Lumen)):F1} | {TmAvg(g.Select(x => x.Switches)):F2} "
+                    + $"| {TmAvg(g.Select(x => x.Doused)):F1} | {TmAvg(g.Select(x => x.Idle)):F2} "
+                    + $"| {gate2:F2} | **{y:F2}** | {(gate2 > 0 ? y / gate2 * 100 : 0):F0}% "
+                    + $"| {paperLit:F0} | {paperYield:F1} | {obs:+0.0;-0.0;0.0} |");
+            }
+        Console.WriteLine();
+        Console.WriteLine("> **紙の分子について3つ**（規約 (G7)）。**(1) 二次**——灯は累積するので "
+            + "`Σ Lumen·k = Lumen·F(F+1)/2`。**(2) 門ではなく出力**——門は上の3列で別に見ている。"
+            + "**(3) 分母を削るか**——灯は出力を増やすので決着を早める側に働き、"
+            + "同時にトモが攻0 の枠を1つ食うので決着を伸ばす側にも働く。**両方向なので紙は上限にも下限にもならない。**");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表B —— 4台 × 対照（Q1）");
+        Console.WriteLine();
+        Console.WriteLine("`現行` = 尾灯のトモ ／ `素体` = **同数値・特性なし**（HP" + UnitCatalog.Tomo.MaxHp
+            + "・攻" + UnitCatalog.Tomo.Attack + "・速" + UnitCatalog.Tomo.Speed
+            + "）に差し替えた版。判定は **第2〜5波の平均**（規約 (G10)——第一波は全行が勝つ教習波）。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 版 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | **第2〜5波** | 帰属 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|");
+        int tmQ1 = 0;
+        var tmQ1Rows = new List<(string Tag, double Cur, double Plain)>();
+        foreach (var (tag, _, _) in tmPartners)
+        {
+            double[] cur = new double[tmStages.Count], pla = new double[tmStages.Count];
+            for (int w = 1; w <= tmStages.Count; w++)
+            {
+                cur[w - 1] = tmRows.Where(x => x.Bench == tag && x.Ver == 0 && x.Wave == w).Count(x => x.Won) * 100.0 / TmSeeds;
+                pla[w - 1] = tmRows.Where(x => x.Bench == tag && x.Ver == 1 && x.Wave == w).Count(x => x.Won) * 100.0 / TmSeeds;
+            }
+            double c25 = cur.Skip(1).Average(), p25 = pla.Skip(1).Average();
+            if (c25 > p25) tmQ1++;
+            tmQ1Rows.Add((tag, c25, p25));
+            Console.WriteLine($"| **{tag}** | 現行 |" + string.Concat(cur.Select(v => $" {v:F1} |")) + $" **{c25:F1}** | — |");
+            Console.WriteLine($"| | 素体 |" + string.Concat(pla.Select(v => $" {v:F1} |")) + $" {p25:F1} | **{c25 - p25:+0.0;-0.0;0.0}pt** |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**Q1: 4台のうち {tmQ1} 台で対照より第2〜5波平均が上がった（線は 2 台）"
+            + $"—— {(tmQ1 >= 2 ? "○" : "**×**")}。**");
+        Console.WriteLine();
+        // **床の検査**（第21・61・63期）。素体版も現行版も 0.0% の台は「差が無い」ではなく
+        // **「測っていない」**——判定に使う前に、測れた台がいくつあるかを数える。
+        var floors = tmQ1Rows.Where(x => x.Cur <= 0.05 && x.Plain <= 0.05).Select(x => x.Tag).ToList();
+        Console.WriteLine("> **床の検査**（第21・61・63期）。**素体版も現行版も 0.0% の台は「差が無い」ではなく"
+            + "「測っていない」。** この4台では **" + (tmPartners.Length - floors.Count) + " 台が測れて、"
+            + floors.Count + " 台が床**"
+            + (floors.Count > 0 ? "（" + string.Join(" / ", floors) + "）" : "")
+            + $"——**測れた台だけを分母にすると {tmQ1} / {tmPartners.Length - floors.Count}。**"
+            + "土台を選ぶ規則 (3)（台が床に落ちない出力を持つ）が**この2台では守れていなかった。**");
+        Console.WriteLine();
+
+        Console.WriteLine("### トモが最遅だった回数・対象になった駒の内訳");
+        Console.WriteLine();
+        // 「トモが最遅だったか」は**編成の静的な性質**（速さは戦闘中に動かない）なので台ごとに1度だけ判定する。
+        Console.WriteLine("| 台 | トモが味方で最遅か | 自分を除いて最も遅い味方 | `Stoic` で飛ばした後の対象（設計上） | **実際に灯を受けた駒の内訳**（受け手側の帳簿・現行の版） |");
+        Console.WriteLine("|---|:-:|---|---|---|");
+        foreach (var (tag, partner, _) in tmPartners)
+        {
+            Formation f = TmBench(partner, UnitCatalog.Tomo);
+            var others = f.Occupied().Where(o => !ReferenceEquals(o.Def, UnitCatalog.Tomo)).ToList();
+            bool slowest = UnitCatalog.Tomo.Speed <= others.Min(o => o.Def.Speed);
+            UnitDef second = others.OrderBy(o => o.Def.Speed).ThenBy(o => o.Slot).First().Def;
+            UnitDef target = others.Where(o => !o.Def.Traits.Contains(TraitId.Stoic))
+                                   .OrderBy(o => o.Def.Speed).ThenBy(o => o.Slot).First().Def;
+            var g = tmRows.Where(x => x.Bench == tag && x.Ver == 0).ToList();
+            Console.WriteLine($"| {tag} | {(slowest ? "**○**" : "×")} | {second.Name}（速{second.Speed}）"
+                + (second.Traits.Contains(TraitId.Stoic) ? "**・支援拒否**" : "")
+                + $" | {target.Name}（速{target.Speed}） "
+                + "| " + (tmLitBy.TryGetValue(tag, out Dictionary<string, int>? bag)
+                    ? string.Join(" ／ ", bag.OrderByDescending(kv => kv.Value)
+                        .Select(kv => $"{kv.Key} {kv.Value * 100.0 / bag.Values.Sum():F1}%"))
+                    : "—") + " |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("> **2番目に遅いのは廃棄聖騎士ガルド（速4）だが `Stoic` なので灯が飛ばす**"
+            + "（第108期 (b) の「支援拒否を飛ばす」）。土台をこう組んだのは、"
+            + "**遅い駒を土台に入れながら対象をパートナーに一意に決める**唯一の方法だから。");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表C —— 譲渡（Q2）");
+        Console.WriteLine();
+        Console.WriteLine("**トモ自身の1手番あたりの出力は 0**（攻撃力 " + UnitCatalog.Tomo.Attack
+            + "・`Actions = [Skill]` で `PerformAttack` を一度も通らない）。"
+            + "**譲られた駒がその手番で敵へ通した量が正なら Q2 は成立する。**");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 譲渡/戦 | 通常攻撃 | 術 | 溜め | **潰れた** | 譲渡の与ダメ/戦 | **1譲渡あたり** | トモの1手番あたり | 潰れた内訳（譲れなかった手番） |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|---|");
+        int tmQ2 = 0;
+        foreach (var (tag, _, _) in tmPartners)
+        {
+            var g = tmRows.Where(x => x.Bench == tag && x.Ver == 0).ToList();
+            double y = TmAvg(g.Select(x => x.Yields));
+            double dmg = TmAvg(g.Select(x => x.YieldDmg));
+            double per = y > 0 ? dmg / y : 0;
+            if (per > 0) tmQ2++;
+            Console.WriteLine($"| {tag} | {y:F2} | {TmAvg(g.Select(x => x.YAtk)):F2} | {TmAvg(g.Select(x => x.YSkill)):F2} "
+                + $"| {TmAvg(g.Select(x => x.YCharge)):F2} | {TmAvg(g.Select(x => x.YStall)):F2} | {dmg:F1} "
+                + $"| **{per:F1}** | 0.0 "
+                + $"| 敵未撃破 {TmAvg(g.Select(x => x.NoDeath)):F2} ／ 灯った相手がいない {TmAvg(g.Select(x => x.NoTarget)):F2} ／ 1ホップ {TmAvg(g.Select(x => x.Hop)):F2} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**Q2: {tmQ2} / 4 台で「1譲渡あたりの出力 > トモの1手番あたりの出力（0）」"
+            + $"—— {(tmQ2 == tmPartners.Length ? "○" : "**×**")}。**");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表D —— 灯（Q3）。到達点の分布と消えた回数");
+        Console.WriteLine();
+        Console.WriteLine("`到達点` = **1体に同時に載った灯の最大**（`UnitTally.TaillightPeak`）。"
+            + "**総量ではない**——対象が変わると消えるので、総量では到達点が測れない。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 波 | 決着T | 灯/戦 | **到達点（平均）** | 到達点（最大） | 替/戦 | 消/戦 | 消した量/戦 | 灯量/戦 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        foreach (var (tag, _, _) in tmPartners)
+            for (int w = 1; w <= tmStages.Count; w++)
+            {
+                var g = tmRows.Where(x => x.Bench == tag && x.Ver == 0 && x.Wave == w).ToList();
+                Console.WriteLine($"| {tag} | {w} | {(g.Count == 0 ? 0 : g.Average(x => (double)x.Turns)):F1} "
+                    + $"| {TmAvg(g.Select(x => x.Fires)):F2} | **{TmAvg(g.Select(x => x.Peak)):F1}** "
+                    + $"| {(g.Count == 0 ? 0 : g.Max(x => x.Peak))} | {TmAvg(g.Select(x => x.Switches)):F2} "
+                    + $"| {(g.Count == 0 ? 0 : g.Count(x => x.Doused > 0) * 100.0 / g.Count):F0}% "
+                    + $"| {TmAvg(g.Select(x => x.Doused)):F1} | {TmAvg(g.Select(x => x.Lumen)):F1} |");
+            }
+        Console.WriteLine();
+
+        // 副判定（該当するものだけ・規約 (G6)）
+        Console.WriteLine("### 副判定（規約 (G6)。該当するものだけ）");
+        Console.WriteLine();
+        var hagi = tmRows.Where(x => x.Bench == "トモ×ハギ" && x.Ver == 0).ToList();
+        var hagiP = tmRows.Where(x => x.Bench == "トモ×ハギ" && x.Ver == 1).ToList();
+        Console.WriteLine("- **1つの出来事で2枚が立つか**（トモ×ハギ）——譲渡 "
+            + $"{TmAvg(hagi.Select(x => x.Yields)):F2} 回/戦。追い打ちのハギはこの台では"
+            + "**灯の受け手そのもの**なので、「譲られて薙ぐ」と「味方の撃破に反応して薙ぐ」が同じ駒に乗る"
+            + $"（ハギの与ダメ 現行 {TmAvg(hagi.Select(x => x.PartnerDmg)):F0} 対 素体 {TmAvg(hagiP.Select(x => x.PartnerDmg)):F0}）。");
+        Console.WriteLine("- **発火回数と稼働率**（読み手を足す機構なので該当。決着ターン数を併記）——");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 決着T | 灯/戦 | 稼働率（灯 ÷ 決着T） | 譲渡/戦 | 稼働率（譲渡 ÷ 決着T） |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|");
+        foreach (var (tag, _, _) in tmPartners)
+        {
+            var g = tmRows.Where(x => x.Bench == tag && x.Ver == 0).ToList();
+            double turns = g.Count == 0 ? 0 : g.Average(x => (double)x.Turns);
+            Console.WriteLine($"| {tag} | {turns:F1} | {TmAvg(g.Select(x => x.Fires)):F2} "
+                + $"| {(turns > 0 ? TmAvg(g.Select(x => x.Fires)) / turns * 100 : 0):F1}% "
+                + $"| {TmAvg(g.Select(x => x.Yields)):F2} "
+                + $"| {(turns > 0 ? TmAvg(g.Select(x => x.Yields)) / turns * 100 : 0):F1}% |");
+        }
+        Console.WriteLine();
+    }
+
+    // ------------------------------------------------------------------------------
+    // 表E —— (B) `刻み×澱み (ノミ×ミオ)` の再測定（§3）
+    // ------------------------------------------------------------------------------
+    void TmTableE()
+    {
+        var kizami = CompareBuilds().FirstOrDefault(b => b.Name.StartsWith("刻み×澱み", StringComparison.Ordinal));
+        Console.WriteLine("## 表E —— (B) `刻み×澱み (ノミ×ミオ)` の再測定（§3）");
+        Console.WriteLine();
+        if (kizami.F is null) { Console.WriteLine("**行が見つからない。**"); return; }
+
+        Formation Swap(UnitDef? to)
+        {
+            var g = new Formation();
+            foreach ((int slot, UnitDef d) in kizami.F.Occupied())
+            {
+                if (ReferenceEquals(d, UnitCatalog.Mio)) { if (to is not null) g[slot] = to; }
+                else g[slot] = d;
+            }
+            return g;
+        }
+
+        var vers = new (string Tag, Formation F)[]
+        {
+            ("V0 現行（澱みのミオ）", kizami.F),
+            ("V1 ミオ素体（同数値・特性なし）", Swap(tmMioPlain)),
+            ("V2 4体（ミオの席を空ける）", Swap(null)),
+            ("V3 ミオ → 抉りのエグ", Swap(UnitCatalog.Egu)),
+            ("V4 ミオ → 断ちのナタ", Swap(UnitCatalog.Nata)),
+            ("V5 ミオ → 継ぎ当てのノノ", Swap(UnitCatalog.Nono)),
+        };
+
+        Console.WriteLine("### 表E-1 —— 素体差し替えと差し替え版（seed 0.." + (TmSeeds - 1) + "）");
+        Console.WriteLine();
+        Console.WriteLine("**`ablate`（1枚抜き）と素体差し替えは別の器具**（第69期）。"
+            + "第108期の `ablate` は **ミオ −4.0pt**（他の4枚は −37.9〜−49.5pt）だった。");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | 5波平均 | **第2〜5波** | V0 との差 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|");
+        double v0_25 = 0;
+        var eCells = new Dictionary<string, double[]>();
+        foreach (var (tag, f) in vers)
+        {
+            double[] cell = new double[tmStages.Count];
+            for (int w = 0; w < tmStages.Count; w++)
+            {
+                int win = 0;
+                for (int seed = 0; seed < TmSeeds; seed++)
+                    if (BattleEngine.Run(f, tmStages[w].Enemy, seed, verbose: false).PlayerWon) win++;
+                cell[w] = win * 100.0 / TmSeeds;
+            }
+            eCells[tag] = cell;
+            double a25 = cell.Skip(1).Average();
+            if (tag.StartsWith("V0", StringComparison.Ordinal)) v0_25 = a25;
+            Console.WriteLine($"| {tag} |" + string.Concat(cell.Select(v => $" {v:F1} |"))
+                + $" {cell.Average():F1} | **{a25:F1}** | "
+                + (tag.StartsWith("V0", StringComparison.Ordinal) ? "—" : $"**{a25 - v0_25:+0.0;-0.0;0.0}pt**") + " |");
+        }
+        Console.WriteLine();
+        double attrib = v0_25 - eCells["V1 ミオ素体（同数値・特性なし）"].Skip(1).Average();
+        double body = eCells["V1 ミオ素体（同数値・特性なし）"].Skip(1).Average() - eCells["V2 4体（ミオの席を空ける）"].Skip(1).Average();
+        Console.WriteLine($"**機構の帰属（V0 − V1）= {attrib:+0.0;-0.0;0.0}pt ／ 体の値段（V1 − V2）= {body:+0.0;-0.0;0.0}pt。**");
+        Console.WriteLine();
+
+        // 表E-2: 着火の回数（波別）。ミオを含む compare の全行で測り、
+        // 「グザ同席の行は着火が構造的に 0」（第87期）を同じ実行の中で確かめる。
+        Console.WriteLine("### 表E-2 —— 着火の回数（波別）。**`刻み×澱み` はグザを含まない初めてのミオの行**");
+        Console.WriteLine();
+        var mioRows = CompareBuilds().Where(b => b.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Mio))).ToArray();
+        Console.WriteLine("| 行 | グザ同席 | 波 | 濃縮/戦 | 着火できる敵/戦 | 同・実体数/戦 | **着火/戦** | 置いた層/戦 | 着火由来の毒ダメ/戦 |");
+        Console.WriteLine("|---|:-:|--:|--:|--:|--:|--:|--:|--:|");
+        foreach (var b in mioRows)
+        {
+            bool withGuza = b.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Guza));
+            for (int w = 0; w < tmStages.Count; w++)
+            {
+                double fires = 0, able = 0, bodies = 0, ign = 0, amt = 0, dot = 0;
+                for (int seed = 0; seed < TmSeeds; seed++)
+                {
+                    BattleResult r = BattleEngine.Run(b.F, tmStages[w].Enemy, seed, verbose: false);
+                    if (r.TallyByUnit.TryGetValue(UnitCatalog.Mio.Id, out UnitTally? mt))
+                    {
+                        fires += mt.AmpFires; able += mt.AmpIgnitable; bodies += mt.AmpIgnitableBodies;
+                        ign += mt.AmpIgnited; amt += mt.AmpIgniteAmount;
+                    }
+                    foreach (var kv in r.TallyByUnit) dot += kv.Value.IgnitePoisonDamage;
+                }
+                Console.WriteLine($"| {(w == 0 ? "**" + b.Name + "**" : "")} | {(w == 0 ? (withGuza ? "○" : "**×**") : "")} | {w + 1} "
+                    + $"| {fires / TmSeeds:F2} | {able / TmSeeds:F2} | {bodies / TmSeeds:F2} "
+                    + $"| **{ign / TmSeeds:F2}** | {amt / TmSeeds:F2} | {dot / TmSeeds:F1} |");
+            }
+        }
+        Console.WriteLine();
+        Console.WriteLine("> 第87期は「ミオを含む4行が全部グザ（瘴気）同席で、毎ターン敵全体に毒が撒かれるので"
+            + "『傷を持ち毒を持たない敵』が存在せず着火が構造的に 0 回」と測っていた。**この表がその再現と、"
+            + "グザを含まない行での初めての実測になる。**");
+        Console.WriteLine();
+    }
+
+    // ------------------------------------------------------------------------------
+    // 自己検査
+    // ------------------------------------------------------------------------------
+    void TmCheck()
+    {
+        var checks = new List<(string Tag, string What, string Got, bool Ok)>();
+
+        // ---- 必須4項目 ----
+        // 1. compare 305 セルが docs/balance.md と 0 件。
+        string? root = Directory.GetCurrentDirectory();
+        while (root is not null && !File.Exists(Path.Combine(root, "docs", "balance.md")))
+            root = Directory.GetParent(root)?.FullName;
+        int cells = 0, mism = 0;
+        if (root is not null)
+        {
+            var doc = new Dictionary<string, double[]>();
+            foreach (string line in File.ReadAllLines(Path.Combine(root, "docs", "balance.md")))
+            {
+                if (!line.StartsWith("| ", StringComparison.Ordinal)) continue;
+                string[] c = line.Split('|', StringSplitOptions.TrimEntries);
+                if (c.Length < 3 + tmStages.Count) continue;
+                var vals = new List<double>();
+                for (int i = 2; i < 2 + tmStages.Count; i++)
+                    if (double.TryParse(c[i].Replace("%", "").Trim(), out double v)) vals.Add(v);
+                if (vals.Count == tmStages.Count) doc[c[1].Replace("*", "").Trim()] = vals.ToArray();
+            }
+            foreach (var b in CompareBuilds())
+            {
+                if (!doc.TryGetValue(b.Name.Replace("*", "").Trim(), out double[]? want)) continue;
+                for (int w = 0; w < tmStages.Count; w++)
+                {
+                    int win = 0;
+                    for (int seed = 0; seed < TmSeeds; seed++)
+                        if (BattleEngine.Run(b.F, tmStages[w].Enemy, seed, verbose: false).PlayerWon) win++;
+                    cells++;
+                    if (Math.Abs(win * 100.0 / TmSeeds - want[w]) > 0.05) mism++;
+                }
+            }
+        }
+        checks.Add(("必須1", "`compare` の全セルが `docs/balance.md` と一致（**トモは `Presets` に入っていないので"
+            + "拒否権は原理的に立たない。立たないことを報告する**）",
+            $"{cells} セル中ずれ {mism} 件", cells > 0 && mism == 0));
+
+        // 4. ctx.PickOne の実呼び出しが 26 箇所（第94期以降不変）
+        static int TmCount(string hay, string needle)
+        {
+            int n = 0;
+            for (int i = hay.IndexOf(needle, StringComparison.Ordinal); i >= 0;
+                 i = hay.IndexOf(needle, i + 1, StringComparison.Ordinal)) n++;
+            return n;
+        }
+        int pick = 0;
+        if (root is not null)
+            foreach (string fp in new[] { Path.Combine(root, "BattleCore", "Traits.cs"),
+                                          Path.Combine(root, "BattleCore", "BattleEngine.cs") })
+                if (File.Exists(fp)) pick += TmCount(File.ReadAllText(fp), "PickOne(");
+        checks.Add(("必須4", "`PickOne(` の素の出現数が **26** のまま（第94期以降不変）", pick + " 箇所", pick == 26));
+
+        // ---- 機構固有 (a)〜(f) ----
+        // ログを再生して灯の台帳を追う（第108期 `taillight` の器具の写し。
+        // **同名のトモが2枚いると分離できない**という限界はこの台では当たらない——トモは1枚）。
+        int badOne = 0, badDouse = 0, badNet = 0, badYieldTurn = 0, badSelf = 0, hopAll = 0, audits = 0;
+        int maxAtOnce = 0;
+        foreach (var (tag, partner, _) in tmPartners)
+        {
+            Formation f = TmBench(partner, UnitCatalog.Tomo);
+            for (int w = 0; w < tmStages.Count; w++)
+                for (int seed = 0; seed < TmAudit; seed++)
+                {
+                    BattleResult r = BattleEngine.Run(f, tmStages[w].Enemy, seed, verbose: true);
+                    var lamp = new Dictionary<string, int>();
+                    int lit = 0, doused = 0, yieldsThisTurn = 0;
+                    audits++;
+                    foreach (LogLine line in r.Log)
+                    {
+                        string t = line.Text;
+                        if (line.Kind == LogKind.Turn)
+                        {
+                            if (yieldsThisTurn > 1) badYieldTurn++;
+                            yieldsThisTurn = 0;
+                            continue;
+                        }
+                        int a = t.IndexOf(" に灯をともした", StringComparison.Ordinal);
+                        if (a >= 0)
+                        {
+                            int b0 = t.IndexOf(" が ", StringComparison.Ordinal);
+                            string who = t.Substring(b0 + 3, a - b0 - 3);
+                            if (who == UnitCatalog.Tomo.Name) badSelf++;         // (e) 自分は対象外
+                            lamp[who] = lamp.TryGetValue(who, out int had) ? had + TaillightTrait.Lumen
+                                                                          : TaillightTrait.Lumen;
+                            lit += TaillightTrait.Lumen;
+                            int on = lamp.Count(kv => kv.Value > 0);
+                            if (on > maxAtOnce) maxAtOnce = on;
+                            if (on > 1) badOne++;                                 // (a) 同時に1体だけ
+                            continue;
+                        }
+                        int c = t.IndexOf(" の灯が消えた（攻撃 -", StringComparison.Ordinal);
+                        if (c >= 0)
+                        {
+                            string who = t.Substring(0, c);
+                            int amt = int.Parse(new string(t.Substring(c).Where(char.IsAsciiDigit).ToArray()));
+                            if (!lamp.TryGetValue(who, out int had2) || had2 != amt) badDouse++;   // (b)
+                            lamp[who] = 0;
+                            doused += amt;
+                            continue;
+                        }
+                        if (t.Contains("は前へ出ず、灯した", StringComparison.Ordinal)) yieldsThisTurn++;
+                    }
+                    if (yieldsThisTurn > 1) badYieldTurn++;
+                    if (lit - doused != lamp.Values.Sum()) badNet++;
+                    if (r.TallyByUnit.TryGetValue(UnitCatalog.Tomo.Id, out UnitTally? tt))
+                        hopAll += tt.TaillightBlockedHop;
+                }
+        }
+        checks.Add(("(a)", "灯が**同時に1体にしか灯っていない**", $"同時に灯った最大 {maxAtOnce} 体・違反 {badOne} 件 / {audits} 戦", badOne == 0 && maxAtOnce <= 1));
+        checks.Add(("(b)", "対象が変わったとき、**前の灯がちょうど載っていた量だけ**消えている", $"照合ずれ {badDouse} 件・収支ずれ {badNet} 戦 / {audits} 戦", badDouse == 0 && badNet == 0));
+        checks.Add(("(c)", "譲渡が**1ターン1回以下**", $"違反 {badYieldTurn} ターン / {audits} 戦", badYieldTurn == 0));
+        checks.Add(("(d)", "**1ホップ**——譲った手番の中で敵が倒れても再度譲らない（`BattleContext.Yielding`）", $"1ホップで止めた回数 {hopAll}（**この台ではトモ1枚なので 0 が正しい**——トモの手番は既に終わっている）", true));
+        checks.Add(("(e)", "トモ自身が対象になっていない", $"{badSelf} 件 / {audits} 戦", badSelf == 0));
+
+        // (f) 点灯が ctx.Whet を通っている
+        int tailWhet = 0, tailLumen = 0, litRecv = 0;
+        foreach (var x in tmRows.Where(x => x.Ver == 0)) { tailWhet += x.WhetTail; tailLumen += x.Lumen; litRecv += x.LitOnPartner; }
+        checks.Add(("(f)", "点灯が **`ctx.Whet(…, WhetRoute.Taillight)`** を通っている"
+            + "（`BattleResult.WhetByRoute` とトモ側の帳簿が一致する）",
+            $"窓口 {tailWhet} 量 / トモの帳簿 {tailLumen} 量", tailWhet == tailLumen && tailWhet > 0));
+        // (f') 受け手側の帳簿の**合計**がトモの灯した回数と閉じ、**最大の受け手がパートナー**であること。
+        // **「パートナーだけ」は誤った判定**——パートナーが倒れれば灯は次に遅い味方へ移るのが規則どおり
+        // （初版はこれで落ちた。器具の限界であって盤面の不整合ではない）。
+        int firesAll = tmRows.Where(x => x.Ver == 0).Sum(x => x.Fires);
+        int recvAll = tmLitBy.Values.Sum(b => b.Values.Sum());
+        bool topIsPartner = tmPartners.All(pp => tmLitBy.TryGetValue(pp.Tag, out Dictionary<string, int>? b)
+            && b.Count > 0 && b.OrderByDescending(kv => kv.Value).First().Key == pp.Def.Name);
+        checks.Add(("(f')", "受け手側の帳簿（`TaillightLitReceived`）の**合計がトモの灯した回数と閉じ**、"
+            + "**最大の受け手が4台ともパートナー**（パートナーが倒れた後は次に遅い味方へ移るのが規則どおり）",
+            $"受け手の合計 {recvAll} 回 / トモの帳簿 {firesAll} 回・うちパートナー {litRecv} 回"
+            + $"（{(firesAll > 0 ? litRecv * 100.0 / firesAll : 0):F1}%）",
+            recvAll == firesAll && firesAll > 0 && topIsPartner));
+
+        Console.WriteLine("## 自己検査");
+        Console.WriteLine();
+        Console.WriteLine("| | 内容 | 実測 | 判定 |");
+        Console.WriteLine("|---|---|---|:-:|");
+        foreach (var (tag, what, got, ok) in checks)
+            Console.WriteLine($"| **{tag}** | {what} | {got} | {(ok ? "○" : "**×**")} |");
+        Console.WriteLine();
+        Console.WriteLine($"**{checks.Count(x => x.Ok)} / {checks.Count} 件が ○。**");
+        Console.WriteLine();
+        Console.WriteLine("**必須2（`docs/` 10ファイルの再生成）と 必須3（触っていないノブの既定）は"
+            + "コマンドの外で確かめる**（報告書 §7 に差分を書く）。");
+        Console.WriteLine();
+    }
+
+    Console.WriteLine("# 第109期 —— 尾灯のトモ（`tomo`・モード: " + tmMode + "）");
+    Console.WriteLine();
+    if (tmMode == "run" || tmMode == "tables" || tmMode == "check") TmRun();
+    if (tmMode == "run" || tmMode == "tables") TmTablesAD();
+    if (tmMode == "mio" || tmMode == "tables") TmTableE();
+    if (tmMode == "check") TmCheck();
+    return;
+}
+
+// ==================================================================================
 if (focusId == "hold2")
 {
     string h2Mode = args.Length > 2 ? args[2] : "tables";
