@@ -3309,6 +3309,11 @@ public sealed class BattleContext
         foreach (UnitState extra in extras)
         {
             if (!extra.IsAlive) continue;
+            // 積み過ぎ（第116期）の門の 3。**盤面には一切影響しない。**
+            // 薙ぎに化けた一撃が実際に何体へ届いたか（＝巻き込み）。安い bool を先に見る
+            // （`ReaderActive` → 型 → 保持者。既存条件の後ろに置く作法）。
+            if (ReaderActive && pattern == AttackPattern.Sweep && actor.HasTrait(TraitId.Overload))
+                TallyOf(actor).ReaderSplash++;
             Log($"    刃が {extra.Name} まで届く", LogKind.Damage);
             ApplyDamage(extra, Math.Max(1, dealt * SecondaryPercent / 100), actor, pattern: pattern);
         }

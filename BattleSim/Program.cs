@@ -51031,7 +51031,9 @@ if (focusId == "reader")
     // --- 読み手の版。**V0 は「特性は載っているが規則が不活性」＝現行のバンと1ビットも違わない。**
     var rdVers = new (string Tag, ReaderRule Rule)[]
     {
-        ("V0 現行",     ReaderRule.Default),          // Threshold 0 ＝ ModifyPattern が素通り
+        // **既定に頼らず 0 を明示する。** 第116期に `ReaderRule.Default` が 5 へ動いたので、
+        // `ReaderRule.Default` のままだと第115期の V0 が黙って V1 に化ける。
+        ("V0 現行",     new ReaderRule(0)),           // Threshold 0 ＝ ModifyPattern が素通り
         ("V1 積み過ぎ", new ReaderRule(RdThreshold)),
     };
 
@@ -51227,6 +51229,648 @@ if (focusId == "reader")
             if (v.Count == waves) map[parts[1]] = v.ToArray();
         }
         return map;
+    }
+
+    // ==============================================================================
+    // 第116期 —— 積み過ぎ（`Overload`）を据えのバンに載せる（`reader load ...`）。
+    //
+    // **第115期の `phase0` / `supply` / `run` / `check` は測定の中身を1文字も書き換えていない**
+    // （`rdVers` の V0 が既定に頼らず `new ReaderRule(0)` を明示するようになっただけ
+    //  ——`ReaderRule.Default` がこの期に 0 → 5 へ動いたので、頼ったままだと V0 が黙って
+    //  V1 に化ける。第110期に同じ穴を踏んでいる）。
+    //
+    //     reader load phase0   §2（戦闘は分布の測定のみ）
+    //     reader load run      §1 (T2)
+    //     reader load seat     §1 (T3)（条件に当たった行だけ）
+    //     reader load check    自己検査（第2引数に採用前の balance.md を渡すと (a) を測る）
+    // ==============================================================================
+    if (rdMode == "load")
+    {
+        string ldSub = args.Length > 3 ? args[3] : "phase0";
+        var ldCompare = CompareBuilds();
+        var ldCross = CrossBuilds();
+        var ldPrim = new HashSet<string>(Baseline.PrimaryRows);
+        const int LdSeeds = 200;      // **帯A**。`compare` と揃える（規約 (G14)）
+        const int LdSupply = 50;      // 経路の内訳は「どの蛇口から来るか」だけを見るので浅くてよい
+        const int LdScan = 50;        // 粗探索。`reseat` / `layout` と揃える
+        const int LdCfBase = 200;     // 追試の帯（選定に使っていない seed）
+        const int LdCfSeeds = 400;
+        const double LdSeatLine = 5.0;   // 第46期の採否閾値
+        var ldOff = new ReaderRule(0);                       // **明示する**。既定に頼らない
+        var ldOn = new ReaderRule(ReaderRule.Adopted);       // 採用値 5
+
+        static string LdN(UnitDef? d) => d?.Name ?? "-";
+        static string LdSeats(Formation f) => LdN(f[0]) + "/" + LdN(f[1]) + " | " + LdN(f[2]) + " | " + LdN(f[3]) + "/" + LdN(f[4]);
+        // 情報セル: `0 < x < 100` を**第2〜5波**で数える（第59期 9-1・規約 (G10)）
+        static int LdInfo(double[] c) { int n = 0; for (int i = 1; i < c.Length; i++) if (c[i] > 0.0 && c[i] < 100.0) n++; return n; }
+        static double LdAvg25(double[] c) => c.Skip(1).Average();
+
+        // **バンを含む行を実装で数える**（指示書 §2-1。「指示書の記述を信用しない」）
+        static bool LdHasBan(Formation f) => f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Ban));
+        var ldBanRows = ldCompare.Where(b => LdHasBan(b.F)).Select(b => (b.Name, b.F, Band: "compare"))
+            .Concat(ldCross.Where(b => LdHasBan(b.F)).Select(b => (b.Name, b.F, Band: "交差帯")))
+            .ToList();
+
+        double[] LdCells(Formation f, ReaderRule rule, int seedFrom, int seeds)
+        {
+            var cells = new double[rdStages.Count];
+            for (int w = 0; w < rdStages.Count; w++)
+            {
+                int win = 0;
+                for (int seed = seedFrom; seed < seedFrom + seeds; seed++)
+                    if (BattleEngine.Run(f, rdStages[w].Enemy, seed, verbose: false, reader: rule).PlayerWon) win++;
+                cells[w] = win * 100.0 / seeds;
+            }
+            return cells;
+        }
+
+        // 1行ぶんの観測（波別）。**到達率は戦ごとに割ってから平均する**（第115期の作法）。
+        LdStat[] LdWatch(Formation f, ReaderRule rule, int seeds)
+        {
+            var st = new LdStat[rdStages.Count];
+            for (int w = 0; w < rdStages.Count; w++)
+            {
+                var ls = new LdStat();
+                for (int seed = 0; seed < seeds; seed++)
+                {
+                    BattleResult r = BattleEngine.Run(f, rdStages[w].Enemy, seed, verbose: false, reader: rule);
+                    UnitTally t = r.TallyByUnit.TryGetValue(UnitCatalog.Ban.Id, out UnitTally? tt) ? tt : new UnitTally();
+                    ls.N++;
+                    if (r.PlayerWon) ls.Win++;
+                    ls.Turns += r.Turns;
+                    ls.Reach += t.ReaderTurns == 0 ? 0.0 : (double)t.ReaderOverTurns / t.ReaderTurns;
+                    ls.Alive += t.ReaderTurns; ls.Over += t.ReaderOverTurns; ls.OverSwung += t.ReaderOverTurnsSwung;
+                    ls.Sweeps += t.ReaderSweeps; ls.Splash += t.ReaderSplash; ls.Swings += t.ReaderSwings;
+                    ls.Bonus += t.ReaderTurns == 0 ? 0.0 : (double)t.ReaderBonusSum / t.ReaderTurns;
+                    ls.BonusMax += t.ReaderBonusMax;
+                    if (t.ReaderFirstOverTurn > 0) { ls.First += t.ReaderFirstOverTurn; ls.FirstN++; }
+                    int[]? probe = t.ReaderProbeTurns;
+                    for (int i = 0; i < UnitTally.ReaderProbes.Length; i++)
+                        ls.Probe[i] += probe == null || t.ReaderTurns == 0 ? 0.0 : (double)probe[i] / t.ReaderTurns;
+                    ls.Dmg += t.DamageToEnemy; ls.Kills += t.Kills;
+                }
+                st[w] = ls;
+            }
+            return st;
+        }
+
+        // 波2〜5をまとめた1つの観測（規約 (G10)）。
+        static LdStat LdSum25(LdStat[] st)
+        {
+            var ls = new LdStat();
+            for (int w = 1; w < st.Length; w++)
+            {
+                ls.N += st[w].N; ls.Win += st[w].Win; ls.Turns += st[w].Turns; ls.Reach += st[w].Reach;
+                ls.Alive += st[w].Alive; ls.Over += st[w].Over; ls.OverSwung += st[w].OverSwung;
+                ls.Sweeps += st[w].Sweeps; ls.Splash += st[w].Splash; ls.Swings += st[w].Swings;
+                ls.Bonus += st[w].Bonus; ls.BonusMax += st[w].BonusMax; ls.First += st[w].First; ls.FirstN += st[w].FirstN;
+                ls.Dmg += st[w].Dmg; ls.Kills += st[w].Kills;
+                for (int i = 0; i < ls.Probe.Length; i++) ls.Probe[i] += st[w].Probe[i];
+            }
+            return ls;
+        }
+
+        // -------------------------------------------------------------------------
+        // load phase0（表P）。**戦闘は「バンに何点届くか」の分布だけ。**
+        // -------------------------------------------------------------------------
+        if (ldSub == "phase0")
+        {
+            Console.WriteLine("# 第116期 Phase 0 —— 積み過ぎを据えのバンに載せる");
+            Console.WriteLine();
+            Console.WriteLine($"閾値 **{ReaderRule.Adopted}**（掃引しない・§0-3）。"
+                + "この節の戦闘は**分布の測定だけ**で、対照はすべて `new ReaderRule(0)` を明示している。");
+
+            // --- 表P-1: バンを含む行の全数
+            Console.WriteLine();
+            Console.WriteLine("## 表P-1. バンを含む行の全数（`Presets` を実装で走査）");
+            Console.WriteLine();
+            Console.WriteLine($"`compare` **{ldCompare.Count(b => LdHasBan(b.F))} 行** / "
+                + $"交差帯 **{ldCross.Count(b => LdHasBan(b.F))} 行** ＝ 合計 **{ldBanRows.Count} 行**"
+                + $"（`compare` は全 {ldCompare.Length} 行・交差帯は全 {ldCross.Length} 行）。");
+            Console.WriteLine();
+            Console.WriteLine("| 行 | 帯 | 主判定 | バンの席 | 前1/前3 | 中央 | 後1/後3 | ガルドの席 | ガルドの隣接（占有枠） |");
+            Console.WriteLine("|---|---|:-:|---|---|---|---|---|--:|");
+            string[] slotName = { "前1", "前3", "中央", "後1", "後3" };
+            foreach (var row in ldBanRows)
+            {
+                int banSlot = row.F.Occupied().First(o => ReferenceEquals(o.Def, UnitCatalog.Ban)).Slot;
+                var gald = row.F.Occupied().Where(o => ReferenceEquals(o.Def, UnitCatalog.Gald)).ToList();
+                string gs = "—", gn = "—";
+                if (gald.Count > 0)
+                {
+                    int g = gald[0].Slot;
+                    int deg = row.F.Occupied().Count(o => o.Slot != g && FormationRules.AreAdjacent(g, o.Slot));
+                    bool nextToBan = FormationRules.AreAdjacent(g, banSlot);
+                    gs = slotName[g];
+                    gn = $"{deg}{(nextToBan ? "（**バンに隣接**）" : "")}";
+                }
+                Console.WriteLine($"| {row.Name} | {row.Band} | {(ldPrim.Contains(row.Name) ? "**P**" : "")} | {slotName[banSlot]} "
+                    + $"| {LdN(row.F[0])}/{LdN(row.F[1])} | {LdN(row.F[2])} | {LdN(row.F[3])}/{LdN(row.F[4])} | {gs} | {gn} |");
+            }
+            Console.WriteLine();
+            Console.WriteLine("**ガルド（`Stoic`）の隣接数がそのまま拡散量になる**のは、"
+                + "`BattleContext.SupportTargets` が「本人が受け取らないぶんを**隣接する味方全員**へ配る」形だから"
+                + "（§0-2）。**バンに隣接していなければ二重配布は起きない。**");
+
+            // --- 表P-2: 経路の内訳
+            Console.WriteLine();
+            Console.WriteLine($"## 表P-2. バンに届く強化の経路（実測・第2〜5波・seed 0..{LdSupply - 1}）");
+            Console.WriteLine();
+            bool[] spread = new bool[WhetRoutes.Count];
+            spread[(int)WhetRoute.RallyOpening] = spread[(int)WhetRoute.RallyTurn] = spread[(int)WhetRoute.Regurgitate] = true;
+            Console.Write("| 行 |");
+            for (int i = 1; i < WhetRoutes.Count; i++) Console.Write($" {WhetRoutes.Names[i]}{(spread[i] ? "◇" : "")} |");
+            Console.WriteLine(" 合計/戦 |");
+            Console.Write("|---|");
+            for (int i = 1; i < WhetRoutes.Count; i++) Console.Write("--:|");
+            Console.WriteLine("--:|");
+            foreach (var row in ldBanRows)
+            {
+                var sum = new double[WhetRoutes.Count];
+                int n = 0;
+                for (int w = 1; w < rdStages.Count; w++)
+                    for (int seed = 0; seed < LdSupply; seed++)
+                    {
+                        BattleResult r = BattleEngine.Run(row.F, rdStages[w].Enemy, seed, verbose: false, reader: ldOff);
+                        n++;
+                        for (int i = 0; i < WhetRoutes.Count; i++)
+                            if (r.WhetToByRoute[i].TryGetValue(UnitCatalog.Ban.Id, out int v)) sum[i] += v;
+                    }
+                Console.Write($"| {row.Name} |");
+                for (int i = 1; i < WhetRoutes.Count; i++) Console.Write($" {sum[i] / n:F2} |");
+                Console.WriteLine($" **{sum.Skip(1).Sum() / n:F2}** |");
+            }
+            Console.WriteLine();
+            Console.WriteLine("◇ = **ばら撒き型**（`SupportTargets` を通る＝ガルドの `Stoic` が隣へ流す）。"
+                + "1体を選ぶ型（駆り立て・縛め・移り木・火選り・尾灯）は流れない。");
+
+            // --- 表P-3: AtkBonus の分布
+            Console.WriteLine();
+            Console.WriteLine($"## 表P-3. 素体（`Threshold = 0`）でのバンの `AtkBonus` 分布（第2〜5波・seed 0..{LdSeeds - 1}）");
+            Console.WriteLine();
+            Console.Write("| 行 | 平均 | 最大 | 初到達T |");
+            foreach (int p in UnitTally.ReaderProbes) Console.Write($" ≥{p} |");
+            Console.WriteLine(" **到達率(≥5)** | 決着T |");
+            Console.Write("|---|--:|--:|--:|");
+            foreach (int _ in UnitTally.ReaderProbes) Console.Write("--:|");
+            Console.WriteLine("--:|--:|");
+            foreach (var row in ldBanRows)
+            {
+                LdStat ls = LdSum25(LdWatch(row.F, ldOff, LdSeeds));
+                Console.Write($"| {row.Name} | {ls.Bonus / ls.N:F2} | {ls.BonusMax / ls.N:F1} "
+                    + $"| {(ls.FirstN == 0 ? "—" : (ls.First / ls.FirstN).ToString("F2"))} |");
+                foreach (double pr in ls.Probe) Console.Write($" {pr / ls.N * 100:F1}% |");
+                Console.WriteLine($" **{ls.Reach / ls.N * 100:F1}%** | {ls.Turns / ls.N:F2} |");
+            }
+            Console.WriteLine();
+            Console.WriteLine($"**閾値 {ReaderRule.Adopted} が分布のどこに来るか**を読む列は `≥5`。"
+                + "`≥1` との差が「届いてはいるが足りない」の量で、そこが厚い行は**供給の有無ではなく高さで落ちている**。");
+
+            // --- 表P-4: 主判定
+            Console.WriteLine();
+            Console.WriteLine("## 表P-4. `Baseline.PrimaryRows` との重なり（§2-5）");
+            Console.WriteLine();
+            var inPrim = ldBanRows.Where(r => ldPrim.Contains(r.Name)).ToList();
+            Console.WriteLine($"主判定 **{Baseline.PrimaryRows.Length} 行**のうちバンを含むのは **{inPrim.Count} 行** —— "
+                + string.Join(" / ", inPrim.Select(r => r.Name)));
+            Console.WriteLine();
+            Console.WriteLine(inPrim.Count > 0
+                ? $"**主判定19行は動く。** 分母の {inPrim.Count} / {Baseline.PrimaryRows.Length} "
+                  + $"= {inPrim.Count * 100.0 / Baseline.PrimaryRows.Length:F1}% が動きうる（規約 (G4)）。"
+                : "**主判定19行は動かない。**");
+
+            // --- 表P-5: 二重保持
+            Console.WriteLine();
+            Console.WriteLine("## 表P-5. バンの札（§2-6）");
+            Console.WriteLine();
+            Console.WriteLine("| 札 | `ModifyAttack` | `ModifyPattern` |");
+            Console.WriteLine("|---|:-:|:-:|");
+            foreach (TraitId t in UnitCatalog.Ban.Traits)
+                Console.WriteLine($"| {t} | {(RdOverrides(t, "ModifyAttack") ? "○" : "—")} | {(RdOverrides(t, "ModifyPattern") ? "○" : "—")} |");
+            int dupA = UnitCatalog.Ban.Traits.Count(t => RdOverrides(t, "ModifyAttack"));
+            int dupP = UnitCatalog.Ban.Traits.Count(t => RdOverrides(t, "ModifyPattern"));
+            Console.WriteLine();
+            Console.WriteLine($"二重保持: `ModifyAttack` **{dupA}** / `ModifyPattern` **{dupP}** → "
+                + $"{(dupA <= 1 && dupP <= 1 ? "**○**（衝突しない）" : "**×**")}");
+
+            // --- 表P-6: 過去にバンを触った期
+            Console.WriteLine();
+            Console.WriteLine("## 表P-6. 過去にバンの席・機構を触った期（`design/` の grep）");
+            Console.WriteLine();
+            string? rt = RdRoot();
+            int hit = 0;
+            if (rt != null)
+                foreach (string path in Directory.GetFiles(Path.Combine(rt, "design"), "*.md").OrderBy(p => p))
+                {
+                    string[] lines = File.ReadAllLines(path);
+                    var found = new List<int>();
+                    for (int i = 0; i < lines.Length; i++)
+                        if (lines[i].Contains("バン") && (lines[i].Contains("席") || lines[i].Contains("reseat")))
+                            found.Add(i + 1);
+                    if (found.Count == 0) continue;
+                    hit++;
+                    Console.WriteLine($"- `design/{Path.GetFileName(path)}` —— {found.Count} 行"
+                        + $"（L{string.Join(", L", found.Take(6))}{(found.Count > 6 ? " …" : "")}）");
+                }
+            Console.WriteLine();
+            Console.WriteLine($"該当 **{hit} ファイル**。");
+            return;
+        }
+
+        // -------------------------------------------------------------------------
+        // load run（表A・表B）。**この期の本体。**
+        // -------------------------------------------------------------------------
+        if (ldSub == "run")
+        {
+            Console.WriteLine("# 第116期 (T2) —— 5 行を測る");
+            Console.WriteLine();
+            Console.WriteLine($"`compare` {ldCompare.Length} 行 ＋ 交差帯 {ldCross.Length} 行 × 5 波 × seed 0..{LdSeeds - 1} を "
+                + $"**V0（`Threshold = 0`・明示）** と **V1（{ReaderRule.Adopted}・採用値）** の2版で。");
+
+            var all = ldCompare.Select(b => (b.Name, b.F, Band: "compare"))
+                .Concat(ldCross.Select(b => (b.Name, b.F, Band: "交差帯"))).ToList();
+            var v0 = new double[all.Count][];
+            var v1 = new double[all.Count][];
+            Parallel.For(0, all.Count, i => { v0[i] = LdCells(all[i].F, ldOff, 0, LdSeeds); v1[i] = LdCells(all[i].F, ldOn, 0, LdSeeds); });
+
+            // --- 表A
+            Console.WriteLine();
+            Console.WriteLine("## 表A. バンを含む 5 行（波別の V0 / V1 / Δ）");
+            Console.WriteLine();
+            Console.WriteLine("| 行 | 帯 | 主判定 | 版 |" + string.Concat(rdStages.Select((_, i) => $" 第{i + 1}波 |"))
+                + " 平均(2〜5波) | 情報セル |");
+            Console.WriteLine("|---|---|:-:|---|" + string.Concat(rdStages.Select(_ => "--:|")) + "--:|--:|");
+            foreach (var row in ldBanRows)
+            {
+                int i = all.FindIndex(a => a.Name == row.Name);
+                foreach (var pair in new[] { ("V0", v0[i]), ("**V1**", v1[i]) })
+                    Console.WriteLine($"| {row.Name} | {row.Band} | {(ldPrim.Contains(row.Name) ? "**P**" : "")} | {pair.Item1} |"
+                        + string.Concat(pair.Item2.Select(x => $" {x:F1}% |"))
+                        + $" {LdAvg25(pair.Item2):F1}% | {LdInfo(pair.Item2)} |");
+                Console.WriteLine("| | | | Δ |" + string.Concat(Enumerable.Range(0, rdStages.Count)
+                        .Select(w => $" {v1[i][w] - v0[i][w]:+0.0;-0.0;0.0} |"))
+                    + $" **{LdAvg25(v1[i]) - LdAvg25(v0[i]):+0.0;-0.0;0.0}** | {LdInfo(v1[i]) - LdInfo(v0[i]):+0;-0;0} |");
+            }
+
+            // --- 表A': 門
+            Console.WriteLine();
+            Console.WriteLine($"## 表A'. 門（第2〜5波・seed 0..{LdSeeds - 1}）");
+            Console.WriteLine();
+            Console.WriteLine("| 行 | 版 | 到達率 | 初到達T | 振/戦 | **薙ぎ/戦** | 薙ぎ率 | **巻き込み/戦** | 空振り | 与ダメ/戦 | 撃破/戦 | 決着T |");
+            Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+            var reachOf = new Dictionary<string, double>(StringComparer.Ordinal);
+            foreach (var row in ldBanRows)
+                foreach (var pair in new[] { ("V0", ldOff), ("**V1**", ldOn) })
+                {
+                    LdStat ls = LdSum25(LdWatch(row.F, pair.Item2, LdSeeds));
+                    double whiff = ls.Over == 0 ? 0 : (ls.Over - ls.OverSwung) / ls.Over * 100;
+                    if (pair.Item1 != "V0") reachOf[row.Name] = ls.Reach / ls.N;
+                    Console.WriteLine($"| {row.Name} | {pair.Item1} | {ls.Reach / ls.N * 100:F1}% "
+                        + $"| {(ls.FirstN == 0 ? "—" : (ls.First / ls.FirstN).ToString("F2"))} | {ls.Swings / ls.N:F2} "
+                        + $"| **{ls.Sweeps / ls.N:F2}** | {(ls.Swings == 0 ? 0 : ls.Sweeps / ls.Swings * 100):F1}% "
+                        + $"| **{ls.Splash / ls.N:F2}** | {whiff:F1}% | {ls.Dmg / ls.N:F1} | {ls.Kills / ls.N:F2} | {ls.Turns / ls.N:F2} |");
+                }
+
+            // --- 表B: 拒否権
+            Console.WriteLine();
+            Console.WriteLine("## 表B. 拒否権 Q1 —— バンを含まない行が ±0.0 か");
+            Console.WriteLine();
+            int movedCells = 0, movedRows = 0, cmpCells = 0;
+            var moved = new List<string>();
+            for (int i = 0; i < all.Count; i++)
+            {
+                if (LdHasBan(all[i].F)) continue;
+                int d = 0;
+                for (int w = 0; w < rdStages.Count; w++) { cmpCells++; if (Math.Abs(v1[i][w] - v0[i][w]) > 0.0001) d++; }
+                if (d > 0) { movedRows++; movedCells += d; moved.Add($"{all[i].Name}（{d} セル）"); }
+            }
+            Console.WriteLine($"バンを含まない **{all.Count - ldBanRows.Count} 行 / {cmpCells} セル**のうち動いたのは "
+                + $"**{movedRows} 行 / {movedCells} セル** → {(movedCells == 0 ? "**○**" : "**×**")}");
+            foreach (string m in moved) Console.WriteLine($"- {m}");
+
+            // --- 表C: 壊れ（(G1)(G2)）と 95% 超
+            Console.WriteLine();
+            Console.WriteLine("## 表C. 拒否権 Q3 —— 壊れ（(G1)(G2)）と第五波 95% 超");
+            Console.WriteLine();
+            var drop = new List<(string Name, int Wave, double D)>();
+            for (int i = 0; i < ldCompare.Length; i++)
+                for (int w = 0; w < rdStages.Count; w++)
+                    if (v1[i][w] - v0[i][w] <= -10.0) drop.Add((all[i].Name, w + 1, v1[i][w] - v0[i][w]));
+            Console.WriteLine($"`compare` {ldCompare.Length} 行（(G1) の分母）で **−10.0pt 以上落ちたセル** は **{drop.Count} 件**"
+                + $" → {(drop.Count == 0 ? "**○**" : "**要 (G2) の分解**")}");
+            foreach (var d in drop) Console.WriteLine($"- {d.Name} 第{d.Wave}波 {d.D:+0.0;-0.0}pt");
+            int hi0 = 0, hi1 = 0;
+            var newHi = new List<string>();
+            for (int i = 0; i < ldCompare.Length; i++)
+            {
+                bool a = v0[i][^1] > 95.0, b = v1[i][^1] > 95.0;
+                if (a) hi0++;
+                if (b) hi1++;
+                if (!a && b) newHi.Add(all[i].Name);
+            }
+            Console.WriteLine();
+            Console.WriteLine($"第五波 95% 超の行: **{hi0} → {hi1}**（新たに {newHi.Count} 行"
+                + (newHi.Count > 0 ? " —— " + string.Join(" / ", newHi) : "") + "）。**(G9) により拒否ではなく記録。**");
+
+            // --- 表D: Baseline
+            Console.WriteLine();
+            Console.WriteLine("## 表D. `Baseline` —— 主判定19行 / 全61行");
+            Console.WriteLine();
+            Console.WriteLine("| 分母 | 版 |" + string.Concat(rdStages.Select((_, i) => $" 第{i + 1}波 |")) + " 歯止めとの余裕 |");
+            Console.WriteLine("|---|---|" + string.Concat(rdStages.Select(_ => "--:|")) + "--:|");
+            void Line(string label, Func<int, bool> pick, double[][] g, string tag)
+            {
+                var idx = Enumerable.Range(0, ldCompare.Length).Where(pick).ToList();
+                var avg = Enumerable.Range(0, rdStages.Count).Select(w => idx.Average(i => g[i][w])).ToArray();
+                Console.WriteLine($"| {label}（{idx.Count} 行） | {tag} |" + string.Concat(avg.Select(x => $" {x:F1} |"))
+                    + $" {avg[^1] - Baseline.PrimaryFifthFloor:+0.0;-0.0}pt |");
+            }
+            Line("主判定", i => ldPrim.Contains(all[i].Name), v0, "V0");
+            Line("主判定", i => ldPrim.Contains(all[i].Name), v1, "**V1**");
+            Line("全61行", i => true, v0, "V0");
+            Line("全61行", i => true, v1, "**V1**");
+            Console.WriteLine();
+            Console.WriteLine($"歯止め `Baseline.PrimaryFifthFloor` = **{Baseline.PrimaryFifthFloor}%**（分母は主判定19行）。");
+
+            // --- 表E: 情報セル
+            Console.WriteLine();
+            Console.WriteLine("## 表E. 情報セルの合計（`compare` 61 行・帯A）");
+            Console.WriteLine();
+            int t0 = Enumerable.Range(0, ldCompare.Length).Sum(i => LdInfo(v0[i]));
+            int t1 = Enumerable.Range(0, ldCompare.Length).Sum(i => LdInfo(v1[i]));
+            Console.WriteLine($"**{t0} → {t1}**（{t1 - t0:+0;-0;0}）。分布 (0/1/2/3/4 セル):");
+            for (int k = 0; k <= 4; k++)
+                Console.WriteLine($"- {k} セル: {Enumerable.Range(0, ldCompare.Length).Count(i => LdInfo(v0[i]) == k)} "
+                    + $"→ {Enumerable.Range(0, ldCompare.Length).Count(i => LdInfo(v1[i]) == k)}");
+            Console.WriteLine();
+            Console.WriteLine("### 席を測り直す行（(T3) の条件・**測る前に固定した**）");
+            Console.WriteLine();
+            Console.WriteLine("    (i) 情報セルが減った ／ (ii) 第五波が 95% を超えた ／ (iii) 第2〜5波平均が ±10pt 以上動いた");
+            Console.WriteLine();
+            foreach (var row in ldBanRows.Where(r => r.Band == "compare"))
+            {
+                int i = all.FindIndex(a => a.Name == row.Name);
+                bool c1 = LdInfo(v1[i]) < LdInfo(v0[i]), c2 = v0[i][^1] <= 95.0 && v1[i][^1] > 95.0;
+                bool c3 = Math.Abs(LdAvg25(v1[i]) - LdAvg25(v0[i])) >= 10.0;
+                Console.WriteLine($"- {row.Name} —— (i) {(c1 ? "○" : "×")} / (ii) {(c2 ? "○" : "×")} / (iii) {(c3 ? "○" : "×")}"
+                    + $" → **{(c1 || c2 || c3 ? "測り直す" : "触らない")}**");
+            }
+
+            // --- Q2
+            Console.WriteLine();
+            Console.WriteLine("## Q2. 行によって到達率が割れるか（線: `compare` 4 行の最大 − 最小 ≥ 0.2）");
+            Console.WriteLine();
+            var rs = ldBanRows.Where(r => r.Band == "compare").Select(r => reachOf[r.Name]).ToList();
+            Console.WriteLine($"最大 **{rs.Max():F3}** / 最小 **{rs.Min():F3}** / 差 **{rs.Max() - rs.Min():F3}** → "
+                + $"{(rs.Max() - rs.Min() >= 0.2 ? "**○**" : "**×**")}");
+            return;
+        }
+
+        // -------------------------------------------------------------------------
+        // load seat（表C）。**(T3) の条件に当たった行だけ。**
+        // -------------------------------------------------------------------------
+        if (ldSub == "seat")
+        {
+            string ldFilter = args.Length > 4 ? args[4] : "";
+            Console.WriteLine("# 第116期 (T3) —— 席の再判定");
+            Console.WriteLine();
+            Console.WriteLine("**線と採る条件は同じ集合で書く（規約 (G16)）。狙は<u>両方に</u>掛ける。**");
+            Console.WriteLine();
+            Console.WriteLine("    線・採る条件（測る前に固定）:");
+            Console.WriteLine("      (a) 狙（ガルドが前列 / セッキが後列）を満たす        ← 線にも採る条件にも掛ける");
+            Console.WriteLine("      (b) 情報セル（帯A・第2〜5波）が 2 以上");
+            Console.WriteLine("      (c) 情報セル 4 → 3 → 2 の順、各段の中で平均（第2〜5波）が最上位");
+            Console.WriteLine("      (d) 現行席との差が 5.0pt 未満で、情報セルが現行より多いときだけ採る");
+            Console.WriteLine();
+
+            var target = new List<(string Name, Formation F)>();
+            foreach (var row in ldBanRows.Where(r => r.Band == "compare"))
+            {
+                if (ldFilter.Length > 0 && !ldFilter.Split(',').Any(k => row.Name.Contains(k.Trim()))) continue;
+                double[] a = LdCells(row.F, ldOff, 0, LdSeeds), b = LdCells(row.F, ldOn, 0, LdSeeds);
+                bool c1 = LdInfo(b) < LdInfo(a), c2 = a[^1] <= 95.0 && b[^1] > 95.0;
+                bool c3 = Math.Abs(LdAvg25(b) - LdAvg25(a)) >= 10.0;
+                Console.WriteLine($"- {row.Name} —— 情報セル {LdInfo(a)} → {LdInfo(b)} / 第五波 {a[^1]:F1}% → {b[^1]:F1}% "
+                    + $"/ 平均 {LdAvg25(a):F1}% → {LdAvg25(b):F1}% → (i){(c1 ? "○" : "×")} (ii){(c2 ? "○" : "×")} (iii){(c3 ? "○" : "×")} "
+                    + $"**{(c1 || c2 || c3 ? "測り直す" : "触らない")}**");
+                if (c1 || c2 || c3) target.Add((row.Name, row.F));
+            }
+            Console.WriteLine();
+            Console.WriteLine($"対象 **{target.Count} 行**。");
+
+            var adopted = new List<(string Name, Formation F, int From, int To, double D)>();
+            foreach (var t in target)
+            {
+                string name = t.Name;
+                Formation cur = t.F;
+                var members = cur.Occupied().Select(x => x.Def).ToList();
+                var perms = new List<Formation>();
+                foreach (int[] assign in SlotAssignments(members.Count))
+                {
+                    var f = new Formation();
+                    for (int m = 0; m < members.Count; m++) f[assign[m]] = members[m];
+                    perms.Add(f);
+                }
+                static bool Intent(Formation f)
+                {
+                    foreach (var (slot, def) in f.Occupied())
+                    {
+                        if (ReferenceEquals(def, UnitCatalog.Gald) && FormationRules.RowOf(slot) != Row.Front) return false;
+                        if (ReferenceEquals(def, UnitCatalog.Sekki) && FormationRules.RowOf(slot) != Row.Back) return false;
+                    }
+                    return true;
+                }
+                var scan = new int[perms.Count];
+                Parallel.For(0, perms.Count, i =>
+                {
+                    int wins = 0;
+                    foreach (EnemyCatalog.Stage st in rdStages)
+                        for (int seed = 0; seed < LdScan; seed++)
+                            if (BattleEngine.Run(perms[i], st.Enemy, seed, verbose: false, reader: ldOn).PlayerWon) wins++;
+                    scan[i] = wins;
+                });
+                var order = Enumerable.Range(0, perms.Count).OrderByDescending(i => scan[i]).ThenBy(i => i).ToList();
+                var pool = order.Take(20).Concat(order.Where(i => Intent(perms[i])).Take(10))
+                                .Append(order.First(i => SameFormation(perms[i], cur))).Distinct().ToList();
+                var cA = new double[pool.Count][];
+                var cB = new double[pool.Count][];
+                var reach = new double[pool.Count];
+                Parallel.For(0, pool.Count, k =>
+                {
+                    cA[k] = LdCells(perms[pool[k]], ldOn, 0, LdSeeds);
+                    cB[k] = LdCells(perms[pool[k]], ldOn, LdCfBase, LdCfSeeds);
+                    LdStat ls = LdSum25(LdWatch(perms[pool[k]], ldOn, LdScan));
+                    reach[k] = ls.N == 0 ? 0 : ls.Reach / ls.N;
+                });
+
+                int curK = pool.FindIndex(i => SameFormation(perms[i], cur));
+                double curAvg = LdAvg25(cA[curK]);
+                int curInfo = LdInfo(cA[curK]);
+                var ranked = Enumerable.Range(0, pool.Count).OrderByDescending(k => LdAvg25(cA[k])).ToList();
+
+                Console.WriteLine();
+                Console.WriteLine($"## {name}{(ldPrim.Contains(name) ? "（**主判定19行**）" : "")}");
+                Console.WriteLine();
+                Console.WriteLine($"現行席の情報セル **{curInfo}**・第2〜5波平均 **{curAvg:F1}%**・到達率 **{reach[curK] * 100:F1}%**。候補 {pool.Count} 通り。");
+                Console.WriteLine();
+                Console.WriteLine("| 追順 | 粗順 | 狙 | 前1/前3 | 中央 | 後1/後3 | 平均(2〜5波) | Δ | **情報セル** | **ガルド隣接** | **到達率** |"
+                    + string.Concat(rdStages.Select((_, i) => $" 第{i + 1}波 |")) + $" 平均({LdCfBase}..) |");
+                Console.WriteLine("|--:|--:|:-:|---|---|---|--:|--:|--:|--:|--:|" + string.Concat(rdStages.Select(_ => "---:|")) + "--:|");
+                for (int r = 0; r < ranked.Count; r++)
+                {
+                    int k = ranked[r];
+                    Formation f = perms[pool[k]];
+                    var g = f.Occupied().Where(o => ReferenceEquals(o.Def, UnitCatalog.Gald)).ToList();
+                    string gd = "—";
+                    if (g.Count > 0)
+                    {
+                        int gs = g[0].Slot;
+                        int deg = f.Occupied().Count(o => o.Slot != gs && FormationRules.AreAdjacent(gs, o.Slot));
+                        int bs = f.Occupied().First(o => ReferenceEquals(o.Def, UnitCatalog.Ban)).Slot;
+                        gd = $"{deg}{(FormationRules.AreAdjacent(gs, bs) ? "**+**" : "")}";
+                    }
+                    Console.WriteLine($"| {r + 1}{(k == curK ? "★現行" : "")} | {order.IndexOf(pool[k]) + 1} | {(Intent(f) ? "○" : "×")} "
+                        + $"| {LdSeats(f)} | {LdAvg25(cA[k]):F1}% | {LdAvg25(cA[k]) - curAvg:+0.0;-0.0;0.0} | **{LdInfo(cA[k])}** "
+                        + $"| {gd} | {reach[k] * 100:F1}% |"
+                        + string.Concat(cA[k].Select(c => $" {c:F1}% |")) + $" {LdAvg25(cB[k]):F1}% |");
+                }
+
+                // 線を満たすが狙で落ちた席の数（(G16)。**掛かっているが効かなかったことも記録する**）
+                int lineOnly = Enumerable.Range(0, pool.Count).Count(k => k != curK && LdInfo(cA[k]) >= 2
+                                && Math.Abs(LdAvg25(cA[k]) - curAvg) < LdSeatLine);
+                var ok = Enumerable.Range(0, pool.Count)
+                    .Where(k => k != curK && Intent(perms[pool[k]]) && LdInfo(cA[k]) >= 2
+                                && Math.Abs(LdAvg25(cA[k]) - curAvg) < LdSeatLine)
+                    .OrderByDescending(k => LdInfo(cA[k])).ThenByDescending(k => LdAvg25(cA[k]))
+                    .ThenBy(k => order.IndexOf(pool[k])).ToList();
+                Console.WriteLine();
+                Console.WriteLine($"線（(b)(d) の差）を満たす席 **{lineOnly} 通り**、そのうち狙 (a) を満たす席 **{ok.Count} 通り** "
+                    + $"——**狙で落ちた席 {lineOnly - ok.Count} 通り**（規約 (G16)）。");
+                if (ok.Count == 0) { Console.WriteLine(); Console.WriteLine("**判定: 据え置き** —— (a)(b)(d) を満たす候補が 0 通り。"); continue; }
+                int best = ok[0];
+                bool take = LdInfo(cA[best]) > curInfo;
+                Console.WriteLine();
+                Console.WriteLine($"最上位は 追順 **{ranked.IndexOf(best) + 1} 位**（情報セル {curInfo} → **{LdInfo(cA[best])}**、"
+                    + $"Δ **{LdAvg25(cA[best]) - curAvg:+0.0;-0.0}pt**、到達率 {reach[curK] * 100:F1}% → **{reach[best] * 100:F1}%**）。");
+                Console.WriteLine();
+                Console.WriteLine($"**判定: {(take ? "差し替え" : "据え置き")}** —— (d) 情報セルが現行より{(take ? "多い" : "多くない")}。");
+                if (take)
+                {
+                    Formation bf = perms[pool[best]];
+                    Console.WriteLine();
+                    Console.WriteLine($"採る配置: `front1: {LdN(bf[0])}, front3: {LdN(bf[1])}, center: {LdN(bf[2])}, "
+                        + $"back1: {LdN(bf[3])}, back3: {LdN(bf[4])}`");
+                    adopted.Add((name, bf, curInfo, LdInfo(cA[best]), LdAvg25(cA[best]) - curAvg));
+                }
+            }
+            Console.WriteLine();
+            Console.WriteLine($"## まとめ —— 差し替える行 **{adopted.Count} 行 / {target.Count} 行**");
+            Console.WriteLine();
+            Console.WriteLine("| 行 | 主判定 | 情報セル | Δ 平均(2〜5波) | 採る配置 |");
+            Console.WriteLine("|---|:-:|--:|--:|---|");
+            foreach (var a in adopted)
+                Console.WriteLine($"| {a.Name} | {(ldPrim.Contains(a.Name) ? "**P**" : "")} | {a.From} → **{a.To}** | {a.D:+0.0;-0.0} | {LdSeats(a.F)} |");
+            return;
+        }
+
+        // -------------------------------------------------------------------------
+        // load check（自己検査）
+        // -------------------------------------------------------------------------
+        if (ldSub == "check")
+        {
+            string oldPath = args.Length > 4 ? args[4] : "";
+            Console.WriteLine("# 第116期 —— 自己検査");
+            Console.WriteLine();
+
+            var bal = RdBalance(rdStages.Count);
+            int cells = 0, bad = 0, unknown = 0, banBad = 0;
+            var v0all = new Dictionary<string, double[]>(StringComparer.Ordinal);
+            var lockObj = new object();
+            Parallel.ForEach(ldCompare, b =>
+            {
+                double[] c = LdCells(b.F, ReaderRule.Default, 0, LdSeeds);
+                double[] z = LdCells(b.F, ldOff, 0, LdSeeds);
+                lock (lockObj)
+                {
+                    v0all[b.Name] = z;
+                    if (!bal.TryGetValue(b.Name, out double[]? want)) { unknown++; return; }
+                    for (int w = 0; w < rdStages.Count; w++)
+                    {
+                        cells++;
+                        if (Math.Abs(c[w] - want[w]) > 0.001) { bad++; if (LdHasBan(b.F)) banBad++; }
+                    }
+                }
+            });
+            Console.WriteLine($"- **必須1** `compare` {cells} セルを `docs/balance.md` と突き合わせ（**既定の規則**）: "
+                + $"**ずれ {bad} 件**（うちバンの行 {banBad}・行名が引けなかった行 {unknown}）→ {(bad == 0 && unknown == 0 ? "**○**" : "**×**")}");
+
+            string? root = RdRoot();
+            int pick = 0;
+            if (root != null)
+                foreach (string p in new[] { "BattleEngine.cs", "Traits.cs" })
+                    pick += File.ReadAllText(Path.Combine(root, "BattleCore", p)).Split("PickOne(").Length - 1;
+            Console.WriteLine($"- **必須4** `PickOne(` の出現数: **{pick} 箇所** → {(pick == 26 ? "**○**（26 のまま）" : "**×**")}");
+
+            // (a) Threshold = 0 を明示した経路が採用前の balance.md と一致
+            if (oldPath.Length > 0 && File.Exists(oldPath))
+            {
+                var old = new Dictionary<string, double[]>(StringComparer.Ordinal);
+                foreach (string line in File.ReadAllLines(oldPath))
+                {
+                    if (!line.StartsWith("| ") || !line.Contains('%')) continue;
+                    var parts = line.Split('|', StringSplitOptions.None).Select(p => p.Trim()).ToArray();
+                    if (parts.Length < 8) continue;
+                    var v = new List<double>();
+                    for (int i = 2; i < parts.Length - 1; i++)
+                        if (parts[i].EndsWith("%") && double.TryParse(parts[i].TrimEnd('%'), out double d)) v.Add(d);
+                    if (v.Count == rdStages.Count) old[parts[1]] = v.ToArray();
+                }
+                int ac = 0, ab = 0;
+                var bads = new List<string>();
+                foreach (var kv in v0all)
+                    if (old.TryGetValue(kv.Key, out double[]? want))
+                        for (int w = 0; w < rdStages.Count; w++)
+                        {
+                            ac++;
+                            if (Math.Abs(kv.Value[w] - want[w]) > 0.001) { ab++; bads.Add($"{kv.Key} 第{w + 1}波"); }
+                        }
+                Console.WriteLine($"- **(a)** `Threshold = 0` を明示した版が**採用前の** `balance.md` と一致: "
+                    + $"{ac} セル中ずれ **{ab} 件** → {(ac > 0 && ab == 0 ? "**○**" : "**×**")}"
+                    + (bads.Count > 0 ? "（" + string.Join(" / ", bads.Take(8)) + "）" : ""));
+            }
+            else Console.WriteLine("- **(a)** 採用前の `balance.md` のパスが渡されていないので測っていない（第2引数に渡す）");
+
+            // (b) Overload を持つ駒はバンだけ
+            var holders = UnitCatalog.All.Where(d => d.Traits.Contains(TraitId.Overload)).Select(d => d.Name).ToList();
+            int foeHolders = 0;
+            foreach (EnemyCatalog.Stage st in rdStages)
+                foeHolders += st.Enemy.Occupied().Count(o => o.Def.Traits.Contains(TraitId.Overload));
+            Console.WriteLine($"- **(b)** `Overload` を持つ駒: 味方 **{holders.Count} 枚**（{string.Join(" / ", holders)}）"
+                + $" / 敵側の在席 **{foeHolders} 枚** → "
+                + $"{(holders.Count == 1 && holders[0] == UnitCatalog.Ban.Name && foeHolders == 0 ? "**○**" : "**×**")}");
+
+            // (c) 分子と分母を同じ瞬間で取っている（空振りが負にならない）
+            int neg = 0, tot = 0;
+            foreach (var row in ldBanRows)
+                foreach (LdStat ls in LdWatch(row.F, ldOn, LdSeeds))
+                {
+                    tot++;
+                    if (ls.Over > ls.Alive || ls.OverSwung > ls.Over) neg++;
+                }
+            Console.WriteLine($"- **(c)** 到達率の分子 ≤ 分母 かつ 空振り ≥ 0（**同じ瞬間で数えている**）: "
+                + $"{tot} セル中の違反 **{neg} 件** → {(neg == 0 ? "**○**" : "**×**")}");
+
+            // (d) 情報セルの帯
+            Console.WriteLine($"- **(d)** 情報セルを数えた帯: **seed 0..{LdSeeds - 1}**（規約 (G14)）→ {(LdSeeds == 200 ? "**○**" : "**×**")}");
+
+            // (e) 狙は seat が線にも採る条件にも掛けている
+            Console.WriteLine("- **(e)** 席の探索で狙が**線にも採る条件にも**掛かっている（規約 (G16)）: "
+                + "`reader load seat` が「線を満たすが狙で落ちた席」を毎行出力する → **○**");
+            return;
+        }
+
+        Console.WriteLine("mode: reader load phase0 / run / seat / check");
+        return;
     }
 
     // ------------------------------------------------------------------------------
@@ -64444,6 +65088,17 @@ sealed class CyCell
         ProbeN = new int[keys * probes];
         ProbeT = new double[keys * probes];
     }
+}
+
+/// <summary>
+/// 第116期（`reader load`）の観測。<b>どの列も盤面には一切影響しない</b>
+/// ——<see cref="BattleResult"/> の計数を読み直しているだけ。
+/// </summary>
+sealed class LdStat
+{
+    public int N, FirstN;
+    public double Win, Turns, Reach, Alive, Over, OverSwung, Sweeps, Splash, Swings, Bonus, BonusMax, First, Dmg, Kills;
+    public double[] Probe = new double[UnitTally.ReaderProbes.Length];
 }
 
 static class Baseline

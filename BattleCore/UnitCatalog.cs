@@ -343,9 +343,12 @@ public static class UnitCatalog
         MaxHp = 88,
         Attack = 5,
         Speed = 2,
-        Traits = new[] { TraitId.Bulwark },
-        PlusText = "そのターン動かなかった味方の被ダメージを半減する",
-        MinusText = "全員が働く編成では何も起きない。自分も鈍重",
+        // 第116期に2本目の札（積み過ぎ）を載せた。**据えは被ダメ側・積み過ぎは型の側**なので
+        // どちらも `ModifyAttack` / `ModifyPattern` を奪い合わない（`reader load check` の (c)）。
+        // **自己強化を1本も持たない駒**なので、閾値に届くかどうかは同席する供給者が決める。
+        Traits = new[] { TraitId.Bulwark, TraitId.Overload },
+        PlusText = "そのターン動かなかった味方の被ダメージを半減し、外から積まれた力が一定を越えているあいだは自分の一撃が薙ぎになる",
+        MinusText = "全員が働く編成では何も起きず、力は自分では1点も積めないうえ鈍重",
         Flavor = "動かない者を守ることしかできない。動く者は守れない。"
     };
 

@@ -681,6 +681,13 @@ public sealed class UnitTally
     public int ReaderTurns, ReaderOverTurns, ReaderFirstOverTurn;
     public int ReaderSwings, ReaderSweeps, ReaderOverTurnsSwung, ReaderLastOverSwingTurn, ReaderOverTurnMark;
     public int ReaderBonusSum, ReaderBonusMax;
+
+    /// <summary>
+    /// 薙ぎに化けた一撃が副次目標へ届いた体数（第116期・<b>巻き込み</b>）。
+    /// <b>規則が生きているときだけ積む</b>——素の型が薙ぎの駒に載せたときの分母を
+    /// V0 と揃えないため（現に載せているバンは単体なので、V0 では恒等的に 0）。
+    /// </summary>
+    public int ReaderSplash;
     /// <summary>格子ごとの到達ターン数。<b>保持者がいる戦闘でだけ確保する</b>（`CreakProbeTurn` と同じ作法）。</summary>
     public int[]? ReaderProbeTurns;
 

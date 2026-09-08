@@ -5702,8 +5702,15 @@ public sealed class OverloadTrait : Trait
 /// </summary>
 public readonly record struct ReaderRule(int Threshold)
 {
-    /// <summary>既定は<b>無効</b>（第115期は測定中）。採用したら採った閾値へ。</summary>
-    public static ReaderRule Default => new(0);
+    /// <summary>
+    /// 既定は<b>5</b>（第116期に採用。第115期は測定中で 0 だった）。
+    /// <b>診断が対照を取るときは <c>new ReaderRule(0)</c> を明示すること</b>
+    /// ——既定に頼っていた列は、採用の瞬間に黙って化ける（第110期に踏んだ形）。
+    /// </summary>
+    public static ReaderRule Default => new(Adopted);
+
+    /// <summary>第116期に採った閾値。<b>掃引していない</b>（§0-2）。</summary>
+    public const int Adopted = 5;
 }
 
 /// <summary>移り木。動かされた味方を癒し強化する。隊列崩しを火力だけでなく耐久にも繋げる。</summary>

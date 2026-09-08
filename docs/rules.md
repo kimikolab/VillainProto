@@ -49,7 +49,7 @@
 | 36 | `menderCost` | `MenderCostRule` | `MenderCostRule { Percent = 50 }` |  | `tempo` / `hold` / `hold2` / `ledger` / `lit` | 第106期〜（3 期） | ○ |
 | 37 | `loose` | `LooseRule` | `LooseRule { Shove = True }` |  | `tempo` / `hold` / `hold2` / `ledger` / `lit` | 第106期〜（3 期） | ○ |
 | 38 | `taillight` | `TaillightRule` | `TaillightRule { Mode = OwnTurnWindow, Filter = ActingNow }` |  | `tomo` / `ledger` / `lit` | 第110期〜（4 期） | ○ |
-| 39 | `reader` | `ReaderRule` | `ReaderRule { Threshold = 0 }` | ○ | `reader` | 第115期 |  |
+| 39 | `reader` | `ReaderRule` | `ReaderRule { Threshold = 5 }` |  | `reader` | 第115期〜（2 期） | ○ |
 
 引数 39 本（`verbose` と観測子を除く）。
 
@@ -84,7 +84,7 @@
 | `MenderCostRule` | `MenderCostRule { Percent = 50 }` | ○ | `tempo` / `hold` / `hold2` / `ledger` / `lit` | 第106期〜（3 期） |
 | `OverbearRule` | `OverbearRule { Drain = 2 }` | ○ | `slander` / `overbear` | 第46期〜（2 期） |
 | `RageRule` | `RageRule { Mode = Amount, Gain = 3 }` | ○ | `tempo` / `hold` / `hold2` | 第106期〜（4 期） |
-| `ReaderRule` | `ReaderRule { Threshold = 0 }` | ○ | `reader` | 第115期 |
+| `ReaderRule` | `ReaderRule { Threshold = 5 }` | ○ | `reader` | 第115期〜（2 期） |
 | `RecoverRule` | `RecoverRule { HpPercent = 0, ReviveDead = False, Active = False }` |  | `choice` / `recover` | 第101期〜（2 期） |
 | `RelayRule` | `RelayRule { TransferPercent = 100 }` | ○ | `curse` / `dull` / `relay` | 第43期〜（3 期） |
 | `ScaleRule` | `ScaleRule { CostPerAttack = 1 }` | ○ | `scale` / `scapegoat` / `divert` / `favor` / `miasma` / `goad` / `finisher` / `ledger` | 第47期〜（12 期） |
