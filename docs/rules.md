@@ -49,9 +49,10 @@
 | 36 | `menderCost` | `MenderCostRule` | `MenderCostRule { Percent = 50 }` |  | `tempo` / `hold` / `hold2` / `ledger` / `lit` | 第106期〜（3 期） | ○ |
 | 37 | `loose` | `LooseRule` | `LooseRule { Shove = True }` |  | `tempo` / `hold` / `hold2` / `ledger` / `lit` | 第106期〜（3 期） | ○ |
 | 38 | `taillight` | `TaillightRule` | `TaillightRule { Mode = OwnTurnWindow, Filter = ActingNow }` |  | `tomo` / `ledger` / `lit` | 第110期〜（4 期） | ○ |
-| 39 | `reader` | `ReaderRule` | `ReaderRule { Threshold = 5 }` |  | `reader` | 第115期〜（2 期） | ○ |
+| 39 | `reader` | `ReaderRule` | `ReaderRule { Threshold = 5 }` |  | `reader` / `boss` | 第115期〜（3 期） | ○ |
+| 40 | `boss` | `BossRule` | `BossRule { Census = False }` | ○ | `seats` / `boss` / `demo` | 第117期 | ○ |
 
-引数 39 本（`verbose` と観測子を除く）。
+引数 40 本（`verbose` と観測子を除く）。
 
 **`= default(T)` は「その規則が既定で何もしない」の機械的な手がかりであって、判定ではない。**
 採否そのものは**既定値の列**を読むこと——`ThornRule { Wound = None }` は残置、`SoakRule { Poison = True, Burn = False }` は毒側だけ採用、という具合に既定値が全部を語る。
@@ -63,6 +64,7 @@
 | `BearRule` | `BearRule { ArmorPerDull = 2 }` | ○ | `curse` / `dull` / `ledger` | 第42期〜（4 期） |
 | `BetrayRule` | `BetrayRule { Enabled = True, Respawn = True }` | ○ | `betray` / `tempo` / `ledger` | 第103期〜（4 期） |
 | `BlazeRule` | `BlazeRule { Targets = Both, Allies = True, Foes = True }` | ○ | `blaze` / `ledger` | 第59期〜（5 期） |
+| `BossRule` | `BossRule { Census = False }` | ○ | `seats` / `boss` / `demo` | 第117期 |
 | `BoundaryRule` | `BoundaryRule { Choice = None, Plan = , Active = False }` |  | `chain` / `choice` | 第102期〜（2 期） |
 | `ColossusRule` | `ColossusRule { Percent = 90, DamagePerGain = 4, Regurgitate = True, Slumber = False, SlumberThreshold = 60, Refund = True, RefundPercent = 25 }` | ○ | `swap` / `gullet` / `guard` / `whet` / `miasma` / `ledger` | 第35期〜（11 期） |
 | `CreakRule` | `CreakRule { Threshold = 0, Source = Whet }` | ○ | `creak` / `traits` / `creak3` | 第66期〜（6 期） |
@@ -84,7 +86,7 @@
 | `MenderCostRule` | `MenderCostRule { Percent = 50 }` | ○ | `tempo` / `hold` / `hold2` / `ledger` / `lit` | 第106期〜（3 期） |
 | `OverbearRule` | `OverbearRule { Drain = 2 }` | ○ | `slander` / `overbear` | 第46期〜（2 期） |
 | `RageRule` | `RageRule { Mode = Amount, Gain = 3 }` | ○ | `tempo` / `hold` / `hold2` | 第106期〜（4 期） |
-| `ReaderRule` | `ReaderRule { Threshold = 5 }` | ○ | `reader` | 第115期〜（2 期） |
+| `ReaderRule` | `ReaderRule { Threshold = 5 }` | ○ | `reader` / `boss` | 第115期〜（3 期） |
 | `RecoverRule` | `RecoverRule { HpPercent = 0, ReviveDead = False, Active = False }` |  | `choice` / `recover` | 第101期〜（2 期） |
 | `RelayRule` | `RelayRule { TransferPercent = 100 }` | ○ | `curse` / `dull` / `relay` | 第43期〜（3 期） |
 | `ScaleRule` | `ScaleRule { CostPerAttack = 1 }` | ○ | `scale` / `scapegoat` / `divert` / `favor` / `miasma` / `goad` / `finisher` / `ledger` | 第47期〜（12 期） |
@@ -102,7 +104,7 @@
 | `WhetMask` | `WhetMask { Bits = 0 }` | ○ | `creak3` / `spend` | 第65期〜（3 期） |
 | `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `replay` / `wave2` / `ledger` | 第35期〜（8 期） |
 
-41 型。
+42 型。
 
 ## 3. 規則が使う列挙型
 

@@ -694,6 +694,35 @@ public sealed class UnitTally
     /// <summary>表C の格子（第115期）。<b>閾値の掃引ではない</b>——分布のどこに線があるかを見るだけ。</summary>
     public static readonly int[] ReaderProbes = { 1, 5, 10, 20, 40 };
 
+    // =====================================================================================
+    // 第117期 —— ボスの土台（<see cref="BossRule"/>）。**傾きを測るためだけの計数。**
+    //
+    // 勝率は「決着が早いほど高い」ので、時間に比例する項を探すのには向かない（指示書 §0-2）。
+    // ここで積むのは**ターンごとの時系列**で、前半3T と後半3T を戦ごとに切り出すために要る
+    // （後半は戦闘の長さに対して相対なので、集計の側では復元できない）。
+    //
+    // **規則が生きているときだけ確保する。** 既定（<c>BossRule.Default</c>）では
+    // <c>BattleContext.BossCensus</c> が偽で、配列は1本も割り当たらない
+    // ——`compare` / `layout` は数百万戦を回すので、確保だけで効く（`ReaderProbeTurns` と同じ作法）。
+    // **誰も読んで分岐しない。**
+    // =====================================================================================
+
+    /// <summary>
+    /// ターン頭の <see cref="UnitState.CurrentAttack"/>（添字＝ターン番号。0 は未使用）。
+    /// <b><c>AtkBonus</c> の生値ではない</b>——ホタの燃焼倍率やウツの逆しまは
+    /// <c>ModifyAttack</c> の側にあるので、生値で取ると育ちを取り落とす（自己検査 (d)）。
+    /// </summary>
+    public int[]? BossAtkByTurn;
+
+    /// <summary>そのターンに敵へ与えたダメージ（添字＝ターン番号）。<c>DamageToEnemy</c> の内訳。</summary>
+    public int[]? BossDmgByTurn;
+
+    /// <summary>ターン頭に生きていたターン数（空振りの分母）と、そのうち1度でも振ったターン数。</summary>
+    public int BossAliveTurns, BossSwingTurns, BossLastSwingTurn;
+
+    /// <summary>最後にターン頭で生きていたターン（＝倒れた／決着したターンの代理。生存T）。</summary>
+    public int BossLastAliveTurn;
+
     /// <summary>
     /// 尾灯の続き（第109期に足した観測。<b>誰も読んで分岐しない計数。</b>）。
     ///

@@ -14,6 +14,20 @@
 public delegate void CounterProbe(TraitId trait, UnitState owner, UnitState target, string key, int delta);
 
 /// <summary>
+/// ボスの土台の計数（第117期）。<b>診断（<c>boss</c>）が時系列を取るためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない。static のノブにしない理由は同型の doc を参照。
+///
+/// <para><b>盤面を1ビットも動かさない。</b> <c>Census</c> は「ターンごとの攻撃力と与ダメを
+/// 配列に写すか」だけを切り替える。既定は偽で、そのとき配列は1本も割り当たらない
+/// ——<c>compare</c> / <c>layout</c> は数百万戦を回すので、確保だけで効く。</para>
+/// </summary>
+public readonly record struct BossRule(bool Census)
+{
+    /// <summary>既定は<b>数えない</b>。診断だけが <c>new BossRule(true)</c> を渡す。</summary>
+    public static BossRule Default => new(false);
+}
+
+/// <summary>
 /// 第94期 (T2) の印。<b>いま実行中の特性とその持ち主</b>だけを持つ観測専用の値。
 /// <b>どの規則もこれを読まない</b>（`derive check` の自己検査 (d)）。
 /// </summary>
@@ -2030,6 +2044,43 @@ public sealed class BattleContext
     /// </summary>
     public const int ReaderProbeLine = 5;
 
+    // =====================================================================================
+    // 第117期 —— ボスの土台（BossRule）。**傾きを測るためだけの計数。engine に規則は1本も無い。**
+    //
+    // 既定（`BossRule.Default` ＝ 数えない）では `BossCensus` が偽なので、走査も確保も
+    // 1回も走らない（`compare` 305 セルが 0 件であることが検算）。**盤面は読むだけ。**
+    // =====================================================================================
+
+    /// <summary>ボスの土台の計数（第117期・<see cref="BossRule"/>）。</summary>
+    public BossRule Boss { get; }
+
+    /// <summary>計数が生きているときだけ真。<b>短絡の作法</b>（軛の Cap・粛の保持者走査と同じ）。</summary>
+    public bool BossCensus => Boss.Census;
+
+    /// <summary>
+    /// ボスの土台（第117期）の時系列。<b>ターン頭に1回だけ、盤面を読むだけ。</b>
+    /// 呼び出しは `Run` のターンループ（`NoteReaderCensus` の隣）1箇所。
+    ///
+    /// <para>写すのは <see cref="UnitState.CurrentAttack"/>（<c>AtkBonus</c> の生値ではない）。
+    /// ホタの燃焼倍率・ウツの逆しまは <c>ModifyAttack</c> の側にあるので、
+    /// 生値で取ると「育ち」を取り落とす（指示書の自己検査 (d)）。</para>
+    ///
+    /// <para><b>味方だけを写す。</b> 傾きの分子も分母も味方の側にしかない。</para>
+    /// </summary>
+    public void NoteBossCensus()
+    {
+        if (!BossCensus) return;
+        foreach (UnitState u in _units)
+        {
+            if (!u.IsAlive || u.TeamId != PlayerTeam) continue;
+            UnitTally t = TallyOf(u);
+            t.BossAliveTurns++;
+            t.BossLastAliveTurn = Turn;
+            int[] atk = t.BossAtkByTurn ??= new int[BattleEngine.MaxTurns + 2];
+            if (Turn >= 0 && Turn < atk.Length) atk[Turn] = u.CurrentAttack;
+        }
+    }
+
     /// <summary>
     /// いま処理中の死亡通知の連鎖に入った時点の「味方の振りの総数」（指示書 Q3 の材料）。
     /// <b>観測専用で、誰も読んで分岐しない。</b> 入れ子（追い打ちが更に誰かを倒す）に備えて
@@ -2258,7 +2309,7 @@ public sealed class BattleContext
                          BetrayRule? betray = null, EncoreRule? encore = null,
                          RageRule? rage = null, MenderCostRule? menderCost = null,
                          LooseRule? loose = null, TaillightRule? taillight = null,
-                         ReaderRule? reader = null,
+                         ReaderRule? reader = null, BossRule? boss = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -2305,6 +2356,7 @@ public sealed class BattleContext
         Loose = loose ?? LooseRule.Default;
         Taillight = taillight ?? TaillightRule.Default;
         Reader = reader ?? ReaderRule.Default;
+        Boss = boss ?? BossRule.Default;
     }
 
     // =====================================================================================
@@ -3163,6 +3215,14 @@ public sealed class BattleContext
             }
         }
 
+        // 第117期。**振ったターン数**（空振り＝生きていたターン − 振ったターン）。
+        // `Overload` の門と同じく**ターン単位**で数える（1ターンに2度振っても 1）。
+        if (BossCensus)
+        {
+            UnitTally bt = TallyOf(actor);
+            if (bt.BossLastSwingTurn != Turn) { bt.BossLastSwingTurn = Turn; bt.BossSwingTurns++; }
+        }
+
         // 逸らし（第50期）。**焦点の効きは「付けた回数」ではなく「実際にそこへ振られた割合」。**
         // 標は単体攻撃にしか効かないので、分母も単体振りだけで数える。
         if (DivertActive && pattern == AttackPattern.Single) NoteDivertSwing(actor, target);
@@ -3799,6 +3859,13 @@ public sealed class BattleContext
             else
             {
                 st.DamageToEnemy += amount;
+                // 第117期。**ターンごとの与ダメ**（前半3T / 後半3T は戦ごとに切り出すので、
+                // 集計の側では復元できない）。既定では `BossCensus` が偽で1本も確保しない。
+                if (BossCensus)
+                {
+                    int[] by = st.BossDmgByTurn ??= new int[BattleEngine.MaxTurns + 2];
+                    if (Turn >= 0 && Turn < by.Length) by[Turn] += amount;
+                }
                 // 第105期。**敵への与ダメだけを手番の中／外に割る**（味方への刃は出力ではない）。
                 if (InOwnTurn(source)) st.DmgOutInTurn += amount; else st.DmgOutOffTurn += amount;
                 // 第109期。**尾灯が譲った手番のぶんだけを切り出す**（指示書 Q2 の分子）。
@@ -4900,14 +4967,14 @@ public static class BattleEngine
                                    EncoreRule? encore = null, RageRule? rage = null,
                                    MenderCostRule? menderCost = null, LooseRule? loose = null,
                                    TaillightRule? taillight = null,
-                         ReaderRule? reader = null,
+                         ReaderRule? reader = null, BossRule? boss = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
-               gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, probe);
+               gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -4938,14 +5005,14 @@ public static class BattleEngine
                                    BetrayRule? betray = null, EncoreRule? encore = null,
                                    RageRule? rage = null, MenderCostRule? menderCost = null,
                                    LooseRule? loose = null, TaillightRule? taillight = null,
-                         ReaderRule? reader = null,
+                         ReaderRule? reader = null, BossRule? boss = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
-                                    betray, encore, rage, menderCost, loose, taillight, reader, probe);
+                                    betray, encore, rage, menderCost, loose, taillight, reader, boss, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -4989,6 +5056,7 @@ public static class BattleEngine
             ctx.EmitStatusSnapshot();   // 削った後の残量を写す。表示用で、盤面には触らない
             ctx.NoteHexCensus();        // 呪い（第96期）の門の 2。**盤面は読むだけ**
             ctx.NoteReaderCensus();     // 積み過ぎ（第115期）の門の 1。**盤面は読むだけ**
+            ctx.NoteBossCensus();       // ボスの土台（第117期）の時系列。**盤面は読むだけ**
 
             foreach (UnitState u in ctx.AllUnits.Where(x => x.IsAlive).ToList())
                 foreach (Trait t in u.Traits.ToList())
