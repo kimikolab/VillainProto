@@ -119,6 +119,15 @@ public enum TraitId
                 // **量ではなく二値で読む**（閾値は低く固定・掃引しない）。自分では1点も積めないので、
                 // 点くか点かないかは同席する供給者が決める（マイナスの外部化）
 
+    // --- 第118期で足した札（**ローカル台だけで測る。`UnitCatalog.All` には入れない**） ---
+    Regen,      // 自己回復: 毎ターン、自分のHPを固定値だけ回復する。**`ctx.Heal` を通る**ので
+                // 渇き（第三波）で丸ごと止まる。割合ではなく固定値なのは、敵の攻撃力の単調増加と
+                // 必ず交差させて「別途タイマーを作らずにマイナスが制限時間として閉じる」ため
+    Nourish,    // 糧: 自分にダメージが通ったとき、与えた者の攻撃力が上がる。**陣営を問わない**。
+                // 量に比例させない（+固定）ので、攻2の駒でも殴り続ければ育つ。
+                // **自己回復とは別の札**にしてあるのは、将来それぞれ単独で配れるようにするため
+                // （第74期「マイナスをプラスと同じ Trait クラスに書くと後から代金が測れない」の系）
+
     // --- 傷の5枚から切り出したマイナス（第74期・**器具**） ---
     // どれも既存の駒に既定で付いたままで、**盤面は1ビットも変わらない**（受け入れ基準は
     // `compare` 305 セル 0 件）。切り出した理由は1つだけ——**計量できるようにするため**。
@@ -387,7 +396,8 @@ public sealed class SacrificeTrait : Trait
             if (ally == self) continue;
             if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
             ctx.Log($"  {self.Name} が隣の {ally.Name} から生気を抜いた（-{Amount}）", LogKind.FriendlyFire);
-            ctx.ApplyDamage(ally, Amount, self, isFriendlyFire: true, lethal: false);
+            // 第118期: `levy` ＝ 徴収の札。**攻撃ではない削り**なので糧（NourishTrait）を渡さない。
+            ctx.ApplyDamage(ally, Amount, self, isFriendlyFire: true, lethal: false, levy: true);
         }
     }
 }
@@ -432,7 +442,8 @@ public sealed class DrainTrait : Trait
         foreach (UnitState ally in ctx.LivingMembersShuffled(self.TeamId))
         {
             if (ally == self) continue;
-            ctx.ApplyDamage(ally, draw, self, isFriendlyFire: true);
+            // 第118期: `levy` ＝ 徴収の札（生贄・置き去りの削りと同じ扱い）。
+            ctx.ApplyDamage(ally, draw, self, isFriendlyFire: true, levy: true);
             gained += draw;
         }
         if (gained > 0)
@@ -2698,15 +2709,19 @@ public enum WhetRoute
     Favor,         // 火選り: ヒヨ → **燃えている味方全員**（自分を除く）・毎ターン。**位置を問わない**。
                     // 候補を自前で AcceptsSupport 濾しする（隣へ漏らさない＝駆り立てと同じ側）。
                     // **状態異常を条件に宛先を選ぶ初めての強化経路**（第58期）
-    Taillight      // 尾灯: トモ → **自分を除いて最も遅い味方1体**・毎ターン。**位置を問わない**。
+    Taillight,     // 尾灯: トモ → **自分を除いて最も遅い味方1体**・毎ターン。**位置を問わない**。
                     // 候補を自前で AcceptsSupport 濾しする（隣へ漏らさない＝駆り立て・火選りと同じ側）。
                     // **配ったぶんを後から引き上げる初めての強化経路**（第108期。灯は1体にしか灯らない）
+    Nourish        // 糧: タンク → **自分にダメージを通した者**・被弾のたび。
+                    // **陣営をまたぐ初めての強化経路**（第118期。他の8本はすべて味方から味方へ）。
+                    // **位置を問わない**し、**AcceptsSupport を見ない**——支援として配るのではなく、
+                    // 殴った側が持っていくため（強化側で初めての無検査経路。第56期の「無検査 0」が破れる）
 }
 
 /// <summary>経路の名前と本数。診断の表の見出しと配列長をここ1箇所から引く。</summary>
 public static class WhetRoutes
 {
-    public static readonly string[] Names = { "その他", "駆り立て", "号令開戦", "号令毎T", "縛め", "移り木", "吐き戻し", "火選り", "尾灯" };
+    public static readonly string[] Names = { "その他", "駆り立て", "号令開戦", "号令毎T", "縛め", "移り木", "吐き戻し", "火選り", "尾灯", "糧" };
     public static int Count => Names.Length;
 }
 
@@ -5713,6 +5728,151 @@ public readonly record struct ReaderRule(int Threshold)
     public const int Adopted = 5;
 }
 
+/// <summary>
+/// 自己回復（第118期・<b>時間を買う機構</b>）。<b>毎ターン、自分の HP を固定値だけ回復する。</b>
+///
+/// <para><b><see cref="BattleContext.Heal"/> を通す。</b> 回復の単一窓口で、渇き（<see cref="DroughtTrait"/>）が
+/// そこ1箇所で止めている。<c>AcceptsSupport</c> の判定も窓口が持つ。
+/// <b>実測で渇きの波の回復は、同数値・特性なしの祭司に差し替えた版の 2.6% まで落ちる</b>
+/// （0 にはならない——<b>祭司を割った後は戻る</b>。第110期）。</para>
+///
+/// <para><b>割合ではなく固定値。</b> 交差点をプレイヤーが暗算できることが価値なので、係数を掛けない。
+/// <b>ただし第118期の実測では、この量（15/T）は敵の総攻（53〜84）に対して小さすぎて
+/// 交差点が 16 セルすべて 2.0T に張り付いた</b>——「別途タイマーを作らずにマイナスが制限時間として閉じる」は
+/// **量として観測できていない**（design/PHASE118_TANK.md §2-1）。</para>
+///
+/// <para><b>発火口は <see cref="OnTurnStart"/>。</b> 第61期の「<c>OnTurnStart</c> は速さ ∞ の席」に該当するが、
+/// この駒は<b>誰かの供給を読まない</b>（自分の HP しか触らない）ので、手番へ降ろす動機が無い
+/// ——降ろすと痺れ・のろまで止まる代わりに、止まったことが「回復が遅れた」ではなく
+/// 「壁が薄くなった」に化けて、時間を買う量が編成外の要因で決まる。</para>
+///
+/// <para><b>ノブを持たない。</b> 量は <see cref="Amount"/> の <c>const</c> 1つきり
+/// ——対照は「素体に差し替える」で取る（第69期の標準器具）。</para>
+/// </summary>
+public sealed class RegenTrait : Trait
+{
+    /// <summary>1ターンに戻す量。<b>割合ではなく固定値</b>。</summary>
+    public const int Amount = 15;
+
+    public override TraitId Id => TraitId.Regen;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+        => ctx.Log($"  {self.Name} の肉は厚い（毎ターン +{Amount}）", LogKind.Trigger);
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        if (self.Hp >= self.MaxHp) return;      // 満タンなら窓口を叩かない（計数を汚さない）
+        int before = self.Hp;
+        ctx.Heal(self, Amount);
+        if (self.Hp > before)
+            ctx.Log($"    {self.Name} の傷が塞がる（+{self.Hp - before}）", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// 糧（第118期・<b>自己回復の代金</b>）。<b>自分にダメージが通ったとき、与えた者の攻撃力が上がる。</b>
+///
+/// <para><b>第118期に測って採用しなかった。</b> 保持者は <c>UnitCatalog.All</c> に1枚もおらず、
+/// 駒は診断 <c>tank</c> のローカルにしかない。落ちた理由は「動かない」ではなく<b>値段が高すぎる</b>こと
+/// ——自己回復が買った時間の <b>66〜87% を食う</b>（design/PHASE118_TANK.md §1-1）。
+/// <b>しかも代金は係数で薄まらない</b>: 回復を厚くすると生存が伸び、生存が伸びると殴られる回数が増え、
+/// <b>殴られる回数がそのまま供給量になる</b>（`Gain = 0` の版の発火は現行より 28〜32% 多い）。
+/// <b>次に触るなら係数ではなく発火の口</b>（1ターン1回／単体だけ／1戦の上限）。</para>
+///
+/// <para><b>陣営を問わない。</b> 敵に殴られれば敵が育ち、味方の刃（ボルグの薙ぎ・カドの棘の巻き込み）で
+/// 削られれば味方が育つ。<b>この非対称が編成の判断になる</b>——敵側は薄く広く、味方側は1本に集中する
+/// （実測でも味方側の育ちは、味方を巻き込む駒と同席した台でしか立たない）。</para>
+///
+/// <para><b>量に比例させない</b>（<see cref="NourishRule.Gain"/> の固定値）。比例にすると
+/// <b>強い駒しか育たず</b>、「捨てられた弱い駒が育つ」筋が消える（README「増幅は必ず加算にする」の系）。</para>
+///
+/// <para><b>窓口は <see cref="BattleContext.Whet"/>。</b> 攻撃力を上げる唯一の窓口で、
+/// <c>AtkBonus</c> を直接足さない（第56期）。<b>ただし <c>AcceptsSupport</c> を見ない</b>
+/// ——支援として配るのではなく<b>殴った側が持っていく</b>ので、支援拒否（ガルド）にも届く。
+/// 強化側で初めての無検査経路で、第56期の「強化側は無検査 0」がここで破れる（意図した破り方）。</para>
+///
+/// <para><b>発火しない4つ</b>（<c>ApplyDamage</c> の構造がそのまま担保する。§1-A の経路表）:</para>
+/// <list type="bullet">
+///   <item><b>破片で受け切った被弾</b>——<c>ApplyDamage</c> が <c>OnDamaged</c> より手前で return する</item>
+///   <item><b>庇い・肩代わりで自分に通らなかったぶん</b>——そもそも自分の <c>OnDamaged</c> が走らない</item>
+///   <item><b>毒・燃焼の刻み</b>——<c>source</c> が null</item>
+///   <item><b>徴収</b>（生贄・吸い・置き去りの削り）——<see cref="BattleContext.InLevy"/> が真。
+///   <b>攻撃ではないので育てない。</b>「殴られるほど殴った者が強くなる」の「殴られる」に、
+///   味方の懐から取り立てるコストは含めない</item>
+/// </list>
+///
+/// <para><b>会戦の境界は跨がない。</b> <c>OnCarryOver</c> を書いていないので、engine の一律消去
+/// （<c>AtkBonus</c> と <c>StatusKeys.All</c>）でそのまま消える。<b>切り替えのノブも置いていない</b>
+/// ——境界を越えるのは勝った側の駒だけなので、<b>敵に積んだ強化は原理的に持ち越せない</b>。
+/// 味方に積んだぶんだけを残す形は意味が割れる（同じ1つの機構の半分だけが残る）。
+/// 何もしないノブを置くほうが危ないので、要るようになった期に足すこと。</para>
+/// </summary>
+public sealed class NourishTrait : Trait
+{
+    public override TraitId Id => TraitId.Nourish;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+        => ctx.Log($"  {self.Name} を削った者は力を得る（攻撃 +{ctx.Nourish.Gain} / 回）", LogKind.Trigger);
+
+    /// <summary>
+    /// <b>ここに来た時点で「通った」ことは確定している</b>——<c>ApplyDamage</c> は
+    /// 破片・肩代わり・上限を全部通した後、<c>target.Hp -= amount</c> の<b>後</b>にこのフックを呼ぶ。
+    /// だから「ダメージが通ったとき」を条件節で書き直す必要が無い。
+    /// </summary>
+    public override void OnDamaged(BattleContext ctx, UnitState self, int amount, UnitState? source)
+    {
+        if (source is null) { ctx.NourishNoSource++; return; }   // 毒・燃焼・転嫁の代金
+        if (source == self) { ctx.NourishSelf++; return; }       // 自傷（深追いの反動）
+        if (ctx.InLevy) { ctx.NourishLevy++; return; }           // 徴収（生贄・吸い・置き去り）
+        if (!source.IsAlive) { ctx.NourishDead++; return; }      // 相打ちで既に倒れている
+
+        ctx.NoteNourishPath(source, self);
+        ctx.NourishFires++;
+
+        int gain = ctx.Nourish.Gain;
+        if (gain <= 0) return;   // 対照（回復のみ）。**計数はここまで同じ**
+
+        ctx.Whet(source, gain, WhetRoute.Nourish);
+        ctx.NourishGiven += gain;
+        if (source.TeamId == self.TeamId) ctx.NourishToAlly += gain; else ctx.NourishToFoe += gain;
+        ctx.Log($"    {source.Name} は {self.Name} を食んで力を得た（攻撃 +{gain}）", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// 糧の強度（第118期）。<b><c>Gain = 0</c> が「自己回復だけ」の対照になる</b>
+/// ——符号の違う2つの効果を1つの駒に持たせるときの既存の作法（第41期の突き返し・第59期の着火）と同じで、
+/// <b>対照を機構の中に持たせる</b>（第117期 §8-1 の推奨）。
+///
+/// <para><b><c>Gain = 0</c> でも計数は同じだけ立つ</b>（発火・経路の内訳）。
+/// 落とすのは <see cref="BattleContext.Whet"/> の呼び出し1行だけで、
+/// <b>乱数も他の窓口も1ビットも動かない</b>——「機構が走っているのに盤面に何も渡らない版」である。</para>
+///
+/// <para>保持者が盤上に1枚もいなければ、<c>Gain</c> が何であってもフックが1度も走らないので
+/// <b>盤面は完全に不変</b>（<c>compare</c> 305 セル 0 件がその検算）。</para>
+/// </summary>
+public readonly record struct NourishRule(int Gain)
+{
+    /// <summary>既定は<b>2</b>（採用候補。<c>UnitCatalog.All</c> に保持者がいないので盤面には出ない）。</summary>
+    public static NourishRule Default => new(Adopted);
+
+    /// <summary>1ヒットあたりに渡す量。<b>掃引しない</b>——プレイヤーが暗算できる単位であることが価値。</summary>
+    public const int Adopted = 2;
+}
+
+/// <summary>
+/// 糧が発火した経路の名前と本数（第118期・<b>診断の表P の見出し</b>）。
+/// <b>盤面には一切影響しない</b>（<see cref="WhetRoutes"/> と同じ札の系列）。
+/// </summary>
+public static class NourishPaths
+{
+    public static readonly string[] Names =
+        { "敵の刃・単体", "敵の刃・範囲", "敵・型なし（反撃/破裂）", "味方の刃（巻き込み）", "中継の段", "その他" };
+
+    public static int Count => Names.Length;
+}
+
 /// <summary>移り木。動かされた味方を癒し強化する。隊列崩しを火力だけでなく耐久にも繋げる。</summary>
 public sealed class DrifterTrait : Trait
 {
@@ -6211,7 +6371,9 @@ public sealed class ForsakeTrait : Trait
             }
             else if (ally.Def.Speed < self.Def.Speed)
             {
-                ctx.ApplyDamage(ally, Toll, self, isFriendlyFire: true, lethal: true);
+                // 第118期: `levy` ＝ 徴収の札。指示書の除外一覧には無いが、**攻撃ではない削り**という
+                // 同じ区分（生贄・吸いと1文で説明できる）なので同じ札を立てる。
+                ctx.ApplyDamage(ally, Toll, self, isFriendlyFire: true, lethal: true, levy: true);
             }
             // 同速は何もしない
         }
@@ -7067,6 +7229,8 @@ public static class TraitCatalog
         new OverreachTrait(),
         new AwaitTrait(),
         new SealTrait(),
+        new RegenTrait(),
+        new NourishTrait(),
         new MartyrTrait(),
         new InversionTrait(),
         new DroughtTrait(),

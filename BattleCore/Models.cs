@@ -717,6 +717,14 @@ public sealed class UnitTally
     /// <summary>そのターンに敵へ与えたダメージ（添字＝ターン番号）。<c>DamageToEnemy</c> の内訳。</summary>
     public int[]? BossDmgByTurn;
 
+    /// <summary>
+    /// ターン頭の <see cref="UnitState.Hp"/>（添字＝ターン番号。第118期に足した）。
+    /// <b>回復の前・行動順ループの前</b>に写すので、<c>Hp[T] &lt; Hp[T-1]</c> は
+    /// 「T-1 ターンのあいだに受けた削りが、その間に戻した回復を上回った」を意味する
+    /// ——これが交差点（指示書 §2-2 の門2）の定義になる。<b>同じ計数（<see cref="BossRule"/>）の中で写す。</b>
+    /// </summary>
+    public int[]? BossHpByTurn;
+
     /// <summary>ターン頭に生きていたターン数（空振りの分母）と、そのうち1度でも振ったターン数。</summary>
     public int BossAliveTurns, BossSwingTurns, BossLastSwingTurn;
 
@@ -1697,6 +1705,32 @@ public sealed class BattleResult
     public required int HexMarksOnStoic { get; init; }
     public required int HexHopBlocked { get; init; }
     public required int HexNonSingleOnCursed { get; init; }
+
+    /// <summary>
+    /// 第118期 —— 糧（<c>NourishRule</c>）の計数。<b>盤面には一切影響しない。</b>
+    ///
+    /// <para><c>NourishFires</c> 発火回数（<c>Gain = 0</c> の対照でも同じだけ立つ） ／
+    /// <c>NourishGiven</c> 実際に渡した量（<c>WhetByRoute[Nourish]</c> と一致するのが自己検査） ／
+    /// <c>NourishToFoe</c> / <c>NourishToAlly</c> その内訳（門3）。</para>
+    ///
+    /// <para><b>発火しなかった内訳</b>——<c>NourishNoSource</c>（毒・燃焼・転嫁の代金）／
+    /// <c>NourishSelf</c>（自傷）／<c>NourishLevy</c>（徴収）／<c>NourishDead</c>（相打ち）／
+    /// <c>NourishSoaked</c>（<b>破片で受け切って <c>OnDamaged</c> まで届かなかった</b>被弾。
+    /// これだけは engine の側で数える）。</para>
+    ///
+    /// <para><c>NourishByPath</c> は経路別の発火回数（<see cref="NourishPaths"/> の並び）。
+    /// <b>保持者が盤上にいなければ空</b>。</para>
+    /// </summary>
+    public required int NourishFires { get; init; }
+    public required int NourishGiven { get; init; }
+    public required int NourishToFoe { get; init; }
+    public required int NourishToAlly { get; init; }
+    public required int NourishNoSource { get; init; }
+    public required int NourishSelf { get; init; }
+    public required int NourishLevy { get; init; }
+    public required int NourishDead { get; init; }
+    public required int NourishSoaked { get; init; }
+    public required IReadOnlyList<int> NourishByPath { get; init; }
 
     /// <summary>
     /// 第103期 —— 背かれ（<c>BetrayRule</c>）の計数。<b>盤面には一切影響しない。</b>

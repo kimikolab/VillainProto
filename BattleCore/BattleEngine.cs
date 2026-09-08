@@ -2078,7 +2078,64 @@ public sealed class BattleContext
             t.BossLastAliveTurn = Turn;
             int[] atk = t.BossAtkByTurn ??= new int[BattleEngine.MaxTurns + 2];
             if (Turn >= 0 && Turn < atk.Length) atk[Turn] = u.CurrentAttack;
+            // 第118期。**同じ場所・同じ guard で HP も写す**（交差点＝門2 の材料）。
+            int[] hp = t.BossHpByTurn ??= new int[BattleEngine.MaxTurns + 2];
+            if (Turn >= 0 && Turn < hp.Length) hp[Turn] = u.Hp;
         }
+    }
+
+    // =====================================================================================
+    // 第118期 —— 糧タンク（NourishRule）。
+    //
+    // **engine に判定は1本も無い。** ここにあるのは (1) 規則の受け渡し、(2) 計数、
+    // (3) ダメージ1回ぶんの「札」（<see cref="Hit"/>）だけで、機構の本体は
+    // <see cref="RegenTrait"/> / <see cref="NourishTrait"/> の中にある（軋み・積み過ぎと同じ形）。
+    //
+    // **`Hit.Levy` だけが規則に読まれる。** 残りの3つ（`FriendlyFire` / `Relayed` / `Pattern`）は
+    // 経路表（指示書 §3）を実測で1行ずつ検証するための計数専用で、**誰も読んで分岐しない。**
+    // =====================================================================================
+
+    /// <summary>糧の強度（第118期・<see cref="NourishRule"/>）。</summary>
+    public NourishRule Nourish { get; }
+
+    /// <summary>
+    /// いま解決中のダメージ1回ぶんの札（第118期）。<see cref="ApplyDamage"/> が入口で立て、
+    /// 出口で元に戻す（肩代わりの中継で入れ子になるので退避・復帰する。<c>Mark</c> と同じ作法）。
+    ///
+    /// <para><b><c>Levy</c> だけが盤面の規則に読まれる</b>——徴収（生贄・吸い・置き去りの削り）は
+    /// 「攻撃によるダメージ」ではないので糧を渡さない。残りは計数専用。</para>
+    /// </summary>
+    public readonly record struct HitFrame(bool Levy, bool FriendlyFire, bool Relayed, AttackPattern? Pattern);
+
+    /// <summary>いま解決中のダメージの札。<see cref="ApplyDamage"/> の外では既定値。</summary>
+    public HitFrame Hit { get; private set; }
+
+    /// <summary>いま解決中のダメージが徴収（コスト）か。<b>糧が読む唯一の札。</b></summary>
+    public bool InLevy => Hit.Levy;
+
+    /// <summary>糧の計数（第118期）。<b>誰も読んで分岐しない。</b></summary>
+    public int NourishFires, NourishGiven, NourishToFoe, NourishToAlly;
+
+    /// <summary>糧が発火しなかった内訳（順に 出どころなし・自傷・徴収・相打ち・破片で受け切り）。</summary>
+    public int NourishNoSource, NourishSelf, NourishLevy, NourishDead, NourishSoaked;
+
+    /// <summary>経路別の発火回数（<see cref="NourishPaths"/>）。<b>保持者がいなければ1本も確保しない。</b></summary>
+    public int[]? NourishByPath;
+
+    /// <summary>
+    /// 発火した経路を1つ数える（第118期・<b>盤面には一切影響しない</b>）。
+    /// 分類は <see cref="Hit"/> と陣営だけから引く——手で書いた分類は1件も無い。
+    /// </summary>
+    public void NoteNourishPath(UnitState source, UnitState target)
+    {
+        int[] by = NourishByPath ??= new int[NourishPaths.Count];
+        int i;
+        if (Hit.Relayed) i = 4;                                   // 中継の段（肩代わりの内側）
+        else if (source.TeamId == target.TeamId || Hit.FriendlyFire) i = 3;   // 味方の刃
+        else if (Hit.Pattern == AttackPattern.Single) i = 0;      // 敵の刃・単体
+        else if (Hit.Pattern is not null) i = 1;                  // 敵の刃・範囲
+        else i = 2;                                               // 型なし（反撃・破裂）
+        by[i]++;
     }
 
     /// <summary>
@@ -2310,6 +2367,7 @@ public sealed class BattleContext
                          RageRule? rage = null, MenderCostRule? menderCost = null,
                          LooseRule? loose = null, TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
+                         NourishRule? nourish = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -2357,6 +2415,7 @@ public sealed class BattleContext
         Taillight = taillight ?? TaillightRule.Default;
         Reader = reader ?? ReaderRule.Default;
         Boss = boss ?? BossRule.Default;
+        Nourish = nourish ?? NourishRule.Default;
     }
 
     // =====================================================================================
@@ -3514,16 +3573,23 @@ public sealed class BattleContext
     /// <see cref="ResolvePierce"/> の各段。反撃・状態異常の刻み・肩代わりの中継・呪いの共有は
     /// 既定の <c>null</c> のままで、再生側は「型なし」として描く。</para>
     /// </param>
+    /// <param name="levy">
+    /// 徴収であることの札（第118期）。<b>攻撃ではない削り</b>——生贄（開戦時に味方を削る）・
+    /// 吸い（毎ターン味方から取る）・置き去りの削り——に立てる。糧（<see cref="NourishTrait"/>）が
+    /// <see cref="InLevy"/> で読む<b>唯一の分岐</b>で、それ以外の規則は1つも見ない。
+    /// <para><b>肩代わりの中継には引き継ぐ</b>（<c>burnTick</c> と同じ扱い）——中継は
+    /// 元の削りの一部であって、途中で攻撃に変わるわけではない。</para>
+    /// </param>
     public void ApplyDamage(UnitState target, int amount, UnitState? source,
                             bool isFriendlyFire = false, bool lethal = true,
                             bool burnTick = false, bool relayed = false,
                             bool spillWound = true, bool deepBite = false,
                             bool singleHit = false, bool hexShare = false,
-                            AttackPattern? pattern = null)
+                            AttackPattern? pattern = null, bool levy = false)
     {
         if (Probe is null)
         {
-            ApplyDamageCore(target, amount, source, isFriendlyFire, lethal, burnTick, relayed, spillWound, deepBite, singleHit, hexShare, pattern);
+            ApplyDamageCore(target, amount, source, isFriendlyFire, lethal, burnTick, relayed, spillWound, deepBite, singleHit, hexShare, pattern, levy);
             return;
         }
 
@@ -3544,18 +3610,39 @@ public sealed class BattleContext
         Mark = default;
         try
         {
-            ApplyDamageCore(target, amount, source, isFriendlyFire, lethal, burnTick, relayed, spillWound, deepBite, singleHit, hexShare, pattern);
+            ApplyDamageCore(target, amount, source, isFriendlyFire, lethal, burnTick, relayed, spillWound, deepBite, singleHit, hexShare, pattern, levy);
         }
         finally { Mark = prev; }
     }
 
-    /// <summary>ダメージ処理の本体。<see cref="ApplyDamage"/> だけが呼ぶ。</summary>
+    /// <summary>
+    /// ダメージ1回ぶんの札（<see cref="Hit"/>）を立てて本体を呼ぶ（第118期）。<b>盤面は1ビットも触らない。</b>
+    /// 肩代わりの中継で入れ子になるので<b>退避・復帰する</b>（<c>Mark</c> と同じ作法）。
+    /// </summary>
     void ApplyDamageCore(UnitState target, int amount, UnitState? source,
                          bool isFriendlyFire, bool lethal,
                          bool burnTick, bool relayed,
                          bool spillWound, bool deepBite,
                          bool singleHit, bool hexShare,
-                         AttackPattern? pattern)
+                         AttackPattern? pattern, bool levy)
+    {
+        HitFrame prevHit = Hit;
+        Hit = new HitFrame(levy, isFriendlyFire, relayed, pattern);
+        try
+        {
+            ApplyDamageBody(target, amount, source, isFriendlyFire, lethal, burnTick, relayed,
+                            spillWound, deepBite, singleHit, hexShare, pattern, levy);
+        }
+        finally { Hit = prevHit; }
+    }
+
+    /// <summary>ダメージ処理の本体。<see cref="ApplyDamageCore"/> だけが呼ぶ。</summary>
+    void ApplyDamageBody(UnitState target, int amount, UnitState? source,
+                         bool isFriendlyFire, bool lethal,
+                         bool burnTick, bool relayed,
+                         bool spillWound, bool deepBite,
+                         bool singleHit, bool hexShare,
+                         AttackPattern? pattern, bool levy)
     {
         if (!target.IsAlive || amount <= 0) return;
 
@@ -3589,7 +3676,7 @@ public sealed class BattleContext
                 Log($"    {target.Name} の鎧は貫かれ、{behind.Name} にも {overflow} 届いた", LogKind.Trigger);
                 // 出どころは元の攻撃者のまま。中継で相手が倒れた場合、入れ替え（SwapSlots）は
                 // ThornGuardTrait.OnDamaged 側の「相手が既に死んでいるならそのまま」で自然に落ちる。
-                ApplyDamage(behind, overflow, source, burnTick: burnTick);
+                ApplyDamage(behind, overflow, source, burnTick: burnTick, levy: levy);
             }
         }
 
@@ -3717,7 +3804,7 @@ public sealed class BattleContext
                     // ——代金を誰かが肩代わりできるのは編成の選択肢。計数だけ出す。
                     if (deepBite) TallyOf(target).DeepBiteRelayed++;
 
-                    ApplyDamage(wall, blocked, source, isFriendlyFire: true, burnTick: burnTick, relayed: true);
+                    ApplyDamage(wall, blocked, source, isFriendlyFire: true, burnTick: burnTick, relayed: true, levy: levy);
                 }
             }
         }
@@ -3739,7 +3826,7 @@ public sealed class BattleContext
                     amount -= taken;
                     Log($"    {sharer.Name} が {target.Name} の痛みを引き受けた", LogKind.Trigger);
                     if (deepBite) TallyOf(target).DeepBiteRelayed++;   // 第93期 §1-2 の 3（計数のみ）
-                    ApplyDamage(sharer, taken, source, isFriendlyFire: true, burnTick: burnTick, relayed: true);
+                    ApplyDamage(sharer, taken, source, isFriendlyFire: true, burnTick: burnTick, relayed: true, levy: levy);
 
                     // 痛みを取り上げられた者は腕がなまる。肩代わり量に比例させているので、
                     // 代金はドハのHPという有限プールから払われる（SharerTrait.DullDivisor 参照）。
@@ -3792,7 +3879,13 @@ public sealed class BattleContext
 
             // 破片で受け切ったなら「何も起きなかった」と扱う。被弾強化も反撃も走らせない。
             // ここを通すと、削られていない駒が削られた駒と同じ収入を得る。
-            if (amount <= 0) return;
+            if (amount <= 0)
+            {
+                // 第118期・**計数のみ**。糧が「破片で受け切った被弾では発火しない」ことを
+                // 実測で示すための1行で、保持者がいなければ1度も加算しない（誰も読んで分岐しない）。
+                if (target.HasTrait(TraitId.Nourish)) NourishSoaked++;
+                return;
+            }
         }
 
         if (!lethal) amount = Math.Min(amount, Math.Max(0, target.Hp - 1));
@@ -4968,13 +5061,15 @@ public static class BattleEngine
                                    MenderCostRule? menderCost = null, LooseRule? loose = null,
                                    TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
+                                   NourishRule? nourish = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
-               gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss, probe);
+               gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
+               nourish, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -5006,13 +5101,15 @@ public static class BattleEngine
                                    RageRule? rage = null, MenderCostRule? menderCost = null,
                                    LooseRule? loose = null, TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
+                                   NourishRule? nourish = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
-                                    betray, encore, rage, menderCost, loose, taillight, reader, boss, probe);
+                                    betray, encore, rage, menderCost, loose, taillight, reader, boss,
+                                    nourish, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -5177,6 +5274,16 @@ public static class BattleEngine
             HexMarksOnStoic = ctx.HexMarksOnStoic,
             HexHopBlocked = ctx.HexHopBlocked,
             HexNonSingleOnCursed = ctx.HexNonSingleOnCursed,
+            NourishFires = ctx.NourishFires,
+            NourishGiven = ctx.NourishGiven,
+            NourishToFoe = ctx.NourishToFoe,
+            NourishToAlly = ctx.NourishToAlly,
+            NourishNoSource = ctx.NourishNoSource,
+            NourishSelf = ctx.NourishSelf,
+            NourishLevy = ctx.NourishLevy,
+            NourishDead = ctx.NourishDead,
+            NourishSoaked = ctx.NourishSoaked,
+            NourishByPath = ctx.NourishByPath ?? Array.Empty<int>(),
             BetrayTries = ctx.BetrayTries,
             BetraySummoned = ctx.BetraySummoned,
             BetrayBlocked = ctx.BetrayBlocked,

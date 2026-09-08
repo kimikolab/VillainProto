@@ -138,6 +138,8 @@
 | `Betrayed` | 背かれのソム |
 | `Taillight` | 尾灯のトモ |
 | `Overload` | 据えのバン |
+| `Regen` | - |
+| `Nourish` | - |
 | `ThinBlade` | 裂きのキリ |
 | `Overreach` | 抉りのエグ |
 | `Await` | 断ちのナタ |

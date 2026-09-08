@@ -176,6 +176,37 @@ if (focusId == "derive")
         }
     }
 
+    // 第118期。**診断が `Program.cs` の外にあっても索けるようにする。**
+    // top-level statements は全部で1つのメソッドなので、大きい診断は別ファイルの static クラスに置く
+    // （`BattleSim/Tank.cs` が最初）。その場合 `focusId == "..."` の区間には振り分けの数行しか無く、
+    // **規則の名前が本文に現れないので `測った診断` が「不明」になる**（実際にこれで 1 件出た）。
+    //
+    // 付け方は「**その区間が名前を挙げているクラスを宣言しているファイル**を、その区間に足す」。
+    // クラス名で結ぶので、ファイル名にもモード名にも依存しない。
+    var dvExtra = new Dictionary<string, string>(StringComparer.Ordinal);
+    if (dvRoot is not null && dvModes.Count > 0)
+    {
+        foreach (string f in Directory.GetFiles(Path.Combine(dvRoot, "BattleSim"), "*.cs"))
+        {
+            if (Path.GetFileName(f) == "Program.cs") continue;
+            string txt = File.ReadAllText(f);
+            foreach (System.Text.RegularExpressions.Match cm in
+                     System.Text.RegularExpressions.Regex.Matches(txt, @"(?:static|sealed) class (\w+)"))
+            {
+                string cls = cm.Groups[1].Value;
+                for (int i = 0; i < dvModes.Count; i++)
+                {
+                    int a = dvModes[i].Start;
+                    int b = i + 1 < dvModes.Count ? dvModes[i + 1].Start : dvProgram.Length;
+                    if (dvProgram.IndexOf(cls + ".", a, b - a, StringComparison.Ordinal) < 0) continue;
+                    dvExtra[dvModes[i].Name] = dvExtra.TryGetValue(dvModes[i].Name, out string? had)
+                        ? had + txt : txt;
+                    break;
+                }
+            }
+        }
+    }
+
     // その名前が現れる診断（`focusId == "..."` の区間で切る）。
     string[] DvDiagnostics(string name)
     {
@@ -185,7 +216,9 @@ if (focusId == "derive")
         {
             int a = dvModes[i].Start;
             int b = i + 1 < dvModes.Count ? dvModes[i + 1].Start : dvProgram.Length;
-            if (dvProgram.IndexOf(name, a, b - a, StringComparison.Ordinal) >= 0) hit.Add(dvModes[i].Name);
+            if (dvProgram.IndexOf(name, a, b - a, StringComparison.Ordinal) >= 0
+                || (dvExtra.TryGetValue(dvModes[i].Name, out string? ex)
+                    && ex.Contains(name, StringComparison.Ordinal))) hit.Add(dvModes[i].Name);
         }
         return hit.Distinct().ToArray();
     }
@@ -245,7 +278,8 @@ if (focusId == "derive")
         Console.WriteLine();
         Console.WriteLine("**この表は全部が実装から derive されている**（第94期 (T1)）。"
                           + "型名・引数名・既定値は reflection、`測った診断` は `BattleSim/Program.cs` の "
-                          + "`focusId == \"...\"` の区間、`期` は `design/PHASE*.md` の本文からそれぞれ引いた。"
+                          + "`focusId == \"...\"` の区間（**別ファイルの診断はそこが名前を挙げているクラスで結ぶ**）、"
+                          + "`期` は `design/PHASE*.md` の本文からそれぞれ引いた。"
                           + "**手で書いた項目は1つも無い。**");
         Console.WriteLine();
         Console.WriteLine("> **以後の指示書は既定値をここから引くこと。手で写さない。**");
@@ -53385,6 +53419,24 @@ if (focusId == "boss")
     }
 
     Console.WriteLine("boss: モードは phase0 / run / check のいずれか。");
+    return;
+}
+
+// =====================================================================================
+// tank モード（第118期） —— 時間を買う機構（自己回復タンク）を作って測る
+//
+// **本体は `BattleSim/Tank.cs`**（診断を別ファイルに置いた最初の例）。
+// このファイルの top-level statements は 67,000 行が**全部で1つのメソッド**で、
+// Release のビルドに 4 分かかる（実測）。診断1本ぶんのローカルとクロージャをそこへ足す理由が無いので、
+// **クロージャを1つも作らない形**（static メソッドと static フィールドだけ）で外に出した。
+// **ここは振り分けの数行だけ。** `derive rules` の走査もこの形に対応させてある（第118期）。
+//
+//     dotnet run --project BattleSim -c Release 0 tank phase0   # 表P（経路表・§1-B の再測定）
+//     dotnet run --project BattleSim -c Release 0 tank run      # 表A〜E
+//     dotnet run --project BattleSim -c Release 0 tank check    # 自己検査
+if (focusId == "tank")
+{
+    TankDiag.Run(args.Length > 2 ? args[2] : "phase0");
     return;
 }
 
