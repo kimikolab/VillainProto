@@ -203,8 +203,21 @@ if (focusId == "derive")
         }
         dvDesign = dvDesign.OrderBy(x => x.Phase).ToList();
     }
-    string dvClaude = dvRoot is not null && File.Exists(Path.Combine(dvRoot, "CLAUDE.md"))
-        ? File.ReadAllText(Path.Combine(dvRoot, "CLAUDE.md")) : "";
+    // 第112期 (T3) 段2: 走査対象を `CLAUDE.md` ＋ `design/LESSONS_*.md` に広げる。
+    // 各期の実測と経緯を `LESSONS_*.md` へ出した（第112期 (T2)）ので、`CLAUDE.md` だけを見ると
+    // **型名が散文にしか出ていない 15 本のノブの ○ が消える**——移動で消えたわけではないのに落ちる。
+    // **段1（生成器を触らずに再生成して消えた ○ を列挙する）を先にやること**——
+    // 段2 だけをやると、移動中に記述ごと消えたノブがあっても ○ が付いたままで気づけない。
+    string dvClaude = "";
+    if (dvRoot is not null)
+    {
+        if (File.Exists(Path.Combine(dvRoot, "CLAUDE.md")))
+            dvClaude = File.ReadAllText(Path.Combine(dvRoot, "CLAUDE.md"));
+        string dvDesignDir = Path.Combine(dvRoot, "design");
+        if (Directory.Exists(dvDesignDir))
+            foreach (string f in Directory.GetFiles(dvDesignDir, "LESSONS_*.md").OrderBy(x => x, StringComparer.Ordinal))
+                dvClaude += "\n" + File.ReadAllText(f);
+    }
 
     int[] DvPhases(string name)
         => dvDesign.Where(d => d.Text.Contains(name, StringComparison.Ordinal))
@@ -242,7 +255,7 @@ if (focusId == "derive")
 
         Console.WriteLine("## 1. `BattleEngine.Run` の引数（ノブの正本）");
         Console.WriteLine();
-        Console.WriteLine("| # | 引数名 | 型 | 既定値（実装） | `= default(T)` | 測った診断 | 期（design/） | CLAUDE.md |");
+        Console.WriteLine("| # | 引数名 | 型 | 既定値（実装） | `= default(T)` | 測った診断 | 期（design/） | CLAUDE.md / LESSONS |");
         Console.WriteLine("|--:|---|---|---|:-:|---|---|:-:|");
         var dvPars = dvRun.GetParameters().Skip(3).ToArray();   // player / enemy / seed を除く
         int dvNo = 0;
