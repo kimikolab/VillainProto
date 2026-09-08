@@ -718,7 +718,8 @@ public sealed class UnitTally
     ///
     /// <para><c>TaillightSkipStatic</c> W1 の静的な濾し（(A) 恒久的に振らない型 ／ (B) 周期に攻撃が無い）で
     /// 飛ばされた回数 ／ <c>TaillightSkipNow</c> W2 の動的な濾し（そのターン <c>CanAct</c> が偽）で
-    /// 飛ばされた回数。<b>既定（<see cref="LitFilter.SupportOnly"/>）では両方とも構造的に 0。</b></para>
+    /// 飛ばされた回数。<b>第114期に既定が <see cref="LitFilter.ActingNow"/> になったので両方とも走る</b>
+    /// （第108〜113期の既定 <see cref="LitFilter.SupportOnly"/> では構造的に 0 だった）。</para>
     /// </summary>
     public int TaillightSkipStatic, TaillightSkipNow;
 

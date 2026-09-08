@@ -48,7 +48,7 @@
 | 35 | `rage` | `RageRule` | `RageRule { Mode = Amount, Gain = 3 }` |  | `tempo` / `hold` / `hold2` | 第106期〜（4 期） | ○ |
 | 36 | `menderCost` | `MenderCostRule` | `MenderCostRule { Percent = 50 }` |  | `tempo` / `hold` / `hold2` / `ledger` / `lit` | 第106期〜（3 期） | ○ |
 | 37 | `loose` | `LooseRule` | `LooseRule { Shove = True }` |  | `tempo` / `hold` / `hold2` / `ledger` / `lit` | 第106期〜（3 期） | ○ |
-| 38 | `taillight` | `TaillightRule` | `TaillightRule { Mode = OwnTurnWindow, Filter = SupportOnly }` |  | `tomo` / `ledger` / `lit` | 第110期〜（3 期） | ○ |
+| 38 | `taillight` | `TaillightRule` | `TaillightRule { Mode = OwnTurnWindow, Filter = ActingNow }` |  | `tomo` / `ledger` / `lit` | 第110期〜（4 期） | ○ |
 
 引数 38 本（`verbose` と観測子を除く）。
 
@@ -94,7 +94,7 @@
 | `SpillWoundRule` | `SpillWoundRule { Enabled = True, Scope = All }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `cross` | 第85期〜（10 期） |
 | `SutureFireRule` | `SutureFireRule { Fire = Swing }` | ○ | `taillight` / `hold2` | 第107期〜（2 期） |
 | `SutureRule` | `SutureRule { Side = Both }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `taillight` / `hold2` / `ledger` / `cross` | 第85期〜（11 期） |
-| `TaillightRule` | `TaillightRule { Mode = OwnTurnWindow, Filter = SupportOnly }` | ○ | `tomo` / `ledger` / `lit` | 第110期〜（3 期） |
+| `TaillightRule` | `TaillightRule { Mode = OwnTurnWindow, Filter = ActingNow }` | ○ | `tomo` / `ledger` / `lit` | 第110期〜（4 期） |
 | `ThinBladeRule` | `ThinBladeRule { Cost = Always }` | ○ | `wcost` / `blade` / `ledger` / `cross` | 第75期〜（5 期） |
 | `ThornRule` | `ThornRule { Wound = None }` | ○ | `derive` / `curse` / `breadth` / `thorn` / `suture2` / `gauge` / `cross` | 第84期〜（16 期） |
 | `WhetMask` | `WhetMask { Bits = 0 }` | ○ | `creak3` / `spend` | 第65期〜（2 期） |

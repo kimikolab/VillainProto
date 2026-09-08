@@ -49891,9 +49891,9 @@ if (focusId == "lit")
     // ------------------------------------------------------------------------------
     var ltVers = new (string Tag, LitFilter F)[]
     {
-        ("W0 現行",   LitFilter.SupportOnly),
+        ("W0 旧",     LitFilter.SupportOnly),   // 第108〜113期の既定（第114期に W2 へ移した。対照として残置）
         ("W1 手番型", LitFilter.ActingOnly),
-        ("W2 その場", LitFilter.ActingNow),
+        ("W2 現行",   LitFilter.ActingNow),     // **第114期に採った既定**
     };
     const int LtW0 = 0, LtW1 = 1, LtW2 = 2, LtPlainVer = 3;
     static TaillightRule LtRule(LitFilter f) => new(YieldMode.OwnTurnWindow, f);
@@ -50002,8 +50002,11 @@ if (focusId == "lit")
     // ------------------------------------------------------------------------------
     // 副判定の4台（第110期 §2-2 で選ばれた土台 = **ガルド / ソラ / ボルグ**）。
     // **`Presets` は1行も触らない。台は診断のローカル**（`gradient` / `aim` と同じ扱い）。
-    // partner = 前1 のとき、`トモ×ドルガ` は `Presets.Compare` の `灯×薙ぎ` と**同じ5枚・同じ席**
-    // ——だから主判定行と副判定のドルガ台は同じ台であり、二重に測らない（自己検査で突き合わせる）。
+    // partner = 前1 のとき、`トモ×ドルガ` は `Presets.Compare` の `灯×薙ぎ` と**同じ5枚**。
+    // **席は第111〜113期のもの（後1 トモ / 後3 ボルグ）で凍結してある**——第114期に `Presets` 側の席だけを
+    // 後1 ボルグ / 後3 トモ へ差し替えたので、**この台と主判定行はもう同じ席ではない。**
+    // 凍結するのは、第113期に取った3版の実測（門・帰属・対象の分布）がそのまま再現できるようにするため
+    // ——**台を動かすと「濾しの効き」と「席の効き」が混ざる。**
     // ------------------------------------------------------------------------------
     var ltPartners = new (string Tag, UnitDef Def)[]
     {
@@ -50301,9 +50304,9 @@ if (focusId == "lit")
         Console.WriteLine();
         Console.WriteLine("| 版 | 濾し |");
         Console.WriteLine("|---|---|");
-        Console.WriteLine("| W0 現行 | `AcceptsSupport` のみ |");
+        Console.WriteLine("| W0 旧 | `AcceptsSupport` のみ（第108〜113期の既定） |");
         Console.WriteLine("| W1 手番型 | ＋ 恒久的に手番で攻撃しない駒を飛ばす（(A) 不動・追い打ち ／ (B) 周期に攻撃が無い） |");
-        Console.WriteLine("| W2 その場 | W1 ＋ そのターン `CanAct` が偽の駒を飛ばす（(C) のろまの休み番） |");
+        Console.WriteLine("| W2 現行 | W1 ＋ そのターン `CanAct` が偽の駒を飛ばす（(C) のろまの休み番）。**第114期に採った既定** |");
 
         LtStat[,,] cell = LtBenchRun(0, LtSeeds);
 
@@ -50744,6 +50747,84 @@ if (focusId == "lit")
                 Console.WriteLine($"採る配置: `front1: {LtN(f[0])}, front3: {LtN(f[1])}, center: {LtN(f[2])}, "
                     + $"back1: {LtN(f[3])}, back3: {LtN(f[4])}`");
         }
+
+        // --------------------------------------------------------------------------
+        // 第114期 (T2) —— **採る席の優先順**（指示書 §1 で、測る前に固定した規則）。
+        //
+        //   線   : 狙（ガルドが前列 / セッキが後列）○ **かつ** 情報セル 2 以上
+        //          ——**狙を線にも採る条件にも掛ける**（規約 (G16)。第113期に食い違った）
+        //   採る : 情報セル **4 → 3** の順に、その段の中で平均が最上位。
+        //          出発点との差が {LtSeatLine}pt 未満なら**情報セルの多い側**を採る
+        //          （情報セル 2 未満しか無ければ採用そのものを見直す＝指示書 §5 の分岐）
+        //
+        // **上の第113期の判定はそのまま残してある。** あちらは「平均が最上位・差 5.0pt 以上なら
+        // 差し替え」で、情報セルは 2 以上という門にしか使っていない——**規則が違うので判定も違う。**
+        // 第114期は「情報を減らす変更は席の再判定と対にする」ための期なので、**情報セルが優先。**
+        // --------------------------------------------------------------------------
+        Console.WriteLine();
+        Console.WriteLine("## 第114期 (T2) —— 採る席の優先順（**情報セルが優先**）");
+        Console.WriteLine();
+        var ltLine = Enumerable.Range(0, pool.Count).Where(k => LtInfo(cellsA[k]) >= 2).ToList();
+        var ltLineOk = ltLine.Where(k => Intent(perms[pool[k]])).ToList();
+        Console.WriteLine($"候補 {pool.Count} 通りのうち **情報セル 2 以上が {ltLine.Count} 通り**、"
+            + $"そのうち**狙で落ちた席が {ltLine.Count - ltLineOk.Count} 通り**（狙 ○ は **{ltLineOk.Count} 通り**）"
+            + $"——**狙は線にも採る条件にも掛かっている**（規約 (G16)・自己検査 (d)）。");
+        Console.WriteLine();
+        Console.WriteLine($"| 情報セル | 狙 ○ の席数 | その段の最上位（追順・平均・Δ） |");
+        Console.WriteLine("|--:|--:|---|");
+        for (int wantInfo = 4; wantInfo >= 2; wantInfo--)
+        {
+            var tier = ltLineOk.Where(k => LtInfo(cellsA[k]) == wantInfo)
+                               .OrderByDescending(k => LtAvg25(cellsA[k])).ToList();
+            Console.WriteLine($"| {wantInfo} | {tier.Count} | "
+                + (tier.Count == 0 ? "—"
+                   : $"追順 {ranked.IndexOf(tier[0]) + 1} 位・{LtAvg25(cellsA[tier[0]]):F1}%"
+                     + $"・{LtAvg25(cellsA[tier[0]]) - LtAvg25(cellsA[curK]):+0.0;-0.0}pt") + " |");
+        }
+
+        int take114 = -1;
+        for (int wantInfo = 4; wantInfo >= 3 && take114 < 0; wantInfo--)
+        {
+            var tier = ltLineOk.Where(k => LtInfo(cellsA[k]) == wantInfo)
+                               .OrderByDescending(k => LtAvg25(cellsA[k])).ToList();
+            foreach (int k in tier)
+            {
+                if (Math.Abs(LtAvg25(cellsA[k]) - LtAvg25(cellsA[curK])) >= LtSeatLine) continue;
+                take114 = k; break;
+            }
+        }
+        Console.WriteLine();
+        if (take114 < 0)
+            Console.WriteLine($"**判定（第114期）: 情報セル 3 以上・狙 ○・差 {LtSeatLine:F1}pt 未満の席が無い** "
+                + "—— 指示書 §5 の分岐へ。");
+        else if (LtInfo(cellsA[take114]) <= LtInfo(cellsA[curK]))
+            Console.WriteLine($"**判定（第114期）: 据え置き** —— 採る候補の情報セル {LtInfo(cellsA[take114])} が"
+                + $"出発点の {LtInfo(cellsA[curK])} を上回らない。");
+        else
+        {
+            Formation nf = perms[pool[take114]];
+            Console.WriteLine($"**判定（第114期）: 差し替え** —— 追順 **{ranked.IndexOf(take114) + 1} 位**"
+                + $"（情報セル {LtInfo(cellsA[curK])} → **{LtInfo(cellsA[take114])}**、"
+                + $"平均 {LtAvg25(cellsA[curK]):F1}% → **{LtAvg25(cellsA[take114]):F1}%** ＝ "
+                + $"**{LtAvg25(cellsA[take114]) - LtAvg25(cellsA[curK]):+0.0;-0.0}pt**、"
+                + $"帯B では {LtAvg25(cellsB[take114]) - LtAvg25(cellsB[curK]):+0.0;-0.0}pt / "
+                + $"情報セル {LtInfo(cellsB[take114])}）。");
+            Console.WriteLine();
+            Console.WriteLine($"採る配置: `front1: {LtN(nf[0])}, front3: {LtN(nf[1])}, center: {LtN(nf[2])}, "
+                + $"back1: {LtN(nf[3])}, back3: {LtN(nf[4])}`");
+            Console.WriteLine();
+            Console.WriteLine("落とした上位3席（表A）:");
+            Console.WriteLine();
+            Console.WriteLine("| 追順 | 狙 | 情報セル | 平均(2〜5波) | Δ | 落とした理由 |");
+            Console.WriteLine("|--:|:-:|--:|--:|--:|---|");
+            foreach (int k in ranked.Where(k => k != take114).Take(3))
+                Console.WriteLine($"| {ranked.IndexOf(k) + 1} | {(Intent(perms[pool[k]]) ? "○" : "×")} "
+                    + $"| {LtInfo(cellsA[k])} | {LtAvg25(cellsA[k]):F1}% "
+                    + $"| {LtAvg25(cellsA[k]) - LtAvg25(cellsA[curK]):+0.0;-0.0} | "
+                    + (!Intent(perms[pool[k]]) ? "狙 ×"
+                       : LtInfo(cellsA[k]) < LtInfo(cellsA[take114]) ? $"情報セル {LtInfo(cellsA[k])} < {LtInfo(cellsA[take114])}"
+                       : "—") + " |");
+        }
         return;
     }
 
@@ -50785,9 +50866,20 @@ if (focusId == "lit")
             }
         }
         int cells = ltCompare.Length * ltStages.Count;
+        // **第114期に判定を直した。** 既定が W2（`LitFilter.ActingNow`）になったので、
+        // **W0 を明示した経路は `docs/balance.md` とずれるのが正しい**——ずれ幅がそのまま採用の効きで、
+        // **ずれる行が `灯×薙ぎ` 1 行だけ**であることが「他の 60 行を動かしていない」の証拠になる
+        // （第113期は既定＝W0 だったので、3つとも 0 件が合格だった）。
+        var knobRows = Enumerable.Range(0, ltCompare.Length)
+            .Where(b => ltStages.Select((_, w) => w).Any(w => Math.Abs(cellsDef[b][w] - cellsW0[b][w]) > 1e-9))
+            .Select(b => ltCompare[b].Name).ToList();
         Console.WriteLine($"- **必須1 / (a)** `compare` {cells} セルと `docs/balance.md` の差: "
-            + $"既定の経路 **{diffDefault} 件** ／ W0 を明示した経路 **{diffW0} 件** ／ 両経路の差 **{diffKnob} 件**"
-            + $" → {(diffDefault == 0 && diffW0 == 0 && diffKnob == 0 ? "**○**" : "**×**")}");
+            + $"**既定の経路 {diffDefault} 件**（← 判定はここ） ／ W0 を明示した経路 {diffW0} 件 ／ 両経路の差 {diffKnob} 件"
+            + $" → {(diffDefault == 0 ? "**○**" : "**×**")}");
+        Console.WriteLine($"  - 既定（W2）と W0 でセルが動く行: **{knobRows.Count} 行**"
+            + (knobRows.Count == 0 ? "" : "（" + string.Join(" / ", knobRows) + "）")
+            + $" → {(knobRows.Count <= 1 ? "**○**" : "**×**")}"
+            + "（**トモを含む行だけが動く**。第113期の Q5 の再確認）");
         Console.WriteLine("- **必須2** `docs/` 10ファイルの再生成は外で行う（`git diff docs/` で示す）。"
             + "**`rules.md` に `LitFilter` の行と `TaillightRule` の既定値が増えるのは想定内**（指示書 §5）。");
         Console.WriteLine($"- **必須3** 触っていないノブの既定: `TaillightRule.Default` = `{TaillightRule.Default}` ／ "

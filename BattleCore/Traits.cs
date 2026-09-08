@@ -6621,7 +6621,8 @@ public sealed class TaillightTrait : Trait
         //
         // **第113期に濾しを2つ足した**（<see cref="LitFilter"/>）。**選び方は1ビットも変えていない**
         // ——足したのはこのループの `continue` 条件だけで、飛ばした先は「次に遅い味方」になる。
-        // **既定（`SupportOnly`）では下の2行はどちらも走らない**（`compare` 305 セル 0 件が検算）。
+        // **第114期に既定を `ActingNow` にした**ので、下の2行は通常の実行でも走る
+        // （第113期までの既定 `SupportOnly` では1行も走らなかった）。**選び方は今も1ビットも変えていない。**
         LitFilter filter = ctx.Taillight.Filter;
         UnitState? pick = null;
         foreach (UnitState a in ctx.LivingMembers(self.TeamId))
@@ -6791,7 +6792,7 @@ public sealed class TaillightTrait : Trait
 /// <para><b>書き換え可能な static のノブにしないこと。</b> Trait は共有シングルトンで、
 /// <c>layout</c> は戦闘を並列実行する（<see cref="ColossusRule"/> / <see cref="YokeRule"/> と同じ判断）。</para>
 /// </summary>
-public readonly record struct TaillightRule(YieldMode Mode, LitFilter Filter = LitFilter.SupportOnly)
+public readonly record struct TaillightRule(YieldMode Mode, LitFilter Filter = LitFilter.ActingNow)
 {
     public static TaillightRule Default => new(YieldMode.OwnTurnWindow);
 }
@@ -6804,14 +6805,21 @@ public readonly record struct TaillightRule(YieldMode Mode, LitFilter Filter = L
 /// <para><b>「最遅を照らす」は捨てない</b>（指示書 §0-3）。<c>攻撃力が最大の味方</c> に変えると
 /// ただの汎用強化になり、「遅いから捨てられた駒を主役にする」という軸そのものが消える。</para>
 ///
-/// <para><b>既定は <see cref="SupportOnly"/>（W0 ＝ 第108期からの現行）。</b>
+/// <para><b>既定は <see cref="ActingNow"/>（W2 ＝ 第114期に採用）。</b>
+/// 第108〜113期の既定は <see cref="SupportOnly"/> で、<b>W0 / W1 の経路はノブで残置してある</b>
+/// （測って採らなかった機構は削除しない。オゴ・ゴウ・ヌキ・オノ・<see cref="ThornRule"/> と同じ作法）。
 /// 診断（<c>lit</c>）が3版を1回の実行の中で比べるためだけの窓口で、通常の実行では誰も渡さない
 /// ——<b>書き換え可能な static のノブにしない</b>（<see cref="ColossusRule"/> と同じ判断）。</para>
+///
+/// <para><b>採った理由は「積んだ量」ではなく「振った回数」</b>（第114期）。W2 は灯の到達点を
+/// 18.1 → 6.8（−62%）まで落とすのに、主判定行 <c>灯×薙ぎ (トモ×ドルガ)</c> の帰属は
+/// +46.0 → +54.1pt に上がる——<b>譲った手番が潰れない</b>ほうが、累積より高い。</para>
 /// </summary>
 public enum LitFilter
 {
     /// <summary>
-    /// W0（現行・第108期）。<see cref="UnitState.AcceptsSupport"/> だけを濾す。
+    /// W0（第108〜113期の既定。<b>第114期に <see cref="ActingNow"/> へ移した</b>）。
+    /// <see cref="UnitState.AcceptsSupport"/> だけを濾す。
     /// <b>「灯を受け取れるか」は見ているが「灯を使えるか」は見ていない。</b>
     /// </summary>
     SupportOnly,
@@ -6834,6 +6842,9 @@ public enum LitFilter
     /// <para><b>W1 との差は強さの大小ではない。</b> 毎ターン対象が動きうるので
     /// <c>TaillightSwitches</c>（替）が増え、そのぶん<b>灯の累積が切れる</b>
     /// ——「濾しを厳しくするほど良い」なら W2 が最良になり、そうでないなら累積が効いている証拠になる。</para>
+    ///
+    /// <para><b>第114期に既定へ採った</b>（替 0.34 → 2.84 回/戦・潰れ 0.78 → 0.00 回/戦）。
+    /// <b>累積は切れたほうが強かった</b>——記録は design/PHASE114_ADOPT.md。</para>
     /// </summary>
     ActingNow
 }
