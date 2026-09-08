@@ -206,6 +206,22 @@ public abstract class Trait
     public virtual bool SurrendersTurn => true;
 
     /// <summary>
+    /// <b>その型が「自分の手番では決して攻撃しない」か</b>（第113期）。
+    /// 灯の濾し（<see cref="LitFilter.ActingOnly"/>）が読む<b>静的な札</b>で、盤面は1ビットも見ない。
+    ///
+    /// <para><b><see cref="SurrendersTurn"/> を流用してはいけない。</b> あれが偽なのは
+    /// 不動（カド）・追い打ち（ハギ）・<b>断ち（ナタ）</b>の3つだが、断ちは
+    /// <see cref="SeverRule"/> の既定（<see cref="SeverWait.Swing"/>・第74期）では毎ターン振る
+    /// ——「手番を捨てるかもしれない条件付きの型」であって「決して攻撃しない型」ではない。
+    /// <b>条件付きの側は <see cref="LitFilter.ActingNow"/>（動的な濾し）が拾う。</b></para>
+    ///
+    /// <para>「手番の周期に <see cref="ActionKind.Attack"/> が1つも無い」駒（ノノ・ミオ・ヒヨ・トモ）は
+    /// 特性ではなく <see cref="UnitDef.Actions"/> の側なので、ここではなく
+    /// <see cref="TaillightTrait.AttacksInOwnTurn"/> がまとめて見る。</para>
+    /// </summary>
+    public virtual bool NeverAttacksOwnTurn => false;
+
+    /// <summary>
     /// その駒の <see cref="StatusKeys.IdleTurn"/> が「差し出された本物の空き」か。
     /// 号令（<see cref="RallyTrait"/>）も据え（<see cref="BulwarkTrait"/>）もここを通す。
     ///
@@ -1328,6 +1344,9 @@ public sealed class ImmobileTrait : Trait
 
     // 最初から振らない型なので、差し出したターンとして数えない
     public override bool SurrendersTurn => false;
+
+    // 第113期。**条件が盤面を1つも読まない**（`kind != Attack` だけ）ので、静的に「決して攻撃しない」。
+    public override bool NeverAttacksOwnTurn => true;
 }
 
 /// <summary>棘。受けたダメージの一部を殴り返す。反撃で反撃が起きない制御は engine 側。</summary>
@@ -5966,6 +5985,11 @@ public sealed class PursuerTrait : Trait
     // 割り込みで振るのが役割。自分のターンを差し出したわけではない
     public override bool SurrendersTurn => false;
 
+    // 第113期。**無条件の false** なので、静的に「自分の手番では決して攻撃しない」。
+    // 灯（攻撃力）は**ターン外の追い打ちには乗る**が、譲られた手番は丸ごと潰れる
+    // ——だから濾すのは `LitFilter.ActingOnly` の側だけで、灯そのものは禁じない。
+    public override bool NeverAttacksOwnTurn => true;
+
     public override void OnTurnStart(BattleContext ctx, UnitState self)
     {
         self.SetCounter("pursuit_chain", 0);
@@ -6495,6 +6519,28 @@ public sealed class TaillightTrait : Trait
     /// <summary>1ターンぶんの灯（攻撃力）。</summary>
     public const int Lumen = 5;
 
+    /// <summary>
+    /// <b>その駒は自分の手番で攻撃するか</b>（第113期・<see cref="LitFilter.ActingOnly"/> の判定）。
+    /// <b>駒の定義からだけ引く。戦闘中の状態を1ビットも読まない</b>
+    /// ——読むと <see cref="LitFilter.ActingNow"/>（動的な濾し）との差が消える。
+    ///
+    /// <para>偽になるのは2つ:</para>
+    /// <list type="number">
+    ///   <item>(A) <see cref="Trait.NeverAttacksOwnTurn"/> を持つ型（不動のカド・追い打ちのハギ）</item>
+    ///   <item>(B) <see cref="UnitDef.Actions"/> を持ち、その周期に <see cref="ActionKind.Attack"/> が
+    ///   1つも無い駒（ノノ・ミオ・ヒヨ・トモ）。<b>溜め（<see cref="ActionKind.Charge"/>）は
+    ///   攻撃を含む周期の一部</b>なので、狙撃手・詠唱兵は真になる</item>
+    /// </list>
+    ///
+    /// <para><c>Actions</c> を持たない駒は <c>PerformAttack</c> の従来経路しか通らないので真。</para>
+    /// </summary>
+    public static bool AttacksInOwnTurn(UnitDef d)
+    {
+        foreach (TraitId id in d.Traits)
+            if (TraitCatalog.Get(id).NeverAttacksOwnTurn) return false;
+        return d.Actions is not { Count: > 0 } acts || acts.Any(a => a.Kind == ActionKind.Attack);
+    }
+
     /// <summary>いま灯している味方の <c>InstanceId + 1</c>。0 は未設定。</summary>
     public const string TargetKey = "tomoTarget";
 
@@ -6572,10 +6618,22 @@ public sealed class TaillightTrait : Trait
 
         // 自分を除く生存味方のうち Def.Speed が最小。**同速は Slot 昇順**（PickOne を使わない）。
         // AcceptsSupport は自前で濾す——支援拒否の駒が最も遅い側にいたら、それを飛ばして次へ。
+        //
+        // **第113期に濾しを2つ足した**（<see cref="LitFilter"/>）。**選び方は1ビットも変えていない**
+        // ——足したのはこのループの `continue` 条件だけで、飛ばした先は「次に遅い味方」になる。
+        // **既定（`SupportOnly`）では下の2行はどちらも走らない**（`compare` 305 セル 0 件が検算）。
+        LitFilter filter = ctx.Taillight.Filter;
         UnitState? pick = null;
         foreach (UnitState a in ctx.LivingMembers(self.TeamId))
         {
             if (a == self || !a.AcceptsSupport) continue;
+            // W1（静的）——恒久的に自分の手番で攻撃しない駒。**駒の定義からだけ引く。**
+            if (filter != LitFilter.SupportOnly && !AttacksInOwnTurn(a.Def))
+            { ctx.TallyOf(a).TaillightSkipStatic++; continue; }
+            // W2（動的）——そのターン `CanAct` が偽の駒（のろまの休み番・痺れ）。
+            // **`OnTurnStart` は行動順ループの外側**なので、ここで問うのは「この後の手番で振れるか」。
+            if (filter == LitFilter.ActingNow && !ctx.CanActNow(a))
+            { ctx.TallyOf(a).TaillightSkipNow++; continue; }
             if (pick is null || a.Def.Speed < pick.Def.Speed
                 || (a.Def.Speed == pick.Def.Speed && a.Slot < pick.Slot)) pick = a;
         }
@@ -6733,9 +6791,51 @@ public sealed class TaillightTrait : Trait
 /// <para><b>書き換え可能な static のノブにしないこと。</b> Trait は共有シングルトンで、
 /// <c>layout</c> は戦闘を並列実行する（<see cref="ColossusRule"/> / <see cref="YokeRule"/> と同じ判断）。</para>
 /// </summary>
-public readonly record struct TaillightRule(YieldMode Mode)
+public readonly record struct TaillightRule(YieldMode Mode, LitFilter Filter = LitFilter.SupportOnly)
 {
     public static TaillightRule Default => new(YieldMode.OwnTurnWindow);
+}
+
+/// <summary>
+/// 灯の<b>対象の濾し</b>（第113期）。<b>選び方（自分を除く生存味方のうち速さ最小・同速は席番号昇順）は
+/// 3版とも1ビットも違わない</b>——足すのは候補ループの <c>continue</c> 条件だけで、
+/// 飛ばした先は「次に遅い味方」になる（支援拒否＝<c>AcceptsSupport</c> を飛ばすのと同じ形）。
+///
+/// <para><b>「最遅を照らす」は捨てない</b>（指示書 §0-3）。<c>攻撃力が最大の味方</c> に変えると
+/// ただの汎用強化になり、「遅いから捨てられた駒を主役にする」という軸そのものが消える。</para>
+///
+/// <para><b>既定は <see cref="SupportOnly"/>（W0 ＝ 第108期からの現行）。</b>
+/// 診断（<c>lit</c>）が3版を1回の実行の中で比べるためだけの窓口で、通常の実行では誰も渡さない
+/// ——<b>書き換え可能な static のノブにしない</b>（<see cref="ColossusRule"/> と同じ判断）。</para>
+/// </summary>
+public enum LitFilter
+{
+    /// <summary>
+    /// W0（現行・第108期）。<see cref="UnitState.AcceptsSupport"/> だけを濾す。
+    /// <b>「灯を受け取れるか」は見ているが「灯を使えるか」は見ていない。</b>
+    /// </summary>
+    SupportOnly,
+
+    /// <summary>
+    /// W1（静的な濾し）。<b>恒久的に自分の手番で攻撃しない駒を飛ばす</b>
+    /// ——(A) <see cref="Trait.NeverAttacksOwnTurn"/> を持つ型（不動のカド・追い打ちのハギ）と、
+    /// (B) <see cref="UnitDef.Actions"/> に <see cref="ActionKind.Attack"/> が1つも無い駒
+    /// （ノノ・ミオ・ヒヨ。トモ自身は元から対象外）。
+    ///
+    /// <para><b>判定は駒の定義からだけ引く</b>（<see cref="TaillightTrait.AttacksInOwnTurn"/>）
+    /// ——戦闘中の状態を読むと <see cref="ActingNow"/> との差が消える。</para>
+    /// </summary>
+    ActingOnly,
+
+    /// <summary>
+    /// W2（動的な濾し）。W1 ＋ <b>そのターン <c>CanAct</c> が偽の駒</b>を飛ばす
+    /// （(C) のろまのドルガ＝偶数ターンは動けない。痺れもここで落ちる）。
+    ///
+    /// <para><b>W1 との差は強さの大小ではない。</b> 毎ターン対象が動きうるので
+    /// <c>TaillightSwitches</c>（替）が増え、そのぶん<b>灯の累積が切れる</b>
+    /// ——「濾しを厳しくするほど良い」なら W2 が最良になり、そうでないなら累積が効いている証拠になる。</para>
+    /// </summary>
+    ActingNow
 }
 
 /// <summary>

@@ -711,6 +711,17 @@ public sealed class UnitTally
     public int TaillightRepeat, TaillightNoFoe, TaillightPair;
     public int TaillightStallStun, TaillightStallSlumber, TaillightStallCanAct, TaillightSaw2;
 
+    /// <summary>
+    /// 灯の濾し（第113期・<see cref="LitFilter"/>）に掛かった回数。<b>誰も読んで分岐しない計数で、
+    /// 積むのは「飛ばされた駒」の側の帳簿</b>——自己検査 (b)（濾した集合が Phase 0 の一覧と一致するか）は
+    /// ここを数えて突き合わせる。
+    ///
+    /// <para><c>TaillightSkipStatic</c> W1 の静的な濾し（(A) 恒久的に振らない型 ／ (B) 周期に攻撃が無い）で
+    /// 飛ばされた回数 ／ <c>TaillightSkipNow</c> W2 の動的な濾し（そのターン <c>CanAct</c> が偽）で
+    /// 飛ばされた回数。<b>既定（<see cref="LitFilter.SupportOnly"/>）では両方とも構造的に 0。</b></para>
+    /// </summary>
+    public int TaillightSkipStatic, TaillightSkipNow;
+
     public int Attacks;
 
     /// <summary>

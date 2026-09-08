@@ -58,7 +58,13 @@ public static class Presets
         // カドを前2の中央に置くと巻き込みがヒサ・ムド・セロの3枚へ広がり、成長が速くなる（+7.1pt / 第5波 +19.3）。
         // 旧配置（ムド前1・ヒサ前3）はヒサの隣接をカドだけに絞る形だったが、カドの巻き込み先が2枚に減っていた（reseat 追試）
         // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +7.3pt）
-        ("惨禍×被弾強化",        Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Sero, center: UnitCatalog.Kado, back1: UnitCatalog.Mudo, back3: UnitCatalog.Nono)),
+        //
+        // **第113期に席を差し替えた**（(G14) の波及・`lit reseat`）。5枚組は1枚も動かしていない。
+        // 前3 のセロと後3 のノノを入れ替えた形で、**情報セルが 1 → 2**（第四波が 100.0% → 95.0%）。
+        // 代金は第2〜5波平均 65.4% → 63.5%（**−1.9pt**・帯B でも −2.9pt）で、採否閾値 5.0pt の内側。
+        // **勝率の1位ではない**（追順9位）——(G14) は「勝率表の上で何セル情報を持つか」で席を選ぶ規則で、
+        // `reseat` の「勝つ席を探す」目的とは向きが違う（第50期・第64期）。
+        ("惨禍×被弾強化",        Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Mudo, center: UnitCatalog.Kado, back1: UnitCatalog.Nono, back3: UnitCatalog.Sero)),
         // 惨禍（味方全体の被ダメ5割増）は位置を問わないので、死の密度は隣接に頼らなくても出る。
         // リィカを後1へ下げて生贄をゾト1枚に絞り、中衛はヴェルに。リィカが開幕で自陣を削りすぎる形をやめた（+19.1pt / 第4波 +57.0）。
         // 旧配置（中衛リィカがカドとゾトを削る）は狙いとしては筋が通っていたが、第4波で 25% まで落ちていた（reseat 追試）
@@ -76,7 +82,13 @@ public static class Presets
         ("毒→被弾強化 (グザ×ムド)", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Guza, back3: UnitCatalog.Borg)),
         // ヴィオの吸い上げは全体対象で位置不問。スィドの毒漏れはむしろ燃料なので、中衛に置いて
         // 前後の隣接（後2のミオ）へわざと当てにいく。漏れを利益に反転する側と噛ませた形（+7.8pt / 第5波 +38.8）
-        ("澱み喰い (グザ×ヴィオ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Sid, back1: UnitCatalog.Vio, back3: UnitCatalog.Mio)),
+        //
+        // **第113期に席を差し替えた**（(G14) の波及・`lit reseat`）。5枚組は1枚も動かしていない。
+        // 中央のスィドと後3 のミオを入れ替え、ヴィオを後3 へ回した形で、**情報セルが 1 → 3**
+        // （第二波 100.0% → 91.5% ／ 第三波 99.5% → 95.5% ／ 第五波 0.0% → 3.0%）。
+        // 代金は第2〜5波平均 74.9% → 72.5%（**−2.4pt**・帯B でも −2.4pt）。
+        // **第五波が床から離れたのがいちばん大きい**——0.0% のセルは「差が無い」ではなく「測っていない」（第61期）。
+        ("澱み喰い (グザ×ヴィオ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Mio, back1: UnitCatalog.Sid, back3: UnitCatalog.Vio)),
         // 軋みの割り込み攻撃の追加後に再探索。セロが前1から中のヨミへ逃げ込んでヨミを前へ突き出し(+22)、その場で振らせる。
         // 以後はバサの入れ替えが割り込みを重ね、セロは二段目で後1のバサを突き飛ばして貫きに変わる（layout 1位）
         ("隊列崩し (バサ×ヨミ×セロ)", Formation.Build(front1: UnitCatalog.Gan, front3: UnitCatalog.Sero, center: UnitCatalog.Gald, back1: UnitCatalog.Yomi, back3: UnitCatalog.Basa)),   // 第89期 (P2) で席を更新

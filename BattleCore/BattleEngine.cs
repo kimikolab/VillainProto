@@ -231,6 +231,32 @@ public sealed class BattleContext
         return ok;
     }
 
+    /// <summary>
+    /// 第113期。<b>そのターン、その駒が自分の手番で行動できるか</b>を<b>静かに</b>問う（観測専用）。
+    /// 灯の動的な濾し（<see cref="LitFilter.ActingNow"/>）だけが呼ぶ。
+    ///
+    /// <para><b>答えは行動順ループと1ビットも違わない</b>——同じ種別（<c>CurrentAction</c> の
+    /// 種別。持たない駒は <see cref="ActionKind.Attack"/>）で同じ <c>CanAct</c> を問う。
+    /// <b>印とログを落とす</b>のは、この問い合わせが観測を汚さないため
+    /// （<c>Trait.SurrenderedTurn</c> の呼び出し口と同じ作法・第103期）
+    /// ——のろまと断ちが <c>CanAct</c> の中でログを出す。<b>乱数は1つも引かない。</b></para>
+    ///
+    /// <para><b>痺れ・まどろみはここでは見ない。</b> あの2つは <c>TakeTurnCore</c> が
+    /// <c>CanAct</c> より前に engine 側で弾いており、<b>痺れは弾いた瞬間に 0 へ戻す</b>ので、
+    /// 「そのターン潰れるか」を完全に写すことはできない。<b>写せるのは <c>CanAct</c> の層だけ</b>
+    /// ——濾しの定義（指示書 §0-3 の (C)）もその層に置いてある。</para>
+    /// </summary>
+    public bool CanActNow(UnitState u)
+    {
+        ActionKind kind = u.CurrentAction?.Kind ?? ActionKind.Attack;
+        TraitMark saveMark = Mark; Mark = default;
+        bool wasQuiet = _quiet; _quiet = true;
+        bool ok = true;
+        foreach (Trait t in u.Traits) if (!t.CanAct(this, u, kind)) { ok = false; break; }
+        _quiet = wasQuiet; Mark = saveMark;
+        return ok;
+    }
+
     public void Interrupt(Action body)
     {
         if (InInterrupt) return;
