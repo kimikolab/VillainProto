@@ -691,8 +691,16 @@ public static class Presets
 
         // 傷 × 被弾。棘の傷（`ThornRule`・**第84期の残置**）／巻き込み則／引き取りの3本が繋いでいる。
         // **§4 の再判定2件はどちらもこの行で `compare` 差分を取る**——カド（棘の傷の書き手）と
-        // ノノ（繕い＝`MendRule` の読み手）を同席させ、終端にハリ（縫い・両側読み）を置いてある。
-        ("傷×被弾 (カド×ハリ×ノノ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kado, center: UnitCatalog.Nono, back1: UnitCatalog.Hari, back3: UnitCatalog.Egu)),
+        // ノノ（繕い＝`MendRule` の読み手）を同席させてある。
+        //
+        // **第111期にハリ（縫い）をノミ（刻み）へ差し替えた。** ハリは第108期に
+        // `UnitCatalog.All` から外れたので、**編成に選べない駒が交差帯だけに生き残っていた**
+        // （第108期 §B-2 の持ち越し）。**行が測る交差（傷 × 被弾）は変えていない**——
+        // 差し替えたのは終端の1枚だけで、席（後1）も他の 11 行も触っていない。
+        // ノミを採った理由は供給側で、**傷の書き手がカド（被弾ごと）1本から刻み（毎ターン）を足した2本になる**
+        // ——エグ（抉り）とノノ（繕い）の読み手が両方鳴る。キリは打点が常に 1 で第92期の規則2
+        // （接続子が両方とも出力ゼロの組は入れない）に触れ、ナタは読み手が3枚になって供給が細る。
+        ("傷×被弾 (カド×ノミ×ノノ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kado, center: UnitCatalog.Nono, back1: UnitCatalog.Nomi, back3: UnitCatalog.Egu)),
 
         // 弱体 × 破片。引き受け（ウケ）が隣の弱体を破片に変える。供給はネル（呪詛の味方漏れ・開戦時）と
         // ドハ（分かちのなまり・被弾ごと）で、**周期の違う2本**を並べてある（規則5）。ウケは中央（隣接4）。
