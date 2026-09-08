@@ -1313,10 +1313,12 @@ public static class UnitCatalog
     /// ——<see cref="Hane"/> と同じ判断）。単体は <c>Actions = [Skill]</c> なので
     /// <b>実質使われない</b>（<c>PerformAttack</c> を一度も通らない）。</para>
     ///
-    /// <para><b>第110期でもまだ盤面に出していない</b>——<c>Presets.Compare</c> にも <c>Presets.Cross</c> にも
-    /// 入っていない。「行が変わったせい」と「駒が変わったせい」を切り分けるため（第109期の指示書 §0）。
-    /// 機構は診断 <c>taillight</c> / <c>tomo</c> / <c>tomo yield</c> のローカル台でだけ走る。
-    /// <b>盤面に出すかは第111期に決める。</b></para>
+    /// <para><b>第111期に盤面へ出した</b>——<c>Presets.Compare</c> の
+    /// <c>灯×薙ぎ (トモ×ドルガ)</c>（`死軸×ホタ (ゾト×熾)` と差し替え。行数は 61 のまま）。
+    /// 第108〜110期は「行が変わったせい」と「駒が変わったせい」を切り分けるために
+    /// 盤面へ出さず、機構は診断 <c>taillight</c> / <c>tomo</c> / <c>tomo yield</c> の
+    /// ローカル台でだけ走らせていた。<b>灯の対象がドルガに一意に決まる台</b>を採ってある
+    /// ——トモを除いて最も遅いのは速4のガルドだが <see cref="TraitId.Stoic"/> で灯の候補から外れる。</para>
     /// </summary>
     public static readonly UnitDef Tomo = new()
     {
