@@ -51002,6 +51002,649 @@ if (focusId == "lit")
     return;
 }
 
+// =====================================================================================
+// reader モード（第115期）—— **強化の2枚目の読み手**。
+//
+// 起点は第65期の積み残し1'——**強化は供給 16（窓口 7 + 自己強化 9）対 読み手 1 の通貨で、
+// 偏っているのは供給の内訳ではなく読み手の側。** `AtkBonus` を読んで分岐する駒は
+// 逆しま（ウツ）1枚だけで、しかも**符号しか読まない**。
+//
+// 測る版は R1（二値の鍵）——攻撃力の補正が閾値以上なら単体の一撃が薙ぎになる。
+// **engine に足したのは規則の受け渡しと計数だけ**で、判定は駒の特性の中にある
+// （軋みが響く＝第66期と同じ形）。**既定は不活性。**
+//
+//     dotnet run --project BattleSim -c Release 0 reader phase0   # 表P（(B) の索引照合・候補の選定）。**戦闘0回**
+//     dotnet run --project BattleSim -c Release 0 reader supply   # 選定規則 (b)（強化の受け手の実測）だけ
+//     dotnet run --project BattleSim -c Release 0 reader run      # 表A〜D（4台 × 2版）
+//     dotnet run --project BattleSim -c Release 0 reader check    # 自己検査
+//
+// **既存の診断は1文字も書き換えていない。`Presets` も `UnitCatalog` も1行も触っていない**
+// ——台は診断のローカル（`gradient` / `aim` / `tomo` と同じ扱い）。
+if (focusId == "reader")
+{
+    string rdMode = args.Length > 2 ? args[2] : "phase0";
+    IReadOnlyList<EnemyCatalog.Stage> rdStages = EnemyCatalog.Stages;
+    const int RdSeeds = 200;        // 帯A。`compare` と揃える（規約 (G14)）
+    const int RdSupplySeeds = 50;   // (b) は「1度でも受けているか」だけを見るので浅くてよい
+    const int RdThreshold = 5;      // **掃引しない**（§0-2）。0（不活性）と 5 の2点だけ
+
+    // --- 読み手の版。**V0 は「特性は載っているが規則が不活性」＝現行のバンと1ビットも違わない。**
+    var rdVers = new (string Tag, ReaderRule Rule)[]
+    {
+        ("V0 現行",     ReaderRule.Default),          // Threshold 0 ＝ ModifyPattern が素通り
+        ("V1 積み過ぎ", new ReaderRule(RdThreshold)),
+    };
+
+    // 読み手（据えのバン ＋ 積み過ぎ）。**`UnitCatalog` には載せない。**
+    UnitDef rdReader = new()
+    {
+        Id = UnitCatalog.Ban.Id,
+        Name = UnitCatalog.Ban.Name,
+        MaxHp = UnitCatalog.Ban.MaxHp,
+        Attack = UnitCatalog.Ban.Attack,
+        Speed = UnitCatalog.Ban.Speed,
+        Pattern = UnitCatalog.Ban.Pattern,
+        Traits = new[] { TraitId.Bulwark, TraitId.Overload },
+        PlusText = UnitCatalog.Ban.PlusText,
+        MinusText = UnitCatalog.Ban.MinusText,
+        Flavor = UnitCatalog.Ban.Flavor
+    };
+
+    // ------------------------------------------------------------------------------
+    // 台（§3-1）。**席は4台とも同じ**——読み手の席を動かすと「供給の効き」と「席の効き」が混ざる。
+    //   前1 = 供給者（台4 は空席）／前3 ドルガ（総攻の土台）／中央 ガルド（壁）
+    //   後1 = 読み手（**レーン0 で供給者の後ろ** ＝ 巨躯の被覆に入る）／後3 エグ
+    // 埋め草3枚は**強化も弱体も1点も撒かない**3枚を選んである。
+    // **読み手が味方でいちばん遅い**（速2）ので、尾灯の「自分を除いて最も遅い味方」は必ず読み手。
+    // ------------------------------------------------------------------------------
+    Formation RdBench(UnitDef? supplier, UnitDef? center = null) => Formation.Build(
+        front1: supplier, front3: UnitCatalog.Dolga, center: center ?? UnitCatalog.Gald,
+        back1: rdReader, back3: UnitCatalog.Egu);
+
+    var rdBenches = new (string Tag, UnitDef? Supplier, UnitDef? Center, string Why)[]
+    {
+        ("台1 ガン",   UnitCatalog.Gan,  null,             "号令開戦（全体・到着 0T）。**早く広く届くが 1 回きり**"),
+        ("台2 ゴルム", UnitCatalog.Golm, null,             "吐き戻し（庇った相手）。**供給量が最大 5.95** だが遅い"),
+        ("台3 トモ",   UnitCatalog.Tomo, null,             "尾灯（最も遅い味方）。**1体に集中し、第114期に動的**"),
+        ("台4 なし",   null,             null,             "**陰性対照**。強化が 0 の台で機構が1ビットも動かないこと"),
+        // 台1 の交絡を切るための対照（第115期に測って足した）。ガルド（`Stoic`）は
+        // **味方全体に配られる強化を自分に乗せず隣接する味方へ流す**ので、中央に置くと
+        // 号令の開戦時 +4 が読み手に**二重に**届く。中央をウケ（`Bear` は弱体しか横取りしない）に
+        // 差し替えると、同じ供給者・同じ席のまま**流し込みだけ**が消える。
+        ("台1' ガン中央ウケ", UnitCatalog.Gan, UnitCatalog.Uke,
+                              "**台1 の交絡の切り分け**。ガルドの `Stoic` による二重配布だけを消す"),
+    };
+    const int RdNegative = 3;      // 陰性対照の台の番号
+    int[] rdMain = { 0, 1, 2 };    // 主判定に使う台（§3-3 の「台1〜3」）
+
+    // 1戦ぶんの観測。
+    var rdRows = new List<RdRow>();
+
+    void RdRunAll(int seeds)
+    {
+        rdRows.Clear();
+        for (int b = 0; b < rdBenches.Length; b++)
+        {
+            Formation f = RdBench(rdBenches[b].Supplier, rdBenches[b].Center);
+            for (int v = 0; v < rdVers.Length; v++)
+                for (int w = 0; w < rdStages.Count; w++)
+                    for (int seed = 0; seed < seeds; seed++)
+                    {
+                        BattleResult r = BattleEngine.Run(f, rdStages[w].Enemy, seed, verbose: false,
+                                                          reader: rdVers[v].Rule);
+                        UnitTally t = r.TallyByUnit.TryGetValue(rdReader.Id, out UnitTally? tt) ? tt : new UnitTally();
+                        int team = 0;
+                        foreach ((int _, UnitDef d) in f.Occupied())
+                            if (r.TallyByUnit.TryGetValue(d.Id, out UnitTally? mt)) team += mt.DamageToEnemy;
+                        rdRows.Add(new RdRow
+                        {
+                            Bench = b, Ver = v, Wave = w + 1, Won = r.PlayerWon, Turns = r.Turns,
+                            Alive = t.ReaderTurns, Over = t.ReaderOverTurns, FirstOver = t.ReaderFirstOverTurn,
+                            Swings = t.ReaderSwings, Sweeps = t.ReaderSweeps, OverSwung = t.ReaderOverTurnsSwung,
+                            BonusSum = t.ReaderBonusSum, BonusMax = t.ReaderBonusMax,
+                            Probe = t.ReaderProbeTurns?.ToArray() ?? new int[UnitTally.ReaderProbes.Length],
+                            Dmg = t.DamageToEnemy, TeamDmg = team, Whet = r.WhetTotal
+                        });
+                    }
+        }
+    }
+
+    // 第2〜5波だけを分母にする（規約 (G10)）。第一波は全行が単発で 100% 勝つ教習波。
+    List<RdRow> RdSel(int b, int v, bool all = false)
+        => rdRows.Where(x => x.Bench == b && x.Ver == v && (all || x.Wave >= 2)).ToList();
+    List<RdRow> RdSelW(int b, int v, int w)
+        => rdRows.Where(x => x.Bench == b && x.Ver == v && x.Wave == w).ToList();
+    static double RdWin(List<RdRow> xs) => xs.Count == 0 ? 0 : xs.Count(x => x.Won) * 100.0 / xs.Count;
+    static double RdAvg(List<RdRow> xs, Func<RdRow, double> f) => xs.Count == 0 ? 0 : xs.Average(f);
+    // 門1（到達率）= 閾値以上だったターン数 ÷ 生きていたターン数。**戦ごとに割ってから平均する**
+    // （決着の長さが版で動くので、総和どうしを割ると長い戦に重みが寄る）。
+    static double RdGate1(List<RdRow> xs) => xs.Count == 0 ? 0
+        : xs.Average(x => x.Alive == 0 ? 0.0 : (double)x.Over / x.Alive);
+
+    // リポジトリ直下（`audit` と同じ walk-up）。
+    static string? RdRoot()
+    {
+        string? root = Directory.GetCurrentDirectory();
+        while (root != null && !File.Exists(Path.Combine(root, "docs", "balance.md")))
+            root = Path.GetDirectoryName(root);
+        return root;
+    }
+
+    // ------------------------------------------------------------------------------
+    // (B) 索引の穴（§2）。**`CLAUDE.md` の `→ LESSONS_*.md` の全参照を抜き、
+    // その期の節がその文書に実在するかを機械照合する。戦闘0回。**
+    // ------------------------------------------------------------------------------
+    static (int Refs, List<(int Phase, string File, List<int> Lines)> Missing) RdIndexAudit()
+    {
+        var missing = new List<(int, string, List<int>)>();
+        string? root = RdRoot();
+        if (root == null) return (0, missing);
+        var secs = new Dictionary<string, HashSet<int>>(StringComparer.Ordinal);
+        foreach (string path in Directory.GetFiles(Path.Combine(root, "design"), "LESSONS_*.md"))
+        {
+            var set = new HashSet<int>();
+            foreach (string line in File.ReadAllLines(path))
+            {
+                var m = System.Text.RegularExpressions.Regex.Match(line, @"^###\s*第(\d+)期");
+                if (m.Success) set.Add(int.Parse(m.Groups[1].Value));
+            }
+            secs[Path.GetFileName(path)] = set;
+        }
+        var bag = new Dictionary<(int, string), List<int>>();
+        string[] claude = File.ReadAllLines(Path.Combine(root, "CLAUDE.md"));
+        int refs = 0;
+        for (int i = 0; i < claude.Length; i++)
+        {
+            var mf = System.Text.RegularExpressions.Regex.Match(claude[i], @"→\s*(LESSONS_\S+\.md)");
+            if (!mf.Success) continue;
+            string file = mf.Groups[1].Value;
+            foreach (System.Text.RegularExpressions.Match mp in
+                     System.Text.RegularExpressions.Regex.Matches(claude[i], @"第(\d+)期"))
+            {
+                int ph = int.Parse(mp.Groups[1].Value);
+                refs++;
+                if (secs.TryGetValue(file, out HashSet<int>? set) && set.Contains(ph)) continue;
+                var key = (ph, file);
+                if (!bag.TryGetValue(key, out List<int>? ls)) bag[key] = ls = new List<int>();
+                if (!ls.Contains(i + 1)) ls.Add(i + 1);
+            }
+        }
+        foreach (var kv in bag.OrderBy(k => k.Key.Item1))
+            missing.Add((kv.Key.Item1, kv.Key.Item2, kv.Value));
+        return (refs, missing);
+    }
+
+    // 特性が `ModifyAttack` / `ModifyPattern` を上書きしているか（選定規則 (d)）。**反射で数える。**
+    static bool RdOverrides(TraitId id, string name)
+        => TraitCatalog.Get(id).GetType().GetMethod(name)?.DeclaringType != typeof(Trait);
+
+    // 自己強化（`AtkBonus` を自分で足す特性）の全数。**手で写さず `Traits.cs` を走査する**
+    // （第94期に「手で写した表の誤り 29 件」を出した反省。`derive` と同じ作法）。
+    static HashSet<TraitId> RdSelfBuffTraits()
+    {
+        var found = new HashSet<TraitId>();
+        string? root = RdRoot();
+        if (root == null) return found;
+        string path = Path.Combine(root, "BattleCore", "Traits.cs");
+        if (!File.Exists(path)) return found;
+        // クラス名 -> TraitId。**抽象な基底クラス（`RedirectGainTrait`）にも当たるように継承を辿る**
+        // ——庇う／殉教はそこに `self.AtkBonus +=` を持っている。
+        var byClass = new Dictionary<string, List<TraitId>>(StringComparer.Ordinal);
+        foreach (TraitId id in Enum.GetValues<TraitId>())
+            for (Type? ty = TraitCatalog.Get(id).GetType(); ty != null && ty != typeof(Trait); ty = ty.BaseType)
+            {
+                if (!byClass.TryGetValue(ty.Name, out List<TraitId>? ls)) byClass[ty.Name] = ls = new List<TraitId>();
+                ls.Add(id);
+            }
+        string cur = "";
+        foreach (string line in File.ReadAllLines(path))
+        {
+            var mc = System.Text.RegularExpressions.Regex.Match(line, @"class\s+(\w+Trait)\b");
+            if (mc.Success) cur = mc.Groups[1].Value;
+            if (line.TrimStart().StartsWith("///")) continue;
+            // **`self.` に限る**——尾灯の消灯（`prev.AtkBonus -= lit`）は他人の灯を引き上げる動作で、
+            // 自己強化ではない（第108期。横取りに晒さないために `Dull` も通していない）。
+            if (!System.Text.RegularExpressions.Regex.IsMatch(line, @"\bself\.AtkBonus\s*[-+]=")) continue;
+            if (byClass.TryGetValue(cur, out List<TraitId>? ids)) foreach (TraitId id2 in ids) found.Add(id2);
+        }
+        return found;
+    }
+
+    // `docs/balance.md` の現行値（**戦闘不要**）。行名 -> 5波のセル。
+    static Dictionary<string, double[]> RdBalance(int waves)
+    {
+        var map = new Dictionary<string, double[]>(StringComparer.Ordinal);
+        string? root = RdRoot();
+        if (root == null) return map;
+        foreach (string line in File.ReadAllLines(Path.Combine(root, "docs", "balance.md")))
+        {
+            if (!line.StartsWith("| ") || !line.Contains('%')) continue;
+            var parts = line.Split('|', StringSplitOptions.None).Select(p => p.Trim()).ToArray();
+            if (parts.Length < 8) continue;
+            var v = new List<double>();
+            for (int i = 2; i < parts.Length - 1; i++)
+                if (parts[i].EndsWith("%") && double.TryParse(parts[i].TrimEnd('%'), out double d)) v.Add(d);
+            if (v.Count == waves) map[parts[1]] = v.ToArray();
+        }
+        return map;
+    }
+
+    // ------------------------------------------------------------------------------
+    // phase0（§5 の表P）。**戦闘0回。**
+    // ------------------------------------------------------------------------------
+    if (rdMode == "phase0")
+    {
+        Console.WriteLine("# 第115期 Phase 0 —— 強化の2枚目の読み手（+ 索引の穴）");
+        Console.WriteLine();
+        Console.WriteLine("**戦闘は1回も回していない。** 盤面も `Presets` も `UnitCatalog` も1行も動かしていない。");
+
+        // --- 表P-1: (B) の索引照合
+        Console.WriteLine();
+        Console.WriteLine("## 表P-1. (B) 索引の穴（`CLAUDE.md` → `design/LESSONS_*.md`）");
+        Console.WriteLine();
+        var (refs, missing) = RdIndexAudit();
+        Console.WriteLine($"`CLAUDE.md` のコマンド索引にある `→ LESSONS_*.md` の参照を「行 × 期」で数えると **{refs} 件**。");
+        Console.WriteLine($"そのうち**参照先にその期の節が実在しないもの**が **{missing.Count} 件**。");
+        Console.WriteLine();
+        Console.WriteLine("| 期 | 参照先 | `CLAUDE.md` の行 |");
+        Console.WriteLine("|---|---|---|");
+        foreach (var (ph, file, lines) in missing)
+            Console.WriteLine($"| 第{ph}期 | `{file}` | {string.Join(", ", lines.Select(l => "L" + l))} |");
+        Console.WriteLine();
+        Console.WriteLine("**B-3 で埋めるのは第65期の1件だけ**（指示書 §2）。"
+            + $"残り **{Math.Max(0, missing.Count - 1)} 件**は列挙するだけで別の期へ送る（B-4）。");
+
+        // --- 表P-2: 窓口の再確認
+        Console.WriteLine();
+        Console.WriteLine("## 表P-2. 強化の窓口の再確認（§0-1）");
+        Console.WriteLine();
+        Console.WriteLine($"`WhetRoute` の経路数（`Other` を含む）: **{Enum.GetValues<WhetRoute>().Length}**");
+        Console.WriteLine();
+        Console.WriteLine("| # | 経路 |");
+        Console.WriteLine("|--:|---|");
+        int rn = 0;
+        foreach (WhetRoute wr in Enum.GetValues<WhetRoute>())
+            Console.WriteLine($"| {++rn} | `{wr}` |");
+        var selfBuff = RdSelfBuffTraits();
+        Console.WriteLine();
+        Console.WriteLine($"`Traits.cs` を走査して見つけた**自己強化（`AtkBonus` を特性が直に動かす）の札**: "
+            + $"**{selfBuff.Count} 本** — "
+            + string.Join(" / ", selfBuff.OrderBy(x => x.ToString(), StringComparer.Ordinal).Select(x => "`" + x + "`")));
+        Console.WriteLine();
+        Console.WriteLine("> **手で写していない**（第94期の反省）。`derive` と同じく原文を走査して数えている。");
+
+        // --- 表P-3: 候補の機械的な絞り込み
+        Console.WriteLine();
+        Console.WriteLine("## 表P-3. 載せる駒の候補（§1-3 の規則を機械で当てる）");
+        Console.WriteLine();
+        Console.WriteLine("規則は4つ。**(a)(d) は反射で、(e) は原文の走査で当てる。(c) だけが判断。**");
+        Console.WriteLine();
+        Console.WriteLine("    (a) `AttackReads` を通る駒       … `Actions` が Skill だけの駒／`Immobile` を除く");
+        Console.WriteLine("    (d) `ModifyAttack` / `ModifyPattern` を既に持っていない");
+        Console.WriteLine("    (e) **自己強化を1本も持たない**   … 第66期の「自分で作れる値を条件にすると");
+        Console.WriteLine("                                        条件の粒度はその駒自身の上昇量が決める」");
+        Console.WriteLine("    (f) 攻撃型が**単体**             … R1 は単体 → 薙ぎなので、既に薙ぎ／貫きの駒は対象外");
+        Console.WriteLine();
+        Console.WriteLine("| 駒 | 速 | 攻 | 型 | (a) | (d) | (e) | (f) | 残る |");
+        Console.WriteLine("|---|--:|--:|---|:-:|:-:|:-:|:-:|:-:|");
+        var survivors = new List<UnitDef>();
+        foreach (UnitDef d in UnitCatalog.All.OrderBy(x => x.Speed).ThenBy(x => x.Id, StringComparer.Ordinal))
+        {
+            bool a = !(d.Actions is { Count: > 0 } && d.Actions.All(x => x.Kind == ActionKind.Skill))
+                     && !d.Traits.Contains(TraitId.Immobile);
+            bool dd = !d.Traits.Any(t => RdOverrides(t, "ModifyAttack") || RdOverrides(t, "ModifyPattern"));
+            bool e = !d.Traits.Any(t => selfBuff.Contains(t));
+            bool f = d.Pattern == AttackPattern.Single;
+            bool keep = a && dd && e && f;
+            if (keep) survivors.Add(d);
+            Console.WriteLine($"| {d.Name} | {d.Speed} | {d.Attack} | {d.Pattern} | {(a ? "○" : "×")} | {(dd ? "○" : "×")} "
+                + $"| {(e ? "○" : "×")} | {(f ? "○" : "×")} | {(keep ? "**○**" : "-")} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**残った駒 {survivors.Count} / {UnitCatalog.All.Count} 枚。**");
+
+        // --- 表P-4: 候補3枚
+        Console.WriteLine();
+        Console.WriteLine("## 表P-4. 候補3枚と、選んだ理由・落とした理由（(c) は判断）");
+        Console.WriteLine();
+        Console.WriteLine("| | 駒 | 速 | 攻 | 既存の1文 | 判断 |");
+        Console.WriteLine("|---|---|--:|--:|---|---|");
+        Console.WriteLine("| **採** | 据えのバン | 2 | 5 | 「動かない者を守ることしかできない。動く者は守れない」 | "
+            + "**ロスターで最も遅い枠**（尾灯の「自分を除いて最も遅い味方」に構造的に当たる）。"
+            + "守る駒が押し付けられた力で初めて盤面を割る＝**主題の反転が1文で説明できる** |");
+        Console.WriteLine("| 落 | 責め苦のシガ | 3 | 9 | 「縛られた的しか殴れない臆病者。だからこそ、縛る者の隣でだけ牙になる」 | "
+            + "**既に条件付きで別物になる駒**。二つ目の条件を足すと**駒が2文でなく3文で説明される**（(c) の趣旨に反する） |");
+        Console.WriteLine("| 落 | 引き受けのウケ | 5 | 6 | 「背負った分だけ自分の腕は落ちる」 | "
+            + "面白いが、**`AtkBonus` が構造的に負へ振れる**ので閾値に届かない恐れが大きい"
+            + "（門1 が 0 になれば鎖が繋がらず、機構ではなく台の失敗として落ちる） |");
+        Console.WriteLine();
+        Console.WriteLine("> **ウツには載せない**（符号読みと二値読みが1枚に重なる。指示書 §1-3）。");
+
+        // --- 表P-5: 台の紙
+        Console.WriteLine();
+        Console.WriteLine("## 表P-5. 台の紙（§3-1・**戦闘0回**）");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 供給 | 5枚の総攻 | 読み手が最遅か | 狙い |");
+        Console.WriteLine("|---|---|--:|:-:|---|");
+        foreach (var (tag, sup, ctr, why) in rdBenches)
+        {
+            Formation f = RdBench(sup, ctr);
+            int atk = f.Occupied().Sum(o => o.Def.Attack);
+            bool slowest = f.Occupied().Where(o => o.Def.Id != rdReader.Id)
+                            .All(o => o.Def.Speed > rdReader.Speed);
+            Console.WriteLine($"| {tag} | {(sup?.Name ?? "—")} | {atk} | {(slowest ? "○" : "×")} | {why} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("**席は4台とも同じ**（前1 供給者 / 前3 ドルガ / 中央 ガルド / 後1 読み手 / 後3 エグ）。");
+        Console.WriteLine("読み手を**後1**に置くのは、**レーン0 で供給者の真後ろ**＝巨躯（ゴルム）の被覆に入るため。");
+        Console.WriteLine("台4 は前1 を**空席**にしてある——供給者を別の駒に差し替えると、"
+            + "**陰性対照が「供給者なし」ではなく「別の駒あり」になる。**");
+
+        Console.WriteLine();
+        Console.WriteLine("## 予測（§3-4・**測る前に書いてある**）");
+        Console.WriteLine();
+        Console.WriteLine("1. 台3（尾灯）の門1 が最も高い。ただし第114期の動的な濾しで**到達は間欠する**");
+        Console.WriteLine("2. 台2（吐き戻し）は量が最大なのに門1 は低い（受け手が散る）");
+        Console.WriteLine("3. 台1（号令開戦）は到着 0T だが **+4 の1回きりで閾値 5 に届かない**");
+        Console.WriteLine("4. Q2 は通る。Q3 は台3 だけで通る");
+        Console.WriteLine("5. 空振りが門2 の 2 割以上");
+        return;
+    }
+
+    // ------------------------------------------------------------------------------
+    // supply（選定規則 (b)）。**`compare` 61 行で「その駒が強化を1度でも受けているか」を測る。**
+    // ------------------------------------------------------------------------------
+    if (rdMode == "supply")
+    {
+        var builds = CompareBuilds();
+        var got = new Dictionary<string, long>(StringComparer.Ordinal);
+        var rows = new Dictionary<string, int>(StringComparer.Ordinal);
+        int battles = 0;
+        foreach (var (name, f) in builds)
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (EnemyCatalog.Stage st in rdStages)
+                for (int seed = 0; seed < RdSupplySeeds; seed++)
+                {
+                    BattleResult r = BattleEngine.Run(f, st.Enemy, seed, verbose: false);
+                    battles++;
+                    foreach (IReadOnlyDictionary<string, int> to in r.WhetToByRoute)
+                        foreach (var kv in to)
+                        {
+                            got[kv.Key] = got.TryGetValue(kv.Key, out long had) ? had + kv.Value : kv.Value;
+                            seen.Add(kv.Key);
+                        }
+                }
+            foreach (string id in seen) rows[id] = rows.TryGetValue(id, out int n) ? n + 1 : 1;
+        }
+        Console.WriteLine("# 第115期 (b) —— 強化の受け手の実測（選定規則 (b) の分母）");
+        Console.WriteLine();
+        Console.WriteLine($"`compare` {builds.Count()} 行 × {rdStages.Count} 波 × seed 0..{RdSupplySeeds - 1} "
+            + $"= **{battles:N0} 戦**。**`WhetTo` を経路を問わず合算**した。");
+        Console.WriteLine();
+        Console.WriteLine("| 順 | 駒 | 受けた総量 | 受けた行数 |");
+        Console.WriteLine("|--:|---|--:|--:|");
+        int i2 = 0;
+        foreach (var kv in got.OrderByDescending(x => x.Value))
+        {
+            UnitDef? d = UnitCatalog.All.FirstOrDefault(x => x.Id == kv.Key);
+            Console.WriteLine($"| {++i2} | {(d?.Name ?? kv.Key)} | {kv.Value:N0} | {(rows.TryGetValue(kv.Key, out int n2) ? n2 : 0)} |");
+        }
+        Console.WriteLine();
+        foreach (string id in new[] { UnitCatalog.Ban.Id, UnitCatalog.Shiga.Id, UnitCatalog.Uke.Id })
+        {
+            UnitDef? d = UnitCatalog.All.FirstOrDefault(x => x.Id == id);
+            bool ok = got.TryGetValue(id, out long v) && v > 0;
+            Console.WriteLine($"- **(b) {d?.Name ?? id}**: 受けた総量 {(got.TryGetValue(id, out long v2) ? v2 : 0):N0} / "
+                + $"行数 {(rows.TryGetValue(id, out int n3) ? n3 : 0)} → {(ok ? "**○**" : "**×**")}");
+        }
+        return;
+    }
+
+    // ------------------------------------------------------------------------------
+    // run（表A〜D）。
+    // ------------------------------------------------------------------------------
+    if (rdMode == "run")
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        RdRunAll(RdSeeds);
+        Console.WriteLine("# 第115期 —— 積み過ぎ（強化の2枚目の読み手）の測定");
+        Console.WriteLine();
+        Console.WriteLine($"{rdBenches.Length}台 × {rdVers.Length}版 × {rdStages.Count}波 × seed 0..{RdSeeds - 1} = **{rdRows.Count:N0} 戦**"
+            + $"（{sw.Elapsed.TotalSeconds:F1} 秒）。**分母は第2〜5波**（規約 (G10)）。");
+        Console.WriteLine();
+        Console.WriteLine($"閾値は **`AtkBonus` >= {RdThreshold}** で固定。**掃引しない**（§0-2）。");
+
+        // 表A. 門
+        Console.WriteLine();
+        Console.WriteLine("## 表A. 門（版 × 台・第2〜5波）");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 版 | 勝率 | 決着T | 門1 到達率 | 初到達T | 門2 薙ぎ/戦 | 振り/戦 | 空振り/戦 | 門3 読み手の与ダメ | 味方総与ダメ | 強化/戦 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        for (int b = 0; b < rdBenches.Length; b++)
+            for (int v = 0; v < rdVers.Length; v++)
+            {
+                var xs = RdSel(b, v);
+                var reached = xs.Where(x => x.FirstOver > 0).ToList();
+                Console.WriteLine($"| {rdBenches[b].Tag} | {rdVers[v].Tag} | {RdWin(xs):F1}% | {RdAvg(xs, x => x.Turns):F2} "
+                    + $"| {RdGate1(xs):F3} | {(reached.Count == 0 ? "—" : RdAvg(reached, x => x.FirstOver).ToString("F2"))} "
+                    + $"| {RdAvg(xs, x => x.Sweeps):F2} | {RdAvg(xs, x => x.Swings):F2} "
+                    + $"| {RdAvg(xs, x => x.Over - x.OverSwung):F2} "
+                    + $"| {RdAvg(xs, x => x.Dmg):F1} | {RdAvg(xs, x => x.TeamDmg):F1} | {RdAvg(xs, x => x.Whet):F2} |");
+            }
+
+        // 表A'. 波別（V1）
+        Console.WriteLine();
+        Console.WriteLine("## 表A'. 波別（V1・門1 / 門2 / 勝率。括弧は V0 の勝率）");
+        Console.WriteLine();
+        Console.WriteLine("| 台 |" + string.Concat(Enumerable.Range(1, rdStages.Count).Select(w => $" 第{w}波 |")));
+        Console.WriteLine("|---|" + string.Concat(rdStages.Select(_ => "---:|")));
+        for (int b = 0; b < rdBenches.Length; b++)
+        {
+            var cells = new List<string>();
+            for (int w = 1; w <= rdStages.Count; w++)
+            {
+                var xs = RdSelW(b, 1, w);
+                cells.Add($" {RdGate1(xs):F2} / {RdAvg(xs, x => x.Sweeps):F2} / {RdWin(xs):F0}% ({RdWin(RdSelW(b, 0, w)):F0}%) |");
+            }
+            Console.WriteLine($"| {rdBenches[b].Tag} |" + string.Concat(cells));
+        }
+
+        // 表B. 帰属
+        Console.WriteLine();
+        Console.WriteLine("## 表B. 帰属（V1 − V0・第2〜5波平均）");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | V0 勝率 | V1 勝率 | 帰属 | 第2波 | 第3波 | 第4波 | 第5波 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|");
+        var attrib = new double[rdBenches.Length];
+        for (int b = 0; b < rdBenches.Length; b++)
+        {
+            double w0 = RdWin(RdSel(b, 0)), w1 = RdWin(RdSel(b, 1));
+            attrib[b] = w1 - w0;
+            var per = new List<string>();
+            for (int w = 2; w <= rdStages.Count; w++)
+                per.Add($" {RdWin(RdSelW(b, 1, w)) - RdWin(RdSelW(b, 0, w)):+0.0;-0.0;0.0} |");
+            Console.WriteLine($"| {rdBenches[b].Tag} | {w0:F1}% | {w1:F1}% | **{attrib[b]:+0.0;-0.0;0.0}pt** |"
+                + string.Concat(per));
+        }
+
+        // 表C. AtkBonus の分布
+        Console.WriteLine();
+        Console.WriteLine("## 表C. `AtkBonus` の分布（V0・第2〜5波）と閾値 5 の位置");
+        Console.WriteLine();
+        Console.WriteLine("格子ごとの**到達ターン率**（そのターン頭に `AtkBonus` がその値以上だった割合）。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 平均 `AtkBonus` | 最大 |" + string.Concat(UnitTally.ReaderProbes.Select(p => $" ≥{p} |")));
+        Console.WriteLine("|---|--:|--:|" + string.Concat(UnitTally.ReaderProbes.Select(_ => "---:|")));
+        for (int b = 0; b < rdBenches.Length; b++)
+        {
+            var xs = RdSel(b, 0);
+            var cells = new List<string>();
+            for (int k = 0; k < UnitTally.ReaderProbes.Length; k++)
+            {
+                int kk = k;
+                cells.Add($" {(xs.Count == 0 ? 0 : xs.Average(x => x.Alive == 0 ? 0.0 : (double)x.Probe[kk] / x.Alive)):F3} |");
+            }
+            Console.WriteLine($"| {rdBenches[b].Tag} | {(xs.Count == 0 ? 0 : xs.Average(x => x.Alive == 0 ? 0.0 : (double)x.BonusSum / x.Alive)):F2} "
+                + $"| {RdAvg(xs, x => x.BonusMax):F1} |" + string.Concat(cells));
+        }
+        Console.WriteLine();
+        Console.WriteLine("> **閾値 5 は「灯 1 回」「号令開戦 +4 では届かない」の境目に置いてある。**"
+            + "分布のどこに来るかは上の `≥1` と `≥5` の差で読む。");
+
+        // 表D. 陰性対照
+        Console.WriteLine();
+        Console.WriteLine("## 表D. 陰性対照（台4・Q4）");
+        Console.WriteLine();
+        int diff = 0;
+        for (int w = 1; w <= rdStages.Count; w++)
+        {
+            var a = RdSelW(RdNegative, 0, w); var c = RdSelW(RdNegative, 1, w);
+            for (int i = 0; i < a.Count && i < c.Count; i++)
+                if (a[i].Won != c[i].Won || a[i].Turns != c[i].Turns) diff++;
+        }
+        Console.WriteLine($"台4（供給者なし）を V0 と V1 で回して、**勝敗と決着ターンが食い違った試行**: "
+            + $"**{diff} / {RdSel(RdNegative, 0, true).Count} 件**");
+        Console.WriteLine();
+        Console.WriteLine("| 波 | V0 勝率 | V1 勝率 | 差 | 門1 | 門2 | 門3 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|");
+        for (int w = 1; w <= rdStages.Count; w++)
+        {
+            var a = RdSelW(RdNegative, 0, w); var c = RdSelW(RdNegative, 1, w);
+            Console.WriteLine($"| 第{w}波 | {RdWin(a):F1}% | {RdWin(c):F1}% | {RdWin(c) - RdWin(a):+0.0;-0.0;0.0} "
+                + $"| {RdGate1(c):F3} | {RdAvg(c, x => x.Sweeps):F2} | {RdAvg(c, x => x.Dmg):F1} |");
+        }
+
+        // 判定
+        Console.WriteLine();
+        Console.WriteLine("## 判定（§3-3）");
+        Console.WriteLine();
+        int q1 = 0;
+        foreach (int b in rdMain) if (RdAvg(RdSel(b, 1), x => x.Sweeps) >= 0.5) q1++;
+        double g1max = rdMain.Max(b => RdGate1(RdSel(b, 1)));
+        double g1min = rdMain.Min(b => RdGate1(RdSel(b, 1)));
+        int q3 = rdMain.Count(b => attrib[b] >= 5.0);
+        Console.WriteLine("| | 内容 | 線 | 実測 | 判定 |");
+        Console.WriteLine("|---|---|---|--:|:-:|");
+        Console.WriteLine($"| **Q1** | 鎖が繋がるか（門2 ≥ 0.5 回/戦） | 台1〜3 のうち 2 台以上 | {q1} 台 "
+            + $"| {(q1 >= 2 ? "**○**" : "**×**")} |");
+        Console.WriteLine($"| **Q2** | 供給者で効き方が変わるか（門1 の最大 − 最小） | 0.2 以上 | {g1max - g1min:F3} "
+            + $"| {(g1max - g1min >= 0.2 ? "**○**" : "**×**")} |");
+        Console.WriteLine($"| **Q3** | 帰属 ≥ +5.0pt の台 | 1 台以上 | {q3} 台 "
+            + $"| {(q3 >= 1 ? "**○**" : "**×**")} |");
+        Console.WriteLine($"| **Q4** | 陰性対照（台4）が ±0.0 | 0 件 | {diff} 件 "
+            + $"| {(diff == 0 ? "**○**" : "**×**")} |");
+        Console.WriteLine();
+        Console.WriteLine("**Q5（`compare` 305 セル 0 件）は `reader check` で取る。**");
+        return;
+    }
+
+    // ------------------------------------------------------------------------------
+    // check（自己検査）。
+    // ------------------------------------------------------------------------------
+    if (rdMode == "check")
+    {
+        Console.WriteLine("# 第115期 —— 自己検査");
+        Console.WriteLine();
+
+        // 必須1: compare 305 セル
+        var builds = CompareBuilds();
+        var bal = RdBalance(rdStages.Count);
+        int cells = 0, bad = 0, unknown = 0;
+        foreach (var (name, f) in builds)
+        {
+            if (!bal.TryGetValue(name, out double[]? want)) { unknown++; continue; }
+            for (int w = 0; w < rdStages.Count; w++)
+            {
+                int wins = 0;
+                for (int seed = 0; seed < RdSeeds; seed++)
+                    if (BattleEngine.Run(f, rdStages[w].Enemy, seed, verbose: false).PlayerWon) wins++;
+                cells++;
+                if (Math.Abs(wins * 100.0 / RdSeeds - want[w]) > 0.001) bad++;
+            }
+        }
+        Console.WriteLine($"- **必須1** `compare` {cells} セルを `docs/balance.md` と突き合わせ: "
+            + $"**ずれ {bad} 件**（行名が引けなかった行 {unknown}）→ {(bad == 0 && unknown == 0 ? "**○**" : "**×**")}");
+        Console.WriteLine("  （**既定は `ReaderRule.Default`（閾値 0）で `ModifyPattern` が素通りする**うえ、"
+            + "`UnitCatalog` に `Overload` を持つ駒は1枚も無い）");
+
+        // 必須4: PickOne
+        string? root = RdRoot();
+        int pick = 0;
+        if (root != null)
+            foreach (string p in new[] { "BattleEngine.cs", "Traits.cs" })
+                pick += File.ReadAllText(Path.Combine(root, "BattleCore", p))
+                            .Split("PickOne(").Length - 1;
+        Console.WriteLine($"- **必須4** `PickOne(` の出現数（`BattleCore/BattleEngine.cs` + `Traits.cs`）: "
+            + $"**{pick} 箇所** → {(pick == 26 ? "**○**（26 のまま）" : "**×**")}");
+
+        // (a) 台4 で門が全部 0
+        RdRunAll(RdSeeds);
+        var neg = RdSel(RdNegative, 1, true);
+        double n1 = neg.Sum(x => x.Over), n2 = neg.Sum(x => x.Sweeps);
+        Console.WriteLine($"- **(a)** 台4（供給者なし）の門1 の分子 **{n1:F0}** / 門2 **{n2:F0}** "
+            + $"→ {(n1 == 0 && n2 == 0 ? "**○**" : "**×**")}");
+
+        // (b) 特性を載せても既定で乱数の消費が不変（V0 == 特性なしのバン）
+        UnitDef plain = new()
+        {
+            Id = UnitCatalog.Ban.Id, Name = UnitCatalog.Ban.Name, MaxHp = UnitCatalog.Ban.MaxHp,
+            Attack = UnitCatalog.Ban.Attack, Speed = UnitCatalog.Ban.Speed, Pattern = UnitCatalog.Ban.Pattern,
+            Traits = UnitCatalog.Ban.Traits
+        };
+        int drift = 0, n = 0;
+        for (int b = 0; b < rdBenches.Length; b++)
+        {
+            Formation withT = RdBench(rdBenches[b].Supplier, rdBenches[b].Center);
+            Formation without = Formation.Build(front1: rdBenches[b].Supplier, front3: UnitCatalog.Dolga,
+                                                center: rdBenches[b].Center ?? UnitCatalog.Gald,
+                                                back1: plain, back3: UnitCatalog.Egu);
+            for (int w = 0; w < rdStages.Count; w++)
+                for (int seed = 0; seed < RdSeeds; seed++)
+                {
+                    BattleResult r1 = BattleEngine.Run(withT, rdStages[w].Enemy, seed, verbose: false);
+                    BattleResult r2 = BattleEngine.Run(without, rdStages[w].Enemy, seed, verbose: false);
+                    n++;
+                    if (r1.PlayerWon != r2.PlayerWon || r1.Turns != r2.Turns) drift++;
+                }
+        }
+        Console.WriteLine($"- **(b)** 札を載せた V0 と**札なしのバン**を同じ seed で回して食い違った試行: "
+            + $"**{drift} / {n}** → {(drift == 0 ? "**○**" : "**×**")}");
+
+        // (c) 二重に持っていないこと
+        bool dup = rdReader.Traits.Count(t => RdOverrides(t, "ModifyAttack") || RdOverrides(t, "ModifyPattern")) > 1;
+        Console.WriteLine($"- **(c)** 読み手が `ModifyAttack` / `ModifyPattern` を二重に持っていないか: "
+            + $"{(dup ? "**×**" : "**○**")}（`Bulwark` はどちらも上書きしない）");
+
+        // (d) (B-3) の逐語照合
+        if (root != null)
+        {
+            string src = File.ReadAllText(Path.Combine(root, "design", "PHASE65_WHET_ANATOMY.md"));
+            string dst = File.ReadAllText(Path.Combine(root, "design", "LESSONS_061_080.md"));
+            int idx = dst.IndexOf("### 第65期", StringComparison.Ordinal);
+            int q = 0, qbad = 0;
+            if (idx >= 0)
+            {
+                int end = dst.IndexOf("\n### ", idx + 5, StringComparison.Ordinal);
+                string sec = end < 0 ? dst.Substring(idx) : dst.Substring(idx, end - idx);
+                foreach (string line in sec.Split('\n'))
+                {
+                    string t = line.TrimEnd();
+                    if (!t.StartsWith("> ") || t.Length < 12) continue;   // 引用ブロックだけを照合する
+                    q++;
+                    if (!src.Contains(t.Substring(2).Trim(), StringComparison.Ordinal)) qbad++;
+                }
+            }
+            Console.WriteLine($"- **(d)** (B-3) の取り込みが原文に逐語で含まれるか（規約 (G15)）: "
+                + $"引用 **{q} 行**中ずれ **{qbad} 行** → {(idx >= 0 && q > 0 && qbad == 0 ? "**○**" : "**×**")}");
+        }
+        return;
+    }
+
+    Console.WriteLine("mode: phase0 / supply / run / check");
+    return;
+}
+
 // compare モード: 代表的な編成を全ステージで比較する。
 // 総当たりは駒が増えるほど爆発するので、系統ごとの当たり外れはこちらで見る。
 if (focusId == "compare")
@@ -64624,4 +65267,21 @@ sealed class LtStat
         foreach (var kv in o.SkipStaticBy) Bump(SkipStaticBy, kv.Key, kv.Value);
         foreach (var kv in o.SkipNowBy) Bump(SkipNowBy, kv.Key, kv.Value);
     }
+}
+
+/// <summary>
+/// 積み過ぎ（第115期・<c>reader</c>）の1戦ぶんの観測。<b>どの列も盤面には一切影響しない</b>
+/// ——<c>BattleResult</c> の計数を読み直しているだけ。
+/// </summary>
+sealed class RdRow
+{
+    public int Bench, Ver, Wave, Turns;
+    public bool Won;
+    /// <summary>読み手が生きていたターン数（門1 の分母）と、閾値以上だったターン数（分子）。</summary>
+    public int Alive, Over, FirstOver;
+    /// <summary><c>PerformAttack</c> を通った総回数 ／ そのうち薙ぎ（門2）／ 閾値以上で振ったターン数。</summary>
+    public int Swings, Sweeps, OverSwung;
+    public int BonusSum, BonusMax;
+    public int[] Probe = System.Array.Empty<int>();
+    public int Dmg, TeamDmg, Whet;
 }

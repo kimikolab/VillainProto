@@ -664,6 +664,30 @@ public sealed class UnitTally
     public int TaillightYields, TaillightYieldStalls, TaillightNoDeath, TaillightNoTarget, TaillightBlockedHop;
 
     /// <summary>
+    /// 積み過ぎ（第115期・<see cref="TraitId.Overload"/>）の門。<b>誰も読んで分岐しない計数。</b>
+    ///
+    /// <para><c>ReaderTurns</c> 生きていたターン数（門1 の分母）／
+    /// <c>ReaderOverTurns</c> そのターン頭に閾値以上だったターン数（門1 の分子）／
+    /// <c>ReaderFirstOverTurn</c> 初到達ターン（0 は未到達）／
+    /// <c>ReaderSwings</c> <c>PerformAttack</c> を通った総回数 ／
+    /// <c>ReaderSweeps</c> そのうち薙ぎで振った回数（門2）／
+    /// <c>ReaderOverTurnsSwung</c> 閾値以上のターンのうち1度でも振ったターン数
+    /// （<b>空振り = <c>ReaderOverTurns</c> − <c>ReaderOverTurnsSwung</c></b>）。</para>
+    ///
+    /// <para><c>ReaderBonusSum</c> / <c>ReaderBonusMax</c> は表C（<c>AtkBonus</c> の分布）の材料、
+    /// <c>ReaderProbeTurns</c> は格子（<see cref="ReaderProbes"/>）ごとの到達ターン数。
+    /// <b>どれも規則を無効にした版でも積む</b>——「閾値に届く供給があったか」は版に依らず読む。</para>
+    /// </summary>
+    public int ReaderTurns, ReaderOverTurns, ReaderFirstOverTurn;
+    public int ReaderSwings, ReaderSweeps, ReaderOverTurnsSwung, ReaderLastOverSwingTurn, ReaderOverTurnMark;
+    public int ReaderBonusSum, ReaderBonusMax;
+    /// <summary>格子ごとの到達ターン数。<b>保持者がいる戦闘でだけ確保する</b>（`CreakProbeTurn` と同じ作法）。</summary>
+    public int[]? ReaderProbeTurns;
+
+    /// <summary>表C の格子（第115期）。<b>閾値の掃引ではない</b>——分布のどこに線があるかを見るだけ。</summary>
+    public static readonly int[] ReaderProbes = { 1, 5, 10, 20, 40 };
+
+    /// <summary>
     /// 尾灯の続き（第109期に足した観測。<b>誰も読んで分岐しない計数。</b>）。
     ///
     /// <para><c>TaillightPeak</c> 1体に同時に載った灯の最大（＝到達点。指示書 Q3）。

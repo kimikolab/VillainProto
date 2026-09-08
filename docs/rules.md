@@ -29,7 +29,7 @@
 | 16 | `favor` | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` |  | `curse` / `favor` / `turn` / `ledger` | 第58期〜（4 期） | ○ |
 | 17 | `blaze` | `BlazeRule` | `BlazeRule { Targets = Both, Allies = True, Foes = True }` |  | `blaze` / `ledger` | 第59期〜（5 期） | ○ |
 | 18 | `funnel` | `FunnelRule` | `FunnelRule { Slowest = True, Both = False }` |  | `funnel` / `cross` | 第62期〜（5 期） | ○ |
-| 19 | `whetMask` | `WhetMask` | `WhetMask { Bits = 0 }` |  | `creak3` / `spend` | 第65期〜（2 期） |  |
+| 19 | `whetMask` | `WhetMask` | `WhetMask { Bits = 0 }` |  | `creak3` / `spend` | 第65期〜（3 期） |  |
 | 20 | `creak` | `CreakRule` | `CreakRule { Threshold = 0, Source = Whet }` | ○ | `creak` / `traits` / `creak3` | 第66期〜（6 期） | ○ |
 | 21 | `sever` | `SeverRule` | `SeverRule { Wait = Swing, Threshold = 2 }` |  | `wcost` / `ledger` / `lit` / `cross` | 第74期〜（5 期） | ○ |
 | 22 | `thinBlade` | `ThinBladeRule` | `ThinBladeRule { Cost = Always }` | ○ | `wcost` / `blade` / `ledger` / `cross` | 第75期〜（5 期） | ○ |
@@ -49,8 +49,9 @@
 | 36 | `menderCost` | `MenderCostRule` | `MenderCostRule { Percent = 50 }` |  | `tempo` / `hold` / `hold2` / `ledger` / `lit` | 第106期〜（3 期） | ○ |
 | 37 | `loose` | `LooseRule` | `LooseRule { Shove = True }` |  | `tempo` / `hold` / `hold2` / `ledger` / `lit` | 第106期〜（3 期） | ○ |
 | 38 | `taillight` | `TaillightRule` | `TaillightRule { Mode = OwnTurnWindow, Filter = ActingNow }` |  | `tomo` / `ledger` / `lit` | 第110期〜（4 期） | ○ |
+| 39 | `reader` | `ReaderRule` | `ReaderRule { Threshold = 0 }` | ○ | `reader` | 第115期 |  |
 
-引数 38 本（`verbose` と観測子を除く）。
+引数 39 本（`verbose` と観測子を除く）。
 
 **`= default(T)` は「その規則が既定で何もしない」の機械的な手がかりであって、判定ではない。**
 採否そのものは**既定値の列**を読むこと——`ThornRule { Wound = None }` は残置、`SoakRule { Poison = True, Burn = False }` は毒側だけ採用、という具合に既定値が全部を語る。
@@ -83,6 +84,7 @@
 | `MenderCostRule` | `MenderCostRule { Percent = 50 }` | ○ | `tempo` / `hold` / `hold2` / `ledger` / `lit` | 第106期〜（3 期） |
 | `OverbearRule` | `OverbearRule { Drain = 2 }` | ○ | `slander` / `overbear` | 第46期〜（2 期） |
 | `RageRule` | `RageRule { Mode = Amount, Gain = 3 }` | ○ | `tempo` / `hold` / `hold2` | 第106期〜（4 期） |
+| `ReaderRule` | `ReaderRule { Threshold = 0 }` | ○ | `reader` | 第115期 |
 | `RecoverRule` | `RecoverRule { HpPercent = 0, ReviveDead = False, Active = False }` |  | `choice` / `recover` | 第101期〜（2 期） |
 | `RelayRule` | `RelayRule { TransferPercent = 100 }` | ○ | `curse` / `dull` / `relay` | 第43期〜（3 期） |
 | `ScaleRule` | `ScaleRule { CostPerAttack = 1 }` | ○ | `scale` / `scapegoat` / `divert` / `favor` / `miasma` / `goad` / `finisher` / `ledger` | 第47期〜（12 期） |
@@ -97,10 +99,10 @@
 | `TaillightRule` | `TaillightRule { Mode = OwnTurnWindow, Filter = ActingNow }` | ○ | `tomo` / `ledger` / `lit` | 第110期〜（4 期） |
 | `ThinBladeRule` | `ThinBladeRule { Cost = Always }` | ○ | `wcost` / `blade` / `ledger` / `cross` | 第75期〜（5 期） |
 | `ThornRule` | `ThornRule { Wound = None }` | ○ | `derive` / `curse` / `breadth` / `thorn` / `suture2` / `gauge` / `cross` | 第84期〜（16 期） |
-| `WhetMask` | `WhetMask { Bits = 0 }` | ○ | `creak3` / `spend` | 第65期〜（2 期） |
+| `WhetMask` | `WhetMask { Bits = 0 }` | ○ | `creak3` / `spend` | 第65期〜（3 期） |
 | `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `replay` / `wave2` / `ledger` | 第35期〜（8 期） |
 
-40 型。
+41 型。
 
 ## 3. 規則が使う列挙型
 

@@ -114,6 +114,11 @@ public enum TraitId
                 // 灯は1体にしか灯らず、対象が変わると前の灯は消える。自分の手番より前に敵が倒れていたら、
                 // 灯した味方に手番を譲る（1つの動作の表と裏。渡すのは力と手番で、自分は何も取らない）
 
+    // --- 第115期で足した札（**強化の2枚目の読み手**。既定は不活性） ---
+    Overload,   // 積み過ぎ: 外から積まれた力が一定を越えると、据えたまま薙ぎ払う。
+                // **量ではなく二値で読む**（閾値は低く固定・掃引しない）。自分では1点も積めないので、
+                // 点くか点かないかは同席する供給者が決める（マイナスの外部化）
+
     // --- 傷の5枚から切り出したマイナス（第74期・**器具**） ---
     // どれも既存の駒に既定で付いたままで、**盤面は1ビットも変わらない**（受け入れ基準は
     // `compare` 305 セル 0 件）。切り出した理由は1つだけ——**計量できるようにするため**。
@@ -5648,6 +5653,59 @@ public sealed class BulwarkTrait : Trait
         => ctx.Log($"  {self.Name} が構えを整えた（動かない味方の被ダメージ -{ReductionPercent}%）", LogKind.Trigger);
 }
 
+/// <summary>
+/// 積み過ぎ（第115期・<b>強化の2枚目の読み手</b>）。<b>外から積まれた力</b>
+/// （<see cref="UnitState.AtkBonus"/>）が閾値以上のあいだ、単体の一撃が<b>薙ぎ</b>になる。
+///
+/// <para><b>量ではなく二値で読む。</b> 強化は分子の分散が大きい通貨（該当行で 5.6〜23.2・第65期）で、
+/// 数を読ませると<b>閾値の高さで効き方が決まる読み手</b>になる。だから閾値は低く固定して
+/// <b>掃引しない</b>（第87期・第104期の「分子が小さい通貨は二値の鍵として読ませる」を、
+/// 分散の側から当てた形）。<b>倍率も追加ダメージも足さない。</b>変えるのは型だけ。</para>
+///
+/// <para><b>読むのは <c>AtkBonus</c> であって <see cref="UnitState.WhetReceived"/> ではない</b>
+/// ——軋み（第67期）は<b>自分で作れる値</b>を避けて外来の累計へ移したが、
+/// この札を載せるのは<b>自己強化を1本も持たない駒</b>なので <c>AtkBonus</c> でよい。
+/// むしろ <c>AtkBonus</c> を読むことで<b>弱体が閾値を押し戻す</b>——
+/// 呪詛・萎縮・なまりが同席すると点かなくなる、が規則ゼロで立つ。</para>
+///
+/// <para><b>自分では1点も積めない</b>（保持者は <c>AtkBonus</c> を上げる特性を持たない）。
+/// 点くか点かないかを決めるのは<b>同席する供給者</b>で、これが
+/// 「マイナスは外部化しろ」（熾のホタと同じ形）にそのまま乗る。</para>
+///
+/// <para><b>閾値は規則（<see cref="ReaderRule"/>）で <c>Run</c> に渡す。</b> static のノブは置かない。
+/// <c>Threshold &lt;= 0</c> で完全に不活性——<see cref="ModifyPattern"/> が素通りするだけなので、
+/// <b>乱数も計数も盤面も1ビットも動かない</b>（これが検算）。
+/// <see cref="UnitState.Board"/> が null（盤面の外で作られた <c>UnitState</c>）でも同じ扱い。</para>
+///
+/// <para><b>割り込み・反撃にも同じ規則が乗る</b>——どちらも <c>ctx.PerformAttack</c> を通り、
+/// そこは <see cref="UnitState.CurrentPattern"/> を読む（軋みと同じ）。</para>
+/// </summary>
+public sealed class OverloadTrait : Trait
+{
+    public override TraitId Id => TraitId.Overload;
+
+    public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
+    {
+        ReaderRule rule = self.Board?.Reader ?? ReaderRule.Default;
+        if (rule.Threshold <= 0) return p;
+        return self.AtkBonus >= rule.Threshold ? AttackPattern.Sweep : p;
+    }
+}
+
+/// <summary>
+/// 積み過ぎの強度（第115期）。<b>診断（<c>reader</c>）が版を差し替えるためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない。static のノブにしない理由は同型の doc を参照。
+///
+/// <para><c>Threshold</c> は<b>二値の鍵の高さ</b>。<b>掃引しない</b>（§0-2）——
+/// 測るのは 0（不活性）と採用値の2点だけで、その間を振ると
+/// 「閾値の高さで効き方が決まる読み手」を作ってしまう。<c>0</c> 以下で完全に不活性。</para>
+/// </summary>
+public readonly record struct ReaderRule(int Threshold)
+{
+    /// <summary>既定は<b>無効</b>（第115期は測定中）。採用したら採った閾値へ。</summary>
+    public static ReaderRule Default => new(0);
+}
+
 /// <summary>移り木。動かされた味方を癒し強化する。隊列崩しを火力だけでなく耐久にも繋げる。</summary>
 public sealed class DrifterTrait : Trait
 {
@@ -6962,6 +7020,7 @@ public static class TraitCatalog
         new FunnelTrait(),
         new HexTrait(),
         new TaillightTrait(),
+        new OverloadTrait(),
         new BetrayedTrait(),
         new AmplifierTrait(),
         new ContagionTrait(),

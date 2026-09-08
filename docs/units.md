@@ -137,6 +137,7 @@
 | `Hex` | 泥人形ムド |
 | `Betrayed` | 背かれのソム |
 | `Taillight` | 尾灯のトモ |
+| `Overload` | - |
 | `ThinBlade` | 裂きのキリ |
 | `Overreach` | 抉りのエグ |
 | `Await` | 断ちのナタ |

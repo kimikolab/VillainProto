@@ -1982,6 +1982,54 @@ public sealed class BattleContext
     /// <summary>V2（即時）のときだけ真。<b>短絡の作法</b>（軛の Cap・粛の保持者走査と同じ）。</summary>
     public bool TaillightImmediate => Taillight.Mode == YieldMode.Immediate;
 
+    // =====================================================================================
+    // 第115期 —— 積み過ぎ（ReaderRule）。**強化の2枚目の読み手。**
+    // engine に足したのは<b>規則の受け渡しと計数だけ</b>で、判定は `OverloadTrait.ModifyPattern`
+    // の中にある（軋み＝`CreakRule` と同じ形）。**既定は不活性**で、渡さない限り
+    // `ModifyPattern` が最初の比較1つで抜けるので乱数も盤面も1ビットも動かない。
+    // =====================================================================================
+
+    /// <summary>積み過ぎの強度（第115期・<see cref="ReaderRule"/>）。</summary>
+    public ReaderRule Reader { get; }
+
+    /// <summary>規則が生きているときだけ真。<b>短絡の作法</b>（軛の Cap・粛の保持者走査と同じ）。</summary>
+    public bool ReaderActive => Reader.Threshold > 0;
+
+    /// <summary>
+    /// 積み過ぎ（第115期）の門の計数。<b>ターン頭に1回だけ、盤面を読むだけ。</b>
+    /// 呼び出しは `Run` のターンループ（`TickStatuses` の直後・`NoteHexCensus` の隣）1箇所。
+    ///
+    /// <para><b>規則を無効にしていても数える</b>——「閾値に届く供給があったか」は
+    /// 版に依らず読めたほうがよい（第65期の到着の帳簿と同じ判断）。門1（到達）の分子と、
+    /// 空振り（閾値は超えたが振れなかったターン）の分母がここで積まれる。</para>
+    /// </summary>
+    public void NoteReaderCensus()
+    {
+        int line = Reader.Threshold > 0 ? Reader.Threshold : ReaderProbeLine;
+        foreach (UnitState u in _units)
+        {
+            if (!u.IsAlive || !u.HasTrait(TraitId.Overload)) continue;
+            UnitTally t = TallyOf(u);
+            t.ReaderTurns++;
+            t.ReaderBonusSum += u.AtkBonus;
+            if (u.AtkBonus > t.ReaderBonusMax) t.ReaderBonusMax = u.AtkBonus;
+            int[] probe = t.ReaderProbeTurns ??= new int[UnitTally.ReaderProbes.Length];
+            for (int i = 0; i < UnitTally.ReaderProbes.Length; i++)
+                if (u.AtkBonus >= UnitTally.ReaderProbes[i]) probe[i]++;
+            if (u.AtkBonus < line) continue;
+            t.ReaderOverTurns++;
+            t.ReaderOverTurnMark = Turn;   // 空振りの分母は**ターン頭の印**（振りの側と同じ瞬間で数える）
+            if (t.ReaderFirstOverTurn == 0) t.ReaderFirstOverTurn = Math.Max(1, Turn);
+        }
+    }
+
+    /// <summary>
+    /// 規則を無効にした版でも「閾値に届いていたか」を数えるための既定の線（第115期）。
+    /// <b>盤面には一切影響しない</b>——採用値と同じ 5 を置いてあるだけで、
+    /// V0 と V1 の門1 を同じ物差しで並べるために要る。
+    /// </summary>
+    public const int ReaderProbeLine = 5;
+
     /// <summary>
     /// いま処理中の死亡通知の連鎖に入った時点の「味方の振りの総数」（指示書 Q3 の材料）。
     /// <b>観測専用で、誰も読んで分岐しない。</b> 入れ子（追い打ちが更に誰かを倒す）に備えて
@@ -2210,6 +2258,7 @@ public sealed class BattleContext
                          BetrayRule? betray = null, EncoreRule? encore = null,
                          RageRule? rage = null, MenderCostRule? menderCost = null,
                          LooseRule? loose = null, TaillightRule? taillight = null,
+                         ReaderRule? reader = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -2255,6 +2304,7 @@ public sealed class BattleContext
         MenderCost = menderCost ?? MenderCostRule.Default;
         Loose = loose ?? LooseRule.Default;
         Taillight = taillight ?? TaillightRule.Default;
+        Reader = reader ?? ReaderRule.Default;
     }
 
     // =====================================================================================
@@ -3094,6 +3144,24 @@ public sealed class BattleContext
 
         UnitState? target = SelectTargetCore(actor, patternOverride, out int pierceLane);
         if (target is null) return;
+
+        // 積み過ぎ（第115期）の門の 2。**盤面には一切影響しない。**
+        // ここで数えるのは「実際に振った型」なので、`patternOverride` を渡す経路
+        // （貫きのレーン解決など）もそのまま正しく落ちる。
+        // **規則を無効にしていても振りの総数は数える**——門2 の分母が版に依らないため。
+        if (actor.HasTrait(TraitId.Overload))
+        {
+            UnitTally rt = TallyOf(actor);
+            rt.ReaderSwings++;
+            if (pattern == AttackPattern.Sweep && ReaderActive) rt.ReaderSweeps++;
+            // **ターン頭の印が付いたターンだけを数える**——振った瞬間の `AtkBonus` で数えると、
+            // ターンの途中で届いた強化のぶんだけ分子が分母を超え、空振りが負になる（第115期に踏んだ）。
+            if (rt.ReaderOverTurnMark == Turn && rt.ReaderLastOverSwingTurn != Turn)
+            {
+                rt.ReaderLastOverSwingTurn = Turn;
+                rt.ReaderOverTurnsSwung++;
+            }
+        }
 
         // 逸らし（第50期）。**焦点の効きは「付けた回数」ではなく「実際にそこへ振られた割合」。**
         // 標は単体攻撃にしか効かないので、分母も単体振りだけで数える。
@@ -4827,13 +4895,14 @@ public static class BattleEngine
                                    EncoreRule? encore = null, RageRule? rage = null,
                                    MenderCostRule? menderCost = null, LooseRule? loose = null,
                                    TaillightRule? taillight = null,
+                         ReaderRule? reader = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
-               gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, probe);
+               gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -4864,13 +4933,14 @@ public static class BattleEngine
                                    BetrayRule? betray = null, EncoreRule? encore = null,
                                    RageRule? rage = null, MenderCostRule? menderCost = null,
                                    LooseRule? loose = null, TaillightRule? taillight = null,
+                         ReaderRule? reader = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
-                                    betray, encore, rage, menderCost, loose, taillight, probe);
+                                    betray, encore, rage, menderCost, loose, taillight, reader, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -4913,6 +4983,7 @@ public static class BattleEngine
             ctx.TickStatuses();
             ctx.EmitStatusSnapshot();   // 削った後の残量を写す。表示用で、盤面には触らない
             ctx.NoteHexCensus();        // 呪い（第96期）の門の 2。**盤面は読むだけ**
+            ctx.NoteReaderCensus();     // 積み過ぎ（第115期）の門の 1。**盤面は読むだけ**
 
             foreach (UnitState u in ctx.AllUnits.Where(x => x.IsAlive).ToList())
                 foreach (Trait t in u.Traits.ToList())
