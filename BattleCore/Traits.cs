@@ -723,6 +723,7 @@ public sealed class GuardianTrait : RedirectGainTrait
         // Q5: 引き取りが**深手化の後**に走ったか（受け手が既に深手か）を数える。
         if (self.Counter(StatusKeys.Deep) > 0) t.DeepGatherAfter++;
         donor.SetCounter(StatusKeys.Wound, best - 1);
+        ctx.NoteWoundLoss(donor, 1, WoundLoss.GatherDonor);   // 第120期の帳簿（中継なので総量は動かない）
         ctx.NoteWoundDrop(donor);   // 第104期: 傷が 0 になったら刻んだ事実も消える
         int after = ctx.Wound(self, 1, self, WoundRoute.Gather);
         t.GatherTaken++;
@@ -1651,6 +1652,70 @@ public enum WoundRoute
 }
 
 /// <summary>
+/// 傷が<b>盤面から消えた経路</b>（第120期の計数。<b>盤面には一切影響しない</b>）。
+///
+/// <para><b>加算は <see cref="WoundRoute"/>・減算はこちら</b>で、2つ合わせて帳簿が閉じる
+/// （自己検査 (a)——書かれた傷 ＝ 消えた傷 ＋ 決着時に残っていた傷）。
+/// <b>減算は窓口を持たない</b>（<see cref="BattleContext.Wound"/> は加算専用）ので、
+/// 数え漏らさないために<b>実装の <c>SetCounter(StatusKeys.Wound, …)</c> を全数当たって</b>置いてある。</para>
+///
+/// <para><b><see cref="Death"/> と <see cref="End"/> は「消えた」ではなく「残った」</b>
+/// ——傷は死んでも消えないので、決着時に全駒（死者を含む）の counter を1度だけ数え、
+/// その駒が生きているかで振り分ける。<b>途中で数えると蘇生で二重計上になる。</b></para>
+/// </summary>
+public enum WoundLoss
+{
+    /// <summary>断ち（ナタ・<see cref="SeverTrait"/>）が全部使った。</summary>
+    Sever,
+    /// <summary>繕い（ノノ・<see cref="MenderTrait"/>）の塞ぎで 1 減った。</summary>
+    MendSeal,
+    /// <summary>縫い（ハリ・<see cref="SutureTrait"/>）の塞ぎで 1 減った。</summary>
+    SutureSeal,
+    /// <summary>傷の引き取り（<c>GatherRule</c>）の<b>donor 側</b>。中継なので盤面の総量は動かない。</summary>
+    GatherDonor,
+    /// <summary>深手（<c>DeepRule</c>）に束ねられて 0 になった。既定は無効。</summary>
+    Bundle,
+    /// <summary>会戦の境界で掃除された（<c>StatusKeys.All</c>）。<b>単発の台では 0</b>。</summary>
+    Carry,
+    /// <summary><b>読まれないまま駒が倒れた</b>（決着時に死んでいる駒に残っていた傷）。</summary>
+    Death,
+    /// <summary><b>読まれないまま戦闘が終わった</b>（決着時に生きている駒に残っていた傷）。</summary>
+    End
+}
+
+/// <summary>
+/// 傷を読んだ役（第120期の計数。<b>盤面には一切影響しない</b>）。
+/// <b>読み手は6枚</b>——維持攻（抉り）／供給側の自給（刻みのなぞり）／消費（断ち）／
+/// 防御の維持読み（縫い）／繕い（第92期に採用）／滲み則（第90期・engine 側）。
+/// </summary>
+public enum WoundReader { Gouge, Carve, Sever, Suture, Mend, Soak }
+
+/// <summary>
+/// 主目標を差し替える介入と、ダメージを分け合う肩代わり（第120期の計数。<b>盤面には一切影響しない</b>）。
+/// <b>案 A（庇いが傷を読む）の材料を数えるためだけにある</b>——指示書 §2-5。
+/// <see cref="Colossus"/> だけは標的選択ではなく <see cref="BattleContext.ApplyDamage"/> の中の段。
+/// </summary>
+public enum GuardKind { Guardian, RearGuard, ThornGuard, Colossus, Martyr }
+
+/// <summary>
+/// 傷という通貨そのもののノブ（第120期）。<b>既定は現行</b>（<c>compare</c> 305 セル 0 件が検算）。
+///
+/// <para><see cref="Enabled"/> を偽にすると <see cref="BattleContext.Wound"/> が
+/// <b>何もせずに返る</b>——書き手も読み手も定義はそのままに、<b>通貨だけが盤面から消える</b>。
+/// 「傷を丸ごと外したら何が壊れるか」（指示書 §2-4）を測るための対照で、
+/// <b>設計案ではない</b>（畳む案 D の材料であって、案 D の実装ではない）。</para>
+///
+/// <para><see cref="Census"/> を真にすると、ターン頭の在庫走査（<see cref="BattleContext.NoteWoundCensus"/>）と
+/// 介入の材料（§2-5）の計数が回る。<b>既定は偽</b>——`layout` は数百万戦を並列で回すので、
+/// 走査を常時入れない（ボスの <c>BossRule.Census</c> と同じ作法）。</para>
+/// </summary>
+public readonly record struct WoundRule(bool Enabled, bool Census)
+{
+    /// <summary>既定は<b>現行</b>（傷は書かれる・走査はしない）。</summary>
+    public static WoundRule Default => new(true, false);
+}
+
+/// <summary>
 /// 深手（第93期）。<b>傷が <see cref="Bundle"/> に達すると束ねられ、動くたびに傷口が開く。</b>
 ///
 /// <para><b>1本の規則で交差を3本引く</b>のが狙い（第92期の答え——交差の空白は台の空白ではなく
@@ -2273,6 +2338,11 @@ public sealed class MenderTrait : Trait
         mt.MendHealed += patient.Hp - before;
         mt.MendPaid += amount;
         mt.MendPaidRaw += paid;   // 第106期 (T2)。**実際に引いた量**（MendPaid は癒した量のまま）
+        // 第120期。**傷を読んだときだけ**数える（w == 0 の回は繕いであって傷の読みではない）。
+        // 名目は傷ぶんの上乗せ、実効はそのうち実際に癒えた量（渇き・満タンで目減りする）。
+        if (w > 0)
+            ctx.NoteWoundRead(patient, WoundReader.Mend, w, PerWound * w,
+                Math.Max(0, Math.Min(patient.Hp - before, PerWound * w)));
         if (patient.TeamId != self.TeamId) mt.MendFoePatient++;   // 起きないはず（MostHurtAlly は同陣営のみ）
 
         ctx.Log($"    {self.Name} が自分を裂いて {patient.Name} を繕った（+{amount}）"
@@ -2282,7 +2352,7 @@ public sealed class MenderTrait : Trait
         // 渇き下でも走る（第39期・ハリの塞ぎと同じ作法。原因ではなく結果で解決しない）。
         // 第93期: **深手は塞げない**（解除はこの期に作らない）ので raw の傷が残っているときだけ引く。
         // 深手が無ければ wRaw == w なので、既定では1ビットも違わない。
-        if (seal && wRaw > 0) { patient.SetCounter(StatusKeys.Wound, wRaw - 1); ctx.NoteWoundDrop(patient); }   // 第104期: 傷が 0 になったら刻んだ事実も消える
+        if (seal && wRaw > 0) { patient.SetCounter(StatusKeys.Wound, wRaw - 1); ctx.NoteWoundDrop(patient); ctx.NoteWoundLoss(patient, 1, WoundLoss.MendSeal); }   // 第104期: 傷が 0 になったら刻んだ事実も消える／第120期の帳簿
     }
 }
 
@@ -4517,7 +4587,9 @@ public sealed class GougeTrait : Trait
         gt.GougeFires++;
         gt.GougeOut += PerWound * w;
 
+        long hp0 = ctx.HpRemoved;   // 第120期: 実効（盤面から実際に減った HP）を取る
         ctx.ApplyDamage(target, PerWound * w, self);
+        ctx.NoteWoundRead(target, WoundReader.Gouge, w, PerWound * w, ctx.HpRemoved - hp0);
     }
 
     // **深追い（倒すと次の手番を失う）は第74期に OverreachTrait へ切り出した。**
@@ -4573,7 +4645,9 @@ public sealed class CarveTrait : Trait
         {
             ctx.Log($"    {self.Name} が {target.Name} の古い傷をなぞる（傷 {w} → +{PerWound * w}）",
                 LogKind.Highlight);
+            long hp0 = ctx.HpRemoved;   // 第120期: 実効（盤面から実際に減った HP）を取る
             ctx.ApplyDamage(target, PerWound * w, self);
+            ctx.NoteWoundRead(target, WoundReader.Carve, w, PerWound * w, ctx.HpRemoved - hp0);
         }
 
         // 上乗せで倒れたなら刻まない（上の生存判定と同じ理由。ApplyDamage を挟んだので取り直す）。
@@ -4753,10 +4827,14 @@ public sealed class SeverTrait : Trait
         // 生死は ApplyDamage に任せる（読み手側の作法。死体でも判定は同じ＝結果で解決する）。
         ctx.Log($"    {self.Name} が {target.Name} の傷をまとめて断つ（傷 {w} → +{PerWound * w}）",
             LogKind.Highlight);
+        long hp0 = ctx.HpRemoved;   // 第120期: 実効（盤面から実際に減った HP）を取る
         ctx.ApplyDamage(target, PerWound * w, self);
+        ctx.NoteWoundRead(target, WoundReader.Sever, w, PerWound * w, ctx.HpRemoved - hp0);
 
         // 消費。倒れていても 0 に戻すのは同じ（蘇生で戻ってきた駒が古い傷を抱えない）。
+        int consumed120 = target.RawCounter(StatusKeys.Wound);   // 第120期の帳簿（実際に消えた量）
         target.SetCounter(StatusKeys.Wound, 0);
+        ctx.NoteWoundLoss(target, consumed120, WoundLoss.Sever);
         ctx.NoteWoundDrop(target);   // 第104期: 傷が 0 になったら刻んだ事実も消える
     }
 }
@@ -4913,11 +4991,13 @@ public sealed class SutureTrait : Trait
         else st.SutureFoe++;
         if (patient.Hp == before) st.SutureDry++;
         st.SutureHealed += patient.Hp - before;
+        // 第120期。**回復側の実効は「実際に癒えた量」**（渇き下では 0 になる＝それが空振り）。
+        ctx.NoteWoundRead(donor, WoundReader.Suture, w, PerWound * w, patient.Hp - before);
 
         // 塞ぎ。**糸を通したほう**の傷を**1つだけ**引く（全部消すのは断ちの側の役で、こちらは維持読み）。
         // 第93期: **深手は塞げない**ので raw の傷が残っているときだけ引く（既定では w と一致する）。
         int donorRaw = donor.Counter(StatusKeys.Wound);
-        if (seal && donorRaw > 0) { donor.SetCounter(StatusKeys.Wound, donorRaw - 1); ctx.NoteWoundDrop(donor); }   // 第104期: 傷が 0 になったら刻んだ事実も消える
+        if (seal && donorRaw > 0) { donor.SetCounter(StatusKeys.Wound, donorRaw - 1); ctx.NoteWoundDrop(donor); ctx.NoteWoundLoss(donor, 1, WoundLoss.SutureSeal); }   // 第104期: 傷が 0 になったら刻んだ事実も消える
 
         // **上限はここで初めて立てる**（空振りではターンを焼かない）。`Swing` では1ビットも書かない。
         if (capped) self.SetCounter(LastTurnKey, ctx.Turn + 1);

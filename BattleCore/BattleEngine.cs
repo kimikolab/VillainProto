@@ -390,6 +390,10 @@ public sealed class BattleContext
     public int Wound(UnitState target, int amount, UnitState writer, WoundRoute route)
     {
         if (!target.IsAlive || amount <= 0) return -1;
+        // 第120期の対照（`WoundRule.Enabled = false`）。**計数より手前で返す**
+        // ——「傷を丸ごと外したら何が壊れるか」を測るので、傷は 1 つも書かれてはいけない
+        // （自己検査 (b)）。既定は真なので通常の実行では素通りする。
+        if (!Wounds.Enabled) return -1;
 
         // **計数は規則の分岐より手前**（版に依らない）。
         UnitTally wt = TallyOf(writer);
@@ -426,6 +430,7 @@ public sealed class BattleContext
         if (Deep.Enabled && w >= DeepRule.Bundle)
         {
             // **余りを繰り越さない**（深手は二値なので繰り越す先が無い）。
+            NoteWoundLoss(target, cur, WoundLoss.Bundle);   // 第120期の帳簿（既定では走らない）
             target.SetCounter(StatusKeys.Wound, 0);
             target.SetCounter(StatusKeys.Deep, 1);
             tt.DeepBundles++;
@@ -439,6 +444,11 @@ public sealed class BattleContext
         }
 
         target.SetCounter(StatusKeys.Wound, w);
+        // 第120期。**書かれた側の陣営**で割る（書き手の帰属は `WoundWritesByRoute` の側にある）。
+        (target.TeamId == PlayerTeam ? WoundWriteAlly : WoundWriteFoe)[(int)route] += amount;
+        // 在庫の齢（計数専用）。**`Census` のときだけ書く**——既定では counter を1つも足さない
+        // （`SetCounter` は `NoteStatusGain` を呼ぶので、既定の経路に1本も枝を増やさない）。
+        if (WoundCensus && cur == 0) target.SetCounter(WoundSinceKey, Math.Max(1, Turn));
         EmitStatusGain(target, StatusKeys.Wound, amount, writer);   // 第97期・表示専用
         NoteWoundWriter(target, writer);   // 第104期。**版に依らない記録。盤面には影響しない**
         FireSutureOnWound(target);   // 第107期 (S3)。既定（Swing）では素通りする
@@ -579,7 +589,13 @@ public sealed class BattleContext
 
         int add = amount;
         // **深手の数に比例させない**（二値なので比例のしようが無いが、明記しておく）。
-        if (Soak.Poison && wounded) { int bump = deepW ? 2 : 1; add += bump; wt.SoakPoisonAdded++; if (deepW) wt.DeepSoakDeeper++; }
+        if (Soak.Poison && wounded)
+        {
+            int bump = deepW ? 2 : 1; add += bump; wt.SoakPoisonAdded++; if (deepW) wt.DeepSoakDeeper++;
+            // 第120期。**滲み則だけは単位が違う**（HP ではなく毒の残ターン）ので、
+            // 実効の列には載せない（名目だけを数え、単価の分子からは外す）。
+            NoteWoundRead(target, WoundReader.Soak, 1, bump, 0);
+        }
 
         target.SetCounter(StatusKeys.Poison, target.RawCounter(StatusKeys.Poison) + add);
         EmitStatusGain(target, StatusKeys.Poison, add, writer);   // 第97期・表示専用（滲みで増えたぶんも込み）
@@ -1922,6 +1938,12 @@ public sealed class BattleContext
     public DeepRule Deep { get; }
 
     /// <summary>
+    /// 傷という通貨のノブ（第120期・<see cref="WoundRule"/>）。<b>診断（wound2）だけが渡す。</b>
+    /// 既定は現行（書かれる・走査しない）なので、通常の実行では 1 ビットも動かない。
+    /// </summary>
+    public WoundRule Wounds { get; }
+
+    /// <summary>
     /// 呪い（第96期）。<b>診断（hex）が版を差し替えるためだけの窓口</b>で、
     /// 通常の実行では誰も渡さない（既定は <see cref="CurseRule.Default"/> ＝ 共有しない）。
     /// 見るのは <see cref="HexTrait"/>（付与）と <see cref="ApplyDamage"/> の共有の段（1箇所）だけ。
@@ -2081,6 +2103,167 @@ public sealed class BattleContext
             // 第118期。**同じ場所・同じ guard で HP も写す**（交差点＝門2 の材料）。
             int[] hp = t.BossHpByTurn ??= new int[BattleEngine.MaxTurns + 2];
             if (Turn >= 0 && Turn < hp.Length) hp[Turn] = u.Hp;
+        }
+    }
+
+    // =====================================================================================
+    // 第120期 —— 傷という通貨の棚卸し。**engine に規則は1本も足していない。計数だけ。**
+    //
+    // 足したのは (1) 規則の受け渡し（<see cref="WoundRule"/>）と (2) 計数の3種類:
+    //   在庫（ターン頭の走査。`Census` のときだけ）／消滅の帳簿（減算の全数）／
+    //   実効（盤面から実際に減った HP）。
+    //
+    // **帳簿が閉じることが自己検査 (a)**——書かれた傷 ＝ 消えた傷 ＋ 決着時に残っていた傷。
+    // 加算は <see cref="Wound"/> の1箇所だけなので、減算の側を全数当たれば必ず閉じる。
+    // =====================================================================================
+
+    /// <summary><see cref="WoundLoss"/> の要素数。</summary>
+    public const int WoundLossCount = 8;
+
+    /// <summary>傷の在庫の走査を回すか。<b>規則が真のときだけ。</b></summary>
+    public bool WoundCensus => Wounds.Census;
+
+    /// <summary>消滅の帳簿（添字は <see cref="WoundLoss"/>）。全体と、味方側の駒から消えたぶん。</summary>
+    public readonly int[] WoundLossAll = new int[WoundLossCount];
+    /// <inheritdoc cref="WoundLossAll"/>
+    public readonly int[] WoundLossAlly = new int[WoundLossCount];
+
+    /// <summary>書かれた傷（<b>実際に counter が増えたぶん</b>）。陣営は<b>書かれた側</b>で割る。</summary>
+    public readonly int[] WoundWriteAlly = new int[WoundRouteCount];
+    /// <inheritdoc cref="WoundWriteAlly"/>
+    public readonly int[] WoundWriteFoe = new int[WoundRouteCount];
+
+    /// <summary>在庫の走査（ターン頭）。延べ・最大・「1体でもいたターン」の数。</summary>
+    public long WoundStockAllySum, WoundStockFoeSum;
+    /// <inheritdoc cref="WoundStockAllySum"/>
+    public int WoundStockTurns, WoundStockAllyMax, WoundStockFoeMax, WoundTurnsAllyAny, WoundTurnsFoeAny;
+
+    /// <summary>深さの分布（走査の延べ。添字 0 = 深さ1 / 1 = 深さ2 / 2 = 深さ3以上）。</summary>
+    public readonly long[] WoundDepthAlly = new long[3];
+    /// <inheritdoc cref="WoundDepthAlly"/>
+    public readonly long[] WoundDepthFoe = new long[3];
+
+    /// <summary>書かれてから読まれるまでのターン数（読まれた傷だけが分母）。</summary>
+    public long WoundLagSum;
+    /// <inheritdoc cref="WoundLagSum"/>
+    public int WoundLagCount;
+
+    /// <summary>
+    /// <b>盤面から実際に減った HP の総量</b>（第120期）。<see cref="ApplyDamage"/> が
+    /// HP を引いた直後に、<b>過剰分（オーバーキル）を除いた実額</b>を足す。
+    /// <para><b>誰も読んで分岐しない。</b> 読み手の呼び出しを挟んで差を取ると、
+    /// 肩代わりで分割された段も貫きの各段も含めた<b>正味の効き</b>が1つの数で取れる
+    /// ——名目（定数 3 × 傷の数）との差が「空振り」そのものになる。</para>
+    /// </summary>
+    public long HpRemoved;
+
+    /// <summary>読み手ごと（添字は <see cref="WoundReader"/>）の 発火／読んだ傷／名目／実効。</summary>
+    public readonly int[] ReadFires = new int[6];
+    /// <inheritdoc cref="ReadFires"/>
+    public readonly long[] ReadWounds = new long[6];
+    /// <inheritdoc cref="ReadFires"/>
+    public readonly long[] ReadNominal = new long[6];
+    /// <inheritdoc cref="ReadFires"/>
+    public readonly long[] ReadEffective = new long[6];
+
+    /// <summary>
+    /// 介入の材料（指示書 §2-5・添字は <see cref="GuardKind"/>）。
+    /// 発火／守った相手が傷を持っていた回数／その瞬間の傷持ちの味方の数の延べ／傷持ちの味方が1体でもいた回数。
+    /// <b>味方陣の介入だけを数える</b>（案 A は味方側の配置の話）。
+    /// </summary>
+    public readonly int[] GuardFires = new int[5];
+    /// <inheritdoc cref="GuardFires"/>
+    public readonly int[] GuardTargetWounded = new int[5];
+    /// <inheritdoc cref="GuardFires"/>
+    public readonly long[] GuardWoundedAllySum = new long[5];
+    /// <inheritdoc cref="GuardFires"/>
+    public readonly int[] GuardAnyWoundedAlly = new int[5];
+
+    /// <summary>傷が最初に書かれたターンを覚える私有キー（<b>計数専用</b>。<see cref="StatusKeys"/> ではない）。</summary>
+    public const string WoundSinceKey = "woundSince";
+
+    /// <summary>
+    /// 在庫の走査（ターン頭）。<b>盤面は読むだけ。</b>
+    /// <see cref="NoteBossCensus"/> と同じ場所・同じ guard に置いてある。
+    /// </summary>
+    public void NoteWoundCensus()
+    {
+        if (!WoundCensus) return;
+        WoundStockTurns++;
+        int a = 0, f = 0;
+        foreach (UnitState u in _units)
+        {
+            if (!u.IsAlive) continue;
+            int w = WoundDepthOf(u);
+            if (w <= 0) continue;
+            bool ally = u.TeamId == PlayerTeam;
+            if (ally) a++; else f++;
+            long[] hist = ally ? WoundDepthAlly : WoundDepthFoe;
+            hist[w >= 3 ? 2 : w - 1]++;
+        }
+        WoundStockAllySum += a; WoundStockFoeSum += f;
+        if (a > WoundStockAllyMax) WoundStockAllyMax = a;
+        if (f > WoundStockFoeMax) WoundStockFoeMax = f;
+        if (a > 0) WoundTurnsAllyAny++;
+        if (f > 0) WoundTurnsFoeAny++;
+    }
+
+    /// <summary>
+    /// 消滅の帳簿に1件足す（第120期）。<b>盤面には一切影響しない。</b>
+    /// <b>減算の窓口は無い</b>ので、呼び出し側（減算する側）に置いてある。
+    /// </summary>
+    public void NoteWoundLoss(UnitState from, int amount, WoundLoss why)
+    {
+        if (amount <= 0) return;
+        WoundLossAll[(int)why] += amount;
+        if (from.TeamId == PlayerTeam) WoundLossAlly[(int)why] += amount;
+        if (WoundCensus && why != WoundLoss.Death && why != WoundLoss.End && why != WoundLoss.Carry)
+            from.SetCounter(WoundSinceKey, 0);
+    }
+
+    /// <summary>
+    /// 読み手が傷を読んだことの計数（第120期）。<b>盤面には一切影響しない。</b>
+    /// <paramref name="effective"/> は <see cref="HpRemoved"/> の差（回復側は癒した実額）。
+    /// </summary>
+    public void NoteWoundRead(UnitState target, WoundReader who, int wounds, long nominal, long effective)
+    {
+        ReadFires[(int)who]++;
+        ReadWounds[(int)who] += wounds;
+        ReadNominal[(int)who] += nominal;
+        ReadEffective[(int)who] += effective;
+        if (!WoundCensus) return;
+        int since = target.RawCounter(WoundSinceKey);
+        if (since > 0) { WoundLagSum += Math.Max(0, Turn - since); WoundLagCount++; }
+    }
+
+    /// <summary>
+    /// 介入が主目標を差し替えた瞬間の材料（第120期・指示書 §2-5）。<b>盤面には一切影響しない。</b>
+    /// </summary>
+    public void NoteGuardPick(GuardKind kind, UnitState guard, UnitState target)
+    {
+        if (!WoundCensus || guard.TeamId != PlayerTeam) return;
+        int i = (int)kind;
+        GuardFires[i]++;
+        if (IsWounded(target)) GuardTargetWounded[i]++;
+        int n = 0;
+        foreach (UnitState u in _units)
+            if (u.IsAlive && u.TeamId == guard.TeamId && u != guard && IsWounded(u)) n++;
+        GuardWoundedAllySum[i] += n;
+        if (n > 0) GuardAnyWoundedAlly[i]++;
+    }
+
+    /// <summary>
+    /// 決着時に残っていた傷を帳簿へ落とす（第120期）。<b>死者も数える</b>——傷は死んでも消えない。
+    /// <b>途中で数えると蘇生で二重計上になる</b>ので、1戦につき最後に1度だけ呼ぶ。
+    /// </summary>
+    public void CloseWoundLedger()
+    {
+        foreach (UnitState u in _units)
+        {
+            int w = u.RawCounter(StatusKeys.Wound);
+            // **深手は足さない**——束ねられた傷は `WoundLoss.Bundle` で既に落ちていて、
+            // 束ねに使われた分は「書かれた」側にも載っていない（`SetCounter` を通らない）。
+            if (w > 0) NoteWoundLoss(u, w, u.IsAlive ? WoundLoss.End : WoundLoss.Death);
         }
     }
 
@@ -2367,7 +2550,7 @@ public sealed class BattleContext
                          RageRule? rage = null, MenderCostRule? menderCost = null,
                          LooseRule? loose = null, TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
-                         NourishRule? nourish = null,
+                         NourishRule? nourish = null, WoundRule? wound = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -2416,6 +2599,7 @@ public sealed class BattleContext
         Reader = reader ?? ReaderRule.Default;
         Boss = boss ?? BossRule.Default;
         Nourish = nourish ?? NourishRule.Default;
+        Wounds = wound ?? WoundRule.Default;
     }
 
     // =====================================================================================
@@ -3064,6 +3248,7 @@ public sealed class BattleContext
                 && Roll(100) < RearGuardTrait.RedirectPercent)
             {
                 Log($"    {rearAny.Name} が後列の {target.Name} の前に入った", LogKind.Trigger);
+                NoteGuardPick(GuardKind.RearGuard, rearAny, target);   // 第120期・§2-5 の材料
                 return rearAny;
             }
             return target;
@@ -3109,6 +3294,7 @@ public sealed class BattleContext
         if (target.Row != Row.Front && rear is not null && Roll(100) < RearGuardTrait.RedirectPercent)
         {
             Log($"    {rear.Name} が後列の {target.Name} の前に入った", LogKind.Trigger);
+            NoteGuardPick(GuardKind.RearGuard, rear, target);   // 第120期・§2-5 の材料
             return rear;
         }
 
@@ -3120,6 +3306,7 @@ public sealed class BattleContext
             Log($"    {guardian.Name} が {target.Name} を庇った", LogKind.Trigger);
             // 肩代わりで受けた分だけ伸びる（GuardianTrait 参照）。素の被弾と区別するための印。
             guardian.SetCounter(GuardianTrait.PendingKey, 1);
+            NoteGuardPick(GuardKind.Guardian, guardian, target);   // 第120期・§2-5 の材料
             return guardian;
         }
 
@@ -3142,6 +3329,7 @@ public sealed class BattleContext
         {
             Log($"    {martyr.Name} が {target.Name} を庇った", LogKind.Trigger);
             martyr.SetCounter(RedirectGainTrait.PendingKey, 1);
+            NoteGuardPick(GuardKind.Martyr, martyr, target);   // 第120期・§2-5 の材料
             return martyr;
         }
 
@@ -3165,6 +3353,7 @@ public sealed class BattleContext
             thornGuard.SetCounter(ThornGuardTrait.PendingKey, 0);
             // スロット + 1 を格納し、0 を「なし」とする（スロット0 と未設定の区別）
             thornGuard.SetCounter(ThornGuardTrait.PartnerKey, target.Slot + 1);
+            NoteGuardPick(GuardKind.ThornGuard, thornGuard, target);   // 第120期・§2-5 の材料
             return thornGuard;
         }
 
@@ -3754,6 +3943,7 @@ public sealed class BattleContext
                 {
                     amount -= blocked;
                     Log($"    {wall.Name} が {target.Name} の前に立ちはだかる", LogKind.Trigger);
+                    NoteGuardPick(GuardKind.Colossus, wall, target);   // 第120期・§2-5 の材料
 
                     // 腹（第36期）。**吐き戻しと同じ場所・同じ量を積む**ので、
                     // 「返した先の増分」と「腹に溜まった量」が定義上ずれない。
@@ -3915,7 +4105,10 @@ public sealed class BattleContext
             amount = Yoke.Cap;
         }
 
+        int hpBefore120 = target.Hp;   // 第120期の計数（オーバーキルを除いた実額を取るため）
         target.Hp -= amount;
+        // 第120期。**盤面から実際に減った HP**（過剰分を除く）。誰も読んで分岐しない。
+        HpRemoved += hpBefore120 - Math.Max(0, target.Hp);
         // 燃焼の刻みが実際に削った量（第57期）。**すべての増減を通した後の値**。
         if (burnTick) TallyOf(target).BurnTaken += amount;
         Log($"    {target.Name} に {amount} ダメージ (残り {Math.Max(0, target.Hp)})",
@@ -5061,7 +5254,7 @@ public static class BattleEngine
                                    MenderCostRule? menderCost = null, LooseRule? loose = null,
                                    TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
-                                   NourishRule? nourish = null,
+                                   NourishRule? nourish = null, WoundRule? wound = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
@@ -5069,7 +5262,7 @@ public static class BattleEngine
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
-               nourish, probe);
+               nourish, wound, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -5101,7 +5294,7 @@ public static class BattleEngine
                                    RageRule? rage = null, MenderCostRule? menderCost = null,
                                    LooseRule? loose = null, TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
-                                   NourishRule? nourish = null,
+                                   NourishRule? nourish = null, WoundRule? wound = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
@@ -5109,7 +5302,7 @@ public static class BattleEngine
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
-                                    nourish, probe);
+                                    nourish, wound, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -5154,6 +5347,7 @@ public static class BattleEngine
             ctx.NoteHexCensus();        // 呪い（第96期）の門の 2。**盤面は読むだけ**
             ctx.NoteReaderCensus();     // 積み過ぎ（第115期）の門の 1。**盤面は読むだけ**
             ctx.NoteBossCensus();       // ボスの土台（第117期）の時系列。**盤面は読むだけ**
+            ctx.NoteWoundCensus();      // 傷の在庫（第120期）。**盤面は読むだけ**
 
             foreach (UnitState u in ctx.AllUnits.Where(x => x.IsAlive).ToList())
                 foreach (Trait t in u.Traits.ToList())
@@ -5230,6 +5424,9 @@ public static class BattleEngine
                 ctx.TallyOf(u).WoundsAtEnd += u.RawCounter(StatusKeys.Wound);
             }
 
+        // 第120期の帳簿を閉じる（**死者を含む全駒を1度だけ**。上のループは生存駒しか見ていない）。
+        ctx.CloseWoundLedger();
+
         return new BattleResult
         {
             PlayerWon = playerWon,
@@ -5240,6 +5437,18 @@ public static class BattleEngine
             TallyByUnit = new Dictionary<string, UnitTally>(ctx.TallyByUnit),
             MaxEnemyKillsInOneTurn = ctx.MaxEnemyKillsInOneTurn,
             Events = ctx.Events.ToList(),
+            Wounds = new WoundLedger(
+                (int[])ctx.WoundWriteAlly.Clone(), (int[])ctx.WoundWriteFoe.Clone(),
+                (int[])ctx.WoundLossAll.Clone(), (int[])ctx.WoundLossAlly.Clone(),
+                ctx.WoundStockTurns, ctx.WoundStockAllySum, ctx.WoundStockFoeSum,
+                ctx.WoundStockAllyMax, ctx.WoundStockFoeMax,
+                ctx.WoundTurnsAllyAny, ctx.WoundTurnsFoeAny,
+                (long[])ctx.WoundDepthAlly.Clone(), (long[])ctx.WoundDepthFoe.Clone(),
+                ctx.WoundLagSum, ctx.WoundLagCount, ctx.HpRemoved,
+                (int[])ctx.ReadFires.Clone(), (long[])ctx.ReadWounds.Clone(),
+                (long[])ctx.ReadNominal.Clone(), (long[])ctx.ReadEffective.Clone(),
+                (int[])ctx.GuardFires.Clone(), (int[])ctx.GuardTargetWounded.Clone(),
+                (long[])ctx.GuardWoundedAllySum.Clone(), (int[])ctx.GuardAnyWoundedAlly.Clone()),
             ExposeCount = ctx.ExposeCount,
             ExposeMissed = ctx.ExposeMissed,
             DullTotal = ctx.DullTotal,

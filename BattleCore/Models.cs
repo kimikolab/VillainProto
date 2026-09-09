@@ -1582,6 +1582,37 @@ public sealed class BattleEvent
 }
 
 /// <summary>戦闘結果。UIはこれを表示するだけでよい。</summary>
+/// <summary>
+/// 傷という通貨の帳簿（第120期）。<b>1戦ぶんの計数で、盤面には一切影響しない。</b>
+///
+/// <para><b>帳簿が閉じることが自己検査 (a)</b>——<c>WriteAlly + WriteFoe</c> の総和 ＝
+/// <c>LossAll</c> の総和（<see cref="WoundLoss.Death"/> / <see cref="WoundLoss.End"/> は
+/// 「消えた」ではなく「読まれずに残った」）。加算は <see cref="BattleContext.Wound"/> の
+/// 1 箇所だけなので、減算の側を全数当たれば必ず閉じる。</para>
+///
+/// <para><b>在庫・齢・介入の材料は <c>WoundRule.Census</c> のときだけ埋まる</b>
+/// （既定は偽——`layout` は数百万戦を並列で回す）。書き込みと消滅の帳簿、
+/// <see cref="HpRemoved"/>、読み手の計数は<b>版に依らず常に取る</b>。</para>
+/// </summary>
+/// <param name="WriteAlly">書かれた傷（味方側の駒に）。添字は <c>WoundRoute</c>。</param>
+/// <param name="WriteFoe">書かれた傷（敵側の駒に）。添字は <c>WoundRoute</c>。</param>
+/// <param name="LossAll">消滅の帳簿（添字は <see cref="WoundLoss"/>）。</param>
+/// <param name="LossAlly">同・味方側の駒から消えたぶん。</param>
+public readonly record struct WoundLedger(
+    int[] WriteAlly, int[] WriteFoe, int[] LossAll, int[] LossAlly,
+    int StockTurns, long StockAllySum, long StockFoeSum, int StockAllyMax, int StockFoeMax,
+    int TurnsAllyAny, int TurnsFoeAny, long[] DepthAlly, long[] DepthFoe,
+    long LagSum, int LagCount, long HpRemoved,
+    int[] ReadFires, long[] ReadWounds, long[] ReadNominal, long[] ReadEffective,
+    int[] GuardFires, int[] GuardTargetWounded, long[] GuardWoundedAllySum, int[] GuardAnyWoundedAlly)
+{
+    /// <summary>書かれた傷の総数（味方 ＋ 敵）。</summary>
+    public int Written => WriteAlly.Sum() + WriteFoe.Sum();
+
+    /// <summary>帳簿の右辺（消えた ＋ 残った）。<see cref="Written"/> と一致しなければならない。</summary>
+    public int Accounted => LossAll.Sum();
+}
+
 public sealed class BattleResult
 {
     public required bool PlayerWon { get; init; }
@@ -1619,6 +1650,9 @@ public sealed class BattleResult
     ///
     /// <para>既定（<c>ExposeRule.Default</c> ＝ 無効）では常に 0。</para>
     /// </summary>
+    /// <summary>傷という通貨の帳簿（第120期・<see cref="WoundLedger"/>）。<b>計数専用。</b></summary>
+    public required WoundLedger Wounds { get; init; }
+
     public required int ExposeCount { get; init; }
     public required int ExposeMissed { get; init; }
 

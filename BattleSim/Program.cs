@@ -54403,6 +54403,16 @@ if (focusId == "tank")
     return;
 }
 
+// wound2 モード: 傷という通貨の棚卸し（第120期・**測定だけ**）。中身は `Wound2.cs`。
+// **engine に規則は1本も足していない**——在庫の走査・消滅の帳簿・実際に減った HP の計数だけ。
+//
+//     dotnet run --project BattleSim -c Release 0 wound2 phase0 / run / check
+if (focusId == "wound2")
+{
+    Wound2Diag.Run(args.Length > 2 ? args[2] : "phase0");
+    return;
+}
+
 // handoff モード: 会戦の交代の実態を計測する（第4期 Phase K）。「部隊を1つ足すと突破数の
 // 増分が編成によらずほぼ +1.00」の原因を、仮説 P（第1部隊が敵をほとんど削らずに全滅し、
 // 第2部隊は仕切り直しで1波抜くだけ＝拾えていない）と仮説 Q（拾えてはいるが、第2部隊の
