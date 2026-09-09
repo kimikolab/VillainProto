@@ -1,0 +1,28 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Nullable>enable</Nullable>
+    <RootNamespace>DemoApp</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    BattleCore をそのまま参照する。これが成立するのは BattleCore が net8.0 の
+    素のクラスライブラリで、UI を一切参照していないため（CLAUDE.md の「絶対のルール」）。
+
+    **同梱の BattleCore スナップショットは第123期に丸ごと削除した。**
+    渡された `VillainProtoDemo` は第110期前後の写しで、改行を正規化した差分が
+    BattleEngine 510 / Traits 466 / Models 140 / Presets 76 / UnitCatalog 31 行あった
+    ——第116期の `Overload`（据えのバン）がそもそも存在しない盤面を見ることになる。
+    **写しを持つと必ずずれる**（第94期に手写しの表で 29 件の誤り／第97期 D6）。
+
+    このプロジェクトは VillainProto.sln に**入れない**。
+    root の `dotnet build` は Windows 以外でも通る必要があり（BattleCore + BattleSim）、
+    ここを混ぜると Godot.NET.Sdk の解決が要る。編成の検証は今まで通り BattleSim で行う。
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\BattleCore\BattleCore.csproj" />
+  </ItemGroup>
+
+</Project>
