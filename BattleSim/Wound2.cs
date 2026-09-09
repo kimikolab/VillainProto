@@ -40,7 +40,7 @@ static class Wound2Diag
     static string? _root;
 
     // ==================================================================================
-    public static void Run(string mode)
+    public static void Run(string mode, string sub)
     {
         if (!Init()) return;
         switch (mode)
@@ -48,7 +48,9 @@ static class Wound2Diag
             case "phase0": Phase0(); return;
             case "run": RunTables(); return;
             case "check": Check(); return;
-            default: Console.WriteLine("wound2: モードは phase0 / run / check のいずれか。"); return;
+            // 第121期 —— 巻き込み則の版を並べる。**既存3モードの呼び出しは1文字も変わらない。**
+            case "spill": SpillRun(sub); return;
+            default: Console.WriteLine("wound2: モードは phase0 / run / check / spill のいずれか。"); return;
         }
     }
 
@@ -818,6 +820,787 @@ static class Wound2Diag
         Console.WriteLine("## (e) 判定に使ったセルの screen");
         Console.WriteLine();
         Console.WriteLine("`wound2 run` の表D-2 が「両方とも床／両方とも天井」の行数を出す。");
+        Console.WriteLine();
+    }
+
+    // =====================================================================================
+    // wound2 spill モード（第121期） —— 巻き込み則の版を並べる。**測るだけ。機構は1つも作らない**
+    //
+    // 起点は第120期: 傷の供給の 89.4% は engine の巻き込み則（`SpillWoundRule`）で、
+    // 駒（キリ・ノミ）は合わせて 6.9% しか書かない。**書かれた傷の 94.7% は一度も読まれずに消える。**
+    //
+    // > **巻き込み則は第88期に、縫いの両側読み（ハリ）と対で採用された。その対の片側は第108期に
+    // > ロスターから外れ、供給の側だけが残って味方に 8.211/戦 を書き続けている。**
+    //
+    // **engine にもノブにも1行も足していない**——`SpillWoundRule(Enabled, Scope)` は既存で、
+    // 計数は第120期の `WoundRule(Census)` をそのまま使う。**新しい enum 値も足さない。**
+    //
+    //     dotnet run --project BattleSim -c Release 0 wound2 spill phase0   # 表P（§1・**戦闘0回**）
+    //     dotnet run --project BattleSim -c Release 0 wound2 spill run      # 表A〜C（3版 × 73行）
+    //     dotnet run --project BattleSim -c Release 0 wound2 spill check    # 自己検査
+    //
+    // **既存3モード（phase0 / run / check）は1文字も変えていない。** 同じファイルに置いてあるのは
+    // `derive rules` の走査がクラス宣言（`static class`）でファイルを結ぶため——`partial` に割ると
+    // **索引から `wound2` が静かに消える**（第121期に実際に踏んだ。第117・119期の「実装から引く表」の系）。
+    // =====================================================================================
+    // --- 版（測る前に固定する）----------------------------------------------------------
+    static readonly (string Tag, string Label, SpillWoundRule R)[] SpillVers =
+    {
+        ("S0", "現行（`Enabled: true, Scope: All`・味方の刃6枚が書く）", new SpillWoundRule(true, SpillScope.All)),
+        ("S1", "絞り（`Scope: Dense`・**吸いと余波だけ**が書く）",        new SpillWoundRule(true, SpillScope.Dense)),
+        ("S2", "停止（`Enabled: false`・**第88期以前の状態**）",          new SpillWoundRule(false)),
+    };
+
+    // --- 第120期の実測（`design/PHASE120_WOUND_STOCK.md`）。**器具の再現の的（Q1）** ------
+    const double P120Spill = 8.211, P120Written = 9.184, P120AllyRatio = 93.1, P120EngineShare = 89.4,
+                 P120Unread = 94.7, P120Depth3Ally = 40.5, P120EffPerRead = 2.72, P120EffPerWritten = 0.15;
+    const int P120Chain = 18, P120Moved = 18, P120Wrote = 54, P120Exact = 55;
+
+    // --- Q3 の分母（第120期 §5-2 の「外すと落ちる」上位6行。**全部ノミかソラを含む**）------
+    static readonly string[] CarveRows =
+    {
+        "刻み×断ち (ノミ×ナタ)", "刻み (ノミ単騎)", "刻み×抉り (ノミ×エグ)",
+        "止め (トメ×ソラ)", "刻み×澱み (ノミ×ミオ)", "逸らし改 (ソラ×ノミ)"
+    };
+    const string PoisonRow = "追撃×毒 (ハギ×グザ)";
+
+    const double Q3Line = 3.0;     // Q3: 刻み系が「動かない」線（第2〜5波平均・±）
+    const double Q4Line = 20.0;    // Q4: `追撃×毒` 第2波が「戻る」線
+    const double VetoLine = 10.0;  // Q5: 拒否権3（いずれかの波で −10.0pt 以上）
+    const double MoveLine = 0.05;  // 「動いた」の線（第2〜5波平均）
+
+    public static void SpillRun(string sub)
+    {
+        switch (sub)
+        {
+            case "phase0": SpillPhase0(); return;
+            case "run": SpillTables(); return;
+            case "check": SpillCheck(); return;
+            default: Console.WriteLine("wound2 spill: モードは phase0 / run / check のいずれか。"); return;
+        }
+    }
+
+    /// <summary>走査した位置から囲みのクラス名を引く（**引けなければ「—」を返して表に出す**・第117/119期）。</summary>
+    static string EnclosingClass(string src, int index)
+    {
+        MatchCollection ms = Regex.Matches(src.Substring(0, index),
+            @"^\s*(?:public |internal |)(?:sealed |static |abstract |partial )*class (?<n>\w+)", RegexOptions.Multiline);
+        return ms.Count == 0 ? "—" : ms[ms.Count - 1].Groups["n"].Value;
+    }
+
+    // ==================================================================================
+    // Phase 0 —— §1。**戦闘0回**
+    // ==================================================================================
+    static void SpillPhase0()
+    {
+        Console.WriteLine("# 第121期 Phase 0 —— 巻き込み則の版を並べる（表P・**戦闘0回**）");
+        Console.WriteLine();
+        Console.WriteLine("**enum のコメントではなく実装の分岐から引く**（第119期）。**走査件数を出力し、0 件なら止める**（第117期）。");
+        Console.WriteLine();
+
+        string traits = Src("Traits.cs"), engine = Src("BattleEngine.cs");
+
+        // --- P-1 版 -------------------------------------------------------------------
+        Console.WriteLine("## P-1 版（**既存のノブ。新しい enum 値も足していない**）");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 設定 | 意味 |");
+        Console.WriteLine("|---|---|---|");
+        foreach (var v in SpillVers)
+            Console.WriteLine($"| **{v.Tag}** | `{v.R}` | {v.Label} |");
+        Console.WriteLine();
+        Console.WriteLine($"- `SpillWoundRule.Default` = `{SpillWoundRule.Default}`（**測る間は現行のまま**）");
+        Console.WriteLine($"- `SpillScope` の列挙子 = {string.Join(" / ", Enum.GetNames(typeof(SpillScope)).Select(x => "`" + x + "`"))}");
+        Match writes = Regex.Match(traits, @"public bool Writes\(UnitState source\) =>\s*(?<b>[^;]+);");
+        if (!writes.Success) { Console.WriteLine("- **`Writes` の実装が引けない。止める。**"); return; }
+        Console.WriteLine($"- 絞りの判定（実装）: `{Regex.Replace(writes.Groups["b"].Value.Trim(), @"\s+", " ")}`");
+        Console.WriteLine();
+
+        // --- P-2 味方の刃の全数 ---------------------------------------------------------
+        Console.WriteLine("## P-2 味方の刃の全数（`isFriendlyFire: true` の呼び出し）");
+        Console.WriteLine();
+        var ff = new List<(string File, string Cls, string Src3, bool Relayed, string Line)>();
+        foreach ((string file, string src) in new[] { ("Traits.cs", traits), ("BattleEngine.cs", engine) })
+            foreach (Match m in Regex.Matches(src,
+                @"^(?!\s*///).*ApplyDamage\(\s*(?<a>[^,]+),\s*(?<b>[^,]+),\s*(?<c>[^,]+),\s*isFriendlyFire: true.*$",
+                RegexOptions.Multiline))
+                ff.Add((file, EnclosingClass(src, m.Index), m.Groups["c"].Value.Trim(),
+                        m.Value.Contains("relayed: true"), m.Value.Trim()));
+
+        Console.WriteLine($"**走査 {ff.Count} 件。**");
+        if (ff.Count == 0) { Console.WriteLine("**走査が空。止める。**"); return; }
+        Console.WriteLine();
+        Console.WriteLine("| # | ファイル | 囲みのクラス | `source` | 中継札 | 巻き込み則を通るか |");
+        Console.WriteLine("|--:|---|---|---|:-:|---|");
+        var writers = new List<string>();
+        for (int i = 0; i < ff.Count; i++)
+        {
+            bool nul = ff[i].Src3 == "null";
+            string verdict = ff[i].Relayed ? "×（`relayed` の札＝肩代わりの中継）"
+                           : nul ? "×（`source` が `null`）"
+                           : "**○ 書き手**";
+            if (!ff[i].Relayed && !nul) writers.Add(ff[i].Cls);
+            Console.WriteLine($"| {i + 1} | `{ff[i].File}` | `{ff[i].Cls}` | `{ff[i].Src3}` | "
+                + $"{(ff[i].Relayed ? "○" : "")} | {verdict} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**書き手 {writers.Count} 枚**（第120期の報告の 6 枚と照合する）。");
+        Console.WriteLine();
+        Console.WriteLine("| 特性 | `TraitId` | 保持者（`UnitCatalog.All`） | **S1（Dense）で書くか** |");
+        Console.WriteLine("|---|---|---|:-:|");
+        int denseWriters = 0, unresolved = 0;
+        foreach (string cls in writers)
+        {
+            string idName = cls.EndsWith("Trait") ? cls.Substring(0, cls.Length - 5) : cls;
+            if (!Enum.TryParse(idName, out TraitId tid))
+            {
+                unresolved++;
+                Console.WriteLine($"| `{cls}` | **引けない** | — | — |");
+                continue;
+            }
+            string holders = string.Join(" / ", UnitCatalog.All.Where(u => u.Traits.Contains(tid)).Select(u => u.Name));
+            bool dense = tid == TraitId.Drain || tid == TraitId.Splash;
+            if (dense) denseWriters++;
+            Console.WriteLine($"| `{cls}` | `{tid}` | {(holders.Length == 0 ? "**0 枚**" : holders)} | {(dense ? "**○**" : "×")} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**S1 で残る書き手 = {denseWriters} 枚**（`Writes` の条件が `Drain` / `Splash` なので実装と一対一）。"
+            + (unresolved > 0 ? $" **`TraitId` に落とせなかったクラスが {unresolved} 件。**" : ""));
+        Console.WriteLine();
+
+        // --- P-3 傷を読む行と陣営 --------------------------------------------------------
+        Console.WriteLine("## P-3 傷を読む行の全数と、**どちらの陣営の傷を読むか**（§1 の 2）");
+        Console.WriteLine();
+        Console.WriteLine("**分類は囲みのクラスで引き、引けなかったものは「未分類」として全部表に出す**");
+        Console.WriteLine("（第119期——**引けたことと使えることは別**）。");
+        Console.WriteLine();
+        var reads = new List<(string File, string Cls)>();
+        foreach ((string file, string src) in new[] { ("Traits.cs", traits), ("BattleEngine.cs", engine) })
+            foreach (Match m in Regex.Matches(src,
+                @"^(?!\s*//)(?!.*NoteWoundRead)(?!.*SetCounter)(?!\s*public (?:int|bool) ).*(?:WoundDepthOf\(|IsWounded\(|Counter\(StatusKeys\.Wound\)).*$",
+                RegexOptions.Multiline))
+                reads.Add((file, EnclosingClass(src, m.Index)));
+
+        Console.WriteLine($"**走査 {reads.Count} 件。**");
+        if (reads.Count == 0) { Console.WriteLine("**走査が空。止める。**"); return; }
+        Console.WriteLine();
+        Console.WriteLine("| クラス | 件数 | 駒 | 読む陣営 | 根拠（実装） |");
+        Console.WriteLine("|---|--:|---|---|---|");
+        int unclassified = 0;
+        foreach (var g in reads.GroupBy(x => x.Cls).OrderByDescending(g => g.Count()))
+        {
+            (string who, string side, string why) = ClassifyReader(g.Key);
+            if (side.Contains("未分類")) unclassified++;
+            Console.WriteLine($"| `{g.Key}` | {g.Count()} | {who} | {side} | {why} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine(unclassified == 0 ? "**未分類 0。**"
+            : $"**未分類 {unclassified} 件。分類表に足すまで判定に使わない。**");
+        Console.WriteLine();
+        Console.WriteLine("> **味方の傷を読むのは 繕い（ノノ）／引き取り（ガルド）／縫い（ハリ・`Presets` に不在）／");
+        Console.WriteLine("> 滲み則（engine・毒を持つ駒の傷を読むので陣営を見ていない）の 4 本。**");
+        Console.WriteLine("> **攻めの3枚（抉り・なぞり・断ち）は敵の傷しか読まない**ので、S1 / S2 で損をしない。");
+        Console.WriteLine();
+
+        // --- P-4 代金が出る行の予告 -------------------------------------------------------
+        Console.WriteLine("## P-4 味方の傷の読み手を含む行（**代金が出る行の予告**・§1 の 3）");
+        Console.WriteLine();
+        var rows = Rows();
+        string[] payers = { UnitCatalog.Nono.Id, UnitCatalog.Gald.Id, UnitCatalog.Hari.Id };
+        string[] payerNames = { "繕い（ノノ）", "引き取り（ガルド）", "縫い（ハリ）" };
+        var hit = new List<(string Row, string Who)>();
+        for (int r = 0; r < rows.Length; r++)
+        {
+            var ids = rows[r].F.Occupied().Select(u => u.Def.Id).ToHashSet(StringComparer.Ordinal);
+            var who = new List<string>();
+            for (int i = 0; i < payers.Length; i++) if (ids.Contains(payers[i])) who.Add(payerNames[i]);
+            if (who.Count > 0) hit.Add((rows[r].Name + (rows[r].Cross ? "（交差帯）" : ""), string.Join(" / ", who)));
+        }
+        Console.WriteLine($"**{hit.Count} 行 / {rows.Length}**（`compare` {Presets.Compare.Length} ＋ 交差帯 {Presets.Cross.Length}）。");
+        Console.WriteLine();
+        Console.WriteLine("| # | 行 | 味方の傷の読み手 |");
+        Console.WriteLine("|--:|---|---|");
+        for (int i = 0; i < hit.Count; i++) Console.WriteLine($"| {i + 1} | {hit[i].Row} | {hit[i].Who} |");
+        Console.WriteLine();
+        Console.WriteLine("**ハリは 0 行のはず**（第108期にロスターから外れた）"
+            + "——**対の片側が消えているというのが、この期の起点そのもの。**");
+        Console.WriteLine();
+
+        // --- P-5 滲み則の往復 ------------------------------------------------------------
+        Console.WriteLine($"## P-5 滲み則が味方側の傷を読む経路（`{PoisonRow}` の往復・§1 の 4）");
+        Console.WriteLine();
+        Console.WriteLine($"- `SoakRule.Default` = `{SoakRule.Default}`（第90期に採用・**毒の側だけ**）");
+        Console.WriteLine("- 実装: 毒の刻みが `wounded` なら 1 層ぶん重くなる（`BattleEngine.cs` の毒の段）。");
+        Console.WriteLine("  **傷を持つ駒が敵味方どちらかを見ていない**ので、**敵の毒が味方の傷を読む**。");
+        Console.WriteLine();
+        var prow = rows.FirstOrDefault(x => x.Name == PoisonRow);
+        if (prow.Name is null) { Console.WriteLine($"**`{PoisonRow}` が引けない。止める。**"); return; }
+        Console.WriteLine($"`{PoisonRow}` の5枚: " + string.Join(" / ", prow.F.Occupied().Select(u => u.Def.Name)));
+        Console.WriteLine();
+        Console.WriteLine("> **第90期の事故（第2波 87.5 → 29.0 ＝ −58.5pt）は規約 (G1) がこの行・この波を名指ししている。**");
+        Console.WriteLine("> 第120期は**傷を丸ごと外すとそっくり戻る**ことを示した（+58.5pt）。");
+        Console.WriteLine("> **S2 で戻るなら、戻したのは「傷」ではなく「巻き込み則が味方に書いた傷」である**（Q4）。");
+        Console.WriteLine();
+
+        // --- P-6 第85 / 86 / 88期 ---------------------------------------------------------
+        Console.WriteLine("## P-6 巻き込み則を採否した期の実測（§1 の 5）");
+        Console.WriteLine();
+        foreach (string f in new[] { "PHASE85_SUTURE2.md", "PHASE86_MENDER.md", "PHASE88_GAUGE.md" })
+        {
+            string path = Path.Combine(_root!, "design", f);
+            Console.WriteLine(File.Exists(path)
+                ? $"- `design/{f}` — あり（{File.ReadAllLines(path).Length} 行）"
+                : $"- `design/{f}` — **無い**");
+        }
+        Console.WriteLine();
+        Console.WriteLine("| 期 | 何を測ったか | 当時の線 | 結果 |");
+        Console.WriteLine("|---|---|---|---|");
+        Console.WriteLine("| 第85期 | 縫いの両側読み（W1）と巻き込み則（W2） | **Δ相乗 ≥ +3.0pt**（水準の分布から引いた線） | 落ちた |");
+        Console.WriteLine("| 第86期 | 繕いの傷読み | 紙 ÷ 総被ダメ ≥ 5%（**大きさの門**） | 2×2 を1戦も回さず落ちた |");
+        Console.WriteLine("| 第88期 | 物差しの引き直し（特異性・情報帯・ノイズ床） | 主判定は**特異性**・拒否権は大きさ | **両側読み ＋ 巻き込み則で +5.74 → 採用** |");
+        Console.WriteLine();
+        Console.WriteLine("> **当時の線と今の線の違い**: 第85期は「大きさ」で落ち、第88期は「特異性」で通った。");
+        Console.WriteLine("> **どちらの線も『対で測る』ことを前提にしている**——その対の片側（ハリ）は今 `Presets` に 0 行。");
+        Console.WriteLine("> **この期が問うのは大きさでも特異性でもなく、「対が壊れた後も供給だけ残す理由があるか」である。**");
+        Console.WriteLine();
+
+        // --- P-7 情報帯の片側 -------------------------------------------------------------
+        Console.WriteLine("## P-7 判定に使うセルが情報帯に入るか（§1 の 6・片側）");
+        Console.WriteLine();
+        ScreenFromBalance();
+
+        // --- P-8 再現の的 -----------------------------------------------------------------
+        Console.WriteLine("## P-8 器具の再現の的（Q1・第120期の実測）");
+        Console.WriteLine();
+        Console.WriteLine("| 量 | 第120期 |");
+        Console.WriteLine("|---|--:|");
+        Console.WriteLine($"| 巻き込み則が書く傷/戦 | {P120Spill:F3} |");
+        Console.WriteLine($"| 書かれた傷/戦（全経路） | {P120Written:F3} |");
+        Console.WriteLine($"| **供給に占める巻き込み則** | **{P120EngineShare:F1}%** |");
+        Console.WriteLine($"| **味方比** | **{P120AllyRatio:F1}%** |");
+        Console.WriteLine($"| **読まれずに消えた割合** | **{P120Unread:F1}%** |");
+        Console.WriteLine($"| 味方側の深さ3以上 | {P120Depth3Ally:F1}% |");
+        Console.WriteLine($"| 実効÷読まれた傷 ／ 実効÷書かれた傷 | {P120EffPerRead:F2} ／ {P120EffPerWritten:F2} |");
+        Console.WriteLine($"| 鎖が繋がっている行 ／ 傷が書かれた行 | {P120Chain} ／ {P120Wrote}（/ 73） |");
+        Console.WriteLine($"| 傷を外すと動いた行 ／ ちょうど ±0.00pt | {P120Moved} ／ {P120Exact} |");
+        Console.WriteLine();
+        Console.WriteLine("**この表と `wound2 spill run` の S0 の列が一致することが Q1。**");
+        Console.WriteLine("**新しい器具は既知の値を再現できて初めて使える。**");
+        Console.WriteLine();
+    }
+
+    /// <summary>傷を読むクラスの分類（**実装から引けるのはクラス名まで。陣営は根拠を1行ずつ書く**）。</summary>
+    static (string Who, string Side, string Why) ClassifyReader(string cls) => cls switch
+    {
+        "GougeTrait" => ("抉り（エグ）", "敵", "`OnAfterAttack` の主目標 ＝ 攻撃対象"),
+        "CarveTrait" => ("刻みのなぞり（ノミ）", "敵", "同上（なぞってから刻む）"),
+        "SeverTrait" => ("断ち（ナタ）", "敵", "`TargetPool`（標的候補 ＝ 敵陣）から選ぶ"),
+        "SutureTrait" => ("縫い（ハリ・**不在**）", "**両側**", "`SutureRule.Both`（第90期）。`Presets` に 0 行"),
+        "MenderTrait" => ("繕い（ノノ）", "**味方**", "`ctx.MostHurtAlly(self)` の患者"),
+        "GuardianTrait" => ("引き取り（ガルド）", "**味方**", "`ctx.LivingMembers(self.TeamId)` の隣接"),
+        "ThinBladeTrait" => ("薄刃（キリ）", "敵", "`ThinBladeCost.Unwounded`。**既定では読まない**"),
+        "AmplifierTrait" => ("澱み（ミオ）", "敵", "傷口の着火（`IgniteRule`）。標的は敵"),
+        "BattleContext" => ("滲み則 ＋ 帳簿（engine）", "**両側**", "毒／燃焼を持つ駒の傷を読む（陣営を見ていない）＋ 計数"),
+        // `BattleEngine`（`BattleContext` ではない）に1件だけある——決着時に残っていた傷を帳簿へ落とす行。
+        // **盤面を分岐させない計数専用**なので、版に依らず走る。
+        "BattleEngine" => ("決着時の帳簿（engine）", "**両側**", "`WoundsAtEnd`。**計数専用で盤面を分岐させない**"),
+        _ => ("—", "**未分類**", "—")
+    };
+
+    // ==================================================================================
+    // run —— 表A〜C（3版 ＋ 第120期の再現用の対照）
+    // ==================================================================================
+    static void SpillTables()
+    {
+        var rows = Rows();
+        int V = SpillVers.Length;
+        var agg = new Agg[V];
+        var perRow = new Agg[V][];
+        var win = new double[V][][];
+        var spillBy = new Dictionary<string, long>[V];
+        for (int v = 0; v < V; v++)
+        {
+            agg[v] = new Agg();
+            perRow[v] = new Agg[rows.Length];
+            win[v] = new double[rows.Length][];
+            spillBy[v] = new Dictionary<string, long>(StringComparer.Ordinal);
+        }
+        var winOff = new double[rows.Length][];
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        for (int r = 0; r < rows.Length; r++)
+        {
+            for (int v = 0; v < V; v++) { win[v][r] = new double[Waves.Length]; perRow[v][r] = new Agg(); }
+            winOff[r] = new double[Waves.Length];
+            for (int wi = 0; wi < Waves.Length; wi++)
+            {
+                Formation foe = EnemyCatalog.Stages[Waves[wi]].Enemy;
+                var hits = new int[V];
+                int hoff = 0;
+                for (int seed = 0; seed < Seeds; seed++)
+                {
+                    for (int v = 0; v < V; v++)
+                    {
+                        BattleResult res = BattleEngine.Run(rows[r].F, foe, seed, verbose: false,
+                                                            spillWound: SpillVers[v].R, wound: V0);
+                        if (res.PlayerWon) hits[v]++;
+                        agg[v].Add(res);
+                        perRow[v][r].Add(res);
+                        foreach (var kv in res.TallyByUnit)
+                            if (kv.Value.SpillWoundsWritten > 0)
+                                spillBy[v][kv.Key] = spillBy[v].GetValueOrDefault(kv.Key) + kv.Value.SpillWoundsWritten;
+                    }
+                    // 第120期の再現用（傷を丸ごと外す・巻き込み則は現行のまま）。
+                    if (BattleEngine.Run(rows[r].F, foe, seed, verbose: false, wound: VOff).PlayerWon) hoff++;
+                }
+                for (int v = 0; v < V; v++) win[v][r][wi] = hits[v] * 100.0 / Seeds;
+                winOff[r][wi] = hoff * 100.0 / Seeds;
+            }
+        }
+        sw.Stop();
+
+        Console.WriteLine("# 第121期 —— 巻き込み則の版を並べる（表A〜C）");
+        Console.WriteLine();
+        Console.WriteLine($"台: `compare` {Presets.Compare.Length} 行 ＋ 交差帯 {Presets.Cross.Length} 行 ＝ **{rows.Length} 行** "
+            + $"× 第2〜5波 × seed 0..{Seeds - 1}（規約 (G10)・(G14)）。");
+        Console.WriteLine($"**3 版 × {agg[0].Battles:N0} 戦 ＋ 第120期の再現用の対照（傷を無効）。** 所要 {sw.Elapsed.TotalSeconds:F1} 秒。");
+        Console.WriteLine();
+        Console.WriteLine("**`Presets` は1行も触っていない。**（版は `BattleEngine.Run` の引数だけで振る）");
+        Console.WriteLine();
+
+        SpillTableQ1(agg[0], rows, perRow[0], win[0], winOff);
+        SpillTableA(agg, spillBy);
+        SpillTableB(rows, win);
+        SpillTableC(rows, win);
+    }
+
+    // --- Q1 器具の再現 ------------------------------------------------------------------
+    static void SpillTableQ1(Agg a, (string Name, Formation F, bool Cross)[] rows, Agg[] per,
+                             double[][] w0, double[][] off)
+    {
+        double n = a.Battles;
+        double written = a.Written / n;
+        double spill = a.WAlly[(int)WoundRoute.Spill] / n;
+        double allyRatio = a.WrittenAlly * 100.0 / Math.Max(1, a.Written);
+        double share = a.WAlly[(int)WoundRoute.Spill] * 100.0 / Math.Max(1, a.Written);
+        double unread = a.Unread * 100.0 / Math.Max(1, a.Written);
+        double d3 = a.DepthAlly[2] * 100.0 / Math.Max(1, a.DepthAlly.Sum());
+        long dmgRead = a.RWounds[0] + a.RWounds[1] + a.RWounds[2];
+        long dmgEff = a.REff[0] + a.REff[1] + a.REff[2];
+
+        int chain = 0, wrote = 0, moved = 0, exact = 0;
+        for (int r = 0; r < rows.Length; r++)
+        {
+            long wr = per[r].Written, rd = per[r].ReadWoundsTotal;
+            if (wr > 0) wrote++;
+            if (wr > 0 && rd > 0) chain++;
+            double avg = 0;
+            for (int i = 0; i < Waves.Length; i++) avg += w0[r][i] - off[r][i];
+            avg /= Waves.Length;
+            if (Math.Abs(avg) > MoveLine) moved++;
+            if (avg == 0.0) exact++;
+        }
+
+        Console.WriteLine("## Q1 —— 器具の再現（S0 が第120期と一致するか）");
+        Console.WriteLine();
+        Console.WriteLine("| 量 | 第120期 | S0（この期） | 一致 |");
+        Console.WriteLine("|---|--:|--:|:-:|");
+        Console.WriteLine(Cmp("巻き込み則が書く傷/戦", P120Spill, spill, 0.005, "F3"));
+        Console.WriteLine(Cmp("書かれた傷/戦（全経路）", P120Written, written, 0.005, "F3"));
+        Console.WriteLine(Cmp("**供給に占める巻き込み則**", P120EngineShare, share, 0.05, "F1"));
+        Console.WriteLine(Cmp("**味方比**", P120AllyRatio, allyRatio, 0.05, "F1"));
+        Console.WriteLine(Cmp("**読まれずに消えた割合**", P120Unread, unread, 0.05, "F1"));
+        Console.WriteLine(Cmp("味方側の深さ3以上", P120Depth3Ally, d3, 0.05, "F1"));
+        Console.WriteLine(Cmp("実効÷読まれた傷", P120EffPerRead, dmgRead == 0 ? 0 : dmgEff / (double)dmgRead, 0.005, "F2"));
+        Console.WriteLine(Cmp("実効÷書かれた傷", P120EffPerWritten, a.Written == 0 ? 0 : dmgEff / (double)a.Written, 0.005, "F2"));
+        Console.WriteLine(Cmp("鎖が繋がっている行", P120Chain, chain, 0.5, "F0"));
+        Console.WriteLine(Cmp("傷が書かれた行", P120Wrote, wrote, 0.5, "F0"));
+        Console.WriteLine(Cmp("傷を外すと動いた行", P120Moved, moved, 0.5, "F0"));
+        Console.WriteLine(Cmp("ちょうど ±0.00pt の行", P120Exact, exact, 0.5, "F0"));
+        Console.WriteLine();
+    }
+
+    static string Cmp(string name, double want, double got, double tol, string fmt)
+        => $"| {name} | {want.ToString(fmt)} | {got.ToString(fmt)} | {(Math.Abs(want - got) <= tol ? "**○**" : "**×**")} |";
+
+    // --- 表A 在庫 3 版 -------------------------------------------------------------------
+    static void SpillTableA(Agg[] agg, Dictionary<string, long>[] spillBy)
+    {
+        int V = SpillVers.Length;
+        Console.WriteLine("## 表A —— 在庫（§2-1・3 版）");
+        Console.WriteLine();
+        Console.WriteLine("### A-1 書かれた傷（経路別 × 陣営別・1戦あたり）");
+        Console.WriteLine();
+        Console.WriteLine("| 経路 | 陣営 | " + string.Join(" | ", SpillVers.Select(v => v.Tag)) + " |");
+        Console.WriteLine("|---|---|" + string.Concat(Enumerable.Repeat("--:|", V)));
+        for (int i = 0; i < RouteName.Length; i++)
+        {
+            long tot = 0;
+            for (int v = 0; v < V; v++) tot += agg[v].WAlly[i] + agg[v].WFoe[i];
+            if (tot == 0) continue;
+            int route = i;
+            Console.WriteLine($"| {RouteName[route]} | 味方へ | " + string.Join(" | ",
+                Enumerable.Range(0, V).Select(v => (agg[v].WAlly[route] / (double)agg[v].Battles).ToString("F3"))) + " |");
+            Console.WriteLine($"| {RouteName[route]} | 敵へ | " + string.Join(" | ",
+                Enumerable.Range(0, V).Select(v => (agg[v].WFoe[route] / (double)agg[v].Battles).ToString("F3"))) + " |");
+        }
+        Console.WriteLine("| **計** | | " + string.Join(" | ",
+            Enumerable.Range(0, V).Select(v => (agg[v].Written / (double)agg[v].Battles).ToString("F3"))) + " |");
+        Console.WriteLine("| **味方比** | | " + string.Join(" | ", Enumerable.Range(0, V).Select(v =>
+            "**" + (agg[v].Written == 0 ? 0 : agg[v].WrittenAlly * 100.0 / agg[v].Written).ToString("F1") + "%**")) + " |");
+        Console.WriteLine();
+
+        Console.WriteLine("### A-2 在庫・深さ・消滅・単価");
+        Console.WriteLine();
+        Console.WriteLine("| 量 | " + string.Join(" | ", SpillVers.Select(v => v.Tag)) + " |");
+        Console.WriteLine("|---|" + string.Concat(Enumerable.Repeat("--:|", V)));
+        ARow("傷を持つ味方の同時存在数（平均/T）", v => (agg[v].StockAlly / (double)Math.Max(1, agg[v].StockTurns)).ToString("F3"));
+        ARow("傷持ちの味方が1体でもいたターン", v => (agg[v].TurnsAllyAny * 100.0 / Math.Max(1, agg[v].StockTurns)).ToString("F1") + "%");
+        ARow("傷持ちの敵が1体でもいたターン", v => (agg[v].TurnsFoeAny * 100.0 / Math.Max(1, agg[v].StockTurns)).ToString("F1") + "%");
+        ARow("**味方側の深さ3以上**", v => (agg[v].DepthAlly[2] * 100.0 / Math.Max(1, agg[v].DepthAlly.Sum())).ToString("F1") + "%");
+        ARow("敵側の深さ1", v => (agg[v].DepthFoe[0] * 100.0 / Math.Max(1, agg[v].DepthFoe.Sum())).ToString("F1") + "%");
+        ARow("**読まれずに消えた割合**", v => "**" + (agg[v].Unread * 100.0 / Math.Max(1, agg[v].Written)).ToString("F1") + "%**");
+        ARow("読まれた傷/戦（延べ）", v => (agg[v].ReadWoundsTotal / (double)agg[v].Battles).ToString("F3"));
+        ARow("**実効÷読まれた傷**", v =>
+        {
+            long rd = agg[v].RWounds[0] + agg[v].RWounds[1] + agg[v].RWounds[2];
+            long ef = agg[v].REff[0] + agg[v].REff[1] + agg[v].REff[2];
+            return rd == 0 ? "—" : (ef / (double)rd).ToString("F2");
+        });
+        ARow("**実効÷書かれた傷**", v =>
+        {
+            long ef = agg[v].REff[0] + agg[v].REff[1] + agg[v].REff[2];
+            return agg[v].Written == 0 ? "—" : "**" + (ef / (double)agg[v].Written).ToString("F2") + "**";
+        });
+        ARow("決着ターン（規約 (G6)）", v => (agg[v].Turns / (double)agg[v].Battles).ToString("F2"));
+        ARow("勝率（全 73 行 × 第2〜5波）", v => (agg[v].Wins * 100.0 / agg[v].Battles).ToString("F1") + "%");
+        Console.WriteLine();
+
+        Console.WriteLine("### A-3 巻き込み則の書き手の内訳（`UnitTally.SpillWoundsWritten`・自己検査 (b)）");
+        Console.WriteLine();
+        var ids = new List<string>();
+        foreach (var d in spillBy) foreach (string k in d.Keys) if (!ids.Contains(k)) ids.Add(k);
+        ids.Sort((x, y) => spillBy[0].GetValueOrDefault(y).CompareTo(spillBy[0].GetValueOrDefault(x)));
+        Console.WriteLine("| 書き手 | " + string.Join(" | ", SpillVers.Select(v => v.Tag)) + " |");
+        Console.WriteLine("|---|" + string.Concat(Enumerable.Repeat("--:|", V)));
+        foreach (string id in ids)
+        {
+            string nm = UnitCatalog.All.FirstOrDefault(u => u.Id == id)?.Name ?? id;
+            string cur = id;
+            Console.WriteLine($"| {nm} | " + string.Join(" | ", Enumerable.Range(0, V).Select(v =>
+                (spillBy[v].GetValueOrDefault(cur) / (double)agg[v].Battles).ToString("F3"))) + " |");
+        }
+        Console.WriteLine();
+
+        void ARow(string name, Func<int, string> f)
+            => Console.WriteLine($"| {name} | " + string.Join(" | ", Enumerable.Range(0, V).Select(f)) + " |");
+    }
+
+    // --- 表B 帰属 -----------------------------------------------------------------------
+    static void SpillTableB((string Name, Formation F, bool Cross)[] rows, double[][][] win)
+    {
+        Console.WriteLine("## 表B —— 帰属（S1 − S0 と S2 − S0・§2-2）");
+        Console.WriteLine();
+        Console.WriteLine("**符号は「版 − 現行」**——正なら**その版のほうが強い**（＝巻き込み則を絞る／止めると上がる）。");
+        Console.WriteLine();
+
+        // B-1 刻み系（Q3）
+        Console.WriteLine("### B-1 刻み系 6 行（Q3・**動かないこと**が芯）");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | S1−S0 平均 | S2−S0 平均 | S2−S0 の最大 | その波 | 線 ±3.0pt |");
+        Console.WriteLine("|---|--:|--:|--:|--:|:-:|");
+        double worst = 0;
+        int missing = 0;
+        foreach (string name in CarveRows)
+        {
+            int r = Array.FindIndex(rows, x => x.Name == name);
+            if (r < 0) { missing++; Console.WriteLine($"| **{name}（引けない）** | — | — | — | — | **×** |"); continue; }
+            double a1 = 0, a2 = 0, mx = 0;
+            int mw = 0;
+            for (int i = 0; i < Waves.Length; i++)
+            {
+                a1 += win[1][r][i] - win[0][r][i];
+                double d = win[2][r][i] - win[0][r][i];
+                a2 += d;
+                if (Math.Abs(d) > Math.Abs(mx)) { mx = d; mw = Waves[i] + 1; }
+            }
+            a1 /= Waves.Length; a2 /= Waves.Length;
+            if (Math.Abs(a2) > Math.Abs(worst)) worst = a2;
+            Console.WriteLine($"| {name} | {a1:+0.0;-0.0;0.0} | **{a2:+0.0;-0.0;0.0}** | {mx:+0.0;-0.0;0.0} | 第{mw}波 | "
+                + (Math.Abs(a2) <= Q3Line ? "**○**" : "**×**") + " |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**Q3 ＝ {(missing == 0 && Math.Abs(worst) <= Q3Line ? "○" : "×")}**"
+            + $"（最大の変動 {worst:+0.0;-0.0;0.0}pt・線 ±{Q3Line:F1}pt）。");
+        Console.WriteLine();
+
+        // B-2 追撃×毒（Q4）
+        Console.WriteLine($"### B-2 `{PoisonRow}`（Q4・第2波が **+{Q4Line:F0}pt 以上戻る**か）");
+        Console.WriteLine();
+        int pr = Array.FindIndex(rows, x => x.Name == PoisonRow);
+        if (pr < 0) Console.WriteLine("**行が引けない。止める。**");
+        else
+        {
+            double q4 = 0;
+            Console.WriteLine("| 波 | S0 | S1 | S2 | S1−S0 | **S2−S0** |");
+            Console.WriteLine("|---|--:|--:|--:|--:|--:|");
+            for (int i = 0; i < Waves.Length; i++)
+            {
+                double d2 = win[2][pr][i] - win[0][pr][i];
+                if (Waves[i] == 1) q4 = d2;
+                Console.WriteLine($"| 第{Waves[i] + 1}波 | {win[0][pr][i]:F1} | {win[1][pr][i]:F1} | {win[2][pr][i]:F1} | "
+                    + $"{win[1][pr][i] - win[0][pr][i]:+0.0;-0.0;0.0} | **{d2:+0.0;-0.0;0.0}** |");
+            }
+            Console.WriteLine();
+            Console.WriteLine($"**Q4 ＝ {(q4 >= Q4Line ? "○" : "×")}**（第2波 {q4:+0.0;-0.0;0.0}pt・線 +{Q4Line:F1}pt）。");
+        }
+        Console.WriteLine();
+
+        // B-3 代金（Q5）
+        Console.WriteLine($"### B-3 代金（Q5・いずれかの波で **−{VetoLine:F1}pt 以上**落ちる行）");
+        Console.WriteLine();
+        for (int v = 1; v <= 2; v++)
+        {
+            var bad = new List<(string Name, double Worst, int Wave, double Avg)>();
+            for (int r = 0; r < rows.Length; r++)
+            {
+                double w = 0, avg = 0;
+                int ww = 0;
+                for (int i = 0; i < Waves.Length; i++)
+                {
+                    double d = win[v][r][i] - win[0][r][i];
+                    avg += d;
+                    if (d < w) { w = d; ww = Waves[i] + 1; }
+                }
+                if (w <= -VetoLine) bad.Add((rows[r].Name, w, ww, avg / Waves.Length));
+            }
+            Console.WriteLine($"**{SpillVers[v].Tag}: {bad.Count} 行**"
+                + (bad.Count >= 3 ? $"（**3 行以上 ＝ {SpillVers[v].Tag} は採らない**）" : "（線は 3 行）") + "。");
+            Console.WriteLine();
+            if (bad.Count == 0) continue;
+            Console.WriteLine("| 行 | 最大の落差 | その波 | 第2〜5波の平均 |");
+            Console.WriteLine("|---|--:|--:|--:|");
+            foreach (var b in bad.OrderBy(x => x.Worst))
+                Console.WriteLine($"| {b.Name} | {b.Worst:F1} pt | 第{b.Wave}波 | {b.Avg:+0.0;-0.0;0.0} pt |");
+            Console.WriteLine();
+            if (v == 2) BreakOrConstraint(rows, win, bad.Select(x => x.Name).ToArray());
+        }
+    }
+
+    /// <summary>規約 (G2) —— 落ちた行を「壊れ」と「制約」に分ける（分母は 73 行）。</summary>
+    static void BreakOrConstraint((string Name, Formation F, bool Cross)[] rows, double[][][] win, string[] bad)
+    {
+        Console.WriteLine("**(G2) 壊れか制約か**——落ちた行に含まれる駒それぞれについて、"
+            + "**その駒を含む他の行**の第2〜5波平均の変化（S2−S0）を出す。");
+        Console.WriteLine();
+        Console.WriteLine("| 落ちた行 | 駒 | その駒を含む他の行 | 平均変化 | 判定 |");
+        Console.WriteLine("|---|---|--:|--:|---|");
+        foreach (string name in bad)
+        {
+            int br = Array.FindIndex(rows, x => x.Name == name);
+            if (br < 0) continue;
+            foreach (var u in rows[br].F.Occupied())
+            {
+                string id = u.Def.Id;
+                double sum = 0;
+                int cnt = 0;
+                for (int r = 0; r < rows.Length; r++)
+                {
+                    if (r == br) continue;
+                    if (!rows[r].F.Occupied().Any(x => x.Def.Id == id)) continue;
+                    double avg = 0;
+                    for (int i = 0; i < Waves.Length; i++) avg += win[2][r][i] - win[0][r][i];
+                    sum += avg / Waves.Length;
+                    cnt++;
+                }
+                string verdict = cnt == 0 ? "**他の行が 0 行 ＝ この分解が成立しない**"
+                               : sum / cnt <= -3.0 ? "**壊れ（その駒が使えなくなっている）**"
+                               : "制約（組み合わせ固有）";
+                Console.WriteLine($"| {name} | {u.Def.Name} | {cnt} | "
+                    + (cnt == 0 ? "—" : $"{sum / cnt:+0.00;-0.00;0.00}") + $" | {verdict} |");
+            }
+        }
+        Console.WriteLine();
+    }
+
+    // --- 表C 動いた行の全列挙 -------------------------------------------------------------
+    static void SpillTableC((string Name, Formation F, bool Cross)[] rows, double[][][] win)
+    {
+        Console.WriteLine($"## 表C —— 動いた行の全列挙（|第2〜5波平均| > {MoveLine:F2}pt）");
+        Console.WriteLine();
+        for (int v = 1; v <= 2; v++)
+        {
+            var moved = new List<(string Name, double Avg, double Worst, double Best, int Info)>();
+            int screened = 0;
+            double all = 0;
+            for (int r = 0; r < rows.Length; r++)
+            {
+                double avg = 0, w = 0, b = 0;
+                bool blind = true;
+                int info = 0;
+                for (int i = 0; i < Waves.Length; i++)
+                {
+                    double d = win[v][r][i] - win[0][r][i];
+                    avg += d;
+                    if (d < w) w = d;
+                    if (d > b) b = d;
+                    bool bothFloor = win[0][r][i] <= 0.0 && win[v][r][i] <= 0.0;
+                    bool bothCeil = win[0][r][i] >= 100.0 && win[v][r][i] >= 100.0;
+                    if (!bothFloor && !bothCeil) blind = false;
+                    if (win[0][r][i] > 0.0 && win[0][r][i] < 100.0) info++;
+                }
+                if (blind) screened++;
+                avg /= Waves.Length;
+                all += avg;
+                if (Math.Abs(avg) > MoveLine) moved.Add((rows[r].Name, avg, w, b, info));
+            }
+            Console.WriteLine($"### {SpillVers[v].Tag} —— **{moved.Count} / {rows.Length} 行**が動いた"
+                + $"（現行と両方とも床／両方とも天井の行 = {screened}・自己検査 (e)）");
+            Console.WriteLine();
+            Console.WriteLine("| 行 | 第2〜5波平均 | 最大の下げ | 最大の上げ | S0 の情報セル |");
+            Console.WriteLine("|---|--:|--:|--:|--:|");
+            foreach (var m in moved.OrderByDescending(x => x.Avg))
+                Console.WriteLine($"| {m.Name} | **{m.Avg:+0.0;-0.0;0.0}** | {m.Worst:F1} | +{m.Best:F1} | {m.Info} |");
+            Console.WriteLine();
+            Console.WriteLine($"**{rows.Length} 行の平均 = {all / rows.Length:+0.00;-0.00;0.00} pt。**");
+            Console.WriteLine();
+
+            // 拒否権1（(G9) の残る2本のうちの1本）。
+            double f0 = 0, fv = 0;
+            int fn = 0;
+            for (int r = 0; r < rows.Length; r++)
+            {
+                if (!Baseline.PrimaryRows.Contains(rows[r].Name)) continue;
+                f0 += win[0][r][Waves.Length - 1];
+                fv += win[v][r][Waves.Length - 1];
+                fn++;
+            }
+            Console.WriteLine($"**主判定 {fn} 行の第五波平均: S0 {f0 / Math.Max(1, fn):F1}% → {SpillVers[v].Tag} {fv / Math.Max(1, fn):F1}%**"
+                + $"（歯止め {Baseline.PrimaryFifthFloor:F1}%・拒否権1 ＝ "
+                + (fv / Math.Max(1, fn) >= Baseline.PrimaryFifthFloor ? "**○**" : "**×**") + "）。");
+            Console.WriteLine();
+        }
+    }
+
+    // ==================================================================================
+    // check —— 自己検査
+    // ==================================================================================
+    static void SpillCheck()
+    {
+        Console.WriteLine("# 第121期 —— 自己検査");
+        Console.WriteLine();
+
+        // --- 必須1 ---------------------------------------------------------------------
+        Console.WriteLine("## 必須1 —— `compare` 305 セルが `docs/balance.md` と 0 件（**既定経路**）");
+        Console.WriteLine();
+        var want = BalanceCells();
+        int cells = 0, diff = 0;
+        foreach (var (name, f) in Presets.Compare)
+        {
+            if (!want.TryGetValue(name, out double[]? exp)) { Console.WriteLine($"- **行名が引けない: {name}**"); continue; }
+            for (int st = 0; st < EnemyCatalog.Stages.Count; st++)
+            {
+                int wins = 0;
+                for (int seed = 0; seed < Seeds; seed++)
+                    if (BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false).PlayerWon) wins++;
+                double got = wins * 100.0 / Seeds;
+                cells++;
+                if (Math.Abs(got - exp[st]) > 0.049)
+                {
+                    diff++;
+                    Console.WriteLine($"- **差分: {name} 第{st + 1}波 {exp[st]:F1}% → {got:F1}%**");
+                }
+            }
+        }
+        Console.WriteLine($"- {cells} セル中 **{diff} 件**の差分。{(diff == 0 ? "**○**" : "**×**")}");
+        Console.WriteLine();
+
+        const int CheckSeeds = 20;
+
+        // --- (a') S0 が既定と一致する -----------------------------------------------------
+        Console.WriteLine("## (a') S0（明示的に `Scope: All` を渡した版）が既定と 1 ビットも違わない");
+        Console.WriteLine();
+        int s0diff = 0, s0cells = 0;
+        foreach (var (_, f) in Presets.Compare.Concat(Presets.Cross))
+            foreach (int wv in Waves)
+            {
+                int x = 0, y = 0;
+                for (int seed = 0; seed < CheckSeeds; seed++)
+                {
+                    if (BattleEngine.Run(f, EnemyCatalog.Stages[wv].Enemy, seed, verbose: false,
+                                         spillWound: SpillVers[0].R, wound: V0).PlayerWon) x++;
+                    if (BattleEngine.Run(f, EnemyCatalog.Stages[wv].Enemy, seed, verbose: false).PlayerWon) y++;
+                }
+                s0cells++;
+                if (x != y) s0diff++;
+            }
+        Console.WriteLine($"- {s0cells} セル中 **{s0diff} 件**の差分。{(s0diff == 0 ? "**○**" : "**×**")}");
+        Console.WriteLine();
+
+        // --- (b)(c) -----------------------------------------------------------------------
+        Console.WriteLine("## (b) S2 で engine 経路が 0 ／ S1 で吸い・余波以外が 0 ／ (c) 帳簿が閉じる（3 版とも）");
+        Console.WriteLine();
+        int V = SpillVers.Length;
+        var spill = new long[V];
+        var gather = new long[V];
+        var other = new long[V];
+        var badLedger = new int[V];
+        int seen = 0;
+        string[] denseIds = UnitCatalog.All
+            .Where(u => u.Traits.Contains(TraitId.Drain) || u.Traits.Contains(TraitId.Splash))
+            .Select(u => u.Id).ToArray();
+        foreach (var (_, f) in Presets.Compare.Concat(Presets.Cross))
+            foreach (int wv in Waves)
+                for (int seed = 0; seed < CheckSeeds; seed++)
+                {
+                    seen++;
+                    for (int v = 0; v < V; v++)
+                    {
+                        BattleResult res = BattleEngine.Run(f, EnemyCatalog.Stages[wv].Enemy, seed, verbose: false,
+                                                            spillWound: SpillVers[v].R, wound: V0);
+                        WoundLedger w = res.Wounds;
+                        spill[v] += w.WriteAlly[(int)WoundRoute.Spill] + w.WriteFoe[(int)WoundRoute.Spill];
+                        gather[v] += w.WriteAlly[(int)WoundRoute.Gather] + w.WriteFoe[(int)WoundRoute.Gather];
+                        if (w.Written != w.Accounted) badLedger[v]++;
+                        foreach (var kv in res.TallyByUnit)
+                            if (kv.Value.SpillWoundsWritten > 0 && !denseIds.Contains(kv.Key))
+                                other[v] += kv.Value.SpillWoundsWritten;
+                    }
+                }
+        Console.WriteLine($"**{seen:N0} 戦 × 3 版。** 密度の高い2枚 = {string.Join(" / ", denseIds)}。");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 巻き込み則の傷 | 引き取り（中継） | **吸い・余波以外が書いた巻き込み** | 帳簿が閉じない戦 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|");
+        for (int v = 0; v < V; v++)
+            Console.WriteLine($"| {SpillVers[v].Tag} | {spill[v]:N0} | {gather[v]:N0} | {other[v]:N0} | {badLedger[v]} |");
+        Console.WriteLine();
+        Console.WriteLine($"- (b) S2 の巻き込み則 = {spill[2]}。{(spill[2] == 0 ? "**○**" : "**×**")}"
+            + $" ／ S1 の「吸い・余波以外」= {other[1]}。{(other[1] == 0 ? "**○**" : "**×**")}");
+        Console.WriteLine($"- (c) 帳簿が閉じなかった戦 = {badLedger.Sum()}。{(badLedger.Sum() == 0 ? "**○**" : "**×**")}");
+        Console.WriteLine();
+
+        // --- 必須3 ------------------------------------------------------------------------
+        Console.WriteLine("## 必須3 —— 触っていないノブの既定が動いていない");
+        Console.WriteLine();
+        Console.WriteLine($"- `SpillWoundRule.Default` = `{SpillWoundRule.Default}` **＝ 現行**（この期は既定を変えない）。");
+        Console.WriteLine($"- `WoundRule.Default` = `{WoundRule.Default}` ／ `GatherRule.Default` = `{GatherRule.Default}` ／ "
+            + $"`MendRule.Default` = `{MendRule.Default}` ／ `SoakRule.Default` = `{SoakRule.Default}`。");
+        Console.WriteLine("- 残りは `docs/rules.md` の差分で示す（`derive rules` を再生成して `git diff docs/`）。**0 バイト差**が合格条件。");
+        Console.WriteLine();
+
+        // --- 必須4 ------------------------------------------------------------------------
+        int pick = Regex.Matches(Src("Traits.cs"), @"(?<!///.{0,200})\bPickOne\(").Count
+                 + Regex.Matches(Src("BattleEngine.cs"), @"\bPickOne\(").Count;
+        Console.WriteLine("## 必須4 —— `ctx.PickOne` を新たに使っていない");
+        Console.WriteLine();
+        Console.WriteLine($"- `BattleCore` の `PickOne(` の出現 = **{pick} 箇所**（第120期と同数なら ○）。");
+        Console.WriteLine("- **第121期は `BattleCore` を1文字も触っていない**（`git diff BattleCore/` が空）。");
+        Console.WriteLine();
+
+        // --- (d)(e) -----------------------------------------------------------------------
+        Console.WriteLine("## (d) 走査件数 ／ (e) 判定に使ったセルの screen");
+        Console.WriteLine();
+        Console.WriteLine("- (d) `wound2 spill phase0` が全部の走査件数を出し、**0 件ならその場で止まる**。");
+        Console.WriteLine("- (e) `wound2 spill run` の表C が「両方とも床／両方とも天井」の行数を版ごとに出す。");
         Console.WriteLine();
     }
 }

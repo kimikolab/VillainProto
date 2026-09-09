@@ -54407,9 +54407,13 @@ if (focusId == "tank")
 // **engine に規則は1本も足していない**——在庫の走査・消滅の帳簿・実際に減った HP の計数だけ。
 //
 //     dotnet run --project BattleSim -c Release 0 wound2 phase0 / run / check
+//
+// 第121期: 版の引数を1つ足した（**既存3モードの呼び出しは1文字も変えない**）。
+//
+//     dotnet run --project BattleSim -c Release 0 wound2 spill phase0 / run / check
 if (focusId == "wound2")
 {
-    Wound2Diag.Run(args.Length > 2 ? args[2] : "phase0");
+    Wound2Diag.Run(args.Length > 2 ? args[2] : "phase0", args.Length > 3 ? args[3] : "phase0");
     return;
 }
 
