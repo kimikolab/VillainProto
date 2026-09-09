@@ -12,12 +12,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     BattleSim/      コンソール総当たりシミュレータ（テスト代わり）
     PrototypeApp/   WPF (net8.0-windows)。編成を組んで結果を眺めるだけ
     GodotApp/       Godot 4 (C#) の戦闘再生装置。sln には入っておらず単独ビルド。
-                    会戦の台本（Events / Openings）を再生するだけで、判定は一切しない
-    docs/           BattleSim が吐く生成物 10ファイル（balance / units / chain / ablation /
-                    pulse / engage / layout / reseat ／ **crossing** ／ **rules**）。手で編集しない。整合は `audit` で見る
+                    会戦の台本（Events / Openings）を再生するだけで、判定は一切しない。
+                    **会戦（`EngagementEngine`）を目で見られるのはここだけ**（第123期 Q0-4）
+    DemoApp/        Godot 4 (C#) のデモ（第123期に取り込んだ）。sln には入っておらず単独ビルド。
+                    編成 → 戦闘の 2.5D 再生と作戦マップ。**`BattleCore` をそのまま参照し、写しを持たない**
+                    ——同梱されていたスナップショット（第110期前後・正規化差分 1,223 行）は削除した。
+                    呼ぶのは `BattleEngine.Run` だけで、**会戦の境界は1行も通らない**
+    docs/           BattleSim が吐く生成物 11ファイル（balance / units / chain / ablation /
+                    pulse / engage / layout / reseat ／ **crossing** ／ **rules** ／ **watch**）。手で編集しない。整合は `audit` で見る
                     ——**`crossing.md` だけは `CrossBuilds()`（交差帯）の生成物で、`audit` は見ない**
                     （`audit` は `CompareBuilds()` の行名で照合する道具なので、別の行集合には当たらない）。
-                    **`rules.md` はノブの一覧**（第94期・`derive rules`）で、**編成数に依存しない**ので `audit` も見ない
+                    **`rules.md` はノブの一覧**（第94期・`derive rules`）で、**編成数に依存しない**ので `audit` も見ない。
+                    **`watch.md` は見る地図**（第123期・`watch` ＋ `watch phase0`）で、
+                    **候補行 28 行しか含まない**ので `audit` も見ない
     design/         設計文書（コンセプトメモ・会戦計画・指示書・測定報告）。手で編集する
 
 **`docs/` は生成物のみ・手書き文書は `design/`。** 測定報告や指示書を `docs/` に置かない
@@ -995,6 +1002,21 @@ engine に窓口がある。**次に同じ表を作るときは engine 側の窓
 第94期がノブの一覧を reflection で引くようにして以来、**実装から引く表は増える一方**なので、
 **引けなかったときの分岐を必ず書く。**
 
+**走査の対象が走査する側のファイル自身なら、検索文字列は連結で組むこと**（第123期・自己参照の版）。
+`Baseline.PrimaryRows` の軸コメントを `BattleSim/Program.cs` から引く走査で、検索リテラルを素直に書いたら
+**自分のコードが最初に当たって別の場所を読んだ**——症状は「走査が空」ではなく**「静かに違う表を作る」**なので、
+第117期の「引けなかったときの分岐」では捕まらない。**第121期の「引けているのに結ばれない」に続く3例目。**
+`derive rules` の「第nn期〜（k 期）」も同じ形で、**`design/PHASE*.md` を数えるのに自分の出力を
+その `design/` に置く**ので、**報告書を書く前に生成すると必ず1期ぶん足りない**
+（HEAD の `SoakRule` は 9 だったが実際は 10）。**(G8) の必須3 は k の列を除いて比べること。**
+
+**「画面に出ない」は「窓口が無い」だけではない。出来事はあるのに書き手が載らない形がある**（第123期）。
+`BattleEventKind` **15 種のうち 9 種が `ActorId` を持たない**ので、
+**蘇生・召喚・回復・移動・見せ場は「起きたこと」は出るが「誰の仕業か」の線が引けない。**
+推奨12戦で特性由来イベント 0 件の駒 12 体の内訳は
+**窓口が無い 3 ／ 発火していない 1 ／ 発火したが痕跡を残さない 8**で、**過半は最後の型。**
+**「見えないもの」を数えるときは、通貨の窓口と出来事の書き手を分けて数えること。**
+
 **「時間に比例する出力」を測るときは、勝率ではなく傾きを見る。ただし傾きは生存で切られる**（第117期）。
 被害で育つ駒の `CurrentAttack` は確かに時間に比例して伸びる（ムド **3.0 → 36.1 ＝ 12.0 倍**）が、
 **味方の与ダメ/T は 16 組すべてで後半のほうが低い**（傾き 0.06〜0.30）。
@@ -1770,6 +1792,10 @@ BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project Ba
     dotnet run --project BattleSim -c Release 0 wound2 spill phase0 adopt # **第122期**: 表P（予告した行・`PrimaryRows` の別・旧文の出所。**戦闘0回**）  → LESSONS_101_.md
     dotnet run --project BattleSim -c Release 0 wound2 spill adopt        # **第122期**: A0 / A1 / A3 × 73行（**A3 − A1 が読み手2枚を降ろしたぶん**・61 秒）
     dotnet run --project BattleSim -c Release 0 wound2 spill seat         # **第122期**: 席の再判定（条件に当たった行だけ・(G16) の「狙で落ちた席」の列つき）
+    dotnet run --project BattleSim -c Release 0 watch [モード]   # 見る地図（第123期・**採否の判定を持たない**。盤面は1ビットも動かない）  → LESSONS_101_.md
+    dotnet run --project BattleSim -c Release 0 watch phase0     # 盲点表（**戦闘0回**。窓口の無い通貨 / `ActorId` を持たない種類 / 既知の欠落）
+    dotnet run --project BattleSim -c Release 0 watch            # 主表（候補行 28 行 × 波 × 代表 seed）→ `docs/watch.md`
+    dotnet run --project BattleSim -c Release 0 watch cast [行名の部分一致]  # 台本の出演内訳（1文と出演を横に並べる）
 
 ### バランス調整のたびにやること（CONTRIBUTING.md より）
 
@@ -1818,6 +1844,7 @@ README.md の「調整メモ」「検証で分かったこと」「未解決の�
 | 波ルール（逆位・渇き・軛・粛・殉教・曝き）と波の分離度 | 第 22, 25, 27, 34, 35, 40 / 44, 51, 54 期 |
 | 器具と測り方（2×2・素体対照・情報帯・ドラフト台・ノイズ床・特異性） | 第 13, 14, 15, 16, 17, 18, 21, 24 / 69, 70, 71, 72, 76, 77, 78, 80 / 81, 82, 83, 88, 94 期 |
 | ロスターの棚卸し（`census` / 切れない駒 / 最後の1枠 / 入れ替え） | 第 48 / 79, 82, 83 / 103, 108, 111, 119 期 |
+| 表示と「見る」（`GodotApp` / `DemoApp` / 台本の窓口 / 盲点表） | 第 97, 98, 99 / **123** 期 |
 
 **期からファイルを引くのは帯の表**（第1〜40 → `001_040`、第41〜60 → `041_060`、第61〜80 → `061_080`、第81〜100 → `081_100`、第101〜 → `101_`）。
 
@@ -1864,6 +1891,7 @@ README.md の「調整メモ」「検証で分かったこと」「未解決の�
 | 第120期 | 傷という通貨を棚卸しした（測定だけ）。**供給の 89.4% は engine・書かれた傷の 94.7% は読まれずに消える** |
 | 第121期 | 巻き込み則の版を並べた（測定だけ）。**止めても刻み系は 1 ビットも動かない**。動くのは到達率（11.2% → 87.8%） |
 | 第122期 | 巻き込み則を止め、**対の読み手2枚を同じコミットで降ろした**（採用）。`追撃×毒` の第2波が +58.5pt 戻る |
+| 第123期 | デモを `DemoApp/` へ取り込み（写しを削除）、`watch` で見る地図を出した。**見えない原因の過半は窓口ではなく `ActorId` の欠落** |
 
 **第1〜83期は各 `LESSONS_*.md` の冒頭の目次から引く**（期 → 診断名の表を各ファイルが持っている）。
 **第97〜99期は `CLAUDE.md` に知見の行を1つも残していない**ので `LESSONS_*.md` にも節が無い——本文は `design/PHASE97_VIEW.md` / `PHASE98_VIEW2.md` / `PHASE99_BACKLOG.md` にある。
