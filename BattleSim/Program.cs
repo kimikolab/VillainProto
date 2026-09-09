@@ -25377,8 +25377,14 @@ if (focusId == "checkup")
 
     IReadOnlyList<EnemyCatalog.Stage> hcStages = EnemyCatalog.Stages;
     int hcW = hcStages.Count;
-    var hcRoster = UnitCatalog.All.ToArray();
-    int hcRN = hcRoster.Length;                       // 51
+    // **第119期**: `run51` のときだけ第82期のロスター（51 体）に切り替える。
+    // 第82期の `All` は「現行 52 枚のうち トモ の席に ハリ が座り、ソム が居ない」形なので、
+    // **並び順まで含めて**その1点だけを差し替えて作る（並びが変われば台の抽選が変わる）。
+    bool hc51 = hcArg == "run51";
+    var hcRoster = (hc51
+        ? UnitCatalog.All.Select(d => d.Id == "tomo" ? UnitCatalog.Hari : d).Where(d => d.Id != "som")
+        : UnitCatalog.All).ToArray();
+    int hcRN = hcRoster.Length;                       // 52（`run51` では 51）
     int hcNK = UnitTally.CarryKeys.Length;            // 11
 
     // ---- 第81期 `pairs2` の定数の写し（**1つも変えていない**。変えたら器具が別物になる）--------------
@@ -25399,6 +25405,234 @@ if (focusId == "checkup")
     var hcIdx = new Dictionary<string, int>();
     for (int u = 0; u < hcRN; u++) hcIdx[hcRoster[u].Id] = u;
     string[] hcName = hcRoster.Select(d => d.Name).ToArray();
+
+    // =====================================================================================
+    // 第119期 —— マイナスの分類（(i) 独立した札 / (ii) 1つの札が両義 / (iii) 数値）
+    //
+    // **`UnitCatalog` は1文字も触らない。** yP（プラスのみ）/ yM（マイナスのみ）は
+    // ここで作るローカルの `UnitDef` で、**版が本物と同じになるときは同じ参照を返す**
+    // ——(ii) の駒で `yP == y11` になることを、実行する前に参照の等価で担保するため。
+    //
+    // 札の3値（マイナス = 単独で外せる代金 / プラス = 純粋な払い出し / 両義 = 1つの動作の表と裏）。
+    // **既定は `Traits.cs` の enum のブロックから機械で引き、食い違うものだけを下の表が上書きする**
+    // （走査が空なら止める——第117期）。
+    // =====================================================================================
+    const int HcMinusL = 0, HcPlusL = 1, HcBothL = 2;
+    string[] hcLabelName = { "マイナス", "プラス", "両義" };
+    var hcLabel = new Dictionary<TraitId, (int L, string Why)>
+    {
+        [TraitId.Splash]     = (HcMinusL, "薙ぎの払い出しは `Pattern` の側にあるので、巻き込みだけを外せる"),
+        [TraitId.Cinder]     = (HcBothL,  "敵への着火と隣の味方への延焼が `OnAfterAttack` の同じ1回"),
+        [TraitId.Rage]       = (HcPlusL,  "被弾で自分の攻撃力が上がるだけ"),
+        [TraitId.Hex]        = (HcBothL,  "自分を殴った駒に呪いが付く。**敵味方を問わない**ので味方の刃も呪う"),
+        [TraitId.Sniper]     = (HcPlusL,  "後退したあと後列にいれば2倍＋貫き"),
+        [TraitId.Coward]     = (HcMinusL, "別の札。**ただし外すと後衛特化の起動条件（後退）を供給する者が居なくなる**"),
+        [TraitId.Curse]      = (HcBothL,  "開戦時の敵全体への弱体と、味方全体への漏れが同じ発火"),
+        [TraitId.Guardian]   = (HcPlusL,  "味方への攻撃を肩代わりし、その傷で育つ"),
+        [TraitId.Stoic]      = (HcMinusL, "支援を受け付けない、だけの別の札"),
+        [TraitId.Necro]      = (HcPlusL,  "味方が倒れるたび層を積む"),
+        [TraitId.Sacrifice]  = (HcMinusL, "開戦時に隣接する味方を削る、だけの別の札"),
+        [TraitId.Colossus]   = (HcPlusL,  "後ろの味方への攻撃を肩代わりし、飲み込んだ量を返す"),
+        [TraitId.Drain]      = (HcMinusL, "毎ターン味方から吸う、だけの別の札"),
+        [TraitId.Sluggish]   = (HcMinusL, "2ターンに1回しか動かない、だけの別の札"),
+        [TraitId.Splitter]   = (HcPlusL,  "**上書き**——ムグの `PlusText` は分裂そのもの。enum のマイナス側ブロックに並ぶのは追加順の都合"),
+        [TraitId.Bomber]     = (HcBothL,  "**上書き**——破裂が敵と味方を同時に巻き込む（enum はマイナス側ブロック）"),
+        [TraitId.Reviver]    = (HcBothL,  "1回縫うごとに自分の最大HPが半分になるのが同じ動作"),
+        [TraitId.Venom]      = (HcBothL,  "殴られて毒を積むのと、毒が隣接する味方へ漏れるのが同じ発火"),
+        [TraitId.ThornGuard] = (HcBothL,  "身代わりと位置の入れ替えが1つの動作（入れ替えた相手は必ず反撃に巻き込まれる）"),
+        [TraitId.Thorns]     = (HcBothL,  "反撃が隣の味方も巻き込む"),
+        [TraitId.Immobile]   = (HcMinusL, "**上書き**——自分からは攻撃しない、だけの別の札（enum はプラス側ブロック）"),
+        [TraitId.Havoc]      = (HcMinusL, "**上書き**——味方全体の被ダメージが5割増える、だけの別の札（同上）"),
+        [TraitId.Marker]     = (HcBothL,  "隣の味方に敵の攻撃を集める＝押し出しが効果そのもの"),
+        [TraitId.Mender]     = (HcBothL,  "繕った量の半分だけ自分が減るのが同じ動作"),
+        [TraitId.Seal]       = (HcMinusL, "第74期に縫いから切り出した代金の札"),
+        [TraitId.Amplifier]  = (HcPlusL,  "敵の毒だけを濃くする（味方の毒には触らない）。マイナスは条件依存で機構の外"),
+        [TraitId.Contagion]  = (HcPlusL,  "毒持ちが倒れたときに撒く。マイナス（自分では毒を積めない）は機構の外"),
+        [TraitId.Miasma]     = (HcBothL,  "毎ターンの散布が敵にも味方にも同時に及ぶ"),
+        [TraitId.Paralyze]   = (HcPlusL,  "殴った相手を止めるだけ"),
+        [TraitId.Devour]     = (HcBothL,  "敵の毒を数えて癒すのと、味方が負った毒が2倍に効くのが同じ札"),
+        [TraitId.Rally]      = (HcPlusL,  "開戦時＋休み番への強化"),
+        [TraitId.Blightfed]  = (HcPlusL,  "味方の毒を吸って育つ。マイナス（毒が無ければ無為）は条件依存"),
+        [TraitId.Displaced]  = (HcBothL,  "動かされて育つ＝自分では動かないことが条件そのもの"),
+        [TraitId.Shuffler]   = (HcBothL,  "毎ターン味方2体を入れ替える（相手を選べないことが効果そのもの）"),
+        [TraitId.Bind]       = (HcBothL,  "縛り（動けない）と攻撃+16 が1つの動作"),
+        [TraitId.Bulwark]    = (HcPlusL,  "動かなかった味方の被ダメージを半減。マイナスは条件依存"),
+        [TraitId.Overload]   = (HcPlusL,  "閾値を越えているあいだ薙ぎ。積めないのは条件（マイナスの外部化）"),
+        [TraitId.Drifter]    = (HcPlusL,  "動かされた味方を癒し強化する。マイナスは条件依存"),
+        [TraitId.Perverse]   = (HcBothL,  "強化で弱くなり弱体で強くなるが1つの規則"),
+        [TraitId.Sharer]     = (HcBothL,  "肩代わりと自分の消耗が同じ動作"),
+        [TraitId.Loose]      = (HcBothL,  "隣が空いた駒を硬くするのと、隣を弾くのが1つの動作"),
+        [TraitId.Cower]      = (HcBothL,  "被ダメ −30% と味方全体の攻撃 −9 が1つの動作"),
+        [TraitId.Pursuer]    = (HcBothL,  "ターン外の割り込みと、自分の手番では動かないことが1つの規則"),
+        [TraitId.RearGuard]  = (HcPlusL,  "後列を肩代わりして育つ"),
+        [TraitId.Pyre]       = (HcPlusL,  "燃えているあいだ4倍＋貫き。マイナスは条件依存"),
+        [TraitId.Shatter]    = (HcPlusL,  "範囲を浴びて破片を配る"),
+        [TraitId.Frail]      = (HcMinusL, "受けるダメージが5割増える、だけの別の札"),
+        [TraitId.Forsake]    = (HcBothL,  "速い味方を癒し遅い味方を削るが1つの規則（enum が明記）"),
+        [TraitId.Torment]    = (HcBothL,  "封じられた敵には追い打ち・動ける敵には自滅が1つの規則（同上）"),
+        [TraitId.Avenge]     = (HcBothL,  "標的の味方への割り込みと、自分が殴られたときの怯みが1つの規則（同上）"),
+        [TraitId.Rend]       = (HcPlusL,  "**上書き**——薄刃（代金）は第74期に別の札へ切り出してあるので、裂き本体は払い出しだけ"),
+        [TraitId.ThinBlade]  = (HcMinusL, "第74期に裂きから切り出した代金の札"),
+        [TraitId.Gouge]      = (HcPlusL,  "**上書き**——深追い（代金）は第74期に別の札へ切り出してある"),
+        [TraitId.Overreach]  = (HcMinusL, "第74期に抉りから切り出した代金の札"),
+        [TraitId.Carve]      = (HcPlusL,  "刻んで上乗せする。代金は執着の側にある"),
+        [TraitId.Fixate]     = (HcMinusL, "第73期に唯一独立して外せたマイナス"),
+        [TraitId.Sever]      = (HcPlusL,  "**上書き**——刃待ち（代金）は第74期に別の札へ切り出してある"),
+        [TraitId.Await]      = (HcMinusL, "第74期に断ちから切り出した代金の札"),
+        [TraitId.Suture]     = (HcPlusL,  "**上書き**——塞ぎ（代金）は第74期に別の札へ切り出してある"),
+        [TraitId.Taillight]  = (HcBothL,  "灯と手番の譲渡が1つの動作"),
+        [TraitId.Shove]      = (HcBothL,  "敵陣の突き崩しと隣の味方のよろけが1つの動作"),
+        [TraitId.Bear]       = (HcBothL,  "横取りして鎧に変えるのと、自分の腕が落ちるのが1つの動作"),
+        [TraitId.Relay]      = (HcBothL,  "横取りして敵へ渡すのと、自分の身が削れるのが1つの動作"),
+        [TraitId.Scale]      = (HcBothL,  "破片を拾って貫きになるのと、振るたび剥がれるのが1サイクル"),
+        [TraitId.Divert]     = (HcBothL,  "視線を引き剥がすのと、自分に刺さるのが1つの動作"),
+        [TraitId.Goad]       = (HcBothL,  "力を渡すのと、渡した相手を押し出すのが1つの動作"),
+        [TraitId.Finisher]   = (HcBothL,  "標を必ず狙って倍で殴るのと、標を消費するのが1サイクル"),
+        [TraitId.Favor]      = (HcBothL,  "燃えている味方を上げるのと、隣の燃えていない味方を鈍らせるのが1つの動作"),
+        [TraitId.Betrayed]   = (HcBothL,  "喚び出しと、喚んだものが敵につくことが1つの動作"),
+    };
+
+    // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------
+    string? hcTraitsPath = null;
+    {
+        string dir0 = Directory.GetCurrentDirectory();
+        for (int up = 0; up < 6 && hcTraitsPath == null; up++)
+        {
+            string cand = Path.Combine(dir0, "BattleCore", "Traits.cs");
+            if (File.Exists(cand)) hcTraitsPath = cand;
+            else { var pdir = Directory.GetParent(dir0); if (pdir == null) break; dir0 = pdir.FullName; }
+        }
+    }
+    var hcBlockOf = new Dictionary<string, string>(StringComparer.Ordinal);
+    var hcCommentOf = new Dictionary<string, string>(StringComparer.Ordinal);
+    int hcScanEnum = 0, hcScanBlock = 0;
+    if (hcTraitsPath != null)
+    {
+        var tlines = File.ReadAllLines(hcTraitsPath);
+        int tstart = Array.FindIndex(tlines, l => l.Contains("enum TraitId"));
+        string tblock = "（先頭）", tlast = "";
+        for (int i = tstart + 1; tstart >= 0 && i < tlines.Length; i++)
+        {
+            string t = tlines[i].Trim();
+            if (t.StartsWith("}")) break;
+            if (t.StartsWith("// ---")) { tblock = t.Trim('/', ' ', '-'); hcScanBlock++; continue; }
+            if (t.StartsWith("//")) { if (tlast != "") hcCommentOf[tlast] += " " + t; continue; }
+            var m = System.Text.RegularExpressions.Regex.Match(t, "^([A-Za-z][A-Za-z0-9]*)[ ]*,?[ ]*(//.*)?$");
+            if (!m.Success) continue;
+            tlast = m.Groups[1].Value;
+            hcBlockOf[tlast] = tblock;
+            hcCommentOf[tlast] = m.Groups[2].Value;
+            hcScanEnum++;
+        }
+    }
+    if (hcScanEnum == 0)
+    {
+        Console.WriteLine("**`BattleCore/Traits.cs` の enum を1つも走査できなかった。分類を実装から引けないので止める**（第117期）。");
+        Console.WriteLine($"（作業ディレクトリ {Directory.GetCurrentDirectory()}）");
+        return;
+    }
+    int HcBlockDefault(TraitId t)
+    {
+        string n = t.ToString();
+        string b = hcBlockOf.TryGetValue(n, out string? bb) ? bb : "";
+        string c = hcCommentOf.TryGetValue(n, out string? cc) ? cc : "";
+        if (c.Contains("表と裏") || c.Contains("同上")) return HcBothL;
+        if (b.Contains("表と裏")) return HcBothL;
+        if (b.Contains("マイナス側")) return HcMinusL;
+        if (b.Contains("プラス側")) return HcPlusL;
+        return -1;                                    // 札・盤面ルール・器具は既定を持たない
+    }
+
+    // ---- 数値のマイナス（(iii)）は `MinusText` の語で拾う。**語と件数を必ず出す** ------------------
+    var hcNumWord = new (string Word, int Stat)[]
+    {
+        ("攻撃力がほぼ無い", 0), ("火力もほぼ無い", 0), ("攻撃力もほぼ無い", 0),
+        ("自分の火力はほぼ無い", 0), ("自分の火力はほぼ無く", 0), ("素の攻撃力はほぼ無い", 0),
+        ("自分では何もできない", 0), ("ほぼ無力", 0),
+        ("本体は脆く", 1),
+        ("鈍重", 2),
+    };
+    string[] hcStatName = { "攻", "HP", "速" };
+    double HcMedianI(IEnumerable<int> xs)
+    {
+        var a = xs.OrderBy(x => x).ToArray();
+        return a.Length % 2 == 1 ? a[a.Length / 2] : (a[a.Length / 2 - 1] + a[a.Length / 2]) / 2.0;
+    }
+    int[] hcMedStat =
+    {
+        (int)Math.Round(HcMedianI(hcRoster.Select(d => d.Attack))),
+        (int)Math.Round(HcMedianI(hcRoster.Select(d => d.MaxHp))),
+        (int)Math.Round(HcMedianI(hcRoster.Select(d => d.Speed))),
+    };
+    var hcNumHit = new List<(int Stat, string Word)>[hcRN];
+    var hcNumWordHit = new List<string>[hcRN];        // 語だけ（下限で落ちたものも記録する）
+    for (int u = 0; u < hcRN; u++)
+    {
+        hcNumHit[u] = new List<(int, string)>();
+        hcNumWordHit[u] = new List<string>();
+        UnitDef d = hcRoster[u];
+        foreach (var (w, st) in hcNumWord)
+        {
+            if (!d.MinusText.Contains(w)) continue;
+            hcNumWordHit[u].Add(w);
+            int cur = st == 0 ? d.Attack : st == 1 ? d.MaxHp : d.Speed;
+            if (cur < hcMedStat[st] && !hcNumHit[u].Any(h => h.Stat == st)) hcNumHit[u].Add((st, w));
+        }
+    }
+    int hcNumHitN = Enumerable.Range(0, hcRN).Count(u => hcNumHit[u].Count > 0);
+    int hcNumWordN = Enumerable.Range(0, hcRN).Count(u => hcNumWordHit[u].Count > 0);
+
+    // ---- yP / yM の定義（**本物と同じなら同じ参照を返す**）----------------------------------------
+    var hcDropP = new List<TraitId>[hcRN];            // yP で外した札
+    var hcDropM = new List<TraitId>[hcRN];            // yM で外した札
+    var hcPlusDef = new UnitDef[hcRN];
+    var hcMinusDef = new UnitDef[hcRN];
+    var hcUnlabeled = new List<TraitId>();
+    for (int u = 0; u < hcRN; u++)
+    {
+        UnitDef d = hcRoster[u];
+        foreach (TraitId t in d.Traits) if (!hcLabel.ContainsKey(t) && !hcUnlabeled.Contains(t)) hcUnlabeled.Add(t);
+        hcDropP[u] = d.Traits.Where(t => hcLabel.TryGetValue(t, out var L) && L.L == HcMinusL).ToList();
+        hcDropM[u] = d.Traits.Where(t => hcLabel.TryGetValue(t, out var L) && L.L == HcPlusL).ToList();
+        int atk = d.Attack, hp = d.MaxHp, spd = d.Speed;
+        foreach (var (st, _) in hcNumHit[u])
+        {
+            if (st == 0) atk = Math.Max(atk, hcMedStat[0]);
+            if (st == 1) hp = Math.Max(hp, hcMedStat[1]);
+            if (st == 2) spd = Math.Max(spd, hcMedStat[2]);
+        }
+        hcPlusDef[u] = hcDropP[u].Count == 0 && atk == d.Attack && hp == d.MaxHp && spd == d.Speed
+            ? d
+            : new UnitDef
+            {
+                Id = d.Id + "_plus", Name = d.Name + "（プラスのみ）", MaxHp = hp, Attack = atk, Speed = spd,
+                Traits = d.Traits.Where(t => !hcDropP[u].Contains(t)).ToArray(),
+                Pattern = d.Pattern, Actions = d.Actions
+            };
+        hcMinusDef[u] = hcDropM[u].Count == 0
+            ? d
+            : new UnitDef
+            {
+                Id = d.Id + "_minus", Name = d.Name + "（マイナスのみ）", MaxHp = d.MaxHp, Attack = d.Attack, Speed = d.Speed,
+                Traits = d.Traits.Where(t => !hcDropM[u].Contains(t)).ToArray(),
+                Pattern = d.Pattern, Actions = d.Actions
+            };
+    }
+    if (hcUnlabeled.Count > 0)
+    {
+        Console.WriteLine($"**ロスターの札に分類の無いものがある: {string.Join("・", hcUnlabeled)}。止める**（第117期）。");
+        return;
+    }
+    // 駒の型: (i) 外せる札がある / (iii) 数値が引き上がる / (ii) どちらも無い＝**yP は本物と同じ参照**
+    string HcTypeOf(int u)
+    {
+        var v = new List<string>();
+        if (hcDropP[u].Count > 0) v.Add("(i)");
+        if (hcNumHit[u].Count > 0) v.Add("(iii)");
+        if (v.Count == 0) v.Add("(ii)");
+        return string.Join("＋", v);
+    }
+    bool HcIsII(int u) => ReferenceEquals(hcPlusDef[u], hcRoster[u]);
 
     // ---- 第78期の器具（入口 / 発火口 / キー）と第80期の分類（供給→読み）------------------------------
     var hcKeyOf = hcRoster.Select(TraitKeyMap.KeysOf).ToArray();
@@ -25697,6 +25931,108 @@ if (focusId == "checkup")
         Console.WriteLine();
         Console.WriteLine($"`UnitCatalog.All` は {UnitCatalog.All.Count} 体。この期は engine も `Traits.cs` も駒も波も触っていないので、ずれは 0 件でなければならない。");
         Console.WriteLine();
+        // =================================================================================
+        // 第119期の自己検査（(a)〜(e) と 必須4項目のうち機械で出る2本）
+        // =================================================================================
+        Console.WriteLine("## 第119期の自己検査");
+        Console.WriteLine();
+        // (a) `UnitCatalog.All` が 52 枚のまま・数値が `docs/units.md` と一致する
+        string unitsPath = "";
+        {
+            string dq = Directory.GetCurrentDirectory();
+            for (int up = 0; up < 6 && unitsPath == ""; up++)
+            {
+                string cand = Path.Combine(dq, "docs", "units.md");
+                if (File.Exists(cand)) unitsPath = cand;
+                else { var pq = Directory.GetParent(dq); if (pq == null) break; dq = pq.FullName; }
+            }
+        }
+        int uScan = 0, uBad = 0;
+        var uSeen = new Dictionary<string, (int Hp, int Atk, int Spd)>(StringComparer.Ordinal);
+        if (unitsPath != "")
+            foreach (string line in File.ReadAllLines(unitsPath))
+            {
+                if (!line.StartsWith("| **")) continue;
+                var cs = line.Split('|');
+                if (cs.Length < 6) continue;
+                string nm = cs[1].Trim().Trim('*');
+                if (!int.TryParse(cs[2].Trim(), out int hp) || !int.TryParse(cs[3].Trim(), out int at)
+                    || !int.TryParse(cs[4].Trim(), out int sp)) continue;
+                uSeen[nm] = (hp, at, sp); uScan++;
+            }
+        foreach (UnitDef d in UnitCatalog.All)
+        {
+            if (!uSeen.TryGetValue(d.Name, out var v)) { uBad++; Console.WriteLine($"- **`docs/units.md` に無い: {d.Name}**"); continue; }
+            if (v.Hp != d.MaxHp || v.Atk != d.Attack || v.Spd != d.Speed)
+            { uBad++; Console.WriteLine($"- **数値が違う: {d.Name} {v.Hp}/{v.Atk}/{v.Spd} 対 {d.MaxHp}/{d.Attack}/{d.Speed}**"); }
+        }
+        Console.WriteLine($"- **(a)** `UnitCatalog.All` は **{UnitCatalog.All.Count} 体**（52 のはず）。"
+                          + $"`docs/units.md` から {uScan} 行を走査して数値を突き合わせ、**食い違い {uBad} 件**"
+                          + "（この期は駒を1体も触っていないので 0 でなければならない）。");
+        // (b) yP / yM で外す札の一覧
+        Console.WriteLine($"- **(b)** yP で外す札は **{Enumerable.Range(0, hcRN).Sum(u => hcDropP[u].Count)} 枚ぶん / {Enumerable.Range(0, hcRN).Count(u => hcDropP[u].Count > 0)} 体**"
+                          + $"（{string.Join("・", Enumerable.Range(0, hcRN).Where(u => hcDropP[u].Count > 0).Select(u => hcName[u] + ":" + string.Join("+", hcDropP[u])))}）"
+                          + "——`phase0` の表と**同じ配列から出している**ので定義上一致する。");
+        Console.WriteLine($"  数値の引き上げは **{Enumerable.Range(0, hcRN).Count(u => hcNumHit[u].Count > 0)} 体**"
+                          + $"（{string.Join("・", Enumerable.Range(0, hcRN).Where(u => hcNumHit[u].Count > 0).Select(u => hcName[u] + ":" + string.Join("+", hcNumHit[u].Select(h => hcStatName[h.Stat]))))}）。");
+        // (c) (ii) の駒では yP == y11（**内容だけ同じ複製を作って実測でも 0 を示す**）
+        {
+            var iiS = Enumerable.Range(0, hcRN).Where(HcIsII).Take(6).ToArray();
+            double worst = 0; int cells = 0;
+            foreach (int u in iiS)
+            {
+                int v = u == 0 ? 1 : 0;
+                int pi = hcPairIxOf[u, v];
+                (int a, int b) = hcAllPairs[pi];
+                var pool = hcRoster.Where((_, k) => k != a && k != b).ToArray();
+                int strong0 = (hcRoster[a].Attack >= HcStrong ? 1 : 0) + (hcRoster[b].Attack >= HcStrong ? 1 : 0);
+                var seen2 = new HashSet<(int, int, int)>();
+                var fills2 = new List<UnitDef[]>();
+                for (int draw = 0; fills2.Count < 4 && draw < HcDrawCap; draw++)
+                {
+                    var f = HcFill(pool, strong0, HcSeed(hcPairIxOf[a, b], draw));
+                    var t3 = f.Select(d => hcIdx[d.Id]).OrderBy(x => x).ToArray();
+                    if (seen2.Add((t3[0], t3[1], t3[2]))) fills2.Add(f);
+                }
+                UnitDef src = hcRoster[u];
+                var copy = new UnitDef
+                {
+                    Id = src.Id, Name = src.Name, MaxHp = src.MaxHp, Attack = src.Attack, Speed = src.Speed,
+                    Traits = src.Traits.ToArray(), Pattern = src.Pattern, Actions = src.Actions
+                };
+                foreach (UnitDef[] fl in fills2)
+                {
+                    var team = new[] { hcRoster[a], hcRoster[b], fl[0], fl[1], fl[2] };
+                    int[] seats = HcSeats(team);
+                    double y11 = HcRate(HcForm(team, seats, 0), HcBand);
+                    double yp = HcRate(HcFormD(team, seats, u == a ? 0 : 1, copy), HcBand);
+                    worst = Math.Max(worst, Math.Abs(y11 - yp)); cells++;
+                }
+            }
+            Console.WriteLine($"- **(c)** (ii) の駒 {iiS.Length} 体 × {cells / Math.Max(1, iiS.Length)} 台で、"
+                              + $"**内容だけ同じ複製を差し込んだ版と y11 の最大差 {worst:F10}pt**（{cells} セル）。"
+                              + "本測定では**同じ参照を返して測らない**ので、ここが 0 であることが「測らなかったこと」の担保になる。");
+        }
+        // (d) 走査件数
+        Console.WriteLine($"- **(d)** 走査件数: `Traits.cs` の enum 列挙子 **{hcScanEnum}** / ブロック **{hcScanBlock}**、"
+                          + $"`docs/units.md` の行 **{uScan}**、第82期の表A **{(File.Exists(Path.Combine(Directory.GetCurrentDirectory(), "design", "PHASE82_CHECKUP.md")) ? "読める" : "この場所からは読めない")}**。"
+                          + "**0 件なら止める**（第117期）。");
+        // `ctx.PickOne` の箇所数
+        {
+            int po = 0; string coreDir = "";
+            string dq = Directory.GetCurrentDirectory();
+            for (int up = 0; up < 6 && coreDir == ""; up++)
+            {
+                string cand = Path.Combine(dq, "BattleCore");
+                if (Directory.Exists(cand)) coreDir = cand;
+                else { var pq = Directory.GetParent(dq); if (pq == null) break; dq = pq.FullName; }
+            }
+            if (coreDir != "")
+                foreach (string f in Directory.GetFiles(coreDir, "*.cs"))
+                    po += System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(f), @"PickOne\(").Count;
+            Console.WriteLine($"- **必須4項目 (4)** `PickOne` は `BattleCore` に **{po} 箇所**（定義1つを含む数え方で第89期以来 26。この期は1つも足していない）。");
+        }
+        Console.WriteLine();
         Console.WriteLine($"所要 {hcSw.Elapsed.TotalSeconds:F1} 秒。");
         return;
     }
@@ -25814,6 +26150,97 @@ if (focusId == "checkup")
         Console.WriteLine("| P5 | 台の一致 | ドラフト台と理想台で群が割れる駒が **5 体以上** |");
         Console.WriteLine("| P6 | 天井で測れない駒 | **体の大きい駒に集中する**（y00 95% 超は体2枚の台で起きる） |");
         Console.WriteLine();
+        // =================================================================================
+        // 第119期 Phase 0 —— マイナスの分類・中央値・screen・予測（**戦闘0回**）
+        // =================================================================================
+        Console.WriteLine("---");
+        Console.WriteLine();
+        Console.WriteLine("# 第119期 Phase 0 —— マイナスを (i)(ii)(iii) に分ける（紙の計算）");
+        Console.WriteLine();
+        Console.WriteLine($"走査: `BattleCore/Traits.cs` の enum から **列挙子 {hcScanEnum} 件 / ブロック {hcScanBlock} 件**"
+                          + $"（**0 件なら止める**——第117期。実装から引く表は、引けなかったときに「該当なし」と区別がつかない）。"
+                          + $"ロスターは **{hcRN} 枚**。");
+        Console.WriteLine();
+        Console.WriteLine("## 1-1. 分類の定義");
+        Console.WriteLine();
+        Console.WriteLine("| 種 | 定義 | yP（プラスのみ）の作り方 |");
+        Console.WriteLine("|---|---|---|");
+        Console.WriteLine("| **(i)** | マイナスが独立した札 | `Traits` からその札を抜く |");
+        Console.WriteLine("| **(ii)** | 1つの札が両義（プラスとマイナスが同じ動作） | **外せない。yP は本物と同じ参照** |");
+        Console.WriteLine("| **(iii)** | マイナスが数値 | その数値をロスターの中央値へ引き上げる |");
+        Console.WriteLine();
+        Console.WriteLine($"中央値（**実装から数えた**）: 攻 **{hcMedStat[0]}** / HP **{hcMedStat[1]}** / 速 **{hcMedStat[2]}**。");
+        Console.WriteLine();
+        Console.WriteLine("## 1-2. 52 枚の分類");
+        Console.WriteLine();
+        Console.WriteLine("| # | 駒 | 型 | 外す札（yP） | 引き上げ | 外す札（yM） | 判断の理由 |");
+        Console.WriteLine("|--:|---|---|---|---|---|---|");
+        for (int u = 0; u < hcRN; u++)
+        {
+            string dp = hcDropP[u].Count == 0 ? "—" : string.Join("・", hcDropP[u]);
+            string dn = hcNumHit[u].Count == 0 ? "—" : string.Join("・", hcNumHit[u].Select(h =>
+                $"{hcStatName[h.Stat]} {(h.Stat == 0 ? hcRoster[u].Attack : h.Stat == 1 ? hcRoster[u].MaxHp : hcRoster[u].Speed)} → {hcMedStat[h.Stat]}"));
+            string dm = hcDropM[u].Count == 0 ? "—" : string.Join("・", hcDropM[u]);
+            string why = hcDropP[u].Count > 0 ? hcLabel[hcDropP[u][0]].Why
+                : hcNumHit[u].Count > 0 ? $"`MinusText` の「{hcNumHit[u][0].Word}」"
+                : "外せる札が無く数値のマイナスも無い＝1つの札が両義";
+            Console.WriteLine($"| {u + 1} | {hcName[u]} | {HcTypeOf(u)} | {dp} | {dn} | {dm} | {why} |");
+        }
+        Console.WriteLine();
+        int p0i = Enumerable.Range(0, hcRN).Count(u => hcDropP[u].Count > 0);
+        int p0iii = Enumerable.Range(0, hcRN).Count(u => hcNumHit[u].Count > 0);
+        int p0ii = Enumerable.Range(0, hcRN).Count(HcIsII);
+        Console.WriteLine($"**(i) を含む {p0i} 体 / (iii) を含む {p0iii} 体 / (ii)（どちらも無い）{p0ii} 体**"
+                          + $"。(i) と (iii) を**両方**持つ駒は {Enumerable.Range(0, hcRN).Count(u => hcDropP[u].Count > 0 && hcNumHit[u].Count > 0)} 体"
+                          + $"（0 なら3つの型はちょうど分割になり、合計は {hcRN} に一致する）。");
+        Console.WriteLine();
+        Console.WriteLine($"`MinusText` の語に当たったのは {hcNumWordN} 体、そのうち中央値未満で実際に引き上がるのは **{p0iii} 体**"
+                          + "（語に当たっても既に中央値以上なら引き上げない）。");
+        Console.WriteLine();
+        Console.WriteLine("## 1-3. 札ごとの分類が enum のブロックと食い違うところ（**判断が入った箇所**）");
+        Console.WriteLine();
+        Console.WriteLine("| 札 | この期 | enum の既定 | 理由 |");
+        Console.WriteLine("|---|---|---|---|");
+        foreach (TraitId t in hcRoster.SelectMany(d => d.Traits).Distinct().OrderBy(t => t.ToString(), StringComparer.Ordinal))
+        {
+            int def = HcBlockDefault(t);
+            if (def == hcLabel[t].L) continue;
+            Console.WriteLine($"| `{t}` | {hcLabelName[hcLabel[t].L]} | {(def < 0 ? "既定なし" : hcLabelName[def])} | {hcLabel[t].Why} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("## 1-4. ヴェルが測れる台か（指示書 §1 の 4）");
+        Console.WriteLine();
+        int velP0 = Array.FindIndex(hcRoster, d => d.Id == "vel");
+        Console.WriteLine($"第118期の土台は攻撃役に固定した4台で、**味方が倒れないので蘇生の価値が測れなかった**。"
+                          + $"`checkup` のドラフト台は**埋め草3枚を残り {hcRN - 2} 体から無作為に引く**ので、"
+                          + $"同じ穴は構造的に踏まない。**第82期の実測でもヴェルは 単独 +12.68・天井 5.4% / 床 46.4% で測れている**"
+                          + $"（この期の値は表C と Q5 に出す）。ヴェルの札は "
+                          + $"{(velP0 < 0 ? "—" : string.Join("・", hcRoster[velP0].Traits.Select(t => $"`{t}`（{hcLabelName[hcLabel[t].L]}）")))}。");
+        Console.WriteLine();
+        Console.WriteLine("## 1-5. 情報帯の screen（指示書 §1 の 6・**第118期の穴の 8 例目にしない**）");
+        Console.WriteLine();
+        Console.WriteLine($"**天井（y00 > {HcCeil:F0}%）だけでなく床（y00 = 0%）も screen する**——第82期は天井しか見ていないが、"
+                          + "実測では床のほうがずっと厚い（中央値 40% 台）。**判定式が読むセルが情報帯に入るかを先に数える**"
+                          + $"（線は「天井% ≤ {HcCeilShare:F0} かつ 床% ≤ {HcCeilShare:F0}」。落ちた駒は象限に置かない）。");
+        Console.WriteLine();
+        Console.WriteLine("## 1-6. 予算");
+        Console.WriteLine();
+        int extra = Enumerable.Range(0, hcRN).Count(u => !HcIsII(u)) ;
+        Console.WriteLine($"- `runp`: {hcNP:N0} 組 × (4 版 ＋ **本物と違う版だけ**) × {HcS * HcK} 台 × {hcW - 1} 波 × seed {HcM} 本");
+        Console.WriteLine($"- yP が本物と違う駒は {extra} / {hcRN} 体、yM が本物と違う駒は {Enumerable.Range(0, hcRN).Count(u => !ReferenceEquals(hcMinusDef[u], hcRoster[u]))} / {hcRN} 体"
+                          + "——**同じ参照になる版は測らずに y11 を写す**ので、(ii) だけの組は 4 版で済む。");
+        Console.WriteLine($"- `run51`: 第82期のロスター（51 枚）で 4 版。**Q1 はこれと第82期の表A を突き合わせる**");
+        Console.WriteLine();
+        Console.WriteLine("## 予測（**測る前に書く**・指示書 §3-1）");
+        Console.WriteLine();
+        Console.WriteLine("| # | 予測 |");
+        Console.WriteLine("|--:|---|");
+        Console.WriteLine("| R1 | 「思想に合わない」象限は **3〜8 体**。第82期の差し替え候補6体と半分は重なるが一致はしない |");
+        Console.WriteLine("| R2 | **(ii) は 10 体以上**（近隣加害型は構造的に (ii) になる） |");
+        Console.WriteLine("| R3 | 「マイナスが実質プラス」象限に **1〜3 体**（バンの積み過ぎがこの形に近い） |");
+        Console.WriteLine("| R4 | ドルガは4象限のどこにも綺麗に入らず**別扱い**になる（第82期は天井 73.6%） |");
+        Console.WriteLine("| R5 | **ムドはプラス値が高く出る**（攻を中央値へ引き上げると怒りの伸びがそのまま乗る） |");
+        Console.WriteLine();
         Console.WriteLine($"所要 {hcSw.Elapsed.TotalSeconds:F1} 秒（**戦闘 0 回**）。");
         return;
     }
@@ -25821,7 +26248,90 @@ if (focusId == "checkup")
     // =====================================================================================
     // run: 組の [skip, skip+take) だけを測って TSV で吐く（**`pairs2 run` と前半が完全に同じ形式**）
     // =====================================================================================
-    if (hcArg == "run")
+    // ---- 第119期: 1組ぶんの 8 版（2×2 の4版 ＋ yP(A) / yP(B) / yM(A) / yM(B)）--------------------
+    // **本物と同じ参照になる版は測らずに y11 を写す**（(ii) の駒）。
+    // 席は4版と同じ（`HcSeats` は本物の5枚から引く）ので、差し替えても隊列は1ビットも動かない。
+    Formation HcFormD(UnitDef[] u, int[] seats, int k, UnitDef d)
+    {
+        var f = new Formation();
+        for (int j = 0; j < 5; j++) f[seats[j]] = j == k ? d : u[j];
+        return f;
+    }
+    (double[][] Y, int NT) HcMeasureX(int pi)
+    {
+        (int a, int b) = hcAllPairs[pi];
+        var pool = hcRoster.Where((_, u) => u != a && u != b).ToArray();
+        int strong0 = (hcRoster[a].Attack >= HcStrong ? 1 : 0) + (hcRoster[b].Attack >= HcStrong ? 1 : 0);
+        var seen = new HashSet<(int, int, int)>();
+        var fills = new List<UnitDef[]>();
+        for (int draw = 0; fills.Count < HcS * HcK && draw < HcDrawCap; draw++)
+        {
+            var f = HcFill(pool, strong0, HcSeed(hcPairIxOf[a, b], draw));
+            var t = f.Select(d => hcIdx[d.Id]).OrderBy(x => x).ToArray();
+            if (seen.Add((t[0], t[1], t[2]))) fills.Add(f);
+        }
+        var ys = new double[fills.Count][];
+        for (int t = 0; t < fills.Count; t++)
+        {
+            var team = new[] { hcRoster[a], hcRoster[b], fills[t][0], fills[t][1], fills[t][2] };
+            int[] seats = HcSeats(team);
+            var y = new double[8];
+            for (int v = 0; v < 4; v++) y[v] = HcRate(HcForm(team, seats, v), HcBand);
+            y[4] = ReferenceEquals(hcPlusDef[a], hcRoster[a]) ? y[0] : HcRate(HcFormD(team, seats, 0, hcPlusDef[a]), HcBand);
+            y[5] = ReferenceEquals(hcPlusDef[b], hcRoster[b]) ? y[0] : HcRate(HcFormD(team, seats, 1, hcPlusDef[b]), HcBand);
+            y[6] = ReferenceEquals(hcMinusDef[a], hcRoster[a]) ? y[0] : HcRate(HcFormD(team, seats, 0, hcMinusDef[a]), HcBand);
+            y[7] = ReferenceEquals(hcMinusDef[b], hcRoster[b]) ? y[0] : HcRate(HcFormD(team, seats, 1, hcMinusDef[b]), HcBand);
+            ys[t] = y;
+        }
+        return (ys, fills.Count);
+    }
+
+    // =====================================================================================
+    // runp: 第119期の 8 版を TSV で吐く（**先頭は `run` と完全に同じ形式**・末尾に 4×台数 を足しただけ）
+    // =====================================================================================
+    if (hcArg == "runp")
+    {
+        var invP = System.Globalization.CultureInfo.InvariantCulture;
+        int skipP = args.Length > 3 ? int.Parse(args[3]) : 0;
+        int takeP = args.Length > 4 ? int.Parse(args[4]) : hcNP;
+        skipP = Math.Clamp(skipP, 0, hcNP);
+        takeP = Math.Clamp(takeP, 0, hcNP - skipP);
+        var rowsP = new string[takeP];
+        int doneP = 0;
+        Console.Error.Write($"checkup runp {skipP} {takeP}: ");
+        Parallel.For(0, takeP, j =>
+        {
+            var (ys, nt) = HcMeasureX(skipP + j);
+            var vsum = new double[4];
+            int f00 = 0, f11 = 0;
+            for (int t = 0; t < nt; t++)
+            {
+                for (int v = 0; v < 4; v++) vsum[v] += ys[t][v];
+                if (ys[t][3] <= 0.0 || ys[t][3] >= 100.0) f00++;
+                if (ys[t][0] <= 0.0 || ys[t][0] >= 100.0) f11++;
+            }
+            var sb = new System.Text.StringBuilder();
+            sb.Append(hcAllPairs[skipP + j].A).Append('\t').Append(hcAllPairs[skipP + j].B).Append('\t')
+              .Append(nt).Append('\t').Append(f00).Append('\t').Append(f11);
+            for (int v = 0; v < 4; v++) sb.Append('\t').Append((nt == 0 ? double.NaN : vsum[v] / nt).ToString("R", invP));
+            for (int sx = 0; sx < HcS; sx++)
+                for (int t = sx; t < nt; t += HcS)
+                    sb.Append('\t').Append((ys[t][0] - ys[t][2] - ys[t][1] + ys[t][3]).ToString("R", invP));
+            for (int t = 0; t < nt; t++)
+                for (int v = 0; v < 4; v++) sb.Append('\t').Append(ys[t][v].ToString("R", invP));
+            // **第119期に足した列**（台の順・yP(A) / yP(B) / yM(A) / yM(B)）
+            for (int t = 0; t < nt; t++)
+                for (int v = 4; v < 8; v++) sb.Append('\t').Append(ys[t][v].ToString("R", invP));
+            rowsP[j] = sb.ToString();
+            if (Interlocked.Increment(ref doneP) % 25 == 0) Console.Error.Write(".");
+        });
+        Console.Error.WriteLine();
+        foreach (string r in rowsP) Console.WriteLine(r);
+        Console.Error.WriteLine($"所要 {hcSw.Elapsed.TotalSeconds:F1} 秒");
+        return;
+    }
+
+    if (hcArg == "run" || hcArg == "run51")
     {
         var inv = System.Globalization.CultureInfo.InvariantCulture;
         int skip = args.Length > 3 ? int.Parse(args[3]) : 0;
@@ -25864,7 +26374,7 @@ if (focusId == "checkup")
 
     if (hcArg != "tables")
     {
-        Console.WriteLine("checkup: 引数は phase0 / run <skip> <take> / tables <path> [<pairs2 の TSV>] / ideal / check。");
+        Console.WriteLine("checkup: 引数は phase0 / run <skip> <take> / **runp <skip> <take>** / **run51 <skip> <take>** / tables <path> [<pairs2 の TSV>|-] [<run51 の TSV>] / ideal / check。");
         return;
     }
 
@@ -25872,7 +26382,8 @@ if (focusId == "checkup")
     // tables: 表A〜F・Q1〜Q6
     // =====================================================================================
     string hcPath = args.Length > 3 ? args[3] : "";
-    string hcRefPath = args.Length > 4 ? args[4] : "";
+    string hcRefPath = args.Length > 4 && args[4] != "-" ? args[4] : "";
+    string hcRefPath51 = args.Length > 5 && args[5] != "-" ? args[5] : "";   // **第119期**: `run51` の TSV
     if (hcPath == "" || !File.Exists(hcPath))
     {
         Console.WriteLine("checkup tables <`checkup run` の吐いた TSV を連結したファイル> [<`pairs2 run` の TSV>]");
@@ -25882,6 +26393,7 @@ if (focusId == "checkup")
 
     var hcY = new double[hcNP][][];
     var hcNT = new int[hcNP];
+    int hasX = 0;                                       // 第119期の列が付いていた組の数
     {
         var seenPair = new bool[hcNP];
         int got = 0;
@@ -25898,9 +26410,18 @@ if (focusId == "checkup")
             var ys = new double[nt][];
             for (int t = 0; t < nt; t++)
             {
-                ys[t] = new double[4];
+                ys[t] = new double[8];                  // **第119期**: 後ろ4つは yP(A)/yP(B)/yM(A)/yM(B)
                 for (int v = 0; v < 4; v++) ys[t][v] = double.Parse(c[at++], hcInv);
             }
+            // 第119期の列が付いていれば読む。付いていない（第82期の `run` の TSV）なら y11 を写して
+            // **プラス値 = 単独 になる**ので、表C は「読めていない」と書いて出さない。
+            if (c.Length >= at + 4 * nt)
+            {
+                for (int t = 0; t < nt; t++)
+                    for (int v = 4; v < 8; v++) ys[t][v] = double.Parse(c[at++], hcInv);
+                hasX++;
+            }
+            else for (int t = 0; t < nt; t++) for (int v = 4; v < 8; v++) ys[t][v] = ys[t][0];
             hcY[pi] = ys;
             got++;
         }
@@ -26344,6 +26865,448 @@ if (focusId == "checkup")
     int v1 = Enumerable.Range(0, hcRN).Count(u => hcVeto1[u]), v2 = Enumerable.Range(0, hcRN).Count(u => hcVeto2[u]), v3 = Enumerable.Range(0, hcRN).Count(u => hcVeto3[u]);
     Console.WriteLine($"| Q4 | 拒否権が働いているか（3条件とも 0 体なら緩い疑い） | 51 体で {v1} / {v2} / {v3}、差し替え候補で {swaps.Count(u => hcVeto1[u])} / {swaps.Count(u => hcVeto2[u])} / {swaps.Count(u => hcVeto3[u])} | {(v1 + v2 + v3 > 0 ? "○" : "**×**")} |");
     Console.WriteLine($"| Q5 | 台が割れた駒の数 | {q5} / {hcRN} | — |");
+    Console.WriteLine("| Q6 | `compare` 305 セル 0 件・`docs/` 差分 0 | `checkup check` と `docs/` の再生成で別に確かめる | — |");
+    Console.WriteLine();
+    // =====================================================================================
+    // 第119期 —— 「マイナスを外した版」の軸（表P・Q1・表B'・表C・表D・表E）
+    // =====================================================================================
+    Console.WriteLine("---");
+    Console.WriteLine();
+    Console.WriteLine("# 第119期 —— 健康診断の回し直し（52 枚）と「マイナスを外した版」の新しい軸");
+    Console.WriteLine();
+    Console.WriteLine("    単独     = y11 − y01      第82期の軸（特性ぜんぶの値段）。差し替えの判定に使う");
+    Console.WriteLine("    プラス値 = yP  − y01      マイナスを外したときの強さ（(ii) では yP = y11 なので単独と一致する）");
+    Console.WriteLine("    マイナス代 = yP  − y11    マイナスが払わせている代金（**負なら「マイナスが実質プラス」**）");
+    Console.WriteLine();
+    Console.WriteLine("**指示書 §2-2 の式は `y11 − yP` だが、それだと「代金」の符号が但し書きと逆になる**"
+                      + "——マイナスが高くつく駒ほど `yP > y11` なので `y11 − yP` は負になり、"
+                      + "「負なら実質プラス」と読めなくなる。**符号だけ直した**（但し書きのほうを正とした）。"
+                      + "この向きだと **プラス値 = 単独 + マイナス代** が恒等式になる。");
+    Console.WriteLine();
+
+    // ---- 駒ごとの プラス値 / マイナス代 / マイナスのみ ---------------------------------------------
+    var hcPlusS = new List<double>[hcRN][];
+    var hcMinusS = new List<double>[hcRN];
+    for (int u = 0; u < hcRN; u++)
+    {
+        hcPlusS[u] = new List<double>[HcS];
+        for (int sx = 0; sx < HcS; sx++) hcPlusS[u][sx] = new List<double>();
+        hcMinusS[u] = new List<double>();
+    }
+    for (int pi = 0; pi < hcNP; pi++)
+    {
+        (int a, int b) = hcAllPairs[pi];
+        for (int t = 0; t < hcNT[pi]; t++)
+        {
+            double[] y = hcY[pi][t];
+            int sx = t % HcS;
+            hcPlusS[a][sx].Add(y[4] - y[1]);
+            hcPlusS[b][sx].Add(y[5] - y[2]);
+            hcMinusS[a].Add(y[6] - y[1]);
+            hcMinusS[b].Add(y[7] - y[2]);
+        }
+    }
+    var hcPlusVal = new double[hcRN];
+    var hcPlusSe = new double[hcRN];
+    var hcPlusSv = new double[hcRN][];
+    var hcMinusVal = new double[hcRN];
+    for (int u = 0; u < hcRN; u++)
+    {
+        var all = hcPlusS[u][0].Concat(hcPlusS[u][1]).ToArray();
+        hcPlusVal[u] = all.Average();
+        hcPlusSe[u] = HcSd(all) / Math.Sqrt(all.Length);
+        hcPlusSv[u] = new[] { hcPlusS[u][0].Average(), hcPlusS[u][1].Average() };
+        hcMinusVal[u] = hcMinusS[u].Average();
+    }
+    double[] hcCost = Enumerable.Range(0, hcRN).Select(u => hcPlusVal[u] - hcSolo[u]).ToArray();
+
+    // ---- 表P: 分類 -------------------------------------------------------------------------------
+    Console.WriteLine("## 表P —— マイナスの分類（52 枚）と、外した札 / 引き上げた数値");
+    Console.WriteLine();
+    Console.WriteLine($"`BattleCore/Traits.cs` の enum を走査: **列挙子 {hcScanEnum} 件 / ブロック {hcScanBlock} 件**"
+                      + $"（0 件なら止める・第117期）。**数値のマイナス（(iii)）の語に当たった駒は {hcNumWordN} 体**、"
+                      + $"そのうち**実際に中央値未満で引き上がったのは {hcNumHitN} 体**。");
+    Console.WriteLine();
+    Console.WriteLine($"中央値（**実装から数えた**・指示書 §1 の 2）: 攻 **{hcMedStat[0]}** / HP **{hcMedStat[1]}** / 速 **{hcMedStat[2]}**。");
+    Console.WriteLine();
+    Console.WriteLine("| # | 駒 | 型 | 外した札（yP） | 引き上げ（yP） | 外した札（yM） | 型の理由 |");
+    Console.WriteLine("|--:|---|---|---|---|---|---|");
+    for (int u = 0; u < hcRN; u++)
+    {
+        string dp = hcDropP[u].Count == 0 ? "—" : string.Join("・", hcDropP[u]);
+        string dn = hcNumHit[u].Count == 0 ? "—" : string.Join("・", hcNumHit[u].Select(h =>
+            $"{hcStatName[h.Stat]} {(h.Stat == 0 ? hcRoster[u].Attack : h.Stat == 1 ? hcRoster[u].MaxHp : hcRoster[u].Speed)} → {hcMedStat[h.Stat]}"));
+        string dm = hcDropM[u].Count == 0 ? "—" : string.Join("・", hcDropM[u]);
+        string why = hcDropP[u].Count > 0
+            ? hcLabel[hcDropP[u][0]].Why
+            : hcNumHit[u].Count > 0
+                ? $"`MinusText` に「{hcNumHit[u][0].Word}」があり、{hcStatName[hcNumHit[u][0].Stat]} が中央値未満"
+                : "外せる札が1枚も無く、数値のマイナスも無い＝**1つの札が両義**";
+        Console.WriteLine($"| {u + 1} | {hcName[u]} | {HcTypeOf(u)} | {dp} | {dn} | {dm} | {why} |");
+    }
+    Console.WriteLine();
+    Console.WriteLine("札ごとの分類（**enum のブロックから引いた既定と食い違うものだけ**を並べる）:");
+    Console.WriteLine();
+    Console.WriteLine("| 札 | この期の分類 | enum のブロック | 理由 |");
+    Console.WriteLine("|---|---|---|---|");
+    int hcOverride = 0;
+    foreach (TraitId t in hcRoster.SelectMany(d => d.Traits).Distinct().OrderBy(t => t.ToString(), StringComparer.Ordinal))
+    {
+        int def = HcBlockDefault(t);
+        if (def == hcLabel[t].L) continue;
+        hcOverride++;
+        Console.WriteLine($"| `{t}` | {hcLabelName[hcLabel[t].L]} | {(def < 0 ? "既定なし（札・器具）" : hcLabelName[def])}"
+                          + $"（{(hcBlockOf.TryGetValue(t.ToString(), out string? bq) ? bq : "—")}） | {hcLabel[t].Why} |");
+    }
+    Console.WriteLine();
+    Console.WriteLine($"**上書きは {hcOverride} 件**（残りは enum のブロックがそのまま既定になった）。");
+    Console.WriteLine();
+
+    // ---- Q1: 第82期の 51 体の再現 -----------------------------------------------------------------
+    Console.WriteLine("## Q1 —— 器具の再現（第82期の 51 体・`checkup run51` の TSV）");
+    Console.WriteLine();
+    Console.WriteLine("**指示書の「ソム・トモを除いた 51 体」は数が合わない**——第82期のロスターは"
+                      + "**現行 52 枚から ソム を抜き、トモ の席に ハリ を戻した 51 枚**である"
+                      + "（第108期に ハリ → トモ の入れ替えがあったので、2 枚抜くと 50 枚になる）。**ハリ を戻して 51 枚で回した。**");
+    Console.WriteLine();
+    int q1Match = -1, q1N = 0;
+    string hcP82Path = "";
+    {
+        string dirq = Directory.GetCurrentDirectory();
+        for (int up = 0; up < 6 && hcP82Path == ""; up++)
+        {
+            string cand = Path.Combine(dirq, "design", "PHASE82_CHECKUP.md");
+            if (File.Exists(cand)) hcP82Path = cand;
+            else { var pq = Directory.GetParent(dirq); if (pq == null) break; dirq = pq.FullName; }
+        }
+    }
+    var hcOld82 = new Dictionary<string, string>(StringComparer.Ordinal);
+    var hcOld82Solo = new Dictionary<string, double>(StringComparer.Ordinal);
+    var hcOld82Syn = new Dictionary<string, double>(StringComparer.Ordinal);
+    if (hcP82Path != "")
+        foreach (string line in File.ReadAllLines(hcP82Path))
+        {
+            if (!line.StartsWith("| ")) continue;
+            var cs = line.Split('|').Select(x => x.Trim()).Where(x => x.Length > 0).ToArray();
+            if (cs.Length < 4 || !int.TryParse(cs[0], out _)) continue;
+            string g = cs[2].Replace("*", "");
+            if (g is "残す" or "転生" or "差し替え" or "別扱い")
+            {
+                hcOld82[cs[1]] = g;
+                if (cs.Length > 3 && double.TryParse(cs[3].Replace("+", ""), out double so82)) hcOld82Solo[cs[1]] = so82;
+                if (cs.Length > 6 && double.TryParse(cs[6].Replace("+", ""), out double sy82)) hcOld82Syn[cs[1]] = sy82;
+            }
+        }
+    if (hcOld82.Count != 51)
+    {
+        Console.WriteLine($"**第82期の表A を {hcOld82.Count} 行しか走査できなかった（51 行のはず）。Q1 は判定しない**（第117期）。");
+        Console.WriteLine();
+    }
+    else if (hcRefPath51 == "" || !File.Exists(hcRefPath51))
+    {
+        Console.WriteLine("**`checkup run51` の TSV が渡されていない。Q1 は判定しない。**");
+        Console.WriteLine();
+    }
+    else
+    {
+        // 51 体のロスターを組み直して、TSV だけから 3分を出す（台の抽選には触らない）
+        var r51 = UnitCatalog.All.Select(d => d.Id == "tomo" ? UnitCatalog.Hari : d).Where(d => d.Id != "som").ToArray();
+        int n51 = r51.Length;
+        var pairs51 = new List<(int A, int B)>();
+        for (int a = 0; a < n51; a++) for (int b = a + 1; b < n51; b++) pairs51.Add((a, b));
+        var ix51 = new int[n51, n51];
+        for (int pi = 0; pi < pairs51.Count; pi++) { ix51[pairs51[pi].A, pairs51[pi].B] = pi; ix51[pairs51[pi].B, pairs51[pi].A] = pi; }
+        var y51 = new double[pairs51.Count][][];
+        var nt51 = new int[pairs51.Count];
+        int got51 = 0;
+        foreach (string line in File.ReadLines(hcRefPath51))
+        {
+            if (line.Length == 0) continue;
+            var c = line.Split('\t');
+            int pi = ix51[int.Parse(c[0]), int.Parse(c[1])];
+            if (y51[pi] != null) continue;
+            int nt = int.Parse(c[2]);
+            nt51[pi] = nt;
+            int at = 9 + nt;
+            var ys = new double[nt][];
+            for (int t = 0; t < nt; t++)
+            {
+                ys[t] = new double[4];
+                for (int v = 0; v < 4; v++) ys[t][v] = double.Parse(c[at++], hcInv);
+            }
+            y51[pi] = ys; got51++;
+        }
+        if (got51 != pairs51.Count)
+        {
+            Console.WriteLine($"**`run51` のシャードが足りない: {got51} / {pairs51.Count} 組。Q1 は判定しない。**");
+            Console.WriteLine();
+        }
+        else
+        {
+            var solo51 = new List<double>[n51][];
+            var ceilN = new int[n51]; var ceilD = new int[n51];
+            for (int u = 0; u < n51; u++) { solo51[u] = new List<double>[HcS]; for (int sx = 0; sx < HcS; sx++) solo51[u][sx] = new List<double>(); }
+            var syn51 = new double[pairs51.Count]; var se51 = new double[pairs51.Count];
+            var synS51 = new double[pairs51.Count][]; var seS51 = new double[pairs51.Count][];
+            for (int pi = 0; pi < pairs51.Count; pi++)
+            {
+                (int a, int b) = pairs51[pi];
+                int nt = nt51[pi];
+                var all = new double[nt];
+                for (int t = 0; t < nt; t++)
+                {
+                    double[] y = y51[pi][t];
+                    all[t] = y[0] - y[2] - y[1] + y[3];
+                    solo51[a][t % HcS].Add(y[0] - y[1]);
+                    solo51[b][t % HcS].Add(y[0] - y[2]);
+                    if (y[3] > HcCeil) { ceilN[a]++; ceilN[b]++; }
+                    ceilD[a]++; ceilD[b]++;
+                }
+                syn51[pi] = all.Average(); se51[pi] = HcSd(all) / Math.Sqrt(nt);
+                synS51[pi] = new double[HcS]; seS51[pi] = new double[HcS];
+                for (int sx = 0; sx < HcS; sx++)
+                {
+                    var xs = new List<double>();
+                    for (int t = sx; t < nt; t += HcS) xs.Add(all[t]);
+                    synS51[pi][sx] = xs.Average(); seS51[pi][sx] = HcSd(xs) / Math.Sqrt(xs.Count);
+                }
+            }
+            var g51 = new string[n51];
+            var soloV51 = new double[n51];
+            var bestV51 = new double[n51];
+            for (int u = 0; u < n51; u++)
+            {
+                var all = solo51[u][0].Concat(solo51[u][1]).ToArray();
+                soloV51[u] = all.Average();
+                double best = double.NaN;
+                for (int v = 0; v < n51; v++)
+                {
+                    if (v == u) continue;
+                    int pi = ix51[u, v];
+                    if (syn51[pi] > 2 * se51[pi] && (double.IsNaN(best) || syn51[pi] > best)) best = syn51[pi];
+                }
+                bestV51[u] = best;
+                bool split = solo51[u][0].Average() * solo51[u][1].Average() < 0;
+                bool noMeasure = 100.0 * ceilN[u] / ceilD[u] > HcCeilShare;
+                g51[u] = split || noMeasure ? "別扱い"
+                    : soloV51[u] >= HcSoloLine ? "残す"
+                    : (!double.IsNaN(best) && best >= HcSynLine ? "転生" : "差し替え");
+            }
+            int same = 0; var moved = new List<string>();
+            for (int u = 0; u < n51; u++)
+            {
+                if (!hcOld82.TryGetValue(r51[u].Name, out string? old)) { moved.Add($"| {r51[u].Name} | — | {g51[u]} | 第82期の表A に無い |"); continue; }
+                if (old == g51[u]) same++;
+                else moved.Add($"| {r51[u].Name} | {old} | {g51[u]} | 単独 {HcP2(soloV51[u])} / 最良 {HcP2(bestV51[u])} |");
+            }
+            q1Match = same; q1N = n51;
+            Console.WriteLine($"**第82期の3分と一致したのは {same} / {n51} 体**（線 48/51）。"
+                              + $"分布は 残す {g51.Count(g => g == "残す")} / 転生 {g51.Count(g => g == "転生")} / "
+                              + $"差し替え {g51.Count(g => g == "差し替え")} / 別扱い {g51.Count(g => g == "別扱い")}"
+                              + "（第82期は **31 / 13 / 6 / 1**）。");
+            Console.WriteLine();
+            // **群（3値）ではなく、その下の連続量が再現するかを見る**——線の近くに標本が溜まっていると、
+            // 群の一致率は器具の再現性ではなく「線と分布の位置関係」を測ってしまう。
+            {
+                var xa = new List<double>(); var ya = new List<double>();
+                var xb = new List<double>(); var yb = new List<double>();
+                double worstSolo = 0;
+                for (int u = 0; u < n51; u++)
+                {
+                    if (hcOld82Solo.TryGetValue(r51[u].Name, out double o))
+                    { xa.Add(o); ya.Add(soloV51[u]); worstSolo = Math.Max(worstSolo, Math.Abs(o - soloV51[u])); }
+                    if (hcOld82Syn.TryGetValue(r51[u].Name, out double o2) && !double.IsNaN(bestV51[u]))
+                    { xb.Add(o2); yb.Add(bestV51[u]); }
+                }
+                Console.WriteLine($"**群の下の連続量**: 単独の相関 r = **{HcCorr(xa, ya):F3}**（{xa.Count} 体・最大差 {worstSolo:F2}pt）、"
+                                  + $"最良の相乗の相関 r = **{HcCorr(xb, yb):F3}**（{xb.Count} 体）。");
+                Console.WriteLine();
+                int nearLine = 0;
+                foreach (int u in Enumerable.Range(0, n51))
+                {
+                    if (!hcOld82.TryGetValue(r51[u].Name, out string? og) || og == g51[u]) continue;
+                    if (Math.Abs(soloV51[u] - HcSoloLine) < 1.0 || (!double.IsNaN(bestV51[u]) && Math.Abs(bestV51[u] - HcSynLine) < 1.5)) nearLine++;
+                }
+                Console.WriteLine($"**群が変わった駒のうち、この期の値が線から 1.0pt（相乗は 1.5pt）以内にいるのは {nearLine} 体。**");
+                Console.WriteLine();
+            }
+            if (moved.Count > 0)
+            {
+                Console.WriteLine("| 駒 | 第82期 | この期（51 体） | この期の値 |");
+                Console.WriteLine("|---|---|---|---|");
+                foreach (string l in moved) Console.WriteLine(l);
+                Console.WriteLine();
+                Console.WriteLine("**engine の規則も駒の数値も第82期から動いている**（呪い則・再行動・積み過ぎ・灯の濾しほか）ので、"
+                                  + "ここで一致しない駒は「器具が壊れた」ではなく「盤面が変わった」でもありうる。**判定は線どおり読む。**");
+                Console.WriteLine();
+            }
+        }
+    }
+
+    // ---- 表B': 52 枚の3分と、第82期からの異動 ------------------------------------------------------
+    Console.WriteLine("## 表B' —— 52 枚の3分（Q2）と第82期からの異動");
+    Console.WriteLine();
+    Console.WriteLine($"**残す {nKeep} / 転生 {nReborn} / 差し替え {nSwap} / 別扱い {nSpecial}**（合計 {hcRN}）。");
+    Console.WriteLine();
+    Console.WriteLine("| 駒 | 第82期 | この期（52 枚） | 単独 | 最良の相乗 |");
+    Console.WriteLine("|---|---|---|--:|--:|");
+    int hcMoved = 0;
+    for (int u = 0; u < hcRN; u++)
+    {
+        string now = hcSpecial[u] ? "別扱い" : hcGroupName[hcGrp[u]];
+        string old = hcOld82.TryGetValue(hcName[u], out string? o) ? o : "—（第82期に居ない）";
+        if (old == now) continue;
+        hcMoved++;
+        Console.WriteLine($"| {hcName[u]} | {old} | {now} | {HcP2(hcSolo[u])} | {HcP2(hcBestV[u])} |");
+    }
+    Console.WriteLine();
+    Console.WriteLine($"**異動は {hcMoved} 体**（52 枚の台は第82期の 51 枚の台とは埋め草の母集団が違うので、"
+                      + "ここは「同じ器具の再現」ではない。再現は Q1 で見る）。");
+    Console.WriteLine();
+
+    // ---- 表C: 4象限（Q3。**この期の主産物**）-------------------------------------------------------
+    Console.WriteLine("## 表C —— 4象限（横軸 単独 × 縦軸 プラス値。**Q3・この期の主産物**）");
+    Console.WriteLine();
+    if (hasX == 0)
+    {
+        Console.WriteLine("**第119期の列が付いた TSV（`checkup runp`）が渡されていない。表C は出せない。**");
+        Console.WriteLine();
+    }
+    else
+    {
+        bool[] hcMeasurable = Enumerable.Range(0, hcRN)
+            .Select(u => hcCeilPct[u] <= HcCeilShare && hcFloorPct[u] <= HcCeilShare).ToArray();
+        Console.WriteLine($"**情報帯の screen（自己検査 (e)・指示書 §1 の 6）: 天井% ≤ {HcCeilShare:F0} かつ 床% ≤ {HcCeilShare:F0}**。"
+                          + $"通ったのは **{hcMeasurable.Count(x => x)} / {hcRN} 体**"
+                          + $"（落ちたのは {string.Join("・", Enumerable.Range(0, hcRN).Where(u => !hcMeasurable[u]).Select(u => $"{hcName[u]}（天井 {hcCeilPct[u]:F1} / 床 {hcFloorPct[u]:F1}）"))}）。"
+                          + "**落ちた駒は象限に置かず、別扱いとして並べる。**");
+        Console.WriteLine();
+        string[] quadName = { "素で有能（正常）", "**マイナスが実質プラス**", "**思想どおり**", "**思想に合わない**" };
+        int QuadOf(int u) => (hcSolo[u] >= HcSoloLine ? 0 : 2) + (hcPlusVal[u] >= HcSoloLine ? 0 : 1);
+        var quad = new List<int>[4];
+        for (int q = 0; q < 4; q++) quad[q] = new List<int>();
+        for (int u = 0; u < hcRN; u++) if (hcMeasurable[u]) quad[QuadOf(u)].Add(u);
+        Console.WriteLine("| | マイナス抜きが強い（プラス値 ≥ +1.5） | マイナス抜きも弱い |");
+        Console.WriteLine("|---|--:|--:|");
+        Console.WriteLine($"| 現行が強い（単独 ≥ +1.5） | {quad[0].Count}（素で有能） | {quad[1].Count}（**マイナスが実質プラス**） |");
+        Console.WriteLine($"| 現行が弱い | {quad[2].Count}（**思想どおり**） | {quad[3].Count}（**思想に合わない**） |");
+        Console.WriteLine();
+        Console.WriteLine("| # | 駒 | 型 | 象限 | 単独 | プラス値 | マイナス代 | マイナスのみ | 最良の相乗 | 群 |");
+        Console.WriteLine("|--:|---|---|---|--:|--:|--:|--:|--:|---|");
+        int rkq = 0;
+        foreach (int u in Enumerable.Range(0, hcRN).Where(u => hcMeasurable[u]).OrderBy(u => QuadOf(u)).ThenBy(u => hcPlusVal[u]))
+            Console.WriteLine($"| {++rkq} | {hcName[u]} | {HcTypeOf(u)} | {quadName[QuadOf(u)]} | {HcP2(hcSolo[u])} | "
+                              + $"{HcP2(hcPlusVal[u])} | {HcP2(hcCost[u])} | {HcP2(hcMinusVal[u])} | {HcP2(hcBestV[u])} | "
+                              + $"{(hcSpecial[u] ? "別扱い" : hcGroupName[hcGrp[u]])} |");
+        Console.WriteLine();
+        var noMeasure119 = Enumerable.Range(0, hcRN).Where(u => !hcMeasurable[u]).ToArray();
+        if (noMeasure119.Length > 0)
+        {
+            Console.WriteLine("**screen で落ちた駒（象限に置かない）**:");
+            Console.WriteLine();
+            Console.WriteLine("| 駒 | 型 | 天井% | 床% | 単独 | プラス値 |");
+            Console.WriteLine("|---|---|--:|--:|--:|--:|");
+            foreach (int u in noMeasure119)
+                Console.WriteLine($"| {hcName[u]} | {HcTypeOf(u)} | {hcCeilPct[u]:F1} | {hcFloorPct[u]:F1} | {HcP2(hcSolo[u])} | {HcP2(hcPlusVal[u])} |");
+            Console.WriteLine();
+        }
+        // **プラスが特性ではなく体でできている駒**——マイナスを外すと素体そのものになる
+        var asPlain = Enumerable.Range(0, hcRN)
+            .Where(u => !HcIsII(u) && hcPlusDef[u].Traits.Count == 0
+                        && hcPlusDef[u].Attack == hcRoster[u].Attack
+                        && hcPlusDef[u].MaxHp == hcRoster[u].MaxHp && hcPlusDef[u].Speed == hcRoster[u].Speed).ToArray();
+        if (asPlain.Length > 0)
+            Console.WriteLine($"**yP が素体と同一になる駒が {asPlain.Length} 体**: "
+                              + string.Join("・", asPlain.Select(u => $"{hcName[u]}（プラス値 {HcP2(hcPlusVal[u])}）"))
+                              + "——**持っている札がマイナスだけ**なので、外すと素体そのものになる。"
+                              + "**プラス値が定義上ちょうど 0 になる**（この駒のプラスは特性ではなく体の側にある）。");
+        Console.WriteLine();
+        var bad = quad[3].Where(u => !HcIsII(u)).ToArray();
+        var badII = quad[3].Where(HcIsII).ToArray();
+        Console.WriteLine($"**「思想に合わない」象限は {quad[3].Count} 体。うち (ii)（分離できない＝マイナスを外せない）が {badII.Length} 体、"
+                          + $"実際にマイナスを外して測れたのに弱いままだったのが {bad.Length} 体。**");
+        Console.WriteLine();
+        Console.WriteLine($"- **外して測れたのに弱い（見直し対象・プラス値の低い順）**: {(bad.Length == 0 ? "**該当なし**" : string.Join("・", bad.OrderBy(u => hcPlusVal[u]).Select(u => $"{hcName[u]}（{HcP2(hcPlusVal[u])}）")))}");
+        Console.WriteLine($"- **(ii) なので外しようが無い**: {(badII.Length == 0 ? "該当なし" : string.Join("・", badII.OrderBy(u => hcPlusVal[u]).Select(u => $"{hcName[u]}（{HcP2(hcPlusVal[u])}）")))}");
+        Console.WriteLine();
+        if (quad[1].Count > 0)
+            Console.WriteLine($"**「マイナスが実質プラス」象限**: {string.Join("・", quad[1].OrderBy(u => hcCost[u]).Select(u => $"{hcName[u]}（マイナス代 {HcP2(hcCost[u])}）"))}"
+                              + "——**現行は線を越えているのに、マイナスを外すと越えなくなる。**");
+        else Console.WriteLine("**「マイナスが実質プラス」は 0 体。**");
+        Console.WriteLine();
+        Console.WriteLine("**マイナス代の大きい順（＝マイナスがいちばん高くついている駒。(ii) は定義上 0）**: "
+                          + string.Join("・", Enumerable.Range(0, hcRN).Where(u => !HcIsII(u)).OrderByDescending(u => hcCost[u]).Take(8)
+                              .Select(u => $"{hcName[u]} {HcP2(hcCost[u])}")) + "。");
+        Console.WriteLine();
+        var neg = Enumerable.Range(0, hcRN).Where(u => !HcIsII(u) && hcCost[u] < 0).OrderBy(u => hcCost[u]).ToArray();
+        Console.WriteLine($"**代金が負（＝マイナスを外すと弱くなる）駒は {neg.Length} 体**: "
+                          + (neg.Length == 0 ? "該当なし" : string.Join("・", neg.Select(u => $"{hcName[u]} {HcP2(hcCost[u])}")))
+                          + "。**象限に関係なく数えている**（象限は線 +1.5 の左右で切るので、"
+                          + "両方とも強い駒の中にある「外すと弱くなる」を拾わない）。");
+        Console.WriteLine();
+    }
+
+    // ---- 表D: (ii) の一覧（Q4）--------------------------------------------------------------------
+    var iiList = Enumerable.Range(0, hcRN).Where(HcIsII).ToArray();
+    Console.WriteLine($"## 表D —— (ii) 分離できない駒（Q4）: **{iiList.Length} / {hcRN} 体**");
+    Console.WriteLine();
+    Console.WriteLine("**プラスとマイナスが同じ1つの動作**なので、`yP` を作ろうとすると本物と同じものしか作れない"
+                      + "（`hcPlusDef` が本物と同じ参照を返す＝**測る前に決まっている**）。指示書 §0-2 の但し書きどおり、"
+                      + "**見直し対象とは区別して報告する。1文で読める駒はむしろ良い設計である。**");
+    Console.WriteLine();
+    Console.WriteLine("| 駒 | 札 | 単独 | 群 | マイナスの持ち方 |");
+    Console.WriteLine("|---|---|--:|---|---|");
+    foreach (int u in iiList.OrderByDescending(u => hcSolo[u]))
+        Console.WriteLine($"| {hcName[u]} | {string.Join("・", hcRoster[u].Traits.Select(t => $"`{t}`"))} | {HcP2(hcSolo[u])} | "
+                          + $"{(hcSpecial[u] ? "別扱い" : hcGroupName[hcGrp[u]])} | {hcLabel[hcRoster[u].Traits[0]].Why} |");
+    Console.WriteLine();
+
+    // ---- 表E: 理想台との割れ（拒否権1）------------------------------------------------------------
+    Console.WriteLine("## 表E —— 理想台との割れ（拒否権1。§0-3 で**ドラフト台を正**と決めた）");
+    Console.WriteLine();
+    Console.WriteLine("**この期の決定: 差し替えの判定はドラフト台を正とし、理想台は拒否権1 としてのみ使う**（指示書 §0-3 の提案をそのまま採る）。"
+                      + "理由——理想台（`CompareBuilds()` 61 行）は**その駒のために組まれた台**なので、"
+                      + "「入れる価値があるか」ではなく「最良の相方と組めば働くか」を測っている。**52 枠が埋まっている今、問いは前者である。**");
+    Console.WriteLine();
+    Console.WriteLine($"割れた駒は **{Enumerable.Range(0, hcRN).Count(u => hcSplitStage[u])} / {hcRN} 体**"
+                      + $"（第82期は 15 / 51・うち 14 が「ドラフト台で残さない × 理想台で残す」）。内訳は上の Q5 の表に出してある。");
+    Console.WriteLine();
+
+    // ---- Q5: ヴェル -------------------------------------------------------------------------------
+    int velIx = Array.FindIndex(hcRoster, d => d.Id == "vel");
+    Console.WriteLine("## Q5 —— ヴェル（第118期で測れなかった駒）が情報帯に入る台で測れたか");
+    Console.WriteLine();
+    if (velIx < 0) Console.WriteLine("**ヴェルがロスターに居ない。**");
+    else
+    {
+        bool velOk = hcCeilPct[velIx] <= HcCeilShare && hcFloorPct[velIx] <= HcCeilShare
+                     && Math.Abs(hcSolo[velIx]) > 2 * hcSoloSe[velIx];
+        Console.WriteLine($"| 量 | 実測 |");
+        Console.WriteLine($"|---|--:|");
+        Console.WriteLine($"| 天井%（y00 > {HcCeil:F0}%） | {hcCeilPct[velIx]:F1} |");
+        Console.WriteLine($"| 床%（y00 = 0%） | {hcFloorPct[velIx]:F1} |");
+        Console.WriteLine($"| 単独 | {HcP2(hcSolo[velIx])}（SE {hcSoloSe[velIx]:F2}） |");
+        Console.WriteLine($"| プラス値 | {HcP2(hcPlusVal[velIx])} |");
+        Console.WriteLine($"| 群 | {(hcSpecial[velIx] ? "別扱い" : hcGroupName[hcGrp[velIx]])} |");
+        Console.WriteLine();
+        Console.WriteLine($"**{(velOk ? "○ 測れている" : "× 測れていない（別扱い）")}**"
+                          + "——ドラフト台は 128 台の埋め草を無作為に引くので、"
+                          + "**第118期の土台（攻撃役に固定した4台）と違って「味方が倒れる台」が必ず混ざる。**");
+        Console.WriteLine();
+    }
+
+    // ---- 判定 -------------------------------------------------------------------------------------
+    Console.WriteLine("## 第119期の判定");
+    Console.WriteLine();
+    Console.WriteLine("| # | 問い | 実測 | 判定 |");
+    Console.WriteLine("|--:|---|---|:-:|");
+    Console.WriteLine($"| Q1 | 51 体で第82期の3分と一致（48/51 以上） | {(q1Match < 0 ? "—" : $"{q1Match} / {q1N}")} | "
+                      + $"{(q1Match < 0 ? "—" : q1Match >= 48 ? "○" : "**×**")} |");
+    Console.WriteLine($"| Q2 | 52 枚の3分・差し替え候補が 1〜15 体 | {nSwap} 体（残す {nKeep} / 転生 {nReborn} / 別扱い {nSpecial}） | {(nSwap >= 1 && nSwap <= 15 ? "○" : "**×**")} |");
+    Console.WriteLine($"| **Q3** | **4象限に 52 枚を割る** | {(hasX == 0 ? "**測っていない**" : "上の表C")} | {(hasX == 0 ? "**×**" : "○")} |");
+    Console.WriteLine($"| Q4 | (ii) の体数と名前 | **{iiList.Length} / {hcRN} 体** | ○ |");
+    Console.WriteLine($"| Q5 | ヴェルが情報帯に入る台で測れたか | {(velIx < 0 ? "—" : $"天井 {hcCeilPct[velIx]:F1} / 床 {hcFloorPct[velIx]:F1}")} | "
+                      + $"{(velIx >= 0 && hcCeilPct[velIx] <= HcCeilShare && hcFloorPct[velIx] <= HcCeilShare ? "○" : "**×**")} |");
     Console.WriteLine("| Q6 | `compare` 305 セル 0 件・`docs/` 差分 0 | `checkup check` と `docs/` の再生成で別に確かめる | — |");
     Console.WriteLine();
     Console.WriteLine($"所要 {hcSw.Elapsed.TotalSeconds:F1} 秒。");
