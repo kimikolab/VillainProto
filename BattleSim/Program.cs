@@ -54413,7 +54413,8 @@ if (focusId == "tank")
 //     dotnet run --project BattleSim -c Release 0 wound2 spill phase0 / run / check
 if (focusId == "wound2")
 {
-    Wound2Diag.Run(args.Length > 2 ? args[2] : "phase0", args.Length > 3 ? args[3] : "phase0");
+    Wound2Diag.Run(args.Length > 2 ? args[2] : "phase0", args.Length > 3 ? args[3] : "phase0",
+                   args.Length > 4 ? args[4] : "");
     return;
 }
 
