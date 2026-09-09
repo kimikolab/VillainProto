@@ -1483,10 +1483,18 @@ public enum SpillScope
 public readonly record struct SpillWoundRule(bool Enabled, SpillScope Scope = SpillScope.All)
 {
     /// <summary>
-    /// 既定は<b>有効</b>＝**第88期に採用**（第85期は当時の線 +3.0pt で落ちていた）。
-    /// <b>味方に傷が載る経路はこれが初めて</b>——第49期の「傷は味方に載る経路が1つも無い」はここで終わる。
+    /// 既定は<b>無効</b>＝**第122期に降ろした**（第88期に採用・第85期は当時の線 +3.0pt で落ちていた）。
+    ///
+    /// <para><b>第88期は「縫いの両側読み（ハリ）と対で」採ったが、その対の片側は第108期に
+    /// ロスターから外れた。</b> 供給だけが残り、味方に 8.211/戦 の傷を書き続けて
+    /// <b>その 94.7% が一度も読まれずに消えていた</b>（第120期の棚卸し）。
+    /// 第121期に版を並べ、第122期に**供給と、入力を失った読み手2枚（繕いの傷読み・引き取り）を
+    /// 同じコミットで降ろした**。</para>
+    ///
+    /// <para><b>機構は残置</b>（このノブを <c>true</c> に戻せば全部そのまま動く）。
+    /// 味方に傷を意図して書く駒ができたら、読み手と対で組み直すことになる。</para>
     /// </summary>
-    public static SpillWoundRule Default => new(true);
+    public static SpillWoundRule Default => new(false);
 
     /// <summary><paramref name="source"/> の刃が書き手として採られるか（<see cref="Scope"/> の判定）。</summary>
     public bool Writes(UnitState source) =>
@@ -1513,8 +1521,13 @@ public readonly record struct GatherRule(bool Enabled)
     /// 既定は<b>引き取る</b>＝**第90期 (P1) に採用**（第89期は「紙のスループット ≥ 5%」という
     /// <b>大きさの線を門に置いていた</b>ので 2×2 を1戦も回さずに落ちていた。第90期 §0-1 で門を
     /// 「鎖が繋がっているか」に置き換え、第88期の特異性の規約で測り直して通った）。
+    ///
+    /// <para><b>第122期に降ろした（<c>false</c>）。</b> 引き取るのは<b>味方の傷</b>で、その供給の
+    /// 89.4% は巻き込み則（<see cref="SpillWoundRule"/>）だった——同じコミットでそちらを止めたので、
+    /// <b>この中継には引き取る在庫が1つも来ない</b>（実測で `compare` 61 行 ＋ 交差帯 12 行の
+    /// 全 73 行が、この規則を降ろしても 1 ビットも動かない）。<b>機構は残置。</b></para>
     /// </summary>
-    public static GatherRule Default => new(true);
+    public static GatherRule Default => new(false);
 }
 
 /// <summary>
@@ -1932,8 +1945,14 @@ public readonly record struct MendRule(MendSide Side)
     /// 拒否権1〜3 もすべて ○（`compare` で動くのは 10 セル / 5 行・−10.0pt 以上落ちた行は 0）。</para>
     /// <para><b>採用時にノノへ塞ぎ（<see cref="TraitId.Seal"/>）を足した</b>ので、
     /// 採用版は測定版より辛い（繕った相手の傷がひとつ塞がる）。**採用後に測り直した表を報告書に併記してある。**</para>
+    ///
+    /// <para><b>第122期に降ろした（<see cref="MendSide.Plain"/>）。</b> ノノが読むのは<b>味方の傷</b>で、
+    /// その供給の 89.4% は巻き込み則（<see cref="SpillWoundRule"/>）だった——同じコミットでそちらを止めたので、
+    /// <b>読む在庫が1つも来ない</b>（実測で 73 行すべてが、この規則を降ろしても 1 ビットも動かない）。
+    /// <b>札（<see cref="TraitId.Seal"/>）も機構も残置</b>——<c>Plain</c> では <c>w == 0</c> なので
+    /// 塞ぎは常に偽になり、第92期以前とまったく同じ挙動に戻る。</para>
     /// </summary>
-    public static MendRule Default => new(MendSide.Wound);
+    public static MendRule Default => new(MendSide.Plain);
 }
 
 /// <summary>
