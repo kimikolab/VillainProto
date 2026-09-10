@@ -65502,8 +65502,10 @@ if (focusId == "cross")
                              + $"| {(keep ? "据え置き" : "**要差し替え**")} | {why} |";
         });
         foreach (string l in xcSeatLine) Console.WriteLine(l);
-        Console.WriteLine();
-        Console.WriteLine($"所要 {xcSw.Elapsed.TotalSeconds:F1} 秒。");
+        // **所要秒は出さない**（第124期 段0 と同じ理由）。`docs/crossing.md` は生成物なので、
+        // 実測の壁時計を末尾に書くと**「再生成して差分なし」が原理的に成り立たない**
+        // ——受け入れ条件 A2 が、盤面を1ビットも動かしていなくても毎回落ちる。
+        // 所要はコンソールで見れば足りる（`docs/` に置く値ではない）。
         return;
     }
 
