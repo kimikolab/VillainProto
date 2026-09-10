@@ -687,6 +687,7 @@ public partial class Main : Control
         _playing = false;
         string verdict = _result.PlayerWon ? "VICTORY" : "DEFEAT";
         Color color = _result.PlayerWon ? UiKit.Heal : UiKit.Hurt;
+        if (_result.PlayerWon) _battleField.ShowVictoryPortraits();
         _battleField.ShowBanner(verdict, color, 2.2);
         _battleField.SetSubline($"{(_result.PlayerWon ? "勝利" : "敗北")} ・ {_result.Turns}ターン ・ 生存 {_result.PlayerSurvivors}体 ・ 最大連鎖 {_result.MaxEnemyKillsInOneTurn}");
         AppendLog($"[color=#{color.ToHtml(false)}][b]{verdict}[/b][/color]  {_result.Turns}ターン");
@@ -969,7 +970,7 @@ public partial class Main : Control
 
     private async Task Delay(double seconds, bool raw = false)
     {
-        if (_fastSmoke)
+        if (_fastSmoke && !raw)
         {
             await Task.CompletedTask;
             return;

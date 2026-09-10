@@ -229,6 +229,11 @@ public partial class BattlefieldView3D : Control
 
     public void SetSubline(string value) => _subline.Text = value;
 
+    public void ShowVictoryPortraits()
+    {
+        foreach (BattlePawn3D pawn in _pawns.Values) pawn.AnimateVictory();
+    }
+
     public BattlePawn3D? FindPawn(int? instanceId)
         => instanceId is { } id && _pawns.TryGetValue(id, out BattlePawn3D? pawn) ? pawn : null;
 

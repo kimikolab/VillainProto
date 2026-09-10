@@ -63,7 +63,9 @@
 
 - `assets/grassland_battlefield.png`: OpenAI 組み込み画像生成で作成
 - `assets/outcast_atlas.png`: OpenAI 組み込み画像生成で作成（6種アトラス）
+- `assets/portraits/*.png`: ComfyUI で作成した味方5体の個別立ち絵（リィカ／スィド／ボルグ／ゾト／カド）
+- `assets/portraits/battle/*_idle_right.png`: OpenAI 組み込み画像生成で作成した味方5体の右向き戦闘待機立ち絵
 - `assets/campaign_player_squad.png`: OpenAI 組み込み画像生成で作成（味方部隊トークン）
 - `assets/campaign_enemy_squad.png`: OpenAI 組み込み画像生成で作成（敵部隊トークン）
 
-画像は本デモ用のオリジナル生成物です。部隊トークンは生成画像の明るい中性色背景を専用シェーダーで抜き、Sprite3D として使用します。
+画像は本デモ用のオリジナル生成物です。編成画面では通常立ち絵、戦闘中は透過済みの戦闘待機立ち絵、勝利後は生存者の通常立ち絵を使います。専用シェーダーは透過画像のアルファを保持し、明るい中性色背景の画像だけ背景色を抜きます。個別立ち絵が無いユニットは従来の `outcast_atlas.png` へフォールバックします。

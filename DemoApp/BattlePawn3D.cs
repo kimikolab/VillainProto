@@ -4,19 +4,30 @@ using System;
 
 public partial class BattlePawn3D : Node3D
 {
+    private const float PortraitGroundY = 0.05f;
+
     private Sprite3D _sprite = null!;
+    private ShaderMaterial _portraitMaterial = null!;
     private MeshInstance3D _shadow = null!;
     private MeshInstance3D _ring = null!;
     private MeshInstance3D _hpBack = null!;
     private MeshInstance3D _hpFill = null!;
+    private QuadMesh _hpFillMesh = null!;
     private Label3D _name = null!;
     private Label3D _seat = null!;
     private Label3D _stats = null!;
     private Label3D _status = null!;
     private Vector3 _home;
     private Color _baseTint;
+    private Texture2D _atlas = null!;
+    private string _unitId = "";
     private float _phase;
+    private float _portraitHeight = 2.25f;
+    private float _portraitBaseY = 1.12f;
+    private float _portraitGroundDistance = 1.07f;
+    private float _fxHeight = 1.35f;
     private bool _alive = true;
+    private bool _victory;
 
     public int InstanceId { get; private set; }
     public int Team { get; private set; }
@@ -41,10 +52,12 @@ public partial class BattlePawn3D : Node3D
     public AttackPattern Pattern { get; private set; }
     public string UnitName { get; private set; } = "";
     public Vector3 Home => _home;
-    public Vector3 FxPoint => GlobalPosition + new Vector3(0, 1.35f, 0);
+    public Vector3 FxPoint => GlobalPosition + new Vector3(0, _fxHeight, 0);
 
     public void Configure(DemoOpening opening, Texture2D atlas)
     {
+        _atlas = atlas;
+        _unitId = opening.UnitId;
         InstanceId = opening.InstanceId;
         Team = opening.Team;
         Slot = opening.Slot;
@@ -54,7 +67,7 @@ public partial class BattlePawn3D : Node3D
         Pattern = opening.Pattern;
         UnitName = opening.Name;
         _phase = (UiKit.StableHash(opening.UnitId) % 1000) * 0.0061f;
-        _baseTint = UiKit.Tint(opening.UnitId, opening.Team == BattleContext.EnemyTeam)
+        _baseTint = UiKit.PortraitTint(opening.UnitId, opening.Team == BattleContext.EnemyTeam)
             .Lerp(Colors.White, 0.42f);
 
         _shadow = new MeshInstance3D
@@ -74,7 +87,20 @@ public partial class BattlePawn3D : Node3D
         };
         AddChild(_ring);
 
-        AtlasTexture portrait = UiKit.Portrait(atlas, opening.UnitId);
+        Texture2D portrait = UiKit.BattlePortrait(atlas, opening.UnitId);
+        bool hasCustomPortrait = UiKit.HasCustomBattlePortrait(opening.UnitId)
+            || UiKit.HasCustomPortrait(opening.UnitId);
+        _portraitHeight = UiKit.PortraitWorldHeight(opening.UnitId);
+        float bottomPadding = UiKit.HasCustomBattlePortrait(opening.UnitId)
+            ? UiKit.BattlePortraitBottomPaddingRatio(opening.UnitId)
+            : 0.0f;
+        SetPortraitGeometry(portrait, bottomPadding);
+        _fxHeight = Math.Clamp(_portraitHeight * 0.58f, 0.90f, 1.65f);
+        float seatY = hasCustomPortrait ? _portraitHeight + 0.06f : 1.88f;
+        float statsY = hasCustomPortrait ? seatY + 0.17f : 2.05f;
+        float hpY = hasCustomPortrait ? seatY + 0.34f : 2.22f;
+        float nameY = hasCustomPortrait ? seatY + 0.61f : 2.49f;
+        float statusY = hasCustomPortrait ? seatY + 0.88f : 2.76f;
         var shader = new Shader
         {
             Code = @"shader_type spatial;
@@ -83,54 +109,61 @@ uniform sampler2D portrait_texture : source_color, filter_linear_mipmap;
 uniform vec4 portrait_tint : source_color = vec4(1.0);
 void fragment() {
     vec4 c = texture(portrait_texture, UV);
-    vec3 top_bg = mix(texture(portrait_texture, vec2(0.02, 0.02)).rgb,
-                      texture(portrait_texture, vec2(0.98, 0.02)).rgb, UV.x);
-    vec3 bottom_bg = mix(texture(portrait_texture, vec2(0.02, 0.98)).rgb,
-                         texture(portrait_texture, vec2(0.98, 0.98)).rgb, UV.x);
+    vec4 top_left = texture(portrait_texture, vec2(0.02, 0.02));
+    vec4 top_right = texture(portrait_texture, vec2(0.98, 0.02));
+    vec4 bottom_left = texture(portrait_texture, vec2(0.02, 0.98));
+    vec4 bottom_right = texture(portrait_texture, vec2(0.98, 0.98));
+    vec3 top_bg = mix(top_left.rgb, top_right.rgb, UV.x);
+    vec3 bottom_bg = mix(bottom_left.rgb, bottom_right.rgb, UV.x);
     vec3 expected_bg = mix(top_bg, bottom_bg, UV.y);
     float separation = distance(c.rgb, expected_bg);
     float silhouette = smoothstep(0.075, 0.19, separation);
-    if (silhouette < 0.06) discard;
+    float corner_alpha = max(max(top_left.a, top_right.a), max(bottom_left.a, bottom_right.a));
+    float has_alpha_background = 1.0 - step(0.08, corner_alpha);
+    float mask = mix(silhouette, 1.0, has_alpha_background);
+    float alpha = c.a * portrait_tint.a * mask;
+    if (alpha < 0.02) discard;
     ALBEDO = c.rgb * portrait_tint.rgb;
-    ALPHA = c.a * portrait_tint.a * silhouette;
+    ALPHA = alpha;
 }"
         };
-        var portraitMaterial = new ShaderMaterial { Shader = shader };
-        portraitMaterial.SetShaderParameter("portrait_texture", portrait);
-        portraitMaterial.SetShaderParameter("portrait_tint", _baseTint);
+        _portraitMaterial = new ShaderMaterial { Shader = shader };
+        _portraitMaterial.SetShaderParameter("portrait_texture", portrait);
+        _portraitMaterial.SetShaderParameter("portrait_tint", _baseTint);
 
         _sprite = new Sprite3D
         {
             Texture = portrait,
-            PixelSize = 0.0044f,
-            Position = new Vector3(0, 1.12f, 0),
+            PixelSize = _portraitHeight / Math.Max(1, portrait.GetHeight()),
+            Position = new Vector3(0, _portraitBaseY, 0),
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
-            MaterialOverride = portraitMaterial,
+            MaterialOverride = _portraitMaterial,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             FlipH = Team == BattleContext.EnemyTeam,
         };
         AddChild(_sprite);
 
-        _hpBack = MakeBillboardQuad(new Vector2(1.68f, 0.15f), new Color(0.015f, 0.025f, 0.02f, 0.92f));
-        _hpBack.Position = new Vector3(0, 2.22f, 0.03f);
+        _hpBack = MakeBillboardQuad(new Vector2(1.68f, 0.15f), new Color(0.015f, 0.025f, 0.02f, 0.92f), 10);
+        _hpBack.Position = new Vector3(0, hpY, 0.02f);
         AddChild(_hpBack);
-        _hpFill = MakeBillboardQuad(new Vector2(1.58f, 0.095f), teamColor.Lightened(0.08f));
-        _hpFill.Position = new Vector3(0, 2.22f, 0.02f);
+        _hpFill = MakeBillboardQuad(new Vector2(1.58f, 0.095f), teamColor.Lightened(0.08f), 11);
+        _hpFillMesh = (QuadMesh)_hpFill.Mesh;
+        _hpFill.Position = new Vector3(0, hpY, 0.04f);
         AddChild(_hpFill);
 
         _name = MakeLabel(opening.Name, 22, Colors.White, 0.0063f);
-        _name.Position = new Vector3(0, 2.49f, 0);
+        _name.Position = new Vector3(0, nameY, 0);
         AddChild(_name);
         _stats = MakeLabel("", 17, Color.FromHtml("#e2e7dd"), 0.0056f);
-        _stats.Position = new Vector3(0, 2.05f, 0);
+        _stats.Position = new Vector3(0, statsY, 0);
         AddChild(_stats);
         // 席名と行名（第123期 §3-3）。`FormationRules.SeatNames` / `RowOf` から引く。
         // 召喚枠（5-8）にも席名があるので、湧いた駒でもそのまま出る。
         _seat = MakeLabel(UiKit.SeatLabel(Slot), 15, UiKit.Muted, 0.0050f);
-        _seat.Position = new Vector3(0, 1.88f, 0);
+        _seat.Position = new Vector3(0, seatY, 0);
         AddChild(_seat);
         _status = MakeLabel("", 18, UiKit.Gold, 0.0058f);
-        _status.Position = new Vector3(0, 2.76f, 0);
+        _status.Position = new Vector3(0, statusY, 0);
         AddChild(_status);
 
         SetHp(Hp);
@@ -147,8 +180,10 @@ void fragment() {
     {
         Hp = Math.Clamp(hp, 0, MaxHp);
         float ratio = Math.Clamp(Hp / (float)MaxHp, 0.001f, 1.0f);
-        _hpFill.Scale = new Vector3(ratio, 1, 1);
-        _hpFill.Position = new Vector3(-0.79f * (1.0f - ratio), 2.22f, 0.02f);
+        _hpFill.Scale = Vector3.One;
+        _hpFillMesh.Size = new Vector2(1.58f * ratio, 0.095f);
+        _hpFillMesh.CenterOffset = new Vector3(-0.79f * (1.0f - ratio), 0, 0);
+        _hpFill.Position = new Vector3(0, _hpBack.Position.Y, 0.04f);
         _stats.Text = $"HP {Hp}/{MaxHp}  ・  攻 {AttackValue} {PatternGlyph(Pattern)}";
     }
 
@@ -246,6 +281,39 @@ void fragment() {
         tween.TweenProperty(_sprite, "modulate:a", 1.0f, 0.24);
     }
 
+    public void AnimateVictory()
+    {
+        if (!_alive || Team != BattleContext.PlayerTeam) return;
+        _victory = true;
+        Position = _home;
+        Rotation = Vector3.Zero;
+        Scale = Vector3.One;
+        _sprite.Scale = Vector3.One;
+        _ring.Visible = false;
+        _hpBack.Visible = false;
+        _hpFill.Visible = false;
+        _name.Visible = false;
+        _seat.Visible = false;
+        _stats.Visible = false;
+        _status.Visible = false;
+
+        Texture2D victoryPortrait = UiKit.Portrait(_atlas, _unitId);
+        var tween = CreateTween();
+        tween.TweenProperty(_sprite, "modulate:a", 0.0f, 0.14)
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+        tween.TweenCallback(Callable.From(() =>
+        {
+            SetPortraitGeometry(victoryPortrait, 0.0f);
+            _sprite.Texture = victoryPortrait;
+            _sprite.PixelSize = _portraitHeight / Math.Max(1, victoryPortrait.GetHeight());
+            _sprite.Position = new Vector3(0, _portraitBaseY, 0);
+            _sprite.Modulate = new Color(1, 1, 1, 0);
+            _portraitMaterial.SetShaderParameter("portrait_texture", victoryPortrait);
+        }));
+        tween.TweenProperty(_sprite, "modulate:a", 1.0f, 0.30)
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+    }
+
     public void AnimateMove(Vector3 target)
     {
         _home = target;
@@ -258,11 +326,20 @@ void fragment() {
     public override void _Process(double delta)
     {
         _phase += (float)delta * 2.1f;
-        if (!_alive) return;
-        float bob = Mathf.Sin(_phase) * 0.035f;
-        _sprite.Position = new Vector3(0, 1.12f + bob, 0);
-        _shadow.Scale = new Vector3(1.0f - bob * 1.5f, 1, 1.0f - bob * 1.5f);
+        if (!_alive || _victory) return;
+        float breath = Mathf.Sin(_phase) * 0.004f;
+        float scaleY = 1.0f + breath;
+        _sprite.Scale = new Vector3(1.0f - breath * 0.18f, scaleY, 1.0f);
+        _sprite.Position = new Vector3(0, PortraitGroundY + _portraitGroundDistance * scaleY, 0);
+        _shadow.Scale = new Vector3(1.0f - breath * 0.10f, 1, 1.0f - breath * 0.10f);
         _ring.Rotation = new Vector3(0, _phase * 0.15f, 0);
+    }
+
+    private void SetPortraitGeometry(Texture2D portrait, float bottomPaddingRatio)
+    {
+        float padding = Math.Clamp(bottomPaddingRatio, 0.0f, 0.45f) * _portraitHeight;
+        _portraitGroundDistance = _portraitHeight * 0.5f - padding;
+        _portraitBaseY = PortraitGroundY + _portraitGroundDistance;
     }
 
     private static Label3D MakeLabel(string text, int size, Color color, float pixelSize)
@@ -283,13 +360,18 @@ void fragment() {
             NoDepthTest = true,
         };
 
-    private static MeshInstance3D MakeBillboardQuad(Vector2 size, Color color)
-        => new()
+    private static MeshInstance3D MakeBillboardQuad(Vector2 size, Color color, int renderPriority)
+    {
+        StandardMaterial3D material = MakeMaterial(color, true, color * 0.18f, true);
+        material.NoDepthTest = true;
+        material.RenderPriority = renderPriority;
+        return new MeshInstance3D
         {
             Mesh = new QuadMesh { Size = size },
-            MaterialOverride = MakeMaterial(color, true, color * 0.18f, true),
+            MaterialOverride = material,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
+    }
 
     private static StandardMaterial3D MakeMaterial(Color color, bool transparent = false, Color? emission = null, bool billboard = false)
     {

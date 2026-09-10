@@ -1,6 +1,7 @@
 using BattleCore;
 using Godot;
 using System;
+using System.Collections.Generic;
 
 public static class UiKit
 {
@@ -20,6 +21,28 @@ public static class UiKit
     public static readonly Color Burn = Color.FromHtml("#ff9a55");
     public static readonly Color Wound = Color.FromHtml("#ef6f91");
     public static readonly Color Shadow = new(0.02f, 0.04f, 0.035f, 0.86f);
+
+    private static readonly Dictionary<string, string> PortraitPaths = new(StringComparer.Ordinal)
+    {
+        ["rica"] = "res://assets/portraits/rica.png",
+        ["sid"] = "res://assets/portraits/sid.png",
+        ["borg"] = "res://assets/portraits/borg.png",
+        ["zoto"] = "res://assets/portraits/zoto.png",
+        ["kado"] = "res://assets/portraits/kado.png",
+    };
+
+    private static readonly Dictionary<string, string> BattlePortraitPaths = new(StringComparer.Ordinal)
+    {
+        ["rica"] = "res://assets/portraits/battle/rica_idle_right.png",
+        ["sid"] = "res://assets/portraits/battle/sid_idle_right.png",
+        ["borg"] = "res://assets/portraits/battle/borg_idle_right.png",
+        ["zoto"] = "res://assets/portraits/battle/zoto_idle_right.png",
+        ["kado"] = "res://assets/portraits/battle/kado_idle_right.png",
+    };
+
+    private static readonly Dictionary<string, Texture2D> PortraitCache = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, Texture2D> BattlePortraitCache = new(StringComparer.Ordinal);
+    private static ShaderMaterial? _portraitCutoutMaterial;
 
     private static readonly Color[] UnitTints =
     {
@@ -81,8 +104,18 @@ public static class UiKit
         return ImageTexture.CreateFromImage(image);
     }
 
-    public static AtlasTexture Portrait(Texture2D atlas, string key)
+    public static Texture2D Portrait(Texture2D atlas, string key)
     {
+        if (PortraitPaths.TryGetValue(key, out string? path))
+        {
+            if (!PortraitCache.TryGetValue(key, out Texture2D? portrait))
+            {
+                portrait = LoadTexture(path);
+                PortraitCache[key] = portrait;
+            }
+            return portrait;
+        }
+
         int index = (int)(StableHash(key) % 6);
         int w = atlas.GetWidth() / 3;
         int h = atlas.GetHeight() / 2;
@@ -92,6 +125,81 @@ public static class UiKit
             Region = new Rect2((index % 3) * w, (index / 3) * h, w, h),
             FilterClip = true,
         };
+    }
+
+    public static Texture2D BattlePortrait(Texture2D atlas, string key)
+    {
+        if (BattlePortraitPaths.TryGetValue(key, out string? path))
+        {
+            if (!BattlePortraitCache.TryGetValue(key, out Texture2D? portrait))
+            {
+                portrait = LoadTexture(path);
+                BattlePortraitCache[key] = portrait;
+            }
+            return portrait;
+        }
+
+        return Portrait(atlas, key);
+    }
+
+    public static bool HasCustomPortrait(string key) => PortraitPaths.ContainsKey(key);
+    public static bool HasCustomBattlePortrait(string key) => BattlePortraitPaths.ContainsKey(key);
+
+    public static Color PortraitTint(string key, bool enemy = false)
+        => HasCustomPortrait(key) ? Colors.White : Tint(key, enemy);
+
+    /// <summary>
+    /// 生成立ち絵の相対体格。元画像のピクセル数ではなく、この高さで戦場上の見た目を揃える。
+    /// </summary>
+    public static float PortraitWorldHeight(string key) => key switch
+    {
+        "rica" => 1.75f,
+        "zoto" => 1.58f,
+        "kado" => 2.40f,
+        "sid" => 2.55f,
+        "borg" => 2.65f,
+        _ => 2.25f,
+    };
+
+    /// <summary>
+    /// 透過キャンバス下端から足元までの余白率。足元を地面へ固定するため、採用画像ごとに保持する。
+    /// </summary>
+    public static float BattlePortraitBottomPaddingRatio(string key) => key switch
+    {
+        "rica" => 0.0600f,
+        "sid" => 0.0040f,
+        "borg" => 0.0384f,
+        "zoto" => 0.1108f,
+        "kado" => 0.0198f,
+        _ => 0.0f,
+    };
+
+    public static Material? PortraitCanvasMaterial(string key)
+    {
+        if (!HasCustomPortrait(key)) return null;
+        if (_portraitCutoutMaterial is not null) return _portraitCutoutMaterial;
+
+        var shader = new Shader
+        {
+            Code = @"shader_type canvas_item;
+void fragment() {
+    vec4 c = texture(TEXTURE, UV);
+    vec4 top_left = texture(TEXTURE, vec2(0.02, 0.02));
+    vec4 top_right = texture(TEXTURE, vec2(0.98, 0.02));
+    vec4 bottom_left = texture(TEXTURE, vec2(0.02, 0.98));
+    vec4 bottom_right = texture(TEXTURE, vec2(0.98, 0.98));
+    vec3 top_bg = mix(top_left.rgb, top_right.rgb, UV.x);
+    vec3 bottom_bg = mix(bottom_left.rgb, bottom_right.rgb, UV.x);
+    vec3 expected_bg = mix(top_bg, bottom_bg, UV.y);
+    float silhouette = smoothstep(0.075, 0.19, distance(c.rgb, expected_bg));
+    float corner_alpha = max(max(top_left.a, top_right.a), max(bottom_left.a, bottom_right.a));
+    float has_alpha_background = 1.0 - step(0.08, corner_alpha);
+    float mask = mix(silhouette, 1.0, has_alpha_background);
+    COLOR = vec4(c.rgb, c.a * mask);
+}"
+        };
+        _portraitCutoutMaterial = new ShaderMaterial { Shader = shader };
+        return _portraitCutoutMaterial;
     }
 
     public static Color Tint(string key, bool enemy = false)
@@ -171,7 +279,8 @@ public partial class RosterCard : PanelContainer
             Texture = UiKit.Portrait(atlas, def.Id),
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-            SelfModulate = UiKit.Tint(def.Id),
+            SelfModulate = UiKit.PortraitTint(def.Id),
+            Material = UiKit.PortraitCanvasMaterial(def.Id),
             MouseFilter = MouseFilterEnum.Ignore,
         };
         portraitFrame.AddChild(_portrait);
@@ -303,7 +412,8 @@ public partial class FormationSlot : PanelContainer
         }
 
         _portrait.Texture = UiKit.Portrait(_atlas, def.Id);
-        _portrait.SelfModulate = UiKit.Tint(def.Id);
+        _portrait.SelfModulate = UiKit.PortraitTint(def.Id);
+        _portrait.Material = UiKit.PortraitCanvasMaterial(def.Id);
         _name.Text = def.Name;
         _stats.Text = $"HP {def.MaxHp}  攻 {def.Attack}  速 {def.Speed}";
         TooltipText = $"{def.Name}\nドラッグで入れ替え / 右クリックで外す";

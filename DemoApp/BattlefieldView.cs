@@ -437,11 +437,14 @@ public partial class PawnView : Control
 
         _portrait = new Sprite2D
         {
-            Texture = UiKit.Portrait(atlas, opening.UnitId),
+            Texture = UiKit.BattlePortrait(atlas, opening.UnitId),
             Position = new Vector2(58, 55),
-            Scale = new Vector2(0.205f, 0.205f),
-            SelfModulate = UiKit.Tint(opening.UnitId, Team == 1),
+            SelfModulate = UiKit.PortraitTint(opening.UnitId, Team == 1),
+            Material = UiKit.PortraitCanvasMaterial(opening.UnitId),
         };
+        Texture2D portrait = _portrait.Texture;
+        float portraitScale = Math.Min(100.0f / Math.Max(1, portrait.GetWidth()), 100.0f / Math.Max(1, portrait.GetHeight()));
+        _portrait.Scale = new Vector2(portraitScale, portraitScale);
         AddChild(_portrait);
 
         _status = UiKit.Text("", 11, UiKit.Gold);
