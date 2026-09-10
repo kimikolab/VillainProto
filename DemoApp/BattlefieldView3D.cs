@@ -19,6 +19,18 @@ public partial class BattlefieldView3D : Control
     private Label _centerBanner = null!;
     private Vector3 _cameraHome;
 
+    /// <summary>画角（第124期 3-c）。<b>寄りは距離で作る</b>ので、ここは動かさない。</summary>
+    private const float CameraFov = 39.0f;
+
+    /// <summary>
+    /// 注視点（第124期 3-c）。<b>盤面の中心より奥・上を見る。</b>
+    /// 立ち絵は縦に長いので、足元（1.0）ではなく胸のあたりを見る。
+    ///
+    /// <para><b>奥（z を負）へ振っても駒は大きくならない</b>——手前の地面が枠から出るぶん
+    /// 空が上から入ってくるだけで、駒の占める割合は変わらない（第124期に測って戻した）。</para>
+    /// </summary>
+    private static readonly Vector3 CameraFocus = new(0, 1.35f, 0f);
+
     public IReadOnlyDictionary<int, BattlePawn3D> Pawns => _pawns;
 
     public override void _Ready()
@@ -37,11 +49,18 @@ public partial class BattlefieldView3D : Control
 
         _viewport = new SubViewport
         {
+            // **`Size` は効かない。** `SubViewportContainer.Stretch = true` が
+            // SubViewport のサイズを枠のサイズで上書きするので、ここを上げても1ピクセルも増えない
+            // （第124期に一度これで測って外した）。**効くノブは 3D のスケーリング。**
             Size = new Vector2I(1280, 720),
             RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
             HandleInputLocally = false,
+            // 第124期 3-c: 「解像度も低め」への直答。3D を 1.5 倍で描いて縮める（スーパーサンプリング）。
+            // FXAA は輪郭をぼかす方向なので、密度を上げた以上は外す。
+            Scaling3DMode = Viewport.Scaling3DModeEnum.Bilinear,
+            Scaling3DScale = 1.5f,
             Msaa3D = Viewport.Msaa.Msaa4X,
-            ScreenSpaceAA = Viewport.ScreenSpaceAAEnum.Fxaa,
+            ScreenSpaceAA = Viewport.ScreenSpaceAAEnum.Disabled,
         };
         container.AddChild(_viewport);
         _world = new Node3D();
@@ -83,10 +102,18 @@ public partial class BattlefieldView3D : Control
             ShadowEnabled = true,
         });
 
-        _cameraHome = new Vector3(0, 9.7f, 14.8f);
-        _camera = new Camera3D { Position = _cameraHome, Current = true, Fov = 39.0f, Near = 0.1f, Far = 80.0f };
+        // 第124期 3-c: 「駒が小さく見える。もう少しズームアップして」への直答。
+        // **画角ではなく距離で寄る**——画角を狭めると遠近が消えて 2.5D の奥行きが失われる。
+        //
+        // **寄せ幅は手前のレーンで決まる。** 駒は x ∈ [-5.2, 5.2] に並ぶが、
+        // 手前のレーン（z = +2.15）はカメラに 2.15 近いぶんだけ横へ広がるので、
+        // **原点で足りていても角の駒が枠から出る**（7.9/11.7 で実際に切れた）。
+        // 9.7/14.8 → 8.5/12.9。原点での半幅 8.3 に対し、手前の角は約 6.4。
+        // 注視点も 1.0 → 1.35 へ上げた——駒の立ち絵は縦に長いので、足元を狙うと上が余る。
+        _cameraHome = new Vector3(0, 8.5f, 12.9f);
+        _camera = new Camera3D { Position = _cameraHome, Current = true, Fov = CameraFov, Near = 0.1f, Far = 80.0f };
         _world.AddChild(_camera);
-        _camera.LookAt(new Vector3(0, 1.0f, 0), Vector3.Up);
+        _camera.LookAt(CameraFocus, Vector3.Up);
 
         var ground = new MeshInstance3D
         {
@@ -206,10 +233,10 @@ public partial class BattlefieldView3D : Control
         foreach (Node child in _fxRoot.GetChildren()) child.QueueFree();
         _eyebrow.Text = "BATTLE 2.5D  /  TURN 0";
         _headline.Text = $"{stageName} — 草原遭遇戦";
-        _subline.Text = "Space: 一時停止   1–4: 再生速度   攻撃者と原因をダメージ表示に併記";
+        _subline.Text = "Space: 一時停止   1–4: 再生速度   T: 戦績   細い線＝誰の仕業か";
         _camera.Position = _cameraHome;
-        _camera.Fov = 39.0f;
-        _camera.LookAt(new Vector3(0, 1.0f, 0), Vector3.Up);
+        _camera.Fov = CameraFov;
+        _camera.LookAt(CameraFocus, Vector3.Up);
 
         foreach (DemoOpening opening in openings)
         {
@@ -272,21 +299,29 @@ public partial class BattlefieldView3D : Control
         switch (pattern)
         {
             case AttackPattern.Sweep:
+                // 第124期 3-d: 薙ぎは**面**（扇）で示す。第123期に「よく見えた」側なので形は変えず、
+                // 副次目標の輪だけ大きくして「どこまで届いたか」を面と一緒に読めるようにする。
                 foreach (BattlePawn3D hit in hits)
                 {
                     MakeBeam(from.FxPoint, hit.FxPoint, color, 0.10f, 0.34);
-                    MakeGroundRing(hit.Home, color, 0.62f, 0.42);
+                    MakeGroundRing(hit.Home, color, hit == to ? 0.62f : 0.86f, 0.52);
                 }
                 MakeSweepFan(from.FxPoint, to.FxPoint, color);
                 break;
             case AttackPattern.Pierce:
             {
+                // 第124期 3-d: 「貫通・薙ぎが区別できない」への直答。
+                // **貫きは1本の槍が列を走り抜ける**——薙ぎ（扇）と形で割れるように、
+                // 芯を長く・白く・太くし、**貫いた駒の足元だけを縦長の輪**にする
+                // （薙ぎの丸い輪と形が違う）。第123期に「ボルグとドルガの薙ぎはよく見えた」のは
+                // 扇が大きな面だったからで、貫きには面が1つも無かった（Q0-9）。
                 Vector3 direction = (to.FxPoint - from.FxPoint).Normalized();
                 float farthest = hits.Max(pawn => Math.Max(0.0f, (pawn.FxPoint - from.FxPoint).Dot(direction)));
-                Vector3 end = from.FxPoint + direction * (farthest + 1.8f);
-                MakeBeam(from.FxPoint, end, new Color(color, 0.48f), 0.30f, 0.48);
-                MakeBeam(from.FxPoint, end, Colors.White.Lerp(color, 0.35f), 0.075f, 0.48);
-                foreach (BattlePawn3D hit in hits) MakeGroundRing(hit.Home, color, 0.50f, 0.44);
+                Vector3 end = from.FxPoint + direction * (farthest + 3.0f);
+                MakeBeam(from.FxPoint, end, new Color(color, 0.34f), 0.62f, 0.62);
+                MakeBeam(from.FxPoint, end, new Color(color, 0.72f), 0.26f, 0.62);
+                MakeBeam(from.FxPoint, end, Colors.White.Lerp(color, 0.22f), 0.085f, 0.62);
+                foreach (BattlePawn3D hit in hits) MakeLanceMark(hit.Home, direction, color);
                 break;
             }
             case AttackPattern.All:
@@ -308,15 +343,34 @@ public partial class BattlefieldView3D : Control
         Float(pawn, $"【{value}】", color, true, 3.45f);
     }
 
-    public void DamagePopup(BattlePawn3D? pawn, int amount, string source, Color color, bool large = false)
+    /// <summary>
+    /// ダメージの数字（第124期 3-b: 「もっと大きくわかりやすく」への直答）。
+    ///
+    /// <para><b>数字と出どころを別の大きさで出す。</b> 1行に混ぜると、読みたい数字が
+    /// 駒名の長さに埋もれる（第123期の「ポップアップが小さい」の実体）。
+    /// 数字は 2 段大きく、出どころはその下に小さく置く。</para>
+    /// </summary>
+    /// <param name="withSource">
+    /// 出どころの札を添えるか（第124期 3-a）。<b>同時着弾では主目標だけに添える</b>
+    /// ——5体ぶんの駒名が一度に浮くと、**大きくした数字がまた読めなくなる。**
+    /// </param>
+    public void DamagePopup(BattlePawn3D? pawn, int amount, string source, Color color,
+                            bool large = false, bool withSource = true)
     {
         if (pawn is null) return;
-        Float(pawn, $"−{amount}  {source}", color, large, 3.15f);
+        Float(pawn, $"−{amount}", color, true, 3.20f, large ? 2.05f : 1.55f);
+        if (withSource) Float(pawn, source, color, false, 2.86f, 0.86f);
     }
 
-    public void Impact(BattlePawn3D? pawn, Color color, bool status)
+    /// <param name="friendly">
+    /// 味方の刃（第124期 3-f: 「味方への隣接ダメージも分かりやすくしたい」への直答）。
+    /// <b>形で割る</b>——敵からの一撃は球、継続効果は輪、<b>味方の刃は足元の紫の輪</b>を足す。
+    /// 色（紫）だけでは継続効果の紫と混ざる。
+    /// </param>
+    public void Impact(BattlePawn3D? pawn, Color color, bool status, bool friendly = false)
     {
         if (pawn is null) return;
+        if (friendly) MakeGroundRing(pawn.Home, UiKit.Violet, 1.02f, 0.58);
         Vector3 center = pawn.Home + new Vector3(0, 1.15f, 0);
         var burst = new MeshInstance3D
         {
@@ -335,10 +389,41 @@ public partial class BattlefieldView3D : Control
         tween.Finished += burst.QueueFree;
     }
 
+    /// <summary>
+    /// <b>書き手 → 対象の線</b>（第124期 3-h）。段2 で `Heal` / `Revive` / `Summon` /
+    /// `Move` / `Highlight` / `StatusGain` に <c>ActorId</c> が載ったので、
+    /// 「起きたこと」に「誰の仕業か」を結べるようになった。
+    ///
+    /// <para><b>攻撃の線とは別の形にする</b>——攻撃は太い実線、こちらは細い線＋
+    /// 書き手の足元の輪。混ぜると「殴った」と「支えた」が同じ絵になる。</para>
+    /// </summary>
+    public void Link(BattlePawn3D? from, BattlePawn3D? to, Color color, string label)
+    {
+        if (from is null) { if (to is not null) Float(to, label, color); return; }
+        if (to is not null && to != from)
+        {
+            MakeBeam(from.FxPoint, to.FxPoint, new Color(color, 0.70f), 0.055f, 0.52);
+            MakeGroundRing(to.Home, color, 0.70f, 0.46);
+        }
+        MakeGroundRing(from.Home, color, 0.92f, 0.46);
+        Float(from, label, color, false, 3.55f, 0.92f);
+    }
+
+    /// <summary>
+    /// 書き手の居ない出来事（第124期 §5-3）。<b>無理に「動いた本人」を線の根元にしない</b>
+    /// ——それは書き手ではないので、線を引くと嘘になる。<b>線を引かずに札だけ出す。</b>
+    /// </summary>
+    public void Orphan(BattlePawn3D? pawn, string label, Color color)
+    {
+        if (pawn is null) return;
+        MakeGroundRing(pawn.Home, UiKit.Faint, 0.78f, 0.42);
+        Float(pawn, label, color, false, 3.35f, 0.90f);
+    }
+
     public void Float(BattlePawn3D? pawn, string value, Color color, bool large = false)
         => Float(pawn, value, color, large, 3.05f);
 
-    private void Float(BattlePawn3D? pawn, string value, Color color, bool large, float height)
+    private void Float(BattlePawn3D? pawn, string value, Color color, bool large, float height, float scale = 1.0f)
     {
         if (pawn is null) return;
         var label = new Label3D
@@ -348,9 +433,9 @@ public partial class BattlefieldView3D : Control
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
             Font = new SystemFont { FontNames = new[] { "Yu Gothic UI", "Meiryo", "Noto Sans CJK JP", "Segoe UI" }, AllowSystemFallback = true },
             FontSize = large ? 29 : 23,
-            PixelSize = large ? 0.0072f : 0.0064f,
+            PixelSize = (large ? 0.0072f : 0.0064f) * scale,
             Modulate = color,
-            OutlineSize = 9,
+            OutlineSize = 12,
             OutlineModulate = new Color(0.005f, 0.008f, 0.006f, 0.98f),
             NoDepthTest = true,
         };
@@ -412,6 +497,27 @@ public partial class BattlefieldView3D : Control
         tween.Finished += beam.QueueFree;
     }
 
+    /// <summary>
+    /// 貫きが通り抜けた跡（第124期 3-d）。<b>薙ぎの丸い輪と形で割るための縦長の板。</b>
+    /// 進行方向へ伸ばすので、レーンを走った向きがそのまま見える。
+    /// </summary>
+    private void MakeLanceMark(Vector3 position, Vector3 direction, Color color)
+    {
+        var mark = new MeshInstance3D
+        {
+            Mesh = new BoxMesh { Size = new Vector3(0.34f, 0.02f, 2.30f) },
+            Position = position + new Vector3(0, 0.03f, 0),
+            MaterialOverride = MakeMaterial(new Color(color, 0.55f), true, true, 0.35f, color * 0.7f),
+        };
+        Vector3 flat = new Vector3(direction.X, 0, direction.Z);
+        if (flat.LengthSquared() > 0.0001f) mark.Rotation = new Vector3(0, Mathf.Atan2(flat.X, flat.Z), 0);
+        _fxRoot.AddChild(mark);
+        var tween = mark.CreateTween().SetParallel();
+        tween.TweenProperty(mark, "scale", new Vector3(1.0f, 1.0f, 1.22f), 0.50);
+        tween.TweenProperty(mark, "transparency", 1.0f, 0.50).SetDelay(0.10);
+        tween.Finished += mark.QueueFree;
+    }
+
     private void MakeGroundRing(Vector3 position, Color color, float radius, double duration)
     {
         var ring = new MeshInstance3D
@@ -434,10 +540,10 @@ public partial class BattlefieldView3D : Control
         Vector3 nudge = (focus - new Vector3(0, 0, 0)) * 0.025f * strength;
         var tween = _camera.CreateTween();
         tween.TweenProperty(_camera, "position", _cameraHome + nudge + new Vector3(0, -0.20f * strength, -0.32f * strength), 0.09);
-        tween.Parallel().TweenProperty(_camera, "fov", 39.0f - 2.0f * strength, 0.09);
+        tween.Parallel().TweenProperty(_camera, "fov", CameraFov - 2.0f * strength, 0.09);
         tween.TweenProperty(_camera, "position", _cameraHome, 0.24)
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
-        tween.Parallel().TweenProperty(_camera, "fov", 39.0f, 0.24);
+        tween.Parallel().TweenProperty(_camera, "fov", CameraFov, 0.24);
     }
 
     private static Vector3 PawnPosition(int team, int slot)

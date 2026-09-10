@@ -16,6 +16,12 @@ public partial class Main : Control
     private readonly Dictionary<int, string> _statusCauseByDamageIndex = new();
     private readonly HashSet<int> _linkedStatusEventIndices = new();
 
+    /// <summary>
+    /// 同時着弾（第124期 3-a）で<b>攻撃の側がまとめて描いた</b> <c>Damage</c> の添字。
+    /// 本体のループがここへ来たら<b>もう一度描かない</b>。
+    /// </summary>
+    private readonly HashSet<int> _batchedDamageIndices = new();
+
     private Texture2D _atlas = null!;
     private BattlefieldView _field = null!;
     private BattlefieldView3D _battleField = null!;
@@ -357,7 +363,11 @@ public partial class Main : Control
         _battleSummary = UiKit.Text("", 11, UiKit.Muted);
         _battleSummary.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         col.AddChild(_battleSummary);
-        var legend = UiKit.Text("攻/薙/貫/全＝攻撃元  ・  毒/燃＝継続ダメージ\n巻込＝味方の刃  ・  反撃＝手番外の攻撃", 10, UiKit.Faint);
+        var legend = UiKit.Text(
+            "攻/薙/貫/全＝攻撃の型  ・  特＝特性が直に削った  ・  毒/燃＝継続ダメージ\n"
+            + "巻込＝味方の刃（足元が紫の輪）  ・  反撃＝手番外の攻撃  ・  肩代＝肩代わりの中継\n"
+            + "細い線＝誰の仕業か（回復・蘇生・召喚・移動・見せ場・状態）  ・  戦績 (T) で数字",
+            10, UiKit.Faint);
         legend.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         col.AddChild(legend);
         col.AddChild(new HSeparator());
@@ -688,6 +698,7 @@ public partial class Main : Control
         SetScoreVisible(false);
         _eventIndex = 0;
         _statusByPawn.Clear();
+        _batchedDamageIndices.Clear();
         Notice("BattleCore が計算したイベント列を再生中", UiKit.Player);
         BeginPlayback();
     }
@@ -766,21 +777,25 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.Attack:
+            {
                 AttackPattern pattern = e.Pattern ?? AttackPattern.Single;
                 IReadOnlyList<BattlePawn3D> impactTargets = FindAttackTargets(eventIndex, e);
                 _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire);
                 _battleField.AttackCue(actor, $"{(e.Reaction ? "反撃 " : "")}{UiKit.PatternLabel(pattern)}", AttackColor(actor, e));
                 AppendLog($"[color=#{(actor?.Team == 0 ? UiKit.Player : UiKit.Enemy).ToHtml(false)}]{NameOf(e.ActorId)}[/color] → {NameOf(e.TargetId)}  [color=#a9b3a8]{UiKit.PatternLabel(e.Pattern ?? AttackPattern.Single)} {e.Amount}[/color]");
                 await Delay(0.16);
+
+                // 第124期 3-a: 「薙ぎやゾトの全体攻撃は一斉に入ったほうが爽快感ある」への直答。
+                // **範囲の巻き込みだけを同時着弾にする。単体は現状のまま**
+                // ——単体は1件しか無いので、まとめても絵が変わらない。
+                if (pattern != AttackPattern.Single && ApplyLinkedDamageAtOnce(eventIndex, e) > 0)
+                    await Delay(0.30);
                 break;
+            }
 
             case BattleEventKind.Damage:
-                target?.SetHp(e.HpAfter);
-                target?.AnimateHit();
-                (string source, Color sourceColor) = DamageSource(eventIndex, e, actor);
-                _battleField.DamagePopup(target, e.Amount, source, sourceColor, e.Amount >= 25);
-                _battleField.Impact(target, sourceColor, _statusCauseByDamageIndex.ContainsKey(eventIndex));
-                AppendLog($"  [color=#{sourceColor.ToHtml(false)}]{source}[/color] → {NameOf(e.TargetId)}  [color=#{UiKit.Hurt.ToHtml(false)}]−{e.Amount}[/color]");
+                if (_batchedDamageIndices.Contains(eventIndex)) break;   // 3-a で同時に描き終えている
+                ShowDamage(eventIndex, e, actor, target);
                 await Delay(0.19);
                 break;
 
@@ -788,7 +803,10 @@ public partial class Main : Control
                 target?.SetHp(e.HpAfter);
                 target?.AnimateHeal();
                 _battleField.Float(target, $"＋{e.Amount}", UiKit.Heal);
-                AppendLog($"  [color=#{UiKit.Heal.ToHtml(false)}]＋{e.Amount} 回復[/color] {NameOf(e.TargetId)}");
+                // 第124期 3-h: 段2 で載った書き手から線を引く。
+                if (e.ActorId is not null) _battleField.Link(actor, target, UiKit.Heal, "繕う");
+                AppendLog($"  [color=#{UiKit.Heal.ToHtml(false)}]＋{e.Amount} 回復[/color] "
+                          + $"{NameOf(e.TargetId)}{WriterSuffix(e.ActorId, e.TargetId)}");
                 await Delay(0.17);
                 break;
 
@@ -804,9 +822,17 @@ public partial class Main : Control
                 if (target is not null)
                 {
                     _battleField.MovePawn(target, e.Slot);
-                    _battleField.Float(target, "移動", UiKit.Player);
+                    // 第124期 3-h / §5-3。**書き手が居ない移動には線を引かない**
+                    // ——それは書き手ではないので、線を引くと嘘になる。札だけを別色で出す。
+                    if (e.ActorId is null)
+                        _battleField.Orphan(target, "移動（原因不明）", UiKit.Faint);
+                    else if (e.ActorId == e.TargetId)
+                        _battleField.Link(actor, null, UiKit.Player, "自分で動いた");
+                    else
+                        _battleField.Link(actor, target, UiKit.Violet, "動かした");
                 }
-                AppendLog($"  {NameOf(e.TargetId)} → {FormationRules.SeatNames[Math.Clamp(e.Slot, 0, FormationRules.TotalSlots - 1)]}");
+                AppendLog($"  {NameOf(e.TargetId)} → {FormationRules.SeatNames[Math.Clamp(e.Slot, 0, FormationRules.TotalSlots - 1)]}"
+                          + $"{WriterSuffix(e.ActorId, e.TargetId)}");
                 await Delay(0.28);
                 break;
 
@@ -826,8 +852,11 @@ public partial class Main : Control
                         def?.Pattern ?? AttackPattern.Single);
                     _openingById[summonId] = opening;
                     _battleField.AddSummon(opening);
+                    if (e.ActorId is not null)
+                        _battleField.Link(actor, _battleField.FindPawn(summonId), UiKit.Violet, "呼んだ");
                 }
-                AppendLog($"  [color=#{UiKit.Violet.ToHtml(false)}]{e.Text ?? "召喚体"} が出現[/color]");
+                AppendLog($"  [color=#{UiKit.Violet.ToHtml(false)}]{e.Text ?? "召喚体"} が出現[/color]"
+                          + $"{WriterSuffix(e.ActorId, e.TargetId)}");
                 await Delay(0.34);
                 break;
 
@@ -838,17 +867,26 @@ public partial class Main : Control
                     _battleField.MovePawn(target, e.Slot);
                     target.AnimateRevive();
                     _battleField.Float(target, "REVIVE", UiKit.Heal, true);
+                    if (e.ActorId is not null) _battleField.Link(actor, target, UiKit.Heal, "繋ぎ直した");
                 }
-                AppendLog($"  [color=#{UiKit.Heal.ToHtml(false)}]{NameOf(e.TargetId)} が復帰[/color]");
+                AppendLog($"  [color=#{UiKit.Heal.ToHtml(false)}]{NameOf(e.TargetId)} が復帰[/color]"
+                          + $"{WriterSuffix(e.ActorId, e.TargetId)}");
                 await Delay(0.38);
                 break;
 
             case BattleEventKind.StatusGain:
                 if (target is not null && e.Text is { } statusKey)
                 {
+                    // 第124期 3-g: 「テロップは出たが効果量が分からない」（ノミ）への直答。
+                    // **量を先に、通貨名を次に、書き手は線で出す**——札の中へ駒名を畳むと、
+                    // 読みたい量が名前の長さに埋もれる（3-b と同じ理由）。
                     string label = DisplayStatusKey(statusKey);
-                    string writer = e.ActorId is null ? "" : $" / {ShortNameOf(e.ActorId)}";
-                    _battleField.Float(target, $"＋{label}{(e.Amount > 1 ? e.Amount.ToString() : "")}{writer}", StatusColor(label));
+                    Color tint = StatusColor(label);
+                    _battleField.Float(target, $"＋{e.Amount} {label}", tint, e.Amount >= 2);
+                    if (e.ActorId is not null && e.ActorId != e.TargetId)
+                        _battleField.Link(actor, target, tint, $"{label}を書いた");
+                    AppendLog($"  [color=#{tint.ToHtml(false)}]＋{e.Amount} {label}[/color] → {NameOf(e.TargetId)}"
+                              + $"{WriterSuffix(e.ActorId, e.TargetId)}");
                 }
                 await Delay(0.10);
                 break;
@@ -863,8 +901,18 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.Highlight:
-                _battleField.ShowBanner(e.Text ?? "発動", UiKit.Gold, 0.72);
-                AppendLog($"  [color=#{UiKit.Gold.ToHtml(false)}][b]{e.Text}[/b][/color]");
+                // 第124期 3-e: 「テロップは1倍速でも読むのが難しい」「『火のそばを見ている』
+                // だけではなんのことやら」への直答。**段2 で書き手が載ったので駒に紐づけて出せる。**
+                // 中央のバナーは**誰の見せ場か**を前置し、駒の頭上にも札を置く
+                // ——中央だけだと、5体のどれの話なのかが画面から引けない。
+                // **駒名が本文に既に入っているなら前置しない**——見せ場の文はほとんどが
+                // 「{名前} が〜した」なので、素直に前置すると「粛の伝令 — 粛の伝令 が…」になる。
+                string cue = e.Text ?? "発動";
+                string banner = actor is null || cue.Contains(actor.UnitName, StringComparison.Ordinal)
+                    ? cue : $"{actor.UnitName} — {cue}";
+                _battleField.ShowBanner(banner, UiKit.Gold, 0.92);
+                if (actor is not null) _battleField.Link(actor, null, UiKit.Gold, "★ 見せ場");
+                AppendLog($"  [color=#{UiKit.Gold.ToHtml(false)}][b]{banner}[/b][/color]");
                 await Delay(0.42);
                 break;
 
@@ -881,6 +929,64 @@ public partial class Main : Control
                 break;
         }
     }
+
+    /// <summary>
+    /// 1件のダメージを描く（間は置かない）。<b>本体のループからも、同時着弾（3-a）からも同じ絵を出す</b>
+    /// ——2箇所に書くと、範囲攻撃だけ描き方がずれる。
+    /// </summary>
+    private void ShowDamage(int eventIndex, BattleEvent e, BattlePawn3D? actor, BattlePawn3D? target,
+                            bool withSource = true)
+    {
+        target?.SetHp(e.HpAfter);
+        target?.AnimateHit();
+        (string source, Color sourceColor) = DamageSource(eventIndex, e, actor);
+        _battleField.DamagePopup(target, e.Amount, source, sourceColor, e.Amount >= 25, withSource);
+        _battleField.Impact(target, sourceColor,
+                            _statusCauseByDamageIndex.ContainsKey(eventIndex), e.FriendlyFire);
+        AppendLog($"  [color=#{sourceColor.ToHtml(false)}]{source}[/color] → {NameOf(e.TargetId)}  "
+                  + $"[color=#{UiKit.Hurt.ToHtml(false)}]−{e.Amount}[/color]");
+    }
+
+    /// <summary>
+    /// 同時着弾（第124期 3-a）。その一振りに<b>紐づく</b> <c>Damage</c> をまとめて描き、
+    /// 描いた添字を控える。戻り値は描いた件数。
+    ///
+    /// <para><b>紐づけの規則は <see cref="FindAttackTargets"/> と同じ</b>
+    /// （同じ <c>ActorId</c>・同じ <c>Pattern</c>・次の <c>TurnStart</c> か
+    /// 同じ駒の次の <c>Attack</c> まで）——**2つの規則を持つと、線を引いた相手と
+    /// 数字を出す相手が食い違う。**</para>
+    ///
+    /// <para><b>台本は1件も並べ替えない。</b> 描く順を前へ寄せるだけで、
+    /// <c>Death</c> や <c>StatusGain</c> は今までどおりその後に流れる。</para>
+    /// </summary>
+    private int ApplyLinkedDamageAtOnce(int attackIndex, BattleEvent attack)
+    {
+        if (_result is null) return 0;
+        int landed = 0;
+        for (int i = attackIndex + 1; i < _result.Events.Count; i++)
+        {
+            BattleEvent candidate = _result.Events[i];
+            if (candidate.Kind == BattleEventKind.TurnStart) break;
+            if (candidate.Kind == BattleEventKind.Attack && candidate.ActorId == attack.ActorId) break;
+            if (candidate.Kind != BattleEventKind.Damage) continue;
+            if (candidate.ActorId != attack.ActorId || candidate.Pattern != attack.Pattern) continue;
+            if (!_batchedDamageIndices.Add(i)) continue;
+            ShowDamage(i, candidate, _battleField.FindPawn(candidate.ActorId),
+                       _battleField.FindPawn(candidate.TargetId),
+                       withSource: candidate.TargetId == attack.TargetId);
+            landed++;
+        }
+        return landed;
+    }
+
+    /// <summary>
+    /// 戦況ログに付ける「誰の仕業か」（第124期 3-h）。<b>書き手が居ないときは何も書かない</b>
+    /// ——「盤面」と書くと、書き手が居ないことと書き手が盤面であることの区別が消える。
+    /// </summary>
+    private string WriterSuffix(int? actorId, int? targetId)
+        => actorId is null || actorId == targetId
+            ? ""
+            : $"  [color=#{UiKit.Faint.ToHtml(false)}]← {NameOf(actorId)}[/color]";
 
     private void IndexStatusDamageEvents(IReadOnlyList<BattleEvent> events)
     {
@@ -945,7 +1051,10 @@ public partial class Main : Control
             AttackPattern.Pierce => "貫",
             AttackPattern.All => "全",
             AttackPattern.Single => "攻",
-            _ => "効果",
+            // 第124期 3-g: 型を持たない ＝ `PerformAttack` を通っていない＝**特性が直に削った**。
+            // 抉り・断ち・なぞり・追い打ち・破裂がここに来る。
+            // 「効果」だと盤面由来（毒・燃焼）と区別が付かなかった。
+            _ => "特",
         };
         return ($"[{mark}] {ShortNameOf(damage.ActorId)}", AttackColor(actor, damage));
     }
@@ -956,8 +1065,12 @@ public partial class Main : Control
     private static Color StatusColor(string status) => status switch
     {
         "毒" => UiKit.Poison,
-        "燃焼" => UiKit.Burn,
+        // `StatusGain` は `StatusKeys.LabelOf`（「燃」）、`Status` は特性側の文字列（「燃焼」）で来る。
+        // **同じ通貨が2つの名前で来る**ので、両方を同じ色に落とす（第124期 3-g）。
+        "燃" or "燃焼" => UiKit.Burn,
         "傷" or "深手" => UiKit.Wound,
+        "なまり" => UiKit.Muted,
+        "強化" => UiKit.Gold,
         _ => UiKit.Violet,
     };
 
@@ -1029,6 +1142,7 @@ public partial class Main : Control
         ++_playToken;
         _eventIndex = 0;
         _statusByPawn.Clear();
+        _batchedDamageIndices.Clear();
         _battleLog.Clear();
         _battleField.BeginBattle(_battleOpening, EnemyCatalog.Stages[_stagePicker.Selected].Name);
         SetScoreVisible(false);
