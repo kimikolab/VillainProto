@@ -41,7 +41,9 @@ public partial class Main : Control
     private Button _replay = null!;
     private Button _campaignSetup = null!;
     private Button _campaignBattle = null!;
+    private Button _score = null!;
     private OptionButton _speedPicker = null!;
+    private ScorePanel _scorePanel = null!;
 
     /// <summary>
     /// 編成プリセット（第123期）。<b><c>Presets</c> を直に引くだけで写しを持たない</b>
@@ -109,6 +111,23 @@ public partial class Main : Control
             && requestedStage < EnemyCatalog.Stages.Count)
             _stagePicker.Selected = requestedStage;
 
+        // 行と seed をコマンドラインからも指定できるようにする（第124期 段1）。
+        // **`docs/watch.md` の推奨12戦をそのまま再現するため**——行名は部分一致で、
+        // `Presets.Compare` ＋ `Presets.Cross` の並び（＝プリセットの一覧）から先頭の一致を採る。
+        // 画面から選ぶ手順（README）は今までどおり。
+        string? presetArg = userArgs.FirstOrDefault(arg => arg.StartsWith("--demo-preset=", StringComparison.Ordinal));
+        if (presetArg is not null)
+        {
+            string want = presetArg["--demo-preset=".Length..];
+            var rows = PresetRows();
+            int hit = Array.FindIndex(rows, r => r.Name.Contains(want, StringComparison.Ordinal));
+            if (hit >= 0) _presetIndex = hit;
+            GD.Print($"DEMO_PRESET query=\"{want}\" index={hit} name={(hit >= 0 ? rows[hit].Name : "(no match)")}");
+        }
+        string? seedArg = userArgs.FirstOrDefault(arg => arg.StartsWith("--demo-seed=", StringComparison.Ordinal));
+        if (seedArg is not null && int.TryParse(seedArg["--demo-seed=".Length..], out int wantSeed))
+            _seed.Value = wantSeed;
+
         AutoFormation();
         UpdateStageHeader();
         ShowEnemyDetails();
@@ -175,6 +194,10 @@ public partial class Main : Control
         _battleField = new BattlefieldView3D { Visible = false };
         _battleField.SetAnchorsPreset(LayoutPreset.FullRect);
         fieldStack.AddChild(_battleField);
+        // 戦績パネル（第124期 段1）は盤面の上に重ねる。**戦況ログを潰さない**（§4-2）。
+        _scorePanel = new ScorePanel();
+        _scorePanel.SetAnchorsPreset(LayoutPreset.FullRect);
+        fieldStack.AddChild(_scorePanel);
         fieldFrame.AddChild(fieldStack);
         body.AddChild(fieldFrame);
 
@@ -396,6 +419,10 @@ public partial class Main : Control
         _campaignBattle = UiKit.ActionButton("作戦マップへ", UiKit.Player);
         _campaignBattle.Pressed += GoToCampaign;
         _battleActions.AddChild(_campaignBattle);
+        // 戦績（第124期 段1）。**戦闘中も開ける**（§4-2）。キーは T。
+        _score = UiKit.ActionButton("戦績 (T)", UiKit.Gold);
+        _score.Pressed += ToggleScore;
+        _battleActions.AddChild(_score);
         _speedPicker = new OptionButton { CustomMinimumSize = new Vector2(112, 42), FocusMode = FocusModeEnum.None };
         foreach ((string label, int id) in new[] { ("×0.5", 0), ("×1", 1), ("×2", 2), ("×4", 3) })
             _speedPicker.AddItem(label, id);
@@ -658,6 +685,7 @@ public partial class Main : Control
         _field.Visible = false;
         _battleField.Visible = true;
         _battleField.BeginBattle(_battleOpening, EnemyCatalog.Stages[stageIndex].Name);
+        SetScoreVisible(false);
         _eventIndex = 0;
         _statusByPawn.Clear();
         Notice("BattleCore が計算したイベント列を再生中", UiKit.Player);
@@ -691,6 +719,7 @@ public partial class Main : Control
         _battleField.ShowBanner(verdict, color, 2.2);
         _battleField.SetSubline($"{(_result.PlayerWon ? "勝利" : "敗北")} ・ {_result.Turns}ターン ・ 生存 {_result.PlayerSurvivors}体 ・ 最大連鎖 {_result.MaxEnemyKillsInOneTurn}");
         AppendLog($"[color=#{color.ToHtml(false)}][b]{verdict}[/b][/color]  {_result.Turns}ターン");
+        SetScoreVisible(true);
         bool returnsToCampaign = CampaignSession.HasPendingEncounter;
         CampaignSession.CompleteBattle(_result.PlayerWon);
         Notice(returnsToCampaign
@@ -1002,6 +1031,7 @@ public partial class Main : Control
         _statusByPawn.Clear();
         _battleLog.Clear();
         _battleField.BeginBattle(_battleOpening, EnemyCatalog.Stages[_stagePicker.Selected].Name);
+        SetScoreVisible(false);
         Notice("同じ計算結果を最初から再生します", UiKit.Player);
         BeginPlayback();
     }
@@ -1023,11 +1053,38 @@ public partial class Main : Control
         _presetPicker.Disabled = false;
         _seed.Editable = true;
         _battleField.Visible = false;
+        SetScoreVisible(false);
         _field.Visible = true;
         _field.UpdateFormation(_formation);
         UpdateStageHeader();
         if (_inspected is { } def) ShowUnitDetails(def); else ShowEnemyDetails();
         Notice("編成と配置を変更できます");
+    }
+
+    /// <summary>
+    /// 戦績パネルの開け閉め（第124期 段1）。<b><c>BattleCore</c> を1行も触らない。</b>
+    ///
+    /// <para>出す数字は <see cref="BattleResult.TallyByUnit"/> ——判定を1つも通さずに
+    /// 「誰が何をしたか」が引ける（Phase 0 Q0-1 / Q0-2）。<b>台本は開戦前に計算済み</b>なので、
+    /// この表は再生位置によらず<b>戦闘全体の最終集計</b>である。</para>
+    /// </summary>
+    private void ToggleScore() => SetScoreVisible(!_scorePanel.Visible);
+
+    private void SetScoreVisible(bool visible)
+    {
+        if (visible && _result is not null)
+        {
+            int stage = _stagePicker.Selected;
+            _scorePanel.Render(
+                _result,
+                _battleOpening,
+                $"{EnemyCatalog.Stages[stage].Name} ・ seed {(int)_seed.Value} ・ "
+                + $"{_result.Turns}ターン ・ {(_result.PlayerWon ? "勝利" : "敗北")}"
+                + $"（生存 {_result.PlayerSurvivors}体）。"
+                + "台本は開戦前に計算済み。この表は戦闘全体の最終集計で、再生位置によらない。");
+        }
+        _scorePanel.Visible = visible && _result is not null;
+        _score.Text = _scorePanel.Visible ? "戦績を閉じる (T)" : "戦績 (T)";
     }
 
     private void GoToCampaign()
@@ -1057,8 +1114,11 @@ public partial class Main : Control
             case Key.Key4:
                 SetSpeed(3);
                 break;
+            case Key.T:
+                ToggleScore();
+                break;
             case Key.Escape:
-                ReturnToFormation();
+                if (_scorePanel.Visible) SetScoreVisible(false); else ReturnToFormation();
                 break;
             default:
                 return;
