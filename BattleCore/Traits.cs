@@ -354,7 +354,7 @@ public sealed class CowardTrait : Trait
 
         UnitState? pushed = ctx.PickOne(
             ctx.LivingMembers(self.TeamId).Where(u => u.Slot == dest.Value).ToList());
-        ctx.SwapSlots(self, dest.Value);
+        ctx.SwapSlots(self, dest.Value, self);
 
         if (pushed is null)
             ctx.Log($"    {self.Name} は耐えきれず一列後ろへ下がった", LogKind.Trigger);
@@ -448,7 +448,7 @@ public sealed class DrainTrait : Trait
         }
         if (gained > 0)
         {
-            ctx.Heal(self, gained);
+            ctx.Heal(self, gained, self);
             ctx.Log($"    {self.Name} が味方から精気を吸った（1体あたり {draw} / 計 +{gained}）",
                     LogKind.FriendlyFire);
         }
@@ -628,7 +628,7 @@ public sealed class CurseTrait : Trait
         foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
         {
             if (!foe.AcceptsSupport) continue;
-            ctx.Dull(foe, EnemyDebuff, DullRoute.CurseEnemy);
+            ctx.Dull(foe, EnemyDebuff, DullRoute.CurseEnemy, self);
         }
         ctx.Log($"  {self.Name} の呪詛が敵全体を蝕む（攻撃 -{EnemyDebuff}）", LogKind.Trigger);
 
@@ -638,7 +638,7 @@ public sealed class CurseTrait : Trait
         {
             if (ally == self) continue;
             foreach (UnitState t in ctx.SupportTargets(ally))
-                ctx.Dull(t, AllyLeak, DullRoute.CurseLeak);
+                ctx.Dull(t, AllyLeak, DullRoute.CurseLeak, self);
         }
         ctx.Log($"    呪詛は味方にも漏れた（攻撃 -{AllyLeak}）", LogKind.FriendlyFire);
     }
@@ -872,10 +872,10 @@ public sealed class NecroTrait : Trait
         int stack = self.Counter("necro") + 1;
         self.SetCounter("lastDeathTurn", ctx.Turn);
         SetStack(ctx, self, stack, decayed: false);
-        ctx.Heal(self, HealOnDeath);
+        ctx.Heal(self, HealOnDeath, self);
         ctx.Log($"    {self.Name} が {dead.Name} を取り込んだ（{stack}層 / 攻撃 {self.CurrentAttack}）", LogKind.Trigger);
 
-        if (stack == AwakenAt) ctx.Log($"    ★ {self.Name} の目の色が変わった", LogKind.Highlight);
+        if (stack == AwakenAt) ctx.Log($"    ★ {self.Name} の目の色が変わった", LogKind.Highlight, self);
     }
 
     // 覚醒後（AwakenAt層以上）は攻撃が薙ぎに変わる。
@@ -1053,7 +1053,7 @@ public sealed class ColossusTrait : Trait
         // 1点も通っていない戦が「還した」に数えられる。渇きの判定を**ここに書き写さない**のが要点
         // ——回復を止める場所は ctx.Heal の入口1箇所、という規則をここでも守る（CLAUDE.md）。
         int before = back.Sum(u => u.Hp);
-        foreach (UnitState u in back) ctx.Heal(u, each);
+        foreach (UnitState u in back) ctx.Heal(u, each, self);
         int gained = back.Sum(u => u.Hp) - before;
 
         ctx.TallyOf(self).Refunds++;
@@ -1154,7 +1154,7 @@ public sealed class SplitterTrait : Trait
         self.SetCounter(SplitKey, 1);
 
         for (int i = 0; i < 2; i++)
-            ctx.Summon(UnitCatalog.Spore, self.TeamId);
+            ctx.Summon(UnitCatalog.Spore, self.TeamId, by: self);
     }
 
     /// <summary>
@@ -1241,7 +1241,7 @@ public sealed class BomberTrait : Trait
     // 巻き込みや生贄で自陣から起爆できるようになる。
     public override void OnDeath(BattleContext ctx, UnitState self)
     {
-        ctx.Log($"    {self.Name} が破裂した", LogKind.Highlight);
+        ctx.Log($"    {self.Name} が破裂した", LogKind.Highlight, self);
 
         // 火種（第59期）。**engine に新しい規則は足していない**——既存のループの中で
         // `ctx.Ignite` を呼ぶだけ。`Ignite` は乱数を引かないので乱数列は動かない。
@@ -1288,7 +1288,7 @@ public sealed class ReviverTrait : Trait
         dead.SetCounter("sewn", 1);
 
         self.SetCounter("charges", self.Counter("charges") + 1);
-        ctx.Revive(dead, dead.MaxHp * ReviveHpPercent / 100);
+        ctx.Revive(dead, dead.MaxHp * ReviveHpPercent / 100, self);
 
         self.MaxHp = Math.Max(1, self.MaxHp / 2);
         self.Hp = Math.Min(self.Hp, self.MaxHp);
@@ -2243,7 +2243,7 @@ public sealed class ThornGuardTrait : Trait
         if (partner is null) return;
 
         ctx.Log($"    {self.Name} は {partner.Name} を押しのけて前に出た", LogKind.Trigger);
-        ctx.SwapSlots(self, dest);
+        ctx.SwapSlots(self, dest, self);
     }
 
     /// <summary>
@@ -2342,7 +2342,7 @@ public sealed class MenderTrait : Trait
 
         int amount = Math.Min(Amount + PerWound * w, self.Hp - 1);
         int before = patient.Hp;
-        ctx.Heal(patient, amount);
+        ctx.Heal(patient, amount, self);
         // 第106期 (T2)。**引く量だけ**を割合にする（癒す量 amount は1点も変えない）。
         // 既定（100）では paid == amount なので、盤面も乱数列も文字列も1ビットも動かない。
         int paid = amount * ctx.MenderCost.Percent / 100;
@@ -2416,7 +2416,7 @@ public sealed class AlmsTrait : Trait
         UnitState? patient = ctx.MostHurtAlly(self);
         if (patient is null) return;
 
-        ctx.Heal(patient, Amount);
+        ctx.Heal(patient, Amount, self);
         ctx.Log($"    {self.Name} が {patient.Name} に施しを与えた（+{Amount}）", LogKind.Trigger);
     }
 }
@@ -2480,7 +2480,7 @@ public sealed class ExposeTrait : Trait
         ctx.ExposeCount++;
         ctx.Log($"    {self.Name} が {pair.Victim.Name} を {pair.Seat.Name} の前へ引きずり出した",
                 LogKind.Trigger);
-        ctx.SwapSlots(pair.Victim, pair.Seat.Slot);
+        ctx.SwapSlots(pair.Victim, pair.Seat.Slot, self);
     }
 }
 
@@ -2557,7 +2557,7 @@ public sealed class SlanderTrait : Trait
             ctx.SlanderTo.TryGetValue(target.Name, out int prev) ? prev + penalty : penalty;
 
         ctx.Log($"    {self.Name} の誹りが {target.Name} の腕を鈍らせた（攻撃 -{penalty}）", LogKind.Trigger);
-        ctx.Dull(target, penalty, DullRoute.Slander);
+        ctx.Dull(target, penalty, DullRoute.Slander, self);
     }
 }
 
@@ -2676,7 +2676,7 @@ public sealed class ShoveTrait : Trait
         ctx.ShoveSwapped++;
         ctx.Log($"    {self.Name} の突き返しが {pair.Victim.Name} を {pair.Seat.Name} の前へ突き崩した",
                 LogKind.Trigger);
-        ctx.SwapSlots(pair.Victim, pair.Seat.Slot);
+        ctx.SwapSlots(pair.Victim, pair.Seat.Slot, self);
     }
 
     /// <summary>
@@ -2699,7 +2699,7 @@ public sealed class ShoveTrait : Trait
             // 通すのとはここが違う。ガルドを隣に置けば代金を1点も払わない。
             if (!ally.AcceptsSupport) { ctx.ShoveBlocked++; continue; }
 
-            ctx.Dull(ally, penalty, DullRoute.Shove);
+            ctx.Dull(ally, penalty, DullRoute.Shove, self);
             ctx.ShoveStaggered++;
             hit.Add(ally.Name);
         }
@@ -3049,7 +3049,7 @@ public sealed class OverbearTrait : Trait
                 // 逆行の実測。**削ったのに相手が強くなった量**（逆しまの自己矛盾）を、
                 // 予測ではなく窓口の前後の差で取る。読むだけで盤面は動かさない。
                 int before = ally.CurrentAttack;
-                ctx.Dull(ally, drain, DullRoute.Overbear);
+                ctx.Dull(ally, drain, DullRoute.Overbear, self);
                 int after = ally.CurrentAttack;
 
                 ctx.OverbearFired++;
@@ -3439,7 +3439,7 @@ public sealed class ScapegoatTrait : Trait
         }
         ctx.ScapegoatFired++;
         ctx.Log($"    {self.Name} が {target.Name} に溜め込んだものを返した（{held} 種）",
-                LogKind.Highlight);
+                LogKind.Highlight, self);
     }
 
     /// <summary>
@@ -3994,7 +3994,7 @@ public sealed class FavorTrait : Trait
             {
                 // マイナス側は隣接だけ。
                 dulled++;
-                ctx.Dull(a, loss, DullRoute.Favor);          // loss <= 0 なら Dull が即 return する
+                ctx.Dull(a, loss, DullRoute.Favor, self);          // loss <= 0 なら Dull が即 return する
             }
         }
 
@@ -4256,7 +4256,7 @@ public sealed class ContagionTrait : Trait
         foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
             ctx.Poison(foe, spread, self, PoisonRoute.Contagion);   // 毒の窓口（第90期）
 
-        ctx.Log($"    {dead.Name} の死骸から毒が撒き散らされた（+{spread}）", LogKind.Highlight);
+        ctx.Log($"    {dead.Name} の死骸から毒が撒き散らされた（+{spread}）", LogKind.Highlight, self);
     }
 }
 
@@ -4465,7 +4465,7 @@ public sealed class TormentTrait : Trait
         if (bound)
         {
             // ApplyDamage の直呼びなので OnAfterAttack は再帰しない（追い打ちが追い打ちを呼ばない）。
-            ctx.Log($"    {self.Name} が動けない {target.Name} に追い打ちを重ねる", LogKind.Highlight);
+            ctx.Log($"    {self.Name} が動けない {target.Name} に追い打ちを重ねる", LogKind.Highlight, self);
             ctx.NoteAttackRead(self);   // 攻撃力を出力に変換した（第64期・死蔵の判定）
             ctx.ApplyDamage(target, Math.Max(1, self.CurrentAttack), self);
             return;
@@ -4597,7 +4597,7 @@ public sealed class GougeTrait : Trait
         // 生死は ApplyDamage の生存判定に任せる——既に倒れているなら空振りするだけで、
         // 「傷を抉った」という判定に例外を作らない（結果で解決する）。
         ctx.Log($"    {self.Name} が {target.Name} の傷をこじ開ける（傷 {w} → +{PerWound * w}）",
-            LogKind.Highlight);
+            LogKind.Highlight, self);
 
         // 計数（第87期・持続係数の検算）。**盤面には一切影響しない。**
         // 上乗せは**この呼び出しの中で払い切る**（残るものが盤面に無い）ので、
@@ -4663,7 +4663,7 @@ public sealed class CarveTrait : Trait
         if (w > 0)
         {
             ctx.Log($"    {self.Name} が {target.Name} の古い傷をなぞる（傷 {w} → +{PerWound * w}）",
-                LogKind.Highlight);
+                LogKind.Highlight, self);
             long hp0 = ctx.HpRemoved;   // 第120期: 実効（盤面から実際に減った HP）を取る
             ctx.ApplyDamage(target, PerWound * w, self);
             ctx.NoteWoundRead(target, WoundReader.Carve, w, PerWound * w, ctx.HpRemoved - hp0);
@@ -4845,7 +4845,7 @@ public sealed class SeverTrait : Trait
 
         // 生死は ApplyDamage に任せる（読み手側の作法。死体でも判定は同じ＝結果で解決する）。
         ctx.Log($"    {self.Name} が {target.Name} の傷をまとめて断つ（傷 {w} → +{PerWound * w}）",
-            LogKind.Highlight);
+            LogKind.Highlight, self);
         long hp0 = ctx.HpRemoved;   // 第120期: 実効（盤面から実際に減った HP）を取る
         ctx.ApplyDamage(target, PerWound * w, self);
         ctx.NoteWoundRead(target, WoundReader.Sever, w, PerWound * w, ctx.HpRemoved - hp0);
@@ -5002,7 +5002,7 @@ public sealed class SutureTrait : Trait
 
         // 渇き下ではこの1行が何も返さない。**それでも下の塞ぎは走る**（クラスの doc 参照）。
         int before = patient.Hp;
-        ctx.Heal(patient, PerWound * w);
+        ctx.Heal(patient, PerWound * w, self);
 
         // 計数（第85期）。**盤面には一切影響しない**——糸口の内訳と「繕いは 0 だが塞ぎは走った」回数。
         UnitTally st = ctx.TallyOf(self);
@@ -5439,7 +5439,7 @@ public sealed class DevourTrait : Trait
 
         int amount = poisoned * 4;
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
-            ctx.Heal(ally, amount);
+            ctx.Heal(ally, amount, self);
         ctx.Log($"    {self.Name} が敵の澱みを啜った（味方全体 +{amount}）", LogKind.Trigger);
     }
 }
@@ -5618,7 +5618,7 @@ public sealed class DisplacedTrait : Trait
         // （SwapSlots 参照）。敵を殴るだけなので味方側のスロットは見ないが、入れ替えの途中で振っていることは覚えておくこと。
         ctx.Interrupt(() =>
         {
-            ctx.Log($"    {self.Name} はよろけた勢いのまま振り抜く", LogKind.Highlight);
+            ctx.Log($"    {self.Name} はよろけた勢いのまま振り抜く", LogKind.Highlight, self);
             ctx.PerformAttack(self, "    ");
         });
     }
@@ -5680,7 +5680,7 @@ public sealed class ShufflerTrait : Trait
         UnitState b = rest[ctx.Roll(rest.Count)];
 
         ctx.Log($"    {self.Name} が隊列をかき回した（{a.Name} ⇔ {b.Name}）", LogKind.FriendlyFire);
-        ctx.SwapSlots(a, b.Slot);
+        ctx.SwapSlots(a, b.Slot, self);
     }
 }
 
@@ -5863,7 +5863,7 @@ public sealed class RegenTrait : Trait
         if (!self.IsAlive) return;
         if (self.Hp >= self.MaxHp) return;      // 満タンなら窓口を叩かない（計数を汚さない）
         int before = self.Hp;
-        ctx.Heal(self, Amount);
+        ctx.Heal(self, Amount, self);
         if (self.Hp > before)
             ctx.Log($"    {self.Name} の傷が塞がる（+{self.Hp - before}）", LogKind.Trigger);
     }
@@ -5983,7 +5983,7 @@ public sealed class DrifterTrait : Trait
     public override void OnAllyMoved(BattleContext ctx, UnitState self, UnitState moved)
     {
         if (!moved.AcceptsSupport) return;
-        ctx.Heal(moved, Heal);
+        ctx.Heal(moved, Heal, self);
         ctx.Whet(moved, Gain, WhetRoute.Drifter);
         ctx.Log($"    {self.Name} が流された {moved.Name} を拾い上げた（+{Heal} / 攻撃 +{Gain}）", LogKind.Trigger);
     }
@@ -6109,7 +6109,7 @@ public sealed class ShatterTrait : Trait
         }
 
         if (given > 0)
-            ctx.Log($"    ★ {self.Name} が砕けて破片が飛んだ（味方へ {shards} ずつ）", LogKind.Highlight);
+            ctx.Log($"    ★ {self.Name} が砕けて破片が飛んだ（味方へ {shards} ずつ）", LogKind.Highlight, self);
     }
 }
 
@@ -6243,7 +6243,7 @@ public sealed class LooseTrait : Trait
         self.SetCounter(LastTurnKey, ctx.Turn + 1);
         t.LooseShoves++;
         ctx.Log($"    {self.Name} が錯乱して {victim.Name} を弾いた", LogKind.Trigger);
-        ctx.SwapSlots(victim, dest);
+        ctx.SwapSlots(victim, dest, self);
     }
 }
 
@@ -6265,7 +6265,7 @@ public sealed class CowerTrait : Trait
         {
             if (ally == self) continue;
             foreach (UnitState t in ctx.SupportTargets(ally))
-                ctx.Dull(t, AttackPenalty, DullRoute.Cower);
+                ctx.Dull(t, AttackPenalty, DullRoute.Cower, self);
         }
         ctx.Log($"  {self.Name} の怯えが伝染した（味方全体 攻撃 -{AttackPenalty} / 被ダメージ -{ReductionPercent}%）", LogKind.FriendlyFire);
     }
@@ -6333,7 +6333,7 @@ public sealed class PursuerTrait : Trait
         }
         self.SetCounter("pursuit_chain", chain + 1);
 
-        ctx.Log($"    {self.Name} が倒れた隙に踏み込む", LogKind.Highlight);
+        ctx.Log($"    {self.Name} が倒れた隙に踏み込む", LogKind.Highlight, self);
         ctx.PerformAttack(self, "    ");
     }
 }
@@ -6466,7 +6466,7 @@ public sealed class ForsakeTrait : Trait
 
             if (ally.Def.Speed > self.Def.Speed)
             {
-                ctx.Heal(ally, Heal);             // AcceptsSupport の判定は ctx.Heal が持つ
+                ctx.Heal(ally, Heal, self);             // AcceptsSupport の判定は ctx.Heal が持つ
             }
             else if (ally.Def.Speed < self.Def.Speed)
             {
@@ -6505,12 +6505,12 @@ public sealed class InversionTrait : Trait
     public override TraitId Id => TraitId.Inversion;
 
     public override void OnBattleStart(BattleContext ctx, UnitState self)
-        => ctx.Log($"  {self.Name} が盤面を逆さにした（行動順が速さの遅い順になる）", LogKind.Highlight);
+        => ctx.Log($"  {self.Name} が盤面を逆さにした（行動順が速さの遅い順になる）", LogKind.Highlight, self);
 
     // HandleDeath は OnDeath の前に Hp = 0 を入れているので、この時点で保持者は既に
     // 生存判定から外れている（＝次のターンの order は正順で組まれる）。
     public override void OnDeath(BattleContext ctx, UnitState self)
-        => ctx.Log($"    {self.Name} が倒れ、次のターンから行動順が戻る", LogKind.Highlight);
+        => ctx.Log($"    {self.Name} が倒れ、次のターンから行動順が戻る", LogKind.Highlight, self);
 }
 
 /// <summary>
@@ -6535,12 +6535,12 @@ public sealed class DroughtTrait : Trait
     public override TraitId Id => TraitId.Drought;
 
     public override void OnBattleStart(BattleContext ctx, UnitState self)
-        => ctx.Log($"  {self.Name} が盤面を渇かせた（両陣営の回復が通らなくなる）", LogKind.Highlight);
+        => ctx.Log($"  {self.Name} が盤面を渇かせた（両陣営の回復が通らなくなる）", LogKind.Highlight, self);
 
     // HandleDeath は OnDeath の前に Hp = 0 を入れているので、この時点で保持者は既に
     // 生存判定から外れている（＝この直後の Heal はもう通る）。
     public override void OnDeath(BattleContext ctx, UnitState self)
-        => ctx.Log($"    {self.Name} が倒れ、回復が戻った", LogKind.Highlight);
+        => ctx.Log($"    {self.Name} が倒れ、回復が戻った", LogKind.Highlight, self);
 }
 
 /// <summary>
@@ -6595,7 +6595,7 @@ public sealed class YokeTrait : Trait
         // 診断が規則を切っている版（yoke の V1「壁のみ」）では何も起きないので、ログも出さない。
         if (!ctx.Yoke.Active) return;
         ctx.Log($"  {self.Name} が盤面に軛をかけた（1回のダメージが {ctx.Yoke.Cap} で切られる）",
-                LogKind.Highlight);
+                LogKind.Highlight, self);
     }
 
     // HandleDeath は OnDeath の前に Hp = 0 を入れているので、この時点で保持者は既に
@@ -6603,7 +6603,7 @@ public sealed class YokeTrait : Trait
     public override void OnDeath(BattleContext ctx, UnitState self)
     {
         if (!ctx.Yoke.Active) return;
-        ctx.Log($"    {self.Name} が倒れ、軛が外れた", LogKind.Highlight);
+        ctx.Log($"    {self.Name} が倒れ、軛が外れた", LogKind.Highlight, self);
     }
 }
 
@@ -6665,7 +6665,7 @@ public sealed class HushTrait : Trait
     {
         // 診断が規則を切っている版（hush の V1「壁のみ」）では何も起きないので、ログも出さない。
         if (!ctx.Hush.Active) return;
-        ctx.Log($"  {self.Name} が盤面を鎮めた（両陣営のターン外の行動が通らなくなる）", LogKind.Highlight);
+        ctx.Log($"  {self.Name} が盤面を鎮めた（両陣営のターン外の行動が通らなくなる）", LogKind.Highlight, self);
     }
 
     // HandleDeath は OnDeath の前に Hp = 0 を入れているので、この時点で保持者は既に
@@ -6673,7 +6673,7 @@ public sealed class HushTrait : Trait
     public override void OnDeath(BattleContext ctx, UnitState self)
     {
         if (!ctx.Hush.Active) return;
-        ctx.Log($"    {self.Name} が倒れ、ターン外の行動が戻った", LogKind.Highlight);
+        ctx.Log($"    {self.Name} が倒れ、ターン外の行動が戻った", LogKind.Highlight, self);
     }
 }
 
@@ -6767,7 +6767,7 @@ public sealed class BetrayedTrait : Trait
         }
 
         UnitState? f = ctx.Summon(UnitCatalog.Fodder, foe, FodderSlot,
-                                  overCorpse: ctx.Betray.Respawn);
+                                  overCorpse: ctx.Betray.Respawn, by: self);
         ctx.NoteBetraySummon(self, f);
         if (f is not null)
             ctx.Log($"    {self.Name} が喚んだものは向こう側に立った", LogKind.Trigger);
@@ -7048,7 +7048,7 @@ public sealed class TaillightTrait : Trait
         {
             t.TaillightYields++;
             if (pair) t.TaillightPair++;
-            ctx.Log($"    {self.Name} は前へ出ず、灯した {lit.Name} に道を譲る", LogKind.Highlight);
+            ctx.Log($"    {self.Name} は前へ出ず、灯した {lit.Name} に道を譲る", LogKind.Highlight, self);
             // 第109期。**内訳を数えるだけ**（第104期の再行動と同じ形）。盤面には触らない。
             switch (ctx.TakeTurn(lit))
             {

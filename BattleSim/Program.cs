@@ -53525,9 +53525,16 @@ if (focusId == "watch")
             Console.WriteLine($"| `{k}` | {(has ? "○" : "**×**")} | {(has ? "誰がやったかが引ける" : "**起きたことは見えるが、誰がやったかは引けない**")} |");
         }
         Console.WriteLine();
-        Console.WriteLine($"**`ActorId` を持たない種類 {waNoActor} 件。**"
-                          + " 回復・蘇生・召喚・移動がここに落ちる——**継ぎ接ぎ（ヴェル）・分裂（ムグ）・"
-                          + "逃亡（セロ）は、起きたことが画面に出ても「誰の仕業か」の線が引けない。**");
+        // **文も走査から組む**（第124期）。第123期は「回復・蘇生・召喚・移動がここに落ちる」と
+        // 手で書いていたので、段2 で `ActorId` を足した瞬間に**表は直るが文が嘘になる**
+        // ——第122期「規則を降ろすと、その規則を前提に書かれた説明文が静かに嘘になる」の生成物版。
+        string[] waNoActorKinds = waEventKindNames
+            .Where(k => waActorOf.ContainsKey(k) && !waActorOf[k]).ToArray();
+        Console.WriteLine($"**`ActorId` を持たない種類 {waNoActor} 件**"
+                          + (waNoActorKinds.Length == 0
+                             ? "。**初期化子に現れるすべての種類が書き手を載せている。**"
+                             : $": {string.Join(" / ", waNoActorKinds.Select(k => $"`{k}`"))}"
+                               + "——**起きたことが画面に出ても「誰の仕業か」の線が引けない。**"));
         Console.WriteLine();
         Console.WriteLine("> **`Death` は `ActorId` を持つが、それは撃破した駒**（＝普通の一振りの結果）で、");
         Console.WriteLine("> 特性の痕跡ではない。`watch cast` の「特性由来」は `Death` を別に数える。");
@@ -53541,10 +53548,23 @@ if (focusId == "watch")
         Console.WriteLine();
 
         bool waDull = waGainKeys.Contains("DullKey");
+
+        // 第124期 段2: 窓口が**書き手**を受け取るかを reflection で引く。
+        // **手で書くと段2 のような変更で表だけ直って文が嘘になる**（第122期の則の生成物版）。
+        // 判定は「`by` という名前の引数を持つか」——`UnitState` の数で見ると、
+        // 元から2体を受け取る窓口（将来の `Transfer` 等）と区別が付かない。
+        static bool WaTakesWriter(string method)
+            => typeof(BattleContext).GetMethod(method)?.GetParameters()
+                   .Any(x => x.Name == "by") == true;
+        string waDullVia = waDull
+            ? (WaTakesWriter("Dull")
+               ? "`StatusGain`（`DullKey`。**書き手も載る**）"
+               : "`StatusGain`（`DullKey`。**writer が null なので札は出るが線は出ない**）")
+            : "**×** —";
         (string Key, string Via, bool Seen)[] waCarryGate =
         {
             ("強化", "**×** —（`AtkBonus` の窓口は `Whet` だが `StatusGain` を呼ばない。受け手の `StatSnapshot` に数字として出るだけ）", false),
-            ("弱体", waDull ? "`StatusGain`（`DullKey`。**writer が null なので札は出るが線は出ない**）" : "**×** —", waDull),
+            ("弱体", waDullVia, waDull),
             ("毒",   waKeyHasGate[StatusKeys.Poison]   ? "`StatusGain`" : "**×** —", waKeyHasGate[StatusKeys.Poison]),
             ("燃",   waKeyHasGate[StatusKeys.Burn]     ? "`StatusGain`" : "**×** —", waKeyHasGate[StatusKeys.Burn]),
             ("痺",   waKeyHasGate[StatusKeys.Stun]     ? "`StatusGain`" : "**×** —", waKeyHasGate[StatusKeys.Stun]),
@@ -53553,7 +53573,9 @@ if (focusId == "watch")
             ("傷",   waKeyHasGate[StatusKeys.Wound]    ? "`StatusGain`" : "**×** —", waKeyHasGate[StatusKeys.Wound]),
             ("手番", waKeyHasGate[StatusKeys.IdleTurn] ? "`StatusGain`" : "**×** —", waKeyHasGate[StatusKeys.IdleTurn]),
             ("被弾", waEventKinds.Contains("Damage") ? "`Damage`" : "**×** —", waEventKinds.Contains("Damage")),
-            ("移動", waEventKinds.Contains("Move")   ? "`Move`"   : "**×** —", waEventKinds.Contains("Move")),
+            ("移動", waEventKinds.Contains("Move")
+                       ? (WaTakesWriter("SwapSlots") ? "`Move`（**書き手も載る**）" : "`Move`")
+                       : "**×** —", waEventKinds.Contains("Move")),
         };
         if (waCarryGate.Length != UnitTally.CarryKeys.Length)
         {
@@ -53611,9 +53633,15 @@ if (focusId == "watch")
         Console.WriteLine("|---|---|:-:|");
         Console.WriteLine("| 痺れ・標・破片の `StatusGain` | 窓口が無い。`Traits.cs` の16箇所から直に `SetCounter` される。第90期（毒）・第93期（傷）と同じ形で3本要る | **既知** |");
         Console.WriteLine("| 減算の窓口 | 引き取り・断ち・縫い・塞ぎは「通貨が減った」を1件も残さない。**画面では在庫が黙って消える** | **既知** |");
-        Console.WriteLine("| `ctx.Dull` の writer | 窓口が書き手を受け取らないので、**なまりの札は出るが線は出ない**（第97期 §4 の (2)） | **既知** |");
+        // 第124期 段2 でここが埋まった。**印は reflection から引く**（手で書くと直しても文が残る）。
+        Console.WriteLine(WaTakesWriter("Dull")
+            ? "| `ctx.Dull` の writer | **第124期 段2 に埋めた。**"
+              + "窓口が `by` を受け取り、`StatusGain` の `ActorId` に載る（第97期 §4 の (2)） | **解消** |"
+            : "| `ctx.Dull` の writer | 窓口が書き手を受け取らないので、**なまりの札は出るが線は出ない**（第97期 §4 の (2)） | **既知** |");
         Console.WriteLine();
-        Console.WriteLine("**第123期はこの3本に手を付けない**（`StatusKeys` のカウンタはバランスが載っている場所から直に書かれている。指示書 §0）。");
+        Console.WriteLine("**第123期はこの3本に手を付けなかった**（`StatusKeys` のカウンタはバランスが載っている場所から直に書かれている）。"
+                          + "**第124期 段2 は3本目（`ctx.Dull` の writer）だけを埋めた**"
+                          + "——上2本は `Traits.cs` の多数箇所から直に `SetCounter` するので、まだ触っていない。");
         Console.WriteLine();
 
         // (4) デモ側の照合（A7）。
@@ -53690,6 +53718,14 @@ if (focusId == "watch")
         Console.WriteLine();
 
         int waScanned = 0, waAdjAll = 0, waAdjBadAll = 0;
+
+        // 第124期 段2 の判定（P3 / A7）。**書き手が載った件数と、null のまま残った件数**を
+        // 種類ごとに数える。**盤面には一切影響しない**——`r.Events` を読むだけ。
+        // 「書き手が居ない経路には無理に入れない」（§5-3）ので、**null が残ること自体は正しい**。
+        // 数えないと、どこが残ったのかが分からないだけである。
+        var waHasActor = new Dictionary<BattleEventKind, int>();
+        var waNullActor = new Dictionary<BattleEventKind, int>();
+
         foreach (string name in waTargets)
         {
             Formation f = waByName[name];
@@ -53745,6 +53781,8 @@ if (focusId == "watch")
                 int lastAttacker = -1;
                 foreach (BattleEvent e in r.Events)
                 {
+                    if (e.ActorId is null) waNullActor[e.Kind] = waNullActor.GetValueOrDefault(e.Kind) + 1;
+                    else waHasActor[e.Kind] = waHasActor.GetValueOrDefault(e.Kind) + 1;
                     if (e.Kind == BattleEventKind.TurnStart) lastAttacker = -1;
                     if (e.Kind == BattleEventKind.Attack) lastAttacker = e.ActorId ?? -1;
                     if (e.ActorId is not int aid) continue;
@@ -53793,6 +53831,29 @@ if (focusId == "watch")
         Console.WriteLine();
         Console.WriteLine($"**Q0-6 の通算**: {waAdjAll + waAdjBadAll} 件のうち連続 **{waAdjAll}** / 非連続 **{waAdjBadAll}**"
                           + $"（{(waAdjAll + waAdjBadAll == 0 ? 0.0 : waAdjAll * 100.0 / (waAdjAll + waAdjBadAll)):F1}%）。");
+        Console.WriteLine();
+
+        // ------------------------------------------------------------------
+        // 第124期 段2 —— 書き手の載り具合（P3 / A7）。
+        // ------------------------------------------------------------------
+        Console.WriteLine("## 書き手（`ActorId`）が載った件数（第124期 段2）");
+        Console.WriteLine();
+        Console.WriteLine("**null のまま残るのは、その出来事に「原因になった駒」が居ない経路**"
+                          + "（盤面全体の区切り・継続効果の発火・ターン頭の写し）。");
+        Console.WriteLine("**無理に「動いた本人」を入れない**——それは書き手ではないので、線を引くと嘘になる（§5-3）。");
+        Console.WriteLine();
+        Console.WriteLine("| 種類 | 書き手あり | null | null 率 |");
+        Console.WriteLine("|---|--:|--:|--:|");
+        int waHaveTot = 0, waNullTot = 0;
+        foreach (BattleEventKind k in Enum.GetValues<BattleEventKind>())
+        {
+            int have = waHasActor.GetValueOrDefault(k), none = waNullActor.GetValueOrDefault(k);
+            if (have + none == 0) continue;
+            waHaveTot += have; waNullTot += none;
+            Console.WriteLine($"| `{k}` | {have} | {none} | {none * 100.0 / (have + none):F1}% |");
+        }
+        Console.WriteLine($"| **計** | **{waHaveTot}** | **{waNullTot}** | "
+                          + $"**{(waHaveTot + waNullTot == 0 ? 0.0 : waNullTot * 100.0 / (waHaveTot + waNullTot)):F1}%** |");
         if (waScanned == 0)
         {
             Console.WriteLine();

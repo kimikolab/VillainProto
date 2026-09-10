@@ -435,7 +435,7 @@ public sealed class BattleContext
             target.SetCounter(StatusKeys.Deep, 1);
             tt.DeepBundles++;
             if (tt.DeepBundleFirstTurn == 0) tt.DeepBundleFirstTurn = Math.Max(1, Turn);
-            Log($"    {target.Name} の傷が束ねられて深手になった（傷 {w} → 深手）", LogKind.Highlight);
+            Log($"    {target.Name} の傷が束ねられて深手になった（傷 {w} → 深手）", LogKind.Highlight, writer);
             EmitStatusGain(target, StatusKeys.Deep, 1, writer);   // 第97期・表示専用
             // 第104期: **束ねは「書けた」側**（深手は WoundDepthOf / IsWounded が傷として読む）。
             NoteWoundWriter(target, writer);
@@ -2462,7 +2462,7 @@ public sealed class BattleContext
                 if (w.Def.Actions is { Count: > 0 }) EncoreWithActions++;   // 自己検査 (h)
                 if (fodder) EncoreFromFodder++;                    // Q5
                 TallyOf(w).EncoreFires++;
-                Log($"    {w.Name} は刻んだ獲物が倒れるのを見て、もう一度踏み込む", LogKind.Highlight);
+                Log($"    {w.Name} は刻んだ獲物が倒れるのを見て、もう一度踏み込む", LogKind.Highlight, w);
                 switch (TakeTurn(w))
                 {
                     case TurnOutcome.Attack: EncoreAttack++; break;
@@ -2934,7 +2934,13 @@ public sealed class BattleContext
     /// 見せ場（Highlight）だけは構造化イベントにも流す。特性側は今まで通り
     /// ctx.Log を呼ぶだけでよく、演出の差し込み位置が自動的に台本へ乗る。
     /// </summary>
-    public void Log(string line, LogKind kind = LogKind.Action)
+    /// <param name="by">
+    /// 見せ場の主（第124期 段2・<b>表示専用</b>）。<see cref="LogKind.Highlight"/> のときだけ
+    /// <see cref="BattleEvent.ActorId"/> へ載る。<b>省略可能なので既存の呼び出しは1つも壊れない。</b>
+    /// <b>書き手が居ないところへ無理に「動いた本人」を入れないこと</b>——それは書き手ではないので、
+    /// 線を引くと嘘になる（第124期 §5-3）。
+    /// </param>
+    public void Log(string line, LogKind kind = LogKind.Action, UnitState? by = null)
     {
         if (!_verbose || _quiet) return;
         int spaces = line.Length - line.TrimStart().Length;
@@ -2942,7 +2948,13 @@ public sealed class BattleContext
         _log.Add(new LogLine(kind, spaces / 2, text));
 
         if (kind == LogKind.Highlight)
-            Emit(new BattleEvent { Kind = BattleEventKind.Highlight, Turn = _turn, Text = text });
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.Highlight,
+                Turn = _turn,
+                ActorId = by?.InstanceId,
+                Text = text,
+            });
     }
 
     /// <summary>
@@ -3008,7 +3020,7 @@ public sealed class BattleContext
     {
         if (!_verbose) return;
         if (!_shown.Add((u.InstanceId, key))) return;
-        Log(line, LogKind.Highlight);
+        Log(line, LogKind.Highlight, u);   // 第124期 段2: 見せ場の主を台本へ載せる
     }
 
     /// <summary>
@@ -4025,7 +4037,7 @@ public sealed class BattleContext
                     int dull = taken / SharerTrait.DullDivisor;
                     if (dull > 0)
                     {
-                        Dull(target, dull, DullRoute.Sharer);
+                        Dull(target, dull, DullRoute.Sharer, sharer);
                         Log($"    痛みを取り上げられた {target.Name} の腕がなまる（攻撃 -{dull}）",
                             LogKind.FriendlyFire);
                     }
@@ -4580,7 +4592,8 @@ public sealed class BattleContext
     /// （背かれ＝<see cref="BetrayedTrait"/> は ○前2 に湧かないと、
     /// 敵の前列が全滅するまで餌が食べられない）。</para>
     /// </summary>
-    public UnitState? Summon(UnitDef def, int teamId, int? at = null, bool overCorpse = false)
+    public UnitState? Summon(UnitDef def, int teamId, int? at = null, bool overCorpse = false,
+                             UnitState? by = null)
     {
         var taken = _units.Where(u => u.TeamId == teamId).Select(u => u.Slot).ToHashSet();
         int slot = -1;
@@ -4625,6 +4638,7 @@ public sealed class BattleContext
         {
             Kind = BattleEventKind.Summon,
             Turn = _turn,
+            ActorId = by?.InstanceId,   // 第124期 段2: 呼んだ駒
             TargetId = unit.InstanceId,
             Slot = slot,
             HpAfter = unit.Hp,
@@ -4635,7 +4649,7 @@ public sealed class BattleContext
     }
 
     /// <summary>倒れた駒を戦線に戻す。無制限にすると壊れるので回数制限は特性側で持つこと。</summary>
-    public void Revive(UnitState target, int hp)
+    public void Revive(UnitState target, int hp, UnitState? by = null)
     {
         if (target.IsAlive) return;
         if (BetrayWatch && BetrayedTrait.IsFodder(target)) BetrayRevived++;   // 第103期・自己検査 (g)
@@ -4648,6 +4662,7 @@ public sealed class BattleContext
         {
             Kind = BattleEventKind.Revive,
             Turn = _turn,
+            ActorId = by?.InstanceId,   // 第124期 段2: 蘇生させた駒
             TargetId = target.InstanceId,
             Slot = target.Slot,
             HpAfter = target.Hp
@@ -4685,7 +4700,8 @@ public sealed class BattleContext
     /// 経路をログの文字列から数え直すこともできるが、開戦時1回の3経路（呪詛×2・萎縮）は
     /// 1行にまとめて出るので延べ体数が復元できない。</para>
     /// </summary>
-    public void Dull(UnitState target, int amount, DullRoute route = DullRoute.Other)
+    public void Dull(UnitState target, int amount, DullRoute route = DullRoute.Other,
+                     UnitState? by = null)
     {
         if (amount <= 0) return;
 
@@ -4824,8 +4840,9 @@ public sealed class BattleContext
         // 盤面には一切影響しない（札で引くだけ・verbose 非依存）。
         if (route == DullRoute.Favor) NoteFavorReceiver(receiver, amount, whet: false);
         // 第97期・表示専用。**実際に AtkBonus が減った駒**に出す（横取りが宛先を書き換えた後）。
-        // 書き手は engine の窓口を通る時点で分からない（`Dull` は writer を受け取らない）ので null。
-        EmitStatusGain(receiver, DullKey, amount, null);
+        // **第124期 段2: 書き手を受け取るようにした**（`Whet` / `Wound` / `Poison` と同じ形）。
+        // 渡していない呼び出し元からは今までどおり null が載る。
+        EmitStatusGain(receiver, DullKey, amount, by);
         receiver.AtkBonus -= amount;
         if (atkBefore > 0 && receiver.CurrentAttack == 0)
         {
@@ -4867,7 +4884,7 @@ public sealed class BattleContext
                     if (sent > RelayMaxSent) RelayMaxSent = sent;
 
                     int before = victim.CurrentAttack;
-                    Relaying(() => Dull(victim, sent, DullRoute.Relay));
+                    Relaying(() => Dull(victim, sent, DullRoute.Relay, relayer));
                     if (before > 0 && victim.CurrentAttack == 0) RelayZeroed++;
 
                     Log($"    {relayer.Name} が {target.Name} の重荷を {victim.Name} へ渡した（攻撃 -{sent}）",
@@ -5071,7 +5088,7 @@ public sealed class BattleContext
         return true;
     }
 
-    public void Heal(UnitState target, int amount)
+    public void Heal(UnitState target, int amount, UnitState? by = null)
     {
         if (!target.IsAlive || amount <= 0) return;
         if (!target.AcceptsSupport) return;
@@ -5118,6 +5135,7 @@ public sealed class BattleContext
         {
             Kind = BattleEventKind.Heal,
             Turn = _turn,
+            ActorId = by?.InstanceId,   // 第124期 段2: 回復させた駒
             TargetId = target.InstanceId,
             Amount = target.Hp - before,
             HpAfter = target.Hp
@@ -5165,7 +5183,7 @@ public sealed class BattleContext
     /// 隊列を入れ替える。移動した駒すべてに OnMoved を通知するので、
     /// 逃亡・喧噪・庇いのどれが原因でも「動かされた」駒は等しく反応できる。
     /// </summary>
-    public void SwapSlots(UnitState self, int destSlot)
+    public void SwapSlots(UnitState self, int destSlot, UnitState? by = null)
     {
         UnitState? occupant = PickOne(
             LivingMembers(self.TeamId).Where(u => u.Slot == destSlot).ToList());
@@ -5186,6 +5204,7 @@ public sealed class BattleContext
             {
                 Kind = BattleEventKind.Move,
                 Turn = _turn,
+                ActorId = by?.InstanceId,   // 第124期 段2: 移動させた駒（押しのけられた側にも同じ駒が載る）
                 TargetId = u.InstanceId,
                 Slot = u.Slot,
                 HpAfter = u.Hp
