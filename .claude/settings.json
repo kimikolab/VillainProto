@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(dotnet build -c Release 2>&1)",
+      "PowerShell(New-Item -ItemType Directory -Force docs | Out-Null; dotnet run --project BattleSim -c Release 0 dump > docs/units.md; \"--- 先頭12行 ---\"; Get-Content docs/units.md -TotalCount 12)"
+    ]
+  }
+}

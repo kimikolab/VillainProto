@@ -22,23 +22,32 @@ public static class UiKit
     public static readonly Color Wound = Color.FromHtml("#ef6f91");
     public static readonly Color Shadow = new(0.02f, 0.04f, 0.035f, 0.86f);
 
-    private static readonly Dictionary<string, string> PortraitPaths = new(StringComparer.Ordinal)
-    {
-        ["rica"] = "res://assets/portraits/rica.png",
-        ["sid"] = "res://assets/portraits/sid.png",
-        ["borg"] = "res://assets/portraits/borg.png",
-        ["zoto"] = "res://assets/portraits/zoto.png",
-        ["kado"] = "res://assets/portraits/kado.png",
-    };
+    // 立ち絵は「駒 ID から規約で引く」——辞書に書かずにファイルの有無だけを見る（第124期 §6-1）。
+    // 絵を足すのに .cs を触らないため。無ければ従来のアトラスへ落ちる。
+    private static string PortraitPathOf(string key) => $"res://assets/portraits/{key}.png";
+    private static string BattlePortraitPathOf(string key) => $"res://assets/portraits/battle/{key}_idle_right.png";
 
-    private static readonly Dictionary<string, string> BattlePortraitPaths = new(StringComparer.Ordinal)
+    // 存在の判定はファイルごとに1度だけ（見つからなかったことも憶える）。
+    private static readonly Dictionary<string, string?> PortraitPathCache = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, string?> BattlePortraitPathCache = new(StringComparer.Ordinal);
+
+    private static string? FindPortrait(string key)
     {
-        ["rica"] = "res://assets/portraits/battle/rica_idle_right.png",
-        ["sid"] = "res://assets/portraits/battle/sid_idle_right.png",
-        ["borg"] = "res://assets/portraits/battle/borg_idle_right.png",
-        ["zoto"] = "res://assets/portraits/battle/zoto_idle_right.png",
-        ["kado"] = "res://assets/portraits/battle/kado_idle_right.png",
-    };
+        if (PortraitPathCache.TryGetValue(key, out string? cached)) return cached;
+        string path = PortraitPathOf(key);
+        string? found = Godot.FileAccess.FileExists(path) ? path : null;
+        PortraitPathCache[key] = found;
+        return found;
+    }
+
+    private static string? FindBattlePortrait(string key)
+    {
+        if (BattlePortraitPathCache.TryGetValue(key, out string? cached)) return cached;
+        string path = BattlePortraitPathOf(key);
+        string? found = Godot.FileAccess.FileExists(path) ? path : null;
+        BattlePortraitPathCache[key] = found;
+        return found;
+    }
 
     private static readonly Dictionary<string, Texture2D> PortraitCache = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, Texture2D> BattlePortraitCache = new(StringComparer.Ordinal);
@@ -106,7 +115,7 @@ public static class UiKit
 
     public static Texture2D Portrait(Texture2D atlas, string key)
     {
-        if (PortraitPaths.TryGetValue(key, out string? path))
+        if (FindPortrait(key) is string path)
         {
             if (!PortraitCache.TryGetValue(key, out Texture2D? portrait))
             {
@@ -129,7 +138,7 @@ public static class UiKit
 
     public static Texture2D BattlePortrait(Texture2D atlas, string key)
     {
-        if (BattlePortraitPaths.TryGetValue(key, out string? path))
+        if (FindBattlePortrait(key) is string path)
         {
             if (!BattlePortraitCache.TryGetValue(key, out Texture2D? portrait))
             {
@@ -142,8 +151,8 @@ public static class UiKit
         return Portrait(atlas, key);
     }
 
-    public static bool HasCustomPortrait(string key) => PortraitPaths.ContainsKey(key);
-    public static bool HasCustomBattlePortrait(string key) => BattlePortraitPaths.ContainsKey(key);
+    public static bool HasCustomPortrait(string key) => FindPortrait(key) is not null;
+    public static bool HasCustomBattlePortrait(string key) => FindBattlePortrait(key) is not null;
 
     public static Color PortraitTint(string key, bool enemy = false)
         => HasCustomPortrait(key) ? Colors.White : Tint(key, enemy);
