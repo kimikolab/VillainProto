@@ -22,6 +22,36 @@ public partial class Main : Control
     /// </summary>
     private readonly HashSet<int> _batchedDamageIndices = new();
 
+    // =====================================================================================
+    // 第125期 段2 —— 手番の外を「手番の外」として見せる。**`BattleCore` を1行も触らない。**
+    //
+    // 情報は台本にもう全部載っている（Phase 0 Q0-3 / Q0-4 と段1 の `Intercept`）。
+    // 足りなかったのは**いつ起きたか**で、いまの再生は `_result.Events` を1本の列として
+    // 先頭から流すだけなので、**割り込みも肩代わりもターン頭の一括も「そういう順番で起きた1件」**
+    // に潰れていた（Q0-8）。ここで拍（`Beat`）を1本の前処理で割り当て、
+    // 再生の側は**その境目でだけ**絵を変える。
+    // =====================================================================================
+
+    /// <summary>再生の拍（第125期 段2）。<b>台本は1件も並べ替えない。</b></summary>
+    private enum Beat
+    {
+        /// <summary>誰の手番でもない時間（`TurnStart` 〜 最初の手番の行動）。ターン頭の一括がここに落ちる。</summary>
+        TurnOpen,
+        /// <summary>手番の中。</summary>
+        InTurn,
+        /// <summary>手番の外（割り込み・肩代わり・介入）。</summary>
+        OffTurn,
+    }
+
+    private readonly List<Beat> _beatByIndex = new();
+    private readonly List<int> _ownerByIndex = new();
+
+    /// <summary>中継された段（`Relayed`）の<b>本来の標的</b>。台本の前方走査で引く。</summary>
+    private readonly Dictionary<int, int> _relayVictimByIndex = new();
+
+    private Beat _shownBeat = Beat.TurnOpen;
+    private int _shownOwner = -1;
+
     private Texture2D _atlas = null!;
     private BattlefieldView _field = null!;
     private BattlefieldView3D _battleField = null!;
@@ -667,6 +697,7 @@ public partial class Main : Control
 
         _result = BattleEngine.Run(players, enemies, seed, verbose: true);
         IndexStatusDamageEvents(_result.Events);
+        IndexTimeline(_result.Events);
         _battleOpening = pending.Select(x => new DemoOpening(
             x.Unit.InstanceId,
             x.Unit.TeamId,
@@ -699,6 +730,8 @@ public partial class Main : Control
         _eventIndex = 0;
         _statusByPawn.Clear();
         _batchedDamageIndices.Clear();
+        _shownBeat = Beat.TurnOpen;
+        _shownOwner = -1;
         Notice("BattleCore が計算したイベント列を再生中", UiKit.Player);
         BeginPlayback();
     }
@@ -752,6 +785,8 @@ public partial class Main : Control
     {
         BattlePawn3D? actor = _battleField.FindPawn(e.ActorId);
         BattlePawn3D? target = _battleField.FindPawn(e.TargetId);
+        // 第125期 段2: 拍の境目でだけ画面を変える。**ここでは待たない**（間は下の switch の中だけ）。
+        EnterBeat(eventIndex, e);
         switch (e.Kind)
         {
             case BattleEventKind.TurnStart:
@@ -783,7 +818,10 @@ public partial class Main : Control
                 _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire);
                 _battleField.AttackCue(actor, $"{(e.Reaction ? "反撃 " : "")}{UiKit.PatternLabel(pattern)}", AttackColor(actor, e));
                 AppendLog($"[color=#{(actor?.Team == 0 ? UiKit.Player : UiKit.Enemy).ToHtml(false)}]{NameOf(e.ActorId)}[/color] → {NameOf(e.TargetId)}  [color=#a9b3a8]{UiKit.PatternLabel(e.Pattern ?? AttackPattern.Single)} {e.Amount}[/color]");
-                await Delay(0.16);
+                // 第125期 段2: 手番の外の一撃（棘・仇討ち・軋み）は**流れを一度止める**。
+                // **手番の中は詰めてある**（0.16 → 0.14）ので、合計はほぼ動かない（§5-2）。
+                if (e.Reaction) await Delay(0.24);
+                await Delay(0.14);
 
                 // 第124期 3-a: 「薙ぎやゾトの全体攻撃は一斉に入ったほうが爽快感ある」への直答。
                 // **範囲の巻き込みだけを同時着弾にする。単体は現状のまま**
@@ -796,7 +834,17 @@ public partial class Main : Control
             case BattleEventKind.Damage:
                 if (_batchedDamageIndices.Contains(eventIndex)) break;   // 3-a で同時に描き終えている
                 ShowDamage(eventIndex, e, actor, target);
-                await Delay(0.19);
+                await Delay(0.16);
+                break;
+
+            // 第125期 段1・段2 —— 介入が主目標を差し替えた。**この期に台本へ足した唯一の種類。**
+            // `ActorId` = 割り込んだ駒 ／ `TargetId` = **本来の標的**なので、
+            // 線は「本来の標的 → 割り込んだ駒」に折れる（§5-1 の 4）。
+            case BattleEventKind.Intercept:
+                _battleField.Divert(target, actor, e.Text ?? "介入", UiKit.Gold);
+                AppendLog($"  [color=#{UiKit.Gold.ToHtml(false)}][b]{NameOf(e.ActorId)} が {NameOf(e.TargetId)} の前に出た[/b][/color]"
+                          + $"  [color=#a9b3a8]（{e.Text ?? "介入"}）[/color]");
+                await Delay(0.30);
                 break;
 
             case BattleEventKind.Heal:
@@ -807,7 +855,7 @@ public partial class Main : Control
                 if (e.ActorId is not null) _battleField.Link(actor, target, UiKit.Heal, "繕う");
                 AppendLog($"  [color=#{UiKit.Heal.ToHtml(false)}]＋{e.Amount} 回復[/color] "
                           + $"{NameOf(e.TargetId)}{WriterSuffix(e.ActorId, e.TargetId)}");
-                await Delay(0.17);
+                await Delay(0.15);
                 break;
 
             case BattleEventKind.Death:
@@ -888,7 +936,7 @@ public partial class Main : Control
                     AppendLog($"  [color=#{tint.ToHtml(false)}]＋{e.Amount} {label}[/color] → {NameOf(e.TargetId)}"
                               + $"{WriterSuffix(e.ActorId, e.TargetId)}");
                 }
-                await Delay(0.10);
+                await Delay(0.08);
                 break;
 
             case BattleEventKind.Status:
@@ -939,6 +987,13 @@ public partial class Main : Control
     {
         target?.SetHp(e.HpAfter);
         target?.AnimateHit();
+        // 第125期 段2（§5-1 の 5）: **1発が分割されて中継された**ことを線で出す。
+        // ゴルムの「耐久している感がない」への直答——中継の段はいままで
+        // 「なぜかゴルムが殴られた」としか見えなかった。
+        if (e.Relayed)
+            _battleField.Split(
+                _relayVictimByIndex.TryGetValue(eventIndex, out int victimId) ? _battleField.FindPawn(victimId) : null,
+                target, e.Amount, "肩代わり", UiKit.Muted);
         (string source, Color sourceColor) = DamageSource(eventIndex, e, actor);
         _battleField.DamagePopup(target, e.Amount, source, sourceColor, e.Amount >= 25, withSource);
         _battleField.Impact(target, sourceColor,
@@ -987,6 +1042,159 @@ public partial class Main : Control
         => actorId is null || actorId == targetId
             ? ""
             : $"  [color=#{UiKit.Faint.ToHtml(false)}]← {NameOf(actorId)}[/color]";
+
+    /// <summary>
+    /// 拍を割り当てる前処理（第125期 段2）。<b>台本は1件も並べ替えない。</b>
+    ///
+    /// <para>規則は3つだけ:</para>
+    /// <list type="number">
+    /// <item><c>TurnStart</c> が来たら<b>誰の手番でもない時間</b>に戻る（主は居ない）。
+    /// `BattleEngine.Run` は <c>EmitTurnStart</c> → <c>TickStatuses</c> → <b><c>OnTurnStart</c> の全駒ループ</b>
+    /// → 行動順ループ、の順に走るので、ターン頭の一括（味方 19 体・Q0-5）は全部ここに落ちる。</item>
+    /// <item>手番の外<b>ではない</b> <c>Attack</c> / <c>Skill</c> / <c>Charge</c> が来たら、
+    /// その <c>ActorId</c> が<b>手番の主</b>になる。</item>
+    /// <item><c>Reaction</c>（棘・仇討ち・軋み）・<c>Relayed</c>（巨躯・分かち）・
+    /// <c>Intercept</c>（鎖の全段）は<b>手番の外</b>。</item>
+    /// </list>
+    ///
+    /// <para><b>介入だけは攻撃の手前に出る</b>——<c>PerformAttack</c> は
+    /// <c>SelectTargetCore</c> を先に呼ぶので、台本では <c>Intercept</c> が <c>Attack</c> より前に来る。
+    /// そのままだと「前の駒の手番を止めた」ことになるので、<b>次の <c>Attack</c> を先読みして
+    /// 主を先に立てる</b>。</para>
+    ///
+    /// <para><b>追い打ち（ハギ）はここでも手番の外にならない</b>——<c>OnAnyDeath</c> から
+    /// <c>ctx.PerformAttack</c> を直に呼ぶので <c>Reaction</c> が立たず、台本の上では
+    /// 普通の一振りと区別が付かない（`Models.cs` の明文。Phase 0 Q0-3 で今も正しいことを確かめた）。
+    /// <b>この期では直さない</b>——包むと発火条件に触れる恐れがある（指示書 §0-4）。</para>
+    /// </summary>
+    private void IndexTimeline(IReadOnlyList<BattleEvent> events)
+    {
+        _beatByIndex.Clear();
+        _ownerByIndex.Clear();
+        _relayVictimByIndex.Clear();
+        _shownBeat = Beat.TurnOpen;
+        _shownOwner = -1;
+
+        Beat current = Beat.TurnOpen;
+        int owner = -1;
+        for (int i = 0; i < events.Count; i++)
+        {
+            BattleEvent e = events[i];
+            bool off = e.Reaction || e.Relayed || e.Kind == BattleEventKind.Intercept;
+
+            if (e.Kind == BattleEventKind.TurnStart)
+            {
+                current = Beat.TurnOpen;
+                owner = -1;
+            }
+            else if (e.Kind == BattleEventKind.Intercept)
+            {
+                // 介入は標的選択の中＝これから振る駒の手番の入口。主を先に立てる。
+                if (NextAttacker(events, i) is { } next) { owner = next; current = Beat.InTurn; }
+            }
+            else if (!off
+                     && e.Kind is BattleEventKind.Attack or BattleEventKind.Skill or BattleEventKind.Charge
+                     && e.ActorId is { } actorId)
+            {
+                owner = actorId;
+                current = Beat.InTurn;
+            }
+
+            _beatByIndex.Add(off ? Beat.OffTurn : current);
+            _ownerByIndex.Add(owner);
+
+            if (e.Kind == BattleEventKind.Damage && e.Relayed && RelayVictim(events, i) is { } victim)
+                _relayVictimByIndex[i] = victim;
+        }
+    }
+
+    /// <summary>次に振る駒（手番の中の <c>Attack</c> の書き手）。同じターンの中だけを見る。</summary>
+    private static int? NextAttacker(IReadOnlyList<BattleEvent> events, int from)
+    {
+        for (int i = from + 1; i < events.Count; i++)
+        {
+            BattleEvent e = events[i];
+            if (e.Kind == BattleEventKind.TurnStart) return null;
+            if (e.Kind != BattleEventKind.Attack) continue;
+            return e.Reaction ? null : e.ActorId;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 中継された段の<b>本来の標的</b>（第125期 段2）。<c>ApplyDamage</c> は肩代わりを
+    /// <b>元の駒の HP を引く前に</b>解決するので、台本では<b>中継の段が先・本来の標的が後</b>に来る。
+    /// 同じ書き手の、中継でない次の <c>Damage</c> がそれ。
+    /// </summary>
+    private static int? RelayVictim(IReadOnlyList<BattleEvent> events, int from)
+    {
+        for (int i = from + 1; i < events.Count; i++)
+        {
+            BattleEvent e = events[i];
+            if (e.Kind is BattleEventKind.TurnStart or BattleEventKind.Attack) return null;
+            if (e.Kind != BattleEventKind.Damage || e.Relayed) continue;
+            return e.ActorId == events[from].ActorId ? e.TargetId : null;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 拍の境目でだけ画面を変える（第125期 段2）。<b>ここでは待たない</b>
+    /// ——間は `ApplyEvent` の switch の中だけに置く（そうしないと「1件あたりの間」が測れなくなる）。
+    /// </summary>
+    /// <returns>拍か主が変わったか。</returns>
+    private bool EnterBeat(int index, BattleEvent e)
+    {
+        if (index >= _beatByIndex.Count) return false;
+        Beat beat = _beatByIndex[index];
+        int owner = _ownerByIndex[index];
+        if (beat == _shownBeat && owner == _shownOwner) return false;
+
+        BattlePawn3D? ownerPawn = owner >= 0 ? _battleField.FindPawn(owner) : null;
+        Color ownerColor = ownerPawn?.Team == BattleContext.EnemyTeam ? UiKit.Enemy : UiKit.Player;
+
+        switch (beat)
+        {
+            case Beat.TurnOpen:
+                _battleField.SetTurnOwner(null, "▷ ターン頭 —— 誰の手番でもない時間", UiKit.Violet);
+                AppendLog($"  [color=#{UiKit.Violet.ToHtml(false)}]▷ ターン頭（誰の手番でもない）[/color]");
+                break;
+
+            case Beat.InTurn:
+                if (_shownBeat == Beat.OffTurn && owner == _shownOwner)
+                {
+                    _battleField.EndInterrupt($"▶ 手番: {NameOf(owner)}", ownerColor);
+                    AppendLog($"  [color=#{UiKit.Faint.ToHtml(false)}]└ 手番へ戻る[/color]");
+                }
+                else
+                {
+                    _battleField.SetTurnOwner(ownerPawn, $"▶ 手番: {NameOf(owner)}", ownerColor);
+                    AppendLog($"  [color=#{ownerColor.ToHtml(false)}]▶ {NameOf(owner)} の手番[/color]");
+                }
+                break;
+
+            case Beat.OffTurn:
+                // 主が先に立っていないと「誰の手番を止めたのか」が読めない。
+                if (owner != _shownOwner && ownerPawn is not null)
+                    _battleField.SetTurnOwner(ownerPawn, $"▶ 手番: {NameOf(owner)}", ownerColor);
+                (string kind, Color tint) = OffTurnLabel(e);
+                // 介入は駒の合図を `Divert` が出すので、ここでは帯だけにする（札を二重に出さない）。
+                _battleField.BeginInterrupt(
+                    e.Kind == BattleEventKind.Intercept ? null : _battleField.FindPawn(e.ActorId), kind, tint);
+                AppendLog($"  [color=#{tint.ToHtml(false)}]⚡ {kind}[/color]");
+                break;
+        }
+
+        _shownBeat = beat;
+        _shownOwner = owner;
+        return true;
+    }
+
+    /// <summary>手番の外の種類（第125期 段2）。<b>台本の札だけで決まる。</b></summary>
+    private static (string Kind, Color Tint) OffTurnLabel(BattleEvent e)
+        => e.Kind == BattleEventKind.Intercept ? ("介入（狙いが逸れた）", UiKit.Gold)
+         : e.Relayed ? ("肩代わり（1発が分けられた）", UiKit.Muted)
+         : ("割り込み（手番の外の一撃）", UiKit.Gold);
 
     private void IndexStatusDamageEvents(IReadOnlyList<BattleEvent> events)
     {
@@ -1143,6 +1351,8 @@ public partial class Main : Control
         _eventIndex = 0;
         _statusByPawn.Clear();
         _batchedDamageIndices.Clear();
+        _shownBeat = Beat.TurnOpen;
+        _shownOwner = -1;
         _battleLog.Clear();
         _battleField.BeginBattle(_battleOpening, EnemyCatalog.Stages[_stagePicker.Selected].Name);
         SetScoreVisible(false);

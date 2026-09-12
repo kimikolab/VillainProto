@@ -17,6 +17,15 @@ public partial class BattlefieldView3D : Control
     private Label _headline = null!;
     private Label _subline = null!;
     private Label _centerBanner = null!;
+
+    /// <summary>
+    /// いまの「拍」（第125期 段2）。<b>ターン頭 ／ 手番: 誰 ／ 割り込み</b>のどれかを常に出す。
+    /// <b>これが無いと割り込みが「そういう順番で起きた1件」に潰れる。</b>
+    /// </summary>
+    private Label _beat = null!;
+
+    /// <summary>いま手番の主として印を出している駒（第125期 段2）。</summary>
+    private BattlePawn3D? _turnOwner;
     private Vector3 _cameraHome;
 
     /// <summary>画角（第124期 3-c）。<b>寄りは距離で作る</b>ので、ここは動かさない。</summary>
@@ -213,6 +222,10 @@ public partial class BattlefieldView3D : Control
         _centerBanner.AddThemeColorOverride("font_outline_color", Colors.Black);
         _centerBanner.Visible = false;
         AddChild(_centerBanner);
+
+        // 拍の帯（第125期 段2）。**眉の行の右**に置く——中央のバナーは見せ場が使っており、
+        // 常時出しっぱなしにすると見せ場が読めなくなる。
+        _beat = OverlayText("", 13, UiKit.Gold, new Vector2(20, 76));
     }
 
     private Label OverlayText(string value, int size, Color color, Vector2 position)
@@ -232,8 +245,10 @@ public partial class BattlefieldView3D : Control
         _pawns.Clear();
         foreach (Node child in _fxRoot.GetChildren()) child.QueueFree();
         _eyebrow.Text = "BATTLE 2.5D  /  TURN 0";
+        _turnOwner = null;
+        _beat.Text = "";
         _headline.Text = $"{stageName} — 草原遭遇戦";
-        _subline.Text = "Space: 一時停止   1–4: 再生速度   T: 戦績   細い線＝誰の仕業か";
+        _subline.Text = "Space: 一時停止   1–4: 再生速度   T: 戦績   細い線＝誰の仕業か   ▶＝手番の主 / ▷＝ターン頭 / ⚡＝手番の外";
         _camera.Position = _cameraHome;
         _camera.Fov = CameraFov;
         _camera.LookAt(CameraFocus, Vector3.Up);
@@ -252,6 +267,86 @@ public partial class BattlefieldView3D : Control
     {
         _eyebrow.Text = $"BATTLE 2.5D  /  TURN {turn}";
         foreach (BattlePawn3D pawn in _pawns.Values) pawn.SetStatus("");
+    }
+
+    // =====================================================================================
+    // 第125期 段2 —— 手番の外を「手番の外」として見せる。
+    //
+    // **`BattleCore` を1行も触らない。** 台本には割り込み（`Reaction`）・肩代わり（`Relayed`）・
+    // 介入（`Intercept`・段1）が既に載っていて、足りないのは**いつ起きたか**の枠だけだった。
+    // =====================================================================================
+
+    /// <summary>
+    /// いま誰の番かを画面に出す（第125期 段2・§5-1 の 1）。
+    /// <paramref name="pawn"/> が <c>null</c> なら<b>誰の手番でもない時間</b>。
+    /// </summary>
+    public void SetTurnOwner(BattlePawn3D? pawn, string label, Color color)
+    {
+        if (_turnOwner is not null && _turnOwner != pawn) _turnOwner.SetTurnOwner(false);
+        _turnOwner = pawn;
+        pawn?.SetTurnOwner(true);
+        _beat.Text = label;
+        _beat.AddThemeColorOverride("font_color", color);
+    }
+
+    /// <summary>
+    /// 割り込みが始まった（第125期 段2・§5-1 の 2）。<b>手番の主の印を落として</b>、
+    /// 割り込んだ駒の足元に輪を出す。<b>演出の作り込みではなく「流れが止まった」ことが分かればよい。</b>
+    /// </summary>
+    public void BeginInterrupt(BattlePawn3D? actor, string kind, Color color)
+    {
+        _turnOwner?.SetTurnOwner(true, paused: true);
+        _beat.Text = _turnOwner is null ? $"⚡ {kind}" : $"⚡ {kind}（{_turnOwner.UnitName} の手番を止めて）";
+        _beat.AddThemeColorOverride("font_color", color);
+        if (actor is null) return;
+        MakeGroundRing(actor.Home, color, 1.25f, 0.34);
+        MakeGroundRing(actor.Home, color, 0.85f, 0.46);
+        Float(actor, $"⚡ {kind}", color, true, 3.70f);
+    }
+
+    /// <summary>割り込みが終わって手番へ戻る（第125期 段2）。</summary>
+    public void EndInterrupt(string label, Color color)
+    {
+        _turnOwner?.SetTurnOwner(true);
+        _beat.Text = label;
+        _beat.AddThemeColorOverride("font_color", color);
+    }
+
+    /// <summary>
+    /// 矢が逸れた（第125期 段2・§5-1 の 4）。<b>本来の標的から割り込んだ駒へ折れる線</b>を描く。
+    ///
+    /// <para><b>攻撃の線をそのまま割り込んだ駒へ引くだけでは「その駒が殴られた」にしかならない</b>
+    /// ——だから線は<b>本来の標的から始めて、途中で折る。</b> 折れ点を持ち上げるのは、
+    /// 攻撃の直線（`Attack`）と形で割るため。</para>
+    /// </summary>
+    public void Divert(BattlePawn3D? victim, BattlePawn3D? guard, string label, Color color)
+    {
+        if (guard is null) return;
+        if (victim is not null && victim != guard)
+        {
+            Vector3 a = victim.FxPoint;
+            Vector3 b = guard.FxPoint;
+            Vector3 bend = (a + b) * 0.5f + Vector3.Up * 1.25f;
+            MakeBeam(a, bend, new Color(color, 0.80f), 0.075f, 0.48);
+            MakeBeam(bend, b, new Color(color, 0.80f), 0.075f, 0.48);
+            MakeGroundRing(victim.Home, UiKit.Faint, 0.68f, 0.42);
+            Float(victim, "狙われた", UiKit.Faint, false, 3.30f, 0.88f);
+        }
+        MakeGroundRing(guard.Home, color, 1.05f, 0.44);
+        Float(guard, label, color, true, 3.52f);
+    }
+
+    /// <summary>
+    /// 1発が分割されて中継された（第125期 段2・§5-1 の 5）。
+    /// <b>受けた側から中継した側へ、太さの違う線を引く。</b> ゴルムの「耐久している感がない」への直答。
+    /// </summary>
+    public void Split(BattlePawn3D? victim, BattlePawn3D? relay, int amount, string label, Color color)
+    {
+        if (relay is null) return;
+        if (victim is not null && victim != relay)
+            MakeBeam(victim.FxPoint, relay.FxPoint, new Color(color, 0.72f), 0.13f, 0.46);
+        MakeGroundRing(relay.Home, color, 1.12f, 0.46);
+        Float(relay, $"{label} −{amount}", color, true, 3.46f);
     }
 
     public void SetSubline(string value) => _subline.Text = value;

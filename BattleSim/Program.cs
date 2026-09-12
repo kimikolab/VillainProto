@@ -53611,13 +53611,15 @@ if (focusId == "offturn")
             Console.WriteLine("**走査が空**: `ApplyEvent` の `Delay` を1件も引けなかった。ここで止める。");
             return;
         }
-        Console.WriteLine("`DemoApp/Main.cs` の `ApplyEvent` から引いた間 **" + ofBeats.Sites + " 箇所** ／ "
+        Console.WriteLine("`DemoApp/Main.cs` の `ApplyEvent` から引いた間 **" + ofBeats.Sites + " 箇所**"
+            + "（うち条件付き **" + ofBeats.CondSites + " 箇所**は別に数える）／ "
             + "種類 **" + ofBeats.Map.Count + " 件**（速度 ×1 のときの秒）。");
         Console.WriteLine();
-        Console.WriteLine("| 種類 | 1件あたりの間（秒） |");
-        Console.WriteLine("|---|--:|");
+        Console.WriteLine("| 種類 | 1件あたりの間（秒） | 条件付き（上限） |");
+        Console.WriteLine("|---|--:|--:|");
         foreach (var kv in ofBeats.Map.OrderByDescending(k => k.Value))
-            Console.WriteLine("| `" + kv.Key + "` | " + kv.Value.ToString("0.00") + " |");
+            Console.WriteLine("| `" + kv.Key + "` | " + kv.Value.ToString("0.00")
+                + " | " + (ofBeats.Cond.GetValueOrDefault(kv.Key) is var c && c > 0 ? c.ToString("0.00") : "—") + " |");
         Console.WriteLine();
         Console.WriteLine("**構造**: `BeginPlayback` が `_result.Events` を**先頭から1件ずつ**取り出し、"
             + "`ApplyEvent` が種類ごとに絵を出して `Delay` で間を置く。"
@@ -53767,15 +53769,20 @@ if (focusId == "offturn")
         }
         Console.WriteLine("# 再生の総尺（第125期・`offturn tempo`）");
         Console.WriteLine();
-        Console.WriteLine("`ApplyEvent` の `Delay` を旧 **" + oldB.Sites + " 箇所** ／ 新 **" + newB.Sites + " 箇所**引いた。");
-        Console.WriteLine("**条件付きの間も上から数える**（同じ規則で両方を数えるので比較は等質）。速度 ×1。");
+        Console.WriteLine("無条件の間を旧 **" + oldB.Sites + " 箇所** ／ 新 **" + newB.Sites + " 箇所**、"
+            + "条件付きを旧 **" + oldB.CondSites + " 箇所** ／ 新 **" + newB.CondSites + " 箇所**引いた。");
+        Console.WriteLine("**総尺は無条件のぶんだけで出す**——条件付きは「1件あたり必ず掛かる時間」ではないので、"
+            + "重み付けに使うと上限しか出せない（同じ規則で両方を分けている）。速度 ×1。");
         Console.WriteLine();
-        Console.WriteLine("| 種類 | 旧（秒/件） | 新（秒/件） |");
-        Console.WriteLine("|---|--:|--:|");
+        Console.WriteLine("| 種類 | 旧（秒/件） | 新（秒/件） | 旧・条件付き | 新・条件付き |");
+        Console.WriteLine("|---|--:|--:|--:|--:|");
         foreach (string k in oldB.Map.Keys.Concat(newB.Map.Keys).Distinct(StringComparer.Ordinal)
                              .OrderBy(x => x, StringComparer.Ordinal))
             Console.WriteLine("| `" + k + "` | " + oldB.Map.GetValueOrDefault(k).ToString("0.00")
-                + " | " + newB.Map.GetValueOrDefault(k).ToString("0.00") + " |");
+                + " | " + newB.Map.GetValueOrDefault(k).ToString("0.00")
+                + " | " + (oldB.Cond.GetValueOrDefault(k) > 0 ? oldB.Cond.GetValueOrDefault(k).ToString("0.00") : "—")
+                + " | " + (newB.Cond.GetValueOrDefault(k) > 0 ? newB.Cond.GetValueOrDefault(k).ToString("0.00") : "—")
+                + " |");
         Console.WriteLine();
         Console.WriteLine("| 行 | 波 | seed | 出来事 | 旧（秒） | 新（秒） | 差 |");
         Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|");
@@ -53800,6 +53807,12 @@ if (focusId == "offturn")
         Console.WriteLine();
         Console.WriteLine("**`Intercept` は旧の表に無い**（第124期には存在しない種類）ので、"
             + "その件数ぶんはまるごと増分として出る。**手番の中を詰めて手番の外に配る**（§5-2）のが要件。");
+        Console.WriteLine();
+        Console.WriteLine("条件付きの間（新）: "
+            + (newB.Cond.Values.Sum() <= 0 ? "—"
+               : string.Join(" / ", newB.Cond.Where(x => x.Value > 0)
+                   .Select(x => "`" + x.Key + "` " + x.Value.ToString("0.00") + " 秒"))) 
+            + "。**発火した回数ぶんだけ乗る**（反撃・同時着弾は毎回は起きない）。");
         return;
     }
 
@@ -69031,14 +69044,22 @@ static class OffturnScan
     /// <b>条件付きの間も上から数える</b>——旧版と新版を<b>同じ規則</b>で数えるので比較は等質になる。
     /// <c>raw: true</c> の待ち（一時停止のポーリング）は <c>ApplyEvent</c> の外なので入らない。
     /// </summary>
-    public static (Dictionary<string, double> Map, int Sites) Beats(string demoSrc)
+    /// <b>無条件の間（<c>Map</c>）と条件付きの間（<c>Cond</c>）を分ける。</b>
+    /// 条件付きは「その種類の出来事1件あたり必ず掛かる時間」ではないので、
+    /// <b>総尺の重み付けに使うと上限しか出せない</b>——旧版にも新版にもあるので、
+    /// <b>同じ規則で分けて、総尺は無条件のぶんだけで出す</b>（条件付きは件数を別に書く）。
+    /// 判定は「その文（直前の <c>;</c> / <c>{</c> / <c>}</c> から <c>Delay</c> まで）に
+    /// <c>if (</c> が含まれるか」。
+    public static (Dictionary<string, double> Map, Dictionary<string, double> Cond, int Sites, int CondSites)
+        Beats(string demoSrc)
     {
         var map = new Dictionary<string, double>(StringComparer.Ordinal);
-        int sites = 0;
+        var cond = new Dictionary<string, double>(StringComparer.Ordinal);
+        int sites = 0, condSites = 0;
         int a = demoSrc.IndexOf("private async Task " + "ApplyEvent", StringComparison.Ordinal);
-        if (a < 0) return (map, 0);
+        if (a < 0) return (map, cond, 0, 0);
         int b = demoSrc.IndexOf('{', a);
-        if (b < 0) return (map, 0);
+        if (b < 0) return (map, cond, 0, 0);
         int depth = 0, end = demoSrc.Length;
         for (int i = b; i < demoSrc.Length; i++)
         {
@@ -69052,16 +69073,21 @@ static class OffturnScan
         {
             int from = marks[i].Index;
             int to = i + 1 < marks.Count ? marks[i + 1].Index : body.Length;
-            double sum = 0;
+            string span = body.Substring(from, to - from);
+            double sum = 0, guarded = 0;
             foreach (System.Text.RegularExpressions.Match d in System.Text.RegularExpressions.Regex
-                     .Matches(body.Substring(from, to - from), @"Delay\(\s*([0-9]*\.?[0-9]+)\s*\)"))
+                     .Matches(span, @"Delay\(\s*([0-9]*\.?[0-9]+)\s*\)"))
             {
-                sum += double.Parse(d.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
-                sites++;
+                double v = double.Parse(d.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+                int st = span.LastIndexOfAny(new[] { ';', '{', '}' }, d.Index);
+                string stmt = span.Substring(st + 1, d.Index - st - 1);
+                if (stmt.Contains("if (", StringComparison.Ordinal)) { guarded += v; condSites++; }
+                else { sum += v; sites++; }
             }
             string kind = marks[i].Groups[1].Value;
             map[kind] = map.GetValueOrDefault(kind) + sum;
+            cond[kind] = cond.GetValueOrDefault(kind) + guarded;
         }
-        return (map, sites);
+        return (map, cond, sites, condSites);
     }
 }

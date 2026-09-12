@@ -10,6 +10,7 @@ public partial class BattlePawn3D : Node3D
     private ShaderMaterial _portraitMaterial = null!;
     private MeshInstance3D _shadow = null!;
     private MeshInstance3D _ring = null!;
+    private MeshInstance3D _turnRing = null!;
     private MeshInstance3D _hpBack = null!;
     private MeshInstance3D _hpFill = null!;
     private QuadMesh _hpFillMesh = null!;
@@ -86,6 +87,19 @@ public partial class BattlePawn3D : Node3D
             MaterialOverride = MakeMaterial(new Color(teamColor, 0.78f), true, teamColor * 0.65f),
         };
         AddChild(_ring);
+
+        // 手番の主の印（第125期 段2）。**常設の輪で、必要なときだけ見せる。**
+        // 攻撃・被弾の輪（`MakeGroundRing`）は一瞬で消えるので、
+        // 「いま誰の番か」を出すには**消えない印**が要る。
+        _turnRing = new MeshInstance3D
+        {
+            Mesh = new TorusMesh { InnerRadius = 0.96f, OuterRadius = 1.14f, Rings = 32, RingSegments = 8 },
+            Position = new Vector3(0, 0.04f, 0),
+            MaterialOverride = MakeMaterial(new Color(UiKit.Gold, 0.85f), true, UiKit.Gold * 0.9f),
+            Visible = false,
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        };
+        AddChild(_turnRing);
 
         Texture2D portrait = UiKit.BattlePortrait(atlas, opening.UnitId);
         bool hasCustomPortrait = UiKit.HasCustomBattlePortrait(opening.UnitId)
@@ -194,6 +208,22 @@ void fragment() {
         _stats.Text = $"HP {Hp}/{MaxHp}  ・  攻 {AttackValue} {PatternGlyph(Pattern)}";
     }
 
+    /// <summary>
+    /// 手番の主の印（第125期 段2）。<b>誰の番かが分からないと「割り込み」が成立しない。</b>
+    ///
+    /// <para><paramref name="paused"/> は<b>割り込まれて待っている</b>状態
+    /// ——輪を金から暗い色へ落とす。<b>立ち絵そのものは暗くしない</b>
+    /// （<c>Modulate</c> は死亡・出現のトゥイーンが握っているので、そこへ割り込むと絵が壊れる）。</para>
+    /// </summary>
+    public void SetTurnOwner(bool on, bool paused = false)
+    {
+        _turnRing.Visible = on && _alive;
+        if (!_turnRing.Visible) return;
+        Color tint = paused ? UiKit.Faint : UiKit.Gold;
+        _turnRing.MaterialOverride = MakeMaterial(new Color(tint, paused ? 0.55f : 0.85f), true, tint * 0.9f);
+        _turnRing.Scale = Vector3.One * (paused ? 0.92f : 1.0f);
+    }
+
     public void SetStatus(string value)
     {
         _status.Text = value;
@@ -241,6 +271,7 @@ void fragment() {
         if (!_alive) return;
         _alive = false;
         _ring.Visible = false;
+        _turnRing.Visible = false;
         _status.Visible = false;
         _name.Visible = false;
         _stats.Visible = false;
