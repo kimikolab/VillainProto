@@ -52,6 +52,18 @@ public partial class Main : Control
     private Beat _shownBeat = Beat.TurnOpen;
     private int _shownOwner = -1;
 
+    /// <summary>
+    /// 溜めの予告を出したまま次の一撃を待っている駒（第125期 段3-b）。
+    /// <c>Charge</c> は次の倍率・攻撃型・名前を全部持っているので、<b>台本だけで予告が書ける。</b>
+    /// </summary>
+    private readonly HashSet<int> _forecastPending = new();
+
+    /// <summary>
+    /// 全体に落ちた一撃（第125期 段3-a）。<c>Highlight</c> の側でまとめて描いた <c>Damage</c> の添字。
+    /// <b>ゾトの破裂は `Attack` を1件も出さない</b>ので、同時着弾（3-a・第124期）の経路に乗らない。
+    /// </summary>
+    private readonly HashSet<int> _burstDamageIndices = new();
+
     private Texture2D _atlas = null!;
     private BattlefieldView _field = null!;
     private BattlefieldView3D _battleField = null!;
@@ -80,6 +92,7 @@ public partial class Main : Control
     private Button _score = null!;
     private OptionButton _speedPicker = null!;
     private ScorePanel _scorePanel = null!;
+    private PartyBar _partyBar = null!;
 
     /// <summary>
     /// 編成プリセット（第123期）。<b><c>Presets</c> を直に引くだけで写しを持たない</b>
@@ -230,6 +243,14 @@ public partial class Main : Control
         _battleField = new BattlefieldView3D { Visible = false };
         _battleField.SetAnchorsPreset(LayoutPreset.FullRect);
         fieldStack.AddChild(_battleField);
+        // 画面下の固定の一覧（第125期 段3-e）。**盤面の上に重ねるが、席が変わっても動かない。**
+        // 盤面上のゲージは消していない（指示書 §6 の 3-e: 「両方出して構わない」）。
+        _partyBar = new PartyBar
+        {
+            AnchorLeft = 0, AnchorRight = 1, AnchorTop = 1, AnchorBottom = 1,
+            OffsetLeft = 8, OffsetRight = -8, OffsetTop = -88, OffsetBottom = -8,
+        };
+        fieldStack.AddChild(_partyBar);
         // 戦績パネル（第124期 段1）は盤面の上に重ねる。**戦況ログを潰さない**（§4-2）。
         _scorePanel = new ScorePanel();
         _scorePanel.SetAnchorsPreset(LayoutPreset.FullRect);
@@ -726,10 +747,14 @@ public partial class Main : Control
         _field.Visible = false;
         _battleField.Visible = true;
         _battleField.BeginBattle(_battleOpening, EnemyCatalog.Stages[stageIndex].Name);
+        _partyBar.Begin(_battleOpening);
+        _partyBar.Sync(_battleField, -1);
+        _partyBar.Visible = true;
         SetScoreVisible(false);
         _eventIndex = 0;
         _statusByPawn.Clear();
         _batchedDamageIndices.Clear();
+        _burstDamageIndices.Clear();
         _shownBeat = Beat.TurnOpen;
         _shownOwner = -1;
         Notice("BattleCore が計算したイベント列を再生中", UiKit.Player);
@@ -753,6 +778,9 @@ public partial class Main : Control
             int eventIndex = _eventIndex++;
             BattleEvent e = _result.Events[eventIndex];
             await ApplyEvent(e, eventIndex);
+            // 第125期 段3-e: 画面下の一覧を引き直す。**数字の出どころは盤面の駒だけ**で、
+            // 台本からは数え直さない（同じ言葉の表を2つ作らない・第124期 §4）。
+            _partyBar.Sync(_battleField, _shownOwner);
         }
 
         if (token != _playToken || !_battleMode) return;
@@ -815,8 +843,18 @@ public partial class Main : Control
             {
                 AttackPattern pattern = e.Pattern ?? AttackPattern.Single;
                 IReadOnlyList<BattlePawn3D> impactTargets = FindAttackTargets(eventIndex, e);
+                // 第125期 3-b: 予告していた一撃が来た。**予告と着弾を1本に結ぶ**
+                // ——「ためている感」は溜めの側だけでは出ない（着弾が普通の一振りに見えたら同じこと）。
+                bool forecasted = e.ActorId is { } swingerId && _forecastPending.Remove(swingerId);
+                if (forecasted)
+                {
+                    actor?.SetForecast("");
+                    _battleField.ShowBanner($"{NameOf(e.ActorId)} — 溜めた一撃", UiKit.Gold, 0.72);
+                }
                 _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire);
-                _battleField.AttackCue(actor, $"{(e.Reaction ? "反撃 " : "")}{UiKit.PatternLabel(pattern)}", AttackColor(actor, e));
+                _battleField.AttackCue(actor,
+                    $"{(forecasted ? "大技 " : "")}{(e.Reaction ? "反撃 " : "")}{UiKit.PatternLabel(pattern)}",
+                    AttackColor(actor, e));
                 AppendLog($"[color=#{(actor?.Team == 0 ? UiKit.Player : UiKit.Enemy).ToHtml(false)}]{NameOf(e.ActorId)}[/color] → {NameOf(e.TargetId)}  [color=#a9b3a8]{UiKit.PatternLabel(e.Pattern ?? AttackPattern.Single)} {e.Amount}[/color]");
                 // 第125期 段2: 手番の外の一撃（棘・仇討ち・軋み）は**流れを一度止める**。
                 // **手番の中は詰めてある**（0.16 → 0.14）ので、合計はほぼ動かない（§5-2）。
@@ -833,6 +871,7 @@ public partial class Main : Control
 
             case BattleEventKind.Damage:
                 if (_batchedDamageIndices.Contains(eventIndex)) break;   // 3-a で同時に描き終えている
+                if (_burstDamageIndices.Contains(eventIndex)) break;     // 破裂（第125期 3-a）で描き終えている
                 ShowDamage(eventIndex, e, actor, target);
                 await Delay(0.16);
                 break;
@@ -850,7 +889,9 @@ public partial class Main : Control
             case BattleEventKind.Heal:
                 target?.SetHp(e.HpAfter);
                 target?.AnimateHeal();
-                _battleField.Float(target, $"＋{e.Amount}", UiKit.Heal);
+                // 第125期 3-c: 「回復はもっと緑文字ではっきり出したほうが良い」への直答。
+                // **ダメージと同じ大きさ・同じ形**で出す（ナラ・ゴルムの還しに効く）。
+                _battleField.HealPopup(target, e.Amount);
                 // 第124期 3-h: 段2 で載った書き手から線を引く。
                 if (e.ActorId is not null) _battleField.Link(actor, target, UiKit.Heal, "繕う");
                 AppendLog($"  [color=#{UiKit.Heal.ToHtml(false)}]＋{e.Amount} 回復[/color] "
@@ -961,14 +1002,29 @@ public partial class Main : Control
                 _battleField.ShowBanner(banner, UiKit.Gold, 0.92);
                 if (actor is not null) _battleField.Link(actor, null, UiKit.Gold, "★ 見せ場");
                 AppendLog($"  [color=#{UiKit.Gold.ToHtml(false)}][b]{banner}[/b][/color]");
+                // 第125期 3-a: 「ゾトの爆発が全体攻撃に見えない」への直答。
+                // **破裂は `Attack` を1件も出さない**（Q0-6）ので同時着弾（3-a・第124期）の
+                // 経路に乗らず、`Pattern` が null の `Damage` が人数ぶん並ぶだけだった。
+                if (ApplyBurstAtOnce(eventIndex, e) > 0) await Delay(0.34);
                 await Delay(0.42);
                 break;
 
             case BattleEventKind.Charge:
-                _battleField.Float(actor, "CHARGE", UiKit.Gold, true);
-                AppendLog($"[color=#{UiKit.Gold.ToHtml(false)}]{NameOf(e.ActorId)} — {e.Text ?? "力を溜める"}[/color]");
+            {
+                // 第125期 3-b: 「ドルガの一撃の重さが表現できていない」への直答。
+                // **`Charge` は次の倍率・攻撃型・溜めの名前を全部持っている**
+                // （`BattleEventKind.Charge` の明文）ので、予告は台本だけで書ける。
+                // 溜めは画面上「何も起きないターン」なので、予告が無いとただの空白になる。
+                string forecast = $"次 ×{e.Amount / 100.0:0.#} {UiKit.PatternLabel(e.Pattern ?? AttackPattern.Single)}";
+                _battleField.Float(actor, "溜め", UiKit.Gold, true);
+                actor?.SetForecast($"▲ {forecast}");
+                if (e.ActorId is { } chargingId) _forecastPending.Add(chargingId);
+                _battleField.ShowBanner($"{NameOf(e.ActorId)} — {e.Text ?? "力を溜める"}　／　{forecast}", UiKit.Gold, 0.80);
+                AppendLog($"[color=#{UiKit.Gold.ToHtml(false)}]{NameOf(e.ActorId)} — {e.Text ?? "力を溜める"}"
+                          + $"　（{forecast}）[/color]");
                 await Delay(0.34);
                 break;
+            }
 
             case BattleEventKind.Skill:
                 _battleField.Float(actor, e.Text ?? "SKILL", UiKit.Heal, true);
@@ -1029,6 +1085,55 @@ public partial class Main : Control
             ShowDamage(i, candidate, _battleField.FindPawn(candidate.ActorId),
                        _battleField.FindPawn(candidate.TargetId),
                        withSource: candidate.TargetId == attack.TargetId);
+            landed++;
+        }
+        return landed;
+    }
+
+    /// <summary>
+    /// 破裂を「全体に落ちた1発」として描く（第125期 3-a）。戻り値は描いた件数。
+    ///
+    /// <para><b>ゾトの破裂は <c>Attack</c> を1件も出さない</b>——敵全員・味方全員へ
+    /// 1体ずつ <c>ApplyDamage</c> を呼ぶだけなので、台本には <c>Pattern</c> が <c>null</c> の
+    /// <c>Damage</c> が人数ぶん並ぶ（Phase 0 Q0-6）。第124期の同時着弾は <c>Attack</c> を起点に
+    /// 紐づけるので、この形はどちらの経路にも乗っていなかった。</para>
+    ///
+    /// <para><b>紐づけは構造だけで決める</b>（文字列は1文字も見ない・`LogKind` の原則）:
+    /// その見せ場と<b>同じ書き手</b>の、<b>攻撃型を持たない</b> <c>Damage</c> を、
+    /// 次の <c>TurnStart</c> / <c>Attack</c> / <c>Highlight</c> まで拾う。
+    /// <b>2体以上に落ちたときだけ</b>「全体」として描く——1体なら普通の一撃と変わらない。</para>
+    ///
+    /// <para><b>台本は1件も並べ替えない。</b> 描く順を前へ寄せるだけで、
+    /// <c>Death</c> や <c>StatusGain</c> は今までどおりその後に流れる。</para>
+    /// </summary>
+    private int ApplyBurstAtOnce(int highlightIndex, BattleEvent highlight)
+    {
+        if (_result is null || highlight.ActorId is null) return 0;
+
+        var hits = new List<int>();
+        for (int i = highlightIndex + 1; i < _result.Events.Count; i++)
+        {
+            BattleEvent candidate = _result.Events[i];
+            if (candidate.Kind is BattleEventKind.TurnStart or BattleEventKind.Attack or BattleEventKind.Highlight) break;
+            if (candidate.Kind != BattleEventKind.Damage) continue;
+            if (candidate.ActorId != highlight.ActorId || candidate.Pattern is not null) continue;
+            if (candidate.Relayed) continue;   // 中継の段は別の絵（§5-1 の 5）
+            hits.Add(i);
+        }
+        if (hits.Count < 2) return 0;
+
+        _battleField.Burst(
+            _battleField.FindPawn(highlight.ActorId),
+            hits.Select(i => _battleField.FindPawn(_result.Events[i].TargetId)).OfType<BattlePawn3D>().ToList(),
+            UiKit.Burn);
+
+        int landed = 0;
+        foreach (int i in hits)
+        {
+            if (!_burstDamageIndices.Add(i)) continue;
+            BattleEvent damage = _result.Events[i];
+            ShowDamage(i, damage, _battleField.FindPawn(damage.ActorId), _battleField.FindPawn(damage.TargetId),
+                       withSource: landed == 0);
             landed++;
         }
         return landed;
@@ -1351,10 +1456,14 @@ public partial class Main : Control
         _eventIndex = 0;
         _statusByPawn.Clear();
         _batchedDamageIndices.Clear();
+        _burstDamageIndices.Clear();
         _shownBeat = Beat.TurnOpen;
         _shownOwner = -1;
         _battleLog.Clear();
         _battleField.BeginBattle(_battleOpening, EnemyCatalog.Stages[_stagePicker.Selected].Name);
+        _partyBar.Begin(_battleOpening);
+        _partyBar.Sync(_battleField, -1);
+        _partyBar.Visible = true;
         SetScoreVisible(false);
         Notice("同じ計算結果を最初から再生します", UiKit.Player);
         BeginPlayback();
@@ -1377,6 +1486,7 @@ public partial class Main : Control
         _presetPicker.Disabled = false;
         _seed.Editable = true;
         _battleField.Visible = false;
+        _partyBar.Visible = false;
         SetScoreVisible(false);
         _field.Visible = true;
         _field.UpdateFormation(_formation);
@@ -1408,6 +1518,7 @@ public partial class Main : Control
                 + "台本は開戦前に計算済み。この表は戦闘全体の最終集計で、再生位置によらない。");
         }
         _scorePanel.Visible = visible && _result is not null;
+        if (_partyBar is not null && _battleMode) _partyBar.Visible = !_scorePanel.Visible;
         _score.Text = _scorePanel.Visible ? "戦績を閉じる (T)" : "戦績 (T)";
     }
 

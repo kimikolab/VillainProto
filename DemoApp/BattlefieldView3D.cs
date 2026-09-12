@@ -394,14 +394,13 @@ public partial class BattlefieldView3D : Control
         switch (pattern)
         {
             case AttackPattern.Sweep:
-                // 第124期 3-d: 薙ぎは**面**（扇）で示す。第123期に「よく見えた」側なので形は変えず、
-                // 副次目標の輪だけ大きくして「どこまで届いたか」を面と一緒に読めるようにする。
+                // 第125期 3-f: 「薙ぎ全般が散弾みたいで銃撃戦に見える」への直答。
+                // **標的ごとの細い線をやめ、1枚の弧にする**——線が人数ぶん飛ぶから散弾に見えていた。
+                // 弧は**実際に当たった駒の角度の幅**を覆うので、「どこまで届いたか」は
+                // 足元の輪ではなく弧そのものが出す（第124期 3-d の「面で示す」を1枚に絞った形）。
+                MakeSweepArc(from.FxPoint, hits, color);
                 foreach (BattlePawn3D hit in hits)
-                {
-                    MakeBeam(from.FxPoint, hit.FxPoint, color, 0.10f, 0.34);
                     MakeGroundRing(hit.Home, color, hit == to ? 0.62f : 0.86f, 0.52);
-                }
-                MakeSweepFan(from.FxPoint, to.FxPoint, color);
                 break;
             case AttackPattern.Pierce:
             {
@@ -557,17 +556,73 @@ public partial class BattlefieldView3D : Control
         tween.Finished += () => _centerBanner.Visible = false;
     }
 
-    private void MakeSweepFan(Vector3 origin, Vector3 target, Color color)
+    /// <summary>
+    /// 薙ぎの弧（第125期 3-f）。<b>当たった駒の角度の幅を1枚で覆う。</b>
+    /// 標的ごとに線を飛ばすと散弾に見える——薙ぎは1回の振りなので、絵も1枚にする。
+    /// </summary>
+    private void MakeSweepArc(Vector3 origin, IReadOnlyList<BattlePawn3D> hits, Color color)
     {
-        Vector3 forward = target - origin;
-        forward.Y = 0;
-        if (forward.LengthSquared() < 0.001f) return;
-        forward = forward.Normalized();
-        for (int i = -3; i <= 3; i++)
+        if (hits.Count == 0) return;
+        var angles = new List<float>();
+        float reach = 2.6f;
+        foreach (BattlePawn3D hit in hits)
         {
-            Vector3 ray = forward.Rotated(Vector3.Up, i * 0.13f);
-            MakeBeam(origin, origin + ray * (3.6f - Math.Abs(i) * 0.14f), new Color(color, 0.48f), 0.055f, 0.28 + Math.Abs(i) * 0.018);
+            Vector3 d = hit.FxPoint - origin;
+            d.Y = 0;
+            if (d.LengthSquared() < 0.0004f) continue;
+            angles.Add(Mathf.Atan2(d.X, d.Z));
+            reach = Math.Max(reach, d.Length() + 0.9f);
         }
+        if (angles.Count == 0) return;
+        float lo = angles.Min(), hi = angles.Max();
+        // 1体しか当たっていなくても弧として見えるだけの幅は持たせる（薙ぎは薙ぎである）。
+        if (hi - lo < 0.34f) { float mid = (lo + hi) * 0.5f; lo = mid - 0.17f; hi = mid + 0.17f; }
+
+        const int Blades = 13;
+        for (int i = 0; i < Blades; i++)
+        {
+            float t = i / (float)(Blades - 1);
+            float ang = Mathf.Lerp(lo - 0.10f, hi + 0.10f, t);
+            var dir = new Vector3(Mathf.Sin(ang), 0, Mathf.Cos(ang));
+            // 中ほどを長く・端を短く。1枚の刃が振り抜けた跡に見える。
+            float len = reach * (0.74f + 0.26f * Mathf.Sin(t * Mathf.Pi));
+            MakeBeam(origin, origin + dir * len, new Color(color, 0.30f), 0.30f, 0.30 + t * 0.02);
+        }
+        MakeGroundRing(new Vector3(origin.X, 0, origin.Z), color, reach * 0.55f, 0.40);
+    }
+
+    /// <summary>
+    /// 全体に落ちた（第125期 3-a）。<b>ゾトの破裂は `Attack` を1件も出さない</b>
+    /// ——敵全員・味方全員へ1体ずつ <c>ApplyDamage</c> を呼ぶだけなので、
+    /// 台本には `Pattern` が <c>null</c> の `Damage` が人数ぶん並ぶだけになる（Phase 0 Q0-6）。
+    /// <b>敵の全体攻撃と同じ絵</b>（上から降る線）をここで出す。
+    /// </summary>
+    public void Burst(BattlePawn3D? origin, IReadOnlyList<BattlePawn3D> hits, Color color)
+    {
+        if (hits.Count == 0) return;
+        if (origin is not null)
+        {
+            MakeGroundRing(origin.Home, color, 2.35f, 0.46);
+            MakeGroundRing(origin.Home, color, 1.45f, 0.34);
+        }
+        foreach (BattlePawn3D hit in hits)
+        {
+            MakeBeam(hit.FxPoint + Vector3.Up * 5.8f, hit.FxPoint, color, 0.17f, 0.50);
+            MakeGroundRing(hit.Home, color, 0.74f, 0.55);
+        }
+        CameraPunch(origin?.GlobalPosition ?? Vector3.Zero, AttackPattern.All);
+    }
+
+    /// <summary>
+    /// 回復の数字（第125期 3-c）。<b>ダメージと同じ大きさで出す</b>
+    /// ——「回復はもっと緑文字ではっきり出したほうが良い」への直答。
+    /// </summary>
+    public void HealPopup(BattlePawn3D? pawn, int amount)
+    {
+        if (pawn is null) return;
+        Float(pawn, $"＋{amount}", UiKit.Heal, true, 3.20f, amount >= 25 ? 2.05f : 1.55f);
+        Float(pawn, "回復", UiKit.Heal, false, 2.86f, 0.86f);
+        MakeGroundRing(pawn.Home, UiKit.Heal, 0.86f, 0.44);
     }
 
     private void MakeBeam(Vector3 from, Vector3 to, Color color, float width, double duration)

@@ -18,6 +18,7 @@ public partial class BattlePawn3D : Node3D
     private Label3D _seat = null!;
     private Label3D _stats = null!;
     private Label3D _status = null!;
+    private Label3D _forecast = null!;
     private Vector3 _home;
     private Color _baseTint;
     private Texture2D _atlas = null!;
@@ -180,6 +181,13 @@ void fragment() {
         _status.Position = new Vector3(0, statusY, 0);
         AddChild(_status);
 
+        // 溜めの予告（第125期 段3-b）。**ターンをまたいで残る**ので `_status` とは別に持つ
+        // （`SetTurn` が毎ターン status を消すので、そこへ書くと予告が次の手番まで残らない）。
+        _forecast = MakeLabel("", 17, UiKit.Gold, 0.0056f);
+        _forecast.Position = new Vector3(0, statusY + 0.19f, 0);
+        _forecast.Visible = false;
+        AddChild(_forecast);
+
         SetHp(Hp);
         SetAttack(AttackValue, Pattern);
     }
@@ -224,10 +232,24 @@ void fragment() {
         _turnRing.Scale = Vector3.One * (paused ? 0.92f : 1.0f);
     }
 
+    /// <summary>いま出している状態異常の札（第125期 段3-e。画面下の一覧が引く）。</summary>
+    public string StatusText => _status?.Text ?? "";
+
     public void SetStatus(string value)
     {
         _status.Text = value;
         _status.Visible = !string.IsNullOrWhiteSpace(value);
+    }
+
+    /// <summary>
+    /// 次の手番に何が来るかの予告（第125期 段3-b）。<b>溜めは画面上ただの空白のターン</b>なので、
+    /// 予告が無いと「ためている感」が出ない。<c>Charge</c> は次の倍率・攻撃型・名前を
+    /// 全部持っている（`BattleEventKind.Charge` の明文）ので、台本だけで書ける。
+    /// </summary>
+    public void SetForecast(string value)
+    {
+        _forecast.Text = value;
+        _forecast.Visible = _alive && !string.IsNullOrWhiteSpace(value);
     }
 
     public void AnimateAttack(Vector3 direction)
@@ -273,6 +295,7 @@ void fragment() {
         _ring.Visible = false;
         _turnRing.Visible = false;
         _status.Visible = false;
+        _forecast.Visible = false;
         _name.Visible = false;
         _stats.Visible = false;
         var tween = CreateTween().SetParallel();
