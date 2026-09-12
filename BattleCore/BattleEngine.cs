@@ -2973,6 +2973,36 @@ public sealed class BattleContext
         => Emit(new BattleEvent { Kind = BattleEventKind.TurnStart, Turn = _turn });
 
     /// <summary>
+    /// 介入が主目標を差し替えたことを台本に打つ（第125期・<b>表示専用</b>）。
+    ///
+    /// <para><b>盤面は1ビットも触らない。</b> <c>verbose</c> のときだけ積むのは他の
+    /// <c>Emit*</c> と同じで、<b>計数（<see cref="UnitTally.Intercepts"/>）は
+    /// <c>verbose</c> に依らず積む</b>——`UnitTally` は 200 seed の一括シミュレーションで
+    /// 平均を取るためのもので、ここを verbose で切ると測りたいときに測れない。</para>
+    ///
+    /// <para><b>呼ぶのは差し替えが実際に起きた段だけ。</b> 標の段の
+    /// <c>marked == target</c>（もともと主目標だった）は鎖の計数を動かさない既存の作法に揃える。</para>
+    /// </summary>
+    /// <param name="guard">割り込んだ駒。</param>
+    /// <param name="target">本来の標的。</param>
+    /// <param name="label">どの段か（<see cref="InterceptLabels"/> の5つのどれか）。</param>
+    private void EmitIntercept(UnitState guard, UnitState target, string label)
+    {
+        TallyOf(guard).Intercepts++;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Intercept,
+            Turn = _turn,
+            ActorId = guard.InstanceId,
+            TargetId = target.InstanceId,
+            Slot = guard.Slot,
+            HpAfter = guard.Hp,
+            Team = guard.TeamId,
+            Text = label,
+        });
+    }
+
+    /// <summary>
     /// 溜めを台本に打つ。**次の手番に何が来るかをこの1件で読めること**が要件
     /// （溜めは画面上「何も起きないターン」なので、予告が無いとただの空白になる）。
     /// 次の行動が攻撃型を上書きしないなら、いま実際に使う型（CurrentPattern）を載せる。
@@ -3261,6 +3291,7 @@ public sealed class BattleContext
             {
                 Log($"    {rearAny.Name} が後列の {target.Name} の前に入った", LogKind.Trigger);
                 NoteGuardPick(GuardKind.RearGuard, rearAny, target);   // 第120期・§2-5 の材料
+                EmitIntercept(rearAny, target, InterceptLabels.RearGuard);   // 第125期 段1（表示専用）
                 return rearAny;
             }
             return target;
@@ -3297,6 +3328,7 @@ public sealed class BattleContext
                 else DivertFoePulls++;
             }
             Log($"    敵は {marked.Name} に気を取られた", LogKind.Trigger);
+            EmitIntercept(marked, target, InterceptLabels.Mark);   // 第125期 段1（表示専用）
             return marked;
         }
 
@@ -3307,6 +3339,7 @@ public sealed class BattleContext
         {
             Log($"    {rear.Name} が後列の {target.Name} の前に入った", LogKind.Trigger);
             NoteGuardPick(GuardKind.RearGuard, rear, target);   // 第120期・§2-5 の材料
+            EmitIntercept(rear, target, InterceptLabels.RearGuard);   // 第125期 段1（表示専用）
             return rear;
         }
 
@@ -3319,6 +3352,7 @@ public sealed class BattleContext
             // 肩代わりで受けた分だけ伸びる（GuardianTrait 参照）。素の被弾と区別するための印。
             guardian.SetCounter(GuardianTrait.PendingKey, 1);
             NoteGuardPick(GuardKind.Guardian, guardian, target);   // 第120期・§2-5 の材料
+            EmitIntercept(guardian, target, InterceptLabels.Guardian);   // 第125期 段1（表示専用）
             return guardian;
         }
 
@@ -3342,6 +3376,7 @@ public sealed class BattleContext
             Log($"    {martyr.Name} が {target.Name} を庇った", LogKind.Trigger);
             martyr.SetCounter(RedirectGainTrait.PendingKey, 1);
             NoteGuardPick(GuardKind.Martyr, martyr, target);   // 第120期・§2-5 の材料
+            EmitIntercept(martyr, target, InterceptLabels.Martyr);   // 第125期 段1（表示専用）
             return martyr;
         }
 
@@ -3366,6 +3401,7 @@ public sealed class BattleContext
             // スロット + 1 を格納し、0 を「なし」とする（スロット0 と未設定の区別）
             thornGuard.SetCounter(ThornGuardTrait.PartnerKey, target.Slot + 1);
             NoteGuardPick(GuardKind.ThornGuard, thornGuard, target);   // 第120期・§2-5 の材料
+            EmitIntercept(thornGuard, target, InterceptLabels.ThornGuard);   // 第125期 段1（表示専用）
             return thornGuard;
         }
 
@@ -4123,6 +4159,9 @@ public sealed class BattleContext
         HpRemoved += hpBefore120 - Math.Max(0, target.Hp);
         // 燃焼の刻みが実際に削った量（第57期）。**すべての増減を通した後の値**。
         if (burnTick) TallyOf(target).BurnTaken += amount;
+        // 第125期 段1。**中継の段が実際に削った量**（巨躯・分かち）。`Swallowed`（名目量）とは別物。
+        // **誰も読んで分岐しない。**
+        if (relayed) TallyOf(target).Shouldered += amount;
         Log($"    {target.Name} に {amount} ダメージ (残り {Math.Max(0, target.Hp)})",
             isFriendlyFire ? LogKind.FriendlyFire : LogKind.Damage);
         Emit(new BattleEvent

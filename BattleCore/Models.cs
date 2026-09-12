@@ -897,6 +897,30 @@ public sealed class UnitTally
     public int Swallowed;
 
     /// <summary>
+    /// <b>割り込んで主目標を引き受けた回数</b>（第125期・<c>SelectTargetChain</c> の全段）。
+    /// 庇う・後備え・棘守り・殉教、および標（<c>StatusKeys.Marked</c>）が引いたぶん。
+    ///
+    /// <para>第124期に戦績パネルの「庇い」列を <c>—</c> で出したのはこの計数が1本も無かったため
+    /// （Q0-3）。<b><see cref="DamageTaken"/> が増えるだけでは「庇ったから増えた」と
+    /// 「殴られたから増えた」が数字から分けられない。</b></para>
+    ///
+    /// <para><b>差し替えが実際に起きた段だけ数える</b>——標の段の
+    /// <c>marked == target</c>（もともと主目標だった）は鎖の計数を動かさない既存の作法に揃える。
+    /// <b>誰も読んで分岐しない。</b></para>
+    /// </summary>
+    public int Intercepts;
+
+    /// <summary>
+    /// <b>肩代わりの中継で引き受けたダメージの合計</b>（第125期・<c>relayed</c> の札が立った段）。
+    /// 巨躯（ゴルム）と分かち（ドハ）の2経路。
+    ///
+    /// <para><see cref="Swallowed"/> は巨躯が<b>飲み込んだ名目量</b>（吐き戻しと同じ場所・同じ量）で、
+    /// こちらは<b>中継された段が実際に HP を削った量</b>——破片・据え・軛を通した後の値なので
+    /// 別物である。<b>誰も読んで分岐しない。</b></para>
+    /// </summary>
+    public int Shouldered;
+
+    /// <summary>
     /// まどろんだ回数（腹が満ちて手番を失った回数）。第36期。<see cref="Swallowed"/> と同じ扱いで
     /// 既存の出力には出さない。
     /// </summary>
@@ -1387,6 +1411,7 @@ public sealed class UnitTally
         Healed += o.Healed;
         Charges += o.Charges; BigAttacks += o.BigAttacks;
         Swallowed += o.Swallowed; Slumbers += o.Slumbers;
+        Intercepts += o.Intercepts; Shouldered += o.Shouldered;
         Refunds += o.Refunds; Refunded += o.Refunded;
         Kills += o.Kills; Deaths += o.Deaths;
         Whetted += o.Whetted; Dulled += o.Dulled;
@@ -1507,7 +1532,49 @@ public enum BattleEventKind
     /// 毒が積まれていない）はこの1件しか残らない**が、残らないと画面上は手番を飛ばした
     /// のと区別が付かない。溜めと同じ理由で、条件を付けずに必ず打つ。
     /// </summary>
-    Skill
+    Skill,
+
+    /// <summary>
+    /// 介入が主目標を差し替えた（第125期・<b>表示専用</b>）。
+    /// <c>SelectTargetChain</c> の全段（標的・後備え・庇う・殉教・棘守り）が1件ずつ出す。
+    ///
+    /// <para><b>台本に無かった唯一の「手番の外」だった</b>——割り込み（棘・仇討ち・軋み）は
+    /// <see cref="BattleEvent.Reaction"/>、肩代わり（巨躯・分かち）は
+    /// <see cref="BattleEvent.Relayed"/> で既に立っていたが、<b>庇いは
+    /// <c>Log</c> の文字列にしか書かれていなかった</b>（第123期 (iii) ／ 第124期 Q0-3）。
+    /// 駒は1ミリも動かず被弾者が入れ替わるだけなので、画面では「ガルドが殴られた」としか見えない。</para>
+    ///
+    /// <para><c>ActorId</c> = <b>割り込んだ駒</b>、<c>TargetId</c> = <b>本来の標的</b>、
+    /// <c>Text</c> = どの段か（<see cref="InterceptLabels"/>）。
+    /// <b>どの規則も読まない。</b> <see cref="Reaction"/> / <see cref="BattleEvent.Relayed"/> と
+    /// 同じ表示専用の札で、盤面には一切影響しない。</para>
+    /// </summary>
+    Intercept
+}
+
+/// <summary>
+/// 介入の段の名前（第125期・<b>表示専用</b>）。<see cref="BattleEventKind.Intercept"/> の
+/// <c>Text</c> に入る文字列はこの5つで全部。
+///
+/// <para><b>定数で持つのは、段の数を機械で数えられるようにするため</b>——受け入れ条件 A3 は
+/// 「<c>SelectTargetChain</c> が列挙した段の数」と「実際に出したイベントの種類数」の一致で、
+/// 文字列リテラルを直に書くと走査が「該当なし」と「引けなかった」を区別できない（第117期）。</para>
+/// </summary>
+public static class InterceptLabels
+{
+    /// <summary>標（<c>StatusKeys.Marked</c>）が主目標を引いた。鎖の1段目。</summary>
+    public const string Mark = "標的";
+    /// <summary>後備え（セッキ）。<b>範囲攻撃にも割り込む</b>ので呼び出し口が2つある。</summary>
+    public const string RearGuard = "後備え";
+    /// <summary>庇う（ガルド）。</summary>
+    public const string Guardian = "庇う";
+    /// <summary>殉教（敵の殉教者）。庇うと挙動は1行も違わない（割合だけ別）。</summary>
+    public const string Martyr = "殉教";
+    /// <summary>棘守り（カド）。鎖の最後。</summary>
+    public const string ThornGuard = "棘守り";
+
+    /// <summary>全段。<b>鎖の並び順</b>（標的 → 後備え → 庇う → 殉教 → 棘守り）で持つ。</summary>
+    public static readonly string[] All = { Mark, RearGuard, Guardian, Martyr, ThornGuard };
 }
 
 /// <summary>
