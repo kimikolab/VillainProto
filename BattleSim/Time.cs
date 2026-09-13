@@ -37,8 +37,9 @@ static class TimeDiag
         switch (mode)
         {
             case "phase0": Phase0(); return;
+            case "run": RunTables(); return;
             default:
-                Console.WriteLine("time: モードは phase0 のみ（第126期 Phase 0）。");
+                Console.WriteLine("time: モードは phase0 / run（第126期）。");
                 return;
         }
     }
@@ -693,6 +694,340 @@ static class TimeDiag
                 + $"| **{g.Average(p => p.Alive):F2}** | {g.Average(p => p.PerT):F1} "
                 + $"| {(gp.Count == 0 ? "—" : gp.Average(p => p.Paper).ToString("F2"))} |");
         }
+        Console.WriteLine();
+    }
+
+    // ==================================================================================
+    // 段2 —— 時間を買う機構をローカル台で測る（3案 × 対照）
+    //
+    // **台は第117期のものをそのまま使う**（前1 = 死なない / 中央 = 育つ / 前3・後1・後3 = 土台3枚）。
+    // **`Presets` も `EnemyCatalog.Stages` も `UnitCatalog.All` も1文字も触らない。**
+    // 機構は**中央（育つ駒）に載せる**——§5-2 の判定が「育つ駒の生存T」なので、
+    // 載せ先が育つ駒でなければ判定そのものが成立しない。
+    // ==================================================================================
+    const int Half = 3;                              // 前半3T / 後半3T（第117期と同じ）
+    const int MinTurns = 2 * Half;                   // 前半と後半が重ならない最短の戦
+    static readonly int[] Waves = { 1, 2, 3, 4 };    // 第2〜5波（規約 (G10)）
+
+    static IReadOnlyList<EnemyCatalog.Stage> Stages => EnemyCatalog.Stages;
+
+    static UnitDef[] _grow = Array.Empty<UnitDef>();
+    static UnitDef[] _hold = Array.Empty<UnitDef>();
+    static UnitDef[] _fill = Array.Empty<UnitDef>();
+
+    /// <summary>版。<b>V0 が対照</b>（何も載せない）。</summary>
+    enum Ver { V0, A, B, C }
+
+    static readonly (Ver V, string Name, TraitId? Extra)[] Versions =
+    {
+        (Ver.V0, "V0 対照",     null),
+        (Ver.A,  "案A 自己回復", TraitId.Regen),
+        (Ver.B,  "案B 猶予",     TraitId.Reprieve),
+        (Ver.C,  "案C 育ち耐性", TraitId.Tempered),
+    };
+
+    /// <summary>土台を第117期と同じ規則で組む（実装から引く。<b>空なら止める</b>）。</summary>
+    static bool InitStand()
+    {
+        _grow = new[] { UnitCatalog.Mudo, UnitCatalog.Kado, UnitCatalog.Yomi, UnitCatalog.Utsu };
+        _hold = new[] { UnitCatalog.Gald, UnitCatalog.Vel, UnitCatalog.Mug, UnitCatalog.Golm };
+        var eight = _grow.Concat(_hold).ToArray();
+
+        // 埋め草は第117期／第118期と同じ規則（攻撃力を書かない・読まない・巻き込まない・
+        // 移動を供給しない・紙でない）に、**回復しない**を足したもの——案A と交絡するため。
+        var pool = new List<UnitDef>();
+        foreach (UnitDef d in UnitCatalog.All)
+        {
+            if (eight.Contains(d)) continue;
+            if (Has(d, "ctx.Whet(", "ctx.Dull(")) continue;                             // 攻撃力を書く
+            if (d.Traits.Any(t => t is TraitId.Overload or TraitId.Perverse)) continue;  // 読む
+            if (Has(d, "isFriendlyFire: true")) continue;                                // 巻き込む
+            if (Has(d, "SwapSlots", "HaulOutPair", "FallBack", "ctx.Summon")) continue;  // 移動
+            if (d.MaxHp < 50) continue;                                                  // 紙
+            if (Has(d, "ctx.Heal(", "ctx.Revive(")) continue;                            // 回復
+            if (Has(d, "self.AtkBonus +=")) continue;                                    // 自己強化
+            pool.Add(d);
+        }
+        pool.Sort(delegate (UnitDef a, UnitDef b)
+        {
+            int c = b.Attack.CompareTo(a.Attack);
+            return c != 0 ? c : string.CompareOrdinal(a.Id, b.Id);
+        });
+        _fill = pool.Take(3).ToArray();
+        return _fill.Length == 3;
+    }
+
+    /// <summary>前1 = 死なない ／ 中央 = 育つ ／ 前3・後1・後3 = 土台3枚（第117期と同じ席）。</summary>
+    static Formation Bench(UnitDef grow, UnitDef hold) => Formation.Build(
+        front1: hold, front3: _fill[0], center: grow, back1: _fill[1], back3: _fill[2]);
+
+    /// <summary>その駒に札を1枚足した版（<b>数値は1つも変えない</b>）。</summary>
+    static UnitDef With(UnitDef d, TraitId? extra) => extra is null ? d : new UnitDef
+    {
+        Id = d.Id + "_" + extra.Value,
+        Name = d.Name,
+        MaxHp = d.MaxHp,
+        Attack = d.Attack,
+        Speed = d.Speed,
+        Pattern = d.Pattern,
+        Traits = d.Traits.Concat(new[] { extra.Value }).ToArray(),
+        Actions = d.Actions,
+    };
+
+    sealed class Agg
+    {
+        public int N, Ok, Wins, Blow, Perfect, GrowFell;
+        public long Early, Late, GrowEarly, GrowLate;
+        public double TurnSum, GrowAlive, SurvSum, GrowAtkMax;
+        public double SurvAll;   // 第82期の `残存度`: **全試行**の生存数（負けは 0）。分母が版で動かない
+        public long OverTurns, AliveTurns;   // 閾値を越えていたターン / ターン頭に生きていたターン
+    }
+
+    static void One(Formation f, Formation enemy, int seed, string growId, int baseAtk, Agg a)
+    {
+        BattleResult r = BattleEngine.Run(f, enemy, seed, verbose: false, boss: new BossRule(true));
+        int L = Math.Max(1, r.Turns);
+        a.N++;
+        a.TurnSum += L;
+        if (r.PlayerWon)
+        {
+            a.Wins++;
+            a.SurvSum += r.PlayerSurvivors;
+            a.SurvAll += r.PlayerSurvivors;   // 負けた試行は 0 のまま（分母は全試行）
+            if (r.PlayerSurvivors >= 4) a.Blow++;
+            if (r.PlayerSurvivors >= f.Occupied().Count()) a.Perfect++;
+        }
+
+        bool ok = L >= MinTurns;
+        if (ok) a.Ok++;
+
+        // 味方全体の与ダメ（前半3T / 後半3T）。
+        // **戦ごとの比を平均しない。合計どうしを割る**（第117期と同じ）。
+        if (ok)
+        {
+            var team = new int[BattleEngine.MaxTurns + 2];
+            foreach ((int _, UnitDef d) in f.Occupied())
+            {
+                if (!r.TallyByUnit.TryGetValue(d.Id, out UnitTally? t)) continue;
+                int[]? by = t.BossDmgByTurn;
+                if (by is null) continue;
+                for (int i = 0; i < team.Length && i < by.Length; i++) team[i] += by[i];
+            }
+            for (int t = 1; t <= Math.Min(Half, L); t++) a.Early += team[t];
+            for (int t = Math.Max(1, L - Half + 1); t <= L && t < team.Length; t++) a.Late += team[t];
+        }
+
+        if (r.TallyByUnit.TryGetValue(growId, out UnitTally? g))
+        {
+            a.GrowAlive += g.BossLastAliveTurn;
+            if (g.Deaths >= 1) a.GrowFell++;
+            int[] atk = g.BossAtkByTurn ?? Array.Empty<int>();
+            int mx = 0;
+            for (int t = 1; t <= L && t < atk.Length; t++)
+            {
+                if (atk[t] <= 0) continue;          // 倒れた後のターンは数えない
+                if (atk[t] > mx) mx = atk[t];
+                a.AliveTurns++;
+                // **到達（最大）ではなく到着（そのターン効いていたか）**（第115期）。
+                if (atk[t] - baseAtk > TemperedTrait.Threshold) a.OverTurns++;
+            }
+            a.GrowAtkMax += mx;
+            // 育つ駒**だけ**の傾き（§4-2）。
+            int[]? by = g.BossDmgByTurn;
+            if (ok && by is not null)
+            {
+                for (int t = 1; t <= Math.Min(Half, L) && t < by.Length; t++) a.GrowEarly += by[t];
+                for (int t = Math.Max(1, L - Half + 1); t <= L && t < by.Length; t++) a.GrowLate += by[t];
+            }
+        }
+    }
+
+    static double Slope(long early, long late, int ok)
+        => ok == 0 || early <= 0 ? 0 : late / (double)early;
+
+    static void RunTables()
+    {
+        if (!InitStand())
+        {
+            Console.WriteLine("time: 埋め草が3枚そろわない。**走査が空なら止める**（第117期）。");
+            return;
+        }
+
+        Console.WriteLine("# 第126期 段2 —— 時間を買う機構をローカル台で測る");
+        Console.WriteLine();
+        Console.WriteLine("`dotnet run --project BattleSim -c Release 0 time run` の出力。");
+        Console.WriteLine("**台は第117期のもの**（前1 = 死なない ／ 中央 = 育つ ／ 前3・後1・後3 = 土台3枚）。");
+        Console.WriteLine($"土台3枚は実装から引いた: **{string.Join("・", _fill.Select(d => d.Name))}**"
+            + "（攻撃力を書かない・読まない・巻き込まない・移動を供給しない・回復しない・"
+            + "自己強化しない・HP 50 以上のうち攻撃力の上位3枚）。");
+        Console.WriteLine($"育つ4枚 × 死なない4枚 = **16 組** × 4版 × 第2〜5波 × seed 0..{Seeds - 1}。");
+        Console.WriteLine();
+        Console.WriteLine("**機構は中央（育つ駒）に載せる**——§5-2 の判定が「育つ駒の生存T」なので、"
+            + "載せ先が育つ駒でなければ判定が成立しない。**数値は1つも変えず、札を1枚足すだけ。**");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 中身 |");
+        Console.WriteLine("|---|---|");
+        Console.WriteLine("| V0 対照 | 何も載せない |");
+        Console.WriteLine($"| 案A 自己回復 | `Regen`——毎ターン自分の HP を **{RegenTrait.Amount}** 戻す"
+            + "（`ctx.Heal` を通る＝渇きが止める） |");
+        Console.WriteLine("| 案B 猶予 | `Reprieve`——致死の一撃を**1戦に1度だけ** HP1 で耐える |");
+        Console.WriteLine($"| 案C 育ち耐性 | `Tempered`——`AtkBonus` が **{TemperedTrait.Threshold}** を越えた分 "
+            + $"**{TemperedTrait.PerPercent}** につき被ダメ −1%（上限 **{TemperedTrait.MaxPercent}%**） |");
+        Console.WriteLine();
+        Console.WriteLine("**3案とも代金を付けていない**（受け入れ条件 A6・§4-2 の注意）——素の効き方を先に測る。");
+        Console.WriteLine();
+
+        var cell = new Dictionary<(int, int, Ver), Agg>();
+        for (int gi = 0; gi < _grow.Length; gi++)
+            for (int hi = 0; hi < _hold.Length; hi++)
+                foreach ((Ver v, string _, TraitId? extra) in Versions)
+                {
+                    UnitDef grow = With(_grow[gi], extra);
+                    Formation f = Bench(grow, _hold[hi]);
+                    var a = new Agg();
+                    foreach (int w in Waves)
+                        for (int seed = 0; seed < Seeds; seed++)
+                            One(f, Stages[w].Enemy, seed, grow.Id, _grow[gi].Attack, a);
+                    cell[(gi, hi, v)] = a;
+                }
+
+        // --- 表A: 組ごとの育つ駒の生存T ------------------------------------------------
+        Console.WriteLine("## 表A —— 育つ駒の生存T（§5-2 の条件1。線は V0 比 **+1.0T**）");
+        Console.WriteLine();
+        Console.WriteLine("| 育つ駒 | 死なない駒 | V0 | 案A | Δ | 案B | Δ | 案C | Δ |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|");
+        for (int gi = 0; gi < _grow.Length; gi++)
+            for (int hi = 0; hi < _hold.Length; hi++)
+            {
+                Agg z = cell[(gi, hi, Ver.V0)];
+                double b0 = z.GrowAlive / z.N;
+                var line = new List<string>();
+                foreach (Ver v in new[] { Ver.A, Ver.B, Ver.C })
+                {
+                    Agg a = cell[(gi, hi, v)];
+                    double x = a.GrowAlive / a.N;
+                    double d = x - b0;
+                    line.Add($"{x:F2} | {(d >= 1.0 ? $"**+{d:F2}**" : d.ToString("+0.00;-0.00;0.00"))}");
+                }
+                Console.WriteLine($"| {_grow[gi].Name} | {_hold[hi].Name} | {b0:F2} | {string.Join(" | ", line)} |");
+            }
+        Console.WriteLine();
+
+        // --- 表A' : 門（案C の入力は実在するか）------------------------------------------
+        //
+        // **案C は `AtkBonus` を読む。** 読む相手が無ければ「効かなかった」ではなく「測っていない」
+        // （第61期）。`到達攻` は `BossAtkByTurn` の最大＝ターン頭の `CurrentAttack` の最大なので、
+        // **素の攻撃力と一致していたら `AtkBonus` は一度も動いていない。**
+        Console.WriteLine("## 表A' —— 門: 案C の入力（`AtkBonus`）は実在するか");
+        Console.WriteLine();
+        Console.WriteLine("`到達攻` は V0 でのターン頭 `CurrentAttack` の最大（`BossAtkByTurn`）。");
+        Console.WriteLine("**素の攻撃力と一致していたら `AtkBonus` は一度も動いていない**"
+            + $"——案C の閾値は `AtkBonus > {TemperedTrait.Threshold}` なので、そこには1度も届かない。");
+        Console.WriteLine();
+        Console.WriteLine("| 育つ駒 | 素の攻 | 到達攻(V0) | 伸び | 届きうるか | **閾値超のターン割合** | 案C の Δ生存T |");
+        Console.WriteLine("|---|--:|--:|--:|:-:|--:|--:|");
+        for (int gi = 0; gi < _grow.Length; gi++)
+        {
+            double mx = 0, dA = 0;
+            int n = 0;
+            long over = 0, alv = 0;
+            for (int hi = 0; hi < _hold.Length; hi++)
+            {
+                Agg z = cell[(gi, hi, Ver.V0)], c = cell[(gi, hi, Ver.C)];
+                mx += z.GrowAtkMax / z.N;
+                dA += c.GrowAlive / c.N - z.GrowAlive / z.N;
+                over += c.OverTurns; alv += c.AliveTurns;   // **案C の版で数える**（実際に効いた側）
+                n++;
+            }
+            mx /= n; dA /= n;
+            double pct = alv == 0 ? 0 : over * 100.0 / alv;
+            double grow = mx - _grow[gi].Attack;
+            Console.WriteLine($"| {_grow[gi].Name} | {_grow[gi].Attack} | {mx:F1} | {grow:+0.0;-0.0;0.0} "
+                + $"| {(grow > TemperedTrait.Threshold ? "**○**" : "**× 届かない**")} "
+                + $"| **{pct:F1}%** | {dA:+0.00;-0.00;0.00} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("> **`到達攻` が素の攻撃力と同じ駒では、案C は1度も発火していない。**"
+            + " その行の `Δ生存T = 0.00` は「効かなかった」ではなく**「測っていない」**（第61期）。");
+        Console.WriteLine();
+
+        EmitVersionSummary(cell);
+    }
+
+    static void EmitVersionSummary(Dictionary<(int, int, Ver), Agg> cell)
+    {
+        Console.WriteLine("## 表B —— 版ごとの通算（16 組をまとめる）");
+        Console.WriteLine();
+        Console.WriteLine("`傾き` は後半3T の与ダメ ÷ 前半3T の与ダメ（分母は **L ≥ 6 の戦だけ**・第117期と同じ。"
+            + "**戦ごとの比を平均せず、合計どうしを割る**）。`育つ駒の傾き` は同じ計算をその駒の与ダメだけで。");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 育つ駒の生存T | Δ | 落ち率 | 到達攻 | 傾き | 育つ駒の傾き "
+            + "| 決着T | 勝率 | 残存 | **残存度** | 圧勝率 | 完全勝利 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        double baseAlive = 0;
+        foreach ((Ver v, string name, TraitId? _) in Versions)
+        {
+            int n = 0, ok = 0, wins = 0, blow = 0, perf = 0, fell = 0;
+            long e = 0, l = 0, ge = 0, gl = 0;
+            double ga = 0, ts = 0, ss = 0, mx = 0, sa = 0;
+            for (int gi = 0; gi < _grow.Length; gi++)
+                for (int hi = 0; hi < _hold.Length; hi++)
+                {
+                    Agg a = cell[(gi, hi, v)];
+                    n += a.N; ok += a.Ok; wins += a.Wins; blow += a.Blow; perf += a.Perfect; fell += a.GrowFell;
+                    e += a.Early; l += a.Late; ge += a.GrowEarly; gl += a.GrowLate;
+                    ga += a.GrowAlive; ts += a.TurnSum; ss += a.SurvSum; mx += a.GrowAtkMax;
+                    sa += a.SurvAll;
+                }
+            double alive = ga / n;
+            if (v == Ver.V0) baseAlive = alive;
+            Console.WriteLine($"| {name} | **{alive:F2}** "
+                + $"| {(v == Ver.V0 ? "—" : (alive - baseAlive).ToString("+0.00;-0.00;0.00"))} "
+                + $"| {fell * 100.0 / n:F1}% | {mx / n:F1} | {Slope(e, l, ok):F2} | {Slope(ge, gl, ok):F2} "
+                + $"| {ts / n:F2} | {wins * 100.0 / n:F1}% "
+                + (wins == 0 ? "| — | — | — | — |"
+                             : $"| {ss / wins:F2} | **{sa / n:F2}** | {blow * 100.0 / wins:F1}% "
+                               + $"| **{perf * 100.0 / wins:F1}%** |"));
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## 表C —— §5-2 の採否（条件1と2の両方を満たした案だけが段3 へ進む）");
+        Console.WriteLine();
+        Console.WriteLine("| 案 | 条件1 生存T +1.0T 以上 | 条件2 育つ駒の傾きが V0 超 | 条件3 残存が上がる | 段3 へ |");
+        Console.WriteLine("|---|:-:|:-:|:-:|:-:|");
+        double v0Alive = 0, v0Slope = 0, v0Surv = 0;
+        foreach ((Ver v, string name, TraitId? _) in Versions)
+        {
+            int n = 0, ok = 0, wins = 0;
+            long ge = 0, gl = 0;
+            double ga = 0, ss = 0;
+            for (int gi = 0; gi < _grow.Length; gi++)
+                for (int hi = 0; hi < _hold.Length; hi++)
+                {
+                    Agg a = cell[(gi, hi, v)];
+                    n += a.N; ok += a.Ok; wins += a.Wins;
+                    ge += a.GrowEarly; gl += a.GrowLate; ga += a.GrowAlive; ss += a.SurvSum;
+                }
+            double alive = ga / n, sl = Slope(ge, gl, ok), sv = wins == 0 ? 0 : ss / wins;
+            if (v == Ver.V0) { v0Alive = alive; v0Slope = sl; v0Surv = sv; continue; }
+            bool c1 = alive - v0Alive >= 1.0, c2 = sl > v0Slope, c3 = sv > v0Surv;
+            Console.WriteLine($"| {name} | {(c1 ? "**○**" : "×")} ({(alive - v0Alive).ToString("+0.00;-0.00;0.00")}) "
+                + $"| {(c2 ? "**○**" : "×")} ({sl:F2} 対 {v0Slope:F2}) "
+                + $"| {(c3 ? "○" : "×")} ({sv:F2} 対 {v0Surv:F2}) "
+                + $"| {(c1 && c2 ? "**進める**" : "進めない")} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("**条件1 と 条件2 の両方を満たした案だけを段3 へ進める**（§5-2）。"
+            + "満たす案が複数なら最も単純なものを採る。**1つも満たさなければ採らない。**");
+        Console.WriteLine();
+        Console.WriteLine("> **条件3 の `残存` は版をまたぐと分母が動く**（規約 (G12)）。"
+            + "`残存` の分母は「勝った試行」なので、**勝率が上がった版では"
+            + "「今まで負けていた難しい戦」が分母に入ってくる**——"
+            + "生存数が減ったのではなく、**ぎりぎりの勝ちが分母に足された**のかもしれない。"
+            + " 表B の **`残存度`**（第82期）は**全試行**が分母で負けを 0 と数えるので、"
+            + "**版をまたいでも分母が動かない。** "
+            + "**条件3 は指示書どおり `残存` で判定した**（第64期・結果を見てから基準を変えない）が、"
+            + "**読むときは `残存度` を併せて見ること。**");
         Console.WriteLine();
     }
 

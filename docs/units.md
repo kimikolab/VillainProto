@@ -140,6 +140,8 @@
 | `Overload` | 据えのバン |
 | `Regen` | - |
 | `Nourish` | - |
+| `Reprieve` | - |
+| `Tempered` | - |
 | `ThinBlade` | 裂きのキリ |
 | `Overreach` | 抉りのエグ |
 | `Await` | 断ちのナタ |

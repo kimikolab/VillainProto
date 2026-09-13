@@ -128,6 +128,15 @@ public enum TraitId
                 // **自己回復とは別の札**にしてあるのは、将来それぞれ単独で配れるようにするため
                 // （第74期「マイナスをプラスと同じ Trait クラスに書くと後から代金が測れない」の系）
 
+    // --- 第126期で足した札（**ローカル台だけで測る。`UnitCatalog.All` には入れない**） ---
+    // どちらも「軸が回る前に落ちる」（第117期）に当てる案で、`Regen`（案A）と並べて測る。
+    Reprieve,   // 猶予: 致死の一撃を1戦に1度だけ HP1 で耐える。**判定は engine の出口にある**
+                // ——入口（ModifyIncomingDamage）だと惨禍(+50%)や脆弱が押し戻して
+                // 「死なない」が守られない（軛と同じ理由・第25期）。札はログを出すだけ
+    Tempered,   // 育ち耐性: 自分の `AtkBonus` が閾値を越えている間、受けるダメージが減る。
+                // **育ちの通貨をそのまま耐久に読み替える**（積み過ぎ＝第115期と同じ「AtkBonus を読む」形）。
+                // 出力と生存が同じ通貨に乗るので、**育つほど落ちにくくなる**
+
     // --- 傷の5枚から切り出したマイナス（第74期・**器具**） ---
     // どれも既存の駒に既定で付いたままで、**盤面は1ビットも変わらない**（受け入れ基準は
     // `compare` 305 セル 0 件）。切り出した理由は1つだけ——**計量できるようにするため**。
@@ -5940,6 +5949,93 @@ public sealed class NourishTrait : Trait
 }
 
 /// <summary>
+/// 猶予（第126期・<b>案B。時間を買う機構の2本目</b>）。
+/// <b>致死の一撃を1戦に1度だけ HP1 で耐える。</b>
+///
+/// <para><b>判定は engine の出口（<c>ApplyDamage</c> の <c>target.Hp -= amount</c> の直前）にある。</b>
+/// この札はログを出すだけで、<b>保持者がいなければ完全に不活性</b>（庇う・分かち・引き受けと同じ形）。
+/// <b>入口（<see cref="Trait.ModifyIncomingDamage"/>）に置いてはいけない</b>——あそこは
+/// 惨禍（<see cref="HavocTrait"/> +50%）や脆弱（<see cref="FrailTrait"/> ×1.5）より<b>手前</b>なので、
+/// 「HP1 で耐える」ように削ったつもりの量を後段が押し戻して**死ぬ**。
+/// 軛（第25期）の「入口ではなく出口で切る」とまったく同じ理由で、
+/// <b>既にそこにある <c>lethal: false</c> のクランプと同じ族</b>である。</para>
+///
+/// <para><b>1戦に1度。</b> 消費したかどうかは <see cref="UsedKey"/> の <c>Counters</c> に持つ
+/// ——<b>Trait インスタンスは全ユニットで共有されるシングルトン</b>なので、
+/// インスタンスフィールドに持つと `layout` の並列実行で壊れる（CLAUDE.md の明文の規則）。</para>
+///
+/// <para><b>会戦の境界では戻す</b>（<see cref="OnCarryOver"/>）。「1戦に1度」の「1戦」は
+/// 部隊戦1回のことなので、持ち越すと2戦目以降が無防備になる。
+/// <c>Counters</c> のキーは特性の私有物で engine は触らないため、ここで明示的に戻す。</para>
+///
+/// <para><b>ノブを持たない。</b> 効果は二値（耐えるか耐えないか）で、振れる量が無い
+/// ——対照は「素体に差し替える」で取る（第69期の標準器具）。</para>
+/// </summary>
+public sealed class ReprieveTrait : Trait
+{
+    /// <summary>この戦闘で既に使ったか（<c>Counters</c> のキー。<b>特性の私有物</b>）。</summary>
+    public const string UsedKey = "reprieveUsed";
+
+    public override TraitId Id => TraitId.Reprieve;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+        => ctx.Log($"  {self.Name} はまだ倒れるわけにいかない（致死の一撃を1度だけ耐える）", LogKind.Trigger);
+
+    /// <summary>会戦の境界で戻す。<b>「1戦に1度」の1戦は部隊戦1回。</b></summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(UsedKey, 0);
+}
+
+/// <summary>
+/// 育ち耐性（第126期・<b>案C。出力と生存を同じ通貨に乗せる</b>）。
+/// <b>自分の <c>AtkBonus</c> が閾値を越えている間、受けるダメージが減る。</b>
+///
+/// <para><b>読むのは <c>AtkBonus</c></b>（積み過ぎ＝<see cref="OverloadTrait"/>・第115期と同じ）。
+/// 育ちの通貨をそのまま耐久に読み替えるので、<b>育つほど落ちにくくなる</b>。</para>
+///
+/// <para><b>engine には1行も足していない。</b> 窓口は <see cref="Trait.ModifyIncomingDamage"/> で、
+/// これは脆弱（<see cref="FrailTrait"/>）が使っているのと同じ場所・同じ層である
+/// ——<b>自分だけに効く増減</b>なので、味方全体に効く惨禍・据え・散開のように engine 側へ出す理由が無い。</para>
+///
+/// <para><b>だから惨禍の手前にいる。</b> 猶予（<see cref="ReprieveTrait"/>）と違って
+/// これは<b>割合</b>の増減なので、後段の +50% と順序を入れ替えても
+/// 「1発が何点になるか」しか動かず、規則そのものは破れない（崖にならない）。
+/// <b>ただし惨禍と同席すると効き目は目減りする</b>——実測でそう出たらそう書くこと。</para>
+///
+/// <para><b>割合にしたのは、減算だと崖になるから</b>（README の浄化・破片と同じ穴）。
+/// <b>上限（<see cref="MaxPercent"/>）を置く</b>のは、積み上げ系（墓守は三角数で伸びる）と
+/// 組んだときに 100% へ張り付いて<b>不死になる</b>のを止めるため
+/// ——「増幅は必ず加算にする」の耐久側の版である。</para>
+///
+/// <para><b>ノブを持たない</b>（<c>const</c> 3つきり）。対照は素体差し替えで取る。</para>
+/// </summary>
+public sealed class TemperedTrait : Trait
+{
+    /// <summary>ここを越えて初めて効き始める。<b>0 から効かせない</b>（育ちを条件にする機構なので）。</summary>
+    public const int Threshold = 5;
+
+    /// <summary>閾値を越えたぶん、これだけの <c>AtkBonus</c> につき 1% 減らす。</summary>
+    public const int PerPercent = 2;
+
+    /// <summary>減らせる上限（%）。<b>不死を作らないための天井</b>。</summary>
+    public const int MaxPercent = 40;
+
+    public override TraitId Id => TraitId.Tempered;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+        => ctx.Log($"  {self.Name} は力を得るほど硬くなる（攻撃 +{Threshold} 超で軽減・最大 {MaxPercent}%）",
+                   LogKind.Trigger);
+
+    public override int ModifyIncomingDamage(UnitState self, int dmg)
+    {
+        int over = self.AtkBonus - Threshold;
+        if (over <= 0 || dmg <= 0) return dmg;
+        int pct = Math.Min(MaxPercent, over / PerPercent);
+        if (pct <= 0) return dmg;
+        return dmg - dmg * pct / 100;
+    }
+}
+
+/// <summary>
 /// 糧の強度（第118期）。<b><c>Gain = 0</c> が「自己回復だけ」の対照になる</b>
 /// ——符号の違う2つの効果を1つの駒に持たせるときの既存の作法（第41期の突き返し・第59期の着火）と同じで、
 /// <b>対照を機構の中に持たせる</b>（第117期 §8-1 の推奨）。
@@ -7329,6 +7425,8 @@ public static class TraitCatalog
         new AwaitTrait(),
         new SealTrait(),
         new RegenTrait(),
+        new ReprieveTrait(),
+        new TemperedTrait(),
         new NourishTrait(),
         new MartyrTrait(),
         new InversionTrait(),

@@ -4129,6 +4129,26 @@ public sealed class BattleContext
         if (!lethal) amount = Math.Min(amount, Math.Max(0, target.Hp - 1));
         if (amount <= 0) return;
 
+        // 猶予（ReprieveTrait・第126期）: 致死の一撃を1戦に1度だけ HP1 で止める。
+        //
+        // **出口に置く。** 入口（ModifyIncomingDamage）だと惨禍（+50%）や脆弱が
+        // 上限を押し戻して「死なない」が守られない——軛（第25期）とまったく同じ理由で、
+        // **1つ上の `lethal: false` のクランプと同じ族**（どちらも「殺さない」制約）。
+        //
+        // 軛より**前**に置いてあるのは、軛が更に切るだけで結果が変わらないのと、
+        // 「殺さない」制約どうしを隣に並べたほうが読めるため（軛のコメントと同じ判断）。
+        //
+        // **保持者がいなければ1ビットも動かない。** `amount >= target.Hp` を先に見るのは
+        // 特性の走査を毎回の被弾で走らせないため（軛と同じ作法。layout は数百万戦を並列で回す）。
+        if (amount >= target.Hp && target.Hp > 1
+            && target.HasTrait(TraitId.Reprieve)
+            && target.RawCounter(ReprieveTrait.UsedKey) == 0)
+        {
+            target.SetCounter(ReprieveTrait.UsedKey, 1);
+            amount = target.Hp - 1;
+            Log($"    {target.Name} は倒れるはずの一撃を堪えた（残り 1）", LogKind.Trigger);
+        }
+
         // 軛（YokeTrait）: 保持者が盤上に生きている間、1回のダメージは上限で切られる。
         // **両陣営にかかる。** 非対称なのは「こちらはそのルールを知って編成を組めるが、
         // 敵は組めない」点だけ（逆位・渇きと同じ）。

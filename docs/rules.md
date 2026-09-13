@@ -50,7 +50,7 @@
 | 37 | `loose` | `LooseRule` | `LooseRule { Shove = True }` |  | `tempo` / `hold` / `hold2` / `ledger` / `lit` | 第106期〜 | ○ |
 | 38 | `taillight` | `TaillightRule` | `TaillightRule { Mode = OwnTurnWindow, Filter = ActingNow }` |  | `tomo` / `ledger` / `lit` | 第110期〜 | ○ |
 | 39 | `reader` | `ReaderRule` | `ReaderRule { Threshold = 5 }` |  | `reader` / `boss` / `tank` | 第115期〜 | ○ |
-| 40 | `boss` | `BossRule` | `BossRule { Census = False }` | ○ | `seats` / `boss` / `tank` / `demo` | 第117期〜 | ○ |
+| 40 | `boss` | `BossRule` | `BossRule { Census = False }` | ○ | `seats` / `boss` / `tank` / `time` / `demo` | 第117期〜 | ○ |
 | 41 | `nourish` | `NourishRule` | `NourishRule { Gain = 2 }` |  | `tank` / `time` | 第117期〜 | ○ |
 | 42 | `wound` | `WoundRule` | `WoundRule { Enabled = True, Census = False }` |  | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `cross` | 第85期〜 | ○ |
 
@@ -66,7 +66,7 @@
 | `BearRule` | `BearRule { ArmorPerDull = 2 }` | ○ | `curse` / `dull` / `ledger` | 第42期〜 |
 | `BetrayRule` | `BetrayRule { Enabled = True, Respawn = True }` | ○ | `betray` / `tempo` / `ledger` | 第103期〜 |
 | `BlazeRule` | `BlazeRule { Targets = Both, Allies = True, Foes = True }` | ○ | `blaze` / `ledger` | 第59期〜 |
-| `BossRule` | `BossRule { Census = False }` | ○ | `seats` / `boss` / `tank` / `demo` | 第117期〜 |
+| `BossRule` | `BossRule { Census = False }` | ○ | `seats` / `boss` / `tank` / `time` / `demo` | 第117期〜 |
 | `BoundaryRule` | `BoundaryRule { Choice = None, Plan = , Active = False }` |  | `chain` / `choice` | 第102期〜 |
 | `ColossusRule` | `ColossusRule { Percent = 90, DamagePerGain = 4, Regurgitate = True, Slumber = False, SlumberThreshold = 60, Refund = True, RefundPercent = 25 }` | ○ | `swap` / `gullet` / `guard` / `whet` / `miasma` / `ledger` | 第35期〜 |
 | `CreakRule` | `CreakRule { Threshold = 0, Source = Whet }` | ○ | `creak` / `traits` / `creak3` | 第66期〜 |
