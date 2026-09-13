@@ -55645,6 +55645,18 @@ if (focusId == "wound2")
     return;
 }
 
+// time モード: 軸が回る前に落ちる問題（第126期）。中身は `Time.cs`。
+// **Phase 0 は盤面を1ビットも動かさない**——読むのは計数
+// （`UnitTally.LastActiveTurn` / `Deaths` / `DamageTaken` / `DamageToEnemy`）だけ。
+// `TankDiag` / `Wound2Diag` と同じく、**ここは振り分けの数行だけ**（Release のビルド時間）。
+//
+//     dotnet run --project BattleSim -c Release 0 time phase0   # Q0-1〜Q0-8
+if (focusId == "time")
+{
+    TimeDiag.Run(args.Length > 2 ? args[2] : "phase0");
+    return;
+}
+
 // handoff モード: 会戦の交代の実態を計測する（第4期 Phase K）。「部隊を1つ足すと突破数の
 // 増分が編成によらずほぼ +1.00」の原因を、仮説 P（第1部隊が敵をほとんど削らずに全滅し、
 // 第2部隊は仕切り直しで1波抜くだけ＝拾えていない）と仮説 Q（拾えてはいるが、第2部隊の
