@@ -51,7 +51,7 @@
 | 38 | `taillight` | `TaillightRule` | `TaillightRule { Mode = OwnTurnWindow, Filter = ActingNow }` |  | `tomo` / `ledger` / `lit` | 第110期〜 | ○ |
 | 39 | `reader` | `ReaderRule` | `ReaderRule { Threshold = 5 }` |  | `reader` / `boss` / `tank` | 第115期〜 | ○ |
 | 40 | `boss` | `BossRule` | `BossRule { Census = False }` | ○ | `seats` / `boss` / `tank` / `demo` | 第117期〜 | ○ |
-| 41 | `nourish` | `NourishRule` | `NourishRule { Gain = 2 }` |  | `tank` | 第117期〜 | ○ |
+| 41 | `nourish` | `NourishRule` | `NourishRule { Gain = 2 }` |  | `tank` / `time` | 第117期〜 | ○ |
 | 42 | `wound` | `WoundRule` | `WoundRule { Enabled = True, Census = False }` |  | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `cross` | 第85期〜 | ○ |
 
 引数 42 本（`verbose` と観測子を除く）。
@@ -86,7 +86,7 @@
 | `MartyrRule` | `MartyrRule { RedirectPercent = 75 }` | ○ | `curse` / `guard` / `gather` / `ledger` | 第35期〜 |
 | `MendRule` | `MendRule { Side = Plain }` | ○ | `curse` / `hex` / `mender` / `gauge` / `hold2` / `ledger` / `wound2` / `cross` | 第86期〜 |
 | `MenderCostRule` | `MenderCostRule { Percent = 50 }` | ○ | `tempo` / `hold` / `hold2` / `ledger` / `lit` / `wound2` | 第106期〜 |
-| `NourishRule` | `NourishRule { Gain = 2 }` | ○ | `tank` | 第117期〜 |
+| `NourishRule` | `NourishRule { Gain = 2 }` | ○ | `tank` / `time` | 第117期〜 |
 | `OverbearRule` | `OverbearRule { Drain = 2 }` | ○ | `slander` / `overbear` | 第46期〜 |
 | `RageRule` | `RageRule { Mode = Amount, Gain = 3 }` | ○ | `tempo` / `hold` / `hold2` | 第106期〜 |
 | `ReaderRule` | `ReaderRule { Threshold = 5 }` | ○ | `reader` / `boss` / `tank` | 第115期〜 |

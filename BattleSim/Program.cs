@@ -40,6 +40,7 @@ if (focusId == "audit")
     var targets = new (string File, string Cmd, bool Depends, bool Sections)[]
     {
         ("balance.md",  "compare", true,  false),
+        ("quality.md",  "compare quality", true, false),   // 第126期 段1
         ("units.md",    "dump",    false, false),
         ("chain.md",    "chain",   true,  false),
         ("ablation.md", "ablate",  true,  true),
@@ -54521,29 +54522,114 @@ if (focusId == "compare")
 
     const int CompareSeeds = 200;
 
+    // 第126期 段1 —— 勝ち方の質（残存・圧勝率・完全勝利・全滅勝ち）。
+    //
+    // **`docs/balance.md` には1文字も足さない。別の生成物（`docs/quality.md`）にする。**
+    // 指示書 §4-1 は「`compare` の出力に足す」と書いているが、**同じ節が挙げている理由
+    // （(G8) の検算が使えなくなる）が、足した瞬間に現実になる**——`docs/balance.md` を読む
+    // 自己検査は「`| ` で始まり `%` を含む行」を**位置で**突き合わせる版（`curse check`）と、
+    // **行名をキーに 2..6 列目を数値として読む**版（`encore check`）の2種類があり、
+    // 勝ち方の質の表は**どちらにも引っかかる**（実測で 61 行 / 293 件のずれが出た）。
+    // **指示書の字と、指示書が挙げた理由が食い違っている場所なので、理由のほうを採る。**
+    //
+    // **戦闘は1回も増えない**——勝率表と同じ `BattleResult` から読むだけ。
+    //
+    //     dotnet run --project BattleSim -c Release 0 compare > docs/balance.md          # 勝率表（不変）
+    //     dotnet run --project BattleSim -c Release 0 compare quality > docs/quality.md  # 勝ち方の質
+    bool cqQuality = args.Length > 2 && args[2] == "quality";
+
     // そのまま docs/balance.md になるので、見出しと注意書きもここで吐く。
     // 手で足した文章はリダイレクトのたびに消えるため、文書の体裁ごと生成物にする。
-    Console.WriteLine("# 勝率表");
-    Console.WriteLine();
-    Console.WriteLine("`dotnet run --project BattleSim -c Release 0 compare > docs/balance.md` の出力。手で編集しない。");
-    Console.WriteLine($"代表編成 × 全ステージ、seed 0..{CompareSeeds - 1} の {CompareSeeds} 試行。");
-    Console.WriteLine();
-
-    // 列はステージ数から作るので、ステージを足しても勝手に増える。
-    // 固定幅で揃えるのはやめた。全角の編成名では桁が合わない（`,-24` は表示幅ではなく文字数を数える）。
-    Console.WriteLine("| 編成 |" + string.Concat(EnemyCatalog.Stages.Select((st, i) => $" 第{i + 1}波 |")));
-    Console.WriteLine("|---|" + string.Concat(EnemyCatalog.Stages.Select(_ => "---:|")));
-    foreach (var (name, f) in builds)
+    if (!cqQuality)
     {
+        Console.WriteLine("# 勝率表");
+        Console.WriteLine();
+        Console.WriteLine("`dotnet run --project BattleSim -c Release 0 compare > docs/balance.md` の出力。手で編集しない。");
+        Console.WriteLine($"代表編成 × 全ステージ、seed 0..{CompareSeeds - 1} の {CompareSeeds} 試行。");
+        Console.WriteLine();
+
+        // 列はステージ数から作るので、ステージを足しても勝手に増える。
+        // 固定幅で揃えるのはやめた。全角の編成名では桁が合わない（`,-24` は表示幅ではなく文字数を数える）。
+        Console.WriteLine("| 編成 |" + string.Concat(EnemyCatalog.Stages.Select((st, i) => $" 第{i + 1}波 |")));
+        Console.WriteLine("|---|" + string.Concat(EnemyCatalog.Stages.Select(_ => "---:|")));
+    }
+
+    var qWins = new int[builds.Length];
+    var qSurv = new double[builds.Length];
+    var qBlow = new int[builds.Length];      // 生存 >= 4（`run` の `圧勝率` と同じ定義）
+    var qPerf = new int[builds.Length];      // 生存 >= 出撃数（**この期の新しい列**）
+    var qNarrow = new int[builds.Length];    // 生存 <= 1
+    var qParty = new int[builds.Length];
+
+    for (int bi = 0; bi < builds.Length; bi++)
+    {
+        (string name, Formation f) = builds[bi];
+        qParty[bi] = f.Occupied().Count();
         var cells = new List<string>();
-        foreach (EnemyCatalog.Stage st in EnemyCatalog.Stages)
+        for (int w = 0; w < EnemyCatalog.Stages.Count; w++)
         {
+            EnemyCatalog.Stage st = EnemyCatalog.Stages[w];
             int wins = 0;
             for (int seed = 0; seed < CompareSeeds; seed++)
-                if (BattleEngine.Run(f, st.Enemy, seed, verbose: false).PlayerWon) wins++;
+            {
+                BattleResult r = BattleEngine.Run(f, st.Enemy, seed, verbose: false);
+                if (!r.PlayerWon) continue;
+                wins++;
+                // **第一波は実行して除外**（規約 (G10)。全行必勝の教習波なので分母に入れない）。
+                if (w == 0) continue;
+                qWins[bi]++;
+                qSurv[bi] += r.PlayerSurvivors;
+                if (r.PlayerSurvivors >= 4) qBlow[bi]++;
+                if (r.PlayerSurvivors >= qParty[bi]) qPerf[bi]++;
+                if (r.PlayerSurvivors <= 1) qNarrow[bi]++;
+            }
             cells.Add($" {wins * 100.0 / CompareSeeds:F1}% |");
         }
-        Console.WriteLine($"| {name} |" + string.Concat(cells));
+        if (!cqQuality) Console.WriteLine($"| {name} |" + string.Concat(cells));
+    }
+
+    if (!cqQuality) return;
+
+    Console.WriteLine("# 勝ち方の質");
+    Console.WriteLine();
+    Console.WriteLine("`dotnet run --project BattleSim -c Release 0 compare quality > docs/quality.md` の出力。手で編集しない。");
+    Console.WriteLine($"代表編成 × 全ステージ、seed 0..{CompareSeeds - 1} の {CompareSeeds} 試行"
+        + "（**勝率表と同じ戦・同じ帯**。戦闘は1回も増えていない）。");
+    Console.WriteLine();
+    Console.WriteLine("**`docs/balance.md` とは別のファイルにしてある。** 勝率表に節を足すと、"
+        + "`docs/balance.md` を読む自己検査（`curse check` は `| ` で始まり `%` を含む行を位置で、"
+        + "`encore check` は行名をキーに 2..6 列目を数値として読む）が両方とも壊れる"
+        + "——実測で 61 行 / 293 件のずれが出た。規約 (G8) の必須1 を守るほうを採った。");
+    Console.WriteLine();
+    Console.WriteLine("## 勝ち方の質（第2〜5波）");
+    Console.WriteLine();
+    Console.WriteLine("**分母は「第2〜5波で勝った試行」**（規約 (G10)。第一波は全行必勝の教習波なので入れない）。");
+    Console.WriteLine("定義は `run` の `RunSolo` から写した——`残存` は勝った試行の平均生存数、");
+    Console.WriteLine("`圧勝率` は生存4体以上、`全滅勝ち` は生存1体以下の割合。");
+    Console.WriteLine();
+    Console.WriteLine("`完全勝利` は**この期に足した列**で、**生存数 ≧ 出撃数**（＝1体も失わずに勝った割合）。");
+    Console.WriteLine("`圧勝率`（4体以上）とは別の量である——`PlayerSurvivors` は戦闘中に湧いた駒");
+    Console.WriteLine("（胞子・餌）も数えるので、`==` ではなく `>=` で書いてある。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 出撃 | 勝った試行 | 残存 | 圧勝率 | **完全勝利** | 全滅勝ち |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|");
+    for (int bi = 0; bi < builds.Length; bi++)
+    {
+        int n = qWins[bi];
+        Console.WriteLine($"| {builds[bi].Name} | {qParty[bi]} | {n} "
+            + (n == 0
+                ? "| — | — | — | — |"
+                : $"| {qSurv[bi] / n:F2} | {qBlow[bi] * 100.0 / n:F1}% "
+                  + $"| **{qPerf[bi] * 100.0 / n:F1}%** | {qNarrow[bi] * 100.0 / n:F1}% |"));
+    }
+
+    int tw = qWins.Sum();
+    if (tw > 0)
+    {
+        Console.WriteLine();
+        Console.WriteLine($"**全 {builds.Length} 行の通算**（勝った試行 {tw}）: "
+            + $"残存 **{qSurv.Sum() / tw:F2}** ／ 圧勝率 **{qBlow.Sum() * 100.0 / tw:F1}%** ／ "
+            + $"**完全勝利 {qPerf.Sum() * 100.0 / tw:F1}%** ／ 全滅勝ち **{qNarrow.Sum() * 100.0 / tw:F1}%**。");
     }
     return;
 }
