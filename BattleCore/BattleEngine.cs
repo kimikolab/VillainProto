@@ -2044,7 +2044,7 @@ public sealed class BattleContext
         int line = Reader.Threshold > 0 ? Reader.Threshold : ReaderProbeLine;
         foreach (UnitState u in _units)
         {
-            if (!u.IsAlive || !u.HasTrait(TraitId.Overload)) continue;
+            if (!u.IsAlive || !PatternReader(u)) continue;
             UnitTally t = TallyOf(u);
             t.ReaderTurns++;
             t.ReaderBonusSum += u.AtkBonus;
@@ -2065,6 +2065,18 @@ public sealed class BattleContext
     /// V0 と V1 の門1 を同じ物差しで並べるために要る。
     /// </summary>
     public const int ReaderProbeLine = 5;
+
+    /// <summary>
+    /// 積み過ぎの門を数える対象（第128期に対象を広げた）。<b>計数の条件であって、規則ではない。</b>
+    ///
+    /// <para>第115期は保持者が積み過ぎ（<c>Overload</c>）1枚だけだったが、第127期に段違い
+    /// （<see cref="TraitId.GradeStep"/> ほか）が増えた。**同じ値（<c>AtkBonus</c>）を同じ閾値で読む札**
+    /// なので門の分母・分子は同じ形で数えられる。<b>盤面は1ビットも動かない</b>
+    /// ——増えるのは <see cref="UnitTally"/> の列だけで、誰も読んで分岐しない。</para>
+    /// </summary>
+    private static bool PatternReader(UnitState u)
+        => u.HasTrait(TraitId.Overload) || u.HasTrait(TraitId.GradeStep)
+           || u.HasTrait(TraitId.GradePierce) || u.HasTrait(TraitId.GradeAll);
 
     // =====================================================================================
     // 第117期 —— ボスの土台（BossRule）。**傾きを測るためだけの計数。engine に規則は1本も無い。**
@@ -3497,11 +3509,12 @@ public sealed class BattleContext
         // ここで数えるのは「実際に振った型」なので、`patternOverride` を渡す経路
         // （貫きのレーン解決など）もそのまま正しく落ちる。
         // **規則を無効にしていても振りの総数は数える**——門2 の分母が版に依らないため。
-        if (actor.HasTrait(TraitId.Overload))
+        if (PatternReader(actor))
         {
             UnitTally rt = TallyOf(actor);
             rt.ReaderSwings++;
             if (pattern == AttackPattern.Sweep && ReaderActive) rt.ReaderSweeps++;
+            if (pattern == AttackPattern.All && ReaderActive) rt.ReaderAlls++;   // 第128期（上の段）
             // **ターン頭の印が付いたターンだけを数える**——振った瞬間の `AtkBonus` で数えると、
             // ターンの途中で届いた強化のぶんだけ分子が分母を超え、空振りが負になる（第115期に踏んだ）。
             if (rt.ReaderOverTurnMark == Turn && rt.ReaderLastOverSwingTurn != Turn)

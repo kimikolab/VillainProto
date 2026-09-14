@@ -33,7 +33,7 @@ static class Grade2Diag
         {
             case "phase0": Phase0(); return;
             case "stock": Stock(); return;
-            case "run": Console.WriteLine("grade2 run は段2 で足す（載せ替えの測定）。"); return;
+            case "run": RunTables(); return;
             case "check": Check(arg); return;
             default:
                 Console.WriteLine("grade2: モードは phase0 / stock / run / check（第128期）。");
@@ -473,6 +473,121 @@ static class Grade2Diag
     }
 
     // ==================================================================================
+    // 段2 —— 載せ替えの測定
+    // ==================================================================================
+    static void RunTables()
+    {
+        Console.WriteLine("# 第128期 段2 —— 載せ替えの測定（発火率・到達率・行ごとの帰属）");
+        Console.WriteLine();
+        Console.WriteLine("`dotnet run --project BattleSim -c Release 0 grade2 run` の出力。");
+        Console.WriteLine($"帯は `compare` と同じ **seed 0..{Seeds - 1}**。**規約 (G10) に従い判定は第2〜5波**"
+            + "（第一波は参考として併記する）。");
+        Console.WriteLine();
+
+        var rows = DolgaRows();
+        Console.WriteLine($"ドルガを含む行 **{rows.Count} 行** ／ `compare` 全 {Presets.Compare.Length} 行。");
+        Console.WriteLine();
+        Console.WriteLine($"閾値は `ReaderRule.Adopted` = **{ReaderRule.Adopted}**（低い段＝薙ぎ・ドルガでは恒等）／"
+            + $"**{ReaderRule.Adopted * GradeTrait.StepFactor}**（上の段＝全体）。**掃引していない。**");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表A —— ドルガの門（到達と発火。波ごと）");
+        Console.WriteLine();
+        Console.WriteLine("`到達率` は**ターン頭に `AtkBonus` が上の段の閾値以上だったターンの割合**"
+            + "（`ReaderProbeTurns` の格子 20 ÷ `ReaderTurns`）。"
+            + "`全体率` は**実際に振った一撃のうち全体だった割合**（`ReaderAlls` ÷ `ReaderSwings`）。");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 波 | 生存T/戦 | 平均到達 | 到達率 | 振/戦 | **全体率** | 勝率 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|");
+
+        long gTurns = 0, gOver = 0, gSwings = 0, gAlls = 0;
+        long gTurns25 = 0, gOver25 = 0, gSwings25 = 0, gAlls25 = 0;
+        // **分母を先に割る**（規約 (G12)）——ドルガに外から1点も届かない行では、
+        // 全体率は閾値に依らず構造的に 0 になる。**その 0 は「効かなかった」ではなく「供給が無い」。**
+        long fedSwings = 0, fedAlls = 0, drySwings = 0, dryAlls = 0;
+        int fedRows = 0, dryRows = 0;
+        // 格子（`UnitTally.ReaderProbes` = 1/5/10/20/40）ごとの到達ターン数。
+        // **閾値を動かす前に、動かした先に標本があるかを見る**（第116期——強化は段で来るので
+        // 格子の2点のあいだに標本がほとんど無いことがある）。
+        long[] probeTurns = new long[UnitTally.ReaderProbes.Length];
+        long probeDenom = 0;
+        foreach ((string name, Formation f, int _) in rows)
+        {
+            long rowWhet = 0, rowSwings = 0, rowAlls = 0;
+            for (int w = 0; w < EnemyCatalog.Stages.Count; w++)
+            {
+                long turns = 0, over = 0, swings = 0, alls = 0, peak = 0, wins = 0;
+                for (int seed = 0; seed < Seeds; seed++)
+                {
+                    BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[w].Enemy, seed, verbose: false);
+                    if (r.PlayerWon) wins++;
+                    if (!r.TallyByUnit.TryGetValue(UnitCatalog.Dolga.Id, out UnitTally? t)) continue;
+                    turns += t.ReaderTurns;
+                    swings += t.ReaderSwings;
+                    alls += t.ReaderAlls;
+                    peak += t.AtkPeak;
+                    int hi = ReaderRule.Adopted * GradeTrait.StepFactor;
+                    int idx = Array.IndexOf(UnitTally.ReaderProbes, hi);
+                    if (idx >= 0 && t.ReaderProbeTurns is not null) over += t.ReaderProbeTurns[idx];
+                    rowWhet += t.Whetted;
+                    if (w >= 1 && t.ReaderProbeTurns is not null)
+                    {
+                        probeDenom += t.ReaderTurns;
+                        for (int i = 0; i < probeTurns.Length; i++) probeTurns[i] += t.ReaderProbeTurns[i];
+                    }
+                }
+                if (w >= 1) { rowSwings += swings; rowAlls += alls; }
+                gTurns += turns; gOver += over; gSwings += swings; gAlls += alls;
+                if (w >= 1) { gTurns25 += turns; gOver25 += over; gSwings25 += swings; gAlls25 += alls; }
+                Console.WriteLine($"| {name} | 第{w + 1}波 | {turns / (double)Seeds:F2} | {peak / (double)Seeds:F1} | "
+                    + $"{(turns == 0 ? "—" : $"{over * 100.0 / turns:F1}%")} | {swings / (double)Seeds:F2} | "
+                    + $"**{(swings == 0 ? "—" : $"{alls * 100.0 / swings:F1}%")}** | {wins * 100.0 / Seeds:F1}% |");
+            }
+            if (rowWhet > 0) { fedRows++; fedSwings += rowSwings; fedAlls += rowAlls; }
+            else { dryRows++; drySwings += rowSwings; dryAlls += rowAlls; }
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**通算（全5波）**: 到達率 **{(gTurns == 0 ? 0 : gOver * 100.0 / gTurns):F1}%** ／ "
+            + $"全体率 **{(gSwings == 0 ? 0 : gAlls * 100.0 / gSwings):F1}%**");
+        Console.WriteLine($"**第2〜5波（規約 (G10) の判定の分母）**: 到達率 **{(gTurns25 == 0 ? 0 : gOver25 * 100.0 / gTurns25):F1}%** ／ "
+            + $"全体率 **{(gSwings25 == 0 ? 0 : gAlls25 * 100.0 / gSwings25):F1}%**");
+        Console.WriteLine();
+        double fire = gSwings25 == 0 ? 0 : gAlls25 * 100.0 / gSwings25;
+        Console.WriteLine();
+        Console.WriteLine("## 表B —— 分母を割る（規約 (G12)）");
+        Console.WriteLine();
+        Console.WriteLine("**ドルガに外から1点でも届く行**と、**1点も届かない行**に分ける。"
+            + "後者では全体率が**閾値に依らず構造的に 0** になる——その 0 は「効かなかった」ではなく"
+            + "**「供給が無い」**（第61期・第126期）。");
+        Console.WriteLine();
+        Console.WriteLine("| 分母 | 行数 | 振/戦 | **全体率**（第2〜5波）|");
+        Console.WriteLine("|---|--:|--:|--:|");
+        double fedFire = fedSwings == 0 ? 0 : fedAlls * 100.0 / fedSwings;
+        Console.WriteLine($"| 供給のある行 | {fedRows} | {fedSwings / (double)(Math.Max(1, fedRows) * 4 * Seeds):F2} | **{fedFire:F1}%** |");
+        Console.WriteLine($"| 供給の無い行 | {dryRows} | {drySwings / (double)(Math.Max(1, dryRows) * 4 * Seeds):F2} | **{(drySwings == 0 ? 0 : dryAlls * 100.0 / drySwings):F1}%** |");
+        Console.WriteLine($"| 全 {rows.Count} 行 | {rows.Count} | {gSwings25 / (double)(rows.Count * 4 * Seeds):F2} | **{fire:F1}%** |");
+        Console.WriteLine();
+        Console.WriteLine("## 表C —— `AtkBonus` の格子（第2〜5波・ドルガの生存ターンが分母）");
+        Console.WriteLine();
+        Console.WriteLine("**閾値を動かす前に、動かした先に標本があるかを見る**（第116期——"
+            + "強化は連続量ではなく段で来るので、格子の2点のあいだに標本がほとんど無いことがある）。");
+        Console.WriteLine();
+        Console.Write("| 格子 |"); foreach (int q in UnitTally.ReaderProbes) Console.Write($" ≥{q} |"); Console.WriteLine();
+        Console.Write("|---|"); foreach (int _ in UnitTally.ReaderProbes) Console.Write("--:|"); Console.WriteLine();
+        Console.Write("| 到達率 |");
+        foreach (long v in probeTurns) Console.Write($" {(probeDenom == 0 ? 0 : v * 100.0 / probeDenom):F1}% |");
+        Console.WriteLine();
+        Console.WriteLine();
+        Console.WriteLine($"→ 現行の上の段は **≥{ReaderRule.Adopted * GradeTrait.StepFactor}**"
+            + $"（`ReaderRule.Adopted` {ReaderRule.Adopted} × `GradeTrait.StepFactor` {GradeTrait.StepFactor}）。");
+        Console.WriteLine();
+        Console.WriteLine($"→ 採否2（発火率 10〜90%）: 全行の分母では **{(fire >= 10 && fire <= 90 ? "○" : "×")}**（{fire:F1}%）／"
+            + $"**供給のある行の分母では {(fedFire >= 10 && fedFire <= 90 ? "○" : "×")}（{fedFire:F1}%）**。"
+            + "**90% を超えたら「普段は薙ぎ」が消えている・10% を切ったら死に札**（§3-3）。");
+        Console.WriteLine();
+    }
+
+    // ==================================================================================
     // 自己検査
     // ==================================================================================
     static void Check(string before)
@@ -511,7 +626,8 @@ static class Grade2Diag
 
         // (d) ReaderRule の既定が動いていない
         Console.WriteLine($"- **(d)** `ReaderRule.Default` = `{ReaderRule.Default}`（採用値 {ReaderRule.Adopted}）／ "
-            + $"`GradeTrait.StepFactor` = {GradeTrait.StepFactor} —— **どちらも触っていない**");
+            + $"`GradeTrait.StepFactor` = {GradeTrait.StepFactor} —— **閾値 `ReaderRule` は第116期から1ビットも動かしていない。"
+            + $"`StepFactor` だけ 4 → {GradeTrait.StepFactor} へ下げた**（§3-3 の唯一の条件＝発火率が 10% を切った。前後の両方を報告書に載せる）");
 
         // (e) ctx.PickOne を新たに使っていない（第89期 (h)）
         int pick = Regex.Matches(_traits, @"PickOne\(").Count;

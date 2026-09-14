@@ -6066,8 +6066,18 @@ public sealed class TemperedTrait : Trait
 /// </summary>
 public sealed class GradeTrait : Trait
 {
-    /// <summary>段で上がる版の上側の閾値（低い側の何倍か）。<b>掃引しない</b>——二値の鍵を2つ重ねるだけ。</summary>
-    public const int StepFactor = 4;
+    /// <summary>
+    /// 段で上がる版の上側の閾値（低い側の何倍か）。
+    ///
+    /// <para><b>第128期に 4 → 2 へ下げた（＝閾値 20 → 10）。</b> 指示書 §3-3 の
+    /// 「発火率が 10% を切ったときだけ動かしてよい」に当たったため——
+    /// 4 のときの全体率は<b>ドルガを含む 24 行で 2.8%・供給のある 16 行でも 4.4%</b>しかなく、
+    /// <b>死に札だった</b>（`AtkBonus` の格子の到達率は ≥10 が 10.4% に対し ≥20 は 2.1%）。
+    /// 2 にすると <b>13.6% / 21.2%</b> で帯（10〜90%）に入り、
+    /// <b>行ごとの最大でも 79.2%</b> なので「普段は薙ぎ」は残る。
+    /// <b>掃引ではない</b>——測ったのは 4 と 2 の2点だけで、前後の両方を報告書に載せてある。</para>
+    /// </summary>
+    public const int StepFactor = 2;
 
     private readonly TraitId _id;
     private readonly AttackPattern _low;

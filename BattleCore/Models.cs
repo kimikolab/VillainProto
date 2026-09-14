@@ -680,6 +680,14 @@ public sealed class UnitTally
     /// </summary>
     public int ReaderTurns, ReaderOverTurns, ReaderFirstOverTurn;
     public int ReaderSwings, ReaderSweeps, ReaderOverTurnsSwung, ReaderLastOverSwingTurn, ReaderOverTurnMark;
+
+    /// <summary>
+    /// 振った一撃が<b>全体</b>だった回数（第128期・<see cref="ReaderSweeps"/> の上の段の版）。
+    /// <b>誰も読んで分岐しない計数</b>で、盤面には一切影響しない。
+    /// 段違い（<see cref="TraitId.GradeStep"/>）をドルガに載せた期に、
+    /// <b>「普段は薙ぎ、強化されると全体」が実戦で成立しているか</b>を数えるために足した。
+    /// </summary>
+    public int ReaderAlls;
     public int ReaderBonusSum, ReaderBonusMax;
 
     /// <summary>
