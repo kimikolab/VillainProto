@@ -32,7 +32,8 @@ public partial class BattlePawn3D : Node3D
     private bool _victory;
     private Tween? _motion;
     private Vector3? _guardPosition;
-    private MeshInstance3D _fire = null!;
+    private Node3D _fire = null!;
+    private PoisonEffect3D _poison = null!;
     public double AnimationSpeed { get; set; } = 1;
     public Vector3 RestPosition => _guardPosition ?? _home;
     public bool IsGuarding => _guardPosition is not null;
@@ -64,6 +65,7 @@ public partial class BattlePawn3D : Node3D
     }
 
     public void SetBurning(bool burning) => _fire.Visible = burning && _alive && !_victory;
+    public void SetPoisoned(bool poisoned) => _poison.SetActive(poisoned && _alive && !_victory);
 
     public int InstanceId { get; private set; }
     public int Team { get; private set; }
@@ -136,22 +138,29 @@ public partial class BattlePawn3D : Node3D
         };
         AddChild(_turnRing);
 
-        // 足元の炎。外部画像を使わず、揺れる炎の舌と火の粉を半透明の面へ描く。
+        // サークルの周囲へ炎を立てる。奥側は駒に隠れ、手前側は足に重なる。
+        // 面は Y 軸だけでカメラへ向け、炎の根元を地面に固定する。
         var fireShader = new Shader { Code = @"shader_type spatial;
 render_mode unshaded, cull_disabled, blend_mix, depth_draw_never;
 uniform float phase = 0.0;
 void vertex() {
-    MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+    vec3 right = normalize(vec3(INV_VIEW_MATRIX[0].x, 0.0, INV_VIEW_MATRIX[0].z));
+    vec3 up = vec3(0.0, 1.0, 0.0);
+    vec3 forward = cross(right, up);
+    MODELVIEW_MATRIX = VIEW_MATRIX * mat4(
+        vec4(right * length(MODEL_MATRIX[0].xyz), 0.0),
+        vec4(up * length(MODEL_MATRIX[1].xyz), 0.0),
+        vec4(forward * length(MODEL_MATRIX[2].xyz), 0.0), MODEL_MATRIX[3]);
 }
 void fragment() {
     float t = TIME * 2.8 + phase;
     float y = 1.0 - UV.y;
     float flame = 0.0;
-    for (int i = 0; i < 7; i++) {
+    for (int i = 0; i < 2; i++) {
         float k = float(i);
         float h = 0.48 + 0.20 * sin(t * 1.3 + k * 2.1);
-        float x = 0.12 + k * 0.126 + sin(y * 8.0 - t * 2.0 + k) * 0.026 * y;
-        float width = 0.086 * max(0.0, 1.0 - y / h);
+        float x = 0.27 + k * 0.46 + sin(y * 8.0 - t * 2.0 + k) * 0.12 * y;
+        float width = 0.26 * max(0.0, 1.0 - y / h);
         flame = max(flame, (1.0 - smoothstep(width * 0.35, width + 0.012, abs(UV.x - x))) * (1.0 - smoothstep(h - 0.10, h, y)));
     }
     float sparks = 0.0;
@@ -166,17 +175,31 @@ void fragment() {
     EMISSION = fire * 1.4;
     ALPHA = max(flame * 0.85 * smoothstep(0.0, 0.04, y), sparks);
 }" };
-        var fireMaterial = new ShaderMaterial { Shader = fireShader, RenderPriority = 2 };
-        fireMaterial.SetShaderParameter("phase", _phase);
-        _fire = new MeshInstance3D
-        {
-            Mesh = new QuadMesh { Size = new Vector2(1.9f, 1.35f) },
-            Position = new Vector3(0, 0.62f, 0.35f),
-            MaterialOverride = fireMaterial,
-            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-            Visible = false,
-        };
+        _fire = new Node3D { Visible = false };
         AddChild(_fire);
+        var fireMesh = new QuadMesh { Size = new Vector2(0.52f, 1.1f) };
+        const int flameCount = 12;
+        for (int i = 0; i < flameCount; i++)
+        {
+            // 駒ごとに固定したばらつき。隣同士の順序を保ち、均等な柵に見えない程度に崩す。
+            float spacing = Mathf.Tau / flameCount;
+            float angle = spacing * (i + 0.22f * Mathf.Sin(i * 2.399f + _phase));
+            float heightScale = 1.0f + 0.22f * Mathf.Sin(i * 4.137f + _phase * 1.7f);
+            var fireMaterial = new ShaderMaterial { Shader = fireShader };
+            fireMaterial.SetShaderParameter("phase", _phase + i * 1.73f);
+            _fire.AddChild(new MeshInstance3D
+            {
+                Mesh = fireMesh,
+                Position = new Vector3(Mathf.Cos(angle) * 0.78f, 0.05f + 0.55f * heightScale, Mathf.Sin(angle) * 0.78f),
+                Scale = new Vector3(1, heightScale, 1),
+                MaterialOverride = fireMaterial,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            });
+        }
+
+        _poison = new PoisonEffect3D();
+        _poison.Configure(_phase);
+        AddChild(_poison);
 
         Texture2D portrait = UiKit.BattlePortrait(atlas, opening.UnitId);
         bool hasCustomPortrait = UiKit.HasCustomBattlePortrait(opening.UnitId)
@@ -341,14 +364,16 @@ void fragment() {
             .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
     }
 
-    public void AnimateHit()
+    public void AnimateHit(bool poison = false)
     {
         if (!_alive) return;
-        Color hit = new(1.45f, 0.62f, 0.48f, 1);
+        Color hit = poison ? new Color(1.05f, 0.48f, 1.35f, 1) : new Color(1.45f, 0.62f, 0.48f, 1);
+        if (poison) _poison.Pulse();
         var tween = CreateTween();
         tween.TweenProperty(_sprite, "modulate", hit, 0.045);
         tween.TweenProperty(_sprite, "modulate", Colors.White, 0.18);
         Vector3 kick = new(Team == BattleContext.PlayerTeam ? -0.20f : 0.20f, 0.06f, 0.12f);
+        if (poison) kick *= 0.25f;
         var shake = BeginMotion();
         shake.TweenProperty(this, "position", RestPosition + kick, 0.045 / AnimationSpeed);
         shake.TweenProperty(this, "position", RestPosition - kick * 0.35f, 0.055 / AnimationSpeed);
@@ -368,6 +393,7 @@ void fragment() {
     {
         if (!_alive) return;
         _alive = false;
+        _poison.Clear();
         SetBurning(false);
         _guardPosition = null;
         _ring.Visible = false;
@@ -419,6 +445,7 @@ void fragment() {
     {
         if (!_alive || Team != BattleContext.PlayerTeam) return;
         _victory = true;
+        _poison.Clear();
         _motion?.Kill();
         _guardPosition = null;
         SetBurning(false);

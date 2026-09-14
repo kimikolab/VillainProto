@@ -462,10 +462,11 @@ public partial class BattlefieldView3D : Control
     /// ——5体ぶんの駒名が一度に浮くと、**大きくした数字がまた読めなくなる。**
     /// </param>
     public void DamagePopup(BattlePawn3D? pawn, int amount, string source, Color color,
-                            bool large = false, bool withSource = true)
+                            bool large = false, bool withSource = true, bool poison = false)
     {
         if (pawn is null) return;
-        Float(pawn, $"−{amount}", color, true, 3.20f, large ? 2.05f : 1.55f);
+        Float(pawn, poison ? $"毒 −{amount}" : $"−{amount}", color, true, 3.20f,
+            large ? 2.05f : poison ? 1.75f : 1.55f);
         if (withSource) Float(pawn, source, color, false, 2.86f, 0.86f);
     }
 

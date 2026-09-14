@@ -13,6 +13,7 @@ public partial class Main : Control
     private readonly Dictionary<string, RosterCard> _rosterCards = new(StringComparer.Ordinal);
     private readonly Dictionary<int, string> _statusByPawn = new();
     private readonly HashSet<int> _burningSnapshot = new();
+    private readonly HashSet<int> _poisonedSnapshot = new();
     private readonly Dictionary<int, DemoOpening> _openingById = new();
     private readonly Dictionary<int, string> _statusCauseByDamageIndex = new();
     private readonly HashSet<int> _linkedStatusEventIndices = new();
@@ -865,6 +866,7 @@ public partial class Main : Control
             case BattleEventKind.TurnStart:
                 _battleField.EndGuards();
                 _burningSnapshot.Clear();
+                _poisonedSnapshot.Clear();
                 _statusByPawn.Clear();
                 _battleField.SetTurn(e.Turn);
                 AppendLog($"\n[color=#efc66a][b]── TURN {e.Turn} ──[/b][/color]");
@@ -875,6 +877,7 @@ public partial class Main : Control
                 if (target is not null && e.Text is { } key && e.Amount > 0)
                 {
                     if (key == StatusKeys.LabelOf(StatusKeys.Burn)) _burningSnapshot.Add(target.InstanceId);
+                    if (key == StatusKeys.LabelOf(StatusKeys.Poison)) _poisonedSnapshot.Add(target.InstanceId);
                     string label = DisplayStatusKey(key);
                     _statusByPawn[target.InstanceId] = string.IsNullOrEmpty(_statusByPawn.GetValueOrDefault(target.InstanceId))
                         ? $"{label}{e.Amount}"
@@ -886,6 +889,7 @@ public partial class Main : Control
             case BattleEventKind.StatSnapshot:
                 // 各駒の状態一覧の直後。最後の燃焼ダメージを見せてから消火する。
                 if (target is not null) target.SetBurning(_burningSnapshot.Contains(target.InstanceId));
+                if (target is not null) target.SetPoisoned(_poisonedSnapshot.Contains(target.InstanceId));
                 target?.SetAttack(e.Amount, e.Pattern);
                 break;
 
@@ -1029,6 +1033,7 @@ public partial class Main : Control
                 if (target is not null && e.Text is { } statusKey)
                 {
                     if (statusKey == StatusKeys.Burn) target.SetBurning(e.Amount > 0);
+                    if (statusKey == StatusKeys.Poison && e.Amount > 0) target.SetPoisoned(true);
                     // 第124期 3-g: 「テロップは出たが効果量が分からない」（ノミ）への直答。
                     // **量を先に、通貨名を次に、書き手は線で出す**——札の中へ駒名を畳むと、
                     // 読みたい量が名前の長さに埋もれる（3-b と同じ理由）。
@@ -1105,7 +1110,9 @@ public partial class Main : Control
                             bool withSource = true)
     {
         target?.SetHp(e.HpAfter);
-        target?.AnimateHit();
+        bool poison = _statusCauseByDamageIndex.TryGetValue(eventIndex, out string? status)
+            && status == StatusKeys.LabelOf(StatusKeys.Poison);
+        target?.AnimateHit(poison);
         // 第125期 段2（§5-1 の 5）: **1発が分割されて中継された**ことを線で出す。
         // ゴルムの「耐久している感がない」への直答——中継の段はいままで
         // 「なぜかゴルムが殴られた」としか見えなかった。
@@ -1114,11 +1121,12 @@ public partial class Main : Control
                 _relayVictimByIndex.TryGetValue(eventIndex, out int victimId) ? _battleField.FindPawn(victimId) : null,
                 target, e.Amount, "肩代わり", UiKit.Muted);
         (string source, Color sourceColor) = DamageSource(eventIndex, e, actor);
-        _battleField.DamagePopup(target, e.Amount, source, sourceColor, e.Amount >= 25, withSource);
-        _battleField.Impact(target, sourceColor,
-                            _statusCauseByDamageIndex.ContainsKey(eventIndex), e.FriendlyFire);
+        _battleField.DamagePopup(target, e.Amount, source, sourceColor, e.Amount >= 25, withSource, poison);
+        if (!poison)
+            _battleField.Impact(target, sourceColor,
+                                _statusCauseByDamageIndex.ContainsKey(eventIndex), e.FriendlyFire);
         AppendLog($"  [color=#{sourceColor.ToHtml(false)}]{source}[/color] → {NameOf(e.TargetId)}  "
-                  + $"[color=#{UiKit.Hurt.ToHtml(false)}]−{e.Amount}[/color]");
+                  + $"[color=#{(poison ? UiKit.Poison : UiKit.Hurt).ToHtml(false)}]−{e.Amount}[/color]");
     }
 
     /// <summary>

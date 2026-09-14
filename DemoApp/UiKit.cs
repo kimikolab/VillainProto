@@ -17,7 +17,7 @@ public static class UiKit
     public static readonly Color Heal = Color.FromHtml("#71d7a1");
     public static readonly Color Hurt = Color.FromHtml("#ff766b");
     public static readonly Color Violet = Color.FromHtml("#bf91f3");
-    public static readonly Color Poison = Color.FromHtml("#a9e66f");
+    public static readonly Color Poison = Color.FromHtml("#ce83ff");
     public static readonly Color Burn = Color.FromHtml("#ff9a55");
     public static readonly Color Wound = Color.FromHtml("#ef6f91");
     public static readonly Color Shadow = new(0.02f, 0.04f, 0.035f, 0.86f);
