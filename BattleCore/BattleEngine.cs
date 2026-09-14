@@ -1857,6 +1857,13 @@ public sealed class BattleContext
     public BlazeRule Blaze { get; }
 
     /// <summary>
+    /// 熾火の配布（第130期）。<b>診断（relay）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="EmberRule.Default"/> ＝ 配る）。
+    /// static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public EmberRule Ember { get; }
+
+    /// <summary>
     /// 軋みが響く閾値（第66期）。<b>診断（creak）が版を差し替えるためだけの窓口</b>で、
     /// 通常の実行では誰も渡さない（既定は <see cref="CreakRule.Default"/> ＝ 無効）。
     /// static のノブにしない理由は同型の doc を参照。
@@ -2563,7 +2570,7 @@ public sealed class BattleContext
                          LooseRule? loose = null, TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
                          NourishRule? nourish = null, WoundRule? wound = null,
-                         CounterProbe? probe = null)
+                         EmberRule? ember = null, CounterProbe? probe = null)
     {
         _rng = new Random(seed);
         Probe = probe;          // 第94期 (T2)。**既定 null。診断だけが渡す。**
@@ -2587,6 +2594,7 @@ public sealed class BattleContext
         Finisher = finisher ?? FinisherRule.Default;
         Favor = favor ?? FavorRule.Default;
         Blaze = blaze ?? BlazeRule.Default;
+        Ember = ember ?? EmberRule.Default;
         Funnel = funnel ?? FunnelRule.Default;
         WhetBlock = whetMask ?? WhetMask.None;
         Creak = creak ?? CreakRule.Default;
@@ -5363,14 +5371,14 @@ public static class BattleEngine
                                    TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
                                    NourishRule? nourish = null, WoundRule? wound = null,
-                                   CounterProbe? probe = null)
+                                   EmberRule? ember = null, CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
-               nourish, wound, probe);
+               nourish, wound, ember, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -5403,14 +5411,14 @@ public static class BattleEngine
                                    LooseRule? loose = null, TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
                                    NourishRule? nourish = null, WoundRule? wound = null,
-                                   CounterProbe? probe = null)
+                                   EmberRule? ember = null, CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
-                                    nourish, wound, probe);
+                                    nourish, wound, ember, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

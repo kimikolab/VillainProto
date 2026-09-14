@@ -6647,6 +6647,88 @@ public sealed class PyreTrait : Trait
 
     public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
         => self.Counter(StatusKeys.Burn) > 0 ? AttackPattern.Pierce : p;
+
+    // 火を配る（第130期・**測って採用しなかった。既定は `EmberRule.Off` で残置**）。
+    // 落ちた理由と逃げ道は `EmberRule` の doc を参照。
+    // **engine には規則も窓口も1つも足していない**——
+    // `ctx.Ignite` を呼ぶだけで、`Ignite` は乱数を1つも引かないので乱数列は動かない
+    // （`EmberRule.Off` が素の PyreTrait と 305 セル 0 件になるのが検算）。
+    //
+    // **ボルグ（火の粉）との役割の分かれ方**:
+    //   ボルグ ＝ 火を**作る**駒（無条件・敵にも隣の味方にも）
+    //   ホタ   ＝ 火を**配る**駒（**燃えている間だけ**・**味方の隣だけ**）
+    //
+    // **敵には付けない。** 付けるとボルグの一文（斬った相手に燃焼を移す）と重なって
+    // 役割が分かれなくなる。**自分にも付けない**（`ally == self` の除外は `CinderTrait` と同じ）
+    // ——自給できてしまうと「自分では火を点けられない」という一文が壊れ、
+    // 「ボルグの隣に置く」という配置判断そのものが消える。
+    //
+    // 隣接規則は `CinderTrait` と**同じ**（`FormationRules.AreAdjacent`＝前後を含む）。
+    // 主目標にしか反応しないのは engine の規則（攻撃1回につき特性は1度）なので、
+    // **貫きで3体抜いても配布は1回**——範囲持ちが燃焼の供給を独占しない。
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (!ctx.Ember.Enabled) return;
+        if (dealt <= 0) return;                              // `CinderTrait` と揃える
+        if (self.Counter(StatusKeys.Burn) <= 0) return;      // 燃えていない間は何もしない
+
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            ctx.Ignite(ally, friendly: true, source: self);
+        }
+    }
+}
+
+/// <summary>
+/// 熾火の配布の窓口（第130期）。<b>診断（relay）が版を差し替えるためだけのノブ</b>で、
+/// 通常の実行では誰も渡さない（既定は <see cref="Default"/>）。
+///
+/// <para><b>書き換え可能な static のノブは置かない</b>（Trait は共有シングルトンで
+/// <c>layout</c> は戦闘を並列に回すため）。<see cref="BattleEngine.Run"/> に引数で渡す
+/// ——<see cref="BlazeRule"/>（第59期）・<see cref="FavorRule"/>（第58期）と同じ形。</para>
+///
+/// <para><b><see cref="Off"/> は第129期までの盤面と1セルも違わない</b>
+/// ——<see cref="PyreTrait.OnAfterAttack"/> は先頭で <c>return</c> し、
+/// <see cref="BattleContext.Ignite"/> は乱数を1つも引かないので乱数列も動かない。
+/// これが診断の検算になる（ホタを含まない行が 0 件）。</para>
+///
+/// <para><b>強度のノブを持たない。</b> 燃焼は非スタックなので「量」が存在せず
+/// （<see cref="PyreTrait"/> の doc）、配る／配らないの二値しかない。
+/// 代金・上限も最初から付けていない（第118・126・127・128期と同じ。素の効き方を先に測る）。</para>
+/// </summary>
+public readonly record struct EmberRule(bool Enabled)
+{
+    /// <summary>
+    /// <b>既定は「配らない」＝第130期に測って採用しなかった</b>（<see cref="Off"/> と同じ）。
+    /// <b>機構は完全に動く</b>——ボルグの燃焼率 0.0% → 11.2%、
+    /// ヒヨの強化がボルグへ 0 → 10,124（供給源が初めて強化対象になった）、
+    /// 代金も効いている（ボルグ −0.18T / ホタ −0.11T / ヒヨ −0.30T）。
+    ///
+    /// <para><b>落ちたのは拒否権3</b>（主判定行がいずれかの波で −10.0pt 以上落ちる・規約 (G9)）。
+    /// <c>燃焼 (ボルグ×ホタ)</c> が第3波 <b>−56.0</b> / 第4波 <b>−79.0</b>、
+    /// <c>火選り (ヒヨ×ホタ)</c> が第3波 −43.5 / 第4波 −77.0。
+    /// <b>前者は `Baseline.PrimaryRows` に入っている。</b></para>
+    ///
+    /// <para><b>代金が見返りを圧倒した。</b> 燃焼は {6}/ターンの<b>固定</b>で、
+    /// 配ると味方 4 枚が同時に払い始める——**軛（第四波の1発 25 上限）を素通りする**ので、
+    /// 上限の効く波ほど相対的に重い（実際いちばん落ちたのが第四波）。
+    /// 見返りの側は<b>ヒヨの強化がボルグに乗る</b>ことだが、
+    /// <b>ボルグは巻き込みが本体で攻撃力への依存が薄い</b>（第60期の実測と同じ形）。</para>
+    ///
+    /// <para><b>逃げ道は2つあり、どちらもこの期では実装していない</b>（指示書 §5）:
+    /// (a) <see cref="BattleContext.Ignite"/> ではなく<b>カウンタを +1 だけ動かす</b>
+    /// （<see cref="ScapegoatTrait"/> が採った形。<c>Ignite</c> は残ターンを
+    /// <see cref="BurnRules.Turns"/> に<b>設定</b>するので、1 を移すつもりで呼ぶと複製になる） ／
+    /// (b) <b>1戦にN回まで</b>。</para>
+    /// </summary>
+    public static EmberRule Default => new(false);
+
+    /// <summary>配る版（第130期に測った版）。<b>既定ではない。</b></summary>
+    public static EmberRule On => new(true);
+
+    /// <summary>配らない版（対照）。<b>第129期までの盤面と 305 セル 0 件で一致する。</b></summary>
+    public static EmberRule Off => new(false);
 }
 
 /// <summary>
