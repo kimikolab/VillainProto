@@ -53,6 +53,7 @@ public static class UnitCatalog
         MaxHp = 45,
         Attack = 7,
         Speed = 9,
+        Advances = false,
         Traits = new[] { TraitId.Curse },
         PlusText = "戦闘開始時、敵全体の攻撃力を下げる",
         MinusText = "呪詛が味方全体にも漏れる",
@@ -145,6 +146,7 @@ public static class UnitCatalog
         MaxHp = 84,
         Attack = 4,
         Speed = 9,
+        Advances = false,
         Traits = new[] { TraitId.Venom },
         PlusText = "殴られると、殴ってきた相手に毒を積む（毒は毎ターン層の分だけ削る）",
         MinusText = "自分からは毒を積めない。毒が隣接する味方にも漏れる（傷を負った味方には深く入る）。攻撃力もほぼ無い",
@@ -158,6 +160,7 @@ public static class UnitCatalog
         MaxHp = 96,
         Attack = 11,
         Speed = 4,
+        Advances = false,
         // **ThornGuard を Thorns より前に置く。** ApplyDamage は target.Traits の順に
         // OnDamaged を通知し、TraitCatalog.Resolve は Def.Traits の順をそのまま保つので、
         // この配列の順序がそのまま「入れ替え → 反撃」の実行順になる
@@ -178,6 +181,7 @@ public static class UnitCatalog
         MaxHp = 44,
         Attack = 2,
         Speed = 10,
+        Advances = false,
         Traits = new[] { TraitId.Marker },
         PlusText = "隣接する味方1体に敵の攻撃を集中させる",
         MinusText = "自分では何もできない。押し出された味方は普通は死ぬ",
@@ -191,6 +195,7 @@ public static class UnitCatalog
         MaxHp = 78,
         Attack = 3,
         Speed = 6,
+        Advances = false,
         // 塞ぎ（`Seal`）は**第92期に採用時の作業として足した**（第86期 §0-2 の分岐）。
         // 札そのものは挙動を持たず、`MenderTrait` の中から `HasTrait(Seal)` で読まれる。
         // **第122期に `MendRule` を `Plain` へ降ろしたので、この札は現在1度も分岐しない**
@@ -214,6 +219,7 @@ public static class UnitCatalog
         MaxHp = 42,
         Attack = 2,
         Speed = 8,
+        Advances = false,
         Traits = new[] { TraitId.Amplifier },
         // 濃縮を手番の行動そのものにする（第11期 Phase BB）。攻撃2 は出なくなる。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "水を濁らせている") },
@@ -229,6 +235,7 @@ public static class UnitCatalog
         MaxHp = 50,
         Attack = 5,
         Speed = 7,
+        Advances = false,
         Traits = new[] { TraitId.Contagion },
         PlusText = "毒に侵された駒が倒れると、残りの敵へ毒が飛ぶ（味方の死骸からも飛ぶ）",
         MinusText = "自分では毒を与えられない。撒いた毒は傷を負った相手には深く入る",
@@ -242,6 +249,7 @@ public static class UnitCatalog
         MaxHp = 58,
         Attack = 2,
         Speed = 5,
+        Advances = false,
         Traits = new[] { TraitId.Miasma },
         PlusText = "毎ターン、敵全体へ薄く毒を撒く",
         MinusText = "瘴気は味方にも及ぶ（味方全体に毒+1）。傷を負った味方には深く入る。攻撃力もほぼ無い",
@@ -255,6 +263,7 @@ public static class UnitCatalog
         MaxHp = 46,
         Attack = 3,
         Speed = 11,
+        Advances = false,
         Traits = new[] { TraitId.Paralyze },
         PlusText = "攻撃した相手を高確率で1ターン動けなくする",
         MinusText = "自分の火力はほぼ無い。粉が尽きれば何も残らない",
@@ -268,6 +277,7 @@ public static class UnitCatalog
         MaxHp = 64,
         Attack = 4,
         Speed = 6,
+        Advances = false,
         Traits = new[] { TraitId.Devour },
         PlusText = "毒に侵された敵の数だけ味方全体を癒す",
         MinusText = "毒が積まれていなければ何もしない。味方が負った毒は2倍に効く",
@@ -281,6 +291,7 @@ public static class UnitCatalog
         MaxHp = 52,
         Attack = 4,
         Speed = 9,
+        Advances = false,
         Traits = new[] { TraitId.Rally },
         PlusText = "開戦時に味方全体+4 / 前のターンに動かなかった味方を+8",
         MinusText = "自分の火力はほぼ無い。全員が働く編成では無意味",
@@ -307,6 +318,7 @@ public static class UnitCatalog
         MaxHp = 92,
         Attack = 6,
         Speed = 5,
+        Advances = false,
         Traits = new[] { TraitId.Displaced },
         PlusText = "隊列を動かされるたび攻撃力が上がり、その場で割り込んで攻撃する。前へ突き出されると上昇が特に大きい",
         MinusText = "自分では動かない。誰も乱してくれなければ置物",
@@ -333,6 +345,7 @@ public static class UnitCatalog
         MaxHp = 54,
         Attack = 3,
         Speed = 10,
+        Advances = false,
         Traits = new[] { TraitId.Bind },
         // 縄は1本。開戦時にその1本を敵へ投げるので、第1ターンだけ味方の縛りが起きない。
         // 代金は振り（攻3）ではなく味方の縛り1回ぶんで、収入の有無で意味が反転する（BindTrait）。
@@ -371,6 +384,7 @@ public static class UnitCatalog
         MaxHp = 60,
         Attack = 4,
         Speed = 8,
+        Advances = false,
         Traits = new[] { TraitId.Drifter },
         PlusText = "隊列を動かされた味方を回復し、攻撃力を上げる",
         MinusText = "隊列が乱れなければ何もしない",
@@ -410,6 +424,7 @@ public static class UnitCatalog
         MaxHp = 58,
         Attack = 7,
         Speed = 12,
+        Advances = false,
         Traits = new[] { TraitId.Loose },
         PlusText = "隣に味方がいない駒の被ダメージを35%下げる。被弾すると、隣の味方1体を別の席へ弾く（1ターン1回）",
         MinusText = "弾く先は選べない。隊列を組み直され、詰める編成では被ダメージ減が何も起きない",
@@ -423,6 +438,7 @@ public static class UnitCatalog
         MaxHp = 70,
         Attack = 3,
         Speed = 4,
+        Advances = false,
         Traits = new[] { TraitId.Cower },
         PlusText = "味方全体の被ダメージを30%下げる",
         MinusText = "味方全体の攻撃力が9下がる",
@@ -474,6 +490,7 @@ public static class UnitCatalog
         MaxHp = 70,
         Attack = 2,
         Speed = 2,
+        Advances = false,
         Traits = new[] { TraitId.RearGuard, TraitId.Rage },
         PlusText = "後列の味方への攻撃を肩代わりする。庇って受けたダメージに応じて攻撃力が上がる",
         MinusText = "素の攻撃力はほぼ無い。前列は一切守らず、狙われなければ育たない",
@@ -492,6 +509,7 @@ public static class UnitCatalog
         MaxHp = 54,
         Attack = 7,
         Speed = 6,
+        Advances = false,
         Traits = new[] { TraitId.Betrayed },
         PlusText = "毎ターン、敵陣に喚び出す",
         MinusText = "喚ばれたものは背いて敵につく。敵の前列が埋まる",
@@ -522,6 +540,7 @@ public static class UnitCatalog
         MaxHp = 12,
         Attack = 0,
         Speed = 1,
+        Advances = false,
         Traits = new[] { TraitId.Ephemeral, TraitId.Immobile },
         PlusText = "",
         MinusText = ""
@@ -869,6 +888,7 @@ public static class UnitCatalog
         MaxHp = 54,
         Attack = 10,
         Speed = 6,
+        Advances = false,
         Traits = new[] { TraitId.Suture, TraitId.Seal },      // 塞ぎ＝代金（同上。**札**）
         PlusText = "傷が最も深い敵を狙い、敵と味方のうち傷が深いほうの傷口から糸を引き、その傷1つにつき最も傷ついた味方を3繕う",
         MinusText = "繕うたび、糸を通した敵の傷がひとつ塞がる",
@@ -1126,6 +1146,7 @@ public static class UnitCatalog
         MaxHp = 96,
         Attack = 6,
         Speed = 8,
+        Advances = false,
         Traits = new[] { TraitId.Divert },
         PlusText = "毎ターン味方に向いた視線を引き剥がし、いちばん硬い敵へ向け直す",
         MinusText = "引き剥がした視線は自分に刺さる。毎ターン狙われ続ける",
@@ -1168,6 +1189,7 @@ public static class UnitCatalog
         MaxHp = 62,
         Attack = 4,
         Speed = 9,
+        Advances = false,
         Traits = new[] { TraitId.Goad },
         PlusText = "毎ターン隣のいちばん殴れる味方に自分の力を渡す（攻撃力が上がり続ける）",
         MinusText = "渡した相手を前に押し出すので、その味方は狙われる。隣に誰もいなければ何もできない",
@@ -1255,6 +1277,7 @@ public static class UnitCatalog
         MaxHp = 70,
         Attack = 5,
         Speed = 6,
+        Advances = false,
         Traits = new[] { TraitId.Favor },
         // **贔屓を手番の行動そのものにする**（第60期）。攻5 は出なくなる。
         // `OnTurnStart` に置くと火の粉（`OnAfterAttack`）に対して構造的に1ターン遅れ、
@@ -1395,6 +1418,7 @@ public static class UnitCatalog
         MaxHp = 54,
         Attack = 0,
         Speed = 3,
+        Advances = false,
         Traits = new[] { TraitId.Taillight },
         // 灯すことと道を譲ることが手番そのもの（第11期 Phase BB の作法）。攻撃は出ない。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "灯をかざしている") },
@@ -1449,6 +1473,23 @@ public static class EnemyCatalog
         Traits = traits
     };
 
+    /// <summary>
+    /// <see cref="Make"/> の<b>踏み込まない</b>版（第131期）。
+    /// 差分は <see cref="UnitDef.Advances"/> ただ1つで、<b>表示専用なので盤面は1ビットも動かない</b>。
+    /// 祈る・詠う・撒く役（従軍司祭・司祭長・施しの司祭長・逆位／渇きの祭司）はこちらで作る。
+    /// </summary>
+    private static UnitDef MakeStill(string id, string name, int hp, int atk, int spd,
+                                     params TraitId[] traits) => new()
+    {
+        Id = id,
+        Name = name,
+        MaxHp = hp,
+        Attack = atk,
+        Speed = spd,
+        Advances = false,
+        Traits = traits
+    };
+
     public static readonly UnitDef Recruit = Make("recruit", "討伐隊の新兵", 45, 11, 6);
     public static readonly UnitDef Axeman = new()
     {
@@ -1456,7 +1497,7 @@ public static class EnemyCatalog
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Sweep
     };
     public static readonly UnitDef Knight = Make("knight", "巡礼騎士", 75, 15, 7);
-    public static readonly UnitDef Priest = Make("priest", "従軍司祭", 40, 9, 8);
+    public static readonly UnitDef Priest = MakeStill("priest", "従軍司祭", 40, 9, 8);
     // 溜めてから撃つ（第10期 Phase AB）。**平均火力は変えない**——2周期の 200% は
     // (0 + 2) / 2 = 1.0 で、毎ターン 14 を振るのと総量が同じ。変えたのは配り方だけで、
     // 「何ターンで終わらせるか」が代金を決めるようにするのが狙い（第10期 §0）。
@@ -1474,6 +1515,7 @@ public static class EnemyCatalog
     public static readonly UnitDef Archer = new()
     {
         Id = "archer", Name = "狙撃手", MaxHp = 38, Attack = 14, Speed = 11,
+        Advances = false,
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Pierce,
         Actions = new UnitAction[]
         {
@@ -1489,6 +1531,7 @@ public static class EnemyCatalog
     public static readonly UnitDef Chanter = new()
     {
         Id = "chanter", Name = "詠唱兵", MaxHp = 70, Attack = 8, Speed = 5,
+        Advances = false,
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.All,
         Actions = new UnitAction[]
         {
@@ -1503,7 +1546,7 @@ public static class EnemyCatalog
     public static readonly UnitDef KnightG = Make("knight_g", "巡礼騎士", 75, 24, 7);
     // 第二波から外した（2026-08-28）。回復役という設定コメントだけで何も回復しないので、
     // 実際に回復する Chaplain に差し替えた。第二波の性格を戻すときの対照として定義は残す。
-    public static readonly UnitDef PriestG = Make("priest_g", "従軍司祭", 40, 9, 8);
+    public static readonly UnitDef PriestG = MakeStill("priest_g", "従軍司祭", 40, 9, 8);
     public static readonly UnitDef RecruitG = Make("recruit_g", "討伐隊の新兵", 45, 11, 6);
     // 第10期でもチャージを付けない。第二波は練習用の波で、ここを溜めさせると
     // 「支援役はレーンを選べば潰せる」という教える内容の手前に、溜めの読み合いが挟まる。
@@ -1537,6 +1580,7 @@ public static class EnemyCatalog
     public static readonly UnitDef ArcherG = new()
     {
         Id = "archer_g", Name = "狙撃手", MaxHp = 38, Attack = 18, Speed = 11,
+        Advances = false,
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Pierce
     };
 
@@ -1610,6 +1654,7 @@ public static class EnemyCatalog
     public static readonly UnitDef Seer = new()
     {
         Id = "seer", Name = "審問官", MaxHp = 76, Attack = 12, Speed = 10,
+        Advances = false,
         Traits = new[] { TraitId.Condemn }, Pattern = AttackPattern.All
     };
     // 第五波では使わない。第六波以降の素材として置いておく。
@@ -1637,7 +1682,7 @@ public static class EnemyCatalog
     // 第二波で使用（2026-08-28）。ここを触ると第二波が動く——他の波が回復役を要るなら
     // 新しい変異体を作ること。攻撃 7 には床がある: 呪詛（CurseTrait.EnemyDebuff = 6）で
     // 7 → 1 になるが 0 にはならず ApplyDamage の早期 return に落ちない。> 6 を割らないこと。
-    public static readonly UnitDef Chaplain = Make("chaplain", "従軍司祭長", 62, 7, 8, TraitId.Mender);
+    public static readonly UnitDef Chaplain = MakeStill("chaplain", "従軍司祭長", 62, 7, 8, TraitId.Mender);
 
     // 施しの司祭長: 第二波の支援役（2026-08-30）。Chaplain（継ぎ当て）は消さずに対照として残す
     // ——PriestG を残してあるのと同じ扱いで、第二波の性格を戻すときにここへ差し戻せる。
@@ -1650,7 +1695,7 @@ public static class EnemyCatalog
     // （貫き・全体・毒）を持つ編成にだけ。
     // 攻撃 7 は Chaplain から据え置き。床も同じ——呪詛（CurseTrait.EnemyDebuff = 6）で 7 → 1 に
     // なるが 0 にはならず ApplyDamage の早期 return に落ちない。> 6 を割らないこと。速さ 8 も据え置き。
-    public static readonly UnitDef Almoner = Make("chaplain_g", "施しの司祭長", 36, 7, 8, TraitId.Alms);
+    public static readonly UnitDef Almoner = MakeStill("chaplain_g", "施しの司祭長", 36, 7, 8, TraitId.Alms);
 
     // ここから第6期・安い波の再設計（design/ENGAGEMENT_PLAN_6.md）の候補素材。
     // 第5期の農兵では代金の「向き」（範囲持ちの編成にだけ安い）が作れなかった
@@ -1777,7 +1822,7 @@ public static class EnemyCatalog
     // 「固有の勝者」側は定義上そもそも立たない。spread の判定が「他のどの波でも 100% 未満」で、
     // 第一波は全35編成が 100% なので、**第2〜5波の固有の勝者は恒等的に 0**。
     // 第三波をどう作っても動かない（第一波を 100% のまま置く限り）。
-public static readonly UnitDef Inverter = Make("inverter", "逆位の祭司", 90, 10, 7, TraitId.Inversion);
+public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司", 90, 10, 7, TraitId.Inversion);
 
     // 渇きの祭司: **第三波の中央に採用した**（2026-08-30）。巡礼騎士1枚と差し替えてある。
     // **数値は巡礼騎士（75/15/7）と1つも違わない。トレイトだけを足してある。**
@@ -1788,7 +1833,7 @@ public static readonly UnitDef Inverter = Make("inverter", "逆位の祭司", 90
     // 測定（spread・seed 200・35編成）: 第三波の 100%編成 18 → 11 / 固有の敗者 0 → 2 /
     // 中間帯 12 → 14 / 第2〜4波すべて100% 16 → 9 / 第2波との相関 +0.85 → +0.71。
     // 平均は 80.5 → 70.0 なので**波としては難しくなっている**（逆位は易しくしていた）。
-    public static readonly UnitDef Droughter = Make("droughter", "渇きの祭司", 75, 15, 7, TraitId.Drought);
+    public static readonly UnitDef Droughter = MakeStill("droughter", "渇きの祭司", 75, 15, 7, TraitId.Drought);
 
     // 軛の重装兵: **第四波の中央に採用した**（2026-08-31）。重装兵1枚と差し替えてある。
     // **数値は城塞の重装兵（145/12/3）と1つも違わない。トレイトだけを足してある**
@@ -1897,6 +1942,7 @@ public static readonly UnitDef Inverter = Make("inverter", "逆位の祭司", 90
     public static readonly UnitDef Reverser = new()
     {
         Id = "seer_r", Name = "逆位の異端審問官", MaxHp = 76, Attack = 12, Speed = 10,
+        Advances = false,
         Traits = new[] { TraitId.Condemn, TraitId.Inversion }, Pattern = AttackPattern.All
     };
 

@@ -65673,10 +65673,16 @@ if (focusId == "dump")
             _ => a.AttackPercent == 100 ? "攻撃" : $"攻撃×{a.AttackPercent}%"
         }));
 
-    Console.WriteLine("| 名前 | HP | 攻 | 速 | 型 | 行動 | プラス | マイナス | 由来 |");
-    Console.WriteLine("|---|---:|---:|---:|---|---|---|---|---|");
+    // 踏込 列は**表示専用**（第131期）。engine に射程という軸は無く、この札を読んで分岐する
+    // 規則は 0 件——`DemoApp` が「敵の前まで出て振るか、その場から振るか」を選ぶためだけにある。
+    // **列は末尾側に足すこと**——`checkup check` の (a) は `docs/units.md` の
+    // 2〜4 列目（HP / 攻 / 速）を位置で読むので、前に挟むとその自己検査が壊れる。
+    static string Adv(UnitDef u) => u.Advances ? "踏込" : "据置";
+
+    Console.WriteLine("| 名前 | HP | 攻 | 速 | 型 | 踏込 | 行動 | プラス | マイナス | 由来 |");
+    Console.WriteLine("|---|---:|---:|---:|---|---|---|---|---|---|");
     foreach (UnitDef u in UnitCatalog.All.Where(u => u.Id != "spore"))
-        Console.WriteLine($"| **{u.Name}** | {u.MaxHp} | {u.Attack} | {u.Speed} | {Pat(u.Pattern)} | {Acts(u)} | {u.PlusText} | {u.MinusText} | {u.Flavor} |");
+        Console.WriteLine($"| **{u.Name}** | {u.MaxHp} | {u.Attack} | {u.Speed} | {Pat(u.Pattern)} | {Adv(u)} | {Acts(u)} | {u.PlusText} | {u.MinusText} | {u.Flavor} |");
 
     Console.WriteLine();
     Console.WriteLine("## 特性");
@@ -65695,7 +65701,7 @@ if (focusId == "dump")
     foreach (EnemyCatalog.Stage st in EnemyCatalog.Stages)
     {
         var e = st.Enemy.Occupied().Select(x =>
-            $"{x.Def.Name}(HP{x.Def.MaxHp}/攻{x.Def.Attack}/{Pat(x.Def.Pattern)}"
+            $"{x.Def.Name}(HP{x.Def.MaxHp}/攻{x.Def.Attack}/{Pat(x.Def.Pattern)}/{Adv(x.Def)}"
             + (x.Def.Actions is null ? "" : $"/{Acts(x.Def)}") + ")");
         Console.WriteLine($"- **{st.Name}**: {string.Join("、", e)}");
     }

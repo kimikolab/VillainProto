@@ -53,7 +53,7 @@
 | 40 | `boss` | `BossRule` | `BossRule { Census = False }` | ○ | `seats` / `boss` / `tank` / `time` / `grade` / `demo` | 第117期〜 | ○ |
 | 41 | `nourish` | `NourishRule` | `NourishRule { Gain = 2 }` |  | `tank` / `time` | 第117期〜 | ○ |
 | 42 | `wound` | `WoundRule` | `WoundRule { Enabled = True, Census = False }` |  | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `cross` | 第85期〜 | ○ |
-| 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False }` | ○ | `burn` / `survive` / `ember` | 第130期 |  |
+| 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False }` | ○ | `burn` / `survive` / `ember` | 第130期〜 | ○ |
 
 引数 43 本（`verbose` と観測子を除く）。
 
@@ -74,7 +74,7 @@
 | `CurseRule` | `CurseRule { Enabled = False, SharePercent = 50 }` | ○ | `curse` / `hex` / `lit` | 第95期〜 |
 | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` / `wound2` | 第93期〜 |
 | `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` | ○ | `divert` / `compare` / `survive` | 第50期〜 |
-| `EmberRule` | `EmberRule { Enabled = False }` | ○ | `burn` / `survive` / `ember` | 第130期 |
+| `EmberRule` | `EmberRule { Enabled = False }` | ○ | `burn` / `survive` / `ember` | 第130期〜 |
 | `EncoreRule` | `EncoreRule { Enabled = True }` | ○ | `encore` / `tempo` / `tomo` / `hold2` / `ledger` / `lit` | 第104期〜 |
 | `ExposeRule` | `ExposeRule { MaxPerBattle = 3 }` | ○ | `expose` / `creak3` / `ledger` | 第40期〜 |
 | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` | ○ | `curse` / `favor` / `turn` / `ledger` | 第58期〜 |
