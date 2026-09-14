@@ -147,6 +147,16 @@ public enum TraitId
     GradeStep,     // 格上げ・段: 閾値で**薙ぎ**、その `GradeTrait.StepFactor` 倍で**全体**。
                    // 「段で上がる」が二値の読み手の上に乗るかを見る唯一の版
 
+    // --- 第129期で足した札（**器具。ローカル台だけで測る。`UnitCatalog.All` には入れない**） ---
+    Undying,    // 不死: この駒はダメージでは HP が 1 未満にならない。**測定器であって機構ではない**
+                // ——「守れたら起動するのか」を先に測るための延命台（第129期 段2）で、
+                // 代金も上限も持たない。**判定は engine の出口**（`ApplyDamage` の
+                // `target.Hp -= amount` の直前）に、猶予（`Reprieve`）と並べて置く
+                // ——入口だと惨禍(+50%)や脆弱が押し戻して「死なない」が守られない
+                // （軛＝第25期・猶予＝第126期とまったく同じ理由。「殺さない」制約は出口にしか置けない）。
+                // **最大HP を触らないのが要点**——HP を膨らませる形だと囃し立て（最大HP最大の味方を選ぶ）
+                // のような「HP を読む選択」が動いて、延命以外のものまで測ってしまう
+
     // --- 傷の5枚から切り出したマイナス（第74期・**器具**） ---
     // どれも既存の駒に既定で付いたままで、**盤面は1ビットも変わらない**（受け入れ基準は
     // `compare` 305 セル 0 件）。切り出した理由は1つだけ——**計量できるようにするため**。
@@ -5996,6 +6006,57 @@ public sealed class ReprieveTrait : Trait
 }
 
 /// <summary>
+/// 不死（第129期・<b>器具であって機構ではない</b>）。
+/// <b>この駒はダメージでは HP が 1 未満にならない。</b> 代金も上限も回数制限も持たない。
+///
+/// <para><b>これは「守れたら起動するのか」を先に測るための延命台である</b>（第129期 段2）。
+/// 第126期は生存Tと紙のT（<c>MaxHp</c> ÷ 被弾/T）が <c>r = 0.853</c>・<c>実測 ÷ 紙</c> が
+/// 30 席中 26 席で 0.9〜1.1 で、<b>時間を買う特性はほぼ存在しない</b>ことを確定させた。
+/// そこで数値を足す前に、<b>落ちなくしたら実際に仕事をするのか</b>を切り分ける。
+/// <b>耐久を足したのに何も起きない、が一番もったいない</b>——鍵（標・撃破・被弾）の供給が
+/// 足りていない駒は、何ターン生かしても発火回数が増えない。</para>
+///
+/// <para><b>判定は engine の出口（<c>ApplyDamage</c> の <c>target.Hp -= amount</c> の直前）にある。</b>
+/// この札は何もせず、<b>保持者がいなければ完全に不活性</b>——猶予（<see cref="ReprieveTrait"/>）と
+/// 同じ場所・同じ族で、<c>lethal: false</c> のクランプの一般化にすぎない。
+/// <b>入口に置いてはいけない</b>（惨禍・脆弱が押し戻す。軛＝第25期・猶予＝第126期と同じ理由）。</para>
+///
+/// <para><b>最大HP を膨らませる形にしなかった</b>のが要点。<c>MaxHp</c> を上げると
+/// 囃し立て（<see cref="MarkerTrait"/>・隣接する<b>最大HP</b>最大の味方を選ぶ）のような
+/// 「HP を読む選択」が動いてしまい、<b>延命以外のものまで測ることになる</b>。
+/// この札は HP の値を1ビットも変えず、<b>0 を下回らせないだけ</b>である。</para>
+///
+/// <para><b>出口のクランプだけでは足りない。</b> HP が 1 に張り付くと、それ以降の被弾は
+/// <c>amount &lt;= 0</c> で早期に返り、<b><see cref="Trait.OnDamaged"/> が呼ばれなくなる</b>
+/// ——庇い（<see cref="GuardianTrait"/>）のように<b>被弾そのものが起動条件</b>の駒では、
+/// 延命したつもりが機構を止めてしまう（測りたいものの逆を測る）。
+/// だから<b>ターン頭に HP を満タンへ戻す</b>のを対にする。被弾は毎ターン普通に通り、
+/// <c>OnDamaged</c>・反撃・被弾強化・破片はすべて従来どおり走る。</para>
+///
+/// <para><b>戻しは <c>ctx.Heal</c> を通さない。</b> 窓口を通すと渇き（第三波）で止まり、
+/// 支援拒否（<c>Stoic</c>・ガルド）にも届かない——<b>いちばん測りたい2枚にだけ効かない器具</b>に
+/// なってしまう。これは回復ではなく<b>台の初期化</b>なので、窓口の規則（回復を止める場所は
+/// <c>ctx.Heal</c> の入口1箇所）には当たらない。<b>計数にも1点も乗らない</b>
+/// （<c>UnitTally.Healed</c> は <c>ctx.Heal</c> が動かした分だけを数える）。</para>
+///
+/// <para><b>ログを出さない。</b> 毎ターン・毎被弾で出るうえ、延命台の 1 戦ログを読む用途が無い
+/// （猶予は1戦に1度なので出している）。</para>
+///
+/// <para><b>保持者は <c>UnitCatalog.All</c> に1枚もいない</b>
+/// （<c>Regen</c> / <c>Reprieve</c> / <c>Tempered</c> / <c>Nourish</c> と同じ扱い）。</para>
+/// </summary>
+public sealed class UndyingTrait : Trait
+{
+    public override TraitId Id => TraitId.Undying;
+
+    /// <summary>ターン頭に満タンへ戻す。<b>回復ではなく台の初期化</b>（窓口を通さない理由は型の doc）。</summary>
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (self.IsAlive) self.Hp = self.MaxHp;
+    }
+}
+
+/// <summary>
 /// 育ち耐性（第126期・<b>案C。出力と生存を同じ通貨に乗せる</b>）。
 /// <b>自分の <c>AtkBonus</c> が閾値を越えている間、受けるダメージが減る。</b>
 ///
@@ -7499,6 +7560,7 @@ public static class TraitCatalog
         new RegenTrait(),
         new ReprieveTrait(),
         new TemperedTrait(),
+        new UndyingTrait(),
         // 第127期の器具。**上がる先だけが違う3本**（読む値も閾値も積み過ぎと共有する）。
         new GradeTrait(TraitId.GradePierce, AttackPattern.Pierce),
         new GradeTrait(TraitId.GradeAll, AttackPattern.All),

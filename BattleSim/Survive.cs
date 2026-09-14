@@ -11,11 +11,14 @@ using BattleCore;
 //
 //   **B. 起動前に落ちる。** 第126期の実測でソラ 2.32T・ガルド 2.17T・トメ 3.20T。
 //   **この状態では「組み合わせが弱い」のか「実演する時間がなかった」のかが混ざる。**
-//   → 段2 は**延命台**で「守れたら起動するか」を先に測る。**器具と段2 は次のコミット。**
+//   → 段2 は**延命台**（`TraitId.Undying`）で「守れたら起動するか」を先に測る。
+//   **起動しない駒は段3 の対象から外す。**
 //
-// **Phase 0 は `Presets` / `EnemyCatalog.Stages` / `UnitCatalog.All` を1文字も触らない。**
+// **Phase 0 と段2 は `Presets` / `EnemyCatalog.Stages` / `UnitCatalog.All` を1文字も触らない。**
+// 台は診断のローカルで、`Undying` の保持者は `UnitCatalog.All` に1枚もいない。
 //
-//     dotnet run --project BattleSim -c Release 0 survive phase0  # Q0-1〜Q0-5 / Q0-7〜Q0-9
+//     dotnet run --project BattleSim -c Release 0 survive phase0  # Q0-1〜Q0-9
+//     dotnet run --project BattleSim -c Release 0 survive run     # 段2（延命台）
 //     dotnet run --project BattleSim -c Release 0 survive check [採用前のbalance.md]
 // =====================================================================================
 
@@ -110,9 +113,11 @@ static class SurviveDiag
         switch (mode)
         {
             case "phase0": Phase0(); return;
+            case "run": RunStage2(); return;
+            case "hp": Sweep(arg); return;
             case "check": Check(arg); return;
             default:
-                Console.WriteLine("survive: モードは phase0 / check（第129期）。");
+                Console.WriteLine("survive: モードは phase0 / run / hp <駒Id> / check（第129期）。");
                 return;
         }
     }
@@ -170,7 +175,7 @@ static class SurviveDiag
             + "（既存の計数を読み直すだけで、規則もノブも1つも触らない）。");
         Console.WriteLine("**手で並べた表は1つも無い**（第94期の作法。走査が空なら止める＝第117期）。");
         Console.WriteLine();
-        Q01(); Q02(); Q03(); Q04(); Q05(); Q07(); Q08(); Q09();
+        Q01(); Q02(); Q03(); Q04(); Q05(); Q06(); Q07(); Q08(); Q09();
     }
 
     static void Q01()
@@ -457,6 +462,59 @@ static class SurviveDiag
         Console.WriteLine();
     }
 
+    static void Q06()
+    {
+        Console.WriteLine("## Q0-6 —— 延命台をどう作るか");
+        Console.WriteLine();
+        Console.WriteLine("**既存の対照札を先に見る**（指示書 Q0-6）:");
+        Console.WriteLine();
+        Console.WriteLine("| 札 | 効き | 味方の保持者 | 延命台に使えるか |");
+        Console.WriteLine("|---|---|--:|---|");
+        foreach ((TraitId t, string what, string ok) in new (TraitId, string, string)[]
+                 {
+                     (TraitId.Regen, "毎ターン自分を回復（`ctx.Heal` を通る）",
+                      "**×**——渇き（第三波）で止まり、`Stoic`（ガルド）にも届かない"),
+                     (TraitId.Reprieve, "致死の一撃を**1戦に1度だけ** HP1 で耐える",
+                      "**×**——1度きりでは決着まで守れない"),
+                     (TraitId.Tempered, "`AtkBonus` が閾値を越えている間だけ被ダメ減",
+                      "**×**——`AtkBonus` の供給が要る（対象の4枚は自己強化を1本も持たない）"),
+                     (TraitId.Undying, "**ダメージでは HP が 1 未満にならない** ＋ ターン頭に満タンへ戻す",
+                      "**○**——この期の器具として足した"),
+                 })
+            Console.WriteLine($"| `{t}` | {what} | {SurviveScan.Holders(t).Count} 枚 | {ok} |");
+        Console.WriteLine();
+        Console.WriteLine("**HP を極端に上げる形は採らなかった。** `MaxHp` を読む機構が盤上にあるので、"
+            + "**延命以外のものまで動く**:");
+        Console.WriteLine();
+        var hp = Lines(_traits, "MaxHp")
+            .Where(l => !l.TrimStart().StartsWith("///", StringComparison.Ordinal)).ToList();
+        Console.WriteLine($"`BattleCore/Traits.cs` で `MaxHp` を読む行（コメントを除く）**{hp.Count} 件**:");
+        Console.WriteLine();
+        foreach (string l in hp) Console.WriteLine($"    {l.Trim()}");
+        Console.WriteLine();
+        Console.WriteLine("うち**他人の `MaxHp` を読むのは囃し立て（ヒサ）の1箇所**"
+            + "（`隣接する最大HP最大の味方`）で、残りは自分の割合を見る型"
+            + "——**逃亡兵セロの後退（`Hp * 3 > MaxHp * 2`）もここにいる**ので、"
+            + "HP を膨らませると**セロ自身の起動条件が壊れる。**");
+        Console.WriteLine();
+        var clamp = Lines(_engine, "TraitId.Undying");
+        Console.WriteLine($"採った形（`BattleEngine.cs`・**{clamp.Count} 件**）"
+            + "——**猶予の直後・同じ出口**（`target.Hp -= amount` の直前）:");
+        Console.WriteLine();
+        foreach (string l in clamp) Console.WriteLine($"    {l.Trim()}");
+        Console.WriteLine();
+        Console.WriteLine("**出口のクランプだけでは足りない。** HP が 1 に張り付くと以降の被弾が "
+            + "`amount <= 0` で早期に返り、**`OnDamaged` が呼ばれなくなる**"
+            + "——庇い（ガルド）のように**被弾そのものが起動条件**の駒では、"
+            + "延命したつもりで機構を止めてしまう（測りたいものの逆を測る）。"
+            + "だから**ターン頭に満タンへ戻す**のを対にした（`UndyingTrait.OnTurnStart`）。");
+        Console.WriteLine();
+        Console.WriteLine("**戻しは `ctx.Heal` を通さない**——窓口を通すと渇きで止まり `Stoic` に届かず、"
+            + "**いちばん測りたい2枚にだけ効かない器具**になる。"
+            + "これは回復ではなく**台の初期化**で、`UnitTally.Healed` にも1点も乗らない。");
+        Console.WriteLine();
+    }
+
     static void Q07()
     {
         Console.WriteLine("## Q0-7 —— トメの鍵（標）の供給");
@@ -514,7 +572,7 @@ static class SurviveDiag
             + $"/ 速 {UnitCatalog.Gald.Speed}**。");
         Console.WriteLine("→ **段3 で `MaxHp` を上げるのは弾かれない**"
             + "（第126期に `Regen` が載らなかったのとは別の話）。");
-        Console.WriteLine("同じ理由で、**器具を作るなら窓口を通さない形にする**（段2）。");
+        Console.WriteLine("同じ理由で、この期の器具（`Undying`）も**窓口を通さない**のでガルドに効く（Q0-6）。");
         Console.WriteLine();
     }
 
@@ -550,13 +608,390 @@ static class SurviveDiag
         Console.WriteLine();
         Console.WriteLine("→ **第126期（`time`）が「時間を買う3案」を測っているが、"
             + "あれは代金つきの<u>機構</u>の案で、「代金ゼロで落ちなくしたら起動するか」は測っていない。**");
-        Console.WriteLine("**同じ機構を別の名前で2度測らないこと**——この期の器具は"
+        Console.WriteLine("**同じ機構を別の名前で2度測らないこと**——この期の `Undying` は"
             + "**採否を持たない測定器**であって、案ではない。");
         Console.WriteLine();
     }
 
     // ==================================================================================
-    // 自己検査（段1 のぶん）
+    // 段2 —— 延命台
+    // ==================================================================================
+
+    /// <summary>段2 の対象（第126期の実測で早く落ちた駒。指示書 §3-2 の表）。</summary>
+    static readonly (UnitDef D, string Key, string Trigger)[] Targets =
+    {
+        (UnitCatalog.Sora, "逸らし",     "自前（毎ターン無条件）"),
+        (UnitCatalog.Gald, "庇う",       "不要（味方が単体攻撃を受けるたび）"),
+        (UnitCatalog.Hagi, "追い打ち",   "撃破（希少）"),
+        (UnitCatalog.Tome, "止め",       "標（敵に立てるのはソラ1枚・殴ると外れる）"),
+        (UnitCatalog.Sero, "後退＋狙撃", "自分の被弾（HP の 1/3）"),
+    };
+
+    /// <summary>その駒の「発火回数」。<b>実装から引いた計数を駒ごとに指定する</b>（A4）。</summary>
+    static double Fires(UnitDef d, BattleResult r)
+    {
+        UnitTally? t = r.TallyByUnit.TryGetValue(d.Id, out UnitTally? v) ? v : null;
+        if (d.Id == UnitCatalog.Sora.Id) return r.DivertFires;
+        if (d.Id == UnitCatalog.Gald.Id) return t?.Intercepts ?? 0;
+        if (d.Id == UnitCatalog.Hagi.Id) return t?.Attacks ?? 0;
+        if (d.Id == UnitCatalog.Tome.Id) return r.FinisherFires;
+        if (d.Id == UnitCatalog.Sero.Id) return t?.SniperSwings ?? 0;
+        return t?.Interventions ?? 0;
+    }
+
+    static string FireLabel(UnitDef d)
+    {
+        if (d.Id == UnitCatalog.Sora.Id) return "`BattleResult.DivertFires`（外し＋焦点の1回の発火）";
+        if (d.Id == UnitCatalog.Gald.Id) return "`UnitTally.Intercepts`（主目標を引き受けた回数）";
+        if (d.Id == UnitCatalog.Hagi.Id) return "`UnitTally.Attacks`（**自分の手番では振らない型**なので全数が追い打ち）";
+        if (d.Id == UnitCatalog.Tome.Id) return "`BattleResult.FinisherFires`（標持ちを狙って倍で振った回数）";
+        if (d.Id == UnitCatalog.Sero.Id) return "`UnitTally.SniperSwings`（狙撃が成立したまま振った回数）";
+        return "`UnitTally.Interventions`";
+    }
+
+    /// <summary>
+    /// 段2 の集計。<b>クラス名に接頭辞を付けてある</b>——`derive rules` の索引は
+    /// <c>(?:static|sealed) class (\w+)</c> で<b>入れ子のクラスまで拾い</b>、
+    /// その名前 ＋ <c>"."</c> が現れたモードにこのファイル全体を結び付ける。
+    /// <c>Acc</c> のような短い名前だと**無関係なモードに結び付いて `docs/rules.md` の
+    /// `利用者` 列が汚れる**（実測で `pairs` が付いた）。第121期「引けているのに結ばれない」の裏返しで、
+    /// <b>今度は結ばれ過ぎる</b>側。
+    /// </summary>
+    sealed class SurviveAcc
+    {
+        public double Fires, Dealt, Alive, Turns;
+        public int Fell, Wins, N;
+    }
+
+    static void RunStage2()
+    {
+        Console.WriteLine("# 第129期 段2 —— 延命台（守れたら起動するか）");
+        Console.WriteLine();
+        Console.WriteLine("`dotnet run --project BattleSim -c Release 0 survive run` の出力。");
+        Console.WriteLine("**`Presets` / `EnemyCatalog.Stages` / `UnitCatalog.All` を1文字も触らない。**");
+        Console.WriteLine("台は `compare` の行そのもの（対象駒が在席する行を機械で引く）で、"
+            + "**V1 は対象駒の `UnitDef` に `Undying` を足した写しへ差し替えるだけ**。");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 内容 |");
+        Console.WriteLine("|---|---|");
+        Console.WriteLine("| V0（対照） | そのまま |");
+        Console.WriteLine("| V1 | **対象駒だけ落ちないようにする**（`TraitId.Undying`。代金も上限も無い） |");
+        Console.WriteLine();
+        Console.WriteLine("**代金を付けない。閾値を掃引しない**（第118・126・127期と同じ）。素の効き方だけを見る。");
+        Console.WriteLine();
+        Console.WriteLine("> **判定: 延命しても発火回数と与ダメが増えない駒は、守っても意味がない。"
+            + "段3 の対象から外す。**");
+        Console.WriteLine();
+
+        var verdicts = new List<(string Unit, int Rows, double F0, double F1, double D0, double D1, double A0, double A1)>();
+
+        foreach ((UnitDef d, string key, string trig) in Targets)
+        {
+            var rows = Presets.Compare
+                .Where(b => b.F.Occupied().Any(o => o.Def.Id == d.Id)).ToList();
+            Console.WriteLine($"## {d.Name}（{key}・鍵の供給: {trig}）");
+            Console.WriteLine();
+            Console.WriteLine($"HP {d.MaxHp} / 攻 {d.Attack} / 速 {d.Speed} ／ "
+                + $"`compare` の在席行 **{rows.Count} 行**。");
+            Console.WriteLine();
+            if (rows.Count == 0)
+            {
+                Console.WriteLine("**在席行が 0。走査が空なので止める**（第117期）。");
+                Console.WriteLine();
+                continue;
+            }
+            Console.WriteLine($"`発火` は {FireLabel(d)}。`生存T` は `UnitTally.LastActiveTurn` の平均。");
+            Console.WriteLine();
+            Console.WriteLine("| 編成 | 波 | 版 | 勝率 | 発火/戦 | 与ダメ(敵)/戦 | 生存T | 落ち率 | 決着T |");
+            Console.WriteLine("|---|--:|---|--:|--:|--:|--:|--:|--:|");
+
+            UnitDef live = Undy(d);
+            var tot = new[] { new SurviveAcc(), new SurviveAcc() };
+            foreach ((string name, Formation f) in rows)
+            {
+                Formation f1 = Swap(f, d, live);
+                for (int w = 1; w < EnemyCatalog.Stages.Count; w++)
+                {
+                    var a = new[] { new SurviveAcc(), new SurviveAcc() };
+                    for (int v = 0; v < 2; v++)
+                    {
+                        Formation ff = v == 0 ? f : f1;
+                        for (int seed = 0; seed < Seeds; seed++)
+                        {
+                            BattleResult r = BattleEngine.Run(ff, EnemyCatalog.Stages[w].Enemy, seed, verbose: false);
+                            a[v].N++; tot[v].N++;
+                            if (r.PlayerWon) { a[v].Wins++; tot[v].Wins++; }
+                            a[v].Turns += r.Turns; tot[v].Turns += r.Turns;
+                            double fr = Fires(d, r);
+                            a[v].Fires += fr; tot[v].Fires += fr;
+                            if (r.TallyByUnit.TryGetValue(d.Id, out UnitTally? t))
+                            {
+                                a[v].Dealt += t.DamageToEnemy; tot[v].Dealt += t.DamageToEnemy;
+                                a[v].Alive += t.LastActiveTurn; tot[v].Alive += t.LastActiveTurn;
+                                if (t.Deaths >= 1) { a[v].Fell++; tot[v].Fell++; }
+                            }
+                        }
+                    }
+                    for (int v = 0; v < 2; v++)
+                        Console.WriteLine($"| {(v == 0 ? name : "")} | {(v == 0 ? (w + 1).ToString() : "")} "
+                            + $"| {(v == 0 ? "V0" : "**V1**")} | {a[v].Wins * 100.0 / a[v].N:F1}% "
+                            + $"| {a[v].Fires / a[v].N:F2} | {a[v].Dealt / a[v].N:F1} "
+                            + $"| {a[v].Alive / a[v].N:F2} | {a[v].Fell * 100.0 / a[v].N:F1}% "
+                            + $"| {a[v].Turns / a[v].N:F2} |");
+                }
+            }
+            Console.WriteLine();
+            Console.WriteLine($"**通算**（{rows.Count} 行 × 第2〜5波 × seed 0..{Seeds - 1} ＝ {tot[0].N} 戦/版）:");
+            Console.WriteLine();
+            Console.WriteLine("| 版 | 勝率 | 発火/戦 | 与ダメ(敵)/戦 | 生存T | 落ち率 | 決着T |");
+            Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|");
+            for (int v = 0; v < 2; v++)
+                Console.WriteLine($"| {(v == 0 ? "V0" : "**V1**")} | {tot[v].Wins * 100.0 / tot[v].N:F1}% "
+                    + $"| {tot[v].Fires / tot[v].N:F2} | {tot[v].Dealt / tot[v].N:F1} "
+                    + $"| {tot[v].Alive / tot[v].N:F2} | {tot[v].Fell * 100.0 / tot[v].N:F1}% "
+                    + $"| {tot[v].Turns / tot[v].N:F2} |");
+            Console.WriteLine();
+            double f0 = tot[0].Fires / tot[0].N, f1v = tot[1].Fires / tot[1].N;
+            double d0 = tot[0].Dealt / tot[0].N, d1 = tot[1].Dealt / tot[1].N;
+            double a0 = tot[0].Alive / tot[0].N, a1 = tot[1].Alive / tot[1].N;
+            Console.WriteLine($"**買った時間**: 生存T {a0:F2} → {a1:F2}（**+{a1 - a0:F2}T**）。");
+            Console.WriteLine($"**発火**: {f0:F2} → {f1v:F2}（{(f0 <= 0 ? "—" : $"×{f1v / f0:F2}")}）"
+                + (f1v <= 0 ? "。**0 回。起動していない。**" : "。"));
+            Console.WriteLine($"**与ダメ(敵)**: {d0:F1} → {d1:F1}（{(d0 <= 0 ? "—" : $"×{d1 / d0:F2}")}）。");
+            Console.WriteLine();
+            Console.WriteLine($"**発火の密度**（発火 ÷ 生存T）: {(a0 <= 0 ? 0 : f0 / a0):F3} → "
+                + $"{(a1 <= 0 ? 0 : f1v / a1):F3}"
+                + $"（×{(a0 <= 0 || f0 <= 0 ? 0 : (f1v / Math.Max(1e-9, a1)) / (f0 / a0)):F2}）"
+                + "——**1 なら発火は時間に比例している。1 を下回るほど、"
+                + "時間ではなく鍵（発火の材料）が律速している。**");
+            Console.WriteLine();
+            Console.WriteLine("→ " + Verdict(f0, f1v, d0, d1));
+            Console.WriteLine();
+            verdicts.Add((d.Name, rows.Count, f0, f1v, d0, d1, a0, a1));
+        }
+
+        Console.WriteLine("## 判定のまとめ（§5-2 の条件1）");
+        Console.WriteLine();
+        Console.WriteLine("| 駒 | 鍵の供給 | 在席行 | 生存T V0 → V1 | 発火 V0 → V1 "
+            + "| 密度 V0 → V1 | 与ダメ V0 → V1 | 判定 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|---|");
+        for (int i = 0; i < verdicts.Count; i++)
+        {
+            (string u, int rr, double f0, double f1, double d0, double d1, double a0, double a1) = verdicts[i];
+            double p0 = a0 <= 0 ? 0 : f0 / a0, p1 = a1 <= 0 ? 0 : f1 / a1;
+            Console.WriteLine($"| {u} | {Targets[i].Trigger} | {rr} "
+                + $"| {a0:F2} → {a1:F2}（+{a1 - a0:F2}） | {f0:F2} → {f1:F2}（×{(f0 <= 0 ? 0 : f1 / f0):F2}） "
+                + $"| {p0:F3} → {p1:F3}（**×{(p0 <= 0 ? 0 : p1 / p0):F2}**） "
+                + $"| {d0:F1} → {d1:F1}（×{(d0 <= 0 ? 0 : d1 / d0):F2}） | {Verdict(f0, f1, d0, d1)} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("**`密度` は 発火 ÷ 生存T。** `×1.00` なら発火は買った時間にきれいに比例している。"
+            + "**下回るほど、律速しているのは時間ではなく鍵（発火の材料）**"
+            + "——判定の線（発火・与ダメの両方が増えたか）は通っても、"
+            + "**密度が落ちている駒は「守れば働く」ではなく「守っても働きが薄まる」**。");
+        Console.WriteLine();
+        Console.WriteLine("**発火回数と与ダメの両方が増えた駒だけが段3 の候補**（§5-2 の条件1）。"
+            + "**1 が無ければ段3 に進まない。**");
+        Console.WriteLine();
+    }
+
+    /// <summary>判定の線は**事前に固定した**（§3-2）: 発火と与ダメの**両方**が増えたか。</summary>
+    static string Verdict(double f0, double f1, double d0, double d1)
+    {
+        if (f1 <= 0) return "**起動していない**（発火 0 回）";
+        bool fUp = f1 > f0, dUp = d1 > d0;
+        return fUp && dUp ? "**守れば起動する**（発火・与ダメとも増）"
+             : fUp ? "発火は増えるが**与ダメは増えない**（段3 の対象から外す）"
+             : dUp ? "与ダメは増えるが**発火は増えない**（段3 の対象から外す）"
+             : "**守っても意味がない**（どちらも増えない）";
+    }
+
+    /// <summary><c>Undying</c> を足した写し。<b>元の <c>UnitDef</c> は1文字も触らない。</b></summary>
+    static UnitDef Undy(UnitDef d) => new()
+    {
+        Id = d.Id, Name = d.Name, MaxHp = d.MaxHp, Attack = d.Attack, Speed = d.Speed,
+        Traits = d.Traits.Concat(new[] { TraitId.Undying }).ToArray(),
+        Pattern = d.Pattern, Actions = d.Actions,
+        PlusText = d.PlusText, MinusText = d.MinusText, Flavor = d.Flavor
+    };
+
+    static Formation Swap(Formation f, UnitDef from, UnitDef to)
+    {
+        Formation g = f.Clone();
+        foreach ((int slot, UnitDef d) in f.Occupied()) if (d.Id == from.Id) g[slot] = to;
+        return g;
+    }
+
+    // ==================================================================================
+    // 段3 の逆算 —— `MaxHp` の掃引（**採否は拒否権で決める**）
+    // ==================================================================================
+
+    /// <summary>
+    /// 対象駒の <c>MaxHp</c> だけを振って、<c>compare</c> 61 行 × 5 波を測り直す。
+    /// <b>触るのは <c>MaxHp</c> 1つだけ</b>（攻撃力・速度・特性・席・`Presets` は1文字も触らない）。
+    /// <b><c>UnitCatalog</c> は書き換えない</b>——写しを作って <c>Formation</c> を差し替えるだけ。
+    /// </summary>
+    static void Sweep(string id)
+    {
+        if (id.Length == 0) id = UnitCatalog.Gald.Id;
+        UnitDef? baseDef = UnitCatalog.All.FirstOrDefault(d => d.Id == id);
+        if (baseDef is null)
+        {
+            Console.WriteLine($"survive hp: 駒 `{id}` が `UnitCatalog.All` に無い。**止める**（第117期）。");
+            return;
+        }
+        var rows = Presets.Compare.Where(b => b.F.Occupied().Any(o => o.Def.Id == id)).ToList();
+        Console.WriteLine($"# 第129期 段3 の逆算 —— {baseDef.Name} の `MaxHp` 掃引");
+        Console.WriteLine();
+        Console.WriteLine($"`dotnet run --project BattleSim -c Release 0 survive hp {id}` の出力。");
+        Console.WriteLine($"**触るのは `MaxHp` だけ**（攻 {baseDef.Attack} / 速 {baseDef.Speed} / "
+            + $"特性 {string.Join("・", baseDef.Traits)} は1文字も触らない）。");
+        Console.WriteLine($"`compare` の在席行 **{rows.Count} / {Presets.Compare.Length} 行**"
+            + $"（{rows.Count * 100.0 / Presets.Compare.Length:F1}%）／ "
+            + $"主判定19行のうち **{Baseline.PrimaryRows.Count(n => rows.Any(r => r.Name == n))} 行**"
+            + "（規約 (G4)）。");
+        Console.WriteLine();
+
+        int[] hps = { baseDef.MaxHp, baseDef.MaxHp + 10, baseDef.MaxHp + 20, baseDef.MaxHp + 30 };
+        var cell = new Dictionary<int, double[,]>();
+        var alive = new Dictionary<int, double>();
+        var fires = new Dictionary<int, double>();
+        var dealt = new Dictionary<int, double>();
+
+        foreach (int hp in hps)
+        {
+            UnitDef d = WithHp(baseDef, hp);
+            var g = new double[Presets.Compare.Length, EnemyCatalog.Stages.Count];
+            double av = 0, fi = 0, de = 0; int n = 0;
+            for (int bi = 0; bi < Presets.Compare.Length; bi++)
+            {
+                (string name, Formation f0) = Presets.Compare[bi];
+                Formation f = Swap(f0, baseDef, d);
+                bool here = rows.Any(r => r.Name == name);
+                for (int w = 0; w < EnemyCatalog.Stages.Count; w++)
+                {
+                    int wins = 0;
+                    for (int seed = 0; seed < Seeds; seed++)
+                    {
+                        BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[w].Enemy, seed, verbose: false);
+                        if (r.PlayerWon) wins++;
+                        if (!here || w == 0) continue;
+                        n++;
+                        fi += Fires(baseDef, r);
+                        if (r.TallyByUnit.TryGetValue(id, out UnitTally? t))
+                        { av += t.LastActiveTurn; de += t.DamageToEnemy; }
+                    }
+                    g[bi, w] = wins * 100.0 / Seeds;
+                }
+            }
+            cell[hp] = g;
+            alive[hp] = n == 0 ? 0 : av / n;
+            fires[hp] = n == 0 ? 0 : fi / n;
+            dealt[hp] = n == 0 ? 0 : de / n;
+        }
+
+        int b0 = baseDef.MaxHp;
+        Console.WriteLine($"## 在席行での効き（第2〜5波・{rows.Count} 行 × seed 0..{Seeds - 1}）");
+        Console.WriteLine();
+        Console.WriteLine($"`発火` は {FireLabel(baseDef)}。`密度` は 発火 ÷ 生存T。");
+        Console.WriteLine();
+        Console.WriteLine("| `MaxHp` | 生存T | 買った時間 | 発火/戦 | 密度 | 与ダメ(敵)/戦 |");
+        Console.WriteLine("|--:|--:|--:|--:|--:|--:|");
+        foreach (int hp in hps)
+            Console.WriteLine($"| {hp}{(hp == b0 ? "（現行）" : "")} | {alive[hp]:F2} "
+                + $"| {(hp == b0 ? "—" : $"+{alive[hp] - alive[b0]:F2}T")} | {fires[hp]:F2} "
+                + $"| {(alive[hp] <= 0 ? 0 : fires[hp] / alive[hp]):F3} | {dealt[hp]:F1} |");
+        Console.WriteLine();
+
+        Console.WriteLine("## 盤面（`compare` 61 行 × 5 波）");
+        Console.WriteLine();
+        Console.WriteLine("`主判定` は `Baseline.PrimaryRows` 19 行の平均、`歯止め` は "
+            + $"{Baseline.PrimaryFifthFloor:F1}%（主判定19行の第五波）。"
+            + "`拒否権3` は**いずれかの波で −10.0pt 以上落ちた行**の数。"
+            + "`余波` は**その駒を含まない行**で動いたセルの数（A6。**0 でなければならない**）。"
+            + "`情報セル` は第2〜5波で 0% でも 100% でもないセルの合計（規約 (G14)）。");
+        Console.WriteLine();
+        Console.WriteLine("| `MaxHp` | 主判定 第2〜5波 | 第五波 | 余裕 | 全61行 第2〜5波 "
+            + "| 拒否権3 | 余波 | 情報セル |");
+        Console.WriteLine("|--:|---|--:|--:|---|--:|--:|--:|");
+        foreach (int hp in hps)
+        {
+            double[,] g = cell[hp], g0 = cell[b0];
+            var pri = new double[EnemyCatalog.Stages.Count];
+            var all = new double[EnemyCatalog.Stages.Count];
+            int pn = 0;
+            for (int bi = 0; bi < Presets.Compare.Length; bi++)
+            {
+                bool isPri = Baseline.PrimaryRows.Contains(Presets.Compare[bi].Name);
+                if (isPri) pn++;
+                for (int w = 0; w < EnemyCatalog.Stages.Count; w++)
+                { all[w] += g[bi, w]; if (isPri) pri[w] += g[bi, w]; }
+            }
+            int veto = 0, spill = 0, info = 0;
+            for (int bi = 0; bi < Presets.Compare.Length; bi++)
+            {
+                bool here = rows.Any(r => r.Name == Presets.Compare[bi].Name);
+                bool bad = false;
+                for (int w = 0; w < EnemyCatalog.Stages.Count; w++)
+                {
+                    if (g[bi, w] - g0[bi, w] <= -10.0) bad = true;
+                    if (!here && Math.Abs(g[bi, w] - g0[bi, w]) > 1e-9) spill++;
+                    if (w >= 1 && g[bi, w] > 0.0 && g[bi, w] < 100.0) info++;
+                }
+                if (bad) veto++;
+            }
+            double fifth = pri[EnemyCatalog.Stages.Count - 1] / pn;
+            Console.WriteLine($"| {hp}{(hp == b0 ? "（現行）" : "")} | "
+                + string.Join(" / ", Enumerable.Range(1, EnemyCatalog.Stages.Count - 1)
+                    .Select(w => $"{pri[w] / pn:F1}"))
+                + $" | {fifth:F1}% | {fifth - Baseline.PrimaryFifthFloor:+0.0;-0.0}pt | "
+                + string.Join(" / ", Enumerable.Range(1, EnemyCatalog.Stages.Count - 1)
+                    .Select(w => $"{all[w] / Presets.Compare.Length:F1}"))
+                + $" | {veto} | {spill} | {info} |");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## 動いた行（現行との差・いずれかの波で ±0.5pt 以上）");
+        Console.WriteLine();
+        foreach (int hp in hps.Skip(1))
+        {
+            Console.WriteLine($"### `MaxHp` {b0} → {hp}");
+            Console.WriteLine();
+            Console.WriteLine("| 編成 |" + string.Concat(Enumerable.Range(0, EnemyCatalog.Stages.Count)
+                .Select(i => $" 第{i + 1}波 |")) + " 主判定 |");
+            Console.WriteLine("|---|" + string.Concat(Enumerable.Range(0, EnemyCatalog.Stages.Count)
+                .Select(_ => "---:|")) + ":-:|");
+            int moved = 0;
+            for (int bi = 0; bi < Presets.Compare.Length; bi++)
+            {
+                var ds = new double[EnemyCatalog.Stages.Count];
+                bool any = false;
+                for (int w = 0; w < EnemyCatalog.Stages.Count; w++)
+                {
+                    ds[w] = cell[hp][bi, w] - cell[b0][bi, w];
+                    if (Math.Abs(ds[w]) >= 0.5) any = true;
+                }
+                if (!any) continue;
+                moved++;
+                Console.WriteLine($"| {Presets.Compare[bi].Name} |"
+                    + string.Concat(ds.Select(x => Math.Abs(x) < 1e-9 ? " ±0.0 |" : $" {x:+0.0;-0.0} |"))
+                    + (Baseline.PrimaryRows.Contains(Presets.Compare[bi].Name) ? " ○ |" : "  |"));
+            }
+            Console.WriteLine();
+            Console.WriteLine($"**動いた行 {moved} 行。**");
+            Console.WriteLine();
+        }
+    }
+
+    static UnitDef WithHp(UnitDef d, int hp) => new()
+    {
+        Id = d.Id, Name = d.Name, MaxHp = hp, Attack = d.Attack, Speed = d.Speed,
+        Traits = d.Traits, Pattern = d.Pattern, Actions = d.Actions,
+        PlusText = d.PlusText, MinusText = d.MinusText, Flavor = d.Flavor
+    };
+
+    // ==================================================================================
+    // 自己検査（規約 (G8) の必須4項目 ＋ この期の (5)(6)）
     // ==================================================================================
     static void Check(string before)
     {
@@ -599,17 +1034,23 @@ static class SurviveDiag
 
         Console.WriteLine("## (2) この期はノブを1本も足していない");
         Console.WriteLine();
-        Console.WriteLine("段1 は**規則もノブも 0 本**（計数を1本足しただけ）。"
-            + "`docs/rules.md` の差分で示す。");
+        Console.WriteLine("段1・段2 は**規則もノブも 0 本**。器具（`Undying`）は札で、"
+            + "強度のノブを持たない（`Reprieve` と同じ）。`docs/rules.md` の差分で示す。");
         Console.WriteLine();
 
         Console.WriteLine("## (3) `ctx.PickOne` を新たに使っていない（第89期 (h)）");
         Console.WriteLine();
         Console.WriteLine($"`PickOne` の出現 **{Lines(_traits, "PickOne").Count + Lines(_engine, "PickOne").Count} 件**。"
-            + "`FallenStarters` は**1件も呼ばない**（乱数を引かない）。");
+            + "`UndyingTrait` / `FallenStarters` / `SniperSwings` は**1件も呼ばない**（どれも乱数を引かない）。");
         Console.WriteLine();
 
-        Console.WriteLine("## (4) 免除は `OnDeath` を持つ味方だけ（A3）");
+        Console.WriteLine("## (4) 器具は保持者がいなければ不活性");
+        Console.WriteLine();
+        Console.WriteLine($"- `Undying` の `UnitCatalog.All` の保持者 **{SurviveScan.Holders(TraitId.Undying).Count} 枚**");
+        Console.WriteLine($"- `EnemyCatalog.Stages` 側の保持者 **{EnemyHolders(TraitId.Undying)} 枚**");
+        Console.WriteLine();
+
+        Console.WriteLine("## (5) 免除は `OnDeath` を持つ味方だけ（A3）");
         Console.WriteLine();
         Console.WriteLine($"- `OnDeath` を上書きする札 **{SurviveScan.DeathTraits.Count} 本**"
             + $"（{SurviveScan.NameList(SurviveScan.DeathTraits)}）");
@@ -621,7 +1062,7 @@ static class SurviveDiag
                 + "——**`OnDeath` 側に入るので免除される。報告書に書く。**"));
         Console.WriteLine();
 
-        Console.WriteLine("## (5) 決定性（同じ seed で 2 回回して一致）");
+        Console.WriteLine("## (6) 決定性（同じ seed で 2 回回して一致）");
         Console.WriteLine();
         int diff = 0, n = 0;
         foreach ((string _, Formation f) in Presets.Compare.Take(10))
@@ -637,4 +1078,12 @@ static class SurviveDiag
         Console.WriteLine();
     }
 
+    static int EnemyHolders(TraitId t)
+    {
+        int n = 0;
+        foreach (EnemyCatalog.Stage st in EnemyCatalog.Stages)
+            foreach ((int _, UnitDef d) in st.Enemy.Occupied())
+                if (d.Traits.Contains(t)) n++;
+        return n;
+    }
 }

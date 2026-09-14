@@ -3647,7 +3647,13 @@ public sealed class BattleContext
         if (actor.HasTrait(TraitId.Pyre) && actor.RawCounter(StatusKeys.Burn) > 0)
             HighlightOnce(actor, "pyre", $"  {actor.Name} は燃えたまま振り抜いた（攻 ×{PyreTrait.Multiplier}・貫き）");
         if (actor.HasTrait(TraitId.Sniper) && actor.HasFallenBack && actor.Row == Row.Back)
+        {
+            // 第129期・**計数のみ**。狙撃の成立は `PerformAttack` がその場で評価して
+            // 打点と攻撃型を書き換えるだけなので、**盤面にも計数にも痕跡が残らない**
+            // （見せ場は verbose が偽だと出ず、1戦に1度しか打たない）。誰も読んで分岐しない。
+            TallyOf(actor).SniperSwings++;
             HighlightOnce(actor, "sniper", $"  {actor.Name} は下がりきって狙いを定めた（攻 ×2・貫き）");
+        }
 
         Log($"{prefix}{actor.Name} → {target.Name} (攻撃 {atk}{label})");
         Emit(new BattleEvent
@@ -4161,6 +4167,17 @@ public sealed class BattleContext
             amount = target.Hp - 1;
             Log($"    {target.Name} は倒れるはずの一撃を堪えた（残り 1）", LogKind.Trigger);
         }
+
+        // 不死（UndyingTrait・第129期）: **器具であって機構ではない。**
+        // 「守れたら起動するのか」を測る延命台（段2）のための札で、`UnitCatalog.All` には
+        // 保持者が1枚もいない。**猶予の直後・同じ出口**に置く——`lethal: false` のクランプの
+        // 一般化にすぎず、「殺さない」制約は出口にしか置けない（軛＝第25期・猶予＝第126期）。
+        //
+        // **ログを出さない**（毎回の被弾で出るうえ、延命台の1戦ログを読む用途が無い）。
+        // `amount >= target.Hp` を先に見るのは特性の走査を毎回の被弾で走らせないため（軛と同じ作法）。
+        if (amount >= target.Hp && target.HasTrait(TraitId.Undying))
+            amount = Math.Max(0, target.Hp - 1);
+        if (amount <= 0) return;
 
         // 軛（YokeTrait）: 保持者が盤上に生きている間、1回のダメージは上限で切られる。
         // **両陣営にかかる。** 非対称なのは「こちらはそのルールを知って編成を組めるが、

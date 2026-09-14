@@ -145,6 +145,7 @@
 | `GradePierce` | - |
 | `GradeAll` | - |
 | `GradeStep` | のろまの巨兵ドルガ |
+| `Undying` | - |
 | `ThinBlade` | 裂きのキリ |
 | `Overreach` | 抉りのエグ |
 | `Await` | 断ちのナタ |

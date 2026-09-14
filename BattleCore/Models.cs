@@ -918,6 +918,14 @@ public sealed class UnitTally
     /// </summary>
     public int Intercepts;
 
+    /// <summary>
+    /// <b>狙撃（<see cref="TraitId.Sniper"/>）が成立したまま振った回数</b>（第129期・<b>計数専用</b>）。
+    /// 成立の条件（<c>HasFallenBack</c> かつ <c>Row.Back</c>）は <c>PerformAttack</c> が
+    /// その場で評価して打点と攻撃型を書き換えるだけなので、<b>盤面にも計数にも痕跡が残らない</b>
+    /// ——見せ場（<c>HighlightOnce</c>）は <c>verbose</c> が偽だと1件も出ないうえ1戦に1度しか打たない。
+    /// <b>逃亡兵セロの「起動したか」を数えられる唯一の計数</b>で、誰も読んで分岐しない。
+    /// </summary>
+    public int SniperSwings;
 
     /// <summary>
     /// <b>肩代わりの中継で引き受けたダメージの合計</b>（第125期・<c>relayed</c> の札が立った段）。
@@ -1421,6 +1429,7 @@ public sealed class UnitTally
         Charges += o.Charges; BigAttacks += o.BigAttacks;
         Swallowed += o.Swallowed; Slumbers += o.Slumbers;
         Intercepts += o.Intercepts; Shouldered += o.Shouldered;
+        SniperSwings += o.SniperSwings;
         Refunds += o.Refunds; Refunded += o.Refunded;
         Kills += o.Kills; Deaths += o.Deaths;
         Whetted += o.Whetted; Dulled += o.Dulled;
