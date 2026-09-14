@@ -54561,6 +54561,12 @@ if (focusId == "compare")
     var qNarrow = new int[builds.Length];    // 生存 <= 1
     var qParty = new int[builds.Length];
 
+    // 第127期 段0-2 —— **波別の完全勝利率**。
+    // 通算だけだと「第三波だけを見た人には 76.1% がその戦の確率に読める」（指示書 §3-1）。
+    // **戦闘は1回も増えない**（同じ `BattleResult` から波ごとに落とすだけ）。
+    var qWinsW = new int[builds.Length, EnemyCatalog.Stages.Count];
+    var qPerfW = new int[builds.Length, EnemyCatalog.Stages.Count];
+
     for (int bi = 0; bi < builds.Length; bi++)
     {
         (string name, Formation f) = builds[bi];
@@ -54582,6 +54588,8 @@ if (focusId == "compare")
                 if (r.PlayerSurvivors >= 4) qBlow[bi]++;
                 if (r.PlayerSurvivors >= qParty[bi]) qPerf[bi]++;
                 if (r.PlayerSurvivors <= 1) qNarrow[bi]++;
+                qWinsW[bi, w]++;
+                if (r.PlayerSurvivors >= qParty[bi]) qPerfW[bi, w]++;
             }
             cells.Add($" {wins * 100.0 / CompareSeeds:F1}% |");
         }
@@ -54630,6 +54638,37 @@ if (focusId == "compare")
         Console.WriteLine($"**全 {builds.Length} 行の通算**（勝った試行 {tw}）: "
             + $"残存 **{qSurv.Sum() / tw:F2}** ／ 圧勝率 **{qBlow.Sum() * 100.0 / tw:F1}%** ／ "
             + $"**完全勝利 {qPerf.Sum() * 100.0 / tw:F1}%** ／ 全滅勝ち **{qNarrow.Sum() * 100.0 / tw:F1}%**。");
+    }
+
+    // --- 第127期 段0-2 —— 波別の完全勝利率 -------------------------------------------
+    Console.WriteLine();
+    Console.WriteLine("## 波別の完全勝利率（第127期 段0-2）");
+    Console.WriteLine();
+    Console.WriteLine("上の表の `完全勝利` は**第2〜5波の通算**なので、**1つの波だけを見たときの確率ではない**。");
+    Console.WriteLine("分母は**その波で勝った試行**（波ごとに違う）。`—` はその波で1度も勝っていない行。");
+    Console.WriteLine("**戦闘は1回も増えていない**——上の表とまったく同じ `BattleResult` から波ごとに落としただけ。");
+    Console.WriteLine("**第一波は判定に使わない**（規約 (G10)。全行必勝の教習波）ので列にも出さない。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 |" + string.Concat(Enumerable.Range(1, EnemyCatalog.Stages.Count - 1)
+        .Select(i => $" 第{i + 1}波 |")));
+    Console.WriteLine("|---|" + string.Concat(Enumerable.Range(1, EnemyCatalog.Stages.Count - 1)
+        .Select(_ => "---:|")));
+    for (int bi = 0; bi < builds.Length; bi++)
+    {
+        var cells = new List<string>();
+        for (int w = 1; w < EnemyCatalog.Stages.Count; w++)
+            cells.Add(qWinsW[bi, w] == 0
+                ? " — |"
+                : $" {qPerfW[bi, w] * 100.0 / qWinsW[bi, w]:F1}% |");
+        Console.WriteLine($"| {builds[bi].Name} |" + string.Concat(cells));
+    }
+    Console.WriteLine();
+    for (int w = 1; w < EnemyCatalog.Stages.Count; w++)
+    {
+        int ww = 0, pp = 0;
+        for (int bi = 0; bi < builds.Length; bi++) { ww += qWinsW[bi, w]; pp += qPerfW[bi, w]; }
+        Console.WriteLine($"- **第{w + 1}波の通算**: 勝った試行 {ww} ／ 完全勝利 "
+            + (ww == 0 ? "—" : $"**{pp * 100.0 / ww:F1}%**"));
     }
     return;
 }

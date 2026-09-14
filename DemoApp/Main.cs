@@ -665,10 +665,52 @@ public partial class Main : Control
             $"[color=#efc66a][font_size=11]UNIT DOSSIER[/font_size][/color]\n" +
             $"[font_size=24][b]{def.Name}[/b][/font_size]\n" +
             $"[color=#a9b3a8]HP {def.MaxHp}   攻撃 {def.Attack}   速度 {def.Speed}   {UiKit.PatternLabel(def.Pattern)}[/color]\n\n" +
+            $"[color=#efc66a][b]◇ 手番[/b][/color]\n{TurnTextOf(def)}\n\n" +
             $"[color=#71d7a1][b]＋ 強み[/b][/color]\n{def.PlusText}\n\n" +
             $"[color=#ff766b][b]− 欠点[/b][/color]\n{def.MinusText}\n\n" +
             $"[color=#6f7f76][i]{def.Flavor}[/i][/color]\n\n" +
             $"[color=#a9b3a8]配置: {PlacementOf(def)}[/color]";
+    }
+
+    /// <summary>
+    /// 「手番」欄の文（第127期 段0-1）。<b>文は書き足さず、実装から組み立てる</b>
+    /// ——`Pattern` ＋ `Actions` ＋ 手番そのものを変える札（のろま・不動・追い打ち・軋み）だけを読む。
+    /// <c>PlusText</c> / <c>MinusText</c> は1文字も触らない。
+    ///
+    /// <para><b>欄の名前を「アクティブスキル」にしない。</b> <c>Actions</c> を持つのは 52 枚中 5 枚なので
+    /// （第126期に実測）、そう名付けると 47 枚が空欄になる。<b>「手番」なら常に埋まる</b>
+    /// ——`—`（計数が無い）と `0`（やっていない）を描き分ける第124期 段1 と同じ判断。</para>
+    /// </summary>
+    private static string TurnTextOf(UnitDef def)
+    {
+        var lines = new List<string>();
+
+        if (def.Actions is null || def.Actions.Count == 0)
+        {
+            lines.Add($"通常攻撃（{UiKit.PatternLabel(def.Pattern)}）");
+        }
+        else
+        {
+            for (int i = 0; i < def.Actions.Count; i++)
+            {
+                UnitAction a = def.Actions[i];
+                string head = def.Actions.Count == 1 ? "" : $"{i + 1}周目: ";
+                lines.Add(head + a.Kind switch
+                {
+                    ActionKind.Charge => "溜める（攻撃しない）",
+                    ActionKind.Skill => "術を使う（攻撃しない）",
+                    _ => $"攻撃（{UiKit.PatternLabel(a.PatternOverride ?? def.Pattern)}"
+                         + (a.AttackPercent == 100 ? "" : $"・威力 {a.AttackPercent}%") + "）",
+                });
+            }
+        }
+
+        if (def.Traits.Contains(TraitId.Sluggish)) lines.Add("2ターンに1回しか動かない");
+        if (def.Traits.Contains(TraitId.Immobile)) lines.Add("自分からは攻撃しない");
+        if (def.Traits.Contains(TraitId.Pursuer)) lines.Add("味方が敵を倒すとターン外に割り込む");
+        if (def.Traits.Contains(TraitId.Displaced)) lines.Add("動かされた直後にターン外に割り込む");
+
+        return string.Join("\n", lines);
     }
 
     private string PlacementOf(UnitDef def)
