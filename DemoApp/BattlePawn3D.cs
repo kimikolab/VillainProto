@@ -30,6 +30,40 @@ public partial class BattlePawn3D : Node3D
     private float _fxHeight = 1.35f;
     private bool _alive = true;
     private bool _victory;
+    private Tween? _motion;
+    private Vector3? _guardPosition;
+    private MeshInstance3D _fire = null!;
+    public double AnimationSpeed { get; set; } = 1;
+    public Vector3 RestPosition => _guardPosition ?? _home;
+    public bool IsGuarding => _guardPosition is not null;
+
+    // 配置は変えず、台本の介入から被弾までだけ前へ出る。
+    public void BeginGuard(Vector3 position)
+    {
+        if (!_alive) return;
+        _guardPosition = position;
+        var tween = BeginMotion();
+        tween.TweenProperty(this, "position", position, 0.22 / AnimationSpeed)
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+    }
+
+    public void EndGuard()
+    {
+        if (_guardPosition is null) return;
+        _guardPosition = null;
+        if (!_alive) return;
+        var tween = BeginMotion();
+        tween.TweenProperty(this, "position", _home, 0.24 / AnimationSpeed)
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.InOut);
+    }
+
+    private Tween BeginMotion()
+    {
+        _motion?.Kill();
+        return _motion = CreateTween();
+    }
+
+    public void SetBurning(bool burning) => _fire.Visible = burning && _alive && !_victory;
 
     public int InstanceId { get; private set; }
     public int Team { get; private set; }
@@ -101,6 +135,48 @@ public partial class BattlePawn3D : Node3D
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
         AddChild(_turnRing);
+
+        // 足元の炎。外部画像を使わず、揺れる炎の舌と火の粉を半透明の面へ描く。
+        var fireShader = new Shader { Code = @"shader_type spatial;
+render_mode unshaded, cull_disabled, blend_mix, depth_draw_never;
+uniform float phase = 0.0;
+void vertex() {
+    MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+}
+void fragment() {
+    float t = TIME * 2.8 + phase;
+    float y = 1.0 - UV.y;
+    float flame = 0.0;
+    for (int i = 0; i < 7; i++) {
+        float k = float(i);
+        float h = 0.48 + 0.20 * sin(t * 1.3 + k * 2.1);
+        float x = 0.12 + k * 0.126 + sin(y * 8.0 - t * 2.0 + k) * 0.026 * y;
+        float width = 0.086 * max(0.0, 1.0 - y / h);
+        flame = max(flame, (1.0 - smoothstep(width * 0.35, width + 0.012, abs(UV.x - x))) * (1.0 - smoothstep(h - 0.10, h, y)));
+    }
+    float sparks = 0.0;
+    for (int i = 0; i < 5; i++) {
+        float k = float(i);
+        float rise = fract(t * 0.23 + k * 0.21);
+        vec2 p = vec2(0.15 + k * 0.17 + sin(t + k) * 0.035, rise);
+        sparks = max(sparks, (1.0 - smoothstep(0.004, 0.015, length(UV - vec2(p.x, 1.0 - p.y)))) * sin(rise * 3.14159));
+    }
+    vec3 fire = mix(vec3(1.0, 0.82, 0.18), vec3(1.0, 0.15, 0.015), smoothstep(0.04, 0.65, y));
+    ALBEDO = fire;
+    EMISSION = fire * 1.4;
+    ALPHA = max(flame * 0.85 * smoothstep(0.0, 0.04, y), sparks);
+}" };
+        var fireMaterial = new ShaderMaterial { Shader = fireShader, RenderPriority = 2 };
+        fireMaterial.SetShaderParameter("phase", _phase);
+        _fire = new MeshInstance3D
+        {
+            Mesh = new QuadMesh { Size = new Vector2(1.9f, 1.35f) },
+            Position = new Vector3(0, 0.62f, 0.35f),
+            MaterialOverride = fireMaterial,
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            Visible = false,
+        };
+        AddChild(_fire);
 
         Texture2D portrait = UiKit.BattlePortrait(atlas, opening.UnitId);
         bool hasCustomPortrait = UiKit.HasCustomBattlePortrait(opening.UnitId)
@@ -258,10 +334,10 @@ void fragment() {
         Vector3 planar = new(direction.X, 0, direction.Z);
         if (planar.LengthSquared() < 0.001f) planar = Team == BattleContext.PlayerTeam ? Vector3.Back : Vector3.Forward;
         planar = planar.Normalized();
-        var tween = CreateTween();
-        tween.TweenProperty(this, "position", _home + planar * 0.82f + Vector3.Up * 0.12f, 0.095)
+        var tween = BeginMotion();
+        tween.TweenProperty(this, "position", RestPosition + planar * 0.82f + Vector3.Up * 0.12f, 0.095 / AnimationSpeed)
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
-        tween.TweenProperty(this, "position", _home, 0.19)
+        tween.TweenProperty(this, "position", RestPosition, 0.19 / AnimationSpeed)
             .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
     }
 
@@ -273,10 +349,10 @@ void fragment() {
         tween.TweenProperty(_sprite, "modulate", hit, 0.045);
         tween.TweenProperty(_sprite, "modulate", Colors.White, 0.18);
         Vector3 kick = new(Team == BattleContext.PlayerTeam ? -0.20f : 0.20f, 0.06f, 0.12f);
-        var shake = CreateTween();
-        shake.TweenProperty(this, "position", _home + kick, 0.045);
-        shake.TweenProperty(this, "position", _home - kick * 0.35f, 0.055);
-        shake.TweenProperty(this, "position", _home, 0.08);
+        var shake = BeginMotion();
+        shake.TweenProperty(this, "position", RestPosition + kick, 0.045 / AnimationSpeed);
+        shake.TweenProperty(this, "position", RestPosition - kick * 0.35f, 0.055 / AnimationSpeed);
+        shake.TweenProperty(this, "position", RestPosition, 0.06 / AnimationSpeed);
     }
 
     public void AnimateHeal()
@@ -292,14 +368,16 @@ void fragment() {
     {
         if (!_alive) return;
         _alive = false;
+        SetBurning(false);
+        _guardPosition = null;
         _ring.Visible = false;
         _turnRing.Visible = false;
         _status.Visible = false;
         _forecast.Visible = false;
         _name.Visible = false;
         _stats.Visible = false;
-        var tween = CreateTween().SetParallel();
-        tween.TweenProperty(this, "position", _home + new Vector3(0.38f, -0.68f, 0.25f), 0.46)
+        var tween = BeginMotion().SetParallel();
+        tween.TweenProperty(this, "position", Position + new Vector3(0.38f, -0.68f, 0.25f), 0.46)
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
         tween.TweenProperty(this, "rotation:z", Team == BattleContext.PlayerTeam ? -0.32f : 0.32f, 0.42);
         tween.TweenProperty(_sprite, "modulate:a", 0.24f, 0.48).SetDelay(0.10);
@@ -309,6 +387,8 @@ void fragment() {
 
     public void AnimateRevive()
     {
+        _motion?.Kill();
+        _guardPosition = null;
         _alive = true;
         Visible = true;
         Position = _home + Vector3.Down * 0.45f;
@@ -319,7 +399,7 @@ void fragment() {
         _stats.Visible = true;
         _hpBack.Scale = Vector3.One;
         SetHp(Hp);
-        var tween = CreateTween().SetParallel();
+        var tween = BeginMotion().SetParallel();
         tween.TweenProperty(this, "position", _home, 0.38)
             .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
         tween.TweenProperty(_sprite, "modulate:a", 1.0f, 0.30);
@@ -339,6 +419,9 @@ void fragment() {
     {
         if (!_alive || Team != BattleContext.PlayerTeam) return;
         _victory = true;
+        _motion?.Kill();
+        _guardPosition = null;
+        SetBurning(false);
         Position = _home;
         Rotation = Vector3.Zero;
         Scale = Vector3.One;
@@ -370,8 +453,9 @@ void fragment() {
 
     public void AnimateMove(Vector3 target)
     {
+        _guardPosition = null;
         _home = target;
-        var tween = CreateTween();
+        var tween = BeginMotion();
         tween.TweenProperty(this, "position", target + Vector3.Up * 0.24f, 0.22)
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
         tween.TweenProperty(this, "position", target, 0.12);

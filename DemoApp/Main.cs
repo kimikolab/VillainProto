@@ -12,6 +12,7 @@ public partial class Main : Control
     private readonly UnitDef?[] _formation = new UnitDef?[FormationRules.PlayableSlotCount];
     private readonly Dictionary<string, RosterCard> _rosterCards = new(StringComparer.Ordinal);
     private readonly Dictionary<int, string> _statusByPawn = new();
+    private readonly HashSet<int> _burningSnapshot = new();
     private readonly Dictionary<int, DemoOpening> _openingById = new();
     private readonly Dictionary<int, string> _statusCauseByDamageIndex = new();
     private readonly HashSet<int> _linkedStatusEventIndices = new();
@@ -855,11 +856,15 @@ public partial class Main : Control
     {
         BattlePawn3D? actor = _battleField.FindPawn(e.ActorId);
         BattlePawn3D? target = _battleField.FindPawn(e.TargetId);
+        if (actor is not null) actor.AnimationSpeed = Math.Max(0.1, _speed);
+        if (target is not null) target.AnimationSpeed = Math.Max(0.1, _speed);
         // 第125期 段2: 拍の境目でだけ画面を変える。**ここでは待たない**（間は下の switch の中だけ）。
         EnterBeat(eventIndex, e);
         switch (e.Kind)
         {
             case BattleEventKind.TurnStart:
+                _battleField.EndGuards();
+                _burningSnapshot.Clear();
                 _statusByPawn.Clear();
                 _battleField.SetTurn(e.Turn);
                 AppendLog($"\n[color=#efc66a][b]── TURN {e.Turn} ──[/b][/color]");
@@ -869,6 +874,7 @@ public partial class Main : Control
             case BattleEventKind.StatusSnapshot:
                 if (target is not null && e.Text is { } key && e.Amount > 0)
                 {
+                    if (key == StatusKeys.LabelOf(StatusKeys.Burn)) _burningSnapshot.Add(target.InstanceId);
                     string label = DisplayStatusKey(key);
                     _statusByPawn[target.InstanceId] = string.IsNullOrEmpty(_statusByPawn.GetValueOrDefault(target.InstanceId))
                         ? $"{label}{e.Amount}"
@@ -878,6 +884,8 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.StatSnapshot:
+                // 各駒の状態一覧の直後。最後の燃焼ダメージを見せてから消火する。
+                if (target is not null) target.SetBurning(_burningSnapshot.Contains(target.InstanceId));
                 target?.SetAttack(e.Amount, e.Pattern);
                 break;
 
@@ -907,7 +915,10 @@ public partial class Main : Control
                 // **範囲の巻き込みだけを同時着弾にする。単体は現状のまま**
                 // ——単体は1件しか無いので、まとめても絵が変わらない。
                 if (pattern != AttackPattern.Single && ApplyLinkedDamageAtOnce(eventIndex, e) > 0)
+                {
                     await Delay(0.30);
+                    _battleField.EndGuards();
+                }
                 break;
             }
 
@@ -916,12 +927,21 @@ public partial class Main : Control
                 if (_burstDamageIndices.Contains(eventIndex)) break;     // 破裂（第125期 3-a）で描き終えている
                 ShowDamage(eventIndex, e, actor, target);
                 await Delay(0.16);
+                if (!e.Relayed && target?.IsGuarding == true)
+                {
+                    await Delay(0.10);
+                    _battleField.EndGuards();
+                }
                 break;
 
             // 第125期 段1・段2 —— 介入が主目標を差し替えた。**この期に台本へ足した唯一の種類。**
             // `ActorId` = 割り込んだ駒 ／ `TargetId` = **本来の標的**なので、
             // 線は「本来の標的 → 割り込んだ駒」に折れる（§5-1 の 4）。
             case BattleEventKind.Intercept:
+                // 標的は引き寄せなので踏み込まない。庇いの各段だけを動かす。
+                if (e.Text is InterceptLabels.Guardian or InterceptLabels.ThornGuard
+                    or InterceptLabels.RearGuard or InterceptLabels.Martyr)
+                    _battleField.Guard(target, actor);
                 _battleField.Divert(target, actor, e.Text ?? "介入", UiKit.Gold);
                 AppendLog($"  [color=#{UiKit.Gold.ToHtml(false)}][b]{NameOf(e.ActorId)} が {NameOf(e.TargetId)} の前に出た[/b][/color]"
                           + $"  [color=#a9b3a8]（{e.Text ?? "介入"}）[/color]");
@@ -1008,6 +1028,7 @@ public partial class Main : Control
             case BattleEventKind.StatusGain:
                 if (target is not null && e.Text is { } statusKey)
                 {
+                    if (statusKey == StatusKeys.Burn) target.SetBurning(e.Amount > 0);
                     // 第124期 3-g: 「テロップは出たが効果量が分からない」（ノミ）への直答。
                     // **量を先に、通貨名を次に、書き手は線で出す**——札の中へ駒名を畳むと、
                     // 読みたい量が名前の長さに埋もれる（3-b と同じ理由）。

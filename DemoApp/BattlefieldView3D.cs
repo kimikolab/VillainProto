@@ -332,7 +332,7 @@ public partial class BattlefieldView3D : Control
             MakeGroundRing(victim.Home, UiKit.Faint, 0.68f, 0.42);
             Float(victim, "狙われた", UiKit.Faint, false, 3.30f, 0.88f);
         }
-        MakeGroundRing(guard.Home, color, 1.05f, 0.44);
+        MakeGroundRing(guard.RestPosition, color, 1.05f, 0.44);
         Float(guard, label, color, true, 3.52f);
     }
 
@@ -358,6 +358,19 @@ public partial class BattlefieldView3D : Control
 
     public BattlePawn3D? FindPawn(int? instanceId)
         => instanceId is { } id && _pawns.TryGetValue(id, out BattlePawn3D? pawn) ? pawn : null;
+
+    public void EndGuards()
+    {
+        foreach (BattlePawn3D pawn in _pawns.Values)
+            if (pawn.Hp > 0) pawn.EndGuard();
+    }
+
+    public void Guard(BattlePawn3D? victim, BattlePawn3D? guard)
+    {
+        if (victim is null || guard is null || victim == guard) return;
+        Vector3 front = new(guard.Team == BattleContext.PlayerTeam ? 1 : -1, 0, 0);
+        guard.BeginGuard(victim.RestPosition + front * 1.1f);
+    }
 
     public void AddSummon(DemoOpening opening)
     {
@@ -465,7 +478,7 @@ public partial class BattlefieldView3D : Control
     {
         if (pawn is null) return;
         if (friendly) MakeGroundRing(pawn.Home, UiKit.Violet, 1.02f, 0.58);
-        Vector3 center = pawn.Home + new Vector3(0, 1.15f, 0);
+        Vector3 center = pawn.RestPosition + new Vector3(0, 1.15f, 0);
         var burst = new MeshInstance3D
         {
             Mesh = status
@@ -523,7 +536,7 @@ public partial class BattlefieldView3D : Control
         var label = new Label3D
         {
             Text = value,
-            Position = pawn.Home + new Vector3(0, height, 0),
+            Position = pawn.RestPosition + new Vector3(0, height, 0),
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
             Font = new SystemFont { FontNames = new[] { "Yu Gothic UI", "Meiryo", "Noto Sans CJK JP", "Segoe UI" }, AllowSystemFallback = true },
             FontSize = large ? 29 : 23,
