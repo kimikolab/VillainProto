@@ -55795,6 +55795,19 @@ if (focusId == "grade")
     return;
 }
 
+// grade2 モード: 段の載せ替え（第128期）。中身は `Grade2.cs`。
+// **Phase 0 と段1 は盤面を1ビットも動かさない**（走査・数え物・既存の計数の読み直しだけ）。
+//
+//     dotnet run --project BattleSim -c Release 0 grade2 phase0  # Q0-1〜Q0-9
+//     dotnet run --project BattleSim -c Release 0 grade2 stock   # 段1 の棚卸し（→ docs/stock.md）
+//     dotnet run --project BattleSim -c Release 0 grade2 run     # 段2 の測定（発火率・到達率）
+//     dotnet run --project BattleSim -c Release 0 grade2 check [採用前のbalance.md]
+if (focusId == "grade2")
+{
+    Grade2Diag.Run(args.Length > 2 ? args[2] : "phase0", args.Length > 3 ? args[3] : "");
+    return;
+}
+
 // handoff モード: 会戦の交代の実態を計測する（第4期 Phase K）。「部隊を1つ足すと突破数の
 // 増分が編成によらずほぼ +1.00」の原因を、仮説 P（第1部隊が敵をほとんど削らずに全滅し、
 // 第2部隊は仕切り直しで1波抜くだけ＝拾えていない）と仮説 Q（拾えてはいるが、第2部隊の
