@@ -54567,10 +54567,36 @@ if (focusId == "compare")
     var qWinsW = new int[builds.Length, EnemyCatalog.Stages.Count];
     var qPerfW = new int[builds.Length, EnemyCatalog.Stages.Count];
 
+    // 第129期 段1 —— **無傷勝利 / 実質無傷勝利 / 決着ターンの分布**。
+    //
+    // **現行の `完全勝利` は緩い。** 判定式は `PlayerSurvivors >= 出撃数` だが、
+    // `PlayerSurvivors` は `ctx.LivingMembers(PlayerTeam).Count()` なので**戦闘中に湧いた駒
+    // （胞子・餌）も数える**——出撃5枚のうち3枚が落ちて胞子が3体湧いた戦も通る。
+    // 分母も「勝った試行」だけなので、負けた試行が1つも効かない。
+    //
+    // **ここは `BattleResult.PlayerStarterFallen`（出撃した駒だけを個体の同一性で見る）を読む。**
+    // **戦闘は1回も増えていない**——上の表とまったく同じ `BattleResult` から落とすだけ。
+    var qTrials = new int[builds.Length];                          // 分母（第2〜5波の**全試行**）
+    var qClean = new int[builds.Length];                           // 無傷勝利
+    var qClean2 = new int[builds.Length];                          // 実質無傷勝利
+    var qTrialsW = new int[builds.Length, EnemyCatalog.Stages.Count];
+    var qCleanW = new int[builds.Length, EnemyCatalog.Stages.Count];
+    var qClean2W = new int[builds.Length, EnemyCatalog.Stages.Count];
+    var qPerfDirty = new int[builds.Length];   // 現行の「完全勝利」のうち**出撃駒が欠けている**試行
+    var qOver = new int[builds.Length];        // `PlayerSurvivors` > 出撃数（現行の判定式を通せる形）
+    var qSummonAlive = new int[builds.Length]; // `PlayerSurvivors` ≠ 出撃数 − 欠けた数（湧いた駒が残った戦）
+    var qExcused = new HashSet<string>[builds.Length];             // 免除する駒（`OnDeath` の保持者）
+    var qTurnAll = new List<int>[builds.Length];                   // 決着T（第2〜5波・全試行）
+    var qTurnW = new List<int>[builds.Length][];
+
     for (int bi = 0; bi < builds.Length; bi++)
     {
         (string name, Formation f) = builds[bi];
         qParty[bi] = f.Occupied().Count();
+        qExcused[bi] = SurviveScan.ExcusedIds(f);
+        qTurnAll[bi] = new List<int>();
+        qTurnW[bi] = new List<int>[EnemyCatalog.Stages.Count];
+        for (int w = 0; w < EnemyCatalog.Stages.Count; w++) qTurnW[bi][w] = new List<int>();
         var cells = new List<string>();
         for (int w = 0; w < EnemyCatalog.Stages.Count; w++)
         {
@@ -54579,9 +54605,32 @@ if (focusId == "compare")
             for (int seed = 0; seed < CompareSeeds; seed++)
             {
                 BattleResult r = BattleEngine.Run(f, st.Enemy, seed, verbose: false);
+
+                // --- 第129期 段1 ——「勝ったか」より前に**全試行**を分母に取る ---------------
+                // **第一波は実行して除外**（規約 (G10)。ここも同じ分母の切り方にそろえる）。
+                if (w > 0)
+                {
+                    qTrials[bi]++; qTrialsW[bi, w]++;
+                    qTurnAll[bi].Add(r.Turns); qTurnW[bi][w].Add(r.Turns);
+                    if (r.PlayerSurvivors > qParty[bi]) qOver[bi]++;
+                    // **湧いた駒が数えられている証拠は「> 出撃数」ではなく「≠ 出撃数 − 欠けた数」**
+                    // ——前者は「欠けた数 ≦ 湧いた数」まで要求するので、1枚欠けて1体湧いた戦を数え落とす。
+                    if (r.PlayerSurvivors != qParty[bi] - r.PlayerStarterFallen.Count) qSummonAlive[bi]++;
+                    if (r.PlayerWon)
+                    {
+                        bool clean = r.PlayerStarterFallen.Count == 0;
+                        if (clean) { qClean[bi]++; qCleanW[bi, w]++; }
+                        // **免除するのは `OnDeath` を上書きする札の保持者だけ**
+                        // （`OnAnyDeath` / `OnAllyDeath` は「他人の死を読む側」なので混ぜない
+                        //   ——混ぜるとリィカ・ラウ・ハギの死軸が丸ごと免除される）。
+                        if (r.PlayerStarterFallen.All(id => qExcused[bi].Contains(id)))
+                        { qClean2[bi]++; qClean2W[bi, w]++; }
+                        if (r.PlayerSurvivors >= qParty[bi] && !clean) qPerfDirty[bi]++;
+                    }
+                }
+
                 if (!r.PlayerWon) continue;
                 wins++;
-                // **第一波は実行して除外**（規約 (G10)。全行必勝の教習波なので分母に入れない）。
                 if (w == 0) continue;
                 qWins[bi]++;
                 qSurv[bi] += r.PlayerSurvivors;
@@ -54669,6 +54718,126 @@ if (focusId == "compare")
         for (int bi = 0; bi < builds.Length; bi++) { ww += qWinsW[bi, w]; pp += qPerfW[bi, w]; }
         Console.WriteLine($"- **第{w + 1}波の通算**: 勝った試行 {ww} ／ 完全勝利 "
             + (ww == 0 ? "—" : $"**{pp * 100.0 / ww:F1}%**"));
+    }
+
+    // --- 第129期 段1 —— 無傷勝利 / 実質無傷勝利 --------------------------------------
+    Console.WriteLine();
+    Console.WriteLine("## 無傷勝利と実質無傷勝利（第129期 段1）");
+    Console.WriteLine();
+    Console.WriteLine("**上の `完全勝利` は緩い。** 判定式は `PlayerSurvivors >= 出撃数` だが、");
+    Console.WriteLine("`PlayerSurvivors` は `ctx.LivingMembers(PlayerTeam).Count()` なので"
+        + "**戦闘中に湧いた駒（胞子・餌）も数える**。");
+    Console.WriteLine("分母も「勝った試行」だけなので、負けた試行が1つも効かない。");
+    Console.WriteLine();
+    Console.WriteLine("**ここは `BattleResult.PlayerStarterFallen` を読む**"
+        + "——出撃した駒だけを、**個体（`UnitState`）の同一性で**見る。");
+    Console.WriteLine("**戦闘は1回も増えていない**（上の表とまったく同じ `BattleResult` から落としただけ）。");
+    Console.WriteLine();
+    Console.WriteLine("| 列 | 定義 | 分母 |");
+    Console.WriteLine("|---|---|---|");
+    Console.WriteLine("| `完全勝利(参考)` | 上の表と同じ値（`PlayerSurvivors >= 出撃数`） | 勝った試行 |");
+    Console.WriteLine("| `無傷勝利` | **出撃した駒が1枚も欠けずに勝った**（`PlayerStarterFallen` が空） | **全試行** |");
+    Console.WriteLine("| `実質無傷勝利` | 上から**自分の死が起動条件の駒**を免除したもの"
+        + "（欠けたのが免除対象だけなら成功とみなす） | **全試行** |");
+    Console.WriteLine("| `免除` | その行で免除した駒。`—` は免除対象が1枚もいない行 | — |");
+    Console.WriteLine();
+    Console.WriteLine($"**免除の判定は実装から引く**——`OnDeath` を上書きする札 "
+        + $"**{SurviveScan.DeathTraits.Count} 本**"
+        + $"（{SurviveScan.NameList(SurviveScan.DeathTraits)}）の保持者。");
+    Console.WriteLine($"**`OnAnyDeath` / `OnAllyDeath`（他人の死を読む側）は混ぜない**"
+        + $"——{SurviveScan.OtherDeathTraits.Count} 本"
+        + $"（{SurviveScan.NameList(SurviveScan.OtherDeathTraits)}）は**1つも免除に使っていない**。");
+    Console.WriteLine("混ぜると墓守リィカ・疫みのラウ・追い打ちのハギを含む死軸が丸ごと免除される。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 出撃 | 全試行 | 完全勝利(参考) | **無傷勝利** | **実質無傷勝利** | 免除 |");
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|---|");
+    for (int bi = 0; bi < builds.Length; bi++)
+    {
+        int n = qTrials[bi], nw = qWins[bi];
+        string ex = qExcused[bi].Count == 0
+            ? "—"
+            : string.Join("・", builds[bi].F.Occupied()
+                .Where(o => qExcused[bi].Contains(o.Def.Id)).Select(o => o.Def.Name));
+        Console.WriteLine($"| {builds[bi].Name} | {qParty[bi]} | {n} "
+            + (nw == 0 ? "| — " : $"| {qPerf[bi] * 100.0 / nw:F1}% ")
+            + (n == 0
+                ? "| — | — "
+                : $"| **{qClean[bi] * 100.0 / n:F1}%** | **{qClean2[bi] * 100.0 / n:F1}%** ")
+            + $"| {ex} |");
+    }
+
+    int tt = qTrials.Sum();
+    if (tt > 0)
+    {
+        Console.WriteLine();
+        Console.WriteLine($"**全 {builds.Length} 行の通算**（全試行 {tt} ／ 勝った試行 {tw}）: "
+            + $"完全勝利(参考) **{qPerf.Sum() * 100.0 / Math.Max(1, tw):F1}%** ／ "
+            + $"無傷勝利 **{qClean.Sum() * 100.0 / tt:F1}%** ／ "
+            + $"実質無傷勝利 **{qClean2.Sum() * 100.0 / tt:F1}%**。");
+        Console.WriteLine();
+        Console.WriteLine($"- 現行の「完全勝利」に数えられた {qPerf.Sum()} 試行のうち、"
+            + $"**出撃した駒が1枚以上欠けているもの {qPerfDirty.Sum()} 件**"
+            + $"（{qPerfDirty.Sum() * 100.0 / Math.Max(1, qPerf.Sum()):F1}%）"
+            + "——**召喚体が欠けを埋めた戦**。");
+        Console.WriteLine($"- 決着時に**湧いた駒が盤上に残っていた**試行 **{qSummonAlive.Sum()} 件**"
+            + $"（全試行の {qSummonAlive.Sum() * 100.0 / tt:F1}%。"
+            + "`PlayerSurvivors` ≠ 出撃数 − 欠けた数）——**湧いた駒が数えられていることの直接の証拠**。"
+            + $"うち `PlayerSurvivors` が出撃数を上回った試行は **{qOver.Sum()} 件**"
+            + "（＝現行の判定式を実際に通せる形）。");
+        Console.WriteLine($"- 免除対象を1枚以上含む行 **{qExcused.Count(h => h.Count > 0)} / {builds.Length}**。");
+    }
+
+    // --- 第129期 段1 —— 波別の無傷勝利率 ---------------------------------------------
+    Console.WriteLine();
+    Console.WriteLine("### 波別の無傷勝利率（分母はその波の全試行）");
+    Console.WriteLine();
+    Console.WriteLine("`—` は分母 0 の波。**第一波は判定に使わない**（規約 (G10)）ので列にも出さない。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 |" + string.Concat(Enumerable.Range(1, EnemyCatalog.Stages.Count - 1)
+        .Select(i => $" 第{i + 1}波 |")));
+    Console.WriteLine("|---|" + string.Concat(Enumerable.Range(1, EnemyCatalog.Stages.Count - 1)
+        .Select(_ => "---:|")));
+    for (int bi = 0; bi < builds.Length; bi++)
+    {
+        var cells = new List<string>();
+        for (int w = 1; w < EnemyCatalog.Stages.Count; w++)
+            cells.Add(qTrialsW[bi, w] == 0
+                ? " — |"
+                : $" {qCleanW[bi, w] * 100.0 / qTrialsW[bi, w]:F1}% |");
+        Console.WriteLine($"| {builds[bi].Name} |" + string.Concat(cells));
+    }
+
+    // --- 第129期 段1 —— 決着ターンの分布 ---------------------------------------------
+    Console.WriteLine();
+    Console.WriteLine("## 決着ターンの分布（第129期 段1）");
+    Console.WriteLine();
+    Console.WriteLine("**勝率からは「安定した」と「運の幅が広がった」が区別できない**"
+        + "（第128期の宿題。8ターン決着と9ターン全滅が同居しうる）。");
+    Console.WriteLine("**分母は全試行**（勝ち負けを問わない）。`σ` は標本標準偏差、"
+        + "`Q1`/`中`/`Q3` は四分位（線形補間なしの順位法）。");
+    Console.WriteLine("**戦闘は1回も増えていない**（`BattleResult.Turns` を読んだだけ）。");
+    Console.WriteLine();
+    Console.WriteLine("| 編成 | 第2〜5波 平均 | σ | Q1 | 中 | Q3 |"
+        + string.Concat(Enumerable.Range(1, EnemyCatalog.Stages.Count - 1)
+            .Select(i => $" 第{i + 1}波 |")));
+    Console.WriteLine("|---|--:|--:|--:|--:|--:|"
+        + string.Concat(Enumerable.Range(1, EnemyCatalog.Stages.Count - 1).Select(_ => "---:|")));
+    for (int bi = 0; bi < builds.Length; bi++)
+    {
+        List<int> all = qTurnAll[bi];
+        var cells = new List<string>();
+        for (int w = 1; w < EnemyCatalog.Stages.Count; w++)
+        {
+            List<int> v = qTurnW[bi][w];
+            cells.Add(v.Count == 0 ? " — |" : $" {SurviveScan.Mean(v):F2}±{SurviveScan.Sd(v):F2} |");
+        }
+        Console.WriteLine($"| {builds[bi].Name} "
+            + (all.Count == 0
+                ? "| — | — | — | — | — "
+                : $"| {SurviveScan.Mean(all):F2} | {SurviveScan.Sd(all):F2} "
+                  + $"| {SurviveScan.Quantile(all, 0.25)} | {SurviveScan.Quantile(all, 0.50)} "
+                  + $"| {SurviveScan.Quantile(all, 0.75)} ")
+            + "|" + string.Concat(cells));
     }
     return;
 }
@@ -55805,6 +55974,20 @@ if (focusId == "grade")
 if (focusId == "grade2")
 {
     Grade2Diag.Run(args.Length > 2 ? args[2] : "phase0", args.Length > 3 ? args[3] : "");
+    return;
+}
+
+// survive モード: 指標の直しと、「起動まで守れるか」（第129期）。中身は `Survive.cs`。
+// **Phase 0 と段2 は盤面を1ビットも動かさない**——器具（`TraitId.Undying`）の保持者は
+// `UnitCatalog.All` に1枚もおらず、台は診断のローカルで `Presets` を1文字も触らない。
+// `TankDiag` / `Wound2Diag` / `TimeDiag` / `GradeDiag` と同じく**ここは振り分けの数行だけ**。
+//
+//     dotnet run --project BattleSim -c Release 0 survive phase0  # Q0-1〜Q0-9
+//     dotnet run --project BattleSim -c Release 0 survive run     # 段2（延命台）
+//     dotnet run --project BattleSim -c Release 0 survive check [採用前のbalance.md]
+if (focusId == "survive")
+{
+    SurviveDiag.Run(args.Length > 2 ? args[2] : "phase0", args.Length > 3 ? args[3] : "");
     return;
 }
 

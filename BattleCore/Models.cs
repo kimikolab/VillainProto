@@ -918,6 +918,7 @@ public sealed class UnitTally
     /// </summary>
     public int Intercepts;
 
+
     /// <summary>
     /// <b>肩代わりの中継で引き受けたダメージの合計</b>（第125期・<c>relayed</c> の札が立った段）。
     /// 巨躯（ゴルム）と分かち（ドハ）の2経路。
@@ -1696,6 +1697,25 @@ public sealed class BattleResult
 
     /// <summary>味方の生存数。バランス調整の指標として使う。</summary>
     public required int PlayerSurvivors { get; init; }
+
+    /// <summary>
+    /// <b>出撃した味方のうち、決着時に生存していない駒の <c>Def.Id</c></b>（第129期・<b>計数専用</b>）。
+    ///
+    /// <para><b><see cref="PlayerSurvivors"/> では「1体も失わずに勝った」が書けない</b>のが理由。
+    /// あちらは <c>ctx.LivingMembers(PlayerTeam).Count()</c> なので<b>戦闘中に湧いた駒
+    /// （胞子・餌）も数える</b>——出撃した5枚のうち3枚が落ちて胞子が3体湧いた戦が、
+    /// 出撃数との比較では「完全勝利」として通る。ここは<b>出撃した駒だけ</b>を、
+    /// <b>個体（<c>UnitState</c>）の同一性で</b>見る。</para>
+    ///
+    /// <para>空なら「出撃した駒が1枚も欠けていない」。蘇生・継ぎ接ぎで戻った駒は<b>入らない</b>
+    /// （見ているのは決着時に生きているかどうかで、倒れた回数ではない
+    /// ——<c>UnitTally.Deaths</c> とはそこが違う）。</para>
+    ///
+    /// <para><b>誰も読んで分岐しない。</b> <c>verbose</c> にも依存しない（`compare` は
+    /// <c>verbose: false</c> で 61 行 × 5 波 × 200 seed を回す）。
+    /// 会戦（<c>Engagement</c>）では「その部隊戦に入場した駒」を指す。</para>
+    /// </summary>
+    public required IReadOnlyList<string> PlayerStarterFallen { get; init; }
 
     /// <summary>ユニットIDごとの与ダメージ合計。誰が働いたかを機械的に見るため。</summary>
     public required IReadOnlyDictionary<string, int> DamageByUnit { get; init; }

@@ -23,9 +23,9 @@
 | 10 | `overbear` | `OverbearRule` | `OverbearRule { Drain = 2 }` |  | `slander` / `overbear` | 第46期〜 |  |
 | 11 | `scale` | `ScaleRule` | `ScaleRule { CostPerAttack = 1 }` |  | `scale` / `scapegoat` / `divert` / `favor` / `miasma` / `goad` / `finisher` / `ledger` | 第47期〜 | ○ |
 | 12 | `scapegoat` | `ScapegoatRule` | `ScapegoatRule { Threshold = 3, Audit = False }` |  | `scapegoat` | 第49期〜 |  |
-| 13 | `divert` | `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` |  | `divert` | 第50期〜 | ○ |
+| 13 | `divert` | `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` |  | `divert` / `compare` / `survive` | 第50期〜 | ○ |
 | 14 | `goad` | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` |  | `derive` / `guard` / `whet` / `goad` / `ledger` | 第52期〜 | ○ |
-| 15 | `finisher` | `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` |  | `finisher` / `ledger` | 第53期〜 | ○ |
+| 15 | `finisher` | `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` |  | `finisher` / `ledger` / `compare` / `survive` | 第53期〜 | ○ |
 | 16 | `favor` | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` |  | `curse` / `favor` / `turn` / `ledger` | 第58期〜 | ○ |
 | 17 | `blaze` | `BlazeRule` | `BlazeRule { Targets = Both, Allies = True, Foes = True }` |  | `blaze` / `ledger` | 第59期〜 | ○ |
 | 18 | `funnel` | `FunnelRule` | `FunnelRule { Slowest = True, Both = False }` |  | `funnel` / `cross` | 第62期〜 | ○ |
@@ -72,11 +72,11 @@
 | `CreakRule` | `CreakRule { Threshold = 0, Source = Whet }` | ○ | `creak` / `traits` / `creak3` | 第66期〜 |
 | `CurseRule` | `CurseRule { Enabled = False, SharePercent = 50 }` | ○ | `curse` / `hex` / `lit` | 第95期〜 |
 | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` / `wound2` | 第93期〜 |
-| `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` | ○ | `divert` | 第50期〜 |
+| `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` | ○ | `divert` / `compare` / `survive` | 第50期〜 |
 | `EncoreRule` | `EncoreRule { Enabled = True }` | ○ | `encore` / `tempo` / `tomo` / `hold2` / `ledger` / `lit` | 第104期〜 |
 | `ExposeRule` | `ExposeRule { MaxPerBattle = 3 }` | ○ | `expose` / `creak3` / `ledger` | 第40期〜 |
 | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` | ○ | `curse` / `favor` / `turn` / `ledger` | 第58期〜 |
-| `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` | ○ | `finisher` / `ledger` | 第53期〜 |
+| `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` | ○ | `finisher` / `ledger` / `compare` / `survive` | 第53期〜 |
 | `FunnelRule` | `FunnelRule { Slowest = True, Both = False }` | ○ | `funnel` / `cross` | 第62期〜 |
 | `GatherRule` | `GatherRule { Enabled = False }` | ○ | `audit` / `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `cross` / `demo` | 第89期〜 |
 | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` | ○ | `derive` / `guard` / `whet` / `goad` / `ledger` | 第52期〜 |

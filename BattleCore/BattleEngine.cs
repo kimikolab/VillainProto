@@ -5524,6 +5524,7 @@ public static class BattleEngine
             Turns = Math.Min(turn, MaxTurns),
             Log = ctx.Log_.ToList(),
             PlayerSurvivors = ctx.LivingMembers(BattleContext.PlayerTeam).Count(),
+            PlayerStarterFallen = FallenStarters(player),
             DamageByUnit = new Dictionary<string, int>(ctx.DamageByUnit),
             TallyByUnit = new Dictionary<string, UnitTally>(ctx.TallyByUnit),
             MaxEnemyKillsInOneTurn = ctx.MaxEnemyKillsInOneTurn,
@@ -5799,6 +5800,20 @@ public static class BattleEngine
     /// 盤面には触らない（Add は Run 側でやる）ので、会戦が「部隊列から次の部隊を起こす」
     /// 用途にそのまま使える。
     /// </summary>
+    /// <summary>
+    /// 出撃した味方のうち決着時に生存していない駒の <c>Def.Id</c>（第129期・<b>計数専用</b>）。
+    /// <b>渡された <c>player</c> のリストそのもの</b>を見るので、戦闘中に湧いた駒は入らない
+    /// （<c>BattleResult.PlayerStarterFallen</c> の doc を参照）。
+    /// 欠けが無ければ割り当てを1つも作らない（`layout` は数百万戦を並列で回す）。
+    /// </summary>
+    static IReadOnlyList<string> FallenStarters(IReadOnlyList<UnitState> player)
+    {
+        List<string>? fallen = null;
+        foreach (UnitState u in player)
+            if (!u.IsAlive) (fallen ??= new List<string>()).Add(u.Def.Id);
+        return fallen ?? (IReadOnlyList<string>)Array.Empty<string>();
+    }
+
     public static List<UnitState> Materialize(Formation formation, int teamId)
     {
         var units = new List<UnitState>();
