@@ -55782,6 +55782,19 @@ if (focusId == "time")
     return;
 }
 
+// grade モード: 段（格上げ）を作る期（第127期）。中身は `Grade.cs`。
+// **Phase 0 は盤面を1ビットも動かさない**（走査と数え物だけ）。段1 も台は診断のローカルで、
+// `Presets` / `EnemyCatalog.Stages` / `UnitCatalog.All` は1文字も触らない。
+// `TankDiag` / `Wound2Diag` / `TimeDiag` と同じく**ここは振り分けの数行だけ**（Release のビルド時間）。
+//
+//     dotnet run --project BattleSim -c Release 0 grade phase0   # Q0-1〜Q0-9
+//     dotnet run --project BattleSim -c Release 0 grade run      # 段1（V0〜V4 × 台2つ）
+if (focusId == "grade")
+{
+    GradeDiag.Run(args.Length > 2 ? args[2] : "phase0");
+    return;
+}
+
 // handoff モード: 会戦の交代の実態を計測する（第4期 Phase K）。「部隊を1つ足すと突破数の
 // 増分が編成によらずほぼ +1.00」の原因を、仮説 P（第1部隊が敵をほとんど削らずに全滅し、
 // 第2部隊は仕切り直しで1波抜くだけ＝拾えていない）と仮説 Q（拾えてはいるが、第2部隊の

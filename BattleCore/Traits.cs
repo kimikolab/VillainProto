@@ -137,6 +137,16 @@ public enum TraitId
                 // **育ちの通貨をそのまま耐久に読み替える**（積み過ぎ＝第115期と同じ「AtkBonus を読む」形）。
                 // 出力と生存が同じ通貨に乗るので、**育つほど落ちにくくなる**
 
+    // --- 第127期で足した札（**ローカル台だけで測る。`UnitCatalog.All` には入れない**） ---
+    // どれも積み過ぎ（`Overload`・第116期）とまったく同じ形の読み手で、**読む値も閾値も共有する**
+    // （`ReaderRule` を `Run` に渡す）。違うのは**上がる先の段だけ**——
+    // 「段の価値は線形か」（第127期 P1）を、読み手・供給・閾値を固定したまま測るためにある。
+    GradePierce,   // 格上げ・貫き: `AtkBonus >= ReaderRule.Threshold` のあいだ一撃が**貫き**になる
+    GradeAll,      // 格上げ・全体: 同じ条件で**全体**になる。**介入（庇い・標的・殉教・棘守り）を
+                   // 全部素通りする**ので、盤面の中核規則（Single にしか介入は効かない）を最も強く曲げる
+    GradeStep,     // 格上げ・段: 閾値で**薙ぎ**、その `GradeTrait.StepFactor` 倍で**全体**。
+                   // 「段で上がる」が二値の読み手の上に乗るかを見る唯一の版
+
     // --- 傷の5枚から切り出したマイナス（第74期・**器具**） ---
     // どれも既存の駒に既定で付いたままで、**盤面は1ビットも変わらない**（受け入れ基準は
     // `compare` 305 セル 0 件）。切り出した理由は1つだけ——**計量できるようにするため**。
@@ -6036,6 +6046,58 @@ public sealed class TemperedTrait : Trait
 }
 
 /// <summary>
+/// 格上げ（第127期・<b>器具</b>）。<b>積み過ぎ（<see cref="OverloadTrait"/>・第116期）の段違い版。</b>
+/// <c>AtkBonus</c> が閾値を越えているあいだ、一撃の<b>攻撃型</b>が上がる。
+///
+/// <para><b>新しい機構ではない。</b> 読む値（<c>AtkBonus</c>）も閾値（<see cref="ReaderRule"/>）も
+/// 窓口（<see cref="Trait.ModifyPattern"/>）も積み過ぎと同じで、<b>違うのは上がる先の段だけ</b>
+/// ——「段の価値は線形か」（第127期 P1）を、読み手・供給・閾値を固定したまま測るためにある。
+/// <b>engine には規則も窓口も1行も足していない。</b></para>
+///
+/// <para><b>量ではなく二値で読む</b>（第115期）。強化は段で来るので、量を読ませると
+/// 閾値の高さで効き方が決まってしまう。<c>Threshold &lt;= 0</c> で完全に不活性——
+/// <see cref="ModifyPattern"/> が最初の比較1つで抜けるので<b>乱数も計数も盤面も1ビットも動かない</b>。</para>
+///
+/// <para><b>倍率も追加ダメージも足さない。代金も付けない</b>（第118・126期の教訓——
+/// 素の効き方を先に測る。代金の設計は採用が決まってからの仕事）。</para>
+///
+/// <para><b>保持者は <c>UnitCatalog.All</c> に1枚もいない</b>（`Regen` / `Reprieve` / `Tempered` と同じ扱い）。
+/// 台は診断 <c>grade</c> のローカルにある。</para>
+/// </summary>
+public sealed class GradeTrait : Trait
+{
+    /// <summary>段で上がる版の上側の閾値（低い側の何倍か）。<b>掃引しない</b>——二値の鍵を2つ重ねるだけ。</summary>
+    public const int StepFactor = 4;
+
+    private readonly TraitId _id;
+    private readonly AttackPattern _low;
+    private readonly AttackPattern? _high;
+
+    internal GradeTrait(TraitId id, AttackPattern low, AttackPattern? high = null)
+    {
+        _id = id;
+        _low = low;
+        _high = high;
+    }
+
+    public override TraitId Id => _id;
+
+    /// <summary>上がる先（診断が版の名前を手で並べないためだけに公開してある）。</summary>
+    public AttackPattern Low => _low;
+
+    /// <inheritdoc cref="Low"/>
+    public AttackPattern? High => _high;
+
+    public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
+    {
+        ReaderRule rule = self.Board?.Reader ?? ReaderRule.Default;
+        if (rule.Threshold <= 0) return p;
+        if (_high is not null && self.AtkBonus >= rule.Threshold * StepFactor) return _high.Value;
+        return self.AtkBonus >= rule.Threshold ? _low : p;
+    }
+}
+
+/// <summary>
 /// 糧の強度（第118期）。<b><c>Gain = 0</c> が「自己回復だけ」の対照になる</b>
 /// ——符号の違う2つの効果を1つの駒に持たせるときの既存の作法（第41期の突き返し・第59期の着火）と同じで、
 /// <b>対照を機構の中に持たせる</b>（第117期 §8-1 の推奨）。
@@ -7427,6 +7489,10 @@ public static class TraitCatalog
         new RegenTrait(),
         new ReprieveTrait(),
         new TemperedTrait(),
+        // 第127期の器具。**上がる先だけが違う3本**（読む値も閾値も積み過ぎと共有する）。
+        new GradeTrait(TraitId.GradePierce, AttackPattern.Pierce),
+        new GradeTrait(TraitId.GradeAll, AttackPattern.All),
+        new GradeTrait(TraitId.GradeStep, AttackPattern.Sweep, AttackPattern.All),
         new NourishTrait(),
         new MartyrTrait(),
         new InversionTrait(),

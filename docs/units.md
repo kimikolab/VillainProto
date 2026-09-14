@@ -142,6 +142,9 @@
 | `Nourish` | - |
 | `Reprieve` | - |
 | `Tempered` | - |
+| `GradePierce` | - |
+| `GradeAll` | - |
+| `GradeStep` | - |
 | `ThinBlade` | 裂きのキリ |
 | `Overreach` | 抉りのエグ |
 | `Await` | 断ちのナタ |
