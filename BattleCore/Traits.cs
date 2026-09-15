@@ -157,6 +157,14 @@ public enum TraitId
                 // **最大HP を触らないのが要点**——HP を膨らませる形だと囃し立て（最大HP最大の味方を選ぶ）
                 // のような「HP を読む選択」が動いて、延命以外のものまで測ってしまう
 
+    // --- 第133期で足した札（**撒いた火を読む**。既定は不活性＝`WildfireRule.Off`） ---
+    Wildfire,   // 火勢: 燃えている**敵**の数だけ一撃が重くなる。**盤面を読む**ので単調に増えない
+                // ——自分で点けた敵を他の駒が倒すと、その場で威力が下がる。
+                // **`ModifyAttack` だけで書ける**（対象ではなく盤面を読む形なので・第133期 Q0-1/Q0-2）
+                // ——止め（`Finisher`・第53期）が engine 側にあるのは「相手が標を持つか」＝
+                // **対象**を見る条件だからで、こちらは `UnitState.Board` から引ける。
+                // 強度は `WildfireRule` を `Run` に渡す（static のノブは置かない）
+
     // --- 傷の5枚から切り出したマイナス（第74期・**器具**） ---
     // どれも既存の駒に既定で付いたままで、**盤面は1ビットも変わらない**（受け入れ基準は
     // `compare` 305 セル 0 件）。切り出した理由は1つだけ——**計量できるようにするため**。
@@ -6735,6 +6743,148 @@ public readonly record struct EmberRule(bool Enabled)
 }
 
 /// <summary>
+/// 火勢（第133期）。<b>燃えている<u>敵</u>の数だけ、一撃が重くなる。</b>
+///
+/// <para><b>埋める穴。</b> <see cref="StatusKeys.Burn"/> を読む駒は第132期まで
+/// <b>2 枚しか無かった</b>——熾のホタ（<see cref="PyreTrait"/>・<b>自分が</b>燃えている）と
+/// 火選りのヒヨ（<see cref="FavorTrait"/>・<b>味方が</b>燃えている）。
+/// <b>敵が燃えていることを読む駒が 1 枚も無く</b>、一方で
+/// <b>唯一の常時の着火役（<see cref="CinderTrait"/>・ボルグ）が、撒いた火に一切の価値を持っていなかった。</b></para>
+///
+/// <para><b>形は実装が1つに決めた</b>（第133期 Q0-1）。<see cref="Trait.ModifyAttack"/> の署名は
+/// <c>(UnitState self, int atk)</c> で<b>対象を受け取らない</b>ので、
+/// 「<u>標的が</u>燃えていれば重い」は<b>書けない</b>——止め（<see cref="FinisherTrait"/>・第53期）と
+/// 薄刃（<see cref="ThinBladeTrait"/>・第75期）が2枚とも engine 側（<c>PerformAttack</c> が
+/// <c>atk</c> を作った直後）にあるのはこれが理由である。
+/// <b>書けるのは「盤面の燃えている敵の数を読む」形だけ</b>で、
+/// その窓口は <see cref="UnitState.Board"/>（驕り＝<see cref="OverbearTrait"/>・第46期が足した参照）。
+/// <b>engine には規則も窓口も 1 本も足していない。</b></para>
+///
+/// <para><b>これは制約ではなく、むしろ望ましい。</b> 盤面を読む形なら
+/// <b>ボルグが着火した後に他の駒がその敵を倒すと、その場で威力が下がる</b>
+/// ——条件が単調に増えないので、驕り（隣が倒れる／隣が育つ）と同じ非単調性が立つ。</para>
+///
+/// <para><b>自給にならない。</b> <see cref="CinderTrait"/> の着火は
+/// <b>攻撃1回につき主目標1体だけ</b>（engine の規則「特性の発動は攻撃1回につき1度」）で、
+/// <see cref="BurnRules.Turns"/> は 3、<see cref="BattleContext.Ignite"/> は残ターンを
+/// <b>設定</b>する（加算しない）——<b>ボルグ単独で同時に燃やせる敵は最大3体</b>、
+/// しかも<b>着火と発揮が1ターンずれる</b>ので、間にその敵が落ちれば無駄になる。</para>
+///
+/// <para><b>条件はフラグで固定しない。</b> 驕りと同じく <see cref="ModifyAttack"/> が
+/// 毎回 <see cref="UnitState.Board"/> から読み直す。<b>盤面の外で作られた
+/// <see cref="UnitState"/>（<c>Board</c> が null）では不活性</b>（第46期の明文の規則）。</para>
+///
+/// <para><b>計数は <see cref="ModifyAttack"/> の中では取らない</b>——<c>CurrentAttack</c> は
+/// 駆り立ての選択・転嫁の流し先・<c>StatSnapshot</c>・棘/仇討ち/責め苦の反撃量からも読まれるので、
+/// 数えると「振った回数」ではなく<b>「読まれた回数」</b>になる（<see cref="OverbearTrait"/> の明文）。
+/// engine 側の <c>PerformAttack</c> に<b>計数専用の1行</b>を置いた（誰も読んで分岐しない）。</para>
+///
+/// <para>強度は <see cref="WildfireRule"/> で外から差す。<b>書き換え可能な static のノブは置かない</b>
+/// （<see cref="ShoveRule"/> / <see cref="BearRule"/> / <see cref="EmberRule"/> と同じ判断）。</para>
+/// </summary>
+public sealed class WildfireTrait : Trait
+{
+    public override TraitId Id => TraitId.Wildfire;
+
+    public override int ModifyAttack(UnitState self, int atk)
+    {
+        BattleContext? board = self.Board;
+        if (board is null) return atk;              // 盤面の外。不活性（第46期）
+        WildfireRule rule = board.Wildfire;
+        if (!rule.Active) return atk;               // 既定は Off。比較1つで抜ける
+        int n = BurningFoes(board, self);
+        if (n <= 0) return atk;
+        return rule.Mode switch
+        {
+            // 加算。**上限（軛）の下では素直に効く**——1発を大きくするのではなく、
+            // 体数に比例した固定量を足すだけなので、切られるのは超過分だけ（第132期）。
+            WildfireMode.Add => atk + rule.Amount * n,
+            // 乗算（体数に比例）。**1発を大きくするので上限に食われる**（第132期の則の検証用）。
+            WildfireMode.Scale => atk * (100 + rule.Amount * n) / 100,
+            // 二値（1体でも燃えていれば）。`Overload`（第116期）と同型。
+            // **盤面を読む意味が消える版**で、P6 の分散が 0 に潰れるかを見るためにある。
+            _ => atk * (100 + rule.Amount) / 100,
+        };
+    }
+
+    /// <summary>
+    /// 盤面で燃えている<b>敵</b>の生存数。<b><see cref="BattleContext.LivingMembers"/> ではなく
+    /// <see cref="BattleContext.AllUnits"/> を走る</b>——<see cref="ModifyAttack"/> は
+    /// 攻撃のたびに呼ばれるので、<c>ToList</c> するスナップショットを毎回確保しない
+    /// （<see cref="OverbearTrait"/> と同じ作法）。
+    /// </summary>
+    public static int BurningFoes(BattleContext board, UnitState self)
+    {
+        int n = 0;
+        foreach (UnitState u in board.AllUnits)
+        {
+            if (!u.IsAlive || u.TeamId == self.TeamId) continue;
+            if (u.Counter(StatusKeys.Burn) > 0) n++;
+        }
+        return n;
+    }
+
+    /// <summary>
+    /// 火勢を除いた <c>CurrentAttack</c>。<b>計数専用</b>（実際に乗った上乗せを
+    /// 「全部通した値 − ここ」で取る）。<see cref="OverbearTrait"/> の <c>PlainAttack</c> と同型。
+    /// </summary>
+    public static int PlainAttack(UnitState u)
+    {
+        int atk = u.Def.Attack + u.AtkBonus;
+        foreach (Trait t in u.Traits)
+            if (t.Id != TraitId.Wildfire) atk = t.ModifyAttack(u, atk);
+        return Math.Max(0, atk);
+    }
+}
+
+/// <summary>火勢の効き方（第133期・段1 の4版）。</summary>
+public enum WildfireMode
+{
+    /// <summary>不活性。<b>既定</b>。比較1つで抜けるので乱数も盤面も1ビットも動かない。</summary>
+    None,
+    /// <summary>V1: 燃えている敵1体につき攻撃力 <c>+Amount</c>（加算）。</summary>
+    Add,
+    /// <summary>V2: 燃えている敵1体につき <c>×(1 + Amount%)</c>（乗算・体数に比例）。</summary>
+    Scale,
+    /// <summary>V3: 燃えている敵が1体でもいれば <c>×(1 + Amount%)</c>（二値）。</summary>
+    Flat
+}
+
+/// <summary>
+/// 火勢の強度（第133期）。<b>診断（wildfire）が版を差し替えるための窓口</b>で、
+/// 通常の実行では誰も渡さない（既定は <see cref="Default"/>）。
+///
+/// <para><b>ノブは1本</b>（<see cref="Amount"/>）にしてある——第52期
+/// 「打ち消しを避けたければノブが動かす量を1本にする」と、第53期の止めが
+/// <c>Multiplier</c> 1本を採った判断に揃えた。<see cref="Mode"/> は<b>ノブではなく版</b>
+/// （<c>BlazeTargets</c> / <c>DivertRule.SelfMark</c> と同じ扱い）。</para>
+///
+/// <para><b>既定を無効にしてよい理由。</b> 段1 の時点で保持者は
+/// <see cref="UnitCatalog.All"/> に 1 枚もいない（診断のローカルの <c>UnitDef</c> だけが持つ）ので、
+/// <b>既存 61 行は 1 バイトも動かない</b>——それ自体が回帰チェックになる。</para>
+/// </summary>
+public readonly record struct WildfireRule(WildfireMode Mode, int Amount)
+{
+    /// <summary>既定 ＝ <see cref="Off"/>。</summary>
+    public static WildfireRule Default => Off;
+
+    /// <summary>不活性。<b>素の駒と 305 セル 0 件で一致する</b>のが検算。</summary>
+    public static WildfireRule Off => new(WildfireMode.None, 0);
+
+    /// <summary>V1 ＝ 燃えている敵1体につき <paramref name="n"/> だけ加算。</summary>
+    public static WildfireRule Added(int n) => new(WildfireMode.Add, n);
+
+    /// <summary>V2 ＝ 燃えている敵1体につき <paramref name="pct"/> % の乗算。</summary>
+    public static WildfireRule Scaled(int pct) => new(WildfireMode.Scale, pct);
+
+    /// <summary>V3 ＝ 1体でも燃えていれば <paramref name="pct"/> % の乗算（二値）。</summary>
+    public static WildfireRule Binary(int pct) => new(WildfireMode.Flat, pct);
+
+    /// <summary><b>1つでも量を動かすか。</b> 偽なら <c>ModifyAttack</c> は最初の比較で抜ける。</summary>
+    public bool Active => Mode != WildfireMode.None && Amount != 0;
+}
+
+/// <summary>
 /// 置き去り。自分の速さを境に味方を二分し、速い側を癒して遅い側を削る。
 /// **同速には何も起きない**——速さを揃えれば無効化できる、という編成側の逃げ道。
 ///
@@ -7651,6 +7801,7 @@ public static class TraitCatalog
         new GradeTrait(TraitId.GradeAll, AttackPattern.All),
         new GradeTrait(TraitId.GradeStep, AttackPattern.Sweep, AttackPattern.All),
         new NourishTrait(),
+        new WildfireTrait(),   // 第133期
         new MartyrTrait(),
         new InversionTrait(),
         new DroughtTrait(),

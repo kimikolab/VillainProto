@@ -1864,6 +1864,13 @@ public sealed class BattleContext
     public EmberRule Ember { get; }
 
     /// <summary>
+    /// 火勢の強度（第133期）。<b>診断（wildfire）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="WildfireRule.Default"/> ＝ 不活性）。
+    /// static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public WildfireRule Wildfire { get; }
+
+    /// <summary>
     /// 軋みが響く閾値（第66期）。<b>診断（creak）が版を差し替えるためだけの窓口</b>で、
     /// 通常の実行では誰も渡さない（既定は <see cref="CreakRule.Default"/> ＝ 無効）。
     /// static のノブにしない理由は同型の doc を参照。
@@ -2645,7 +2652,8 @@ public sealed class BattleContext
                          LooseRule? loose = null, TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
                          NourishRule? nourish = null, WoundRule? wound = null,
-                         EmberRule? ember = null, CounterProbe? probe = null)
+                         EmberRule? ember = null, WildfireRule? wildfire = null,
+                                   CounterProbe? probe = null)
     {
         _rng = new Random(seed);
         Probe = probe;          // 第94期 (T2)。**既定 null。診断だけが渡す。**
@@ -2670,6 +2678,7 @@ public sealed class BattleContext
         Favor = favor ?? FavorRule.Default;
         Blaze = blaze ?? BlazeRule.Default;
         Ember = ember ?? EmberRule.Default;
+        Wildfire = wildfire ?? WildfireRule.Default;
         Funnel = funnel ?? FunnelRule.Default;
         WhetBlock = whetMask ?? WhetMask.None;
         Creak = creak ?? CreakRule.Default;
@@ -3580,6 +3589,28 @@ public sealed class BattleContext
     /// **反撃・追い打ちのような手番外の攻撃には掛からない**（呼び出し側が渡さない＝100）。
     /// </param>
     /// <param name="patternOverride">この攻撃だけ攻撃型を差し替える。null なら CurrentPattern。</param>
+    /// <summary>
+    /// 火勢の帳簿（第133期・<b>計数専用</b>）。<b>盤面を1ビットも動かさない</b>
+    /// ——読むのは <see cref="WildfireTrait.BurningFoes"/> と攻撃力の2つだけ。
+    ///
+    /// <para><b>上乗せは「全部通した値 − 火勢を除いた値」で取る</b>
+    /// （<c>OverbearTrait.PlainAttack</c> と同型）。<c>attackPercent</c> の割引は掛けない
+    /// ——大技（<c>BigAttacks</c>）を持つ保持者はいまの所いないので、素の打点で数える。</para>
+    /// </summary>
+    void NoteWildfireSwing(UnitState actor)
+    {
+        int n = WildfireTrait.BurningFoes(this, actor);
+        int gain = actor.CurrentAttack - WildfireTrait.PlainAttack(actor);
+        UnitTally t = TallyOf(actor);
+        t.WildfireSwings++;
+        if (n > 0) t.WildfireLit++;
+        t.WildfireFoes += n;
+        t.WildfireFoesSq += (long)n * n;
+        if (n > t.WildfireFoesMax) t.WildfireFoesMax = n;
+        t.WildfireGain += gain;
+        t.WildfireGainSq += (long)gain * gain;
+    }
+
     public void PerformAttack(UnitState actor, string prefix = "  ",
                               int attackPercent = 100, AttackPattern? patternOverride = null)
     {
@@ -3634,6 +3665,14 @@ public sealed class BattleContext
         int atk = attackPercent == 100
             ? actor.CurrentAttack
             : actor.CurrentAttack * attackPercent / 100;
+
+        // 第133期・**計数専用**。火勢（`TraitId.Wildfire`）が実際に乗った振りを数える。
+        // **`ModifyAttack` の中では数えない**——`CurrentAttack` は駆り立ての選択・転嫁の流し先・
+        // `StatSnapshot`・棘/仇討ち/責め苦の反撃量からも読まれるので、数えると
+        // 「振った回数」ではなく**「読まれた回数」**になる（驕り＝第46期の明文）。
+        // **規則は1本も足していない**（判定は `WildfireTrait.ModifyAttack` の中にある）。
+        // **誰も読んで分岐しない。** 保持者がいなければ比較1つで抜ける。
+        if (actor.HasTrait(TraitId.Wildfire)) NoteWildfireSwing(actor);
 
         // 薄刃の払い方（第75期）。**規則が V0（既定）なら最初の比較1つで抜ける**ので、
         // 通常の実行では乱数も盤面も1ビットも動かない（`compare` 305 セル 0 件が検算）。
@@ -5491,14 +5530,15 @@ public static class BattleEngine
                                    TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
                                    NourishRule? nourish = null, WoundRule? wound = null,
-                                   EmberRule? ember = null, CounterProbe? probe = null)
+                                   EmberRule? ember = null, WildfireRule? wildfire = null,
+                                   CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
-               nourish, wound, ember, probe);
+               nourish, wound, ember, wildfire, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -5531,14 +5571,15 @@ public static class BattleEngine
                                    LooseRule? loose = null, TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
                                    NourishRule? nourish = null, WoundRule? wound = null,
-                                   EmberRule? ember = null, CounterProbe? probe = null)
+                                   EmberRule? ember = null, WildfireRule? wildfire = null,
+                                   CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
-                                    nourish, wound, ember, probe);
+                                    nourish, wound, ember, wildfire, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

@@ -954,6 +954,24 @@ public sealed class UnitTally
     public int SniperSwings;
 
     /// <summary>
+    /// <b>火勢（<see cref="TraitId.Wildfire"/>）の帳簿</b>（第133期・<b>計数専用</b>）。
+    ///
+    /// <para><b><c>ModifyAttack</c> の中では数えられない</b>——<c>CurrentAttack</c> は
+    /// 駆り立ての選択・転嫁の流し先・<c>StatSnapshot</c>・棘/仇討ち/責め苦の反撃量からも
+    /// 読まれるので、あそこで数えると「振った回数」ではなく<b>「読まれた回数」</b>になる
+    /// （<c>OverbearTrait</c> の明文）。<c>PerformAttack</c> が打点を作った直後に
+    /// <b>計数専用の1行</b>で書く。<b>誰も読んで分岐しない。</b></para>
+    ///
+    /// <para><c>WildfireSwings</c> ＝ 保持者が振った回数（手番も割り込みも） ／
+    /// <c>WildfireLit</c> ＝ そのうち燃えている敵が1体以上いた回数（＝発火率の分子） ／
+    /// <c>WildfireFoes</c>・<c>WildfireFoesSq</c>・<c>WildfireFoesMax</c> ＝
+    /// 振った時点の燃えている敵の数の 和・二乗和・最大（<b>分散が P6</b>） ／
+    /// <c>WildfireGain</c>・<c>WildfireGainSq</c> ＝ 実際に上乗せされた打点の 和・二乗和。</para>
+    /// </summary>
+    public int WildfireSwings, WildfireLit, WildfireFoesMax;
+    public long WildfireFoes, WildfireFoesSq, WildfireGain, WildfireGainSq;
+
+    /// <summary>
     /// <b>肩代わりの中継で引き受けたダメージの合計</b>（第125期・<c>relayed</c> の札が立った段）。
     /// 巨躯（ゴルム）と分かち（ドハ）の2経路。
     ///
@@ -1456,6 +1474,10 @@ public sealed class UnitTally
         Swallowed += o.Swallowed; Slumbers += o.Slumbers;
         Intercepts += o.Intercepts; Shouldered += o.Shouldered;
         SniperSwings += o.SniperSwings;
+        WildfireSwings += o.WildfireSwings; WildfireLit += o.WildfireLit;
+        WildfireFoes += o.WildfireFoes; WildfireFoesSq += o.WildfireFoesSq;
+        WildfireGain += o.WildfireGain; WildfireGainSq += o.WildfireGainSq;
+        if (o.WildfireFoesMax > WildfireFoesMax) WildfireFoesMax = o.WildfireFoesMax;
         Refunds += o.Refunds; Refunded += o.Refunded;
         Kills += o.Kills; Deaths += o.Deaths;
         Whetted += o.Whetted; Dulled += o.Dulled;
