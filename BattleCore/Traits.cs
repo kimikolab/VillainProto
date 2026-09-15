@@ -6246,7 +6246,7 @@ public readonly record struct ParryRule(int Uses, ParryScope Scope, bool Relay)
     public const int AdoptedUses = 4;
 
     /// <summary>段3（中継）の採用値。</summary>
-    public const bool AdoptedRelay = false;
+    public const bool AdoptedRelay = true;
 
     /// <summary>既定 ＝ 採用値。<c>Uses = 0</c> なら不活性（段1 と同値）。</summary>
     public static ParryRule Default => new(AdoptedUses, ParryScope.Any, AdoptedRelay);
