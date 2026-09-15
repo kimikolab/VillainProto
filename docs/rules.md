@@ -12,7 +12,7 @@
 | # | 引数名 | 型 | 既定値（実装） | `= default(T)` | 測った診断 | 期（design/） | CLAUDE.md / LESSONS |
 |--:|---|---|---|:-:|---|---|:-:|
 | 1 | `colossus` | `ColossusRule` | `ColossusRule { Percent = 90, DamagePerGain = 4, Regurgitate = True, Slumber = False, SlumberThreshold = 60, Refund = True, RefundPercent = 25 }` |  | `swap` / `gullet` / `guard` / `whet` / `miasma` / `ledger` | 第35期〜 | ○ |
-| 2 | `yoke` | `YokeRule` | `YokeRule { Cap = 25, Active = True }` |  | `curse` / `yoke` / `replay` / `wave2` / `ledger` | 第35期〜 | ○ |
+| 2 | `yoke` | `YokeRule` | `YokeRule { Cap = 25, Active = True }` |  | `curse` / `yoke` / `replay` / `wave2` / `ledger` / `parry` | 第35期〜 | ○ |
 | 3 | `hush` | `HushRule` | `HushRule { Active = True }` |  | `curse` / `yoke` / `hush` / `replay` / `wave2` / `ledger` | 第35期〜 | ○ |
 | 4 | `martyr` | `MartyrRule` | `MartyrRule { RedirectPercent = 75 }` |  | `curse` / `guard` / `gather` / `ledger` | 第35期〜 | ○ |
 | 5 | `expose` | `ExposeRule` | `ExposeRule { MaxPerBattle = 3 }` |  | `expose` / `creak3` / `ledger` | 第40期〜 | ○ |
@@ -36,10 +36,10 @@
 | 23 | `thorn` | `ThornRule` | `ThornRule { Wound = None }` | ○ | `derive` / `curse` / `breadth` / `thorn` / `suture2` / `gauge` / `wound2` / `cross` | 第84期〜 | ○ |
 | 24 | `suture` | `SutureRule` | `SutureRule { Side = Both }` |  | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `taillight` / `hold2` / `ledger` / `wound2` / `cross` | 第85期〜 | ○ |
 | 25 | `sutureFire` | `SutureFireRule` | `SutureFireRule { Fire = Swing }` | ○ | `taillight` / `hold2` | 第107期〜 | ○ |
-| 26 | `spillWound` | `SpillWoundRule` | `SpillWoundRule { Enabled = False, Scope = All }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `cross` | 第85期〜 | ○ |
+| 26 | `spillWound` | `SpillWoundRule` | `SpillWoundRule { Enabled = False, Scope = All }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期〜 | ○ |
 | 27 | `mend` | `MendRule` | `MendRule { Side = Plain }` | ○ | `curse` / `hex` / `mender` / `gauge` / `hold2` / `ledger` / `wound2` / `cross` | 第86期〜 | ○ |
 | 28 | `woundIgnite` | `IgniteRule` | `IgniteRule { Enabled = True }` |  | `audit` / `derive` / `curse` / `mender` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `cross` / `demo` | 第87期〜 | ○ |
-| 29 | `gather` | `GatherRule` | `GatherRule { Enabled = False }` | ○ | `audit` / `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `cross` / `demo` | 第89期〜 | ○ |
+| 29 | `gather` | `GatherRule` | `GatherRule { Enabled = False }` | ○ | `audit` / `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `parry` / `cross` / `demo` | 第89期〜 | ○ |
 | 30 | `soak` | `SoakRule` | `SoakRule { Poison = True, Burn = False, DullPerKind = 1 }` |  | `derive` / `curse` / `hex` / `soak` / `burn` / `ledger` / `lit` / `wound2` / `ember` / `cross` | 第90期〜 | ○ |
 | 31 | `deep` | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` / `wound2` | 第93期〜 | ○ |
 | 32 | `curse` | `CurseRule` | `CurseRule { Enabled = False, SharePercent = 50 }` |  | `curse` / `hex` / `lit` | 第95期〜 | ○ |
@@ -52,10 +52,12 @@
 | 39 | `reader` | `ReaderRule` | `ReaderRule { Threshold = 5 }` |  | `lit` / `reader` / `boss` / `tank` / `grade` / `grade2` | 第115期〜 | ○ |
 | 40 | `boss` | `BossRule` | `BossRule { Census = False }` | ○ | `seats` / `boss` / `tank` / `time` / `grade` / `demo` | 第117期〜 | ○ |
 | 41 | `nourish` | `NourishRule` | `NourishRule { Gain = 2 }` |  | `tank` / `time` | 第117期〜 | ○ |
-| 42 | `wound` | `WoundRule` | `WoundRule { Enabled = True, Census = False }` |  | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `cross` | 第85期〜 | ○ |
+| 42 | `wound` | `WoundRule` | `WoundRule { Enabled = True, Census = False }` |  | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期〜 | ○ |
 | 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False }` | ○ | `burn` / `survive` / `ember` | 第130期〜 | ○ |
+| 44 | `harm` | `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` | 第135期 | ○ |
+| 45 | `parry` | `ParryRule` | `ParryRule { Uses = 0, Scope = Guarded }` | ○ | `parry` | 第135期 | ○ |
 
-引数 43 本（`verbose` と観測子を除く）。
+引数 45 本（`verbose` と観測子を除く）。
 
 **`= default(T)` は「その規則が既定で何もしない」の機械的な手がかりであって、判定ではない。**
 採否そのものは**既定値の列**を読むこと——`ThornRule { Wound = None }` は残置、`SoakRule { Poison = True, Burn = False }` は毒側だけ採用、という具合に既定値が全部を語る。
@@ -80,8 +82,9 @@
 | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` | ○ | `curse` / `favor` / `turn` / `ledger` | 第58期〜 |
 | `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` | ○ | `finisher` / `ledger` / `compare` / `survive` | 第53期〜 |
 | `FunnelRule` | `FunnelRule { Slowest = True, Both = False }` | ○ | `funnel` / `cross` | 第62期〜 |
-| `GatherRule` | `GatherRule { Enabled = False }` | ○ | `audit` / `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `cross` / `demo` | 第89期〜 |
+| `GatherRule` | `GatherRule { Enabled = False }` | ○ | `audit` / `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `parry` / `cross` / `demo` | 第89期〜 |
 | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` | ○ | `derive` / `guard` / `whet` / `goad` / `ledger` | 第52期〜 |
+| `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` | 第135期 |
 | `HushRule` | `HushRule { Active = True }` | ○ | `curse` / `yoke` / `hush` / `replay` / `wave2` / `ledger` | 第35期〜 |
 | `IgniteRule` | `IgniteRule { Enabled = True }` | ○ | `audit` / `derive` / `curse` / `mender` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `cross` / `demo` | 第87期〜 |
 | `LooseRule` | `LooseRule { Shove = True }` | ○ | `tempo` / `hold` / `hold2` / `ledger` / `lit` | 第106期〜 |
@@ -90,6 +93,7 @@
 | `MenderCostRule` | `MenderCostRule { Percent = 50 }` | ○ | `tempo` / `hold` / `hold2` / `ledger` / `lit` / `wound2` | 第106期〜 |
 | `NourishRule` | `NourishRule { Gain = 2 }` | ○ | `tank` / `time` | 第117期〜 |
 | `OverbearRule` | `OverbearRule { Drain = 2 }` | ○ | `slander` / `overbear` | 第46期〜 |
+| `ParryRule` | `ParryRule { Uses = 0, Scope = Guarded }` | ○ | `parry` | 第135期 |
 | `RageRule` | `RageRule { Mode = Amount, Gain = 3 }` | ○ | `tempo` / `hold` / `hold2` | 第106期〜 |
 | `ReaderRule` | `ReaderRule { Threshold = 5 }` | ○ | `lit` / `reader` / `boss` / `tank` / `grade` / `grade2` | 第115期〜 |
 | `RecoverRule` | `RecoverRule { HpPercent = 0, ReviveDead = False, Active = False }` |  | `choice` / `recover` | 第101期〜 |
@@ -100,17 +104,17 @@
 | `ShoveRule` | `ShoveRule { Penalty = 2 }` | ○ | `shove` / `ledger` | 第41期〜 |
 | `SlanderRule` | `SlanderRule { Penalty = 0 }` | ○ | `relay` / `slander` | 第44期〜 |
 | `SoakRule` | `SoakRule { Poison = True, Burn = False, DullPerKind = 1 }` | ○ | `derive` / `curse` / `hex` / `soak` / `burn` / `ledger` / `lit` / `wound2` / `ember` / `cross` | 第90期〜 |
-| `SpillWoundRule` | `SpillWoundRule { Enabled = False, Scope = All }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `cross` | 第85期〜 |
+| `SpillWoundRule` | `SpillWoundRule { Enabled = False, Scope = All }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期〜 |
 | `SutureFireRule` | `SutureFireRule { Fire = Swing }` | ○ | `taillight` / `hold2` | 第107期〜 |
 | `SutureRule` | `SutureRule { Side = Both }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `taillight` / `hold2` / `ledger` / `wound2` / `cross` | 第85期〜 |
 | `TaillightRule` | `TaillightRule { Mode = OwnTurnWindow, Filter = ActingNow }` | ○ | `tomo` / `ledger` / `lit` | 第110期〜 |
 | `ThinBladeRule` | `ThinBladeRule { Cost = Always }` | ○ | `wcost` / `blade` / `ledger` / `cross` | 第75期〜 |
 | `ThornRule` | `ThornRule { Wound = None }` | ○ | `derive` / `curse` / `breadth` / `thorn` / `suture2` / `gauge` / `wound2` / `cross` | 第84期〜 |
 | `WhetMask` | `WhetMask { Bits = 0 }` | ○ | `creak3` / `spend` | 第65期〜 |
-| `WoundRule` | `WoundRule { Enabled = True, Census = False }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `cross` | 第85期〜 |
-| `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `replay` / `wave2` / `ledger` | 第35期〜 |
+| `WoundRule` | `WoundRule { Enabled = True, Census = False }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期〜 |
+| `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `replay` / `wave2` / `ledger` / `parry` | 第35期〜 |
 
-45 型。
+47 型。
 
 ## 3. 規則が使う列挙型
 
@@ -123,6 +127,7 @@
 | `CreakSource` | `Whet`=0 / `Bonus`=1 / `Both`=2 |
 | `LitFilter` | `SupportOnly`=0 / `ActingOnly`=1 / `ActingNow`=2 |
 | `MendSide` | `Plain`=0 / `Wound`=1 |
+| `ParryScope` | `Guarded`=0 / `Any`=1 |
 | `RageMode` | `Amount`=0 / `Count`=1 |
 | `SeverWait` | `Yield`=0 / `Swing`=1 |
 | `SpillScope` | `All`=0 / `Dense`=1 |
@@ -132,4 +137,4 @@
 | `ThornWound` | `None`=0 / `Foe`=1 / `Both`=2 |
 | `YieldMode` | `OwnTurn`=0 / `OwnTurnWindow`=1 / `Immediate`=2 |
 
-13 型。
+14 型。
