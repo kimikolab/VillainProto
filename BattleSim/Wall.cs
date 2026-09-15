@@ -168,9 +168,7 @@ static class WallDiag
         if (support.Length == 0 || whet.Length == 0 || rally.Length == 0) { Console.WriteLine("**走査が空。止める**（第117期）。"); return; }
         Console.WriteLine($"- `RallyTrait` が `ctx.Whet` を呼ぶ前に `SupportTargets(ally)` を通す箇所: **{Count(rally, "ctx.SupportTargets(ally)")} 箇所**（鬨・溜めの両方）");
         Console.WriteLine($"- `SupportTargets`: `AcceptsSupport` なら本人（{Count(support, "if (u.AcceptsSupport) return new[] { u }")} 箇所）／`Stoic` なら**隣接する `AcceptsSupport` の味方全員**（`FormationRules.AreAdjacent`・{Count(support, "FormationRules.AreAdjacent(u.Slot, a.Slot)")} 箇所）／それ以外は空");
-        string whetCode = string.Join("
-", whet.Split('
-').Where(l => !l.TrimStart().StartsWith("//") && !l.TrimStart().StartsWith("///")));
+        string whetCode = string.Join("\n", whet.Split('\n').Where(l => !l.TrimStart().StartsWith("//") && !l.TrimStart().StartsWith("///")));
         Console.WriteLine($"- `Whet` 本体（コメントを除く）の `AcceptsSupport` の読み: **{Count(whetCode, "AcceptsSupport")} 箇所**——横流し（`Funnel`）の宛先候補を濾す1箇所だけで、**宛先（`receiver`）自体は検査しない**（窓口は見ない。呼び出し側に残す・第56期）");
         Console.WriteLine("- **したがってガルド自身は号令から 1 も得ない。得るのは隣接する味方**（角なら 2 枠・中央なら 4 枠。隣接は `AdjacencyTable`）。");
         Console.WriteLine("  据え（バン）だけは `ApplyDamage` の中で本人の被弾を半減するので `Stoic` を通らない → **中継の危険はガンではなくバン**（指示書 §1-3）。");
