@@ -56331,6 +56331,19 @@ if (focusId == "parry")
     return;
 }
 
+// wall モード（第136期） —— ガルドを壁にする（確実な庇い・受け流し・中継）。本体は `Wall.cs`。
+// **ここは振り分けの数行だけ**（Release のビルド時間）。**規則の型名をここに書かない**（第129期）。
+//
+//     dotnet run --project BattleSim -c Release 0 wall phase0            # Q0-1〜Q0-10
+//     dotnet run --project BattleSim -c Release 0 wall n                 # 段2 の N の決め方（§5-2）
+//     dotnet run --project BattleSim -c Release 0 wall run [段1のbalance.md]  # 段2/段3 の版 × 群A/B/C
+//     dotnet run --project BattleSim -c Release 0 wall check [段1のbalance.md]  # 自己検査
+if (focusId == "wall")
+{
+    WallDiag.Run(args.Length > 2 ? args[2] : "phase0", args.Length > 3 ? args[3] : "");
+    return;
+}
+
 // handoff モード: 会戦の交代の実態を計測する（第4期 Phase K）。「部隊を1つ足すと突破数の
 // 増分が編成によらずほぼ +1.00」の原因を、仮説 P（第1部隊が敵をほとんど削らずに全滅し、
 // 第2部隊は仕切り直しで1波抜くだけ＝拾えていない）と仮説 Q（拾えてはいるが、第2部隊の

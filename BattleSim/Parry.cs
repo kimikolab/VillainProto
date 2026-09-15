@@ -70,10 +70,10 @@ static class ParryDiag
     // **受け入れ条件 A3 が名指しするのは 7 枚**（ガルド・ゴルム・ドハ・セッキ・ウケ・ワタ・ササ）。
     // カドは条文に無いが、`SelectTargetChain` の鎖の最後の段（棘守り）を持つ唯一の駒なので足した
     // ——「庇う・肩代わりする駒全員」を機構から引くと必ず入る。
-    static readonly string[] Watched =
+    internal static readonly string[] Watched =
         { "gald", "golm", "doha", "sekki", "uke", "wata", "sasa", "kado" };
 
-    const int Seeds = 200;
+    internal const int Seeds = 200;
 
     public static void Run(string mode, string arg)
     {
@@ -95,7 +95,7 @@ static class ParryDiag
     // 帳簿の収集（段1 と phase0 が共有する）
     // =================================================================================
 
-    sealed class Ledger
+    internal sealed class Ledger
     {
         public readonly long[] Amount = new long[DamageRoutes.Count];
         public readonly long[] Hits = new long[DamageRoutes.Count];
@@ -114,13 +114,14 @@ static class ParryDiag
     /// `compare` 61行 × 第2〜5波 × seed 0..199 を1度だけ回して、駒ごとの帳簿を作る。
     /// <b>第一波は分母に入れない</b>（規約 (G10)）。
     /// </summary>
-    static Dictionary<string, Ledger> Collect()
+    // 第136期: `parry` を外から差せるようにした（`wall` が版ごとの帳簿を取る）。既定は現行。
+    internal static Dictionary<string, Ledger> Collect(ParryRule? parry = null, IEnumerable<(string Name, Formation F)>? rows = null)
     {
         var led = new Dictionary<string, Ledger>(StringComparer.Ordinal);
         foreach (string id in Watched) led[id] = new Ledger();
 
         var harm = new HarmRule(true);
-        foreach ((string name, Formation f) in Presets.Compare)
+        foreach ((string name, Formation f) in rows ?? Presets.Compare)
         {
             var mine = f.Occupied().Select(o => o.Def.Id).Where(led.ContainsKey).Distinct().ToList();
             if (mine.Count == 0) continue;
@@ -130,7 +131,7 @@ static class ParryDiag
                 for (int seed = 0; seed < Seeds; seed++)
                 {
                     BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[w].Enemy, seed,
-                                                      verbose: false, harm: harm);
+                                                      verbose: false, harm: harm, parry: parry);
                     foreach (string id in mine)
                     {
                         if (!r.TallyByUnit.TryGetValue(id, out UnitTally? t)) continue;
@@ -170,7 +171,7 @@ static class ParryDiag
         for (int i = 0; i < dst.Length && i < src.Length; i++) dst[i] += src[i];
     }
 
-    static string NameOf(string id) => UnitCatalog.All.First(d => d.Id == id).Name;
+    internal static string NameOf(string id) => UnitCatalog.All.First(d => d.Id == id).Name;
 
     /// <summary>量（または回数）の経路別の行。合計が 0 なら「—」で埋める。</summary>
     static string RouteCells(long[] v, bool asPercent)
@@ -614,7 +615,7 @@ static class ParryDiag
         return h.Count == 0 ? "**0 枚**" : string.Join("・", h.Select(d => d.Name));
     }
 
-    static int Count(string hay, params string[] needles)
+    internal static int Count(string hay, params string[] needles)
     {
         int n = 0;
         foreach (string s in needles)
