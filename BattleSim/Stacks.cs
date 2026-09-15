@@ -86,9 +86,10 @@ static class StacksDiag
         {
             case "phase0": Phase0(); break;
             case "burn": Stage1(); break;
+            case "rules": Stage2(); break;
             case "check": Check(arg); break;
             default:
-                Console.WriteLine("使い方: stacks [phase0|burn|check]");
+                Console.WriteLine("使い方: stacks [phase0|burn|rules|check]");
                 break;
         }
     }
@@ -527,6 +528,233 @@ static class StacksDiag
     static string Pct(long n, long d) => d == 0 ? "—" : $"{n * 100.0 / d:F1}%";
 
     // =================================================================================
+    // 段2 —— 盤面ルールの対称性
+    // =================================================================================
+
+    sealed class RuleAcc
+    {
+        public readonly long[] DHits = new long[2], DReq = new long[2], DEff = new long[2];
+        public readonly Dictionary<string, (long Hits, long Amount)> DOn = new();
+        public readonly long[] HBlock = new long[2], HAny = new long[2], HAsk = new long[2];
+        public readonly long[][] HRoute = MakeRoutes();
+        public readonly long[] YCutHits = new long[2], YCutLost = new long[2];
+        public readonly long[] FallSum = new int[BoardRuleLedger.RuleCount].Select(_ => 0L).ToArray();
+        public readonly long[] FallCount = new long[BoardRuleLedger.RuleCount];
+        public readonly long[] FallNever = new long[BoardRuleLedger.RuleCount];
+        public int Battles;
+
+        static long[][] MakeRoutes()
+        {
+            var a = new long[OutOfTurnRoutes.Count][];
+            for (int i = 0; i < a.Length; i++) a[i] = new long[2];
+            return a;
+        }
+
+        public void Add(BattleResult r)
+        {
+            Battles++;
+            BoardRuleLedger b = r.BoardRules;
+            for (int s = 0; s < 2; s++)
+            {
+                DHits[s] += b.DroughtHits[s]; DReq[s] += b.DroughtRequested[s]; DEff[s] += b.DroughtEffective[s];
+                HBlock[s] += b.HushBlocked[s]; HAny[s] += b.HushBlockedAny[s]; HAsk[s] += b.HushAsked[s];
+                for (int t = 0; t < OutOfTurnRoutes.Count; t++) HRoute[t][s] += b.HushByRoute[t][s];
+            }
+            YCutHits[Ally] += r.Yoke.CutOnPlayerHits; YCutLost[Ally] += r.Yoke.CutOnPlayerLost;
+            YCutHits[Foe] += r.Yoke.CutOnEnemyHits; YCutLost[Foe] += r.Yoke.CutOnEnemyLost;
+            foreach (var kv in b.DroughtOn)
+            {
+                DOn.TryGetValue(kv.Key, out var a);
+                DOn[kv.Key] = (a.Hits + kv.Value.Hits, a.Amount + kv.Value.Amount);
+            }
+            for (int i = 0; i < BoardRuleLedger.RuleCount; i++)
+            {
+                if (b.HolderCount[i] == 0) continue;
+                if (b.HolderFallTurn[i] > 0) { FallSum[i] += b.HolderFallTurn[i]; FallCount[i]++; }
+                else FallNever[i]++;
+            }
+        }
+    }
+
+    static void Stage2()
+    {
+        Console.WriteLine("# 第134期 段2 —— 盤面ルールの対称性の実測");
+        Console.WriteLine();
+        Console.WriteLine("**第132期の `YokeLedger` と同じ形**を渇き・粛に当てた。"
+            + "数えるのは**課税された側の陣営**——渇きは回復を止められた駒、粛は振れなかった駒。");
+        Console.WriteLine();
+        Console.WriteLine($"分母: `compare` 全 {Presets.Compare.Length} 行 × 第2〜5波（規約 (G10)）× seed 0..{Seeds - 1}。");
+        Console.WriteLine();
+
+        var all = new RuleAcc();
+        var byWave = new RuleAcc[EnemyCatalog.Stages.Count];
+        for (int w = 0; w < byWave.Length; w++) byWave[w] = new RuleAcc();
+
+        foreach ((_, Formation f) in Presets.Compare)
+            foreach (int w in JudgeWaves)
+                for (int seed = 0; seed < Seeds; seed++)
+                {
+                    BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[w].Enemy, seed, verbose: false);
+                    all.Add(r); byWave[w].Add(r);
+                }
+
+        // ---- 表F ----
+        Console.WriteLine("## 表F —— 3ルールの対称性の一覧（1戦あたり・**第134期でいちばん再利用される表**）");
+        Console.WriteLine();
+        Console.WriteLine("| ルール | 効く波 | 課税された回数（敵） | 同（味方） | 課税された量（敵） | 同（味方） | 味方の取り分 |");
+        Console.WriteLine("|---|---|---|---|---|---|---|");
+        Console.WriteLine($"| **軛**（1発 25 上限） | 第四波 | {Per(all.YCutHits[Foe], all.Battles)} "
+            + $"| {Per(all.YCutHits[Ally], all.Battles)} | {Per(all.YCutLost[Foe], all.Battles)} 点 "
+            + $"| {Per(all.YCutLost[Ally], all.Battles)} 点 | {Pct(all.YCutLost[Ally], all.YCutLost.Sum())} |");
+        Console.WriteLine($"| **渇き**（回復禁止） | 第三波 | {Per(all.DHits[Foe], all.Battles)} "
+            + $"| {Per(all.DHits[Ally], all.Battles)} | {Per(all.DEff[Foe], all.Battles)} 点 "
+            + $"| {Per(all.DEff[Ally], all.Battles)} 点 | {Pct(all.DEff[Ally], all.DEff.Sum())} |");
+        Console.WriteLine($"| **粛**（ターン外禁止） | 第二波 | {Per(all.HBlock[Foe], all.Battles)} "
+            + $"| {Per(all.HBlock[Ally], all.Battles)} | — | — | {Pct(all.HBlock[Ally], all.HBlock.Sum())} |");
+        Console.WriteLine();
+        Console.WriteLine("**「課税された量」の単位**: 軛 ＝ 切り落とされた打点／渇き ＝ 入るはずだった回復"
+            + "（**上限で切った後の実効量**）／粛 ＝ 量が無い（止まるのは回数）。");
+        Console.WriteLine();
+        Console.WriteLine("**第132期の報告値**（第四波だけを分母にした値）: 敵 7.68 回 / 174.3 点 対 味方 0.07 回 / 0.4 点。"
+            + "上の表は**第2〜5波を分母にしている**ので値は小さくなるが、**比は同じ**。");
+        Console.WriteLine();
+        Console.WriteLine("| ルール | 該当の波だけを分母にした値（敵 回数/量 ／ 味方 回数/量） |");
+        Console.WriteLine("|---|---|");
+        WriteWaveRow("軛", 3, byWave[3], y: true);
+        WriteWaveRow("渇き", 2, byWave[2], y: false);
+        WriteWaveRow("粛", 1, byWave[1], y: false);
+        Console.WriteLine();
+
+        // ---- 表G ----
+        Console.WriteLine("## 表G —— 渇き: 誰の回復が封じられたか（1戦あたり・第三波）");
+        Console.WriteLine();
+        Console.WriteLine($"- 要求量 対 実効量（通算）: 敵 {Per(all.DReq[Foe], all.Battles)} → **{Per(all.DEff[Foe], all.Battles)}** ／ "
+            + $"味方 {Per(all.DReq[Ally], all.Battles)} → **{Per(all.DEff[Ally], all.Battles)}** 点/戦");
+        Console.WriteLine($"  （満タンで元から入らなかったぶんの差: 敵 {Pct(all.DReq[Foe] - all.DEff[Foe], all.DReq[Foe])} ／ "
+            + $"味方 {Pct(all.DReq[Ally] - all.DEff[Ally], all.DReq[Ally])}）");
+        Console.WriteLine();
+        Console.WriteLine("| 駒 | 陣営 | 止められた回数/戦 | 止められた実効量/戦 |");
+        Console.WriteLine("|---|---|---|---|");
+        foreach (var kv in all.DOn.OrderByDescending(x => x.Value.Amount).Take(12))
+            Console.WriteLine($"| {NameOf(kv.Key)} | {(UnitCatalog.All.Any(d => d.Id == kv.Key) ? "味方" : "敵")} "
+                + $"| {Per(kv.Value.Hits, all.Battles)} | {Per(kv.Value.Amount, all.Battles)} |");
+        Console.WriteLine();
+        // **回復役は説明文からではなく `ctx.Heal` の呼び出し元から引く**（第39期の則）。
+        var healIds = HealTraitIds();
+        if (!StScan.Guard("`ctx.Heal(` を呼ぶ特性（実装から）", healIds.Count)) return;
+        var foeHealers = EnemyCatalog.Stages.SelectMany(s => s.Enemy.Occupied().Select(o => o.Def))
+            .Distinct().Where(d => d.Traits.Any(healIds.Contains)).ToList();
+        var allyHealers = UnitCatalog.All.Where(d => d.Traits.Any(healIds.Contains)).ToList();
+        Console.WriteLine($"- 回復の経路（`ctx.Heal` の呼び出し元の特性）: **{healIds.Count} 本** "
+            + string.Join(" / ", healIds.Select(t => $"`{t}`")));
+        Console.WriteLine($"- **敵側**の回復役: **{foeHealers.Count} 種** "
+            + (foeHealers.Count == 0 ? "" : "—— " + string.Join(" / ", foeHealers.Select(d => d.Name))));
+        Console.WriteLine($"- **味方側**の回復役: **{allyHealers.Count} 枚**");
+        Console.WriteLine();
+        Console.WriteLine("**敵の回復役が、渇きと同じ波に立っているか**（これが渇きの対称性を決めている）:");
+        Console.WriteLine();
+        Console.WriteLine("| 波 | 渇きの保持者 | 敵の回復役 |");
+        Console.WriteLine("|---|---|---|");
+        for (int w = 0; w < EnemyCatalog.Stages.Count; w++)
+        {
+            var defs = EnemyCatalog.Stages[w].Enemy.Occupied().Select(o => o.Def).ToList();
+            var dr = defs.Where(d => d.Traits.Contains(TraitId.Drought)).Select(d => d.Name).ToList();
+            var hl = defs.Where(d => d.Traits.Any(healIds.Contains)).Select(d => d.Name).ToList();
+            Console.WriteLine($"| {EnemyCatalog.Stages[w].Name} | {(dr.Count == 0 ? "—" : string.Join(" / ", dr))} "
+                + $"| {(hl.Count == 0 ? "—" : string.Join(" / ", hl))} |");
+        }
+        Console.WriteLine();
+        bool together = EnemyCatalog.Stages.Any(st =>
+        {
+            var defs = st.Enemy.Occupied().Select(o => o.Def).ToList();
+            return defs.Any(d => d.Traits.Contains(TraitId.Drought)) && defs.Any(d => d.Traits.Any(healIds.Contains));
+        });
+        Console.WriteLine(together
+            ? "> **渇きと敵の回復役が同席する波がある。** 敵側の 0.00 は配置では説明できない。"
+            : "> **渇きと敵の回復役は一度も同席しない。** 敵側にも回復役はいる"
+              + "（`Alms` の司祭長）が、**渇きが置かれていない波にいる**"
+              + " ——渇きの非対称は「敵に回復役が無いから」ではなく**「回復役のいる波に渇きを置いていないから」**である。");
+        Console.WriteLine();
+        Console.WriteLine();
+
+        // ---- 表H ----
+        Console.WriteLine("## 表H —— 粛: どの経路が止まったか（1戦あたり・第二波）");
+        Console.WriteLine();
+        Console.WriteLine("| 経路 | 敵 | 味方 |");
+        Console.WriteLine("|---|---|---|");
+        for (int t = 0; t < OutOfTurnRoutes.Count; t++)
+            Console.WriteLine($"| {OutOfTurnRoutes.Names[t]} | {Per(all.HRoute[t][Foe], all.Battles)} "
+                + $"| {Per(all.HRoute[t][Ally], all.Battles)} |");
+        Console.WriteLine($"| **合計（粛が単独の原因）** | **{Per(all.HBlock[Foe], all.Battles)}** "
+            + $"| **{Per(all.HBlock[Ally], all.Battles)}** |");
+        Console.WriteLine($"| 粛が閉じていた問い合わせ（痺れ等で既に落ちていた分を含む） | {Per(all.HAny[Foe], all.Battles)} "
+            + $"| {Per(all.HAny[Ally], all.Battles)} |");
+        Console.WriteLine($"| `CanActOutOfTurn` が問われた回数（粛の有無に依らず） | {Per(all.HAsk[Foe], all.Battles)} "
+            + $"| {Per(all.HAsk[Ally], all.Battles)} |");
+        Console.WriteLine();
+
+        // ---- 表I ----
+        Console.WriteLine("## 表I —— 保持者が落ちるまでのターン数");
+        Console.WriteLine();
+        Console.WriteLine("**「保持者が全員落ちていることを最初に観測したターン頭」**"
+            + "（＝**ルールが解けた最初のターン**。決着のターンに落ちた場合は決着ターン）。");
+        Console.WriteLine();
+        Console.WriteLine("| ルール | 保持者がいた戦 | 解けた戦の割合 | 解けたターンの平均 |");
+        Console.WriteLine("|---|---|---|---|");
+        string[] rn = { "軛", "渇き", "粛", "逆位" };
+        for (int i = 0; i < BoardRuleLedger.RuleCount; i++)
+        {
+            long had = all.FallCount[i] + all.FallNever[i];
+            Console.WriteLine($"| {rn[i]} | {had} | {Pct(all.FallCount[i], had)} "
+                + $"| {(all.FallCount[i] > 0 ? ((double)all.FallSum[i] / all.FallCount[i]).ToString("F2") : "—")} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("**「保持者を割れば解除できる」設計**（第110期の粛・第118期の渇き）が"
+            + "実際に何ターン目に解除されているか。**回避可能な課税として働いているか**の判定に使う。");
+        Console.WriteLine();
+    }
+
+    /// <summary>
+    /// <c>ctx.Heal</c> を呼ぶ特性の <see cref="TraitId"/> を<b>実装から</b>引く（第39期の則
+    /// ——「駒の説明文から数えると必ず抜ける」）。<b>走査が空なら呼び出し側が止める。</b>
+    /// </summary>
+    /// <summary>
+    /// <c>ctx.Heal</c> を呼ぶ特性の <see cref="TraitId"/> を<b>実装から</b>引く（第39期の則
+    /// ——「駒の説明文から数えると必ず抜ける」）。<b>走査が空なら呼び出し側が止める。</b>
+    ///
+    /// <para><b>窓のとり方に注意</b>——クラス宣言の位置を先に取り、<b>そこから先の部分文字列</b>の中で
+    /// <c>TraitId Id =&gt; TraitId.X</c> を探す。1本の正規表現でクラス名と札を結ぼうとすると、
+    /// <b>同じ名前が doc コメントに先に現れた場合にそちらへ当たる</b>（第129期「結ばれ過ぎる」）。</para>
+    /// </summary>
+    static HashSet<TraitId> HealTraitIds()
+    {
+        string traits = StScan.Read("BattleCore/Traits.cs");
+        var ids = new HashSet<TraitId>();
+        foreach (Match m in Regex.Matches(traits, @"ctx\.Heal\("))
+        {
+            string cls = StScan.TypeAt(traits, m.Index);
+            var decl = Regex.Match(traits, @"\bclass\s+" + Regex.Escape(cls) + @"\b");
+            if (!decl.Success) continue;
+            int end = Math.Min(traits.Length, decl.Index + 4000);
+            var d = Regex.Match(traits[decl.Index..end], @"TraitId\s+Id\s*=>\s*TraitId\.(\w+)");
+            if (d.Success && Enum.TryParse(d.Groups[1].Value, out TraitId id)) ids.Add(id);
+        }
+        return ids;
+    }
+
+    static void WriteWaveRow(string label, int w, RuleAcc a, bool y)
+    {
+        string v = y
+            ? $"敵 {Per(a.YCutHits[Foe], a.Battles)} 回 / {Per(a.YCutLost[Foe], a.Battles)} 点 ／ "
+              + $"味方 {Per(a.YCutHits[Ally], a.Battles)} 回 / {Per(a.YCutLost[Ally], a.Battles)} 点"
+            : label == "渇き"
+                ? $"敵 {Per(a.DHits[Foe], a.Battles)} 回 / {Per(a.DEff[Foe], a.Battles)} 点 ／ "
+                  + $"味方 {Per(a.DHits[Ally], a.Battles)} 回 / {Per(a.DEff[Ally], a.Battles)} 点"
+                : $"敵 {Per(a.HBlock[Foe], a.Battles)} 回 ／ 味方 {Per(a.HBlock[Ally], a.Battles)} 回";
+        Console.WriteLine($"| **{label}**（{EnemyCatalog.Stages[w].Name}） | {v} |");
+    }
+
+    // =================================================================================
     // 自己検査
     // =================================================================================
 
@@ -550,7 +778,7 @@ static class StacksDiag
 
         Console.WriteLine("## A2 —— engine に規則も窓口も 0 本（足したのは計数だけ）");
         Console.WriteLine();
-        var notes = Regex.Matches(engine, @"\b(NoteIgnite|CloseBurnEpisode|CloseBurnLedger)\b");
+        var notes = Regex.Matches(engine, @"\b(NoteIgnite|CloseBurnEpisode|CloseBurnLedger|NoteDroughtBlocked|NoteHushBlocked|NoteRuleHolders|CloseRuleHolders)\b");
         if (!StScan.Guard("第134期に足した計数の呼び出し・宣言", notes.Count)) return;
         Console.WriteLine();
         foreach (var g in notes.Select(m => m.Value).GroupBy(x => x).OrderBy(g => g.Key))
@@ -561,16 +789,19 @@ static class StacksDiag
         // 第123期「走査対象が走査する側のコード自身なら、当たるのは自分」の engine 側の版。
         string outside = engine.Replace(NewCode(engine), "");
         int branch = Regex.Matches(outside,
-            @"\b(BurnLitSide|BurnRelitSide|BurnEpisodes|BurnRelitSum|BurnHist|BurnEndExpired)\b").Count;
+            @"\b(BurnLitSide|BurnRelitSide|BurnEpisodes|BurnRelitSum|BurnHist|BurnEndExpired|DroughtHits|DroughtRequested|DroughtEffective|HushBlockedSide|HushBlockedAnySide|HushByRoute|RuleFallTurn)\b").Count;
         int built = Regex.Matches(engine[engine.IndexOf("Burns = new BurnLedger", StringComparison.Ordinal)..],
-            @"\b(BurnLitSide|BurnRelitSide|BurnEpisodes|BurnRelitSum|BurnHist|BurnEndExpired)\b").Count;
+            @"\b(BurnLitSide|BurnRelitSide|BurnEpisodes|BurnRelitSum|BurnHist|BurnEndExpired|DroughtHits|DroughtRequested|DroughtEffective|HushBlockedSide|HushBlockedAnySide|HushByRoute|RuleFallTurn)\b").Count;
         Console.WriteLine($"第134期のブロックの**外**で帳簿の配列を読んでいる箇所: **{branch} 件**"
             + $"（うち `Run` の末尾で `BattleResult` へ写している {built} 件） —— "
             + (branch == built ? "**A2 ○**（写す以外に読む箇所が 1 つも無い ＝ どの規則も帳簿を読まない）" : "**A2 ×**"));
         Console.WriteLine();
-        int traitRef = Regex.Matches(traits, @"\b(BurnLedger|BoardRuleLedger|NoteIgnite)\b").Count;
+        int traitRef = Regex.Matches(traits, @"\b(BurnLedger|BoardRuleLedger|NoteIgnite|NoteDroughtBlocked|NoteHushBlocked)\b").Count;
         Console.WriteLine($"`Traits.cs` からの帳簿の参照: **{traitRef} 件** —— "
             + (traitRef == 0 ? "**○**（特性側は1つも読まない）" : "**×**"));
+        Console.WriteLine();
+        Console.WriteLine("`Traits.cs` で触ったのは **`ctx.CanActOutOfTurn(self)` に経路名を渡す 5 箇所だけ**"
+            + "（`OutOfTurnRoute` は計数専用で、答えを1ビットも変えない）。");
         Console.WriteLine();
 
         Console.WriteLine("## A4 —— 陣営別に出ているか");
@@ -602,7 +833,7 @@ static class StacksDiag
         if (Directory.Exists(dd))
             foreach (string f in Directory.GetFiles(dd, "*.cs", SearchOption.AllDirectories))
                 demo += Regex.Matches(File.ReadAllText(f),
-                    "BurnLedger").Count;
+                    "BurnLedger|BoardRuleLedger|OutOfTurnRoute|CanActOutOfTurn").Count;
         Console.WriteLine($"`DemoApp` の第134期の型・窓口の出現 **{demo} 件** —— {(demo == 0 ? "**A10 ○**" : "**A10 ×**")}");
         Console.WriteLine();
 

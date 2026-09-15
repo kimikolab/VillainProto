@@ -164,6 +164,41 @@ public static class BurnRules
 }
 
 /// <summary>
+/// ターン外の行動の呼び出し口（第134期 段2）。<b>計数専用で、どの規則も読まない</b>
+/// ——<see cref="BattleContext.CanActOutOfTurn"/> の答えを1ビットも変えない。
+///
+/// <para><b>呼び出し口は5本</b>。<c>CLAUDE.md</c> は第27期以来「棘・仇討ち・軋み・追い打ちの
+/// 4本だけ」と書いているが、<b>第110期の譲渡（尾灯・<c>TaillightTrait</c>）が5本目として
+/// 増えている</b>（第134期 Q0-7 の走査で判明）。</para>
+/// </summary>
+public enum OutOfTurnRoute
+{
+    /// <summary>棘（<c>ThornsTrait.OnDamaged</c>）。</summary>
+    Thorns,
+    /// <summary>仇討ち（<c>AvengeTrait.OnAllyDamaged</c>）。</summary>
+    Avenge,
+    /// <summary>軋み（<c>DisplacedTrait.OnMoved</c>）。</summary>
+    Creak,
+    /// <summary>追い打ち（<c>PursuerTrait.OnAnyDeath</c>）。</summary>
+    Pursue,
+    /// <summary>譲渡（<c>TaillightTrait</c>・第110期）。</summary>
+    Taillight,
+    /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
+    Other
+}
+
+/// <summary><see cref="OutOfTurnRoute"/> の一覧（帳簿の添字用）。</summary>
+public static class OutOfTurnRoutes
+{
+    /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
+    public static readonly string[] Names =
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "その他" };
+
+    /// <summary>経路の数。</summary>
+    public static int Count => Names.Length;
+}
+
+/// <summary>
 /// 1体ぶんの手番で何が起きたか（第104期）。<see cref="BattleContext.TakeTurn"/> の戻り値で、
 /// <b>盤面には一切影響しない</b>——再行動（<c>EncoreRule</c>）の内訳（§3-3 の Q4）を
 /// 前後の差分ではなく直接数えるためだけにある。
@@ -221,11 +256,26 @@ public sealed class BattleContext
     /// （庇う・分かち・巨躯・後備え・棘守り）はダメージの再分配であって行動ではないので、
     /// この窓口を通らない＝粛の下でも働く。責め苦（シガ）の追撃も自分の手番の中なので無風。</para>
     /// </summary>
-    public bool CanActOutOfTurn(UnitState u)
-        => u.IsAlive
-           && u.RawCounter(StatusKeys.Stun) == 0
-           && u.Traits.All(t => CanReactProbed(t, u))
-           && !(Hush.Active && AllUnits.Any(x => x.IsAlive && x.HasTrait(TraitId.Hush)));
+    /// <param name="route">
+    /// どの経路からの問い合わせか（第134期 段2・<b>計数専用。答えは1ビットも変えない</b>）。
+    /// <b>呼び出し口は5本</b>——棘・仇討ち・軋み・追い打ちの4本に、第110期の譲渡（尾灯）が加わっている。
+    /// </param>
+    public bool CanActOutOfTurn(UnitState u, OutOfTurnRoute route = OutOfTurnRoute.Other)
+    {
+        // **式のままだと「粛が単独の原因だったか」が数えられない**ので、第134期に
+        // 節へほどいた。**評価の順序も結果も第27期から1ビットも変えていない**——
+        // 保持者の走査は `AllUnits.Any(...)` から `_hushHolders`（`Add` が積む）へ寄せてあり、
+        // 短絡の意味（数百万戦を並列で回すので全駒走査を後ろに置く）はそのまま残る。
+        bool basic = u.IsAlive
+                     && u.RawCounter(StatusKeys.Stun) == 0
+                     && u.Traits.All(t => CanReactProbed(t, u));
+        bool hushed = Hush.Active && HushHolderAlive;
+
+        HushAskedSide[SideOf(u)]++;
+        if (hushed) NoteHushBlocked(u, route, sole: basic);
+
+        return basic && !hushed;
+    }
 
     /// <summary>第94期 (T2)。<see cref="Trait.CanReact"/> を印つきで問う。<b>答えは1ビットも変えない。</b></summary>
     bool CanReactProbed(Trait t, UnitState u)
@@ -302,6 +352,7 @@ public sealed class BattleContext
     /// <summary>毒などの継続ダメージ。ターン開始時に engine から呼ばれる。</summary>
     public void TickStatuses()
     {
+        NoteRuleHolders();   // 第134期 段2 —— 保持者が落ちたターンの記録。**盤面には触らない。**
 
         foreach (UnitState u in _units.Where(x => x.IsAlive).ToList())
         {
@@ -2335,6 +2386,108 @@ public sealed class BattleContext
         foreach (UnitState u in _units.ToList()) CloseBurnEpisode(u, expired: false);
     }
 
+    public readonly long[] DroughtHits = new long[2];
+    public readonly long[] DroughtRequested = new long[2];
+    public readonly long[] DroughtEffective = new long[2];
+
+    /// <summary>渇きに止められた駒の帳簿（<c>Def.Id</c> → 回数・実効量）。</summary>
+    public readonly Dictionary<string, (long Hits, long Amount)> DroughtOn = new();
+
+    public readonly long[] HushBlockedSide = new long[2];
+    public readonly long[] HushBlockedAnySide = new long[2];
+    public readonly long[] HushAskedSide = new long[2];
+    public readonly long[][] HushByRoute = MakeHushRoutes();
+
+    static long[][] MakeHushRoutes()
+    {
+        var a = new long[OutOfTurnRoutes.Count][];
+        for (int i = 0; i < a.Length; i++) a[i] = new long[2];
+        return a;
+    }
+
+    /// <summary>渇きの保持者（<see cref="Add"/> が積む）。</summary>
+    readonly List<UnitState> _droughtHolders = new();
+
+    /// <summary>粛の保持者（<see cref="Add"/> が積む）。</summary>
+    readonly List<UnitState> _hushHolders = new();
+
+    /// <summary>逆位の保持者（<see cref="Add"/> が積む）。<b>第134期 P5 の実証用</b>（規則は第22期から）。</summary>
+    readonly List<UnitState> _inversionHolders = new();
+
+    /// <summary>保持者が全員倒れたターン（0 ＝ 最後まで生きていた／保持者がいない）。</summary>
+    public readonly int[] RuleFallTurn = new int[BoardRuleLedger.RuleCount];
+
+    static bool AnyAlive(List<UnitState> holders)
+    {
+        for (int i = 0; i < holders.Count; i++) if (holders[i].IsAlive) return true;
+        return false;
+    }
+
+    /// <summary>渇きがいま効いているか。<b>判定は第22期から1ビットも変えていない</b>（走査を配列に寄せただけ）。</summary>
+    public bool DroughtBinding => AnyAlive(_droughtHolders);
+
+    /// <summary>粛の保持者が生きているか（<c>Hush.Active</c> は呼び出し側で見る）。</summary>
+    public bool HushHolderAlive => AnyAlive(_hushHolders);
+
+    /// <summary>
+    /// 保持者が落ちたターンを控える（第134期 段2）。<b>ターン頭に1度だけ</b>呼ぶ。
+    /// <b>盤面には触らない。</b> 「保持者を割れば解除できる」設計（第110期の粛・第118期の渇き）が
+    /// 実際に何ターン目に解除されているかを出すためだけにある。
+    /// </summary>
+    void NoteRuleHolders()
+    {
+        Fall((int)BoardRuleLedger.RuleIndex.Yoke, _yokeHolders);
+        Fall((int)BoardRuleLedger.RuleIndex.Drought, _droughtHolders);
+        Fall((int)BoardRuleLedger.RuleIndex.Hush, _hushHolders);
+        Fall((int)BoardRuleLedger.RuleIndex.Inversion, _inversionHolders);
+
+        void Fall(int ix, List<UnitState> holders)
+        {
+            if (holders.Count == 0 || RuleFallTurn[ix] != 0 || AnyAlive(holders)) return;
+            RuleFallTurn[ix] = _turn;
+        }
+    }
+
+    /// <summary>
+    /// 決着後に1度だけ呼ぶ（第134期 段2）。<b>決着したターンに保持者が落ちた場合を拾う</b>
+    /// ——そのターンの頭はもう過ぎていて、次のターンの頭は来ない。
+    /// </summary>
+    public void CloseRuleHolders() => NoteRuleHolders();
+
+    /// <summary>保持者の数（<see cref="BoardRuleLedger.RuleIndex"/> の順）。</summary>
+    public int[] RuleHolderCount => new[]
+    {
+        _yokeHolders.Count, _droughtHolders.Count, _hushHolders.Count, _inversionHolders.Count
+    };
+
+    /// <summary>渇きが止めた回復の帳簿（<see cref="Heal"/> の入口から呼ぶ）。<b>盤面には触らない。</b></summary>
+    void NoteDroughtBlocked(UnitState target, int amount)
+    {
+        int side = SideOf(target);
+        // **実効量は上限で切ってから数える**——満タンの駒への回復は、渇きが無くても
+        // 1点も入らない（`Heal` は `Hp == before` で抜ける）。要求量だけを数えると
+        // 「封じられた量」を上振れさせる。両方を出して報告書で並べる。
+        int effective = Math.Max(0, Math.Min(amount, target.MaxHp - target.Hp));
+        DroughtHits[side]++;
+        DroughtRequested[side] += amount;
+        DroughtEffective[side] += effective;
+        DroughtOn.TryGetValue(target.Def.Id, out var acc);
+        DroughtOn[target.Def.Id] = (acc.Hits + 1, acc.Amount + effective);
+    }
+
+    /// <summary>
+    /// 粛が止めたターン外の行動の帳簿（<see cref="CanActOutOfTurn"/> から呼ぶ）。<b>盤面には触らない。</b>
+    /// <paramref name="sole"/> が真なら<b>粛が単独の原因</b>（痺れ・<c>CanReact</c> では落ちていない）。
+    /// </summary>
+    void NoteHushBlocked(UnitState u, OutOfTurnRoute route, bool sole)
+    {
+        int side = SideOf(u);
+        HushBlockedAnySide[side]++;
+        if (!sole) return;
+        HushBlockedSide[side]++;
+        HushByRoute[(int)route][side]++;
+    }
+
     /// <summary>
     /// 上限がいま効いているか。<b>規則の有効・保持者の生存を1箇所に集めただけ</b>で、
     /// 判定は第25期から1ビットも変わっていない（<c>AllUnits.Any(...)</c> と同値）。
@@ -2996,6 +3149,11 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Funnel)) FunnelActive = true;
         // 第132期 段1: 上限の保持者をここで拾う（`YokeBinding` が全駒を走査しないため）。
         if (u.HasTrait(TraitId.Yoke)) _yokeHolders.Add(u);
+        // 第134期 段2: 残り3つの盤面ルールの保持者も同じ形で拾う（**計数専用**。
+        // 渇きだけは `Heal` の入口の判定もここに寄せた——`AllUnits.Any(...)` と同値）。
+        if (u.HasTrait(TraitId.Drought)) _droughtHolders.Add(u);
+        if (u.HasTrait(TraitId.Hush)) _hushHolders.Add(u);
+        if (u.HasTrait(TraitId.Inversion)) _inversionHolders.Add(u);
         u.InstanceId = _nextInstanceId++;
         u.Board = this;          // 「隣に誰がいるか」を読む特性のため（UnitState.Board の doc 参照）
         _units.Add(u);
@@ -5460,7 +5618,15 @@ public sealed class BattleContext
         //
         // ノノ（MenderTrait）は ctx.Heal の後に self.Hp -= amount を無条件で走らせるので、
         // 渇き下では**一方的に減る**。これは意図した挙動（回復役を連れてきた代金だけが残る）。
-        if (AllUnits.Any(u => u.IsAlive && u.HasTrait(TraitId.Drought))) return;
+        //
+        // **第134期 段2**: 判定は `_droughtHolders`（`Add` が積む）に寄せた。
+        // `AllUnits.Any(u => u.IsAlive && u.HasTrait(TraitId.Drought))` と**同値**で、
+        // 足したのは `NoteDroughtBlocked`（計数専用）だけ。
+        if (DroughtBinding)
+        {
+            NoteDroughtBlocked(target, amount);
+            return;
+        }
 
         int before = target.Hp;
         target.Hp = Math.Min(target.MaxHp, target.Hp + amount);
@@ -5805,6 +5971,8 @@ public static class BattleEngine
         // 第134期 段1 の帳簿を閉じる（**死者を含む全駒を1度だけ**。燃えたまま倒れた駒の区間は
         // `TickStatuses` が二度と触らないので、ここで閉じないと丸ごと落ちる）。
         ctx.CloseBurnLedger();
+        // 第134期 段2。保持者が最後のターンに落ちた場合を拾う（`TickStatuses` はもう回らない）。
+        ctx.CloseRuleHolders();
 
         return new BattleResult
         {
@@ -5851,6 +6019,14 @@ public static class BattleEngine
                 (long[])ctx.BurnEndAlive.Clone(),
                 new Dictionary<string, (long, long)>(ctx.BurnBy),
                 new Dictionary<string, (long, long)>(ctx.BurnOn)),
+            BoardRules = new BoardRuleLedger(
+                (long[])ctx.DroughtHits.Clone(), (long[])ctx.DroughtRequested.Clone(),
+                (long[])ctx.DroughtEffective.Clone(),
+                new Dictionary<string, (long, long)>(ctx.DroughtOn),
+                (long[])ctx.HushBlockedSide.Clone(), (long[])ctx.HushBlockedAnySide.Clone(),
+                ctx.HushByRoute.Select(r => (long[])r.Clone()).ToArray(),
+                (long[])ctx.HushAskedSide.Clone(),
+                ctx.RuleHolderCount, (int[])ctx.RuleFallTurn.Clone()),
             ExposeCount = ctx.ExposeCount,
             ExposeMissed = ctx.ExposeMissed,
             DullTotal = ctx.DullTotal,

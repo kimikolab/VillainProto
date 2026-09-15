@@ -2063,7 +2063,7 @@ public sealed class ThornsTrait : Trait
         //
         // 副作用として敵の痺れがカドに効くようになるが、これは意図した効果。
         // 強力な反撃役に対する攻略の語彙になる。
-        if (!ctx.CanActOutOfTurn(self)) return;
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Thorns)) return;
 
         int back = Math.Max(1, self.CurrentAttack * Multiplier);
         ctx.NoteAttackRead(self);   // 攻撃力を出力に変換した（第64期・死蔵の判定）
@@ -4450,7 +4450,7 @@ public sealed class AvengeTrait : Trait
         if (ctx.InReaction) return;                                     // 反撃の連鎖を止める
 
         // 怯み（自傷の痺れ）はここで効く。棘・軋み・追い打ちと同じ門をくぐる。
-        if (!ctx.CanActOutOfTurn(self)) return;
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Avenge)) return;
 
         ctx.Reaction(() =>
         {
@@ -5649,7 +5649,7 @@ public sealed class DisplacedTrait : Trait
 
         // 痺れ・のろまで無力化されている間は振れない。攻撃力の上昇は残す
         // （動かされた事実は起きているので、縛めが解けた後にまとめて振る形になる）。
-        if (!ctx.CanActOutOfTurn(self)) return;
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Creak)) return;
 
         // 毒のティックで敵が全滅した直後のターン開始に動かされることがある。振る相手がいなければ見せ場のログも出さない。
         if (!ctx.TeamAlive(ctx.Opponent(self.TeamId))) return;
@@ -6562,7 +6562,7 @@ public sealed class PursuerTrait : Trait
     public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
     {
         if (dead.TeamId == self.TeamId) return;
-        if (!ctx.CanActOutOfTurn(self)) return;   // 縛められている間は追い打てない
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Pursue)) return;   // 縛められている間は追い打てない
 
         int chain = self.Counter("pursuit_chain");
         if (chain > 0)
@@ -7376,7 +7376,7 @@ public sealed class TaillightTrait : Trait
         // 内訳は `CanActOutOfTurn` と同じ順で自分で引き直す（**答えは1ビットも変えない**）
         // ——`CanReact` の実装はロスターでのろま（<see cref="SluggishTrait"/>）1枚だけで、
         // ログも乱数も counter も触らないので、ここで直に問うても観測を汚さない。
-        if (!ctx.CanActOutOfTurn(lit))
+        if (!ctx.CanActOutOfTurn(lit, OutOfTurnRoute.Taillight))
         {
             t.TaillightNoOutOfTurn++;
             if (lit.RawCounter(StatusKeys.Stun) > 0) t.TaillightOutStun++;

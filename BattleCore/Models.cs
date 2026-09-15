@@ -1824,6 +1824,40 @@ public readonly record struct BurnLedger(
         => Episodes[team] > 0 ? (double)RelitSum[team] / Episodes[team] : 0.0;
 }
 
+/// <summary>
+/// 盤面ルールの対称性の帳簿（第134期 段2）。<b>計数専用で、どの規則も読まない。</b>
+///
+/// <para><b>第132期の <see cref="YokeLedger"/> と同じ形</b>を、渇き（<c>Drought</c>）と
+/// 粛（<c>Hush</c>）に当てたもの。あちらが「切られた側の陣営」を数えたのと同じく、
+/// <b>ここも数えるのは「課税された側の陣営」</b>——<c>0 = 敵</c> / <c>1 = 味方</c>。</para>
+///
+/// <para><b>規則は「両陣営に等しくかかる」と宣言されている</b>が、第132期に軛が
+/// <b>実質プレイヤー専用の税</b>だったことが実測で出ている。<b>対称性は規則ではなく
+/// 数値と在庫で決まる</b>ので、その2つを陣営別に数える。</para>
+/// </summary>
+/// <param name="DroughtHits">渇きが止めた回復の回数。添字は回復されるはずだった駒の陣営。</param>
+/// <param name="DroughtRequested">同・要求された量（<c>Heal</c> の引数）。</param>
+/// <param name="DroughtEffective">同・<b>実際に入るはずだった量</b>（<c>MaxHp - Hp</c> で切った後）。</param>
+/// <param name="DroughtOn">止められた駒の <c>Def.Id</c> → (回数, 実効量)。</param>
+/// <param name="HushBlocked">粛が<b>単独の原因で</b>止めたターン外の行動の回数。添字は行動しようとした駒の陣営。</param>
+/// <param name="HushBlockedAny">同・粛が閉じていた問い合わせの回数（痺れ等で既に落ちていた分を含む）。</param>
+/// <param name="HushByRoute">経路別の <c>HushBlocked</c>。<c>[経路][陣営]</c>（経路は <see cref="OutOfTurnRoute"/>）。</param>
+/// <param name="HushAsked">粛の有無に関わらず <c>CanActOutOfTurn</c> が問われた回数。添字は陣営。</param>
+/// <param name="HolderCount">保持者の数。添字は <see cref="BoardRuleLedger.RuleIndex"/>。</param>
+/// <param name="HolderFallTurn">保持者が全員倒れたターン（<c>0</c> ＝ 最後まで生きていた、または保持者がいない）。</param>
+public readonly record struct BoardRuleLedger(
+    long[] DroughtHits, long[] DroughtRequested, long[] DroughtEffective,
+    Dictionary<string, (long Hits, long Amount)> DroughtOn,
+    long[] HushBlocked, long[] HushBlockedAny, long[][] HushByRoute, long[] HushAsked,
+    int[] HolderCount, int[] HolderFallTurn)
+{
+    /// <summary>ルールの添字（<see cref="HolderCount"/> / <see cref="HolderFallTurn"/> 用）。</summary>
+    public enum RuleIndex { Yoke = 0, Drought = 1, Hush = 2, Inversion = 3 }
+
+    /// <summary>ルールの数（<see cref="RuleIndex"/> の要素数）。</summary>
+    public const int RuleCount = 4;
+}
+
 public sealed class BattleResult
 {
     public required bool PlayerWon { get; init; }
@@ -1889,6 +1923,8 @@ public sealed class BattleResult
     /// <summary>燃焼の重ね掛けの帳簿（第134期 段1・<see cref="BurnLedger"/>）。<b>計数専用。</b></summary>
     public required BurnLedger Burns { get; init; }
 
+    /// <summary>盤面ルール（渇き・粛）の帳簿（第134期 段2・<see cref="BoardRuleLedger"/>）。<b>計数専用。</b></summary>
+    public required BoardRuleLedger BoardRules { get; init; }
 
     public required int ExposeCount { get; init; }
     public required int ExposeMissed { get; init; }

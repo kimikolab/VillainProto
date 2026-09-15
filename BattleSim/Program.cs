@@ -56307,6 +56307,7 @@ if (focusId == "wildfire")
 //
 //     dotnet run --project BattleSim -c Release 0 stacks phase0  # Q0-1〜Q0-8（戦闘0回）
 //     dotnet run --project BattleSim -c Release 0 stacks burn    # 段1（重ね掛けの実測）
+//     dotnet run --project BattleSim -c Release 0 stacks rules   # 段2（盤面ルールの対称性）
 //     dotnet run --project BattleSim -c Release 0 stacks check [採用前のbalance.md]
 if (focusId == "stacks")
 {
