@@ -1259,6 +1259,46 @@ public sealed class BattleContext
     /// </summary>
     public int ScaleFullSoaks { get; internal set; }
 
+    // --- 砕け（第137期）---------------------------------------------------------------------
+    // **計数だけ。盤面には1ビットも触らない**（`Dull` の経路別と同じ扱い）。
+    // 既存の `ScaleGainShatter` は**受け手が鱗（ウロ）のときしか呼ばれない**ので
+    // 「砕けが陣営全体へ何点配ったか」は引けない（Phase 0 Q0-2）。ここで陣営合計を持つ。
+
+    /// <summary>砕けが発火した回数（配る相手が 0 人でも、配る量が 0 でも数えない）。</summary>
+    /// <summary>
+    /// 砕けの保持者が盤上にいるか（<see cref="Add"/> が立てる）。
+    /// <b>計数の短絡専用で、どの規則も読まない。</b>
+    /// </summary>
+    public bool ShatterActive { get; internal set; }
+
+    public int ShatterTicks { get; internal set; }
+    /// <summary>配った破片の総量（受け手の人数ぶん合算する）。</summary>
+    public int ShatterGiven { get; internal set; }
+    /// <summary>
+    /// 配った破片のうち<b>実際にダメージを吸った量</b>。
+    /// <para><b>出どころ別には割らない。</b> 集約（ウケ）・鱗（味方の死）と同じプールに落ちるので、
+    /// 砕けを含む行に集約や鱗が同席していると混ざる。Phase 0 Q0-3 で同席する行を数えてあり
+    /// （`鱗改` / `破片×被弾` の 2 行にウロがいる）、そこは <c>ScaleSpentHit</c> と
+    /// <c>ScaleGainDeath</c> を並べて読む。<b>陣営合計で足りる</b>のは、
+    /// この期の主判定がローカル台（砕け以外の破片の供給を置かない）だから。</para>
+    /// </summary>
+    public int ShatterSoaked { get; internal set; }
+    /// <summary>代金の総額（自前の鍵のときだけ立つ。<c>Passive</c> では 0）。</summary>
+    public int ShatterPaid { get; internal set; }
+    /// <summary>
+    /// そのうち保持者が<b>自弁した</b>額（自弁率の分子。分母は <see cref="ShatterPaid"/>）。
+    /// <b>tally の差分で取る</b>——巨躯・分かちが割り込むと代金は他人へ移るので、
+    /// 「払ったつもりの額」を払ったことにはならない（ワタの <c>RelaySelfPaid</c> と同じ作法・第43期）。
+    /// </summary>
+    public int ShatterPaidSelf { get; internal set; }
+
+    /// <summary>砕けの供給を記録する。<b>盤面には触らない。</b></summary>
+    internal void NoteShatter(int given)
+    {
+        ShatterTicks++;
+        ShatterGiven += given;
+    }
+
     /// <summary>鱗の獲得を記録する。<b>盤面には触らない。</b></summary>
     internal void NoteScaleGain(int amount, ScaleSource src, bool ephemeral = false)
     {
@@ -2621,6 +2661,12 @@ public sealed class BattleContext
     public ParryRule Parry { get; }
 
     /// <summary>
+    /// 砕けの供給の出どころ（第137期。既定は <see cref="ShatterRule.Default"/> ＝ 現行）。
+    /// static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public ShatterRule Shatter { get; }
+
+    /// <summary>
     /// <b>直前の標的選択で介入が主目標を差し替えた相手</b>（第135期・<b>計数専用</b>）。
     /// <see cref="SelectTargetChain"/> の冒頭で毎回 null に戻し、
     /// <c>EmitIntercept</c> が立て、最初にその駒へ入ったダメージ1件で消費する。
@@ -3007,6 +3053,7 @@ public sealed class BattleContext
                          NourishRule? nourish = null, WoundRule? wound = null,
                          EmberRule? ember = null, WildfireRule? wildfire = null,
                          HarmRule? harm = null, ParryRule? parry = null,
+                         ShatterRule? shatter = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -3060,6 +3107,7 @@ public sealed class BattleContext
         Wounds = wound ?? WoundRule.Default;
         Harm = harm ?? HarmRule.Default;
         Parry = parry ?? ParryRule.Default;
+        Shatter = shatter ?? ShatterRule.Default;
     }
 
     // =====================================================================================
@@ -3252,6 +3300,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Divert)) DivertActive = true;
         if (u.HasTrait(TraitId.Finisher)) FinisherActive = true;
         if (u.HasTrait(TraitId.Funnel)) FunnelActive = true;
+        // 第137期: 砕けの保持者が盤上にいるか（`ShatterSoaked` を短絡させるためだけ。盤面には影響しない）。
+        if (u.HasTrait(TraitId.Shatter)) ShatterActive = true;
         // 第132期 段1: 上限の保持者をここで拾う（`YokeBinding` が全駒を走査しないため）。
         if (u.HasTrait(TraitId.Yoke)) _yokeHolders.Add(u);
         // 第134期 段2: 残り3つの盤面ルールの保持者も同じ形で拾う（**計数専用**。
@@ -4646,6 +4696,11 @@ public sealed class BattleContext
             // 出力に変換される前に戦闘が終わる）と同じ穴に落ちるので、吸った量を別に持つ。
             if (target.HasTrait(TraitId.Bear)) BearSoaked += soak;
 
+            // 砕け（第137期）が配った破片が実際に吸った量。**盤面には触らない。**
+            // 砕けの保持者は自分には配らないので、**保持者自身の破片は数に入らない**
+            // （ヒビの `Armor` は他の供給が無ければ常に 0）。
+            if (ShatterActive) ShatterSoaked += soak;
+
             // 第132期 段1・**計数のみ**。上限が効いている間に、破片が上限の**手前**で食った量。
             // 破片は上限の外側で効く（この行より下で切る）ので、回避経路の実測はここでしか取れない。
             if (YokeBinding) YokeArmorSoak += soak;
@@ -4706,6 +4761,13 @@ public sealed class BattleContext
             // 「受け流すと育たない」は仕様——受けなかった傷では強くなれない。
             target.SetCounter(RedirectGainTrait.PendingKey, 0);
             NoteParry(target, amount, pattern, source);
+            if (_verbose) Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.Parry, Turn = Turn,
+                ActorId = source.InstanceId, TargetId = target.InstanceId,
+                Amount = amount, HpAfter = target.Hp, Pattern = pattern,
+                Reaction = InReaction || InInterrupt, Relayed = relayed
+            });
             Log($"    {target.Name} が {source.Name} の一撃を受け流した（{amount} を無効化）", LogKind.Trigger);
             return;
         }
@@ -5992,6 +6054,7 @@ public static class BattleEngine
                                    NourishRule? nourish = null, WoundRule? wound = null,
                                    EmberRule? ember = null, WildfireRule? wildfire = null,
                                    HarmRule? harm = null, ParryRule? parry = null,
+                                   ShatterRule? shatter = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
@@ -5999,7 +6062,7 @@ public static class BattleEngine
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
-               nourish, wound, ember, wildfire, harm, parry, probe);
+               nourish, wound, ember, wildfire, harm, parry, shatter, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -6034,6 +6097,7 @@ public static class BattleEngine
                                    NourishRule? nourish = null, WoundRule? wound = null,
                                    EmberRule? ember = null, WildfireRule? wildfire = null,
                                    HarmRule? harm = null, ParryRule? parry = null,
+                                   ShatterRule? shatter = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
@@ -6041,7 +6105,7 @@ public static class BattleEngine
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
-                                    nourish, wound, ember, wildfire, harm, parry, probe);
+                                    nourish, wound, ember, wildfire, harm, parry, shatter, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -6382,6 +6446,11 @@ public static class BattleEngine
             ScaleLeftover = ctx.AllUnits
                 .Where(u => u.HasTrait(TraitId.Scale))
                 .Sum(u => u.RawCounter(StatusKeys.Armor)),
+            ShatterTicks = ctx.ShatterTicks,
+            ShatterGiven = ctx.ShatterGiven,
+            ShatterSoaked = ctx.ShatterSoaked,
+            ShatterPaid = ctx.ShatterPaid,
+            ShatterPaidSelf = ctx.ShatterPaidSelf,
             ScapegoatTakes = ctx.ScapegoatTakes,
             ScapegoatTakeByKind = ctx.ScapegoatTakeByKind,
             ScapegoatTakeFrom = ctx.ScapegoatTakeFrom,

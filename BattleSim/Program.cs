@@ -56346,6 +56346,19 @@ if (focusId == "wall")
     return;
 }
 
+// shard モード（第137期） —— 砕けの鍵を自前にする（ヒビ）。本体は `Shard.cs`。
+// **ここは振り分けの数行だけ**。**規則の型名をここに書かない**（第129期）。
+//
+//     dotnet run --project BattleSim -c Release 0 shard phase0   # Q0-1 の実測（現行の帳簿）
+//     dotnet run --project BattleSim -c Release 0 shard scan     # 段1 の台の下見（床と天井）
+//     dotnet run --project BattleSim -c Release 0 shard run      # 掰引（3点）× 台 × 既存５行
+//     dotnet run --project BattleSim -c Release 0 shard check docs/balance.md   # 自己検査
+if (focusId == "shard")
+{
+    ShardDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // handoff モード: 会戦の交代の実態を計測する（第4期 Phase K）。「部隊を1つ足すと突破数の
 // 増分が編成によらずほぼ +1.00」の原因を、仮説 P（第1部隊が敵をほとんど削らずに全滅し、
 // 第2部隊は仕切り直しで1波抜くだけ＝拾えていない）と仮説 Q（拾えてはいるが、第2部隊の

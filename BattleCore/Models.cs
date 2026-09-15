@@ -1723,7 +1723,13 @@ public enum BattleEventKind
     /// <b>どの規則も読まない。</b> <see cref="Reaction"/> / <see cref="BattleEvent.Relayed"/> と
     /// 同じ表示専用の札で、盤面には一切影響しない。</para>
     /// </summary>
-    Intercept
+    Intercept,
+
+    /// <summary>
+    /// 一撃を受け流した（表示専用）。ActorId = 攻撃者、TargetId = 受け流した駒、
+    /// Amount = 無効化量、HpAfter = 変化していないHP。Damage は発生しない。
+    /// </summary>
+    Parry
 }
 
 /// <summary>
@@ -2422,6 +2428,19 @@ public sealed class BattleResult
     public required int ScaleDepleted { get; init; }
     public required int ScaleFullSoaks { get; init; }
     public required int ScaleLeftover { get; init; }
+
+    /// <summary>
+    /// 砕け（第137期）の帳簿。<c>ShatterTicks</c> 発火回数 ／ <c>ShatterGiven</c> 配った総量 ／
+    /// <c>ShatterSoaked</c> そのうち実際に吸った量 ／ <c>ShatterPaid</c> 代金の総額 ／
+    /// <c>ShatterPaidSelf</c> そのうち保持者が自弁した額。
+    /// <b>どの規則も読まない計数</b>で、<c>ShatterSoaked</c> は
+    /// 破片のプール全体（集約・鱗と混ざる）を数えていることに注意する。
+    /// </summary>
+    public required int ShatterTicks { get; init; }
+    public required int ShatterGiven { get; init; }
+    public required int ShatterSoaked { get; init; }
+    public required int ShatterPaid { get; init; }
+    public required int ShatterPaidSelf { get; init; }
 
     /// <summary>
     /// 業（第49期）の計数。<b>ロスターで初めて「状態異常の種類数」を読む駒</b>なので、

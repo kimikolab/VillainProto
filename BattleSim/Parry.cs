@@ -70,8 +70,14 @@ static class ParryDiag
     // **受け入れ条件 A3 が名指しするのは 7 枚**（ガルド・ゴルム・ドハ・セッキ・ウケ・ワタ・ササ）。
     // カドは条文に無いが、`SelectTargetChain` の鎖の最後の段（棘守り）を持つ唯一の駒なので足した
     // ——「庇う・肩代わりする駒全員」を機構から引くと必ず入る。
+    // 第137期: **ヒビを足した。** 表Aの分母（被弾/戦・生存T・死亡率）は
+    // 「その駒が編成に加わる価値は、少なくともその駒が受ける被弾を上回らなければならない」
+    // という物差しの分母そのものなので、砕けを測る期にはこれが要る（Phase 0 Q0-1）。
+    // **ヒビは庇わないし肩代わりもしない**——それでも並べるのは、`docs/harm.md` が
+    // 「何で削られ、何で死ぬか」の表であって「庇う駒の表」ではないから
+    // （表C / 表E の庇いの列は `—` で描き分けられる）。
     internal static readonly string[] Watched =
-        { "gald", "golm", "doha", "sekki", "uke", "wata", "sasa", "kado" };
+        { "gald", "golm", "doha", "sekki", "uke", "wata", "sasa", "kado", "hibi" };
 
     internal const int Seeds = 200;
 

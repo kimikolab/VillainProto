@@ -6538,6 +6538,51 @@ public sealed class PerverseTrait : Trait
 /// この変更は Sharer 特性にしか触れていないので、ドハを含まない27編成は無変化（compare で確認済み）。
 /// </summary>
 /// <summary>
+/// 砕けの供給の出どころ（第137期）。<b>診断（shard）が版を差し替えるためだけの窓口</b>で、
+/// 通常の実行では誰も渡さない（既定 ＝ <see cref="ShatterMode.Passive"/> ＝ 現行）。
+///
+/// <para><b>書き換え可能な static のノブにしないこと</b>（Trait は共有シングルトンで
+/// <c>layout</c> は並列実行する。<see cref="YokeRule"/> / <see cref="BearRule"/> /
+/// <see cref="ScaleRule"/> と同じ判断）。</para>
+///
+/// <para><b>既定は現行なので、ヒビを入れない限り既存の行は1バイトも動かない</b>
+/// ——それ自体が回帰チェックになる（<see cref="BearRule"/> の doc と同じ論法）。</para>
+/// </summary>
+/// <param name="Mode">供給の出どころ。</param>
+/// <param name="SelfCostPerTurn">
+/// 自前の鍵のとき、毎ターン自分に入れるダメージ。
+/// <b>0 なら1ビットも動かない</b>（保持者の走査もしない——軛と同じ短絡の作法）。
+/// </param>
+public readonly record struct ShatterRule(ShatterMode Mode, int SelfCostPerTurn)
+{
+    /// <summary>既定 ＝ 現行（範囲攻撃を浴びたら配る・自傷なし）。</summary>
+    public static ShatterRule Default => new(ShatterMode.Passive, 0);
+}
+
+/// <summary>砕けの供給の出どころ（第137期）。</summary>
+public enum ShatterMode
+{
+    /// <summary>
+    /// <b>現行。</b>範囲攻撃を浴びた量の <see cref="ShatterTrait.ConvertPercent"/> を配る。
+    /// 鍵は<b>敵が何を振るか</b>に完全に依存する。
+    /// </summary>
+    Passive,
+
+    /// <summary>
+    /// <b>新。</b>毎ターン自分を砕いて、<b>実際に減った HP と同じだけ</b>配る（自前の鍵）。
+    /// <para>払った量と配る量を同じにしてあるので、一文が「自分を砕いて破片を撒く」で済み、
+    /// <b>変換率という2つ目のノブが要らない</b>。脆弱で代金が1.5倍になるなら配る量も1.5倍になる
+    /// ——「浴びるほど配れる」という現行の設計言語がそのまま自前の鍵に移る。</para>
+    /// </summary>
+    Turn,
+
+    /// <summary>
+    /// <b>対照。両方走らせる。採用候補ではない</b>（どちらが効いたか分離できない）。
+    /// </summary>
+    Both
+}
+
+/// <summary>
 /// 砕け。範囲攻撃を浴びると、受けた分の半分を破片（アーマー）にして味方全員へ配る。
 ///
 /// <para><b>庇う（Guardian）のちょうど裏返し。</b> 庇う・標的の介入は
@@ -6583,6 +6628,10 @@ public sealed class ShatterTrait : Trait
 
     public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
     {
+        // 第137期: 自前の鍵（Turn）では受動の供給を止める。**Both は対照なので両方走る。**
+        // **既存の中身は1行も書き換えていない**——先頭にこの1行を足しただけ（指示書 §2-2）。
+        if (ctx.Shatter.Mode == ShatterMode.Turn) return;
+
         // 範囲攻撃のときだけ働く。source の型を見れば足りるので ApplyDamage の引数を増やさずに済む。
         // 毒・燃焼の継続ダメージは source が null なので自然に外れる（あれは範囲攻撃ではない）。
         if (source is null || source.CurrentPattern == AttackPattern.Single) return;
@@ -6590,6 +6639,73 @@ public sealed class ShatterTrait : Trait
         int shards = dmg * ConvertPercent / 100;
         if (shards <= 0) return;
 
+        Distribute(ctx, self, shards);
+    }
+
+    /// <summary>
+    /// 毎ターン自分を砕いて、<b>実際に減った HP と同じだけ</b>配る（第137期・自前の鍵）。
+    ///
+    /// <para><b>手番ではなくターン頭に置く。</b> 手番（<c>OnAction</c>）へ降ろすと攻5 を捨てることになり、
+    /// 「鍵の出どころ」以外の変数が増える（指示書 §6）。<c>OnTurnStart</c> は行動順ループの外＝
+    /// speed = ∞ の席なので（第61期）、<b>同じターン頭に発火する読み手より席順が前なら
+    /// その読み手はこのターンから破片を数えられる</b>——鱗（<see cref="ScaleTrait.OnTurnStart"/>）が
+    /// まさにそれで、既存の2行（<c>鱗改</c> / <c>破片×被弾</c>）はどちらもヒビが中央＝ウロより前の席にいる。</para>
+    ///
+    /// <para><b>配る量を「実際に減った HP」にするのが要点。</b> 払った量と配る量が同じなら
+    /// 一文が1文で済み、変換率という2つ目のノブが要らない。
+    /// <b>帰結として、巨躯・分かちが代金を肩代わりすると配る量も減る</b>
+    /// ——「代金を誰かに肩代わりさせる」が機構そのものを縮める形になるので、自弁率を数える。</para>
+    ///
+    /// <para><b>HP1 では供給が自然に止まる。</b> <c>lethal: false</c> のクランプが
+    /// <c>amount</c> を 0 にして即 return するので、減る HP も配る量も 0 になる
+    /// ——「払えなくなったら供給が止まる」を<b>規則を1本も足さずに</b>満たす（Phase 0 Q0-5）。</para>
+    /// </summary>
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (ctx.Shatter.Mode == ShatterMode.Passive) return;
+
+        int cost = ctx.Shatter.SelfCostPerTurn;
+        if (cost <= 0) return;
+        if (!self.IsAlive) return;
+
+        // **自弁率は tally の差分で取る**（ワタの `RelaySelfPaid` と同じ作法・第43期）。
+        // 肩代わり（巨躯・分かち）が割り込むと代金は他人へ移るので、
+        // 「cost を払った」ことにはならない。
+        int hpBefore = self.Hp;
+        int paidBefore = ctx.TallyOf(self).DamageTaken;
+
+        ctx.ShatterPaid += cost;
+
+        // **`ApplyDamage` を通す**（直接 HP を引かない）。ワタの `HpCostPerDull` の前例。
+        // - `source: self` ＝ `DamageRoute.Self`（自傷）に落ちる
+        // - `isFriendlyFire: true` ＝ 敵の一撃ではないので受け流し（ガルド）が弾かない
+        // - `lethal: false` ＝ 代金で自滅すると代金が代金として働かない
+        // - `spillWound: false` ＝ 自傷で傷を撒くつもりはない
+        //   （`SpillWoundRule.Enabled` は第122期に false へ降りているので既定でも同じだが、意図を明示する）
+        //
+        // **脆弱（FrailTrait）は外さない**（指示書 §2-3）。代金は1.5倍になるが、
+        // 配る量は「実際に減った HP」なので配る側も1.5倍になる。
+        ctx.ApplyDamage(self, cost, source: self, isFriendlyFire: true, lethal: false, spillWound: false);
+
+        ctx.ShatterPaidSelf += ctx.TallyOf(self).DamageTaken - paidBefore;
+
+        int shards = hpBefore - self.Hp;
+        if (shards <= 0) return;
+
+        Distribute(ctx, self, shards);
+    }
+
+    /// <summary>
+    /// 破片を味方全員へ配る。<b>受動（<see cref="OnDamaged"/>）と自前（<see cref="OnTurnStart"/>）で
+    /// 1バイトも違わない</b>——第137期は配り先を1つも変えていない（指示書 §2-2 / §6）。
+    ///
+    /// <para><b><c>MostHurtAlly</c> は使わない。</b> あれは
+    /// <c>AcceptsSupport</c> を通すので<b>ガルドが除外される</b>——破片の設計意図
+    /// （回復が届かない駒に唯一届く）と正面から矛盾する。
+    /// 「最も被弾している味方に配る」案はこの期では採らない。</para>
+    /// </summary>
+    static void Distribute(BattleContext ctx, UnitState self, int shards)
+    {
         int given = 0;
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
@@ -6608,6 +6724,10 @@ public sealed class ShatterTrait : Trait
             // どれだけ受け取っているかを、死からの供給と分けて数えるためだけの1行。
             if (ally.HasTrait(TraitId.Scale)) ctx.NoteScaleGain(shards, ScaleSource.Shatter);
         }
+
+        // 第137期・**計数のみ**（`ShatterGiven` / `ShatterTicks`）。盤面には触らない。
+        // 既存の `NoteScaleGain` は受け手がウロのときだけなので、陣営全体の供給はここでしか取れない。
+        if (given > 0) ctx.NoteShatter(given);
 
         if (given > 0)
             ctx.Log($"    ★ {self.Name} が砕けて破片が飛んだ（味方へ {shards} ずつ）", LogKind.Highlight, self);
