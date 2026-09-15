@@ -11,6 +11,8 @@ public partial class BattlefieldView3D : Control
     private Node3D _world = null!;
     private Node3D _actorRoot = null!;
     private Node3D _fxRoot = null!;
+    private Node3D _scenery = null!;
+    private bool _fortress;
     private Camera3D _camera = null!;
     private Texture2D _atlas = null!;
     private Label _eyebrow = null!;
@@ -94,20 +96,20 @@ public partial class BattlefieldView3D : Control
             Sky = new Sky { SkyMaterial = skyMaterial },
             AmbientLightSource = Godot.Environment.AmbientSource.Color,
             AmbientLightColor = Color.FromHtml("#b8c9bd"),
-            AmbientLightEnergy = 0.74f,
+            AmbientLightEnergy = 0.42f,
             ReflectedLightSource = Godot.Environment.ReflectionSource.Sky,
             TonemapMode = Godot.Environment.ToneMapper.Filmic,
             FogEnabled = true,
-            FogLightColor = Color.FromHtml("#d8cba5"),
+            FogLightColor = Color.FromHtml("#a8b6ae"),
             FogLightEnergy = 0.62f,
-            FogDensity = 0.0062f,
+            FogDensity = 0.0035f,
         };
         _world.AddChild(new WorldEnvironment { Environment = environment });
         _world.AddChild(new DirectionalLight3D
         {
-            RotationDegrees = new Vector3(-57, -24, 0),
+            RotationDegrees = new Vector3(-34, -42, 0),
             LightColor = Color.FromHtml("#ffe6b0"),
-            LightEnergy = 1.36f,
+            LightEnergy = 1.12f,
             ShadowEnabled = true,
         });
 
@@ -124,57 +126,8 @@ public partial class BattlefieldView3D : Control
         _world.AddChild(_camera);
         _camera.LookAt(CameraFocus, Vector3.Up);
 
-        var ground = new MeshInstance3D
-        {
-            Mesh = new PlaneMesh { Size = new Vector2(26, 20), SubdivideWidth = 12, SubdivideDepth = 10 },
-            MaterialOverride = MakeMaterial(Color.FromHtml("#526f3e"), roughness: 0.98f),
-        };
-        _world.AddChild(ground);
-
-        AddHill(new Vector3(-10.2f, -1.35f, -6.5f), new Vector3(4.8f, 1.4f, 3.0f), "#3d5c36");
-        AddHill(new Vector3(10.5f, -1.55f, -5.2f), new Vector3(4.4f, 1.5f, 3.2f), "#405f38");
-        AddHill(new Vector3(-11.2f, -1.65f, 7.5f), new Vector3(4.0f, 1.5f, 3.4f), "#48683c");
-        AddHill(new Vector3(11.4f, -1.7f, 8.2f), new Vector3(4.4f, 1.45f, 3.0f), "#46643b");
-
-        StandardMaterial3D lane = MakeMaterial(new Color(0.78f, 0.69f, 0.42f, 0.18f), true, true, 1.0f, Color.FromHtml("#8f7f4e") * 0.16f);
-        AddStrip(new Vector3(-6.5f, 0.023f, -2.15f), new Vector3(6.5f, 0.023f, -2.15f), 0.18f, lane);
-        AddStrip(new Vector3(-6.5f, 0.023f, 2.15f), new Vector3(6.5f, 0.023f, 2.15f), 0.18f, lane);
-        AddStrip(new Vector3(0, 0.021f, -4.6f), new Vector3(0, 0.021f, 4.6f), 0.10f, lane);
-
-        StandardMaterial3D trunk = MakeMaterial(Color.FromHtml("#55442c"));
-        StandardMaterial3D leavesA = MakeMaterial(Color.FromHtml("#244c34"));
-        StandardMaterial3D leavesB = MakeMaterial(Color.FromHtml("#345d39"));
-        Vector3[] trees =
-        {
-            new(-10,0,-7), new(-8.6f,0,-8.1f), new(-11.2f,0,-4.9f), new(9.4f,0,-7.7f), new(11.0f,0,-5.8f),
-            new(-10.8f,0,6.8f), new(-9.0f,0,8.4f), new(9.1f,0,8.3f), new(11.0f,0,6.7f), new(12.1f,0,9.0f),
-        };
-        for (int i = 0; i < trees.Length; i++) AddTree(trees[i], trunk, i % 2 == 0 ? leavesA : leavesB, 0.78f + (i % 3) * 0.10f);
-
-        StandardMaterial3D rock = MakeMaterial(Color.FromHtml("#6d7061"), roughness: 0.96f);
-        foreach ((Vector3 pos, Vector3 scale) in new[]
-        {
-            (new Vector3(-7.2f,0,-4.4f), new Vector3(1.0f,0.45f,0.7f)),
-            (new Vector3(7.8f,0,5.0f), new Vector3(1.25f,0.55f,0.8f)),
-            (new Vector3(8.3f,0,-4.3f), new Vector3(0.7f,0.38f,0.55f)),
-        })
-        {
-            _world.AddChild(new MeshInstance3D
-            {
-                Mesh = new SphereMesh { Radius = 1.0f, Height = 1.35f, RadialSegments = 20, Rings = 8 },
-                Position = pos + Vector3.Up * 0.25f,
-                Scale = scale,
-                MaterialOverride = rock,
-            });
-        }
-
-        var mist = new MeshInstance3D
-        {
-            Mesh = new QuadMesh { Size = new Vector2(21, 4.5f) },
-            Position = new Vector3(0, 2.0f, -8.8f),
-            MaterialOverride = MakeMaterial(new Color(0.73f, 0.78f, 0.65f, 0.12f), true, true),
-        };
-        _world.AddChild(mist);
+        _scenery = new MeadowEnvironment3D();
+        _world.AddChild(_scenery);
 
         _actorRoot = new Node3D();
         _world.AddChild(_actorRoot);
@@ -239,15 +192,25 @@ public partial class BattlefieldView3D : Control
         return label;
     }
 
-    public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName)
+    public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName, int stageIndex)
     {
+        // 波の番号で背景を選ぶ。表示名や戦闘ログの文字列は判定に使わない。
+        bool fortress = stageIndex == 3;
+        if (_fortress != fortress)
+        {
+            _world.RemoveChild(_scenery);
+            _scenery.QueueFree();
+            _scenery = fortress ? new FortressEnvironment3D() : new MeadowEnvironment3D();
+            _world.AddChild(_scenery);
+            _fortress = fortress;
+        }
         foreach (BattlePawn3D pawn in _pawns.Values) pawn.QueueFree();
         _pawns.Clear();
         foreach (Node child in _fxRoot.GetChildren()) child.QueueFree();
         _eyebrow.Text = "BATTLE 2.5D  /  TURN 0";
         _turnOwner = null;
         _beat.Text = "";
-        _headline.Text = $"{stageName} — 草原遭遇戦";
+        _headline.Text = $"{stageName} — {(_fortress ? "城門前の攻防" : "草原遭遇戦")}";
         _subline.Text = "Space: 一時停止   1–4: 再生速度   T: 戦績   細い線＝誰の仕業か   ▶＝手番の主 / ▷＝ターン頭 / ⚡＝手番の外";
         _camera.Position = _cameraHome;
         _camera.Fov = CameraFov;
@@ -727,49 +690,6 @@ public partial class BattlefieldView3D : Control
         };
         float x = team == BattleContext.PlayerTeam ? -depth : depth;
         return new Vector3(x, 0.08f, lane);
-    }
-
-    private void AddHill(Vector3 position, Vector3 scale, string color)
-    {
-        _world.AddChild(new MeshInstance3D
-        {
-            Mesh = new SphereMesh { Radius = 1.0f, Height = 2.0f, RadialSegments = 28, Rings = 10 },
-            Position = position,
-            Scale = scale,
-            MaterialOverride = MakeMaterial(Color.FromHtml(color), roughness: 1.0f),
-        });
-    }
-
-    private void AddTree(Vector3 position, Material trunk, Material leaves, float scale)
-    {
-        var root = new Node3D { Position = position, Scale = Vector3.One * scale };
-        root.AddChild(new MeshInstance3D
-        {
-            Mesh = new CylinderMesh { TopRadius = 0.10f, BottomRadius = 0.15f, Height = 1.2f, RadialSegments = 8 },
-            Position = new Vector3(0, 0.6f, 0),
-            MaterialOverride = trunk,
-        });
-        root.AddChild(new MeshInstance3D
-        {
-            Mesh = new CylinderMesh { TopRadius = 0.08f, BottomRadius = 0.82f, Height = 1.7f, RadialSegments = 12 },
-            Position = new Vector3(0, 1.65f, 0),
-            MaterialOverride = leaves,
-        });
-        _world.AddChild(root);
-    }
-
-    private void AddStrip(Vector3 start, Vector3 end, float width, Material material)
-    {
-        Vector3 delta = end - start;
-        var strip = new MeshInstance3D
-        {
-            Mesh = new BoxMesh { Size = new Vector3(width, 0.018f, 1.0f) },
-            Position = (start + end) * 0.5f,
-            Scale = new Vector3(1, 1, delta.Length()),
-            MaterialOverride = material,
-        };
-        strip.Rotation = new Vector3(0, Mathf.Atan2(delta.X, delta.Z), 0);
-        _world.AddChild(strip);
     }
 
     private static StandardMaterial3D MakeMaterial(

@@ -790,7 +790,7 @@ public partial class Main : Control
         _battleLog.Clear();
         _field.Visible = false;
         _battleField.Visible = true;
-        _battleField.BeginBattle(_battleOpening, EnemyCatalog.Stages[stageIndex].Name);
+        _battleField.BeginBattle(_battleOpening, EnemyCatalog.Stages[stageIndex].Name, stageIndex);
         _partyBar.Begin(_battleOpening);
         _partyBar.Sync(_battleField, -1);
         _partyBar.Visible = true;
@@ -1531,7 +1531,7 @@ public partial class Main : Control
         _shownBeat = Beat.TurnOpen;
         _shownOwner = -1;
         _battleLog.Clear();
-        _battleField.BeginBattle(_battleOpening, EnemyCatalog.Stages[_stagePicker.Selected].Name);
+        _battleField.BeginBattle(_battleOpening, EnemyCatalog.Stages[_stagePicker.Selected].Name, _stagePicker.Selected);
         _partyBar.Begin(_battleOpening);
         _partyBar.Sync(_battleField, -1);
         _partyBar.Visible = true;
