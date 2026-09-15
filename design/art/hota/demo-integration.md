@@ -4,7 +4,7 @@
 
 - `DemoApp/assets/portraits/battle/hota_idle_right.png`: 非燃焼。
 - `DemoApp/assets/portraits/battle/hota_burning_idle_right.png`: 燃焼。
-- `DemoApp/assets/portraits/hota.png`: 非燃焼の同画像を編成・勝利表示にも使用。
+- `DemoApp/assets/portraits/hota.png`: 第2案の左側に描かれた正面・非燃焼の立ち絵を単独素材化し、編成・勝利表示に使用。戦闘用の構えとは分離。
 
 元の2枚は維持。内蔵 image_gen で格子背景を単色緑に置換した画像を採用した。PNG自体は透過ではなく、既存の表示シェーダーで背景を抜く。緑単色を検出した場合だけ輪郭の緑の混色も除去する。両差分は1024×1536で、足元の余白率は共通0.012。
 

@@ -13,6 +13,7 @@ public partial class PortraitStateCheck : Node3D
             var atlas = UiKit.LoadTexture("res://assets/outcast_atlas.png");
             var normal = UiKit.BattlePortrait(atlas, "hota");
             var burning = UiKit.BattlePortrait(atlas, "hota", true);
+            Require(!UiKit.Portrait(atlas, "hota").GetImage().GetData().SequenceEqual(normal.GetImage().GetData()), "選択用と戦闘用の画像を分離");
             Require(normal != burning, "燃焼差分の読み込み");
             Require(normal.GetSize() == burning.GetSize(), "差分のキャンバス寸法");
             Require(UiKit.BattlePortrait(atlas, "yomi", true) == UiKit.BattlePortrait(atlas, "yomi"), "差分なしの駒");
