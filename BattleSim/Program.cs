@@ -56302,6 +56302,18 @@ if (focusId == "wildfire")
     return;
 }
 
+// stacks モード（第134期） —— 重ね掛けの実測と、盤面ルールの対称性。
+// **測定だけの期。機構を1つも足さない。** 実装は `BattleSim/Stacks.cs`。
+//
+//     dotnet run --project BattleSim -c Release 0 stacks phase0  # Q0-1〜Q0-8（戦闘0回）
+//     dotnet run --project BattleSim -c Release 0 stacks burn    # 段1（重ね掛けの実測）
+//     dotnet run --project BattleSim -c Release 0 stacks check [採用前のbalance.md]
+if (focusId == "stacks")
+{
+    StacksDiag.Run(args.Length > 2 ? args[2] : "phase0", args.Length > 3 ? args[3] : "");
+    return;
+}
+
 // handoff モード: 会戦の交代の実態を計測する（第4期 Phase K）。「部隊を1つ足すと突破数の
 // 増分が編成によらずほぼ +1.00」の原因を、仮説 P（第1部隊が敵をほとんど削らずに全滅し、
 // 第2部隊は仕切り直しで1波抜くだけ＝拾えていない）と仮説 Q（拾えてはいるが、第2部隊の

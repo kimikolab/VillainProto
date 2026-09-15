@@ -1780,6 +1780,50 @@ public readonly record struct YokeLedger(
     public long Passed => InAmount.Sum();
 }
 
+/// <summary>
+/// 燃焼の重ね掛けの帳簿（第134期 段1）。<b>計数専用で、どの規則も読まない。</b>
+///
+/// <para><b>陣営の添字は受け手の側</b>——<c>0 = 敵に点いた火</c> / <c>1 = 味方に点いた火</c>。
+/// <see cref="BattleContext.Ignite"/> は<b>残ターンを上書きする（加算しない）</b>ので、
+/// 既に燃えている駒への再付与は「濃さ」を1ビットも変えない。<b>その捨てられている供給が
+/// 何回起きているか</b>だけを数える。</para>
+///
+/// <para><b>「区間」（＝消えるまでの点け直し回数）の定義。</b>
+/// <c>火が点いていない駒に点いた瞬間</c>に区間が開き、次のどれかで閉じる:
+/// <list type="bullet">
+/// <item><c>Expired</c> 残ターンが 0 まで落ちた（<c>TickStatuses</c> で燃え尽きた）</item>
+/// <item><c>Death</c> 燃えたまま倒れた（決着時に <c>IsAlive</c> が偽）</item>
+/// <item><c>Alive</c> 燃えたまま決着した（<c>IsAlive</c> が真）</item>
+/// </list>
+/// <b>1区間の「点け直し回数」は、その区間が開いてから閉じるまでに走った再付与の回数</b>
+/// （0 なら一度も煽られずに燃え尽きた）。<b>戦闘単位ではなく区間単位で数える</b>ので、
+/// 同じ駒が2度燃えれば2区間になる。</para>
+/// </summary>
+/// <param name="Lit">火が点いた回数（<c>relit == false</c>）。添字は受け手の陣営。</param>
+/// <param name="Relit">既に燃えている駒への再付与の回数。同上。</param>
+/// <param name="Episodes">閉じた区間の数。同上。</param>
+/// <param name="RelitSum">閉じた区間の点け直し回数の総和。同上。</param>
+/// <param name="RelitMax">1区間の点け直し回数の最大。同上。</param>
+/// <param name="Hist">点け直し回数の分布。<c>[陣営][0..5]</c> で <b>5 は「5回以上」</b>。</param>
+/// <param name="EndExpired">燃え尽きて閉じた区間の数。同上。</param>
+/// <param name="EndDeath">燃えたまま倒れて閉じた区間の数。同上。</param>
+/// <param name="EndAlive">燃えたまま決着して閉じた区間の数。同上。</param>
+/// <param name="By">点けた側の <c>Def.Id</c> → (点けた回数, 煽った回数)。<b>付け手が渡された着火だけ</b>。</param>
+/// <param name="On">点けられた側の <c>Def.Id</c> → (点いた回数, 煽られた回数)。</param>
+public readonly record struct BurnLedger(
+    long[] Lit, long[] Relit, long[] Episodes, long[] RelitSum, long[] RelitMax,
+    long[][] Hist, long[] EndExpired, long[] EndDeath, long[] EndAlive,
+    Dictionary<string, (long Lit, long Relit)> By,
+    Dictionary<string, (long Lit, long Relit)> On)
+{
+    /// <summary>着火の総回数（点いた ＋ 煽った）。</summary>
+    public long Fires => Lit.Sum() + Relit.Sum();
+
+    /// <summary>1区間あたりの平均の点け直し回数（<b>P1 の主判定</b>）。区間が 0 なら 0。</summary>
+    public double MeanRelit(int team)
+        => Episodes[team] > 0 ? (double)RelitSum[team] / Episodes[team] : 0.0;
+}
+
 public sealed class BattleResult
 {
     public required bool PlayerWon { get; init; }
@@ -1841,6 +1885,10 @@ public sealed class BattleResult
 
     /// <summary>上限（軛）の帳簿（第132期 段1・<see cref="YokeLedger"/>）。<b>計数専用。</b></summary>
     public required YokeLedger Yoke { get; init; }
+
+    /// <summary>燃焼の重ね掛けの帳簿（第134期 段1・<see cref="BurnLedger"/>）。<b>計数専用。</b></summary>
+    public required BurnLedger Burns { get; init; }
+
 
     public required int ExposeCount { get; init; }
     public required int ExposeMissed { get; init; }

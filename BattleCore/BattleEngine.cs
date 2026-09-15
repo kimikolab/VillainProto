@@ -302,6 +302,7 @@ public sealed class BattleContext
     /// <summary>毒などの継続ダメージ。ターン開始時に engine から呼ばれる。</summary>
     public void TickStatuses()
     {
+
         foreach (UnitState u in _units.Where(x => x.IsAlive).ToList())
         {
             int poison = u.RawCounter(StatusKeys.Poison);
@@ -352,6 +353,8 @@ public sealed class BattleContext
             bt.BurnTicks++;
 
             u.SetCounter(StatusKeys.Burn, left - 1);
+            // 第134期 段1 —— 燃え尽きた時点で区間を閉じる。**盤面には触らない。**
+            if (left - 1 <= 0) CloseBurnEpisode(u, expired: true);
             Log($"    {u.Name} が燃えている（残り {left - 1}）", LogKind.Status);
             Emit(new BattleEvent
             {
@@ -656,6 +659,7 @@ public sealed class BattleContext
         // 「点いた」と「煽られた」を分けるのが要点——非スタックなので後者は
         // 残ターンを 3 に戻すだけで、供給としては捨てられている。
         UnitTally it = TallyOf(target);
+        NoteIgnite(target, source, relit);   // 第134期 段1 —— 重ね掛けの帳簿。盤面には触らない
         if (relit)
         {
             it.BurnRelit++;
@@ -2236,6 +2240,100 @@ public sealed class BattleContext
 
     /// <summary>軛の保持者（<see cref="Add"/> が積む）。<b>全駒の走査を避けるためのキャッシュ。</b></summary>
     readonly List<UnitState> _yokeHolders = new();
+
+    // =====================================================================================
+    // 第134期 段1・段2 —— 重ね掛けと盤面ルールの対称性の帳簿。**計数専用。**
+    //
+    // **どの規則も読まない。** 足したのは (a) 下の配列と辞書、(b) `Ignite` / `TickStatuses` /
+    // `Heal` / `CanActOutOfTurn` に置いた `Note*` の呼び出し、(c) `Run` の組み立てだけで、
+    // **盤面の分岐も乱数も1ビットも動かない**（受け入れ条件 A1・A2）。
+    //
+    // 陣営の添字は**課税された側**（0 = 敵 / 1 = 味方）。第132期の `YokeLedger` に揃えてある。
+    // =====================================================================================
+
+    /// <summary>陣営の添字（0 = 敵 / 1 = 味方）。<b>第134期の帳簿はすべてこの向き。</b></summary>
+    static int SideOf(UnitState u) => u.TeamId == PlayerTeam ? 1 : 0;
+
+    /// <summary>点け直し回数の分布の段数。<b>添字 5 は「5回以上」</b>。</summary>
+    public const int BurnHistBuckets = 6;
+
+    public readonly long[] BurnLitSide = new long[2];
+    public readonly long[] BurnRelitSide = new long[2];
+    public readonly long[] BurnEpisodes = new long[2];
+    public readonly long[] BurnRelitSum = new long[2];
+    public readonly long[] BurnRelitMax = new long[2];
+    public readonly long[][] BurnHist = { new long[BurnHistBuckets], new long[BurnHistBuckets] };
+    public readonly long[] BurnEndExpired = new long[2];
+    public readonly long[] BurnEndDeath = new long[2];
+    public readonly long[] BurnEndAlive = new long[2];
+
+    /// <summary>点けた側の帳簿（<c>Def.Id</c> → 点けた回数・煽った回数）。</summary>
+    public readonly Dictionary<string, (long Lit, long Relit)> BurnBy = new();
+
+    /// <summary>点けられた側の帳簿（<c>Def.Id</c> → 点いた回数・煽られた回数）。</summary>
+    public readonly Dictionary<string, (long Lit, long Relit)> BurnOn = new();
+
+    /// <summary>
+    /// いま開いている区間の点け直し回数（<c>InstanceId</c> → 回数）。
+    /// <b>区間は「燃えていない駒に火が点いた瞬間」に開く</b>ので、キーがあること自体が
+    /// 「その駒がいま燃えている」と同値になる（<see cref="CloseBurnEpisode"/> が閉じるまで）。
+    /// </summary>
+    readonly Dictionary<int, int> _burnOpen = new();
+
+    /// <summary>着火の帳簿（<see cref="Ignite"/> の中から1回だけ呼ぶ）。<b>盤面には触らない。</b></summary>
+    void NoteIgnite(UnitState target, UnitState? source, bool relit)
+    {
+        int side = SideOf(target);
+        if (relit)
+        {
+            BurnRelitSide[side]++;
+            // 区間が開いていない既燃は原理的に無い（区間はここでしか開かず、
+            // <see cref="CloseBurnEpisode"/> でしか閉じない）が、キーが無ければ 0 から開き直す
+            // ——数え落とすより、開き直したことが分布に出る形にしておく。
+            _burnOpen[target.InstanceId] = _burnOpen.TryGetValue(target.InstanceId, out int n) ? n + 1 : 0;
+        }
+        else
+        {
+            BurnLitSide[side]++;
+            _burnOpen[target.InstanceId] = 0;
+        }
+
+        BurnOn.TryGetValue(target.Def.Id, out var on);
+        BurnOn[target.Def.Id] = relit ? (on.Lit, on.Relit + 1) : (on.Lit + 1, on.Relit);
+
+        if (source is not null)
+        {
+            BurnBy.TryGetValue(source.Def.Id, out var by);
+            BurnBy[source.Def.Id] = relit ? (by.Lit, by.Relit + 1) : (by.Lit + 1, by.Relit);
+        }
+    }
+
+    /// <summary>
+    /// 区間を閉じる（第134期 段1）。<b>閉じ方は3通り</b>——燃え尽きた（<paramref name="expired"/>）／
+    /// 燃えたまま倒れた／燃えたまま決着した。<b>盤面には触らない。</b>
+    /// </summary>
+    void CloseBurnEpisode(UnitState u, bool expired)
+    {
+        if (!_burnOpen.Remove(u.InstanceId, out int relit)) return;
+        int side = SideOf(u);
+        BurnEpisodes[side]++;
+        BurnRelitSum[side] += relit;
+        if (relit > BurnRelitMax[side]) BurnRelitMax[side] = relit;
+        BurnHist[side][Math.Min(relit, BurnHistBuckets - 1)]++;
+        if (expired) BurnEndExpired[side]++;
+        else if (u.IsAlive) BurnEndAlive[side]++;
+        else BurnEndDeath[side]++;
+    }
+
+    /// <summary>
+    /// 決着時に開いたままの区間を閉じる（第134期 段1）。<b>死者も数える</b>——
+    /// 燃えたまま倒れた駒の区間は <see cref="TickStatuses"/> が二度と触らないので、
+    /// ここで閉じないと帳簿から丸ごと落ちる。<b>1戦につき最後に1度だけ呼ぶ。</b>
+    /// </summary>
+    public void CloseBurnLedger()
+    {
+        foreach (UnitState u in _units.ToList()) CloseBurnEpisode(u, expired: false);
+    }
 
     /// <summary>
     /// 上限がいま効いているか。<b>規則の有効・保持者の生存を1箇所に集めただけ</b>で、
@@ -5704,6 +5802,10 @@ public static class BattleEngine
         // 第120期の帳簿を閉じる（**死者を含む全駒を1度だけ**。上のループは生存駒しか見ていない）。
         ctx.CloseWoundLedger();
 
+        // 第134期 段1 の帳簿を閉じる（**死者を含む全駒を1度だけ**。燃えたまま倒れた駒の区間は
+        // `TickStatuses` が二度と触らないので、ここで閉じないと丸ごと落ちる）。
+        ctx.CloseBurnLedger();
+
         return new BattleResult
         {
             PlayerWon = playerWon,
@@ -5739,6 +5841,16 @@ public static class BattleEngine
                 ctx.YokeInBurnHits, ctx.YokeInBurnAmount,
                 ctx.YokeInLevyHits, ctx.YokeInLevyAmount,
                 ctx.DirectHpLoss, new Dictionary<string, (long, long)>(ctx.YokeCutBy)),
+            // 第134期 段1・段2。**計数専用**（どの規則も読まない）。
+            Burns = new BurnLedger(
+                (long[])ctx.BurnLitSide.Clone(), (long[])ctx.BurnRelitSide.Clone(),
+                (long[])ctx.BurnEpisodes.Clone(), (long[])ctx.BurnRelitSum.Clone(),
+                (long[])ctx.BurnRelitMax.Clone(),
+                new[] { (long[])ctx.BurnHist[0].Clone(), (long[])ctx.BurnHist[1].Clone() },
+                (long[])ctx.BurnEndExpired.Clone(), (long[])ctx.BurnEndDeath.Clone(),
+                (long[])ctx.BurnEndAlive.Clone(),
+                new Dictionary<string, (long, long)>(ctx.BurnBy),
+                new Dictionary<string, (long, long)>(ctx.BurnOn)),
             ExposeCount = ctx.ExposeCount,
             ExposeMissed = ctx.ExposeMissed,
             DullTotal = ctx.DullTotal,
