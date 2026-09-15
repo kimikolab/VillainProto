@@ -1,0 +1,15 @@
+# ホタ 基本立ち絵コンセプト v1
+
+生成方式: 内蔵 image_gen。参照設定: docs/units.md の「熾のホタ」とユーザー指定。初期案であり、DemoApp への実装は行わない。
+
+## 生成プロンプト
+
+Use case: stylized-concept
+Asset type: Japanese fantasy game character concept sheet, first proposal for a base standing character illustration.
+Create a polished anime fantasy concept art sheet of 熾のホタ (Hota).
+Primary request: A princess-knight with a youthful innocent face and slightly uncertain expression when she is not burning. Orange-tinted blonde LONG LOOSE hair, flowing naturally as if in a gentle breeze, reaching her lower back / waist (not floor-length). Her clear silhouette combines knight plate armor and a dress, an elegant armor dress. She carries one ornate ONE-HANDED treasured straight sword, with an embellished guard and jewel, proportioned for practical one-handed use.
+Composition: clean pale neutral background, large dominant head-to-toe three-quarter FRONT standing portrait occupying about three quarters of the sheet. All hair, feet and sword fully inside the frame with margin. Main portrait is completely unlit, NO flames or sparks, no glowing sword. Slightly lowered eyebrows, gentle hesitant gaze, modest reserved stance, but still a trained knight. Hold the sword in one hand pointing down beside the body, blade clearly visible; other hand relaxed close to the torso. Armor dress with readable steel plates over the torso, shoulders, forearms and shins, layered fabric skirt; refined princess-like craft, not oversized heavy tank armor. Design material colors tastefully to complement warm blonde hair. Detailed but readable ornament, elegant silhouette, no helmet obscuring the hair.
+At the right edge include two smaller HEAD AND SHOULDERS expression studies of exactly the same woman with identical hair and armor: one shy/uncertain neutral face without fire; one burning-state face with calm, assured strong-warrior composure, slight confident smile and relaxed eyebrows, with a few orange flames behind shoulders and warm reflected light. The burning version is the SAME character, not an evil personality or costume transformation.
+World reference: Hota cannot ignite herself. While someone else has set her burning, her attack becomes four times stronger and piercing. When the fire goes out she returns to an unconfident ordinary state. Convey the psychological contrast through expression only in the small study, no self-casting gesture or magic ignition device.
+Style/medium: beautiful high quality Japanese anime game character design, precise graceful linework, softly painted materials, expressive face, full color, concept clarity over splash-art effects. Neutral even lighting on main figure for easy design review.
+Constraints: One dominant base full-body illustration, two subordinate face studies only. Consistent character identity. No environment, no other characters, no shield, no giant two-handed sword, no floor-length hair, no revealing bikini armor, no text or logo or watermark. This is initial concept art, not a game UI or screenshot.

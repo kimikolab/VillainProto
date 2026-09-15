@@ -146,6 +146,7 @@
 | `GradeAll` | - |
 | `GradeStep` | のろまの巨兵ドルガ |
 | `Undying` | - |
+| `Wildfire` | - |
 | `Parry` | - |
 | `ThinBlade` | 裂きのキリ |
 | `Overreach` | 抉りのエグ |

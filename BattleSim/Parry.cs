@@ -558,9 +558,13 @@ static class ParryDiag
             Console.WriteLine($"| {k} | {(hit.Count == 0 ? "**0 件**" : string.Join(" / ", hit))} |");
         }
         Console.WriteLine();
-        Console.WriteLine("**「反射を却下した判断」はリポジトリ内に1件も無い**（当たった `反射` はどれも");
-        Console.WriteLine("「出力経路の列挙」か「ゴルムが弱体を反射する」の比喩で、却下の記録ではない）。");
-        Console.WriteLine("**この期の報告書に残す。**");
+        Console.WriteLine("**当たったファイルは3種類しかない**——(i) **この期の案そのものの持ち越し**");
+        Console.WriteLine("（第132〜134期の §8 が「ガルドのパリィ案」として次期へ送っている）／");
+        Console.WriteLine("(ii) **この期が書いた `LESSONS_101_.md` の節自身**");
+        Console.WriteLine("（走査対象が走査する側の成果物を含む＝第123期の自己参照）／");
+        Console.WriteLine("(iii) `反射` の 4 件（「出力経路の列挙」「リフレクションで引く」");
+        Console.WriteLine("「ゴルムが弱体を反射する」の比喩）。");
+        Console.WriteLine("**「無効化・パリィを測った期」も「反射を却下した判断」も 0 件。この期の報告書に残す。**");
         Console.WriteLine();
 
         // ---- Q0-10 -------------------------------------------------------------------
