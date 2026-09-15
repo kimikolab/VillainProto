@@ -40,6 +40,7 @@ public static class UnitCatalog
         MaxHp = 42,
         Attack = 11,
         Speed = 12,
+        Advances = false,
         Traits = new[] { TraitId.Sniper, TraitId.Coward },
         PlusText = "戦闘中に一度後退してから後列にいると攻撃力2倍になり、敵の後列を狙い撃つ貫きに変わる（最初から後列に置いても発動しない）",
         MinusText = "3分の1削られると後列の味方を突き飛ばして逃げる（味方が矢面に立つ）",
@@ -362,6 +363,7 @@ public static class UnitCatalog
         MaxHp = 88,
         Attack = 5,
         Speed = 2,
+        Advances = false,
         // 第116期に2本目の札（積み過ぎ）を載せた。**据えは被ダメ側・積み過ぎは型の側**なので
         // どちらも `ModifyAttack` / `ModifyPattern` を奪い合わない（`reader load check` の (c)）。
         // **自己強化を1本も持たない駒**なので、閾値に届くかどうかは同席する供給者が決める。
@@ -631,6 +633,7 @@ public static class UnitCatalog
         MaxHp = 55,
         Attack = 5,
         Speed = 3,
+        Advances = false,
         Traits = new[] { TraitId.Shatter, TraitId.Frail },
         PlusText = "範囲攻撃を受けると、その4分の1を破片として味方全員に配る（HPの前に削られる／回復を受け付けない味方にも届く）",
         MinusText = "受けるダメージが5割増し / 単体攻撃しか飛んでこない相手には何も起きない",
