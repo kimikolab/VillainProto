@@ -2176,6 +2176,81 @@ public sealed class BattleContext
     /// </summary>
     public long HpRemoved;
 
+    // ===== 第132期 段1: 上限（軛）の帳簿 =========================================================
+    //
+    // **誰も読んで分岐しない。** 盤面にも乱数列にも1ビットも触らない。
+    // 第25期に軛を採ってから第131期まで「何が何回・何点切られたか」を数える窓口が1つも無く、
+    // 「型ごとに上限との相性が逆を向く」が**3期にわたって未測定のまま指示書に書き継がれていた**。
+    //
+    // 添字は攻撃型（`AttackPattern`）で、**4 は「型なし」**——継続ダメージ（毒・燃焼）・反撃・
+    // 肩代わりの中継・徴収はどれも `pattern` を渡さないのでここに落ちる。
+    // **肩代わりの中継が元の型に戻らないのは意図した形**（分割された段は別の一撃なので、
+    // 「どの型の一撃が切られたか」に足すと二重に数えることになる）。
+
+    /// <summary>
+    /// 攻撃型ごとの「軛に切られた一撃」の回数。
+    /// <b>添字は <c>型 + (受けたのが味方なら 5)</c></b>——0..4 が敵に入った一撃（＝味方の刃）、
+    /// 5..9 が味方に入った一撃（＝敵の刃）。<b>型の 4 は「型なし」。</b>
+    /// </summary>
+    public readonly long[] YokeCutHits = new long[10];
+    /// <summary>同・切り落とされた量（<c>amount - Cap</c> の合計）。</summary>
+    public readonly long[] YokeCutLost = new long[10];
+    /// <summary>同・切られたうえで通った量（<c>Cap</c> の合計）。</summary>
+    public readonly long[] YokeCutPassed = new long[10];
+    /// <summary>切られなかったが上限に近い一撃（<c>Cap * 4 / 5</c> 超〜<c>Cap</c>）の回数。</summary>
+    public readonly long[] YokeNearHits = new long[10];
+    /// <summary>上限が効いている間に HP へ届いた回数（切られた一撃も含む）。</summary>
+    public readonly long[] YokeInHits = new long[10];
+    /// <summary>同・量（上限を通した後の実額）。</summary>
+    public readonly long[] YokeInAmount = new long[10];
+    /// <summary>同・その一撃で相手が倒れた回数。</summary>
+    public readonly long[] YokeKills = new long[10];
+    /// <summary>同・過剰分（<c>amount - 直前のHP</c>。倒した一撃だけ）。</summary>
+    public readonly long[] YokeOverkill = new long[10];
+    /// <summary>切られた側が味方（プレイヤー）だった回数と量。</summary>
+    public long YokeCutOnPlayerHits, YokeCutOnPlayerLost;
+    /// <summary>切られた側が敵だった回数と量。</summary>
+    public long YokeCutOnEnemyHits, YokeCutOnEnemyLost;
+    /// <summary>上限が効いている間に、破片（<c>Armor</c>）が上限の<b>手前</b>で食った量。</summary>
+    public long YokeArmorSoak;
+    /// <summary>上限が効いている間に HP へ届いた量のうち、肩代わりの中継だったぶん。</summary>
+    public long YokeInRelayedHits, YokeInRelayedAmount;
+    /// <summary>同・継続ダメージ（毒・燃焼の刻み）だったぶん。</summary>
+    public long YokeInBurnHits, YokeInBurnAmount;
+    /// <summary>同・徴収（生贄・吸い・置き去りの削り）だったぶん。</summary>
+    public long YokeInLevyHits, YokeInLevyAmount;
+    /// <summary>
+    /// <see cref="ApplyDamage"/> を<b>1度も通さずに</b>書かれた HP の減り（繕いの代金）。
+    /// <b>上限も破片も肩代わりも通らない</b>ので、回避経路の3分類でいちばん外側にいる。
+    /// </summary>
+    public long DirectHpLoss;
+    /// <summary>誰の一撃が切られたか（<c>Def.Id</c> → 回数・切られた量）。</summary>
+    public readonly Dictionary<string, (long Hits, long Lost)> YokeCutBy = new();
+
+    /// <summary>軛の保持者（<see cref="Add"/> が積む）。<b>全駒の走査を避けるためのキャッシュ。</b></summary>
+    readonly List<UnitState> _yokeHolders = new();
+
+    /// <summary>
+    /// 上限がいま効いているか。<b>規則の有効・保持者の生存を1箇所に集めただけ</b>で、
+    /// 判定は第25期から1ビットも変わっていない（<c>AllUnits.Any(...)</c> と同値）。
+    /// </summary>
+    public bool YokeBinding
+    {
+        get
+        {
+            if (!Yoke.Active) return false;
+            for (int i = 0; i < _yokeHolders.Count; i++) if (_yokeHolders[i].IsAlive) return true;
+            return false;
+        }
+    }
+
+    /// <summary><see cref="ApplyDamage"/> を通らずに HP を減らした量を記録する（計数のみ）。</summary>
+    public void NoteDirectHpLoss(int amount) { if (amount > 0) DirectHpLoss += amount; }
+
+    /// <summary>帳簿の添字（型 ＋ 受け手の陣営）。</summary>
+    int YokeSlot(AttackPattern? p, UnitState target)
+        => (p is null ? 4 : (int)p) + (target.TeamId == PlayerTeam ? 5 : 0);
+
     /// <summary>読み手ごと（添字は <see cref="WoundReader"/>）の 発火／読んだ傷／名目／実効。</summary>
     public readonly int[] ReadFires = new int[6];
     /// <inheritdoc cref="ReadFires"/>
@@ -2812,6 +2887,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Divert)) DivertActive = true;
         if (u.HasTrait(TraitId.Finisher)) FinisherActive = true;
         if (u.HasTrait(TraitId.Funnel)) FunnelActive = true;
+        // 第132期 段1: 上限の保持者をここで拾う（`YokeBinding` が全駒を走査しないため）。
+        if (u.HasTrait(TraitId.Yoke)) _yokeHolders.Add(u);
         u.InstanceId = _nextInstanceId++;
         u.Board = this;          // 「隣に誰がいるか」を読む特性のため（UnitState.Board の doc 参照）
         _units.Add(u);
@@ -4127,6 +4204,10 @@ public sealed class BattleContext
             // 出力に変換される前に戦闘が終わる）と同じ穴に落ちるので、吸った量を別に持つ。
             if (target.HasTrait(TraitId.Bear)) BearSoaked += soak;
 
+            // 第132期 段1・**計数のみ**。上限が効いている間に、破片が上限の**手前**で食った量。
+            // 破片は上限の外側で効く（この行より下で切る）ので、回避経路の実測はここでしか取れない。
+            if (YokeBinding) YokeArmorSoak += soak;
+
             // 燃焼の刻みが破片に吸われた量（第57期）。**盤面には触らない。**
             if (burnTick) TallyOf(target).BurnSoaked += soak;
 
@@ -4204,14 +4285,53 @@ public sealed class BattleContext
         //
         // amount > Cap を先に見るのは、保持者の探索（AllUnits の走査）を毎回の被弾で
         // 走らせないため。Math.Min の結果は変わらない（layout は数百万戦を並列で回す）。
-        if (Yoke.Active && amount > Yoke.Cap
-            && AllUnits.Any(u => u.IsAlive && u.HasTrait(TraitId.Yoke)))
+        //
+        // **保持者の探索は `YokeBinding` に寄せた**（第132期 段1）。判定は同値
+        // （`Yoke.Active && AllUnits.Any(u => u.IsAlive && u.HasTrait(TraitId.Yoke))`）で、
+        // 走査の対象が全駒から保持者のキャッシュに変わっただけ。
+        bool yokeBinding = amount > Yoke.Cap ? YokeBinding : false;
+        if (yokeBinding)
         {
+            // 第132期 段1・**計数のみ**。切る前にしか取れない量（切り落とされた量）をここで記録する。
+            int pi = YokeSlot(pattern, target);
+            YokeCutHits[pi]++;
+            YokeCutLost[pi] += amount - Yoke.Cap;
+            YokeCutPassed[pi] += Yoke.Cap;
+            if (target.TeamId == PlayerTeam) { YokeCutOnPlayerHits++; YokeCutOnPlayerLost += amount - Yoke.Cap; }
+            else { YokeCutOnEnemyHits++; YokeCutOnEnemyLost += amount - Yoke.Cap; }
+            string who = source?.Def.Id ?? "（出どころなし）";
+            YokeCutBy.TryGetValue(who, out var acc);
+            YokeCutBy[who] = (acc.Hits + 1, acc.Lost + amount - Yoke.Cap);
+
             Log($"    軛が {target.Name} への一撃を {amount} から {Yoke.Cap} に切った", LogKind.Trigger);
             amount = Yoke.Cap;
         }
+        else if (Yoke.Cap > 0 && amount > Yoke.Cap * 4 / 5 && YokeBinding)
+        {
+            // 切られなかったが上限に近い一撃（上限が効いている境界を見るため）。**計数のみ。**
+            YokeNearHits[YokeSlot(pattern, target)]++;
+        }
 
         int hpBefore120 = target.Hp;   // 第120期の計数（オーバーキルを除いた実額を取るため）
+
+        // 第132期 段1・**計数のみ**。上限が効いている間に HP へ届いた一撃を、攻撃型と入口で割る。
+        // 「通った量」と「切られた量」を同じ場所で取らないと、分母が版で動いて比較できない
+        // （第115期「同じ比を作る2つの計数は同じ瞬間に取ること」）。
+        if (yokeBinding || YokeBinding)
+        {
+            int pi = YokeSlot(pattern, target);
+            YokeInHits[pi]++;
+            YokeInAmount[pi] += amount;
+            if (amount >= hpBefore120)
+            {
+                YokeKills[pi]++;
+                YokeOverkill[pi] += amount - hpBefore120;
+            }
+            if (burnTick) { YokeInBurnHits++; YokeInBurnAmount += amount; }
+            else if (relayed) { YokeInRelayedHits++; YokeInRelayedAmount += amount; }
+            else if (levy) { YokeInLevyHits++; YokeInLevyAmount += amount; }
+        }
+
         target.Hp -= amount;
         // 第120期。**盤面から実際に減った HP**（過剰分を除く）。誰も読んで分岐しない。
         HpRemoved += hpBefore120 - Math.Max(0, target.Hp);
@@ -5566,6 +5686,18 @@ public static class BattleEngine
                 (long[])ctx.ReadNominal.Clone(), (long[])ctx.ReadEffective.Clone(),
                 (int[])ctx.GuardFires.Clone(), (int[])ctx.GuardTargetWounded.Clone(),
                 (long[])ctx.GuardWoundedAllySum.Clone(), (int[])ctx.GuardAnyWoundedAlly.Clone()),
+            // 第132期 段1。**計数専用**（どの規則も読まない）。
+            Yoke = new YokeLedger(
+                (long[])ctx.YokeCutHits.Clone(), (long[])ctx.YokeCutLost.Clone(),
+                (long[])ctx.YokeCutPassed.Clone(), (long[])ctx.YokeNearHits.Clone(),
+                (long[])ctx.YokeInHits.Clone(), (long[])ctx.YokeInAmount.Clone(),
+                (long[])ctx.YokeKills.Clone(), (long[])ctx.YokeOverkill.Clone(),
+                ctx.YokeCutOnPlayerHits, ctx.YokeCutOnPlayerLost,
+                ctx.YokeCutOnEnemyHits, ctx.YokeCutOnEnemyLost,
+                ctx.YokeArmorSoak, ctx.YokeInRelayedHits, ctx.YokeInRelayedAmount,
+                ctx.YokeInBurnHits, ctx.YokeInBurnAmount,
+                ctx.YokeInLevyHits, ctx.YokeInLevyAmount,
+                ctx.DirectHpLoss, new Dictionary<string, (long, long)>(ctx.YokeCutBy)),
             ExposeCount = ctx.ExposeCount,
             ExposeMissed = ctx.ExposeMissed,
             DullTotal = ctx.DullTotal,

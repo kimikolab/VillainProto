@@ -6164,6 +6164,282 @@ if (focusId == "yoke")
         EnemyCatalog.Warden.Id, EnemyCatalog.Yoker.Id, EnemyCatalog.Chanter.Id, EnemyCatalog.Priest.Id
     });
 
+    // ---- map: 上限の地図（第132期 段1）--------------------------------------------------------
+    //
+    // **測定だけ。既定（`YokeRule.Default`）は1ビットも触らない。**
+    //
+    // 第25期に軛を採ってから、「何が何回・何点切られたか」を数える窓口が1つも無かった。
+    // そのせいで「型ごとに上限との相性が逆を向く」が**第129〜131期の指示書に3回書き継がれた
+    // まま未測定**だった（第131期に指摘されて落ちた）。ここで地図を埋める。
+    //
+    // **版は3つ。保持者は3版とも盤上に生きている**（第25期の V0/V1 と同じ作法で、
+    // 動く変数を `Cap` 1つに絞る）:
+    //
+    //     V1 上限あり  Cap 25（現行）
+    //     V2 上限なし  Cap 1,000,000（**保持者はそのまま**。切られないだけ）
+    //     V3 規則off   Active=false。**V2 と1セルも違わないはず＝検算**
+    //
+    // 帳簿は `BattleResult.Yoke`（`YokeLedger`）。V2 でも `YokeBinding` は真なので
+    // **「切られなかった世界の名目量」が同じ器具で取れる**——これが無いと
+    // 「切られた量」の分母が版で動く（第115期「同じ比を作る2つの計数は同じ瞬間に取る」）。
+    if (yokeMode == "map")
+    {
+        int ymNb = yokeBuilds.Length;
+        Formation wave4map = EnemyCatalog.Stages[Wave4].Enemy;
+        var vers = new (string Name, YokeRule Rule)[]
+        {
+            ("V1 上限あり (Cap 25)", YokeRule.Default),
+            ("V2 上限なし (Cap 1,000,000)", new YokeRule(1_000_000, Active: true)),
+            ("V3 規則 off (Active=false)", new YokeRule(YokeTrait.Cap, Active: false)),
+        };
+        int ymNv = vers.Length;
+
+        long[][] cutHits = new long[ymNv][], cutLost = new long[ymNv][], cutPassed = new long[ymNv][],
+                 near = new long[ymNv][], inHits = new long[ymNv][], inAmt = new long[ymNv][],
+                 kills = new long[ymNv][], over = new long[ymNv][];
+        long[] armor = new long[ymNv], relH = new long[ymNv], relA = new long[ymNv],
+               burnH = new long[ymNv], burnA = new long[ymNv], levyH = new long[ymNv], levyA = new long[ymNv],
+               direct = new long[ymNv], cutPlayerH = new long[ymNv], cutPlayerL = new long[ymNv],
+               cutFoeH = new long[ymNv], cutFoeL = new long[ymNv];
+        var cutBy = new Dictionary<string, (long Hits, long Lost)>[ymNv];
+        var winRate = new double[ymNv][];
+        var turnAvg = new double[ymNv][];
+        for (int v = 0; v < ymNv; v++)
+        {
+            cutHits[v] = new long[10]; cutLost[v] = new long[10]; cutPassed[v] = new long[10];
+            near[v] = new long[10]; inHits[v] = new long[10]; inAmt[v] = new long[10];
+            kills[v] = new long[10]; over[v] = new long[10];
+            cutBy[v] = new Dictionary<string, (long, long)>();
+            winRate[v] = new double[ymNb]; turnAvg[v] = new double[ymNb];
+        }
+        // 行ごとの型内訳（V1 の「敵に入った量」で割る）。**分類は測定から引く。手で分けない。**
+        var rowIn = new long[ymNb][];
+        for (int b = 0; b < ymNb; b++) rowIn[b] = new long[5];
+
+        for (int v = 0; v < ymNv; v++)
+        {
+            for (int b = 0; b < ymNb; b++)
+            {
+                int wins = 0; long tsum = 0;
+                for (int seed = 0; seed < YokeSeeds; seed++)
+                {
+                    BattleResult r = BattleEngine.Run(yokeBuilds[b].F, wave4map, seed, verbose: false, null, vers[v].Rule);
+                    if (r.PlayerWon) wins++;
+                    tsum += r.Turns;
+                    YokeLedger y = r.Yoke;
+                    for (int i = 0; i < 10; i++)
+                    {
+                        cutHits[v][i] += y.CutHits[i]; cutLost[v][i] += y.CutLost[i];
+                        cutPassed[v][i] += y.CutPassed[i]; near[v][i] += y.NearHits[i];
+                        inHits[v][i] += y.InHits[i]; inAmt[v][i] += y.InAmount[i];
+                        kills[v][i] += y.Kills[i]; over[v][i] += y.Overkill[i];
+                    }
+                    if (v == 0) for (int i = 0; i < 5; i++) rowIn[b][i] += y.InAmount[i];
+                    armor[v] += y.ArmorSoak; direct[v] += y.DirectHpLoss;
+                    relH[v] += y.InRelayedHits; relA[v] += y.InRelayedAmount;
+                    burnH[v] += y.InBurnHits; burnA[v] += y.InBurnAmount;
+                    levyH[v] += y.InLevyHits; levyA[v] += y.InLevyAmount;
+                    cutPlayerH[v] += y.CutOnPlayerHits; cutPlayerL[v] += y.CutOnPlayerLost;
+                    cutFoeH[v] += y.CutOnEnemyHits; cutFoeL[v] += y.CutOnEnemyLost;
+                    foreach (var kv in y.CutBy)
+                    {
+                        cutBy[v].TryGetValue(kv.Key, out var acc);
+                        cutBy[v][kv.Key] = (acc.Hits + kv.Value.Hits, acc.Lost + kv.Value.Lost);
+                    }
+                }
+                winRate[v][b] = wins * 100.0 / YokeSeeds;
+                turnAvg[v][b] = tsum / (double)YokeSeeds;
+            }
+            Console.Error.WriteLine("  " + vers[v].Name + " 完了");
+        }
+
+        string[] patName = { "単体", "薙ぎ", "貫き", "全体", "型なし" };
+        double Per(long x) => x / (double)(ymNb * YokeSeeds);
+
+        Console.WriteLine("# 上限の地図（yoke map・第132期 段1）");
+        Console.WriteLine();
+        Console.WriteLine($"`CompareBuilds()` {ymNb} 行 × 第四波 × seed 0..{YokeSeeds - 1} = {ymNb * YokeSeeds:N0} 戦 × 3 版。");
+        Console.WriteLine("**測定だけ。`YokeRule` の既定は1ビットも触っていない。**");
+        Console.WriteLine();
+        Console.WriteLine("**3版とも保持者（軛の重装兵）は盤上に生きている**——動く変数は `Cap` だけ（第25期の V0/V1 と同じ作法）。");
+        Console.WriteLine("V2 でも帳簿は回るので、**「切られなかった世界の名目量」が同じ器具で取れる**。");
+        Console.WriteLine();
+
+        Console.WriteLine("## 0. 検算");
+        Console.WriteLine();
+        int diff23 = Enumerable.Range(0, ymNb).Count(b => Math.Abs(winRate[1][b] - winRate[2][b]) > 1e-9);
+        Console.WriteLine($"- **V2（Cap 1,000,000）と V3（規則 off）の勝率は {ymNb} 行中 ずれ {diff23} 件**"
+            + "（`amount > Cap` が一度も立たないので切る行に到達しない＝同じ盤面でなければならない）。");
+        Console.WriteLine($"- V2 の切られた回数 **{cutHits[1].Sum()}**（0 でなければならない）／ V3 **{cutHits[2].Sum()}**（規則 off なので帳簿も回らない）。");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表A —— 攻撃型ごとの上限の帳簿（V1・1戦あたり）");
+        Console.WriteLine();
+        Console.WriteLine("`切られた` は一撃が上限を超えた回数、`切られた量` は落とされた総量（`amount - Cap`）。");
+        Console.WriteLine("`入った` は上限を通した後に HP へ届いた回数と量、`撃破` はその一撃で相手が倒れた回数。");
+        Console.WriteLine($"**`惜しい` は切られなかったが {YokeTrait.Cap * 4 / 5} 超の一撃**（上限が効いている境界）。");
+        Console.WriteLine("**`型なし`** は継続ダメージ・反撃・肩代わりの中継・徴収（`pattern` を渡さない経路）。");
+        Console.WriteLine();
+        Console.WriteLine("| 受け手 | 型 | 切られた/戦 | 切られた量/戦 | 惜しい/戦 | 入った/戦 | 入った量/戦 | 撃破/戦 | 過剰/戦 | 切られた率 | 1撃あたり |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        for (int side = 0; side < 2; side++)
+            for (int k = 0; k < 5; k++)
+            {
+                int i = k + side * 5;
+                if (inHits[0][i] == 0 && cutHits[0][i] == 0) continue;
+                double cutRate = inHits[0][i] == 0 ? 0 : cutHits[0][i] * 100.0 / inHits[0][i];
+                double each = inHits[0][i] == 0 ? 0 : inAmt[0][i] / (double)inHits[0][i];
+                Console.WriteLine($"| {(side == 0 ? "**敵**（味方の刃）" : "味方（敵の刃）")} | {patName[k]} "
+                    + $"| {Per(cutHits[0][i]):F2} | {Per(cutLost[0][i]):F1} | {Per(near[0][i]):F2} "
+                    + $"| {Per(inHits[0][i]):F2} | {Per(inAmt[0][i]):F1} | {Per(kills[0][i]):F3} | {Per(over[0][i]):F1} "
+                    + $"| {cutRate:F1}% | {each:F1} |");
+            }
+        Console.WriteLine();
+        Console.WriteLine($"- 切られた側: **敵 {Per(cutFoeH[0]):F2} 回 / {Per(cutFoeL[0]):F1} 点、味方 {Per(cutPlayerH[0]):F2} 回 / {Per(cutPlayerL[0]):F1} 点**（1戦あたり）。");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表B —— 上限の下での効率（V1 対 V2・**敵に入った側だけ**）");
+        Console.WriteLine();
+        Console.WriteLine("**同じ台・同じ seed で `Cap` だけを動かした**ので、`名目` は V2 の入った量、`実額` は V1 の入った量。");
+        Console.WriteLine("**`撃破/一撃` が P4 の主判定**——上限は1発を平準化するので、体数の多い型が得をするなら撃破の側に出る。");
+        Console.WriteLine();
+        Console.WriteLine("| 型 | 一撃/戦 (V1) | 名目/戦 (V2) | 実額/戦 (V1) | 通過率 | 撃破/戦 (V1) | 撃破/戦 (V2) | 撃破/一撃 (V1) | 撃破/一撃 (V2) | 過剰率 (V1) | 過剰率 (V2) |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        for (int k = 0; k < 5; k++)
+        {
+            if (inHits[0][k] == 0 && inHits[1][k] == 0) continue;
+            double pass = inAmt[1][k] == 0 ? 0 : inAmt[0][k] * 100.0 / inAmt[1][k];
+            double kp1 = inHits[0][k] == 0 ? 0 : kills[0][k] / (double)inHits[0][k];
+            double kp2 = inHits[1][k] == 0 ? 0 : kills[1][k] / (double)inHits[1][k];
+            double ov1 = inAmt[0][k] == 0 ? 0 : over[0][k] * 100.0 / inAmt[0][k];
+            double ov2 = inAmt[1][k] == 0 ? 0 : over[1][k] * 100.0 / inAmt[1][k];
+            Console.WriteLine($"| {patName[k]} | {Per(inHits[0][k]):F2} | {Per(inAmt[1][k]):F1} | {Per(inAmt[0][k]):F1} | {pass:F1}% "
+                + $"| {Per(kills[0][k]):F3} | {Per(kills[1][k]):F3} | {kp1:F3} | {kp2:F3} | {ov1:F1}% | {ov2:F1}% |");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## 表C —— 誰の一撃が切られたか（V1・上位 12）");
+        Console.WriteLine();
+        Console.WriteLine("| # | 出どころ | 切られた/戦 | 切られた量/戦 | 1回あたり |");
+        Console.WriteLine("|--:|---|--:|--:|--:|");
+        int rank = 0;
+        foreach (var kv in cutBy[0].OrderByDescending(x => x.Value.Lost).Take(12))
+        {
+            UnitDef? def = UnitCatalog.All.FirstOrDefault(d => d.Id == kv.Key)
+                        ?? EnemyCatalog.Stages.SelectMany(st => st.Enemy.Occupied().Select(o => o.Def)).FirstOrDefault(d => d.Id == kv.Key);
+            Console.WriteLine($"| {++rank} | {(def is null ? kv.Key : def.Name)} | {Per(kv.Value.Hits):F3} "
+                + $"| {Per(kv.Value.Lost):F2} | {kv.Value.Lost / (double)kv.Value.Hits:F1} |");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## 表D —— 上限を通らない経路（V1・1戦あたり）");
+        Console.WriteLine();
+        Console.WriteLine("| 経路 | 回数/戦 | 量/戦 | 上限との関係 |");
+        Console.WriteLine("|---|--:|--:|---|");
+        Console.WriteLine($"| 破片（`Armor`） | — | {Per(armor[0]):F2} | **上限の手前**で引かれる（切る前に減るので上限に触れない） |");
+        Console.WriteLine($"| 肩代わりの中継 | {Per(relH[0]):F2} | {Per(relA[0]):F2} | **段ごとに別の `ApplyDamage`** なので独立に切られる＝分割は回避経路 |");
+        Console.WriteLine($"| 継続ダメージ（毒・燃焼） | {Per(burnH[0]):F2} | {Per(burnA[0]):F2} | 固定量なので**一度も上限に触れない**（第130期） |");
+        Console.WriteLine($"| 徴収（生贄・吸い・置き去り） | {Per(levyH[0]):F2} | {Per(levyA[0]):F2} | `ApplyDamage` は通るので**切られうる** |");
+        Console.WriteLine($"| 繕いの代金（`self.Hp -= paid`） | — | {Per(direct[0]):F2} | **`ApplyDamage` を1度も通らない**（上限も破片も肩代わりも通らない） |");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表E —— 行ごとの勝率（V1 対 V2）と、その行が振った型");
+        Console.WriteLine();
+        Console.WriteLine("`主型` は V1 で**敵に入った量**がいちばん多い型（**測定から引く。手で分類しない**）。");
+        Console.WriteLine();
+        Console.WriteLine("| 編成 | 主型 | 上限あり | 上限なし | Δ | 決着T (V1) | 決着T (V2) |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|");
+        for (int b = 0; b < ymNb; b++)
+        {
+            long tot = rowIn[b].Sum();
+            int top = 0; for (int k = 1; k < 5; k++) if (rowIn[b][k] > rowIn[b][top]) top = k;
+            Console.WriteLine($"| {yokeBuilds[b].Name} | {(tot == 0 ? "—" : $"{patName[top]} {rowIn[b][top] * 100.0 / tot:F0}%")} "
+                + $"| {winRate[0][b]:F1} | {winRate[1][b]:F1} | {winRate[0][b] - winRate[1][b]:+0.0;-0.0;0.0} "
+                + $"| {turnAvg[0][b]:F2} | {turnAvg[1][b]:F2} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("### 主型ごとの集計");
+        Console.WriteLine();
+        Console.WriteLine("| 主型 | 行数 | 上限あり | 上限なし | Δ |");
+        Console.WriteLine("|---|--:|--:|--:|--:|");
+        for (int k = 0; k < 5; k++)
+        {
+            var rows = Enumerable.Range(0, ymNb).Where(b =>
+            {
+                long tot = rowIn[b].Sum(); if (tot == 0) return false;
+                int top = 0; for (int j = 1; j < 5; j++) if (rowIn[b][j] > rowIn[b][top]) top = j;
+                return top == k;
+            }).ToArray();
+            if (rows.Length == 0) continue;
+            double a1 = rows.Average(b => winRate[0][b]), a2 = rows.Average(b => winRate[1][b]);
+            Console.WriteLine($"| {patName[k]} | {rows.Length} | {a1:F1} | {a2:F1} | {a1 - a2:+0.0;-0.0;0.0} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**全 {ymNb} 行の平均: 上限あり {winRate[0].Average():F1}% / 上限なし {winRate[1].Average():F1}%"
+            + $"（Δ {winRate[0].Average() - winRate[1].Average():+0.0;-0.0}pt）。**");
+        Console.WriteLine();
+
+        // ---- 表F: §0-3 の矛盾を解く 2×2（段 × 上限）------------------------------------------
+        //
+        // 第128期にドルガへ段違い（`GradeStep`）を載せたとき、いちばん跳ねたのが**第四波**だった
+        // （責め苦 1.0 → 65.5 / 仇討ち 18.5 → 94.0）。「全体は1発が大きいので上限に最も切られる
+        // はずなのに、上限の波で最も勝率が上がる」が §0-3 の矛盾。
+        //
+        // **段を外した版のドルガを診断のローカルで作って 2×2 にする**（`UnitCatalog` は触らない）。
+        // 対照は「段なし × 上限なし」まで取る——これが無いと、段の効きが上限のせいなのか
+        // ただ強いだけなのかが割れない（第59期「符号の違う2つの効果は片側だけを 0 にする対照が要る」）。
+        var plainDolga = new UnitDef
+        {
+            Id = UnitCatalog.Dolga.Id, Name = UnitCatalog.Dolga.Name + "（段なし）",
+            MaxHp = UnitCatalog.Dolga.MaxHp, Attack = UnitCatalog.Dolga.Attack, Speed = UnitCatalog.Dolga.Speed,
+            Advances = UnitCatalog.Dolga.Advances, Pattern = UnitCatalog.Dolga.Pattern,
+            Actions = UnitCatalog.Dolga.Actions,
+            Traits = UnitCatalog.Dolga.Traits.Where(t => t != TraitId.GradeStep).ToArray(),
+        };
+        var dolgaRows = Enumerable.Range(0, ymNb)
+            .Where(b => yokeBuilds[b].F.Occupied().Any(o => o.Def.Id == UnitCatalog.Dolga.Id))
+            .ToArray();
+
+        Console.WriteLine("## 表F —— §0-3 の矛盾（段 × 上限の 2×2・ドルガを含む行）");
+        Console.WriteLine();
+        Console.WriteLine($"ドルガを含む行は **{dolgaRows.Length} / {ymNb}**。`段なし` は `GradeStep` だけを外した"
+            + "ローカルの `UnitDef`（**`UnitCatalog` は1文字も触らない**。数値・席・他の4枚は同一）。");
+        Console.WriteLine();
+        Console.WriteLine("| 編成 | 主型 | 段あり×上限あり | 段なし×上限あり | **段の効き（上限あり）** | 段あり×上限なし | 段なし×上限なし | 段の効き（上限なし） |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|");
+        double s11 = 0, s01 = 0, s10 = 0, s00 = 0;
+        foreach (int b in dolgaRows)
+        {
+            Formation noStep = yokeBuilds[b].F.Clone();
+            foreach (var (slot, def) in yokeBuilds[b].F.Occupied())
+                if (def.Id == UnitCatalog.Dolga.Id) noStep[slot] = plainDolga;
+            double[] w = new double[2];
+            for (int v = 0; v < 2; v++)
+            {
+                int wins = 0;
+                for (int seed = 0; seed < YokeSeeds; seed++)
+                    if (BattleEngine.Run(noStep, wave4map, seed, verbose: false, null, vers[v].Rule).PlayerWon) wins++;
+                w[v] = wins * 100.0 / YokeSeeds;
+            }
+            long tot = rowIn[b].Sum();
+            int top = 0; for (int k = 1; k < 5; k++) if (rowIn[b][k] > rowIn[b][top]) top = k;
+            s11 += winRate[0][b]; s01 += w[0]; s10 += winRate[1][b]; s00 += w[1];
+            Console.WriteLine($"| {yokeBuilds[b].Name} | {(tot == 0 ? "—" : patName[top])} "
+                + $"| {winRate[0][b]:F1} | {w[0]:F1} | **{winRate[0][b] - w[0]:+0.0;-0.0;0.0}** "
+                + $"| {winRate[1][b]:F1} | {w[1]:F1} | {winRate[1][b] - w[1]:+0.0;-0.0;0.0} |");
+        }
+        if (dolgaRows.Length > 0)
+        {
+            int n = dolgaRows.Length;
+            Console.WriteLine($"| **平均** | — | {s11 / n:F1} | {s01 / n:F1} | **{(s11 - s01) / n:+0.0;-0.0;0.0}** "
+                + $"| {s10 / n:F1} | {s00 / n:F1} | {(s10 - s00) / n:+0.0;-0.0;0.0} |");
+            Console.WriteLine();
+            Console.WriteLine($"**相乗（段 × 上限）= {((s11 - s01) - (s10 - s00)) / n:+0.0;-0.0;0.0}pt**"
+                + "——正なら「段は上限の下でこそ効く」（§0-3 の解）、負なら上限は段の値打ちを削っているだけ。");
+        }
+        return;
+    }
+
     // ---- sweep: Cap の帯を振る -----------------------------------------------------------
     //
     // 4版の対照（V0/V1/V2/V3/V4）で **Cap 15 も 20 も落としすぎる**ことが分かったので、

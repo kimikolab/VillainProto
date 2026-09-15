@@ -2376,6 +2376,9 @@ public sealed class MenderTrait : Trait
         // 既定（100）では paid == amount なので、盤面も乱数列も文字列も1ビットも動かない。
         int paid = amount * ctx.MenderCost.Percent / 100;
         self.Hp -= paid;
+        // 第132期 段1・**計数のみ**。`ApplyDamage` を1度も通さない HP の減りはここだけ
+        // ——上限（軛）も破片も肩代わりも通らないので、回避経路の3分類でいちばん外側にいる。
+        ctx.NoteDirectHpLoss(paid);
 
         // 計数（第86期）。**盤面には一切影響しない。**
         UnitTally mt = ctx.TallyOf(self);

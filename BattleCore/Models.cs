@@ -1724,6 +1724,40 @@ public readonly record struct WoundLedger(
     public int Accounted => LossAll.Sum();
 }
 
+/// <summary>
+/// 上限（軛・第25期）の帳簿（第132期 段1）。<b>計数専用で、どの規則も読まない。</b>
+///
+/// <para>配列の添字は <c>攻撃型 + (受けたのが味方なら 5)</c> の 10 個。
+/// <b>0..4 が敵に入った一撃（＝味方の刃）、5..9 が味方に入った一撃（＝敵の刃）</b>で、
+/// <b>型の 4 は「型なし」</b>——継続ダメージ・反撃・肩代わりの中継・徴収は
+/// <c>pattern</c> を渡さないのでここに落ちる。</para>
+///
+/// <para><b>保持者が盤上にいなければ全部 0。</b> 第四波（軛の重装兵）以外では1つも増えない。</para>
+/// </summary>
+/// <param name="CutHits">切られた一撃の回数。</param>
+/// <param name="CutLost">切り落とされた量（<c>amount - Cap</c>）。</param>
+/// <param name="CutPassed">切られたうえで通った量（<c>Cap</c>）。</param>
+/// <param name="NearHits">切られなかったが上限に近い一撃（<c>Cap * 4 / 5</c> 超）。</param>
+/// <param name="InHits">上限が効いている間に HP へ届いた回数。</param>
+/// <param name="InAmount">同・量。</param>
+/// <param name="Kills">同・その一撃で倒れた回数。</param>
+/// <param name="Overkill">同・過剰分。</param>
+public readonly record struct YokeLedger(
+    long[] CutHits, long[] CutLost, long[] CutPassed, long[] NearHits,
+    long[] InHits, long[] InAmount, long[] Kills, long[] Overkill,
+    long CutOnPlayerHits, long CutOnPlayerLost, long CutOnEnemyHits, long CutOnEnemyLost,
+    long ArmorSoak, long InRelayedHits, long InRelayedAmount,
+    long InBurnHits, long InBurnAmount, long InLevyHits, long InLevyAmount,
+    long DirectHpLoss, Dictionary<string, (long Hits, long Lost)> CutBy)
+{
+    /// <summary>切られた一撃の総数。</summary>
+    public long Cuts => CutHits.Sum();
+    /// <summary>切り落とされた量の総和。</summary>
+    public long Lost => CutLost.Sum();
+    /// <summary>上限が効いている間に HP へ届いた量の総和。</summary>
+    public long Passed => InAmount.Sum();
+}
+
 public sealed class BattleResult
 {
     public required bool PlayerWon { get; init; }
@@ -1782,6 +1816,9 @@ public sealed class BattleResult
     /// </summary>
     /// <summary>傷という通貨の帳簿（第120期・<see cref="WoundLedger"/>）。<b>計数専用。</b></summary>
     public required WoundLedger Wounds { get; init; }
+
+    /// <summary>上限（軛）の帳簿（第132期 段1・<see cref="YokeLedger"/>）。<b>計数専用。</b></summary>
+    public required YokeLedger Yoke { get; init; }
 
     public required int ExposeCount { get; init; }
     public required int ExposeMissed { get; init; }
