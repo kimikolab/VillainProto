@@ -150,6 +150,14 @@ static class ShardDiag
     }
 
     static double Per(long v, long n) => n == 0 ? 0 : v / (double)n;
+
+    /// <summary>
+    /// 脆弱（<c>dmg + dmg / 2</c>・<b>整数</b>）だけが効いたときの「自弁 ÷ 請求」。
+    /// <b>cost = 1 では 100%</b>（切り捨てで増幅が 0 になる。第126期「整数の切り捨て」）。
+    /// </summary>
+    static double FrailOnly(ShatterRule r)
+        => r.SelfCostPerTurn <= 0 ? 0
+         : (r.SelfCostPerTurn + r.SelfCostPerTurn / 2) * 100.0 / r.SelfCostPerTurn;
     static string W(double[] v) => $"{v[0]:F1} / {v[1]:F1} / {v[2]:F1} / {v[3]:F1} / {v[4]:F1}";
     static double Avg25(double[] v) => (v[1] + v[2] + v[3] + v[4]) / 4.0;
 
@@ -292,8 +300,8 @@ static class ShardDiag
             {
                 Console.WriteLine($"### {name}");
                 Console.WriteLine();
-                Console.WriteLine("| 版 | 勝率(1..5波) | 2〜5平均 | Δ | 発火/戦 | 配布/戦 | 吸った/戦 | 物差し | 代金/戦 | 自弁率 | 纏い率 | ヒビ生存T | ヒビ死亡率 |");
-                Console.WriteLine("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+                Console.WriteLine("| 版 | 勝率(1..5波) | 2〜5平均 | Δ | 発火/戦 | 配布/戦 | 吸った/戦 | 物差し | 請求/戦 | 自弁/戦 | 自弁÷請求 | 脆弱のみの期待値 | 纏い率 | ヒビ生存T | ヒビ死亡率 |");
+                Console.WriteLine("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
                 double v0 = 0;
                 foreach ((string tag, ShatterRule rule) in versions)
                 {
@@ -302,11 +310,17 @@ static class ShardDiag
                     if (tag.StartsWith("V0")) v0 = a;
                     double soaked = Per(L.Soaked, L.Battles), taken = Per(L.HibiTaken, L.Battles);
                     string yard = taken <= 0 ? "—" : $"{soaked / taken:F2}";
+                    // **「自弁率」ではない（第121期の則）。**
+                    // 分子はヒビが<b>実際に失った HP</b>（脆弱の後・肩代わりの後）、
+                    // 分母は<b>請求額（脆弱の前）</b>なので、比は3つの効果の積になる:
+                    //   脆弱（+50%・ただし `dmg + dmg / 2` の**整数**なので cost=1 では 0）
+                    //   HP1 のクランプ（−）と 肩代わり（−）。
+                    // **脆弱のみの期待値を隣に並べる**ので、下回れば残り2つが動いていると読める。
                     string self = L.Paid == 0 ? "—" : $"{L.PaidSelf * 100.0 / L.Paid:F1}%";
                     string worn = L.AliveTurns == 0 ? "—" : $"{L.WornTurns * 100.0 / L.AliveTurns:F1}%";
                     Console.WriteLine($"| {tag} | {W(L.Win)} | {a:F1} | {a - v0:+0.0;-0.0;0.0} | "
                         + $"{Per(L.Ticks, L.Battles):F2} | {Per(L.Given, L.Battles):F1} | {soaked:F1} | {yard} | "
-                        + $"{Per(L.Paid, L.Battles):F1} | {self} | {worn} | "
+                        + $"{Per(L.Paid, L.Battles):F1} | {Per(L.PaidSelf, L.Battles):F1} | {self} | {FrailOnly(rule):F1}% | {worn} | "
                         + $"{Per(L.HibiLife, L.Battles):F2} | {Per(L.HibiDeaths * 100, L.Battles):F1}% |");
                 }
                 Console.WriteLine();
@@ -319,17 +333,20 @@ static class ShardDiag
         Console.WriteLine("破片は `ApplyDamage` の中で受け流しより**手前**にあり、吸い切ると `amount <= 0` で return するので、");
         Console.WriteLine("**破片が先に吸うと受け流しの在庫が減らない**（＝ガルドが長持ちする）方向を予測した。");
         Console.WriteLine();
-        Console.WriteLine("| 台・行 | 版 | ガルド被弾/戦 | 受け流し/戦 | 無効化量/戦 | ガルド生存T | ガルド死亡率 |");
-        Console.WriteLine("|---|---|---:|---:|---:|---:|---:|");
+        Console.WriteLine("| 台・行 | 版 | **決着T** | ガルド被弾/戦 | 受け流し/戦 | 無効化量/戦 | ガルド生存T | 生存T÷決着T | ガルド死亡率 |");
+        Console.WriteLine("|---|---|---:|---:|---:|---:|---:|---:|---:|");
+        // **決着T を必ず併記する**（規約 (G6)）——`LastActiveTurn` は戦闘が長引けば伸びるので、
+        // 生存T を単体で読むと「弱い版のほうが長生き」に見える。
         foreach ((string name, Formation f) in rigs.Concat(rows))
         {
             if (!f.Occupied().Any(o => o.Def.Id == "gald")) continue;
             foreach ((string tag, ShatterRule rule) in versions)
             {
                 Led L = Run(f, rule);
-                Console.WriteLine($"| {name} | {tag} | {Per(L.GaldTaken, L.Battles):F1} | "
+                double turns = Per(L.Turns, L.Battles), glife = Per(L.GaldLife, L.Battles);
+                Console.WriteLine($"| {name} | {tag} | {turns:F2} | {Per(L.GaldTaken, L.Battles):F1} | "
                     + $"{Per(L.GaldParry, L.Battles):F2} | {Per(L.GaldParryAmt, L.Battles):F1} | "
-                    + $"{Per(L.GaldLife, L.Battles):F2} | {Per(L.GaldDeaths * 100, L.Battles):F1}% |");
+                    + $"{glife:F2} | {(turns <= 0 ? 0 : glife / turns):F2} | {Per(L.GaldDeaths * 100, L.Battles):F1}% |");
             }
         }
         Console.WriteLine();

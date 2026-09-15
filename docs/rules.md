@@ -57,8 +57,9 @@
 | 44 | `wildfire` | `WildfireRule` | `WildfireRule { Mode = None, Amount = 0, Active = False }` | ○ | `wildfire` | 第133期 | ○ |
 | 45 | `harm` | `HarmRule` | `HarmRule { Census = False }` | ○ | `sever` / `parry` / `wall` | 第135期 | ○ |
 | 46 | `parry` | `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True }` |  | `sever` / `parry` / `wall` | 第135期 | ○ |
+| 47 | `shatter` | `ShatterRule` | `ShatterRule { Mode = Passive, SelfCostPerTurn = 0 }` | ○ | `shard` | 第137期 | ○ |
 
-引数 46 本（`verbose` と観測子を除く）。
+引数 47 本（`verbose` と観測子を除く）。
 
 **`= default(T)` は「その規則が既定で何もしない」の機械的な手がかりであって、判定ではない。**
 採否そのものは**既定値の列**を読むこと——`ThornRule { Wound = None }` は残置、`SoakRule { Poison = True, Burn = False }` は毒側だけ採用、という具合に既定値が全部を語る。
@@ -102,6 +103,7 @@
 | `ScaleRule` | `ScaleRule { CostPerAttack = 1 }` | ○ | `scale` / `scapegoat` / `divert` / `favor` / `miasma` / `goad` / `finisher` / `ledger` | 第47期 |
 | `ScapegoatRule` | `ScapegoatRule { Threshold = 3, Audit = False }` | ○ | `scapegoat` | 第49期 |
 | `SeverRule` | `SeverRule { Wait = Swing, Threshold = 2 }` | ○ | `wcost` / `ledger` / `lit` / `wound2` / `cross` | 第74期 |
+| `ShatterRule` | `ShatterRule { Mode = Passive, SelfCostPerTurn = 0 }` | ○ | `shard` | 第137期 |
 | `ShoveRule` | `ShoveRule { Penalty = 2 }` | ○ | `shove` / `ledger` | 第41期 |
 | `SlanderRule` | `SlanderRule { Penalty = 0 }` | ○ | `relay` / `slander` | 第44期 |
 | `SoakRule` | `SoakRule { Poison = True, Burn = False, DullPerKind = 1 }` | ○ | `derive` / `curse` / `hex` / `soak` / `burn` / `ledger` / `lit` / `wound2` / `ember` / `cross` | 第90期 |
@@ -116,7 +118,7 @@
 | `WoundRule` | `WoundRule { Enabled = True, Census = False }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期 |
 | `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `replay` / `wave2` / `ledger` / `parry` | 第35期 |
 
-48 型。
+49 型。
 
 ## 3. 規則が使う列挙型
 
@@ -132,6 +134,7 @@
 | `ParryScope` | `Guarded`=0 / `Any`=1 |
 | `RageMode` | `Amount`=0 / `Count`=1 |
 | `SeverWait` | `Yield`=0 / `Swing`=1 |
+| `ShatterMode` | `Passive`=0 / `Turn`=1 / `Both`=2 |
 | `SpillScope` | `All`=0 / `Dense`=1 |
 | `SutureFire` | `Swing`=0 / `OnWound`=1 |
 | `SutureSide` | `Foe`=0 / `Both`=1 |
@@ -140,4 +143,4 @@
 | `WildfireMode` | `None`=0 / `Add`=1 / `Scale`=2 / `Flat`=3 |
 | `YieldMode` | `OwnTurn`=0 / `OwnTurnWindow`=1 / `Immediate`=2 |
 
-15 型。
+16 型。
