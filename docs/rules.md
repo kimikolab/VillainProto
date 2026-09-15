@@ -56,7 +56,7 @@
 | 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False }` | ○ | `burn` / `survive` / `ember` / `wildfire` | 第130期 | ○ |
 | 44 | `wildfire` | `WildfireRule` | `WildfireRule { Mode = None, Amount = 0, Active = False }` | ○ | `wildfire` | 第133期 | ○ |
 | 45 | `harm` | `HarmRule` | `HarmRule { Census = False }` | ○ | `sever` / `parry` / `wall` | 第135期 | ○ |
-| 46 | `parry` | `ParryRule` | `ParryRule { Uses = 4, Scope = Any, Relay = True }` |  | `sever` / `parry` / `wall` | 第135期 | ○ |
+| 46 | `parry` | `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True }` |  | `sever` / `parry` / `wall` | 第135期 | ○ |
 
 引数 46 本（`verbose` と観測子を除く）。
 
@@ -94,7 +94,7 @@
 | `MenderCostRule` | `MenderCostRule { Percent = 50 }` | ○ | `tempo` / `hold` / `hold2` / `ledger` / `lit` / `wound2` | 第106期 |
 | `NourishRule` | `NourishRule { Gain = 2 }` | ○ | `tank` / `time` | 第117期 |
 | `OverbearRule` | `OverbearRule { Drain = 2 }` | ○ | `slander` / `overbear` / `wildfire` | 第46期 |
-| `ParryRule` | `ParryRule { Uses = 4, Scope = Any, Relay = True }` | ○ | `sever` / `parry` / `wall` | 第135期 |
+| `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True }` | ○ | `sever` / `parry` / `wall` | 第135期 |
 | `RageRule` | `RageRule { Mode = Amount, Gain = 3 }` | ○ | `tempo` / `hold` / `hold2` | 第106期 |
 | `ReaderRule` | `ReaderRule { Threshold = 5 }` | ○ | `lit` / `reader` / `boss` / `tank` / `grade` / `grade2` | 第115期 |
 | `RecoverRule` | `RecoverRule { HpPercent = 0, ReviveDead = False, Active = False }` |  | `choice` / `recover` | 第101期 |

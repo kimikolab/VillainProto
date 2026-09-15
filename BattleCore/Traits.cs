@@ -6243,7 +6243,7 @@ public enum ParryScope
 public readonly record struct ParryRule(int Uses, ParryScope Scope, bool Relay)
 {
     /// <summary>第136期 段2 の採用値（N）。<b>`wall run` の掃引で決めた</b>——経緯は design/PHASE136_WALL.md。</summary>
-    public const int AdoptedUses = 4;
+    public const int AdoptedUses = 2;
 
     /// <summary>段3（中継）の採用値。</summary>
     public const bool AdoptedRelay = true;
