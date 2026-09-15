@@ -337,7 +337,7 @@ static class ParryDiag
                 + $" {L.GuardRangeMissed / (double)L.Battles:F2} |");
         }
         Console.WriteLine();
-        Console.WriteLine("**`庇いの判定` は「鎖が庇いの段まで来て 50% を振られた回数」**、");
+        Console.WriteLine($"**`庇いの判定` は「鎖が庇いの段まで来て判定（`GuardianTrait.RedirectPercent` = {GuardianTrait.RedirectPercent}%）を振られた回数」**、");
         Console.WriteLine("**`範囲で機会なし` は「資格のある庇い手が前列にいたのに、単体以外の一撃だったので段に到達すらしなかった回数」。**");
         Console.WriteLine("後者は `SelectTargetChain` で攻撃型が決まった直後——**貫きの早期リターンより前**——に数えている");
         Console.WriteLine("（後ろに置くと貫きが丸ごと落ちる）。**主目標の除外は掛けていない**——");

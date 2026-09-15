@@ -691,8 +691,16 @@ public sealed class CurseTrait : Trait
 }
 
 /// <summary>
-/// 庇う。前列にいるとき、味方への攻撃を一定確率で肩代わりする。
+/// 庇う。前列にいるとき、味方への単体攻撃を<b>必ず</b>肩代わりする（第136期 段1・<see cref="RedirectPercent"/> = 100）。
 /// 肩代わりして受けた分だけ攻撃力が伸びる（ドハの分かちと同じ見返りの経路）。
+///
+/// <para><b>第136期 段1: 50% → 100%。</b> 50 は最初のコミット（2026-08-20）以来一度も動いておらず、
+/// 掃引されたのは殉教者の割合（第35期）だけだった。実測（第135期・`docs/harm.md` 表F）では
+/// 判定 2.92 回/戦に対して成立 1.47 回/戦（50.2%）で、**半分は振って外していた**。
+/// ポンの決定「庇いは 100% にしてよい」に従い、判定回数がそのまま成立になる形にした。
+/// <b><c>Roll(100)</c> は engine 側に残してある</b>——消すと乱数列が動いて全行が変わる
+/// （<c>Roll(100) &lt; 100</c> は必ず真で、1つ消費するだけ）。
+/// <b>殉教者（<see cref="MartyrTrait"/>）の割合は別勘定で、触っていない。</b></para>
 ///
 /// 見返りが無かった頃、庇うは**プラスの顔をしたコスト**だった。
 /// 2026-08-21 の監査では、ガルドを前列に置く制約を外すと試した8編成すべてで勝率が上がり、
@@ -709,7 +717,8 @@ public sealed class CurseTrait : Trait
 /// </summary>
 public sealed class GuardianTrait : RedirectGainTrait
 {
-    public const int RedirectPercent = 50;
+    /// <summary>庇いの成立率。<b>第136期 段1 に 50 → 100</b>（経緯は型の doc）。</summary>
+    public const int RedirectPercent = 100;
 
     public override TraitId Id => TraitId.Guardian;
 

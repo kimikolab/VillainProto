@@ -3850,8 +3850,9 @@ public sealed class BattleContext
         UnitState? guardian = PickOne(foes.Where(
             f => f.HasTrait(TraitId.Guardian) && f.Row == Row.Front && f != target).ToList());
 
-        // 第135期の計数。**鎖が庇いの段まで来て、この駒が 50% の判定を振られた回数。**
-        // 成立したぶんは InterceptsByLabel の側にあるので、差が「振って外した回数」になる。
+        // 第135期の計数。**鎖が庇いの段まで来て、この駒が判定を振られた回数。**
+        // 成立したぶんは InterceptsByLabel の側にあるので、差が「振って外した回数」になる
+        // （第136期 段1 で RedirectPercent を 100 にしたので、以後は差が 0 になる。Roll は残す）。
         if (HarmCensus && guardian is not null) TallyOf(guardian).GuardChances++;
 
         if (guardian is not null && Roll(100) < GuardianTrait.RedirectPercent)
