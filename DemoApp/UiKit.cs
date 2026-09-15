@@ -136,8 +136,20 @@ public static class UiKit
         };
     }
 
-    public static Texture2D BattlePortrait(Texture2D atlas, string key)
+    public static Texture2D BattlePortrait(Texture2D atlas, string key, bool burning = false)
     {
+        // 状態差分が無い駒は通常絵へ戻す。燃焼の判定は台本の通知だけが担う。
+        string variantKey = key + "_burning";
+        if (burning && FindBattlePortrait(variantKey) is string variantPath)
+        {
+            if (!BattlePortraitCache.TryGetValue(variantKey, out Texture2D? variant))
+            {
+                variant = LoadTexture(variantPath);
+                BattlePortraitCache[variantKey] = variant;
+            }
+            return variant;
+        }
+
         if (FindBattlePortrait(key) is string path)
         {
             if (!BattlePortraitCache.TryGetValue(key, out Texture2D? portrait))
@@ -212,6 +224,7 @@ public static class UiKit
         "hiyo" => 0.0150f,
         "gan" => 0.0384f,
         "yomi" => 0.0286f,
+        "hota" => 0.0120f,
         "basa" => 0.0540f,
         "nara" => 0.1400f,
         "nel" => 0.0378f,
@@ -240,6 +253,11 @@ void fragment() {
     float corner_alpha = max(max(top_left.a, top_right.a), max(bottom_left.a, bottom_right.a));
     float has_alpha_background = 1.0 - step(0.08, corner_alpha);
     float mask = mix(silhouette, 1.0, has_alpha_background);
+    // 緑単色の素材だけ、輪郭に混じった緑も除く。
+    if (has_alpha_background < 0.5 && expected_bg.g > 0.8 && max(expected_bg.r, expected_bg.b) < 0.15) {
+        mask = 1.0 - smoothstep(0.02, 0.18, c.g - max(c.r, c.b));
+        c.g = min(c.g, max(c.r, c.b));
+    }
     COLOR = vec4(c.rgb, c.a * mask);
 }"
         };

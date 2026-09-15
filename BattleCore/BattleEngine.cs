@@ -164,6 +164,41 @@ public static class BurnRules
 }
 
 /// <summary>
+/// ターン外の行動の呼び出し口（第134期 段2）。<b>計数専用で、どの規則も読まない</b>
+/// ——<see cref="BattleContext.CanActOutOfTurn"/> の答えを1ビットも変えない。
+///
+/// <para><b>呼び出し口は5本</b>。<c>CLAUDE.md</c> は第27期以来「棘・仇討ち・軋み・追い打ちの
+/// 4本だけ」と書いているが、<b>第110期の譲渡（尾灯・<c>TaillightTrait</c>）が5本目として
+/// 増えている</b>（第134期 Q0-7 の走査で判明）。</para>
+/// </summary>
+public enum OutOfTurnRoute
+{
+    /// <summary>棘（<c>ThornsTrait.OnDamaged</c>）。</summary>
+    Thorns,
+    /// <summary>仇討ち（<c>AvengeTrait.OnAllyDamaged</c>）。</summary>
+    Avenge,
+    /// <summary>軋み（<c>DisplacedTrait.OnMoved</c>）。</summary>
+    Creak,
+    /// <summary>追い打ち（<c>PursuerTrait.OnAnyDeath</c>）。</summary>
+    Pursue,
+    /// <summary>譲渡（<c>TaillightTrait</c>・第110期）。</summary>
+    Taillight,
+    /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
+    Other
+}
+
+/// <summary><see cref="OutOfTurnRoute"/> の一覧（帳簿の添字用）。</summary>
+public static class OutOfTurnRoutes
+{
+    /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
+    public static readonly string[] Names =
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "その他" };
+
+    /// <summary>経路の数。</summary>
+    public static int Count => Names.Length;
+}
+
+/// <summary>
 /// 1体ぶんの手番で何が起きたか（第104期）。<see cref="BattleContext.TakeTurn"/> の戻り値で、
 /// <b>盤面には一切影響しない</b>——再行動（<c>EncoreRule</c>）の内訳（§3-3 の Q4）を
 /// 前後の差分ではなく直接数えるためだけにある。
@@ -221,11 +256,26 @@ public sealed class BattleContext
     /// （庇う・分かち・巨躯・後備え・棘守り）はダメージの再分配であって行動ではないので、
     /// この窓口を通らない＝粛の下でも働く。責め苦（シガ）の追撃も自分の手番の中なので無風。</para>
     /// </summary>
-    public bool CanActOutOfTurn(UnitState u)
-        => u.IsAlive
-           && u.RawCounter(StatusKeys.Stun) == 0
-           && u.Traits.All(t => CanReactProbed(t, u))
-           && !(Hush.Active && AllUnits.Any(x => x.IsAlive && x.HasTrait(TraitId.Hush)));
+    /// <param name="route">
+    /// どの経路からの問い合わせか（第134期 段2・<b>計数専用。答えは1ビットも変えない</b>）。
+    /// <b>呼び出し口は5本</b>——棘・仇討ち・軋み・追い打ちの4本に、第110期の譲渡（尾灯）が加わっている。
+    /// </param>
+    public bool CanActOutOfTurn(UnitState u, OutOfTurnRoute route = OutOfTurnRoute.Other)
+    {
+        // **式のままだと「粛が単独の原因だったか」が数えられない**ので、第134期に
+        // 節へほどいた。**評価の順序も結果も第27期から1ビットも変えていない**——
+        // 保持者の走査は `AllUnits.Any(...)` から `_hushHolders`（`Add` が積む）へ寄せてあり、
+        // 短絡の意味（数百万戦を並列で回すので全駒走査を後ろに置く）はそのまま残る。
+        bool basic = u.IsAlive
+                     && u.RawCounter(StatusKeys.Stun) == 0
+                     && u.Traits.All(t => CanReactProbed(t, u));
+        bool hushed = Hush.Active && HushHolderAlive;
+
+        HushAskedSide[SideOf(u)]++;
+        if (hushed) NoteHushBlocked(u, route, sole: basic);
+
+        return basic && !hushed;
+    }
 
     /// <summary>第94期 (T2)。<see cref="Trait.CanReact"/> を印つきで問う。<b>答えは1ビットも変えない。</b></summary>
     bool CanReactProbed(Trait t, UnitState u)
@@ -302,6 +352,8 @@ public sealed class BattleContext
     /// <summary>毒などの継続ダメージ。ターン開始時に engine から呼ばれる。</summary>
     public void TickStatuses()
     {
+        NoteRuleHolders();   // 第134期 段2 —— 保持者が落ちたターンの記録。**盤面には触らない。**
+
         foreach (UnitState u in _units.Where(x => x.IsAlive).ToList())
         {
             int poison = u.RawCounter(StatusKeys.Poison);
@@ -352,6 +404,8 @@ public sealed class BattleContext
             bt.BurnTicks++;
 
             u.SetCounter(StatusKeys.Burn, left - 1);
+            // 第134期 段1 —— 燃え尽きた時点で区間を閉じる。**盤面には触らない。**
+            if (left - 1 <= 0) CloseBurnEpisode(u, expired: true);
             Log($"    {u.Name} が燃えている（残り {left - 1}）", LogKind.Status);
             Emit(new BattleEvent
             {
@@ -656,6 +710,7 @@ public sealed class BattleContext
         // 「点いた」と「煽られた」を分けるのが要点——非スタックなので後者は
         // 残ターンを 3 に戻すだけで、供給としては捨てられている。
         UnitTally it = TallyOf(target);
+        NoteIgnite(target, source, relit);   // 第134期 段1 —— 重ね掛けの帳簿。盤面には触らない
         if (relit)
         {
             it.BurnRelit++;
@@ -1864,6 +1919,13 @@ public sealed class BattleContext
     public EmberRule Ember { get; }
 
     /// <summary>
+    /// 火勢の強度（第133期）。<b>診断（wildfire）が版を差し替えるためだけの窓口</b>で、
+    /// 通常の実行では誰も渡さない（既定は <see cref="WildfireRule.Default"/> ＝ 不活性）。
+    /// static のノブにしない理由は同型の doc を参照。
+    /// </summary>
+    public WildfireRule Wildfire { get; }
+
+    /// <summary>
     /// 軋みが響く閾値（第66期）。<b>診断（creak）が版を差し替えるためだけの窓口</b>で、
     /// 通常の実行では誰も渡さない（既定は <see cref="CreakRule.Default"/> ＝ 無効）。
     /// static のノブにしない理由は同型の doc を参照。
@@ -2175,6 +2237,277 @@ public sealed class BattleContext
     /// ——名目（定数 3 × 傷の数）との差が「空振り」そのものになる。</para>
     /// </summary>
     public long HpRemoved;
+
+    // ===== 第132期 段1: 上限（軛）の帳簿 =========================================================
+    //
+    // **誰も読んで分岐しない。** 盤面にも乱数列にも1ビットも触らない。
+    // 第25期に軛を採ってから第131期まで「何が何回・何点切られたか」を数える窓口が1つも無く、
+    // 「型ごとに上限との相性が逆を向く」が**3期にわたって未測定のまま指示書に書き継がれていた**。
+    //
+    // 添字は攻撃型（`AttackPattern`）で、**4 は「型なし」**——継続ダメージ（毒・燃焼）・反撃・
+    // 肩代わりの中継・徴収はどれも `pattern` を渡さないのでここに落ちる。
+    // **肩代わりの中継が元の型に戻らないのは意図した形**（分割された段は別の一撃なので、
+    // 「どの型の一撃が切られたか」に足すと二重に数えることになる）。
+
+    /// <summary>
+    /// 攻撃型ごとの「軛に切られた一撃」の回数。
+    /// <b>添字は <c>型 + (受けたのが味方なら 5)</c></b>——0..4 が敵に入った一撃（＝味方の刃）、
+    /// 5..9 が味方に入った一撃（＝敵の刃）。<b>型の 4 は「型なし」。</b>
+    /// </summary>
+    public readonly long[] YokeCutHits = new long[10];
+    /// <summary>同・切り落とされた量（<c>amount - Cap</c> の合計）。</summary>
+    public readonly long[] YokeCutLost = new long[10];
+    /// <summary>同・切られたうえで通った量（<c>Cap</c> の合計）。</summary>
+    public readonly long[] YokeCutPassed = new long[10];
+    /// <summary>切られなかったが上限に近い一撃（<c>Cap * 4 / 5</c> 超〜<c>Cap</c>）の回数。</summary>
+    public readonly long[] YokeNearHits = new long[10];
+    /// <summary>上限が効いている間に HP へ届いた回数（切られた一撃も含む）。</summary>
+    public readonly long[] YokeInHits = new long[10];
+    /// <summary>同・量（上限を通した後の実額）。</summary>
+    public readonly long[] YokeInAmount = new long[10];
+    /// <summary>同・その一撃で相手が倒れた回数。</summary>
+    public readonly long[] YokeKills = new long[10];
+    /// <summary>同・過剰分（<c>amount - 直前のHP</c>。倒した一撃だけ）。</summary>
+    public readonly long[] YokeOverkill = new long[10];
+    /// <summary>切られた側が味方（プレイヤー）だった回数と量。</summary>
+    public long YokeCutOnPlayerHits, YokeCutOnPlayerLost;
+    /// <summary>切られた側が敵だった回数と量。</summary>
+    public long YokeCutOnEnemyHits, YokeCutOnEnemyLost;
+    /// <summary>上限が効いている間に、破片（<c>Armor</c>）が上限の<b>手前</b>で食った量。</summary>
+    public long YokeArmorSoak;
+    /// <summary>上限が効いている間に HP へ届いた量のうち、肩代わりの中継だったぶん。</summary>
+    public long YokeInRelayedHits, YokeInRelayedAmount;
+    /// <summary>同・継続ダメージ（毒・燃焼の刻み）だったぶん。</summary>
+    public long YokeInBurnHits, YokeInBurnAmount;
+    /// <summary>同・徴収（生贄・吸い・置き去りの削り）だったぶん。</summary>
+    public long YokeInLevyHits, YokeInLevyAmount;
+    /// <summary>
+    /// <see cref="ApplyDamage"/> を<b>1度も通さずに</b>書かれた HP の減り（繕いの代金）。
+    /// <b>上限も破片も肩代わりも通らない</b>ので、回避経路の3分類でいちばん外側にいる。
+    /// </summary>
+    public long DirectHpLoss;
+    /// <summary>誰の一撃が切られたか（<c>Def.Id</c> → 回数・切られた量）。</summary>
+    public readonly Dictionary<string, (long Hits, long Lost)> YokeCutBy = new();
+
+    /// <summary>軛の保持者（<see cref="Add"/> が積む）。<b>全駒の走査を避けるためのキャッシュ。</b></summary>
+    readonly List<UnitState> _yokeHolders = new();
+
+    // =====================================================================================
+    // 第134期 段1・段2 —— 重ね掛けと盤面ルールの対称性の帳簿。**計数専用。**
+    //
+    // **どの規則も読まない。** 足したのは (a) 下の配列と辞書、(b) `Ignite` / `TickStatuses` /
+    // `Heal` / `CanActOutOfTurn` に置いた `Note*` の呼び出し、(c) `Run` の組み立てだけで、
+    // **盤面の分岐も乱数も1ビットも動かない**（受け入れ条件 A1・A2）。
+    //
+    // 陣営の添字は**課税された側**（0 = 敵 / 1 = 味方）。第132期の `YokeLedger` に揃えてある。
+    // =====================================================================================
+
+    /// <summary>陣営の添字（0 = 敵 / 1 = 味方）。<b>第134期の帳簿はすべてこの向き。</b></summary>
+    static int SideOf(UnitState u) => u.TeamId == PlayerTeam ? 1 : 0;
+
+    /// <summary>点け直し回数の分布の段数。<b>添字 5 は「5回以上」</b>。</summary>
+    public const int BurnHistBuckets = 6;
+
+    public readonly long[] BurnLitSide = new long[2];
+    public readonly long[] BurnRelitSide = new long[2];
+    public readonly long[] BurnEpisodes = new long[2];
+    public readonly long[] BurnRelitSum = new long[2];
+    public readonly long[] BurnRelitMax = new long[2];
+    public readonly long[][] BurnHist = { new long[BurnHistBuckets], new long[BurnHistBuckets] };
+    public readonly long[] BurnEndExpired = new long[2];
+    public readonly long[] BurnEndDeath = new long[2];
+    public readonly long[] BurnEndAlive = new long[2];
+
+    /// <summary>点けた側の帳簿（<c>Def.Id</c> → 点けた回数・煽った回数）。</summary>
+    public readonly Dictionary<string, (long Lit, long Relit)> BurnBy = new();
+
+    /// <summary>点けられた側の帳簿（<c>Def.Id</c> → 点いた回数・煽られた回数）。</summary>
+    public readonly Dictionary<string, (long Lit, long Relit)> BurnOn = new();
+
+    /// <summary>
+    /// いま開いている区間の点け直し回数（<c>InstanceId</c> → 回数）。
+    /// <b>区間は「燃えていない駒に火が点いた瞬間」に開く</b>ので、キーがあること自体が
+    /// 「その駒がいま燃えている」と同値になる（<see cref="CloseBurnEpisode"/> が閉じるまで）。
+    /// </summary>
+    readonly Dictionary<int, int> _burnOpen = new();
+
+    /// <summary>着火の帳簿（<see cref="Ignite"/> の中から1回だけ呼ぶ）。<b>盤面には触らない。</b></summary>
+    void NoteIgnite(UnitState target, UnitState? source, bool relit)
+    {
+        int side = SideOf(target);
+        if (relit)
+        {
+            BurnRelitSide[side]++;
+            // 区間が開いていない既燃は原理的に無い（区間はここでしか開かず、
+            // <see cref="CloseBurnEpisode"/> でしか閉じない）が、キーが無ければ 0 から開き直す
+            // ——数え落とすより、開き直したことが分布に出る形にしておく。
+            _burnOpen[target.InstanceId] = _burnOpen.TryGetValue(target.InstanceId, out int n) ? n + 1 : 0;
+        }
+        else
+        {
+            BurnLitSide[side]++;
+            _burnOpen[target.InstanceId] = 0;
+        }
+
+        BurnOn.TryGetValue(target.Def.Id, out var on);
+        BurnOn[target.Def.Id] = relit ? (on.Lit, on.Relit + 1) : (on.Lit + 1, on.Relit);
+
+        if (source is not null)
+        {
+            BurnBy.TryGetValue(source.Def.Id, out var by);
+            BurnBy[source.Def.Id] = relit ? (by.Lit, by.Relit + 1) : (by.Lit + 1, by.Relit);
+        }
+    }
+
+    /// <summary>
+    /// 区間を閉じる（第134期 段1）。<b>閉じ方は3通り</b>——燃え尽きた（<paramref name="expired"/>）／
+    /// 燃えたまま倒れた／燃えたまま決着した。<b>盤面には触らない。</b>
+    /// </summary>
+    void CloseBurnEpisode(UnitState u, bool expired)
+    {
+        if (!_burnOpen.Remove(u.InstanceId, out int relit)) return;
+        int side = SideOf(u);
+        BurnEpisodes[side]++;
+        BurnRelitSum[side] += relit;
+        if (relit > BurnRelitMax[side]) BurnRelitMax[side] = relit;
+        BurnHist[side][Math.Min(relit, BurnHistBuckets - 1)]++;
+        if (expired) BurnEndExpired[side]++;
+        else if (u.IsAlive) BurnEndAlive[side]++;
+        else BurnEndDeath[side]++;
+    }
+
+    /// <summary>
+    /// 決着時に開いたままの区間を閉じる（第134期 段1）。<b>死者も数える</b>——
+    /// 燃えたまま倒れた駒の区間は <see cref="TickStatuses"/> が二度と触らないので、
+    /// ここで閉じないと帳簿から丸ごと落ちる。<b>1戦につき最後に1度だけ呼ぶ。</b>
+    /// </summary>
+    public void CloseBurnLedger()
+    {
+        foreach (UnitState u in _units.ToList()) CloseBurnEpisode(u, expired: false);
+    }
+
+    public readonly long[] DroughtHits = new long[2];
+    public readonly long[] DroughtRequested = new long[2];
+    public readonly long[] DroughtEffective = new long[2];
+
+    /// <summary>渇きに止められた駒の帳簿（<c>Def.Id</c> → 回数・実効量）。</summary>
+    public readonly Dictionary<string, (long Hits, long Amount)> DroughtOn = new();
+
+    public readonly long[] HushBlockedSide = new long[2];
+    public readonly long[] HushBlockedAnySide = new long[2];
+    public readonly long[] HushAskedSide = new long[2];
+    public readonly long[][] HushByRoute = MakeHushRoutes();
+
+    static long[][] MakeHushRoutes()
+    {
+        var a = new long[OutOfTurnRoutes.Count][];
+        for (int i = 0; i < a.Length; i++) a[i] = new long[2];
+        return a;
+    }
+
+    /// <summary>渇きの保持者（<see cref="Add"/> が積む）。</summary>
+    readonly List<UnitState> _droughtHolders = new();
+
+    /// <summary>粛の保持者（<see cref="Add"/> が積む）。</summary>
+    readonly List<UnitState> _hushHolders = new();
+
+    /// <summary>逆位の保持者（<see cref="Add"/> が積む）。<b>第134期 P5 の実証用</b>（規則は第22期から）。</summary>
+    readonly List<UnitState> _inversionHolders = new();
+
+    /// <summary>保持者が全員倒れたターン（0 ＝ 最後まで生きていた／保持者がいない）。</summary>
+    public readonly int[] RuleFallTurn = new int[BoardRuleLedger.RuleCount];
+
+    static bool AnyAlive(List<UnitState> holders)
+    {
+        for (int i = 0; i < holders.Count; i++) if (holders[i].IsAlive) return true;
+        return false;
+    }
+
+    /// <summary>渇きがいま効いているか。<b>判定は第22期から1ビットも変えていない</b>（走査を配列に寄せただけ）。</summary>
+    public bool DroughtBinding => AnyAlive(_droughtHolders);
+
+    /// <summary>粛の保持者が生きているか（<c>Hush.Active</c> は呼び出し側で見る）。</summary>
+    public bool HushHolderAlive => AnyAlive(_hushHolders);
+
+    /// <summary>
+    /// 保持者が落ちたターンを控える（第134期 段2）。<b>ターン頭に1度だけ</b>呼ぶ。
+    /// <b>盤面には触らない。</b> 「保持者を割れば解除できる」設計（第110期の粛・第118期の渇き）が
+    /// 実際に何ターン目に解除されているかを出すためだけにある。
+    /// </summary>
+    void NoteRuleHolders()
+    {
+        Fall((int)BoardRuleLedger.RuleIndex.Yoke, _yokeHolders);
+        Fall((int)BoardRuleLedger.RuleIndex.Drought, _droughtHolders);
+        Fall((int)BoardRuleLedger.RuleIndex.Hush, _hushHolders);
+        Fall((int)BoardRuleLedger.RuleIndex.Inversion, _inversionHolders);
+
+        void Fall(int ix, List<UnitState> holders)
+        {
+            if (holders.Count == 0 || RuleFallTurn[ix] != 0 || AnyAlive(holders)) return;
+            RuleFallTurn[ix] = _turn;
+        }
+    }
+
+    /// <summary>
+    /// 決着後に1度だけ呼ぶ（第134期 段2）。<b>決着したターンに保持者が落ちた場合を拾う</b>
+    /// ——そのターンの頭はもう過ぎていて、次のターンの頭は来ない。
+    /// </summary>
+    public void CloseRuleHolders() => NoteRuleHolders();
+
+    /// <summary>保持者の数（<see cref="BoardRuleLedger.RuleIndex"/> の順）。</summary>
+    public int[] RuleHolderCount => new[]
+    {
+        _yokeHolders.Count, _droughtHolders.Count, _hushHolders.Count, _inversionHolders.Count
+    };
+
+    /// <summary>渇きが止めた回復の帳簿（<see cref="Heal"/> の入口から呼ぶ）。<b>盤面には触らない。</b></summary>
+    void NoteDroughtBlocked(UnitState target, int amount)
+    {
+        int side = SideOf(target);
+        // **実効量は上限で切ってから数える**——満タンの駒への回復は、渇きが無くても
+        // 1点も入らない（`Heal` は `Hp == before` で抜ける）。要求量だけを数えると
+        // 「封じられた量」を上振れさせる。両方を出して報告書で並べる。
+        int effective = Math.Max(0, Math.Min(amount, target.MaxHp - target.Hp));
+        DroughtHits[side]++;
+        DroughtRequested[side] += amount;
+        DroughtEffective[side] += effective;
+        DroughtOn.TryGetValue(target.Def.Id, out var acc);
+        DroughtOn[target.Def.Id] = (acc.Hits + 1, acc.Amount + effective);
+    }
+
+    /// <summary>
+    /// 粛が止めたターン外の行動の帳簿（<see cref="CanActOutOfTurn"/> から呼ぶ）。<b>盤面には触らない。</b>
+    /// <paramref name="sole"/> が真なら<b>粛が単独の原因</b>（痺れ・<c>CanReact</c> では落ちていない）。
+    /// </summary>
+    void NoteHushBlocked(UnitState u, OutOfTurnRoute route, bool sole)
+    {
+        int side = SideOf(u);
+        HushBlockedAnySide[side]++;
+        if (!sole) return;
+        HushBlockedSide[side]++;
+        HushByRoute[(int)route][side]++;
+    }
+
+    /// <summary>
+    /// 上限がいま効いているか。<b>規則の有効・保持者の生存を1箇所に集めただけ</b>で、
+    /// 判定は第25期から1ビットも変わっていない（<c>AllUnits.Any(...)</c> と同値）。
+    /// </summary>
+    public bool YokeBinding
+    {
+        get
+        {
+            if (!Yoke.Active) return false;
+            for (int i = 0; i < _yokeHolders.Count; i++) if (_yokeHolders[i].IsAlive) return true;
+            return false;
+        }
+    }
+
+    /// <summary><see cref="ApplyDamage"/> を通らずに HP を減らした量を記録する（計数のみ）。</summary>
+    public void NoteDirectHpLoss(int amount) { if (amount > 0) DirectHpLoss += amount; }
+
+    /// <summary>帳簿の添字（型 ＋ 受け手の陣営）。</summary>
+    int YokeSlot(AttackPattern? p, UnitState target)
+        => (p is null ? 4 : (int)p) + (target.TeamId == PlayerTeam ? 5 : 0);
 
     /// <summary>読み手ごと（添字は <see cref="WoundReader"/>）の 発火／読んだ傷／名目／実効。</summary>
     public readonly int[] ReadFires = new int[6];
@@ -2570,7 +2903,8 @@ public sealed class BattleContext
                          LooseRule? loose = null, TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
                          NourishRule? nourish = null, WoundRule? wound = null,
-                         EmberRule? ember = null, CounterProbe? probe = null)
+                         EmberRule? ember = null, WildfireRule? wildfire = null,
+                                   CounterProbe? probe = null)
     {
         _rng = new Random(seed);
         Probe = probe;          // 第94期 (T2)。**既定 null。診断だけが渡す。**
@@ -2595,6 +2929,7 @@ public sealed class BattleContext
         Favor = favor ?? FavorRule.Default;
         Blaze = blaze ?? BlazeRule.Default;
         Ember = ember ?? EmberRule.Default;
+        Wildfire = wildfire ?? WildfireRule.Default;
         Funnel = funnel ?? FunnelRule.Default;
         WhetBlock = whetMask ?? WhetMask.None;
         Creak = creak ?? CreakRule.Default;
@@ -2812,6 +3147,13 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Divert)) DivertActive = true;
         if (u.HasTrait(TraitId.Finisher)) FinisherActive = true;
         if (u.HasTrait(TraitId.Funnel)) FunnelActive = true;
+        // 第132期 段1: 上限の保持者をここで拾う（`YokeBinding` が全駒を走査しないため）。
+        if (u.HasTrait(TraitId.Yoke)) _yokeHolders.Add(u);
+        // 第134期 段2: 残り3つの盤面ルールの保持者も同じ形で拾う（**計数専用**。
+        // 渇きだけは `Heal` の入口の判定もここに寄せた——`AllUnits.Any(...)` と同値）。
+        if (u.HasTrait(TraitId.Drought)) _droughtHolders.Add(u);
+        if (u.HasTrait(TraitId.Hush)) _hushHolders.Add(u);
+        if (u.HasTrait(TraitId.Inversion)) _inversionHolders.Add(u);
         u.InstanceId = _nextInstanceId++;
         u.Board = this;          // 「隣に誰がいるか」を読む特性のため（UnitState.Board の doc 参照）
         _units.Add(u);
@@ -3503,6 +3845,28 @@ public sealed class BattleContext
     /// **反撃・追い打ちのような手番外の攻撃には掛からない**（呼び出し側が渡さない＝100）。
     /// </param>
     /// <param name="patternOverride">この攻撃だけ攻撃型を差し替える。null なら CurrentPattern。</param>
+    /// <summary>
+    /// 火勢の帳簿（第133期・<b>計数専用</b>）。<b>盤面を1ビットも動かさない</b>
+    /// ——読むのは <see cref="WildfireTrait.BurningFoes"/> と攻撃力の2つだけ。
+    ///
+    /// <para><b>上乗せは「全部通した値 − 火勢を除いた値」で取る</b>
+    /// （<c>OverbearTrait.PlainAttack</c> と同型）。<c>attackPercent</c> の割引は掛けない
+    /// ——大技（<c>BigAttacks</c>）を持つ保持者はいまの所いないので、素の打点で数える。</para>
+    /// </summary>
+    void NoteWildfireSwing(UnitState actor)
+    {
+        int n = WildfireTrait.BurningFoes(this, actor);
+        int gain = actor.CurrentAttack - WildfireTrait.PlainAttack(actor);
+        UnitTally t = TallyOf(actor);
+        t.WildfireSwings++;
+        if (n > 0) t.WildfireLit++;
+        t.WildfireFoes += n;
+        t.WildfireFoesSq += (long)n * n;
+        if (n > t.WildfireFoesMax) t.WildfireFoesMax = n;
+        t.WildfireGain += gain;
+        t.WildfireGainSq += (long)gain * gain;
+    }
+
     public void PerformAttack(UnitState actor, string prefix = "  ",
                               int attackPercent = 100, AttackPattern? patternOverride = null)
     {
@@ -3557,6 +3921,14 @@ public sealed class BattleContext
         int atk = attackPercent == 100
             ? actor.CurrentAttack
             : actor.CurrentAttack * attackPercent / 100;
+
+        // 第133期・**計数専用**。火勢（`TraitId.Wildfire`）が実際に乗った振りを数える。
+        // **`ModifyAttack` の中では数えない**——`CurrentAttack` は駆り立ての選択・転嫁の流し先・
+        // `StatSnapshot`・棘/仇討ち/責め苦の反撃量からも読まれるので、数えると
+        // 「振った回数」ではなく**「読まれた回数」**になる（驕り＝第46期の明文）。
+        // **規則は1本も足していない**（判定は `WildfireTrait.ModifyAttack` の中にある）。
+        // **誰も読んで分岐しない。** 保持者がいなければ比較1つで抜ける。
+        if (actor.HasTrait(TraitId.Wildfire)) NoteWildfireSwing(actor);
 
         // 薄刃の払い方（第75期）。**規則が V0（既定）なら最初の比較1つで抜ける**ので、
         // 通常の実行では乱数も盤面も1ビットも動かない（`compare` 305 セル 0 件が検算）。
@@ -4127,6 +4499,10 @@ public sealed class BattleContext
             // 出力に変換される前に戦闘が終わる）と同じ穴に落ちるので、吸った量を別に持つ。
             if (target.HasTrait(TraitId.Bear)) BearSoaked += soak;
 
+            // 第132期 段1・**計数のみ**。上限が効いている間に、破片が上限の**手前**で食った量。
+            // 破片は上限の外側で効く（この行より下で切る）ので、回避経路の実測はここでしか取れない。
+            if (YokeBinding) YokeArmorSoak += soak;
+
             // 燃焼の刻みが破片に吸われた量（第57期）。**盤面には触らない。**
             if (burnTick) TallyOf(target).BurnSoaked += soak;
 
@@ -4204,14 +4580,53 @@ public sealed class BattleContext
         //
         // amount > Cap を先に見るのは、保持者の探索（AllUnits の走査）を毎回の被弾で
         // 走らせないため。Math.Min の結果は変わらない（layout は数百万戦を並列で回す）。
-        if (Yoke.Active && amount > Yoke.Cap
-            && AllUnits.Any(u => u.IsAlive && u.HasTrait(TraitId.Yoke)))
+        //
+        // **保持者の探索は `YokeBinding` に寄せた**（第132期 段1）。判定は同値
+        // （`Yoke.Active && AllUnits.Any(u => u.IsAlive && u.HasTrait(TraitId.Yoke))`）で、
+        // 走査の対象が全駒から保持者のキャッシュに変わっただけ。
+        bool yokeBinding = amount > Yoke.Cap ? YokeBinding : false;
+        if (yokeBinding)
         {
+            // 第132期 段1・**計数のみ**。切る前にしか取れない量（切り落とされた量）をここで記録する。
+            int pi = YokeSlot(pattern, target);
+            YokeCutHits[pi]++;
+            YokeCutLost[pi] += amount - Yoke.Cap;
+            YokeCutPassed[pi] += Yoke.Cap;
+            if (target.TeamId == PlayerTeam) { YokeCutOnPlayerHits++; YokeCutOnPlayerLost += amount - Yoke.Cap; }
+            else { YokeCutOnEnemyHits++; YokeCutOnEnemyLost += amount - Yoke.Cap; }
+            string who = source?.Def.Id ?? "（出どころなし）";
+            YokeCutBy.TryGetValue(who, out var acc);
+            YokeCutBy[who] = (acc.Hits + 1, acc.Lost + amount - Yoke.Cap);
+
             Log($"    軛が {target.Name} への一撃を {amount} から {Yoke.Cap} に切った", LogKind.Trigger);
             amount = Yoke.Cap;
         }
+        else if (Yoke.Cap > 0 && amount > Yoke.Cap * 4 / 5 && YokeBinding)
+        {
+            // 切られなかったが上限に近い一撃（上限が効いている境界を見るため）。**計数のみ。**
+            YokeNearHits[YokeSlot(pattern, target)]++;
+        }
 
         int hpBefore120 = target.Hp;   // 第120期の計数（オーバーキルを除いた実額を取るため）
+
+        // 第132期 段1・**計数のみ**。上限が効いている間に HP へ届いた一撃を、攻撃型と入口で割る。
+        // 「通った量」と「切られた量」を同じ場所で取らないと、分母が版で動いて比較できない
+        // （第115期「同じ比を作る2つの計数は同じ瞬間に取ること」）。
+        if (yokeBinding || YokeBinding)
+        {
+            int pi = YokeSlot(pattern, target);
+            YokeInHits[pi]++;
+            YokeInAmount[pi] += amount;
+            if (amount >= hpBefore120)
+            {
+                YokeKills[pi]++;
+                YokeOverkill[pi] += amount - hpBefore120;
+            }
+            if (burnTick) { YokeInBurnHits++; YokeInBurnAmount += amount; }
+            else if (relayed) { YokeInRelayedHits++; YokeInRelayedAmount += amount; }
+            else if (levy) { YokeInLevyHits++; YokeInLevyAmount += amount; }
+        }
+
         target.Hp -= amount;
         // 第120期。**盤面から実際に減った HP**（過剰分を除く）。誰も読んで分岐しない。
         HpRemoved += hpBefore120 - Math.Max(0, target.Hp);
@@ -5203,7 +5618,15 @@ public sealed class BattleContext
         //
         // ノノ（MenderTrait）は ctx.Heal の後に self.Hp -= amount を無条件で走らせるので、
         // 渇き下では**一方的に減る**。これは意図した挙動（回復役を連れてきた代金だけが残る）。
-        if (AllUnits.Any(u => u.IsAlive && u.HasTrait(TraitId.Drought))) return;
+        //
+        // **第134期 段2**: 判定は `_droughtHolders`（`Add` が積む）に寄せた。
+        // `AllUnits.Any(u => u.IsAlive && u.HasTrait(TraitId.Drought))` と**同値**で、
+        // 足したのは `NoteDroughtBlocked`（計数専用）だけ。
+        if (DroughtBinding)
+        {
+            NoteDroughtBlocked(target, amount);
+            return;
+        }
 
         int before = target.Hp;
         target.Hp = Math.Min(target.MaxHp, target.Hp + amount);
@@ -5371,14 +5794,15 @@ public static class BattleEngine
                                    TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
                                    NourishRule? nourish = null, WoundRule? wound = null,
-                                   EmberRule? ember = null, CounterProbe? probe = null)
+                                   EmberRule? ember = null, WildfireRule? wildfire = null,
+                                   CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
-               nourish, wound, ember, probe);
+               nourish, wound, ember, wildfire, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -5411,14 +5835,15 @@ public static class BattleEngine
                                    LooseRule? loose = null, TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
                                    NourishRule? nourish = null, WoundRule? wound = null,
-                                   EmberRule? ember = null, CounterProbe? probe = null)
+                                   EmberRule? ember = null, WildfireRule? wildfire = null,
+                                   CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
-                                    nourish, wound, ember, probe);
+                                    nourish, wound, ember, wildfire, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -5543,6 +5968,12 @@ public static class BattleEngine
         // 第120期の帳簿を閉じる（**死者を含む全駒を1度だけ**。上のループは生存駒しか見ていない）。
         ctx.CloseWoundLedger();
 
+        // 第134期 段1 の帳簿を閉じる（**死者を含む全駒を1度だけ**。燃えたまま倒れた駒の区間は
+        // `TickStatuses` が二度と触らないので、ここで閉じないと丸ごと落ちる）。
+        ctx.CloseBurnLedger();
+        // 第134期 段2。保持者が最後のターンに落ちた場合を拾う（`TickStatuses` はもう回らない）。
+        ctx.CloseRuleHolders();
+
         return new BattleResult
         {
             PlayerWon = playerWon,
@@ -5566,6 +5997,36 @@ public static class BattleEngine
                 (long[])ctx.ReadNominal.Clone(), (long[])ctx.ReadEffective.Clone(),
                 (int[])ctx.GuardFires.Clone(), (int[])ctx.GuardTargetWounded.Clone(),
                 (long[])ctx.GuardWoundedAllySum.Clone(), (int[])ctx.GuardAnyWoundedAlly.Clone()),
+            // 第132期 段1。**計数専用**（どの規則も読まない）。
+            Yoke = new YokeLedger(
+                (long[])ctx.YokeCutHits.Clone(), (long[])ctx.YokeCutLost.Clone(),
+                (long[])ctx.YokeCutPassed.Clone(), (long[])ctx.YokeNearHits.Clone(),
+                (long[])ctx.YokeInHits.Clone(), (long[])ctx.YokeInAmount.Clone(),
+                (long[])ctx.YokeKills.Clone(), (long[])ctx.YokeOverkill.Clone(),
+                ctx.YokeCutOnPlayerHits, ctx.YokeCutOnPlayerLost,
+                ctx.YokeCutOnEnemyHits, ctx.YokeCutOnEnemyLost,
+                ctx.YokeArmorSoak, ctx.YokeInRelayedHits, ctx.YokeInRelayedAmount,
+                ctx.YokeInBurnHits, ctx.YokeInBurnAmount,
+                ctx.YokeInLevyHits, ctx.YokeInLevyAmount,
+                ctx.DirectHpLoss, new Dictionary<string, (long, long)>(ctx.YokeCutBy)),
+            // 第134期 段1・段2。**計数専用**（どの規則も読まない）。
+            Burns = new BurnLedger(
+                (long[])ctx.BurnLitSide.Clone(), (long[])ctx.BurnRelitSide.Clone(),
+                (long[])ctx.BurnEpisodes.Clone(), (long[])ctx.BurnRelitSum.Clone(),
+                (long[])ctx.BurnRelitMax.Clone(),
+                new[] { (long[])ctx.BurnHist[0].Clone(), (long[])ctx.BurnHist[1].Clone() },
+                (long[])ctx.BurnEndExpired.Clone(), (long[])ctx.BurnEndDeath.Clone(),
+                (long[])ctx.BurnEndAlive.Clone(),
+                new Dictionary<string, (long, long)>(ctx.BurnBy),
+                new Dictionary<string, (long, long)>(ctx.BurnOn)),
+            BoardRules = new BoardRuleLedger(
+                (long[])ctx.DroughtHits.Clone(), (long[])ctx.DroughtRequested.Clone(),
+                (long[])ctx.DroughtEffective.Clone(),
+                new Dictionary<string, (long, long)>(ctx.DroughtOn),
+                (long[])ctx.HushBlockedSide.Clone(), (long[])ctx.HushBlockedAnySide.Clone(),
+                ctx.HushByRoute.Select(r => (long[])r.Clone()).ToArray(),
+                (long[])ctx.HushAskedSide.Clone(),
+                ctx.RuleHolderCount, (int[])ctx.RuleFallTurn.Clone()),
             ExposeCount = ctx.ExposeCount,
             ExposeMissed = ctx.ExposeMissed,
             DullTotal = ctx.DullTotal,

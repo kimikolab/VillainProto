@@ -30,6 +30,7 @@ public partial class BattlePawn3D : Node3D
     private float _fxHeight = 1.35f;
     private bool _alive = true;
     private bool _victory;
+    private bool _burning;
     private Tween? _motion;
     private Vector3? _guardPosition;
     private Node3D _fire = null!;
@@ -64,7 +65,20 @@ public partial class BattlePawn3D : Node3D
         return _motion = CreateTween();
     }
 
-    public void SetBurning(bool burning) => _fire.Visible = burning && _alive && !_victory;
+    public void SetBurning(bool burning)
+    {
+        bool active = burning && _alive && !_victory;
+        _fire.Visible = active;
+        if (_burning == active) return;
+        _burning = active;
+        // 勝利絵の表示後に遅れた通知が来ても、戦闘絵で上書きしない。
+        if (_victory || _sprite is null) return;
+        Texture2D portrait = UiKit.BattlePortrait(_atlas, _unitId, active);
+        if (_sprite.Texture == portrait) return;
+        _sprite.Texture = portrait;
+        _sprite.PixelSize = _portraitHeight / Math.Max(1, portrait.GetHeight());
+        _portraitMaterial.SetShaderParameter("portrait_texture", portrait);
+    }
     public void SetPoisoned(bool poisoned) => _poison.SetActive(poisoned && _alive && !_victory);
 
     public int InstanceId { get; private set; }
@@ -235,6 +249,11 @@ void fragment() {
     float corner_alpha = max(max(top_left.a, top_right.a), max(bottom_left.a, bottom_right.a));
     float has_alpha_background = 1.0 - step(0.08, corner_alpha);
     float mask = mix(silhouette, 1.0, has_alpha_background);
+    // 緑単色で用意した素材は、輪郭の混色も抜く。既存の透過・灰色背景には適用しない。
+    if (has_alpha_background < 0.5 && expected_bg.g > 0.8 && max(expected_bg.r, expected_bg.b) < 0.15) {
+        mask = 1.0 - smoothstep(0.02, 0.18, c.g - max(c.r, c.b));
+        c.g = min(c.g, max(c.r, c.b));
+    }
     float alpha = c.a * portrait_tint.a * mask;
     if (alpha < 0.02) discard;
     ALBEDO = c.rgb * portrait_tint.rgb;

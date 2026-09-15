@@ -954,6 +954,24 @@ public sealed class UnitTally
     public int SniperSwings;
 
     /// <summary>
+    /// <b>火勢（<see cref="TraitId.Wildfire"/>）の帳簿</b>（第133期・<b>計数専用</b>）。
+    ///
+    /// <para><b><c>ModifyAttack</c> の中では数えられない</b>——<c>CurrentAttack</c> は
+    /// 駆り立ての選択・転嫁の流し先・<c>StatSnapshot</c>・棘/仇討ち/責め苦の反撃量からも
+    /// 読まれるので、あそこで数えると「振った回数」ではなく<b>「読まれた回数」</b>になる
+    /// （<c>OverbearTrait</c> の明文）。<c>PerformAttack</c> が打点を作った直後に
+    /// <b>計数専用の1行</b>で書く。<b>誰も読んで分岐しない。</b></para>
+    ///
+    /// <para><c>WildfireSwings</c> ＝ 保持者が振った回数（手番も割り込みも） ／
+    /// <c>WildfireLit</c> ＝ そのうち燃えている敵が1体以上いた回数（＝発火率の分子） ／
+    /// <c>WildfireFoes</c>・<c>WildfireFoesSq</c>・<c>WildfireFoesMax</c> ＝
+    /// 振った時点の燃えている敵の数の 和・二乗和・最大（<b>分散が P6</b>） ／
+    /// <c>WildfireGain</c>・<c>WildfireGainSq</c> ＝ 実際に上乗せされた打点の 和・二乗和。</para>
+    /// </summary>
+    public int WildfireSwings, WildfireLit, WildfireFoesMax;
+    public long WildfireFoes, WildfireFoesSq, WildfireGain, WildfireGainSq;
+
+    /// <summary>
     /// <b>肩代わりの中継で引き受けたダメージの合計</b>（第125期・<c>relayed</c> の札が立った段）。
     /// 巨躯（ゴルム）と分かち（ドハ）の2経路。
     ///
@@ -1456,6 +1474,10 @@ public sealed class UnitTally
         Swallowed += o.Swallowed; Slumbers += o.Slumbers;
         Intercepts += o.Intercepts; Shouldered += o.Shouldered;
         SniperSwings += o.SniperSwings;
+        WildfireSwings += o.WildfireSwings; WildfireLit += o.WildfireLit;
+        WildfireFoes += o.WildfireFoes; WildfireFoesSq += o.WildfireFoesSq;
+        WildfireGain += o.WildfireGain; WildfireGainSq += o.WildfireGainSq;
+        if (o.WildfireFoesMax > WildfireFoesMax) WildfireFoesMax = o.WildfireFoesMax;
         Refunds += o.Refunds; Refunded += o.Refunded;
         Kills += o.Kills; Deaths += o.Deaths;
         Whetted += o.Whetted; Dulled += o.Dulled;
@@ -1724,6 +1746,118 @@ public readonly record struct WoundLedger(
     public int Accounted => LossAll.Sum();
 }
 
+/// <summary>
+/// 上限（軛・第25期）の帳簿（第132期 段1）。<b>計数専用で、どの規則も読まない。</b>
+///
+/// <para>配列の添字は <c>攻撃型 + (受けたのが味方なら 5)</c> の 10 個。
+/// <b>0..4 が敵に入った一撃（＝味方の刃）、5..9 が味方に入った一撃（＝敵の刃）</b>で、
+/// <b>型の 4 は「型なし」</b>——継続ダメージ・反撃・肩代わりの中継・徴収は
+/// <c>pattern</c> を渡さないのでここに落ちる。</para>
+///
+/// <para><b>保持者が盤上にいなければ全部 0。</b> 第四波（軛の重装兵）以外では1つも増えない。</para>
+/// </summary>
+/// <param name="CutHits">切られた一撃の回数。</param>
+/// <param name="CutLost">切り落とされた量（<c>amount - Cap</c>）。</param>
+/// <param name="CutPassed">切られたうえで通った量（<c>Cap</c>）。</param>
+/// <param name="NearHits">切られなかったが上限に近い一撃（<c>Cap * 4 / 5</c> 超）。</param>
+/// <param name="InHits">上限が効いている間に HP へ届いた回数。</param>
+/// <param name="InAmount">同・量。</param>
+/// <param name="Kills">同・その一撃で倒れた回数。</param>
+/// <param name="Overkill">同・過剰分。</param>
+public readonly record struct YokeLedger(
+    long[] CutHits, long[] CutLost, long[] CutPassed, long[] NearHits,
+    long[] InHits, long[] InAmount, long[] Kills, long[] Overkill,
+    long CutOnPlayerHits, long CutOnPlayerLost, long CutOnEnemyHits, long CutOnEnemyLost,
+    long ArmorSoak, long InRelayedHits, long InRelayedAmount,
+    long InBurnHits, long InBurnAmount, long InLevyHits, long InLevyAmount,
+    long DirectHpLoss, Dictionary<string, (long Hits, long Lost)> CutBy)
+{
+    /// <summary>切られた一撃の総数。</summary>
+    public long Cuts => CutHits.Sum();
+    /// <summary>切り落とされた量の総和。</summary>
+    public long Lost => CutLost.Sum();
+    /// <summary>上限が効いている間に HP へ届いた量の総和。</summary>
+    public long Passed => InAmount.Sum();
+}
+
+/// <summary>
+/// 燃焼の重ね掛けの帳簿（第134期 段1）。<b>計数専用で、どの規則も読まない。</b>
+///
+/// <para><b>陣営の添字は受け手の側</b>——<c>0 = 敵に点いた火</c> / <c>1 = 味方に点いた火</c>。
+/// <see cref="BattleContext.Ignite"/> は<b>残ターンを上書きする（加算しない）</b>ので、
+/// 既に燃えている駒への再付与は「濃さ」を1ビットも変えない。<b>その捨てられている供給が
+/// 何回起きているか</b>だけを数える。</para>
+///
+/// <para><b>「区間」（＝消えるまでの点け直し回数）の定義。</b>
+/// <c>火が点いていない駒に点いた瞬間</c>に区間が開き、次のどれかで閉じる:
+/// <list type="bullet">
+/// <item><c>Expired</c> 残ターンが 0 まで落ちた（<c>TickStatuses</c> で燃え尽きた）</item>
+/// <item><c>Death</c> 燃えたまま倒れた（決着時に <c>IsAlive</c> が偽）</item>
+/// <item><c>Alive</c> 燃えたまま決着した（<c>IsAlive</c> が真）</item>
+/// </list>
+/// <b>1区間の「点け直し回数」は、その区間が開いてから閉じるまでに走った再付与の回数</b>
+/// （0 なら一度も煽られずに燃え尽きた）。<b>戦闘単位ではなく区間単位で数える</b>ので、
+/// 同じ駒が2度燃えれば2区間になる。</para>
+/// </summary>
+/// <param name="Lit">火が点いた回数（<c>relit == false</c>）。添字は受け手の陣営。</param>
+/// <param name="Relit">既に燃えている駒への再付与の回数。同上。</param>
+/// <param name="Episodes">閉じた区間の数。同上。</param>
+/// <param name="RelitSum">閉じた区間の点け直し回数の総和。同上。</param>
+/// <param name="RelitMax">1区間の点け直し回数の最大。同上。</param>
+/// <param name="Hist">点け直し回数の分布。<c>[陣営][0..5]</c> で <b>5 は「5回以上」</b>。</param>
+/// <param name="EndExpired">燃え尽きて閉じた区間の数。同上。</param>
+/// <param name="EndDeath">燃えたまま倒れて閉じた区間の数。同上。</param>
+/// <param name="EndAlive">燃えたまま決着して閉じた区間の数。同上。</param>
+/// <param name="By">点けた側の <c>Def.Id</c> → (点けた回数, 煽った回数)。<b>付け手が渡された着火だけ</b>。</param>
+/// <param name="On">点けられた側の <c>Def.Id</c> → (点いた回数, 煽られた回数)。</param>
+public readonly record struct BurnLedger(
+    long[] Lit, long[] Relit, long[] Episodes, long[] RelitSum, long[] RelitMax,
+    long[][] Hist, long[] EndExpired, long[] EndDeath, long[] EndAlive,
+    Dictionary<string, (long Lit, long Relit)> By,
+    Dictionary<string, (long Lit, long Relit)> On)
+{
+    /// <summary>着火の総回数（点いた ＋ 煽った）。</summary>
+    public long Fires => Lit.Sum() + Relit.Sum();
+
+    /// <summary>1区間あたりの平均の点け直し回数（<b>P1 の主判定</b>）。区間が 0 なら 0。</summary>
+    public double MeanRelit(int team)
+        => Episodes[team] > 0 ? (double)RelitSum[team] / Episodes[team] : 0.0;
+}
+
+/// <summary>
+/// 盤面ルールの対称性の帳簿（第134期 段2）。<b>計数専用で、どの規則も読まない。</b>
+///
+/// <para><b>第132期の <see cref="YokeLedger"/> と同じ形</b>を、渇き（<c>Drought</c>）と
+/// 粛（<c>Hush</c>）に当てたもの。あちらが「切られた側の陣営」を数えたのと同じく、
+/// <b>ここも数えるのは「課税された側の陣営」</b>——<c>0 = 敵</c> / <c>1 = 味方</c>。</para>
+///
+/// <para><b>規則は「両陣営に等しくかかる」と宣言されている</b>が、第132期に軛が
+/// <b>実質プレイヤー専用の税</b>だったことが実測で出ている。<b>対称性は規則ではなく
+/// 数値と在庫で決まる</b>ので、その2つを陣営別に数える。</para>
+/// </summary>
+/// <param name="DroughtHits">渇きが止めた回復の回数。添字は回復されるはずだった駒の陣営。</param>
+/// <param name="DroughtRequested">同・要求された量（<c>Heal</c> の引数）。</param>
+/// <param name="DroughtEffective">同・<b>実際に入るはずだった量</b>（<c>MaxHp - Hp</c> で切った後）。</param>
+/// <param name="DroughtOn">止められた駒の <c>Def.Id</c> → (回数, 実効量)。</param>
+/// <param name="HushBlocked">粛が<b>単独の原因で</b>止めたターン外の行動の回数。添字は行動しようとした駒の陣営。</param>
+/// <param name="HushBlockedAny">同・粛が閉じていた問い合わせの回数（痺れ等で既に落ちていた分を含む）。</param>
+/// <param name="HushByRoute">経路別の <c>HushBlocked</c>。<c>[経路][陣営]</c>（経路は <see cref="OutOfTurnRoute"/>）。</param>
+/// <param name="HushAsked">粛の有無に関わらず <c>CanActOutOfTurn</c> が問われた回数。添字は陣営。</param>
+/// <param name="HolderCount">保持者の数。添字は <see cref="BoardRuleLedger.RuleIndex"/>。</param>
+/// <param name="HolderFallTurn">保持者が全員倒れたターン（<c>0</c> ＝ 最後まで生きていた、または保持者がいない）。</param>
+public readonly record struct BoardRuleLedger(
+    long[] DroughtHits, long[] DroughtRequested, long[] DroughtEffective,
+    Dictionary<string, (long Hits, long Amount)> DroughtOn,
+    long[] HushBlocked, long[] HushBlockedAny, long[][] HushByRoute, long[] HushAsked,
+    int[] HolderCount, int[] HolderFallTurn)
+{
+    /// <summary>ルールの添字（<see cref="HolderCount"/> / <see cref="HolderFallTurn"/> 用）。</summary>
+    public enum RuleIndex { Yoke = 0, Drought = 1, Hush = 2, Inversion = 3 }
+
+    /// <summary>ルールの数（<see cref="RuleIndex"/> の要素数）。</summary>
+    public const int RuleCount = 4;
+}
+
 public sealed class BattleResult
 {
     public required bool PlayerWon { get; init; }
@@ -1782,6 +1916,15 @@ public sealed class BattleResult
     /// </summary>
     /// <summary>傷という通貨の帳簿（第120期・<see cref="WoundLedger"/>）。<b>計数専用。</b></summary>
     public required WoundLedger Wounds { get; init; }
+
+    /// <summary>上限（軛）の帳簿（第132期 段1・<see cref="YokeLedger"/>）。<b>計数専用。</b></summary>
+    public required YokeLedger Yoke { get; init; }
+
+    /// <summary>燃焼の重ね掛けの帳簿（第134期 段1・<see cref="BurnLedger"/>）。<b>計数専用。</b></summary>
+    public required BurnLedger Burns { get; init; }
+
+    /// <summary>盤面ルール（渇き・粛）の帳簿（第134期 段2・<see cref="BoardRuleLedger"/>）。<b>計数専用。</b></summary>
+    public required BoardRuleLedger BoardRules { get; init; }
 
     public required int ExposeCount { get; init; }
     public required int ExposeMissed { get; init; }
