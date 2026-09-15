@@ -20,12 +20,12 @@
 | 7 | `bear` | `BearRule` | `BearRule { ArmorPerDull = 2 }` |  | `curse` / `dull` / `ledger` | 第42期 | ○ |
 | 8 | `relay` | `RelayRule` | `RelayRule { TransferPercent = 100 }` |  | `curse` / `dull` / `relay` | 第43期 | ○ |
 | 9 | `slander` | `SlanderRule` | `SlanderRule { Penalty = 0 }` | ○ | `relay` / `slander` | 第44期 | ○ |
-| 10 | `overbear` | `OverbearRule` | `OverbearRule { Drain = 2 }` |  | `slander` / `overbear` | 第46期 |  |
+| 10 | `overbear` | `OverbearRule` | `OverbearRule { Drain = 2 }` |  | `slander` / `overbear` / `wildfire` | 第46期 |  |
 | 11 | `scale` | `ScaleRule` | `ScaleRule { CostPerAttack = 1 }` |  | `scale` / `scapegoat` / `divert` / `favor` / `miasma` / `goad` / `finisher` / `ledger` | 第47期 | ○ |
 | 12 | `scapegoat` | `ScapegoatRule` | `ScapegoatRule { Threshold = 3, Audit = False }` |  | `scapegoat` | 第49期 |  |
-| 13 | `divert` | `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` |  | `divert` / `compare` / `survive` | 第50期 | ○ |
+| 13 | `divert` | `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` |  | `divert` / `compare` / `survive` / `wildfire` | 第50期 | ○ |
 | 14 | `goad` | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` |  | `derive` / `guard` / `whet` / `goad` / `ledger` | 第52期 | ○ |
-| 15 | `finisher` | `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` |  | `finisher` / `ledger` / `compare` / `survive` | 第53期 | ○ |
+| 15 | `finisher` | `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` |  | `finisher` / `ledger` / `compare` / `survive` / `wildfire` | 第53期 | ○ |
 | 16 | `favor` | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` |  | `curse` / `favor` / `turn` / `ledger` | 第58期 | ○ |
 | 17 | `blaze` | `BlazeRule` | `BlazeRule { Targets = Both, Allies = True, Foes = True }` |  | `burn` / `blaze` / `ledger` / `ember` | 第59期 | ○ |
 | 18 | `funnel` | `FunnelRule` | `FunnelRule { Slowest = True, Both = False }` |  | `funnel` / `cross` | 第62期 | ○ |
@@ -53,9 +53,10 @@
 | 40 | `boss` | `BossRule` | `BossRule { Census = False }` | ○ | `seats` / `boss` / `tank` / `time` / `grade` / `demo` | 第117期 | ○ |
 | 41 | `nourish` | `NourishRule` | `NourishRule { Gain = 2 }` |  | `tank` / `time` | 第117期 | ○ |
 | 42 | `wound` | `WoundRule` | `WoundRule { Enabled = True, Census = False }` |  | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `cross` | 第85期 | ○ |
-| 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False }` | ○ | `burn` / `survive` / `ember` | 第130期 | ○ |
+| 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False }` | ○ | `burn` / `survive` / `ember` / `wildfire` | 第130期 | ○ |
+| 44 | `wildfire` | `WildfireRule` | `WildfireRule { Mode = None, Amount = 0, Active = False }` | ○ | `wildfire` | 第133期 | ○ |
 
-引数 43 本（`verbose` と観測子を除く）。
+引数 44 本（`verbose` と観測子を除く）。
 
 **`= default(T)` は「その規則が既定で何もしない」の機械的な手がかりであって、判定ではない。**
 採否そのものは**既定値の列**を読むこと——`ThornRule { Wound = None }` は残置、`SoakRule { Poison = True, Burn = False }` は毒側だけ採用、という具合に既定値が全部を語る。
@@ -73,12 +74,12 @@
 | `CreakRule` | `CreakRule { Threshold = 0, Source = Whet }` | ○ | `creak` / `traits` / `creak3` | 第66期 |
 | `CurseRule` | `CurseRule { Enabled = False, SharePercent = 50 }` | ○ | `curse` / `hex` / `lit` | 第95期 |
 | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` / `wound2` | 第93期 |
-| `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` | ○ | `divert` / `compare` / `survive` | 第50期 |
-| `EmberRule` | `EmberRule { Enabled = False }` | ○ | `burn` / `survive` / `ember` | 第130期 |
+| `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` | ○ | `divert` / `compare` / `survive` / `wildfire` | 第50期 |
+| `EmberRule` | `EmberRule { Enabled = False }` | ○ | `burn` / `survive` / `ember` / `wildfire` | 第130期 |
 | `EncoreRule` | `EncoreRule { Enabled = True }` | ○ | `encore` / `tempo` / `tomo` / `hold2` / `ledger` / `lit` | 第104期 |
 | `ExposeRule` | `ExposeRule { MaxPerBattle = 3 }` | ○ | `expose` / `creak3` / `ledger` | 第40期 |
 | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` | ○ | `curse` / `favor` / `turn` / `ledger` | 第58期 |
-| `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` | ○ | `finisher` / `ledger` / `compare` / `survive` | 第53期 |
+| `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` | ○ | `finisher` / `ledger` / `compare` / `survive` / `wildfire` | 第53期 |
 | `FunnelRule` | `FunnelRule { Slowest = True, Both = False }` | ○ | `funnel` / `cross` | 第62期 |
 | `GatherRule` | `GatherRule { Enabled = False }` | ○ | `audit` / `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `cross` / `demo` | 第89期 |
 | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` | ○ | `derive` / `guard` / `whet` / `goad` / `ledger` | 第52期 |
@@ -89,7 +90,7 @@
 | `MendRule` | `MendRule { Side = Plain }` | ○ | `curse` / `hex` / `mender` / `gauge` / `hold2` / `ledger` / `wound2` / `cross` | 第86期 |
 | `MenderCostRule` | `MenderCostRule { Percent = 50 }` | ○ | `tempo` / `hold` / `hold2` / `ledger` / `lit` / `wound2` | 第106期 |
 | `NourishRule` | `NourishRule { Gain = 2 }` | ○ | `tank` / `time` | 第117期 |
-| `OverbearRule` | `OverbearRule { Drain = 2 }` | ○ | `slander` / `overbear` | 第46期 |
+| `OverbearRule` | `OverbearRule { Drain = 2 }` | ○ | `slander` / `overbear` / `wildfire` | 第46期 |
 | `RageRule` | `RageRule { Mode = Amount, Gain = 3 }` | ○ | `tempo` / `hold` / `hold2` | 第106期 |
 | `ReaderRule` | `ReaderRule { Threshold = 5 }` | ○ | `lit` / `reader` / `boss` / `tank` / `grade` / `grade2` | 第115期 |
 | `RecoverRule` | `RecoverRule { HpPercent = 0, ReviveDead = False, Active = False }` |  | `choice` / `recover` | 第101期 |
@@ -107,10 +108,11 @@
 | `ThinBladeRule` | `ThinBladeRule { Cost = Always }` | ○ | `wcost` / `blade` / `ledger` / `cross` | 第75期 |
 | `ThornRule` | `ThornRule { Wound = None }` | ○ | `derive` / `curse` / `breadth` / `thorn` / `suture2` / `gauge` / `wound2` / `cross` | 第84期 |
 | `WhetMask` | `WhetMask { Bits = 0 }` | ○ | `creak3` / `spend` | 第65期 |
+| `WildfireRule` | `WildfireRule { Mode = None, Amount = 0, Active = False }` | ○ | `wildfire` | 第133期 |
 | `WoundRule` | `WoundRule { Enabled = True, Census = False }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `cross` | 第85期 |
 | `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `replay` / `wave2` / `ledger` | 第35期 |
 
-45 型。
+46 型。
 
 ## 3. 規則が使う列挙型
 
@@ -130,6 +132,7 @@
 | `SutureSide` | `Foe`=0 / `Both`=1 |
 | `ThinBladeCost` | `Always`=0 / `Unwounded`=1 / `Carving`=2 / `Slower`=3 |
 | `ThornWound` | `None`=0 / `Foe`=1 / `Both`=2 |
+| `WildfireMode` | `None`=0 / `Add`=1 / `Scale`=2 / `Flat`=3 |
 | `YieldMode` | `OwnTurn`=0 / `OwnTurnWindow`=1 / `Immediate`=2 |
 
-13 型。
+14 型。
