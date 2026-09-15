@@ -797,6 +797,12 @@ public abstract class RedirectGainTrait : Trait
         if (!guarded || dmg <= 0 || source is null || !self.IsAlive) return;
 
         int gain = Math.Max(1, dmg / DamagePerGain);
+        // 第135期の計数。**版に依らず数える**（`HarmRule` で切らない）——
+        // ガルドの一文「その傷のぶん強くなる」が実際に働いているかを決める唯一の窓口で、
+        // 傷の引き取り（`GatherRule`）とは別の機構である。**誰も読んで分岐しない。**
+        UnitTally rt = ctx.TallyOf(self);
+        rt.RedirectGainFires++;
+        rt.RedirectGain += gain;
         self.AtkBonus += gain;
         ctx.Log($"    {self.Name} が受けた傷が誓いを思い出させる（攻撃 +{gain} → {self.CurrentAttack}）",
             LogKind.Trigger);
@@ -1738,6 +1744,78 @@ public enum WoundReader { Gouge, Carve, Sever, Suture, Mend, Soak }
 /// <see cref="Colossus"/> だけは標的選択ではなく <see cref="BattleContext.ApplyDamage"/> の中の段。
 /// </summary>
 public enum GuardKind { Guardian, RearGuard, ThornGuard, Colossus, Martyr }
+
+/// <summary>
+/// <b>被弾1件の経路</b>（第135期・<b>計数専用</b>。どの規則も読まない）。
+///
+/// <para><b>新しい札を1つも足していない。</b> 分類は <see cref="BattleContext.ApplyDamage"/> が
+/// 既に持っている札（<c>burnTick</c> ／ <c>levy</c> ／ <c>relayed</c> ／ <c>isFriendlyFire</c> ／
+/// <see cref="BattleContext.HitFrame.Pattern"/>）と出どころだけから決まる
+/// ——第118期が「経路表を実測で検証するための計数専用」として立てた4つの札の、<b>読み手の側</b>である。</para>
+///
+/// <para><b><see cref="Poison"/> は「出どころが無く燃焼でもない削り」で引く。</b>
+/// 実装で該当するのは毒の刻み（<c>ApplyDamage(u, poison, null)</c>）1箇所きり
+/// ——もう1本の <c>source is null</c>（連鎖の自傷）は <c>isFriendlyFire</c> が立つので
+/// <see cref="Self"/> に落ちる。<b>経路を足したら、ここの分岐を数え直すこと</b>（第39期）。</para>
+/// </summary>
+public enum DamageRoute
+{
+    /// <summary>単体の一撃（<c>Pattern == Single</c>）。<b>庇いが割り込めるのはここだけ。</b></summary>
+    Single,
+    /// <summary>薙ぎ（主目標と副次目標の両方）。</summary>
+    Sweep,
+    /// <summary>貫き（レーンの各段）。</summary>
+    Pierce,
+    /// <summary>全体。</summary>
+    All,
+    /// <summary>毒の刻み。</summary>
+    Poison,
+    /// <summary>燃焼の刻み（<c>burnTick</c>）。</summary>
+    Burn,
+    /// <summary>徴収（<c>levy</c> ＝ 生贄・吸い・置き去りの削り）。</summary>
+    Levy,
+    /// <summary>肩代わりの中継（<c>relayed</c> ＝ 巨躯・分かち）。<b>他人のぶんを引き受けた量。</b></summary>
+    Relay,
+    /// <summary>味方の刃の巻き込み（型の付かない味方由来のダメージ）。</summary>
+    Friendly,
+    /// <summary>自傷（出どころが自分）。</summary>
+    Self,
+    /// <summary>型の付かない敵からの干渉（反撃・責め苦・抉り・破裂など）。</summary>
+    Other,
+}
+
+/// <summary>経路の名前（第135期）。<b>表示専用。</b></summary>
+public static class DamageRoutes
+{
+    /// <summary><see cref="DamageRoute"/> と同じ並び。</summary>
+    public static readonly string[] Names =
+        { "単体", "薙ぎ", "貫き", "全体", "毒", "燃焼", "徴収", "肩代わり", "巻き込み", "自傷", "その他" };
+
+    /// <summary>経路の数。<b>enum から引く</b>（手で写さない・第94期）。</summary>
+    public static readonly int Count = Enum.GetValues<DamageRoute>().Length;
+
+    /// <summary><b>範囲</b>（薙ぎ・貫き・全体）か。<b>庇いが1つも割り込めない型。</b></summary>
+    public static bool IsRange(DamageRoute r)
+        => r is DamageRoute.Sweep or DamageRoute.Pierce or DamageRoute.All;
+}
+
+/// <summary>
+/// 害の帳簿（第135期）。<b>計数だけのノブで、盤面は1ビットも動かさない。</b>
+///
+/// <para><see cref="Census"/> を真にすると、被弾1件ごとの経路別の帳簿
+/// （<see cref="UnitTally.HarmAmount"/> ほか）と、庇いの機会の計数が回る。
+/// <b>既定は偽</b>——`layout` は数百万戦を並列で回すので、配列の確保を常時入れない
+/// （<c>BossRule.Census</c> / <c>WoundRule.Census</c> と同じ作法）。</para>
+///
+/// <para><b>「ガルドは何で死んでいるか」を割るためだけにある。</b> 総量では
+/// 単体と範囲が区別できない（第134期——<b>同じ総数が3つの違う構造から出ていた</b>）ので、
+/// <b>総量の内訳と致命打の内訳を別々に持つ</b>。</para>
+/// </summary>
+public readonly record struct HarmRule(bool Census)
+{
+    /// <summary>既定は<b>数えない</b>（<c>compare</c> 305 セル 0 件が検算）。</summary>
+    public static HarmRule Default => new(false);
+}
 
 /// <summary>
 /// 傷という通貨そのもののノブ（第120期）。<b>既定は現行</b>（<c>compare</c> 305 セル 0 件が検算）。

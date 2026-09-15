@@ -2271,6 +2271,84 @@ public sealed class BattleContext
         if (n > 0) GuardAnyWoundedAlly[i]++;
     }
 
+    // =====================================================================================
+    // 第135期 —— 害の帳簿（HarmRule）。**engine に規則は1本も無い。計数だけ。**
+    //
+    // 既定（`HarmRule.Default` ＝ 数えない）では `HarmCensus` が偽なので、
+    // 配列は1本も確保されず、分類の分岐も1回も走らない（`compare` 305 セル 0 件が検算）。
+    // =====================================================================================
+
+    /// <summary>害の帳簿（第135期）。</summary>
+    public HarmRule Harm { get; }
+
+    /// <summary>帳簿を回すか。<b>規則が有効なときだけ。</b></summary>
+    public bool HarmCensus => Harm.Census;
+
+
+    /// <summary>
+    /// <b>直前の標的選択で介入が主目標を差し替えた相手</b>（第135期・<b>計数専用</b>）。
+    /// <see cref="SelectTargetChain"/> の冒頭で毎回 null に戻し、
+    /// <c>EmitIntercept</c> が立て、最初にその駒へ入ったダメージ1件で消費する。
+    ///
+    /// <para><b>盤面は1ビットも読まない・書かない。</b> 「庇って引き受けたぶん」と
+    /// 「素で狙われたぶん」を分けるためだけにあり、<see cref="RedirectGainTrait.PendingKey"/>
+    /// では足りない——あの印は庇う・殉教の2段にしか立たず、後備え・棘守り・標では立たない。</para>
+    /// </summary>
+    private UnitState? _interceptedInto;
+
+    /// <summary>
+    /// 被弾1件を経路別の帳簿へ入れる（第135期）。<b>盤面には一切影響しない。</b>
+    /// <see cref="ApplyDamage"/> が HP を引いた直後の1箇所からだけ呼ぶ。
+    /// </summary>
+    void NoteHarm(UnitState target, int amount, bool fatal,
+                  bool burnTick, bool levy, bool relayed, bool isFriendlyFire,
+                  AttackPattern? pattern, UnitState? source)
+    {
+        if (!HarmCensus || amount <= 0) return;
+
+        DamageRoute r;
+        if (burnTick) r = DamageRoute.Burn;
+        else if (levy) r = DamageRoute.Levy;
+        else if (relayed) r = DamageRoute.Relay;
+        else if (source is null) r = isFriendlyFire ? DamageRoute.Self : DamageRoute.Poison;
+        else if (source == target) r = DamageRoute.Self;
+        else if (pattern is AttackPattern p)
+            r = p switch
+            {
+                AttackPattern.Sweep => DamageRoute.Sweep,
+                AttackPattern.Pierce => DamageRoute.Pierce,
+                AttackPattern.All => DamageRoute.All,
+                _ => DamageRoute.Single,
+            };
+        else if (isFriendlyFire || source.TeamId == target.TeamId) r = DamageRoute.Friendly;
+        else r = DamageRoute.Other;
+
+        int i = (int)r;
+        UnitTally t = TallyOf(target);
+        int[] amt = t.HarmAmount ??= new int[DamageRoutes.Count];
+        int[] cnt = t.HarmHits ??= new int[DamageRoutes.Count];
+        amt[i] += amount;
+        cnt[i]++;
+
+        // 介入で引き受けた一撃か。**印は1件で消費する**（同じ差し替えを2度数えない）。
+        if (_interceptedInto == target)
+        {
+            _interceptedInto = null;
+            int[] gamt = t.HarmGuardAmount ??= new int[DamageRoutes.Count];
+            int[] gcnt = t.HarmGuardHits ??= new int[DamageRoutes.Count];
+            gamt[i] += amount;
+            gcnt[i]++;
+        }
+
+        // 致命打。**総量の内訳とは別に持つ**——「たくさん殴られている」と
+        // 「何で死んだか」は別の量である（第134期）。
+        if (fatal)
+        {
+            int[] f = t.HarmFatal ??= new int[DamageRoutes.Count];
+            f[i]++;
+        }
+    }
+
     /// <summary>
     /// 決着時に残っていた傷を帳簿へ落とす（第120期）。<b>死者も数える</b>——傷は死んでも消えない。
     /// <b>途中で数えると蘇生で二重計上になる</b>ので、1戦につき最後に1度だけ呼ぶ。
@@ -2570,7 +2648,8 @@ public sealed class BattleContext
                          LooseRule? loose = null, TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
                          NourishRule? nourish = null, WoundRule? wound = null,
-                         EmberRule? ember = null, CounterProbe? probe = null)
+                         EmberRule? ember = null, HarmRule? harm = null,
+                         CounterProbe? probe = null)
     {
         _rng = new Random(seed);
         Probe = probe;          // 第94期 (T2)。**既定 null。診断だけが渡す。**
@@ -2620,6 +2699,7 @@ public sealed class BattleContext
         Boss = boss ?? BossRule.Default;
         Nourish = nourish ?? NourishRule.Default;
         Wounds = wound ?? WoundRule.Default;
+        Harm = harm ?? HarmRule.Default;
     }
 
     // =====================================================================================
@@ -2843,9 +2923,18 @@ public sealed class BattleContext
         if (u.AcceptsSupport) return new[] { u };
         if (!u.HasTrait(TraitId.Stoic)) return Array.Empty<UnitState>();
 
-        return LivingMembers(u.TeamId)
+        var heads = LivingMembers(u.TeamId)
             .Where(a => a != u && a.AcceptsSupport && FormationRules.AreAdjacent(u.Slot, a.Slot))
             .ToList();
+        // 第135期の計数。**隣へ流した回数と宛先の延べ数**（指示書 Q0-5）。
+        // **量は持たない**——この窓口は「誰に配るか」しか知らない。量は素体対照で取る。
+        if (HarmCensus)
+        {
+            UnitTally st = TallyOf(u);
+            st.StoicSupportHops++;
+            st.StoicSupportHeads += heads.Count;
+        }
+        return heads;
     }
 
     public int Opponent(int teamId) => teamId == PlayerTeam ? EnemyTeam : PlayerTeam;
@@ -3009,6 +3098,18 @@ public sealed class BattleContext
     private void EmitIntercept(UnitState guard, UnitState target, string label)
     {
         TallyOf(guard).Intercepts++;
+        // 第135期。**段別の内訳**と、「次にこの駒へ入るダメージは引き受けたぶん」の印。
+        // どちらも計数専用で、盤面は1ビットも動かない（既定では配列も確保しない）。
+        if (HarmCensus)
+        {
+            int li = Array.IndexOf(InterceptLabels.All, label);
+            if (li >= 0)
+            {
+                int[] by = TallyOf(guard).InterceptsByLabel ??= new int[InterceptLabels.All.Length];
+                by[li]++;
+            }
+            _interceptedInto = guard;
+        }
         Emit(new BattleEvent
         {
             Kind = BattleEventKind.Intercept,
@@ -3242,11 +3343,27 @@ public sealed class BattleContext
     private UnitState? SelectTargetChain(UnitState attacker, AttackPattern? patternOverride, out int lane)
     {
         lane = -1;
+        // 第135期。**標的選択1回ごとに印を落とす**（計数専用）。立ったまま次の一撃へ持ち越すと、
+        // 破片が全額吸って `NoteHarm` に届かなかった介入が、無関係な被弾を「引き受けたぶん」に化けさせる。
+        _interceptedInto = null;
 
         List<UnitState> foes = LivingMembers(Opponent(attacker.TeamId)).ToList();
         if (foes.Count == 0) return null;
 
         AttackPattern pattern = patternOverride ?? attacker.CurrentPattern;
+
+        // 第135期の計数。**庇いは Single にしか効かない**ので、単体以外の一撃では
+        // 資格のある庇い手（前列に立つ Guardian / Martyr）は判定を振られることすらない。
+        // これが「庇えなかった範囲攻撃の数」＝受け流しの機会数の上限になる（指示書 Q0-3）。
+        //
+        // **貫きの早期リターンより前に置く。** 後ろに置くと貫きが丸ごと落ちて、
+        // 「庇えなかった範囲」から最大の経路が消える（実測でガルドの範囲の被弾の半分が貫き）。
+        // **主目標の除外（f != target）は掛けない**——貫きの時点では主目標がまだ決まっていない。
+        if (HarmCensus && pattern != AttackPattern.Single)
+            foreach (UnitState f in foes)
+                if (f.Row == Row.Front
+                    && (f.HasTrait(TraitId.Guardian) || f.HasTrait(TraitId.Martyr)))
+                    TallyOf(f).GuardRangeMissed++;
 
         if (pattern == AttackPattern.Pierce)
             return SelectPierceEntry(foes, out lane);
@@ -3365,6 +3482,10 @@ public sealed class BattleContext
 
         UnitState? guardian = PickOne(foes.Where(
             f => f.HasTrait(TraitId.Guardian) && f.Row == Row.Front && f != target).ToList());
+
+        // 第135期の計数。**鎖が庇いの段まで来て、この駒が 50% の判定を振られた回数。**
+        // 成立したぶんは InterceptsByLabel の側にあるので、差が「振って外した回数」になる。
+        if (HarmCensus && guardian is not null) TallyOf(guardian).GuardChances++;
 
         if (guardian is not null && Roll(100) < GuardianTrait.RedirectPercent)
         {
@@ -4273,6 +4394,10 @@ public sealed class BattleContext
 
         UnitTally tt = TallyOf(target);
         tt.DamageTaken += amount;
+        // 第135期。**経路別の帳簿**（既定では1行も走らない）。`target.Hp <= 0` がそのまま
+        // 「この一撃で倒れた」——死亡判定（`HandleDeath`）はこの数行下にあり、
+        // 死ぬ経路は `ApplyDamage` のここ1箇所しかない。
+        NoteHarm(target, amount, target.Hp <= 0, burnTick, levy, relayed, isFriendlyFire, pattern, source);
         // 第68期。被弾は**回数**で数える（量は DamageTaken の側。格子は回数に当てる）。
         NoteCarry(target, UnitTally.CarryHit, 1);
         if (source is not null && (isFriendlyFire || source.TeamId == target.TeamId))
@@ -5188,7 +5313,18 @@ public sealed class BattleContext
     public void Heal(UnitState target, int amount, UnitState? by = null)
     {
         if (!target.IsAlive || amount <= 0) return;
-        if (!target.AcceptsSupport) return;
+        if (!target.AcceptsSupport)
+        {
+            // 第135期の計数。**支援拒否（Stoic）が弾いた回復**（指示書 Q0-5）。
+            // 盤面は1ビットも動かない——弾く判断そのものは第22期から変わっていない。
+            if (HarmCensus)
+            {
+                UnitTally bt = TallyOf(target);
+                bt.StoicHealBlocked += amount;
+                bt.StoicHealBlockedFires++;
+            }
+            return;
+        }
 
         // 渇き（DroughtTrait）: 保持者が盤上に生きている間、回復は一切通らない。
         // **両陣営にかかる。** ここ1箇所で止めれば足りるのは、ここが回復の単一窓口だから
@@ -5371,14 +5507,15 @@ public static class BattleEngine
                                    TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
                                    NourishRule? nourish = null, WoundRule? wound = null,
-                                   EmberRule? ember = null, CounterProbe? probe = null)
+                                   EmberRule? ember = null, HarmRule? harm = null,
+                                   CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
-               nourish, wound, ember, probe);
+               nourish, wound, ember, harm, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -5411,14 +5548,15 @@ public static class BattleEngine
                                    LooseRule? loose = null, TaillightRule? taillight = null,
                          ReaderRule? reader = null, BossRule? boss = null,
                                    NourishRule? nourish = null, WoundRule? wound = null,
-                                   EmberRule? ember = null, CounterProbe? probe = null)
+                                   EmberRule? ember = null, HarmRule? harm = null,
+                                   CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
-                                    nourish, wound, ember, probe);
+                                    nourish, wound, ember, harm, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

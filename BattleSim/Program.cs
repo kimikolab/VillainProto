@@ -56005,6 +56005,20 @@ if (focusId == "ember")
     return;
 }
 
+// parry モード: ガルドは何で死んでいるか（と、受け流し）（第135期）。中身は `Parry.cs`。
+// **段1 は測るだけ**——engine に足したのは計数（`HarmRule.Census`）で、既定では配列を1本も確保しない。
+// `Presets` / `EnemyCatalog.Stages` / `UnitCatalog.All` は1文字も触らない。
+// `SurviveDiag` / `RelayDiag` と同じく**ここは振り分けの数行だけ**（Release のビルド時間）。
+//
+//     dotnet run --project BattleSim -c Release 0 parry phase0            # Q0-1〜Q0-10
+//     dotnet run --project BattleSim -c Release 0 parry harm > docs/harm.md  # 段1 の生成物
+//     dotnet run --project BattleSim -c Release 0 parry check [採用前のbalance.md]
+if (focusId == "parry")
+{
+    ParryDiag.Run(args.Length > 2 ? args[2] : "phase0", args.Length > 3 ? args[3] : "");
+    return;
+}
+
 // handoff モード: 会戦の交代の実態を計測する（第4期 Phase K）。「部隊を1つ足すと突破数の
 // 増分が編成によらずほぼ +1.00」の原因を、仮説 P（第1部隊が敵をほとんど削らずに全滅し、
 // 第2部隊は仕切り直しで1波抜くだけ＝拾えていない）と仮説 Q（拾えてはいるが、第2部隊の

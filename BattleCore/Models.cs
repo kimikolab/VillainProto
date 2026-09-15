@@ -945,6 +945,68 @@ public sealed class UnitTally
     public int Intercepts;
 
     /// <summary>
+    /// <b>段別の介入回数</b>（第135期・添字は <see cref="InterceptLabels.All"/> の並び）。
+    /// <see cref="Intercepts"/> の内訳で、<b>合計は必ず一致する</b>（自己検査）。
+    ///
+    /// <para>第125期に足した <see cref="Intercepts"/> は5段の合計しか持たないので、
+    /// <b>「ガルドが庇った回数」だけを引けなかった</b>——指示書 Q0-3 の分子はここ。
+    /// <b>既定では確保しない</b>（<c>HarmRule.Census</c> が偽なら1本も割り当たらない）。</para>
+    /// </summary>
+    public int[]? InterceptsByLabel;
+
+    /// <summary>
+    /// <b>庇いの機会</b>（第135期・<c>HarmRule.Census</c> のときだけ）。
+    ///
+    /// <para><c>GuardChances</c> 鎖が庇いの段まで来て、資格のある庇い手として数えられた回数
+    /// （＝<b>50% の判定を振られた回数</b>。成立したぶんは <see cref="InterceptsByLabel"/> の側）／
+    /// <c>GuardRangeMissed</c> <b>範囲攻撃だったので庇いの段に到達すらしなかった回数</b>
+    /// ——<b>これが「庇えなかった範囲攻撃の数」</b>で、受け流しの機会数の上限を決める。</para>
+    ///
+    /// <para><b>誰も読んで分岐しない。</b></para>
+    /// </summary>
+    public int GuardChances, GuardRangeMissed;
+
+    /// <summary>
+    /// <b>肩代わりで受けた傷が攻撃力に化けた量と回数</b>（第135期・<b>版に依らず数える</b>）。
+    /// <see cref="TraitId.Guardian"/> / <see cref="TraitId.Martyr"/> が共有する
+    /// <c>RedirectGainTrait.OnDamaged</c> の <c>self.AtkBonus += gain</c> の1箇所きり。
+    ///
+    /// <para><b>ガルドの一文「その傷のぶん強くなる」が死文かどうかを決める唯一の計数。</b>
+    /// 傷の引き取り（<c>GatherRule</c>・<see cref="GatherTaken"/>）とは<b>別の機構</b>で、
+    /// あちらは <see cref="StatusKeys.Wound"/> を移すだけで <c>AtkBonus</c> を1も動かさない。</para>
+    /// </summary>
+    public int RedirectGainFires, RedirectGain;
+
+    /// <summary>
+    /// <b>支援拒否（<see cref="TraitId.Stoic"/>）が弾いた回復</b>（第135期・<c>HarmRule.Census</c> のときだけ）。
+    /// <c>BattleContext.Heal</c> の <c>!target.AcceptsSupport</c> の早期リターンで数える。
+    /// <b>1体を選ぶ回復がガルドに届かなかった量と回数</b>そのもの。
+    /// </summary>
+    public int StoicHealBlocked, StoicHealBlockedFires;
+
+    /// <summary>
+    /// <b>支援拒否が隣へ流した回数と宛先の延べ数</b>（第135期・<c>HarmRule.Census</c> のときだけ）。
+    /// <c>BattleContext.SupportTargets</c> の <c>Stoic</c> の枝で数える。
+    /// <b>量は持たない</b>——あの窓口は「誰に配るか」しか知らない。
+    /// 量は素体対照（<c>Stoic</c> を外した版との差）で取る。
+    /// </summary>
+    public int StoicSupportHops, StoicSupportHeads;
+
+    /// <summary>
+    /// <b>経路別に受けたダメージの量と回数</b>（第135期・添字は <see cref="DamageRoute"/>）。
+    /// <c>HarmRule.Census</c> のときだけ確保する。<b>誰も読んで分岐しない。</b>
+    ///
+    /// <para><c>HarmGuardAmount</c> / <c>HarmGuardHits</c> は<b>そのうち介入で引き受けたぶん</b>
+    /// （庇う・後備え・殉教・棘守り・標のどれかが主目標を差し替えた一撃）。
+    /// 差が「素で狙われたぶん」になる。</para>
+    ///
+    /// <para><c>HarmFatal</c> は<b>倒れた一撃だけ</b>を経路別に数える（1回の死につき1件）。
+    /// <b>総量の内訳と一致しない</b>のがこの帳簿の要点で、
+    /// 「たくさん殴られている」と「何で死んだか」は別の量である（第134期）。</para>
+    /// </summary>
+    public int[]? HarmAmount, HarmHits, HarmGuardAmount, HarmGuardHits, HarmFatal;
+
+    /// <summary>
     /// <b>狙撃（<see cref="TraitId.Sniper"/>）が成立したまま振った回数</b>（第129期・<b>計数専用</b>）。
     /// 成立の条件（<c>HasFallenBack</c> かつ <c>Row.Back</c>）は <c>PerformAttack</c> が
     /// その場で評価して打点と攻撃型を書き換えるだけなので、<b>盤面にも計数にも痕跡が残らない</b>
@@ -1455,6 +1517,21 @@ public sealed class UnitTally
         Charges += o.Charges; BigAttacks += o.BigAttacks;
         Swallowed += o.Swallowed; Slumbers += o.Slumbers;
         Intercepts += o.Intercepts; Shouldered += o.Shouldered;
+        // 第135期。回数・量は単純加算。配列は遅延確保（`CarryAmount` と同じ作法）。
+        GuardChances += o.GuardChances; GuardRangeMissed += o.GuardRangeMissed;
+        RedirectGainFires += o.RedirectGainFires; RedirectGain += o.RedirectGain;
+        StoicHealBlocked += o.StoicHealBlocked; StoicHealBlockedFires += o.StoicHealBlockedFires;
+        StoicSupportHops += o.StoicSupportHops; StoicSupportHeads += o.StoicSupportHeads;
+        if (o.InterceptsByLabel is not null)
+        {
+            int[] mine = InterceptsByLabel ??= new int[o.InterceptsByLabel.Length];
+            for (int i = 0; i < mine.Length; i++) mine[i] += o.InterceptsByLabel[i];
+        }
+        MergeHarm(ref HarmAmount, o.HarmAmount);
+        MergeHarm(ref HarmHits, o.HarmHits);
+        MergeHarm(ref HarmGuardAmount, o.HarmGuardAmount);
+        MergeHarm(ref HarmGuardHits, o.HarmGuardHits);
+        MergeHarm(ref HarmFatal, o.HarmFatal);
         SniperSwings += o.SniperSwings;
         Refunds += o.Refunds; Refunded += o.Refunded;
         Kills += o.Kills; Deaths += o.Deaths;
@@ -1500,6 +1577,14 @@ public sealed class UnitTally
                     dst[j] = dst[j] == 0 ? src[j] : src[j] == 0 ? dst[j] : Math.Min(dst[j], src[j]);
             }
         }
+    }
+
+    /// <summary>害の帳簿の配列を足し込む（第135期）。<b>相手が確保していなければ何もしない。</b></summary>
+    static void MergeHarm(ref int[]? mine, int[]? other)
+    {
+        if (other is null) return;
+        mine ??= new int[other.Length];
+        for (int i = 0; i < mine.Length; i++) mine[i] += other[i];
     }
 }
 
