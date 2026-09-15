@@ -1007,6 +1007,16 @@ public sealed class UnitTally
     public int[]? HarmAmount, HarmHits, HarmGuardAmount, HarmGuardHits, HarmFatal;
 
     /// <summary>
+    /// <b>受け流し</b>（第135期・<see cref="TraitId.Parry"/>）。<b>誰も読んで分岐しない計数。</b>
+    /// <c>ParryFires</c> 弾いた回数 ／ <c>ParryBlocked</c> 弾いた総量 ／
+    /// <c>ParryBlockedMax</c> 1回で弾いた最大 ／ <c>ParryByRoute</c> 経路別の回数。
+    /// <b>既定（<c>ParryRule.Uses</c> = 0）では1度も動かない。</b>
+    /// </summary>
+    public int ParryFires, ParryBlocked, ParryBlockedMax;
+    /// <inheritdoc cref="ParryFires"/>
+    public int[]? ParryByRoute;
+
+    /// <summary>
     /// <b>狙撃（<see cref="TraitId.Sniper"/>）が成立したまま振った回数</b>（第129期・<b>計数専用</b>）。
     /// 成立の条件（<c>HasFallenBack</c> かつ <c>Row.Back</c>）は <c>PerformAttack</c> が
     /// その場で評価して打点と攻撃型を書き換えるだけなので、<b>盤面にも計数にも痕跡が残らない</b>
@@ -1532,6 +1542,9 @@ public sealed class UnitTally
         MergeHarm(ref HarmGuardAmount, o.HarmGuardAmount);
         MergeHarm(ref HarmGuardHits, o.HarmGuardHits);
         MergeHarm(ref HarmFatal, o.HarmFatal);
+        ParryFires += o.ParryFires; ParryBlocked += o.ParryBlocked;
+        ParryBlockedMax = Math.Max(ParryBlockedMax, o.ParryBlockedMax);
+        MergeHarm(ref ParryByRoute, o.ParryByRoute);
         SniperSwings += o.SniperSwings;
         Refunds += o.Refunds; Refunded += o.Refunded;
         Kills += o.Kills; Deaths += o.Deaths;

@@ -2284,6 +2284,8 @@ public sealed class BattleContext
     /// <summary>帳簿を回すか。<b>規則が有効なときだけ。</b></summary>
     public bool HarmCensus => Harm.Census;
 
+    /// <summary>受け流しの強度（第135期）。<b>既定は不活性</b>（<c>Uses = 0</c>）。</summary>
+    public ParryRule Parry { get; }
 
     /// <summary>
     /// <b>直前の標的選択で介入が主目標を差し替えた相手</b>（第135期・<b>計数専用</b>）。
@@ -2347,6 +2349,28 @@ public sealed class BattleContext
             int[] f = t.HarmFatal ??= new int[DamageRoutes.Count];
             f[i]++;
         }
+    }
+
+    /// <summary>
+    /// 受け流しを1件数える（第135期）。<b>盤面には一切影響しない。</b>
+    /// <b>経路は <see cref="NoteHarm"/> と同じ分類を使う</b>——ここへ来る時点で
+    /// 刻み・徴収・中継・味方の刃はすべて除外済みなので、攻撃型だけを見れば足りる。
+    /// </summary>
+    void NoteParry(UnitState target, int amount, AttackPattern? pattern, UnitState source)
+    {
+        UnitTally t = TallyOf(target);
+        t.ParryFires++;
+        t.ParryBlocked += amount;
+        if (amount > t.ParryBlockedMax) t.ParryBlockedMax = amount;
+        int[] cnt = t.ParryByRoute ??= new int[DamageRoutes.Count];
+        cnt[(int)(pattern switch
+        {
+            AttackPattern.Sweep => DamageRoute.Sweep,
+            AttackPattern.Pierce => DamageRoute.Pierce,
+            AttackPattern.All => DamageRoute.All,
+            AttackPattern.Single => DamageRoute.Single,
+            _ => DamageRoute.Other,
+        })]++;
     }
 
     /// <summary>
@@ -2649,7 +2673,7 @@ public sealed class BattleContext
                          ReaderRule? reader = null, BossRule? boss = null,
                          NourishRule? nourish = null, WoundRule? wound = null,
                          EmberRule? ember = null, HarmRule? harm = null,
-                         CounterProbe? probe = null)
+                         ParryRule? parry = null, CounterProbe? probe = null)
     {
         _rng = new Random(seed);
         Probe = probe;          // 第94期 (T2)。**既定 null。診断だけが渡す。**
@@ -2700,6 +2724,7 @@ public sealed class BattleContext
         Nourish = nourish ?? NourishRule.Default;
         Wounds = wound ?? WoundRule.Default;
         Harm = harm ?? HarmRule.Default;
+        Parry = parry ?? ParryRule.Default;
     }
 
     // =====================================================================================
@@ -4277,6 +4302,35 @@ public sealed class BattleContext
         if (!lethal) amount = Math.Min(amount, Math.Max(0, target.Hp - 1));
         if (amount <= 0) return;
 
+        // 受け流し（ParryTrait・第135期）: 1戦に ParryRule.Uses 回だけ、敵の一撃を丸ごと無効化する。
+        //
+        // **出口に置く。** 猶予・不死・軛と同じ族で、入口（ModifyIncomingDamage）だと
+        // 惨禍（+50%）や脆弱（×1.5）が 0 にしたつもりの量を押し戻す（第25期・第126期）。
+        // **破片・肩代わり・据え・散開・萎縮より後ろ**なので、弾くのは
+        // 「それら全部を通り抜けて自分に残ったぶん」だけ。
+        //
+        // **敵陣から来た攻撃だけ。** 刻み（毒・燃焼）も徴収（生贄・吸い・置き去り）も
+        // 味方の巻き込みも「敵の一撃」ではないので弾かない。
+        //
+        // **Uses <= 0 なら1ビットも動かない**（既定。保持者の走査もしない——軛と同じ短絡の作法）。
+        if (Parry.Uses > 0 && source is not null && source.TeamId != target.TeamId
+            && !burnTick && !levy && !isFriendlyFire
+            && target.HasTrait(TraitId.Parry)
+            && target.RawCounter(ParryTrait.UsedKey) < Parry.Uses
+            && (Parry.Scope == ParryScope.Any
+                || target.RawCounter(RedirectGainTrait.PendingKey) > 0))
+        {
+            target.SetCounter(ParryTrait.UsedKey, target.RawCounter(ParryTrait.UsedKey) + 1);
+            // **肩代わりの印をここで落とす。** 弾いた時点で OnDamaged が呼ばれなくなるので、
+            // 落とさないと印が次の被弾まで残って毒の刻みを肩代わりと取り違える
+            // （RedirectGainTrait が元から持っている懸念そのもの）。
+            // 「受け流すと育たない」は仕様——受けなかった傷では強くなれない。
+            target.SetCounter(RedirectGainTrait.PendingKey, 0);
+            NoteParry(target, amount, pattern, source);
+            Log($"    {target.Name} が {source.Name} の一撃を受け流した（{amount} を無効化）", LogKind.Trigger);
+            return;
+        }
+
         // 猶予（ReprieveTrait・第126期）: 致死の一撃を1戦に1度だけ HP1 で止める。
         //
         // **出口に置く。** 入口（ModifyIncomingDamage）だと惨禍（+50%）や脆弱が
@@ -5508,14 +5562,14 @@ public static class BattleEngine
                          ReaderRule? reader = null, BossRule? boss = null,
                                    NourishRule? nourish = null, WoundRule? wound = null,
                                    EmberRule? ember = null, HarmRule? harm = null,
-                                   CounterProbe? probe = null)
+                                   ParryRule? parry = null, CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
-               nourish, wound, ember, harm, probe);
+               nourish, wound, ember, harm, parry, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -5549,14 +5603,14 @@ public static class BattleEngine
                          ReaderRule? reader = null, BossRule? boss = null,
                                    NourishRule? nourish = null, WoundRule? wound = null,
                                    EmberRule? ember = null, HarmRule? harm = null,
-                                   CounterProbe? probe = null)
+                                   ParryRule? parry = null, CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
                                     relay, slander, overbear, scale, scapegoat, divert, goad, finisher,
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
-                                    nourish, wound, ember, harm, probe);
+                                    nourish, wound, ember, harm, parry, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

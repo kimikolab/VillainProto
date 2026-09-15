@@ -15,6 +15,7 @@ using BattleCore;
 //
 //     dotnet run --project BattleSim -c Release 0 parry phase0   # Q0-1〜Q0-10
 //     dotnet run --project BattleSim -c Release 0 parry harm > docs/harm.md   # 段1 の生成物
+//     dotnet run --project BattleSim -c Release 0 parry scan     # 段2 の台の下見（版は振らない）
 //     dotnet run --project BattleSim -c Release 0 parry run      # 段2（受け流しのローカル台）
 //     dotnet run --project BattleSim -c Release 0 parry check [採用前のbalance.md]
 // =====================================================================================
@@ -81,10 +82,11 @@ static class ParryDiag
         {
             case "phase0": Phase0(); return;
             case "harm": Harm(); return;
+            case "scan": Scan(); return;
             case "run": Stage2(); return;
             case "check": Check(arg); return;
             default:
-                Console.WriteLine("parry: モードは phase0 / harm / run / check（第135期）。");
+                Console.WriteLine("parry: モードは phase0 / harm / scan / run / check（第135期）。");
                 return;
         }
     }
@@ -701,12 +703,277 @@ static class ParryDiag
     // 段2 —— 受け流しをローカル台で測る
     // =================================================================================
 
+    // ---- 台（**診断のローカル**。`Presets` / `UnitCatalog.All` は1文字も触らない）------------
+    //
+    // 条件は指示書 §3-2 の3つ:
+    //   (1) **庇いが確実に起きる** —— ガルドを前1 に置き、庇われる味方を後ろに並べる
+    //   (2) **敵は単体攻撃と範囲攻撃の両方を持つ** —— 第2〜5波をそのまま使う
+    //       （第一波は分母に入れない＝規約 (G10)）
+    //   (3) **土台は全版で同一**
+    //
+    // 肩代わり役（ゴルム・ドハ・カド）は1枚も入れない——`ApplyDamage` の層で先に量を取られると
+    // 「ガルドに残ったぶん」が台ごとに変わり、受け流しが弾く量の意味が動く。
+    static (string Name, Formation F)[] Candidates() => new (string, Formation)[]
+    {
+        ("A 前が薄い", Formation.Build(
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Sero,
+            back1: UnitCatalog.Nono, back3: UnitCatalog.Dolga)),
+        ("B 前が硬い", Formation.Build(
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Nel,
+            back1: UnitCatalog.Hisa, back3: UnitCatalog.Kiri)),
+        ("C 後ろに出力", Formation.Build(
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Sero,
+            back1: UnitCatalog.Nono, back3: UnitCatalog.Borg)),
+        ("D 前に出力", Formation.Build(
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Sero,
+            back1: UnitCatalog.Nono, back3: UnitCatalog.Egu)),
+        ("E 前が硬い+出力", Formation.Build(
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Nel,
+            back1: UnitCatalog.Nono, back3: UnitCatalog.Kiri)),
+        ("F 脆い後列", Formation.Build(
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Zan, center: UnitCatalog.Sero,
+            back1: UnitCatalog.Hisa, back3: UnitCatalog.Dolga)),
+        ("G 前が硬い（HP78）", Formation.Build(
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Nono, center: UnitCatalog.Sero,
+            back1: UnitCatalog.Mudo, back3: UnitCatalog.Dolga)),
+        ("H 呪詛つき", Formation.Build(
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel,
+            back1: UnitCatalog.Nono, back3: UnitCatalog.Dolga)),
+        ("I 中央が回復", Formation.Build(
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Nono,
+            back1: UnitCatalog.Sero, back3: UnitCatalog.Dolga)),
+        ("J 前が硬い（呪詛）", Formation.Build(
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Nono, center: UnitCatalog.Nel,
+            back1: UnitCatalog.Sero, back3: UnitCatalog.Dolga)),
+        ("K 裂き入り", Formation.Build(
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Sero,
+            back1: UnitCatalog.Kiri, back3: UnitCatalog.Dolga)),
+    };
+
+    /// <summary>
+    /// 段2 で使う台（<b>`scan` の結果から選ぶ</b>）。
+    /// <b>台が床でも天井でもないこと</b>を先に測ってから固定する
+    /// ——素体の勝率が 40〜95% の外にある台では、版の差が定義上 0 にしかならない（第61・63期）。
+    ///
+    /// <para>11 候補のうち帯に入ったのは <b>A / G / H / K の4つ</b>。
+    /// このうち<b>庇いの成立回数がいちばん離れている2つ</b>を採った
+    /// ——A は 1.61 回/戦、H は 2.93 回/戦で、G (1.58) と K (1.66) は A とほぼ同じ形だった。
+    /// <b>「庇いの機会が何回あるか」が受け流しの効きを決める軸</b>なので、そこを振る。</para>
+    /// </summary>
+    static (string Name, Formation F)[] Tables()
+        => Candidates().Where(c => c.Name[0] is 'A' or 'H').ToArray();
+
+    /// <summary>
+    /// 台の下見（<b>版を1つも振らない</b>）。勝率が 40〜95% に入るか・庇いが起きるかだけを見る。
+    /// </summary>
+    static void Scan()
+    {
+        Console.WriteLine("# 第135期 段2 —— 台の下見（**版は1つも振らない**）");
+        Console.WriteLine();
+        Console.WriteLine("**台が床でも天井でもないことを先に測る**（第61期「素体の5波平均が 40% 以上」／");
+        Console.WriteLine("第63期「40〜95% の両側で切る」）——外にある台では版の差が定義上 0 にしかならない。");
+        Console.WriteLine("**庇いが 0 の台は測定不能**（受け入れ条件 A4）。");
+        Console.WriteLine();
+        Console.WriteLine($"分母: 第2〜5波 × seed 0..{Seeds - 1}。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 編成 | 勝率 | 帯 | 決着T | ガルド生存T | 庇い/戦 | 範囲で機会なし/戦 |");
+        Console.WriteLine("|---|---|---:|:-:|---:|---:|---:|---:|");
+        var harm = new HarmRule(true);
+        int gi = Array.IndexOf(InterceptLabels.All, InterceptLabels.Guardian);
+        foreach ((string name, Formation f) in Candidates())
+        {
+            long wins = 0, n = 0, turns = 0, life = 0, guards = 0, missed = 0;
+            for (int w = 1; w < EnemyCatalog.Stages.Count; w++)
+                for (int seed = 0; seed < Seeds; seed++)
+                {
+                    BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[w].Enemy, seed,
+                                                      verbose: false, harm: harm);
+                    n++;
+                    if (r.PlayerWon) wins++;
+                    turns += r.Turns;
+                    if (!r.TallyByUnit.TryGetValue("gald", out UnitTally? t)) continue;
+                    life += t.LastActiveTurn;
+                    guards += t.InterceptsByLabel is int[] L ? L[gi] : 0;
+                    missed += t.GuardRangeMissed;
+                }
+            double win = wins * 100.0 / n;
+            Console.WriteLine($"| {name} | " + string.Join(" / ", f.Occupied().Select(o => o.Def.Name))
+                + $" | {win:F1}% | {(win >= 40 && win <= 95 ? "**○**" : "×")} | {turns / (double)n:F2} | "
+                + $"{life / (double)n:F2} | {guards / (double)n:F2} | {missed / (double)n:F2} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("**採る台**: " + string.Join(" / ", Tables().Select(t => t.Name)));
+    }
+
+    /// <summary>`N の決め方` で引いた中央値（紙の節が読むだけ）。</summary>
+    static int GuardMedianCache;
+
+    static UnitDef GaldWith(TraitId extra) => new()
+    {
+        Id = UnitCatalog.Gald.Id, Name = UnitCatalog.Gald.Name, MaxHp = UnitCatalog.Gald.MaxHp,
+        Attack = UnitCatalog.Gald.Attack, Speed = UnitCatalog.Gald.Speed,
+        Advances = UnitCatalog.Gald.Advances,
+        Traits = UnitCatalog.Gald.Traits.Append(extra).ToArray(),
+        Pattern = UnitCatalog.Gald.Pattern, Actions = UnitCatalog.Gald.Actions,
+        PlusText = UnitCatalog.Gald.PlusText, MinusText = UnitCatalog.Gald.MinusText,
+        Flavor = UnitCatalog.Gald.Flavor,
+    };
+
     static void Stage2()
     {
         Console.WriteLine("# 第135期 段2 —— 受け流しをローカル台で測る");
         Console.WriteLine();
-        Console.WriteLine("**段1 の結果しだいで、この段には進まない**（指示書 §5-1）。");
-        Console.WriteLine("`parry harm` の表B・表D を先に読むこと。");
+        Console.WriteLine("**代金を付けない。掃引しない**（受け入れ条件 A6。第118・126・127・128・130期と同じ作法）。");
+        Console.WriteLine("**`Presets` / `EnemyCatalog.Stages` / `UnitCatalog.All` は1文字も触らない**");
+        Console.WriteLine("——台は診断のローカルで、`TraitId.Parry` の保持者は `UnitCatalog.All` に1枚もいない。");
+        Console.WriteLine();
+
+        // ---- N の決め方（**測る前に固定する**・受け入れ条件 A5）------------------------------
+        Console.WriteLine("## N の決め方（**§3-2 のとおり。実測の中央値から引く**）");
+        Console.WriteLine();
+        int median = GuardMedian(out int[] hist, out double mean, out long battles);
+        GuardMedianCache = median;
+        Console.WriteLine($"`compare` のガルドを含む 35 行 × 第2〜5波 × seed 0..{Seeds - 1} = **{battles} 戦**での");
+        Console.WriteLine("**庇いの成立回数 / 戦**の分布:");
+        Console.WriteLine();
+        Console.WriteLine("| 回数 | " + string.Join(" | ", Enumerable.Range(0, hist.Length - 1).Select(i => i.ToString())) + $" | {hist.Length - 1}+ |");
+        Console.WriteLine("|---|" + string.Concat(hist.Select(_ => "---:|")));
+        Console.WriteLine("| 戦 |" + string.Concat(hist.Select(v => $" {v} |")));
+        Console.WriteLine("| 割合 |" + string.Concat(hist.Select(v => $" {v * 100.0 / battles:F1}% |")));
+        Console.WriteLine();
+        Console.WriteLine($"**平均 {mean:F2} 回/戦・中央値 {median} 回/戦。**");
+        int[] ns = { 1, Math.Max(1, median), Math.Max(2, median * 2) };
+        ns = ns.Distinct().OrderBy(x => x).ToArray();
+        Console.WriteLine($"§3-2 の「1 / 中央値 / 中央値×2」は **N = {string.Join(" / ", ns)}**（重複は畳んだ）。");
+        Console.WriteLine();
+
+        // ---- 版 ---------------------------------------------------------------------------
+        var versions = new List<(string Name, ParryRule R)> { ("V0 対照", new ParryRule(0, ParryScope.Guarded)) };
+        foreach (int n in ns) versions.Add(($"V1 庇った分 N={n}", new ParryRule(n, ParryScope.Guarded)));
+        foreach (int n in ns) versions.Add(($"V2 自分への攻撃 N={n}", new ParryRule(n, ParryScope.Any)));
+
+        UnitDef parried = GaldWith(TraitId.Parry);
+        var harm = new HarmRule(true);
+
+        Console.WriteLine("## 表A —— 版 × 台");
+        Console.WriteLine();
+        Console.WriteLine("`生存T` はガルド、`守られた側` は同じ台の他の4枚の生存Tの平均。");
+        Console.WriteLine("**`庇い/戦` が 0 の版は測定不能として判定に使わない**（受け入れ条件 A4）。");
+        Console.WriteLine();
+
+        foreach ((string tn, Formation f0) in Tables())
+        {
+            Formation f = Swap(f0, "gald", parried);
+            Console.WriteLine($"### {tn} —— " + string.Join(" / ", f0.Occupied()
+                .Select(o => $"{FormationRules.SeatNames[o.Slot]} {o.Def.Name}")));
+            Console.WriteLine();
+            Console.WriteLine("| 版 | 勝率 | 決着T | 残存 | **ガルド生存T** | Δ | 守られた側 生存T | Δ | 庇い/戦 | 受け流し/戦 | 弾いた量/戦 | 1回の最大 | ガルド被弾/戦 |");
+            Console.WriteLine("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+
+            double baseLife = 0, baseAlly = 0, baseTaken = 0, baseBlockPer = 0;
+            var blocked = new Dictionary<string, long[]>(StringComparer.Ordinal);
+            foreach ((string vn, ParryRule rule) in versions)
+            {
+                long wins = 0, turns = 0, surv = 0, life = 0, ally = 0, allyN = 0;
+                long guards = 0, fires = 0, amt = 0, taken = 0; int mx = 0;
+                var byRoute = new long[DamageRoutes.Count];
+                long n = 0;
+                for (int w = 1; w < EnemyCatalog.Stages.Count; w++)
+                    for (int seed = 0; seed < Seeds; seed++)
+                    {
+                        BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[w].Enemy, seed,
+                                                          verbose: false, harm: harm, parry: rule);
+                        n++;
+                        if (r.PlayerWon) wins++;
+                        turns += r.Turns;
+                        surv += r.PlayerSurvivors;
+                        foreach (var kv in r.TallyByUnit)
+                        {
+                            if (f0.Occupied().All(o => o.Def.Id != kv.Key)) continue;
+                            if (kv.Key == "gald")
+                            {
+                                life += kv.Value.LastActiveTurn;
+                                guards += kv.Value.InterceptsByLabel is int[] L
+                                    ? L[Array.IndexOf(InterceptLabels.All, InterceptLabels.Guardian)] : 0;
+                                fires += kv.Value.ParryFires;
+                                amt += kv.Value.ParryBlocked;
+                                taken += kv.Value.DamageTaken;
+                                mx = Math.Max(mx, kv.Value.ParryBlockedMax);
+                                Acc(byRoute, kv.Value.ParryByRoute);
+                            }
+                            else { ally += kv.Value.LastActiveTurn; allyN++; }
+                        }
+                    }
+                double gl = life / (double)n, al = allyN == 0 ? 0 : ally / (double)allyN;
+                if (vn.StartsWith("V0", StringComparison.Ordinal)) { baseLife = gl; baseAlly = al; baseTaken = taken / (double)n; }
+                if (fires > 0 && baseBlockPer == 0) baseBlockPer = amt / (double)fires;
+                blocked[vn] = byRoute;
+                Console.WriteLine($"| {vn} | {wins * 100.0 / n:F1}% | {turns / (double)n:F2} | {surv / (double)n:F2} | "
+                    + $"{gl:F2} | {gl - baseLife:+0.00;-0.00;0.00} | {al:F2} | {al - baseAlly:+0.00;-0.00;0.00} | "
+                    + $"{guards / (double)n:F2} | {fires / (double)n:F2} | {amt / (double)n:F1} | {mx} | {taken / (double)n:F1} |");
+            }
+            Console.WriteLine();
+            // ---- 紙のスループット（規約 (G7)。**線が到達可能かを先に見る**＝(G11)・第118期）----
+            {
+                double hp = UnitCatalog.Gald.MaxHp;
+                double want = 1.0 / baseLife;                       // +1.0T に要る伸び率
+                double needN = want * hp / Math.Max(1, baseBlockPer);
+                Console.WriteLine($"**紙**: ガルドの最大HP {hp:F0} ／ 受け流し1回で弾く量 {baseBlockPer:F1} ／ "
+                    + $"V0 の生存T {baseLife:F2}。");
+                Console.WriteLine($"生存Tが実効HPに比例する（第126期の実測 `実測 ÷ 紙` が 30 席中 26 席で 0.9〜1.1）なら、");
+                Console.WriteLine($"**+1.0T に要る回数は N ≈ {needN:F1}**。");
+                Console.WriteLine($"§3-2 の決め方（中央値 {GuardMedianCache} を上限に 1 / 中央値 / 中央値×2）が許すのは **N ≤ 2**。");
+                Console.WriteLine();
+            }
+            Console.WriteLine("受け流した一撃の経路（**Q0-2 の致命打の経路と重なっているか**＝採否の条件2）:");
+            Console.WriteLine();
+            Console.WriteLine("| 版 | 受け流し 計" + RouteHeader() + " |");
+            Console.WriteLine("|---|---:" + RouteRule() + " |");
+            foreach ((string vn, ParryRule _) in versions)
+                Console.WriteLine($"| {vn} | {blocked[vn].Sum()}" + RouteCells(blocked[vn], true) + " |");
+            Console.WriteLine();
+        }
+
+        Console.WriteLine("## 採否（指示書 §5-2）");
+        Console.WriteLine();
+        Console.WriteLine("1. **ガルドの生存T が V0 より +1.0T 以上**（P4。第117期・第126期と同じ線）");
+        Console.WriteLine("2. **受け流した経路が Q0-2 の致命打の経路と重なっている**");
+        Console.WriteLine("3. **庇われた味方の生存Tも上がっている**");
+        Console.WriteLine();
+        Console.WriteLine("**1 と 2 の両方を満たすこと。**");
+    }
+
+    /// <summary>
+    /// 庇いの成立回数 / 戦 の<b>中央値</b>（N の決め方・受け入れ条件 A5）。
+    /// <b>`compare` のガルドを含む行が分母</b>で、段2 の台ではない
+    /// ——線は台を作る前に実測から引く。
+    /// </summary>
+    static int GuardMedian(out int[] hist, out double mean, out long battles)
+    {
+        hist = new int[8];
+        long sum = 0;
+        battles = 0;
+        int gi = Array.IndexOf(InterceptLabels.All, InterceptLabels.Guardian);
+        var harm = new HarmRule(true);
+        foreach ((string _, Formation f) in Presets.Compare)
+        {
+            if (f.Occupied().All(o => o.Def.Id != "gald")) continue;
+            for (int w = 1; w < EnemyCatalog.Stages.Count; w++)
+                for (int seed = 0; seed < Seeds; seed++)
+                {
+                    BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[w].Enemy, seed,
+                                                      verbose: false, harm: harm);
+                    battles++;
+                    int g = r.TallyByUnit.TryGetValue("gald", out UnitTally? t) && t.InterceptsByLabel is int[] L
+                        ? L[gi] : 0;
+                    sum += g;
+                    hist[Math.Min(g, hist.Length - 1)]++;
+                }
+        }
+        mean = sum / (double)battles;
+        long half = battles / 2, run = 0;
+        for (int i = 0; i < hist.Length; i++) { run += hist[i]; if (run > half) return i; }
+        return 0;
     }
 
     // =================================================================================
@@ -807,21 +1074,51 @@ static class ParryDiag
         Console.WriteLine();
 
         // (4) PickOne を新たに使っていない（必須4）
-        Console.WriteLine("## 必須4 —— `ctx.PickOne` を新たに使っていない");
+        // (d) 受け流しが不活性であること（`Uses = 0` なら札を持っていても1ビットも動かない）
+        Console.WriteLine("## (d) —— `ParryRule.Uses = 0` なら札を持っていても盤面が1ビットも動かない");
         Console.WriteLine();
-        // **呼び出しの形（`.PickOne(`）だけを数える**——語だけを数えるとこの見出しと
-        // 直上のコメントに自分で当たる（第123期。走査対象が走査する側のファイル自身）。
+        {
+            UnitDef parried = GaldWith(TraitId.Parry);
+            int dd = 0, dn = 0; long fires = 0;
+            foreach ((string _, Formation f0) in Tables())
+            {
+                Formation f = Swap(f0, "gald", parried);
+                for (int st = 1; st < EnemyCatalog.Stages.Count; st++)
+                    for (int seed = 0; seed < 50; seed++)
+                    {
+                        BattleResult a0 = BattleEngine.Run(f0, EnemyCatalog.Stages[st].Enemy, seed, verbose: false);
+                        BattleResult b0 = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false,
+                                                           parry: ParryRule.Default);
+                        dn++;
+                        if (a0.PlayerWon != b0.PlayerWon || a0.Turns != b0.Turns
+                            || a0.PlayerSurvivors != b0.PlayerSurvivors
+                            || a0.MaxEnemyKillsInOneTurn != b0.MaxEnemyKillsInOneTurn) dd++;
+                        if (b0.TallyByUnit.TryGetValue("gald", out UnitTally? t)) fires += t.ParryFires;
+                    }
+            }
+            Console.WriteLine($"- 札あり（`Uses = 0`）と札なしで勝敗・ターン・生存数・連鎖が一致: "
+                + $"**ずれ {dd} / {dn} 戦**{(dd == 0 ? "（○）" : "（×）")}");
+            Console.WriteLine($"- 受け流しの発火: **{fires} 回**{(fires == 0 ? "（○）" : "（×）")}");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## 必須4 —— `ctx` の抽選窓口を新たに使っていない");
+        Console.WriteLine();
+        // **呼び出しの形（名前 ＋ 開き括弧）だけを数える**——検索文字列は連結で組み、
+        // このコメント自身にも当たらない綴りにしてある
+        // （第123期。走査対象が走査する側のファイル自身なら、症状は「空」ではなく「静かに違う表」）。
         string self = ParryScan.Read(Path.Combine("BattleSim", "Parry.cs"));
         string eng2 = ParryScan.Read(Path.Combine("BattleCore", "BattleEngine.cs"));
         string call = "Pick" + "One(";
         Console.WriteLine($"- `BattleSim/Parry.cs` の呼び出し: **{Count(self, call)} 件**");
         Console.WriteLine($"- `BattleCore/BattleEngine.cs` の呼び出し: **{Count(eng2, call)} 件**"
-            + "（第134期の HEAD と同数。この期に足した計数は1件も呼んでいない）");
+            + "（この期の前の HEAD と同数。段1・段2 で足した計数も判定も1件も呼んでいない）");
         Console.WriteLine();
         Console.WriteLine("## 必須3 —— 触っていないノブの既定");
         Console.WriteLine();
         Console.WriteLine($"- `GatherRule.Default` = **`{GatherRule.Default}`**（第122期のまま）");
         Console.WriteLine($"- `SpillWoundRule.Default` = **`{SpillWoundRule.Default}`**");
         Console.WriteLine($"- `HarmRule.Default` = **`{HarmRule.Default}`**（この期に足した。既定は数えない）");
+        Console.WriteLine($"- `ParryRule.Default` = **`{ParryRule.Default}`**（この期に足した。既定は不活性）");
     }
 }

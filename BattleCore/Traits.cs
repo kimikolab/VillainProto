@@ -157,6 +157,15 @@ public enum TraitId
                 // **最大HP を触らないのが要点**——HP を膨らませる形だと囃し立て（最大HP最大の味方を選ぶ）
                 // のような「HP を読む選択」が動いて、延命以外のものまで測ってしまう
 
+    // --- 第135期で足した札（**ローカル台だけで測る。`UnitCatalog.All` には入れない**） ---
+    Parry,      // 受け流し: 1戦に `ParryRule.Uses` 回だけ、敵の一撃を**丸ごと無効化**する。
+                // **ロスター初の「無効化」**——猶予・不死は「殺さない」制約、軛と破片は「量を切る」で、
+                // 「1発を無かったことにする」機構は1枚も無かった（第135期 Q0-8）。
+                // **確率ではなく回数**にしてある（第135期 §0-4）——確率は敵の火力に比例するので
+                // 難易度カーブを平坦化し、主力のタンクの生死が運で振れる。
+                // **判定は engine の出口**（`ApplyDamage` の `target.Hp -= amount` の直前・猶予の直前）。
+                // 二値の制約なので入口には置けない（軛＝第25期・猶予＝第126期と同じ理由）。
+
     // --- 傷の5枚から切り出したマイナス（第74期・**器具**） ---
     // どれも既存の駒に既定で付いたままで、**盤面は1ビットも変わらない**（受け入れ基準は
     // `compare` 305 セル 0 件）。切り出した理由は1つだけ——**計量できるようにするため**。
@@ -6135,6 +6144,84 @@ public sealed class UndyingTrait : Trait
 }
 
 /// <summary>
+/// 受け流しの範囲（第135期）。<b>どちらを測るかは死因の内訳しだい</b>（指示書 §3-2）。
+/// </summary>
+public enum ParryScope
+{
+    /// <summary>V1 —— <b>庇って引き受けた一撃だけ</b>。ガルドの一文「味方への攻撃を肩代わりし」に沿う。</summary>
+    Guarded,
+    /// <summary>V2 —— <b>自分への敵の一撃すべて</b>。ポンの言う「技量でカバー」に沿い、範囲攻撃も弾ける。</summary>
+    Any,
+}
+
+/// <summary>
+/// 受け流し（第135期）。<b><see cref="Uses"/> が 0 なら完全に不活性</b>
+/// ——保持者がいても1回も走らない（<c>compare</c> 305 セル 0 件が検算）。
+///
+/// <para><b>確率ではなく回数。</b> 確率にすると弾いた量が敵の火力に比例し、
+/// 第五波の断罪や全体攻撃を弾いたときの価値が雑魚の一撃の何倍にもなる
+/// ——<b>難易度カーブが平坦化する</b>（反射を却下したのと同じ理由・第135期 §0-4）。
+/// 回数なら上限が自然に決まり、<b>主力のタンクの生死が運で振れない</b>。</para>
+///
+/// <para><b>代金を持たない。</b> 掃引もしない（第118・126・127・128・130・133期と同じ作法）
+/// ——対照は「素体に差し替える」＝<c>Uses = 0</c> で取る。</para>
+/// </summary>
+public readonly record struct ParryRule(int Uses, ParryScope Scope)
+{
+    /// <summary>既定は<b>不活性</b>（1回も受け流さない）。</summary>
+    public static ParryRule Default => new(0, ParryScope.Guarded);
+}
+
+/// <summary>
+/// 受け流し（第135期・<b>ロスター初の「無効化」</b>）。
+/// <b>1戦に <see cref="ParryRule.Uses"/> 回だけ、敵の一撃を丸ごと無かったことにする。</b>
+///
+/// <para><b>判定は engine の出口</b>（<c>ApplyDamage</c> の <c>target.Hp -= amount</c> の直前・
+/// 猶予（<see cref="ReprieveTrait"/>）の直前）。この札はログを出すだけで、
+/// <b><see cref="ParryRule.Uses"/> が 0 なら完全に不活性</b>（庇う・分かち・引き受けと同じ形）。
+/// <b>入口（<see cref="Trait.ModifyIncomingDamage"/>）に置いてはいけない</b>——あそこは
+/// 惨禍（+50%）や脆弱（×1.5）より手前なので、0 にしたつもりの量を後段が押し戻す
+/// （軛＝第25期・猶予＝第126期とまったく同じ理由。<b>二値の制約は出口にしか置けない</b>）。</para>
+///
+/// <para><b>破片・肩代わり・据え・散開・萎縮より後ろ。</b> 弾くのは
+/// <b>それら全部を通り抜けて自分に残ったぶん</b>で、破片が全額吸った一撃では発火しない
+/// （あちらが先に <c>amount &lt;= 0</c> で返る）。</para>
+///
+/// <para><b>刻みと徴収では発火しない。</b> 毒・燃焼の刻み（<c>burnTick</c> / 出どころ無し）と
+/// 徴収（<c>levy</c> ＝ 生贄・吸い・置き去りの削り）は「敵の一撃」ではない。
+/// 味方の巻き込みも弾かない——<b>受け流すのは敵陣から来た攻撃だけ</b>。</para>
+///
+/// <para><b>受け流した一撃では肩代わりの見返りが出ない。</b> 弾いた時点で
+/// <c>amount = 0</c> になり <see cref="Trait.OnDamaged"/> が呼ばれなくなるので、
+/// <see cref="RedirectGainTrait.PendingKey"/> をここで<b>明示的に落とす</b>
+/// ——落とさないと印が次の被弾まで残り、毒の刻みを肩代わりと取り違える
+/// （<c>RedirectGainTrait</c> が元から持っている懸念そのもの）。
+/// <b>「受け流すと育たない」は仕様である</b>——受けなかった傷では強くなれない。</para>
+///
+/// <para><b>1戦に N 回。</b> 使った回数は <see cref="UsedKey"/> の <c>Counters</c> に持つ
+/// ——<b>Trait インスタンスは全ユニットで共有されるシングルトン</b>なので、
+/// インスタンスフィールドに持つと `layout` の並列実行で壊れる（CLAUDE.md の明文の規則）。
+/// <b>会戦の境界では戻す</b>（<see cref="OnCarryOver"/>。猶予と同じ扱い）。</para>
+/// </summary>
+public sealed class ParryTrait : Trait
+{
+    /// <summary>この戦闘で何回使ったか（<c>Counters</c> のキー。<b>特性の私有物</b>）。</summary>
+    public const string UsedKey = "parryUsed";
+
+    public override TraitId Id => TraitId.Parry;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+    {
+        if (ctx.Parry.Uses <= 0) return;
+        ctx.Log($"  {self.Name} は{(ctx.Parry.Scope == ParryScope.Guarded ? "庇った一撃を" : "向けられた刃を")}"
+                + $" {ctx.Parry.Uses} 度だけ受け流せる", LogKind.Trigger);
+    }
+
+    /// <summary>「1戦に N 回」の「1戦」は部隊戦1回。持ち越すと2戦目以降が無防備になる。</summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(UsedKey, 0);
+}
+
+/// <summary>
 /// 育ち耐性（第126期・<b>案C。出力と生存を同じ通貨に乗せる</b>）。
 /// <b>自分の <c>AtkBonus</c> が閾値を越えている間、受けるダメージが減る。</b>
 ///
@@ -7721,6 +7808,7 @@ public static class TraitCatalog
         new ReprieveTrait(),
         new TemperedTrait(),
         new UndyingTrait(),
+        new ParryTrait(),
         // 第127期の器具。**上がる先だけが違う3本**（読む値も閾値も積み過ぎと共有する）。
         new GradeTrait(TraitId.GradePierce, AttackPattern.Pierce),
         new GradeTrait(TraitId.GradeAll, AttackPattern.All),
