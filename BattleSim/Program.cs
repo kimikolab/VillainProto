@@ -25500,6 +25500,10 @@ if (focusId == "checkup")
         [TraitId.Finisher]   = (HcBothL,  "標を必ず狙って倍で殴るのと、標を消費するのが1サイクル"),
         [TraitId.Favor]      = (HcBothL,  "燃えている味方を上げるのと、隣の燃えていない味方を鈍らせるのが1つの動作"),
         [TraitId.Betrayed]   = (HcBothL,  "喚び出しと、喚んだものが敵につくことが1つの動作"),
+        // 第132期 段0-a: 第128期に `GradeStep` を ドルガ に載せたとき、この表に足さなかったので
+        // `checkup` が「分類の無い札がある」で**3期ぶん止まっていた**（第131期に判明）。
+        // 分類は積み過ぎ（`Overload`）と同じ——読む値も閾値も共有し、違うのは上がる先の段だけ。
+        [TraitId.GradeStep]  = (HcPlusL,  "閾値を越えているあいだ薙ぎ・その `GradeTrait.StepFactor` 倍で全体。積めないのは条件（`Overload` と同型）"),
     };
 
     // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------
