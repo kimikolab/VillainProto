@@ -4679,7 +4679,9 @@ public sealed class BattleContext
         if (!lethal) amount = Math.Min(amount, Math.Max(0, target.Hp - 1));
         if (amount <= 0) return;
 
-        // 受け流し（ParryTrait・第135期）: 1戦に ParryRule.Uses 回だけ、敵の一撃を丸ごと無効化する。
+        // 受け流し（ParryTrait・第135期に置き、第136期 段2 に本採用）: 在庫（StockKey）が残っているあいだ、
+        // 敵の一撃を丸ごと無効化する。在庫は開戦時と毎ターン頭の構えで N に戻り、庇って身に受けるたび 1 戻る
+        // （どちらも特性側。engine は在庫を 1 減らすだけ——**規則は1本も足していない**）。
         //
         // **出口に置く。** 猶予・不死・軛と同じ族で、入口（ModifyIncomingDamage）だと
         // 惨禍（+50%）や脆弱（×1.5）が 0 にしたつもりの量を押し戻す（第25期・第126期）。
@@ -4689,15 +4691,15 @@ public sealed class BattleContext
         // **敵陣から来た攻撃だけ。** 刻み（毒・燃焼）も徴収（生贄・吸い・置き去り）も
         // 味方の巻き込みも「敵の一撃」ではないので弾かない。
         //
-        // **Uses <= 0 なら1ビットも動かない**（既定。保持者の走査もしない——軛と同じ短絡の作法）。
+        // **Uses <= 0 なら1ビットも動かない**（保持者の走査もしない——軛と同じ短絡の作法）。
         if (Parry.Uses > 0 && source is not null && source.TeamId != target.TeamId
             && !burnTick && !levy && !isFriendlyFire
             && target.HasTrait(TraitId.Parry)
-            && target.RawCounter(ParryTrait.UsedKey) < Parry.Uses
+            && target.RawCounter(ParryTrait.StockKey) > 0
             && (Parry.Scope == ParryScope.Any
                 || target.RawCounter(RedirectGainTrait.PendingKey) > 0))
         {
-            target.SetCounter(ParryTrait.UsedKey, target.RawCounter(ParryTrait.UsedKey) + 1);
+            target.SetCounter(ParryTrait.StockKey, target.RawCounter(ParryTrait.StockKey) - 1);
             // **肩代わりの印をここで落とす。** 弾いた時点で OnDamaged が呼ばれなくなるので、
             // 落とさないと印が次の被弾まで残って毒の刻みを肩代わりと取り違える
             // （RedirectGainTrait が元から持っている懸念そのもの）。
@@ -5171,6 +5173,9 @@ public sealed class BattleContext
     {
         dead.Hp = 0;
         TallyOf(dead).Deaths++;
+        // 第136期・計数のみ。倒れた瞬間に受け流しの在庫が残っていたか（＝在庫切れで死んだのか、上限を素通りしたのか）。
+        if (Parry.Uses > 0 && dead.HasTrait(TraitId.Parry))
+            TallyOf(dead).ParryStockAtDeath += dead.RawCounter(ParryTrait.StockKey);
         // 読まれないまま落ちた傷（第85期・自己検査 (j)）。**盤面には一切影響しない。**
         TallyOf(dead).WoundsAtDeath += dead.RawCounter(StatusKeys.Wound);
         TallyOf(dead).LastActiveTurn = _turn;   // 蘇生されて再度倒れると上書きされる（後の値が勝つ）

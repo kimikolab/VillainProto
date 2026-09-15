@@ -25723,7 +25723,9 @@ if (focusId == "checkup")
         [TraitId.Sniper]     = (HcPlusL,  "後退したあと後列にいれば2倍＋貫き"),
         [TraitId.Coward]     = (HcMinusL, "別の札。**ただし外すと後衛特化の起動条件（後退）を供給する者が居なくなる**"),
         [TraitId.Curse]      = (HcBothL,  "開戦時の敵全体への弱体と、味方全体への漏れが同じ発火"),
-        [TraitId.Guardian]   = (HcPlusL,  "味方への攻撃を肩代わりし、その傷で育つ"),
+        [TraitId.Guardian]   = (HcPlusL,  "味方への単体攻撃を必ず肩代わりし、身に受けるたび受け流しの在庫を1つ戻す（第136期。攻撃力は上がらない）"),
+        // 第136期 段2: 受け流しを本採用したときに足した（第128期の穴＝分類を足さずに `checkup` が止まる、を繰り返さない）。
+        [TraitId.Parry]      = (HcBothL,  "回数ぶん敵の一撃を無効化して構えで戻すのと、自分からは攻撃しないことが1つの札（`Pursuer` と同型）"),
         [TraitId.Stoic]      = (HcMinusL, "支援を受け付けない、だけの別の札"),
         [TraitId.Necro]      = (HcPlusL,  "味方が倒れるたび層を積む"),
         [TraitId.Sacrifice]  = (HcMinusL, "開戦時に隣接する味方を削る、だけの別の札"),
@@ -56340,7 +56342,7 @@ if (focusId == "parry")
 //     dotnet run --project BattleSim -c Release 0 wall check [段1のbalance.md]  # 自己検査
 if (focusId == "wall")
 {
-    WallDiag.Run(args.Length > 2 ? args[2] : "phase0", args.Length > 3 ? args[3] : "");
+    WallDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
     return;
 }
 

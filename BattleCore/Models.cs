@@ -1015,6 +1015,13 @@ public sealed class UnitTally
     public int ParryFires, ParryBlocked, ParryBlockedMax;
     /// <inheritdoc cref="ParryFires"/>
     public int[]? ParryByRoute;
+    /// <summary>
+    /// 受け流しの在庫の帳簿（第136期 段2・<b>計数専用</b>）。
+    /// <c>ParryStances</c> 構えで補充したターン数 ／ <c>ParryRefillTurn</c> 構えで戻した総数 ／
+    /// <c>ParryRefillGuard</c> 庇って身に受けて戻した回数 ／ <c>ParryRefillGuardWasted</c> 満タンで戻せなかった回数 ／
+    /// <c>ParryStockAtDeath</c> 倒れた瞬間の残り在庫の総和。
+    /// </summary>
+    public int ParryStances, ParryRefillTurn, ParryRefillGuard, ParryRefillGuardWasted, ParryStockAtDeath;
 
     /// <summary>
     /// <b>狙撃（<see cref="TraitId.Sniper"/>）が成立したまま振った回数</b>（第129期・<b>計数専用</b>）。
@@ -1563,6 +1570,9 @@ public sealed class UnitTally
         ParryFires += o.ParryFires; ParryBlocked += o.ParryBlocked;
         ParryBlockedMax = Math.Max(ParryBlockedMax, o.ParryBlockedMax);
         MergeHarm(ref ParryByRoute, o.ParryByRoute);
+        ParryStances += o.ParryStances; ParryRefillTurn += o.ParryRefillTurn;
+        ParryRefillGuard += o.ParryRefillGuard; ParryRefillGuardWasted += o.ParryRefillGuardWasted;
+        ParryStockAtDeath += o.ParryStockAtDeath;
         SniperSwings += o.SniperSwings;
         WildfireSwings += o.WildfireSwings; WildfireLit += o.WildfireLit;
         WildfireFoes += o.WildfireFoes; WildfireFoesSq += o.WildfireFoesSq;

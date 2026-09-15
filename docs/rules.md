@@ -55,8 +55,8 @@
 | 42 | `wound` | `WoundRule` | `WoundRule { Enabled = True, Census = False }` |  | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期 | ○ |
 | 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False }` | ○ | `burn` / `survive` / `ember` / `wildfire` | 第130期 | ○ |
 | 44 | `wildfire` | `WildfireRule` | `WildfireRule { Mode = None, Amount = 0, Active = False }` | ○ | `wildfire` | 第133期 | ○ |
-| 45 | `harm` | `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` | 第135期 | ○ |
-| 46 | `parry` | `ParryRule` | `ParryRule { Uses = 0, Scope = Guarded }` | ○ | `sever` / `parry` / `wall` | 第135期 | ○ |
+| 45 | `harm` | `HarmRule` | `HarmRule { Census = False }` | ○ | `sever` / `parry` / `wall` | 第135期 | ○ |
+| 46 | `parry` | `ParryRule` | `ParryRule { Uses = 4, Scope = Any, Relay = False }` |  | `sever` / `parry` / `wall` | 第135期 | ○ |
 
 引数 46 本（`verbose` と観測子を除く）。
 
@@ -85,7 +85,7 @@
 | `FunnelRule` | `FunnelRule { Slowest = True, Both = False }` | ○ | `funnel` / `cross` | 第62期 |
 | `GatherRule` | `GatherRule { Enabled = False }` | ○ | `audit` / `derive` / `curse` / `hex` / `encore` / `sever` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `parry` / `wall` / `cross` / `demo` | 第89期 |
 | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` | ○ | `derive` / `guard` / `whet` / `goad` / `ledger` | 第52期 |
-| `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` | 第135期 |
+| `HarmRule` | `HarmRule { Census = False }` | ○ | `sever` / `parry` / `wall` | 第135期 |
 | `HushRule` | `HushRule { Active = True }` | ○ | `curse` / `yoke` / `hush` / `replay` / `wave2` / `ledger` | 第35期 |
 | `IgniteRule` | `IgniteRule { Enabled = True }` | ○ | `audit` / `derive` / `curse` / `mender` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `cross` / `demo` | 第87期 |
 | `LooseRule` | `LooseRule { Shove = True }` | ○ | `tempo` / `hold` / `hold2` / `ledger` / `lit` | 第106期 |
@@ -94,7 +94,7 @@
 | `MenderCostRule` | `MenderCostRule { Percent = 50 }` | ○ | `tempo` / `hold` / `hold2` / `ledger` / `lit` / `wound2` | 第106期 |
 | `NourishRule` | `NourishRule { Gain = 2 }` | ○ | `tank` / `time` | 第117期 |
 | `OverbearRule` | `OverbearRule { Drain = 2 }` | ○ | `slander` / `overbear` / `wildfire` | 第46期 |
-| `ParryRule` | `ParryRule { Uses = 0, Scope = Guarded }` | ○ | `sever` / `parry` / `wall` | 第135期 |
+| `ParryRule` | `ParryRule { Uses = 4, Scope = Any, Relay = False }` | ○ | `sever` / `parry` / `wall` | 第135期 |
 | `RageRule` | `RageRule { Mode = Amount, Gain = 3 }` | ○ | `tempo` / `hold` / `hold2` | 第106期 |
 | `ReaderRule` | `ReaderRule { Threshold = 5 }` | ○ | `lit` / `reader` / `boss` / `tank` / `grade` / `grade2` | 第115期 |
 | `RecoverRule` | `RecoverRule { HpPercent = 0, ReviveDead = False, Active = False }` |  | `choice` / `recover` | 第101期 |

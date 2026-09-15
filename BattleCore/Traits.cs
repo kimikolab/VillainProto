@@ -295,7 +295,15 @@ public abstract class Trait
     /// </summary>
     public static bool SurrenderedTurn(BattleContext ctx, UnitState u)
         => !u.Traits.Where(t => !t.CanAct(ctx, u, ActionKind.Attack))
-                    .Any(t => !t.SurrendersTurn);
+                    .Any(t => !t.SurrendersTurnIn(ctx, u));
+
+    /// <summary>
+    /// <see cref="SurrendersTurn"/> の盤面を読める版（第136期 段3）。既定は静的な札をそのまま返す。
+    /// 受け流し（<see cref="ParryTrait"/>）だけが <see cref="ParryRule.Relay"/> を読んで上書きする
+    /// ——静的な札は ctx を受け取らないので、規則で切り替える段3 のスイッチはここでしか書けない。
+    /// <b>判定本体（<see cref="SurrenderedTurn"/>）はこちらを通す</b>（静的な札を直接読む箇所を残さない）。
+    /// </summary>
+    public virtual bool SurrendersTurnIn(BattleContext ctx, UnitState self) => SurrendersTurn;
 
     /// <summary>
     /// ターン外の攻撃（割り込み・追い打ち）ができるか。
@@ -723,6 +731,24 @@ public sealed class GuardianTrait : RedirectGainTrait
     public override TraitId Id => TraitId.Guardian;
 
     /// <summary>
+    /// 見返りの振り替え（第136期 段2）。<b>庇って身に受けるたび、受け流しの在庫が 1 戻る。攻撃力は上がらない。</b>
+    /// ポンの決定「ガルドに攻撃は期待していない。庇い時の攻撃力アップは要らない——受け流しの回数に振り替える」。
+    /// <b>受け流し（<see cref="ParryRule.Uses"/> &gt; 0 かつ札を持つ）でなければ既定＝攻撃力のまま</b>
+    /// ——<c>Uses = 0</c> の対照が段1 と1ビットも違わないため。上限は N（<see cref="ParryRule.Uses"/>）で切る。
+    /// </summary>
+    protected override void Reward(BattleContext ctx, UnitState self, int dmg, int gain)
+    {
+        if (ctx.Parry.Uses <= 0 || !self.HasTrait(TraitId.Parry)) { base.Reward(ctx, self, dmg, gain); return; }
+        int stock = self.RawCounter(ParryTrait.StockKey);
+        UnitTally t = ctx.TallyOf(self);
+        t.RedirectGainFires++;          // 発火は数える（版に依らない）。`RedirectGain`（攻撃力）は 0 のまま
+        if (stock >= ctx.Parry.Uses) { t.ParryRefillGuardWasted++; return; }
+        self.SetCounter(ParryTrait.StockKey, stock + 1);
+        t.ParryRefillGuard++;
+        ctx.Log($"    {self.Name} が受けた傷が誓いを思い出させる（受け流し {stock} → {stock + 1}）", LogKind.Trigger);
+    }
+
+    /// <summary>
     /// 傷の引き取り（第89期・<see cref="GatherRule"/>）。<b>庇いが成立した被弾のたび、
     /// 隣接する味方のうち傷がいちばん深い者から傷をひとつ自分へ移す。</b>
     ///
@@ -831,8 +857,18 @@ public abstract class RedirectGainTrait : Trait
         if (!guarded || dmg <= 0 || source is null || !self.IsAlive) return;
 
         int gain = Math.Max(1, dmg / DamagePerGain);
+        Reward(ctx, self, dmg, gain);
+    }
+
+    /// <summary>
+    /// 肩代わりの見返り（第136期 段2 に切り出した）。<b>既定は攻撃力</b>（殉教者はこのまま）。
+    /// <b>庇う（<see cref="GuardianTrait"/>）だけが受け流しの在庫に振り替える</b>——
+    /// 基底に書くと敵の殉教者にも及ぶ（Q0-7。`wall check` の (e) が敵側 0 件を実測する）。
+    /// </summary>
+    protected virtual void Reward(BattleContext ctx, UnitState self, int dmg, int gain)
+    {
         // 第135期の計数。**版に依らず数える**（`HarmRule` で切らない）——
-        // ガルドの一文「その傷のぶん強くなる」が実際に働いているかを決める唯一の窓口で、
+        // 一文「その傷のぶん強くなる」が実際に働いているかを決める唯一の窓口で、
         // 傷の引き取り（`GatherRule`）とは別の機構である。**誰も読んで分岐しない。**
         UnitTally rt = ctx.TallyOf(self);
         rt.RedirectGainFires++;
@@ -6172,7 +6208,8 @@ public sealed class UndyingTrait : Trait
 }
 
 /// <summary>
-/// 受け流しの範囲（第135期）。<b>どちらを測るかは死因の内訳しだい</b>（指示書 §3-2）。
+/// 受け流しの範囲（第135期）。第136期の採用値は <see cref="Any"/>（指示書 §4-3:
+/// 庇った一撃も素で狙われた一撃もどちらも受け流せる。V1 では死因に届かないことが第135期に出ている）。
 /// </summary>
 public enum ParryScope
 {
@@ -6183,70 +6220,112 @@ public enum ParryScope
 }
 
 /// <summary>
-/// 受け流し（第135期）。<b><see cref="Uses"/> が 0 なら完全に不活性</b>
-/// ——保持者がいても1回も走らない（<c>compare</c> 305 セル 0 件が検算）。
+/// 受け流しの規則（第135期に器具として作り、<b>第136期 段2 に本採用</b>）。
+/// <b><see cref="Uses"/> が 0 なら完全に不活性</b>——札を持っていても構えも在庫も1ビットも動かず、
+/// <c>CanAct</c> も真のまま（＝段1 の姿と同値。`wall check` の (c) が検算）。
+///
+/// <para><b><see cref="Uses"/> は在庫の上限 N。</b> 開戦時に N、<b>毎ターン頭の構えで N に戻り</b>、
+/// 庇って身に受けるたび 1 戻る（<see cref="GuardianTrait"/> の見返りの振り替え）。
+/// N の決め方は指示書 §5-2（段1 の実測から。`wall n`）。</para>
+///
+/// <para><b><see cref="Relay"/> は段3（中継）。</b> 真なら構えたターンを「差し出したターン」として売る
+/// （<see cref="Trait.SurrendersTurnIn"/> が読む）——号令（ガン）は隣へ流れ（<c>Stoic</c>）、
+/// 据え（バン）はガルド本人の被弾を半減する。<b>偽なら不動のカドと同じ扱い</b>（差し出すものが無い）。</para>
 ///
 /// <para><b>確率ではなく回数。</b> 確率にすると弾いた量が敵の火力に比例し、
 /// 第五波の断罪や全体攻撃を弾いたときの価値が雑魚の一撃の何倍にもなる
 /// ——<b>難易度カーブが平坦化する</b>（反射を却下したのと同じ理由・第135期 §0-4）。
 /// 回数なら上限が自然に決まり、<b>主力のタンクの生死が運で振れない</b>。</para>
 ///
-/// <para><b>代金を持たない。</b> 掃引もしない（第118・126・127・128・130・133期と同じ作法）
-/// ——対照は「素体に差し替える」＝<c>Uses = 0</c> で取る。</para>
+/// <para><b>書き換え可能な static のノブにしないこと</b>（Trait は共有シングルトンで
+/// `layout` は並列実行する。<see cref="MartyrRule"/> と同じ判断）。</para>
 /// </summary>
-public readonly record struct ParryRule(int Uses, ParryScope Scope)
+public readonly record struct ParryRule(int Uses, ParryScope Scope, bool Relay)
 {
-    /// <summary>既定は<b>不活性</b>（1回も受け流さない）。</summary>
-    public static ParryRule Default => new(0, ParryScope.Guarded);
+    /// <summary>第136期 段2 の採用値（N）。<b>`wall run` の掃引で決めた</b>——経緯は design/PHASE136_WALL.md。</summary>
+    public const int AdoptedUses = 4;
+
+    /// <summary>段3（中継）の採用値。</summary>
+    public const bool AdoptedRelay = false;
+
+    /// <summary>既定 ＝ 採用値。<c>Uses = 0</c> なら不活性（段1 と同値）。</summary>
+    public static ParryRule Default => new(AdoptedUses, ParryScope.Any, AdoptedRelay);
 }
 
 /// <summary>
-/// 受け流し（第135期・<b>ロスター初の「無効化」</b>）。
-/// <b>1戦に <see cref="ParryRule.Uses"/> 回だけ、敵の一撃を丸ごと無かったことにする。</b>
+/// 受け流し（第135期に器具・<b>第136期 段2 に本採用。ロスター初の「無効化」</b>）。
+/// <b>在庫（<see cref="StockKey"/>）が残っているあいだ、敵の一撃を丸ごと無かったことにする。</b>
 ///
-/// <para><b>判定は engine の出口</b>（<c>ApplyDamage</c> の <c>target.Hp -= amount</c> の直前・
-/// 猶予（<see cref="ReprieveTrait"/>）の直前）。この札はログを出すだけで、
-/// <b><see cref="ParryRule.Uses"/> が 0 なら完全に不活性</b>（庇う・分かち・引き受けと同じ形）。
-/// <b>入口（<see cref="Trait.ModifyIncomingDamage"/>）に置いてはいけない</b>——あそこは
-/// 惨禍（+50%）や脆弱（×1.5）より手前なので、0 にしたつもりの量を後段が押し戻す
-/// （軛＝第25期・猶予＝第126期とまったく同じ理由。<b>二値の制約は出口にしか置けない</b>）。</para>
+/// <para><b>3つの面が1つの札</b>（指示書 §4-3。分けられない）:
+/// (1) <b>受け流し</b>——判定は engine の出口（<c>ApplyDamage</c> の <c>lethal: false</c> のクランプの直後・
+/// 猶予の直前。第135期の段をそのまま使う）。<b>入口（<see cref="Trait.ModifyIncomingDamage"/>）に置いてはいけない</b>
+/// ——惨禍（+50%）や脆弱（×1.5）が 0 にしたつもりの量を後段が押し戻す（軛＝第25期・猶予＝第126期）。
+/// (2) <b>構え</b>——<c>CanAct(Attack)</c> を偽にして自分の手番では攻撃せず、<b>毎ターン頭（<see cref="OnTurnStart"/>）に在庫を N へ戻す</b>。
+/// (3) <b>振り替え</b>——庇って身に受けた一撃ごとに在庫が 1 戻る（<see cref="GuardianTrait"/> の見返り）。攻撃力は上がらない。</para>
+///
+/// <para><b>構えを `CanAct` 偽で書く理由</b>（第136期 Q0-1）: <c>Charge</c> も <c>Skill</c> も <c>IdleTurn</c> を立てない
+/// （engine のコメントに明記）ので、段3（中継＝号令・据えが買い取る）が書けるのは <c>CanAct</c> 偽の形だけ。
+/// 段2 と段3 で形を変えないために、段2 からこの形にしてある。<c>CanAct</c> 偽の経路には特性側のフックが無いので、
+/// 補充は行動順ループの外側（<c>OnTurnStart</c>）に置く——敵はほぼ全員ガルド（速4）より速いので、
+/// 「その手番で満タン」と「次のターン頭で満タン」は速 3 の敵（第一波の 3 体）を除いて同じ供給である。</para>
 ///
 /// <para><b>破片・肩代わり・据え・散開・萎縮より後ろ。</b> 弾くのは
-/// <b>それら全部を通り抜けて自分に残ったぶん</b>で、破片が全額吸った一撃では発火しない
-/// （あちらが先に <c>amount &lt;= 0</c> で返る）。</para>
+/// <b>それら全部を通り抜けて自分に残ったぶん</b>で、破片が全額吸った一撃では発火しない。
+/// <b>刻みと徴収では発火しない。</b> 毒・燃焼の刻み（<c>burnTick</c> / 出どころ無し）と
+/// 徴収（<c>levy</c>）は「敵の一撃」ではない。味方の巻き込みも弾かない——<b>受け流すのは敵陣から来た攻撃だけ</b>。</para>
 ///
-/// <para><b>刻みと徴収では発火しない。</b> 毒・燃焼の刻み（<c>burnTick</c> / 出どころ無し）と
-/// 徴収（<c>levy</c> ＝ 生贄・吸い・置き去りの削り）は「敵の一撃」ではない。
-/// 味方の巻き込みも弾かない——<b>受け流すのは敵陣から来た攻撃だけ</b>。</para>
+/// <para><b>受け流した一撃では肩代わりの見返りが出ない。</b> 弾いた時点で <c>amount = 0</c> になり
+/// <see cref="Trait.OnDamaged"/> が呼ばれなくなるので、<see cref="RedirectGainTrait.PendingKey"/> を engine が
+/// <b>明示的に落とす</b>——落とさないと印が次の被弾まで残り、毒の刻みを肩代わりと取り違える。
+/// <b>「受け流すと戻らない」は仕様である</b>——身に受けなかった庇いでは在庫は戻らない。</para>
 ///
-/// <para><b>受け流した一撃では肩代わりの見返りが出ない。</b> 弾いた時点で
-/// <c>amount = 0</c> になり <see cref="Trait.OnDamaged"/> が呼ばれなくなるので、
-/// <see cref="RedirectGainTrait.PendingKey"/> をここで<b>明示的に落とす</b>
-/// ——落とさないと印が次の被弾まで残り、毒の刻みを肩代わりと取り違える
-/// （<c>RedirectGainTrait</c> が元から持っている懸念そのもの）。
-/// <b>「受け流すと育たない」は仕様である</b>——受けなかった傷では強くなれない。</para>
+/// <para><b>状態は <c>Counters</c> に持つ</b>（Trait は共有シングルトン）。<b>会戦の境界では捨て、
+/// 次の部隊戦の開戦時に満タンから始める</b>（<see cref="OnCarryOver"/> / <see cref="OnBattleStart"/>）。</para>
 ///
-/// <para><b>1戦に N 回。</b> 使った回数は <see cref="UsedKey"/> の <c>Counters</c> に持つ
-/// ——<b>Trait インスタンスは全ユニットで共有されるシングルトン</b>なので、
-/// インスタンスフィールドに持つと `layout` の並列実行で壊れる（CLAUDE.md の明文の規則）。
-/// <b>会戦の境界では戻す</b>（<see cref="OnCarryOver"/>。猶予と同じ扱い）。</para>
+/// <para><b><see cref="Trait.SurrendersTurn"/> と <c>CanAct</c> は同じ札に載せる</b>
+/// （<see cref="ImmobileTrait"/> / <see cref="PursuerTrait"/> の doc）。段3 のスイッチ（<see cref="ParryRule.Relay"/>）は
+/// <see cref="SurrendersTurnIn"/>（ctx を受け取る側）で読む。
+/// <see cref="Trait.NeverAttacksOwnTurn"/> は既定（偽）のまま——静的な札で <c>Uses</c> を読めず、
+/// 灯の濾しの既定（<c>LitFilter.ActingNow</c>）は動的に <c>CanAct</c> を問うので実害は無い。</para>
 /// </summary>
 public sealed class ParryTrait : Trait
 {
-    /// <summary>この戦闘で何回使ったか（<c>Counters</c> のキー。<b>特性の私有物</b>）。</summary>
-    public const string UsedKey = "parryUsed";
+    /// <summary>残りの回数（<c>Counters</c> のキー。<b>特性の私有物</b>）。</summary>
+    public const string StockKey = "parryStock";
 
     public override TraitId Id => TraitId.Parry;
 
     public override void OnBattleStart(BattleContext ctx, UnitState self)
     {
         if (ctx.Parry.Uses <= 0) return;
+        self.SetCounter(StockKey, ctx.Parry.Uses);
         ctx.Log($"  {self.Name} は{(ctx.Parry.Scope == ParryScope.Guarded ? "庇った一撃を" : "向けられた刃を")}"
-                + $" {ctx.Parry.Uses} 度だけ受け流せる", LogKind.Trigger);
+                + $" {ctx.Parry.Uses} 度まで受け流せる（構え直すたび戻る{(ctx.Parry.Relay ? "・構えたターンは差し出す" : "")}）", LogKind.Trigger);
     }
 
-    /// <summary>「1戦に N 回」の「1戦」は部隊戦1回。持ち越すと2戦目以降が無防備になる。</summary>
-    public override void OnCarryOver(UnitState self) => self.SetCounter(UsedKey, 0);
+    /// <summary>構え。<b>毎ターン頭に在庫を N へ戻す</b>（行動順ループの外側。理由は型の doc）。</summary>
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (ctx.Parry.Uses <= 0 || !self.IsAlive) return;
+        int stock = self.RawCounter(StockKey);
+        if (stock >= ctx.Parry.Uses) return;
+        UnitTally t = ctx.TallyOf(self);
+        t.ParryStances++;
+        t.ParryRefillTurn += ctx.Parry.Uses - stock;
+        self.SetCounter(StockKey, ctx.Parry.Uses);
+        ctx.Log($"    {self.Name} が構え直した（受け流し {stock} → {ctx.Parry.Uses}）", LogKind.Trigger);
+    }
+
+    /// <summary>構えている駒は自分からは攻撃しない（<c>Uses = 0</c> なら従来どおり振る）。術・溜めは通す。</summary>
+    public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
+        => kind != ActionKind.Attack || ctx.Parry.Uses <= 0;
+
+    /// <summary>段3 のスイッチ。偽なら不動のカドと同じ（差し出すものが無い）。静的な側は偽で固定。</summary>
+    public override bool SurrendersTurn => false;
+    public override bool SurrendersTurnIn(BattleContext ctx, UnitState self) => ctx.Parry.Relay;
+
+    /// <summary>「1戦に N 回」の「1戦」は部隊戦1回。次の部隊戦の開戦時に満タンから始める。</summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(StockKey, 0);
 }
 
 /// <summary>

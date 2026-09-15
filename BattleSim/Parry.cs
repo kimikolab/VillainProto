@@ -107,6 +107,9 @@ static class ParryDiag
         public long GuardChances, GuardRangeMissed, RedirectFires, RedirectGain;
         public long GatherGuards, GatherHadDonor, GatherTaken;
         public long StoicHeal, StoicHealFires, StoicHops, StoicHeads;
+        // 第136期 段2: 受け流しの在庫の帳簿（表I）
+        public long ParryFires, ParryBlocked, ParryRefillGuard, ParryRefillGuardWasted, ParryStances, ParryRefillTurn, ParryStockAtDeath, AtkPeakSum;
+        public readonly long[] ParryByRoute = new long[DamageRoutes.Count];
         public readonly SortedSet<string> Rows = new(StringComparer.Ordinal);
     }
 
@@ -153,6 +156,15 @@ static class ParryDiag
                         L.StoicHealFires += t.StoicHealBlockedFires;
                         L.StoicHops += t.StoicSupportHops;
                         L.StoicHeads += t.StoicSupportHeads;
+                        L.ParryFires += t.ParryFires;
+                        L.ParryBlocked += t.ParryBlocked;
+                        L.ParryRefillGuard += t.ParryRefillGuard;
+                        L.ParryRefillGuardWasted += t.ParryRefillGuardWasted;
+                        L.ParryStances += t.ParryStances;
+                        L.ParryRefillTurn += t.ParryRefillTurn;
+                        L.ParryStockAtDeath += t.ParryStockAtDeath;
+                        L.AtkPeakSum += t.AtkPeak;
+                        Acc(L.ParryByRoute, t.ParryByRoute);
                         Acc(L.Amount, t.HarmAmount);
                         Acc(L.Hits, t.HarmHits);
                         Acc(L.GuardAmount, t.HarmGuardAmount);
@@ -379,6 +391,47 @@ static class ParryDiag
         Console.WriteLine();
         Console.WriteLine("**量を持つのは回復だけ。** 強化・弱体は `SupportTargets` が「誰に配るか」しか知らないので、");
         Console.WriteLine("量は素体対照（`Stoic` を外した版との差）で取る——`parry phase0` の Q0-5。");
+        Console.WriteLine();
+
+        // ---- 表I（第136期 段2）------------------------------------------------------
+        Console.WriteLine("## 表I —— 受け流しの在庫（第136期 段2・`ParryRule`）");
+        Console.WriteLine();
+        Console.WriteLine($"`ParryRule.Default` = **`{ParryRule.Default}`**。");
+        if (ParryRule.Default.Uses <= 0)
+        {
+            Console.WriteLine("**`Uses = 0` なので受け流しは1度も走らない**（この表は空）。");
+        }
+        else
+        {
+            Console.WriteLine("在庫は開戦時と毎ターン頭の構えで N に戻り、庇って身に受けるたび 1 戻る。**攻撃力は上がらない**（表G の `攻撃力 +/戦` が 0 になる）。");
+            Console.WriteLine();
+            Console.WriteLine("| 駒 | 受け流し 回/戦 | 無効化 量/戦 | 被弾に対する比 | 構え直し T/戦 | 構えで戻した/戦 | 庇いで戻した/戦 | 満タンで戻せず/戦 | 死亡時の残り在庫（平均） | 攻撃力の到達点 |");
+            Console.WriteLine("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+            foreach (string id in Watched)
+            {
+                Ledger L = led[id];
+                if (L.Battles == 0 || L.ParryFires == 0)
+                { Console.WriteLine($"| {NameOf(id)} | — | — | — | — | — | — | — | — | {(L.Battles == 0 ? "—" : (L.AtkPeakSum / (double)L.Battles).ToString("F2"))} |"); continue; }
+                double b = L.Battles;
+                Console.WriteLine($"| {NameOf(id)} | {L.ParryFires / b:F2} | {L.ParryBlocked / b:F1} | {(L.Taken + L.ParryBlocked == 0 ? "—" : (L.ParryBlocked * 100.0 / (L.Taken + L.ParryBlocked)).ToString("F1") + "%")} | "
+                    + $"{L.ParryStances / b:F2} | {L.ParryRefillTurn / b:F2} | {L.ParryRefillGuard / b:F2} | {L.ParryRefillGuardWasted / b:F2} | "
+                    + $"{(L.Deaths == 0 ? "—" : (L.ParryStockAtDeath / (double)L.Deaths).ToString("F2"))} | {L.AtkPeakSum / b:F2} |");
+            }
+            Console.WriteLine();
+            Console.WriteLine("受け流した一撃の経路（**表D の致命打の経路と重なっているか**）:");
+            Console.WriteLine();
+            Console.WriteLine("| 駒 | 回/戦" + RouteHeader() + " |");
+            Console.WriteLine("|---|---:" + RouteRule() + " |");
+            foreach (string id in Watched)
+            {
+                Ledger L = led[id];
+                if (L.Battles == 0 || L.ParryFires == 0) continue;
+                Console.WriteLine($"| {NameOf(id)} | {L.ParryFires / (double)L.Battles:F2}" + RouteCells(L.ParryByRoute, true) + " |");
+            }
+            Console.WriteLine();
+            Console.WriteLine("**`被弾に対する比` は 無効化 ÷（実際に受けた量 ＋ 無効化）**——受け流しが無ければ受けていたはずの量のうち、消えた割合。");
+            Console.WriteLine("**`死亡時の残り在庫` が 0 でなければ、上限（在庫）ではなく素通り（刻み・徴収・巻き込み）か一撃の大きさで死んでいる。**");
+        }
     }
 
     static double Pct(long[] v, Func<DamageRoute, bool> pick)
@@ -853,9 +906,9 @@ static class ParryDiag
         Console.WriteLine();
 
         // ---- 版 ---------------------------------------------------------------------------
-        var versions = new List<(string Name, ParryRule R)> { ("V0 対照", new ParryRule(0, ParryScope.Guarded)) };
-        foreach (int n in ns) versions.Add(($"V1 庇った分 N={n}", new ParryRule(n, ParryScope.Guarded)));
-        foreach (int n in ns) versions.Add(($"V2 自分への攻撃 N={n}", new ParryRule(n, ParryScope.Any)));
+        var versions = new List<(string Name, ParryRule R)> { ("V0 対照", new ParryRule(0, ParryScope.Guarded, false)) };
+        foreach (int n in ns) versions.Add(($"V1 庇った分 N={n}", new ParryRule(n, ParryScope.Guarded, false)));
+        foreach (int n in ns) versions.Add(($"V2 自分への攻撃 N={n}", new ParryRule(n, ParryScope.Any, false)));
 
         UnitDef parried = GaldWith(TraitId.Parry);
         var harm = new HarmRule(true);

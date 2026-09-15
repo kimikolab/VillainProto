@@ -68,10 +68,14 @@ public static class UnitCatalog
         MaxHp = 100,
         Attack = 9,
         Speed = 4,
-        Traits = new[] { TraitId.Guardian, TraitId.Stoic },
+        // 第136期 段2: 受け流し（`Parry`）を足し、庇いの見返りを攻撃力から在庫の補充へ振り替えた。
+        // 構えている（`ParryRule.Uses > 0`）あいだ自分の手番では攻撃しないので、踏み込みの札は据置（第131期 (a)）。
+        Advances = false,
+        Traits = new[] { TraitId.Guardian, TraitId.Stoic, TraitId.Parry },
         // 第122期に第90期 (P1) 以前の文へ戻した（`GatherRule` を降ろしたので傷は肩代わりしない）。
-        PlusText = "味方への攻撃を肩代わりし、その傷のぶん強くなる",
-        MinusText = "味方全体に配られる強化も弱体も自分には乗らず、隣接する味方へそのまま流れる（1体を選ぶ回復・強化は受け取れない）",
+        // 第136期 段2: 「その傷のぶん強くなる」を受け流しに置き換えた（回数は `ParryRule.Uses`）。
+        PlusText = "味方への単体攻撃を必ず肩代わりする / 向けられた刃を回数ぶん受け流して無かったことにし、毎ターン構え直して回数を戻す。庇って身に受けるたび回数が1つ戻る",
+        MinusText = "自分からは決して攻撃しない / 味方全体に配られる強化も弱体も自分には乗らず、隣接する味方へそのまま流れる（1体を選ぶ回復・強化は受け取れない）",
         Flavor = "誓約が壊れていて、もう誰の助けも届かない。"
     };
 
