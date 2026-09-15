@@ -272,9 +272,18 @@ if (focusId == "derive")
         // 規約 (G8) の必須3「触っていないノブの既定が動いていない」を `docs/rules.md` の差分で示す、が
         // **k のせいで常に偽になる**ので、検算の側を守るために出力から外す。
         // **初出（`ph[0]`）は動かない**——後から足される報告書の期番号は必ず既出より大きい。
-        return ph.Length == 0 ? "**不明**"
-             : ph.Length == 1 ? $"第{ph[0]}期"
-             : $"第{ph[0]}期〜";
+        //
+        // **第132期 段0-b: 「〜」も落とした。** 第124期は「（k 期）」だけを落としたが、
+        // **「〜」に同じ自己参照が1ビットぶん残っていた**——「初出だけ」と書いてあるのに
+        // `ph.Length` を見ているので、**指示書がそのノブの型名を挙げただけで
+        // 「第nn期」→「第nn期〜」に変わる**（第131期に実測。第130期に初出のノブが「第130期〜」に変わった）。
+        // **この註では型名を1つも書かない**——`測った診断` の列は本文まるごとで結ぶので、
+        // ここに型名を書くと**そのノブの利用者に `derive` が付く**（この期に実際に踏んだ）。
+        // **常に1行動く検算は、検算として死んでいる**——規約 (G8) の必須3
+        // （触っていないノブの既定が動いていない）を `docs/rules.md` 丸ごとの差分で示す、が
+        // 指示書が既存のノブに言及した期には必ず偽になり、毎期「札のせいか自己参照か」を
+        // 人力で切り分けることになる。**部分的に塞ぐと残りに気づけない**（第124期の積み残し）。
+        return ph.Length == 0 ? "**不明**" : $"第{ph[0]}期";
     }
 
     // =================================================================================
@@ -289,7 +298,7 @@ if (focusId == "derive")
         Console.WriteLine("**この表は全部が実装から derive されている**（第94期 (T1)）。"
                           + "型名・引数名・既定値は reflection、`測った診断` は `BattleSim/Program.cs` の "
                           + "`focusId == \"...\"` の区間（**別ファイルの診断はそこが名前を挙げているクラスで結ぶ**）、"
-                          + "`期` は `design/PHASE*.md` の本文からそれぞれ引いた。"
+                          + "`初出` は `design/PHASE*.md` の本文からそれぞれ引いた（**初出の期だけ。範囲は出さない**——第132期 段0-b）。"
                           + "**手で書いた項目は1つも無い。**");
         Console.WriteLine();
         Console.WriteLine("> **以後の指示書は既定値をここから引くこと。手で写さない。**");
@@ -299,7 +308,7 @@ if (focusId == "derive")
 
         Console.WriteLine("## 1. `BattleEngine.Run` の引数（ノブの正本）");
         Console.WriteLine();
-        Console.WriteLine("| # | 引数名 | 型 | 既定値（実装） | `= default(T)` | 測った診断 | 期（design/） | CLAUDE.md / LESSONS |");
+        Console.WriteLine("| # | 引数名 | 型 | 既定値（実装） | `= default(T)` | 測った診断 | 初出（design/） | CLAUDE.md / LESSONS |");
         Console.WriteLine("|--:|---|---|---|:-:|---|---|:-:|");
         var dvPars = dvRun.GetParameters().Skip(3).ToArray();   // player / enemy / seed を除く
         int dvNo = 0;
@@ -326,7 +335,7 @@ if (focusId == "derive")
 
         Console.WriteLine("## 2. `Default` を持つ型の全数（`Run` の引数に出ないものを含む）");
         Console.WriteLine();
-        Console.WriteLine("| 型 | 既定値 | `Run` の引数 | 測った診断 | 期（design/） |");
+        Console.WriteLine("| 型 | 既定値 | `Run` の引数 | 測った診断 | 初出（design/） |");
         Console.WriteLine("|---|---|:-:|---|---|");
         var dvArgTypes = dvPars.Select(p => Nullable.GetUnderlyingType(p.ParameterType) ?? p.ParameterType).ToHashSet();
         int dvTypeN = 0;
