@@ -13,6 +13,7 @@ public partial class Main : Control
     private readonly Dictionary<string, RosterCard> _rosterCards = new(StringComparer.Ordinal);
     private readonly Dictionary<int, string> _statusByPawn = new();
     private readonly HashSet<int> _burningSnapshot = new();
+    private readonly Dictionary<int, (int Marked, int Stunned, int Armor)> _statusEffectSnapshot = new();
     private readonly HashSet<int> _poisonedSnapshot = new();
     private readonly Dictionary<int, DemoOpening> _openingById = new();
     private readonly Dictionary<int, string> _statusCauseByDamageIndex = new();
@@ -866,6 +867,7 @@ public partial class Main : Control
             case BattleEventKind.TurnStart:
                 _battleField.EndGuards();
                 _burningSnapshot.Clear();
+                _statusEffectSnapshot.Clear();
                 _poisonedSnapshot.Clear();
                 _statusByPawn.Clear();
                 _battleField.SetTurn(e.Turn);
@@ -877,6 +879,11 @@ public partial class Main : Control
                 if (target is not null && e.Text is { } key && e.Amount > 0)
                 {
                     if (key == StatusKeys.LabelOf(StatusKeys.Burn)) _burningSnapshot.Add(target.InstanceId);
+                    var effects = _statusEffectSnapshot.GetValueOrDefault(target.InstanceId);
+                    if (key == StatusKeys.LabelOf(StatusKeys.Marked)) effects.Marked = e.Amount;
+                    if (key == StatusKeys.LabelOf(StatusKeys.Stun)) effects.Stunned = e.Amount;
+                    if (key == StatusKeys.LabelOf(StatusKeys.Armor)) effects.Armor = e.Amount;
+                    _statusEffectSnapshot[target.InstanceId] = effects;
                     if (key == StatusKeys.LabelOf(StatusKeys.Poison)) _poisonedSnapshot.Add(target.InstanceId);
                     string label = DisplayStatusKey(key);
                     _statusByPawn[target.InstanceId] = string.IsNullOrEmpty(_statusByPawn.GetValueOrDefault(target.InstanceId))
@@ -889,6 +896,11 @@ public partial class Main : Control
             case BattleEventKind.StatSnapshot:
                 // 各駒の状態一覧の直後。最後の燃焼ダメージを見せてから消火する。
                 if (target is not null) target.SetBurning(_burningSnapshot.Contains(target.InstanceId));
+                if (target is not null)
+                {
+                    var effects = _statusEffectSnapshot.GetValueOrDefault(target.InstanceId);
+                    target.SetStatusEffects(effects.Marked, effects.Stunned, effects.Armor);
+                }
                 if (target is not null) target.SetPoisoned(_poisonedSnapshot.Contains(target.InstanceId));
                 target?.SetAttack(e.Amount, e.Pattern);
                 break;

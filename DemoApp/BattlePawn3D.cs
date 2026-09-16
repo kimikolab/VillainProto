@@ -35,6 +35,7 @@ public partial class BattlePawn3D : Node3D
     private Vector3? _guardPosition;
     private Node3D _fire = null!;
     private PoisonEffect3D _poison = null!;
+    private StatusEffects3D _statusEffects = null!;
     public double AnimationSpeed { get; set; } = 1;
     public Vector3 RestPosition => _guardPosition ?? _home;
     public bool IsGuarding => _guardPosition is not null;
@@ -80,6 +81,11 @@ public partial class BattlePawn3D : Node3D
         _portraitMaterial.SetShaderParameter("portrait_texture", portrait);
     }
     public void SetPoisoned(bool poisoned) => _poison.SetActive(poisoned && _alive && !_victory);
+    public void SetStatusEffects(int marked, int stunned, int armor)
+    {
+        bool active = _alive && !_victory;
+        _statusEffects.SetAmounts(active ? marked : 0, active ? stunned : 0, active ? armor : 0);
+    }
 
     public int InstanceId { get; private set; }
     public int Team { get; private set; }
@@ -219,6 +225,9 @@ void fragment() {
         bool hasCustomPortrait = UiKit.HasCustomBattlePortrait(opening.UnitId)
             || UiKit.HasCustomPortrait(opening.UnitId);
         _portraitHeight = UiKit.PortraitWorldHeight(opening.UnitId);
+        _statusEffects = new StatusEffects3D();
+        _statusEffects.Configure(_portraitHeight, _phase);
+        AddChild(_statusEffects);
         float bottomPadding = UiKit.HasCustomBattlePortrait(opening.UnitId)
             ? UiKit.BattlePortraitBottomPaddingRatio(opening.UnitId)
             : 0.0f;
@@ -429,6 +438,7 @@ void fragment() {
     {
         if (!_alive) return;
         _alive = false;
+        SetStatusEffects(0,0,0);
         _poison.Clear();
         SetBurning(false);
         _guardPosition = null;
@@ -481,6 +491,7 @@ void fragment() {
     {
         if (!_alive || Team != BattleContext.PlayerTeam) return;
         _victory = true;
+        SetStatusEffects(0,0,0);
         _poison.Clear();
         _motion?.Kill();
         _guardPosition = null;
