@@ -14558,7 +14558,10 @@ if (focusId == "carry")
 
         var soloWith = new Dictionary<string, List<double>>();
         var soloAlone = new Dictionary<string, List<double>>();
-        foreach (UnitDef u in cyRoster) { soloWith[u.Id] = new List<double>(); soloAlone[u.Id] = new List<double>(); }
+        // **第141期: 箱は `Everyone`（`All ∪ Retired`）で作る。** `compare` の行にはエグ（第139期に `All` から外した）が
+        // 残っているので、`cyRoster`（＝`All` のうち compare に出る駒）だけで箱を作ると `soloWith["egu"]` で落ちる。
+        // **表（D-2 以降）は `cyRoster` を回すので行数は動かない**——箱が増えるだけ。
+        foreach (UnitDef u in UnitCatalog.Everyone.Where(x => cyUnitRows.ContainsKey(x.Id))) { soloWith[u.Id] = new List<double>(); soloAlone[u.Id] = new List<double>(); }
 
         Console.WriteLine("## D-1. 行 × 駒（寄与と相方の有無）");
         Console.WriteLine();
