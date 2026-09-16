@@ -14,39 +14,54 @@
 2 を飛ばすと勝率表が嘘になる。差分が出ないこと自体が
 「触ったがバランスは動いていない」という情報になるので、必ず測り直す。
 
-### `docs/` の生成物は8ファイル
+### `docs/` の生成物は14ファイル
 
 **全部が BattleSim の出力。手で編集しても次の生成で消える。**
-`編成数依存` は、行数が `CompareBuilds()` の行数（現在 56）で決まるかどうか。
-所要は第55期の実測（`--no-build` / Release / この repo の開発機）。
+`編成数依存` は、行数が `CompareBuilds()` の行数（現在 **61**）で決まるかどうか。
+**所要は第140期の実測**（`--no-build` / Release / 32 コア / ServerGC。第55期の値から総入れ替え）。
 
 | ファイル | 生成コマンド（`dotnet run --project BattleSim -c Release 0 ...`） | 編成数依存 | 所要 | いつ生成し直すか |
 |---|---|:-:|--:|---|
-| `balance.md` | `compare > docs/balance.md` | ○ | 10s | **毎回** |
-| `units.md` | `dump > docs/units.md` | × | 1s | **毎回** |
-| `chain.md` | `chain > docs/chain.md` | ○ | 9s | 編成の増減時 |
-| `pulse.md` | `pulse > docs/pulse.md` | ○ | 9s | 編成の増減時 |
-| `engage.md` | `engage > docs/engage.md` | ○ | 25s | 編成の増減時 |
-| `ablation.md` | `ablate > docs/ablation.md` | ○ | 36s | 編成の増減時 |
-| `layout.md` | `layout > docs/layout.md` | ○ | 146s | 編成の増減時・仕様変更時 |
-| `reseat.md` | `reseat > docs/reseat.md` | ○ | 367s | 編成の増減時・仕様変更時 |
+| `balance.md` | `compare > docs/balance.md` | ○ | 6s | **毎回** |
+| `units.md` | `dump > docs/units.md` | × | 2s | **毎回** |
+| `quality.md` | `compare quality > docs/quality.md` | ○ | 6s | 編成の増減時 |
+| `chain.md` | `chain > docs/chain.md` | ○ | 6s | 編成の増減時 |
+| `pulse.md` | `pulse > docs/pulse.md` | ○ | 5s | 編成の増減時 |
+| `stock.md` | `grade2 stock > docs/stock.md` | × | 5s | 駒の強化の経路が動いたとき |
+| `harm.md` | `parry harm > docs/harm.md` | × | 12s | 庇う・肩代わりの経路が動いたとき |
+| `engage.md` | `engage > docs/engage.md` | ○ | 12s | 編成の増減時 |
+| `ablation.md` | `ablate > docs/ablation.md` | ○ | 12s | 編成の増減時 |
+| `crossing.md` | `cross quality > docs/crossing.md` | × | 22s | 交差帯（`Presets.Cross`）が動いたとき |
+| `watch.md` | `watch > docs/watch.md` ＋ `watch phase0 >> docs/watch.md` | × | 9s | 台本の窓口が動いたとき |
+| `rules.md` | `derive rules > docs/rules.md` | × | 2s | ノブが増減したとき。**`CLAUDE.md` を書き終えた後に最後に回す**（第131期） |
+| `layout.md` | `layout > docs/layout.md` | ○ | 72s | 編成の増減時・仕様変更時 |
+| `reseat.md` | `reseat > docs/reseat.md` | ○ | 93s | 編成の増減時・仕様変更時 |
+|  | **全部** | | **約 263s（4.4 分）** | |
+
+**`docs/watch.md` は2コマンドで作る。** 第139期に**2本目（`watch phase0`）を回し忘れて節が丸ごと欠けた**
+——`audit` は行数と編成名の整合しか見ないので、この欠けは捕まらない。
 
 **義務の切り分けは3段。**
 
-- **毎回**（合計 11 秒）: `compare` / `dump` / `audit`。
+- **毎回**（合計 約 8 秒）: `compare` / `dump` / `audit`。
   数値を1つ動かしただけでも回す。ここを削ると勝率表と説明文が嘘になる
-- **編成が増減したとき**（合計 約10分）: 上表の `編成数依存 ○` を全部。
+- **編成が増減したとき**（合計 約2分）: 上表の `編成数依存 ○` を全部。
   `CompareBuilds()` に行を足したり消したりしたら、6ファイルが**必ず**古くなる。
   **足した行だけを追記することはできない**（どのモードも全編成を1回で吐く）
 - **仕様変更のとき**（攻撃パターン・盤面・特性の挙動が動いた）: 加えて `layout` / `reseat`。
   配置が旧ルール前提のまま残ると、その編成は変更に対応できていないだけなのに
   「変更が過剰だった」ように見える（実例: 後衛特化+後備えが旧配置3.5% / 再探索後26.0%）
 
-**`reseat` は 367 秒かかるので、1回のツール呼び出しに収まらないことがある。**
-`skip` / `take` で切り出して2回に分け、2本目の先頭4行（見出し）を落として繋ぐ:
+**第140期より前は `reseat` が 367 秒かかったので、`skip` / `take` で2回に切り分けて繋いでいた。**
+**いまは 93 秒なので、その必要は無い**（切り分けたい場合の形は下に残す）:
 
     dotnet run --project BattleSim -c Release 0 reseat "" 0  28 >  docs/reseat.md
     dotnet run --project BattleSim -c Release 0 reseat "" 28 28 | tail -n +5 >> docs/reseat.md
+
+**いま1回の変更で待つ時間の過半はビルド**（`BattleSim` の Release ビルドが 263〜294 秒）であって、
+測定ではない。**ビルド中に別のビルドを走らせない**（`obj` のロックで両方壊れる）し、
+**`bin/.../BattleSim.dll` を掴んだままの BattleSim プロセスが残っていると
+コピーの段で MSB3027 で落ちる**ので、長い診断を途中で止めたら残プロセスを確かめること。
 
 **長時間ジョブは前景で待ち切ること。** 背景に回すと起動元のコマンドが返った時点で刈られる。
 
