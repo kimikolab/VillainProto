@@ -33925,8 +33925,10 @@ if (focusId == "gather")
 
     IReadOnlyList<EnemyCatalog.Stage> gaStages = EnemyCatalog.Stages;
     int gaW = gaStages.Count;
-    var gaRoster = UnitCatalog.All.ToArray();
-    int gaRN = gaRoster.Length;                       // 51
+    // **第141期: ロスターは `Everyone`（`All ∪ Retired`）。** 意図した相手の終端がハリ（第108期に `All` から外れた）。
+    // ロスターが B の集合・引き表・素体表（`gaPlainMap`）を兼ねるのでロスターごと広げる（`thorn` と同じ理由）。
+    var gaRoster = UnitCatalog.Everyone.ToArray();
+    int gaRN = gaRoster.Length;                       // 54（第89期は 51）
 
     // ---- 第81期 `pairs2` の定数の写し（**1つも変えていない**）----------------------------------
     const int GaTableSeed = 8_100_000;                // 本編（A ＝ ガルド）
