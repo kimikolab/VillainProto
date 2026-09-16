@@ -17513,7 +17513,8 @@ if (focusId == "slope")
     var d4Sw = System.Diagnostics.Stopwatch.StartNew();
     var d4Roster = UnitCatalog.All.ToArray();
     int d4RN = d4Roster.Length;                       // 51
-    var d4KeyOf = d4Roster.ToDictionary(u => u.Id, TraitKeyMap.KeysOf);
+    // **第141期: キー表は `Everyone` で引く**（`draft3` と同じ。理想61行にエグが残っている）。
+    var d4KeyOf = UnitCatalog.Everyone.ToDictionary(u => u.Id, TraitKeyMap.KeysOf);
     int d4K = UnitTally.CarryKeys.Length;             // 11
 
     // ---- 測る前に固定した定数 ------------------------------------------------------------
