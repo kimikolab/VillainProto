@@ -36,6 +36,11 @@ static class SweepDiag
     {
         "0 spend alt", "0 creak alt", "0 draft alt", "0 draft2", "0 draft2 alt",
         "0 slope", "0 slope alt", "0 pairs", "0 pairs2", "0 hold2 seats",
+        // 第141期の初回の走行で新しく上限に当たった 11 本のうち、文書か実測に所要が書いてある 6 本。
+        // `reseat` 93 秒（CONTRIBUTING.md）／`seats2` 約 7 分／`draft` 169 秒・`draft3` 288 秒・`draft3 alt` 239 秒
+        // （第141期 §2-2 の実測）／`wall run` 3 分。残る 5 本（gradient / bridge / wave / divert / spend）は
+        // 所要の記録が無い（`bridge` は「30 秒前後」と書いてある）ので「新規」のまま残す——次の走行で再現するかを見る。
+        "0 reseat", "0 seats2", "0 draft", "0 draft3", "0 draft3 alt", "0 wall run",
     };
 
     /// <summary>コマンド表の行頭。**連結で組む**（この診断自身が `CLAUDE.md` に載るので、素直に書くと自分の行に当たる＝第123期）。</summary>
