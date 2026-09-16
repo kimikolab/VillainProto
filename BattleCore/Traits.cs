@@ -1888,6 +1888,26 @@ public readonly record struct HarmRule(bool Census)
 }
 
 /// <summary>
+/// 破片（<see cref="StatusKeys.Armor"/>）の在庫の走査（第138期 段2）。
+/// <b>計数専用で、どの規則も読まない。</b> <see cref="HarmRule"/> と同じ形・同じ理由。
+///
+/// <para><b>現行の計数では「ある時点で1体が纏っている量」が出せない</b>（Phase 0 Q0-1）
+/// ——<c>ShatterGiven</c> は配布の総量、<c>ScaleWornTurns</c> はウロの纏い率の<b>二値</b>、
+/// <c>ScaleLeftover</c> は決着時の残量で<b>ウロだけ</b>を合計している。
+/// 礫（<see cref="TraitId.Shrapnel"/>）が1回に砕ける量は<b>最大保持者の在庫</b>で決まるので、
+/// そこを直接数えないと掃引の中心が引けない。</para>
+///
+/// <para><b>紙から導かない</b>——第137期は掃引の中心を「1戦の配布総量 ÷ 生存T」で引いて桁を外した。
+/// 原因はその式が<b>実装の発火周期を勘定に入れていなかった</b>ことで、
+/// ここは周期ではなく<b>在庫そのもの</b>をターン頭に写す。</para>
+/// </summary>
+public readonly record struct ArmorRule(bool Census)
+{
+    /// <summary>既定は<b>数えない</b>（<c>compare</c> 305 セル 0 件が検算）。</summary>
+    public static ArmorRule Default => new(false);
+}
+
+/// <summary>
 /// 傷という通貨そのもののノブ（第120期）。<b>既定は現行</b>（<c>compare</c> 305 セル 0 件が検算）。
 ///
 /// <para><see cref="Enabled"/> を偽にすると <see cref="BattleContext.Wound"/> が

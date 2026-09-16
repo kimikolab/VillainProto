@@ -2600,6 +2600,79 @@ public sealed class BattleContext
         if (f > 0) WoundTurnsFoeAny++;
     }
 
+    // =====================================================================================
+    // 第138期 段2 —— 破片（StatusKeys.Armor）の在庫（ArmorLedger）。
+    //
+    // **盤面には一切影響しない。** 既定（`ArmorRule.Default` ＝ 数えない）では
+    // `ArmorCensus` が偽なので走査も加算も1回も走らない（`compare` 305 セル 0 件が検算）。
+    //
+    // **`RawCounter` で読む**——`Counter` は `Probe` が刺さっているとき読みを記録するので、
+    // 診断（第94期 (T2)）と混ざる。数えたいのは在庫であって「誰が読んだか」ではない。
+    // =====================================================================================
+
+    /// <summary>破片の在庫を走査するか。<b>規則が有効なときだけ。</b></summary>
+    public bool ArmorCensus => ArmorCensusRule.Census;
+
+    /// <summary>在庫の帳簿（添字は陣営。<c>0 = 敵</c> / <c>1 = 味方</c>）。</summary>
+    public long ArmorTurns;
+    /// <inheritdoc cref="ArmorTurns"/>
+    public readonly long[] ArmorStockSum = new long[2], ArmorStockMax = new long[2];
+    /// <inheritdoc cref="ArmorTurns"/>
+    public readonly long[] ArmorTopSum = new long[2], ArmorTopMax = new long[2];
+    /// <inheritdoc cref="ArmorTurns"/>
+    public readonly long[] ArmorTurnsAny = new long[2], ArmorHolders = new long[2];
+    /// <summary>味方側の最大保持者の <c>Def.Id</c> → (回数, 在庫の総和)。</summary>
+    public readonly Dictionary<string, (long Times, long Sum)> ArmorTopBy = new();
+
+    /// <summary>
+    /// 在庫の走査（ターン頭）。<b>盤面は読むだけ。</b>
+    /// <see cref="NoteWoundCensus"/> と同じ場所・同じ guard に置いてある。
+    ///
+    /// <para><b>同値のときは走査順（スロット昇順）で先に来た1体を「最大保持者」にする。</b>
+    /// 礫の選択（<c>PickOne</c> で割る）とは一致しないが、<b>ここで測りたいのは
+    /// 「1回に砕ける量」＝最大値</b>であって誰が砕かれるかではない。
+    /// 名前の表（<c>ArmorTopBy</c>）は同値のぶんだけ先着に偏る——<b>それを承知で読むこと。</b></para>
+    /// </summary>
+    public void NoteArmorCensus()
+    {
+        if (!ArmorCensus) return;
+        ArmorTurns++;
+
+        Span<long> stock = stackalloc long[2];
+        Span<long> top = stackalloc long[2];
+        UnitState? topAlly = null;
+
+        foreach (UnitState u in _units)
+        {
+            if (!u.IsAlive) continue;
+            int v = u.RawCounter(StatusKeys.Armor);
+            if (v <= 0) continue;
+            int t = u.TeamId == PlayerTeam ? 1 : 0;
+            stock[t] += v;
+            ArmorHolders[t]++;
+            if (v > top[t])
+            {
+                top[t] = v;
+                if (t == 1) topAlly = u;
+            }
+        }
+
+        for (int t = 0; t < 2; t++)
+        {
+            ArmorStockSum[t] += stock[t];
+            if (stock[t] > ArmorStockMax[t]) ArmorStockMax[t] = stock[t];
+            ArmorTopSum[t] += top[t];
+            if (top[t] > ArmorTopMax[t]) ArmorTopMax[t] = top[t];
+            if (stock[t] > 0) ArmorTurnsAny[t]++;
+        }
+
+        if (topAlly is not null)
+        {
+            (long times, long sum) = ArmorTopBy.TryGetValue(topAlly.Def.Id, out var prev) ? prev : (0, 0);
+            ArmorTopBy[topAlly.Def.Id] = (times + 1, sum + top[1]);
+        }
+    }
+
     /// <summary>
     /// 消滅の帳簿に1件足す（第120期）。<b>盤面には一切影響しない。</b>
     /// <b>減算の窓口は無い</b>ので、呼び出し側（減算する側）に置いてある。
@@ -2665,6 +2738,13 @@ public sealed class BattleContext
     /// static のノブにしない理由は同型の doc を参照。
     /// </summary>
     public ShatterRule Shatter { get; }
+
+    /// <summary>
+    /// 破片の在庫の走査（第138期 段2。既定は <see cref="ArmorRule.Default"/> ＝ <b>数えない</b>）。
+    /// <b>盤面には一切影響しない。</b>
+    /// </summary>
+    public ArmorRule ArmorCensusRule { get; }
+
 
     /// <summary>
     /// <b>直前の標的選択で介入が主目標を差し替えた相手</b>（第135期・<b>計数専用</b>）。
@@ -3053,7 +3133,7 @@ public sealed class BattleContext
                          NourishRule? nourish = null, WoundRule? wound = null,
                          EmberRule? ember = null, WildfireRule? wildfire = null,
                          HarmRule? harm = null, ParryRule? parry = null,
-                         ShatterRule? shatter = null,
+                         ShatterRule? shatter = null, ArmorRule? armor = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -3108,6 +3188,7 @@ public sealed class BattleContext
         Harm = harm ?? HarmRule.Default;
         Parry = parry ?? ParryRule.Default;
         Shatter = shatter ?? ShatterRule.Default;
+        ArmorCensusRule = armor ?? ArmorRule.Default;
     }
 
     // =====================================================================================
@@ -6054,7 +6135,7 @@ public static class BattleEngine
                                    NourishRule? nourish = null, WoundRule? wound = null,
                                    EmberRule? ember = null, WildfireRule? wildfire = null,
                                    HarmRule? harm = null, ParryRule? parry = null,
-                                   ShatterRule? shatter = null,
+                                   ShatterRule? shatter = null, ArmorRule? armor = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
@@ -6062,7 +6143,7 @@ public static class BattleEngine
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
-               nourish, wound, ember, wildfire, harm, parry, shatter, probe);
+               nourish, wound, ember, wildfire, harm, parry, shatter, armor, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -6097,7 +6178,7 @@ public static class BattleEngine
                                    NourishRule? nourish = null, WoundRule? wound = null,
                                    EmberRule? ember = null, WildfireRule? wildfire = null,
                                    HarmRule? harm = null, ParryRule? parry = null,
-                                   ShatterRule? shatter = null,
+                                   ShatterRule? shatter = null, ArmorRule? armor = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
@@ -6105,7 +6186,7 @@ public static class BattleEngine
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
-                                    nourish, wound, ember, wildfire, harm, parry, shatter, probe);
+                                    nourish, wound, ember, wildfire, harm, parry, shatter, armor, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -6151,6 +6232,7 @@ public static class BattleEngine
             ctx.NoteReaderCensus();     // 積み過ぎ（第115期）の門の 1。**盤面は読むだけ**
             ctx.NoteBossCensus();       // ボスの土台（第117期）の時系列。**盤面は読むだけ**
             ctx.NoteWoundCensus();      // 傷の在庫（第120期）。**盤面は読むだけ**
+            ctx.NoteArmorCensus();      // 破片の在庫（第138期 段2）。**盤面は読むだけ**
 
             foreach (UnitState u in ctx.AllUnits.Where(x => x.IsAlive).ToList())
                 foreach (Trait t in u.Traits.ToList())
@@ -6271,6 +6353,13 @@ public static class BattleEngine
                 ctx.YokeInBurnHits, ctx.YokeInBurnAmount,
                 ctx.YokeInLevyHits, ctx.YokeInLevyAmount,
                 ctx.DirectHpLoss, new Dictionary<string, (long, long)>(ctx.YokeCutBy)),
+            // 第138期 段2。**計数専用**（どの規則も読まない）。
+            Armor = new ArmorLedger(
+                ctx.ArmorTurns,
+                (long[])ctx.ArmorStockSum.Clone(), (long[])ctx.ArmorStockMax.Clone(),
+                (long[])ctx.ArmorTopSum.Clone(), (long[])ctx.ArmorTopMax.Clone(),
+                (long[])ctx.ArmorTurnsAny.Clone(), (long[])ctx.ArmorHolders.Clone(),
+                new Dictionary<string, (long, long)>(ctx.ArmorTopBy)),
             // 第134期 段1・段2。**計数専用**（どの規則も読まない）。
             Burns = new BurnLedger(
                 (long[])ctx.BurnLitSide.Clone(), (long[])ctx.BurnRelitSide.Clone(),

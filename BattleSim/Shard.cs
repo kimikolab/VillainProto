@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 
 // =====================================================================================
 // shard モード（第137期） —— 砕けの鍵を自前にする（ヒビ）
@@ -229,6 +229,100 @@ static class ShardDiag
         Console.WriteLine("> **物差し**: ある駒が編成に加わる価値は、少なくとも「その駒が受ける被弾」を上回らなければならない。");
         Console.WriteLine($"> 現行は **吸った {Per(tot.Soaked, tot.Battles):F1} 対 ヒビ被弾 {Per(tot.HibiTaken, tot.Battles):F1}**"
             + $" ＝ 比 **{(tot.HibiTaken == 0 ? 0 : tot.Soaked / (double)tot.HibiTaken):F2}**。");
+        Console.WriteLine();
+
+        StockTable();
+    }
+
+    // =================================================================================
+    // 第138期 Q0-1 —— 破片の在庫の時系列（**ターン頭**）
+    //
+    // **`shard` に新しいモードを作らない**（第138期 指示書 §4-1）ので `phase0` に節を足した。
+    // 礫（`TraitId.Shrapnel`）が1回に砕ける量は「配布の総量」ではなく
+    // **「その時点で最も多く纏っている1体の在庫」**で決まるので、そこを直接数える。
+    // =================================================================================
+
+    /// <summary>1行ぶんの在庫の帳簿（味方側だけを見る。敵側は在庫が構造的に 0＝Q0-7）。</summary>
+    sealed class Stock
+    {
+        public long Battles, Turns;
+        public long StockSum, TopSum, TurnsAny, Holders;
+        public long StockMax, TopMax;
+        public readonly Dictionary<string, (long Times, long Sum)> TopBy = new();
+    }
+
+    static Stock RunStock(Formation f)
+    {
+        var S = new Stock();
+        for (int st = 1; st < EnemyCatalog.Stages.Count; st++)   // 第2〜5波（規約 (G10)）
+            for (int seed = 0; seed < Seeds; seed++)
+            {
+                BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed,
+                                                  verbose: false, armor: new ArmorRule(true));
+                ArmorLedger a = r.Armor;
+                S.Battles++;
+                S.Turns += a.Turns;
+                S.StockSum += a.StockSum[1]; S.TopSum += a.TopSum[1];
+                S.TurnsAny += a.TurnsAny[1]; S.Holders += a.Holders[1];
+                if (a.StockMax[1] > S.StockMax) S.StockMax = a.StockMax[1];
+                if (a.TopMax[1] > S.TopMax) S.TopMax = a.TopMax[1];
+                foreach ((string id, (long t, long sum)) in a.TopBy)
+                {
+                    (long pt, long ps) = S.TopBy.TryGetValue(id, out var prev) ? prev : (0, 0);
+                    S.TopBy[id] = (pt + t, ps + sum);
+                }
+            }
+        return S;
+    }
+
+    static void StockTable()
+    {
+        Console.WriteLine("## 第138期 Q0-1 —— 破片の在庫（**ターン頭**・味方側）");
+        Console.WriteLine();
+        Console.WriteLine("分母は**ターン頭の数**（`ArmorLedger.Turns`）。写す位置は `TickStatuses` の後・`OnTurnStart` の**前**");
+        Console.WriteLine("——**そのターンの供給が乗る前**の在庫で、これが礫（手番＝行動順ループ）が見る在庫に一番近い。");
+        Console.WriteLine();
+        Console.WriteLine("`盤面` は生存している味方全員の在庫の和、`最大保持` は**そのターン最も多く纏っている1体**の在庫。");
+        Console.WriteLine("**礫が1回に砕ける量の見積もりは `最大保持` の列**である（`盤面` ではない）。");
+        Console.WriteLine();
+        Console.WriteLine("| 台／行 | ターン頭/戦 | 盤面 平均 | 盤面 最大 | **最大保持 平均** | 最大保持 最大 | 在庫のあるT率 | 保持者/T |");
+        Console.WriteLine("|---|---:|---:|---:|---:|---:|---:|---:|");
+
+        var all = new List<(string Name, Formation F)>();
+        foreach ((string name, Formation f) in Rigs()) all.Add((name, f));
+        foreach ((string band, string name, Formation f) in HibiRows()) all.Add((name, f));
+
+        var agg = new Dictionary<string, (long Times, long Sum)>();
+        foreach ((string name, Formation f) in all)
+        {
+            Stock S = RunStock(f);
+            Console.WriteLine($"| {name} | {Per(S.Turns, S.Battles):F2} | {Per(S.StockSum, S.Turns):F1} | {S.StockMax} | "
+                + $"**{Per(S.TopSum, S.Turns):F1}** | {S.TopMax} | {Per(S.TurnsAny * 100, S.Turns):F1}% | "
+                + $"{Per(S.Holders, S.Turns):F2} |");
+            foreach ((string id, (long t, long sum)) in S.TopBy)
+            {
+                (long pt, long ps) = agg.TryGetValue(id, out var prev) ? prev : (0, 0);
+                agg[id] = (pt + t, ps + sum);
+            }
+        }
+        Console.WriteLine();
+
+        long total = agg.Values.Sum(v => v.Times);
+        Console.WriteLine("### 最大保持者は誰か（全台・全行の合算）");
+        Console.WriteLine();
+        Console.WriteLine("**同値のときは走査順（スロット昇順）で先に来た1体を数えている**ので、同値のぶんだけ先着に偏る。");
+        Console.WriteLine();
+        Console.WriteLine("| 駒 | 最大保持だったT | 割合 | そのときの在庫 平均 | 鱗（ウロ）か |");
+        Console.WriteLine("|---|---:|---:|---:|---|");
+        foreach ((string id, (long t, long sum)) in agg.OrderByDescending(kv => kv.Value.Times))
+        {
+            UnitDef d = UnitCatalog.All.FirstOrDefault(u => u.Id == id)
+                     ?? UnitCatalog.All.First();
+            string nm = d.Id == id ? d.Name : id;
+            bool scale = d.Id == id && d.Traits is not null && d.Traits.Contains(TraitId.Scale);
+            Console.WriteLine($"| {nm} | {t} | {(total == 0 ? 0 : t * 100.0 / total):F1}% | "
+                + $"{Per(sum, t):F1} | {(scale ? "**○**" : "—")} |");
+        }
     }
 
     // =================================================================================

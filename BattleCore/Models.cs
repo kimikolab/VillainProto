@@ -1939,6 +1939,36 @@ public readonly record struct BurnLedger(
 }
 
 /// <summary>
+/// 破片（<c>StatusKeys.Armor</c>）の在庫の帳簿（第138期 段2）。<b>計数専用で、どの規則も読まない。</b>
+///
+/// <para><b>ターン頭に1回だけ写す</b>（<c>TickStatuses</c> の後・<c>OnTurnStart</c> の<b>前</b>）。
+/// 前に置くのは、砕けの自前の鍵（<c>ShatterTrait.OnTurnStart</c>）と鱗の纏い率の分母が
+/// <c>OnTurnStart</c> にあるため——<b>そのターンの供給が乗る前の在庫</b>を見ないと、
+/// 「礫が手番で見る在庫」と別のものを数えることになる（礫も <c>OnAction</c> ＝ 行動順ループの中）。</para>
+///
+/// <para>添字は陣営（<c>0 = 敵</c> / <c>1 = 味方</c>）。<see cref="BattleContext.PlayerTeam"/> の値に合わせてある。</para>
+/// </summary>
+/// <param name="Turns">走査したターン頭の数（全部の分母）。</param>
+/// <param name="StockSum">盤面全体の在庫の総和。陣営別。</param>
+/// <param name="StockMax">盤面全体の在庫の最大（1ターン頭あたり）。陣営別。</param>
+/// <param name="TopSum">最も多く纏っている1体の在庫の総和。陣営別。</param>
+/// <param name="TopMax">同・最大。陣営別。</param>
+/// <param name="TurnsAny">在庫が1点でもあったターン頭の数。陣営別。</param>
+/// <param name="Holders">在庫を持っていた駒の延べ数。陣営別。</param>
+/// <param name="TopBy">最大保持者の <c>Def.Id</c> → (回数, 在庫の総和)。<b>味方側だけ</b>数える。</param>
+public readonly record struct ArmorLedger(
+    long Turns, long[] StockSum, long[] StockMax, long[] TopSum, long[] TopMax,
+    long[] TurnsAny, long[] Holders,
+    Dictionary<string, (long Times, long Sum)> TopBy)
+{
+    /// <summary>味方側の、1ターン頭あたりの平均在庫（盤面全体）。</summary>
+    public double MeanStock(int team) => Turns > 0 ? (double)StockSum[team] / Turns : 0.0;
+
+    /// <summary>味方側の、1ターン頭あたりの平均「最大保持者の在庫」＝<b>礫が1回に砕ける量の見積もり</b>。</summary>
+    public double MeanTop(int team) => Turns > 0 ? (double)TopSum[team] / Turns : 0.0;
+}
+
+/// <summary>
 /// 盤面ルールの対称性の帳簿（第134期 段2）。<b>計数専用で、どの規則も読まない。</b>
 ///
 /// <para><b>第132期の <see cref="YokeLedger"/> と同じ形</b>を、渇き（<c>Drought</c>）と
@@ -2039,6 +2069,9 @@ public sealed class BattleResult
 
     /// <summary>盤面ルール（渇き・粛）の帳簿（第134期 段2・<see cref="BoardRuleLedger"/>）。<b>計数専用。</b></summary>
     public required BoardRuleLedger BoardRules { get; init; }
+
+    /// <summary>破片の在庫の帳簿（第138期 段2・<see cref="ArmorLedger"/>）。<b>計数専用。</b></summary>
+    public required ArmorLedger Armor { get; init; }
 
     public required int ExposeCount { get; init; }
     public required int ExposeMissed { get; init; }
