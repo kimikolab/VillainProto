@@ -5,6 +5,17 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- 第140期 段1 —— 測定を速くする（盤面には1ビットも触らない）。
+         `BattleEngine.Run` は1戦あたり多数の短命オブジェクトを作る
+         （`LivingMembers` がスナップショットの `List` を返す作法・CLAUDE.md）ので、
+         32 コアで戦闘を並列に回すと **既定の Workstation GC が律速になる**。
+         ServerGC はコアごとにヒープを分けるのでここが解ける。
+         ConcurrentGC はバックグラウンドの GC スレッドが計測用のコアを食うので切る。
+         **どれも生成物の値には影響しない**（GC は観測できない）。 -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
   </PropertyGroup>
 
   <ItemGroup>
