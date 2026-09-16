@@ -29789,8 +29789,11 @@ if (focusId == "suture2")
 
     IReadOnlyList<EnemyCatalog.Stage> suStages = EnemyCatalog.Stages;
     int suW = suStages.Count;
-    var suRoster = UnitCatalog.All.ToArray();
-    int suRN = suRoster.Length;                       // 51
+    // **第141期: ロスターは `Everyone`（`All ∪ Retired`）。** A ＝ ハリは第108期に `All` から外れているので、
+    // `All` のままでは `suIdx["hari"]` で落ちる（第109期以降 32 期ぶん）。ロスターが B の集合と引き表を兼ねるので
+    // ロスターごと広げる（`thorn` と同じ理由）。第85期の測定当時は 51 枚すべてが `All` に居た。
+    var suRoster = UnitCatalog.Everyone.ToArray();
+    int suRN = suRoster.Length;                       // 54（第85期は 51）
 
     // ---- 第81期 `pairs2` の定数の写し（**1つも変えていない**）----------------------------------
     const int SuTableSeed = 8_100_000;
