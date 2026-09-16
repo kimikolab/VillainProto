@@ -65187,17 +65187,6 @@ if (focusId == "ablate")
                     || filter.Split(',').Any(k => b.Name.Contains(k.Trim())))
         .ToArray();
 
-    double WinRate(Formation f)
-    {
-        int wins = 0, trials = 0;
-        foreach (EnemyCatalog.Stage st in abStages)
-            for (int seed = 0; seed < AblateSeeds; seed++)
-            {
-                trials++;
-                if (BattleEngine.Run(f, st.Enemy, seed, verbose: false).PlayerWon) wins++;
-            }
-        return wins * 100.0 / trials;
-    }
 
     Console.WriteLine("# アブレーション（1体抜いた時の勝率変化）");
     Console.WriteLine();
@@ -65206,25 +65195,76 @@ if (focusId == "ablate")
     Console.WriteLine("差が大きいほど「そのメンバーが編成の強さの源」。差が0に近い、またはプラス（抜いたほうが勝率が上がる）なら入れ得の疑い。");
     Console.WriteLine();
 
+    // === 第140期 —— 戦闘を1つの平坦な並列パスに畳んだ（器具の期・値は1ビットも変えない） ===
+    //
+    // **編成の作り方（フル / 1体抜き）も、印字の順序も1文字も変えていない。**
+    // `BattleEngine.Run` は seed 決定的な純関数なので、どのスレッドで走らせても値は同じ。
+    // 各ジョブは自分の添字にしか書かない（共有の `List` に `Add` しない）。
+    //
+    // **勝率は整数の勝ち数を持ち帰って、最後に直列で割る**——並列側で平均を取ると
+    // 合算の順序で浮動小数が動きうる（規約: カウンタは整数のまま持ち帰る）。
+    // **波までジョブに割る**のは、編成単位（= 1,000 戦）だと末尾でコアが余るため。
+    var abForms = new List<Formation[]>();       // [行] → [0]=フル, [1..]=1体抜き
+    var abMembers = new List<List<(int Slot, UnitDef Def)>>();
     foreach (var (name, full) in targets)
     {
-        double fullRate = WinRate(full);
         var members = full.Occupied().ToList();
+        var fs = new Formation[members.Count + 1];
+        fs[0] = full;
+        for (int m = 0; m < members.Count; m++)
+        {
+            var ablated = new Formation();
+            foreach (var (mSlot, mDef) in members)
+                if (mSlot != members[m].Slot) ablated[mSlot] = mDef;
+            fs[m + 1] = ablated;
+        }
+        abForms.Add(fs);
+        abMembers.Add(members);
+    }
+
+    var abWins = new int[abForms.Count][][];     // [行][版][波] の勝ち数
+    var abJobs = new List<(int R, int V, int St)>();
+    for (int r = 0; r < abForms.Count; r++)
+    {
+        abWins[r] = new int[abForms[r].Length][];
+        for (int v = 0; v < abForms[r].Length; v++)
+        {
+            abWins[r][v] = new int[abStages.Count];
+            for (int st = 0; st < abStages.Count; st++) abJobs.Add((r, v, st));
+        }
+    }
+    Parallel.For(0, abJobs.Count, j =>
+    {
+        var (r, v, st) = abJobs[j];
+        int wins = 0;
+        for (int seed = 0; seed < AblateSeeds; seed++)
+            if (BattleEngine.Run(abForms[r][v], abStages[st].Enemy, seed, verbose: false).PlayerWon) wins++;
+        abWins[r][v][st] = wins;
+    });
+
+    double AbRate(int r, int v)
+    {
+        int wins = 0;
+        for (int st = 0; st < abStages.Count; st++) wins += abWins[r][v][st];
+        return wins * 100.0 / (abStages.Count * AblateSeeds);
+    }
+
+    for (int r = 0; r < targets.Length; r++)
+    {
+        string name = targets[r].Name;
+        double fullRate = AbRate(r, 0);
+        var members = abMembers[r];
 
         Console.WriteLine($"## {name}（フル編成 {fullRate:F1}%）");
         Console.WriteLine();
         Console.WriteLine("| 抜いた駒 | 抜いた後 | 差 |");
         Console.WriteLine("|---|--:|--:|");
 
-        foreach (var (slot, def) in members)
+        for (int m = 0; m < members.Count; m++)
         {
-            var ablated = new Formation();
-            foreach (var (mSlot, mDef) in members)
-                if (mSlot != slot) ablated[mSlot] = mDef;
-
-            double rate = WinRate(ablated);
+            double rate = AbRate(r, m + 1);
             string sign = rate - fullRate >= 0 ? "+" : "";
-            Console.WriteLine($"| {def.Name} | {rate:F1}% | {sign}{rate - fullRate:F1}pt |");
+            Console.WriteLine($"| {members[m].Def.Name} | {rate:F1}% | {sign}{rate - fullRate:F1}pt |");
         }
         Console.WriteLine();
     }
@@ -65829,46 +65869,99 @@ if (focusId == "reseat")
     Console.WriteLine($"seed 0..{ScanSeeds - 1} の全配置探索で候補を絞り、seed 0..{VerifySeeds - 1} で測り直した。");
     Console.WriteLine("`狙`列: ガルドが前列 / セッキが後列 を満たすか（その駒を含む編成のみ）。");
 
-    foreach (string name in targets)
+    // === 第140期 —— 戦闘を2つの平坦な並列パスに畳んだ（器具の期・値は1ビットも変えない） ===
+    //
+    // **`perms` / `order` / `pool` / `verified` の作り方は1文字も変えていない。**
+    // 変えたのは「どの順で戦闘を走らせるか」だけで、`BattleEngine.Run` は seed 決定的な純関数
+    // （副作用も外部依存もない）なので、どのスレッドで走らせても同じ seed は同じ結果を返す。
+    //
+    // **各ジョブは自分の添字にしか書かない**（共有の `List` に `Add` しない）ので回収に同期は要らず、
+    // **印字は従来どおり直列に、`targets` の順・`pool` の順で行う**——出力はスレッドの
+    // スケジューリングに依存しない。**平均も `double[]` の添字順に足す**ので浮動小数も同一。
+    //
+    // 行ごとに `Parallel.For` を 61 回立てるのではなく**全行ぶんを1つの平坦なジョブ表に畳む**のは、
+    // 1行あたり 120 ジョブでは末尾でコアが余るため（`layout` の粗探索と同じ形）。
+    var rsPerms = new List<Formation>[targets.Length];
+    for (int t = 0; t < targets.Length; t++)
     {
-        var build = all.First(b => b.Name == name);
-        var members = build.F.Occupied().Select(x => x.Def).ToList();
-
-        var perms = new List<Formation>();
+        var members = all.First(b => b.Name == targets[t]).F.Occupied().Select(x => x.Def).ToList();
+        var ps = new List<Formation>();
         foreach (int[] assign in SlotAssignments(members.Count))
         {
             var f = new Formation();
             for (int m = 0; m < members.Count; m++) f[assign[m]] = members[m];
-            perms.Add(f);
+            ps.Add(f);
         }
+        rsPerms[t] = ps;
+    }
 
-        var scan = new int[perms.Count];
-        for (int i = 0; i < perms.Count; i++)
-        {
-            int wins = 0;
-            foreach (EnemyCatalog.Stage st in stages)
-                for (int seed = 0; seed < ScanSeeds; seed++)
-                    if (BattleEngine.Run(perms[i], st.Enemy, seed, verbose: false).PlayerWon) wins++;
-            scan[i] = wins;
-        }
+    // (a) 粗探索（seed 0..ScanSeeds-1 の全配置）。
+    var rsScan = new int[targets.Length][];
+    var rsScanJobs = new List<(int T, int I)>();
+    for (int t = 0; t < targets.Length; t++)
+    {
+        rsScan[t] = new int[rsPerms[t].Count];
+        for (int i = 0; i < rsPerms[t].Count; i++) rsScanJobs.Add((t, i));
+    }
+    Parallel.For(0, rsScanJobs.Count, j =>
+    {
+        var (t, i) = rsScanJobs[j];
+        int wins = 0;
+        foreach (EnemyCatalog.Stage st in stages)
+            for (int seed = 0; seed < ScanSeeds; seed++)
+                if (BattleEngine.Run(rsPerms[t][i], st.Enemy, seed, verbose: false).PlayerWon) wins++;
+        rsScan[t][i] = wins;
+    });
 
-        var order = Enumerable.Range(0, perms.Count).OrderByDescending(i => scan[i]).ThenBy(i => i).ToList();
-        var pool = order.Take(TopOverall)
-            .Concat(order.Where(i => MeetsIntent(perms[i])).Take(TopConstrained))
-            .Append(order.First(i => SameFormation(perms[i], build.F)))
+    // (b) 候補の選び方は従来と同一。**戦闘を1回も回さない**ので直列のまま。
+    var rsOrder = new List<int>[targets.Length];
+    var rsPool = new List<int>[targets.Length];
+    for (int t = 0; t < targets.Length; t++)
+    {
+        var perms = rsPerms[t];
+        var scan = rsScan[t];
+        var build = all.First(b => b.Name == targets[t]);
+        rsOrder[t] = Enumerable.Range(0, perms.Count).OrderByDescending(i => scan[i]).ThenBy(i => i).ToList();
+        rsPool[t] = rsOrder[t].Take(TopOverall)
+            .Concat(rsOrder[t].Where(i => MeetsIntent(perms[i])).Take(TopConstrained))
+            .Append(rsOrder[t].First(i => SameFormation(perms[i], build.F)))
             .Distinct().ToList();
+    }
 
-        var verified = pool.Select(i =>
+    // (c) 測り直し（seed 0..VerifySeeds-1）。**波までジョブに割る**ので粒度が揃う。
+    var rsCells = new double[targets.Length][][];
+    var rsVerJobs = new List<(int T, int P, int St)>();
+    for (int t = 0; t < targets.Length; t++)
+    {
+        rsCells[t] = new double[rsPool[t].Count][];
+        for (int p = 0; p < rsPool[t].Count; p++)
         {
-            var cells = stages.Select(st =>
-            {
-                int wins = 0;
-                for (int seed = 0; seed < VerifySeeds; seed++)
-                    if (BattleEngine.Run(perms[i], st.Enemy, seed, verbose: false).PlayerWon) wins++;
-                return wins * 100.0 / VerifySeeds;
-            }).ToArray();
-            return (Idx: i, Cells: cells, Avg: cells.Average());
-        }).OrderByDescending(x => x.Avg).ToList();
+            rsCells[t][p] = new double[stages.Count];
+            for (int st = 0; st < stages.Count; st++) rsVerJobs.Add((t, p, st));
+        }
+    }
+    Parallel.For(0, rsVerJobs.Count, j =>
+    {
+        var (t, p, st) = rsVerJobs[j];
+        int wins = 0;
+        for (int seed = 0; seed < VerifySeeds; seed++)
+            if (BattleEngine.Run(rsPerms[t][rsPool[t][p]], stages[st].Enemy, seed, verbose: false).PlayerWon) wins++;
+        rsCells[t][p][st] = wins * 100.0 / VerifySeeds;
+    });
+
+    // (d) 印字。**従来の foreach の中身をそのまま持ってきてある。**
+    for (int t = 0; t < targets.Length; t++)
+    {
+        string name = targets[t];
+        var build = all.First(b => b.Name == name);
+        var perms = rsPerms[t];
+        var order = rsOrder[t];
+
+        // `pool.Select(...).OrderByDescending(x => x.Avg)` と同じ——LINQ の OrderBy は安定ソートなので、
+        // 同値は `pool` の順（＝従来と同じ順）で残る。
+        var verified = Enumerable.Range(0, rsPool[t].Count)
+            .Select(p => (Idx: rsPool[t][p], Cells: rsCells[t][p], Avg: rsCells[t][p].Average()))
+            .OrderByDescending(x => x.Avg).ToList();
 
         Console.WriteLine();
         Console.WriteLine($"## {name}");
@@ -65886,16 +65979,16 @@ if (focusId == "reseat")
                 + $"| {N(f[3])}/{N(f[4])} | {v.Avg:F1}% |" + string.Concat(v.Cells.Select(c => $" {c:F1}% |")));
         }
         Console.Out.Flush();
+    }
 
-        bool MeetsIntent(Formation f)
+    bool MeetsIntent(Formation f)
+    {
+        foreach (var (slot, def) in f.Occupied())
         {
-            foreach (var (slot, def) in f.Occupied())
-            {
-                if (ReferenceEquals(def, UnitCatalog.Gald) && FormationRules.RowOf(slot) != Row.Front) return false;
-                if (ReferenceEquals(def, UnitCatalog.Sekki) && FormationRules.RowOf(slot) != Row.Back) return false;
-            }
-            return true;
+            if (ReferenceEquals(def, UnitCatalog.Gald) && FormationRules.RowOf(slot) != Row.Front) return false;
+            if (ReferenceEquals(def, UnitCatalog.Sekki) && FormationRules.RowOf(slot) != Row.Back) return false;
         }
+        return true;
     }
     return;
 }
@@ -65939,6 +66032,59 @@ if (focusId == "layout")
         results[i] = wins;
     });
 
+    // === 第140期 —— 波別最良の測り直しを、印字ループの外の平坦な並列パスに前出しした ===
+    //
+    // **選び方（`ranked` / `cur` / `pool` / 候補数 8 / 現行を必ず混ぜる）は1文字も変えていない。**
+    // 変えたのは「どの順で `Rate` を走らせるか」だけで、`Rate` は seed 決定的な純関数なので値は同一。
+    //
+    // 従来はここが**印字ループの中で完全に直列**だった——61編成 × 5波 × 最大9候補 × 200 seed。
+    // しかも `curRate` は `pool` にも入っているので、**同じ配置・同じ波を毎回2度測っていた**。
+    // ここでは (配置, 波) をキーに**重複を潰してから**測る。
+    var lyRanked = new List<int>[builds.Length];
+    var lyCur = new int[builds.Length];
+    for (int b = 0; b < builds.Length; b++)
+    {
+        int bb = b;
+        lyRanked[b] = Enumerable.Range(0, jobs.Count)
+            .Where(i => jobs[i].BuildIdx == bb)
+            .OrderByDescending(i => results[i].Sum())
+            .ThenBy(i => jobs[i].PermIdx)   // 同点は配置の辞書式で若い方（決定的タイブレーク）
+            .ToList();
+        lyCur[b] = lyRanked[b].FindIndex(i => SameFormation(jobs[i].F, builds[bb].F));
+    }
+
+    // 必要な (配置, 波) の組を、印字と同じ規則で先に全部並べる。
+    var lyPool = new List<int>[builds.Length, stages.Count];
+    var lyNeed = new List<(int JobIdx, int St)>();
+    var lySeen = new HashSet<(int, int)>();
+    for (int b = 0; b < builds.Length; b++)
+        for (int st = 0; st < stages.Count; st++)
+        {
+            int sx = st;
+            const int Candidates = 8;
+            var pool = lyRanked[b].OrderByDescending(i => results[i][sx])
+                                  .ThenBy(i => jobs[i].PermIdx)
+                                  .Take(Candidates)
+                                  .Append(lyRanked[b][lyCur[b]])
+                                  .Distinct()
+                                  .ToList();
+            lyPool[b, st] = pool;
+            foreach (int i in pool.Append(lyRanked[b][lyCur[b]]))
+                if (lySeen.Add((i, sx))) lyNeed.Add((i, sx));
+        }
+
+    var lyRateVal = new double[lyNeed.Count];
+    Parallel.For(0, lyNeed.Count, k =>
+    {
+        var (i, sx) = lyNeed[k];
+        int wins = 0;
+        for (int seed = 0; seed < VerifySeeds; seed++)
+            if (BattleEngine.Run(jobs[i].F, stages[sx].Enemy, seed, verbose: false).PlayerWon) wins++;
+        lyRateVal[k] = wins * 100.0 / VerifySeeds;
+    });
+    var lyRate = new Dictionary<(int, int), double>(lyNeed.Count);
+    for (int k = 0; k < lyNeed.Count; k++) lyRate[lyNeed[k]] = lyRateVal[k];
+
     Console.WriteLine("# 配置探索");
     Console.WriteLine();
     Console.WriteLine("`dotnet run --project BattleSim -c Release 0 layout` の出力。");
@@ -65949,11 +66095,7 @@ if (focusId == "layout")
     for (int b = 0; b < builds.Length; b++)
     {
         int bb = b;
-        var ranked = Enumerable.Range(0, jobs.Count)
-            .Where(i => jobs[i].BuildIdx == bb)
-            .OrderByDescending(i => results[i].Sum())
-            .ThenBy(i => jobs[i].PermIdx)   // 同点は配置の辞書式で若い方（決定的タイブレーク）
-            .ToList();
+        var ranked = lyRanked[b];
 
         Console.WriteLine();
         Console.WriteLine($"## {builds[b].Name}");
@@ -65964,7 +66106,7 @@ if (focusId == "layout")
         for (int rank = 0; rank < TopN && rank < ranked.Count; rank++)
             Console.WriteLine(LayoutRow($"{rank + 1}", jobs[ranked[rank]].F, results[ranked[rank]], LayoutSeeds));
 
-        int cur = ranked.FindIndex(i => SameFormation(jobs[i].F, builds[bb].F));
+        int cur = lyCur[b];
         Console.WriteLine(LayoutRow($"現行({cur + 1}位)", jobs[ranked[cur]].F, results[ranked[cur]], LayoutSeeds));
 
         // 波別最良。上の表は全ステージ平均を最大化する「一つの配置」を選ぶが、
@@ -65981,20 +66123,15 @@ if (focusId == "layout")
             // 1位だけを測り直すと「波別最良が現行より低い」という原理的にありえない行が出る
             // （実測で最大 8pt の逆転が出た）。候補を上位数件に広げ、現行も必ず混ぜて、
             // seed 200 で測り直した中の最良を採る。これで表は必ず単調になる。
-            const int Candidates = 8;
-            var pool = ranked.OrderByDescending(i => results[i][sx])
-                             .ThenBy(i => jobs[i].PermIdx)
-                             .Take(Candidates)
-                             .Append(ranked[cur])
-                             .Distinct()
-                             .ToList();
+            // **候補の作り方は上の前計算と同一**（第140期に `lyPool` へ移しただけ）。
+            var pool = lyPool[b, st];
 
-            double curRate = Rate(jobs[ranked[cur]].F, stages[sx].Enemy);
+            double curRate = lyRate[(ranked[cur], sx)];
             int best = ranked[cur];
             double bestRate = curRate;
             foreach (int i in pool)
             {
-                double r = Rate(jobs[i].F, stages[sx].Enemy);
+                double r = lyRate[(i, sx)];
                 if (r > bestRate) { bestRate = r; best = i; }
             }
             bestByStage[bb, sx] = (curRate, bestRate);
@@ -66021,14 +66158,6 @@ if (focusId == "layout")
         Console.WriteLine($"| {builds[b].Name} |" + string.Concat(cells));
     }
     return;
-
-    double Rate(Formation f, Formation enemy)
-    {
-        int wins = 0;
-        for (int seed = 0; seed < VerifySeeds; seed++)
-            if (BattleEngine.Run(f, enemy, seed, verbose: false).PlayerWon) wins++;
-        return wins * 100.0 / VerifySeeds;
-    }
 
     static string NameOf(UnitDef? d) => d?.Name ?? "−";
 }
