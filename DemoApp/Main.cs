@@ -926,6 +926,14 @@ public partial class Main : Control
                 break;
             }
 
+            case BattleEventKind.Parry:
+                if (_batchedDamageIndices.Contains(eventIndex)) break;
+                if (_burstDamageIndices.Contains(eventIndex)) break;
+                ShowParry(e);
+                await Delay(0.30);
+                _battleField.EndGuards();
+                break;
+
             case BattleEventKind.Damage:
                 if (_batchedDamageIndices.Contains(eventIndex)) break;   // 3-a で同時に描き終えている
                 if (_burstDamageIndices.Contains(eventIndex)) break;     // 破裂（第125期 3-a）で描き終えている
@@ -1129,8 +1137,16 @@ public partial class Main : Control
                   + $"[color=#{(poison ? UiKit.Poison : UiKit.Hurt).ToHtml(false)}]−{e.Amount}[/color]");
     }
 
+    private void ShowParry(BattleEvent e)
+    {
+        var defender = _battleField.FindPawn(e.TargetId);
+        if (defender is not null) defender.AnimationSpeed = Math.Max(0.1, _speed);
+        _battleField.Parry(_battleField.FindPawn(e.ActorId), defender);
+        AppendLog($"  [color=#8ce6ff][b]{NameOf(e.TargetId)} が {NameOf(e.ActorId)} の一撃を受け流した[/b]（{e.Amount} を無効化）[/color]");
+    }
+
     /// <summary>
-    /// 同時着弾（第124期 3-a）。その一振りに<b>紐づく</b> <c>Damage</c> をまとめて描き、
+    /// 同時着弾（第124期 3-a）。その一振りに<b>紐づく</b> Damage / Parry をまとめて描き、
     /// 描いた添字を控える。戻り値は描いた件数。
     ///
     /// <para><b>紐づけの規則は <see cref="FindAttackTargets"/> と同じ</b>
@@ -1150,10 +1166,11 @@ public partial class Main : Control
             BattleEvent candidate = _result.Events[i];
             if (candidate.Kind == BattleEventKind.TurnStart) break;
             if (candidate.Kind == BattleEventKind.Attack && candidate.ActorId == attack.ActorId) break;
-            if (candidate.Kind != BattleEventKind.Damage) continue;
+            if (candidate.Kind is not (BattleEventKind.Damage or BattleEventKind.Parry)) continue;
             if (candidate.ActorId != attack.ActorId || candidate.Pattern != attack.Pattern) continue;
             if (!_batchedDamageIndices.Add(i)) continue;
-            ShowDamage(i, candidate, _battleField.FindPawn(candidate.ActorId),
+            if (candidate.Kind == BattleEventKind.Parry) ShowParry(candidate);
+            else ShowDamage(i, candidate, _battleField.FindPawn(candidate.ActorId),
                        _battleField.FindPawn(candidate.TargetId),
                        withSource: candidate.TargetId == attack.TargetId);
             landed++;
@@ -1186,7 +1203,7 @@ public partial class Main : Control
         {
             BattleEvent candidate = _result.Events[i];
             if (candidate.Kind is BattleEventKind.TurnStart or BattleEventKind.Attack or BattleEventKind.Highlight) break;
-            if (candidate.Kind != BattleEventKind.Damage) continue;
+            if (candidate.Kind is not (BattleEventKind.Damage or BattleEventKind.Parry)) continue;
             if (candidate.ActorId != highlight.ActorId || candidate.Pattern is not null) continue;
             if (candidate.Relayed) continue;   // 中継の段は別の絵（§5-1 の 5）
             hits.Add(i);
@@ -1203,7 +1220,8 @@ public partial class Main : Control
         {
             if (!_burstDamageIndices.Add(i)) continue;
             BattleEvent damage = _result.Events[i];
-            ShowDamage(i, damage, _battleField.FindPawn(damage.ActorId), _battleField.FindPawn(damage.TargetId),
+            if (damage.Kind == BattleEventKind.Parry) ShowParry(damage);
+            else ShowDamage(i, damage, _battleField.FindPawn(damage.ActorId), _battleField.FindPawn(damage.TargetId),
                        withSource: landed == 0);
             landed++;
         }
@@ -1407,7 +1425,7 @@ public partial class Main : Control
             BattleEvent candidate = _result.Events[i];
             if (candidate.Kind == BattleEventKind.TurnStart) break;
             if (candidate.Kind == BattleEventKind.Attack && candidate.ActorId == attack.ActorId) break;
-            if (candidate.Kind == BattleEventKind.Damage
+            if (candidate.Kind is BattleEventKind.Damage or BattleEventKind.Parry
                 && candidate.ActorId == attack.ActorId
                 && candidate.Pattern == pattern
                 && candidate.TargetId is { } targetId)

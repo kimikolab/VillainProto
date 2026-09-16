@@ -407,6 +407,55 @@ public partial class BattlefieldView3D : Control
         }
     }
 
+    public void Parry(BattlePawn3D? attacker, BattlePawn3D? defender)
+    {
+        if (defender is null) return;
+        Vector3 forward = (attacker?.FxPoint ?? defender.FxPoint + Vector3.Right) - defender.FxPoint;
+        forward.Y = 0;
+        if (forward.LengthSquared() < 0.001f) forward = Vector3.Right;
+        forward = forward.Normalized();
+        defender.AnimateParry(forward);
+        Vector3 center = defender.FxPoint + forward * 0.65f;
+        Vector3 side = forward.Cross(Vector3.Up).Normalized();
+        Color ice = new(0.55f, 0.90f, 1.0f);
+        double duration = 0.28 / defender.AnimationSpeed;
+
+        // 盾の前を斜めに払う弧。足元の輪ではなく、刃がぶつかった高さに出す。
+        Vector3 previous = center + side * -0.85f + Vector3.Up * -0.48f;
+        for (int i = 1; i <= 10; i++)
+        {
+            float t = i / 10f;
+            Vector3 next = center + side * Mathf.Lerp(-0.85f, 0.85f, t)
+                + Vector3.Up * Mathf.Lerp(-0.48f, 0.70f, t)
+                + forward * (Mathf.Sin(t * Mathf.Pi) * 0.32f);
+            MakeBeam(previous, next, ice, 0.075f, duration);
+            previous = next;
+        }
+        MakeBeam(center - side * 0.40f, center + side * 0.40f, Colors.White, 0.13f, duration * 0.6);
+        MakeBeam(center - Vector3.Up * 0.50f, center + Vector3.Up * 0.50f, Colors.White, 0.09f, duration * 0.6);
+
+        // 接点から外へ跳ぶ火花。攻撃者へダメージが返ったようには描かない。
+        for (int i = 0; i < 7; i++)
+        {
+            float spread = (i - 3) / 3f;
+            Vector3 direction = (forward * 0.45f + side * spread + Vector3.Up * (0.5f + 0.35f * (i % 2))).Normalized();
+            var spark = new MeshInstance3D
+            {
+                Mesh = new BoxMesh { Size = new Vector3(0.045f, 0.045f, 0.32f) },
+                Position = center,
+                MaterialOverride = MakeMaterial(i % 2 == 0 ? Colors.White : UiKit.Gold, true, true),
+            };
+            _fxRoot.AddChild(spark);
+            spark.LookAt(center + direction, Vector3.Up);
+            var tween = spark.CreateTween().SetParallel();
+            tween.TweenProperty(spark, "position", center + direction * (1.2f + 0.15f * i), duration)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+            tween.TweenProperty(spark, "transparency", 1.0f, duration);
+            tween.Finished += spark.QueueFree;
+        }
+        Float(defender, "受け流し", ice, true, 3.20f, 1.25f);
+    }
+
     public void AttackCue(BattlePawn3D? pawn, string value, Color color)
     {
         if (pawn is null) return;

@@ -383,6 +383,23 @@ void fragment() {
             .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
     }
 
+    // 庇いの位置を基準に、刃を迎えて斜めへ払う。被弾の後ずさりとは別の動き。
+    public void AnimateParry(Vector3 direction)
+    {
+        if (!_alive) return;
+        Vector3 forward = new(direction.X, 0, direction.Z);
+        if (forward.LengthSquared() < 0.001f)
+            forward = new Vector3(Team == BattleContext.PlayerTeam ? 1 : -1, 0, 0);
+        forward = forward.Normalized();
+        Vector3 side = forward.Cross(Vector3.Up);
+        var tween = BeginMotion();
+        tween.TweenProperty(this, "position", RestPosition + forward * 0.28f, 0.045 / AnimationSpeed);
+        tween.TweenProperty(this, "position", RestPosition + side * 0.24f + Vector3.Up * 0.07f, 0.07 / AnimationSpeed)
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        tween.TweenProperty(this, "position", RestPosition, 0.15 / AnimationSpeed)
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+    }
+
     public void AnimateHit(bool poison = false)
     {
         if (!_alive) return;
