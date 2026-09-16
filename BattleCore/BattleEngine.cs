@@ -2745,6 +2745,38 @@ public sealed class BattleContext
     /// </summary>
     public ArmorRule ArmorCensusRule { get; }
 
+    /// <summary>
+    /// 礫の強度（第138期。既定は <see cref="ShrapnelRule.Default"/>）。
+    /// <b>保持者が <see cref="UnitCatalog.All"/> に 0 枚なので、既定では盤面に1度も現れない。</b>
+    /// </summary>
+    public ShrapnelRule Shrapnel { get; }
+
+    // =====================================================================================
+    // 第138期 —— 礫（TraitId.Shrapnel）の計数。**盤面には一切影響しない。**
+    // 撃った回数は `ShrapnelFires`、捨てた回数は `UnitTally.StallCanAct`（engine が既に数えている）。
+    // **`ShrapnelDealt` は名目**（`shards * Multiplier + 攻撃力` × 体数）で、
+    // 実際に通った量は `UnitTally.DamageToEnemy` にある——**差が軽減と軛の切り取り**である（予測 P6）。
+    // =====================================================================================
+
+    /// <summary>撃った回数 ／ 砕いた破片の総量 ／ 敵を砕いた回数（<b>この期は 0 が正</b>）。</summary>
+    public int ShrapnelFires, ShrapnelShards, ShrapnelFoeTargets;
+    /// <summary>敵全体へ撃った名目の総量 ／ 砕かれた駒へ返した総量 ／ 着弾した体数。</summary>
+    public int ShrapnelDealt, ShrapnelSelfHarm, ShrapnelHits;
+
+    /// <summary>1回の発火を数える（<b>計数のみ</b>）。</summary>
+    public void NoteShrapnel(int shards, bool foeSide)
+    {
+        ShrapnelFires++;
+        ShrapnelShards += shards;
+        if (foeSide) ShrapnelFoeTargets++;
+    }
+
+    /// <summary>敵1体への着弾を数える（<b>計数のみ・名目</b>）。</summary>
+    public void NoteShrapnelHit(int nominal) { ShrapnelHits++; ShrapnelDealt += nominal; }
+
+    /// <summary>砕かれた駒への返りを数える（<b>計数のみ・名目</b>）。</summary>
+    public void NoteShrapnelSelfHarm(int amount) => ShrapnelSelfHarm += amount;
+
 
     /// <summary>
     /// <b>直前の標的選択で介入が主目標を差し替えた相手</b>（第135期・<b>計数専用</b>）。
@@ -3134,6 +3166,7 @@ public sealed class BattleContext
                          EmberRule? ember = null, WildfireRule? wildfire = null,
                          HarmRule? harm = null, ParryRule? parry = null,
                          ShatterRule? shatter = null, ArmorRule? armor = null,
+                         ShrapnelRule? shrapnel = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -3189,6 +3222,7 @@ public sealed class BattleContext
         Parry = parry ?? ParryRule.Default;
         Shatter = shatter ?? ShatterRule.Default;
         ArmorCensusRule = armor ?? ArmorRule.Default;
+        Shrapnel = shrapnel ?? ShrapnelRule.Default;
     }
 
     // =====================================================================================
@@ -6136,6 +6170,7 @@ public static class BattleEngine
                                    EmberRule? ember = null, WildfireRule? wildfire = null,
                                    HarmRule? harm = null, ParryRule? parry = null,
                                    ShatterRule? shatter = null, ArmorRule? armor = null,
+                                   ShrapnelRule? shrapnel = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
@@ -6143,7 +6178,7 @@ public static class BattleEngine
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
-               nourish, wound, ember, wildfire, harm, parry, shatter, armor, probe);
+               nourish, wound, ember, wildfire, harm, parry, shatter, armor, shrapnel, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -6179,6 +6214,7 @@ public static class BattleEngine
                                    EmberRule? ember = null, WildfireRule? wildfire = null,
                                    HarmRule? harm = null, ParryRule? parry = null,
                                    ShatterRule? shatter = null, ArmorRule? armor = null,
+                                   ShrapnelRule? shrapnel = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
@@ -6186,7 +6222,7 @@ public static class BattleEngine
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
-                                    nourish, wound, ember, wildfire, harm, parry, shatter, armor, probe);
+                                    nourish, wound, ember, wildfire, harm, parry, shatter, armor, shrapnel, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -6535,6 +6571,12 @@ public static class BattleEngine
             ScaleLeftover = ctx.AllUnits
                 .Where(u => u.HasTrait(TraitId.Scale))
                 .Sum(u => u.RawCounter(StatusKeys.Armor)),
+            ShrapnelFires = ctx.ShrapnelFires,
+            ShrapnelShards = ctx.ShrapnelShards,
+            ShrapnelFoeTargets = ctx.ShrapnelFoeTargets,
+            ShrapnelDealt = ctx.ShrapnelDealt,
+            ShrapnelSelfHarm = ctx.ShrapnelSelfHarm,
+            ShrapnelHits = ctx.ShrapnelHits,
             ShatterTicks = ctx.ShatterTicks,
             ShatterGiven = ctx.ShatterGiven,
             ShatterSoaked = ctx.ShatterSoaked,

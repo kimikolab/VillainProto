@@ -189,6 +189,21 @@ public enum TraitId
                  // **これだけは札**（本体は SutureTrait の中）。引き受け＝BearTrait と同型で、
                  // 理由は SealTrait の doc を参照（患者の選び直しが乱数と盤面を動かす）
 
+    // --- 第138期で足した札（**破片に初めての「出口」を作る**。`UnitCatalog.All` には入れない） ---
+    Shrapnel,   // 礫: 手番に、盤面で最も破片を纏っている1体を砕き、砕いた量と自分の攻撃力ぶん敵全体を撃つ。
+                // 砕かれた駒は同じだけ削られ、砕ける破片が無いターンは何もできない
+                //（1つの動作の表と裏。プラスは敵全体への打点・マイナスは味方の資源と自分の手番）
+                //
+                // **破片（`StatusKeys.Armor`）の2枚目の読み手**——第47期に鱗（`Scale`）が1枚目を作ってから
+                // 91 期、第48期の棚卸しが空白として名指ししたまま埋まっていなかった（第138期 Q0-6）。
+                // **鱗は `Armor > 0` の二値で読む**（`ModifyPattern`）が、こちらは**量で読む**
+                // ——第137期の「二値で読む機構の稼働率と、通貨の総量は逆を向く」に対する出口側の答え。
+                //
+                // **陣営で絞らない。** 現状、敵に破片を書く経路が盤面に1本も無いので必ず味方が選ばれるが、
+                // 「場の回復を破片に変える」対称ルール（次期の候補）を入れると敵側にも破片が湧き、
+                // **この札を1バイトも触らずに敵側の分岐が点灯する**。
+                // **この期の報告書に「敵側分岐の発火 0 件」を回帰値として残してある。**
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -1905,6 +1920,23 @@ public readonly record struct ArmorRule(bool Census)
 {
     /// <summary>既定は<b>数えない</b>（<c>compare</c> 305 セル 0 件が検算）。</summary>
     public static ArmorRule Default => new(false);
+}
+
+/// <summary>
+/// 礫（第138期・<see cref="TraitId.Shrapnel"/>）の強度。<b><c>static</c> のノブは置かない</b>
+/// （<see cref="ScaleRule"/> / <see cref="BearRule"/> / <see cref="ShatterRule"/> と同じ作法）。
+///
+/// <para><b>この期に振るのは <see cref="Multiplier"/> だけ</b>（1変数）。
+/// <see cref="SelfDamagePercent"/> は 100 の定数扱いで固定する——破片は元々ダメージを吸うプールなので、
+/// 100% なら「吸うはずだった分を先に受ける」になり<b>等価交換として一文で説明が済む</b>。
+/// ただし<b>超過分は素通りする</b>（プールが必ず全部使われたわけではない）ので、完全に無料ではない。</para>
+/// </summary>
+/// <param name="Multiplier">砕いた破片1点あたり、敵全体へ何点撃つか。</param>
+/// <param name="SelfDamagePercent">砕いた破片のうち何 % を、砕かれた駒へダメージとして返すか。</param>
+public readonly record struct ShrapnelRule(int Multiplier, int SelfDamagePercent)
+{
+    /// <summary>既定。<b>保持者が <see cref="UnitCatalog.All"/> に 0 枚なので盤面は動かない。</b></summary>
+    public static ShrapnelRule Default => new(2, 100);
 }
 
 /// <summary>
@@ -6763,6 +6795,127 @@ public sealed class ShatterTrait : Trait
     }
 }
 
+/// <summary>
+/// 礫（第138期）。<b>破片（<see cref="StatusKeys.Armor"/>）に初めての「出口」を作る。</b>
+///
+/// <para>手番（<see cref="ActionKind.Skill"/>）に、盤面で最も破片を纏っている1体を砕き、
+/// <b>砕いた量 × <see cref="ShrapnelRule.Multiplier"/> ＋ 自分の攻撃力</b>を敵全体へ撃つ。
+/// 砕かれた駒は砕かれた量ぶん削られ、砕ける破片が無いターンは何もできない。</para>
+///
+/// <para><b>なぜ量で読むか。</b> 破片の既存の読み手は鱗（<see cref="ScaleTrait"/>・第47期）1枚だけで、
+/// あれは <c>Armor &gt; 0</c> の<b>二値</b>（<see cref="ScaleTrait.ModifyPattern"/>）である。
+/// 二値でしか読まれないので<b>溜めた量に意味が無く</b>、第137期は
+/// 「纏い率（稼働率）が 47.4% → 62.9% に上がったのに勝率は落ちた」という形でそれを実測した。
+/// <b>供給ではなく出口を足すのがこの期の一文。</b></para>
+///
+/// <para><b>陣営で絞らない</b>（指示書 §1-2）。現状、敵に破片を書く経路が盤面に1本も無いので
+/// 必ず味方が選ばれるが、「場の回復を破片に変える」対称ルールを入れると敵側にも破片が湧き、
+/// <b>この札を1バイトも触らずに敵側の分岐が点灯する</b>。味方を砕く（自陣の資源を食う）のと
+/// 敵を砕く（敵の防御を剥がしつつ撃つ）のは<b>コストの符号が逆</b>なので、そこで初めて
+/// 「どちらを砕くか」が編成の判断になる。</para>
+///
+/// <para><b>ダメージ式に攻撃力を足す理由</b>: <c>Skill</c> は通常攻撃を消費するので、
+/// 合否テストが自動的に「その駒の通常攻撃 &lt; その効果か？」になる。攻撃力を式に含めておけば
+/// 「通常攻撃を全体化した上に破片ぶんを上乗せした」という読み方でテストが最初から満たされる。</para>
+///
+/// <para><b>閉ループは構造的に立たない</b>（Phase 0 Q0-2）。礫のダメージで破片が湧くとしたら
+/// 砕け（<see cref="ShatterTrait.OnDamaged"/>）だが、あれは <c>source.CurrentPattern == Single</c> で
+/// 早期 return する——ガレの <c>Def.Pattern</c> は単体で <c>ModifyPattern</c> を持つ札を1枚も載せない。
+/// 集約（<see cref="BearTrait"/>）は <c>Dull</c> の中にしかなく、鱗の消費は <c>OnAfterAttack</c> ＝
+/// <c>PerformAttack</c> の2箇所からしか呼ばれないので <c>Skill</c> では走らない。</para>
+/// </summary>
+public sealed class ShrapnelTrait : Trait
+{
+    public override TraitId Id => TraitId.Shrapnel;
+
+    /// <summary>砕ける相手か。<b>自分は除く</b>（ヒビが自分に配らない・ウロが自分の死で発火しないのと同じ作法）。</summary>
+    static bool Breakable(UnitState self, UnitState u)
+        => u != self && u.IsAlive && u.RawCounter(StatusKeys.Armor) > 0;
+
+    /// <summary>
+    /// 砕ける破片が無いターンは撃てない。<b>これがマイナスの本体。</b>
+    ///
+    /// <para><b>攻撃力ぶんだけでも撃てるようにはしない</b>——そうすると破片を1点も読まない
+    /// 全体攻撃駒になり、この期の問い（溜めた量に意味が生まれるか）が測れない。</para>
+    ///
+    /// <para><b>ここでは <see cref="BattleContext.PickOne"/> を呼ばない</b>（存在検査だけ）。
+    /// <c>CanAct</c> は <see cref="Trait.SurrenderedTurn"/>（号令・据えが毎ターン味方ぶん問う）と
+    /// <see cref="BattleContext.CanActNow"/> からも呼ばれるので、ここで <c>Roll</c> を消費すると
+    /// <b>問い合わせの回数で乱数列が動く</b>。engine のコメントが
+    /// 「<c>CanAct</c> の実装のどれも <c>Roll</c> を呼ばない」と明記しているのはこのため。</para>
+    ///
+    /// <para><b><see cref="Trait.SurrendersTurn"/> は既定（真）のまま上書きしない。</b>
+    /// ガレが失うのは「本来使えたはずの手番」であって、不動（カド）・追い打ち（ハギ）のような
+    /// 「もともと持っていないターン」ではない——偽にすると号令・据えの市場が消える。
+    /// <c>SurrenderedTurn</c> は <see cref="ActionKind.Attack"/> で問うので、
+    /// ここは種別で早期 return するだけで市場には正しく乗る（Phase 0 Q0-4）。</para>
+    ///
+    /// <para><b><c>Actions</c> は <c>[Skill]</c> 1要素にする。</b> <c>ActionIndex++</c> は
+    /// <c>CanAct</c> 通過<b>後</b>なので、周期に永久に実行できない種別を混ぜるとその要素で止まる。</para>
+    /// </summary>
+    public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
+    {
+        if (kind != ActionKind.Skill) return true;
+        foreach (UnitState u in ctx.AllUnits) if (Breakable(self, u)) return true;
+        return false;
+    }
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+
+        // 最大保持者を選ぶ。**同値が並んだときだけ PickOne**（乱数を引くのはここだけ）。
+        // 候補が 0 / 1 個なら Roll を消費しない（横流し＝第62期と同じ作法）ので、
+        // 保持者が盤上にいない行では乱数列が1ビットも動かない。
+        var pool = new List<UnitState>();
+        int best = 0;
+        foreach (UnitState u in ctx.AllUnits)
+        {
+            if (u == self || !u.IsAlive) continue;
+            int v = u.Counter(StatusKeys.Armor);
+            if (v <= 0 || v < best) continue;
+            if (v > best) { best = v; pool.Clear(); }
+            pool.Add(u);
+        }
+        if (pool.Count == 0) return;   // CanAct が通した以上ここには来ない（防御的）
+
+        UnitState victim = ctx.PickOne(pool)!;
+        int shards = best;
+        victim.SetCounter(StatusKeys.Armor, 0);
+
+        bool foeSide = victim.TeamId != self.TeamId;
+        ctx.NoteShrapnel(shards, foeSide);
+        ctx.Log($"    ★ {self.Name} が {victim.Name} の破片を砕いて撒いた（{shards}）", LogKind.Highlight, self);
+
+        // 敵全体。**`LivingMembers`（スロット昇順・非シャッフル）を使う**——破裂（`BomberTrait`）は
+        // `LivingMembersShuffled` だが、あちらと違ってこの効果は全員一律なので順序に意味が無く、
+        // `Shuffle` が乱数を消費すると「ノブ 0 が素体と1セルも違わない」型の検算が壊れる
+        // （火選り＝第58期・瘴気＝第61期と同じ判断）。
+        //
+        // **`pattern: All` は渡す。** 読み手は糧（`NoteNourishPath`・保持者 0 枚）と
+        // 害の帳簿（`DamageRoute`）と台本だけで、**分岐する規則は 0 件**（Phase 0 Q0-3）。
+        // 渡さないと `DamageRoute.Other` ＝「型なし」に落ちて、帳簿でも再生でも全体攻撃として読めない。
+        int dmg = shards * ctx.Shrapnel.Multiplier + self.CurrentAttack;
+        ctx.NoteAttackRead(self);   // 攻撃力を出力に変換した（第64期・死蔵の判定）
+        foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        {
+            ctx.NoteShrapnelHit(dmg);
+            ctx.ApplyDamage(foe, dmg, self, pattern: AttackPattern.All);
+        }
+
+        // 砕かれた駒への返り。**`levy` は立てない**——徴収の札は生贄・吸い・置き去りの3本だけで、
+        // 読み手は糧（保持者 0 枚）1つしかない。**4本目を増やす理由が無い**ので、
+        // 味方の刃（`DamageRoute.Friendly`）のまま落とす。
+        // `lethal: false` ＝ 代金で味方を殺すと「破片を溜める」こと自体が罰になる（指示書 §7-2 の持ち越し）。
+        int back = shards * ctx.Shrapnel.SelfDamagePercent / 100;
+        if (back > 0)
+        {
+            ctx.NoteShrapnelSelfHarm(back);
+            ctx.ApplyDamage(victim, back, self, isFriendlyFire: !foeSide, lethal: false);
+        }
+    }
+}
+
 public sealed class SharerTrait : Trait
 {
     public const int Percent = 40;
@@ -8181,6 +8334,7 @@ public static class TraitCatalog
         new PerverseTrait(),
         new SharerTrait(),
         new ShatterTrait(),
+        new ShrapnelTrait(),
         new LooseTrait(),
         new CowerTrait(),
         new PursuerTrait(),

@@ -25,8 +25,10 @@ static class ShardDiag
             case "scan": Scan(); return;
             case "run": Sweep(arg); return;
             case "check": Check(arg); return;
+            case "gscan": if (arg.StartsWith("probe")) GareProbe(arg.Length > 5 ? arg[6..] : ""); else GareScan(); return;   // 第138期 段4
+            case "gare": GareSweep(arg); return;               // 第138期 段5（掃引）
             default:
-                Console.WriteLine("shard: モードは phase0 / scan / run / check（第137期）。");
+                Console.WriteLine("shard: モードは phase0 / scan / run / check（第137期）／ gscan / gare（第138期）。");
                 return;
         }
     }
@@ -583,5 +585,420 @@ static class ShardDiag
         Console.WriteLine();
         Console.WriteLine("> §3-2: **発火回数/戦がヒビの生存T とほぼ一致する**（毎ターン払っているのだから）。");
         Console.WriteLine("> 一致しないなら払えていないターンがある＝HP1 の張り付きが起きている。");
+        Console.WriteLine();
+
+        GareCheck();
+    }
+
+    // =================================================================================
+    // 第138期 —— 礫（ガレ）のローカル台と測定
+    //
+    // **`Presets` には1行も足さない**（指示書 Q0-5）。ガレは `UnitCatalog.All` にも入っていないので、
+    // `compare` 61行・交差帯 12行は `ShrapnelRule` を何に振っても1バイトも動かない。
+    // =================================================================================
+
+    /// <summary>素体（同じ数値・特性なし・<c>Actions</c> も落とす）。第69期の標準器具。</summary>
+    static UnitDef Plain(UnitDef d) => new()
+    {
+        Id = d.Id + "_plain",
+        Name = "素体の" + d.Name,
+        MaxHp = d.MaxHp,
+        Attack = d.Attack,
+        Speed = d.Speed,
+        Pattern = d.Pattern,
+        Advances = d.Advances,
+        Traits = Array.Empty<TraitId>()
+    };
+
+    static readonly UnitDef GarePlain = Plain(UnitCatalog.Gare);
+
+    /// <summary>
+    /// 段4 のローカル台（指示書 §4-2）。<b>V0 は「同じ台のガレを素体に落とした版」</b>
+    /// ——席も他の4枚も1枚も動かさないので、差はまるごと礫の帰属になる。
+    ///
+    /// <para><b>台C（供給なし）は破片を1点も書かない4枚で組む</b>——
+    /// 破片の書き手は 砕け（ヒビ）／集約（ウケ）／鱗（ウロ・味方の死から）の3本だけなので、
+    /// その3枚を外せばどの5枚でも「供給なし」になる。</para>
+    /// </summary>
+    /// <summary>
+    /// 埋め草2枚（前1・前3）。<b>破片を1点も書かない・読まない駒から選ぶ</b>
+    /// ——書き手は 砕け（ヒビ）／集約（ウケ）／鱗（ウロ・味方の死から）の3本だけ、読み手は鱗だけ。
+    /// <b>組は `gscan probe` で走査して決めた</b>（第137期と同じ作法。理由は報告書 §段4）。
+    /// </summary>
+    /// <b>前1 ドルガ ／ 前3 ガルド</b>。`gscan probe` の 42 組で<b>4台とも 40〜95% に入ったのは
+    /// ドルガ×ガルドの2通りだけ</b>（左右を入れ替えた版）で、そのうち台D の天井に余裕がある側を採った
+    /// （89.9% 対 94.9%）。<b>ガルドは受け流し（第136期）を持つが破片は1点も書かず読まない</b>ので、
+    /// 礫の帰属には入らない——ただし<b>壁として台を成立させているのはこの1枚</b>である。
+    static UnitDef[] _fillers = { UnitCatalog.Dolga, UnitCatalog.Gald };
+
+    /// <summary>
+    /// 段4 のローカル台（指示書 §4-2）。<b>V0 は「同じ台のガレを素体に落とした版」</b>
+    /// ——席も他の4枚も1枚も動かさないので、差はまるごと礫の帰属になる。
+    ///
+    /// <para><b>4台は「後1 の1枚」と「中央の1枚」だけで分岐する梯子</b>にしてある:
+    /// A→B は 後1（ウロ ＝ 読み手 → エグ ＝ 読まない）、B→C は 中央（ヒビ ＝ 供給 → ネル ＝ 供給なし）、
+    /// B→D は 後1（エグ → ガン ＝ 手番の買い手）。<b>1枚しか違わないので差の帰属が濁らない。</b></para>
+    /// </summary>
+    static (string Name, Formation F)[] GareRigs()
+    {
+        Formation Rig(UnitDef center, UnitDef back1) => Formation.Build(
+            front1: _fillers[0], front3: _fillers[1],
+            center: center, back1: back1, back3: UnitCatalog.Gare);
+
+        return new (string, Formation)[]
+        {
+            // 供給あり・読み手あり: 礫とウロが同じ在庫を取り合う（予測 P2）。
+            ("台A 取り合い (ガレ×ヒビ×ウロ)", Rig(UnitCatalog.Hibi, UnitCatalog.Uro)),
+
+            // 供給あり・読み手なし: 出口だけがある。**台A との差は 後1 の1枚だけ。**
+            ("台B 出口だけ (ガレ×ヒビ)", Rig(UnitCatalog.Hibi, UnitCatalog.Egu)),
+
+            // 供給なし: 破片を1点も書かない4枚。**台B との差は 中央 の1枚だけ。**
+            // **手番を捨て続ける台**（予測 P3）。
+            ("台C 供給なし (ガレ単騎)", Rig(UnitCatalog.Nel, UnitCatalog.Egu)),
+
+            // 手番市場: 号令（ガン）が礫の捨てた手番を買い取るか（Q0-4）。**台B との差は 後1 の1枚だけ。**
+            ("台D 手番市場 (ガレ×ヒビ×ガン)", Rig(UnitCatalog.Hibi, UnitCatalog.Gan)),
+        };
+    }
+
+    /// <summary>
+    /// 埋め草の組の走査（第138期 段4）。<b>版を1つも振らない。</b>
+    /// 4台すべての V0（ガレを素体に落とした版）が <b>40〜95%</b> に入る組を探す
+    /// ——第61期（40% 以上）・第63期（40〜95% の両側）・第133期（段1 のローカル台にも当てる）。
+    /// </summary>
+    static void GareProbe(string ids)
+    {
+        // 破片を書く・読む3枚（ヒビ／ウケ／ウロ）と、台の役の2枚（ガン）は候補から外す。
+        var block = new HashSet<string>(StringComparer.Ordinal) { "hibi", "uke", "uro", "gan", "gare" };
+        UnitDef[] cand = string.IsNullOrWhiteSpace(ids)
+            ? new[] { UnitCatalog.Dolga, UnitCatalog.Borg, UnitCatalog.Mudo,
+                      UnitCatalog.Zan, UnitCatalog.Sekki, UnitCatalog.Kiri, UnitCatalog.Sid }
+            : ids.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                 .Select(t => t.Trim())
+                 .Where(t => !block.Contains(t))
+                 .Select(t => UnitCatalog.All.FirstOrDefault(u => u.Id == t))
+                 .Where(u => u is not null).Select(u => u!).ToArray();
+        if (cand.Length < 2) { Console.WriteLine("候補が2枚未満。`gscan probe borg,dolga,...` の形で渡す。"); return; }
+
+        Console.WriteLine("# 第138期 段4 —— 埋め草の組の走査（**版を1つも振らない**）");
+        Console.WriteLine();
+        Console.WriteLine("4台すべての **V0（ガレを素体に落とした版）が 40〜95%** に入る組を探す。");
+        Console.WriteLine("候補は**破片を書かない・読まない駒**だけ（書き手 ヒビ／ウケ／ウロ・読み手 ウロ を除く）。");
+        Console.WriteLine();
+        Console.WriteLine("| 前1 | 前3 | 台A | 台B | 台C | 台D | 4台とも帯の中 |");
+        Console.WriteLine("|---|---|---:|---:|---:|---:|---|");
+
+        UnitDef[] save = _fillers;
+        for (int i = 0; i < cand.Length; i++)
+            for (int j = 0; j < cand.Length; j++)
+            {
+                if (i == j) continue;
+                _fillers = new[] { cand[i], cand[j] };
+                var v = new double[4];
+                int k = 0;
+                foreach ((string _, Formation f) in GareRigs())
+                    v[k++] = Avg25(RunGare(Without(f), ShrapnelRule.Default).Win);
+                bool ok = v.All(x => x >= 40 && x <= 95);
+                Console.WriteLine($"| {cand[i].Name} | {cand[j].Name} | {v[0]:F1} | {v[1]:F1} | {v[2]:F1} | {v[3]:F1} | "
+                    + $"{(ok ? "**○**" : "—")} |");
+            }
+        _fillers = save;
+        Console.WriteLine();
+        Console.WriteLine("> **席の左右（前1 / 前3）も振ってある**——盤面はX字で前1と前3は次数2で等価だが、");
+        Console.WriteLine("> 薙ぎの巻き込み（`SweepTargets`）は非対称なので同じ2枚でも値が違う。");
+    }
+
+    /// <summary>ガレを素体に落とした版（V0）。<b>席も他の4枚も1枚も動かさない。</b></summary>
+    static Formation Without(Formation f)
+    {
+        Formation c = f.Clone();
+        foreach ((int slot, UnitDef d) in f.Occupied())
+            if (d.Id == "gare") c[slot] = GarePlain;
+        return c;
+    }
+
+    sealed class GLed
+    {
+        public long Battles, Turns;
+        public long Fires, Idles, Shards, Dealt, Hits, SelfHarm, FoeTargets;
+        public long Ticks, Given, WornTurns, AliveTurns;
+        public long GareLife, GareDeaths, GareStun, GareDealt;
+        public long HibiLife, UroLife;
+        public readonly double[] Win = new double[5];
+    }
+
+    static GLed RunGare(Formation f, ShrapnelRule rule)
+    {
+        var L = new GLed();
+        for (int st = 0; st < EnemyCatalog.Stages.Count; st++)
+        {
+            int wins = 0;
+            for (int seed = 0; seed < Seeds; seed++)
+            {
+                BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed,
+                                                  verbose: false, shrapnel: rule);
+                if (r.PlayerWon) wins++;
+                if (st == 0) continue;   // 規約 (G10)
+
+                L.Battles++;
+                L.Turns += r.Turns;
+                L.Fires += r.ShrapnelFires;
+                L.Shards += r.ShrapnelShards;
+                L.Dealt += r.ShrapnelDealt;
+                L.Hits += r.ShrapnelHits;
+                L.SelfHarm += r.ShrapnelSelfHarm;
+                L.FoeTargets += r.ShrapnelFoeTargets;
+                L.Ticks += r.ShatterTicks;
+                L.Given += r.ShatterGiven;
+                L.WornTurns += r.ScaleWornTurns;
+                L.AliveTurns += r.ScaleAliveTurns;
+                if (r.TallyByUnit.TryGetValue("gare", out UnitTally? tg))
+                {
+                    L.Idles += tg.StallCanAct;
+                    L.GareLife += tg.LastActiveTurn;
+                    L.GareDeaths += tg.Deaths > 0 ? 1 : 0;
+                    L.GareStun += tg.StallStun + tg.StallSlumber + tg.StallImmobile;
+                    L.GareDealt += tg.DamageToEnemy;
+                }
+                if (r.TallyByUnit.TryGetValue("hibi", out UnitTally? th)) L.HibiLife += th.LastActiveTurn;
+                if (r.TallyByUnit.TryGetValue("uro", out UnitTally? tu)) L.UroLife += tu.LastActiveTurn;
+            }
+            L.Win[st] = wins * 100.0 / Seeds;
+        }
+        return L;
+    }
+
+    /// <summary>
+    /// 段4 の台の下見（<b>版を1つも振らない</b>）。第61期（40% 以上）・第63期（40〜95% の両側）・
+    /// 第133期（段1 のローカル台にも床と天井の規則を当てる）。<b>V0 が床でも天井でもないこと。</b>
+    /// </summary>
+    static void GareScan()
+    {
+        Console.WriteLine("# 第138期 段4 —— 台の下見（**V0 ＝ ガレを素体に落とした版**。版は振らない）");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | V0 勝率(1..5波) | 第2〜5波平均 | 帯 |");
+        Console.WriteLine("|---|---|---:|---|");
+        foreach ((string name, Formation f) in GareRigs())
+        {
+            GLed L = RunGare(Without(f), ShrapnelRule.Default);
+            double a = Avg25(L.Win);
+            string band = a < 40 ? "**床（使わない）**" : a > 95 ? "**天井（使わない）**" : "○";
+            Console.WriteLine($"| {name} | {W(L.Win)} | {a:F1} | {band} |");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## 掃引の中心を実測から引く（§4-3）");
+        Console.WriteLine();
+        Console.WriteLine("**「1回に砕ける量 × 発火回数」から引く**（指示書 Q0-1 の注記。1戦の総量を発火回数で割る式は使わない）。");
+        Console.WriteLine("**ガレを入れた版で測り直す**——礫は在庫を消費するので、Q0-1（ガレ抜き）の値は上振れしている。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 発火/戦 | 捨て/戦 | 発火率 | **1回に砕ける量** | 破片由来/発火 | 攻撃力由来 | 条件1 を満たす最小 M |");
+        Console.WriteLine("|---|---:|---:|---:|---:|---:|---:|---:|");
+        int atk = UnitCatalog.Gare.Attack;
+        foreach ((string name, Formation f) in GareRigs())
+        {
+            GLed L = RunGare(f, ShrapnelRule.Default);
+            double fire = Per(L.Fires, L.Battles), idle = Per(L.Idles, L.Battles);
+            double per = L.Fires == 0 ? 0 : L.Shards / (double)L.Fires;
+            double need = per <= 0 ? 0 : Math.Floor(atk / per) + 1;
+            Console.WriteLine($"| {name} | {fire:F2} | {idle:F2} | "
+                + $"{(fire + idle <= 0 ? 0 : fire * 100.0 / (fire + idle)):F1}% | **{per:F2}** | "
+                + $"{per * ShrapnelRule.Default.Multiplier:F1} | {atk} | {need:F0} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"> **採用条件1**（破片由来が攻撃力由来を上回る）は「1回に砕ける量 × M > 攻{atk}」と同値なので、");
+        Console.WriteLine("> 最後の列が「その台で条件1 を満たす最小の `Multiplier`」である。**掃引点はこれを跨ぐように置く。**");
+    }
+
+    // =================================================================================
+    // 第138期 段5 —— 掃引
+    // =================================================================================
+
+    static void GareSweep(string arg)
+    {
+        // **掃引点は `gscan` の実測から引いて先に固定した**（第64期・結果を見てから広げない）。
+        // 4台の「1回に砕ける量」は 3.87〜4.05 で、採用条件1（破片由来 > 攻撃力由来 ＝ 攻9）を
+        // 満たす最小の `Multiplier` は 3 だった。**その 3 を跨ぐように 2 / 3 / 4 に置く。**
+        int[] pts = { 2, 3, 4 };
+        if (!string.IsNullOrWhiteSpace(arg))
+        {
+            var q = arg.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                       .Select(t => int.TryParse(t.Trim(), out int v) ? v : -1)
+                       .Where(v => v > 0).ToArray();
+            if (q.Length > 0) pts = q;
+        }
+
+        Console.WriteLine("# 第138期 段5 —— 礫の掃引");
+        Console.WriteLine();
+        Console.WriteLine($"第2〜5波 × seed 0..{Seeds - 1}（規約 (G10)。第一波は走らせるが分母に入れない）。");
+        Console.WriteLine($"掃引点は `Multiplier = {string.Join(" / ", pts)}`。**`SelfDamagePercent` は 100 で固定**（指示書 §1-4）。");
+        Console.WriteLine("**V0 ＝ 同じ台のガレを素体に落とした版**（席も他の4枚も動かさない）。");
+        Console.WriteLine();
+
+        foreach ((string name, Formation f) in GareRigs())
+        {
+            Console.WriteLine($"## {name}");
+            Console.WriteLine();
+            GLed v0 = RunGare(Without(f), ShrapnelRule.Default);
+            Console.WriteLine("| 版 | 勝率(1..5波) | 第2〜5波平均 | 帰属 | 発火/戦 | 捨て/戦 | 砕いた/戦 | 名目/戦 | 実通/戦 | 通し率 | 自傷/戦 | 破片由来 | 決着T |");
+            Console.WriteLine("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+            Console.WriteLine($"| **V0 素体** | {W(v0.Win)} | {Avg25(v0.Win):F1} | — | — | — | — | — | — | — | — | — | {Per(v0.Turns, v0.Battles):F2} |");
+            foreach (int m in pts)
+            {
+                GLed L = RunGare(f, new ShrapnelRule(m, 100));
+                double nominal = Per(L.Dealt, L.Battles), actual = Per(L.GareDealt, L.Battles);
+                double shardPart = L.Fires == 0 ? 0 : L.Shards / (double)L.Fires * m;
+                double atkPart = UnitCatalog.Gare.Attack;
+                Console.WriteLine($"| V1 M={m} | {W(L.Win)} | {Avg25(L.Win):F1} | {Avg25(L.Win) - Avg25(v0.Win):+0.0;-0.0;0.0} | "
+                    + $"{Per(L.Fires, L.Battles):F2} | {Per(L.Idles, L.Battles):F2} | {Per(L.Shards, L.Battles):F1} | "
+                    + $"{nominal:F1} | {actual:F1} | {(nominal <= 0 ? 0 : actual * 100.0 / nominal):F1}% | "
+                    + $"{Per(L.SelfHarm, L.Battles):F1} | "
+                    + $"{(shardPart + atkPart <= 0 ? 0 : shardPart * 100.0 / (shardPart + atkPart)):F1}% | "
+                    + $"{Per(L.Turns, L.Battles):F2} |");
+            }
+            Console.WriteLine();
+        }
+
+        Console.WriteLine("## 予測 P2 —— ウロの纏い率（取り合い）");
+        Console.WriteLine();
+        Console.WriteLine("礫は「最大保持者」を選ぶので、破片を溜めたウロが真っ先に砕かれて `Armor > 0` が切れる。");
+        Console.WriteLine("**纏い率（`ScaleWornTurns ÷ ScaleAliveTurns`）が下がり、かつ勝率が上がれば第137期の逆**（予測 P7）。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 版 | ウロ纏い率 | 第2〜5波平均 | ウロ生存T |");
+        Console.WriteLine("|---|---|---:|---:|---:|");
+        foreach ((string name, Formation f) in GareRigs())
+        {
+            if (!f.Occupied().Any(o => o.Def.Id == "uro")) continue;
+            GLed v0 = RunGare(Without(f), ShrapnelRule.Default);
+            Console.WriteLine($"| {name} | V0 素体 | {(v0.AliveTurns == 0 ? 0 : v0.WornTurns * 100.0 / v0.AliveTurns):F1}% | "
+                + $"{Avg25(v0.Win):F1} | {Per(v0.UroLife, v0.Battles):F2} |");
+            foreach (int m in pts)
+            {
+                GLed L = RunGare(f, new ShrapnelRule(m, 100));
+                Console.WriteLine($"| {name} | V1 M={m} | {(L.AliveTurns == 0 ? 0 : L.WornTurns * 100.0 / L.AliveTurns):F1}% | "
+                    + $"{Avg25(L.Win):F1} | {Per(L.UroLife, L.Battles):F2} |");
+            }
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## 予測 P6 —— 第四波（軛・1発 25 上限）で切られるか");
+        Console.WriteLine();
+        Console.WriteLine("`名目` は `砕いた量 × M ＋ 攻9` × 着弾体数、`実通` は `UnitTally.DamageToEnemy`（**軽減と軛の後**）。");
+        Console.WriteLine("**M を上げるほど通し率が落ちれば P6 が当たり**——ただし軛は**1回の `ApplyDamage` を**切るので、");
+        Console.WriteLine("全体攻撃は「1発 25 × 敵の体数」まで通る。**丸ごと潰れるのではなく、1体あたりの上振れだけが捨てられる。**");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | M | 第2波 通し率 | 第3波 | **第4波（軛）** | 第5波 |");
+        Console.WriteLine("|---|---:|---:|---:|---:|---:|");
+        foreach ((string name, Formation f) in GareRigs())
+            foreach (int m in pts)
+            {
+                var pass = new double[5];
+                for (int st = 1; st < EnemyCatalog.Stages.Count; st++)
+                {
+                    long nom = 0, act = 0;
+                    for (int seed = 0; seed < Seeds; seed++)
+                    {
+                        BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed,
+                                                          verbose: false, shrapnel: new ShrapnelRule(m, 100));
+                        nom += r.ShrapnelDealt;
+                        if (r.TallyByUnit.TryGetValue("gare", out UnitTally? tg)) act += tg.DamageToEnemy;
+                    }
+                    pass[st] = nom == 0 ? 0 : act * 100.0 / nom;
+                }
+                Console.WriteLine($"| {name} | {m} | {pass[1]:F1}% | {pass[2]:F1}% | **{pass[3]:F1}%** | {pass[4]:F1}% |");
+            }
+    }
+
+    // =================================================================================
+    // 第138期 —— 礫（ガレ）の自己検査
+    // =================================================================================
+
+    static void GareCheck()
+    {
+        Console.WriteLine("# 第138期 自己検査（礫のガレ）");
+        Console.WriteLine();
+
+        // (G-a) ロスターに入れていないこと
+        bool inAll = UnitCatalog.All.Any(u => u.Id == "gare");
+        bool inPresets = Presets.Compare.Concat(Presets.Cross)
+            .Any(r => r.Item2.Occupied().Any(o => o.Def.Id == "gare"));
+
+        Console.WriteLine("## (G-a) —— ガレは `UnitCatalog.All` にも `Presets` にも入っていない");
+        Console.WriteLine();
+        Console.WriteLine($"`UnitCatalog.All` ＝ **{UnitCatalog.All.Count} 枚**（ガレ在席: {(inAll ? "**×** いる" : "○ いない")}）。");
+        Console.WriteLine($"`Presets.Compare` ＋ `Presets.Cross` ＝ {Presets.Compare.Length + Presets.Cross.Length} 行"
+            + $"（ガレ在席: {(inPresets ? "**×** いる" : "○ いない")}）。");
+        Console.WriteLine();
+        Console.WriteLine("> **これが「61行 ＋ 12行が ±0.0」の構造的な保証**——`Formation` から参照されないので、");
+        Console.WriteLine("> `ShrapnelRule` を何に振っても既存の行は1バイトも動かない（予測 P5）。");
+        Console.WriteLine();
+
+        // (G-b) 札が正しく解決されること
+        Console.WriteLine("## (G-b) —— 札と行動の形");
+        Console.WriteLine();
+        UnitDef g = UnitCatalog.Gare;
+        Console.WriteLine($"- `Traits` ＝ {string.Join(" / ", g.Traits ?? Array.Empty<TraitId>())}");
+        Console.WriteLine($"- `Actions` ＝ {(g.Actions is null ? "なし" : string.Join(" / ", g.Actions.Select(x => x.Kind.ToString())))}"
+            + $"（**`[Skill]` 1要素であること**: {(g.Actions is { Count: 1 } && g.Actions[0].Kind == ActionKind.Skill ? "○" : "**×**")}）");
+        Console.WriteLine($"- `Def.Pattern` ＝ {g.Pattern}（**単体であること**: {(g.Pattern == AttackPattern.Single ? "○" : "**×**")}"
+            + " ——砕け〈`ShatterTrait.OnDamaged`〉が `source.CurrentPattern == Single` で早期 return する条件)");
+        Console.WriteLine($"- `Advances` ＝ {g.Advances}（第131期の基準 (a)：一度も通常攻撃をしない）");
+        ShrapnelRule d = ShrapnelRule.Default;
+        Console.WriteLine($"- `ShrapnelRule.Default` ＝ `Multiplier = {d.Multiplier}` / `SelfDamagePercent = {d.SelfDamagePercent}`");
+        Console.WriteLine();
+
+        // (G-c) ループ検査の実測（Q0-2）
+        Console.WriteLine("## (G-c) —— ループ検査（Q0-2 の実測）");
+        Console.WriteLine();
+        Console.WriteLine("ガレを入れた台で、**砕けの発火回数（`ShatterTicks`）が礫の発火で増えていないこと**を見る。");
+        Console.WriteLine("砕けは範囲攻撃（`source.CurrentPattern != Single`）にしか反応しないので、");
+        Console.WriteLine("**礫の自傷（`source` ＝ ガレ・単体）では 1 回も増えないはず。**");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 礫 発火/戦 | 砕け 発火/戦 | ヒビ生存T | 砕け発火 ÷ ヒビ生存T |");
+        Console.WriteLine("|---|---:|---:|---:|---:|");
+        foreach ((string name, Formation f) in GareRigs())
+        {
+            var L = RunGare(f, ShrapnelRule.Default);
+            double life = Per(L.HibiLife, L.Battles);
+            Console.WriteLine($"| {name} | {Per(L.Fires, L.Battles):F2} | {Per(L.Ticks, L.Battles):F2} | {life:F2} | "
+                + $"{(life <= 0 ? 0 : Per(L.Ticks, L.Battles) / life):F2} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("> **砕けは被弾の回数（範囲攻撃を浴びた回数）で決まる量**なので、礫の有無で動くのは");
+        Console.WriteLine("> 決着の長さのぶんだけ。**1ターンに何度も増えていたらループしている。**");
+        Console.WriteLine();
+
+        // (G-d) 帳簿が閉じる
+        Console.WriteLine("## (G-d) —— 帳簿が閉じる（§3-2）");
+        Console.WriteLine();
+        Console.WriteLine("**撃った回数 ＋ 捨てた回数 ＝ 礫の生存T**（撃つか捨てるかのどちらかしかない）。");
+        Console.WriteLine("`捨てた` は engine が数えている `UnitTally.StallCanAct`。");
+        Console.WriteLine("**痺れ・まどろみで潰れたターンは別に数えられる**ので、その分だけ下にずれる。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 撃った/戦 | 捨てた/戦 | 和 | ガレ生存T | 差 | 痺/眠 |");
+        Console.WriteLine("|---|---:|---:|---:|---:|---:|---:|");
+        foreach ((string name, Formation f) in GareRigs())
+        {
+            var L = RunGare(f, ShrapnelRule.Default);
+            double fire = Per(L.Fires, L.Battles), idle = Per(L.Idles, L.Battles), life = Per(L.GareLife, L.Battles);
+            Console.WriteLine($"| {name} | {fire:F2} | {idle:F2} | {fire + idle:F2} | {life:F2} | {fire + idle - life:+0.00;-0.00;0.00} | "
+                + $"{Per(L.GareStun, L.Battles):F2} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("**砕いた量の合計 ≦ 盤面に配られた破片の合計**（在庫以上を砕いていない）と");
+        Console.WriteLine("**敵側分岐の発火 0 件**（予測 P4・次期の点灯確認に使う回帰値）:");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 砕いた/戦 | 配られた/戦 | 砕いた ≦ 配られた | **敵を砕いた回数** |");
+        Console.WriteLine("|---|---:|---:|---|---:|");
+        foreach ((string name, Formation f) in GareRigs())
+        {
+            var L = RunGare(f, ShrapnelRule.Default);
+            double br = Per(L.Shards, L.Battles), gv = Per(L.Given, L.Battles);
+            Console.WriteLine($"| {name} | {br:F1} | {gv:F1} | {(br <= gv + 1e-9 ? "○" : "**×**")} | **{L.FoeTargets}** |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("> **配られた（`ShatterGiven`）は砕けだけの供給**なので、鱗の死拾い・集約のぶんは含まない。");
+        Console.WriteLine("> その2本がある台では `砕いた` が上回りうる——**上回ったらどちらの供給かを内訳で確かめること。**");
     }
 }

@@ -2469,6 +2469,30 @@ public sealed class BattleResult
     /// <b>どの規則も読まない計数</b>で、<c>ShatterSoaked</c> は
     /// 破片のプール全体（集約・鱗と混ざる）を数えていることに注意する。
     /// </summary>
+    /// <summary>
+    /// 礫（第138期・<see cref="TraitId.Shrapnel"/>）の帳簿。<b>どの規則も読まない計数。</b>
+    /// <c>ShrapnelFires</c> 撃った回数 ／ <c>ShrapnelShards</c> 砕いた破片の総量 ／
+    /// <c>ShrapnelFoeTargets</c> <b>敵</b>を砕いた回数（<b>この期は 0 が正</b>）／
+    /// <c>ShrapnelDealt</c> 敵全体へ撃った<b>名目</b>の総量 ／ <c>ShrapnelHits</c> 着弾した体数 ／
+    /// <c>ShrapnelSelfHarm</c> 砕かれた駒へ返した総量。
+    ///
+    /// <para><b>捨てた手番（破片が無くて撃てなかった回数）はここには無い</b>——
+    /// engine が既に <c>UnitTally.StallCanAct</c> で数えている。
+    /// <b>実際に通ったダメージ</b>も <c>UnitTally.DamageToEnemy</c> にあり、
+    /// <c>ShrapnelDealt</c> との差が<b>軽減と軛の切り取り</b>になる（予測 P6）。</para>
+    /// </summary>
+    public required int ShrapnelFires { get; init; }
+    /// <inheritdoc cref="ShrapnelFires"/>
+    public required int ShrapnelShards { get; init; }
+    /// <inheritdoc cref="ShrapnelFires"/>
+    public required int ShrapnelFoeTargets { get; init; }
+    /// <inheritdoc cref="ShrapnelFires"/>
+    public required int ShrapnelDealt { get; init; }
+    /// <inheritdoc cref="ShrapnelFires"/>
+    public required int ShrapnelSelfHarm { get; init; }
+    /// <inheritdoc cref="ShrapnelFires"/>
+    public required int ShrapnelHits { get; init; }
+
     public required int ShatterTicks { get; init; }
     public required int ShatterGiven { get; init; }
     public required int ShatterSoaked { get; init; }
