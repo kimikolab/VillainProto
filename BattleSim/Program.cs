@@ -4932,24 +4932,39 @@ if (focusId == "pulse")
     Console.WriteLine("`被(味)` は受けたダメージのうち味方由来のぶん。ここが `被ダメ` の過半を占める駒は、");
     Console.WriteLine("敵ではなく編成に殺されている。");
 
-    foreach (var (name, formation) in targets)
+    // === 第140期 —— 集計だけを行ごとに並列化した。印字は従来どおり直列に `targets` の順 ===
+    //
+    // 集計の辞書（`sum`）は行の私物で、行をまたいで触らない。
+    // 表は `formation.Occupied()` の順に引くので、辞書の列挙順には依存しない。
+    var puSum = new Dictionary<string, UnitTally>[targets.Length];
+    var puBattles = new int[targets.Length];
+    var puTurns = new int[targets.Length];
+    Parallel.For(0, targets.Length, ti =>
     {
         // 駒ごとに全戦闘の集計を足し込む。Def.Id で引くので、胞子のような増援もまとまる。
-        var sum = new Dictionary<string, UnitTally>();
-        int battles = 0, totalTurns = 0;
-
+        Formation pf = targets[ti].F;
+        var s = new Dictionary<string, UnitTally>();
+        int b = 0, tt = 0;
         foreach (EnemyCatalog.Stage st in stages)
             for (int seed = 0; seed < PulseSeeds; seed++)
             {
-                BattleResult r = BattleEngine.Run(formation, st.Enemy, seed, verbose: false);
-                battles++;
-                totalTurns += r.Turns;
+                BattleResult r = BattleEngine.Run(pf, st.Enemy, seed, verbose: false);
+                b++;
+                tt += r.Turns;
                 foreach ((string id, UnitTally t) in r.TallyByUnit)
                 {
-                    if (!sum.TryGetValue(id, out UnitTally? acc)) sum[id] = acc = new UnitTally();
+                    if (!s.TryGetValue(id, out UnitTally? acc)) s[id] = acc = new UnitTally();
                     acc.Add(t);
                 }
             }
+        puSum[ti] = s; puBattles[ti] = b; puTurns[ti] = tt;
+    });
+
+    for (int ti = 0; ti < targets.Length; ti++)
+    {
+        (string name, Formation formation) = targets[ti];
+        var sum = puSum[ti];
+        int battles = puBattles[ti], totalTurns = puTurns[ti];
 
         Console.WriteLine();
         Console.WriteLine($"## {name}");
@@ -54911,7 +54926,16 @@ if (focusId == "compare")
     var qTurnAll = new List<int>[builds.Length];                   // 決着T（第2〜5波・全試行）
     var qTurnW = new List<int>[builds.Length][];
 
-    for (int bi = 0; bi < builds.Length; bi++)
+    // === 第140期 —— 行（編成）ごとに並列化した（器具の期・値は1ビットも変えない） ===
+    //
+    // **この表の集計は、どの行も自分の `[bi]` の枠にしか書かない**——`qWins[bi]` も
+    // `qTurnAll[bi]` も行の私物なので、行をまたいだ競合が原理的に起きない。
+    // **波（`w`）では割らない**——`qWins[bi] += ...` のように波をまたいで足す量があるので、
+    // 同じ行の2つの波を別スレッドに置くと壊れる。**割ってよい軸は行だけ。**
+    //
+    // 印字は従来どおり直列に `builds` の順で行う（行の文字列を控えて後でまとめて出す）。
+    var cqRow = new string[builds.Length];
+    Parallel.For(0, builds.Length, bi =>
     {
         (string name, Formation f) = builds[bi];
         qParty[bi] = f.Occupied().Count();
@@ -54964,10 +54988,14 @@ if (focusId == "compare")
             }
             cells.Add($" {wins * 100.0 / CompareSeeds:F1}% |");
         }
-        if (!cqQuality) Console.WriteLine($"| {name} |" + string.Concat(cells));
-    }
+        cqRow[bi] = $"| {name} |" + string.Concat(cells);
+    });
 
-    if (!cqQuality) return;
+    if (!cqQuality)
+    {
+        foreach (string row in cqRow) Console.WriteLine(row);
+        return;
+    }
 
     Console.WriteLine("# 勝ち方の質");
     Console.WriteLine();
@@ -55260,11 +55288,26 @@ if (focusId == "engage")
         var enemyErodedAll = new double[squads];
         var enemyReachedAll = new int[squads];
 
-        foreach (var (name, f) in targets)
+        // === 第140期 —— 3つの `Sweep` を編成をまたいで1つの平坦な並列パスに前出しした ===
+        //
+        // `Sweep` は (編成, 部隊列, 投入部隊数) の純関数で、内側で作る配列も呼び出しごとに新しい。
+        // `EngagementEngine.Run` は `BattleEngine.Run` を繋ぐだけなので同じく seed 決定的。
+        // **各ジョブは自分の添字にしか書かず、印字は従来どおり直列に `targets` の順で行う。**
+        var egS = new (int Full, double Cleared, double Attr, int Draws, int[] Dist,
+                       double[] AliveSum, double[] HpRatioSum, int[] Reached,
+                       double[] EnemyEroded, int[] EnemyReached)[targets.Length, 3];
+        Parallel.For(0, targets.Length * 3, k =>
         {
-            var s1 = Sweep(f, col.Squads, 1);
-            var s2 = Sweep(f, col.Squads, 2);
-            var s3 = Sweep(f, col.Squads, 3);
+            int t = k / 3, n = k % 3;
+            egS[t, n] = Sweep(targets[t].F, col.Squads, n + 1);
+        });
+
+        for (int t = 0; t < targets.Length; t++)
+        {
+            string name = targets[t].Name;
+            var s1 = egS[t, 0];
+            var s2 = egS[t, 1];
+            var s3 = egS[t, 2];
 
             // 非線形 = 期待突破数(2部隊) ÷ (期待突破数(1部隊)×2)。1.00 超なら第1部隊の削りを
             // 第2部隊が拾えている。期待(1) が 0 の編成は分母が立たないので —（現状は出ない）。
@@ -63439,8 +63482,12 @@ if (focusId == "chain")
     Console.WriteLine("| 編成 | 勝率 | 連鎖深度(平均) | 連鎖深度(最大) | 決着T(勝利時平均) | 残存 | 全滅勝ち |");
     Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|");
 
-    foreach (var (name, f) in builds)
+    // === 第140期 —— 行（編成）ごとに並列化した。**1行の中は従来どおり波→seed の順**なので、
+    // 浮動小数の合算順序も変わらない。印字は控えて後で直列に出す。 ===
+    var chRow = new string[builds.Length];
+    Parallel.For(0, builds.Length, bi =>
     {
+        (string name, Formation f) = builds[bi];
         int wins = 0, trials = 0;
         double killSum = 0;
         int killMax = 0;
@@ -63472,9 +63519,10 @@ if (focusId == "chain")
         double turnAvgOnWin = wins > 0 ? turnSumOnWin / wins : 0;
         double survAvg = wins > 0 ? survSumOnWin / wins : 0;
         double narrow = wins > 0 ? narrowWins * 100.0 / wins : 0;
-        Console.WriteLine($"| {name} | {winRate:F1}% | {killAvg:F2} | {killMax} | {turnAvgOnWin:F1} "
-            + $"| {survAvg:F1}/{party} | {narrow:F0}% |");
-    }
+        chRow[bi] = $"| {name} | {winRate:F1}% | {killAvg:F2} | {killMax} | {turnAvgOnWin:F1} "
+            + $"| {survAvg:F1}/{party} | {narrow:F0}% |";
+    });
+    foreach (string row in chRow) Console.WriteLine(row);
     return;
 }
 
