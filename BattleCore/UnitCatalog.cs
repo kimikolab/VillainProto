@@ -1515,13 +1515,46 @@ public static class UnitCatalog
     /// そのまま回る</b>。<b>`Presets` からも外していない</b>——エグは `compare` 5 行（うち2行は埋め草）と
     /// 交差帯 1 行に居るが、<c>All</c> は「編成に選べる 52 枚」の定義であって
     /// `Presets` が参照できる集合ではない（第108期）。<b>したがって差し替えだけでは盤面は 1 ビットも動かない。</b></para>
+    ///
+    /// <para><b>駒を外すときは <see cref="Retired"/> へ移すこと（第141期）。</b>
+    /// <c>All</c> は「編成に選べる 52 枚」の定義であって、`Presets` や診断のローカル台が参照できる集合ではない。
+    /// 外した駒を辞書のキーに使う診断は <see cref="Everyone"/>（<c>All ∪ Retired</c>）で箱を作る。
+    /// <b>移し忘れは診断 `sweep`（全診断の exit 検査）が捕まえる</b>——第140期に 19 本が黙って落ちていたのは、
+    /// 第108期（ハリ）と第139期（エグ）が外しただけでどこにも移さなかったから。</para>
     /// </summary>
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
         Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Gare, Nomi, Nata, Tomo, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
     };
 
-    public static UnitDef ById(string id) => All.First(u => u.Id == id);
+    /// <summary>
+    /// <b><see cref="All"/> から外した駒（第141期）。</b> 定義は削除せず、`Presets` と診断のローカル台が参照し続ける。
+    /// <b>この一覧が「外した駒」の唯一の記録</b>で、`All` から外す作業は「ここへ移す」の1行になる。
+    ///
+    /// <list type="bullet">
+    /// <item><see cref="Hari"/>（縫いのハリ）—— <b>第108期</b>に外した。根拠は4期ぶん（第83期の3分で唯一「切れる」判定／
+    /// 第85期の両側読みで律速が振り 2.15 回/戦／第106期の再行動が 0.00 回/戦／第107期の発火口の移設でも解けず）。
+    /// 交差帯には第111期まで残り、終端をノミへ差し替えて閉じた。</item>
+    /// <item><see cref="Egu"/>（抉りのエグ）—— <b>第139期</b>に外した。根拠は第119期のプラス値 +0.66（線 +1.5 に届かない3体の1つ）と、
+    /// 代金の救済（号令が買い取る）が第103期に 52 枚中 49 位で否定されていること。
+    /// **`Presets` には残っている**（`compare` 5 行・交差帯 1 行）。</item>
+    /// </list>
+    ///
+    /// <para><b>棄却して定義だけ残した素材（オゴ・ゴウ・ヌキ・オノ）はここに入れない</b>——
+    /// あれらは一度も `All` に居なかった。ここは「居たが外した」駒の記録である。</para>
+    /// </summary>
+    public static IReadOnlyList<UnitDef> Retired { get; } = new[] { Hari, Egu };
+
+    /// <summary>
+    /// <b><c>All ∪ Retired</c>（第141期）。辞書のキーや <c>Id</c> の引きに使う集合。</b>
+    /// 表を回す・編成候補を作る・52 枚を数える側は <see cref="All"/> のまま（列挙と引きを分ける）。
+    /// 順序は `All` の後ろに `Retired` を足した形で、`All` の並びは1つも動かさない。
+    /// </summary>
+    public static IReadOnlyList<UnitDef> Everyone { get; } = All.Concat(Retired).ToArray();
+
+    /// <summary><c>Id</c> から引く。<b>第141期から <see cref="Everyone"/> を引く</b>——`All` を引く形だと
+    /// `Presets` の行（エグを含む5行）を組む診断（`betray`）が `Sequence contains no matching element` で落ちる。</summary>
+    public static UnitDef ById(string id) => Everyone.First(u => u.Id == id);
 }
 
 /// <summary>討伐に来る人間側。プレイヤーは編成できない。</summary>
