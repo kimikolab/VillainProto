@@ -1903,26 +1903,6 @@ public readonly record struct HarmRule(bool Census)
 }
 
 /// <summary>
-/// 破片（<see cref="StatusKeys.Armor"/>）の在庫の走査（第138期 段2）。
-/// <b>計数専用で、どの規則も読まない。</b> <see cref="HarmRule"/> と同じ形・同じ理由。
-///
-/// <para><b>現行の計数では「ある時点で1体が纏っている量」が出せない</b>（Phase 0 Q0-1）
-/// ——<c>ShatterGiven</c> は配布の総量、<c>ScaleWornTurns</c> はウロの纏い率の<b>二値</b>、
-/// <c>ScaleLeftover</c> は決着時の残量で<b>ウロだけ</b>を合計している。
-/// 礫（<see cref="TraitId.Shrapnel"/>）が1回に砕ける量は<b>最大保持者の在庫</b>で決まるので、
-/// そこを直接数えないと掃引の中心が引けない。</para>
-///
-/// <para><b>紙から導かない</b>——第137期は掃引の中心を「1戦の配布総量 ÷ 生存T」で引いて桁を外した。
-/// 原因はその式が<b>実装の発火周期を勘定に入れていなかった</b>ことで、
-/// ここは周期ではなく<b>在庫そのもの</b>をターン頭に写す。</para>
-/// </summary>
-public readonly record struct ArmorRule(bool Census)
-{
-    /// <summary>既定は<b>数えない</b>（<c>compare</c> 305 セル 0 件が検算）。</summary>
-    public static ArmorRule Default => new(false);
-}
-
-/// <summary>
 /// 礫（第138期・<see cref="TraitId.Shrapnel"/>）の強度。<b><c>static</c> のノブは置かない</b>
 /// （<see cref="ScaleRule"/> / <see cref="BearRule"/> / <see cref="ShatterRule"/> と同じ作法）。
 ///
@@ -1930,13 +1910,34 @@ public readonly record struct ArmorRule(bool Census)
 /// <see cref="SelfDamagePercent"/> は 100 の定数扱いで固定する——破片は元々ダメージを吸うプールなので、
 /// 100% なら「吸うはずだった分を先に受ける」になり<b>等価交換として一文で説明が済む</b>。
 /// ただし<b>超過分は素通りする</b>（プールが必ず全部使われたわけではない）ので、完全に無料ではない。</para>
+///
+/// <para><b><see cref="ArmorCensus"/> は本来この型に入れたくない。</b>
+/// 破片の在庫（<c>StatusKeys.Armor</c>）はこの駒の持ち物ではなく通貨そのもので、
+/// 素直に書くなら <c>HarmRule(bool Census)</c> と同じ形の独立した型になる。実際に一度そうした。
+/// <b>そのうえで畳んだのは、<c>BattleEngine.Run</c> の引数をこの期に2本増やしたら
+/// <c>compare</c> が <c>ApplyDamage</c> の再帰でスタックを踏み抜いたから</b>
+/// ——1本なら通り、2本で落ちる（第138期 段5 の実測。詳細は design/PHASE138_SHRAPNEL.md）。
+/// <b><c>ShatterRule</c>（第137期）の側に足さなかったのは、規約 (G8) の必須3
+/// 「触っていないノブの既定が動いていない」を偽にしないため。</b></para>
 /// </summary>
 /// <param name="Multiplier">砕いた破片1点あたり、敵全体へ何点撃つか。</param>
 /// <param name="SelfDamagePercent">砕いた破片のうち何 % を、砕かれた駒へダメージとして返すか。</param>
-public readonly record struct ShrapnelRule(int Multiplier, int SelfDamagePercent)
+/// <param name="ArmorCensus">
+/// 破片の在庫（ターン頭）を走査するか。<b>計数専用で、盤面には一切影響しない。</b>
+/// 既定は偽（<c>compare</c> 305 セル 0 件が検算）。
+/// </param>
+public readonly record struct ShrapnelRule(int Multiplier, int SelfDamagePercent, bool ArmorCensus)
 {
-    /// <summary>既定。<b>保持者が <see cref="UnitCatalog.All"/> に 0 枚なので盤面は動かない。</b></summary>
-    public static ShrapnelRule Default => new(2, 100);
+    /// <summary>
+    /// 既定（<b>第138期 段5 の採用値</b>）。<b>保持者が <see cref="UnitCatalog.All"/> に 0 枚なので
+    /// 盤面は1ビットも動かない</b>——ロスターへ入れるのは差し替え先を決める次期。
+    ///
+    /// <para><b><c>Multiplier = 3</c> は採用条件1 を満たす最小の掃引点。</b>
+    /// 4台の「1回に砕ける量」が 3.87〜4.05 なので、破片由来が攻撃力由来（攻9）を上回るのは M ≥ 3。
+    /// <b>M = 4 のほうが勝率は高いが、閾値を跨いだ最初の点を採る</b>
+    /// （強度を決めた集合と採否を判定する集合を同じにする・第135〜137期の則）。</para>
+    /// </summary>
+    public static ShrapnelRule Default => new(3, 100, false);
 }
 
 /// <summary>

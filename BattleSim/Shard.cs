@@ -260,7 +260,7 @@ static class ShardDiag
             for (int seed = 0; seed < Seeds; seed++)
             {
                 BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed,
-                                                  verbose: false, armor: new ArmorRule(true));
+                                                  verbose: false, shrapnel: ShrapnelRule.Default with { ArmorCensus = true });
                 ArmorLedger a = r.Armor;
                 S.Battles++;
                 S.Turns += a.Turns;
@@ -846,7 +846,7 @@ static class ShardDiag
             Console.WriteLine($"| **V0 素体** | {W(v0.Win)} | {Avg25(v0.Win):F1} | — | — | — | — | — | — | — | — | — | {Per(v0.Turns, v0.Battles):F2} |");
             foreach (int m in pts)
             {
-                GLed L = RunGare(f, new ShrapnelRule(m, 100));
+                GLed L = RunGare(f, new ShrapnelRule(m, 100, false));
                 double nominal = Per(L.Dealt, L.Battles), actual = Per(L.GareDealt, L.Battles);
                 double shardPart = L.Fires == 0 ? 0 : L.Shards / (double)L.Fires * m;
                 double atkPart = UnitCatalog.Gare.Attack;
@@ -875,7 +875,7 @@ static class ShardDiag
                 + $"{Avg25(v0.Win):F1} | {Per(v0.UroLife, v0.Battles):F2} |");
             foreach (int m in pts)
             {
-                GLed L = RunGare(f, new ShrapnelRule(m, 100));
+                GLed L = RunGare(f, new ShrapnelRule(m, 100, false));
                 Console.WriteLine($"| {name} | V1 M={m} | {(L.AliveTurns == 0 ? 0 : L.WornTurns * 100.0 / L.AliveTurns):F1}% | "
                     + $"{Avg25(L.Win):F1} | {Per(L.UroLife, L.Battles):F2} |");
             }
@@ -900,7 +900,7 @@ static class ShardDiag
                     for (int seed = 0; seed < Seeds; seed++)
                     {
                         BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed,
-                                                          verbose: false, shrapnel: new ShrapnelRule(m, 100));
+                                                          verbose: false, shrapnel: new ShrapnelRule(m, 100, false));
                         nom += r.ShrapnelDealt;
                         if (r.TallyByUnit.TryGetValue("gare", out UnitTally? tg)) act += tg.DamageToEnemy;
                     }
@@ -1000,5 +1000,31 @@ static class ShardDiag
         Console.WriteLine();
         Console.WriteLine("> **配られた（`ShatterGiven`）は砕けだけの供給**なので、鱗の死拾い・集約のぶんは含まない。");
         Console.WriteLine("> その2本がある台では `砕いた` が上回りうる——**上回ったらどちらの供給かを内訳で確かめること。**");
+        Console.WriteLine();
+
+        // (G-e) 73 行が ShrapnelRule に依らない（受け入れ条件 3-1）
+        Console.WriteLine("## (G-e) —— `compare` 61行 ＋ 交差帯 12行 が `ShrapnelRule` に依らない");
+        Console.WriteLine();
+        Console.WriteLine("**(G-a) の構造的な保証を実測でも取る**（第137期 (c) と同じ形）。版は `M = 2` 対 `M = 8`。");
+        Console.WriteLine();
+        int rows = 0, diff = 0;
+        var lo = new ShrapnelRule(2, 100, false);
+        var hi = new ShrapnelRule(8, 100, false);
+        foreach ((var src, string _) in new[] { (Presets.Compare, "compare"), (Presets.Cross, "交差帯") })
+            foreach ((string name, Formation f) in src)
+            {
+                rows++;
+                for (int st = 0; st < EnemyCatalog.Stages.Count; st++)
+                {
+                    int a = 0, b = 0;
+                    for (int seed = 0; seed < Seeds; seed++)
+                    {
+                        if (BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false, shrapnel: lo).PlayerWon) a++;
+                        if (BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false, shrapnel: hi).PlayerWon) b++;
+                    }
+                    if (a != b) { diff++; Console.WriteLine($"- **差分**: {name} 第{st + 1}波 {a * 100.0 / Seeds:F1} → {b * 100.0 / Seeds:F1}"); }
+                }
+            }
+        Console.WriteLine($"**{rows} 行 / {rows * 5} セル**中 **{diff} 件**差分。{(diff == 0 ? "**0 件。**" : "**0 件でない。**")}");
     }
 }

@@ -2603,15 +2603,19 @@ public sealed class BattleContext
     // =====================================================================================
     // 第138期 段2 —— 破片（StatusKeys.Armor）の在庫（ArmorLedger）。
     //
-    // **盤面には一切影響しない。** 既定（`ArmorRule.Default` ＝ 数えない）では
+    // **盤面には一切影響しない。** 既定（`ShrapnelRule.Default.ArmorCensus` ＝ 偽）では
     // `ArmorCensus` が偽なので走査も加算も1回も走らない（`compare` 305 セル 0 件が検算）。
     //
     // **`RawCounter` で読む**——`Counter` は `Probe` が刺さっているとき読みを記録するので、
     // 診断（第94期 (T2)）と混ざる。数えたいのは在庫であって「誰が読んだか」ではない。
     // =====================================================================================
 
-    /// <summary>破片の在庫を走査するか。<b>規則が有効なときだけ。</b></summary>
-    public bool ArmorCensus => ArmorCensusRule.Census;
+    /// <summary>
+    /// 破片の在庫を走査するか。<b>規則が有効なときだけ。</b>
+    /// 札が <see cref="ShrapnelRule"/> に同居しているのは <c>Run</c> の引数を増やせないから
+    /// （理由は <see cref="ShrapnelRule.ArmorCensus"/> の doc）。
+    /// </summary>
+    public bool ArmorCensus => Shrapnel.ArmorCensus;
 
     /// <summary>在庫の帳簿（添字は陣営。<c>0 = 敵</c> / <c>1 = 味方</c>）。</summary>
     public long ArmorTurns;
@@ -2739,11 +2743,6 @@ public sealed class BattleContext
     /// </summary>
     public ShatterRule Shatter { get; }
 
-    /// <summary>
-    /// 破片の在庫の走査（第138期 段2。既定は <see cref="ArmorRule.Default"/> ＝ <b>数えない</b>）。
-    /// <b>盤面には一切影響しない。</b>
-    /// </summary>
-    public ArmorRule ArmorCensusRule { get; }
 
     /// <summary>
     /// 礫の強度（第138期。既定は <see cref="ShrapnelRule.Default"/>）。
@@ -3165,8 +3164,7 @@ public sealed class BattleContext
                          NourishRule? nourish = null, WoundRule? wound = null,
                          EmberRule? ember = null, WildfireRule? wildfire = null,
                          HarmRule? harm = null, ParryRule? parry = null,
-                         ShatterRule? shatter = null, ArmorRule? armor = null,
-                         ShrapnelRule? shrapnel = null,
+                         ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -3221,7 +3219,6 @@ public sealed class BattleContext
         Harm = harm ?? HarmRule.Default;
         Parry = parry ?? ParryRule.Default;
         Shatter = shatter ?? ShatterRule.Default;
-        ArmorCensusRule = armor ?? ArmorRule.Default;
         Shrapnel = shrapnel ?? ShrapnelRule.Default;
     }
 
@@ -6169,8 +6166,7 @@ public static class BattleEngine
                                    NourishRule? nourish = null, WoundRule? wound = null,
                                    EmberRule? ember = null, WildfireRule? wildfire = null,
                                    HarmRule? harm = null, ParryRule? parry = null,
-                                   ShatterRule? shatter = null, ArmorRule? armor = null,
-                                   ShrapnelRule? shrapnel = null,
+                                   ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
@@ -6178,7 +6174,7 @@ public static class BattleEngine
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
-               nourish, wound, ember, wildfire, harm, parry, shatter, armor, shrapnel, probe);
+               nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -6213,8 +6209,7 @@ public static class BattleEngine
                                    NourishRule? nourish = null, WoundRule? wound = null,
                                    EmberRule? ember = null, WildfireRule? wildfire = null,
                                    HarmRule? harm = null, ParryRule? parry = null,
-                                   ShatterRule? shatter = null, ArmorRule? armor = null,
-                                   ShrapnelRule? shrapnel = null,
+                                   ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
@@ -6222,7 +6217,7 @@ public static class BattleEngine
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
-                                    nourish, wound, ember, wildfire, harm, parry, shatter, armor, shrapnel, probe);
+                                    nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

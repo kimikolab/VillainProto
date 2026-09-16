@@ -152,6 +152,7 @@
 | `Overreach` | 抉りのエグ |
 | `Await` | 断ちのナタ |
 | `Seal` | 継ぎ当てのノノ |
+| `Shrapnel` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
