@@ -28983,8 +28983,13 @@ if (focusId == "thorn")
 
     IReadOnlyList<EnemyCatalog.Stage> thStages = EnemyCatalog.Stages;
     int thW = thStages.Count;
-    var thRoster = UnitCatalog.All.ToArray();
-    int thRN = thRoster.Length;                       // 51
+    // **第141期: ロスターは `Everyone`（`All ∪ Retired` ＝ 52 ＋ 2）。** この診断ではロスターが
+    // 「B を回す集合」と「`Id` → 添字の引き表」を兼ねていて、意図した相手 5 枚（キリ・ノミ・エグ・ナタ・ハリ）のうち
+    // エグ（第139期）とハリ（第108期）が `All` に居ない。引き表だけを広げても添字が配列の外を指すので、
+    // **ロスターごと `Everyone` にする**——第84期の測定当時はどちらも `All` に居て B の候補だったので、
+    // 当時の集合に近いのはこちら（その後に入った トモ・ソム・ガレ のぶんだけ広い）。
+    var thRoster = UnitCatalog.Everyone.ToArray();
+    int thRN = thRoster.Length;                       // 54（第84期は 51）
 
     // ---- 第81期 `pairs2` の定数の写し（**1つも変えていない**）----------------------------------
     const int ThTableSeed = 8_100_000;
