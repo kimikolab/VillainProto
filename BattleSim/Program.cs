@@ -56462,6 +56462,18 @@ if (focusId == "shard")
     return;
 }
 
+// sweep モード（第141期） —— 全診断の exit 検査。本体は `Sweep.cs`。
+// `CLAUDE.md` のコマンド表を自分で読み、引数の穴の無い本を1本ずつ上限つきの子プロセスで走らせる。
+// **合格 = 異常終了 0 本**。毎期は回さない（80 分前後）——`UnitCatalog.All` ／ `Retired` ／ `Presets` に触る期の受け入れ条件。
+//
+//     dotnet run --project BattleSim -c Release 0 sweep [上限秒] [絞り込み]   # 全部（上限 90 秒）
+//     dotnet run --project BattleSim -c Release 0 sweep list                  # 一覧だけ（戦闘0回）
+if (focusId == "sweep")
+{
+    SweepDiag.Run(args.Skip(2).ToArray());
+    return;
+}
+
 // handoff モード: 会戦の交代の実態を計測する（第4期 Phase K）。「部隊を1つ足すと突破数の
 // 増分が編成によらずほぼ +1.00」の原因を、仮説 P（第1部隊が敵をほとんど削らずに全滅し、
 // 第2部隊は仕切り直しで1波抜くだけ＝拾えていない）と仮説 Q（拾えてはいるが、第2部隊の
