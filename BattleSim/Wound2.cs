@@ -674,7 +674,15 @@ static class Wound2Diag
         Console.WriteLine();
         var gains = attr.Where(x => !x.Screened && x.Worst <= -AttrLine).OrderBy(x => x.Worst).ToArray();
         Console.WriteLine($"**逆側 —— 傷を外すといずれかの波で {AttrLine:F1}pt 以上<u>上がる</u>行: {gains.Length} 行**");
-        Console.WriteLine("（＝**傷が正味の損になっている行**。巻き込み則が味方に 8 個/戦 書くので、これは驚きではない）");
+        // **この1文は実装から引く**（第139期）。第120期は「巻き込み則が味方に 8 個/戦 書くので、
+        // これは驚きではない」と**数を地の文に焼き付けていた**が、第122期に巻き込み則が降りて
+        // **味方側の傷が 0.000/戦 になった時点で嘘になっていた**——規則を降ろすと、その規則を
+        // 前提に書かれた説明文が静かに嘘になる（第122期の則の、器具の出力文の側の版）。
+        Console.WriteLine(SpillWoundRule.Default.Enabled
+            ? "（＝**傷が正味の損になっている行**。巻き込み則（`SpillWoundRule` ＝ **有効**）が"
+              + "味方側の駒にも傷を書くので、これは驚きではない）"
+            : "（＝**傷が正味の損になっている行**。巻き込み則（`SpillWoundRule`）は**第122期に降りている**ので、"
+              + "味方側に傷を書く経路は盤面に1本も無い——**ここに行が出たら、理由は味方の傷ではない**）");
         Console.WriteLine();
         if (gains.Length > 0)
         {

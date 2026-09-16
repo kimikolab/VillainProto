@@ -378,6 +378,16 @@ static class Grade2Diag
         var stats = new Dictionary<string, Stat>(StringComparer.Ordinal);
         foreach (UnitDef d in UnitCatalog.All) stats[d.Id] = new Stat();
 
+        // **`Presets` に居るが `All` に居ない駒**にも箱を用意する（第139期）。
+        // **ロスターは「編成に選べる 52 枚」の定義であって、`Presets` が参照できる集合ではない**
+        // （第108期。ハリを `All` から外したときも `Presets.Cross` には残した）。
+        // 第139期にエグを外したとき、エグは `compare` 5 行に残ったので**ここで落ちた**
+        // （`The given key 'egu' was not present in the dictionary.`）。
+        // **表は `UnitCatalog.All` を回すので 52 行のまま**——箱が増えるだけで出力は1文字も変わらない。
+        foreach ((string _, Formation f) in Presets.Compare)
+            foreach ((int _, UnitDef d) in f.Occupied())
+                if (!stats.ContainsKey(d.Id)) stats[d.Id] = new Stat();
+
         object gate = new();
         Parallel.ForEach(Presets.Compare, row =>
         {
