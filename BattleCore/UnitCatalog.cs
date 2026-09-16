@@ -647,10 +647,10 @@ public static class UnitCatalog
     /// <summary>
     /// 礫のガレ（第138期）。<b>破片（<c>StatusKeys.Armor</c>）に初めての「出口」を作る駒。</b>
     ///
-    /// <para><b><see cref="All"/> には入れていない。</b> ロスターの上限は 52 ＝ トランプ1組で
-    /// 第103期に確定しており、<b>どの既存駒と差し替えるかは採否が決まってから</b>（第138期 Q0-5）。
-    /// 測って採らなかった素材（オゴ・ゴウ・ヌキ・オノ・ハリ）と器具の札と同じ扱いで、
-    /// 測定は診断 <c>shard</c> のローカル台だけが持つ。</para>
+    /// <para><b>第139期に <see cref="All"/> へ入れた（<see cref="Egu"/> と差し替え・52 枚のまま）。</b>
+    /// 第138期は「上限 52 ＝ トランプ1組は第103期に確定しており、どの既存駒と差し替えるかは
+    /// 採否が決まってから」として <c>All</c> の外に置いていた（第138期 Q0-5）。
+    /// <b>差し替えの根拠は <see cref="All"/> の doc にある。</b></para>
     ///
     /// <para><b>数値はこの期では振らない</b>（HP62 / 攻9 / 速6）。
     /// 攻9 は効果の式（<c>shards × Multiplier ＋ 攻撃力</c>）が参照するので中位に置いてある
@@ -1492,10 +1492,33 @@ public static class UnitCatalog
     /// <para><b>ハリは `Presets.Cross` の交差帯にはまだ残っている</b>
     /// （`傷×被弾 (カド×ハリ×ノノ)`）。交差帯は<b>測定の器具</b>で、
     /// 「計測器と測定対象を同時に動かさない」ため第108期では触っていない（報告書 §B）。</para>
+    ///
+    /// <para><b>第139期に <see cref="Egu"/>（抉りのエグ）を外し、<see cref="Gare"/>（礫のガレ）を入れた。
+    /// 枚数は 52 のまま。</b> ガレは第138期に採用が決まった機構（破片の初めての「出口」）で、
+    /// 上限 52 に触るため差し替え先の決定だけが次期送りになっていた。</para>
+    ///
+    /// <para><b>エグを選んだ根拠は2つ。</b>
+    /// (1) 第119期の健康診断の<b>プラス値</b>（マイナスを外したときの伸び）で
+    /// <b>線 +1.5 に届かなかった3体のうちの1体</b>（ノノ +0.28 / ナタ +0.59 / <b>エグ +0.66</b>）
+    /// ——エグは代金（深追い・倒すと次の手番を失う）を外してもほとんど伸びない。
+    /// (2) その代金の<b>救済の当ても外れている</b>——「失った手番を号令・据えが買い取る」は
+    /// 第103期の実測で<b>号令のガンが 52 枚中 49 位（−8.23）</b>と最も強く否定された。</para>
+    ///
+    /// <para><b>ただし第119期の3分そのものはエグを「転生」に置いている</b>（第82期の「差し替え」から上がった）
+    /// ——理由は<b>最良の相乗 +5.59 が線 +5.0 の内側にある</b>こと。
+    /// 同期の「差し替え」は ハネ・ノノ の2体で、どちらも拒否権1 に当たる（＝<b>切れる駒は 52 枚でも 0 体</b>）。
+    /// <b>この期はプラス値の側を採った。器具の総合判定とは逆を向いていることを消さずに書いておく</b>
+    /// ——覆すなら根拠はプラス値ではなく相乗の側にある。</para>
+    ///
+    /// <para><b><see cref="Egu"/> の <c>UnitDef</c> と <c>GougeTrait</c> / <c>OverreachTrait</c> は削除していない</b>
+    /// ——ハリ・オゴ・ゴウ・ヌキ・オノと同じ扱いで、<b>診断（`wound2` / `deep` / `gauge` / `shard` など）は
+    /// そのまま回る</b>。<b>`Presets` からも外していない</b>——エグは `compare` 5 行（うち2行は埋め草）と
+    /// 交差帯 1 行に居るが、<c>All</c> は「編成に選べる 52 枚」の定義であって
+    /// `Presets` が参照できる集合ではない（第108期）。<b>したがって差し替えだけでは盤面は 1 ビットも動かない。</b></para>
     /// </summary>
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Egu, Nomi, Nata, Tomo, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Gare, Nomi, Nata, Tomo, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
     };
 
     public static UnitDef ById(string id) => All.First(u => u.Id == id);

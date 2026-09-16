@@ -54895,7 +54895,11 @@ if (focusId == "compare")
             int wins = 0;
             for (int seed = 0; seed < CompareSeeds; seed++)
             {
-                BattleResult r = BattleEngine.Run(f, st.Enemy, seed, verbose: false);
+                // **大きなスタックの上で走らせる**（第139期 段0・`BigStack` の doc に理由）。
+                // HEAD（第138期 `eaec7e6`）では 23 行目 `反撃改3 (カド×ハギ)` で
+                // 棘の反撃の再帰がスタックを踏み抜き、`docs/balance.md` が途中で壊れていた。
+                // **引数・戻り値・順序・乱数は `BattleEngine.Run(f, st.Enemy, seed, verbose: false)` と同値。**
+                BattleResult r = BigStack.Run(f, st.Enemy, seed);
 
                 // --- 第129期 段1 ——「勝ったか」より前に**全試行**を分母に取る ---------------
                 // **第一波は実行して除外**（規約 (G10)。ここも同じ分母の切り方にそろえる）。
