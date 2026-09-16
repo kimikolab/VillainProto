@@ -35975,8 +35975,10 @@ if (focusId == "soak")
 
     IReadOnlyList<EnemyCatalog.Stage> skStages = EnemyCatalog.Stages;
     int skW = skStages.Count;
-    var skRoster = UnitCatalog.All.ToArray();
-    int skRN = skRoster.Length;                       // 51
+    // **第141期: ロスターは `Everyone`（`All ∪ Retired`）。** (P1)＝第89期の再判定の意図した相手にハリが入る
+    // （`soak redo89` が `skIdx["hari"]` で落ちていた）。ロスターが B の集合と引き表を兼ねるのでロスターごと広げる。
+    var skRoster = UnitCatalog.Everyone.ToArray();
+    int skRN = skRoster.Length;                       // 54（第90期は 51）
 
     // ---- 第81期 `pairs2` の定数の写し（**1つも変えていない**）----------------------------------
     const int SkTableSeed = 9_000_000;                // **第90期の標本**（第87・88期 8,100,000 ／ 第89期 8,900,000 とは別）
