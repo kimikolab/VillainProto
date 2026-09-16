@@ -16569,7 +16569,9 @@ if (focusId == "draft3")
     var d3Sw = System.Diagnostics.Stopwatch.StartNew();
     var d3Roster = UnitCatalog.All.ToArray();
     int d3RN = d3Roster.Length;                       // 51
-    var d3KeyOf = d3Roster.ToDictionary(u => u.Id, TraitKeyMap.KeysOf);
+    // **第141期: キー表は `Everyone` で引く。** 理想61行（`CompareBuilds()`）にはエグが残っているので、
+    // `d3Roster`（＝`All`・抽選の母集団）だけで表を作ると `D3Pairs` が `d3KeyOf["egu"]` で落ちる。
+    var d3KeyOf = UnitCatalog.Everyone.ToDictionary(u => u.Id, TraitKeyMap.KeysOf);
 
     // ---- 測る前に固定した定数 ------------------------------------------------------------
     //
