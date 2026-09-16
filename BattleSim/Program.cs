@@ -15032,7 +15032,10 @@ if (focusId == "draft")
     // **`Trait` に属性を足さない**（第48期 census の作法。判定の根拠が
     // 「誰かが属性を正しく付けたか」に化けて grep で検算できなくなる）。
     // **engine 側の窓口は駒に属さないので入らない。**
-    var dfKeyOfUnit = dfRoster.ToDictionary(u => u.Id, TraitKeyMap.KeysOf);
+    // **第141期: キー表は `Everyone`（`All ∪ Retired`）で引く。** `dfTargets` の 30 体はこの期の対象として固定してあり
+    // エグ（第139期）とハリ（第108期）を含む——`dfRoster`（＝`All`）で表を作ると `dfKeyOfUnit["egu"]` で落ちる。
+    // **抽選の母集団 `dfRoster` は `All` のまま**（列挙は触らない）。
+    var dfKeyOfUnit = UnitCatalog.Everyone.ToDictionary(u => u.Id, TraitKeyMap.KeysOf);
 
     // ---- 標本の作り方（**測る前に固定**） ------------------------------------------------
     //
@@ -15506,12 +15509,18 @@ if (focusId == "draft")
             var idxs = Enumerable.Range(0, DfN).Where(i => Array.IndexOf(res.Present[i], t) >= 0).ToArray();
             var d = idxs.Select(i => dfRateArr[1][i] - dfRateArr[0][i]).ToList();
             var st = DfStats(d);
+            // **第141期: 在席 0 の対象を落とさない。** エグ・ハリは `dfTargets`（この期に固定した 30 体）には居るが
+            // 抽選の母集団 `dfRoster`（＝`All`）には居ないので、標本が 1 つも無い（`Average` が空で落ちていた）。
+            // 行は残して「—」で出す——「測っていない」を「無かった」に見せないため（第61期）。
             seatRows.Add((t, st.Mean, DfZ * st.Sd / Math.Sqrt(Math.Max(1, st.N)), idxs.Length,
-                          idxs.Average(i => dfRateArr[0][i]), idxs.Average(i => dfRateArr[1][i])));
+                          idxs.Length == 0 ? double.NaN : idxs.Average(i => dfRateArr[0][i]),
+                          idxs.Length == 0 ? double.NaN : idxs.Average(i => dfRateArr[1][i])));
         }
-        foreach (var r2 in seatRows.OrderByDescending(x => x.D))
-            Console.WriteLine($"| {dfTargets[r2.T].Name} | {r2.N} | {r2.A:F2}% | {r2.B:F2}% "
-                              + $"| **{DfP2(r2.D)}** | ±{r2.Ci:F2} |");
+        foreach (var r2 in seatRows.OrderByDescending(x => x.N > 0 ? 1 : 0).ThenByDescending(x => x.D))
+            Console.WriteLine(r2.N == 0
+                ? $"| {dfTargets[r2.T].Name} | 0 | — | — | — | — |"
+                : $"| {dfTargets[r2.T].Name} | {r2.N} | {r2.A:F2}% | {r2.B:F2}% "
+                  + $"| **{DfP2(r2.D)}** | ±{r2.Ci:F2} |");
         Console.WriteLine();
 
         // ---- 表D ----
