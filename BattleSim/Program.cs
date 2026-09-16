@@ -32920,8 +32920,10 @@ if (focusId == "gauge")
 
     IReadOnlyList<EnemyCatalog.Stage> ggStages = EnemyCatalog.Stages;
     int ggW = ggStages.Count;
-    var ggRoster = UnitCatalog.All.ToArray();
-    int ggRN = ggRoster.Length;                       // 51
+    // **第141期: ロスターは `Everyone`（`All ∪ Retired`）。** 第85期の機構は A ＝ ハリ、第84期の意図した相手に
+    // エグ・ハリが入っていて、どちらも `All` に居ない。ロスターが B の集合と引き表を兼ねるのでロスターごと広げる。
+    var ggRoster = UnitCatalog.Everyone.ToArray();
+    int ggRN = ggRoster.Length;                       // 54（第88期は 51）
 
     // ---- 第81期 `pairs2` の定数の写し（**1つも変えていない**。第88期が変えるのは分母の取り方だけ）----
     const int GgTableSeed = 8_100_000;
