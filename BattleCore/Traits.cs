@@ -7125,8 +7125,24 @@ public static class ShoveRules
 /// <param name="Stagger">突き飛ばした味方を転ばせる（次の手番を失わせる）か（段D）。</param>
 public readonly record struct BraceRule(int Cap, bool Refuse, bool Stagger)
 {
-    /// <summary>既定。<b>最終的に採用した値</b>（第136期の受け流し N=2 と同じ扱い）。</summary>
-    public static BraceRule Default => new(0, false, false);
+    /// <summary>
+    /// 既定（<b>第143期 段C の採用値</b>）。
+    ///
+    /// <para><b><c>Cap = 7</c> は Q0-2 の分布の p10。</b> 3点（7 / 12 / 20）のうち
+    /// <b>4台すべてで帰属が正になったのは 7 だけ</b>（+7.8 / +9.4 / +13.1 / +16.9）で、
+    /// 12 と 20 は 4台中3台で負ける。<b>「閾値を跨いだ最初の点を採る」（第138期）は
+    /// ここでは効かない</b>——跨ぐ点が1つしか無い。</para>
+    ///
+    /// <para><b><c>Refuse = true</c>（切り落とした分を配る）が機構の本体。</b>
+    /// 上限だけ（段B）では 4台中2台で負ける——<b>壁になっても、切り落とした分を誰も読まないと
+    /// 攻撃を捨てた代金が回収できない。</b></para>
+    ///
+    /// <para><b><c>Stagger = false</c>（転倒は採らなかった）。</b> 測ると<b>4台すべてで下がり</b>
+    /// （−7.4 / −5.4 / −40.1 / −0.9）、<b>手番市場の台でも符号が反転しない</b>
+    /// ので、採否の条件3（読み手なしで下がり、手番市場で上がる）を満たさない。
+    /// <b>ノブは残置</b>——`Stagger = true` を渡せばそのまま動く。</para>
+    /// </summary>
+    public static BraceRule Default => new(7, true, false);
 }
 
 /// <summary>
