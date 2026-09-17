@@ -7019,15 +7019,62 @@ public sealed class LooseTrait : Trait
         if (!ctx.Loose.Shove || dmg <= 0 || !self.IsAlive) return;
 
         UnitTally t = ctx.TallyOf(self);
-        if (self.Counter(LastTurnKey) == ctx.Turn + 1) { t.LooseCapped++; return; }
+        switch (ShoveRules.Shove(ctx, self, LastTurnKey, out _))
+        {
+            case ShoveOutcome.Capped: t.LooseCapped++; break;
+            case ShoveOutcome.NoTarget: t.LooseNoTarget++; break;
+            case ShoveOutcome.Shoved: t.LooseShoves++; break;
+        }
+    }
+}
 
-        UnitState? victim = null;
+/// <summary>弾きの結果（<see cref="ShoveRules.Shove"/>）。<b>計数は呼び出し側が持つ。</b></summary>
+public enum ShoveOutcome
+{
+    /// <summary>実際に弾いた。</summary>
+    Shoved,
+    /// <summary>1ターン1回の上限で弾かれた。</summary>
+    Capped,
+    /// <summary>隣に生存味方がいない（または行き先が1つも無い）。</summary>
+    NoTarget
+}
+
+/// <summary>
+/// 隣の味方を別の席へ弾く規則（第106期 (T2) に <see cref="LooseTrait"/> が作り、
+/// <b>第143期に共有ヘルパへ出した</b>）。<b>規則は1文字も変えていない</b>
+/// ——`compare` 305 セルが 0 件差分であることが検算。
+///
+/// <para><b>計数だけを呼び出し側に残した。</b> 散開（<see cref="LooseTrait"/>）と
+/// 身構え（<see cref="BraceTrait"/>）は別の帳簿を持つので、
+/// <c>UnitTally</c> に触るのはこの中ではなく <see cref="ShoveOutcome"/> を受け取った側。
+/// <b>盤面に触る順序（上限を立てる → ログ → <c>SwapSlots</c>）は 1 ビットも動かしていない。</b></para>
+/// </summary>
+public static class ShoveRules
+{
+    /// <summary>
+    /// <b>弾く先の決め方（乱数を1つも引かない・<c>ctx.PickOne</c> を使わない）</b>:
+    /// 対象は<b>隣接する生存味方のうち席番号が最小の1体</b>。行き先は編成枠 0-4 のうち
+    /// 対象自身と保持者の席を除いた3つで、<b>(1) 保持者に隣接しない席を優先し、
+    /// (2) その中で空席を優先し、(3) 同じなら席番号が小さいほう</b>。
+    /// 召喚枠（5-8）は行き先にしない（<c>PlayableSlots</c> だけを見る）。
+    ///
+    /// <para><b>1ターン1回まで。</b> <see cref="BattleContext.SwapSlots"/> は <c>OnMoved</c> を通じて
+    /// 軋みの割り込み攻撃を起こし、その攻撃が保持者を殴り返すと再入する。上限は
+    /// <b><c>SwapSlots</c> を呼ぶ前に</b>立てるので、同じターンの再入はそこで止まる。</para>
+    /// </summary>
+    /// <param name="lastTurnKey">「最後に弾いたターン + 1」を持つ私有カウンタのキー。<b>札ごとに別のキーを渡すこと。</b></param>
+    /// <param name="victim">実際に弾いた味方（<see cref="ShoveOutcome.Shoved"/> のときだけ非 null）。</param>
+    public static ShoveOutcome Shove(BattleContext ctx, UnitState self, string lastTurnKey, out UnitState? victim)
+    {
+        victim = null;
+        if (self.Counter(lastTurnKey) == ctx.Turn + 1) return ShoveOutcome.Capped;
+
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
             if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
             if (victim is null || ally.Slot < victim.Slot) victim = ally;
         }
-        if (victim is null) { t.LooseNoTarget++; return; }
+        if (victim is null) return ShoveOutcome.NoTarget;
 
         var taken = new HashSet<int>(ctx.LivingMembers(self.TeamId).Select(u => u.Slot));
         int dest = -1;
@@ -7041,13 +7088,13 @@ public sealed class LooseTrait : Trait
             bestRank = rank;
             dest = slot;
         }
-        if (dest < 0) { t.LooseNoTarget++; return; }
+        if (dest < 0) { victim = null; return ShoveOutcome.NoTarget; }
 
         // **上限を先に立てる**（SwapSlots が起こす割り込みからの再入をここで止める）。
-        self.SetCounter(LastTurnKey, ctx.Turn + 1);
-        t.LooseShoves++;
+        self.SetCounter(lastTurnKey, ctx.Turn + 1);
         ctx.Log($"    {self.Name} が錯乱して {victim.Name} を弾いた", LogKind.Trigger);
         ctx.SwapSlots(victim, dest, self);
+        return ShoveOutcome.Shoved;
     }
 }
 
