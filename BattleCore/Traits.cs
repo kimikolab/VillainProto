@@ -8092,13 +8092,22 @@ public readonly record struct YokeRule(int Cap, bool Active)
 /// 保持者の走査もしない）。<c>compare</c> 305 セルが 0 件であることが検算。</para>
 /// </summary>
 /// <param name="Active">混乱を掛けるか。<b>既定は偽（回帰の基準）。</b></param>
-public readonly record struct ConfusionRule(bool Active)
+/// <param name="Percent">
+/// 動かされた駒が混乱する確率（%）。<b>既定 100 では <c>Roll</c> を1つも引かない</b>
+/// ——`100 以上なら短絡する`ので、100 の版と「確率のノブが無かったとき」は
+/// 乱数列まで1ビット同じになる（段B の値がそのまま比較できる）。
+/// <b>段C の「弱めた版」専用</b>で、指示書 §5 が求めた1点（50）を測るためにある。
+/// </param>
+public readonly record struct ConfusionRule(bool Active, int Percent = 100)
 {
     /// <summary>既定は<b>掛けない</b>。第145期までと1ビットも違わない。</summary>
     public static ConfusionRule Default => new(Active: false);
 
-    /// <summary>両陣営に掛ける（段B・段C）。</summary>
+    /// <summary>両陣営に掛ける（段B）。<b>動かされたら必ず混乱する。</b></summary>
     public static ConfusionRule On => new(Active: true);
+
+    /// <summary>段C: 弱めた版（動かされた駒の <paramref name="Percent"/> % だけ混乱する）。</summary>
+    public static ConfusionRule Half => new(Active: true, Percent: 50);
 }
 
 /// <summary>

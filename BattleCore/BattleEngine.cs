@@ -6305,7 +6305,9 @@ public sealed class BattleContext
             // ——自分で逃げても引きずり出されても「動かされた」は同じ。
             // 押しのけられた側にも同じだけ立つ（Notify は両方に走る）。
             // **`Active = false` なら 1 バイトも動かない**（軛と同じ短絡の作法）。
-            if (Confusion.Active && u.RawCounter(StatusKeys.Confused) == 0)
+            // **`Percent >= 100` なら `Roll` を引かない**（段B の乱数列を段C のノブで動かさない）。
+            if (Confusion.Active && u.RawCounter(StatusKeys.Confused) == 0
+                && (Confusion.Percent >= 100 || Roll(100) < Confusion.Percent))
             {
                 u.SetCounter(StatusKeys.Confused, 1);
                 TallyOf(u).ConfusedMarks++;

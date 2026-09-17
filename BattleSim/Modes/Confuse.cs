@@ -24,8 +24,11 @@ static class ConfuseDiag
         switch (mode)
         {
             case "phase0": Phase0(); return;
-            case "scan": Scan(); return;
+            case "scan": if (arg.StartsWith("probe")) Probe(); else Scan(); return;
             case "run": Sweep(); return;
+            case "dir": Direction(); return;
+            case "half": Half(); return;
+            case "compare": CompareRows(); return;
             case "check": Check(arg); return;
             default:
                 Console.WriteLine("confuse: モードは phase0 / scan / run / check。");
@@ -48,6 +51,18 @@ static class ConfuseDiag
     };
 
     /// <summary>
+    /// 埋め草の強さ（<c>scan probe</c> が振る）。<b>既定は下の掃引で選んだ値。</b>
+    /// <b>台の V0 が床（第2〜5波平均 40% 未満）だと勝率の列が1ビットも情報を持たない</b>
+    /// ——第133期の台1（V0 0.0%）と同じ轍。<b>台を作る条件に「V0 が 40〜95%」を入れること。</b>
+    /// </summary>
+    /// <para><b>採用値は HP 110 / 攻 34</b>（`scan probe` の 12 点のうち <b>4台とも帯に入る2点</b>
+    /// ——(90, 34) と (110, 34)。情報セルはどちらも 14/16 だが、**200 seed で測り直すと (90, 34) の台4 が 39.2% で床を割る**ので大きいほうを採った）。
+    /// <b>特性は1つも持たない</b>ので、敵の数値にも味方の通貨にも触らない（第143期の則）。</para>
+    static int _fillHp = 110, _fillAtk = 34;
+
+    static UnitDef Fill(string id) => Plain(id, _fillHp, _fillAtk);
+
+    /// <summary>
     /// ローカル台。<b><c>Presets</c> には置かない</b>（<c>compare</c> 61行を汚さない）。
     ///
     /// <para><b>供給は喧噪のバサに寄せてある</b>——毎ターン敵2体と味方2体を入れ替えるので、
@@ -63,24 +78,26 @@ static class ConfuseDiag
         // **混乱が代金になるか**を読む台（指示書 §3 予測1 の負の側）。
         ("被弾変換が厚い", Formation.Build(
             front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Doha,
-            back1: UnitCatalog.Basa, back3: Plain("pa", 70, 10))),
+            back1: UnitCatalog.Basa, back3: Fill("pa"))),
 
         // 打点だけ。被弾を資産に変える札が1枚も無いので、**混乱が純粋な得になるか**を読む
         // （指示書 §3 予測1 の正の側）。台4 とはバサの有無だけが違う。
         ("被弾変換が薄い", Formation.Build(
             front1: UnitCatalog.Dolga, front3: UnitCatalog.Borg, center: UnitCatalog.Kiri,
-            back1: UnitCatalog.Basa, back3: Plain("pa", 70, 10))),
+            back1: UnitCatalog.Basa, back3: Fill("pa"))),
 
         // ササ（身構え・上限7で切って切り落としを破片へ）＋ ガレ（礫・破片を出口へ）。
         // **混乱の一撃が供給に化けるか**（指示書 §3 予測2）。
         ("ササ同席", Formation.Build(
             front1: UnitCatalog.Sasa, front3: UnitCatalog.Gare, center: UnitCatalog.Borg,
-            back1: UnitCatalog.Basa, back3: Plain("pa", 70, 10))),
+            back1: UnitCatalog.Basa, back3: Fill("pa"))),
 
-        // 動かす機構なし（陰性対照）。台2 からバサを抜いただけ。
+        // 動かす機構なし（陰性対照）。**台2 のバサを同数値・特性なしの素体に落としただけ**
+        // （HP56 / 攻7 / 速8 ＝ 喧噪のバサと1つも違わない）。差は札 `Shuffler` の1枚きりなので、
+        // **「混乱が立たない」以外の理由で台2 と差が出ない**（第39・61期の同数値対照）。
         ("動かす機構なし", Formation.Build(
             front1: UnitCatalog.Dolga, front3: UnitCatalog.Borg, center: UnitCatalog.Kiri,
-            back1: Plain("pb", 70, 10), back3: Plain("pa", 70, 10))),
+            back1: Plain("pb", 56, 7), back3: Fill("pa"))),
     };
 
     // =================================================================================
@@ -205,6 +222,39 @@ static class ConfuseDiag
         }
     }
 
+    /// <summary>
+    /// 埋め草の強さを振って、<b>4台とも帯（40〜95%）に入る組</b>を探す（第138期 `gscan probe` と同型）。
+    /// <b>版は1つも振らない</b>——探しているのは台であって効き目ではない。
+    /// </summary>
+    static void Probe()
+    {
+        Console.WriteLine("# 第146期 `confuse scan probe` —— 埋め草の強さを振る（V0 だけ）");
+        Console.WriteLine();
+        Console.WriteLine("**4台とも第2〜5波平均が 40〜95% に入る組を探す。** 情報セルは第2〜5波で `0 < x < 100`。");
+        Console.WriteLine();
+        Console.WriteLine("| HP | 攻 | 厚い | 薄い | ササ | 機構なし | 帯に入る台 | 情報セル合計 |");
+        Console.WriteLine("|--:|--:|--:|--:|--:|--:|--:|--:|");
+        int savedHp = _fillHp, savedAtk = _fillAtk;
+        foreach (int hp in new[] { 70, 90, 110 })
+            foreach (int atk in new[] { 10, 18, 26, 34 })
+            {
+                _fillHp = hp; _fillAtk = atk;
+                var avg = new List<double>();
+                int info = 0;
+                foreach ((string _, Formation f) in Rigs())
+                {
+                    double[] w = Rates(f, V0, 100);
+                    avg.Add(w.Skip(1).Average());
+                    info += w.Skip(1).Count(x => x > 0.0 && x < 100.0);
+                }
+                int inBand = avg.Count(a => a >= 40 && a <= 95);
+                Console.WriteLine("| " + hp + " | " + atk + " | "
+                                  + string.Join(" | ", avg.Select(a => a.ToString("F1")))
+                                  + " | **" + inBand + "/4** | " + info + "/16 |");
+            }
+        _fillHp = savedHp; _fillAtk = savedAtk;
+    }
+
     // =================================================================================
     // run —— 段B: V0 対 V1
     // =================================================================================
@@ -249,6 +299,188 @@ static class ConfuseDiag
                                   + am.ToString("F2") + " | " + asw.ToString("F2") + " | "
                                   + fm.ToString("F2") + " | " + fsw.ToString("F2") + " |");
             }
+    }
+
+    // =================================================================================
+    // dir —— 供給の**向き**を分ける（段B の × の原因を割る）
+    // =================================================================================
+
+    /// <summary>
+    /// <b>段B は4台とも下がった。その原因が「混乱そのもの」か「供給が両陣営に等量だから」かを割る。</b>
+    ///
+    /// <para><b>向きを振る器具は `ShufflerRule` にある</b>——<c>Legacy</c>（<c>Foes = false</c>）は
+    /// <b>味方だけ</b>を乱し、<c>(true, None)</c> は<b>両陣営</b>を乱す。差はどの陣営を乱すかの1点だけで、
+    /// <b>転倒は両方 `None` に固定してある</b>（第144期の転倒が混ざると混乱以外の変数が増える）。</para>
+    ///
+    /// <para><b>「敵だけ」は既存の駒では作れない。</b> ハネ（突き返し）は <c>OnMoved</c> /
+    /// <c>OnAllyMoved</c> しか持たず<b>自分から移動を起こさない</b>ので（第41期の設計）、
+    /// 供給の無い台では 1 回も発火しない——実測で第2〜4波の発火は <b>0.00</b> だった。
+    /// セロ（逃亡）も <c>Row.Back</c> で即 return するので<b>後列に置くと 0 回</b>。
+    /// <b>どちらも第117期の穴（土台が測る対象の入力を 0 にする）である。</b>
+    /// そこで<b>診断のローカルに曝き（<c>TraitId.Expose</c>）を持つ同数値の駒を置く</b>
+    /// ——曝きは <c>Opponent(self.TeamId)</c> を引きずり出すので、<b>味方が持てば敵だけが動く</b>
+    /// （第118期の糧タンクと同じ「診断のローカルだけが持つ駒」の扱い）。</para>
+    /// </summary>
+    static void Direction()
+    {
+        Console.WriteLine("# 第146期 `confuse dir` —— 供給の向きを分ける");
+        Console.WriteLine();
+        Console.WriteLine("**土台は共通**（ドルガ 前1 ／ ボルグ 前3 ／ キリ 中央 ／ 素体 後3）で、**後1 の1枚だけ**を振る。");
+        Console.WriteLine("**転倒は全版 `None` に固定**（第144期の転倒が混ざると混乱以外の変数が増える）。");
+        Console.WriteLine("帰属 ＝ V1 − V0（同じ土台・同じ席なので、駒の素の強さは V0 に吸われる）。");
+        Console.WriteLine();
+
+        var allyOnly = ShufflerRule.Legacy;                            // 味方だけ
+        var bothTeams = new ShufflerRule(true, ShuffleStagger.None);    // 両陣営（転倒なし）
+
+        // 診断のローカル。曝きは Opponent を引きずり出すので、**味方が持てば敵だけが動く**。
+        // 数値は喧噪のバサと同一（HP56 / 攻7 / 速8）——差を札1枚に閉じるため。
+        UnitDef exposer = new()
+        {
+            Id = "pex", Name = "曝きの素体", MaxHp = 56, Attack = 7, Speed = 8,
+            Advances = true, Traits = new[] { TraitId.Expose }
+        };
+
+        (string Name, UnitDef Def, ShufflerRule Rule, string Dir)[] supply =
+        {
+            ("バサ（両陣営）", UnitCatalog.Basa, bothTeams, "敵2体 ＋ 味方2体"),
+            ("バサ（味方だけ）", UnitCatalog.Basa, allyOnly, "味方2体"),
+            ("曝きの素体（敵だけ）", exposer, allyOnly, "敵1体"),
+            ("素体（供給なし）", Plain("pc", 56, 7), allyOnly, "なし"),
+        };
+
+        Console.WriteLine("| 供給 | 動かす相手 | 波 | V0 | V1 | 帰属 | 味方が振った | 敵が振った |");
+        Console.WriteLine("|---|---|---|--:|--:|--:|--:|--:|");
+        foreach ((string sname, UnitDef def, ShufflerRule rule, string dir) in supply)
+        {
+            Formation f = Formation.Build(
+                front1: UnitCatalog.Dolga, front3: UnitCatalog.Borg, center: UnitCatalog.Kiri,
+                back1: def, back3: Fill("pa"));
+            double[] a = Rates(f, V0, Seeds, rule), b = Rates(f, V1, Seeds, rule);
+            for (int st = 1; st < 5; st++)
+            {
+                (double _, double asw, double _2, double fsw) = Ledger(f, st, V1, Seeds, rule);
+                Console.WriteLine("| " + sname + " | " + dir + " | 第" + (st + 1) + "波 | "
+                                  + a[st].ToString("F1") + " | " + b[st].ToString("F1") + " | "
+                                  + (b[st] - a[st]).ToString("+0.0;-0.0") + " | "
+                                  + asw.ToString("F2") + " | " + fsw.ToString("F2") + " |");
+            }
+            Console.WriteLine("| **" + sname + "** | | **第2〜5波** | **" + a.Skip(1).Average().ToString("F1")
+                              + "** | **" + b.Skip(1).Average().ToString("F1") + "** | **"
+                              + (b.Skip(1).Average() - a.Skip(1).Average()).ToString("+0.0;-0.0") + "** | | |");
+        }
+    }
+
+    // =================================================================================
+    // half —— 段C: 指示書 §5 が求めた「弱めた版」1点
+    // =================================================================================
+
+    /// <summary>
+    /// 段B の版は<b>天井と床に張り付く</b>（敵だけ版の第4波 5.5 → 100.0 ／ 味方だけ版の第2波 92.5 → 0.0）。
+    /// 指示書 §5 は<b>そのとき「50% の確率で」に弱めた版を1点だけ測って報告する（採用はしない）</b>と
+    /// 書いているので、<c>ConfusionRule.Half</c> をここで測る。
+    /// </summary>
+    static void Half()
+    {
+        Console.WriteLine("# 第146期 `confuse half` —— 段C: 弱めた版（50%）を1点だけ");
+        Console.WriteLine();
+        Console.WriteLine("**採用はしない**（指示書 §5）。段B が天井と床に張り付いたので、その1点を記録するだけ。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 波 | V0 | V1（100%） | V1h（50%） | 100% の帰属 | 50% の帰属 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|");
+        foreach ((string name, Formation f) in Rigs())
+        {
+            double[] a = Rates(f, V0), b = Rates(f, V1), h = Rates(f, ConfusionRule.Half);
+            for (int st = 1; st < 5; st++)
+                Console.WriteLine("| " + name + " | 第" + (st + 1) + "波 | " + a[st].ToString("F1")
+                                  + " | " + b[st].ToString("F1") + " | " + h[st].ToString("F1") + " | "
+                                  + (b[st] - a[st]).ToString("+0.0;-0.0") + " | "
+                                  + (h[st] - a[st]).ToString("+0.0;-0.0") + " |");
+            Console.WriteLine("| **" + name + "** | **第2〜5波** | **" + a.Skip(1).Average().ToString("F1")
+                              + "** | **" + b.Skip(1).Average().ToString("F1") + "** | **"
+                              + h.Skip(1).Average().ToString("F1") + "** | **"
+                              + (b.Skip(1).Average() - a.Skip(1).Average()).ToString("+0.0;-0.0") + "** | **"
+                              + (h.Skip(1).Average() - a.Skip(1).Average()).ToString("+0.0;-0.0") + "** |");
+        }
+    }
+
+    // =================================================================================
+    // compare —— 拒否権（`compare` 61 行）
+    // =================================================================================
+
+    /// <summary>
+    /// <b>選択肢 (a)（保持者を置かない）を採ったので、指示書 §4 の 3「この波を含まない行が ±0.0」は
+    /// 到達不能になった</b>——ノブは全波に掛かるので「この波を含まない行」が存在しない
+    /// （第107・110期の「判定式の線が別の節によって到達不能になる」の、選択の帰結としての版）。
+    ///
+    /// <para>代わりに読むのは <b>(i) 混乱が1件も立たない行が ±0.0 か</b> と
+    /// <b>(ii) 拒否権（第五波平均の歯止め・いずれかの波で −10.0pt 以上）</b>。</para>
+    /// </summary>
+    static void CompareRows()
+    {
+        Console.WriteLine("# 第146期 `confuse compare` —— 拒否権（`compare` 61 行）");
+        Console.WriteLine();
+        Console.WriteLine("**選択肢 (a) を採ったので指示書 §4 の 3 は到達不能**——ノブは全波に掛かるので");
+        Console.WriteLine("「この波を含まない行」が存在しない。代わりに「混乱が1件も立たない行が ±0.0 か」を読む。");
+        Console.WriteLine();
+
+        var rows = new List<(string Name, double[] A, double[] B, double Marks)>();
+        foreach ((string name, Formation f) in Presets.Compare)
+        {
+            double[] a = Rates(f, V0, 50), b = Rates(f, V1, 50);
+            double marks = 0;
+            for (int st = 0; st < 5; st++)
+            {
+                (double am, double _1, double fm, double _2) = Ledger(f, st, V1, 20);
+                marks += am + fm;
+            }
+            rows.Add((name, a, b, marks));
+        }
+
+        Console.WriteLine("## 表A. 混乱が1件も立たない行（陰性対照）");
+        Console.WriteLine();
+        var dead = rows.Where(r => r.Marks == 0).ToList();
+        Console.WriteLine("- **" + dead.Count + " / " + rows.Count + " 行**で混乱が 0 件");
+        int deadDiff = dead.Sum(r => Enumerable.Range(0, 5).Count(i => Math.Abs(r.A[i] - r.B[i]) > 0.001));
+        Console.WriteLine("- そのうち動いたセル: **" + deadDiff + " 件**" + (deadDiff == 0 ? " ○" : " **×**"));
+        Console.WriteLine();
+
+        Console.WriteLine("## 表B. 全体（第2〜5波平均と第五波）");
+        Console.WriteLine();
+        Console.WriteLine("| | V0 | V1 | Δ |");
+        Console.WriteLine("|---|--:|--:|--:|");
+        double a25 = rows.Average(r => r.A.Skip(1).Average()), b25 = rows.Average(r => r.B.Skip(1).Average());
+        double a5 = rows.Average(r => r.A[4]), b5 = rows.Average(r => r.B[4]);
+        Console.WriteLine("| 全61行・第2〜5波 | " + a25.ToString("F1") + " | " + b25.ToString("F1")
+                          + " | " + (b25 - a25).ToString("+0.0;-0.0") + " |");
+        Console.WriteLine("| 全61行・第五波 | " + a5.ToString("F1") + " | " + b5.ToString("F1")
+                          + " | " + (b5 - a5).ToString("+0.0;-0.0") + " |");
+        var pri = rows.Where(r => Baseline.PrimaryRows.Contains(r.Name)).ToList();
+        double pa5 = pri.Average(r => r.A[4]), pb5 = pri.Average(r => r.B[4]);
+        Console.WriteLine("| **主判定" + pri.Count + "行・第五波** | **" + pa5.ToString("F1") + "** | **"
+                          + pb5.ToString("F1") + "** | **" + (pb5 - pa5).ToString("+0.0;-0.0") + "** |");
+        Console.WriteLine();
+        Console.WriteLine("**拒否権1（主判定19行の第五波平均が歯止め `Baseline.PrimaryFifthFloor` = "
+                          + Baseline.PrimaryFifthFloor.ToString("F1") + "% を下回る）: "
+                          + (pb5 < Baseline.PrimaryFifthFloor ? "**発動**" : "通る") + "**");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表C. 拒否権3: いずれかの波で −10.0pt 以上落ちた行");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 波 | V0 | V1 | Δ | 混乱/戦 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|");
+        int veto = 0;
+        foreach ((string name, double[] a, double[] b, double marks) in rows)
+            for (int st = 0; st < 5; st++)
+                if (b[st] - a[st] <= -10.0)
+                {
+                    veto++;
+                    Console.WriteLine("| " + name + " | 第" + (st + 1) + "波 | " + a[st].ToString("F1")
+                                      + " | " + b[st].ToString("F1") + " | " + (b[st] - a[st]).ToString("+0.0;-0.0")
+                                      + " | " + (marks / 5).ToString("F2") + " |");
+                }
+        Console.WriteLine();
+        Console.WriteLine("- **" + veto + " セル**が −10.0pt 以上");
     }
 
     // =================================================================================
@@ -359,14 +591,15 @@ static class ConfuseDiag
     // 器具
     // =================================================================================
 
-    static double[] Rates(Formation f, ConfusionRule? r, int seeds = Seeds)
+    static double[] Rates(Formation f, ConfusionRule? r, int seeds = Seeds, ShufflerRule? sh = null)
     {
         var w = new double[5];
         for (int st = 0; st < 5; st++)
         {
             int wins = 0;
             for (int seed = 0; seed < seeds; seed++)
-                if (BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false, confusion: r).PlayerWon)
+                if (BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false,
+                                     shuffler: sh, confusion: r).PlayerWon)
                     wins++;
             w[st] = 100.0 * wins / seeds;
         }
@@ -379,14 +612,14 @@ static class ConfuseDiag
     /// 台のどれも敵と同じ <c>Id</c> を持たないことが前提（素体の <c>Id</c> に `pa` / `pb` を使ってあるのはそのため）。
     /// </summary>
     static (double AllyMarks, double AllySwings, double FoeMarks, double FoeSwings)
-        Ledger(Formation f, int st, ConfusionRule r, int seeds)
+        Ledger(Formation f, int st, ConfusionRule r, int seeds, ShufflerRule? sh = null)
     {
         var own = new HashSet<string>(f.Occupied().Select(o => o.Def.Id));
         double am = 0, asw = 0, fm = 0, fsw = 0;
         for (int seed = 0; seed < seeds; seed++)
         {
             BattleResult res = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed,
-                                                verbose: false, confusion: r);
+                                                verbose: false, shuffler: sh, confusion: r);
             foreach (var kv in res.TallyByUnit)
             {
                 if (own.Contains(kv.Key)) { am += kv.Value.ConfusedMarks; asw += kv.Value.ConfusedSwings; }
