@@ -6071,6 +6071,10 @@ public sealed class ShufflerTrait : Trait
             // **これは噛み合う側の相互作用である**（第144期 Q0-3）。
             u.SetCounter(StatusKeys.Stagger, 1);
             tally.ShuffleStaggers++;
+            // 第145期（表示専用）: 付いた瞬間。**StatusSnapshot では代用できない**
+            // ——あれはターン頭の OnTurnStart より前に撮るので、同じターンのうちに
+            // 立って消える転倒はどの写しにも載らない（BattleEventKind.Stagger の doc）。
+            c.EmitStagger(u, StaggerLabels.Fell, self);
             c.Log($"    {u.Name} は前へ引きずり出されて転んだ（次の手番を失う）", LogKind.Status);
         }
     }

@@ -972,6 +972,27 @@ public partial class Main : Control
                 await Delay(0.30);
                 break;
 
+            // 第145期 —— 転倒。**付与と消費は別の拍で来る**（付与はターン頭の
+            // `ShufflerTrait`、消費は行動順ループの中）ので、2本とも出す。
+            // `StatusSnapshot` には一度も載らない（写しは `OnTurnStart` より前に撮る）。
+            case BattleEventKind.Stagger:
+                Color fallTint = StatusColor(StatusKeys.LabelOf(StatusKeys.Stagger));
+                if (e.Text == StaggerLabels.Fell)
+                {
+                    _battleField.Float(target, "転倒！", fallTint, large: true);
+                    if (e.ActorId is not null) _battleField.Link(actor, target, fallTint, "引きずり出した");
+                    AppendLog($"  [color=#{fallTint.ToHtml(false)}][b]{NameOf(e.TargetId)} は前へ引きずり出されて転んだ[/b][/color]"
+                              + $"  [color=#a9b3a8]（次の手番を失う）[/color]{WriterSuffix(e.ActorId, e.TargetId)}");
+                    await Delay(0.26);
+                }
+                else
+                {
+                    _battleField.Float(target, "転んで動けない", fallTint);
+                    AppendLog($"  [color=#{fallTint.ToHtml(false)}]{NameOf(e.TargetId)} は転んだまま手番を失った[/color]");
+                    await Delay(0.20);
+                }
+                break;
+
             case BattleEventKind.Heal:
                 target?.SetHp(e.HpAfter);
                 target?.AnimateHeal();

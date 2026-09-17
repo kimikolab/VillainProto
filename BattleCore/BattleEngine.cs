@@ -3757,6 +3757,30 @@ public sealed class BattleContext
     }
 
     /// <summary>
+    /// 転倒を台本に打つ（第145期・<b>表示専用</b>）。呼び口は2つだけ——
+    /// <c>ShufflerTrait</c>（付いた瞬間）と <see cref="TakeTurnCore"/>（手番を失った瞬間）。
+    ///
+    /// <para><see cref="Emit"/> は verbose のときしか積まないので、<c>compare</c>（verbose 偽）では
+    /// 1件も作られない。<b>盤面には一切影響しない</b>——計数（<c>ShuffleStaggers</c> /
+    /// <c>StallStagger</c>）にも触っていない。</para>
+    /// </summary>
+    /// <param name="phase"><see cref="StaggerLabels"/> のどちらか。</param>
+    /// <param name="by">転ばせた駒。消費側は null。</param>
+    internal void EmitStagger(UnitState target, string phase, UnitState? by)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Stagger,
+            Turn = _turn,
+            ActorId = by?.InstanceId,
+            TargetId = target.InstanceId,
+            HpAfter = target.Hp,
+            Text = phase,
+        });
+    }
+
+    /// <summary>
     /// そのターン頭に各駒が負っている継続効果を、値ごと台本へ写す。
     /// 再生側は TurnStart で持っている状態を捨て、これで組み直す（0 のものは出さない）。
     /// </summary>
@@ -5306,6 +5330,8 @@ public sealed class BattleContext
             TallyOf(actor).StallStagger++;            // 第143期（計数のみ）
             if (ScapegoatActive) NoteScapegoatSkip(actor);
             if (DeepWatch) NoteDeepStalled(actor);
+            // 第145期（表示専用）: 手番を失った瞬間。付与はターン頭なので別の出来事として打つ。
+            EmitStagger(actor, StaggerLabels.Lost, null);
             Log($"  {actor.Name} は転んで動けない", LogKind.Status);
             return TurnOutcome.Stalled;
         }

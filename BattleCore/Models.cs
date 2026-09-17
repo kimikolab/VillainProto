@@ -1778,7 +1778,51 @@ public enum BattleEventKind
     /// 一撃を受け流した（表示専用）。ActorId = 攻撃者、TargetId = 受け流した駒、
     /// Amount = 無効化量、HpAfter = 変化していないHP。Damage は発生しない。
     /// </summary>
-    Parry
+    Parry,
+
+    /// <summary>
+    /// 転倒（第145期・<b>表示専用</b>）。<see cref="StatusKeys.Stagger"/> が
+    /// <b>付いた瞬間</b>と<b>手番を失った瞬間</b>の2本を、<c>Text</c>
+    /// （<see cref="StaggerLabels"/>）で区別して出す。
+    ///
+    /// <para><b>種類を1つにまとめたのは、2つが別のターンになりうるから</b>——
+    /// 付与はターン頭（<c>ShufflerTrait.OnTurnStart</c>）、消費は行動順ループの中
+    /// （<c>TakeTurnCore</c>）で、片方だけでは「何が起きたか」か「なぜ動かないか」の
+    /// どちらかが欠ける。</para>
+    ///
+    /// <para><b><see cref="StatusSnapshot"/> では代用できない。</b> スナップショットは
+    /// ターン頭の <c>OnTurnStart</c> より<b>前</b>に撮るので、同じターンのうちに
+    /// 立って消える転倒は<b>どの写しにも一度も載らない</b>——
+    /// 「<c>StatusKeys.All</c> に入っていて記号も定義済みなのに画面に出ない」の正体がこれ。</para>
+    ///
+    /// <para><b><see cref="StatusGain"/> には載せない</b>——あちらは
+    /// 「engine の窓口を持つ4通貨だけが出す」を明文で持っており、転倒に窓口は無い。</para>
+    ///
+    /// <para><c>ActorId</c> = 転ばせた駒（消費側は null）、<c>TargetId</c> = 転んだ駒、
+    /// <c>Text</c> = <see cref="StaggerLabels"/>。
+    /// <b>どの規則も読まない。</b> <see cref="Intercept"/> / <see cref="Parry"/> と同じ
+    /// 表示専用の札で、盤面には一切影響しない。</para>
+    /// </summary>
+    Stagger
+}
+
+/// <summary>
+/// 転倒の2本の名前（第145期・<b>表示専用</b>）。<see cref="BattleEventKind.Stagger"/> の
+/// <c>Text</c> に入る文字列はこの2つで全部。
+///
+/// <para><see cref="InterceptLabels"/> と同じく定数で持つ——文字列リテラルを直に書くと、
+/// 走査が「該当なし」と「引けなかった」を区別できない（第117期）。</para>
+/// </summary>
+public static class StaggerLabels
+{
+    /// <summary>転んだ（<see cref="StatusKeys.Stagger"/> が立った）。ターン頭。</summary>
+    public const string Fell = "転倒";
+
+    /// <summary>転んだまま手番を失った。行動順ループの中。</summary>
+    public const string Lost = "手番喪失";
+
+    /// <summary>両方。<b>付与 → 消費</b>の順で持つ。</summary>
+    public static readonly string[] All = { Fell, Lost };
 }
 
 /// <summary>
