@@ -2138,6 +2138,16 @@ N の掃引点を引くために前1 への被弾の分布を取ったとき、*
 **両方の台で下がるなら、それは可変コストではなくただのコストである**
 ——第43期「隣に置きたい駒は『弱体を受ける駒』」の**手番側の版**で、こちらは**置きたくない駒がいる。**
 
+**`sweep` はコマンド表の行を<u>そのまま</u>走らせる。穴埋めの引数も引数である**（第144期・(G17) の系）。
+`CLAUDE.md` のコマンド表は `brace log "台名 N seed"` のように**穴埋めの形**で本を書くが、
+`sweep`（第141期）はその行を子プロセスへ verbatim で渡すので、
+**`int.Parse("N")` が例外を投げて全診断の exit 検査が不合格になる**
+——第143期に足った行が、第144期の走査で初めて出た（**376 本中の異常終了 1 本がこれ**）。
+**診断は引数で落ちてはいけない**——読めない引数は使い方を出して `return` する
+（第117期「引けなかったときの分岐を必ず書く」の**引数の側**）。
+**入れ子の角括弧も書かない**——`scan [probe [台名]]` は `sweep` の側で `scan ]` に化ける
+（この期に実際に化けた。例外は出ないので**静かに違うものを測る**・第123期）。
+
 **位置を無作為に入れ替える機構は、敵側でも期待値ゼロではない——符号が台で割れる**（第144期）。
 入れ替えは**2つのことを同時にする**: 後列の脆い駒を**前へ出す**（＝露出）のと、
 前列の硬い駒を**後ろへ下げる**（＝**単体攻撃が届かない場所へ隠す**）。
@@ -3038,7 +3048,8 @@ N=4 は効き過ぎ（ガルド死亡率 9.2%・被弾の 91% を無効化）だ
     dotnet run --project BattleSim -c Release 0 brace check       # 自己検査（必須1・必須4 ＋ (a)(a')(b)(c)(d)）
     dotnet run --project BattleSim -c Release 0 tumult [モード]   # バサの転生（第144期・**段B を採用**）。本体は `Modes/Tumult.cs`
     dotnet run --project BattleSim -c Release 0 tumult phase0    # Q0-1〜Q0-7（**敵の召喚枠**・敵の `IdleTurn` の読み手・**波ごとの席順と特性**）
-    dotnet run --project BattleSim -c Release 0 tumult scan [probe [台名]]  # 台の下見／`probe` は埋め草の総当たり（帯 40〜95% ＋ 情報セル 3 以上）
+    dotnet run --project BattleSim -c Release 0 tumult scan       # 台の下見だけ（V0 の第2〜5波平均が 40〜95% ＋ 情報セル）
+    dotnet run --project BattleSim -c Release 0 tumult scan probe  # 埋め草の総当たり（帯 40〜95% ＋ 情報セル 3 以上。台名を続けると1台だけ）
     dotnet run --project BattleSim -c Release 0 tumult run       # 段A（敵も乱す）／段B（前に出た敵が転ぶ）／段C（2体とも）× 台4つ ＋ `compare` のバサ行
     dotnet run --project BattleSim -c Release 0 tumult check [採用前のbalance.md]  # 自己検査（必須1・必須4 ＋ (a)〜(f)）
     dotnet run --project BattleSim -c Release 0 sweep [上限秒] [絞り込み]  # **全診断の exit 検査**（第141期・本体は `Sweep.cs`）。この表を自分で読んで引数の穴の無い本を子プロセスで回す。**80 分前後・毎期は回さない**（規約 (G17)）

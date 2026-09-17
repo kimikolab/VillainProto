@@ -447,6 +447,10 @@ static class TumultDiag
         Console.WriteLine("# 第144期 自己検査 —— `tumult check`");
         Console.WriteLine();
 
+        // **既定の版は1度だけ回して使い回す**（(a) と (b) が同じ値を読む）。
+        // 2度回すと `sweep` の 90 秒上限に張り付く（第144期の実測で 90.5 秒）。
+        var def = Presets.Compare.ToDictionary(b => b.Name, b => Rates(b.F, null));
+
         string bal = arg.Length > 0 ? arg : "docs/balance.md";
         Console.WriteLine($"## (a) 必須1: `compare` 305 セルが `{bal}` と 0 件（既定の `ShufflerRule`）");
         Console.WriteLine();
@@ -468,7 +472,7 @@ static class TumultDiag
             foreach ((string name, Formation f) in Presets.Compare)
             {
                 if (!want.TryGetValue(name, out double[]? w)) { Console.WriteLine($"- 行が引けない: {name}"); continue; }
-                double[] got = Rates(f, null);
+                double[] got = def[name];
                 for (int i = 0; i < 5; i++) { cells++; if (Math.Abs(got[i] - w[i]) > 0.001) diff++; }
             }
             Console.WriteLine($"- {cells} セル中 **{diff} 件**の差分{(diff == 0 ? " ○" : " **×**")}");
@@ -479,9 +483,9 @@ static class TumultDiag
         Console.WriteLine();
         {
             int diff = 0;
-            foreach ((string _, Formation f) in Presets.Compare)
+            foreach ((string name, Formation f) in Presets.Compare)
             {
-                double[] a = Rates(f, null), c = Rates(f, V0);
+                double[] a = def[name], c = Rates(f, V0);
                 for (int i = 0; i < 5; i++) if (Math.Abs(a[i] - c[i]) > 0.001) diff++;
             }
             Console.WriteLine($"- **{diff} 件**{(diff == 0 ? " ○（既定＝現行）" : "（既定は採用版。段B を採った後はここが 0 でなくなる）")}");

@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -465,17 +465,36 @@ static class BraceDiag
         Console.WriteLine();
     }
 
-    /// <summary>1戦の監査（台名の部分一致 ＋ N ＋ seed）。</summary>
+    /// <summary>
+    /// 1戦の監査（台名の部分一致 ＋ N ＋ seed）。
+    ///
+    /// <para><b>引数が読めなければ使い方を出して止める</b>（第144期に直した）。
+    /// `CLAUDE.md` のコマンド表はこの本を <c>"台名 N seed"</c> という<b>穴埋めの形</b>で書いており、
+    /// <c>sweep</c>（第141期）は表の行を<b>そのまま子プロセスで走らせる</b>ので、
+    /// <c>int.Parse("N")</c> が例外を投げて<b>全診断の exit 検査が不合格になっていた</b>
+    /// ——第143期から第144期の走査まで気付かれなかった。
+    /// <b>診断は引数で落ちてはいけない。</b>（第117期「引けなかったときの分岐を必ず書く」の引数の側）</para>
+    /// </summary>
     static void LogOne(string arg)
     {
         string[] a = arg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         string bedKey = a.Length > 0 ? a[0] : "台3";
-        int n = a.Length > 1 ? int.Parse(a[1]) : 7;
-        int seed = a.Length > 2 ? int.Parse(a[2]) : 0;
-        Formation f = Rigs(UnitCatalog.Sasa).First(x => x.Name.Contains(bedKey)).F;
+        int n = 7, seed = 0;
+        if (a.Length > 1 && !int.TryParse(a[1], out n)) { Usage(); return; }
+        if (a.Length > 2 && !int.TryParse(a[2], out seed)) { Usage(); return; }
+
+        var hit = Rigs(UnitCatalog.Sasa).Where(x => x.Name.Contains(bedKey)).ToList();
+        if (hit.Count == 0) { Usage(); return; }
+        Formation f = hit[0].F;
         BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[1].Enemy, seed, verbose: true,
                                           brace: new BraceRule(n, true, false));
         foreach (LogLine l in r.Log) Console.WriteLine(l.Text);
+
+        void Usage()
+        {
+            Console.WriteLine("brace log: 引数は \"<台名の部分一致> <N> <seed>\"（既定は 台3 7 0）。");
+            Console.WriteLine("台: " + string.Join(" / ", Rigs(UnitCatalog.Sasa).Select(x => x.Name)));
+        }
     }
 
     /// <summary>
