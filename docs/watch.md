@@ -400,7 +400,7 @@ seed 0..199 の 200 試行（`compare` と同じ帯）。**盤面は1ビット�
 
 ## 1. `StatusKeys.All` × 「付いた瞬間」の窓口（`StatusGain`）
 
-`StatusKeys.All` 10 キー ／ `EmitStatusGain` の呼び出し元 5 箇所（うち `StatusKeys.*` でないもの 1 件）。
+`StatusKeys.All` 11 キー ／ `EmitStatusGain` の呼び出し元 5 箇所（うち `StatusKeys.*` でないもの 1 件）。
 
 | キー | 表示名 | 付いた瞬間（`StatusGain`） | 残量（`StatusSnapshot`） |
 |---|---|:-:|:-:|
@@ -414,8 +414,9 @@ seed 0..199 の 200 試行（`compare` と同じ帯）。**盤面は1ビット�
 | `Deep` | 深手 | ○ | ○ |
 | `Curse` | 呪 | **×** | ○ |
 | `Stagger` | 転 | **×** | ○ |
+| `Confused` | 乱 | **×** | ○ |
 
-**窓口を持たないキー 6 / 10。** 残量はターン頭に全キーぶん写る（`StatusLabels` は `StatusKeys.All` から作られる）ので、**「いま乗っている」は見えるが「いま書かれた」は見えない**。
+**窓口を持たないキー 7 / 11。** 残量はターン頭に全キーぶん写る（`StatusLabels` は `StatusKeys.All` から作られる）ので、**「いま乗っている」は見えるが「いま書かれた」は見えない**。
 
 `StatusKeys.All` に無い窓口 1 件: `DullKey`（なまり＝`BattleContext.DullKey`。`AtkBonus` は状態異常のカウンタではないので `All` に無い）。
 

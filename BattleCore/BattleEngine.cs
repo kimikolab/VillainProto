@@ -136,7 +136,23 @@ public static class StatusKeys
     /// </summary>
     public const string Stagger = "stagger";
 
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger };
+    /// <summary>
+    /// 混乱（第146期・<see cref="ConfusionRule"/>）。<b>次の1回の攻撃を自軍に向ける。0 か 1 の二値。</b>
+    ///
+    /// <para>立つのは <c>SwapSlots</c> の通知1箇所——<b>誰が動かしたかを問わない</b>
+    /// （自分で逃げても引きずり出されても「動かされた」は同じ）。落ちるのは
+    /// <c>PerformAttack</c> が標的を解決した直後で、<b>1回で落ちる</b>。</para>
+    ///
+    /// <para><b>痺れ・転倒を流用しない。</b> どちらにも読み手がいる（痺れ＝深追い・背かれ・尾灯／
+    /// 転倒＝据え・号令が買う手番）ので、混乱がその帳簿に混ざる。</para>
+    ///
+    /// <para><b>ターン外の行動は混乱しない。</b> 棘・仇討ち・軋み・追い打ち・譲渡は
+    /// <c>PerformAttack</c> を通らない（反撃は <c>ctx.Reaction</c>、割り込みは <c>ctx.Interrupt</c>）ので、
+    /// 混乱が乗るのは<b>通常の手番の一振りだけ</b>。</para>
+    /// </summary>
+    public const string Confused = "confused";
+
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused };
 
     /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
@@ -155,6 +171,7 @@ public static class StatusKeys
         Deep => "深手",
         Curse => "呪",
         Stagger => "転",
+        Confused => "乱",
         _ => key
     };
 }
@@ -2113,6 +2130,9 @@ public sealed class BattleContext
     /// <summary>身構え（第143期・<see cref="BraceRule"/>）。<b>既定（<c>Cap = 0</c>）では1バイトも動かない。</b></summary>
     public BraceRule Brace { get; }
 
+    /// <summary>混乱（第146期・<see cref="ConfusionRule"/>）。<b>既定（<c>Active = false</c>）では1バイトも動かない。</b></summary>
+    public ConfusionRule Confusion { get; }
+
     /// <summary>喧噪（第144期・<see cref="ShufflerRule"/>）。<b><c>Foes = false</c> では第143期と1バイトも違わない。</b></summary>
     public ShufflerRule Shuffler { get; }
 
@@ -3192,6 +3212,7 @@ public sealed class BattleContext
                          HarmRule? harm = null, ParryRule? parry = null,
                          ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
                          BraceRule? brace = null, ShufflerRule? shuffler = null,
+                         ConfusionRule? confusion = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -3249,6 +3270,7 @@ public sealed class BattleContext
         Shatter = shatter ?? ShatterRule.Default;
         Shrapnel = shrapnel ?? ShrapnelRule.Default;
         Shuffler = shuffler ?? ShufflerRule.Default;
+        Confusion = confusion ?? ConfusionRule.Default;
     }
 
     // =====================================================================================
@@ -3960,7 +3982,7 @@ public sealed class BattleContext
         // 破片が全額吸って `NoteHarm` に届かなかった介入が、無関係な被弾を「引き受けたぶん」に化けさせる。
         _interceptedInto = null;
 
-        List<UnitState> foes = LivingMembers(Opponent(attacker.TeamId)).ToList();
+        List<UnitState> foes = FoesOf(attacker);   // 第146期: 混乱はここで陣営を反転する
         if (foes.Count == 0) return null;
 
         AttackPattern pattern = patternOverride ?? attacker.CurrentPattern;
@@ -4172,7 +4194,42 @@ public sealed class BattleContext
     /// ——貫き型の駒が断ちを持っても選好は働かない（執着とまったく同じ非対称）。</para>
     /// </summary>
     public List<UnitState> TargetPool(UnitState attacker)
-        => PoolOf(LivingMembers(Opponent(attacker.TeamId)).ToList());
+        => PoolOf(FoesOf(attacker));
+
+    /// <summary>
+    /// <b>攻撃の標的になりうる駒の集合（第146期に1箇所へ寄せた）。</b>
+    /// 混乱（<see cref="ConfusionRule"/>）が効く<b>唯一の窓口</b>で、
+    /// ここを通るのは <see cref="SelectTargetChain"/> の <c>foes</c>／<see cref="TargetPool"/>／
+    /// <see cref="SecondaryTargets"/> の3つだけ。
+    ///
+    /// <para><see cref="ResolvePierce"/> は <c>entry.TeamId</c>（＝標的側）を見ているので
+    /// <b>自動で追従する</b>——混乱した貫きは自軍のレーンで正しく解決される。
+    /// 攻撃者側の選好（執着・断ち・止め）は <c>foes</c> / <c>pool</c> を受け取る側なので触らない。</para>
+    ///
+    /// <para><b>混乱のときだけ自分を除く。</b> 素の経路では攻撃者は相手陣営にいないので
+    /// この <c>Where</c> は恒等になる——だから<b>分岐の中に入れて、既定の経路に1本も枝を増やさない</b>
+    /// （軛・受け流しと同じ短絡の作法）。</para>
+    /// </summary>
+    internal List<UnitState> FoesOf(UnitState attacker)
+    {
+        if (Confusion.Active && attacker.RawCounter(StatusKeys.Confused) > 0)
+            return LivingMembers(attacker.TeamId).Where(u => u != attacker).ToList();
+
+        return LivingMembers(Opponent(attacker.TeamId)).ToList();
+    }
+
+    /// <summary>
+    /// 混乱を1つ消費する（第146期）。<b>1回の攻撃で必ず落ちる。</b>
+    /// 呼び口は <see cref="PerformAttack"/> の2つの出口だけ——貫きの早期リターンと、
+    /// <see cref="SecondaryTargets"/> を引いた後。<b>落とすのは最後の読み手より後ろ</b>で、
+    /// 手前で落とすと薙ぎ・全体の巻き込みだけが敵陣へ戻る。
+    /// </summary>
+    private void ConsumeConfusion(UnitState actor)
+    {
+        if (!Confusion.Active || actor.RawCounter(StatusKeys.Confused) == 0) return;
+        actor.SetCounter(StatusKeys.Confused, 0);
+        TallyOf(actor).ConfusedSwings++;
+    }
 
     private static List<UnitState> PoolOf(List<UnitState> foes)
     {
@@ -4441,6 +4498,7 @@ public sealed class BattleContext
 
         if (pattern == AttackPattern.Pierce)
         {
+            ConsumeConfusion(actor);   // 第146期: 貫きの出口（ResolvePierce は entry.TeamId を見る）
             ResolvePierce(actor, pierceLane, target, atk);
             return;
         }
@@ -4453,6 +4511,7 @@ public sealed class BattleContext
         // 適用順を混ぜる。同じ一振りで2体以上落ちるとき、死亡順（墓守の層・破裂の連鎖）が
         // 席番号で決まっていた。巻き込む相手の顔ぶれは変わらない——順番だけ。
         var extras = SecondaryTargets(actor, target, patternOverride).ToList();
+        ConsumeConfusion(actor);   // 第146期: 最後の読み手（巻き込み）を引いた後に落とす
         Shuffle(extras);
         foreach (UnitState extra in extras)
         {
@@ -4540,8 +4599,8 @@ public sealed class BattleContext
     public IReadOnlyList<UnitState> SecondaryTargets(UnitState attacker, UnitState primary,
                                                     AttackPattern? patternOverride = null)
     {
-        List<UnitState> foes = LivingMembers(Opponent(attacker.TeamId))
-            .Where(f => f != primary).ToList();
+        // 第146期: **ここも混乱を通す。** 主目標だけ味方・巻き込みは敵、という破れ方をする。
+        List<UnitState> foes = FoesOf(attacker).Where(f => f != primary).ToList();
 
         return (patternOverride ?? attacker.CurrentPattern) switch
         {
@@ -6242,6 +6301,17 @@ public sealed class BattleContext
             // （読み手＝軋み・移り木・突き返しが読むのはこちら）。
             NoteCarry(u, UnitTally.CarryMove, 1);
 
+            // 混乱（第146期）。**動かされた駒に立てる。動かした側の陣営は問わない**
+            // ——自分で逃げても引きずり出されても「動かされた」は同じ。
+            // 押しのけられた側にも同じだけ立つ（Notify は両方に走る）。
+            // **`Active = false` なら 1 バイトも動かない**（軛と同じ短絡の作法）。
+            if (Confusion.Active && u.RawCounter(StatusKeys.Confused) == 0)
+            {
+                u.SetCounter(StatusKeys.Confused, 1);
+                TallyOf(u).ConfusedMarks++;
+                Log($"    {u.Name} は足を取られて向きを見失った", LogKind.Status);
+            }
+
             // 後ろへ動いた事実を記録する。自分から逃げたか突き飛ばされたかは問わない。
             // どちらの場合も「味方が矢面に立つ」という代償は発生している。
             if (FormationRules.DepthOf(u.Row) > FormationRules.DepthOf(from))
@@ -6306,6 +6376,7 @@ public static class BattleEngine
                                    HarmRule? harm = null, ParryRule? parry = null,
                                    ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
                                    BraceRule? brace = null, ShufflerRule? shuffler = null,
+                                   ConfusionRule? confusion = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
@@ -6313,7 +6384,8 @@ public static class BattleEngine
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
-               nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace, shuffler, probe);
+               nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace, shuffler,
+               confusion, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -6350,6 +6422,7 @@ public static class BattleEngine
                                    HarmRule? harm = null, ParryRule? parry = null,
                                    ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
                                    BraceRule? brace = null, ShufflerRule? shuffler = null,
+                                   ConfusionRule? confusion = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
@@ -6358,7 +6431,7 @@ public static class BattleEngine
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
                                     nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace,
-                                    shuffler, probe);
+                                    shuffler, confusion, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

@@ -1494,6 +1494,18 @@ public sealed class UnitTally
     public int ShuffleAllySwaps, ShuffleFoeSwaps, ShuffleAdvanced;
     public int ShuffleAdvancedTraited, ShuffleAdvancedFromBack, ShuffleStaggers, ShuffleNoFoePair;
 
+    /// <summary>
+    /// 混乱（第146期・<see cref="ConfusionRule"/>）。<b>計数のみ。</b>
+    /// <c>ConfusedMarks</c> この駒に混乱が立った回数（＝動かされた回数のうち、まだ混乱していなかった分）／
+    /// <c>ConfusedSwings</c> 混乱したまま振った回数。
+    ///
+    /// <para><b><c>ConfusedSwings ≦ ConfusedMarks</c> が受け入れ条件</b>
+    /// （指示書 §4 の 6。差は「立ったまま振らずに終わった」分——倒れた・波が終わった・
+    /// 振らない駒だった）。<b>1回の攻撃で必ず1つ落ちる</b>ので、
+    /// 「発火回数 ＝ 混乱した駒が攻撃した回数」はこの2列で読む。</para>
+    /// </summary>
+    public int ConfusedMarks, ConfusedSwings;
+
     /// <summary>敵に与えたダメージのうち、手番の中／外で生んだ分（<see cref="DamageToEnemy"/> の内訳）。</summary>
     public int DmgOutInTurn, DmgOutOffTurn;
 
@@ -1594,6 +1606,7 @@ public sealed class UnitTally
         ShuffleAdvanced += o.ShuffleAdvanced; ShuffleAdvancedTraited += o.ShuffleAdvancedTraited;
         ShuffleAdvancedFromBack += o.ShuffleAdvancedFromBack; ShuffleStaggers += o.ShuffleStaggers;
         ShuffleNoFoePair += o.ShuffleNoFoePair;
+        ConfusedMarks += o.ConfusedMarks; ConfusedSwings += o.ConfusedSwings;
         Attacks += o.Attacks; Interventions += o.Interventions;
         DamageToEnemy += o.DamageToEnemy; DamageToAlly += o.DamageToAlly;
         DamageTaken += o.DamageTaken; TakenFromAlly += o.TakenFromAlly;

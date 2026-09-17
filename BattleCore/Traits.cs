@@ -8062,6 +8062,46 @@ public readonly record struct YokeRule(int Cap, bool Active)
 }
 
 /// <summary>
+/// 混乱（第146期）: <b>席を動かされた駒は、次の1回の攻撃を自軍に向ける。</b>
+///
+/// <para><b>保持者を置かない。</b> 逆位・渇き・軛・粛は「その駒を割れば解ける」勾配のために
+/// 保持者を1体立てるが、混乱を置ける波（第五波）は 5 枚とも測りたい駒である
+/// ——<b>告発人（曝き）は敵由来の混乱が発火する唯一の源</b>で、<b>殉教者は「混乱した敵の攻撃を
+/// 敵自身が庇う」を測る相手</b>。どちらを外しても測りたいものが消えるので、
+/// <b>ノブだけで両陣営に掛ける</b>（Phase 0 の答えを受けた判断。design/PHASE146_CONFUSION.md §Q0-5）。
+/// 代金は「早く割れば解ける」が立たないことで、報告書に明記してある。</para>
+///
+/// <para><b>engine に規則は1本も足していない。</b> 触るのは<b>標的の集合を作る3箇所だけ</b>
+/// （<c>SelectTargetChain</c> の <c>foes</c> ／ <c>TargetPool</c> ／ <c>SecondaryTargets</c>）。
+/// <c>ResolvePierce</c> は <c>entry.TeamId</c> を見ているので自動で追従し、
+/// 攻撃者側の選好（執着・断ち・止め）は <c>foes</c> / <c>pool</c> を受け取る側なので
+/// 1つも触らない。</para>
+///
+/// <para><b>鍵は <see cref="StatusKeys.Confused"/>。痺れ・転倒を流用しない</b>
+/// ——どちらにも読み手がいるので、混乱がその帳簿に混ざる（第143期の転倒と同じ判断）。
+/// 立つのは <c>SwapSlots</c> の通知1箇所で、<b>動かした側の陣営を問わない</b>
+/// ——自分で逃げても引きずり出されても「動かされた」は同じ。</para>
+///
+/// <para><b><c>isFriendlyFire</c> は渡さない。</b> 経路の分類・<c>DamageToAlly</c>・
+/// <c>NoteHarm</c> はどれも <c>isFriendlyFire || source.TeamId == target.TeamId</c> と
+/// <b>論理和</b>なので、札を立てなくても「味方の刃」として正しく帳簿に載る。
+/// 立てると巻き込み則（<see cref="SpillWoundRule"/>・第122期に既定オフ）の条件が成立して、
+/// <b>ノブを触らないまま裏口から復活する</b>——混乱は事故ではなく敵の妨害の結果である。</para>
+///
+/// <para><b><c>Active = false</c> は1バイトも動かさない</b>（軛と同じ短絡の作法。
+/// 保持者の走査もしない）。<c>compare</c> 305 セルが 0 件であることが検算。</para>
+/// </summary>
+/// <param name="Active">混乱を掛けるか。<b>既定は偽（回帰の基準）。</b></param>
+public readonly record struct ConfusionRule(bool Active)
+{
+    /// <summary>既定は<b>掛けない</b>。第145期までと1ビットも違わない。</summary>
+    public static ConfusionRule Default => new(Active: false);
+
+    /// <summary>両陣営に掛ける（段B・段C）。</summary>
+    public static ConfusionRule On => new(Active: true);
+}
+
+/// <summary>
 /// 粛: 保持者が盤上に生きている間、**ターン外の行動が一切通らない**。両陣営に等しくかかる。
 ///
 /// <para><b>判定は engine 側（<c>BattleContext.CanActOutOfTurn</c>）に置いてある。</b>
