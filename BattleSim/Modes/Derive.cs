@@ -106,9 +106,17 @@ public static void Run(string[] args, int stageIndex)
     var dvExtra = new Dictionary<string, string>(StringComparer.Ordinal);
     if (dvRoot is not null && dvModes.Count > 0)
     {
-        foreach (string f in Directory.GetFiles(Path.Combine(dvRoot, "BattleSim"), "*.cs"))
+        // 第142期: `BattleSim/Modes/` を掘るようになった。**モードを別ファイルへ割った瞬間、
+        // `Program.cs` の区間には振り分けの1行しか残らない**ので、ここを再帰にしないと
+        // `測った診断` がほぼ全部「不明」になる（実測で 90 行が落ちた）。
+        // `obj` / `bin` の生成コードは索引の対象ではないので外す。
+        foreach (string f in Directory.GetFiles(Path.Combine(dvRoot, "BattleSim"), "*.cs",
+                                                SearchOption.AllDirectories))
         {
             if (Path.GetFileName(f) == "Program.cs") continue;
+            string rel = Path.GetRelativePath(Path.Combine(dvRoot, "BattleSim"), f);
+            if (rel.StartsWith("obj" + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+                || rel.StartsWith("bin" + Path.DirectorySeparatorChar, StringComparison.Ordinal)) continue;
             string txt = File.ReadAllText(f);
             foreach (System.Text.RegularExpressions.Match cm in
                      System.Text.RegularExpressions.Regex.Matches(txt, @"(?:static|sealed) class (\w+)"))
@@ -216,7 +224,8 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine();
         Console.WriteLine("**この表は全部が実装から derive されている**（第94期 (T1)）。"
                           + "型名・引数名・既定値は reflection、`測った診断` は `BattleSim/Program.cs` の "
-                          + "`focusId == \"...\"` の区間（**別ファイルの診断はそこが名前を挙げているクラスで結ぶ**）、"
+                          + "`focusId == \"...\"` の区間（**別ファイルの診断はそこが名前を挙げているクラスで結ぶ**"
+                          + "——第142期に全モードが `BattleSim/Modes/` へ出たので、いまはほぼ全部がこの経路）、"
                           + "`初出` は `design/PHASE*.md` の本文からそれぞれ引いた（**初出の期だけ。範囲は出さない**——第132期 段0-b）。"
                           + "**手で書いた項目は1つも無い。**");
         Console.WriteLine();
