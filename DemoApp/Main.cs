@@ -979,17 +979,19 @@ public partial class Main : Control
                 Color fallTint = StatusColor(StatusKeys.LabelOf(StatusKeys.Stagger));
                 if (e.Text == StaggerLabels.Fell)
                 {
+                    _battleField.StaggerFall(target, fallTint);
                     _battleField.Float(target, "転倒！", fallTint, large: true);
                     if (e.ActorId is not null) _battleField.Link(actor, target, fallTint, "引きずり出した");
                     AppendLog($"  [color=#{fallTint.ToHtml(false)}][b]{NameOf(e.TargetId)} は前へ引きずり出されて転んだ[/b][/color]"
                               + $"  [color=#a9b3a8]（次の手番を失う）[/color]{WriterSuffix(e.ActorId, e.TargetId)}");
-                    await Delay(0.26);
+                    await Delay(0.34);
                 }
                 else
                 {
+                    _battleField.StaggerLost(target, fallTint);
                     _battleField.Float(target, "転んで動けない", fallTint);
                     AppendLog($"  [color=#{fallTint.ToHtml(false)}]{NameOf(e.TargetId)} は転んだまま手番を失った[/color]");
-                    await Delay(0.20);
+                    await Delay(0.30);
                 }
                 break;
 
@@ -1324,6 +1326,15 @@ public partial class Main : Control
                      && e.ActorId is { } actorId)
             {
                 owner = actorId;
+                current = Beat.InTurn;
+            }
+            else if (e.Kind == BattleEventKind.Stagger
+                     && e.Text == StaggerLabels.Lost
+                     && e.TargetId is { } staggeredId)
+            {
+                // 転倒で潰れた手番には Attack / Skill / Charge が1件も無い。
+                // 消費イベント自身を入口にしないと、直前の駒の手番として表示される。
+                owner = staggeredId;
                 current = Beat.InTurn;
             }
 

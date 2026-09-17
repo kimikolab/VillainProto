@@ -31,6 +31,10 @@ public partial class BattlePawn3D : Node3D
     private bool _alive = true;
     private bool _victory;
     private bool _burning;
+    private bool _staggered;
+    private float _staggerPose;
+    private float _staggerRecoverDelay;
+    private float _staggerPulse;
     private Tween? _motion;
     private Vector3? _guardPosition;
     private Node3D _fire = null!;
@@ -434,10 +438,34 @@ void fragment() {
         tween.TweenProperty(this, "scale", Vector3.One, 0.22);
     }
 
+    /// <summary>
+    /// 転倒した姿勢を、次の手番を失うまで残す。死亡の沈み込みとは違い、立ち絵だけを
+    /// 地面へ傾けるので、席・HP・状態の札は読み取れるままにする。
+    /// </summary>
+    public void AnimateStaggerFall()
+    {
+        if (!_alive) return;
+        _staggered = true;
+        _staggerRecoverDelay = 0;
+        _staggerPulse = 1;
+    }
+
+    /// <summary>
+    /// 転倒を消費して手番を失った拍。いったん起き上がろうともがいてから通常姿勢へ戻る。
+    /// </summary>
+    public void AnimateStaggerLost()
+    {
+        if (!_alive) return;
+        _staggered = false;
+        _staggerRecoverDelay = 0.11f;
+        _staggerPulse = 1;
+    }
+
     public void AnimateDeath()
     {
         if (!_alive) return;
         _alive = false;
+        ResetStaggerPose();
         SetStatusEffects(0,0,0);
         _poison.Clear();
         SetBurning(false);
@@ -460,6 +488,7 @@ void fragment() {
     public void AnimateRevive()
     {
         _motion?.Kill();
+        ResetStaggerPose();
         _guardPosition = null;
         _alive = true;
         Visible = true;
@@ -491,6 +520,7 @@ void fragment() {
     {
         if (!_alive || Team != BattleContext.PlayerTeam) return;
         _victory = true;
+        ResetStaggerPose();
         SetStatusEffects(0,0,0);
         _poison.Clear();
         _motion?.Kill();
@@ -539,12 +569,47 @@ void fragment() {
     {
         _phase += (float)delta * 2.1f;
         if (!_alive || _victory) return;
+
+        float animationDelta = (float)delta * (float)Math.Max(0.1, AnimationSpeed);
+        if (_staggerRecoverDelay > 0)
+        {
+            _staggerRecoverDelay -= animationDelta;
+            if (_staggerRecoverDelay < 0) _staggerRecoverDelay = 0;
+        }
+        float staggerTarget = _staggered || _staggerRecoverDelay > 0 ? 1 : 0;
+        float poseSpeed = staggerTarget > _staggerPose ? 7.5f : 5.2f;
+        _staggerPose = Mathf.MoveToward(_staggerPose, staggerTarget, animationDelta * poseSpeed);
+        _staggerPulse = Mathf.MoveToward(_staggerPulse, 0, animationDelta * 3.6f);
+
         float breath = Mathf.Sin(_phase) * 0.004f;
         float scaleY = 1.0f + breath;
-        _sprite.Scale = new Vector3(1.0f - breath * 0.18f, scaleY, 1.0f);
-        _sprite.Position = new Vector3(0, PortraitGroundY + _portraitGroundDistance * scaleY, 0);
-        _shadow.Scale = new Vector3(1.0f - breath * 0.10f, 1, 1.0f - breath * 0.10f);
+        float fall = _staggerPose * _staggerPose * (3.0f - 2.0f * _staggerPose);
+        float fallSign = Team == BattleContext.PlayerTeam ? -1.0f : 1.0f;
+        float struggle = Mathf.Sin((1.0f - _staggerPulse) * Mathf.Tau * 1.5f) * _staggerPulse * 0.10f;
+        _sprite.Rotation = new Vector3(0, 0, fallSign * (fall * 0.78f + struggle));
+        _sprite.Scale = new Vector3(1.0f - breath * 0.18f + fall * 0.05f, scaleY - fall * 0.08f, 1.0f);
+        _sprite.Position = new Vector3(
+            fallSign * fall * 0.22f,
+            PortraitGroundY + _portraitGroundDistance * scaleY - fall * 0.30f,
+            0);
+        float shadowSpread = fall * 0.28f;
+        _shadow.Scale = new Vector3(1.0f - breath * 0.10f + shadowSpread, 1, 1.0f - breath * 0.10f - shadowSpread * 0.35f);
         _ring.Rotation = new Vector3(0, _phase * 0.15f, 0);
+    }
+
+    private void ResetStaggerPose()
+    {
+        _staggered = false;
+        _staggerPose = 0;
+        _staggerRecoverDelay = 0;
+        _staggerPulse = 0;
+        if (_sprite is not null)
+        {
+            _sprite.Rotation = Vector3.Zero;
+            _sprite.Scale = Vector3.One;
+            _sprite.Position = new Vector3(0, _portraitBaseY, 0);
+        }
+        if (_shadow is not null) _shadow.Scale = Vector3.One;
     }
 
     private void SetPortraitGeometry(Texture2D portrait, float bottomPaddingRatio)

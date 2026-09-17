@@ -456,6 +456,58 @@ public partial class BattlefieldView3D : Control
         Float(defender, "受け流し", ice, true, 3.20f, 1.25f);
     }
 
+    /// <summary>
+    /// 転倒した瞬間。姿勢を次の手番まで残し、足元の土煙で「移動した」だけではないことを示す。
+    /// </summary>
+    public void StaggerFall(BattlePawn3D? pawn, Color color)
+    {
+        if (pawn is null) return;
+        pawn.AnimateStaggerFall();
+        MakeGroundRing(pawn.Home, color, 1.18f, 0.48);
+        MakeGroundRing(pawn.Home, UiKit.Faint, 0.72f, 0.34);
+
+        Vector3 center = pawn.Home + Vector3.Up * 0.10f;
+        Color dust = Color.FromHtml("#c9b58a").Lerp(color, 0.18f);
+        for (int i = 0; i < 8; i++)
+        {
+            float angle = Mathf.Tau * i / 8.0f + (UiKit.StableHash(pawn.UnitName) % 17) * 0.017f;
+            Vector3 direction = new(Mathf.Cos(angle), 0.16f + 0.05f * (i % 3), Mathf.Sin(angle));
+            var mote = new MeshInstance3D
+            {
+                Mesh = new SphereMesh { Radius = 0.055f, Height = 0.11f, RadialSegments = 8, Rings = 4 },
+                Position = center,
+                MaterialOverride = MakeMaterial(new Color(dust, 0.78f), true, true),
+            };
+            _fxRoot.AddChild(mote);
+            double duration = 0.30 + 0.025 * (i % 3);
+            var tween = mote.CreateTween().SetParallel();
+            tween.TweenProperty(mote, "position", center + direction * (0.75f + 0.08f * i), duration)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+            tween.TweenProperty(mote, "scale", Vector3.One * 0.18f, duration);
+            tween.TweenProperty(mote, "transparency", 1.0f, duration).SetDelay(0.08);
+            tween.Finished += mote.QueueFree;
+        }
+    }
+
+    /// <summary>
+    /// 転倒を消費して手番を失った瞬間。手番の輪を暗くし、地面の×印で「行動なし」を示す。
+    /// </summary>
+    public void StaggerLost(BattlePawn3D? pawn, Color color)
+    {
+        if (pawn is null) return;
+        pawn.AnimateStaggerLost();
+        pawn.SetTurnOwner(true, paused: true);
+        _beat.Text = $"⊘ 手番喪失: {pawn.UnitName}（転倒）";
+        _beat.AddThemeColorOverride("font_color", color);
+
+        Vector3 center = pawn.Home + Vector3.Up * 0.10f;
+        Vector3 a = new(0.68f, 0, 0.68f);
+        Vector3 b = new(0.68f, 0, -0.68f);
+        MakeBeam(center - a, center + a, new Color(color, 0.86f), 0.095f, 0.42);
+        MakeBeam(center - b, center + b, new Color(color, 0.86f), 0.095f, 0.42);
+        MakeGroundRing(pawn.Home, UiKit.Faint, 1.02f, 0.42);
+    }
+
     public void AttackCue(BattlePawn3D? pawn, string value, Color color)
     {
         if (pawn is null) return;
