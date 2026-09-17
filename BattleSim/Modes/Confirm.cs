@@ -204,6 +204,14 @@ public static void Run(string[] args, int stageIndex)
         ("驕り改 (オゴ×ウツ)",
             Formation.Build(front1: UnitCatalog.Utsu, front3: UnitCatalog.Gald, center: UnitCatalog.Ogo, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga),
             Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Doha, center: UnitCatalog.Utsu, back1: UnitCatalog.Dolga, back3: UnitCatalog.Ogo)),
+        // 第144期 段0。**第143期の持ち越し**——ササを転生させた期に席を触らないと決めたので、
+        // `置き去り×分散回復` は第2波 −22.0pt で拒否権3 に触れたまま残っていた
+        // （第107期「機構が変わった行の席は寿命が切れる」の、駒そのものを入れ替えた版）。
+        // 候補は `docs/reseat.md` の粗順4（狙 ○・情報セル 4・帯A で第2〜5波 +22.1pt）。
+        // **バサとは無関係の行**なので、この期の測定に入る前に独立して決める。
+        ("置き去り×分散回復",
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Nara, center: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa),
+            Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back3: UnitCatalog.Nara)),
     };
 
     Console.WriteLine("## 採用候補の追試");
