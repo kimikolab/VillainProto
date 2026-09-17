@@ -422,6 +422,13 @@ if (focusId == "shard")
     return;
 }
 
+// brace モード（第143期） —— ササの転生（身を固めて、はね返した分を撒く）。本体は `Modes/Brace.cs`。
+if (focusId == "brace")
+{
+    BraceDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // sweep モード（第141期） —— 全診断の exit 検査。本体は `Sweep.cs`。
 // `CLAUDE.md` のコマンド表を自分で読み、引数の穴の無い本を1本ずつ上限つきの子プロセスで走らせる。
 // **合格 = 異常終了 0 本**。毎期は回さない（80 分前後）——`UnitCatalog.All` ／ `Retired` ／ `Presets` に触る期の受け入れ条件。
