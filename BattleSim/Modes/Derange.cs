@@ -21,15 +21,20 @@ static class DerangeDiag
 {
     const int Seeds = 200;
 
-    /// <summary>対照。<b>転倒版</b>（第144期に採用した既定）。</summary>
-    static readonly ShufflerRule V0 = ShufflerRule.Default;
+    /// <summary>
+    /// 対照。<b>転倒版</b>（第144期の既定）。
+    /// <b>第147期 段C で既定が混乱へ移ったので、V0 は `ShufflerRule.Default` ではなく
+    /// `Stagger144` を名指しする</b>——採用で既定が動いた診断は検算の相手が移る（第60期）。
+    /// </summary>
+    static readonly ShufflerRule V0 = ShufflerRule.Stagger144;
 
     /// <summary>段A。転倒を混乱に置き換える（絞りなし）。</summary>
     static readonly ShufflerRule V1 = new(true, ShuffleStagger.Confuse);
 
     /// <summary>
-    /// 段C の採用候補。<b>回数制（保持者1体・1戦あたり3回まで）。</b>
+    /// 段C の採用値。<b>回数制（保持者1体・1戦あたり3回まで）。</b>
     /// 段B / 段B' を同じ帯で比べた結果、<b>同じ供給量なら回数制のほうが帰属が 5.6〜8.8pt 高い</b>。
+    /// <b>第147期 段C でこれが `ShufflerRule.Default` になった</b>（自己検査 (b) が同値を確かめる）。
     /// </summary>
     static readonly ShufflerRule VC = new(true, ShuffleStagger.Confuse, ConfuseUses: 3);
 
@@ -406,7 +411,7 @@ static class DerangeDiag
         Console.WriteLine();
 
         string bal = arg.Length > 0 ? arg : "docs/balance.md";
-        Console.WriteLine("## (a) 必須1: `compare` 305 セルが `" + bal + "` と 0 件（既定 ＝ 転倒版）");
+        Console.WriteLine("## (a) 必須1: `compare` 305 セルが `" + bal + "` と 0 件");
         Console.WriteLine();
         if (!File.Exists(bal)) Console.WriteLine("**比較先が見つからない。手で `compare` を回して突き合わせること。**");
         else
@@ -433,13 +438,15 @@ static class DerangeDiag
         }
 
         Console.WriteLine();
-        Console.WriteLine("## (b) 既定が `ShufflerRule.Default` と 305 セル 0 件");
+        Console.WriteLine("## (b) **採用版（段C）が既定と 305 セル 0 件**（第60期: 既定が動いた診断は検算の相手が移る）");
         Console.WriteLine();
+        Console.WriteLine("- `ShufflerRule.Default` = `" + ShufflerRule.Default + "`");
+        Console.WriteLine("- 段C の値 = `" + VC + "`");
         {
             int diff = 0;
             foreach ((string _, Formation f) in CompareBuilds())
             {
-                double[] a = Rates(f, null), b = Rates(f, V0);
+                double[] a = Rates(f, null), b = Rates(f, VC);
                 for (int i = 0; i < 5; i++) if (Math.Abs(a[i] - b[i]) > 0.001) diff++;
             }
             Console.WriteLine("- 305 セル中 **" + diff + " 件**" + (diff == 0 ? " ○" : " **×**"));

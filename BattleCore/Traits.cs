@@ -5979,16 +5979,33 @@ public readonly record struct ShufflerRule(
     bool Foes, ShuffleStagger Stagger, int ConfusePercent = 100, int ConfuseUses = 0)
 {
     /// <summary>
-    /// 既定は<b>段B</b>（敵も乱し、<b>行が前に変わった敵だけ</b>が転ぶ）。第144期に採用した値。
+    /// 既定は<b>混乱・1戦3回まで</b>（第147期に採用）。敵も乱し、<b>行が前に変わった敵</b>が
+    /// 正気を失って<b>次の1回の攻撃を自軍へ向ける</b>。
     ///
-    /// <para><b>段C（2体とも転ぶ）は採らなかった。</b> 帰属は段B より大きい（+12.1〜+46.5pt）が、
-    /// 主判定の台は第2〜5波が<b>全部 100.0%</b> に飽和する——方向が消えて
-    /// 「乱す駒」ではなく<b>「毎ターン敵の手番を2つ削る駒」</b>になる。<b>ノブは残置。</b></para>
+    /// <para><b>第144期の既定は転倒（<see cref="ShuffleStagger.Advanced"/>）だった。</b>
+    /// 置き換えの帰属は 4 台で <b>+8.0 / +17.4 / +15.6 / ±0.0</b>（陰性対照が ±0.0）。</para>
     ///
-    /// <para><b>段A（入れ替えだけ）も採らなかった。</b> 7 台中 2 台で負（−7.5 / −3.1）
+    /// <para><b>絞りは確率ではなく回数にした。</b> 段B（<see cref="ConfusePercent"/> 100/50/25）と
+    /// 段B'（<see cref="ConfuseUses"/> 0/3/1）を<b>同じ台・同じ seed・同じ波</b>で振ると、
+    /// <b>両方効く</b>——ただし<b>同じ供給量で比べると回数制が 5.6〜8.8pt 優る</b>
+    /// （供給 1.06 の「確率 25%」が −10.1pt に対し、供給 1.00 の「回数 1」は −4.4pt）。
+    /// <b>確率は「何もしないターン」を一様に作るが、回数制は前半に寄せる</b>——
+    /// 混乱は敵の陣形が崩れる前ほど値打ちがあるので、<b>同じ量でも置き場所で値段が違う</b>。</para>
+    ///
+    /// <para><b>絞りなし（100%）は採らなかった。</b> 帰属は大きい（+11.1 / +20.0 / +18.5）が、
+    /// <b>被弾変換が厚い台が 96.9% で帯（40〜95%）を出る</b>。
+    /// 情報セルも 140 → 137（主判定 45 → 43）で、3回制（138 / 44）より1つずつ多く失う。</para>
+    ///
+    /// <para><b>転倒（<see cref="ShuffleStagger.Advanced"/>）はノブとして残置。</b>
+    /// <b>同じトリガーに転倒と混乱を両方は載せない</b>（<see cref="ShuffleStagger.Confuse"/> の doc）。</para>
+    ///
+    /// <para><b>段A（入れ替えだけ）は第144期に採らなかった。</b> 7 台中 2 台で負（−7.5 / −3.1）
     /// ——<b>敵を無作為に入れ替えるのは期待値ゼロではない</b>（doc の「符号が台で割れる」を参照）。</para>
     /// </summary>
-    public static ShufflerRule Default => new(true, ShuffleStagger.Advanced);
+    public static ShufflerRule Default => new(true, ShuffleStagger.Confuse, ConfuseUses: 3);
+
+    /// <summary>第144期の姿（前に出た敵が<b>転ぶ</b>）。<b>第147期に混乱へ置き換えた。</b></summary>
+    public static ShufflerRule Stagger144 => new(true, ShuffleStagger.Advanced);
 
     /// <summary>第143期までの姿（味方だけを乱す）。<b>回帰の基準。</b></summary>
     public static ShufflerRule Legacy => new(false, ShuffleStagger.None);

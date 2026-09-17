@@ -60,8 +60,8 @@
 | 47 | `shatter` | `ShatterRule` | `ShatterRule { Mode = Passive, SelfCostPerTurn = 0 }` | ○ | `shard` | 第137期 | ○ |
 | 48 | `shrapnel` | `ShrapnelRule` | `ShrapnelRule { Multiplier = 3, SelfDamagePercent = 100, ArmorCensus = False }` |  | `shard` | 第138期 | ○ |
 | 49 | `brace` | `BraceRule` | `BraceRule { Cap = 7, Refuse = True, Stagger = False }` |  | `brace` | 第143期 | ○ |
-| 50 | `shuffler` | `ShufflerRule` | `ShufflerRule { Foes = True, Stagger = Advanced, ConfusePercent = 100, ConfuseUses = 0 }` |  | `tumult` / `confuse` | 第144期 | ○ |
-| 51 | `confusion` | `ConfusionRule` | `ConfusionRule { Active = False, Percent = 100 }` |  | `confuse` | 第146期 | ○ |
+| 50 | `shuffler` | `ShufflerRule` | `ShufflerRule { Foes = True, Stagger = Confuse, ConfusePercent = 100, ConfuseUses = 3 }` |  | `tumult` / `derange` / `confuse` | 第144期 | ○ |
+| 51 | `confusion` | `ConfusionRule` | `ConfusionRule { Active = False, Percent = 100 }` |  | `derange` / `confuse` | 第146期 | ○ |
 
 引数 51 本（`verbose` と観測子を除く）。
 
@@ -79,7 +79,7 @@
 | `BoundaryRule` | `BoundaryRule { Choice = None, Plan = , Active = False }` |  | `choice` | 第102期 |
 | `BraceRule` | `BraceRule { Cap = 7, Refuse = True, Stagger = False }` | ○ | `brace` | 第143期 |
 | `ColossusRule` | `ColossusRule { Percent = 90, DamagePerGain = 4, Regurgitate = True, Slumber = False, SlumberThreshold = 60, Refund = True, RefundPercent = 25 }` | ○ | `gullet` / `whet` / `miasma` / `ledger` | 第35期 |
-| `ConfusionRule` | `ConfusionRule { Active = False, Percent = 100 }` | ○ | `confuse` | 第146期 |
+| `ConfusionRule` | `ConfusionRule { Active = False, Percent = 100 }` | ○ | `derange` / `confuse` | 第146期 |
 | `CreakRule` | `CreakRule { Threshold = 0, Source = Whet }` | ○ | `creak` / `pairs` / `creak3` | 第66期 |
 | `CurseRule` | `CurseRule { Enabled = False, SharePercent = 50 }` | ○ | `curse` / `hex` / `lit` | 第95期 |
 | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` / `wound2` | 第93期 |
@@ -112,7 +112,7 @@
 | `ShatterRule` | `ShatterRule { Mode = Passive, SelfCostPerTurn = 0 }` | ○ | `shard` | 第137期 |
 | `ShoveRule` | `ShoveRule { Penalty = 2 }` | ○ | `shove` / `ledger` / `brace` | 第41期 |
 | `ShrapnelRule` | `ShrapnelRule { Multiplier = 3, SelfDamagePercent = 100, ArmorCensus = False }` | ○ | `shard` | 第138期 |
-| `ShufflerRule` | `ShufflerRule { Foes = True, Stagger = Advanced, ConfusePercent = 100, ConfuseUses = 0 }` | ○ | `tumult` / `confuse` | 第144期 |
+| `ShufflerRule` | `ShufflerRule { Foes = True, Stagger = Confuse, ConfusePercent = 100, ConfuseUses = 3 }` | ○ | `tumult` / `derange` / `confuse` | 第144期 |
 | `SlanderRule` | `SlanderRule { Penalty = 0 }` | ○ | `slander` | 第44期 |
 | `SoakRule` | `SoakRule { Poison = True, Burn = False, DullPerKind = 1 }` | ○ | `derive` / `curse` / `hex` / `soak` / `ledger` / `lit` / `wound2` / `ember` / `cross` | 第90期 |
 | `SpillWoundRule` | `SpillWoundRule { Enabled = False, Scope = All }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期 |
