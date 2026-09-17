@@ -1417,6 +1417,9 @@ public sealed class UnitTally
     /// </summary>
     public int StallStun, StallSlumber, StallImmobile, StallCanAct;
 
+    /// <summary>転倒（第143期・<see cref="StatusKeys.Stagger"/>）で潰れた手番。<b>計数のみ。</b></summary>
+    public int StallStagger;
+
     /// <summary>
     /// <b>売れた手番</b>——潰れた手番のうち <see cref="Trait.SurrenderedTurn"/> が真だった回数。
     /// 第103期の訂正どおり、生の <c>IdleTurn</c> ではなく<b>買い手が通す判定のほう</b>を数える
@@ -1453,6 +1456,22 @@ public sealed class UnitTally
     /// <summary>散開（<see cref="TraitId.Loose"/>）の弾き。<c>LooseShoves</c> 実際に弾いた回数 ／
     /// <c>LooseCapped</c> 1ターン1回の上限で弾かれた回数 ／ <c>LooseNoTarget</c> 隣に味方がいなかった回数。</summary>
     public int LooseShoves, LooseCapped, LooseNoTarget;
+
+    /// <summary>
+    /// 身構え（<see cref="TraitId.Brace"/>・第143期）の帳簿。<b>計数専用で、どの規則も読まない。</b>
+    ///
+    /// <para><c>BraceGuards</c> 身を固めた手番数 ／ <c>BraceCuts</c> 上限で切った回数 ／
+    /// <c>BraceRefused</c> 切り落とした総量 ／ <c>BraceGiven</c> 味方の破片にした量 ／
+    /// <c>BraceLost</c> 宛先が無いまま消えた量 ／ <c>BraceShoves</c>・<c>BraceShoveCapped</c>・
+    /// <c>BraceNoTarget</c> 弾きの3分類 ／ <c>BraceStaggers</c> 転ばせた回数 ／
+    /// <c>BraceArmorMuted</c> <b>破片が一撃を全部吸って <c>OnDamaged</c> が鳴らなかった回数</b>
+    /// （第143期 Q0-1 の穴。<b>この期では塞がず、発生だけ数える</b>）。</para>
+    ///
+    /// <para><b><c>BraceGiven ≦ BraceRefused</c> が受け入れ条件</b>（配った量が切り落とした量を超えない）。
+    /// 差は <c>BraceLost</c> と、戦闘終了時にまだ配られていない保留。</para>
+    /// </summary>
+    public int BraceGuards, BraceCuts, BraceRefused, BraceGiven, BraceLost;
+    public int BraceShoves, BraceShoveCapped, BraceNoTarget, BraceStaggers, BraceArmorMuted;
 
     /// <summary>敵に与えたダメージのうち、手番の中／外で生んだ分（<see cref="DamageToEnemy"/> の内訳）。</summary>
     public int DmgOutInTurn, DmgOutOffTurn;
@@ -1545,6 +1564,11 @@ public sealed class UnitTally
                 if (mine[i] == 0 || (o.AtkProbeTurn[i] != 0 && o.AtkProbeTurn[i] < mine[i])) mine[i] = o.AtkProbeTurn[i];
         }
         LooseShoves += o.LooseShoves; LooseCapped += o.LooseCapped; LooseNoTarget += o.LooseNoTarget;
+        BraceGuards += o.BraceGuards; BraceCuts += o.BraceCuts; BraceRefused += o.BraceRefused;
+        BraceGiven += o.BraceGiven; BraceLost += o.BraceLost; BraceShoves += o.BraceShoves;
+        BraceShoveCapped += o.BraceShoveCapped; BraceNoTarget += o.BraceNoTarget;
+        BraceStaggers += o.BraceStaggers; BraceArmorMuted += o.BraceArmorMuted;
+        StallStagger += o.StallStagger;
         Attacks += o.Attacks; Interventions += o.Interventions;
         DamageToEnemy += o.DamageToEnemy; DamageToAlly += o.DamageToAlly;
         DamageTaken += o.DamageTaken; TakenFromAlly += o.TakenFromAlly;

@@ -423,17 +423,25 @@ public static class UnitCatalog
         Flavor = "他人の痛みを勝手に引き受ける。感謝はされず、ただ先に倒れる。"
     };
 
+    // 第143期に転生させた。旧「散開のササ」（HP58・`TraitId.Loose` ＝ 隣が空いた駒の被ダメ −35%
+    // ＋ 被弾で隣を弾く）は `compare` 61 行のうち**在席1行**で、
+    // **弾きの受け皿（移動軸）が無い編成では −35% しか働いていなかった**。
+    // `LooseTrait` / `LooseRule` は**残置**（対照）。
     public static readonly UnitDef Sasa = new()
     {
         Id = "sasa",
-        Name = "散開のササ",
-        MaxHp = 58,
+        Name = "錯乱のササ",
+        MaxHp = 96,
         Attack = 7,
         Speed = 12,
         Advances = false,
-        Traits = new[] { TraitId.Loose },
-        PlusText = "隣に味方がいない駒の被ダメージを35%下げる。被弾すると、隣の味方1体を別の席へ弾く（1ターン1回）",
-        MinusText = "弾く先は選べない。隊列を組み直され、詰める編成では被ダメージ減が何も起きない",
+        // **攻撃は捨てる**（`Actions` が `Skill` 1要素なので通常攻撃の手番が来ない）。
+        // 周期に「その駒が永久に実行できない種別」を混ぜないこと——engine の行動順ループが
+        // その要素で止まって二度と先へ進まない（`TakeTurnCore` のコメント）。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "身を固めている") },
+        Traits = new[] { TraitId.Brace },
+        PlusText = "手番で身を固め、次のターンまで一撃は上限までに抑える。殴られると錯乱して隣の味方を突き飛ばし、その味方に、切り落とした分を破片として付ける",
+        MinusText = "突き飛ばされた味方は転び、次の手番を失う ／ 弾く相手と行き先は選べない ／ 自分は攻撃しない",
         Flavor = "誰かの隣に立つことができない。近づかれると錯乱する。"
     };
 

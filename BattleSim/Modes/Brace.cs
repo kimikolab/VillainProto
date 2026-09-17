@@ -24,6 +24,7 @@ static class BraceDiag
             case "scan": if (arg.StartsWith("probe")) Probe(); else Scan(); return;
             case "run": Sweep(arg); return;
             case "check": Check(arg); return;
+            case "log": LogOne(arg); return;
             default:
                 Console.WriteLine("brace: モードは phase0 / scan / run / check。");
                 return;
@@ -314,7 +315,168 @@ static class BraceDiag
         }
     }
 
-    static void Sweep(string arg) => Console.WriteLine("brace run: 段A〜D は次のコミットで足す。");
+    // =================================================================================
+    // 段A〜D の測定
+    // =================================================================================
+
+    /// <summary>
+    /// <b>対照（V0）＝ 転生前のササ</b>。第143期に `UnitCatalog.Sasa` の側を転生させたので、
+    /// <b>診断のローカルに置くのは「転生前の姿」</b>（第60期の作法。採用で既定が動いたら
+    /// 検算の相手は V0 ではなく V1 に移る）。
+    /// </summary>
+    static UnitDef OldSasa() => new()
+    {
+        Id = "sasa", Name = "散開のササ（転生前）", MaxHp = 58, Attack = 7, Speed = 12,
+        Advances = false, Traits = new[] { TraitId.Loose }
+    };
+
+    sealed class Led
+    {
+        public long Battles, Wins, Turns;
+        public long Taken, Life, Deaths, Dealt;
+        public long Guards, Cuts, Refused, Given, Lost, Shoves, Capped, NoTarget, Staggers, Muted;
+        public long Surrendered, Stalls, ShrapShards, ShrapDealt, ScaleWorn, ScaleAlive;
+        public readonly double[] Win = new double[5];
+    }
+
+    static Led Measure(Formation f, BraceRule rule) => Measure(f, rule, null);
+
+    /// <summary><paramref name="byWave"/> を渡すと波別の供給（切った回数・切り落とし・配った・戦数）も積む。</summary>
+    static Led Measure(Formation f, BraceRule rule, long[][]? byWave)
+    {
+        var L = new Led();
+        for (int st = 0; st < EnemyCatalog.Stages.Count; st++)
+        {
+            int wins = 0;
+            for (int seed = 0; seed < Seeds; seed++)
+            {
+                BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed,
+                                                  verbose: false, brace: rule);
+                if (r.PlayerWon) wins++;
+                if (st == 0) continue;   // 帳簿は第2〜5波（規約 (G10)）
+                L.Battles++; L.Turns += r.Turns;
+                if (r.PlayerWon) L.Wins++;
+                L.ShrapShards += r.ShrapnelShards; L.ShrapDealt += r.ShrapnelDealt;
+                L.ScaleWorn += r.ScaleWornTurns; L.ScaleAlive += r.ScaleAliveTurns;
+                if (byWave is not null && r.TallyByUnit.TryGetValue("sasa", out UnitTally? bw))
+                {
+                    byWave[st][0] += bw.BraceCuts; byWave[st][1] += bw.BraceRefused;
+                    byWave[st][2] += bw.BraceGiven; byWave[st][3]++;
+                }
+                if (r.TallyByUnit.TryGetValue("sasa", out UnitTally? t))
+                {
+                    L.Taken += t.DamageTaken; L.Life += t.LastActiveTurn;
+                    L.Deaths += t.Deaths > 0 ? 1 : 0; L.Dealt += t.DamageToEnemy;
+                    L.Guards += t.BraceGuards; L.Cuts += t.BraceCuts; L.Refused += t.BraceRefused;
+                    L.Given += t.BraceGiven; L.Lost += t.BraceLost; L.Shoves += t.BraceShoves;
+                    L.Capped += t.BraceShoveCapped; L.NoTarget += t.BraceNoTarget;
+                    L.Staggers += t.BraceStaggers; L.Muted += t.BraceArmorMuted;
+                    L.Shoves += t.LooseShoves; L.Capped += t.LooseCapped; L.NoTarget += t.LooseNoTarget;
+                }
+                // 転倒が手番市場に売れたか。**買い手が通す判定**（`TurnsSurrendered`）で見る
+                // ——生の `IdleTurn` を数えると必ず「×」になる（第103期の訂正）。
+                foreach (UnitTally any in r.TallyByUnit.Values)
+                {
+                    L.Surrendered += any.TurnsSurrendered;
+                    L.Stalls += any.StallStagger;
+                }
+            }
+            L.Win[st] = 100.0 * wins / Seeds;
+        }
+        return L;
+    }
+
+    static double Mean(Led L) => (L.Win[1] + L.Win[2] + L.Win[3] + L.Win[4]) / 4;
+
+    /// <summary>段A〜D。<c>arg</c> に N の掃引点をカンマ区切りで渡せる（既定 7,12,20 ＝ Q0-2 の3点）。</summary>
+    static void Sweep(string arg)
+    {
+        int[] ns = string.IsNullOrWhiteSpace(arg)
+            ? new[] { 7, 12, 20 }
+            : arg.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => int.Parse(x.Trim())).ToArray();
+
+        Console.WriteLine("# 第143期 段A〜D（`brace run`）");
+        Console.WriteLine();
+        Console.WriteLine($"台4つ × 版 × 第2〜5波 × seed 0..{Seeds - 1}。**第一波は実行して分母から除外**（規約 (G10)）。");
+        Console.WriteLine($"N の掃引点は Q0-2 の表から引いた **{string.Join(" / ", ns)}**（p10 / 中央値 / p90）。");
+        Console.WriteLine();
+
+        var versions = new List<(string Tag, UnitDef Sasa, BraceRule Rule)>
+        {
+            ("V0 転生前", OldSasa(), BraceRule.Default),
+            ("段A 上限なし", UnitCatalog.Sasa, new BraceRule(0, false, false)),
+        };
+        foreach (int n in ns) versions.Add(($"段B N={n}", UnitCatalog.Sasa, new BraceRule(n, false, false)));
+        foreach (int n in ns) versions.Add(($"段C N={n} 配る", UnitCatalog.Sasa, new BraceRule(n, true, false)));
+        foreach (int n in ns) versions.Add(($"段D N={n} 配る+転倒", UnitCatalog.Sasa, new BraceRule(n, true, true)));
+
+        foreach ((string bedName, Formation _) in Rigs(UnitCatalog.Sasa))
+        {
+            Console.WriteLine($"## {bedName}");
+            Console.WriteLine();
+            Console.WriteLine("| 版 | 勝率 2/3/4/5波 | 第2〜5波平均 | 帰属 | 決着T | ササ生存T | 死亡率 | 被弾/戦 | 与ダメ/戦 |");
+            Console.WriteLine("|---|---|---:|---:|---:|---:|---:|---:|---:|");
+            double baseM = 0;
+            var leds = new List<(string Tag, Led L)>();
+            foreach ((string tag, UnitDef sasa, BraceRule rule) in versions)
+            {
+                Formation f = Rigs(sasa).First(x => x.Name == bedName).F;
+                Led L = Measure(f, rule);
+                leds.Add((tag, L));
+                double m = Mean(L);
+                if (tag.StartsWith("V0")) baseM = m;
+                Console.WriteLine($"| {tag} | {L.Win[1]:F1} / {L.Win[2]:F1} / {L.Win[3]:F1} / {L.Win[4]:F1} | {m:F1} " +
+                                  $"| {(tag.StartsWith("V0") ? "—" : (m - baseM).ToString("+0.0;-0.0"))} " +
+                                  $"| {(double)L.Turns / L.Battles:F2} | {(double)L.Life / L.Battles:F2} " +
+                                  $"| {100.0 * L.Deaths / L.Battles:F1}% | {(double)L.Taken / L.Battles:F1} | {(double)L.Dealt / L.Battles:F1} |");
+            }
+            Console.WriteLine();
+            Console.WriteLine("| 版 | 身構え/戦 | 切った回数 | 切り落とし/戦 | 配った/戦 | 消えた/戦 | 弾き/戦 | 転ばせ/戦 | 破片で不発 | 差し出した手番/戦 | 転倒で潰れたT/戦 | ガレ砕き/戦 | ウロ纏い率 |");
+            Console.WriteLine("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+            foreach ((string tag, Led L) in leds)
+                Console.WriteLine($"| {tag} | {(double)L.Guards / L.Battles:F2} | {(double)L.Cuts / L.Battles:F2} " +
+                                  $"| {(double)L.Refused / L.Battles:F1} | {(double)L.Given / L.Battles:F1} | {(double)L.Lost / L.Battles:F1} " +
+                                  $"| {(double)L.Shoves / L.Battles:F2} | {(double)L.Staggers / L.Battles:F2} | {(double)L.Muted / L.Battles:F2} " +
+                                  $"| {(double)L.Surrendered / L.Battles:F2} | {(double)L.Stalls / L.Battles:F2} " +
+                                  $"| {(double)L.ShrapShards / L.Battles:F1} " +
+                                  $"| {(L.ScaleAlive == 0 ? "—" : (100.0 * L.ScaleWorn / L.ScaleAlive).ToString("F1") + "%")} |");
+            Console.WriteLine();
+        }
+
+        // 波別の供給（**予測3 を読む表**。採用候補の版だけ出す）。
+        int nStar = ns[0];
+        Console.WriteLine($"## 波別の供給（段C N={nStar}・**予測3 を読む表**）");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 波 | 切った回数/戦 | 切り落とし/戦 | 配った/戦 |");
+        Console.WriteLine("|---|---|---:|---:|---:|");
+        foreach ((string bedName, Formation _) in Rigs(UnitCatalog.Sasa))
+        {
+            var byWave = new long[5][];
+            for (int i = 0; i < 5; i++) byWave[i] = new long[4];
+            Measure(Rigs(UnitCatalog.Sasa).First(x => x.Name == bedName).F,
+                    new BraceRule(nStar, true, false), byWave);
+            for (int st = 1; st < 5; st++)
+            {
+                long b = Math.Max(1, byWave[st][3]);
+                Console.WriteLine($"| {bedName.Split(' ')[0]} | 第{st + 1}波 | {(double)byWave[st][0] / b:F2} " +
+                                  $"| {(double)byWave[st][1] / b:F1} | {(double)byWave[st][2] / b:F1} |");
+            }
+        }
+        Console.WriteLine();
+    }
+
+    /// <summary>1戦の監査（台名の部分一致 ＋ N ＋ seed）。</summary>
+    static void LogOne(string arg)
+    {
+        string[] a = arg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string bedKey = a.Length > 0 ? a[0] : "台3";
+        int n = a.Length > 1 ? int.Parse(a[1]) : 7;
+        int seed = a.Length > 2 ? int.Parse(a[2]) : 0;
+        Formation f = Rigs(UnitCatalog.Sasa).First(x => x.Name.Contains(bedKey)).F;
+        BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[1].Enemy, seed, verbose: true,
+                                          brace: new BraceRule(n, true, false));
+        foreach (LogLine l in r.Log) Console.WriteLine(l.Text);
+    }
 
     static void Check(string arg) => Console.WriteLine("brace check: 次のコミットで足す。");
 }

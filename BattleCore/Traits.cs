@@ -204,6 +204,21 @@ public enum TraitId
                 // **この札を1バイトも触らずに敵側の分岐が点灯する**。
                 // **この期の報告書に「敵側分岐の発火 0 件」を回帰値として残してある。**
 
+    // --- 第143期で足した札（**ササの転生**。散開＝`Loose` は対照として残置） ---
+    Brace,      // 身構え: 手番で身を固め、次のターンまで一撃は上限まで。殴られると錯乱して隣の味方を
+                // 突き飛ばし、その味方に、上限で切り落とした分を破片として付ける。
+                // 突き飛ばされた味方は転び、次の手番を失う
+                //（1つの動作の表と裏。プラスは自分の耐久と味方への破片・マイナスは自分の攻撃と味方の手番）
+                //
+                // **「駒が自分の一撃に上限を持ち、切り落とした分を配る」はロスター初**（第143期 Q0-7）。
+                // 単発の上限は 軛（盤面ルール）と 棘守りの `AbsorbCap` の2つだけで、
+                // **どちらも切り落とした分を配らない**（軛は捨て、棘守りは守った相手へ素のまま転送する）。
+                //
+                // **耐久と供給が同じ在庫を食い合わない形にしてある。**
+                // 「手番で自分に破片を纏い、弾いた味方に分ける」案は落とした——**配ると自分が薄くなり、
+                // 殴られた後は渡す分が残らない**ので、壁として働く場面と供給が出る場面が食い違う。
+                // 上限は配っても減らず、供給は**集中砲火を受けるほど太る**。
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -7099,6 +7114,181 @@ public static class ShoveRules
 }
 
 /// <summary>
+/// 身構えの規則（第143期）。<b><c>Cap = 0</c> は上限なし</b>——保持者がいても
+/// 乱数も計数も盤面も1ビットも動かさない（段A の対照）。
+/// </summary>
+/// <param name="Cap">
+/// 一撃の上限。<b>0 なら上限なし。</b> 掃引点は「前1 に実際に届く一撃」の分布から引く
+/// （第143期 Q0-2・p10 / 中央値 / p90 ＝ 7 / 12 / 20）。<b>紙から引かない。</b>
+/// </param>
+/// <param name="Refuse">切り落とした分を、そのターンに突き飛ばした味方へ破片として付けるか（段C）。</param>
+/// <param name="Stagger">突き飛ばした味方を転ばせる（次の手番を失わせる）か（段D）。</param>
+public readonly record struct BraceRule(int Cap, bool Refuse, bool Stagger)
+{
+    /// <summary>既定。<b>最終的に採用した値</b>（第136期の受け流し N=2 と同じ扱い）。</summary>
+    public static BraceRule Default => new(0, false, false);
+}
+
+/// <summary>
+/// 身構え（<see cref="TraitId.Brace"/>・第143期）。<b>ササの転生。</b>
+///
+/// <para><b>手番で身を固める</b>（<see cref="OnAction"/>）と、<b>そのターンのあいだ</b>
+/// 一撃が <see cref="BraceRule.Cap"/> までに切られる。切り落とした分（<c>refused</c>）は
+/// <b>そのターンに突き飛ばした隣の味方</b>へ破片（<see cref="StatusKeys.Armor"/>）として付く。
+/// 突き飛ばされた味方は転んで次の手番を失う（<see cref="StatusKeys.Stagger"/>）。</para>
+///
+/// <para><b>「纏った破片を分ける」案を落とした理由。</b>
+/// 「手番で自分に破片を纏い、弾いた味方に分ける」形は、<b>耐久と供給が同じ在庫を食い合う</b>
+/// ——配ると自分が薄くなり、殴られた後は渡す分が残らないので、
+/// <b>壁として働いている場面と供給が出る場面が食い違う</b>。
+/// 採ったのは<b>供給を「自分が受けなかったダメージ」から取る</b>形で、
+/// 上限（耐久）は配っても減らず、供給は<b>集中砲火を受けるほど太る</b>。
+/// タンク3枚が別々の耐え方になる: <b>ガルド＝回数 ／ ゴルム＝総量 ／ ササ＝単発</b>。</para>
+///
+/// <para><b>上限の判定は engine 側（<c>ApplyDamageBody</c>）にある。</b>
+/// 「1発を上限で切る」は出口にしか置けない（軛＝第25期・猶予＝第126期・受け流し＝第135期と同じ族）
+/// ——入口（<see cref="Trait.ModifyIncomingDamage"/>）だと惨禍（+50%）や脆弱が
+/// 切ったつもりの量を押し戻して「1発は Cap を超えない」が守られない。
+/// 置き場所は<b>軛の直前</b>で、理由は「駒の上限が先、波の上限はその後」。</para>
+///
+/// <para><b>印も宛先も保留も、ターン番号で持つ</b>（<see cref="LooseTrait.LastTurnKey"/> と同じ作法）。
+/// ターン頭に消す処理を書かない——<c>TickStatuses</c> が <c>OnTurnStart</c> より先に走るので、
+/// 「ターン頭で消す」形にすると<b>前のターンの身構えが次のターンの毒・燃焼の刻みにまで効いてしまう</b>。</para>
+/// </summary>
+public sealed class BraceTrait : Trait
+{
+    /// <summary>身を固めたターン + 1。<c>0</c> は「まだ一度も」。</summary>
+    public const string BracedKey = "braceTurn";
+
+    /// <summary>最後に弾いたターン + 1（<see cref="ShoveRules.Shove"/> へ渡す私有キー）。</summary>
+    public const string ShoveTurnKey = "braceShoveTurn";
+
+    /// <summary>
+    /// このターンの帳簿（保留と宛先）を立てたターン + 1。
+    ///
+    /// <para><b>保留と宛先は同じ寿命を持つ。</b> 別々のキーで持つと、
+    /// <b>弾きが先・切り落としが後</b>のターン（味方の削り・毒の刻みで先に殴られる形。実測では珍しくない）で
+    /// 最初の切り落としが宛先を消してしまう——実際にそう実装して、
+    /// <c>台3 肩代わり</c> で「切り落としは 46.8/戦 出るのに配ったのは 0.2/戦」になった。</para>
+    /// </summary>
+    public const string TurnKey = "braceLedgerTurn";
+
+    /// <summary>そのターンの保留量。</summary>
+    public const string PendingKey = "bracePend";
+
+    /// <summary>そのターンの宛先（<c>InstanceId + 1</c>）。<b><see cref="OnCarryOver"/> で必ず捨てる。</b></summary>
+    public const string TargetKey = "braceTarget";
+
+    public override TraitId Id => TraitId.Brace;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+        => ctx.Log($"  {self.Name} が身構えた", LogKind.Trigger);
+
+    /// <summary>手番（<c>Actions = [Skill]</c> の1要素）。攻撃は捨てて身を固める。</summary>
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        self.SetCounter(BracedKey, ctx.Turn + 1);
+        ctx.TallyOf(self).BraceGuards++;
+        ctx.Log(ctx.Brace.Cap > 0
+                ? $"    {self.Name} が身を固めた（このターン、一撃は {ctx.Brace.Cap} まで）"
+                : $"    {self.Name} が身を固めた", LogKind.Trigger);
+    }
+
+    /// <summary>その駒がいま身を固めているか。<b>engine の上限の段だけが読む。</b></summary>
+    public static bool IsBraced(BattleContext ctx, UnitState u)
+        => u.Counter(BracedKey) == ctx.Turn + 1;
+
+    /// <summary>
+    /// 切り落とした分を保留に積む。<b><c>ApplyDamageBody</c> の上限の段からだけ呼ぶ。</b>
+    /// 保留はターン番号で持つので、前のターンの残りは自動的に 0 から数え直す
+    /// （<b>宛先が無いまま残った保留は消える</b>——自分には付けない）。
+    /// </summary>
+    public static void Refuse(BattleContext ctx, UnitState self, int refused)
+    {
+        Roll(ctx, self);
+        self.SetCounter(PendingKey, self.RawCounter(PendingKey) + refused);
+        UnitTally t = ctx.TallyOf(self);
+        t.BraceCuts++;
+        t.BraceRefused += refused;
+    }
+
+    /// <summary>
+    /// 被弾したら隣を弾き（1ターン1回）、そのターンの保留を宛先へ破片として渡す。
+    /// <b>同じターンの2回目以降は弾かず、記録してある宛先へ直接付ける。</b>
+    /// </summary>
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        if (dmg <= 0 || !self.IsAlive) return;
+
+        UnitTally t = ctx.TallyOf(self);
+        switch (ShoveRules.Shove(ctx, self, ShoveTurnKey, out UnitState? victim))
+        {
+            case ShoveOutcome.Shoved:
+                t.BraceShoves++;
+                Roll(ctx, self);
+                self.SetCounter(TargetKey, victim!.InstanceId + 1);
+                if (ctx.Brace.Stagger && victim.IsAlive)
+                {
+                    victim.SetCounter(StatusKeys.Stagger, 1);
+                    t.BraceStaggers++;
+                    ctx.Log($"    {victim.Name} は転んだ（次の手番を失う）", LogKind.Status);
+                }
+                break;
+            case ShoveOutcome.Capped: t.BraceShoveCapped++; break;
+            case ShoveOutcome.NoTarget: t.BraceNoTarget++; break;
+        }
+
+        Deliver(ctx, self);
+    }
+
+    /// <summary>
+    /// ターンが変わっていたら帳簿を繰り越す。<b>宛先が無いまま残った保留は消える</b>
+    /// （自分には付けない——耐久と供給が同じ在庫を食い合わないための要）。
+    /// </summary>
+    static void Roll(BattleContext ctx, UnitState self)
+    {
+        if (self.Counter(TurnKey) == ctx.Turn + 1) return;
+        ctx.TallyOf(self).BraceLost += self.RawCounter(PendingKey);
+        self.SetCounter(TurnKey, ctx.Turn + 1);
+        self.SetCounter(PendingKey, 0);
+        self.SetCounter(TargetKey, 0);
+    }
+
+    /// <summary>保留をそのターンの宛先へ破片として渡す。宛先が無ければ何もしない（保留は残る）。</summary>
+    static void Deliver(BattleContext ctx, UnitState self)
+    {
+        if (!ctx.Brace.Refuse) return;
+        if (self.Counter(TurnKey) != ctx.Turn + 1) return;
+        int pending = self.RawCounter(PendingKey);
+        if (pending <= 0) return;
+
+        int id = self.RawCounter(TargetKey) - 1;
+        if (id < 0) return;
+        UnitState? to = ctx.LivingMembers(self.TeamId).FirstOrDefault(u => u.InstanceId == id);
+        if (to is null) return;
+
+        to.SetCounter(StatusKeys.Armor, to.RawCounter(StatusKeys.Armor) + pending);
+        self.SetCounter(PendingKey, 0);
+        UnitTally t = ctx.TallyOf(self);
+        t.BraceGiven += pending;
+        ctx.Log($"    {self.Name} がはね返した {pending} を {to.Name} の破片にした", LogKind.Trigger);
+    }
+
+    /// <summary>
+    /// 会戦の境界。<b><see cref="TargetKey"/> は <c>InstanceId</c> を持つので必ず捨てる</b>
+    /// （持ち越すと前の戦闘の番号が次の戦闘の無関係な駒に当たる。執着・駆り立てと同じ理由）。
+    /// </summary>
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(BracedKey, 0);
+        self.SetCounter(ShoveTurnKey, 0);
+        self.SetCounter(TurnKey, 0);
+        self.SetCounter(PendingKey, 0);
+        self.SetCounter(TargetKey, 0);
+    }
+}
+
+/// <summary>
 /// 萎縮。味方全体の攻撃力を下げる代わりに、被ダメージを下げる。
 /// 普通の編成にとっては純粋なコストだが、弱体化を力に変える駒にとっては
 /// 耐久と火力を同時に供給する相棒になる。
@@ -8384,6 +8574,7 @@ public static class TraitCatalog
         new ShatterTrait(),
         new ShrapnelTrait(),
         new LooseTrait(),
+        new BraceTrait(),
         new CowerTrait(),
         new PursuerTrait(),
         new RearGuardTrait(),

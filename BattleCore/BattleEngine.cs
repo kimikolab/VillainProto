@@ -118,7 +118,25 @@ public static class StatusKeys
     /// （状態異常は Battle スコープ、という寿命規則。Armor も含めて消す——破片は
     /// Battle 内の供給に依存するプール）。**新しいキーを足したら必ずここにも足すこと。**
     /// </summary>
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse };
+    /// <summary>
+    /// 転倒（第143期・<see cref="BraceTrait"/>）。<b>次の手番を1回だけ失う。0 か 1 の二値。</b>
+    ///
+    /// <para><b>痺れ（<see cref="Stun"/>）を流用しない。</b> 痺れには読み手がいる
+    /// （責め苦のシガ「縛られた敵しか殴れない」ほか）ので、<b>味方の転倒が痺れの帳簿に混ざる</b>
+    /// ——別の出来事を同じキーに積むと、帳簿が閉じなくなる。</para>
+    ///
+    /// <para><b>まどろみ（第36期）とまったく同じ形で engine が立てる。</b>
+    /// <see cref="IdleTurn"/> を立てて手番を潰すだけで <c>CanAct</c> は1つも false にしないので、
+    /// <c>Trait.SurrenderedTurn</c> が真のまま通り、<b>号令（ガン）・据え（バン）が買い取れる</b>
+    /// ——それがこの代金の狙いである。<c>CanAct</c> のオーバーライドで書くと
+    /// 不動（カド）・追い打ち（ハギ）と同じ扱いになって買い手が消える。</para>
+    ///
+    /// <para><b>ターン外の行動は失わない。</b> <see cref="IdleTurn"/> は <c>CanReact</c> を
+    /// 1ビットも見ないので、軋み（ヨミ）の割り込みはその場で走る——落ちるのは次の通常の手番だけ。</para>
+    /// </summary>
+    public const string Stagger = "stagger";
+
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger };
 
     /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
@@ -136,6 +154,7 @@ public static class StatusKeys
         Wound => "傷",
         Deep => "深手",
         Curse => "呪",
+        Stagger => "転",
         _ => key
     };
 }
@@ -2090,6 +2109,9 @@ public sealed class BattleContext
     /// <summary>散開の弾き（第106期 (T2)・<see cref="LooseRule"/>）。</summary>
     public LooseRule Loose { get; }
 
+    /// <summary>身構え（第143期・<see cref="BraceRule"/>）。<b>既定（<c>Cap = 0</c>）では1バイトも動かない。</b></summary>
+    public BraceRule Brace { get; }
+
     /// <summary>憤怒の発火の内訳（<b>版に依らない</b>。Phase 0 で「1発と数える集合」を出すため）。</summary>
     public int RageFiresFromFoe, RageFiresFromAlly, RageFiresNoSource;
 
@@ -3165,6 +3187,7 @@ public sealed class BattleContext
                          EmberRule? ember = null, WildfireRule? wildfire = null,
                          HarmRule? harm = null, ParryRule? parry = null,
                          ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
+                         BraceRule? brace = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -3211,6 +3234,7 @@ public sealed class BattleContext
         Rage = rage ?? RageRule.Default;
         MenderCost = menderCost ?? MenderCostRule.Default;
         Loose = loose ?? LooseRule.Default;
+        Brace = brace ?? BraceRule.Default;
         Taillight = taillight ?? TaillightRule.Default;
         Reader = reader ?? ReaderRule.Default;
         Boss = boss ?? BossRule.Default;
@@ -4839,6 +4863,10 @@ public sealed class BattleContext
                 // 第118期・**計数のみ**。糧が「破片で受け切った被弾では発火しない」ことを
                 // 実測で示すための1行で、保持者がいなければ1度も加算しない（誰も読んで分岐しない）。
                 if (target.HasTrait(TraitId.Nourish)) NourishSoaked++;
+                // 第143期 Q0-1 の穴（**計数のみ**）。破片が一撃を全部吸うとここで返るので、
+                // `OnDamaged` が鳴らず**身構えの弾きが立たない**。**この期では塞がない。**
+                // 現行の散開にも同じ穴があるので、機構の新しい欠陥ではない。
+                if (Brace.Cap > 0 && target.HasTrait(TraitId.Brace)) TallyOf(target).BraceArmorMuted++;
                 return;
             }
         }
@@ -4933,6 +4961,29 @@ public sealed class BattleContext
         // amount > Cap を先に見るのは、保持者の探索（AllUnits の走査）を毎回の被弾で
         // 走らせないため。Math.Min の結果は変わらない（layout は数百万戦を並列で回す）。
         //
+        // 身構え（BraceTrait・第143期）: 保持者が手番で身を固めたターンのあいだ、
+        // 1回のダメージが BraceRule.Cap で切られる。**切り落とした分は捨てずに保留へ積む**
+        // ——そのターンに突き飛ばした隣の味方へ破片として渡る（Trait 側の Deliver）。
+        //
+        // **軛の直前に置く。** 「駒の上限が先、波の上限はその後」——軛の後ろに置くと
+        // 第四波では軛が 25 で先に切るので、ササの切り落としがその波だけ細る。
+        // （**実測では第四波の一撃は最大 16 で軛は 1 発も切っていない**ので、この期の盤面では
+        // どちらに置いても同じ値になる。順序は「切られる波が後から来たときに壊れない側」で決めてある。）
+        //
+        // **出口に置く理由は軛・猶予・受け流しと同じ。** 入口（Trait.ModifyIncomingDamage）だと
+        // 惨禍（+50%）や脆弱が切ったつもりの量を押し戻して「1発は Cap を超えない」が守られない。
+        //
+        // Cap > 0 を先に見るのは、既定（0 ＝ 上限なし）で HasTrait の走査を1回も走らせないため
+        // （軛の Cap 判定・粛の保持者走査と同じ短絡の作法）。
+        if (Brace.Cap > 0 && amount > Brace.Cap && target.HasTrait(TraitId.Brace)
+            && BraceTrait.IsBraced(this, target))
+        {
+            int refused = amount - Brace.Cap;
+            amount = Brace.Cap;
+            BraceTrait.Refuse(this, target, refused);
+            Log($"    {target.Name} が身構えて一撃を {refused + Brace.Cap} から {Brace.Cap} に抑えた", LogKind.Trigger);
+        }
+
         // **保持者の探索は `YokeBinding` に寄せた**（第132期 段1）。判定は同値
         // （`Yoke.Active && AllUnits.Any(u => u.IsAlive && u.HasTrait(TraitId.Yoke))`）で、
         // 走査の対象が全駒から保持者のキャッシュに変わっただけ。
@@ -5229,6 +5280,29 @@ public sealed class BattleContext
             actor.SetCounter(StatusKeys.IdleTurn, Turn);
             TallyOf(actor).StallStun++;   // 第105期（計数のみ）
             Log($"  {actor.Name} は痺れて動けない", LogKind.Status);
+            return TurnOutcome.Stalled;
+        }
+
+        // 転倒（第143期・StatusKeys.Stagger）: 身構えに突き飛ばされた味方は、次の手番を失う。
+        //
+        // **まどろみとまったく同じ形で立てる。** engine 側で IdleTurn を立てて Stalled を返すので
+        // CanAct を1つも false にしない ＝ Trait.SurrenderedTurn が真のまま通り、
+        // 号令（ガン）・据え（バン）がそのまま買い取る——**それがこの代金の狙いである。**
+        // CanAct のオーバーライドで書くと不動（カド）・追い打ち（ハギ）と同じ扱いになって買い手が消える。
+        //
+        // **痺れを流用しない**（StatusKeys.Stagger の doc を参照）。痺れには読み手がいるので、
+        // 味方の転倒がその帳簿に混ざる。
+        //
+        // **ターン外の行動は失わない。** IdleTurn は CanReact を1ビットも見ないので、
+        // 軋み（ヨミ）の割り込みはその場で走る——落ちるのは次の通常の手番だけ。
+        if (actor.RawCounter(StatusKeys.Stagger) > 0)
+        {
+            actor.SetCounter(StatusKeys.Stagger, 0);
+            actor.SetCounter(StatusKeys.IdleTurn, Turn);
+            TallyOf(actor).StallStagger++;            // 第143期（計数のみ）
+            if (ScapegoatActive) NoteScapegoatSkip(actor);
+            if (DeepWatch) NoteDeepStalled(actor);
+            Log($"  {actor.Name} は転んで動けない", LogKind.Status);
             return TurnOutcome.Stalled;
         }
 
@@ -6167,6 +6241,7 @@ public static class BattleEngine
                                    EmberRule? ember = null, WildfireRule? wildfire = null,
                                    HarmRule? harm = null, ParryRule? parry = null,
                                    ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
+                                   BraceRule? brace = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
@@ -6174,7 +6249,7 @@ public static class BattleEngine
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
-               nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, probe);
+               nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -6210,6 +6285,7 @@ public static class BattleEngine
                                    EmberRule? ember = null, WildfireRule? wildfire = null,
                                    HarmRule? harm = null, ParryRule? parry = null,
                                    ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
+                                   BraceRule? brace = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
@@ -6217,7 +6293,7 @@ public static class BattleEngine
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
-                                    nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, probe);
+                                    nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
