@@ -478,5 +478,99 @@ static class BraceDiag
         foreach (LogLine l in r.Log) Console.WriteLine(l.Text);
     }
 
-    static void Check(string arg) => Console.WriteLine("brace check: 次のコミットで足す。");
+    /// <summary>
+    /// 自己検査。規約 (G8) の必須4項目 ＋ この期の (a)〜(d)。
+    /// <paramref name="arg"/> に段A の <c>balance.md</c> を渡すと (a) も検査する。
+    /// </summary>
+    static void Check(string arg)
+    {
+        Console.WriteLine("# 第143期 自己検査（`brace check`）");
+        Console.WriteLine();
+
+        // 必須1: `compare` 305 セルが `docs/balance.md` と 0 件。
+        var live = new List<string>();
+        foreach ((string name, Formation f) in Presets.Compare)
+        {
+            var cells = new List<string>();
+            for (int st = 0; st < 5; st++)
+            {
+                int w = 0;
+                for (int seed = 0; seed < 200; seed++)
+                    if (BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false).PlayerWon) w++;
+                cells.Add($"{100.0 * w / 200:F1}%");
+            }
+            live.Add($"| {name} | {string.Join(" | ", cells)} |");
+        }
+        var doc = File.ReadAllLines("docs/balance.md")
+                      .Where(l => l.StartsWith("| ") && l.Contains('%')).ToList();
+        int bad = live.Count(l => !doc.Contains(l));
+        Console.WriteLine($"- **必須1** `compare` 305 セル ↔ `docs/balance.md`: **ずれ {bad} 件**（61 行 / 305 セル）");
+
+        // 必須4: `ctx.PickOne` を新たに使っていない（第89期 (h)。候補2個以上で `Roll` を消費する）。
+        string traits = File.ReadAllText("BattleCore/Traits.cs");
+        int bs = traits.IndexOf("public sealed class BraceTrait");
+        int be = traits.IndexOf("public sealed class CowerTrait");
+        int ss = traits.IndexOf("public static class ShoveRules");
+        string body = traits[bs..be] + traits[ss..traits.IndexOf("/// 身構えの規則（第143期）", ss)];
+        Console.WriteLine($"- **必須4** `BraceTrait` ＋ `ShoveRules` の `PickOne(` : "
+                          + $"**{body.Split("PickOne(").Length - 1} 件**（0 が正）");
+
+        // (a) `Cap = 0` なら `Refuse` は不活性（切り落としが1点も出ないので配るものが無い）。
+        // **`Stagger` は上限ではなく弾きに付いているので `Cap` に依らない**——同じ検査で両方出す。
+        int aDiff = 0, aStag = 0;
+        foreach ((string _, Formation f) in Rigs(UnitCatalog.Sasa))
+            for (int st = 0; st < 5; st++)
+                for (int seed = 0; seed < 50; seed++)
+                {
+                    bool x = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false,
+                                              brace: new BraceRule(0, false, false)).PlayerWon;
+                    if (x != BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false,
+                                              brace: new BraceRule(0, true, false)).PlayerWon) aDiff++;
+                    if (x != BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false,
+                                              brace: new BraceRule(0, false, true)).PlayerWon) aStag++;
+                }
+        Console.WriteLine($"- **(a)** `Cap = 0` で `Refuse` を振っても盤面が動かない: **ずれ {aDiff} 件**（1,000 戦・0 が正）");
+        Console.WriteLine($"- **(a')** `Cap = 0` で `Stagger` を振ると盤面が動く: **ずれ {aStag} 件**"
+                          + "（**0 でないのが正**。転倒は上限ではなく弾きに付いている）");
+
+        // (b) ササを含まない行は `BraceRule` を振っても 1 セルも動かない。
+        int bDiff = 0;
+        foreach ((string _, Formation f) in Presets.Compare.Concat(Presets.Cross))
+        {
+            if (f.Occupied().Any(o => o.Def.Id == "sasa")) continue;
+            for (int st = 0; st < 5; st++)
+                for (int seed = 0; seed < 20; seed++)
+                {
+                    bool x = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false).PlayerWon;
+                    bool y = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false,
+                                              brace: new BraceRule(20, true, true)).PlayerWon;
+                    if (x != y) bDiff++;
+                }
+        }
+        Console.WriteLine($"- **(b)** ササを含まない 72 行は `BraceRule` に依らない: **ずれ {bDiff} 件**");
+
+        // (c) 帳簿が閉じる（配った ≦ 切り落とし）／(d) 敵側に転倒が立たない。
+        long refused = 0, given = 0, lost = 0, foeStagger = 0, muted = 0;
+        foreach ((string _, Formation f) in Rigs(UnitCatalog.Sasa))
+            for (int st = 1; st < 5; st++)
+                for (int seed = 0; seed < 50; seed++)
+                {
+                    BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false,
+                                                      brace: new BraceRule(7, true, true));
+                    if (r.TallyByUnit.TryGetValue("sasa", out UnitTally? t))
+                    {
+                        refused += t.BraceRefused; given += t.BraceGiven;
+                        lost += t.BraceLost; muted += t.BraceArmorMuted;
+                    }
+                    foreach (var kv in r.TallyByUnit)
+                        if (EnemyCatalog.Stages[st].Enemy.Occupied().Any(o => o.Def.Id == kv.Key))
+                            foeStagger += kv.Value.StallStagger;
+                }
+        Console.WriteLine($"- **(c)** 配った {given} ≦ 切り落とし {refused}: **{(given <= refused ? "OK" : "**×**")}**"
+                          + $"（消えた {lost} ／ 残り {refused - given - lost}）");
+        Console.WriteLine($"- **(d)** 敵側に転倒が立った回数: **{foeStagger}**（0 が正。弾きは味方しか選ばない）");
+        Console.WriteLine($"- 参考: 破片が一撃を全部吸って弾きが鳴らなかった回数（Q0-1 の穴）: **{muted}**");
+        Console.WriteLine();
+        Console.WriteLine("**必須2**（`docs/` 全再生成の差分）と **必須3**（触っていないノブの既定）は報告書に書く。");
+    }
 }

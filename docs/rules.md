@@ -12,11 +12,11 @@
 | # | 引数名 | 型 | 既定値（実装） | `= default(T)` | 測った診断 | 初出（design/） | CLAUDE.md / LESSONS |
 |--:|---|---|---|:-:|---|---|:-:|
 | 1 | `colossus` | `ColossusRule` | `ColossusRule { Percent = 90, DamagePerGain = 4, Regurgitate = True, Slumber = False, SlumberThreshold = 60, Refund = True, RefundPercent = 25 }` |  | `gullet` / `whet` / `miasma` / `ledger` | 第35期 | ○ |
-| 2 | `yoke` | `YokeRule` | `YokeRule { Cap = 25, Active = True }` |  | `curse` / `yoke` / `goad` / `wave2` / `ledger` / `parry` | 第35期 | ○ |
+| 2 | `yoke` | `YokeRule` | `YokeRule { Cap = 25, Active = True }` |  | `curse` / `yoke` / `goad` / `wave2` / `ledger` / `parry` / `brace` | 第35期 | ○ |
 | 3 | `hush` | `HushRule` | `HushRule { Active = True }` |  | `curse` / `hush` / `goad` / `wave2` / `ledger` | 第35期 | ○ |
 | 4 | `martyr` | `MartyrRule` | `MartyrRule { RedirectPercent = 75 }` |  | `curse` / `guard` / `gather` / `ledger` / `wall` | 第35期 | ○ |
 | 5 | `expose` | `ExposeRule` | `ExposeRule { MaxPerBattle = 3 }` |  | `expose` / `creak3` / `ledger` | 第40期 | ○ |
-| 6 | `shove` | `ShoveRule` | `ShoveRule { Penalty = 2 }` |  | `shove` / `ledger` | 第41期 | ○ |
+| 6 | `shove` | `ShoveRule` | `ShoveRule { Penalty = 2 }` |  | `shove` / `ledger` / `brace` | 第41期 | ○ |
 | 7 | `bear` | `BearRule` | `BearRule { ArmorPerDull = 2 }` |  | `curse` / `dull` / `ledger` | 第42期 | ○ |
 | 8 | `relay` | `RelayRule` | `RelayRule { TransferPercent = 100 }` |  | `curse` / `relay` | 第43期 | ○ |
 | 9 | `slander` | `SlanderRule` | `SlanderRule { Penalty = 0 }` | ○ | `slander` | 第44期 | ○ |
@@ -59,8 +59,9 @@
 | 46 | `parry` | `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True }` |  | `parry` / `wall` | 第135期 | ○ |
 | 47 | `shatter` | `ShatterRule` | `ShatterRule { Mode = Passive, SelfCostPerTurn = 0 }` | ○ | `shard` | 第137期 | ○ |
 | 48 | `shrapnel` | `ShrapnelRule` | `ShrapnelRule { Multiplier = 3, SelfDamagePercent = 100, ArmorCensus = False }` |  | `shard` | 第138期 | ○ |
+| 49 | `brace` | `BraceRule` | `BraceRule { Cap = 7, Refuse = True, Stagger = False }` |  | `brace` | 第143期 | ○ |
 
-引数 48 本（`verbose` と観測子を除く）。
+引数 49 本（`verbose` と観測子を除く）。
 
 **`= default(T)` は「その規則が既定で何もしない」の機械的な手がかりであって、判定ではない。**
 採否そのものは**既定値の列**を読むこと——`ThornRule { Wound = None }` は残置、`SoakRule { Poison = True, Burn = False }` は毒側だけ採用、という具合に既定値が全部を語る。
@@ -74,6 +75,7 @@
 | `BlazeRule` | `BlazeRule { Targets = Both, Allies = True, Foes = True }` | ○ | `blaze` / `ledger` / `ember` | 第59期 |
 | `BossRule` | `BossRule { Census = False }` | ○ | `boss` / `tank` / `time` / `grade` / `demo` | 第117期 |
 | `BoundaryRule` | `BoundaryRule { Choice = None, Plan = , Active = False }` |  | `choice` | 第102期 |
+| `BraceRule` | `BraceRule { Cap = 7, Refuse = True, Stagger = False }` | ○ | `brace` | 第143期 |
 | `ColossusRule` | `ColossusRule { Percent = 90, DamagePerGain = 4, Regurgitate = True, Slumber = False, SlumberThreshold = 60, Refund = True, RefundPercent = 25 }` | ○ | `gullet` / `whet` / `miasma` / `ledger` | 第35期 |
 | `CreakRule` | `CreakRule { Threshold = 0, Source = Whet }` | ○ | `creak` / `pairs` / `creak3` | 第66期 |
 | `CurseRule` | `CurseRule { Enabled = False, SharePercent = 50 }` | ○ | `curse` / `hex` / `lit` | 第95期 |
@@ -105,7 +107,7 @@
 | `ScapegoatRule` | `ScapegoatRule { Threshold = 3, Audit = False }` | ○ | `scapegoat` | 第49期 |
 | `SeverRule` | `SeverRule { Wait = Swing, Threshold = 2 }` | ○ | `wcost` / `ledger` / `lit` / `wound2` / `cross` | 第74期 |
 | `ShatterRule` | `ShatterRule { Mode = Passive, SelfCostPerTurn = 0 }` | ○ | `shard` | 第137期 |
-| `ShoveRule` | `ShoveRule { Penalty = 2 }` | ○ | `shove` / `ledger` | 第41期 |
+| `ShoveRule` | `ShoveRule { Penalty = 2 }` | ○ | `shove` / `ledger` / `brace` | 第41期 |
 | `ShrapnelRule` | `ShrapnelRule { Multiplier = 3, SelfDamagePercent = 100, ArmorCensus = False }` | ○ | `shard` | 第138期 |
 | `SlanderRule` | `SlanderRule { Penalty = 0 }` | ○ | `slander` | 第44期 |
 | `SoakRule` | `SoakRule { Poison = True, Burn = False, DullPerKind = 1 }` | ○ | `derive` / `curse` / `hex` / `soak` / `ledger` / `lit` / `wound2` / `ember` / `cross` | 第90期 |
@@ -118,9 +120,9 @@
 | `WhetMask` | `WhetMask { Bits = 0 }` | ○ | `spend` | 第65期 |
 | `WildfireRule` | `WildfireRule { Mode = None, Amount = 0, Active = False }` | ○ | `wildfire` | 第133期 |
 | `WoundRule` | `WoundRule { Enabled = True, Census = False }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期 |
-| `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `goad` / `wave2` / `ledger` / `parry` | 第35期 |
+| `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `goad` / `wave2` / `ledger` / `parry` / `brace` | 第35期 |
 
-50 型。
+51 型。
 
 ## 3. 規則が使う列挙型
 

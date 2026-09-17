@@ -129,6 +129,10 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.Sharer]     = (HcBothL,  "肩代わりと自分の消耗が同じ動作"),
         [TraitId.Loose]      = (HcBothL,  "隣が空いた駒を硬くするのと、隣を弾くのが1つの動作"),
         [TraitId.Brace]      = (HcBothL,  "上限と破片の供給（プラス）と、自分の攻撃・味方の手番（マイナス）が1つの動作"),
+        // **第139期がガレを `UnitCatalog.All` に入れたときに足し忘れていた**（第143期に判明）。
+        // 第131期「駒に札を足す作業には、その札を分類している診断の一覧を添えること」の再発で、
+        // `checkup check` は第139期から4期ぶん「止める」しか出していなかった。
+        [TraitId.Shrapnel]   = (HcBothL,  "敵全体への打点（プラス）と、味方の破片・自分の手番（マイナス）が1つの動作"),
         [TraitId.Cower]      = (HcBothL,  "被ダメ −30% と味方全体の攻撃 −9 が1つの動作"),
         [TraitId.Pursuer]    = (HcBothL,  "ターン外の割り込みと、自分の手番では動かないことが1つの規則"),
         [TraitId.RearGuard]  = (HcPlusL,  "後列を肩代わりして育つ"),
