@@ -5911,8 +5911,75 @@ public enum CreakSource
 }
 
 /// <summary>
-/// 喧噪。毎ターン味方2体の位置を無作為に入れ替える。
+/// 転倒をどこまで撒くか（第144期・<see cref="ShufflerRule"/>）。
+///
+/// <para><see cref="None"/> は段A（入れ替えだけ・対照）、<see cref="Advanced"/> が採用候補
+/// （<b>行が前に変わった敵だけ</b>が転ぶ）、<see cref="Both"/> は<b>上限の測定用</b>で
+/// 入れ替えた2体とも転ばせる。</para>
+///
+/// <para><b><see cref="Advanced"/> に方向がある</b>のが要点——後列から引きずり出された
+/// 祭司・狙撃手は<b>露出した上に1ターン動けない</b>が、同じ行どうしの入れ替えでは
+/// 誰も転ばない（自己制動）。<see cref="Both"/> は方向が消えるので、
+/// 「乱す駒」ではなく「毎ターン敵の手番を1つ削る駒」になる——<b>採用候補ではない。</b></para>
+/// </summary>
+public enum ShuffleStagger
+{
+    /// <summary>転ばせない（段A・対照）。</summary>
+    None,
+    /// <summary>行が前に変わった敵だけ転ばせる（段B・採用候補）。</summary>
+    Advanced,
+    /// <summary>入れ替えた2体とも転ばせる（段C・上限の測定）。</summary>
+    Both,
+}
+
+/// <summary>
+/// 喧噪の強度（第144期）。<b>診断が版を差し替えるためだけの窓口</b>で、
+/// static のノブにしない理由は <see cref="CreakRule"/> と同じ。
+///
+/// <para><c>Foes</c> が<b>敵陣も乱すか</b>、<c>Stagger</c> が<b>前に出した敵を転ばせるか</b>。
+/// <b><c>Foes = false</c> なら第143期までと1ビットも違わない</b>
+/// ——味方側の入れ替えは1文字も変えていないので、乱数列も盤面も動かない。これが検算になる。</para>
+/// </summary>
+/// <param name="Foes">敵陣も毎ターン2体入れ替えるか。</param>
+/// <param name="Stagger">前に出した敵を転ばせるか（<see cref="ShuffleStagger"/>）。</param>
+public readonly record struct ShufflerRule(bool Foes, ShuffleStagger Stagger)
+{
+    /// <summary>既定。<b>採用が決まるまでは第143期までの姿</b>（味方だけを乱す）。</summary>
+    public static ShufflerRule Default => Legacy;
+
+    /// <summary>第143期までの姿（味方だけを乱す）。<b>回帰の基準。</b></summary>
+    public static ShufflerRule Legacy => new(false, ShuffleStagger.None);
+}
+
+/// <summary>
+/// 喧噪。<b>毎ターン、敵2体と味方2体をそれぞれ入れ替える。行が前に変わった敵は転び、次の手番を失う。</b>
 /// 後列前提の駒や庇う駒の配置を自分から崩すので、素直な編成とは噛み合わない。
+///
+/// <para><b>敵側は第144期に足した。</b> それまでは味方2体を<b>無作為に</b>入れ替えるだけで、
+/// 「傷ついた前衛が下がる」と「無傷の後衛が前に出る」が半々に起きるので<b>期待値がゼロ</b>だった
+/// ——読み手（ヨミ・シオ・ハネ）がいない編成では1点も生まない。
+/// 敵側には隣接表を読む特性が1つも無いので、敵の入れ替えは<b>標的選択だけを動かす
+/// いちばん安い介入</b>である。</para>
+///
+/// <para><b>交代型（最も傷ついた味方 ⇔ 最も無傷の味方）は採らなかった。</b>
+/// 期待値をゼロでなくする案としては素直だが、<b>他人の被弾を自分に集める駒は
+/// 仕事をするほど前へ押し出される</b>——ゴルム（巨躯）・ドハ（分かち）・セッキ（後備え）と
+/// 構造的に噛み合わない。「乱す」という一文も壊れる。</para>
+///
+/// <para><b>マイナスは現行のまま「味方も乱れる」。</b> 「喧噪は敵味方を問わない」で一文が閉じるうえ、
+/// 移動軸の供給（ヨミ・シオ・ハネの餌）が消えない。対案「騒いだ次のターン息切れする」は
+/// 第36期の則「<b>安い手番は売っても安い</b>」に当たる（バサの手番は攻7しか無い）ので採らない。</para>
+///
+/// <para><b><see cref="BattleContext.SwapSlots"/> には手を入れていない。</b> 陣営は
+/// <c>self.TeamId</c> で引くので元からチーム非依存で、移動の通知・<c>HasFallenBack</c> の記録・
+/// <c>Move</c> イベントはあちらで既に正しい。<b>前に出たかは特性の側で
+/// <see cref="FormationRules.DepthOf"/> を比べて決める</b>——<c>HasFallenBack</c> は
+/// 「後ろへ動いた」しか記録しないので使えない。</para>
+///
+/// <para><b>敵側は編成枠（0–4）だけを見る。</b> 背かれのソム（第103期）が喚ぶ餌は
+/// <b>敵チームの ○前2（召喚枠 7）に立つ</b>ので、除かないと「餌と入れ替えて前に出す」が起きる。
+/// 逃亡・後退が <c>PlayableSlotsOfRow</c> を使うのと同じ作法。
+/// <b>味方側は従来どおり召喚枠も含める</b>（胞子は昔から入れ替えの対象だった）。</para>
 /// </summary>
 public sealed class ShufflerTrait : Trait
 {
@@ -5920,15 +5987,74 @@ public sealed class ShufflerTrait : Trait
 
     public override void OnTurnStart(BattleContext ctx, UnitState self)
     {
-        var team = ctx.LivingMembers(self.TeamId).Where(u => u != self).ToList();
-        if (team.Count < 2) return;
+        // **味方が先。** 第143期までと同じ順序・同じ乱数の引き方を保つ
+        // （敵側を足しても味方側の乱数列が1ビットも動かないこと、が段A の検算）。
+        Stir(ctx, self, self.TeamId, foes: false);
+
+        if (!ctx.Shuffler.Foes) return;
+        Stir(ctx, self, ctx.Opponent(self.TeamId), foes: true);
+    }
+
+    private static void Stir(BattleContext ctx, UnitState self, int teamId, bool foes)
+    {
+        UnitTally tally = ctx.TallyOf(self);
+
+        var team = ctx.LivingMembers(teamId).Where(u => u != self).ToList();
+        // 敵側だけ召喚枠を外す（doc を参照）。味方側はこの行を通らないので従来どおり。
+        if (foes) team = team.Where(u => !FormationRules.IsSummonSlot(u.Slot)).ToList();
+        if (team.Count < 2)
+        {
+            if (foes) tally.ShuffleNoFoePair++;
+            return;
+        }
 
         UnitState a = team[ctx.Roll(team.Count)];
         var rest = team.Where(u => u != a).ToList();
         UnitState b = rest[ctx.Roll(rest.Count)];
 
-        ctx.Log($"    {self.Name} が隊列をかき回した（{a.Name} ⇔ {b.Name}）", LogKind.FriendlyFire);
+        Row fromA = a.Row, fromB = b.Row;
+
+        ctx.Log(foes
+            ? $"    {self.Name} が敵の隊列をかき回した（{a.Name} ⇔ {b.Name}）"
+            : $"    {self.Name} が隊列をかき回した（{a.Name} ⇔ {b.Name}）", LogKind.FriendlyFire);
         ctx.SwapSlots(a, b.Slot, self);
+
+        if (!foes) { tally.ShuffleAllySwaps++; return; }
+        tally.ShuffleFoeSwaps++;
+
+        // 前に出たのは高々1体（片方が前へ出れば、もう片方は必ず後ろへ下がる）。
+        // 同じ行どうしの入れ替えでは 0 体——**そこが自己制動**で、無作為が
+        // 「当たり／外れ」として読めるようにしている。
+        Settle(ctx, a, fromA);
+        Settle(ctx, b, fromB);
+
+        void Settle(BattleContext c, UnitState u, Row from)
+        {
+            bool advanced = FormationRules.DepthOf(u.Row) < FormationRules.DepthOf(from);
+            if (advanced)
+            {
+                tally.ShuffleAdvanced++;
+                if (u.Traits.Count > 0) tally.ShuffleAdvancedTraited++;
+                if (from == Row.Back) tally.ShuffleAdvancedFromBack++;
+            }
+
+            bool trip = c.Shuffler.Stagger switch
+            {
+                ShuffleStagger.Advanced => advanced,
+                ShuffleStagger.Both => true,
+                _ => false,
+            };
+            if (!trip || !u.IsAlive) return;
+
+            // 転倒は engine 側（TakeTurnCore）が読む二値。**痺れを流用しない**
+            // ——痺れには読み手（責め苦・追い打ち）がいるので、そちらの帳簿に混ざる。
+            // なお engine が立てる `IdleTurn` は敵側にも立つが、それを読む味方の機構は
+            // 責め苦・追い打ち（`target.Counter(IdleTurn) == ctx.Turn`）の1本だけで、
+            // **これは噛み合う側の相互作用である**（第144期 Q0-3）。
+            u.SetCounter(StatusKeys.Stagger, 1);
+            tally.ShuffleStaggers++;
+            c.Log($"    {u.Name} は前へ引きずり出されて転んだ（次の手番を失う）", LogKind.Status);
+        }
     }
 }
 

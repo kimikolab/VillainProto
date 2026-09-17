@@ -1473,6 +1473,27 @@ public sealed class UnitTally
     public int BraceGuards, BraceCuts, BraceRefused, BraceGiven, BraceLost;
     public int BraceShoves, BraceShoveCapped, BraceNoTarget, BraceStaggers, BraceArmorMuted;
 
+    /// <summary>
+    /// 喧噪（<see cref="TraitId.Shuffler"/>・第144期）の帳簿。<b>計数専用で、どの規則も読まない。</b>
+    ///
+    /// <para><c>ShuffleAllySwaps</c> 味方を入れ替えた回数（<b>第144期より前と同じ動作</b>。
+    /// 敵側を足しても味方側が1ビットも動いていないことの検算）／
+    /// <c>ShuffleFoeSwaps</c> 敵を入れ替えた回数 ／
+    /// <c>ShuffleAdvanced</c> そのうち<b>行が前に変わった敵の延べ体数</b>
+    /// （<see cref="FormationRules.DepthOf"/> が浅くなった側。1回の入れ替えで 0 か 1）／
+    /// <c>ShuffleAdvancedTraited</c> そのうち<b>特性を1つ以上持っていた体数</b>
+    /// （＝後列・中央の祭司・狙撃手・盤面ルール持ちを引きずり出した回数）／
+    /// <c>ShuffleAdvancedFromBack</c> そのうち <see cref="Row.Back"/> から出てきた体数 ／
+    /// <c>ShuffleStaggers</c> 実際に <see cref="StatusKeys.Stagger"/> を立てた回数 ／
+    /// <c>ShuffleNoFoePair</c> 敵側の候補が2体に満たず入れ替えなかったターン数。</para>
+    ///
+    /// <para><b><c>ShuffleStaggers ≦ ShuffleAdvanced</c> が受け入れ条件</b>
+    /// （<see cref="ShuffleStagger.Advanced"/> のとき。<see cref="ShuffleStagger.Both"/> では
+    /// 1回の入れ替えで2体に立つので <c>≦ 2 × ShuffleFoeSwaps</c> のほうが上限になる）。</para>
+    /// </summary>
+    public int ShuffleAllySwaps, ShuffleFoeSwaps, ShuffleAdvanced;
+    public int ShuffleAdvancedTraited, ShuffleAdvancedFromBack, ShuffleStaggers, ShuffleNoFoePair;
+
     /// <summary>敵に与えたダメージのうち、手番の中／外で生んだ分（<see cref="DamageToEnemy"/> の内訳）。</summary>
     public int DmgOutInTurn, DmgOutOffTurn;
 
@@ -1569,6 +1590,10 @@ public sealed class UnitTally
         BraceShoveCapped += o.BraceShoveCapped; BraceNoTarget += o.BraceNoTarget;
         BraceStaggers += o.BraceStaggers; BraceArmorMuted += o.BraceArmorMuted;
         StallStagger += o.StallStagger;
+        ShuffleAllySwaps += o.ShuffleAllySwaps; ShuffleFoeSwaps += o.ShuffleFoeSwaps;
+        ShuffleAdvanced += o.ShuffleAdvanced; ShuffleAdvancedTraited += o.ShuffleAdvancedTraited;
+        ShuffleAdvancedFromBack += o.ShuffleAdvancedFromBack; ShuffleStaggers += o.ShuffleStaggers;
+        ShuffleNoFoePair += o.ShuffleNoFoePair;
         Attacks += o.Attacks; Interventions += o.Interventions;
         DamageToEnemy += o.DamageToEnemy; DamageToAlly += o.DamageToAlly;
         DamageTaken += o.DamageTaken; TakenFromAlly += o.TakenFromAlly;

@@ -2112,6 +2112,9 @@ public sealed class BattleContext
     /// <summary>身構え（第143期・<see cref="BraceRule"/>）。<b>既定（<c>Cap = 0</c>）では1バイトも動かない。</b></summary>
     public BraceRule Brace { get; }
 
+    /// <summary>喧噪（第144期・<see cref="ShufflerRule"/>）。<b><c>Foes = false</c> では第143期と1バイトも違わない。</b></summary>
+    public ShufflerRule Shuffler { get; }
+
     /// <summary>憤怒の発火の内訳（<b>版に依らない</b>。Phase 0 で「1発と数える集合」を出すため）。</summary>
     public int RageFiresFromFoe, RageFiresFromAlly, RageFiresNoSource;
 
@@ -3187,7 +3190,7 @@ public sealed class BattleContext
                          EmberRule? ember = null, WildfireRule? wildfire = null,
                          HarmRule? harm = null, ParryRule? parry = null,
                          ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
-                         BraceRule? brace = null,
+                         BraceRule? brace = null, ShufflerRule? shuffler = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -3244,6 +3247,7 @@ public sealed class BattleContext
         Parry = parry ?? ParryRule.Default;
         Shatter = shatter ?? ShatterRule.Default;
         Shrapnel = shrapnel ?? ShrapnelRule.Default;
+        Shuffler = shuffler ?? ShufflerRule.Default;
     }
 
     // =====================================================================================
@@ -6241,7 +6245,7 @@ public static class BattleEngine
                                    EmberRule? ember = null, WildfireRule? wildfire = null,
                                    HarmRule? harm = null, ParryRule? parry = null,
                                    ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
-                                   BraceRule? brace = null,
+                                   BraceRule? brace = null, ShufflerRule? shuffler = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
@@ -6249,7 +6253,7 @@ public static class BattleEngine
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
-               nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace, probe);
+               nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace, shuffler, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -6285,7 +6289,7 @@ public static class BattleEngine
                                    EmberRule? ember = null, WildfireRule? wildfire = null,
                                    HarmRule? harm = null, ParryRule? parry = null,
                                    ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
-                                   BraceRule? brace = null,
+                                   BraceRule? brace = null, ShufflerRule? shuffler = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
@@ -6293,7 +6297,8 @@ public static class BattleEngine
                                     favor, blaze, funnel, whetMask, creak, sever, thinBlade, thorn,
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
-                                    nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace, probe);
+                                    nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace,
+                                    shuffler, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
