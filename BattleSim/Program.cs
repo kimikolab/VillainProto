@@ -42,91 +42,7 @@ string focusId = args.Length > 1 ? args[1] : "";
 // 「対象ステージ」の見出しと stageIndex の解決はこの3モードの分岐を抜けた後で行う。
 // （3モードともステージ引数を無視して全ステージを回すため、内容としても誤りになる）
 
-// audit モード: docs/ の生成物が現行の編成数と整合しているかを判定する（第55期）。
-//
-// 生成物は「作った時点の編成数」で固まるので、CompareBuilds() に行を足すたびに
-// 測り直さないと静かに腐る。第54期に docs/chain.md が 35 行（当時の現行は 56 行）と
-// 判明したのが発端で、20期以上前の編成表を根拠に判断しかけた。
-//
-// **戦闘を1回も回さない。docs/ に何も書かない**（生成物を増やすと腐るものが増える）。
-// 判定は「現行の編成名がその生成物に1つ残らず現れるか」の1本だけ——行数を直に比べると
-// 表の書式を変えるたびに閾値が嘘になるが、名前の有無は書式に依存しない。
-//
-//     dotnet run --project BattleSim -c Release 0 audit
-if (focusId == "audit")
-{
-    string[] names = CompareBuilds().Select(b => b.Name).ToArray();
-
-    // リポジトリ直下から実行するのが既定だが、どこから叩かれても docs/ を見つけられるようにする。
-    string? root = Directory.GetCurrentDirectory();
-    while (root != null && !File.Exists(Path.Combine(root, "docs", "balance.md")))
-        root = Path.GetDirectoryName(root);
-    if (root == null)
-    {
-        Console.WriteLine("docs/ が見つからない（リポジトリの外から実行している）。");
-        return;
-    }
-    string docs = Path.Combine(root, "docs");
-
-    // Depends: 行数が編成数に依存するか。Sections: `## ` の見出しが編成名か。
-    var targets = new (string File, string Cmd, bool Depends, bool Sections)[]
-    {
-        ("balance.md",  "compare", true,  false),
-        ("quality.md",  "compare quality", true, false),   // 第126期 段1
-        ("units.md",    "dump",    false, false),
-        ("chain.md",    "chain",   true,  false),
-        ("ablation.md", "ablate",  true,  true),
-        ("pulse.md",    "pulse",   true,  true),
-        ("engage.md",   "engage",  true,  false),
-        ("layout.md",   "layout",  true,  true),
-        ("reseat.md",   "reseat",  true,  true),
-    };
-
-    Console.WriteLine($"現行の編成数: {names.Length}");
-    Console.WriteLine();
-    Console.WriteLine("| ファイル | 生成コマンド | 行数 | 編成数依存 | 現れた編成 | 節(編成/他) | 判定 |");
-    Console.WriteLine("|---|---|--:|:-:|--:|--:|:-:|");
-
-    var stale = new List<(string File, string[] Missing)>();
-    foreach ((string file, string cmd, bool depends, bool sections) in targets)
-    {
-        string path = Path.Combine(docs, file);
-        if (!File.Exists(path))
-        {
-            Console.WriteLine($"| `{file}` | `{cmd}` | — | {(depends ? "○" : "×")} | — | — | **欠落** |");
-            stale.Add((file, names));
-            continue;
-        }
-
-        string[] lines = File.ReadAllLines(path);
-        string text = string.Join("\n", lines);
-        string[] missing = depends ? names.Where(n => !text.Contains(n)).ToArray() : Array.Empty<string>();
-
-        string secCol = "—";
-        if (sections)
-        {
-            var heads = lines.Where(l => l.StartsWith("## ")).Select(l => l.Substring(3).Trim()).ToArray();
-            // ablate は見出しに「（フル編成 43.9%）」を足すので、完全一致では引けない。
-            int known = heads.Count(h => names.Any(n => h.StartsWith(n)));
-            secCol = $"{known}/{heads.Length - known}";
-        }
-
-        string hit = depends ? $"{names.Length - missing.Length}/{names.Length}" : "—";
-        Console.WriteLine($"| `{file}` | `{cmd}` | {lines.Length} | {(depends ? "○" : "×")} | {hit} | {secCol} "
-                          + $"| {(missing.Length == 0 ? "OK" : "**ずれ**")} |");
-        if (missing.Length > 0) stale.Add((file, missing));
-    }
-
-    Console.WriteLine();
-    Console.WriteLine($"ずれているファイル {stale.Count} 件");
-    foreach ((string file, string[] missing) in stale)
-    {
-        Console.WriteLine();
-        Console.WriteLine($"## {file} — {missing.Length} 編成が現れない");
-        foreach (string n in missing) Console.WriteLine($"- {n}");
-    }
-    return;
-}
+if (focusId == "audit") { AuditDiag.Run(args, stageIndex); return; }
 
 if (focusId == "derive") { DeriveDiag.Run(args, stageIndex); return; }
 
@@ -317,92 +233,7 @@ if (focusId == "funnel") { FunnelDiag.Run(args, stageIndex); return; }
 
 if (focusId == "yield") { YieldDiag.Run(args, stageIndex); return; }
 
-// replay モード: 1戦ぶんの台本を JSON で吐く。戦闘画面（ビューア）が読む。
-//
-// BattleEngine.Run は seed 決定的な純関数で戦闘を丸ごと計算し切るので、
-// ビューアはシミュレーションを持たず、この列を再生するだけでよい。
-// ここが JSON を吐く唯一の場所。docs/ と違って生成物を repo に置かない
-// （盤面が変わるたび腐るし、diff が読めない）。
-//
-//     dotnet run --project BattleSim -c Release <stage> replay [編成の部分一致] [seed]
-if (focusId == "replay")
-{
-    string want = args.Length > 2 ? args[2] : "";
-    int replaySeed = args.Length > 3 && int.TryParse(args[3], out int rs) ? rs : 0;
-
-    var (buildName, playerF) = CompareBuilds()
-        .FirstOrDefault(b => want.Length == 0 || b.Name.Contains(want));
-    if (playerF is null)
-    {
-        Console.Error.WriteLine($"編成が見つからない: {want}");
-        return;
-    }
-
-    EnemyCatalog.Stage st = EnemyCatalog.Stages[stageIndex];
-    BattleResult res = BattleEngine.Run(playerF, st.Enemy, replaySeed, verbose: true);
-
-    // 初期盤面は Run の前の状態が要るが、Run は編成を書き換えないので
-    // ここで Formation から組み直せる。InstanceId は Deploy の順（味方→敵、スロット昇順）で
-    // 振られるので、同じ順で数えれば一致する。
-    var roster = new List<object>();
-    int id = 0;
-    foreach (var (team, f) in new[] { (0, playerF), (1, st.Enemy) })
-        foreach (var (slot, def) in f.Occupied())
-            roster.Add(new
-            {
-                id = id++,
-                team,
-                slot,
-                name = def.Name,
-                maxHp = def.MaxHp,
-                attack = def.Attack,
-                speed = def.Speed,
-                pattern = def.Pattern.ToString(),
-                plus = def.PlusText,
-                minus = def.MinusText
-            });
-
-    // 増援・蘇生で後から出る駒は roster に無いので、ビューアは Summon イベントで足す。
-    // その駒の見た目に要る情報をイベント側からは引けないため、カタログ全体も併せて渡す。
-    var catalog = UnitCatalog.All.ToDictionary(
-        u => u.Name,
-        u => (object)new { maxHp = u.MaxHp, attack = u.Attack, pattern = u.Pattern.ToString() });
-
-    var payload = new
-    {
-        build = buildName,
-        stage = st.Name,
-        stageIndex,
-        seed = replaySeed,
-        playerWon = res.PlayerWon,
-        turns = res.Turns,
-        maxChain = res.MaxEnemyKillsInOneTurn,
-        roster,
-        catalog,
-        events = res.Events.Select(e => new
-        {
-            kind = e.Kind.ToString(),
-            turn = e.Turn,
-            actor = e.ActorId,
-            target = e.TargetId,
-            amount = e.Amount,
-            hpAfter = e.HpAfter,
-            friendly = e.FriendlyFire,
-            slot = e.Slot,
-            team = e.Team,
-            pattern = e.Pattern?.ToString(),
-            text = e.Text
-        }).ToList()
-    };
-
-    Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(payload,
-        new System.Text.Json.JsonSerializerOptions
-        {
-            WriteIndented = false,
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        }));
-    return;
-}
+if (focusId == "replay") { ReplayDiag.Run(args, stageIndex); return; }
 
 if (focusId == "goad") { GoadDiag.Run(args, stageIndex); return; }
 
@@ -605,45 +436,7 @@ if (focusId == "sweep")
 
 if (focusId == "handoff") { HandoffDiag.Run(args, stageIndex); return; }
 
-// cost モード: 波の「代金」を測る診断（第5期 Phase M）。
-// compare / engage は「勝てるか」しか測っておらず、「いくら払ったか」の列が無い。
-// 無傷の1部隊がその波「だけ」と戦ったとき（単独列 [i..i] 相当。会戦として組む必要は
-// 無いので BattleEngine.Run を直接呼ぶ）、勝った試行に何が残るか（残体数・残HP%）を測り、
-// 代金 = 100% − 残HP% と読む。負けた試行は代金が定義できないので集計から外す（勝率を併記）。
-//
-// 波間の差は代金の平均で、編成間の差は代金の標準偏差で見る。標準偏差が一律に小さいなら
-// 「どの波もどの編成にも同じ値段」で、波をいくら安くしても投入部隊数の配分判断を生まない
-// （第5期 §0。勾配のある部隊列を設計する動機の裏付けを取る診断）。
-// 診断用で docs/ には置かない（seats / handoff と同じ扱い。標準出力で読むだけ）。
-//
-//     dotnet run --project BattleSim -c Release 0 cost [絞り込み]
-if (focusId == "cost")
-{
-    var all = CompareBuilds();
-    const int CostSeeds = 200;
-
-    string filter = args.Length > 2 ? args[2] : "";
-    var targets = all
-        .Where(b => filter.Length == 0 || filter.Split(',').Any(k => b.Name.Contains(k.Trim())))
-        .ToArray();
-
-    var waves = EnemyCatalog.Stages
-        .Select((st, i) => (Name: $"第{i + 1}波", Enemy: st.Enemy))
-        .ToList();
-
-    Console.WriteLine($"# 波の代金診断（単独戦・seed 0..{CostSeeds - 1} の {CostSeeds} 試行）");
-    Console.WriteLine();
-    Console.WriteLine("無傷の1部隊が各波「だけ」と戦ったときの勝率と、勝った試行の残存（体数・HP%）。");
-    Console.WriteLine("**代金 = 100% − 残HP%**。残HP% の分母は編成の定義上の総最大HP");
-    Console.WriteLine("（engage の入場戦力と同じ判断。生存駒だけを分母にすると全快1体が 100% に化ける）。");
-    Console.WriteLine();
-    Console.WriteLine("検算: 第1波の残HP% は docs/engage.md 順路の「第2戦の入場戦力」とおおむね一致するはず");
-    Console.WriteLine("（順路の第1戦は第1波単独と同じ状況で、境界の CarryOver は HP に触らない。");
-    Console.WriteLine("大きくずれたら CarryOver が残存に何かしている——止まって報告する。第5期 §2-2）。");
-    Console.WriteLine();
-    EmitCostTables(targets, waves, CostSeeds);
-    return;
-}
+if (focusId == "cost") { CostDiag.Run(args, stageIndex); return; }
 
 if (focusId == "gradient") { GradientDiag.Run(args, stageIndex); return; }
 
@@ -671,69 +464,7 @@ if (focusId == "output") { OutputDiag.Run(args, stageIndex); return; }
 
 if (focusId == "convert") { ConvertDiag.Run(args, stageIndex); return; }
 
-if (focusId == "chain")
-{
-    var builds = CompareBuilds();
-    const int ChainSeeds = 200;
-
-    Console.WriteLine("# 連鎖の深さ");
-    Console.WriteLine();
-    Console.WriteLine("`dotnet run --project BattleSim -c Release 0 chain > docs/chain.md` の出力。手で編集しない。");
-    Console.WriteLine($"代表編成 × 全ステージ、seed 0..{ChainSeeds - 1} の {ChainSeeds} 試行。全ステージ通算。");
-    Console.WriteLine("`連鎖深度`は1ターンで味方が倒した敵の数の最大値（全試行平均 / 最大値）。");
-    Console.WriteLine("`決着T`は勝利した試行だけの平均ターン数（短いほど速攻で畳んでいる）。");
-    Console.WriteLine();
-    Console.WriteLine("`残存`は**勝った試行だけ**の生存数（平均 / 出撃数）。**勝ち方の質**を測る列で、");
-    Console.WriteLine("低いほど「なんとか勝った」になる。勝率が同じでも、5体残して勝つ編成と");
-    Console.WriteLine("1体残して勝つ編成は別物だが、勝率表では区別がつかない。");
-    Console.WriteLine("`全滅勝ち`は生存1体での勝率（勝った試行のうち何%がぎりぎりだったか）。");
-    Console.WriteLine();
-    Console.WriteLine("| 編成 | 勝率 | 連鎖深度(平均) | 連鎖深度(最大) | 決着T(勝利時平均) | 残存 | 全滅勝ち |");
-    Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|");
-
-    // === 第140期 —— 行（編成）ごとに並列化した。**1行の中は従来どおり波→seed の順**なので、
-    // 浮動小数の合算順序も変わらない。印字は控えて後で直列に出す。 ===
-    var chRow = new string[builds.Length];
-    Parallel.For(0, builds.Length, bi =>
-    {
-        (string name, Formation f) = builds[bi];
-        int wins = 0, trials = 0;
-        double killSum = 0;
-        int killMax = 0;
-        double turnSumOnWin = 0;
-        double survSumOnWin = 0;
-        int narrowWins = 0;
-        int party = f.Occupied().Count();
-
-        foreach (EnemyCatalog.Stage st in EnemyCatalog.Stages)
-        {
-            for (int seed = 0; seed < ChainSeeds; seed++)
-            {
-                var r = BattleEngine.Run(f, st.Enemy, seed, verbose: false);
-                trials++;
-                killSum += r.MaxEnemyKillsInOneTurn;
-                if (r.MaxEnemyKillsInOneTurn > killMax) killMax = r.MaxEnemyKillsInOneTurn;
-                if (r.PlayerWon)
-                {
-                    wins++;
-                    turnSumOnWin += r.Turns;
-                    survSumOnWin += r.PlayerSurvivors;
-                    if (r.PlayerSurvivors <= 1) narrowWins++;
-                }
-            }
-        }
-
-        double winRate = wins * 100.0 / trials;
-        double killAvg = killSum / trials;
-        double turnAvgOnWin = wins > 0 ? turnSumOnWin / wins : 0;
-        double survAvg = wins > 0 ? survSumOnWin / wins : 0;
-        double narrow = wins > 0 ? narrowWins * 100.0 / wins : 0;
-        chRow[bi] = $"| {name} | {winRate:F1}% | {killAvg:F2} | {killMax} | {turnAvgOnWin:F1} "
-            + $"| {survAvg:F1}/{party} | {narrow:F0}% |";
-    });
-    foreach (string row in chRow) Console.WriteLine(row);
-    return;
-}
+if (focusId == "chain") { ChainDiag.Run(args, stageIndex); return; }
 
 if (focusId == "run") { RunDiag.Run(args, stageIndex); return; }
 
@@ -751,65 +482,7 @@ if (focusId == "reseat") { ReseatDiag.Run(args, stageIndex); return; }
 
 if (focusId == "layout") { LayoutDiag.Run(args, stageIndex); return; }
 
-// dump モード: カタログから資料を吐く。手書きの一覧とコードがずれないようにするため。
-if (focusId == "dump")
-{
-    static string Pat(AttackPattern p) => p switch
-    {
-        AttackPattern.Sweep => "薙ぎ", AttackPattern.Pierce => "貫き",
-        AttackPattern.All => "全体", _ => "単体"
-    };
-    Console.WriteLine("# ユニット・特性・ステージ一覧");
-    Console.WriteLine();
-    Console.WriteLine("`dotnet run --project BattleSim -c Release 0 dump > docs/units.md` の出力。手で編集しない。");
-    Console.WriteLine();
-    Console.WriteLine("## ユニット");
-    Console.WriteLine();
-    // 行動列は「説明文と挙動のズレ」を防ぐための列（過去4回発生）。Actions を持たない駒は
-    // 空欄——味方は全員そちらなので、この表の見た目は第9期までと変わらない。
-    static string Acts(UnitDef u) => u.Actions is null
-        ? ""
-        : string.Join(" → ", u.Actions.Select(a => a.Kind switch
-        {
-            ActionKind.Charge => a.Label ?? "溜め",
-            ActionKind.Skill => a.Label ?? "術",
-            _ => a.AttackPercent == 100 ? "攻撃" : $"攻撃×{a.AttackPercent}%"
-        }));
-
-    // 踏込 列は**表示専用**（第131期）。engine に射程という軸は無く、この札を読んで分岐する
-    // 規則は 0 件——`DemoApp` が「敵の前まで出て振るか、その場から振るか」を選ぶためだけにある。
-    // **列は末尾側に足すこと**——`checkup check` の (a) は `docs/units.md` の
-    // 2〜4 列目（HP / 攻 / 速）を位置で読むので、前に挟むとその自己検査が壊れる。
-    static string Adv(UnitDef u) => u.Advances ? "踏込" : "据置";
-
-    Console.WriteLine("| 名前 | HP | 攻 | 速 | 型 | 踏込 | 行動 | プラス | マイナス | 由来 |");
-    Console.WriteLine("|---|---:|---:|---:|---|---|---|---|---|---|");
-    foreach (UnitDef u in UnitCatalog.All.Where(u => u.Id != "spore"))
-        Console.WriteLine($"| **{u.Name}** | {u.MaxHp} | {u.Attack} | {u.Speed} | {Pat(u.Pattern)} | {Adv(u)} | {Acts(u)} | {u.PlusText} | {u.MinusText} | {u.Flavor} |");
-
-    Console.WriteLine();
-    Console.WriteLine("## 特性");
-    Console.WriteLine();
-    Console.WriteLine("| 特性 | 保持者 |");
-    Console.WriteLine("|---|---|");
-    foreach (TraitId id in Enum.GetValues<TraitId>())
-    {
-        var owners = UnitCatalog.All.Where(u => u.Traits.Contains(id)).Select(u => u.Name).ToList();
-        Console.WriteLine($"| `{id}` | {(owners.Count == 0 ? "-" : string.Join("、", owners))} |");
-    }
-
-    Console.WriteLine();
-    Console.WriteLine("## ステージ");
-    Console.WriteLine();
-    foreach (EnemyCatalog.Stage st in EnemyCatalog.Stages)
-    {
-        var e = st.Enemy.Occupied().Select(x =>
-            $"{x.Def.Name}(HP{x.Def.MaxHp}/攻{x.Def.Attack}/{Pat(x.Def.Pattern)}/{Adv(x.Def)}"
-            + (x.Def.Actions is null ? "" : $"/{Acts(x.Def)}") + ")");
-        Console.WriteLine($"- **{st.Name}**: {string.Join("、", e)}");
-    }
-    return;
-}
+if (focusId == "dump") { DumpDiag.Run(args, stageIndex); return; }
 
 EnemyCatalog.Stage stage = EnemyCatalog.Stages[stageIndex];
 Console.WriteLine($"対象ステージ: {stage.Name}\n");
@@ -819,94 +492,9 @@ if (focusId == "life") { LifeDiag.Run(args, stageIndex); return; }
 if (focusId == "cross") { CrossDiag.Run(args, stageIndex); return; }
 
 
-if (focusId == "ptrace")
-{
-    string want = args.Length > 2 ? args[2] : "毒 (グザ";
-    var builds = CompareBuilds();
-    var (name, f) = builds.First(b => b.Name.Contains(want));
+if (focusId == "ptrace") { PtraceDiag.Run(args, stageIndex); return; }
 
-    Console.WriteLine($"# 毒の立ち上がり: {name}");
-    for (int st = 0; st < EnemyCatalog.Stages.Count; st++)
-    {
-        Console.WriteLine();
-        Console.WriteLine($"## {EnemyCatalog.Stages[st].Name}");
-        Console.WriteLine();
-        Console.WriteLine("| ターン | 敵の総層数 | 敵残 | 味方残 | 味方の総層数 |");
-        Console.WriteLine("|--:|--:|--:|--:|--:|");
-
-        BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed: 0, verbose: true);
-        var enemyNames = EnemyCatalog.Stages[st].Enemy.Occupied().Select(x => x.Def.Name).ToHashSet();
-        var allyNames = f.Occupied().Select(x => x.Def.Name).ToHashSet();
-
-        int turn = 0, ep = 0, ap = 0;
-        var deadE = new HashSet<string>();
-        var deadA = new HashSet<string>();
-        int nE = EnemyCatalog.Stages[st].Enemy.Count, nA = f.Count;
-
-        void Flush()
-        {
-            if (turn > 0)
-                Console.WriteLine($"| {turn} | {ep} | {nE - deadE.Count} | {nA - deadA.Count} | {ap} |");
-        }
-
-        foreach (LogLine line in r.Log)
-        {
-            string ln = line.ToString();
-            if (ln.Contains("--- ターン ")) { Flush(); turn++; ep = 0; ap = 0; continue; }
-            if (ln.Contains("は毒に蝕まれている"))
-            {
-                int a = ln.IndexOf('（'), b = ln.IndexOf('）');
-                if (a >= 0 && b > a && int.TryParse(ln[(a + 1)..b], out int n))
-                {
-                    if (enemyNames.Any(e => ln.Contains(e + " は毒"))) ep += n;
-                    else if (allyNames.Any(e => ln.Contains(e + " は毒"))) ap += n;
-                }
-                continue;
-            }
-            if (ln.Contains("倒れた") || ln.Contains("死亡"))
-            {
-                foreach (string e in enemyNames) if (ln.Contains(e)) deadE.Add(e);
-                foreach (string e in allyNames) if (ln.Contains(e)) deadA.Add(e);
-            }
-        }
-        Flush();
-        Console.WriteLine();
-        Console.WriteLine($"結果: {(r.PlayerWon ? "勝利" : "敗北")} / {r.Turns}ターン");
-    }
-    return;
-}
-
-if (focusId == "demo")
-{
-    // 第3引数に編成名の部分一致を渡すと、compare の編成をそのまま1戦ぶん詳細ログで流す
-    // （`... <n> demo "仇討ち"`）。省略時は従来どおり下の固定編成。
-    // 新しい特性が**実際に発火しているか**はログの並びでしか読めない——勝率は
-    // 「発火したが足りなかった」と「一度も発火しなかった」を区別しない。
-    string demoWant = args.Length > 2 ? args[2] : "";
-    int demoSeed = args.Length > 3 && int.TryParse(args[3], out int ds) ? ds : 7;
-    if (demoWant.Length > 0)
-    {
-        var (demoName, demoF) = CompareBuilds().FirstOrDefault(b => b.Name.Contains(demoWant));
-        if (demoF is null) { Console.Error.WriteLine($"編成が見つからない: {demoWant}"); return; }
-        BattleResult picked = BattleEngine.Run(demoF, stage.Enemy, demoSeed, verbose: true);
-        Console.WriteLine($"# {demoName} / 第{stageIndex + 1}波 / seed {demoSeed}");
-        foreach (LogLine line in picked.Log) Console.WriteLine(line);
-        Console.WriteLine($"結果: {(picked.PlayerWon ? "勝利" : "敗北")} / {picked.Turns}ターン");
-        return;
-    }
-
-    var build = Formation.Build(
-        front1: UnitCatalog.Kado,   // 反撃。範囲で返す
-        front3: UnitCatalog.Hisa,   // 標的を付けてカドに殴らせる
-        center: UnitCatalog.Gald,   // 壁。中央は前列が割れるまで単体攻撃が届かない席
-        back1:  UnitCatalog.Hagi,   // 追い打ち。誰かが倒すと割り込む
-        back3:  UnitCatalog.Gan     // 号令。動かないカドの攻撃を積む
-    );
-    BattleResult demo = BattleEngine.Run(build, stage.Enemy, demoSeed, verbose: true);
-    foreach (LogLine line in demo.Log) Console.WriteLine(line);
-    Console.WriteLine($"結果: {(demo.PlayerWon ? "勝利" : "敗北")} / {demo.Turns}ターン");
-    return;
-}
+if (focusId == "demo") { DemoDiag.Run(args, stageIndex); return; }
 
 const int SeedsPerFormation = 20;
 
