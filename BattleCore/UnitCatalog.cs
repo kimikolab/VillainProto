@@ -338,7 +338,7 @@ public static class UnitCatalog
         Attack = 7,
         Speed = 8,
         Traits = new[] { TraitId.Shuffler },
-        PlusText = "毎ターン味方2体の位置を入れ替える",
+        PlusText = "毎ターン、敵2体と味方2体をそれぞれ入れ替える。行が前に変わった敵は転び、次の手番を失う",
         MinusText = "入れ替える相手は選べない。後列前提の駒や庇う駒の配置を自分で壊す",
         Flavor = "隊列を整えている横で騒ぎ立て、二度と行軍に加えられなかった。"
     };

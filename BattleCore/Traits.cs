@@ -5944,8 +5944,17 @@ public enum ShuffleStagger
 /// <param name="Stagger">前に出した敵を転ばせるか（<see cref="ShuffleStagger"/>）。</param>
 public readonly record struct ShufflerRule(bool Foes, ShuffleStagger Stagger)
 {
-    /// <summary>既定。<b>採用が決まるまでは第143期までの姿</b>（味方だけを乱す）。</summary>
-    public static ShufflerRule Default => Legacy;
+    /// <summary>
+    /// 既定は<b>段B</b>（敵も乱し、<b>行が前に変わった敵だけ</b>が転ぶ）。第144期に採用した値。
+    ///
+    /// <para><b>段C（2体とも転ぶ）は採らなかった。</b> 帰属は段B より大きい（+12.1〜+46.5pt）が、
+    /// 主判定の台は第2〜5波が<b>全部 100.0%</b> に飽和する——方向が消えて
+    /// 「乱す駒」ではなく<b>「毎ターン敵の手番を2つ削る駒」</b>になる。<b>ノブは残置。</b></para>
+    ///
+    /// <para><b>段A（入れ替えだけ）も採らなかった。</b> 7 台中 2 台で負（−7.5 / −3.1）
+    /// ——<b>敵を無作為に入れ替えるのは期待値ゼロではない</b>（doc の「符号が台で割れる」を参照）。</para>
+    /// </summary>
+    public static ShufflerRule Default => new(true, ShuffleStagger.Advanced);
 
     /// <summary>第143期までの姿（味方だけを乱す）。<b>回帰の基準。</b></summary>
     public static ShufflerRule Legacy => new(false, ShuffleStagger.None);
@@ -5960,6 +5969,15 @@ public readonly record struct ShufflerRule(bool Foes, ShuffleStagger Stagger)
 /// ——読み手（ヨミ・シオ・ハネ）がいない編成では1点も生まない。
 /// 敵側には隣接表を読む特性が1つも無いので、敵の入れ替えは<b>標的選択だけを動かす
 /// いちばん安い介入</b>である。</para>
+///
+/// <para><b>ただし「敵を乱すだけ」も期待値ゼロではなかった——符号が台で割れる</b>（第144期の実測）。
+/// 入れ替えは<b>2つのことを同時にする</b>: 後列の脆い駒を<b>前へ出す</b>（＝露出。狙い）のと、
+/// 前列の硬い駒を<b>後ろへ下げる</b>（＝<b>単体攻撃が届かない場所へ隠す</b>）。
+/// 削り合いで勝つ台（ササの破片・ゴルムの肩代わり）では後者が勝って
+/// <b>段A 単独では −7.5 / −3.1pt</b> になる。曝き（第40期）と突き返し（第41期）が
+/// 「<b>選んで</b>引きずり出す」形なのは、この裏側を踏まないためだったと分かる。
+/// <b>転倒を足すと向きが決まる</b>——前へ出た側だけが罰せられるので、
+/// 「隠す」側の損が「出す」側の利得に追いつかなくなる。</para>
 ///
 /// <para><b>交代型（最も傷ついた味方 ⇔ 最も無傷の味方）は採らなかった。</b>
 /// 期待値をゼロでなくする案としては素直だが、<b>他人の被弾を自分に集める駒は
