@@ -1016,6 +1016,27 @@ public partial class Main : Control
                 }
                 break;
 
+            // 第147期 —— 混乱。転倒・痺れと同じ形で**付与と発動の2本**を出すが、理由が違う:
+            // 混乱した駒は**振る**ので `Attack` は出る——出ないのは「なぜ味方を殴ったのか」のほう。
+            // 付与から発動まで何ターンも空きうるので、2本とも無いと因果が画面で繋がらない。
+            case BattleEventKind.Confused:
+                Color madTint = StatusColor(StatusKeys.LabelOf(StatusKeys.Confused));
+                if (e.Text == ConfusedLabels.Lost)
+                {
+                    _battleField.Float(target, "錯乱！", madTint, large: true);
+                    if (e.ActorId is not null) _battleField.Link(actor, target, madTint, "正気を奪った");
+                    AppendLog($"  [color=#{madTint.ToHtml(false)}][b]{NameOf(e.TargetId)} は正気を失った[/b][/color]"
+                              + $"  [color=#a9b3a8]（次の攻撃を自軍へ向ける）[/color]{WriterSuffix(e.ActorId, e.TargetId)}");
+                    await Delay(0.32);
+                }
+                else
+                {
+                    _battleField.Float(target, "同士討ち", madTint);
+                    AppendLog($"  [color=#{madTint.ToHtml(false)}]{NameOf(e.TargetId)} は自軍へ振った[/color]");
+                    await Delay(0.24);
+                }
+                break;
+
             case BattleEventKind.Heal:
                 target?.SetHp(e.HpAfter);
                 target?.AnimateHeal();

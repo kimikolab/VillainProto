@@ -5926,10 +5926,31 @@ public enum ShuffleStagger
 {
     /// <summary>転ばせない（段A・対照）。</summary>
     None,
-    /// <summary>行が前に変わった敵だけ転ばせる（段B・採用候補）。</summary>
+    /// <summary>行が前に変わった敵だけ転ばせる（第144期に採用した値）。</summary>
     Advanced,
-    /// <summary>入れ替えた2体とも転ばせる（段C・上限の測定）。</summary>
+    /// <summary>入れ替えた2体とも転ばせる（第144期 段C・上限の測定）。</summary>
     Both,
+
+    /// <summary>
+    /// 転ばせる代わりに<b>正気を失わせる</b>（第147期）——行が前に変わった敵は
+    /// <see cref="StatusKeys.Confused"/> を得て、<b>次の1回の攻撃を自軍へ向ける</b>。
+    /// 条件は <see cref="Advanced"/> とまったく同じ（前へ出た側だけ）で、効果だけが違う。
+    ///
+    /// <para><b>転倒と混乱を両方載せない。</b> 同じトリガー（前に出た敵）に2つ積むと
+    /// 効果が二重になるうえ、<b>どちらが効いたかが測れない</b>——だから直交するノブではなく
+    /// <b>この列挙の枝</b>にしてある（第147期の指示書 §0。案 (ii)「別のノブを足す」は
+    /// 両方載せられてしまうので却下した）。</para>
+    ///
+    /// <para><b><see cref="Both"/> に相当する枝は作らない。</b> あちらは
+    /// 「方向が消えて『毎ターン敵の手番を2つ削る駒』になる」ので第144期に採らなかった上限測定用の値で、
+    /// 混乱側に同じ枝を作っても<b>測る前から採らないと決まっている版が1つ増えるだけ</b>である。</para>
+    ///
+    /// <para><b>混乱そのものの規則は第146期の <see cref="ConfusionRule"/> と1行も違わない</b>
+    /// ——engine の読み手（<c>FoesOf</c> / <c>ConsumeConfusion</c>）は<b>キーが立っているかだけ</b>を見る。
+    /// この枝が決めるのは<b>誰が立てるか</b>だけで、波ルール版（両陣営の全ての移動で立つ・既定オフ）とは
+    /// <b>供給の口が違うだけの同じ機構</b>である。</para>
+    /// </summary>
+    Confuse,
 }
 
 /// <summary>
@@ -5941,8 +5962,21 @@ public enum ShuffleStagger
 /// ——味方側の入れ替えは1文字も変えていないので、乱数列も盤面も動かない。これが検算になる。</para>
 /// </summary>
 /// <param name="Foes">敵陣も毎ターン2体入れ替えるか。</param>
-/// <param name="Stagger">前に出した敵を転ばせるか（<see cref="ShuffleStagger"/>）。</param>
-public readonly record struct ShufflerRule(bool Foes, ShuffleStagger Stagger)
+/// <param name="Stagger">前に出した敵をどうするか（<see cref="ShuffleStagger"/>）。</param>
+/// <param name="ConfusePercent">
+/// <see cref="ShuffleStagger.Confuse"/> のとき、前に出た敵が混乱する確率（%）。
+/// <b>既定 100 では <c>Roll</c> を1つも引かない</b>（`100 以上なら短絡する`）ので、
+/// 100 の版と「確率のノブが無かったとき」は<b>乱数列まで1ビット同じ</b>——段B の値がそのまま比較できる。
+/// <b>転倒（<see cref="ShuffleStagger.Advanced"/> / <see cref="ShuffleStagger.Both"/>）には掛からない。</b>
+/// </param>
+/// <param name="ConfuseUses">
+/// <b>保持者1体・1戦あたりに混乱を立てられる上限。0 は無制限（既定）。</b>
+/// <b>「1体につき N 回まで」（対象ごと）にはしていない</b>——絞りたいのは<b>供給の総量</b>で、
+/// <paramref name="ConfusePercent"/> と<b>同じ軸</b>を振らないと2つのノブを比べられない（第147期 段B / 段B'）。
+/// 在庫は保持者の <c>Counters</c> に持つ（Trait は共有シングルトン）。
+/// </param>
+public readonly record struct ShufflerRule(
+    bool Foes, ShuffleStagger Stagger, int ConfusePercent = 100, int ConfuseUses = 0)
 {
     /// <summary>
     /// 既定は<b>段B</b>（敵も乱し、<b>行が前に変わった敵だけ</b>が転ぶ）。第144期に採用した値。
@@ -6056,13 +6090,22 @@ public sealed class ShufflerTrait : Trait
                 if (from == Row.Back) tally.ShuffleAdvancedFromBack++;
             }
 
-            bool trip = c.Shuffler.Stagger switch
+            bool hit = c.Shuffler.Stagger switch
             {
                 ShuffleStagger.Advanced => advanced,
                 ShuffleStagger.Both => true,
+                // 混乱（第147期）は条件が Advanced とまったく同じ——効果だけが違う。
+                // **転倒と両方は載せない**（ShuffleStagger.Confuse の doc）。
+                ShuffleStagger.Confuse => advanced,
                 _ => false,
             };
-            if (!trip || !u.IsAlive) return;
+            if (!hit || !u.IsAlive) return;
+
+            if (c.Shuffler.Stagger == ShuffleStagger.Confuse)
+            {
+                Derange(c, u);
+                return;
+            }
 
             // 転倒は engine 側（TakeTurnCore）が読む二値。**痺れを流用しない**
             // ——痺れには読み手（責め苦・追い打ち）がいるので、そちらの帳簿に混ざる。
@@ -6077,7 +6120,42 @@ public sealed class ShufflerTrait : Trait
             c.EmitStagger(u, StaggerLabels.Fell, self);
             c.Log($"    {u.Name} は前へ引きずり出されて転んだ（次の手番を失う）", LogKind.Status);
         }
+
+        // 混乱（第147期）。**engine に規則も窓口も1本も足していない**——立てるのは
+        // `StatusKeys.Confused` の二値で、読むのは第146期に据えた
+        // `FoesOf` / `ConsumeConfusion` の2箇所（`ShuffleStagger.Confuse` の doc）。
+        void Derange(BattleContext c, UnitState u)
+        {
+            // **既に混乱しているなら何もしない。在庫も消費しない。**
+            // 二値なので上書きしても増えず、「立てた回数」と「立っている状態」を取り違えると
+            // 在庫（ConfuseUses）が空振りで減る。
+            if (u.RawCounter(StatusKeys.Confused) > 0) return;
+
+            // 在庫（段B'）。**保持者ごと・1戦あたり**で、対象ごとではない
+            // （ShufflerRule.ConfuseUses の doc）。0 は無制限。
+            // Trait は共有シングルトンなので状態は `Counters` に置く。
+            if (c.Shuffler.ConfuseUses > 0 && self.Counter(ConfuseUsedKey) >= c.Shuffler.ConfuseUses) return;
+
+            // **Percent >= 100 なら Roll を引かない**（段B の乱数列を段B' のノブで動かさない）。
+            // **在庫の検査より後ろに置く**——手前だと在庫が尽きた後も乱数を引き続けて、
+            // 「在庫だけを絞ったつもりが乱数列まで動く」が起きる。
+            if (c.Shuffler.ConfusePercent < 100 && c.Roll(100) >= c.Shuffler.ConfusePercent) return;
+
+            u.SetCounter(StatusKeys.Confused, 1);   // 付与のイベントは NoteStatusGain が打つ
+            self.SetCounter(ConfuseUsedKey, self.Counter(ConfuseUsedKey) + 1);
+            tally.ShuffleConfuses++;
+            c.Log($"    {u.Name} は前へ引きずり出されて正気を失った（次の攻撃を自軍へ向ける）", LogKind.Status);
+        }
     }
+
+    /// <summary>
+    /// この戦闘で混乱を立てた回数（<see cref="ShufflerRule.ConfuseUses"/> の在庫）。
+    /// <b>保持者の私有カウンタ。</b> 会戦の境界では <see cref="OnCarryOver"/> で捨てる
+    /// ——「1戦あたり」の上限なので、持ち越すと部隊戦をまたいで在庫が尽きる。
+    /// </summary>
+    public const string ConfuseUsedKey = "shuffleConfuseUsed";
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(ConfuseUsedKey, 0);
 }
 
 /// <summary>

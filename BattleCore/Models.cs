@@ -1495,6 +1495,14 @@ public sealed class UnitTally
     public int ShuffleAdvancedTraited, ShuffleAdvancedFromBack, ShuffleStaggers, ShuffleNoFoePair;
 
     /// <summary>
+    /// 喧噪が<b>混乱</b>を立てた回数（第147期・<see cref="ShuffleStagger.Confuse"/>。<b>計数のみ</b>）。
+    /// <b><c>ShuffleConfuses ≦ ShuffleAdvanced</c> が受け入れ条件</b>——前へ出た敵にしか立てない。
+    /// <b>保持者に載せる</b>（<c>ShuffleStaggers</c> と同じ。立った側は <c>ConfusedMarks</c>）ので、
+    /// 在庫（<see cref="ShufflerRule.ConfuseUses"/>）の消費回数と一致する。
+    /// </summary>
+    public int ShuffleConfuses;
+
+    /// <summary>
     /// 混乱（第146期・<see cref="ConfusionRule"/>）。<b>計数のみ。</b>
     /// <c>ConfusedMarks</c> この駒に混乱が立った回数（＝動かされた回数のうち、まだ混乱していなかった分）／
     /// <c>ConfusedSwings</c> 混乱したまま振った回数。
@@ -1605,6 +1613,7 @@ public sealed class UnitTally
         ShuffleAllySwaps += o.ShuffleAllySwaps; ShuffleFoeSwaps += o.ShuffleFoeSwaps;
         ShuffleAdvanced += o.ShuffleAdvanced; ShuffleAdvancedTraited += o.ShuffleAdvancedTraited;
         ShuffleAdvancedFromBack += o.ShuffleAdvancedFromBack; ShuffleStaggers += o.ShuffleStaggers;
+        ShuffleConfuses += o.ShuffleConfuses;
         ShuffleNoFoePair += o.ShuffleNoFoePair;
         ConfusedMarks += o.ConfusedMarks; ConfusedSwings += o.ConfusedSwings;
         Attacks += o.Attacks; Interventions += o.Interventions;
@@ -1843,7 +1852,53 @@ public enum BattleEventKind
     /// <c>TargetId</c> = 痺れた駒、<c>Text</c> = <see cref="StunLabels"/>。
     /// <b>どの規則も読まない。</b></para>
     /// </summary>
-    Stun
+    Stun,
+
+    /// <summary>
+    /// 混乱（第147期・<b>表示専用</b>）。<see cref="StatusKeys.Confused"/> が
+    /// <b>付いた瞬間</b>と<b>自軍へ振った瞬間</b>の2本を、<c>Text</c>
+    /// （<see cref="ConfusedLabels"/>）で区別して出す。<see cref="Stagger"/> / <see cref="Stun"/> と同じ形。
+    ///
+    /// <para><b>2本とも要る理由は転倒・痺れとは違う。</b> あちらは「何が起きたか」と
+    /// 「なぜ動かないか」だったが、混乱は<b>振る</b>ので <see cref="Attack"/> は出る
+    /// ——出ないのは<b>「なぜ味方を殴ったのか」</b>のほうである。付与だけだと
+    /// 何ターンも後の同士討ちと結び付かず、発動だけだと理由が画面に無い。</para>
+    ///
+    /// <para><b>名前をキーの定数名（<c>Confused</c>）に揃えてある。</b> 盲点表
+    /// （<c>watch phase0</c>）の「専用の種類」の列が <see cref="StatusKeys"/> の定数名と
+    /// この列挙の名前を<b>機械で照合する</b>ので、揃えないと走査が静かに × を出す（第117・123期）。</para>
+    ///
+    /// <para><b><see cref="StatusGain"/> には載せない</b>——あちらは
+    /// 「engine の窓口を持つ4通貨だけが出す」を明文で持っており、混乱に窓口は無い。
+    /// 打ち口が <c>NoteStatusGain</c> なのは、そこが <c>SetCounter</c> から来る
+    /// 唯一の合流点だからであって、窓口を1本足したわけではない（痺れと同じ判断）。
+    /// <b>書き手が2つある</b>（喧噪の <c>ShufflerTrait</c> と、波ルール版の <c>SwapSlots</c>）ので、
+    /// 呼び口を1箇所に寄せる利得は痺れのときより大きい。</para>
+    ///
+    /// <para><c>ActorId</c> = 混乱させた駒（<c>Mark.Owner</c>。発動側は null）、
+    /// <c>TargetId</c> = 混乱した駒、<c>Text</c> = <see cref="ConfusedLabels"/>。
+    /// <b>どの規則も読まない。</b></para>
+    /// </summary>
+    Confused
+}
+
+/// <summary>
+/// 混乱の2本の名前（第147期・<b>表示専用</b>）。<see cref="BattleEventKind.Confused"/> の
+/// <c>Text</c> に入る文字列はこの2つで全部。
+///
+/// <para><see cref="StaggerLabels"/> / <see cref="StunLabels"/> と同じく定数で持つ——文字列リテラルを
+/// 直に書くと、走査が「該当なし」と「引けなかった」を区別できない（第117期）。</para>
+/// </summary>
+public static class ConfusedLabels
+{
+    /// <summary>正気を失った（<see cref="StatusKeys.Confused"/> が立った）。</summary>
+    public const string Lost = "錯乱";
+
+    /// <summary>混乱したまま自軍へ振った。<c>PerformAttack</c> の出口。</summary>
+    public const string Struck = "同士討ち";
+
+    /// <summary>両方。<b>付与 → 発動</b>の順で持つ。</summary>
+    public static readonly string[] All = { Lost, Struck };
 }
 
 /// <summary>

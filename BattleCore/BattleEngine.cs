@@ -1954,6 +1954,9 @@ public sealed class BattleContext
             case StatusKeys.Burn: NoteCarry(u, UnitTally.CarryBurn, delta); break;
             // 第146期 段0（表示専用）: 付いた瞬間。**計数の隣に置くだけで盤面は1ビットも動かない。**
             case StatusKeys.Stun: NoteCarry(u, UnitTally.CarryStun, 1); EmitStun(u, StunLabels.Struck, Mark.Owner); break;
+            // 第147期（表示専用）: 混乱が付いた瞬間。**計数（NoteCarry）は足していない**
+            // ——`UnitTally.CarryKeys` を増やすと過去の期の帳簿が動く。書き手は Mark.Owner。
+            case StatusKeys.Confused: EmitConfused(u, ConfusedLabels.Lost, Mark.Owner); break;
             case StatusKeys.Marked: NoteCarry(u, UnitTally.CarryMark, 1); break;
             case StatusKeys.Wound: NoteCarry(u, UnitTally.CarryWound, 1); break;
             case StatusKeys.IdleTurn: NoteCarry(u, UnitTally.CarryIdle, 1); break;
@@ -2135,6 +2138,20 @@ public sealed class BattleContext
 
     /// <summary>喧噪（第144期・<see cref="ShufflerRule"/>）。<b><c>Foes = false</c> では第143期と1バイトも違わない。</b></summary>
     public ShufflerRule Shuffler { get; }
+
+    /// <summary>
+    /// <b><see cref="StatusKeys.Confused"/> を立てうる経路が1本でもあるか</b>（第147期）。
+    /// ctor で1回だけ計算する。
+    ///
+    /// <para><b>読む側（<see cref="FoesOf"/> / <c>ConsumeConfusion</c>）は「誰が立てたか」を見ない</b>
+    /// ——ノブが決めるのは<b>誰が立てるか</b>だけで、立っていれば従う。
+    /// それでも <c>RawCounter</c> を既定の経路で毎回引かないのは、<c>FoesOf</c> が1回の攻撃で
+    /// 複数回通り、<c>compare</c> / <c>layout</c> が数百万戦を回すため（軛・受け流しと同じ短絡の作法）。</para>
+    ///
+    /// <para><b>唯一の抜け穴は業（<c>ScapegoatTrait</c>）がカウンタを移す経路</b>だが、
+    /// あの駒は <c>UnitCatalog.All</c> に保持者 0 枚（第49期・残置）なので盤面には出ない。</para>
+    /// </summary>
+    internal bool ConfusionLive { get; }
 
     /// <summary>憤怒の発火の内訳（<b>版に依らない</b>。Phase 0 で「1発と数える集合」を出すため）。</summary>
     public int RageFiresFromFoe, RageFiresFromAlly, RageFiresNoSource;
@@ -3271,6 +3288,7 @@ public sealed class BattleContext
         Shrapnel = shrapnel ?? ShrapnelRule.Default;
         Shuffler = shuffler ?? ShufflerRule.Default;
         Confusion = confusion ?? ConfusionRule.Default;
+        ConfusionLive = Confusion.Active || Shuffler.Stagger == ShuffleStagger.Confuse;
     }
 
     // =====================================================================================
@@ -3835,6 +3853,35 @@ public sealed class BattleContext
     }
 
     /// <summary>
+    /// 混乱を台本に打つ（第147期・<b>表示専用</b>）。呼び口は2つだけ——
+    /// <see cref="NoteStatusGain"/>（付いた瞬間）と <c>ConsumeConfusion</c>（自軍へ振った瞬間）。
+    ///
+    /// <para><b>付与側を <see cref="NoteStatusGain"/> に置いたのは、そこが <c>SetCounter</c> から来る
+    /// 唯一の合流点だから</b>（痺れと同じ判断）。混乱の書き手は<b>2つある</b>
+    /// ——喧噪（<c>ShufflerTrait</c>・<see cref="ShuffleStagger.Confuse"/>）と
+    /// 波ルール版（<c>SwapSlots</c> の通知・<see cref="ConfusionRule"/>・既定オフ）で、
+    /// 呼び口を分けると片方だけ画面から落ちる。</para>
+    ///
+    /// <para><see cref="Emit"/> は verbose のときしか積まないので、<c>compare</c>（verbose 偽）では
+    /// 1件も作られない。<b>盤面には一切影響しない。</b></para>
+    /// </summary>
+    /// <param name="phase"><see cref="ConfusedLabels"/> のどちらか。</param>
+    /// <param name="by">混乱させた駒。発動側は null。</param>
+    internal void EmitConfused(UnitState target, string phase, UnitState? by)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Confused,
+            Turn = _turn,
+            ActorId = by?.InstanceId,
+            TargetId = target.InstanceId,
+            HpAfter = target.Hp,
+            Text = phase,
+        });
+    }
+
+    /// <summary>
     /// そのターン頭に各駒が負っている継続効果を、値ごと台本へ写す。
     /// 再生側は TurnStart で持っている状態を捨て、これで組み直す（0 のものは出さない）。
     /// </summary>
@@ -4212,7 +4259,7 @@ public sealed class BattleContext
     /// </summary>
     internal List<UnitState> FoesOf(UnitState attacker)
     {
-        if (Confusion.Active && attacker.RawCounter(StatusKeys.Confused) > 0)
+        if (ConfusionLive && attacker.RawCounter(StatusKeys.Confused) > 0)
             return LivingMembers(attacker.TeamId).Where(u => u != attacker).ToList();
 
         return LivingMembers(Opponent(attacker.TeamId)).ToList();
@@ -4226,9 +4273,11 @@ public sealed class BattleContext
     /// </summary>
     private void ConsumeConfusion(UnitState actor)
     {
-        if (!Confusion.Active || actor.RawCounter(StatusKeys.Confused) == 0) return;
+        if (!ConfusionLive || actor.RawCounter(StatusKeys.Confused) == 0) return;
         actor.SetCounter(StatusKeys.Confused, 0);
         TallyOf(actor).ConfusedSwings++;
+        // 第147期（表示専用）: 自軍へ振った瞬間。付与は何ターンも前でありうるので別の出来事として打つ。
+        EmitConfused(actor, ConfusedLabels.Struck, null);
     }
 
     private static List<UnitState> PoolOf(List<UnitState> foes)

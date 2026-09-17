@@ -168,9 +168,9 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine($"`StatusKeys.All` {StatusKeys.All.Length} キー ／ `EmitStatusGain` の呼び出し元 {waGain.Count} 箇所"
                           + $"（うち `StatusKeys.*` でないもの {waGain.Count(g => !g.StartsWith("StatusKeys.", StringComparison.Ordinal))} 件）。");
         Console.WriteLine();
-        Console.WriteLine("| キー | 表示名 | 付いた瞬間（`StatusGain`） | 残量（`StatusSnapshot`） |");
-        Console.WriteLine("|---|---|:-:|:-:|");
-        int waNoGate = 0;
+        Console.WriteLine("| キー | 表示名 | 付いた瞬間（`StatusGain`） | 専用の種類 | 残量（`StatusSnapshot`） |");
+        Console.WriteLine("|---|---|:-:|:-:|:-:|");
+        int waNoGate = 0, waOwnKind = 0;
         var waKeyHasGate = new Dictionary<string, bool>(StringComparer.Ordinal);
         var waConstName = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (string key in StatusKeys.All)
@@ -183,13 +183,28 @@ public static void Run(string[] args, int stageIndex)
             bool gate = waGainKeys.Contains(cname);
             waKeyHasGate[key] = gate;
             if (!gate) waNoGate++;
+            // 第147期に足した列。**`StatusGain` を持たないキーでも、専用の
+            // `BattleEventKind` を持てば「付いた瞬間」は画面に出る**——転倒（第145期）・
+            // 痺れ（第146期 段0）・混乱（第147期）がそれで、この列が無かったせいで
+            // 3期ぶんの成果が盲点表では × のままだった。
+            // **照合はキーの定数名と列挙の名前**（だから種類の名前をキーに揃えてある）。
+            bool own = waEventKinds.Contains(cname);
+            if (own) waOwnKind++;
             // 残量は `StatusLabels` が `StatusKeys.All` から作られるので全キー ○。
-            Console.WriteLine($"| `{cname}` | {StatusKeys.LabelOf(key)} | {(gate ? "○" : "**×**")} | ○ |");
+            Console.WriteLine($"| `{cname}` | {StatusKeys.LabelOf(key)} | {(gate ? "○" : "**×**")}"
+                              + $" | {(own ? "○" : "**×**")} | ○ |");
         }
         Console.WriteLine();
-        Console.WriteLine($"**窓口を持たないキー {waNoGate} / {StatusKeys.All.Length}。**"
+        Console.WriteLine($"**窓口を持たないキー {waNoGate} / {StatusKeys.All.Length}"
+                          + $"（うち専用の種類を持つ {waOwnKind}）。**"
                           + " 残量はターン頭に全キーぶん写る（`StatusLabels` は `StatusKeys.All` から作られる）ので、"
                           + "**「いま乗っている」は見えるが「いま書かれた」は見えない**。");
+        Console.WriteLine();
+        Console.WriteLine("> **「窓口」と「画面に出るか」は別の問い**（第147期 Q0-4）。`StatusGain` は"
+                          + " 「engine の窓口を持つ4通貨だけが出す」を明文で持つので、窓口の無いキーは"
+                          + " **専用の `BattleEventKind` を足す**ことで画面に出す——"
+                          + "その3件をこの表で数えていなかったため、第147期の指示書は"
+                          + "**「盲点表から1行減る」という到達不能な受け入れ条件**を書いていた。");
         Console.WriteLine();
         var waOrphan = waGainKeys.Where(k => !waConstName.Values.Contains(k, StringComparer.Ordinal)).ToArray();
         Console.WriteLine($"`StatusKeys.All` に無い窓口 {waOrphan.Length} 件: "
