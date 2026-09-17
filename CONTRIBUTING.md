@@ -58,8 +58,13 @@
     dotnet run --project BattleSim -c Release 0 reseat "" 0  28 >  docs/reseat.md
     dotnet run --project BattleSim -c Release 0 reseat "" 28 28 | tail -n +5 >> docs/reseat.md
 
-**いま1回の変更で待つ時間の過半はビルド**（`BattleSim` の Release ビルドが 263〜294 秒）であって、
-測定ではない。**ビルド中に別のビルドを走らせない**（`obj` のロックで両方壊れる）し、
+**第142期より前は、1回の変更で待つ時間の過半がビルドだった**（`BattleSim` の Release ビルドが
+263〜294 秒・Roslyn のピークが 22.3 GB）。**いまは 7.5 秒・1.1 GB**
+——`Program.cs` の 70,065 行を `Prog.Body` 1メソッドに畳んでいたのをやめ、
+モードごとに `BattleSim/Modes/*.cs` の `static class` へ割ったため（第142期）。
+**待ちの過半は測定に戻った**ので、上の表の「全部で約 263 秒」がそのまま1回の代金になる。
+
+**ビルド中に別のビルドを走らせない**（`obj` のロックで両方壊れる）し、
 **`bin/.../BattleSim.dll` を掴んだままの BattleSim プロセスが残っていると
 コピーの段で MSB3027 で落ちる**ので、長い診断を途中で止めたら残プロセスを確かめること。
 
