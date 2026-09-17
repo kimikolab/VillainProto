@@ -436,6 +436,13 @@ if (focusId == "tumult")
     return;
 }
 
+// derange モード（第147期） —— バサの転倒を混乱に置き換える。本体は `Modes/Derange.cs`。
+if (focusId == "derange")
+{
+    DerangeDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // confuse モード（第146期） —— 混乱（動かされた駒は次の攻撃を自軍へ向ける）。本体は `Modes/Confuse.cs`。
 if (focusId == "confuse")
 {

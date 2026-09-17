@@ -3693,6 +3693,20 @@ public sealed class BattleContext
     /// <param name="guard">割り込んだ駒。</param>
     /// <param name="target">本来の標的。</param>
     /// <param name="label">どの段か（<see cref="InterceptLabels"/> の5つのどれか）。</param>
+    /// <summary>
+    /// <b>混乱した攻撃を庇った回数</b>（第147期・<b>計数のみ。どの規則も読まない</b>）。
+    /// 介入の鎖の6段すべてに1行ずつ置いてある（標・後備え×2・庇う・殉教・棘守り）。
+    ///
+    /// <para><b>鎖は陣営を見ない</b>ので、混乱した敵の攻撃は<b>敵の殉教者が庇う</b>
+    /// ——第147期の予測4 はこの計数で読む。<c>NoteGuardPick</c> は流用できない
+    /// （あちらは <c>WoundCensus</c> とプレイヤー陣営で絞ってある・第120期）。</para>
+    /// </summary>
+    private void NoteConfusedGuard(UnitState attacker, UnitState guard)
+    {
+        if (ConfusionLive && attacker.RawCounter(StatusKeys.Confused) > 0)
+            TallyOf(guard).ConfusedGuards++;
+    }
+
     private void EmitIntercept(UnitState guard, UnitState target, string label)
     {
         TallyOf(guard).Intercepts++;
@@ -4110,6 +4124,7 @@ public sealed class BattleContext
             {
                 Log($"    {rearAny.Name} が後列の {target.Name} の前に入った", LogKind.Trigger);
                 NoteGuardPick(GuardKind.RearGuard, rearAny, target);   // 第120期・§2-5 の材料
+                NoteConfusedGuard(attacker, rearAny);   // 第147期（計数のみ）
                 EmitIntercept(rearAny, target, InterceptLabels.RearGuard);   // 第125期 段1（表示専用）
                 return rearAny;
             }
@@ -4147,6 +4162,7 @@ public sealed class BattleContext
                 else DivertFoePulls++;
             }
             Log($"    敵は {marked.Name} に気を取られた", LogKind.Trigger);
+            NoteConfusedGuard(attacker, marked);   // 第147期（計数のみ）
             EmitIntercept(marked, target, InterceptLabels.Mark);   // 第125期 段1（表示専用）
             return marked;
         }
@@ -4158,6 +4174,7 @@ public sealed class BattleContext
         {
             Log($"    {rear.Name} が後列の {target.Name} の前に入った", LogKind.Trigger);
             NoteGuardPick(GuardKind.RearGuard, rear, target);   // 第120期・§2-5 の材料
+            NoteConfusedGuard(attacker, rear);   // 第147期（計数のみ）
             EmitIntercept(rear, target, InterceptLabels.RearGuard);   // 第125期 段1（表示専用）
             return rear;
         }
@@ -4176,6 +4193,7 @@ public sealed class BattleContext
             // 肩代わりで受けた分だけ伸びる（GuardianTrait 参照）。素の被弾と区別するための印。
             guardian.SetCounter(GuardianTrait.PendingKey, 1);
             NoteGuardPick(GuardKind.Guardian, guardian, target);   // 第120期・§2-5 の材料
+            NoteConfusedGuard(attacker, guardian);   // 第147期（計数のみ）
             EmitIntercept(guardian, target, InterceptLabels.Guardian);   // 第125期 段1（表示専用）
             return guardian;
         }
@@ -4200,6 +4218,7 @@ public sealed class BattleContext
             Log($"    {martyr.Name} が {target.Name} を庇った", LogKind.Trigger);
             martyr.SetCounter(RedirectGainTrait.PendingKey, 1);
             NoteGuardPick(GuardKind.Martyr, martyr, target);   // 第120期・§2-5 の材料
+            NoteConfusedGuard(attacker, martyr);   // 第147期（計数のみ）
             EmitIntercept(martyr, target, InterceptLabels.Martyr);   // 第125期 段1（表示専用）
             return martyr;
         }
@@ -4225,6 +4244,7 @@ public sealed class BattleContext
             // スロット + 1 を格納し、0 を「なし」とする（スロット0 と未設定の区別）
             thornGuard.SetCounter(ThornGuardTrait.PartnerKey, target.Slot + 1);
             NoteGuardPick(GuardKind.ThornGuard, thornGuard, target);   // 第120期・§2-5 の材料
+            NoteConfusedGuard(attacker, thornGuard);   // 第147期（計数のみ）
             EmitIntercept(thornGuard, target, InterceptLabels.ThornGuard);   // 第125期 段1（表示専用）
             return thornGuard;
         }
@@ -5637,6 +5657,17 @@ public sealed class BattleContext
             bfP = _units.Sum(u => u.RawCounter(StatusKeys.Poison));
             bfS = killer is not null && killer.HasTrait(TraitId.Overreach)
                 ? killer.RawCounter(StatusKeys.Stun) : 0;
+        }
+
+        // 混乱の下流（第147期・**計数のみ**）。**`ConsumeConfusion` は `PerformAttack` の出口なので、
+        // ここではまだ札が立っている**——立っているうちに数えないと、同士討ちが1件も残らない。
+        if (killer is not null && ConfusionLive && killer.RawCounter(StatusKeys.Confused) > 0
+            && killer.TeamId == dead.TeamId)
+        {
+            TallyOf(killer).ConfusedKills++;
+            // 処刑は陣営を見ない（`ExecutionerTrait.OnKill`）ので、混乱した処刑持ちは
+            // **味方を倒して育つ**。この1行がその実測（第147期 Q0-3・予測4）。
+            if (killer.IsAlive && killer.HasTrait(TraitId.Executioner)) TallyOf(killer).ConfusedExecGain++;
         }
 
         if (killer is not null && killer.IsAlive)

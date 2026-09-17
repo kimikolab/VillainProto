@@ -1514,6 +1514,18 @@ public sealed class UnitTally
     /// </summary>
     public int ConfusedMarks, ConfusedSwings;
 
+    /// <summary>
+    /// 混乱の下流（第147期・<b>計数のみ。どの規則も読まない</b>）。
+    /// <c>ConfusedGuards</c> この駒が<b>混乱した攻撃を庇った</b>回数（介入の鎖の全段）／
+    /// <c>ConfusedKills</c> この駒が<b>混乱したまま自軍の駒を倒した</b>回数／
+    /// <c>ConfusedExecGain</c> そのうち<b>処刑（<see cref="TraitId.Executioner"/>）が積まれた</b>回数。
+    ///
+    /// <para><b>3つとも「敵が敵に対してやったこと」を測るためにある</b>——処刑も殉教も
+    /// <b>陣営を見ない</b>ので、混乱は敵側の札に直撃する（第147期 Q0-3）。
+    /// <c>ConfusedExecGain ≦ ConfusedKills</c> が受け入れ条件。</para>
+    /// </summary>
+    public int ConfusedGuards, ConfusedKills, ConfusedExecGain;
+
     /// <summary>敵に与えたダメージのうち、手番の中／外で生んだ分（<see cref="DamageToEnemy"/> の内訳）。</summary>
     public int DmgOutInTurn, DmgOutOffTurn;
 
@@ -1616,6 +1628,8 @@ public sealed class UnitTally
         ShuffleConfuses += o.ShuffleConfuses;
         ShuffleNoFoePair += o.ShuffleNoFoePair;
         ConfusedMarks += o.ConfusedMarks; ConfusedSwings += o.ConfusedSwings;
+        ConfusedGuards += o.ConfusedGuards; ConfusedKills += o.ConfusedKills;
+        ConfusedExecGain += o.ConfusedExecGain;
         Attacks += o.Attacks; Interventions += o.Interventions;
         DamageToEnemy += o.DamageToEnemy; DamageToAlly += o.DamageToAlly;
         DamageTaken += o.DamageTaken; TakenFromAlly += o.TakenFromAlly;

@@ -6143,7 +6143,11 @@ public sealed class ShufflerTrait : Trait
 
             u.SetCounter(StatusKeys.Confused, 1);   // 付与のイベントは NoteStatusGain が打つ
             self.SetCounter(ConfuseUsedKey, self.Counter(ConfuseUsedKey) + 1);
-            tally.ShuffleConfuses++;
+            tally.ShuffleConfuses++;                    // 立てた側（保持者）
+            // **立った側にも同じだけ載せる**——第146期の波ルール版が `ConfusedMarks` に
+            // 載せているので、供給の口が違っても計数の意味を揃えておく
+            // （揃えないと `ConfusedSwings ≦ ConfusedMarks` の受け入れ条件が偽になる）。
+            c.TallyOf(u).ConfusedMarks++;
             c.Log($"    {u.Name} は前へ引きずり出されて正気を失った（次の攻撃を自軍へ向ける）", LogKind.Status);
         }
     }
