@@ -995,6 +995,27 @@ public partial class Main : Control
                 }
                 break;
 
+            // 第146期 段0 —— 痺れ。転倒と同じ形で**付与と消費の2本**を出す。
+            // 痺れは転倒と違ってターンをまたぐので `StatusSnapshot` には載る
+            // ——欠けていたのは「いつ誰に付けられたか」と「その手番が実際に潰れたか」。
+            case BattleEventKind.Stun:
+                Color stunTint = StatusColor(StatusKeys.LabelOf(StatusKeys.Stun));
+                if (e.Text == StunLabels.Struck)
+                {
+                    _battleField.Float(target, "痺れ！", stunTint, large: true);
+                    if (e.ActorId is not null) _battleField.Link(actor, target, stunTint, "痺れさせた");
+                    AppendLog($"  [color=#{stunTint.ToHtml(false)}][b]{NameOf(e.TargetId)} が痺れた[/b][/color]"
+                              + $"  [color=#a9b3a8]（次の手番を失う）[/color]{WriterSuffix(e.ActorId, e.TargetId)}");
+                    await Delay(0.26);
+                }
+                else
+                {
+                    _battleField.Float(target, "痺れて動けない", stunTint);
+                    AppendLog($"  [color=#{stunTint.ToHtml(false)}]{NameOf(e.TargetId)} は痺れたまま手番を失った[/color]");
+                    await Delay(0.24);
+                }
+                break;
+
             case BattleEventKind.Heal:
                 target?.SetHp(e.HpAfter);
                 target?.AnimateHeal();

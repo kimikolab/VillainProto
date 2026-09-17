@@ -1803,7 +1803,53 @@ public enum BattleEventKind
     /// <b>どの規則も読まない。</b> <see cref="Intercept"/> / <see cref="Parry"/> と同じ
     /// 表示専用の札で、盤面には一切影響しない。</para>
     /// </summary>
-    Stagger
+    Stagger,
+
+    /// <summary>
+    /// 痺れ（第146期 段0・<b>表示専用</b>）。<see cref="StatusKeys.Stun"/> が
+    /// <b>付いた瞬間</b>と<b>手番を失った瞬間</b>の2本を、<c>Text</c>
+    /// （<see cref="StunLabels"/>）で区別して出す。<see cref="Stagger"/> と同じ形。
+    ///
+    /// <para><b>種類を1つにまとめたのは、2つが別のターンになりうるから</b>——
+    /// 付与は攻撃の巻き添え・断罪・縛めなどその場で、消費は<b>次の</b>行動順ループの
+    /// <c>TakeTurnCore</c>。片方だけでは「何が起きたか」か「なぜ動かないか」の
+    /// どちらかが欠ける（転倒とまったく同じ理由）。</para>
+    ///
+    /// <para><b>転倒と違い <see cref="StatusSnapshot"/> には載る</b>——痺れはターンを
+    /// またいで残るので写しに出る。欠けているのは<b>瞬間</b>のほうで、
+    /// 「いつ誰に付けられたか」と「その手番が実際に潰れたか」が画面から引けなかった
+    /// （第125期「手番が潰れたターンは台本に1件も残らない」）。</para>
+    ///
+    /// <para><b><see cref="StatusGain"/> には載せない</b>——あちらは
+    /// 「engine の窓口を持つ4通貨だけが出す」を明文で持っており、痺れに窓口は無い。
+    /// <b>打ち口が <c>NoteStatusGain</c> なのは、そこが <c>SetCounter</c> から来る
+    /// 唯一の合流点だから</b>であって、窓口を1本足したわけではない
+    /// （盤面を書く関数ではなく、書かれたのを数える関数である）。</para>
+    ///
+    /// <para><c>ActorId</c> = 痺れさせた駒（<c>Mark.Owner</c>。engine 由来と消費側は null）、
+    /// <c>TargetId</c> = 痺れた駒、<c>Text</c> = <see cref="StunLabels"/>。
+    /// <b>どの規則も読まない。</b></para>
+    /// </summary>
+    Stun
+}
+
+/// <summary>
+/// 痺れの2本の名前（第146期 段0・<b>表示専用</b>）。<see cref="BattleEventKind.Stun"/> の
+/// <c>Text</c> に入る文字列はこの2つで全部。
+///
+/// <para><see cref="StaggerLabels"/> と同じく定数で持つ——文字列リテラルを直に書くと、
+/// 走査が「該当なし」と「引けなかった」を区別できない（第117期）。</para>
+/// </summary>
+public static class StunLabels
+{
+    /// <summary>痺れた（<see cref="StatusKeys.Stun"/> が立った）。</summary>
+    public const string Struck = "痺れ";
+
+    /// <summary>痺れたまま手番を失った。行動順ループの中。</summary>
+    public const string Lost = "手番喪失";
+
+    /// <summary>両方。<b>付与 → 消費</b>の順で持つ。</summary>
+    public static readonly string[] All = { Struck, Lost };
 }
 
 /// <summary>

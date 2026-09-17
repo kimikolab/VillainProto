@@ -1935,7 +1935,8 @@ public sealed class BattleContext
             case StatusKeys.Poison: NoteCarry(u, UnitTally.CarryPoison, delta); break;
             case StatusKeys.Armor: NoteCarry(u, UnitTally.CarryArmor, delta); break;
             case StatusKeys.Burn: NoteCarry(u, UnitTally.CarryBurn, delta); break;
-            case StatusKeys.Stun: NoteCarry(u, UnitTally.CarryStun, 1); break;
+            // 第146期 段0（表示専用）: 付いた瞬間。**計数の隣に置くだけで盤面は1ビットも動かない。**
+            case StatusKeys.Stun: NoteCarry(u, UnitTally.CarryStun, 1); EmitStun(u, StunLabels.Struck, Mark.Owner); break;
             case StatusKeys.Marked: NoteCarry(u, UnitTally.CarryMark, 1); break;
             case StatusKeys.Wound: NoteCarry(u, UnitTally.CarryWound, 1); break;
             case StatusKeys.IdleTurn: NoteCarry(u, UnitTally.CarryIdle, 1); break;
@@ -3781,6 +3782,37 @@ public sealed class BattleContext
     }
 
     /// <summary>
+    /// 痺れを台本に打つ（第146期 段0・<b>表示専用</b>）。呼び口は2つだけ——
+    /// <see cref="NoteStatusGain"/>（付いた瞬間）と <c>TakeTurnCore</c>（手番を失った瞬間）。
+    ///
+    /// <para><b>付与側を <see cref="NoteStatusGain"/> に置いたのは、そこが
+    /// <see cref="UnitState.SetCounter"/> から来る唯一の合流点だから。</b>
+    /// <c>StatusKeys.Stun</c> を書く箇所は <c>Traits.cs</c> に7つ（責め苦・断罪・縛め・
+    /// 深追い・かき回し ほか）＋ 業の引き取りがあるが、全部ここを通る
+    /// ——7箇所に呼び出しを撒くと、次に痺れを書く札が増えたとき静かに1本落ちる。
+    /// 書き手は <c>Mark.Owner</c>（第94期 (T2) の印）から取れるので引数も要らない。</para>
+    ///
+    /// <para><see cref="Emit"/> は verbose のときしか積まないので、<c>compare</c>（verbose 偽）では
+    /// 1件も作られない。<b>盤面には一切影響しない</b>——計数（<c>CarryStun</c> /
+    /// <c>StallStun</c>）にも触っていない。</para>
+    /// </summary>
+    /// <param name="phase"><see cref="StunLabels"/> のどちらか。</param>
+    /// <param name="by">痺れさせた駒。engine 由来と消費側は null。</param>
+    internal void EmitStun(UnitState target, string phase, UnitState? by)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Stun,
+            Turn = _turn,
+            ActorId = by?.InstanceId,
+            TargetId = target.InstanceId,
+            HpAfter = target.Hp,
+            Text = phase,
+        });
+    }
+
+    /// <summary>
     /// そのターン頭に各駒が負っている継続効果を、値ごと台本へ写す。
     /// 再生側は TurnStart で持っている状態を捨て、これで組み直す（0 のものは出さない）。
     /// </summary>
@@ -5307,6 +5339,8 @@ public sealed class BattleContext
             actor.SetCounter(StatusKeys.Stun, 0);
             actor.SetCounter(StatusKeys.IdleTurn, Turn);
             TallyOf(actor).StallStun++;   // 第105期（計数のみ）
+            // 第146期 段0（表示専用）: 手番を失った瞬間。付与は別のターンなので別の出来事として打つ。
+            EmitStun(actor, StunLabels.Lost, null);
             Log($"  {actor.Name} は痺れて動けない", LogKind.Status);
             return TurnOutcome.Stalled;
         }
