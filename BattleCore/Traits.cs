@@ -8338,6 +8338,68 @@ public readonly record struct ConfusionRule(bool Active, int Percent = 100)
 }
 
 /// <summary>
+/// 行動順の前倒しの選び方（第149期）。<b>駒でも代金でもなく「通貨の値段」を測るための窓口。</b>
+/// </summary>
+public enum HastePick
+{
+    /// <summary>掛けない（既定）。<c>order</c> に一切触らない。</summary>
+    None,
+
+    /// <summary>
+    /// 生存味方のうち <c>Def.Speed</c> が最小の1体。同値は <c>order</c> の中で先に出てくるほう。
+    /// <b>「遅いから外された層」（バン 速2・セッキ 速2・ゴルム 速3・ガルド 速4）が先に動く。</b>
+    /// <b>ドルガは速6 なので、`compare` 61 行のどこでも「いちばん遅い」にはならない</b>
+    /// （第149期 Phase 0 の実測。指示書の「ドルガ 速3」は誤り）。
+    /// </summary>
+    Slowest,
+
+    /// <summary>生存味方のうち <c>CurrentAttack</c> が最大の1体。同値は同上。単純な火力の前倒し。</summary>
+    Strongest,
+}
+
+/// <summary>
+/// 前倒し（第149期）: <b>毎ターン、味方1体を行動順の先頭に出す。</b>
+///
+/// <para><b>この期は駒も代金も作らない。</b> 測るのは<b>行動順という通貨の値段</b>だけで、
+/// 誰に載せるか・何で払わせるかは値段が分かってから決める
+/// （第137期の「鍵の密度を測る前に設計を積み上げて外した」の逆順）。</para>
+///
+/// <para><b>乱数列を1ビットも動かさない。</b> <c>order</c> は今までどおり
+/// <c>speedGroups</c> → <c>Shuffle(tie)</c>（同速・同陣営の中だけを混ぜる呼び出し） の順で組み切り、
+/// <b>確定した後のリストから対象を <c>Remove</c> して先頭に <c>Insert</c> する</b>だけ
+/// ——<c>Shuffle</c> の入力と呼び出し回数が変わらないので乱数の消費が同一になる。
+/// <b>群から先に抜くと群の要素数が変わってシャッフルの消費がずれ、盤面全体が動く</b>
+/// （この期の最大の実装上の罠）。</para>
+///
+/// <para><b>先頭に出すと敵全員より先に動く</b>（<c>order</c> は両陣営が混ざった1本のリスト）。
+/// <b>延べ手番数は変わらない</b>——<c>Remove</c> してから <c>Insert</c> するので
+/// <c>TurnLoopCalls</c> が版間で一致することが検算になる。
+/// 既に先頭にいる駒を選んだ場合は何も起きない。</para>
+///
+/// <para><b>対象は決定的に選ぶ</b>（<c>PickOne</c> を使わない・乱数を引かない）。
+/// 乱数で選ぶと「何に課金したか」が分離できない（第130期）。</para>
+///
+/// <para><b>逆位（<see cref="TraitId.Inversion"/>）と同時には測らない</b>（変数が2つ）。
+/// 逆位は既定では保持者が盤上に 0 枚（<c>Inverter</c> / <c>Reverser</c> はどちらも
+/// <c>Stages</c> に載っていない）ので、この規則は逆位の影響を受けない。</para>
+///
+/// <para><b>既定は <see cref="HastePick.None"/>。</b> 第148期までと1ビットも違わない
+/// ——<c>compare</c> 305 セルが 0 件であることが検算。</para>
+/// </summary>
+/// <param name="Pick">誰を先頭に出すか。<b>既定は掛けない。</b></param>
+public readonly record struct HasteRule(HastePick Pick)
+{
+    /// <summary>既定は<b>掛けない</b>。</summary>
+    public static HasteRule Default => new(HastePick.None);
+
+    /// <summary>段B: 生存味方のうちいちばん遅い1体を先頭へ。</summary>
+    public static HasteRule Slowest => new(HastePick.Slowest);
+
+    /// <summary>段C: 生存味方のうちいちばん攻撃力が高い1体を先頭へ。</summary>
+    public static HasteRule Strongest => new(HastePick.Strongest);
+}
+
+/// <summary>
 /// 粛: 保持者が盤上に生きている間、**ターン外の行動が一切通らない**。両陣営に等しくかかる。
 ///
 /// <para><b>判定は engine 側（<c>BattleContext.CanActOutOfTurn</c>）に置いてある。</b>

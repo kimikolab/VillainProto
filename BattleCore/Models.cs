@@ -2449,6 +2449,16 @@ public sealed class BattleResult
     public int TurnLoopCalls { get; init; }
 
     /// <summary>
+    /// 前倒し（第149期・<c>HasteRule</c>）が <c>order</c> を組み替えた回数。<b>観測専用。</b>
+    /// </summary>
+    public int HasteMoves { get; init; }
+
+    /// <summary>
+    /// 前倒しが <c>order</c> の要素数を変えた回数（第149期）。<b>常に 0。観測専用。</b>
+    /// </summary>
+    public int HasteCountMismatch { get; init; }
+
+    /// <summary>
     /// 出力の3分割の総計（自己検査 (d)）。<c>In + Off + None == All</c> が成り立つ。
     /// ダメージ・回復は<b>量</b>、状態異常は<b>書き込みの回数</b>。
     /// </summary>

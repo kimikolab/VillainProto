@@ -62,8 +62,9 @@
 | 49 | `brace` | `BraceRule` | `BraceRule { Cap = 7, Refuse = True, Stagger = False }` |  | `brace` | 第143期 | ○ |
 | 50 | `shuffler` | `ShufflerRule` | `ShufflerRule { Foes = True, Stagger = Confuse, ConfusePercent = 100, ConfuseUses = 3 }` |  | `tumult` / `tumult2` / `derange` / `confuse` | 第144期 | ○ |
 | 51 | `confusion` | `ConfusionRule` | `ConfusionRule { Active = False, Percent = 100 }` |  | `derange` / `confuse` | 第146期 | ○ |
+| 52 | `haste` | `HasteRule` | `HasteRule { Pick = None }` | ○ | `haste` | 第149期 | ○ |
 
-引数 51 本（`verbose` と観測子を除く）。
+引数 52 本（`verbose` と観測子を除く）。
 
 **`= default(T)` は「その規則が既定で何もしない」の機械的な手がかりであって、判定ではない。**
 採否そのものは**既定値の列**を読むこと——`ThornRule { Wound = None }` は残置、`SoakRule { Poison = True, Burn = False }` は毒側だけ採用、という具合に既定値が全部を語る。
@@ -93,6 +94,7 @@
 | `GatherRule` | `GatherRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `parry` / `wall` / `cross` / `demo` | 第89期 |
 | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` | ○ | `derive` / `whet` / `goad` / `ledger` | 第52期 |
 | `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` | 第135期 |
+| `HasteRule` | `HasteRule { Pick = None }` | ○ | `haste` | 第149期 |
 | `HushRule` | `HushRule { Active = True }` | ○ | `curse` / `hush` / `goad` / `wave2` / `ledger` | 第35期 |
 | `IgniteRule` | `IgniteRule { Enabled = True }` | ○ | `derive` / `curse` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `cross` / `demo` | 第87期 |
 | `LooseRule` | `LooseRule { Shove = True }` | ○ | `hold` / `hold2` / `ledger` / `lit` | 第106期 |
@@ -126,7 +128,7 @@
 | `WoundRule` | `WoundRule { Enabled = True, Census = False }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期 |
 | `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `goad` / `wave2` / `ledger` / `parry` / `brace` | 第35期 |
 
-53 型。
+54 型。
 
 ## 3. 規則が使う列挙型
 
@@ -137,6 +139,7 @@
 | `BlazeTargets` | `None`=0 / `AllyOnly`=1 / `Both`=2 / `FoeOnly`=3 |
 | `BoundaryChoice` | `None`=0 / `Revive`=1 / `Heal`=2 / `Carry`=3 |
 | `CreakSource` | `Whet`=0 / `Bonus`=1 / `Both`=2 |
+| `HastePick` | `None`=0 / `Slowest`=1 / `Strongest`=2 |
 | `LitFilter` | `SupportOnly`=0 / `ActingOnly`=1 / `ActingNow`=2 |
 | `MendSide` | `Plain`=0 / `Wound`=1 |
 | `ParryScope` | `Guarded`=0 / `Any`=1 |
@@ -152,4 +155,4 @@
 | `WildfireMode` | `None`=0 / `Add`=1 / `Scale`=2 / `Flat`=3 |
 | `YieldMode` | `OwnTurn`=0 / `OwnTurnWindow`=1 / `Immediate`=2 |
 
-17 型。
+18 型。

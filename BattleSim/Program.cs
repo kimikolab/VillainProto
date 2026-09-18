@@ -436,6 +436,13 @@ if (focusId == "tumult")
     return;
 }
 
+// haste モード（第149期） —— 行動順という通貨の値段。本体は `Modes/Haste.cs`。
+if (focusId == "haste")
+{
+    HasteDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // tumult2 モード（第148期） —— バサの手番を混乱に使う。本体は `Modes/Tumult2.cs`。
 if (focusId == "tumult2")
 {

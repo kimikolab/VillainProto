@@ -2140,6 +2140,12 @@ public sealed class BattleContext
     public ShufflerRule Shuffler { get; }
 
     /// <summary>
+    /// 前倒し（第149期・<see cref="HasteRule"/>）。<b>既定（<c>Pick = None</c>）では
+    /// <c>order</c> に一切触らない</b>ので、盤面も乱数列も1ビット動かない。
+    /// </summary>
+    public HasteRule Haste { get; }
+
+    /// <summary>
     /// <b><see cref="StatusKeys.Confused"/> を立てうる経路が1本でもあるか</b>（第147期）。
     /// ctor で1回だけ計算する。
     ///
@@ -3229,7 +3235,7 @@ public sealed class BattleContext
                          HarmRule? harm = null, ParryRule? parry = null,
                          ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
                          BraceRule? brace = null, ShufflerRule? shuffler = null,
-                         ConfusionRule? confusion = null,
+                         ConfusionRule? confusion = null, HasteRule? haste = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -3288,6 +3294,7 @@ public sealed class BattleContext
         Shrapnel = shrapnel ?? ShrapnelRule.Default;
         Shuffler = shuffler ?? ShufflerRule.Default;
         Confusion = confusion ?? ConfusionRule.Default;
+        Haste = haste ?? HasteRule.Default;
         // **枝を足したらここも足す。** 読む側（`FoesOf` / `ConsumeConfusion`）はこの短絡の内側に
         // あるので、**新しい供給の口を `ShuffleStagger` に足してこの行を忘れると、
         // 混乱は立つのに誰も読まない**（第148期に実際に踏んだ。実測は「敵に立った 2.3〜3.4 /
@@ -3426,6 +3433,18 @@ public sealed class BattleContext
 
     /// <summary>行動順ループが <see cref="TakeTurn"/> を呼んだ回数（自己検査 (c) の右辺）。</summary>
     public int TurnLoopCalls;
+
+    /// <summary>
+    /// 前倒し（第149期）が実際に <c>order</c> を組み替えた回数（<b>計数のみ。どの規則も読まない</b>）。
+    /// 既に先頭にいる駒が選ばれたターンは数えない。
+    /// </summary>
+    public int HasteMoves;
+
+    /// <summary>
+    /// 前倒しが <c>order</c> の<b>要素数</b>を変えてしまった回数（第149期）。<b>常に 0 のはず。</b>
+    /// <c>Remove</c> に失敗して <c>Insert</c> だけが通ると 1 増える。
+    /// </summary>
+    public int HasteCountMismatch;
 
     /// <summary>
     /// 出力の3分割の総計（自己検査 (d)）。<c>*All</c> は分割前の総量で、
@@ -6462,7 +6481,7 @@ public static class BattleEngine
                                    HarmRule? harm = null, ParryRule? parry = null,
                                    ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
                                    BraceRule? brace = null, ShufflerRule? shuffler = null,
-                                   ConfusionRule? confusion = null,
+                                   ConfusionRule? confusion = null, HasteRule? haste = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
@@ -6471,7 +6490,7 @@ public static class BattleEngine
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
                nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace, shuffler,
-               confusion, probe);
+               confusion, haste, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -6508,7 +6527,7 @@ public static class BattleEngine
                                    HarmRule? harm = null, ParryRule? parry = null,
                                    ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
                                    BraceRule? brace = null, ShufflerRule? shuffler = null,
-                                   ConfusionRule? confusion = null,
+                                   ConfusionRule? confusion = null, HasteRule? haste = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
@@ -6517,7 +6536,7 @@ public static class BattleEngine
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
                                     nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace,
-                                    shuffler, confusion, probe);
+                                    shuffler, confusion, haste, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -6613,6 +6632,42 @@ public static class BattleEngine
                     return tie;
                 })
                 .ToList();
+
+            // 前倒し（第149期・HasteRule）。**order が確定した後**に1体を抜いて先頭へ差し込む。
+            //
+            // **speedGroups にも Shuffle にも触らない。** 群から先に抜くと群の要素数が変わって
+            // シャッフルの乱数消費がずれ、盤面全体が動く（この期の最大の実装上の罠）。
+            // ここは Shuffle を全部走らせ切った後なので、**乱数列は規則の有無に依らず同一**
+            // ——既定（Pick = None）で `compare` 305 セルが 0 件であることが検算。
+            //
+            // **Remove してから Insert する**ので延べ手番数は変わらない（TurnLoopCalls が版間で一致）。
+            // 選択は決定的（PickOne を使わない）。同値は order の並びで解決する
+            // ＝新しい乱数を1つも引かない。
+            if (ctx.Haste.Pick != HastePick.None)
+            {
+                UnitState? pick = null;
+                foreach (UnitState u in order)
+                {
+                    if (u.TeamId != BattleContext.PlayerTeam || !u.IsAlive) continue;
+                    if (pick is null) { pick = u; continue; }
+                    // 同値では入れ替えない（order の中で先に出てくるほうを残す）。
+                    bool better = ctx.Haste.Pick == HastePick.Slowest
+                        ? u.Def.Speed < pick.Def.Speed
+                        : u.CurrentAttack > pick.CurrentAttack;
+                    if (better) pick = u;
+                }
+                if (pick is not null && order[0] != pick)
+                {
+                    int before = order.Count;
+                    order.Remove(pick);
+                    order.Insert(0, pick);
+                    ctx.HasteMoves++;   // 計数のみ。どの規則も読まない
+                    // **その<u>ターンの</u>延べ手番数が変わっていないこと**の検算（第149期）。
+                    // 戦をまたいだ `TurnLoopCalls` の総和は一致しない——順序が盤面を動かすと
+                    // 決着ターン数が動き、分母がターン数である量はそれに引きずられる（第113期）。
+                    if (order.Count != before) ctx.HasteCountMismatch++;
+                }
+            }
 
             foreach (UnitState actor in order)
             {
@@ -6768,6 +6823,8 @@ public static class BattleEngine
             EncoreDeathsWithLiveWriter = ctx.EncoreDeathsWithLiveWriter,
             EncoreFired = ctx.EncoreFired,
             TurnLoopCalls = ctx.TurnLoopCalls,
+            HasteMoves = ctx.HasteMoves,
+            HasteCountMismatch = ctx.HasteCountMismatch,
             TurnDmgAll = ctx.TurnDmgAll, TurnDmgIn = ctx.TurnDmgIn,
             TurnDmgOff = ctx.TurnDmgOff, TurnDmgNone = ctx.TurnDmgNone,
             TurnHealAll = ctx.TurnHealAll, TurnHealIn = ctx.TurnHealIn,
