@@ -95,6 +95,9 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.Guardian]   = (HcPlusL,  "味方への単体攻撃を必ず肩代わりし、身に受けるたび受け流しの在庫を1つ戻す（第136期。攻撃力は上がらない）"),
         // 第136期 段2: 受け流しを本採用したときに足した（第128期の穴＝分類を足さずに `checkup` が止まる、を繰り返さない）。
         [TraitId.Parry]      = (HcBothL,  "回数ぶん敵の一撃を無効化して構えで戻すのと、自分からは攻撃しないことが1つの札（`Pursuer` と同型）"),
+        // 第153期 段A: 預かりを足したときに分類も足した（第128期の穴＝分類を足さずに `checkup` が止まる、を繰り返さない）。
+        [TraitId.Ward]       = (HcPlusL,  "味方の傷を預かって後から本人へ返すだけ。代金は `Forfeit` に切り出してある（第74期の作法）"),
+        [TraitId.Forfeit]    = (HcMinusL, "預かったまま味方が倒れるとその全額が敵の回復になる、だけの別の札"),
         [TraitId.Stoic]      = (HcMinusL, "支援を受け付けない、だけの別の札"),
         [TraitId.Necro]      = (HcPlusL,  "味方が倒れるたび層を積む"),
         [TraitId.Sacrifice]  = (HcMinusL, "開戦時に隣接する味方を削る、だけの別の札"),

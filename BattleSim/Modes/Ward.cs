@@ -24,6 +24,9 @@ static class WardDiag
         {
             case "phase0": Phase0(); return;
             case "scan": if (arg.StartsWith("probe")) Probe(); else Scan(); return;
+            case "run": Stage(); return;
+            case "sweep": Sweep(arg); return;
+            case "check": Check(arg); return;
             default:
                 Console.WriteLine("ward: モードは phase0 / scan / run / sweep / check。");
                 return;
@@ -55,13 +58,21 @@ static class WardDiag
     /// 診断のローカルにしか存在しない（第138期の礫のガレと同じ扱い）。
     /// 数値は Q0-3 で数え直した中央値から決める。
     /// </summary>
-    public static UnitDef Nochi(bool plain = false) => new()
+    /// <param name="plain">特性を1つも持たない素体（第69期の標準器具の対照）。</param>
+    /// <param name="noForfeit">
+    /// <b>マイナスを外した版（<c>yP</c>）。</b> 札を2枚に切ってあるので、
+    /// <c>Traits</c> の配列から <see cref="TraitId.Forfeit"/> を抜くだけで作れる
+    /// ——これが2枚に分けた理由そのもの（第74期の作法・指示書 §1-1）。
+    /// </param>
+    public static UnitDef Nochi(bool plain = false, bool noForfeit = false) => new()
     {
         Id = plain ? "nochi_plain" : "nochi",
-        Name = plain ? "素体のノチ" : "後払いのノチ",
+        Name = plain ? "素体のノチ" : noForfeit ? "後払いのノチ（預かりのみ）" : "後払いのノチ",
         MaxHp = NochiHp, Attack = NochiAtk, Speed = NochiSpd,
         Advances = false,
-        Traits = plain ? Array.Empty<TraitId>() : new[] { TraitId.Ward, TraitId.Forfeit }
+        Traits = plain ? Array.Empty<TraitId>()
+               : noForfeit ? new[] { TraitId.Ward }
+               : new[] { TraitId.Ward, TraitId.Forfeit }
     };
 
     public static int NochiHp = 58, NochiAtk = 4, NochiSpd = 6;
@@ -318,6 +329,275 @@ static class WardDiag
                                       + " | " + m.ToString("F1") + " | " + (m >= 40 && m <= 95 ? "○" : "×")
                                       + " | " + info + " |");
                 }
+    }
+
+    // =================================================================================
+    // 版（段B）
+    // =================================================================================
+
+    /// <summary>素体差し替えの対照（第69期の標準器具）。<b>この期の線はこの期の対照で引く</b>（第118期 §6-3 の申し送り1）。</summary>
+    static (string Tag, UnitDef Nochi, WardRule Rule)[] Versions() => new[]
+    {
+        ("V0 素体", Nochi(plain: true), WardRule.Default),
+        ("V1 Burst", Nochi(), WardRule.Default),
+        ("V1p Burst 預かりのみ", Nochi(noForfeit: true), WardRule.Default),
+        ("V2 Drip",  Nochi(), WardRule.Default with { Return = WardReturn.Drip }),
+        ("V2p Drip 預かりのみ", Nochi(noForfeit: true), WardRule.Default with { Return = WardReturn.Drip }),
+    };
+
+    sealed class WdAcc
+    {
+        public long Battles, Wins, Turns, Life, Stacked, Released, Forfeited, Residual;
+        public long Bursts, Drips, Dry, DryDrought, DryStoic, Forfeits, ForfeitHealed, Unbalanced;
+        public double[] WaveWin = new double[5];
+    }
+
+    static WdAcc Measure(Formation f, WardRule rule, int stFrom = 1, int stTo = 5)
+    {
+        var a = new WdAcc();
+        for (int st = stFrom; st < stTo; st++)
+        {
+            long w = 0;
+            for (int seed = 0; seed < Seeds; seed++)
+            {
+                BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false, ward: rule);
+                a.Battles++; a.Turns += r.Turns;
+                if (r.PlayerWon) { a.Wins++; w++; }
+                foreach (var o in f.Occupied())
+                    if (r.TallyByUnit.TryGetValue(o.Def.Id, out UnitTally? t)) a.Life += t.LastActiveTurn;
+                WardLedger L = r.Ward;
+                a.Stacked += L.Stacked; a.Released += L.Released; a.Forfeited += L.Forfeited;
+                a.Residual += L.Residual; a.Bursts += L.Bursts; a.Drips += L.Drips;
+                a.Dry += L.Dry; a.DryDrought += L.DryDrought; a.DryStoic += L.DryStoic;
+                a.Forfeits += L.Forfeits; a.ForfeitHealed += L.ForfeitHealed;
+                if (!L.Balanced) a.Unbalanced++;
+            }
+            a.WaveWin[st] = 100.0 * w / Seeds;
+        }
+        return a;
+    }
+
+    /// <summary>段B —— Burst と Drip を**同じ台・同じ seed** で並べる。</summary>
+    static void Stage()
+    {
+        Console.WriteLine("# 第153期 段B —— `Burst` 対 `Drip`（同じ台・同じ seed 0.." + (Seeds - 1) + "・第2〜5波）");
+        Console.WriteLine();
+        Console.WriteLine("`帰属` は素体差し替え比（版 − V0）。`取り分` は Δ ÷ (100 − V0)（§9-1）。");
+        Console.WriteLine("`味方生存T` は編成5枚の `LastActiveTurn` の平均（1戦・1枚あたり）。");
+        Console.WriteLine();
+
+        var rigs = Rigs(Nochi());
+        for (int i = 0; i < rigs.Length; i++)
+        {
+            Console.WriteLine("## " + rigs[i].Name);
+            Console.WriteLine();
+            Console.WriteLine("| 版 | 勝率 2/3/4/5波 | 第2〜5波平均 | 帰属 | 取り分 | 決着T | 味方生存T | 生存T差 | 生存T÷決着T | 比の差 |");
+            Console.WriteLine("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|");
+            double baseM = 0, baseLife = 0, baseRatio = 0;
+            var accs = new List<(string Tag, WdAcc A)>();
+            foreach ((string tag, UnitDef nochi, WardRule rule) in Versions())
+            {
+                Formation f = Rig(i, nochi, FillerOf[i].Atk, FillerOf[i].Hp).F;
+                WdAcc a = Measure(f, rule);
+                accs.Add((tag, a));
+                double m = 100.0 * a.Wins / a.Battles;
+                double life = (double)a.Life / a.Battles / 5.0;
+                double ratio = life / ((double)a.Turns / a.Battles);
+                if (tag.StartsWith("V0")) { baseM = m; baseLife = life; baseRatio = ratio; }
+                string share = tag.StartsWith("V0") ? "—"
+                    : baseM >= 100.0 ? "—" : ((m - baseM) / (100 - baseM)).ToString("F3");
+                Console.WriteLine("| " + tag + " | "
+                    + string.Join(" / ", a.WaveWin.Skip(1).Select(x => x.ToString("F1"))) + " | "
+                    + m.ToString("F1") + " | " + (tag.StartsWith("V0") ? "—" : (m - baseM).ToString("+0.0;-0.0;0.0"))
+                    + " | " + share + " | " + ((double)a.Turns / a.Battles).ToString("F2")
+                    + " | " + life.ToString("F2")
+                    + " | " + (tag.StartsWith("V0") ? "—" : (life - baseLife).ToString("+0.00;-0.00;0.00"))
+                    + " | " + ratio.ToString("F3")
+                    + " | " + (tag.StartsWith("V0") ? "—" : (ratio - baseRatio).ToString("+0.000;-0.000;0.000")) + " |");
+            }
+            Console.WriteLine();
+            Console.WriteLine("| 版 | 積んだ | 返した | 没収 | 残額 | 収支 | 返却の試行 | 空振り | 渇き | 支援拒否 | 没収発火 | 敵の回復 |");
+            Console.WriteLine("|---|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|");
+            foreach ((string tag, WdAcc a) in accs)
+            {
+                double b = a.Battles;
+                Console.WriteLine("| " + tag + " | " + (a.Stacked / b).ToString("F2") + " | " + (a.Released / b).ToString("F2")
+                    + " | " + (a.Forfeited / b).ToString("F2") + " | " + (a.Residual / b).ToString("F2")
+                    + " | " + (a.Unbalanced == 0 ? "**閉じる**" : "**ずれ " + a.Unbalanced + " 戦**")
+                    + " | " + ((a.Bursts + a.Drips) / b).ToString("F2") + " | " + (a.Dry / b).ToString("F2")
+                    + " | " + (a.DryDrought / b).ToString("F2") + " | " + (a.DryStoic / b).ToString("F2")
+                    + " | " + (a.Forfeits / b).ToString("F2") + " | " + (a.ForfeitHealed / b).ToString("F2") + " |");
+            }
+            Console.WriteLine();
+        }
+    }
+
+    // =================================================================================
+    // 段C —— 掃引
+    // =================================================================================
+
+    static void Sweep(string arg)
+    {
+        bool pct = arg.StartsWith("percent");
+        Console.WriteLine(pct
+            ? "# 第153期 段C-b —— `Percent` の掃引（**予測6 の確認**）"
+            : "# 第153期 段C —— `Threshold`（Burst）と `Drip` の掃引（**返した量を揃えた点で比べる**）");
+        Console.WriteLine();
+
+        var rigs = Rigs(Nochi());
+        var plainRigs = Rigs(Nochi(plain: true));
+        for (int i = 0; i < rigs.Length - 1; i++)   // 台5（陰性対照）は掃引しない
+        {
+            WdAcc v0 = Measure(plainRigs[i].F, WardRule.Default);
+            double baseM = 100.0 * v0.Wins / v0.Battles;
+            double baseLife = (double)v0.Life / v0.Battles / 5.0;
+            Console.WriteLine("## " + rigs[i].Name + "（V0 素体 " + baseM.ToString("F1") + "% / 生存T "
+                              + baseLife.ToString("F2") + "）");
+            Console.WriteLine();
+            Console.WriteLine("| 版 | ノブ | 勝率 | 帰属 | 生存T差 | 積んだ | **返した** | 没収 | 残額 | 返却率 |");
+            Console.WriteLine("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|");
+
+            var points = new List<(string Tag, WardRule R)>();
+            if (pct)
+                foreach (int pp in new[] { 25, 50, 75, 100 })
+                    points.Add(("Burst", WardRule.Default with { Percent = pp }));
+            else
+            {
+                foreach (int th in new[] { 10, 20, 30, 40, 60, 90, 130 })
+                    points.Add(("Burst", WardRule.Default with { Threshold = th }));
+                foreach (int dr in new[] { 2, 4, 6, 8, 12, 18, 26 })
+                    points.Add(("Drip", WardRule.Default with { Return = WardReturn.Drip, Drip = dr }));
+            }
+
+            foreach ((string tag, WardRule r) in points)
+            {
+                WdAcc a = Measure(rigs[i].F, r);
+                double m = 100.0 * a.Wins / a.Battles;
+                double life = (double)a.Life / a.Battles / 5.0;
+                string knob = pct ? "Percent " + r.Percent
+                    : r.Return == WardReturn.Burst ? "Threshold " + r.Threshold : "Drip " + r.Drip;
+                Console.WriteLine("| " + tag + " | " + knob + " | " + m.ToString("F1") + " | "
+                    + (m - baseM).ToString("+0.0;-0.0;0.0") + " | " + (life - baseLife).ToString("+0.00;-0.00;0.00")
+                    + " | " + ((double)a.Stacked / a.Battles).ToString("F2")
+                    + " | **" + ((double)a.Released / a.Battles).ToString("F2") + "**"
+                    + " | " + ((double)a.Forfeited / a.Battles).ToString("F2")
+                    + " | " + ((double)a.Residual / a.Battles).ToString("F2")
+                    + " | " + (a.Stacked > 0 ? (100.0 * a.Released / a.Stacked).ToString("F1") + "%" : "—") + " |");
+            }
+            Console.WriteLine();
+        }
+    }
+
+    // =================================================================================
+    // 自己検査（§7）
+    // =================================================================================
+
+    static void Check(string arg)
+    {
+        Console.WriteLine("# 第153期 `ward check` —— 自己検査");
+        Console.WriteLine();
+
+        string bal = arg.Trim().Length > 0 ? arg.Trim() : "docs/balance.md";
+        Console.WriteLine("## (a) `compare` 305 セルが `" + bal + "` と 0 件");
+        Console.WriteLine();
+        if (!File.Exists(bal)) Console.WriteLine("**`" + bal + "` が無い。手で `compare` を回して差分を見ること。**");
+        else
+        {
+            int cells = 0;
+            foreach (string line in File.ReadAllLines(bal).Where(l => l.StartsWith("| ") && l.Contains("%")))
+                cells += line.Split('|').Select(c => c.Trim()).Count(c => c.EndsWith("%"));
+            Console.WriteLine("`" + bal + "` の `%` セルは **" + cells + "** 個。"
+                              + "突き合わせは `0 compare > /tmp/x && diff docs/balance.md /tmp/x` で行う"
+                              + "——**ノチは `UnitCatalog.All` にも `Presets` にも無いので、"
+                              + "差分が出たら実装が既定を動かしている。**");
+        }
+        Console.WriteLine();
+
+        string? eng = FindSource("BattleCore", "BattleEngine.cs");
+        string? tr = FindSource("BattleCore", "Traits.cs");
+        if (eng is not null && tr is not null)
+        {
+            int n = File.ReadAllLines(eng).Count(l => l.Contains("PickOne("))
+                  + File.ReadAllLines(tr).Count(l => l.Contains("PickOne("));
+            Console.WriteLine("## (b) `ctx.PickOne` を新たに使っていない");
+            Console.WriteLine();
+            Console.WriteLine("`BattleCore` の `PickOne(` は **" + n + "** 行（第153期の基準は 27）。"
+                              + (n == 27 ? "**一致**" : "**要確認**"));
+            Console.WriteLine();
+        }
+
+        var rigs = Rigs(Nochi());
+
+        Console.WriteLine("## (c) 収支が閉じる（積んだ ＝ 返した ＋ 没収 ＋ 残額）");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 版 | 戦数 | 積んだ | 返した＋没収＋残額 | ずれた戦 |");
+        Console.WriteLine("|---|---|---:|---:|---:|---:|");
+        long badTotal = 0;
+        for (int i = 0; i < rigs.Length; i++)
+            foreach ((string tag, UnitDef nochi, WardRule rule) in Versions())
+            {
+                if (tag.StartsWith("V0")) continue;
+                WdAcc a = Measure(Rig(i, nochi, FillerOf[i].Atk, FillerOf[i].Hp).F, rule);
+                badTotal += a.Unbalanced;
+                Console.WriteLine("| " + rigs[i].Name + " | " + tag + " | " + a.Battles + " | " + a.Stacked
+                    + " | " + (a.Released + a.Forfeited + a.Residual) + " | " + a.Unbalanced + " |");
+            }
+        Console.WriteLine();
+        Console.WriteLine(badTotal == 0 ? "**1点もずれていない。**" : "**ずれている。止める。**");
+        Console.WriteLine();
+
+        Console.WriteLine("## (d) `StatusKeys.All` に `Ward` が入っている（会戦の境界で消える）");
+        Console.WriteLine();
+        Console.WriteLine("- `StatusKeys.All`: "
+                          + (StatusKeys.All.Contains(StatusKeys.Ward) ? "**入っている**" : "**入っていない。止める**")
+                          + "（" + StatusKeys.All.Length + " 本）");
+        {
+            // 会戦を2戦またぐ。境界が消していなければ2戦目は「積んでいない預かりを返す」ので、
+            // 収支（積んだ ＝ 返した ＋ 没収 ＋ 残額）が必ず破れる。
+            var squads = new[] { rigs[0].F, rigs[1].F };
+            var foes = EnemyCatalog.Stages.Skip(1).Take(3).Select(x => x.Enemy).ToList();
+            int battles = 0, bad = 0;
+            for (int seed = 0; seed < 40; seed++)
+            {
+                EngagementResult er = EngagementEngine.Run(squads, foes, seed, verbose: false);
+                foreach (BattleResult r in er.Battles) { battles++; if (!r.Ward.Balanced) bad++; }
+            }
+            Console.WriteLine("- 会戦 40 試行の部隊戦 **" + battles + "** 戦で、収支が破れた戦: **" + bad + "**"
+                              + (bad == 0 ? "（**境界で消えている**）" : "（**止める**）"));
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## (f) ノチ非在席で版が1ビットも違わない");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | " + string.Join(" | ", Versions().Select(v => v.Tag)) + " | 差 |");
+        Console.WriteLine("|---|" + string.Concat(Versions().Select(_ => "---|")) + "---|");
+        {
+            Formation f = rigs[^1].F;   // 台5（陰性対照）
+            var ws = Versions().Select(v => Measure(f, v.Rule).WaveWin).ToList();
+            bool same = ws.All(w => Enumerable.Range(1, 4).All(st => w[st] == ws[0][st]));
+            Console.WriteLine("| " + rigs[^1].Name + " | "
+                + string.Join(" | ", ws.Select(w => string.Join(" / ", w.Skip(1).Select(x => x.ToString("F1")))))
+                + " | " + (same ? "**0 件**" : "**差あり。止める**") + " |");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## (g) 渇き下で返った量が 0（`Heal` の入口で止まっているか）");
+        Console.WriteLine();
+        Console.WriteLine("第三波（渇きの祭司）だけを回す。**祭司が生きている間**は1点も返らないが、");
+        Console.WriteLine("**祭司を割れば返る**ので戦全体では 0 にならない。読むのは `うち渇き` の側。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 版 | 返した | 空振り | うち渇き | うち支援拒否 |");
+        Console.WriteLine("|---|---|---:|---:|---:|---:|");
+        for (int i = 0; i < rigs.Length - 1; i++)
+            foreach ((string tag, UnitDef nochi, WardRule rule) in Versions())
+            {
+                if (tag.StartsWith("V0")) continue;
+                WdAcc a = Measure(Rig(i, nochi, FillerOf[i].Atk, FillerOf[i].Hp).F, rule, stFrom: 2, stTo: 3);
+                Console.WriteLine("| " + rigs[i].Name + " | " + tag + " | "
+                    + ((double)a.Released / a.Battles).ToString("F2") + " | " + ((double)a.Dry / a.Battles).ToString("F2")
+                    + " | " + ((double)a.DryDrought / a.Battles).ToString("F2")
+                    + " | " + ((double)a.DryStoic / a.Battles).ToString("F2") + " |");
+            }
     }
 
     static double[] Waves(Formation f)

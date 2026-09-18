@@ -148,6 +148,8 @@
 | `Undying` | - |
 | `Wildfire` | - |
 | `Parry` | 廃棄聖騎士ガルド |
+| `Ward` | - |
+| `Forfeit` | - |
 | `ThinBlade` | 裂きのキリ |
 | `Overreach` | - |
 | `Await` | 断ちのナタ |

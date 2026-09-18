@@ -1478,6 +1478,13 @@ public sealed class UnitTally
     /// <para><b><c>BraceGiven ≦ BraceRefused</c> が受け入れ条件</b>（配った量が切り落とした量を超えない）。
     /// 差は <c>BraceLost</c> と、戦闘終了時にまだ配られていない保留。</para>
     /// </summary>
+    /// <summary>
+    /// 預かり（<see cref="TraitId.Ward"/>・第153期）の帳簿。<b>計数専用で、どの規則も読まない。</b>
+    /// <b>保持者（ノチ）の側</b>に載せる——<c>WardStacked</c> 積んだ量 ／
+    /// <c>WardReleased</c> 実際に返った量 ／ <c>WardForfeited</c> 没収された量。
+    /// </summary>
+    public long WardStacked, WardReleased, WardForfeited;
+
     public int BraceGuards, BraceCuts, BraceRefused, BraceGiven, BraceLost;
     public int BraceShoves, BraceShoveCapped, BraceNoTarget, BraceStaggers, BraceArmorMuted;
 
@@ -1646,6 +1653,7 @@ public sealed class UnitTally
         BraceGiven += o.BraceGiven; BraceLost += o.BraceLost; BraceShoves += o.BraceShoves;
         BraceShoveCapped += o.BraceShoveCapped; BraceNoTarget += o.BraceNoTarget;
         BraceStaggers += o.BraceStaggers; BraceArmorMuted += o.BraceArmorMuted;
+        WardStacked += o.WardStacked; WardReleased += o.WardReleased; WardForfeited += o.WardForfeited;
         StallStagger += o.StallStagger;
         ShuffleAllySwaps += o.ShuffleAllySwaps; ShuffleFoeSwaps += o.ShuffleFoeSwaps;
         ShuffleAdvanced += o.ShuffleAdvanced; ShuffleAdvancedTraited += o.ShuffleAdvancedTraited;
@@ -2265,6 +2273,35 @@ public readonly record struct ArmorLedger(
 }
 
 /// <summary>
+/// 預かりの帳簿（第153期 段A）。<b>計数専用で、どの規則も読まない。</b>
+///
+/// <para><b>収支が閉じること</b>——<c>Stacked == Released + Forfeited + Residual</c>——が
+/// 自己検査 (c)（指示書 §6 条件5）。<b>1点もずれてはいけない。</b></para>
+/// </summary>
+/// <param name="Stacked">預かりに積んだ総量。</param>
+/// <param name="ReleaseAsked">返そうとした総量（プールから出そうとした量）。</param>
+/// <param name="Released"><b>実際に HP が増えた量</b>＝プールから実際に減った量。</param>
+/// <param name="Residual">決着時にプールに残っていた量（死者も含む）。</param>
+/// <param name="Bursts">閾値に達して全額を返そうとした回数。</param>
+/// <param name="Drips">毎ターン頭に返そうとした回数。</param>
+/// <param name="Dry">返そうとしたが1点も入らなかった回数。</param>
+/// <param name="DryDrought">そのうち渇きで止まった回数。</param>
+/// <param name="DryStoic">そのうち支援拒否（<c>Stoic</c>）で止まった回数。</param>
+/// <param name="Forfeits">没収の発火回数。</param>
+/// <param name="Forfeited">没収された預かりの総量（敵へ渡した名目量）。</param>
+/// <param name="ForfeitHealed">没収で敵の HP が実際に増えた量（体数ぶん重なる）。</param>
+/// <param name="On">預けた駒ごとの内訳（<c>Def.Id</c> → 積んだ量・返った量）。</param>
+public readonly record struct WardLedger(
+    long Stacked, long ReleaseAsked, long Released, long Residual,
+    long Bursts, long Drips, long Dry, long DryDrought, long DryStoic,
+    long Forfeits, long Forfeited, long ForfeitHealed,
+    Dictionary<string, (long Stacked, long Released)> On)
+{
+    /// <summary>収支が閉じているか（1点もずれていないか）。</summary>
+    public bool Balanced => Stacked == Released + Forfeited + Residual;
+}
+
+/// <summary>
 /// 盤面ルールの対称性の帳簿（第134期 段2）。<b>計数専用で、どの規則も読まない。</b>
 ///
 /// <para><b>第132期の <see cref="YokeLedger"/> と同じ形</b>を、渇き（<c>Drought</c>）と
@@ -2371,6 +2408,9 @@ public sealed class BattleResult
 
     /// <summary>破片の在庫の帳簿（第138期 段2・<see cref="ArmorLedger"/>）。<b>計数専用。</b></summary>
     public required ArmorLedger Armor { get; init; }
+
+    /// <summary>預かりの帳簿（第153期 段A・<see cref="WardLedger"/>）。<b>計数専用。</b></summary>
+    public required WardLedger Ward { get; init; }
 
     public required int ExposeCount { get; init; }
     public required int ExposeMissed { get; init; }

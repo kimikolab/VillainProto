@@ -9185,6 +9185,157 @@ public readonly record struct HushRule(bool Active)
     public static HushRule Default => new(Active: true);
 }
 
+/// <summary>預かりの返し方（第153期）。</summary>
+public enum WardReturn
+{
+    /// <summary><b>本命。</b> 預かりが <see cref="WardRule.Threshold"/> に達した瞬間、全額を返す。</summary>
+    Burst,
+
+    /// <summary><b>対照。</b> 毎ターン頭に <see cref="WardRule.Drip"/> だけ返す。</summary>
+    Drip
+}
+
+/// <summary>
+/// 預かりの規則（第153期・<see cref="WardTrait"/>）。
+///
+/// <para><b><c>Burst</c> を本命に置く理由。</b> 蓄積機構は周期ではなく<b>出来事の閾値</b>で区切る、
+/// という既存の判断がある（溜め＝<c>Charge</c> が棄却された理由）。加えて <c>Burst</c> は
+/// <b>殴られ続けないと返ってこない</b>ので、タンクには早く返り、殴られない後衛には返らない
+/// ——<b>席が判断になる。</b></para>
+///
+/// <para><b><c>Drip</c> は捨てない</b>（第147期「2つのノブは同じ供給量の点で比べる」）。</para>
+///
+/// <para><b>掃引するのは <see cref="Threshold"/> であって <see cref="Percent"/> ではない</b>
+/// （第118期 §1-2 ＝ 回復を厚くすると生存が伸び、生存が伸びると殴られる回数が増え、
+/// 殴られる回数がそのまま供給量になるので、量のノブでは比が動かない）。</para>
+/// </summary>
+/// <param name="Return">返し方（<see cref="WardReturn"/>）。</param>
+/// <param name="Percent">被弾のうち預かりに積む割合（%）。<b>0 なら札は完全に不活性。</b></param>
+/// <param name="Threshold"><c>Burst</c> で全額を返す閾値。</param>
+/// <param name="Drip"><c>Drip</c> で毎ターン頭に返す量。</param>
+public readonly record struct WardRule(WardReturn Return, int Percent, int Threshold, int Drip)
+{
+    public static WardRule Default => new(WardReturn.Burst, 50, 40, 10);
+}
+
+/// <summary>
+/// 預かり（<see cref="TraitId.Ward"/>・第153期）。<b>回復に「時間」の次元を入れる札。</b>
+///
+/// <para>ロスターの回復役4枚（継ぎ当て・毒喰らい・移り木・置き去り）は
+/// <b>4枚とも「HPを戻す」という同じ1つのことを、発火条件だけ変えてやっている</b>
+/// ——違うのは宛先の選び方だけで、次元が分かれていない。
+/// 対してタンク3枚は分かれている（ガルド＝<b>回数</b> ／ ゴルム＝<b>総量</b> ／ ササ＝<b>単発上限</b>）ので、
+/// 同席しても食い合わない。この札は回復に<b>時間</b>を入れる。</para>
+///
+/// <para><b>積む位置は <see cref="OnAllyDamaged"/>。</b> <c>ApplyDamage</c> が
+/// <c>target.Hp -= amount</c> を走らせた<b>後</b>の通知なので、ここに来る駒は
+/// <b>実際に HP が減った駒</b>である——肩代わりされた駒（HP が1点も減っていない）には積まれない。
+/// 「受けた傷を後から返す」ものなので、傷を受けた駒に付くのが素直（第153期 Q0-4）。</para>
+///
+/// <para><b>返るのは実際に HP が増えた分だけ。</b> 満タン・渇き・支援拒否（<c>Stoic</c>）で
+/// 入らなかった分は<b>プールに残る</b>（捨てない）。だから
+/// <b>渇きの下では積まれ続けて1点も返らず、祭司を割ると一気に戻る</b>——
+/// <b>engine には規則も窓口も1つも足していない</b>（<c>ctx.Heal</c> が入口で止めているだけ）。</para>
+///
+/// <para><b>自分の傷は預からない。</b> <c>OnAllyDamaged</c> は本人を含まないので、
+/// 保持者自身の被弾はこの札を1度も通らない。</para>
+/// </summary>
+public sealed class WardTrait : Trait
+{
+    public override TraitId Id => TraitId.Ward;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+        => ctx.Log($"  {self.Name} が味方の傷を預かり始めた", LogKind.Trigger);
+
+    public override void OnAllyDamaged(BattleContext ctx, UnitState self, UnitState ally,
+                                       int dmg, UnitState? source)
+    {
+        if (!self.IsAlive || ctx.Ward.Percent <= 0) return;
+        // 倒れた駒には積まない（この通知は HandleDeath より前に走る）。積むと
+        // 「積んだ瞬間に没収される」だけの空回りが帳簿に載る。
+        if (dmg <= 0 || !ally.IsAlive) return;
+
+        int add = dmg * ctx.Ward.Percent / 100;
+        if (add <= 0) return;
+
+        int pool = ally.RawCounter(StatusKeys.Ward) + add;
+        ally.SetCounter(StatusKeys.Ward, pool);
+        ctx.NoteWardStacked(self, ally, add);
+
+        if (ctx.Ward.Return == WardReturn.Burst && pool >= ctx.Ward.Threshold)
+            Release(ctx, self, ally, pool, burst: true);
+    }
+
+    /// <summary><c>Drip</c> のときだけ、毎ターン頭に <see cref="WardRule.Drip"/> ずつ返す。</summary>
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive || ctx.Ward.Return != WardReturn.Drip || ctx.Ward.Drip <= 0) return;
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            int pool = ally.RawCounter(StatusKeys.Ward);
+            if (pool <= 0) continue;
+            Release(ctx, self, ally, Math.Min(pool, ctx.Ward.Drip), burst: false);
+        }
+    }
+
+    /// <summary>
+    /// プールから <paramref name="amount"/> を返そうとする。<b>実際に HP が増えた分だけ</b>減らす。
+    /// </summary>
+    static void Release(BattleContext ctx, UnitState self, UnitState ally, int amount, bool burst)
+    {
+        int before = ally.Hp;
+        ctx.Heal(ally, amount, self);
+        int healed = ally.Hp - before;
+        if (healed > 0)
+        {
+            ally.SetCounter(StatusKeys.Ward, ally.RawCounter(StatusKeys.Ward) - healed);
+            ctx.Log($"    {self.Name} が {ally.Name} に預かりを返した（+{healed}）", LogKind.Trigger);
+        }
+        ctx.NoteWardRelease(self, ally, amount, healed, burst);
+    }
+}
+
+/// <summary>
+/// 没収（<see cref="TraitId.Forfeit"/>・第153期）。<b>預かりの代金。</b>
+/// 預かりを抱えたまま味方が倒れると、その預かりの<b>全額が敵全体へ回復として渡る</b>。
+///
+/// <para><b>札を2枚に分けてあるのは器具の要件</b>（第74期に 裂き → <c>Rend</c> + <c>ThinBlade</c> を
+/// 切り出したのと同じ作法）。1枚に畳むと <c>checkup</c> の <c>yP</c>（マイナスを外した版）が作れない。
+/// <b>挙動は畳んだ版と1ビットも変わらない。</b></para>
+///
+/// <para><b>宛先は <c>ctx.Heal</c> を通す</b>（第153期 Q0-5）——通すことが要件で、
+/// <b>渇きの下ではマイナスも消える</b>（第三波ではこの駒が相対的に強くなる）。
+/// <c>by</c> に保持者を渡すので、敵に入った回復は保持者の <c>HealOutOffTurn</c> に載る
+/// ——<b>それが正しい。保持者の代金だからである。</b></para>
+///
+/// <para><b>発火点は <see cref="OnAllyDeath"/> の1箇所で足りる</b>——
+/// <c>HandleDeath</c> の呼び出しは <c>ApplyDamage</c> の中の1箇所しかないので、
+/// 毒・燃焼のティックも自傷も吸いも置き去りの削りも全部この通知を通る（第153期 Q0-6）。</para>
+/// </summary>
+public sealed class ForfeitTrait : Trait
+{
+    public override TraitId Id => TraitId.Forfeit;
+
+    public override void OnAllyDeath(BattleContext ctx, UnitState self, UnitState dead)
+    {
+        if (!self.IsAlive) return;
+        int pool = dead.RawCounter(StatusKeys.Ward);
+        if (pool <= 0) return;
+
+        dead.SetCounter(StatusKeys.Ward, 0);
+        int healed = 0;
+        foreach (UnitState foe in ctx.LivingMembers(
+                     self.TeamId == BattleContext.PlayerTeam ? BattleContext.EnemyTeam : BattleContext.PlayerTeam))
+        {
+            int before = foe.Hp;
+            ctx.Heal(foe, pool, self);
+            healed += foe.Hp - before;
+        }
+        ctx.NoteWardForfeit(self, dead, pool, healed);
+        ctx.Log($"    {dead.Name} の預かり {pool} は敵の糧になった", LogKind.FriendlyFire);
+    }
+}
+
 public static class TraitCatalog
 {
     private static readonly Dictionary<TraitId, Trait> Map = new Trait[]
@@ -9280,6 +9431,8 @@ public static class TraitCatalog
         new GradeTrait(TraitId.GradeStep, AttackPattern.Sweep, AttackPattern.All),
         new NourishTrait(),
         new WildfireTrait(),   // 第133期
+        new WardTrait(),       // 第153期
+        new ForfeitTrait(),    // 第153期
         new MartyrTrait(),
         new InversionTrait(),
         new DroughtTrait(),

@@ -152,7 +152,25 @@ public static class StatusKeys
     /// </summary>
     public const string Confused = "confused";
 
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused };
+    /// <summary>
+    /// 預かり（第153期・<see cref="WardTrait"/>）。<b>後から本人へ返すために積んである HP。</b>
+    ///
+    /// <para><b>積むときは <see cref="BattleContext.Heal"/> を通らず、返すときだけ通る。</b>
+    /// だから<b>渇き（第三波）の下では積まれ続けて1点も返らない</b>——
+    /// 「渇きの祭司を先に割れば預かりが一気に戻る」という回避判断がここから出る。
+    /// <b>engine には何も足していない。既存の構造がそのまま出るだけである。</b></para>
+    ///
+    /// <para><b>破片（<see cref="Armor"/>）を流用しない。</b> あちらは <c>ApplyDamage</c> の側で
+    /// 消費される damage のプールで、預かりは <c>Heal</c> を通る別資源
+    /// ——混ぜると帳簿が閉じない（第143期に転倒が痺れを流用しなかったのと同じ理由）。</para>
+    ///
+    /// <para><b>減衰も上限も無い。</b> 供給が被弾に縛られているので自然に止まる。
+    /// <b>返るのは実際に HP が増えた分だけ</b>で、満タン・渇き・支援拒否（<c>Stoic</c>）で
+    /// 入らなかった分はプールに残る（＝捨てない）。</para>
+    /// </summary>
+    public const string Ward = "ward";
+
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward };
 
     /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
@@ -172,6 +190,7 @@ public static class StatusKeys
         Curse => "呪",
         Stagger => "転",
         Confused => "乱",
+        Ward => "預",
         _ => key
     };
 }
@@ -2133,6 +2152,9 @@ public sealed class BattleContext
     /// <summary>身構え（第143期・<see cref="BraceRule"/>）。<b>既定（<c>Cap = 0</c>）では1バイトも動かない。</b></summary>
     public BraceRule Brace { get; }
 
+    /// <summary>預かり（第153期・<see cref="WardRule"/>）。<b>保持者が盤上に居なければ1バイトも動かない。</b></summary>
+    public WardRule Ward { get; }
+
     /// <summary>混乱（第146期・<see cref="ConfusionRule"/>）。<b>既定（<c>Active = false</c>）では1バイトも動かない。</b></summary>
     public ConfusionRule Confusion { get; }
 
@@ -2650,6 +2672,74 @@ public sealed class BattleContext
     {
         if (!MarkActive) return;
         foreach (UnitState u in _units.ToList()) CloseMarkEpisode(u, 3);
+    }
+
+    // --- 預かりの帳簿（第153期・**計数専用。どの規則も読まない**） --------------------------
+    // 収支が閉じること（積んだ ＝ 返した ＋ 没収 ＋ 残額）が自己検査 (c)。
+
+    /// <summary>預かりに積んだ総量。</summary>
+    public long WardStacked;
+    /// <summary>返そうとした総量（プールから出そうとした量）。</summary>
+    public long WardReleaseAsked;
+    /// <summary><b>実際に HP が増えた量</b>＝プールから実際に減った量。</summary>
+    public long WardReleased;
+    /// <summary>閾値に達して全額を返そうとした回数（<c>Burst</c>）。</summary>
+    public long WardBursts;
+    /// <summary>毎ターン頭に返そうとした回数（<c>Drip</c>）。</summary>
+    public long WardDrips;
+    /// <summary>返そうとしたが1点も入らなかった回数（満タン・渇き・支援拒否）。</summary>
+    public long WardDry;
+    /// <summary>そのうち渇きで止まった回数。</summary>
+    public long WardDryDrought;
+    /// <summary>そのうち支援拒否（<c>Stoic</c>）で止まった回数。</summary>
+    public long WardDryStoic;
+    /// <summary>没収の発火回数。</summary>
+    public long WardForfeits;
+    /// <summary>没収された預かりの総量（＝敵へ渡した名目量）。</summary>
+    public long WardForfeited;
+    /// <summary>没収で敵の HP が実際に増えた量（体数ぶん重なるので名目とは別物）。</summary>
+    public long WardForfeitHealed;
+    /// <summary>決着時にプールに残っていた量（<see cref="CloseWardLedger"/> が閉じる）。</summary>
+    public long WardResidual;
+    /// <summary>預けた駒ごとの内訳（<c>Def.Id</c> → 積んだ量・返った量）。</summary>
+    public readonly Dictionary<string, (long Stacked, long Released)> WardOn = new();
+
+    internal void NoteWardStacked(UnitState by, UnitState on, int amount)
+    {
+        WardStacked += amount;
+        WardOn.TryGetValue(on.Def.Id, out var a);
+        WardOn[on.Def.Id] = (a.Stacked + amount, a.Released);
+        TallyOf(by).WardStacked += amount;
+    }
+
+    internal void NoteWardRelease(UnitState by, UnitState on, int asked, int healed, bool burst)
+    {
+        WardReleaseAsked += asked;
+        WardReleased += healed;
+        if (burst) WardBursts++; else WardDrips++;
+        if (healed <= 0)
+        {
+            WardDry++;
+            if (DroughtBinding) WardDryDrought++;
+            else if (!on.AcceptsSupport) WardDryStoic++;
+        }
+        WardOn.TryGetValue(on.Def.Id, out var a);
+        WardOn[on.Def.Id] = (a.Stacked, a.Released + healed);
+        TallyOf(by).WardReleased += healed;
+    }
+
+    internal void NoteWardForfeit(UnitState by, UnitState dead, int pool, int healed)
+    {
+        WardForfeits++;
+        WardForfeited += pool;
+        WardForfeitHealed += healed;
+        TallyOf(by).WardForfeited += pool;
+    }
+
+    /// <summary>決着時に残っていた預かりを数える（<b>死者も含めた全駒を1度だけ</b>）。</summary>
+    public void CloseWardLedger()
+    {
+        foreach (UnitState u in _units) WardResidual += u.RawCounter(StatusKeys.Ward);
     }
 
     public readonly long[] DroughtHits = new long[2];
@@ -3393,6 +3483,7 @@ public sealed class BattleContext
                          ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
                          BraceRule? brace = null, ShufflerRule? shuffler = null,
                          ConfusionRule? confusion = null, HasteRule? haste = null,
+                         WardRule? ward = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -3440,6 +3531,7 @@ public sealed class BattleContext
         MenderCost = menderCost ?? MenderCostRule.Default;
         Loose = loose ?? LooseRule.Default;
         Brace = brace ?? BraceRule.Default;
+        Ward = ward ?? WardRule.Default;
         Taillight = taillight ?? TaillightRule.Default;
         Reader = reader ?? ReaderRule.Default;
         Boss = boss ?? BossRule.Default;
@@ -6658,6 +6750,7 @@ public static class BattleEngine
                                    ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
                                    BraceRule? brace = null, ShufflerRule? shuffler = null,
                                    ConfusionRule? confusion = null, HasteRule? haste = null,
+                                   WardRule? ward = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
@@ -6666,7 +6759,7 @@ public static class BattleEngine
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
                nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace, shuffler,
-               confusion, haste, probe);
+               confusion, haste, ward, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -6704,6 +6797,7 @@ public static class BattleEngine
                                    ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
                                    BraceRule? brace = null, ShufflerRule? shuffler = null,
                                    ConfusionRule? confusion = null, HasteRule? haste = null,
+                                   WardRule? ward = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
@@ -6712,7 +6806,7 @@ public static class BattleEngine
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
                                     nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace,
-                                    shuffler, confusion, haste, probe);
+                                    shuffler, confusion, haste, ward, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -6884,6 +6978,8 @@ public static class BattleEngine
         ctx.CloseRuleHolders();
         // 第150期 段A。標の帳簿を閉じる（決着時にまだ立っていた標）。
         ctx.CloseMarkLedger();
+        // 第153期。決着時にプールに残っていた預かりを数える（収支を閉じるため）。
+        ctx.CloseWardLedger();
 
         return new BattleResult
         {
@@ -6946,6 +7042,12 @@ public static class BattleEngine
                 (long[])ctx.MarkLifeSum.Clone(), (long[])ctx.MarkLifeMax.Clone(),
                 (long[])ctx.MarkHits.Clone(), (long[])ctx.MarkHitsByFinisher.Clone(),
                 new Dictionary<string, (long, long, long)>(ctx.MarkOn)),
+            // 第153期 段A。預かりの帳簿（**計数専用**。どの規則も読まない）。
+            Ward = new WardLedger(
+                ctx.WardStacked, ctx.WardReleaseAsked, ctx.WardReleased, ctx.WardResidual,
+                ctx.WardBursts, ctx.WardDrips, ctx.WardDry, ctx.WardDryDrought, ctx.WardDryStoic,
+                ctx.WardForfeits, ctx.WardForfeited, ctx.WardForfeitHealed,
+                new Dictionary<string, (long, long)>(ctx.WardOn)),
             BoardRules = new BoardRuleLedger(
                 (long[])ctx.DroughtHits.Clone(), (long[])ctx.DroughtRequested.Clone(),
                 (long[])ctx.DroughtEffective.Clone(),
