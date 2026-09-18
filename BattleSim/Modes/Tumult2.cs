@@ -31,6 +31,25 @@ static class Tumult2Diag
     static readonly ShufflerRule V1 = new(true, ShuffleStagger.ConfuseOnAction);
 
     /// <summary>
+    /// <b>分解のための対照</b>（第148期 §段B-2）。ターン頭のまま<b>在庫だけ外した</b>版。
+    /// バサは通常攻撃を続けるので、<b>「供給を増やすこと」だけの値段</b>が読める
+    /// ——V1 の損が「攻7 を捨てたこと」なのか「供給の形」なのかを割る。
+    /// 第41期「符号を測りたい効果は、その効果だけを 0 にできるノブと対にして作る」の分解側。
+    /// </summary>
+    static readonly ShufflerRule V2 = new(true, ShuffleStagger.Confuse);
+
+    /// <summary>
+    /// 手番版のバサ（周期 <c>[Attack, Skill]</c>）。<b>段C の上限・下限の測定用で、採用候補ではない。</b>
+    /// <c>ActionIndex++</c> は <c>CanAct</c> 通過後なので、撃てないターンは
+    /// <b>`Skill` の位置に留まったまま</b>次のターンを待つ（周期は進まない）。
+    /// </summary>
+    static readonly UnitDef BasaCycle = Clone(new[]
+    {
+        new UnitAction(ActionKind.Attack),
+        new UnitAction(ActionKind.Skill, Label: "敵の隊列を怒鳴りつけた"),
+    });
+
+    /// <summary>
     /// 手番版のバサ。<b>数値も特性も1つも触らず、`Actions` を <c>[Skill]</c> の1要素だけ足す。</b>
     ///
     /// <para><b>周期にしない。</b> <c>ActionIndex++</c> は <c>CanAct</c> 通過<b>後</b>なので、
@@ -38,7 +57,11 @@ static class Tumult2Diag
     /// （<c>TakeTurnCore</c> のコメント）。1要素なら <c>ActionIndex % 1</c> が常に 0 で、
     /// 撃てないターンがあっても周期は壊れない。</para>
     /// </summary>
-    static readonly UnitDef BasaOnAction = new()
+    static readonly UnitDef BasaOnAction =
+        Clone(new[] { new UnitAction(ActionKind.Skill, Label: "敵の隊列を怒鳴りつけた") });
+
+    /// <summary><c>UnitCatalog.Basa</c> の写しに <c>Actions</c> だけを載せる（数値も特性も触らない）。</summary>
+    static UnitDef Clone(UnitAction[] actions) => new()
     {
         Id = UnitCatalog.Basa.Id,
         Name = UnitCatalog.Basa.Name,
@@ -47,7 +70,7 @@ static class Tumult2Diag
         Speed = UnitCatalog.Basa.Speed,
         Traits = UnitCatalog.Basa.Traits,
         Advances = UnitCatalog.Basa.Advances,
-        Actions = new[] { new UnitAction(ActionKind.Skill, Label: "敵の隊列を怒鳴りつけた") },
+        Actions = actions,
         PlusText = UnitCatalog.Basa.PlusText,
         MinusText = UnitCatalog.Basa.MinusText,
         Flavor = UnitCatalog.Basa.Flavor,
@@ -437,6 +460,7 @@ static class Tumult2Diag
         Console.WriteLine("|---|---|--:|--:|--:|--:|");
         var rigs0 = Rigs(UnitCatalog.Basa);
         var rigs1 = Rigs(BasaOnAction);
+        var rigs3 = Rigs(BasaCycle);
         for (int r = 0; r < rigs0.Length; r++)
         {
             double[] a = Rates(rigs0[r].F, V0), b = Rates(rigs1[r].F, V1);
@@ -452,6 +476,38 @@ static class Tumult2Diag
                               + "** | **" + b.Skip(1).Average().ToString("F1") + "** | **"
                               + (b.Skip(1).Average() - a.Skip(1).Average()).ToString("+0.0;-0.0") + "** | |");
         }
+
+        Console.WriteLine();
+        Console.WriteLine("## 表A'. **何が失われたのかを割る**（第2〜5波平均・括弧は V0 との差）");
+        Console.WriteLine();
+        Console.WriteLine("`V2` は**ターン頭のまま在庫だけ外した版**（バサは通常攻撃を続ける）"
+                          + "——**供給を増やすことだけの値段**。");
+        Console.WriteLine("`V3` は**周期 `[Attack, Skill]`**（段C・上限下限の測定。採用候補ではない）"
+                          + "——**攻撃を半分だけ残した版**。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | V0 | V2 供給だけ増やす | V1 手番（攻撃を全部捨てる） | V3 周期（半分残す） |");
+        Console.WriteLine("|---|--:|--:|--:|--:|");
+        for (int r = 0; r < rigs0.Length; r++)
+        {
+            double a = Rates(rigs0[r].F, V0).Skip(1).Average();
+            double v2 = Rates(rigs0[r].F, V2).Skip(1).Average();
+            double v1 = Rates(rigs1[r].F, V1).Skip(1).Average();
+            double v3 = Rates(rigs3[r].F, V1).Skip(1).Average();
+            Console.WriteLine("| " + rigs0[r].Name + " | " + a.ToString("F1")
+                              + " | " + v2.ToString("F1") + " (" + (v2 - a).ToString("+0.0;-0.0") + ")"
+                              + " | " + v1.ToString("F1") + " (" + (v1 - a).ToString("+0.0;-0.0") + ")"
+                              + " | " + v3.ToString("F1") + " (" + (v3 - a).ToString("+0.0;-0.0") + ") |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("| 台 | V0 供給 | V2 供給 | V1 供給 | V3 供給 | V0 与ダメ | V3 与ダメ |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|");
+        for (int r = 0; r < rigs0.Length; r++)
+            Console.WriteLine("| " + rigs0[r].Name + " | " + Sum(rigs0[r].F, V0).Confuses.ToString("F2")
+                              + " | " + Sum(rigs0[r].F, V2).Confuses.ToString("F2")
+                              + " | " + Sum(rigs1[r].F, V1).Confuses.ToString("F2")
+                              + " | " + Sum(rigs3[r].F, V1).Confuses.ToString("F2")
+                              + " | " + BasaOf(rigs0[r].F, V0).Damage.ToString("F1")
+                              + " | " + BasaOf(rigs3[r].F, V1).Damage.ToString("F1") + " |");
 
         Console.WriteLine();
         Console.WriteLine("## 表B. 供給（回/戦・第2〜5波）—— 予測1");

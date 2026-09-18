@@ -6027,6 +6027,21 @@ public readonly record struct ShufflerRule(
     /// </summary>
     public static ShufflerRule Default => new(true, ShuffleStagger.Confuse, ConfuseUses: 3);
 
+    /// <summary>
+    /// <b>混乱を立てうる枝か</b>（第148期）。<c>BattleContext.ConfusionLive</c> がこれを読む。
+    ///
+    /// <para><b>枝を足したらここに1つ足す。</b> 読む側（<c>FoesOf</c> / <c>ConsumeConfusion</c>）は
+    /// この短絡の内側にあるので、忘れると<b>混乱は立つのに誰も読まない</b>
+    /// ——第148期に実際に踏んだ（敵に立った 2.3〜3.4 に対して<b>敵が振った 0.00</b>）。
+    /// <b>列挙の枝を1つ足すことと、その枝を読む側を開けることは別の作業である。</b></para>
+    /// </summary>
+    /// <para><b>プロパティではなくメソッドにしてある。</b> <c>record struct</c> の計算プロパティは
+    /// 自動生成の <c>ToString</c> に載るので、<b><c>docs/rules.md</c> の「既定値」の列が動く</b>
+    /// ——規約 (G8) の必須3（触っていないノブの既定が動いていない）が、
+    /// 盤面を1ビットも変えない追加で偽になる（第148期に実際に1度そうなった）。</para>
+    public bool Confuses()
+        => Stagger is ShuffleStagger.Confuse or ShuffleStagger.ConfuseOnAction;
+
     /// <summary>第144期の姿（前に出た敵が<b>転ぶ</b>）。<b>第147期に混乱へ置き換えた。</b></summary>
     public static ShufflerRule Stagger144 => new(true, ShuffleStagger.Advanced);
 

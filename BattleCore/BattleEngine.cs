@@ -3288,7 +3288,11 @@ public sealed class BattleContext
         Shrapnel = shrapnel ?? ShrapnelRule.Default;
         Shuffler = shuffler ?? ShufflerRule.Default;
         Confusion = confusion ?? ConfusionRule.Default;
-        ConfusionLive = Confusion.Active || Shuffler.Stagger == ShuffleStagger.Confuse;
+        // **枝を足したらここも足す。** 読む側（`FoesOf` / `ConsumeConfusion`）はこの短絡の内側に
+        // あるので、**新しい供給の口を `ShuffleStagger` に足してこの行を忘れると、
+        // 混乱は立つのに誰も読まない**（第148期に実際に踏んだ。実測は「敵に立った 2.3〜3.4 /
+        // 敵が振った 0.00」——立った数だけが帳簿に残り、盤面では何も起きない）。
+        ConfusionLive = Confusion.Active || Shuffler.Confuses();
     }
 
     // =====================================================================================

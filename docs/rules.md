@@ -60,7 +60,7 @@
 | 47 | `shatter` | `ShatterRule` | `ShatterRule { Mode = Passive, SelfCostPerTurn = 0 }` | ○ | `shard` | 第137期 | ○ |
 | 48 | `shrapnel` | `ShrapnelRule` | `ShrapnelRule { Multiplier = 3, SelfDamagePercent = 100, ArmorCensus = False }` |  | `shard` | 第138期 | ○ |
 | 49 | `brace` | `BraceRule` | `BraceRule { Cap = 7, Refuse = True, Stagger = False }` |  | `brace` | 第143期 | ○ |
-| 50 | `shuffler` | `ShufflerRule` | `ShufflerRule { Foes = True, Stagger = Confuse, ConfusePercent = 100, ConfuseUses = 3 }` |  | `tumult` / `derange` / `confuse` | 第144期 | ○ |
+| 50 | `shuffler` | `ShufflerRule` | `ShufflerRule { Foes = True, Stagger = Confuse, ConfusePercent = 100, ConfuseUses = 3 }` |  | `tumult` / `tumult2` / `derange` / `confuse` | 第144期 | ○ |
 | 51 | `confusion` | `ConfusionRule` | `ConfusionRule { Active = False, Percent = 100 }` |  | `derange` / `confuse` | 第146期 | ○ |
 
 引数 51 本（`verbose` と観測子を除く）。
@@ -112,7 +112,7 @@
 | `ShatterRule` | `ShatterRule { Mode = Passive, SelfCostPerTurn = 0 }` | ○ | `shard` | 第137期 |
 | `ShoveRule` | `ShoveRule { Penalty = 2 }` | ○ | `shove` / `ledger` / `brace` | 第41期 |
 | `ShrapnelRule` | `ShrapnelRule { Multiplier = 3, SelfDamagePercent = 100, ArmorCensus = False }` | ○ | `shard` | 第138期 |
-| `ShufflerRule` | `ShufflerRule { Foes = True, Stagger = Confuse, ConfusePercent = 100, ConfuseUses = 3 }` | ○ | `tumult` / `derange` / `confuse` | 第144期 |
+| `ShufflerRule` | `ShufflerRule { Foes = True, Stagger = Confuse, ConfusePercent = 100, ConfuseUses = 3 }` | ○ | `tumult` / `tumult2` / `derange` / `confuse` | 第144期 |
 | `SlanderRule` | `SlanderRule { Penalty = 0 }` | ○ | `slander` | 第44期 |
 | `SoakRule` | `SoakRule { Poison = True, Burn = False, DullPerKind = 1 }` | ○ | `derive` / `curse` / `hex` / `soak` / `ledger` / `lit` / `wound2` / `ember` / `cross` | 第90期 |
 | `SpillWoundRule` | `SpillWoundRule { Enabled = False, Scope = All }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期 |
@@ -143,7 +143,7 @@
 | `RageMode` | `Amount`=0 / `Count`=1 |
 | `SeverWait` | `Yield`=0 / `Swing`=1 |
 | `ShatterMode` | `Passive`=0 / `Turn`=1 / `Both`=2 |
-| `ShuffleStagger` | `None`=0 / `Advanced`=1 / `Both`=2 / `Confuse`=3 |
+| `ShuffleStagger` | `None`=0 / `Advanced`=1 / `Both`=2 / `Confuse`=3 / `ConfuseOnAction`=4 |
 | `SpillScope` | `All`=0 / `Dense`=1 |
 | `SutureFire` | `Swing`=0 / `OnWound`=1 |
 | `SutureSide` | `Foe`=0 / `Both`=1 |
