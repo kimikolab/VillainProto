@@ -9531,8 +9531,18 @@ public sealed class IndulgenceTrait : Trait
         // 燃料があるターンは焼きの番（BrandTrait）。前借りは撃たない。
         if (self.RawCounter(BrandTrait.FuelKey) > 0) return;
 
-        UnitState? patient = Pick(ctx, self, rule);
-        if (patient is null) { ctx.NoteIndulgenceDry(self, noPatient: true); return; }
+        UnitState? patient = Pick(ctx, self, rule, out bool blocked);
+        if (patient is null)
+        {
+            // 第155期 追補・**計数のみ**。`blocked` は「契約枠が埋まっていたので候補を
+            // 負債持ちに絞った結果、貸せる相手がいなくなった」——枠が塞がった手番である。
+            // `idle` は engine の `IdleTurn`（号令・据えが買い取る札）が立っているか
+            // ——`ActionKind.Skill` の経路は立てないので構造的に偽になるはずで、
+            // **その確認のために取る**（手番は消えるが売れない）。
+            ctx.NoteIndulgenceDry(self, noPatient: true, blocked: blocked,
+                                  idle: self.RawCounter(StatusKeys.IdleTurn) == ctx.Turn);
+            return;
+        }
 
         int before = patient.Hp;
         ctx.Heal(patient, rule.Advance, self);
@@ -9556,12 +9566,18 @@ public sealed class IndulgenceTrait : Trait
     /// 貸す相手。<b>既定（<c>Contracts = 0</c>）では <see cref="BattleContext.MostHurtAlly"/> そのもの。</b>
     /// 契約の上限に達しているときだけ、候補を「既に負債を抱えている味方」に絞る。
     /// </summary>
-    static UnitState? Pick(BattleContext ctx, UnitState self, IndulgenceRule rule)
+    /// <param name="blocked">
+    /// <b>計数専用（第155期 追補）。</b> 契約枠が埋まっていて候補を負債持ちに絞ったか
+    /// ——<b>盤面の判断には1ビットも使わない</b>（戻り値は絞る前と1バイトも変わらない）。
+    /// </param>
+    static UnitState? Pick(BattleContext ctx, UnitState self, IndulgenceRule rule, out bool blocked)
     {
+        blocked = false;
         if (rule.Contracts <= 0) return ctx.MostHurtAlly(self);
 
         int carriers = ctx.LivingMembers(self.TeamId).Count(a => a.RawCounter(StatusKeys.Debt) > 0);
         if (carriers < rule.Contracts) return ctx.MostHurtAlly(self);
+        blocked = true;
         return ctx.MostHurtAlly(self, a => a.RawCounter(StatusKeys.Debt) > 0);
     }
 }

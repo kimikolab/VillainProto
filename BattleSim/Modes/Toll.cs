@@ -11,6 +11,7 @@ using static Common;
 //     dotnet run --project BattleSim -c Release 0 toll scan probe  # 埋め草の掃引（台ごとに帯へ入れる）
 //     dotnet run --project BattleSim -c Release 0 toll run     # 段B（V0 / Vp / Single / All）
 //     dotnet run --project BattleSim -c Release 0 toll cost    # 段B'（決着T のはしご。**代金の分母を Vp で帯に入れる**）
+//     dotnet run --project BattleSim -c Release 0 toll contract # 追補: 契約枠の検証（`Toll` は代金か、枠の開放か）
 //     dotnet run --project BattleSim -c Release 0 toll sweep   # 段C（Threshold / Contracts / Advance）
 //     dotnet run --project BattleSim -c Release 0 toll check   # 自己検査（§6）
 // =====================================================================================
@@ -31,10 +32,11 @@ static class TollDiag
                 return;
             case "run": Stage(); return;
             case "cost": Ladder(); return;
+            case "contract": Contract(); return;
             case "sweep": Sweep(arg); return;
             case "check": Check(arg); return;
             default:
-                Console.WriteLine("toll: モードは phase0 / scan / run / cost / sweep / check。");
+                Console.WriteLine("toll: モードは phase0 / scan / run / cost / contract / sweep / check。");
                 return;
         }
     }
@@ -422,7 +424,7 @@ static class TollDiag
     sealed class TlAcc
     {
         public long Battles, Wins, Turns, Life;
-        public long Fires, Asked, Stacked, Dry, DryDrought, NoPatient;
+        public long Fires, Asked, Stacked, Dry, DryDrought, NoPatient, Blocked, BlockedIdle, Distinct, Lent;
         public long TollFires, Collected, TollTaken, TollFloored, TollYokeCut, TollKills;
         public long Forgives, Forgiven, ForgivenSelfHp;
         public long BrandFires, BrandSpent, BrandRemoved, BrandYokeCut, BrandHits, BrandKills, BrandDry, BrandResidual;
@@ -447,6 +449,11 @@ static class TollDiag
                 IndulgenceLedger L = r.Indulgence;
                 a.Fires += L.Fires; a.Asked += L.Asked; a.Stacked += L.Stacked;
                 a.Dry += L.Dry; a.DryDrought += L.DryDrought; a.NoPatient += L.NoPatient;
+                a.Blocked += L.Blocked; a.BlockedIdle += L.BlockedIdle;
+                // 貸した相手の異なり数（**その戦で実際に負債が積まれた駒の数**）。
+                // `On` は1戦ぶんの辞書で、`Stacked == 0` の行（渇きで1点も入らなかった相手）は数えない。
+                a.Distinct += L.On.Count(kv => kv.Value.Stacked > 0);
+                if (L.Stacked > 0) a.Lent++;   // 1度でも貸せた戦（`異なり` の分母）
                 a.TollFires += L.TollFires; a.Collected += L.Collected; a.TollTaken += L.TollTaken;
                 a.TollFloored += L.TollFloored; a.TollYokeCut += L.TollYokeCut; a.TollKills += L.TollKills;
                 a.Forgives += L.Forgives; a.Forgiven += L.Forgiven; a.ForgivenSelfHp += L.ForgivenSelfHp;
@@ -576,6 +583,76 @@ static class TollDiag
                 + " | " + m2.ToString("F1") + " | **" + (m2 - mVp).ToString("+0.0;-0.0;0.0") + "**"
                 + " | " + ((double)v1.TollTaken / v1.Battles).ToString("F2")
                 + " | " + ((double)v1.BrandRemoved / v1.Battles).ToString("F2") + " |");
+        }
+    }
+
+    // =================================================================================
+    // 追補（第155期） —— 契約枠の検証（`Toll` は代金か、枠の開放か）
+    // =================================================================================
+
+    /// <summary>
+    /// <b>疑い</b>: <c>Contracts = 1</c> で <see cref="TraitId.Toll"/> を外すと、
+    /// 負債が一度も清算されないので<b>契約枠が永久に塞がる</b>のではないか
+    /// ——だとすれば <c>Vp</c> は「マイナスを外した版」ではなく
+    /// <b>「1体しか癒せない壊れたヒーラー」</b>であり、そこと比べれば取り立てが強く出るのは
+    /// <b>取り立てが枠を開けているから</b>である（＝プラスとマイナスが分離できていない）。
+    ///
+    /// <para><b>実装は盤面を1ビットも変えていない</b>——足したのは計数2本
+    /// （<c>IndulgenceLedger.Blocked</c> / <c>BlockedIdle</c>）だけで、
+    /// <c>Pick</c> の戻り値は絞る前と1バイトも変わらない。
+    /// <b>検算は段B・段C の数字がそのまま再現すること。</b></para>
+    /// </summary>
+    static void Contract()
+    {
+        Console.WriteLine("# 第155期 追補 —— 契約枠の検証（`0 toll contract`）");
+        Console.WriteLine();
+        Console.WriteLine("出口は `All` に固定（代金が正になった条件を再現する）。seed 0.." + (Seeds - 1)
+                          + "・第2〜5波・台とノブは段C と完全に同一。");
+        Console.WriteLine();
+        Console.WriteLine("`入った` ＝ 前借りが実際に HP を増やした回数（`前借り` − `空振り`）。");
+        Console.WriteLine("`異なり` ＝ **その戦で実際に負債が積まれた駒の数**（1戦あたり）。");
+        Console.WriteLine("`異なり(貸)` ＝ **1度でも貸せた戦だけを分母にした異なり数**"
+                          + "——`Contracts = 1` は構造的に 1 が上限なので、**ここが 1.00 なら1体に張り付いている**。");
+        Console.WriteLine("`枠埋まり` ＝ 契約枠が満杯で候補を負債持ちに絞った結果、貸せる相手がいなかった回数。");
+        Console.WriteLine("`うちIdle` ＝ そのとき engine の `IdleTurn`（号令・据えが買い取る札）が立っていた回数。");
+        Console.WriteLine();
+
+        for (int i = 1; i <= 3; i++)   // 台2 / 台3 / 台4
+        {
+            (string name, _) = Rig(i, Aga(), FillerOf[i].Atk, FillerOf[i].Hp);
+            Console.WriteLine("## " + name);
+            Console.WriteLine();
+            Console.WriteLine("| 版 | 勝率 | **前借り/戦** | 入った/戦 | 空振り | **異なり/戦** | **異なり(貸)** | **枠埋まり/戦** | うちIdle | 相手なし/戦 | 負債/戦 | 取立(実HP) | 決着T |");
+            Console.WriteLine("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+            var rows = new List<(string Tag, double Win)>();
+            foreach (bool noToll in new[] { true, false })
+                foreach (int c in new[] { 1, 2, 0 })
+                {
+                    IndulgenceRule r = IndulgenceRule.Default with { Contracts = c, Blast = BrandBlast.All };
+                    TlAcc a = Measure(Rig(i, Aga(noToll: noToll), FillerOf[i].Atk, FillerOf[i].Hp).F, r);
+                    double b = a.Battles;
+                    double m = 100.0 * a.Wins / b;
+                    string tag = (noToll ? "`Vp`" : "`V1`") + " Contracts " + (c == 0 ? "0（無制限）" : c.ToString());
+                    rows.Add((tag, m));
+                    Console.WriteLine("| " + tag + " | " + m.ToString("F1")
+                        + " | **" + (a.Fires / b).ToString("F2") + "**"
+                        + " | " + ((a.Fires - a.Dry) / b).ToString("F2")
+                        + " | " + (a.Dry / b).ToString("F2")
+                        + " | **" + (a.Distinct / b).ToString("F2") + "**"
+                        + " | **" + (a.Lent == 0 ? "—" : ((double)a.Distinct / a.Lent).ToString("F2")) + "**"
+                        + " | **" + (a.Blocked / b).ToString("F2") + "**"
+                        + " | " + (a.BlockedIdle / b).ToString("F2")
+                        + " | " + (a.NoPatient / b).ToString("F2")
+                        + " | " + (a.Stacked / b).ToString("F2")
+                        + " | " + (a.TollTaken / b).ToString("F2")
+                        + " | " + ((double)a.Turns / b).ToString("F2") + " |");
+                }
+            Console.WriteLine();
+            Console.WriteLine("**代金（`V1 − Vp`・同じ `Contracts` どうし）**: "
+                + string.Join(" / ", new[] { 0, 1, 2 }.Select(k =>
+                    (k == 2 ? "無制限 " : "Contracts " + (k + 1) + " ")
+                    + (rows[3 + k].Win - rows[k].Win).ToString("+0.0;-0.0;0.0"))));
+            Console.WriteLine();
         }
     }
 

@@ -2353,6 +2353,8 @@ public readonly record struct WardLedger(
 /// <param name="Dry">前借りを撃ったが1点も入らなかった回数。</param>
 /// <param name="DryDrought">そのうち渇きで止まった回数。</param>
 /// <param name="NoPatient">貸す相手がいなかった回数。</param>
+/// <param name="Blocked"><b>そのうち契約枠が埋まっていて貸せなかった回数</b>（第155期 追補・計数専用）。</param>
+/// <param name="BlockedIdle">同・そのとき <c>IdleTurn</c> が立っていた回数（号令・据えが買い取れるか）。</param>
 /// <param name="TollFires">取り立ての発火回数。</param>
 /// <param name="Collected">取り立てた負債の<b>名目</b>量。</param>
 /// <param name="TollTaken">取り立てが<b>実際に削った HP</b>（＝焼きの燃料）。</param>
@@ -2374,6 +2376,7 @@ public readonly record struct WardLedger(
 /// <param name="On">借り手ごとの内訳（<c>Def.Id</c> → 積んだ量・取り立てられた量）。</param>
 public readonly record struct IndulgenceLedger(
     long Fires, long Asked, long Stacked, long Dry, long DryDrought, long NoPatient,
+    long Blocked, long BlockedIdle,
     long TollFires, long Collected, long TollTaken, long TollFloored, long TollYokeCut, long TollKills,
     long Forgives, long Forgiven, long ForgivenSelfHp,
     long BrandFires, long BrandSpent, long BrandRemoved, long BrandYokeCut,

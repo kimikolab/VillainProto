@@ -2827,6 +2827,13 @@ public sealed class BattleContext
     public long IndulgenceDryDrought;
     /// <summary>貸す相手がいなかった回数（傷ついた味方が1体もいない・契約の上限）。</summary>
     public long IndulgenceNoPatient;
+    /// <summary>
+    /// <b>そのうち「契約枠が埋まっていて貸せなかった」回数</b>（第155期 追補・計数専用）。
+    /// <see cref="IndulgenceRule.Contracts"/> が 0（無制限）なら構造的に 0 になる。
+    /// </summary>
+    public long IndulgenceBlocked;
+    /// <summary>同・そのとき engine の <c>IdleTurn</c>（号令・据えが買い取る札）が立っていた回数。</summary>
+    public long IndulgenceBlockedIdle;
 
     /// <summary>取り立ての発火回数。</summary>
     public long TollFires;
@@ -2886,11 +2893,12 @@ public sealed class BattleContext
         TallyOf(by).IndulgenceStacked += gained;
     }
 
-    internal void NoteIndulgenceDry(UnitState by, bool noPatient)
+    internal void NoteIndulgenceDry(UnitState by, bool noPatient, bool blocked = false, bool idle = false)
     {
         IndulgenceFires++;
         IndulgenceDry++;
         if (noPatient) IndulgenceNoPatient++;
+        if (blocked) { IndulgenceBlocked++; if (idle) IndulgenceBlockedIdle++; }
     }
 
     internal void NoteToll(UnitState by, UnitState on, int nominal, int taken, bool floored, long yokeCut, bool killed)
@@ -7342,6 +7350,7 @@ public static class BattleEngine
             Indulgence = new IndulgenceLedger(
                 ctx.IndulgenceFires, ctx.IndulgenceAsked, ctx.DebtStacked,
                 ctx.IndulgenceDry, ctx.IndulgenceDryDrought, ctx.IndulgenceNoPatient,
+                ctx.IndulgenceBlocked, ctx.IndulgenceBlockedIdle,
                 ctx.TollFires, ctx.TollNominal, ctx.TollTaken, ctx.TollFloored, ctx.TollYokeCut, ctx.TollKills,
                 ctx.TollForgives, ctx.TollForgiven, ctx.TollForgivenSelfHp,
                 ctx.BrandFires, ctx.BrandSpent, ctx.BrandRemoved, ctx.BrandYokeCut,
