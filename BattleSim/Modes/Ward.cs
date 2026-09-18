@@ -47,7 +47,7 @@ static class WardDiag
     /// <b>比べるのは同じ台の中の版どうし</b>（素体差し替え）なので、台をまたいで
     /// 埋め草を揃える必要は無い。</para>
     /// </summary>
-    static UnitDef Filler(string id, int hp, int atk) => new()
+    public static UnitDef Filler(string id, int hp, int atk) => new()
     {
         Id = "w_" + id, Name = "素体" + id, MaxHp = hp, Attack = atk, Speed = 7,
         Advances = true, Traits = Array.Empty<TraitId>()
@@ -83,7 +83,7 @@ static class WardDiag
     /// 最大</b>の点」。台4 だけは情報セル 4 の点が1つも無いので 3 を採った
     /// ——ガルドが第3波（渇き）を必ず抜け、第5波が床に張り付くため。
     /// </remarks>
-    static readonly (int Atk, int Hp)[] FillerOf = { (14, 110), (14, 130), (22, 110), (18, 90), (14, 90) };
+    public static readonly (int Atk, int Hp)[] FillerOf = { (14, 110), (14, 130), (22, 110), (18, 90), (14, 90) };
 
     /// <summary>
     /// ローカル台（§4）。<b><c>Presets</c> には置かない</b>（`compare` 61行を汚さない）。
@@ -97,7 +97,7 @@ static class WardDiag
         return r;
     }
 
-    static (string Name, Formation F) Rig(int i, UnitDef nochi, int atk, int hp)
+    public static (string Name, Formation F) Rig(int i, UnitDef nochi, int atk, int hp)
     {
         UnitDef A() => Filler("a", hp, atk);
         UnitDef B() => Filler("b", hp, atk);

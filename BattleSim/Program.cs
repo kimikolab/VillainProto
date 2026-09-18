@@ -457,6 +457,13 @@ if (focusId == "ward")
     return;
 }
 
+// wardcost モード（第154期） —— 預かりの代金を付け替える。本体は `Modes/Wardcost.cs`。
+if (focusId == "wardcost")
+{
+    WardcostDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // stall モード（第152期） —— 膠着（30 ターン上限）を塞ぐ。本体は `Modes/Stall.cs`。
 if (focusId == "stall")
 {

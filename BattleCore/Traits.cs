@@ -183,6 +183,16 @@ public enum TraitId
                 // 渇き（第三波）の下では積まれ続けて1点も返らない（既存の構造がそのまま出るだけ・第153期 §0-3）
     Forfeit,    // 没収: 預かりを抱えたまま味方が倒れると、その全額が敵全体への回復になる（預かりの代金）
 
+    // --- 第154期で足した代金の札（**預かりの代金を付け替える2枝**。どちらも保持者はノチ） ---
+    // **効くのは「預かりを抱えている味方本人」であってノチ自身ではない**ので、
+    // どちらも駒ごとのフックでは書けない（`ModifyIncomingDamage` も `ModifyAttack` も `self` しか
+    // 受け取らない）——**惨禍と同じ形で engine 側に判定がある**。札の本体は空。
+    // **`Forfeit` は消していない**（第64期の作法。測って採らなかった枝は対照として残す）。
+    Burden,     // 荷: 預かりを抱えている味方の被ダメージが `WardRule.BurdenPercent`% 増える
+                // ——**入口（`ModifyIncomingDamage` の族）に置く**。出口だと身構え（ササ）の
+                // 切り落としが増えず、この期で測りたい変換がまるごと消える（第154期 §1-2）
+    Laden,      // 重り: 預かり `WardRule.LadenPer` ごとに、抱えている味方の攻撃力が 1 下がる（下限 1）
+
     // --- 傷の5枚から切り出したマイナス（第74期・**器具**） ---
     // どれも既存の駒に既定で付いたままで、**盤面は1ビットも変わらない**（受け入れ基準は
     // `compare` 305 セル 0 件）。切り出した理由は1つだけ——**計量できるようにするため**。
@@ -9213,9 +9223,38 @@ public enum WardReturn
 /// <param name="Percent">被弾のうち預かりに積む割合（%）。<b>0 なら札は完全に不活性。</b></param>
 /// <param name="Threshold"><c>Burst</c> で全額を返す閾値。</param>
 /// <param name="Drip"><c>Drip</c> で毎ターン頭に返す量。</param>
-public readonly record struct WardRule(WardReturn Return, int Percent, int Threshold, int Drip)
+public readonly record struct WardRule(WardReturn Return, int Percent, int Threshold, int Drip,
+                                      WardCost Cost = WardCost.Forfeit,
+                                      int BurdenPercent = 50, int LadenPer = 10)
 {
     public static WardRule Default => new(WardReturn.Burst, 50, 40, 10);
+}
+
+/// <summary>
+/// 預かりの代金の形（第154期）。<b>プラス側（<see cref="TraitId.Ward"/>）は1ビットも変えず、
+/// 代金の札だけを差し替えて符号が編成で反転するかを見る。</b>
+///
+/// <para><b>第153期の結論は「没収は定数型のマイナスだった」</b>——4台とも負で符号が1つも反転しない。
+/// 理由は<b>代金が「敵への回復」という通貨で払われていて、味方ロスターにその通貨の読み手が
+/// 1体もいない</b>こと。だからどの編成を組んでも変換できなかった。</para>
+///
+/// <para><b>この列挙が選ぶのは「どの代金が効いているか」だけで、
+/// 札（<see cref="TraitId.Burden"/> / <see cref="TraitId.Laden"/>）が保持者に無ければ
+/// 何も起きない。</b> 既定の <see cref="Forfeit"/> では
+/// engine 側の走査が1回も走らない（軛・粛と同じ短絡の作法）。
+/// <b><see cref="TraitId.Forfeit"/> だけはこの列挙で門を掛けていない</b>
+/// ——札があれば従来どおり発火する（第153期の版を1ビットも動かさないため）。</para>
+/// </summary>
+public enum WardCost
+{
+    /// <summary><b>第153期の既定。</b> 抱えたまま倒れると敵全体への回復になる。</summary>
+    Forfeit,
+
+    /// <summary><b>枝1。</b> 抱えている間、その味方の被ダメージが増える。</summary>
+    Burden,
+
+    /// <summary><b>枝2。</b> 抱えている量に応じて、その味方の攻撃力が下がる。</summary>
+    Laden
 }
 
 /// <summary>
@@ -9336,6 +9375,67 @@ public sealed class ForfeitTrait : Trait
     }
 }
 
+/// <summary>
+/// 荷（<see cref="TraitId.Burden"/>・第154期）。<b>預かりの代金の枝1。</b>
+/// 預かりを抱えている味方は、抱えている間だけ被ダメージが
+/// <see cref="WardRule.BurdenPercent"/>% 増える。
+///
+/// <para><b>札の本体は空</b>——効くのは「預かりを抱えている<u>味方本人</u>」であって保持者ではないので、
+/// 駒ごとのフック（<see cref="Trait.ModifyIncomingDamage"/> は <c>self</c> しか受け取らない）では書けない。
+/// <b>惨禍（<see cref="HavocTrait"/>）とまったく同じ形</b>で、判定は <c>ApplyDamageBody</c> の中にある
+/// （引き受け＝<see cref="BearTrait"/> が <c>Dull</c> の中に本体を持つのと同じ作法）。</para>
+///
+/// <para><b>置くのは入口（惨禍の直後）であって出口ではない。</b>
+/// 身構え（<see cref="BraceTrait"/>）の上限は出口の手前にあるので、
+/// <b>入口で増やした分はそのままササの切り落としになる</b>——
+/// 出口に置くと切り落としが1点も増えず、この期で測りたい変換がまるごと消える（第154期 §1-2）。
+/// 受け流し（無効化）・軛（上限）より<b>前</b>なのも同じ理由で、
+/// 「殺さない／量を切る」制約はこの札の後ろで効く。</para>
+///
+/// <para><b>増幅は加算にする</b>（README「増幅は必ず加算にする」）——
+/// 惨禍と同じ <c>amount += amount * p / 100</c> の形で、掛け算にはしない。
+/// 惨禍と同席すれば順に乗るが、それは惨禍が脆弱の後に乗るのと同じ既存の振る舞いである。</para>
+/// </summary>
+public sealed class BurdenTrait : Trait
+{
+    public override TraitId Id => TraitId.Burden;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+    {
+        if (ctx.Ward.Cost == WardCost.Burden)
+            ctx.Log($"  {self.Name} の預かりは重荷になる", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// 重り（<see cref="TraitId.Laden"/>・第154期）。<b>預かりの代金の枝2。</b>
+/// 預かり <see cref="WardRule.LadenPer"/> ごとに、抱えている味方の攻撃力が 1 下がる。
+///
+/// <para><b>下限は 1。</b> 0 にすると「攻撃しない駒と同じ」になって枝の意味が消える
+/// （攻撃力 0 の駒を 1 に<b>上げない</b>ため、下げる側にしか働かない形で書いてある）。</para>
+///
+/// <para><b>札の本体は空</b>——理由は <see cref="BurdenTrait"/> と同じで、
+/// <see cref="Trait.ModifyAttack"/> も <c>self</c> しか受け取らない。判定は
+/// <see cref="UnitState.CurrentAttack"/> が <see cref="UnitState.Board"/> 越しに引く
+/// （<b>驕り＝第46期が「隣に誰がいるか」を攻撃力の条件にするために足した窓口</b>をそのまま使う。
+/// engine に窓口は1つも足していない）。</para>
+///
+/// <para><b>「攻撃しない駒には払うものが無い」は成り立たない駒がある</b>（第154期 Q0-2）——
+/// 棘（<see cref="ThornsTrait"/>）・仇討ち・責め苦の反撃量は自分の <c>CurrentAttack</c> で決まるので、
+/// <b>1度も振らないカドでも代金は満額効く</b>。<c>CurrentAttack</c> は
+/// 駆り立ての選択・転嫁の流し先・<c>StatSnapshot</c> からも読まれる（第75期の明文）。</para>
+/// </summary>
+public sealed class LadenTrait : Trait
+{
+    public override TraitId Id => TraitId.Laden;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+    {
+        if (ctx.Ward.Cost == WardCost.Laden)
+            ctx.Log($"  {self.Name} の預かりは重りになる", LogKind.Trigger);
+    }
+}
+
 public static class TraitCatalog
 {
     private static readonly Dictionary<TraitId, Trait> Map = new Trait[]
@@ -9433,6 +9533,8 @@ public static class TraitCatalog
         new WildfireTrait(),   // 第133期
         new WardTrait(),       // 第153期
         new ForfeitTrait(),    // 第153期
+        new BurdenTrait(),     // 第154期
+        new LadenTrait(),      // 第154期
         new MartyrTrait(),
         new InversionTrait(),
         new DroughtTrait(),

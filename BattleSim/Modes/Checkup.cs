@@ -98,6 +98,8 @@ public static void Run(string[] args, int stageIndex)
         // 第153期 段A: 預かりを足したときに分類も足した（第128期の穴＝分類を足さずに `checkup` が止まる、を繰り返さない）。
         [TraitId.Ward]       = (HcPlusL,  "味方の傷を預かって後から本人へ返すだけ。代金は `Forfeit` に切り出してある（第74期の作法）"),
         [TraitId.Forfeit]    = (HcMinusL, "預かったまま味方が倒れるとその全額が敵の回復になる、だけの別の札"),
+        [TraitId.Burden]     = (HcMinusL, "預かりを抱えている味方の被ダメージが増える、だけの札（第154期・代金の枝1）"),
+        [TraitId.Laden]      = (HcMinusL, "預かりを抱えている味方の攻撃力が下がる、だけの札（第154期・代金の枝2）"),
         [TraitId.Stoic]      = (HcMinusL, "支援を受け付けない、だけの別の札"),
         [TraitId.Necro]      = (HcPlusL,  "味方が倒れるたび層を積む"),
         [TraitId.Sacrifice]  = (HcMinusL, "開戦時に隣接する味方を削る、だけの別の札"),

@@ -328,6 +328,16 @@ public sealed class UnitState
                 atk = t.ModifyAttack(this, atk);
                 b?.EndTrait(m);
             }
+            // 重り（第154期・<see cref="TraitId.Laden"/>）。**抱えている本人にかかる**ので
+            // `Trait.ModifyAttack`（self しか受け取らない）では書けず、盤面越しに引く
+            // ——窓口は驕り（第46期）が足した `Board` で、engine に新しい窓口は1つも無い。
+            // **既定では bool 1つ（`LadenActive`）を読んで抜ける。**
+            // **下限は 1。`atk > 1` を見るので、攻撃力 0 の駒を 1 に上げることはない。**
+            if (b is not null && b.LadenActive && atk > 1)
+            {
+                int pen = b.LadenPenalty(this);
+                if (pen > 0) atk = Math.Max(1, atk - pen);
+            }
             return Math.Max(0, atk);
         }
     }
@@ -1485,6 +1495,13 @@ public sealed class UnitTally
     /// </summary>
     public long WardStacked, WardReleased, WardForfeited;
 
+    /// <summary>
+    /// 第154期の代金（<b>こちらは<u>受け手</u>の側に載せる</b>——効くのは預かりを抱えている味方本人で、
+    /// 保持者ではない）。<c>WardBurdenTaken</c> 荷で増えた被ダメージ ／
+    /// <c>WardLadenLost</c> 重りで振られなかった打点（名目）。<b>計数専用。</b>
+    /// </summary>
+    public long WardBurdenTaken, WardLadenLost;
+
     public int BraceGuards, BraceCuts, BraceRefused, BraceGiven, BraceLost;
     public int BraceShoves, BraceShoveCapped, BraceNoTarget, BraceStaggers, BraceArmorMuted;
 
@@ -1654,6 +1671,7 @@ public sealed class UnitTally
         BraceShoveCapped += o.BraceShoveCapped; BraceNoTarget += o.BraceNoTarget;
         BraceStaggers += o.BraceStaggers; BraceArmorMuted += o.BraceArmorMuted;
         WardStacked += o.WardStacked; WardReleased += o.WardReleased; WardForfeited += o.WardForfeited;
+        WardBurdenTaken += o.WardBurdenTaken; WardLadenLost += o.WardLadenLost;
         StallStagger += o.StallStagger;
         ShuffleAllySwaps += o.ShuffleAllySwaps; ShuffleFoeSwaps += o.ShuffleFoeSwaps;
         ShuffleAdvanced += o.ShuffleAdvanced; ShuffleAdvancedTraited += o.ShuffleAdvancedTraited;
@@ -2291,11 +2309,21 @@ public readonly record struct ArmorLedger(
 /// <param name="Forfeited">没収された預かりの総量（敵へ渡した名目量）。</param>
 /// <param name="ForfeitHealed">没収で敵の HP が実際に増えた量（体数ぶん重なる）。</param>
 /// <param name="On">預けた駒ごとの内訳（<c>Def.Id</c> → 積んだ量・返った量）。</param>
+/// <param name="BurdenHits">荷（第154期）が被ダメージを増やした回数。</param>
+/// <param name="BurdenAdded">同・<b>増えた分だけ</b>の総量（素のダメージは含まない）。</param>
+/// <param name="LadenSwings">重り（第154期）が乗った振りの回数。</param>
+/// <param name="LadenFloored">そのうち下限 1 で切られた振り（<b>名目 &gt; 実効</b>）。</param>
+/// <param name="LadenSwingLost"><b>実際に振られなかった打点</b>（名目）。</param>
+/// <param name="LadenNominal">ターン頭に数えた「下がっている攻撃力」の延べ総量（<b>在庫の側</b>）。</param>
+/// <param name="LadenCarriers">同・ターン頭に預かりを抱えていた駒の延べ数。</param>
 public readonly record struct WardLedger(
     long Stacked, long ReleaseAsked, long Released, long Residual,
     long Bursts, long Drips, long Dry, long DryDrought, long DryStoic,
     long Forfeits, long Forfeited, long ForfeitHealed,
-    Dictionary<string, (long Stacked, long Released)> On)
+    Dictionary<string, (long Stacked, long Released)> On,
+    long BurdenHits = 0, long BurdenAdded = 0,
+    long LadenSwings = 0, long LadenFloored = 0, long LadenSwingLost = 0,
+    long LadenNominal = 0, long LadenCarriers = 0)
 {
     /// <summary>収支が閉じているか（1点もずれていないか）。</summary>
     public bool Balanced => Stacked == Released + Forfeited + Residual;

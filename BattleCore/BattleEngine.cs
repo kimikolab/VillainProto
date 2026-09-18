@@ -2701,6 +2701,53 @@ public sealed class BattleContext
     public long WardForfeitHealed;
     /// <summary>決着時にプールに残っていた量（<see cref="CloseWardLedger"/> が閉じる）。</summary>
     public long WardResidual;
+
+    // --- 第154期の代金の帳簿（**計数専用。どの規則も読まない**） ---
+
+    /// <summary>荷が実際に被ダメージを増やした回数。</summary>
+    public long WardBurdenHits;
+    /// <summary>荷が増やした被ダメージの総量（<b>増えた分だけ</b>。素のダメージは含まない）。</summary>
+    public long WardBurdenAdded;
+    /// <summary>重りが乗った振りの回数（<c>PerformAttack</c> が <c>atk</c> を作った瞬間に数える）。</summary>
+    public long WardLadenSwings;
+    /// <summary>そのうち下限 1 で切られた振り（<b>名目より実効が小さい</b>）。</summary>
+    public long WardLadenFloored;
+    /// <summary><b>実際に振られなかった打点</b>（名目。下限で切られた分を含む）。</summary>
+    public long WardLadenSwingLost;
+    /// <summary>ターン頭に数えた「下がっている攻撃力の総量」（<b>在庫の側</b>・延べターン）。</summary>
+    public long WardLadenNominal;
+    /// <summary>ターン頭に預かりを抱えていた駒の延べ数（<see cref="WardLadenNominal"/> の分母）。</summary>
+    public long WardLadenCarriers;
+
+    /// <summary>
+    /// 重りの在庫（第154期・<b>計数専用</b>）。ターン頭に1度だけ、生きている全駒について
+    /// 「いま何点ぶん攻撃力が下がっているか」を数える。<b>盤面は読むだけ。</b>
+    /// </summary>
+    public void NoteWardCensus()
+    {
+        if (!LadenActive) return;
+        foreach (UnitState u in _units)
+        {
+            if (!u.IsAlive) continue;
+            int pen = LadenPenalty(u);
+            if (pen <= 0) continue;
+            WardLadenCarriers++;
+            WardLadenNominal += pen;
+        }
+    }
+
+    /// <summary>重りが乗った一振りを数える（<c>PerformAttack</c> から・<b>計数専用</b>）。</summary>
+    /// <param name="atk">下限まで含めて解決したあとの打点。</param>
+    internal void NoteLadenSwing(UnitState actor, int atk)
+    {
+        int pen = LadenPenalty(actor);
+        if (pen <= 0) return;
+        WardLadenSwings++;
+        WardLadenSwingLost += pen;
+        TallyOf(actor).WardLadenLost += pen;
+        // 下限 1 に当たった振りだけは名目 > 実効になる（`atk > 1` なら名目＝実効）。
+        if (atk <= 1) WardLadenFloored++;
+    }
     /// <summary>預けた駒ごとの内訳（<c>Def.Id</c> → 積んだ量・返った量）。</summary>
     public readonly Dictionary<string, (long Stacked, long Released)> WardOn = new();
 
@@ -2769,6 +2816,42 @@ public sealed class BattleContext
 
     /// <summary>逆位の保持者（<see cref="Add"/> が積む）。<b>第134期 P5 の実証用</b>（規則は第22期から）。</summary>
     readonly List<UnitState> _inversionHolders = new();
+
+    /// <summary>荷（第154期・<see cref="TraitId.Burden"/>）の保持者。</summary>
+    readonly List<UnitState> _burdenHolders = new();
+
+    /// <summary>重り（第154期・<see cref="TraitId.Laden"/>）の保持者。</summary>
+    readonly List<UnitState> _ladenHolders = new();
+
+    /// <summary>
+    /// 重りの規則がいま効きうるか（<b>規則の値だけで決まる定数</b>。保持者の生存は
+    /// <see cref="LadenPenalty"/> が見る）。<c>CurrentAttack</c> は最も呼ばれる読みなので、
+    /// <b>既定では bool 1つの読みで抜ける</b>ようにここに畳んである。
+    /// </summary>
+    internal bool LadenActive { get; private set; }
+
+    /// <summary>
+    /// その駒がいま抱えている預かりのぶんの攻撃力の下げ幅（<b>下限の適用前</b>）。
+    /// <b>効くのは抱えている本人</b>で、保持者（ノチ）自身ではない。
+    /// </summary>
+    internal int LadenPenalty(UnitState u)
+    {
+        if (!LadenActive) return 0;
+        int pool = u.RawCounter(StatusKeys.Ward);
+        if (pool <= 0) return 0;
+        for (int i = 0; i < _ladenHolders.Count; i++)
+            if (_ladenHolders[i].IsAlive && _ladenHolders[i].TeamId == u.TeamId)
+                return pool / Ward.LadenPer;
+        return 0;
+    }
+
+    /// <summary>荷がいま効いているか（<paramref name="target"/> の陣営に生きた保持者がいるか）。</summary>
+    bool BurdenBinding(UnitState target)
+    {
+        for (int i = 0; i < _burdenHolders.Count; i++)
+            if (_burdenHolders[i].IsAlive && _burdenHolders[i].TeamId == target.TeamId) return true;
+        return false;
+    }
 
     /// <summary>保持者が全員倒れたターン（0 ＝ 最後まで生きていた／保持者がいない）。</summary>
     public readonly int[] RuleFallTurn = new int[BoardRuleLedger.RuleCount];
@@ -3549,6 +3632,8 @@ public sealed class BattleContext
         // 混乱は立つのに誰も読まない**（第148期に実際に踏んだ。実測は「敵に立った 2.3〜3.4 /
         // 敵が振った 0.00」——立った数だけが帳簿に残り、盤面では何も起きない）。
         ConfusionLive = Confusion.Active || Shuffler.Confuses();
+        // 第154期。**既定（`Forfeit`）では `CurrentAttack` が bool 1つを読んで抜ける。**
+        LadenActive = Ward.Cost == WardCost.Laden && Ward.LadenPer > 0;
     }
 
     // =====================================================================================
@@ -3764,6 +3849,10 @@ public sealed class BattleContext
         // 第134期 段2: 残り3つの盤面ルールの保持者も同じ形で拾う（**計数専用**。
         // 渇きだけは `Heal` の入口の判定もここに寄せた——`AllUnits.Any(...)` と同値）。
         if (u.HasTrait(TraitId.Drought)) _droughtHolders.Add(u);
+        // 第154期: 預かりの代金の保持者（惨禍と同じく「本人ではなく味方」に効くので engine 側に判定がある）。
+        // **既定（`WardCost.Forfeit`）ではこの2本のリストを1度も引かない。**
+        if (u.HasTrait(TraitId.Burden)) _burdenHolders.Add(u);
+        if (u.HasTrait(TraitId.Laden)) _ladenHolders.Add(u);
         if (u.HasTrait(TraitId.Hush)) _hushHolders.Add(u);
         if (u.HasTrait(TraitId.Inversion)) _inversionHolders.Add(u);
         u.InstanceId = _nextInstanceId++;
@@ -4725,6 +4814,13 @@ public sealed class BattleContext
         // **誰も読んで分岐しない。** 保持者がいなければ比較1つで抜ける。
         if (actor.HasTrait(TraitId.Wildfire)) NoteWildfireSwing(actor);
 
+        // 第154期・**計数専用**。重り（`TraitId.Laden`）が乗った振りを数える。
+        // **`CurrentAttack` の中では数えない**——あちらは駆り立ての選択・転嫁の流し先・
+        // `StatSnapshot`・棘/仇討ち/責め苦の反撃量からも読まれるので、数えると
+        // 「振った回数」ではなく**「読まれた回数」**になる（第75期・第133期の明文）。
+        // **既定では bool 1つで抜ける。**
+        if (LadenActive) NoteLadenSwing(actor, atk);
+
         // 薄刃の払い方（第75期）。**規則が V0（既定）なら最初の比較1つで抜ける**ので、
         // 通常の実行では乱数も盤面も1ビットも動かない（`compare` 305 セル 0 件が検算）。
         //
@@ -5127,6 +5223,33 @@ public sealed class BattleContext
         // 「カドを名指しで除外」ではなく関係で書いてあるので、惨禍持ちが2体並べば互いに増幅し合う。
         if (teammates.Any(u => u != target && u.HasTrait(TraitId.Havoc)))
             amount += amount * HavocTrait.Percent / 100;
+
+        // 荷（BurdenTrait・第154期）: 預かりを抱えている味方は、抱えている間だけ被ダメージが増える。
+        // **惨禍の直後・同じ入口の族**（据え・散開・萎縮・肩代わり・破片・身構え・軛より前）。
+        //
+        // **出口ではなく入口に置く。** 身構え（ササ）の上限は出口の手前にあるので、
+        // ここで増やした分はそのまま**切り落とし**になって隣の味方の破片に変わる
+        // ——出口に置くと切り落としが1点も増えず、この期で測りたい変換がまるごと消える（第154期 §1-2）。
+        // 「殺さない／量を切る」制約（受け流し・猶予・軛）はこの後ろで効くので、
+        // **この札は上限を押し戻さない**（第25期の禁止に触れない）。
+        //
+        // **増幅は加算**（惨禍と同じ式）。掛け算にしない（README「増幅は必ず加算にする」）。
+        //
+        // **既定（`WardCost.Forfeit`）では列挙の比較1つで抜ける**ので、保持者の走査も
+        // カウンタの読みも1回も走らない（軛の `Cap` 判定・粛の保持者走査と同じ短絡の作法）。
+        if (Ward.Cost == WardCost.Burden && Ward.BurdenPercent > 0
+            && target.RawCounter(StatusKeys.Ward) > 0 && BurdenBinding(target))
+        {
+            int extra = amount * Ward.BurdenPercent / 100;
+            if (extra > 0)
+            {
+                amount += extra;
+                WardBurdenHits++;
+                WardBurdenAdded += extra;
+                TallyOf(target).WardBurdenTaken += extra;
+                Log($"    {target.Name} は預かりの重さで深く傷ついた（+{extra}）", LogKind.FriendlyFire);
+            }
+        }
 
         // 据え: このターン差し出された駒は硬くなる。
         // 「動けなかった」ではなく「差し出した」を見る（Trait.SurrenderedTurn。号令と同じ判定）。
@@ -6853,6 +6976,7 @@ public static class BattleEngine
             ctx.NoteBossCensus();       // ボスの土台（第117期）の時系列。**盤面は読むだけ**
             ctx.NoteWoundCensus();      // 傷の在庫（第120期）。**盤面は読むだけ**
             ctx.NoteArmorCensus();      // 破片の在庫（第138期 段2）。**盤面は読むだけ**
+            ctx.NoteWardCensus();       // 重りの在庫（第154期）。**盤面は読むだけ**
 
             foreach (UnitState u in ctx.AllUnits.Where(x => x.IsAlive).ToList())
                 foreach (Trait t in u.Traits.ToList())
@@ -7047,7 +7171,10 @@ public static class BattleEngine
                 ctx.WardStacked, ctx.WardReleaseAsked, ctx.WardReleased, ctx.WardResidual,
                 ctx.WardBursts, ctx.WardDrips, ctx.WardDry, ctx.WardDryDrought, ctx.WardDryStoic,
                 ctx.WardForfeits, ctx.WardForfeited, ctx.WardForfeitHealed,
-                new Dictionary<string, (long, long)>(ctx.WardOn)),
+                new Dictionary<string, (long, long)>(ctx.WardOn),
+                ctx.WardBurdenHits, ctx.WardBurdenAdded,
+                ctx.WardLadenSwings, ctx.WardLadenFloored, ctx.WardLadenSwingLost,
+                ctx.WardLadenNominal, ctx.WardLadenCarriers),
             BoardRules = new BoardRuleLedger(
                 (long[])ctx.DroughtHits.Clone(), (long[])ctx.DroughtRequested.Clone(),
                 (long[])ctx.DroughtEffective.Clone(),
