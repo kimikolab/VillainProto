@@ -138,7 +138,7 @@ static class WardcostDiag
         public long Bursts, Drips, Dry, Forfeits, ForfeitHealed, Unbalanced;
         public long BurdenHits, BurdenAdded, LadenSwings, LadenFloored, LadenLost, LadenNominal, LadenCarriers;
         public long BraceRefused, BraceGiven, Damage;
-        public readonly Dictionary<string, (long Burden, long Laden, long Refused)> By = new();
+        public readonly Dictionary<string, (long Burden, long Laden, long Refused, long Out)> By = new();
         public double[] WaveWin = new double[5];
     }
 
@@ -162,7 +162,8 @@ static class WardcostDiag
                         a.Damage += t.DamageTaken;
                         a.By.TryGetValue(o.Def.Id, out var c);
                         a.By[o.Def.Id] = (c.Burden + t.WardBurdenTaken, c.Laden + t.WardLadenLost,
-                                          c.Refused + t.BraceRefused);
+                                          c.Refused + t.BraceRefused,
+                                          c.Out + t.DmgOutInTurn + t.DmgOutOffTurn);
                     }
                 WardLedger L = r.Ward;
                 a.Stacked += L.Stacked; a.Released += L.Released; a.Forfeited += L.Forfeited;
@@ -676,17 +677,19 @@ static class WardcostDiag
 
         Console.WriteLine("## (f) 重りが「攻撃しない駒」で 0 の代金になるか");
         Console.WriteLine();
-        Console.WriteLine("| 台 | 前列の駒 | その駒の 振られなかった打点/戦 | 台の合計 |");
-        Console.WriteLine("|---|---|---:|---:|");
+        Console.WriteLine("| 台 | 前列の駒 | 版 | 振られなかった打点/戦 | **その駒の与ダメ/戦** | 台の合計 |");
+        Console.WriteLine("|---|---|---|---:|---:|---:|");
         foreach ((int rig, string id) in new[] { (0, UnitCatalog.Sasa.Id), (1, UnitCatalog.Kado.Id) })
-        {
-            (string t3, UnitDef nochi, WardRule rule) = Versions(WardRule.Default).First(x => x.Tag == "V3 重り");
-            Acc a = Measure(Rig(rig, nochi, FillerOf[rig].Atk, FillerOf[rig].Hp).F, rule);
-            a.By.TryGetValue(id, out var c);
-            Console.WriteLine("| " + rigs[rig].Name + " | " + id + " | "
-                + (c.Laden / (double)a.Battles).ToString("F2") + " | "
-                + (a.LadenLost / (double)a.Battles).ToString("F2") + " |");
-        }
+            foreach (string tag in new[] { "Vp 預かりのみ", "V3 重り" })
+            {
+                (string t3, UnitDef nochi, WardRule rule) = Versions(WardRule.Default).First(x => x.Tag == tag);
+                Acc a = Measure(Rig(rig, nochi, FillerOf[rig].Atk, FillerOf[rig].Hp).F, rule);
+                a.By.TryGetValue(id, out var c);
+                Console.WriteLine("| " + rigs[rig].Name + " | " + id + " | " + tag + " | "
+                    + (c.Laden / (double)a.Battles).ToString("F2") + " | **"
+                    + (c.Out / (double)a.Battles).ToString("F1") + "** | "
+                    + (a.LadenLost / (double)a.Battles).ToString("F2") + " |");
+            }
         Console.WriteLine();
         Console.WriteLine("**カドは通常攻撃を1度も振らないが、棘の反撃量が `CurrentAttack` なので払う。**");
         Console.WriteLine("ただし反撃は `PerformAttack` を通らないので `振られなかった打点` には載らない");

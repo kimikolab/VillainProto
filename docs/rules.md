@@ -63,7 +63,7 @@
 | 50 | `shuffler` | `ShufflerRule` | `ShufflerRule { Foes = True, Stagger = Confuse, ConfusePercent = 100, ConfuseUses = 3, GustPercent = 20, GustSecondary = True }` |  | `tumult` / `gust` / `tumult2` / `derange` / `confuse` | 第144期 | ○ |
 | 51 | `confusion` | `ConfusionRule` | `ConfusionRule { Active = False, Percent = 100 }` |  | `derange` / `confuse` | 第146期 | ○ |
 | 52 | `haste` | `HasteRule` | `HasteRule { Pick = None }` | ○ | `mark` / `haste` | 第149期 | ○ |
-| 53 | `ward` | `WardRule` | `WardRule { Return = Burst, Percent = 50, Threshold = 40, Drip = 10 }` |  | `ward` | 第153期 | ○ |
+| 53 | `ward` | `WardRule` | `WardRule { Return = Burst, Percent = 50, Threshold = 40, Drip = 10, Cost = Forfeit, BurdenPercent = 50, LadenPer = 10 }` |  | `ward` / `wardcost` | 第153期 | ○ |
 
 引数 53 本（`verbose` と観測子を除く）。
 
@@ -124,7 +124,7 @@
 | `TaillightRule` | `TaillightRule { Mode = OwnTurnWindow, Filter = ActingNow }` | ○ | `tomo` / `ledger` / `lit` | 第110期 |
 | `ThinBladeRule` | `ThinBladeRule { Cost = Always }` | ○ | `blade` / `ledger` / `cross` | 第75期 |
 | `ThornRule` | `ThornRule { Wound = None }` | ○ | `derive` / `curse` / `thorn` / `suture2` / `gauge` / `wound2` / `cross` | 第84期 |
-| `WardRule` | `WardRule { Return = Burst, Percent = 50, Threshold = 40, Drip = 10 }` | ○ | `ward` | 第153期 |
+| `WardRule` | `WardRule { Return = Burst, Percent = 50, Threshold = 40, Drip = 10, Cost = Forfeit, BurdenPercent = 50, LadenPer = 10 }` | ○ | `ward` / `wardcost` | 第153期 |
 | `WhetMask` | `WhetMask { Bits = 0 }` | ○ | `spend` | 第65期 |
 | `WildfireRule` | `WildfireRule { Mode = None, Amount = 0, Active = False }` | ○ | `wildfire` | 第133期 |
 | `WoundRule` | `WoundRule { Enabled = True, Census = False }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期 |
@@ -155,8 +155,9 @@
 | `SutureSide` | `Foe`=0 / `Both`=1 |
 | `ThinBladeCost` | `Always`=0 / `Unwounded`=1 / `Carving`=2 / `Slower`=3 |
 | `ThornWound` | `None`=0 / `Foe`=1 / `Both`=2 |
+| `WardCost` | `Forfeit`=0 / `Burden`=1 / `Laden`=2 |
 | `WardReturn` | `Burst`=0 / `Drip`=1 |
 | `WildfireMode` | `None`=0 / `Add`=1 / `Scale`=2 / `Flat`=3 |
 | `YieldMode` | `OwnTurn`=0 / `OwnTurnWindow`=1 / `Immediate`=2 |
 
-20 型。
+21 型。

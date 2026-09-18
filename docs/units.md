@@ -150,6 +150,8 @@
 | `Parry` | 廃棄聖騎士ガルド |
 | `Ward` | - |
 | `Forfeit` | - |
+| `Burden` | - |
+| `Laden` | - |
 | `ThinBlade` | 裂きのキリ |
 | `Overreach` | - |
 | `Await` | 断ちのナタ |
