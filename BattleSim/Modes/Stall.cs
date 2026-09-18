@@ -21,7 +21,10 @@ static class StallDiag
 {
     const int Seeds = 200;
 
-    static readonly ParryRule V0 = ParryRule.Default;
+    // **第152期 段C で既定が動いたので、V0 は `Default` ではなく明示の `Off` を指す**
+    // （第60期「採用で既定が動いた診断は、検算の相手が V0 から V1 へ移る。
+    // 採用したら、その期のうちに診断の V0 を作り直すこと」——放置すると V0 と採用版が同じものを指す）。
+    static readonly ParryRule V0 = ParryRule.Default with { Swing = ParrySwing.Off };
     static readonly ParryRule VF = ParryRule.Default with { Swing = ParrySwing.WhenFull };
     static readonly ParryRule VS = ParryRule.Default with { Swing = ParrySwing.WhenStocked };
 
@@ -395,7 +398,7 @@ static class StallDiag
                           + "**（第135期 HEAD は 8 / 18）");
         Console.WriteLine();
 
-        Console.WriteLine("## (c) 既定では構えを解いた手番が1つも無い（`ParrySwings` = 0）");
+        Console.WriteLine("## (c) `Off` では構えを解いた手番が1つも無い（`ParrySwings` = 0）");
         Console.WriteLine();
         long sw = 0, swF = 0, swS = 0;
         foreach (var (_, f) in CompareBuilds())
@@ -411,7 +414,7 @@ static class StallDiag
                 }
         Console.WriteLine("| 版 | `ParrySwings` の総和（seed 0..19） |");
         Console.WriteLine("|---|--:|");
-        Console.WriteLine("| V0（`Off`） | **" + sw + "**（0 なら ○） |");
+        Console.WriteLine("| V0（明示の `Off`） | **" + sw + "**（0 なら ○） |");
         Console.WriteLine("| F（`WhenFull`） | " + swF + " |");
         Console.WriteLine("| S（`WhenStocked`） | " + swS + " |");
         Console.WriteLine();
