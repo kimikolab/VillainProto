@@ -38,12 +38,14 @@ public static class Presets
         // X字化に伴う振り直し。**旧盤面でスィドの味方漏れを消していた「孤立席（前3）」は消滅した**
         // ——編成5体が0-4を必ず埋めるので、どの席も隣接を持つ。漏れは常に発生する。
         // スィドを前1・ガルドを前3にした形が狙いを満たす最良（reseat 15位 / confirm +6.5pt / 第4波 +21.5）
-        ("毒 (グザ×ミオ×ラウ)", Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Gald, center: UnitCatalog.Guza, back1: UnitCatalog.Mio, back3: UnitCatalog.Rau)),
+        // **第148期 段0 で席を差し替えた**（棚卸し）。帯A 69.3 → 80.7・帯B(seed 200..599) 80.5%（+11.6pt）・狙 ○・情報セル 3 → 3・`reseat` 粗順 14。
+        ("毒 (グザ×ミオ×ラウ)", Formation.Build(front1: UnitCatalog.Mio, front3: UnitCatalog.Gald, center: UnitCatalog.Guza, back1: UnitCatalog.Sid, back3: UnitCatalog.Rau)),
         // 支援2枚を後列に下げ、痺れ粉は守られる中衛から撒く（layout 1位）
         // ベニのマイナス（味方の毒が2倍に効く）が入った分、毒を浴びる位置関係が変わった。
         // ミオを中衛へ上げ、ベニとトウを後列に下げた形が上（+4.0pt / 第5波 +15.8）
         // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +4.7pt）
-        ("毒+耐久 (ベニ×トウ)",  Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Tou, back1: UnitCatalog.Mio, back3: UnitCatalog.Beni)),
+        // **第148期 段0 で席を差し替えた**（棚卸し）。帯A 88.4 → 94.5・帯B(seed 200..599) 93.7%（+6.3pt）・狙 ○・情報セル 2 → 3・`reseat` 粗順 2。
+        ("毒+耐久 (ベニ×トウ)",  Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Gald, center: UnitCatalog.Mio, back1: UnitCatalog.Guza, back3: UnitCatalog.Tou)),
         // 毒+耐久 の92%はベニ単独でもトウ単独でも出ない（ベニのみ 100/25/5/89/2、トウのみ 100/0/0/0/0）。
         // 効いているのは「毒の供給＋耐える手段」という型で、耐える側はトウでなくてもよい。
         // その裏を取るためのエントリ。トウをラウに差し替えた形。
@@ -53,6 +55,11 @@ public static class Presets
         ("毒爆弾 (ラウ×ヴィオ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: UnitCatalog.Vio, back3: UnitCatalog.Rau)),
         // ヒサの隣接はカドだけ（後1↔後2）。ガルド(HP100>カド96)を隣に置くと標的が逸れる（layout 1位）
         // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +27.7pt）
+        // **第148期 段0 で測ったが採らなかった。** 帯B +23.2pt（`confirm`）と線は通るが、候補は
+        // ヒサを後1へ下げる形で、**隣接が ガルド(HP100) と カド(96) の2枚になる**
+        // ——囃し立ては隣接する<b>最大HP</b>の味方に標を付けるので、**標がカドからガルドへ移って
+        // この行の機構（標を集めたカドが反撃する）が丸ごと消える**。上の行の狙いそのもの。
+        // 第50期「採用した配置で機構の発火回数が 0 になっていないことを毎回確認する」。
         ("反撃 (ヒサ×カド)",     Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Gald, center: UnitCatalog.Nel, back1: UnitCatalog.Kado, back3: UnitCatalog.Nono)),
         // ヒサを前1へ回すと隣接はカドとノノになるが、標的は最大HPで選ばれるのでカドのままで狙いは崩れない。
         // カドを前2の中央に置くと巻き込みがヒサ・ムド・セロの3枚へ広がり、成長が速くなる（+7.1pt / 第5波 +19.3）。
@@ -100,7 +107,8 @@ public static class Presets
         ("礫 (ガレ×ヒビ×ウロ)", Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.Hibi, back1: UnitCatalog.Uro, back3: UnitCatalog.Gare)),
         // グザの瘴気（味方全体に毒）は位置不問。ムドは前1で敵の攻撃も浴びて育ち、ガルドは前3で庇う。セロは中央から被弾後退。
         // X字化に伴う振り直し: 後列のグザとボルグを入れ替えた（reseat 1位＝狙いを満たす最良 / confirm +19.6pt / 第2波 +57.8）
-        ("毒→被弾強化 (グザ×ムド)", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Guza, back3: UnitCatalog.Borg)),
+        // **第148期 段0 で席を差し替えた**（棚卸し）。帯A 39.3 → 62.9・帯B(seed 200..599) 60.7%（+21.3pt）・狙 ○・情報セル 3 → 4・`reseat` 粗順 4。
+        ("毒→被弾強化 (グザ×ムド)", Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Mudo, back1: UnitCatalog.Borg, back3: UnitCatalog.Guza)),
         // ヴィオの吸い上げは全体対象で位置不問。スィドの毒漏れはむしろ燃料なので、中衛に置いて
         // 前後の隣接（後2のミオ）へわざと当てにいく。漏れを利益に反転する側と噛ませた形（+7.8pt / 第5波 +38.8）
         //
@@ -167,7 +175,8 @@ public static class Presets
         // 中身は第4波を約3pt 差し出して第5波を約13pt 買う入れ替えで、全体が一様に伸びたわけではない。
         // X字化に伴う振り直し。機械的な写しではホタが後列でボルグの火種が届かず 7/0/0/0 に潰れていた。
         // ホタを中央（ボルグの隣）へ上げた（reseat 1位＝狙いを満たす最良 / confirm +57.5pt）
-        ("燃焼 (ボルグ×ホタ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Nono, center: UnitCatalog.Hota, back1: UnitCatalog.Mudo, back3: UnitCatalog.Borg)),
+        // **第148期 段0 で席を差し替えた**（棚卸し）。帯A 82.2 → 93.0・帯B(seed 200..599) 92.0%（+9.8pt）・狙 ○・情報セル 1 → 1・`reseat` 粗順 1。
+        ("燃焼 (ボルグ×ホタ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Nono, back1: UnitCatalog.Mudo, back3: UnitCatalog.Hota)),
         // 範囲耐性。砕け盾のヒビ（範囲を浴びて破片を配る）を軸に据えた編成。
         // ガルドは Stoic で回復も強化も受け付けないが、破片は damage 側で消費されるので届く。
         // ドルガ（攻38・薙ぎだが2ターンに1回）は「強い。ただ遅い」という理由で外された駒で、
@@ -179,6 +188,9 @@ public static class Presets
         // 探索1位はボルグを後列へ回してこの噛み合わせを捨てる形なので採らない。
         // X字化に伴う振り直し。ヒビは中央に置く——2本の貫き経路・薙ぎ・隣接次数4が全部そこへ入るので、
         // 範囲を浴びて破片を配る駒の指定席になる（reseat 1位 / confirm +36.8pt / 第4波 +87.0）
+        // **第148期 段0 で測ったが採らなかった。** 帯B +7.3pt だが、候補は**ヒビを後3へ下げる形**
+        // ——上の「ヒビは中央に置く（2本の貫き経路・薙ぎ・隣接次数4が全部そこへ入る）」を捨てる。
+        // ボルグとの横の隣接は残るが、**範囲を浴びる量そのものが落ちる**ので軸が痩せる。
         ("範囲耐性 (ヒビ×ボルグ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Hibi, back1: UnitCatalog.Borg, back3: UnitCatalog.Rica)),
         // 縛め（クグ）の測定用。既存でクグを含むのは 溜め改 だけで、そこにはカドが入っている——
         // カドの改修と交絡していて、クグの設計の中心（編成によって縛りの意味が反転する）が測れない。
@@ -195,6 +207,9 @@ public static class Presets
         // ガルドは前列（庇いの制約）、セロは中衛（狙撃化には戦闘中に後退した実績が要る）
         // X字化に伴う振り直し。機械的な写しではボルグが中央に落ち、味方4枚へ毎ターン巻き込みを撒いていた
         // （中央は編成5枠すべてと隣接する）。ボルグを後3へ、セロを中央へ（reseat 1位 / confirm +10.7pt）
+        // **第148期 段0 で測ったが採らなかった。** 帯B +18.2pt だが、候補は**セロを後1へ下げる形**
+        // ——逃亡（`if (self.Row == Row.Back) return;`）は後列では1回も発火しないので、
+        // 上の「セロは中衛（狙撃化には戦闘中に後退した実績が要る）」が原理的に成立しなくなる（第146期）。
         ("縛め非収入型 (クグ×速攻)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kugu, center: UnitCatalog.Sero, back1: UnitCatalog.Mudo, back3: UnitCatalog.Borg)),
         // 据え（バン）とハギ（追い打ち）の同居。31編成に1本も無い組み合わせなので、
         // `IdleTurn` の会計を据え側で直しても compare が1行も動かず、変更が効いたことを
@@ -208,7 +223,8 @@ public static class Presets
         // 抜く枠にゾトを選んだのは、ヴェルを外すと第2波が 98.0% → 32.5% まで落ちることが
         // 測定済み（2026-08-23）で、ゴルムは前列の受けを兼ねているため。
         // バンは前2。据えは位置を問わないが、ゾトの空けた席をそのまま使えば土台との差が1枠で済む。
-        ("追撃×据え (ハギ×バン)", Formation.Build(front1: UnitCatalog.Hagi, front3: UnitCatalog.Ban, center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
+        // **第148期 段0 で席を差し替えた**（棚卸し）。帯A 58.7 → 70.4・帯B(seed 200..599) 69.3%（+9.3pt）・狙 ○・情報セル 3 → 3・`reseat` 粗順 1。
+        ("追撃×据え (ハギ×バン)", Formation.Build(front1: UnitCatalog.Hagi, front3: UnitCatalog.Golm, center: UnitCatalog.Ban, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
         // 置き去り（ナラ）の測定用。同じ1体が編成で正反対の駒になることを表で見えるようにする2本。
         // **配置は仮置き**——採否を決める前に reseat（120通り全探索）→ confirm（seed 200..599）を回す。
         //
@@ -313,9 +329,10 @@ public static class Presets
         // **巨躯ゴルム(150)を中央に置いて標的をそこへ集める**形が最良になる（72.5%）。
         // ヒサは前1で隣接＝中央ゴルム(150)と後1ドルガ(85)、最大HPのゴルムに標的が付く。
         // ゴルムは後方も被覆するので、ザン(後3)は殴られにくい＝怯みにくい。
-        ("仇討ち×砕け (ヒビ×ザン)", Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Hibi,
-                                              center: UnitCatalog.Golm, back1: UnitCatalog.Dolga,
-                                              back3: UnitCatalog.Zan)),
+        // **第148期 段0 で測ったが採らなかった。** 帯B +27.7pt だが、候補は**ヒサを後3・ゴルムを前1へ**動かす形で、
+        // **ヒサの隣接から ゴルム(150) が外れて標がドルガ(85)へ移る**——上の
+        // 「巨躯ゴルムを中央に置いて標的をそこへ集める」が成り立たない。
+        ("仇討ち×砕け (ヒビ×ザン)", Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Hibi, center: UnitCatalog.Golm, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan)),
         // 物理軸の連鎖・第2弾（裂きのキリ / 抉りのエグ）。**配置は仮置き**——
         // reseat（120通り全探索）→ confirm で採否を決める。
         //
@@ -578,9 +595,10 @@ public static class Presets
         // **ドルガが前1に来るのは偶然ではない。** 標の代金は「前列が生きている限り後列は
         // 狙われない」を破ることから来るので、**もともと前列にいる駒を押し出せば代金がほぼ消える**
         // ——配置探索は代金を最小化する席を選んでいる（機構は殺していない）。
-        ("駆り立て (カリ×ドルガ)", Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald,
-                                          center: UnitCatalog.Gan, back1: UnitCatalog.Kari,
-                                          back3: UnitCatalog.Zan)),
+        // **第148期 段0 で測ったが採らなかった。** 帯B +5.4pt と線ぎりぎりを通るが、候補は**カリを後3の角へ置く形**
+        // ——上に「1位と4位は採らない（カリを角へ置いた形だが 発火 1.59 / 空振り 3.16）」と
+        // 書いてある席と同じ族である。**配置探索が機構を無効化する席**（第49期）。
+        ("駆り立て (カリ×ドルガ)", Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.Gan, back1: UnitCatalog.Kari, back3: UnitCatalog.Zan)),
         // 死軸の台。**「死の連鎖 (リィカ軸)」とメンバーが1枚しか違わない**——
         // ヴェル（継ぎ接ぎ）をカリに差し替えただけ（`鱗 (ウロ×死軸)` と同じ作り方）。
         // **押し出された駒が死ぬことが資産になる**台で、墓守リィカが層を積み、
@@ -641,9 +659,10 @@ public static class Presets
         //     **供給者自身には移らない**ので、ボルグの隣に立つと毎ターンボルグを鈍らせる
         //     （仮置きでは弱体の最大の受け手がボルグ 4.26 量/戦だった）。後1へ動かすと
         //     隣接はガルド（`Stoic` で弾かれる）とムド（燃えている）になり、**非燃体が 3.14 → 1.21 に落ちる。**
-        ("火選り (ヒヨ×ホタ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo,
-                                          center: UnitCatalog.Hota, back1: UnitCatalog.Hiyo,
-                                          back3: UnitCatalog.Borg)),
+        // **第148期 段0 で測ったが採らなかった。** 帯B +10.3pt だが、候補は**ヒヨを中央へ**置く形で、
+        // 中央は隣接次数4 なので**ボルグ(前1)の隣に戻る**——上の「ヒヨをボルグの隣から外すのが要点」
+        // （供給者は自分の撒いたものを持たないので毎ターン火種の腕を削る・第58期）を捨てることになる。
+        ("火選り (ヒヨ×ホタ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Hota, back1: UnitCatalog.Hiyo, back3: UnitCatalog.Borg)),
         // (2) **代金の台（この期の本命）。** `毒→被弾強化 (グザ×ムド)` は火の粉の帰属が
         //     **−7.3 / −7.9pt と8行で最も負**（味方の燃焼が生存を削っている側）。
         //     グザ（後1・素体差 −1.0pt）をヒヨに差し替えた。**代金が資産に反転するかを測る唯一の行。**
@@ -651,9 +670,8 @@ public static class Presets
         //     ——「最も負の帰属」と「ほぼ無料の枠」を同時に満たすのは8行でこれだけだった。
         //     **配置は仮置きのまま据え置き**（confirm の上位5通りが −0.6〜+0.3pt で、採否閾値 5.0pt に届かない。
         //     現行は 120 通り中 11位）。
-        ("火選り代金型 (ヒヨ×ムド)", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Gald,
-                                              center: UnitCatalog.Sero, back1: UnitCatalog.Hiyo,
-                                              back3: UnitCatalog.Borg)),
+        // **第148期 段0 で席を差し替えた**（棚卸し）。帯A 33.7 → 60.5・帯B(seed 200..599) 60.0%（+24.8pt）・狙 ○・情報セル 2 → 3・`reseat` 粗順 2。
+        ("火選り代金型 (ヒヨ×ムド)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Sero, back1: UnitCatalog.Hiyo, back3: UnitCatalog.Mudo)),
         // (3) 無風の台。`逸らし (ソラ×カド)` は火の粉の帰属が −0.6 / +1.7 ＝ **0**（第57期の
         //     「|帰属| < 1.5pt は 0 と読む」）。グザ（中央・素体差 +0.1pt）をヒヨに差し替えた。
         //     **中央は隣接次数4** なので、マイナス側（隣接する非燃焼の味方）の対象が最大になる

@@ -212,6 +212,72 @@ public static void Run(string[] args, int stageIndex)
         ("置き去り×分散回復",
             Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Nara, center: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa),
             Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Dolga, back3: UnitCatalog.Nara)),
+        // ------------------------------------------------------------------
+        // 第148期 段0 —— **席の棚卸し**（指示書 §0-1）。
+        //
+        // 第147期で情報セルが 140 → 138（主判定 45 → 44）に落ちたので、
+        // **測る分解能が落ちた状態で次の駒の期に入らない**ために `docs/reseat.md` を
+        // 全61行ぶん機械で読み直した（`tumult2 phase0` が同じ表を出す）。
+        //
+        // **線と採る条件は同じ集合で書く**（規約 (G16)）。ここに載っているのは
+        //   (1) 狙 ○（ガルドが前列 / セッキが後列。その駒を含む行のみ）
+        //   (2) 情報セル（帯A・第2〜5波）が**現行以上**——この期の目的が分解能の回復なので、
+        //       勝率が上がっても情報セルを減らす席は最初から候補にしない
+        //   (3) 帯A（seed 0..199）の5波平均が現行より **+5.0pt 以上**
+        // の3つを満たした**12 行**で、採否は下の `Threshold`（帯B・seed 200..599 で +5.0pt）だけで決める。
+        //
+        // **`突き返し (ハネ×ウツ)` は指示書が「確定で候補」と書いていたが、線に届かない**
+        // ——帯A の最良は粗順1 の 68.8% で現行（65.1%・粗順35）との差は **+3.7pt**。
+        // 第五波でも 34 → 38 の +4pt しか動かない。**候補に載せない。**
+        // ------------------------------------------------------------------
+        // 第148期 段0。帯A 69.3 → 80.7（+11.4）・狙 ○・情報セル 3 → 3・粗順 14。
+        ("毒 (グザ×ミオ×ラウ)",
+            Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Gald, center: UnitCatalog.Guza, back1: UnitCatalog.Mio, back3: UnitCatalog.Rau),
+            Formation.Build(front1: UnitCatalog.Mio, front3: UnitCatalog.Gald, center: UnitCatalog.Guza, back1: UnitCatalog.Sid, back3: UnitCatalog.Rau)),
+        // 第148期 段0。帯A 88.4 → 94.5（+6.1）・狙 ○・情報セル 2 → 3・粗順 2。
+        ("毒+耐久 (ベニ×トウ)",
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Tou, back1: UnitCatalog.Mio, back3: UnitCatalog.Beni),
+            Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Gald, center: UnitCatalog.Mio, back1: UnitCatalog.Guza, back3: UnitCatalog.Tou)),
+        // 第148期 段0。帯A 56.2 → 79.9（+23.7）・狙 ○・情報セル 1 → 1・粗順 2。
+        ("反撃 (ヒサ×カド)",
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Gald, center: UnitCatalog.Nel, back1: UnitCatalog.Kado, back3: UnitCatalog.Nono),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Nel, center: UnitCatalog.Kado, back1: UnitCatalog.Hisa, back3: UnitCatalog.Nono)),
+        // 第148期 段0。帯A 39.3 → 62.9（+23.6）・狙 ○・情報セル 3 → 4・粗順 4。
+        ("毒→被弾強化 (グザ×ムド)",
+            Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Guza, back3: UnitCatalog.Borg),
+            Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Mudo, back1: UnitCatalog.Borg, back3: UnitCatalog.Guza)),
+        // 第148期 段0。帯A 82.2 → 93.0（+10.8）・狙 ○・情報セル 1 → 1・粗順 1。
+        ("燃焼 (ボルグ×ホタ)",
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Nono, center: UnitCatalog.Hota, back1: UnitCatalog.Mudo, back3: UnitCatalog.Borg),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Nono, back1: UnitCatalog.Mudo, back3: UnitCatalog.Hota)),
+        // 第148期 段0。帯A 83.2 → 89.8（+6.6）・狙 ○・情報セル 2 → 2・粗順 1。
+        ("範囲耐性 (ヒビ×ボルグ)",
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Hibi, back1: UnitCatalog.Borg, back3: UnitCatalog.Rica),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Dolga, back1: UnitCatalog.Rica, back3: UnitCatalog.Hibi)),
+        // 第148期 段0。帯A 46.3 → 66.3（+20.0）・狙 ○・情報セル 3 → 4・粗順 2。
+        ("縛め非収入型 (クグ×速攻)",
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kugu, center: UnitCatalog.Sero, back1: UnitCatalog.Mudo, back3: UnitCatalog.Borg),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Kugu, back1: UnitCatalog.Sero, back3: UnitCatalog.Borg)),
+        // 第148期 段0。帯A 58.7 → 70.4（+11.7）・狙 ○・情報セル 3 → 3・粗順 1。
+        ("追撃×据え (ハギ×バン)",
+            Formation.Build(front1: UnitCatalog.Hagi, front3: UnitCatalog.Ban, center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel),
+            Formation.Build(front1: UnitCatalog.Hagi, front3: UnitCatalog.Golm, center: UnitCatalog.Ban, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
+        // 第148期 段0。帯A 56.5 → 84.3（+27.8）・狙 ○・情報セル 4 → 4・粗順 3。
+        ("仇討ち×砕け (ヒビ×ザン)",
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Hibi, center: UnitCatalog.Golm, back1: UnitCatalog.Dolga, back3: UnitCatalog.Zan),
+            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hibi, center: UnitCatalog.Dolga, back1: UnitCatalog.Zan, back3: UnitCatalog.Hisa)),
+        // 第148期 段0。帯A 79.6 → 85.3（+5.7）・狙 ○・情報セル 3 → 3・粗順 9。
+        ("駆り立て (カリ×ドルガ)",
+            Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.Gan, back1: UnitCatalog.Kari, back3: UnitCatalog.Zan),
+            Formation.Build(front1: UnitCatalog.Zan, front3: UnitCatalog.Gald, center: UnitCatalog.Dolga, back1: UnitCatalog.Gan, back3: UnitCatalog.Kari)),
+        // 第148期 段0。帯A 84.0 → 94.4（+10.4）・狙 ○・情報セル 2 → 3・粗順 2。
+        ("火選り (ヒヨ×ホタ)",
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Hota, back1: UnitCatalog.Hiyo, back3: UnitCatalog.Borg),
+            Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Gald, center: UnitCatalog.Hiyo, back1: UnitCatalog.Hota, back3: UnitCatalog.Mudo)),
+        // 第148期 段0。帯A 33.7 → 60.5（+26.8）・狙 ○・情報セル 2 → 3・粗順 2。
+        ("火選り代金型 (ヒヨ×ムド)",
+            Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Hiyo, back3: UnitCatalog.Borg),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Sero, back1: UnitCatalog.Hiyo, back3: UnitCatalog.Mudo)),
     };
 
     Console.WriteLine("## 採用候補の追試");
