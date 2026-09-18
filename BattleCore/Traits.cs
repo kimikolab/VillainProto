@@ -6045,7 +6045,21 @@ public readonly record struct ShufflerRule(
     /// <para><b>段A（入れ替えだけ）は第144期に採らなかった。</b> 7 台中 2 台で負（−7.5 / −3.1）
     /// ——<b>敵を無作為に入れ替えるのは期待値ゼロではない</b>（doc の「符号が台で割れる」を参照）。</para>
     /// </summary>
-    public static ShufflerRule Default => new(true, ShuffleStagger.Confuse, ConfuseUses: 3);
+    /// <para><b>第151期に突風を足した</b>（<see cref="GustPercent"/> = 20 ／ 巻き込みにも乗せる）。
+    /// 4台の帰属は <b>+4.5 / +6.8 / +8.4 / +3.8</b>（陰性対照 ±0.0）。
+    /// <b>薙ぎ化そのものは値打ちの本体ではない</b>——段A（攻5・薙ぎ・転倒なし）は
+    /// +2.0 / −2.5 / +1.3 / +2.3 で、<b>段A が負だった台が転倒を足すと最大になる。</b></para>
+    ///
+    /// <para><b>30% は採らなかった。</b> 帰属は大きい（+5.1 / +9.6 / +10.1 / +4.8）が、
+    /// <b>情報セルを全61行で 141 → 140・主判定19行で 45 → 43 落とす</b>（20% は 141 / 44）。
+    /// 第147期に絞りなしを落としたのと同じ読み方。</para>
+    ///
+    /// <para><b><see cref="GustSecondary"/> = false（主目標だけ）は採らなかった。</b>
+    /// 30% でも供給は段B の 10〜20% ぶんしか出ないのに、<b>同じ供給量の段B に 0.3〜1.4pt 負ける</b>
+    /// ——転ばせる相手の列の分布は段B とほとんど同じ（巻き込みは<b>届く先を変えていない</b>）なので、
+    /// 差は<b>1回の振りで2体を同時に転ばせること</b>にある（同じラウンドから2手番を抜く）。</para>
+    public static ShufflerRule Default
+        => new(true, ShuffleStagger.Confuse, ConfuseUses: 3, GustPercent: 20);
 
     /// <summary>
     /// <b>混乱を立てうる枝か</b>（第148期）。<c>BattleContext.ConfusionLive</c> がこれを読む。
