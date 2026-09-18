@@ -1024,6 +1024,14 @@ public sealed class UnitTally
     public int ParryStances, ParryRefillTurn, ParryRefillGuard, ParryRefillGuardWasted, ParryStockAtDeath;
 
     /// <summary>
+    /// <b>構えを解いて振った手番</b>（第152期 段B・<see cref="ParrySwing"/>）。<b>誰も読んで分岐しない計数。</b>
+    /// <c>ParrySwings</c> 振った手番の数 ／ <c>ParrySwingsFull</c> うち在庫が満タンだった数。
+    /// <b>既定（<see cref="ParrySwing.Off"/>）では1度も動かない。</b>
+    /// <b>2つは同じ瞬間に数える</b>（行動順ループの中・第115期「同じ比を作る2つの計数は同じ瞬間に取る」）。
+    /// </summary>
+    public int ParrySwings, ParrySwingsFull;
+
+    /// <summary>
     /// <b>狙撃（<see cref="TraitId.Sniper"/>）が成立したまま振った回数</b>（第129期・<b>計数専用</b>）。
     /// 成立の条件（<c>HasFallenBack</c> かつ <c>Row.Back</c>）は <c>PerformAttack</c> が
     /// その場で評価して打点と攻撃型を書き換えるだけなので、<b>盤面にも計数にも痕跡が残らない</b>
@@ -1677,6 +1685,7 @@ public sealed class UnitTally
         ParryStances += o.ParryStances; ParryRefillTurn += o.ParryRefillTurn;
         ParryRefillGuard += o.ParryRefillGuard; ParryRefillGuardWasted += o.ParryRefillGuardWasted;
         ParryStockAtDeath += o.ParryStockAtDeath;
+        ParrySwings += o.ParrySwings; ParrySwingsFull += o.ParrySwingsFull;
         SniperSwings += o.SniperSwings;
         WildfireSwings += o.WildfireSwings; WildfireLit += o.WildfireLit;
         WildfireFoes += o.WildfireFoes; WildfireFoesSq += o.WildfireFoesSq;

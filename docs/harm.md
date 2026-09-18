@@ -182,7 +182,7 @@
 
 ## 表I —— 受け流しの在庫（第136期 段2・`ParryRule`）
 
-`ParryRule.Default` = **`ParryRule { Uses = 2, Scope = Any, Relay = True }`**。
+`ParryRule.Default` = **`ParryRule { Uses = 2, Scope = Any, Relay = True, Swing = Off }`**。
 在庫は開戦時と毎ターン頭の構えで N に戻り、庇って身に受けるたび 1 戻る。**攻撃力は上がらない**（表G の `攻撃力 +/戦` が 0 になる）。
 
 | 駒 | 受け流し 回/戦 | 無効化 量/戦 | 被弾に対する比 | 構え直し T/戦 | 構えで戻した/戦 | 庇いで戻した/戦 | 満タンで戻せず/戦 | 死亡時の残り在庫（平均） | 攻撃力の到達点 |

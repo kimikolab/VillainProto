@@ -56,7 +56,7 @@
 | 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False }` | ○ | `survive` / `ember` / `wildfire` | 第130期 | ○ |
 | 44 | `wildfire` | `WildfireRule` | `WildfireRule { Mode = None, Amount = 0, Active = False }` | ○ | `wildfire` | 第133期 | ○ |
 | 45 | `harm` | `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` | 第135期 | ○ |
-| 46 | `parry` | `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True }` |  | `parry` / `wall` | 第135期 | ○ |
+| 46 | `parry` | `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True, Swing = Off }` |  | `parry` / `wall` | 第135期 | ○ |
 | 47 | `shatter` | `ShatterRule` | `ShatterRule { Mode = Passive, SelfCostPerTurn = 0 }` | ○ | `shard` | 第137期 | ○ |
 | 48 | `shrapnel` | `ShrapnelRule` | `ShrapnelRule { Multiplier = 3, SelfDamagePercent = 100, ArmorCensus = False }` |  | `shard` | 第138期 | ○ |
 | 49 | `brace` | `BraceRule` | `BraceRule { Cap = 7, Refuse = True, Stagger = False }` |  | `brace` | 第143期 | ○ |
@@ -103,7 +103,7 @@
 | `MenderCostRule` | `MenderCostRule { Percent = 50 }` | ○ | `hold` / `hold2` / `ledger` / `lit` / `wound2` | 第106期 |
 | `NourishRule` | `NourishRule { Gain = 2 }` | ○ | `tank` / `time` | 第117期 |
 | `OverbearRule` | `OverbearRule { Drain = 2 }` | ○ | `overbear` / `wildfire` | 第46期 |
-| `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True }` | ○ | `parry` / `wall` | 第135期 |
+| `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True, Swing = Off }` | ○ | `parry` / `wall` | 第135期 |
 | `RageRule` | `RageRule { Mode = Amount, Gain = 3 }` | ○ | `hold` / `hold2` | 第106期 |
 | `ReaderRule` | `ReaderRule { Threshold = 5 }` | ○ | `reader` / `boss` / `tank` / `grade` / `grade2` | 第115期 |
 | `RecoverRule` | `RecoverRule { HpPercent = 0, ReviveDead = False, Active = False }` |  | `choice` / `recover` | 第101期 |
@@ -143,6 +143,7 @@
 | `LitFilter` | `SupportOnly`=0 / `ActingOnly`=1 / `ActingNow`=2 |
 | `MendSide` | `Plain`=0 / `Wound`=1 |
 | `ParryScope` | `Guarded`=0 / `Any`=1 |
+| `ParrySwing` | `Off`=0 / `WhenFull`=1 / `WhenStocked`=2 |
 | `RageMode` | `Amount`=0 / `Count`=1 |
 | `SeverWait` | `Yield`=0 / `Swing`=1 |
 | `ShatterMode` | `Passive`=0 / `Turn`=1 / `Both`=2 |
@@ -155,4 +156,4 @@
 | `WildfireMode` | `None`=0 / `Add`=1 / `Scale`=2 / `Flat`=3 |
 | `YieldMode` | `OwnTurn`=0 / `OwnTurnWindow`=1 / `Immediate`=2 |
 
-18 型。
+19 型。

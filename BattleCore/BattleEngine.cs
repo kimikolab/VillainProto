@@ -5744,6 +5744,17 @@ public sealed class BattleContext
             return TurnOutcome.Stalled;
         }
 
+        // 第152期 段B。**計数のみ**（どの規則も読んで分岐しない）。構えを解いて振った手番と、
+        // そのとき在庫が満タンだったかを**同じ瞬間に**数える（第115期）。
+        // **既定（`ParrySwing.Off`）では `CanAct` が偽なので、ここへは1度も到達しない。**
+        if (Parry.Swing != ParrySwing.Off && kind == ActionKind.Attack
+            && actor.HasTrait(TraitId.Parry))
+        {
+            UnitTally pst = TallyOf(actor);
+            pst.ParrySwings++;
+            if (actor.RawCounter(ParryTrait.StockKey) >= Parry.Uses) pst.ParrySwingsFull++;
+        }
+
         if (act is null)
         {
             PerformAttack(actor);   // 従来経路。Actions を持たない駒はここしか通らない

@@ -6770,7 +6770,39 @@ public enum ParryScope
 /// <para><b>書き換え可能な static のノブにしないこと</b>（Trait は共有シングルトンで
 /// `layout` は並列実行する。<see cref="MartyrRule"/> と同じ判断）。</para>
 /// </summary>
-public readonly record struct ParryRule(int Uses, ParryScope Scope, bool Relay)
+/// <summary>
+/// <b>構えを解いて殴る条件</b>（第152期 段B）。<b>膠着（30 ターン上限で負ける局面）を塞ぐための枝。</b>
+///
+/// <para><b>なぜ要るか</b>: 受け流しは「殴らない手番」を資源にしているので、
+/// <b>ガルドが唯一の殴り手だった行は、敵を倒しきれないまま上限ターンで負ける</b>
+/// ——膠着の条件は<b>「味方に殴り手が残っていない ∧ 敵の1ターンの攻撃回数 ≤ 在庫 N」</b>で、
+/// <c>Uses</c> を下げても解けない（敵が1体なら N=1 でも成立する。第136期の追加）。</para>
+///
+/// <para><b><see cref="WhenFull"/> と <see cref="WhenStocked"/> は「満タン」の2つの読み方である。</b>
+/// 第152期 Q0-5 の実測——<b>敵はほぼ全員ガルド（速4）より速い</b>ので、
+/// ガルドの手番が回ってきた時点で在庫は既に <c>Uses − 1</c> まで減っている
+/// （膠着の <c>demo</c> は毎ターン頭に「受け流し <b>1</b> → 2」と構え直している）。
+/// したがって<b><see cref="WhenFull"/> は膠着では構造的に1回も成立しない</b>
+/// ——<b>「膠着＝在庫が減らない」ではなく「膠着＝在庫が 0 に届かない」</b>だからである。</para>
+///
+/// <para><b>在庫の出どころ（構え直し／庇いの見返り）は読み分けない。</b>
+/// 読み分けると <see cref="Trait.SurrendersTurnIn"/> が「殴ったのに手番を差し出した」状態を作れてしまい、
+/// 1つの札の3つの面が食い違う。</para>
+/// </summary>
+public enum ParrySwing
+{
+    /// <summary><b>既定。</b> 構えたまま一度も殴らない（第136期 段2 と1ビットも違わない）。</summary>
+    Off,
+
+    /// <summary>在庫が満タン（<c>≧ Uses</c>）の手番だけ殴る。<b>＝そのターンまだ誰にも殴られていない手番。</b></summary>
+    WhenFull,
+
+    /// <summary>在庫が残っている（<c>&gt; 0</c>）手番は殴る。<b>＝受け流す余裕があるうちは殴る。</b></summary>
+    WhenStocked,
+}
+
+public readonly record struct ParryRule(int Uses, ParryScope Scope, bool Relay,
+                                        ParrySwing Swing = ParrySwing.Off)
 {
     /// <summary>第136期 段2 の採用値（N）。<b>`wall run` の掃引で決めた</b>——経緯は design/PHASE136_WALL.md。</summary>
     public const int AdoptedUses = 2;
@@ -6846,9 +6878,26 @@ public sealed class ParryTrait : Trait
         ctx.Log($"    {self.Name} が構え直した（受け流し {stock} → {ctx.Parry.Uses}）", LogKind.Trigger);
     }
 
-    /// <summary>構えている駒は自分からは攻撃しない（<c>Uses = 0</c> なら従来どおり振る）。術・溜めは通す。</summary>
+    /// <summary>
+    /// 構えている駒は自分からは攻撃しない（<c>Uses = 0</c> なら従来どおり振る）。術・溜めは通す。
+    /// <b>第152期 段B: <see cref="ParryRule.Swing"/> が <see cref="ParrySwing.Off"/> 以外なら、
+    /// 在庫を見て構えを解く</b>（既定は <c>Off</c> ＝ 従来と1ビットも違わない）。
+    ///
+    /// <para><b>ここでログを出さない。</b> この窓口は行動順ループのほかに
+    /// <c>BattleContext.CanActNow</c>（灯の動的な濾し・第113期）からも問われるので、
+    /// <b>1ターンに複数回呼ばれる</b>。計数も同じ理由でここには置かない
+    /// （engine の <c>TakeTurnCore</c> が1手番に1度だけ数える）。</para>
+    /// </summary>
     public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
-        => kind != ActionKind.Attack || ctx.Parry.Uses <= 0;
+    {
+        if (kind != ActionKind.Attack || ctx.Parry.Uses <= 0) return true;
+        return ctx.Parry.Swing switch
+        {
+            ParrySwing.WhenFull => self.RawCounter(StockKey) >= ctx.Parry.Uses,
+            ParrySwing.WhenStocked => self.RawCounter(StockKey) > 0,
+            _ => false,
+        };
+    }
 
     /// <summary>段3 のスイッチ。偽なら不動のカドと同じ（差し出すものが無い）。静的な側は偽で固定。</summary>
     public override bool SurrendersTurn => false;
