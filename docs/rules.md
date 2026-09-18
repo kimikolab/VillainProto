@@ -64,8 +64,9 @@
 | 51 | `confusion` | `ConfusionRule` | `ConfusionRule { Active = False, Percent = 100 }` |  | `derange` / `confuse` | 第146期 | ○ |
 | 52 | `haste` | `HasteRule` | `HasteRule { Pick = None }` | ○ | `mark` / `haste` | 第149期 | ○ |
 | 53 | `ward` | `WardRule` | `WardRule { Return = Burst, Percent = 50, Threshold = 40, Drip = 10, Cost = Forfeit, BurdenPercent = 50, LadenPer = 10 }` |  | `ward` / `wardcost` | 第153期 | ○ |
+| 54 | `indulgence` | `IndulgenceRule` | `IndulgenceRule { Advance = 30, Threshold = 60, Contracts = 0, Blast = Single }` |  | `toll` | 第155期 | ○ |
 
-引数 53 本（`verbose` と観測子を除く）。
+引数 54 本（`verbose` と観測子を除く）。
 
 **`= default(T)` は「その規則が既定で何もしない」の機械的な手がかりであって、判定ではない。**
 採否そのものは**既定値の列**を読むこと——`ThornRule { Wound = None }` は残置、`SoakRule { Poison = True, Burn = False }` は毒側だけ採用、という具合に既定値が全部を語る。
@@ -98,6 +99,7 @@
 | `HasteRule` | `HasteRule { Pick = None }` | ○ | `mark` / `haste` | 第149期 |
 | `HushRule` | `HushRule { Active = True }` | ○ | `curse` / `hush` / `goad` / `wave2` / `ledger` | 第35期 |
 | `IgniteRule` | `IgniteRule { Enabled = True }` | ○ | `derive` / `curse` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `cross` / `demo` | 第87期 |
+| `IndulgenceRule` | `IndulgenceRule { Advance = 30, Threshold = 60, Contracts = 0, Blast = Single }` | ○ | `toll` | 第155期 |
 | `LooseRule` | `LooseRule { Shove = True }` | ○ | `hold` / `hold2` / `ledger` / `lit` | 第106期 |
 | `MartyrRule` | `MartyrRule { RedirectPercent = 75 }` | ○ | `curse` / `guard` / `gather` / `ledger` / `wall` | 第35期 |
 | `MendRule` | `MendRule { Side = Plain }` | ○ | `curse` / `hex` / `mender` / `gauge` / `hold2` / `ledger` / `wound2` / `cross` | 第86期 |
@@ -130,7 +132,7 @@
 | `WoundRule` | `WoundRule { Enabled = True, Census = False }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期 |
 | `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `goad` / `wave2` / `ledger` / `parry` / `brace` | 第35期 |
 
-55 型。
+56 型。
 
 ## 3. 規則が使う列挙型
 
@@ -140,6 +142,7 @@
 |---|---|
 | `BlazeTargets` | `None`=0 / `AllyOnly`=1 / `Both`=2 / `FoeOnly`=3 |
 | `BoundaryChoice` | `None`=0 / `Revive`=1 / `Heal`=2 / `Carry`=3 |
+| `BrandBlast` | `Single`=0 / `All`=1 |
 | `CreakSource` | `Whet`=0 / `Bonus`=1 / `Both`=2 |
 | `HastePick` | `None`=0 / `Slowest`=1 / `Strongest`=2 |
 | `LitFilter` | `SupportOnly`=0 / `ActingOnly`=1 / `ActingNow`=2 |
@@ -160,4 +163,4 @@
 | `WildfireMode` | `None`=0 / `Add`=1 / `Scale`=2 / `Flat`=3 |
 | `YieldMode` | `OwnTurn`=0 / `OwnTurnWindow`=1 / `Immediate`=2 |
 
-21 型。
+22 型。

@@ -152,6 +152,9 @@
 | `Forfeit` | - |
 | `Burden` | - |
 | `Laden` | - |
+| `Indulgence` | - |
+| `Toll` | - |
+| `Brand` | - |
 | `ThinBlade` | 裂きのキリ |
 | `Overreach` | - |
 | `Await` | 断ちのナタ |

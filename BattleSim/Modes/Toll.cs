@@ -10,6 +10,7 @@ using static Common;
 //     dotnet run --project BattleSim -c Release 0 toll scan    # 段0 台の下見（素体版が 40〜95% か・決着T）
 //     dotnet run --project BattleSim -c Release 0 toll scan probe  # 埋め草の掃引（台ごとに帯へ入れる）
 //     dotnet run --project BattleSim -c Release 0 toll run     # 段B（V0 / Vp / Single / All）
+//     dotnet run --project BattleSim -c Release 0 toll cost    # 段B'（決着T のはしご。**代金の分母を Vp で帯に入れる**）
 //     dotnet run --project BattleSim -c Release 0 toll sweep   # 段C（Threshold / Contracts / Advance）
 //     dotnet run --project BattleSim -c Release 0 toll check   # 自己検査（§6）
 // =====================================================================================
@@ -23,12 +24,17 @@ static class TollDiag
         switch (mode)
         {
             case "phase0": Phase0(); return;
-            case "scan": if (arg.StartsWith("probe")) Probe(); else Scan(); return;
+            case "scan":
+                if (arg.StartsWith("probevp")) Probe(vp: true);
+                else if (arg.StartsWith("probe")) Probe(vp: false);
+                else Scan();
+                return;
             case "run": Stage(); return;
+            case "cost": Ladder(); return;
             case "sweep": Sweep(arg); return;
             case "check": Check(arg); return;
             default:
-                Console.WriteLine("toll: モードは phase0 / scan / run / sweep / check。");
+                Console.WriteLine("toll: モードは phase0 / scan / run / cost / sweep / check。");
                 return;
         }
     }
@@ -377,9 +383,11 @@ static class TollDiag
     }
 
     /// <summary>埋め草の掃引（§4 段0）。<b>台ごとに点を選ぶ。</b></summary>
-    static void Probe()
+    static void Probe(bool vp)
     {
-        Console.WriteLine("## 段0 —— 埋め草の掃引（**素体のアガ**・台ごとに帯 40〜95% の点を探す）");
+        Console.WriteLine(vp
+            ? "## 段0' —— 埋め草の掃引（**Vp ＝ 前借りのみ**で帯を切る。**代金の分母は Vp だから**）"
+            : "## 段0 —— 埋め草の掃引（**素体のアガ**・台ごとに帯 40〜95% の点を探す）");
         Console.WriteLine();
         Console.WriteLine("| 台 | 攻 | HP | 勝率（1..5波） | 第2〜5波平均 | 帯 | 情報セル | 決着T |");
         Console.WriteLine("|---|---:|---:|---|---:|---|---:|---:|");
@@ -387,7 +395,7 @@ static class TollDiag
             foreach (int atk in new[] { 10, 14, 18, 22, 26, 30 })
                 foreach (int hp in new[] { 70, 90, 110, 130 })
                 {
-                    (string name, Formation f) = Rig(i, Aga(plain: true), atk, hp);
+                    (string name, Formation f) = Rig(i, Aga(plain: vp ? false : true, noToll: vp), atk, hp);
                     (double[] w, double turns) = Waves(f);
                     double m = (w[1] + w[2] + w[3] + w[4]) / 4;
                     int info = w.Skip(1).Count(x => x > 0.0 && x < 100.0);
@@ -530,6 +538,48 @@ static class TollDiag
     }
 
     // =================================================================================
+    // 段B' —— 決着T のはしご（**条件1 の本丸をここで読む**）
+    // =================================================================================
+
+    /// <summary>
+    /// <b>代金（<c>Vn − Vp</c>）の分母は <c>Vp</c> であって <c>V0</c> ではない。</b>
+    /// 段B の台は「<c>V0</c> が帯（40〜95%）に入ること」で選んだので、
+    /// <b>前借りが強い台では <c>Vp</c> が天井に張り付いて代金が構造的に 0 に潰れる</b>
+    /// （第24期「天井・床のセルでは誰に注入しても 0 に潰れる」・第118期）。
+    ///
+    /// <para>そこで<b>台の形を固定したまま</b>（埋め草5枚 ＋ アガの中立な台）、
+    /// <b><c>Vp</c> が帯に入る点だけ</b>を決着T の順に並べる。
+    /// 変わるのは埋め草の 攻/HP だけなので、**決着の速さ以外は何も動かない。**</para>
+    ///
+    /// <para><b>線（10.0pt）は動かしていない。</b> 動かしたのは「どこで測るか」だけである。</para>
+    /// </summary>
+    static void Ladder()
+    {
+        Console.WriteLine("# 第155期 段B' —— 決着T のはしご（**代金の分母を `Vp` で帯に入れる**）");
+        Console.WriteLine();
+        Console.WriteLine("台の形は固定（埋め草4枚 ＋ 後1 アガ）。**埋め草の 攻/HP だけ**を振って決着の速さを変える。");
+        Console.WriteLine("点は `0 toll scan probevp` で **`Vp` の第2〜5波平均が 40〜95%** に入った6点。");
+        Console.WriteLine();
+        Console.WriteLine("| 埋め草(攻/HP) | **Vp の決着T** | Vp | V1 Single | **代金(V1−Vp)** | V2 All | **代金(V2−Vp)** | V1 の取立(実HP) | V1 の焼き(実HP) |");
+        Console.WriteLine("|---|---:|---:|---:|---:|---:|---:|---:|---:|");
+        foreach ((int atk, int hp) in new[] { (22, 70), (18, 90), (18, 70), (14, 90), (14, 110), (14, 130) })
+        {
+            TlAcc vp = Measure(Rig(1, Aga(noToll: true), atk, hp).F, IndulgenceRule.Default);
+            TlAcc v1 = Measure(Rig(1, Aga(), atk, hp).F, IndulgenceRule.Default);
+            TlAcc v2 = Measure(Rig(1, Aga(), atk, hp).F, IndulgenceRule.Default with { Blast = BrandBlast.All });
+            double mVp = 100.0 * vp.Wins / vp.Battles;
+            double m1 = 100.0 * v1.Wins / v1.Battles;
+            double m2 = 100.0 * v2.Wins / v2.Battles;
+            Console.WriteLine("| " + atk + " / " + hp + " | " + ((double)vp.Turns / vp.Battles).ToString("F2")
+                + " | " + mVp.ToString("F1") + " | " + m1.ToString("F1")
+                + " | **" + (m1 - mVp).ToString("+0.0;-0.0;0.0") + "**"
+                + " | " + m2.ToString("F1") + " | **" + (m2 - mVp).ToString("+0.0;-0.0;0.0") + "**"
+                + " | " + ((double)v1.TollTaken / v1.Battles).ToString("F2")
+                + " | " + ((double)v1.BrandRemoved / v1.Battles).ToString("F2") + " |");
+        }
+    }
+
+    // =================================================================================
     // 段C —— 掃引
     // =================================================================================
 
@@ -548,14 +598,14 @@ static class TollDiag
         for (int i = 0; i < rigs.Length - 1; i++)   // 台5（陰性対照）は掃引しない
         {
             TlAcc v0 = Measure(plainRigs[i].F, IndulgenceRule.Default);
-            TlAcc vp = Measure(vpRigs[i].F, IndulgenceRule.Default);
             double baseM = 100.0 * v0.Wins / v0.Battles;
-            double vpM = 100.0 * vp.Wins / vp.Battles;
-            Console.WriteLine("## " + rigs[i].Name + "（V0 素体 " + baseM.ToString("F1")
-                              + "% / Vp 前借りのみ " + vpM.ToString("F1") + "%）");
+            Console.WriteLine("## " + rigs[i].Name + "（V0 素体 " + baseM.ToString("F1") + "%）");
             Console.WriteLine();
-            Console.WriteLine("| ノブ | 出口 | 勝率 | 帰属 | 代金(−Vp) | 前借り | 負債 | 取立回数 | 取立(実HP) | 焼き回数 | 焼き(実HP) | 未回収 | 決着T |");
-            Console.WriteLine("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+            Console.WriteLine("**`Vp` は点ごとに測り直す**——`Advance` と `Contracts` は前借りの側も動かすので、");
+            Console.WriteLine("既定の `Vp` を分母にすると代金にノブそのものの効きが混ざる。");
+            Console.WriteLine();
+            Console.WriteLine("| ノブ | 出口 | **Vp** | 勝率 | 帰属 | **代金(−Vp)** | 前借り | 負債 | 取立回数 | 取立(実HP) | 焼き回数 | 焼き(実HP) | 未回収 | 決着T |");
+            Console.WriteLine("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
 
             var points = new List<(string Knob, IndulgenceRule R)>();
             if (adv)
@@ -570,21 +620,26 @@ static class TollDiag
                     points.Add(("Threshold " + v, IndulgenceRule.Default with { Threshold = v }));
 
             foreach ((string knob, IndulgenceRule r0) in points)
+            {
+                TlAcc vp = Measure(vpRigs[i].F, r0);
+                double vpM = 100.0 * vp.Wins / vp.Battles;
                 foreach (BrandBlast blast in new[] { BrandBlast.Single, BrandBlast.All })
                 {
                     IndulgenceRule r = r0 with { Blast = blast };
                     TlAcc a = Measure(rigs[i].F, r);
                     double m = 100.0 * a.Wins / a.Battles;
                     double b = a.Battles;
-                    Console.WriteLine("| " + knob + " | " + blast + " | " + m.ToString("F1")
+                    Console.WriteLine("| " + knob + " | " + blast + " | " + vpM.ToString("F1")
+                        + " | " + m.ToString("F1")
                         + " | " + (m - baseM).ToString("+0.0;-0.0;0.0")
-                        + " | " + (m - vpM).ToString("+0.0;-0.0;0.0")
+                        + " | **" + (m - vpM).ToString("+0.0;-0.0;0.0") + "**"
                         + " | " + (a.Fires / b).ToString("F2") + " | " + (a.Stacked / b).ToString("F2")
                         + " | " + (a.TollFires / b).ToString("F2") + " | " + (a.TollTaken / b).ToString("F2")
                         + " | " + (a.BrandFires / b).ToString("F2") + " | " + (a.BrandRemoved / b).ToString("F2")
                         + " | " + (a.Residual / b).ToString("F2")
                         + " | " + ((double)a.Turns / b).ToString("F2") + " |");
                 }
+            }
             Console.WriteLine();
         }
     }
