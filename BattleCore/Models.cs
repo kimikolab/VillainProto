@@ -1503,6 +1503,23 @@ public sealed class UnitTally
     public int ShuffleConfuses;
 
     /// <summary>
+    /// 突風（第151期・<see cref="ShufflerRule.GustPercent"/>。<b>計数のみ。どの規則も読まない</b>）。
+    /// <b>保持者に載せる</b>: <c>GustSwings</c> 薙ぎを振った回数 ／
+    /// <c>GustPrimary</c> 主目標に当たった体数（＝振った回数。<b>倒れた相手も数える</b>）／
+    /// <c>GustSplash</c> 巻き込みで当たった体数（<c>OnAfterAttack</c> の時点で生きている分）／
+    /// <c>GustFell</c> 実際に <see cref="StatusKeys.Stagger"/> を立てた回数。
+    ///
+    /// <para><b>立てられた側には <c>GustFellHere</c> を載せる</b>——
+    /// 「誰を転ばせたか」は保持者の帳簿からは引けない（第150期の「門を読み手に掛けない」の逆側で、
+    /// <b>供給と受領を別々に数える</b>・第124期 Q0-4）。</para>
+    ///
+    /// <para><b><c>GustFell ≦ GustPrimary + GustSplash</c> が受け入れ条件。</b>
+    /// 等号にならないのは (i) 既に転んでいる相手には立て直さない（二値）／
+    /// (ii) その振りで倒れた相手は <c>IsAlive</c> で落ちる／(iii) <c>GustPercent &lt; 100</c> の分。</para>
+    /// </summary>
+    public int GustSwings, GustPrimary, GustSplash, GustFell, GustFellHere;
+
+    /// <summary>
     /// 混乱（第146期・<see cref="ConfusionRule"/>）。<b>計数のみ。</b>
     /// <c>ConfusedMarks</c> この駒に混乱が立った回数（＝動かされた回数のうち、まだ混乱していなかった分）／
     /// <c>ConfusedSwings</c> 混乱したまま振った回数。
@@ -1626,6 +1643,8 @@ public sealed class UnitTally
         ShuffleAdvanced += o.ShuffleAdvanced; ShuffleAdvancedTraited += o.ShuffleAdvancedTraited;
         ShuffleAdvancedFromBack += o.ShuffleAdvancedFromBack; ShuffleStaggers += o.ShuffleStaggers;
         ShuffleConfuses += o.ShuffleConfuses;
+        GustSwings += o.GustSwings; GustPrimary += o.GustPrimary; GustSplash += o.GustSplash;
+        GustFell += o.GustFell; GustFellHere += o.GustFellHere;
         ShuffleNoFoePair += o.ShuffleNoFoePair;
         ConfusedMarks += o.ConfusedMarks; ConfusedSwings += o.ConfusedSwings;
         ConfusedGuards += o.ConfusedGuards; ConfusedKills += o.ConfusedKills;

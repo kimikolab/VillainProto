@@ -6001,8 +6001,25 @@ public enum ShuffleStagger
 /// <paramref name="ConfusePercent"/> と<b>同じ軸</b>を振らないと2つのノブを比べられない（第147期 段B / 段B'）。
 /// 在庫は保持者の <c>Counters</c> に持つ（Trait は共有シングルトン）。
 /// </param>
+/// <param name="GustPercent">
+/// <b>突風</b>（第151期）。保持者の攻撃が当たった敵が転ぶ確率（%）。<b>既定 0 ＝ 完全に不活性</b>
+/// （<c>OnAfterAttack</c> が最初の比較1つで抜けるので<b>乱数も計数も盤面も1ビットも動かない</b>）。
+///
+/// <para><b><see cref="ShuffleStagger"/> の枝にはしていない。</b> あの列挙の軸は
+/// 「<b>ターン頭に前へ出た敵</b>をどうするか」で、突風のトリガーは<b>攻撃が当たったこと</b>
+/// ——別のトリガーなので第147期の「同じトリガーに2つ積まない」に当たらず、直交するノブでよい。
+/// <b>だから突風と混乱は同居する。</b></para>
+///
+/// <para><b>100 では <c>Roll</c> を1つも引かない</b>（<paramref name="ConfusePercent"/> と同じ短絡の作法）。</para>
+/// </param>
+/// <param name="GustSecondary">
+/// 突風を<b>薙ぎの巻き込み先にも</b>乗せるか（既定 true）。
+/// <b>偽にすると供給が 1/3 になる</b>（前1 を薙ぐと主目標 ＋ 巻き込み2体に当たるため）
+/// ——<paramref name="GustPercent"/> とは<b>別の絞り方</b>で、同じ量でも置き場所が違う（第147期 段B / 段B'）。
+/// </param>
 public readonly record struct ShufflerRule(
-    bool Foes, ShuffleStagger Stagger, int ConfusePercent = 100, int ConfuseUses = 0)
+    bool Foes, ShuffleStagger Stagger, int ConfusePercent = 100, int ConfuseUses = 0,
+    int GustPercent = 0, bool GustSecondary = true)
 {
     /// <summary>
     /// 既定は<b>混乱・1戦3回まで</b>（第147期に採用）。敵も乱し、<b>行が前に変わった敵</b>が
@@ -6231,6 +6248,59 @@ public sealed class ShufflerTrait : Trait
         // （揃えないと `ConfusedSwings ≦ ConfusedMarks` の受け入れ条件が偽になる）。
         c.TallyOf(u).ConfusedMarks++;
         c.Log($"    {u.Name} は正気を失った（次の攻撃を自軍へ向ける）", LogKind.Status);
+    }
+
+    /// <summary>
+    /// <b>突風</b>（第151期）。薙ぎが当たった敵を確率で転ばせる。
+    ///
+    /// <para><b>engine には規則も窓口も1本も足していない。</b> 立てるのは第144期がそのまま残している
+    /// <see cref="StatusKeys.Stagger"/> の二値で、読むのは <c>TakeTurnCore</c> の1箇所。</para>
+    ///
+    /// <para><b>巻き込み先は特性の側で引き直す。</b> engine の <c>OnAfterAttack</c> は
+    /// 「攻撃1回につき1度・<b>主目標に対してのみ</b>」なので、範囲の相手はここに渡ってこない
+    /// ——<see cref="BattleContext.SecondaryTargets"/> を呼ぶ。
+    /// <b>呼ばれるのは <c>extras</c> ループの後</b>なので、その振りで倒れた相手は既に死んでいて
+    /// <c>IsAlive</c> で自然に落ちる（＝「倒した相手を転ばせる」空振りが起きない）。</para>
+    ///
+    /// <para><b>味方には乗らない</b>（<c>u.TeamId != self.TeamId</c>）。混乱したバサは
+    /// <c>SecondaryTargets</c> が<b>味方</b>を返す（<c>FoesOf</c> が反転する）ので、
+    /// この検査が無いと「味方側の転倒は 0」が規則ではなく偶然になる。</para>
+    ///
+    /// <para><b><c>Roll</c> は <c>GustPercent &lt; 100</c> のときだけ、当たった1体につき1回引く。</b>
+    /// 既定 0 では最初の比較で抜けるので<b>乱数列が1ビットも動かない</b>——これが
+    /// 「枝を足しただけ」の検算（<c>compare</c> 305 セル 0 件）を成り立たせている。</para>
+    /// </summary>
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dmg)
+    {
+        if (ctx.Shuffler.GustPercent <= 0) return;
+
+        UnitTally tally = ctx.TallyOf(self);
+        tally.GustSwings++;
+        tally.GustPrimary++;
+        Blow(ctx, self, target, tally);
+
+        if (!ctx.Shuffler.GustSecondary) return;
+        foreach (UnitState extra in ctx.SecondaryTargets(self, target))
+        {
+            if (!extra.IsAlive) continue;
+            tally.GustSplash++;
+            Blow(ctx, self, extra, tally);
+        }
+    }
+
+    /// <summary>突風を1体に当てる。<b>既に転んでいる相手には立て直さない</b>（二値）。</summary>
+    private static void Blow(BattleContext ctx, UnitState self, UnitState u, UnitTally tally)
+    {
+        if (!u.IsAlive || u.TeamId == self.TeamId) return;
+        if (u.RawCounter(StatusKeys.Stagger) > 0) return;
+        if (ctx.Shuffler.GustPercent < 100 && ctx.Roll(100) >= ctx.Shuffler.GustPercent) return;
+
+        u.SetCounter(StatusKeys.Stagger, 1);
+        tally.GustFell++;
+        ctx.TallyOf(u).GustFellHere++;
+        // 第145期（表示専用）: 付いた瞬間。ターン頭の写しでは代用できない（同じターンに立って消える）。
+        ctx.EmitStagger(u, StaggerLabels.Fell, self);
+        ctx.Log($"    {u.Name} は突風に足を取られた（次の手番を失う）", LogKind.Status);
     }
 
     /// <summary>

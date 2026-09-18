@@ -11,6 +11,10 @@ using static Common;
 //
 //     dotnet run --project BattleSim -c Release 0 gust phase0   # 前提を実装から引き直す（戦闘0回 ＋ 供給の見積り）
 //     dotnet run --project BattleSim -c Release 0 gust scan     # 台の下見（V0 だけ）
+//     dotnet run --project BattleSim -c Release 0 gust run      # 段A: 薙ぎ化（攻撃力の掃引）
+//     dotnet run --project BattleSim -c Release 0 gust gale     # 段B/C: 転倒の確率と巻き込み
+//     dotnet run --project BattleSim -c Release 0 gust compare  # 拒否権（compare 61行 ＋ 交差帯12行）
+//     dotnet run --project BattleSim -c Release 0 gust check    # 自己検査
 //
 // **攻撃力と型は規則では振れない**（`UnitDef` が決める）ので、段A は**この診断のローカルの
 // `UnitDef`** で作る（第60期の火選りの移設と同じ扱い）。転倒だけが `ShufflerRule` の枝。
@@ -29,9 +33,12 @@ static class GustDiag
         {
             case "phase0": Phase0(); return;
             case "scan": Scan(); return;
+            case "run": StageA(arg); return;
+            case "gale": StageBC(arg); return;
+            case "compare": CompareRows(arg); return;
+            case "check": Check(arg); return;
             default:
-                Console.WriteLine("gust: モードは phase0 / scan。"
-                                  + "（run / gale / compare / check は段A 以降で足す）");
+                Console.WriteLine("gust: モードは phase0 / scan / run / gale / compare / check。");
                 return;
         }
     }
@@ -399,6 +406,453 @@ static class GustDiag
     }
 
     // =================================================================================
+    // run —— 段A: 薙ぎ化（攻撃力の掃引）
+    // =================================================================================
+
+    static void StageA(string arg)
+    {
+        int[] atks = arg.Length > 0
+            ? arg.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray()
+            : new[] { 2, 3, 4, 5 };
+
+        Console.WriteLine("# 第151期 `gust run` —— 段A: 薙ぎ化（転倒なし）");
+        Console.WriteLine();
+        Console.WriteLine("**V0 ＝ 現行**（攻" + UnitCatalog.Basa.Attack + "・単体）。"
+                          + "**掃引は 攻" + string.Join(" / 攻", atks) + " × 薙ぎ。**");
+        Console.WriteLine("`GustPercent = 0` なので転倒は1件も立たない（段A は型と攻撃力だけを振る）。");
+        Console.WriteLine();
+
+        var rigs0 = Rigs(UnitCatalog.Basa);
+
+        Console.WriteLine("## 表A. 帰属（第2〜5波平均・Δ と**余地に対する取り分**を併記）—— 規約 Q0-1");
+        Console.WriteLine();
+        Console.WriteLine("`取り分` ＝ Δ ÷ (上がったなら 100 − V0 ／ 下がったなら V0)。");
+        Console.WriteLine();
+        Console.Write("| 台 | V0 攻7単体 |");
+        foreach (int a in atks) Console.Write(" 攻" + a + "薙ぎ | 取り分 |");
+        Console.WriteLine();
+        Console.Write("|---|--:|");
+        foreach (int _ in atks) Console.Write("--:|--:|");
+        Console.WriteLine();
+        foreach ((string name, Formation f) in rigs0)
+        {
+            double v0 = Rates(f, V0).Skip(1).Average();
+            Console.Write("| " + name + " | " + v0.ToString("F1") + " |");
+            foreach (int a in atks)
+            {
+                double v = Rates(Swap(f, Basa(a, AttackPattern.Sweep)), V0).Skip(1).Average();
+                double room = v >= v0 ? 100.0 - v0 : v0;
+                Console.Write(" " + v.ToString("F1") + " (" + (v - v0).ToString("+0.0;-0.0") + ") | "
+                              + (room <= 0.001 ? "—" : ((v - v0) / room).ToString("+0.000;-0.000")) + " |");
+            }
+            Console.WriteLine();
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("## 表B. バサの出力（第2〜5波平均・回/戦・量/戦）");
+        Console.WriteLine();
+        Console.WriteLine("**与ダメは総量。第127期の「段の価値は打点では測れない」があるので勝率と並べて読む。**");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 版 | 振り | 与ダメ | 1振りあたり | 撃破 | 生存T |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|");
+        foreach ((string name, Formation f) in rigs0)
+        {
+            if (name == "動かす機構なし") continue;
+            foreach ((string lab, UnitDef d) in
+                     new[] { ("V0 攻7単体", UnitCatalog.Basa) }
+                     .Concat(atks.Select(a => ("攻" + a + "薙ぎ", Basa(a, AttackPattern.Sweep)))))
+            {
+                Bas b = BasaOf(Swap(f, d), V0, UnitCatalog.Basa.Id);
+                Console.WriteLine("| " + name + " | " + lab + " | " + b.Attacks.ToString("F2") + " | "
+                                  + b.Damage.ToString("F1") + " | "
+                                  + (b.Attacks <= 1e-9 ? "—" : (b.Damage / b.Attacks).ToString("F2")) + " | "
+                                  + b.Kills.ToString("F2") + " | " + b.Last.ToString("F2") + " |");
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("## 表C. 陣営全体（第2〜5波平均）");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 版 | 味方の与ダメ | 決着T |");
+        Console.WriteLine("|---|---|--:|--:|");
+        foreach ((string name, Formation f) in rigs0)
+        {
+            if (name == "動かす機構なし") continue;
+            foreach ((string lab, UnitDef d) in
+                     new[] { ("V0 攻7単体", UnitCatalog.Basa) }
+                     .Concat(atks.Select(a => ("攻" + a + "薙ぎ", Basa(a, AttackPattern.Sweep)))))
+            {
+                (double dmg, double turns) = TeamOf(Swap(f, d), V0);
+                Console.WriteLine("| " + name + " | " + lab + " | " + dmg.ToString("F1") + " | "
+                                  + turns.ToString("F2") + " |");
+            }
+        }
+    }
+
+    // =================================================================================
+    // gale —— 段B / 段C: 転倒の確率と巻き込み
+    // =================================================================================
+
+    static void StageBC(string arg)
+    {
+        string[] a = arg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        int atk = a.Length > 0 ? int.Parse(a[0]) : 4;
+        int[] pcts = a.Length > 1
+            ? a[1].Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToArray()
+            : new[] { 10, 20, 30 };
+
+        Console.WriteLine("# 第151期 `gust gale` —— 段B（確率の掃引）と 段C（巻き込みを外す）");
+        Console.WriteLine();
+        Console.WriteLine("**段A で確定した攻撃力 ＝ 攻" + atk + "・薙ぎ**。掃引は `GustPercent` = "
+                          + string.Join(" / ", pcts) + "%。");
+        Console.WriteLine("**段C は最良の確率で `GustSecondary = false`**（主目標だけ転ばせる）。");
+        Console.WriteLine();
+
+        UnitDef gust = Basa(atk, AttackPattern.Sweep);
+        var rigs0 = Rigs(UnitCatalog.Basa);
+
+        var versions = new List<(string Lab, ShufflerRule R)>();
+        versions.Add(("段A 転倒なし", V0 with { GustPercent = 0 }));
+        foreach (int p in pcts) versions.Add(("段B " + p + "%", V0 with { GustPercent = p }));
+        versions.Add(("段C " + pcts[^1] + "% 主のみ",
+                      V0 with { GustPercent = pcts[^1], GustSecondary = false }));
+
+        Console.WriteLine("## 表D. 帰属（第2〜5波平均・**Δ と取り分を併記**）");
+        Console.WriteLine();
+        Console.Write("| 台 | V0 攻7単体 |");
+        foreach (var v in versions) Console.Write(" " + v.Lab + " | 取り分 |");
+        Console.WriteLine();
+        Console.Write("|---|--:|");
+        foreach (var _ in versions) Console.Write("--:|--:|");
+        Console.WriteLine();
+        foreach ((string name, Formation f) in rigs0)
+        {
+            double v0 = Rates(f, V0).Skip(1).Average();
+            Console.Write("| " + name + " | " + v0.ToString("F1") + " |");
+            foreach (var v in versions)
+            {
+                double x = Rates(Swap(f, gust), v.R).Skip(1).Average();
+                double room = x >= v0 ? 100.0 - v0 : v0;
+                Console.Write(" " + x.ToString("F1") + " (" + (x - v0).ToString("+0.0;-0.0") + ") | "
+                              + (room <= 0.001 ? "—" : ((x - v0) / room).ToString("+0.000;-0.000")) + " |");
+            }
+            Console.WriteLine();
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("## 表E. 波ごと（帯 ＝ 第2〜5波を分けて出す）—— 予測3");
+        Console.WriteLine();
+        Console.WriteLine("**生の pt ではなく取り分で並べる**（第144期・規約 Q0-1）。");
+        Console.WriteLine();
+        Console.Write("| 台 | 波 | V0 |");
+        foreach (var v in versions) Console.Write(" " + v.Lab + " | 取り分 |");
+        Console.WriteLine();
+        Console.Write("|---|---|--:|");
+        foreach (var _ in versions) Console.Write("--:|--:|");
+        Console.WriteLine();
+        foreach ((string name, Formation f) in rigs0)
+        {
+            if (name == "動かす機構なし") continue;
+            double[] w0 = Rates(f, V0);
+            var wv = versions.Select(v => Rates(Swap(f, gust), v.R)).ToList();
+            for (int st = 1; st < 5; st++)
+            {
+                Console.Write("| " + name + " | 第" + (st + 1) + "波 | " + w0[st].ToString("F1") + " |");
+                for (int i = 0; i < versions.Count; i++)
+                {
+                    double x = wv[i][st], room = x >= w0[st] ? 100.0 - w0[st] : w0[st];
+                    Console.Write(" " + x.ToString("F1") + " (" + (x - w0[st]).ToString("+0.0;-0.0") + ") | "
+                                  + (room <= 0.001 ? "—" : ((x - w0[st]) / room).ToString("+0.000;-0.000")) + " |");
+                }
+                Console.WriteLine();
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("## 表F. 機構の帳簿（第2〜5波平均・回/戦）—— 受け入れ条件 §4-2");
+        Console.WriteLine();
+        Console.WriteLine("`当たった` は薙ぎが届いた延べ体数（主 ＋ 巻き込み）、"
+                          + "`転倒` は実際に `StatusKeys.Stagger` を立てた回数。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 版 | 振り | 当たった | うち主 | うち巻き込み | 1振りの体数 | **転倒** | 転倒/当たった | 味方の転倒 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|");
+        foreach ((string name, Formation f) in rigs0)
+        {
+            if (name == "動かす機構なし") continue;
+            foreach (var v in versions)
+            {
+                Gl g = Gale(Swap(f, gust), v.R);
+                Console.WriteLine("| " + name + " | " + v.Lab + " | " + g.Swings.ToString("F2") + " | "
+                                  + (g.Primary + g.Splash).ToString("F2") + " | " + g.Primary.ToString("F2")
+                                  + " | " + g.Splash.ToString("F2") + " | "
+                                  + (g.Swings <= 1e-9 ? "—" : ((g.Primary + g.Splash) / g.Swings).ToString("F2"))
+                                  + " | **" + g.Fell.ToString("F2") + "** | "
+                                  + (g.Primary + g.Splash <= 1e-9 ? "—"
+                                     : (g.Fell / (g.Primary + g.Splash)).ToString("F3"))
+                                  + " | " + g.AllyFell.ToString("F2") + " |");
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("## 表G. 誰を転ばせたか（第2〜5波の合計・体）—— 予測3 の直接の証拠");
+        Console.WriteLine();
+        Console.WriteLine("**前列の壁を転ばせているのか、引きずり出した後列の駒を転ばせているのか。**");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 版 | 転倒の相手（多い順） |");
+        Console.WriteLine("|---|---|---|");
+        foreach ((string name, Formation f) in rigs0)
+        {
+            if (name == "動かす機構なし") continue;
+            foreach (var v in versions)
+            {
+                if (v.R.GustPercent == 0) continue;
+                var who = Victims(Swap(f, gust), v.R);
+                Console.WriteLine("| " + name + " | " + v.Lab + " | "
+                                  + (who.Count == 0 ? "—"
+                                     : string.Join(" ／ ", who.OrderByDescending(k => k.Value).Take(5)
+                                         .Select(k => k.Key + " " + (k.Value / 4.0 / Seeds).ToString("F2")))) + " |");
+            }
+        }
+    }
+
+    // =================================================================================
+    // compare —— 拒否権（`compare` 61 行 ＋ 交差帯 12 行）
+    // =================================================================================
+
+    static void CompareRows(string arg)
+    {
+        string[] a = arg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        int atk = a.Length > 0 ? int.Parse(a[0]) : 4;
+        int pct = a.Length > 1 ? int.Parse(a[1]) : 20;
+        bool sec = a.Length <= 2 || a[2] != "primary";
+
+        Console.WriteLine("# 第151期 `gust compare` —— 拒否権");
+        Console.WriteLine();
+        Console.WriteLine("**V0 ＝ 現行の盤面そのもの。V1 ＝ 攻" + atk + "・薙ぎ ＋ `GustPercent = " + pct
+                          + "` / `GustSecondary = " + sec + "`**");
+        Console.WriteLine("（`Presets` のバサを差し替えられないので、**編成ごとにバサだけを入れ替えた写し**を組む）。");
+        Console.WriteLine();
+
+        UnitDef gust = Basa(atk, AttackPattern.Sweep);
+        ShufflerRule V1 = V0 with { GustPercent = pct, GustSecondary = sec };
+
+        var rows = new List<(string Name, double[] A, double[] B)>();
+        foreach ((string name, Formation f) in CompareBuilds())
+            rows.Add((name, Rates(f, V0), Rates(Swap(f, gust), V1)));
+
+        int moved = rows.Count(r => Enumerable.Range(0, 5).Any(i => Math.Abs(r.A[i] - r.B[i]) > 0.001));
+        Console.WriteLine("## 表H. 特異性（バサを含まない行が ±0.0 か）");
+        Console.WriteLine();
+        Console.WriteLine("- 動いた行: **" + moved + " / " + rows.Count + "**");
+        Console.WriteLine("- バサを含む行: **"
+                          + CompareBuilds().Count(b => b.F.Occupied().Any(o => o.Def.Id == UnitCatalog.Basa.Id))
+                          + " / " + rows.Count + "**");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | バサ在席 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|:-:|");
+        foreach ((string name, double[] x, double[] y) in rows)
+            if (Enumerable.Range(0, 5).Any(i => Math.Abs(x[i] - y[i]) > 0.001))
+                Console.WriteLine("| " + name + " | " + string.Join(" | ", Enumerable.Range(0, 5)
+                    .Select(i => (y[i] - x[i]).ToString("+0.0;-0.0;0.0"))) + " | "
+                    + (CompareBuilds().First(b => b.Name == name).F.Occupied()
+                        .Any(o => o.Def.Id == UnitCatalog.Basa.Id) ? "○" : "**×**") + " |");
+        Console.WriteLine();
+
+        int cross = 0, crossRows = 0;
+        var crossNames = new List<string>();
+        foreach ((string cname, Formation f) in CrossBuilds())
+        {
+            double[] x = Rates(f, V0), y = Rates(Swap(f, gust), V1);
+            int n = Enumerable.Range(0, 5).Count(i => Math.Abs(x[i] - y[i]) > 0.001);
+            cross += n;
+            if (n > 0) { crossRows++; crossNames.Add(cname + "（" + n + " セル）"); }
+        }
+        Console.WriteLine("- 交差帯 12 行 / 60 セルで動いたセル: **" + cross + "**（" + crossRows + " 行）");
+        Console.WriteLine("  - " + (crossNames.Count == 0 ? "—" : string.Join(" ／ ", crossNames)));
+        Console.WriteLine();
+
+        var pri = rows.Where(r => Baseline.PrimaryRows.Contains(r.Name)).ToList();
+        double pa5 = pri.Average(r => r.A[4]), pb5 = pri.Average(r => r.B[4]);
+        Console.WriteLine("## 表I. 拒否権1（主判定19行の第五波平均）");
+        Console.WriteLine();
+        Console.WriteLine("| | V0 | V1 | Δ |");
+        Console.WriteLine("|---|--:|--:|--:|");
+        for (int st = 0; st < 5; st++)
+            Console.WriteLine("| 全61行・第" + (st + 1) + "波 | " + rows.Average(r => r.A[st]).ToString("F1")
+                              + " | " + rows.Average(r => r.B[st]).ToString("F1") + " | "
+                              + (rows.Average(r => r.B[st]) - rows.Average(r => r.A[st])).ToString("+0.0;-0.0") + " |");
+        Console.WriteLine("| **主判定" + pri.Count + "行・第五波** | **" + pa5.ToString("F1") + "** | **"
+                          + pb5.ToString("F1") + "** | **" + (pb5 - pa5).ToString("+0.0;-0.0") + "** |");
+        Console.WriteLine();
+        Console.WriteLine("**拒否権1（歯止め " + Baseline.PrimaryFifthFloor.ToString("F1") + "%）: "
+                          + (pb5 < Baseline.PrimaryFifthFloor ? "発動" : "通る") + "**");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表J. 拒否権3（いずれかの波で −10.0pt 以上）");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 波 | V0 | V1 | Δ | 主判定 |");
+        Console.WriteLine("|---|---|--:|--:|--:|:-:|");
+        int veto = 0;
+        foreach ((string name, double[] x, double[] y) in rows)
+            for (int st = 0; st < 5; st++)
+                if (y[st] - x[st] <= -10.0)
+                {
+                    veto++;
+                    Console.WriteLine("| " + name + " | 第" + (st + 1) + "波 | " + x[st].ToString("F1") + " | "
+                                      + y[st].ToString("F1") + " | " + (y[st] - x[st]).ToString("+0.0;-0.0")
+                                      + " | " + (Baseline.PrimaryRows.Contains(name) ? "**○**" : "—") + " |");
+                }
+        Console.WriteLine();
+        Console.WriteLine("- **" + veto + " セル**が −10.0pt 以上");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表K. 情報セル（第2〜5波で `0 < x < 100`）");
+        Console.WriteLine();
+        Console.WriteLine("| | V0 | V1 |");
+        Console.WriteLine("|---|--:|--:|");
+        Console.WriteLine("| 全61行 | " + rows.Sum(r => r.A.Skip(1).Count(x => x > 0 && x < 100))
+                          + " | " + rows.Sum(r => r.B.Skip(1).Count(x => x > 0 && x < 100)) + " |");
+        Console.WriteLine("| 主判定" + pri.Count + "行 | " + pri.Sum(r => r.A.Skip(1).Count(x => x > 0 && x < 100))
+                          + " | " + pri.Sum(r => r.B.Skip(1).Count(x => x > 0 && x < 100)) + " |");
+        Console.WriteLine("| 第五波 95% 超の行 | " + rows.Count(r => r.A[4] > 95)
+                          + " | " + rows.Count(r => r.B[4] > 95) + " |");
+    }
+
+    // =================================================================================
+    // check —— 自己検査
+    // =================================================================================
+
+    static void Check(string arg)
+    {
+        Console.WriteLine("# 第151期 自己検査 —— `gust check`");
+        Console.WriteLine();
+
+        string bal = arg.Length > 0 ? arg : "docs/balance.md";
+        Console.WriteLine("## (a) 必須1: `compare` 305 セルが `" + bal + "` と 0 件");
+        Console.WriteLine();
+        if (!File.Exists(bal)) Console.WriteLine("**比較先が見つからない。手で `compare` を回して突き合わせること。**");
+        else
+        {
+            var want = new Dictionary<string, double[]>();
+            foreach (string line in File.ReadAllLines(bal))
+            {
+                if (!line.StartsWith("| ") || !line.Contains('%')) continue;
+                string[] c = line.Split('|', StringSplitOptions.TrimEntries);
+                if (c.Length < 7) continue;
+                var v = new List<double>();
+                for (int i = 2; i <= 6; i++)
+                    if (double.TryParse(c[i].TrimEnd('%'), out double d)) v.Add(d);
+                if (v.Count == 5) want[c[1]] = v.ToArray();
+            }
+            int diff = 0, cells = 0;
+            foreach ((string name, Formation f) in CompareBuilds())
+            {
+                if (!want.TryGetValue(name, out double[]? w)) { Console.WriteLine("- 行が引けない: " + name); continue; }
+                double[] got = Rates(f, null);
+                for (int i = 0; i < 5; i++) { cells++; if (Math.Abs(got[i] - w[i]) > 0.001) diff++; }
+            }
+            Console.WriteLine("- " + cells + " セル中 **" + diff + " 件**" + (diff == 0 ? " ○" : " **×**"));
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("## (b) `GustPercent = 0` が既定と 1 ビットも違わない（枝を足しただけの検算）");
+        Console.WriteLine();
+        Console.WriteLine("- `ShufflerRule.Default` = `" + ShufflerRule.Default + "`");
+        Console.WriteLine("- この診断の V0 = `" + V0 + "`");
+        {
+            int diff = 0;
+            foreach ((string _, Formation f) in CompareBuilds())
+            {
+                double[] x = Rates(f, null), y = Rates(f, V0 with { GustPercent = 0 });
+                for (int i = 0; i < 5; i++) if (Math.Abs(x[i] - y[i]) > 0.001) diff++;
+            }
+            Console.WriteLine("- 305 セル: **" + diff + " 件**" + (diff == 0 ? " ○" : " **×**"));
+        }
+        Console.WriteLine();
+        Console.WriteLine("**`GustSecondary` も単独では盤面を動かさない**（`GustPercent = 0` のとき）:");
+        {
+            int diff = 0;
+            foreach ((string _, Formation f) in CompareBuilds())
+            {
+                double[] x = Rates(f, null), y = Rates(f, V0 with { GustPercent = 0, GustSecondary = false });
+                for (int i = 0; i < 5; i++) if (Math.Abs(x[i] - y[i]) > 0.001) diff++;
+            }
+            Console.WriteLine("- 305 セル: **" + diff + " 件**" + (diff == 0 ? " ○" : " **×**"));
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("## (c) §4-2: `転倒 ≦ 当たった延べ体数` ／ **味方側の転倒が 0**");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 波 | 振り | 当たった | 転倒 | 味方の転倒 | 判定 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|:-:|");
+        UnitDef gust = Basa(4, AttackPattern.Sweep);
+        ShufflerRule full = V0 with { GustPercent = 100 };
+        bool ok = true;
+        foreach ((string name, Formation f) in Rigs(UnitCatalog.Basa))
+        {
+            if (name == "動かす機構なし") continue;
+            for (int st = 1; st < 5; st++)
+            {
+                Gl g = Gale(Swap(f, gust), full, st, st + 1, 50);
+                bool o = g.Fell <= g.Primary + g.Splash + 1e-9 && g.AllyFell <= 1e-9;
+                if (!o) ok = false;
+                Console.WriteLine("| " + name + " | 第" + (st + 1) + "波 | " + g.Swings.ToString("F2") + " | "
+                                  + (g.Primary + g.Splash).ToString("F2") + " | " + g.Fell.ToString("F2")
+                                  + " | " + g.AllyFell.ToString("F2") + " | " + (o ? "○" : "**×**") + " |");
+            }
+        }
+        Console.WriteLine();
+        Console.WriteLine("- 全 16 セル" + (ok ? " ○" : " **×**"));
+        Console.WriteLine();
+        Console.WriteLine("**`GustPercent = 100` では `転倒 ＝ 当たった` になるとは限らない**"
+                          + "——既に転んでいる相手（二値）には立て直さないし、");
+        Console.WriteLine("巻き込みで倒れた相手は `IsAlive` で落ちる。");
+
+        Console.WriteLine();
+        Console.WriteLine("## (d) 段C（`GustSecondary = false`）が主目標だけを転ばせる");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 当たった（主 / 巻き込み） | 転倒 | 転倒 ≦ 主 |");
+        Console.WriteLine("|---|---|--:|:-:|");
+        bool okC = true;
+        foreach ((string name, Formation f) in Rigs(UnitCatalog.Basa))
+        {
+            if (name == "動かす機構なし") continue;
+            Gl g = Gale(Swap(f, gust), V0 with { GustPercent = 100, GustSecondary = false });
+            bool o = g.Fell <= g.Primary + 1e-9;
+            if (!o) okC = false;
+            Console.WriteLine("| " + name + " | " + g.Primary.ToString("F2") + " / " + g.Splash.ToString("F2")
+                              + " | " + g.Fell.ToString("F2") + " | " + (o ? "○" : "**×**") + " |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("- " + (okC ? "○" : "**×**"));
+
+        Console.WriteLine();
+        Console.WriteLine("## (e) 必須4: `ctx.PickOne` を新たに使っていない");
+        Console.WriteLine();
+        string? tr = FindSource("BattleCore", "Traits.cs");
+        string? eng = FindSource("BattleCore", "BattleEngine.cs");
+        if (tr is null || eng is null) Console.WriteLine("**ソースが引けない。止める**（第117期）。");
+        else
+        {
+            Console.WriteLine("- `BattleEngine.cs` の `PickOne(` は **"
+                              + File.ReadAllLines(eng).Count(l => l.Contains("PickOne(")) + "** 行");
+            Console.WriteLine("- `Traits.cs` の `PickOne(` は **"
+                              + File.ReadAllLines(tr).Count(l => l.Contains("PickOne(")) + "** 行");
+            Console.WriteLine("- 突風が引く乱数は `GustPercent < 100` のときの `Roll(100)` だけ: **"
+                              + (File.ReadAllLines(tr).Any(l => l.Contains("ctx.Shuffler.GustPercent < 100"))
+                                 ? "○" : "**×**（未実装なら段A の前）") + "**");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("## (f) 必須3: `docs/rules.md` の既定値の列");
+        Console.WriteLine();
+        Console.WriteLine("`ShufflerRule` の既定 = `" + ShufflerRule.Default + "`");
+        Console.WriteLine();
+        Console.WriteLine("**`record struct` に計算プロパティを足していないこと**（第148期）——"
+                          + "自動生成の `ToString` に載って既定値の列が動く。");
+    }
+
+    // =================================================================================
     // 器具
     // =================================================================================
 
@@ -443,9 +897,69 @@ static class GustDiag
         return new Bas(atk / d, dmg / d, kill / d, last / d);
     }
 
+    /// <summary>味方全体の与ダメと決着ターン（第2〜5波の平均）。</summary>
+    static (double Damage, double Turns) TeamOf(Formation f, ShufflerRule r)
+    {
+        var own = new HashSet<string>(f.Occupied().Select(o => o.Def.Id));
+        double dmg = 0, turns = 0;
+        for (int st = 1; st < 5; st++)
+            for (int seed = 0; seed < Seeds; seed++)
+            {
+                BattleResult res = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed,
+                                                    verbose: false, shuffler: r);
+                foreach (var kv in res.TallyByUnit)
+                    if (own.Contains(kv.Key)) dmg += kv.Value.DamageToEnemy;
+                turns += res.Turns;
+            }
+        double d = 4.0 * Seeds;
+        return (dmg / d, turns / d);
+    }
 
+    readonly record struct Gl(double Swings, double Primary, double Splash, double Fell, double AllyFell);
 
+    /// <summary>突風の帳簿（既定は第2〜5波の平均・回/戦）。</summary>
+    static Gl Gale(Formation f, ShufflerRule r, int from = 1, int to = 5, int seeds = Seeds)
+    {
+        var own = new HashSet<string>(f.Occupied().Select(o => o.Def.Id));
+        double sw = 0, pri = 0, spl = 0, fell = 0, ally = 0;
+        int n = 0;
+        for (int st = from; st < to; st++)
+        {
+            n++;
+            for (int seed = 0; seed < seeds; seed++)
+            {
+                BattleResult res = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed,
+                                                    verbose: false, shuffler: r);
+                foreach (var kv in res.TallyByUnit)
+                {
+                    UnitTally t = kv.Value;
+                    sw += t.GustSwings; pri += t.GustPrimary; spl += t.GustSplash; fell += t.GustFell;
+                    if (own.Contains(kv.Key)) ally += t.GustFellHere;
+                }
+            }
+        }
+        double d = Math.Max(1, n) * (double)seeds;
+        return new Gl(sw / d, pri / d, spl / d, fell / d, ally / d);
+    }
 
+    /// <summary>転倒した相手の名前ごとの延べ件数（第2〜5波の合計）。</summary>
+    static Dictionary<string, int> Victims(Formation f, ShufflerRule r)
+    {
+        var own = new HashSet<string>(f.Occupied().Select(o => o.Def.Id));
+        var who = new Dictionary<string, int>();
+        for (int st = 1; st < 5; st++)
+            for (int seed = 0; seed < Seeds; seed++)
+            {
+                BattleResult res = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed,
+                                                    verbose: false, shuffler: r);
+                foreach (var kv in res.TallyByUnit)
+                {
+                    if (own.Contains(kv.Key) || kv.Value.GustFellHere == 0) continue;
+                    who[kv.Key] = who.GetValueOrDefault(kv.Key) + kv.Value.GustFellHere;
+                }
+            }
+        return who;
+    }
 
     /// <summary>リポジトリ内のファイルを探す。<b>引けなかったら呼び出し側で止めること</b>（第117期）。</summary>
     static string? FindSource(string dirName, string leaf)
