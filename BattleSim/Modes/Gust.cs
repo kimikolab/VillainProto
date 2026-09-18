@@ -32,7 +32,7 @@ static class GustDiag
         switch (mode)
         {
             case "phase0": Phase0(); return;
-            case "scan": Scan(); return;
+            case "scan": if (arg.StartsWith("probe")) ScanProbe(); else Scan(); return;
             case "run": StageA(arg); return;
             case "gale": StageBC(arg); return;
             case "compare": CompareRows(arg); return;
@@ -74,13 +74,26 @@ static class GustDiag
         Advances = true, Traits = Array.Empty<TraitId>()
     };
 
-    static UnitDef Fill(string id) => Plain(id, 110, 34);
+    static UnitDef Fill(string id) => Plain(id, FillHp, FillAtk);
+
+    /// <summary>埋め草の既定の強さ（第148期から。他の4台はこのまま）。</summary>
+    const int FillHp = 110, FillAtk = 34;
+
+    /// <summary><b>第152期 段0 で組み直した `被弾変換が厚い` の埋め草。</b>
+    /// 第151期に V0 = 93.8%（余地 6.2pt）だったのがバサの採用で <b>98.2%（余地 1.8pt）</b>まで上がり、
+    /// 「4台とも 40〜95% に収まる」が「勝率をほとんど上げないこと」と同義になっていた
+    /// ——<b>埋め草だけを弱めて帯へ戻す</b>（肩代わり3枚の顔ぶれは1枚も触らない）。
+    /// 値は <c>gust scan probe</c> の掃引から採った（<b>帯の中で情報セルが最多の点</b>）。
+    /// <b>この台の第151期の数字はもう再現しない</b>——埋め草が変わったので、
+    /// 過去の期と比べるときは 110/34 に戻すこと（他の4台は1枚も触っていない）。</summary>
+    static UnitDef FillThick(string id) => Plain(id, ThickFillHp, ThickFillAtk);
+    static int ThickFillHp = 70, ThickFillAtk = 16;
 
     static (string Name, Formation F)[] Rigs(UnitDef basa) => new (string, Formation)[]
     {
         ("被弾変換が厚い", Formation.Build(
             front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Doha,
-            back1: basa, back3: Fill("pa"))),
+            back1: basa, back3: FillThick("pa"))),
 
         ("被弾変換が薄い", Formation.Build(
             front1: UnitCatalog.Dolga, front3: UnitCatalog.Borg, center: UnitCatalog.Kiri,
@@ -403,6 +416,59 @@ static class GustDiag
                               + w.Skip(1).Count(x => x > 0.0 && x < 100.0) + "/4 | "
                               + (avg >= 40 && avg <= 95 ? "○" : "**×**") + " |");
         }
+    }
+
+    /// <summary>
+    /// <b>段0（第152期）。</b> 埋め草の強さだけを掃引して、台を帯（40〜95%）へ戻す点を探す。
+    /// <b>顔ぶれは1枚も動かさない</b>——動かすと台の名前（「被弾変換が厚い」）が意味を失う。
+    /// </summary>
+    static void ScanProbe()
+    {
+        (int Hp, int Atk)[] pts =
+        {
+            (110, 34), (100, 28), (90, 24), (80, 20), (70, 16), (60, 12), (56, 10), (50, 8), (45, 6),
+        };
+
+        Console.WriteLine("# 第152期 段0 `gust scan probe` —— 埋め草の強さを掃引する");
+        Console.WriteLine();
+        Console.WriteLine("**採る条件は第61・63期の帯: 第2〜5波平均が 40〜95%、かつ情報セル 3 以上**"
+                          + "（Q0-6）。掃引するのは**埋め草1枚（後3）だけ**で、");
+        Console.WriteLine("台の顔ぶれ（前1 ガルド / 前3 ムド / 中央 ドハ）は1枚も動かさない。");
+        Console.WriteLine();
+        Console.WriteLine("| 埋め草 HP/攻 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | 第2〜5波 | 情報セル | 帯 | 採否 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|:-:|:-:|");
+
+        int savedHp = ThickFillHp, savedAtk = ThickFillAtk;
+        (int Hp, int Atk, double Avg, int Info)? best = null;
+        foreach ((int hp, int atk) in pts)
+        {
+            ThickFillHp = hp; ThickFillAtk = atk;
+            Formation f = Rigs(UnitCatalog.Basa)[0].F;
+            double[] w = Rates(f, V0);
+            double avg = w.Skip(1).Average();
+            int info = w.Skip(1).Count(x => x > 0.0 && x < 100.0);
+            bool ok = avg >= 40 && avg <= 95 && info >= 3;
+            // 帯の中で**いちばん情報セルが多い**点を採り、同数なら帯の中央（67.5%）に近いほうを採る。
+            if (ok && (best is null || info > best.Value.Info
+                       || (info == best.Value.Info
+                           && Math.Abs(avg - 67.5) < Math.Abs(best.Value.Avg - 67.5))))
+                best = (hp, atk, avg, info);
+            Console.WriteLine("| " + hp + " / " + atk + " | "
+                              + string.Join(" | ", w.Select(x => x.ToString("F1")))
+                              + " | **" + avg.ToString("F1") + "** | " + info + "/4 | "
+                              + (avg >= 40 && avg <= 95 ? "○" : "**×**") + " | "
+                              + (ok ? "○" : "—") + " |");
+        }
+        ThickFillHp = savedHp; ThickFillAtk = savedAtk;
+
+        Console.WriteLine();
+        Console.WriteLine(best is null
+            ? "**帯に入る点が1つも無い。掃引の範囲を広げること**（第117期「走査が空なら止める」）。"
+            : "**採った点: 埋め草 HP" + best.Value.Hp + " / 攻" + best.Value.Atk
+              + "**（第2〜5波 " + best.Value.Avg.ToString("F1") + "% ・情報セル "
+              + best.Value.Info + "/4）——帯の中で情報セルが最多の点。");
+        Console.WriteLine();
+        Console.WriteLine("**現行の設定は 埋め草 HP" + savedHp + " / 攻" + savedAtk + "。**");
     }
 
     // =================================================================================
