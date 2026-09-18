@@ -450,6 +450,13 @@ if (focusId == "gust")
     return;
 }
 
+// ward モード（第153期） —— 預かり（回復に「時間」の次元を入れる）。本体は `Modes/Ward.cs`。
+if (focusId == "ward")
+{
+    WardDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // stall モード（第152期） —— 膠着（30 ターン上限）を塞ぐ。本体は `Modes/Stall.cs`。
 if (focusId == "stall")
 {
