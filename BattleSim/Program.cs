@@ -436,6 +436,13 @@ if (focusId == "tumult")
     return;
 }
 
+// tumult2 モード（第148期） —— バサの手番を混乱に使う。本体は `Modes/Tumult2.cs`。
+if (focusId == "tumult2")
+{
+    Tumult2Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // derange モード（第147期） —— バサの転倒を混乱に置き換える。本体は `Modes/Derange.cs`。
 if (focusId == "derange")
 {

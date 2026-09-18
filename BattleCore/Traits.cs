@@ -5951,6 +5951,29 @@ public enum ShuffleStagger
     /// <b>供給の口が違うだけの同じ機構</b>である。</para>
     /// </summary>
     Confuse,
+
+    /// <summary>
+    /// 混乱を<b>ターン頭ではなく保持者の手番で</b>立てる（第148期）。
+    /// 対象は<b>そのターンに行が前へ変わった敵</b>のうち、<b>まだ混乱していない1体</b>
+    /// （複数なら <c>Roll</c> で1体）。<b>いなければ撃てない</b>
+    /// ——<see cref="Trait.CanAct"/> が偽を返して <c>IdleTurn</c> が立つので、
+    /// その手番は号令（ガン）・据え（バン）が買い取れる（<c>ShufflerTrait.CanAct</c> の doc）。
+    ///
+    /// <para><b><see cref="Confuse"/> との違いは供給の口だけ</b>で、混乱そのものの規則は1行も違わない。
+    /// <b>ターン頭では1件も立てない</b>——二重に立てると「どちらが効いたか」が測れなくなる。</para>
+    ///
+    /// <para><b><see cref="ShufflerRule.ConfuseUses"/> はこの枝では読まない。</b>
+    /// 上限は<b>手番そのもの</b>（1ターンに高々1回）で、外付けの在庫を重ねると
+    /// 同じ軸を2本のノブで絞ることになる。<b>効かないノブを黙って作らない</b>ために doc に書く。
+    /// <see cref="ShufflerRule.ConfusePercent"/> は<b>読む</b>（撃ったが外した手番を作れる）。</para>
+    ///
+    /// <para><b>保持者の速さは触っていない</b>（第148期。バサは速8）。
+    /// 混乱は<b>ターン頭の一括消去に入っていない</b>（消えるのは本人が次に振ったときだけ）ので、
+    /// <b>自分より速い敵に立てた混乱は無駄にならず1ターン遅れるだけ</b>——
+    /// 遅い敵（詠唱兵5・城塞の重装兵3）に立てればそのターンのうちに自軍へ向く。
+    /// <b>「誰に立てるか」に速さの判断が乗る</b>形はいまのロスターに無いので、厚みとして残した。</para>
+    /// </summary>
+    ConfuseOnAction,
 }
 
 /// <summary>
@@ -6107,6 +6130,18 @@ public sealed class ShufflerTrait : Trait
                 if (from == Row.Back) tally.ShuffleAdvancedFromBack++;
             }
 
+            // 手番版（第148期）は**ターン頭では1件も立てない**。前へ出た敵に印だけを置いて、
+            // 保持者の手番（OnAction）がその中から1体を選ぶ。**印は特性の私有キー**なので
+            // `StatusKeys.All` にも帳簿にも載らない（`UnitState.SetCounter` の doc）。
+            //
+            // **この枝の外では1ビットも書かない。** 印を無条件に置くと他の版の `Counters` が
+            // 変わってしまい、「既定を動かしていない」の検算（305 セル 0 件）が意味を失う。
+            if (c.Shuffler.Stagger == ShuffleStagger.ConfuseOnAction)
+            {
+                if (advanced && u.IsAlive) u.SetCounter(AdvancedTurnKey, c.Turn);
+                return;
+            }
+
             bool hit = c.Shuffler.Stagger switch
             {
                 ShuffleStagger.Advanced => advanced,
@@ -6120,7 +6155,7 @@ public sealed class ShufflerTrait : Trait
 
             if (c.Shuffler.Stagger == ShuffleStagger.Confuse)
             {
-                Derange(c, u);
+                Derange(c, self, u, tally, useStock: true);
                 return;
             }
 
@@ -6137,36 +6172,114 @@ public sealed class ShufflerTrait : Trait
             c.EmitStagger(u, StaggerLabels.Fell, self);
             c.Log($"    {u.Name} は前へ引きずり出されて転んだ（次の手番を失う）", LogKind.Status);
         }
+    }
 
-        // 混乱（第147期）。**engine に規則も窓口も1本も足していない**——立てるのは
-        // `StatusKeys.Confused` の二値で、読むのは第146期に据えた
-        // `FoesOf` / `ConsumeConfusion` の2箇所（`ShuffleStagger.Confuse` の doc）。
-        void Derange(BattleContext c, UnitState u)
-        {
-            // **既に混乱しているなら何もしない。在庫も消費しない。**
-            // 二値なので上書きしても増えず、「立てた回数」と「立っている状態」を取り違えると
-            // 在庫（ConfuseUses）が空振りで減る。
-            if (u.RawCounter(StatusKeys.Confused) > 0) return;
+    /// <summary>
+    /// 混乱（第147期）。<b>engine に規則も窓口も1本も足していない</b>——立てるのは
+    /// <see cref="StatusKeys.Confused"/> の二値で、読むのは第146期に据えた
+    /// <c>FoesOf</c> / <c>ConsumeConfusion</c> の2箇所（<see cref="ShuffleStagger.Confuse"/> の doc）。
+    ///
+    /// 混乱を1体に立てる。<b>ターン頭版（<see cref="ShuffleStagger.Confuse"/>）と
+    /// 手番版（<see cref="ShuffleStagger.ConfuseOnAction"/>）で本体を共有する</b>
+    /// ——供給の口が違うだけの同じ機構なので、計数の意味も揃えておく（第147期の doc）。
+    /// </summary>
+    /// <param name="useStock">
+    /// <see cref="ShufflerRule.ConfuseUses"/> を読むか。<b>手番版では読まない</b>
+    /// ——上限は手番そのもの（<see cref="ShuffleStagger.ConfuseOnAction"/> の doc）。
+    /// </param>
+    private static void Derange(BattleContext c, UnitState self, UnitState u, UnitTally tally, bool useStock)
+    {
+        // **既に混乱しているなら何もしない。在庫も消費しない。**
+        // 二値なので上書きしても増えず、「立てた回数」と「立っている状態」を取り違えると
+        // 在庫（ConfuseUses）が空振りで減る。
+        if (u.RawCounter(StatusKeys.Confused) > 0) return;
 
-            // 在庫（段B'）。**保持者ごと・1戦あたり**で、対象ごとではない
-            // （ShufflerRule.ConfuseUses の doc）。0 は無制限。
-            // Trait は共有シングルトンなので状態は `Counters` に置く。
-            if (c.Shuffler.ConfuseUses > 0 && self.Counter(ConfuseUsedKey) >= c.Shuffler.ConfuseUses) return;
+        // 在庫（段B'）。**保持者ごと・1戦あたり**で、対象ごとではない
+        // （ShufflerRule.ConfuseUses の doc）。0 は無制限。
+        // Trait は共有シングルトンなので状態は `Counters` に置く。
+        if (useStock && c.Shuffler.ConfuseUses > 0
+            && self.Counter(ConfuseUsedKey) >= c.Shuffler.ConfuseUses) return;
 
-            // **Percent >= 100 なら Roll を引かない**（段B の乱数列を段B' のノブで動かさない）。
-            // **在庫の検査より後ろに置く**——手前だと在庫が尽きた後も乱数を引き続けて、
-            // 「在庫だけを絞ったつもりが乱数列まで動く」が起きる。
-            if (c.Shuffler.ConfusePercent < 100 && c.Roll(100) >= c.Shuffler.ConfusePercent) return;
+        // **Percent >= 100 なら Roll を引かない**（段B の乱数列を段B' のノブで動かさない）。
+        // **在庫の検査より後ろに置く**——手前だと在庫が尽きた後も乱数を引き続けて、
+        // 「在庫だけを絞ったつもりが乱数列まで動く」が起きる。
+        if (c.Shuffler.ConfusePercent < 100 && c.Roll(100) >= c.Shuffler.ConfusePercent) return;
 
-            u.SetCounter(StatusKeys.Confused, 1);   // 付与のイベントは NoteStatusGain が打つ
-            self.SetCounter(ConfuseUsedKey, self.Counter(ConfuseUsedKey) + 1);
-            tally.ShuffleConfuses++;                    // 立てた側（保持者）
-            // **立った側にも同じだけ載せる**——第146期の波ルール版が `ConfusedMarks` に
-            // 載せているので、供給の口が違っても計数の意味を揃えておく
-            // （揃えないと `ConfusedSwings ≦ ConfusedMarks` の受け入れ条件が偽になる）。
-            c.TallyOf(u).ConfusedMarks++;
-            c.Log($"    {u.Name} は前へ引きずり出されて正気を失った（次の攻撃を自軍へ向ける）", LogKind.Status);
-        }
+        u.SetCounter(StatusKeys.Confused, 1);   // 付与のイベントは NoteStatusGain が打つ
+        self.SetCounter(ConfuseUsedKey, self.Counter(ConfuseUsedKey) + 1);
+        tally.ShuffleConfuses++;                    // 立てた側（保持者）
+        // **立った側にも同じだけ載せる**——第146期の波ルール版が `ConfusedMarks` に
+        // 載せているので、供給の口が違っても計数の意味を揃えておく
+        // （揃えないと `ConfusedSwings ≦ ConfusedMarks` の受け入れ条件が偽になる）。
+        c.TallyOf(u).ConfusedMarks++;
+        c.Log($"    {u.Name} は正気を失った（次の攻撃を自軍へ向ける）", LogKind.Status);
+    }
+
+    /// <summary>
+    /// そのターンに<b>前へ出た敵</b>の印（値は <c>BattleContext.Turn</c>）。
+    /// <b>手番版（<see cref="ShuffleStagger.ConfuseOnAction"/>）でしか書かない。</b>
+    ///
+    /// <para><b>立てる側ではなく立てられる側に置く</b>——保持者に「誰を」を持たせると
+    /// <c>InstanceId</c> を跨いで覚えることになり、会戦の境界で捨て忘れると
+    /// 前の部隊戦の番号が無関係な駒に当たる（執着＝<see cref="FixateTrait"/> の記憶と同じ穴）。
+    /// ターン番号なら<b>その戦闘のその1ターンでしか真にならない</b>ので、記憶を捨てる必要が無い。
+    /// 印が乗るのは<b>敵陣の駒</b>で、敵は部隊戦ごとに作り直されるから持ち越しも起きない。</para>
+    ///
+    /// <para>読み方は責め苦・追い打ちの <c>target.Counter(IdleTurn) == ctx.Turn</c> と同じ作法。</para>
+    /// </summary>
+    public const string AdvancedTurnKey = "shuffleAdvancedTurn";
+
+    /// <summary>この手番で正気を失わせられる相手か（<see cref="CanAct"/> と <see cref="OnAction"/> で共有）。</summary>
+    private static bool Fresh(BattleContext ctx, UnitState self, UnitState u)
+        => u.TeamId != self.TeamId && u.IsAlive
+           && u.RawCounter(AdvancedTurnKey) == ctx.Turn
+           && u.RawCounter(StatusKeys.Confused) == 0;
+
+    /// <summary>
+    /// <b>前へ出てきた敵がいないターンは撃てない。これがマイナスの本体</b>（第148期）。
+    ///
+    /// <para><b>既に混乱している敵しかいないターンも撃てない。</b> 二値なので立て直しても増えず、
+    /// 撃てば手番だけが消える——<c>CanAct</c> と <see cref="OnAction"/> が<b>同じ述語</b>
+    /// （<see cref="Fresh"/>）を見るので、「撃つ」か「手番を差し出す」かのどちらかしか起きない。
+    /// これが受け入れ条件（立てた回数 ＋ 差し出した回数 ＝ 生存T）を成り立たせている。</para>
+    ///
+    /// <para><b><c>Roll</c> を1つも引かない</b>（存在検査だけ）。<c>CanAct</c> は
+    /// <see cref="Trait.SurrenderedTurn"/>（号令・据えが毎ターン味方ぶん問う）と
+    /// <c>BattleContext.CanActNow</c> からも呼ばれるので、ここで乱数を消費すると
+    /// <b>問い合わせの回数で乱数列が動く</b>（礫＝第138期と同じ作法）。</para>
+    ///
+    /// <para><b><see cref="Trait.SurrendersTurn"/> は既定（真）のまま上書きしない。</b>
+    /// バサが失うのは「本来使えたはずの手番」であって、不動（カド）・追い打ち（ハギ）のような
+    /// 「もともと持っていないターン」ではない——偽にすると号令・据えの市場が消える。
+    /// <c>SurrenderedTurn</c> は <see cref="ActionKind.Attack"/> で問うので、
+    /// ここは種別で早期 return するだけで市場には正しく乗る。</para>
+    ///
+    /// <para><b>版の切り替えは規則ではできない。</b> 手番を持つかどうかは
+    /// <see cref="UnitDef.Actions"/> が決めるので、<c>Run</c> の引数では振れない
+    /// ——診断はローカルの <c>UnitDef</c> で切り替える（第60期の火選りの移設と同じ扱い）。
+    /// 印を書くのが <see cref="ShuffleStagger.ConfuseOnAction"/> だけなので、
+    /// 他の版では<b>候補が常に 0 個</b>＝この駒は毎ターン手番を差し出すことになる。</para>
+    /// </summary>
+    public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
+    {
+        if (kind != ActionKind.Skill) return true;
+        foreach (UnitState u in ctx.AllUnits) if (Fresh(ctx, self, u)) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// 手番で1体だけ正気を失わせる（第148期）。
+    /// <b>候補が複数なら <c>Roll</c> で1体</b>——<c>BattleContext.PickOne</c> は新たに使わない（必須4）。
+    /// </summary>
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+
+        var pool = new List<UnitState>();
+        foreach (UnitState u in ctx.AllUnits) if (Fresh(ctx, self, u)) pool.Add(u);
+        if (pool.Count == 0) return;   // CanAct が通した以上ここには来ない（防御的）
+
+        Derange(ctx, self, pool[ctx.Roll(pool.Count)], ctx.TallyOf(self), useStock: false);
     }
 
     /// <summary>
