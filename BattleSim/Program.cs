@@ -450,6 +450,13 @@ if (focusId == "gust")
     return;
 }
 
+// stall モード（第152期） —— 膠着（30 ターン上限）を塞ぐ。本体は `Modes/Stall.cs`。
+if (focusId == "stall")
+{
+    StallDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // haste モード（第149期） —— 行動順という通貨の値段。本体は `Modes/Haste.cs`。
 if (focusId == "haste")
 {

@@ -6810,8 +6810,29 @@ public readonly record struct ParryRule(int Uses, ParryScope Scope, bool Relay,
     /// <summary>段3（中継）の採用値。</summary>
     public const bool AdoptedRelay = true;
 
+    /// <summary>
+    /// <b>第152期 段C の採用値。</b> 膠着（30 ターン上限で負ける局面）を塞ぐために構えを解く条件。
+    /// <b><see cref="ParrySwing.WhenStocked"/>（在庫 &gt; 0）を採った</b>——
+    /// <see cref="ParrySwing.WhenFull"/> は 49 → 46 セルしか減らせず、膠着の本丸
+    /// （<c>反撃 (ヒサ×カド)</c> 第三波）は 100.0% の上限到達のまま1ビットも動かなかった。
+    ///
+    /// <para><b>カドとガルドの同席そのものは直していない。</b> 両方が「庇う」駒で、
+    /// しかも受け流しがカドの反撃の燃料（被弾）を消す——<b>役割が重なったうえに片方が片方を無力化する</b>
+    /// のは、組み合わせを考えさせるという狙いそのものであって欠陥ではない。
+    /// <b>塞いだのは結果のほうだけ</b>（30 ターン何も起きない絵が流れ、勝敗が上限ターンという
+    /// メタルールで決まること）。しかも<b>膠着の条件にカドは出てこない</b>ので、
+    /// 「無効化で耐える壁 ＋ 殴り手が全滅」なら将来どの組み合わせでも再現する。</para>
+    ///
+    /// <para><b>採らなかった案</b>: (1) 上限ターンに近づいたら受け流しが効かなくなる（消耗）——
+    /// 「いつ効かなくなるか」を編成から読めないので、盤面の外の数字（<c>MaxTurns</c>）が
+    /// 規則になってしまう。(2) 在庫の上限を敵の攻撃回数より小さくする——
+    /// 敵が1体なら N=1 でも膠着するので解けない（第136期の追加で実測）。
+    /// (3) カドとガルドを <c>compare</c> の行から分ける——器具の話で、膠着そのものは解けない。</para>
+    /// </summary>
+    public const ParrySwing AdoptedSwing = ParrySwing.WhenStocked;
+
     /// <summary>既定 ＝ 採用値。<c>Uses = 0</c> なら不活性（段1 と同値）。</summary>
-    public static ParryRule Default => new(AdoptedUses, ParryScope.Any, AdoptedRelay);
+    public static ParryRule Default => new(AdoptedUses, ParryScope.Any, AdoptedRelay, AdoptedSwing);
 }
 
 /// <summary>

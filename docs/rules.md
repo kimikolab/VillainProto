@@ -56,7 +56,7 @@
 | 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False }` | ○ | `survive` / `ember` / `wildfire` | 第130期 | ○ |
 | 44 | `wildfire` | `WildfireRule` | `WildfireRule { Mode = None, Amount = 0, Active = False }` | ○ | `wildfire` | 第133期 | ○ |
 | 45 | `harm` | `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` | 第135期 | ○ |
-| 46 | `parry` | `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True, Swing = Off }` |  | `parry` / `wall` | 第135期 | ○ |
+| 46 | `parry` | `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True, Swing = WhenStocked }` |  | `parry` / `wall` / `stall` | 第135期 | ○ |
 | 47 | `shatter` | `ShatterRule` | `ShatterRule { Mode = Passive, SelfCostPerTurn = 0 }` | ○ | `shard` | 第137期 | ○ |
 | 48 | `shrapnel` | `ShrapnelRule` | `ShrapnelRule { Multiplier = 3, SelfDamagePercent = 100, ArmorCensus = False }` |  | `shard` | 第138期 | ○ |
 | 49 | `brace` | `BraceRule` | `BraceRule { Cap = 7, Refuse = True, Stagger = False }` |  | `brace` | 第143期 | ○ |
@@ -103,7 +103,7 @@
 | `MenderCostRule` | `MenderCostRule { Percent = 50 }` | ○ | `hold` / `hold2` / `ledger` / `lit` / `wound2` | 第106期 |
 | `NourishRule` | `NourishRule { Gain = 2 }` | ○ | `tank` / `time` | 第117期 |
 | `OverbearRule` | `OverbearRule { Drain = 2 }` | ○ | `overbear` / `wildfire` | 第46期 |
-| `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True, Swing = Off }` | ○ | `parry` / `wall` | 第135期 |
+| `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True, Swing = WhenStocked }` | ○ | `parry` / `wall` / `stall` | 第135期 |
 | `RageRule` | `RageRule { Mode = Amount, Gain = 3 }` | ○ | `hold` / `hold2` | 第106期 |
 | `ReaderRule` | `ReaderRule { Threshold = 5 }` | ○ | `reader` / `boss` / `tank` / `grade` / `grade2` | 第115期 |
 | `RecoverRule` | `RecoverRule { HpPercent = 0, ReviveDead = False, Active = False }` |  | `choice` / `recover` | 第101期 |
