@@ -770,7 +770,11 @@ static class GustDiag
         }
 
         Console.WriteLine();
-        Console.WriteLine("## (b) `GustPercent = 0` が既定と 1 ビットも違わない（枝を足しただけの検算）");
+        Console.WriteLine("## (b) **採用で既定が動いたので、検算の相手が V0 から V1 へ移った**（第60期）");
+        Console.WriteLine();
+        Console.WriteLine("**段0（枝を足しただけ）のときは `GustPercent = 0` が既定と 305 セル 0 件だった。**");
+        Console.WriteLine("採用後の既定は `GustPercent = 20` なので、**いま 0 件になるのは既定そのもの**で、");
+        Console.WriteLine("`GustPercent = 0` との差は**採用したノブが盤面を動かした量**である（0 件だと逆に異常）。");
         Console.WriteLine();
         Console.WriteLine("- `ShufflerRule.Default` = `" + ShufflerRule.Default + "`");
         Console.WriteLine("- この診断の V0 = `" + V0 + "`");
@@ -781,10 +785,12 @@ static class GustDiag
                 double[] x = Rates(f, null), y = Rates(f, V0 with { GustPercent = 0 });
                 for (int i = 0; i < 5; i++) if (Math.Abs(x[i] - y[i]) > 0.001) diff++;
             }
-            Console.WriteLine("- 305 セル: **" + diff + " 件**" + (diff == 0 ? " ○" : " **×**"));
+            Console.WriteLine("- `GustPercent = 0` との差: **" + diff + " 件**"
+                              + (diff > 0 ? "（＝採用したノブが動かした量。**0 件だと異常**）" : " **×**"));
         }
         Console.WriteLine();
-        Console.WriteLine("**`GustSecondary` も単独では盤面を動かさない**（`GustPercent = 0` のとき）:");
+        Console.WriteLine("**`GustSecondary` は単独では盤面を動かさない**（`GustPercent = 0` のとき"
+                          + "`GustSecondary` を落としても上と同じ件数）:");
         {
             int diff = 0;
             foreach ((string _, Formation f) in CompareBuilds())
@@ -792,7 +798,17 @@ static class GustDiag
                 double[] x = Rates(f, null), y = Rates(f, V0 with { GustPercent = 0, GustSecondary = false });
                 for (int i = 0; i < 5; i++) if (Math.Abs(x[i] - y[i]) > 0.001) diff++;
             }
-            Console.WriteLine("- 305 セル: **" + diff + " 件**" + (diff == 0 ? " ○" : " **×**"));
+            Console.WriteLine("- 305 セル: **" + diff + " 件**（上と同数なら ○）");
+        }
+        {
+            int diff = 0;
+            foreach ((string _, Formation f) in CompareBuilds())
+            {
+                double[] x = Rates(f, V0), y = Rates(f, ShufflerRule.Default);
+                for (int i = 0; i < 5; i++) if (Math.Abs(x[i] - y[i]) > 0.001) diff++;
+            }
+            Console.WriteLine("- **この診断の V0 と engine の既定**: **" + diff + " 件**"
+                              + (diff == 0 ? " ○" : " **×**"));
         }
 
         Console.WriteLine();
