@@ -2495,6 +2495,163 @@ public sealed class BattleContext
         foreach (UnitState u in _units.ToList()) CloseBurnEpisode(u, expired: false);
     }
 
+    // =====================================================================================
+    // 第150期 段A —— 標（<c>StatusKeys.Marked</c>）の一生の帳簿。**計数専用。**
+    //
+    // **どの規則も読まない。** 足したのは (a) 下の配列と辞書、(b) `Add` の短絡フラグ、
+    // (c) ターン頭の走査（`ScanMarkLedger`）、(d) 消す側3箇所に置いた `Note*` の呼び出し、
+    // (e) `Run` の組み立てだけで、**盤面の分岐も乱数も1ビットも動かない**。
+    //
+    // **区間の定義**: 「標が付いていない駒に標が付いた」瞬間に開き、次のどれかで閉じる:
+    //
+    //     消費   止め（トメ）が殴って消した                 ＝ 設計どおり働いた
+    //     死亡   標を持ったまま倒れた                       ＝ 対抗仮説の直接の証拠
+    //     剥がし 逸らし（ソラ）が味方から引き剥がした
+    //     替え   駆り立て（カリ）が別の相手へ付け替えた
+    //     他     上のどれでもない（**0 でなければ経路を数え落としている**）
+    //     残存   決着時にまだ立っていた
+    //
+    // **区間を開くのはターン頭の走査だけ**——標の書き手4枚（囃し立て・逸らし・駆り立て・業）は
+    // すべて `OnBattleStart` か `OnTurnStart` なので、行動順ループが回る前に書き終わっている。
+    // 消す側は手番の中でも走る（消費・死亡）ので、そちらは即時に閉じる。
+    // **駆り立ては毎ターン `prev` を 0 にしてから付け直す**ので、同じ相手に付け直した場合は
+    // 走査の時点で標が立っており区間は閉じない（＝「替え」は宛先が変わったときだけ数える）。
+    //
+    // 陣営の添字は**標が付いた側**（0 = 敵に付いた標 / 1 = 味方に付いた標）。
+    // `駆り立て改` と `止め` は書き手の向きが逆なので、混ぜると読めない（指示書 Q0-3）。
+    // =====================================================================================
+
+    /// <summary>標を書ける駒が盤上にいるか（<see cref="Add"/> が立てる）。<b>走査の短絡専用。</b></summary>
+    public bool MarkActive { get; private set; }
+
+    public readonly long[] MarkOpened = new long[2];
+    public readonly long[] MarkEndConsumed = new long[2];
+    public readonly long[] MarkEndDied = new long[2];
+    public readonly long[] MarkEndDiedByFinisher = new long[2];
+    public readonly long[] MarkEndStrip = new long[2];
+    public readonly long[] MarkEndGoad = new long[2];
+    public readonly long[] MarkEndOther = new long[2];
+    public readonly long[] MarkEndStanding = new long[2];
+    public readonly long[] MarkLifeSum = new long[2];
+    public readonly long[] MarkLifeMax = new long[2];
+
+    /// <summary>標が立っているあいだに標持ちが受けた攻撃の回数（<c>source</c> つきだけ＝継続ダメージは外れる）。</summary>
+    public readonly long[] MarkHits = new long[2];
+
+    /// <summary>そのうち止め（<see cref="TraitId.Finisher"/>）が入れたもの。</summary>
+    public readonly long[] MarkHitsByFinisher = new long[2];
+
+    /// <summary>標が付いた側の帳簿（<c>Def.Id</c> → 開いた区間・消費・死亡）。</summary>
+    public readonly Dictionary<string, (long Opened, long Consumed, long Died)> MarkOn = new();
+
+    /// <summary>いま開いている区間（<c>InstanceId</c> → 開いたターン）。</summary>
+    readonly Dictionary<int, int> _markOpen = new();
+
+    /// <summary>閉じた理由の下書き（<c>InstanceId</c> → (ターン, 1 = 剥がし / 2 = 替え)）。同一ターンに両方来たら後勝ち。</summary>
+    readonly Dictionary<int, (int Turn, int Why)> _markHint = new();
+
+    /// <summary>逸らしが味方から引き剥がした（<see cref="DivertTrait"/> から。<b>盤面には触らない</b>）。</summary>
+    public void NoteMarkStrip(UnitState u)
+    {
+        if (MarkActive) _markHint[u.InstanceId] = (_turn, 1);
+    }
+
+    /// <summary>駆り立てが前の相手の標を消した（<see cref="GoadTrait"/> から。<b>同上</b>）。</summary>
+    public void NoteMarkGoadClear(UnitState u)
+    {
+        if (MarkActive) _markHint[u.InstanceId] = (_turn, 2);
+    }
+
+    /// <summary>止めが標を消費した（<see cref="FinisherTrait"/> から。<b>同上</b>）。手番の中で即時に閉じる。</summary>
+    public void NoteMarkConsumed(UnitState u)
+    {
+        if (!MarkActive || !_markOpen.ContainsKey(u.InstanceId)) return;
+        CloseMarkEpisode(u, 0);
+        MarkOn.TryGetValue(u.Def.Id, out var on);
+        MarkOn[u.Def.Id] = (on.Opened, on.Consumed + 1, on.Died);
+    }
+
+    /// <summary>標を持ったまま倒れた（<see cref="HandleDeath"/> から。<b>同上</b>）。</summary>
+    void NoteMarkDeath(UnitState u, UnitState? killer)
+    {
+        if (!MarkActive || u.RawCounter(StatusKeys.Marked) <= 0) return;
+        if (!_markOpen.ContainsKey(u.InstanceId)) return;
+        int side = SideOf(u);
+        if (killer is not null && killer.HasTrait(TraitId.Finisher)) MarkEndDiedByFinisher[side]++;
+        CloseMarkEpisode(u, 1);
+        MarkOn.TryGetValue(u.Def.Id, out var on);
+        MarkOn[u.Def.Id] = (on.Opened, on.Consumed, on.Died + 1);
+    }
+
+    /// <summary>標持ちが殴られた（<see cref="ApplyDamage"/> から。<b>同上</b>）。</summary>
+    void NoteMarkHit(UnitState target, UnitState? source)
+    {
+        if (!MarkActive || source is null || target.RawCounter(StatusKeys.Marked) <= 0) return;
+        int side = SideOf(target);
+        MarkHits[side]++;
+        if (source.HasTrait(TraitId.Finisher)) MarkHitsByFinisher[side]++;
+    }
+
+    /// <summary>
+    /// 区間を閉じる。<paramref name="why"/> は 0 = 消費 / 1 = 死亡 / 2 = 走査（理由は下書きから）/ 3 = 残存。
+    /// </summary>
+    void CloseMarkEpisode(UnitState u, int why)
+    {
+        if (!_markOpen.Remove(u.InstanceId, out int since)) return;
+        int side = SideOf(u);
+        long life = _turn - since;
+        MarkLifeSum[side] += life;
+        if (life > MarkLifeMax[side]) MarkLifeMax[side] = life;
+        switch (why)
+        {
+            case 0: MarkEndConsumed[side]++; break;
+            case 1: MarkEndDied[side]++; break;
+            case 3: MarkEndStanding[side]++; break;
+            default:
+                if (_markHint.TryGetValue(u.InstanceId, out var h) && h.Turn == _turn)
+                {
+                    if (h.Why == 1) MarkEndStrip[side]++;
+                    else MarkEndGoad[side]++;
+                }
+                else MarkEndOther[side]++;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// ターン頭の走査（第150期 段A）。<b><c>OnTurnStart</c> が全部走り終わった直後に1回だけ呼ぶ</b>
+    /// ——標の書き手はすべてそこまでに書き終わる（<see cref="NoteFinisherMarkAges"/> と同じ位置・同じ理由）。
+    /// <b>盤面は1つも動かさない</b>（私有の辞書を書くだけ）。
+    /// </summary>
+    internal void ScanMarkLedger()
+    {
+        if (!MarkActive) return;
+        foreach (UnitState u in _units)
+        {
+            if (!u.IsAlive) continue;
+            bool marked = u.RawCounter(StatusKeys.Marked) > 0;
+            bool open = _markOpen.ContainsKey(u.InstanceId);
+            if (marked && !open)
+            {
+                _markOpen[u.InstanceId] = _turn;
+                MarkOpened[SideOf(u)]++;
+                MarkOn.TryGetValue(u.Def.Id, out var on);
+                MarkOn[u.Def.Id] = (on.Opened + 1, on.Consumed, on.Died);
+            }
+            else if (!marked && open)
+            {
+                CloseMarkEpisode(u, 2);
+            }
+        }
+    }
+
+    /// <summary>決着時に開いたままの区間を閉じる。<b>1戦につき最後に1度だけ呼ぶ。</b></summary>
+    public void CloseMarkLedger()
+    {
+        if (!MarkActive) return;
+        foreach (UnitState u in _units.ToList()) CloseMarkEpisode(u, 3);
+    }
+
     public readonly long[] DroughtHits = new long[2];
     public readonly long[] DroughtRequested = new long[2];
     public readonly long[] DroughtEffective = new long[2];
@@ -3503,6 +3660,10 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Scapegoat)) ScapegoatActive = true;
         if (u.HasTrait(TraitId.Divert)) DivertActive = true;
         if (u.HasTrait(TraitId.Finisher)) FinisherActive = true;
+        // 第150期 段A: 標の一生の帳簿を短絡させるためのフラグ（**計数専用**。盤面には影響しない）。
+        // 標を書ける駒（囃し立て・逸らし・駆り立て・業）が1枚も盤上にいなければ走査ごと飛ばす。
+        if (u.HasTrait(TraitId.Marker) || u.HasTrait(TraitId.Divert)
+            || u.HasTrait(TraitId.Goad) || u.HasTrait(TraitId.Scapegoat)) MarkActive = true;
         if (u.HasTrait(TraitId.Funnel)) FunnelActive = true;
         // 第137期: 砕けの保持者が盤上にいるか（`ShatterSoaked` を短絡させるためだけ。盤面には影響しない）。
         if (u.HasTrait(TraitId.Shatter)) ShatterActive = true;
@@ -5308,6 +5469,8 @@ public sealed class BattleContext
         NoteHarm(target, amount, target.Hp <= 0, burnTick, levy, relayed, isFriendlyFire, pattern, source);
         // 第68期。被弾は**回数**で数える（量は DamageTaken の側。格子は回数に当てる）。
         NoteCarry(target, UnitTally.CarryHit, 1);
+        // 第150期 段A。標が立っている駒への一撃（**計数専用**。継続ダメージは source が null なので外れる）。
+        NoteMarkHit(target, source);
         if (source is not null && (isFriendlyFire || source.TeamId == target.TeamId))
             tt.TakenFromAlly += amount;
 
@@ -5641,6 +5804,8 @@ public sealed class BattleContext
             TallyOf(dead).ParryStockAtDeath += dead.RawCounter(ParryTrait.StockKey);
         // 読まれないまま落ちた傷（第85期・自己検査 (j)）。**盤面には一切影響しない。**
         TallyOf(dead).WoundsAtDeath += dead.RawCounter(StatusKeys.Wound);
+        // 第150期 段A。標を持ったまま倒れた（**計数専用**）。
+        NoteMarkDeath(dead, killer);
         TallyOf(dead).LastActiveTurn = _turn;   // 蘇生されて再度倒れると上書きされる（後の値が勝つ）
         // 第102期。**純粋な記録で、誰も読んで分岐しない**（盤面は1ビットも動かない）。
         // 会戦の境界の蘇生が「最後に倒れた駒」を選ぶためだけにある。
@@ -6597,6 +6762,9 @@ public static class BattleEngine
             // **盤面は1つも動かさない**（私有カウンタを書くだけ）ので、保持者がいなければ走らない。
             if (ctx.FinisherActive) ctx.NoteFinisherMarkAges();
 
+            // 第150期 段A。標の一生の帳簿（**計数専用**）。位置と理由は上と同じ。
+            ctx.ScanMarkLedger();
+
             // 素早さ順。同値はチームで割り、**その中は毎ターン乱数で混ぜる**。
             //
             // 以前は .ThenBy(u => u.Slot) で安定させていたが、これが席番号の偏りの本体だった。
@@ -6703,6 +6871,8 @@ public static class BattleEngine
         ctx.CloseBurnLedger();
         // 第134期 段2。保持者が最後のターンに落ちた場合を拾う（`TickStatuses` はもう回らない）。
         ctx.CloseRuleHolders();
+        // 第150期 段A。標の帳簿を閉じる（決着時にまだ立っていた標）。
+        ctx.CloseMarkLedger();
 
         return new BattleResult
         {
@@ -6756,6 +6926,15 @@ public static class BattleEngine
                 (long[])ctx.BurnEndAlive.Clone(),
                 new Dictionary<string, (long, long)>(ctx.BurnBy),
                 new Dictionary<string, (long, long)>(ctx.BurnOn)),
+            // 第150期 段A。標の一生（**計数専用**。どの規則も読まない）。
+            Marks = new MarkLedger(
+                (long[])ctx.MarkOpened.Clone(), (long[])ctx.MarkEndConsumed.Clone(),
+                (long[])ctx.MarkEndDied.Clone(), (long[])ctx.MarkEndDiedByFinisher.Clone(),
+                (long[])ctx.MarkEndStrip.Clone(), (long[])ctx.MarkEndGoad.Clone(),
+                (long[])ctx.MarkEndOther.Clone(), (long[])ctx.MarkEndStanding.Clone(),
+                (long[])ctx.MarkLifeSum.Clone(), (long[])ctx.MarkLifeMax.Clone(),
+                (long[])ctx.MarkHits.Clone(), (long[])ctx.MarkHitsByFinisher.Clone(),
+                new Dictionary<string, (long, long, long)>(ctx.MarkOn)),
             BoardRules = new BoardRuleLedger(
                 (long[])ctx.DroughtHits.Clone(), (long[])ctx.DroughtRequested.Clone(),
                 (long[])ctx.DroughtEffective.Clone(),

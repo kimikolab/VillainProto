@@ -2116,6 +2116,53 @@ public readonly record struct YokeLedger(
 }
 
 /// <summary>
+/// 標（<see cref="StatusKeys.Marked"/>）の一生の帳簿（第150期 段A）。
+/// <b>計数専用で、どの規則も読まない。</b>
+///
+/// <para><b>「区間」の定義。</b> 標が付いていない駒に標が付いた瞬間に開き、次のどれかで閉じる:
+/// <list type="bullet">
+/// <item><c>Consumed</c> 止め（トメ）が殴って消した ＝ <b>設計どおり働いた</b></item>
+/// <item><c>Died</c> 標を持ったまま倒れた（<c>DiedByFinisher</c> は止めが倒した内数）</item>
+/// <item><c>Strip</c> 逸らし（ソラ）が味方から引き剥がした</item>
+/// <item><c>Goad</c> 駆り立て（カリ）が別の相手へ付け替えた</item>
+/// <item><c>Other</c> 上のどれでもない（<b>0 でなければ経路を数え落としている</b>）</item>
+/// <item><c>Standing</c> 決着時にまだ立っていた</item>
+/// </list>
+/// <b>付いた標の総数 ＝ 分類の合計</b>（受け入れ条件4）。</para>
+///
+/// <para><b>陣営の添字は標が付いた側</b>——<c>0 = 敵に付いた標</c> / <c>1 = 味方に付いた標</c>。
+/// 駆り立て（味方に付ける）と逸らし（敵と自分に付ける）は向きが逆なので、
+/// 混ぜると読めない（指示書 Q0-3）。</para>
+/// </summary>
+/// <param name="Opened">開いた区間の数。添字は標が付いた側の陣営。</param>
+/// <param name="Consumed">止めが消費して閉じた区間。同上。</param>
+/// <param name="Died">標を持ったまま倒れて閉じた区間。同上。</param>
+/// <param name="DiedByFinisher"><c>Died</c> のうち<b>止めが倒した</b>もの（内数）。同上。</param>
+/// <param name="Strip">逸らしが剥がして閉じた区間。同上。</param>
+/// <param name="Goad">駆り立てが付け替えて閉じた区間。同上。</param>
+/// <param name="Other">分類できずに閉じた区間（<b>0 が期待値</b>）。同上。</param>
+/// <param name="Standing">決着時に立ったまま閉じた区間。同上。</param>
+/// <param name="LifeSum">区間の長さ（閉じたターン − 開いたターン）の総和。同上。</param>
+/// <param name="LifeMax">区間の長さの最大。同上。</param>
+/// <param name="Hits">標が立っているあいだに標持ちが受けた攻撃の回数（継続ダメージは除く）。同上。</param>
+/// <param name="HitsByFinisher"><c>Hits</c> のうち止めが入れたもの（内数）。同上。</param>
+/// <param name="On">標が付いた側の <c>Def.Id</c> → (開いた区間, 消費, 死亡)。</param>
+public readonly record struct MarkLedger(
+    long[] Opened, long[] Consumed, long[] Died, long[] DiedByFinisher,
+    long[] Strip, long[] Goad, long[] Other, long[] Standing,
+    long[] LifeSum, long[] LifeMax, long[] Hits, long[] HitsByFinisher,
+    Dictionary<string, (long Opened, long Consumed, long Died)> On)
+{
+    /// <summary>閉じた区間の合計（<c>Opened</c> と一致するはず＝受け入れ条件4）。</summary>
+    public long Closed(int side)
+        => Consumed[side] + Died[side] + Strip[side] + Goad[side] + Other[side] + Standing[side];
+
+    /// <summary>1区間あたりの平均の長さ（ターン）。区間が 0 なら 0。</summary>
+    public double MeanLife(int side)
+        => Opened[side] > 0 ? (double)LifeSum[side] / Opened[side] : 0.0;
+}
+
+/// <summary>
 /// 燃焼の重ね掛けの帳簿（第134期 段1）。<b>計数専用で、どの規則も読まない。</b>
 ///
 /// <para><b>陣営の添字は受け手の側</b>——<c>0 = 敵に点いた火</c> / <c>1 = 味方に点いた火</c>。
@@ -2287,6 +2334,9 @@ public sealed class BattleResult
 
     /// <summary>燃焼の重ね掛けの帳簿（第134期 段1・<see cref="BurnLedger"/>）。<b>計数専用。</b></summary>
     public required BurnLedger Burns { get; init; }
+
+    /// <summary>標の一生の帳簿（第150期 段A）。<b>計数専用で、どの規則も読まない。</b></summary>
+    public required MarkLedger Marks { get; init; }
 
     /// <summary>盤面ルール（渇き・粛）の帳簿（第134期 段2・<see cref="BoardRuleLedger"/>）。<b>計数専用。</b></summary>
     public required BoardRuleLedger BoardRules { get; init; }

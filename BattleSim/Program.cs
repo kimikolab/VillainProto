@@ -436,6 +436,13 @@ if (focusId == "tumult")
     return;
 }
 
+// mark モード（第150期） —— 標（`Marked`）の軸を診る。本体は `Modes/Mark.cs`。
+if (focusId == "mark")
+{
+    MarkDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // haste モード（第149期） —— 行動順という通貨の値段。本体は `Modes/Haste.cs`。
 if (focusId == "haste")
 {

@@ -3795,6 +3795,7 @@ public sealed class DivertTrait : Trait
             if (ally == self || ally.Counter(StatusKeys.Marked) <= 0) continue;
             ally.SetCounter(StatusKeys.Marked, 0);
             ctx.NoteDivertStrip(ally.Def.Name);
+            ctx.NoteMarkStrip(ally);   // 第150期 段A（計数のみ）
             stripped++;
             ctx.Log($"    {self.Name} が {ally.Name} から視線を引き剥がした", LogKind.Trigger);
         }
@@ -3950,6 +3951,7 @@ public sealed class GoadTrait : Trait
         bool lost = ctx.Goad.Mark && prev is not null && prev.IsAlive
                     && prev.Counter(StatusKeys.Marked) <= 0;
         prev?.SetCounter(StatusKeys.Marked, 0);
+        if (prev is not null) ctx.NoteMarkGoadClear(prev);   // 第150期 段A（計数のみ）
 
         // --- 選ぶ（隣接する生存味方のうち CurrentAttack が最大の1体）----------------------
         var adj = ctx.LivingMembers(self.TeamId)
@@ -4094,6 +4096,7 @@ public sealed class FinisherTrait : Trait
 
         target.SetCounter(StatusKeys.Marked, 0);
         ctx.NoteFinisherConsume();
+        ctx.NoteMarkConsumed(target);   // 第150期 段A（計数のみ）
         ctx.Log($"    {self.Name} が {target.Name} を仕留めにかかり、指差しが消えた", LogKind.Trigger);
     }
 }
