@@ -443,6 +443,13 @@ if (focusId == "mark")
     return;
 }
 
+// gust モード（第151期） —— バサの手番を「突風」にする。本体は `Modes/Gust.cs`。
+if (focusId == "gust")
+{
+    GustDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // haste モード（第149期） —— 行動順という通貨の値段。本体は `Modes/Haste.cs`。
 if (focusId == "haste")
 {
