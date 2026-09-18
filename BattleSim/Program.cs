@@ -464,6 +464,13 @@ if (focusId == "wardcost")
     return;
 }
 
+// toll モード（第155期） —— 贖いのアガ（前借りと取り立て）。本体は `Modes/Toll.cs`。
+if (focusId == "toll")
+{
+    TollDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // stall モード（第152期） —— 膠着（30 ターン上限）を塞ぐ。本体は `Modes/Stall.cs`。
 if (focusId == "stall")
 {

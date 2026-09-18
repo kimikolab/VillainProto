@@ -170,7 +170,21 @@ public static class StatusKeys
     /// </summary>
     public const string Ward = "ward";
 
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward };
+    /// <summary>
+    /// 負債（第155期・<see cref="IndulgenceTrait"/>）。<b>前借りで受け取った HP の残高。</b>
+    ///
+    /// <para><b>積むのは「実際に増えた HP」だけ</b>——満タン・渇き・支援拒否（<c>Stoic</c>）で
+    /// 入らなかった分は負債にもならない。だから<b>渇き（第三波）では前借りも取り立ても起きず、
+    /// 保持者が無害化されるだけ</b>で、第153期の預かり（積むだけ積んで返らない丸損）にはならない。</para>
+    ///
+    /// <para><b>預かり（<see cref="Ward"/>）と流用しない。</b> あちらは <c>Heal</c> で返す側のプールで、
+    /// こちらは <c>ApplyDamage</c> で取り立てる側の残高——<b>符号が逆で、混ぜると帳簿が閉じない。</b></para>
+    ///
+    /// <para><b>増える経路は前借りの1本きり。</b> だから積んだ直後に閾値を見れば取りこぼさない。</para>
+    /// </summary>
+    public const string Debt = "debt";
+
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt };
 
     /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
@@ -191,6 +205,7 @@ public static class StatusKeys
         Stagger => "転",
         Confused => "乱",
         Ward => "預",
+        Debt => "負",
         _ => key
     };
 }
@@ -2155,6 +2170,9 @@ public sealed class BattleContext
     /// <summary>預かり（第153期・<see cref="WardRule"/>）。<b>保持者が盤上に居なければ1バイトも動かない。</b></summary>
     public WardRule Ward { get; }
 
+    /// <summary>贖い（第155期・<see cref="IndulgenceTrait"/>）。<b>保持者が盤上に居なければ1バイトも動かない。</b></summary>
+    public IndulgenceRule Indulgence { get; }
+
     /// <summary>混乱（第146期・<see cref="ConfusionRule"/>）。<b>既定（<c>Active = false</c>）では1バイトも動かない。</b></summary>
     public ConfusionRule Confusion { get; }
 
@@ -2787,6 +2805,140 @@ public sealed class BattleContext
     public void CloseWardLedger()
     {
         foreach (UnitState u in _units) WardResidual += u.RawCounter(StatusKeys.Ward);
+    }
+
+    // =====================================================================================
+    // 第155期 —— 贖い（免罪・取り立て・焼き）の帳簿。**計数専用で、どの規則も読まない。**
+    //
+    // 収支は **積んだ負債 ＝ 取り立てた負債 ＋ 肩代わりした負債 ＋ 決着時の残額** で閉じる
+    // （第153・154期と同じ水準を要求する）。**HP ではなく負債の帳簿**であることに注意——
+    // 取り立てが実際に削った HP（`TollTaken`）は上限・破片・HP1 のクランプで名目を下回る。
+    // =====================================================================================
+
+    /// <summary>前借りの発火回数。</summary>
+    public long IndulgenceFires;
+    /// <summary>前借りが <c>ctx.Heal</c> に要求した名目量。</summary>
+    public long IndulgenceAsked;
+    /// <summary><b>実際に増えた HP</b>＝積まれた負債の総量。</summary>
+    public long DebtStacked;
+    /// <summary>前借りを撃ったが1点も入らなかった回数。</summary>
+    public long IndulgenceDry;
+    /// <summary>そのうち渇きで止まった回数。</summary>
+    public long IndulgenceDryDrought;
+    /// <summary>貸す相手がいなかった回数（傷ついた味方が1体もいない・契約の上限）。</summary>
+    public long IndulgenceNoPatient;
+
+    /// <summary>取り立ての発火回数。</summary>
+    public long TollFires;
+    /// <summary>取り立てた負債の名目量（<b>収支の分子</b>）。</summary>
+    public long TollNominal;
+    /// <summary><b>実際に削った HP</b>（＝焼きの燃料）。</summary>
+    public long TollTaken;
+    /// <summary>HP1 のクランプで止まった回数。</summary>
+    public long TollFloored;
+    /// <summary><b>取り立てが直接殺した回数</b>（<c>lethal: false</c> が効いていれば常に 0）。</summary>
+    public long TollKills;
+    /// <summary>取り立てが軛に切られた量。</summary>
+    public long TollYokeCut;
+
+    /// <summary>踏み倒し（借り手が負債を抱えたまま倒れた）の回数。</summary>
+    public long TollForgives;
+    /// <summary>同・保持者が引き受けた負債の名目量。</summary>
+    public long TollForgiven;
+    /// <summary>同・<b>保持者の HP が実際に減った量</b>（肩代わりされた分はここに出ない）。</summary>
+    public long TollForgivenSelfHp;
+
+    /// <summary>焼きの発火回数。</summary>
+    public long BrandFires;
+    /// <summary>焼きが叩き込んだ名目量（全体の巻き込みを含む）。</summary>
+    public long BrandSpent;
+    /// <summary>同・<b>実際に削った HP</b>。</summary>
+    public long BrandRemoved;
+    /// <summary>同・軛に切られた量。</summary>
+    public long BrandYokeCut;
+    /// <summary>焼きが当たった体数（延べ）。</summary>
+    public long BrandHits;
+    /// <summary>焼きで倒した敵の数。</summary>
+    public long BrandKills;
+    /// <summary>燃料はあるのに狙える敵が1体もいなかった回数。</summary>
+    public long BrandDry;
+    /// <summary>決着時に燃え残った燃料。</summary>
+    public long BrandResidual;
+
+    /// <summary>決着時に残っていた負債（死者も含む）。</summary>
+    public long DebtResidual;
+
+    /// <summary>借り手ごとの内訳（<c>Def.Id</c> → 積んだ量・取り立てられた量）。</summary>
+    public readonly Dictionary<string, (long Stacked, long Collected)> DebtOn = new();
+
+    internal void NoteIndulgence(UnitState by, UnitState on, int asked, int gained)
+    {
+        IndulgenceFires++;
+        IndulgenceAsked += asked;
+        DebtStacked += gained;
+        if (gained <= 0)
+        {
+            IndulgenceDry++;
+            if (DroughtBinding) IndulgenceDryDrought++;
+        }
+        DebtOn.TryGetValue(on.Def.Id, out var a);
+        DebtOn[on.Def.Id] = (a.Stacked + gained, a.Collected);
+        TallyOf(by).IndulgenceStacked += gained;
+    }
+
+    internal void NoteIndulgenceDry(UnitState by, bool noPatient)
+    {
+        IndulgenceFires++;
+        IndulgenceDry++;
+        if (noPatient) IndulgenceNoPatient++;
+    }
+
+    internal void NoteToll(UnitState by, UnitState on, int nominal, int taken, bool floored, long yokeCut, bool killed)
+    {
+        TollFires++;
+        if (killed) TollKills++;
+        TollNominal += nominal;
+        TollTaken += taken;
+        TollYokeCut += yokeCut;
+        if (floored) TollFloored++;
+        DebtOn.TryGetValue(on.Def.Id, out var a);
+        DebtOn[on.Def.Id] = (a.Stacked, a.Collected + nominal);
+        TallyOf(by).TollTaken += taken;
+    }
+
+    internal void NoteTollForgive(UnitState by, UnitState dead, int nominal, int selfHp)
+    {
+        TollForgives++;
+        TollForgiven += nominal;
+        TollForgivenSelfHp += selfHp;
+    }
+
+    internal void NoteBrandFire(UnitState by, int fuel)
+    {
+        BrandFires++;
+        TallyOf(by).BrandFires++;
+    }
+
+    internal void NoteBrandDry(UnitState by) => BrandDry++;
+
+    internal void NoteBrandHit(UnitState by, int amount, int removed, long yokeCut, bool killed)
+    {
+        BrandHits++;
+        BrandSpent += amount;
+        BrandRemoved += removed;
+        BrandYokeCut += yokeCut;
+        if (killed) BrandKills++;
+        TallyOf(by).BrandDealt += removed;
+    }
+
+    /// <summary>決着時に残っていた負債と燃料を数える（<b>死者も含めた全駒を1度だけ</b>）。</summary>
+    public void CloseIndulgenceLedger()
+    {
+        foreach (UnitState u in _units)
+        {
+            DebtResidual += u.RawCounter(StatusKeys.Debt);
+            BrandResidual += u.RawCounter(BrandTrait.FuelKey);
+        }
     }
 
     public readonly long[] DroughtHits = new long[2];
@@ -3566,7 +3718,7 @@ public sealed class BattleContext
                          ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
                          BraceRule? brace = null, ShufflerRule? shuffler = null,
                          ConfusionRule? confusion = null, HasteRule? haste = null,
-                         WardRule? ward = null,
+                         WardRule? ward = null, IndulgenceRule? indulgence = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -3615,6 +3767,7 @@ public sealed class BattleContext
         Loose = loose ?? LooseRule.Default;
         Brace = brace ?? BraceRule.Default;
         Ward = ward ?? WardRule.Default;
+        Indulgence = indulgence ?? IndulgenceRule.Default;
         Taillight = taillight ?? TaillightRule.Default;
         Reader = reader ?? ReaderRule.Default;
         Boss = boss ?? BossRule.Default;
@@ -3943,10 +4096,18 @@ public sealed class BattleContext
     /// <para><b>回復量の上限（継ぎ当ての自消費）や封じ（渇き）はここでは見ない。</b>
     /// 患者を選ぶことと、実際に何が届くかは別の層（<see cref="Heal"/>）の仕事。</para>
     /// </summary>
-    public UnitState? MostHurtAlly(UnitState self)
+    public UnitState? MostHurtAlly(UnitState self) => MostHurtAlly(self, null);
+
+    /// <summary>
+    /// 同じ選択に候補の絞りを掛けた版（第155期）。<b><paramref name="filter"/> が
+    /// <c>null</c> なら上の版と1ビットも違わない</b>——選択の定義を2箇所に増やさないための
+    /// オーバーロードで、規則は1つも足していない。
+    /// </summary>
+    public UnitState? MostHurtAlly(UnitState self, Func<UnitState, bool>? filter)
     {
         var hurt = LivingMembers(self.TeamId)
-            .Where(a => a != self && a.AcceptsSupport && a.Hp < a.MaxHp).ToList();
+            .Where(a => a != self && a.AcceptsSupport && a.Hp < a.MaxHp)
+            .Where(a => filter is null || filter(a)).ToList();
         int worst = hurt.Count == 0 ? 0 : hurt.Min(a => a.Hp * 100 / Math.Max(1, a.MaxHp));
         return PickOne(hurt.Where(a => a.Hp * 100 / Math.Max(1, a.MaxHp) == worst).ToList());
     }
@@ -6873,7 +7034,7 @@ public static class BattleEngine
                                    ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
                                    BraceRule? brace = null, ShufflerRule? shuffler = null,
                                    ConfusionRule? confusion = null, HasteRule? haste = null,
-                                   WardRule? ward = null,
+                                   WardRule? ward = null, IndulgenceRule? indulgence = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
@@ -6882,7 +7043,7 @@ public static class BattleEngine
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
                nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace, shuffler,
-               confusion, haste, ward, probe);
+               confusion, haste, ward, indulgence, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -6920,7 +7081,7 @@ public static class BattleEngine
                                    ShatterRule? shatter = null, ShrapnelRule? shrapnel = null,
                                    BraceRule? brace = null, ShufflerRule? shuffler = null,
                                    ConfusionRule? confusion = null, HasteRule? haste = null,
-                                   WardRule? ward = null,
+                                   WardRule? ward = null, IndulgenceRule? indulgence = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
@@ -6929,7 +7090,7 @@ public static class BattleEngine
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
                                     nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace,
-                                    shuffler, confusion, haste, ward, probe);
+                                    shuffler, confusion, haste, ward, indulgence, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -7104,6 +7265,8 @@ public static class BattleEngine
         ctx.CloseMarkLedger();
         // 第153期。決着時にプールに残っていた預かりを数える（収支を閉じるため）。
         ctx.CloseWardLedger();
+        // 第155期。決着時に残っていた負債と燃料を数える（収支を閉じるため）。
+        ctx.CloseIndulgenceLedger();
 
         return new BattleResult
         {
@@ -7175,6 +7338,15 @@ public static class BattleEngine
                 ctx.WardBurdenHits, ctx.WardBurdenAdded,
                 ctx.WardLadenSwings, ctx.WardLadenFloored, ctx.WardLadenSwingLost,
                 ctx.WardLadenNominal, ctx.WardLadenCarriers),
+            // 第155期 段A。贖いの帳簿（**計数専用**。どの規則も読まない）。
+            Indulgence = new IndulgenceLedger(
+                ctx.IndulgenceFires, ctx.IndulgenceAsked, ctx.DebtStacked,
+                ctx.IndulgenceDry, ctx.IndulgenceDryDrought, ctx.IndulgenceNoPatient,
+                ctx.TollFires, ctx.TollNominal, ctx.TollTaken, ctx.TollFloored, ctx.TollYokeCut, ctx.TollKills,
+                ctx.TollForgives, ctx.TollForgiven, ctx.TollForgivenSelfHp,
+                ctx.BrandFires, ctx.BrandSpent, ctx.BrandRemoved, ctx.BrandYokeCut,
+                ctx.BrandHits, ctx.BrandKills, ctx.BrandDry, ctx.BrandResidual,
+                ctx.DebtResidual, new Dictionary<string, (long, long)>(ctx.DebtOn)),
             BoardRules = new BoardRuleLedger(
                 (long[])ctx.DroughtHits.Clone(), (long[])ctx.DroughtRequested.Clone(),
                 (long[])ctx.DroughtEffective.Clone(),

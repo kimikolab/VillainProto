@@ -193,6 +193,17 @@ public enum TraitId
                 // 切り落としが増えず、この期で測りたい変換がまるごと消える（第154期 §1-2）
     Laden,      // 重り: 預かり `WardRule.LadenPer` ごとに、抱えている味方の攻撃力が 1 下がる（下限 1）
 
+    // --- 第155期で足した札（**回復に「前借り」の次元を入れる**。`UnitCatalog.All` には入れない） ---
+    // **3枚に分けてあるのは器具の要件**（第74期に 裂き → `Rend` + `ThinBlade` を切り出したのと同じ作法）。
+    // `checkup` の `yP`（マイナスを外した版）は `Traits` の配列から `Toll` を抜くだけで作れる。
+    // **`Brand` は `Toll` の下流**なので、`yP` では燃料が1点も溜まらない——これは正しい挙動である
+    // （代金を外すと、その代金から生まれる出力も消える）。
+    Indulgence, // 免罪: 手番で味方1体を `IndulgenceRule.Advance` だけ癒し、**実際に増えた HP** を負債として積む
+                // ——満タン・渇き・支援拒否で入らなかった分は負債にもならない（第155期 §1-3 (a)）
+    Toll,       // 取り立て: 負債が `IndulgenceRule.Threshold` に達した味方から全額を取り立てる（`lethal: false`）。
+                // **借り手が負債を抱えたまま先に倒れたら、その負債ぶん保持者自身が削れる**（踏み倒しの禁止・§1-3 (c)）
+    Brand,      // 焼き: 取り立てた量を燃料として溜め、保持者の手番で敵へ叩き込む（**攻撃力を経由しない**・§1-3 (f)）
+
     // --- 傷の5枚から切り出したマイナス（第74期・**器具**） ---
     // どれも既存の駒に既定で付いたままで、**盤面は1ビットも変わらない**（受け入れ基準は
     // `compare` 305 セル 0 件）。切り出した理由は1つだけ——**計量できるようにするため**。
@@ -9436,6 +9447,265 @@ public sealed class LadenTrait : Trait
     }
 }
 
+/// <summary>
+/// 焼き（<see cref="TraitId.Brand"/>）の出口（第155期）。
+///
+/// <para><b><c>Pierce</c> は作っていない。</b> 貫きを engine と同じ規則で解くには
+/// <see cref="BattleEngine"/> の <c>SelectPierceEntry</c> / <c>ResolvePierce</c> が要るが、
+/// どちらも <c>private</c> で、しかも <c>ResolvePierce</c> は<b>レーンの先頭に対して
+/// <see cref="Trait.OnAfterAttack"/> を発火させる</b>——焼きは攻撃ではないので、
+/// 通すと「特性の発動は攻撃1回につき1度」の契約が破れる。
+/// <b>列挙に枝だけ足して読む側を開けない形にはしない</b>（第148期：立つのに誰も読まない）ので、
+/// 枝そのものを置いていない。指示書 §1-5 の「要るなら落としてよい」に従った。</para>
+/// </summary>
+public enum BrandBlast
+{
+    /// <summary><b>既定。</b> 通常攻撃と同じ規則で1体を選び、燃料をそのまま叩き込む。</summary>
+    Single,
+
+    /// <summary>主目標に全額・他の敵に <see cref="BattleContext.SecondaryPercent"/>%（engine の全体攻撃と同じ配分）。</summary>
+    All
+}
+
+/// <summary>
+/// 贖いの規則（第155期・<see cref="IndulgenceTrait"/>）。
+///
+/// <para><b>前借りは固定値で、割合にしない</b>（第154期の副産物——<c>Percent</c> は整数除算で
+/// 小さい入力が丸ごと 0 に落ち、0.30 倍にすると積んだ量が 0.234〜0.253 倍になる。
+/// <b>強度のノブとして使えない</b>）。掃引するのは <see cref="Threshold"/> の側。</para>
+///
+/// <para><b><see cref="Advance"/> が 0 なら札は完全に不活性。</b></para>
+/// </summary>
+/// <param name="Advance">前借りの固定量（<c>ctx.Heal</c> に渡す名目量）。</param>
+/// <param name="Threshold">負債がこの値に達したら全額を取り立てる。</param>
+/// <param name="Contracts">同時に負債を抱えられる味方の数。<b>0 は無制限（既定）。</b></param>
+/// <param name="Blast">焼きの出口（<see cref="BrandBlast"/>）。</param>
+public readonly record struct IndulgenceRule(int Advance, int Threshold, int Contracts, BrandBlast Blast)
+{
+    public static IndulgenceRule Default => new(30, 60, 0, BrandBlast.Single);
+}
+
+/// <summary>
+/// 免罪（<see cref="TraitId.Indulgence"/>・第155期）。<b>回復に「前借り」の次元を入れる札。</b>
+///
+/// <para>ロスターの回復役4枚（継ぎ当て・毒喰らい・移り木・置き去り）は
+/// <b>4枚とも「HPを戻す」を発火条件だけ変えてやっている</b>。この札が動かすのは量ではなく
+/// <b>タイミング</b>——いま大きく癒し、その分を後で取り立てる。</para>
+///
+/// <para><b>負債は「実際に増えた HP」で積む</b>（第155期 §1-3 (a)）。満タン・渇き・支援拒否で
+/// 入らなかった分は負債にもならないので、<b>渇き（第三波）では前借りも取り立ても起きない</b>
+/// ——第153期の預かり（積むだけ積んで返らない丸損）とはここが違う。
+/// <b>engine には規則も窓口も1つも足していない</b>（<c>ctx.Heal</c> が入口で止めているだけ）。</para>
+///
+/// <para><b>患者の選び方は継ぎ当て・施し・縫いと共有</b>（<see cref="BattleContext.MostHurtAlly"/>・
+/// 第39期に抽出した1箇所）。<see cref="IndulgenceRule.Contracts"/> が効くときだけ
+/// 「既に負債を抱えている味方」に候補を絞る——<b>絞りは呼び出し側に残す</b>（第39期の作法）。</para>
+/// </summary>
+public sealed class IndulgenceTrait : Trait
+{
+    /// <summary>その駒が前借りを撃った最後のターン（<b>私有カウンタ</b>。焼きとの二重発火を止める）。</summary>
+    public const string ActKey = "indulgenceActed";
+
+    public override TraitId Id => TraitId.Indulgence;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+        => ctx.Log($"  {self.Name} が赦しを配り始めた", LogKind.Trigger);
+
+    // 手番の行動として撃つ（第11期 Phase BB の作法）。**中身は状態で切り替える**（第155期 §1-4）
+    // ——燃料があれば焼き（BrandTrait）に手番を譲り、無ければ前借りを撃つ。
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Advance(ctx, self);
+
+    // 行動パターンを持たない保持者は従来どおりターン頭に発火する（理由は Trait.ActsOnPattern）。
+    // **保持者が1枚でも分岐を残す**——無条件に移すと、同じ札を持つ Actions 無しの駒の効果だけが静かに消える。
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Advance(ctx, self);
+    }
+
+    static void Advance(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        IndulgenceRule rule = ctx.Indulgence;
+        if (rule.Advance <= 0) return;
+
+        // 燃料があるターンは焼きの番（BrandTrait）。前借りは撃たない。
+        if (self.RawCounter(BrandTrait.FuelKey) > 0) return;
+
+        UnitState? patient = Pick(ctx, self, rule);
+        if (patient is null) { ctx.NoteIndulgenceDry(self, noPatient: true); return; }
+
+        int before = patient.Hp;
+        ctx.Heal(patient, rule.Advance, self);
+        int gained = patient.Hp - before;
+        ctx.NoteIndulgence(self, patient, rule.Advance, gained);
+        // 前借りを撃った手番の印。**焼きはこの手番では撃たない**——前借りがそのまま
+        // 閾値に届いて取り立てが走ると、同じ手番で燃料が生まれてしまうため。
+        self.SetCounter(ActKey, ctx.Turn);
+        if (gained <= 0) return;   // 渇き・満タン: 負債も積まない（§1-3 (a)）
+
+        patient.SetCounter(StatusKeys.Debt, patient.RawCounter(StatusKeys.Debt) + gained);
+        ctx.Log($"    {self.Name} が {patient.Name} に赦しを与えた（+{gained}・負債 {patient.RawCounter(StatusKeys.Debt)}）",
+                LogKind.Trigger);
+
+        // 取り立ては別の札。**保持者が持っていなければ走らない**（`yP` はこの1行で作れる）
+        // ——`MenderTrait` が `self.HasTrait(TraitId.Seal)` を見るのと同じ形。
+        if (self.HasTrait(TraitId.Toll)) TollTrait.Collect(ctx, self, patient);
+    }
+
+    /// <summary>
+    /// 貸す相手。<b>既定（<c>Contracts = 0</c>）では <see cref="BattleContext.MostHurtAlly"/> そのもの。</b>
+    /// 契約の上限に達しているときだけ、候補を「既に負債を抱えている味方」に絞る。
+    /// </summary>
+    static UnitState? Pick(BattleContext ctx, UnitState self, IndulgenceRule rule)
+    {
+        if (rule.Contracts <= 0) return ctx.MostHurtAlly(self);
+
+        int carriers = ctx.LivingMembers(self.TeamId).Count(a => a.RawCounter(StatusKeys.Debt) > 0);
+        if (carriers < rule.Contracts) return ctx.MostHurtAlly(self);
+        return ctx.MostHurtAlly(self, a => a.RawCounter(StatusKeys.Debt) > 0);
+    }
+}
+
+/// <summary>
+/// 取り立て（<see cref="TraitId.Toll"/>・第155期）。<b>前借りの代金。</b>
+/// 負債が <see cref="IndulgenceRule.Threshold"/> に達した味方から<b>全額</b>を取り立てる。
+///
+/// <para><b>殺さない（<c>lethal: false</c>）。</b> 理由は2つ——(1) 殺すと保持者が
+/// <b>死軸の駒</b>になり、ゾト・リィカと同じ「死ぬことが仕事」の群に合流して
+/// 「5枚目のヒーラー」という枠の目的を外す。(2) リィカの <c>RaiseCost</c> が
+/// 「起こした反動で自分が倒れると代償が代償として働かない」として同じ判断を下している。</para>
+///
+/// <para><b>踏み倒しを許さない</b>（§1-3 (c)）——借り手が負債を抱えたまま先に倒れたら、
+/// その負債ぶん<b>保持者自身が削れる</b>。許すと「借金を作ってから死なせる」が最適手になり、
+/// 上の「殺さない」という判断が無効化される。</para>
+///
+/// <para><b>宛先は貸した本人。</b> 保持者が選び直さない（第154期「代金は1枚に閉じろ」）。</para>
+///
+/// <para><b>取り立ては <c>ApplyDamage</c> を通す</b>ので、破片・肩代わり・軛が正しく効く。
+/// 第四波の軛（1発 25 上限）で切られるのは<b>意図した課税</b>であって欠陥ではない。
+/// <b>徴収の札（<c>levy: true</c>）を立てる</b>——攻撃によるダメージではないので（第118期）。</para>
+/// </summary>
+public sealed class TollTrait : Trait
+{
+    public override TraitId Id => TraitId.Toll;
+
+    /// <summary>
+    /// 借り手が負債を抱えたまま倒れたときの肩代わり。
+    /// <b>発火点は <see cref="OnAllyDeath"/> の1箇所で足りる</b>——<c>HandleDeath</c> の呼び出しは
+    /// <c>ApplyDamage</c> の中の1箇所しかないので、毒・燃焼のティックも自傷も吸いも全部ここを通る。
+    /// </summary>
+    public override void OnAllyDeath(BattleContext ctx, UnitState self, UnitState dead)
+    {
+        if (!self.IsAlive) return;
+        int debt = dead.RawCounter(StatusKeys.Debt);
+        if (debt <= 0) return;
+
+        dead.SetCounter(StatusKeys.Debt, 0);
+        int before = self.Hp;
+        // 出どころは自分。**肩代わり（巨躯・分かち）の対象になりうる**——第155期 Q0-3 で
+        // 実測して報告する（この期では塞がない）。
+        ctx.ApplyDamage(self, debt, self, isFriendlyFire: true, levy: true);
+        ctx.NoteTollForgive(self, dead, debt, before - Math.Max(0, self.Hp));
+        ctx.Log($"    {dead.Name} の負債 {debt} は {self.Name} に残った", LogKind.FriendlyFire);
+    }
+
+    /// <summary>
+    /// 負債が閾値に達していれば全額を取り立てる。<b>呼ぶのは <see cref="IndulgenceTrait"/> だけ。</b>
+    /// 負債が増える経路が前借りの1本しか無いので、積んだ直後に見れば取りこぼさない。
+    /// </summary>
+    internal static void Collect(BattleContext ctx, UnitState self, UnitState ally)
+    {
+        int debt = ally.RawCounter(StatusKeys.Debt);
+        if (debt <= 0 || debt < ctx.Indulgence.Threshold) return;
+
+        // 先に 0 にする（取り立ての最中に走るフックが同じ負債を二度読まないように）。
+        ally.SetCounter(StatusKeys.Debt, 0);
+
+        int before = ally.Hp;
+        ctx.YokeCutBy.TryGetValue(self.Def.Id, out var y0);
+        ctx.ApplyDamage(ally, debt, self, isFriendlyFire: true, lethal: false, levy: true);
+        ctx.YokeCutBy.TryGetValue(self.Def.Id, out var y1);
+
+        int taken = before - Math.Max(0, ally.Hp);
+        ctx.NoteToll(self, ally, debt, taken, ally.IsAlive && ally.Hp <= 1, y1.Lost - y0.Lost, !ally.IsAlive);
+        ctx.Log($"    {self.Name} が {ally.Name} から {taken} を取り立てた（負債 {debt}）", LogKind.FriendlyFire);
+
+        // 燃料は**実際に取り立てた HP**。上限（軛）・破片・HP1 のクランプで削れなかった分は燃えない。
+        if (taken > 0) self.SetCounter(BrandTrait.FuelKey, self.RawCounter(BrandTrait.FuelKey) + taken);
+    }
+}
+
+/// <summary>
+/// 焼き（<see cref="TraitId.Brand"/>・第155期）。<b>取り立てた量をそのままダメージにする。</b>
+///
+/// <para><b>攻撃力を経由しない</b>（§1-3 (f)）——「攻撃力に加算する」形はこのプロジェクトで
+/// 3回失敗している（ゴルムの吐き戻し＝第23期「攻撃力という遅い通貨に変換しているため、
+/// 使う前に戦闘が終わる」／ムドの <c>Rage</c> ＝第118期／号令＝第148期「払い先が攻撃力なので
+/// 攻撃しない駒には市場が成立しない」）。保持者は攻4・速6 の回復役で振る回数が稼げないので、
+/// 同じ穴に落ちる。<b>取り立てた瞬間に価値が確定する形にしてある。</b></para>
+///
+/// <para><b><c>ApplyDamage</c> を通す</b>ので破片・庇い・軛が正しく効く。
+/// <b>標的選択は通常攻撃と同じ規則</b>（<see cref="BattleContext.TargetPool"/>
+/// ＝前列が生きている限り後列は狙われない）。無作為にはしない。</para>
+///
+/// <para><b><see cref="TraitId.Toll"/> の下流</b>——取り立てが無ければ燃料は1点も溜まらない。
+/// <c>yP</c>（マイナスを外した版）でこの札の出力が 0 になるのは正しい挙動である。</para>
+/// </summary>
+public sealed class BrandTrait : Trait
+{
+    /// <summary>取り立てた燃料（<b>私有カウンタ</b>。<see cref="StatusKeys"/> には足さない）。</summary>
+    public const string FuelKey = "brandFuel";
+
+    public override TraitId Id => TraitId.Brand;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Blast(ctx, self);
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Blast(ctx, self);
+    }
+
+    static void Blast(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        // 前借りを撃った手番では焼かない（1手番に2つのことをさせない）。
+        if (self.RawCounter(IndulgenceTrait.ActKey) == ctx.Turn) return;
+
+        int fuel = self.RawCounter(FuelKey);
+        if (fuel <= 0) return;
+
+        List<UnitState> pool = ctx.TargetPool(self);
+        if (pool.Count == 0) { ctx.NoteBrandDry(self); return; }   // 燃料は残す（捨てない）
+
+        self.SetCounter(FuelKey, 0);
+        UnitState target = pool[ctx.Roll(pool.Count)];
+        bool all = ctx.Indulgence.Blast == BrandBlast.All;
+        AttackPattern pattern = all ? AttackPattern.All : AttackPattern.Single;
+
+        ctx.Log($"  {self.Name} は溜めた贖罪を炎に変えた（{fuel}）", LogKind.Highlight);
+        ctx.NoteBrandFire(self, fuel);
+        Hit(ctx, self, target, fuel, pattern);
+
+        if (!all) return;
+        // engine の全体攻撃と同じ配分（主目標に全額・他は SecondaryPercent%）。
+        int secondary = Math.Max(1, fuel * BattleContext.SecondaryPercent / 100);
+        foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)).ToList())
+        {
+            if (foe == target || !foe.IsAlive) continue;
+            Hit(ctx, self, foe, secondary, pattern);
+        }
+    }
+
+    static void Hit(BattleContext ctx, UnitState self, UnitState foe, int amount, AttackPattern pattern)
+    {
+        int before = foe.Hp;
+        ctx.YokeCutBy.TryGetValue(self.Def.Id, out var y0);
+        ctx.ApplyDamage(foe, amount, self, singleHit: pattern == AttackPattern.Single, pattern: pattern);
+        ctx.YokeCutBy.TryGetValue(self.Def.Id, out var y1);
+        ctx.NoteBrandHit(self, amount, before - Math.Max(0, foe.Hp), y1.Lost - y0.Lost, !foe.IsAlive);
+    }
+}
+
 public static class TraitCatalog
 {
     private static readonly Dictionary<TraitId, Trait> Map = new Trait[]
@@ -9535,6 +9805,9 @@ public static class TraitCatalog
         new ForfeitTrait(),    // 第153期
         new BurdenTrait(),     // 第154期
         new LadenTrait(),      // 第154期
+        new IndulgenceTrait(), // 第155期
+        new TollTrait(),       // 第155期
+        new BrandTrait(),      // 第155期
         new MartyrTrait(),
         new InversionTrait(),
         new DroughtTrait(),

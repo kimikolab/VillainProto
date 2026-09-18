@@ -1502,6 +1502,13 @@ public sealed class UnitTally
     /// </summary>
     public long WardBurdenTaken, WardLadenLost;
 
+    /// <summary>
+    /// 贖い（第155期・<see cref="TraitId.Indulgence"/>）。<b>保持者（アガ）の側</b>に載せる——
+    /// <c>IndulgenceStacked</c> 前借りで積んだ負債 ／ <c>TollTaken</c> 取り立てで実際に削った HP ／
+    /// <c>BrandFires</c> 焼いた回数 ／ <c>BrandDealt</c> 焼きが実際に削った HP。<b>計数専用。</b>
+    /// </summary>
+    public long IndulgenceStacked, TollTaken, BrandFires, BrandDealt;
+
     public int BraceGuards, BraceCuts, BraceRefused, BraceGiven, BraceLost;
     public int BraceShoves, BraceShoveCapped, BraceNoTarget, BraceStaggers, BraceArmorMuted;
 
@@ -1672,6 +1679,8 @@ public sealed class UnitTally
         BraceStaggers += o.BraceStaggers; BraceArmorMuted += o.BraceArmorMuted;
         WardStacked += o.WardStacked; WardReleased += o.WardReleased; WardForfeited += o.WardForfeited;
         WardBurdenTaken += o.WardBurdenTaken; WardLadenLost += o.WardLadenLost;
+        IndulgenceStacked += o.IndulgenceStacked; TollTaken += o.TollTaken;
+        BrandFires += o.BrandFires; BrandDealt += o.BrandDealt;
         StallStagger += o.StallStagger;
         ShuffleAllySwaps += o.ShuffleAllySwaps; ShuffleFoeSwaps += o.ShuffleFoeSwaps;
         ShuffleAdvanced += o.ShuffleAdvanced; ShuffleAdvancedTraited += o.ShuffleAdvancedTraited;
@@ -2330,6 +2339,52 @@ public readonly record struct WardLedger(
 }
 
 /// <summary>
+/// 贖いの帳簿（第155期 段A）。<b>計数専用で、どの規則も読まない。</b>
+///
+/// <para><b>これは「負債」の帳簿であって HP の帳簿ではない。</b>
+/// 収支は <c>Stacked == Collected + Forgiven + Residual</c> で 1 点もずれずに閉じる。
+/// 取り立てが<b>実際に削った HP</b>（<see cref="TollTaken"/>）は、上限（軛）・破片・
+/// HP1 のクランプ・肩代わりで名目（<see cref="Collected"/>）を下回る——
+/// <b>この差が「取り立てが取りこぼした分」で、そのまま焼きの燃料の目減りになる。</b></para>
+/// </summary>
+/// <param name="Fires">前借りの発火回数。</param>
+/// <param name="Asked">前借りが <c>ctx.Heal</c> に要求した名目量。</param>
+/// <param name="Stacked"><b>実際に増えた HP</b>＝積まれた負債の総量。</param>
+/// <param name="Dry">前借りを撃ったが1点も入らなかった回数。</param>
+/// <param name="DryDrought">そのうち渇きで止まった回数。</param>
+/// <param name="NoPatient">貸す相手がいなかった回数。</param>
+/// <param name="TollFires">取り立ての発火回数。</param>
+/// <param name="Collected">取り立てた負債の<b>名目</b>量。</param>
+/// <param name="TollTaken">取り立てが<b>実際に削った HP</b>（＝焼きの燃料）。</param>
+/// <param name="TollFloored">HP1 のクランプで止まった回数。</param>
+/// <param name="TollYokeCut">取り立てが軛に切られた量。</param>
+/// <param name="TollKills"><b>取り立てが直接殺した回数</b>（<c>lethal: false</c> が効いていれば常に 0）。</param>
+/// <param name="Forgives">踏み倒し（借り手が負債を抱えたまま倒れた）の回数。</param>
+/// <param name="Forgiven">同・保持者が引き受けた負債の名目量。</param>
+/// <param name="ForgivenSelfHp">同・<b>保持者の HP が実際に減った量</b>（肩代わりされた分は出ない）。</param>
+/// <param name="BrandFires">焼きの発火回数。</param>
+/// <param name="BrandSpent">焼きが叩き込んだ名目量（全体の巻き込みを含む）。</param>
+/// <param name="BrandRemoved">同・<b>実際に削った HP</b>。</param>
+/// <param name="BrandYokeCut">同・軛に切られた量。</param>
+/// <param name="BrandHits">焼きが当たった体数（延べ）。</param>
+/// <param name="BrandKills">焼きで倒した敵の数。</param>
+/// <param name="BrandDry">燃料はあるのに狙える敵が1体もいなかった回数。</param>
+/// <param name="BrandResidual">決着時に燃え残った燃料。</param>
+/// <param name="Residual">決着時に残っていた負債（死者も含む）。</param>
+/// <param name="On">借り手ごとの内訳（<c>Def.Id</c> → 積んだ量・取り立てられた量）。</param>
+public readonly record struct IndulgenceLedger(
+    long Fires, long Asked, long Stacked, long Dry, long DryDrought, long NoPatient,
+    long TollFires, long Collected, long TollTaken, long TollFloored, long TollYokeCut, long TollKills,
+    long Forgives, long Forgiven, long ForgivenSelfHp,
+    long BrandFires, long BrandSpent, long BrandRemoved, long BrandYokeCut,
+    long BrandHits, long BrandKills, long BrandDry, long BrandResidual,
+    long Residual, Dictionary<string, (long Stacked, long Collected)> On)
+{
+    /// <summary>収支が閉じているか（1点もずれていないか）。</summary>
+    public bool Balanced => Stacked == Collected + Forgiven + Residual;
+}
+
+/// <summary>
 /// 盤面ルールの対称性の帳簿（第134期 段2）。<b>計数専用で、どの規則も読まない。</b>
 ///
 /// <para><b>第132期の <see cref="YokeLedger"/> と同じ形</b>を、渇き（<c>Drought</c>）と
@@ -2439,6 +2494,9 @@ public sealed class BattleResult
 
     /// <summary>預かりの帳簿（第153期 段A・<see cref="WardLedger"/>）。<b>計数専用。</b></summary>
     public required WardLedger Ward { get; init; }
+
+    /// <summary>贖いの帳簿（第155期 段A・<see cref="IndulgenceLedger"/>）。<b>計数専用。</b></summary>
+    public required IndulgenceLedger Indulgence { get; init; }
 
     public required int ExposeCount { get; init; }
     public required int ExposeMissed { get; init; }
