@@ -516,6 +516,11 @@ static class GustDiag
         foreach (int p in pcts) versions.Add(("段B " + p + "%", V0 with { GustPercent = p }));
         versions.Add(("段C " + pcts[^1] + "% 主のみ",
                       V0 with { GustPercent = pcts[^1], GustSecondary = false }));
+        // **参考の対照**（採用候補ではない）。敵陣を乱さない ＝ 喧噪が後列を前へ出さない版。
+        // 表G の `後列` が喧噪の供給なのか、「前列が全滅して `pool` が後列へ落ちた」だけなのかを割る。
+        // **混乱も同時に消える**ので勝率は比べない——見るのは**転倒の相手の列の分布だけ**。
+        versions.Add(("参考 " + pcts[^1] + "% 敵を乱さない",
+                      V0 with { Foes = false, GustPercent = pcts[^1] }));
 
         Console.WriteLine("## 表D. 帰属（第2〜5波平均・**Δ と取り分を併記**）");
         Console.WriteLine();
@@ -598,18 +603,28 @@ static class GustDiag
         Console.WriteLine();
         Console.WriteLine("**前列の壁を転ばせているのか、引きずり出した後列の駒を転ばせているのか。**");
         Console.WriteLine();
-        Console.WriteLine("| 台 | 版 | 転倒の相手（多い順） |");
-        Console.WriteLine("|---|---|---|");
+        Console.WriteLine("**列は「その波の開幕の席」で数える**——喧噪で前へ引きずり出された駒も"
+                          + "`後列` のまま数えるので、`後列` の件数が**そのまま予測3 の証拠**になる。");
+        Console.WriteLine("（薙ぎは `SweepTargets` で広がるので、**後列へは構造的に届かない**"
+                          + "——届いたなら喧噪が前へ出したか、前列と中央が全滅して `pool` が後列に落ちたかのどちらか。）");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 版 | 前列 | 中央 | **後列** | 後列の割合 | 相手（多い順） |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|---|");
         foreach ((string name, Formation f) in rigs0)
         {
             if (name == "動かす機構なし") continue;
             foreach (var v in versions)
             {
                 if (v.R.GustPercent == 0) continue;
-                var who = Victims(Swap(f, gust), v.R);
+                (Dictionary<string, int> who, double[] row) = Victims(Swap(f, gust), v.R);
+                double tot = row.Sum();
                 Console.WriteLine("| " + name + " | " + v.Lab + " | "
+                                  + (row[0] / 4.0 / Seeds).ToString("F2") + " | "
+                                  + (row[1] / 4.0 / Seeds).ToString("F2") + " | **"
+                                  + (row[2] / 4.0 / Seeds).ToString("F2") + "** | "
+                                  + (tot <= 0 ? "—" : (row[2] / tot).ToString("P1")) + " | "
                                   + (who.Count == 0 ? "—"
-                                     : string.Join(" ／ ", who.OrderByDescending(k => k.Value).Take(5)
+                                     : string.Join(" ／ ", who.OrderByDescending(k => k.Value).Take(4)
                                          .Select(k => k.Key + " " + (k.Value / 4.0 / Seeds).ToString("F2")))) + " |");
             }
         }
@@ -942,12 +957,25 @@ static class GustDiag
         return new Gl(sw / d, pri / d, spl / d, fell / d, ally / d);
     }
 
-    /// <summary>転倒した相手の名前ごとの延べ件数（第2〜5波の合計）。</summary>
-    static Dictionary<string, int> Victims(Formation f, ShufflerRule r)
+    /// <summary>
+    /// 転倒した相手の名前ごとの延べ件数と、<b>その波の開幕の列</b>ごとの内訳（前 / 中 / 後）。
+    /// <b>開幕の席で数える</b>——喧噪が前へ引きずり出した駒も `後列` のままなので、
+    /// 「引きずり出した後列の駒を転ばせているか」（予測3）がこの列で直接読める。
+    /// </summary>
+    static (Dictionary<string, int> Who, double[] Row) Victims(Formation f, ShufflerRule r)
     {
         var own = new HashSet<string>(f.Occupied().Select(o => o.Def.Id));
         var who = new Dictionary<string, int>();
+        var row = new double[3];
         for (int st = 1; st < 5; st++)
+        {
+            // その波の開幕の席（同じ `Id` が2枠に立つ波があるので、浅いほうを採る）。
+            var opening = new Dictionary<string, int>();
+            foreach (var o in EnemyCatalog.Stages[st].Enemy.Occupied())
+            {
+                int d = FormationRules.DepthOf(FormationRules.RowOf(o.Slot));
+                if (!opening.TryGetValue(o.Def.Id, out int cur) || d < cur) opening[o.Def.Id] = d;
+            }
             for (int seed = 0; seed < Seeds; seed++)
             {
                 BattleResult res = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed,
@@ -956,9 +984,11 @@ static class GustDiag
                 {
                     if (own.Contains(kv.Key) || kv.Value.GustFellHere == 0) continue;
                     who[kv.Key] = who.GetValueOrDefault(kv.Key) + kv.Value.GustFellHere;
+                    if (opening.TryGetValue(kv.Key, out int d)) row[d] += kv.Value.GustFellHere;
                 }
             }
-        return who;
+        }
+        return (who, row);
     }
 
     /// <summary>リポジトリ内のファイルを探す。<b>引けなかったら呼び出し側で止めること</b>（第117期）。</summary>
