@@ -33,9 +33,11 @@ static class StageDiag
             case "scan": Scan(arg); return;
             case "run": Attribute(arg); return;
             case "life": Life(arg); return;
+            case "rho": Rho(arg); return;
+            case "rhocarry": RhoCarry(arg); return;
             case "check": Check(arg); return;
             default:
-                Console.WriteLine("stage: モードは phase0 / scan / run / life / check。");
+                Console.WriteLine("stage: モードは phase0 / scan / run / life / rho / rhocarry / check。");
                 return;
         }
     }
@@ -56,11 +58,16 @@ static class StageDiag
         // 実装から引く（名前で決め打ちしない・第100期の作法）。
         var route = EnemyCatalog.Columns.First(c => ReferenceEquals(c.Squads, EnemyCatalog.EngagementColumn));
         var spot = EnemyCatalog.Columns.Where(c => c.Squads.Count == 3).OrderBy(c => c.Name).First();
+        // 第158期: 逆順列。**既存の `EnemyCatalog.Columns` にあるもの**を引くだけで、
+        // 新しい敵も新しい並びも作らない（順路と同じ長さで、順路ではない列）。
+        var rev = EnemyCatalog.Columns.First(c => c.Squads.Count == route.Squads.Count
+                                                  && !ReferenceEquals(c.Squads, EnemyCatalog.EngagementColumn));
         return new[]
         {
             new Col("地点2", EnemyCatalog.Stages.Take(2).Select(s => s.Enemy).ToList()),
             new Col("地点3", spot.Squads),
             new Col("順路5", route.Squads),
+            new Col("逆順路5", rev.Squads),
         };
     }
 
@@ -473,6 +480,354 @@ static class StageDiag
         Console.WriteLine();
         Console.WriteLine($"平均 会戦 {fullE.Average():F3} ／ 単発 {fullI.Average():F3}"
             + $"（SD {Sd(fullE):F3} / {Sd(fullI):F3}）。**列長 {col.Len}。**");
+        Console.WriteLine();
+        Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F1} 秒。");
+    }
+
+    // =================================================================================
+    // 第158期 —— 目的変数を ρ に変える（`stage rho`）
+    //
+    // **単発帰属は版に依らない**（`IndepDegree` は `Ver` を受け取らない）ので、列ごとに1度だけ
+    // 測って使い回す。同じ列の点どうしは分母（単発側）が1ビットも違わない——
+    // だから「絞った ρ」のフィルタを**単発側**に掛けると、点をまたいで同じ枠集合になる。
+    // **処置後の側（会戦帰属）で選別しない**のは第88期の情報帯と同じ理由。
+    // =================================================================================
+
+    public sealed record Pt(string ColName, string VerName, string Note);
+
+    public static Pt[] RhoPoints() => new[]
+    {
+        new Pt("順路5",   "R0",      "**対照**（現行の境界。第157期 rho 0.857 / 帰属SD 0.318）"),
+        new Pt("順路5",   "RFull",   "**対照**（第157期 rho 0.884 / 帰属SD 0.808）"),
+        new Pt("順路5",   "BCarry",  "**本命**（`StatusKeys` / `AtkBonus` / `WhetReceived` を持ち越す）"),
+        new Pt("順路5",   "BRevive", "`BoundaryChoice` のもう一方（体だけ返す）"),
+        new Pt("逆順路5", "R0",      "列の順序"),
+        new Pt("逆順路5", "BCarry",  "列の順序 × 本命"),
+        new Pt("地点3",   "R0",      "短い列"),
+        new Pt("地点3",   "BCarry",  "短い列 × 本命"),
+        new Pt("地点2",   "R0",      "一番短い列（**rho が 1 に近づくはず** ＝ 予測4）"),
+    };
+
+    // §4。**実装前に書き切り、外れても消さない**（規約・第64期）。
+    public static readonly (string Key, string Text)[] RhoPredictions =
+    {
+        ("P1", "**`BCarry` は rho を下げる**（順路5 × BCarry の rho < 対照 R0 の 0.857）"),
+        ("P2", "**`BCarry` で上がる駒**：ヒビ・ウロ・ガレ（破片）／ムド・ウツ（`AtkBonus`）。R0 で負だった差が反転する"),
+        ("P3", "**`BCarry` で下がる駒**：グザ・ミオ・スィド（毒。**負も持ち越す**）"),
+        ("P4", "**`地点2 × R0` の rho が全点で最大**（列が短く単発に近い）"),
+        ("P5", "**逆順列は rho を下げるが SD は上げない**（順序が変わるだけで通貨は増えない）"),
+        ("P6", "**`RFull` の rho が高い**（持ち越しの経路を消しているので単発に似る）"),
+    };
+
+    // ---- 線（**測る前に固定する**。§2-1） ----
+    const double RhoLine = 0.75;     // 線1: 序列が動いた
+    const double SdLine = 0.162;     // 線2: 駒の差が立っている（帰属SD ÷ 列長）
+
+    static double IndepAvg(Formation f, Col col)
+    {
+        double s = 0;
+        for (int seed = 0; seed < Seeds; seed++) s += IndepDegree(f, col, seed);
+        return s / Seeds;
+    }
+
+    static double EngageAvg(Formation f, Col col, Ver v)
+    {
+        double s = 0;
+        for (int seed = 0; seed < Seeds; seed++) s += EngageDegree(f, col, v, seed);
+        return s / Seeds;
+    }
+
+    static Formation SwapOne(Formation src, int slot)
+    {
+        var f = new Formation();
+        foreach ((int sl, UnitDef d) in src.Occupied()) f[sl] = sl == slot ? Plain(d) : d;
+        return f;
+    }
+
+    sealed record RhoRes(Pt P, Col C, string[] Ids,
+                         double[] UE, double[] UI, double[] SE, double[] SI, double[] FE);
+
+    static double RhoQ1(double[] v)
+    {
+        var a = v.Select(Math.Abs).OrderBy(x => x).ToArray();
+        return a[a.Length / 4];
+    }
+
+    static (double Rho, int N) RhoOf(double[] e, double[] i, double thr)
+    {
+        var xs = new List<double>(); var ys = new List<double>();
+        for (int k = 0; k < e.Length; k++) if (Math.Abs(i[k]) > thr) { xs.Add(e[k]); ys.Add(i[k]); }
+        if (xs.Count < 3) return (double.NaN, xs.Count);
+        var c = Correlate(xs.ToArray(), ys.ToArray());
+        return (c.Rho, c.N);
+    }
+
+    // 同値塊（規約 (G13)）。最大の同値グループの割合と、厳密に 0 の数。
+    static (double Tie, int Zero) RhoTies(double[] v)
+    {
+        var g = v.GroupBy(x => Math.Round(x, 6)).OrderByDescending(x => x.Count()).First();
+        return ((double)g.Count() / v.Length, v.Count(x => Math.Abs(x) < 1e-9));
+    }
+
+    static void Rho(string arg)
+    {
+        var rows = CompareBuilds();
+        var jobs = new List<(int Row, int Slot, UnitDef Def)>();
+        for (int i = 0; i < rows.Length; i++)
+            foreach ((int sl, UnitDef d) in rows[i].F.Occupied()) jobs.Add((i, sl, d));
+        var ids = jobs.Select(j => j.Def.Id).Distinct().ToArray();
+        var uname = ids.ToDictionary(id => id, id => jobs.First(j => j.Def.Id == id).Def.Name);
+        var slotsOf = ids.ToDictionary(id => id,
+            id => Enumerable.Range(0, jobs.Count).Where(j => jobs[j].Def.Id == id).ToArray());
+
+        var pts = RhoPoints();
+        if (arg.Trim().Length > 0)
+        {
+            var want = arg.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
+            // **完全一致**で絞る。`Contains` だと「順路5 R0」が「逆順路5 R0」を拾う
+            // （第123期「静かに違うものを測る」の引数の側。実際に1度拾った）。
+            pts = pts.Where(p => want.Contains($"{p.ColName} {p.VerName}")).ToArray();
+            if (pts.Length == 0) { Console.WriteLine("stage rho: 該当する点が無い。"); return; }
+        }
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        // ---- 単発側は列ごとに1度だけ（版に依らない） ----
+        var indepFull = new Dictionary<string, double[]>();
+        var indepGot = new Dictionary<string, double[]>();
+        foreach (string cn in pts.Select(p => p.ColName).Distinct())
+        {
+            var col = ColOf(cn);
+            var fI = new double[rows.Length];
+            Parallel.For(0, rows.Length, i => fI[i] = IndepAvg(rows[i].F, col));
+            var gI = new double[jobs.Count];
+            Parallel.For(0, jobs.Count, j => gI[j] = IndepAvg(SwapOne(rows[jobs[j].Row].F, jobs[j].Slot), col));
+            indepFull[cn] = fI; indepGot[cn] = gI;
+        }
+
+        var res = new List<RhoRes>();
+        foreach (var p in pts)
+        {
+            var col = ColOf(p.ColName); var ver = VerOf(p.VerName);
+            var fE = new double[rows.Length];
+            Parallel.For(0, rows.Length, i => fE[i] = EngageAvg(rows[i].F, col, ver));
+            var gE = new double[jobs.Count];
+            Parallel.For(0, jobs.Count, j => gE[j] = EngageAvg(SwapOne(rows[jobs[j].Row].F, jobs[j].Slot), col, ver));
+            double[] fI = indepFull[p.ColName], gI = indepGot[p.ColName];
+            var sE = new double[jobs.Count]; var sI = new double[jobs.Count];
+            for (int j = 0; j < jobs.Count; j++) { sE[j] = fE[jobs[j].Row] - gE[j]; sI[j] = fI[jobs[j].Row] - gI[j]; }
+            var uE = ids.Select(id => slotsOf[id].Average(j => sE[j])).ToArray();
+            var uI = ids.Select(id => slotsOf[id].Average(j => sI[j])).ToArray();
+            res.Add(new RhoRes(p, col, ids, uE, uI, sE, sI, fE));
+        }
+
+        Console.WriteLine("# 第158期 段B —— 目的変数を rho に変える");
+        Console.WriteLine();
+        Console.WriteLine($"`CompareBuilds()` {rows.Length} 行 × 延べ {jobs.Count} 枠 × 駒 {ids.Length} 体 × seed 0..{Seeds - 1}。");
+        Console.WriteLine();
+        Console.WriteLine("    会戦帰属 = 突破度（本体） − 突破度（その駒を素体に）   ← 持ち越しあり");
+        Console.WriteLine("    単発帰属 = 同じ器具・同じ列・同じ seed を毎戦新品で    ← 持ち越しなし。**版に依らない**");
+        Console.WriteLine("    rho      = 会戦帰属 と 単発帰属 の順位相関             ← **この期の目的変数**");
+        Console.WriteLine();
+        Console.WriteLine("**絞った rho のフィルタは単発側**（`|単発帰属| > q1`）。処置後の側で選別しない（第88期の情報帯）。");
+        Console.WriteLine("**単発側は版に依らない**ので、同じ列の点はどれも同じ枠集合で絞られる。");
+        Console.WriteLine();
+
+        Console.WriteLine("## B-1. 点ごとの rho と SD（**駒 52 体**の水準。第157期 §2-4 と同じ）");
+        Console.WriteLine();
+        Console.WriteLine("| 点 | 列長 | **rho(全)** | **rho(絞)** | 絞りの分母 | r(全) | 帰属SD | **SD÷列長** | 台SD | 台SD÷列長 | 会戦帰属の平均 | 単発帰属の平均 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        foreach (var r in res)
+        {
+            double q = RhoQ1(r.UI);
+            var (rhoAll, nAll) = RhoOf(r.UE, r.UI, -1);
+            var (rhoCut, nCut) = RhoOf(r.UE, r.UI, q);
+            double pear = Correlate(r.UE, r.UI).R;
+            double sd = Sd(r.UE);
+            Console.WriteLine($"| {r.P.ColName} × {r.P.VerName} | {r.C.Len} | **{rhoAll:F3}** | **{rhoCut:F3}** "
+                + $"| {nCut} / {nAll} | {pear:F3} | {sd:F3} | **{sd / r.C.Len:F3}** "
+                + $"| {Sd(r.FE):F3} | {Sd(r.FE) / r.C.Len:F3} | {r.UE.Average():+0.000;-0.000} | {r.UI.Average():+0.000;-0.000} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("絞りの閾値 q1（|単発帰属| の最小四分位）は列ごとに1つ: "
+            + string.Join(" / ", res.Select(r => r.P.ColName).Distinct()
+                .Select(cn => $"{cn} {RhoQ1(res.First(r => r.P.ColName == cn).UI):F3}")) + "。");
+        Console.WriteLine();
+
+        Console.WriteLine("## B-2. 点ごとの rho（**枠**の水準。§2-2 の字義どおり）");
+        Console.WriteLine();
+        Console.WriteLine("| 点 | rho(全) | rho(絞) | 絞りの分母 | 帰属SD | SD÷列長 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|");
+        foreach (var r in res)
+        {
+            double q = RhoQ1(r.SI);
+            var (rhoAll, nAll) = RhoOf(r.SE, r.SI, -1);
+            var (rhoCut, nCut) = RhoOf(r.SE, r.SI, q);
+            Console.WriteLine($"| {r.P.ColName} × {r.P.VerName} | {rhoAll:F3} | {rhoCut:F3} | {nCut} / {nAll} "
+                + $"| {Sd(r.SE):F3} | {Sd(r.SE) / r.C.Len:F3} |");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## B-3. 同値塊（規約 (G13)。**同値塊がある分布に順位相関を当てない**）");
+        Console.WriteLine();
+        Console.WriteLine("| 点 | 会戦帰属の最大同値塊 | 厳密に 0 の駒 | 単発帰属の最大同値塊 | 厳密に 0 の駒 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|");
+        foreach (var r in res)
+        {
+            var (tE, zE) = RhoTies(r.UE); var (tI, zI) = RhoTies(r.UI);
+            Console.WriteLine($"| {r.P.ColName} × {r.P.VerName} | {tE:P1} | {zE} / {r.Ids.Length} | {tI:P1} | {zI} / {r.Ids.Length} |");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## B-4. 判定（**線は §2-1 で測る前に固定した**）");
+        Console.WriteLine();
+        Console.WriteLine($"線1 序列が動いた: **rho <= {RhoLine:F2}**（全枠と絞った枠の**両方**。§2-2 の「絞ったほうでも下がっていて初めて」）  ");
+        Console.WriteLine($"線2 駒の差が立っている: **帰属SD ÷ 列長 >= {SdLine:F3}**  ");
+        Console.WriteLine("線3 本丸: **線1 と線2 を同時に満たす点が1つ以上**");
+        Console.WriteLine();
+        Console.WriteLine("| 点 | rho(全) | rho(絞) | 線1 | SD÷列長 | 線2 | **本丸** |");
+        Console.WriteLine("|---|--:|--:|:-:|--:|:-:|:-:|");
+        int win = 0;
+        foreach (var r in res)
+        {
+            double q = RhoQ1(r.UI);
+            double a = RhoOf(r.UE, r.UI, -1).Rho, b = RhoOf(r.UE, r.UI, q).Rho;
+            double sdn = Sd(r.UE) / r.C.Len;
+            bool l1 = a <= RhoLine && b <= RhoLine, l2 = sdn >= SdLine;
+            if (l1 && l2) win++;
+            Console.WriteLine($"| {r.P.ColName} × {r.P.VerName} | {a:F3} | {b:F3} | {(l1 ? "○" : "×")} "
+                + $"| {sdn:F3} | {(l2 ? "○" : "×")} | {(l1 && l2 ? "**○**" : "×")} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**線1 と線2 を同時に満たす点: {win} / {res.Count}。本丸は {(win > 0 ? "○" : "×")}。**");
+        Console.WriteLine();
+
+        Console.WriteLine("## B-5. 予測（**実装前に書いた。外れても消さない**）");
+        Console.WriteLine();
+        foreach (var (k, t) in RhoPredictions) Console.WriteLine($"{k}. {t}");
+        Console.WriteLine();
+
+        Console.WriteLine("## B-6. 動いた駒（単発と会戦で順位が入れ替わった上位10体）");
+        Console.WriteLine();
+        foreach (var r in res)
+        {
+            var rE = AverageRanksDesc(r.UE);
+            var rI = AverageRanksDesc(r.UI);
+            var ord = Enumerable.Range(0, r.Ids.Length)
+                .OrderByDescending(k => Math.Abs(rI[k] - rE[k])).Take(10).ToArray();
+            Console.WriteLine($"### {r.P.ColName} × {r.P.VerName}");
+            Console.WriteLine();
+            Console.WriteLine("| 駒 | 在席枠 | 単発順位 | 会戦順位 | **Δ順位** | 単発帰属 | 会戦帰属 | 差 | 札 |");
+            Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|---|");
+            foreach (int k in ord)
+            {
+                var def = jobs.First(j => j.Def.Id == r.Ids[k]).Def;
+                string traits = def.Traits.Count == 0 ? "—" : string.Join(" / ", def.Traits);
+                Console.WriteLine($"| {uname[r.Ids[k]]} | {slotsOf[r.Ids[k]].Length} | {rI[k]:F1} | {rE[k]:F1} "
+                    + $"| **{rI[k] - rE[k]:+0.0;-0.0}** | {r.UI[k]:+0.000;-0.000} | {r.UE[k]:+0.000;-0.000} "
+                    + $"| {r.UE[k] - r.UI[k]:+0.000;-0.000} | {traits} |");
+            }
+            Console.WriteLine();
+        }
+
+        Console.WriteLine("## B-7. 予測 P2 / P3 の名指し（`差 = 会戦帰属 − 単発帰属` の符号）");
+        Console.WriteLine();
+        string[] up = { "hibi", "uro", "gare", "mudo", "utsu" };
+        string[] down = { "guza", "mio", "sid" };
+        Console.WriteLine("| 駒 | 予測 | " + string.Join(" | ", res.Select(r => $"{r.P.ColName}×{r.P.VerName}")) + " |");
+        Console.WriteLine("|---|---|" + string.Concat(res.Select(_ => "--:|")));
+        foreach (string id in up.Concat(down))
+        {
+            int k = Array.IndexOf(ids, id);
+            if (k < 0) { Console.WriteLine($"| {id} | — | 在席せず |"); continue; }
+            Console.WriteLine($"| {uname[id]} | {(up.Contains(id) ? "P2 上がる" : "P3 下がる")} | "
+                + string.Join(" | ", res.Select(r => $"{r.UE[k] - r.UI[k]:+0.000;-0.000}")) + " |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F1} 秒。");
+    }
+
+    // =================================================================================
+    // 第158期 —— 境界をまたいで運ばれた「入場時の実効攻撃力の上乗せ」（`stage rhocarry`）
+    //
+    // `BattleOpening.Attack` は **`UnitState.CurrentAttack`**（`Def.Attack + AtkBonus` を
+    // `Trait.ModifyAttack` に通した後）で、`BaseAttack` は `Def.Attack`。
+    // **だから引き算は純粋な `AtkBonus` ではない**——薄刃（キリ −11）や逆しまの半減が混ざる
+    // （第121期「判定の線は計数の名前ではなく実装が数えている出来事に当てる」）。
+    // **engine には1行も足さない。** 状態異常のカウンタは台本に載らない（第125期）ので出せない。
+    // =================================================================================
+    static void RhoCarry(string arg)
+    {
+        var a = arg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var col = ColOf(a.Length > 0 ? a[0] : "順路5");
+        var vers = (a.Length > 1 ? a[1] : "R0,BCarry").Split(',').Select(VerOf).ToArray();
+        var rows = CompareBuilds();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        Console.WriteLine("# 第158期 段C —— 入場時の実効攻撃力の上乗せ（実測）");
+        Console.WriteLine();
+        Console.WriteLine($"列 ＝ {col.Name}。`BattleOpening.Attack − BaseAttack` を**第2戦以降の入場時**に読む。");
+        Console.WriteLine();
+        Console.WriteLine("**これは純粋な `AtkBonus` ではない**——`Attack` は `CurrentAttack`（`ModifyAttack` を通った後）なので、");
+        Console.WriteLine("薄刃（裂きのキリ −11）や逆しまの半減が混ざる。**`AtkBonus` そのものを読む窓口は台本に無い。**");
+        Console.WriteLine("**状態異常のカウンタは台本に載らないので出せない**（第125期）。");
+        Console.WriteLine();
+
+        var per = new Dictionary<string, double[]>();
+        var pos = new Dictionary<string, double[]>();
+        var cnt = new Dictionary<string, long[]>();
+        var lk = new object();
+        for (int vi = 0; vi < vers.Length; vi++)
+        {
+            int vidx = vi;
+            Parallel.ForEach(rows, row =>
+            {
+                var lSum = new Dictionary<string, double>();
+                var lPos = new Dictionary<string, long>();
+                var lCnt = new Dictionary<string, long>();
+                for (int seed = 0; seed < Seeds; seed++)
+                {
+                    EngagementResult r = EngagementEngine.Run(new[] { row.F }, col.Squads, seed,
+                        verbose: true, recover: vers[vidx].Rec, boundary: vers[vidx].Bnd);
+                    for (int b = 1; b < r.Openings.Count; b++)
+                        foreach (var op in r.Openings[b].Where(o => o.TeamId == BattleContext.PlayerTeam))
+                        {
+                            int bonus = op.Attack - op.BaseAttack;
+                            lSum[op.UnitId] = lSum.GetValueOrDefault(op.UnitId) + bonus;
+                            if (bonus > 0) lPos[op.UnitId] = lPos.GetValueOrDefault(op.UnitId) + 1;
+                            lCnt[op.UnitId] = lCnt.GetValueOrDefault(op.UnitId) + 1;
+                        }
+                }
+                lock (lk)
+                    foreach (string id in lCnt.Keys)
+                    {
+                        if (!per.ContainsKey(id))
+                        {
+                            per[id] = new double[vers.Length];
+                            pos[id] = new double[vers.Length];
+                            cnt[id] = new long[vers.Length];
+                        }
+                        per[id][vidx] += lSum.GetValueOrDefault(id);
+                        pos[id][vidx] += lPos.GetValueOrDefault(id);
+                        cnt[id][vidx] += lCnt[id];
+                    }
+            });
+        }
+
+        Console.WriteLine("| 駒 | " + string.Join(" | ", vers.Select(v => $"{v.Name} 平均 | {v.Name} 正の率")) + " |");
+        Console.WriteLine("|---|" + string.Concat(vers.Select(_ => "--:|--:|")));
+        int last = vers.Length - 1;
+        foreach (string id in per.Keys.OrderByDescending(id => cnt[id][last] == 0 ? 0 : per[id][last] / cnt[id][last]))
+        {
+            string nm = UnitCatalog.Everyone.FirstOrDefault(d => d.Id == id)?.Name ?? id;
+            var cells = new List<string>();
+            for (int v = 0; v < vers.Length; v++)
+            {
+                long c = cnt[id][v];
+                cells.Add(c == 0 ? "—" : $"{per[id][v] / c:F2}");
+                cells.Add(c == 0 ? "—" : $"{(double)pos[id][v] / c:P1}");
+            }
+            Console.WriteLine($"| {nm} | " + string.Join(" | ", cells) + " |");
+        }
         Console.WriteLine();
         Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F1} 秒。");
     }
