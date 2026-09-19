@@ -79,7 +79,7 @@
 | `BetrayRule` | `BetrayRule { Enabled = True, Respawn = True }` | ○ | `betray` / `tempo` / `ledger` | 第103期 |
 | `BlazeRule` | `BlazeRule { Targets = Both, Allies = True, Foes = True }` | ○ | `blaze` / `ledger` / `ember` | 第59期 |
 | `BossRule` | `BossRule { Census = False }` | ○ | `boss` / `tank` / `time` / `grade` / `demo` | 第117期 |
-| `BoundaryRule` | `BoundaryRule { Choice = None, Plan = , Active = False }` |  | `choice` | 第102期 |
+| `BoundaryRule` | `BoundaryRule { Choice = None, Plan = , Active = False }` |  | `stage` / `choice` | 第102期 |
 | `BraceRule` | `BraceRule { Cap = 7, Refuse = True, Stagger = False }` | ○ | `brace` | 第143期 |
 | `ColossusRule` | `ColossusRule { Percent = 90, DamagePerGain = 4, Regurgitate = True, Slumber = False, SlumberThreshold = 60, Refund = True, RefundPercent = 25 }` | ○ | `gullet` / `whet` / `miasma` / `ledger` | 第35期 |
 | `ConfusionRule` | `ConfusionRule { Active = False, Percent = 100 }` | ○ | `derange` / `confuse` | 第146期 |
@@ -109,7 +109,7 @@
 | `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True, Swing = WhenStocked }` | ○ | `parry` / `wall` / `stall` | 第135期 |
 | `RageRule` | `RageRule { Mode = Amount, Gain = 3 }` | ○ | `hold` / `hold2` | 第106期 |
 | `ReaderRule` | `ReaderRule { Threshold = 5 }` | ○ | `reader` / `boss` / `tank` / `grade` / `grade2` | 第115期 |
-| `RecoverRule` | `RecoverRule { HpPercent = 0, ReviveDead = False, Active = False }` |  | `choice` / `recover` | 第101期 |
+| `RecoverRule` | `RecoverRule { HpPercent = 0, ReviveDead = False, Active = False }` |  | `stage` / `choice` / `recover` | 第101期 |
 | `RelayRule` | `RelayRule { TransferPercent = 100 }` | ○ | `curse` / `relay` | 第43期 |
 | `ScaleRule` | `ScaleRule { CostPerAttack = 1 }` | ○ | `scale` / `scapegoat` / `divert` / `favor` / `miasma` / `goad` / `finisher` / `ledger` | 第47期 |
 | `ScapegoatRule` | `ScapegoatRule { Threshold = 3, Audit = False }` | ○ | `scapegoat` | 第49期 |

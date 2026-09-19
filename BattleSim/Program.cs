@@ -471,6 +471,13 @@ if (focusId == "toll")
     return;
 }
 
+// stage モード（第157期） —— ステージ単位で駒を測る。本体は `Modes/Stage.cs`。
+if (focusId == "stage")
+{
+    StageDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // stall モード（第152期） —— 膠着（30 ターン上限）を塞ぐ。本体は `Modes/Stall.cs`。
 if (focusId == "stall")
 {
