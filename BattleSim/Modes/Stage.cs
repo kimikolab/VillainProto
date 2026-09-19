@@ -33,11 +33,13 @@ static class StageDiag
             case "scan": Scan(arg); return;
             case "run": Attribute(arg); return;
             case "life": Life(arg); return;
+            case "perm": Perm(arg); return;
+            case "permsd": PermSd(arg); return;
             case "rho": Rho(arg); return;
             case "rhocarry": RhoCarry(arg); return;
             case "check": Check(arg); return;
             default:
-                Console.WriteLine("stage: モードは phase0 / scan / run / life / rho / rhocarry / check。");
+                Console.WriteLine("stage: モードは phase0 / scan / perm / permsd / run / life / rho / rhocarry / check。");
                 return;
         }
     }
@@ -96,7 +98,58 @@ static class StageDiag
     };
 
     public static Ver VerOf(string name) => Versions().First(v => v.Name == name);
-    public static Col ColOf(string name) => Columns().First(c => c.Name == name);
+
+    /// <summary>
+    /// 列を名前で引く。<b>第159期</b>: <c>P12345</c> の形の名前は「既存5波の並べ替え」として
+    /// その場で組む——<b>新しい敵も新しい編成も1体も作らない</b>（<c>EnemyCatalog.Stages</c> を
+    /// 並べ替えるだけ）。<c>P12345</c> は <c>順路5</c>・<c>P54321</c> は <c>逆順路5</c> と
+    /// <b>同じ <see cref="Formation"/> の参照</b>になるので、対照の再現がそのまま検算になる。
+    /// </summary>
+    public static Col ColOf(string name)
+    {
+        var hit = Columns().FirstOrDefault(c => c.Name == name);
+        if (hit is not null) return hit;
+        int[]? p = ParsePerm(name);
+        if (p is not null) return PermCol(p);
+        throw new ArgumentException($"列 `{name}` が引けない（地点2 / 地点3 / 順路5 / 逆順路5 / P12345 形式）。");
+    }
+
+    /// <summary>`P12345` を 0 始まりの添字列へ。順列でなければ null。</summary>
+    public static int[]? ParsePerm(string name)
+    {
+        int n = EnemyCatalog.Stages.Count;
+        if (name.Length != n + 1 || name[0] != 'P') return null;
+        var p = new int[n];
+        for (int i = 0; i < n; i++)
+        {
+            int d = name[i + 1] - '1';
+            if (d < 0 || d >= n) return null;
+            p[i] = d;
+        }
+        return p.Distinct().Count() == n ? p : null;
+    }
+
+    /// <summary>並べ替えた列。**敵は1体も作らない**——`Stages` の `Enemy` をそのまま引く。</summary>
+    public static Col PermCol(int[] p) =>
+        new("P" + string.Concat(p.Select(i => (char)('1' + i))),
+            p.Select(i => EnemyCatalog.Stages[i].Enemy).ToList());
+
+    /// <summary>0..n-1 の全順列（辞書順）。</summary>
+    public static IEnumerable<int[]> AllPerms(int n)
+    {
+        var cur = Enumerable.Range(0, n).ToArray();
+        while (true)
+        {
+            yield return (int[])cur.Clone();
+            int i = n - 2;
+            while (i >= 0 && cur[i] >= cur[i + 1]) i--;
+            if (i < 0) yield break;
+            int j = n - 1;
+            while (cur[j] <= cur[i]) j--;
+            (cur[i], cur[j]) = (cur[j], cur[i]);
+            Array.Reverse(cur, i + 1, n - i - 1);
+        }
+    }
 
     // ---- 1行ぶんの突破度（seed 平均）と内訳 ----
     public static (double Deg, int NoClear, int FullClear) Degree(Formation f, Col col, Ver v)
@@ -485,6 +538,238 @@ static class StageDiag
     }
 
     // =================================================================================
+    // 第159期 段A —— 列の並べ方（`stage perm`）
+    //
+    // **敵の総量は1ビットも変えない。順序だけを変える。**
+    // 5波の全 120 順列 × 版。ここでは rho を測らない（安い走査）——出すのは台の水準と
+    // **何戦目で決着したか**の分布だけ（指示書 Q0-3。SD が落ちる理由が床か天井かを割る）。
+    // =================================================================================
+
+    // §7-4。**実装前に書き切り、外れても消さない**（規約・第64期）。
+    public static readonly (string Key, string Text)[] PermPredictions =
+    {
+        ("PA1", "**逆順で SD が落ちる理由は (a) 床への収束**"
+              + "——第1戦で決着する会戦の割合が順路より高く、突破度 0 の行が増える"),
+        ("PA2", "**台SD÷列長 が最大になるのは「難度の山が後ろにある」順列**"
+              + "（＝第五波が終盤・第一波が序盤。順路5 に近い並び）"),
+        ("PA3", "**本丸は ×**——順列の軸でも rho と SD は同じ向きに動く"
+              + "（第158期 §3-3 の r = +0.726 が順列でも効く。rho を下げる並びは SD も落とす）"),
+        ("PA4", "**段C の顔ぶれは第158期と同じ**——`BCarry` を含む点では"
+              + "強化を配る駒（移り木のシオ・尾灯のトモ）が上位に出る"),
+    };
+
+    /// <summary>1行ぶんの突破度に<b>「何戦目で決着したか」</b>を足したもの（段A 専用）。</summary>
+    static (double Deg, int NoClear, int FullClear, int[] Battles) DegreeB(Formation f, Col col, Ver v)
+    {
+        var player = new[] { f };
+        double sum = 0;
+        int noClear = 0, fullClear = 0;
+        var hist = new int[col.Len + 1];
+        for (int seed = 0; seed < Seeds; seed++)
+        {
+            EngagementResult r = EngagementEngine.Run(player, col.Squads, seed,
+                                                      verbose: false, recover: v.Rec, boundary: v.Bnd);
+            sum += BreakthroughDegree(r, col.Len);
+            if (r.EnemySquadsCleared == 0) noClear++;
+            if (r.EnemySquadsCleared >= col.Len) fullClear++;
+            hist[Math.Min(r.Battles.Count, col.Len)]++;
+        }
+        return (sum / Seeds, noClear, fullClear, hist);
+    }
+
+    static void Perm(string arg)
+    {
+        var rows = CompareBuilds();
+        var a = arg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        string[] verNames = a.Length > 0
+            ? a[0].Split(',', StringSplitOptions.RemoveEmptyEntries)
+            : new[] { "R0", "BCarry" };
+        var vers = verNames.Select(VerOf).ToArray();
+        int n = EnemyCatalog.Stages.Count;
+        var perms = AllPerms(n).Select(PermCol).ToArray();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        Console.WriteLine("# 第159期 段A —— 列の並べ方（安い走査。rho は測らない）");
+        Console.WriteLine();
+        Console.WriteLine($"`CompareBuilds()` {rows.Length} 行 × seed 0..{Seeds - 1} × "
+            + $"**順列 {perms.Length} 通り × 版 {vers.Length} 版 ＝ {perms.Length * vers.Length} 点**。");
+        Console.WriteLine();
+        Console.WriteLine("**敵の総量は1ビットも変えていない**——`EnemyCatalog.Stages` の5波を並べ替えるだけで、"
+            + "新しい敵も新しい編成も1体も作っていない。`P12345` ＝ `順路5`・`P54321` ＝ `逆順路5`。");
+        Console.WriteLine();
+        foreach (var (k, t) in PermPredictions) Console.WriteLine($"{k}. {t}  ");
+        Console.WriteLine();
+
+        var recs = new List<(string P, string V, double Mean, double Sd, int Zero, int Full,
+                             int NoClearRows, int FullClearRows, double[] Battles, double AvgB)>();
+        foreach (var col in perms)
+            foreach (var v in vers)
+            {
+                var deg = new double[rows.Length];
+                var nc = new int[rows.Length];
+                var fc = new int[rows.Length];
+                var hist = new int[rows.Length][];
+                Parallel.For(0, rows.Length, i =>
+                {
+                    var (d, z, f, h) = DegreeB(rows[i].F, col, v);
+                    deg[i] = d; nc[i] = z; fc[i] = f; hist[i] = h;
+                });
+                var tot = new double[col.Len + 1];
+                for (int b = 0; b <= col.Len; b++)
+                    tot[b] = hist.Sum(h => h[b]) / (double)(rows.Length * Seeds);
+                double avgB = Enumerable.Range(0, col.Len + 1).Sum(b => b * tot[b]);
+                recs.Add((col.Name, v.Name, deg.Average(), Sd(deg),
+                          deg.Count(d => d == 0.0), deg.Count(d => d >= col.Len),
+                          nc.Count(x => x == Seeds), fc.Count(x => x == Seeds), tot, avgB));
+                Console.Error.WriteLine($"{col.Name} {v.Name} done {sw.Elapsed.TotalSeconds:F0}s");
+            }
+
+        Console.WriteLine("## A-1. 台SD÷列長 の上位20点（版ごとの上位は A-2）");
+        Console.WriteLine();
+        void Head()
+        {
+            Console.WriteLine("| 順列 | 版 | 五波の位置 | 平均突破度 | 取り分 | **台SD÷列長** | 0行 | 満行 | 抜き0行 | 全抜き行 | 平均戦数 | 1戦で決着 |");
+            Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        }
+        int PosOfLast(string pn) => pn.IndexOf((char)('1' + n - 1));   // 1 始まり（先頭の 'P' のぶん）
+        void Line((string P, string V, double Mean, double Sd, int Zero, int Full,
+                   int NoClearRows, int FullClearRows, double[] Battles, double AvgB) r)
+            => Console.WriteLine($"| {r.P} | {r.V} | {PosOfLast(r.P)} | {r.Mean:F3} | {r.Mean / n * 100:F1}% "
+                + $"| **{r.Sd / n:F3}** | {r.Zero} | {r.Full} | {r.NoClearRows} | {r.FullClearRows} "
+                + $"| {r.AvgB:F2} | {r.Battles[1]:P1} |");
+        Head();
+        foreach (var r in recs.OrderByDescending(x => x.Sd).Take(20)) Line(r);
+        Console.WriteLine();
+        Console.WriteLine("`五波の位置` は第五波（異端審問団）が何戦目か（1 始まり）。");
+        Console.WriteLine();
+
+        Console.WriteLine("## A-2. 版ごとの上位4点（**段B で rho を測る候補**）＋ 対照2点");
+        Console.WriteLine();
+        Head();
+        var picks = new List<(string P, string V)>();
+        foreach (var v in vers)
+            foreach (var r in recs.Where(x => x.V == v.Name).OrderByDescending(x => x.Sd).Take(4))
+            { Line(r); picks.Add((r.P, r.V)); }
+        foreach (var c in new[] { ("P12345", "R0"), ("P54321", "BCarry") })
+        {
+            var r = recs.FirstOrDefault(x => x.P == c.Item1 && x.V == c.Item2);
+            if (r.P is not null) { Line(r); if (!picks.Contains(c)) picks.Add(c); }
+        }
+        Console.WriteLine();
+        Console.WriteLine("**段B の点**: " + string.Join(" / ", picks.Select(x => $"`{x.P} {x.V}`")));
+        Console.WriteLine();
+        Console.WriteLine("    dotnet run --project BattleSim -c Release 0 stage rho \"" 
+            + string.Join(",", picks.Select(x => $"{x.P} {x.V}")) + "\"");
+        Console.WriteLine();
+
+        Console.WriteLine("## A-3. 決着した戦数の分布（指示書 Q0-3。**床か天井か**）");
+        Console.WriteLine();
+        Console.WriteLine("| 順列 | 版 | " + string.Join(" | ", Enumerable.Range(1, n).Select(b => $"{b}戦")) 
+            + " | 平均戦数 | 0行 | 満行 |");
+        Console.WriteLine("|---|---|" + string.Concat(Enumerable.Range(0, n + 3).Select(_ => "--:|")));
+        foreach (var r in recs.Where(x => x.P == "P12345" || x.P == "P54321")
+                              .OrderBy(x => x.P).ThenBy(x => x.V))
+            Console.WriteLine($"| {r.P} | {r.V} | "
+                + string.Join(" | ", Enumerable.Range(1, n).Select(b => $"{r.Battles[b]:P1}"))
+                + $" | {r.AvgB:F2} | {r.Zero} | {r.Full} |");
+        Console.WriteLine();
+
+        Console.WriteLine("## A-4. 全 " + recs.Count + " 点");
+        Console.WriteLine();
+        Head();
+        foreach (var r in recs.OrderBy(x => x.V).ThenByDescending(x => x.Sd)) Line(r);
+        Console.WriteLine();
+        Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F1} 秒。");
+    }
+
+    // =================================================================================
+    // 第159期 段A' —— **帰属SD そのもの**で 120 順列を走査（`stage permsd`）
+    //
+    // 段A の並べ替えは台SD（61 行の突破度のばらつき）で候補を選ぶが、**線2 が読むのは帰属SD**
+    // （駒 52 体のばらつき）で、実測ではこの2つが食い違う（P41325 は台SD 0.198 に対し帰属SD 0.093）。
+    // **rho は測らない**——単発側（列ごとに 366 回の `IndepAvg`）を省くと1点 4 秒で済む。
+    // **線は1つも動かしていない。** 候補の選び方を代理から本番の量へ替えただけ。
+    // =================================================================================
+    static void PermSd(string arg)
+    {
+        var rows = CompareBuilds();
+        var a = arg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var vers = (a.Length > 0 ? a[0].Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                 : new[] { "R0", "BCarry" }).Select(VerOf).ToArray();
+        int n = EnemyCatalog.Stages.Count;
+        var perms = AllPerms(n).Select(PermCol).ToArray();
+
+        var jobs = new List<(int Row, int Slot, UnitDef Def)>();
+        for (int i = 0; i < rows.Length; i++)
+            foreach ((int sl, UnitDef d) in rows[i].F.Occupied()) jobs.Add((i, sl, d));
+        var ids = jobs.Select(j => j.Def.Id).Distinct().ToArray();
+        var slotsOf = ids.ToDictionary(id => id,
+            id => Enumerable.Range(0, jobs.Count).Where(j => jobs[j].Def.Id == id).ToArray());
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        Console.WriteLine("# 第159期 段A' —— 帰属SD で 120 順列を走査（rho は測らない）");
+        Console.WriteLine();
+        Console.WriteLine($"`CompareBuilds()` {rows.Length} 行 × 延べ {jobs.Count} 枠 × 駒 {ids.Length} 体 × "
+            + $"seed 0..{Seeds - 1} × **順列 {perms.Length} 通り × 版 {vers.Length} 版**。");
+        Console.WriteLine();
+        Console.WriteLine("**線2 が読むのは帰属SD（駒 52 体）**で、段A が候補選びに使った台SD（61 行）ではない。"
+            + "**線は1つも動かしていない**——候補の選び方を代理から本番の量へ替えただけ。");
+        Console.WriteLine();
+
+        var recs = new List<(string P, string V, double SdU, double SdS, double TaiSd, double Mean)>();
+        foreach (var col in perms)
+            foreach (var v in vers)
+            {
+                var fE = new double[rows.Length];
+                Parallel.For(0, rows.Length, i => fE[i] = EngageAvg(rows[i].F, col, v));
+                var gE = new double[jobs.Count];
+                Parallel.For(0, jobs.Count, j => gE[j] = EngageAvg(SwapOne(rows[jobs[j].Row].F, jobs[j].Slot), col, v));
+                var sE = new double[jobs.Count];
+                for (int j = 0; j < jobs.Count; j++) sE[j] = fE[jobs[j].Row] - gE[j];
+                var uE = ids.Select(id => slotsOf[id].Average(j => sE[j])).ToArray();
+                recs.Add((col.Name, v.Name, Sd(uE), Sd(sE), Sd(fE), uE.Average()));
+                Console.Error.WriteLine($"{col.Name} {v.Name} done {sw.Elapsed.TotalSeconds:F0}s");
+            }
+
+        void Head()
+        {
+            Console.WriteLine("| 順列 | 版 | **帰属SD÷列長** | 対照比 | 枠SD÷列長 | 台SD÷列長 | 会戦帰属の平均 | 線2 |");
+            Console.WriteLine("|---|---|--:|--:|--:|--:|--:|:-:|");
+        }
+        double ctrl = recs.FirstOrDefault(x => x.P == "P12345" && x.V == "R0").SdU / n;
+        void Line((string P, string V, double SdU, double SdS, double TaiSd, double Mean) r)
+            => Console.WriteLine($"| {r.P} | {r.V} | **{r.SdU / n:F3}** | {(ctrl > 0 ? (r.SdU / n / ctrl).ToString("F2") : "—")} 倍 "
+                + $"| {r.SdS / n:F3} | {r.TaiSd / n:F3} | {r.Mean:+0.000;-0.000} | {(r.SdU / n >= SdLine ? "○" : "×")} |");
+
+        Console.WriteLine($"## A'-1. 帰属SD÷列長 の上位20点（線2 ＝ {SdLine:F3}）");
+        Console.WriteLine();
+        Head();
+        foreach (var r in recs.OrderByDescending(x => x.SdU).Take(20)) Line(r);
+        Console.WriteLine();
+        Console.WriteLine($"**線2 を満たす点: {recs.Count(x => x.SdU / n >= SdLine)} / {recs.Count}。**"
+            + $" 最大は `{recs.OrderByDescending(x => x.SdU).First().P} × {recs.OrderByDescending(x => x.SdU).First().V}` "
+            + $"の {recs.Max(x => x.SdU) / n:F3}（対照 {ctrl:F3} の {recs.Max(x => x.SdU) / n / ctrl:F2} 倍）。");
+        Console.WriteLine();
+
+        Console.WriteLine("## A'-2. 対照");
+        Console.WriteLine();
+        Head();
+        foreach (var c in new[] { ("P12345", "R0"), ("P12345", "BCarry"), ("P54321", "R0"), ("P54321", "BCarry") })
+        {
+            var r = recs.FirstOrDefault(x => x.P == c.Item1 && x.V == c.Item2);
+            if (r.P is not null) Line(r);
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## A'-3. 全 " + recs.Count + " 点");
+        Console.WriteLine();
+        Head();
+        foreach (var r in recs.OrderBy(x => x.V).ThenByDescending(x => x.SdU)) Line(r);
+        Console.WriteLine();
+        Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F1} 秒。");
+    }
+
+    // =================================================================================
     // 第158期 —— 目的変数を ρ に変える（`stage rho`）
     //
     // **単発帰属は版に依らない**（`IndepDegree` は `Ver` を受け取らない）ので、列ごとに1度だけ
@@ -586,7 +871,19 @@ static class StageDiag
             var want = arg.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray();
             // **完全一致**で絞る。`Contains` だと「順路5 R0」が「逆順路5 R0」を拾う
             // （第123期「静かに違うものを測る」の引数の側。実際に1度拾った）。
-            pts = pts.Where(p => want.Contains($"{p.ColName} {p.VerName}")).ToArray();
+            // 第159期: 表に無い点（`P12345 R0` のような順列）は**その場で組む**——
+            // 組めるかどうかは `ColOf` / `VerOf` が決める（引けなければ例外で止まる。第117期）。
+            var built = new List<Pt>();
+            foreach (string w in want)
+            {
+                var hit = pts.FirstOrDefault(p => $"{p.ColName} {p.VerName}" == w);
+                if (hit is not null) { built.Add(hit); continue; }
+                var t = w.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (t.Length != 2) { Console.WriteLine($"stage rho: 点 `{w}` が読めない（「列 版」）。"); return; }
+                _ = ColOf(t[0]); _ = VerOf(t[1]);            // 引けることを先に確かめる
+                built.Add(new Pt(t[0], t[1], "第159期 段B"));
+            }
+            pts = built.ToArray();
             if (pts.Length == 0) { Console.WriteLine("stage rho: 該当する点が無い。"); return; }
         }
         var sw = System.Diagnostics.Stopwatch.StartNew();
