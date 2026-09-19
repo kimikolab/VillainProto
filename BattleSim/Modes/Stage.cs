@@ -806,7 +806,11 @@ static class StageDiag
 
     // ---- 線（**測る前に固定する**。§2-1） ----
     const double RhoLine = 0.75;     // 線1: 序列が動いた
-    const double SdLine = 0.162;     // 線2: 駒の差が立っている（帰属SD ÷ 列長）
+    const double SdLine = 0.162;     // 線2（第158/159期の版・**第161期に参考へ降ろした**）: 帰属SD ÷ 列長
+    // 線2（**第161期に引き直した版**）: 会戦の帰属SD ÷ **単発の帰属SD**。
+    // **列長で割らない**（比なので無次元）し、**どの対照で出た値かも自明**（同じ走行の単発側）。
+    // 旧 0.162 の出どころは第157期 §1-2 の**台の水準**の表で、**駒の水準の線として設定されたことが一度も無い**。
+    const double RatioLine = 0.80;
 
     static double IndepAvg(Formation f, Col col)
     {
@@ -931,18 +935,19 @@ static class StageDiag
 
         Console.WriteLine("## B-1. 点ごとの rho と SD（**駒 52 体**の水準。第157期 §2-4 と同じ）");
         Console.WriteLine();
-        Console.WriteLine("| 点 | 列長 | **rho(全)** | **rho(絞)** | 絞りの分母 | r(全) | 帰属SD | **SD÷列長** | 台SD | 台SD÷列長 | 会戦帰属の平均 | 単発帰属の平均 |");
-        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        Console.WriteLine("| 点 | 列長 | **rho(全)** | **rho(絞)** | 絞りの分母 | r(全) | 会戦の帰属SD | **単発の帰属SD** | **比** | SD÷列長 | 台SD | 台SD÷列長 | 会戦帰属の平均 | 単発帰属の平均 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
         foreach (var r in res)
         {
             double q = RhoQ1(r.UI);
             var (rhoAll, nAll) = RhoOf(r.UE, r.UI, -1);
             var (rhoCut, nCut) = RhoOf(r.UE, r.UI, q);
             double pear = Correlate(r.UE, r.UI).R;
-            double sd = Sd(r.UE);
+            double sd = Sd(r.UE), sdI = Sd(r.UI);
             Console.WriteLine($"| {r.P.ColName} × {r.P.VerName} | {r.C.Len} | **{rhoAll:F3}** | **{rhoCut:F3}** "
-                + $"| {nCut} / {nAll} | {pear:F3} | {sd:F3} | **{sd / r.C.Len:F3}** "
-                + $"| {Sd(r.FE):F3} | {Sd(r.FE) / r.C.Len:F3} | {r.UE.Average():+0.000;-0.000} | {r.UI.Average():+0.000;-0.000} |");
+                + $"| {nCut} / {nAll} | {pear:F3} | {sd:F3} | **{sdI:F3}** | **{(sdI > 0 ? sd / sdI : double.NaN):F3}** "
+                + $"| {sd / r.C.Len:F3} | {Sd(r.FE):F3} | {Sd(r.FE) / r.C.Len:F3} "
+                + $"| {r.UE.Average():+0.000;-0.000} | {r.UI.Average():+0.000;-0.000} |");
         }
         Console.WriteLine();
         Console.WriteLine("絞りの閾値 q1（|単発帰属| の最小四分位）は列ごとに1つ: "
@@ -977,25 +982,48 @@ static class StageDiag
 
         Console.WriteLine("## B-4. 判定（**線は §2-1 で測る前に固定した**）");
         Console.WriteLine();
-        Console.WriteLine($"線1 序列が動いた: **rho <= {RhoLine:F2}**（全枠と絞った枠の**両方**。§2-2 の「絞ったほうでも下がっていて初めて」）  ");
-        Console.WriteLine($"線2 駒の差が立っている: **帰属SD ÷ 列長 >= {SdLine:F3}**  ");
+        Console.WriteLine($"線1 序列が動いた: **rho(絞) <= {RhoLine:F2}**（**第161期に rho(絞) で揃えた**。rho(全) は併記するが判定に使わない）  ");
+        Console.WriteLine($"線2 駒の差が立っている: **会戦の帰属SD ÷ 単発の帰属SD >= {RatioLine:F2}**"
+            + $"（**第161期に引き直した**。旧 `帰属SD ÷ 列長 >= {SdLine:F3}` は参考へ降ろした——"
+            + "あの 0.162 は第157期 §1-2 の**台の水準**の値で、駒の水準の線として設定されたことが一度も無い）  ");
         Console.WriteLine("線3 本丸: **線1 と線2 を同時に満たす点が1つ以上**");
         Console.WriteLine();
-        Console.WriteLine("| 点 | rho(全) | rho(絞) | 線1 | SD÷列長 | 線2 | **本丸** |");
-        Console.WriteLine("|---|--:|--:|:-:|--:|:-:|:-:|");
+        Console.WriteLine("| 点 | rho(全) | **rho(絞)** | 線1 | **比** | 線2 | **本丸** | 旧SD÷列長 | 旧線2 |");
+        Console.WriteLine("|---|--:|--:|:-:|--:|:-:|:-:|--:|:-:|");
         int win = 0;
         foreach (var r in res)
         {
             double q = RhoQ1(r.UI);
             double a = RhoOf(r.UE, r.UI, -1).Rho, b = RhoOf(r.UE, r.UI, q).Rho;
-            double sdn = Sd(r.UE) / r.C.Len;
-            bool l1 = a <= RhoLine && b <= RhoLine, l2 = sdn >= SdLine;
+            double sd = Sd(r.UE), sdI = Sd(r.UI), sdn = sd / r.C.Len;
+            double ratio = sdI > 0 ? sd / sdI : double.NaN;
+            bool l1 = b <= RhoLine, l2 = ratio >= RatioLine;
             if (l1 && l2) win++;
-            Console.WriteLine($"| {r.P.ColName} × {r.P.VerName} | {a:F3} | {b:F3} | {(l1 ? "○" : "×")} "
-                + $"| {sdn:F3} | {(l2 ? "○" : "×")} | {(l1 && l2 ? "**○**" : "×")} |");
+            Console.WriteLine($"| {r.P.ColName} × {r.P.VerName} | {a:F3} | **{b:F3}** | {(l1 ? "○" : "×")} "
+                + $"| **{ratio:F3}** | {(l2 ? "○" : "×")} | {(l1 && l2 ? "**○**" : "×")} "
+                + $"| {sdn:F3} | {(sdn >= SdLine ? "○" : "×")} |");
         }
         Console.WriteLine();
         Console.WriteLine($"**線1 と線2 を同時に満たす点: {win} / {res.Count}。本丸は {(win > 0 ? "○" : "×")}。**");
+        Console.WriteLine();
+        var near = res.OrderByDescending(r => Sd(r.UE) / Sd(r.UI)).First();
+        double nr = Sd(near.UE) / Sd(near.UI);
+        Console.WriteLine($"比が最大の点は `{near.P.ColName} × {near.P.VerName}` の **{nr:F3}**。");
+        // 線2 を1点も通らなかったときだけ「あと何倍要るか」を出す（通っているのに出すと嘘になる）。
+        var miss = res.Where(r => Sd(r.UE) / Sd(r.UI) < RatioLine)
+                      .OrderByDescending(r => Sd(r.UE) / Sd(r.UI)).ToArray();
+        if (miss.Length == res.Count)
+        {
+            double mr = Sd(miss[0].UE) / Sd(miss[0].UI);
+            Console.WriteLine($"**線2 は 0 / {res.Count}。** いちばん近い `{miss[0].P.ColName} × {miss[0].P.VerName}` で "
+                + $"**{mr:F3}**——線 {RatioLine:F2} に届くには会戦の帰属SD が **{RatioLine / mr:F2} 倍**要る。");
+        }
+        else if (miss.Length > 0)
+        {
+            double mr = Sd(miss[0].UE) / Sd(miss[0].UI);
+            Console.WriteLine($"線2 を落とした点のうち最良は `{miss[0].P.ColName} × {miss[0].P.VerName}` の **{mr:F3}**"
+                + $"（あと **{RatioLine / mr:F2} 倍**）。");
+        }
         Console.WriteLine();
 
         Console.WriteLine("## B-5. 予測（**実装前に書いた。外れても消さない**）");
