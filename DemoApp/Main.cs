@@ -145,6 +145,13 @@ public partial class Main : Control
         // 第169期 自己検査 (c)。**画面を1つも作らずに `Map11State` だけを回す。**
         // 通常起動では 1 ビットも走らない。
         string[] bootArgs = OS.GetCmdlineUserArgs();
+        if (bootArgs.Contains("--map11-phase0", StringComparer.Ordinal))
+        {
+            bool p0 = Map11Verify.Phase0(GD.Print);
+            GD.Print($"MAP11_PHASE0_COMPLETE ok={p0}");
+            GetTree().Quit(p0 ? 0 : 1);
+            return;
+        }
         string? verifyArg = bootArgs.FirstOrDefault(a => a.StartsWith("--map11-verify", StringComparison.Ordinal));
         if (verifyArg is not null)
         {
@@ -899,7 +906,7 @@ public partial class Main : Control
         bool returnsToCampaign = CampaignSession.HasPendingEncounter || Map11Session.HasPendingBattle;
         // 第169期。**精算はここ1箇所**。`Map11Session` 側が「戻った1回だけ」に絞っているので、
         // 「最初から」で台本を再生し直しても二度は走らない。
-        Map11Session.CompleteBattle(_result.PlayerWon);
+        Map11Session.CompleteBattle(_result.PlayerWon, _result);
         CampaignSession.ClearCarriedBattle();
         CampaignSession.CompleteBattle(_result.PlayerWon);
         Notice(returnsToCampaign

@@ -15,12 +15,26 @@ public static class Map11Session
 {
     public const string Scene = "res://Map11Main.tscn";
 
-    /// <summary>1 回の通しの記録（どの隊をどの道へ何番目に出したか）。結果画面が出す。</summary>
-    public sealed record Order(int Turn, string Squad, string Road);
+    /// <summary>
+    /// <b>戦闘1回につき1行</b>（第170期 §1-5）。第169期の「出した順」は
+    /// <b>送り先を変えたときだけ</b>1行足す作りだったので、戦闘回数と合わなかった
+    /// ——3 回目の走行は戦闘 5 回に対して 3 行しか出ず、
+    /// <b>どの隊が何戦目を抜いたか後から復元できなかった。</b>
+    /// </summary>
+    /// <param name="No">何戦目か（1 始まり）。</param>
+    /// <param name="Squad">出した隊。</param>
+    /// <param name="Road">道。</param>
+    /// <param name="Foe">相手の部隊名（その道の何番目か込み）。</param>
+    /// <param name="Won">抜いたか。</param>
+    /// <param name="Alive">戦闘後にその隊に残った枚数。</param>
+    /// <param name="HpPercent">同・残り HP 割合。</param>
+    /// <param name="Notes">盤面ルールが実際にしたこと（<see cref="Map11Info.RuleNotes"/>）。</param>
+    public sealed record Line(int No, string Squad, string Road, string Foe,
+                              bool Won, int Alive, double HpPercent, IReadOnlyList<string> Notes);
 
     public static Map11State? State { get; private set; }
     public static int Seed { get; private set; }
-    public static List<Order> Orders { get; } = new();
+    public static List<Line> BattleLog { get; } = new();
     public static int Battles { get; private set; }
 
     /// <summary>いま戦闘シーンへ送り出している隊と区画。戻ってきた1回だけ精算する。</summary>
@@ -37,7 +51,7 @@ public static class Map11Session
     {
         Seed = seed ?? new Random().Next(0, 1_000_000);
         State = new Map11State(Seed);
-        Orders.Clear();
+        BattleLog.Clear();
         Battles = 0;
         PendingSquad = -1;
         PendingNode = null;
@@ -49,16 +63,12 @@ public static class Map11Session
         if (State is null) Reset();
     }
 
-    /// <summary>隊を道へ送る（プレイヤーの判断）。記録に残す。</summary>
+    /// <summary>隊を道へ送る（プレイヤーの判断）。<b>記録は戦闘のたびに付ける</b>ので、ここでは残さない。</summary>
     public static void Send(int squad, int road)
     {
         if (State is null) return;
-        Map11State.Squad s = State.Squads[squad];
-        if (s.Lost) return;
-        // 「送り先を変えた」だけを記録する（同じ道へ進め続けるのは1行にまとめる）。
-        bool changed = !s.Deployed || s.Road != road;
+        if (State.Squads[squad].Lost) return;
         State.Send(squad, road);
-        if (changed) Orders.Add(new Order(Orders.Count + 1, s.Def.Name, Map11.RoadNames[road]));
     }
 
     /// <summary>
@@ -75,8 +85,12 @@ public static class Map11Session
         return true;
     }
 
-    /// <summary>戦闘から戻った1回だけ精算する（再生のやり直しでは二度走らない）。</summary>
-    public static void CompleteBattle(bool playerWon)
+    /// <summary>
+    /// 戦闘から戻った1回だけ精算する（再生のやり直しでは二度走らない）。
+    /// <paramref name="result"/> を渡すと、<b>盤面ルールが実際にしたこと</b>を記録に添える
+    /// （第170期 §1-4）。<b>判定には1ビットも使わない——読むだけ。</b>
+    /// </summary>
+    public static void CompleteBattle(bool playerWon, BattleResult? result = null)
     {
         if (State is null || PendingNode is null) return;
         Map11State.Node node = PendingNode;
@@ -84,9 +98,20 @@ public static class Map11Session
         PendingNode = null;
         PendingSquad = -1;
 
-        string squadName = State.Squads[squad].Def.Name;
+        Map11State.Squad sq = State.Squads[squad];
+        string squadName = sq.Def.Name;
+        int road = node.Def.Road;
         State.Resolve(squad, node, playerWon);
         Battles = State.Battles;
+
+        var notes = result is null ? new List<string>() : Map11Info.RuleNotes(result);
+        int maxHp = sq.Def.F.Occupied().Sum(o => o.Def.MaxHp);
+        int alive = sq.Units?.Count(u => u.IsAlive) ?? 0;
+        double hpPct = sq.Units is null || maxHp == 0
+            ? 0 : 100.0 * sq.Units.Where(u => u.IsAlive).Sum(u => u.Hp) / maxHp;
+        BattleLog.Add(new Line(Battles, squadName, Map11.RoadNames[road],
+                               $"{node.Def.Index + 1}. {node.Def.Name}",
+                               playerWon, alive, hpPct, notes));
 
         // **「抜けなかった」には2種類ある。** 全滅と、30 ターンで決着しない膠着。
         // 膠着は engine の上限ターン（`MaxTurns`）で、**同じ相手にもう一度当てても同じことが起きる**
@@ -99,8 +124,13 @@ public static class Map11Session
                   + "もう一度当てても同じになる——引き返すか、別の隊を当てること";
     }
 
-    /// <summary>結果画面に出す1行の並び。</summary>
-    public static string OrderSummary() =>
-        Orders.Count == 0 ? "（出撃の記録なし）"
-        : string.Join(" → ", Orders.Select(o => $"{o.Squad}:{o.Road}"));
+    /// <summary>盤上に残っている枚数（未出撃の隊は数えない）。</summary>
+    public static int AliveOnMap =>
+        State is null ? 0 : State.Squads.Sum(s => s.Units?.Count(u => u.IsAlive) ?? 0);
+
+    /// <summary>まだ失っていない枚数（<b>未出撃の隊も数える</b>）。第169期に画面内で2通りに割れていた量。</summary>
+    public static int AliveIncludingReserve =>
+        State is null ? 0 : State.Squads.Sum(s =>
+            s.Units is { } u ? u.Count(x => x.IsAlive)
+            : s.Lost ? 0 : s.Def.F.Occupied().Count());
 }

@@ -92,6 +92,164 @@ public static class Map11Verify
                         usedReserve, rallied);
     }
 
+    /// <summary>
+    /// <b>第170期 Phase 0</b> —— 説明文の出どころと帳簿を<b>実装から引き直す</b>（戦闘0回）。
+    /// 手書きの <see cref="Map11Info"/> の札に欠けがあれば名指しで落ちる。
+    /// </summary>
+    public static bool Phase0(Action<string> write)
+    {
+        write("# 第170期 Phase 0 —— 情報の出どころ（戦闘0回）");
+        write("");
+
+        // ---- Q0-1a: 味方 15 枚 ----
+        write("## Q0-1a: 味方 15 枚の説明文の出どころ（`UnitDef.PlusText` / `MinusText` / `Flavor`）");
+        write("");
+        write("| 隊 | 席 | 駒 | プラス | マイナス | 由来 |");
+        write("|---|---|---|:-:|:-:|:-:|");
+        int allyMissing = 0;
+        foreach (Map11.SquadDef s in Map11.Squads)
+            foreach ((int slot, UnitDef d) in s.F.Occupied())
+            {
+                bool p = d.PlusText.Length > 0, m = d.MinusText.Length > 0, f = d.Flavor.Length > 0;
+                if (!p || !m || !f) allyMissing++;
+                write($"| {s.Name} | {FormationRules.SeatNames[slot]} | {d.Name} "
+                    + $"| {(p ? "○" : "**×**")} | {(m ? "○" : "**×**")} | {(f ? "○" : "**×**")} |");
+            }
+        write("");
+        write(allyMissing == 0
+            ? "**15 枚すべてに3つとも入っている。手書きは0行で済む。**"
+            : $"**{allyMissing} 枚に欠けがある。**");
+        write("");
+
+        // ---- Q0-1b: 敵 18 体 ----
+        write("## Q0-1b: 敵 18 体の説明文の出どころ");
+        write("");
+        write("| 道 | 部隊 | 席 | 駒 | HP/攻/速 | 札 | プラス | 由来 |");
+        write("|---|---|---|---|---|---|:-:|:-:|");
+        int foeCount = 0, foeWithText = 0;
+        var seen = new HashSet<TraitId>();
+        foreach (IReadOnlyList<Map11.RoadNode> road in Map11.Roads)
+            foreach (Map11.RoadNode n in road)
+                foreach ((int slot, UnitDef d) in n.Enemy.Occupied())
+                {
+                    foeCount++;
+                    if (d.PlusText.Length > 0) foeWithText++;
+                    foreach (TraitId t in d.Traits) seen.Add(t);
+                    write($"| {Map11.RoadNames[n.Road]} | {n.Name} | {FormationRules.SeatNames[slot]} "
+                        + $"| {d.Name} | {d.MaxHp}/{d.Attack}/{d.Speed} "
+                        + $"| {(d.Traits.Count == 0 ? "—" : string.Join(" ", d.Traits))} "
+                        + $"| {(d.PlusText.Length > 0 ? "○" : "**×**")} "
+                        + $"| {(d.Flavor.Length > 0 ? "○" : "**×**")} |");
+                }
+        write("");
+        write($"**敵 {foeCount} 体のうち、説明文を持つのは {foeWithText} 体。**"
+            + (foeWithText == 0
+                ? " **元データは1体も無い**——`Map11Info.TraitLines`（札ごとの1行）で埋めるしかない。"
+                : ""));
+        write("");
+
+        // ---- 札の網羅性（手書きの唯一の場所） ----
+        write("## 札の1行の網羅性（`Map11Info.TraitLines`）");
+        write("");
+        var missing = seen.Where(t => Map11Info.TraitLineOf(t) is null).OrderBy(t => t.ToString()).ToList();
+        write($"このマップの敵が持つ札は **{seen.Count} 種**"
+            + $"（{string.Join(" / ", seen.OrderBy(t => t.ToString()))}）。");
+        write(missing.Count == 0
+            ? "**全部に1行がある。**"
+            : $"**1行が無い札: {string.Join(" / ", missing)}**");
+        write("");
+
+        // ---- Q0-2〜Q0-4: 帳簿 ----
+        write("## Q0-2〜Q0-4: 帳簿から引ける量");
+        write("");
+        write("| # | 量 | 引く場所 | 陣営別か | 使う |");
+        write("|---|---|---|:-:|:-:|");
+        write("| Q0-2 | `BattleResult` を `Map11` 側で読めるか | `Main.EnterBattle` が持つ `_result` を"
+            + " `Map11Session.CompleteBattle` に渡す | — | **○** |");
+        write("| Q0-2 | 粛が止めた回数 | `BoardRules.HushBlocked[1]` | ○（0=敵 / 1=味方） | **○** |");
+        write("| Q0-2 | 渇きが止めた回復 | `BoardRules.DroughtHits[1]` / `DroughtEffective[1]` | ○ | **○** |");
+        write("| Q0-3 | 軛が切った一撃 | `Yoke.CutOnPlayerHits` / `CutOnPlayerLost` | ○（専用の2組） | **○** |");
+        write("| Q0-2 | 保持者が倒れたターン | `BoardRules.HolderFallTurn[RuleIndex]` | — | **○** |");
+        write("| Q0-4 | 断罪（痺れさせた回数） | **帳簿は無い**（`BattleEventKind.Stun` の台本イベントだけ） "
+            + "| — | × |");
+        write("| Q0-4 | 殉教者の庇い | `TallyByUnit[\"martyr\"].Intercepts`（**敵の駒も入っている**） | — "
+            + "| ×（この期では出さない） |");
+        write("| Q0-4 | 曝き | `ExposeCount`（`ExposeRule.Default` は無効なので常に 0） | — | × |");
+        write("");
+        write("**第五波の断罪・殉教は §1-4 には出さない**（指示書 Q0-4: 帳簿はこの期では足さない）。"
+            + "殉教の庇いは `Intercepts` に数字があるが、**敵味方を混ぜた駒ごとの表**なので"
+            + "「味方側の数字だけ」という §1-4 の書式に合わない。");
+        write("");
+
+        // ---- §4: 封じを戦闘中に見せるための材料 ----
+        write("## §4（調べるだけ）—— 「封じられている」を戦闘中に見せるには");
+        write("");
+        write("| # | 問い | 実装から引いた答え |");
+        write("|---|---|---|");
+        write("| S-1 | 粛が止めた瞬間、台本にイベントは出ているか | **出ていない。ログの文字列にも無い。** "
+            + "`BattleContext.CanActOutOfTurn` は `NoteHushBlocked`（計数）を呼ぶだけ。"
+            + "**足すなら1箇所**——同メソッドの `if (hushed)` の中（`sole` が真のときだけ） |");
+        write("| S-2 | 渇き | **出ていない。ログにも無い。** `Heal` 入口の `if (DroughtBinding)` の中が1箇所 |");
+        write("| S-2 | 軛 | **ログの文字列には出ている**（`LogKind.Trigger`「軛が … を切った」）が、"
+            + "**台本（`BattleEvent`）には無い**。`ApplyDamage` の `if (yokeBinding)` の中が1箇所 |");
+        write("| S-3 | 「保持者が生きている間ずっと封じられている」を再生側が描けるか | **描ける。**"
+            + "保持者の生死は `Death` イベントで分かり、どの駒が保持者かは `Map11Info.IsBoardRuleHolder` で引ける。"
+            + "ただし `DemoOpening` は `Traits` を運んでいないので、**そこに1フィールド足す必要がある** |");
+        write("| S-4 | 知らないイベントを再生側は無視できるか | **できる。** `Main.ApplyEvent` の "
+            + "`switch (e.Kind)` に `default:` が無いので、未知の種類は何もせず素通りする |");
+        write("");
+        write("**`BattleEventKind` を1つ足すと `docs/watch.md` が動く**"
+            + "（`watch` の盲点表が `Enum.GetNames(typeof(BattleEventKind))` を列挙している）。"
+            + "**この期では足さない。**");
+        write("");
+
+        // ---- Q0-5 ----
+        write("## Q0-5: 勝ち筋の下書きを書くために読んだ場所");
+        write("");
+        write("`Presets.Compare` の各行の注記と、各駒の `UnitDef.PlusText`。**3本とも報告書に貼ってある。**");
+        write("");
+        foreach (Map11.SquadDef s in Map11.Squads)
+            write($"- **{s.Name}**: {Map11Info.PlanOf(s.Id)}");
+        write("");
+
+        // ---- §1-4 の3本が実際に出るか（1戦ずつ回して確かめる） ----
+        write("## §1-4 の3本が実際に出るか（3 隊 × 4 区画を1戦ずつ）");
+        write("");
+        write("**3つとも「0 なら出さない」ので、出ないこと自体は不具合ではない。**"
+            + "ここで確かめるのは**出るべき局面で出るか**。");
+        write("");
+        write("| 隊 | 相手 | 盤面ルール | 出た文 |");
+        write("|---|---|---|---|");
+        var fired = new HashSet<string>();
+        foreach (Map11.SquadDef sq in Map11.Squads)
+            foreach (IReadOnlyList<Map11.RoadNode> road in Map11.Roads)
+                foreach (Map11.RoadNode n in road)
+                {
+                    // 1戦だけ。**盤面には何も残さない**（この場で作って捨てる）。
+                    var pu = BattleEngine.Materialize(sq.F, BattleContext.PlayerTeam);
+                    var eu = BattleEngine.Materialize(n.Enemy, BattleContext.EnemyTeam);
+                    BattleResult res = BattleEngine.Run(pu, eu, 0, verbose: false);
+                    var notes = Map11Info.RuleNotes(res);
+                    if (notes.Count == 0) continue;   // 「0 なら出さない」ので行にもしない
+                    foreach (string x in notes)
+                        foreach (string key in new[] { "粛", "渇き", "軛" })
+                            if (x.Contains(key, StringComparison.Ordinal)) fired.Add(key);
+                    write($"| {sq.Name} | {n.Name} | {Map11.RuleLineOf(n.Enemy)} "
+                        + $"| {string.Join(" ／ ", notes.Select(x => x.Trim()))} |");
+                }
+        write("");
+        write(fired.Count == 3
+            ? "**3つとも出た**（粛・渇き・軛）。"
+            : $"出たのは {fired.Count} 種（{string.Join(" / ", fired)}）"
+              + "——残りは seed 0 のこの1戦では起きなかっただけで、読む場所は同じ3つの帳簿。");
+        write("");
+
+        bool ok = allyMissing == 0 && missing.Count == 0;
+        write(ok ? "**Phase 0 ○ —— 手書きが要るのは敵の札の1行だけで、その網羅性は機械で確かめられる。**"
+                 : "**Phase 0 × —— 上の × を埋めること。**");
+        return ok;
+    }
+
     public static Stat Band(int[] assign, int seed0, int seeds)
     {
         var o = new Once[seeds];

@@ -24,16 +24,15 @@ public partial class Map11Main : Node3D
     private static readonly Color DeadColor = Color.FromHtml("#6d7370");
 
     /// <summary>拠点。左端。</summary>
-    private static readonly Vector3 BasePos = new(-8.0f, 0, 2.0f);
+    // 第170期に左のパネルが横に広がったので、拠点をその右へ寄せた（札が隠れていた）。
+    private static readonly Vector3 BasePos = new(-4.0f, 0, 2.0f);
 
     /// <summary>区画の位置（道 × 番号）。北の道が奥（-Z）、南の道が手前（+Z）。</summary>
     private static Vector3 NodePos(int road, int index)
         => new(3.0f + index * 11.0f, 0, road == 0 ? -8.5f : 8.5f);
 
-    /// <summary>隊が拠点で待つ位置（3 隊を縦に並べる）。</summary>
-    private static Vector3 WaitPos(int squad) => BasePos + new Vector3(-5.4f + squad * 5.4f, 0, 6.4f);
-
     private Camera3D _camera = null!;
+    private Label3D _homeLabel = null!;
     private readonly List<Marker> _squadMarkers = new();
     private readonly List<Marker> _nodeMarkers = new();
 
@@ -43,11 +42,14 @@ public partial class Map11Main : Node3D
     private Label _toast = null!;
     private Button _sendNorth = null!;
     private Button _sendSouth = null!;
-    private Button _inspect = null!;
+    private Label _hint = null!;
 
-    private Control _detailOverlay = null!;
-    private VBoxContainer _detailBody = null!;
-    private Label _detailTitle = null!;
+    private VBoxContainer _squadDetail = null!;
+    private VBoxContainer _foeDetail = null!;
+    private VBoxContainer _history = null!;
+
+    /// <summary>右のパネルで中身を開いている敵の区画（道, 番号）。既定は北の 1 戦目。</summary>
+    private (int Road, int Index) _foeView = (0, 0);
 
     private Control _encounterOverlay = null!;
     private Label _encounterTitle = null!;
@@ -104,8 +106,7 @@ public partial class Map11Main : Node3D
         string[] parts = spec.Split(',');
         string path = parts[0];
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-        if (parts.Length > 1 && parts[1] == "detail") ShowDetail();
-        else if (parts.Length > 1 && parts[1] == "encounter") Send(1);
+        if (parts.Length > 1 && parts[1] == "encounter") Send(1);
         await ToSignal(GetTree().CreateTimer(0.4), SceneTreeTimer.SignalName.Timeout);
         Error error = GetViewport().GetTexture().GetImage().SavePng(path);
         GD.Print($"MAP11_CAPTURE error={error} path={path}");
@@ -122,6 +123,17 @@ public partial class Map11Main : Node3D
         {
             GD.Print($"MAP11_FLOW_SMOKE_COMPLETE won={St.Won} cleared={St.ClearedCount}"
                 + $"/{Map11.TotalNodes} battles={St.Battles} seed={Map11Session.Seed}");
+            // 戦闘の記録と、盤面ルールが実際にしたこと（第170期 §1-4）をそのまま吐く。
+            foreach (Map11Session.Line l in Map11Session.BattleLog)
+            {
+                GD.Print("MAP11_LOG " + HistoryLine(l));
+                foreach (string note in l.Notes) GD.Print("MAP11_LOG     " + note);
+            }
+            GD.Print($"MAP11_LOG 盤上 {Map11Session.AliveOnMap} 枚 / 未出撃を含む {Map11Session.AliveIncludingReserve} 枚");
+            // 通しの最後の絵も撮れるようにしておく（`--map11-capture=` を併せて渡したときだけ）。
+            if (OS.GetCmdlineUserArgs()
+                    .FirstOrDefault(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal))
+                is { } shot) { _ = Capture(shot["--map11-capture=".Length..]); return; }
             GetTree().Quit();
             return;
         }
@@ -211,7 +223,8 @@ public partial class Map11Main : Node3D
             Position = new Vector3(0, 0.2f, 0),
             MaterialOverride = CampaignMain.MakeMaterial(Color.FromHtml("#6a6b58"), roughness: 0.95f),
         });
-        home.AddChild(WorldLabel("拠点", new Vector3(0, 0.9f, 3.1f), 32, PlayerColor));
+        _homeLabel = WorldLabel("拠点", new Vector3(2.4f, 0.9f, 3.1f), 30, PlayerColor);
+        home.AddChild(_homeLabel);
 
         for (int road = 0; road < Map11.RoadCount; road++)
             for (int i = 0; i < Map11.Roads[road].Count; i++)
@@ -221,7 +234,7 @@ public partial class Map11Main : Node3D
             }
 
         for (int s = 0; s < St.Squads.Length; s++)
-            _squadMarkers.Add(new Marker(this, WaitPos(s), PlayerColor, 1.3f));
+            _squadMarkers.Add(new Marker(this, BasePos, PlayerColor, 1.3f));
     }
 
     private void AddStrip(Vector3 from, Vector3 to, Color color)
@@ -334,6 +347,9 @@ public partial class Map11Main : Node3D
         var leftCol = new VBoxContainer();
         leftCol.AddThemeConstantOverride("separation", 8);
         left.AddChild(leftCol);
+        _hint = UiKit.Text("① 隊を選ぶ → ② 道を選ぶ → ③ 接敵したら「戦う」か「引き返す」", 13, GoldColor);
+        _hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        leftCol.AddChild(_hint);
         leftCol.AddChild(UiKit.Text("部隊", 12, UiKit.Faint));
         _squadList = new VBoxContainer();
         _squadList.AddThemeConstantOverride("separation", 6);
@@ -365,29 +381,65 @@ public partial class Map11Main : Node3D
         _sendSouth.Pressed += () => Send(1);
         orders.AddChild(_sendSouth);
 
-        _inspect = UiKit.ActionButton("この隊の中身を見る");
-        _inspect.Pressed += ShowDetail;
-        leftCol.AddChild(_inspect);
+        // 隊の中身は**常時開いておく**（第169期の自由記述「自分の部隊を確認したくなった」。
+        // 「この隊の中身を見る」ボタンには気づかれなかった）。
+        leftCol.AddChild(UiKit.Text("この隊の中身", 12, UiKit.Faint));
+        _squadDetail = new VBoxContainer();
+        _squadDetail.AddThemeConstantOverride("separation", 4);
+        leftCol.AddChild(Scroll(_squadDetail, 300));
 
         // ---- 右: 道 ----
         PanelContainer right = Panel();
         right.AnchorLeft = 1;
         right.AnchorRight = 1;
-        right.OffsetLeft = -400;
+        right.OffsetLeft = -430;
         right.OffsetRight = -20;
         right.OffsetTop = 90;
         root.AddChild(right);
         var rightCol = new VBoxContainer();
         rightCol.AddThemeConstantOverride("separation", 8);
         right.AddChild(rightCol);
-        rightCol.AddChild(UiKit.Text("道と敵部隊", 12, UiKit.Faint));
+        rightCol.AddChild(UiKit.Text("道と敵部隊（押すと中身が出ます）", 12, UiKit.Faint));
         _roadList = new VBoxContainer();
         _roadList.AddThemeConstantOverride("separation", 6);
         rightCol.AddChild(_roadList);
+        rightCol.AddChild(UiKit.Text("この部隊の中身", 12, UiKit.Faint));
+        _foeDetail = new VBoxContainer();
+        _foeDetail.AddThemeConstantOverride("separation", 4);
+        rightCol.AddChild(Scroll(_foeDetail, 300));
 
-        BuildDetailOverlay(root);
+        // ---- 下中央: 戦闘の記録（**戦闘1回につき1行**） ----
+        PanelContainer bottom = Panel();
+        bottom.AnchorTop = 1;
+        bottom.AnchorBottom = 1;
+        bottom.OffsetTop = -210;
+        bottom.OffsetBottom = -20;
+        bottom.OffsetLeft = 470;
+        bottom.OffsetRight = -450;
+        root.AddChild(bottom);
+        var bottomCol = new VBoxContainer();
+        bottomCol.AddThemeConstantOverride("separation", 6);
+        bottom.AddChild(bottomCol);
+        bottomCol.AddChild(UiKit.Text("戦闘の記録", 12, UiKit.Faint));
+        _history = new VBoxContainer();
+        _history.AddThemeConstantOverride("separation", 3);
+        bottomCol.AddChild(Scroll(_history, 150));
+
         BuildEncounterOverlay(root);
         BuildResultOverlay(root);
+    }
+
+    /// <summary>中身が溢れても読めるように包む。</summary>
+    private static ScrollContainer Scroll(Control content, int height)
+    {
+        content.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        var scroll = new ScrollContainer
+        {
+            CustomMinimumSize = new Vector2(0, height),
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+        };
+        scroll.AddChild(content);
+        return scroll;
     }
 
     private static PanelContainer Panel()
@@ -421,20 +473,6 @@ public partial class Map11Main : Node3D
         modal.AddChild(column);
         column.AddChild(UiKit.Text(tag, 11, tagColor));
         return overlay;
-    }
-
-    private void BuildDetailOverlay(Control root)
-    {
-        _detailOverlay = Modal(root, 330, 250, out VBoxContainer col, "SQUAD", PlayerColor);
-        _detailTitle = UiKit.Text("", 24, Colors.White);
-        col.AddChild(_detailTitle);
-        _detailBody = new VBoxContainer();
-        _detailBody.AddThemeConstantOverride("separation", 6);
-        _detailBody.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
-        col.AddChild(_detailBody);
-        Button close = UiKit.ActionButton("閉じる");
-        close.Pressed += () => _detailOverlay.Visible = false;
-        col.AddChild(close);
     }
 
     private void BuildEncounterOverlay(Control root)
@@ -495,6 +533,8 @@ public partial class Map11Main : Node3D
         if (St.NextNode(road) is null) { ShowToast($"{Map11.RoadNames[road]} は抜け切っています", UiKit.Muted, 3.0f); return; }
 
         Map11Session.Send(_selected, road);
+        // 送った先の中身を右に出しておく（**隊の勝ち筋と敵のルールを並べて見せる**・案B）。
+        if (St.NextNode(road) is { } next) _foeView = (road, next.Def.Index);
         ShowToast($"{s.Def.Name} を {Map11.RoadNames[road]} へ", PlayerColor, 3.0f);
         Refresh();
         TryEncounter();
@@ -538,11 +578,23 @@ public partial class Map11Main : Node3D
         GetTree().ChangeSceneToFile(CampaignSession.BattleScene);
     }
 
-    private void ShowDetail()
+    /// <summary>
+    /// 選んでいる隊の中身。<b>説明文は `UnitDef.PlusText` / `MinusText` から引くだけ</b>
+    /// ——`docs/units.md` を生成しているのと同じ元データなので、写しを持たない（自己検査 (e)）。
+    ///
+    /// <para>見出しを2つに分ける（指示書 §1-2）——<b>「何をする」</b>（全15枚・元データ）と
+    /// <b>「どの道で」</b>（第164〜168期で書けた4枚だけ・`Map11.LineOf`）。</para>
+    /// </summary>
+    private void RefreshSquadDetail()
     {
+        foreach (Node child in _squadDetail.GetChildren()) child.QueueFree();
         Map11State.Squad s = St.Squads[_selected];
-        _detailTitle.Text = $"{s.Def.Name}（{s.Def.Role}）";
-        foreach (Node child in _detailBody.GetChildren()) child.QueueFree();
+
+        _squadDetail.AddChild(UiKit.Text($"{s.Def.Name}（{s.Def.Role}）", 17, Colors.White));
+        Label plan = UiKit.Text(Map11Info.PlanOf(s.Def.Id).Replace("**", ""), 13, GoldColor);
+        plan.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        _squadDetail.AddChild(plan);
+        _squadDetail.AddChild(UiKit.Text("", 6, UiKit.Faint));
 
         // 盤上に出ている駒があればその現在値、まだ出ていなければ定義の値を出す。
         var rows = s.Units is { } units
@@ -556,27 +608,125 @@ public partial class Map11Main : Node3D
         {
             Color tint = r.Alive ? UiKit.Ink : DeadColor;
             string seat = FormationRules.SeatNames[Math.Clamp(r.Slot, 0, FormationRules.TotalSlots - 1)];
-            var head = UiKit.Text(
-                r.Alive ? $"{seat}  {r.Def.Name}   HP {r.Hp} / {r.MaxHp}" : $"{seat}  {r.Def.Name}   （戦死）",
-                15, tint);
-            _detailBody.AddChild(head);
+            _squadDetail.AddChild(UiKit.Text(
+                r.Alive
+                    ? $"{seat}  {r.Def.Name}   HP {r.Hp}/{r.MaxHp} ・ 攻{r.Def.Attack} ・ 速{r.Def.Speed}"
+                    : $"{seat}  {r.Def.Name}   （戦死）",
+                14, tint));
+            Wrapped($"　何をする: {r.Def.PlusText}", 12, r.Alive ? UiKit.Muted : DeadColor);
+            if (r.Def.MinusText.Length > 0)
+                Wrapped($"　代わりに: {r.Def.MinusText}", 12, r.Alive ? UiKit.Faint : DeadColor);
             if (Map11.LineOf(r.Def.Id) is { } line)
-                _detailBody.AddChild(UiKit.Text($"      {line}", 12, r.Alive ? GoldColor : DeadColor));
+                Wrapped($"　どの道で: {line}", 12, r.Alive ? GoldColor : DeadColor);
+            _squadDetail.AddChild(UiKit.Text("", 4, UiKit.Faint));
         }
         if (s.Units is null && !s.Deployed)
-            _detailBody.AddChild(UiKit.Text("（まだ拠点にいます。数字は定義上の値）", 12, UiKit.Faint));
-        _detailOverlay.Visible = true;
+            _squadDetail.AddChild(UiKit.Text("（まだ拠点にいます。数字は定義上の値）", 12, UiKit.Faint));
+
+        void Wrapped(string text, int size, Color color)
+        {
+            Label l = UiKit.Text(text, size, color);
+            l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            _squadDetail.AddChild(l);
+        }
     }
+
+    /// <summary>
+    /// 右で選んでいる敵部隊の中身。<b>敵の <c>UnitDef</c> には説明文が1体も無い</b>ので
+    /// （Phase 0 Q0-1b）、札ごとの1行（<see cref="Map11Info.TraitLineOf"/>）で埋める。
+    ///
+    /// <para>用語は<b>括弧の中を主、名前を従</b>にしてある（§1-3）——
+    /// 観察ログの「()で効果を書いてくれていたからなんとか分かった」に合わせた。</para>
+    /// </summary>
+    private void RefreshFoeDetail()
+    {
+        foreach (Node child in _foeDetail.GetChildren()) child.QueueFree();
+        Map11State.Node node = St.Nodes[_foeView.Road][_foeView.Index];
+
+        _foeDetail.AddChild(UiKit.Text(
+            $"{Map11.RoadNames[node.Def.Road]} {node.Def.Index + 1} 戦目 ・ {node.Def.Name}"
+            + (node.Cleared ? "（撃破済み）" : ""), 16, node.Cleared ? DeadColor : Colors.White));
+
+        // 盤上に立っている駒があればその現在値、まだ当たっていなければ定義の値。
+        var rows = node.Units is { } units
+            ? units.OrderBy(u => u.Slot)
+                   .Select(u => (u.Slot, u.Def, u.Hp, u.MaxHp, Alive: u.IsAlive)).ToList()
+            : node.Def.Enemy.Occupied()
+                   .Select(o => (o.Slot, o.Def, Hp: o.Def.MaxHp, MaxHp: o.Def.MaxHp, Alive: true)).ToList();
+
+        foreach (var r in rows)
+        {
+            bool live = r.Alive && !node.Cleared;
+            Color tint = live ? UiKit.Ink : DeadColor;
+            string seat = FormationRules.SeatNames[Math.Clamp(r.Slot, 0, FormationRules.TotalSlots - 1)];
+            _foeDetail.AddChild(UiKit.Text(
+                live
+                    ? $"{seat}  {r.Def.Name}   HP {r.Hp}/{r.MaxHp} ・ 攻{r.Def.Attack} ・ 速{r.Def.Speed}"
+                    : $"{seat}  {r.Def.Name}   （倒れた）",
+                14, tint));
+            foreach (string line in Map11Info.TraitLinesOf(r.Def))
+            {
+                Label l = UiKit.Text($"　{line}", 12, live ? UiKit.Muted : DeadColor);
+                l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+                _foeDetail.AddChild(l);
+            }
+            if (Map11Info.IsBoardRuleHolder(r.Def))
+            {
+                Label l = UiKit.Text("　★ この駒が倒れるとルールが消える", 12, live ? GoldColor : DeadColor);
+                l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+                _foeDetail.AddChild(l);
+            }
+            _foeDetail.AddChild(UiKit.Text("", 4, UiKit.Faint));
+        }
+    }
+
+    /// <summary>戦闘の記録（<b>戦闘1回につき1行</b>）。マップ上と結果画面の両方に同じものを出す。</summary>
+    private void RefreshHistory()
+    {
+        foreach (Node child in _history.GetChildren()) child.QueueFree();
+        if (Map11Session.BattleLog.Count == 0)
+        {
+            _history.AddChild(UiKit.Text("（まだ戦っていません）", 12, UiKit.Faint));
+            return;
+        }
+        foreach (Map11Session.Line l in Map11Session.BattleLog)
+        {
+            _history.AddChild(UiKit.Text(HistoryLine(l), 13, l.Won ? UiKit.Ink : UiKit.Hurt));
+            foreach (string note in l.Notes)
+            {
+                Label n = UiKit.Text($"　　{note}", 12, GoldColor);
+                n.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+                _history.AddChild(n);
+            }
+        }
+    }
+
+    private static string HistoryLine(Map11Session.Line l) =>
+        $"{l.No}戦目  {l.Squad} → {l.Road} {l.Foe}  {(l.Won ? "抜いた" : "抜けず")}"
+        + $"  （残り {l.Alive}枚 ・ HP {l.HpPercent:F0}%）";
 
     private void ShowResult()
     {
         _resultTitle.Text = St.Won ? "踏破" : "撤退";
-        _resultBody.Text =
-            $"抜いた敵部隊 {St.ClearedCount} / {Map11.TotalNodes}（部分点 {St.Partial():F2}）\n"
-            + $"生存枚数 {St.Squads.Sum(s => s.Units?.Count(u => u.IsAlive) ?? 0)} 枚"
-            + $" ・ 戦闘回数 {St.Battles} 回\n\n"
-            + $"出した順: {Map11Session.OrderSummary()}\n\n"
-            + $"seed {Map11Session.Seed}（この数字を控えれば同じ通しを再現できます）";
+        // **生存枚数は2つ出す**（第169期に画面内で数え方が2通りに割れていた）。
+        var lines = new List<string>
+        {
+            $"抜いた敵部隊 {St.ClearedCount} / {Map11.TotalNodes}（部分点 {St.Partial():F2}）",
+            $"盤上に残った枚数 {Map11Session.AliveOnMap} 枚"
+            + $" ／ 未出撃を含む枚数 {Map11Session.AliveIncludingReserve} 枚",
+            $"戦闘回数 {St.Battles} 回",
+            "",
+            "戦闘の記録:",
+        };
+        if (Map11Session.BattleLog.Count == 0) lines.Add("　（戦っていません）");
+        foreach (Map11Session.Line l in Map11Session.BattleLog)
+        {
+            lines.Add("　" + HistoryLine(l));
+            foreach (string note in l.Notes) lines.Add("　　　" + note);
+        }
+        lines.Add("");
+        lines.Add($"seed {Map11Session.Seed}（この数字を控えれば同じ通しを再現できます）");
+        _resultBody.Text = string.Join("\n", lines);
         _resultOverlay.Visible = true;
     }
 
@@ -613,17 +763,16 @@ public partial class Map11Main : Node3D
             _squadButtons[i].Disabled = s.Lost;
             _squadButtons[i].Modulate = i == _selected ? new Color(0.72f, 1.0f, 0.90f) : Colors.White;
 
+            // **盤上に札を出すのは道へ出ている隊だけ**（第170期）。待機と全滅は左のパネルが持つ
+            // ——中身のパネルを常時開いたぶんパネルが伸びて、拠点の札が下に隠れたため。
+            // 同じ言葉の表を2つ作らない（第124期 §4）。
             Marker m = _squadMarkers[i];
-            bool onMap = s.Units is not null;
-            Vector3 pos = !onMap || s.Road < 0
-                ? WaitPos(i)
-                : NodePos(s.Road, St.NextNode(s.Road)?.Def.Index ?? 0) + new Vector3(-3.4f, 0, 0);
-            m.MoveTo(pos);
-            // 盤上の札は短く（同じ数字は左のパネルに出ている）。
-            string badge = s.Units is null
-                ? $"{s.Def.Name}\n待機"
-                : $"{s.Def.Name}\n{s.Units.Count(u => u.IsAlive)}枚 {SquadHpPercent(s):F0}%";
-            m.Set(s.Lost ? "" : badge, PlayerColor, !s.Lost);
+            if (s.Units is { } live && s.Road >= 0)
+            {
+                m.MoveTo(NodePos(s.Road, St.NextNode(s.Road)?.Def.Index ?? 0) + new Vector3(-3.6f, 0, 0));
+                m.Set($"{s.Def.Name}\n{live.Count(u => u.IsAlive)}枚 {SquadHpPercent(s):F0}%", PlayerColor);
+            }
+            else m.Set("", PlayerColor, visible: false);
         }
 
         foreach (Node child in _roadList.GetChildren()) child.QueueFree();
@@ -636,10 +785,22 @@ public partial class Map11Main : Node3D
                 Map11State.Node n = St.Nodes[road][i];
                 int alive = n.Cleared ? 0 : n.Units?.Count(u => u.IsAlive) ?? n.Def.Enemy.Occupied().Count();
                 string text = n.Cleared
-                    ? $"  {i + 1}. {n.Def.Name} — 撃破"
-                    : $"  {i + 1}. {n.Def.Name}\n     {Map11.RuleLineOf(n.Def.Enemy)}\n"
-                      + $"     {alive} 体 ・ 残り HP {NodeHpPercent(n):F0}%";
-                _roadList.AddChild(UiKit.Text(text, 13, n.Cleared ? DeadColor : UiKit.Ink));
+                    ? $"{i + 1}. {n.Def.Name} — 撃破"
+                    : $"{i + 1}. {n.Def.Name}\n{Map11.RuleLineOf(n.Def.Enemy)}\n"
+                      + $"{alive} 体 ・ 残り HP {NodeHpPercent(n):F0}%";
+                // 押すと右下に中身が出る（観察ログ: 敵のイメージが沸かない）。
+                (int r0, int i0) = (road, i);
+                var button = new Button
+                {
+                    Text = text,
+                    Alignment = HorizontalAlignment.Left,
+                    FocusMode = Control.FocusModeEnum.None,
+                    CustomMinimumSize = new Vector2(0, n.Cleared ? 30 : 62),
+                    Modulate = _foeView == (r0, i0) ? new Color(1.0f, 0.86f, 0.80f) : Colors.White,
+                };
+                button.AddThemeColorOverride("font_color", n.Cleared ? DeadColor : UiKit.Ink);
+                button.Pressed += () => { _foeView = (r0, i0); Refresh(); };
+                _roadList.AddChild(button);
 
                 Marker m = _nodeMarkers[marker++];
                 m.Set(n.Cleared ? "" : $"{n.Def.Name}\n{alive} 体 ・ {NodeHpPercent(n):F0}%",
@@ -647,9 +808,18 @@ public partial class Map11Main : Node3D
             }
         }
 
+        int waiting = St.Squads.Count(x => !x.Lost && x.Road < 0);
+        _homeLabel.Text = waiting == 0 ? "拠点" : $"拠点（待機 {waiting} 隊）";
+
+        RefreshSquadDetail();
+        RefreshFoeDetail();
+        RefreshHistory();
+
         bool busy = St.Finished;
         _sendNorth.Disabled = busy || St.NextNode(0) is null;
         _sendSouth.Disabled = busy || St.NextNode(1) is null;
+        // 操作の案内は**まだ1戦もしていない間だけ**（観察ログ「操作方法が最初わからなかった」）。
+        _hint.Visible = Map11Session.BattleLog.Count == 0;
     }
 
     private void ShowToast(string text, Color color, float seconds)
