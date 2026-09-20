@@ -37,11 +37,12 @@ static class StageDiag
             case "permsd": PermSd(arg); return;
             case "obj": ObjRun(arg); return;
             case "cross": CrossRun(arg); return;
+            case "catalog": CatalogRun(arg); return;
             case "rho": Rho(arg); return;
             case "rhocarry": RhoCarry(arg); return;
             case "check": Check(arg); return;
             default:
-                Console.WriteLine("stage: モードは phase0 / scan / perm / permsd / run / life / obj / cross / rho / rhocarry / check。");
+                Console.WriteLine("stage: モードは phase0 / scan / perm / permsd / run / life / obj / cross / catalog / rho / rhocarry / check。");
                 return;
         }
     }
@@ -2376,6 +2377,586 @@ static class StageDiag
         Console.WriteLine("## 予測（**測る前に書いた**）");
         Console.WriteLine();
         foreach (var (k, t) in CrossPredictions) Console.WriteLine($"{k}. {t}");
+    }
+
+
+    // =================================================================================
+    // 第164期 —— 52枚の送り先カタログと、列の型（`stage catalog`）
+    //
+    // 指示書は design/PHASE164_CATALOG_SPEC.md。前提は design/PHASE163_CROSSCOLUMN.md。
+    //
+    // **engine は1行も触らない。新しい走行も足さない。** 第163期の `stage cross` と
+    // **同じ 12 列 × 2版 ＋ 帯 12 本**を回し、同じ `EngageObjAvg`（`与えた総害`）から
+    // **列どうしの相関行列**と**駒ごとのカタログ**を作るだけ。
+    //
+    //     dotnet run --project BattleSim -c Release 0 stage catalog phase0
+    //     dotnet run --project BattleSim -c Release 0 stage catalog
+    // =================================================================================
+
+    // ---- 線（**Q0-3。測る前に固定した。結果を見てから動かさない**・第64期） ----
+    const double CatCorrLine = 0.70;    // 型: 52次元の帰属ベクトルの相関がこれ以上なら同じ型（単連結）
+    const double CatBandNoise = 6.0;    // ノイズに埋もれた駒: 帯レンジ（順位）がこれ以上。第163期の帯レンジ中央値 2.0 の 3 倍
+    const double CatColBig = 17.0;      // 列レンジ 大: 上位1/3 の幅（52 体 → 17）
+    const double CatRatio = 3.0;        // 送り先で化ける駒: 列レンジ ÷ max(帯レンジ, 1.0)
+    const double CatSoloLow = 1.5;      // `checkup` の単独の 高/低（第119期の「単独の線 +1.5」）
+
+    public static readonly (string Key, string Text)[] CatPredictions =
+    {
+        ("P1", "**型は2つに割れる**——第163期 §5 の手置きの軸（重い波が前半か）がそのまま出て、"
+             + "10 列が 6 対 4 に分かれる"),
+        ("P2", "**列長の2本（`地点2` / `地点3`）は、列長5 のどれとも相関が低く、自分どうしで高い**"
+             + "——R244 の「列長に反応する」が相関行列の形で見えるはず"),
+        ("P3", "**3群の枚数は 化ける 15 前後 / どこでも同じ 30 前後 / ノイズ 5 前後**"
+             + "——第163期の反転が 15 / 14 枚で、帯レンジの中央値が 2.0 だったので"),
+        ("P4", "**左下（単独 低 × 列レンジ 大）には 5 枚以上いる**——第163期の反転表には"
+             + "`置き去りのナラ`（単独 −9.20）・`仇討ちのザン`（−5.91）・`突き返しのハネ`（−3.59）が既に出ている"),
+        ("P5", "**継ぎ当てのノノ（52枚で唯一の差し替え候補）は左下に入らない**"
+             + "——回復は列に依らず要るので、列レンジは小さいはず"),
+    };
+
+    /// <summary>
+    /// `checkup`（第152期）の値を design/PHASE152_CHECKUP.md の表Aから読む。
+    /// <b>再計算しない</b>（自己検査 (f)）——20 分かかるうえ、比べたいのは既に出ている値である。
+    /// </summary>
+    static Dictionary<string, (string Grp, double Solo)> CheckupTable(out string path)
+    {
+        string[] cand =
+        {
+            "design/PHASE152_CHECKUP.md",
+            "../design/PHASE152_CHECKUP.md",
+            "../../design/PHASE152_CHECKUP.md",
+        };
+        path = cand.FirstOrDefault(File.Exists)
+            ?? throw new FileNotFoundException("design/PHASE152_CHECKUP.md が引けない（cwd をリポジトリ直下に）。");
+        var d = new Dictionary<string, (string, double)>();
+        foreach (string line in File.ReadAllLines(path))
+        {
+            if (!line.StartsWith("|")) continue;
+            var c = line.Split('|').Select(x => x.Trim()).ToArray();
+            if (c.Length < 6 || !int.TryParse(c[1], out _)) continue;
+            string name = c[2], grp = c[3].Replace("*", "");
+            if (grp != "残す" && grp != "転生" && grp != "差し替え" && grp != "別扱い") continue;
+            if (!double.TryParse(c[4], out double solo)) continue;
+            d[name] = (grp, solo);
+        }
+        return d;
+    }
+
+    /// <summary>列長5 の列について「重い波（第四波・第五波）が何番目に来るか」の平均（§6 の連続量）。</summary>
+    static double HeavyPos(int[] waves)
+    {
+        var p = new List<double>();
+        for (int i = 0; i < waves.Length; i++) if (waves[i] >= 4) p.Add(i + 1);
+        return p.Count == 0 ? double.NaN : p.Average();
+    }
+
+    static void CatalogPhase0()
+    {
+        Console.WriteLine("# 第164期 Phase 0 —— 前提（**戦闘0回**）");
+        Console.WriteLine();
+        Console.WriteLine("## Q0-2. 第163期の走行が持っている量");
+        Console.WriteLine();
+        Console.WriteLine("`CrossStatOf` が返すのは **`Range` / `RankSd` / `Flip` / `Ranks`** の4つ"
+            + "（駒ごと・群ごと）。**その手前の `Point()` が駒 × 列の帰属そのものを持っている**"
+            + "（`double[目的変数][駒]`）ので、**相関行列はこの期で集計を足すだけで出る**"
+            + "——新しい戦闘は 1 回も要らない。");
+        Console.WriteLine();
+        Console.WriteLine("| 量 | どこにある | この期で足すか |");
+        Console.WriteLine("|---|---|:-:|");
+        Console.WriteLine("| 駒 × 列 の帰属 | `Point()` の戻り値 | — |");
+        Console.WriteLine("| 駒ごとの順位レンジ・順位SD・反転 | `CrossStatOf` | — |");
+        Console.WriteLine("| **列 × 列 の相関行列** | 無い | **足す**（52 次元のベクトルどうし） |");
+        Console.WriteLine("| **型（相関で束ねた列の群）** | 無い | **足す**（単連結） |");
+        Console.WriteLine("| **`checkup` の単独と群** | `design/PHASE152_CHECKUP.md` の表A | **読むだけ**（再計算しない） |");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-3. 線（**結果を見る前に固定した**）");
+        Console.WriteLine();
+        Console.WriteLine("| # | 量 | 単位 | 線 | 出どころ |");
+        Console.WriteLine("|---|---|---|--:|---|");
+        Console.WriteLine($"| 型 | 52 次元の帰属ベクトルのピアソン相関（単連結） | 無次元 | **>= {CatCorrLine:F2}** "
+            + "| 第163期の手置きの軸に依らずに束ねるため。0.7 は「分散の半分（0.49）を共有する」点 |");
+        Console.WriteLine($"| ノイズ | 帯レンジ（順位） | 順位 | **>= {CatBandNoise:F1}** "
+            + "| 第163期の帯レンジ中央値 **2.0** の 3 倍（同 最大 13.0） |");
+        Console.WriteLine($"| 列レンジ 大 | 列レンジ（順位） | 順位 | **>= {CatColBig:F1}** "
+            + "| 上位1/3 の幅（52 体 → 17）＝「ロスターの3分の1をまたぐ」 |");
+        Console.WriteLine($"| 化ける | 列レンジ ÷ max(帯レンジ, 1.0) | 無次元 | **>= {CatRatio:F1}** "
+            + "| 第163期の線1（中央値どうしの比 2.0）より厳しくし、駒ごとに当てる |");
+        Console.WriteLine($"| 単独 低 | `checkup` の単独（勝率 pt） | pt | **< {CatSoloLow:+0.0;-0.0}** "
+            + "| 第119期の「単独の線 +1.5」 |");
+        Console.WriteLine();
+        Console.WriteLine("**型の分類は列長5 の 10 列だけで行う**（指示書 §2-3・R244）。"
+            + "`地点2` / `地点3` は相関行列には載せるが、型の判定には使わない。");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-4. `checkup` の第152期の値");
+        Console.WriteLine();
+        var tbl = CheckupTable(out string path);
+        Console.WriteLine($"`{path}` の表A から **{tbl.Count} 体**を読んだ（**再計算していない**）。");
+        Console.WriteLine();
+        Console.WriteLine("| 群 | 枚数 |");
+        Console.WriteLine("|---|--:|");
+        foreach (var g in tbl.GroupBy(kv => kv.Value.Grp).OrderByDescending(g => g.Count()))
+            Console.WriteLine($"| {g.Key} | {g.Count()} |");
+        Console.WriteLine();
+        var ids0 = CompareBuilds().SelectMany(r => r.F.Occupied()).Select(o => o.Item2.Name).Distinct().ToArray();
+        var miss = ids0.Where(x => !tbl.ContainsKey(x)).ToArray();
+        Console.WriteLine($"`CompareBuilds()` に出る駒 {ids0.Length} 体のうち、表A に無いのは "
+            + (miss.Length == 0 ? "**0 体**" : $"**{miss.Length} 体**（{string.Join(" / ", miss)}）") + "。");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-5. 走行の見積り");
+        Console.WriteLine();
+        Console.WriteLine("**第163期とまったく同じ 35 点**（12 列 × 2 版 ＋ 帯 12 本のうち 1 点は共用）。"
+            + "第163期の実測は 125.4 秒。**追加の走行は 0 点。**");
+        Console.WriteLine();
+
+        Console.WriteLine("## 予測（**実装前に書き切る。外れても消さない**）");
+        Console.WriteLine();
+        foreach (var (k, t) in CatPredictions) Console.WriteLine($"{k}. {t}");
+    }
+
+    static void CatalogRun(string arg)
+    {
+        string a = arg.Trim();
+        if (a.StartsWith("phase0")) { CatalogPhase0(); return; }
+
+        string[] colNames = a.Length > 0
+            ? a.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray()
+            : CrossColumnNames();
+        string[] verNames = CrossVersionNames();
+        foreach (string cn in colNames) _ = ColOf(cn);
+        int bands = colNames.Length;
+        const string BandCol = "順路5", BandVer = "BCarry";
+
+        var rows = CompareBuilds();
+        var jobs = new List<(int Row, int Slot, UnitDef Def)>();
+        for (int i = 0; i < rows.Length; i++)
+            foreach ((int sl, UnitDef d) in rows[i].F.Occupied()) jobs.Add((i, sl, d));
+        var ids = jobs.Select(j => j.Def.Id).Distinct().ToArray();
+        var uname = ids.ToDictionary(id => id, id => jobs.First(j => j.Def.Id == id).Def.Name);
+        var udef = ids.ToDictionary(id => id, id => jobs.First(j => j.Def.Id == id).Def);
+        var slotsOf = ids.ToDictionary(id => id,
+            id => Enumerable.Range(0, jobs.Count).Where(j => jobs[j].Def.Id == id).ToArray());
+        int n = ids.Length;
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        double[][] Point(Col col, Ver ver, int seed0)
+        {
+            var fE = new double[rows.Length][];
+            Parallel.For(0, rows.Length, i => fE[i] = EngageObjAvg(rows[i].F, col, ver, seed0));
+            var gE = new double[jobs.Count][];
+            Parallel.For(0, jobs.Count, j =>
+                gE[j] = EngageObjAvg(SwapOne(rows[jobs[j].Row].F, jobs[j].Slot), col, ver, seed0));
+            var u = new double[ObjCount][];
+            for (int k = 0; k < ObjCount; k++)
+            {
+                var s = new double[jobs.Count];
+                for (int j = 0; j < jobs.Count; j++) s[j] = fE[jobs[j].Row][k] - gE[j][k];
+                u[k] = ids.Select(id => slotsOf[id].Average(j => s[j])).ToArray();
+            }
+            return u;
+        }
+
+        int H = (int)Obj.Harm;
+
+        var colPts = new List<(string Cn, string Vn, int Len, double[][] U)>();
+        foreach (string cn in colNames)
+            foreach (string vn in verNames)
+            {
+                var col = ColOf(cn);
+                colPts.Add((cn, vn, col.Len, Point(col, VerOf(vn), 0)));
+            }
+
+        var bandPts = new List<(int B, double[][] U)>();
+        {
+            var col = ColOf(BandCol); var ver = VerOf(BandVer);
+            for (int b = 0; b < bands; b++)
+            {
+                var got = colPts.FirstOrDefault(p => p.Cn == BandCol && p.Vn == BandVer);
+                bandPts.Add((b, b == 0 && got.U is not null ? got.U : Point(col, ver, b * Seeds)));
+            }
+        }
+
+        int WaveOf(Formation sq)
+        {
+            for (int i = 0; i < EnemyCatalog.Stages.Count; i++)
+                if (ReferenceEquals(EnemyCatalog.Stages[i].Enemy, sq)) return i + 1;
+            return -1;
+        }
+        var wavesOf = colNames.ToDictionary(cn => cn, cn => ColOf(cn).Squads.Select(WaveOf).ToArray());
+
+        Console.WriteLine("# 第164期 —— 52枚の送り先カタログと、列の型");
+        Console.WriteLine();
+        Console.WriteLine($"`CompareBuilds()` {rows.Length} 行 × 延べ {jobs.Count} 枠 × 駒 {n} 体。");
+        Console.WriteLine($"**目的変数は `与えた総害` に固定**・版は {string.Join(" / ", verNames)}・"
+            + $"列 {colNames.Length} 本・対照は seed 帯 {bands} 本（`{BandCol} × {BandVer}`）"
+            + "——**第163期とすべて同じ**（指示書 §1）。");
+        Console.WriteLine();
+
+        var bandStat = CrossStatOf(bandPts.Select(p => p.U[H]).ToArray(), n);
+        var perVer = verNames.ToDictionary(vn => vn, vn =>
+            CrossStatOf(colPts.Where(p => p.Vn == vn).Select(p => p.U[H]).ToArray(), n));
+        var perVer5 = verNames.ToDictionary(vn => vn, vn =>
+            CrossStatOf(colPts.Where(p => p.Vn == vn && p.Len == 5).Select(p => p.U[H]).ToArray(), n));
+        var cols5Names = colNames.Where(cn => ColOf(cn).Len == 5).ToArray();
+
+        // ---------------- B-0. 第163期の再現（自己検査 (b)(d)） ----------------
+        Console.WriteLine("## B-0. 第163期の再現（**自己検査 (b)(d)**）");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 列レンジ中央値 | 帯レンジ中央値 | 比（線1 = 2.0） | 反転 差し引き（線2 = 8） | 棘鎧のカドの列レンジ |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|");
+        int kado = Array.FindIndex(ids, id => uname[id] == "棘鎧のカド");
+        foreach (string vn in verNames)
+        {
+            var cs = perVer[vn];
+            double mc = Median(cs.Range), mb = Median(bandStat.Range);
+            int net = Enumerable.Range(0, n).Count(u => cs.Flip[u] && !bandStat.Flip[u]);
+            Console.WriteLine($"| {vn} | {mc:F1} | {mb:F1} | **{mc / mb:F2}** | **{net}** "
+                + $"| {(kado >= 0 ? cs.Range[kado].ToString("F1") : "—")} |");
+        }
+        Console.WriteLine();
+        var tieMax = colPts.Max(p => RhoTies(p.U[H]).Tie);
+        var zeroMax = colPts.Max(p => RhoTies(p.U[H]).Zero);
+        Console.WriteLine($"同値塊（**順位を付ける前に数える**・規約 (G13)）: 最大 **{tieMax:P1}**・"
+            + $"厳密に 0 の駒は最大 **{zeroMax} / {n}**。");
+        Console.WriteLine();
+
+        // ---------------- B-1. 列どうしの相関行列 ----------------
+        Console.WriteLine("## B-1. 列どうしの相関行列（**52 次元の帰属ベクトル**・§2-2）");
+        Console.WriteLine();
+        Console.WriteLine("各列について「52 体の帰属」を並べたベクトルを作り、列どうしのピアソン相関を取る。");
+        Console.WriteLine($"**相関が {CatCorrLine:F2} 以上なら同じ型**（単連結）——**閾値は結果を見る前に決めた**（Q0-3）。");
+        Console.WriteLine();
+        var corr = new Dictionary<string, double[,]>();
+        foreach (string vn in verNames)
+        {
+            var pts = colNames.Select(cn => colPts.First(p => p.Cn == cn && p.Vn == vn).U[H]).ToArray();
+            var m = new double[colNames.Length, colNames.Length];
+            for (int i = 0; i < colNames.Length; i++)
+                for (int j = 0; j < colNames.Length; j++) m[i, j] = Pearson(pts[i], pts[j]);
+            corr[vn] = m;
+            Console.WriteLine($"### {vn}");
+            Console.WriteLine();
+            Console.WriteLine("| 列 | 長 | " + string.Join(" | ", colNames) + " |");
+            Console.WriteLine("|---|--:|" + string.Concat(colNames.Select(_ => "--:|")));
+            for (int i = 0; i < colNames.Length; i++)
+                Console.WriteLine($"| {colNames[i]} | {ColOf(colNames[i]).Len} | "
+                    + string.Join(" | ", Enumerable.Range(0, colNames.Length)
+                        .Select(j => i == j ? "—" : m[i, j].ToString("F2"))) + " |");
+            Console.WriteLine();
+        }
+
+        // ---------------- B-2. 型（列長5 の 10 列だけ・単連結） ----------------
+        Console.WriteLine("## B-2. 列の型（**列長5 の 10 列だけ**・§2-3・自己検査 (e)）");
+        Console.WriteLine();
+        var typeOf = new Dictionary<string, Dictionary<string, int>>();
+        var typeOf2 = new Dictionary<string, Dictionary<string, int>>();   // **参考**（完全連結。線を通った結果ではない）
+        foreach (string vn in verNames)
+        {
+            var m = corr[vn];
+            int[] idx5 = cols5Names.Select(cn => Array.IndexOf(colNames, cn)).ToArray();
+            int k5 = idx5.Length;
+            var parent = Enumerable.Range(0, k5).ToArray();
+            int Find(int x) { while (parent[x] != x) x = parent[x] = parent[parent[x]]; return x; }
+            for (int i = 0; i < k5; i++)
+                for (int j = i + 1; j < k5; j++)
+                    if (m[idx5[i], idx5[j]] >= CatCorrLine) parent[Find(i)] = Find(j);
+            var comp = Enumerable.Range(0, k5).GroupBy(Find).OrderByDescending(g => g.Count()).ToArray();
+            var map = new Dictionary<string, int>();
+            for (int t = 0; t < comp.Length; t++) foreach (int i in comp[t]) map[cols5Names[i]] = t;
+            typeOf[vn] = map;
+
+            Console.WriteLine($"### {vn} —— **型 {comp.Length} 個**");
+            Console.WriteLine();
+            Console.WriteLine("| 型 | 列 | 並び | 先頭2波 | 重い波の位置の平均 | 型内の最小相関 |");
+            Console.WriteLine("|--:|---|---|---|--:|--:|");
+            for (int t = 0; t < comp.Length; t++)
+            {
+                var mem = comp[t].Select(i => cols5Names[i]).ToArray();
+                double lo = 1.0;
+                foreach (int i in comp[t]) foreach (int j in comp[t]) if (i != j) lo = Math.Min(lo, m[idx5[i], idx5[j]]);
+                Console.WriteLine($"| {t + 1} | {string.Join(" / ", mem)} "
+                    + $"| {string.Join(" ・ ", mem.Select(cn => string.Join("-", wavesOf[cn])))} "
+                    + $"| {string.Join(" ・ ", mem.Select(cn => $"{wavesOf[cn][0]}-{wavesOf[cn][1]}"))} "
+                    + $"| {mem.Average(cn => HeavyPos(wavesOf[cn])):F2} "
+                    + $"| {(mem.Length == 1 ? "—" : lo.ToString("F2"))} |");
+            }
+            Console.WriteLine();
+            if (comp.Length >= 2)
+            {
+                double across = double.MinValue;
+                for (int i = 0; i < k5; i++)
+                    for (int j = i + 1; j < k5; j++)
+                        if (Find(i) != Find(j)) across = Math.Max(across, m[idx5[i], idx5[j]]);
+                Console.WriteLine($"型をまたぐ相関の最大値: **{across:F2}**（線 {CatCorrLine:F2}）。");
+                Console.WriteLine();
+            }
+
+            // ---- **参考**: 同じ閾値を完全連結で当てる（**線を通った結果ではない**。§2-2 の束ね方は単連結） ----
+            // 単連結は「鎖」でつながるので、相関が連続的に落ちていく行列では全部が1つになる。
+            // 同じ 0.70 を**群内の最小相関**に要求するとどう割れるかを、**事後の参考として**併記する。
+            var cl = Enumerable.Range(0, k5).Select(i => new List<int> { i }).ToList();
+            while (cl.Count > 1)
+            {
+                double best = double.MinValue; int bi = -1, bj = -1;
+                for (int i = 0; i < cl.Count; i++)
+                    for (int j = i + 1; j < cl.Count; j++)
+                    {
+                        double lo2 = double.MaxValue;
+                        foreach (int x in cl[i]) foreach (int y in cl[j]) lo2 = Math.Min(lo2, m[idx5[x], idx5[y]]);
+                        if (lo2 > best) { best = lo2; bi = i; bj = j; }
+                    }
+                if (best < CatCorrLine) break;
+                cl[bi].AddRange(cl[bj]); cl.RemoveAt(bj);
+            }
+            var map2 = new Dictionary<string, int>();
+            var cl2 = cl.OrderByDescending(c => c.Count).ToList();
+            for (int t = 0; t < cl2.Count; t++) foreach (int i in cl2[t]) map2[cols5Names[i]] = t;
+            typeOf2[vn] = map2;
+            Console.WriteLine($"**参考（完全連結・同じ閾値 {CatCorrLine:F2}）**: 群 {cl2.Count} 個 —— "
+                + string.Join(" ／ ", cl2.Select((c, t) => $"参考型{(char)('A' + t)} = "
+                    + string.Join(" / ", c.Select(i => cols5Names[i])))) + "。");
+            Console.WriteLine("**この割り方は結果を見た後に当てたものなので、採否 1 の判定には使わない。**");
+            Console.WriteLine();
+        }
+
+        // ---------------- B-3. 連続量（重い波の位置） ----------------
+        Console.WriteLine("## B-3. 列の性質を連続量で見る（**§6 の「1 が落ちた場合」に備えた保険**）");
+        Console.WriteLine();
+        Console.WriteLine("列長5 の 10 列について「**重い波（第四波・第五波）が何番目に来るか**」の平均を取り、");
+        Console.WriteLine("駒ごとに「その連続量 対 その駒の順位」の相関を出す（10 点）。**負 = 重い波が早いほど上位**。");
+        Console.WriteLine();
+        var hp = cols5Names.Select(cn => HeavyPos(wavesOf[cn])).ToArray();
+        Console.WriteLine("| 列 | 並び | 重い波の位置の平均 |");
+        Console.WriteLine("|---|---|--:|");
+        for (int i = 0; i < cols5Names.Length; i++)
+            Console.WriteLine($"| {cols5Names[i]} | {string.Join("-", wavesOf[cols5Names[i]])} | {hp[i]:F1} |");
+        Console.WriteLine();
+        foreach (string vn in verNames)
+        {
+            var cs = perVer5[vn];
+            Console.WriteLine($"### {vn} —— |r| の大きい 12 体");
+            Console.WriteLine();
+            Console.WriteLine("| 駒 | r（重い波の位置 対 順位） | 列レンジ(長5) | 札 |");
+            Console.WriteLine("|---|--:|--:|---|");
+            var rr = Enumerable.Range(0, n).Select(u =>
+                (U: u, R: Pearson(hp, Enumerable.Range(0, cols5Names.Length).Select(g => cs.Ranks[g][u]).ToArray()))).ToArray();
+            foreach (var (u, r) in rr.Where(x => !double.IsNaN(x.R)).OrderByDescending(x => Math.Abs(x.R)).Take(12))
+                Console.WriteLine($"| {uname[ids[u]]} | **{r:+0.00;-0.00}** | {cs.Range[u]:F1} "
+                    + $"| {(udef[ids[u]].Traits.Count == 0 ? "—" : string.Join(" / ", udef[ids[u]].Traits))} |");
+            Console.WriteLine();
+        }
+
+        // ---------------- C. 3群 ----------------
+        Console.WriteLine("## C. 52 枚を3群に分ける（**§3-1。線は Q0-3 で固定**）");
+        Console.WriteLine();
+        Console.WriteLine($"- **ノイズに埋もれた駒**: 帯レンジ >= {CatBandNoise:F1}");
+        Console.WriteLine($"- **送り先で化ける駒**: ノイズでない かつ 列レンジ >= {CatColBig:F1} "
+            + $"かつ 列レンジ ÷ max(帯レンジ, 1.0) >= {CatRatio:F1}");
+        Console.WriteLine("- **どこでも同じ駒**: 残り");
+        Console.WriteLine();
+        var grp = new Dictionary<string, int[]>();
+        Console.WriteLine("| 版 | 送り先で化ける | どこでも同じ | ノイズに埋もれた |");
+        Console.WriteLine("|---|--:|--:|--:|");
+        foreach (string vn in verNames)
+        {
+            var cs = perVer[vn];
+            var g = new int[n];
+            for (int u = 0; u < n; u++)
+                g[u] = bandStat.Range[u] >= CatBandNoise ? 2
+                     : (cs.Range[u] >= CatColBig && cs.Range[u] / Math.Max(bandStat.Range[u], 1.0) >= CatRatio) ? 0
+                     : 1;
+            grp[vn] = g;
+            Console.WriteLine($"| {vn} | **{g.Count(x => x == 0)}** | {g.Count(x => x == 1)} | {g.Count(x => x == 2)} |");
+        }
+        Console.WriteLine();
+        foreach (string vn in verNames)
+        {
+            Console.WriteLine($"**{vn} のノイズ群**: " + (grp[vn].Count(x => x == 2) == 0 ? "なし"
+                : string.Join(" / ", Enumerable.Range(0, n).Where(u => grp[vn][u] == 2)
+                    .OrderByDescending(u => bandStat.Range[u])
+                    .Select(u => $"{uname[ids[u]]}（帯 {bandStat.Range[u]:F1}）"))) + "。");
+        }
+        Console.WriteLine();
+
+        // ---------------- D. カタログ ----------------
+        Console.WriteLine("## D. 送り先で化ける駒のカタログ（**§3-2**）");
+        Console.WriteLine();
+        Console.WriteLine("**型が1個に潰れた版では、§6 に従って「上がる型 / 下がる型」を連続量で書く**"
+            + "——上位の列・下位の列（列長5 の 10 列だけ・§2-3）と、"
+            + "「重い波の位置の平均 対 その駒の順位」の相関 r（**負 = 重い波が早い列ほど上位**）。"
+            + "`参考型` の列は B-2 の**事後の**完全連結の群ごとの平均順位で、**採否には使わない**。");
+        Console.WriteLine("`符号` は**帰属の符号が列で変わるか**（最小 < 0 < 最大）。");
+        Console.WriteLine();
+        var catalog = new Dictionary<string, List<(int U, double Diff)>>();
+        foreach (string vn in verNames)
+        {
+            var cs = perVer[vn]; var cs5 = perVer5[vn];
+            var map = typeOf[vn];
+            int tn = map.Values.Max() + 1;
+            var memIdx = Enumerable.Range(0, tn)
+                .Select(t => Enumerable.Range(0, cols5Names.Length).Where(g => map[cols5Names[g]] == t).ToArray())
+                .ToArray();
+            var ptsAll = colNames.Select(cn => colPts.First(p => p.Cn == cn && p.Vn == vn).U[H]).ToArray();
+
+            Console.WriteLine($"### {vn}");
+            Console.WriteLine();
+            // 型が1つに潰れた版では、**§6 の「1 が落ちた場合」に従って連続量で書く**
+            // （上がる型／下がる型の代わりに、上位の列・下位の列と「重い波の位置」への相関）。
+            var map2v = typeOf2[vn];
+            int tn2 = map2v.Values.Max() + 1;
+            var memIdx2 = Enumerable.Range(0, tn2)
+                .Select(t => Enumerable.Range(0, cols5Names.Length).Where(g => map2v[cols5Names[g]] == t).ToArray())
+                .ToArray();
+            Console.WriteLine("| 駒 | 在席枠 | 札 | 上位の列 | 下位の列 | r（重い波の位置 対 順位） | "
+                + string.Join(" | ", Enumerable.Range(0, tn2).Select(t => $"参考型{(char)('A' + t)}"))
+                + " | 符号 | 列レンジ(全12) | 列レンジ(長5) | 帯レンジ |");
+            Console.WriteLine("|---|--:|---|---|---|--:|" + string.Concat(Enumerable.Range(0, tn2).Select(_ => "--:|"))
+                + ":-:|--:|--:|--:|");
+            var list = new List<(int U, double Diff)>();
+            foreach (int u in Enumerable.Range(0, n).Where(x => grp[vn][x] == 0)
+                .OrderByDescending(x => cs.Range[x]))
+            {
+                var tavg = Enumerable.Range(0, tn).Select(t => memIdx[t].Average(g => cs5.Ranks[g][u])).ToArray();
+                var tavg2 = Enumerable.Range(0, tn2).Select(t => memIdx2[t].Average(g => cs5.Ranks[g][u])).ToArray();
+                double amin = ptsAll.Min(p => p[u]), amax = ptsAll.Max(p => p[u]);
+                var rs5 = Enumerable.Range(0, cols5Names.Length).Select(g => cs5.Ranks[g][u]).ToArray();
+                int b5 = Array.IndexOf(rs5, rs5.Min()), w5 = Array.IndexOf(rs5, rs5.Max());
+                double rHeavy = Pearson(hp, rs5);
+                list.Add((u, tavg2.Max() - tavg2.Min()));
+                Console.WriteLine($"| {uname[ids[u]]} | {slotsOf[ids[u]].Length} "
+                    + $"| {(udef[ids[u]].Traits.Count == 0 ? "—" : string.Join(" / ", udef[ids[u]].Traits))} "
+                    + $"| {cols5Names[b5]} {rs5.Min():F0}位 | {cols5Names[w5]} {rs5.Max():F0}位 "
+                    + $"| **{rHeavy:+0.00;-0.00}** | "
+                    + string.Join(" | ", tavg2.Select(x => $"{x:F1}位"))
+                    + $" | {(amin < 0 && amax > 0 ? "**変わる**" : "—")} "
+                    + $"| {cs.Range[u]:F1} | {cs5.Range[u]:F1} | {bandStat.Range[u]:F1} |");
+            }
+            catalog[vn] = list;
+            Console.WriteLine();
+        }
+
+        // ---------------- E. checkup との突き合わせ ----------------
+        Console.WriteLine("## E. `checkup`（第152期）との突き合わせ（**§4。再計算しない**）");
+        Console.WriteLine();
+        var chk = CheckupTable(out string chkPath);
+        Console.WriteLine($"`{chkPath}` の表A から {chk.Count} 体を読んだ。");
+        Console.WriteLine($"**単独 低 = 単独 < {CatSoloLow:+0.0;-0.0}**（第119期の線）／"
+            + $"**列レンジ 大 = 列レンジ >= {CatColBig:F1}**（Q0-3）。");
+        Console.WriteLine();
+        string[] gname = { "**化ける**", "どこでも同じ", "ノイズ" };
+        foreach (string vn in verNames)
+        {
+            var cs = perVer[vn];
+            int[,] q = new int[2, 2];
+            var low = new List<(int U, double Solo, double Rng, string Grp)>();
+            for (int u = 0; u < n; u++)
+            {
+                if (!chk.TryGetValue(uname[ids[u]], out var c)) continue;
+                int r = c.Solo < CatSoloLow ? 1 : 0, cc = cs.Range[u] >= CatColBig ? 0 : 1;
+                q[r, cc]++;
+                if (r == 1 && cc == 0) low.Add((u, c.Solo, cs.Range[u], c.Grp));
+            }
+            Console.WriteLine($"### {vn}");
+            Console.WriteLine();
+            Console.WriteLine("| | 列レンジ 大 | 列レンジ 小 |");
+            Console.WriteLine("|---|--:|--:|");
+            Console.WriteLine($"| **単独 高** | {q[0, 0]} | {q[0, 1]} |");
+            Console.WriteLine($"| **単独 低** | **{q[1, 0]}** | {q[1, 1]} |");
+            Console.WriteLine();
+            Console.WriteLine($"**左下（単独 低 × 列レンジ 大）= {low.Count} 枚**");
+            Console.WriteLine();
+            Console.WriteLine("| 駒 | checkup 単独 | checkup 群 | 列レンジ | 帯レンジ | 化ける | 札 |");
+            Console.WriteLine("|---|--:|---|--:|--:|:-:|---|");
+            foreach (var (u, solo, rng, g) in low.OrderBy(x => x.Solo))
+                Console.WriteLine($"| {uname[ids[u]]} | {solo:+0.00;-0.00} | {g} | **{rng:F1}** "
+                    + $"| {bandStat.Range[u]:F1} | {(grp[vn][u] == 0 ? "**○**" : "—")} "
+                    + $"| {(udef[ids[u]].Traits.Count == 0 ? "—" : string.Join(" / ", udef[ids[u]].Traits))} |");
+            Console.WriteLine();
+        }
+
+        Console.WriteLine("### E-2. 名指しで確認する5体（指示書 §4-2）");
+        Console.WriteLine();
+        Console.WriteLine("| 駒 | checkup 単独 | checkup 群 | " + string.Join(" | ", verNames.Select(v => $"{v} 列レンジ"))
+            + " | " + string.Join(" | ", verNames.Select(v => $"{v} 群")) + " | 帯レンジ |");
+        Console.WriteLine("|---|--:|---|" + string.Concat(verNames.Select(_ => "--:|"))
+            + string.Concat(verNames.Select(_ => "---|")) + "--:|");
+        string[] named = { "継ぎ当てのノノ", "断ちのナタ", "逃亡兵セロ", "置き去りのナラ", "萎縮のクビ" };
+        foreach (string nm in named)
+        {
+            int u = Array.FindIndex(ids, id => uname[id] == nm);
+            chk.TryGetValue(nm, out var c);
+            if (u < 0) { Console.WriteLine($"| {nm} | {c.Solo:+0.00;-0.00} | {c.Grp ?? "—"} | （`CompareBuilds()` に在席 0 枠） |"); continue; }
+            Console.WriteLine($"| {nm} | {c.Solo:+0.00;-0.00} | {c.Grp ?? "—"} | "
+                + string.Join(" | ", verNames.Select(v => perVer[v].Range[u].ToString("F1"))) + " | "
+                + string.Join(" | ", verNames.Select(v => gname[grp[v][u]])) + $" | {bandStat.Range[u]:F1} |");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("### E-3. 右下（単独 低 × 列レンジ 小）＝ **送り先を選んでも働かない駒**（§4-3）");
+        Console.WriteLine();
+        foreach (string vn in verNames)
+        {
+            var cs = perVer[vn];
+            var rb = Enumerable.Range(0, n)
+                .Where(u => chk.TryGetValue(uname[ids[u]], out var c) && c.Solo < CatSoloLow && cs.Range[u] < CatColBig)
+                .OrderBy(u => chk[uname[ids[u]]].Solo).ToArray();
+            Console.WriteLine($"**{vn}**: {rb.Length} 枚 —— "
+                + string.Join(" / ", rb.Select(u => $"{uname[ids[u]]}（単独 {chk[uname[ids[u]]].Solo:+0.00;-0.00}・列 {cs.Range[u]:F1}）")));
+            Console.WriteLine();
+        }
+
+        // ---------------- F. 全 52 枚 ----------------
+        Console.WriteLine("## F. 全 52 枚（**参考**・列レンジ順）");
+        Console.WriteLine();
+        foreach (string vn in verNames)
+        {
+            var cs = perVer[vn]; var cs5 = perVer5[vn];
+            Console.WriteLine($"### {vn}");
+            Console.WriteLine();
+            Console.WriteLine("| 駒 | 群 | checkup 単独 | checkup 群 | 列レンジ(全12) | 列レンジ(長5) | 帯レンジ | 最上位の列 | 最下位の列 |");
+            Console.WriteLine("|---|---|--:|---|--:|--:|--:|---|---|");
+            foreach (int u in Enumerable.Range(0, n).OrderByDescending(x => cs.Range[x]))
+            {
+                var rs = Enumerable.Range(0, colNames.Length).Select(g => cs.Ranks[g][u]).ToArray();
+                int b = Array.IndexOf(rs, rs.Min()), w = Array.IndexOf(rs, rs.Max());
+                bool has = chk.TryGetValue(uname[ids[u]], out var c);
+                Console.WriteLine($"| {uname[ids[u]]} | {gname[grp[vn][u]]} | {(has ? c.Solo.ToString("+0.00;-0.00") : "—")} | {c.Grp ?? "—"} "
+                    + $"| {cs.Range[u]:F1} | {cs5.Range[u]:F1} | {bandStat.Range[u]:F1} "
+                    + $"| {colNames[b]} {rs.Min():F0}位 | {colNames[w]} {rs.Max():F0}位 |");
+            }
+            Console.WriteLine();
+        }
+
+        // ---------------- 採否 ----------------
+        Console.WriteLine("## G. 採否（**出力の質の判定**・指示書 §6）");
+        Console.WriteLine();
+        Console.WriteLine("| # | 条件 | " + string.Join(" | ", verNames) + " |");
+        Console.WriteLine("|---|---|" + string.Concat(verNames.Select(_ => ":-:|")));
+        Console.WriteLine("| 1 | 列の型が2つ以上 | "
+            + string.Join(" | ", verNames.Select(v => typeOf[v].Values.Distinct().Count() >= 2
+                ? $"**○**（{typeOf[v].Values.Distinct().Count()}）" : $"**×**（{typeOf[v].Values.Distinct().Count()}）")) + " |");
+        Console.WriteLine("| 2 | 3群に分かれ、枚数が出る | "
+            + string.Join(" | ", verNames.Select(v => $"○（{grp[v].Count(x => x == 0)} / {grp[v].Count(x => x == 1)} / {grp[v].Count(x => x == 2)}）")) + " |");
+        Console.WriteLine("| 3 | 化ける駒に送り先が付く（型が1個なら §6 の連続量で） | "
+            + string.Join(" | ", verNames.Select(v => catalog[v].Count > 0 ? $"○（{catalog[v].Count} 体）" : "×")) + " |");
+        Console.WriteLine("| 4 | 左下の象限の枚数が出る | "
+            + string.Join(" | ", verNames.Select(v =>
+            {
+                var cs = perVer[v];
+                int cnt = Enumerable.Range(0, n).Count(u => chk.TryGetValue(uname[ids[u]], out var c)
+                    && c.Solo < CatSoloLow && cs.Range[u] >= CatColBig);
+                return $"○（{cnt} 枚）";
+            })) + " |");
+        Console.WriteLine();
+
+        Console.WriteLine("## H. 予測（**実装前に書いた。当落は報告書で**）");
+        Console.WriteLine();
+        foreach (var (k, t) in CatPredictions) Console.WriteLine($"{k}. {t}");
+        Console.WriteLine();
+        Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F1} 秒。");
     }
 
 }

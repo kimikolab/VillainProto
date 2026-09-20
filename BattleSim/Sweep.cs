@@ -43,6 +43,8 @@ static class SweepDiag
         "0 reseat", "0 seats2", "0 draft", "0 draft3", "0 draft3 alt", "0 wall run",
         // 第163期。`stage cross` は 12 列 × 版2 × 帯 12 本 ＝ 35 点で **125 秒**（報告書 §1 の実測）。
         "0 stage cross",
+        // 第164期。`stage catalog` は `stage cross` と同じ 35 点を回すので **150 秒**（報告書 §1 の実測）。
+        "0 stage catalog",
     };
 
     /// <summary>コマンド表の行頭。**連結で組む**（この診断自身が `CLAUDE.md` に載るので、素直に書くと自分の行に当たる＝第123期）。</summary>
