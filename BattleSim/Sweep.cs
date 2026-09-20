@@ -45,6 +45,9 @@ static class SweepDiag
         "0 stage cross",
         // 第164期。`stage catalog` は `stage cross` と同じ 35 点を回すので **150 秒**（報告書 §1 の実測）。
         "0 stage catalog",
+        // 第165期。`stage short` は 40 列 × 版2 ＋ 帯 24 本 ＋ 長5 の 10 列 ＝ 114 点で **377 秒**（報告書 §1 の実測）。
+        // `stage catalog seeds=800` は 24 点 × seed 4 倍で **約 350 秒**（同）——**穴埋めの引数も引数である**（R178）。
+        "0 stage short", "0 stage catalog seeds=800",
     };
 
     /// <summary>コマンド表の行頭。**連結で組む**（この診断自身が `CLAUDE.md` に載るので、素直に書くと自分の行に当たる＝第123期）。</summary>

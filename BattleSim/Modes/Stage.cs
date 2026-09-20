@@ -38,6 +38,7 @@ static class StageDiag
             case "obj": ObjRun(arg); return;
             case "cross": CrossRun(arg); return;
             case "catalog": CatalogRun(arg); return;
+            case "short": ShortRun(arg); return;
             case "rho": Rho(arg); return;
             case "rhocarry": RhoCarry(arg); return;
             case "check": Check(arg); return;
@@ -117,19 +118,25 @@ static class StageDiag
         throw new ArgumentException($"列 `{name}` が引けない（地点2 / 地点3 / 順路5 / 逆順路5 / P12345 形式）。");
     }
 
-    /// <summary>`P12345` を 0 始まりの添字列へ。順列でなければ null。</summary>
+    /// <summary>
+    /// `P12345` を 0 始まりの添字列へ。順列でなければ null。
+    /// <b>第165期</b>: <b>2〜n 桁の部分順列も受ける</b>（`P12` / `P321`）——
+    /// 短い列を名前で引けるようにしただけで、<b>敵も編成も1体も作らない</b>
+    /// （<see cref="PermCol"/> が `Stages` の `Enemy` をそのまま引く）。
+    /// </summary>
     public static int[]? ParsePerm(string name)
     {
         int n = EnemyCatalog.Stages.Count;
-        if (name.Length != n + 1 || name[0] != 'P') return null;
-        var p = new int[n];
-        for (int i = 0; i < n; i++)
+        if (name.Length < 3 || name.Length > n + 1 || name[0] != 'P') return null;
+        int m = name.Length - 1;
+        var p = new int[m];
+        for (int i = 0; i < m; i++)
         {
             int d = name[i + 1] - '1';
             if (d < 0 || d >= n) return null;
             p[i] = d;
         }
-        return p.Distinct().Count() == n ? p : null;
+        return p.Distinct().Count() == m ? p : null;
     }
 
     /// <summary>並べ替えた列。**敵は1体も作らない**——`Stages` の `Enemy` をそのまま引く。</summary>
@@ -1516,16 +1523,16 @@ static class StageDiag
     /// <b>第163期</b>: <paramref name="seed0"/> は seed の起点（対照の帯を振るためだけ。既定 0 は
     /// 第162期と1ビットも違わない）。
     /// </summary>
-    static double[] EngageObjAvg(Formation f, Col col, Ver v, int seed0 = 0)
+    static double[] EngageObjAvg(Formation f, Col col, Ver v, int seed0 = 0, int seeds = Seeds)
     {
         var c = CtxOf(f, col);
         var s = new double[ObjCount];
-        for (int seed = seed0; seed < seed0 + Seeds; seed++)
+        for (int seed = seed0; seed < seed0 + seeds; seed++)
         {
             var o = EngageObjs(f, col, v, seed, c);
             for (int k = 0; k < ObjCount; k++) s[k] += o[k];
         }
-        for (int k = 0; k < ObjCount; k++) s[k] /= Seeds;
+        for (int k = 0; k < ObjCount; k++) s[k] /= seeds;
         return s;
     }
 
@@ -2521,10 +2528,20 @@ static class StageDiag
         string a = arg.Trim();
         if (a.StartsWith("phase0")) { CatalogPhase0(); return; }
 
+        // 第165期 部B: `seeds=800` で seed 数だけを増やして読み直す。
+        // **既定 200 は第164期と1ビットも違わない**（自己検査 (c)）。
+        // 走行時間のために、seed を増やしたときは版を `R0` だけにする（指示書 §2）。
+        int seeds = Seeds;
+        {
+            var toks = a.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+            int si = toks.FindIndex(t => t.StartsWith("seeds="));
+            if (si >= 0) { seeds = int.Parse(toks[si].Substring(6)); toks.RemoveAt(si); }
+            a = string.Join(' ', toks);
+        }
         string[] colNames = a.Length > 0
             ? a.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray()
             : CrossColumnNames();
-        string[] verNames = CrossVersionNames();
+        string[] verNames = seeds == Seeds ? CrossVersionNames() : new[] { "R0" };
         foreach (string cn in colNames) _ = ColOf(cn);
         int bands = colNames.Length;
         const string BandCol = "順路5", BandVer = "BCarry";
@@ -2545,10 +2562,10 @@ static class StageDiag
         double[][] Point(Col col, Ver ver, int seed0)
         {
             var fE = new double[rows.Length][];
-            Parallel.For(0, rows.Length, i => fE[i] = EngageObjAvg(rows[i].F, col, ver, seed0));
+            Parallel.For(0, rows.Length, i => fE[i] = EngageObjAvg(rows[i].F, col, ver, seed0, seeds));
             var gE = new double[jobs.Count][];
             Parallel.For(0, jobs.Count, j =>
-                gE[j] = EngageObjAvg(SwapOne(rows[jobs[j].Row].F, jobs[j].Slot), col, ver, seed0));
+                gE[j] = EngageObjAvg(SwapOne(rows[jobs[j].Row].F, jobs[j].Slot), col, ver, seed0, seeds));
             var u = new double[ObjCount][];
             for (int k = 0; k < ObjCount; k++)
             {
@@ -2575,7 +2592,7 @@ static class StageDiag
             for (int b = 0; b < bands; b++)
             {
                 var got = colPts.FirstOrDefault(p => p.Cn == BandCol && p.Vn == BandVer);
-                bandPts.Add((b, b == 0 && got.U is not null ? got.U : Point(col, ver, b * Seeds)));
+                bandPts.Add((b, b == 0 && got.U is not null ? got.U : Point(col, ver, b * seeds)));
             }
         }
 
@@ -2957,6 +2974,673 @@ static class StageDiag
         foreach (var (k, t) in CatPredictions) Console.WriteLine($"{k}. {t}");
         Console.WriteLine();
         Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F1} 秒。");
+    }
+
+    // =================================================================================
+    // 第165期 —— 短い列（2〜3戦）でも「送り先」は判断になるか
+    //
+    // **`BattleCore` は1行も触らない。新しい敵・編成・駒は1体も作らない**
+    // （列は `EnemyCatalog.Stages` の部分順列。`ParsePerm` を 2〜4 桁へ広げただけ）。
+    //
+    // 対にする理由（指示書 §1-1）: 対の中では**列長も、含む波も、敵の総量も同じ**。
+    // **違うのは順番だけ**になる。
+    // =================================================================================
+
+    // ---- §1-5 の線（**測る前に固定した**。結果を見てから動かさない・第64期） ----
+    const double ShortRangeLine = 2.0;   // 線1: |d| 中央値 ÷ ノイズ
+    const int ShortSignPairs = 8;        // 線2: 10 対中 8 対以上で符号が予測どおり
+    const int ShortSignUnits = 2;        // 線2: 3 体中 2 体以上
+    const double ShortLenLine = 10.0;    // 線3: 長さ3 の平均順位が長さ2 より 10 位以上 上
+
+    // §4。**実装前に書き切り、外れても消さない**（規約・第64期）。
+    public static readonly (string Key, string Text)[] ShortPredictions =
+    {
+        ("W1", "線1 は**長さ3 で ○・長さ2 で ×**。持ち越しが1回しか起きない列では並びの効きが薄い"),
+        ("W2", "カドは長さ3 で 8/10 以上。長さ2 では届かない（第二波を含む対が足を引く）"),
+        ("W3", "クビは**長さ2 でも 3 でも ○**。「開戦時1回」の札は短い列ほど効きがはっきり出る"),
+        ("W4", "線3 は ○（バサ・ガレとも）。ただしガレは差が 10 位ぎりぎり"),
+        ("W5", "ナラは seed 800 で帯レンジ 5.0 以下になり「化ける」に入る。シガは 800 でも読めない"),
+        ("W6", "重心と旧つまみの r は 0.9 以上。ただし短い列では**総重量のほうが重心より多くの駒を動かす**"),
+        ("CC1", "**長さ2 のノイズは第163期の帯レンジ中央値 2.0 より大きい**"
+              + "——列が短いほど1戦あたりの寄与のばらつきが平均で薄まらない。線1 の分母が膨らむ"),
+        ("CC2", "**Q0-3 で外れる列は 0 本**（厳密に 0 の駒は 0 / 52）"
+              + "——`与えた総害` は負けた地点の削りも乗るので、第163期の `地点2` でも 0 体だった"),
+        ("CC3", "**カドの線2 が落ちるとすれば第二波を含む対**（第27期の粛 × カドで勝率 0.0%）。"
+              + "Q0-4 の分割で「含まない対」のほうが符号が揃う"),
+        ("CC4", "**線3 はバサ・ガレとも ○ で、ガレの差はバサより大きい**"
+              + "——第164期でバサは列長5 に絞ると 41.0 → 13.0 と落ちたが、ガレは 40.0 → 22.0 で残った"),
+        ("CC5", "**重心 対 旧つまみの r は 0.9 に届かない（0.75〜0.95）**"
+              + "——旧つまみは第四・五波だけを等重みで見るが、重心は第二波（w 19.3）を第四波（20.6）と"
+              + "ほぼ同じ重さで見る。**W6 の前半は外れる**"),
+    };
+
+    /// <summary>`docs/balance.md` の 61 行平均から波の重さ w(k) = 100 − 平均勝率 を引く（§1-6）。</summary>
+    static double[] WaveWeights()
+    {
+        int n = EnemyCatalog.Stages.Count;
+        var sum = new double[n]; int rows = 0;
+        foreach (string line in System.IO.File.ReadAllLines("docs/balance.md"))
+        {
+            if (!line.StartsWith("| ") || !line.Contains('%')) continue;
+            var cell = line.Split('|').Select(x => x.Trim()).ToArray();
+            if (cell.Length < n + 3) continue;
+            bool ok = true;
+            var v = new double[n];
+            for (int k = 0; k < n; k++)
+                if (!double.TryParse(cell[k + 2].TrimEnd('%'), out v[k])) { ok = false; break; }
+            if (!ok) continue;
+            for (int k = 0; k < n; k++) sum[k] += v[k];
+            rows++;
+        }
+        if (rows == 0) throw new InvalidOperationException("docs/balance.md から勝率行が1行も引けない。");
+        return sum.Select(x => 100.0 - x / rows).ToArray();
+    }
+
+    /// <summary>0..n-1 から k 個を選ぶ組（辞書順・添字は昇順）。</summary>
+    static IEnumerable<int[]> Combos(int n, int k)
+    {
+        var idx = Enumerable.Range(0, k).ToArray();
+        while (true)
+        {
+            yield return (int[])idx.Clone();
+            int i = k - 1;
+            while (i >= 0 && idx[i] == n - k + i) i--;
+            if (i < 0) yield break;
+            idx[i]++;
+            for (int j = i + 1; j < k; j++) idx[j] = idx[j - 1] + 1;
+        }
+    }
+
+    /// <summary>`Stages` の何番目か（0 始まり）。**実装から引く**（`ReferenceEquals`）。</summary>
+    static int WaveIdxOf(Formation sq)
+    {
+        for (int i = 0; i < EnemyCatalog.Stages.Count; i++)
+            if (ReferenceEquals(EnemyCatalog.Stages[i].Enemy, sq)) return i;
+        throw new InvalidOperationException("`Stages` に無い部隊が列に入っている。");
+    }
+
+    static string TraitsOf(string id)
+    {
+        var d = UnitCatalog.Everyone.FirstOrDefault(u => u.Id == id);
+        return d is null ? "—" : string.Join(" / ", d.Traits.Select(t => t.ToString()));
+    }
+
+    static void ShortRun(string arg)
+    {
+        if (arg.Trim().StartsWith("phase0")) { ShortPhase0(); return; }
+
+        var w = WaveWeights();
+        int nw = w.Length;
+        string[] verNames = CrossVersionNames();          // R0 / BCarry
+        int[] lens = { 2, 3 };
+        const string BandVer = "BCarry";
+        const int Bands = 12;
+
+        var rows = CompareBuilds();
+        var jobs = new List<(int Row, int Slot, UnitDef Def)>();
+        for (int i = 0; i < rows.Length; i++)
+            foreach ((int sl, UnitDef d) in rows[i].F.Occupied()) jobs.Add((i, sl, d));
+        var ids = jobs.Select(j => j.Def.Id).Distinct().ToArray();
+        var uname = ids.ToDictionary(id => id, id => jobs.First(j => j.Def.Id == id).Def.Name);
+        var slotsOf = ids.ToDictionary(id => id,
+            id => Enumerable.Range(0, jobs.Count).Where(j => jobs[j].Def.Id == id).ToArray());
+        int n = ids.Length;
+        int H = (int)Obj.Harm;
+
+        double[] Point(Col col, Ver ver, int seed0)
+        {
+            var fE = new double[rows.Length][];
+            Parallel.For(0, rows.Length, i => fE[i] = EngageObjAvg(rows[i].F, col, ver, seed0));
+            var gE = new double[jobs.Count][];
+            Parallel.For(0, jobs.Count, j =>
+                gE[j] = EngageObjAvg(SwapOne(rows[jobs[j].Row].F, jobs[j].Slot), col, ver, seed0));
+            var s = new double[jobs.Count];
+            for (int j = 0; j < jobs.Count; j++) s[j] = fE[jobs[j].Row][H] - gE[j][H];
+            return ids.Select(id => slotsOf[id].Average(j => s[j])).ToArray();
+        }
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        // ---- 対を組む（**w の順**。番号順ではない——Q0-1） ----
+        var pairs = new List<(int Len, int[] Combo, string First, string Last)>();
+        foreach (int L in lens)
+            foreach (var c in Combos(nw, L))
+            {
+                var heavyFirst = c.OrderByDescending(i => w[i]).ToArray();
+                var heavyLast = c.OrderBy(i => w[i]).ToArray();
+                pairs.Add((L, c, PermCol(heavyFirst).Name, PermCol(heavyLast).Name));
+            }
+
+        // ---- 走らせる（列軸） ----
+        var cols = new Dictionary<(string Cn, string Vn), double[]>();
+        foreach (var p in pairs)
+            foreach (string vn in verNames)
+                foreach (string cn in new[] { p.First, p.Last })
+                    if (!cols.ContainsKey((cn, vn))) cols[(cn, vn)] = Point(ColOf(cn), VerOf(vn), 0);
+
+        // ---- 帯軸（長さごとに別の対照。**2群の形**＝ §1-3） ----
+        var bandCol = new Dictionary<int, string> { [2] = "P12", [3] = "P123" };
+        var bands = lens.ToDictionary(L => L, L => Enumerable.Range(0, Bands)
+            .Select(b => Point(ColOf(bandCol[L]), VerOf(BandVer), b * Seeds)).ToArray());
+
+        // ---- §1-6 の対照（列長5 の 10 列・R0 のみ） ----
+        var cols5 = CrossColumnNames().Where(cn => ColOf(cn).Len == 5).ToArray();
+        var pts5 = cols5.ToDictionary(cn => cn, cn => Point(ColOf(cn), VerOf("R0"), 0));
+
+        double secs = sw.Elapsed.TotalSeconds;
+
+        // =========================== 出力 ===========================
+        Console.WriteLine("# 第165期 —— 短い列（2〜3戦）でも「送り先」は判断になるか");
+        Console.WriteLine();
+        Console.WriteLine($"`CompareBuilds()` {rows.Length} 行 × 延べ {jobs.Count} 枠 × 駒 {n} 体。");
+        Console.WriteLine("**目的変数は `与えた総害` に固定**・版は " + string.Join(" / ", verNames)
+            + $"・seed 0..{Seeds - 1}（§1-2）。");
+        Console.WriteLine($"**列 {cols.Count / verNames.Length} 本**（長さ2 が 20・長さ3 が 20）／"
+            + $"対照は長さごとに seed 帯 {Bands} 本（`P12` / `P123` × `{BandVer}`）。");
+        Console.WriteLine();
+        Console.WriteLine("**`BattleCore` は1行も触っていない。新しい敵・編成・駒は1体も作っていない**"
+            + "——列は `EnemyCatalog.Stages` の部分順列である。");
+        Console.WriteLine();
+
+        // ---------------- S-0. 波の重さ（Q0-1） ----------------
+        Console.WriteLine("## S-0. 波の重さ w（**Q0-1**）");
+        Console.WriteLine();
+        Console.WriteLine("`w(k) = 100 − docs/balance.md の第k波の 61 行平均勝率`。");
+        Console.WriteLine();
+        Console.WriteLine("| 波 | 61 行平均勝率 | **w** | 重い順 |");
+        Console.WriteLine("|---|--:|--:|--:|");
+        var order = Enumerable.Range(0, nw).OrderByDescending(i => w[i]).ToArray();
+        for (int k = 0; k < nw; k++)
+            Console.WriteLine($"| 第{k + 1}波 | {100 - w[k]:F2}% | **{w[k]:F2}** | {Array.IndexOf(order, k) + 1} |");
+        Console.WriteLine();
+        bool mono = Enumerable.Range(0, nw - 1).All(i => w[i] <= w[i + 1]);
+        Console.WriteLine(mono
+            ? "**w は波の番号順に単調。** §1-1 の「昇順／降順」は番号順のままでよい。"
+            : $"**w は波の番号順に単調ではない**——第三波（{w[2]:F2}）が第二波（{w[1]:F2}）より軽い。"
+              + "**§1-1 の「昇順／降順」は番号ではなく w の順で取り直した**"
+              + "（指示書 Q0-1 の指示どおり。報告書の冒頭にも書く）。");
+        Console.WriteLine();
+        Console.WriteLine($"第一波の w は **{w[0]:F2}**（全編成必勝の教習波）。"
+            + "`Σw` が 0 になる列は無い（長さ2 以上なら必ず第一波以外を含む）。");
+        Console.WriteLine();
+
+        Console.WriteLine("### 対の一覧（**重い敵が先 / 重い敵が後**）");
+        Console.WriteLine();
+        Console.WriteLine("| 長 | 組 | 重い敵が先 | 重い敵が後 | 番号順と一致 |");
+        Console.WriteLine("|--:|---|---|---|:-:|");
+        foreach (var p in pairs)
+        {
+            string asc = "P" + string.Concat(p.Combo.Select(i => (char)('1' + i)));
+            Console.WriteLine($"| {p.Len} | {{{string.Join(",", p.Combo.Select(i => i + 1))}}} "
+                + $"| {p.First} | {p.Last} | {(p.Last == asc ? "○" : "**×**")} |");
+        }
+        Console.WriteLine();
+
+        // ---------------- S-1. 同値塊（Q0-3・規約 (G13)） ----------------
+        Console.WriteLine("## S-1. 同値塊（**順位を付ける前に数える**・規約 (G13)・Q0-3）");
+        Console.WriteLine();
+        Console.WriteLine($"線: **厳密に 0 の駒が {CrossTieMax} 体を超えた列は判定から外し、その列を含む対も外す。**");
+        Console.WriteLine();
+        var badCols = new HashSet<string>();
+        double tieMax = 0; int zeroMax = 0; string zeroWorst = "—";
+        foreach (var kv in cols)
+        {
+            var (tie, zero) = RhoTies(kv.Value);
+            if (tie > tieMax) tieMax = tie;
+            if (zero > zeroMax) { zeroMax = zero; zeroWorst = $"{kv.Key.Cn} × {kv.Key.Vn}"; }
+            if (zero > CrossTieMax) badCols.Add(kv.Key.Cn);
+        }
+        foreach (int L in lens)
+            for (int b = 0; b < Bands; b++)
+            {
+                var (tie, zero) = RhoTies(bands[L][b]);
+                if (tie > tieMax) tieMax = tie;
+                if (zero > zeroMax) { zeroMax = zero; zeroWorst = $"帯 {bandCol[L]} seed {b * Seeds}"; }
+            }
+        Console.WriteLine($"最大同値塊 **{tieMax:P1}**・厳密に 0 の駒は最大 **{zeroMax} / {n}**（{zeroWorst}）。");
+        Console.WriteLine();
+        Console.WriteLine(badCols.Count == 0
+            ? "**外した列は 0 本。**"
+            : $"**外した列: {string.Join(" / ", badCols)}。**");
+        Console.WriteLine();
+        var use = pairs.Where(p => !badCols.Contains(p.First) && !badCols.Contains(p.Last)).ToList();
+        Console.WriteLine($"判定に使う対: 長さ2 **{use.Count(p => p.Len == 2)}** / "
+            + $"長さ3 **{use.Count(p => p.Len == 3)}**（各 10 対）。");
+        Console.WriteLine();
+
+        // ---- d(u, pair) を作る ----
+        var rank = cols.ToDictionary(kv => kv.Key, kv => AverageRanksDesc(kv.Value));
+        var dmap = new Dictionary<(int L, string Vn), List<(int[] Combo, double[] D)>>();
+        foreach (int L in lens)
+            foreach (string vn in verNames)
+            {
+                var lst = new List<(int[], double[])>();
+                foreach (var p in use.Where(x => x.Len == L))
+                {
+                    var rf = rank[(p.First, vn)]; var rl = rank[(p.Last, vn)];
+                    lst.Add((p.Combo, Enumerable.Range(0, n).Select(u => rl[u] - rf[u]).ToArray()));
+                }
+                dmap[(L, vn)] = lst;
+            }
+
+        // ---- ノイズ（帯・隣り合う 6 対） ----
+        var noise = new Dictionary<int, double>();
+        var noisePerUnit = new Dictionary<int, double[]>();
+        foreach (int L in lens)
+        {
+            var br = bands[L].Select(AverageRanksDesc).ToArray();
+            var per = new double[n];
+            for (int u = 0; u < n; u++)
+                per[u] = Median(Enumerable.Range(0, Bands / 2)
+                    .Select(i => Math.Abs(br[2 * i][u] - br[2 * i + 1][u])));
+            noisePerUnit[L] = per;
+            noise[L] = Median(per);
+        }
+
+        // ---------------- S-2. 線1 ----------------
+        Console.WriteLine("## S-2. 線1 —— 並びだけで順位は動くか");
+        Console.WriteLine();
+        Console.WriteLine($"量: 駒ごとに **10 対の |d| の中央値**を取り、52 体の中央値。"
+            + $"ノイズは同じ長さの帯 {Bands} 本の**隣り合う 6 対**（§1-3）。線 **>= {ShortRangeLine:F1}**。");
+        Console.WriteLine();
+        Console.WriteLine("| 長 | 版 | \\|d\\| 中央値 | 同 平均 | 同 最大 | ノイズ | **比** | 線1 |");
+        Console.WriteLine("|--:|---|--:|--:|--:|--:|--:|:-:|");
+        var line1 = new Dictionary<(int, string), bool>();
+        var dmed = new Dictionary<(int, string), double[]>();
+        foreach (int L in lens)
+            foreach (string vn in verNames)
+            {
+                var lst = dmap[(L, vn)];
+                var per = Enumerable.Range(0, n)
+                    .Select(u => Median(lst.Select(x => Math.Abs(x.D[u])))).ToArray();
+                dmed[(L, vn)] = per;
+                double m = Median(per), r = m / noise[L];
+                bool ok = r >= ShortRangeLine;
+                line1[(L, vn)] = ok;
+                Console.WriteLine($"| {L} | {vn} | {m:F2} | {per.Average():F2} | {per.Max():F2} "
+                    + $"| {noise[L]:F2} | **{r:F2}** | {(ok ? "**○**" : "×")} |");
+            }
+        Console.WriteLine();
+
+        // ---------------- S-3. 線2 ----------------
+        Console.WriteLine("## S-3. 線2 —— 教えられる駒は短い列でも同じ向きか");
+        Console.WriteLine();
+        Console.WriteLine("予測の向き: **棘鎧のカド ＋**（重い敵が先の列で上位）／**萎縮のクビ −**／**突き返しのハネ −**。");
+        Console.WriteLine($"線: **10 対中 {ShortSignPairs} 対以上で予測どおり**（d が厳密に 0 の対は分母から外す）。"
+            + $"**3 体中 {ShortSignUnits} 体以上**で ○。");
+        Console.WriteLine();
+        var named = new (string Name, int Sign)[] { ("棘鎧のカド", +1), ("萎縮のクビ", -1), ("突き返しのハネ", -1) };
+        Console.WriteLine("| 長 | 版 | 駒 | 予測 | **k / m** | 線 | 第二波を含む対（k/m） | 含まない対（k/m） |");
+        Console.WriteLine("|--:|---|---|:-:|--:|:-:|--:|--:|");
+        var line2 = new Dictionary<(int, string), bool>();
+        foreach (int L in lens)
+            foreach (string vn in verNames)
+            {
+                int hit = 0;
+                foreach (var (nm, sg) in named)
+                {
+                    int u = Array.FindIndex(ids, id => uname[id] == nm);
+                    if (u < 0) { Console.WriteLine($"| {L} | {vn} | {nm} | — | 在席 0 | — | — | — |"); continue; }
+                    var lst = dmap[(L, vn)];
+                    int k = 0, m = 0, kw = 0, mw = 0, kn = 0, mn = 0;
+                    foreach (var x in lst)
+                    {
+                        if (x.D[u] == 0) continue;
+                        bool good = Math.Sign(x.D[u]) == sg;
+                        m++; if (good) k++;
+                        if (x.Combo.Contains(1)) { mw++; if (good) kw++; }
+                        else { mn++; if (good) kn++; }
+                    }
+                    bool ok = k >= ShortSignPairs;
+                    if (ok) hit++;
+                    Console.WriteLine($"| {L} | {vn} | {nm} | {(sg > 0 ? "＋" : "−")} | **{k} / {m}** "
+                        + $"| {(ok ? "**○**" : "×")} | {kw} / {mw} | {kn} / {mn} |");
+                }
+                line2[(L, vn)] = hit >= ShortSignUnits;
+            }
+        Console.WriteLine();
+        foreach (int L in lens)
+            foreach (string vn in verNames)
+                Console.WriteLine($"- 長さ{L} × {vn}: **{(line2[(L, vn)] ? "○" : "×")}**");
+        Console.WriteLine();
+
+        // ---------------- S-4. 線3 ----------------
+        Console.WriteLine("## S-4. 線3 —— 長さの駒は 2 と 3 で分かれるか");
+        Console.WriteLine();
+        Console.WriteLine($"量: 「長さ3 の 20 列」の平均順位 と 「長さ2 の 20 列」の平均順位。"
+            + $"線: **長さ3 が {ShortLenLine:F0} 位以上 上**（＝順位の数字が小さい）。**2 体とも ○**。");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 駒 | 長さ2 平均順位 | 長さ3 平均順位 | **差（2 − 3）** | 線3 |");
+        Console.WriteLine("|---|---|--:|--:|--:|:-:|");
+        var line3 = new Dictionary<string, bool>();
+        foreach (string vn in verNames)
+        {
+            int hit = 0;
+            foreach (string nm in new[] { "喧噪のバサ", "礫のガレ" })
+            {
+                int u = Array.FindIndex(ids, id => uname[id] == nm);
+                if (u < 0) { Console.WriteLine($"| {vn} | {nm} | 在席 0 | — | — | — |"); continue; }
+                double m2 = use.Where(p => p.Len == 2)
+                    .SelectMany(p => new[] { rank[(p.First, vn)][u], rank[(p.Last, vn)][u] }).Average();
+                double m3 = use.Where(p => p.Len == 3)
+                    .SelectMany(p => new[] { rank[(p.First, vn)][u], rank[(p.Last, vn)][u] }).Average();
+                bool ok = m2 - m3 >= ShortLenLine;
+                if (ok) hit++;
+                Console.WriteLine($"| {vn} | {nm} | {m2:F1} | {m3:F1} | **{m2 - m3:+0.0;-0.0}** "
+                    + $"| {(ok ? "**○**" : "×")} |");
+            }
+            line3[vn] = hit == 2;
+        }
+        Console.WriteLine();
+
+        // ---------------- S-5. 本丸 ----------------
+        Console.WriteLine("## S-5. 本丸 —— 2〜3戦のマップで送り先は判断になるか");
+        Console.WriteLine();
+        Console.WriteLine("**線: 長さ3 で 線1 と 線2 が同時に ○（版はどちらか一方で良い）。**");
+        Console.WriteLine();
+        Console.WriteLine("| 長 | 版 | 線1 | 線2 | 同時 |");
+        Console.WriteLine("|--:|---|:-:|:-:|:-:|");
+        bool main = false;
+        foreach (int L in lens)
+            foreach (string vn in verNames)
+            {
+                bool both = line1[(L, vn)] && line2[(L, vn)];
+                if (L == 3 && both) main = true;
+                Console.WriteLine($"| {L} | {vn} | {(line1[(L, vn)] ? "○" : "×")} "
+                    + $"| {(line2[(L, vn)] ? "○" : "×")} | {(both ? "**○**" : "×")} |");
+            }
+        Console.WriteLine();
+        Console.WriteLine($"**本丸: {(main ? "○" : "×")}**");
+        Console.WriteLine();
+
+        // ---------------- S-6. 5体の 40 列（§7-2） ----------------
+        Console.WriteLine("## S-6. 名指しの5体の順位（**対を横に並べた形**・§7-2）");
+        Console.WriteLine();
+        string[] five = { "棘鎧のカド", "萎縮のクビ", "突き返しのハネ", "喧噪のバサ", "礫のガレ" };
+        foreach (string vn in verNames)
+        {
+            Console.WriteLine($"### {vn}");
+            Console.WriteLine();
+            Console.WriteLine("各セルは **先(重い敵が先) / 後(重い敵が後) / d**。d は 後 − 先（正＝重い敵が先の列で上位）。");
+            Console.WriteLine();
+            Console.WriteLine("| 長 | 組 | 先 | 後 | " + string.Join(" | ", five) + " |");
+            Console.WriteLine("|--:|---|---|---|" + string.Concat(Enumerable.Repeat("---|", five.Length)));
+            foreach (var p in use)
+            {
+                var rf = rank[(p.First, vn)]; var rl = rank[(p.Last, vn)];
+                var cells = five.Select(nm =>
+                {
+                    int u = Array.FindIndex(ids, id => uname[id] == nm);
+                    return u < 0 ? "—" : $"{rf[u]:F0}/{rl[u]:F0}/**{rl[u] - rf[u]:+0;-0;0}**";
+                });
+                Console.WriteLine($"| {p.Len} | {{{string.Join(",", p.Combo.Select(i => i + 1))}}} "
+                    + $"| {p.First} | {p.Last} | {string.Join(" | ", cells)} |");
+            }
+            Console.WriteLine();
+        }
+
+        // ---------------- S-7. |d| 上位10（§7-3） ----------------
+        Console.WriteLine("## S-7. 長さ3 で |d| 中央値が大きい駒 上位10（**教えられる駒の追加候補**・§7-3）");
+        Console.WriteLine();
+        foreach (string vn in verNames)
+        {
+            Console.WriteLine($"### {vn}");
+            Console.WriteLine();
+            Console.WriteLine("| 駒 | 在席枠 | **\\|d\\| 中央値** | d 中央値（符号つき） | 正の対 | 負の対 | ノイズ | 比 | 札 |");
+            Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|---|");
+            var lst = dmap[(3, vn)];
+            foreach (int u in Enumerable.Range(0, n).OrderByDescending(x => dmed[(3, vn)][x]).Take(10))
+            {
+                var ds = lst.Select(x => x.D[u]).ToArray();
+                Console.WriteLine($"| {uname[ids[u]]} | {slotsOf[ids[u]].Length} | **{dmed[(3, vn)][u]:F1}** "
+                    + $"| {Median(ds):+0.0;-0.0;0.0} | {ds.Count(x => x > 0)} | {ds.Count(x => x < 0)} "
+                    + $"| {noisePerUnit[3][u]:F1} | {dmed[(3, vn)][u] / Math.Max(noisePerUnit[3][u], 1.0):F1} "
+                    + $"| {TraitsOf(ids[u])} |");
+            }
+            Console.WriteLine();
+        }
+
+        // ---------------- S-8. 符号が対の中で変わる駒（§7-4） ----------------
+        Console.WriteLine("## S-8. 符号が対の中で変わる駒（**＝入れると損な並びがある駒**・§7-4）");
+        Console.WriteLine();
+        Console.WriteLine("定義: 10 対のうち **d > ノイズ の対**と **d < −ノイズ の対**が**どちらも1つ以上**ある駒。");
+        Console.WriteLine("（ノイズはその駒自身の帯の |順位差| 中央値。0 のときは 1.0 を下限に置く）");
+        Console.WriteLine();
+        Console.WriteLine("| 長 | 版 | **符号が変わる** | 常に ＋ | 常に − | どちらも床以下 |");
+        Console.WriteLine("|--:|---|--:|--:|--:|--:|");
+        var swing = new Dictionary<(int, string), List<int>>();
+        foreach (int L in lens)
+            foreach (string vn in verNames)
+            {
+                var lst = dmap[(L, vn)];
+                int both = 0, pos = 0, neg = 0, flat = 0;
+                var bl = new List<int>();
+                for (int u = 0; u < n; u++)
+                {
+                    double f = Math.Max(noisePerUnit[L][u], 1.0);
+                    bool hp = lst.Any(x => x.D[u] > f), hn = lst.Any(x => x.D[u] < -f);
+                    if (hp && hn) { both++; bl.Add(u); }
+                    else if (hp) pos++;
+                    else if (hn) neg++;
+                    else flat++;
+                }
+                swing[(L, vn)] = bl;
+                Console.WriteLine($"| {L} | {vn} | **{both}** | {pos} | {neg} | {flat} |");
+            }
+        Console.WriteLine();
+        foreach (int L in lens)
+            foreach (string vn in verNames)
+            {
+                var bl = swing[(L, vn)].OrderByDescending(u => dmed[(L, vn)][u]).Take(12).ToArray();
+                Console.WriteLine($"- 長さ{L} × {vn} の上位: "
+                    + (bl.Length == 0 ? "なし" : string.Join(" / ",
+                        bl.Select(u => $"{uname[ids[u]]}({dmed[(L, vn)][u]:F0})"))));
+            }
+        Console.WriteLine();
+
+        // ---------------- S-9. 重心（§1-6・参考） ----------------
+        Console.WriteLine("## S-9. 重心と総重量（**新しいつまみの候補。判定には使わない・参考**・§1-6）");
+        Console.WriteLine();
+        Console.WriteLine("    重心 ＝ Σ(位置の正規化 × w) ÷ Σw    位置の正規化 ＝ (何番目 − 1) ÷ (列長 − 1)");
+        Console.WriteLine("    総重量 ＝ Σw                        ← 重心と独立に動く。必ず併記する");
+        Console.WriteLine();
+        double Bary(Col c)
+        {
+            var ws = c.Squads.Select(sq => w[WaveIdxOf(sq)]).ToArray();
+            return ws.Select((x, i) => (double)i / (ws.Length - 1) * x).Sum() / ws.Sum();
+        }
+        double Total(Col c) => c.Squads.Sum(sq => w[WaveIdxOf(sq)]);
+
+        Console.WriteLine("### 40 列（長さ2 / 3）");
+        Console.WriteLine();
+        Console.WriteLine("| 長 | 列 | 並び | **重心** | **総重量** |");
+        Console.WriteLine("|--:|---|---|--:|--:|");
+        foreach (var p in use)
+            foreach (string cn in new[] { p.First, p.Last })
+            {
+                var c = ColOf(cn);
+                Console.WriteLine($"| {p.Len} | {cn} | {string.Join("-", c.Squads.Select(sq => WaveIdxOf(sq) + 1))} "
+                    + $"| {Bary(c):F3} | {Total(c):F1} |");
+            }
+        Console.WriteLine();
+
+        Console.WriteLine("### 対照 —— 列長5 の 10 列で、重心と旧つまみ（第四・五波の位置の平均）を突き合わせる");
+        Console.WriteLine();
+        Console.WriteLine("| 列 | 並び | 重心 | 旧つまみ | 総重量 |");
+        Console.WriteLine("|---|---|--:|--:|--:|");
+        var bary5 = new double[cols5.Length]; var knob5 = new double[cols5.Length];
+        var tot5 = new double[cols5.Length];
+        for (int i = 0; i < cols5.Length; i++)
+        {
+            var c = ColOf(cols5[i]);
+            var idx = c.Squads.Select(sq => WaveIdxOf(sq)).ToArray();
+            bary5[i] = Bary(c); tot5[i] = Total(c);
+            knob5[i] = new[] { 3, 4 }.Average(k => (double)Array.IndexOf(idx, k) + 1);
+            Console.WriteLine($"| {cols5[i]} | {string.Join("-", idx.Select(x => x + 1))} "
+                + $"| {bary5[i]:F3} | {knob5[i]:F1} | {tot5[i]:F1} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**重心 対 旧つまみ の r = {Pearson(bary5, knob5):F3}**（期待 |r| >= 0.9）。"
+            + $"総重量は 10 列とも {tot5.Min():F1}〜{tot5.Max():F1}"
+            + "（**列長5 では定数**——中身が同じで並びだけが違うので）。");
+        Console.WriteLine();
+        Console.WriteLine("**カドの符号が第164期（+0.67）と揃うか**"
+            + "（**第164期と同じ向き**＝ `r = Pearson(重心, 順位の数字)`。順位は小さいほど上位なので、"
+            + "**正 = 重い波が早い列ほど上位**）:");
+        Console.WriteLine();
+        Console.WriteLine("| 駒 | 重心 対 順位 r（長5・R0） | 第164期の r（旧つまみ） | 同符号 |");
+        Console.WriteLine("|---|--:|--:|:-:|");
+        var r5 = pts5.ToDictionary(kv => kv.Key, kv => AverageRanksDesc(kv.Value));
+        var ref164 = new (string Nm, double R)[]
+        {
+            ("棘鎧のカド", +0.67), ("移り木のシオ", +0.73), ("軋みのヨミ", +0.80),
+            ("喧噪のバサ", +0.56), ("突き返しのハネ", -0.70), ("逆しまのウツ", -0.62),
+        };
+        foreach (var (nm, r164) in ref164)
+        {
+            int u = Array.FindIndex(ids, id => uname[id] == nm);
+            if (u < 0) { Console.WriteLine($"| {nm} | 在席 0 | {r164:+0.00;-0.00} | — |"); continue; }
+            var rk = cols5.Select(cn => r5[cn][u]).ToArray();
+            double r = Pearson(bary5, rk);
+            Console.WriteLine($"| {nm} | **{r:+0.00;-0.00}** | {r164:+0.00;-0.00} "
+                + $"| {(Math.Sign(r) == Math.Sign(r164) ? "**○**" : "×")} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("### 長さごとに |r|（重心 対 順位）が 0.5 を超える駒");
+        Console.WriteLine();
+        foreach (int L in lens)
+            foreach (string vn in verNames)
+            {
+                var cns = use.Where(p => p.Len == L).SelectMany(p => new[] { p.First, p.Last }).ToArray();
+                var bx = cns.Select(cn => Bary(ColOf(cn))).ToArray();
+                var tx = cns.Select(cn => Total(ColOf(cn))).ToArray();
+                var big = new List<string>(); var bigT = new List<string>();
+                for (int u = 0; u < n; u++)
+                {
+                    var rk = cns.Select(cn => rank[(cn, vn)][u]).ToArray();
+                    double rb = Pearson(bx, rk), rt = Pearson(tx, rk);   // 第164期と同じ向き（正 = 重い波が早いほど上位）
+                    if (Math.Abs(rb) >= 0.5) big.Add($"{uname[ids[u]]}({rb:+0.00;-0.00})");
+                    if (Math.Abs(rt) >= 0.5) bigT.Add($"{uname[ids[u]]}({rt:+0.00;-0.00})");
+                }
+                Console.WriteLine($"- **長さ{L} × {vn}** 重心 |r| >= 0.5: **{big.Count} 体** — "
+                    + (big.Count == 0 ? "なし" : string.Join(" / ", big.Take(12))));
+                Console.WriteLine($"  - 総重量 |r| >= 0.5: **{bigT.Count} 体** — "
+                    + (bigT.Count == 0 ? "なし" : string.Join(" / ", bigT.Take(12))));
+            }
+        Console.WriteLine();
+
+        // ---------------- S-10. 予測 ----------------
+        Console.WriteLine("## S-10. 予測（**実装前に書いた。外れても消さない**）");
+        Console.WriteLine();
+        Console.WriteLine("| # | 予測 |");
+        Console.WriteLine("|---|---|");
+        foreach (var (k, t) in ShortPredictions) Console.WriteLine($"| {k} | {t} |");
+        Console.WriteLine();
+        Console.WriteLine($"所要 **{secs:F1} 秒**（走らせた点 {cols.Count + lens.Length * Bands + cols5.Length} 点）。");
+    }
+
+    static void ShortPhase0()
+    {
+        Console.WriteLine("# 第165期 Phase 0 —— 前提を実装から引き直す（**戦闘0回**）");
+        Console.WriteLine();
+        var w = WaveWeights();
+        int nw = w.Length;
+
+        Console.WriteLine("## Q0-1. 波の重さ w は波の番号順に単調か");
+        Console.WriteLine();
+        Console.WriteLine("| 波 | 61 行平均勝率 | w = 100 − 勝率 | 重い順 |");
+        Console.WriteLine("|---|--:|--:|--:|");
+        var order = Enumerable.Range(0, nw).OrderByDescending(i => w[i]).ToArray();
+        for (int k = 0; k < nw; k++)
+            Console.WriteLine($"| 第{k + 1}波 | {100 - w[k]:F2}% | **{w[k]:F2}** | {Array.IndexOf(order, k) + 1} |");
+        Console.WriteLine();
+        bool mono = Enumerable.Range(0, nw - 1).All(i => w[i] <= w[i + 1]);
+        Console.WriteLine(mono ? "**単調。** §1-1 は番号順のままでよい。"
+            : "**単調ではない。** §1-1 の昇順／降順は **w の順**で取り直す。軽い順 = "
+              + string.Join(" < ", order.Reverse().Select(i => $"第{i + 1}波")) + "。");
+        Console.WriteLine();
+        int flipped = 0;
+        foreach (int L in new[] { 2, 3 })
+            foreach (var c in Combos(nw, L))
+                if (!c.OrderBy(i => w[i]).SequenceEqual(c)) flipped++;
+        Console.WriteLine($"**番号順と w 順が食い違う組: {flipped} / 20**"
+            + "（第二波と第三波を両方含む組だけ。w2 > w3 なので）。");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-2. `P12` / `P123` は `地点2` / `地点3` と同じ `Formation` の参照か");
+        Console.WriteLine();
+        Console.WriteLine("| 名前 | 相手 | 長さ一致 | **参照が全部同じ** |");
+        Console.WriteLine("|---|---|:-:|:-:|");
+        foreach (var (pn, sn) in new[] { ("P12", "地点2"), ("P123", "地点3") })
+        {
+            var a = ColOf(pn).Squads; var b = ColOf(sn).Squads;
+            bool same = a.Count == b.Count
+                && Enumerable.Range(0, a.Count).All(i => ReferenceEquals(a[i], b[i]));
+            Console.WriteLine($"| {pn} | {sn} | {(a.Count == b.Count ? "○" : "×")} | {(same ? "**○**" : "×")} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("同じなら**自己検査 (b) の検算に使える**（第163期の `地点2` / `地点3` の帰属と一致するはず）。");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-3. 長さ2 の列で `与えた総害` が厳密に 0 になる駒");
+        Console.WriteLine();
+        Console.WriteLine($"線は `CrossTieMax = {CrossTieMax}` 体。**順位を付ける前に数える**（規約 (G13)）。");
+        Console.WriteLine("第163期の実測では `地点2`（列長2）でも **0 / 52** だった"
+            + "——`与えた総害` は負けた地点の削りも乗るので「出番が来ない駒」を作らない（第162期 §2-4）。");
+        Console.WriteLine("**本走行の S-1 で数える。**");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-4. カドの線2 を「第二波を含む対」と「含まない対」で分ける");
+        Console.WriteLine();
+        int c2 = Combos(nw, 2).Count(c => c.Contains(1)), c3 = Combos(nw, 3).Count(c => c.Contains(1));
+        Console.WriteLine($"第二波を含む組: **長さ2 で {c2} / 10・長さ3 で {c3} / 10**。");
+        Console.WriteLine("**線そのものは §1-5 のまま**（分割は併記だけ）。S-3 の右2列に出す。");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-5. 走行時間の見積もり");
+        Console.WriteLine();
+        double per = 125.0 / 35.0 / 4.58;       // 第163期: 35 点・125 秒・平均列長 4.58
+        double a2 = 20 * 2 * per * 2, a3 = 20 * 2 * per * 3;
+        double b23 = 12 * per * 2 + 12 * per * 3, a5 = 10 * per * 5, pb = 24 * per * 4.58 * 4;
+        Console.WriteLine("| 部 | 点 | 列長 | 見積り（第163期 125 秒 / 35 点・平均列長 4.58 から按分） |");
+        Console.WriteLine("|---|--:|--:|--:|");
+        Console.WriteLine($"| A 長さ2 の列 | 40 | 2 | {a2:F0} 秒 |");
+        Console.WriteLine($"| A 長さ3 の列 | 40 | 3 | {a3:F0} 秒 |");
+        Console.WriteLine($"| A 帯（長さ2 / 3） | 24 | 2,3 | {b23:F0} 秒 |");
+        Console.WriteLine($"| A §1-6 の対照（長5・R0） | 10 | 5 | {a5:F0} 秒 |");
+        Console.WriteLine($"| B `catalog seeds=800`（12 列 × R0 ＋ 帯 12） | 24 | 4.58 | {pb:F0} 秒 |");
+        double tot = a2 + a3 + b23 + a5 + pb;
+        Console.WriteLine();
+        Console.WriteLine($"**合計 約 {tot:F0} 秒 = {tot / 60:F1} 分**（線 15 分）。"
+            + (tot <= 900 ? "**通る。**" : "**超える。報告して止まる。**"));
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-6. 作戦マップの戦闘は何を持ち越しているか（**読むだけ・触らない**）");
+        Console.WriteLine();
+        Console.WriteLine("`DemoApp/Main.cs:764` = `BattleEngine.Run(players, enemies, seed, verbose: true)`"
+            + "——**単発戦。`EngagementEngine` は1回も呼ばれていない**。");
+        Console.WriteLine("`CampaignSession.CompleteBattle(bool playerWon)` が持ち越すのは");
+        Console.WriteLine();
+        Console.WriteLine("    LastPlayerWon / LastOutcomeText     勝敗と文言");
+        Console.WriteLine("    DefeatedEnemies.Add(enemyId)        勝ったら敵部隊を消す");
+        Console.WriteLine("    SquadPositions[...] = HomeOf(...)   負けたら双方を初期位置へ戻す");
+        Console.WriteLine();
+        Console.WriteLine("**HP も死亡も状態異常も `AtkBonus` も1つも持ち越していない**"
+            + "——毎戦が新品（この期の版で言えば `RFull` よりさらに緩い）。**次期の材料。**");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-7. 長さ2〜3 の並べ替え列を測った期");
+        Console.WriteLine();
+        Console.WriteLine("`design/` の走査では **0 件**。既存の短い列は `地点2` / `地点3` の2本だけで、"
+            + "**どちらも `順路5` の接頭**（＝軽い敵が先頭）である（第164期 §2-2）。");
+        Console.WriteLine("**「短くて重い敵が先頭」の列は1本も測られていない。**");
+        Console.WriteLine();
+
+        Console.WriteLine("## 予測");
+        Console.WriteLine();
+        Console.WriteLine("| # | 予測 |");
+        Console.WriteLine("|---|---|");
+        foreach (var (k, t) in ShortPredictions) Console.WriteLine($"| {k} | {t} |");
     }
 
 }
