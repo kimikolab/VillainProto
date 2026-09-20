@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -41,6 +41,8 @@ static class SweepDiag
         // （第141期 §2-2 の実測）／`wall run` 3 分。残る 5 本（gradient / bridge / wave / divert / spend）は
         // 所要の記録が無い（`bridge` は「30 秒前後」と書いてある）ので「新規」のまま残す——次の走行で再現するかを見る。
         "0 reseat", "0 seats2", "0 draft", "0 draft3", "0 draft3 alt", "0 wall run",
+        // 第163期。`stage cross` は 12 列 × 版2 × 帯 12 本 ＝ 35 点で **125 秒**（報告書 §1 の実測）。
+        "0 stage cross",
     };
 
     /// <summary>コマンド表の行頭。**連結で組む**（この診断自身が `CLAUDE.md` に載るので、素直に書くと自分の行に当たる＝第123期）。</summary>

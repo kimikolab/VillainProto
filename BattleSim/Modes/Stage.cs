@@ -36,11 +36,12 @@ static class StageDiag
             case "perm": Perm(arg); return;
             case "permsd": PermSd(arg); return;
             case "obj": ObjRun(arg); return;
+            case "cross": CrossRun(arg); return;
             case "rho": Rho(arg); return;
             case "rhocarry": RhoCarry(arg); return;
             case "check": Check(arg); return;
             default:
-                Console.WriteLine("stage: モードは phase0 / scan / perm / permsd / run / life / obj / rho / rhocarry / check。");
+                Console.WriteLine("stage: モードは phase0 / scan / perm / permsd / run / life / obj / cross / rho / rhocarry / check。");
                 return;
         }
     }
@@ -1510,11 +1511,15 @@ static class StageDiag
         return o;
     }
 
-    static double[] EngageObjAvg(Formation f, Col col, Ver v)
+    /// <summary>
+    /// <b>第163期</b>: <paramref name="seed0"/> は seed の起点（対照の帯を振るためだけ。既定 0 は
+    /// 第162期と1ビットも違わない）。
+    /// </summary>
+    static double[] EngageObjAvg(Formation f, Col col, Ver v, int seed0 = 0)
     {
         var c = CtxOf(f, col);
         var s = new double[ObjCount];
-        for (int seed = 0; seed < Seeds; seed++)
+        for (int seed = seed0; seed < seed0 + Seeds; seed++)
         {
             var o = EngageObjs(f, col, v, seed, c);
             for (int k = 0; k < ObjCount; k++) s[k] += o[k];
@@ -1857,6 +1862,520 @@ static class StageDiag
         Console.WriteLine("## 予測（**測る前に書いた**）");
         Console.WriteLine();
         foreach (var (k, t) in ObjPredictions) Console.WriteLine($"{k}. {t}");
+    }
+
+
+    // =================================================================================
+    // 第163期 —— 相手が変わると駒の序列は入れ替わるか（`stage cross`）
+    //
+    // 指示書は design/PHASE163_CROSSCOLUMN_SPEC.md。前提は design/PHASE162_OBJECTIVE.md。
+    //
+    // **engine は1行も触らない。** 第162期の `EngageObjAvg`（`与えた総害`）に
+    // **seed の起点だけを引数で足し**、同じ帰属を「列を替えて」と「seed 帯を替えて」の
+    // 2軸で並べるだけ。**新しい敵も新しい編成も1体も作らない**（列は `EnemyCatalog.Stages`
+    // の接頭と並べ替え）。
+    //
+    // **rho は使わない。単発側は1回も回さない。** 比べるのは列どうし・帯どうしである。
+    // =================================================================================
+
+    // ---- §3 の線（**測る前に固定した**。結果を見てから動かさない・第64期） ----
+    const double CrossRangeLine = 2.0;   // 線1: 列間レンジの中央値 ÷ 帯間レンジの中央値
+    const int CrossFlipLine = 8;         // 線2: 反転した駒（帯でも反転する駒を除く）
+    const int CrossTieMax = 20;          // Q0-2: 厳密に 0 の駒がこれを超えた列は判定から外す
+
+    /// <summary>§1-3。**既に定義があるものと、`Stages` の並べ替えだけ。**</summary>
+    public static string[] CrossColumnNames() => new[]
+    {
+        "地点2", "地点3", "順路5", "逆順路5",
+        "P43125",   // 第159期で rho 最小だった並び
+        "P21354",   // 第159期で SD 最大だった並び
+        "P23451",   // 先頭 = 第二波
+        "P34512",   // 先頭 = 第三波
+        "P45123",   // 先頭 = 第四波
+        "P51234",   // 先頭 = 第五波
+        "P32154",
+        "P15243",
+    };
+
+    public static string[] CrossVersionNames() => new[] { "R0", "BCarry" };
+
+    // §3。**実装前に書き切り、外れても消さない**（規約・第64期）。
+    public static readonly (string Key, string Text)[] CrossPredictions =
+    {
+        ("P1", "**列間レンジの中央値は帯間より大きい。ただし比 2.0 には届かない**"
+             + "——12 列はどれも同じ5波の接頭か並べ替えで、敵の顔ぶれの重なりが大きい"),
+        ("P2", "**反転した駒（帯でも反転する駒を除いた後）は 8 枚に届かない**"
+             + "——上位1/3 と下位1/3 をまたぐには順位が 19 以上動く必要がある"),
+        ("P3", "**外れ値は `地点2`**（列長2）——レンジの主因が「相手の顔ぶれ」ではなく「列長」になる。"
+             + "だから §3 の判定は列長で割って見ないと読めない（R238 の依存変数）"),
+        ("P4", "**反転する駒があるとすれば、盤面ルールの波（軛・渇き・粛）に噛み合う駒**"
+             + "——先頭に来る波が変われば、その規則の下で振る回数が変わる"),
+        ("P5", "**帯間レンジは 0 ではなく、無視できない大きさで出る**"
+             + "——帰属は2つの 200 試行平均の差なので、第45期の `reseat` と同じ揺らぎを持つ"),
+    };
+
+    /// <summary>駒ごとの順位のばらつき（§1-4）。<b>列軸と帯軸で同じ関数を使う</b>（自己検査 (c)）。</summary>
+    sealed record CrossStat(double[] Range, double[] RankSd, bool[] Flip, double[][] Ranks);
+
+    /// <summary>
+    /// 群（列 or 帯）ごとの帰属から、駒ごとの順位レンジ・順位SD・反転を作る。
+    /// 順位付けは <see cref="AverageRanksDesc"/>（降順・同値は平均順位）——<b>Q0-3。両軸で同一。</b>
+    /// 反転 = ある群で上位 1/3（1〜17位）かつ別の群で下位 1/3（36〜52位）。
+    /// </summary>
+    static CrossStat CrossStatOf(IReadOnlyList<double[]> groups, int n)
+    {
+        var ranks = groups.Select(AverageRanksDesc).ToArray();
+        int top = (n + 2) / 3;            // 52 → 18 未満 ＝ 1..17 位
+        int bot = n - top + 1;            // 52 → 36 位以上
+        var range = new double[n]; var sd = new double[n]; var flip = new bool[n];
+        for (int u = 0; u < n; u++)
+        {
+            var rs = ranks.Select(r => r[u]).ToArray();
+            range[u] = rs.Max() - rs.Min();
+            sd[u] = Sd(rs);
+            flip[u] = rs.Any(x => x < top) && rs.Any(x => x >= bot);
+        }
+        return new CrossStat(range, sd, flip, ranks);
+    }
+
+    static double Median(IEnumerable<double> v)
+    {
+        var a = v.OrderBy(x => x).ToArray();
+        if (a.Length == 0) return double.NaN;
+        return a.Length % 2 == 1 ? a[a.Length / 2] : (a[a.Length / 2 - 1] + a[a.Length / 2]) / 2.0;
+    }
+
+    static void CrossRun(string arg)
+    {
+        string a = arg.Trim();
+        if (a.StartsWith("phase0")) { CrossPhase0(); return; }
+
+        string[] colNames = a.Length > 0
+            ? a.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray()
+            : CrossColumnNames();
+        string[] verNames = CrossVersionNames();
+        foreach (string cn in colNames) _ = ColOf(cn);      // 完全一致で引く（自己検査 (e)）
+
+        // 帯の本数は**列の本数に揃える**——レンジは群の数が多いほど大きく出るので、
+        // 揃えないと線1 が群の数の産物になる（§2 の「揃えられるなら揃える」）。
+        int bands = colNames.Length;
+        const string BandCol = "順路5", BandVer = "BCarry";
+
+        var rows = CompareBuilds();
+        var jobs = new List<(int Row, int Slot, UnitDef Def)>();
+        for (int i = 0; i < rows.Length; i++)
+            foreach ((int sl, UnitDef d) in rows[i].F.Occupied()) jobs.Add((i, sl, d));
+        var ids = jobs.Select(j => j.Def.Id).Distinct().ToArray();
+        var uname = ids.ToDictionary(id => id, id => jobs.First(j => j.Def.Id == id).Def.Name);
+        var slotsOf = ids.ToDictionary(id => id,
+            id => Enumerable.Range(0, jobs.Count).Where(j => jobs[j].Def.Id == id).ToArray());
+        int n = ids.Length;
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        // ---- 1点ぶんの駒ごとの帰属（**会戦側だけ**。目的変数は4つ同時に取れるので全部持つ） ----
+        double[][] Point(Col col, Ver ver, int seed0)
+        {
+            var fE = new double[rows.Length][];
+            Parallel.For(0, rows.Length, i => fE[i] = EngageObjAvg(rows[i].F, col, ver, seed0));
+            var gE = new double[jobs.Count][];
+            Parallel.For(0, jobs.Count, j =>
+                gE[j] = EngageObjAvg(SwapOne(rows[jobs[j].Row].F, jobs[j].Slot), col, ver, seed0));
+            var u = new double[ObjCount][];
+            for (int k = 0; k < ObjCount; k++)
+            {
+                var s = new double[jobs.Count];
+                for (int j = 0; j < jobs.Count; j++) s[j] = fE[jobs[j].Row][k] - gE[j][k];
+                u[k] = ids.Select(id => slotsOf[id].Average(j => s[j])).ToArray();
+            }
+            return u;
+        }
+
+        int H = (int)Obj.Harm;
+
+        // ---- 列軸 ----
+        var colPts = new List<(string Cn, string Vn, int Len, double[][] U)>();
+        foreach (string cn in colNames)
+            foreach (string vn in verNames)
+            {
+                var col = ColOf(cn);
+                colPts.Add((cn, vn, col.Len, Point(col, VerOf(vn), 0)));
+            }
+
+        // ---- 帯軸（列と版は固定。**帯0 は列軸の同じ点と同一の走行になる**＝自己検査 (b)） ----
+        var bandPts = new List<(int B, int Seed0, double[][] U)>();
+        {
+            var col = ColOf(BandCol); var ver = VerOf(BandVer);
+            for (int b = 0; b < bands; b++)
+            {
+                int s0 = b * Seeds;
+                var got = colPts.FirstOrDefault(p => p.Cn == BandCol && p.Vn == BandVer);
+                bandPts.Add((b, s0, b == 0 && got.U is not null ? got.U : Point(col, ver, s0)));
+            }
+        }
+
+        Console.WriteLine("# 第163期 —— 相手が変わると駒の序列は入れ替わるか");
+        Console.WriteLine();
+        Console.WriteLine($"`CompareBuilds()` {rows.Length} 行 × 延べ {jobs.Count} 枠 × 駒 {n} 体。");
+        Console.WriteLine($"**目的変数は `与えた総害` に固定**（§1-1）。版は {string.Join(" / ", verNames)}（§1-2）。");
+        Console.WriteLine($"列 {colNames.Length} 本（§1-3）／ 対照は seed 帯 {bands} 本"
+            + $"（`{BandCol} × {BandVer}`・seed 0..{bands * Seeds - 1} を {Seeds} ずつ）。");
+        Console.WriteLine();
+        Console.WriteLine("**rho は使わない。単発側は1回も回していない。** 比べるのは列どうし・帯どうしである。");
+        Console.WriteLine("**帯の本数は列の本数に揃えた**——順位レンジは群の数が多いほど大きく出るので、"
+            + "揃えないと線1 が群の数の産物になる。");
+        Console.WriteLine();
+
+        // ---------------- Q0-2 ----------------
+        Console.WriteLine("## A-1. 同値塊（**規約 (G13)。順位を付ける前に数える**・Q0-2）");
+        Console.WriteLine();
+        Console.WriteLine($"線: **厳密に 0 の駒が {CrossTieMax} 体を超えた列は §3 の判定から外す。**");
+        Console.WriteLine();
+        Console.WriteLine("| 軸 | 点 | 列長 | 最大同値塊 | 厳密に 0 の駒 | 判定に使うか |");
+        Console.WriteLine("|---|---|--:|--:|--:|:-:|");
+        var dropped = new List<string>();
+        foreach (var p in colPts)
+        {
+            var (tie, zero) = RhoTies(p.U[H]);
+            bool ok = zero <= CrossTieMax;
+            if (!ok) dropped.Add($"{p.Cn} × {p.Vn}");
+            Console.WriteLine($"| 列 | {p.Cn} × {p.Vn} | {p.Len} | {tie:P1} | {zero} / {n} | {(ok ? "○" : "**×**")} |");
+        }
+        foreach (var p in bandPts)
+        {
+            var (tie, zero) = RhoTies(p.U[H]);
+            Console.WriteLine($"| 帯 | seed {p.Seed0}..{p.Seed0 + Seeds - 1} | {ColOf(BandCol).Len} "
+                + $"| {tie:P1} | {zero} / {n} | {(zero <= CrossTieMax ? "○" : "**×**")} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine(dropped.Count == 0
+            ? "**外した列は 0 本。** `与えた総害` はどの駒も削るので、`地点3` でも「出番が来ない駒」を作らない（第162期 §2-4）。"
+            : $"**外した列: {string.Join(" / ", dropped)}。**");
+        Console.WriteLine();
+
+        // ---------------- 本体 ----------------
+        var keep = colPts.Where(p => RhoTies(p.U[H]).Zero <= CrossTieMax).ToArray();
+
+        Console.WriteLine("## A-2. 版ごとの2軸（**線1 の材料**）");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 軸 | 群の数 | 順位レンジ 中央値 | 同 平均 | 同 最大 | 順位SD 中央値 | 帰属SD 中央値 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|");
+        var perVer = new Dictionary<string, (CrossStat Col, CrossStat Band)>();
+        var bandStat = CrossStatOf(bandPts.Select(p => p.U[H]).ToArray(), n);
+        foreach (string vn in verNames)
+        {
+            var g = keep.Where(p => p.Vn == vn).Select(p => p.U[H]).ToArray();
+            var cs = CrossStatOf(g, n);
+            perVer[vn] = (cs, bandStat);
+            Console.WriteLine($"| {vn} | **列** | {g.Length} | **{Median(cs.Range):F1}** | {cs.Range.Average():F1} "
+                + $"| {cs.Range.Max():F1} | {Median(cs.RankSd):F2} | {Median(g.Select(x => Sd(x))):F3} |");
+        }
+        Console.WriteLine($"| {BandVer} | **帯** | {bandPts.Count} | **{Median(bandStat.Range):F1}** "
+            + $"| {bandStat.Range.Average():F1} | {bandStat.Range.Max():F1} | {Median(bandStat.RankSd):F2} "
+            + $"| {Median(bandPts.Select(p => Sd(p.U[H]))):F3} |");
+        Console.WriteLine();
+
+        Console.WriteLine("## A-3. 判定（**線は §3 で測る前に固定した**）");
+        Console.WriteLine();
+        Console.WriteLine($"線1 **列間の順位レンジの中央値 ÷ 帯間の順位レンジの中央値 >= {CrossRangeLine:F1}**  ");
+        Console.WriteLine($"線2 **反転した駒が {CrossFlipLine} 枚以上**（上位1/3 ＝ 1..{(n + 2) / 3 - 1} 位 かつ "
+            + $"下位1/3 ＝ {n - (n + 2) / 3 + 1}..{n} 位。**帯でも反転する駒は除く**）  ");
+        Console.WriteLine("線3 **本丸 = 1 と 2 を同時に満たす版が1つ以上**");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 列レンジ中央値 | 帯レンジ中央値 | **比** | 線1 | 列で反転 | 帯で反転 | **差し引き** | 線2 | **線3** |");
+        Console.WriteLine("|---|--:|--:|--:|:-:|--:|--:|--:|:-:|:-:|");
+        int win = 0;
+        var flipNet = new Dictionary<string, int[]>();
+        foreach (string vn in verNames)
+        {
+            var (cs, bs) = perVer[vn];
+            double mc = Median(cs.Range), mb = Median(bs.Range);
+            double ratio = mb > 0 ? mc / mb : double.NaN;
+            var net = Enumerable.Range(0, n).Where(u => cs.Flip[u] && !bs.Flip[u]).ToArray();
+            flipNet[vn] = net;
+            bool l1 = ratio >= CrossRangeLine, l2 = net.Length >= CrossFlipLine;
+            if (l1 && l2) win++;
+            Console.WriteLine($"| {vn} | {mc:F1} | {mb:F1} | **{ratio:F2}** | {(l1 ? "○" : "×")} "
+                + $"| {cs.Flip.Count(x => x)} | {bs.Flip.Count(x => x)} | **{net.Length}** "
+                + $"| {(l2 ? "○" : "×")} | {(l1 && l2 ? "**○**" : "×")} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**線3 を通った版: {win} / {verNames.Length}。本丸は {(win > 0 ? "○" : "**×**")}。**");
+        Console.WriteLine();
+
+        Console.WriteLine("## A-4. 列長の依存（**R238。線を引いた量が列長で決まっていないか**・§9-2）");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 部分集合 | 列 | 順位レンジ 中央値 | 帯との比 |");
+        Console.WriteLine("|---|---|--:|--:|--:|");
+        foreach (string vn in verNames)
+        {
+            double mb = Median(bandStat.Range);
+            foreach (var (label, pick) in new (string, Func<(string Cn, string Vn, int Len, double[][] U), bool>)[]
+            {
+                ("全部", p => true),
+                ("列長5 だけ", p => p.Len == 5),
+                ("列長5 未満だけ", p => p.Len < 5),
+            })
+            {
+                var g = keep.Where(p => p.Vn == vn && pick(p)).Select(p => p.U[H]).ToArray();
+                if (g.Length < 2) { Console.WriteLine($"| {vn} | {label} | {g.Length} | — | — |"); continue; }
+                double m = Median(CrossStatOf(g, n).Range);
+                Console.WriteLine($"| {vn} | {label} | {g.Length} | {m:F1} | {(mb > 0 ? m / mb : double.NaN):F2} |");
+            }
+        }
+        Console.WriteLine();
+        Console.WriteLine("**列長5 だけの部分集合は「相手の並びだけが違う列」**（接頭を含まない）なので、"
+            + "ここで比が落ちるなら、列軸のレンジの出どころは**顔ぶれではなく列長**である。");
+        Console.WriteLine();
+
+        Console.WriteLine("## A-4b. 反転を列長で切り分ける（**R238。§9-2 の「列長で結果が割れていないか」**）");
+        Console.WriteLine();
+        Console.WriteLine("**反転には2種類ある**——`地点2` / `地点3`（接頭・列が短い）で上位か下位に来る駒は");
+        Console.WriteLine("「相手が違う」ではなく「**列が短い**」に反応している。**列長5 の 10 列だけで数え直す**と、");
+        Console.WriteLine("**相手の並びだけが違う列の中での反転**が残る。");
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 部分集合 | 列 | 列で反転 | 帯で反転 | **差し引き** | 線2 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|:-:|");
+        var flip5 = new Dictionary<string, int[]>();
+        foreach (string vn in verNames)
+        {
+            foreach (var (label, pick) in new (string, Func<(string Cn, string Vn, int Len, double[][] U), bool>)[]
+            {
+                ("全部（12 列）", p => true),
+                ("**列長5 だけ（10 列）**", p => p.Len == 5),
+            })
+            {
+                var g = keep.Where(p => p.Vn == vn && pick(p)).Select(p => p.U[H]).ToArray();
+                var cs = CrossStatOf(g, n);
+                var net = Enumerable.Range(0, n).Where(u => cs.Flip[u] && !bandStat.Flip[u]).ToArray();
+                if (label.Contains("列長5")) flip5[vn] = net;
+                Console.WriteLine($"| {vn} | {label} | {g.Length} | {cs.Flip.Count(x => x)} "
+                    + $"| {bandStat.Flip.Count(x => x)} | **{net.Length}** | {(net.Length >= CrossFlipLine ? "○" : "×")} |");
+            }
+        }
+        Console.WriteLine();
+        Console.WriteLine("**列長5 だけの反転**（帯でも反転する駒を除いた後）:");
+        Console.WriteLine();
+        foreach (string vn in verNames)
+            Console.WriteLine($"- **{vn}**: {flip5[vn].Length} 枚 —— "
+                + (flip5[vn].Length == 0 ? "なし" : string.Join(" / ", flip5[vn].Select(u => uname[ids[u]]))));
+        Console.WriteLine();
+
+        Console.WriteLine("## A-4c. 何が列を分けているか（**列長5 の 10 列だけ**）");
+        Console.WriteLine();
+        Console.WriteLine("列の並びを「**先頭2波に第四波か第五波（重い波）が入るか**」で2群に割り、");
+        Console.WriteLine("反転した駒の平均順位を群ごとに出す。**列の性質は `Stages` の添字から機械で引く**"
+            + "（`ReferenceEquals` で `Squads[i]` を `Stages` に突き合わせる）。");
+        Console.WriteLine();
+        int WaveOf(Formation sq)
+        {
+            for (int i = 0; i < EnemyCatalog.Stages.Count; i++)
+                if (ReferenceEquals(EnemyCatalog.Stages[i].Enemy, sq)) return i + 1;
+            return -1;
+        }
+        var long5 = keep.Where(p => p.Len == 5 && p.Vn == verNames[0]).ToArray();
+        Console.WriteLine("| 列 | 並び | 先頭2波 | **重い波が前半** |");
+        Console.WriteLine("|---|---|---|:-:|");
+        foreach (var p in long5)
+        {
+            var w = ColOf(p.Cn).Squads.Select(WaveOf).ToArray();
+            bool heavy = w.Take(2).Any(x => x >= 4);
+            Console.WriteLine($"| {p.Cn} | {string.Join("-", w)} | {w[0]}-{w[1]} | {(heavy ? "**○**" : "×")} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("| 版 | 駒 | 重い波が前半（平均順位） | そうでない（平均順位） | **差** | 札 |");
+        Console.WriteLine("|---|---|--:|--:|--:|---|");
+        foreach (string vn in verNames)
+        {
+            var cols5 = keep.Where(p => p.Len == 5 && p.Vn == vn).ToArray();
+            var cs = CrossStatOf(cols5.Select(p => p.U[H]).ToArray(), n);
+            var heavyIdx = Enumerable.Range(0, cols5.Length)
+                .Where(g => ColOf(cols5[g].Cn).Squads.Select(WaveOf).Take(2).Any(x => x >= 4)).ToArray();
+            var lightIdx = Enumerable.Range(0, cols5.Length).Except(heavyIdx).ToArray();
+            foreach (int u in Enumerable.Range(0, n)
+                .OrderByDescending(x => Math.Abs(lightIdx.Average(g => cs.Ranks[g][x])
+                                              - heavyIdx.Average(g => cs.Ranks[g][x]))).Take(10))
+            {
+                double h = heavyIdx.Average(g => cs.Ranks[g][u]), l = lightIdx.Average(g => cs.Ranks[g][u]);
+                var def = jobs.First(j => j.Def.Id == ids[u]).Def;
+                string traits = def.Traits.Count == 0 ? "—" : string.Join(" / ", def.Traits);
+                Console.WriteLine($"| {vn} | {uname[ids[u]]} | {h:F1} | {l:F1} | **{l - h:+0.0;-0.0}** | {traits} |");
+            }
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## A-5. 参考 —— 目的変数を替えたときの同じ2軸");
+        Console.WriteLine();
+        Console.WriteLine("**判定には使わない**（§1-1 で `与えた総害` に固定した）。1回の走行から同時に取れるので併記する。");
+        Console.WriteLine();
+        Console.WriteLine("| 目的変数 | 版 | 列レンジ中央値 | 帯レンジ中央値 | 比 | 差し引きの反転 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|");
+        foreach (var (o, nm, _) in ObjDefs)
+        {
+            int k = (int)o;
+            foreach (string vn in verNames)
+            {
+                var cs = CrossStatOf(keep.Where(p => p.Vn == vn).Select(p => p.U[k]).ToArray(), n);
+                var bs = CrossStatOf(bandPts.Select(p => p.U[k]).ToArray(), n);
+                double mc = Median(cs.Range), mb = Median(bs.Range);
+                int net = Enumerable.Range(0, n).Count(u => cs.Flip[u] && !bs.Flip[u]);
+                Console.WriteLine($"| {nm} | {vn} | {mc:F1} | {mb:F1} | {(mb > 0 ? mc / mb : double.NaN):F2} | {net} |");
+            }
+        }
+        Console.WriteLine();
+
+        // ---------------- §5 / §6 ----------------
+        Console.WriteLine("## A-6. 順位がいちばん動いた駒（**列軸・上位15体**）");
+        Console.WriteLine();
+        foreach (string vn in verNames)
+        {
+            var (cs, bs) = perVer[vn];
+            var cols = keep.Where(p => p.Vn == vn).ToArray();
+            Console.WriteLine($"### {vn}");
+            Console.WriteLine();
+            Console.WriteLine("| 駒 | 在席枠 | **列レンジ** | 帯レンジ | 反転 | 最上位の列 | 最下位の列 | 札 |");
+            Console.WriteLine("|---|--:|--:|--:|:-:|---|---|---|");
+            foreach (int u in Enumerable.Range(0, n).OrderByDescending(x => cs.Range[x]).Take(15))
+            {
+                var rs = Enumerable.Range(0, cols.Length).Select(g => cs.Ranks[g][u]).ToArray();
+                int bestG = Array.IndexOf(rs, rs.Min()), worstG = Array.IndexOf(rs, rs.Max());
+                var def = jobs.First(j => j.Def.Id == ids[u]).Def;
+                string traits = def.Traits.Count == 0 ? "—" : string.Join(" / ", def.Traits);
+                Console.WriteLine($"| {uname[ids[u]]} | {slotsOf[ids[u]].Length} | **{cs.Range[u]:F1}** "
+                    + $"| {bs.Range[u]:F1} | {(cs.Flip[u] && !bs.Flip[u] ? "**○**" : cs.Flip[u] ? "(帯も)" : "—")} "
+                    + $"| {cols[bestG].Cn} {rs.Min():F0}位 | {cols[worstG].Cn} {rs.Max():F0}位 | {traits} |");
+            }
+            Console.WriteLine();
+        }
+
+        Console.WriteLine("## A-7. 反転した駒の全数（**帯でも反転する駒を除いた後**・§5）");
+        Console.WriteLine();
+        foreach (string vn in verNames)
+        {
+            var (cs, _) = perVer[vn];
+            var cols = keep.Where(p => p.Vn == vn).ToArray();
+            Console.WriteLine($"### {vn} —— {flipNet[vn].Length} 枚");
+            Console.WriteLine();
+            if (flipNet[vn].Length == 0) { Console.WriteLine("なし。"); Console.WriteLine(); continue; }
+            Console.WriteLine("| 駒 | 在席枠 | 上位に入る列 | 下位に落ちる列 | 帰属の幅 | 札 |");
+            Console.WriteLine("|---|--:|---|---|--:|---|");
+            int top = (n + 2) / 3, bot = n - top + 1;
+            foreach (int u in flipNet[vn].OrderByDescending(x => cs.Range[x]))
+            {
+                var hi = Enumerable.Range(0, cols.Length).Where(g => cs.Ranks[g][u] < top)
+                    .Select(g => $"{cols[g].Cn}({cs.Ranks[g][u]:F0})").ToArray();
+                var lo = Enumerable.Range(0, cols.Length).Where(g => cs.Ranks[g][u] >= bot)
+                    .Select(g => $"{cols[g].Cn}({cs.Ranks[g][u]:F0})").ToArray();
+                var vals = cols.Select(p => p.U[H][u]).ToArray();
+                var def = jobs.First(j => j.Def.Id == ids[u]).Def;
+                string traits = def.Traits.Count == 0 ? "—" : string.Join(" / ", def.Traits);
+                Console.WriteLine($"| {uname[ids[u]]} | {slotsOf[ids[u]].Length} | {string.Join(" / ", hi)} "
+                    + $"| {string.Join(" / ", lo)} | {vals.Min():+0.000;-0.000} 〜 {vals.Max():+0.000;-0.000} | {traits} |");
+            }
+            Console.WriteLine();
+        }
+
+        Console.WriteLine("## A-8. 列ごとの順位（**全 52 体 × 列**。`与えた総害` / 版ごと）");
+        Console.WriteLine();
+        foreach (string vn in verNames)
+        {
+            var (cs, _) = perVer[vn];
+            var cols = keep.Where(p => p.Vn == vn).ToArray();
+            Console.WriteLine($"### {vn}");
+            Console.WriteLine();
+            Console.WriteLine("| 駒 | " + string.Join(" | ", cols.Select(p => p.Cn)) + " | レンジ | 順位SD |");
+            Console.WriteLine("|---|" + string.Concat(cols.Select(_ => "--:|")) + "--:|--:|");
+            foreach (int u in Enumerable.Range(0, n).OrderBy(x => cs.Ranks[0][x]))
+                Console.WriteLine($"| {uname[ids[u]]} | "
+                    + string.Join(" | ", Enumerable.Range(0, cols.Length).Select(g => $"{cs.Ranks[g][u]:F0}"))
+                    + $" | {cs.Range[u]:F1} | {cs.RankSd[u]:F2} |");
+            Console.WriteLine();
+        }
+
+        Console.WriteLine("## A-9. 自己検査 (b) —— 第162期の値の再現");
+        Console.WriteLine();
+        Console.WriteLine("| 点 | 目的変数 | 会戦の帰属SD | 第162期 §3 | 一致 |");
+        Console.WriteLine("|---|---|--:|--:|:-:|");
+        foreach (var (cn, vn, want) in new[] { ("順路5", "R0", 0.530), ("順路5", "BCarry", 0.976),
+                                               ("地点3", "R0", 0.514), ("地点3", "BCarry", 0.914) })
+        {
+            var p = colPts.FirstOrDefault(x => x.Cn == cn && x.Vn == vn);
+            if (p.U is null) { Console.WriteLine($"| {cn} × {vn} | 与えた総害 | — | {want:F3} | — |"); continue; }
+            double sd = Sd(p.U[H]);
+            Console.WriteLine($"| {cn} × {vn} | 与えた総害 | {sd:F3} | {want:F3} "
+                + $"| {(Math.Abs(sd - want) < 5e-4 ? "**○**" : "**×**")} |");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## A-10. 予測（**実装前に書いた。外れても消さない**）");
+        Console.WriteLine();
+        foreach (var (k, t) in CrossPredictions) Console.WriteLine($"{k}. {t}");
+        Console.WriteLine();
+        Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F1} 秒。");
+    }
+
+    /// <summary>Phase 0（**戦闘0回**）。列・版・順位付けの規則・走行の見積りを実装から引き直す。</summary>
+    static void CrossPhase0()
+    {
+        Console.WriteLine("# 第163期 Phase 0 —— 前提を実装から引き直す（**戦闘0回**）");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-2 / Q0-3. 順位付けの規則（**列軸と帯軸で同一**）");
+        Console.WriteLine();
+        Console.WriteLine("- 順位 = `Common.AverageRanksDesc`（**降順・1 が最良・同値は平均順位**）。"
+            + "`CrossStatOf` の1箇所だけが呼ぶので、列軸と帯軸で違う規則は原理的に書けない。");
+        Console.WriteLine($"- 同値塊は `RhoTies`（第158期の写し）で数える。**厳密に 0 の駒が {CrossTieMax} 体を"
+            + "超えた列は判定から外す**（(G13)）。");
+        Console.WriteLine("- **第162期 §2-4 で `与えた総害` は 16 セルすべて 0 / 52**"
+            + "——出力を測る目的変数は「出番が来ない駒」を作らないので、外れる列は出ない見込み。");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-5 / §1-3. 列（**新しい敵も新しい編成も1体も作らない**）");
+        Console.WriteLine();
+        Console.WriteLine("| 列 | 長さ | 先頭の波 | 出どころ |");
+        Console.WriteLine("|---|--:|---|---|");
+        foreach (string cn in CrossColumnNames())
+        {
+            var c = ColOf(cn);
+            var st = EnemyCatalog.Stages.FirstOrDefault(s => ReferenceEquals(s.Enemy, c.Squads[0]));
+            string head = st is null ? "—" : st.Name;
+            bool named = Columns().Any(x => x.Name == cn);
+            Console.WriteLine($"| {cn} | {c.Len} | {head} | {(named ? "`Columns()`（既存）" : "`Stages` の並べ替え（`PermCol`）")} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("**第159期の 120 順列の走行は再利用できない**——`stage perm` は"
+            + "**台（61 行）の突破度**しか持たず、駒ごとの帰属（素体差し替え 305 枠）を持たない。"
+            + $"だから列は {CrossColumnNames().Length} 本に絞り、**そのうち "
+            + $"{CrossColumnNames().Count(cn => !Columns().Any(x => x.Name == cn))} 本を"
+            + "先頭の波が散るように選んだ**（第159期の「効くのは先頭に何を置くか」）。");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-4. 走行時間の見積り");
+        Console.WriteLine();
+        int rowsN = CompareBuilds().Length;
+        int jobsN = CompareBuilds().Sum(r => r.F.Occupied().Count());
+        int pts = CrossColumnNames().Length * CrossVersionNames().Length + CrossColumnNames().Length - 1;
+        long battles = 0;
+        foreach (string cn in CrossColumnNames())
+            battles += (long)(rowsN + jobsN) * Seeds * ColOf(cn).Len * CrossVersionNames().Length;
+        battles += (long)(rowsN + jobsN) * Seeds * ColOf("順路5").Len * (CrossColumnNames().Length - 1);
+        Console.WriteLine($"- 点 = 列 {CrossColumnNames().Length} × 版 {CrossVersionNames().Length} "
+            + $"＋ 帯 {CrossColumnNames().Length} − 1（帯0 は列軸と同じ走行）= **{pts}**");
+        Console.WriteLine($"- 1点 = {rowsN} 行 ＋ {jobsN} 枠 = {rowsN + jobsN} 回の会戦平均 × seed {Seeds}");
+        Console.WriteLine($"- 総部隊戦数 ≈ **{battles:N0}**");
+        Console.WriteLine("- **単発側は1回も回さない**（rho を使わないので不要）——第162期の同じ点に対して**半分以下**。");
+        Console.WriteLine();
+
+        Console.WriteLine("## §3 の線（**測る前に固定した**）");
+        Console.WriteLine();
+        Console.WriteLine($"線1 列間レンジの中央値 ÷ 帯間レンジの中央値 >= **{CrossRangeLine:F1}**  ");
+        Console.WriteLine($"線2 反転した駒 >= **{CrossFlipLine}** 枚（帯でも反転する駒を除く）  ");
+        Console.WriteLine("線3 本丸 = 1 と 2 を同時に満たす版が1つ以上");
+        Console.WriteLine();
+
+        Console.WriteLine("## 予測（**測る前に書いた**）");
+        Console.WriteLine();
+        foreach (var (k, t) in CrossPredictions) Console.WriteLine($"{k}. {t}");
     }
 
 }
