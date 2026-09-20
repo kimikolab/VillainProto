@@ -189,6 +189,7 @@ public partial class BattlefieldView3D : Control
         // 常時出しっぱなしにすると見せ場が読めなくなる。
         _beat = OverlayText("", 13, UiKit.Gold, new Vector2(20, 76));
 
+        BuildSuperFlash();
         BuildBonusAttackCutIn();
     }
 
@@ -208,7 +209,7 @@ public partial class BattlefieldView3D : Control
 
         _bonusAttackShade = new ColorRect
         {
-            Color = new Color(0.005f, 0.012f, 0.018f, 0.36f),
+            Color = new Color(0.005f, 0.012f, 0.018f, _superFlashEnabled ? 0 : 0.36f),
             MouseFilter = MouseFilterEnum.Ignore,
         };
         _bonusAttackShade.SetAnchorsPreset(LayoutPreset.FullRect);
@@ -300,6 +301,7 @@ public partial class BattlefieldView3D : Control
             _world.AddChild(_scenery);
             _fortress = fortress;
         }
+        ResetSuperFlash();
         ResetSeals();
         foreach (BattlePawn3D pawn in _pawns.Values) pawn.QueueFree();
         _pawns.Clear();
@@ -391,6 +393,7 @@ public partial class BattlefieldView3D : Control
         // 格闘ゲームの必殺技発動と同じ順序。先に駒そのものを青く立たせ、
         // 視線が発動者へ移ってから名前の帯を差し込む。
         BeginBonusAura(actor, aura, Time(0.78));
+        BeginSuperFlash(actor, Time(0.48));
         var actorPulse = actor.CreateTween();
         actorPulse.TweenProperty(actor, "scale", new Vector3(1.08f, 1.08f, 1.08f), Time(0.075))
             .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);

@@ -177,6 +177,11 @@ godot --path DemoApp -- --demo-autoplay --demo-preset=反撃 --demo-stage=1 --de
 
 ### 通常起動
 
+追加攻撃の暗転は試作として既定 ON。戦闘中の **F8** で ON/OFF を切り替え、
+`--demo-no-super-flash` を付けて起動すると従来版で開始します。
+発動者の周囲だけ明るさを残し、青い横閃光・外から発動者へ加速して流れ込む集中線と紺青の暗転を重ねます
+（2倍速で約0.3秒、既存のカットイン時間内）。粛による不発には暗転を出しません。
+
 - Godot 4.7.x Mono で `project.godot` を開いて実行
 - または `godot --path C:\works\VillainProto\DemoApp --editor`
 - 起動シーンは `Main.tscn`（編成画面）。**検証用マップ 1-1 へは編成画面の「作戦マップへ」から入る**
