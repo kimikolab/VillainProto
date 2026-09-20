@@ -917,9 +917,11 @@ public partial class Main : Control
                     actor?.SetForecast("");
                     _battleField.ShowBanner($"{NameOf(e.ActorId)} — 溜めた一撃", UiKit.Gold, 0.72);
                 }
+                if (e.Reaction)
+                    await _battleField.ShowBonusAttack(actor);
                 _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire);
                 _battleField.AttackCue(actor,
-                    $"{(forecasted ? "大技 " : "")}{(e.Reaction ? "反撃 " : "")}{UiKit.PatternLabel(pattern)}",
+                    $"{(forecasted ? "大技 " : "")}{UiKit.PatternLabel(pattern)}",
                     AttackColor(actor, e));
                 AppendLog($"[color=#{(actor?.Team == 0 ? UiKit.Player : UiKit.Enemy).ToHtml(false)}]{NameOf(e.ActorId)}[/color] → {NameOf(e.TargetId)}  [color=#a9b3a8]{UiKit.PatternLabel(e.Pattern ?? AttackPattern.Single)} {e.Amount}[/color]");
                 // 第125期 段2: 手番の外の一撃（棘・仇討ち・軋み）は**流れを一度止める**。
@@ -941,6 +943,8 @@ public partial class Main : Control
             case BattleEventKind.Parry:
                 if (_batchedDamageIndices.Contains(eventIndex)) break;
                 if (_burstDamageIndices.Contains(eventIndex)) break;
+                if (e.Reaction && StartsDirectReaction(eventIndex, e))
+                    await _battleField.ShowBonusAttack(actor);
                 ShowParry(e);
                 await Delay(0.30);
                 _battleField.EndGuards();
@@ -949,6 +953,10 @@ public partial class Main : Control
             case BattleEventKind.Damage:
                 if (_batchedDamageIndices.Contains(eventIndex)) break;   // 3-a で同時に描き終えている
                 if (_burstDamageIndices.Contains(eventIndex)) break;     // 破裂（第125期 3-a）で描き終えている
+                // 棘（カド）・仇討ちは PerformAttack を通らず、Reaction 付き Damage から始まる。
+                // ヨミのように Reaction 付き Attack を持つ段は上で既にカットイン済みなので二重に出さない。
+                if (e.Reaction && StartsDirectReaction(eventIndex, e))
+                    await _battleField.ShowBonusAttack(actor);
                 ShowDamage(eventIndex, e, actor, target);
                 await Delay(0.16);
                 if (!e.Relayed && target?.IsGuarding == true)
@@ -1460,7 +1468,8 @@ public partial class Main : Control
                 (string kind, Color tint) = OffTurnLabel(e);
                 // 介入は駒の合図を `Divert` が出すので、ここでは帯だけにする（札を二重に出さない）。
                 _battleField.BeginInterrupt(
-                    e.Kind == BattleEventKind.Intercept ? null : _battleField.FindPawn(e.ActorId), kind, tint);
+                    e.Kind == BattleEventKind.Intercept ? null : _battleField.FindPawn(e.ActorId), kind, tint,
+                    markActor: !e.Reaction);
                 AppendLog($"  [color=#{tint.ToHtml(false)}]⚡ {kind}[/color]");
                 break;
         }
@@ -1474,7 +1483,7 @@ public partial class Main : Control
     private static (string Kind, Color Tint) OffTurnLabel(BattleEvent e)
         => e.Kind == BattleEventKind.Intercept ? ("介入（狙いが逸れた）", UiKit.Gold)
          : e.Relayed ? ("肩代わり（1発が分けられた）", UiKit.Muted)
-         : ("割り込み（手番の外の一撃）", UiKit.Gold);
+         : ("追加攻撃（手番へ割り込み）", UiKit.Gold);
 
     private void IndexStatusDamageEvents(IReadOnlyList<BattleEvent> events)
     {
@@ -1518,6 +1527,25 @@ public partial class Main : Control
                 ids.Add(targetId);
         }
         return ids.Select(id => _battleField.FindPawn(id)).OfType<BattlePawn3D>().ToList();
+    }
+
+    /// <summary>
+    /// <see cref="BattleEventKind.Attack"/> を持たず、Damage / Parry から直接始まる追加攻撃か。
+    /// 棘の範囲反撃は Reaction 付き Damage が複数並ぶので、先頭にだけカットインを出す。
+    /// Death / StatusGain など反撃中に挟まる表示イベントは読み飛ばす。
+    /// </summary>
+    private bool StartsDirectReaction(int eventIndex, BattleEvent damage)
+    {
+        for (int i = eventIndex - 1; i >= 0; i--)
+        {
+            BattleEvent previous = _result!.Events[i];
+            if (previous.Kind == BattleEventKind.TurnStart) return true;
+            if (previous.Kind == BattleEventKind.Attack)
+                return !(previous.Reaction && previous.ActorId == damage.ActorId);
+            if (previous.Kind is BattleEventKind.Damage or BattleEventKind.Parry)
+                return !(previous.Reaction && previous.ActorId == damage.ActorId);
+        }
+        return true;
     }
 
     private (string Label, Color Color) DamageSource(int eventIndex, BattleEvent damage, BattlePawn3D? actor)

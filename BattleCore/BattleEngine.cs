@@ -5103,7 +5103,10 @@ public sealed class BattleContext
             ActorId = actor.InstanceId,
             TargetId = target.InstanceId,
             Amount = atk,
-            Pattern = pattern
+            Pattern = pattern,
+            // 第151期・表示専用。着弾側だけでなく「振る直前」にも札を載せる。
+            // 再生側が追加攻撃の予告を出すには Damage まで待っていては遅い。
+            Reaction = InReaction || InInterrupt
         });
 
         if (pattern == AttackPattern.Pierce)

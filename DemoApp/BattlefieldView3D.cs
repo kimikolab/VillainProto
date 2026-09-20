@@ -3,6 +3,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 public partial class BattlefieldView3D : Control
 {
@@ -19,6 +20,14 @@ public partial class BattlefieldView3D : Control
     private Label _headline = null!;
     private Label _subline = null!;
     private Label _centerBanner = null!;
+    private Control _bonusAttackCutIn = null!;
+    private ColorRect _bonusAttackShade = null!;
+    private ColorRect _bonusAttackSlash = null!;
+    private ColorRect _bonusAttackEdgeTop = null!;
+    private ColorRect _bonusAttackEdgeBottom = null!;
+    private Label _bonusAttackKicker = null!;
+    private Label _bonusAttackTitle = null!;
+    private Label _bonusAttackActor = null!;
 
     /// <summary>
     /// いまの「拍」（第125期 段2）。<b>ターン頭 ／ 手番: 誰 ／ 割り込み</b>のどれかを常に出す。
@@ -179,6 +188,93 @@ public partial class BattlefieldView3D : Control
         // 拍の帯（第125期 段2）。**眉の行の右**に置く——中央のバナーは見せ場が使っており、
         // 常時出しっぱなしにすると見せ場が読めなくなる。
         _beat = OverlayText("", 13, UiKit.Gold, new Vector2(20, 76));
+
+        BuildBonusAttackCutIn();
+    }
+
+    /// <summary>
+    /// 追加攻撃専用のカットイン。盤面は見えるまま、上寄りへ細い帯を差し込み、
+    /// 通常の手番がいったん断ち切られたことを形で見せる。
+    /// </summary>
+    private void BuildBonusAttackCutIn()
+    {
+        _bonusAttackCutIn = new Control
+        {
+            Visible = false,
+            MouseFilter = MouseFilterEnum.Ignore,
+        };
+        _bonusAttackCutIn.SetAnchorsPreset(LayoutPreset.FullRect);
+        AddChild(_bonusAttackCutIn);
+
+        _bonusAttackShade = new ColorRect
+        {
+            Color = new Color(0.005f, 0.012f, 0.018f, 0.36f),
+            MouseFilter = MouseFilterEnum.Ignore,
+        };
+        _bonusAttackShade.SetAnchorsPreset(LayoutPreset.FullRect);
+        _bonusAttackCutIn.AddChild(_bonusAttackShade);
+
+        _bonusAttackSlash = new ColorRect
+        {
+            AnchorLeft = 0,
+            AnchorRight = 1,
+            AnchorTop = 0.30f,
+            AnchorBottom = 0.30f,
+            OffsetLeft = -90,
+            OffsetRight = 90,
+            OffsetTop = -48,
+            OffsetBottom = 48,
+            RotationDegrees = -2.0f,
+            Color = new Color(0.015f, 0.075f, 0.11f, 0.94f),
+            MouseFilter = MouseFilterEnum.Ignore,
+        };
+        _bonusAttackCutIn.AddChild(_bonusAttackSlash);
+
+        _bonusAttackEdgeTop = BonusAttackEdge(-53, 4, Color.FromHtml("#63d7ff"));
+        _bonusAttackEdgeBottom = BonusAttackEdge(49, 2, new Color(Colors.White, 0.72f));
+
+        _bonusAttackKicker = BonusAttackText("INTERRUPT  //  EXTRA ATTACK", 13, Color.FromHtml("#63d7ff"), -37, -15);
+        _bonusAttackTitle = BonusAttackText("", 36, Colors.White, -20, 25);
+        _bonusAttackTitle.AddThemeConstantOverride("outline_size", 11);
+        _bonusAttackActor = BonusAttackText("追加攻撃 発動", 14, UiKit.Ink, 24, 45);
+    }
+
+    private ColorRect BonusAttackEdge(float centerOffset, float height, Color color)
+    {
+        var edge = new ColorRect
+        {
+            AnchorLeft = 0,
+            AnchorRight = 1,
+            AnchorTop = 0.30f,
+            AnchorBottom = 0.30f,
+            OffsetLeft = -90,
+            OffsetRight = 90,
+            OffsetTop = centerOffset - height * 0.5f,
+            OffsetBottom = centerOffset + height * 0.5f,
+            RotationDegrees = -2.0f,
+            Color = color,
+            MouseFilter = MouseFilterEnum.Ignore,
+        };
+        _bonusAttackCutIn.AddChild(edge);
+        return edge;
+    }
+
+    private Label BonusAttackText(string value, int size, Color color, float top, float bottom)
+    {
+        Label label = UiKit.Text(value, size, color);
+        label.AnchorLeft = 0;
+        label.AnchorRight = 1;
+        label.AnchorTop = 0.30f;
+        label.AnchorBottom = 0.30f;
+        label.OffsetTop = top;
+        label.OffsetBottom = bottom;
+        label.HorizontalAlignment = HorizontalAlignment.Center;
+        label.VerticalAlignment = VerticalAlignment.Center;
+        label.MouseFilter = MouseFilterEnum.Ignore;
+        label.AddThemeConstantOverride("outline_size", 7);
+        label.AddThemeColorOverride("font_outline_color", Colors.Black);
+        _bonusAttackCutIn.AddChild(label);
+        return label;
     }
 
     private Label OverlayText(string value, int size, Color color, Vector2 position)
@@ -210,6 +306,7 @@ public partial class BattlefieldView3D : Control
         _eyebrow.Text = "BATTLE 2.5D  /  TURN 0";
         _turnOwner = null;
         _beat.Text = "";
+        _bonusAttackCutIn.Visible = false;
         _headline.Text = $"{stageName} — {(_fortress ? "城門前の攻防" : "草原遭遇戦")}";
         _subline.Text = "Space: 一時停止   1–4: 再生速度   T: 戦績   細い線＝誰の仕業か   ▶＝手番の主 / ▷＝ターン頭 / ⚡＝手番の外";
         _camera.Position = _cameraHome;
@@ -256,15 +353,132 @@ public partial class BattlefieldView3D : Control
     /// 割り込みが始まった（第125期 段2・§5-1 の 2）。<b>手番の主の印を落として</b>、
     /// 割り込んだ駒の足元に輪を出す。<b>演出の作り込みではなく「流れが止まった」ことが分かればよい。</b>
     /// </summary>
-    public void BeginInterrupt(BattlePawn3D? actor, string kind, Color color)
+    public void BeginInterrupt(BattlePawn3D? actor, string kind, Color color, bool markActor = true)
     {
         _turnOwner?.SetTurnOwner(true, paused: true);
         _beat.Text = _turnOwner is null ? $"⚡ {kind}" : $"⚡ {kind}（{_turnOwner.UnitName} の手番を止めて）";
         _beat.AddThemeColorOverride("font_color", color);
-        if (actor is null) return;
+        if (actor is null || !markActor) return;
         MakeGroundRing(actor.Home, color, 1.25f, 0.34);
         MakeGroundRing(actor.Home, color, 0.85f, 0.46);
         Float(actor, $"⚡ {kind}", color, true, 3.70f);
+    }
+
+    /// <summary>
+    /// 追加攻撃の直前に通常進行を止めて見せる。表示専用の <c>Reaction</c> だけを読み、
+    /// 攻撃処理や発動条件には触れない。
+    /// </summary>
+    public async Task ShowBonusAttack(BattlePawn3D? actor)
+    {
+        if (actor is null) return;
+
+        // 4倍速でも「誰が光ったか」は読める長さを残す。戦闘全体の速度は変えず、
+        // この短い発動確認だけ上限を設ける。
+        double speed = Math.Clamp(actor.AnimationSpeed, 0.75, 1.60);
+        double Time(double seconds) => seconds / speed;
+        Color aura = Color.FromHtml("#63d7ff");
+        Color teamAccent = actor.Team == BattleContext.PlayerTeam ? UiKit.Player : UiKit.Enemy;
+
+        _bonusAttackSlash.Color = new Color(aura.Darkened(0.78f), 0.94f);
+        _bonusAttackEdgeTop.Color = new Color(aura, 0.96f);
+        _bonusAttackEdgeBottom.Color = new Color(teamAccent, 0.82f);
+        _bonusAttackKicker.AddThemeColorOverride("font_color", aura);
+        _bonusAttackTitle.Text = actor.UnitName;
+        _bonusAttackActor.Text = "追加攻撃 発動  //  BREAK IN";
+
+        // 格闘ゲームの必殺技発動と同じ順序。先に駒そのものを青く立たせ、
+        // 視線が発動者へ移ってから名前の帯を差し込む。
+        BeginBonusAura(actor, aura, Time(0.78));
+        var actorPulse = actor.CreateTween();
+        actorPulse.TweenProperty(actor, "scale", new Vector3(1.08f, 1.08f, 1.08f), Time(0.075))
+            .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
+        actorPulse.TweenProperty(actor, "scale", Vector3.One, Time(0.18))
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+
+        var cameraTween = _camera.CreateTween();
+        cameraTween.TweenProperty(_camera, "fov", CameraFov - 4.0f, Time(0.09))
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        cameraTween.TweenInterval(Time(0.13));
+        cameraTween.TweenProperty(_camera, "fov", CameraFov, Time(0.18))
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.InOut);
+
+        await ToSignal(GetTree().CreateTimer(Time(0.10)), SceneTreeTimer.SignalName.Timeout);
+
+        _bonusAttackCutIn.Visible = true;
+        _bonusAttackCutIn.Modulate = Colors.White;
+        _bonusAttackSlash.PivotOffset = _bonusAttackSlash.Size * 0.5f;
+        _bonusAttackEdgeTop.PivotOffset = _bonusAttackEdgeTop.Size * 0.5f;
+        _bonusAttackEdgeBottom.PivotOffset = _bonusAttackEdgeBottom.Size * 0.5f;
+        _bonusAttackSlash.Scale = new Vector2(0.025f, 1);
+        _bonusAttackEdgeTop.Scale = new Vector2(0.025f, 1);
+        _bonusAttackEdgeBottom.Scale = new Vector2(0.025f, 1);
+        _bonusAttackKicker.Modulate = new Color(1, 1, 1, 0);
+        _bonusAttackTitle.Modulate = new Color(1, 1, 1, 0);
+        _bonusAttackActor.Modulate = new Color(1, 1, 1, 0);
+
+        var tween = _bonusAttackCutIn.CreateTween();
+        tween.TweenProperty(_bonusAttackSlash, "scale", Vector2.One, Time(0.085))
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        tween.Parallel().TweenProperty(_bonusAttackEdgeTop, "scale", Vector2.One, Time(0.11));
+        tween.Parallel().TweenProperty(_bonusAttackEdgeBottom, "scale", Vector2.One, Time(0.14));
+        tween.Parallel().TweenProperty(_bonusAttackKicker, "modulate:a", 1.0f, Time(0.065)).SetDelay(Time(0.025));
+        tween.Parallel().TweenProperty(_bonusAttackTitle, "modulate:a", 1.0f, Time(0.065)).SetDelay(Time(0.045));
+        tween.Parallel().TweenProperty(_bonusAttackActor, "modulate:a", 1.0f, Time(0.065)).SetDelay(Time(0.065));
+        tween.TweenInterval(Time(0.15));
+        tween.TweenProperty(_bonusAttackCutIn, "modulate:a", 0.0f, Time(0.09))
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+
+        await ToSignal(tween, Tween.SignalName.Finished);
+        _bonusAttackCutIn.Visible = false;
+    }
+
+    /// <summary>
+    /// 発動者を先に見つけるための青いオーラ。細い光柱は立ち絵を隠さず上へ抜け、
+    /// 青い局所光と足元の輪だけが攻撃の入り口まで残る。
+    /// </summary>
+    private void BeginBonusAura(BattlePawn3D actor, Color color, double duration)
+    {
+        Vector3 basePosition = actor.RestPosition;
+        var light = new OmniLight3D
+        {
+            Position = basePosition + Vector3.Up * 1.25f,
+            LightColor = color,
+            LightEnergy = 0,
+            OmniRange = 3.4f,
+            ShadowEnabled = false,
+        };
+        _fxRoot.AddChild(light);
+        var lightTween = light.CreateTween();
+        lightTween.TweenProperty(light, "light_energy", 5.2f, duration * 0.12)
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        lightTween.TweenInterval(duration * 0.50);
+        lightTween.TweenProperty(light, "light_energy", 0.0f, duration * 0.38);
+        lightTween.Finished += light.QueueFree;
+
+        MakeGroundRing(basePosition, color, 1.55f, duration * 0.82);
+        MakeGroundRing(basePosition, Colors.White, 0.82f, duration * 0.54);
+
+        for (int i = 0; i < 11; i++)
+        {
+            float angle = Mathf.Tau * i / 11.0f + 0.17f;
+            float radius = 0.54f + 0.24f * (i % 3);
+            Vector3 start = basePosition + new Vector3(Mathf.Cos(angle) * radius, 0.08f + 0.10f * (i % 2), Mathf.Sin(angle) * radius);
+            var streak = new MeshInstance3D
+            {
+                Mesh = new BoxMesh { Size = new Vector3(0.035f, 0.72f + 0.11f * (i % 4), 0.035f) },
+                Position = start,
+                MaterialOverride = MakeMaterial(new Color(color, 0.78f), true, true, 0.15f, color * 1.45f),
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            };
+            _fxRoot.AddChild(streak);
+            double delay = duration * (0.035 * (i % 5));
+            var streakTween = streak.CreateTween().SetParallel();
+            streakTween.TweenProperty(streak, "position:y", start.Y + 2.5f + 0.14f * (i % 3), duration * 0.70)
+                .SetDelay(delay).SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+            streakTween.TweenProperty(streak, "transparency", 1.0f, duration * 0.58)
+                .SetDelay(delay + duration * 0.22);
+            streakTween.Finished += streak.QueueFree;
+        }
     }
 
     /// <summary>割り込みが終わって手番へ戻る（第125期 段2）。</summary>
