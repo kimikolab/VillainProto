@@ -974,4 +974,597 @@ static partial class StageDiag
         Console.WriteLine("|---|---|");
         foreach (var (k, t) in MapPredictions) Console.WriteLine($"| {k} | {t} |");
     }
+
+    // =================================================================================
+    // stage band（第167期） —— 道中の回復で、2〜3戦のマップを遊べる難度帯に入れる
+    //
+    // 指示書は design/PHASE167_MAPBAND_SPEC.md。前提は第166期（F1〜F3）。
+    //
+    // **触るのはこのファイルだけ。** 道は第166期の組（北 `P23` / 南 `P45`）をそのまま使い、
+    // 隊は `CompareBuilds()` の行をそのまま取る（第166期 F1 ＝ 隊割りのミスを直すため）。
+    // **敵も駒も1体も作らない。engine には1行も足さない。**
+    //
+    //     dotnet run --project BattleSim -c Release 0 stage band phase0
+    //     dotnet run --project BattleSim -c Release 0 stage band
+    //     dotnet run --project BattleSim -c Release 0 stage band b     # 第3隊を第2候補にして確かめる
+    // =================================================================================
+
+    const int BandSeeds = 800;            // 1 帯あたりの seed 本数（指示書 §3-1）
+    const int BandCap = 24;               // 1 マップの戦闘回数の上限
+    const double BandLo = 30.0;           // 線1: 2本抜き率の帯（下）
+    const double BandHi = 70.0;           // 線1: 同（上）
+    const double BandContrastLine = 0.5;  // 線2: 対比（点）
+    const double BandNoiseMul = 3.0;      // 線2: ノイズの何倍か
+    const double BandRallyLo = 20.0;      // 線3: 挽回率の帯（下）
+    const double BandRallyHi = 80.0;      // 線3: 同（上）
+    const int BandProbeSeeds = 200;       // 第3隊の選定に使う seed 本数
+
+    /// <summary>振るつまみ（指示書 §2）。<b>勝った隊が次の戦闘へ入る前</b>に効く割合回復。</summary>
+    static readonly int[] BandRecover = { 0, 25, 50, 75, 100 };
+
+    const string BandRowA = "反撃 (ヒサ×カド)";
+    const string BandRowB = "突き返し (ハネ×ウツ)";
+
+    static Formation FormOf(string row) =>
+        CompareBuilds().FirstOrDefault(r => r.Name == row).F
+        ?? throw new ArgumentException("その行が `CompareBuilds()` に無い: " + row);
+
+    /// <summary>
+    /// 2 隊を組む。<b>席はその行のまま</b>（指示書 §1-2）。
+    /// 駒が重なったら、重なった駒はカド隊に残し、ハネ隊の席には
+    /// 第165期 部B の「どこでも同じ」群から <c>checkup</c> 単独が高い順に空いている駒を入れる。
+    /// </summary>
+    static (Formation A, Formation B, (string Slot, string From, string To)[] Sub) BandSquads()
+    {
+        Formation a = FormOf(BandRowA), b0 = FormOf(BandRowB);
+        var inA = new HashSet<string>(a.Occupied().Select(o => o.Def.Id));
+        var used = new HashSet<string>(inA);
+        foreach (var o in b0.Occupied()) used.Add(o.Def.Id);
+
+        var b = new Formation();
+        var subs = new List<(string, string, string)>();
+        foreach (var o in b0.Occupied())
+        {
+            if (!inA.Contains(o.Def.Id)) { b[o.Slot] = o.Def; continue; }
+            string pick = MapSteadyBySolo.First(x => !used.Contains(x));
+            used.Add(pick);
+            b[o.Slot] = Def(pick);
+            subs.Add((SlotName[o.Slot], o.Def.Name, Def(pick).Name));
+        }
+        return (a, b, subs.ToArray());
+    }
+
+    /// <summary>ある編成の、第2〜5波に対する単発勝率（新品どうし）。</summary>
+    static double[] BandSolo(Formation f, int seeds)
+    {
+        var res = new double[4];
+        Parallel.For(0, 4, k =>
+        {
+            int win = 0;
+            for (int seed = 0; seed < seeds; seed++)
+                if (BattleEngine.Run(f, EnemyCatalog.Stages[k + 1].Enemy, seed, verbose: false).PlayerWon) win++;
+            res[k] = 100.0 * win / seeds;
+        });
+        return res;
+    }
+
+    /// <summary>
+    /// 第3隊の候補（指示書 §1-3）——<b>上の2隊と駒が重ならず、
+    /// 第2〜5波の単発勝率の平均が 61 行の中央に最も近い行</b>。
+    /// 戻りは（候補の並び・61 行の中央値）で、先頭が第1候補・2 番目が第2候補。
+    /// </summary>
+    static ((string Name, Formation F, double Mean, double[] Solo)[] Cand, double Median61) BandReserve(
+        Formation a, Formation b, int seeds)
+    {
+        var rows = CompareBuilds();
+        var means = new double[rows.Length];
+        var solos = new double[rows.Length][];
+        for (int i = 0; i < rows.Length; i++)
+        {
+            solos[i] = BandSolo(rows[i].F, seeds);
+            means[i] = solos[i].Average();
+        }
+        double med = Median(means.ToArray());
+        var taken = new HashSet<string>(a.Occupied().Select(o => o.Def.Id)
+            .Concat(b.Occupied().Select(o => o.Def.Id)));
+        var cand = Enumerable.Range(0, rows.Length)
+            .Where(i => rows[i].F.Occupied().All(o => !taken.Contains(o.Def.Id)))
+            .OrderBy(i => Math.Abs(means[i] - med)).ThenBy(i => i)
+            .Select(i => (rows[i].Name, rows[i].F, means[i], solos[i]))
+            .ToArray();
+        return (cand, med);
+    }
+
+    // ---------------- マップの進行 ----------------
+
+    /// <summary>1 マップぶんの結果。<b>どれも読んで分岐しない計数である。</b></summary>
+    readonly record struct BandOut(
+        int Cleared, double Partial, bool TwoRunA, bool TwoRunB,
+        bool ReserveUsed, bool ReserveCleared, int LastRoad, int LastIdx, int Battles);
+
+    /// <summary>
+    /// 1 マップぶん回す。第166期の <see cref="MapOnce"/> との違いは 2 つだけ——
+    /// <b>(1) 勝った隊が次の戦闘へ入る前に割合ぶん回復する</b>（指示書 §2）と、
+    /// <b>(2) 隊が全滅したら控えの第3隊がその道の続きへ 1 回だけ出る</b>（§1-3）。
+    /// </summary>
+    static BandOut BandOnce(Formation[] starters, Formation? reserve, int[] assign,
+                            IReadOnlyList<Formation>[] roads, int seed, int pct)
+    {
+        var P = new List<UnitState>?[3];
+        var asg = new int[3];
+        for (int s = 0; s < 2; s++)
+        {
+            P[s] = BattleEngine.Materialize(starters[s], BattleContext.PlayerTeam);
+            asg[s] = assign[s];
+        }
+        asg[2] = -1;   // 控え（まだ出ていない）
+
+        var E = roads.Select(r => new List<UnitState>?[r.Count]).ToArray();
+        var cleared = roads.Select(r => new bool[r.Count]).ToArray();
+        var maxHp = roads.Select(r => r.Select(f => f.Occupied().Sum(o => o.Def.MaxHp)).ToArray()).ToArray();
+        var hpNow = roads.Select((r, i) => maxHp[i].ToArray()).ToArray();
+
+        int total = roads.Sum(r => r.Count);
+        var clearedBy = new int[3];          // 隊ごとの、自分の担当の道で抜いた数
+        bool usedReserve = false;
+        int reserveRoad = -1;
+        int battles = 0, lastRoad = -1, lastIdx = -1;
+
+        while (battles < BandCap)
+        {
+            bool acted = false;
+            for (int s = 0; s < 3; s++)
+            {
+                if (P[s] is not { } pu || asg[s] < 0) continue;
+                int road = asg[s];
+                if (!cleared[road].Any(c => !c))
+                {
+                    road = Array.FindIndex(cleared, r => r.Any(c => !c));
+                    if (road < 0) break;
+                }
+                int idx = Array.FindIndex(cleared[road], c => !c);
+                lastRoad = road; lastIdx = idx;
+
+                E[road][idx] ??= BattleEngine.Materialize(roads[road][idx], BattleContext.EnemyTeam);
+                var eu = E[road][idx]!;
+
+                BattleResult r = BattleEngine.Run(pu, eu, DeriveSeed(seed, battles), verbose: false);
+                battles++; acted = true;
+
+                var aliveP = pu.Where(u => u.IsAlive).ToList();
+                var aliveE = eu.Where(u => u.IsAlive).ToList();
+                hpNow[road][idx] = aliveE.Sum(u => u.Hp);
+
+                if (aliveE.Count == 0)
+                {
+                    cleared[road][idx] = true; E[road][idx] = null; hpNow[road][idx] = 0;
+                    if (road == (s == 2 ? reserveRoad : assign[s])) clearedBy[s]++;
+                }
+                else E[road][idx] = EngagementEngine.CrossBoundary(aliveE);
+
+                // **勝った隊だけが、次の戦闘へ入る前に回復する**（指示書 §2）。
+                // 負けて生存者が残った隊（第166期 F2 の実測で 0.04%）には掛けない。
+                if (aliveP.Count == 0)
+                {
+                    P[s] = null;
+                    if (!usedReserve && reserve is not null)
+                    {
+                        usedReserve = true; reserveRoad = road; asg[2] = road;
+                        P[2] = BattleEngine.Materialize(reserve, BattleContext.PlayerTeam);
+                    }
+                }
+                else
+                {
+                    P[s] = EngagementEngine.CrossBoundary(aliveP, pu,
+                        r.PlayerWon && pct > 0 ? new RecoverRule(pct, false) : null);
+                }
+
+                int done = cleared.Sum(x => x.Count(c => c));
+                if (done >= total || P.All(x => x is null)) goto fin;
+            }
+            if (!acted) break;
+        }
+    fin:
+        int cl = cleared.Sum(x => x.Count(c => c));
+        double partial = cl;
+        for (int r0 = 0; r0 < roads.Length; r0++)
+            for (int i = 0; i < roads[r0].Count; i++)
+                if (!cleared[r0][i] && maxHp[r0][i] > 0)
+                    partial += (double)(maxHp[r0][i] - hpNow[r0][i]) / maxHp[r0][i];
+
+        bool rallied = usedReserve && reserveRoad >= 0 && cleared[reserveRoad].All(c => c);
+        return new BandOut(cl, partial, clearedBy[0] >= 2, clearedBy[1] >= 2,
+                           usedReserve, rallied, lastRoad, lastIdx, battles);
+    }
+
+    /// <summary>seed 帯 1 本ぶんの集計。</summary>
+    sealed record BandStat(double Full, double Partial, double TwoA, double TwoB,
+                           int ReserveN, double Rally, double Battles, int[,] StopAt,
+                           double ClearedAvg);
+
+    static BandStat BandBand(Formation[] starters, Formation? reserve, int[] assign,
+                             IReadOnlyList<Formation>[] roads, int seed0, int pct)
+    {
+        var o = new BandOut[BandSeeds];
+        Parallel.For(0, BandSeeds, i => o[i] = BandOnce(starters, reserve, assign, roads, seed0 + i, pct));
+        int total = roads.Sum(r => r.Count);
+        var stop = new int[roads.Length, roads.Max(r => r.Count)];
+        foreach (var x in o)
+            if (x.Cleared < total && x.LastRoad >= 0) stop[x.LastRoad, x.LastIdx]++;
+        int rn = o.Count(x => x.ReserveUsed);
+        return new BandStat(
+            100.0 * o.Count(x => x.Cleared >= total) / BandSeeds,
+            o.Average(x => x.Partial),
+            100.0 * o.Count(x => x.TwoRunA) / BandSeeds,
+            100.0 * o.Count(x => x.TwoRunB) / BandSeeds,
+            rn, rn == 0 ? 0 : 100.0 * o.Count(x => x.ReserveCleared) / rn,
+            o.Average(x => (double)x.Battles), stop, o.Average(x => (double)x.Cleared));
+    }
+
+    /// <summary>
+    /// 1 戦目の勝率と、1 戦目を抜いた時点の平均残り HP 割合・平均生存枚数
+    /// （指示書 §5-1 の併記）。<b>マップとは独立に、新品どうしで 1 戦だけ測る。</b>
+    /// </summary>
+    static (double Win, double Hp, double Alive) BandFirst(Formation f, Formation foe, int seeds)
+    {
+        int win = 0; double hp = 0, al = 0;
+        for (int seed = 0; seed < seeds; seed++)
+        {
+            var pu = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
+            var eu = BattleEngine.Materialize(foe, BattleContext.EnemyTeam);
+            if (!BattleEngine.Run(pu, eu, seed, verbose: false).PlayerWon) continue;
+            win++;
+            hp += 100.0 * pu.Where(u => u.IsAlive).Sum(u => u.Hp) / pu.Sum(u => u.Def.MaxHp);
+            al += pu.Count(u => u.IsAlive);
+        }
+        return (100.0 * win / seeds, win == 0 ? 0 : hp / win, win == 0 ? 0 : al / win);
+    }
+
+    // ---------------- 入口 ----------------
+
+    static void BandEntry(string arg)
+    {
+        string a = arg.Trim();
+        if (a.StartsWith("phase0")) { BandPhase0(); return; }
+        BandMain(a.StartsWith("b"));
+    }
+
+    // ---------------- Phase 0（戦闘は下見のぶんだけ） ----------------
+
+    static void BandPhase0()
+    {
+        Console.WriteLine("# 第167期 Phase 0 —— 道中の回復で 2〜3戦のマップを帯に入れる");
+        Console.WriteLine();
+
+        var (a, b, subs) = BandSquads();
+
+        Console.WriteLine("## Q0-1. 2 行の駒の一覧と重なり");
+        Console.WriteLine();
+        Console.WriteLine("| 隊 | 行 | 席（その行のまま） |");
+        Console.WriteLine("|---|---|---|");
+        Console.WriteLine($"| カド隊 | `{BandRowA}` | {Show(FormOf(BandRowA))} |");
+        Console.WriteLine($"| ハネ隊 | `{BandRowB}` | {Show(FormOf(BandRowB))} |");
+        Console.WriteLine();
+        if (subs.Length == 0)
+            Console.WriteLine("**重なりは 0 件。** 入れ替えは行っていない。");
+        else
+        {
+            Console.WriteLine($"**重なりが {subs.Length} 件。** §1-2 の規則どおり、"
+                + "重なった駒はカド隊に残し、ハネ隊の席を"
+                + "「どこでも同じ」群（`checkup` 単独の降順）の空いている駒で埋めた。");
+            Console.WriteLine();
+            Console.WriteLine("| 席 | もとの駒（カド隊に残す） | 入れた駒 |");
+            Console.WriteLine("|---|---|---|");
+            foreach (var (sl, f, t) in subs) Console.WriteLine($"| {sl} | {f} | **{t}** |");
+            Console.WriteLine();
+            Console.WriteLine($"**入れ替え後のハネ隊**: {Show(b)}");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"### 入れ替え後の単発勝率（新品どうし・seed 0..{BandProbeSeeds - 1}）");
+        Console.WriteLine();
+        Console.WriteLine("| 隊 | 第二波 | 第三波 | 第四波 | 第五波 | 平均 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|");
+        foreach (var (nm, f) in new[] { ("カド隊", a), ("ハネ隊", b) })
+        {
+            var s = BandSolo(f, BandProbeSeeds);
+            Console.WriteLine($"| {nm} | " + string.Join(" | ", s.Select(x => $"{x:F1}%"))
+                + $" | **{s.Average():F1}%** |");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-2. 第3隊の候補");
+        Console.WriteLine();
+        var (cand, med) = BandReserve(a, b, BandProbeSeeds);
+        Console.WriteLine($"`CompareBuilds()` {CompareBuilds().Length} 行の"
+            + $"「第2〜5波の単発勝率の平均」の**中央値は {med:F1}%**。"
+            + $"上の 2 隊と駒が重ならない行は **{cand.Length} 行**で、中央値に近い順に:");
+        Console.WriteLine();
+        Console.WriteLine("| # | 行 | 第二波 | 第三波 | 第四波 | 第五波 | 平均 | 中央値との差 | 採否 |");
+        Console.WriteLine("|--:|---|--:|--:|--:|--:|--:|--:|---|");
+        for (int i = 0; i < Math.Min(6, cand.Length); i++)
+        {
+            var c = cand[i];
+            string mark = i == 0 ? "**第1候補**" : i == 1 ? "第2候補" : "—";
+            Console.WriteLine($"| {i + 1} | `{c.Name}` | "
+                + string.Join(" | ", c.Solo.Select(x => $"{x:F1}%"))
+                + $" | {c.Mean:F1}% | {Math.Abs(c.Mean - med):F1}pt | {mark} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**第1候補の席**: {Show(cand[0].F)}");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-3. 境界の包みは回復の規則を受けられるか");
+        Console.WriteLine();
+        string eng = ReadRepo("BattleCore/Engagement.cs");
+        var el = eng.Split('\n');
+        int cb = Array.FindIndex(el, l => l.Contains("public static List<UnitState> CrossBoundary"));
+        for (int i = cb; i >= 0 && i < cb + 6; i++)
+            Console.WriteLine($"    Engagement.cs:{i + 1}  {el[i].TrimEnd()}");
+        Console.WriteLine();
+        bool ok3 = cb >= 0 && el.Skip(cb).Take(6).Any(l => l.Contains("? recover"));
+        Console.WriteLine(ok3
+            ? "**○ —— 受けられる。** 第166期が足した包みが省略可能な引数として持っているので、"
+              + "**`BattleCore` には 1 行も足さない。**"
+            : "**× —— 受けられない。** 指示書 §2 の但し書きどおり、ここで止まって報告する。");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-4. 渇き（第三波の回復封じ）は境界の回復に効くか");
+        Console.WriteLine();
+        int at = Array.FindIndex(el, l => l.Contains("rec.HpPercent > 0"));
+        if (at >= 0)
+            foreach (var l in el.Skip(Math.Max(0, at - 4)).Take(6))
+                Console.WriteLine("    " + l.TrimEnd());
+        Console.WriteLine();
+        bool heal = at >= 0 && el.Skip(at).Take(2).Any(l => l.Contains("u.Hp = Math.Min"));
+        Console.WriteLine(heal
+            ? "**効かない。** 境界の回復は **`Hp` を直接足していて、回復の窓口を通らない**"
+              + "——渇きも支援拒否も「戦闘中に味方が配るもの」に対する規則なので、"
+              + "**北の道の第三波は、道中の回復を 1 点も削らない。**"
+            : "**要確認**（走査で該当行が引けなかった）。");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-5. 第101期（境界の回復を入れた期）との重なり");
+        Console.WriteLine();
+        string p101 = ReadRepo("design/PHASE101_RECOVER.md");
+        foreach (var l in p101.Split('\n').Where(l => l.TrimStart().StartsWith("> ")).Take(3))
+            Console.WriteLine(l.TrimEnd());
+        Console.WriteLine();
+        Console.WriteLine("**重なる**——第101期は**同じつまみ（境界ごとの割合回復）を 0 / 25 / 50 / 100 で**"
+            + "73 行 × 地点3波に当てている。ただし**測った量が違う**"
+            + "（あちらは突破率と 0% の行の数・こちらは 1 隊が道 1 本を抜く率）ので、"
+            + "**この期は「HP だけの回復では足りない」という第101期の結論を、"
+            + "2〜3戦のマップの尺度で引き直すことになる。**");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-6. 走行時間の見積もり");
+        Console.WriteLine();
+        var roads = MapRoads.Select(r => (IReadOnlyList<Formation>)ColOf(r.Col).Squads).ToArray();
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var probe = BandBand(new[] { a, b }, cand[0].F, new[] { 1, 0 }, roads, 0, 50);
+        sw.Stop();
+        double per = sw.Elapsed.TotalSeconds;
+        int points = BandRecover.Length * 2 * 2 + 4;   // 5 回復量 × 2 割り当て × 2 帯 ＋ 第2候補
+        Console.WriteLine($"1 点（seed {BandSeeds} 本）が **{per:F1} 秒**。"
+            + $"本体は **{points} 点**なので **約 {per * points:F0} 秒**"
+            + $"（{(per * points > 600 ? "**10 分を超える。止まって報告する**" : "10 分の内側")}）。");
+        Console.WriteLine();
+        Console.WriteLine($"下見の 1 点（正・回復 50%）: 踏破 {probe.Full:F1}% ／ 部分点 {probe.Partial:F2} ／ "
+            + $"2本抜き カド隊 {probe.TwoA:F1}% ・ ハネ隊 {probe.TwoB:F1}% ／ 挽回 {probe.Rally:F1}%（分母 {probe.ReserveN}）。");
+        Console.WriteLine();
+
+        Console.WriteLine("## 予測（**本体を回す前に書いた。外れても消さない**）");
+        Console.WriteLine();
+        Console.WriteLine("| # | 予測 |");
+        Console.WriteLine("|---|---|");
+        foreach (var (k, t) in BandPredictions) Console.WriteLine($"| {k} | {t} |");
+    }
+
+    public static readonly (string Key, string Text)[] BandPredictions =
+    {
+        ("K1", "**線1 は ×**——第101期が同じつまみ（0/25/50/100）で"
+             + "「持ち越しの代金は HP ではなく体」を出している。HP だけ戻しても帯に入らない"),
+        ("K2", "**カド隊の北（粛）は回復 100 でも 30% に届かない**"
+             + "——R251 どおり、第二波の 1 戦目で落ちる。回復は 1 戦目には効かない"),
+        ("K3", "**ハネ隊は 2 隊のうち先に帯を抜けて 70% を超える**"
+             + "——`compare` の行なので殴る駒を持ち、第2〜4波の単発が 95% 以上ある"),
+        ("K4", "**挽回率は回復量にほとんど依らない**——第3隊は新品で出るので、"
+             + "道中の回復は第3隊の 1 戦目に 1 点も効かない"),
+        ("K5", "**対比は回復量が増えるほど小さくなる**——回復は弱い側の道を救うので、"
+             + "割り当ての違いが埋まる"),
+    };
+
+    // ---------------- 本体 ----------------
+
+    static void BandMain(bool second)
+    {
+        var (a, b, subs) = BandSquads();
+        var roads = MapRoads.Select(r => (IReadOnlyList<Formation>)ColOf(r.Col).Squads).ToArray();
+        var (cand, med) = BandReserve(a, b, BandProbeSeeds);
+        Formation res = cand[second ? 1 : 0].F;
+        string resName = cand[second ? 1 : 0].Name;
+        var squads = new[] { a, b };
+        int[] straight = { 1, 0 };   // 正: カド隊 → 南(1) ／ ハネ隊 → 北(0)
+        int[] cross = { 0, 1 };      // 逆
+
+        Console.WriteLine("# 第167期 —— 道中の回復で、2〜3戦のマップを遊べる難度帯に入れる");
+        Console.WriteLine();
+        Console.WriteLine($"**第3隊は{(second ? "第2候補" : "第1候補")} `{resName}`**（中央値 {med:F1}%）。");
+        Console.WriteLine($"カド隊 {Show(a)}／ハネ隊 {Show(b)}"
+            + (subs.Length == 0 ? "" : $"（{subs.Length} 枠を入れ替えた）") + "。");
+        Console.WriteLine($"道: 北 `{MapRoads[0].Col}` ／ 南 `{MapRoads[1].Col}`。"
+            + $"seed 帯 2 本（0..{BandSeeds - 1} / {BandSeeds}..{2 * BandSeeds - 1}）。");
+        Console.WriteLine();
+
+        // 5 回復量 × 2 割り当て × 2 帯
+        var P = new BandStat[BandRecover.Length, 2];   // [pct, band]
+        var Q = new BandStat[BandRecover.Length, 2];
+        for (int p = 0; p < BandRecover.Length; p++)
+            for (int bd = 0; bd < 2; bd++)
+            {
+                P[p, bd] = BandBand(squads, res, straight, roads, bd * BandSeeds, BandRecover[p]);
+                Q[p, bd] = BandBand(squads, res, cross, roads, bd * BandSeeds, BandRecover[p]);
+            }
+
+        // ---- 表1 ----
+        Console.WriteLine("## 1. 回復量 × 隊 × 道 の 2本抜き率（線1 の本体）");
+        Console.WriteLine();
+        Console.WriteLine("**2本抜き率 ＝ 1 隊が自分の道の 2 部隊を続けて抜いた割合**（第3隊の加勢なし）。"
+            + "正の割り当ては カド隊 → 南 ／ ハネ隊 → 北、逆はその入れ替え。");
+        Console.WriteLine();
+        Console.WriteLine("| 回復 | カド隊×南（正） | ハネ隊×北（正） | 線1（正） | カド隊×北（逆） | ハネ隊×南（逆） | 踏破率 正 | 踏破率 逆 |");
+        Console.WriteLine("|--:|--:|--:|:-:|--:|--:|--:|--:|");
+        var pass1 = new bool[BandRecover.Length];
+        for (int p = 0; p < BandRecover.Length; p++)
+        {
+            double ka = P[p, 0].TwoA, ha = P[p, 0].TwoB;
+            bool inA = ka >= BandLo && ka <= BandHi, inB = ha >= BandLo && ha <= BandHi;
+            pass1[p] = inA && inB;
+            string mark = inA && inB ? "**○**" : (inA || inB ? "△" : "×");
+            Console.WriteLine($"| {BandRecover[p]}% | {ka:F1}% | {ha:F1}% | {mark} "
+                + $"| {Q[p, 0].TwoA:F1}% | {Q[p, 0].TwoB:F1}% "
+                + $"| {P[p, 0].Full:F1}% | {Q[p, 0].Full:F1}% |");
+        }
+        Console.WriteLine();
+        for (int p = 0; p < BandRecover.Length; p++)
+        {
+            double ka = P[p, 0].TwoA, ha = P[p, 0].TwoB;
+            bool inA = ka >= BandLo && ka <= BandHi, inB = ha >= BandLo && ha <= BandHi;
+            if (inA ^ inB)
+                Console.WriteLine($"- 回復 {BandRecover[p]}%: **△** —— "
+                    + $"{(inA ? "ハネ隊×北" : "カド隊×南")} が "
+                    + $"{((inA ? ha : ka) < BandLo ? "下" : "上")}へ外れた"
+                    + $"（{(inA ? ha : ka):F1}%）");
+        }
+        Console.WriteLine();
+        Console.WriteLine("### 1 戦目の勝率と、抜いた時点の残り（**マップとは独立に新品どうしで 1 戦だけ**）");
+        Console.WriteLine();
+        Console.WriteLine("| 隊 | 道 | 1 戦目 | 勝率 | 抜いた時点の残り HP 割合 | 同 生存枚数 |");
+        Console.WriteLine("|---|---|---|--:|--:|--:|");
+        foreach (var (nm, f) in new[] { ("カド隊", a), ("ハネ隊", b) })
+            for (int r = 0; r < roads.Length; r++)
+            {
+                var (w, h, al) = BandFirst(f, roads[r][0], BandProbeSeeds);
+                Console.WriteLine($"| {nm} | {MapRoads[r].Name} | 第{WaveIdxOf(roads[r][0]) + 1}波 "
+                    + $"| {w:F1}% | {h:F1}% | {al:F2} 枚 |");
+            }
+        Console.WriteLine();
+
+        // ---- 表2 ----
+        Console.WriteLine("## 2. 部分点と対比（線2）");
+        Console.WriteLine();
+        Console.WriteLine("**部分点 ＝ 抜いた敵部隊の数（0〜4）＋ 残った敵部隊の削り**"
+            + "（失った HP ÷ 定義上の総最大 HP）。**対比 ＝ 正 − 逆。**");
+        Console.WriteLine();
+        Console.WriteLine("| 回復 | 正 部分点 | 逆 部分点 | **対比** | 帯1 の再現（正/逆） | ノイズ | 対比 ÷ ノイズ | 線2 |");
+        Console.WriteLine("|--:|--:|--:|--:|--:|--:|--:|:-:|");
+        var pass2 = new bool[BandRecover.Length];
+        for (int p = 0; p < BandRecover.Length; p++)
+        {
+            double c0 = P[p, 0].Partial - Q[p, 0].Partial;
+            double c1 = P[p, 1].Partial - Q[p, 1].Partial;
+            double noise = (Math.Abs(P[p, 0].Partial - P[p, 1].Partial)
+                          + Math.Abs(Q[p, 0].Partial - Q[p, 1].Partial)) / 2.0;
+            double ratio = noise <= 0 ? double.PositiveInfinity : Math.Abs(c0) / noise;
+            pass2[p] = c0 >= BandContrastLine && ratio >= BandNoiseMul;
+            Console.WriteLine($"| {BandRecover[p]}% | {P[p, 0].Partial:F3} | {Q[p, 0].Partial:F3} "
+                + $"| **{c0:+0.000;-0.000}** | {P[p, 1].Partial:F3} / {Q[p, 1].Partial:F3} "
+                + $"| {noise:F3} | {(double.IsInfinity(ratio) ? "∞" : ratio.ToString("F1"))} "
+                + $"| {(pass2[p] ? "**○**" : "×")} |（対比の再現 {c1:+0.000;-0.000}）");
+        }
+        Console.WriteLine();
+
+        // ---- 表3 ----
+        Console.WriteLine("## 3. 挽回率（線3）");
+        Console.WriteLine();
+        Console.WriteLine("**挽回率 ＝ 第3隊が出た seed のうち、第3隊がその道を抜き切った割合。**");
+        Console.WriteLine();
+        Console.WriteLine("| 回復 | 正 第3隊が出た | 正 挽回率 | 逆 第3隊が出た | 逆 挽回率 | 線3（逆） |");
+        Console.WriteLine("|--:|--:|--:|--:|--:|:-:|");
+        var pass3 = new bool[BandRecover.Length];
+        for (int p = 0; p < BandRecover.Length; p++)
+        {
+            double rq = Q[p, 0].Rally;
+            pass3[p] = rq >= BandRallyLo && rq <= BandRallyHi;
+            Console.WriteLine($"| {BandRecover[p]}% | {P[p, 0].ReserveN} / {BandSeeds} | {P[p, 0].Rally:F1}% "
+                + $"| {Q[p, 0].ReserveN} / {BandSeeds} | **{rq:F1}%** | {(pass3[p] ? "**○**" : "×")} |");
+        }
+        Console.WriteLine();
+
+        // ---- 表4 ----
+        Console.WriteLine("## 4. 失敗の内訳（どの道の何戦目で止まったか）");
+        Console.WriteLine();
+        Console.WriteLine("| 回復 | 割り当て | 失敗数 | " + string.Join(" | ",
+            MapRoads.SelectMany((rd, r) => Enumerable.Range(0, roads[r].Count)
+                .Select(i => $"{rd.Name} {i + 1}戦目"))) + " | 平均戦闘回数 |");
+        Console.WriteLine("|--:|---|--:|" + string.Concat(Enumerable.Repeat("--:|", roads.Sum(r => r.Count) + 1)));
+        for (int p = 0; p < BandRecover.Length; p++)
+            foreach (var (nm, st) in new[] { ("正", P[p, 0]), ("逆", Q[p, 0]) })
+            {
+                var cells = new List<string>();
+                for (int r = 0; r < roads.Length; r++)
+                    for (int i = 0; i < roads[r].Count; i++) cells.Add(st.StopAt[r, i].ToString());
+                int fail = (int)Math.Round(BandSeeds * (100.0 - st.Full) / 100.0);
+                Console.WriteLine($"| {BandRecover[p]}% | {nm} | {fail} | "
+                    + string.Join(" | ", cells) + $" | {st.Battles:F2} |");
+            }
+        Console.WriteLine();
+
+        // ---- 表5 ----
+        Console.WriteLine("## 5. 回復 100% でも 2本抜き率が 30% に届かない隊×道");
+        Console.WriteLine();
+        int last = BandRecover.Length - 1;
+        var bad = new List<string>();
+        if (P[last, 0].TwoA < BandLo) bad.Add($"**カド隊 × 南**（{P[last, 0].TwoA:F1}%）");
+        if (P[last, 0].TwoB < BandLo) bad.Add($"**ハネ隊 × 北**（{P[last, 0].TwoB:F1}%）");
+        if (Q[last, 0].TwoA < BandLo) bad.Add($"**カド隊 × 北**（{Q[last, 0].TwoA:F1}%）");
+        if (Q[last, 0].TwoB < BandLo) bad.Add($"**ハネ隊 × 南**（{Q[last, 0].TwoB:F1}%）");
+        Console.WriteLine(bad.Count == 0
+            ? "**該当なし。** 回復だけで 4 通りすべてが 30% を超える。"
+            : "**回復では解けない＝敵を軽くする必要がある箇所**: " + string.Join(" ／ ", bad) + "。");
+        Console.WriteLine();
+
+        // ---- 表6 ----
+        Console.WriteLine("## 6. 自己検査 —— 回復 0 が第166期と一致するか");
+        Console.WriteLine();
+        Console.WriteLine("**第166期の隊（`stage map` の `MapSetup`）で、第3隊なし・回復 0 を 1 回だけ回す。**");
+        Console.WriteLine();
+        var (m1, m2, mroads) = MapSetup(fillerB: false);
+        var msq = new[] { m1, m2 };
+        Console.WriteLine("| 割り当て | 帯 | 踏破率 | 抜いた部隊数 | 第166期の値 | 一致 |");
+        Console.WriteLine("|---|---|--:|--:|--:|:-:|");
+        var want = new[] { (1.00, 1.00), (0.04, 0.03) };
+        for (int k = 0; k < 2; k++)
+            for (int bd = 0; bd < 2; bd++)
+            {
+                var st = BandBand(msq, null, k == 0 ? straight : cross, mroads, bd * BandSeeds, 0);
+                double w = bd == 0 ? want[k].Item1 : want[k].Item2;
+                Console.WriteLine($"| {(k == 0 ? "正" : "逆")} | seed {bd * BandSeeds}.. | {st.Full:F1}% "
+                    + $"| **{st.ClearedAvg:F2}** | {w:F2} | {(Math.Abs(st.ClearedAvg - w) < 0.005 ? "**○**" : "×")} |");
+            }
+        Console.WriteLine();
+
+        // ---- 判定 ----
+        Console.WriteLine("## 7. 判定");
+        Console.WriteLine();
+        Console.WriteLine("| 回復 | 線1 | 線2 | 線3 | 本丸（3 つ同時） |");
+        Console.WriteLine("|--:|:-:|:-:|:-:|:-:|");
+        bool main = false;
+        for (int p = 0; p < BandRecover.Length; p++)
+        {
+            bool all = pass1[p] && pass2[p] && pass3[p];
+            main |= all;
+            Console.WriteLine($"| {BandRecover[p]}% | {(pass1[p] ? "○" : "×")} | {(pass2[p] ? "○" : "×")} "
+                + $"| {(pass3[p] ? "○" : "×")} | {(all ? "**○**" : "×")} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine(main
+            ? "**本丸: ○ —— 回復だけで検証用マップが立つ回復量がある。**"
+            : "**本丸: × —— 3 つを同時に満たす回復量は無い。線は動かさない（指示書 §3-2）。**");
+        Console.WriteLine();
+        Console.WriteLine("## 8. 予測の当落");
+        Console.WriteLine();
+        Console.WriteLine("| # | 予測 |");
+        Console.WriteLine("|---|---|");
+        foreach (var (k, t) in BandPredictions) Console.WriteLine($"| {k} | {t} |");
+    }
 }

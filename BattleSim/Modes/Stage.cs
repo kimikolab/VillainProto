@@ -40,11 +40,12 @@ static partial class StageDiag
             case "catalog": CatalogRun(arg); return;
             case "short": ShortRun(arg); return;
             case "map": MapRun(arg); return;
+            case "band": BandEntry(arg); return;
             case "rho": Rho(arg); return;
             case "rhocarry": RhoCarry(arg); return;
             case "check": Check(arg); return;
             default:
-                Console.WriteLine("stage: モードは phase0 / scan / perm / permsd / run / life / obj / cross / catalog / short / map / rho / rhocarry / check。");
+                Console.WriteLine("stage: モードは phase0 / scan / perm / permsd / run / life / obj / cross / catalog / short / map / band / rho / rhocarry / check。");
                 return;
         }
     }
