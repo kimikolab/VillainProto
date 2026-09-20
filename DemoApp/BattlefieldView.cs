@@ -35,6 +35,14 @@ public partial class BattlefieldView : Control
     private readonly Dictionary<int, PawnView> _pawns = new();
     private bool _setupMode = true;
 
+    // ---- 第172期 部B: 編成画面に関係の線を重ねる ----
+    //
+    // **編成の仕組みは1つも変えていない。** 既存の 5 席の上に、`Map11Relations` から
+    // 機械で引いた線を重ねるだけ（描画そのものは `SeatLinks`・マップの図と同じ1本）。
+    private SetupLinkLayer _setupLines = null!;
+    private SetupLinkLayer _setupWords = null!;
+    private int _setupSelected = -1;
+
     public Action<int>? SetupSlotClicked;
     public Action<int>? SetupSlotRemoveRequested;
     public Action<int, string>? SetupUnitDropped;
@@ -92,6 +100,8 @@ public partial class BattlefieldView : Control
         _subline.AddThemeColorOverride("font_outline_color", Colors.Black);
         AddChild(_subline);
 
+        _setupLines = AddSetupLinkLayer(words: false);
+
         for (int i = 0; i < _slots.Length; i++)
         {
             int slot = i;
@@ -103,6 +113,9 @@ public partial class BattlefieldView : Control
             AddChild(view);
             _slots[i] = view;
         }
+
+        // **語は札の上、線は札の下**（マップの図と同じ判断）。
+        _setupWords = AddSetupLinkLayer(words: true);
 
         _fx = new FxLayer
         {
@@ -134,7 +147,7 @@ public partial class BattlefieldView : Control
         _subline.Text = "ロスターから5体を選び、X字の席へ配置してください";
     }
 
-    public void UpdateFormation(IReadOnlyList<UnitDef?> formation)
+    public void UpdateFormation(IReadOnlyList<UnitDef?> formation, int selected = -1)
     {
         _setupMode = true;
         _eyebrow.Text = "FORMATION CAMP  /  配置フェイズ";
@@ -146,13 +159,44 @@ public partial class BattlefieldView : Control
             _slots[i].Visible = true;
             _slots[i].SetUnit(formation[i]);
         }
+        // **置くたび・動かすたびに引き直す**（写しを持たない・自己検査 (e)）。
+        _setupSelected = selected;
+        var seats = new Dictionary<int, UnitDef>();
+        for (int i = 0; i < formation.Count && i < FormationRules.PlayableSlotCount; i++)
+            if (formation[i] is { } def) seats[i] = def;
+        var links = Map11Relations.Of(seats);
+        _setupLines.Set(links, selected);
+        _setupWords.Set(links, selected);
         LayoutActors();
+    }
+
+    /// <summary>編成画面で選んでいる席（線を濃くする先）。<b>盤面には何も起きない。</b></summary>
+    public void SetSetupSelection(int slot)
+    {
+        _setupSelected = slot;
+        _setupLines.Select(slot);
+        _setupWords.Select(slot);
+    }
+
+    private SetupLinkLayer AddSetupLinkLayer(bool words)
+    {
+        var layer = new SetupLinkLayer
+        {
+            MouseFilter = MouseFilterEnum.Ignore,
+            DrawWords = words,
+            RectOf = slot => new Rect2(_slots[slot].Position, _slots[slot].Size),
+        };
+        layer.SetAnchorsPreset(LayoutPreset.FullRect);
+        AddChild(layer);
+        return layer;
     }
 
     public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName)
     {
         _setupMode = false;
         foreach (FormationSlot slot in _slots) slot.Visible = false;
+        _setupLines.Visible = false;
+        _setupWords.Visible = false;
         foreach (PawnView pawn in _pawns.Values) pawn.QueueFree();
         _pawns.Clear();
         _fx.ClearEffects();
@@ -336,6 +380,9 @@ public partial class BattlefieldView : Control
                 _slots[slot].Size = new Vector2(138, 168);
                 _slots[slot].Position = SetupTopLeft(slot, _slots[slot].Size);
             }
+            // 席が動いたら線も引き直す（画面の広さで席の座標が変わる）。
+            _setupLines.QueueRedraw();
+            _setupWords.QueueRedraw();
         }
         else
         {
@@ -390,6 +437,36 @@ public partial class BattlefieldView : Control
         7 or 8 or 2 => 0.555f,
         _ => 0.555f,
     };
+}
+
+/// <summary>
+/// 編成画面の関係の線（第172期 部B）。<b>席の四角を外から受け取るだけ</b>で、
+/// 描画は <see cref="SeatLinks"/>（マップの図と同じ1本）。<b>判定も元データも持たない。</b>
+/// </summary>
+public partial class SetupLinkLayer : Control
+{
+    public bool DrawWords { get; init; }
+    public Func<int, Rect2> RectOf { get; init; } = _ => new Rect2();
+
+    private IReadOnlyList<Map11Relations.Link> _links = Array.Empty<Map11Relations.Link>();
+    private int _selected = -1;
+
+    public void Set(IReadOnlyList<Map11Relations.Link> links, int selected)
+    {
+        _links = links;
+        _selected = selected;
+        Visible = true;
+        QueueRedraw();
+    }
+
+    public void Select(int selected)
+    {
+        _selected = selected;
+        QueueRedraw();
+    }
+
+    public override void _Draw()
+        => SeatLinks.Draw(this, _links, _selected, UiKit.Player, RectOf, DrawWords, fontSize: 12);
 }
 
 public partial class PawnView : Control

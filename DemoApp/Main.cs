@@ -167,6 +167,23 @@ public partial class Main : Control
             GetTree().Quit(p171 ? 0 : 1);
             return;
         }
+        // 第172期 Phase 0。**ソースの中身はここで読んで渡す**（`Map11Phase172` に Godot の型を入れない）。
+        if (bootArgs.Contains("--map11-phase172", StringComparer.Ordinal))
+        {
+            string core = ProjectSettings.GlobalizePath("res://") + "../BattleCore/";
+            string demo = ProjectSettings.GlobalizePath("res://");
+            string Read172(string path)
+            {
+                try { return System.IO.File.ReadAllText(path); }
+                catch (Exception ex) { GD.Print($"（{path} を読めなかった: {ex.Message}）"); return ""; }
+            }
+            bool p172 = Map11Phase172.Run(GD.Print, Read172(core + "Traits.cs"),
+                                          Read172(core + "Models.cs"),
+                                          Read172(demo + "BattlefieldView.cs"));
+            GD.Print($"MAP11_PHASE172_COMPLETE ok={p172}");
+            GetTree().Quit(p172 ? 0 : 1);
+            return;
+        }
         // 第171期 部C —— 演出の穴の棚卸し（**調べて表にするだけ**）。
         if (bootArgs.Contains("--map11-artgap", StringComparer.Ordinal))
         {
@@ -247,6 +264,11 @@ public partial class Main : Control
         _map11FlowSmoke = userArgs.Contains("--map11-flow-smoke", StringComparer.Ordinal);
         if (_map11FlowSmoke) _fastSmoke = true;
         if (_fastSmoke) _speed = 1000.0;
+        // 第172期 部B。**編成画面の当たりを1枚だけ撮る**（見た目の確認だけ。判定には使わない）。
+        // 書式は `--demo-setup-capture=<path>[,<席>]`。
+        if (userArgs.FirstOrDefault(a => a.StartsWith("--demo-setup-capture=", StringComparison.Ordinal))
+            is { } setupShot)
+            _ = CaptureSetup(setupShot["--demo-setup-capture=".Length..]);
         string? captureArg = userArgs.FirstOrDefault(arg => arg.StartsWith("--demo-capture-dir=", StringComparison.Ordinal));
         string? captureDirectory = captureArg?["--demo-capture-dir=".Length..];
         if (userArgs.Contains("--demo-autoplay", StringComparer.Ordinal))
@@ -257,6 +279,18 @@ public partial class Main : Control
 
         // 第169期。検証用マップ 1-1 から接敵して来たときは、**編成を挟まずそのまま出撃する。**
         if (CampaignSession.HasCarriedBattle) StartCarriedBattle();
+    }
+
+    /// <summary>編成画面（関係の線つき）の絵を1枚撮って終わる。第172期 部B の見た目の確認用。</summary>
+    private async Task CaptureSetup(string spec)
+    {
+        string[] parts = spec.Split(',');
+        await Delay(0.4, raw: true);
+        if (parts.Length > 1 && int.TryParse(parts[1], out int slot)) OnSetupSlotClicked(slot);
+        await Delay(0.3, raw: true);
+        Error error = GetViewport().GetTexture().GetImage().SavePng(parts[0]);
+        GD.Print($"DEMO_SETUP_CAPTURE error={error} path={parts[0]}");
+        GetTree().Quit(error == Error.Ok ? 0 : 1);
     }
 
     private async Task AutoplayForCapture(string? captureDirectory)
@@ -646,6 +680,7 @@ public partial class Main : Control
         if (_formation[slot] is { } current)
         {
             _armedUnitId = current.Id;
+            _field.SetSetupSelection(slot);
             ShowUnitDetails(current);
             Notice($"{current.Name}: ドラッグで別の席へ移動、右クリックで外せます");
             return;
@@ -715,7 +750,9 @@ public partial class Main : Control
 
     private void RefreshFormation()
     {
-        _field.UpdateFormation(_formation);
+        // 第172期 部B。**選んでいる駒の席**を渡して、その駒に関わる線だけ濃くする。
+        _field.UpdateFormation(_formation, _armedUnitId is null
+            ? -1 : Array.FindIndex(_formation, u => u?.Id == _armedUnitId));
         int count = _formation.Count(u => u is not null);
         _count.Text = $"{count} / {FormationRules.PlayableSlotCount}";
         _count.AddThemeColorOverride("font_color", count == FormationRules.PlayableSlotCount ? UiKit.Heal : UiKit.Gold);
@@ -736,7 +773,7 @@ public partial class Main : Control
             $"[color=#71d7a1][b]＋ 強み[/b][/color]\n{def.PlusText}\n\n" +
             $"[color=#ff766b][b]− 欠点[/b][/color]\n{def.MinusText}\n\n" +
             $"[color=#6f7f76][i]{def.Flavor}[/i][/color]\n\n" +
-            $"[color=#a9b3a8]配置: {PlacementOf(def)}[/color]";
+            $"[color=#a9b3a8]配置: {PlacementOf(def)}[/color]" + RelationTextOf(def);
     }
 
     /// <summary>
@@ -778,6 +815,34 @@ public partial class Main : Control
         if (def.Traits.Contains(TraitId.Displaced)) lines.Add("動かされた直後にターン外に割り込む");
 
         return string.Join("\n", lines);
+    }
+
+    /// <summary>
+    /// いまの編成で、その駒から出ている／その駒に入っている関係（第172期 部B）。
+    /// <b>線と同じ元データ（`Map11Relations`）から引くだけ</b>——写しを持たない（自己検査 (e)）。
+    /// 編成に入っていない駒では空。
+    /// </summary>
+    private string RelationTextOf(UnitDef def)
+    {
+        int slot = Array.FindIndex(_formation, u => u?.Id == def.Id);
+        if (slot < 0) return "";
+        var seats = new Dictionary<int, UnitDef>();
+        for (int i = 0; i < _formation.Length; i++)
+            if (_formation[i] is { } d) seats[i] = d;
+
+        var lines = new List<string>();
+        foreach (Map11Relations.Link l in Map11Relations.Of(seats))
+        {
+            bool from = l.From == slot, to = l.To == slot;
+            if (!from && !to) continue;
+            string other = seats[from ? l.To : l.From].Name;
+            string mean = Map11Relations.MeanOf(l.Trait) is { Length: > 0 } m
+                ? $"\n   [color=#6f7f76]{m}[/color]" : "";
+            lines.Add($"[color=#69bfe0]{(from ? "→" : "←")}[/color] {other}：[b]{l.Word}[/b]{mean}");
+        }
+        return lines.Count == 0
+            ? "\n\n[color=#6f7f76]この席から出ている関係はありません[/color]"
+            : "\n\n[color=#efc66a][b]◇ この席の関係[/b][/color]\n" + string.Join("\n", lines);
     }
 
     private string PlacementOf(UnitDef def)

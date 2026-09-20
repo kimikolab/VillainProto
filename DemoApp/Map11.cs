@@ -78,13 +78,79 @@ public static class Map11
         return f;
     }
 
-    /// <summary>3 隊。<b>この期では組み直しなし。</b> 先頭 2 隊が最初から拠点にいて、3 番目が控え。</summary>
+    /// <summary>
+    /// 3 隊。先頭 2 隊が最初から拠点にいて、3 番目が控え。
+    /// <b>第172期に「ハネ隊」を「かき回し隊」へ改名した</b>（指示書 §3）——隊を動かしているのは
+    /// バサ・ヨミ・ウツ・ドルガで、<b>看板に偽りがあった</b>（`Id` は `hane` のまま。
+    /// 器具（第168期）の行名と突き合わせるときに追えなくなるため）。
+    /// </summary>
     public static SquadDef[] Squads { get; } =
     {
         new("kado", "カド隊", "反撃・棘", RowOf(RowKado)),
-        new("hane", "ハネ隊", "突き返し", HaneSquad()),
+        new("hane", "かき回し隊", "突き返し", HaneSquad()),
         new("hold", "控え隊", "死軸・火選り", RowOf(RowHold)),
     };
+
+    // ---------------- 控えの駒（第172期 §1-2） ----------------
+
+    /// <summary>控えの駒の枚数（指示書 §1-2）。</summary>
+    public const int ReserveCount = 6;
+
+    /// <summary>
+    /// 名指しの2枚（指示書 §1-2）。<b>ポンが「ヒヨの代わり」を試せるようにするための指定。</b>
+    /// </summary>
+    private static readonly UnitDef[] NamedReserves = { UnitCatalog.Kubi, UnitCatalog.Sekki };
+
+    /// <summary>候補1枚ぶんの素性（<c>--map11-phase172</c> がそのまま表にする）。</summary>
+    public sealed record ReserveRow(UnitDef Def, int Seats, int[] WithSquad, bool AllThree, int Total);
+
+    /// <summary>
+    /// 残り4枚の候補を、<b>規則で</b>並べる（指示書 §1-2）。手で選ばない。
+    ///
+    /// <para>線は3つ——(1) 3 隊 15 枚と重ならない ／ (2) `Presets.Compare` の在席枠が 3 以上 ／
+    /// (3) <b>カド隊・かき回し隊・控え隊それぞれの駒と同じ行に入った実績がある</b>。
+    /// 通った駒を「同席した (行, 相手) の組の数」の多い順に並べ、同数なら
+    /// <see cref="UnitCatalog.All"/> の並び順で割る。</para>
+    /// </summary>
+    public static ReserveRow[] ReserveRanking()
+    {
+        var rows = Presets.Compare;
+        var squadIds = Squads.Select(s => s.F.Occupied().Select(o => o.Def.Id).ToHashSet(StringComparer.Ordinal))
+                             .ToArray();
+        var taken = new HashSet<string>(squadIds.SelectMany(x => x), StringComparer.Ordinal);
+        foreach (UnitDef d in NamedReserves) taken.Add(d.Id);
+
+        var list = new List<ReserveRow>();
+        foreach (UnitDef def in UnitCatalog.All)
+        {
+            if (taken.Contains(def.Id)) continue;
+            int seats = rows.Sum(r => r.F.Occupied().Count(o => o.Def.Id == def.Id));
+            var with = new int[Squads.Length];
+            foreach (var r in rows)
+            {
+                var ids = r.F.Occupied().Select(o => o.Def.Id).ToHashSet(StringComparer.Ordinal);
+                if (!ids.Contains(def.Id)) continue;
+                for (int s = 0; s < Squads.Length; s++)
+                    with[s] += ids.Count(x => squadIds[s].Contains(x));
+            }
+            bool all3 = with.All(x => x > 0);
+            list.Add(new ReserveRow(def, seats, with, all3 && seats >= 3, with.Sum()));
+        }
+        return list
+            .OrderByDescending(x => x.AllThree)
+            .ThenByDescending(x => x.Total)
+            .ThenBy(x => UnitCatalog.All.ToList().FindIndex(u => u.Id == x.Def.Id))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// 控えの駒 6 枚。<b>名指しの2枚 ＋ 規則で選んだ4枚</b>（<see cref="ReserveRanking"/>）。
+    /// <b>ポンが差し替える前提</b>——差し替えるなら <see cref="NamedReserves"/> に足すだけでよい。
+    /// </summary>
+    public static UnitDef[] Reserves { get; } = NamedReserves
+        .Concat(ReserveRanking().Where(x => x.AllThree).Select(x => x.Def))
+        .Take(ReserveCount)
+        .ToArray();
 
     // ---------------- 駒カードの一行（指示書 §3） ----------------
 
@@ -176,9 +242,19 @@ public sealed class Map11State
     public Squad[] Squads { get; }
     public Node[][] Nodes { get; }
 
+    /// <summary>
+    /// 控えの駒（第172期 §1-2）。<b>席を持たない駒の置き場</b>で、拠点の隊とだけ行き来できる。
+    /// <see cref="Map11.Reserves"/> をそのまま実体化したもの——<b>乱数を1つも引かない</b>ので、
+    /// 組み直しを1度もしない通しは第169期と1ビットも違わない（自己検査 (a)）。
+    /// </summary>
+    public List<UnitState> Bench { get; }
+
     public Map11State(int seed)
     {
         Seed = seed;
+        Bench = Map11.Reserves
+            .Select(d => BattleEngine.Materialize(Formation.Build(front1: d), BattleContext.PlayerTeam)[0])
+            .ToList();
         Squads = Map11.Squads.Select((d, i) => new Squad { Def = d, Index = i }).ToArray();
         Nodes = Map11.Roads.Select(r => r.Select(n =>
         {
@@ -208,13 +284,146 @@ public sealed class Map11State
     {
         Squad s = Squads[squadIndex];
         if (s.Lost) return;
+        if (!CanSend(squadIndex)) return;
         s.Road = road;
         if (s.Home < 0) s.Home = road;
-        if (s.Units is null && !s.Deployed)
+        // 組み直しで先に実体化していることがあるので `??=`。**第169期と同値**
+        // ——あの版で「`Units` が null でなく `Deployed` が偽」になる道は1本も無かった。
+        s.Units ??= BattleEngine.Materialize(s.Def.F, BattleContext.PlayerTeam);
+        s.Deployed = true;
+    }
+
+    // =============================================================================
+    // 拠点での組み直し（第172期 部A）
+    //
+    // **戦闘・回復・勝敗の規則は1行も触っていない。** ここでするのは
+    // 「拠点にいる隊の `UnitState` を、どの席に置くか」の書き換えだけ。
+    // 組み直しを1度もしなければ第169期と1ビットも違わない（自己検査 (a)）。
+    // =============================================================================
+
+    /// <summary>その隊を組み直せるか（<b>拠点にいる隊だけ</b>。道の上と全滅した隊は不可）。</summary>
+    public bool CanReform(int squadIndex)
+    {
+        Squad s = Squads[squadIndex];
+        return !s.Lost && s.Road < 0;
+    }
+
+    /// <summary>出せるか。<b>0 枚の隊は出せない</b>（指示書 §1-1）。</summary>
+    public bool CanSend(int squadIndex)
+    {
+        Squad s = Squads[squadIndex];
+        if (s.Lost) return false;
+        return s.Units is not { } u || u.Any(x => x.IsAlive);
+    }
+
+    /// <summary>
+    /// 拠点の隊の駒を、動かせる形（<see cref="UnitState"/> のリスト）にする。
+    /// <b>触ったときだけ実体化する</b>——触らない隊は <c>Units</c> が null のままで、
+    /// <see cref="Send"/> がこれまでどおり定義から作る。
+    /// </summary>
+    private List<UnitState> Roster(int squadIndex)
+    {
+        Squad s = Squads[squadIndex];
+        return s.Units ??= BattleEngine.Materialize(s.Def.F, BattleContext.PlayerTeam);
+    }
+
+    /// <summary>席の昇順に整える。<b>engine は渡した並びで <c>InstanceId</c> を振る</b>ので、
+    /// <c>Materialize</c> / <c>CrossBoundary</c> と同じ並びに保つ。</summary>
+    private static void SortBySlot(List<UnitState> units) => units.Sort((a, b) => a.Slot.CompareTo(b.Slot));
+
+    /// <summary>
+    /// 組み直しのために席の駒をつまむ。<b>拠点の隊なら、まだ実体化していなくてもここで実体化する</b>
+    /// ——定義のままの隊（`Units` が null）でも 1 枚目からつまめるようにするため。
+    /// </summary>
+    public UnitState? PickUp(int squadIndex, int slot)
+        => CanReform(squadIndex)
+            ? Roster(squadIndex).FirstOrDefault(u => u.Slot == slot)
+            : UnitAt(squadIndex, slot);
+
+    /// <summary>その席に立っている駒（空席なら null）。<b>読むだけ</b>——実体化はしない。</summary>
+    public UnitState? UnitAt(int squadIndex, int slot)
+    {
+        Squad s = Squads[squadIndex];
+        if (s.Units is { } u) return u.FirstOrDefault(x => x.Slot == slot);
+        return null;
+    }
+
+    /// <summary>
+    /// 席どうしを入れ替える（<b>同じ隊の中も、拠点にいる隊どうしも同じ操作</b>）。
+    /// 片方が空席なら移動になる。どちらも拠点にいないと何もしない。
+    /// </summary>
+    public bool SwapSeats(int squadA, int slotA, int squadB, int slotB)
+    {
+        if (!CanReform(squadA) || !CanReform(squadB)) return false;
+        if (squadA == squadB && slotA == slotB) return false;
+        List<UnitState> a = Roster(squadA), b = Roster(squadB);
+        UnitState? ua = a.FirstOrDefault(u => u.Slot == slotA);
+        UnitState? ub = b.FirstOrDefault(u => u.Slot == slotB);
+        if (ua is null && ub is null) return false;
+        if (ua is not null) a.Remove(ua);
+        if (ub is not null) b.Remove(ub);
+        if (ua is not null) { ua.Slot = slotB; b.Add(ua); }
+        if (ub is not null) { ub.Slot = slotA; a.Add(ub); }
+        SortBySlot(a);
+        if (!ReferenceEquals(a, b)) SortBySlot(b);
+        return true;
+    }
+
+    /// <summary>
+    /// 席と控えの駒を入れ替える。<paramref name="benchIndex"/> が範囲外なら
+    /// 「その駒を控えへ下げる」（席が空く）。席が空なら「控えの駒をそこへ入れる」。
+    /// </summary>
+    public bool SwapWithBench(int squadIndex, int slot, int benchIndex)
+    {
+        if (!CanReform(squadIndex)) return false;
+        List<UnitState> a = Roster(squadIndex);
+        UnitState? seat = a.FirstOrDefault(u => u.Slot == slot);
+        UnitState? bench = benchIndex >= 0 && benchIndex < Bench.Count ? Bench[benchIndex] : null;
+        if (seat is null && bench is null) return false;
+        int at = bench is null ? Bench.Count : benchIndex;
+        if (seat is not null) a.Remove(seat);
+        if (bench is not null) { Bench.RemoveAt(benchIndex); bench.Slot = slot; a.Add(bench); }
+        if (seat is not null) Bench.Insert(Math.Min(at, Bench.Count), seat);
+        SortBySlot(a);
+        return true;
+    }
+
+    /// <summary>
+    /// その隊を既定の編成へ戻す（指示書 §1-3 の「元に戻す」）。
+    /// <b>拠点にある駒からしか集められない</b>——道の上・全滅した隊にいる駒は戻せないので、
+    /// 1 枚でも欠けていれば何もしない（<c>false</c> を返す）。
+    /// 押し出された駒は控えへ下がる。
+    /// </summary>
+    public bool ResetSquad(int squadIndex)
+    {
+        if (!CanReform(squadIndex)) return false;
+        var want = Squads[squadIndex].Def.F.Occupied().ToArray();
+
+        // 拠点にある駒を全部集める（どの隊のどの席にいるか／控えの何番目か）。
+        UnitState? Find(string id)
         {
-            s.Units = BattleEngine.Materialize(s.Def.F, BattleContext.PlayerTeam);
-            s.Deployed = true;
+            for (int s = 0; s < Squads.Length; s++)
+                if (CanReform(s) && Squads[s].Units is { } u
+                    && u.FirstOrDefault(x => x.Def.Id == id) is { } hit) return hit;
+            return Bench.FirstOrDefault(x => x.Def.Id == id);
         }
+
+        var found = want.Select(w => Find(w.Def.Id)).ToArray();
+        if (found.Any(f => f is null)) return false;
+
+        // いったん全部を控えへ引き上げてから、定義どおりに置き直す。
+        for (int s = 0; s < Squads.Length; s++)
+            if (CanReform(s) && Squads[s].Units is { } u)
+                foreach (UnitState x in u.ToList())
+                    if (found.Contains(x) || s == squadIndex) { u.Remove(x); Bench.Add(x); }
+        foreach (UnitState f in found!) Bench.Remove(f!);
+
+        var target = Roster(squadIndex);
+        for (int i = 0; i < want.Length; i++) { found[i]!.Slot = want[i].Slot; target.Add(found[i]!); }
+        SortBySlot(target);
+        for (int s = 0; s < Squads.Length; s++)
+            if (Squads[s].Units is { } u) SortBySlot(u);
+        return true;
     }
 
     /// <summary>

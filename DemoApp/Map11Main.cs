@@ -62,6 +62,24 @@ public partial class Map11Main : Node3D
     private int _squadPick = -1;
     private int _foePick = -1;
 
+    // ---- 第172期 部A: 拠点での組み直し ----
+
+    /// <summary>組み直しの最中か。<b>拠点にいる隊だけ</b>（判定は `Map11State.CanReform`）。</summary>
+    private bool _reform;
+
+    /// <summary>つまんでいる駒。席のときは（隊, 席）、控えのときは番号。どちらも -1 ＝ 何も持っていない。</summary>
+    private int _holdSquad = -1;
+    private int _holdSlot = -1;
+    private int _holdBench = -1;
+
+    private bool Holding => _holdSlot >= 0 || _holdBench >= 0;
+
+    private ScrollContainer _leftScroll = null!;
+    private Button _reformButton = null!;
+    private Button _resetButton = null!;
+    private VBoxContainer _benchList = null!;
+    private Label _reformHint = null!;
+
     /// <summary>右のパネルで中身を開いている敵の区画（道, 番号）。既定は北の 1 戦目。</summary>
     private (int Road, int Index) _foeView = (0, 0);
 
@@ -104,8 +122,14 @@ public partial class Map11Main : Node3D
         // 判断だけを器具と同じ固定の割り当てで代行し、戦闘は本物の再生を通す。
         // `_Ready` の中でシーンを替えると木の再入で落ちるので、必ず遅らせる。
         string[] args = OS.GetCmdlineUserArgs();
-        if (args.Contains("--map11-flow-smoke", StringComparer.Ordinal))
+        // 第172期 自己検査 (c)。**1 回組み直してから出す**通し（組み直した隊で戦って、
+        // 持ち越しと結果画面まで通ることを確かめる）。
+        bool reformFirst = args.Contains("--map11-reform-smoke", StringComparer.Ordinal);
+        if (args.Contains("--map11-flow-smoke", StringComparer.Ordinal) || reformFirst)
+        {
+            if (reformFirst) AutoReform();
             Callable.From(AutoStep).CallDeferred();
+        }
         else if (args.FirstOrDefault(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal))
                  is { } shot)
             _ = Capture(shot["--map11-capture=".Length..]);
@@ -123,6 +147,14 @@ public partial class Map11Main : Node3D
         if (parts.Length > 1 && parts[1] == "encounter") Send(1);
         // 第171期: 図の札を1枚選んだ絵（関係の線と「何をする」が出ている状態）。
         else if (parts.Length > 1 && parts[1] == "pick") { _squadPick = 3; _foePick = 2; Refresh(); }
+        // 第172期: 組み直しの絵（つまんでいる札と控えの駒が出ている状態）。
+        else if (parts.Length > 1 && parts[1] == "reform")
+        {
+            ToggleReform();
+            OnSquadSlot(3);
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            _leftScroll.ScrollVertical = 10000;
+        }
         await ToSignal(GetTree().CreateTimer(0.4), SceneTreeTimer.SignalName.Timeout);
         Error error = GetViewport().GetTexture().GetImage().SavePng(path);
         GD.Print($"MAP11_CAPTURE error={error} path={path}");
@@ -179,6 +211,29 @@ public partial class Map11Main : Node3D
         GD.Print($"MAP11_FLOW_SMOKE_COMPLETE won={St.Won} cleared={St.ClearedCount}"
             + $"/{Map11.TotalNodes} battles={St.Battles} seed={Map11Session.Seed} (no move)");
         GetTree().Quit();
+    }
+
+    /// <summary>
+    /// 自己検査 (c) の組み直し。<b>頭なしで 3 つの操作を1回ずつ通す</b>——
+    /// 同じ隊の席の入れ替え ／ 隊どうしの入れ替え ／ 控えの駒との交代。
+    /// </summary>
+    private void AutoReform()
+    {
+        bool a = St.SwapSeats(0, 0, 0, 3);                 // カド隊の 前1 ↔ 後1
+        bool b = St.SwapSeats(0, 1, 1, 4);                 // カド隊 前3 ↔ かき回し隊 後3
+        bool c = St.SwapWithBench(0, 2, 0);                // カド隊 中央 ↔ 控えの 1 枚目
+        GD.Print($"MAP11_REFORM_SMOKE seat={a} across={b} bench={c}");
+        for (int i = 0; i < St.Squads.Length; i++)
+        {
+            Map11State.Squad sq = St.Squads[i];
+            string body = sq.Units is { } u
+                ? string.Join(" / ", u.OrderBy(x => x.Slot)
+                    .Select(x => $"{FormationRules.SeatNames[x.Slot]} {x.Def.Name}"))
+                : "（定義のまま）";
+            GD.Print($"MAP11_REFORM_SMOKE {sq.Def.Name}: {body}");
+        }
+        GD.Print("MAP11_REFORM_SMOKE 控え: "
+            + string.Join(" / ", St.Bench.Select(x => x.Def.Name)));
     }
 
     private void BuildWorld()
@@ -356,13 +411,22 @@ public partial class Map11Main : Node3D
         root.AddChild(_toast);
 
         // ---- 左: 隊 ----
+        // **高さを画面の中に止め、中身は縦に流す**（第172期 §1-3）——第171期の観察ログ
+        // 「くわしくを押したが**下側で見切れて読めない**」（問い5）は、パネル自身が
+        // 画面の下へ伸びていたため。中の欄だけをスクロールにしても外側が溢れていた。
         PanelContainer left = Panel();
-        left.Position = new Vector2(20, 90);
-        left.CustomMinimumSize = new Vector2(330, 0);
+        left.AnchorTop = 0;
+        left.AnchorBottom = 1;
+        left.OffsetLeft = 20;
+        left.OffsetRight = 20 + 352;
+        left.OffsetTop = 90;
+        left.OffsetBottom = -20;
         root.AddChild(left);
         var leftCol = new VBoxContainer();
         leftCol.AddThemeConstantOverride("separation", 8);
-        left.AddChild(leftCol);
+        leftCol.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _leftScroll = Scroll(leftCol, 0);
+        left.AddChild(_leftScroll);
         _hint = UiKit.Text("① 隊を選ぶ → ② 道を選ぶ → ③ 接敵したら「戦う」か「引き返す」", 13, GoldColor);
         _hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         leftCol.AddChild(_hint);
@@ -401,15 +465,39 @@ public partial class Map11Main : Node3D
         // 第170期の観察ログ「隊の中身、文章が長すぎて毎回読んでいられない」（問い5）と
         // 「どう配置されているかが良く見ないと分からない」（問い2）は同じことの表裏で、
         // **足りないのは量ではなく形**。説明文は札を押したときだけ下に出す。
+        // 第172期 部A —— **図をそのまま編成の道具にする。**
+        // 観察ログ「編成UIにこれは欲しい」（第171期 問い1）と、2 期続けて出た
+        // 「カドを動かしたい・ヒヨを替えたい」（問い6）への答え。
+        var reformRow = new HBoxContainer();
+        reformRow.AddThemeConstantOverride("separation", 8);
+        leftCol.AddChild(reformRow);
+        _reformButton = UiKit.ActionButton("組み直す", GoldColor);
+        _reformButton.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _reformButton.Pressed += ToggleReform;
+        reformRow.AddChild(_reformButton);
+        _resetButton = UiKit.ActionButton("元に戻す", UiKit.Muted);
+        _resetButton.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _resetButton.Pressed += ResetSquad;
+        reformRow.AddChild(_resetButton);
+        _reformHint = UiKit.Text("", 12, GoldColor);
+        _reformHint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        leftCol.AddChild(_reformHint);
+
         leftCol.AddChild(UiKit.Text("この隊の配置（押すと、その駒が何をするか出ます）", 12, UiKit.Faint));
         _squadDiagram = new SeatDiagram();
-        _squadDiagram.SlotSelected += slot => { _squadPick = slot; Refresh(); };
+        _squadDiagram.SlotSelected += OnSquadSlot;
         leftCol.AddChild(_squadDiagram);
         _squadFocus = new VBoxContainer();
         _squadFocus.AddThemeConstantOverride("separation", 3);
         // **高さを止める。** `PlusText` は長い駒がいる（カドは2文）ので、
         // そのまま伸ばすと左のパネルが画面の下へ抜ける（第170期の「長すぎる」の再発になる）。
         leftCol.AddChild(Scroll(_squadFocus, 128));
+
+        // 控えの駒（第172期 §1-2）。**組み直しの最中だけ押せる。**
+        leftCol.AddChild(UiKit.Text("控えの駒（拠点で交代できます）", 12, UiKit.Faint));
+        _benchList = new VBoxContainer();
+        _benchList.AddThemeConstantOverride("separation", 4);
+        leftCol.AddChild(Scroll(_benchList, 116));
 
         // 第170期の文章のパネルは**畳む**（消さない）。
         _squadMore = UiKit.ActionButton("くわしく", UiKit.Muted);
@@ -428,10 +516,13 @@ public partial class Map11Main : Node3D
         right.OffsetLeft = -430;
         right.OffsetRight = -20;
         right.OffsetTop = 90;
+        right.AnchorBottom = 1;
+        right.OffsetBottom = -20;
         root.AddChild(right);
         var rightCol = new VBoxContainer();
         rightCol.AddThemeConstantOverride("separation", 8);
-        right.AddChild(rightCol);
+        rightCol.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        right.AddChild(Scroll(rightCol, 0));
         rightCol.AddChild(UiKit.Text("道と敵部隊（押すと中身が出ます）", 12, UiKit.Faint));
         _roadList = new VBoxContainer();
         _roadList.AddThemeConstantOverride("separation", 6);
@@ -439,7 +530,7 @@ public partial class Map11Main : Node3D
         // 第171期 部A —— 敵も同じ図。**空席は空席として描く**（先遣は後1 が空いているのが見える）。
         rightCol.AddChild(UiKit.Text("この部隊の配置（押すと、その駒が何をするか出ます）", 12, UiKit.Faint));
         _foeDiagram = new SeatDiagram();
-        _foeDiagram.SlotSelected += slot => { _foePick = slot; Refresh(); };
+        _foeDiagram.SlotSelected += slot => { _foePick = _foePick == slot ? -1 : slot; Refresh(); };
         rightCol.AddChild(_foeDiagram);
         _foeFocus = new VBoxContainer();
         _foeFocus.AddThemeConstantOverride("separation", 3);
@@ -586,6 +677,9 @@ public partial class Map11Main : Node3D
         if (St.Finished) return;
         Map11State.Squad s = St.Squads[_selected];
         if (s.Lost) { ShowToast($"{s.Def.Name} は失われています", EnemyColor, 3.0f); return; }
+        // **0 枚の隊は出せない**（指示書 §1-1）。組み直しで空にしたときだけ起きる。
+        if (!St.CanSend(_selected)) { ShowToast($"{s.Def.Name} は 0 枚です（1 枚以上にしてください）", EnemyColor, 3.0f); return; }
+        if (_reform) { _reform = false; ClearHold(); }
         if (St.NextNode(road) is null) { ShowToast($"{Map11.RoadNames[road]} は抜け切っています", UiKit.Muted, 3.0f); return; }
 
         Map11Session.Send(_selected, road);
@@ -662,6 +756,170 @@ public partial class Map11Main : Node3D
     }
 
     // =================================================================================
+    // 第172期 部A —— 拠点での組み直し
+    //
+    // **画面は判定を1つも持たない。** 「動かせるか」は `Map11State.CanReform` / `SwapSeats` /
+    // `SwapWithBench` / `ResetSquad` が全部返す——ここでするのは
+    // 「どの札を押したか」を渡して、結果を引き直すことだけ。
+    // =================================================================================
+
+    private void ClearHold() { _holdSquad = -1; _holdSlot = -1; _holdBench = -1; }
+
+    private void ToggleReform()
+    {
+        if (!_reform && !St.CanReform(_selected))
+        {
+            ShowToast($"{St.Squads[_selected].Def.Name} は拠点にいません（道の上の隊は組み直せません）",
+                      EnemyColor, 3.0f);
+            return;
+        }
+        _reform = !_reform;
+        ClearHold();
+        ShowToast(_reform
+            ? "組み直し中——札を2枚押すと入れ替わります（控えの駒も同じ）"
+            : "組み直しを終えました", GoldColor, 3.0f);
+        Refresh();
+    }
+
+    private void ResetSquad()
+    {
+        Map11State.Squad s = St.Squads[_selected];
+        if (!St.CanReform(_selected))
+        {
+            ShowToast($"{s.Def.Name} は拠点にいません", EnemyColor, 3.0f);
+            return;
+        }
+        ClearHold();
+        // **拠点にある駒からしか集められない**（道の上・全滅した隊の駒は戻せない）。
+        bool done = St.ResetSquad(_selected);
+        ShowToast(done
+            ? $"{s.Def.Name} を既定の編成へ戻しました"
+            : $"{s.Def.Name} の駒が拠点に揃っていません（戻せません）",
+            done ? PlayerColor : EnemyColor, 3.0f);
+        Refresh();
+    }
+
+    /// <summary>
+    /// 図の札を押した。<b>組み直し中は「1 枚目でつまみ、2 枚目で入れ替える」</b>
+    /// ——ドラッグではなく2回押しにしたのは、同じ札が「中身を見る」と
+    /// 「つまむ」の両方を担うため（指示書 §1-3 が許している形）。
+    /// </summary>
+    private void OnSquadSlot(int slot)
+    {
+        if (!_reform)
+        {
+            _squadPick = _squadPick == slot ? -1 : slot;
+            Refresh();
+            return;
+        }
+        if (!St.CanReform(_selected))
+        {
+            ShowToast($"{St.Squads[_selected].Def.Name} は拠点にいません", EnemyColor, 3.0f);
+            return;
+        }
+
+        if (_holdBench >= 0)
+        {
+            if (!St.SwapWithBench(_selected, slot, _holdBench))
+                ShowToast("その席へは入れられません", EnemyColor, 3.0f);
+            ClearHold();
+        }
+        else if (_holdSlot >= 0)
+        {
+            if (_holdSquad == _selected && _holdSlot == slot) ClearHold();
+            else
+            {
+                if (!St.SwapSeats(_holdSquad, _holdSlot, _selected, slot))
+                    ShowToast("その2席は入れ替えられません（拠点にいる隊だけです）", EnemyColor, 3.0f);
+                ClearHold();
+            }
+        }
+        else
+        {
+            if (St.PickUp(_selected, slot) is null)
+            {
+                ShowToast("空席です。先に動かしたい駒か控えの駒を押してください", UiKit.Muted, 3.0f);
+                return;
+            }
+            _holdSquad = _selected;
+            _holdSlot = slot;
+        }
+        _squadPick = slot;
+        Refresh();
+    }
+
+    private void OnBenchPressed(int index)
+    {
+        if (!_reform) { ShowToast("「組み直す」を押してから選んでください", UiKit.Muted, 3.0f); return; }
+        if (_holdSlot >= 0)
+        {
+            if (!St.SwapWithBench(_holdSquad, _holdSlot, index))
+                ShowToast("その駒は動かせません", EnemyColor, 3.0f);
+            ClearHold();
+        }
+        else if (_holdBench == index) ClearHold();
+        else if (index < St.Bench.Count) _holdBench = index;
+        else ShowToast("先に席の駒を押してください（ここへ下げられます）", UiKit.Muted, 3.0f);
+        Refresh();
+    }
+
+    /// <summary>控えの駒の一覧。<b>末尾に「ここへ下げる」の枠</b>（席を空にする操作）。</summary>
+    private void RefreshBench()
+    {
+        foreach (Node child in _benchList.GetChildren()) child.QueueFree();
+        for (int i = 0; i < St.Bench.Count; i++)
+        {
+            UnitState u = St.Bench[i];
+            int index = i;
+            var b = new Button
+            {
+                Text = $"{u.Def.Name}   HP {u.Hp}/{u.MaxHp} ・ 攻{u.Def.Attack} ・ 速{u.Def.Speed}",
+                Alignment = HorizontalAlignment.Left,
+                FocusMode = Control.FocusModeEnum.None,
+                CustomMinimumSize = new Vector2(0, 26),
+                Disabled = !_reform,
+                Modulate = _holdBench == index ? new Color(1.0f, 0.90f, 0.62f) : Colors.White,
+            };
+            b.AddThemeFontSizeOverride("font_size", 12);
+            b.Pressed += () => OnBenchPressed(index);
+            _benchList.AddChild(b);
+        }
+        int tail = St.Bench.Count;
+        var down = new Button
+        {
+            Text = "＋ ここへ下げる（席を空ける）",
+            Alignment = HorizontalAlignment.Left,
+            FocusMode = Control.FocusModeEnum.None,
+            CustomMinimumSize = new Vector2(0, 26),
+            Disabled = !_reform || _holdSlot < 0,
+        };
+        down.AddThemeFontSizeOverride("font_size", 12);
+        down.Pressed += () => OnBenchPressed(tail);
+        _benchList.AddChild(down);
+    }
+
+    /// <summary>組み直しの案内（いま何ができるか・何をつまんでいるか）。</summary>
+    private void RefreshReform()
+    {
+        bool can = St.CanReform(_selected) && !St.Finished;
+        _reformButton.Disabled = !can && !_reform;
+        _reformButton.Text = _reform ? "組み直しを終える" : "組み直す";
+        _resetButton.Disabled = !can;
+
+        string held = _holdBench >= 0 && _holdBench < St.Bench.Count
+            ? $"控えの {St.Bench[_holdBench].Def.Name}"
+            : _holdSlot >= 0 && St.UnitAt(_holdSquad, _holdSlot) is { } u
+                ? $"{St.Squads[_holdSquad].Def.Name} {FormationRules.SeatNames[_holdSlot]} {u.Def.Name}"
+                : "";
+        _reformHint.Text = !_reform
+            ? (can ? "" : $"{St.Squads[_selected].Def.Name} は道の上です（拠点の隊だけ組み直せます）")
+            : held.Length > 0
+                ? $"つまんでいる: {held} —— もう1枚押すと入れ替わります"
+                : "動かしたい札（または控えの駒）を押してください";
+        _reformHint.AddThemeColorOverride("font_color", can || _reform ? GoldColor : UiKit.Faint);
+    }
+
+    // =================================================================================
     // 第171期 部A —— 配置の図
     //
     // **席の意味は `FormationRules` から引くだけ**で、写しを持たない。
@@ -679,16 +937,23 @@ public partial class Map11Main : Node3D
             foreach ((int slot, UnitDef def) in s.Def.F.Occupied())
                 cells.Add(new SeatDiagram.Cell(slot, def, def.MaxHp, def.MaxHp, true));
 
-        // 席に居ない駒が選ばれたままにならないようにする（隊を替えたとき）。
-        if (_squadPick >= 0 && cells.All(c => c.Slot != _squadPick)) _squadPick = -1;
+        // **空席も描く**（第172期）——組み直しで控えの駒を入れられる場所だから。
+        foreach (int slot in Enumerable.Range(0, FormationRules.PlayableSlotCount))
+            if (cells.All(c => c.Slot != slot))
+                cells.Add(new SeatDiagram.Cell(slot, null, 0, 0, false));
+        cells.Sort((x, y) => x.Slot.CompareTo(y.Slot));
+
+        _squadDiagram.AllowEmptyPress = _reform;
         _squadDiagram.Render(cells, PlayerColor, _squadPick);
 
         foreach (Node child in _squadFocus.GetChildren()) child.QueueFree();
-        if (_squadPick < 0)
+        if (_squadPick < 0 || cells.First(c => c.Slot == _squadPick).Def is null)
         {
-            FocusHint(_squadFocus, s.Units is null && !s.Deployed
-                ? "（まだ拠点にいます。数字は定義上の値）"
-                : "札を押すと、その駒が何をするか出ます");
+            FocusHint(_squadFocus, _reform
+                ? "札を押すとつまみます。もう1枚押すと入れ替わります"
+                : s.Units is null && !s.Deployed
+                    ? "（まだ拠点にいます。数字は定義上の値）"
+                    : "札を押すと、その駒が何をするか出ます");
             return;
         }
         SeatDiagram.Cell pick = cells.First(c => c.Slot == _squadPick);
@@ -747,8 +1012,12 @@ public partial class Map11Main : Node3D
                          .ToDictionary(c => c.Slot, c => c.Def!);
         foreach (Map11Relations.Link l in Map11Relations.Of(seats))
         {
-            if (l.From == slot) yield return $"→ {seats[l.To].Name}：{l.Word}";
-            else if (l.To == slot) yield return $"← {seats[l.From].Name}：{l.Word}";
+            // **語に意味の1行を添える**（第172期 §1-3）——第171期の観察ログ
+            // 「ヒサの標が**どんな効果なのか分からない**」（問い1）への答え。
+            // 文は `Map11Relations.Rules` が持ち、**網羅性は `--map11-phase172` が門にする**。
+            string mean = Map11Relations.MeanOf(l.Trait) is { Length: > 0 } m ? $"（{m}）" : "";
+            if (l.From == slot) yield return $"→ {seats[l.To].Name}：{l.Word}{mean}";
+            else if (l.To == slot) yield return $"← {seats[l.From].Name}：{l.Word}{mean}";
         }
     }
 
@@ -1004,6 +1273,8 @@ public partial class Map11Main : Node3D
         RefreshSquadDetail();
         RefreshFoeDetail();
         RefreshHistory();
+        RefreshBench();
+        RefreshReform();
 
         bool busy = St.Finished;
         _sendNorth.Disabled = busy || St.NextNode(0) is null;

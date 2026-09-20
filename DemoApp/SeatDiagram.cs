@@ -44,8 +44,15 @@ public partial class SeatDiagram : Control
 
     public static readonly Vector2 Size2 = new(CardW + ColStep * 2, CardH + RowStep * 2);
 
-    /// <summary>札を押したときに呼ばれる（席番号）。同じ札をもう一度押すと -1 が来る。</summary>
+    /// <summary>
+    /// 札を押したときに呼ばれる（席番号）。<b>第172期に「押された席をそのまま渡す」へ変えた</b>
+    /// ——選択の入り切りは呼び出し側が決める（組み直しでは「2 枚目を押す」が入れ替えになるので、
+    /// ここで -1 に潰すと 2 枚目が拾えない）。
+    /// </summary>
     public Action<int>? SlotSelected;
+
+    /// <summary>空席も押せるか（組み直しのとき＝控えの駒をそこへ入れられる）。</summary>
+    public bool AllowEmptyPress { get; set; }
 
     /// <summary>いま選んでいる席（-1 ＝ なし）。</summary>
     public int Selected { get; private set; } = -1;
@@ -86,8 +93,6 @@ public partial class SeatDiagram : Control
 
     private static Rect2 RectOf(int slot) => new(PosOf(slot), new Vector2(CardW, CardH));
 
-    private static Vector2 CenterOf(int slot) => RectOf(slot).GetCenter();
-
     /// <summary>
     /// 図を引き直す。<paramref name="cells"/> は 5 席ぶん（空席は <c>Def</c> が null）。
     /// <b>選んでいる席は呼び出し側から渡す</b>——引き直しで選択が飛ばないようにするため。
@@ -113,7 +118,7 @@ public partial class SeatDiagram : Control
                     ClipText = true,
                 };
                 card.AddThemeFontSizeOverride("font_size", 11);
-                card.Pressed += () => SlotSelected?.Invoke(Selected == captured ? -1 : captured);
+                card.Pressed += () => SlotSelected?.Invoke(captured);
                 AddChild(card);
                 var back = new ColorRect
                 {
@@ -142,10 +147,11 @@ public partial class SeatDiagram : Control
             string seat = FormationRules.SeatNames[slot];
             if (cell.Def is null)
             {
-                card.Text = $"{seat}\n（空席）";
+                card.Text = (slot == Selected ? "▶ " : "") + $"{seat}\n（空席）";
                 card.AddThemeColorOverride("font_color", UiKit.Faint);
-                card.Modulate = new Color(1, 1, 1, 0.45f);
-                card.Disabled = true;
+                card.Modulate = slot == Selected ? new Color(1.0f, 0.90f, 0.62f)
+                                                 : new Color(1, 1, 1, 0.45f);
+                card.Disabled = !AllowEmptyPress;
                 _bars[slot].Visible = false;
                 _barBacks[slot].Visible = false;
                 continue;
@@ -190,16 +196,12 @@ public partial class SeatDiagram : Control
     /// 関係の線（<see cref="DrawWords"/> が偽）と語（真）。
     /// <b>常時は薄く、選んだ札に関わる線だけ濃く出して語を添える</b>
     /// ——常時ぜんぶ描くと読めない（指示書 §1-2 の最後）。
+    ///
+    /// <para><b>第172期に描画そのものを <see cref="SeatLinks"/> へ出した</b>——編成画面
+    /// （`BattlefieldView`）も同じ線を引くようになったため。**ここに写しは残っていない。**</para>
     /// </summary>
     private sealed partial class LinkLayer : Control
     {
-        /// <summary>線に添える語は日本語なので、<b>フォールバックではなくシステムフォント</b>で描く。</summary>
-        private static readonly SystemFont LabelFont = new()
-        {
-            FontNames = new[] { "Yu Gothic UI", "Meiryo", "Noto Sans CJK JP", "Segoe UI" },
-            AllowSystemFallback = true,
-        };
-
         public bool DrawWords { get; init; }
 
         private IReadOnlyList<Map11Relations.Link> _links = Array.Empty<Map11Relations.Link>();
@@ -215,57 +217,6 @@ public partial class SeatDiagram : Control
         }
 
         public override void _Draw()
-        {
-            // 同じ2席のあいだに何本も走るので、語が重ならないよう線上で位置をずらす。
-            var lane = new Dictionary<(int, int), int>();
-            foreach (Map11Relations.Link l in _links)
-            {
-                bool hot = _selected >= 0 && (l.From == _selected || l.To == _selected);
-                if (_selected >= 0 && !hot) continue;   // 選んでいる間は関係ない線を消す
-                var key = (Math.Min(l.From, l.To), Math.Max(l.From, l.To));
-                int n = lane.GetValueOrDefault(key);
-                lane[key] = n + 1;
-
-                (Vector2 a, Vector2 b) = Clip(l.From, l.To);
-                Color c = hot ? _accent : new Color(_accent, 0.20f);
-                if (!DrawWords)
-                {
-                    DrawLine(a, b, c, hot ? 2.4f : 1.2f, true);
-                    DrawCircle(b, hot ? 4.5f : 2.5f, c);
-                    continue;
-                }
-                if (!hot) continue;
-                // 0 本目は中央、以降は手前・奥へ交互に寄せる。
-                float t = 0.5f + (n % 2 == 0 ? 1 : -1) * ((n + 1) / 2) * 0.24f;
-                Vector2 mid = a.Lerp(b, Math.Clamp(t, 0.12f, 0.88f));
-                Vector2 size = LabelFont.GetStringSize(l.Word, HorizontalAlignment.Left, -1, 10);
-                // **札の隙間に入らない語は出さない。** 同じ列の2枚（前1↔前3・後1↔後3）は
-                // 隙間が数十 px しかないので、無理に置くと札の上に乗って名前を隠す
-                // ——関係そのものは下の欄に文で出ているので、線と矢印だけ残す。
-                if (size.X + 10 > a.DistanceTo(b)) continue;
-                Vector2 at = mid - new Vector2(size.X / 2f, -4);
-                DrawRect(new Rect2(at + new Vector2(-3, -12), size + new Vector2(6, 5)),
-                         new Color(0.02f, 0.05f, 0.04f, 0.90f));
-                DrawString(LabelFont, at, l.Word, HorizontalAlignment.Left, -1, 10, UiKit.Gold);
-            }
-        }
-
-        /// <summary>線の両端を、札の四角の外へ切り詰める（札の上に線を重ねない）。</summary>
-        private static (Vector2, Vector2) Clip(int from, int to)
-        {
-            Vector2 a = CenterOf(from), b = CenterOf(to);
-            return (Exit(RectOf(from), a, b), Exit(RectOf(to), b, a));
-        }
-
-        /// <summary>中心 <paramref name="c"/> から <paramref name="toward"/> へ向かう線が矩形を出る点。</summary>
-        private static Vector2 Exit(Rect2 rect, Vector2 c, Vector2 toward)
-        {
-            Vector2 d = toward - c;
-            if (d.LengthSquared() < 0.001f) return c;
-            float hx = rect.Size.X / 2f + 3f, hy = rect.Size.Y / 2f + 3f;
-            float sx = Math.Abs(d.X) < 0.001f ? float.MaxValue : hx / Math.Abs(d.X);
-            float sy = Math.Abs(d.Y) < 0.001f ? float.MaxValue : hy / Math.Abs(d.Y);
-            return c + d * Math.Min(sx, sy);
-        }
+            => SeatLinks.Draw(this, _links, _selected, _accent, RectOf, DrawWords);
     }
 }

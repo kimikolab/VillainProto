@@ -47,21 +47,35 @@ public static class Map11Relations
     }
 
     /// <summary>
-    /// <b>この期に手書きしたのはこの表だけ。</b> 札 → （席から引ける関係の形、線に添える1語）。
+    /// <b>手書きなのはこの表だけ。</b> 札 → （席から引ける関係の形、線に添える1語、<b>その1語の意味</b>）。
     ///
     /// <para><b>語は「その線が何をしているか」だけを書く。</b> 良し悪しは書かない（案B）。</para>
+    ///
+    /// <para><b>第172期に `Mean`（意味の1行）を足した</b>（指示書 §1-3）——第171期の観察ログ
+    /// 「ヒサの標がどんな効果なのか分からない」（問い1）は、<b>線の語だけでは
+    /// 何が起きるか分からない</b>ということだった。<b>網羅性は `--map11-phase172` が門にする</b>
+    /// （9 種すべてに空でない1行があること）。</para>
     /// </summary>
-    private static readonly Dictionary<TraitId, (Shape Shape, string Word)> Rules = new()
+    private static readonly Dictionary<TraitId, (Shape Shape, string Word, string Mean)> Rules = new()
     {
-        [TraitId.Marker] = (Shape.AdjacentTopHp, "標"),
-        [TraitId.Guardian] = (Shape.Adjacent, "庇う"),
-        [TraitId.Stoic] = (Shape.StoicSpill, "支援が流れる"),
-        [TraitId.ThornGuard] = (Shape.RowPairOrAhead, "身代わり"),
-        [TraitId.Thorns] = (Shape.Adjacent, "反撃が巻き込む"),
-        [TraitId.Sacrifice] = (Shape.Adjacent, "開戦時に削る"),
-        [TraitId.Shove] = (Shape.AdjacentAcceptsSupport, "腕が鈍る"),
-        [TraitId.Favor] = (Shape.AdjacentAcceptsSupport, "火が無いと鈍る"),
-        [TraitId.Colossus] = (Shape.DeeperRow, "肩代わり"),
+        [TraitId.Marker] = (Shape.AdjacentTopHp, "標",
+            "敵の単体攻撃がこの駒へ集まりやすくなる"),
+        [TraitId.Guardian] = (Shape.Adjacent, "庇う",
+            "この駒への単体攻撃に割り込んで代わりに受ける（薙ぎ・貫き・全体は素通りする）"),
+        [TraitId.Stoic] = (Shape.StoicSpill, "支援が流れる",
+            "1体を選ぶ回復・強化を自分は受け取らず、この駒へ回す"),
+        [TraitId.ThornGuard] = (Shape.RowPairOrAhead, "身代わり",
+            "この駒が受けた傷を、決まった量まで代わりに引き受ける（超えた分は本人が受ける）"),
+        [TraitId.Thorns] = (Shape.Adjacent, "反撃が巻き込む",
+            "殴られたときの反射が、この駒にも当たる（味方も削れる）"),
+        [TraitId.Sacrifice] = (Shape.Adjacent, "開戦時に削る",
+            "開戦時にこの駒の HP を削る（被弾で育つ駒なら、そのまま起動の合図になる）"),
+        [TraitId.Shove] = (Shape.AdjacentAcceptsSupport, "腕が鈍る",
+            "突き返すたび、この駒の攻撃力が下がる"),
+        [TraitId.Favor] = (Shape.AdjacentAcceptsSupport, "火が無いと鈍る",
+            "この駒が燃えていなければ攻撃力が下がる（燃えている味方は逆に強くなる）"),
+        [TraitId.Colossus] = (Shape.DeeperRow, "肩代わり",
+            "自分より後ろの列にいるこの駒の傷を、大半を飲み込んで代わりに受ける"),
     };
 
     /// <summary>
@@ -159,4 +173,11 @@ public static class Map11Relations
 
     /// <summary>その札の1語（線の脇に出す）。</summary>
     public static string? WordOf(TraitId id) => Rules.TryGetValue(id, out var r) ? r.Word : null;
+
+    /// <summary>その1語の意味（第172期 §1-3）。線を押したときに添える。</summary>
+    public static string? MeanOf(TraitId id) => Rules.TryGetValue(id, out var r) ? r.Mean : null;
+
+    /// <summary>手書きの表そのもの（走査の突き合わせ用）。</summary>
+    public static IEnumerable<(TraitId Id, string Word, string Mean)> Table
+        => Rules.Select(kv => (kv.Key, kv.Value.Word, kv.Value.Mean));
 }

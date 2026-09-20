@@ -19,7 +19,7 @@ public static class Map11Phase171
     /// ソースの走査に使う位置の窓口。<b><see cref="FormationRules"/> の公開メンバの名前</b>で、
     /// 「席・隣接・列・レーンを読んでいる」の判定はこの語の出現だけで決まる。
     /// </summary>
-    private static readonly string[] PositionApis =
+    public static readonly string[] PositionApis =
     {
         "AreAdjacent", "AreSameRowPair", "IsLanePredecessor", "SweepTargets",
         "PlayableSlotsOfRow", "SlotsOfRow", "LanePath", "LanesOf", "DepthOf",
@@ -29,7 +29,7 @@ public static class Map11Phase171
     /// クラス塊に割って、位置の窓口を読んでいる <c>*Trait</c> と、その <see cref="TraitId"/> を引く。
     /// <b>1クラスが複数の <c>TraitId</c> を持つ場合があるので全部拾う</b>（R051）。
     /// </summary>
-    private static Dictionary<TraitId, string> ScanPositionalTraits(string traitsSource)
+    public static Dictionary<TraitId, string> ScanPositionalTraits(string traitsSource)
     {
         var found = new Dictionary<TraitId, string>();
         var heads = System.Text.RegularExpressions.Regex

@@ -288,10 +288,12 @@ public static class Map11Verify
             ok &= hit;
             write($"| {name} | {want:F1}% | **{got:F1}%** | {d:+0.0;-0.0;0.0} | {(hit ? "**○**" : "×")} |");
         }
-        Row("踏破率 正（カド隊→南／ハネ隊→北）", ExpectStraight, p.Full);
+        // 隊 1 は第172期に「ハネ隊」→「かき回し隊」へ改名した（指示書 §3）。
+        // **器具（第168期）の行名も併記する**——過去の表と突き合わせるときに追えなくなるため。
+        Row("踏破率 正（カド隊→南／かき回し隊→北）", ExpectStraight, p.Full);
         Row("踏破率 逆", ExpectCross, q.Full);
         Row("2 本抜き カド隊×南（正）", ExpectTwoKadoSouth, p.TwoA);
-        Row("2 本抜き ハネ隊×北（正）", ExpectTwoHaneNorth, p.TwoB);
+        Row("2 本抜き かき回し隊×北（正・第168期の「ハネ隊」）", ExpectTwoHaneNorth, p.TwoB);
         Row("挽回率 逆", ExpectRallyCross, q.Rally);
         write("");
         write($"部分点 正 {p.Partial:F3} ／ 逆 {q.Partial:F3}（対比 {p.Partial - q.Partial:+0.000;-0.000}）。"

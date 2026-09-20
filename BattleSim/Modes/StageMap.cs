@@ -178,6 +178,11 @@ static partial class StageDiag
                 BattleResult r = BattleEngine.Run(pu, eu, DeriveSeed(seed, battles), verbose: false);
                 battles++; acted = true;
 
+                // **読むだけの計数**（第172期 部C）。既定では null なので1ビットも動かない。
+                if (harm is not null)
+                    foreach (var kv in r.TallyByUnit)
+                        harm[kv.Key] = harm.GetValueOrDefault(kv.Key) + kv.Value.DamageToEnemy;
+
                 if (harm is not null)
                     foreach ((string id, UnitTally t) in r.TallyByUnit)
                         if (harm.ContainsKey(id)) harm[id] += t.DamageToEnemy;
@@ -1088,7 +1093,8 @@ static partial class StageDiag
     /// <b>(2) 隊が全滅したら控えの第3隊がその道の続きへ 1 回だけ出る</b>（§1-3）。
     /// </summary>
     static BandOut BandOnce(Formation[] starters, Formation? reserve, int[] assign,
-                            IReadOnlyList<Formation>[] roads, int seed, int pct)
+                            IReadOnlyList<Formation>[] roads, int seed, int pct,
+                            Dictionary<string, double>? harm = null)
     {
         var P = new List<UnitState>?[3];
         var asg = new int[3];
@@ -1130,6 +1136,11 @@ static partial class StageDiag
 
                 BattleResult r = BattleEngine.Run(pu, eu, DeriveSeed(seed, battles), verbose: false);
                 battles++; acted = true;
+
+                // **読むだけの計数**（第172期 部C）。既定では null なので1ビットも動かない。
+                if (harm is not null)
+                    foreach (var kv in r.TallyByUnit)
+                        harm[kv.Key] = harm.GetValueOrDefault(kv.Key) + kv.Value.DamageToEnemy;
 
                 var aliveP = pu.Where(u => u.IsAlive).ToList();
                 var aliveE = eu.Where(u => u.IsAlive).ToList();
@@ -1183,10 +1194,21 @@ static partial class StageDiag
                            double ClearedAvg);
 
     static BandStat BandBand(Formation[] starters, Formation? reserve, int[] assign,
-                             IReadOnlyList<Formation>[] roads, int seed0, int pct)
+                             IReadOnlyList<Formation>[] roads, int seed0, int pct,
+                             Dictionary<string, double>? harm = null)
     {
         var o = new BandOut[BandSeeds];
-        Parallel.For(0, BandSeeds, i => o[i] = BandOnce(starters, reserve, assign, roads, seed0 + i, pct));
+        var bags = harm is null ? null : new Dictionary<string, double>[BandSeeds];
+        Parallel.For(0, BandSeeds, i =>
+        {
+            var bag = bags is null ? null : new Dictionary<string, double>();
+            o[i] = BandOnce(starters, reserve, assign, roads, seed0 + i, pct, bag);
+            if (bags is not null) bags[i] = bag!;
+        });
+        if (harm is not null && bags is not null)
+            foreach (var bag in bags)
+                foreach (var kv in bag)
+                    harm[kv.Key] = harm.GetValueOrDefault(kv.Key) + kv.Value / BandSeeds;
         int total = roads.Sum(r => r.Count);
         var stop = new int[roads.Length, roads.Max(r => r.Count)];
         foreach (var x in o)
