@@ -344,6 +344,28 @@ public static class EngagementEngine
         };
     }
 
+    /// <summary>
+    /// <b>第166期</b>——境界を <b>1 回ぶんだけ</b>外から進める入口。
+    /// <b>中身は <c>CarryOver</c> そのもので、1 文字も別物を書いていない</b>
+    /// （この包みは「新しいリストへ写してから private を呼ぶ」だけ）。
+    ///
+    /// <para>用途は検証用マップ（1 戦ずつ起きるので <see cref="Run"/> の列ループに乗らない）。
+    /// <see cref="Run"/> は従来どおり private の <c>CarryOver</c> を直に呼ぶ
+    /// ——<b>会戦の経路は 1 行も変えていない</b>（受け入れ条件: <c>compare</c> 差分ゼロ）。</para>
+    ///
+    /// <para><b>勝った側・負けた側のどちらにも使える。</b> <c>CarryOver</c> は勝敗を読まない
+    /// （読むのは生存リストと <see cref="RecoverRule"/> / <see cref="BoundaryChoice"/> だけ）ので、
+    /// 負けた部隊の生存者を傷つきのまま持ち帰る用途でも前提は崩れない。</para>
+    /// </summary>
+    /// <param name="survivors">生き残った駒（呼び出し側のリストは書き換えない）。</param>
+    /// <param name="deployed">投入した駒の全部。<c>ReviveDead</c> / <c>Revive</c> のときだけ読む。</param>
+    public static List<UnitState> CrossBoundary(IEnumerable<UnitState> survivors,
+                                                IReadOnlyList<UnitState>? deployed = null,
+                                                RecoverRule? recover = null,
+                                                BoundaryChoice choice = BoundaryChoice.None)
+        => CarryOver(survivors.ToList(), deployed?.ToList(),
+                     recover ?? RecoverRule.Default, choice);
+
     /// <summary>入場時点の戦力の写し。読むだけで UnitState には一切触らない。
     /// 投入直後（Materialize / CarryOver の直後）に呼ぶので全員生存のはずだが、
     /// 生存数は仮定せず数える（前提が崩れたとき集計側で気づけるように）。</summary>

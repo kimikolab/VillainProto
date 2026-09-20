@@ -110,6 +110,11 @@ public static void Run(string[] args, int stageIndex)
         // `Program.cs` の区間には振り分けの1行しか残らない**ので、ここを再帰にしないと
         // `測った診断` がほぼ全部「不明」になる（実測で 90 行が落ちた）。
         // `obj` / `bin` の生成コードは索引の対象ではないので外す。
+        // 第166期: **宣言に `partial` を挟めるようにした**——モードを 2 ファイルへ割ったとき、
+        // 宣言が正規表現に当たらず `測った診断` からそのモードが黙って消えた（R051 の再発）。
+        // **ここに宣言の綴りも、規則の型名も書かないこと**——
+        // **このファイル自身が走査の対象なので、コメントに書いた名前がそのまま索引に載る**（R035）。
+        // 実際に 2 度踏んだ（綴りを書いて 12 行、型名を書いて 2 行の誤り）。
         foreach (string f in Directory.GetFiles(Path.Combine(dvRoot, "BattleSim"), "*.cs",
                                                 SearchOption.AllDirectories))
         {
@@ -119,7 +124,7 @@ public static void Run(string[] args, int stageIndex)
                 || rel.StartsWith("bin" + Path.DirectorySeparatorChar, StringComparison.Ordinal)) continue;
             string txt = File.ReadAllText(f);
             foreach (System.Text.RegularExpressions.Match cm in
-                     System.Text.RegularExpressions.Regex.Matches(txt, @"(?:static|sealed) class (\w+)"))
+                     System.Text.RegularExpressions.Regex.Matches(txt, @"(?:static|sealed)\s+(?:partial\s+)?class (\w+)"))
             {
                 string cls = cm.Groups[1].Value;
                 for (int i = 0; i < dvModes.Count; i++)

@@ -17,7 +17,7 @@ using static Common;
 //     dotnet run --project BattleSim -c Release 0 stage check   # 自己検査（§4）
 // =====================================================================================
 
-static class StageDiag
+static partial class StageDiag
 {
     const int Seeds = 200;
 
@@ -39,11 +39,12 @@ static class StageDiag
             case "cross": CrossRun(arg); return;
             case "catalog": CatalogRun(arg); return;
             case "short": ShortRun(arg); return;
+            case "map": MapRun(arg); return;
             case "rho": Rho(arg); return;
             case "rhocarry": RhoCarry(arg); return;
             case "check": Check(arg); return;
             default:
-                Console.WriteLine("stage: モードは phase0 / scan / perm / permsd / run / life / obj / cross / catalog / rho / rhocarry / check。");
+                Console.WriteLine("stage: モードは phase0 / scan / perm / permsd / run / life / obj / cross / catalog / short / map / rho / rhocarry / check。");
                 return;
         }
     }
