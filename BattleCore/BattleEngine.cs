@@ -3072,6 +3072,9 @@ public sealed class BattleContext
         DroughtEffective[side] += effective;
         DroughtOn.TryGetValue(target.Def.Id, out var acc);
         DroughtOn[target.Def.Id] = (acc.Hits + 1, acc.Amount + effective);
+        // 第171期・**表示専用**。量は `effective`（上限で切ったあと）を出す
+        // ——満タンの駒への回復は渇きが無くても入らないので、要求量だと画面が上振れする。
+        EmitSealed(target, SealedLabels.Drought, effective);
     }
 
     /// <summary>
@@ -3085,6 +3088,9 @@ public sealed class BattleContext
         if (!sole) return;
         HushBlockedSide[side]++;
         HushByRoute[(int)route][side]++;
+        // 第171期・**表示専用**。ここが「粛が単独の原因で止めた」の唯一の合流点なので、
+        // 台本へ出すのもここ1行で足りる（計数には1ビットも触らない）。
+        EmitSealed(u, SealedLabels.Hush, 0);
     }
 
     /// <summary>
@@ -4430,6 +4436,40 @@ public sealed class BattleContext
     }
 
     /// <summary>
+    /// 盤面ルールが何かを封じたことを台本に打つ（第171期・<b>表示専用</b>）。呼び口は3つだけ——
+    /// <see cref="NoteHushBlocked"/>（粛が<b>単独の原因</b>のときだけ）・
+    /// <see cref="NoteDroughtBlocked"/>（回復の入口）・<c>ApplyDamage</c> の <c>yokeBinding</c> の中。
+    ///
+    /// <para><b>3箇所とも既にある計数の合流点</b>——粛・渇きは <c>Note*</c> の中、軛は
+    /// 切る前にしか取れない量を記録している同じブロックの中。<b>新しい判定は1つも足していない</b>ので、
+    /// 盤面ルールの答えも乱数の消費も1ビットも変わらない（第171期 Q0-3）。</para>
+    ///
+    /// <para><see cref="Emit"/> は verbose のときしか積まないので、<c>compare</c>（verbose 偽）では
+    /// 1件も作られない。<b>計数（<c>HushBlockedSide</c> / <c>DroughtHits</c> / <c>YokeCutHits</c>）には
+    /// 触っていない</b>——自己検査 (c) は「帳簿の数 ＝ 台本の封じイベントの数」で取るので、
+    /// ここで数え直すと検算にならない。</para>
+    /// </summary>
+    /// <param name="target">封じられた駒。</param>
+    /// <param name="rule"><see cref="SealedLabels"/> の3つのどれか。</param>
+    /// <param name="amount">通らなかった量（渇き＝入るはずだった回復／軛＝切り落とされた量／粛＝0）。</param>
+    /// <param name="by">相手側の駒（軛なら殴った駒）。粛・渇きは null。</param>
+    internal void EmitSealed(UnitState target, string rule, int amount, UnitState? by = null)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Sealed,
+            Turn = _turn,
+            ActorId = by?.InstanceId,
+            TargetId = target.InstanceId,
+            Amount = amount,
+            HpAfter = target.Hp,
+            Team = target.TeamId,
+            Text = rule,
+        });
+    }
+
+    /// <summary>
     /// そのターン頭に各駒が負っている継続効果を、値ごと台本へ写す。
     /// 再生側は TurnStart で持っている状態を捨て、これで組み直す（0 のものは出さない）。
     /// </summary>
@@ -5761,6 +5801,9 @@ public sealed class BattleContext
             YokeCutBy[who] = (acc.Hits + 1, acc.Lost + amount - Yoke.Cap);
 
             Log($"    軛が {target.Name} への一撃を {amount} から {Yoke.Cap} に切った", LogKind.Trigger);
+            // 第171期・**表示専用**。**`amount` を書き換える前**に打つ（切り落とされた量は
+            // ここでしか取れない）。`ActorId` は殴った駒——粛・渇きと違って相手が居る唯一の封じ。
+            EmitSealed(target, SealedLabels.Yoke, amount - Yoke.Cap, source);
             amount = Yoke.Cap;
         }
         else if (Yoke.Cap > 0 && amount > Yoke.Cap * 4 / 5 && YokeBinding)

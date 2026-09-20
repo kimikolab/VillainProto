@@ -1956,7 +1956,53 @@ public enum BattleEventKind
     /// <c>TargetId</c> = 混乱した駒、<c>Text</c> = <see cref="ConfusedLabels"/>。
     /// <b>どの規則も読まない。</b></para>
     /// </summary>
-    Confused
+    Confused,
+
+    /// <summary>
+    /// 盤面ルールが何かを<b>封じた瞬間</b>（第171期・<b>表示専用</b>）。粛・渇き・軛の3本を、
+    /// <c>Text</c>（<see cref="SealedLabels"/>）で区別して1つの種類にまとめてある。
+    ///
+    /// <para><b><see cref="Highlight"/> に乗せなかった</b>——あちらは見せ場（破裂・覚醒）の
+    /// 差し込み位置で、再生側は文字列をそのままバナーに出す。封じを混ぜると
+    /// <b>再生側が封じを他の強調と区別できない</b>（第171期 Q0-1 の判断基準がこれ1つ）。</para>
+    ///
+    /// <para><b>3本を1つの種類にまとめたのは、3つとも「盤面ルールが働いた」という同じ出来事だから。</b>
+    /// 転倒・痺れ・混乱が「付与」と「発動」の2本を1種類に持つのと同じで、
+    /// 種類を分けると再生側が同じ形の分岐を3つ持つことになる。</para>
+    ///
+    /// <para><b>engine で足したのは3箇所だけ</b>——<c>NoteHushBlocked</c>（粛が<b>単独の原因</b>で
+    /// 止めたときだけ）・<c>NoteDroughtBlocked</c>（回復の入口）・<c>ApplyDamage</c> の
+    /// <c>yokeBinding</c> の中。どれも既にある計数の合流点で、<b>判定・数値・乱数の消費には触らない。</b></para>
+    ///
+    /// <para><c>ActorId</c> = 封じられた行動の<b>相手側</b>（軛なら殴った駒。粛・渇きは null）、
+    /// <c>TargetId</c> = 封じられた駒、<c>Amount</c> = 通らなかった量
+    /// （渇き＝入るはずだった回復／軛＝切り落とされた量／粛＝0）、
+    /// <c>Text</c> = <see cref="SealedLabels"/>。<b>どの規則も読まない。</b></para>
+    /// </summary>
+    Sealed
+}
+
+/// <summary>
+/// 封じの3本の名前（第171期・<b>表示専用</b>）。<see cref="BattleEventKind.Sealed"/> の
+/// <c>Text</c> に入る文字列はこの3つで全部。
+///
+/// <para><see cref="StaggerLabels"/> / <see cref="StunLabels"/> / <see cref="ConfusedLabels"/> と
+/// 同じく定数で持つ——文字列リテラルを直に書くと、走査が「該当なし」と「引けなかった」を
+/// 区別できない（第117期）。</para>
+/// </summary>
+public static class SealedLabels
+{
+    /// <summary>粛がターン外の行動を止めた（<b>粛が単独の原因のときだけ</b>）。</summary>
+    public const string Hush = "粛";
+
+    /// <summary>渇きが回復を止めた。</summary>
+    public const string Drought = "渇き";
+
+    /// <summary>軛が1発を上限で切った。</summary>
+    public const string Yoke = "軛";
+
+    /// <summary>3つとも。<b>粛 → 渇き → 軛</b>の順（<c>BoardRuleLedger.RuleIndex</c> とは別の並び）。</summary>
+    public static readonly string[] All = { Hush, Drought, Yoke };
 }
 
 /// <summary>

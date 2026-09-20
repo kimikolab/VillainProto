@@ -152,6 +152,32 @@ public partial class Main : Control
             GetTree().Quit(p0 ? 0 : 1);
             return;
         }
+        // 第171期 Phase 0。**ソースの中身はここで読んで渡す**——`Map11Phase171` に
+        // Godot の型を入れないため（`Map11` / `Map11Verify` と同じ扱い）。
+        if (bootArgs.Contains("--map11-phase171", StringComparer.Ordinal))
+        {
+            string root = ProjectSettings.GlobalizePath("res://") + "../BattleCore/";
+            string Read(string name)
+            {
+                try { return System.IO.File.ReadAllText(root + name); }
+                catch (Exception ex) { GD.Print($"（{name} を読めなかった: {ex.Message}）"); return ""; }
+            }
+            bool p171 = Map11Phase171.Run(GD.Print, Read("Traits.cs"), Read("BattleEngine.cs"));
+            GD.Print($"MAP11_PHASE171_COMPLETE ok={p171}");
+            GetTree().Quit(p171 ? 0 : 1);
+            return;
+        }
+        // 第171期 部C —— 演出の穴の棚卸し（**調べて表にするだけ**）。
+        if (bootArgs.Contains("--map11-artgap", StringComparer.Ordinal))
+        {
+            string main = "";
+            try { main = System.IO.File.ReadAllText(ProjectSettings.GlobalizePath("res://") + "Main.cs"); }
+            catch (Exception ex) { GD.Print($"（Main.cs を読めなかった: {ex.Message}）"); }
+            bool gap = Map11ArtGap.Run(GD.Print, main);
+            GD.Print($"MAP11_ARTGAP_COMPLETE ok={gap}");
+            GetTree().Quit(gap ? 0 : 1);
+            return;
+        }
         string? verifyArg = bootArgs.FirstOrDefault(a => a.StartsWith("--map11-verify", StringComparison.Ordinal));
         if (verifyArg is not null)
         {
@@ -839,7 +865,9 @@ public partial class Main : Control
             x.MaxHp,
             x.Attack,
             x.Pattern,
-            x.Unit.Def.Advances)).ToList();
+            x.Unit.Def.Advances,
+            // 第171期 §2-2。**盤面ルールの保持者の札**を再生側が出すための1フィールド。
+            x.Unit.Def.Traits)).ToList();
 
         _openingById.Clear();
         foreach (DemoOpening opening in _battleOpening) _openingById[opening.InstanceId] = opening;
@@ -1120,6 +1148,20 @@ public partial class Main : Control
                 }
                 break;
 
+            // 第171期 §2-2 —— 盤面ルールが何かを封じた瞬間（**仮の表示**）。
+            // 3本（粛・渇き・軛）を `Text` で分ける。**エフェクト・音・カメラは作らない**
+            // （部C の表を Codex に渡してから決める）。
+            //
+            // **同じターンに何回も出る**（粛は1ターンに8回止めることもある）ので、
+            // 浮き文字は毎回出すが**間は置かない**——置くと再生が封じで埋まる。
+            case BattleEventKind.Sealed:
+                Color sealTint = UiKit.Hurt;
+                string sealWord = e.Text ?? "封じ";
+                _battleField.Float(target, SealFloatText(sealWord, e.Amount), sealTint);
+                AppendLog($"  [color=#{sealTint.ToHtml(false)}]{NameOf(e.TargetId)} は{SealLogText(sealWord, e.Amount)}[/color]"
+                          + $"  [color=#a9b3a8]（{sealWord}）[/color]");
+                break;
+
             case BattleEventKind.Heal:
                 target?.SetHp(e.HpAfter);
                 target?.AnimateHeal();
@@ -1173,7 +1215,8 @@ public partial class Main : Control
                         Math.Max(e.HpAfter, def?.MaxHp ?? e.HpAfter),
                         def?.Attack ?? 0,
                         def?.Pattern ?? AttackPattern.Single,
-                        def?.Advances ?? true);
+                        def?.Advances ?? true,
+                        def?.Traits);
                     _openingById[summonId] = opening;
                     _battleField.AddSummon(opening);
                     if (e.ActorId is not null)
@@ -1393,6 +1436,27 @@ public partial class Main : Control
     /// 戦況ログに付ける「誰の仕業か」（第124期 3-h）。<b>書き手が居ないときは何も書かない</b>
     /// ——「盤面」と書くと、書き手が居ないことと書き手が盤面であることの区別が消える。
     /// </summary>
+    /// <summary>
+    /// 封じの浮き文字（第171期 §2-2・<b>仮の表示</b>）。<b>短い文字を浮かせるだけ</b>で、
+    /// 絵も音もカメラも無い——指示書 §2-2 が「仮の表示まで」と決めている。
+    /// </summary>
+    private static string SealFloatText(string rule, int amount) => rule switch
+    {
+        SealedLabels.Hush => "封じ",
+        SealedLabels.Drought => amount > 0 ? $"渇き −{amount}" : "渇き",
+        SealedLabels.Yoke => "25 で止まる",
+        _ => rule,
+    };
+
+    /// <summary>同・ログ側の一文。<b>評価の言葉は書かない</b>（起きたことだけ）。</summary>
+    private static string SealLogText(string rule, int amount) => rule switch
+    {
+        SealedLabels.Hush => "ターン外に動けなかった",
+        SealedLabels.Drought => $"回復が通らなかった（{amount} 点）",
+        SealedLabels.Yoke => $"受けた一撃が 25 で切られた（{amount} 点ぶん）",
+        _ => "封じられた",
+    };
+
     private string WriterSuffix(int? actorId, int? targetId)
         => actorId is null || actorId == targetId
             ? ""

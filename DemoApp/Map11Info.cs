@@ -87,9 +87,12 @@ public static class Map11Info
     public static IEnumerable<string> TraitLinesOf(UnitDef def)
         => def.Traits.Select(TraitLineOf).Where(s => s is not null)!;
 
-    /// <summary>盤面ルールの札を持っているか（「この駒が倒れるとルールが消える」の印）。</summary>
-    public static bool IsBoardRuleHolder(UnitDef def)
-        => def.Traits.Any(t => t is TraitId.Hush or TraitId.Drought or TraitId.Yoke or TraitId.Inversion);
+    /// <summary>
+    /// 盤面ルールの札を持っているか（「この駒が倒れるとルールが消える」の印）。
+    /// <b>第171期に <see cref="BoardRuleTags"/> へ寄せた</b>——戦闘中の保持者の札と
+    /// マップの ★ が別々の一覧を持つと、片方だけ静かに古くなる（第124期 §4）。
+    /// </summary>
+    public static bool IsBoardRuleHolder(UnitDef def) => BoardRuleTags.IsHolder(def.Traits);
 
     // ---------------- 戦闘の後の1行（指示書 §1-4） ----------------
 
