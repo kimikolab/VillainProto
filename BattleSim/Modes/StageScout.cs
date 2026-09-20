@@ -35,9 +35,17 @@ static partial class StageDiag
     const int ScoutWavesNeeded = 2;      // 線A: 4波のうち何波で斥候級が立てばよいか
     const int ScoutRecover = 50;         // 部B の道中の回復（第167期: 50% で飽和）
 
-    /// <summary>波 <paramref name="wave"/>（0 始まり）の形 <paramref name="form"/>。</summary>
+    /// <summary>
+    /// 波 <paramref name="wave"/>（0 始まり）の形 <paramref name="form"/>。
+    ///
+    /// <para><b>第169期</b>——部B が使う 2 つ（第二波・第四波の <c>S4</c>）だけは
+    /// <see cref="EnemyCatalog.Vanguards"/> の定義を引く（`DemoApp` の 1-1 と<b>同じ物</b>を
+    /// 見るため）。<b>中身は下のループが組む形と 1 ビットも違わない</b>——
+    /// 自己検査 (b) が全波・全形で突き合わせている。</para>
+    /// </summary>
     static Formation ScoutSquad(int wave, int form)
     {
+        if (ScoutForms[form].Name == "S4" && EnemyCatalog.VanguardOf(wave) is { } vg) return vg;
         var src = EnemyCatalog.Stages[wave].Enemy;
         var f = new Formation();
         foreach (int s in ScoutForms[form].Slots) f[s] = src[s];
@@ -653,10 +661,26 @@ static partial class StageDiag
         Console.WriteLine($"| (b') | `M5` の 61 行 × 4 波 ＝ {rows.Length * 4} セルの勝率が `Stages` と一致 "
             + $"| {(diffTotal == 0 ? "**○** 0 件差分" : $"× {diffTotal} 件")} |");
 
+        // 第169期 (b''): `S4` を `EnemyCatalog.Vanguards` から引くようにした。
+        // **形としては 1 ビットも違わない**ことを、全波・全形・全席で突き合わせる。
+        int s4diff = 0, s4checked = 0;
+        for (int w = 1; w <= 4; w++)
+            for (int k = 0; k < ScoutForms.Length; k++)
+            {
+                var got = ScoutSquad(w, k);
+                var want = new Formation();
+                foreach (int t in ScoutForms[k].Slots) want[t] = EnemyCatalog.Stages[w].Enemy[t];
+                for (int t = 0; t < 5; t++) { s4checked++; if (!ReferenceEquals(got[t], want[t])) s4diff++; }
+            }
+        Console.WriteLine($"| (b'') | `S4` を `EnemyCatalog.Vanguards` から引いても形が同一"
+            + $"（{s4checked} 席を参照まで突き合わせ） | {(s4diff == 0 ? "**○** 0 件差分" : $"× {s4diff} 件")} |");
+
         Console.WriteLine("| (d) | 波・形・回復量・割り当てを混ぜた集計で判定していない "
             + "| **○**（部A は 波 × 形 ごと、部B は 形 × 回復 × 割り当て ごとに線を当てている） |");
-        Console.WriteLine("| (f) | `BattleCore` / `DemoApp` / `All` / `Presets` / `Stages` / `Columns` に触っていない "
-            + "| **○**（この期が足したのは `BattleSim/Modes/StageScout.cs` と振り分け 1 行だけ） |");
+        Console.WriteLine("| (f) | `All` / `Presets` / `Stages` / `Columns` に触っていない "
+            + "| **○**（第168期が足したのは `BattleSim/Modes/StageScout.cs` と振り分け 1 行だけ。"
+            + "**第169期に `EnemyCatalog.Vanguards` を足したが `Stages` / `Columns` には載せていない**"
+            + "——形が同じことは (b'') が示す） |");
         Console.WriteLine();
         Console.WriteLine("(a) `compare` 305 セル ／ (c) 第167期の対照列 ／ (e) `docs/rules.md` は"
             + "別コマンドで確かめる（報告書 §自己検査）。");

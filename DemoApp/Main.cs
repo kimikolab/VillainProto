@@ -91,6 +91,12 @@ public partial class Main : Control
     private Button _back = null!;
     private Button _replay = null!;
     private Button _campaignSetup = null!;
+
+    /// <summary>
+    /// 「作戦マップへ」の戻り先。入場時に1回だけ決める（第169期）。
+    /// 既定は検証用マップ 1-1 で、既存の作戦マップから来たときだけそちらを指す。
+    /// </summary>
+    private string _returnScene = Map11Session.Scene;
     private Button _campaignBattle = null!;
     private Button _score = null!;
     private OptionButton _speedPicker = null!;
@@ -124,6 +130,7 @@ public partial class Main : Control
     private bool _quitAfterPlayback;
     private bool _fastSmoke;
     private bool _campaignFlowSmoke;
+    private bool _map11FlowSmoke;
 
     private sealed record PendingOpening(
         UnitState Unit,
@@ -135,6 +142,21 @@ public partial class Main : Control
 
     public override void _Ready()
     {
+        // 第169期 自己検査 (c)。**画面を1つも作らずに `Map11State` だけを回す。**
+        // 通常起動では 1 ビットも走らない。
+        string[] bootArgs = OS.GetCmdlineUserArgs();
+        string? verifyArg = bootArgs.FirstOrDefault(a => a.StartsWith("--map11-verify", StringComparison.Ordinal));
+        if (verifyArg is not null)
+        {
+            int n = verifyArg.Length > "--map11-verify=".Length
+                && int.TryParse(verifyArg["--map11-verify=".Length..], out int want) && want > 0
+                ? want : Map11Verify.DefaultSeeds;
+            bool ok = Map11Verify.Report(n, GD.Print);
+            GD.Print($"MAP11_VERIFY_COMPLETE seeds={n} ok={ok}");
+            GetTree().Quit(ok ? 0 : 1);
+            return;
+        }
+
         Theme = new Theme
         {
             DefaultFont = new SystemFont
@@ -188,11 +210,20 @@ public partial class Main : Control
         _quitAfterPlayback = userArgs.Contains("--demo-quit", StringComparer.Ordinal);
         _fastSmoke = userArgs.Contains("--demo-fast", StringComparer.Ordinal);
         _campaignFlowSmoke = userArgs.Contains("--campaign-flow-smoke", StringComparer.Ordinal);
+        // 第169期。検証用マップ 1-1 の通し確認（画面あり・頭なし）。
+        _map11FlowSmoke = userArgs.Contains("--map11-flow-smoke", StringComparer.Ordinal);
+        if (_map11FlowSmoke) _fastSmoke = true;
         if (_fastSmoke) _speed = 1000.0;
         string? captureArg = userArgs.FirstOrDefault(arg => arg.StartsWith("--demo-capture-dir=", StringComparison.Ordinal));
         string? captureDirectory = captureArg?["--demo-capture-dir=".Length..];
         if (userArgs.Contains("--demo-autoplay", StringComparer.Ordinal))
             _ = AutoplayForCapture(captureDirectory);
+
+        // 第169期。戻り先は入場時に決める（勝敗で `HasPendingEncounter` が落ちても揺れない）。
+        if (CampaignSession.HasPendingEncounter) _returnScene = CampaignSession.CampaignScene;
+
+        // 第169期。検証用マップ 1-1 から接敵して来たときは、**編成を挟まずそのまま出撃する。**
+        if (CampaignSession.HasCarriedBattle) StartCarriedBattle();
     }
 
     private async Task AutoplayForCapture(string? captureDirectory)
@@ -757,6 +788,33 @@ public partial class Main : Control
 
         List<UnitState> players = BattleEngine.Materialize(formation, BattleContext.PlayerTeam);
         List<UnitState> enemies = BattleEngine.Materialize(EnemyCatalog.Stages[stageIndex].Enemy, BattleContext.EnemyTeam);
+        EnterBattle(players, enemies, seed, stageIndex, EnemyCatalog.Stages[stageIndex].Name);
+    }
+
+    /// <summary>
+    /// <b>第169期</b> —— 検証用マップ 1-1 から入る戦闘。<b>編成画面を経由しない。</b>
+    ///
+    /// <para>渡された <see cref="UnitState"/> のリストを<b>写さずにそのまま</b>
+    /// <see cref="BattleEngine.Run"/> へ入れる（傷・死者・最大HPの損耗がそのまま盤面に立つ）。
+    /// <c>stageIndex</c> は背景の選択にしか使わない。</para>
+    /// </summary>
+    private void StartCarriedBattle()
+    {
+        if (_battleMode || !CampaignSession.HasCarriedBattle) return;
+        List<UnitState> players = CampaignSession.CarriedPlayers!;
+        List<UnitState> enemies = CampaignSession.CarriedEnemies!;
+        int stageIndex = CampaignSession.CarriedStageIndex;
+        string title = CampaignSession.CarriedEnemyName ?? EnemyCatalog.Stages[stageIndex].Name;
+        _stagePicker.Selected = stageIndex;
+        _seed.Value = CampaignSession.CarriedSeed;
+        // 編成画面へは戻さない（この戦闘の編成は作戦マップが持っている）。
+        _back.Visible = false;
+        EnterBattle(players, enemies, CampaignSession.CarriedSeed, stageIndex, title);
+    }
+
+    private void EnterBattle(List<UnitState> players, List<UnitState> enemies,
+                             int seed, int stageIndex, string title)
+    {
         List<PendingOpening> pending = players.Concat(enemies)
             .Select(u => new PendingOpening(u, u.Slot, u.Hp, u.MaxHp, u.CurrentAttack, u.CurrentPattern))
             .ToList();
@@ -788,11 +846,11 @@ public partial class Main : Control
         _stagePicker.Disabled = true;
         _presetPicker.Disabled = true;
         _seed.Editable = false;
-        _battleSummary.Text = $"{EnemyCatalog.Stages[stageIndex].Name}\nseed {seed} ・ 予測済み台本 {_result.Events.Count}イベント";
+        _battleSummary.Text = $"{title}\nseed {seed} ・ 予測済み台本 {_result.Events.Count}イベント";
         _battleLog.Clear();
         _field.Visible = false;
         _battleField.Visible = true;
-        _battleField.BeginBattle(_battleOpening, EnemyCatalog.Stages[stageIndex].Name, stageIndex);
+        _battleField.BeginBattle(_battleOpening, title, stageIndex);
         _partyBar.Begin(_battleOpening);
         _partyBar.Sync(_battleField, -1);
         _partyBar.Visible = true;
@@ -838,12 +896,21 @@ public partial class Main : Control
         _battleField.SetSubline($"{(_result.PlayerWon ? "勝利" : "敗北")} ・ {_result.Turns}ターン ・ 生存 {_result.PlayerSurvivors}体 ・ 最大連鎖 {_result.MaxEnemyKillsInOneTurn}");
         AppendLog($"[color=#{color.ToHtml(false)}][b]{verdict}[/b][/color]  {_result.Turns}ターン");
         SetScoreVisible(true);
-        bool returnsToCampaign = CampaignSession.HasPendingEncounter;
+        bool returnsToCampaign = CampaignSession.HasPendingEncounter || Map11Session.HasPendingBattle;
+        // 第169期。**精算はここ1箇所**。`Map11Session` 側が「戻った1回だけ」に絞っているので、
+        // 「最初から」で台本を再生し直しても二度は走らない。
+        Map11Session.CompleteBattle(_result.PlayerWon);
+        CampaignSession.ClearCarriedBattle();
         CampaignSession.CompleteBattle(_result.PlayerWon);
         Notice(returnsToCampaign
             ? "戦闘終了。結果を持って作戦マップへ戻れます。"
             : "戦闘終了。配置を変えるか、同じ台本をもう一度再生できます。", color);
-        if (_campaignFlowSmoke)
+        if (_map11FlowSmoke)
+        {
+            GD.Print($"MAP11_BATTLE_DONE won={_result.PlayerWon} turns={_result.Turns}");
+            GetTree().ChangeSceneToFile(Map11Session.Scene);
+        }
+        else if (_campaignFlowSmoke)
         {
             CampaignSession.FlowSmokeReturning = true;
             GetTree().ChangeSceneToFile(CampaignSession.CampaignScene);
@@ -1727,10 +1794,16 @@ public partial class Main : Control
         _score.Text = _scorePanel.Visible ? "戦績を閉じる (T)" : "戦績 (T)";
     }
 
+    /// <summary>
+    /// 作戦マップへ。<b>第169期から既定は検証用マップ 1-1</b>（<c>Map11Main.tscn</c>）。
+    /// 既存の自由移動の作戦マップ（<c>CampaignMain.tscn</c>）から接敵して来たときだけ
+    /// そちらへ戻す——戻り先は入場時（<c>_Ready</c>）に決めてあり、
+    /// 戦闘の勝敗で <c>HasPendingEncounter</c> が落ちても揺れない。
+    /// </summary>
     private void GoToCampaign()
     {
         ++_playToken;
-        GetTree().ChangeSceneToFile(CampaignSession.CampaignScene);
+        GetTree().ChangeSceneToFile(_returnScene);
     }
 
     public override void _UnhandledInput(InputEvent @event)

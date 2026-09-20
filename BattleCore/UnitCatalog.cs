@@ -2199,4 +2199,40 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
     /// 列を選べるようにするのは、どの列を標準にするかを計測結果で決めてから（別作業）。
     /// </summary>
     public static IReadOnlyList<Formation> EngagementColumn => Columns[0].Squads;
+
+    /// <summary>
+    /// <b>第169期</b> —— 検証用マップ 1-1 の<b>先遣隊</b>。
+    /// <b>`Stages` / `Columns` には載せない</b>（`Inverter` / `Levy` / `Slanderer` と同じ扱いで、
+    /// 読むのは `DemoApp` の 1-1 と `BattleSim` の `stage scout` だけ）。
+    ///
+    /// <para><b>新しい駒は1体も作っていない。</b> 既存の波から <b>後1 を空けるだけ</b>で、
+    /// 数値も席も1つも変えていない（第168期 部A の形 <c>S4</c>）。空席は
+    /// 「その駒が開戦前に死んでいる」と同値で、新しい経路は1本も通らない
+    /// （第168期 Q0-2 で実装から確かめてある）。</para>
+    ///
+    /// <para><b>「斥候級」という札は付けない</b>——第四波の先遣は斥候級の線
+    /// （残り枚数 4.0〜4.7 枚）に届いていない（実測 3.89 枚）。呼び名は「先遣」で足りる。</para>
+    /// </summary>
+    public static IReadOnlyList<Stage> Vanguards { get; } = new[]
+    {
+        new Stage("第二波・先遣", WithoutBack1(Stages[1].Enemy)),   // 後1 施しの司祭長 を抜く
+        new Stage("第四波・先遣", WithoutBack1(Stages[3].Enemy)),   // 後1 詠唱兵 を抜く
+    };
+
+    /// <summary><paramref name="stageIndex"/>（0 始まり）の先遣隊。定義が無い波は null。</summary>
+    public static Formation? VanguardOf(int stageIndex) => stageIndex switch
+    {
+        1 => Vanguards[0].Enemy,
+        3 => Vanguards[1].Enemy,
+        _ => null,
+    };
+
+    /// <summary>後1（スロット3）だけを空けた写し。元の <see cref="Formation"/> は触らない。</summary>
+    private static Formation WithoutBack1(Formation src)
+    {
+        var f = new Formation();
+        foreach (var o in src.Occupied())
+            if (o.Slot != 3) f[o.Slot] = o.Def;
+        return f;
+    }
 }
