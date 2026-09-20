@@ -300,6 +300,7 @@ public partial class BattlefieldView3D : Control
             _world.AddChild(_scenery);
             _fortress = fortress;
         }
+        ResetSeals();
         foreach (BattlePawn3D pawn in _pawns.Values) pawn.QueueFree();
         _pawns.Clear();
         foreach (Node child in _fxRoot.GetChildren()) child.QueueFree();
@@ -320,6 +321,7 @@ public partial class BattlefieldView3D : Control
             pawn.SetHome(PawnPosition(opening.Team, opening.Slot));
             _actorRoot.AddChild(pawn);
             _pawns[opening.InstanceId] = pawn;
+            RegisterSealHolder(opening);
         }
     }
 
@@ -433,54 +435,13 @@ public partial class BattlefieldView3D : Control
     }
 
     /// <summary>
-    /// 発動者を先に見つけるための青いオーラ。細い光柱は立ち絵を隠さず上へ抜け、
-    /// 青い局所光と足元の輪だけが攻撃の入り口まで残る。
+    /// 発動者の輪郭と先行する残像を青く示す。不発では残像を引き戻して粒にほどく。
     /// </summary>
-    private void BeginBonusAura(BattlePawn3D actor, Color color, double duration)
+    private void BeginBonusAura(BattlePawn3D actor, Color color, double duration, bool interrupted = false)
     {
-        Vector3 basePosition = actor.RestPosition;
-        var light = new OmniLight3D
-        {
-            Position = basePosition + Vector3.Up * 1.25f,
-            LightColor = color,
-            LightEnergy = 0,
-            OmniRange = 3.4f,
-            ShadowEnabled = false,
-        };
-        _fxRoot.AddChild(light);
-        var lightTween = light.CreateTween();
-        lightTween.TweenProperty(light, "light_energy", 5.2f, duration * 0.12)
-            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
-        lightTween.TweenInterval(duration * 0.50);
-        lightTween.TweenProperty(light, "light_energy", 0.0f, duration * 0.38);
-        lightTween.Finished += light.QueueFree;
-
-        MakeGroundRing(basePosition, color, 1.55f, duration * 0.82);
-        MakeGroundRing(basePosition, Colors.White, 0.82f, duration * 0.54);
-
-        for (int i = 0; i < 11; i++)
-        {
-            float angle = Mathf.Tau * i / 11.0f + 0.17f;
-            float radius = 0.54f + 0.24f * (i % 3);
-            Vector3 start = basePosition + new Vector3(Mathf.Cos(angle) * radius, 0.08f + 0.10f * (i % 2), Mathf.Sin(angle) * radius);
-            var streak = new MeshInstance3D
-            {
-                Mesh = new BoxMesh { Size = new Vector3(0.035f, 0.72f + 0.11f * (i % 4), 0.035f) },
-                Position = start,
-                MaterialOverride = MakeMaterial(new Color(color, 0.78f), true, true, 0.15f, color * 1.45f),
-                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-            };
-            _fxRoot.AddChild(streak);
-            double delay = duration * (0.035 * (i % 5));
-            var streakTween = streak.CreateTween().SetParallel();
-            streakTween.TweenProperty(streak, "position:y", start.Y + 2.5f + 0.14f * (i % 3), duration * 0.70)
-                .SetDelay(delay).SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
-            streakTween.TweenProperty(streak, "transparency", 1.0f, duration * 0.58)
-                .SetDelay(delay + duration * 0.22);
-            streakTween.Finished += streak.QueueFree;
-        }
+        actor.BeginBonusAfterimage(color, duration, interrupted);
+        MakeGroundRing(actor.RestPosition, new Color(color, 0.35f), 0.95f, duration * 0.6);
     }
-
     /// <summary>割り込みが終わって手番へ戻る（第125期 段2）。</summary>
     public void EndInterrupt(string label, Color color)
     {
@@ -556,6 +517,8 @@ public partial class BattlefieldView3D : Control
         pawn.SetHome(PawnPosition(opening.Team, opening.Slot));
         _actorRoot.AddChild(pawn);
         _pawns[opening.InstanceId] = pawn;
+        RegisterSealHolder(opening);
+        ConnectSeals();
         pawn.AnimateAppear();
         MakeGroundRing(pawn.Home, UiKit.Violet, 0.9f, 0.50);
     }

@@ -1148,16 +1148,14 @@ public partial class Main : Control
                 }
                 break;
 
-            // 第171期 §2-2 —— 盤面ルールが何かを封じた瞬間（**仮の表示**）。
-            // 3本（粛・渇き・軛）を `Text` で分ける。**エフェクト・音・カメラは作らない**
-            // （部C の表を Codex に渡してから決める）。
-            //
-            // **同じターンに何回も出る**（粛は1ターンに8回止めることもある）ので、
-            // 浮き文字は毎回出すが**間は置かない**——置くと再生が封じで埋まる。
+            // 粛は青い予備動作を鎖で潰す。渇き・軛は観察後に演出を決める。
             case BattleEventKind.Sealed:
                 Color sealTint = UiKit.Hurt;
                 string sealWord = e.Text ?? "封じ";
-                _battleField.Float(target, SealFloatText(sealWord, e.Amount), sealTint);
+                if (sealWord == SealedLabels.Hush)
+                    await _battleField.ShowHushSeal(target);
+                else
+                    _battleField.Float(target, SealFloatText(sealWord, e.Amount), sealTint);
                 AppendLog($"  [color=#{sealTint.ToHtml(false)}]{NameOf(e.TargetId)} は{SealLogText(sealWord, e.Amount)}[/color]"
                           + $"  [color=#a9b3a8]（{sealWord}）[/color]");
                 break;
@@ -1176,6 +1174,7 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.Death:
+                _battleField.SealPawnDied(target);
                 target?.SetHp(0);
                 target?.AnimateDeath();
                 _battleField.Float(target, "DOWN", UiKit.Hurt, true);
@@ -1233,6 +1232,7 @@ public partial class Main : Control
                     target.SetHp(e.HpAfter);
                     _battleField.MovePawn(target, e.Slot);
                     target.AnimateRevive();
+                    _battleField.SealPawnRevived(target);
                     _battleField.Float(target, "REVIVE", UiKit.Heal, true);
                     if (e.ActorId is not null) _battleField.Link(actor, target, UiKit.Heal, "繋ぎ直した");
                 }

@@ -126,7 +126,7 @@ Godot.exe --path DemoApp --quit-after 400 res://Map11Main.tscn -- "--map11-captu
 
 出来事の側の描き分けは3つです。
 
-- **追加攻撃**（棘・仇討ち・軋み）—— 台本の `Reaction`。割り込んだ駒を青いオーラと光柱で
+- **追加攻撃**（棘・仇討ち・軋み）—— 台本の `Reaction`。割り込んだ駒を青い輪郭と先行する残像で
   先に示し、その駒の名前を載せた細い `EXTRA ATTACK` 帯を消してから着弾します。
 - **肩代わり**（巨躯ゴルム・分かちドハ）—— 台本の `Relayed`。
   **本来の標的から中継した駒へ太い線**が引かれ、1発が分けられたことが見えます。
@@ -150,6 +150,32 @@ Godot.exe --path DemoApp --quit-after 400 res://Map11Main.tscn -- "--map11-captu
 - **薙ぎ**を標的ごとの細い線から1枚の弧に変えました（散弾に見えていたため）。
 
 ## 起動
+
+### 粛の封鎖演出
+
+`Sealed`（粛）を受けた駒に、保持者から鎖を繋ぎます。初回の封鎖以後は薄く残り、
+次の封鎖で光って張り詰めます。追加攻撃と同じ青い輪郭・残像が先行し、途中で引き戻されて粒に散ります。
+保持者の `Death` でその保持者の鎖が砕け、蘇生で戻ります。対象は実際の台本から拾い、
+特性名から封鎖対象を推測しません。複数保持者・両陣営・移動・召喚・再生し直しに対応しています。
+
+2倍速以上でも不発の一連の動きに約0.54秒を残しています。粛の頭上の「封じ」「★ 粛」は
+鎖へ置き換えました。渇き・軛は従来表示のまま、粛を観察してから演出を決めます。
+
+開発用の `SealEffectCheck.tscn` は2倍速の不発・解放・正常発動を表示し、
+複数保持者・死亡・蘇生・移動・再開を検査して終了します。
+
+```powershell
+dotnet build DemoApp/DemoApp.csproj
+godot --path DemoApp res://SealEffectCheck.tscn
+```
+
+通常の戦闘で確認する場合は第二波・反撃編成を使います。
+
+```powershell
+godot --path DemoApp -- --demo-autoplay --demo-preset=反撃 --demo-stage=1 --demo-seed=0
+```
+
+### 通常起動
 
 - Godot 4.7.x Mono で `project.godot` を開いて実行
 - または `godot --path C:\works\VillainProto\DemoApp --editor`

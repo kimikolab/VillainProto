@@ -1,6 +1,7 @@
 using BattleCore;
 using Godot;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 public partial class BattlePawn3D : Node3D
@@ -253,6 +254,7 @@ void fragment() {
 render_mode unshaded, cull_disabled, blend_mix, depth_prepass_alpha;
 uniform sampler2D portrait_texture : source_color, filter_linear_mipmap;
 uniform vec4 portrait_tint : source_color = vec4(1.0);
+uniform float aura_amount = 0.0;
 void fragment() {
     vec4 c = texture(portrait_texture, UV);
     vec4 top_left = texture(portrait_texture, vec2(0.02, 0.02));
@@ -274,7 +276,7 @@ void fragment() {
     }
     float alpha = c.a * portrait_tint.a * mask;
     if (alpha < 0.02) discard;
-    ALBEDO = c.rgb * portrait_tint.rgb;
+    ALBEDO = mix(c.rgb * portrait_tint.rgb, portrait_tint.rgb, aura_amount);
     ALPHA = alpha;
 }"
         };
@@ -328,7 +330,8 @@ void fragment() {
         // ——封じは「保持者が生きている間ずっと」効いているので、瞬間の表示だけでは
         // 「いま封じられている」が画面から引けない（第170期 §4 の S-3）。
         // 語は `SealedLabels` と同じ文字列で、封じの瞬間の浮き文字と必ず一致する。
-        _ruleTag = MakeLabel(BoardRuleTags.LabelFor(opening.Traits), 16, UiKit.Hurt, 0.0054f);
+        // 粛は鎖で示す。未制作の盤面ルールだけ従来の札を残す。
+        _ruleTag = MakeLabel(BoardRuleTags.LabelFor(opening.Traits?.Where(t => t != TraitId.Hush)), 16, UiKit.Hurt, 0.0054f);
         _ruleTag.Position = new Vector3(0, statusY + 0.38f, 0);
         _ruleTag.Visible = _ruleTag.Text.Length > 0;
         AddChild(_ruleTag);
