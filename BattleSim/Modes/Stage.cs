@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -35,11 +35,12 @@ static class StageDiag
             case "life": Life(arg); return;
             case "perm": Perm(arg); return;
             case "permsd": PermSd(arg); return;
+            case "obj": ObjRun(arg); return;
             case "rho": Rho(arg); return;
             case "rhocarry": RhoCarry(arg); return;
             case "check": Check(arg); return;
             default:
-                Console.WriteLine("stage: モードは phase0 / scan / perm / permsd / run / life / rho / rhocarry / check。");
+                Console.WriteLine("stage: モードは phase0 / scan / perm / permsd / run / life / obj / rho / rhocarry / check。");
                 return;
         }
     }
@@ -1412,4 +1413,450 @@ static class StageDiag
             + "`BattleSim/Modes/Stage.cs`（新規）と `BattleSim/Program.cs` の振り分け1ブロックだけ。"
             + "`docs/rules.md` の差分で示す。");
     }
+
+    // =================================================================================
+    // 第162期 —— 目的変数を替える（`stage obj`）
+    //
+    // 指示書は design/PHASE162_OBJECTIVE_SPEC.md。前提は design/PHASE161_RELINE.md。
+    //
+    // **engine は1行も触らない。** `EngagementResult` が **`verbose: false` でも積んでいる**
+    // `PlayerExits`（`SquadEntry`）と `Battles[i].TallyByUnit` を読むだけ——
+    // 4つの目的変数はすべて**1回の走行から同時に**取れるので、戦闘の回数は第161期と変わらない。
+    //
+    // **列長の交絡を切るため、判定は `順路5`（列長5）と `地点3`（列長3）の両方で要求する**（§1-2）。
+    // =================================================================================
+
+    /// <summary>目的変数（第162期）。<b>どれも「戦った部隊戦ごとの項の和」</b>で、戦わなかった地点は 0。</summary>
+    public enum Obj { Break = 0, Alive = 1, Hp = 2, Harm = 3 }
+
+    public const int ObjCount = 4;
+
+    public static readonly (Obj O, string Name, string Def)[] ObjDefs =
+    {
+        (Obj.Break, "突破度",
+            "`EnemySquadsCleared + LastBattleAttrition`（列長で頭打ち）＝**いまの目的変数・対照**"),
+        (Obj.Alive, "生存枚数",
+            "Σ_戦 `PlayerExits[b].Alive` ÷ **出撃枚数**（1戦あたり 0..1）"),
+        (Obj.Hp, "残HP割合",
+            "Σ_戦 `max(0, PlayerExits[b].HpSum)` ÷ **編成の定義上総MaxHp**（1戦あたり 0..1）"),
+        (Obj.Harm, "与えた総害",
+            "Σ_戦 （その戦で味方が敵へ与えたダメージ）÷ **その敵部隊の定義上総MaxHp**"),
+    };
+
+    /// <summary>
+    /// 行（編成）ごとに1度だけ作る定数。<b>目的変数の分母はここで固定する</b>——
+    /// 「戦ごとに動く分母」を使うと部分点の意味が Battle ごとに変わる（<c>Engagement.cs</c> の
+    /// <c>LastBattleAttrition</c> の doc と同じ理由）。
+    /// </summary>
+    sealed record ObjCtx(HashSet<string> Ids, int Deployed, int DefMaxHp, int[] FoeMax);
+
+    static ObjCtx CtxOf(Formation f, Col col) => new(
+        f.Occupied().Select(o => o.Def.Id).ToHashSet(),
+        f.Occupied().Count(),
+        f.Occupied().Sum(o => o.Def.MaxHp),
+        col.Squads.Select(s => s.Occupied().Sum(o => o.Def.MaxHp)).ToArray());
+
+    /// <summary>その部隊戦で味方（<b>出撃した駒</b>）が敵へ与えたダメージ。</summary>
+    static int HarmOf(BattleResult r, ObjCtx c)
+    {
+        int d = 0;
+        foreach ((string id, UnitTally t) in r.TallyByUnit) if (c.Ids.Contains(id)) d += t.DamageToEnemy;
+        return d;
+    }
+
+    /// <summary><b>会戦版</b>の4つの目的変数を1回の走行から同時に取る。</summary>
+    static double[] EngageObjs(Formation f, Col col, Ver v, int seed, ObjCtx c)
+    {
+        EngagementResult r = EngagementEngine.Run(new[] { f }, col.Squads, seed,
+                                                  verbose: false, recover: v.Rec, boundary: v.Bnd);
+        var o = new double[ObjCount];
+        o[(int)Obj.Break] = BreakthroughDegree(r, col.Len);
+        for (int b = 0; b < r.Battles.Count; b++)
+        {
+            o[(int)Obj.Alive] += c.Deployed == 0 ? 0 : (double)r.PlayerExits[b].Alive / c.Deployed;
+            o[(int)Obj.Hp] += c.DefMaxHp == 0 ? 0 : Math.Max(0, r.PlayerExits[b].HpSum) / (double)c.DefMaxHp;
+            int foeMax = c.FoeMax[r.Pairings[b].EnemySquad];
+            o[(int)Obj.Harm] += foeMax == 0 ? 0 : HarmOf(r.Battles[b], c) / (double)foeMax;
+        }
+        return o;
+    }
+
+    /// <summary>
+    /// <b>単発版</b>の4つ。<see cref="IndepDegree"/> の逐語の写しに、
+    /// 同じ位置で同じ式の3つを足しただけ（打ち切り <c>break</c> も同じ場所）。
+    /// </summary>
+    static double[] IndepObjs(Formation f, Col col, int seed, ObjCtx c)
+    {
+        int cleared = 0;
+        double attr = 0;
+        var o = new double[ObjCount];
+        for (int b = 0; b < col.Len; b++)
+        {
+            var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
+            var e = BattleEngine.Materialize(col.Squads[b], BattleContext.EnemyTeam);
+            int defMax = e.Sum(u => u.Def.MaxHp);
+            BattleResult r = BattleEngine.Run(p, e, DeriveSeed(seed, b), verbose: false);
+            int left = e.Sum(u => Math.Max(0, u.Hp));
+            attr = defMax == 0 ? 0 : (double)(defMax - left) / defMax;
+            bool clearedE = e.All(u => !u.IsAlive);
+            bool lostP = p.All(u => !u.IsAlive) || !r.PlayerWon;
+            o[(int)Obj.Alive] += c.Deployed == 0 ? 0 : (double)p.Count(u => u.IsAlive) / c.Deployed;
+            o[(int)Obj.Hp] += c.DefMaxHp == 0 ? 0 : Math.Max(0, p.Sum(u => u.Hp)) / (double)c.DefMaxHp;
+            o[(int)Obj.Harm] += defMax == 0 ? 0 : HarmOf(r, c) / (double)defMax;
+            if (clearedE) cleared++;
+            if (lostP) break;
+        }
+        o[(int)Obj.Break] = cleared >= col.Len ? col.Len : cleared + attr;
+        return o;
+    }
+
+    static double[] EngageObjAvg(Formation f, Col col, Ver v)
+    {
+        var c = CtxOf(f, col);
+        var s = new double[ObjCount];
+        for (int seed = 0; seed < Seeds; seed++)
+        {
+            var o = EngageObjs(f, col, v, seed, c);
+            for (int k = 0; k < ObjCount; k++) s[k] += o[k];
+        }
+        for (int k = 0; k < ObjCount; k++) s[k] /= Seeds;
+        return s;
+    }
+
+    static double[] IndepObjAvg(Formation f, Col col)
+    {
+        var c = CtxOf(f, col);
+        var s = new double[ObjCount];
+        for (int seed = 0; seed < Seeds; seed++)
+        {
+            var o = IndepObjs(f, col, seed, c);
+            for (int k = 0; k < ObjCount; k++) s[k] += o[k];
+        }
+        for (int k = 0; k < ObjCount; k++) s[k] /= Seeds;
+        return s;
+    }
+
+    // ---- §4 の線（**測る前に固定した**。線1 / 線2 の高さは第161期と同じ） ----
+    //  線3 **`順路5` と `地点3` の両方で 1 と 2**（列長の交絡を切る）／ 線4 本丸 = 線3 を満たす目的変数が1つ以上
+
+    // §4。**実装前に書き切り、外れても消さない**（規約・第64期）。
+    public static readonly (string Key, string Text)[] ObjPredictions =
+    {
+        ("P1", "**`生存枚数` は床に張り付く**（突破度 0 の行がそのまま 0 になる）——Q0-4 で落ちる"),
+        ("P2", "**`与えた総害` の分子（会戦の帰属SD）が突破度より大きい**（負けた地点の削りが乗るので天井が外れる）"),
+        ("P3", "**`与えた総害` は分母（単発の帰属SD）も一緒に大きくなる**ので、比は思ったほど伸びない"),
+        ("P4", "**`残HP割合` は rho を下げる**（消耗そのものを測るので持ち越しの効きが直接出る）"),
+        ("P5", "**線3（両方の列）を通る目的変数は 0 個**——`地点3` で通っても `順路5` で落ちる"),
+    };
+
+    static void ObjRun(string arg)
+    {
+        string mode = arg.Trim();
+        if (mode.StartsWith("phase0")) { ObjPhase0(); return; }
+        if (mode.StartsWith("floor")) { ObjFloor(); return; }
+
+        var rows = CompareBuilds();
+        var jobs = new List<(int Row, int Slot, UnitDef Def)>();
+        for (int i = 0; i < rows.Length; i++)
+            foreach ((int sl, UnitDef d) in rows[i].F.Occupied()) jobs.Add((i, sl, d));
+        var ids = jobs.Select(j => j.Def.Id).Distinct().ToArray();
+        var uname = ids.ToDictionary(id => id, id => jobs.First(j => j.Def.Id == id).Def.Name);
+        var slotsOf = ids.ToDictionary(id => id,
+            id => Enumerable.Range(0, jobs.Count).Where(j => jobs[j].Def.Id == id).ToArray());
+
+        // 点は「列 版」の完全一致（第161期 (e)）。既定は §4 の4点。
+        string[] want = mode.Length > 0
+            ? mode.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToArray()
+            : new[] { "順路5 R0", "順路5 BCarry", "地点3 R0", "地点3 BCarry" };
+        var pts = new List<(string Cn, string Vn)>();
+        foreach (string w in want)
+        {
+            var t = w.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (t.Length != 2) { Console.WriteLine($"stage obj: 点 `{w}` が読めない（「列 版」）。"); return; }
+            _ = ColOf(t[0]); _ = VerOf(t[1]);
+            pts.Add((t[0], t[1]));
+        }
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        // ---- 単発側は列ごとに1度だけ（版に依らない） ----
+        var iFull = new Dictionary<string, double[][]>();   // [行][目的変数]
+        var iGot = new Dictionary<string, double[][]>();    // [枠][目的変数]
+        foreach (string cn in pts.Select(p => p.Cn).Distinct())
+        {
+            var col = ColOf(cn);
+            var fI = new double[rows.Length][];
+            Parallel.For(0, rows.Length, i => fI[i] = IndepObjAvg(rows[i].F, col));
+            var gI = new double[jobs.Count][];
+            Parallel.For(0, jobs.Count, j => gI[j] = IndepObjAvg(SwapOne(rows[jobs[j].Row].F, jobs[j].Slot), col));
+            iFull[cn] = fI; iGot[cn] = gI;
+        }
+
+        // ---- 会戦側（点ごと） ----
+        var recs = new List<(string Cn, string Vn, Col C, double[][] UE, double[][] UI)>();
+        foreach (var (cn, vn) in pts)
+        {
+            var col = ColOf(cn); var ver = VerOf(vn);
+            var fE = new double[rows.Length][];
+            Parallel.For(0, rows.Length, i => fE[i] = EngageObjAvg(rows[i].F, col, ver));
+            var gE = new double[jobs.Count][];
+            Parallel.For(0, jobs.Count, j => gE[j] = EngageObjAvg(SwapOne(rows[jobs[j].Row].F, jobs[j].Slot), col, ver));
+            double[][] fI = iFull[cn], gI = iGot[cn];
+            // 駒ごとの帰属（在席枠の平均）を目的変数ごとに
+            var uE = new double[ObjCount][]; var uI = new double[ObjCount][];
+            for (int k = 0; k < ObjCount; k++)
+            {
+                var sE = new double[jobs.Count]; var sI = new double[jobs.Count];
+                for (int j = 0; j < jobs.Count; j++)
+                {
+                    sE[j] = fE[jobs[j].Row][k] - gE[j][k];
+                    sI[j] = fI[jobs[j].Row][k] - gI[j][k];
+                }
+                uE[k] = ids.Select(id => slotsOf[id].Average(j => sE[j])).ToArray();
+                uI[k] = ids.Select(id => slotsOf[id].Average(j => sI[j])).ToArray();
+            }
+            recs.Add((cn, vn, col, uE, uI));
+        }
+
+        Console.WriteLine("# 第162期 段A/B —— 目的変数を替える");
+        Console.WriteLine();
+        Console.WriteLine($"`CompareBuilds()` {rows.Length} 行 × 延べ {jobs.Count} 枠 × 駒 {ids.Length} 体 × seed 0..{Seeds - 1}。");
+        Console.WriteLine("**4つの目的変数は1回の走行から同時に取る**（戦闘の回数は第161期の1点ぶんと同じ）。");
+        Console.WriteLine();
+        foreach (var (o, nm, df) in ObjDefs) Console.WriteLine($"- **{nm}**: {df}");
+        Console.WriteLine();
+
+        Console.WriteLine("## B-1. 目的変数 × 点（**駒の水準**）");
+        Console.WriteLine();
+        Console.WriteLine("| 目的変数 | 点 | 列長 | rho(全) | **rho(絞)** | 絞りの分母 | 線1 | 会戦の帰属SD | 単発の帰属SD | **比** | 線2 | 会戦帰属の平均 | 単発帰属の平均 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|:-:|--:|--:|--:|:-:|--:|--:|");
+        var pass = new Dictionary<(int K, string P), bool>();
+        foreach (var (o, nm, _) in ObjDefs)
+        {
+            int k = (int)o;
+            foreach (var r in recs)
+            {
+                double q = RhoQ1(r.UI[k]);
+                var (rhoAll, nAll) = RhoOf(r.UE[k], r.UI[k], -1);
+                var (rhoCut, nCut) = RhoOf(r.UE[k], r.UI[k], q);
+                double sd = Sd(r.UE[k]), sdI = Sd(r.UI[k]);
+                double ratio = sdI > 0 ? sd / sdI : double.NaN;
+                bool l1 = rhoCut <= RhoLine, l2 = ratio >= RatioLine;
+                pass[(k, r.Cn + " " + r.Vn)] = l1 && l2;
+                Console.WriteLine($"| {nm} | {r.Cn} × {r.Vn} | {r.C.Len} | {rhoAll:F3} | **{rhoCut:F3}** | {nCut} / {nAll} "
+                    + $"| {(l1 ? "○" : "×")} | {sd:F3} | {sdI:F3} | **{ratio:F3}** | {(l2 ? "○" : "×")} "
+                    + $"| {r.UE[k].Average():+0.000;-0.000} | {r.UI[k].Average():+0.000;-0.000} |");
+            }
+        }
+        Console.WriteLine();
+        Console.WriteLine("絞りの閾値 q1（|単発帰属| の最小四分位）は**列 × 目的変数**ごとに1つ。");
+        Console.WriteLine();
+
+        Console.WriteLine("## B-2. 同値塊（規約 (G13)）");
+        Console.WriteLine();
+        Console.WriteLine("| 目的変数 | 点 | 会戦帰属の最大同値塊 | 厳密に 0 の駒 | 単発帰属の最大同値塊 | 厳密に 0 の駒 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|");
+        foreach (var (o, nm, _) in ObjDefs)
+        {
+            int k = (int)o;
+            foreach (var r in recs)
+            {
+                var (tE, zE) = RhoTies(r.UE[k]); var (tI, zI) = RhoTies(r.UI[k]);
+                Console.WriteLine($"| {nm} | {r.Cn} × {r.Vn} | {tE:P1} | {zE} / {ids.Length} | {tI:P1} | {zI} / {ids.Length} |");
+            }
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## B-3. 判定（**線は §4 で測る前に固定した**）");
+        Console.WriteLine();
+        Console.WriteLine($"線1 **rho(絞) <= {RhoLine:F2}** ／ 線2 **会戦の帰属SD ÷ 単発の帰属SD >= {RatioLine:F2}**  ");
+        Console.WriteLine("線3 **`順路5` と `地点3` の両方で 1 と 2**（列長の交絡を切る・§1-2）  ");
+        Console.WriteLine("線4 **本丸 = 線3 を満たす目的変数が1つ以上**");
+        Console.WriteLine();
+        var vers = recs.Select(r => r.Vn).Distinct().ToArray();
+        Console.WriteLine("| 目的変数 | 版 | 順路5（列長5） | 地点3（列長3） | **線3** |");
+        Console.WriteLine("|---|---|:-:|:-:|:-:|");
+        int win = 0;
+        foreach (var (o, nm, _) in ObjDefs)
+        {
+            int k = (int)o;
+            foreach (string vn in vers)
+            {
+                bool a = pass.TryGetValue((k, "順路5 " + vn), out bool pa) && pa;
+                bool b = pass.TryGetValue((k, "地点3 " + vn), out bool pb) && pb;
+                bool got = a && b;
+                if (got) win++;
+                Console.WriteLine($"| {nm} | {vn} | {(a ? "○" : "×")} | {(b ? "○" : "×")} | {(got ? "**○**" : "×")} |");
+            }
+        }
+        Console.WriteLine();
+        Console.WriteLine($"**線3 を通った（目的変数 × 版）: {win}。本丸は {(win > 0 ? "○" : "×")}。**");
+        Console.WriteLine();
+
+        Console.WriteLine("## B-4. §6-1 —— 分子（会戦の帰属SD）は突破度からどれだけ伸びたか");
+        Console.WriteLine();
+        Console.WriteLine("| 点 | 突破度 | 生存枚数 | 残HP割合 | 与えた総害 | 最大の伸び |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|");
+        foreach (var r in recs)
+        {
+            double b0 = Sd(r.UE[0]);
+            var row = Enumerable.Range(0, ObjCount).Select(k => Sd(r.UE[k])).ToArray();
+            Console.WriteLine($"| {r.Cn} × {r.Vn} | {row[0]:F3} | {row[1]:F3} | {row[2]:F3} | {row[3]:F3} "
+                + $"| **×{(b0 > 0 ? row.Skip(1).Max() / b0 : double.NaN):F2}** |");
+        }
+        Console.WriteLine();
+
+        Console.WriteLine("## B-5. 予測（**実装前に書いた。外れても消さない**）");
+        Console.WriteLine();
+        foreach (var (k, t) in ObjPredictions) Console.WriteLine($"{k}. {t}");
+        Console.WriteLine();
+
+        Console.WriteLine("## B-6. 段C —— 動いた駒（順位が入れ替わった上位10体）");
+        Console.WriteLine();
+        foreach (var r in recs)
+        {
+            foreach (var (o, nm, _) in ObjDefs)
+            {
+                int k = (int)o;
+                var rE = AverageRanksDesc(r.UE[k]);
+                var rI = AverageRanksDesc(r.UI[k]);
+                var ord = Enumerable.Range(0, ids.Length)
+                    .OrderByDescending(x => Math.Abs(rI[x] - rE[x])).Take(10).ToArray();
+                Console.WriteLine($"### {r.Cn} × {r.Vn} / {nm}");
+                Console.WriteLine();
+                Console.WriteLine("| 駒 | 在席枠 | 単発順位 | 会戦順位 | **Δ順位** | 単発帰属 | 会戦帰属 | 差 | 札 |");
+                Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|---|");
+                foreach (int x in ord)
+                {
+                    var def = jobs.First(j => j.Def.Id == ids[x]).Def;
+                    string traits = def.Traits.Count == 0 ? "—" : string.Join(" / ", def.Traits);
+                    Console.WriteLine($"| {uname[ids[x]]} | {slotsOf[ids[x]].Length} | {rI[x]:F1} | {rE[x]:F1} "
+                        + $"| **{rI[x] - rE[x]:+0.0;-0.0}** | {r.UI[k][x]:+0.000;-0.000} | {r.UE[k][x]:+0.000;-0.000} "
+                        + $"| {r.UE[k][x] - r.UI[k][x]:+0.000;-0.000} | {traits} |");
+                }
+                Console.WriteLine();
+            }
+        }
+        Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F1} 秒。");
+    }
+
+    /// <summary>
+    /// Q0-4（**`ablate` を回す前に数える**）。61 行の目的変数の分布——
+    /// <b>最小値ちょうどの行数</b>と<b>最大値ちょうどの行数</b>が 15 を超えたら、
+    /// その候補はそこで落とす（§2-1 の条件2）。
+    /// </summary>
+    static void ObjFloor()
+    {
+        var rows = CompareBuilds();
+        var pts = new[] { ("順路5", "R0"), ("地点3", "R0") };
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+        Console.WriteLine("# 第162期 段0 Q0-4 —— 床と天井（**`ablate` を回す前**）");
+        Console.WriteLine();
+        Console.WriteLine($"`CompareBuilds()` {rows.Length} 行 × seed 0..{Seeds - 1}。**素体差し替えは1回も回していない**"
+            + $"（{rows.Length} 行ぶんの走行だけ）。線は **最小値ちょうど {ZeroMax} 行以下 かつ 最大値ちょうど {FullMax} 行以下**。");
+        Console.WriteLine();
+        Console.WriteLine("| 点 | 目的変数 | 最小値 | **=最小の行** | 最大値 | **=最大の行** | 中央値 | 平均 | 行のSD | 条件2 |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|:-:|");
+        foreach (var (cn, vn) in pts)
+        {
+            var col = ColOf(cn); var ver = VerOf(vn);
+            var vals = new double[rows.Length][];
+            Parallel.For(0, rows.Length, i => vals[i] = EngageObjAvg(rows[i].F, col, ver));
+            foreach (var (o, nm, _) in ObjDefs)
+            {
+                int k = (int)o;
+                var v = vals.Select(x => x[k]).ToArray();
+                double mn = v.Min(), mx = v.Max();
+                int nmn = v.Count(x => Math.Abs(x - mn) < 1e-9), nmx = v.Count(x => Math.Abs(x - mx) < 1e-9);
+                var srt = v.OrderBy(x => x).ToArray();
+                bool ok = nmn <= ZeroMax && nmx <= FullMax;
+                Console.WriteLine($"| {cn} × {vn} | {nm} | {mn:F3} | **{nmn}** | {mx:F3} | **{nmx}** "
+                    + $"| {srt[srt.Length / 2]:F3} | {v.Average():F3} | {Sd(v):F3} | {(ok ? "○" : "**×**")} |");
+            }
+        }
+        Console.WriteLine();
+        Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F1} 秒。");
+    }
+
+    /// <summary>Q0-2 / Q0-3 / Q0-5（**戦闘0回**）。<c>EngagementResult</c> から取れる量を実装から引き直す。</summary>
+    static void ObjPhase0()
+    {
+        Console.WriteLine("# 第162期 段0 —— Phase 0（**戦闘0回**）");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-2. `EngagementResult` から取れる量");
+        Console.WriteLine();
+        Console.WriteLine("| フィールド | `verbose: false` で積むか | 出どころ |");
+        Console.WriteLine("|---|:-:|---|");
+        foreach (var p in typeof(EngagementResult).GetProperties())
+        {
+            bool vb = p.Name is "Openings";
+            string note = p.Name switch
+            {
+                "Openings" => "**`verbose` 時のみ**（各要素が空になる）",
+                "Battles" => "各部隊戦の `BattleResult`（`Log` / `Events` だけが verbose 依存）",
+                "PlayerEntries" or "EnemyEntries" => "入場戦力。doc に「verbose に関係なく積む」",
+                "PlayerExits" => "**退場戦力**。`Run` の直後に `Snapshot(current)`",
+                _ => "—",
+            };
+            Console.WriteLine($"| `{p.Name}` | {(vb ? "×" : "○")} | {note} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("`SquadEntry` のフィールド: "
+            + string.Join(" / ", typeof(SquadEntry).GetProperties().Select(p => $"`{p.Name}`")) + "。");
+        Console.WriteLine();
+        Console.WriteLine("**注意（実装を読んで判明）**: `Snapshot` は `squad.Sum(u => u.Hp)` で、"
+            + "`BattleEngine` は `target.Hp -= amount` の後に **0 で切っていない**。"
+            + "したがって `HpSum` には**倒れた駒の負の HP** が入りうる。"
+            + "**会戦側と単発側で同じ式（合計を取ってから 0 で切る）にしてある**ので、比の両側で同じ扱いになる。");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-3. 候補ごとに、engine を触らずに集計できるか");
+        Console.WriteLine();
+        Console.WriteLine("| 候補 | 窓口 | engine を触るか | 条件1（負けた後も定義される） |");
+        Console.WriteLine("|---|---|:-:|---|");
+        Console.WriteLine("| 突破度（対照） | `EnemySquadsCleared` / `LastBattleAttrition` | 不要 | **×**（列長で頭打ち・部分点は最後の1地点だけ） |");
+        Console.WriteLine("| 生存枚数 | `PlayerExits[b].Alive` | 不要 | △（負けた戦は 0 だが、それまでの戦の分は残る） |");
+        Console.WriteLine("| 残HP割合 | `PlayerExits[b].HpSum` | 不要 | ○ |");
+        Console.WriteLine("| 与えた総害 | `Battles[b].TallyByUnit[id].DamageToEnemy` | 不要 | **○**（負けた地点で削った分がそのまま乗る） |");
+        Console.WriteLine();
+        Console.WriteLine("**4つとも engine を触らずに取れる**（`TallyByUnit` も `verbose` に依存しない）。");
+        Console.WriteLine();
+
+        Console.WriteLine("### 与えた総害の分子の作り方（**`Def.Id` の衝突と召喚の漏れ**）");
+        Console.WriteLine();
+        var pIds = CompareBuilds().SelectMany(r => r.F.Occupied().Select(o => o.Def.Id)).Distinct().ToHashSet();
+        var eIds = EnemyCatalog.Stages.SelectMany(s => s.Enemy.Occupied().Select(o => o.Def.Id)).Distinct().ToHashSet();
+        var clash = pIds.Intersect(eIds).ToArray();
+        Console.WriteLine($"`CompareBuilds()` の味方 `Def.Id` {pIds.Count} 種 と 5波の敵 `Def.Id` {eIds.Count} 種 の"
+            + $"**重なりは {clash.Length} 件**（{(clash.Length == 0 ? "○ 衝突なし" : string.Join(" / ", clash))}）。");
+        Console.WriteLine();
+        Console.WriteLine("**分子は「出撃した5枚の `Def.Id`」に限る**ので、**戦闘中に湧いた味方（胞子・餌・亡者）の"
+            + "与ダメージは数に入らない**。これは会戦側と単発側で同じ扱いなので比には効かないが、"
+            + "**召喚を持つ駒の帰属を過小に見る**（記録しておく）。");
+        Console.WriteLine();
+
+        Console.WriteLine("## Q0-5. 単発側の定義");
+        Console.WriteLine();
+        Console.WriteLine("`IndepObjs` は `IndepDegree`（第157期）の**逐語の写し**に、"
+            + "**同じ位置で同じ式**の3つを足しただけ。**打ち切り（`if (lostP) break;`）も同じ場所**にある。");
+        Console.WriteLine();
+        Console.WriteLine("| 目的変数 | 会戦側 | 単発側 |");
+        Console.WriteLine("|---|---|---|");
+        Console.WriteLine("| 生存枚数 | `PlayerExits[b].Alive` ÷ 出撃枚数 | `p.Count(u => u.IsAlive)` ÷ 出撃枚数 |");
+        Console.WriteLine("| 残HP割合 | `max(0, PlayerExits[b].HpSum)` ÷ 定義上総MaxHp | `max(0, p.Sum(u => u.Hp))` ÷ 同 |");
+        Console.WriteLine("| 与えた総害 | `Battles[b].TallyByUnit` | 同じ `BattleResult` の同じ辞書 |");
+        Console.WriteLine();
+        Console.WriteLine("**打ち切りは分母にも乗る**（第159期 R239）——`IndepDegree` が"
+            + "「最初に負けた時点で止まる」ので、**単発側にも同じ天井がある**。"
+            + "**打ち切りを外さなかった**のは、外すと**会戦側（負けたら会戦が終わる）と定義が食い違う**ため"
+            + "——比の両側は**同じ打ち切り**で揃えてある。");
+        Console.WriteLine();
+
+        Console.WriteLine("## 予測（**測る前に書いた**）");
+        Console.WriteLine();
+        foreach (var (k, t) in ObjPredictions) Console.WriteLine($"{k}. {t}");
+    }
+
 }
