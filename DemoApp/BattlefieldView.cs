@@ -13,7 +13,8 @@ public sealed record DemoOpening(
     int Hp,
     int MaxHp,
     int Attack,
-    AttackPattern Pattern);
+    AttackPattern Pattern,
+    bool Advances);
 
 public partial class BattlefieldView : Control
 {

@@ -773,7 +773,8 @@ public partial class Main : Control
             x.Hp,
             x.MaxHp,
             x.Attack,
-            x.Pattern)).ToList();
+            x.Pattern,
+            x.Unit.Def.Advances)).ToList();
 
         _openingById.Clear();
         foreach (DemoOpening opening in _battleOpening) _openingById[opening.InstanceId] = opening;
@@ -919,7 +920,7 @@ public partial class Main : Control
                 }
                 if (e.Reaction)
                     await _battleField.ShowBonusAttack(actor);
-                _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire);
+                await _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire);
                 _battleField.AttackCue(actor,
                     $"{(forecasted ? "大技 " : "")}{UiKit.PatternLabel(pattern)}",
                     AttackColor(actor, e));
@@ -1097,7 +1098,8 @@ public partial class Main : Control
                         e.HpAfter,
                         Math.Max(e.HpAfter, def?.MaxHp ?? e.HpAfter),
                         def?.Attack ?? 0,
-                        def?.Pattern ?? AttackPattern.Single);
+                        def?.Pattern ?? AttackPattern.Single,
+                        def?.Advances ?? true);
                     _openingById[summonId] = opening;
                     _battleField.AddSummon(opening);
                     if (e.ActorId is not null)

@@ -566,7 +566,7 @@ public partial class BattlefieldView3D : Control
         pawn.AnimateMove(PawnPosition(pawn.Team, slot));
     }
 
-    public void Attack(
+    public async Task Attack(
         BattlePawn3D? from,
         BattlePawn3D? to,
         AttackPattern pattern,
@@ -578,7 +578,10 @@ public partial class BattlefieldView3D : Control
         Color color = friendly ? UiKit.Violet : reaction ? UiKit.Gold : from.Team == BattleContext.PlayerTeam ? UiKit.Player : UiKit.Enemy;
         List<BattlePawn3D> hits = impacted.Distinct().ToList();
         if (hits.Count == 0) hits.Add(to);
-        from.AnimateAttack(to.GlobalPosition - from.GlobalPosition);
+
+        // Advances は表示専用。踏み込む駒だけが標的の手前まで移動し、
+        // 到着後に攻撃エフェクトを出してから元の席へ戻る。
+        await from.AdvanceToAttack(to.RestPosition);
         CameraPunch((from.GlobalPosition + to.GlobalPosition) * 0.5f, pattern);
 
         switch (pattern)
@@ -619,6 +622,8 @@ public partial class BattlefieldView3D : Control
                 MakeBeam(from.FxPoint, to.FxPoint, color, reaction ? 0.15f : 0.11f, 0.34);
                 break;
         }
+
+        from.ReturnFromAttack();
     }
 
     public void Parry(BattlePawn3D? attacker, BattlePawn3D? defender)

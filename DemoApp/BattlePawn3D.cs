@@ -1,6 +1,7 @@
 using BattleCore;
 using Godot;
 using System;
+using System.Threading.Tasks;
 
 public partial class BattlePawn3D : Node3D
 {
@@ -112,6 +113,7 @@ public partial class BattlePawn3D : Node3D
     public int MaxHp { get; private set; }
     public int AttackValue { get; private set; }
     public AttackPattern Pattern { get; private set; }
+    public bool Advances { get; private set; }
     public string UnitName { get; private set; } = "";
     public Vector3 Home => _home;
     public Vector3 FxPoint => GlobalPosition + new Vector3(0, _fxHeight, 0);
@@ -127,6 +129,7 @@ public partial class BattlePawn3D : Node3D
         MaxHp = Math.Max(1, opening.MaxHp);
         AttackValue = opening.Attack;
         Pattern = opening.Pattern;
+        Advances = opening.Advances;
         UnitName = opening.Name;
         _phase = (UiKit.StableHash(opening.UnitId) % 1000) * 0.0061f;
         _baseTint = UiKit.PortraitTint(opening.UnitId, opening.Team == BattleContext.EnemyTeam)
@@ -383,16 +386,32 @@ void fragment() {
         _forecast.Visible = _alive && !string.IsNullOrWhiteSpace(value);
     }
 
-    public void AnimateAttack(Vector3 direction)
+    public async Task AdvanceToAttack(Vector3 targetPosition)
     {
-        if (!_alive) return;
-        Vector3 planar = new(direction.X, 0, direction.Z);
-        if (planar.LengthSquared() < 0.001f) planar = Team == BattleContext.PlayerTeam ? Vector3.Back : Vector3.Forward;
-        planar = planar.Normalized();
+        if (!_alive || !Advances) return;
+
+        Vector3 origin = RestPosition;
+        Vector3 planar = new(targetPosition.X - origin.X, 0, targetPosition.Z - origin.Z);
+        float distance = planar.Length();
+        const float attackDistance = 1.75f;
+        if (distance <= attackDistance) return;
+
+        Vector3 destination = origin + planar / distance * (distance - attackDistance) + Vector3.Up * 0.10f;
+        double duration = Math.Clamp(0.12 + (distance - attackDistance) * 0.018, 0.16, 0.28) / AnimationSpeed;
         var tween = BeginMotion();
-        tween.TweenProperty(this, "position", RestPosition + planar * 0.82f + Vector3.Up * 0.12f, 0.095 / AnimationSpeed)
+        tween.TweenProperty(this, "position", destination, duration)
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
-        tween.TweenProperty(this, "position", RestPosition, 0.19 / AnimationSpeed)
+
+        await ToSignal(tween, Tween.SignalName.Finished);
+    }
+
+    public void ReturnFromAttack()
+    {
+        if (!_alive || !Advances || Position.IsEqualApprox(RestPosition)) return;
+
+        var tween = BeginMotion();
+        tween.TweenInterval(0.055 / AnimationSpeed);
+        tween.TweenProperty(this, "position", RestPosition, 0.20 / AnimationSpeed)
             .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
     }
 

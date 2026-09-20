@@ -64,7 +64,7 @@ public partial class PortraitStateCheck : Node3D
     {
         var pawn = new BattlePawn3D();
         AddChild(pawn);
-        pawn.Configure(new DemoOpening(id, team, "hota", "ホタ", 0, 78, 78, 6, AttackPattern.Single), atlas);
+        pawn.Configure(new DemoOpening(id, team, "hota", "ホタ", 0, 78, 78, 6, AttackPattern.Single, true), atlas);
         pawn.Position = new Vector3(x, 0, 0);
         return pawn;
     }
