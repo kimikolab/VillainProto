@@ -9,7 +9,8 @@ using System.Linq;
 // **走査の対象は実装そのもの**（`BattleCore/Traits.cs` / `BattleCore/Models.cs` /
 // `DemoApp/BattlefieldView.cs`）。この期に手書きしたのは
 //   (1) `Map11Relations.Rules` の意味の1行（9 種）
-//   (2) 控えの駒の名指し 2 枚（残り4枚は `Map11.ReserveRanking()` が規則で選ぶ）
+//   (2) 控えの駒の名指し 3 枚（第172期は 2 枚。第173期 §1-3 #4 で空焚きのホタを足した。
+//       残り4枚は `Map11.ReserveRanking()` が規則で選ぶ）
 // の2つだけで、**どちらも欠けがあればここで名指しで落ちる**（R260）。
 //
 // `Map11Verify` / `Map11Phase171` と同じく **Godot の型を1つも使わない**
@@ -118,7 +119,7 @@ public static class Map11Phase172
         write("");
 
         // ---------------- Q0-4 ----------------
-        write("## Q0-4: 控えの駒 6 枚の候補と根拠");
+        write($"## Q0-4: 控えの駒 {Map11.ReserveCount} 枚の候補と根拠");
         write("");
         write("**手で選ばない**（指示書 §1-2）。線は3つ——(1) 3 隊 15 枚と重ならない ／ "
             + "(2) `Presets.Compare` の在席枠が 3 以上 ／ (3) **カド隊・かき回し隊・控え隊"
@@ -138,17 +139,21 @@ public static class Map11Phase172
                 + $"| {(picked.Contains(r.Def.Id) ? "**採**" : "—")} |");
         }
         write("");
-        write($"**名指しの2枚**（指示書 §1-2）: {string.Join(" / ", Map11.Reserves.Take(2).Select(d => d.Name))}"
+        write($"**名指しの3枚**: {string.Join(" / ", Map11.Reserves.Take(3).Select(d => d.Name))}"
             + "——クビは「送り先の一行が書けている駒で 3 隊に入っていない」、"
-            + "セッキは「リィカの相方として実測が最良だった駒」。");
+            + "セッキは「リィカの相方として実測が最良だった駒」、"
+            + "**ホタは第173期 §1-3 #4**（火を撒く駒も読む駒も盤上にいるのに、"
+            + "**火の受け手だけが欠けていた**。規則で選ぶ側は「3 隊それぞれと同席した実績」を見るので、"
+            + "この形の駒は構造的に上がってこない）。");
         write("");
-        write($"**採った 6 枚**: {string.Join(" / ", Map11.Reserves.Select(d => d.Name))}");
+        write($"**採った {Map11.ReserveCount} 枚**: "
+            + $"{string.Join(" / ", Map11.Reserves.Select(d => d.Name))}");
         write("");
         bool six = Map11.Reserves.Length == Map11.ReserveCount
                 && Map11.Reserves.Select(d => d.Id).Distinct().Count() == Map11.ReserveCount;
         ok &= six;
-        write(six ? "**6 枚が重複なく揃った（○）。ポンが差し替える前提。**"
-                  : "**× —— 6 枚に足りない。線が厳しすぎる。**");
+        write(six ? $"**{Map11.ReserveCount} 枚が重複なく揃った（○）。ポンが差し替える前提。**"
+                  : $"**× —— {Map11.ReserveCount} 枚に足りない。線が厳しすぎる。**");
         write("");
 
         // ---------------- Q0-5 ----------------
@@ -213,23 +218,32 @@ public static class Map11Phase172
             + "（R264: 窓口が engine 側にある札は、札のソースの走査では拾えない）。");
         write("");
 
-        // ---------------- 意味の1行 ----------------
-        write("## 線の1語の意味（`Map11Relations.Rules` の `Mean`）");
+        // ---------------- 意味の1行 ＋ 得／損（第173期 §1-1 の門） ----------------
+        write("## 線の1語の意味と 得／損（`Map11Relations.Rules`）");
         write("");
-        write("| 札 | 語 | 意味の1行 |");
-        write("|---|---|---|");
-        int noMean = 0;
-        foreach ((TraitId id, string word, string mean) in
+        write("**第173期に列が2つ増えた**——`Sign`（得／損／両方）と `点線`"
+            + "（席からは引けるが、いつ起きるかが条件付き）。"
+            + "**どちらも手書きなので、欠けがあればここで落ちる**（R260）。");
+        write("");
+        write("| 札 | 語 | 得／損 | 点線 | 意味の1行 | 説明文に出る語 |");
+        write("|---|---|:-:|:-:|---|---|");
+        int noMean = 0, noEcho = 0;
+        foreach ((TraitId id, Map11Relations.Rule r) in
                  Map11Relations.Table.OrderBy(t => t.Id.ToString(), StringComparer.Ordinal))
         {
-            if (mean.Trim().Length == 0) noMean++;
-            write($"| `{id}` | {word} | {(mean.Trim().Length == 0 ? "**×（無い）**" : mean)} |");
+            if (r.Mean.Trim().Length == 0) noMean++;
+            if (r.Echo.Trim().Length == 0) noEcho++;
+            write($"| `{id}` | {r.Word} | **{Map11Relations.LabelOf(r.Sign)}** "
+                + $"| {(r.Conditional ? "┄" : "—")} "
+                + $"| {(r.Mean.Trim().Length == 0 ? "**×（無い）**" : r.Mean)} "
+                + $"| {(r.Echo.Trim().Length == 0 ? "**×（無い）**" : "「" + r.Echo + "」")} |");
         }
         write("");
-        ok &= noMean == 0;
-        write(noMean == 0
-            ? $"**関係の形 {Map11Relations.Table.Count()} 種すべてに1行がある（○）。**"
-            : $"**{noMean} 種に1行が無い（×）。**");
+        ok &= noMean == 0 && noEcho == 0;
+        write(noMean == 0 && noEcho == 0
+            ? $"**関係の形 {Map11Relations.Table.Count()} 種すべてに、意味の1行・得／損の印・"
+              + "説明文の語がある（○）。**"
+            : $"**意味が無い {noMean} 種 ／ 説明文の語が無い {noEcho} 種（×）。**");
         write("");
 
         // ---------------- 組み直しの操作が規則どおりか ----------------

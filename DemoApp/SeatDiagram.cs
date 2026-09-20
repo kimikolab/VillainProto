@@ -54,6 +54,14 @@ public partial class SeatDiagram : Control
     /// <summary>空席も押せるか（組み直しのとき＝控えの駒をそこへ入れられる）。</summary>
     public bool AllowEmptyPress { get; set; }
 
+    /// <summary>
+    /// 倒れた駒の札に出す語（第173期 §1-3 #3）。既定は「（戦死）」。
+    /// <b>全滅した隊では「（失われた）」に替える</b>——第172期は隊が全滅すると <c>Units</c> が
+    /// null になるので、図が<b>満タンの既定編成</b>を描いていた（失われた隊が、まだ出していない隊と
+    /// 同じ絵になる）。
+    /// </summary>
+    public string DeadLabel { get; set; } = "（戦死）";
+
     /// <summary>いま選んでいる席（-1 ＝ なし）。</summary>
     public int Selected { get; private set; } = -1;
 
@@ -97,7 +105,7 @@ public partial class SeatDiagram : Control
     /// 図を引き直す。<paramref name="cells"/> は 5 席ぶん（空席は <c>Def</c> が null）。
     /// <b>選んでいる席は呼び出し側から渡す</b>——引き直しで選択が飛ばないようにするため。
     /// </summary>
-    public void Render(IReadOnlyList<Cell> cells, Color accent, int selected)
+    public void Render(IReadOnlyList<Cell> cells, int selected)
     {
         Selected = selected;
         _cells.Clear();
@@ -165,7 +173,7 @@ public partial class SeatDiagram : Control
             card.Text = cell.Alive
                 ? $"{head}  {cell.Def.Name}\nHP {cell.Hp}/{cell.MaxHp}  攻{cell.Def.Attack} 速{cell.Def.Speed}"
                   + (tag.Length > 0 ? "\n" + tag : "")
-                : $"{head}  {cell.Def.Name}\n（戦死）";
+                : $"{head}  {cell.Def.Name}\n{DeadLabel}";
             card.AddThemeColorOverride("font_color",
                 !cell.Alive ? UiKit.Faint
                 : pct <= 30 ? UiKit.Hurt
@@ -188,12 +196,13 @@ public partial class SeatDiagram : Control
             .Where(c => c.Def is not null && c.Alive)
             .ToDictionary(c => c.Slot, c => c.Def!);
         var links = Map11Relations.Of(seats);
-        _lines.Set(links, Selected, accent);
-        _words.Set(links, Selected, accent);
+        _lines.Set(links, Selected);
+        _words.Set(links, Selected);
     }
 
     /// <summary>
     /// 関係の線（<see cref="DrawWords"/> が偽）と語（真）。
+    /// <b>色は 得／損／両方</b>（第173期・`SeatLinks.ColorOf`）。
     /// <b>常時は薄く、選んだ札に関わる線だけ濃く出して語を添える</b>
     /// ——常時ぜんぶ描くと読めない（指示書 §1-2 の最後）。
     ///
@@ -206,17 +215,15 @@ public partial class SeatDiagram : Control
 
         private IReadOnlyList<Map11Relations.Link> _links = Array.Empty<Map11Relations.Link>();
         private int _selected = -1;
-        private Color _accent = UiKit.Player;
 
-        public void Set(IReadOnlyList<Map11Relations.Link> links, int selected, Color accent)
+        public void Set(IReadOnlyList<Map11Relations.Link> links, int selected)
         {
             _links = links;
             _selected = selected;
-            _accent = accent;
             QueueRedraw();
         }
 
         public override void _Draw()
-            => SeatLinks.Draw(this, _links, _selected, _accent, RectOf, DrawWords);
+            => SeatLinks.Draw(this, _links, _selected, RectOf, DrawWords);
     }
 }

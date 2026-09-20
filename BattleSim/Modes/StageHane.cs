@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using System;
 using System.Collections.Generic;
@@ -26,14 +26,16 @@ using System.Linq;
 static partial class StageDiag
 {
     /// <summary>
-    /// 控えの駒 6 枚（<b>`DemoApp` の <c>Map11.Reserves</c> と同じ並び</b>）。
+    /// 控えの駒 7 枚（<b>`DemoApp` の <c>Map11.Reserves</c> と同じ並び</b>）。
+    /// <b>第173期 §1-3 #4 に空焚きのホタを足して 6 → 7 枚にした</b>
+    /// ——控えには火を撒く駒（ボルグ）も火を読む駒（ヒヨ）もいるのに、<b>火の受け手だけが欠けていた</b>。
     ///
     /// <para><b>ここは写しである。</b> 選ぶ規則そのものは `DemoApp/Map11.cs`（`ReserveRanking`）が持ち、
     /// その出力は <c>--map11-phase172</c> が表にする——`BattleSim` は `DemoApp` を参照できないので、
     /// <b>規則を2回書くより、結果を1行で写して出どころを書くほうが安全</b>と判断した。
     /// 差し替えたらこの行も直すこと。</para>
     /// </summary>
-    const string HaneReserves = "kubi,sekki,sero,borg,gan,hagi";
+    const string HaneReserves = "kubi,sekki,hota,sero,borg,gan,hagi";
 
     /// <summary>かき回し隊で振る席（後3）。<b>`突き返し (ハネ×ウツ)` の行でハネが座っている席。</b></summary>
     const int HaneSlot = 4;

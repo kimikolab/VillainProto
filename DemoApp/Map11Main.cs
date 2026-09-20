@@ -42,6 +42,8 @@ public partial class Map11Main : Node3D
     private Label _toast = null!;
     private Button _sendNorth = null!;
     private Button _sendSouth = null!;
+    /// <summary>道の上の隊を拠点へ戻す（第173期 §1-2）。<b>選んだ隊が道にいるときだけ押せる。</b></summary>
+    private Button _recall = null!;
     private Label _hint = null!;
 
     private VBoxContainer _squadDetail = null!;
@@ -125,8 +127,13 @@ public partial class Map11Main : Node3D
         // 第172期 自己検査 (c)。**1 回組み直してから出す**通し（組み直した隊で戦って、
         // 持ち越しと結果画面まで通ることを確かめる）。
         bool reformFirst = args.Contains("--map11-reform-smoke", StringComparer.Ordinal);
-        if (args.Contains("--map11-flow-smoke", StringComparer.Ordinal) || reformFirst)
+        // 第173期 自己検査 (d)。**道へ出した隊を拠点へ戻し、組み直してから出す**通し。
+        bool recallFirst = args.Contains("--map11-recall-smoke", StringComparer.Ordinal);
+        if (args.Contains("--map11-flow-smoke", StringComparer.Ordinal) || reformFirst || recallFirst)
         {
+            // **戻すのは1度だけ**——戦闘のたびにこのシーンへ戻ってくる（`_Ready` が毎回走る）ので、
+            // 素通りさせると通しのあいだ毎回組み直してしまう。
+            if (recallFirst && St.Battles == 0) AutoRecall();
             if (reformFirst) AutoReform();
             Callable.From(AutoStep).CallDeferred();
         }
@@ -234,6 +241,27 @@ public partial class Map11Main : Node3D
         }
         GD.Print("MAP11_REFORM_SMOKE 控え: "
             + string.Join(" / ", St.Bench.Select(x => x.Def.Name)));
+    }
+
+    /// <summary>
+    /// 自己検査 (d) の「拠点へ戻す」（第173期 §1-2）。<b>画面と同じ口を通す</b>
+    /// ——`Send` → `Recall` → 組み直し → `CanSend` の順で、道の上の隊が拠点へ戻って
+    /// 組み直せることを頭なしで確かめる。<b>盤面には何も残さない</b>（戻した隊はそのまま
+    /// 通し確認の <see cref="AutoStep"/> が出し直す）。
+    /// </summary>
+    private void AutoRecall()
+    {
+        _selected = 0;
+        Map11Session.Send(0, 0);
+        bool onRoad = St.CanWithdraw(0) && !St.CanReform(0);
+        Recall();
+        bool home = St.Squads[0].Road < 0 && St.CanReform(0);
+        bool reformed = St.SwapSeats(0, 0, 0, 3);
+        bool sendable = St.CanSend(0);
+        GD.Print($"MAP11_RECALL_SMOKE onRoad={onRoad} home={home} reformed={reformed} sendable={sendable}");
+        GD.Print("MAP11_RECALL_SMOKE " + St.Squads[0].Def.Name + ": "
+            + string.Join(" / ", St.Squads[0].Units!.OrderBy(x => x.Slot)
+                .Select(x => $"{FormationRules.SeatNames[x.Slot]} {x.Def.Name}")));
     }
 
     private void BuildWorld()
@@ -460,6 +488,13 @@ public partial class Map11Main : Node3D
         _sendSouth.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _sendSouth.Pressed += () => Send(1);
         orders.AddChild(_sendSouth);
+        // 第173期 §1-2 —— **道の上の隊を拠点へ戻す導線。**
+        // 第172期まで引き返す口は接敵の窓だけで、その窓は道が抜け切ると開かない
+        // ——担当の道を抜き切った隊は `Road` が立ったまま戻れず、二度と組み直せなかった。
+        _recall = UiKit.ActionButton("拠点へ戻す", UiKit.Muted);
+        _recall.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _recall.Pressed += Recall;
+        orders.AddChild(_recall);
 
         // 第171期 部A —— **文章ではなく図。**
         // 第170期の観察ログ「隊の中身、文章が長すぎて毎回読んでいられない」（問い5）と
@@ -484,6 +519,7 @@ public partial class Map11Main : Node3D
         leftCol.AddChild(_reformHint);
 
         leftCol.AddChild(UiKit.Text("この隊の配置（押すと、その駒が何をするか出ます）", 12, UiKit.Faint));
+        leftCol.AddChild(LinkLegend());
         _squadDiagram = new SeatDiagram();
         _squadDiagram.SlotSelected += OnSquadSlot;
         leftCol.AddChild(_squadDiagram);
@@ -529,6 +565,7 @@ public partial class Map11Main : Node3D
         rightCol.AddChild(_roadList);
         // 第171期 部A —— 敵も同じ図。**空席は空席として描く**（先遣は後1 が空いているのが見える）。
         rightCol.AddChild(UiKit.Text("この部隊の配置（押すと、その駒が何をするか出ます）", 12, UiKit.Faint));
+        rightCol.AddChild(LinkLegend());
         _foeDiagram = new SeatDiagram();
         _foeDiagram.SlotSelected += slot => { _foePick = _foePick == slot ? -1 : slot; Refresh(); };
         rightCol.AddChild(_foeDiagram);
@@ -564,6 +601,24 @@ public partial class Map11Main : Node3D
 
         BuildEncounterOverlay(root);
         BuildResultOverlay(root);
+    }
+
+    /// <summary>
+    /// 線の凡例（第173期 §1-1）。<b>色の出どころは <see cref="SeatLinks.ColorOf"/> の1本</b>
+    /// ——ここで色を書き直さない（同じ言葉の表を2つ作らない・第124期 §4）。
+    /// </summary>
+    private static Control LinkLegend()
+    {
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 10);
+        foreach (Map11Relations.LinkSign sign in new[]
+                 {
+                     Map11Relations.LinkSign.Gain, Map11Relations.LinkSign.Loss,
+                     Map11Relations.LinkSign.Both,
+                 })
+            row.AddChild(UiKit.Text("■ " + Map11Relations.LabelOf(sign), 11, SeatLinks.ColorOf(sign)));
+        row.AddChild(UiKit.Text("┄ 条件つき（殴ったとき等）", 11, UiKit.Faint));
+        return row;
     }
 
     /// <summary>中身が溢れても読めるように包む。</summary>
@@ -742,9 +797,24 @@ public partial class Map11Main : Node3D
     private void Withdraw()
     {
         _encounterOverlay.Visible = false;
+        Recall();
+    }
+
+    /// <summary>
+    /// 道の上の隊を拠点へ戻す（第173期 §1-2）。<b>判定は <see cref="Map11State.Withdraw"/> が持つ</b>
+    /// ——画面は押されたことを渡して、結果を出すだけ。
+    /// <b>戻すこと自体に代金は無い</b>（HP も死者もそのまま。時間の代金は次の期の話）。
+    /// </summary>
+    private void Recall()
+    {
         Map11State.Squad s = St.Squads[_selected];
-        s.Road = -1;
-        ShowToast($"{s.Def.Name} は拠点へ引き返した", UiKit.Muted, 3.0f);
+        if (!St.Withdraw(_selected))
+        {
+            ShowToast(s.Lost ? $"{s.Def.Name} は失われています" : $"{s.Def.Name} は道の上にいません",
+                      UiKit.Muted, 3.0f);
+            return;
+        }
+        ShowToast($"{s.Def.Name} は拠点へ戻った（ここで組み直せます）", PlayerColor, 3.0f);
         Refresh();
     }
 
@@ -934,8 +1004,10 @@ public partial class Map11Main : Node3D
             foreach (UnitState u in units.Where(u => !u.Def.Traits.Contains(TraitId.Ephemeral)))
                 cells.Add(new SeatDiagram.Cell(u.Slot, u.Def, Math.Max(0, u.Hp), u.MaxHp, u.IsAlive));
         else
+            // **失われた隊を満タンの既定編成で描かない**（第173期 §1-3 #3）——全滅すると
+            // `Units` が null になるので、第172期はここで定義の値を満タンで描いていた。
             foreach ((int slot, UnitDef def) in s.Def.F.Occupied())
-                cells.Add(new SeatDiagram.Cell(slot, def, def.MaxHp, def.MaxHp, true));
+                cells.Add(new SeatDiagram.Cell(slot, def, s.Lost ? 0 : def.MaxHp, def.MaxHp, !s.Lost));
 
         // **空席も描く**（第172期）——組み直しで控えの駒を入れられる場所だから。
         foreach (int slot in Enumerable.Range(0, FormationRules.PlayableSlotCount))
@@ -944,16 +1016,19 @@ public partial class Map11Main : Node3D
         cells.Sort((x, y) => x.Slot.CompareTo(y.Slot));
 
         _squadDiagram.AllowEmptyPress = _reform;
-        _squadDiagram.Render(cells, PlayerColor, _squadPick);
+        _squadDiagram.DeadLabel = s.Lost ? "（失われた）" : "（戦死）";
+        _squadDiagram.Render(cells, _squadPick);
 
         foreach (Node child in _squadFocus.GetChildren()) child.QueueFree();
         if (_squadPick < 0 || cells.First(c => c.Slot == _squadPick).Def is null)
         {
             FocusHint(_squadFocus, _reform
                 ? "札を押すとつまみます。もう1枚押すと入れ替わります"
-                : s.Units is null && !s.Deployed
-                    ? "（まだ拠点にいます。数字は定義上の値）"
-                    : "札を押すと、その駒が何をするか出ます");
+                : s.Lost
+                    ? "（この隊は失われました。もう出せません）"
+                    : s.Units is null && !s.Deployed
+                        ? "（まだ拠点にいます。数字は定義上の値）"
+                        : "札を押すと、その駒が何をするか出ます");
             return;
         }
         SeatDiagram.Cell pick = cells.First(c => c.Slot == _squadPick);
@@ -965,8 +1040,9 @@ public partial class Map11Main : Node3D
         if (d.MinusText.Length > 0) FocusLine(_squadFocus, $"代わりに: {d.MinusText}", UiKit.Faint);
         if (Map11.LineOf(d.Id) is { } line) FocusLine(_squadFocus, $"どの道で: {line}", GoldColor);
         // その駒から出ている線の説明（図に描いた語をそのまま文字でも出す）。
-        foreach (string rel in RelationWordsFor(cells, _squadPick))
-            FocusLine(_squadFocus, rel, PlayerColor);
+        // **色は線と同じ 得／損／両方**（第173期 §1-1・出どころは `SeatLinks.ColorOf` の1本）。
+        foreach ((string rel, Color tint) in RelationWordsFor(cells, _squadPick))
+            FocusLine(_squadFocus, rel, tint);
     }
 
     /// <summary>敵部隊の 5 席を図にする。<b>空席は空席として描く</b>（先遣は後1 が空いている）。</summary>
@@ -982,7 +1058,8 @@ public partial class Map11Main : Node3D
                 cells.Add(new SeatDiagram.Cell(slot, def, def.MaxHp, def.MaxHp, !node.Cleared));
 
         if (_foePick >= 0 && cells.All(c => c.Slot != _foePick)) _foePick = -1;
-        _foeDiagram.Render(cells, EnemyColor, _foePick);
+        _foeDiagram.DeadLabel = "（倒れた）";
+        _foeDiagram.Render(cells, _foePick);
 
         foreach (Node child in _foeFocus.GetChildren()) child.QueueFree();
         if (_foePick < 0)
@@ -995,18 +1072,19 @@ public partial class Map11Main : Node3D
         _foeFocus.AddChild(UiKit.Text($"{FormationRules.SeatNames[_foePick]}  {d.Name}"
             + (pick.Alive ? "" : "（倒れた）"), 15, pick.Alive ? Colors.White : DeadColor));
         // 敵には説明文の元データが1体も無いので、札ごとの1行で埋める（第170期）。
-        foreach (string l in Map11Info.TraitLinesOf(d)) FocusLine(_foeFocus, l, UiKit.Muted);
+        foreach (string l in Map11Info.LinesOf(d)) FocusLine(_foeFocus, l, UiKit.Muted);
         if (Map11Info.IsBoardRuleHolder(d))
             FocusLine(_foeFocus, "★ この駒が倒れるとルールが消える", GoldColor);
-        foreach (string rel in RelationWordsFor(cells, _foePick))
-            FocusLine(_foeFocus, rel, EnemyColor);
+        foreach ((string rel, Color tint) in RelationWordsFor(cells, _foePick))
+            FocusLine(_foeFocus, rel, tint);
     }
 
     /// <summary>
     /// その席から出ている／その席に入っている関係を文にする。
     /// <b>元データは `Map11Relations`（席から機械で引いたもの）そのまま。</b>
     /// </summary>
-    private static IEnumerable<string> RelationWordsFor(IReadOnlyList<SeatDiagram.Cell> cells, int slot)
+    private static IEnumerable<(string Text, Color Tint)> RelationWordsFor(
+        IReadOnlyList<SeatDiagram.Cell> cells, int slot)
     {
         var seats = cells.Where(c => c.Def is not null && c.Alive)
                          .ToDictionary(c => c.Slot, c => c.Def!);
@@ -1016,8 +1094,13 @@ public partial class Map11Main : Node3D
             // 「ヒサの標が**どんな効果なのか分からない**」（問い1）への答え。
             // 文は `Map11Relations.Rules` が持ち、**網羅性は `--map11-phase172` が門にする**。
             string mean = Map11Relations.MeanOf(l.Trait) is { Length: > 0 } m ? $"（{m}）" : "";
-            if (l.From == slot) yield return $"→ {seats[l.To].Name}：{l.Word}{mean}";
-            else if (l.To == slot) yield return $"← {seats[l.From].Name}：{l.Word}{mean}";
+            // **得／損／両方 と、条件つき（点線）かを文にも出す**（第173期 §1-1）
+            // ——線の色に気づかなくても、押せば同じことが文で読める。
+            string sign = $"[{Map11Relations.LabelOf(l.Sign)}]";
+            string dash = l.Conditional ? "（条件つき）" : "";
+            Color tint = SeatLinks.ColorOf(l.Sign);
+            if (l.From == slot) yield return ($"{sign} → {seats[l.To].Name}：{l.Word}{dash}{mean}", tint);
+            else if (l.To == slot) yield return ($"{sign} ← {seats[l.From].Name}：{l.Word}{dash}{mean}", tint);
         }
     }
 
@@ -1088,8 +1171,8 @@ public partial class Map11Main : Node3D
     }
 
     /// <summary>
-    /// 右で選んでいる敵部隊の中身。<b>敵の <c>UnitDef</c> には説明文が1体も無い</b>ので
-    /// （Phase 0 Q0-1b）、札ごとの1行（<see cref="Map11Info.TraitLineOf"/>）で埋める。
+    /// 右で選んでいる敵部隊の中身。<b>第173期 §1-4 に敵の <c>UnitDef</c> へ説明文を入れた</b>ので、
+    /// 味方と同じ出どころ（<see cref="Map11Info.LinesOf"/>）から引く。
     ///
     /// <para>用語は<b>括弧の中を主、名前を従</b>にしてある（§1-3）——
     /// 観察ログの「()で効果を書いてくれていたからなんとか分かった」に合わせた。</para>
@@ -1123,7 +1206,7 @@ public partial class Map11Main : Node3D
                     ? $"{seat}  {r.Def.Name}   HP {r.Hp}/{r.MaxHp} ・ 攻{r.Def.Attack} ・ 速{r.Def.Speed}"
                     : $"{seat}  {r.Def.Name}   （倒れた）",
                 14, tint));
-            foreach (string line in Map11Info.TraitLinesOf(r.Def))
+            foreach (string line in Map11Info.LinesOf(r.Def))
             {
                 Label l = UiKit.Text($"　{line}", 12, live ? UiKit.Muted : DeadColor);
                 l.AutowrapMode = TextServer.AutowrapMode.WordSmart;
@@ -1279,6 +1362,7 @@ public partial class Map11Main : Node3D
         bool busy = St.Finished;
         _sendNorth.Disabled = busy || St.NextNode(0) is null;
         _sendSouth.Disabled = busy || St.NextNode(1) is null;
+        _recall.Disabled = busy || !St.CanWithdraw(_selected);
         // 操作の案内は**まだ1戦もしていない間だけ**（観察ログ「操作方法が最初わからなかった」）。
         _hint.Visible = Map11Session.BattleLog.Count == 0;
     }

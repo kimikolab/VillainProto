@@ -93,13 +93,21 @@ public static class Map11
 
     // ---------------- 控えの駒（第172期 §1-2） ----------------
 
-    /// <summary>控えの駒の枚数（指示書 §1-2）。</summary>
-    public const int ReserveCount = 6;
+    /// <summary>控えの駒の枚数（第172期 §1-2 は 6 枚。<b>第173期 §1-3 #4 で 7 枚にした</b>）。</summary>
+    public const int ReserveCount = 7;
 
     /// <summary>
-    /// 名指しの2枚（指示書 §1-2）。<b>ポンが「ヒヨの代わり」を試せるようにするための指定。</b>
+    /// 名指しの3枚（第172期 §1-2 は 2 枚）。<b>ポンが「ヒヨの代わり」を試せるようにするための指定。</b>
+    ///
+    /// <para><b>第173期に空焚きのホタを足した</b>（指示書 §1-3 #4）——控えの 6 枚には
+    /// <b>火を撒く駒（ボルグ）も火を読む駒（ヒヨ）も既に盤上にいるのに、火の受け手だけが
+    /// 欠けていた</b>。ホタは自分では着火できず、<b>ボルグの隣に置くという配置判断が
+    /// 発動条件そのもの</b>（`PyreTrait` の宣言）なので、<b>組み直しで初めて意味を持つ1枚</b>である。
+    /// 規則で選ぶ側（<see cref="ReserveRanking"/>）は「3 隊それぞれと同席した実績」を見るので、
+    /// この形の駒は構造的に上がってこない。</para>
     /// </summary>
-    private static readonly UnitDef[] NamedReserves = { UnitCatalog.Kubi, UnitCatalog.Sekki };
+    private static readonly UnitDef[] NamedReserves =
+        { UnitCatalog.Kubi, UnitCatalog.Sekki, UnitCatalog.Hota };
 
     /// <summary>候補1枚ぶんの素性（<c>--map11-phase172</c> がそのまま表にする）。</summary>
     public sealed record ReserveRow(UnitDef Def, int Seats, int[] WithSquad, bool AllThree, int Total);
@@ -144,7 +152,7 @@ public static class Map11
     }
 
     /// <summary>
-    /// 控えの駒 6 枚。<b>名指しの2枚 ＋ 規則で選んだ4枚</b>（<see cref="ReserveRanking"/>）。
+    /// 控えの駒 7 枚。<b>名指しの3枚 ＋ 規則で選んだ4枚</b>（<see cref="ReserveRanking"/>）。
     /// <b>ポンが差し替える前提</b>——差し替えるなら <see cref="NamedReserves"/> に足すだけでよい。
     /// </summary>
     public static UnitDef[] Reserves { get; } = NamedReserves
@@ -291,6 +299,35 @@ public sealed class Map11State
         // ——あの版で「`Units` が null でなく `Deployed` が偽」になる道は1本も無かった。
         s.Units ??= BattleEngine.Materialize(s.Def.F, BattleContext.PlayerTeam);
         s.Deployed = true;
+    }
+
+    /// <summary>
+    /// 道の上の隊を拠点へ戻す（第173期 §1-2）。<b>戻すこと自体に代金は無い</b>
+    /// ——HP も死者もそのままで、戻った隊は拠点で組み直せる（時間の代金は次の期の話）。
+    ///
+    /// <para><b>ここに置くのは「不具合の直し」である。</b> 第172期まで引き返す口は
+    /// 接敵の窓（`Map11Main` の「拠点へ引き返す」）1つしか無く、その窓は
+    /// <see cref="NextNode"/> が null——<b>つまり道が抜け切った瞬間</b>——に開かなくなる。
+    /// 担当の道を抜き切った隊は <c>Road</c> が立ったまま拠点へ戻れず、
+    /// <see cref="CanReform"/> が偽のままなので<b>二度と組み直せなくなっていた</b>。</para>
+    ///
+    /// <para><b>盤面の規則は1つも触らない</b>——書き換えるのは <c>Road</c> だけで、
+    /// <c>Units</c> / <c>Home</c> / <c>Cleared</c> / <c>Deployed</c> は1ビットも動かさない
+    /// （<c>Home</c> を動かすと 2 本抜きの分子が変わる）。</para>
+    /// </summary>
+    public bool Withdraw(int squadIndex)
+    {
+        Squad s = Squads[squadIndex];
+        if (s.Lost || s.Units is null || s.Road < 0) return false;
+        s.Road = -1;
+        return true;
+    }
+
+    /// <summary>その隊を拠点へ戻せるか（道の上に出ている隊だけ）。</summary>
+    public bool CanWithdraw(int squadIndex)
+    {
+        Squad s = Squads[squadIndex];
+        return !s.Lost && s.Units is not null && s.Road >= 0;
     }
 
     // =============================================================================

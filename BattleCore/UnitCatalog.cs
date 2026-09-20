@@ -74,7 +74,7 @@ public static class UnitCatalog
         Traits = new[] { TraitId.Guardian, TraitId.Stoic, TraitId.Parry },
         // 第122期に第90期 (P1) 以前の文へ戻した（`GatherRule` を降ろしたので傷は肩代わりしない）。
         // 第136期 段2: 「その傷のぶん強くなる」を受け流しに置き換えた（回数は `ParryRule.Uses`）。
-        PlusText = "味方への単体攻撃を必ず肩代わりする / 向けられた刃を回数ぶん受け流して無かったことにし、毎ターン構え直して回数を戻す。庇って身に受けるたび回数が1つ戻る",
+        PlusText = "味方への単体攻撃を必ず庇う（身に受けて肩代わりする） / 向けられた刃を回数ぶん受け流して無かったことにし、毎ターン構え直して回数を戻す。庇って身に受けるたび回数が1つ戻る",
         MinusText = "自分からは決して攻撃しない / 味方全体に配られる強化も弱体も自分には乗らず、隣接する味方へそのまま流れる（1体を選ぶ回復・強化は受け取れない）",
         Flavor = "誓約が壊れていて、もう誰の助けも届かない。"
     };
@@ -88,7 +88,7 @@ public static class UnitCatalog
         Speed = 7,
         Traits = new[] { TraitId.Necro, TraitId.Sacrifice },
         PlusText = "味方が倒れるたび累積で強化される（層は毎ターン1つ薄れる）／3層以上で攻撃が薙ぎに変わる",
-        MinusText = "戦闘開始時に隣接する味方を削る",
+        MinusText = "開戦時に隣接する味方を削る",
         Flavor = "味方の死を待っている顔をする、と report に書かれた。"
     };
 
@@ -188,7 +188,7 @@ public static class UnitCatalog
         Speed = 10,
         Advances = false,
         Traits = new[] { TraitId.Marker },
-        PlusText = "隣接する味方1体に敵の攻撃を集中させる",
+        PlusText = "隣接する味方1体に標を付け、敵の攻撃を集中させる",
         MinusText = "自分では何もできない。押し出された味方は普通は死ぬ",
         Flavor = "味方を矢面に立たせて生き延びた男。誰も隣に立ちたがらない。"
     };
@@ -985,7 +985,7 @@ public static class UnitCatalog
         Speed = 8,
         Traits = new[] { TraitId.Shove },
         PlusText = "味方が押しのけられるたび、敵の隊列を突き崩す",
-        MinusText = "勢い余って隣の味方の体勢まで崩す（攻撃力が下がる）",
+        MinusText = "勢い余って隣の味方の体勢まで崩し、腕が鈍る（攻撃力が下がる）",
         Flavor = "押されたら押し返す。それしかできないし、加減も知らない。"
     };
 
@@ -1222,7 +1222,7 @@ public static class UnitCatalog
     /// 駆り立てのカリ。<b>ロスターで2枚目の標（<c>StatusKeys.Marked</c>）の書き手</b>（第52期）。
     ///
     /// <para><b>設計の出発点は囃し立てのヒサ（44/攻2/速10）だった。</b> ヒサは
-    /// <c>PlusText</c> が「隣接する味方1体に敵の攻撃を集中させる」——<b>プラス欄に書いてあるのが
+    /// <c>PlusText</c> が「隣接する味方1体に標を付け、敵の攻撃を集中させる」——<b>プラス欄に書いてあるのが
     /// 味方への害</b>で、発火は開戦時1回・対象は隣接する最大HPの味方に固定。盤上で何も起きず、
     /// 拾う理由が無い。対して縛めのクグ（54/攻3/速10）は「毎ターン味方1体を縛る」という害の中に
     /// <b>「その味方の攻撃+16」</b>が埋まっていて、`縛め収入型` という行が主判定に立っている。
@@ -1610,14 +1610,57 @@ public static class EnemyCatalog
         Traits = traits
     };
 
+    /// <summary>
+    /// <b>説明文つきの <see cref="Make"/></b>（第173期 §1-4）。足したのは文字列だけで、
+    /// <b>盤面は1ビットも動かない</b>——`docs/units.md` が出すのは <see cref="UnitCatalog.All"/> だけなので、
+    /// 敵に文を入れても生成物は1行も動かない（Q0-5）。
+    ///
+    /// <para><b>出どころを1つにするための追加である。</b> 第170期は敵の <c>PlusText</c> が
+    /// 全員空だったので `DemoApp` 側が <c>TraitId</c> ごとの1行を手書きで持っていたが、
+    /// <b>同じ名前の駒が数値違いで2体いる</b>（巡礼騎士 攻15 / 攻24、狙撃手 溜めあり / なし）ので、
+    /// 札ごとの1行では書き分けられない。<b>駒ごとの文はここにしか置けない。</b></para>
+    ///
+    /// <para><b>語は味方側・盤面ルールの表示と揃える</b>——「ターン外の行動」「回復」「1発」は
+    /// それぞれ 粛／渇き／軛 の括弧書きと同じ語。プレイヤーが2つを結べるのは語が同じときだけ
+    /// （第170期 §1-1）。</para>
+    /// </summary>
+    private static UnitDef Make(string id, string name, int hp, int atk, int spd, string plus,
+                                params TraitId[] traits) => new()
+    {
+        Id = id,
+        Name = name,
+        MaxHp = hp,
+        Attack = atk,
+        Speed = spd,
+        Traits = traits,
+        PlusText = plus
+    };
+
+    /// <summary>説明文つきの <see cref="MakeStill"/>（第173期 §1-4）。差分は <see cref="UnitDef.Advances"/> だけ。</summary>
+    private static UnitDef MakeStill(string id, string name, int hp, int atk, int spd, string plus,
+                                     params TraitId[] traits) => new()
+    {
+        Id = id,
+        Name = name,
+        MaxHp = hp,
+        Attack = atk,
+        Speed = spd,
+        Advances = false,
+        Traits = traits,
+        PlusText = plus
+    };
+
     public static readonly UnitDef Recruit = Make("recruit", "討伐隊の新兵", 45, 11, 6);
     public static readonly UnitDef Axeman = new()
     {
         Id = "axeman", Name = "戦斧兵", MaxHp = 55, Attack = 12, Speed = 5,
+        PlusText = "薙ぎ払い。狙った相手と同じ列の駒まで巻き込む。特性は1つも持たない",
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Sweep
     };
-    public static readonly UnitDef Knight = Make("knight", "巡礼騎士", 75, 15, 7);
-    public static readonly UnitDef Priest = MakeStill("priest", "従軍司祭", 40, 9, 8);
+    public static readonly UnitDef Knight = Make("knight", "巡礼騎士", 75, 15, 7,
+        "毎ターン、目の前の1体を殴る。特性は1つも持たない——数値だけの歩兵");
+    public static readonly UnitDef Priest = MakeStill("priest", "従軍司祭", 40, 9, 8,
+        "その場から殴るだけ。名前に反して回復はしない——特性を1つも持たない");
     // 溜めてから撃つ（第10期 Phase AB）。**平均火力は変えない**——2周期の 200% は
     // (0 + 2) / 2 = 1.0 で、毎ターン 14 を振るのと総量が同じ。変えたのは配り方だけで、
     // 「何ターンで終わらせるか」が代金を決めるようにするのが狙い（第10期 §0）。
@@ -1636,6 +1679,7 @@ public static class EnemyCatalog
     {
         Id = "archer", Name = "狙撃手", MaxHp = 38, Attack = 14, Speed = 11,
         Advances = false,
+        PlusText = "1ターン狙いを定め、次のターンに2倍の貫きを撃つ（溜め）—— 貫きはレーンを前から抜けるので後列にも届く",
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Pierce,
         Actions = new UnitAction[]
         {
@@ -1643,7 +1687,8 @@ public static class EnemyCatalog
             new(ActionKind.Attack, 200),
         }
     };
-    public static readonly UnitDef Warden = Make("warden", "城塞の重装兵", 145, 12, 3);
+    public static readonly UnitDef Warden = Make("warden", "城塞の重装兵", 145, 12, 3,
+        "HP145 の壁。速さ3 で最後に動く。特性は1つも持たない——硬さだけの重装兵");
     // 溜めてから撃つ（第10期 Phase AB）。狙撃手と同じ 2周期 200%（理由は上）。
     // 全体 16 は味方後列の HP（40〜55 前後）を1発では抜かない。第四波は決着が遅い波
     // （積み上げ系の立ち上がりを見るための波）なので発火 平均 2.68 と多いが、
@@ -1652,6 +1697,7 @@ public static class EnemyCatalog
     {
         Id = "chanter", Name = "詠唱兵", MaxHp = 70, Attack = 8, Speed = 5,
         Advances = false,
+        PlusText = "1ターン魔力を集め、次のターンに2倍の全体攻撃を撃つ（溜め）—— 席に関わらず全員に当たる",
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.All,
         Actions = new UnitAction[]
         {
@@ -1659,11 +1705,14 @@ public static class EnemyCatalog
             new(ActionKind.Attack, 200),
         }
     };
-    public static readonly UnitDef Hero = Make("hero", "勇者候補", 95, 20, 14, TraitId.Executioner);
+    public static readonly UnitDef Hero = Make("hero", "勇者候補", 95, 20, 14,
+        "1体倒すたびに攻撃力が上がる（処刑）—— 放っておくと後半ほど重くなる。速さ14 で誰より先に動く",
+        TraitId.Executioner);
 
     // ここから第二波用。共有定義を触ると第一・三・四波が一緒に動くので、Id を変えて別定義にする。
     // 調整は Attack のみ。HP を触ると決着ターン数が変わり、積み上げ系の成立可否まで動く。
-    public static readonly UnitDef KnightG = Make("knight_g", "巡礼騎士", 75, 24, 7);
+    public static readonly UnitDef KnightG = Make("knight_g", "巡礼騎士", 75, 24, 7,
+        "毎ターン、目の前の1体を重く殴る（攻24）。特性は1つも持たない——数値だけの歩兵");
     // 第二波から外した（2026-08-28）。回復役という設定コメントだけで何も回復しないので、
     // 実際に回復する Chaplain に差し替えた。第二波の性格を戻すときの対照として定義は残す。
     public static readonly UnitDef PriestG = MakeStill("priest_g", "従軍司祭", 40, 9, 8);
@@ -1701,6 +1750,7 @@ public static class EnemyCatalog
     {
         Id = "archer_g", Name = "狙撃手", MaxHp = 38, Attack = 18, Speed = 11,
         Advances = false,
+        PlusText = "毎ターン貫きを撃つ（攻18・溜めなし）—— 貫きはレーンを前から抜けるので、前列の後ろに隠れても届く",
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Pierce
     };
 
@@ -1745,12 +1795,15 @@ public static class EnemyCatalog
     public static readonly UnitDef Martyr = new()
     {
         Id = "axeman_g", Name = "殉教者", MaxHp = 52, Attack = 11, Speed = 5,
+        PlusText = "味方への単体攻撃に割り込んで身代わりになる（殉教）—— 薙ぎ・貫き・全体は素通りする。逸れた傷のぶん自分の攻撃力が上がり、その攻撃は薙ぎ払い",
         Traits = new[] { TraitId.Martyr }, Pattern = AttackPattern.Sweep
     };
     // 断罪は審問官と勇者候補の2体で持つ。1体だとカドの反撃が担い手を先に殺して罰が消える
     // （審問官 HP76 / 単独だと配置を変えるだけで第5波 97.5% まで戻った）。
     // 3体にすると今度はカド系が全部20%台まで落ちて逆の崖になる。数ではなく担い手の数が摘み。
-    public static readonly UnitDef Hero2 = Make("hero_v", "勇者候補", 90, 20, 14, TraitId.Condemn);
+    public static readonly UnitDef Hero2 = Make("hero_v", "勇者候補", 90, 20, 14,
+        "反撃してきた相手を痺れさせる（断罪）—— ターン外の行動をする駒だけが代金を払う。速さ14 で誰より先に動く",
+        TraitId.Condemn);
     public static readonly UnitDef Knight2 = Make("knight_v", "巡礼騎士", 71, 15, 7);
 
     // 告発人（第40期）。**第五波の中央に置く。巡礼騎士（Knight2）と数値・型・速さが1つも違わない。**
@@ -1765,16 +1818,20 @@ public static class EnemyCatalog
     //
     // 中央を選ぶのは渇き・軛・粛と同じ理由——**どちらの列を貫いても必ず通る**位置だから。
     // 詳細と符号反転の実測は ExposeTrait の宣言と design/PHASE40_EXPOSE.md。
-    public static readonly UnitDef Accuser = Make("accuser", "告発人", 71, 15, 7, TraitId.Expose);
+    public static readonly UnitDef Accuser = Make("accuser", "告発人", 71, 15, 7,
+        "殴ったあと、こちらの隊列から1体を引きずり出す（曝き・1戦に3回まで）—— 後列の駒が前へ出される",
+        TraitId.Expose);
     public static readonly UnitDef Lancer = new()
     {
         Id = "lancer", Name = "槍騎兵", MaxHp = 66, Attack = 17, Speed = 12,
+        PlusText = "毎ターン貫きを撃つ（攻17・速さ12）—— 貫きはレーンを前から抜けるので後列にも届く。特性は1つも持たない",
         Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Pierce
     };
     public static readonly UnitDef Seer = new()
     {
         Id = "seer", Name = "審問官", MaxHp = 76, Attack = 12, Speed = 10,
         Advances = false,
+        PlusText = "その場から全体攻撃を撃つ。反撃してきた相手を痺れさせる（断罪）—— ターン外の行動をする駒だけが代金を払う",
         Traits = new[] { TraitId.Condemn }, Pattern = AttackPattern.All
     };
     // 第五波では使わない。第六波以降の素材として置いておく。
@@ -1953,7 +2010,9 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
     // 測定（spread・seed 200・35編成）: 第三波の 100%編成 18 → 11 / 固有の敗者 0 → 2 /
     // 中間帯 12 → 14 / 第2〜4波すべて100% 16 → 9 / 第2波との相関 +0.85 → +0.71。
     // 平均は 80.5 → 70.0 なので**波としては難しくなっている**（逆位は易しくしていた）。
-    public static readonly UnitDef Droughter = MakeStill("droughter", "渇きの祭司", 75, 15, 7, TraitId.Drought);
+    public static readonly UnitDef Droughter = MakeStill("droughter", "渇きの祭司", 75, 15, 7,
+        "回復が通らない（渇き）—— 両軍とも、どんな回復も1点も入らない。数値は巡礼騎士と同じ",
+        TraitId.Drought);
 
     // 軛の重装兵: **第四波の中央に採用した**（2026-08-31）。重装兵1枚と差し替えてある。
     // **数値は城塞の重装兵（145/12/3）と1つも違わない。トレイトだけを足してある**
@@ -1973,7 +2032,9 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
     // 平均は 87.0 → 61.8 で、波の並びが 100 / 85.8 / 72.5 / 61.8 / 59.8 と単調に落ちる。
     // **課税されたのは大打点の駒ではなく積み上げ系**（墓守の層 攻撃151 → 25・毒の刻み 52 → 25）
     // で、ドルガ38 や反撃軸はほぼ無風だった——経緯は README「波に『1発の上限』を置いたら」。
-    public static readonly UnitDef Yoker = Make("yoker", "軛の重装兵", 145, 12, 3, TraitId.Yoke);
+    public static readonly UnitDef Yoker = Make("yoker", "軛の重装兵", 145, 12, 3,
+        "1発が 25 で切られる（軛）—— 両軍とも、1回のダメージが 25 を超えない。数値は城塞の重装兵と同じ",
+        TraitId.Yoke);
 
     // 粛の伝令: **第二波の中央に採用した**（2026-08-31）。討伐隊の新兵1枚と差し替えてある。
     // **数値は討伐隊の新兵（45/11/6）と1つも違わない。トレイトだけを足してある**
@@ -2007,7 +2068,9 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
     // 連続量のノブが無い（「ターン外に振れるか」は二値）ので**係数では緩められない**
     // ——緩めるなら窓口の絞り込み（回数制限・保持者の後列配置）で、どちらも別の規則として
     // 測り直しになる。経緯は README「波に『ターン外の行動禁止』を置いたら」。
-    public static readonly UnitDef Husher = Make("husher", "粛の伝令", 45, 11, 6, TraitId.Hush);
+    public static readonly UnitDef Husher = Make("husher", "粛の伝令", 45, 11, 6,
+        "ターン外の行動が止まる（粛）—— 両軍とも、反撃・追撃・割り込みが出なくなる。数値は討伐隊の新兵と同じ",
+        TraitId.Hush);
 
     // 逆位の異端審問官: 第五波の後1に置く候補として作り、**測って採らなかった**（2026-08-31・第32期）。
     // 差し戻し済み（Stages[4] の後1 は審問官に戻してある）。**定義は対照として残す**

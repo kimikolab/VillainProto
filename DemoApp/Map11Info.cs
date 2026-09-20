@@ -8,14 +8,14 @@ using System.Linq;
 //
 // `Map11State`（進行の規則）には1行も触らない——(c) の 0.0pt 一致を保つ（R259）。
 //
-// 出どころ:
+// 出どころ（**第173期に敵側も `UnitDef` へ寄せた**）:
 //   味方15枚の説明     `UnitDef.PlusText` / `MinusText` / `Flavor`（`docs/units.md` の生成元そのもの）
-//   敵18体の説明       **元データが無い**（敵の `UnitDef` は3つとも空文字）。
-//                      代わりに `TraitId` ごとの1行を下の `TraitLines` に持つ。**ここだけ手書き**
+//   敵18体の説明       **第173期 §1-4 で `EnemyCatalog` の定義に入れた**（それまでは全員空で、
+//                      ここが `TraitId` ごとの1行を手書きで持っていた）。**手書きは0行になった**
 //   盤面ルールの実績   `BattleResult.BoardRules`（粛・渇き）と `BattleResult.Yoke`（軛）
 //
-// 手書きの `TraitLines` は `Map11Verify.Phase0` が**網羅性を機械で確かめる**
-// ——このマップに出る駒の札に1つでも欠けがあれば名指しで落ちる。
+// 網羅性は `Map11Verify.Phase0` が**機械で確かめる**
+// ——このマップに出る駒の説明文に1体でも欠けがあれば名指しで落ちる（R260）。
 // =====================================================================================
 
 public static class Map11Info
@@ -48,44 +48,26 @@ public static class Map11Info
 
     public static string PlanOf(string squadId) => Plans.GetValueOrDefault(squadId, "");
 
-    // ---------------- 札の1行（敵に元データが無いぶんを埋める） ----------------
+    // ---------------- 駒の1行（第173期 §1-4 に出どころを1つへ寄せた） ----------------
 
     /// <summary>
-    /// <b>ここだけ手書き。</b> 敵の <see cref="UnitDef"/> は <c>PlusText</c> / <c>MinusText</c> /
-    /// <c>Flavor</c> がすべて空なので、<see cref="TraitId"/> ごとに1行を持つしかない。
+    /// その駒の説明文（味方も敵も同じ <see cref="UnitDef"/> から引く）。
     ///
-    /// <para><b>用語は括弧の中を主、名前を従にする</b>（指示書 §1-3）——
-    /// 「ターン外の行動が止まる（粛）」の順。観察ログの「()で効果を書いてくれていたから
-    /// なんとか分かった」に合わせた。</para>
+    /// <para><b>第173期に手書きをやめた。</b> 第170期は敵の <c>PlusText</c> が18体とも空だったので、
+    /// ここが <c>TraitId</c> ごとの1行を手書きで持っていた——しかし
+    /// <b>同じ名前の駒が数値違いで2体いる</b>（巡礼騎士 攻15 / 攻24、狙撃手 溜めあり / なし）ので、
+    /// 札ごとの1行では書き分けられない。第173期 §1-4 で
+    /// <b>`EnemyCatalog` の定義そのものに文を入れた</b>ので、
+    /// <b>味方と敵で出どころが同じ1本になった</b>（写しを持たない・自己検査 (b)）。</para>
     ///
-    /// <para><b>網羅性は `Map11Verify.Phase0` が機械で確かめる。</b>
-    /// このマップに出る駒の札が1つでも欠ければ名指しで出る。</para>
+    /// <para><b>網羅性は `Map11Verify.Phase0` が機械で確かめる</b>——このマップに出る駒に
+    /// 1体でも空があれば名指しで落ちる（R260）。</para>
     /// </summary>
-    private static readonly Dictionary<TraitId, string> TraitLines = new()
+    public static IEnumerable<string> LinesOf(UnitDef def)
     {
-        // --- 盤面ルール（保持者が倒れると消える） ---
-        [TraitId.Hush] = "ターン外の行動が止まる（粛）—— 反撃・追撃・割り込みが両軍とも出なくなる",
-        [TraitId.Drought] = "回復が通らない（渇き）—— 両軍とも、どんな回復も1点も入らない",
-        [TraitId.Yoke] = "1発が 25 で切られる（軛）—— 両軍とも、1回のダメージが 25 を超えない",
-        [TraitId.Inversion] = "行動順が逆さになる（逆位）—— 遅い駒から動く",
-
-        // --- 敵側の札 ---
-        [TraitId.Condemn] = "反撃してきた相手を痺れさせる（断罪）—— ターン外に動く駒だけが代金を払う",
-        [TraitId.Martyr] = "味方への単体攻撃に割り込んで身代わりになる（殉教）—— 薙ぎ・貫き・全体は素通りする",
-        [TraitId.Expose] = "殴ったあと、敵陣の駒を引きずり出す（曝き）",
-        [TraitId.Executioner] = "1体倒すたびに攻撃力が上がる（処刑）—— 放っておくと後半ほど重くなる",
-
-        // --- 味方側にも出る札（中身のパネルの補助。PlusText と重ねて出す） ---
-        [TraitId.Immobile] = "自分からは決して攻撃しない（不動）",
-        [TraitId.Stoic] = "1体を選ぶ回復・強化を受け取らず、隣の味方へ流す（支援拒否）",
-        [TraitId.Ephemeral] = "戦闘が終わると消える（儚い）—— 蘇生されず、次の戦闘へ持ち越さない",
-    };
-
-    public static string? TraitLineOf(TraitId id) => TraitLines.GetValueOrDefault(id);
-
-    /// <summary>その駒の札のうち、1行が書いてあるものだけを並べる。</summary>
-    public static IEnumerable<string> TraitLinesOf(UnitDef def)
-        => def.Traits.Select(TraitLineOf).Where(s => s is not null)!;
+        if (def.PlusText.Length > 0) yield return def.PlusText.Replace("**", "");
+        if (def.MinusText.Length > 0) yield return "代わりに: " + def.MinusText.Replace("**", "");
+    }
 
     /// <summary>
     /// 盤面ルールの札を持っているか（「この駒が倒れるとルールが消える」の印）。

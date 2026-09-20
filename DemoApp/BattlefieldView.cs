@@ -466,7 +466,7 @@ public partial class SetupLinkLayer : Control
     }
 
     public override void _Draw()
-        => SeatLinks.Draw(this, _links, _selected, UiKit.Player, RectOf, DrawWords, fontSize: 12);
+        => SeatLinks.Draw(this, _links, _selected, RectOf, DrawWords, fontSize: 12);
 }
 
 public partial class PawnView : Control

@@ -128,12 +128,14 @@ public static class Map11Verify
         write("|---|---|---|---|---|---|:-:|:-:|");
         int foeCount = 0, foeWithText = 0;
         var seen = new HashSet<TraitId>();
+        var foeMissing = new List<string>();
         foreach (IReadOnlyList<Map11.RoadNode> road in Map11.Roads)
             foreach (Map11.RoadNode n in road)
                 foreach ((int slot, UnitDef d) in n.Enemy.Occupied())
                 {
                     foeCount++;
                     if (d.PlusText.Length > 0) foeWithText++;
+                    else if (!foeMissing.Contains(d.Name)) foeMissing.Add(d.Name);
                     foreach (TraitId t in d.Traits) seen.Add(t);
                     write($"| {Map11.RoadNames[n.Road]} | {n.Name} | {FormationRules.SeatNames[slot]} "
                         + $"| {d.Name} | {d.MaxHp}/{d.Attack}/{d.Speed} "
@@ -142,21 +144,26 @@ public static class Map11Verify
                         + $"| {(d.Flavor.Length > 0 ? "○" : "**×**")} |");
                 }
         write("");
-        write($"**敵 {foeCount} 体のうち、説明文を持つのは {foeWithText} 体。**"
-            + (foeWithText == 0
-                ? " **元データは1体も無い**——`Map11Info.TraitLines`（札ごとの1行）で埋めるしかない。"
-                : ""));
+        write($"**敵 {foeCount} 体のうち、説明文を持つのは {foeWithText} 体。**");
+        write("");
+        write("**第173期 §1-4 にこの列を埋めた**（それまでは 0 体で、`DemoApp` 側が "
+            + "`TraitId` ごとの1行を手書きで持っていた）。**手書きは 0 行になった**"
+            + "——同じ名前の駒が数値違いで2体いる（巡礼騎士 攻15 / 攻24、狙撃手 溜めあり / なし）ので、"
+            + "**札ごとの1行では書き分けられない**というのが、駒ごとの文にした理由である。");
         write("");
 
-        // ---- 札の網羅性（手書きの唯一の場所） ----
-        write("## 札の1行の網羅性（`Map11Info.TraitLines`）");
+        // ---- 説明文の網羅性（第173期 §1-4 で手書きの表から `UnitDef` へ移した） ----
+        write("## 説明文の網羅性（`UnitDef.PlusText`・このマップに出る敵）");
         write("");
-        var missing = seen.Where(t => Map11Info.TraitLineOf(t) is null).OrderBy(t => t.ToString()).ToList();
         write($"このマップの敵が持つ札は **{seen.Count} 種**"
-            + $"（{string.Join(" / ", seen.OrderBy(t => t.ToString()))}）。");
-        write(missing.Count == 0
-            ? "**全部に1行がある。**"
-            : $"**1行が無い札: {string.Join(" / ", missing)}**");
+            + $"（{string.Join(" / ", seen.OrderBy(t => t.ToString()))}）。"
+            + "**札ごとではなく駒ごとに文があること**を数える。");
+        write(foeMissing.Count == 0
+            ? $"**{foeCount} 体すべてに `PlusText` がある。**"
+            : $"**`PlusText` が空の駒: {string.Join(" / ", foeMissing)}**");
+        write("");
+        write("**`MinusText` / `Flavor` は空のままでよい**（指示書 §1-4：無理に作らない）。"
+            + "フレーバーは Web 側で書いて次の期に入れる。");
         write("");
 
         // ---- Q0-2〜Q0-4: 帳簿 ----
@@ -244,8 +251,8 @@ public static class Map11Verify
               + "——残りは seed 0 のこの1戦では起きなかっただけで、読む場所は同じ3つの帳簿。");
         write("");
 
-        bool ok = allyMissing == 0 && missing.Count == 0;
-        write(ok ? "**Phase 0 ○ —— 手書きが要るのは敵の札の1行だけで、その網羅性は機械で確かめられる。**"
+        bool ok = allyMissing == 0 && foeMissing.Count == 0;
+        write(ok ? "**Phase 0 ○ —— 味方も敵も説明文の出どころは `UnitDef` の1本で、網羅性は機械で確かめられる。**"
                  : "**Phase 0 × —— 上の × を埋めること。**");
         return ok;
     }

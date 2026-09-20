@@ -184,6 +184,18 @@ public partial class Main : Control
             GetTree().Quit(p172 ? 0 : 1);
             return;
         }
+        // 第173期 Phase 0。**ソースの中身はここで読んで渡す**（`Map11Phase173` に Godot の型を入れない）。
+        if (bootArgs.Contains("--map11-phase173", StringComparer.Ordinal))
+        {
+            string core173 = ProjectSettings.GlobalizePath("res://") + "../BattleCore/";
+            string traits173 = "";
+            try { traits173 = System.IO.File.ReadAllText(core173 + "Traits.cs"); }
+            catch (Exception ex) { GD.Print($"（Traits.cs を読めなかった: {ex.Message}）"); }
+            bool p173 = Map11Phase173.Run(GD.Print, traits173);
+            GD.Print($"MAP11_PHASE173_COMPLETE ok={p173}");
+            GetTree().Quit(p173 ? 0 : 1);
+            return;
+        }
         // 第171期 部C —— 演出の穴の棚卸し（**調べて表にするだけ**）。
         if (bootArgs.Contains("--map11-artgap", StringComparer.Ordinal))
         {
@@ -838,7 +850,12 @@ public partial class Main : Control
             string other = seats[from ? l.To : l.From].Name;
             string mean = Map11Relations.MeanOf(l.Trait) is { Length: > 0 } m
                 ? $"\n   [color=#6f7f76]{m}[/color]" : "";
-            lines.Add($"[color=#69bfe0]{(from ? "→" : "←")}[/color] {other}：[b]{l.Word}[/b]{mean}");
+            // **得／損／両方 と、条件つき（点線）かを文にも出す**（第173期 §1-1）。
+            // 色の出どころは線と同じ `SeatLinks.ColorOf` の1本（写しを持たない）。
+            string tint = SeatLinks.ColorOf(l.Sign).ToHtml(false);
+            string dash = l.Conditional ? "[color=#6f7f76]（条件つき）[/color]" : "";
+            lines.Add($"[color=#{tint}][{Map11Relations.LabelOf(l.Sign)}] {(from ? "→" : "←")}[/color]"
+                + $" {other}：[b][color=#{tint}]{l.Word}[/color][/b]{dash}{mean}");
         }
         return lines.Count == 0
             ? "\n\n[color=#6f7f76]この席から出ている関係はありません[/color]"
