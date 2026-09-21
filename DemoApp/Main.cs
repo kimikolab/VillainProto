@@ -70,6 +70,7 @@ public partial class Main : Control
     private Texture2D _atlas = null!;
     private BattlefieldView _field = null!;
     private BattlefieldView3D _battleField = null!;
+    private BattleMusic _battleMusic = null!;
     private PanelContainer _rosterPanel = null!;
     private PanelContainer _detailPanel = null!;
     private PanelContainer _battlePanel = null!;
@@ -326,6 +327,9 @@ public partial class Main : Control
 
     private void BuildUi()
     {
+        _battleMusic = new BattleMusic();
+        AddChild(_battleMusic);
+
         var page = new ColorRect { Color = Color.FromHtml("#0b1110") };
         page.SetAnchorsPreset(LayoutPreset.FullRect);
         AddChild(page);
@@ -968,6 +972,7 @@ public partial class Main : Control
         _field.Visible = false;
         _battleField.Visible = true;
         _battleField.BeginBattle(_battleOpening, title, stageIndex);
+        _battleMusic.PlayWave(stageIndex);
         _partyBar.Begin(_battleOpening);
         _partyBar.Sync(_battleField, -1);
         _partyBar.Visible = true;
@@ -1893,6 +1898,7 @@ public partial class Main : Control
         _shownOwner = -1;
         _battleLog.Clear();
         _battleField.BeginBattle(_battleOpening, EnemyCatalog.Stages[_stagePicker.Selected].Name, _stagePicker.Selected);
+        _battleMusic.PlayWave(_stagePicker.Selected);
         _partyBar.Begin(_battleOpening);
         _partyBar.Sync(_battleField, -1);
         _partyBar.Visible = true;
@@ -1918,6 +1924,7 @@ public partial class Main : Control
         _presetPicker.Disabled = false;
         _seed.Editable = true;
         _battleField.Visible = false;
+        _battleMusic.Stop();
         _partyBar.Visible = false;
         SetScoreVisible(false);
         _field.Visible = true;

@@ -124,7 +124,7 @@ public partial class BattleAttackAudio : Node
         foreach (string path in HushBreak) LoadSound(path);
         for (int i = 0; i < _deathVoices.Length; i++)
         {
-            _deathVoices[i] = new AudioStreamPlayer { VolumeDb = -18, MaxPolyphony = 1 };
+            _deathVoices[i] = new AudioStreamPlayer { VolumeDb = -8, MaxPolyphony = 1 };
             AddChild(_deathVoices[i]);
         }
     }
@@ -269,6 +269,7 @@ public partial class BattleAttackAudio : Node
         // 攻撃音に直後の撃破音を切らせない。死亡音同士の重なりも2音まで。
         var voice = _deathVoices[_nextDeathVoice++ % _deathVoices.Length];
         voice.Stop();
+        voice.VolumeDb = finish ? -5 : -8;
         voice.Stream = LoadSound(team == BattleContext.EnemyTeam ? (finish ? Finish : EnemyDeath) : PlayerDeath);
         voice.Play();
     }
