@@ -22,7 +22,7 @@ public partial class BattlePawn3D : Node3D
     private Label3D _status = null!;
     private Label3D _forecast = null!;
     /// <summary>盤面ルールの保持者の札（第171期・<b>表示専用</b>）。<b>倒れるまで出しっぱなし。</b></summary>
-    private Label3D _ruleTag = null!;
+    private Node3D _ruleTag = null!;
     private Vector3 _home;
     private Color _baseTint;
     private Texture2D _atlas = null!;
@@ -131,6 +131,7 @@ public partial class BattlePawn3D : Node3D
         Hp = opening.Hp;
         MaxHp = Math.Max(1, opening.MaxHp);
         AttackValue = opening.Attack;
+        _baseAttack = opening.Attack;
         Pattern = opening.Pattern;
         Advances = opening.Advances;
         UnitName = opening.Name;
@@ -326,15 +327,8 @@ void fragment() {
         _forecast.Visible = false;
         AddChild(_forecast);
 
-        // 盤面ルールの保持者の札（第171期 §2-2）。**倒れるまで消えない**
-        // ——封じは「保持者が生きている間ずっと」効いているので、瞬間の表示だけでは
-        // 「いま封じられている」が画面から引けない（第170期 §4 の S-3）。
-        // 語は `SealedLabels` と同じ文字列で、封じの瞬間の浮き文字と必ず一致する。
-        // 粛は鎖で示す。未制作の盤面ルールだけ従来の札を残す。
-        _ruleTag = MakeLabel(BoardRuleTags.LabelFor(opening.Traits?.Where(t => t != TraitId.Hush)), 16, UiKit.Hurt, 0.0054f);
-        _ruleTag.Position = new Vector3(0, statusY + 0.38f, 0);
-        _ruleTag.Visible = _ruleTag.Text.Length > 0;
-        AddChild(_ruleTag);
+        BuildRuleMarks(opening);
+        BuildAttackChange();
 
         SetHp(Hp);
         SetAttack(AttackValue, Pattern);
@@ -359,9 +353,11 @@ void fragment() {
 
     public void SetAttack(int attack, AttackPattern? pattern = null)
     {
+        int change = attack - AttackValue;
         AttackValue = attack;
         if (pattern is { } value) Pattern = value;
         _stats.Text = $"HP {Hp}/{MaxHp}  ・  攻 {AttackValue} {PatternGlyph(Pattern)}";
+        ShowAttackChange(change);
     }
 
     /// <summary>
@@ -497,6 +493,7 @@ void fragment() {
     public void AnimateDeath()
     {
         if (!_alive) return;
+        ClearAuras();
         _alive = false;
         ResetStaggerPose();
         SetStatusEffects(0,0,0);
@@ -511,6 +508,7 @@ void fragment() {
         _stats.Visible = false;
         // 保持者が倒れたらルールは消える。**札も一緒に消す**（第171期 §2-2）。
         _ruleTag.Visible = false;
+        _attackDelta.Visible = false;
         var tween = BeginMotion().SetParallel();
         tween.TweenProperty(this, "position", Position + new Vector3(0.38f, -0.68f, 0.25f), 0.46)
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
@@ -534,7 +532,8 @@ void fragment() {
         _name.Visible = true;
         _stats.Visible = true;
         // 戻ってきたらルールも戻る（保持者の生死がそのまま規則の生死・第171期 §2-2）。
-        _ruleTag.Visible = _ruleTag.Text.Length > 0;
+        _ruleTag.Visible = true;
+        ShowAttackChange(0);
         _hpBack.Scale = Vector3.One;
         SetHp(Hp);
         var tween = BeginMotion().SetParallel();

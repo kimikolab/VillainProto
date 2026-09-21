@@ -303,6 +303,7 @@ public partial class BattlefieldView3D : Control
         }
         ResetSuperFlash();
         ResetSeals();
+        ResetPopups();
         foreach (BattlePawn3D pawn in _pawns.Values) pawn.QueueFree();
         _pawns.Clear();
         foreach (Node child in _fxRoot.GetChildren()) child.QueueFree();
@@ -471,7 +472,6 @@ public partial class BattlefieldView3D : Control
             MakeBeam(a, bend, new Color(color, 0.80f), 0.075f, 0.48);
             MakeBeam(bend, b, new Color(color, 0.80f), 0.075f, 0.48);
             MakeGroundRing(victim.Home, UiKit.Faint, 0.68f, 0.42);
-            Float(victim, "狙われた", UiKit.Faint, false, 3.30f, 0.88f);
         }
         MakeGroundRing(guard.RestPosition, color, 1.05f, 0.44);
         Float(guard, label, color, true, 3.52f);
@@ -702,21 +702,13 @@ public partial class BattlefieldView3D : Control
     /// <summary>
     /// ダメージの数字（第124期 3-b: 「もっと大きくわかりやすく」への直答）。
     ///
-    /// <para><b>数字と出どころを別の大きさで出す。</b> 1行に混ぜると、読みたい数字が
-    /// 駒名の長さに埋もれる（第123期の「ポップアップが小さい」の実体）。
-    /// 数字は 2 段大きく、出どころはその下に小さく置く。</para>
+    /// <para>出どころはログに残し、盤上は数字だけ。同じ駒の連続分は合算する。</para>
     /// </summary>
-    /// <param name="withSource">
-    /// 出どころの札を添えるか（第124期 3-a）。<b>同時着弾では主目標だけに添える</b>
-    /// ——5体ぶんの駒名が一度に浮くと、**大きくした数字がまた読めなくなる。**
-    /// </param>
     public void DamagePopup(BattlePawn3D? pawn, int amount, string source, Color color,
                             bool large = false, bool withSource = true, bool poison = false)
     {
         if (pawn is null) return;
-        Float(pawn, poison ? $"毒 −{amount}" : $"−{amount}", color, true, 3.20f,
-            large ? 2.05f : poison ? 1.75f : 1.55f);
-        if (withSource) Float(pawn, source, color, false, 2.86f, 0.86f);
+        NumberPopup(pawn, amount, false, color, large);
     }
 
     /// <param name="friendly">
@@ -763,7 +755,6 @@ public partial class BattlefieldView3D : Control
             MakeGroundRing(to.Home, color, 0.70f, 0.46);
         }
         MakeGroundRing(from.Home, color, 0.92f, 0.46);
-        Float(from, label, color, false, 3.55f, 0.92f);
     }
 
     /// <summary>
@@ -780,9 +771,10 @@ public partial class BattlefieldView3D : Control
     public void Float(BattlePawn3D? pawn, string value, Color color, bool large = false)
         => Float(pawn, value, color, large, 3.05f);
 
-    private void Float(BattlePawn3D? pawn, string value, Color color, bool large, float height, float scale = 1.0f)
+    private Label3D? Float(BattlePawn3D? pawn, string value, Color color, bool large, float height, float scale = 1.0f)
     {
-        if (pawn is null) return;
+        if (pawn is null) return null;
+        TrimPopups(pawn.InstanceId);
         var label = new Label3D
         {
             Text = value,
@@ -797,11 +789,13 @@ public partial class BattlefieldView3D : Control
             NoDepthTest = true,
         };
         _fxRoot.AddChild(label);
+        _popups.Add((pawn.InstanceId, label));
         var tween = label.CreateTween().SetParallel();
         tween.TweenProperty(label, "position:y", height + pawn.Home.Y + 0.95f, 0.78)
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
         tween.TweenProperty(label, "modulate:a", 0.0f, 0.78).SetDelay(0.22);
         tween.Finished += label.QueueFree;
+        return label;
     }
 
     public void ShowBanner(string value, Color color, double seconds = 1.0)
@@ -883,9 +877,7 @@ public partial class BattlefieldView3D : Control
     public void HealPopup(BattlePawn3D? pawn, int amount)
     {
         if (pawn is null) return;
-        Float(pawn, $"＋{amount}", UiKit.Heal, true, 3.20f, amount >= 25 ? 2.05f : 1.55f);
-        Float(pawn, "回復", UiKit.Heal, false, 2.86f, 0.86f);
-        MakeGroundRing(pawn.Home, UiKit.Heal, 0.86f, 0.44);
+        NumberPopup(pawn, amount, true, UiKit.Heal, amount >= 25);
     }
 
     private void MakeBeam(Vector3 from, Vector3 to, Color color, float width, double duration)

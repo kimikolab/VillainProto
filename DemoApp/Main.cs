@@ -24,6 +24,7 @@ public partial class Main : Control
     /// 本体のループがここへ来たら<b>もう一度描かない</b>。
     /// </summary>
     private readonly HashSet<int> _batchedDamageIndices = new();
+    private readonly HashSet<int> _shownYokeIndices = new();
 
     // =====================================================================================
     // 第125期 段2 —— 手番の外を「手番の外」として見せる。**`BattleCore` を1行も触らない。**
@@ -975,6 +976,7 @@ public partial class Main : Control
         _eventIndex = 0;
         _statusByPawn.Clear();
         _batchedDamageIndices.Clear();
+        _shownYokeIndices.Clear();
         _burstDamageIndices.Clear();
         _shownBeat = Beat.TurnOpen;
         _shownOwner = -1;
@@ -1105,9 +1107,6 @@ public partial class Main : Control
                 if (e.Reaction)
                     await _battleField.ShowBonusAttack(actor);
                 await _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire);
-                _battleField.AttackCue(actor,
-                    $"{(forecasted ? "大技 " : "")}{UiKit.PatternLabel(pattern)}",
-                    AttackColor(actor, e));
                 AppendLog($"[color=#{(actor?.Team == 0 ? UiKit.Player : UiKit.Enemy).ToHtml(false)}]{NameOf(e.ActorId)}[/color] → {NameOf(e.TargetId)}  [color=#a9b3a8]{UiKit.PatternLabel(e.Pattern ?? AttackPattern.Single)} {e.Amount}[/color]");
                 // 第125期 段2: 手番の外の一撃（棘・仇討ち・軋み）は**流れを一度止める**。
                 // **手番の中は詰めてある**（0.16 → 0.14）ので、合計はほぼ動かない（§5-2）。
@@ -1230,14 +1229,16 @@ public partial class Main : Control
                 }
                 break;
 
-            // 粛は青い予備動作を鎖で潰す。渇き・軛は観察後に演出を決める。
+            // 封じは色と動きで示す。説明文はログにだけ残す。
             case BattleEventKind.Sealed:
-                Color sealTint = UiKit.Hurt;
                 string sealWord = e.Text ?? "封じ";
+                Color sealTint = BattlefieldView3D.RuleColor(sealWord);
                 if (sealWord == SealedLabels.Hush)
                     await _battleField.ShowHushSeal(target);
-                else
-                    _battleField.Float(target, SealFloatText(sealWord, e.Amount), sealTint);
+                else if (sealWord == SealedLabels.Yoke && _shownYokeIndices.Add(eventIndex))
+                    _battleField.ShowYokeSeal(target, e.Amount);
+                else if (sealWord == SealedLabels.Drought)
+                    _battleField.ShowDroughtSeal(target, e.Amount);
                 AppendLog($"  [color=#{sealTint.ToHtml(false)}]{NameOf(e.TargetId)} は{SealLogText(sealWord, e.Amount)}[/color]"
                           + $"  [color=#a9b3a8]（{sealWord}）[/color]");
                 break;
@@ -1249,7 +1250,7 @@ public partial class Main : Control
                 // **ダメージと同じ大きさ・同じ形**で出す（ナラ・ゴルムの還しに効く）。
                 _battleField.HealPopup(target, e.Amount);
                 // 第124期 3-h: 段2 で載った書き手から線を引く。
-                if (e.ActorId is not null) _battleField.Link(actor, target, UiKit.Heal, "繕う");
+                _battleField.HealingLight(actor, target, e.Amount);
                 AppendLog($"  [color=#{UiKit.Heal.ToHtml(false)}]＋{e.Amount} 回復[/color] "
                           + $"{NameOf(e.TargetId)}{WriterSuffix(e.ActorId, e.TargetId)}");
                 await Delay(0.15);
@@ -1403,6 +1404,18 @@ public partial class Main : Control
     private void ShowDamage(int eventIndex, BattleEvent e, BattlePawn3D? actor, BattlePawn3D? target,
                             bool withSource = true)
     {
+        // 範囲攻撃は着弾を前へ寄せるので、直前の軛も同じ拍へ寄せる。
+        if (_result is not null)
+        for (int i = eventIndex - 1; i >= 0; i--)
+        {
+            BattleEvent prior = _result.Events[i];
+            if (prior.Kind is BattleEventKind.Damage or BattleEventKind.Parry or BattleEventKind.Attack
+                or BattleEventKind.TurnStart or BattleEventKind.Death) break;
+            if (prior.Kind != BattleEventKind.Sealed || prior.Text != SealedLabels.Yoke
+                || prior.TargetId != e.TargetId || prior.ActorId != e.ActorId) continue;
+            if (_shownYokeIndices.Add(i)) _battleField.ShowYokeSeal(target, prior.Amount);
+            break;
+        }
         target?.SetHp(e.HpAfter);
         bool poison = _statusCauseByDamageIndex.TryGetValue(eventIndex, out string? status)
             && status == StatusKeys.LabelOf(StatusKeys.Poison);
@@ -1514,22 +1527,6 @@ public partial class Main : Control
         return landed;
     }
 
-    /// <summary>
-    /// 戦況ログに付ける「誰の仕業か」（第124期 3-h）。<b>書き手が居ないときは何も書かない</b>
-    /// ——「盤面」と書くと、書き手が居ないことと書き手が盤面であることの区別が消える。
-    /// </summary>
-    /// <summary>
-    /// 封じの浮き文字（第171期 §2-2・<b>仮の表示</b>）。<b>短い文字を浮かせるだけ</b>で、
-    /// 絵も音もカメラも無い——指示書 §2-2 が「仮の表示まで」と決めている。
-    /// </summary>
-    private static string SealFloatText(string rule, int amount) => rule switch
-    {
-        SealedLabels.Hush => "封じ",
-        SealedLabels.Drought => amount > 0 ? $"渇き −{amount}" : "渇き",
-        SealedLabels.Yoke => "25 で止まる",
-        _ => rule,
-    };
-
     /// <summary>同・ログ側の一文。<b>評価の言葉は書かない</b>（起きたことだけ）。</summary>
     private static string SealLogText(string rule, int amount) => rule switch
     {
@@ -1539,6 +1536,10 @@ public partial class Main : Control
         _ => "封じられた",
     };
 
+    /// <summary>
+    /// 戦況ログに付ける「誰の仕業か」（第124期 3-h）。<b>書き手が居ないときは何も書かない</b>
+    /// ——「盤面」と書くと、書き手が居ないことと書き手が盤面であることの区別が消える。
+    /// </summary>
     private string WriterSuffix(int? actorId, int? targetId)
         => actorId is null || actorId == targetId
             ? ""
@@ -1881,6 +1882,7 @@ public partial class Main : Control
         _eventIndex = 0;
         _statusByPawn.Clear();
         _batchedDamageIndices.Clear();
+        _shownYokeIndices.Clear();
         _burstDamageIndices.Clear();
         _shownBeat = Beat.TurnOpen;
         _shownOwner = -1;
