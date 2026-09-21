@@ -127,7 +127,8 @@ public static class Map11Session
         Map11State.Squad sq = State.Squads[squad];
         string squadName = sq.Def.Name;
         int road = node.Def.Road;
-        State.Resolve(squad, node, playerWon);
+        // 第175期 §2: **迎撃で勝っても道中の回復は乗らない**（規則は `Map11State` が持つ）。
+        State.Resolve(squad, node, playerWon, wasIntercept);
         Battles = State.Battles;
 
         var notes = result is null ? new List<string>() : Map11Info.RuleNotes(result);
@@ -159,15 +160,15 @@ public static class Map11Session
     // ——戦闘はシーンを替えるので、1 作戦ターンの途中で中断して戻ってくる必要がある。
     // =================================================================================
 
-    /// <summary>1 隊ぶんの命令（指示書 §2-1）。「組み直す」はその作戦ターンを使い切る（＝何もしない）。</summary>
-    public enum Order { Wait, Advance, Back, Rest, Reform }
-
     /// <summary>作戦ターンを進めた結果。</summary>
     public enum StepKind { Done, Battle, Intercept, Fallen }
 
-    public static Order[] Orders { get; private set; } = Array.Empty<Order>();
-    /// <summary>「進む」で拠点から出るときの行き先（道の番号）。</summary>
-    public static int[] OrderRoad { get; private set; } = Array.Empty<int>();
+    /// <summary>
+    /// 隊ごとの<b>行き先</b>（第175期 §1-1）。<b>第174期の「毎ターン置く命令」を置き換えた。</b>
+    /// 命令は毎ターン <see cref="Map11Orders.Plan"/> が行き先から作るので、ここには持たない。
+    /// <b>既定は拠点</b>（＝待つ）——一度行き先を決めた隊は、変えるまでそこへ向かい続ける。
+    /// </summary>
+    public static Dest[] Destinations { get; private set; } = Array.Empty<Dest>();
 
     /// <summary>いま作戦ターンの最中か（戦闘から戻ったら続きを流す）。</summary>
     public static bool TurnRunning { get; private set; }
@@ -182,8 +183,7 @@ public static class Map11Session
     private static void ResetTurn()
     {
         int n = Map11.Squads.Length;
-        Orders = new Order[n];
-        OrderRoad = Enumerable.Repeat(-1, n).ToArray();
+        Destinations = Enumerable.Repeat(Dest.Home, n).ToArray();
         TurnRunning = false;
         InterceptNode = null;
         _cursor = 0;
@@ -191,12 +191,16 @@ public static class Map11Session
         _foeIndex = 0;
     }
 
-    public static void SetOrder(int squad, Order order, int road = -1)
+    /// <summary>行き先を決める（プレイヤーの判断）。<b>盤面は1ビットも動かない。</b></summary>
+    public static void SetDestination(int squad, Dest dest)
     {
-        if (squad < 0 || squad >= Orders.Length || TurnRunning) return;
-        Orders[squad] = order;
-        OrderRoad[squad] = road;
+        if (squad < 0 || squad >= Destinations.Length || TurnRunning) return;
+        Destinations[squad] = dest;
     }
+
+    /// <summary>その隊がこの作戦ターンに何をするか（画面に出す1語）。</summary>
+    public static string OrderText(int squad)
+        => State is null ? "" : Map11Orders.Describe(State, squad, Destinations[squad]);
 
     /// <summary>作戦ターンを始める。以後 <see cref="StepTurn"/> が <c>Done</c> を返すまで流す。</summary>
     public static void BeginTurn()
@@ -223,16 +227,11 @@ public static class Map11Session
             if (st.Finished) break;
             Map11State.Squad s = st.Squads[i];
             if (s.Lost) continue;
-            switch (Orders[i])
-            {
-                case Order.Advance:
-                    int road = s.Cell < 0 ? OrderRoad[i] : s.Road;
-                    if (road < 0) break;
-                    if (st.Advance(i, road) is { } node && BeginBattle(i)) return StepKind.Battle;
-                    break;
-                case Order.Back: st.StepBack(i); break;
-                case Order.Rest: st.Rest(i); break;
-            }
+            // 第175期: **命令は行き先から作る**（規則は `Map11Orders` の1本・器具と共有）。
+            Dest dest = Destinations[i];
+            Map11Orders.Order order = Map11Orders.Plan(st, i, dest);
+            if (Map11Orders.Apply(st, i, dest, order) is not null && BeginBattle(i))
+                return StepKind.Battle;
         }
 
         // ---- 2) 敵が動く ----
@@ -260,8 +259,8 @@ public static class Map11Session
         InterceptNode = null;
         _foes = null;
         _cursor = 0;
-        // 次の作戦ターンの命令は「待つ」から始める（前のターンの命令を引きずらない）。
-        for (int i = 0; i < Orders.Length; i++) { Orders[i] = Order.Wait; OrderRoad[i] = -1; }
+        // **行き先は引きずる**（第175期 §1-1「一度でも出した隊は、行き先を変えるまで前へ進み続ける」）
+        // ——第174期はここで命令を「待つ」へ戻していた。それが「何も押さないことが有効な手」の正体だった。
         return st.Fallen ? StepKind.Fallen : StepKind.Done;
     }
 

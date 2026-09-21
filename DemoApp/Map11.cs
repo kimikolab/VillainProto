@@ -43,6 +43,9 @@ public static class Map11
     /// 遊ぶときの時間の規則（<b>第174期 段B1 で測って決めた</b>）。
     /// <b>K = 1</b>（敵は毎作戦ターン1マス近づく）——線1〜3 が同時に通る K のうち最も小さい値で、
     /// <b>K = 2/3/4 は線1（全快方針の迎撃が起きた率 ≥ 50%）を通らない</b>（帯A/帯B とも）。
+    ///
+    /// <para><b>第175期に迎撃の回復を落とした</b>（<see cref="TimeRule.InterceptRecover"/> ＝ <c>false</c>）
+    /// ——待ちが得だった3つの理由のうち、規則の1行で外せるのはこれだけ（§2）。</para>
     /// </summary>
     public static readonly TimeRule AdoptedTime = TimeRule.Every(1);
 
@@ -233,14 +236,27 @@ public static class Map11
 /// <param name="On">時間を使うか。偽なら <see cref="Map11State"/> の時間の枝は1行も走らない。</param>
 /// <param name="AdvanceEvery">敵が1マス前進する間隔（作戦ターン）。<c>K</c>。</param>
 /// <param name="RestPercent">拠点で「休む」1回で戻る割合（<c>MaxHp</c> に対する %）。</param>
-public readonly record struct TimeRule(bool On, int AdvanceEvery, int RestPercent)
+/// <param name="InterceptRecover">
+/// <b>迎撃戦に勝った隊に道中の回復を乗せるか（第175期 §2。<u>この期で変えた規則はこれ1つ</u>）。</b>
+/// 第174期は乗せていた（＝<c>true</c> が第174期の姿）。<b>既定は <c>false</c>。</b>
+///
+/// <para>理由は第174期の観察ログ——拠点で待つのが得な3つの理由
+/// （移動ですり減らない／迎撃にも回復が乗る／1部隊ずつ来る）のうち、
+/// <b>規則の1行で外せるのはこれだけ</b>である。休む（拠点で <see cref="RestPercent"/>）は残すので、
+/// <b>待って受けるなら休みに作戦ターンを払う</b>形になる。</para>
+/// </param>
+public readonly record struct TimeRule(bool On, int AdvanceEvery, int RestPercent,
+                                       bool InterceptRecover = false)
 {
-    /// <summary>時間なし（第169期の規則そのもの）。</summary>
+    /// <summary>時間なし（第169期の規則そのもの）。<b>迎撃が原理的に起きない</b>ので最後の1つは効かない。</summary>
     public static readonly TimeRule Off = new(false, 0, 25);
 
-    public static TimeRule Every(int k, int restPercent = 25) => new(true, k, restPercent);
+    public static TimeRule Every(int k, int restPercent = 25, bool interceptRecover = false)
+        => new(true, k, restPercent, interceptRecover);
 
-    public override string ToString() => On ? $"K={AdvanceEvery} 休={RestPercent}%" : "時間なし";
+    public override string ToString() => On
+        ? $"K={AdvanceEvery} 休={RestPercent}% 迎撃回復={(InterceptRecover ? "あり" : "なし")}"
+        : "時間なし";
 }
 
 /// <summary>
@@ -558,8 +574,14 @@ public sealed class Map11State
     /// 1 戦ぶんの後始末。<b>第168期 <c>BandOnce</c> と同じ順序・同じ規則</b>——
     /// 敵の生存者は傷ついたまま残り、味方は生き残れば境界を越えて
     /// <b>勝ったときだけ</b> <see cref="Map11.RecoverPercent"/> ぶん回復する。
+    ///
+    /// <para><b>第175期 §2 —— 迎撃戦に勝った隊にはその回復を乗せない</b>
+    /// （<see cref="TimeRule.InterceptRecover"/>・既定 <c>false</c>）。
+    /// <b>この期で変えた規則はこれ1つだけ</b>で、他は1行も触っていない。
+    /// <c>InterceptRecover = true</c> にすれば第174期と1ビットも違わない。</para>
     /// </summary>
-    public void Resolve(int squadIndex, Node node, bool playerWon)
+    /// <param name="intercept">拠点の迎撃戦か（<see cref="PrepareIntercept"/> を通った戦闘）。</param>
+    public void Resolve(int squadIndex, Node node, bool playerWon, bool intercept = false)
     {
         Squad s = Squads[squadIndex];
         List<UnitState> pu = s.Units!;
@@ -588,9 +610,11 @@ public sealed class Map11State
         }
         else
         {
+            // 第175期 §2: **迎撃で勝っても、道中の回復は乗らない**（待ちの抜け道を塞ぐ）。
+            bool recover = playerWon && Map11.RecoverPercent > 0
+                           && (!intercept || Time.InterceptRecover);
             s.Units = EngagementEngine.CrossBoundary(aliveP, pu,
-                playerWon && Map11.RecoverPercent > 0
-                    ? new RecoverRule(Map11.RecoverPercent, false) : null);
+                recover ? new RecoverRule(Map11.RecoverPercent, false) : null);
         }
     }
 

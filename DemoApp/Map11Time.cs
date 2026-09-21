@@ -5,39 +5,60 @@ using System.Linq;
 using System.Threading.Tasks;
 
 // =====================================================================================
-// 第174期 段B1 —— **時間を器具で先に当てる（UI の前）。**
+// 第174期 段B1 / 第175期 §3 —— **時間を器具で当てる（UI の前）。**
 //
 // **遊ぶ側と同じ `Map11State` を頭なしで回す**（R259）。ここが持つのは
 // 「自動で打つ手」＝方針だけで、**規則は1行も持たない**
 // ——進む・戻る・休む・敵の前進・迎撃・陥落は全部 `Map11State` にある。
 //
-//     Godot_console.exe --path DemoApp --headless -- --map11-time[=seeds]
+//     Godot_console.exe --path DemoApp --headless -- --map11-time[=seeds[,起点]]
 //
-// 方針は2つ（指示書 §2-2）:
-//   貪欲  休まない。正の割り当てで進み続ける
-//   全快  戦う前に、生存者の HP が 100% でなければ拠点へ戻って休む。休み切ってから出る
+// **第175期に方針の書き方を変えた**——4 方針とも「行き先を1つ選ぶ」だけになり、
+// そこから1ターンの命令を作るのは `Map11Orders`（<b>遊ぶ側と同じ1本</b>）。
+// **盤面の規則は1つも通っていない**ので、貪欲・全快は第174期と1ビットも違わない
+// （自己検査 (b) が実測で確かめる）。
+//
+// 方針は4つ:
+//   貪欲    休まない。担当の道の奥まで進み続ける
+//   全快    傷が残っていれば行き先を拠点にする（戻って休む）。全快したらまた出る
+//   籠城    行き先はずっと拠点。**1 マスも動かない**（拠点で傷が残っていれば休む）
+//   即出し  **1 作戦ターン目から3隊とも出す**（第174期の観察ログ——ポンの打ち方は
+//           器具の2方針のどちらでもなく、これに近い）
 // =====================================================================================
 
 public static class Map11Time
 {
     public const int DefaultSeeds = 800;
 
-    /// <summary>掃引する K（敵が1マス前進する間隔）。</summary>
-    public static readonly int[] Ks = { 1, 2, 3, 4 };
+    /// <summary>
+    /// 採用した K（敵が1マス前進する間隔）。<b>第174期に測って決めた値で、この期では振らない</b>
+    /// ——§2 で変えたのは迎撃の回復だけなので、K の当落は第174期の表がそのまま使える。
+    /// </summary>
+    public const int AdoptedK = 1;
 
     /// <summary>
-    /// 自動で打つ手。<b>籠城は第174期の観察ログから足した</b>——ポンの3プレイ目が
-    /// 「<b>拠点から一歩も出ず、迎撃だけで殲滅した</b>」だったので、
-    /// <b>それが実際に何%通るのか</b>を数えるために作った方針である（判定には使わない）。
+    /// 自動で打つ手。<b>籠城は第174期の観察ログから、即出しは第175期 §3 から足した。</b>
+    /// 籠城はポンの3プレイ目（拠点から一歩も出ず迎撃だけで殲滅）、
+    /// 即出しは1・2プレイ目（1ターン目から3隊とも出す）を写したものである。
     /// </summary>
-    public enum Policy { Greedy, Full, Turtle }
+    public enum Policy { Greedy, Full, Turtle, TurtleLast, Rush, RushSplit }
 
     public static string NameOf(Policy p) => p switch
     {
         Policy.Greedy => "貪欲",
         Policy.Full => "全快",
-        _ => "籠城",
+        Policy.Turtle => "籠城",
+        Policy.TurtleLast => "籠城（控えから出す）",
+        Policy.Rush => "即出し",
+        _ => "即出し（控えは南）",
     };
+
+    /// <summary>第174期の実測（K = 1・迎撃の回復あり）。<b>自己検査 (b) の相手。</b></summary>
+    public static readonly (double Full, double Intercept, double Fall, double Turn) Phase174Greedy
+        = (94.0, 44.8, 6.0, 3.0);
+    public static readonly (double Full, double Intercept, double Fall, double Turn) Phase174Full
+        = (88.0, 91.2, 12.0, 4.0);
+    public const double Phase174Tolerance = 0.1;
 
     private readonly record struct Once(
         bool Full, bool Fallen, bool Intercepted, int Turns, int Battles, double Partial,
@@ -72,7 +93,8 @@ public static class Map11Time
             if (prep is not { } p) return;
             if (intercept) { if (node.Def.Road == 0) IntN++; else IntS++; IntBy[squad]++; }
             BattleResult r = BattleEngine.Run(p.Players, p.Enemies, p.Seed, verbose: false);
-            St.Resolve(squad, p.Node, r.PlayerWon);
+            // 第175期 §2: **迎撃で勝っても道中の回復は乗らない**（`TimeRule.InterceptRecover`）。
+            St.Resolve(squad, p.Node, r.PlayerWon, intercept);
             if (intercept && r.PlayerWon) { IntWins++; IntWonBy[squad]++; }
 
             // 控えは第169期と同じ自動規則——**隊が全滅した道へ1回だけ**。
@@ -84,17 +106,54 @@ public static class Map11Time
             }
         }
 
-        /// <summary>拠点の迎撃。<b>拠点の隊を番号順に出し、抜くか出せる隊が尽きるまで。</b></summary>
+        /// <summary>
+        /// 拠点の迎撃。<b>抜くか、出せる隊が尽きるまで</b>。
+        /// <b>籠城だけ選び方を人に寄せる</b>（第175期 §3）——「まだ戦っていない隊」→「HP% の高い隊」。
+        /// R271（拠点を守れるのは<b>まだ出していない隊</b>）をそのまま手にした形で、
+        /// <b>貪欲・全快・即出しは第174期のまま番号順</b>（自己検査 (b) を厳密に保つため）。
+        /// </summary>
         public void Intercept(Map11State.Node node)
         {
             while (!St.Finished)
             {
-                int j = St.NextInterceptor(node);
+                int j = Pol is Policy.Turtle or Policy.TurtleLast
+                    ? PickInterceptor(node) : St.NextInterceptor(node);
                 if (j < 0) break;
                 Fight(j, node, intercept: true);
                 if (node.Cleared) break;
             }
             St.CloseIntercept(node);
+        }
+
+        /// <summary>
+        /// 迎撃に出す隊を「まだ戦っていない → HP% の高い」の順で選ぶ（籠城だけ）。
+        ///
+        /// <para><b>第175期の観察ログから <c>TurtleLast</c> を足した</b>——最初の到着では3隊とも
+        /// 未出撃・HP 100% で<b>完全に同点</b>になるので、実際に効くのは<b>同点の割り方</b>だけである。
+        /// <c>Turtle</c> は隊の番号順（＝カド隊が最初の到着を受ける）、
+        /// <c>TurtleLast</c> は逆順（＝控え隊が受ける）。
+        /// <b>ポンの1巡目はカド隊を北の粛へ出して失い、3巡目は控え隊に受けさせて通した。</b></para>
+        /// </summary>
+        private int PickInterceptor(Map11State.Node node)
+        {
+            int best = -1;
+            double bestKey = double.NegativeInfinity;
+            bool last = Pol == Policy.TurtleLast;
+            for (int k = 0; k < St.Squads.Length; k++)
+            {
+                int i = last ? St.Squads.Length - 1 - k : k;
+                Map11State.Squad s = St.Squads[i];
+                if (node.Tried.Contains(i) || s.Lost || s.Cell >= 0 || !St.CanSend(i)) continue;
+                double hp = 100.0;
+                if (s.Units is { } u)
+                {
+                    int max = u.Sum(x => x.MaxHp);
+                    hp = max == 0 ? 0 : 100.0 * u.Where(x => x.IsAlive).Sum(x => x.Hp) / max;
+                }
+                double key = (s.Deployed ? 0 : 1000) + hp;
+                if (key > bestKey) { bestKey = key; best = i; }
+            }
+            return best;
         }
 
         /// <summary>その隊が向かう道（担当の道が抜け切っていれば、残っている道）。</summary>
@@ -107,27 +166,30 @@ public static class Map11Time
             return -1;
         }
 
-        /// <summary>1 隊ぶんの手。<b>ここが方針の全部</b>——規則はすべて `Map11State` が持つ。</summary>
+        /// <summary>
+        /// その隊の<b>行き先</b>。<b>方針が持つのはこれだけ</b>（第175期 §1-1）——
+        /// 1 ターンの命令はここから <see cref="Map11Orders.Plan"/> が作る。
+        /// </summary>
+        public Dest DestFor(int i)
+        {
+            if (St.Squads[i].Lost || Home[i] < 0) return Dest.Home;
+            // 籠城: **1 マスも動かない。** 戦うのは拠点へ来た敵だけ（拠点にいるので傷は休んで戻す）。
+            if (Pol is Policy.Turtle or Policy.TurtleLast) return Dest.Home;
+            // 全快: 傷が残っていれば行き先を拠点にする（戻って休む）。全快したらまた出る。
+            if (Pol == Policy.Full && St.Hurt(i)) return Dest.Home;
+            int road = RoadFor(i);
+            return road < 0 ? Dest.Home : Dest.Deep(road);
+        }
+
+        /// <summary>
+        /// 1 隊ぶんの手。<b>遊ぶ側とまったく同じ層</b>（`Map11Orders`）を通る——
+        /// 器具が持つのは行き先の選び方だけで、規則は1行も持たない（R259）。
+        /// </summary>
         public void Act(int i)
         {
-            Map11State.Squad s = St.Squads[i];
-            if (s.Lost || Home[i] < 0) return;
-            // 籠城: **1 マスも動かない。** 戦うのは拠点へ来た敵だけ。
-            if (Pol == Policy.Turtle) return;
-
-            // 全快: 傷が残っていれば拠点へ戻って休む。休み切ってから出る。
-            if (Pol == Policy.Full && St.Hurt(i))
-            {
-                if (!St.AtHome(i)) { St.StepBack(i); return; }
-                if (St.Rest(i)) return;
-            }
-
-            int road = RoadFor(i);
-            if (road < 0) return;
-            // 担当の道が抜け切って別の道へ回るには、いったん拠点まで戻る（一瞬では移れない）。
-            if (!St.AtHome(i) && s.Road != road) { St.StepBack(i); return; }
-
-            if (St.Advance(i, road) is { } node) Fight(i, node, intercept: false);
+            Dest dest = DestFor(i);
+            Map11Orders.Order order = Map11Orders.Plan(St, i, dest);
+            if (Map11Orders.Apply(St, i, dest, order) is { } node) Fight(i, node, intercept: false);
         }
     }
 
@@ -137,7 +199,16 @@ public static class Map11Time
         {
             St = new Map11State(seed, time),
             Pol = pol,
-            Home = new[] { assign[0], assign[1], -1 },
+            // 即出し（第175期 §3）: **1 作戦ターン目から3隊とも出す**。
+            // 控え隊はかき回し隊と同じ道（北）へ——ポンの1・2プレイ目がその形だった。
+            // 参考の `RushSplit` は控えを**もう一方の道**へ出す——即出しが負ける原因を
+            // 「拠点を空にしたこと」と「2 隊を同じ道へ重ねたこと」に割るためだけの点（線には使わない）。
+            Home = new[]
+            {
+                assign[0], assign[1],
+                pol == Policy.Rush ? assign[1] : pol == Policy.RushSplit ? assign[0] : -1,
+            },
+            ReserveSent = pol is Policy.Rush or Policy.RushSplit,
         };
         Map11State st = run.St;
 
@@ -181,26 +252,32 @@ public static class Map11Time
             Enumerable.Range(0, Map11.Squads.Length).Select(s => o.Sum(x => x.BySquad[s])).ToArray(),
             Enumerable.Range(0, Map11.Squads.Length).Select(s => o.Sum(x => x.WonBySquad[s])).ToArray());
     }
-
     // =================================================================================
-    // 表
+    // 表（第175期 §3）
+    //
+    // **K は振らない**（採用値 1）。振るのは **方針 4 つ × 迎撃の回復 あり/なし** の 8 点。
     // =================================================================================
 
-    /// <summary>線（測る前に固定・指示書 §2-2）。</summary>
-    public const double Line1Intercept = 50.0;   // 全快: 迎撃が起きた率 >= 50%
-    public const double Line2Fall = 10.0;        // 貪欲: 陥落率 <= 10%
-    public const double Line3Gap = 15.0;         // 踏破率の差 <= 15pt
-    public const double Line3Ceiling = 95.0;     // どちらも 95% 未満
+    /// <summary>線（測る前に固定・指示書 §3）。</summary>
+    public const double Line1Turtle = 10.0;   // 迎撃の回復なしで、籠城の踏破率 <= 10%
+    public const double Line2Rush = 85.0;     // 迎撃の回復なしで、即出しの踏破率 >= 85%
+
+    private static readonly Policy[] All =
+        { Policy.Greedy, Policy.Full, Policy.Turtle, Policy.TurtleLast,
+          Policy.Rush, Policy.RushSplit };
 
     public static bool Report(int seeds, Action<string> write, int seed0 = 0)
     {
         int[] straight = { 1, 0 };   // 正: カド隊 -> 南(1) ／ かき回し隊 -> 北(0)
 
-        write("# 第174期 段B1 —— 時間を器具で当てる");
+        write("# 第175期 §3 —— 待ちの抜け道を塞いだか");
         write("");
-        write($"seed {seed0}..{seed0 + seeds - 1}。道中の回復 {Map11.RecoverPercent}%（第168期の本丸の条件・そのまま）。"
-            + $"休む 1 回で {TimeRule.Every(1).RestPercent}%。割り当ては正"
-            + "（カド隊 → 南 ／ かき回し隊 → 北）、控えは第169期と同じ自動規則。");
+        write($"seed {seed0}..{seed0 + seeds - 1}。K = {AdoptedK}（第174期の採用値・この期では振らない）。"
+            + $"道中の回復 {Map11.RecoverPercent}%、休む 1 回で {TimeRule.Every(AdoptedK).RestPercent}%。"
+            + "割り当ては正（カド隊 → 南 ／ かき回し隊 → 北）。");
+        write("");
+        write("**この期で変えた規則は1つだけ**——`InterceptRecover`"
+            + "（迎撃戦に勝った隊に道中の回復を乗せるか）。**`true` が第174期の姿で、既定は `false`。**");
         write("");
 
         // ---- 対照: 時間なし ----
@@ -208,84 +285,148 @@ public static class Map11Time
         write("## 対照（`TimeOn = false`）");
         write("");
         write($"踏破率 **{off.Full:F1}%**（第169期 {Map11Verify.ExpectStraight:F1}%・"
-            + $"差 {off.Full - Map11Verify.ExpectStraight:+0.0;-0.0;0.0}pt）／ 部分点 {off.Partial:F3}。");
+            + $"差 {off.Full - Map11Verify.ExpectStraight:+0.0;-0.0;0.0}pt）／ 部分点 {off.Partial:F3}。"
+            + "**時間なしでは迎撃が原理的に起きない**ので、`InterceptRecover` は1ビットも効かない。");
         write("");
 
         // ---- 本表 ----
-        write("## 本表（K × 方針）");
-        write("");
-        write("| K | 方針 | 踏破率 | 迎撃が起きた率 | 陥落率 | 作戦T 中央値 | 戦闘/戦 | 部分点 | 迎撃/戦 | 迎撃の北% | 迎撃の勝率 | 休/戦 |");
-        write("|--:|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        var table = new Dictionary<(bool, Policy), Stat>();
+        foreach (bool rec in new[] { true, false })
+            foreach (Policy pol in All)
+                table[(rec, pol)] = Band(pol, TimeRule.Every(AdoptedK, interceptRecover: rec),
+                                         straight, seeds, seed0);
 
-        var table = new Dictionary<(int, Policy), Stat>();
-        foreach (int k in Ks)
-            foreach (Policy pol in new[] { Policy.Greedy, Policy.Full, Policy.Turtle })
+        write("## 本表（迎撃の回復 × 方針）");
+        write("");
+        write("| 迎撃の回復 | 方針 | 踏破率 | 迎撃が起きた率 | 陥落率 | 作戦T 中央値 | 戦闘/戦 | 部分点 | 迎撃/戦 | 迎撃の北% | 迎撃の勝率 | 休/戦 |");
+        write("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        foreach (bool rec in new[] { true, false })
+            foreach (Policy pol in All)
             {
-                Stat st = Band(pol, TimeRule.Every(k), straight, seeds, seed0);
-                table[(k, pol)] = st;
-                write($"| {k} | {NameOf(pol)} | {st.Full:F1}% | {st.Intercept:F1}% | {st.Fall:F1}% "
+                Stat st = table[(rec, pol)];
+                write($"| {(rec ? "あり（第174期）" : "**なし（採用）**")} | {NameOf(pol)} "
+                    + $"| {st.Full:F1}% | {st.Intercept:F1}% | {st.Fall:F1}% "
                     + $"| {st.TurnMedian:F1} | {st.Battles:F2} | {st.Partial:F3} | {st.InterceptPerRun:F2} "
                     + $"| {st.NorthShare:F1}% | {st.InterceptWin:F1}% | {st.Rests:F2} |");
             }
         write("");
 
-        // ---- 線 ----
-        write("## 線（測る前に固定）");
+        // ---- 迎撃の回復を外したぶん ----
+        write("## 迎撃の回復を外したぶん（なし − あり）");
         write("");
-        write("| K | 線1 全快の迎撃 ≥ 50% | 線2 貪欲の陥落 ≤ 10% | 線3 差 ≤ 15pt かつ両方 < 95% | 本丸 |");
-        write("|--:|:-:|:-:|:-:|:-:|");
-        int adopted = -1;
-        foreach (int k in Ks)
+        write("| 方針 | 踏破率 | 陥落率 | 戦闘/戦 | 部分点 |");
+        write("|---|--:|--:|--:|--:|");
+        foreach (Policy pol in All)
         {
-            Stat g = table[(k, Policy.Greedy)], f = table[(k, Policy.Full)];
-            bool l1 = f.Intercept >= Line1Intercept;
-            bool l2 = g.Fall <= Line2Fall;
-            double gap = Math.Abs(g.Full - f.Full);
-            bool l3 = gap <= Line3Gap && g.Full < Line3Ceiling && f.Full < Line3Ceiling;
-            bool all = l1 && l2 && l3;
-            if (all && adopted < 0) adopted = k;
-            write($"| {k} | {(l1 ? "**○**" : "×")} {f.Intercept:F1}% | {(l2 ? "**○**" : "×")} {g.Fall:F1}% "
-                + $"| {(l3 ? "**○**" : "×")} 差 {gap:F1}pt ／ {g.Full:F1}% ・ {f.Full:F1}% "
-                + $"| {(all ? "**○**" : "×")} |");
+            Stat a = table[(true, pol)], b = table[(false, pol)];
+            write($"| {NameOf(pol)} | {b.Full - a.Full:+0.0;-0.0;0.0}pt | {b.Fall - a.Fall:+0.0;-0.0;0.0}pt "
+                + $"| {b.Battles - a.Battles:+0.00;-0.00;0.00} | {b.Partial - a.Partial:+0.000;-0.000;0.000} |");
         }
         write("");
 
-        // ---- 迎撃に出たのは誰か（予測 W3） ----
-        write("## 迎撃に出た隊（予測 W3）");
+        // ---- 線 ----
+        Stat turtle = table[(false, Policy.Turtle)], rush = table[(false, Policy.Rush)];
+        bool line1 = turtle.Full <= Line1Turtle;
+        bool line2 = rush.Full >= Line2Rush;
+        write("## 線（測る前に固定）");
         write("");
-        write("| K | 方針 | " + string.Join(" | ", Map11.Squads.Select(x => x.Name + " 回/勝率")) + " |");
-        write("|--:|---|" + string.Concat(Map11.Squads.Select(_ => "--:|")));
-        foreach (int k in Ks)
-            foreach (Policy pol in new[] { Policy.Greedy, Policy.Full })
+        write("| # | 線 | 実測 | 合否 |");
+        write("|---|---|--:|:-:|");
+        write($"| 線1 | 迎撃の回復なしで、籠城の踏破率 ≤ {Line1Turtle:F0}% | **{turtle.Full:F1}%** "
+            + $"| {(line1 ? "**○**" : "×")} |");
+        write($"| 線2 | 迎撃の回復なしで、即出しの踏破率 ≥ {Line2Rush:F0}% | **{rush.Full:F1}%** "
+            + $"| {(line2 ? "**○**" : "×")} |");
+        write("");
+        if (!line1)
+            write("**線1 が × —— まだ効いている待ちの理由を下の表で読む**"
+                + "（「1部隊ずつ来る」を外すのは次の期の判断）。");
+        if (line2 && rush.Full >= 98.0)
+            write($"**即出しが {rush.Full:F1}% と高すぎる（≥ 98%）。報告だけする**"
+                + "——難度は第176期の「配られた駒から組む」で上げる。");
+        if (!line2)
+        {
+            Stat greedy = table[(false, Policy.Greedy)], split = table[(false, Policy.RushSplit)];
+            write($"**線2 が × —— しかも即出しは4方針で最も高くない**"
+                + $"（貪欲 {greedy.Full:F1}% > 即出し {rush.Full:F1}%）。**指示書 §3 の想定と逆である。**");
+            write("");
+            write("| 何が違うか | 踏破率 | 陥落率 | 読み |");
+            write("|---|--:|--:|---|");
+            write($"| 貪欲（控えは拠点に残る） | {greedy.Full:F1}% | {greedy.Fall:F1}% | 拠点に隊がいる |");
+            write($"| 即出し（控えも北へ） | {rush.Full:F1}% | {rush.Fall:F1}% "
+                + $"| 拠点が空 ＋ 2 隊が同じ道 |");
+            write($"| 参考 即出し（控えは南へ） | {split.Full:F1}% | {split.Fall:F1}% "
+                + $"| 拠点が空・道は割れている |");
+            write("");
+            write($"**踏破率の落ち（{rush.Full - greedy.Full:+0.0;-0.0;0.0}pt）と"
+                + $"陥落率の増え（{rush.Fall - greedy.Fall:+0.0;-0.0;0.0}pt）がほぼ同じ大きさ**"
+                + "——即出しが失うのは**全部、拠点を空にした代金**である（R271）。");
+        }
+        write("");
+
+        // ---- 待ちが得だった3つの理由 ----
+        write("## 待ちが得だった3つの理由（線1 が × のとき読む表）");
+        write("");
+        write("| 理由 | この期で外したか | 実測 |");
+        write("|---|:-:|---|");
+        write($"| (b) 迎撃に勝っても道中の回復が乗る | **外した** "
+            + $"| 籠城の踏破率 {table[(true, Policy.Turtle)].Full:F1}% → **{turtle.Full:F1}%** |");
+        write($"| (a) 移動ですり減らない | 外していない "
+            + $"| 籠城の戦闘数 {turtle.Battles:F2} 回（貪欲 {table[(false, Policy.Greedy)].Battles:F2} 回） |");
+        write($"| (c) 相手を1部隊ずつ迎えられる | 外していない "
+            + $"| 籠城の迎撃が起きた率 {turtle.Intercept:F1}% ／ 迎撃の勝率 {turtle.InterceptWin:F1}% |");
+        write("");
+
+        // ---- 迎撃に出たのは誰か（R271） ----
+        write("## 迎撃に出た隊（R271: 拠点を守れるのは「まだ出していない隊」）");
+        write("");
+        write("| 迎撃の回復 | 方針 | " + string.Join(" | ", Map11.Squads.Select(x => x.Name + " 回/勝率")) + " |");
+        write("|---|---|" + string.Concat(Map11.Squads.Select(_ => "--:|")));
+        foreach (bool rec in new[] { true, false })
+            foreach (Policy pol in All)
             {
-                Stat st = table[(k, pol)];
+                Stat st = table[(rec, pol)];
                 string cells = string.Join(" | ", Enumerable.Range(0, Map11.Squads.Length)
                     .Select(i => st.BySquad[i] == 0 ? "—"
                         : $"{st.BySquad[i]} / {100.0 * st.WonBySquad[i] / st.BySquad[i]:F1}%"));
-                write($"| {k} | {NameOf(pol)} | {cells} |");
+                write($"| {(rec ? "あり" : "なし")} | {NameOf(pol)} | {cells} |");
             }
         write("");
 
-        // ---- 籠城（第174期の観察ログ・判定には使わない） ----
-        write("## 籠城（拠点から一歩も出ない）—— 観察ログ 問い3 への数字");
+        // ---- 自己検査 (b) ----
+        write("## 自己検査 (b) —— `InterceptRecover = true` が第174期と一致するか");
         write("");
-        write("**判定には使わない。** ポンの3プレイ目が「拠点から一歩も出ず殲滅した」"
-            + "「待ってるだけでクリアできるのはゲームの趣旨と合わない」だったので、"
-            + "**それが何%通るのか**を数えただけ。");
+        write("**第175期は方針の書き方も変えた**（4 方針とも `Map11Orders` を通す）ので、"
+            + "**貪欲・全快が第174期と1ビットも違わないこと**が、その置き換えの検算になる。"
+            + "**籠城は迎撃役の選び方と休みを人に寄せたので対照外**（§3）。");
         write("");
-        write("| K | 籠城の踏破率 | 貪欲の踏破率 | 差 | 籠城の作戦T 中央値 |");
-        write("|--:|--:|--:|--:|--:|");
-        foreach (int k in Ks)
+        write($"| 方針 | 量 | 第174期 | いま | 差 | 線 ±{Phase174Tolerance:F1} |");
+        write("|---|---|--:|--:|--:|:-:|");
+        bool ok = true;
+        void Row(string pol, string name, double want, double got)
         {
-            Stat t = table[(k, Policy.Turtle)], g = table[(k, Policy.Greedy)];
-            write($"| {k} | **{t.Full:F1}%** | {g.Full:F1}% | {t.Full - g.Full:+0.0;-0.0;0.0}pt "
-                + $"| {t.TurnMedian:F1} |");
+            double d = got - want;
+            bool hit = Math.Abs(d) <= Phase174Tolerance;
+            ok &= hit;
+            write($"| {pol} | {name} | {want:F1} | **{got:F1}** | {d:+0.0;-0.0;0.0} | {(hit ? "**○**" : "×")} |");
         }
+        Stat g174 = table[(true, Policy.Greedy)], f174 = table[(true, Policy.Full)];
+        Row("貪欲", "踏破率", Phase174Greedy.Full, g174.Full);
+        Row("貪欲", "迎撃が起きた率", Phase174Greedy.Intercept, g174.Intercept);
+        Row("貪欲", "陥落率", Phase174Greedy.Fall, g174.Fall);
+        Row("貪欲", "作戦T 中央値", Phase174Greedy.Turn, g174.TurnMedian);
+        Row("全快", "踏破率", Phase174Full.Full, f174.Full);
+        Row("全快", "迎撃が起きた率", Phase174Full.Intercept, f174.Intercept);
+        Row("全快", "陥落率", Phase174Full.Fall, f174.Fall);
+        Row("全快", "作戦T 中央値", Phase174Full.Turn, f174.TurnMedian);
+        write("");
+        write(ok ? "**(b) ○ —— 迎撃の回復を戻すと第174期と一致する。行き先の層は盤面を1ビットも動かしていない。**"
+                 : "**(b) × —— 第174期と食い違う量がある。**");
         write("");
 
-        write(adopted > 0
-            ? $"**本丸 ○ —— 線1〜3 が同時に通る K のうち最も小さいのは K = {adopted}。既定にする。**"
-            : "**本丸 × —— どの K でも線1〜3 は同時に通らない。段B2 へは進まない。**");
-        return adopted > 0;
+        bool all = line1 && line2 && ok;
+        write(all
+            ? "**本丸 ○ —— 線1・線2 が通り、対照も一致した。**"
+            : "**本丸 × —— 上の × を読むこと。**");
+        return all;
     }
 }
