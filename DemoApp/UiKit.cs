@@ -234,6 +234,7 @@ public static class UiKit
         "gan" => 0.0384f,
         "yomi" => 0.0286f,
         "hota" => 0.0120f,
+        "shio" => 0.0182f,
         "basa" => 0.0540f,
         "nara" => 0.1400f,
         "nel" => 0.0378f,
