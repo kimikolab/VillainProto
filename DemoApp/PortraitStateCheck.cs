@@ -11,6 +11,17 @@ public partial class PortraitStateCheck : Node3D
         try
         {
             var atlas = UiKit.LoadTexture("res://assets/outcast_atlas.png");
+            foreach (string key in new[] { "axeman", "accuser" })
+            {
+                Require(UiKit.HasCustomBattlePortrait(key) && !UiKit.HasCustomPortrait(key), "戦闘専用画像の検証対象");
+                var enemy = MakePawn(atlas, 100, BattleContext.EnemyTeam, 0, key);
+                var sprite = enemy.GetChildren().OfType<Sprite3D>().Single();
+                var material = (ShaderMaterial)sprite.MaterialOverride;
+                Require(material.GetShaderParameter("portrait_tint").AsColor() == Colors.White, "敵の戦闘立ち絵に着色しない");
+                Require(UiKit.PortraitTint(key, true) == UiKit.Tint(key, true), "編成用の仮画像は色分けを維持");
+                enemy.QueueFree();
+            }
+            Require(UiKit.BattlePortraitTint("__missing_portrait__", true) == UiKit.Tint("__missing_portrait__", true), "戦闘用の仮画像は色分けを維持");
             var normal = UiKit.BattlePortrait(atlas, "hota");
             var burning = UiKit.BattlePortrait(atlas, "hota", true);
             Require(!UiKit.Portrait(atlas, "hota").GetImage().GetData().SequenceEqual(normal.GetImage().GetData()), "選択用と戦闘用の画像を分離");
@@ -60,11 +71,11 @@ public partial class PortraitStateCheck : Node3D
         }
     }
 
-    private BattlePawn3D MakePawn(Texture2D atlas, int id, int team, float x)
+    private BattlePawn3D MakePawn(Texture2D atlas, int id, int team, float x, string key = "hota")
     {
         var pawn = new BattlePawn3D();
         AddChild(pawn);
-        pawn.Configure(new DemoOpening(id, team, "hota", "ホタ", 0, 78, 78, 6, AttackPattern.Single, true), atlas);
+        pawn.Configure(new DemoOpening(id, team, key, key, 0, 78, 78, 6, AttackPattern.Single, true), atlas);
         pawn.Position = new Vector3(x, 0, 0);
         return pawn;
     }

@@ -137,7 +137,7 @@ public partial class BattlePawn3D : Node3D
         Advances = opening.Advances;
         UnitName = opening.Name;
         _phase = (UiKit.StableHash(opening.UnitId) % 1000) * 0.0061f;
-        _baseTint = UiKit.PortraitTint(opening.UnitId, opening.Team == BattleContext.EnemyTeam)
+        _baseTint = UiKit.BattlePortraitTint(opening.UnitId, opening.Team == BattleContext.EnemyTeam)
             .Lerp(Colors.White, 0.42f);
 
         _shadow = new MeshInstance3D
@@ -268,7 +268,8 @@ void fragment() {
     vec3 expected_bg = mix(top_bg, bottom_bg, UV.y);
     float separation = distance(c.rgb, expected_bg);
     float silhouette = smoothstep(0.075, 0.19, separation);
-    float corner_alpha = max(max(top_left.a, top_right.a), max(bottom_left.a, bottom_right.a));
+    // 隅の1点に靴や武器がかかっても、透明な隅があれば素材のアルファを使う。
+    float corner_alpha = min(min(top_left.a, top_right.a), min(bottom_left.a, bottom_right.a));
     float has_alpha_background = 1.0 - step(0.08, corner_alpha);
     float mask = mix(silhouette, 1.0, has_alpha_background);
     // 緑単色で用意した素材は、輪郭の混色も抜く。既存の透過・灰色背景には適用しない。

@@ -1,0 +1,11 @@
+# 戦斧兵 v3 — 既存絵に合わせたセル塗り
+
+生成方法: Codex 組み込み ImageGen。
+編集元: `axeman-idle-right-v2.png`。
+画風参照: `DemoApp/assets/portraits/battle/basa_idle_right.png` と `gan_idle_right.png`。
+出力: `axeman-idle-right-v3.png`。1024×1536、背景透過PNG。
+ワイルドな顔立ちを残し、肌・ひげ・装備の細かい質感を整理。新兵は変更なし。
+
+```text
+Use case: style-transfer. Image 1 is the axeman edit target and defines his design, pose, proportions and equipment. Images 2 and 3 are the authoritative existing GAME ART STYLE references only (harpy and tiger officer). Redraw image 1 to sit seamlessly in the same roster as images 2 and 3: clean Japanese anime game illustration with precise smooth dark outlines, clean flat local colors and large deliberate angular cel-shaded planes, restrained soft transitions only as present in references. Remove the current realistic painterly texture across skin, metal, leather and fabric. No pores, sweat, gritty speckles, dense stubble dots, photographic reflections, intricate veins or tiny anatomical shading. Render muscles through simple large shapes and minimal lines. Render steel with clean broad graphic highlights and only sparse wear, cloth with few clear folds and flat color areas. Face is a stylized wild young-adult anime bruiser: strong broad angular jaw, thick bold eyebrows, fierce clearly drawn anime eyes, blunt simple nose, impatient bared-teeth scowl, tousled swept-back short dark-brown hair in graphic locks, and a SMALL simplified chin-stubble accent expressed with a few deliberate strokes instead of realistic beard texture. Retain distinct rugged facial archetype, NOT a slim pretty-boy recruit face. He remains a young man, not middle aged. Preserve muscular large build, same outfit and desaturated navy/off-white/brown/steel colors, huge two-handed axe, exact right-facing battle-ready pose, hand placements and entire-body framing. No tiger features, feathers, wings, tails, or costume elements from style references. One human male axeman only. Vertical 1024x1536, full body and whole axe within safe margins. Genuinely transparent RGBA alpha backdrop and all empty gaps. No background, vignette, gradient, floor, ground shadow, text, logo or watermark. The change in rendering must be obvious: prioritize matching the clean illustrated surfaces and graphic shadow shapes of images 2 and 3 over preserving image 1's gritty surface treatment.
+```

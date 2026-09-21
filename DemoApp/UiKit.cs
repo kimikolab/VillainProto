@@ -169,6 +169,10 @@ public static class UiKit
     public static Color PortraitTint(string key, bool enemy = false)
         => HasCustomPortrait(key) ? Colors.White : Tint(key, enemy);
 
+    // 戦闘専用の立ち絵も原色で表示する。編成用の仮画像の色分けとは分ける。
+    public static Color BattlePortraitTint(string key, bool enemy = false)
+        => HasCustomBattlePortrait(key) ? Colors.White : PortraitTint(key, enemy);
+
     /// <summary>
     /// 生成立ち絵の相対体格。元画像のピクセル数ではなく、この高さで戦場上の見た目を揃える。
     /// </summary>
@@ -197,6 +201,11 @@ public static class UiKit
         "nara" => 2.50f,
         "nel" => 2.50f,
         "utsu" => 2.50f,
+        "axeman" => 2.65f,
+        "knight" => 2.65f,
+        "warden" => 3.10f,
+        "yoker" => 3.10f,
+        "axeman_g" => 2.65f,
         _ => 2.25f,
     };
 
@@ -229,6 +238,25 @@ public static class UiKit
         "nara" => 0.1400f,
         "nel" => 0.0378f,
         "utsu" => 0.0436f,
+        "recruit" => 0.0260f,
+        "axeman" => 0.0326f,
+        "knight_g" => 0.0150f,
+        "husher" => 0.0189f,
+        "chaplain_g" => 0.0208f,
+        "archer_g" => 0.0163f,
+        "knight" => 0.0117f,
+        "hero" => 0.0137f,
+        "droughter" => 0.0052f,
+        "archer" => 0.0085f,
+        "warden" => 0.0241f,
+        "yoker" => 0.0221f,
+        "chanter" => 0.0143f,
+        "priest" => 0.0085f,
+        "axeman_g" => 0.0254f,
+        "hero_v" => 0.0078f,
+        "accuser" => 0.0072f,
+        "seer" => 0.0091f,
+        "lancer" => 0.0195f,
         _ => 0.0f,
     };
 
@@ -250,7 +278,8 @@ void fragment() {
     vec3 bottom_bg = mix(bottom_left.rgb, bottom_right.rgb, UV.x);
     vec3 expected_bg = mix(top_bg, bottom_bg, UV.y);
     float silhouette = smoothstep(0.075, 0.19, distance(c.rgb, expected_bg));
-    float corner_alpha = max(max(top_left.a, top_right.a), max(bottom_left.a, bottom_right.a));
+    // 隅の1点に靴や武器がかかっても、透明な隅があれば素材のアルファを使う。
+    float corner_alpha = min(min(top_left.a, top_right.a), min(bottom_left.a, bottom_right.a));
     float has_alpha_background = 1.0 - step(0.08, corner_alpha);
     float mask = mix(silhouette, 1.0, has_alpha_background);
     // 緑単色の素材だけ、輪郭に混じった緑も除く。
