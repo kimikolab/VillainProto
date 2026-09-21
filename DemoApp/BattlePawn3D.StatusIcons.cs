@@ -1,4 +1,5 @@
 using Godot;
+using BattleCore;
 using System.Collections.Generic;
 
 public partial class BattlePawn3D
@@ -8,6 +9,7 @@ public partial class BattlePawn3D
     internal int StatusIconCount => _statusIcons.ActiveCount;
     internal int StatusIconFlashCount => _statusIcons.FlashCount;
     internal bool HasStatusIcon(string key) => _statusIcons.Has(key);
+    internal bool HasConfusionEffect => _confusion.Visible;
     private void BuildStatusIcons()
     {
         _statusIcons = new StatusIconRow3D { Position = new Vector3(0, _hpBack.Position.Y - 0.23f, 0.06f) };
@@ -22,9 +24,14 @@ public partial class BattlePawn3D
     {
         if (!_alive) return;
         foreach (string key in StatusIconArt.Keys) _statusIcons.Set(key, _statusSnapshot.Contains(key));
+        _confusion.SetActive(!_victory && _statusSnapshot.Contains(StatusKeys.Confused));
     }
     public void SetStatusIcon(string keyOrLabel, bool active)
     {
-        if (_alive && StatusIconArt.KeyOf(keyOrLabel) is { } key) _statusIcons.Set(key, active);
+        if (_alive && StatusIconArt.KeyOf(keyOrLabel) is { } key)
+        {
+            _statusIcons.Set(key, active);
+            if (key == StatusKeys.Confused) _confusion.SetActive(active && !_victory);
+        }
     }
 }

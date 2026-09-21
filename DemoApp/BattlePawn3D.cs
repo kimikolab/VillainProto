@@ -44,6 +44,7 @@ public partial class BattlePawn3D : Node3D
     private Vector3? _guardPosition;
     private Node3D _fire = null!;
     private PoisonEffect3D _poison = null!;
+    private ConfusionEffect3D _confusion = null!;
     private StatusEffects3D _statusEffects = null!;
     public double AnimationSpeed { get; set; } = 1;
     public Vector3 RestPosition => _guardPosition ?? _home;
@@ -237,6 +238,9 @@ void fragment() {
         bool hasCustomPortrait = UiKit.HasCustomBattlePortrait(opening.UnitId)
             || UiKit.HasCustomPortrait(opening.UnitId);
         _portraitHeight = UiKit.PortraitWorldHeight(opening.UnitId);
+        _confusion = new ConfusionEffect3D();
+        _confusion.Configure(_portraitHeight, _phase);
+        AddChild(_confusion);
         _statusEffects = new StatusEffects3D();
         _statusEffects.Configure(_portraitHeight, _phase);
         AddChild(_statusEffects);
@@ -506,6 +510,7 @@ void fragment() {
         ResetStaggerPose();
         SetStatusEffects(0,0,0);
         _poison.Clear();
+        _confusion.SetActive(false);
         SetBurning(false);
         _guardPosition = null;
         _ring.Visible = false;
@@ -568,6 +573,7 @@ void fragment() {
         if (!_alive || Team != BattleContext.PlayerTeam) return;
         CancelCharge();
         _victory = true;
+        _confusion.SetActive(false);
         _statusIcons.Clear();
         ResetStaggerPose();
         SetStatusEffects(0,0,0);

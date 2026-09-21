@@ -635,6 +635,10 @@ public partial class BattlefieldView3D : Control
 
     public void PlayAttackChangeSound(int change) => _attackAudio.PlayAttackChange(change);
 
+    public void PlayStatusGainSound(string key) => _attackAudio.PlayStatusGain(key);
+
+    public void PlayStatusDamageSound(string? label) => _attackAudio.PlayStatusDamage(label);
+
     public void PlayHitSound(BattlePawn3D? target)
     {
         if (target?.UnitId == "kado") _attackAudio.PlayKadoHit();

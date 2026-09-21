@@ -119,6 +119,7 @@ public partial class StagingEffectCheck : Control
                     StatusKeys.Confused, StatusKeys.Wound, StatusKeys.Marked, StatusKeys.Armor };
                 foreach (string key in common) target.SetStatusIcon(key, true);
                 Require(target.StatusIconCount == 8, "8状態の同時表示");
+                Require(target.HasConfusionEffect, "混乱付与でヒヨコを表示");
                 await Wait(0.45);
                 await Capture("status-eight");
                 target.BeginStatusSnapshot();
@@ -130,19 +131,27 @@ public partial class StagingEffectCheck : Control
                 target.ReadStatusSnapshot(StatusKeys.LabelOf(StatusKeys.Poison), 3);
                 target.CommitStatusSnapshot();
                 Require(target.StatusIconCount == 1 && target.HasStatusIcon(StatusKeys.Poison), "写しにない状態を解除");
+                Require(!target.HasConfusionEffect, "混乱の残量消失でヒヨコを解除");
                 await Wait(0.1);
                 await Capture("status-clear");
                 await Wait(0.4);
                 target.SetStatusIcon(StatusKeys.Stagger, true);
                 target.SetStatusIcon(StatusKeys.Stagger, false);
                 Require(!target.HasStatusIcon(StatusKeys.Stagger), "転倒の即時消費");
+                target.SetStatusIcon(StatusKeys.Confused, true);
+                await Wait(0.4);
+                await Capture("confused");
+                target.SetStatusIcon(StatusKeys.Confused, false);
+                Require(!target.HasConfusionEffect, "混乱消費でヒヨコを解除");
                 foreach (string key in StatusIconArt.Keys) target.SetStatusIcon(key, true);
                 await Wait(0.4);
                 await Capture("status-all");
                 target.AnimateDeath();
                 Require(target.StatusIconCount == 0, "死亡でアイコンを破棄");
+                Require(!target.HasConfusionEffect, "死亡でヒヨコを解除");
                 target.AnimateRevive();
                 Require(target.StatusIconCount == 0, "蘇生で古い状態を復元しない");
+                Require(!target.HasConfusionEffect, "蘇生で混乱演出を復元しない");
                 await Wait(0.5);
             }
             if (mode == "parry-audio")

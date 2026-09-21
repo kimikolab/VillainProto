@@ -1205,6 +1205,7 @@ public partial class Main : Control
                 Color fallTint = StatusColor(StatusKeys.LabelOf(StatusKeys.Stagger));
                 if (e.Text == StaggerLabels.Fell)
                 {
+                    _battleField.PlayStatusGainSound(StatusKeys.Stagger);
                     _battleField.StaggerFall(target, fallTint);
                     if (e.ActorId is not null) _battleField.Link(actor, target, fallTint, "引きずり出した");
                     AppendLog($"  [color=#{fallTint.ToHtml(false)}][b]{NameOf(e.TargetId)} は前へ引きずり出されて転んだ[/b][/color]"
@@ -1248,6 +1249,7 @@ public partial class Main : Control
                 Color madTint = StatusColor(StatusKeys.LabelOf(StatusKeys.Confused));
                 if (e.Text == ConfusedLabels.Lost)
                 {
+                    _battleField.PlayStatusGainSound(StatusKeys.Confused);
                     if (e.ActorId is not null) _battleField.Link(actor, target, madTint, "正気を奪った");
                     AppendLog($"  [color=#{madTint.ToHtml(false)}][b]{NameOf(e.TargetId)} は正気を失った[/b][/color]"
                               + $"  [color=#a9b3a8]（次の攻撃を自軍へ向ける）[/color]{WriterSuffix(e.ActorId, e.TargetId)}");
@@ -1354,6 +1356,7 @@ public partial class Main : Control
             case BattleEventKind.StatusGain:
                 if (target is not null && e.Text is { } statusKey)
                 {
+                    if (e.Amount > 0) _battleField.PlayStatusGainSound(statusKey);
                     target.SetStatusIcon(statusKey, e.Amount > 0);
                     if (statusKey == StatusKeys.Burn) target.SetBurning(e.Amount > 0);
                     if (statusKey == StatusKeys.Poison && e.Amount > 0) target.SetPoisoned(true);
@@ -1447,6 +1450,7 @@ public partial class Main : Control
         bool poison = _statusCauseByDamageIndex.TryGetValue(eventIndex, out string? status)
             && status == StatusKeys.LabelOf(StatusKeys.Poison);
         target?.AnimateHit(poison);
+        if (e.Amount > 0) _battleField.PlayStatusDamageSound(status);
         // 毒・燃焼などの継続ダメージや自傷では金属の被弾音を鳴らさない。
         if (e.Amount > 0 && actor is not null && actor != target
             && !_statusCauseByDamageIndex.ContainsKey(eventIndex))

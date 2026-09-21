@@ -52,6 +52,12 @@ public partial class BattleAttackAudio : Node
     private static readonly string[] PhysicalChargeRelease = { "res://assets/audio/se/charge_physical_release.mp3" };
     private static readonly string[] Summon = { "res://assets/audio/se/summon.mp3" };
     private static readonly string[] Revive = { "res://assets/audio/se/revive.mp3" };
+    private static readonly string[] BurnGain = { "res://assets/audio/se/burn_gain.mp3" };
+    private static readonly string[] BurnDamage = { "res://assets/audio/se/burn_damage.mp3" };
+    private static readonly string[] PoisonGain = { "res://assets/audio/se/poison_gain.mp3" };
+    private static readonly string[] PoisonDamage = { "res://assets/audio/se/poison_damage.mp3" };
+    private static readonly string[] StaggerGain = { "res://assets/audio/se/stagger_gain.mp3" };
+    private static readonly string[] ConfusedGain = { "res://assets/audio/se/confused_gain.mp3" };
     private static readonly string[] Yoke = { "res://assets/audio/se/rule_yoke.mp3" };
     private static readonly string[] Drought = { "res://assets/audio/se/rule_drought.mp3" };
     private static readonly string[] HushBlock = { "res://assets/audio/se/hush_block.mp3" };
@@ -121,6 +127,12 @@ public partial class BattleAttackAudio : Node
         LoadSound(PhysicalChargeRelease[0]);
         LoadSound(Summon[0]);
         LoadSound(Revive[0]);
+        LoadSound(BurnGain[0]);
+        LoadSound(BurnDamage[0]);
+        LoadSound(PoisonGain[0]);
+        LoadSound(PoisonDamage[0]);
+        LoadSound(StaggerGain[0]);
+        LoadSound(ConfusedGain[0]);
         LoadSound(Yoke[0]);
         LoadSound(Drought[0]);
         LoadSound(HushBlock[0]);
@@ -186,6 +198,22 @@ public partial class BattleAttackAudio : Node
     }
     public void PlaySummon() => PlayVariation(Summon);
     public void PlayRevive() => PlayVariation(Revive);
+    public void PlayStatusGain(string key)
+    {
+        switch (key)
+        {
+            case StatusKeys.Burn: PlayVariation(BurnGain); break;
+            case StatusKeys.Poison: PlayVariation(PoisonGain); break;
+            case StatusKeys.Stagger: PlayVariation(StaggerGain); break;
+            case StatusKeys.Confused: PlayVariation(ConfusedGain); break;
+        }
+    }
+
+    public void PlayStatusDamage(string? label)
+    {
+        if (label == StatusKeys.LabelOf(StatusKeys.Burn)) PlayVariation(BurnDamage);
+        else if (label == StatusKeys.LabelOf(StatusKeys.Poison)) PlayVariation(PoisonDamage);
+    }
     public void PlayYoke()
     {
         // 頻発する通常SEに埋もれやすいため、軛だけ専用枠で通常より3dB前へ出す。

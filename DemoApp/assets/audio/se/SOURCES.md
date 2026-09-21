@@ -147,3 +147,19 @@
 渇きは通常SEと同じ4音枠・-16 dB。
 軛・渇きは `--effect=yoke` / `--effect=drought`、
 粛は `SealEffectCheck.tscn` で確認可能。
+
+## 状態異常音
+
+ユーザー指定の次のファイルを無加工でコピー。通常SEと同じ4音枠・-13 dBで再生する。
+
+| アプリ内ファイル | 元ファイル | タイミング |
+|---|---|---|
+| burn_gain.mp3 | D:/Assets/SE/Springin/着火1.mp3 | 燃焼付与時 |
+| burn_damage.mp3 | D:/Assets/SE/Springin/着火2.mp3 | 燃焼ダメージ表示時 |
+| poison_gain.mp3 | D:/Assets/SE/効果音ラボ/戦闘/毒魔法1.mp3 | 毒付与時 |
+| poison_damage.mp3 | D:/Assets/SE/効果音ラボ/戦闘/毒魔法2.mp3 | 毒ダメージ表示時 |
+| stagger_gain.mp3 | D:/Assets/SE/効果音ラボ/演出/足首がグキッ.mp3 | 転倒付与時 |
+| confused_gain.mp3 | D:/Assets/SE/効果音ラボ/演出/ヒヨコが頭の上を回るmp3.mp3 | 混乱付与時 |
+
+残量の写し・解除・転倒の手番喪失・混乱の攻撃時には付与音を鳴らさない。
+燃焼・毒のダメージ音は既存の状態効果とダメージの対応表を使い、正のダメージにのみ鳴らす。
