@@ -91,6 +91,7 @@ public partial class Main : Control
     private Button _pause = null!;
     private Button _back = null!;
     private Button _replay = null!;
+    private Button _battleLogToggle = null!;
     private Button _campaignSetup = null!;
 
     /// <summary>
@@ -594,6 +595,9 @@ public partial class Main : Control
         _replay = UiKit.ActionButton("最初から", UiKit.Gold);
         _replay.Pressed += ReplayBattle;
         _battleActions.AddChild(_replay);
+        _battleLogToggle = UiKit.ActionButton("ログを表示");
+        _battleLogToggle.Pressed += ToggleBattleLog;
+        _battleActions.AddChild(_battleLogToggle);
         _campaignBattle = UiKit.ActionButton("作戦マップへ", UiKit.Player);
         _campaignBattle.Pressed += GoToCampaign;
         _battleActions.AddChild(_campaignBattle);
@@ -961,7 +965,7 @@ public partial class Main : Control
         _battleMode = true;
         _rosterPanel.Visible = false;
         _detailPanel.Visible = false;
-        _battlePanel.Visible = true;
+        SetBattleLogVisible(false);
         _setupActions.Visible = false;
         _battleActions.Visible = true;
         _stagePicker.Disabled = true;
@@ -1897,6 +1901,7 @@ public partial class Main : Control
         _shownBeat = Beat.TurnOpen;
         _shownOwner = -1;
         _battleLog.Clear();
+        SetBattleLogVisible(false);
         _battleField.BeginBattle(_battleOpening, EnemyCatalog.Stages[_stagePicker.Selected].Name, _stagePicker.Selected);
         _battleMusic.PlayWave(_stagePicker.Selected);
         _partyBar.Begin(_battleOpening);
@@ -1932,6 +1937,14 @@ public partial class Main : Control
         UpdateStageHeader();
         if (_inspected is { } def) ShowUnitDetails(def); else ShowEnemyDetails();
         Notice("編成と配置を変更できます");
+    }
+
+    private void ToggleBattleLog() => SetBattleLogVisible(!_battlePanel.Visible);
+
+    private void SetBattleLogVisible(bool visible)
+    {
+        _battlePanel.Visible = _battleMode && visible;
+        _battleLogToggle.Text = visible ? "ログを隠す" : "ログを表示";
     }
 
     /// <summary>
