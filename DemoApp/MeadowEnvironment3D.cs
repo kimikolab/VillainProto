@@ -18,7 +18,9 @@ public partial class MeadowEnvironment3D : Node3D
     private static float Height(float x, float z)
     {
         float edge = Mathf.SmoothStep(0, 1, Mathf.Clamp(Mathf.Max(Mathf.Abs(x) - 7, Mathf.Abs(z) - 4.8f) / 6, 0, 1));
-        return edge * (1.1f + Mathf.Sin(x * 0.23f + z * 0.14f) * 0.8f
+        // 観戦側は平地へ開く。水平視点のカメラと戦場の間に丘を作らない。
+        float viewingSide = 1 - Mathf.SmoothStep(4.8f, 9f, z);
+        return viewingSide * edge * (1.1f + Mathf.Sin(x * 0.23f + z * 0.14f) * 0.8f
             + Mathf.Cos(z * 0.31f - x * 0.11f) * 0.6f);
     }
 

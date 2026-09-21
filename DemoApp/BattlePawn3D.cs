@@ -298,7 +298,7 @@ void fragment() {
         AddChild(_sprite);
 
         _hpBack = MakeBillboardQuad(new Vector2(1.68f, 0.15f), new Color(0.015f, 0.025f, 0.02f, 0.92f), 10);
-        _hpBack.Position = new Vector3(0, hpY, 0.02f);
+        _hpBack.Position = new Vector3(0, hpY + 0.55f, 0.02f);
         AddChild(_hpBack);
         _hpFill = MakeBillboardQuad(new Vector2(1.58f, 0.095f), teamColor.Lightened(0.08f), 11);
         _hpFillMesh = (QuadMesh)_hpFill.Mesh;
@@ -306,7 +306,7 @@ void fragment() {
         AddChild(_hpFill);
 
         _name = MakeLabel(opening.Name, 22, Colors.White, 0.0063f);
-        _name.Position = new Vector3(0, nameY, 0);
+        _name.Position = new Vector3(0, nameY + 0.55f, 0);
         AddChild(_name);
         _stats = MakeLabel("", 17, Color.FromHtml("#e2e7dd"), 0.0056f);
         _stats.Position = new Vector3(0, statsY, 0);
@@ -329,6 +329,7 @@ void fragment() {
 
         BuildRuleMarks(opening);
         BuildAttackChange();
+        BuildStatusIcons();
 
         SetHp(Hp);
         SetAttack(AttackValue, Pattern);
@@ -382,7 +383,8 @@ void fragment() {
     public void SetStatus(string value)
     {
         _status.Text = value;
-        _status.Visible = !string.IsNullOrWhiteSpace(value);
+        // 文章は画面下の一覧に残す。駒の上にはアイコンだけを描く。
+        _status.Visible = false;
     }
 
     /// <summary>
@@ -493,7 +495,11 @@ void fragment() {
     public void AnimateDeath()
     {
         if (!_alive) return;
+        CancelCharge();
+        ShowLifeTransition(LifeTransition3D.Kind.Death);
         ClearAuras();
+        _statusIcons.Clear();
+        _statusSnapshot.Clear();
         _alive = false;
         ResetStaggerPose();
         SetStatusEffects(0,0,0);
@@ -520,6 +526,7 @@ void fragment() {
 
     public void AnimateRevive()
     {
+        ShowLifeTransition(LifeTransition3D.Kind.Revive);
         _motion?.Kill();
         ResetStaggerPose();
         _guardPosition = null;
@@ -527,6 +534,7 @@ void fragment() {
         Visible = true;
         Position = _home + Vector3.Down * 0.45f;
         Rotation = Vector3.Zero;
+        Scale = Vector3.One;
         _sprite.Modulate = new Color(1, 1, 1, 0.12f);
         _ring.Visible = true;
         _name.Visible = true;
@@ -544,9 +552,10 @@ void fragment() {
 
     public void AnimateAppear()
     {
+        ShowLifeTransition(LifeTransition3D.Kind.Summon);
         Scale = new Vector3(0.2f, 0.2f, 0.2f);
         _sprite.Modulate = new Color(1, 1, 1, 0);
-        var tween = CreateTween().SetParallel();
+        var tween = BeginMotion().SetParallel();
         tween.TweenProperty(this, "scale", Vector3.One, 0.35)
             .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
         tween.TweenProperty(_sprite, "modulate:a", 1.0f, 0.24);
@@ -555,7 +564,9 @@ void fragment() {
     public void AnimateVictory()
     {
         if (!_alive || Team != BattleContext.PlayerTeam) return;
+        CancelCharge();
         _victory = true;
+        _statusIcons.Clear();
         ResetStaggerPose();
         SetStatusEffects(0,0,0);
         _poison.Clear();

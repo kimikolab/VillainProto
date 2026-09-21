@@ -158,22 +158,7 @@ public partial class BattlefieldView3D : Control
         _headline = OverlayText("草原遭遇戦", 24, Colors.White, new Vector2(18, 27));
         _subline = OverlayText("3D地形上で BattleEvent を再生", 11, UiKit.Muted, new Vector2(20, 62));
 
-        var depthBadge = new PanelContainer
-        {
-            AnchorLeft = 1,
-            AnchorRight = 1,
-            OffsetLeft = -194,
-            OffsetTop = 15,
-            OffsetRight = -18,
-            OffsetBottom = 61,
-            MouseFilter = MouseFilterEnum.Ignore,
-        };
-        depthBadge.AddThemeStyleboxOverride("panel", UiKit.Box(new Color(0.03f, 0.07f, 0.055f, 0.9f), UiKit.Player, 1, 18));
-        var depthText = UiKit.Text("3D FIELD  ×  2D UNITS", 10, UiKit.Player.Lightened(0.18f));
-        depthText.HorizontalAlignment = HorizontalAlignment.Center;
-        depthText.VerticalAlignment = VerticalAlignment.Center;
-        depthBadge.AddChild(depthText);
-        AddChild(depthBadge);
+        BuildCameraControls();
 
         _centerBanner = UiKit.Text("", 36, Colors.White);
         _centerBanner.SetAnchorsPreset(LayoutPreset.FullRect);
@@ -191,6 +176,7 @@ public partial class BattlefieldView3D : Control
 
         BuildSuperFlash();
         BuildBonusAttackCutIn();
+        BuildTurnLabel();
     }
 
     /// <summary>
@@ -304,6 +290,7 @@ public partial class BattlefieldView3D : Control
         ResetSuperFlash();
         ResetSeals();
         ResetPopups();
+        ResetTurnLabel();
         foreach (BattlePawn3D pawn in _pawns.Values) pawn.QueueFree();
         _pawns.Clear();
         foreach (Node child in _fxRoot.GetChildren()) child.QueueFree();
@@ -313,6 +300,7 @@ public partial class BattlefieldView3D : Control
         _bonusAttackCutIn.Visible = false;
         _headline.Text = $"{stageName} — {(_fortress ? "城門前の攻防" : "草原遭遇戦")}";
         _subline.Text = "Space: 一時停止   1–4: 再生速度   T: 戦績   細い線＝誰の仕業か   ▶＝手番の主 / ▷＝ターン頭 / ⚡＝手番の外";
+        _cameraMotion?.Kill();
         _camera.Position = _cameraHome;
         _camera.Fov = CameraFov;
         _camera.LookAt(CameraFocus, Vector3.Up);
@@ -330,8 +318,13 @@ public partial class BattlefieldView3D : Control
 
     public void SetTurn(int turn)
     {
+        AnnounceTurn(turn);
         _eyebrow.Text = $"BATTLE 2.5D  /  TURN {turn}";
-        foreach (BattlePawn3D pawn in _pawns.Values) pawn.SetStatus("");
+        foreach (BattlePawn3D pawn in _pawns.Values)
+        {
+            pawn.SetStatus("");
+            pawn.BeginStatusSnapshot();
+        }
     }
 
     // =====================================================================================
@@ -401,7 +394,9 @@ public partial class BattlefieldView3D : Control
         actorPulse.TweenProperty(actor, "scale", Vector3.One, Time(0.18))
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
 
-        var cameraTween = _camera.CreateTween();
+        _cameraMotion?.Kill();
+        _camera.Position = _cameraHome;
+        var cameraTween = _cameraMotion = _camera.CreateTween();
         cameraTween.TweenProperty(_camera, "fov", CameraFov - 4.0f, Time(0.09))
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
         cameraTween.TweenInterval(Time(0.13));
@@ -548,6 +543,7 @@ public partial class BattlefieldView3D : Control
         // Advances は表示専用。踏み込む駒だけが標的の手前まで移動し、
         // 到着後に攻撃エフェクトを出してから元の席へ戻る。
         await from.AdvanceToAttack(to.RestPosition);
+        if (!reaction) from.ReleaseCharge();
         CameraPunch((from.GlobalPosition + to.GlobalPosition) * 0.5f, pattern);
 
         switch (pattern)
@@ -585,7 +581,7 @@ public partial class BattlefieldView3D : Control
                 }
                 break;
             default:
-                MakeBeam(from.FxPoint, to.FxPoint, color, reaction ? 0.15f : 0.11f, 0.34);
+                MakeSingleSlash(from, to, color);
                 break;
         }
 
@@ -943,7 +939,8 @@ public partial class BattlefieldView3D : Control
     {
         float strength = pattern switch { AttackPattern.All => 1.15f, AttackPattern.Pierce => 0.9f, AttackPattern.Sweep => 0.72f, _ => 0.45f };
         Vector3 nudge = (focus - new Vector3(0, 0, 0)) * 0.025f * strength;
-        var tween = _camera.CreateTween();
+        _cameraMotion?.Kill();
+        var tween = _cameraMotion = _camera.CreateTween();
         tween.TweenProperty(_camera, "position", _cameraHome + nudge + new Vector3(0, -0.20f * strength, -0.32f * strength), 0.09);
         tween.Parallel().TweenProperty(_camera, "fov", CameraFov - 2.0f * strength, 0.09);
         tween.TweenProperty(_camera, "position", _cameraHome, 0.24)

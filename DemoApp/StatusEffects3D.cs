@@ -70,7 +70,7 @@ void fragment() {" + fragment + "}" };
         _mark.Visible = marked > 0;
         _stun.Visible = stunned > 0;
         _shards.Visible = armor > 0;
-        // 欠片の数は装飾。正確な残量は既存の状態札が表示する。
+        // 欠片の数は装飾。正確な残量は画面下の状態一覧が表示する。
         SetProcess(_shards.Visible);
     }
 

@@ -22,12 +22,165 @@ public partial class StagingEffectCheck : Control
                 new(3, 1, "seal-check", "保持者", 2, 100, 100, 10, AttackPattern.Single, true,
                     [TraitId.Hush, TraitId.Drought, TraitId.Yoke]),
             ];
+            if (mode == "charge")
+            {
+                // ドルガの「のろま」は Charge ではない。実際に溜める詠唱兵の姿で確認する。
+                UnitDef caster = EnemyCatalog.Chanter;
+                openings[0] = new DemoOpening(1, BattleContext.PlayerTeam, caster.Id, caster.Name,
+                    0, caster.MaxHp, caster.MaxHp, caster.Attack, caster.Pattern, caster.Advances, caster.Traits);
+            }
             field.BeginBattle(openings, "演出確認", 1);
             var target = field.FindPawn(1)!;
             var healer = field.FindPawn(2)!;
             var holder = field.FindPawn(3)!;
             target.AnimationSpeed = healer.AnimationSpeed = holder.AnimationSpeed = 2;
             await Wait(0.3);
+            if (mode == "camera")
+            {
+                await Capture("camera-default");
+                field.SetCameraElevation(0);
+                await Wait(0.2);
+                await Capture("camera-side");
+                field.SetCameraYaw(-35);
+                field.SetCameraZoom(1.3f);
+                await Wait(0.2);
+                await Capture("camera-left-near");
+                field.SetCameraYaw(35);
+                field.SetCameraZoom(0.75f);
+                await Wait(0.2);
+                await Capture("camera-right-far");
+                var attack = field.Attack(target, holder, AttackPattern.Single, new[] { holder });
+                await Wait(0.12);
+                field.SetCameraElevation(10);
+                await attack;
+                await Wait(0.4);
+                await Capture("camera-low-after-attack");
+                field.BeginBattle(openings, "演出確認", 1);
+                Require(field.CameraElevation == 10, "再開後も視点を保持");
+                Require(field.CameraYaw == 35 && field.CameraZoom == 0.75f, "再開後も左右と距離を保持");
+                field.ResetCameraView();
+                Require(field.CameraYaw == 0 && field.CameraZoom == 1, "元の視点へ一括復帰");
+                field.SetCameraElevation(50);
+                await Wait(0.2);
+                await Capture("camera-high");
+                target = field.FindPawn(1)!;
+                healer = field.FindPawn(2)!;
+                holder = field.FindPawn(3)!;
+            }
+            if (mode == "turn")
+            {
+                field.SetTurn(1);
+                await Wait(0.25);
+                Require(field.TurnLabelVisible && field.TurnLabelText == "TURN  01", "ターン開始表示");
+                await Capture("turn-01");
+                await Wait(1.1);
+                Require(!field.TurnLabelVisible, "ラベルが消える");
+                field.SetTurn(2);
+                await Wait(0.08);
+                field.SetTurn(3);
+                await Wait(0.25);
+                Require(field.TurnLabelVisible && field.TurnLabelText == "TURN  03", "速い更新で最新ターンを表示");
+                await Capture("turn-03");
+                field.BeginBattle(openings, "演出確認", 1);
+                Require(!field.TurnLabelVisible, "再開で古いラベルを破棄");
+                field.SetTurn(1);
+                await Wait(0.3);
+                Require(field.TurnLabelVisible, "再開後の第1ターン");
+                target = field.FindPawn(1)!;
+                healer = field.FindPawn(2)!;
+                holder = field.FindPawn(3)!;
+            }
+            if (mode is "all" or "status")
+            {
+                Require(StatusKeys.All.Where(k => k != StatusKeys.IdleTurn).All(k => StatusIconArt.KeyOf(k) is not null), "状態一覧の網羅");
+                string[] common = { StatusKeys.Poison, StatusKeys.Burn, StatusKeys.Stun, StatusKeys.Stagger,
+                    StatusKeys.Confused, StatusKeys.Wound, StatusKeys.Marked, StatusKeys.Armor };
+                foreach (string key in common) target.SetStatusIcon(key, true);
+                Require(target.StatusIconCount == 8, "8状態の同時表示");
+                await Wait(0.45);
+                await Capture("status-eight");
+                target.BeginStatusSnapshot();
+                foreach (string key in common) target.ReadStatusSnapshot(StatusKeys.LabelOf(key), 2);
+                target.ReadStatusSnapshot(StatusKeys.LabelOf(StatusKeys.IdleTurn), 1);
+                target.CommitStatusSnapshot();
+                Require(target.StatusIconCount == 8 && target.StatusIconFlashCount == 0, "同じ写しでは点滅し直さない");
+                target.BeginStatusSnapshot();
+                target.ReadStatusSnapshot(StatusKeys.LabelOf(StatusKeys.Poison), 3);
+                target.CommitStatusSnapshot();
+                Require(target.StatusIconCount == 1 && target.HasStatusIcon(StatusKeys.Poison), "写しにない状態を解除");
+                await Wait(0.1);
+                await Capture("status-clear");
+                await Wait(0.4);
+                target.SetStatusIcon(StatusKeys.Stagger, true);
+                target.SetStatusIcon(StatusKeys.Stagger, false);
+                Require(!target.HasStatusIcon(StatusKeys.Stagger), "転倒の即時消費");
+                foreach (string key in StatusIconArt.Keys) target.SetStatusIcon(key, true);
+                await Wait(0.4);
+                await Capture("status-all");
+                target.AnimateDeath();
+                Require(target.StatusIconCount == 0, "死亡でアイコンを破棄");
+                target.AnimateRevive();
+                Require(target.StatusIconCount == 0, "蘇生で古い状態を復元しない");
+                await Wait(0.5);
+            }
+            if (mode is "all" or "life")
+            {
+                target.AnimateDeath();
+                await Wait(0.28);
+                await Capture("life-death");
+                await Wait(0.7);
+                target.AnimateRevive();
+                await Wait(0.25);
+                await Capture("life-revive");
+                await Wait(0.7);
+                field.AddSummon(new DemoOpening(99, 0, "nara", "召喚確認", 4, 20, 20, 5, AttackPattern.Single, false));
+                await Wait(0.3);
+                await Capture("life-summon");
+                var summoned = field.FindPawn(99)!;
+                summoned.AnimateDeath();
+                summoned.AnimateRevive();
+                await Wait(1);
+                Require(!summoned.GetChildren().OfType<LifeTransition3D>().Any(), "出現・死亡・蘇生の連続後に残らない");
+            }
+            if (mode is "all" or "slash")
+            {
+                await field.Attack(target, holder, AttackPattern.Single, new[] { holder });
+                await Wait(0.10);
+                await Capture("single-slash");
+                await Wait(0.6);
+                await field.Attack(holder, target, AttackPattern.Single, new[] { target });
+                await Wait(0.10);
+                await Capture("single-slash-return");
+                await Wait(0.6);
+            }
+            if (mode is "all" or "charge")
+            {
+                target.BeginCharge(250);
+                await Wait(0.4);
+                await Capture("charge-start");
+                field.SetTurn(2);
+                target.BeginCharge(300);
+                Require(target.GetChildren().OfType<ChargeAura3D>().Count() == 1, "再度の溜めは重ねない");
+                await Wait(0.7);
+                Require(target.IsCharging, "ターンをまたいで溜めを維持");
+                await Capture("charge-hold");
+                if (mode == "charge") await Wait(2.0);
+                await field.Attack(target, holder, AttackPattern.Single, new[] { holder }, reaction: true);
+                Require(target.IsCharging, "手番外では溜めを解放しない");
+                await field.Attack(target, holder, AttackPattern.All, new[] { holder });
+                Require(!target.IsCharging, "本来の攻撃で解放");
+                await Wait(0.12);
+                await Capture("charge-release");
+                await Wait(0.5);
+                Require(!target.GetChildren().OfType<ChargeAura3D>().Any(), "解放後の片付け");
+                target.BeginCharge(200);
+                target.AnimateDeath();
+                Require(!target.IsCharging, "死亡で溜めを解除");
+                target.AnimateRevive();
+                Require(!target.IsCharging, "蘇生で古い予兆が復活しない");
+                await Wait(0.5);
+                target.BeginCharge(200);
+            }
             if (mode is "all" or "marks")
             {
                 Require(holder.RuleMarkCount == 3, "複数の保持者印");
@@ -128,6 +281,8 @@ public partial class StagingEffectCheck : Control
             field.BeginBattle(openings, "再開確認", 1);
             await Wait(0.8);
             Require(field.PopupCount == 0, "再開で表示を破棄");
+            Require(field.Pawns.Values.All(p => !p.IsCharging), "再開で溜めを破棄");
+            Require(field.Pawns.Values.All(p => p.StatusIconCount == 0), "再開で状態を破棄");
             GD.Print("STAGING_EFFECT_CHECK_OK " + mode + " speed=2 restart death revive");
             GetTree().Quit();
         }

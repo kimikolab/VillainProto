@@ -60,7 +60,6 @@ public partial class Main : Control
     /// 溜めの予告を出したまま次の一撃を待っている駒（第125期 段3-b）。
     /// <c>Charge</c> は次の倍率・攻撃型・名前を全部持っているので、<b>台本だけで予告が書ける。</b>
     /// </summary>
-    private readonly HashSet<int> _forecastPending = new();
 
     /// <summary>
     /// 全体に落ちた一撃（第125期 段3-a）。<c>Highlight</c> の側でまとめて描いた <c>Damage</c> の添字。
@@ -1009,6 +1008,7 @@ public partial class Main : Control
         if (token != _playToken || !_battleMode) return;
         _playing = false;
         string verdict = _result.PlayerWon ? "VICTORY" : "DEFEAT";
+        foreach (var pawn in _battleField.Pawns.Values) pawn.CancelCharge();
         Color color = _result.PlayerWon ? UiKit.Heal : UiKit.Hurt;
         if (_result.PlayerWon) _battleField.ShowVictoryPortraits();
         _battleField.ShowBanner(verdict, color, 2.2);
@@ -1065,6 +1065,7 @@ public partial class Main : Control
             case BattleEventKind.StatusSnapshot:
                 if (target is not null && e.Text is { } key && e.Amount > 0)
                 {
+                    target.ReadStatusSnapshot(key, e.Amount);
                     if (key == StatusKeys.LabelOf(StatusKeys.Burn)) _burningSnapshot.Add(target.InstanceId);
                     var effects = _statusEffectSnapshot.GetValueOrDefault(target.InstanceId);
                     if (key == StatusKeys.LabelOf(StatusKeys.Marked)) effects.Marked = e.Amount;
@@ -1081,6 +1082,7 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.StatSnapshot:
+                target?.CommitStatusSnapshot();
                 // 各駒の状態一覧の直後。最後の燃焼ダメージを見せてから消火する。
                 if (target is not null) target.SetBurning(_burningSnapshot.Contains(target.InstanceId));
                 if (target is not null)
@@ -1096,14 +1098,7 @@ public partial class Main : Control
             {
                 AttackPattern pattern = e.Pattern ?? AttackPattern.Single;
                 IReadOnlyList<BattlePawn3D> impactTargets = FindAttackTargets(eventIndex, e);
-                // 第125期 3-b: 予告していた一撃が来た。**予告と着弾を1本に結ぶ**
-                // ——「ためている感」は溜めの側だけでは出ない（着弾が普通の一振りに見えたら同じこと）。
-                bool forecasted = e.ActorId is { } swingerId && _forecastPending.Remove(swingerId);
-                if (forecasted)
-                {
-                    actor?.SetForecast("");
-                    _battleField.ShowBanner($"{NameOf(e.ActorId)} — 溜めた一撃", UiKit.Gold, 0.72);
-                }
+                // 溜めの解放は踏み込み後の着弾で行う。手番外の攻撃では消費しない。
                 if (e.Reaction)
                     await _battleField.ShowBonusAttack(actor);
                 await _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire);
@@ -1168,11 +1163,11 @@ public partial class Main : Control
             // `ShufflerTrait`、消費は行動順ループの中）ので、2本とも出す。
             // `StatusSnapshot` には一度も載らない（写しは `OnTurnStart` より前に撮る）。
             case BattleEventKind.Stagger:
+                target?.SetStatusIcon(StatusKeys.Stagger, e.Text == StaggerLabels.Fell);
                 Color fallTint = StatusColor(StatusKeys.LabelOf(StatusKeys.Stagger));
                 if (e.Text == StaggerLabels.Fell)
                 {
                     _battleField.StaggerFall(target, fallTint);
-                    _battleField.Float(target, "転倒！", fallTint, large: true);
                     if (e.ActorId is not null) _battleField.Link(actor, target, fallTint, "引きずり出した");
                     AppendLog($"  [color=#{fallTint.ToHtml(false)}][b]{NameOf(e.TargetId)} は前へ引きずり出されて転んだ[/b][/color]"
                               + $"  [color=#a9b3a8]（次の手番を失う）[/color]{WriterSuffix(e.ActorId, e.TargetId)}");
@@ -1181,7 +1176,6 @@ public partial class Main : Control
                 else
                 {
                     _battleField.StaggerLost(target, fallTint);
-                    _battleField.Float(target, "転んで動けない", fallTint);
                     AppendLog($"  [color=#{fallTint.ToHtml(false)}]{NameOf(e.TargetId)} は転んだまま手番を失った[/color]");
                     await Delay(0.30);
                 }
@@ -1191,10 +1185,11 @@ public partial class Main : Control
             // 痺れは転倒と違ってターンをまたぐので `StatusSnapshot` には載る
             // ——欠けていたのは「いつ誰に付けられたか」と「その手番が実際に潰れたか」。
             case BattleEventKind.Stun:
+                // 手番喪失は残量ゼロを意味しない。解除は次の残量通知で読む。
+                if (e.Text == StunLabels.Struck) target?.SetStatusIcon(StatusKeys.Stun, true);
                 Color stunTint = StatusColor(StatusKeys.LabelOf(StatusKeys.Stun));
                 if (e.Text == StunLabels.Struck)
                 {
-                    _battleField.Float(target, "痺れ！", stunTint, large: true);
                     if (e.ActorId is not null) _battleField.Link(actor, target, stunTint, "痺れさせた");
                     AppendLog($"  [color=#{stunTint.ToHtml(false)}][b]{NameOf(e.TargetId)} が痺れた[/b][/color]"
                               + $"  [color=#a9b3a8]（次の手番を失う）[/color]{WriterSuffix(e.ActorId, e.TargetId)}");
@@ -1202,7 +1197,6 @@ public partial class Main : Control
                 }
                 else
                 {
-                    _battleField.Float(target, "痺れて動けない", stunTint);
                     AppendLog($"  [color=#{stunTint.ToHtml(false)}]{NameOf(e.TargetId)} は痺れたまま手番を失った[/color]");
                     await Delay(0.24);
                 }
@@ -1212,10 +1206,10 @@ public partial class Main : Control
             // 混乱した駒は**振る**ので `Attack` は出る——出ないのは「なぜ味方を殴ったのか」のほう。
             // 付与から発動まで何ターンも空きうるので、2本とも無いと因果が画面で繋がらない。
             case BattleEventKind.Confused:
+                target?.SetStatusIcon(StatusKeys.Confused, e.Text == ConfusedLabels.Lost);
                 Color madTint = StatusColor(StatusKeys.LabelOf(StatusKeys.Confused));
                 if (e.Text == ConfusedLabels.Lost)
                 {
-                    _battleField.Float(target, "錯乱！", madTint, large: true);
                     if (e.ActorId is not null) _battleField.Link(actor, target, madTint, "正気を奪った");
                     AppendLog($"  [color=#{madTint.ToHtml(false)}][b]{NameOf(e.TargetId)} は正気を失った[/b][/color]"
                               + $"  [color=#a9b3a8]（次の攻撃を自軍へ向ける）[/color]{WriterSuffix(e.ActorId, e.TargetId)}");
@@ -1223,7 +1217,6 @@ public partial class Main : Control
                 }
                 else
                 {
-                    _battleField.Float(target, "同士討ち", madTint);
                     AppendLog($"  [color=#{madTint.ToHtml(false)}]{NameOf(e.TargetId)} は自軍へ振った[/color]");
                     await Delay(0.24);
                 }
@@ -1260,7 +1253,6 @@ public partial class Main : Control
                 _battleField.SealPawnDied(target);
                 target?.SetHp(0);
                 target?.AnimateDeath();
-                _battleField.Float(target, "DOWN", UiKit.Hurt, true);
                 AppendLog($"  [color=#{UiKit.Hurt.ToHtml(false)}][b]{NameOf(e.TargetId)} 撃破[/b][/color]");
                 await Delay(0.36);
                 break;
@@ -1316,7 +1308,6 @@ public partial class Main : Control
                     _battleField.MovePawn(target, e.Slot);
                     target.AnimateRevive();
                     _battleField.SealPawnRevived(target);
-                    _battleField.Float(target, "REVIVE", UiKit.Heal, true);
                     if (e.ActorId is not null) _battleField.Link(actor, target, UiKit.Heal, "繋ぎ直した");
                 }
                 AppendLog($"  [color=#{UiKit.Heal.ToHtml(false)}]{NameOf(e.TargetId)} が復帰[/color]"
@@ -1327,6 +1318,7 @@ public partial class Main : Control
             case BattleEventKind.StatusGain:
                 if (target is not null && e.Text is { } statusKey)
                 {
+                    target.SetStatusIcon(statusKey, e.Amount > 0);
                     if (statusKey == StatusKeys.Burn) target.SetBurning(e.Amount > 0);
                     if (statusKey == StatusKeys.Poison && e.Amount > 0) target.SetPoisoned(true);
                     // 第124期 3-g: 「テロップは出たが効果量が分からない」（ノミ）への直答。
@@ -1334,7 +1326,8 @@ public partial class Main : Control
                     // 読みたい量が名前の長さに埋もれる（3-b と同じ理由）。
                     string label = DisplayStatusKey(statusKey);
                     Color tint = StatusColor(label);
-                    _battleField.Float(target, $"＋{e.Amount} {label}", tint, e.Amount >= 2);
+                    if (StatusIconArt.KeyOf(statusKey) is null)
+                        _battleField.Float(target, $"＋{e.Amount} {label}", tint, e.Amount >= 2);
                     if (e.ActorId is not null && e.ActorId != e.TargetId)
                         _battleField.Link(actor, target, tint, $"{label}を書いた");
                     AppendLog($"  [color=#{tint.ToHtml(false)}]＋{e.Amount} {label}[/color] → {NameOf(e.TargetId)}"
@@ -1379,10 +1372,7 @@ public partial class Main : Control
                 // （`BattleEventKind.Charge` の明文）ので、予告は台本だけで書ける。
                 // 溜めは画面上「何も起きないターン」なので、予告が無いとただの空白になる。
                 string forecast = $"次 ×{e.Amount / 100.0:0.#} {UiKit.PatternLabel(e.Pattern ?? AttackPattern.Single)}";
-                _battleField.Float(actor, "溜め", UiKit.Gold, true);
-                actor?.SetForecast($"▲ {forecast}");
-                if (e.ActorId is { } chargingId) _forecastPending.Add(chargingId);
-                _battleField.ShowBanner($"{NameOf(e.ActorId)} — {e.Text ?? "力を溜める"}　／　{forecast}", UiKit.Gold, 0.80);
+                actor?.BeginCharge(e.Amount);
                 AppendLog($"[color=#{UiKit.Gold.ToHtml(false)}]{NameOf(e.ActorId)} — {e.Text ?? "力を溜める"}"
                           + $"　（{forecast}）[/color]");
                 await Delay(0.34);
@@ -1390,6 +1380,7 @@ public partial class Main : Control
             }
 
             case BattleEventKind.Skill:
+                if (!e.Reaction) actor?.ReleaseCharge();
                 _battleField.Float(actor, e.Text ?? "SKILL", UiKit.Heal, true);
                 AppendLog($"[color=#{UiKit.Heal.ToHtml(false)}]{NameOf(e.ActorId)} — {e.Text ?? "術"}[/color]");
                 await Delay(0.22);
