@@ -25,6 +25,27 @@ public static class Map11
     /// <summary>1 マップの戦闘回数の上限（第168期 <c>BandCap</c> と同じ）。</summary>
     public const int BattleCap = 24;
 
+    // ---------------- 時間（第174期） ----------------
+
+    /// <summary>
+    /// 道のマス数（第174期 §2-1）。<b>拠点と1つ目の敵のあいだに空きマスを1つ足した。</b>
+    /// マス 0 が空き、マス 1・2 が敵部隊の初期位置（区画の番号 + 1）。拠点は -1。
+    /// </summary>
+    public const int RoadCells = 3;
+
+    /// <summary>1 マップの作戦ターンの上限（戦闘回数の上限とは別の歯止め）。</summary>
+    public const int TurnCap = 60;
+
+    /// <summary>敵部隊の初期のマス。<b>空きマスのぶんだけ奥にいる。</b></summary>
+    public static int StartCellOf(int nodeIndex) => nodeIndex + 1;
+
+    /// <summary>
+    /// 遊ぶときの時間の規則（<b>第174期 段B1 で測って決めた</b>）。
+    /// <b>K = 1</b>（敵は毎作戦ターン1マス近づく）——線1〜3 が同時に通る K のうち最も小さい値で、
+    /// <b>K = 2/3/4 は線1（全快方針の迎撃が起きた率 ≥ 50%）を通らない</b>（帯A/帯B とも）。
+    /// </summary>
+    public static readonly TimeRule AdoptedTime = TimeRule.Every(1);
+
     public const int RoadCount = 2;
     public static readonly string[] RoadNames = { "北の道", "南の道" };
 
@@ -206,6 +227,23 @@ public static class Map11
 }
 
 /// <summary>
+/// 時間の規則（第174期）。<b><c>On</c> が偽なら第169期と1ビットも違わない</b>
+/// ——このレコードを読む箇所はすべて <c>On</c> の裏側にある（自己検査 (a)）。
+/// </summary>
+/// <param name="On">時間を使うか。偽なら <see cref="Map11State"/> の時間の枝は1行も走らない。</param>
+/// <param name="AdvanceEvery">敵が1マス前進する間隔（作戦ターン）。<c>K</c>。</param>
+/// <param name="RestPercent">拠点で「休む」1回で戻る割合（<c>MaxHp</c> に対する %）。</param>
+public readonly record struct TimeRule(bool On, int AdvanceEvery, int RestPercent)
+{
+    /// <summary>時間なし（第169期の規則そのもの）。</summary>
+    public static readonly TimeRule Off = new(false, 0, 25);
+
+    public static TimeRule Every(int k, int restPercent = 25) => new(true, k, restPercent);
+
+    public override string ToString() => On ? $"K={AdvanceEvery} 休={RestPercent}%" : "時間なし";
+}
+
+/// <summary>
 /// マップ 1-1 の進行。<b>盤面の規則は <see cref="BattleEngine"/> と
 /// <see cref="EngagementEngine.CrossBoundary"/> しか呼ばない</b>（判定はこのクラスに1つも無い）。
 ///
@@ -222,6 +260,12 @@ public sealed class Map11State
         public List<UnitState>? Units { get; set; }
         /// <summary>向かっている道。-1 ＝ 拠点で待機。</summary>
         public int Road { get; set; } = -1;
+        /// <summary>
+        /// 道の上のマス（第174期）。<b>-1 ＝ 拠点</b>で、0 が空きマス、1・2 が敵部隊の初期位置。
+        /// <b><c>Road</c> と必ず同時に動く</b>（<c>Road &gt;= 0</c> ⇔ <c>Cell &gt;= 0</c>）。
+        /// <b>時間を切った設定では誰も読まない。</b>
+        /// </summary>
+        public int Cell { get; set; } = -1;
         /// <summary>
         /// <b>最初に送り出された道</b>（-1 ＝ まだ出していない）。
         /// <c>Cleared</c> はこの道で抜いた数だけを数える——第168期 <c>BandOnce</c> の
@@ -243,12 +287,39 @@ public sealed class Map11State
         public int DefMaxHp { get; init; }
         /// <summary>いまの残 HP（まだ当たっていない部隊は満タン）。</summary>
         public int HpNow { get; set; }
+        /// <summary>
+        /// いまいるマス（第174期）。初期値は <see cref="Map11.StartCellOf"/>。
+        /// <b>-1 ＝ 拠点まで来た</b>（迎撃戦）。<b>時間を切った設定では誰も読まない。</b>
+        /// </summary>
+        public int Cell { get; set; }
+        /// <summary>
+        /// この到着の迎撃でもう出した隊（同じ隊が1回の到着で何度も出ないようにするだけ）。
+        /// <b>区画ごとに持つ</b>——2 本の道が同じ作戦ターンに拠点へ着くことがある。
+        /// </summary>
+        public HashSet<int> Tried { get; } = new();
     }
 
     public int Seed { get; }
     public int Battles { get; private set; }
     public Squad[] Squads { get; }
     public Node[][] Nodes { get; }
+
+    // ---------------- 時間（第174期） ----------------
+
+    /// <summary>時間の規則。<b><c>On</c> が偽なら、このクラスの時間の枝は1行も走らない。</b></summary>
+    public TimeRule Time { get; }
+
+    /// <summary>いま何作戦ターン目か（敵が動いた回数）。</summary>
+    public int Turn { get; private set; }
+
+    /// <summary>拠点が陥落した（敵が拠点に着いたのに、拠点に隊が1つもいなかった）。</summary>
+    public bool Fallen { get; private set; }
+
+    /// <summary>拠点の迎撃戦が起きた回数（測るためだけの計数）。</summary>
+    public int Intercepts { get; private set; }
+
+    /// <summary>休んだ回数（測るためだけの計数）。</summary>
+    public int Rests { get; private set; }
 
     /// <summary>
     /// 控えの駒（第172期 §1-2）。<b>席を持たない駒の置き場</b>で、拠点の隊とだけ行き来できる。
@@ -257,9 +328,10 @@ public sealed class Map11State
     /// </summary>
     public List<UnitState> Bench { get; }
 
-    public Map11State(int seed)
+    public Map11State(int seed, TimeRule? time = null)
     {
         Seed = seed;
+        Time = time ?? TimeRule.Off;
         Bench = Map11.Reserves
             .Select(d => BattleEngine.Materialize(Formation.Build(front1: d), BattleContext.PlayerTeam)[0])
             .ToList();
@@ -267,7 +339,7 @@ public sealed class Map11State
         Nodes = Map11.Roads.Select(r => r.Select(n =>
         {
             int hp = n.Enemy.Occupied().Sum(o => o.Def.MaxHp);
-            return new Node { Def = n, DefMaxHp = hp, HpNow = hp };
+            return new Node { Def = n, DefMaxHp = hp, HpNow = hp, Cell = Map11.StartCellOf(n.Index) };
         }).ToArray()).ToArray();
     }
 
@@ -277,8 +349,9 @@ public sealed class Map11State
     /// <summary>出せる隊が1つも残っていない（盤上に居らず、かつ出していないわけでもない）。</summary>
     public bool NoSquadsLeft => Squads.All(s => s.Units is null && (s.Lost || s.Deployed));
 
-    public bool Finished => AllCleared || NoSquadsLeft || Battles >= Map11.BattleCap;
-    public bool Won => AllCleared;
+    public bool Finished => AllCleared || NoSquadsLeft || Battles >= Map11.BattleCap
+                            || Fallen || (Time.On && Turn >= Map11.TurnCap);
+    public bool Won => AllCleared && !Fallen;
 
     /// <summary>道 <paramref name="road"/> で次に当たる区画。道が抜け切っていれば null。</summary>
     public Node? NextNode(int road)
@@ -299,6 +372,9 @@ public sealed class Map11State
         // ——あの版で「`Units` が null でなく `Deployed` が偽」になる道は1本も無かった。
         s.Units ??= BattleEngine.Materialize(s.Def.F, BattleContext.PlayerTeam);
         s.Deployed = true;
+        // 第174期: 拠点から出たら道の先頭のマス（空きマス）に立つ。
+        // **時間を切った設定では誰も読まない**ので、第169期と1ビットも違わない。
+        if (s.Cell < 0) s.Cell = 0;
     }
 
     /// <summary>
@@ -320,6 +396,7 @@ public sealed class Map11State
         Squad s = Squads[squadIndex];
         if (s.Lost || s.Units is null || s.Road < 0) return false;
         s.Road = -1;
+        s.Cell = -1;
         return true;
     }
 
@@ -507,6 +584,7 @@ public sealed class Map11State
             s.Units = null;
             s.Lost = true;
             s.Road = -1;
+            s.Cell = -1;
         }
         else
         {
@@ -514,6 +592,176 @@ public sealed class Map11State
                 playerWon && Map11.RecoverPercent > 0
                     ? new RecoverRule(Map11.RecoverPercent, false) : null);
         }
+    }
+
+    // =============================================================================
+    // 時間（第174期 部B）
+    //
+    // **`Time.On` が偽なら、ここから下は1行も走らない。** 呼ぶ側（`Map11Verify` の方針と
+    // `Map11Main` の作戦ターン）が `Time.On` を見て分岐する。
+    //
+    // 規則は指示書 §2-1 のまま——1 作戦ターンに全部の隊が1つずつ行動し、終わったら敵が動く。
+    // **戦闘・回復・勝敗の規則は1つも触っていない**（`Prepare` / `Resolve` をそのまま使う）。
+    // =============================================================================
+
+    /// <summary>敵の前進で起きる戦闘。<c>Squad</c> が -1 なら<b>拠点の迎撃</b>（相手は拠点の隊から選ぶ）。</summary>
+    public sealed record Encounter(int Squad, Node Node, bool Intercept);
+
+    /// <summary>その隊は拠点にいるか。</summary>
+    public bool AtHome(int squadIndex) => Squads[squadIndex].Cell < 0;
+
+    /// <summary>道 <paramref name="road"/> で次に当たる敵のマス（敵が残っていなければ null）。</summary>
+    public int? FoeCell(int road) => NextNode(road)?.Cell;
+
+    /// <summary>
+    /// 進む（1 マス）。<b>敵のいるマスへ入れば、その場で戦闘</b>——戻り値が相手の区画。
+    /// 拠点にいる隊は <paramref name="road"/> の道へ出る（<see cref="Send"/> を通る）。
+    /// 敵を追い越すことはできない。
+    /// </summary>
+    public Node? Advance(int squadIndex, int road)
+    {
+        Squad s = Squads[squadIndex];
+        if (s.Lost || !CanSend(squadIndex)) return null;
+
+        if (s.Cell < 0)
+        {
+            if (NextNode(road) is null) return null;
+            Send(squadIndex, road);
+        }
+        else
+        {
+            road = s.Road;
+            Node? front = NextNode(road);
+            // **すでに敵と同じマスにいる**（前の戦闘が決着しなかった）ときは、その場でもう一度当たる。
+            if (front is not null && front.Cell == s.Cell) return front;
+            int limit = front?.Cell ?? Map11.RoadCells - 1;
+            int next = Math.Min(s.Cell + 1, Math.Min(limit, Map11.RoadCells - 1));
+            if (next == s.Cell) return null;
+            s.Cell = next;
+        }
+
+        Node? n = NextNode(s.Road);
+        return n is not null && n.Cell == s.Cell ? n : null;
+    }
+
+    /// <summary>戻る（拠点へ向かって 1 マス）。<b>一瞬では戻れない。</b></summary>
+    public bool StepBack(int squadIndex)
+    {
+        Squad s = Squads[squadIndex];
+        if (s.Lost || s.Units is null || s.Cell < 0) return false;
+        s.Cell--;
+        if (s.Cell < 0) s.Road = -1;
+        return true;
+    }
+
+    /// <summary>
+    /// 休む（<b>拠点でだけ</b>）。生存者の HP を <see cref="TimeRule.RestPercent"/> ぶん戻す。
+    /// <b>死者は戻らない。</b> 足し方は境界の回復（<c>CarryOver</c>）と同じ式で、
+    /// <c>ctx.Heal</c> は通さない（渇きも支援拒否も戦闘中の規則なので、拠点の手当てには掛からない）。
+    /// </summary>
+    public bool Rest(int squadIndex)
+    {
+        Squad s = Squads[squadIndex];
+        if (s.Lost || s.Cell >= 0 || Time.RestPercent <= 0) return false;
+        if (s.Units is not { } u) return false;   // 未出撃の隊は満タンなので休む意味がない
+        bool moved = false;
+        foreach (UnitState x in u)
+        {
+            if (!x.IsAlive) continue;
+            int before = x.Hp;
+            x.Hp = Math.Min(x.MaxHp, x.Hp + x.MaxHp * Time.RestPercent / 100);
+            if (x.Hp != before) moved = true;
+        }
+        if (moved) Rests++;
+        return moved;
+    }
+
+    /// <summary>生存者に傷が残っているか（「全快」方針が読む）。</summary>
+    public bool Hurt(int squadIndex)
+    {
+        Squad s = Squads[squadIndex];
+        return s.Units is { } u && u.Any(x => x.IsAlive && x.Hp < x.MaxHp);
+    }
+
+    /// <summary>
+    /// 敵が動く（1 作戦ターンの終わり）。<b>まだ抜かれていない先頭の敵部隊だけ</b>が
+    /// <see cref="TimeRule.AdvanceEvery"/> 作戦ターンごとに1マス拠点へ近づく。
+    /// 前進先に味方がいれば戦闘、拠点まで着いたら迎撃（拠点に隊がいなければ陥落）。
+    /// </summary>
+    public List<Encounter> AdvanceFoes()
+    {
+        var list = new List<Encounter>();
+        if (!Time.On) return list;
+        Turn++;
+        if (Time.AdvanceEvery <= 0 || Turn % Time.AdvanceEvery != 0) return list;
+
+        for (int road = 0; road < Map11.RoadCount; road++)
+        {
+            Node? n = NextNode(road);
+            if (n is null) continue;
+            if (n.Cell >= 0) n.Cell--;
+
+            if (n.Cell < 0)
+            {
+                BeginIntercept(n);
+                if (NextInterceptor(n) < 0) { Fallen = true; return list; }
+                list.Add(new Encounter(-1, n, true));
+                continue;
+            }
+            int sq = SquadAt(road, n.Cell);
+            if (sq >= 0) list.Add(new Encounter(sq, n, false));
+        }
+        return list;
+    }
+
+    /// <summary>そのマスにいる隊のうち、いちばん番号の若いもの（いなければ -1）。</summary>
+    public int SquadAt(int road, int cell)
+    {
+        for (int i = 0; i < Squads.Length; i++)
+        {
+            Squad s = Squads[i];
+            if (s.Units is not null && s.Road == road && s.Cell == cell && s.Units.Any(u => u.IsAlive))
+                return i;
+        }
+        return -1;
+    }
+
+    /// <summary>迎撃が始まった（同じ到着で同じ隊を二度出さないための印）。</summary>
+    public void BeginIntercept(Node node) { node.Tried.Clear(); Intercepts++; }
+
+    /// <summary>次に迎撃へ出せる隊（拠点にいて、まだこの到着で出していない隊）。いなければ -1。</summary>
+    public int NextInterceptor(Node node)
+    {
+        if (node.Cleared) return -1;
+        for (int i = 0; i < Squads.Length; i++)
+            if (!node.Tried.Contains(i) && !Squads[i].Lost && Squads[i].Cell < 0 && CanSend(i)) return i;
+        return -1;
+    }
+
+    /// <summary>迎撃に出す（<b>拠点から動かない</b>——道の上に出るわけではない）。</summary>
+    public (List<UnitState> Players, List<UnitState> Enemies, int Seed, Node Node)? PrepareIntercept(
+        int squadIndex, Node node)
+    {
+        Squad s = Squads[squadIndex];
+        if (s.Lost || node.Cleared || !CanSend(squadIndex)) return null;
+        node.Tried.Add(squadIndex);
+        List<UnitState> pu = Roster(squadIndex);
+        if (!pu.Any(u => u.IsAlive)) return null;
+        s.Deployed = true;
+        if (s.Home < 0) s.Home = node.Def.Road;
+        node.Units ??= BattleEngine.Materialize(node.Def.Enemy, BattleContext.EnemyTeam);
+        return (pu, node.Units, Map11.DeriveSeed(Seed, Battles), node);
+    }
+
+    /// <summary>
+    /// 迎撃が終わったあとの判定。<b>抜けず、拠点に出せる隊がもう1つも無ければ陥落。</b>
+    /// </summary>
+    public void CloseIntercept(Node node)
+    {
+        if (node.Cleared) return;
+        // **判定は「拠点に出せる隊が1つも無いか」の1本だけ**——この到着でもう出した隊が
+        // 残っていても（決着しなかったなど）、まだ拠点にいるなら陥落ではない。
+        if (!Squads.Any(x => !x.Lost && x.Cell < 0 && CanSend(x.Index))) Fallen = true;
     }
 
     /// <summary>部分点（第168期と同じ定義）＝ 抜いた部隊数 ＋ 残った部隊の削り。</summary>

@@ -242,6 +242,35 @@ public static class Map11Relations
     private static bool Accepts(UnitDef def)
         => !TraitCatalog.Resolve(def.Traits).Any(t => t.BlocksSupport);
 
+    /// <summary>
+    /// <b>席に紐づかない「隊全体にかかる札」</b>（第174期 部A #4）。
+    /// <b>元データは手書きしない</b>——<see cref="Unresolved"/> のうち
+    /// 理由に「位置を問わない」と書いてある札をそのまま引く。
+    /// <b>一覧は1つきり</b>で、文もそこにある（同じ言葉の表を2つ作らない・第124期 §4）。
+    /// </summary>
+    public const string GlobalMark = "位置を問わない";
+
+    public static IEnumerable<TraitId> WholeSquad
+        => Unresolved.Where(kv => kv.Value.Contains(GlobalMark, StringComparison.Ordinal))
+                     .Select(kv => kv.Key);
+
+    /// <summary>
+    /// その顔ぶれが持つ「隊全体にかかる札」を1行ずつ（第174期 部A #4）。
+    /// <b>文は <see cref="Unresolved"/> のものをそのまま使う。</b>
+    /// </summary>
+    public static IEnumerable<(string Unit, string Text)> GlobalNotes(IEnumerable<UnitDef> units)
+    {
+        var seen = new HashSet<(string, TraitId)>();
+        foreach (UnitDef d in units)
+            foreach (TraitId t in d.Traits)
+            {
+                if (!Unresolved.TryGetValue(t, out string? why)) continue;
+                if (!why.Contains(GlobalMark, StringComparison.Ordinal)) continue;
+                if (!seen.Add((d.Id, t))) continue;
+                yield return (d.Name, why);
+            }
+    }
+
     /// <summary>手書きの <see cref="Rules"/> が受け持つ札の一覧（走査の突き合わせ用）。</summary>
     public static IEnumerable<TraitId> Covered => Rules.Keys;
 

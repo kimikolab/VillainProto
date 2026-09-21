@@ -209,6 +209,22 @@ public partial class Main : Control
             GetTree().Quit(gap ? 0 : 1);
             return;
         }
+        // 第174期 段B1。**画面を1つも作らずに `Map11State` を時間ありで回す。**
+        // **完全一致か `=` 付きだけ**を受ける（`--map11-time-smoke` は別物・R231）。
+        string? timeArg = bootArgs.FirstOrDefault(a => a == "--map11-time"
+            || a.StartsWith("--map11-time=", StringComparison.Ordinal));
+        if (timeArg is not null)
+        {
+            // 書式は `--map11-time[=<seed 本数>[,<起点>]]`（起点は帯B の追試に使う）。
+            string[] parts = (timeArg.Length > "--map11-time=".Length
+                ? timeArg["--map11-time=".Length..] : "").Split(',');
+            int tn = int.TryParse(parts[0], out int tw) && tw > 0 ? tw : Map11Time.DefaultSeeds;
+            int t0 = parts.Length > 1 && int.TryParse(parts[1], out int ts) && ts >= 0 ? ts : 0;
+            bool tok = Map11Time.Report(tn, GD.Print, t0);
+            GD.Print($"MAP11_TIME_COMPLETE seeds={tn} seed0={t0} ok={tok}");
+            GetTree().Quit(tok ? 0 : 1);
+            return;
+        }
         string? verifyArg = bootArgs.FirstOrDefault(a => a.StartsWith("--map11-verify", StringComparison.Ordinal));
         if (verifyArg is not null)
         {
@@ -275,7 +291,8 @@ public partial class Main : Control
         _fastSmoke = userArgs.Contains("--demo-fast", StringComparer.Ordinal);
         _campaignFlowSmoke = userArgs.Contains("--campaign-flow-smoke", StringComparer.Ordinal);
         // 第169期。検証用マップ 1-1 の通し確認（画面あり・頭なし）。
-        _map11FlowSmoke = userArgs.Contains("--map11-flow-smoke", StringComparer.Ordinal);
+        _map11FlowSmoke = userArgs.Contains("--map11-flow-smoke", StringComparer.Ordinal)
+            || userArgs.Contains("--map11-time-smoke", StringComparer.Ordinal);
         if (_map11FlowSmoke) _fastSmoke = true;
         if (_fastSmoke) _speed = 1000.0;
         // 第172期 部B。**編成画面の当たりを1枚だけ撮る**（見た目の確認だけ。判定には使わない）。
