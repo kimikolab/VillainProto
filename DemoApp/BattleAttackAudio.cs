@@ -5,6 +5,9 @@ using System.Collections.Generic;
 // 戦闘計算とは独立した音選び。専用音の未登録キャラには共通音を使う。
 public partial class BattleAttackAudio : Node
 {
+    // ヨミの追加攻撃を含む通常SEを旧設定から3 dB上げ、BGMに埋もれにくくする。
+    private const float NormalVolumeDb = -13;
+
     private readonly RandomNumberGenerator _random = new();
     private readonly Dictionary<(string, AttackPattern), string[]> _overrides = new();
     private readonly Dictionary<string, AudioStream> _streams = new();
@@ -82,7 +85,7 @@ public partial class BattleAttackAudio : Node
         _random.Randomize();
         for (int i = 0; i < _voices.Length; i++)
         {
-            _voices[i] = new AudioStreamPlayer { VolumeDb = -16, MaxPolyphony = 1 };
+            _voices[i] = new AudioStreamPlayer { VolumeDb = NormalVolumeDb, MaxPolyphony = 1 };
             AddChild(_voices[i]);
         }
         for (int i = 0; i < _chargeVoices.Length; i++)
@@ -90,11 +93,11 @@ public partial class BattleAttackAudio : Node
             _chargeVoices[i] = new AudioStreamPlayer { VolumeDb = -8, MaxPolyphony = 1 };
             AddChild(_chargeVoices[i]);
         }
-        _yokeVoice = new AudioStreamPlayer { VolumeDb = -13, MaxPolyphony = 1 };
+        _yokeVoice = new AudioStreamPlayer { VolumeDb = -10, MaxPolyphony = 1 };
         AddChild(_yokeVoice);
         for (int i = 0; i < _hushVoices.Length; i++)
         {
-            _hushVoices[i] = new AudioStreamPlayer { VolumeDb = -12, MaxPolyphony = 1 };
+            _hushVoices[i] = new AudioStreamPlayer { VolumeDb = -9, MaxPolyphony = 1 };
             AddChild(_hushVoices[i]);
         }
         foreach (string path in Common) LoadSound(path);
@@ -237,12 +240,12 @@ public partial class BattleAttackAudio : Node
 
         // 予兆と解放の頭だけ通常SEを下げる。死亡・フィニッシュ音は勝敗の手掛かりなので下げない。
         _duckTween?.Kill();
-        foreach (var ordinary in _voices) ordinary.VolumeDb = -25;
+        foreach (var ordinary in _voices) ordinary.VolumeDb = NormalVolumeDb - 9;
         _duckTween = CreateTween();
         _duckTween.TweenInterval(duckSeconds);
-        _duckTween.TweenProperty(_voices[0], "volume_db", -16, 0.18);
+        _duckTween.TweenProperty(_voices[0], "volume_db", NormalVolumeDb, 0.18);
         for (int i = 1; i < _voices.Length; i++)
-            _duckTween.Parallel().TweenProperty(_voices[i], "volume_db", -16, 0.18);
+            _duckTween.Parallel().TweenProperty(_voices[i], "volume_db", NormalVolumeDb, 0.18);
     }
 
     private void PlayHushAccent(string[] paths)
@@ -283,7 +286,7 @@ public partial class BattleAttackAudio : Node
         foreach (var voice in _hushVoices) voice.Stop();
         _duckTween?.Kill();
         _duckTween = null;
-        foreach (var voice in _voices) voice.VolumeDb = -16;
+        foreach (var voice in _voices) voice.VolumeDb = NormalVolumeDb;
         _nextVoice = 0;
         _nextChargeVoice = 0;
         _nextDeathVoice = 0;
