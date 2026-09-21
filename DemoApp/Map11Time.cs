@@ -41,7 +41,14 @@ public static class Map11Time
     /// 籠城はポンの3プレイ目（拠点から一歩も出ず迎撃だけで殲滅）、
     /// 即出しは1・2プレイ目（1ターン目から3隊とも出す）を写したものである。
     /// </summary>
-    public enum Policy { Greedy, Full, Turtle, TurtleLast, Rush, RushSplit }
+    public enum Policy
+    {
+        Greedy, Full, Turtle, TurtleLast, Rush, RushSplit,
+        Seize, SeizeSwap, SeizeLate, SeizeAll,
+    }
+
+    /// <summary>「遅い制圧」が拠点で待つ作戦ターン数（第176期 §2-1 の対照）。</summary>
+    public const int SeizeDelay = 6;
 
     public static string NameOf(Policy p) => p switch
     {
@@ -50,8 +57,17 @@ public static class Map11Time
         Policy.Turtle => "籠城",
         Policy.TurtleLast => "籠城（控えから出す）",
         Policy.Rush => "即出し",
-        _ => "即出し（控えは南）",
+        Policy.RushSplit => "即出し（控えは南）",
+        Policy.Seize => "制圧狙い",
+        Policy.SeizeSwap => "制圧狙い（道を入れ替え）",
+        Policy.SeizeLate => $"遅い制圧（{SeizeDelay}T 待つ）",
+        Policy.SeizeAll => "総力制圧（3 隊とも出す・参考）",
+        _ => "?",
     };
+
+    /// <summary>敵の拠点を狙う方針か（第176期）。</summary>
+    public static bool IsSeize(Policy p)
+        => p is Policy.Seize or Policy.SeizeSwap or Policy.SeizeLate or Policy.SeizeAll;
 
     /// <summary>第174期の実測（K = 1・迎撃の回復あり）。<b>自己検査 (b) の相手。</b></summary>
     public static readonly (double Full, double Intercept, double Fall, double Turn) Phase174Greedy
@@ -63,13 +79,17 @@ public static class Map11Time
     private readonly record struct Once(
         bool Full, bool Fallen, bool Intercepted, int Turns, int Battles, double Partial,
         int InterceptNorth, int InterceptSouth, int InterceptWins, int Rests,
-        int[] BySquad, int[] WonBySquad);
+        int[] BySquad, int[] WonBySquad,
+        bool Captured, int CaptureTurn, int Spawns, bool Wiped, bool Stalled, int SecondFalls,
+        int FallenRoad);
 
     public sealed record Stat(
         double Full, double Intercept, double Fall, double TurnMedian,
         double Battles, double Partial, double InterceptPerRun,
         double NorthShare, double InterceptWin, double Rests,
-        int[] BySquad, int[] WonBySquad);
+        int[] BySquad, int[] WonBySquad,
+        double Capture, double CaptureTurnMedian, double SpawnMedian,
+        double Wipe, double Stall, int SecondFalls, double FallNorthShare);
 
     // =================================================================================
     // 1 マップぶん（方針が打つ手）
@@ -89,7 +109,7 @@ public static class Map11Time
         /// <summary>1 戦。<b>戦闘・回復・勝敗の規則は `Map11State` の `Resolve` に任せる。</b></summary>
         public void Fight(int squad, Map11State.Node node, bool intercept)
         {
-            var prep = intercept ? St.PrepareIntercept(squad, node) : St.Prepare(squad);
+            var prep = intercept ? St.PrepareIntercept(squad, node) : St.Prepare(squad, node);
             if (prep is not { } p) return;
             if (intercept) { if (node.Def.Road == 0) IntN++; else IntS++; IntBy[squad]++; }
             BattleResult r = BattleEngine.Run(p.Players, p.Enemies, p.Seed, verbose: false);
@@ -116,8 +136,8 @@ public static class Map11Time
         {
             while (!St.Finished)
             {
-                int j = Pol is Policy.Turtle or Policy.TurtleLast
-                    ? PickInterceptor(node) : St.NextInterceptor(node);
+                int j = Pol is Policy.Greedy or Policy.Full or Policy.Rush or Policy.RushSplit
+                    ? St.NextInterceptor(node) : PickInterceptor(node);
                 if (j < 0) break;
                 Fight(j, node, intercept: true);
                 if (node.Cleared) break;
@@ -175,6 +195,19 @@ public static class Map11Time
             if (St.Squads[i].Lost || Home[i] < 0) return Dest.Home;
             // 籠城: **1 マスも動かない。** 戦うのは拠点へ来た敵だけ（拠点にいるので傷は休んで戻す）。
             if (Pol is Policy.Turtle or Policy.TurtleLast) return Dest.Home;
+            // 制圧狙い（第176期 §2-1）: **カド隊は拠点に残し**、残り2隊を敵の拠点へ向ける。
+            if (IsSeize(Pol))
+            {
+                // **カド隊は拠点に残る**——`SeizeAll`（参考）だけは残さない。
+                if (i == 0 && Pol != Policy.SeizeAll) return Dest.Home;
+                // 遅い制圧: 最初の `SeizeDelay` 作戦ターンは拠点で休んで待つ（線3 の対照）。
+                if (Pol == Policy.SeizeLate && St.Turn < SeizeDelay) return Dest.Home;
+                // 制圧した後——傷が残っていれば第2拠点で休み、満タンなら拠点へ戻って掃除する
+                // （勝ち条件は「制圧 ＋ 盤上の敵が 0」なので、残りを片付ける必要がある）。
+                if (St.Captured)
+                    return St.AtSecondBase(i) && St.Hurt(i) ? Dest.Portal(St.Squads[i].Road) : Dest.Home;
+                return Dest.Portal(Home[i]);
+            }
             // 全快: 傷が残っていれば行き先を拠点にする（戻って休む）。全快したらまた出る。
             if (Pol == Policy.Full && St.Hurt(i)) return Dest.Home;
             int road = RoadFor(i);
@@ -193,22 +226,28 @@ public static class Map11Time
         }
     }
 
-    private static Once RunOne(Policy pol, TimeRule time, int[] assign, int seed)
+    private static Once RunOne(Policy pol, TimeRule time, int[] assign, int seed,
+                               PortalRule? portal = null)
     {
         var run = new Run
         {
-            St = new Map11State(seed, time),
+            St = new Map11State(seed, time, portal),
             Pol = pol,
             // 即出し（第175期 §3）: **1 作戦ターン目から3隊とも出す**。
             // 控え隊はかき回し隊と同じ道（北）へ——ポンの1・2プレイ目がその形だった。
             // 参考の `RushSplit` は控えを**もう一方の道**へ出す——即出しが負ける原因を
             // 「拠点を空にしたこと」と「2 隊を同じ道へ重ねたこと」に割るためだけの点（線には使わない）。
+            // 制圧狙い（第176期）: **控え隊も1 作戦ターン目から出す**——カド隊が拠点に残るので、
+            // 道へ出せるのは残り2隊しかいない。道の割り振りは `Seize` と `SeizeSwap` で入れ替える。
             Home = new[]
             {
-                assign[0], assign[1],
-                pol == Policy.Rush ? assign[1] : pol == Policy.RushSplit ? assign[0] : -1,
+                assign[0],
+                pol == Policy.SeizeSwap ? assign[0] : assign[1],
+                pol == Policy.Rush ? assign[1] : pol == Policy.RushSplit ? assign[0]
+                    : pol is Policy.Seize or Policy.SeizeLate ? assign[0]
+                    : pol == Policy.SeizeSwap ? assign[1] : -1,
             },
-            ReserveSent = pol is Policy.Rush or Policy.RushSplit,
+            ReserveSent = pol is Policy.Rush or Policy.RushSplit || IsSeize(pol),
         };
         Map11State st = run.St;
 
@@ -224,14 +263,27 @@ public static class Map11Time
             }
         }
 
+        // 膠着 ＝ 決着しなかった（作戦ターンの上限・戦闘回数の上限）。**全滅と陥落は負けで、膠着ではない。**
+        bool wiped = !st.Won && !st.Fallen && st.NoSquadsLeft;
+        bool stalled = !st.Won && !st.Fallen && !wiped;
         return new Once(st.Won, st.Fallen, st.Intercepts > 0, st.Turn, st.Battles, st.Partial(),
-                        run.IntN, run.IntS, run.IntWins, st.Rests, run.IntBy, run.IntWonBy);
+                        run.IntN, run.IntS, run.IntWins, st.Rests, run.IntBy, run.IntWonBy,
+                        st.Captured, st.CapturedTurn, st.SpawnCount, wiped, stalled, st.SecondBaseFalls,
+                        st.FallenRoad);
     }
 
-    public static Stat Band(Policy pol, TimeRule time, int[] assign, int seeds, int seed0 = 0)
+    private static double Median(IEnumerable<double> xs)
+    {
+        double[] a = xs.OrderBy(x => x).ToArray();
+        if (a.Length == 0) return 0;
+        return a.Length % 2 == 1 ? a[a.Length / 2] : (a[a.Length / 2 - 1] + a[a.Length / 2]) / 2.0;
+    }
+
+    public static Stat Band(Policy pol, TimeRule time, int[] assign, int seeds, int seed0 = 0,
+                            PortalRule? portal = null)
     {
         var o = new Once[seeds];
-        Parallel.For(0, seeds, i => o[i] = RunOne(pol, time, assign, seed0 + i));
+        Parallel.For(0, seeds, i => o[i] = RunOne(pol, time, assign, seed0 + i, portal));
         var turns = o.Select(x => (double)x.Turns).OrderBy(x => x).ToArray();
         double med = turns.Length == 0 ? 0
             : turns.Length % 2 == 1 ? turns[turns.Length / 2]
@@ -250,7 +302,15 @@ public static class Map11Time
             intAll == 0 ? 0 : 100.0 * o.Sum(x => x.InterceptWins) / intAll,
             o.Average(x => (double)x.Rests),
             Enumerable.Range(0, Map11.Squads.Length).Select(s => o.Sum(x => x.BySquad[s])).ToArray(),
-            Enumerable.Range(0, Map11.Squads.Length).Select(s => o.Sum(x => x.WonBySquad[s])).ToArray());
+            Enumerable.Range(0, Map11.Squads.Length).Select(s => o.Sum(x => x.WonBySquad[s])).ToArray(),
+            100.0 * o.Count(x => x.Captured) / seeds,
+            Median(o.Where(x => x.Captured).Select(x => (double)x.CaptureTurn)),
+            Median(o.Select(x => (double)x.Spawns)),
+            100.0 * o.Count(x => x.Wiped) / seeds,
+            100.0 * o.Count(x => x.Stalled) / seeds,
+            o.Sum(x => x.SecondFalls),
+            o.Count(x => x.Fallen) == 0 ? 0
+                : 100.0 * o.Count(x => x.Fallen && x.FallenRoad == 0) / o.Count(x => x.Fallen));
     }
     // =================================================================================
     // 表（第175期 §3）

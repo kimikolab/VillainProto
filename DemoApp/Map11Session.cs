@@ -82,10 +82,15 @@ public static class Map11Session
     /// 接敵。<b>持っている <c>UnitState</c> のリストをそのまま戦闘シーンへ渡す</b>
     /// ——`Materialize` はしない（傷も死者もそのまま持ち込む）。
     /// </summary>
-    public static bool BeginBattle(int squad)
+    /// <param name="against">
+    /// 当たる相手（<c>null</c> なら隊の位置から引く）。<b>第176期に足した</b>
+    /// ——敵の拠点では「道の先頭の敵」と「いま同じマスにいる敵」が別物になりうるので、
+    /// 命令を実行した側が見つけた相手をそのまま渡す。
+    /// </param>
+    public static bool BeginBattle(int squad, Map11State.Node? against = null)
     {
         if (State is null || HasPendingBattle) return false;
-        if (State.Prepare(squad) is not { } prep) return false;
+        if (State.Prepare(squad, against) is not { } prep) return false;
         return Launch(squad, prep, intercept: false);
     }
 
@@ -230,7 +235,7 @@ public static class Map11Session
             // 第175期: **命令は行き先から作る**（規則は `Map11Orders` の1本・器具と共有）。
             Dest dest = Destinations[i];
             Map11Orders.Order order = Map11Orders.Plan(st, i, dest);
-            if (Map11Orders.Apply(st, i, dest, order) is not null && BeginBattle(i))
+            if (Map11Orders.Apply(st, i, dest, order) is { } met && BeginBattle(i, met))
                 return StepKind.Battle;
         }
 
@@ -252,7 +257,7 @@ public static class Map11Session
                 continue;
             }
             _foeIndex++;
-            if (BeginBattle(e.Squad)) return StepKind.Battle;
+            if (BeginBattle(e.Squad, e.Node)) return StepKind.Battle;
         }
 
         TurnRunning = false;

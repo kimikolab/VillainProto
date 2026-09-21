@@ -39,6 +39,30 @@ public static class Map11
     /// <summary>敵部隊の初期のマス。<b>空きマスのぶんだけ奥にいる。</b></summary>
     public static int StartCellOf(int nodeIndex) => nodeIndex + 1;
 
+    // ---------------- 敵の拠点（ワープポータル・第176期） ----------------
+
+    /// <summary>
+    /// 敵の拠点のマス（道のいちばん奥・第176期 §1-1）。<b>北と南はここで合流する</b>
+    /// ——道の上のマスは 0..<see cref="RoadCells"/>-1 なので、その1つ先が拠点である。
+    /// <b><see cref="PortalRule.On"/> が偽なら誰もこのマスに立てない</b>（`Map11State.MaxCell`）。
+    /// </summary>
+    public const int PortalCell = RoadCells;
+
+    /// <summary>敵の拠点の呼び名（画面と器具で1つにする）。</summary>
+    public const string PortalName = "敵の拠点";
+
+    /// <summary>
+    /// 湧く部隊の中身（第176期 §1-2）。<b>新しい敵は1体も作らない</b>
+    /// ——北なら第二波・先遣、南なら第四波・先遣で、どちらも <see cref="EnemyCatalog.Vanguards"/> の写し。
+    /// </summary>
+    public static Formation SpawnEnemy(int road) => EnemyCatalog.Vanguards[road].Enemy;
+
+    /// <summary>湧く部隊の名前（道で変わる）。</summary>
+    public static string SpawnName(int road) => EnemyCatalog.Vanguards[road].Name;
+
+    /// <summary>湧く部隊の背景（<b>元の波と同じ</b>——先遣は第二波 / 第四波の背景で描く）。</summary>
+    public static int SpawnStage(int road) => road == 0 ? 1 : 3;
+
     /// <summary>
     /// 遊ぶときの時間の規則（<b>第174期 段B1 で測って決めた</b>）。
     /// <b>K = 1</b>（敵は毎作戦ターン1マス近づく）——線1〜3 が同時に通る K のうち最も小さい値で、
@@ -260,6 +284,31 @@ public readonly record struct TimeRule(bool On, int AdvanceEvery, int RestPercen
 }
 
 /// <summary>
+/// 敵の拠点（ワープポータル）の規則（第176期）。
+/// <b><c>On</c> が偽なら第175期と1ビットも違わない</b>——このレコードを読む箇所はすべて
+/// <c>On</c> の裏側にあり、湧きも合流のマスも1行も走らない（自己検査 (a)）。
+/// </summary>
+/// <param name="On">敵の拠点を置くか。偽なら道の奥は <see cref="Map11.RoadCells"/>-1 で行き止まり。</param>
+/// <param name="SpawnEvery">
+/// 湧きの間隔（作戦ターン）。<c>S</c>。<b>制圧するまで、この間隔で敵の拠点に1部隊ずつ湧く</b>
+/// ——北と南を交互に選ぶ（第176期 §1-2）。
+/// </param>
+/// <param name="BattleCap">
+/// 1 マップの戦闘回数の上限。<b>第175期までの 24 では足りない</b>
+/// ——籠城は 60 作戦ターンのあいだ迎撃を繰り返すので、24 で切ると
+/// 「湧きに押し切られた」と「戦闘の上限に当たった」が区別できなくなる（§1-4 の膠着）。
+/// </param>
+public readonly record struct PortalRule(bool On, int SpawnEvery, int BattleCap = 120)
+{
+    /// <summary>敵の拠点なし（第175期の規則そのもの）。</summary>
+    public static readonly PortalRule Off = new(false, 0, Map11.BattleCap);
+
+    public static PortalRule Every(int s, int battleCap = 120) => new(true, s, battleCap);
+
+    public override string ToString() => On ? $"S={SpawnEvery}" : "拠点なし";
+}
+
+/// <summary>
 /// マップ 1-1 の進行。<b>盤面の規則は <see cref="BattleEngine"/> と
 /// <see cref="EngagementEngine.CrossBoundary"/> しか呼ばない</b>（判定はこのクラスに1つも無い）。
 ///
@@ -298,6 +347,12 @@ public sealed class Map11State
     public sealed class Node
     {
         public required Map11.RoadNode Def { get; init; }
+        /// <summary>
+        /// 敵の拠点から湧いた部隊か（第176期）。<b>最初からいる4部隊は偽。</b>
+        /// 2 本抜き（<see cref="Squad.Cleared"/>）の分子に入れないためだけの印で、
+        /// 戦闘・回復・勝敗の規則は1つも読まない。
+        /// </summary>
+        public bool FromPortal { get; init; }
         public List<UnitState>? Units { get; set; }
         public bool Cleared { get; set; }
         public int DefMaxHp { get; init; }
@@ -331,11 +386,41 @@ public sealed class Map11State
     /// <summary>拠点が陥落した（敵が拠点に着いたのに、拠点に隊が1つもいなかった）。</summary>
     public bool Fallen { get; private set; }
 
+    /// <summary>陥落させた敵部隊の道（-1 ＝ 陥落していない）。<b>測るためだけの計数。</b></summary>
+    public int FallenRoad { get; private set; } = -1;
+
     /// <summary>拠点の迎撃戦が起きた回数（測るためだけの計数）。</summary>
     public int Intercepts { get; private set; }
 
     /// <summary>休んだ回数（測るためだけの計数）。</summary>
     public int Rests { get; private set; }
+
+    // ---------------- 敵の拠点（第176期） ----------------
+
+    /// <summary>敵の拠点の規則。<b><c>On</c> が偽なら、このクラスの拠点の枝は1行も走らない。</b></summary>
+    public PortalRule Portal { get; }
+
+    /// <summary>敵の拠点を制圧したか。<b>制圧した時点で湧きが止まる。</b></summary>
+    public bool Captured { get; private set; }
+
+    /// <summary>制圧した作戦ターン（していなければ -1）。</summary>
+    public int CapturedTurn { get; private set; } = -1;
+
+    /// <summary>湧いた敵部隊（抜いたものも残す——数えるときに <c>Cleared</c> で除く）。
+    /// <b>並びは湧いた順＝道の上では後ろの順</b>（列の順序の不変条件）。</summary>
+    public List<Node> Spawns { get; } = new();
+
+    /// <summary>湧いた総数（測るためだけの計数）。</summary>
+    public int SpawnCount { get; private set; }
+
+    /// <summary>第2拠点が陥落した回数（§1-3 (4)。<b>敵は拠点へ向かってしか動かないので原理的に 0</b>）。</summary>
+    public int SecondBaseFalls { get; private set; }
+
+    /// <summary>隊が立てるいちばん奥のマス。<b>拠点なしなら道の行き止まり</b>（第175期のまま）。</summary>
+    public int MaxCell => Portal.On ? Map11.PortalCell : Map11.RoadCells - 1;
+
+    /// <summary>1 マップの戦闘回数の上限（拠点ありでは <see cref="PortalRule.BattleCap"/>）。</summary>
+    public int BattleCapNow => Portal.On ? Portal.BattleCap : Map11.BattleCap;
 
     /// <summary>
     /// 控えの駒（第172期 §1-2）。<b>席を持たない駒の置き場</b>で、拠点の隊とだけ行き来できる。
@@ -344,10 +429,11 @@ public sealed class Map11State
     /// </summary>
     public List<UnitState> Bench { get; }
 
-    public Map11State(int seed, TimeRule? time = null)
+    public Map11State(int seed, TimeRule? time = null, PortalRule? portal = null)
     {
         Seed = seed;
         Time = time ?? TimeRule.Off;
+        Portal = portal ?? PortalRule.Off;
         Bench = Map11.Reserves
             .Select(d => BattleEngine.Materialize(Formation.Build(front1: d), BattleContext.PlayerTeam)[0])
             .ToList();
@@ -365,9 +451,17 @@ public sealed class Map11State
     /// <summary>出せる隊が1つも残っていない（盤上に居らず、かつ出していないわけでもない）。</summary>
     public bool NoSquadsLeft => Squads.All(s => s.Units is null && (s.Lost || s.Deployed));
 
-    public bool Finished => AllCleared || NoSquadsLeft || Battles >= Map11.BattleCap
+    /// <summary>盤上に敵部隊が1つでも残っているか（<b>湧いたものも数える</b>）。</summary>
+    public bool FoesLeft => Nodes.Any(r => r.Any(n => !n.Cleared)) || Spawns.Any(n => !n.Cleared);
+
+    public bool Finished => (Portal.On ? Won : AllCleared) || NoSquadsLeft || Battles >= BattleCapNow
                             || Fallen || (Time.On && Turn >= Map11.TurnCap);
-    public bool Won => AllCleared && !Fallen;
+
+    /// <summary>
+    /// 勝ち。<b>拠点ありでは「制圧した ＋ 盤上の敵部隊が 0」</b>（第176期 §1-4）
+    /// ——道を抜くだけでは終わらない。拠点なしでは第175期のまま。
+    /// </summary>
+    public bool Won => Portal.On ? (Captured && !FoesLeft && !Fallen) : (AllCleared && !Fallen);
 
     /// <summary>道 <paramref name="road"/> で次に当たる区画。道が抜け切っていれば null。</summary>
     public Node? NextNode(int road)
@@ -375,6 +469,74 @@ public sealed class Map11State
         foreach (Node n in Nodes[road]) if (!n.Cleared) return n;
         return null;
     }
+
+    // ---------------- 道の上の敵（第176期。**拠点なしでは湧きが 0 なので第175期と同義**） ----------------
+
+    /// <summary>
+    /// その道に残っている敵部隊を<b>手前（拠点に近い）順</b>に返す。
+    /// <b>固定の4部隊は必ず湧きより手前にいる</b>——湧きは敵の拠点から出て、
+    /// 前が詰まっていれば進めない（<see cref="AdvanceFoes"/>）ので、この並びが位置の順になる。
+    /// </summary>
+    public IEnumerable<Node> FoesOn(int road)
+    {
+        foreach (Node n in Nodes[road]) if (!n.Cleared) yield return n;
+        foreach (Node n in Spawns) if (!n.Cleared && n.Def.Road == road) yield return n;
+    }
+
+    /// <summary>その道でいちばん拠点に近い敵部隊。<b>拠点なしでは <see cref="NextNode"/> と同じもの。</b></summary>
+    public Node? FrontFoe(int road) => FoesOn(road).FirstOrDefault();
+
+    /// <summary>そのマスにいる敵部隊（手前の順で最初の1つ）。</summary>
+    public Node? FoeAt(int road, int cell) => FoesOn(road).FirstOrDefault(n => n.Cell == cell);
+
+    /// <summary>敵の拠点のマスにいる敵部隊（<b>道をまたいで数える</b>——北と南はそこで合流する）。</summary>
+    public Node? PortalFoe()
+    {
+        if (!Portal.On) return null;
+        for (int road = 0; road < Map11.RoadCount; road++)
+            foreach (Node n in FoesOn(road))
+                if (n.Cell >= Map11.PortalCell) return n;
+        return null;
+    }
+
+    /// <summary>
+    /// その隊がいま当たっている敵部隊（<b>同じマスにいる相手</b>）。いなければ null。
+    /// <b>拠点なしでは「道の先頭の敵が同じマスにいるか」そのもの</b>（第175期の <c>Advance</c> の式）。
+    /// </summary>
+    public Node? FoeFacing(int squadIndex)
+    {
+        Squad s = Squads[squadIndex];
+        if (s.Units is null || s.Road < 0) return null;
+        if (Portal.On && s.Cell >= Map11.PortalCell) return PortalFoe();
+        Node? f = FrontFoe(s.Road);
+        return f is not null && f.Cell == s.Cell ? f : null;
+    }
+
+    /// <summary>
+    /// その道へ向かう意味があるか。<b>拠点なしでは「抜け切っていない道だけ」</b>（第175期）で、
+    /// 拠点ありでは<b>敵が残っていなくても奥へ行ける</b>（その先に敵の拠点がある）。
+    /// </summary>
+    public bool CanHead(int road) => Portal.On || NextNode(road) is not null;
+
+    /// <summary>
+    /// 制圧の判定（<b>ここ1箇所だけ</b>）。敵の拠点のマスに味方がいて、そこに敵部隊が1つも無ければ制圧。
+    /// <b>制圧した時点で湧きが止まる</b>（<see cref="SpawnIfDue"/> が <c>Captured</c> を見る）。
+    /// </summary>
+    private void TryCapture()
+    {
+        if (!Portal.On || Captured || PortalFoe() is not null) return;
+        foreach (Squad s in Squads)
+            if (s.Units is not null && s.Cell >= Map11.PortalCell && s.Units.Any(u => u.IsAlive))
+            {
+                Captured = true;
+                CapturedTurn = Turn;
+                return;
+            }
+    }
+
+    /// <summary>その隊は制圧した第2拠点にいるか（<b>休む・組み直しができる</b>）。</summary>
+    public bool AtSecondBase(int squadIndex)
+        => Captured && Squads[squadIndex].Units is not null && Squads[squadIndex].Cell >= Map11.PortalCell;
 
     /// <summary>出撃させる（拠点 → 道）。控えはここで初めて盤上に出る。</summary>
     public void Send(int squadIndex, int road)
@@ -435,7 +597,7 @@ public sealed class Map11State
     public bool CanReform(int squadIndex)
     {
         Squad s = Squads[squadIndex];
-        return !s.Lost && s.Road < 0;
+        return !s.Lost && (s.Road < 0 || AtSecondBase(squadIndex));
     }
 
     /// <summary>出せるか。<b>0 枚の隊は出せない</b>（指示書 §1-1）。</summary>
@@ -560,12 +722,15 @@ public sealed class Map11State
     /// 1 戦ぶんの駒を用意する。<b>返すリストはそのまま <see cref="BattleEngine.Run"/> へ渡す</b>
     /// ——戦闘が書き換えた同じ参照を <see cref="Resolve"/> が読む。
     /// </summary>
-    public (List<UnitState> Players, List<UnitState> Enemies, int Seed, Node Node)? Prepare(int squadIndex)
+    public (List<UnitState> Players, List<UnitState> Enemies, int Seed, Node Node)? Prepare(
+        int squadIndex, Node? against = null)
     {
         Squad s = Squads[squadIndex];
         if (s.Units is not { } pu || s.Road < 0) return null;
-        Node? node = NextNode(s.Road);
-        if (node is null) return null;
+        // **拠点なしでは第175期のまま**（道の先頭の区画）。拠点ありでは「いま同じマスにいる相手」
+        // ——敵の拠点のマスでは、そこに立っている湧いた部隊が相手になる（§1-2）。
+        Node? node = against ?? (Portal.On ? FoeFacing(squadIndex) : NextNode(s.Road));
+        if (node is null || node.Cleared) return null;
         node.Units ??= BattleEngine.Materialize(node.Def.Enemy, BattleContext.EnemyTeam);
         return (pu, node.Units, Map11.DeriveSeed(Seed, Battles), node);
     }
@@ -597,7 +762,7 @@ public sealed class Map11State
             node.Cleared = true;
             node.Units = null;
             node.HpNow = 0;
-            if (node.Def.Road == s.Home) s.Cleared++;
+            if (node.Def.Road == s.Home && !node.FromPortal) s.Cleared++;
         }
         else node.Units = EngagementEngine.CrossBoundary(aliveE);
 
@@ -616,6 +781,9 @@ public sealed class Map11State
             s.Units = EngagementEngine.CrossBoundary(aliveP, pu,
                 recover ? new RecoverRule(Map11.RecoverPercent, false) : null);
         }
+
+        // 敵の拠点のマスで最後の1つを抜いたら、その場で制圧になる（第176期 §1-3）。
+        TryCapture();
     }
 
     // =============================================================================
@@ -649,23 +817,60 @@ public sealed class Map11State
 
         if (s.Cell < 0)
         {
-            if (NextNode(road) is null) return null;
+            if (!CanHead(road)) return null;
             Send(squadIndex, road);
         }
         else
         {
             road = s.Road;
-            Node? front = NextNode(road);
             // **すでに敵と同じマスにいる**（前の戦闘が決着しなかった）ときは、その場でもう一度当たる。
-            if (front is not null && front.Cell == s.Cell) return front;
-            int limit = front?.Cell ?? Map11.RoadCells - 1;
-            int next = Math.Min(s.Cell + 1, Math.Min(limit, Map11.RoadCells - 1));
+            if (FoeFacing(squadIndex) is { } contact) return contact;
+            Node? front = FrontFoe(road);
+            int limit = front?.Cell ?? MaxCell;
+            int next = Math.Min(s.Cell + 1, Math.Min(limit, MaxCell));
             if (next == s.Cell) return null;
             s.Cell = next;
+            // 敵の拠点のマスへ入って、そこに敵が1つも無ければ制圧（第176期 §1-3）。
+            TryCapture();
         }
 
-        Node? n = NextNode(s.Road);
-        return n is not null && n.Cell == s.Cell ? n : null;
+        return FoeFacing(squadIndex);
+    }
+
+    /// <summary>
+    /// 拠点どうしのワープ（第176期 §1-3）。<b>制圧した後だけ</b>、味方の拠点 ⇔ 第2拠点を
+    /// <b>1 作戦ターンで行き来できる</b>。<b>道の上へは飛べない。</b>
+    /// </summary>
+    public bool Warp(int squadIndex, Dest dest)
+    {
+        if (!Portal.On || !Captured) return false;
+        Squad s = Squads[squadIndex];
+        if (s.Lost || s.Units is null || !CanSend(squadIndex)) return false;
+
+        if (dest.AtHome)
+        {
+            if (!AtSecondBase(squadIndex)) return false;
+            s.Road = -1;
+            s.Cell = -1;
+            return true;
+        }
+        if (s.Cell >= 0 || dest.Cell < Map11.PortalCell) return false;
+        if (PortalFoe() is not null) return false;   // 敵がいるあいだは拠点ではない
+        s.Road = dest.Road;
+        if (s.Home < 0) s.Home = dest.Road;
+        s.Cell = Map11.PortalCell;
+        s.Deployed = true;
+        return true;
+    }
+
+    /// <summary>そのワープができるか（<see cref="Map11Orders.Plan"/> が読む）。</summary>
+    public bool CanWarp(int squadIndex, Dest dest)
+    {
+        if (!Portal.On || !Captured) return false;
+        Squad s = Squads[squadIndex];
+        if (s.Lost || s.Units is null || !CanSend(squadIndex)) return false;
+        if (dest.AtHome) return AtSecondBase(squadIndex);
+        return s.Cell < 0 && dest.Cell >= Map11.PortalCell && PortalFoe() is null;
     }
 
     /// <summary>戻る（拠点へ向かって 1 マス）。<b>一瞬では戻れない。</b></summary>
@@ -686,7 +891,8 @@ public sealed class Map11State
     public bool Rest(int squadIndex)
     {
         Squad s = Squads[squadIndex];
-        if (s.Lost || s.Cell >= 0 || Time.RestPercent <= 0) return false;
+        if (s.Lost || Time.RestPercent <= 0) return false;
+        if (s.Cell >= 0 && !AtSecondBase(squadIndex)) return false;
         if (s.Units is not { } u) return false;   // 未出撃の隊は満タンなので休む意味がない
         bool moved = false;
         foreach (UnitState x in u)
@@ -717,24 +923,64 @@ public sealed class Map11State
         var list = new List<Encounter>();
         if (!Time.On) return list;
         Turn++;
-        if (Time.AdvanceEvery <= 0 || Turn % Time.AdvanceEvery != 0) return list;
+        if (Time.AdvanceEvery <= 0 || Turn % Time.AdvanceEvery != 0) return SpawnIfDue(list);
 
-        for (int road = 0; road < Map11.RoadCount; road++)
+        // 1 部隊ぶんの前進。**第175期の式をそのまま関数にしただけ**で、中身は1文字も変えていない。
+        // 戻り値が偽 ＝ 拠点が陥落したので、その場で打ち切る。
+        bool Step(Node n)
         {
-            Node? n = NextNode(road);
-            if (n is null) continue;
             if (n.Cell >= 0) n.Cell--;
-
             if (n.Cell < 0)
             {
                 BeginIntercept(n);
-                if (NextInterceptor(n) < 0) { Fallen = true; return list; }
+                if (NextInterceptor(n) < 0) { Fallen = true; FallenRoad = n.Def.Road; return false; }
                 list.Add(new Encounter(-1, n, true));
-                continue;
+                return true;
             }
-            int sq = SquadAt(road, n.Cell);
+            int sq = SquadAt(n.Def.Road, n.Cell);
             if (sq >= 0) list.Add(new Encounter(sq, n, false));
+            return true;
         }
+
+        for (int road = 0; road < Map11.RoadCount; road++)
+        {
+            // **最初からいる4部隊の規則は第175期のまま**（先頭だけが前進する・§1-1）。
+            Node? n = NextNode(road);
+            if (n is not null && !Step(n)) return list;
+            if (!Portal.On) continue;
+
+            // **湧いた部隊は列になって進む**（§1-2）——手前から順に1マスずつ、
+            // 前が詰まっていればそのマスの手前で待つ。固定の4部隊も「詰まり」として数える。
+            foreach (Node sp in FoesOn(road).Where(x => x.FromPortal).ToList())
+            {
+                if (sp.Cell < 0) continue;
+                int target = sp.Cell - 1;
+                if (FoesOn(road).Any(x => !ReferenceEquals(x, sp) && x.Cell == target)) continue;
+                if (!Step(sp)) return list;
+            }
+        }
+        return SpawnIfDue(list);
+    }
+
+    /// <summary>
+    /// 敵の拠点から1部隊湧かせる（第176期 §1-2）。<b>制圧していれば湧かない。</b>
+    /// 道は<b>北と南を交互</b>に選び、中身はその道の先遣（<see cref="Map11.SpawnEnemy"/>）。
+    /// <b>満タンで湧く</b>——<c>Materialize</c> は戦闘の直前まで遅らせるので、ここでは箱だけ作る。
+    /// </summary>
+    private List<Encounter> SpawnIfDue(List<Encounter> list)
+    {
+        if (!Portal.On || Captured || Fallen) return list;
+        if (Portal.SpawnEvery <= 0 || Turn <= 0 || Turn % Portal.SpawnEvery != 0) return list;
+
+        int road = SpawnCount % Map11.RoadCount;
+        var def = new Map11.RoadNode(road, Map11.RoadCells, Map11.SpawnName(road),
+                                     Map11.SpawnEnemy(road), Map11.SpawnStage(road));
+        int hp = def.Enemy.Occupied().Sum(o => o.Def.MaxHp);
+        Spawns.Add(new Node
+        {
+            Def = def, FromPortal = true, DefMaxHp = hp, HpNow = hp, Cell = Map11.PortalCell,
+        });
+        SpawnCount++;
         return list;
     }
 
@@ -782,10 +1028,22 @@ public sealed class Map11State
     /// </summary>
     public void CloseIntercept(Node node)
     {
+        // §1-3 (4): 第2拠点も、敵が来て隊が1つもいなければ陥落する。**敵は拠点へ向かってしか
+        // 動かない**ので、制圧した後に敵が第2拠点へ来る道は1本も無い——数えて 0 であることを出す。
+        if (Portal.On && Captured && PortalFoe() is not null
+            && !Squads.Any(x => !x.Lost && AtSecondBase(x.Index) && CanSend(x.Index)))
+        {
+            Captured = false;
+            SecondBaseFalls++;
+        }
         if (node.Cleared) return;
         // **判定は「拠点に出せる隊が1つも無いか」の1本だけ**——この到着でもう出した隊が
         // 残っていても（決着しなかったなど）、まだ拠点にいるなら陥落ではない。
-        if (!Squads.Any(x => !x.Lost && x.Cell < 0 && CanSend(x.Index))) Fallen = true;
+        if (!Squads.Any(x => !x.Lost && x.Cell < 0 && CanSend(x.Index)))
+        {
+            Fallen = true;
+            FallenRoad = node.Def.Road;
+        }
     }
 
     /// <summary>部分点（第168期と同じ定義）＝ 抜いた部隊数 ＋ 残った部隊の削り。</summary>

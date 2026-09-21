@@ -225,6 +225,35 @@ public partial class Main : Control
             GetTree().Quit(tok ? 0 : 1);
             return;
         }
+        // 第176期 Phase 0 / 段1。**画面を1つも作らずに `Map11State` を敵の拠点ありで回す。**
+        if (bootArgs.Contains("--map11-phase176", StringComparer.Ordinal))
+        {
+            bool p176 = Map11Portal.Phase0(200, GD.Print);
+            GD.Print($"MAP11_PHASE176_COMPLETE ok={p176}");
+            GetTree().Quit(p176 ? 0 : 1);
+            return;
+        }
+        if (bootArgs.Contains("--map11-portal-scan", StringComparer.Ordinal))
+        {
+            bool sc = Map11Portal.Scan(Map11Portal.DefaultSeeds, GD.Print);
+            GD.Print($"MAP11_PORTAL_SCAN_COMPLETE ok={sc}");
+            GetTree().Quit(sc ? 0 : 1);
+            return;
+        }
+        // **完全一致か `=` 付きだけ**を受ける（R231 の再発防止）。
+        string? portalArg = bootArgs.FirstOrDefault(a => a == "--map11-portal"
+            || a.StartsWith("--map11-portal=", StringComparison.Ordinal));
+        if (portalArg is not null)
+        {
+            string[] pp = (portalArg.Length > "--map11-portal=".Length
+                ? portalArg["--map11-portal=".Length..] : "").Split(',');
+            int pn = int.TryParse(pp[0], out int pw) && pw > 0 ? pw : Map11Portal.DefaultSeeds;
+            int p0s = pp.Length > 1 && int.TryParse(pp[1], out int ps) && ps >= 0 ? ps : 0;
+            bool pok = Map11Portal.Report(pn, GD.Print, p0s);
+            GD.Print($"MAP11_PORTAL_COMPLETE seeds={pn} seed0={p0s} ok={pok}");
+            GetTree().Quit(pok ? 0 : 1);
+            return;
+        }
         string? verifyArg = bootArgs.FirstOrDefault(a => a.StartsWith("--map11-verify", StringComparison.Ordinal));
         if (verifyArg is not null)
         {

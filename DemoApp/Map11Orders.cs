@@ -25,8 +25,14 @@ public readonly record struct Dest(int Road, int Cell)
 
     public bool AtHome => Road < 0;
 
-    /// <summary>その道のいちばん奥（＝抜き切るまで進み続ける）。</summary>
+    /// <summary>その道のいちばん奥（＝抜き切るまで進み続ける）。<b>敵の拠点は含まない。</b></summary>
     public static Dest Deep(int road) => new(road, Map11.RoadCells - 1);
+
+    /// <summary>その道の先の<b>敵の拠点</b>（第176期）。拠点なしの設定では誰も立てない。</summary>
+    public static Dest Portal(int road) => new(road, Map11.PortalCell);
+
+    /// <summary>行き先が敵の拠点か。</summary>
+    public bool IsPortal => Road >= 0 && Cell >= Map11.PortalCell;
 }
 
 public static class Map11Orders
@@ -35,14 +41,17 @@ public static class Map11Orders
     /// 1 隊ぶんの命令。<b>第174期の <c>Map11Session.Order</c> をここへ移しただけ</b>
     /// （「組み直す」の枝は落とした——組み直しは作戦ターンを使わない操作になった）。
     /// </summary>
-    public enum Order { Wait, Advance, Back, Rest }
+    public enum Order { Wait, Advance, Back, Rest, Warp }
 
     /// <summary>マスの名前（空きマスだけ名前を持ち、残りは区画の番号で呼ぶ）。</summary>
-    public static string CellName(int cell) => cell <= 0 ? "手前" : $"{cell} 戦目の地点";
+    public static string CellName(int cell)
+        => cell >= Map11.PortalCell ? Map11.PortalName : cell <= 0 ? "手前" : $"{cell} 戦目の地点";
 
     /// <summary>行き先の1語（隊の札と盤の矢印に同じものを出す）。</summary>
     public static string Where(Dest dest)
-        => dest.AtHome ? "拠点" : $"{Map11.RoadNames[dest.Road]} {CellName(dest.Cell)}";
+        => dest.AtHome ? "拠点"
+         : dest.IsPortal ? Map11.PortalName
+         : $"{Map11.RoadNames[dest.Road]} {CellName(dest.Cell)}";
 
     /// <summary>
     /// 行き先から、この作戦ターンの命令を1つ決める（<b>盤面は1ビットも動かさない</b>）。
@@ -59,20 +68,25 @@ public static class Map11Orders
         if (s.Lost || !st.CanSend(squad)) return Order.Wait;
         bool home = s.Cell < 0;
 
+        // 制圧した拠点どうしは1作戦ターンで行き来できる（第176期 §1-3）。
+        if (st.CanWarp(squad, dest)) return Order.Warp;
+
         if (dest.AtHome)
         {
             if (!home) return Order.Back;
             return st.Hurt(squad) ? Order.Rest : Order.Wait;
         }
 
-        // 抜け切った道へは出ない（出ても当たる相手がいない）。
-        if (st.NextNode(dest.Road) is null) return home ? Order.Wait : Order.Back;
+        // 抜け切った道へは出ない（出ても当たる相手がいない）。**敵の拠点があるならその先へ行ける。**
+        if (!st.CanHead(dest.Road)) return home ? Order.Wait : Order.Back;
         if (home) return Order.Advance;
         if (s.Road != dest.Road) return Order.Back;
         if (s.Cell < dest.Cell) return Order.Advance;
         if (s.Cell > dest.Cell) return Order.Back;
         // 着いている。敵が同じマスまで来ていれば、もう一度当たる。
-        return st.NextNode(dest.Road) is { } n && n.Cell == s.Cell ? Order.Advance : Order.Wait;
+        if (st.FoeFacing(squad) is not null) return Order.Advance;
+        // 制圧した敵の拠点（第2拠点）に立っているなら、傷が残っていれば休む。
+        return st.AtSecondBase(squad) && st.Hurt(squad) ? Order.Rest : Order.Wait;
     }
 
     /// <summary>
@@ -92,6 +106,9 @@ public static class Map11Orders
             case Order.Rest:
                 st.Rest(squad);
                 return null;
+            case Order.Warp:
+                st.Warp(squad, dest);
+                return null;
             default:
                 return null;
         }
@@ -102,7 +119,8 @@ public static class Map11Orders
     {
         Order.Advance => $"{Where(dest)} へ進む",
         Order.Back => dest.AtHome ? "拠点へ戻る" : $"{Where(dest)} へ（拠点を経由）",
-        Order.Rest => "休む（拠点）",
+        Order.Rest => st.AtSecondBase(squad) ? $"休む（{Map11.PortalName}）" : "休む（拠点）",
+        Order.Warp => dest.AtHome ? "拠点へワープ" : $"{Map11.PortalName} へワープ",
         _ => dest.AtHome ? "拠点で待つ" : $"{Where(dest)} に到着（待機）",
     };
 }
