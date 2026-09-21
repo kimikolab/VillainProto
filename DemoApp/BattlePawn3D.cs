@@ -27,6 +27,7 @@ public partial class BattlePawn3D : Node3D
     private Color _baseTint;
     private Texture2D _atlas = null!;
     private string _unitId = "";
+    public string UnitId => _unitId;
     private float _phase;
     private float _portraitHeight = 2.25f;
     private float _portraitBaseY = 1.12f;

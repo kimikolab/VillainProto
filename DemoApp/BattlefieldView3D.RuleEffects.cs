@@ -15,6 +15,7 @@ public partial class BattlefieldView3D
     public void ShowYokeSeal(BattlePawn3D? target, int cut)
     {
         if (target is null) return;
+        _attackAudio.PlayYoke();
         Color color = RuleColor(SealedLabels.Yoke);
         float strength = Math.Clamp(cut / 60f, 0.15f, 1f);
         Vector3 center = target.FxPoint + Vector3.Up * 0.75f;
@@ -42,6 +43,7 @@ public partial class BattlefieldView3D
     public void ShowDroughtSeal(BattlePawn3D? target, int blocked)
     {
         if (target is null) return;
+        _attackAudio.PlayDrought();
         // 渇きの台本は回復の書き手を持たない。架空の出発点を他の駒に結ばない。
         Vector3 center = target.FxPoint;
         Color color = RuleColor(SealedLabels.Drought);
@@ -75,6 +77,7 @@ public partial class BattlefieldView3D
     public void HealingLight(BattlePawn3D? source, BattlePawn3D? target, int amount)
     {
         if (target is null || amount <= 0) return;
+        _attackAudio.PlayHeal(source?.UnitId, source == target);
         target.ShowHealingDrops(amount);
         Color color = Color.FromHtml("#bdefff");
         if (source is not null && source != target)

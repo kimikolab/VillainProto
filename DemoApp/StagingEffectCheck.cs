@@ -22,13 +22,35 @@ public partial class StagingEffectCheck : Control
                 new(3, 1, "seal-check", "保持者", 2, 100, 100, 10, AttackPattern.Single, true,
                     [TraitId.Hush, TraitId.Drought, TraitId.Yoke]),
             ];
-            if (mode == "charge")
+            if (mode is "charge" or "charge-audio")
             {
                 // ドルガの「のろま」は Charge ではない。実際に溜める詠唱兵の姿で確認する。
                 UnitDef caster = EnemyCatalog.Chanter;
                 openings[0] = new DemoOpening(1, BattleContext.PlayerTeam, caster.Id, caster.Name,
                     0, caster.MaxHp, caster.MaxHp, caster.Attack, caster.Pattern, caster.Advances, caster.Traits);
+                if (mode == "charge-audio")
+                {
+                    UnitDef lancer = EnemyCatalog.Archer;
+                    openings[1] = new DemoOpening(2, BattleContext.PlayerTeam, lancer.Id, lancer.Name,
+                        3, lancer.MaxHp, lancer.MaxHp, lancer.Attack, lancer.Pattern, lancer.Advances, lancer.Traits);
+                }
             }
+            if (mode == "character-audio")
+                openings[1] = new DemoOpening(2, 0, "yomi", "ヨミ", 3, 100, 100, 10, AttackPattern.Single, false);
+            if (mode == "life-audio")
+            {
+                field.AddSummon(new DemoOpening(98, 0, "nara", "召喚音確認", 4,
+                    30, 30, 5, AttackPattern.Single, false));
+                await Wait(1.3);
+                var summoned = field.FindPawn(98)!;
+                summoned.AnimateDeath();
+                await Wait(0.8);
+                summoned.SetHp(20);
+                field.RevivePawn(summoned);
+                await Wait(1.5);
+            }
+            if (mode == "parry-audio")
+                openings[0] = new DemoOpening(1, 0, "gald", "ガルド", 0, 100, 100, 9, AttackPattern.Single, false);
             field.BeginBattle(openings, "演出確認", 1);
             var target = field.FindPawn(1)!;
             var healer = field.FindPawn(2)!;
@@ -123,6 +145,60 @@ public partial class StagingEffectCheck : Control
                 Require(target.StatusIconCount == 0, "蘇生で古い状態を復元しない");
                 await Wait(0.5);
             }
+            if (mode == "parry-audio")
+            {
+                for (int i = 0; i < 6; i++)
+                {
+                    field.Parry(holder, target);
+                    await Wait(0.65);
+                }
+            }
+            if (mode == "character-audio")
+            {
+                await field.Attack(healer, holder, AttackPattern.Single, new[] { holder });
+                await Wait(0.8);
+                await field.ShowBonusAttack(healer);
+                await field.Attack(healer, holder, AttackPattern.Single, new[] { holder }, reaction: true);
+                await Wait(0.8);
+                await field.Attack(holder, target, AttackPattern.Single, new[] { target });
+                target.AnimateHit(false);
+                field.PlayHitSound(target);
+                await Wait(0.5);
+                await field.ShowBonusAttack(target);
+                field.PlayDirectReactionSound(target);
+                holder.AnimateHit(false);
+                await Wait(1);
+            }
+            if (mode == "finish-audio")
+            {
+                BattleEvent[] events =
+                [
+                    new() { Kind = BattleEventKind.Death, Turn = 1, TargetId = 3 },
+                    new() { Kind = BattleEventKind.Revive, Turn = 1, TargetId = 3, HpAfter = 10 },
+                    new() { Kind = BattleEventKind.Summon, Turn = 1, TargetId = 4, Team = 1, HpAfter = 10 },
+                    new() { Kind = BattleEventKind.Death, Turn = 2, TargetId = 3 },
+                    new() { Kind = BattleEventKind.Death, Turn = 2, TargetId = 4 },
+                ];
+                Require(FinishSoundCue.Find(true, openings, events) == 4, "蘇生・召喚後の最後の敵だけを選ぶ");
+                Require(FinishSoundCue.Find(false, openings, events) == -1, "敗北時は鳴らない");
+                Require(FinishSoundCue.Find(true, openings, events.Take(4).ToArray()) == -1, "敵が残る場合は鳴らない");
+                field.PlayDeath(holder, finish: true);
+                await Wait(2);
+                holder.SetHp(100);
+                holder.AnimateRevive();
+            }
+            if (mode == "death-audio")
+            {
+                field.PlayDeath(holder);
+                await Wait(1.5);
+                field.PlayDeath(target);
+                await Wait(1.5);
+                holder.SetHp(100);
+                holder.AnimateRevive();
+                target.SetHp(100);
+                target.AnimateRevive();
+                await Wait(0.8);
+            }
             if (mode is "all" or "life")
             {
                 target.AnimateDeath();
@@ -153,13 +229,24 @@ public partial class StagingEffectCheck : Control
                 await Capture("single-slash-return");
                 await Wait(0.6);
             }
+            if (mode == "charge-audio")
+            {
+                field.BeginCharge(target, 250);
+                await Wait(1.0);
+                await field.Attack(target, holder, AttackPattern.All, new[] { holder });
+                await Wait(1.0);
+                field.BeginCharge(healer, 250);
+                await Wait(1.0);
+                await field.Attack(healer, holder, AttackPattern.Pierce, new[] { holder });
+                await Wait(1.0);
+            }
             if (mode is "all" or "charge")
             {
-                target.BeginCharge(250);
+                field.BeginCharge(target, 250);
                 await Wait(0.4);
                 await Capture("charge-start");
                 field.SetTurn(2);
-                target.BeginCharge(300);
+                field.BeginCharge(target, 300);
                 Require(target.GetChildren().OfType<ChargeAura3D>().Count() == 1, "再度の溜めは重ねない");
                 await Wait(0.7);
                 Require(target.IsCharging, "ターンをまたいで溜めを維持");
@@ -247,12 +334,14 @@ public partial class StagingEffectCheck : Control
             if (mode is "all" or "stats")
             {
                 target.SetAttack(40);
+                field.PlayAttackChangeSound(20);
                 Require(target.PowerMistActive, "強化オーラ");
                 Require(target.AttackDeltaText == "+20" && target.AttackDeltaVisible, "基準からの強化");
                 await Wait(0.28);
                 await Capture("attack-up");
                 await Wait(0.6);
                 target.SetAttack(12);
+                field.PlayAttackChangeSound(-28);
                 Require(target.PowerMistActive, "弱体オーラ");
                 Require(target.AttackDeltaText == "-8" && target.AttackDeltaVisible, "基準からの弱体");
                 await Wait(0.28);

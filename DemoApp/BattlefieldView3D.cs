@@ -38,6 +38,7 @@ public partial class BattlefieldView3D : Control
     /// <summary>いま手番の主として印を出している駒（第125期 段2）。</summary>
     private BattlePawn3D? _turnOwner;
     private Vector3 _cameraHome;
+    private BattleAttackAudio _attackAudio = null!;
 
     /// <summary>画角（第124期 3-c）。<b>寄りは距離で作る</b>ので、ここは動かさない。</summary>
     private const float CameraFov = 39.0f;
@@ -87,6 +88,9 @@ public partial class BattlefieldView3D : Control
         _viewport.AddChild(_world);
         BuildWorld();
         BuildOverlay();
+        _attackAudio = new BattleAttackAudio();
+        AddChild(_attackAudio);
+        VisibilityChanged += () => { if (!IsVisibleInTree()) _attackAudio.StopAll(); };
     }
 
     private void BuildWorld()
@@ -277,6 +281,7 @@ public partial class BattlefieldView3D : Control
 
     public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName, int stageIndex)
     {
+        _attackAudio.StopAll();
         // 波の番号で背景を選ぶ。表示名や戦闘ログの文字列は判定に使わない。
         bool fortress = stageIndex == 3;
         if (_fortress != fortress)
@@ -508,6 +513,15 @@ public partial class BattlefieldView3D : Control
         guard.BeginGuard(victim.RestPosition + front * 1.1f);
     }
 
+    public void PlayDeath(BattlePawn3D? pawn, bool finish = false)
+    {
+        if (pawn is null) return;
+        SealPawnDied(pawn);
+        pawn.SetHp(0);
+        _attackAudio.PlayDeath(pawn.Team, finish);
+        pawn.AnimateDeath();
+    }
+
     public void AddSummon(DemoOpening opening)
     {
         var pawn = new BattlePawn3D();
@@ -517,8 +531,15 @@ public partial class BattlefieldView3D : Control
         _pawns[opening.InstanceId] = pawn;
         RegisterSealHolder(opening);
         ConnectSeals();
+        _attackAudio.PlaySummon();
         pawn.AnimateAppear();
         MakeGroundRing(pawn.Home, UiKit.Violet, 0.9f, 0.50);
+    }
+
+    public void RevivePawn(BattlePawn3D pawn)
+    {
+        _attackAudio.PlayRevive();
+        pawn.AnimateRevive();
     }
 
     public void MovePawn(BattlePawn3D pawn, int slot)
@@ -543,7 +564,9 @@ public partial class BattlefieldView3D : Control
         // Advances は表示専用。踏み込む駒だけが標的の手前まで移動し、
         // 到着後に攻撃エフェクトを出してから元の席へ戻る。
         await from.AdvanceToAttack(to.RestPosition);
+        bool charged = !reaction && from.IsCharging;
         if (!reaction) from.ReleaseCharge();
+        _attackAudio.PlayAttack(from.UnitId, from.Team, pattern, reaction, charged);
         CameraPunch((from.GlobalPosition + to.GlobalPosition) * 0.5f, pattern);
 
         switch (pattern)
@@ -588,9 +611,39 @@ public partial class BattlefieldView3D : Control
         from.ReturnFromAttack();
     }
 
+    public void BeginCharge(BattlePawn3D? pawn, int percent)
+    {
+        if (pawn is null) return;
+        bool alreadyCharging = pawn.IsCharging;
+        pawn.BeginCharge(percent);
+        if (!alreadyCharging) _attackAudio.PlayCharge(pawn.UnitId);
+    }
+
+    public void ReleaseChargedSkill(BattlePawn3D? pawn)
+    {
+        if (pawn is null || !pawn.IsCharging) return;
+        pawn.ReleaseCharge();
+        _attackAudio.PlayChargeRelease(pawn.UnitId);
+    }
+
+    public void PlayDirectReactionSound(BattlePawn3D? actor)
+    {
+        if (actor is not null) _attackAudio.PlayDirectReaction(actor.UnitId);
+    }
+
+    public void PlayBattleStartSound() => _attackAudio.PlayBattleStart();
+
+    public void PlayAttackChangeSound(int change) => _attackAudio.PlayAttackChange(change);
+
+    public void PlayHitSound(BattlePawn3D? target)
+    {
+        if (target?.UnitId == "kado") _attackAudio.PlayKadoHit();
+    }
+
     public void Parry(BattlePawn3D? attacker, BattlePawn3D? defender)
     {
         if (defender is null) return;
+        if (defender.UnitId == "gald") _attackAudio.PlayParry();
         Vector3 forward = (attacker?.FxPoint ?? defender.FxPoint + Vector3.Right) - defender.FxPoint;
         forward.Y = 0;
         if (forward.LengthSquared() < 0.001f) forward = Vector3.Right;

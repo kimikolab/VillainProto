@@ -983,13 +983,17 @@ public partial class Main : Control
         BeginPlayback();
     }
 
+    private int _finishSoundIndex = -1;
+
     private async void BeginPlayback()
     {
         if (_result is null) return;
+        _finishSoundIndex = FinishSoundCue.Find(_result.PlayerWon, _battleOpening, _result.Events);
         int token = ++_playToken;
         _playing = true;
         _paused = false;
         _pause.Text = "一時停止";
+        _battleField.PlayBattleStartSound();
         _battleField.ShowBanner("BATTLE START", UiKit.Gold, 0.8);
         await Delay(0.62);
 
@@ -1091,7 +1095,9 @@ public partial class Main : Control
                     target.SetStatusEffects(effects.Marked, effects.Stunned, effects.Armor);
                 }
                 if (target is not null) target.SetPoisoned(_poisonedSnapshot.Contains(target.InstanceId));
+                int attackChange = target is null ? 0 : e.Amount - target.AttackValue;
                 target?.SetAttack(e.Amount, e.Pattern);
+                _battleField.PlayAttackChangeSound(attackChange);
                 break;
 
             case BattleEventKind.Attack:
@@ -1123,7 +1129,10 @@ public partial class Main : Control
                 if (_batchedDamageIndices.Contains(eventIndex)) break;
                 if (_burstDamageIndices.Contains(eventIndex)) break;
                 if (e.Reaction && StartsDirectReaction(eventIndex, e))
+                {
                     await _battleField.ShowBonusAttack(actor);
+                    _battleField.PlayDirectReactionSound(actor);
+                }
                 ShowParry(e);
                 await Delay(0.30);
                 _battleField.EndGuards();
@@ -1135,7 +1144,10 @@ public partial class Main : Control
                 // 棘（カド）・仇討ちは PerformAttack を通らず、Reaction 付き Damage から始まる。
                 // ヨミのように Reaction 付き Attack を持つ段は上で既にカットイン済みなので二重に出さない。
                 if (e.Reaction && StartsDirectReaction(eventIndex, e))
+                {
                     await _battleField.ShowBonusAttack(actor);
+                    _battleField.PlayDirectReactionSound(actor);
+                }
                 ShowDamage(eventIndex, e, actor, target);
                 await Delay(0.16);
                 if (!e.Relayed && target?.IsGuarding == true)
@@ -1250,9 +1262,7 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.Death:
-                _battleField.SealPawnDied(target);
-                target?.SetHp(0);
-                target?.AnimateDeath();
+                _battleField.PlayDeath(target, eventIndex == _finishSoundIndex);
                 AppendLog($"  [color=#{UiKit.Hurt.ToHtml(false)}][b]{NameOf(e.TargetId)} 撃破[/b][/color]");
                 await Delay(0.36);
                 break;
@@ -1306,7 +1316,7 @@ public partial class Main : Control
                 {
                     target.SetHp(e.HpAfter);
                     _battleField.MovePawn(target, e.Slot);
-                    target.AnimateRevive();
+                    _battleField.RevivePawn(target);
                     _battleField.SealPawnRevived(target);
                     if (e.ActorId is not null) _battleField.Link(actor, target, UiKit.Heal, "繋ぎ直した");
                 }
@@ -1372,7 +1382,7 @@ public partial class Main : Control
                 // （`BattleEventKind.Charge` の明文）ので、予告は台本だけで書ける。
                 // 溜めは画面上「何も起きないターン」なので、予告が無いとただの空白になる。
                 string forecast = $"次 ×{e.Amount / 100.0:0.#} {UiKit.PatternLabel(e.Pattern ?? AttackPattern.Single)}";
-                actor?.BeginCharge(e.Amount);
+                _battleField.BeginCharge(actor, e.Amount);
                 AppendLog($"[color=#{UiKit.Gold.ToHtml(false)}]{NameOf(e.ActorId)} — {e.Text ?? "力を溜める"}"
                           + $"　（{forecast}）[/color]");
                 await Delay(0.34);
@@ -1380,7 +1390,7 @@ public partial class Main : Control
             }
 
             case BattleEventKind.Skill:
-                if (!e.Reaction) actor?.ReleaseCharge();
+                if (!e.Reaction) _battleField.ReleaseChargedSkill(actor);
                 _battleField.Float(actor, e.Text ?? "SKILL", UiKit.Heal, true);
                 AppendLog($"[color=#{UiKit.Heal.ToHtml(false)}]{NameOf(e.ActorId)} — {e.Text ?? "術"}[/color]");
                 await Delay(0.22);
@@ -1411,6 +1421,10 @@ public partial class Main : Control
         bool poison = _statusCauseByDamageIndex.TryGetValue(eventIndex, out string? status)
             && status == StatusKeys.LabelOf(StatusKeys.Poison);
         target?.AnimateHit(poison);
+        // 毒・燃焼などの継続ダメージや自傷では金属の被弾音を鳴らさない。
+        if (e.Amount > 0 && actor is not null && actor != target
+            && !_statusCauseByDamageIndex.ContainsKey(eventIndex))
+            _battleField.PlayHitSound(target);
         // 第125期 段2（§5-1 の 5）: **1発が分割されて中継された**ことを線で出す。
         // ゴルムの「耐久している感がない」への直答——中継の段はいままで
         // 「なぜかゴルムが殴られた」としか見えなかった。

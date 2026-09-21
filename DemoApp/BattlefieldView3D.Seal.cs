@@ -58,6 +58,7 @@ public partial class BattlefieldView3D
         BeginBonusAura(target, Color.FromHtml("#63d7ff"), duration, interrupted: true);
         await ToSignal(GetTree().CreateTimer(duration * 0.28), SceneTreeTimer.SignalName.Timeout);
         if (!IsInsideTree() || generation != _sealGeneration) return;
+        _attackAudio.PlayHushBlock();
         foreach (var pair in _hushChains.Where(p => p.Key.Target == target.InstanceId))
             pair.Value.Tighten();
         await ToSignal(GetTree().CreateTimer(duration * 0.72), SceneTreeTimer.SignalName.Timeout);
@@ -67,13 +68,20 @@ public partial class BattlefieldView3D
     {
         if (pawn is null) return;
         _fallenForSeal.Add(pawn.InstanceId);
+        bool shattered = false;
         foreach (var key in _hushChains.Keys.Where(k => k.Holder == pawn.InstanceId || k.Target == pawn.InstanceId).ToArray())
         {
             // 保持者の死亡だけが鎖を砕く。封じられた側の死亡は静かに消す。
-            if (key.Holder == pawn.InstanceId) _hushChains[key].Shatter();
+            if (key.Holder == pawn.InstanceId)
+            {
+                _hushChains[key].Shatter();
+                shattered = true;
+            }
             else _hushChains[key].QueueFree();
             _hushChains.Remove(key);
         }
+        // 一人の保持者から複数本伸びていても、死亡一回につき破砕音は一音だけ。
+        if (shattered) _attackAudio.PlayHushBreak();
     }
 
     public void SealPawnRevived(BattlePawn3D pawn)
