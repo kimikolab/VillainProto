@@ -32,11 +32,26 @@ public partial class Map11Main : Node3D
         => new(3.0f + index * 11.0f, 0, road == 0 ? -8.5f : 8.5f);
 
     /// <summary>
+    /// 敵の拠点（ワープポータル・第177期 §2）。<b>北と南はここで合流する</b>ので、
+    /// 道ではなく<b>その真ん中</b>に置く（`Map11State.PortalFoe` が道をまたいで数えるのと同じ形）。
+    /// </summary>
+    private static readonly Vector3 PortalPos = new(22.0f, 0, 0);
+
+    /// <summary>
     /// マスの位置（第174期 §2-1）。<b>マス 0 は拠点と1つ目の敵のあいだの空きマス</b>で、
     /// マス 1・2 は区画 0・1 と同じ場所（<see cref="NodePos"/>）。
+    /// <b>マス <see cref="Map11.PortalCell"/> 以上は敵の拠点</b>（道に依らない1点・第177期）。
     /// </summary>
     private static Vector3 CellPos(int road, int cell)
-        => cell <= 0 ? new(-0.6f, 0, road == 0 ? -8.5f : 8.5f) : NodePos(road, cell - 1);
+        => cell >= Map11.PortalCell ? PortalPos
+         : cell <= 0 ? new(-0.6f, 0, road == 0 ? -8.5f : 8.5f) : NodePos(road, cell - 1);
+
+    /// <summary>
+    /// 盤の上で重なる駒をずらす（拠点・敵の拠点は複数の隊が同じ1点に立つ）。
+    /// <b>文字を大きくしたぶんだけ間隔も広げる</b>（第177期）——広げないと3 隊の札が重なる。
+    /// </summary>
+    private static Vector3 Stack(Vector3 at, int index)
+        => at + new Vector3(0.6f, 0, (index - 1) * 3.6f * _labelScale - 0.4f);
 
     private Camera3D _camera = null!;
     private Label3D _homeLabel = null!;
@@ -74,6 +89,15 @@ public partial class Map11Main : Node3D
     /// <summary>道の上の空きマスの板（位置を教えるためだけの物）。</summary>
     private readonly List<Marker> _cellMarkers = new();
 
+    // ---- 第177期 §2: 敵の拠点（ワープポータル） ----
+
+    /// <summary>敵の拠点の板。<b>湧くまでの残りと、制圧したかを出す。</b></summary>
+    private Marker _portalMarker = null!;
+    /// <summary>拠点どうしを結ぶ点線（<b>制圧してから</b>出す＝ワープできる道）。</summary>
+    private readonly List<MeshInstance3D> _warpDashes = new();
+    /// <summary>湧いた敵部隊の板（足りなくなったら増やす）。</summary>
+    private readonly List<Marker> _spawnMarkers = new();
+
     private VBoxContainer _squadDetail = null!;
     private VBoxContainer _foeDetail = null!;
     private VBoxContainer _history = null!;
@@ -109,11 +133,29 @@ public partial class Map11Main : Node3D
     private ScrollContainer _leftScroll = null!;
     private Button _reformButton = null!;
     private Button _resetButton = null!;
+    /// <summary>第177期 §3 —— 「既定の3隊で始める」（<b>組み始める前だけ</b>出す逃げ道）。</summary>
+    private Button _defaultButton = null!;
+    /// <summary>同・手札の見出し（「控えの駒」と「手札」で言葉が変わる）。</summary>
+    private Label _benchTitle = null!;
     private VBoxContainer _benchList = null!;
     private Label _reformHint = null!;
 
     /// <summary>右のパネルで中身を開いている敵の区画（道, 番号）。既定は北の 1 戦目。</summary>
-    private (int Road, int Index) _foeView = (0, 0);
+    /// <summary>
+    /// <b>第177期に区画そのものへ変えた</b>——湧いた部隊（<see cref="Map11State.Spawns"/>）は
+    /// <c>St.Nodes[道][番号]</c> では引けないため（道と番号の組では一意にならない）。
+    /// </summary>
+    private Map11State.Node? _foeView;
+
+    /// <summary>右のパネルが開いている区画（既定は北の 1 戦目）。</summary>
+    private Map11State.Node FoeView => _foeView ??= St.Nodes[0][0];
+
+    /// <summary>右のパネルの中身を差し替える（<b>札の選択は外す</b>——前の部隊の席が残ると読み違える）。</summary>
+    private void ShowFoe(Map11State.Node node)
+    {
+        if (!ReferenceEquals(_foeView, node)) _foePick = -1;
+        _foeView = node;
+    }
 
     private Control _encounterOverlay = null!;
     private Label _encounterTitle = null!;
@@ -141,11 +183,21 @@ public partial class Map11Main : Node3D
         BuildUi();
         Refresh();
 
+        // 第177期 §3: **手札から組むところから始まる**ので、組み直しを最初から開いておく。
+        if (Map11Session.Drafting && St.Bench.Count > 0)
+        {
+            _reform = true;
+            Refresh();
+        }
+
         if (Map11Session.LastOutcome is { } outcome)
         {
             ShowToast(outcome, GoldColor, 6.0f);
             Map11Session.LastOutcome = null;
         }
+        else if (Map11Session.Drafting && St.Bench.Count > 0)
+            ShowToast("手札の駒を押して、席の札を押すと配れます（「既定の3隊で始める」でも可）",
+                      GoldColor, 8.0f);
         else ShowToast("隊を押してから、盤の行き先を押してください（拠点を押せば引き返す）",
                        GoldColor, 6.0f);
 
@@ -161,13 +213,34 @@ public partial class Map11Main : Node3D
         // 第173期 自己検査 (d)。**道へ出した隊を拠点へ戻し、組み直してから出す**通し。
         bool recallFirst = args.Contains("--map11-recall-smoke", StringComparer.Ordinal);
         bool timeSmoke = args.Contains("--map11-time-smoke", StringComparer.Ordinal);
+        // 第177期 自己検査 (c): **制圧 → ワープ → 第2拠点で組み直し → 勝利**を通す。
+        _portalSmoke = args.Contains("--map11-portal-smoke", StringComparer.Ordinal);
+        // 第177期 自己検査 (d): **空の手札から3隊を組んで出撃する。**
+        _draftSmoke = args.Contains("--map11-draft-smoke", StringComparer.Ordinal);
+        // 第177期: **ボタンの経路**（`RunUntilEvent`）を通す門。
+        _runSmoke = args.Contains("--map11-run-smoke", StringComparer.Ordinal);
         // 第174期 自己検査 (d): **「休む」と「迎撃」を1回ずつ含む走行**。
         // seed を固定して全快方針で回す（傷が残っていれば拠点へ戻って休む）。
         if (timeSmoke && St.Turn == 0 && St.Battles == 0 && !Map11Session.TurnRunning)
             Map11Session.Reset(0);
-        if (args.Contains("--map11-flow-smoke", StringComparer.Ordinal)
-            || reformFirst || recallFirst || timeSmoke)
+        if (_portalSmoke && St.Turn == 0 && St.Battles == 0 && !Map11Session.TurnRunning)
+            Map11Session.Reset(PortalSmokeSeed);
+        if (_draftSmoke && St.Turn == 0 && St.Battles == 0 && !Map11Session.TurnRunning)
+            Map11Session.Reset(0);
+        if (_runSmoke)
         {
+            if (Map11Session.Drafting && St.Bench.Count > 0) St.UseDefaultSquads();
+            Callable.From(RunSmokeStep).CallDeferred();
+        }
+        else if (args.Contains("--map11-flow-smoke", StringComparer.Ordinal)
+            || reformFirst || recallFirst || timeSmoke || _portalSmoke || _draftSmoke)
+        {
+            // 第177期 §3: 通し確認は**手札から始まる**ので、先に配る。
+            // `--map11-draft-smoke` だけは**ばらばらに配る**（自分で組めることの確認）。
+            if (Map11Session.Drafting && St.Bench.Count > 0)
+            {
+                if (_draftSmoke) AutoDraft(); else St.UseDefaultSquads();
+            }
             // **戻すのは1度だけ**——戦闘のたびにこのシーンへ戻ってくる（`_Ready` が毎回走る）ので、
             // 素通りさせると通しのあいだ毎回組み直してしまう。
             if (recallFirst && St.Battles == 0) AutoRecall();
@@ -194,6 +267,9 @@ public partial class Map11Main : Node3D
         { PickDestination(Dest.Deep(1)); AdvanceTurn(); }
         // 第171期: 図の札を1枚選んだ絵（関係の線と「何をする」が出ている状態）。
         else if (parts.Length > 1 && parts[1] == "pick") { _squadPick = 3; _foePick = 2; Refresh(); }
+        // 第177期: **既定の3隊を配った後**の絵（手札から組む前の画面ではなく、遊んでいる姿）。
+        else if (parts.Length > 1 && parts[1] == "default")
+        { UseDefaultSquads(); _reform = false; ClearHold(); Refresh(); }
         // 第172期: 組み直しの絵（つまんでいる札と控えの駒が出ている状態）。
         else if (parts.Length > 1 && parts[1] == "reform")
         {
@@ -234,7 +310,7 @@ public partial class Map11Main : Node3D
                 {
                     Map11State.Node? node = Map11Session.PendingNode;
                     GD.Print($"MAP11_FLOW_SMOKE_STEP turn={St.Turn + 1}"
-                        + $" squad={St.Squads[Map11Session.PendingSquad].Def.Name}"
+                        + $" squad={St.Squads[Map11Session.PendingSquad].Label}"
                         + $" foe={node?.Def.Name} battles={St.Battles}");
                     GetTree().ChangeSceneToFile(CampaignSession.BattleScene);
                     return;
@@ -244,7 +320,7 @@ public partial class Map11Main : Node3D
                     if (Map11Session.InterceptNode is not { } node) break;
                     int pick = St.NextInterceptor(node);
                     GD.Print($"MAP11_TIME_SMOKE intercept turn={St.Turn} foe={node.Def.Name}"
-                        + $" squad={(pick >= 0 ? St.Squads[pick].Def.Name : "—")}");
+                        + $" squad={(pick >= 0 ? St.Squads[pick].Label : "—")}");
                     if (pick >= 0 && Map11Session.ChooseInterceptor(pick))
                     {
                         GetTree().ChangeSceneToFile(CampaignSession.BattleScene);
@@ -263,6 +339,15 @@ public partial class Map11Main : Node3D
     {
         GD.Print($"MAP11_TIME_SMOKE rests={St.Rests} intercepts={St.Intercepts} fallen={St.Fallen}"
             + $" turns={St.Turn}");
+        // 第177期 自己検査 (c)(d)。**合否はこの1行で読む**（終了コードは第169期から 0 にならない）。
+        if (_portalSmoke)
+            GD.Print($"MAP11_PORTAL_SMOKE_COMPLETE won={St.Won} captured={St.Captured}"
+                + $" capturedTurn={St.CapturedTurn + 1} warped={_smoke.Warped}"
+                + $" reformedAtSecondBase={_smoke.Reformed} spawned={St.SpawnCount}"
+                + $" ok={St.Won && _smoke.Warped && _smoke.Reformed}");
+        if (_draftSmoke)
+            GD.Print($"MAP11_DRAFT_SMOKE_COMPLETE battles={St.Battles} hand={St.Bench.Count}"
+                + $" ok={St.Battles > 0 && St.Bench.Count == 0}");
         GD.Print($"MAP11_FLOW_SMOKE_COMPLETE won={St.Won} cleared={St.ClearedCount}"
             + $"/{Map11.TotalNodes} battles={St.Battles} seed={Map11Session.Seed}");
         foreach (Map11Session.Line l in Map11Session.BattleLog)
@@ -271,6 +356,8 @@ public partial class Map11Main : Node3D
             foreach (string note in l.Notes) GD.Print("MAP11_LOG     " + note);
         }
         GD.Print($"MAP11_LOG 盤上 {Map11Session.AliveOnMap} 枚 / 未出撃を含む {Map11Session.AliveIncludingReserve} 枚");
+        // 第177期 §3: **開始時の編成**（次の期の材料。観察ログにそのまま貼れる形で出す）。
+        foreach (string line in Map11Session.OpeningLines) GD.Print("MAP11_LOG 開始 " + line);
         if (OS.GetCmdlineUserArgs()
                 .FirstOrDefault(a => a.StartsWith("--map11-capture=", StringComparison.Ordinal))
             is { } shot) { _ = Capture(shot["--map11-capture=".Length..]); return; }
@@ -283,8 +370,61 @@ public partial class Map11Main : Node3D
     /// <c>--map11-time-smoke</c> のときだけ全快（傷が残っていれば拠点へ戻って休む）。
     /// <b>命令は <see cref="Map11Orders.Plan"/> が行き先から作る</b>ので、ここは行き先を置くだけ。
     /// </summary>
+    // ---- 第177期 §5: 通し確認 (c)(d) ----
+
+    /// <summary>自己検査 (c) の通し（制圧 → ワープ → 第2拠点で組み直し → 勝利）。</summary>
+    private bool _portalSmoke;
+    /// <summary>自己検査 (d) の通し（空の手札から3隊を組んで出撃する）。</summary>
+    private bool _draftSmoke;
+    /// <summary>
+    /// (c) の方針（<b>頭なしの試し走りと同じクラス</b>）。ワープと組み直しの印もここが持つ。
+    /// <b><c>static</c> でなければならない</b>——この画面は戦闘のたびに作り直されるので、
+    /// インスタンスの欄に持つと**1戦ごとに印が消える**（実際に踏んだ）。
+    /// </summary>
+    private static readonly Map11Smoke _smoke = new();
+
+    /// <summary>
+    /// 自己検査 (c) の seed。<b>勝つところまで通す</b>必要があるので固定する。
+    /// <b>選び方は器具に残した</b>——<c>--map11-portal-seed=64</c> が
+    /// 「制圧・ワープ・第2拠点の組み直し・勝利の4つが全部立つ seed」を頭なしで並べる
+    /// （64 本中 24 本が通る）。その中で<b>いちばん戦闘の少ない seed</b>を採った
+    /// （通しは戦闘を1つずつ再生するので、本数がそのまま所要時間になる）。
+    /// </summary>
+    private const int PortalSmokeSeed = 20;
+
+    /// <summary>
+    /// 自己検査 (d) —— <b>手札 15 枚を3隊へ順番に配る</b>（1 枚ずつ回す）。
+    /// <b>既定の3隊とは別の編成になる</b>のが要点で、
+    /// 「自分で組んだ隊でも最後まで通る」ことを確かめるためにある。
+    /// <b>規則は `Map11State.SwapWithBench` の1本</b>——画面と同じ口を通す。
+    /// </summary>
+    private void AutoDraft()
+    {
+        for (int slot = 0; slot < FormationRules.PlayableSlotCount; slot++)
+            for (int i = 0; i < St.Squads.Length; i++)
+                if (St.Bench.Count > 0) St.SwapWithBench(i, slot, 0);
+        GD.Print($"MAP11_DRAFT_SMOKE 手札の残り {St.Bench.Count} 枚");
+        for (int i = 0; i < St.Squads.Length; i++)
+        {
+            Map11State.Squad s = St.Squads[i];
+            GD.Print($"MAP11_DRAFT_SMOKE {s.Label}: " + (s.Units is { } u
+                ? string.Join(" / ", u.OrderBy(x => x.Slot)
+                    .Select(x => $"{FormationRules.SeatNames[x.Slot]} {x.Def.Name}"))
+                : "（空）"));
+        }
+    }
+
+    /// <summary>
+    /// 自己検査 (c) の行き先。<b>方針そのものは <see cref="Map11Smoke"/> が持つ</b>
+    /// ——seed を選んだ頭なしの試し走り（<c>--map11-portal-seed</c>）と<b>同じ1本</b>を通す（R259）。
+    /// ここでするのは、画面側の口（<c>Map11Session.SetDestination</c>）へ渡すことだけ。
+    /// </summary>
+    private void PortalSmokeOrders()
+        => _smoke.Orders(St, Map11Session.SetDestination, m => GD.Print("MAP11_PORTAL_SMOKE " + m));
+
     private void AutoOrders()
     {
+        if (_portalSmoke) { PortalSmokeOrders(); return; }
         bool full = OS.GetCmdlineUserArgs().Contains("--map11-time-smoke", StringComparer.Ordinal);
         int[] home = { 1, 0, -1 };
         bool anyLost = St.Squads.Any(x => x.Lost);
@@ -306,6 +446,10 @@ public partial class Map11Main : Node3D
                 for (int r = 0; r < Map11.RoadCount; r++)
                     if (St.NextNode(r) is not null) { road = r; break; }
             }
+            // 第177期 §2: **道を抜き切ったら敵の拠点へ。** 拠点なしの設定では奥が無いので
+            // 第175期のまま拠点へ戻る（`CanHead` が偽なら `Plan` も出さない）。
+            if (road < 0 && St.Portal.On && !St.Captured)
+            { Map11Session.SetDestination(i, Dest.Portal(home[i] < 0 ? 0 : home[i])); continue; }
             Map11Session.SetDestination(i, road < 0 ? Dest.Home : Dest.Deep(road));
         }
     }
@@ -327,7 +471,7 @@ public partial class Map11Main : Node3D
                 ? string.Join(" / ", u.OrderBy(x => x.Slot)
                     .Select(x => $"{FormationRules.SeatNames[x.Slot]} {x.Def.Name}"))
                 : "（定義のまま）";
-            GD.Print($"MAP11_REFORM_SMOKE {sq.Def.Name}: {body}");
+            GD.Print($"MAP11_REFORM_SMOKE {sq.Label}: {body}");
         }
         GD.Print("MAP11_REFORM_SMOKE 控え: "
             + string.Join(" / ", St.Bench.Select(x => x.Def.Name)));
@@ -351,13 +495,69 @@ public partial class Map11Main : Node3D
         bool reformed = St.SwapSeats(0, 0, 0, 3);
         bool sendable = St.CanSend(0);
         GD.Print($"MAP11_RECALL_SMOKE onRoad={onRoad} home={home} reformed={reformed} sendable={sendable}");
-        GD.Print("MAP11_RECALL_SMOKE " + St.Squads[0].Def.Name + ": "
+        GD.Print("MAP11_RECALL_SMOKE " + St.Squads[0].Label + ": "
             + string.Join(" / ", St.Squads[0].Units!.OrderBy(x => x.Slot)
                 .Select(x => $"{FormationRules.SeatNames[x.Slot]} {x.Def.Name}")));
     }
 
+    // ---- 第177期: ボタンの経路を通す門（ポンの2巡目で踏んだ穴） ----
+
+    /// <summary>
+    /// <b>「▶ 進める」を押す経路</b>を頭なしで通す（<c>--map11-run-smoke</c>）。
+    ///
+    /// <para><b>既存の通し確認（<c>--map11-flow-smoke</c>）はこれを1度も通っていない</b>
+    /// ——あちらは <see cref="AutoStep"/> という別のループで、
+    /// <see cref="RunUntilEvent"/> も <see cref="StopReason"/> も呼ばない。
+    /// <b>ポンの2巡目は「制圧した瞬間に勝ったのに結果画面が出ず、
+    /// 「▶ 進める」も `Finished` で押せなくなって先へ進めない」</b>形で止まった。
+    /// **見るのは1つだけ**——<b>終わっているのに結果画面が出ていない状態を作らないこと。</b></para>
+    /// </summary>
+    private bool _runSmoke;
+    private static int _runSteps;
+
+    private void RunSmokeStep()
+    {
+        if (_runSteps++ > 400)
+        {
+            GD.Print("MAP11_RUN_SMOKE_COMPLETE ok=False reason=step-limit");
+            GetTree().Quit(1);
+            return;
+        }
+
+        if (_resultOverlay.Visible)
+        {
+            GD.Print($"MAP11_RUN_SMOKE_COMPLETE won={St.Won} captured={St.Captured}"
+                + $" battles={St.Battles} turns={St.Turn} resultShown=True ok=True");
+            GetTree().Quit();
+            return;
+        }
+        if (_encounterOverlay.Visible) { Fight(); return; }
+        if (_interceptOverlay.Visible)
+        {
+            if (Map11Session.InterceptNode is { } node && St.NextInterceptor(node) is var pick && pick >= 0)
+            { ChooseInterceptor(pick); Callable.From(RunSmokeStep).CallDeferred(); return; }
+            _interceptOverlay.Visible = false;
+        }
+
+        AutoOrders();
+        RunUntilEvent();
+        // **これが門**——勝っている／負けているのに結果画面が出ていなければ、そこで詰む。
+        if (St.Finished && !_resultOverlay.Visible && !_encounterOverlay.Visible
+            && !_interceptOverlay.Visible)
+        {
+            GD.Print($"MAP11_RUN_SMOKE_COMPLETE ok=False reason=finished-without-result"
+                + $" won={St.Won} captured={St.Captured} turns={St.Turn}");
+            GetTree().Quit(1);
+            return;
+        }
+        Callable.From(RunSmokeStep).CallDeferred();
+    }
+
     private void BuildWorld()
     {
+        // 敵の拠点があるとカメラを引くので、盤の文字はそのぶん大きくする（距離の比）。
+        _labelScale = St.Portal.On ? 1.40f : 1.0f;
+
         var sky = new ProceduralSkyMaterial
         {
             SkyTopColor = Color.FromHtml("#6d8790"),
@@ -389,7 +589,8 @@ public partial class Map11Main : Node3D
             MaterialOverride = CampaignMain.MakeMaterial(Color.FromHtml("#557343"), roughness: 0.96f),
         });
 
-        // 道（拠点 → 区画0 → 区画1 の帯）。位置を教えるだけの板。
+        // 道（拠点 → 区画0 → 区画1 → 敵の拠点 の帯）。位置を教えるだけの板。
+        // **第177期: 道の奥は敵の拠点で合流する**ので、最後の1本は2 本とも同じ点へ伸びる。
         for (int road = 0; road < Map11.RoadCount; road++)
         {
             Vector3 from = BasePos;
@@ -399,11 +600,20 @@ public partial class Map11Main : Node3D
                 AddStrip(from, to, Color.FromHtml("#8b7756"));
                 from = to;
             }
+            if (St.Portal.On) AddStrip(from, PortalPos, Color.FromHtml("#8b7756"));
         }
 
-        _camera = new Camera3D { Position = new Vector3(8.0f, 31.0f, 26.0f), Fov = 50 };
+        // 第177期 §2: 道が1本伸びたぶん、カメラを引いて奥まで入れる。
+        // 第177期 §2: 道が1本伸びたぶん、**引いて奥まで入れる**。
+        // 左右のパネル（合わせて 800 px 強）に隠れない幅に収める必要がある。
+        bool portal = St.Portal.On;
+        _camera = new Camera3D
+        {
+            Position = portal ? new Vector3(9.0f, 45.0f, 35.0f) : new Vector3(8.0f, 31.0f, 26.0f),
+            Fov = 50,
+        };
         AddChild(_camera);
-        _camera.LookAt(new Vector3(8.0f, 0, 0), Vector3.Up);
+        _camera.LookAt(new Vector3(portal ? 9.0f : 8.0f, 0, 0), Vector3.Up);
 
         // 拠点
         var home = new Node3D { Position = BasePos };
@@ -438,6 +648,45 @@ public partial class Map11Main : Node3D
             // 第175期 §1-2 —— 隊から行き先への矢印。**判定は1つも持たない**（見せるだけ）。
             _arrows.Add(new Arrow(this, PlayerColor));
         }
+
+        // ---- 第177期 §2: 敵の拠点（ワープポータル） ----
+        if (!portal) return;
+
+        var ring = new Node3D { Position = PortalPos };
+        AddChild(ring);
+        ring.AddChild(new MeshInstance3D
+        {
+            Mesh = new TorusMesh { InnerRadius = 2.6f, OuterRadius = 3.4f, RingSegments = 24 },
+            Position = new Vector3(0, 0.12f, 0),
+            MaterialOverride = CampaignMain.MakeMaterial(Color.FromHtml("#5b4a6b"), roughness: 0.75f),
+        });
+        _portalMarker = new Marker(this, PortalPos, EnemyColor, 2.2f);
+
+        // 拠点どうしを結ぶ点線。**制圧してから見せる**（それまでは通れない）。
+        Vector3 a = BasePos, b = PortalPos;
+        const int dashes = 14;
+        for (int i = 0; i < dashes; i++)
+        {
+            Vector3 at = a.Lerp(b, (i + 0.5f) / dashes) + new Vector3(0, 0, i % 2 == 0 ? -0.4f : 0.4f);
+            var dash = new MeshInstance3D
+            {
+                Mesh = new BoxMesh { Size = new Vector3(1.4f, 0.05f, 0.5f) },
+                Position = new Vector3(at.X, 0.10f, at.Z),
+                MaterialOverride = CampaignMain.MakeMaterial(GoldColor, roughness: 0.6f,
+                                                             emission: GoldColor * 0.4f),
+                Visible = false,
+            };
+            AddChild(dash);
+            _warpDashes.Add(dash);
+        }
+    }
+
+    /// <summary>湧いた敵部隊の板を、必要な数だけ用意する（<b>数える以外のことはしない</b>）。</summary>
+    private Marker SpawnMarker(int index)
+    {
+        while (_spawnMarkers.Count <= index)
+            _spawnMarkers.Add(new Marker(this, PortalPos, EnemyColor, 1.7f));
+        return _spawnMarkers[index];
     }
 
     // =================================================================================
@@ -470,7 +719,7 @@ public partial class Map11Main : Node3D
             {
                 Text = "",
                 FocusMode = Control.FocusModeEnum.None,
-                Size = new Vector2(96, 26),
+                Size = new Vector2(140, 26),
                 MouseFilter = Control.MouseFilterEnum.Stop,
             };
             b.AddThemeFontSizeOverride("font_size", 12);
@@ -480,10 +729,18 @@ public partial class Map11Main : Node3D
         }
 
         // 札は<b>いつも板の真下</b>（道で揃える）。名前は板の上、前進の予告はさらにその上。
-        Add(Dest.Home, BasePos, new Vector2(-48, 78));
+        Add(Dest.Home, BasePos, new Vector2(-70, 78));
         for (int road = 0; road < Map11.RoadCount; road++)
             for (int cell = 0; cell < Map11.RoadCells; cell++)
-                Add(new Dest(road, cell), CellPos(road, cell), new Vector2(-48, 32));
+                // **空きマス（0）だけ1段下げる**——拠点のすぐ隣なので、同じ段だと札が重なる。
+                Add(new Dest(road, cell), CellPos(road, cell), new Vector2(-70, cell == 0 ? 62 : 32));
+
+        // 第177期 §2 —— 敵の拠点。**北と南は同じ1点**なので、札は道ごとに縦に並べる
+        // （どちらの道を通って向かうかは、行き先ではなく<b>道</b>が決める）。
+        // **板の名前より下**に置く（上に置くと「湧くまで あと n」が隠れる）。
+        if (!St.Portal.On) return;
+        for (int road = 0; road < Map11.RoadCount; road++)
+            Add(Dest.Portal(road), PortalPos, new Vector2(-70, road == 0 ? 40 : 70));
     }
 
     /// <summary>
@@ -493,16 +750,16 @@ public partial class Map11Main : Node3D
     {
         if (St.Finished || Map11Session.TurnRunning) return;
         Map11State.Squad s = St.Squads[_selected];
-        if (s.Lost) { ShowToast($"{s.Def.Name} は失われています", EnemyColor, 3.0f); return; }
+        if (s.Lost) { ShowToast($"{s.Label} は失われています", EnemyColor, 3.0f); return; }
         if (!dest.AtHome && !St.CanSend(_selected))
-        { ShowToast($"{s.Def.Name} は 0 枚です（1 枚以上にしてください）", EnemyColor, 3.0f); return; }
+        { ShowToast($"{s.Label} は 0 枚です（1 枚以上にしてください）", EnemyColor, 3.0f); return; }
 
         if (_reform) { _reform = false; ClearHold(); }
         Map11Session.SetDestination(_selected, dest);
         // 行き先の道の中身を右に出しておく（決める瞬間の隣に相手を置く・第171期 §1-3）。
-        if (!dest.AtHome && St.NextNode(dest.Road) is { } next)
-        { if (_foeView != (dest.Road, next.Def.Index)) _foePick = -1; _foeView = (dest.Road, next.Def.Index); }
-        ShowToast($"{s.Def.Name}: {Map11Orders.Describe(St, _selected, dest)}", PlayerColor, 3.0f);
+        if (!dest.AtHome && (St.FrontFoe(dest.Road) ?? St.PortalFoe()) is { } next)
+            ShowFoe(next);
+        ShowToast($"{s.Label}: {Map11Orders.Describe(St, _selected, dest)}", PlayerColor, 3.0f);
         Refresh();
     }
 
@@ -511,16 +768,27 @@ public partial class Map11Main : Node3D
     {
         bool busy = St.Finished || Map11Session.TurnRunning;
         Map11State.Squad sel = St.Squads[_selected];
+        // 第177期 §2（第176期 §3-1 #3）——**札に「〈隊名〉をここへ」を出す。**
+        // 隊の名前は短くする（盤の上は狭い）——末尾の「隊」を落とすだけ。
+        string who = sel.Label.EndsWith("隊", StringComparison.Ordinal)
+            ? sel.Label[..^1] : sel.Label;
         foreach (DestButton d in _destButtons)
         {
             Vector2 p = _camera.UnprojectPosition(d.World);
             d.Node.Position = p + d.Offset;
-            bool cleared = !d.Dest.AtHome && St.NextNode(d.Dest.Road) is null;
+            // **行けない行き先は押せない**——抜け切った道（拠点なしのとき）と、
+            // 敵の拠点がない設定での敵の拠点。
+            bool cleared = !d.Dest.AtHome && !St.CanHead(d.Dest.Road);
             d.Node.Disabled = busy || sel.Lost || cleared;
             bool here = Map11Session.Destinations[_selected] == d.Dest;
-            // 札は短く（盤の上は狭い）。長い名前は左のパネルと案内が出す。
-            d.Node.Text = (here ? "◆ " : "") + (d.Dest.AtHome ? "拠点"
-                : d.Dest.Cell <= 0 ? "手前" : $"{d.Dest.Cell} 戦目");
+            string place = d.Dest.AtHome ? "拠点"
+                : d.Dest.IsPortal ? (St.Captured ? "第2拠点" : "敵の拠点")
+                : d.Dest.Cell <= 0 ? "手前" : $"{d.Dest.Cell} 戦目";
+            if (d.Dest.IsPortal) place = $"{place}（{Map11.RoadNames[d.Dest.Road][0]}）";
+            d.Node.Text = here ? $"◆ {place}"
+                        : cleared ? place
+                        : $"{place} ← {who}";
+            d.Node.TooltipText = $"{sel.Label} をここへ";
             d.Node.Modulate = here ? new Color(1.0f, 0.90f, 0.62f)
                             : cleared ? new Color(1, 1, 1, 0.35f) : Colors.White;
         }
@@ -540,6 +808,12 @@ public partial class Map11Main : Node3D
         AddChild(node);
     }
 
+    /// <summary>
+    /// 盤の文字の大きさ（第177期 §2）。<b>カメラを引いたぶんだけ戻す</b>——
+    /// <see cref="Label3D"/> はワールド座標なので、引くとそのまま小さくなって読めなくなる。
+    /// </summary>
+    private static float _labelScale = 1.0f;
+
     private static Label3D WorldLabel(string text, Vector3 offset, int size, Color color) => new()
     {
         Text = text,
@@ -551,7 +825,7 @@ public partial class Map11Main : Node3D
             AllowSystemFallback = true,
         },
         FontSize = size,
-        PixelSize = 0.021f,
+        PixelSize = 0.021f * _labelScale,
         Modulate = color,
         OutlineModulate = new Color(0.01f, 0.015f, 0.012f, 0.95f),
         OutlineSize = 8,
@@ -571,6 +845,9 @@ public partial class Map11Main : Node3D
         private float _slide, _slideFor;
         private float _clock;
         private bool _pulse;
+        /// <summary>第177期 §2（第176期 §3-1 #3）——<b>選んでいる隊を盤の上で光らせる</b>。</summary>
+        private bool _glow;
+        private Color _color;
         public Node3D Root { get; }
 
         public Marker(Node parent, Vector3 position, Color color, float radius)
@@ -597,11 +874,22 @@ public partial class Map11Main : Node3D
         public void Set(string text, Color color, bool visible = true)
         {
             _label.Text = text;
+            _color = color;
             _material.AlbedoColor = color;
-            _material.Emission = color * 0.25f;
+            _material.Emission = color * (_glow ? 0.85f : 0.25f);
             _disc.Visible = visible;
             _label.Visible = visible;
-            if (!visible) { _note.Visible = false; _pulse = false; }
+            if (!visible) { _note.Visible = false; _pulse = false; _glow = false; }
+        }
+
+        /// <summary>光らせる（<b>見た目だけ</b>——判定は1つも通らない）。</summary>
+        public void SetGlow(bool on)
+        {
+            if (_glow == on) return;
+            _glow = on;
+            _material.Emission = _color * (on ? 0.85f : 0.25f);
+            _label.FontSize = on ? 32 : 28;
+            _label.OutlineSize = on ? 14 : 8;
         }
 
         /// <summary>
@@ -646,6 +934,7 @@ public partial class Map11Main : Node3D
                 if (_slide <= 0) Root.Position = _to;
             }
             float k = _pulse ? 1 + 0.10f * Mathf.Sin(_clock * 6.0f) : 1;
+            if (_glow) k *= 1.10f + 0.05f * Mathf.Sin(_clock * 3.2f);
             _disc.Scale = new Vector3(k, 1, k);
         }
     }
@@ -658,6 +947,11 @@ public partial class Map11Main : Node3D
         private readonly Node3D _root;
         private readonly MeshInstance3D _shaft;
         private readonly MeshInstance3D _head;
+        /// <summary>
+        /// 第177期 §2（第176期 §3-1 #2）——<b>矢印は途中の敵で止め、その先は点線</b>にする。
+        /// 「行き先まで一直線に行ける」と読めてしまうのが第175期の観察ログの宿題2 だった。
+        /// </summary>
+        private readonly List<MeshInstance3D> _dashes = new();
 
         public Arrow(Node parent, Color color)
         {
@@ -681,23 +975,60 @@ public partial class Map11Main : Node3D
                 MaterialOverride = mat,
             };
             _root.AddChild(_head);
+            StandardMaterial3D faint = CampaignMain.MakeMaterial(color, roughness: 0.9f,
+                                                                 emission: color * 0.18f);
+            faint.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
+            faint.AlbedoColor = new Color(color.R, color.G, color.B, 0.45f);
+            for (int i = 0; i < 10; i++)
+            {
+                var dash = new MeshInstance3D
+                {
+                    Mesh = new BoxMesh { Size = new Vector3(0.26f, 0.05f, 0.7f) },
+                    MaterialOverride = faint,
+                    Visible = false,
+                };
+                parent.AddChild(dash);
+                _dashes.Add(dash);
+            }
             _root.Visible = false;
         }
 
-        public void Set(Vector3 from, Vector3 to)
+        /// <summary>
+        /// <paramref name="stop"/> まで実線、そこから <paramref name="to"/> までを点線で描く。
+        /// <paramref name="stop"/> が <paramref name="to"/> と同じなら点線は出ない。
+        /// </summary>
+        public void Set(Vector3 from, Vector3 stop, Vector3 to)
         {
-            float len = from.DistanceTo(to);
-            if (len < 0.5f) { _root.Visible = false; return; }
-            _root.Visible = true;
-            _root.Position = new Vector3(from.X, 0.35f, from.Z);
-            _root.LookAt(new Vector3(to.X, 0.35f, to.Z), Vector3.Up);
-            float body = Math.Max(0.2f, len - 1.1f);
-            _shaft.Position = new Vector3(0, 0, -body * 0.5f);
-            _shaft.Scale = new Vector3(1, 1, body);
-            _head.Position = new Vector3(0, 0, -body - 0.55f);
+            float len = from.DistanceTo(stop);
+            if (len < 0.5f) _root.Visible = false;
+            else
+            {
+                _root.Visible = true;
+                _root.Position = new Vector3(from.X, 0.35f, from.Z);
+                _root.LookAt(new Vector3(stop.X, 0.35f, stop.Z), Vector3.Up);
+                float body = Math.Max(0.2f, len - 1.1f);
+                _shaft.Position = new Vector3(0, 0, -body * 0.5f);
+                _shaft.Scale = new Vector3(1, 1, body);
+                _head.Position = new Vector3(0, 0, -body - 0.55f);
+            }
+
+            float tail = stop.DistanceTo(to);
+            for (int i = 0; i < _dashes.Count; i++)
+            {
+                MeshInstance3D d = _dashes[i];
+                if (tail < 1.0f) { d.Visible = false; continue; }
+                Vector3 at = stop.Lerp(to, (i + 0.5f) / _dashes.Count);
+                d.Visible = true;
+                d.Position = new Vector3(at.X, 0.30f, at.Z);
+                d.LookAtFromPosition(d.Position, new Vector3(to.X, 0.30f, to.Z), Vector3.Up);
+            }
         }
 
-        public void Hide() => _root.Visible = false;
+        public void Hide()
+        {
+            _root.Visible = false;
+            foreach (MeshInstance3D d in _dashes) d.Visible = false;
+        }
     }
 
     // =================================================================================
@@ -753,8 +1084,13 @@ public partial class Map11Main : Node3D
         leftCol.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _leftScroll = Scroll(leftCol, 0);
         left.AddChild(_leftScroll);
-        _hint = UiKit.Text("① 隊を押す → ② 盤の行き先を押す（拠点を押せば引き返す）"
-            + " → ③「▶ 進める」。何かが起きるまで作戦ターンが流れ、敵も1マスずつ近づきます", 13, GoldColor);
+        _hint = UiKit.Text(St.Draft
+            ? "① 手札の駒を押す → ② 席の札を押す（15 枚を 1〜3 隊に好きに分ける）"
+              + " → ③ 隊を押して盤の行き先を押す → ④「▶ 進める」。"
+              + "道の奥には敵の拠点があり、制圧すれば湧きが止まって第2拠点になります"
+            : "① 隊を押す → ② 盤の行き先を押す（拠点を押せば引き返す）"
+              + " → ③「▶ 進める」。何かが起きるまで作戦ターンが流れ、敵も1マスずつ近づきます",
+            13, GoldColor);
         _hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         leftCol.AddChild(_hint);
         leftCol.AddChild(UiKit.Text("部隊", 12, UiKit.Faint));
@@ -822,9 +1158,19 @@ public partial class Map11Main : Node3D
         _resetButton.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         _resetButton.Pressed += ResetSquad;
         reformRow.AddChild(_resetButton);
+        // 第177期 §3 —— **15 枚から自分で組む。** 面倒なときの逃げ道として
+        // 「既定の3隊で始める」を残す（回帰確認の口でもある）。
+        _defaultButton = UiKit.ActionButton("既定の3隊で始める", PlayerColor);
+        _defaultButton.Pressed += UseDefaultSquads;
+        leftCol.AddChild(_defaultButton);
         _reformHint = UiKit.Text("", 12, GoldColor);
         _reformHint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         leftCol.AddChild(_reformHint);
+
+        // 第177期 §3: **自分で組む通しでは、手札を図より上に置く**
+        // ——案内が「① 手札の駒を押す → ② 席の札を押す」なのに、
+        // 手札が図の下にあるとスクロールしないと1手目が見えない。
+        if (St.Draft) AddBench(leftCol);
 
         leftCol.AddChild(UiKit.Text("この隊の配置（押すと、その駒が何をするか出ます）", 12, UiKit.Faint));
         leftCol.AddChild(LinkLegend());
@@ -837,11 +1183,7 @@ public partial class Map11Main : Node3D
         // そのまま伸ばすと左のパネルが画面の下へ抜ける（第170期の「長すぎる」の再発になる）。
         leftCol.AddChild(Scroll(_squadFocus, 128));
 
-        // 控えの駒（第172期 §1-2）。**組み直しの最中だけ押せる。**
-        leftCol.AddChild(UiKit.Text("控えの駒（拠点で交代できます）", 12, UiKit.Faint));
-        _benchList = new VBoxContainer();
-        _benchList.AddThemeConstantOverride("separation", 4);
-        leftCol.AddChild(Scroll(_benchList, 116));
+        if (!St.Draft) AddBench(leftCol);
 
         // 第170期の文章のパネルは**畳む**（消さない）。
         _squadMore = UiKit.ActionButton("くわしく", UiKit.Muted);
@@ -910,6 +1252,19 @@ public partial class Map11Main : Node3D
         BuildEncounterOverlay(root);
         BuildInterceptOverlay(root);
         BuildResultOverlay(root);
+    }
+
+    /// <summary>
+    /// 控えの駒（第172期 §1-2）。<b>組み直しの最中だけ押せる。</b>
+    /// 第177期 §3: 自分で組む通しでは、ここが<b>手札</b>になる（15 枚）。
+    /// </summary>
+    private void AddBench(VBoxContainer col)
+    {
+        _benchTitle = UiKit.Text("控えの駒（拠点で交代できます）", 12, UiKit.Faint);
+        col.AddChild(_benchTitle);
+        _benchList = new VBoxContainer();
+        _benchList.AddThemeConstantOverride("separation", 4);
+        col.AddChild(Scroll(_benchList, St.Draft ? 190 : 116));
     }
 
     /// <summary>
@@ -1062,10 +1417,24 @@ public partial class Map11Main : Node3D
     // ここがするのは「止まった理由に応じて窓を出す」ことだけ。
     // =================================================================================
 
+    /// <summary>
+    /// 第177期 §3 —— <b>1 枚も配らずに始めさせない。</b> 規則の上では「全部待つ」と同じで、
+    /// 敵が拠点に着いて陥落するだけだが、<b>事故でそうなるのは操作の穴である。</b>
+    /// </summary>
+    private bool NothingDeployed()
+    {
+        if (!Map11Session.Drafting) return false;
+        if (St.Squads.Any(s => s.Units is { Count: > 0 })) return false;
+        ShowToast("まだ1枚も配っていません（手札の駒を席へ置くか、「既定の3隊で始める」を押してください）",
+                  EnemyColor, 5.0f);
+        return true;
+    }
+
     private void AdvanceTurn()
     {
         if (St.Finished) { ShowResult(); return; }
         if (Map11Session.TurnRunning) return;
+        if (NothingDeployed()) return;
         if (_reform) { _reform = false; ClearHold(); }
         Map11Session.BeginTurn();
         Pump();
@@ -1074,12 +1443,29 @@ public partial class Map11Main : Node3D
     // ---- 第175期 §1-2: 「▶ 進める」——何かが起きるまで作戦ターンを自動で回す ----
 
     /// <summary>止まる理由を調べるために、作戦ターンの前に写しておく盤面。</summary>
-    private readonly record struct Watch(bool[] Arrived, bool[] Imminent);
+    private readonly record struct Watch(bool[] Arrived, bool[] Imminent, int Spawns, bool Captured);
 
     private static Watch Take() => new(
         Enumerable.Range(0, St.Squads.Length).Select(AtDest).ToArray(),
         Enumerable.Range(0, Map11.RoadCount)
-                  .Select(r => St.NextNode(r) is { } n && n.Cell <= 0).ToArray());
+                  .Select(r => St.NextNode(r) is { } n && n.Cell <= 0).ToArray(),
+        St.SpawnCount, St.Captured);
+
+    /// <summary>
+    /// 第177期 §2（第176期 §3-1 #2）—— <b>行き先までのあいだに立っている最初の敵のマス。</b>
+    /// 無ければ行き先そのもの。<b>盤面は1ビットも読み書きしない</b>（矢印を切る場所を決めるだけ）。
+    /// </summary>
+    private static int ArrowStopCell(int squad, Dest d)
+    {
+        Map11State.Squad s = St.Squads[squad];
+        if (d.AtHome || d.Road < 0) return d.Cell;
+        // 別の道へ行くときはいったん拠点まで戻るので、途中の敵では止めない。
+        if (s.Cell >= 0 && s.Road != d.Road) return d.Cell;
+        int from = Math.Max(s.Cell, 0);
+        foreach (Map11State.Node n in St.FoesOn(d.Road))
+            if (n.Cell >= from && n.Cell <= d.Cell) return n.Cell;
+        return d.Cell;
+    }
 
     /// <summary>その隊は行き先に着いているか。</summary>
     private static bool AtDest(int squad)
@@ -1101,9 +1487,14 @@ public partial class Map11Main : Node3D
     /// </summary>
     private static string? StopReason(Watch before)
     {
+        // 第177期 §2（第176期 §3 の停止条件）——**湧いた瞬間と制圧した瞬間**。
+        if (!before.Captured && St.Captured)
+            return $"{Map11.PortalName} を制圧した（湧きが止まり、第2拠点になった）";
+        if (St.SpawnCount > before.Spawns)
+            return $"{Map11.PortalName} から {St.SpawnCount - before.Spawns} 部隊が湧いた";
         for (int i = 0; i < St.Squads.Length; i++)
             if (!before.Arrived[i] && AtDest(i) && !St.Squads[i].Lost)
-                return $"{St.Squads[i].Def.Name} が {Map11Orders.Where(Map11Session.Destinations[i])} に着いた";
+                return $"{St.Squads[i].Label} が {Map11Orders.Where(Map11Session.Destinations[i])} に着いた";
         for (int r = 0; r < Map11.RoadCount; r++)
             if (!before.Imminent[r] && St.NextNode(r) is { } n && n.Cell <= 0)
                 return $"{Map11.RoadNames[r]} の {n.Def.Name} が拠点の手前まで来た（次の前進で迎撃）";
@@ -1119,6 +1510,7 @@ public partial class Map11Main : Node3D
     {
         if (St.Finished) { ShowResult(); return; }
         if (Map11Session.TurnRunning) { Pump(); return; }
+        if (NothingDeployed()) return;
         if (_reform) { _reform = false; ClearHold(); }
         _running = true;
 
@@ -1135,6 +1527,11 @@ public partial class Map11Main : Node3D
                 case Map11Session.StepKind.Intercept: _running = false; ShowIntercept(); return;
                 case Map11Session.StepKind.Fallen: _running = false; ShowResult(); return;
             }
+            // **終わったかを、止まる理由より先に見る**（第177期・ポンの2巡目で踏んだ）。
+            // 制圧の瞬間は `StopReason` が「制圧した」を返すが、**盤上の敵が 0 なら同時に踏破**である
+            // ——止まる理由だけで帰ると、勝っているのに結果画面が出ず、
+            // 「▶ 進める」も `Finished` で押せなくなって**先へ進めなくなる**。
+            if (St.Finished) { _running = false; Refresh(); ShowResult(); return; }
             if (StopReason(before) is { } why)
             { _running = false; ShowToast(why, GoldColor, 5.0f); Refresh(); return; }
         }
@@ -1173,7 +1570,7 @@ public partial class Map11Main : Node3D
             string stat = s.Units is { } u
                 ? $"{u.Count(x => x.IsAlive)} 枚 ・ HP {SquadHpPercent(s):F0}%"
                 : $"{s.Def.F.Occupied().Count()} 枚 ・ HP 100%（未出撃）";
-            Button b = UiKit.ActionButton($"{s.Def.Name}  {stat}", GoldColor);
+            Button b = UiKit.ActionButton($"{s.Label}  {stat}", GoldColor);
             b.Pressed += () => ChooseInterceptor(index);
             _interceptList.AddChild(b);
         }
@@ -1205,13 +1602,14 @@ public partial class Map11Main : Node3D
         Map11State.Squad s = St.Squads[squad];
         if (s.Units is null) { Pump(); return; }
         _selected = squad;
-        if (_foeView != (node.Def.Road, node.Def.Index)) _foePick = -1;
-        _foeView = (node.Def.Road, node.Def.Index);
+        ShowFoe(node);
 
         int alive = node.Units?.Count(u => u.IsAlive) ?? node.Def.Enemy.Occupied().Count();
         bool athome = node.Cell < 0;
-        _encounterTitle.Text = (athome ? "迎撃  " : "") + $"{s.Def.Name} × {node.Def.Name}";
-        string plan = Map11Info.PlanOf(s.Def.Id).Replace("**", "");
+        _encounterTitle.Text = (athome ? "迎撃  " : "") + $"{s.Label} × {node.Def.Name}";
+        // 第177期 §3: 自分で組んだ隊には既定の「勝ち筋」が当てはまらないので、そう書く。
+        string plan = PlanOf(s).Replace("**", "");
+        if (plan.Length == 0) plan = "自分で組んだ隊です（この5枚がどう噛み合うかは、左の図の線で読めます）。";
         _encounterBody.Text =
             "[color=#8f9b90]" + (athome
                 ? "拠点まで来られた。ここで抜けなければ次の隊が出る。"
@@ -1327,7 +1725,7 @@ public partial class Map11Main : Node3D
     {
         if (!_reform && !St.CanReform(_selected))
         {
-            ShowToast($"{St.Squads[_selected].Def.Name} は拠点にいません（道の上の隊は組み直せません）",
+            ShowToast($"{St.Squads[_selected].Label} は拠点にいません（道の上の隊は組み直せません）",
                       EnemyColor, 3.0f);
             return;
         }
@@ -1339,12 +1737,39 @@ public partial class Map11Main : Node3D
         Refresh();
     }
 
+    /// <summary>
+    /// 第177期 §3 —— 「既定の3隊で始める」。<b>判定は <see cref="Map11State.UseDefaultSquads"/> が持つ</b>
+    /// ——ここは押されたことを渡して、結果を引き直すだけ。
+    /// </summary>
+    private void UseDefaultSquads()
+    {
+        bool done = St.UseDefaultSquads();
+        ShowToast(done
+            ? "既定の3隊で始めます（あとから組み直せます）"
+            : "駒が拠点に揃っていません（道の上に出した隊があります）",
+            done ? PlayerColor : EnemyColor, 4.0f);
+        ClearHold();
+        Refresh();
+    }
+
+    /// <summary>
+    /// その隊の勝ち筋の1行（第170期）。<b>自分で組んだ隊では出さない</b>（第177期 §3）
+    /// ——「カド隊」の勝ち筋は、カドがいない編成には当てはまらない。
+    /// <b>既定の顔ぶれの中だけで組まれている隊</b>（戦死で減った隊も含む）にだけ出す。
+    /// </summary>
+    private static string PlanOf(Map11State.Squad s)
+    {
+        var want = s.Def.F.Occupied().Select(o => o.Def.Id).ToHashSet(StringComparer.Ordinal);
+        if (s.Units is { } u && (u.Count == 0 || !u.All(x => want.Contains(x.Def.Id)))) return "";
+        return Map11Info.PlanOf(s.Def.Id);
+    }
+
     private void ResetSquad()
     {
         Map11State.Squad s = St.Squads[_selected];
         if (!St.CanReform(_selected))
         {
-            ShowToast($"{s.Def.Name} は拠点にいません", EnemyColor, 3.0f);
+            ShowToast($"{s.Label} は拠点にいません", EnemyColor, 3.0f);
             return;
         }
         ClearHold();
@@ -1353,8 +1778,8 @@ public partial class Map11Main : Node3D
         // ——「元に戻す」は5席まとめて動くので、差分の1行にすると読めなくなる。
         bool done = St.ResetSquad(_selected);
         ShowToast(done
-            ? $"{s.Def.Name} を既定の編成へ戻しました"
-            : $"{s.Def.Name} の駒が拠点に揃っていません（戻せません）",
+            ? $"{s.Label} を既定の編成へ戻しました"
+            : $"{s.Label} の駒が拠点に揃っていません（戻せません）",
             done ? PlayerColor : EnemyColor, 3.0f);
         Refresh();
     }
@@ -1374,7 +1799,7 @@ public partial class Map11Main : Node3D
         }
         if (!St.CanReform(_selected))
         {
-            ShowToast($"{St.Squads[_selected].Def.Name} は拠点にいません", EnemyColor, 3.0f);
+            ShowToast($"{St.Squads[_selected].Label} は拠点にいません", EnemyColor, 3.0f);
             return;
         }
 
@@ -1471,14 +1896,20 @@ public partial class Map11Main : Node3D
         _reformButton.Disabled = !can && !_reform;
         _reformButton.Text = _reform ? "組み直しを終える" : "組み直す";
         _resetButton.Disabled = !can;
+        // 第177期 §3: 逃げ道は**まだ組み始める前だけ**（出したあとに配り直せると意味が変わる）。
+        _defaultButton.Visible = Map11Session.Drafting;
+        _defaultButton.Disabled = St.Squads.Any(x => x.Lost || !St.CanReform(x.Index));
+        _benchTitle.Text = St.Draft && Map11Session.Drafting
+            ? $"手札（残り {St.Bench.Count} 枚）—— 席の札と押し合わせて配ります"
+            : "控えの駒（拠点で交代できます）";
 
         string held = _holdBench >= 0 && _holdBench < St.Bench.Count
             ? $"控えの {St.Bench[_holdBench].Def.Name}"
             : _holdSlot >= 0 && St.UnitAt(_holdSquad, _holdSlot) is { } u
-                ? $"{St.Squads[_holdSquad].Def.Name} {FormationRules.SeatNames[_holdSlot]} {u.Def.Name}"
+                ? $"{St.Squads[_holdSquad].Label} {FormationRules.SeatNames[_holdSlot]} {u.Def.Name}"
                 : "";
         _reformHint.Text = !_reform
-            ? (can ? "" : $"{St.Squads[_selected].Def.Name} は道の上です（拠点の隊だけ組み直せます）")
+            ? (can ? "" : $"{St.Squads[_selected].Label} は道の上です（拠点の隊だけ組み直せます）")
             : held.Length > 0
                 ? $"つまんでいる: {held} —— もう1枚押すと入れ替わります"
                 : "動かしたい札（または控えの駒）を押してください";
@@ -1671,7 +2102,7 @@ public partial class Map11Main : Node3D
         RenderSquadDiagram(s);
         _squadMore.Text = _squadDetailBox.Visible ? "文章を畳む" : "くわしく（文章）";
 
-        _squadDetail.AddChild(UiKit.Text($"{s.Def.Name}（{s.Def.Role}）", 17, Colors.White));
+        _squadDetail.AddChild(UiKit.Text($"{s.Label}（{s.Role}）", 17, Colors.White));
         Label plan = UiKit.Text(Map11Info.PlanOf(s.Def.Id).Replace("**", ""), 13, GoldColor);
         plan.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _squadDetail.AddChild(plan);
@@ -1722,7 +2153,7 @@ public partial class Map11Main : Node3D
     private void RefreshFoeDetail()
     {
         foreach (Node child in _foeDetail.GetChildren()) child.QueueFree();
-        Map11State.Node node = St.Nodes[_foeView.Road][_foeView.Index];
+        Map11State.Node node = FoeView;
 
         RenderFoeDiagram(node);
         _foeMore.Text = _foeDetailBox.Visible ? "文章を畳む" : "くわしく（文章）";
@@ -1793,7 +2224,7 @@ public partial class Map11Main : Node3D
 
     private void ShowResult()
     {
-        _resultTitle.Text = St.Won ? "踏破" : "撤退";
+        _resultTitle.Text = St.Won ? "踏破" : St.Fallen ? "拠点 陥落" : "撤退";
         // **生存枚数は2つ出す**（第169期に画面内で数え方が2通りに割れていた）。
         var lines = new List<string>
         {
@@ -1801,9 +2232,24 @@ public partial class Map11Main : Node3D
             $"盤上に残った枚数 {Map11Session.AliveOnMap} 枚"
             + $" ／ 未出撃を含む枚数 {Map11Session.AliveIncludingReserve} 枚",
             $"戦闘回数 {St.Battles} 回",
-            "",
-            "戦闘の記録:",
         };
+        // 第177期 §2（第176期 §3）—— **制圧した作戦ターンと、湧いた敵部隊の数。**
+        if (St.Portal.On)
+        {
+            lines.Add(St.Captured
+                ? $"{Map11.PortalName} を制圧したのは 作戦ターン {St.CapturedTurn + 1}"
+                : $"{Map11.PortalName} は制圧できなかった");
+            lines.Add($"{Map11.PortalName} から湧いた敵部隊 {St.SpawnCount} 部隊"
+                + $"（うち抜いた {St.Spawns.Count(n => n.Cleared)} 部隊）");
+            if (St.SecondBaseFalls > 0) lines.Add($"第2拠点を取り返された {St.SecondBaseFalls} 回");
+        }
+        // 第177期 §3 —— **開始時に自分で組んだ編成**（次の期の材料）。
+        lines.Add("");
+        lines.Add("開始時の編成:");
+        if (Map11Session.OpeningLines.Count == 0) lines.Add("　（出撃していません）");
+        foreach (string line in Map11Session.OpeningLines) lines.Add("　" + line);
+        lines.Add("");
+        lines.Add("戦闘の記録:");
         if (Map11Session.BattleLog.Count == 0) lines.Add("　（戦っていません）");
         foreach (Map11Session.Line l in Map11Session.BattleLog)
         {
@@ -1844,9 +2290,14 @@ public partial class Map11Main : Node3D
     private void Refresh()
     {
         // 第174期 §2-2: **画面上部に「作戦ターン N」**。時間を切った設定では出さない。
+        // 第177期 §2: 拠点ありでは**勝ち条件が「制圧 ＋ 盤上の敵 0」**なので、
+        // 「抜いた敵部隊 n / 4」だけでは何が残っているか読めない——湧いたぶんも出す。
+        int left = St.Nodes.Sum(r => r.Count(x => !x.Cleared)) + St.Spawns.Count(x => !x.Cleared);
         _headline.Text = $"検証用マップ 1-1 ・ "
             + (St.Time.On ? $"作戦ターン {St.Turn + 1} ・ " : "")
-            + $"抜いた敵部隊 {St.ClearedCount} / {Map11.TotalNodes}"
+            + (St.Portal.On
+                ? $"{(St.Captured ? "制圧済み" : Map11.PortalName + "は敵のもの")} ・ 残る敵部隊 {left}"
+                : $"抜いた敵部隊 {St.ClearedCount} / {Map11.TotalNodes}")
             + $" ・ 戦闘 {St.Battles} 回 ・ seed {Map11Session.Seed}";
 
         for (int i = 0; i < St.Squads.Length; i++)
@@ -1855,10 +2306,12 @@ public partial class Map11Main : Node3D
             string where = s.Lost ? "失われた"
                 : s.Cell < 0 ? (s.Units is null ? "未出撃（拠点）" : "拠点")
                 : $"{Map11.RoadNames[s.Road]} {CellName(s.Road, s.Cell)}";
+            // 第177期 §3: **1 枚も配っていない隊を「HP 0%」と書かない**（空席である）。
             string stat = s.Units is null
                 ? (s.Lost ? "—" : $"{s.Def.F.Occupied().Count()} 枚 ・ HP 100%")
+                : s.Units.Count == 0 ? "（空席）"
                 : $"{s.Units.Count(u => u.IsAlive)} 枚 ・ HP {SquadHpPercent(s):F0}%";
-            _squadButtons[i].Text = $"{s.Def.Name}  ({s.Def.Role})" + Nl + stat + Nl + where
+            _squadButtons[i].Text = $"{s.Label}  ({s.Role})" + Nl + stat + Nl + where
                 + (s.Lost || !St.Time.On ? "" : $"　命令: {OrderText(i)}");
             _squadButtons[i].Disabled = s.Lost;
             _squadButtons[i].Modulate = i == _selected ? new Color(0.72f, 1.0f, 0.90f) : Colors.White;
@@ -1873,16 +2326,29 @@ public partial class Map11Main : Node3D
             {
                 int alive = s.Units?.Count(u => u.IsAlive) ?? s.Def.F.Occupied().Count();
                 // 拠点にいる隊は**縦に並べる**（3 隊が重なると札が読めない）。
-                Vector3 at = s.Cell >= 0
-                    ? CellPos(s.Road, s.Cell) + new Vector3(-3.4f, 0, 0)
-                    : BasePos + new Vector3(0.6f, 0, (i - 1) * 3.6f - 0.4f);
+                // **敵の拠点も1点に集まる**ので同じ扱い（第177期）。
+                // 敵の拠点は札が重なる（ポータル自身の札・湧いた部隊・複数の隊が同じ1点）ので、
+                // **隊は手前（拠点寄り）へずらしてから縦に並べる**（第177期・ポンの2巡目で読めなかった）。
+                Vector3 at = s.Cell < 0 ? Stack(BasePos, i)
+                    : s.Cell >= Map11.PortalCell ? Stack(PortalPos + new Vector3(-5.2f, 0, 0), i)
+                    : CellPos(s.Road, s.Cell) + new Vector3(-3.4f, 0, 0);
                 if (_firstRefresh) m.MoveTo(at); else m.SlideTo(at);
-                m.Set($"{s.Def.Name}" + Nl + $"{alive}枚 {SquadHpPercent(s):F0}%", PlayerColor);
-                // 第175期 §1-2 —— **隊から行き先へ矢印**（選んでいる隊だけ太く見せる必要は無い）。
+                m.Set($"{s.Label}" + Nl
+                      + (s.Units is { Count: 0 } ? "（空席）" : $"{alive}枚 {SquadHpPercent(s):F0}%"),
+                      PlayerColor);
+                // 第177期 §2（第176期 §3-1 #3）—— **選んでいる隊を盤の上で光らせる。**
+                m.SetGlow(i == _selected && !St.Finished);
+                // 第175期 §1-2 —— **隊から行き先へ矢印**。
+                // 第177期: **途中に敵がいればそこで止め、その先は点線**（第176期 §3-1 #2）。
                 Dest d = Map11Session.Destinations[i];
                 bool arrived = AtDest(i);
                 if (arrived || St.Finished) _arrows[i].Hide();
-                else _arrows[i].Set(at, d.AtHome ? BasePos : CellPos(d.Road, d.Cell));
+                else
+                {
+                    Vector3 goal = d.AtHome ? BasePos : CellPos(d.Road, d.Cell);
+                    Vector3 stop = d.AtHome ? goal : CellPos(d.Road, ArrowStopCell(i, d));
+                    _arrows[i].Set(at, stop, goal);
+                }
             }
         }
 
@@ -1894,49 +2360,28 @@ public partial class Map11Main : Node3D
             for (int i = 0; i < St.Nodes[road].Length; i++)
             {
                 Map11State.Node n = St.Nodes[road][i];
-                int alive = n.Cleared ? 0 : n.Units?.Count(u => u.IsAlive) ?? n.Def.Enemy.Occupied().Count();
-                // 第175期 §1-3: **「あと n ターンで前進」はパネルから消して盤の上へ移した。**
-                // 第170期から3期続けて左右のパネルへ行を足しており、
-                // ポンは第174期にこの行に「気づかなかった」（観察ログ 問い2）。
-                string text = n.Cleared
-                    ? $"{i + 1}. {n.Def.Name} — 撃破"
-                    : $"{i + 1}. {n.Def.Name}" + Nl + Map11.RuleLineOf(n.Def.Enemy) + Nl
-                      + $"{alive} 体 ・ 残り HP {NodeHpPercent(n):F0}%";
-                // 押すと右下に中身が出る（観察ログ: 敵のイメージが沸かない）。
-                (int r0, int i0) = (road, i);
-                var button = new Button
-                {
-                    Text = text,
-                    Alignment = HorizontalAlignment.Left,
-                    FocusMode = Control.FocusModeEnum.None,
-                    CustomMinimumSize = new Vector2(0, n.Cleared ? 30 : 62),
-                    Modulate = _foeView == (r0, i0) ? new Color(1.0f, 0.86f, 0.80f) : Colors.White,
-                };
-                button.AddThemeColorOverride("font_color", n.Cleared ? DeadColor : UiKit.Ink);
-                button.Pressed += () => { if (_foeView != (r0, i0)) _foePick = -1; _foeView = (r0, i0); Refresh(); };
-                _roadList.AddChild(button);
+                _roadList.AddChild(FoeButton(n, $"{i + 1}. "));
 
                 Marker m = _nodeMarkers[marker++];
-                if (!n.Cleared)
-                {
-                    Vector3 at = n.Cell < 0 ? BasePos + new Vector3(0, 0, road == 0 ? -3.4f : 3.4f)
-                                            : CellPos(road, n.Cell);
-                    // 第175期 §1-3: **前進した瞬間は1マス滑らせる**（瞬間移動させない）。
-                    if (_firstRefresh) m.MoveTo(at); else m.SlideTo(at);
-                }
-                m.Set(n.Cleared ? "" : $"{n.Def.Name}" + Nl + $"{alive} 体 ・ {NodeHpPercent(n):F0}%",
-                      EnemyColor, !n.Cleared);
-                // 第175期 §1-3: **盤の上に「← あと n」**（拠点の向きの矢印つき）。先頭の敵だけ。
-                if (!n.Cleared && St.Time.On && St.NextNode(road) == n)
-                {
-                    int? left = Map11Session.TurnsToAdvance(road);
-                    bool soon = n.Cell <= 0 || left is 1;
-                    m.SetNote(n.Cell < 0 ? "◀ 拠点に到達" : $"◀ あと {left}",
-                              soon ? UiKit.Hurt : GoldColor, soon);
-                }
-                else m.SetNote("", GoldColor, false);
+                Place(m, n, road);
             }
+
+            // 第177期 §2: **敵の拠点から湧いた部隊**（この道のぶん）。抜いたものは出さない。
+            foreach (Map11State.Node n in St.Spawns)
+                if (n.Def.Road == road && !n.Cleared)
+                    _roadList.AddChild(FoeButton(n, "＋ "));
         }
+
+        // 盤の上の湧きの板（道をまたいで、湧いた順に並べる）。
+        int spawn = 0;
+        foreach (Map11State.Node n in St.Spawns)
+        {
+            Marker m = SpawnMarker(spawn++);
+            Place(m, n, n.Def.Road, stackAtPortal: spawn);
+        }
+        for (int i = spawn; i < _spawnMarkers.Count; i++) _spawnMarkers[i].Set("", EnemyColor, false);
+
+        RefreshPortal();
 
         int waiting = St.Squads.Count(x => !x.Lost && x.Road < 0);
         _homeLabel.Text = waiting == 0 ? "拠点" : $"拠点（待機 {waiting} 隊）";
@@ -1954,12 +2399,90 @@ public partial class Map11Main : Node3D
         _advanceTurn.Disabled = busy;
         // 第175期: **1 行にまとめた**（第174期は「いまの命令」と「行き先」で2行になっていた）。
         _orderHint.Text = St.Time.On
-            ? $"{sel.Def.Name} の行き先: {Map11Orders.Where(Map11Session.Destinations[_selected])}"
+            ? $"{sel.Label} の行き先: {Map11Orders.Where(Map11Session.Destinations[_selected])}"
               + $"　→ この作戦ターン: {OrderText(_selected)}"
             : "";
         // 操作の案内は**まだ1戦もしていない間だけ**（観察ログ「操作方法が最初わからなかった」）。
         _hint.Visible = Map11Session.BattleLog.Count == 0;
         _firstRefresh = false;
+    }
+
+    /// <summary>
+    /// 右のパネルの敵部隊 1 行（押すと中身が下に出る）。
+    /// <b>湧いた部隊も最初からいる部隊も同じ1本で書く</b>——同じ言葉の表を2つ作らない（第124期 §4）。
+    /// </summary>
+    private Button FoeButton(Map11State.Node n, string prefix)
+    {
+        int alive = n.Cleared ? 0 : n.Units?.Count(u => u.IsAlive) ?? n.Def.Enemy.Occupied().Count();
+        // 第175期 §1-3: **「あと n ターンで前進」はパネルから消して盤の上へ移した。**
+        string text = n.Cleared
+            ? $"{prefix}{n.Def.Name} — 撃破"
+            : $"{prefix}{n.Def.Name}" + Nl + Map11.RuleLineOf(n.Def.Enemy) + Nl
+              + $"{alive} 体 ・ 残り HP {NodeHpPercent(n):F0}%"
+              + (n.Cell >= Map11.PortalCell ? $"（{Map11.PortalName}）" : "");
+        var button = new Button
+        {
+            Text = text,
+            Alignment = HorizontalAlignment.Left,
+            FocusMode = Control.FocusModeEnum.None,
+            CustomMinimumSize = new Vector2(0, n.Cleared ? 30 : 62),
+            Modulate = ReferenceEquals(_foeView, n) ? new Color(1.0f, 0.86f, 0.80f) : Colors.White,
+        };
+        button.AddThemeColorOverride("font_color", n.Cleared ? DeadColor : UiKit.Ink);
+        button.Pressed += () => { ShowFoe(n); Refresh(); };
+        return button;
+    }
+
+    /// <summary>
+    /// 敵部隊の板を盤の上に置く。<b>湧いた部隊も最初からいる部隊も同じ規則</b>。
+    /// <paramref name="stackAtPortal"/> は敵の拠点で重なったときにずらす番号（0 ＝ ずらさない）。
+    /// </summary>
+    private void Place(Marker m, Map11State.Node n, int road, int stackAtPortal = 0)
+    {
+        int alive = n.Cleared ? 0 : n.Units?.Count(u => u.IsAlive) ?? n.Def.Enemy.Occupied().Count();
+        if (!n.Cleared)
+        {
+            Vector3 at = n.Cell < 0 ? BasePos + new Vector3(0, 0, road == 0 ? -3.4f : 3.4f)
+                       : n.Cell >= Map11.PortalCell
+                           ? PortalPos + new Vector3(3.2f + stackAtPortal * 0.9f, 0,
+                                                     road == 0 ? -2.2f : 2.2f)
+                       : CellPos(road, n.Cell);
+            // 第175期 §1-3: **前進した瞬間は1マス滑らせる**（瞬間移動させない）。
+            if (_firstRefresh) m.MoveTo(at); else m.SlideTo(at);
+        }
+        m.Set(n.Cleared ? "" : $"{n.Def.Name}" + Nl + $"{alive} 体 ・ {NodeHpPercent(n):F0}%",
+              EnemyColor, !n.Cleared);
+        // 第175期 §1-3: **盤の上に「← あと n」**（拠点の向きの矢印つき）。先頭の敵だけ。
+        if (!n.Cleared && St.Time.On && ReferenceEquals(St.FrontFoe(road), n))
+        {
+            int? left = Map11Session.TurnsToAdvance(road);
+            bool soon = n.Cell <= 0 || left is 1;
+            m.SetNote(n.Cell < 0 ? "◀ 拠点に到達" : $"◀ あと {left}",
+                      soon ? UiKit.Hurt : GoldColor, soon);
+        }
+        else m.SetNote("", GoldColor, false);
+    }
+
+    /// <summary>
+    /// 第177期 §2 —— 敵の拠点（ワープポータル）の板。
+    /// <b>湧くまでの残りと、味方のワープが使えるまでの残りは同じ1本のタイマー</b>
+    /// （<see cref="Map11State.PortalCooldown"/>）なので、<b>敵側・味方側とも同じ表示</b>にする。
+    /// </summary>
+    private void RefreshPortal()
+    {
+        if (!St.Portal.On) return;
+        bool mine = St.Captured;
+        Color tint = mine ? PlayerColor : new Color(0.72f, 0.55f, 0.92f);
+        int wait = St.PortalCooldown;
+        string head = mine ? $"{Map11.PortalName}（制圧）" : Map11.PortalName;
+        string body = mine
+            ? (wait > 0 ? $"ワープまで あと {wait}" : "ワープできる")
+            : (wait > 0 ? $"湧くまで あと {wait}" : "いつでも湧く");
+        _portalMarker.Set(head + Nl + body, tint);
+        // **湧く瞬間（＝残り 0）に脈打つ**／制圧したら止める。
+        _portalMarker.SetNote(mine ? "" : wait <= 1 ? "◀ 湧く" : "", UiKit.Hurt, true);
+        _portalMarker.SetGlow(!mine && wait <= 1);
+        foreach (MeshInstance3D d in _warpDashes) d.Visible = mine;
     }
 
     private void ShowToast(string text, Color color, float seconds)
@@ -1975,6 +2498,8 @@ public partial class Map11Main : Node3D
         foreach (Marker m in _squadMarkers) m.Tick(delta);
         foreach (Marker m in _nodeMarkers) m.Tick(delta);
         foreach (Marker m in _cellMarkers) m.Tick(delta);
+        foreach (Marker m in _spawnMarkers) m.Tick(delta);
+        _portalMarker?.Tick(delta);
         // 画面の大きさが変わると札の位置がずれるので、毎フレーム引き直す（7 枚だけ）。
         foreach (DestButton d in _destButtons)
             d.Node.Position = _camera.UnprojectPosition(d.World) + d.Offset;

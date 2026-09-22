@@ -142,6 +142,16 @@ public partial class Main : Control
         int Attack,
         AttackPattern Pattern);
 
+    /// <summary>
+    /// 検証用マップ 1-1 の通し確認の札（第177期に1箇所へ寄せた）。
+    /// <b>この一覧に無い札で通しを回すと、戦闘の再生が等速で止まる。</b>
+    /// </summary>
+    private static readonly string[] Map11Smokes =
+    {
+        "--map11-flow-smoke", "--map11-time-smoke",
+        "--map11-portal-smoke", "--map11-draft-smoke", "--map11-run-smoke",
+    };
+
     public override void _Ready()
     {
         // 第169期 自己検査 (c)。**画面を1つも作らずに `Map11State` だけを回す。**
@@ -240,6 +250,20 @@ public partial class Main : Control
             GetTree().Quit(sc ? 0 : 1);
             return;
         }
+        // 第177期 自己検査 (c) —— 通る seed を頭なしで探す（**`--map11-portal` より先に見る**
+        // ——`--map11-portal-seed` は `StartsWith("--map11-portal=")` には当たらないが、
+        // 札を増やすたびに前後関係を確かめること・R231）。
+        string? smokeSeedArg = bootArgs.FirstOrDefault(a => a == "--map11-portal-seed"
+            || a.StartsWith("--map11-portal-seed=", StringComparison.Ordinal));
+        if (smokeSeedArg is not null)
+        {
+            int sn = smokeSeedArg.Length > "--map11-portal-seed=".Length
+                && int.TryParse(smokeSeedArg["--map11-portal-seed=".Length..], out int sw) && sw > 0 ? sw : 64;
+            bool sok = Map11Smoke.Probe(sn, GD.Print);
+            GD.Print($"MAP11_PORTAL_SEED_COMPLETE seeds={sn} ok={sok}");
+            GetTree().Quit(sok ? 0 : 1);
+            return;
+        }
         // **完全一致か `=` 付きだけ**を受ける（R231 の再発防止）。
         string? portalArg = bootArgs.FirstOrDefault(a => a == "--map11-portal"
             || a.StartsWith("--map11-portal=", StringComparison.Ordinal));
@@ -320,8 +344,9 @@ public partial class Main : Control
         _fastSmoke = userArgs.Contains("--demo-fast", StringComparer.Ordinal);
         _campaignFlowSmoke = userArgs.Contains("--campaign-flow-smoke", StringComparer.Ordinal);
         // 第169期。検証用マップ 1-1 の通し確認（画面あり・頭なし）。
-        _map11FlowSmoke = userArgs.Contains("--map11-flow-smoke", StringComparer.Ordinal)
-            || userArgs.Contains("--map11-time-smoke", StringComparer.Ordinal);
+        // **第177期に (c)(d) の2本を足した**——ここへ足し忘れると、
+        // 戦闘の再生が等速のまま止まらず、**通しが1戦目から先へ進まない**（実際に踏んだ）。
+        _map11FlowSmoke = Map11Smokes.Any(f => userArgs.Contains(f, StringComparer.Ordinal));
         if (_map11FlowSmoke) _fastSmoke = true;
         if (_fastSmoke) _speed = 1000.0;
         // 第172期 部B。**編成画面の当たりを1枚だけ撮る**（見た目の確認だけ。判定には使わない）。

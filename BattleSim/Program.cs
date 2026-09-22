@@ -43,6 +43,7 @@ string focusId = args.Length > 1 ? args[1] : "";
 // （3モードともステージ引数を無視して全ステージを回すため、内容としても誤りになる）
 
 if (focusId == "audit") { AuditDiag.Run(args, stageIndex); return; }
+if (focusId == "roster") { RosterDiag.Run(args, stageIndex); return; }
 
 if (focusId == "derive") { DeriveDiag.Run(args, stageIndex); return; }
 

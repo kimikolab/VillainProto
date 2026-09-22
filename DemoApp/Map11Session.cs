@@ -51,11 +51,29 @@ public static class Map11Session
     public static bool Active => State is not null;
     public static bool HasPendingBattle => PendingNode is not null;
 
+    /// <summary>
+    /// 開始時の編成（第177期 §3）。<b>最初の作戦ターンが始まった瞬間に1度だけ写す</b>
+    /// ——後で組み直しても、ここは「何で始めたか」を持ち続ける。
+    /// 結果画面と <c>MAP11_LOG</c> に出し、<b>次の期の材料にする</b>（誰と誰を組んだか）。
+    /// </summary>
+    public static List<string> OpeningLines { get; } = new();
+
+    /// <summary>まだ最初の作戦ターンを始めていない（＝手札から組んでいる最中）。</summary>
+    public static bool Drafting { get; private set; }
+
     /// <summary>新しい通しを始める。seed を渡さなければ毎回振り直す（結果画面に出す）。</summary>
-    public static void Reset(int? seed = null)
+    /// <param name="draft">
+    /// <b>自分で 15 枚から組むか</b>（第177期 §3・既定）。偽にすると第176期までと同じ
+    /// 「既定の3隊で始める」形になる。
+    /// </param>
+    public static void Reset(int? seed = null, bool draft = true)
     {
         Seed = seed ?? new Random().Next(0, 1_000_000);
-        State = new Map11State(Seed, Map11.AdoptedTime);
+        // 第177期 §1: **敵の拠点（ワープポータル）を遊ぶ側に載せた。**
+        // 第176期は `PortalRule.Off` のままで、起動して遊べるものは第175期と同じだった。
+        State = new Map11State(Seed, Map11.AdoptedTime, Map11.AdoptedPortal, draft);
+        Drafting = draft;
+        OpeningLines.Clear();
         BattleLog.Clear();
         Battles = 0;
         PendingSquad = -1;
@@ -130,7 +148,7 @@ public static class Map11Session
         _pendingIntercept = false;
 
         Map11State.Squad sq = State.Squads[squad];
-        string squadName = sq.Def.Name;
+        string squadName = sq.Label;
         int road = node.Def.Road;
         // 第175期 §2: **迎撃で勝っても道中の回復は乗らない**（規則は `Map11State` が持つ）。
         State.Resolve(squad, node, playerWon, wasIntercept);
@@ -211,6 +229,7 @@ public static class Map11Session
     public static void BeginTurn()
     {
         if (State is null || TurnRunning || State.Finished) return;
+        TakeOpening();
         TurnRunning = true;
         _cursor = 0;
         _foes = null;
@@ -275,6 +294,29 @@ public static class Map11Session
         if (State is null || InterceptNode is not { } node) return false;
         if (!BeginIntercept(squad, node)) return false;
         return true;
+    }
+
+    /// <summary>
+    /// 開始時の編成を1度だけ写す（第177期 §3）。<b>最初の作戦ターンの直前</b>
+    /// ——組み直しは作戦ターンを使わないので、「進める」を押すまでは何度でも組み替えられる。
+    /// </summary>
+    public static void TakeOpening()
+    {
+        if (State is not { } st || OpeningLines.Count > 0) return;
+        Drafting = false;
+        foreach (Map11State.Squad s in st.Squads)
+        {
+            string body = s.Units is { Count: > 0 } u
+                ? string.Join(" / ", u.OrderBy(x => x.Slot)
+                    .Select(x => $"{FormationRules.SeatNames[x.Slot]} {x.Def.Name}"))
+                : s.Units is null
+                    ? string.Join(" / ", s.Def.F.Occupied()
+                        .Select(o => $"{FormationRules.SeatNames[o.Slot]} {o.Def.Name}"))
+                    : "（空）";
+            OpeningLines.Add($"{s.Label}: {body}");
+        }
+        if (st.Bench.Count > 0)
+            OpeningLines.Add("余り: " + string.Join(" / ", st.Bench.Select(x => x.Def.Name)));
     }
 
     /// <summary>その道の先頭の敵が、あと何作戦ターンで前進するか（時間なしなら null）。</summary>

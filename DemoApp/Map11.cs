@@ -73,6 +73,18 @@ public static class Map11
     /// </summary>
     public static readonly TimeRule AdoptedTime = TimeRule.Every(1);
 
+    /// <summary>
+    /// 遊ぶときの敵の拠点の規則（<b>第177期 §1</b>）。<b>測って決めた値ではない</b>
+    /// ——この期は「器具で線を引いてから画面に出す」形をやめ、
+    /// <b>ポンの構想どおりの値をそのまま入れて遊んで直す</b>（指示書 §0）。
+    ///
+    /// <para><c>S = 8</c>（湧きのリキャスト）／<c>R = 3</c>（味方のワープのリキャスト）。
+    /// <b>どちらも同じ1本のタイマー</b>で、使った側の値だけ次に使えなくなる
+    /// （<see cref="Map11State.PortalCooldown"/>）。第176期の測定は <c>S = 2/3/4/6</c> だったので、
+    /// <b>8 はそのどれよりも緩い</b>——湧きで押し切る盤面ではなくなっている。</para>
+    /// </summary>
+    public static readonly PortalRule AdoptedPortal = PortalRule.Every(8, warpEvery: 3);
+
     public const int RoadCount = 2;
     public static readonly string[] RoadNames = { "北の道", "南の道" };
 
@@ -298,14 +310,21 @@ public readonly record struct TimeRule(bool On, int AdvanceEvery, int RestPercen
 /// ——籠城は 60 作戦ターンのあいだ迎撃を繰り返すので、24 で切ると
 /// 「湧きに押し切られた」と「戦闘の上限に当たった」が区別できなくなる（§1-4 の膠着）。
 /// </param>
-public readonly record struct PortalRule(bool On, int SpawnEvery, int BattleCap = 120)
+/// <param name="WarpEvery">
+/// <b>味方のワープのリキャスト（<c>R</c>・第177期 §1）。</b> 制圧した後、拠点どうしのワープは
+/// <b>同じポータルを使う</b>ので、1 回使うとこのターン数だけ誰も使えない。
+/// <b>湧きと同じ1本のタイマーを共有する</b>——<c>0</c> なら連続で使える。
+/// </param>
+public readonly record struct PortalRule(bool On, int SpawnEvery, int BattleCap = 120,
+                                         int WarpEvery = 3)
 {
     /// <summary>敵の拠点なし（第175期の規則そのもの）。</summary>
     public static readonly PortalRule Off = new(false, 0, Map11.BattleCap);
 
-    public static PortalRule Every(int s, int battleCap = 120) => new(true, s, battleCap);
+    public static PortalRule Every(int s, int battleCap = 120, int warpEvery = 3)
+        => new(true, s, battleCap, warpEvery);
 
-    public override string ToString() => On ? $"S={SpawnEvery}" : "拠点なし";
+    public override string ToString() => On ? $"S={SpawnEvery} R={WarpEvery}" : "拠点なし";
 }
 
 /// <summary>
@@ -321,6 +340,14 @@ public sealed class Map11State
     {
         public required Map11.SquadDef Def { get; init; }
         public required int Index { get; init; }
+        /// <summary>
+        /// 画面に出す隊の名前（第177期 §3）。<b>自分で組んだ通しでは役割の名前が嘘になる</b>
+        /// ——「カド隊」にカドがいない編成を組めるので、<b>番号で呼ぶ</b>。
+        /// <c>Def.Name</c> は器具（第168期の行名）との突き合わせに残す。
+        /// </summary>
+        public required string Label { get; set; }
+        /// <summary>同・役割の1語（自分で組んだ通しでは出さない）。</summary>
+        public required string Role { get; set; }
         /// <summary>盤上に出ている駒。<c>null</c> ＝ まだ出ていない（控え）／全滅した。</summary>
         public List<UnitState>? Units { get; set; }
         /// <summary>向かっている道。-1 ＝ 拠点で待機。</summary>
@@ -416,6 +443,23 @@ public sealed class Map11State
     /// <summary>第2拠点が陥落した回数（§1-3 (4)。<b>敵は拠点へ向かってしか動かないので原理的に 0</b>）。</summary>
     public int SecondBaseFalls { get; private set; }
 
+    /// <summary>拠点どうしをワープした回数（第177期。<b>測るためだけの計数</b>）。</summary>
+    public int Warps { get; private set; }
+
+    /// <summary>
+    /// ポータルが次に使えるようになる作戦ターン（第177期 §1）。
+    /// <b>湧きと味方のワープが1本のタイマーを共有する</b>——使った側の値
+    /// （<see cref="PortalRule.SpawnEvery"/> ／ <see cref="PortalRule.WarpEvery"/>）だけ塞がる。
+    /// <b>初期値は <c>S</c></b>（最初の湧きまで S ターンかかる ＝ 第176期の <c>Turn % S == 0</c> と同じ）。
+    /// </summary>
+    private int _portalReady;
+
+    /// <summary>ポータルが使えるまでの残り作戦ターン（<b>0 ＝ いま使える</b>）。画面の札が読む。</summary>
+    public int PortalCooldown => Portal.On ? Math.Max(0, _portalReady - Turn) : 0;
+
+    /// <summary>ポータルをいま使えるか（湧きも味方のワープもこの1本を見る）。</summary>
+    public bool PortalReady => Portal.On && Turn >= _portalReady;
+
     /// <summary>隊が立てるいちばん奥のマス。<b>拠点なしなら道の行き止まり</b>（第175期のまま）。</summary>
     public int MaxCell => Portal.On ? Map11.PortalCell : Map11.RoadCells - 1;
 
@@ -429,15 +473,36 @@ public sealed class Map11State
     /// </summary>
     public List<UnitState> Bench { get; }
 
-    public Map11State(int seed, TimeRule? time = null, PortalRule? portal = null)
+    /// <summary>
+    /// <b>自分で組む通しか</b>（第177期 §3）。真なら<b>3 隊は空席で始まり、15 枚が手札に載る</b>
+    /// ——控えの 7 枚（<see cref="Map11.Reserves"/>）はこの期では配らない。
+    /// <b>偽なら第176期と1ビットも違わない。</b>
+    /// </summary>
+    public bool Draft { get; }
+
+    public Map11State(int seed, TimeRule? time = null, PortalRule? portal = null, bool draft = false)
     {
         Seed = seed;
         Time = time ?? TimeRule.Off;
         Portal = portal ?? PortalRule.Off;
-        Bench = Map11.Reserves
+        Draft = draft;
+        // 最初の1回まで S ターン（第176期の `Turn % S == 0` と同じ立ち上がり）。
+        _portalReady = Portal.On ? Math.Max(0, Portal.SpawnEvery) : 0;
+        // 第177期 §3: 自分で組む通しでは、**3 隊の 15 枚をばらして手札にする**。
+        Bench = (draft
+                ? Map11.Squads.SelectMany(s => s.F.Occupied().Select(o => o.Def))
+                : Map11.Reserves.AsEnumerable())
             .Select(d => BattleEngine.Materialize(Formation.Build(front1: d), BattleContext.PlayerTeam)[0])
             .ToList();
-        Squads = Map11.Squads.Select((d, i) => new Squad { Def = d, Index = i }).ToArray();
+        Squads = Map11.Squads.Select((d, i) => new Squad
+        {
+            Def = d,
+            Index = i,
+            Label = draft ? $"第{i + 1}隊" : d.Name,
+            Role = draft ? "自分で組んだ隊" : d.Role,
+            // **空席で始める**（`null` ＝ 「定義のまま」なので、空のリストを置く）。
+            Units = draft ? new List<UnitState>() : null,
+        }).ToArray();
         Nodes = Map11.Roads.Select(r => r.Select(n =>
         {
             int hp = n.Enemy.Occupied().Sum(o => o.Def.MaxHp);
@@ -530,6 +595,11 @@ public sealed class Map11State
             {
                 Captured = true;
                 CapturedTurn = Turn;
+                // 第177期 §1: **制圧した時点でポータルは味方のものになる**ので、
+                // リキャストは味方の <see cref="PortalRule.WarpEvery"/> から数え直す
+                // ——敵の湧きの残り（最大 S ターン）を引き継がない。
+                // <b>制圧は「使う」ことではない</b>ので、その場で1回は使える。
+                _portalReady = Turn;
                 return;
             }
     }
@@ -719,6 +789,21 @@ public sealed class Map11State
     }
 
     /// <summary>
+    /// 「既定の3隊で始める」（第177期 §3）——<b>手札の 15 枚を定義どおりに配り直す。</b>
+    /// 面倒なときの逃げ道であり、<b>回帰確認の口</b>でもある（既定の3隊で始めた通しは
+    /// 第176期までと同じ編成になる）。1 枚でも拠点に無ければ何もしない。
+    /// </summary>
+    public bool UseDefaultSquads()
+    {
+        if (Squads.Any(s => s.Lost || !CanReform(s.Index))) return false;
+        for (int i = 0; i < Squads.Length; i++)
+            if (!ResetSquad(i)) return false;
+        // 名前も既定へ戻す（「第1隊」のままだと、中身と看板がまた食い違う）。
+        foreach (Squad s in Squads) { s.Label = s.Def.Name; s.Role = s.Def.Role; }
+        return true;
+    }
+
+    /// <summary>
     /// 1 戦ぶんの駒を用意する。<b>返すリストはそのまま <see cref="BattleEngine.Run"/> へ渡す</b>
     /// ——戦闘が書き換えた同じ参照を <see cref="Resolve"/> が読む。
     /// </summary>
@@ -843,19 +928,18 @@ public sealed class Map11State
     /// </summary>
     public bool Warp(int squadIndex, Dest dest)
     {
-        if (!Portal.On || !Captured) return false;
+        // 第177期 §1: 可否の判定は `CanWarp` の1箇所に寄せた（リキャストもそこで見る）。
+        if (!CanWarp(squadIndex, dest)) return false;
         Squad s = Squads[squadIndex];
-        if (s.Lost || s.Units is null || !CanSend(squadIndex)) return false;
+        _portalReady = Turn + Math.Max(0, Portal.WarpEvery);
+        Warps++;
 
         if (dest.AtHome)
         {
-            if (!AtSecondBase(squadIndex)) return false;
             s.Road = -1;
             s.Cell = -1;
             return true;
         }
-        if (s.Cell >= 0 || dest.Cell < Map11.PortalCell) return false;
-        if (PortalFoe() is not null) return false;   // 敵がいるあいだは拠点ではない
         s.Road = dest.Road;
         if (s.Home < 0) s.Home = dest.Road;
         s.Cell = Map11.PortalCell;
@@ -866,7 +950,7 @@ public sealed class Map11State
     /// <summary>そのワープができるか（<see cref="Map11Orders.Plan"/> が読む）。</summary>
     public bool CanWarp(int squadIndex, Dest dest)
     {
-        if (!Portal.On || !Captured) return false;
+        if (!Portal.On || !Captured || !PortalReady) return false;
         Squad s = Squads[squadIndex];
         if (s.Lost || s.Units is null || !CanSend(squadIndex)) return false;
         if (dest.AtHome) return AtSecondBase(squadIndex);
@@ -923,7 +1007,8 @@ public sealed class Map11State
         var list = new List<Encounter>();
         if (!Time.On) return list;
         Turn++;
-        if (Time.AdvanceEvery <= 0 || Turn % Time.AdvanceEvery != 0) return SpawnIfDue(list);
+        if (Time.AdvanceEvery <= 0 || Turn % Time.AdvanceEvery != 0)
+        { LoseSecondBaseIfEmpty(); return SpawnIfDue(list); }
 
         // 1 部隊ぶんの前進。**第175期の式をそのまま関数にしただけ**で、中身は1文字も変えていない。
         // 戻り値が偽 ＝ 拠点が陥落したので、その場で打ち切る。
@@ -959,7 +1044,24 @@ public sealed class Map11State
                 if (!Step(sp)) return list;
             }
         }
+        LoseSecondBaseIfEmpty();
         return SpawnIfDue(list);
+    }
+
+    /// <summary>
+    /// 第2拠点の明け渡し（第177期 §1「空の拠点は即占領」の味方側）。
+    /// <b>敵が制圧済みの拠点のマスに立っていて、そこに出せる隊が1つも無ければ取り返される</b>
+    /// ——防壁は置かない。取り返されれば湧きも再開する。
+    ///
+    /// <para><b>敵は味方の拠点へ向かってしか動かない</b>ので、実測ではここは1度も発火しない
+    /// （第176期 §1-3 (4) で 0 件）。<b>規則として対称にするためだけに残す。</b></para>
+    /// </summary>
+    private void LoseSecondBaseIfEmpty()
+    {
+        if (!Portal.On || !Captured || PortalFoe() is null) return;
+        if (Squads.Any(x => !x.Lost && AtSecondBase(x.Index) && CanSend(x.Index))) return;
+        Captured = false;
+        SecondBaseFalls++;
     }
 
     /// <summary>
@@ -970,7 +1072,9 @@ public sealed class Map11State
     private List<Encounter> SpawnIfDue(List<Encounter> list)
     {
         if (!Portal.On || Captured || Fallen) return list;
-        if (Portal.SpawnEvery <= 0 || Turn <= 0 || Turn % Portal.SpawnEvery != 0) return list;
+        // 第177期 §1: **ポータルは使うたびに塞がる**（湧きと味方のワープで1本を共有する）。
+        if (Portal.SpawnEvery <= 0 || Turn <= 0 || !PortalReady) return list;
+        _portalReady = Turn + Portal.SpawnEvery;
 
         int road = SpawnCount % Map11.RoadCount;
         var def = new Map11.RoadNode(road, Map11.RoadCells, Map11.SpawnName(road),
@@ -1028,14 +1132,7 @@ public sealed class Map11State
     /// </summary>
     public void CloseIntercept(Node node)
     {
-        // §1-3 (4): 第2拠点も、敵が来て隊が1つもいなければ陥落する。**敵は拠点へ向かってしか
-        // 動かない**ので、制圧した後に敵が第2拠点へ来る道は1本も無い——数えて 0 であることを出す。
-        if (Portal.On && Captured && PortalFoe() is not null
-            && !Squads.Any(x => !x.Lost && AtSecondBase(x.Index) && CanSend(x.Index)))
-        {
-            Captured = false;
-            SecondBaseFalls++;
-        }
+        LoseSecondBaseIfEmpty();
         if (node.Cleared) return;
         // **判定は「拠点に出せる隊が1つも無いか」の1本だけ**——この到着でもう出した隊が
         // 残っていても（決着しなかったなど）、まだ拠点にいるなら陥落ではない。

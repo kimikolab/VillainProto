@@ -114,10 +114,35 @@ public static class Map11Orders
         }
     }
 
+    /// <summary>
+    /// この作戦ターンに当たる相手（当たらなければ null）。<b>盤面は1ビットも動かさない。</b>
+    ///
+    /// <para>第177期（第176期 §3-1 #2）—— 画面の「この作戦ターン」に
+    /// <b>「〈地点〉で〈敵の名前〉と接敵」</b>と出すためだけにある。
+    /// <b>止まる場所の式は <see cref="Map11State.Advance"/> と同じ</b>
+    /// （敵は追い越せないので、行き先は先頭の敵のマスで切られる）。</para>
+    /// </summary>
+    public static Map11State.Node? Meeting(Map11State st, int squad, Dest dest)
+    {
+        if (Plan(st, squad, dest) != Order.Advance) return null;
+        Map11State.Squad s = st.Squads[squad];
+        // すでに同じマスにいる（前の戦闘が決着しなかった）ならその相手。
+        if (st.FoeFacing(squad) is { } now) return now;
+        int road = s.Cell < 0 ? dest.Road : s.Road;
+        if (road < 0) return null;
+        Map11State.Node? front = st.FrontFoe(road);
+        int limit = front?.Cell ?? st.MaxCell;
+        int next = Math.Min(s.Cell < 0 ? 0 : s.Cell + 1, Math.Min(limit, st.MaxCell));
+        return front is not null && front.Cell == next ? front : null;
+    }
+
     /// <summary>その隊がこの作戦ターンに何をするか（画面に出す1語）。</summary>
     public static string Describe(Map11State st, int squad, Dest dest) => Plan(st, squad, dest) switch
     {
-        Order.Advance => $"{Where(dest)} へ進む",
+        // 第177期: **接敵するターンはそう書く**（「〜へ進む」だと何が起きるか読めない）。
+        Order.Advance => Meeting(st, squad, dest) is { } foe
+            ? $"{Map11.RoadNames[foe.Def.Road]} {CellName(foe.Cell)} で {foe.Def.Name} と接敵"
+            : $"{Where(dest)} へ進む",
         Order.Back => dest.AtHome ? "拠点へ戻る" : $"{Where(dest)} へ（拠点を経由）",
         Order.Rest => st.AtSecondBase(squad) ? $"休む（{Map11.PortalName}）" : "休む（拠点）",
         Order.Warp => dest.AtHome ? "拠点へワープ" : $"{Map11.PortalName} へワープ",
