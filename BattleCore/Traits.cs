@@ -7200,10 +7200,24 @@ public sealed class PerverseTrait : Trait
 {
     /// <summary>
     /// <b>第177期までの倍率。</b> 下げ幅 1 につき攻撃力 +3。
-    /// <b>第178期に「攻撃力」から「回数」へ移したので、盤面ではもう誰も読まない</b>
+    /// <b>第178期に「攻撃力」と「回数」へ割ったので、盤面ではもう誰も読まない</b>
     /// ——<see cref="HitsPerDull"/> の導出（総ダメージが揃う値）にだけ残してある。
     /// </summary>
     public const int DebuffMultiplier = 3;
+
+    /// <summary>
+    /// <b>下げ幅 1 につき乗る攻撃力（第178期・両取り）。</b>
+    ///
+    /// <para><b>3 → 1 に落としてある。</b> 第178期の初版は「攻撃力は素のまま・回数だけ増える」で、
+    /// <c>攻 9 × (1 + d/3)</c> が旧版の <c>9 + 3d</c> と d ≤ 12 で一致する形だった
+    /// ——そこへ攻撃力を戻すので、**倍率は 3 ではなく 1**（両方を 3 にすると
+    /// <c>(9 + 3d) × (1 + d/3)</c> ＝ 旧版の二乗になる）。</para>
+    ///
+    /// <para><b>それでも出力は旧版を超える</b>（1手番 <c>(9 + d) × 発数</c>）。
+    /// <b>上限（軛）に対する性格も途中で変わる</b>——下げ幅が 16 を超えると
+    /// 1発が <see cref="YokeTrait.Cap"/>(25) を跨ぐので、**手数を増やしても切られ始める。**</para>
+    /// </summary>
+    public const int AttackPerDull = 1;
 
     /// <summary>
     /// <b>下げ幅いくつごとに1発増えるか（第178期）。</b>
@@ -7213,9 +7227,9 @@ public sealed class PerverseTrait : Trait
     /// 攻 ＝ 9 なら <c>3d = 9d/N</c> ⇔ <c>N = 3</c>（＝<see cref="DebuffMultiplier"/>）。
     /// <b>上限に当たるまでは総ダメージが一致する</b>（d が 3 の倍数でないときの切り捨てを除く）。</para>
     ///
-    /// <para><b>だから「同じ量を別の形で出す」変更であって、強化でも弱体でもない</b>
-    /// ——変わるのは<b>1発の重さ</b>（9 固定）と<b>発数</b>で、
-    /// そこに庇い・反撃・上限・傷・毒が1発ごとに噛む。</para>
+    /// <para><b>第178期の初版はここで「同じ量を別の形で出す」変更だったが、
+    /// 両取り（攻撃力 ＋ 回数）にしたので出力は旧版を超える。</b>
+    /// 変わるのは<b>1発の重さ</b>と<b>発数</b>の両方で、そこに庇い・反撃・上限・傷・毒が1発ごとに噛む。</para>
     /// </summary>
     public const int HitsPerDull = 3;
 
@@ -7229,15 +7243,18 @@ public sealed class PerverseTrait : Trait
     public override TraitId Id => TraitId.Perverse;
 
     /// <summary>
-    /// <b>弱体化は攻撃力に乗らない（第178期）。</b> 乗るのは <see cref="ModifyHitCount"/> の側。
+    /// <b>弱体化は攻撃力にも回数にも乗る（第178期・両取り）。</b>
+    /// こちらは下げ幅の <see cref="AttackPerDull"/> 倍、回数は <see cref="ModifyHitCount"/> の側。
     /// <para>強化の半減（マイナス）は1文字も変えていない。</para>
     /// </summary>
     public override int ModifyAttack(UnitState self, int atk)
     {
+        int b = self.AtkBonus;
         int baseAtk = self.Def.Attack;
 
-        if (self.AtkBonus > 0) return Math.Max(1, baseAtk / 2);   // 讃えられると鈍る
-        return baseAtk;                                           // 呪われても素のまま。冴えるのは回数
+        if (b < 0) return baseAtk + (-b) * AttackPerDull;   // 呪われるほど冴える
+        if (b > 0) return Math.Max(1, baseAtk / 2);         // 讃えられると鈍る
+        return baseAtk;
     }
 
     /// <summary>

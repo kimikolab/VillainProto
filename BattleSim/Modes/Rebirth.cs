@@ -87,25 +87,29 @@ static class RebirthDiag
         Console.WriteLine();
         int baseAtk = UnitCatalog.Utsu.Attack;
         Console.WriteLine("素の攻撃力 ＝ **" + baseAtk + "**。下げ幅 d のとき、");
-        Console.WriteLine("旧版の1手番の出力は `攻 + 3d`、新版は `攻 × (1 + d/N)` なので");
-        Console.WriteLine("`3d = " + baseAtk + "d/N` ⇔ **N = " + baseAtk / PerverseTrait.DebuffMultiplier + "**。");
+        Console.WriteLine("旧版（第177期まで）の1手番の出力は `攻 + 3d`。");
+        Console.WriteLine("**両取りの新版は `(攻 + " + PerverseTrait.AttackPerDull + "d) × 発数`**"
+                          + "（発数 ＝ `min(" + PerverseTrait.MaxHits + ", 1 + d/"
+                          + PerverseTrait.HitsPerDull + ")`）。");
+        Console.WriteLine("**倍率を 3 ではなく " + PerverseTrait.AttackPerDull + " にしてある**"
+                          + "——両方 3 にすると `(9 + 3d) × (1 + d/3)` ＝ 旧版の二乗になる。");
         Console.WriteLine();
-        Console.WriteLine("| 下げ幅 d | 旧 攻 ＝ 旧 出力 | N=2 発 | N=2 出力 | **N=3 発** | **N=3 出力** | N=4 発 | N=4 出力 |");
-        Console.WriteLine("|--:|--:|--:|--:|--:|--:|--:|--:|");
-        foreach (int d in new[] { 0, 2, 3, 6, 9, 12, 15, 20, 45 })
+        Console.WriteLine("| 下げ幅 d | 旧 攻 ＝ 旧 出力 | 新 攻 | 新 発数 | **新 出力** | 旧比 | 軛(25)を跨ぐか |");
+        Console.WriteLine("|--:|--:|--:|--:|--:|--:|:-:|");
+        foreach (int d in new[] { 0, 2, 3, 6, 9, 12, 15, 16, 17, 20, 45 })
         {
-            string row = "| " + d + " | " + (baseAtk + 3 * d) + " |";
-            foreach (int n in new[] { 2, 3, 4 })
-            {
-                int h = Math.Min(PerverseTrait.MaxHits, 1 + d / n);
-                row += " " + h + " | " + (h * baseAtk) + " |";
-            }
-            Console.WriteLine(row);
+            int oldOut = baseAtk + 3 * d;
+            int atk = baseAtk + d * PerverseTrait.AttackPerDull;
+            int h = Math.Min(PerverseTrait.MaxHits, 1 + d / PerverseTrait.HitsPerDull);
+            Console.WriteLine("| " + d + " | " + oldOut + " | " + atk + " | " + h + " | **" + atk * h + "** | "
+                              + ((double)atk * h / oldOut).ToString("F2") + " | "
+                              + (atk > YokeTrait.Cap ? "**跨ぐ**" : "—") + " |");
         }
         Console.WriteLine();
         Console.WriteLine("**N = " + PerverseTrait.HitsPerDull + " / 上限 " + PerverseTrait.MaxHits
-                          + " 発を仮置きする。** d ≤ 12 では総ダメージが一致し（d が 3 の倍数でないときの"
-                          + "切り捨てを除く）、**d > 12 では上限で頭打ちになる**——そこが新しいマイナスである。");
+                          + " 発 / 攻撃力は下げ幅の " + PerverseTrait.AttackPerDull + " 倍。**"
+                          + "**出力は全域で旧版以上**になるが、**下げ幅が 16 を超えると1発が軛の上限 "
+                          + YokeTrait.Cap + " を跨ぐ**ので、第四波ではそこから先が切られ始める。");
         Console.WriteLine();
 
         // ---- Q0-3 ----
@@ -262,7 +266,7 @@ static class RebirthDiag
             for (int st = 1; st < 5; st++)
             {
                 Cen c = Census(f, st, UtsuId, EmberRule.Default);
-                double turns = c.Atk - c.Extra;
+                double turns = c.SwingTurns;
                 Console.WriteLine("| " + name + " | 第" + (st + 1) + "波 | " + F1(c.Win) + "% | "
                                   + F1(c.Atk) + " | " + F1(c.Extra) + " | "
                                   + (turns > 0 ? (c.Atk / turns).ToString("F2") : "—") + " | "
@@ -270,9 +274,9 @@ static class RebirthDiag
                                   + F1(c.FellTurn) + " |");
             }
         Console.WriteLine();
-        Console.WriteLine("**「1手番あたり発数」＝ `Attacks ÷ (Attacks − ExtraSwings)`。**"
-                          + "分母は手番の1発目だけなので、反撃・割り込みを持つ駒では 1.00 に寄る"
-                          + "（ウツはどちらも持たないので、そのまま平均発数になる）。");
+        Console.WriteLine("**「1手番あたり発数」＝ `Attacks ÷ TurnAttacks`**（分母は<b>攻撃で終わった手番の数</b>）。"
+                          + "**`Attacks − ExtraSwings` を分母にしてはいけない**"
+                          + "——手番が 2 回しか無い行では分母が 0.06 まで潰れて 179 のような値が出る。");
         Console.WriteLine();
 
         // ---- 台本の確認（自己検査 (e) の材料） ----
@@ -455,9 +459,10 @@ static class RebirthDiag
             var traits = TraitCatalog.Resolve(UnitCatalog.Utsu.Traits);
             int hits = traits.Aggregate(1, (h, t) => t.ModifyHitCount(p, h));
             int atk = traits.Aggregate(UnitCatalog.Utsu.Attack, (a, t) => t.ModifyAttack(p, a));
+            int oldOut = b < 0 ? UnitCatalog.Utsu.Attack + 3 * -b : Math.Max(1, UnitCatalog.Utsu.Attack / 2);
             Console.WriteLine("- `AtkBonus = " + b + "`: **" + hits + " 発 × 攻 " + atk + " ＝ " + hits * atk
-                              + "**（旧版なら攻 " + (b < 0 ? UnitCatalog.Utsu.Attack + 3 * -b
-                                  : Math.Max(1, UnitCatalog.Utsu.Attack / 2)) + "）");
+                              + "**（旧版なら攻 " + oldOut + " ＝ 旧比 "
+                              + ((double)hits * atk / oldOut).ToString("F2") + "）");
         }
         Console.WriteLine();
 
@@ -500,14 +505,14 @@ static class RebirthDiag
 
     readonly record struct Cen(double Win, double FellPct, double FellTurn, double BurnDeathPct,
                                double FoeDeathPct, double BurnTurns, double BurnTaken,
-                               double Atk, double Extra, double Dmg, double Taken);
+                               double Atk, double Extra, double Dmg, double Taken, double SwingTurns);
 
     static Cen Census(Formation f, int st, string id, EmberRule ember)
     {
         var fellTurns = new List<int>();
         var burnTurns = new List<int>();
         int wins = 0, fell = 0, burnDead = 0;
-        double atk = 0, extra = 0, dmg = 0, taken = 0, burnTaken = 0;
+        double atk = 0, extra = 0, dmg = 0, taken = 0, burnTaken = 0, swingTurns = 0;
         for (int seed = 0; seed < Seeds; seed++)
         {
             BattleResult res = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed,
@@ -515,7 +520,7 @@ static class RebirthDiag
             if (res.PlayerWon) wins++;
             if (!res.TallyByUnit.TryGetValue(id, out UnitTally? t)) continue;
             burnTurns.Add(t.BurnTicks);
-            atk += t.Attacks; extra += t.ExtraSwings;
+            atk += t.Attacks; extra += t.ExtraSwings; swingTurns += t.TurnAttacks;
             dmg += t.DamageToEnemy; taken += t.DamageTaken; burnTaken += t.BurnTaken;
             if (t.Deaths > 0)
             {
@@ -528,7 +533,7 @@ static class RebirthDiag
                        fell > 0 ? 100.0 * burnDead / fell : 0,
                        fell > 0 ? 100.0 * (fell - burnDead) / fell : 0,
                        Median(burnTurns), burnTaken / Seeds,
-                       atk / Seeds, extra / Seeds, dmg / Seeds, taken / Seeds);
+                       atk / Seeds, extra / Seeds, dmg / Seeds, taken / Seeds, swingTurns / Seeds);
     }
 
     static double Median(List<int> xs)
