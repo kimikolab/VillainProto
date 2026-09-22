@@ -44,7 +44,7 @@
 | 31 | `deep` | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` / `wound2` | 第93期 | ○ |
 | 32 | `curse` | `CurseRule` | `CurseRule { Enabled = False, SharePercent = 50 }` |  | `curse` / `hex` / `lit` | 第95期 | ○ |
 | 33 | `betray` | `BetrayRule` | `BetrayRule { Enabled = True, Respawn = True }` |  | `betray` / `tempo` / `ledger` | 第103期 | ○ |
-| 34 | `encore` | `EncoreRule` | `EncoreRule { Enabled = True }` |  | `encore` / `tempo` / `tomo` / `hold2` / `ledger` / `lit` | 第104期 | ○ |
+| 34 | `encore` | `EncoreRule` | `EncoreRule { Enabled = True }` |  | `encore` / `tempo` / `tomo` / `hold2` / `ledger` / `lit` / `rebirth` | 第104期 | ○ |
 | 35 | `rage` | `RageRule` | `RageRule { Mode = Amount, Gain = 3 }` |  | `hold` / `hold2` | 第106期 | ○ |
 | 36 | `menderCost` | `MenderCostRule` | `MenderCostRule { Percent = 50 }` |  | `hold` / `hold2` / `ledger` / `lit` / `wound2` | 第106期 | ○ |
 | 37 | `loose` | `LooseRule` | `LooseRule { Shove = True }` |  | `hold` / `hold2` / `ledger` / `lit` | 第106期 | ○ |
@@ -53,7 +53,7 @@
 | 40 | `boss` | `BossRule` | `BossRule { Census = False }` | ○ | `boss` / `tank` / `time` / `grade` / `demo` | 第117期 | ○ |
 | 41 | `nourish` | `NourishRule` | `NourishRule { Gain = 2 }` |  | `tank` / `time` | 第117期 | ○ |
 | 42 | `wound` | `WoundRule` | `WoundRule { Enabled = True, Census = False }` |  | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期 | ○ |
-| 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False }` | ○ | `survive` / `ember` / `wildfire` | 第130期 | ○ |
+| 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0 }` |  | `survive` / `ember` / `wildfire` / `rebirth` | 第130期 | ○ |
 | 44 | `wildfire` | `WildfireRule` | `WildfireRule { Mode = None, Amount = 0, Active = False }` | ○ | `wildfire` | 第133期 | ○ |
 | 45 | `harm` | `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` | 第135期 | ○ |
 | 46 | `parry` | `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True, Swing = WhenStocked }` |  | `parry` / `wall` / `stall` | 第135期 | ○ |
@@ -87,8 +87,8 @@
 | `CurseRule` | `CurseRule { Enabled = False, SharePercent = 50 }` | ○ | `curse` / `hex` / `lit` | 第95期 |
 | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` / `wound2` | 第93期 |
 | `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` | ○ | `divert` / `survive` / `wildfire` / `mark` | 第50期 |
-| `EmberRule` | `EmberRule { Enabled = False }` | ○ | `survive` / `ember` / `wildfire` | 第130期 |
-| `EncoreRule` | `EncoreRule { Enabled = True }` | ○ | `encore` / `tempo` / `tomo` / `hold2` / `ledger` / `lit` | 第104期 |
+| `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0 }` | ○ | `survive` / `ember` / `wildfire` / `rebirth` | 第130期 |
+| `EncoreRule` | `EncoreRule { Enabled = True }` | ○ | `encore` / `tempo` / `tomo` / `hold2` / `ledger` / `lit` / `rebirth` | 第104期 |
 | `ExposeRule` | `ExposeRule { MaxPerBattle = 3 }` | ○ | `expose` / `creak3` / `ledger` | 第40期 |
 | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` | ○ | `curse` / `favor` / `turn` / `ledger` | 第58期 |
 | `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` | ○ | `finisher` / `ledger` / `survive` / `wildfire` / `mark` | 第53期 |

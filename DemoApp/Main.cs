@@ -130,6 +130,16 @@ public partial class Main : Control
     private bool _paused;
     private double _speed = 2.0;
     private bool _quitAfterPlayback;
+
+    /// <summary>
+    /// 第178期 自己検査 (e)。<b>再生側が「1手番の連撃」を何回の絵に割ったか</b>を数える。
+    /// <b>表示専用で、再生にも盤面にも1ビットも影響しない</b>——`--demo-quit` の最後の1行に出すだけ。
+    /// <para>数えるのは <c>Attack</c> の絵を実際に流した瞬間（＝<c>_battleField.Attack</c> の直後）で、
+    /// <b>同じ駒が `TurnStart` を挟まずに連続で振った最大回数</b>を控える。
+    /// 1発ずつ別の絵・別の音になっていれば、その回数がそのまま発数になる。</para>
+    /// </summary>
+    private int _attackPlays, _attackRun, _attackRunActor = -1, _attackRunMax;
+    private string _attackRunName = "";
     private bool _fastSmoke;
     private bool _campaignFlowSmoke;
     private bool _map11FlowSmoke;
@@ -1120,7 +1130,8 @@ public partial class Main : Control
         }
         else if (_quitAfterPlayback)
         {
-            GD.Print($"DEMO_SMOKE_COMPLETE events={_eventIndex} turns={_result.Turns} won={_result.PlayerWon}");
+            GD.Print($"DEMO_SMOKE_COMPLETE events={_eventIndex} turns={_result.Turns} won={_result.PlayerWon}"
+                     + $" attackPlays={_attackPlays} maxRun={_attackRunMax} maxRunBy={_attackRunName}");
             GetTree().Quit();
         }
     }
@@ -1136,6 +1147,7 @@ public partial class Main : Control
         switch (e.Kind)
         {
             case BattleEventKind.TurnStart:
+                _attackRun = 0; _attackRunActor = -1;   // 第178期 (e)。連撃の数え直しはターン境界で
                 _battleField.EndGuards();
                 _burningSnapshot.Clear();
                 _statusEffectSnapshot.Clear();
@@ -1188,6 +1200,11 @@ public partial class Main : Control
                 if (e.Reaction)
                     await _battleField.ShowBonusAttack(actor);
                 await _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire);
+                // 第178期 自己検査 (e)。**計数だけ**（上の1行が「1発ぶんの絵と音」なので、ここで数える）。
+                _attackPlays++;
+                _attackRun = e.ActorId == _attackRunActor ? _attackRun + 1 : 1;
+                _attackRunActor = e.ActorId ?? -1;
+                if (_attackRun > _attackRunMax) { _attackRunMax = _attackRun; _attackRunName = NameOf(e.ActorId); }
                 AppendLog($"[color=#{(actor?.Team == 0 ? UiKit.Player : UiKit.Enemy).ToHtml(false)}]{NameOf(e.ActorId)}[/color] → {NameOf(e.TargetId)}  [color=#a9b3a8]{UiKit.PatternLabel(e.Pattern ?? AttackPattern.Single)} {e.Amount}[/color]");
                 // 第125期 段2: 手番の外の一撃（棘・仇討ち・軋み）は**流れを一度止める**。
                 // **手番の中は詰めてある**（0.16 → 0.14）ので、合計はほぼ動かない（§5-2）。

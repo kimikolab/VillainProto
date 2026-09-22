@@ -419,8 +419,8 @@ public static class UnitCatalog
         Attack = 9,
         Speed = 6,
         Traits = new[] { TraitId.Perverse },
-        PlusText = "弱体化されるほど攻撃力が上がる（下げ幅の3倍）",
-        MinusText = "強化されると攻撃力が半減する。支援を積む編成には入れない",
+        PlusText = "弱体化されるほど手数が増える（下げ幅3ごとに+1発・最大5発。1発ずつ別の攻撃として当たる）",
+        MinusText = "強化されると攻撃力が半減する。支援を積む編成には入れない。手数には上限があり、呪われ過ぎても伸びない",
         Flavor = "褒められると腕が落ちる。呪われている間だけまともに戦う。"
     };
 
@@ -638,7 +638,7 @@ public static class UnitCatalog
         Attack = 6,
         Speed = 7,
         Traits = new[] { TraitId.Pyre },
-        PlusText = "自分が燃えている間、攻撃力が4倍になり、攻撃が貫きに変わる",
+        PlusText = "自分が燃えている間、攻撃力が4倍になり、攻撃が貫きに変わる。火には焼かれない",
         MinusText = "火が消えればただの湿った薪。自分では火を点けられない",
         Flavor = "焚きつけられている間だけ働く。誰かが火を放つのを待っている。"
     };

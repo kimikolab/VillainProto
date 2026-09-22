@@ -380,6 +380,25 @@ public abstract class Trait
 
     /// <summary>攻撃パターンを状況で書き換える。後列でだけ貫きになる、など。</summary>
     public virtual AttackPattern ModifyPattern(UnitState self, AttackPattern p) => p;
+
+    /// <summary>
+    /// <b>その手番に何発振るか（第178期）。Modify 系の4本目。</b>
+    ///
+    /// <para><b>問うのは手番の2箇所だけ</b>（<c>TakeTurnCore</c> の従来経路と
+    /// <c>ActionKind.Attack</c>）。反撃（<c>ctx.Reaction</c>）・割り込み（<c>ctx.Interrupt</c>）・
+    /// 追い打ち（<see cref="OverreachTrait"/>）・再行動（<c>EncoreRule</c>）は<b>通らない</b>
+    /// ——あれらは「手番」ではないので、ここで増やすと連鎖の中で二乗に伸びる。</para>
+    ///
+    /// <para><b>1発ずつが独立した <c>PerformAttack</c> になる。</b> 標的選択・傷・毒・燃焼・
+    /// 上限（軛）・庇い・反撃は<b>1発ごとに通常どおり</b>走り、台本にも
+    /// <c>Attack</c> / <c>Damage</c> が1発ずつ並ぶ（束ねない——再生側で1発ずつ音を鳴らすため）。</para>
+    ///
+    /// <para><b>上限は特性の側で掛ける。</b> engine は 1 未満にならないことだけを保証する
+    /// ——<c>Cap</c> を engine に置くと「誰の上限か」が読めなくなる。</para>
+    ///
+    /// <para><b>ウツ以外の駒の値は 1 のまま</b>（第178期の回帰の根拠）。</para>
+    /// </summary>
+    public virtual int ModifyHitCount(UnitState self, int hits) => hits;
     public virtual int ModifyIncomingDamage(UnitState self, int dmg) => dmg;
     public virtual void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt) { }
     public virtual void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source) { }
@@ -7127,18 +7146,59 @@ public sealed class DrifterTrait : Trait
 /// </summary>
 public sealed class PerverseTrait : Trait
 {
+    /// <summary>
+    /// <b>第177期までの倍率。</b> 下げ幅 1 につき攻撃力 +3。
+    /// <b>第178期に「攻撃力」から「回数」へ移したので、盤面ではもう誰も読まない</b>
+    /// ——<see cref="HitsPerDull"/> の導出（総ダメージが揃う値）にだけ残してある。
+    /// </summary>
     public const int DebuffMultiplier = 3;
+
+    /// <summary>
+    /// <b>下げ幅いくつごとに1発増えるか（第178期）。</b>
+    ///
+    /// <para><b>3 は合わせ込みではなく等式から出た</b>——旧版の1手番の出力は
+    /// <c>攻 + 3d</c>（d ＝ 下げ幅）、新版は <c>攻 × (1 + d/N)</c> で、
+    /// 攻 ＝ 9 なら <c>3d = 9d/N</c> ⇔ <c>N = 3</c>（＝<see cref="DebuffMultiplier"/>）。
+    /// <b>上限に当たるまでは総ダメージが一致する</b>（d が 3 の倍数でないときの切り捨てを除く）。</para>
+    ///
+    /// <para><b>だから「同じ量を別の形で出す」変更であって、強化でも弱体でもない</b>
+    /// ——変わるのは<b>1発の重さ</b>（9 固定）と<b>発数</b>で、
+    /// そこに庇い・反撃・上限・傷・毒が1発ごとに噛む。</para>
+    /// </summary>
+    public const int HitsPerDull = 3;
+
+    /// <summary>
+    /// <b>1手番の上限（第178期・仮置き）。</b> d が 12 を超えたぶんは出力にならない
+    /// ——旧版は <c>3d</c> で原理的に青天井だったので、<b>ここが新しいマイナスである</b>
+    /// （萎縮のクビ＝開戦時に味方1体につき 9 を積む行では、d が 40 を超える）。
+    /// </summary>
+    public const int MaxHits = 5;
 
     public override TraitId Id => TraitId.Perverse;
 
+    /// <summary>
+    /// <b>弱体化は攻撃力に乗らない（第178期）。</b> 乗るのは <see cref="ModifyHitCount"/> の側。
+    /// <para>強化の半減（マイナス）は1文字も変えていない。</para>
+    /// </summary>
     public override int ModifyAttack(UnitState self, int atk)
     {
-        int b = self.AtkBonus;
         int baseAtk = self.Def.Attack;
 
-        if (b < 0) return baseAtk + (-b) * DebuffMultiplier;  // 呪われるほど冴える
-        if (b > 0) return Math.Max(1, baseAtk / 2);           // 讃えられると鈍る
-        return baseAtk;
+        if (self.AtkBonus > 0) return Math.Max(1, baseAtk / 2);   // 讃えられると鈍る
+        return baseAtk;                                           // 呪われても素のまま。冴えるのは回数
+    }
+
+    /// <summary>
+    /// <b>呪われるほど手数が増える。</b> 下げ幅 <see cref="HitsPerDull"/> ごとに +1 発。
+    ///
+    /// <para><b>強化されている間（<c>AtkBonus &gt; 0</c>）は 1 発のまま</b>
+    /// ——半減と重ねて二重に罰しない。</para>
+    /// </summary>
+    public override int ModifyHitCount(UnitState self, int hits)
+    {
+        int b = self.AtkBonus;
+        if (b >= 0) return hits;
+        return Math.Min(MaxHits, hits + (-b) / HitsPerDull);
     }
 }
 
@@ -8093,7 +8153,7 @@ public sealed class PyreTrait : Trait
 /// （<see cref="PyreTrait"/> の doc）、配る／配らないの二値しかない。
 /// 代金・上限も最初から付けていない（第118・126・127・128期と同じ。素の効き方を先に測る）。</para>
 /// </summary>
-public readonly record struct EmberRule(bool Enabled)
+public readonly record struct EmberRule(bool Enabled, bool Fireproof = true, int TickHeal = 0)
 {
     /// <summary>
     /// <b>既定は「配らない」＝第130期に測って採用しなかった</b>（<see cref="Off"/> と同じ）。
@@ -8117,14 +8177,31 @@ public readonly record struct EmberRule(bool Enabled)
     /// （<see cref="ScapegoatTrait"/> が採った形。<c>Ignite</c> は残ターンを
     /// <see cref="BurnRules.Turns"/> に<b>設定</b>するので、1 を移すつもりで呼ぶと複製になる） ／
     /// (b) <b>1戦にN回まで</b>。</para>
+    ///
+    /// <para><b>第178期に窓口を2つ足した。</b> <c>Fireproof</c>（<b>既定 true ＝ 採用した版</b>）と
+    /// <c>TickHeal</c>（既定 0 ＝ 何もしない）。どちらも<b>配布（<c>Enabled</c>）とは独立</b>で、
+    /// 熾のホタ（<see cref="PyreTrait"/>）1枚にしか掛からない。
+    /// <b>引数を1本も増やさないために、熾火の窓口をこの1つにまとめてある</b>（第154期の作法）。</para>
     /// </summary>
     public static EmberRule Default => new(false);
 
     /// <summary>配る版（第130期に測った版）。<b>既定ではない。</b></summary>
     public static EmberRule On => new(true);
 
-    /// <summary>配らない版（対照）。<b>第129期までの盤面と 305 セル 0 件で一致する。</b></summary>
+    /// <summary>
+    /// 配らない版（対照）。<b>第129期までの盤面と 305 セル 0 件で一致する</b>
+    /// ——<b>ただし第178期からは「火に焼かれない」が既定なので、
+    /// 第177期までの盤面と突き合わせるときは <see cref="Charred"/> を使うこと。</b>
+    /// </summary>
     public static EmberRule Off => new(false);
+
+    /// <summary>
+    /// <b>第178期の前の版（ホタも燃焼の刻みで削られる）。対照専用で、既定ではない。</b>
+    /// <para><c>燃焼 (ボルグ×ホタ)</c> ／ <c>火選り (ヒヨ×ホタ)</c> ／ <c>強化×燃</c> の
+    /// 3 行をこの版で回すと、第177期の <c>docs/balance.md</c> と 1 セルも違わない
+    /// ——それがこの期の回帰の本体（自己検査 (a)）。</para>
+    /// </summary>
+    public static EmberRule Charred => new(false, false, 0);
 }
 
 /// <summary>

@@ -838,6 +838,16 @@ public sealed class UnitTally
     public int Attacks;
 
     /// <summary>
+    /// <b>手番の中で 2 発目以降に振った回数（第178期・計数専用）。</b>
+    /// <see cref="Attacks"/> の内数で、<b>誰も読んで分岐しない。</b>
+    ///
+    /// <para>数えるのは <c>SwingTurn</c> の1箇所だけ ＝ <c>Trait.ModifyHitCount</c> が
+    /// 1 より大きい値を返した手番のぶん。<b>反撃・割り込み・追い打ち・再行動は入らない</b>
+    /// ——あれらは <c>PerformAttack</c> を直接呼ぶので <see cref="Attacks"/> だけが増える。</para>
+    /// </summary>
+    public int ExtraSwings;
+
+    /// <summary>
     /// <b>この駒の <c>CurrentAttack</c> が出力（ダメージ量）に変換された回数</b>（第64期）。
     ///
     /// <para><see cref="Attacks"/>（<c>PerformAttack</c> を通った回数）では
@@ -1730,6 +1740,7 @@ public sealed class UnitTally
         Kills += o.Kills; Deaths += o.Deaths;
         Whetted += o.Whetted; Dulled += o.Dulled;
         BurnLit += o.BurnLit; BurnRelit += o.BurnRelit; BurnLitAlly += o.BurnLitAlly;
+        ExtraSwings += o.ExtraSwings;   // 第178期（計数専用）
         BurnTicks += o.BurnTicks; BurnTaken += o.BurnTaken; BurnSoaked += o.BurnSoaked;
         BurnDeaths += o.BurnDeaths; BurnAttacks += o.BurnAttacks;
         // FirstBurnTurn は**加算しない**。0（一度も点かなかった）を除いた最小値を取る

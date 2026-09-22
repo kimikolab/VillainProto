@@ -486,6 +486,13 @@ if (focusId == "stall")
     return;
 }
 
+// rebirth モード（第178期） —— B群の転生（熾のホタ／逆しまのウツ）。本体は `Modes/Rebirth.cs`。
+if (focusId == "rebirth")
+{
+    RebirthDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // haste モード（第149期） —— 行動順という通貨の値段。本体は `Modes/Haste.cs`。
 if (focusId == "haste")
 {

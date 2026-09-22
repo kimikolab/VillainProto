@@ -476,6 +476,28 @@ public sealed class BattleContext
             u.SetCounter(StatusKeys.Burn, left - 1);
             // 第134期 段1 —— 燃え尽きた時点で区間を閉じる。**盤面には触らない。**
             if (left - 1 <= 0) CloseBurnEpisode(u, expired: true);
+
+            // 火には焼かれない（第178期・熾のホタ）。**燃焼の状態は1ビットも消さない**
+            // ——残りターンは上で普通に減り、攻 ×4・貫き（`PyreTrait`）も今までどおり立つ。
+            // 変わるのは「この刻みが HP を削るか」の1点だけである。
+            //
+            // **`ApplyDamage` の中ではなく、ここで切る。** あちらで切ると
+            // 「浴びた量」を読む札（被弾強化・砕け・分かち・逆しま…）が
+            // 「0 を浴びた」で発火し、帳簿（`BurnTaken` / 破片の吸い）にも段が残る。
+            // **刻みそのものを起こさない**のが「焼かれない」の正しい形。
+            //
+            // `Ember.Fireproof` は **既定 true ＝ 採用した版**。偽にすると第177期までの盤面に戻る
+            // （`EmberRule.Charred`。自己検査 (a) がそれで 305 セルを突き合わせる）。
+            // 保持者はロスターに熾のホタ1枚だけなので、他の 51 枚は比較1つで抜ける。
+            if (Ember.Fireproof && u.HasTrait(TraitId.Pyre))
+            {
+                Log($"    {u.Name} は燃えているが焼かれない（残り {left - 1}）", LogKind.Status);
+                // ノブ（既定 0 ＝ 1ビットも動かない）。**`ctx.Heal` を通す**ので、
+                // 渇き（盤面ルール）にも支援拒否（`Stoic`）にも素直に課税される。
+                if (Ember.TickHeal > 0) Heal(u, Ember.TickHeal);
+                continue;
+            }
+
             Log($"    {u.Name} が燃えている（残り {left - 1}）", LogKind.Status);
             Emit(new BattleEvent
             {
@@ -6187,7 +6209,7 @@ public sealed class BattleContext
 
         if (act is null)
         {
-            PerformAttack(actor);   // 従来経路。Actions を持たない駒はここしか通らない
+            SwingTurn(actor, null);   // 従来経路。Actions を持たない駒はここしか通らない
             if (DeepWatch) NoteDeepAction(actor);    // 第93期 §2-3: 実際に行動した直後
             return TurnOutcome.Attack;
         }
@@ -6230,10 +6252,41 @@ public sealed class BattleContext
             return TurnOutcome.Skill;
         }
 
-        PerformAttack(actor, attackPercent: act.AttackPercent,
-                          patternOverride: act.PatternOverride);
+        SwingTurn(actor, act);
         if (DeepWatch) NoteDeepAction(actor);        // 第93期 §2-3
         return TurnOutcome.Attack;
+    }
+
+    /// <summary>
+    /// <b>手番の攻撃を、問うた回数だけ振る（第178期）。</b>
+    ///
+    /// <para><b>ここが `Trait.ModifyHitCount` を問う唯一の場所である。</b>
+    /// 反撃（<c>Reaction</c>）・割り込み（<c>Interrupt</c>）・追い打ち・再行動は
+    /// <see cref="PerformAttack"/> を直接呼ぶので<b>1発のまま</b>
+    /// ——手番の外まで増やすと、連鎖の中で二乗に伸びる。</para>
+    ///
+    /// <para><b>1発ずつ独立した <see cref="PerformAttack"/> を呼ぶ。</b>
+    /// 標的は毎発取り直され（前の1発で倒れていれば次の相手へ）、
+    /// 傷・毒・燃焼・上限（軛）・庇い・反撃も1発ごとに通常どおり走る。
+    /// <b>途中で倒れたら残りは振らない</b>（カドの棘は1発ごとに返ってくる）。</para>
+    ///
+    /// <para><b>周期・痺れ・転倒・まどろみ・<c>IdleTurn</c> は1手番に1回のまま</b>
+    /// ——どれも <see cref="TakeTurnCore"/> の頭で、この呼び出しより手前にある。</para>
+    /// </summary>
+    private void SwingTurn(UnitState actor, UnitAction? act)
+    {
+        int hits = 1;
+        foreach (Trait t in actor.Traits) hits = t.ModifyHitCount(actor, hits);
+        if (hits < 1) hits = 1;   // 上限は特性の側。engine が保証するのは「1発は振る」だけ
+
+        for (int i = 0; i < hits; i++)
+        {
+            if (!actor.IsAlive) break;
+            if (i > 0) TallyOf(actor).ExtraSwings++;   // 第178期・**計数専用**
+            if (act is null) PerformAttack(actor);
+            else PerformAttack(actor, attackPercent: act.AttackPercent,
+                               patternOverride: act.PatternOverride);
+        }
     }
 
     private void HandleDeath(UnitState dead, UnitState? killer)
