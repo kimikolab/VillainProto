@@ -180,6 +180,7 @@ public static class UiKit
     {
         "rica" => 1.75f,
         "zoto" => 1.58f,
+        "susu" => 1.65f,
         "kado" => 2.40f,
         "sid" => 2.55f,
         "borg" => 2.65f,
@@ -235,6 +236,7 @@ public static class UiKit
         "yomi" => 0.0286f,
         "hota" => 0.0120f,
         "shio" => 0.0182f,
+        "susu" => 0.0352f,
         "basa" => 0.0540f,
         "nara" => 0.1400f,
         "nel" => 0.0378f,

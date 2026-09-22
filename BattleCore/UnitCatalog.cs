@@ -729,9 +729,14 @@ public static class UnitCatalog
         Advances = false,
         Traits = new[] { TraitId.Ash },
         // **[Skill] 1要素にする**（`ActionIndex++` は `CanAct` 通過後。第138期 Q0-4）。
-        // ただし灰が無い手番は `AshTrait.OnAction` が素の一撃を振るので、周期は止まらない。
-        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "灰を掬い上げた") },
-        PlusText = "味方が味方から受けたダメージを灰として溜め、手番に、溜めた量ぶん敵全体を撃つ",
+        //
+        // **「溜める → 投げる」の2拍は `Actions` の要素数では表さない**（第179期 追補）。
+        // 拍の長さは `AshRule.ThrowEvery` のノブで、**`UnitDef` は静的なので規則では振れない**
+        // （第60期「判定材料が `UnitDef.Actions` なので、版の切り替えは `Run` の引数ではできない」）。
+        // だから周期は `AshTrait` が `UnitState.Counters` で数え、
+        // ここの札は**どちらの拍でも嘘にならない中立の1行**にしてある。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "灰に手を伸ばした") },
+        PlusText = "味方が味方から受けたダメージを灰として溜め、2手番に1度、溜めた量ぶん敵全体を撃つ",
         MinusText = "灰を溜めたまま倒れると、その灰が隣接する味方に等分で降る / 敵から受けたダメージは灰にならない",
         Flavor = "誰かの後始末ばかりで、自分の手柄になったことが一度もない。だから投げ返す先を敵に変えた。"
     };

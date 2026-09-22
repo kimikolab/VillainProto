@@ -15,6 +15,7 @@ public partial class BattlePawn3D
         AddChild(_chargeAura);
         _chargeAura.Configure(_fxHeight, percent);
         _charging = true;
+        RefreshBattlePortrait();
     }
 
     public void ReleaseCharge()
@@ -22,12 +23,15 @@ public partial class BattlePawn3D
         if (!_charging) return;
         _charging = false;
         if (AuraAlive(_chargeAura)) _chargeAura!.Release();
+        RefreshBattlePortrait();
     }
 
     public void CancelCharge()
     {
         _charging = false;
+        _ashReleasing = false;
         if (AuraAlive(_chargeAura)) { _chargeAura!.Visible = false; _chargeAura.QueueFree(); }
         _chargeAura = null;
+        RefreshBattlePortrait();
     }
 }

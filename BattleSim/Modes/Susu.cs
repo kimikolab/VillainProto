@@ -32,6 +32,12 @@ static class SusuDiag
     /// <summary>マイナスを 0 にした対照（倒れても灰が降らない）。</summary>
     static readonly AshRule NoFallout = AshRule.Default with { FalloutOnDeath = false };
 
+    /// <summary>追補前の形（毎手番投げる）。<b>`ThrowEvery = 1` で1ビットも違わずに戻る。</b></summary>
+    static readonly AshRule Every1 = AshRule.Default with { ThrowEvery = 1 };
+
+    /// <summary>既定1 でマイナスだけを 0 にした対照。</summary>
+    static readonly AshRule Every1NoFallout = Every1 with { FalloutOnDeath = false };
+
     /// <summary>§2-2 で見る行（指示書が名指しした6行）。</summary>
     static readonly string[] Rows =
     {
@@ -41,6 +47,9 @@ static class SusuDiag
         "反撃改 (ドハ×カド)",
         "毒+耐久 (ベニ×トウ)",
         "死軸×ヒヨ (ゾト×火選り)",
+        // 第179期 追補: **味方由来ダメージが 61 行で最大の行**（291.1 / 戦）。
+        // 代金（抱えたまま倒れる）がいちばん出やすい台として足した。
+        "惨禍×死の連鎖",
     };
 
     public static void Run(string mode, string arg)
@@ -234,31 +243,45 @@ static class SusuDiag
 
         Console.WriteLine("## 表B. 元の版 対 ススを入れた版（勝率・第2〜5波）");
         Console.WriteLine();
-        Console.WriteLine("| 行 | 版 | 第2波 | 第3波 | 第4波 | 第5波 | 平均 | Δ |");
+        Console.WriteLine("**既定1** ＝ `ThrowEvery = 1`（毎手番投げる・追補前の形）／"
+                          + "**既定2** ＝ `ThrowEvery = 2`（溜める → 投げるの2拍・**現在の既定**）。");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 版 | 第2波 | 第3波 | 第4波 | 第5波 | 平均 | Δ（元比） |");
         Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|");
         foreach ((string name, Formation f, UnitDef drop) in picks)
         {
             double[] a = Rates(f, null);
             Formation g = SwapDef(f, drop, UnitCatalog.Susu);
-            double[] b = Rates(g, V1);
+            double[] b1 = Rates(g, Every1), b2 = Rates(g, V1);
             Console.WriteLine("| " + name + " | 元 | " + Cells(a) + " | " + Mean25(a).ToString("F1") + " | — |");
-            Console.WriteLine("| | **スス** | " + Cells(b) + " | " + Mean25(b).ToString("F1") + " | **"
-                              + (Mean25(b) - Mean25(a)).ToString("+0.0;-0.0;0.0") + "** |");
+            Console.WriteLine("| | スス（既定1） | " + Cells(b1) + " | " + Mean25(b1).ToString("F1") + " | "
+                              + (Mean25(b1) - Mean25(a)).ToString("+0.0;-0.0;0.0") + " |");
+            Console.WriteLine("| | **スス（既定2）** | " + Cells(b2) + " | " + Mean25(b2).ToString("F1") + " | **"
+                              + (Mean25(b2) - Mean25(a)).ToString("+0.0;-0.0;0.0") + "** |");
         }
         Console.WriteLine();
 
         Console.WriteLine("## 表C. ススの帳簿（第2〜5波の平均・1戦あたり）");
         Console.WriteLine();
-        Console.WriteLine("| 行 | 溜めた灰 | 撒いた回数 | 撒いた灰 | 1回の最大 | 素振り | 与えた総害 | 抱えて倒れた灰 | 残り枚数 |");
-        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|");
+        Console.WriteLine("**`抱えて倒れた灰`** は「倒れた瞬間に持っていた灰」、"
+                          + "**`降った試行`** は「その灰が実際に隣へ降った戦の割合」"
+                          + "——**隣が1人もいなければ降らない**ので、2つは一致しない。");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 拍 | 溜めた灰 | 撒いた回数 | 撒いた灰 | 1回の最大 | 溜め番 | 素振り | 与えた総害 | 抱えて倒れた灰 | 降った灰 | **降った試行** |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
         foreach ((string name, Formation f, UnitDef drop) in picks)
         {
             Formation g = SwapDef(f, drop, UnitCatalog.Susu);
-            Led s = LedgerOf(g, V1);
-            Console.WriteLine("| " + name + " | " + s.Gained.ToString("F1") + " | " + s.Fires.ToString("F2")
-                              + " | " + s.Spent.ToString("F1") + " | " + s.Peak.ToString("F1")
-                              + " | " + s.Dry.ToString("F2") + " | " + s.Dealt.ToString("F1")
-                              + " | " + s.AtDeath.ToString("F1") + " | " + s.Survivors.ToString("F2") + " |");
+            foreach ((string tag, AshRule r) in new[] { ("既定1", Every1), ("**既定2**", V1) })
+            {
+                Led s = LedgerOf(g, r);
+                Console.WriteLine("| " + name + " | " + tag + " | " + s.Gained.ToString("F1") + " | " + s.Fires.ToString("F2")
+                                  + " | " + s.Spent.ToString("F1") + " | " + s.Peak.ToString("F1")
+                                  + " | " + s.Holds.ToString("F2")
+                                  + " | " + s.Dry.ToString("F2") + " | " + s.Dealt.ToString("F1")
+                                  + " | " + s.AtDeath.ToString("F1") + " | " + s.FalloutAmt.ToString("F1")
+                                  + " | **" + s.FalloutRate.ToString("F1") + "%** |");
+            }
         }
         Console.WriteLine();
 
@@ -267,14 +290,23 @@ static class SusuDiag
         Console.WriteLine("**`Multiplier = 0`** ＝ 溜めても撒いても1点も出ない（プラスが 0）／"
                           + "**`FalloutOnDeath = false`** ＝ 抱えて倒れても降らない（マイナスが 0）。");
         Console.WriteLine();
-        Console.WriteLine("| 行 | 既定 | 撒かない | 降らない | 代金（既定 − 降らない） |");
-        Console.WriteLine("|---|--:|--:|--:|--:|");
+        Console.WriteLine("**代金 ＝ 既定 − 降らない**（負なら「降ることで損をしている」）。"
+                          + "**拍ごとに別々に測る**——溜める番を挟むと在庫が乗っている時間が伸びるので、"
+                          + "**代金が出るとしたらここで出る**。");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 拍 | 既定 | 撒かない | 降らない | **代金** |");
+        Console.WriteLine("|---|---|--:|--:|--:|--:|");
         foreach ((string name, Formation f, UnitDef drop) in picks)
         {
             Formation g = SwapDef(f, drop, UnitCatalog.Susu);
-            double d = Mean25(Rates(g, V1)), n = Mean25(Rates(g, NoThrow)), o = Mean25(Rates(g, NoFallout));
-            Console.WriteLine("| " + name + " | " + d.ToString("F1") + " | " + n.ToString("F1")
-                              + " | " + o.ToString("F1") + " | " + (d - o).ToString("+0.0;-0.0;0.0") + " |");
+            foreach ((string tag, AshRule r, AshRule nf) in new[]
+                     { ("既定1", Every1, Every1NoFallout), ("**既定2**", V1, NoFallout) })
+            {
+                double d = Mean25(Rates(g, r)), o = Mean25(Rates(g, nf));
+                double n = Mean25(Rates(g, r with { Multiplier = 0 }));
+                Console.WriteLine("| " + name + " | " + tag + " | " + d.ToString("F1") + " | " + n.ToString("F1")
+                                  + " | " + o.ToString("F1") + " | **" + (d - o).ToString("+0.0;-0.0;0.0") + "** |");
+            }
         }
         Console.WriteLine();
     }
@@ -423,12 +455,14 @@ static class SusuDiag
     // =================================================================================
 
     readonly record struct Led(double Gained, double Fires, double Spent, double Peak,
-                               double Dry, double Dealt, double AtDeath, double Survivors, double Win);
+                               double Dry, double Dealt, double AtDeath, double Survivors, double Win,
+                               double Holds, double FalloutAmt, double FalloutRate);
 
     /// <summary>ススの帳簿（第2〜5波の平均）。</summary>
     static Led LedgerOf(Formation f, AshRule r)
     {
-        double g = 0, fi = 0, sp = 0, pk = 0, dr = 0, de = 0, ad = 0, sv = 0, win = 0; int n = 0;
+        double g = 0, fi = 0, sp = 0, pk = 0, dr = 0, de = 0, ad = 0, sv = 0, win = 0;
+        double ho = 0, fa = 0, ft = 0; int n = 0;
         for (int st = 1; st < 5; st++)
             for (int seed = 0; seed < Seeds; seed++)
             {
@@ -439,8 +473,11 @@ static class SusuDiag
                 if (!res.TallyByUnit.TryGetValue(UnitCatalog.Susu.Id, out UnitTally? t)) continue;
                 g += t.AshGained; fi += t.AshFires; sp += t.AshSpent; pk += t.AshPeak;
                 dr += t.AshDry; de += t.DamageToEnemy; ad += t.AshAtDeath;
+                ho += t.AshHolds; fa += t.AshFalloutOut;
+                if (t.AshFalloutOut > 0) ft++;          // **降った試行**（量ではなく件数）
             }
-        return new Led(g / n, fi / n, sp / n, pk / n, dr / n, de / n, ad / n, sv / n, 100.0 * win / n);
+        return new Led(g / n, fi / n, sp / n, pk / n, dr / n, de / n, ad / n, sv / n, 100.0 * win / n,
+                       ho / n, fa / n, 100.0 * ft / n);
     }
 
     /// <summary>ススの帳簿（ある敵1つだけに対して）。</summary>
@@ -455,7 +492,7 @@ static class SusuDiag
             if (!res.TallyByUnit.TryGetValue(UnitCatalog.Susu.Id, out UnitTally? t)) continue;
             g += t.AshGained; fi += t.AshFires; sp += t.AshSpent; de += t.DamageToEnemy;
         }
-        return new Led(g / n, fi / n, sp / n, 0, 0, de / n, 0, 0, 100.0 * win / n);
+        return new Led(g / n, fi / n, sp / n, 0, 0, de / n, 0, 0, 100.0 * win / n, 0, 0, 0);
     }
 
     /// <summary>同じ数値・特性なしの素体（第69期からの器具）。</summary>

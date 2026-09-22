@@ -1526,7 +1526,8 @@ public sealed class UnitTally
     /// <c>AshDry</c> 灰が無くて素振りした回数 ／ <c>AshAtDeath</c> 倒れた時点で抱えていた灰。
     /// <b>計数専用。</b>
     /// </summary>
-    public long AshGained, AshFires, AshSpent, AshPeak, AshDry, AshAtDeath, AshResidual;
+    public long AshGained, AshFires, AshSpent, AshPeak, AshDry, AshAtDeath, AshResidual,
+                AshHolds, AshFalloutOut;
 
     public int BraceGuards, BraceCuts, BraceRefused, BraceGiven, BraceLost;
     public int BraceShoves, BraceShoveCapped, BraceNoTarget, BraceStaggers, BraceArmorMuted;
@@ -1701,6 +1702,7 @@ public sealed class UnitTally
         IndulgenceStacked += o.IndulgenceStacked; TollTaken += o.TollTaken;
         AshGained += o.AshGained; AshFires += o.AshFires; AshSpent += o.AshSpent;
         AshDry += o.AshDry; AshAtDeath += o.AshAtDeath; AshResidual += o.AshResidual;
+        AshHolds += o.AshHolds; AshFalloutOut += o.AshFalloutOut;
         if (o.AshPeak > AshPeak) AshPeak = o.AshPeak;
         BrandFires += o.BrandFires; BrandDealt += o.BrandDealt;
         StallStagger += o.StallStagger;

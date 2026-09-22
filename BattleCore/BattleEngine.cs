@@ -3175,7 +3175,7 @@ public sealed class BattleContext
     bool AshBinding => _ashHolders.Count > 0;
 
     /// <summary>撒いた回数 ／ 撒いた灰の総量 ／ 着弾した体数 ／ 灰が無くて素振りした回数 ／ 降った総量。</summary>
-    public long AshFires, AshSpent, AshHits, AshDry, AshFallout;
+    public long AshFires, AshSpent, AshHits, AshDry, AshFallout, AshHolds;
     /// <summary>溜まった灰の総量（<b>実際に削られた量</b>）と、倒れた時点で抱えていた灰の総量。</summary>
     public long AshGained, AshAtDeath;
     /// <summary>決着時に撒かれずに残っていた灰。</summary>
@@ -3234,11 +3234,24 @@ public sealed class BattleContext
     /// <summary>灰が無くて素振りした（<b>計数のみ</b>）。</summary>
     public void NoteAshDry(UnitState self) { AshDry++; TallyOf(self).AshDry++; }
 
+    /// <summary>溜めに専念した手番（第179期 追補・<b>計数のみ</b>）。</summary>
+    public void NoteAshHold(UnitState self, int carried)
+    {
+        AshHolds++;
+        UnitTally t = TallyOf(self);
+        t.AshHolds++;
+        if (carried > t.AshPeak) t.AshPeak = carried;   // 在庫の山は投げる直前とは限らない
+    }
+
     /// <summary>灰が1体に着弾した（<b>計数のみ</b>。名目量）。</summary>
     public void NoteAshHit(int dmg) { AshHits++; }
 
     /// <summary>灰が隣へ降った（<b>計数のみ</b>。名目量）。</summary>
-    public void NoteAshFallout(int amount) { AshFallout += amount; }
+    public void NoteAshFallout(UnitState from, int amount)
+    {
+        AshFallout += amount;
+        TallyOf(from).AshFalloutOut += amount;
+    }
 
     /// <summary>倒れた時点で抱えていた灰（<b>計数のみ</b>）。</summary>
     public void NoteAshAtDeath(UnitState self, int ash)

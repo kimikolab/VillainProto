@@ -2038,10 +2038,22 @@ public readonly record struct ShrapnelRule(int Multiplier, int SelfDamagePercent
 /// <param name="CountDot">出どころの無い継続ダメージ（燃焼・毒の刻み）を灰に数えるか。<b>既定は真</b>。</param>
 /// <param name="Multiplier">灰1点あたり、敵全体へ何 % 撃つか。<b>既定は 100（＝1.0 倍）</b>。</param>
 /// <param name="FalloutOnDeath">灰を溜めたまま倒れたとき、隣接する味方へ等分で降らせるか。<b>既定は真＝マイナスの本体</b>。</param>
-public readonly record struct AshRule(bool CountHavoc, bool CountDot, int Multiplier, bool FalloutOnDeath)
+/// <param name="ThrowEvery">
+/// 何手番に1度投げるか（第179期 追補・<b>既定 2</b>）。あいだの手番は<b>溜めに専念して何も振らない</b>。
+/// <b><c>1</c> で追補前の形にそのまま戻る</b>（毎手番投げる）。
+/// <para><b>周期を <c>UnitDef.Actions</c> の要素数で表さなかった。</b> あちらは静的なので
+/// <b>規則では振れない</b>（第60期——「判定材料が <c>UnitDef.Actions</c> なので、版の切り替えは
+/// <c>Run</c> の引数ではできない」）。ノブにする以上、周期は駒ごとの
+/// <see cref="UnitState.Counters"/> で数えるしかない（<c>Trait</c> は共有シングルトン）。</para>
+/// <para><b>狙いは代金を発生させること。</b> 追補前は速6 で毎手番に吐き切れたので、
+/// 「抱えたまま倒れる」が撒いた量の 1〜35% にしかならず、マイナスが盤面でほぼ 0 だった（R286）。
+/// <b>在庫が乗っている時間を延ばす</b>のが、代金を作る唯一の向きである。</para>
+/// </param>
+public readonly record struct AshRule(bool CountHavoc, bool CountDot, int Multiplier, bool FalloutOnDeath,
+                                      int ThrowEvery)
 {
     /// <summary>既定（<b>第179期の仮置き</b>）。<b>保持者が盤上にいなければ1ビットも動かない。</b></summary>
-    public static AshRule Default => new(true, true, 100, true);
+    public static AshRule Default => new(true, true, 100, true, 2);
 }
 
 /// <summary>
@@ -7624,9 +7636,45 @@ public sealed class AshTrait : Trait
     /// <summary>いま抱えている灰。<b>読むのはここ1箇所</b>（診断と画面は <c>StatusKeys.Ash</c> を直接見る）。</summary>
     public static int AshOf(UnitState self) => self.RawCounter(StatusKeys.Ash);
 
+    /// <summary>
+    /// 手番の周期（第179期 追補）。<b>駒ごとの <see cref="UnitState.Counters"/> に置く</b>
+    /// ——<c>Trait</c> は全駒で共有されるシングルトンなので、インスタンスフィールドに持てない。
+    /// <b>戦闘ごとに振り直す</b>（<see cref="OnCarryOver"/> で捨てる）。
+    /// </summary>
+    public const string CycleKey = "ashCycle";
+
+    /// <summary>
+    /// この手番は投げる番か。<b>問うのは <see cref="OnAction"/> の1箇所だけ</b>で、
+    /// <b>この呼び出し自身が周期を1つ進める</b>（＝手番が回ってきた回数で数える。
+    /// 痺れ・転倒で飛んだターンは <c>OnAction</c> を通らないので進まない）。
+    /// <para><c>ThrowEvery = 1</c> なら常に真＝追補前とまったく同じ形。</para>
+    /// </summary>
+    static bool StepIsThrow(BattleContext ctx, UnitState self)
+    {
+        int every = Math.Max(1, ctx.Ash.ThrowEvery);
+        int n = self.RawCounter(CycleKey) + 1;
+        self.SetCounter(CycleKey, n % every);   // 0 に戻すので `Counters` が膨らまない
+        return n % every == 0;
+    }
+
     public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
     {
         if (!self.IsAlive) return;
+
+        if (!StepIsThrow(ctx, self))
+        {
+            // 溜める番。**通常攻撃も振らない**（灰が 0 でも同じ）——溜めに専念する手番であって、
+            // 「撃てないので何もできない」手番ではない。
+            //
+            // **`IdleTurn` を立てない。** 手番は使っているので、号令（ガン）・据え（バン）は
+            // 買い取らない（溜め＝`ActionKind.Charge` と同じ扱い。engine 側の `Skill` の分岐が
+            // 元からそうなっているので、ここでは何もしないだけでよい）。
+            ctx.NoteAshHold(self, AshOf(self));
+            ctx.EmitCharge(self, new UnitAction(ActionKind.Charge, Label: AshActionLabels.Hold),
+                new UnitAction(ActionKind.Skill, PatternOverride: AttackPattern.All));
+            ctx.Log($"    {self.Name} は灰を掬い集めている（{AshOf(self)}）", LogKind.Status);
+            return;
+        }
 
         int ash = AshOf(self);
         if (ash <= 0)
@@ -7644,6 +7692,7 @@ public sealed class AshTrait : Trait
         ctx.NoteAshThrow(self, ash, dmg);
         if (dmg <= 0) return;
 
+        ctx.EmitSkill(self, new UnitAction(ActionKind.Skill, Label: AshActionLabels.Release));
         ctx.Log($"    ★ {self.Name} が溜めた灰を撒いた（{ash}）", LogKind.Highlight, self);
 
         // 敵全体。**`LivingMembers`（スロット昇順・非シャッフル）を使う**——効果が全員一律なので
@@ -7692,13 +7741,16 @@ public sealed class AshTrait : Trait
         ctx.Log($"    {self.Name} が抱えていた灰が降る（{share} ずつ）", LogKind.FriendlyFire);
         foreach (UnitState ally in neighbours)
         {
-            ctx.NoteAshFallout(share);
+            ctx.NoteAshFallout(self, share);
             ctx.ApplyDamage(ally, share, self, isFriendlyFire: true);
         }
     }
 
-    /// <summary>灰は戦闘スコープ。<c>StatusKeys.All</c> に入っているので境界で消える（ここでは何もしない）。</summary>
-    public override void OnCarryOver(UnitState self) { }
+    /// <summary>
+    /// 灰そのものは <c>StatusKeys.All</c> に入っているので境界で消える。
+    /// <b>捨てるのは周期のカウンタだけ</b>（私有のキーは境界の掃除を通らない）。
+    /// </summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(CycleKey, 0);
 }
 
 public sealed class SharerTrait : Trait

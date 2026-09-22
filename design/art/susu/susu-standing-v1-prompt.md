@@ -1,0 +1,18 @@
+# 拾い屋のスス 立ち絵 v1
+
+生成方法: Codex 組み込み ImageGen。
+用途: インプ案を元にしたゲーム用全身立ち絵。DemoAppへ採用済み（適用先は demo-integration.md）。
+参照: exec-6d56c353-e60e-4549-a8a6-089a6a6bb509.png（本会話のインプ案）。
+出力: susu-standing-v1.png。preview は背景を合成した透過確認用。
+
+## 生成プロンプト
+
+```text
+Use case: identity-preserve. Asset: production full-body transparent standing portrait for Japanese fantasy RPG character Susu, the ash scavenger. Use supplied image as authoritative identity, species, proportions, costume and palette reference. Preserve this EXACT recognizable little imp: same round face, amber eyes, pale lavender skin, charcoal tousled hair, two small horns, pointed ears, two small purple bat wings, long thin purple tail with rounded spade tip, same compact roughly four-head body proportions, oversized cream work shirt, gray-brown patched apron, baggy dark trousers, rounded brown boots, large mittens, terracotta neck scarf and huge patched ash bag. A small adult imp species, cheeky and competent, not a helpless child. Convert concept art to finished isolated standing game portrait. Pose: stable upright three-quarter stance facing slightly screen-right, face toward viewer, feet firmly apart and both boots visible. Large ash bag supported at the screen-right hip by a practical broad shoulder strap; screen-right mitten supports its rim. Other mitten holds his short-handled rounded iron dustpan slightly away from body at screen-left, filled with a little ash, ready to throw. Bag must remain impressively large but not obscure face, chest and both legs. Expression: mildly puffed disgruntled mouth, confident raised eyebrow, self-possessed mischievous amber eyes, 'I know exactly how much work I do, and I will throw this back.' No sad eyebrows, tears or frightened pose. Wings attached coherently behind shoulders and visible, tail curves cleanly to side, all silhouette features contained. Deepen neck scarf slightly to muted burgundy-red to harmonize with dark-armored teammates. Refine rendering to polished Japanese RPG game art: precise clean dark outlines, crisp controlled cel shadows with soft painted transitions and clear cloth/leather/iron materials, subtle restrained wear. Preserve appealing simplicity, NOT gritty realism, not detailed pores, not fur, not scary, do not elongate into adult human proportions. Remove paper texture and all backdrop. Genuine transparent alpha background including gaps between limbs wings tail tool and bag. NO floor, NO ground shadow, NO haze, NO glow, NO vignette, NO painted checkerboard, NO background color. Minimal ash visible inside bag and dustpan, no floating smoke clouds that obscure silhouette. One full-body character only, portrait composition, generous clear margin around horns wing tips tail dustpan bag and boots, no cropping. No labels text panels watermark or extra items.
+```
+
+## 透過仕上げプロンプト
+
+```text
+Edit this exact image for production game sprite cutout. Preserve the character itself EXACTLY: face, hair, expression, horns, ears, wings, tail, proportions, pose, colors, outfit, bag, dustpan and all details. ONLY correct alpha/background. Remove ALL the blurry brown purple gray halo surrounding the character, including every gap between tail and torso, wings and body, legs and bag. All space outside the actual solid character, clothing, tools and ash bag must be fully transparent alpha=0. Interior of character must be fully opaque alpha=255; only very thin edge antialiasing may be partially transparent. NO blurred halo, NO glow, NO smoke, NO vignette, NO ground shadow, NO background. Do not paint a black or white backdrop or checkerboard. Keep identical framing and complete silhouette, single character. This is clean background extraction, not a redesign.
+```

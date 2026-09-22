@@ -84,11 +84,7 @@ public partial class BattlePawn3D : Node3D
         _burning = active;
         // 勝利絵の表示後に遅れた通知が来ても、戦闘絵で上書きしない。
         if (_victory || _sprite is null) return;
-        Texture2D portrait = UiKit.BattlePortrait(_atlas, _unitId, active);
-        if (_sprite.Texture == portrait) return;
-        _sprite.Texture = portrait;
-        _sprite.PixelSize = _portraitHeight / Math.Max(1, portrait.GetHeight());
-        _portraitMaterial.SetShaderParameter("portrait_texture", portrait);
+        RefreshBattlePortrait();
     }
     public void SetPoisoned(bool poisoned) => _poison.SetActive(poisoned && _alive && !_victory);
     public void SetStatusEffects(int marked, int stunned, int armor)
@@ -644,7 +640,7 @@ void fragment() {
         _sprite.Rotation = new Vector3(0, 0, fallSign * (fall * 0.78f + struggle));
         _sprite.Scale = new Vector3(1.0f - breath * 0.18f + fall * 0.05f, scaleY - fall * 0.08f, 1.0f);
         _sprite.Position = new Vector3(
-            fallSign * fall * 0.22f,
+            _portraitOffsetX + fallSign * fall * 0.22f,
             PortraitGroundY + _portraitGroundDistance * scaleY - fall * 0.30f,
             0);
         float shadowSpread = fall * 0.28f;

@@ -1473,6 +1473,7 @@ public partial class Main : Control
                 // 経路に乗らず、`Pattern` が null の `Damage` が人数ぶん並ぶだけだった。
                 if (ApplyBurstAtOnce(eventIndex, e) > 0) await Delay(0.34);
                 await Delay(0.42);
+                actor?.EndAshRelease();
                 break;
 
             case BattleEventKind.Charge:
@@ -1481,7 +1482,8 @@ public partial class Main : Control
                 // **`Charge` は次の倍率・攻撃型・溜めの名前を全部持っている**
                 // （`BattleEventKind.Charge` の明文）ので、予告は台本だけで書ける。
                 // 溜めは画面上「何も起きないターン」なので、予告が無いとただの空白になる。
-                string forecast = $"次 ×{e.Amount / 100.0:0.#} {UiKit.PatternLabel(e.Pattern ?? AttackPattern.Single)}";
+                string forecast = e.Text == AshActionLabels.Hold ? "貯めた灰を全体へ放つ準備"
+                    : $"次 ×{e.Amount / 100.0:0.#} {UiKit.PatternLabel(e.Pattern ?? AttackPattern.Single)}";
                 _battleField.BeginCharge(actor, e.Amount);
                 AppendLog($"[color=#{UiKit.Gold.ToHtml(false)}]{NameOf(e.ActorId)} — {e.Text ?? "力を溜める"}"
                           + $"　（{forecast}）[/color]");
@@ -1490,7 +1492,10 @@ public partial class Main : Control
             }
 
             case BattleEventKind.Skill:
-                if (!e.Reaction) _battleField.ReleaseChargedSkill(actor);
+                // ススの周期は推測しない。特性が出す溜め・放出の通知に従う。
+                if (!e.Reaction && (actor?.UnitId != "susu" || e.Text == AshActionLabels.Release))
+                    _battleField.ReleaseChargedSkill(actor);
+                if (e.Text == AshActionLabels.Release) actor?.BeginAshRelease();
                 _battleField.Float(actor, e.Text ?? "SKILL", UiKit.Heal, true);
                 AppendLog($"[color=#{UiKit.Heal.ToHtml(false)}]{NameOf(e.ActorId)} — {e.Text ?? "術"}[/color]");
                 await Delay(0.22);
@@ -1613,7 +1618,9 @@ public partial class Main : Control
             if (candidate.Relayed) continue;   // 中継の段は別の絵（§5-1 の 5）
             hits.Add(i);
         }
-        if (hits.Count < 2) return 0;
+        // 灰は敵が最後の1体でも、放つ絵の表示中に着弾まで描く。
+        if (hits.Count == 0 || (hits.Count < 2
+            && _battleField.FindPawn(highlight.ActorId)?.IsAshReleasing != true)) return 0;
 
         _battleField.Burst(
             _battleField.FindPawn(highlight.ActorId),
