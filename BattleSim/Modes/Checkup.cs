@@ -172,6 +172,12 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.GradeStep]  = (HcPlusL,  "閾値を越えているあいだ薙ぎ・その `GradeTrait.StepFactor` 倍で全体。積めないのは条件（`Overload` と同型）"),
         // 第179期: 灰（スス）を足したときに分類も足した（第128期の穴＝分類を足さずに `checkup` が止まる、を繰り返さない）。
         [TraitId.Ash]        = (HcBothL,  "味方の自傷を灰として溜めて撒くのと、抱えたまま倒れると隣へ降るのが1つの在庫の表と裏"),
+        // 第180期: ムド（暴発＋泥散り）・ヴィオ（吐き戻し）・ガン（叩き起こし）。
+        // **マイナスを別の `TraitId` に切り出してあるので `yP` が組める**（第74期の作法）。
+        [TraitId.Erupt]      = (HcPlusL,  "殴られた回数を溜めて割り込み連撃する。代金は別の札（`Smear`）に切り出してある"),
+        [TraitId.Smear]      = (HcMinusL, "被弾のたび隣の味方の攻撃力が下がるだけ。暴発の代金で、外せば `yP` になる"),
+        [TraitId.Spit]       = (HcPlusL,  "腹に溜めた毒を殴った相手へ移すだけ（澱み喰いの chain-out）"),
+        [TraitId.Reveille]   = (HcPlusL,  "手番を差し出した味方1体に割り込みの一撃をさせるだけ"),
     };
 
     // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------

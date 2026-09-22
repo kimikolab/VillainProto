@@ -1529,6 +1529,26 @@ public sealed class UnitTally
     public long AshGained, AshFires, AshSpent, AshPeak, AshDry, AshAtDeath, AshResidual,
                 AshHolds, AshFalloutOut;
 
+    /// <summary>
+    /// 第180期の4枚。<b>計数専用で、どの規則も読まない。</b>
+    ///
+    /// <para>暴発（ムド）: <c>EruptFuel</c> 数えた被弾 ／ <c>EruptFuelFromAlly</c> うち味方の刃 ／
+    /// <c>EruptFires</c> 暴発した回数 ／ <c>EruptSwings</c> 放った発数 ／
+    /// <c>EruptPeak</c> 1回の最大連撃 ／ <c>EruptHeld</c> 入れ子で見送った回数。</para>
+    ///
+    /// <para>泥散り（ムド）: <c>SmearDealt</c> 撒いた総量 ／ <c>SmearBlocked</c> 支援拒否に弾かれた回数。</para>
+    ///
+    /// <para>吐き戻し（ヴィオ）: <c>SpitStored</c> 腹に記帳した層（<b>版に依らない分母</b>）／
+    /// <c>SpitMoved</c> 吐いた層 ／ <c>SpitFires</c> 吐いた回数。</para>
+    ///
+    /// <para>叩き起こし（ガン）: <c>ReveilleFires</c> 起こした回数（保持者の側）／
+    /// <c>ReveilleMisses</c> 相手がいなかった回数 ／ <c>ReveilleWoken</c> <b>起こされた回数</b>（受け手の側）。</para>
+    /// </summary>
+    public long EruptFuel, EruptFuelFromAlly, EruptFires, EruptSwings, EruptPeak, EruptHeld,
+                SmearDealt, SmearBlocked,
+                SpitStored, SpitMoved, SpitFires,
+                ReveilleFires, ReveilleMisses, ReveilleWoken;
+
     public int BraceGuards, BraceCuts, BraceRefused, BraceGiven, BraceLost;
     public int BraceShoves, BraceShoveCapped, BraceNoTarget, BraceStaggers, BraceArmorMuted;
 

@@ -253,9 +253,12 @@ public static class BurnRules
 /// ターン外の行動の呼び出し口（第134期 段2）。<b>計数専用で、どの規則も読まない</b>
 /// ——<see cref="BattleContext.CanActOutOfTurn"/> の答えを1ビットも変えない。
 ///
-/// <para><b>呼び出し口は5本</b>。<c>CLAUDE.md</c> は第27期以来「棘・仇討ち・軋み・追い打ちの
-/// 4本だけ」と書いているが、<b>第110期の譲渡（尾灯・<c>TaillightTrait</c>）が5本目として
-/// 増えている</b>（第134期 Q0-7 の走査で判明）。</para>
+/// <para><b>呼び出し口は7本</b>。<c>CLAUDE.md</c> は第27期以来「棘・仇討ち・軋み・追い打ちの
+/// 4本だけ」と書いていたが、<b>第110期の譲渡（尾灯・<c>TaillightTrait</c>）が5本目として
+/// 増えていた</b>（第134期 Q0-7 の走査で判明）。<b>第180期に暴発（<c>EruptTrait</c>）と
+/// 叩き起こし（<c>ReveilleTrait</c>）が 6・7 本目になった</b>
+/// ——<b>叩き起こしだけは問う相手が自分ではなく「起こされる味方」</b>で、
+/// 他の6本（自分がターン外に動けるか）とはここが違う。</para>
 /// </summary>
 public enum OutOfTurnRoute
 {
@@ -269,6 +272,10 @@ public enum OutOfTurnRoute
     Pursue,
     /// <summary>譲渡（<c>TaillightTrait</c>・第110期）。</summary>
     Taillight,
+    /// <summary>暴発（<c>EruptTrait.OnDamaged</c>・第180期）。</summary>
+    Erupt,
+    /// <summary>叩き起こし（<c>ReveilleTrait.OnAfterAttack</c>・第180期。<b>問う相手は起こされる味方</b>）。</summary>
+    Reveille,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -278,7 +285,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -765,11 +772,11 @@ public sealed class BattleContext
             Log($"    {target.Name} の{(deepW ? "深手" : "傷口")}から毒が滲みた（+{add - amount}）", LogKind.Status);
     }
 
-    /// <summary><see cref="UnitTally.SoakSeenByRoute"/> の長さ（毒 5 経路 ＋ 燃焼 1）。</summary>
-    public const int SoakRouteCount = 6;
+    /// <summary><see cref="UnitTally.SoakSeenByRoute"/> の長さ（毒 6 経路 ＋ 燃焼 1。第180期に吐き戻しで1本増えた）。</summary>
+    public const int SoakRouteCount = 7;
 
     /// <summary>燃焼の経路の添字（<see cref="UnitTally.SoakSeenByRoute"/> の末尾）。</summary>
-    public const int SoakBurnRouteIx = 5;
+    public const int SoakBurnRouteIx = 6;
 
     /// <summary>
     /// 巻き込み則（第85期）で最後にこの駒へ傷を書いた駒の <c>InstanceId + 1</c>（第90期の計数専用の札）。
@@ -3259,6 +3266,82 @@ public sealed class BattleContext
         if (ash <= 0) return;
         AshAtDeath += ash; TallyOf(self).AshAtDeath += ash;
     }
+
+    // =====================================================================================
+    // 第180期 —— 暴発（ムド）／泥散り（ムド）／吐き戻し（ヴィオ）／叩き起こし（ガン）
+    // **どれも計数専用。engine には規則も窓口も1本も足していない**（判定はすべて特性の中）。
+    // =====================================================================================
+
+    /// <summary>暴発の燃料（数えた被弾）／味方の刃から数えた分 ／ 暴発した回数 ／ 放った発数 ／
+    /// 入れ子で見送った回数（<c>InInterrupt</c>・<c>InReaction</c> の中で閾値に届いた回数）。</summary>
+    public long EruptFuel, EruptFuelFromAlly, EruptFires, EruptSwings, EruptHeld;
+
+    /// <summary>泥散りが撒いた総量 ／ 支援拒否（<c>Stoic</c>）で弾かれた回数。</summary>
+    public long SmearDealt, SmearBlocked;
+
+    /// <summary>吐き戻し: 腹に記帳した層 ／ 吐いた層 ／ 吐いた回数。</summary>
+    public long SpitStored, SpitMoved, SpitFires;
+
+    /// <summary>叩き起こし: 起こした回数 ／ 起こす相手がいなかった回数。</summary>
+    public long ReveilleFires, ReveilleMisses;
+
+    /// <summary>暴発の燃料を1つ数えた（<b>計数のみ</b>）。</summary>
+    public void NoteEruptFuel(UnitState self, UnitState source)
+    {
+        EruptFuel++;
+        UnitTally t = TallyOf(self);
+        t.EruptFuel++;
+        if (source.TeamId == self.TeamId) { EruptFuelFromAlly++; t.EruptFuelFromAlly++; }
+    }
+
+    /// <summary>閾値に届いたが入れ子だったので見送った（<b>計数のみ</b>）。</summary>
+    public void NoteEruptHeld(UnitState self) { EruptHeld++; TallyOf(self).EruptHeld++; }
+
+    /// <summary>暴発した（<b>計数のみ</b>）。<paramref name="n"/> は溜まっていた怒り。</summary>
+    public void NoteEruptFire(UnitState self, int n)
+    {
+        EruptFires++;
+        UnitTally t = TallyOf(self);
+        t.EruptFires++;
+        if (n > t.EruptPeak) t.EruptPeak = n;
+    }
+
+    /// <summary>暴発の1発（<b>計数のみ</b>）。</summary>
+    public void NoteEruptSwing(UnitState self) { EruptSwings++; TallyOf(self).EruptSwings++; }
+
+    /// <summary>泥が散った（<b>計数のみ</b>。名目量）。</summary>
+    public void NoteSmear(UnitState self, int amount)
+    {
+        SmearDealt += amount; TallyOf(self).SmearDealt += amount;
+    }
+
+    /// <summary>支援拒否が泥散りを弾いた（<b>計数のみ</b>）。</summary>
+    public void NoteSmearBlocked(UnitState self) { SmearBlocked++; TallyOf(self).SmearBlocked++; }
+
+    /// <summary>腹に層を記帳した（<b>計数のみ</b>。読み手がいなくても数える＝版に依らない分母）。</summary>
+    public void NoteSpitStore(UnitState self, int stacks)
+    {
+        SpitStored += stacks; TallyOf(self).SpitStored += stacks;
+    }
+
+    /// <summary>腹から吐いた（<b>計数のみ</b>）。</summary>
+    public void NoteSpit(UnitState self, int stacks)
+    {
+        SpitMoved += stacks; SpitFires++;
+        UnitTally t = TallyOf(self);
+        t.SpitMoved += stacks; t.SpitFires++;
+    }
+
+    /// <summary>叩き起こした（<b>計数のみ</b>）。<b>起こされた側にも記録する</b>——「誰が起きたか」の内訳。</summary>
+    public void NoteReveille(UnitState self, UnitState woken)
+    {
+        ReveilleFires++;
+        TallyOf(self).ReveilleFires++;
+        TallyOf(woken).ReveilleWoken++;
+    }
+
+    /// <summary>起こす相手がいなかった（<b>計数のみ</b>）。</summary>
+    public void NoteReveilleMiss(UnitState self) { ReveilleMisses++; TallyOf(self).ReveilleMisses++; }
 
     /// <summary><see cref="ApplyDamage"/> を通らずに HP を減らした量を記録する（計数のみ）。</summary>
     public void NoteDirectHpLoss(int amount) { if (amount > 0) DirectHpLoss += amount; }

@@ -263,6 +263,30 @@ public enum TraitId
                 // **燃焼軸に変換器が1枚もいない**（第178期でホタの死因の 69% が敵の攻撃と出た）
                 // のが出発点で、回復で耐えるのではなく<b>自傷の総量を殲滅の速さに変える</b>方向の答え。
 
+    // --- 第180期で足した札（**B群の転生 3〜5枚目**。憤怒＝`Rage` は対照として残置） ---
+    // **4枚に割ってあるのは器具の要件**（第74期に 裂き → `Rend` + `ThinBlade` を切り出したのと同じ作法）。
+    // 1枚に畳むと「泥散りだけを 0 にした対照」も「叩き起こしだけを外した対照」も作れず、
+    // `checkup` の `yP`（マイナスを外した版）も組めない。**挙動は畳んだ版と1ビットも変わらない。**
+    Erupt,      // 暴発: 殴られた<b>回数</b>を溜め、閾を越えた瞬間その場で割り込み、溜めた回数だけ連撃する。
+                // 1発ごとに少し回復し、倒れたら不発（溜めた怒りは消える）
+                //
+                // **憤怒（<see cref="TraitId.Rage"/>）との違いは通貨の変換先**——あちらは
+                // 被弾の<b>量</b>を攻撃力に変えるので、HP が燃料と寿命を兼ねて
+                // 「育ち切った頃には次のターンに落ちる」（第180期 §1-1）。こちらは
+                // 被弾の<b>回数</b>を<b>手番の外の手数</b>に変えるので、**溜まった瞬間に吐き出す**。
+                // カドとの対比が説明の軸: **カドは殴られるたび返す（範囲・即時・定額）。
+                // ムドは溜め込んで爆ぜる（単体・満期・一括）。**
+    Smear,      // 泥散り: 殴られるたび、隣接する味方の攻撃力が下がる（恒久累積・暴発の代金）。
+                // **窓口は `BattleContext.Dull`**（第42期の規約。`AtkBonus` を直に引かない）ので、
+                // 逆しま（ウツ）・引き受け（ウケ）・渡し（ワタ）の読み手にそのまま合流する
+    Spit,       // 吐き戻し: 吸い上げた毒を腹に溜め、手番の攻撃が命中したとき標的へ毒として移す。
+                // **澱み喰い（<see cref="TraitId.Blightfed"/>）に chain-out を足すだけ**で、
+                // 攻撃力に変える現行の式は1文字も触っていない
+                // ——敵に付いた毒は 澱み（ミオ）・疫み（ラウ）・毒喰らい（ベニ）の餌になる
+    Reveille,   // 叩き起こし: 自分の手番の攻撃が終わった直後、前のターンに手番を差し出した味方1体が
+                // その場で割り込んで1回攻撃する。**買う条件は号令（<see cref="TraitId.Rally"/>）と同じ**
+                // ——同じターンの頭に号令が払った +8 が、その一撃でそのまま使われる
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -2234,7 +2258,9 @@ public enum PoisonRoute
     /// <summary>毒撃の隣への漏れ（スィド・隣接味方）。</summary>
     VenomLeak,
     /// <summary>疫み（ラウ・死骸から敵全体へ）。</summary>
-    Contagion
+    Contagion,
+    /// <summary>吐き戻し（ヴィオ・腹に溜めた層を殴った相手へ。第180期）。</summary>
+    Spit
 }
 
 /// <summary>
@@ -3107,15 +3133,18 @@ public enum DullRoute
                   // **敵から味方へ弱体を撒く初めての経路**（第44期）。他の6本は味方が起点
     Overbear,     // 驕り: オゴ → 隣接する生存味方全員・毎ターン。
                   // **撒いた本人が撒いた結果を出力条件として読む唯一の経路**（第46期）
-    Favor        // 火選りの鈍り: ヒヨ → 隣接する生存味方のうち**燃えていない**者・毎ターン。
+    Favor,       // 火選りの鈍り: ヒヨ → 隣接する生存味方のうち**燃えていない**者・毎ターン。
                   // **状態異常を条件に宛先を選ぶ初めての弱体経路**（第58期）。
                   // 同じ1回の発火が <see cref="WhetRoute.Favor"/> の側も走らせる（表と裏）
+    Smear        // 泥散り: ムド → 隣接する生存味方・**被弾のたび**（第180期）。
+                  // **供給の周期が「相手が殴ってくる回数」で決まる初めての弱体経路**
+                  // ——他の9本はどれも自分の手番か開戦時が起点で、撒く側が回数を決めている
 }
 
 /// <summary>経路の名前と本数。診断の表の見出しと配列長をここ1箇所から引く。</summary>
 public static class DullRoutes
 {
-    public static readonly string[] Names = { "その他", "なまり", "呪詛敵", "呪詛漏れ", "突き返し", "萎縮", "渡し", "誹り", "驕り", "火選り" };
+    public static readonly string[] Names = { "その他", "なまり", "呪詛敵", "呪詛漏れ", "突き返し", "萎縮", "渡し", "誹り", "驕り", "火選り", "泥散り" };
     public static int Count => Names.Length;
 }
 
@@ -5876,6 +5905,11 @@ public sealed class BlightfedTrait : Trait
         if (drawn == 0) return;
 
         self.AtkBonus += drawn * GainPerStack;
+        // 第180期。**腹（在庫）にも同じ層を記帳する。** 攻撃力に変える現行の式は1文字も触っていない
+        // ——吐き戻し（<see cref="SpitTrait"/>）がここから引く。**読み手がいなければ在庫は増えるだけ**で、
+        // 盤面には1ビットも影響しない（対照 ＝ `Spit` を外した版はこの行を通っても同値）。
+        self.SetCounter(SpitTrait.BellyKey, self.RawCounter(SpitTrait.BellyKey) + drawn);
+        ctx.NoteSpitStore(self, drawn);
         ctx.Log($"    {self.Name} が味方の澱みを吸い上げた（{drawn}層 / 攻撃 +{drawn * GainPerStack}）", LogKind.Trigger);
     }
 }
@@ -10015,6 +10049,256 @@ public sealed class BrandTrait : Trait
     }
 }
 
+/// <summary>
+/// 暴発（第180期・泥人形ムド）。<b>殴られた<u>回数</u>を溜め、閾を越えた瞬間その場で割り込み、
+/// 溜めた回数だけ連撃する。1発ごとに少し回復し、倒れたら不発。</b>
+///
+/// <para><b>憤怒（<see cref="RageTrait"/>）との違いは変換先だけ。</b> あちらは被弾の<b>量</b>を
+/// 攻撃力に変えるので、HP が燃料と寿命を兼ねる——育ち切った頃には次のターンに落ちる
+/// （第180期 §1-1）。こちらは被弾の<b>回数</b>を<b>手番の外の手数</b>に変えるので、
+/// <b>溜まった瞬間に吐き出す</b>。<b>憤怒は対照として残置</b>（保持者は棘守りのセッキ1枚）。</para>
+///
+/// <para><b>数える集合は祟り（<see cref="HexTrait"/>）と同じ式</b>——
+/// <c>source is null</c>（毒・燃焼の刻み）と <c>ReferenceEquals(source, self)</c>（自傷）を外す。
+/// ムドの2つの札で「1発」の定義が割れると盤面が読めなくなる。
+/// <b>刻みを外すのは「時計であって出来事ではない」から</b>
+/// ——数えると、後衛に隠れてメトロノーム式に勝手に育つのが最適解になる
+/// （<see cref="RageTrait"/> が第106期に書いた懸念がそのまま効く）。
+/// <b>味方の刃は数える</b>——「加害型マイナスの隣がムドの餌」という同席理由を作るため。</para>
+///
+/// <para><b>engine には規則も窓口も1本も足していない。</b> 割り込みは
+/// <c>ctx.Interrupt</c> ＋ <c>ctx.PerformAttack</c> で、軋み（<see cref="DisplacedTrait"/>）と同じ経路
+/// ——<c>SwingTurn</c> にも <see cref="Trait.ModifyHitCount"/>（第178期・手番専用）にも触れない。</para>
+///
+/// <para><b>再入禁止は <c>ctx.Interrupt</c> がそのまま担う。</b> 暴発の連撃中に棘・祟りの
+/// 跳ね返りでムドがさらに被弾しても、<b>カウンタは積むが入れ子の暴発は起こさない</b>
+/// （<c>InInterrupt</c> が真なら <c>Interrupt</c> は body を呼ばない）。
+/// <b>抜けた時点で閾値以上でも発火しない</b>——次の被弾まで待つ（「被弾が引き金」を崩さない）。
+/// フラグを <c>static</c> に置かないのは、<c>Trait</c> が全戦闘で共有されるシングルトンで
+/// <c>layout</c> が戦闘を並列実行するため。</para>
+/// </summary>
+public sealed class EruptTrait : Trait
+{
+    /// <summary>何回の被弾で暴発するか（指示書 §1-2 が<b>測る前に固定</b>した値）。</summary>
+    public const int Threshold = 3;
+
+    /// <summary>暴発の1発に乗る上乗せ。素攻 3 ＋ 5 ＝ <b>8</b>（軛の上限 25 を1発も跨がない）。</summary>
+    public const int SwingBonus = 5;
+
+    /// <summary>暴発1発ごとの回復。<b><c>ctx.Heal</c> を通る</b>ので渇き（第三波）で丸ごと止まる（仕様）。</summary>
+    public const int HealPerSwing = 2;
+
+    /// <summary>溜めた怒り（<b>私有キー</b>。<c>StatusKeys</c> を1本も足さない）。</summary>
+    public const string CountKey = "eruptRage";
+
+    /// <summary>暴発の連撃の最中か（<see cref="ModifyAttack"/> が読む。<b>駒ごとに持つ</b>）。</summary>
+    public const string BurstKey = "eruptBurst";
+
+    public override TraitId Id => TraitId.Erupt;
+
+    /// <summary>いま溜まっている怒り。</summary>
+    public static int RageOf(UnitState self) => self.RawCounter(CountKey);
+
+    /// <summary>
+    /// <b>上乗せは暴発の1発にだけ乗る。</b> 自分の手番の通常攻撃は素攻のまま
+    /// （「素の攻撃力がほぼ無い」は差し替え後もステータスが語る）。
+    /// <b>条件は自分の状態だけを読む</b>ので <see cref="ModifyAttack"/> に置ける
+    /// ——「対象を見る条件は <c>PerformAttack</c> へ」という則（R080）には触れない
+    /// （後衛特化＝<see cref="SniperTrait"/> が <c>Ready(self)</c> を読むのと同じ形）。
+    /// </summary>
+    public override int ModifyAttack(UnitState self, int atk)
+        => self.RawCounter(BurstKey) > 0 ? atk + SwingBonus : atk;
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        if (dmg <= 0) return;
+        if (source is null || ReferenceEquals(source, self)) return;   // 刻みと自傷は数えない
+
+        int n = RageOf(self) + 1;
+        self.SetCounter(CountKey, n);
+        ctx.NoteEruptFuel(self, source);
+
+        if (!self.IsAlive) return;        // 倒れたら不発（死体は暴れない）
+        if (n < Threshold) return;
+
+        // **入れ子の暴発は起こさない。** カウンタは積んだままにする（次の被弾で改めて問う）。
+        if (ctx.InInterrupt || ctx.InReaction) { ctx.NoteEruptHeld(self); return; }
+
+        // 痺れ・粛はターン外の行動を止める（棘・仇討ち・軋み・追い打ち・譲渡と同じ窓口）。
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Erupt)) return;
+        if (!ctx.TeamAlive(ctx.Opponent(self.TeamId))) return;
+
+        self.SetCounter(CountKey, 0);
+        ctx.NoteEruptFire(self, n);
+        ctx.Interrupt(() =>
+        {
+            ctx.Log($"    ★ {self.Name} が溜め込んだ泥を撒き散らす（{n} 連撃）", LogKind.Highlight, self);
+            self.SetCounter(BurstKey, 1);
+            try
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    // **1発ごとに見る。** 反撃で自分が倒れる／敵が全滅する経路があるので、
+                    // 見ないと空振りの PerformAttack が回数ぶん並ぶ（計数にも台本にも空の段が残る）。
+                    if (!self.IsAlive || !ctx.TeamAlive(ctx.Opponent(self.TeamId))) break;
+                    ctx.NoteEruptSwing(self);
+                    ctx.PerformAttack(self, "    ");
+                    ctx.Heal(self, HealPerSwing, self);
+                }
+            }
+            finally { self.SetCounter(BurstKey, 0); }
+        });
+    }
+
+    /// <summary>怒りは戦闘ごとに振り直す（私有キーは会戦の境界の掃除を通らない）。</summary>
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(CountKey, 0);
+        self.SetCounter(BurstKey, 0);
+    }
+}
+
+/// <summary>
+/// 泥散り（第180期・暴発の代金）。<b>殴られるたび、隣接する味方の攻撃力が下がる</b>（恒久累積）。
+///
+/// <para><b>窓口は <see cref="BattleContext.Dull"/>。</b> <c>AtkBonus</c> を直に引かない（第42期の規約）
+/// ——通すことで 逆しま（ウツ）・引き受け（ウケ）・渡し（ワタ）の読み手にそのまま合流し、
+/// <c>dull</c> / <c>carry</c> / <c>spend</c> の帳簿にも経路名で載る。</para>
+///
+/// <para><b>供給の周期が「相手が殴ってくる回数」で決まる初めての弱体経路。</b>
+/// 既存の10本はどれも自分の手番か開戦時が起点で、撒く側が回数を決めている
+/// ——泥散りは<b>ムドが殴られるほど細かく積む</b>ので、ハネの一括 −2（ウツの1発ぶん 3 に届かない）と違い
+/// ウツの発数（<see cref="PerverseTrait.HitsPerDull"/> ごとに +1）へ届きうる。</para>
+///
+/// <para><b>支援拒否（ガルド）は弾く。隣へ流さない</b>（突き返し＝<see cref="ShoveTrait"/> と同じ側）。
+/// <b>ムド自身には効かせない。</b></para>
+///
+/// <para><b>数える集合は暴発と完全に同一</b>（刻みと自傷を外す）——ムドの札で「1発」の定義が割れないこと。
+/// <b>倒れた被弾でも散る</b>（泥は最後の一撃でも飛ぶ）。</para>
+/// </summary>
+public sealed class SmearTrait : Trait
+{
+    /// <summary>被弾1回ごとに隣の味方から引く攻撃力（指示書 §1-2 が<b>測る前に固定</b>した値）。</summary>
+    public const int PerHit = 1;
+
+    public override TraitId Id => TraitId.Smear;
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        if (dmg <= 0) return;
+        if (source is null || ReferenceEquals(source, self)) return;   // 暴発と同じ集合
+
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            if (ally == self) continue;
+            if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            if (!ally.AcceptsSupport) { ctx.NoteSmearBlocked(self); continue; }
+            ctx.Dull(ally, PerHit, DullRoute.Smear, self);
+            ctx.NoteSmear(self, PerHit);
+        }
+    }
+}
+
+/// <summary>
+/// 吐き戻し（第180期・澱み喰いのヴィオ）。<b>吸い上げた毒を腹に溜め、
+/// 手番の攻撃が命中したとき、腹から最大 <see cref="SpitMax"/> 層を標的へ毒として移す。</b>
+///
+/// <para><b>澱み喰い（<see cref="BlightfedTrait"/>）の式は1文字も触っていない</b>
+/// ——吸う → 攻撃力、は据え置きで、<b>吐く経路だけを足した</b>（変数を1つに絞る）。
+/// 記帳は <c>BlightfedTrait</c> の中の1行で、<b>この札が無ければ在庫は増えるだけ</b>
+/// （盤面には1ビットも影響しない＝対照がそのまま作れる）。</para>
+///
+/// <para><b>これが chain-out。</b> 澱み喰いは chain-in（グザの漏れ・スィドの漏れ）を持ちながら
+/// 出口が無く、「強くなって殴るだけ」で閉じていた。敵に付いた毒は
+/// 澱み（ミオ・増幅）・疫み（ラウ・死骸から飛散）・毒喰らい（ベニ・喰って回復）の餌になる。</para>
+///
+/// <para><b>毒の窓口（<see cref="BattleContext.Poison"/>）を通す</b>（第90期）
+/// ——滲み則の入口も台本の <c>StatusGain</c> も、ここを通らないと載らない。</para>
+/// </summary>
+public sealed class SpitTrait : Trait
+{
+    /// <summary>1回の命中で移せる層の上限（指示書 §2-1 が<b>測る前に固定</b>した値）。</summary>
+    public const int SpitMax = 3;
+
+    /// <summary>腹（<b>私有キー</b>。<c>StatusKeys</c> を1本も足さない）。</summary>
+    public const string BellyKey = "blightBelly";
+
+    public override TraitId Id => TraitId.Spit;
+
+    /// <summary>いま腹に溜まっている層。</summary>
+    public static int BellyOf(UnitState self) => self.RawCounter(BellyKey);
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (!target.IsAlive) return;                       // 死体に毒を書かない（作法）
+        if (target.TeamId == self.TeamId) return;          // 味方には吐き戻さない
+        int belly = BellyOf(self);
+        if (belly <= 0) return;
+
+        int move = Math.Min(SpitMax, belly);
+        self.SetCounter(BellyKey, belly - move);
+        ctx.Poison(target, move, self, PoisonRoute.Spit);
+        ctx.NoteSpit(self, move);
+        ctx.Log($"    {self.Name} が啜った澱みを {target.Name} に吐き戻した（毒 +{move}）", LogKind.Trigger);
+    }
+
+    /// <summary>腹は戦闘ごとに空にする（私有キーは会戦の境界の掃除を通らない）。</summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(BellyKey, 0);
+}
+
+/// <summary>
+/// 叩き起こし（第180期・鬨の号令ガン）。<b>自分の手番の攻撃が終わった直後、
+/// 前のターンに手番を差し出した味方1体が、その場で割り込んで1回攻撃する。</b>
+///
+/// <para><b>買う条件は号令（<see cref="RallyTrait"/>）とまったく同じ</b>
+/// ——<c>IdleTurn == ctx.Turn - 1</c> と <see cref="Trait.SurrenderedTurn"/> の積（指示書 §3-1）。
+/// <b>同じターンの頭に号令が払った +8 が、その一撃でそのまま使われる。</b>
+/// 不動（カド）は <c>SurrendersTurn</c> が偽なので<b>最初から拾わない</b>
+/// ——差し出すものを持たない駒に無償で発火しない。</para>
+///
+/// <para><b>選び方は決定的</b>——現在攻撃力が最も高い1体、同値は席番号の小さい方
+/// （<c>LivingMembers</c> がスロット昇順なので、厳密な不等号で自然に落ちる）。
+/// <b><see cref="BattleContext.PickOne"/> を使わない</b>（第89期 (h)。候補2個以上で <c>Roll</c> を消費する）。</para>
+///
+/// <para><b>ガンが振れなかったターンは発火しない</b>——<c>OnAfterAttack</c> は
+/// 攻撃が成立したときにしか呼ばれない。<b>号令は声を出せる者の仕事である。</b>
+/// 反撃・割り込みの中からは発火しない（<b>手番の中だけ</b>）。</para>
+///
+/// <para><b>ノブは置かない</b>（発数1・固定）。engine には規則も窓口も1本も足していない。</para>
+/// </summary>
+public sealed class ReveilleTrait : Trait
+{
+    public override TraitId Id => TraitId.Reveille;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (ctx.InInterrupt || ctx.InReaction) return;   // 手番の中だけ
+        if (!self.IsAlive) return;
+        if (!ctx.TeamAlive(ctx.Opponent(self.TeamId))) return;
+
+        UnitState? pick = null;
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            if (ally == self) continue;
+            int idle = ally.Counter(StatusKeys.IdleTurn);
+            if (idle <= 0 || idle != ctx.Turn - 1) continue;      // 号令の支払いと同じ前ターン基準
+            if (!SurrenderedTurn(ctx, ally)) continue;            // 差し出す型であること
+            if (!ctx.CanActOutOfTurn(ally, OutOfTurnRoute.Reveille)) continue;
+            if (pick is null || ally.CurrentAttack > pick.CurrentAttack) pick = ally;
+        }
+
+        if (pick is null) { ctx.NoteReveilleMiss(self); return; }
+
+        UnitState woken = pick;
+        ctx.NoteReveille(self, woken);
+        ctx.Interrupt(() =>
+        {
+            ctx.Log($"    ★ {self.Name} の号令が {woken.Name} を叩き起こした", LogKind.Highlight, self);
+            ctx.PerformAttack(woken, "    ");
+        });
+    }
+}
+
 public static class TraitCatalog
 {
     private static readonly Dictionary<TraitId, Trait> Map = new Trait[]
@@ -10115,6 +10399,10 @@ public static class TraitCatalog
         new BurdenTrait(),     // 第154期
         new LadenTrait(),      // 第154期
         new AshTrait(),        // 第179期
+        new EruptTrait(),      // 第180期
+        new SmearTrait(),      // 第180期
+        new SpitTrait(),       // 第180期
+        new ReveilleTrait(),   // 第180期
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期

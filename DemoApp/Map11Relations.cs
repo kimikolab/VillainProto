@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -158,6 +158,11 @@ public static class Map11Relations
         [TraitId.Ash] = new(Shape.Adjacent, "灰が降る",
             "灰を抱えたまま倒れると、抱えていた灰が隣の味方に等分で降る（そのぶん HP が削れる）",
             LinkSign.Loss, true, "降る"),
+        // 第180期。**殴られたときだけ起きる**ので点線——「隣であること」は席で決まり、
+        // **いつ散るかだけが席の外にある**（上の (b) 型）。
+        [TraitId.Smear] = new(Shape.AdjacentAcceptsSupport, "泥が散る",
+            "自分が殴られるたび、この駒に泥が散って攻撃力が下がる（累積して戻らない）",
+            LinkSign.Loss, true, "泥"),
     };
 
     /// <summary>

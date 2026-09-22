@@ -27,9 +27,9 @@ public static class UnitCatalog
         MaxHp = 80,
         Attack = 3,
         Speed = 5,
-        Traits = new[] { TraitId.Rage, TraitId.Hex },
-        PlusText = "受けたダメージに応じて攻撃力が上がる",
-        MinusText = "素の攻撃力がほぼ無い",
+        Traits = new[] { TraitId.Erupt, TraitId.Smear, TraitId.Hex },
+        PlusText = "殴られた回数を溜め、3回で閾を越えた瞬間その場で割り込み、溜めた回数だけ殴り返す（1発ごとに少し回復する）",
+        MinusText = "殴られるたび泥が散り、隣の味方の得物が鈍る（攻撃力低下）。素の攻撃力はほぼ無く、倒れると溜めた怒りは不発",
         Flavor = "殴られないと働かないので、誰も連れて行きたがらない。"
     };
 
@@ -297,8 +297,8 @@ public static class UnitCatalog
         Attack = 4,
         Speed = 9,
         Advances = false,
-        Traits = new[] { TraitId.Rally },
-        PlusText = "開戦時に味方全体+4 / 前のターンに動かなかった味方を+8",
+        Traits = new[] { TraitId.Rally, TraitId.Reveille },
+        PlusText = "開戦時に味方全体+4 / 前のターンに動かなかった味方を+8。さらに自分が殴った直後、その味方のうち最も強い1体を叩き起こして1回攻撃させる",
         MinusText = "自分の火力はほぼ無い。全員が働く編成では無意味",
         Flavor = "号令だけは達者だが、自分では槍一本まともに振れない。"
     };
@@ -310,8 +310,8 @@ public static class UnitCatalog
         MaxHp = 58,
         Attack = 6,
         Speed = 7,
-        Traits = new[] { TraitId.Blightfed },
-        PlusText = "味方が負った毒を吸い取り、その層の分だけ攻撃力が上がる",
+        Traits = new[] { TraitId.Blightfed, TraitId.Spit },
+        PlusText = "味方が負った毒を吸い取り、その層の分だけ攻撃力が上がる。吸った毒は腹に溜まり、攻撃が当たるたび最大3層まで相手へ吐き戻す",
         MinusText = "味方が汚れていなければただの穀潰し",
         Flavor = "仲間の膿を舐めて回る。治るのは事実だが、誰も礼を言わない。"
     };

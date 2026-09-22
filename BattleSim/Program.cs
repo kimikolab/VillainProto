@@ -493,6 +493,13 @@ if (focusId == "susu")
     return;
 }
 
+// rebirth2 モード（第180期） —— B群の転生 3〜5枚目（ムド／ヴィオ／ガン）。本体は `Modes/Rebirth2.cs`。
+if (focusId == "rebirth2")
+{
+    Rebirth2Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // rebirth モード（第178期） —— B群の転生（熾のホタ／逆しまのウツ）。本体は `Modes/Rebirth.cs`。
 if (focusId == "rebirth")
 {
