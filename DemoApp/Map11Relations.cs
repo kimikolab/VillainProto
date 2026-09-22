@@ -153,6 +153,11 @@ public static class Map11Relations
         [TraitId.Goad] = new(Shape.AdjacentAcceptsSupport, "前に押し出す",
             "毎ターン、隣でいちばん攻撃力が高い1体に力を渡して前へ出す（渡した相手は狙われる）",
             LinkSign.Both, true, "押し出す"),
+        // 第179期の残件（第178期 追補で入れた）。**倒れたときだけ起きる**ので点線
+        // ——「隣であること」は席で決まり、**いつ降るかだけが席の外にある**（上の (b) 型）。
+        [TraitId.Ash] = new(Shape.Adjacent, "灰が降る",
+            "灰を抱えたまま倒れると、抱えていた灰が隣の味方に等分で降る（そのぶん HP が削れる）",
+            LinkSign.Loss, true, "降る"),
     };
 
     /// <summary>
@@ -165,6 +170,10 @@ public static class Map11Relations
     /// <para><b>第173期に4本がここから <see cref="Rules"/> の点線側へ移った</b>
     /// （巻き込み・火の粉・毒漏れ・駆り立て）——どれも
     /// 「隣接であることは席で決まり、<b>起きる条件だけが席の外にある</b>」型だった。</para>
+    ///
+    /// <para><b>第179期の `Ash`（灰が降る）は最初からその型なので、点線側へ直接入れた</b>
+    /// （第178期 追補。**この門が捕まえた**——`AshTrait` は
+    /// <c>FormationRules.AreAdjacent</c> を読むのに、どちらの表にも居なかった・R260）。</para>
     /// </summary>
     public static readonly Dictionary<TraitId, string> Unresolved = new()
     {
