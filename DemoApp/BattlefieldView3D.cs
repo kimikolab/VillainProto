@@ -554,7 +554,9 @@ public partial class BattlefieldView3D : Control
         AttackPattern pattern,
         IReadOnlyList<BattlePawn3D> impacted,
         bool reaction = false,
-        bool friendly = false)
+        bool friendly = false,
+        bool advance = true,
+        bool holdPosition = false)
     {
         if (from is null || to is null) return;
         Color color = friendly ? UiKit.Violet : reaction ? UiKit.Gold : from.Team == BattleContext.PlayerTeam ? UiKit.Player : UiKit.Enemy;
@@ -563,7 +565,8 @@ public partial class BattlefieldView3D : Control
 
         // Advances は表示専用。踏み込む駒だけが標的の手前まで移動し、
         // 到着後に攻撃エフェクトを出してから元の席へ戻る。
-        await from.AdvanceToAttack(to.RestPosition);
+        if (advance) await from.AdvanceToAttack(to.RestPosition);
+        if (holdPosition) from.HoldComboPosition();
         bool charged = !reaction && from.IsCharging;
         if (!reaction) from.ReleaseCharge();
         _attackAudio.PlayAttack(from.UnitId, from.Team, pattern, reaction, charged);
@@ -608,7 +611,7 @@ public partial class BattlefieldView3D : Control
                 break;
         }
 
-        from.ReturnFromAttack();
+        if (!holdPosition) from.ReturnFromAttack();
     }
 
     public void BeginCharge(BattlePawn3D? pawn, int percent)

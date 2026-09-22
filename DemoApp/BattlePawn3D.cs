@@ -47,7 +47,11 @@ public partial class BattlePawn3D : Node3D
     private ConfusionEffect3D _confusion = null!;
     private StatusEffects3D _statusEffects = null!;
     public double AnimationSpeed { get; set; } = 1;
-    public Vector3 RestPosition => _guardPosition ?? _home;
+    private Vector3? _comboPosition;
+    public Vector3 RestPosition => _comboPosition ?? _guardPosition ?? _home;
+
+    // 反撃の被弾でも連撃中の立ち位置へ戻す。
+    public void HoldComboPosition() => _comboPosition = Position;
     public bool IsGuarding => _guardPosition is not null;
 
     // 配置は変えず、台本の介入から被弾までだけ前へ出る。
@@ -421,6 +425,7 @@ void fragment() {
 
     public void ReturnFromAttack()
     {
+        _comboPosition = null;
         if (!_alive || !Advances || Position.IsEqualApprox(RestPosition)) return;
 
         var tween = BeginMotion();

@@ -5,8 +5,8 @@ using System.Collections.Generic;
 // 戦闘計算とは独立した音選び。専用音の未登録キャラには共通音を使う。
 public partial class BattleAttackAudio : Node
 {
-    // ヨミの追加攻撃を含む通常SEを旧設定から3 dB上げ、BGMに埋もれにくくする。
-    private const float NormalVolumeDb = -13;
+    // SE全体をさらに3 dB上げ、専用音との音量差を保つ。
+    private const float NormalVolumeDb = -10;
 
     private readonly RandomNumberGenerator _random = new();
     private readonly Dictionary<(string, AttackPattern), string[]> _overrides = new();
@@ -42,6 +42,14 @@ public partial class BattleAttackAudio : Node
     };
     private static readonly string[] YomiBonus = { "res://assets/audio/se/yomi_bonus.mp3" };
     private static readonly string[] YomiAttack = { "res://assets/audio/se/yomi_attack.mp3" };
+    private static readonly string[] UtsuAttack =
+    {
+        "res://assets/audio/se/utsu_attack_1.mp3",
+        "res://assets/audio/se/utsu_attack_2.mp3",
+        "res://assets/audio/se/utsu_attack_3.mp3",
+        "res://assets/audio/se/utsu_attack_4.mp3",
+        "res://assets/audio/se/utsu_attack_5.mp3",
+    };
     private static readonly string[] KadoHit = { "res://assets/audio/se/kado_hit.mp3" };
     private static readonly string[] Heal = { "res://assets/audio/se/heal_magic_1.mp3" };
     private static readonly string[] TraitHeal = { "res://assets/audio/se/heal_trait.mp3" };
@@ -96,14 +104,14 @@ public partial class BattleAttackAudio : Node
         }
         for (int i = 0; i < _chargeVoices.Length; i++)
         {
-            _chargeVoices[i] = new AudioStreamPlayer { VolumeDb = -8, MaxPolyphony = 1 };
+            _chargeVoices[i] = new AudioStreamPlayer { VolumeDb = -5, MaxPolyphony = 1 };
             AddChild(_chargeVoices[i]);
         }
-        _yokeVoice = new AudioStreamPlayer { VolumeDb = -10, MaxPolyphony = 1 };
+        _yokeVoice = new AudioStreamPlayer { VolumeDb = -7, MaxPolyphony = 1 };
         AddChild(_yokeVoice);
         for (int i = 0; i < _hushVoices.Length; i++)
         {
-            _hushVoices[i] = new AudioStreamPlayer { VolumeDb = -9, MaxPolyphony = 1 };
+            _hushVoices[i] = new AudioStreamPlayer { VolumeDb = -6, MaxPolyphony = 1 };
             AddChild(_hushVoices[i]);
         }
         foreach (string path in Common) LoadSound(path);
@@ -117,6 +125,7 @@ public partial class BattleAttackAudio : Node
         foreach (string path in AttackDown) LoadSound(path);
         LoadSound(YomiBonus[0]);
         LoadSound(YomiAttack[0]);
+        foreach (string path in UtsuAttack) LoadSound(path);
         LoadSound(KadoHit[0]);
         LoadSound(Heal[0]);
         LoadSound(TraitHeal[0]);
@@ -139,7 +148,7 @@ public partial class BattleAttackAudio : Node
         foreach (string path in HushBreak) LoadSound(path);
         for (int i = 0; i < _deathVoices.Length; i++)
         {
-            _deathVoices[i] = new AudioStreamPlayer { VolumeDb = -8, MaxPolyphony = 1 };
+            _deathVoices[i] = new AudioStreamPlayer { VolumeDb = -5, MaxPolyphony = 1 };
             AddChild(_deathVoices[i]);
         }
     }
@@ -170,6 +179,7 @@ public partial class BattleAttackAudio : Node
         }
         if (reaction && unitId == "yomi") { PlayVariation(YomiBonus); return; }
         if (!reaction && unitId == "yomi") { PlayVariation(YomiAttack); return; }
+        if (unitId == "utsu") { PlayVariation(UtsuAttack); return; }
         if (reaction && unitId == "kado") { PlayVariation(KadoCounter); return; }
         string[] paths = _overrides.GetValueOrDefault((unitId, pattern))
             ?? (team == BattleContext.EnemyTeam ? EnemyCommon : Common);
@@ -300,7 +310,7 @@ public partial class BattleAttackAudio : Node
         // 攻撃音に直後の撃破音を切らせない。死亡音同士の重なりも2音まで。
         var voice = _deathVoices[_nextDeathVoice++ % _deathVoices.Length];
         voice.Stop();
-        voice.VolumeDb = finish ? -5 : -8;
+        voice.VolumeDb = finish ? -2 : -5;
         voice.Stream = LoadSound(team == BattleContext.EnemyTeam ? (finish ? Finish : EnemyDeath) : PlayerDeath);
         voice.Play();
     }

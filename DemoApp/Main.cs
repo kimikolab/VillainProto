@@ -140,6 +140,8 @@ public partial class Main : Control
     /// </summary>
     private int _attackPlays, _attackRun, _attackRunActor = -1, _attackRunMax;
     private string _attackRunName = "";
+    private BattlePawn3D? _comboPawn;
+    private int _comboEndIndex;
     private bool _fastSmoke;
     private bool _campaignFlowSmoke;
     private bool _map11FlowSmoke;
@@ -1080,6 +1082,7 @@ public partial class Main : Control
         if (_result is null) return;
         _finishSoundIndex = FinishSoundCue.Find(_result.PlayerWon, _battleOpening, _result.Events);
         int token = ++_playToken;
+        _comboPawn = null;
         _playing = true;
         _paused = false;
         _pause.Text = "一時停止";
@@ -1094,6 +1097,12 @@ public partial class Main : Control
             int eventIndex = _eventIndex++;
             BattleEvent e = _result.Events[eventIndex];
             await ApplyEvent(e, eventIndex);
+            if (_comboPawn is not null && _eventIndex >= _comboEndIndex)
+            {
+                _comboPawn.ReturnFromAttack();
+                _comboPawn = null;
+                await Delay(0.255);
+            }
             // 第125期 段3-e: 画面下の一覧を引き直す。**数字の出どころは盤面の駒だけ**で、
             // 台本からは数え直さない（同じ言葉の表を2つ作らない・第124期 §4）。
             _partyBar.Sync(_battleField, _shownOwner);
@@ -1134,6 +1143,26 @@ public partial class Main : Control
                      + $" attackPlays={_attackPlays} maxRun={_attackRunMax} maxRunBy={_attackRunName}");
             GetTree().Quit();
         }
+    }
+
+    // 台本の通常攻撃を先読みする。反撃・肩代わりは間に挟んだまま再生し、
+    // 最後の一撃のダメージまで出してから帰還する。回数や駒名は決め打ちしない。
+    private int? FindComboEnd(int index, BattleEvent attack)
+    {
+        if (attack.Reaction || attack.Relayed || _result is null) return null;
+        int hits = 1;
+        int end = index + 1;
+        for (; end < _result.Events.Count; end++)
+        {
+            BattleEvent next = _result.Events[end];
+            if (next.Kind == BattleEventKind.TurnStart) break;
+            if (next.Reaction || next.Relayed) continue;
+            if (next.Kind is BattleEventKind.Skill or BattleEventKind.Charge) break;
+            if (next.Kind != BattleEventKind.Attack) continue;
+            if (next.ActorId != attack.ActorId) break;
+            hits++;
+        }
+        return hits > 1 ? end : null;
     }
 
     private async Task ApplyEvent(BattleEvent e, int eventIndex)
@@ -1199,7 +1228,14 @@ public partial class Main : Control
                 // 溜めの解放は踏み込み後の着弾で行う。手番外の攻撃では消費しない。
                 if (e.Reaction)
                     await _battleField.ShowBonusAttack(actor);
-                await _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire);
+                bool continuingCombo = actor is not null && actor == _comboPawn;
+                if (_comboPawn is null && actor is not null && FindComboEnd(eventIndex, e) is { } comboEnd)
+                {
+                    _comboPawn = actor;
+                    _comboEndIndex = comboEnd;
+                }
+                await _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire,
+                    advance: !continuingCombo, holdPosition: actor is not null && actor == _comboPawn);
                 // 第178期 自己検査 (e)。**計数だけ**（上の1行が「1発ぶんの絵と音」なので、ここで数える）。
                 _attackPlays++;
                 _attackRun = e.ActorId == _attackRunActor ? _attackRun + 1 : 1;
