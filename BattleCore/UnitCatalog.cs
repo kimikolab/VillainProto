@@ -702,6 +702,41 @@ public static class UnitCatalog
     };
 
     /// <summary>
+    /// 拾い屋のスス（第179期・<b>A群の転生 1枚目</b>）。<see cref="Kiri"/>（裂きのキリ）と入れ替えた。
+    ///
+    /// <para><b>自傷を食う変換器</b>。自傷を持つ軸（燃焼・反撃・毒漏れ・破裂）は、敵のダメージに加えて
+    /// 自分のダメージも払うので他の隊より最初から不利で、うまくいっている軸には必ず変換器がいる
+    /// （カドの巻き込み → ムド・ドハ ／ 毒漏れ → ベニ・ヴィオ）。
+    /// <b>燃焼軸には変換器が1枚もいなかった</b>——ヒヨ（火選り）は燃えている味方を強めるだけで、
+    /// 燃えた分を何にも変えない。第178期でホタの死因の <b>69% が敵の攻撃</b>と出たので、
+    /// <b>回復で耐える方向ではなく、自傷の総量を敵全体への火力に変えて殲滅を速くする方向</b>で解く。</para>
+    ///
+    /// <para><b>攻3。</b> 灰が無ければ本当に何もできない体で、<b>味方が味方を傷つけない編成では入れる意味が無い</b>
+    /// ——ここが「編成が選ぶ」を作っている。速6 は <see cref="Gare"/> と同じで、
+    /// <b>ボルグ（速8）の火の粉・カドの巻き込みより後ろ</b>に回るので、そのターンに撒かれた灰をその手番で投げられる。</para>
+    ///
+    /// <para><b>攻撃力は灰に乗らない</b>（礫＝<see cref="ShrapnelTrait"/> との違い）。
+    /// 乗せると「灰が少ないときは攻撃力、多いときは灰」の二本立てになり、
+    /// <b>溜めた量に意味があるか</b>という問いが測れなくなる。</para>
+    /// </summary>
+    public static readonly UnitDef Susu = new()
+    {
+        Id = "susu",
+        Name = "拾い屋のスス",
+        MaxHp = 64,
+        Attack = 3,
+        Speed = 6,
+        Advances = false,
+        Traits = new[] { TraitId.Ash },
+        // **[Skill] 1要素にする**（`ActionIndex++` は `CanAct` 通過後。第138期 Q0-4）。
+        // ただし灰が無い手番は `AshTrait.OnAction` が素の一撃を振るので、周期は止まらない。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "灰を掬い上げた") },
+        PlusText = "味方が味方から受けたダメージを灰として溜め、手番に、溜めた量ぶん敵全体を撃つ",
+        MinusText = "灰を溜めたまま倒れると、その灰が隣接する味方に等分で降る / 敵から受けたダメージは灰にならない",
+        Flavor = "誰かの後始末ばかりで、自分の手柄になったことが一度もない。だから投げ返す先を敵に変えた。"
+    };
+
+    /// <summary>
     /// 置き去りのナラ。速さを読む唯一の駒。
     ///
     /// 速さ8。**7（35体の中央値）から動かしてある（第20期）。**
@@ -1546,7 +1581,7 @@ public static class UnitCatalog
     /// </summary>
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Kiri, Gare, Nomi, Nata, Tomo, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Susu, Gare, Nomi, Nata, Tomo, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
     };
 
     /// <summary>
@@ -1560,12 +1595,18 @@ public static class UnitCatalog
     /// <item><see cref="Egu"/>（抉りのエグ）—— <b>第139期</b>に外した。根拠は第119期のプラス値 +0.66（線 +1.5 に届かない3体の1つ）と、
     /// 代金の救済（号令が買い取る）が第103期に 52 枚中 49 位で否定されていること。
     /// **`Presets` には残っている**（`compare` 5 行・交差帯 1 行）。</item>
+    /// <item><see cref="Kiri"/>（裂きのキリ）—— <b>第179期</b>に外し、<see cref="Susu"/>（拾い屋のスス）を入れた。
+    /// 根拠はポンの駒別評価（✕「もういらない」）と、<c>docs/roster_audit.md</c>。
+    /// <b>`Presets` には残している</b>（`compare` 2 行 ＝ `裂き (キリ×エグ)` / `裂き×責め苦 (キリ×エグ×シガ)`）
+    /// ——<c>All</c> は「編成に選べる 52 枚」の定義であって `Presets` が参照できる集合ではない（第108期）。
+    /// <b>したがって差し替えだけでは盤面は 1 ビットも動かない</b>（第139期のエグと同じ形）。
+    /// <see cref="RendTrait"/> / <see cref="ThinBladeTrait"/> も削除していないので、傷軸の診断はそのまま回る。</item>
     /// </list>
     ///
     /// <para><b>棄却して定義だけ残した素材（オゴ・ゴウ・ヌキ・オノ）はここに入れない</b>——
     /// あれらは一度も `All` に居なかった。ここは「居たが外した」駒の記録である。</para>
     /// </summary>
-    public static IReadOnlyList<UnitDef> Retired { get; } = new[] { Hari, Egu };
+    public static IReadOnlyList<UnitDef> Retired { get; } = new[] { Hari, Egu, Kiri };
 
     /// <summary>
     /// <b><c>All ∪ Retired</c>（第141期）。辞書のキーや <c>Id</c> の引きに使う集合。</b>

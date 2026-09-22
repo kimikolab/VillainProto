@@ -249,6 +249,20 @@ public enum TraitId
                 // 殴られた後は渡す分が残らない**ので、壁として働く場面と供給が出る場面が食い違う。
                 // 上限は配っても減らず、供給は**集中砲火を受けるほど太る**。
 
+    // --- 第179期で足した札（**A群の転生 1枚目**。裂き＝`Rend` / 薄刃＝`ThinBlade` は対照として残置） ---
+    Ash,        // 拾い屋: 味方が味方から受けたダメージを灰として溜め、手番に、溜めた量ぶん敵全体を撃つ。
+                // 灰を溜めたまま倒れると、その灰は隣接する味方に等分で降る
+                //（1つの動作の表と裏。プラスは自傷の総量を敵への打点に変えること・
+                //  マイナスは変える前に倒れたときの後始末）
+                //
+                // **「味方由来のダメージ」を入力にする初めての札**（第179期 Q0-5）。
+                // 近いのは 巨躯（`Colossus`）と 砕け（`Shatter`）だが、前者は<b>肩代わりした量</b>、
+                // 後者は<b>自分が浴びた範囲攻撃</b>で、どちらも「自分に来た分」しか読まない。
+                // **盤面全体の自傷を読むのはこれが最初。**
+                //
+                // **燃焼軸に変換器が1枚もいない**（第178期でホタの死因の 69% が敵の攻撃と出た）
+                // のが出発点で、回復で耐えるのではなく<b>自傷の総量を殲滅の速さに変える</b>方向の答え。
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -2002,6 +2016,32 @@ public readonly record struct ShrapnelRule(int Multiplier, int SelfDamagePercent
     /// （強度を決めた集合と採否を判定する集合を同じにする・第135〜137期の則）。</para>
     /// </summary>
     public static ShrapnelRule Default => new(3, 100, false);
+}
+
+/// <summary>
+/// 灰（第179期・<see cref="TraitId.Ash"/>）の規則。<b><c>static</c> のノブは置かない</b>
+/// （<see cref="ShrapnelRule"/> / <see cref="BraceRule"/> と同じ作法）。
+///
+/// <para><b>この期は1つも振らない。</b> 既定は「構想どおりの値をそのまま入れる」で、
+/// 採否はポンが遊んで決める（指示書 §0——<b>線は置かない</b>）。
+/// ノブは<b>対照を作るためだけ</b>にある——<see cref="FalloutOnDeath"/> を偽にすれば
+/// マイナスが 0 の版、<see cref="Multiplier"/> を 0 にすればプラスが 0 の版になる。</para>
+///
+/// <para><b><see cref="ShrapnelRule"/> の側に畳まなかった。</b> 第138期はそうしたが、
+/// あれは<b>自分の期のノブを自分の型に足した</b>のではなく「他に置き場が無かった」形で、
+/// 他人の型にフィールドを足すと <c>docs/rules.md</c> のその行の<b>既定値が動く</b>
+/// ——規約 (G8) の必須3「触っていないノブの既定が動いていない」がそのまま偽になる。
+/// <b>だから <c>Run</c> の引数を1本だけ増やした</b>（第138期の実測は「1本なら通り、2本で落ちる」で、
+/// そのスタックの真因は第139期に <c>Prog.Body</c> / <c>Entry.Main</c> の側で解けている）。</para>
+/// </summary>
+/// <param name="CountHavoc">惨禍（カド）による増分を灰に数えるか。<b>既定は真</b>（実際に削られた量をそのまま溜める）。</param>
+/// <param name="CountDot">出どころの無い継続ダメージ（燃焼・毒の刻み）を灰に数えるか。<b>既定は真</b>。</param>
+/// <param name="Multiplier">灰1点あたり、敵全体へ何 % 撃つか。<b>既定は 100（＝1.0 倍）</b>。</param>
+/// <param name="FalloutOnDeath">灰を溜めたまま倒れたとき、隣接する味方へ等分で降らせるか。<b>既定は真＝マイナスの本体</b>。</param>
+public readonly record struct AshRule(bool CountHavoc, bool CountDot, int Multiplier, bool FalloutOnDeath)
+{
+    /// <summary>既定（<b>第179期の仮置き</b>）。<b>保持者が盤上にいなければ1ビットも動かない。</b></summary>
+    public static AshRule Default => new(true, true, 100, true);
 }
 
 /// <summary>
@@ -7554,6 +7594,113 @@ public sealed class ShrapnelTrait : Trait
     }
 }
 
+/// <summary>
+/// 拾い屋（第179期・スス）。<b>味方が味方から受けたダメージを灰として溜め、
+/// 手番に、溜めた量ぶん敵全体を撃つ。</b>
+///
+/// <para><b>溜めるのは engine 側にある</b>（<see cref="BattleContext.NoteAsh"/> を
+/// <c>ApplyDamage</c> が HP を引いた直後に呼ぶ）。惨禍・据え・散開・萎縮・肩代わり・破片・
+/// 上限をすべて通った<b>実際に削られた量</b>が入力で、<b>駒ごとのフックでは書けない</b>
+/// ——盤面の誰が削られても溜まるので、惨禍・分かちと同じ「味方全体にかかる」族である。</para>
+///
+/// <para><b>敵から受けたダメージは灰にならない。</b> だから
+/// <b>味方が味方を傷つけない編成では、攻3 の体でしかない</b>
+/// ——燃焼（ボルグ・ホタ）・巻き込み（カド）・破裂（ゾト）・毒漏れ（グザ）・
+/// 生贄（リィカ）・吸い（ゴルム）と組んで初めて働く。</para>
+///
+/// <para><b>灰が無い手番は通常攻撃を振る</b>（礫＝<see cref="ShrapnelTrait"/> と違う）。
+/// 礫は「撃てないターンは何もできない」がマイナスの本体だが、こちらのマイナスは
+/// <see cref="OnDeath"/> の側にあるので、手番まで取り上げると代金が二重になる。
+/// <b>だから <see cref="CanAct"/> は上書きしない</b>——<c>Actions</c> は <c>[Skill]</c> の
+/// 1要素で、常に通る（種別で弾かれて周期が止まる穴＝第138期 Q0-4 にも触れない）。</para>
+///
+/// <para><b>攻撃力は乗らない。</b> 乗せると「灰が少ないときは攻撃力、多いときは灰」の
+/// 二本立てになり、<b>溜めた量に意味があるか</b>という問いが測れなくなる。</para>
+/// </summary>
+public sealed class AshTrait : Trait
+{
+    public override TraitId Id => TraitId.Ash;
+
+    /// <summary>いま抱えている灰。<b>読むのはここ1箇所</b>（診断と画面は <c>StatusKeys.Ash</c> を直接見る）。</summary>
+    public static int AshOf(UnitState self) => self.RawCounter(StatusKeys.Ash);
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+
+        int ash = AshOf(self);
+        if (ash <= 0)
+        {
+            // 灰が無い手番は素の一撃。**`SwingTurn` ではなく `PerformAttack` を直に呼ぶ**
+            // ——`ModifyHitCount`（連撃）は手番の中で1度だけ問う約束で、
+            // ここは既に「術を撃った」扱いの中にいる（第178期）。
+            ctx.NoteAshDry(self);
+            ctx.PerformAttack(self, "    ");
+            return;
+        }
+
+        self.SetCounter(StatusKeys.Ash, 0);
+        int dmg = ash * ctx.Ash.Multiplier / 100;
+        ctx.NoteAshThrow(self, ash, dmg);
+        if (dmg <= 0) return;
+
+        ctx.Log($"    ★ {self.Name} が溜めた灰を撒いた（{ash}）", LogKind.Highlight, self);
+
+        // 敵全体。**`LivingMembers`（スロット昇順・非シャッフル）を使う**——効果が全員一律なので
+        // 順序に意味が無く、`Shuffle` が乱数を消費すると「保持者がいない行は1セルも動かない」型の
+        // 検算が壊れる（礫＝第138期・火選り＝第58期と同じ判断）。
+        //
+        // **`pattern: All` は渡す。** 通常の `ApplyDamage` を通るので上限（軛）で切られ、
+        // 庇い・後備えは `Single` ではないので素通りする——どちらも意図した帰結。
+        foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        {
+            ctx.NoteAshHit(dmg);
+            ctx.ApplyDamage(foe, dmg, self, pattern: AttackPattern.All);
+        }
+    }
+
+    /// <summary>
+    /// <b>マイナスの本体。</b> 灰を溜めたまま倒れると、その灰が隣接する味方に等分で降る。
+    ///
+    /// <para><b>等分（切り捨て）にしてある。</b> 満額を全員に配ると「隣に誰を置くか」が
+    /// 一方向の罰にしかならず、<b>隣を増やすほど総量が増える</b>——呪詛・萎縮が
+    /// <c>SupportTargets</c> で満額を漏らすのとは目的が違う（あちらは支援の宛先の解決）。
+    /// 割れば<b>総量は灰そのもので固定</b>され、隣の数は「1人あたりいくらか」だけを決める。</para>
+    ///
+    /// <para><b>隣が1人もいなければ灰は消える。</b> 罰を逃す配置が成立するのは仕様
+    /// ——角に置けば代金は 0 になるが、角は隣接次数2 なので供給も細る。</para>
+    ///
+    /// <para><b>出どころは自分（<c>isFriendlyFire: true</c>）。</b> 味方の刃として落ちるので
+    /// 害の帳簿でも台本でも「味方由来」で読める。<b>ここで降った灰は誰の灰にもならない</b>
+    /// ——保持者は既に倒れていて、灰を溜めるのは生きている保持者だけだからである
+    /// （<see cref="BattleContext.NoteAsh"/>）。</para>
+    /// </summary>
+    public override void OnDeath(BattleContext ctx, UnitState self)
+    {
+        int ash = AshOf(self);
+        ctx.NoteAshAtDeath(self, ash);
+        if (ash <= 0 || !ctx.Ash.FalloutOnDeath) return;
+        self.SetCounter(StatusKeys.Ash, 0);
+
+        var neighbours = ctx.LivingMembers(self.TeamId)
+            .Where(u => u != self && FormationRules.AreAdjacent(self.Slot, u.Slot)).ToList();
+        if (neighbours.Count == 0) return;
+
+        int share = ash / neighbours.Count;
+        if (share <= 0) return;
+
+        ctx.Log($"    {self.Name} が抱えていた灰が降る（{share} ずつ）", LogKind.FriendlyFire);
+        foreach (UnitState ally in neighbours)
+        {
+            ctx.NoteAshFallout(share);
+            ctx.ApplyDamage(ally, share, self, isFriendlyFire: true);
+        }
+    }
+
+    /// <summary>灰は戦闘スコープ。<c>StatusKeys.All</c> に入っているので境界で消える（ここでは何もしない）。</summary>
+    public override void OnCarryOver(UnitState self) { }
+}
+
 public sealed class SharerTrait : Trait
 {
     public const int Percent = 40;
@@ -9898,6 +10045,7 @@ public static class TraitCatalog
         new ForfeitTrait(),    // 第153期
         new BurdenTrait(),     // 第154期
         new LadenTrait(),      // 第154期
+        new AshTrait(),        // 第179期
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期

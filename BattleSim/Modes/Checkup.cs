@@ -170,6 +170,8 @@ public static void Run(string[] args, int stageIndex)
         // `checkup` が「分類の無い札がある」で**3期ぶん止まっていた**（第131期に判明）。
         // 分類は積み過ぎ（`Overload`）と同じ——読む値も閾値も共有し、違うのは上がる先の段だけ。
         [TraitId.GradeStep]  = (HcPlusL,  "閾値を越えているあいだ薙ぎ・その `GradeTrait.StepFactor` 倍で全体。積めないのは条件（`Overload` と同型）"),
+        // 第179期: 灰（スス）を足したときに分類も足した（第128期の穴＝分類を足さずに `checkup` が止まる、を繰り返さない）。
+        [TraitId.Ash]        = (HcBothL,  "味方の自傷を灰として溜めて撒くのと、抱えたまま倒れると隣へ降るのが1つの在庫の表と裏"),
     };
 
     // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------

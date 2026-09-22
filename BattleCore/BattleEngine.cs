@@ -184,7 +184,22 @@ public static class StatusKeys
     /// </summary>
     public const string Debt = "debt";
 
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt };
+    /// <summary>
+    /// 灰（第179期・<see cref="AshTrait"/>）。<b>味方が味方から受けたダメージの総量。</b>
+    ///
+    /// <para><b>破片（<see cref="Armor"/>）を流用しない。</b> あちらは <c>ApplyDamage</c> の側で
+    /// 消費される防御のプールで、こちらは<b>撃つための燃料</b>——混ぜると帳簿が閉じない
+    /// （第143期に転倒が痺れを流用しなかったのと同じ理由）。</para>
+    ///
+    /// <para><b>減衰も上限も無い。</b> 供給が「味方が味方を傷つけること」に縛られていて、
+    /// その供給源はこちらの編成が選んだ駒だけなので、<b>天井は編成が自分で決める</b>。</para>
+    ///
+    /// <para><b>溜まるのは保持者が生きている間だけ。</b> 倒れた瞬間に
+    /// <see cref="AshTrait.OnDeath"/> が隣接する味方へ等分で落とし、0 に戻す。</para>
+    /// </summary>
+    public const string Ash = "ash";
+
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash };
 
     /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
@@ -206,6 +221,7 @@ public static class StatusKeys
         Confused => "乱",
         Ward => "預",
         Debt => "負",
+        Ash => "灰",
         _ => key
     };
 }
@@ -2971,6 +2987,21 @@ public sealed class BattleContext
         }
     }
 
+    /// <summary>
+    /// 決着時に撒かれずに残っていた灰を数える（第179期・<b>計数のみ</b>）。
+    /// <b>収支（溜めた ＝ 撒いた ＋ 抱えて倒れた ＋ 残り）が閉じるか</b>を見るためだけにある。
+    /// </summary>
+    public void CloseAshLedger()
+    {
+        for (int i = 0; i < _ashHolders.Count; i++)
+        {
+            int left = _ashHolders[i].RawCounter(StatusKeys.Ash);
+            if (left <= 0) continue;
+            AshResidual += left;
+            TallyOf(_ashHolders[i]).AshResidual += left;
+        }
+    }
+
     public readonly long[] DroughtHits = new long[2];
     public readonly long[] DroughtRequested = new long[2];
     public readonly long[] DroughtEffective = new long[2];
@@ -3127,6 +3158,93 @@ public sealed class BattleContext
             for (int i = 0; i < _yokeHolders.Count; i++) if (_yokeHolders[i].IsAlive) return true;
             return false;
         }
+    }
+
+    // =====================================================================================
+    // 第179期 —— 灰（TraitId.Ash）。**溜める側だけが engine にある。**
+    // 撒く側・降らす側は `AshTrait` の中で、engine は規則を1本も持たない。
+    // =====================================================================================
+
+    /// <summary>灰の保持者（<see cref="Add"/> が積む）。<b>陣営ごとに引く</b>ので陣営で分けない。</summary>
+    readonly List<UnitState> _ashHolders = new();
+
+    /// <summary>
+    /// いま灰を溜められる駒が盤上にいるか。<b>いなければ <see cref="ApplyDamage"/> は
+    /// 比較1つで抜ける</b>（軛の <c>Cap</c> 判定・粛の保持者走査と同じ短絡の作法）。
+    /// </summary>
+    bool AshBinding => _ashHolders.Count > 0;
+
+    /// <summary>撒いた回数 ／ 撒いた灰の総量 ／ 着弾した体数 ／ 灰が無くて素振りした回数 ／ 降った総量。</summary>
+    public long AshFires, AshSpent, AshHits, AshDry, AshFallout;
+    /// <summary>溜まった灰の総量（<b>実際に削られた量</b>）と、倒れた時点で抱えていた灰の総量。</summary>
+    public long AshGained, AshAtDeath;
+    /// <summary>決着時に撒かれずに残っていた灰。</summary>
+    public long AshResidual;
+
+    /// <summary>
+    /// 味方が味方から受けたダメージを灰として溜める（第179期）。
+    /// <b><see cref="ApplyDamage"/> が HP を引いた直後の1箇所からだけ呼ぶ。</b>
+    ///
+    /// <para><b>入力は「実際に削られた量」。</b> 惨禍・据え・散開・萎縮・肩代わり・破片・
+    /// 受け流し・上限をすべて通った後の値なので、<b>帳簿の <c>DamageTaken</c> と定義上ずれない</b>
+    /// （第115期「同じ比を作る2つの計数は、同じ瞬間に取ること」）。</para>
+    ///
+    /// <para><b>肩代わりの中継（<c>relayed</c>）も数える。</b> 中継は元の削りの一部であって
+    /// 別の出来事ではない——ただし<b>元の段も中継の段も別々に HP を削っている</b>ので、
+    /// 二重計上ではなく実額の合計になる。</para>
+    ///
+    /// <para><b>倒れた駒の分も数える</b>（この呼び出しは死亡判定より手前）。
+    /// 「最後の一撃だけ灰にならない」という説明のつかない穴を作らないため。</para>
+    /// </summary>
+    /// <param name="target">削られた駒。<b>灰が溜まるのはこの駒と同じ陣営の保持者だけ。</b></param>
+    /// <param name="amount">実際に削られた量。</param>
+    /// <param name="source">出どころ。<c>null</c> は継続ダメージ（燃焼・毒の刻み）。</param>
+    /// <param name="havocExtra">惨禍が上乗せした量（<see cref="AshRule.CountHavoc"/> が偽なら引く）。</param>
+    void NoteAsh(UnitState target, int amount, UnitState? source, int havocExtra)
+    {
+        if (amount <= 0 || !AshBinding) return;
+
+        // 敵から受けたダメージは灰にならない。**これがマイナスの半分**（指示書 §1）。
+        if (source is null) { if (!Ash.CountDot) return; }
+        else if (source.TeamId != target.TeamId) return;
+
+        int gained = amount;
+        if (!Ash.CountHavoc && havocExtra > 0) gained -= Math.Min(havocExtra, gained);
+        if (gained <= 0) return;
+
+        for (int i = 0; i < _ashHolders.Count; i++)
+        {
+            UnitState h = _ashHolders[i];
+            if (!h.IsAlive || h.TeamId != target.TeamId) continue;
+            h.SetCounter(StatusKeys.Ash, h.RawCounter(StatusKeys.Ash) + gained);
+            AshGained += gained;
+            TallyOf(h).AshGained += gained;
+        }
+    }
+
+    /// <summary>灰を撒いた（<b>計数のみ</b>）。</summary>
+    public void NoteAshThrow(UnitState self, int ash, int dealt)
+    {
+        AshFires++; AshSpent += ash;
+        UnitTally t = TallyOf(self);
+        t.AshFires++; t.AshSpent += ash;
+        if (ash > t.AshPeak) t.AshPeak = ash;
+    }
+
+    /// <summary>灰が無くて素振りした（<b>計数のみ</b>）。</summary>
+    public void NoteAshDry(UnitState self) { AshDry++; TallyOf(self).AshDry++; }
+
+    /// <summary>灰が1体に着弾した（<b>計数のみ</b>。名目量）。</summary>
+    public void NoteAshHit(int dmg) { AshHits++; }
+
+    /// <summary>灰が隣へ降った（<b>計数のみ</b>。名目量）。</summary>
+    public void NoteAshFallout(int amount) { AshFallout += amount; }
+
+    /// <summary>倒れた時点で抱えていた灰（<b>計数のみ</b>）。</summary>
+    public void NoteAshAtDeath(UnitState self, int ash)
+    {
+        if (ash <= 0) return;
+        AshAtDeath += ash; TallyOf(self).AshAtDeath += ash;
     }
 
     /// <summary><see cref="ApplyDamage"/> を通らずに HP を減らした量を記録する（計数のみ）。</summary>
@@ -3336,6 +3454,13 @@ public sealed class BattleContext
     /// <b>保持者が <see cref="UnitCatalog.All"/> に 0 枚なので、既定では盤面に1度も現れない。</b>
     /// </summary>
     public ShrapnelRule Shrapnel { get; }
+
+    /// <summary>
+    /// 灰の規則（第179期。既定は <see cref="AshRule.Default"/>）。
+    /// <b>保持者（スス）が盤上にいなければ1ビットも動かない</b>——
+    /// 溜める側は <see cref="AshBinding"/> で短絡し、撃つ側は特性の中にある。
+    /// </summary>
+    public AshRule Ash { get; }
 
     // =====================================================================================
     // 第138期 —— 礫（TraitId.Shrapnel）の計数。**盤面には一切影響しない。**
@@ -3755,6 +3880,7 @@ public sealed class BattleContext
                          BraceRule? brace = null, ShufflerRule? shuffler = null,
                          ConfusionRule? confusion = null, HasteRule? haste = null,
                          WardRule? ward = null, IndulgenceRule? indulgence = null,
+                                   AshRule? ash = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -3813,6 +3939,7 @@ public sealed class BattleContext
         Parry = parry ?? ParryRule.Default;
         Shatter = shatter ?? ShatterRule.Default;
         Shrapnel = shrapnel ?? ShrapnelRule.Default;
+        Ash = ash ?? AshRule.Default;
         Shuffler = shuffler ?? ShufflerRule.Default;
         Confusion = confusion ?? ConfusionRule.Default;
         Haste = haste ?? HasteRule.Default;
@@ -4034,6 +4161,8 @@ public sealed class BattleContext
         // 第137期: 砕けの保持者が盤上にいるか（`ShatterSoaked` を短絡させるためだけ。盤面には影響しない）。
         if (u.HasTrait(TraitId.Shatter)) ShatterActive = true;
         // 第132期 段1: 上限の保持者をここで拾う（`YokeBinding` が全駒を走査しないため）。
+        // 第179期: 灰の保持者（`NoteAsh` が全駒を走査しないため）。
+        if (u.HasTrait(TraitId.Ash)) _ashHolders.Add(u);
         if (u.HasTrait(TraitId.Yoke)) _yokeHolders.Add(u);
         // 第134期 段2: 残り3つの盤面ルールの保持者も同じ形で拾う（**計数専用**。
         // 渇きだけは `Heal` の入口の判定もここに寄せた——`AllUnits.Any(...)` と同値）。
@@ -5455,8 +5584,13 @@ public sealed class BattleContext
 
         // u != target ＝ 惨禍は本人には乗らない（HavocTrait のコメント参照）。
         // 「カドを名指しで除外」ではなく関係で書いてあるので、惨禍持ちが2体並べば互いに増幅し合う。
+        // 第179期・**計数のみ**（灰が惨禍の増分を数えるかの対照に使う。既定では読まれない）。
+        int havocExtra = 0;
         if (teammates.Any(u => u != target && u.HasTrait(TraitId.Havoc)))
-            amount += amount * HavocTrait.Percent / 100;
+        {
+            havocExtra = amount * HavocTrait.Percent / 100;
+            amount += havocExtra;
+        }
 
         // 荷（BurdenTrait・第154期）: 預かりを抱えている味方は、抱えている間だけ被ダメージが増える。
         // **惨禍の直後・同じ入口の族**（据え・散開・萎縮・肩代わり・破片・身構え・軛より前）。
@@ -5862,6 +5996,10 @@ public sealed class BattleContext
         // 第125期 段1。**中継の段が実際に削った量**（巨躯・分かち）。`Swallowed`（名目量）とは別物。
         // **誰も読んで分岐しない。**
         if (relayed) TallyOf(target).Shouldered += amount;
+        // 第179期。**味方が味方から受けたダメージを灰として溜める**（拾い屋のスス）。
+        // **HP を引いた直後・死亡判定より手前**——実額で溜め、最後の一撃も落とさない。
+        // 保持者が盤上にいなければ `AshBinding` の比較1つで抜ける。
+        NoteAsh(target, amount, source, havocExtra);
         Log($"    {target.Name} に {amount} ダメージ (残り {Math.Max(0, target.Hp)})",
             isFriendlyFire ? LogKind.FriendlyFire : LogKind.Damage);
         Emit(new BattleEvent
@@ -7142,6 +7280,7 @@ public static class BattleEngine
                                    BraceRule? brace = null, ShufflerRule? shuffler = null,
                                    ConfusionRule? confusion = null, HasteRule? haste = null,
                                    WardRule? ward = null, IndulgenceRule? indulgence = null,
+                                   AshRule? ash = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
@@ -7150,7 +7289,7 @@ public static class BattleEngine
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
                nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace, shuffler,
-               confusion, haste, ward, indulgence, probe);
+               confusion, haste, ward, indulgence, ash, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -7189,6 +7328,7 @@ public static class BattleEngine
                                    BraceRule? brace = null, ShufflerRule? shuffler = null,
                                    ConfusionRule? confusion = null, HasteRule? haste = null,
                                    WardRule? ward = null, IndulgenceRule? indulgence = null,
+                                   AshRule? ash = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
@@ -7197,7 +7337,7 @@ public static class BattleEngine
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
                                     nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace,
-                                    shuffler, confusion, haste, ward, indulgence, probe);
+                                    shuffler, confusion, haste, ward, indulgence, ash, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -7374,6 +7514,7 @@ public static class BattleEngine
         ctx.CloseWardLedger();
         // 第155期。決着時に残っていた負債と燃料を数える（収支を閉じるため）。
         ctx.CloseIndulgenceLedger();
+        ctx.CloseAshLedger();   // 第179期・**計数のみ**
 
         return new BattleResult
         {

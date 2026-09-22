@@ -486,6 +486,13 @@ if (focusId == "stall")
     return;
 }
 
+// susu モード（第179期） —— A群の転生 1枚目：拾い屋のスス。本体は `Modes/Susu.cs`。
+if (focusId == "susu")
+{
+    SusuDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // rebirth モード（第178期） —— B群の転生（熾のホタ／逆しまのウツ）。本体は `Modes/Rebirth.cs`。
 if (focusId == "rebirth")
 {

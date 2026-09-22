@@ -1519,6 +1519,15 @@ public sealed class UnitTally
     /// </summary>
     public long IndulgenceStacked, TollTaken, BrandFires, BrandDealt;
 
+    /// <summary>
+    /// 灰（第179期・<see cref="TraitId.Ash"/>）。<b>保持者（スス）の側</b>に載せる——
+    /// <c>AshGained</c> 溜めた総量（実額）／ <c>AshFires</c> 撒いた回数 ／
+    /// <c>AshSpent</c> 撒いた灰の総量 ／ <c>AshPeak</c> 1回の最大 ／
+    /// <c>AshDry</c> 灰が無くて素振りした回数 ／ <c>AshAtDeath</c> 倒れた時点で抱えていた灰。
+    /// <b>計数専用。</b>
+    /// </summary>
+    public long AshGained, AshFires, AshSpent, AshPeak, AshDry, AshAtDeath, AshResidual;
+
     public int BraceGuards, BraceCuts, BraceRefused, BraceGiven, BraceLost;
     public int BraceShoves, BraceShoveCapped, BraceNoTarget, BraceStaggers, BraceArmorMuted;
 
@@ -1690,6 +1699,9 @@ public sealed class UnitTally
         WardStacked += o.WardStacked; WardReleased += o.WardReleased; WardForfeited += o.WardForfeited;
         WardBurdenTaken += o.WardBurdenTaken; WardLadenLost += o.WardLadenLost;
         IndulgenceStacked += o.IndulgenceStacked; TollTaken += o.TollTaken;
+        AshGained += o.AshGained; AshFires += o.AshFires; AshSpent += o.AshSpent;
+        AshDry += o.AshDry; AshAtDeath += o.AshAtDeath; AshResidual += o.AshResidual;
+        if (o.AshPeak > AshPeak) AshPeak = o.AshPeak;
         BrandFires += o.BrandFires; BrandDealt += o.BrandDealt;
         StallStagger += o.StallStagger;
         ShuffleAllySwaps += o.ShuffleAllySwaps; ShuffleFoeSwaps += o.ShuffleFoeSwaps;

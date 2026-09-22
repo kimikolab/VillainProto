@@ -19,6 +19,8 @@ public static class StatusIconArt
         [StatusKeys.Deep] = ("#f86689", "<path d='M32 10l-9 16 9 4-12 24 23-25-10-5 9-14z'/>"),
         [StatusKeys.Curse] = ("#bd9aed", "<path d='M10 32Q32 8 54 32Q32 56 10 32z' fill='none'/><circle cx='32' cy='32' r='7'/>"),
         [StatusKeys.Ward] = ("#a1edcd", "<path d='M13 16h38v22L32 54 13 38z' fill='none'/><path d='M32 22v20m-10-10h20' fill='none'/>"),
+        // 第179期・灰（拾い屋のスス）。**破片と同じ見せ方**（数字ではなく札1つ）。
+        [StatusKeys.Ash] = ("#b9b2a6", "<path d='M12 50h40L32 18z' fill='none'/><path d='M24 50l8-14 8 14z'/><path d='M26 12v6m12-9v7m-6 2v5' fill='none'/>"),
         [StatusKeys.Debt] = ("#ccbdad", "<path d='M18 10h28v44l-7-4-7 4-7-4-7 4z' fill='none'/><path d='M25 26h14m-14 10h14' fill='none'/>"),
     };
     private static readonly Dictionary<string, Texture2D> Cache = new();

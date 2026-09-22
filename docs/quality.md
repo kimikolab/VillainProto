@@ -173,7 +173,7 @@
 | `実質無傷勝利` | 上から**自分の死が起動条件の駒**を免除したもの（欠けたのが免除対象だけなら成功とみなす） | **全試行** |
 | `免除` | その行で免除した駒。`—` は免除対象が1枚もいない行 | — |
 
-**免除の判定は実装から引く**——`OnDeath` を上書きする札 **7 本**（Splitter / Bomber / Colossus / Inversion / Drought / Yoke / Hush）の保持者。
+**免除の判定は実装から引く**——`OnDeath` を上書きする札 **8 本**（Splitter / Bomber / Colossus / Ash / Inversion / Drought / Yoke / Hush）の保持者。
 **`OnAnyDeath` / `OnAllyDeath`（他人の死を読む側）は混ぜない**——8 本（Necro / Contagion / Pursuer / Taillight / Reviver / Scale / Forfeit / Toll）は**1つも免除に使っていない**。
 混ぜると墓守リィカ・疫みのラウ・追い打ちのハギを含む死軸が丸ごと免除される。
 

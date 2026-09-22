@@ -65,8 +65,9 @@
 | 52 | `haste` | `HasteRule` | `HasteRule { Pick = None }` | ○ | `mark` / `haste` | 第149期 | ○ |
 | 53 | `ward` | `WardRule` | `WardRule { Return = Burst, Percent = 50, Threshold = 40, Drip = 10, Cost = Forfeit, BurdenPercent = 50, LadenPer = 10 }` |  | `ward` / `wardcost` | 第153期 | ○ |
 | 54 | `indulgence` | `IndulgenceRule` | `IndulgenceRule { Advance = 30, Threshold = 60, Contracts = 0, Blast = Single }` |  | `toll` | 第155期 | ○ |
+| 55 | `ash` | `AshRule` | `AshRule { CountHavoc = True, CountDot = True, Multiplier = 100, FalloutOnDeath = True }` |  | `susu` | 第179期 | ○ |
 
-引数 54 本（`verbose` と観測子を除く）。
+引数 55 本（`verbose` と観測子を除く）。
 
 **`= default(T)` は「その規則が既定で何もしない」の機械的な手がかりであって、判定ではない。**
 採否そのものは**既定値の列**を読むこと——`ThornRule { Wound = None }` は残置、`SoakRule { Poison = True, Burn = False }` は毒側だけ採用、という具合に既定値が全部を語る。
@@ -75,6 +76,7 @@
 
 | 型 | 既定値 | `Run` の引数 | 測った診断 | 初出（design/） |
 |---|---|:-:|---|---|
+| `AshRule` | `AshRule { CountHavoc = True, CountDot = True, Multiplier = 100, FalloutOnDeath = True }` | ○ | `susu` | 第179期 |
 | `BearRule` | `BearRule { ArmorPerDull = 2 }` | ○ | `curse` / `dull` / `ledger` | 第42期 |
 | `BetrayRule` | `BetrayRule { Enabled = True, Respawn = True }` | ○ | `betray` / `tempo` / `ledger` | 第103期 |
 | `BlazeRule` | `BlazeRule { Targets = Both, Allies = True, Foes = True }` | ○ | `blaze` / `ledger` / `ember` | 第59期 |
@@ -132,7 +134,7 @@
 | `WoundRule` | `WoundRule { Enabled = True, Census = False }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期 |
 | `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `goad` / `wave2` / `ledger` / `parry` / `brace` | 第35期 |
 
-56 型。
+57 型。
 
 ## 3. 規則が使う列挙型
 
