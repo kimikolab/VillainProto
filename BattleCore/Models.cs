@@ -2107,7 +2107,19 @@ public enum BattleEventKind
     /// <c>Amount</c> = 吸った量、<c>StatusRemaining</c> = 吸った後にその駒に残った量。
     /// <b>どの規則も読まない。</b> <c>verbose</c> のときしか積まない。</para>
     /// </summary>
-    StatusDrain
+    StatusDrain,
+
+    /// <summary>
+    /// 竦み（<see cref="StatusKeys.Cowed"/>）を<b>消費した瞬間</b>（第185期 追補3・<b>表示専用</b>）。
+    /// 付いた瞬間は <see cref="StatusGain"/>（<c>Text = "cowed"</c>・<c>SpreadFromId</c> = 悲鳴の出どころ）の側。
+    ///
+    /// <para><c>TargetId</c> = 竦みを消費した駒、<c>ActorId</c> = 竦ませたシガ、<c>SpreadFromId</c> = 悲鳴の出どころ
+    /// （付いたときの <c>StatusGain</c> と同じ値）、<c>Text</c> = <see cref="CowedLabels"/>
+    /// ——<see cref="CowedLabels.Lost"/>（竦みで手番を失った）／<see cref="CowedLabels.Absorbed"/>
+    /// （痺れ・転倒・組み付きで失う手番に竦みが吸われた。二重には取らない）。
+    /// <b>どの規則も読まない。</b> <c>verbose</c> のときしか積まない。末尾に足したので既存の種類の番号は動かない。</para>
+    /// </summary>
+    Cowed
 }
 
 /// <summary>
@@ -2178,6 +2190,19 @@ public static class StunLabels
 /// <para><see cref="InterceptLabels"/> と同じく定数で持つ——文字列リテラルを直に書くと、
 /// 走査が「該当なし」と「引けなかった」を区別できない（第117期）。</para>
 /// </summary>
+/// <summary><see cref="BattleEventKind.Cowed"/> の <c>Text</c>（第185期 追補3・表示専用）。</summary>
+public static class CowedLabels
+{
+    /// <summary>竦みで手番を失った（行動順ループの中・竦み自身が理由）。</summary>
+    public const string Lost = "手番喪失";
+
+    /// <summary>痺れ・転倒・組み付きで失う手番に、竦みが一緒に吸われた（竦みの分はもう1手番を取らない）。</summary>
+    public const string Absorbed = "吸収";
+
+    /// <summary>両方。</summary>
+    public static readonly string[] All = { Lost, Absorbed };
+}
+
 public static class StaggerLabels
 {
     /// <summary>転んだ（<see cref="StatusKeys.Stagger"/> が立った）。ターン頭。</summary>

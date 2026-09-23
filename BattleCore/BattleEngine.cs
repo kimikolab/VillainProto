@@ -3746,12 +3746,32 @@ public sealed class BattleContext
     }
 
     /// <summary>竦みを消費する（手番を失ったとき）。ハメ防止の印を立てる。</summary>
-    void ConsumeCowed(UnitState u)
+    /// <param name="phase"><see cref="CowedLabels"/>——竦み自身で手番を失ったか、別の理由で失う手番に吸われたか（表示専用）。</param>
+    void ConsumeCowed(UnitState u, string phase = CowedLabels.Absorbed)
     {
         if (u.RawCounter(StatusKeys.Cowed) <= 0) return;
         u.SetCounter(StatusKeys.Cowed, 0);
         u.SetCounter(ShameTrait.GuardKey, 1);
         TallyOf(u).CowedLost++;
+        EmitCowed(u, phase, u.RawCounter(ShameTrait.ByKey) - 1, u.RawCounter(ShameTrait.FromKey) - 1);   // 第185期 追補3・表示専用
+        u.SetCounter(ShameTrait.ByKey, 0);
+        u.SetCounter(ShameTrait.FromKey, 0);
+    }
+
+    /// <summary>竦みを消費した瞬間を台本に打つ（第185期 追補3・<b>表示専用</b>。<c>verbose</c> のときだけ）。</summary>
+    internal void EmitCowed(UnitState target, string phase, int byId, int fromId)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Cowed,
+            Turn = _turn,
+            ActorId = byId >= 0 ? byId : null,          // 竦ませたシガ
+            SpreadFromId = fromId >= 0 ? fromId : null, // 悲鳴の出どころ
+            TargetId = target.InstanceId,
+            HpAfter = target.Hp,
+            Text = phase,
+        });
     }
 
     /// <summary>組み付かれて手番を失った。止めた側（組み付いている駒）にも数える。</summary>
@@ -6924,7 +6944,7 @@ public sealed class BattleContext
             if (actor.RawCounter(StatusKeys.Cowed) > 0)
             {
                 actor.SetCounter(StatusKeys.IdleTurn, Turn);
-                ConsumeCowed(actor);
+                ConsumeCowed(actor, CowedLabels.Lost);
                 TallyOf(actor).StallCowed++;
                 if (ScapegoatActive) NoteScapegoatSkip(actor);
                 if (DeepWatch) NoteDeepStalled(actor);

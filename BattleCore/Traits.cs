@@ -10975,6 +10975,12 @@ public sealed class ShameTrait : Trait
     /// </summary>
     public const string GuardKey = "cowGuard";
 
+    /// <summary>
+    /// 竦ませた駒（シガ）と悲鳴の出どころ（責められた敵）の <c>InstanceId + 1</c>（第185期 追補3・<b>表示専用</b>）。
+    /// 竦んだ側のカウンタに控え、消費の瞬間の台本（<c>BattleEventKind.Cowed</c>）に載せて 0 に戻す。<b>どの規則も読まない。</b>
+    /// </summary>
+    public const string ByKey = "cowBy", FromKey = "cowFrom";
+
     public override TraitId Id => TraitId.Shame;
 
     /// <summary>
@@ -11000,6 +11006,8 @@ public sealed class ShameTrait : Trait
             if (u.RawCounter(StatusKeys.Cowed) > 0) continue;               // 既に竦んでいる
             if (u.RawCounter(GuardKey) > 0) { blocked++; continue; }       // 竦みが明けたばかり（ハメ防止）
             u.SetCounter(StatusKeys.Cowed, 1);
+            u.SetCounter(ByKey, self.InstanceId + 1);       // 表示専用（消費の瞬間の台本に載せる）
+            u.SetCounter(FromKey, target.InstanceId + 1);   // 表示専用
             ctx.EmitStatusGain(u, StatusKeys.Cowed, 1, self, spreadFrom: target);   // 表示専用（竦んだ瞬間・悲鳴の出どころ）
             cowed++;
         }
