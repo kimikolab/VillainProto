@@ -1438,6 +1438,7 @@ static class TraitHookMap
         [TraitId.Shame]       = new[] { "OnAfterAttack", Engine },               // 第185期（標的の選好は SelectTargetChain）
         [TraitId.Footing]     = new[] { "OnAction", Engine },                    // 第185期（層の軽減・範囲の盾は engine）
         [TraitId.Planted]     = new[] { Engine },                                // 第185期（SwapSlots の入口）
+        [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Mender]      = new[] { "OnTurnStart", "OnAction" },
         [TraitId.Amplifier]   = new[] { "OnTurnStart", "OnAction" },
         [TraitId.Contagion]   = new[] { "OnAnyDeath" },

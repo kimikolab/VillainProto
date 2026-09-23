@@ -21,15 +21,15 @@ static partial class Sora186Diag
         switch (mode)
         {
             case "phase0": Phase0(); return;
+            case "run": StageRun(); return;
+            case "ledger": Ledger(); return;
+            case "bench": Bench(); return;
+            case "check": Check(arg); return;
             default:
-                if (RunMore(mode, arg)) return;
                 Console.WriteLine("sora186: モードは phase0 / run / ledger / bench / check。");
                 return;
         }
     }
-
-    static partial void RunMoreCore(string mode, string arg, ref bool handled);
-    static bool RunMore(string mode, string arg) { bool h = false; RunMoreCore(mode, arg, ref h); return h; }
 
     static IEnumerable<(string Band, string Name, Formation F)> Bands()
     {

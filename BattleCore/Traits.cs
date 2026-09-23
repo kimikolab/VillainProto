@@ -314,6 +314,10 @@ public enum TraitId
                 // 範囲の盾: 薙ぎ・貫き・全体が自分と隣の味方に同時に当たるとき、隣の味方の分を代わりに受ける
     Planted,    // 据えた足: 入れ替えを受け付けない（この駒を動かす入れ替えは空振りする）。踏みしめの代金。外せば `yP`
 
+    // --- 第186期で足した札（逸らしのソラの2枚目） ---
+    Deflect,    // 逸らし: 自分への単体攻撃のダメージを、半分だけ自分が受け、残り半分を「逸らし（Divert）で標を付けた敵」へ逸らす。
+                // 逸らした分は攻撃ではなくダメージの受け渡し（出どころは元の攻撃者のまま・同士討ち）。判定は engine（ApplyDamage の入口）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -3986,12 +3990,17 @@ public sealed class DivertTrait : Trait
         // （席番号の若い順で決めないための唯一の窓口。鏡像の配置を同値にする）。
         var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId)).ToList();
         int focused = 0;
+        // 第186期。逸らし（`DeflectTrait`）の宛先の記憶。**最初に指差した1体**だけを覚える。
+        // 保持者でなければ書かない（書いても盤面は動かないが、`Counters` に知らないキーを増やさない）。
+        bool remember = self.HasTrait(TraitId.Deflect);
+        if (remember) self.SetCounter(DeflectTrait.TargetKey, 0);
         for (int i = 0; i < ctx.Divert.TargetCount && foes.Count > 0; i++)
         {
             int top = foes.Max(f => f.Hp);
             UnitState? pick = ctx.PickOne(foes.Where(f => f.Hp == top).ToList());
             if (pick is null) break;
             foes.Remove(pick);   // 同じ相手に2回付けない（TargetCount は「体数」）
+            if (remember && i == 0) self.SetCounter(DeflectTrait.TargetKey, pick.InstanceId + 1);
 
             bool fresh = pick.Counter(StatusKeys.Marked) <= 0;
             pick.SetCounter(StatusKeys.Marked, 1);
@@ -11092,6 +11101,47 @@ public sealed class FootingTrait : Trait
 }
 
 /// <summary>
+/// 逸らし（第186期・逸らしのソラの2枚目の札）。<b>本体は engine</b>（<c>ApplyDamageBody</c> の入口）で、
+/// この札は定数と宛先の記憶を持つだけ。
+///
+/// <para>ソラへの<b>単体攻撃</b>（主目標への一撃・<c>pattern == Single</c>）のダメージを、
+/// <see cref="DeflectPercent"/> だけ「ソラが逸らし（<see cref="DivertTrait"/>）で標を付けた敵」へ逸らし、
+/// 残りをソラが受ける。<b>割るのは素の量</b>——ソラ側の増減（惨禍・ヒサの半減・巨躯・破片・軛）は
+/// ソラの取り分にだけ掛かり、逸らした分には敵の側の段（§1 の +50%・破片・軛）が掛かる。</para>
+///
+/// <para>逸らした分は<b>攻撃ではなくダメージの受け渡し</b>で、出どころ（<c>source</c>）は元の攻撃者のまま
+/// （<c>isFriendlyFire</c>・同士討ちとして数える）。<b>反射ではない</b>——半分は必ずソラが受け、
+/// 返す先は攻撃者ではなくソラが指差した敵である（第137期に書き戻した「反射は採らない」の判断とは別物）。</para>
+///
+/// <para>宛先は <see cref="TargetKey"/>（<c>InstanceId + 1</c>）の記憶で引く。標は二値で出どころを持たないので、
+/// ザンが付けた標と区別するには記憶が要る。<b>条件は宛先が生きていることだけ</b>——トメが標を消費しても
+/// 指差しは次のターン頭まで残る（§1 の +50% は標が残っているときだけ乗る）。宛先がいなければソラが全部受ける。</para>
+/// </summary>
+public sealed class DeflectTrait : Trait
+{
+    /// <summary>逸らす割合（%）。指示書が<b>測る前に固定</b>した値。</summary>
+    public const int DeflectPercent = 50;
+
+    /// <summary>逸らしの宛先（最後に指差した敵の <c>InstanceId + 1</c>）。0 は未設定。<see cref="DivertTrait"/> が書く。</summary>
+    public const string TargetKey = "divertTarget";
+
+    public override TraitId Id => TraitId.Deflect;
+
+    /// <summary>いま逸らせる相手（生きている宛先）。いなければ null。</summary>
+    public static UnitState? Target(BattleContext ctx, UnitState self)
+    {
+        int id = self.RawCounter(TargetKey) - 1;
+        if (id < 0) return null;
+        foreach (UnitState u in ctx.AllUnits)
+            if (u.InstanceId == id) return u.IsAlive ? u : null;
+        return null;
+    }
+
+    // `InstanceId` は戦闘ごとに振り直されるので、持ち越すと次の戦闘の無関係な駒に当たる（執着と同じ理由）。
+    public override void OnCarryOver(UnitState self) => self.SetCounter(TargetKey, 0);
+}
+
+/// <summary>
 /// 据えた足（第185期・踏みしめの代金）。<b>入れ替えを受け付けない</b>——この駒を動かす入れ替え
 /// （喧噪・逃げ回る・突き返し・曝き・逃亡・身構え・棘守り）は<b>空振りする</b>。
 /// 判定は <see cref="BattleContext.SwapSlots"/> の入口1箇所。<b>札そのものは挙動を持たない。</b>
@@ -11251,6 +11301,7 @@ public static class TraitCatalog
         new ShameTrait(),      // 第185期
         new FootingTrait(),    // 第185期
         new PlantedTrait(),    // 第185期
+        new DeflectTrait(),    // 第186期
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期

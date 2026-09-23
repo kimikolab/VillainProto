@@ -3689,6 +3689,15 @@ public sealed class BattleContext
     /// <summary>矢面（ヒサ）の保持者。<c>ApplyDamage</c> の半減の判定を、保持者がいない盤面で1回も走らせないため。</summary>
     readonly List<UnitState> _beckonHolders = new();
 
+    /// <summary>逸らし（第186期・ソラ）の保持者。<c>ApplyDamage</c> の入口の判定を、保持者がいない盤面で1回も走らせないため。</summary>
+    readonly List<UnitState> _deflectHolders = new();
+
+    /// <summary>
+    /// いま入れようとしている <c>ApplyDamage</c> が逸らしの受け渡しであるときの、逸らした駒（第186期）。
+    /// <b>本体の最初の行で読んで消す</b>（引数を足さずに、その1回の呼び出しにだけ札を渡すため）。
+    /// </summary>
+    UnitState? _deflectFrom;
+
     /// <summary>敵の標の出どころ（<c>InstanceId</c> → 最後に付けた書き手）。<b>計数専用。</b></summary>
     readonly Dictionary<int, MarkOrigin> _markOrigin = new();
 
@@ -4654,6 +4663,7 @@ public sealed class BattleContext
             || u.HasTrait(TraitId.Goad) || u.HasTrait(TraitId.Scapegoat)
             || u.HasTrait(TraitId.Beckon) || u.HasTrait(TraitId.Vendetta)) MarkActive = true;   // 第184期に2本
         if (u.HasTrait(TraitId.Beckon)) _beckonHolders.Add(u);   // 第184期（半減の判定の短絡）
+        if (u.HasTrait(TraitId.Deflect)) _deflectHolders.Add(u); // 第186期（逸らしの判定の短絡）
         // 第185期: 組み付き・見せしめ（手番の頭の2つのキーと標的の選好を短絡させる）／踏みしめ（範囲の盾・層の軽減）／
         // 据えた足（入れ替えの空振り）。**保持者がいなければ比較1つで抜ける**——既存の行が 0 件差分であることの根拠。
         if (u.HasTrait(TraitId.Grapple) || u.HasTrait(TraitId.Shame)) _restrainLive = true;
@@ -6180,7 +6190,51 @@ public sealed class BattleContext
                          bool singleHit, bool hexShare,
                          AttackPattern? pattern, bool levy)
     {
+        // 逸らしの受け渡しの札（第186期）。**ここで読んで消す**——この呼び出しの中で起きる
+        // 別の ApplyDamage（中継・死亡トリガー）に札を漏らさないため。
+        UnitState? deflectFrom = _deflectFrom;
+        _deflectFrom = null;
+
         if (!target.IsAlive || amount <= 0) return;
+
+        // 逸らし（第186期・DeflectTrait・ソラ）: 単体攻撃のダメージを、半分だけ本人が受け、残り半分を
+        // 「逸らし（Divert）で標を付けた敵」へ逸らす。**入口に置く**（棘守りの上限・駒の被ダメ修正・惨禍より前）
+        // ——逸らすのは素の攻撃の量で、ソラ側の増減（惨禍・ヒサの半減・巨躯・破片・軛）はソラの取り分にだけ掛かる。
+        // 逸らした分は敵への別の呼び出しで、そちらでは敵の側の段（§1 の +50%・破片・軛）が掛かる。
+        // **逸らす方を先に入れる**（棘守りの中継と同じ順。ソラが倒れても逸らした分は既に届いている）。
+        // 対象は「敵陣営の出どころを持つ主目標への一撃」だけ（`pattern == Single` は PerformAttack の主目標にしか立たない）。
+        // 刻み・徴収・中継・共有・同士討ちは逸らさない。**保持者がいなければリストが空で比較1つで抜ける。**
+        bool deflectedHere = false;
+        if (_deflectHolders.Count > 0 && pattern == AttackPattern.Single && source is not null
+            && source.TeamId != target.TeamId && !burnTick && !levy && !relayed && !hexShare && !isFriendlyFire
+            && target.HasTrait(TraitId.Deflect))
+        {
+            UnitTally dt = TallyOf(target);
+            UnitState? to = DeflectTrait.Target(this, target);
+            int moved = to is null ? 0 : amount * DeflectTrait.DeflectPercent / 100;
+            if (to is null) dt.DeflectNoTarget++;
+            else if (moved > 0)
+            {
+                amount -= moved;
+                deflectedHere = true;
+                dt.DeflectHits++;
+                dt.DeflectMoved += moved;
+                if (to == source) dt.DeflectSelf++;   // 計数のみ（殴った本人が宛先＝反射と同じ形）
+                Log($"    {target.Name} が {source.Name} の一撃を {to.Name} へ逸らした（{moved}）", LogKind.Trigger);
+                UnitTally tt0 = TallyOf(to);
+                long before = tt0.DamageTaken;
+                _deflectFrom = target;
+                ApplyDamage(to, moved, source, isFriendlyFire: true);
+                _deflectFrom = null;
+                dt.DeflectLanded += tt0.DamageTaken - before;
+                if (!to.IsAlive)
+                {
+                    dt.DeflectKills++;
+                    if (source.IsAlive && source.HasTrait(TraitId.Executioner)) dt.DeflectExecFeed++;   // 計数のみ
+                }
+                if (!target.IsAlive || amount <= 0) return;
+            }
+        }
 
         // 棘守り（カド）の肩代わり上限。**素の入力ダメージを ThornGuardTrait.AbsorbCap で切り、
         // 超過分を守った相手へ素のまま中継する。** 惨禍・据え・散開・萎縮より前に置いてあるのは、
@@ -6267,8 +6321,10 @@ public sealed class BattleContext
         // 破片・身構え・軛より前）——上限の前に置くので「1発は Cap を超えない」は守られる。
         // **敵陣営の標持ちだけ・攻撃によるダメージだけ**（相手陣営の出どころがあり、刻み・徴収・中継・共有ではない）。
         // **増幅は加算**（惨禍と同じ式）。既定の判定は `VulnerablePercent > 0` と陣営の比較で短絡する。
+        // 第186期: 逸らしの受け渡し（`deflectFrom`）は出どころが同じ陣営でも §1 に乗せる（指示書 §1-1）。
+        // 上乗せの帳簿は殴った敵ではなく**逸らした駒**に付ける。
         if (MarkRules.VulnerablePercent > 0 && target.TeamId != PlayerTeam
-            && source is not null && source.TeamId != target.TeamId
+            && source is not null && (source.TeamId != target.TeamId || deflectFrom is not null)
             && !burnTick && !levy && !relayed && !hexShare
             && target.RawCounter(StatusKeys.Marked) > 0)
         {
@@ -6279,7 +6335,8 @@ public sealed class BattleContext
                 int oi = _markOrigin.TryGetValue(target.InstanceId, out MarkOrigin o) ? (int)o : 0;
                 MarkVulnHits[oi]++;
                 MarkVulnAdded[oi] += extra;
-                TallyOf(source).MarkVulnDealt += extra;
+                if (deflectFrom is not null) TallyOf(deflectFrom).DeflectVulnAdded += extra;
+                else TallyOf(source).MarkVulnDealt += extra;
                 Log($"    指差された {target.Name} は深く傷ついた（+{extra}）", LogKind.Trigger);
             }
         }
@@ -6331,6 +6388,7 @@ public sealed class BattleContext
                 if (saved > 0)
                 {
                     amount -= saved;
+                    if (deflectedHere) TallyOf(target).DeflectBeckonStack++;   // 第186期（計数のみ）
                     BeckonGuardHits++;
                     BeckonGuardSaved += saved;
                     TallyOf(holder).BeckonGuardSaved += saved;
@@ -6722,7 +6780,9 @@ public sealed class BattleContext
             Pattern = pattern,
             Reaction = InReaction || InInterrupt,
             // 第182期・表示専用。受け渡しの段だけ出どころ（元の被弾者）を載せる
-            ShareFromId = hexShare ? _hexShareFrom : null
+            ShareFromId = hexShare ? _hexShareFrom : null,
+            // 第186期・表示専用。逸らしの受け渡しの段だけ、逸らした駒（ソラ）を載せる
+            DeflectFromId = deflectFrom?.InstanceId
         });
 
         if (source is not null && !isFriendlyFire)
@@ -6761,6 +6821,7 @@ public sealed class BattleContext
 
         UnitTally tt = TallyOf(target);
         tt.DamageTaken += amount;
+        if (deflectedHere) tt.DeflectKeptTaken += amount;   // 第186期（計数のみ）
         // 第135期。**経路別の帳簿**（既定では1行も走らない）。`target.Hp <= 0` がそのまま
         // 「この一撃で倒れた」——死亡判定（`HandleDeath`）はこの数行下にあり、
         // 死ぬ経路は `ApplyDamage` のここ1箇所しかない。

@@ -1610,6 +1610,19 @@ public sealed class UnitTally
                 FootingSteps, FootingFull, FootingSaved, ShieldTakes, ShieldTaken, ShieldCovered, PlantedRefused,
                 FootingLayerSum, FootingLayerTurns, PlantedRefusedFoe, ShieldHalved, FootingHitSteps;
 
+    /// <summary>
+    /// 第186期の逸らし（ソラ・保持者の側）。<b>計数専用で、どの規則も読まない。</b>
+    ///
+    /// <para><c>DeflectHits</c> 逸らした回数 ／ <c>DeflectMoved</c> 逸らした名目量（素の量の半分）／
+    /// <c>DeflectLanded</c> 宛先が実際に受けた量（敵の段・§1 込み・過剰を含む）／ <c>DeflectVulnAdded</c> そのうち §1 の上乗せ ／
+    /// <c>DeflectKills</c> 逸らした分で宛先が倒れた回数 ／ <c>DeflectNoTarget</c> 宛先がいなくて全部受けた単体の一撃 ／
+    /// <c>DeflectBeckonStack</c> 逸らした一撃にヒサの半減も重なった回数 ／ <c>DeflectKeptTaken</c> 逸らした一撃でソラが実際に受けた量 ／
+    /// <c>DeflectSelf</c> 宛先が殴った本人だった回数（＝その一撃に限って反射と同じ形になる）／
+    /// <c>DeflectExecFeed</c> 逸らした分で倒した撃破者（元の攻撃者）が処刑持ちだった回数（勇者候補が味方を倒して育つ）。</para>
+    /// </summary>
+    public long DeflectHits, DeflectMoved, DeflectLanded, DeflectVulnAdded, DeflectKills, DeflectNoTarget,
+                DeflectBeckonStack, DeflectKeptTaken, DeflectSelf, DeflectExecFeed;
+
     /// <summary>据えの層が最大（3）に届いた最初のターン（0 は届かなかった・第185期 追補4・<b>計数のみ</b>）。戦闘ごとの値で、Merge は最小を取る。</summary>
     public int FootingFullAt;
 
@@ -1804,6 +1817,10 @@ public sealed class UnitTally
         ShieldTakes += o.ShieldTakes; ShieldTaken += o.ShieldTaken; ShieldCovered += o.ShieldCovered;
         PlantedRefused += o.PlantedRefused; FootingLayerSum += o.FootingLayerSum; FootingLayerTurns += o.FootingLayerTurns;
         PlantedRefusedFoe += o.PlantedRefusedFoe; ShieldHalved += o.ShieldHalved; FootingHitSteps += o.FootingHitSteps;
+        DeflectHits += o.DeflectHits; DeflectMoved += o.DeflectMoved; DeflectLanded += o.DeflectLanded;
+        DeflectVulnAdded += o.DeflectVulnAdded; DeflectKills += o.DeflectKills; DeflectNoTarget += o.DeflectNoTarget;
+        DeflectBeckonStack += o.DeflectBeckonStack; DeflectKeptTaken += o.DeflectKeptTaken;   // 第186期
+        DeflectSelf += o.DeflectSelf; DeflectExecFeed += o.DeflectExecFeed;
         if (o.FootingFullAt > 0 && (FootingFullAt == 0 || o.FootingFullAt < FootingFullAt)) FootingFullAt = o.FootingFullAt;
         ShuffleAllySwaps += o.ShuffleAllySwaps; ShuffleFoeSwaps += o.ShuffleFoeSwaps;
         ShuffleAllyRefused += o.ShuffleAllyRefused;
@@ -2387,6 +2404,15 @@ public sealed class BattleEvent
     /// <c>ShareFromId</c> → <c>TargetId</c> に引く。<b>どの規則も読まない。</b></para>
     /// </summary>
     public int? ShareFromId { get; init; }
+
+    /// <summary>
+    /// 逸らし（第186期・<see cref="DeflectTrait"/>）で出た <c>Damage</c> のときだけ、
+    /// <b>逸らした駒（ソラ）</b>の InstanceId が入る（<b>表示専用</b>）。それ以外は <c>null</c>。
+    /// <para><c>ActorId</c> は元の攻撃者のまま（同士討ちとして数える）。線は
+    /// <c>DeflectFromId</c> → <c>TargetId</c> に引く。<b>どの規則も読まない。</b>
+    /// <c>ShareFromId</c>（呪い）とは別の欄にしてある——再生側が呪いの演出に使っているため。</para>
+    /// </summary>
+    public int? DeflectFromId { get; init; }
 
     /// <summary>
     /// 毒の <c>StatusGain</c> のときだけ、<b>付与経路</b>（<see cref="BattleCore.PoisonRoute"/>）が入る

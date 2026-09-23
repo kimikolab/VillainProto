@@ -191,6 +191,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.Grapple]    = (HcBothL,  "敵を掴んで止めるのと、掴んでいる間は自分も何もできず殴られるとほどけるのが1つの動作"),
         [TraitId.Shame]      = (HcPlusL,  "動けない敵を優先して狙い、責めると隣の敵を竦ませる。マイナスは責め苦の側"),
         [TraitId.Footing]    = (HcPlusL,  "手番で層を積んで被ダメージを減らし、隣の味方への範囲攻撃を代わりに受ける。代金は別の札（`Planted`）"),
+        [TraitId.Deflect]    = (HcPlusL,  "自分への単体の一撃の半分を、指差した敵へ逸らす。代金は `Divert` の側（自分に刺さる標）"),
         [TraitId.Planted]    = (HcMinusL, "入れ替えを受け付けないだけ。踏みしめの代金で、外せば `yP` になる"),
     };
 
