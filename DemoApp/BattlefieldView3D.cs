@@ -283,6 +283,10 @@ public partial class BattlefieldView3D : Control
     {
         _shieldCowedGeneration++;
         TormentHitPlays = 0;
+        DeflectionPlays = 0;
+        ThrustPlays = 0;
+        ThrustMarkedHits = 0;
+        _thrustGeneration++;
         _attackAudio.StopAll();
         // 波の番号で背景を選ぶ。表示名や戦闘ログの文字列は判定に使わない。
         bool fortress = stageIndex == 3;
@@ -497,7 +501,11 @@ public partial class BattlefieldView3D : Control
 
     public void ShowVictoryPortraits()
     {
-        foreach (BattlePawn3D pawn in _pawns.Values) pawn.AnimateVictory();
+        foreach (BattlePawn3D pawn in _pawns.Values)
+        {
+            pawn.SetThrustCharge(0);
+            pawn.AnimateVictory();
+        }
     }
 
     public BattlePawn3D? FindPawn(int? instanceId)
@@ -560,12 +568,15 @@ public partial class BattlefieldView3D : Control
         bool friendly = false,
         bool advance = true,
         bool holdPosition = false,
-        Func<Task>? shieldImpact = null)
+        Func<Task>? shieldImpact = null,
+        int? thrustCharge = null,
+        Action<BattlePawn3D>? thrustImpact = null)
     {
         if (from is null || to is null) return;
         Color color = friendly ? UiKit.Violet : reaction ? UiKit.Gold : from.Team == BattleContext.PlayerTeam ? UiKit.Player : UiKit.Enemy;
         List<BattlePawn3D> hits = impacted.Distinct().ToList();
         if (hits.Count == 0) hits.Add(to);
+        if (thrustCharge is int attackStacks) from.SetThrustCharge(attackStacks);
 
         // Advances は表示専用。踏み込む駒だけが標的の手前まで移動し、
         // 到着後に攻撃エフェクトを出してから元の席へ戻る。
@@ -573,10 +584,19 @@ public partial class BattlefieldView3D : Control
         if (holdPosition) from.HoldComboPosition();
         bool charged = !reaction && from.IsCharging;
         if (!reaction) from.ReleaseCharge();
-        _attackAudio.PlayAttack(from.UnitId, from.Team, pattern, reaction, charged);
-        CameraPunch((from.GlobalPosition + to.GlobalPosition) * 0.5f, pattern);
+        bool stagedThrust = thrustCharge is not null && pattern == AttackPattern.Pierce && shieldImpact is null;
+        if (!stagedThrust)
+        {
+            if (thrustCharge is int soundCharge) _attackAudio.PlayThrust(from.UnitId, from.Team, soundCharge);
+            else _attackAudio.PlayAttack(from.UnitId, from.Team, pattern, reaction, charged);
+            CameraPunch((from.GlobalPosition + to.GlobalPosition) * 0.5f, pattern);
+        }
 
+        if (thrustCharge is not null && (shieldImpact is not null || pattern != AttackPattern.Pierce))
+            from.SetThrustCharge(0);
         if (shieldImpact is not null) await shieldImpact();
+        else if (thrustCharge is int stacks && pattern == AttackPattern.Pierce)
+            await ShowThrust(from, hits, stacks, thrustImpact);
         else switch (pattern)
         {
             case AttackPattern.Sweep:
@@ -618,7 +638,7 @@ public partial class BattlefieldView3D : Control
                 break;
         }
 
-        if (!holdPosition) from.ReturnFromAttack();
+        if (IsInstanceValid(from) && from.IsInsideTree() && !holdPosition) from.ReturnFromAttack();
     }
 
     public void BeginCharge(BattlePawn3D? pawn, int percent)

@@ -1118,7 +1118,11 @@ public partial class Main : Control
         _battleField.ResetBindings();
         foreach (var pawn in _battleField.Pawns.Values) pawn.SetFrightened(false);
         foreach (var pawn in _battleField.Pawns.Values) pawn.SetStatusIcon(StatusKeys.Cowed, false);
-        foreach (var pawn in _battleField.Pawns.Values) pawn.CancelCharge();
+        foreach (var pawn in _battleField.Pawns.Values)
+        {
+            pawn.CancelCharge();
+            pawn.SetThrustCharge(0);
+        }
         Color color = _result.PlayerWon ? UiKit.Heal : UiKit.Hurt;
         if (_result.PlayerWon) _battleField.ShowVictoryPortraits();
         _battleField.ShowBanner(verdict, color, 2.2);
@@ -1240,8 +1244,13 @@ public partial class Main : Control
 
             case BattleEventKind.Attack:
             {
+                int attackToken = _playToken;
                 AttackPattern pattern = e.Pattern ?? AttackPattern.Single;
                 IReadOnlyList<BattlePawn3D> impactTargets = FindAttackTargets(eventIndex, e);
+                if (e.ThrustCharge is not null)
+                    impactTargets = ThrustDamageIndices(eventIndex, e)
+                        .Select(i => _battleField.FindPawn(_result!.Events[i].TargetId))
+                        .OfType<BattlePawn3D>().Distinct().ToArray();
                 var shieldShares = FindShieldShares(eventIndex);
                 // 溜めの解放は踏み込み後の着弾で行う。手番外の攻撃では消費しない。
                 bool continuingCombo = actor is not null && _comboEnds.ContainsKey(actor);
@@ -1257,7 +1266,12 @@ public partial class Main : Control
                 await _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire,
                     advance: !continuingCombo, holdPosition: actor is not null && _comboEnds.ContainsKey(actor),
                     shieldImpact: shieldShares.Count == 0 ? null :
-                        () => _battleField.ShowRangeShield(actor, impactTargets, shieldShares, pattern, _speed));
+                        () => _battleField.ShowRangeShield(actor, impactTargets, shieldShares, pattern, _speed),
+                    thrustCharge: e.ThrustCharge,
+                    thrustImpact: pawn => {
+                        if (attackToken == _playToken) ApplyThrustDamage(eventIndex, e, pawn);
+                    });
+                if (attackToken != _playToken || !_battleMode) return;
                 // 第178期 自己検査 (e)。**計数だけ**（上の1行が「1発ぶんの絵と音」なので、ここで数える）。
                 _attackPlays++;
                 _attackRun = e.ActorId == _attackRunActor ? _attackRun + 1 : 1;
@@ -1300,6 +1314,16 @@ public partial class Main : Control
                 if (e.ShareFromId is not null)
                 {
                     await PlayHexShares(eventIndex);
+                    break;
+                }
+                if (e.DeflectFromId is not null)
+                {
+                    int deflectToken = _playToken;
+                    await _battleField.ShowDeflection(actor, _battleField.FindPawn(e.DeflectFromId), target, _speed);
+                    if (deflectToken != _playToken || !_battleMode) return;
+                    if (e.ThrustCharge is int stacks) _battleField.FindPawn(e.DeflectFromId)?.SetThrustCharge(stacks);
+                    ShowDamage(eventIndex, e, actor, target, withSource: false);
+                    await Delay(0.10);
                     break;
                 }
                 // 棘（カド）・仇討ちは PerformAttack を通らず、Reaction 付き Damage から始まる。
@@ -1737,10 +1761,11 @@ public partial class Main : Control
                 target, e.Amount, "肩代わり", UiKit.Muted);
         (string source, Color sourceColor) = DamageSource(eventIndex, e, actor);
         if (e.ShareFromId is not null) sourceColor = HexMudFx.Tint;
+        if (e.DeflectFromId is not null) sourceColor = new Color("ffe3a0");
         _battleField.DamagePopup(target, e.Amount, source, sourceColor, e.Amount >= 25, withSource, poison);
         if (!poison && e.ShareFromId is null)
             _battleField.Impact(target, sourceColor,
-                                _statusCauseByDamageIndex.ContainsKey(eventIndex), e.FriendlyFire);
+                                _statusCauseByDamageIndex.ContainsKey(eventIndex), e.FriendlyFire && e.DeflectFromId is null);
         AppendLog($"  [color=#{sourceColor.ToHtml(false)}]{source}[/color] → {NameOf(e.TargetId)}  "
                   + $"[color=#{(poison ? UiKit.Poison : UiKit.Hurt).ToHtml(false)}]−{e.Amount}[/color]");
     }
@@ -1775,6 +1800,7 @@ public partial class Main : Control
             if (candidate.Kind == BattleEventKind.TurnStart) break;
             if (candidate.Kind == BattleEventKind.Attack && candidate.ActorId == attack.ActorId) break;
             if (candidate.Kind is not (BattleEventKind.Damage or BattleEventKind.Parry)) continue;
+            if (candidate.DeflectFromId is not null) continue; // 逸らしはマントからの飛行を待つ。
             if (candidate.ActorId != attack.ActorId || candidate.Pattern != attack.Pattern) continue;
             if (!_batchedDamageIndices.Add(i)) continue;
             if (candidate.Kind == BattleEventKind.Parry) ShowParry(candidate);
@@ -1815,7 +1841,7 @@ public partial class Main : Control
             if (candidate.Kind is BattleEventKind.TurnStart or BattleEventKind.Attack or BattleEventKind.Highlight) break;
             if (candidate.Kind is not (BattleEventKind.Damage or BattleEventKind.Parry)) continue;
             if (candidate.ActorId != highlight.ActorId || candidate.Pattern is not null) continue;
-            if (candidate.Relayed || candidate.ShareFromId is not null) continue;   // 中継・呪いは別の絵（§5-1 の 5）
+            if (candidate.Relayed || candidate.ShareFromId is not null || candidate.DeflectFromId is not null) continue;
             hits.Add(i);
         }
         // 灰は敵が最後の1体でも、放つ絵の表示中に着弾まで描く。
@@ -2062,6 +2088,7 @@ public partial class Main : Control
             if (candidate.Kind == BattleEventKind.Attack && candidate.ActorId == attack.ActorId) break;
             if (candidate.Kind is BattleEventKind.Damage or BattleEventKind.Parry
                 && candidate.ActorId == attack.ActorId
+                && candidate.DeflectFromId is null
                 && candidate.Pattern == pattern
                 && candidate.TargetId is { } targetId)
                 ids.Add(targetId);

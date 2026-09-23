@@ -64,6 +64,8 @@ public partial class BattleAttackAudio : Node
         "res://assets/audio/se/shiga_attack_3.mp3",
     };
     private static readonly string[] KadoHit = { "res://assets/audio/se/kado_hit.mp3" };
+    private static readonly string[] SoraThrustMedium = { "res://assets/audio/se/sora_thrust_2_3.mp3" };
+    private static readonly string[] SoraThrustFull = { "res://assets/audio/se/sora_thrust_4.mp3" };
     private static readonly string[] Heal = { "res://assets/audio/se/heal_magic_1.mp3" };
     private static readonly string[] TraitHeal = { "res://assets/audio/se/heal_trait.mp3" };
     private static readonly string[] GaldReflect = { "res://assets/audio/se/gald_reflect.mp3" };
@@ -144,6 +146,8 @@ public partial class BattleAttackAudio : Node
         foreach (string path in MudoAttack) LoadSound(path);
         foreach (string path in ShigaAttack) LoadSound(path);
         LoadSound(KadoHit[0]);
+        LoadSound(SoraThrustMedium[0]);
+        LoadSound(SoraThrustFull[0]);
         LoadSound(Heal[0]);
         LoadSound(TraitHeal[0]);
         LoadSound(GaldReflect[0]);
@@ -205,6 +209,15 @@ public partial class BattleAttackAudio : Node
         string[] paths = _overrides.GetValueOrDefault((unitId, pattern))
             ?? (team == BattleContext.EnemyTeam ? EnemyCommon : Common);
         PlayVariation(paths);
+    }
+
+    internal static string? ThrustSoundPath(int charge)
+        => charge >= 4 ? SoraThrustFull[0] : charge >= 2 ? SoraThrustMedium[0] : null;
+
+    public void PlayThrust(string unitId, int team, int charge)
+    {
+        if (ThrustSoundPath(charge) is { } path) PlayChargeAccent(new[] { path }, 0.35);
+        else PlayAttack(unitId, team, AttackPattern.Pierce, reaction: false, charged: false);
     }
 
     public void PlayParry() => PlayVariation(ParrySounds);

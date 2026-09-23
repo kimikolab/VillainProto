@@ -48,7 +48,7 @@ public partial class BattlePawn3D : Node3D
     private StatusEffects3D _statusEffects = null!;
     public double AnimationSpeed { get; set; } = 1;
     private Vector3? _comboPosition;
-    public Vector3 RestPosition => _comboPosition ?? _guardPosition ?? _home;
+    public Vector3 RestPosition => _thrustPosition ?? _comboPosition ?? _guardPosition ?? _home;
 
     // 反撃の被弾でも連撃中の立ち位置へ戻す。
     public void HoldComboPosition() => _comboPosition = Position;
@@ -502,6 +502,8 @@ void fragment() {
     public void AnimateDeath()
     {
         if (!_alive) return;
+        SetThrustCharge(0);
+        _thrustPosition = null;
         CancelCharge();
         ShowLifeTransition(LifeTransition3D.Kind.Death);
         ClearAuras();
@@ -535,6 +537,8 @@ void fragment() {
 
     public void AnimateRevive()
     {
+        SetThrustCharge(0);
+        _thrustPosition = null;
         ShowLifeTransition(LifeTransition3D.Kind.Revive);
         _motion?.Kill();
         ResetStaggerPose();
@@ -573,6 +577,8 @@ void fragment() {
     public void AnimateVictory()
     {
         if (!_alive || Team != BattleContext.PlayerTeam) return;
+        SetThrustCharge(0);
+        _thrustPosition = null;
         CancelCharge();
         _victory = true;
         _confusion.SetActive(false);
@@ -650,6 +656,7 @@ void fragment() {
             _portraitOffsetX + fallSign * fall * 0.22f,
             PortraitGroundY + _portraitGroundDistance * scaleY - fall * 0.30f,
             0);
+        UpdateRapierGlow();
         float shadowSpread = fall * 0.28f;
         ProcessShieldCowed(animationDelta);
         _shadow.Scale = new Vector3(1.0f - breath * 0.10f + shadowSpread, 1, 1.0f - breath * 0.10f - shadowSpread * 0.35f);
