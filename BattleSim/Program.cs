@@ -493,6 +493,9 @@ if (focusId == "susu")
     return;
 }
 
+// mudohex モード（第182期） —— 泥人形ムドの呪いを既定でオンにする。本体は `Modes/MudoHex.cs`。
+if (focusId == "mudohex") { MudoHexDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
+
 // mudo モード（第181期） —— 泥人形ムドの手直し。本体は `Modes/Mudo.cs`。
 if (focusId == "mudo")
 {

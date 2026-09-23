@@ -1845,11 +1845,19 @@ public readonly record struct SoakRule(bool Poison, bool Burn, int DullPerKind =
 /// </list>
 ///
 /// <para><b><see cref="SharePercent"/> は振らない。</b> 掃引はこの期に無い。</para>
+///
+/// <para><b>第182期に既定でオンにした</b>（<c>Enabled: true, SharePercent: 50</c>）。
+/// 第96期に採らなかった理由は特異性の主判定（0/10）で、効果は大半がプラスで拒否権も立っていなかった。
+/// 第180期以降のムドは単体攻撃を暴発の連撃で撃つ駒になり、<b>呪いの共有に自分で燃料を足す</b>形になっている。
+/// <b><see cref="HexTrait"/> と <see cref="BattleContext.ApplyDamage"/> の共有の段は1文字も触っていない。</b>
+/// 経緯は design/PHASE182_MUDO_HEX.md。</para>
 /// </summary>
 public readonly record struct CurseRule(bool Enabled, int SharePercent = 50)
 {
     /// <summary>
-    /// 既定は<b>共有しない</b>——<b>測定中</b>（第96期）。
+    /// 既定は<b>共有する</b>（第182期）。<see cref="Off"/> が第181期までの既定（＝回帰の検算に使う）。
+    /// <para>以下は第96期の記述（<b>当時の既定＝共有しない</b>）。</para>
+    /// <para>既定は<b>共有しない</b>——<b>測定中</b>（第96期）。</para>
     /// <para><b>付与（<see cref="HexTrait"/> の印）も既定では走らない</b>ので、
     /// ムドに札を1枚足しても盤面は1ビットも動かない
     /// （<c>compare</c> 305 セルが <c>docs/balance.md</c> と 0 件であることが検算）。
@@ -1857,7 +1865,10 @@ public readonly record struct CurseRule(bool Enabled, int SharePercent = 50)
     /// 共有量が 0 なので <see cref="BattleContext.ApplyDamage"/> が即座に返り、
     /// <b>盤面は W0 と完全に同一のまま計数だけが立つ</b>（第96期 §1-1 の「版に依らない計数」）。</para>
     /// </summary>
-    public static CurseRule Default => new(false, 50);
+    public static CurseRule Default => new(true, 50);
+
+    /// <summary>第181期までの既定（共有しない・印も書かない）。<b>回帰の検算に使う。</b></summary>
+    public static CurseRule Off => new(false, 50);
 }
 
 /// <summary>
@@ -10082,7 +10093,12 @@ public enum SmearWhen
 /// 第180期は <c>現在攻撃力 + SwingBonus</c> で、ネルの漏れ（−5）が乗る行では1発が 3 に落ちていた。
 /// </param>
 /// <param name="Smear">泥散りを撒く周期。</param>
-public readonly record struct EruptRule(bool Floor, SmearWhen Smear)
+/// <param name="Heavy">
+/// 第182期の比較用の版。真なら暴発の上乗せを <see cref="EruptTrait.SwingBonus"/>（5）ではなく
+/// <see cref="EruptTrait.HeavySwingBonus"/>（10）にする。<b>既定は偽</b>（採否はポンが遊んでから）。
+/// 「呪いで足りるのか、火力そのものが足りないのか」を分けるためだけにある。
+/// </param>
+public readonly record struct EruptRule(bool Floor, SmearWhen Smear, bool Heavy = false)
 {
     /// <summary>第181期の既定（＝採用候補）。</summary>
     public static EruptRule Default => new(true, SmearWhen.PerErupt);
@@ -10127,6 +10143,12 @@ public sealed class EruptTrait : Trait
     /// <summary>暴発の1発に乗る上乗せ。素攻 3 ＋ 5 ＝ <b>8</b>（軛の上限 25 を1発も跨がない）。</summary>
     public const int SwingBonus = 5;
 
+    /// <summary>
+    /// 第182期の比較用の上乗せ（<see cref="EruptRule.Heavy"/> が真のときだけ）。
+    /// 素攻 3 ＋ 10 ＝ <b>13</b>（軛の上限 25 を1発も跨がない）。
+    /// </summary>
+    public const int HeavySwingBonus = 10;
+
     /// <summary>暴発1発ごとの回復。<b><c>ctx.Heal</c> を通る</b>ので渇き（第三波）で丸ごと止まる（仕様）。</summary>
     public const int HealPerSwing = 2;
 
@@ -10155,8 +10177,9 @@ public sealed class EruptTrait : Trait
         // 上げ（号令の鬨・溜め）は `atk` に乗ったまま残る。
         // **「素攻 + SwingBonus」に固定しない**のは、ガンの +8 が暴発に届かなくなるため
         // （号令と暴発の連鎖を切らない・指示書 §1-1）。
-        bool floor = (self.Board?.Erupt ?? EruptRule.Default).Floor;
-        return (floor ? Math.Max(self.Def.Attack, atk) : atk) + SwingBonus;
+        EruptRule rule = self.Board?.Erupt ?? EruptRule.Default;
+        int bonus = rule.Heavy ? HeavySwingBonus : SwingBonus;   // 第182期の比較用の版
+        return (rule.Floor ? Math.Max(self.Def.Attack, atk) : atk) + bonus;
     }
 
     public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)

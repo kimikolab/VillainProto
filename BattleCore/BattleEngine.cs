@@ -2173,7 +2173,8 @@ public sealed class BattleContext
 
     /// <summary>
     /// 呪い（第96期）。<b>診断（hex）が版を差し替えるためだけの窓口</b>で、
-    /// 通常の実行では誰も渡さない（既定は <see cref="CurseRule.Default"/> ＝ 共有しない）。
+    /// 通常の実行では誰も渡さない（既定は <see cref="CurseRule.Default"/> ＝ <b>第182期から共有する</b>。
+    /// 第181期までは共有しなかった ＝ <see cref="CurseRule.Off"/>）。
     /// 見るのは <see cref="HexTrait"/>（付与）と <see cref="ApplyDamage"/> の共有の段（1箇所）だけ。
     /// <para><b>第95期の「なまりが汚れの種類だけ重くなる」は同じ名前を取っていたが、
     /// 実体は滲み則そのものだった</b>ので第96期 (R1) で <c>SoakRule.DullPerKind</c> へ畳んだ

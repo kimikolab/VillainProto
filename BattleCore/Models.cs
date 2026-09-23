@@ -2650,7 +2650,9 @@ public sealed class BattleResult
     /// <c>HexShareHits</c>（単体攻撃が呪い持ちに入った回数）。
     /// <b>3つとも 0 より大きくないと共有は1回も起きない。</b></para>
     ///
-    /// <para><b>既定（<see cref="CurseRule.Default"/> ＝ 共有しない）では全部 0。</b>
+    /// <para><b>第182期から既定（<see cref="CurseRule.Default"/>）は共有する。</b>
+    /// <see cref="CurseRule.Off"/>（第181期までの既定）では <c>HexHits*</c> 以外は全部 0。</para>
+    /// <para>（第96期の記述）<b>既定（共有しない）では全部 0。</b>
     /// 門を数えるときは <c>new CurseRule(true, 0)</c>（印は書くが共有量 0）を渡す。</para>
     /// </summary>
     public required int HexHits { get; init; }
