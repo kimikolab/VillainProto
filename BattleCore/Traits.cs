@@ -10418,17 +10418,20 @@ public sealed class ReveilleTrait : Trait
 ///
 /// <para><b>蘇生（<see cref="ReviverTrait"/>）は1文字も触っていない。</b> この札は空いていた手番だけを使う。</para>
 ///
-/// <para><b>選び方は決定的</b>——失った HP（<c>MaxHp − Hp</c>）が最大の1体、同値は席番号の小さい方
-/// （<c>LivingMembers</c> がスロット昇順なので、厳密な不等号で自然に落ちる）。
+/// <para><b>選び方は決定的</b>——失った HP の<b>割合</b>（<c>(MaxHp − Hp) / MaxHp</c>）が最大の1体、
+/// 同値は席番号の小さい方（<c>LivingMembers</c> がスロット昇順なので、厳密な不等号で自然に落ちる）。
+/// <b>第183期 追補で「量」から「割合」へ替えた</b>——量で選ぶと最大HP 150 の大喰らいゴルムが
+/// ほぼ毎手番1位になり、固定の 12 点が最も薄く効く相手に吸われていた（R293）。
+/// 割合は整数の交差乗算で比べる（浮動小数を使わない）。
 /// <b><see cref="BattleContext.MostHurtAlly"/> は使わない</b>——あちらは HP の<b>割合</b>で選び、
 /// 同値を <c>PickOne</c> で割る（乱数を引く）。<b>隣接に絞るのは配置の問いを作るため</b>
 /// （リィカ・ゾトを離す／ムドを隣に置いて縫い続けてもらう）。</para>
 ///
 /// <para><b>回復は <c>ctx.Heal</c> を通す</b>ので、支援拒否（ガルドの <c>Stoic</c>）は候補から外し、
-/// 渇き（第三波）の下では封じられる。<b>封じられた縫いは縫い跡も残さない</b>
+/// 渇き（第三波）の下では封じられる。<b>封じられた縫いは縫い跡も残さず、その手番は普通に殴る</b>
 /// ——HP が1点も増えなかった縫いは「縫えなかった」として扱う（第183期の判断。
 /// 渇きの下で毎手番、隣の最大HPだけを削り続けるのは頼んでいない代金になる）。
-/// その手番は殴らない（封じられたのは回復で、手番は縫いに使った）。</para>
+/// <b>第183期 追補で「殴らない」から「殴る」へ替えた</b>（封じの手番が丸ごと空いていた）。</para>
 ///
 /// <para><b>手番の中だけ</b>——<c>Actions = [Skill]</c> の <see cref="OnAction"/> で撃つ。
 /// <see cref="OnTurnStart"/> には置かない（手番の外で発火させない）。
@@ -10445,18 +10448,20 @@ public sealed class StitchTrait : Trait
 
     public override TraitId Id => TraitId.Stitch;
 
-    /// <summary>縫う相手（隣接・支援を受け付ける・傷ついている・失った HP が最大・同値はスロット昇順）。</summary>
+    /// <summary>縫う相手（隣接・支援を受け付ける・傷ついている・失った HP の割合が最大・同値はスロット昇順）。</summary>
     public static UnitState? Patient(BattleContext ctx, UnitState self)
     {
         UnitState? pick = null;
-        int best = 0;
+        long bestLost = 0, bestMax = 1;
         foreach (UnitState a in ctx.LivingMembers(self.TeamId))
         {
             if (a == self || !a.AcceptsSupport) continue;
             if (!FormationRules.AreAdjacent(self.Slot, a.Slot)) continue;
             int lost = a.MaxHp - a.Hp;
             if (lost <= 0) continue;
-            if (pick is null || lost > best) { pick = a; best = lost; }
+            // lost / MaxHp > bestLost / bestMax を交差乗算で（MaxHp は下限 1）。
+            if (pick is null || (long)lost * bestMax > bestLost * Math.Max(1, a.MaxHp))
+            { pick = a; bestLost = lost; bestMax = Math.Max(1, a.MaxHp); }
         }
         return pick;
     }
@@ -10481,8 +10486,10 @@ public sealed class StitchTrait : Trait
         if (healed <= 0)
         {
             // 渇きに封じられた（Hp < MaxHp を確かめてあるので、通れば必ず 1 以上増える）。
+            // 縫い跡は残さず、その手番は普通に殴る（第183期 追補）。
             ctx.NoteStitchSealed(self);
             ctx.Log($"    {self.Name} の針は {p.Name} に通らなかった", LogKind.Status);
+            ctx.PerformAttack(self, "    ");
             return;
         }
 
