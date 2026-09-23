@@ -832,7 +832,7 @@ public static class UnitCatalog
         Traits = new[] { TraitId.Vendetta, TraitId.Recoil },
         PlusText = "標を付けられた味方が殴られるたび、殴った者へ割り込んで倍の刃を返し、仇として標を付ける（標を付けられた敵は受けるダメージが5割増える）",
         MinusText = "刃を返すたびに自分も傷つく（それで倒れはしない）",
-        Flavor = "仲間が殴られた時だけ勇敢になれる。自分が殴られると、そこにはもう誰もいない。"
+        Flavor = "仲間が傷つくと、刃を抜かずにはいられない。返した刃は、いつも自分の手も裂いている。"
     };
 
     /// <summary>
