@@ -3697,6 +3697,7 @@ public sealed class BattleContext
     /// <b>本体の最初の行で読んで消す</b>（引数を足さずに、その1回の呼び出しにだけ札を渡すため）。
     /// </summary>
     UnitState? _deflectFrom;
+    int? _deflectCharge;   // 第186期 追補・表示専用。逸らしの受け渡しに載せる溜めの段（_deflectFrom と対で読んで消す）
 
     /// <summary>突き（第186期 追補）の保持者が盤上に1体でもいるか。いなければ列の指定と倍率の判定を比較1つで抜ける。</summary>
     bool _thrustLive;
@@ -5830,10 +5831,12 @@ public sealed class BattleContext
 
         // 突き（第186期 追補）: 威力 ＝ 現在攻撃力 ×（1 ＋ 前の突きから逸らした回数）。突いたら 0 に戻す。
         // **増幅を意図して乗算にしてある**（ポンの判断）。対照（`ThrustPlain`）は 現在攻撃力 ＋ 素の攻撃力 × 回数。
+        int? thrustCharge = null;   // 表示専用（台本の Attack の ThrustCharge）
         if (_thrustLive && pattern == AttackPattern.Pierce
             && (actor.HasTrait(TraitId.Thrust) || actor.HasTrait(TraitId.ThrustPlain)))
         {
             int charge = actor.RawCounter(ThrustTrait.ChargeKey);
+            thrustCharge = charge;
             atk += (actor.HasTrait(TraitId.ThrustPlain) ? actor.Def.Attack : atk) * charge;
             actor.SetCounter(ThrustTrait.ChargeKey, 0);
             UnitTally th = TallyOf(actor);
@@ -5977,7 +5980,9 @@ public sealed class BattleContext
             Pattern = pattern,
             // 第151期・表示専用。着弾側だけでなく「振る直前」にも札を載せる。
             // 再生側が追加攻撃の予告を出すには Damage まで待っていては遅い。
-            Reaction = InReaction || InInterrupt
+            Reaction = InReaction || InInterrupt,
+            // 第186期 追補・表示専用。この突きに乗った逸らしの回数（突きの保持者だけ）
+            ThrustCharge = thrustCharge
         });
 
         if (pattern == AttackPattern.Pierce)
@@ -6240,6 +6245,8 @@ public sealed class BattleContext
         // 別の ApplyDamage（中継・死亡トリガー）に札を漏らさないため。
         UnitState? deflectFrom = _deflectFrom;
         _deflectFrom = null;
+        int? deflectCharge = _deflectCharge;
+        _deflectCharge = null;
 
         if (!target.IsAlive || amount <= 0) return;
 
@@ -6276,14 +6283,20 @@ public sealed class BattleContext
                 dt.DeflectMoved += moved;
                 if (route == 0) dt.DeflectToPointed++; else if (route == 1) dt.DeflectToOtherMarked++; else dt.DeflectToFallback++;
                 // 突き（第186期 追補）の回数。**逸らしが実際に起きたときだけ**積む（Q0-8）。
+                int? chargeNow = null;   // 表示専用（台本の ThrustCharge）
                 if (_thrustLive && (target.HasTrait(TraitId.Thrust) || target.HasTrait(TraitId.ThrustPlain)))
-                    target.SetCounter(ThrustTrait.ChargeKey, target.RawCounter(ThrustTrait.ChargeKey) + 1);
+                {
+                    chargeNow = target.RawCounter(ThrustTrait.ChargeKey) + 1;
+                    target.SetCounter(ThrustTrait.ChargeKey, chargeNow.Value);
+                }
                 Log($"    {target.Name} が {source.Name} の一撃を {to.Name} へ逸らした（{moved}）", LogKind.Trigger);
                 UnitTally tt0 = TallyOf(to);
                 long before = tt0.DamageTaken;
                 _deflectFrom = target;
+                _deflectCharge = chargeNow;
                 ApplyDamage(to, moved, source, isFriendlyFire: true);
                 _deflectFrom = null;
+                _deflectCharge = null;
                 dt.DeflectLanded += tt0.DamageTaken - before;
                 if (!to.IsAlive)
                 {
@@ -6840,7 +6853,9 @@ public sealed class BattleContext
             // 第182期・表示専用。受け渡しの段だけ出どころ（元の被弾者）を載せる
             ShareFromId = hexShare ? _hexShareFrom : null,
             // 第186期・表示専用。逸らしの受け渡しの段だけ、逸らした駒（ソラ）を載せる
-            DeflectFromId = deflectFrom?.InstanceId
+            DeflectFromId = deflectFrom?.InstanceId,
+            // 第186期 追補・表示専用。この逸らしで積んだ後の溜めの段（突きの保持者だけ）
+            ThrustCharge = deflectCharge
         });
 
         if (source is not null && !isFriendlyFire)

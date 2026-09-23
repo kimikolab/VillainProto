@@ -88,6 +88,8 @@ public static void Run(string[] args, int stageIndex)
             team = e.Team,
             pattern = e.Pattern?.ToString(),
             shareFrom = e.ShareFromId,   // 第182期・呪いの受け渡しの出どころ（それ以外は null）
+            deflectFrom = e.DeflectFromId,             // 第186期・逸らした駒（ソラ）。actor は元の攻撃者
+            thrustCharge = e.ThrustCharge,             // 第186期 追補・逸らし: 積んだ後の段 ／ 突きの Attack: 乗った回数
             poisonRoute = e.PoisonRoute?.ToString(),   // 第183期 追補2・毒の付与経路（毒の StatusGain 以外は null）
             spreadFrom = e.SpreadFromId,               // 第183期 追補2・伝染の元の敵（Touch 以外は null）
             remaining = e.StatusRemaining,             // 第183期 追補3・StatusDrain: 吸われた駒に残った量

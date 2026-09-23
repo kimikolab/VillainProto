@@ -2434,6 +2434,18 @@ public sealed class BattleEvent
     public int? DeflectFromId { get; init; }
 
     /// <summary>
+    /// 突き（第186期 追補・<see cref="ThrustTrait"/>）の溜めの段（<b>表示専用</b>）。<b>どの規則も読まない。</b>
+    /// <list type="bullet">
+    /// <item>逸らしの受け渡しの <c>Damage</c>（<see cref="DeflectFromId"/> が非 null）: この逸らしで積んだ<b>後</b>の累計回数
+    /// ＝何段目か（1 始まり）。逸らした駒が突きを持たないときは <c>null</c>。</item>
+    /// <item>突きの <c>Attack</c>（型は貫き）: <b>この突きに乗った回数</b>（0 もありうる。突いた直後に 0 へ戻る）。
+    /// 突きの保持者以外の <c>Attack</c> では <c>null</c>。</item>
+    /// </list>
+    /// <para>逸らしの元の一撃の攻撃者は、逸らしの <c>Damage</c> の <c>ActorId</c> にそのまま入っている（元の攻撃者のまま）。</para>
+    /// </summary>
+    public int? ThrustCharge { get; init; }
+
+    /// <summary>
     /// 毒の <c>StatusGain</c> のときだけ、<b>付与経路</b>（<see cref="BattleCore.PoisonRoute"/>）が入る
     /// （第183期 追補2・<b>表示専用</b>）。毒の窓口（<c>BattleContext.Poison</c>）を通った付与はすべて載る。
     /// 毒以外の <c>StatusGain</c> と他の種類では <c>null</c>。<b>どの規則も読まない。</b>
