@@ -11052,6 +11052,16 @@ public sealed class FootingTrait : Trait
     /// </summary>
     public const int ShieldPercent = 50;
 
+    /// <summary>
+    /// <b>殴られるたびに層が1つ積もる</b>（第185期 追補4・<b>true</b>。手番の踏みしめも残す・最大は同じ <see cref="MaxLayers"/>）。
+    /// 数えるのは<b>攻撃によるダメージ</b>（相手陣営の出どころがあり、刻み・徴収・中継・呪いの共有ではない。
+    /// 範囲の盾で隣の分を受けた場合も含む）で、<b>HP に届いたときだけ</b>。
+    /// <b>層はその攻撃が終わってから積む</b>（その一撃には今ある層だけが効く）。<b>1回の攻撃につき1層</b>
+    /// （範囲の盾で複数人分を受けても1層）。判定は engine（<c>ApplyDamage</c> の被弾の通知の直前）、
+    /// 積むのは <c>PerformAttack</c> の枠が閉じるとき。<b>false で第185期 追補2 までと1ビットも違わない。</b>
+    /// </summary>
+    public const bool StackOnHit = true;
+
     public override TraitId Id => TraitId.Footing;
 
     public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Step(ctx, self);
@@ -11073,6 +11083,7 @@ public sealed class FootingTrait : Trait
         }
         self.SetCounter(StatusKeys.Footing, now + 1);
         ctx.NoteFooting(self, true);
+        if (now + 1 >= MaxLayers) ctx.NoteFootingFull(self);
         ctx.EmitStatusGain(self, StatusKeys.Footing, 1, self);   // 表示専用（層が増えた瞬間）
         ctx.Log($"    {self.Name} が踏みしめた（据え {now + 1} 層・被ダメ -{(now + 1) * PercentPerLayer}%）", LogKind.Trigger);
     }

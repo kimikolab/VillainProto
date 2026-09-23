@@ -3746,6 +3746,35 @@ public sealed class BattleContext
     }
 
     /// <summary>竦みを消費する（手番を失ったとき）。ハメ防止の印を立てる。</summary>
+    /// <summary>殴られて積もる層の控え（攻撃の枠ごと・第185期 追補4）。枠の外の攻撃（反撃など）はその場で積む。</summary>
+    readonly Stack<List<UnitState>> _footingFrames = new();
+
+    void QueueFootingHit(UnitState u)
+    {
+        if (_footingFrames.Count == 0) { StepFootingOnHit(u); return; }
+        List<UnitState> top = _footingFrames.Peek();
+        if (!top.Contains(u)) top.Add(u);   // 1回の攻撃につき1層
+    }
+
+    void StepFootingOnHit(UnitState u)
+    {
+        if (!u.IsAlive) return;
+        int now = u.RawCounter(StatusKeys.Footing);
+        if (now >= FootingTrait.MaxLayers) return;
+        u.SetCounter(StatusKeys.Footing, now + 1);
+        TallyOf(u).FootingHitSteps++;
+        if (now + 1 >= FootingTrait.MaxLayers) NoteFootingFull(u);
+        EmitStatusGain(u, StatusKeys.Footing, 1, u);   // 表示専用（層が増えた瞬間）
+        Log($"    {u.Name} は殴られて踏みとどまった（据え {now + 1} 層）", LogKind.Trigger);
+    }
+
+    /// <summary>層が最大に届いた最初のターン（戦闘ごと・<b>計数のみ</b>）。</summary>
+    public void NoteFootingFull(UnitState u)
+    {
+        UnitTally t = TallyOf(u);
+        if (t.FootingFullAt == 0) t.FootingFullAt = Turn;
+    }
+
     /// <param name="phase"><see cref="CowedLabels"/>——竦み自身で手番を失ったか、別の理由で失う手番に吸われたか（表示専用）。</param>
     void ConsumeCowed(UnitState u, string phase = CowedLabels.Absorbed)
     {
@@ -5692,6 +5721,23 @@ public sealed class BattleContext
     public void PerformAttack(UnitState actor, string prefix = "  ",
                               int attackPercent = 100, AttackPattern? patternOverride = null)
     {
+        // 第185期 追補4: 殴られて積もる据えの層を「1回の攻撃につき1層・攻撃が終わってから」にする枠。
+        // **保持者がいなければ比較1つで本体へ直行する**（既存の行が 0 件差分であることの根拠）。
+        if (!FootingTrait.StackOnHit || _shieldHolders.Count == 0)
+        {
+            PerformAttackBody(actor, prefix, attackPercent, patternOverride);
+            return;
+        }
+        _footingFrames.Push(new List<UnitState>());
+        try { PerformAttackBody(actor, prefix, attackPercent, patternOverride); }
+        finally
+        {
+            foreach (UnitState u in _footingFrames.Pop()) StepFootingOnHit(u);
+        }
+    }
+
+    private void PerformAttackBody(UnitState actor, string prefix, int attackPercent, AttackPattern? patternOverride)
+    {
         if (!actor.IsAlive) return;
 
         AttackPattern pattern = patternOverride ?? actor.CurrentPattern;
@@ -6725,6 +6771,12 @@ public sealed class BattleContext
         NoteMarkHit(target, source);
         if (source is not null && (isFriendlyFire || source.TeamId == target.TeamId))
             tt.TakenFromAlly += amount;
+
+        // 殴られて据えの層が積もる（第185期 追補4・FootingTrait.StackOnHit）。**攻撃によるダメージが HP に届いたときだけ**。
+        // ここでは積まずに控える（攻撃の枠が閉じたときに1層だけ積む）。**保持者がいなければ比較1つで抜ける。**
+        if (FootingTrait.StackOnHit && _shieldHolders.Count > 0 && source is not null && source.TeamId != target.TeamId
+            && !burnTick && !levy && !relayed && !hexShare && target.HasTrait(TraitId.Footing))
+            QueueFootingHit(target);
 
         foreach (Trait t in target.Traits.ToList())
         {

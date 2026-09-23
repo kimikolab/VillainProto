@@ -1608,7 +1608,10 @@ public sealed class UnitTally
     public long GrappleFires, GrappleHolds, GrappleStalled, GrappleBreaks, GrappledTimes, StallGrappled,
                 ShamePicks, ShameFires, ShameCowed, ShameBlocked, CowedLost, StallCowed,
                 FootingSteps, FootingFull, FootingSaved, ShieldTakes, ShieldTaken, ShieldCovered, PlantedRefused,
-                FootingLayerSum, FootingLayerTurns, PlantedRefusedFoe, ShieldHalved;
+                FootingLayerSum, FootingLayerTurns, PlantedRefusedFoe, ShieldHalved, FootingHitSteps;
+
+    /// <summary>据えの層が最大（3）に届いた最初のターン（0 は届かなかった・第185期 追補4・<b>計数のみ</b>）。戦闘ごとの値で、Merge は最小を取る。</summary>
+    public int FootingFullAt;
 
     public int BraceGuards, BraceCuts, BraceRefused, BraceGiven, BraceLost;
     public int BraceShoves, BraceShoveCapped, BraceNoTarget, BraceStaggers, BraceArmorMuted;
@@ -1794,7 +1797,8 @@ public sealed class UnitTally
         FootingSteps += o.FootingSteps; FootingFull += o.FootingFull; FootingSaved += o.FootingSaved;
         ShieldTakes += o.ShieldTakes; ShieldTaken += o.ShieldTaken; ShieldCovered += o.ShieldCovered;
         PlantedRefused += o.PlantedRefused; FootingLayerSum += o.FootingLayerSum; FootingLayerTurns += o.FootingLayerTurns;
-        PlantedRefusedFoe += o.PlantedRefusedFoe; ShieldHalved += o.ShieldHalved;
+        PlantedRefusedFoe += o.PlantedRefusedFoe; ShieldHalved += o.ShieldHalved; FootingHitSteps += o.FootingHitSteps;
+        if (o.FootingFullAt > 0 && (FootingFullAt == 0 || o.FootingFullAt < FootingFullAt)) FootingFullAt = o.FootingFullAt;
         ShuffleAllySwaps += o.ShuffleAllySwaps; ShuffleFoeSwaps += o.ShuffleFoeSwaps;
         ShuffleAdvanced += o.ShuffleAdvanced; ShuffleAdvancedTraited += o.ShuffleAdvancedTraited;
         ShuffleAdvancedFromBack += o.ShuffleAdvancedFromBack; ShuffleStaggers += o.ShuffleStaggers;

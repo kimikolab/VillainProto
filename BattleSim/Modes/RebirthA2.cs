@@ -635,12 +635,12 @@ static class RebirthA2Diag
 
         Console.WriteLine("## 表H. バン（踏みしめ＋範囲の盾＋据えた足）");
         Console.WriteLine();
-        Console.WriteLine("| 行 | 帯 | 席 | 層の平均 | 層で防いだ | 盾で受けた回数 | 盾で受けた量（半分の後） | 半分で消えた量 | 入れ替えの空振り（うち敵） | 生存T | 倒れた率 | 旧の倒れた率 | 旧の被弾 → 新の被弾 |");
-        Console.WriteLine("|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|");
+        Console.WriteLine("| 行 | 帯 | 席 | 層の平均 | 層で防いだ | 盾で受けた回数 | 盾で受けた量（半分の後） | 半分で消えた量 | 入れ替えの空振り（うち敵） | 殴られて積んだ層 | 3層に届いた率 | 届いたT（平均） | 生存T | 倒れた率 | 旧の倒れた率 | 旧の被弾 → 新の被弾 |");
+        Console.WriteLine("|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|");
         foreach (var r in rows)
         {
             if (!Has(r.F, "ban")) continue;
-            double layerSum = 0, layerTurns = 0, saved = 0, takes = 0, taken = 0, halved = 0, refused = 0, refusedFoe = 0, lifeT = 0, dead = 0, deadOld = 0, hitOld = 0, hitNew = 0; int n = 0;
+            double layerSum = 0, layerTurns = 0, saved = 0, takes = 0, taken = 0, halved = 0, refused = 0, refusedFoe = 0, hitSteps = 0, full = 0, fullT = 0, lifeT = 0, dead = 0, deadOld = 0, hitOld = 0, hitNew = 0; int n = 0;
             for (int st = 1; st < 5; st++)
                 for (int seed = 0; seed < Seeds; seed++)
                 {
@@ -649,7 +649,8 @@ static class RebirthA2Diag
                     if (b.TallyByUnit.TryGetValue("ban", out UnitTally? t))
                     {
                         layerSum += t.FootingLayerSum; layerTurns += t.FootingLayerTurns; saved += t.FootingSaved;
-                        takes += t.ShieldTakes; taken += t.ShieldTaken; halved += t.ShieldHalved; refused += t.PlantedRefused; refusedFoe += t.PlantedRefusedFoe;
+                        takes += t.ShieldTakes; taken += t.ShieldTaken; halved += t.ShieldHalved; refused += t.PlantedRefused; refusedFoe += t.PlantedRefusedFoe; hitSteps += t.FootingHitSteps;
+                        if (t.FootingFullAt > 0) { full++; fullT += t.FootingFullAt; }
                         lifeT += t.FootingLayerTurns; hitNew += t.DamageTaken;
                     }
                     if (b.PlayerStarterFallen.Contains("ban")) dead++;
@@ -659,7 +660,8 @@ static class RebirthA2Diag
                 }
             Console.WriteLine("| " + r.Name + " | " + r.Band + " | " + SlotName(r.F, "ban") + " | " + (layerTurns == 0 ? 0 : layerSum / layerTurns).ToString("F2") + " | "
                               + (saved / n).ToString("F1") + " | " + (takes / n).ToString("F2") + " | " + (taken / n).ToString("F1") + " | "
-                              + (halved / n).ToString("F1") + " | " + (refused / n).ToString("F2") + "（" + (refusedFoe / n).ToString("F2") + "） | " + (lifeT / n).ToString("F2") + " | " + (100.0 * dead / n).ToString("F1") + "% | "
+                              + (halved / n).ToString("F1") + " | " + (refused / n).ToString("F2") + "（" + (refusedFoe / n).ToString("F2") + "） | "
+                              + (hitSteps / n).ToString("F2") + " | " + (100.0 * full / n).ToString("F1") + "% | " + (full == 0 ? "—" : (fullT / full).ToString("F2")) + " | " + (lifeT / n).ToString("F2") + " | " + (100.0 * dead / n).ToString("F1") + "% | "
                               + (100.0 * deadOld / n).ToString("F1") + "% | " + (hitOld / n).ToString("F1") + " → " + (hitNew / n).ToString("F1") + " |");
         }
         Console.WriteLine();
