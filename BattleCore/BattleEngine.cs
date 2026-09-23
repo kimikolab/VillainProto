@@ -21,10 +21,70 @@ public delegate void CounterProbe(TraitId trait, UnitState owner, UnitState targ
 /// 配列に写すか」だけを切り替える。既定は偽で、そのとき配列は1本も割り当たらない
 /// ——<c>compare</c> / <c>layout</c> は数百万戦を回すので、確保だけで効く。</para>
 /// </summary>
+///
+/// <para><b>第187期に敵の難易度のつまみ（<see cref="Scale"/>）を相乗りさせた</b>——指示書が
+/// 「<c>Run</c> の引数は増やさない（既存の規則の束に1本足す）」と決めたため。<c>Census</c> は計数だけだが、
+/// <b><c>Scale</c> は盤面を動かす</b>（敵の最大HPと素の攻撃力）。</para>
+/// </summary>
 public readonly record struct BossRule(bool Census)
 {
-    /// <summary>既定は<b>数えない</b>。診断だけが <c>new BossRule(true)</c> を渡す。</summary>
+    /// <summary>既定は<b>数えない</b>。診断だけが <c>new BossRule(true)</c> を渡す。敵の倍率は採用値。</summary>
     public static BossRule Default => new(false);
+
+    /// <summary>
+    /// 敵の数値の倍率（第187期）。<b>渡さなければ <see cref="EnemyScaleRule.Default"/>（採用値）</b>。
+    /// 欄は null を持ち、読むときに既定へ落とす——<c>default(BossRule)</c> や引数なしの <c>new BossRule()</c> で
+    /// 倍率が (0, 0)（＝ HP 1）にならないため。<c>default(BossRule) == BossRule.Default</c> も保たれる。
+    /// </summary>
+    public EnemyScaleRule Scale { get => _scale ?? EnemyScaleRule.Default; init => _scale = value; }
+    readonly EnemyScaleRule? _scale;
+}
+
+/// <summary>
+/// 敵の難易度のつまみ（第187期）。<b>敵陣営の駒が盤面に出るとき、最大HPと素の攻撃力
+/// （<see cref="UnitDef.Attack"/>）を百分率で一律に掛ける</b>（切り捨て・最低1）。
+///
+/// <para><b>味方には一切かけない。</b> 敵の特性・波ルールの数値（軛の上限・施しの量・処刑の伸び）・
+/// 配置・速さ・攻撃型は1つも触らない。<b>掛ける口は2つだけ</b>——
+/// <see cref="BattleEngine.Materialize(Formation, int)"/>（敵の編成から作るとき。会戦・作戦マップ・DemoApp も全部ここ）と、
+/// <see cref="BattleContext.Summon"/>（<b>敵の駒が</b>敵陣に呼んだとき。ソムの餌は味方の仕組みなので掛けない）。
+/// 会戦の持ち越しは同じ <see cref="UnitState"/> を使い回すので二重には掛からない。</para>
+///
+/// <para><b>掛け方は <see cref="UnitDef"/> の写しを <c>Def</c> に差す</b>——<c>Def.Attack</c> を直に読む箇所
+/// （ムドの床・突きの素の倍率・味方巻き込みの基礎）が全部1本で揃う。<c>AtkBonus</c> には掛けない。
+/// <b>(100, 100) は写しを作らない</b>ので現行と1ビットも違わない。</para>
+/// </summary>
+public readonly record struct EnemyScaleRule(int HpPercent, int AtkPercent)
+{
+    /// <summary>現行（倍率なし）。回帰の検算に使う。</summary>
+    public static EnemyScaleRule None => new(100, 100);
+
+    /// <summary>
+    /// <b>採用値 ＝ S1（115 / 115）</b>（第187期 §3）。7 版のうち足切り（主判定19行の第五波 40%）の内側で
+    /// 情報セル（`compare` 61 行 × 第2〜5波）が最大——112 → 149。参考の 5% 刻みでも 115 が頂上だった。
+    /// </summary>
+    public static EnemyScaleRule Adopted => new(115, 115);
+
+    /// <summary>既定 ＝ <see cref="Adopted"/>。<see cref="None"/> に戻すと第186期と1ビットも違わない。</summary>
+    public static EnemyScaleRule Default => Adopted;
+
+    /// <summary>この規則が盤面を動かしうるか。偽なら写しを作らない。</summary>
+    public bool Active => HpPercent != 100 || AtkPercent != 100;
+
+    static readonly System.Collections.Concurrent.ConcurrentDictionary<(UnitDef, int, int), UnitDef> _cache = new();
+
+    /// <summary>
+    /// 倍率を掛けた定義。<b>同じ定義・同じ倍率には同じインスタンスを返す</b>（写しの同一性を揃えるため）。
+    /// </summary>
+    public UnitDef Apply(UnitDef d)
+    {
+        if (!Active) return d;
+        return _cache.GetOrAdd((d, HpPercent, AtkPercent), static k =>
+        {
+            (UnitDef src, int hp, int atk) = k;
+            return src.WithStats(Math.Max(1, src.MaxHp * hp / 100), Math.Max(1, src.Attack * atk / 100));
+        });
+    }
 }
 
 /// <summary>
@@ -7478,6 +7538,10 @@ public sealed class BattleContext
         }
         if (slot < 0) return null;
 
+        // 第187期: 敵の駒が敵陣に呼んだときだけ倍率を掛ける（ソムの餌＝味方が敵陣に呼ぶ駒は掛けない）。
+        // **現行の敵の編成に、敵陣へ駒を呼ぶ敵は 0 体**なので、いまの盤面ではこの枝は1度も走らない。
+        if (teamId == EnemyTeam && by is not null && by.TeamId == EnemyTeam) def = Boss.Scale.Apply(def);
+
         var unit = new UnitState
         {
             Def = def,
@@ -8245,7 +8309,7 @@ public static class BattleEngine
                                    AshRule? ash = null, EruptRule? erupt = null, MarkRule? markRule = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
-               Materialize(enemy, BattleContext.EnemyTeam),
+               Materialize(enemy, BattleContext.EnemyTeam, (boss ?? BossRule.Default).Scale),
                seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear, relay, slander,
                overbear, scale, scapegoat, divert, goad, finisher, favor, blaze, funnel, whetMask,
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
@@ -8860,11 +8924,21 @@ public static class BattleEngine
         return fallen ?? (IReadOnlyList<string>)Array.Empty<string>();
     }
 
+    /// <summary>
+    /// 編成から駒を作る。<b>敵陣営（<see cref="BattleContext.EnemyTeam"/>）には
+    /// <see cref="EnemyScaleRule.Default"/>（採用値）を掛ける</b>（第187期）——会戦・作戦マップ・DemoApp は
+    /// 自分でここを呼んでから <c>Run</c> に渡すので、この既定が唯一の口になる。
+    /// </summary>
     public static List<UnitState> Materialize(Formation formation, int teamId)
+        => Materialize(formation, teamId, EnemyScaleRule.Default);
+
+    /// <summary>倍率を明示する版。<b>味方陣営には <paramref name="scale"/> を読まない</b>。</summary>
+    public static List<UnitState> Materialize(Formation formation, int teamId, EnemyScaleRule scale)
     {
         var units = new List<UnitState>();
-        foreach ((int slot, UnitDef def) in formation.Occupied())
+        foreach ((int slot, UnitDef raw) in formation.Occupied())
         {
+            UnitDef def = teamId == BattleContext.EnemyTeam ? scale.Apply(raw) : raw;
             units.Add(new UnitState
             {
                 Def = def,

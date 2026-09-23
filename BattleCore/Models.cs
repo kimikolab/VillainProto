@@ -123,6 +123,17 @@ public sealed class UnitDef
     public string MinusText { get; init; } = "";
     public string Flavor { get; init; } = "";
 
+    /// <summary>
+    /// 最大HPと攻撃力だけを差し替えた写し（第187期・敵の難易度のつまみ）。
+    /// <b>他の全部（特性・速さ・攻撃型・行動・説明文）はそのまま写す</b>——項目を足したらここにも足すこと。
+    /// </summary>
+    public UnitDef WithStats(int maxHp, int attack) => new()
+    {
+        Id = Id, Name = Name, MaxHp = maxHp, Attack = attack, Speed = Speed, Traits = Traits,
+        Pattern = Pattern, Advances = Advances, Actions = Actions,
+        PlusText = PlusText, MinusText = MinusText, Flavor = Flavor,
+    };
+
     public override string ToString() => Name;
 }
 

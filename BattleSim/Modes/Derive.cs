@@ -149,12 +149,30 @@ public static void Run(string[] args, int stageIndex)
         {
             int a = dvModes[i].Start;
             int b = i + 1 < dvModes.Count ? dvModes[i + 1].Start : dvProgram.Length;
-            if (dvProgram.IndexOf(name, a, b - a, StringComparison.Ordinal) >= 0
+            if (DvHasWord(dvProgram, name, a, b - a)
                 || (dvExtra.TryGetValue(dvModes[i].Name, out string? ex)
-                    && ex.Contains(name, StringComparison.Ordinal))) hit.Add(dvModes[i].Name);
+                    && DvHasWord(ex, name, 0, ex.Length))) hit.Add(dvModes[i].Name);
         }
         return hit.Distinct().ToArray();
     }
+
+    // 第187期: 型名は**識別子の境界で**当てる（R262）。素の部分一致だと敵の倍率の型（Enemy＋鱗の型名）が
+    // 鱗の型に当たり、鱗の `測った診断` に `escale` / `dump` が紛れ込んだ（型名をここに書くと、この診断自身が紛れる・R035）。
+    static bool DvHasWord(string text, string name, int start, int len)
+    {
+        int end = start + len;
+        for (int i = text.IndexOf(name, start, len, StringComparison.Ordinal); i >= 0 && i + name.Length <= end;
+             i = i + 1 < end ? text.IndexOf(name, i + 1, end - i - 1, StringComparison.Ordinal) : -1)
+        {
+            bool l = i > 0 && IsId(text[i - 1]);
+            int j = i + name.Length;
+            bool r = j < text.Length && IsId(text[j]);
+            if (!l && !r) return true;
+        }
+        return false;
+    }
+    // 境界は ASCII の識別子文字だけで見る（散文で型名の直後に日本語が続く場合を落とさない）。
+    static bool IsId(char c) => c < 128 && (char.IsLetterOrDigit(c) || c == '_');
 
     // design/PHASEnn_*.md のうち、その名前が現れるものの期番号。
     var dvDesign = new List<(int Phase, string File, string Text)>();

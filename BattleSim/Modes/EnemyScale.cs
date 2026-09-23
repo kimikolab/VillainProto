@@ -8,6 +8,8 @@ using static Common;
 // 指示書は design/PHASE187_ENEMY_SCALE_SPEC.md ／ 報告は design/PHASE187_ENEMY_SCALE.md。
 //
 //     dotnet run --project BattleSim -c Release 0 escale phase0   # 現行 docs/balance.md の数え物（**戦闘0回**）
+//     dotnet run --project BattleSim -c Release 0 escale run [採用前のbalance.md]  # 7 版の掃引（compare 61 行 × 5 波 × seed 0..199 ＋ 診断台）
+//     dotnet run --project BattleSim -c Release 0 escale fine     # 参考の刻み 100〜130 を 5% ずつ（**採否には使わない**）
 // =====================================================================================
 
 static partial class EnemyScaleDiag
@@ -17,8 +19,10 @@ static partial class EnemyScaleDiag
         switch (mode)
         {
             case "phase0": Phase0(); return;
+            case "run": Sweep(arg); return;
+            case "fine": Fine(); return;
             default:
-                Console.WriteLine("escale: モードは phase0。");
+                Console.WriteLine("escale: モードは phase0 / run / fine。");
                 return;
         }
     }

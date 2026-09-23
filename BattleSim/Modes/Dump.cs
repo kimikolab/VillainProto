@@ -63,10 +63,19 @@ public static void Run(string[] args, int stageIndex)
     Console.WriteLine();
     Console.WriteLine("## ステージ");
     Console.WriteLine();
+    // 第187期: 敵は盤面に出るとき `EnemyScaleRule.Default` の倍率が掛かる。**盤面の値を出し、定義の素の値を〈〉に添える**。
+    EnemyScaleRule esc = EnemyScaleRule.Default;
+    if (esc.Active)
+    {
+        Console.WriteLine($"敵は盤面に出るとき最大HP {esc.HpPercent}% ／ 攻撃力 {esc.AtkPercent}% が掛かる（`EnemyScaleRule.Default`・第187期）。"
+                          + "下の値は掛けた後で、〈〉は定義の素の値。");
+        Console.WriteLine();
+    }
+    string Stat(int scaled, int raw) => scaled == raw ? $"{scaled}" : $"{scaled}〈{raw}〉";
     foreach (EnemyCatalog.Stage st in EnemyCatalog.Stages)
     {
-        var e = st.Enemy.Occupied().Select(x =>
-            $"{x.Def.Name}(HP{x.Def.MaxHp}/攻{x.Def.Attack}/{Pat(x.Def.Pattern)}/{Adv(x.Def)}"
+        var e = st.Enemy.Occupied().Select(x => (Raw: x.Def, Def: esc.Apply(x.Def))).Select(x =>
+            $"{x.Def.Name}(HP{Stat(x.Def.MaxHp, x.Raw.MaxHp)}/攻{Stat(x.Def.Attack, x.Raw.Attack)}/{Pat(x.Def.Pattern)}/{Adv(x.Def)}"
             + (x.Def.Actions is null ? "" : $"/{Acts(x.Def)}") + ")");
         Console.WriteLine($"- **{st.Name}**: {string.Join("、", e)}");
     }
