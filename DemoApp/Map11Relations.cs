@@ -164,6 +164,16 @@ public static class Map11Relations
         [TraitId.Smear] = new(Shape.AdjacentAcceptsSupport, "泥が散る",
             "自分が暴発したとき、この駒に泥が散って攻撃力が下がる（累積して戻らない）",
             LinkSign.Loss, true, "泥"),
+        // 第183期。**傷ついたときだけ縫う**ので点線——隣であることは席で決まり、
+        // **いつ縫うか（隣が傷ついているか）だけが席の外にある**（上の (b) 型）。
+        // 回復と縫い跡（最大HPが減る）が同じ針から出るので「両方」。
+        [TraitId.Stitch] = new(Shape.AdjacentAcceptsSupport, "縫い合わせ",
+            "この駒が傷ついていると、手番で回復する（縫うたびこの駒の最大HPが減る）",
+            LinkSign.Both, true, "縫い合わせ"),
+        // 第183期。**うつしたときだけ漏れる**ので点線（(b) 型）。
+        [TraitId.TouchLeak] = new(Shape.Adjacent, "毒が付く",
+            "自分が敵へ毒をうつすたび、この駒にも毒が1層付く（毒は毎ターン層の分だけ削る）",
+            LinkSign.Loss, true, "毒が付く"),
     };
 
     /// <summary>
@@ -198,6 +208,7 @@ public static class Map11Relations
         [TraitId.Cower] = "味方全体へ配る（位置を問わない）",
         [TraitId.Betrayed] = "倒した相手の席に湧く（開幕には無い）",
         [TraitId.Sniper] = "自分の列だけを読む（相手がいない）",
+        [TraitId.Touch] = "敵陣の隣接を読む（味方どうしの線ではない）",
     };
 
     /// <summary>

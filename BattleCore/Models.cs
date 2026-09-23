@@ -1550,6 +1550,24 @@ public sealed class UnitTally
                 SpitStored, SpitMoved, SpitFires,
                 ReveilleFires, ReveilleMisses, ReveilleWoken;
 
+    /// <summary>
+    /// 第183期の3枚。<b>計数専用で、どの規則も読まない。</b>
+    ///
+    /// <para>縫い合わせ（ヴェル・保持者の側）: <c>StitchFires</c> 縫った回数 ／ <c>StitchHealed</c> 実際に増えた HP ／
+    /// <c>StitchScarDealt</c> 削った最大HP ／ <c>StitchSealed</c> 渇きに封じられた回数 ／
+    /// <c>StitchSwings</c> 傷ついた隣人がいなくて殴った回数 ／ <c>RevivesGiven</c> 蘇生した回数（<c>Revive</c> の <c>by</c>）。
+    /// 受け手の側: <c>StitchedTimes</c> 縫われた回数 ／ <c>StitchScarTaken</c> 失った最大HP。</para>
+    ///
+    /// <para>触れてうつす（ラウ）: <c>TouchFires</c> うつした回数 ／ <c>TouchTargets</c> うつした延べ体数 ／
+    /// <c>TouchLayers</c> うつした層 ／ <c>TouchMisses</c> 毒はあったが隣に敵がいなかった回数 ／
+    /// <c>TouchLeakOut</c> 漏らした層。受け手の側: <c>TouchLeakIn</c> 漏れを受けた層。
+    /// 読み手（ヴィオ）の側: <c>TouchLeakDrawn</c> 吸った層のうち漏れ由来の上限 ／ <c>TouchLeakDrawFires</c> その回数。</para>
+    /// </summary>
+    public long StitchFires, StitchHealed, StitchScarDealt, StitchSealed, StitchSwings, RevivesGiven,
+                StitchedTimes, StitchScarTaken,
+                TouchFires, TouchTargets, TouchLayers, TouchMisses, TouchLeakOut, TouchLeakIn,
+                TouchLeakDrawn, TouchLeakDrawFires;
+
     public int BraceGuards, BraceCuts, BraceRefused, BraceGiven, BraceLost;
     public int BraceShoves, BraceShoveCapped, BraceNoTarget, BraceStaggers, BraceArmorMuted;
 

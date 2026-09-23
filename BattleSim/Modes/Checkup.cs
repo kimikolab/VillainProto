@@ -178,6 +178,10 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.Smear]      = (HcMinusL, "被弾のたび隣の味方の攻撃力が下がるだけ。暴発の代金で、外せば `yP` になる"),
         [TraitId.Spit]       = (HcPlusL,  "腹に溜めた毒を殴った相手へ移すだけ（澱み喰いの chain-out）"),
         [TraitId.Reveille]   = (HcPlusL,  "手番を差し出した味方1体に割り込みの一撃をさせるだけ"),
+        // 第183期: ヴェル（縫い合わせ）・ラウ（触れてうつす＋漏れ）。分類を同じコミットで足す（第132期 段0-a の再発防止）。
+        [TraitId.Stitch]     = (HcBothL,  "隣を回復するのと、縫われた者の最大HPが減るのが同じ針の表と裏"),
+        [TraitId.Touch]      = (HcPlusL,  "毒を持つ敵を殴ると隣の敵へ写すだけ。代金は別の札（`TouchLeak`）に切り出してある"),
+        [TraitId.TouchLeak]  = (HcMinusL, "うつすたび隣の味方に毒が付くだけ。触れてうつすの代金で、外せば `yP` になる"),
     };
 
     // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------

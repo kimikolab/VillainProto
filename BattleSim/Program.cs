@@ -503,6 +503,9 @@ if (focusId == "mudo")
     return;
 }
 
+// rebirth3 モード（第183期） —— B群の転生 最後の2枚（ヴェル／ラウ）。本体は `Modes/Rebirth3.cs`。
+if (focusId == "rebirth3") { Rebirth3Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
+
 // rebirth2 モード（第180期） —— B群の転生 3〜5枚目（ムド／ヴィオ／ガン）。本体は `Modes/Rebirth2.cs`。
 if (focusId == "rebirth2")
 {

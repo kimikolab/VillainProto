@@ -287,6 +287,14 @@ public enum TraitId
                 // その場で割り込んで1回攻撃する。**買う条件は号令（<see cref="TraitId.Rally"/>）と同じ**
                 // ——同じターンの頭に号令が払った +8 が、その一撃でそのまま使われる
 
+    // --- 第183期で足した札（**B群の転生 最後の2枚**。蘇生＝`Reviver` と疫み＝`Contagion` は1文字も触らない） ---
+    Stitch,     // 縫い合わせ: 手番で、隣接する味方のうち最も傷ついた1体を回復する（攻撃の代わり）。
+                // 縫われた味方は最大HPが減る（恒久）。傷ついた隣人がいなければ普通に殴る
+                // ——**表と裏が1つの動作**（縫う量と縫い跡が同じ針から出る）なので札は割らない
+    Touch,      // 触れてうつす: 手番の攻撃が毒を持つ敵に当たると、その毒の半分を標的の隣の敵全員に写す。
+                // 代金は別の札（`TouchLeak`）に切り出してある（第74期の作法。外せば `yP` になる）
+    TouchLeak,  // 漏れ: うつすたび、自分に隣接する味方全員に毒が付く（触れてうつすの代金）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -2271,7 +2279,11 @@ public enum PoisonRoute
     /// <summary>疫み（ラウ・死骸から敵全体へ）。</summary>
     Contagion,
     /// <summary>吐き戻し（ヴィオ・腹に溜めた層を殴った相手へ。第180期）。</summary>
-    Spit
+    Spit,
+    /// <summary>触れてうつす（ラウ・毒を持つ標的の隣の敵へ写す。第183期）。</summary>
+    Touch,
+    /// <summary>触れてうつすの漏れ（ラウ・隣接味方へ。第183期）。</summary>
+    TouchLeak
 }
 
 /// <summary>
@@ -5910,6 +5922,7 @@ public sealed class BlightfedTrait : Trait
             if (ally == self) continue;
             int poison = ally.Counter(StatusKeys.Poison);
             if (poison <= 0) continue;
+            ctx.NoteLeakDrawn(self, ally, poison);   // 第183期・**計数のみ**（漏れ由来の上限）
             ally.SetCounter(StatusKeys.Poison, 0);
             drawn += poison;
         }
@@ -10398,6 +10411,162 @@ public sealed class ReveilleTrait : Trait
     }
 }
 
+/// <summary>
+/// 縫い合わせ（第183期・継ぎ接ぎのヴェル）。<b>手番で、隣接する味方のうち最も傷ついた1体を
+/// <see cref="StitchHeal"/> だけ回復し、縫われた味方は最大HPが <see cref="StitchScar"/> 減る</b>（恒久・下限 1）。
+/// <b>傷ついた隣人がいなければ普通に殴る</b>（手番を捨てない）。
+///
+/// <para><b>蘇生（<see cref="ReviverTrait"/>）は1文字も触っていない。</b> この札は空いていた手番だけを使う。</para>
+///
+/// <para><b>選び方は決定的</b>——失った HP（<c>MaxHp − Hp</c>）が最大の1体、同値は席番号の小さい方
+/// （<c>LivingMembers</c> がスロット昇順なので、厳密な不等号で自然に落ちる）。
+/// <b><see cref="BattleContext.MostHurtAlly"/> は使わない</b>——あちらは HP の<b>割合</b>で選び、
+/// 同値を <c>PickOne</c> で割る（乱数を引く）。<b>隣接に絞るのは配置の問いを作るため</b>
+/// （リィカ・ゾトを離す／ムドを隣に置いて縫い続けてもらう）。</para>
+///
+/// <para><b>回復は <c>ctx.Heal</c> を通す</b>ので、支援拒否（ガルドの <c>Stoic</c>）は候補から外し、
+/// 渇き（第三波）の下では封じられる。<b>封じられた縫いは縫い跡も残さない</b>
+/// ——HP が1点も増えなかった縫いは「縫えなかった」として扱う（第183期の判断。
+/// 渇きの下で毎手番、隣の最大HPだけを削り続けるのは頼んでいない代金になる）。
+/// その手番は殴らない（封じられたのは回復で、手番は縫いに使った）。</para>
+///
+/// <para><b>手番の中だけ</b>——<c>Actions = [Skill]</c> の <see cref="OnAction"/> で撃つ。
+/// <see cref="OnTurnStart"/> には置かない（手番の外で発火させない）。
+/// 周期は <c>[Skill]</c> の1要素なので、殴る手番も同じ入口から <c>ctx.PerformAttack</c> を直に呼ぶ
+/// （拾い屋のスス＝<see cref="AshTrait"/> と同じ形）。</para>
+/// </summary>
+public sealed class StitchTrait : Trait
+{
+    /// <summary>1回に縫う量（指示書 §1-3 が<b>測る前に固定</b>した値。継ぎ当て 14 の少し下）。</summary>
+    public const int StitchHeal = 12;
+
+    /// <summary>1回縫うごとに縫われた側が失う最大HP（同上）。</summary>
+    public const int StitchScar = 3;
+
+    public override TraitId Id => TraitId.Stitch;
+
+    /// <summary>縫う相手（隣接・支援を受け付ける・傷ついている・失った HP が最大・同値はスロット昇順）。</summary>
+    public static UnitState? Patient(BattleContext ctx, UnitState self)
+    {
+        UnitState? pick = null;
+        int best = 0;
+        foreach (UnitState a in ctx.LivingMembers(self.TeamId))
+        {
+            if (a == self || !a.AcceptsSupport) continue;
+            if (!FormationRules.AreAdjacent(self.Slot, a.Slot)) continue;
+            int lost = a.MaxHp - a.Hp;
+            if (lost <= 0) continue;
+            if (pick is null || lost > best) { pick = a; best = lost; }
+        }
+        return pick;
+    }
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+
+        UnitState? p = Patient(ctx, self);
+        if (p is null)
+        {
+            // 傷ついた隣人がいない手番は素の一撃（手番を捨てない）。
+            // **`SwingTurn` ではなく `PerformAttack` を直に呼ぶ**（ススと同じ。第178期の約束）。
+            ctx.NoteStitchSwing(self);
+            ctx.PerformAttack(self, "    ");
+            return;
+        }
+
+        int before = p.Hp;
+        ctx.Heal(p, StitchHeal, self);
+        int healed = p.Hp - before;
+        if (healed <= 0)
+        {
+            // 渇きに封じられた（Hp < MaxHp を確かめてあるので、通れば必ず 1 以上増える）。
+            ctx.NoteStitchSealed(self);
+            ctx.Log($"    {self.Name} の針は {p.Name} に通らなかった", LogKind.Status);
+            return;
+        }
+
+        int maxBefore = p.MaxHp;
+        p.MaxHp = Math.Max(1, p.MaxHp - StitchScar);
+        p.Hp = Math.Min(p.Hp, p.MaxHp);
+        ctx.NoteStitch(self, p, healed, maxBefore - p.MaxHp);
+        ctx.Log($"    {self.Name} が {p.Name} を縫い合わせた（+{healed} / 最大HP {p.MaxHp}）", LogKind.Trigger, self);
+    }
+}
+
+/// <summary>
+/// 触れてうつす（第183期・疫みのラウ）。<b>手番の攻撃が毒を持つ敵に当たったとき、その毒の半分
+/// （切り捨て・最低1）を、標的に隣接する敵全員に付ける</b>（コピー。標的の毒は減らさない）。
+///
+/// <para><b>疫み（<see cref="ContagionTrait"/>・死骸から飛ぶ）は1文字も触っていない。</b>
+/// 伝染量は疫みの <c>carried / 2</c>（最低1）と揃えてある。</para>
+///
+/// <para><b>隣接は <see cref="FormationRules.AreAdjacent"/> の同じ表</b>——スロットだけを読み、
+/// 陣営を見ないので、敵陣でもそのまま引ける（第183期 Q0-4）。</para>
+///
+/// <para><b>手番の中だけ</b>——反撃（<c>Reaction</c>）・割り込み（<c>Interrupt</c>）の中では発火しない
+/// （叩き起こし＝<see cref="ReveilleTrait"/> と同じ番人）。<b>標的が倒れた一撃では写さない</b>
+/// ——死骸の毒は疫み（<c>OnAnyDeath</c>）が敵全体へ飛ばすので、写すと二重になる。</para>
+///
+/// <para><b>代金（<see cref="TraitId.TouchLeak"/>）は別の札</b>で、ここで保持を問う
+/// （札の本体は空）。外せば <c>yP</c> ＝ <c>LeakPerTouch = 0</c> の対照になる。</para>
+/// </summary>
+public sealed class TouchTrait : Trait
+{
+    public override TraitId Id => TraitId.Touch;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (ctx.InInterrupt || ctx.InReaction) return;     // 手番の中だけ
+        if (!target.IsAlive) return;                        // 死骸は疫みの側
+        if (target.TeamId == self.TeamId) return;
+        int carried = target.Counter(StatusKeys.Poison);
+        if (carried <= 0) return;                           // 毒が無ければ普通の一撃
+
+        int spread = Math.Max(1, carried / 2);
+        int hit = 0;
+        foreach (UnitState foe in ctx.LivingMembers(target.TeamId))
+        {
+            if (foe == target || !FormationRules.AreAdjacent(target.Slot, foe.Slot)) continue;
+            ctx.Poison(foe, spread, self, PoisonRoute.Touch);
+            hit++;
+        }
+        if (hit == 0) { ctx.NoteTouchMiss(self); return; }
+        ctx.NoteTouch(self, hit, spread * hit);
+        ctx.Log($"    ★ {self.Name} が {target.Name} の毒を隣の {hit} 体へうつした（+{spread}）", LogKind.Highlight, self);
+
+        if (!self.HasTrait(TraitId.TouchLeak)) return;
+        int leak = TouchLeakTrait.LeakPerTouch;
+        if (leak <= 0) return;
+        var leaked = new List<string>();
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            ctx.Poison(ally, leak, self, PoisonRoute.TouchLeak);
+            ctx.NoteTouchLeak(self, ally, leak);
+            leaked.Add(ally.Name);
+        }
+        if (leaked.Count > 0)
+            ctx.Log($"    {self.Name} の手から毒が漏れた（{string.Join("・", leaked)} に +{leak}）", LogKind.FriendlyFire, self);
+    }
+}
+
+/// <summary>
+/// 漏れ（第183期・疫みのラウ）。<b>触れてうつす（<see cref="TouchTrait"/>）が発火するたび、
+/// ラウに隣接する味方全員に毒が <see cref="LeakPerTouch"/> 付く。</b>
+/// <b>札の本体は空</b>——判定は <see cref="TouchTrait"/> の中で保持を問う（泥散りの第181期の形）。
+///
+/// <para>狙う連鎖: 漏れ → 澱み喰い（ヴィオ）が次のターン頭に吸う → 吐き戻しで敵へ → ラウがさらに広げる。
+/// <b>毒の刻みはターン頭の <c>TickStatuses</c> が先</b>なので、漏れた毒は1度は味方を刻んでから吸われる。</para>
+/// </summary>
+public sealed class TouchLeakTrait : Trait
+{
+    /// <summary>隣の味方1体あたりの毒（指示書 §2-4。グザの味方漏れ 1 と揃えた）。</summary>
+    public const int LeakPerTouch = 1;
+
+    public override TraitId Id => TraitId.TouchLeak;
+}
+
 public static class TraitCatalog
 {
     private static readonly Dictionary<TraitId, Trait> Map = new Trait[]
@@ -10502,6 +10671,9 @@ public static class TraitCatalog
         new SmearTrait(),      // 第180期
         new SpitTrait(),       // 第180期
         new ReveilleTrait(),   // 第180期
+        new StitchTrait(),     // 第183期
+        new TouchTrait(),      // 第183期
+        new TouchLeakTrait(),  // 第183期
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期

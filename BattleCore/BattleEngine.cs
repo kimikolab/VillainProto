@@ -772,11 +772,13 @@ public sealed class BattleContext
             Log($"    {target.Name} の{(deepW ? "深手" : "傷口")}から毒が滲みた（+{add - amount}）", LogKind.Status);
     }
 
-    /// <summary><see cref="UnitTally.SoakSeenByRoute"/> の長さ（毒 6 経路 ＋ 燃焼 1。第180期に吐き戻しで1本増えた）。</summary>
-    public const int SoakRouteCount = 7;
+    /// <summary><see cref="UnitTally.SoakSeenByRoute"/> の長さ（毒 8 経路 ＋ 燃焼 1。第180期に吐き戻しで1本、
+    /// 第183期に触れてうつす・その漏れで2本増えた）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
+    /// ——ずらさないと新しい経路の添字が燃焼と重なる。</summary>
+    public const int SoakRouteCount = 9;
 
     /// <summary>燃焼の経路の添字（<see cref="UnitTally.SoakSeenByRoute"/> の末尾）。</summary>
-    public const int SoakBurnRouteIx = 6;
+    public const int SoakBurnRouteIx = 8;
 
     /// <summary>
     /// 巻き込み則（第85期）で最後にこの駒へ傷を書いた駒の <c>InstanceId + 1</c>（第90期の計数専用の札）。
@@ -3363,6 +3365,64 @@ public sealed class BattleContext
 
     /// <summary>起こす相手がいなかった（<b>計数のみ</b>）。</summary>
     public void NoteReveilleMiss(UnitState self) { ReveilleMisses++; TallyOf(self).ReveilleMisses++; }
+
+    // =====================================================================================
+    // 第183期 —— 縫い合わせ（ヴェル）／触れてうつす・漏れ（ラウ）
+    // **どれも計数専用。engine には規則も窓口も1本も足していない**（判定はすべて特性の中）。
+    // =====================================================================================
+
+    /// <summary>
+    /// 漏れた毒の印（<b>私有キー・計数専用</b>）。漏れを受けた味方に積み、澱み喰い（ヴィオ）が
+    /// 吸い上げたときに「そのうち漏れ由来は何層か（上限）」を数えて 0 に戻す。<b>盤面の誰も読まない。</b>
+    /// </summary>
+    public const string TouchLeakMarkKey = "touchLeakMark";
+
+    /// <summary>縫った（<b>計数のみ</b>）。<b>縫われた側にも記録する</b>——「誰が縫われたか」の内訳。</summary>
+    public void NoteStitch(UnitState self, UnitState patient, int healed, int scar)
+    {
+        UnitTally t = TallyOf(self);
+        t.StitchFires++; t.StitchHealed += healed; t.StitchScarDealt += scar;
+        UnitTally p = TallyOf(patient);
+        p.StitchedTimes++; p.StitchScarTaken += scar;
+    }
+
+    /// <summary>縫おうとしたが渇きに封じられた（<b>計数のみ</b>）。</summary>
+    public void NoteStitchSealed(UnitState self) => TallyOf(self).StitchSealed++;
+
+    /// <summary>傷ついた隣人がいなかったので殴った（<b>計数のみ</b>）。</summary>
+    public void NoteStitchSwing(UnitState self) => TallyOf(self).StitchSwings++;
+
+    /// <summary>うつした（<b>計数のみ</b>）。</summary>
+    public void NoteTouch(UnitState self, int targets, int layers)
+    {
+        UnitTally t = TallyOf(self);
+        t.TouchFires++; t.TouchTargets += targets; t.TouchLayers += layers;
+    }
+
+    /// <summary>標的に毒はあったが、隣に敵が1体もいなかった（<b>計数のみ</b>）。</summary>
+    public void NoteTouchMiss(UnitState self) => TallyOf(self).TouchMisses++;
+
+    /// <summary>漏れた（<b>計数のみ</b>）。受け手の側にも載せ、澱み喰いが読むための印を積む。</summary>
+    public void NoteTouchLeak(UnitState self, UnitState ally, int layers)
+    {
+        TallyOf(self).TouchLeakOut += layers;
+        TallyOf(ally).TouchLeakIn += layers;
+        ally.SetCounter(TouchLeakMarkKey, ally.RawCounter(TouchLeakMarkKey) + layers);
+    }
+
+    /// <summary>
+    /// 澱み喰いが味方の毒を吸った瞬間に、そのうち漏れ由来の上限を数える（<b>計数のみ</b>）。
+    /// <paramref name="drawn"/> はその味方から吸った層。印は 0 に戻す。
+    /// </summary>
+    public void NoteLeakDrawn(UnitState reader, UnitState ally, int drawn)
+    {
+        int mark = ally.RawCounter(TouchLeakMarkKey);
+        if (mark <= 0) return;
+        ally.SetCounter(TouchLeakMarkKey, 0);
+        int fromLeak = Math.Min(mark, drawn);
+        UnitTally t = TallyOf(reader);
+        t.TouchLeakDrawn += fromLeak; t.TouchLeakDrawFires++;
+    }
 
     /// <summary><see cref="ApplyDamage"/> を通らずに HP を減らした量を記録する（計数のみ）。</summary>
     public void NoteDirectHpLoss(int amount) { if (amount > 0) DirectHpLoss += amount; }
@@ -6759,6 +6819,7 @@ public sealed class BattleContext
         if (target.IsAlive) return;
         if (BetrayWatch && BetrayedTrait.IsFodder(target)) BetrayRevived++;   // 第103期・自己検査 (g)
         target.Hp = Math.Max(1, hp);
+        if (by is not null) TallyOf(by).RevivesGiven++;   // 第183期・**計数のみ**（蘇生の本体は触らない）
         target.ResetAtkBonus();   // 第68期: 帳簿に載せずに戻す（負→0 を上昇として数えないため）
         // 第67期。配られた力が消える場所で「押された累計」も一緒に消す（寿命を AtkBonus に揃える）。
         target.WhetReceived = 0;

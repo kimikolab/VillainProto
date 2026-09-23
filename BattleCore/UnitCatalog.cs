@@ -138,9 +138,13 @@ public static class UnitCatalog
         MaxHp = 46,
         Attack = 6,
         Speed = 8,
-        Traits = new[] { TraitId.Reviver },
-        PlusText = "倒れた味方を戦線に戻す（2回まで）",
-        MinusText = "1回縫うごとに自分の最大HPが半分になる",
+        Traits = new[] { TraitId.Reviver, TraitId.Stitch },
+        // 第183期: 空いていた手番に縫い合わせ（`StitchTrait`）を載せた。**[Skill] 1要素**
+        // ——傷ついた隣人がいない手番は `StitchTrait` が `ctx.PerformAttack` を直に呼ぶ（ススと同じ形）。
+        // 札は**どちらの拍でも嘘にならない中立の1行**にしてある。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "針を取った") },
+        PlusText = "手番で隣の傷ついた味方を縫い合わせる（いなければ殴る）。倒れた味方を戦線に戻す（2回まで）",
+        MinusText = "縫われた者は最大HPが減る。1回戻すごとに自分の最大HPが半分になる",
         Flavor = "縫い直された者はもう元の者ではない、と嫌われた。"
     };
 
@@ -241,9 +245,9 @@ public static class UnitCatalog
         Attack = 5,
         Speed = 7,
         Advances = false,
-        Traits = new[] { TraitId.Contagion },
-        PlusText = "毒に侵された駒が倒れると、残りの敵へ毒が飛ぶ（味方の死骸からも飛ぶ）",
-        MinusText = "自分では毒を与えられない。撒いた毒は傷を負った相手には深く入る",
+        Traits = new[] { TraitId.Contagion, TraitId.Touch, TraitId.TouchLeak },
+        PlusText = "毒に侵された敵を殴ると、隣の敵にもうつる。毒に侵された駒が倒れると、残りの敵へ毒が飛ぶ（味方の死骸からも飛ぶ）",
+        MinusText = "自分では毒を与えられない。うつすたび、隣の味方にも毒が付く",
         Flavor = "死体を運ばせると必ず疫病が出るので、隊列から外された。"
     };
 
