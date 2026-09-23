@@ -1117,6 +1117,7 @@ public partial class Main : Control
         string verdict = _result.PlayerWon ? "VICTORY" : "DEFEAT";
         _battleField.ResetBindings();
         foreach (var pawn in _battleField.Pawns.Values) pawn.SetFrightened(false);
+        foreach (var pawn in _battleField.Pawns.Values) pawn.SetStatusIcon(StatusKeys.Cowed, false);
         foreach (var pawn in _battleField.Pawns.Values) pawn.CancelCharge();
         Color color = _result.PlayerWon ? UiKit.Heal : UiKit.Hurt;
         if (_result.PlayerWon) _battleField.ShowVictoryPortraits();
@@ -1149,7 +1150,8 @@ public partial class Main : Control
                      + $" attackPlays={_attackPlays} maxRun={_attackRunMax} maxRunBy={_attackRunName}"
                      + $" hexMarks={_hexMarksShown} hexBatches={_hexSharePlays} hexHits={_hexShareHits}"
                      + $" poisonSpreads={_poisonSpreadPlays} poisonLeaks={_poisonLeakPlays}"
-                     + $" poisonDrains={_poisonDrainPlays} poisonDrainHits={_poisonDrainHits}");
+                     + $" poisonDrains={_poisonDrainPlays} poisonDrainHits={_poisonDrainHits}"
+                     + $" shieldShares={_shieldShown.Count} cowedGains={_cowedShown.Count} cowedLost={_cowedLostPlays} cowedAbsorbed={_cowedAbsorbed}");
             GetTree().Quit();
         }
     }
@@ -1239,6 +1241,7 @@ public partial class Main : Control
             {
                 AttackPattern pattern = e.Pattern ?? AttackPattern.Single;
                 IReadOnlyList<BattlePawn3D> impactTargets = FindAttackTargets(eventIndex, e);
+                var shieldShares = FindShieldShares(eventIndex);
                 // 溜めの解放は踏み込み後の着弾で行う。手番外の攻撃では消費しない。
                 bool continuingCombo = actor is not null && _comboEnds.ContainsKey(actor);
                 if (e.Reaction && !continuingCombo)
@@ -1248,7 +1251,9 @@ public partial class Main : Control
                     _comboEnds[actor] = comboEnd;
                 }
                 await _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire,
-                    advance: !continuingCombo, holdPosition: actor is not null && _comboEnds.ContainsKey(actor));
+                    advance: !continuingCombo, holdPosition: actor is not null && _comboEnds.ContainsKey(actor),
+                    shieldImpact: shieldShares.Count == 0 ? null :
+                        () => _battleField.ShowRangeShield(actor, impactTargets, shieldShares, pattern, _speed));
                 // 第178期 自己検査 (e)。**計数だけ**（上の1行が「1発ぶんの絵と音」なので、ここで数える）。
                 _attackPlays++;
                 _attackRun = e.ActorId == _attackRunActor ? _attackRun + 1 : 1;
@@ -1312,6 +1317,13 @@ public partial class Main : Control
             // `ActorId` = 割り込んだ駒 ／ `TargetId` = **本来の標的**なので、
             // 線は「本来の標的 → 割り込んだ駒」に折れる（§5-1 の 4）。
             case BattleEventKind.Intercept:
+                if (e.Text == InterceptLabels.RangeShield)
+                {
+                    if (!_shieldShown.Contains(eventIndex) && actor is not null && target is not null)
+                        await _battleField.ShowRangeShield(null, new[] { actor }, new[] { (target, actor) },
+                            AttackPattern.All, _speed);
+                    break;
+                }
                 // 標的は引き寄せなので踏み込まない。庇いの各段だけを動かす。
                 if (e.Text is InterceptLabels.Guardian or InterceptLabels.ThornGuard
                     or InterceptLabels.RearGuard or InterceptLabels.Martyr)
@@ -1490,7 +1502,34 @@ public partial class Main : Control
                     await PlayPoisonDrain(eventIndex);
                 break;
 
+            case BattleEventKind.Cowed:
+                if (target is not null)
+                {
+                    if (e.Text == CowedLabels.Lost)
+                    {
+                        _cowedLostPlays++;
+                        target.PulseCowedLost();
+                        await Delay(0.64);
+                    }
+                    else if (e.Text == CowedLabels.Absorbed) _cowedAbsorbed++;
+                    target.SetStatusIcon(StatusKeys.Cowed, false);
+                    SetDisplayedStatus(target, DisplayStatusKey(StatusKeys.Cowed), 0);
+                }
+                break;
+
             case BattleEventKind.StatusGain:
+                if (e.Text == StatusKeys.Cowed)
+                {
+                    await PlayCowedGain(eventIndex);
+                    break;
+                }
+                if (e.Text == StatusKeys.Footing && target is not null)
+                {
+                    target.AddFooting(e.Amount);
+                    _battleField.ShowFooting(target);
+                    await Delay(0.20);
+                    break;
+                }
                 if (e.Text == StatusKeys.Grappled && target is not null)
                 {
                     _battleField.SetBinding(actor, target, e.Amount > 0);
@@ -1789,6 +1828,9 @@ public partial class Main : Control
     private void IndexTimeline(IReadOnlyList<BattleEvent> events)
     {
         _beatByIndex.Clear();
+        _shieldShown.Clear();
+        _cowedShown.Clear();
+        _cowedLostPlays = _cowedAbsorbed = 0;
         _ownerByIndex.Clear();
         _relayVictimByIndex.Clear();
         _shownBeat = Beat.TurnOpen;
@@ -1799,14 +1841,15 @@ public partial class Main : Control
         for (int i = 0; i < events.Count; i++)
         {
             BattleEvent e = events[i];
-            bool off = e.Reaction || e.Relayed || e.Kind == BattleEventKind.Intercept;
+            bool rangeShield = e.Kind == BattleEventKind.Intercept && e.Text == InterceptLabels.RangeShield;
+            bool off = e.Reaction || e.Relayed || (e.Kind == BattleEventKind.Intercept && !rangeShield);
 
             if (e.Kind == BattleEventKind.TurnStart)
             {
                 current = Beat.TurnOpen;
                 owner = -1;
             }
-            else if (e.Kind == BattleEventKind.Intercept)
+            else if (e.Kind == BattleEventKind.Intercept && !rangeShield)
             {
                 // 介入は標的選択の中＝これから振る駒の手番の入口。主を先に立てる。
                 if (NextAttacker(events, i) is { } next) { owner = next; current = Beat.InTurn; }
@@ -1818,8 +1861,8 @@ public partial class Main : Control
                 owner = actorId;
                 current = Beat.InTurn;
             }
-            else if (e.Kind == BattleEventKind.Stagger
-                     && e.Text == StaggerLabels.Lost
+            else if ((e.Kind == BattleEventKind.Stagger && e.Text == StaggerLabels.Lost
+                      || e.Kind == BattleEventKind.Cowed)
                      && e.TargetId is { } staggeredId)
             {
                 // 転倒で潰れた手番には Attack / Skill / Charge が1件も無い。

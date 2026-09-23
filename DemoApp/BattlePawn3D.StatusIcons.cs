@@ -29,11 +29,12 @@ public partial class BattlePawn3D
         if (!_statusSnapshot.ContainsKey(StatusKeys.Stun)) SetFrightened(false);
         foreach (string key in StatusIconArt.Keys)
         {
-            if (key == StatusKeys.Poison)
+            if (key is StatusKeys.Poison or StatusKeys.Footing)
                 _statusIcons.SetAmount(key, _statusSnapshot.GetValueOrDefault(key), false);
             else _statusIcons.Set(key, _statusSnapshot.ContainsKey(key));
         }
         _confusion.SetActive(!_victory && _statusSnapshot.ContainsKey(StatusKeys.Confused));
+        SetCowed(!_victory && _statusSnapshot.ContainsKey(StatusKeys.Cowed));
         SetCurseStain(!_victory && _statusSnapshot.ContainsKey(StatusKeys.Curse));
     }
 
@@ -70,6 +71,7 @@ public partial class BattlePawn3D
             _statusIcons.Set(key, active);
             if (key == StatusKeys.Confused) _confusion.SetActive(active && !_victory);
             if (key == StatusKeys.Curse) SetCurseStain(active && !_victory);
+            if (key == StatusKeys.Cowed) SetCowed(active && !_victory);
         }
     }
 }

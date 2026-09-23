@@ -651,12 +651,14 @@ void fragment() {
             PortraitGroundY + _portraitGroundDistance * scaleY - fall * 0.30f,
             0);
         float shadowSpread = fall * 0.28f;
+        ProcessShieldCowed(animationDelta);
         _shadow.Scale = new Vector3(1.0f - breath * 0.10f + shadowSpread, 1, 1.0f - breath * 0.10f - shadowSpread * 0.35f);
         _ring.Rotation = new Vector3(0, _phase * 0.15f, 0);
     }
 
     private void ResetStaggerPose()
     {
+        ResetShieldCowed();
         _staggered = false;
         _staggerPose = 0;
         _staggerRecoverDelay = 0;

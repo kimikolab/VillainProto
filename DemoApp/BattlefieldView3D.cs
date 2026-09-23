@@ -281,6 +281,7 @@ public partial class BattlefieldView3D : Control
 
     public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName, int stageIndex)
     {
+        _shieldCowedGeneration++;
         _attackAudio.StopAll();
         // 波の番号で背景を選ぶ。表示名や戦闘ログの文字列は判定に使わない。
         bool fortress = stageIndex == 3;
@@ -557,7 +558,8 @@ public partial class BattlefieldView3D : Control
         bool reaction = false,
         bool friendly = false,
         bool advance = true,
-        bool holdPosition = false)
+        bool holdPosition = false,
+        Func<Task>? shieldImpact = null)
     {
         if (from is null || to is null) return;
         Color color = friendly ? UiKit.Violet : reaction ? UiKit.Gold : from.Team == BattleContext.PlayerTeam ? UiKit.Player : UiKit.Enemy;
@@ -573,7 +575,8 @@ public partial class BattlefieldView3D : Control
         _attackAudio.PlayAttack(from.UnitId, from.Team, pattern, reaction, charged);
         CameraPunch((from.GlobalPosition + to.GlobalPosition) * 0.5f, pattern);
 
-        switch (pattern)
+        if (shieldImpact is not null) await shieldImpact();
+        else switch (pattern)
         {
             case AttackPattern.Sweep:
                 // 第125期 3-f: 「薙ぎ全般が散弾みたいで銃撃戦に見える」への直答。
