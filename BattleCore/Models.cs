@@ -1568,6 +1568,27 @@ public sealed class UnitTally
                 TouchFires, TouchTargets, TouchLayers, TouchMisses, TouchLeakOut, TouchLeakIn,
                 TouchLeakDrawn, TouchLeakDrawFires;
 
+    /// <summary>
+    /// 第184期の2枚（標の軸）。<b>計数専用で、どの規則も読まない。</b>
+    ///
+    /// <para>矢面（ヒサ・保持者の側）: <c>BeckonFires</c> 標を付けた回数 ／ <c>BeckonSwitches</c> そのうち付け替え ／
+    /// <c>BeckonIdle</c> 隣がいなかった ／ <c>BeckonGuardSaved</c> 半減で防いだ量。
+    /// 受け手の側: <c>BeckonPicked</c> 指差された回数 ／ <c>BeckonGuardTaken</c> 半減で防いでもらった量。</para>
+    ///
+    /// <para>逃げ回る: <c>FleeSwaps</c> 入れ替えた回数 ／ <c>FleeStuck</c> 相手がいなかった ／
+    /// <c>FleeReaderSwings</c> 入れ替えの最中に振られた回数（軋みの割り込みなど）／
+    /// <c>FleeReaderWhet</c> 入れ替えの最中に味方が受けた強化（移り木など）／
+    /// <c>FleeFoeMoves</c> 入れ替えの最中に動いた敵（突き返しなど）。受け手の側: <c>FleePushed</c>。</para>
+    ///
+    /// <para>仇指し（ザン）: <c>VendettaFires</c> 刃を返した回数 ／ <c>VendettaDealt</c> 実際に削った HP ／
+    /// <c>VendettaMarks</c> 標を付けた回数 ／ <c>RecoilTaken</c> 返り血の総量。
+    /// 殴った側: <c>MarkVulnDealt</c> §1 の被ダメージ増で上乗せした量。</para>
+    /// </summary>
+    public long BeckonFires, BeckonSwitches, BeckonIdle, BeckonGuardSaved, BeckonPicked, BeckonGuardTaken,
+                FleeSwaps, FleeStuck, FleeReaderSwings, FleeReaderWhet, FleeFoeMoves, FleePushed,
+                VendettaFires, VendettaDealt, VendettaMarks, RecoilTaken, MarkVulnDealt,
+                BeckonStrippedHits;
+
     public int BraceGuards, BraceCuts, BraceRefused, BraceGiven, BraceLost;
     public int BraceShoves, BraceShoveCapped, BraceNoTarget, BraceStaggers, BraceArmorMuted;
 
@@ -2391,6 +2412,22 @@ public readonly record struct MarkLedger(
 }
 
 /// <summary>
+/// 標の軸の帳簿（第184期）。<b>計数専用で、どの規則も読まない。</b>
+/// </summary>
+/// <param name="VulnHits">§1 の被ダメージ増が乗った回数（添字は <see cref="MarkOrigin"/>＝その他／逸らし／仇指し）。</param>
+/// <param name="VulnAdded">§1 で上乗せした量（同上）。</param>
+/// <param name="FoeUnitTurns">ターン頭に敵の標が立っていた延べ体数。</param>
+/// <param name="FoeTurns">ターン頭に敵の標が1体以上立っていたターン数。</param>
+/// <param name="FoeMax">同時に立っていた最大数。</param>
+/// <param name="GuardHits">§2 矢面の半減が効いた回数。</param>
+/// <param name="GuardSaved">§2 矢面の半減で防いだ量。</param>
+/// <param name="StrippedHits">§2 矢面の記憶が指しているのに標が剥がされていて、半減が掛からなかった被弾の回数。</param>
+/// <param name="StrippedDamage">同じく、その被弾の量（軽減の族を通った後・肩代わりの前）。</param>
+public readonly record struct MarkAxisLedger(
+    long[] VulnHits, long[] VulnAdded, long FoeUnitTurns, long FoeTurns, long FoeMax,
+    long GuardHits, long GuardSaved, long StrippedHits, long StrippedDamage);
+
+/// <summary>
 /// 燃焼の重ね掛けの帳簿（第134期 段1）。<b>計数専用で、どの規則も読まない。</b>
 ///
 /// <para><b>陣営の添字は受け手の側</b>——<c>0 = 敵に点いた火</c> / <c>1 = 味方に点いた火</c>。
@@ -2653,6 +2690,12 @@ public sealed class BattleResult
 
     /// <summary>標の一生の帳簿（第150期 段A）。<b>計数専用で、どの規則も読まない。</b></summary>
     public required MarkLedger Marks { get; init; }
+
+    /// <summary>
+    /// 第184期。標の軸（§1 被ダメージ増・§2 矢面の半減）の帳簿（<b>計数専用</b>。どの規則も読まない）。
+    /// 駒ごとの計数（付け替え・逃げ・倍返し・返り血）は <see cref="TallyByUnit"/> にある。
+    /// </summary>
+    public MarkAxisLedger MarkAxis { get; init; }
 
     /// <summary>盤面ルール（渇き・粛）の帳簿（第134期 段2・<see cref="BoardRuleLedger"/>）。<b>計数専用。</b></summary>
     public required BoardRuleLedger BoardRules { get; init; }

@@ -191,9 +191,13 @@ public static class UnitCatalog
         Attack = 2,
         Speed = 10,
         Advances = false,
-        Traits = new[] { TraitId.Marker },
-        PlusText = "隣接する味方1体に標を付け、敵の攻撃を集中させる",
-        MinusText = "自分では何もできない。押し出された味方は普通は死ぬ",
+        // **第184期に転生**（旧 `Marker` は定義だけ残す）。矢面（`Beckon`）と、その代金の逃げ回る（`Flee`）。
+        // **札の並びが実行順**——矢面が標を付けてから、逃げ回るが標の相手以外と入れ替わる（どちらも `OnAction`）。
+        Traits = new[] { TraitId.Beckon, TraitId.Flee },
+        // 指差すのが手番そのもの（攻撃2 は出なくなる）。`[Skill]` の1要素で毎手番指差して逃げる。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "隣の味方を指差した") },
+        PlusText = "手番で、隣でいちばん元気な味方1体に標を付けて矢面に立たせる。標を付けられた味方は、攻撃から受ける痛みが半分になる",
+        MinusText = "自分では攻撃しない。指差したら、標の相手以外の隣の味方と入れ替わって逃げる（入れ替わった味方は前へ押し出される）",
         Flavor = "味方を矢面に立たせて生き延びた男。誰も隣に立ちたがらない。"
     };
 
@@ -811,6 +815,11 @@ public static class UnitCatalog
     ///
     /// 怯みは痺れに乗っているので、破片（ヒビ）を配られていると受け切った被弾では
     /// 怯まない（AvengeTrait 参照）。破片に初めて実質的な読み手が付く組み合わせ。
+    ///
+    /// <para><b>第184期に転生した</b>（上の2段落は旧版＝<see cref="AvengeTrait"/> の話）。
+    /// 怯みを外し、割り込みを<b>倍の刃</b>にして<b>殴った敵に標を付ける</b>ようにした（<see cref="VendettaTrait"/>）。
+    /// 代金は<b>刃を返すたびの返り血</b>（<see cref="RecoilTrait"/>・殺さない）。
+    /// 標の書き手は ヒサ（矢面）・カリ（駆り立て）・ソラ（自分への標）の3枚。</para>
     /// </summary>
     public static readonly UnitDef Zan = new()
     {
@@ -819,9 +828,10 @@ public static class UnitCatalog
         MaxHp = 56,
         Attack = 10,
         Speed = 5,
-        Traits = new[] { TraitId.Avenge },
-        PlusText = "標的にされた味方が殴られるたび、殴った者へ割り込んで刃を返す",
-        MinusText = "自分が殴られると怖気づき、次の手番を失う。怯んでいる間は刃も返せない",
+        // **第184期に転生**（旧 `Avenge` は定義だけ残す）。仇指し（倍返し＋敵に標）と、その代金の返り血。
+        Traits = new[] { TraitId.Vendetta, TraitId.Recoil },
+        PlusText = "標を付けられた味方が殴られるたび、殴った者へ割り込んで倍の刃を返し、仇として標を付ける（標を付けられた敵は受けるダメージが5割増える）",
+        MinusText = "刃を返すたびに自分も傷つく（それで倒れはしない）",
         Flavor = "仲間が殴られた時だけ勇敢になれる。自分が殴られると、そこにはもう誰もいない。"
     };
 

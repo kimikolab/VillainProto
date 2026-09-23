@@ -295,6 +295,13 @@ public enum TraitId
                 // 代金は別の札（`TouchLeak`）に切り出してある（第74期の作法。外せば `yP` になる）
     TouchLeak,  // 漏れ: うつすたび、自分に隣接する味方全員に毒が付く（触れてうつすの代金）
 
+    // --- 第184期で足した札（**A群の転生 1〜2枚目・標の軸**。旧 `Marker` / `Avenge` は定義だけ残す） ---
+    Beckon,     // 矢面: 手番で、隣接する味方のうち現在HPが最も多い1体に標を付ける（攻撃の代わり・標は1つだけ）。
+                // 標を付けられた味方は、攻撃によるダメージが半分になる（`BeckonTrait.GuardPercent`）
+    Flee,       // 逃げ回る: 標を付けた直後、標の相手以外の隣の味方と場所を入れ替える（矢面の代金。外せば `yP`）
+    Vendetta,   // 仇指し: 標を持つ味方が殴られるたび、殴った者へ倍の刃を返し、その敵に標を付ける（怯みは無い）
+    Recoil,     // 返り血: 仇指しの刃を返すたび、自分が傷つく（殺さない・仇指しの代金。外せば `yP`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -3976,6 +3983,7 @@ public sealed class DivertTrait : Trait
 
             bool fresh = pick.Counter(StatusKeys.Marked) <= 0;
             pick.SetCounter(StatusKeys.Marked, 1);
+            if (fresh) ctx.NoteMarkOrigin(pick, MarkOrigin.Divert);   // 第184期（計数のみ）
             ctx.NoteDivertFocus(pick.Def.Name, fresh);
             focused++;
             if (fresh)
@@ -10578,6 +10586,275 @@ public sealed class TouchLeakTrait : Trait
     public override TraitId Id => TraitId.TouchLeak;
 }
 
+/// <summary>
+/// 矢面（第184期・囃し立てのヒサの転生）。<b>手番で</b>（<c>Actions = [Skill]</c>・攻撃の代わり）、
+/// 隣接する味方のうち<b>現在HPが最も多い1体</b>に標を付ける。<b>ヒサの標は1つだけ</b>——
+/// 相手が変わったら前の相手の標を外す。<b>標を付けられた味方は、攻撃によるダメージが半分になる</b>
+/// （<see cref="GuardPercent"/>。判定は engine の <c>ApplyDamage</c> の軽減の族——据え・散開・萎縮の直後）。
+///
+/// <para><b>選び方は決定的</b>——現在HPが最大、同値は<b>席番号の小さい方</b>。<c>PickOne</c> を使わない
+/// （旧 <see cref="MarkerTrait"/> は最大HPの同値を乱数で割っていた。<b>この札で <c>PickOne</c> が1件減る</b>）。
+/// <c>LivingMembers</c> の並びは入れ替えの後はスロット順ではないので、<b>同値は席番号で明示的に比べる</b>。</para>
+///
+/// <para><b>開戦時にも1回付ける</b>（指示書 §2-1 の4。第2〜5波の敵はヒサ（速10）より速い駒を含むので、
+/// 初手の手番を待つと最初の1巡は守りが立たない）。選び方は手番と同じ規則で、開戦時は逃げない。</para>
+///
+/// <para><b>半減が付くのは「ヒサの標」だけ</b>（指示書 Q0-4）——標のカウンタは1本しかないので、
+/// 出どころは<b>保持者の側の記憶</b>（<see cref="TargetKey"/> ＝ 相手の <c>InstanceId + 1</c>）で区別する。
+/// 駆り立て（カリ）・逸らし（ソラの自分への標）の標は半減しない。
+/// <b>標が誰かに剥がされたら半減も止まる</b>（engine は「標がある かつ 記憶が指している」の積で読む）。
+/// <b>ヒサが倒れても記憶は残る</b>——標が残る限り、守りも残る。</para>
+///
+/// <para><b>「支援」ではない</b>——支援拒否（ガルドの <c>Stoic</c>）も候補に入る。
+/// 標は矢面に立たせる害で、半減はその害の中に埋めた見返り（駆り立ての「害の中に見返りを埋める」形）。</para>
+/// </summary>
+public sealed class BeckonTrait : Trait
+{
+    /// <summary>標を持つ味方が攻撃から受けるダメージの軽減（%）。指示書が<b>測る前に固定</b>した値。</summary>
+    public const int GuardPercent = 50;
+
+    /// <summary>いま標を付けている味方の <c>InstanceId + 1</c>。0 は未設定。</summary>
+    public const string TargetKey = "beckonTarget";
+
+    public override TraitId Id => TraitId.Beckon;
+
+    /// <summary>
+    /// 付ける相手（隣接・生存・自分以外・現在HPが最大・同値は席番号の小さい方）。
+    /// </summary>
+    public static UnitState? Pick(BattleContext ctx, UnitState self)
+    {
+        UnitState? pick = null;
+        foreach (UnitState a in ctx.LivingMembers(self.TeamId))
+        {
+            if (a == self || !FormationRules.AreAdjacent(self.Slot, a.Slot)) continue;
+            if (pick is null || a.Hp > pick.Hp || (a.Hp == pick.Hp && a.Slot < pick.Slot)) pick = a;
+        }
+        return pick;
+    }
+
+    /// <summary>いま標を付けている相手（生死を問わない）。未設定なら null。</summary>
+    public static UnitState? Target(BattleContext ctx, UnitState self)
+    {
+        int id = self.RawCounter(TargetKey) - 1;
+        if (id < 0) return null;
+        foreach (UnitState u in ctx.AllUnits)
+            if (u.InstanceId == id) return u;
+        return null;
+    }
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self) => Beckon(ctx, self);
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Beckon(ctx, self);
+
+    // 行動パターンを持たない保持者は従来どおりターン頭に発火する（`Trait.ActsOnPattern`・継ぎ当てと同じ作法）。
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Beckon(ctx, self);
+    }
+
+    private static void Beckon(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+
+        UnitState? prev = Target(ctx, self);
+        UnitState? pick = Pick(ctx, self);
+        if (pick is null)
+        {
+            ctx.NoteBeckonIdle(self);
+            ctx.Log($"    {self.Name} は指差す相手がいなかった", LogKind.Action);
+            return;
+        }
+
+        if (prev is not null && !ReferenceEquals(prev, pick))
+        {
+            prev.SetCounter(StatusKeys.Marked, 0);
+            ctx.NoteMarkGoadClear(prev);   // 第150期の帳簿の「替え」（付け替え。計数のみ）
+        }
+
+        bool fresh = pick.RawCounter(StatusKeys.Marked) <= 0;
+        pick.SetCounter(StatusKeys.Marked, 1);
+        self.SetCounter(TargetKey, pick.InstanceId + 1);
+        ctx.NoteBeckon(self, pick, prev is not null && !ReferenceEquals(prev, pick));
+        if (fresh) ctx.EmitStatusGain(pick, StatusKeys.Marked, 1, self);   // 表示専用（標が付いた瞬間）
+        ctx.Log($"    {self.Name} が {pick.Name} を指差して矢面に立たせた（受ける痛みが半分に）", LogKind.Trigger);
+    }
+
+    /// <summary>部隊戦の境界で記憶を捨てる（<c>InstanceId</c> は戦闘ごとに振り直される。駆り立てと同じ理由）。</summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(TargetKey, 0);
+}
+
+/// <summary>
+/// 逃げ回る（第184期・矢面の代金）。<b>矢面（<see cref="BeckonTrait"/>）が標を付けた直後</b>
+/// （同じ手番の <see cref="OnAction"/>。札の並びが矢面 → 逃げ回る なのでこの順で走る）、
+/// <b>標の相手以外の隣の味方と場所を入れ替える</b>。毎手番動く。
+///
+/// <para><b>入れ替わる相手は決定的</b>——<b>自分より後ろの列にいる隣を優先</b>
+/// （ヒサが下がり、相手が前へ押し出される）、同じ条件なら席番号の小さい方。召喚枠（○中1 など）は相手にしない
+/// （逃げ込み先の空席と同じ理由——召喚枠の駒は編成の外）。相手がいなければ動かない。</para>
+///
+/// <para><b>移動は <see cref="BattleContext.SwapSlots"/> を通す</b>ので、移動の読み手
+/// （軋みの割り込み・移り木の強化・突き返し・混乱）はそのまま発火する。<b>バサの転倒は敵にしか付かない</b>
+/// （<see cref="ShufflerTrait"/> が前へ出した<b>敵</b>を転ばせる形）ので、味方の入れ替えでは起きない。</para>
+///
+/// <para>開戦時は動かない（矢面の <c>OnBattleStart</c> は標を付けるだけ）。<b>別の札に切り出してある</b>ので、
+/// 外せば「標を付けるが逃げない」ヒサ（`yP`）になる。</para>
+/// </summary>
+public sealed class FleeTrait : Trait
+{
+    public override TraitId Id => TraitId.Flee;
+
+    /// <summary>入れ替える相手（隣・生存・編成枠・標の相手以外・後ろの列を優先・同値は席番号）。</summary>
+    public static UnitState? Partner(BattleContext ctx, UnitState self, UnitState? keep)
+    {
+        UnitState? pick = null;
+        int myDepth = FormationRules.DepthOf(self.Row);
+        foreach (UnitState a in ctx.LivingMembers(self.TeamId))
+        {
+            if (a == self || ReferenceEquals(a, keep)) continue;
+            if (FormationRules.IsSummonSlot(a.Slot)) continue;
+            if (!FormationRules.AreAdjacent(self.Slot, a.Slot)) continue;
+            if (pick is null) { pick = a; continue; }
+            bool aBack = FormationRules.DepthOf(a.Row) > myDepth;
+            bool pBack = FormationRules.DepthOf(pick.Row) > myDepth;
+            if (aBack != pBack) { if (aBack) pick = a; continue; }
+            if (a.Slot < pick.Slot) pick = a;
+        }
+        return pick;
+    }
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        UnitState? keep = BeckonTrait.Target(ctx, self);
+        UnitState? partner = Partner(ctx, self, keep);
+        if (partner is null)
+        {
+            ctx.FleeSwap(self, null);
+            ctx.Log($"    {self.Name} は逃げ場が無かった", LogKind.Action);
+            return;
+        }
+        ctx.Log($"    {self.Name} は指差したまま {partner.Name} の陰へ逃げ込んだ", LogKind.FriendlyFire);
+        ctx.FleeSwap(self, partner);   // SwapSlots ＋ 計数（移動の読み手が何をしたか）
+    }
+}
+
+/// <summary>
+/// 仇指し（第184期・仇討ちのザンの転生）。<b>標を持つ味方が殴られるたび、殴った者へ割り込んで
+/// 倍の刃を返し（<see cref="AvengeMultiplier"/>）、その敵に標を付ける</b>
+/// ——<b>味方の標（挑発）の出来事を、敵の標に変換する</b>駒。敵の標は engine の鎖（味方の単体攻撃が狙う）と
+/// 標の被ダメージ増（<see cref="MarkRule"/>）と止め（トメ）の読みに乗る。
+///
+/// <para><b>殴ってから付ける</b>（指示書 Q0-6）——1発目は倍のみ、2人目以降が標の +50% を受ける。
+/// 既に標を持つ敵を殴り返せば、その1発目から +50% が乗る。</para>
+///
+/// <para><b>怯み（痺れ）は外した</b>——旧 <see cref="AvengeTrait"/> の「殴られると次の手番を失う」は無い。
+/// 代金は別の札（<see cref="RecoilTrait"/>・返り血）。<b>粛（第二波）には今までどおり封じられる</b>
+/// （<see cref="BattleContext.CanActOutOfTurn"/> を通る。経路は <see cref="OutOfTurnRoute.Avenge"/> のまま）。</para>
+///
+/// <para>1発は <see cref="BattleContext.ApplyDamage"/> を直に呼ぶ（旧版と同じ。<c>PerformAttack</c> を通らないので
+/// 止めの倍率・標の引き寄せ・巻き込みには乗らない）。<c>Reaction</c> で包むので反撃の連鎖は起きない。</para>
+/// </summary>
+public sealed class VendettaTrait : Trait
+{
+    /// <summary>割り込みの一撃の倍率（指示書が<b>測る前に固定</b>した値）。</summary>
+    public const int AvengeMultiplier = 2;
+
+    public override TraitId Id => TraitId.Vendetta;
+
+    public override void OnAllyDamaged(BattleContext ctx, UnitState self, UnitState ally,
+                                       int dmg, UnitState? source)
+    {
+        if (ally == self) return;
+        if (ally.Counter(StatusKeys.Marked) <= 0) return;               // 標を持つ味方だけ
+        if (source is null || source.TeamId == self.TeamId) return;     // 味方の事故には出ない
+        if (!source.IsAlive) return;
+        if (ctx.InReaction) return;                                     // 反撃の連鎖を止める
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Avenge)) return;  // 粛・痺れで止まる
+
+        ctx.Reaction(() =>
+        {
+            int atk = Math.Max(1, self.CurrentAttack * AvengeMultiplier);
+            int before = source.Hp;
+            bool alreadyMarked = source.RawCounter(StatusKeys.Marked) > 0;
+            ctx.Log($"    {self.Name} が {ally.Name} の仇へ倍の刃を返す", LogKind.Trigger);
+            ctx.NoteAttackRead(self);   // 攻撃力を出力に変換した（第64期・死蔵の判定）
+            ctx.ApplyDamage(source, atk, self);
+            int dealt = Math.Max(0, before - Math.Max(0, source.Hp));
+
+            // 殴ってから付ける（Q0-6）。倒れた相手には付けない。
+            bool marked = false;
+            if (source.IsAlive && !alreadyMarked)
+            {
+                source.SetCounter(StatusKeys.Marked, 1);
+                ctx.NoteMarkOrigin(source, MarkOrigin.Vendetta);
+                ctx.EmitStatusGain(source, StatusKeys.Marked, 1, self);   // 表示専用
+                ctx.Log($"    {self.Name} が {source.Name} を仇として指差した", LogKind.Trigger);
+                marked = true;
+            }
+            ctx.NoteVendetta(self, dealt, marked);
+
+            if (self.HasTrait(TraitId.Recoil) && self.IsAlive)
+            {
+                int before2 = self.Hp;
+                ctx.ApplyDamage(self, RecoilTrait.AvengeCost, self, isFriendlyFire: true, lethal: false, levy: true);
+                ctx.NoteRecoil(self, Math.Max(0, before2 - self.Hp));
+            }
+        });
+    }
+}
+
+/// <summary>
+/// 返り血（第184期・仇指しの代金）。<b>刃を返すたびに自分が <see cref="AvengeCost"/> 傷つく</b>（殺さない）。
+///
+/// <para><b>本体は空の札</b>——発火は仇指し（<see cref="VendettaTrait"/>）の中で <c>HasTrait(Recoil)</c> を問う1行
+/// （触れてうつす × 漏れと同じ形）。別の札にしてあるので、外せば `yP` になる。</para>
+///
+/// <para><b>味方の刃（<c>isFriendlyFire</c>）かつ徴収（<c>levy</c>）として通す</b>——攻撃ではない自傷なので、
+/// 標の被ダメージ増・矢面の半減（どちらも「攻撃によるダメージ」だけ）には乗らない。
+/// <c>lethal: false</c> なので HP 1 で止まる。</para>
+/// </summary>
+public sealed class RecoilTrait : Trait
+{
+    /// <summary>刃を返すたびの自傷（指示書が<b>測る前に固定</b>した値）。</summary>
+    public const int AvengeCost = 3;
+
+    public override TraitId Id => TraitId.Recoil;
+}
+
+/// <summary>敵の標を誰が付けたか（第184期・<b>計数専用</b>。§1 の被ダメージ増の出どころを割るためだけ）。</summary>
+public enum MarkOrigin
+{
+    /// <summary>上の2つ以外（業の転写・出どころを記録していない経路）。</summary>
+    Other,
+    /// <summary>逸らし（ソラ）。</summary>
+    Divert,
+    /// <summary>仇指し（ザン）。</summary>
+    Vendetta
+}
+
+/// <summary>
+/// 敵の標の被ダメージ増（第184期 §1）。<b>敵陣営の標持ちが、攻撃によるダメージを <see cref="VulnerablePercent"/>% 多く受ける。</b>
+///
+/// <para><b>味方陣営の標には付けない</b>（挑発された味方がさらに痛くなると矢面の半減と打ち消し合って読めない）。
+/// <b>「攻撃によるダメージ」だけ</b>——出どころがあり（<c>source</c> つき）、相手陣営からで、
+/// 継続ダメージの刻み（<c>burnTick</c>）・徴収（<c>levy</c>）・肩代わりの中継（<c>relayed</c>）・呪いの共有（<c>hexShare</c>）ではない。
+/// 毒の刻みは <c>source</c> が null なので自然に外れる。</para>
+///
+/// <para><b>段は入口の族</b>——惨禍・荷の直後、軽減（据え・散開・萎縮・矢面）・肩代わり・破片・上限（軛）より前。
+/// <b>増幅は加算</b>（惨禍と同じ式）。上限の前なので「1発は Cap を超えない」は守られる（第25期の禁止に触れない）。</para>
+///
+/// <para><b>保持者を持たない盤面ルールではない</b>——敵に標を付ける駒（ソラ・ザン）がいなければ、
+/// 敵の <c>Marked</c> は 0 のままなので1ビットも動かない。<see cref="Off"/> で第183期の盤面に戻る。</para>
+/// </summary>
+public readonly record struct MarkRule(int VulnerablePercent)
+{
+    /// <summary>既定（第184期に<b>測る前に固定</b>した値）。</summary>
+    public static MarkRule Default => new(50);
+
+    /// <summary>被ダメージ増なし（第183期の盤面・対照）。</summary>
+    public static MarkRule Off => new(0);
+}
+
 public static class TraitCatalog
 {
     private static readonly Dictionary<TraitId, Trait> Map = new Trait[]
@@ -10685,6 +10962,10 @@ public static class TraitCatalog
         new StitchTrait(),     // 第183期
         new TouchTrait(),      // 第183期
         new TouchLeakTrait(),  // 第183期
+        new BeckonTrait(),     // 第184期
+        new FleeTrait(),       // 第184期
+        new VendettaTrait(),   // 第184期
+        new RecoilTrait(),     // 第184期
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期

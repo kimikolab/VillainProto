@@ -182,6 +182,11 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.Stitch]     = (HcBothL,  "隣を回復するのと、縫われた者の最大HPが減るのが同じ針の表と裏"),
         [TraitId.Touch]      = (HcPlusL,  "毒を持つ敵を殴ると隣の敵へ写すだけ。代金は別の札（`TouchLeak`）に切り出してある"),
         [TraitId.TouchLeak]  = (HcMinusL, "うつすたび隣の味方に毒が付くだけ。触れてうつすの代金で、外せば `yP` になる"),
+        // 第184期: ヒサ（矢面＋逃げ回る）・ザン（仇指し＋返り血）。分類を同じコミットで足す（第132期 段0-a の再発防止）。
+        [TraitId.Beckon]     = (HcPlusL,  "隣でいちばん元気な味方に標を付け、その味方の被ダメージを半分にする。代金は別の札（`Flee`）に切り出してある"),
+        [TraitId.Flee]       = (HcMinusL, "指差したら標の相手以外の隣と入れ替わって逃げるだけ。矢面の代金で、外せば `yP` になる"),
+        [TraitId.Vendetta]   = (HcPlusL,  "標の味方が殴られると倍の刃を返し、殴った敵に標を付ける。代金は別の札（`Recoil`）に切り出してある"),
+        [TraitId.Recoil]     = (HcMinusL, "刃を返すたび自分が傷つくだけ（殺さない）。仇指しの代金で、外せば `yP` になる"),
     };
 
     // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------

@@ -505,6 +505,8 @@ if (focusId == "mudo")
 
 // rebirth3 モード（第183期） —— B群の転生 最後の2枚（ヴェル／ラウ）。本体は `Modes/Rebirth3.cs`。
 if (focusId == "rebirth3") { Rebirth3Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
+// mark184 モード（第184期） —— A群の転生 1〜2枚目（標の軸: ヒサ・ザン ＋ 敵の標の被ダメージ増）。本体は `Modes/Mark184.cs`。
+if (focusId == "mark184") { Mark184Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 
 // rebirth2 モード（第180期） —— B群の転生 3〜5枚目（ムド／ヴィオ／ガン）。本体は `Modes/Rebirth2.cs`。
 if (focusId == "rebirth2")
@@ -1306,6 +1308,8 @@ static class TraitKeyMap
         [TraitId.Avenge]     = new[] { UnitTally.CarryStun, UnitTally.CarryMark, UnitTally.CarryHit },
         // 標
         [TraitId.Marker]     = new[] { UnitTally.CarryMark },
+        [TraitId.Beckon]     = new[] { UnitTally.CarryMark },                                   // 第184期（旧 Marker の転生）
+        [TraitId.Vendetta]   = new[] { UnitTally.CarryMark, UnitTally.CarryHit },               // 第184期（旧 Avenge の転生・怯みは外した）
         [TraitId.Divert]     = new[] { UnitTally.CarryMark },
         [TraitId.Finisher]   = new[] { UnitTally.CarryMark },
         // 破片
@@ -1420,6 +1424,10 @@ static class TraitHookMap
         [TraitId.Venom]       = new[] { "OnDamaged" },
         [TraitId.Thorns]      = new[] { "OnDamaged" },
         [TraitId.Marker]      = new[] { "OnBattleStart" },
+        [TraitId.Beckon]      = new[] { "OnBattleStart", "OnAction", Engine },   // 第184期（半減は ApplyDamage）
+        [TraitId.Flee]        = new[] { "OnAction" },                            // 第184期
+        [TraitId.Vendetta]    = new[] { "OnAllyDamaged" },                       // 第184期
+        [TraitId.Recoil]      = Array.Empty<string>(),                           // 第184期（仇指しの中で読まれる札）
         [TraitId.Mender]      = new[] { "OnTurnStart", "OnAction" },
         [TraitId.Amplifier]   = new[] { "OnTurnStart", "OnAction" },
         [TraitId.Contagion]   = new[] { "OnAnyDeath" },
@@ -1555,6 +1563,7 @@ static class TraitEntryMap
         [TraitId.Torment]    = new[] { (UnitTally.CarryStun, Where.Foe),
                                        (UnitTally.CarryIdle, Where.Foe) },                  // 観測
         [TraitId.Avenge]     = new[] { (UnitTally.CarryMark, Where.Ally), (UnitTally.CarryHit, Where.Ally) },
+        [TraitId.Vendetta]   = new[] { (UnitTally.CarryMark, Where.Ally), (UnitTally.CarryHit, Where.Ally) },   // 第184期
         [TraitId.Finisher]   = new[] { (UnitTally.CarryMark, Where.Foe) },
         [TraitId.Scale]      = new[] { (UnitTally.CarryArmor, Where.Self) },
         [TraitId.Gouge]      = new[] { (UnitTally.CarryWound, Where.Foe) },
@@ -1625,6 +1634,9 @@ static class TraitEntryMap
         [TraitId.Avenge]     = new[] { (UnitTally.CarryStun, Where.Self) },                 // 観測（ターン外の行動の代金）
         [TraitId.Condemn]    = new[] { (UnitTally.CarryStun, Where.Foe) },                  // 観測（敵側の断罪）
         [TraitId.Marker]     = new[] { (UnitTally.CarryMark, Where.Ally) },
+        [TraitId.Beckon]     = new[] { (UnitTally.CarryMark, Where.Ally) },                 // 第184期
+        [TraitId.Vendetta]   = new[] { (UnitTally.CarryMark, Where.Foe) },                  // 第184期（殴った敵に標）
+        [TraitId.Flee]       = new[] { (UnitTally.CarryMove, Where.Ally) },                 // 第184期（入れ替え）
         [TraitId.Goad]       = new[] { (UnitTally.CarryMark, Where.Ally), (UnitTally.CarryWhet, Where.Ally) },
         [TraitId.Divert]     = new[] { (UnitTally.CarryMark, Where.Foe), (UnitTally.CarryMark, Where.Self) },
         [TraitId.Rally]      = new[] { (UnitTally.CarryWhet, Where.Ally),

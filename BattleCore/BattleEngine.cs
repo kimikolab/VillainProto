@@ -2743,6 +2743,12 @@ public sealed class BattleContext
                 CloseMarkEpisode(u, 2);
             }
         }
+
+        // 第184期 §1 の帳簿: ターン頭に敵の標が何体に立っていたか（計数のみ）。
+        long foes = _units.Count(u => u.IsAlive && u.TeamId != PlayerTeam && u.RawCounter(StatusKeys.Marked) > 0);
+        MarkFoeUnitTurns += foes;
+        if (foes > 0) MarkFoeTurns++;
+        if (foes > MarkFoeMax) MarkFoeMax = foes;
     }
 
     /// <summary>決着時に開いたままの区間を閉じる。<b>1戦につき最後に1度だけ呼ぶ。</b></summary>
@@ -3646,6 +3652,118 @@ public sealed class BattleContext
     public AshRule Ash { get; }
 
     /// <summary>
+    /// 敵の標の被ダメージ増（第184期 §1。既定は <see cref="MarkRule.Default"/>）。
+    /// <b>敵に標を付ける駒（ソラ・ザン）がいなければ1ビットも動かない</b>——敵の <c>Marked</c> が 0 のまま。
+    /// 判定は <c>ApplyDamage</c> の入口の族の1箇所。
+    /// </summary>
+    public MarkRule MarkRules { get; }
+
+    // =====================================================================================
+    // 第184期 —— 標の軸の帳簿（**計数専用。どの規則も読まない**）
+    // =====================================================================================
+
+    /// <summary>矢面（ヒサ）の保持者。<c>ApplyDamage</c> の半減の判定を、保持者がいない盤面で1回も走らせないため。</summary>
+    readonly List<UnitState> _beckonHolders = new();
+
+    /// <summary>敵の標の出どころ（<c>InstanceId</c> → 最後に付けた書き手）。<b>計数専用。</b></summary>
+    readonly Dictionary<int, MarkOrigin> _markOrigin = new();
+
+    /// <summary>§1: 被ダメージ増が乗った回数と、上乗せした量（出どころ別。添字は <see cref="MarkOrigin"/>）。</summary>
+    public readonly long[] MarkVulnHits = new long[3];
+    public readonly long[] MarkVulnAdded = new long[3];
+
+    /// <summary>§1: ターン頭に敵の標が立っていた延べ体数 ／ 1体以上立っていたターン数 ／ 同時に立っていた最大数。</summary>
+    public long MarkFoeUnitTurns, MarkFoeTurns, MarkFoeMax;
+
+    /// <summary>§2: 矢面の半減が効いた回数と、防いだ量。</summary>
+    public long BeckonGuardHits, BeckonGuardSaved;
+
+    /// <summary>敵の標を付けた書き手を記録する（<b>計数のみ</b>）。</summary>
+    public void NoteMarkOrigin(UnitState u, MarkOrigin origin) => _markOrigin[u.InstanceId] = origin;
+
+    /// <summary>矢面が標を付けた（<b>計数のみ</b>）。付け替えなら <paramref name="switched"/>。</summary>
+    public void NoteBeckon(UnitState self, UnitState pick, bool switched)
+    {
+        UnitTally t = TallyOf(self);
+        t.BeckonFires++;
+        if (switched) t.BeckonSwitches++;
+        TallyOf(pick).BeckonPicked++;
+    }
+
+    /// <summary>矢面が指差す相手がいなかった（<b>計数のみ</b>）。</summary>
+    public void NoteBeckonIdle(UnitState self) => TallyOf(self).BeckonIdle++;
+
+    /// <summary>
+    /// 逃げ回る（第184期）。<b>入れ替えは <see cref="SwapSlots"/> そのもの</b>——ここで足すのは、
+    /// その入れ替えの最中に<b>移動の読み手が何をしたか</b>の計数だけ（振った回数・受けた強化・動いた敵）。
+    /// <b>盤面の分岐は1つも足していない。</b>
+    /// </summary>
+    public void FleeSwap(UnitState self, UnitState? partner)
+    {
+        if (partner is null) { TallyOf(self).FleeStuck++; return; }
+        long atk0 = 0, whet0 = 0;
+        foreach (UnitState u in _units) { atk0 += AttacksOf(u); if (u.TeamId == self.TeamId) whet0 += u.WhetReceived; }
+        var foeSlots = _units.Where(u => u.TeamId != self.TeamId).Select(u => (u, u.Slot)).ToList();
+
+        SwapSlots(self, partner.Slot, self);
+
+        long atk1 = 0, whet1 = 0;
+        foreach (UnitState u in _units) { atk1 += AttacksOf(u); if (u.TeamId == self.TeamId) whet1 += u.WhetReceived; }
+        UnitTally t = TallyOf(self);
+        t.FleeSwaps++;
+        t.FleeReaderSwings += atk1 - atk0;
+        t.FleeReaderWhet += whet1 - whet0;
+        t.FleeFoeMoves += foeSlots.Count(x => x.u.Slot != x.Slot);
+        TallyOf(partner).FleePushed++;
+    }
+
+    /// <summary>振った回数を読むだけ（<b>帳簿の行を作らない</b>——<c>TallyOf</c> は無ければ作るので使わない）。</summary>
+    long AttacksOf(UnitState u) => TallyByUnit.TryGetValue(u.Def.Id, out UnitTally? t) ? t.Attacks : 0;
+
+    /// <summary>仇指しが刃を返した（<b>計数のみ</b>）。</summary>
+    public void NoteVendetta(UnitState self, int dealt, bool marked)
+    {
+        UnitTally t = TallyOf(self);
+        t.VendettaFires++;
+        t.VendettaDealt += dealt;
+        if (marked) t.VendettaMarks++;
+    }
+
+    /// <summary>返り血（<b>計数のみ</b>）。</summary>
+    public void NoteRecoil(UnitState self, int taken) => TallyOf(self).RecoilTaken += taken;
+
+    /// <summary>§2: 矢面の記憶が指しているのに標が剥がされていて、半減が掛からなかった被弾（回数・量）。</summary>
+    public long BeckonStrippedHits, BeckonStrippedDamage;
+
+    /// <summary>
+    /// 矢面の記憶が指している相手なのに標が無い（ソラの剥がし・カリの付け替えで消えた）まま殴られた（<b>計数のみ</b>）。
+    /// </summary>
+    void NoteBeckonStripped(UnitState target, int amount)
+    {
+        if (target.RawCounter(StatusKeys.Marked) > 0) return;
+        foreach (UnitState h in _beckonHolders)
+            if (h.TeamId == target.TeamId && h.RawCounter(BeckonTrait.TargetKey) == target.InstanceId + 1)
+            {
+                BeckonStrippedHits++;
+                BeckonStrippedDamage += amount;
+                TallyOf(h).BeckonStrippedHits++;
+                return;
+            }
+    }
+
+    /// <summary>
+    /// 矢面の半減が掛かる相手か。<b>標がある かつ 同じ陣営の矢面の保持者の記憶がこの駒を指している</b>
+    /// （保持者の生死は問わない——標が残る限り守りも残る）。
+    /// </summary>
+    UnitState? BeckonGuardOf(UnitState target)
+    {
+        if (target.RawCounter(StatusKeys.Marked) <= 0) return null;
+        foreach (UnitState h in _beckonHolders)
+            if (h.TeamId == target.TeamId && h.RawCounter(BeckonTrait.TargetKey) == target.InstanceId + 1) return h;
+        return null;
+    }
+
+    /// <summary>
     /// 泥人形ムドの規則（第181期。既定は <see cref="EruptRule.Default"/> ＝ 採用候補）。
     /// <b>保持者がいなければ1ビットも動かない</b>——読むのは <see cref="EruptTrait"/> と
     /// <see cref="SmearTrait"/> の中だけで、engine には判定が1つも無い。
@@ -4070,7 +4188,7 @@ public sealed class BattleContext
                          BraceRule? brace = null, ShufflerRule? shuffler = null,
                          ConfusionRule? confusion = null, HasteRule? haste = null,
                          WardRule? ward = null, IndulgenceRule? indulgence = null,
-                                   AshRule? ash = null, EruptRule? erupt = null,
+                                   AshRule? ash = null, EruptRule? erupt = null, MarkRule? markRule = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -4131,6 +4249,7 @@ public sealed class BattleContext
         Shrapnel = shrapnel ?? ShrapnelRule.Default;
         Ash = ash ?? AshRule.Default;
         Erupt = erupt ?? EruptRule.Default;
+        MarkRules = markRule ?? MarkRule.Default;
         Shuffler = shuffler ?? ShufflerRule.Default;
         Confusion = confusion ?? ConfusionRule.Default;
         Haste = haste ?? HasteRule.Default;
@@ -4347,7 +4466,9 @@ public sealed class BattleContext
         // 第150期 段A: 標の一生の帳簿を短絡させるためのフラグ（**計数専用**。盤面には影響しない）。
         // 標を書ける駒（囃し立て・逸らし・駆り立て・業）が1枚も盤上にいなければ走査ごと飛ばす。
         if (u.HasTrait(TraitId.Marker) || u.HasTrait(TraitId.Divert)
-            || u.HasTrait(TraitId.Goad) || u.HasTrait(TraitId.Scapegoat)) MarkActive = true;
+            || u.HasTrait(TraitId.Goad) || u.HasTrait(TraitId.Scapegoat)
+            || u.HasTrait(TraitId.Beckon) || u.HasTrait(TraitId.Vendetta)) MarkActive = true;   // 第184期に2本
+        if (u.HasTrait(TraitId.Beckon)) _beckonHolders.Add(u);   // 第184期（半減の判定の短絡）
         if (u.HasTrait(TraitId.Funnel)) FunnelActive = true;
         // 第137期: 砕けの保持者が盤上にいるか（`ShatterSoaked` を短絡させるためだけ。盤面には影響しない）。
         if (u.HasTrait(TraitId.Shatter)) ShatterActive = true;
@@ -5852,6 +5973,27 @@ public sealed class BattleContext
             }
         }
 
+        // 敵の標の被ダメージ増（第184期 §1・MarkRule）。**入口の族**（惨禍・荷の直後、軽減・肩代わり・
+        // 破片・身構え・軛より前）——上限の前に置くので「1発は Cap を超えない」は守られる。
+        // **敵陣営の標持ちだけ・攻撃によるダメージだけ**（相手陣営の出どころがあり、刻み・徴収・中継・共有ではない）。
+        // **増幅は加算**（惨禍と同じ式）。既定の判定は `VulnerablePercent > 0` と陣営の比較で短絡する。
+        if (MarkRules.VulnerablePercent > 0 && target.TeamId != PlayerTeam
+            && source is not null && source.TeamId != target.TeamId
+            && !burnTick && !levy && !relayed && !hexShare
+            && target.RawCounter(StatusKeys.Marked) > 0)
+        {
+            int extra = amount * MarkRules.VulnerablePercent / 100;
+            if (extra > 0)
+            {
+                amount += extra;
+                int oi = _markOrigin.TryGetValue(target.InstanceId, out MarkOrigin o) ? (int)o : 0;
+                MarkVulnHits[oi]++;
+                MarkVulnAdded[oi] += extra;
+                TallyOf(source).MarkVulnDealt += extra;
+                Log($"    指差された {target.Name} は深く傷ついた（+{extra}）", LogKind.Trigger);
+            }
+        }
+
         // 据え: このターン差し出された駒は硬くなる。
         // 「動けなかった」ではなく「差し出した」を見る（Trait.SurrenderedTurn。号令と同じ判定）。
         // ハギ（追い打ち）のように最初から自分の手番を持たない型は差し出すものが無いので、
@@ -5883,6 +6025,30 @@ public sealed class BattleContext
         // 萎縮: 火力と引き換えの被ダメージ減
         if (teammates.Any(u => u.HasTrait(TraitId.Cower)))
             amount -= amount * CowerTrait.ReductionPercent / 100;
+
+        // 矢面（第184期 §2・BeckonTrait）: ヒサの標を持つ味方は、攻撃によるダメージが半分になる。
+        // **軽減の族**（据え・散開・萎縮の直後、肩代わり・破片・軛より前）で、§1 の被ダメージ増と
+        // **同じ条件で符号だけ違う形**（相手陣営の出どころがあり、刻み・徴収・中継・共有ではない）。
+        // **保持者がいなければリストが空で1回も走らない。**
+        if (_beckonHolders.Count > 0 && source is not null && source.TeamId != target.TeamId
+            && !burnTick && !levy && !relayed && !hexShare)
+        {
+            UnitState? holder = BeckonGuardOf(target);
+            if (holder is null) NoteBeckonStripped(target, amount);   // 計数のみ（剥がされて守りが無かった被弾）
+            if (holder is not null)
+            {
+                int saved = amount * BeckonTrait.GuardPercent / 100;
+                if (saved > 0)
+                {
+                    amount -= saved;
+                    BeckonGuardHits++;
+                    BeckonGuardSaved += saved;
+                    TallyOf(holder).BeckonGuardSaved += saved;
+                    TallyOf(target).BeckonGuardTaken += saved;
+                    Log($"    矢面の {target.Name} は痛みを半分に抑えた（-{saved}）", LogKind.Trigger);
+                }
+            }
+        }
 
         if (amount <= 0) return;
 
@@ -7524,7 +7690,7 @@ public static class BattleEngine
                                    BraceRule? brace = null, ShufflerRule? shuffler = null,
                                    ConfusionRule? confusion = null, HasteRule? haste = null,
                                    WardRule? ward = null, IndulgenceRule? indulgence = null,
-                                   AshRule? ash = null, EruptRule? erupt = null,
+                                   AshRule? ash = null, EruptRule? erupt = null, MarkRule? markRule = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
@@ -7533,7 +7699,7 @@ public static class BattleEngine
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
                nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace, shuffler,
-               confusion, haste, ward, indulgence, ash, erupt, probe);
+               confusion, haste, ward, indulgence, ash, erupt, markRule, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -7572,7 +7738,7 @@ public static class BattleEngine
                                    BraceRule? brace = null, ShufflerRule? shuffler = null,
                                    ConfusionRule? confusion = null, HasteRule? haste = null,
                                    WardRule? ward = null, IndulgenceRule? indulgence = null,
-                                   AshRule? ash = null, EruptRule? erupt = null,
+                                   AshRule? ash = null, EruptRule? erupt = null, MarkRule? markRule = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
@@ -7581,7 +7747,7 @@ public static class BattleEngine
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
                                     nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace,
-                                    shuffler, confusion, haste, ward, indulgence, ash, erupt, probe);
+                                    shuffler, confusion, haste, ward, indulgence, ash, erupt, markRule, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);
@@ -7821,6 +7987,11 @@ public static class BattleEngine
                 (long[])ctx.MarkLifeSum.Clone(), (long[])ctx.MarkLifeMax.Clone(),
                 (long[])ctx.MarkHits.Clone(), (long[])ctx.MarkHitsByFinisher.Clone(),
                 new Dictionary<string, (long, long, long)>(ctx.MarkOn)),
+            // 第184期。標の軸（**計数専用**。どの規則も読まない）。
+            MarkAxis = new MarkAxisLedger(
+                (long[])ctx.MarkVulnHits.Clone(), (long[])ctx.MarkVulnAdded.Clone(),
+                ctx.MarkFoeUnitTurns, ctx.MarkFoeTurns, ctx.MarkFoeMax,
+                ctx.BeckonGuardHits, ctx.BeckonGuardSaved, ctx.BeckonStrippedHits, ctx.BeckonStrippedDamage),
             // 第153期 段A。預かりの帳簿（**計数専用**。どの規則も読まない）。
             Ward = new WardLedger(
                 ctx.WardStacked, ctx.WardReleaseAsked, ctx.WardReleased, ctx.WardResidual,
