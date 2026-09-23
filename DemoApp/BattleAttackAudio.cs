@@ -14,6 +14,7 @@ public partial class BattleAttackAudio : Node
     private readonly Dictionary<string, int> _last = new();
     private readonly AudioStreamPlayer[] _voices = new AudioStreamPlayer[4];
     private int _nextVoice;
+    private readonly float[] _voiceBoosts = new float[4];
     private readonly AudioStreamPlayer[] _chargeVoices = new AudioStreamPlayer[2];
     private int _nextChargeVoice;
     private AudioStreamPlayer _yokeVoice = null!;
@@ -49,6 +50,12 @@ public partial class BattleAttackAudio : Node
         "res://assets/audio/se/utsu_attack_3.mp3",
         "res://assets/audio/se/utsu_attack_4.mp3",
         "res://assets/audio/se/utsu_attack_5.mp3",
+    };
+    private static readonly string[] MudoAttack =
+    {
+        "res://assets/audio/se/mudo_attack_1.mp3",
+        "res://assets/audio/se/mudo_attack_2.mp3",
+        "res://assets/audio/se/mudo_attack_3.mp3",
     };
     private static readonly string[] KadoHit = { "res://assets/audio/se/kado_hit.mp3" };
     private static readonly string[] Heal = { "res://assets/audio/se/heal_magic_1.mp3" };
@@ -126,6 +133,7 @@ public partial class BattleAttackAudio : Node
         LoadSound(YomiBonus[0]);
         LoadSound(YomiAttack[0]);
         foreach (string path in UtsuAttack) LoadSound(path);
+        foreach (string path in MudoAttack) LoadSound(path);
         LoadSound(KadoHit[0]);
         LoadSound(Heal[0]);
         LoadSound(TraitHeal[0]);
@@ -180,6 +188,7 @@ public partial class BattleAttackAudio : Node
         if (reaction && unitId == "yomi") { PlayVariation(YomiBonus); return; }
         if (!reaction && unitId == "yomi") { PlayVariation(YomiAttack); return; }
         if (unitId == "utsu") { PlayVariation(UtsuAttack); return; }
+        if (unitId == "mudo") { PlayVariation(MudoAttack, 3); return; }
         if (reaction && unitId == "kado") { PlayVariation(KadoCounter); return; }
         string[] paths = _overrides.GetValueOrDefault((unitId, pattern))
             ?? (team == BattleContext.EnemyTeam ? EnemyCommon : Common);
@@ -259,12 +268,15 @@ public partial class BattleAttackAudio : Node
         if (unitId == "kado") PlayVariation(KadoCounter);
     }
 
-    private void PlayVariation(string[] paths)
+    private void PlayVariation(string[] paths, float boostDb = 0)
     {
         string path = PickVariation(paths);
         // 攻撃・受け流しを合わせて最大4音。再生速度でピッチを変えない。
-        var voice = _voices[_nextVoice++ % _voices.Length];
+        int index = _nextVoice++ % _voices.Length;
+        var voice = _voices[index];
         voice.Stop();
+        voice.VolumeDb += boostDb - _voiceBoosts[index];
+        _voiceBoosts[index] = boostDb;
         voice.Stream = LoadSound(path);
         voice.Play();
     }
@@ -278,12 +290,16 @@ public partial class BattleAttackAudio : Node
 
         // 予兆と解放の頭だけ通常SEを下げる。死亡・フィニッシュ音は勝敗の手掛かりなので下げない。
         _duckTween?.Kill();
-        foreach (var ordinary in _voices) ordinary.VolumeDb = NormalVolumeDb - 9;
+        for (int i = 0; i < _voices.Length; i++)
+            _voices[i].VolumeDb = NormalVolumeDb - 9 + _voiceBoosts[i];
         _duckTween = CreateTween();
         _duckTween.TweenInterval(duckSeconds);
-        _duckTween.TweenProperty(_voices[0], "volume_db", NormalVolumeDb, 0.18);
-        for (int i = 1; i < _voices.Length; i++)
-            _duckTween.Parallel().TweenProperty(_voices[i], "volume_db", NormalVolumeDb, 0.18);
+        // 再生途中に音が替わっても、その音の音量差を保って戻す。
+        _duckTween.TweenMethod(Callable.From<float>(level =>
+        {
+            for (int i = 0; i < _voices.Length; i++)
+                _voices[i].VolumeDb = level + _voiceBoosts[i];
+        }), NormalVolumeDb - 9, NormalVolumeDb, 0.18);
     }
 
     private void PlayHushAccent(string[] paths)
@@ -325,6 +341,7 @@ public partial class BattleAttackAudio : Node
         _duckTween?.Kill();
         _duckTween = null;
         foreach (var voice in _voices) voice.VolumeDb = NormalVolumeDb;
+        System.Array.Clear(_voiceBoosts);
         _nextVoice = 0;
         _nextChargeVoice = 0;
         _nextDeathVoice = 0;

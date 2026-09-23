@@ -506,6 +506,7 @@ void fragment() {
         ShowLifeTransition(LifeTransition3D.Kind.Death);
         ClearAuras();
         _statusIcons.Clear();
+        SetCurseStain(false);
         _statusSnapshot.Clear();
         _alive = false;
         ResetStaggerPose();
@@ -576,6 +577,7 @@ void fragment() {
         _victory = true;
         _confusion.SetActive(false);
         _statusIcons.Clear();
+        SetCurseStain(false);
         ResetStaggerPose();
         SetStatusEffects(0,0,0);
         _poison.Clear();

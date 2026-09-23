@@ -607,7 +607,8 @@ public partial class BattlefieldView3D : Control
                 }
                 break;
             default:
-                MakeSingleSlash(from, to, color);
+                if (from.UnitId == "mudo") MakePunchImpact(to, from.AnimationSpeed);
+                else MakeSingleSlash(from, to, color);
                 break;
         }
 

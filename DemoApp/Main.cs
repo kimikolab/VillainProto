@@ -140,8 +140,7 @@ public partial class Main : Control
     /// </summary>
     private int _attackPlays, _attackRun, _attackRunActor = -1, _attackRunMax;
     private string _attackRunName = "";
-    private BattlePawn3D? _comboPawn;
-    private int _comboEndIndex;
+    private readonly Dictionary<BattlePawn3D, int> _comboEnds = new();
     private bool _fastSmoke;
     private bool _campaignFlowSmoke;
     private bool _map11FlowSmoke;
@@ -1082,7 +1081,8 @@ public partial class Main : Control
         if (_result is null) return;
         _finishSoundIndex = FinishSoundCue.Find(_result.PlayerWon, _battleOpening, _result.Events);
         int token = ++_playToken;
-        _comboPawn = null;
+        _comboEnds.Clear();
+        _hexMarksShown = _hexSharePlays = _hexShareHits = 0;
         _playing = true;
         _paused = false;
         _pause.Text = "一時停止";
@@ -1097,10 +1097,10 @@ public partial class Main : Control
             int eventIndex = _eventIndex++;
             BattleEvent e = _result.Events[eventIndex];
             await ApplyEvent(e, eventIndex);
-            if (_comboPawn is not null && _eventIndex >= _comboEndIndex)
+            foreach (var combo in _comboEnds.Where(pair => _eventIndex >= pair.Value).ToArray())
             {
-                _comboPawn.ReturnFromAttack();
-                _comboPawn = null;
+                combo.Key.ReturnFromAttack();
+                _comboEnds.Remove(combo.Key);
                 await Delay(0.255);
             }
             // 第125期 段3-e: 画面下の一覧を引き直す。**数字の出どころは盤面の駒だけ**で、
@@ -1140,23 +1140,28 @@ public partial class Main : Control
         else if (_quitAfterPlayback)
         {
             GD.Print($"DEMO_SMOKE_COMPLETE events={_eventIndex} turns={_result.Turns} won={_result.PlayerWon}"
-                     + $" attackPlays={_attackPlays} maxRun={_attackRunMax} maxRunBy={_attackRunName}");
+                     + $" attackPlays={_attackPlays} maxRun={_attackRunMax} maxRunBy={_attackRunName}"
+                     + $" hexMarks={_hexMarksShown} hexBatches={_hexSharePlays} hexHits={_hexShareHits}");
             GetTree().Quit();
         }
     }
 
-    // 台本の通常攻撃を先読みする。反撃・肩代わりは間に挟んだまま再生し、
+    // 台本の連撃を先読みする。通常連撃と割り込む反撃連撃は別々に位置を保持し、
     // 最後の一撃のダメージまで出してから帰還する。回数や駒名は決め打ちしない。
     private int? FindComboEnd(int index, BattleEvent attack)
     {
-        if (attack.Reaction || attack.Relayed || _result is null) return null;
+        if (attack.Relayed || _result is null) return null;
         int hits = 1;
         int end = index + 1;
         for (; end < _result.Events.Count; end++)
         {
             BattleEvent next = _result.Events[end];
             if (next.Kind == BattleEventKind.TurnStart) break;
-            if (next.Reaction || next.Relayed) continue;
+            // 反撃は通常進行へ戻る地点で区切り、次の発動と束ねない。
+            // 回復・強化などには Reaction が付かないので、攻撃と着弾だけで判定する。
+            if (attack.Reaction && !next.Reaction
+                && next.Kind is BattleEventKind.Attack or BattleEventKind.Damage or BattleEventKind.Parry) break;
+            if (next.Relayed || (!attack.Reaction && next.Reaction)) continue;
             if (next.Kind is BattleEventKind.Skill or BattleEventKind.Charge) break;
             if (next.Kind != BattleEventKind.Attack) continue;
             if (next.ActorId != attack.ActorId) break;
@@ -1164,6 +1169,10 @@ public partial class Main : Control
         }
         return hits > 1 ? end : null;
     }
+
+    // 打撃・ダメージ・自己回復の待ちが積み重ならないよう、ムドの連撃中だけ詰める。
+    private bool IsMudoCombo(BattlePawn3D? pawn)
+        => pawn?.UnitId == "mudo" && _comboEnds.ContainsKey(pawn);
 
     private async Task ApplyEvent(BattleEvent e, int eventIndex)
     {
@@ -1226,16 +1235,15 @@ public partial class Main : Control
                 AttackPattern pattern = e.Pattern ?? AttackPattern.Single;
                 IReadOnlyList<BattlePawn3D> impactTargets = FindAttackTargets(eventIndex, e);
                 // 溜めの解放は踏み込み後の着弾で行う。手番外の攻撃では消費しない。
-                if (e.Reaction)
+                bool continuingCombo = actor is not null && _comboEnds.ContainsKey(actor);
+                if (e.Reaction && !continuingCombo)
                     await _battleField.ShowBonusAttack(actor);
-                bool continuingCombo = actor is not null && actor == _comboPawn;
-                if (_comboPawn is null && actor is not null && FindComboEnd(eventIndex, e) is { } comboEnd)
+                if (!continuingCombo && actor is not null && FindComboEnd(eventIndex, e) is { } comboEnd)
                 {
-                    _comboPawn = actor;
-                    _comboEndIndex = comboEnd;
+                    _comboEnds[actor] = comboEnd;
                 }
                 await _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire,
-                    advance: !continuingCombo, holdPosition: actor is not null && actor == _comboPawn);
+                    advance: !continuingCombo, holdPosition: actor is not null && _comboEnds.ContainsKey(actor));
                 // 第178期 自己検査 (e)。**計数だけ**（上の1行が「1発ぶんの絵と音」なので、ここで数える）。
                 _attackPlays++;
                 _attackRun = e.ActorId == _attackRunActor ? _attackRun + 1 : 1;
@@ -1244,8 +1252,8 @@ public partial class Main : Control
                 AppendLog($"[color=#{(actor?.Team == 0 ? UiKit.Player : UiKit.Enemy).ToHtml(false)}]{NameOf(e.ActorId)}[/color] → {NameOf(e.TargetId)}  [color=#a9b3a8]{UiKit.PatternLabel(e.Pattern ?? AttackPattern.Single)} {e.Amount}[/color]");
                 // 第125期 段2: 手番の外の一撃（棘・仇討ち・軋み）は**流れを一度止める**。
                 // **手番の中は詰めてある**（0.16 → 0.14）ので、合計はほぼ動かない（§5-2）。
-                if (e.Reaction) await Delay(0.24);
-                await Delay(0.14);
+                if (e.Reaction && !continuingCombo && !IsMudoCombo(actor)) await Delay(0.24);
+                await Delay(IsMudoCombo(actor) ? 0.08 : 0.14);
 
                 // 第124期 3-a: 「薙ぎやゾトの全体攻撃は一斉に入ったほうが爽快感ある」への直答。
                 // **範囲の巻き込みだけを同時着弾にする。単体は現状のまま**
@@ -1274,6 +1282,11 @@ public partial class Main : Control
             case BattleEventKind.Damage:
                 if (_batchedDamageIndices.Contains(eventIndex)) break;   // 3-a で同時に描き終えている
                 if (_burstDamageIndices.Contains(eventIndex)) break;     // 破裂（第125期 3-a）で描き終えている
+                if (e.ShareFromId is not null)
+                {
+                    await PlayHexShares(eventIndex);
+                    break;
+                }
                 // 棘（カド）・仇討ちは PerformAttack を通らず、Reaction 付き Damage から始まる。
                 // ヨミのように Reaction 付き Attack を持つ段は上で既にカットイン済みなので二重に出さない。
                 if (e.Reaction && StartsDirectReaction(eventIndex, e))
@@ -1282,7 +1295,7 @@ public partial class Main : Control
                     _battleField.PlayDirectReactionSound(actor);
                 }
                 ShowDamage(eventIndex, e, actor, target);
-                await Delay(0.16);
+                await Delay(IsMudoCombo(actor) ? 0.10 : 0.16);
                 if (!e.Relayed && target?.IsGuarding == true)
                 {
                     await Delay(0.10);
@@ -1393,7 +1406,7 @@ public partial class Main : Control
                 _battleField.HealingLight(actor, target, e.Amount);
                 AppendLog($"  [color=#{UiKit.Heal.ToHtml(false)}]＋{e.Amount} 回復[/color] "
                           + $"{NameOf(e.TargetId)}{WriterSuffix(e.ActorId, e.TargetId)}");
-                await Delay(0.15);
+                await Delay(IsMudoCombo(actor) && actor == target ? 0.05 : 0.15);
                 break;
 
             case BattleEventKind.Death:
@@ -1461,6 +1474,16 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.StatusGain:
+                if (e.Text == StatusKeys.Curse && target is not null)
+                {
+                    int token = _playToken;
+                    if (e.Amount > 0)
+                        await _battleField.ShowCurseApplication(actor, target, _speed);
+                    if (token != _playToken || !_battleMode) return;
+                    target.SetStatusIcon(StatusKeys.Curse, e.Amount > 0);
+                    if (e.Amount > 0) _hexMarksShown++;
+                    break;
+                }
                 if (target is not null && e.Text is { } statusKey)
                 {
                     if (e.Amount > 0) _battleField.PlayStatusGainSound(statusKey);
@@ -1564,19 +1587,20 @@ public partial class Main : Control
         target?.AnimateHit(poison);
         if (e.Amount > 0) _battleField.PlayStatusDamageSound(status);
         // 毒・燃焼などの継続ダメージや自傷では金属の被弾音を鳴らさない。
-        if (e.Amount > 0 && actor is not null && actor != target
+        if (e.ShareFromId is null && e.Amount > 0 && actor is not null && actor != target
             && !_statusCauseByDamageIndex.ContainsKey(eventIndex))
             _battleField.PlayHitSound(target);
         // 第125期 段2（§5-1 の 5）: **1発が分割されて中継された**ことを線で出す。
         // ゴルムの「耐久している感がない」への直答——中継の段はいままで
         // 「なぜかゴルムが殴られた」としか見えなかった。
-        if (e.Relayed)
+        if (e.Relayed && e.ShareFromId is null)
             _battleField.Split(
                 _relayVictimByIndex.TryGetValue(eventIndex, out int victimId) ? _battleField.FindPawn(victimId) : null,
                 target, e.Amount, "肩代わり", UiKit.Muted);
         (string source, Color sourceColor) = DamageSource(eventIndex, e, actor);
+        if (e.ShareFromId is not null) sourceColor = HexMudFx.Tint;
         _battleField.DamagePopup(target, e.Amount, source, sourceColor, e.Amount >= 25, withSource, poison);
-        if (!poison)
+        if (!poison && e.ShareFromId is null)
             _battleField.Impact(target, sourceColor,
                                 _statusCauseByDamageIndex.ContainsKey(eventIndex), e.FriendlyFire);
         AppendLog($"  [color=#{sourceColor.ToHtml(false)}]{source}[/color] → {NameOf(e.TargetId)}  "
@@ -1651,7 +1675,7 @@ public partial class Main : Control
             if (candidate.Kind is BattleEventKind.TurnStart or BattleEventKind.Attack or BattleEventKind.Highlight) break;
             if (candidate.Kind is not (BattleEventKind.Damage or BattleEventKind.Parry)) continue;
             if (candidate.ActorId != highlight.ActorId || candidate.Pattern is not null) continue;
-            if (candidate.Relayed) continue;   // 中継の段は別の絵（§5-1 の 5）
+            if (candidate.Relayed || candidate.ShareFromId is not null) continue;   // 中継・呪いは別の絵（§5-1 の 5）
             hits.Add(i);
         }
         // 灰は敵が最後の1体でも、放つ絵の表示中に着弾まで描く。
