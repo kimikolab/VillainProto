@@ -512,6 +512,9 @@ if (focusId == "rebirtha2") { RebirthA2Diag.Run(args.Length > 2 ? args[2] : "pha
 // sora186 モード（第186期） —— 逸らしのソラ（半分を逸らす）。本体は `Modes/Sora186.cs`。
 if (focusId == "sora186") { Sora186Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 
+// escale モード（第187期） —— 敵の難易度のつまみ（数値で一律に強くする）。本体は `Modes/EnemyScale.cs`。
+if (focusId == "escale") { EnemyScaleDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
+
 // rebirth2 モード（第180期） —— B群の転生 3〜5枚目（ムド／ヴィオ／ガン）。本体は `Modes/Rebirth2.cs`。
 if (focusId == "rebirth2")
 {
