@@ -514,6 +514,8 @@ if (focusId == "sora186") { Sora186Diag.Run(args.Length > 2 ? args[2] : "phase0"
 
 // escale モード（第187期） —— 敵の難易度のつまみ（数値で一律に強くする）。本体は `Modes/EnemyScale.cs`。
 if (focusId == "escale") { EnemyScaleDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
+// kata モード（第188期） —— ナタの枠に新駒「触媒のカタ」（起爆）。本体は `Modes/Kata.cs`。
+if (focusId == "kata") { KataDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 
 // rebirth2 モード（第180期） —— B群の転生 3〜5枚目（ムド／ヴィオ／ガン）。本体は `Modes/Rebirth2.cs`。
 if (focusId == "rebirth2")
