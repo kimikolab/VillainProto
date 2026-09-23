@@ -302,6 +302,18 @@ public enum TraitId
     Vendetta,   // 仇指し: 標を持つ味方が殴られるたび、殴った者へ倍の刃を返し、その敵に標を付ける（怯みは無い）
     Recoil,     // 返り血: 仇指しの刃を返すたび、自分が傷つく（殺さない・仇指しの代金。外せば `yP`）
 
+    // --- 第185期で足した札（**A群の転生 3〜5枚目**。旧 `Bind` / `Bulwark` / `Overload` は定義だけ残す） ---
+    Grapple,    // 組み付き: 手番で、敵のうち現在攻撃力が最も高い1体に組み付く（攻撃の代わり）。
+                // 組み付かれた敵は手番を失い続ける（`StatusKeys.Grappled`）。組み付いている間は自分も何もできず、
+                // **殴られるとほどける**（次の手番で選び直す）。開戦時の大縛り（`Bind` と同じ動作）は残す。
+                // **表と裏が1つの動作**（掴んでいる腕は他に使えない）なので札は割らない
+    Shame,      // 見せしめ: 動けない敵を優先して狙い、動けない敵を責めた（責め苦の追い打ちが出た）とき、
+                // その敵に隣接する敵全員を竦ませる（`StatusKeys.Cowed`・次の手番を1回失う）。
+                // 竦みが明けた次の手番までは竦まない（ハメ防止）。**竦みから竦みは広がらない**
+    Footing,    // 踏みしめ: 手番で据えの層を1つ積む（最大 `FootingTrait.MaxLayers`・1層ごとに被ダメ −10%）。
+                // 範囲の盾: 薙ぎ・貫き・全体が自分と隣の味方に同時に当たるとき、隣の味方の分を代わりに受ける
+    Planted,    // 据えた足: 入れ替えを受け付けない（この駒を動かす入れ替えは空振りする）。踏みしめの代金。外せば `yP`
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -4866,13 +4878,25 @@ public sealed class TormentTrait : Trait
 {
     public override TraitId Id => TraitId.Torment;
 
+    /// <summary>
+    /// 「動けない敵」の判定（責め苦の二重条件）。<b>見せしめ（<see cref="ShameTrait"/>）の標的選びも同じ1本を読む。</b>
+    ///
+    /// <para><b>第185期に2つ足した</b>——組み付き（<see cref="StatusKeys.Grappled"/>・クグ）と
+    /// 竦み（<see cref="StatusKeys.Cowed"/>・見せしめ）。どちらも<b>書き手が盤上にいなければ 0 のまま</b>なので、
+    /// 第184期までの盤面では答えが1ビットも変わらない（旧シガの行が 0 件差分であることが検算）。</para>
+    /// </summary>
+    public static bool IsBound(BattleContext ctx, UnitState target)
+        => target.Counter(StatusKeys.Stun) > 0
+           || target.Counter(StatusKeys.IdleTurn) == ctx.Turn
+           || target.Counter(StatusKeys.Grappled) > 0
+           || target.Counter(StatusKeys.Cowed) > 0;
+
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
         // 死んでいても判定は同じ（結果で解決。例外を作らない）。
         // 縛られた敵を殴り倒したなら追い打ちの条件は満たしている——出どころは既に消えているので
         // ApplyDamage は生存判定で自然に空振りするが、「動ける敵を殴った」側の自傷は正しく走る。
-        bool bound = target.Counter(StatusKeys.Stun) > 0
-                     || target.Counter(StatusKeys.IdleTurn) == ctx.Turn;
+        bool bound = IsBound(ctx, target);
 
         if (bound)
         {
@@ -6621,7 +6645,7 @@ public sealed class BindTrait : Trait
     ///
     /// 味方側の +16 は「縛られて力を溜める」意味なので敵には移さない。敵へは拘束のみ。
     /// </summary>
-    private static void BindEnemy(BattleContext ctx, UnitState self)
+    internal static void BindEnemy(BattleContext ctx, UnitState self)
     {
         var living = ctx.LivingMembers(ctx.Opponent(self.TeamId))
             .Where(u => u.Counter(StatusKeys.Stun) == 0)   // 既に縛られている敵に重ねても無駄
@@ -10821,6 +10845,224 @@ public sealed class RecoilTrait : Trait
     public override TraitId Id => TraitId.Recoil;
 }
 
+/// <summary>
+/// 組み付き（第185期・<b>縛めのクグの転生</b>。旧 <see cref="BindTrait"/> は対照として残す）。
+///
+/// <para><b>手番で</b>（攻撃しない）、敵のうち<b>現在攻撃力が最も高い1体</b>に組み付く（同値はスロットの小さい方）。
+/// 組み付かれた敵は<b>手番を失い続ける</b>（<see cref="StatusKeys.Grappled"/>。痺れと違って<b>自分の手番で消費されない</b>）。
+/// 組み付いている間、<b>クグも何もできない</b>（毎手番、組み付きを維持するだけ）。
+/// <b>殴られるとほどける</b>——次の手番で組み付き直す（相手は選び直す）。
+/// 組んだ相手が倒れたら、次の手番で次の相手へ。</para>
+///
+/// <para><b>開戦時の大縛りは残す</b>（<see cref="BindTrait.BindEnemy"/> をそのまま呼ぶ）
+/// ——初手の組み付きより前に速い敵が動くため。<b>味方を縛るのはやめた</b>（攻+16 は無い）。</para>
+///
+/// <para><b>乱数を1つも引かない</b>（同値はスロット順。大縛りの同速の割り方だけが既存の <c>Roll</c>）。
+/// <b>組み付きを維持する手番は <c>Skill</c> なので <c>IdleTurn</c> を立てない</b>
+/// ——号令（ガン）・叩き起こしの「差し出した手番」にはならない（クグは働いている）。</para>
+///
+/// <para>組み付かれた敵は<b>ターン外の行動もできない</b>（<see cref="BattleContext.CanActOutOfTurn"/> が
+/// <c>Grappled</c> を痺れと同じ位置で見る）。責め苦（シガ）はこれを「動けない」と読む
+/// （<see cref="TormentTrait.IsBound"/>）。</para>
+/// </summary>
+public sealed class GrappleTrait : Trait
+{
+    /// <summary>組んでいる相手（<c>InstanceId + 1</c>。0 は「組んでいない」）。<b>保持者の私有カウンタ。</b></summary>
+    public const string TargetKey = "grappleTarget";
+
+    public override TraitId Id => TraitId.Grapple;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self) => BindTrait.BindEnemy(ctx, self);
+
+    public static UnitState? Held(BattleContext ctx, UnitState self)
+    {
+        int id = self.RawCounter(TargetKey) - 1;
+        if (id < 0) return null;
+        foreach (UnitState u in ctx.AllUnits)
+            if (u.InstanceId == id) return u;
+        return null;
+    }
+
+    /// <summary>組み付く相手（敵のうち現在攻撃力が最大。同値はスロットの小さい方）。<b>乱数を引かない。</b></summary>
+    public static UnitState? Pick(BattleContext ctx, UnitState self)
+    {
+        UnitState? pick = null;
+        foreach (UnitState u in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        {
+            if (pick is null) { pick = u; continue; }
+            int a = u.CurrentAttack, b = pick.CurrentAttack;
+            if (a > b || (a == b && u.Slot < pick.Slot)) pick = u;
+        }
+        return pick;
+    }
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Act(ctx, self);
+
+    // 行動パターンを持たない保持者は従来どおりターン頭に発火する（継ぎ当て・矢面と同じ作法）。
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Act(ctx, self);
+    }
+
+    private static void Act(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        UnitState? held = Held(ctx, self);
+        if (held is not null && held.IsAlive && held.RawCounter(StatusKeys.Grappled) > 0)
+        {
+            ctx.NoteGrappleHold(self);
+            ctx.Log($"    {self.Name} は {held.Name} に組み付いたまま離さない", LogKind.Action);
+            return;
+        }
+        self.SetCounter(TargetKey, 0);
+
+        UnitState? pick = Pick(ctx, self);
+        if (pick is null) return;
+        pick.SetCounter(StatusKeys.Grappled, 1);
+        self.SetCounter(TargetKey, pick.InstanceId + 1);
+        ctx.NoteGrapple(self, pick);
+        ctx.EmitStatusGain(pick, StatusKeys.Grappled, 1, self);   // 表示専用（組み付いた瞬間）
+        ctx.Log($"    {self.Name} が {pick.Name} に組み付いた（動けない）", LogKind.Trigger);
+    }
+
+    /// <summary>ほどく。<b>殴られた・倒れた</b>ときに呼ぶ。相手の <c>Grappled</c> を 0 に戻す。</summary>
+    private static void Release(BattleContext ctx, UnitState self, string why)
+    {
+        UnitState? held = Held(ctx, self);
+        self.SetCounter(TargetKey, 0);
+        if (held is null || held.RawCounter(StatusKeys.Grappled) <= 0) return;
+        held.SetCounter(StatusKeys.Grappled, 0);
+        if (!held.IsAlive) return;
+        ctx.NoteGrappleBreak(self);
+        ctx.Log($"    {self.Name} は{why} {held.Name} を放した", LogKind.Status);
+    }
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        if (source is null || source.TeamId == self.TeamId || dmg <= 0) return;   // 殴られたときだけ
+        Release(ctx, self, "殴られて");
+    }
+
+    public override void OnDeath(BattleContext ctx, UnitState self) => Release(ctx, self, "倒れて");
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(TargetKey, 0);
+}
+
+/// <summary>
+/// 見せしめ（第185期・<b>責め苦のシガに足した札</b>。責め苦＝<see cref="TormentTrait"/> はそのまま並べる）。
+///
+/// <para><b>1. 標的選び</b>: 単体攻撃（叩き起こしの一撃も）で、<b>動けない敵がいれば優先して狙う</b>。
+/// 置き場所は engine の執着・断ちと同じ段（<c>pool</c> から無作為に選ぶ直前）で、
+/// <b>前列の制約の内側</b>（<c>pool</c>）だけから選ぶ。<b>標の段・庇いの鎖はこの後ろ</b>なので、
+/// 標や庇いが主目標を差し替えることは今までどおり起きる。</para>
+///
+/// <para><b>2. 見せしめ</b>: 動けない敵を責めた（責め苦の追い打ちが出た）とき、
+/// その敵に<b>隣接する敵全員</b>が竦む（<see cref="StatusKeys.Cowed"/>・次の手番を1回失う）。
+/// 倒した相手の席も「隣」として数える（悲鳴は倒れても上がる）。</para>
+///
+/// <para><b>3. ハメ防止</b>: 竦みが明けた駒は、<b>次の自分の手番が来るまで竦まない</b>（<see cref="GuardKey"/>）。
+/// 竦みから竦みは広がらない（広げるのはこの札だけ）。
+/// <b>既に手番を失うことが決まっている駒</b>（痺れ・転倒・組み付き）に重ねた竦みは、その失う手番に吸われる
+/// ——「次の手番を1回失う」を二重に取らない（engine の <c>ConsumeCowed</c>）。</para>
+/// </summary>
+public sealed class ShameTrait : Trait
+{
+    /// <summary>
+    /// ハメ防止の印。竦みを消費した手番に 1 を立て、<b>その駒の次の手番の頭で 0 に戻す</b>。
+    /// <b>竦んだ側（敵）のカウンタ</b>なので <see cref="StatusKeys.All"/> には入れない（表示に出さない）。
+    /// 会戦の境界を越えて残っても、次の戦闘の最初の手番で消える。
+    /// </summary>
+    public const string GuardKey = "cowGuard";
+
+    public override TraitId Id => TraitId.Shame;
+
+    /// <summary>
+    /// 優先して狙う相手（<c>pool</c> の中の動けない敵）。<b>0 体なら null</b>（通常の無作為に戻る）、
+    /// <b>1 体なら乱数を引かない</b>、2 体以上なら <c>Roll</c> で割る（pool の無作為と同じ作法。<c>PickOne</c> は増やさない）。
+    /// </summary>
+    public static UnitState? Preferred(BattleContext ctx, List<UnitState> pool)
+    {
+        List<UnitState>? c = null;
+        foreach (UnitState u in pool)
+            if (TormentTrait.IsBound(ctx, u)) (c ??= new()).Add(u);
+        if (c is null) return null;
+        return c.Count == 1 ? c[0] : c[ctx.Roll(c.Count)];
+    }
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (!TormentTrait.IsBound(ctx, target)) return;   // 追い打ちが出た一撃だけ（責め苦と同じ判定）
+        int cowed = 0, blocked = 0;
+        foreach (UnitState u in ctx.LivingMembers(target.TeamId))
+        {
+            if (u == target || !FormationRules.AreAdjacent(target.Slot, u.Slot)) continue;
+            if (u.RawCounter(StatusKeys.Cowed) > 0) continue;               // 既に竦んでいる
+            if (u.RawCounter(GuardKey) > 0) { blocked++; continue; }       // 竦みが明けたばかり（ハメ防止）
+            u.SetCounter(StatusKeys.Cowed, 1);
+            ctx.EmitStatusGain(u, StatusKeys.Cowed, 1, self);             // 表示専用（竦んだ瞬間）
+            cowed++;
+        }
+        ctx.NoteShame(self, cowed, blocked);
+        if (cowed > 0)
+            ctx.Log($"    {target.Name} の悲鳴に、隣の敵 {cowed} 体が竦んだ", LogKind.Highlight, self);
+    }
+}
+
+/// <summary>
+/// 踏みしめ（第185期・<b>据えのバンの転生</b>。旧 <see cref="BulwarkTrait"/> / <see cref="OverloadTrait"/> は対照として残す）。
+///
+/// <para><b>手番で</b>（攻撃しない）据えの層を1つ積む（最大 <see cref="MaxLayers"/>）。
+/// <b>1層ごとに被ダメ −<see cref="PercentPerLayer"/>%</b>（engine の軽減の族・矢面の直後）。
+/// 層は <see cref="StatusKeys.Footing"/> に置くので、状態の札としてそのまま画面に出る。倒れれば消える。</para>
+///
+/// <para><b>範囲の盾</b>: 薙ぎ・貫き・全体の一撃が<b>この駒とこの駒に隣接する味方に同時に当たる</b>とき、
+/// <b>隣接する味方の分をこの駒が代わりに受ける</b>（この駒の層の軽減が乗る）。
+/// 判定は engine（<see cref="BattleContext.PerformAttack"/> / <c>ResolvePierce</c>）にある——
+/// 「同じ一撃が誰に当たるか」は攻撃の解決の中でしか分からないため（巨躯・分かちと同じ理由）。
+/// <b>庇いの鎖（<c>SelectTargetChain</c>）には入れない</b>——あちらは主目標を差し替えるだけで範囲には触れない。</para>
+/// </summary>
+public sealed class FootingTrait : Trait
+{
+    public const int MaxLayers = 3;
+    public const int PercentPerLayer = 10;
+
+    public override TraitId Id => TraitId.Footing;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Step(ctx, self);
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Step(ctx, self);
+    }
+
+    private static void Step(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        int now = self.RawCounter(StatusKeys.Footing);
+        if (now >= MaxLayers)
+        {
+            ctx.NoteFooting(self, false);
+            ctx.Log($"    {self.Name} は踏みしめたまま動かない（据え {now} 層）", LogKind.Action);
+            return;
+        }
+        self.SetCounter(StatusKeys.Footing, now + 1);
+        ctx.NoteFooting(self, true);
+        ctx.EmitStatusGain(self, StatusKeys.Footing, 1, self);   // 表示専用（層が増えた瞬間）
+        ctx.Log($"    {self.Name} が踏みしめた（据え {now + 1} 層・被ダメ -{(now + 1) * PercentPerLayer}%）", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// 据えた足（第185期・踏みしめの代金）。<b>入れ替えを受け付けない</b>——この駒を動かす入れ替え
+/// （喧噪・逃げ回る・突き返し・曝き・逃亡・身構え・棘守り）は<b>空振りする</b>。
+/// 判定は <see cref="BattleContext.SwapSlots"/> の入口1箇所。<b>札そのものは挙動を持たない。</b>
+/// 外せば <c>yP</c>（踏みしめだけ）になる。
+/// </summary>
+public sealed class PlantedTrait : Trait
+{
+    public override TraitId Id => TraitId.Planted;
+}
+
 /// <summary>敵の標を誰が付けたか（第184期・<b>計数専用</b>。§1 の被ダメージ増の出どころを割るためだけ）。</summary>
 public enum MarkOrigin
 {
@@ -10966,6 +11208,10 @@ public static class TraitCatalog
         new FleeTrait(),       // 第184期
         new VendettaTrait(),   // 第184期
         new RecoilTrait(),     // 第184期
+        new GrappleTrait(),    // 第185期
+        new ShameTrait(),      // 第185期
+        new FootingTrait(),    // 第185期
+        new PlantedTrait(),    // 第185期
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期

@@ -184,6 +184,12 @@ public static class Map11Relations
         [TraitId.Flee] = new(Shape.Adjacent, "入れ替わる",
             "指差したあと、この駒と場所を入れ替えて逃げる（この駒は前へ押し出されることがある）",
             LinkSign.Loss, true, "入れ替わ"),
+        // 第185期（バンの転生）。**範囲攻撃が同時に当たったときだけ受ける**ので点線（(b) 型）
+        // ——隣であることは席で決まり、**いつ受けるか（薙ぎ・貫き・全体が両方に当たるか）だけが席の外にある**。
+        // 判定は engine（`PerformAttack` / `ResolvePierce`）にあるので、札のソースの走査には出てこない（R264）。
+        [TraitId.Footing] = new(Shape.Adjacent, "範囲を受ける",
+            "薙ぎ・貫き・全体がこの駒と同時に当たるとき、この駒の分を代わりに受け止める（踏みしめた層の軽減が乗る）",
+            LinkSign.Gain, true, "範囲攻撃"),
     };
 
     /// <summary>
@@ -219,6 +225,7 @@ public static class Map11Relations
         [TraitId.Betrayed] = "倒した相手の席に湧く（開幕には無い）",
         [TraitId.Sniper] = "自分の列だけを読む（相手がいない）",
         [TraitId.Touch] = "敵陣の隣接を読む（味方どうしの線ではない）",
+        [TraitId.Shame] = "敵陣の隣接を読む（味方どうしの線ではない）",
     };
 
     /// <summary>

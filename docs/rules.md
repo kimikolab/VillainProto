@@ -40,7 +40,7 @@
 | 27 | `mend` | `MendRule` | `MendRule { Side = Plain }` | ○ | `curse` / `hex` / `mender` / `gauge` / `hold2` / `ledger` / `wound2` / `cross` | 第86期 | ○ |
 | 28 | `woundIgnite` | `IgniteRule` | `IgniteRule { Enabled = True }` |  | `derive` / `curse` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `cross` / `demo` | 第87期 | ○ |
 | 29 | `gather` | `GatherRule` | `GatherRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `parry` / `wall` / `cross` / `demo` | 第89期 | ○ |
-| 30 | `soak` | `SoakRule` | `SoakRule { Poison = True, Burn = False, DullPerKind = 1 }` |  | `derive` / `curse` / `hex` / `soak` / `ledger` / `lit` / `wound2` / `ember` / `rebirth3` / `cross` | 第90期 | ○ |
+| 30 | `soak` | `SoakRule` | `SoakRule { Poison = True, Burn = False, DullPerKind = 1 }` |  | `derive` / `curse` / `hex` / `soak` / `ledger` / `lit` / `wound2` / `ember` / `rebirth3` / `rebirtha2` / `cross` | 第90期 | ○ |
 | 31 | `deep` | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` / `wound2` | 第93期 | ○ |
 | 32 | `curse` | `CurseRule` | `CurseRule { Enabled = True, SharePercent = 50 }` |  | `curse` / `hex` / `lit` / `mudohex` | 第95期 | ○ |
 | 33 | `betray` | `BetrayRule` | `BetrayRule { Enabled = True, Respawn = True }` |  | `betray` / `tempo` / `ledger` | 第103期 | ○ |
@@ -67,7 +67,7 @@
 | 54 | `indulgence` | `IndulgenceRule` | `IndulgenceRule { Advance = 30, Threshold = 60, Contracts = 0, Blast = Single }` |  | `toll` | 第155期 | ○ |
 | 55 | `ash` | `AshRule` | `AshRule { CountHavoc = True, CountDot = True, Multiplier = 100, FalloutOnDeath = True, ThrowEvery = 2 }` |  | `susu` | 第179期 | ○ |
 | 56 | `erupt` | `EruptRule` | `EruptRule { Floor = True, Smear = PerErupt, Heavy = True }` |  | `mudohex` / `mudo` | 第180期 | ○ |
-| 57 | `markRule` | `MarkRule` | `MarkRule { VulnerablePercent = 50 }` |  | `mark` / `mark184` | 第150期 | ○ |
+| 57 | `markRule` | `MarkRule` | `MarkRule { VulnerablePercent = 50 }` |  | `mark` / `mark184` / `rebirtha2` | 第150期 | ○ |
 
 引数 57 本（`verbose` と観測子を除く）。
 
@@ -106,7 +106,7 @@
 | `IgniteRule` | `IgniteRule { Enabled = True }` | ○ | `derive` / `curse` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `cross` / `demo` | 第87期 |
 | `IndulgenceRule` | `IndulgenceRule { Advance = 30, Threshold = 60, Contracts = 0, Blast = Single }` | ○ | `toll` | 第155期 |
 | `LooseRule` | `LooseRule { Shove = True }` | ○ | `hold` / `hold2` / `ledger` / `lit` | 第106期 |
-| `MarkRule` | `MarkRule { VulnerablePercent = 50 }` | ○ | `mark` / `mark184` | 第150期 |
+| `MarkRule` | `MarkRule { VulnerablePercent = 50 }` | ○ | `mark` / `mark184` / `rebirtha2` | 第150期 |
 | `MartyrRule` | `MartyrRule { RedirectPercent = 75 }` | ○ | `curse` / `guard` / `gather` / `ledger` / `wall` | 第35期 |
 | `MendRule` | `MendRule { Side = Plain }` | ○ | `curse` / `hex` / `mender` / `gauge` / `hold2` / `ledger` / `wound2` / `cross` | 第86期 |
 | `MenderCostRule` | `MenderCostRule { Percent = 50 }` | ○ | `hold` / `hold2` / `ledger` / `lit` / `wound2` | 第106期 |
@@ -125,7 +125,7 @@
 | `ShrapnelRule` | `ShrapnelRule { Multiplier = 3, SelfDamagePercent = 100, ArmorCensus = False }` | ○ | `shard` | 第138期 |
 | `ShufflerRule` | `ShufflerRule { Foes = True, Stagger = Confuse, ConfusePercent = 100, ConfuseUses = 3, GustPercent = 20, GustSecondary = True }` | ○ | `tumult` / `gust` / `tumult2` / `derange` / `confuse` | 第144期 |
 | `SlanderRule` | `SlanderRule { Penalty = 0 }` | ○ | `slander` | 第44期 |
-| `SoakRule` | `SoakRule { Poison = True, Burn = False, DullPerKind = 1 }` | ○ | `derive` / `curse` / `hex` / `soak` / `ledger` / `lit` / `wound2` / `ember` / `rebirth3` / `cross` | 第90期 |
+| `SoakRule` | `SoakRule { Poison = True, Burn = False, DullPerKind = 1 }` | ○ | `derive` / `curse` / `hex` / `soak` / `ledger` / `lit` / `wound2` / `ember` / `rebirth3` / `rebirtha2` / `cross` | 第90期 |
 | `SpillWoundRule` | `SpillWoundRule { Enabled = False, Scope = All }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期 |
 | `SutureFireRule` | `SutureFireRule { Fire = Swing }` | ○ | `taillight` / `hold2` | 第107期 |
 | `SutureRule` | `SutureRule { Side = Both }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `taillight` / `hold2` / `ledger` / `wound2` / `cross` | 第85期 |

@@ -507,6 +507,8 @@ if (focusId == "mudo")
 if (focusId == "rebirth3") { Rebirth3Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 // mark184 モード（第184期） —— A群の転生 1〜2枚目（標の軸: ヒサ・ザン ＋ 敵の標の被ダメージ増）。本体は `Modes/Mark184.cs`。
 if (focusId == "mark184") { Mark184Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
+// rebirtha2 モード（第185期） —— A群の転生 3〜5枚目（クグ・シガ・バン）。本体は `Modes/RebirthA2.cs`。
+if (focusId == "rebirtha2") { RebirthA2Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 
 // rebirth2 モード（第180期） —— B群の転生 3〜5枚目（ムド／ヴィオ／ガン）。本体は `Modes/Rebirth2.cs`。
 if (focusId == "rebirth2")
@@ -1277,6 +1279,7 @@ static class TraitKeyMap
         // 強化
         [TraitId.Rally]      = new[] { UnitTally.CarryWhet, UnitTally.CarryIdle },
         [TraitId.Bind]       = new[] { UnitTally.CarryWhet, UnitTally.CarryStun },
+        [TraitId.Grapple]    = new[] { UnitTally.CarryStun },                                   // 第185期（大縛りだけが痺れを書く。組み付きは専用キー）
         [TraitId.Drifter]    = new[] { UnitTally.CarryWhet, UnitTally.CarryMove },
         [TraitId.Goad]       = new[] { UnitTally.CarryWhet, UnitTally.CarryMark },
         [TraitId.Favor]      = new[] { UnitTally.CarryWhet, UnitTally.CarryDull, UnitTally.CarryBurn },
@@ -1304,6 +1307,7 @@ static class TraitKeyMap
         // 痺れ
         [TraitId.Paralyze]   = new[] { UnitTally.CarryStun },
         [TraitId.Torment]    = new[] { UnitTally.CarryStun, UnitTally.CarryIdle },
+        [TraitId.Shame]      = new[] { UnitTally.CarryStun, UnitTally.CarryIdle },              // 第185期（責め苦と同じ「動けない」を読む）
         [TraitId.Gouge]      = new[] { UnitTally.CarryStun, UnitTally.CarryWound },
         [TraitId.Avenge]     = new[] { UnitTally.CarryStun, UnitTally.CarryMark, UnitTally.CarryHit },
         // 標
@@ -1428,6 +1432,10 @@ static class TraitHookMap
         [TraitId.Flee]        = new[] { "OnAction" },                            // 第184期
         [TraitId.Vendetta]    = new[] { "OnAllyDamaged" },                       // 第184期
         [TraitId.Recoil]      = Array.Empty<string>(),                           // 第184期（仇指しの中で読まれる札）
+        [TraitId.Grapple]     = new[] { "OnBattleStart", "OnAction", "OnDamaged", "OnDeath", Engine },   // 第185期（手番を失うのは TakeTurnCore）
+        [TraitId.Shame]       = new[] { "OnAfterAttack", Engine },               // 第185期（標的の選好は SelectTargetChain）
+        [TraitId.Footing]     = new[] { "OnAction", Engine },                    // 第185期（層の軽減・範囲の盾は engine）
+        [TraitId.Planted]     = new[] { Engine },                                // 第185期（SwapSlots の入口）
         [TraitId.Mender]      = new[] { "OnTurnStart", "OnAction" },
         [TraitId.Amplifier]   = new[] { "OnTurnStart", "OnAction" },
         [TraitId.Contagion]   = new[] { "OnAnyDeath" },
@@ -1560,6 +1568,7 @@ static class TraitEntryMap
         [TraitId.Blightfed]  = new[] { (UnitTally.CarryPoison, Where.Ally) },
         [TraitId.Pyre]       = new[] { (UnitTally.CarryBurn, Where.Self) },
         [TraitId.Favor]      = new[] { (UnitTally.CarryBurn, Where.Ally) },
+        [TraitId.Shame]      = new[] { (UnitTally.CarryStun, Where.Foe), (UnitTally.CarryIdle, Where.Foe) },   // 第185期
         [TraitId.Torment]    = new[] { (UnitTally.CarryStun, Where.Foe),
                                        (UnitTally.CarryIdle, Where.Foe) },                  // 観測
         [TraitId.Avenge]     = new[] { (UnitTally.CarryMark, Where.Ally), (UnitTally.CarryHit, Where.Ally) },
@@ -1630,6 +1639,7 @@ static class TraitEntryMap
         [TraitId.Cinder]     = new[] { (UnitTally.CarryBurn, Where.Foe), (UnitTally.CarryBurn, Where.Ally) },
         [TraitId.Bomber]     = new[] { (UnitTally.CarryBurn, Where.Foe), (UnitTally.CarryBurn, Where.Ally) },
         [TraitId.Paralyze]   = new[] { (UnitTally.CarryStun, Where.Foe) },
+        [TraitId.Grapple]    = new[] { (UnitTally.CarryStun, Where.Foe) },                  // 第185期（開戦時の大縛り）
         [TraitId.Torment]    = new[] { (UnitTally.CarryStun, Where.Self) },
         [TraitId.Avenge]     = new[] { (UnitTally.CarryStun, Where.Self) },                 // 観測（ターン外の行動の代金）
         [TraitId.Condemn]    = new[] { (UnitTally.CarryStun, Where.Foe) },                  // 観測（敵側の断罪）

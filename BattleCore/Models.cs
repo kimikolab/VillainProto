@@ -1589,6 +1589,26 @@ public sealed class UnitTally
                 VendettaFires, VendettaDealt, VendettaMarks, RecoilTaken, MarkVulnDealt,
                 BeckonStrippedHits;
 
+    /// <summary>
+    /// 第185期の3枚（A群の転生 3〜5枚目）。<b>計数専用で、どの規則も読まない。</b>
+    ///
+    /// <para>組み付き（クグ・保持者の側）: <c>GrappleFires</c> 組み付いた回数 ／ <c>GrappleHolds</c> 組んだまま維持した手番 ／
+    /// <c>GrappleStalled</c> 止めた敵の手番数 ／ <c>GrappleBreaks</c> 殴られてほどけた回数。
+    /// 敵の側: <c>GrappledTimes</c> 組み付かれた回数（＝相手の内訳）／ <c>StallGrappled</c> 組み付かれて失った手番。</para>
+    ///
+    /// <para>見せしめ（シガ）: <c>ShamePicks</c> 動けない敵を優先して狙った回数 ／ <c>ShameFires</c> 見せしめが出た回数 ／
+    /// <c>ShameCowed</c> 竦ませた延べ体数 ／ <c>ShameBlocked</c> ハメ防止で弾いた延べ体数。
+    /// 敵の側: <c>CowedLost</c> 竦みを消費した回数（失う手番に吸われた分を含む）／ <c>StallCowed</c> 竦みで失った手番。</para>
+    ///
+    /// <para>踏みしめ（バン）: <c>FootingSteps</c> 層を積んだ手番 ／ <c>FootingFull</c> 満ちていた手番 ／ <c>FootingSaved</c> 層で防いだ量 ／
+    /// <c>ShieldTakes</c> 範囲の盾で代わりに受けた回数 ／ <c>ShieldTaken</c> その量（軽減の前）／
+    /// <c>PlantedRefused</c> 入れ替えを空振りさせた回数（うち敵が起こした入れ替え＝曝き <c>PlantedRefusedFoe</c>）／ <c>FootingLayerSum</c> ÷ <c>FootingLayerTurns</c> ターン末の層の平均。受け手の側: <c>ShieldCovered</c> 盾に受けてもらった量。</para>
+    /// </summary>
+    public long GrappleFires, GrappleHolds, GrappleStalled, GrappleBreaks, GrappledTimes, StallGrappled,
+                ShamePicks, ShameFires, ShameCowed, ShameBlocked, CowedLost, StallCowed,
+                FootingSteps, FootingFull, FootingSaved, ShieldTakes, ShieldTaken, ShieldCovered, PlantedRefused,
+                FootingLayerSum, FootingLayerTurns, PlantedRefusedFoe;
+
     public int BraceGuards, BraceCuts, BraceRefused, BraceGiven, BraceLost;
     public int BraceShoves, BraceShoveCapped, BraceNoTarget, BraceStaggers, BraceArmorMuted;
 
@@ -1766,6 +1786,14 @@ public sealed class UnitTally
         if (o.AshPeak > AshPeak) AshPeak = o.AshPeak;
         BrandFires += o.BrandFires; BrandDealt += o.BrandDealt;
         StallStagger += o.StallStagger;
+        GrappleFires += o.GrappleFires; GrappleHolds += o.GrappleHolds; GrappleStalled += o.GrappleStalled;
+        GrappleBreaks += o.GrappleBreaks; GrappledTimes += o.GrappledTimes; StallGrappled += o.StallGrappled;
+        ShamePicks += o.ShamePicks; ShameFires += o.ShameFires; ShameCowed += o.ShameCowed;
+        ShameBlocked += o.ShameBlocked; CowedLost += o.CowedLost; StallCowed += o.StallCowed;
+        FootingSteps += o.FootingSteps; FootingFull += o.FootingFull; FootingSaved += o.FootingSaved;
+        ShieldTakes += o.ShieldTakes; ShieldTaken += o.ShieldTaken; ShieldCovered += o.ShieldCovered;
+        PlantedRefused += o.PlantedRefused; FootingLayerSum += o.FootingLayerSum; FootingLayerTurns += o.FootingLayerTurns;
+        PlantedRefusedFoe += o.PlantedRefusedFoe;
         ShuffleAllySwaps += o.ShuffleAllySwaps; ShuffleFoeSwaps += o.ShuffleFoeSwaps;
         ShuffleAdvanced += o.ShuffleAdvanced; ShuffleAdvancedTraited += o.ShuffleAdvancedTraited;
         ShuffleAdvancedFromBack += o.ShuffleAdvancedFromBack; ShuffleStaggers += o.ShuffleStaggers;
@@ -2696,6 +2724,9 @@ public sealed class BattleResult
     /// 駒ごとの計数（付け替え・逃げ・倍返し・返り血）は <see cref="TallyByUnit"/> にある。
     /// </summary>
     public MarkAxisLedger MarkAxis { get; init; }
+
+    /// <summary>第185期。1ターンに手番を失った敵の数の分布（0/1/2/3+）。<b>計数専用</b>（ターン末に1回数える）。</summary>
+    public long[] FoeStalledHist { get; init; } = new long[4];
 
     /// <summary>盤面ルール（渇き・粛）の帳簿（第134期 段2・<see cref="BoardRuleLedger"/>）。<b>計数専用。</b></summary>
     public required BoardRuleLedger BoardRules { get; init; }

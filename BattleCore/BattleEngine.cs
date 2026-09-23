@@ -199,7 +199,27 @@ public static class StatusKeys
     /// </summary>
     public const string Ash = "ash";
 
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash };
+    /// <summary>
+    /// 組み付き（第185期・クグの <see cref="TraitId.Grapple"/>）。<b>0/1 のキー</b>で、立っている間は
+    /// <b>自分の手番を失い続ける</b>（痺れと違って手番で消費されない。ほどくのは組み付いた側だけ）。
+    /// ターン外の行動も止まる（<c>CanActOutOfTurn</c>）。責め苦は「動けない」と読む。
+    /// </summary>
+    public const string Grappled = "grappled";
+
+    /// <summary>
+    /// 竦み（第185期・シガの <see cref="TraitId.Shame"/>）。<b>0/1 のキー</b>で、次の手番を1回失う（手番で消費）。
+    /// <b>痺れを流用しない</b>——痺れにはターン外の行動を止める意味と、責め苦・号令の読み手がいる。
+    /// 竦みは「次の手番を1回」だけを表す（転倒と同じ形）。
+    /// </summary>
+    public const string Cowed = "cowed";
+
+    /// <summary>
+    /// 据えの層（第185期・バンの <see cref="TraitId.Footing"/>）。<b>量のキー</b>（0〜<see cref="FootingTrait.MaxLayers"/>）で、
+    /// 1層ごとに被ダメ −10%。<see cref="All"/> に入れてあるので、会戦の境界で消え、状態の札として画面に出る。
+    /// </summary>
+    public const string Footing = "footing";
+
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing };
 
     /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
@@ -222,6 +242,9 @@ public static class StatusKeys
         Ward => "預",
         Debt => "負",
         Ash => "灰",
+        Grappled => "組",
+        Cowed => "竦",
+        Footing => "据",
         _ => key
     };
 }
@@ -361,6 +384,7 @@ public sealed class BattleContext
         // 短絡の意味（数百万戦を並列で回すので全駒走査を後ろに置く）はそのまま残る。
         bool basic = u.IsAlive
                      && u.RawCounter(StatusKeys.Stun) == 0
+                     && (!_restrainLive || u.RawCounter(StatusKeys.Grappled) == 0)   // 第185期: 組み付かれた駒
                      && u.Traits.All(t => CanReactProbed(t, u));
         bool hushed = Hush.Active && HushHolderAlive;
 
@@ -3690,6 +3714,110 @@ public sealed class BattleContext
         TallyOf(pick).BeckonPicked++;
     }
 
+    // =================================================================================
+    // 第185期（A群の転生 3〜5枚目）: 組み付き・見せしめ・踏みしめ・据えた足
+    // =================================================================================
+
+    /// <summary>組み付き・見せしめの保持者が盤上にいるか（手番の頭の2つのキーと標的の選好の短絡）。</summary>
+    bool _restrainLive;
+    /// <summary>踏みしめ（範囲の盾・層の軽減）の保持者。</summary>
+    readonly List<UnitState> _shieldHolders = new();
+    /// <summary>据えた足の保持者が盤上にいるか（入れ替えの空振りの短絡）。</summary>
+    bool _plantedLive;
+
+    /// <summary>1ターンに手番を失った敵の数の分布（0/1/2/3+。<b>計数のみ</b>・毎ターン末に1回）。</summary>
+    public readonly long[] FoeStalledHist = new long[4];
+
+    /// <summary>ターン末に呼ぶ。このターンに <c>IdleTurn</c> が立った敵を数える（倒れた敵も数える）。</summary>
+    internal void NoteFoeStalled()
+    {
+        int n = 0;
+        foreach (UnitState u in _units)
+            if (u.TeamId != PlayerTeam && u.RawCounter(StatusKeys.IdleTurn) == Turn) n++;
+        FoeStalledHist[Math.Min(3, n)]++;
+        // 据えの層の時間平均（踏みしめの保持者が生きていたターンだけ）。
+        foreach (UnitState h in _shieldHolders)
+            if (h.IsAlive)
+            {
+                UnitTally t = TallyOf(h);
+                t.FootingLayerSum += h.RawCounter(StatusKeys.Footing);
+                t.FootingLayerTurns++;
+            }
+    }
+
+    /// <summary>竦みを消費する（手番を失ったとき）。ハメ防止の印を立てる。</summary>
+    void ConsumeCowed(UnitState u)
+    {
+        if (u.RawCounter(StatusKeys.Cowed) <= 0) return;
+        u.SetCounter(StatusKeys.Cowed, 0);
+        u.SetCounter(ShameTrait.GuardKey, 1);
+        TallyOf(u).CowedLost++;
+    }
+
+    /// <summary>組み付かれて手番を失った。止めた側（組み付いている駒）にも数える。</summary>
+    void NoteGrappleStall(UnitState u)
+    {
+        TallyOf(u).StallGrappled++;
+        foreach (UnitState h in _units)
+            if (h.IsAlive && h.TeamId != u.TeamId && h.RawCounter(GrappleTrait.TargetKey) == u.InstanceId + 1)
+                TallyOf(h).GrappleStalled++;
+    }
+
+    public void NoteGrapple(UnitState self, UnitState target)
+    {
+        TallyOf(self).GrappleFires++;
+        TallyOf(target).GrappledTimes++;
+    }
+    public void NoteGrappleHold(UnitState self) => TallyOf(self).GrappleHolds++;
+    public void NoteGrappleBreak(UnitState self) => TallyOf(self).GrappleBreaks++;
+
+    public void NoteShame(UnitState self, int cowed, int blocked)
+    {
+        UnitTally t = TallyOf(self);
+        t.ShameFires++;
+        t.ShameCowed += cowed;
+        t.ShameBlocked += blocked;
+    }
+
+    public void NoteFooting(UnitState self, bool added)
+    {
+        UnitTally t = TallyOf(self);
+        if (added) t.FootingSteps++; else t.FootingFull++;
+    }
+
+    /// <summary>
+    /// 範囲の盾の持ち主のうち、この一撃（薙ぎ・全体）に当たるもの。<b>乱数を引かない。</b>
+    /// 「当たる」＝主目標そのものか、振る前の盤面での巻き込みの顔ぶれに入っていること。
+    /// </summary>
+    UnitState? ShieldHit(UnitState actor, UnitState target, AttackPattern? patternOverride)
+    {
+        IReadOnlyList<UnitState>? extras = null;
+        foreach (UnitState h in _shieldHolders)
+        {
+            if (!h.IsAlive || h.TeamId != target.TeamId) continue;
+            if (h == target) return h;
+            extras ??= SecondaryTargets(actor, target, patternOverride);
+            if (extras.Contains(h)) return h;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 範囲の盾: 同じ一撃が盾の持ち主と<b>その隣の味方</b>に当たるとき、隣の味方の分を盾が受ける。
+    /// 盾が倒れていれば（この一撃の途中で倒れた場合も）本人が受ける。
+    /// </summary>
+    UnitState ShieldRecv(UnitState shield, UnitState struck, int amount)
+    {
+        if (struck == shield || !shield.IsAlive || !struck.IsAlive) return struck;
+        if (struck.TeamId != shield.TeamId || !FormationRules.AreAdjacent(shield.Slot, struck.Slot)) return struck;
+        UnitTally t = TallyOf(shield);
+        t.ShieldTakes++;
+        t.ShieldTaken += amount;
+        TallyOf(struck).ShieldCovered += amount;
+        Log($"    {shield.Name} が {struck.Name} に及ぶ刃を代わりに受け止めた", LogKind.Trigger);
+        return shield;
+    }
+
     /// <summary>矢面が指差す相手がいなかった（<b>計数のみ</b>）。</summary>
     public void NoteBeckonIdle(UnitState self) => TallyOf(self).BeckonIdle++;
 
@@ -4469,6 +4597,11 @@ public sealed class BattleContext
             || u.HasTrait(TraitId.Goad) || u.HasTrait(TraitId.Scapegoat)
             || u.HasTrait(TraitId.Beckon) || u.HasTrait(TraitId.Vendetta)) MarkActive = true;   // 第184期に2本
         if (u.HasTrait(TraitId.Beckon)) _beckonHolders.Add(u);   // 第184期（半減の判定の短絡）
+        // 第185期: 組み付き・見せしめ（手番の頭の2つのキーと標的の選好を短絡させる）／踏みしめ（範囲の盾・層の軽減）／
+        // 据えた足（入れ替えの空振り）。**保持者がいなければ比較1つで抜ける**——既存の行が 0 件差分であることの根拠。
+        if (u.HasTrait(TraitId.Grapple) || u.HasTrait(TraitId.Shame)) _restrainLive = true;
+        if (u.HasTrait(TraitId.Footing)) _shieldHolders.Add(u);
+        if (u.HasTrait(TraitId.Planted)) _plantedLive = true;
         if (u.HasTrait(TraitId.Funnel)) FunnelActive = true;
         // 第137期: 砕けの保持者が盤上にいるか（`ShatterSoaked` を短絡させるためだけ。盤面には影響しない）。
         if (u.HasTrait(TraitId.Shatter)) ShatterActive = true;
@@ -5180,7 +5313,16 @@ public sealed class BattleContext
         // 執着・断ちが効いている手番は **Roll を消費しない**。ここで引くと、効いている間と
         // いない間で以降の乱数列がずれる。同数のタイブレークは Preferred の中の PickOne
         // （候補 0 個・1 個では Roll を消費しない）。
-        UnitState target = fixated ?? severed ?? pool[Roll(pool.Count)];
+        // 見せしめ（第185期・シガ）: 動けない敵を優先する。**執着・断ちと同じ段**（pool から無作為に選ぶ直前）で、
+        // pool は1体も足さない・引かない（前列の制約の内側）。標の段・庇いの鎖はこの後ろ。
+        // 効いた手番は pool の Roll を引かない（執着・断ちと同じ）。**保持者がいなければ比較1つで抜ける。**
+        UnitState? shamed = _restrainLive && fixated is null && severed is null
+                            && pattern == AttackPattern.Single && attacker.HasTrait(TraitId.Shame)
+            ? ShameTrait.Preferred(this, pool)
+            : null;
+        if (shamed is not null) TallyOf(attacker).ShamePicks++;
+
+        UnitState target = fixated ?? severed ?? shamed ?? pool[Roll(pool.Count)];
 
         if (fixated is not null)
             Log($"    {attacker.Name} は {fixated.Name} から目を離せない", LogKind.Trigger);
@@ -5662,9 +5804,18 @@ public sealed class BattleContext
         }
 
         int dealt = atk;
+
+        // 範囲の盾（第185期・バン）。**この一撃が盾の持ち主にも当たるか**を、振る前の盤面で決める
+        // （巻き込みの顔ぶれは主目標の着弾の後に引き直されるが、盾が「同時に当たる」かはこの時点で読む）。
+        // **保持者がいなければ比較1つで抜ける**——SecondaryTargets は乱数を引かないので、引いても盤面は動かない。
+        UnitState? shield = _shieldHolders.Count > 0 && pattern != AttackPattern.Single
+            ? ShieldHit(actor, target, patternOverride)
+            : null;
+
         // 呪いの共有（第96期）は**単体攻撃の一撃そのもの**にだけ札を付ける。
         // 副次目標（薙ぎ・全体）と貫きの段には付けない——範囲が二乗で伸びるのを止める構造。
-        ApplyDamage(target, dealt, actor, singleHit: pattern == AttackPattern.Single, pattern: pattern);
+        ApplyDamage(shield is null ? target : ShieldRecv(shield, target, dealt),
+                    dealt, actor, singleHit: pattern == AttackPattern.Single, pattern: pattern);
 
         // 適用順を混ぜる。同じ一振りで2体以上落ちるとき、死亡順（墓守の層・破裂の連鎖）が
         // 席番号で決まっていた。巻き込む相手の顔ぶれは変わらない——順番だけ。
@@ -5680,7 +5831,8 @@ public sealed class BattleContext
             if (ReaderActive && pattern == AttackPattern.Sweep && actor.HasTrait(TraitId.Overload))
                 TallyOf(actor).ReaderSplash++;
             Log($"    刃が {extra.Name} まで届く", LogKind.Damage);
-            ApplyDamage(extra, Math.Max(1, dealt * SecondaryPercent / 100), actor, pattern: pattern);
+            int share = Math.Max(1, dealt * SecondaryPercent / 100);
+            ApplyDamage(shield is null ? extra : ShieldRecv(shield, extra, share), share, actor, pattern: pattern);
         }
 
         // 特性の発動は攻撃1回につき1度、主目標に対してのみ。
@@ -5718,6 +5870,12 @@ public sealed class BattleContext
         int passed = 0;
         int primaryDealt = 0;
 
+        // 範囲の盾（第185期）。貫きは同じレーンに並んだ全員に当たるので、盾がこの列にいれば「同時に当たる」。
+        UnitState? shield = null;
+        if (_shieldHolders.Count > 0)
+            foreach (UnitState h in _shieldHolders)
+                if (h.IsAlive && line.Contains(h)) { shield = h; break; }
+
         foreach (UnitState u in line)
         {
             // 途中で倒れた駒はもう立ちはだかっていないので、減衰の数に入れない。
@@ -5737,7 +5895,7 @@ public sealed class BattleContext
                 ScaleBackDamage += dmg;
             }
 
-            ApplyDamage(u, dmg, actor, pattern: AttackPattern.Pierce);
+            ApplyDamage(shield is null ? u : ShieldRecv(shield, u, dmg), dmg, actor, pattern: AttackPattern.Pierce);
             if (u == entry) primaryDealt = dmg;
             passed++;
         }
@@ -6046,6 +6204,23 @@ public sealed class BattleContext
                     TallyOf(holder).BeckonGuardSaved += saved;
                     TallyOf(target).BeckonGuardTaken += saved;
                     Log($"    矢面の {target.Name} は痛みを半分に抑えた（-{saved}）", LogKind.Trigger);
+                }
+            }
+        }
+
+        // 据えの層（第185期・FootingTrait）: 1層ごとに被ダメ −10%。**軽減の族**（矢面の直後、肩代わり・破片・軛より前）。
+        // 範囲の盾で代わりに受けた分にもここで乗る（盾はこの駒への ApplyDamage として入ってくる）。
+        // **保持者がいなければ比較1つで抜ける。**
+        if (_shieldHolders.Count > 0)
+        {
+            int layers = target.RawCounter(StatusKeys.Footing);
+            if (layers > 0)
+            {
+                int saved = amount * layers * FootingTrait.PercentPerLayer / 100;
+                if (saved > 0)
+                {
+                    amount -= saved;
+                    TallyOf(target).FootingSaved += saved;
                 }
             }
         }
@@ -6643,9 +6818,12 @@ public sealed class BattleContext
     /// <summary>手番の中身（第104期に切り出した本体。第105期に枠を被せた）。</summary>
     private TurnOutcome TakeTurnCore(UnitState actor)
     {
+        // 第185期: 竦みのハメ防止の印は「次の自分の手番の頭」で落とす（ShameTrait.GuardKey）。
+        if (_restrainLive && actor.RawCounter(ShameTrait.GuardKey) > 0) actor.SetCounter(ShameTrait.GuardKey, 0);
 
         if (actor.RawCounter(StatusKeys.Stun) > 0)
         {
+            if (_restrainLive) ConsumeCowed(actor);   // 第185期: 失う手番に竦みも吸わせる（二重に取らない）
             if (ScapegoatActive) NoteScapegoatSkip(actor);
             // 第93期: 深手は**実際に行動したとき**だけ開く。止められた駒は延命する（§1 の予測）。
             if (DeepWatch) NoteDeepStalled(actor);
@@ -6675,12 +6853,40 @@ public sealed class BattleContext
             actor.SetCounter(StatusKeys.Stagger, 0);
             actor.SetCounter(StatusKeys.IdleTurn, Turn);
             TallyOf(actor).StallStagger++;            // 第143期（計数のみ）
+            if (_restrainLive) ConsumeCowed(actor);   // 第185期
             if (ScapegoatActive) NoteScapegoatSkip(actor);
             if (DeepWatch) NoteDeepStalled(actor);
             // 第145期（表示専用）: 手番を失った瞬間。付与はターン頭なので別の出来事として打つ。
             EmitStagger(actor, StaggerLabels.Lost, null);
             Log($"  {actor.Name} は転んで動けない", LogKind.Status);
             return TurnOutcome.Stalled;
+        }
+
+        // 組み付き・竦み（第185期）。**転倒とまったく同じ形で立てる**（engine 側で IdleTurn を立てて Stalled を返す。
+        // CanAct は1つも偽にしない）。組み付きは**消費しない**（ほどくのは組み付いた側だけ）、竦みは1回で消える。
+        // **保持者がいなければ `_restrainLive` の比較1つで抜ける**——既存の行が 0 件差分であることの根拠。
+        if (_restrainLive)
+        {
+            if (actor.RawCounter(StatusKeys.Grappled) > 0)
+            {
+                actor.SetCounter(StatusKeys.IdleTurn, Turn);
+                ConsumeCowed(actor);
+                NoteGrappleStall(actor);
+                if (ScapegoatActive) NoteScapegoatSkip(actor);
+                if (DeepWatch) NoteDeepStalled(actor);
+                Log($"  {actor.Name} は組み付かれて動けない", LogKind.Status);
+                return TurnOutcome.Stalled;
+            }
+            if (actor.RawCounter(StatusKeys.Cowed) > 0)
+            {
+                actor.SetCounter(StatusKeys.IdleTurn, Turn);
+                ConsumeCowed(actor);
+                TallyOf(actor).StallCowed++;
+                if (ScapegoatActive) NoteScapegoatSkip(actor);
+                if (DeepWatch) NoteDeepStalled(actor);
+                Log($"  {actor.Name} は竦んで動けない", LogKind.Status);
+                return TurnOutcome.Stalled;
+            }
         }
 
         // まどろみ（第36期）: 腹が満ちた壁は、その手番を失う。
@@ -7584,6 +7790,23 @@ public sealed class BattleContext
     {
         UnitState? occupant = PickOne(
             LivingMembers(self.TeamId).Where(u => u.Slot == destSlot).ToList());
+
+        // 据えた足（第185期・バン）: **この駒を動かす入れ替えは空振りする**（どちら側でも）。
+        // occupant は先に引いてある（PickOne は候補 0/1 個では乱数を引かないので、空振りでも乱数列は変わらない）。
+        // **保持者がいなければ比較1つで抜ける。**
+        if (_plantedLive)
+        {
+            UnitState? planted = self.HasTrait(TraitId.Planted) ? self
+                               : occupant is not null && occupant.HasTrait(TraitId.Planted) ? occupant : null;
+            if (planted is not null)
+            {
+                TallyOf(planted).PlantedRefused++;
+                if (by is not null && by.TeamId != planted.TeamId) TallyOf(planted).PlantedRefusedFoe++;   // 敵が起こした入れ替え（曝き）
+                Log($"    {planted.Name} の据えた足は動かない（入れ替えは空振りした）", LogKind.Trigger);
+                return;
+            }
+        }
+
         int origin = self.Slot;
         Row selfFrom = self.Row;
 
@@ -7892,6 +8115,8 @@ public static class BattleEngine
                 ctx.TurnLoopCalls++;   // 第105期・自己検査 (c)（計数のみ）
                 ctx.TakeTurn(actor);
             }
+
+            ctx.NoteFoeStalled();   // 第185期（計数のみ）: このターンに手番を失った敵の数の分布
         }
 
         bool playerWon = ctx.TeamAlive(BattleContext.PlayerTeam)
@@ -7987,6 +8212,7 @@ public static class BattleEngine
                 (long[])ctx.MarkLifeSum.Clone(), (long[])ctx.MarkLifeMax.Clone(),
                 (long[])ctx.MarkHits.Clone(), (long[])ctx.MarkHitsByFinisher.Clone(),
                 new Dictionary<string, (long, long, long)>(ctx.MarkOn)),
+            FoeStalledHist = (long[])ctx.FoeStalledHist.Clone(),   // 第185期（計数のみ）
             // 第184期。標の軸（**計数専用**。どの規則も読まない）。
             MarkAxis = new MarkAxisLedger(
                 (long[])ctx.MarkVulnHits.Clone(), (long[])ctx.MarkVulnAdded.Clone(),

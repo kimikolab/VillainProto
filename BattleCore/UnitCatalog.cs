@@ -373,13 +373,14 @@ public static class UnitCatalog
         Attack = 3,
         Speed = 10,
         Advances = false,
-        Traits = new[] { TraitId.Bind },
-        // 縄は1本。開戦時にその1本を敵へ投げるので、第1ターンだけ味方の縛りが起きない。
-        // 代金は振り（攻3）ではなく味方の縛り1回ぶんで、収入の有無で意味が反転する（BindTrait）。
-        // 周期（Actions）は持たせない——稼働率が低い駒の周期スキルは発動しないまま決着する。
-        PlusText = "開戦時に大縛りで最も速い敵1体を縛る。第2ターン以降は毎ターン味方1体を縛り、その味方の攻撃+16",
-        MinusText = "縛る味方は選べない。縛られた味方はそのターン動けない。第1ターンは味方の縛りが起きない",
-        Flavor = "味方を縛り上げる癖が抜けず、何度も牢に入れられた。"
+        // **第185期に転生**（旧 `Bind` は定義だけ残す）。味方を縛るのをやめ、敵の主力に組み付く。
+        // 開戦時の大縛りは組み付きの札の中に残してある（`GrappleTrait.OnBattleStart`）。
+        // 組み付きが手番そのもの（攻撃3 は出なくなる）。`[Skill]` の1要素で毎手番組み付く／維持する。
+        Traits = new[] { TraitId.Grapple },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "組み付いている") },
+        PlusText = "開戦時に大縛りで最も速い敵1体を縛る。手番でいちばん手強い敵に組み付き、動けなくする",
+        MinusText = "組み付いている間は自分も何もできない。殴られるとほどける",
+        Flavor = "縛る相手を味方から敵に変えただけで、しがみついたら離さない癖は抜けていない。"
     };
 
     public static readonly UnitDef Ban = new()
@@ -399,10 +400,14 @@ public static class UnitCatalog
         // 実戦で上の段（20 で全体）が立つのは縛めが乗った行だけ——しかも第127期の目視では
         // **全体が一度も出なかった**（`AtkBonus` の到達点は 8.65 で、20 には構造的に届かない）。
         // **段そのものは効くので、載せ替え先はドルガ**（`docs/stock.md` の棚卸し）。
-        Traits = new[] { TraitId.Bulwark, TraitId.Overload },
-        PlusText = "そのターン動かなかった味方の被ダメージを半減し、外から積まれた力が一定を越えているあいだは自分の一撃が薙ぎになる",
-        MinusText = "全員が働く編成では何も起きず、力は自分では1点も積めないうえ鈍重",
-        Flavor = "動かない者を守ることしかできない。動く者は守れない。"
+        //
+        // **第185期に転生**（旧 `Bulwark` / `Overload` は定義だけ残す）。踏みしめ（層 ＋ 範囲の盾）と、
+        // その代金の据えた足（入れ替えを受け付けない）。踏みしめが手番そのもの（攻撃5 は出なくなる）。
+        Traits = new[] { TraitId.Footing, TraitId.Planted },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "踏みしめた") },
+        PlusText = "手番で踏みしめて守りを固める（1層ごとに被ダメージ -10%・3層まで）。隣の味方に及ぶ範囲攻撃を代わりに受け止める",
+        MinusText = "自分では殴らない。据えた足は誰にも動かせない（入れ替えは空振りする）",
+        Flavor = "一度足を据えたら動かない。動かないから、隣の者の前に立てる。"
     };
 
     public static readonly UnitDef Shio = new()
@@ -800,8 +805,9 @@ public static class UnitCatalog
         MaxHp = 52,
         Attack = 9,
         Speed = 3,
-        Traits = new[] { TraitId.Torment },
-        PlusText = "動きを封じられた敵を殴ると、同じ重さの追い打ちを重ねる",
+        // **第185期に見せしめ（`Shame`）を足した**。責め苦はそのまま（動けない判定に組み付き・竦みを足しただけ）。
+        Traits = new[] { TraitId.Torment, TraitId.Shame },
+        PlusText = "動けない敵を優先して狙う。動けない敵を責めると追い打ちを重ね、その悲鳴で隣の敵を竦ませる（竦んだ敵は次の手番を失う）",
         MinusText = "動ける敵を殴ると、怖気づいて自分が1ターン動けなくなる",
         Flavor = "縛られた的しか殴れない臆病者。だからこそ、縛る者の隣でだけ牙になる。"
     };

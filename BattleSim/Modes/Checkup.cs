@@ -187,6 +187,11 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.Flee]       = (HcMinusL, "指差したら標の相手以外の隣と入れ替わって逃げるだけ。矢面の代金で、外せば `yP` になる"),
         [TraitId.Vendetta]   = (HcPlusL,  "標の味方が殴られると倍の刃を返し、殴った敵に標を付ける。代金は別の札（`Recoil`）に切り出してある"),
         [TraitId.Recoil]     = (HcMinusL, "刃を返すたび自分が傷つくだけ（殺さない）。仇指しの代金で、外せば `yP` になる"),
+        // 第185期: クグ（組み付き）・シガ（見せしめ）・バン（踏みしめ＋据えた足）。分類を同じコミットで足す。
+        [TraitId.Grapple]    = (HcBothL,  "敵を掴んで止めるのと、掴んでいる間は自分も何もできず殴られるとほどけるのが1つの動作"),
+        [TraitId.Shame]      = (HcPlusL,  "動けない敵を優先して狙い、責めると隣の敵を竦ませる。マイナスは責め苦の側"),
+        [TraitId.Footing]    = (HcPlusL,  "手番で層を積んで被ダメージを減らし、隣の味方への範囲攻撃を代わりに受ける。代金は別の札（`Planted`）"),
+        [TraitId.Planted]    = (HcMinusL, "入れ替えを受け付けないだけ。踏みしめの代金で、外せば `yP` になる"),
     };
 
     // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------
