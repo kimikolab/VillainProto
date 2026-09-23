@@ -26,6 +26,7 @@ public partial class BattlePawn3D
     public void CommitStatusSnapshot()
     {
         if (!_alive) return;
+        if (!_statusSnapshot.ContainsKey(StatusKeys.Stun)) SetFrightened(false);
         foreach (string key in StatusIconArt.Keys)
         {
             if (key == StatusKeys.Poison)

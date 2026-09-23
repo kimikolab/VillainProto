@@ -1115,6 +1115,8 @@ public partial class Main : Control
         if (token != _playToken || !_battleMode) return;
         _playing = false;
         string verdict = _result.PlayerWon ? "VICTORY" : "DEFEAT";
+        _battleField.ResetBindings();
+        foreach (var pawn in _battleField.Pawns.Values) pawn.SetFrightened(false);
         foreach (var pawn in _battleField.Pawns.Values) pawn.CancelCharge();
         Color color = _result.PlayerWon ? UiKit.Heal : UiKit.Hurt;
         if (_result.PlayerWon) _battleField.ShowVictoryPortraits();
@@ -1347,6 +1349,9 @@ public partial class Main : Control
             // 痺れは転倒と違ってターンをまたぐので `StatusSnapshot` には載る
             // ——欠けていたのは「いつ誰に付けられたか」と「その手番が実際に潰れたか」。
             case BattleEventKind.Stun:
+                // 責め苦の自分由来の痺れだけを怖気づきの絵にする。
+                if (e.Text == StunLabels.Struck && actor == target && target?.UnitId == "shiga")
+                    target.SetFrightened(true);
                 // 手番喪失は残量ゼロを意味しない。解除は次の残量通知で読む。
                 if (e.Text == StunLabels.Struck) target?.SetStatusIcon(StatusKeys.Stun, true);
                 Color stunTint = StatusColor(StatusKeys.LabelOf(StatusKeys.Stun));
@@ -1361,6 +1366,7 @@ public partial class Main : Control
                 {
                     AppendLog($"  [color=#{stunTint.ToHtml(false)}]{NameOf(e.TargetId)} は痺れたまま手番を失った[/color]");
                     await Delay(0.24);
+                    target?.SetFrightened(false);
                 }
                 break;
 
@@ -1413,6 +1419,8 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.Death:
+                target?.SetFrightened(false);
+                _battleField.ClearBindingsFor(target);
                 _battleField.PlayDeath(target, eventIndex == _finishSoundIndex);
                 AppendLog($"  [color=#{UiKit.Hurt.ToHtml(false)}][b]{NameOf(e.TargetId)} 撃破[/b][/color]");
                 await Delay(0.36);
@@ -1463,6 +1471,7 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.Revive:
+                target?.SetFrightened(false);
                 if (target is not null)
                 {
                     target.SetHp(e.HpAfter);
@@ -1482,6 +1491,13 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.StatusGain:
+                if (e.Text == StatusKeys.Grappled && target is not null)
+                {
+                    _battleField.SetBinding(actor, target, e.Amount > 0);
+                    AppendLog($"  {NameOf(e.ActorId)} → {NameOf(e.TargetId)}：{(e.Amount > 0 ? "糸で拘束" : "拘束解除")}");
+                    await Delay(e.Amount > 0 ? 0.28 : 0.12);
+                    break;
+                }
                 if (e.Text == StatusKeys.Curse && target is not null)
                 {
                     int token = _playToken;

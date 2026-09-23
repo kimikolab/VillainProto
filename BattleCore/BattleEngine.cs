@@ -3822,6 +3822,7 @@ public sealed class BattleContext
         t.ShieldHalved += raw - amount;
         TallyOf(struck).ShieldCovered += raw;
         Log($"    {shield.Name} が {struck.Name} に及ぶ刃を代わりに受け止めた（{raw} → {amount}）", LogKind.Trigger);
+        EmitShieldIntercept(shield, struck, amount);   // 第185期 追補2・表示専用
         return shield;
     }
 
@@ -4850,6 +4851,29 @@ public sealed class BattleContext
             TallyOf(guard).ConfusedGuards++;
     }
 
+    /// <summary>
+    /// 範囲の盾が受け止めた瞬間（第185期 追補2・<b>表示専用</b>）。<see cref="EmitIntercept"/> と同じ種類
+    /// （<see cref="BattleEventKind.Intercept"/>）を出すが、<b>計数（<c>Intercepts</c>・害の帳簿の印）には1つも触らない</b>
+    /// ——あちらを呼ぶと `pulse` / `harm` の数字が動く。<c>verbose</c> のときしか積まない。
+    /// 直後にバンへの <c>Damage</c> が続く（受けた量は層・軛の後の値でそちらに出る）。
+    /// </summary>
+    private void EmitShieldIntercept(UnitState shield, UnitState covered, int amount)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Intercept,
+            Turn = _turn,
+            ActorId = shield.InstanceId,
+            TargetId = covered.InstanceId,
+            Slot = shield.Slot,
+            HpAfter = shield.Hp,
+            Team = shield.TeamId,
+            Amount = amount,
+            Text = InterceptLabels.RangeShield,
+        });
+    }
+
     private void EmitIntercept(UnitState guard, UnitState target, string label)
     {
         TallyOf(guard).Intercepts++;
@@ -4927,6 +4951,15 @@ public sealed class BattleContext
         if (!_verbose) return;
         if (!_shown.Add((u.InstanceId, key))) return;
         Log(line, LogKind.Highlight, u);   // 第124期 段2: 見せ場の主を台本へ載せる
+    }
+
+    // 組み付きの解除を台本に残す。0 は解除であり、盤面は呼び元で変更済み。
+    internal void EmitGrappleRelease(UnitState self, UnitState target)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent { Kind = BattleEventKind.StatusGain, Turn = _turn,
+            ActorId = self.InstanceId, TargetId = target.InstanceId,
+            Text = StatusKeys.Grappled, Amount = 0 });
     }
 
     /// <summary>

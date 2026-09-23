@@ -1948,6 +1948,8 @@ public enum BattleEventKind
     ///
     /// <para><c>ActorId</c> = 書き手（engine の規則が足したぶんは null）、
     /// <c>Amount</c> = 付いた量、<c>Text</c> = <see cref="StatusKeys"/> のキー名。
+    /// 組み付き（<see cref="StatusKeys.Grappled"/>）は開始が1、解除が0。
+    /// 解除も ActorId = 拘束していた駒、TargetId = 拘束されていた駒を保つ。
     /// <b>盤面には一切影響しない。</b></para>
     /// </summary>
     StatusGain,
@@ -2209,6 +2211,14 @@ public static class InterceptLabels
     /// <summary>棘守り（カド）。鎖の最後。</summary>
     public const string ThornGuard = "棘守り";
 
+    /// <summary>
+    /// 範囲の盾（バン・第185期 追補2・<b>表示専用</b>）。<b>鎖の段ではない</b>——標的選択を差し替えるのではなく、
+    /// 範囲の一撃を配る直前に受け手を差し替える（<c>BattleContext.ShieldRecv</c>）。だから <see cref="All"/> には入れない
+    /// （<c>All</c> は鎖の段の一覧で、害の帳簿の段別の添字と `offturn check` の段の数に使われている）。
+    /// <c>ActorId</c> = バン ／ <c>TargetId</c> = 守られた味方 ／ <c>Amount</c> = 受け止めた量（半分にした後・層の軽減の前）。
+    /// </summary>
+    public const string RangeShield = "範囲の盾";
+
     /// <summary>全段。<b>鎖の並び順</b>（標的 → 後備え → 庇う → 殉教 → 棘守り）で持つ。</summary>
     public static readonly string[] All = { Mark, RearGuard, Guardian, Martyr, ThornGuard };
 }
@@ -2301,6 +2311,8 @@ public sealed class BattleEvent
     /// 伝染（<see cref="PoisonRoute.Touch"/>・疫みのラウ）の <c>StatusGain</c> のときだけ、
     /// <b>うつした元の敵 ＝ ラウに殴られた標的</b>の InstanceId が入る（第183期 追補2・<b>表示専用</b>）。
     /// <c>ActorId</c> はラウ、<c>TargetId</c> はうつされた隣の敵。線は <c>SpreadFromId</c> → <c>TargetId</c> に引く。
+    /// <para><b>第185期 追補2</b>: 竦み（<see cref="StatusKeys.Cowed"/>）の <c>StatusGain</c> にも入る——
+    /// <b>悲鳴の出どころ ＝ シガに責められた敵</b>（波紋の始点）。<c>ActorId</c> はシガ、<c>TargetId</c> は竦んだ隣の敵。</para>
     /// それ以外では <c>null</c>。<b>どの規則も読まない。</b>
     /// </summary>
     public int? SpreadFromId { get; init; }
@@ -3421,4 +3433,3 @@ public sealed class BattleResult
     public required IReadOnlyDictionary<string, int> FunnelDullFrom { get; init; }
     public required IReadOnlyDictionary<string, int> FunnelDullTo { get; init; }
 }
-

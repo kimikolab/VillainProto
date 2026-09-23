@@ -10932,6 +10932,7 @@ public sealed class GrappleTrait : Trait
         self.SetCounter(TargetKey, 0);
         if (held is null || held.RawCounter(StatusKeys.Grappled) <= 0) return;
         held.SetCounter(StatusKeys.Grappled, 0);
+        ctx.EmitGrappleRelease(self, held);
         if (!held.IsAlive) return;
         ctx.NoteGrappleBreak(self);
         ctx.Log($"    {self.Name} は{why} {held.Name} を放した", LogKind.Status);
@@ -10999,7 +11000,7 @@ public sealed class ShameTrait : Trait
             if (u.RawCounter(StatusKeys.Cowed) > 0) continue;               // 既に竦んでいる
             if (u.RawCounter(GuardKey) > 0) { blocked++; continue; }       // 竦みが明けたばかり（ハメ防止）
             u.SetCounter(StatusKeys.Cowed, 1);
-            ctx.EmitStatusGain(u, StatusKeys.Cowed, 1, self);             // 表示専用（竦んだ瞬間）
+            ctx.EmitStatusGain(u, StatusKeys.Cowed, 1, self, spreadFrom: target);   // 表示専用（竦んだ瞬間・悲鳴の出どころ）
             cowed++;
         }
         ctx.NoteShame(self, cowed, blocked);

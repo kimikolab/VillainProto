@@ -7,6 +7,22 @@ public partial class BattlePawn3D
     private bool _ashReleasing;
     private float _portraitOffsetX;
     public bool IsAshReleasing => _ashReleasing;
+    public bool IsBinding { get; private set; }
+    public bool IsFrightened { get; private set; }
+
+    public void SetFrightened(bool active)
+    {
+        bool next = active && _unitId == "shiga" && _alive && !_victory;
+        if (IsFrightened == next) return;
+        IsFrightened = next;
+        RefreshBattlePortrait();
+    }
+
+    public void SetBinding(bool active)
+    {
+        IsBinding = active && _alive && !_victory;
+        RefreshBattlePortrait();
+    }
 
     // 灰の描画まで含むキャンバスでも、本体の大きさと足元を揃える。
     private void RefreshBattlePortrait()
@@ -30,6 +46,16 @@ public partial class BattlePawn3D
                 key = "susu_charging";
                 padding = 0.0286f;
             }
+        }
+        if (key == "kugu" && IsBinding && _alive)
+        {
+            key = "kugu_binding";
+            padding = 0.04232f;
+        }
+        if (key == "shiga" && IsFrightened && _alive)
+        {
+            key = "shiga_frightened";
+            padding = 0.02083f;
         }
         Texture2D portrait = UiKit.BattlePortrait(_atlas, key, _burning);
         _portraitGroundDistance = height * (0.5f - padding);

@@ -293,6 +293,7 @@ public partial class BattlefieldView3D : Control
             _fortress = fortress;
         }
         ResetSuperFlash();
+        ResetBindings();
         ResetSeals();
         ResetPopups();
         ResetTurnLabel();
