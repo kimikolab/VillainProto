@@ -1062,6 +1062,12 @@ public sealed class BattleContext
     public readonly Dictionary<string, int> HexShareBySource = new();
     public readonly Dictionary<string, int> HexShareDamageBySource = new();
 
+    /// <summary>
+    /// 呪いの受け渡しの出どころ（第182期・<b>表示専用</b>）。共有の段が <c>ApplyDamage</c> を呼ぶ間だけ立ち、
+    /// <c>hexShare</c> が真の段の <c>Damage</c> イベントが読む。<b>どの規則も読まない。</b>
+    /// </summary>
+    int? _hexShareFrom;
+
     /// <summary>祟りの被弾（門の 1）。<b>規則の有無に依らず数える。</b></summary>
     internal void NoteHexHit(UnitState self, UnitState? source)
     {
@@ -4602,6 +4608,8 @@ public sealed class BattleContext
     /// <para><b>engine の窓口を持つ4通貨だけが呼ぶ</b>——<see cref="Wound"/> / <see cref="Poison"/> /
     /// <see cref="Ignite"/> / <see cref="Dull"/>。窓口の無い痺れ・標・破片は出さない
     /// （出すには先に窓口が要る。第90・93期と同じ形）。</para>
+    /// <para><b>第182期に5本目の呼び口</b>——<see cref="HexTrait"/> の呪いの付与（書き手はムド）。
+    /// 窓口は無いが付与口が1箇所きりなので、そこから直接呼ぶ。</para>
     ///
     /// <para><see cref="Emit"/> は verbose のときしか積まないので、<c>compare</c>（verbose 偽）では
     /// 1件も作られない。<b>盤面には一切影響しない</b>——<c>NoteStatusGain</c> の計数にも触っていない。</para>
@@ -6133,7 +6141,9 @@ public sealed class BattleContext
             Relayed = relayed,
             // 第97期・表示専用。線の形（薙ぎの扇・貫きの矢印）と向き（反撃は逆）を描き分けるため。
             Pattern = pattern,
-            Reaction = InReaction || InInterrupt
+            Reaction = InReaction || InInterrupt,
+            // 第182期・表示専用。受け渡しの段だけ出どころ（元の被弾者）を載せる
+            ShareFromId = hexShare ? _hexShareFrom : null
         });
 
         if (source is not null && !isFriendlyFire)
@@ -6281,9 +6291,17 @@ public sealed class BattleContext
                         HexShareDamageBySource[source.Def.Name] = a0 + share;
                     }
                     Log($"    呪いが {target.Name} の痛みを {other.Name} へ渡す（{share}）", LogKind.Status);
-                    ApplyDamage(other, share, source, isFriendlyFire: ff,
-                                burnTick: burnTick, spillWound: false,
-                                singleHit: true, hexShare: true);
+                    // 第182期・表示専用。台本の `Damage.ShareFromId` に載せるためだけの退避
+                    // （1ホップなので入れ子の受け渡しは起きないが、作法として退避・復帰する）。
+                    int? prevShareFrom = _hexShareFrom;
+                    _hexShareFrom = target.InstanceId;
+                    try
+                    {
+                        ApplyDamage(other, share, source, isFriendlyFire: ff,
+                                    burnTick: burnTick, spillWound: false,
+                                    singleHit: true, hexShare: true);
+                    }
+                    finally { _hexShareFrom = prevShareFrom; }
                 }
             }
         }

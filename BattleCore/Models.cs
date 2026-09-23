@@ -2201,6 +2201,15 @@ public sealed class BattleEvent
     /// </summary>
     public bool Reaction { get; init; }
 
+    /// <summary>
+    /// 呪いの受け渡し（第182期・<see cref="CurseRule"/>）で出た <c>Damage</c> のときだけ、
+    /// <b>痛みの出どころ ＝ 元の一撃を受けた呪い持ち</b>の InstanceId が入る（<b>表示専用</b>）。
+    /// それ以外の出来事では <c>null</c>——<b>非 null であること自体が「受け渡し」の目印</b>。
+    /// <para><c>ActorId</c> は元の攻撃者のまま（与害の帳簿と同じ）。線は
+    /// <c>ShareFromId</c> → <c>TargetId</c> に引く。<b>どの規則も読まない。</b></para>
+    /// </summary>
+    public int? ShareFromId { get; init; }
+
     /// <summary>Highlight / Status のフレーバー。演出の中身ではなく添え物として扱う。</summary>
     public string? Text { get; init; }
 }

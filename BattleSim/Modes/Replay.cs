@@ -87,6 +87,7 @@ public static void Run(string[] args, int stageIndex)
             slot = e.Slot,
             team = e.Team,
             pattern = e.Pattern?.ToString(),
+            shareFrom = e.ShareFromId,   // 第182期・呪いの受け渡しの出どころ（それ以外は null）
             text = e.Text
         }).ToList()
     };

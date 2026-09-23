@@ -9018,6 +9018,7 @@ public sealed class HexTrait : Trait
 
         source.SetCounter(StatusKeys.Curse, 1);
         ctx.NoteHexMark(source);
+        ctx.EmitStatusGain(source, StatusKeys.Curse, 1, self);   // 第182期・表示専用（付いた瞬間。書き手はムド）
         ctx.Log($"    {self.Name} の泥が {source.Name} に絡みつく（呪い）", LogKind.Trigger);
     }
 }

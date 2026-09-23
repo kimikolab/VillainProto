@@ -243,3 +243,14 @@ H1 ではムド 100 ／ ウツ 386、共有 17 回。
 ——**歯止めとの余裕は +29.9pt**。**情報セルは 129 → 127（主判定 42 → 41）、第五波 95% 超は 12 → 13**
 （`置き去り×被弾強化` 97.0%）。**この期に失ったのはこの3つ**（`速攻` 第4波が 42.5 → 100.0 で天井へ、など）。
 `docs/` で動いたのは 13 ファイル＋`rules.md`（`EruptRule` の既定が `Heavy = True`）。`units.md` は H1 の版から動かない。
+
+## 11. 追補2 —— 呪いを台本に載せる（`design/CODEX_BRIEF_HEX.md` §3・表示専用）
+
+- **呪いが付いた瞬間** `StatusGain`（`ActorId` = ムド、`TargetId` = 呪われた駒、`Text` = `"curse"`、`Amount` = 1）。
+  呼び口は `HexTrait.OnDamaged` の1箇所（`ctx.EmitStatusGain`）
+- **受け渡しの `Damage`** に `BattleEvent.ShareFromId`（元の被弾者の InstanceId）。**非 null が「受け渡し」の目印**。
+  `ActorId` は元の攻撃者のまま、`Pattern` は null。台本では「元の一撃の `Damage` → 受け渡しの `Damage`（人数ぶん）」の順に並ぶ。
+  リプレイ JSON では `shareFrom`
+- 受け入れ: `compare` は `docs/balance.md` と 0 行差分、`docs/` を作り直して差分 0、`audit` ずれ 0 件。
+  `4 replay "燃焼 (ボルグ×ホタ)" 3` で `StatusGain curse` 3件・`shareFrom` 付き `Damage` 8件。
+  DemoApp の頭なし再生（同じ戦）は `DEMO_SMOKE_COMPLETE events=257 won=True`
