@@ -5151,6 +5151,28 @@ public sealed class BattleContext
         }
     }
 
+    /// <summary>
+    /// 叩き起こし（<see cref="BattleEventKind.Reveille"/>）を台本に打つ（<b>表示専用</b>）。
+    /// <paramref name="label"/> は <see cref="ReveilleLabels"/>。
+    /// </summary>
+    public void EmitReveille(UnitState caller, UnitState ally, string label)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Reveille,
+            Turn = _turn,
+            ActorId = caller.InstanceId,
+            TargetId = ally.InstanceId,
+            HpAfter = ally.Hp,
+            Team = caller.TeamId,
+            Text = label,
+        });
+    }
+
+    /// <summary>粛がいま効いているか（<b>表示専用の読み口</b>。盤面の判断に使わないこと）。</summary>
+    public bool HushBindingNow => Hush.Active && HushHolderAlive;
+
     internal void EmitSealed(UnitState target, string rule, int amount, UnitState? by = null)
     {
         if (!_verbose) return;
@@ -6356,7 +6378,7 @@ public sealed class BattleContext
                             // 第94期 (T2) の印。**engine に本体がある機構は、その特性の名前で観測する**
                             // ——印が無いと吐き戻しが「壁を殴った側の特性」に付いてしまう。
                             TraitMark cm = BeginTrait(TraitId.Colossus, wall);
-                            foreach (UnitState t in back) Whet(t, gain, WhetRoute.Regurgitate);
+                            WhetEach(back, target, gain, WhetRoute.Regurgitate);
                             EndTrait(cm);
                             Log($"    {wall.Name} が飲み込んだ力を {target.Name} へ返した（攻撃 +{gain}）",
                                 LogKind.Trigger);
@@ -7591,6 +7613,25 @@ public sealed class BattleContext
     /// <b>盤面には一切影響しない</b>（<see cref="DullRoute"/> と同じ扱いで <c>verbose</c> に依存しない）。</para>
     /// </summary>
     public void Whet(UnitState target, int amount, WhetRoute route = WhetRoute.Other)
+        => WhetCore(target, amount, route, target, 0, true);
+
+    /// <summary>
+    /// 支援の宛先（<see cref="SupportTargets"/> の戻り値）それぞれに <see cref="Whet"/> する。
+    /// <b><c>foreach (t in heads) Whet(t, …)</c> と1ビットも違わない</b>——違うのは台本
+    /// （<see cref="BattleEventKind.Whet"/>）に<b>本来の対象</b>と<b>一連の通し番号</b>を載せることだけ（表示専用）。
+    /// </summary>
+    public void WhetEach(IReadOnlyList<UnitState> heads, UnitState intended, int amount, WhetRoute route)
+    {
+        int seq = _verbose && heads.Count > 0 ? ++_whetSeq : 0;
+        for (int i = 0; i < heads.Count; i++)
+            WhetCore(heads[i], amount, route, intended, seq, i == heads.Count - 1);
+    }
+
+    /// <summary>強化の一連の通し番号（表示専用）。1戦の中で 1 から数える。</summary>
+    private int _whetSeq;
+
+    private void WhetCore(UnitState target, int amount, WhetRoute route,
+                          UnitState intended, int seq, bool last)
     {
         if (amount <= 0) return;
 
@@ -7661,6 +7702,23 @@ public sealed class BattleContext
             receiver.WhetReceived += amount;
             // 第68期。**`WhetReceived` と同じ行・同じ条件**で外から届いた量の帳簿にも積む。
             NoteCarry(receiver, UnitTally.CarryWhet, amount);
+            // 号令の台本（表示専用）。**実際に乗ったときだけ**出す。盤面は読むだけ。
+            if (_verbose)
+                Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.Whet,
+                    Turn = _turn,
+                    ActorId = Mark.Owner?.InstanceId,
+                    TargetId = receiver.InstanceId,
+                    IntendedId = intended.InstanceId,
+                    Amount = amount,
+                    Team = receiver.TeamId,
+                    WhetRoute = route,
+                    SourceTrait = Mark.Owner is null ? null : Mark.Id,
+                    SupportSeq = seq > 0 ? seq : ++_whetSeq,
+                    SupportLast = last,
+                    AttackAfter = receiver.CurrentAttack,
+                });
         }
 
         // 軋み（第66期）。**外の供給が同じ AtkBonus に積まれる**ことの記録で、盤面には触らない。
@@ -7748,6 +7806,22 @@ public sealed class BattleContext
                 UnitTally bt = TallyOf(target);
                 bt.StoicHealBlocked += amount;
                 bt.StoicHealBlockedFires++;
+            }
+            // 表示専用。支援拒否が回復を弾いた瞬間（隣へは流さない）。盤面は読むだけ。
+            if (_verbose && target.HasTrait(TraitId.Stoic))
+            {
+                UnitState? src = by ?? Mark.Owner;
+                Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.HealBlocked,
+                    Turn = _turn,
+                    ActorId = src?.InstanceId,
+                    TargetId = target.InstanceId,
+                    Amount = amount,
+                    HpAfter = target.Hp,
+                    Team = target.TeamId,
+                    SourceTrait = Mark.Owner is null ? null : Mark.Id,
+                });
             }
             return;
         }

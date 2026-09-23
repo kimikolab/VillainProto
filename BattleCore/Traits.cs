@@ -5899,8 +5899,7 @@ public sealed class RallyTrait : Trait
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
             if (ally == self) continue;
-            foreach (UnitState t in ctx.SupportTargets(ally))
-                ctx.Whet(t, OpeningGain, WhetRoute.RallyOpening);
+            ctx.WhetEach(ctx.SupportTargets(ally), ally, OpeningGain, WhetRoute.RallyOpening);
         }
         ctx.Log($"  {self.Name} が鬨を上げた（味方全体 攻撃 +{OpeningGain}）", LogKind.Trigger);
     }
@@ -5930,8 +5929,7 @@ public sealed class RallyTrait : Trait
 
             // 条件（差し出したターンかどうか）は ally 側で見て、乗せる先は拡散を通す。
             // 拡散持ちは自分では受け取らないが、差し出した事実は本人のものなので判定は動かさない。
-            foreach (UnitState t in ctx.SupportTargets(ally))
-                ctx.Whet(t, Gain, WhetRoute.RallyTurn);
+            ctx.WhetEach(ctx.SupportTargets(ally), ally, Gain, WhetRoute.RallyTurn);
             ctx.Log($"    {self.Name} の号令で {ally.Name} の溜めが乗った（攻撃 +{Gain}）", LogKind.Trigger);
         }
     }
@@ -10425,20 +10423,32 @@ public sealed class ReveilleTrait : Trait
         if (!ctx.TeamAlive(ctx.Opponent(self.TeamId))) return;
 
         UnitState? pick = null;
+        UnitState? held = null;   // 表示専用: 動けなくて起こせなかった候補（選び方は pick と同じ）
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
             if (ally == self) continue;
             int idle = ally.Counter(StatusKeys.IdleTurn);
             if (idle <= 0 || idle != ctx.Turn - 1) continue;      // 号令の支払いと同じ前ターン基準
             if (!SurrenderedTurn(ctx, ally)) continue;            // 差し出す型であること
-            if (!ctx.CanActOutOfTurn(ally, OutOfTurnRoute.Reveille)) continue;
+            if (!ctx.CanActOutOfTurn(ally, OutOfTurnRoute.Reveille))
+            {
+                if (ctx.Verbose && (held is null || ally.CurrentAttack > held.CurrentAttack)) held = ally;
+                continue;
+            }
             if (pick is null || ally.CurrentAttack > pick.CurrentAttack) pick = ally;
         }
 
-        if (pick is null) { ctx.NoteReveilleMiss(self); return; }
+        if (pick is null)
+        {
+            if (held is not null)
+                ctx.EmitReveille(self, held, ctx.HushBindingNow ? ReveilleLabels.Hushed : ReveilleLabels.Held);
+            ctx.NoteReveilleMiss(self);
+            return;
+        }
 
         UnitState woken = pick;
         ctx.NoteReveille(self, woken);
+        ctx.EmitReveille(self, woken, ReveilleLabels.Woken);
         ctx.Interrupt(() =>
         {
             ctx.Log($"    ★ {self.Name} の号令が {woken.Name} を叩き起こした", LogKind.Highlight, self);

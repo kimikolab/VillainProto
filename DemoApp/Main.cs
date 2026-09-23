@@ -1151,7 +1151,8 @@ public partial class Main : Control
                      + $" hexMarks={_hexMarksShown} hexBatches={_hexSharePlays} hexHits={_hexShareHits}"
                      + $" poisonSpreads={_poisonSpreadPlays} poisonLeaks={_poisonLeakPlays}"
                      + $" poisonDrains={_poisonDrainPlays} poisonDrainHits={_poisonDrainHits}"
-                     + $" shieldShares={_shieldShown.Count} cowedGains={_cowedShown.Count} cowedLost={_cowedLostPlays} cowedAbsorbed={_cowedAbsorbed}");
+                     + $" shieldShares={_shieldShown.Count} cowedGains={_cowedShown.Count} cowedLost={_cowedLostPlays} cowedAbsorbed={_cowedAbsorbed}"
+                     + $" whetLogs={_whetLogs} whetRelayed={_whetRelayedLogs} healBlocked={_healBlockedLogs} reveille={_reveilleLogs}");
             GetTree().Quit();
         }
     }
@@ -1642,7 +1643,44 @@ public partial class Main : Control
                 AppendLog($"[color=#{UiKit.Heal.ToHtml(false)}]{NameOf(e.ActorId)} — {e.Text ?? "術"}[/color]");
                 await Delay(0.22);
                 break;
+
+            // 号令と支援拒否の流れ（台本は BattleCore が出す・表示専用）。ここではログに書くだけで絵は出さない
+            // ——絵は design/CODEX_BRIEF_RALLY_STOIC.md §2 の側。
+            case BattleEventKind.Whet:
+                _whetLogs++;
+                if (e.IntendedId is { } via && via != e.TargetId) _whetRelayedLogs++;
+                AppendLog(WhetLogText(e));
+                break;
+
+            case BattleEventKind.HealBlocked:
+                _healBlockedLogs++;
+                AppendLog($"  [color=#{UiKit.Muted.ToHtml(false)}]{NameOf(e.TargetId)} は回復 {e.Amount} を弾いた（隣へは流れない）[/color]"
+                          + WriterSuffix(e.ActorId, e.TargetId));
+                break;
+
+            case BattleEventKind.Reveille:
+                _reveilleLogs++;
+                AppendLog(e.Text == ReveilleLabels.Woken
+                    ? $"  [color=#{UiKit.Gold.ToHtml(false)}][b]{NameOf(e.ActorId)} が {NameOf(e.TargetId)} を叩き起こした[/b][/color]"
+                    : $"  [color=#{BattlefieldView3D.RuleColor(SealedLabels.Hush).ToHtml(false)}]{NameOf(e.ActorId)} の喝は {NameOf(e.TargetId)} を起こせなかった[/color]"
+                      + $"  [color=#a9b3a8]（{e.Text}）[/color]");
+                break;
         }
+    }
+
+    // スモーク行の計数（表示専用）。号令・支援拒否・叩き起こしのログを書いた件数。
+    private int _whetLogs, _whetRelayedLogs, _healBlockedLogs, _reveilleLogs;
+
+    /// <summary>強化の1件をログの1行にする。本来の対象と受け手が違えば「弾いて隣へ流した」と書く。</summary>
+    private string WhetLogText(BattleEvent e)
+    {
+        string route = e.WhetRoute is { } r && (int)r < WhetRoutes.Count ? WhetRoutes.Names[(int)r] : "強化";
+        string after = e.AttackAfter is { } a ? $"（攻撃 {a}）" : "";
+        string gain = $"[color=#{UiKit.Gold.ToHtml(false)}]攻撃 +{e.Amount}[/color]";
+        string head = e.ActorId is null ? route : $"{NameOf(e.ActorId)} の{route}";
+        return e.IntendedId is { } intended && intended != e.TargetId
+            ? $"  {head} → [color=#{UiKit.Muted.ToHtml(false)}]{NameOf(intended)} が弾いて[/color] {NameOf(e.TargetId)} へ流した  {gain}{after}"
+            : $"  {head} → {NameOf(e.TargetId)}  {gain}{after}";
     }
 
     /// <summary>

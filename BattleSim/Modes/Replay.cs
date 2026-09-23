@@ -94,6 +94,11 @@ public static void Run(string[] args, int stageIndex)
             drainSeq = e.DrainSeq,                     // 第183期 追補3・StatusDrain: 同じ吸い上げの一連
             drainLast = e.DrainLast,                   // 第183期 追補3・StatusDrain: 一連の最後の1件
             attackAfter = e.AttackAfter,               // 第183期 追補3・StatusDrain: 最後の1件にだけ吸った側の攻撃力
+            intended = e.IntendedId,                   // Whet: 本来の対象（支援拒否・横流しで受け手と違う）
+            whetRoute = e.WhetRoute?.ToString(),       // Whet: 強化の経路
+            sourceTrait = e.SourceTrait?.ToString(),   // Whet / HealBlocked: 書き手（回復の出どころ）の札
+            supportSeq = e.SupportSeq,                 // Whet: 同じ1回の配りの一連
+            supportLast = e.SupportLast,               // Whet: 一連の最後の1件
             text = e.Text
         }).ToList()
     };

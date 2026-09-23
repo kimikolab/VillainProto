@@ -2119,7 +2119,59 @@ public enum BattleEventKind
     /// （痺れ・転倒・組み付きで失う手番に竦みが吸われた。二重には取らない）。
     /// <b>どの規則も読まない。</b> <c>verbose</c> のときしか積まない。末尾に足したので既存の種類の番号は動かない。</para>
     /// </summary>
-    Cowed
+    Cowed,
+
+    /// <summary>
+    /// 攻撃力の強化が<b>乗った瞬間</b>（号令の台本・<b>表示専用</b>）。<c>BattleContext.Whet</c> の出口で、
+    /// 実際に <c>AtkBonus</c> へ積んだときだけ1件出す。
+    ///
+    /// <para><c>ActorId</c> = 書き手（第94期 (T2) の印 <c>Mark.Owner</c>。号令ならガン）、
+    /// <c>TargetId</c> = <b>実際に受け取った駒</b>、<c>IntendedId</c> = <b>本来の対象</b>
+    /// （支援拒否のガルドや横流しで差し替わったときだけ <c>TargetId</c> と違う）、
+    /// <c>Amount</c> = 量、<c>WhetRoute</c> = 経路、<c>SourceTrait</c> = 書き手の札、
+    /// <c>AttackAfter</c> = 乗った後の受け手の攻撃力。</para>
+    ///
+    /// <para><b>支援拒否で隣へ配ったときは受け取った駒ごとに1件</b>で、同じ一連は <c>SupportSeq</c> が同じ値、
+    /// 一連の最後の1件だけ <c>SupportLast</c> が真。<b>どの規則も読まない。</b></para>
+    /// </summary>
+    Whet,
+
+    /// <summary>
+    /// 支援拒否（<see cref="TraitId.Stoic"/>）が回復を<b>弾いた瞬間</b>（<b>表示専用</b>）。
+    /// <c>BattleContext.Heal</c> の入口。弾いた回復は隣へ流れない。
+    ///
+    /// <para><c>ActorId</c> = 回復の出どころの駒（<c>by</c> か <c>Mark.Owner</c>。無ければ null）、
+    /// <c>TargetId</c> = 弾いた駒、<c>Amount</c> = 弾いた量、<c>SourceTrait</c> = 回復の出どころの札。
+    /// <b>どの規則も読まない。</b></para>
+    /// </summary>
+    HealBlocked,
+
+    /// <summary>
+    /// 叩き起こし（<see cref="TraitId.Reveille"/>・鬨の号令ガン）の瞬間（<b>表示専用</b>）。
+    ///
+    /// <para><c>ActorId</c> = 起こした駒（ガン）、<c>TargetId</c> = 起こされた味方、
+    /// <c>Text</c> = <see cref="ReveilleLabels"/>——<see cref="ReveilleLabels.Woken"/>（起きて1回殴る。
+    /// この直後に起こされた駒の <c>Attack</c> が <c>Reaction</c> 付きで並ぶ）／
+    /// <see cref="ReveilleLabels.Hushed"/>（粛がいて誰も起こせなかった。<c>TargetId</c> は
+    /// 粛が無ければ起こしていたはずの1体）／<see cref="ReveilleLabels.Held"/>（粛以外の理由で起こせなかった）。
+    /// <b>どの規則も読まない。</b></para>
+    /// </summary>
+    Reveille
+}
+
+/// <summary><see cref="BattleEventKind.Reveille"/> の <c>Text</c>（<b>表示専用</b>）。</summary>
+public static class ReveilleLabels
+{
+    /// <summary>叩き起こした（起こされた駒がこの直後に1回殴る）。</summary>
+    public const string Woken = "起床";
+
+    /// <summary>粛がいて、起こそうとした味方がターン外に動けなかった。</summary>
+    public const string Hushed = "粛";
+
+    /// <summary>粛以外（痺れ・組み付きなど）で、起こそうとした味方が動けなかった。</summary>
+    public const string Held = "封じ";
+
+    public static readonly string[] All = { Woken, Hushed, Held };
 }
 
 /// <summary>
@@ -2359,6 +2411,30 @@ public sealed class BattleEvent
     /// （<c>CurrentAttack</c>。第183期 追補3・<b>表示専用</b>）。
     /// </summary>
     public int? AttackAfter { get; init; }
+
+    /// <summary>
+    /// <see cref="BattleEventKind.Whet"/> のときだけ: <b>本来の対象</b>の InstanceId（<b>表示専用</b>）。
+    /// 支援拒否（ガルド）が隣へ配った・横流しが差し替えたときは <c>TargetId</c>（実際に受け取った駒）と違う。
+    /// </summary>
+    public int? IntendedId { get; init; }
+
+    /// <summary><see cref="BattleEventKind.Whet"/> のときだけ: 強化の経路（<b>表示専用</b>）。</summary>
+    public WhetRoute? WhetRoute { get; init; }
+
+    /// <summary>
+    /// <see cref="BattleEventKind.Whet"/> / <see cref="BattleEventKind.HealBlocked"/> のときだけ:
+    /// 書き手（回復の出どころ）の札（<c>Mark.Id</c>。印が無ければ null。<b>表示専用</b>）。
+    /// </summary>
+    public TraitId? SourceTrait { get; init; }
+
+    /// <summary>
+    /// <see cref="BattleEventKind.Whet"/> のときだけ: 同じ1回の配りの一連を束ねる通し番号（1戦の中で 1 から）。
+    /// 支援拒否で隣の複数へ配ったときは同じ値が並ぶ（<b>表示専用</b>）。
+    /// </summary>
+    public int? SupportSeq { get; init; }
+
+    /// <summary><see cref="BattleEventKind.Whet"/> のときだけ: 一連の最後の1件か（<b>表示専用</b>）。</summary>
+    public bool SupportLast { get; init; }
 
     /// <summary>Highlight / Status のフレーバー。演出の中身ではなく添え物として扱う。</summary>
     public string? Text { get; init; }

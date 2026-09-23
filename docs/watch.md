@@ -425,7 +425,7 @@ seed 0..199 の 200 試行（`compare` と同じ帯）。**盤面は1ビット�
 
 ## 1-b. 出来事の種類 × 「誰がやったか」（`ActorId`）
 
-`BattleEventKind` 23 種 ／ `BattleEngine.cs` の初期化子 26 箇所。
+`BattleEventKind` 26 種 ／ `BattleEngine.cs` の初期化子 29 箇所。
 
 | 種類 | `ActorId` | 意味 |
 |---|:-:|---|
@@ -452,6 +452,9 @@ seed 0..199 の 200 試行（`compare` と同じ帯）。**盤面は1ビット�
 | `Sealed` | ○ | 誰がやったかが引ける |
 | `StatusDrain` | ○ | 誰がやったかが引ける |
 | `Cowed` | ○ | 誰がやったかが引ける |
+| `Whet` | ○ | 誰がやったかが引ける |
+| `HealBlocked` | ○ | 誰がやったかが引ける |
+| `Reveille` | ○ | 誰がやったかが引ける |
 
 **`ActorId` を持たない種類 4 件**: `TurnStart` / `Status` / `StatusSnapshot` / `StatSnapshot`——**起きたことが画面に出ても「誰の仕業か」の線が引けない。**
 
