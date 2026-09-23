@@ -1439,6 +1439,8 @@ static class TraitHookMap
         [TraitId.Footing]     = new[] { "OnAction", Engine },                    // 第185期（層の軽減・範囲の盾は engine）
         [TraitId.Planted]     = new[] { Engine },                                // 第185期（SwapSlots の入口）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
+        [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）
+        [TraitId.ThrustPlain] = new[] { "OnCarryOver", Engine },                 // 第186期 追補（対照・保持者 0 枚）
         [TraitId.Mender]      = new[] { "OnTurnStart", "OnAction" },
         [TraitId.Amplifier]   = new[] { "OnTurnStart", "OnAction" },
         [TraitId.Contagion]   = new[] { "OnAnyDeath" },

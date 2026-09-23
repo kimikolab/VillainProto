@@ -25,8 +25,11 @@ static partial class Sora186Diag
             case "ledger": Ledger(); return;
             case "bench": Bench(); return;
             case "check": Check(arg); return;
+            case "thrust": ThrustLedger(); return;
+            case "carry": CarryBench(); return;
+            case "seat": SeatConfirm(); return;
             default:
-                Console.WriteLine("sora186: モードは phase0 / run / ledger / bench / check。");
+                Console.WriteLine("sora186: モードは phase0 / run / ledger / bench / check / thrust / carry / seat。");
                 return;
         }
     }

@@ -3698,6 +3698,9 @@ public sealed class BattleContext
     /// </summary>
     UnitState? _deflectFrom;
 
+    /// <summary>突き（第186期 追補）の保持者が盤上に1体でもいるか。いなければ列の指定と倍率の判定を比較1つで抜ける。</summary>
+    bool _thrustLive;
+
     /// <summary>敵の標の出どころ（<c>InstanceId</c> → 最後に付けた書き手）。<b>計数専用。</b></summary>
     readonly Dictionary<int, MarkOrigin> _markOrigin = new();
 
@@ -4664,6 +4667,7 @@ public sealed class BattleContext
             || u.HasTrait(TraitId.Beckon) || u.HasTrait(TraitId.Vendetta)) MarkActive = true;   // 第184期に2本
         if (u.HasTrait(TraitId.Beckon)) _beckonHolders.Add(u);   // 第184期（半減の判定の短絡）
         if (u.HasTrait(TraitId.Deflect)) _deflectHolders.Add(u); // 第186期（逸らしの判定の短絡）
+        if (u.HasTrait(TraitId.Thrust) || u.HasTrait(TraitId.ThrustPlain)) _thrustLive = true;   // 第186期 追補
         // 第185期: 組み付き・見せしめ（手番の頭の2つのキーと標的の選好を短絡させる）／踏みしめ（範囲の盾・層の軽減）／
         // 据えた足（入れ替えの空振り）。**保持者がいなければ比較1つで抜ける**——既存の行が 0 件差分であることの根拠。
         if (u.HasTrait(TraitId.Grapple) || u.HasTrait(TraitId.Shame)) _restrainLive = true;
@@ -5395,7 +5399,31 @@ public sealed class BattleContext
                     TallyOf(f).GuardRangeMissed++;
 
         if (pattern == AttackPattern.Pierce)
+        {
+            // 突き（第186期 追補）: **指差した敵のいる列を突き抜く**。宛先が生きていて foes（混乱なら反転後の陣営）に
+            // いるときだけ。中央は2本の列に属するので、生きている敵が多い列・同数なら番号の若い列（`Roll` を引かない）。
+            // 宛先が列に属さない席（○前2・○後2）にいれば通常の選び方に落とす。
+            if (_thrustLive && (attacker.HasTrait(TraitId.Thrust) || attacker.HasTrait(TraitId.ThrustPlain)))
+            {
+                UnitState? aim = DeflectTrait.Target(this, attacker);
+                if (aim is not null && foes.Contains(aim))
+                {
+                    int best = -1, bestN = -1;
+                    foreach (int l in FormationRules.LanesOf(aim.Slot))
+                    {
+                        int n = LaneOccupants(foes, l).Count;
+                        if (n > bestN || (n == bestN && l < best)) { best = l; bestN = n; }
+                    }
+                    if (best >= 0)
+                    {
+                        lane = best;
+                        TallyOf(attacker).ThrustForced++;
+                        return LaneOccupants(foes, lane)[0];
+                    }
+                }
+            }
             return SelectPierceEntry(foes, out lane);
+        }
 
         // 前から順に、生き残っている最も前の列を狙う。
         List<UnitState> pool = PoolOf(foes);
@@ -5799,6 +5827,24 @@ public sealed class BattleContext
         int atk = attackPercent == 100
             ? actor.CurrentAttack
             : actor.CurrentAttack * attackPercent / 100;
+
+        // 突き（第186期 追補）: 威力 ＝ 現在攻撃力 ×（1 ＋ 前の突きから逸らした回数）。突いたら 0 に戻す。
+        // **増幅を意図して乗算にしてある**（ポンの判断）。対照（`ThrustPlain`）は 現在攻撃力 ＋ 素の攻撃力 × 回数。
+        if (_thrustLive && pattern == AttackPattern.Pierce
+            && (actor.HasTrait(TraitId.Thrust) || actor.HasTrait(TraitId.ThrustPlain)))
+        {
+            int charge = actor.RawCounter(ThrustTrait.ChargeKey);
+            atk += (actor.HasTrait(TraitId.ThrustPlain) ? actor.Def.Attack : atk) * charge;
+            actor.SetCounter(ThrustTrait.ChargeKey, 0);
+            UnitTally th = TallyOf(actor);
+            th.ThrustSwings++;
+            th.ThrustChargeSum += charge;
+            th.ThrustChargeMax = Math.Max(th.ThrustChargeMax, charge);
+            th.ThrustAtkSum += atk;
+            th.ThrustAtkMax = Math.Max(th.ThrustAtkMax, atk);
+            (th.ThrustAtks ??= new List<int>()).Add(atk);
+            if (charge > 0) Log($"    {actor.Name} は逸らした {charge} 回ぶんを乗せて突いた（威力 {atk}）", LogKind.Trigger);
+        }
 
         // 第133期・**計数専用**。火勢（`TraitId.Wildfire`）が実際に乗った振りを数える。
         // **`ModifyAttack` の中では数えない**——`CurrentAttack` は駆り立ての選択・転嫁の流し先・
@@ -6211,6 +6257,15 @@ public sealed class BattleContext
         {
             UnitTally dt = TallyOf(target);
             UnitState? to = DeflectTrait.Target(this, target);
+            // 第186期 追補（ポンの指示）: **殴ってきた本人が指差した敵なら、本人には返さない**
+            // ——ほかの標持ち、いなければ本人以外の現在HP最大へ（`DeflectTrait.Redirect`・乱数を引かない）。
+            int route = 0;   // 0 指差した敵 ／ 1 ほかの標持ち ／ 2 補助
+            if (to is not null && to == source)
+            {
+                dt.DeflectSelf++;   // 計数のみ（差し替えが起きた回数）
+                to = DeflectTrait.Redirect(this, target, source, out bool otherMarked);
+                route = otherMarked ? 1 : 2;
+            }
             int moved = to is null ? 0 : amount * DeflectTrait.DeflectPercent / 100;
             if (to is null) dt.DeflectNoTarget++;
             else if (moved > 0)
@@ -6219,7 +6274,10 @@ public sealed class BattleContext
                 deflectedHere = true;
                 dt.DeflectHits++;
                 dt.DeflectMoved += moved;
-                if (to == source) dt.DeflectSelf++;   // 計数のみ（殴った本人が宛先＝反射と同じ形）
+                if (route == 0) dt.DeflectToPointed++; else if (route == 1) dt.DeflectToOtherMarked++; else dt.DeflectToFallback++;
+                // 突き（第186期 追補）の回数。**逸らしが実際に起きたときだけ**積む（Q0-8）。
+                if (_thrustLive && (target.HasTrait(TraitId.Thrust) || target.HasTrait(TraitId.ThrustPlain)))
+                    target.SetCounter(ThrustTrait.ChargeKey, target.RawCounter(ThrustTrait.ChargeKey) + 1);
                 Log($"    {target.Name} が {source.Name} の一撃を {to.Name} へ逸らした（{moved}）", LogKind.Trigger);
                 UnitTally tt0 = TallyOf(to);
                 long before = tt0.DamageTaken;

@@ -1272,8 +1272,11 @@ public static class UnitCatalog
         Speed = 8,
         Advances = false,
         // 第186期: 逸らし（`Deflect`）を足した——自分への単体の一撃は半分を指差した敵へ逸らす。
-        Traits = new[] { TraitId.Divert, TraitId.Deflect },
-        PlusText = "毎ターン、味方への狙いを自分に引き受け、代わりに一番手強い敵を指差す。自分への一撃は半分をその敵へ逸らす",
+        // 第186期 追補: 突き（`Thrust`）——攻撃型を貫きにし、指差した敵の列を 攻撃力 ×（1＋逸らした回数）で突き抜く。
+        Pattern = AttackPattern.Pierce,
+        Traits = new[] { TraitId.Divert, TraitId.Deflect, TraitId.Thrust },
+        PlusText = "毎ターン、味方への狙いを自分に引き受け、代わりに一番手強い敵を指差す。自分への一撃は半分をその敵へ逸らし、"
+                   + "逸らした数だけ鋭くなる突きで指差した敵の列を突き抜く",
         MinusText = "引き受けた視線は自分に刺さり、毎ターン狙われ続ける",
         Flavor = "誰かが見られている限り、代わりに見られてやる。それしか取り柄がない。"
     };

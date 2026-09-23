@@ -22,7 +22,7 @@ static partial class Sora186Diag
     static readonly UnitDef SoraOld = new()
     {
         Id = UnitCatalog.Sora.Id, Name = UnitCatalog.Sora.Name, MaxHp = UnitCatalog.Sora.MaxHp,
-        Attack = UnitCatalog.Sora.Attack, Speed = UnitCatalog.Sora.Speed, Pattern = UnitCatalog.Sora.Pattern,
+        Attack = UnitCatalog.Sora.Attack, Speed = UnitCatalog.Sora.Speed, Pattern = AttackPattern.Single,   // 第185期は単体
         Advances = UnitCatalog.Sora.Advances, Actions = UnitCatalog.Sora.Actions,
         Traits = new[] { TraitId.Divert },
         PlusText = "毎ターン味方に向いた視線を引き剥がし、いちばん硬い敵へ向け直す",
@@ -30,14 +30,27 @@ static partial class Sora186Diag
         Flavor = UnitCatalog.Sora.Flavor
     };
 
-    sealed record Version(string Name, bool NewSora);
-    static readonly Version V0 = new("旧（第185期）", false);
-    static readonly Version New = new("新（逸らし）", true);
+    /// <summary>第186期 追補の版を作る（ソラの札と攻撃型だけを差し替える）。</summary>
+    static UnitDef SoraAs(TraitId[] traits, AttackPattern pattern) => new()
+    {
+        Id = UnitCatalog.Sora.Id, Name = UnitCatalog.Sora.Name, MaxHp = UnitCatalog.Sora.MaxHp,
+        Attack = UnitCatalog.Sora.Attack, Speed = UnitCatalog.Sora.Speed, Pattern = pattern,
+        Advances = UnitCatalog.Sora.Advances, Actions = UnitCatalog.Sora.Actions,
+        Traits = traits, PlusText = UnitCatalog.Sora.PlusText, MinusText = UnitCatalog.Sora.MinusText, Flavor = UnitCatalog.Sora.Flavor
+    };
+
+    sealed record Version(string Name, UnitDef Def);
+    static readonly Version V0 = new("旧（第185期）", SoraOld);
+    /// <summary>逸らしだけ（突きなし・単体）。第186期 本編の姿に、追補の (B) 宛先の差し替えだけが入った版。</summary>
+    static readonly Version VD = new("逸らしだけ", SoraAs(new[] { TraitId.Divert, TraitId.Deflect }, AttackPattern.Single));
+    static readonly Version New = new("新（逸らし＋突き）", UnitCatalog.Sora);
+    /// <summary>突きの対照: 倍率を素の攻撃力で掛ける。</summary>
+    static readonly Version VP = new("素の倍率", SoraAs(new[] { TraitId.Divert, TraitId.Deflect, TraitId.ThrustPlain }, AttackPattern.Pierce));
 
     static Formation Apply(Formation f, Version v)
     {
         var g = new Formation();
-        foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = d.Id == "sora" ? (v.NewSora ? UnitCatalog.Sora : SoraOld) : d;
+        foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = d.Id == "sora" ? v.Def : d;
         return g;
     }
 
@@ -67,8 +80,9 @@ static partial class Sora186Diag
 
         var rows = Bands().ToList();
         var res = new Dictionary<(string, string), double[]>();
-        Parallel.ForEach(rows.SelectMany(r => new[] { V0, New }.Select(v => (r, v))), x =>
+        Parallel.ForEach(rows.SelectMany(r => new[] { V0, VD, New, VP }.Select(v => (r, v))), x =>
         {
+            if (!Mine(x.r.F) && (x.v == VD || x.v == VP)) return;
             double[] w = Rates(x.r.F, x.v);
             lock (res) res[(x.r.Band + "/" + x.r.Name, x.v.Name)] = w;
         });
@@ -92,6 +106,21 @@ static partial class Sora186Diag
         }
         Console.WriteLine();
         Console.WriteLine("`ソラの生存T` ＝ `LastActiveTurn`（倒れなければ決着T）の第2〜5波平均。");
+        Console.WriteLine();
+
+        Console.WriteLine("## 表A'. 追補の版（第2〜5波の平均）");
+        Console.WriteLine();
+        Console.WriteLine("**逸らしだけ** ＝ 突きなし・単体（(B) の宛先の差し替えは入っている）。**素の倍率** ＝ 突きの倍率を素の攻撃力で掛けた対照。");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 旧 | 逸らしだけ | **新（突き）** | 素の倍率 | 突きの寄与（新−逸らしだけ） | 強化が倍率に乗る寄与（新−素の倍率） | 新 第2〜5波 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|---|");
+        foreach (var r in rows)
+        {
+            if (!Mine(r.F)) continue;
+            string key = r.Band + "/" + r.Name;
+            Console.WriteLine("| " + r.Name + " | " + A(key, V0).ToString("F1") + " | " + A(key, VD).ToString("F1") + " | **" + A(key, New).ToString("F1") + "** | "
+                              + A(key, VP).ToString("F1") + " | " + D(A(key, New) - A(key, VD)) + " | " + D(A(key, New) - A(key, VP)) + " | " + Cells(res[(key, New.Name)]) + " |");
+        }
         Console.WriteLine();
 
         int still = 0, stillRows = 0;
@@ -458,13 +487,13 @@ static partial class Sora186Diag
         return d;
     }
 
-    static double[] Rates(Formation f, Version v, int seeds = Seeds)
+    static double[] Rates(Formation f, Version v, int seeds = Seeds, int baseSeed = 0)
     {
         var w = new double[5];
         for (int st = 0; st < 5; st++)
         {
             int wins = 0;
-            for (int seed = 0; seed < seeds; seed++)
+            for (int seed = baseSeed; seed < baseSeed + seeds; seed++)
                 if (Fight(f, st, seed, v).PlayerWon) wins++;
             w[st] = 100.0 * wins / seeds;
         }

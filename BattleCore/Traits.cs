@@ -317,6 +317,9 @@ public enum TraitId
     // --- 第186期で足した札（逸らしのソラの2枚目） ---
     Deflect,    // 逸らし: 自分への単体攻撃のダメージを、半分だけ自分が受け、残り半分を「逸らし（Divert）で標を付けた敵」へ逸らす。
                 // 逸らした分は攻撃ではなくダメージの受け渡し（出どころは元の攻撃者のまま・同士討ち）。判定は engine（ApplyDamage の入口）
+    Thrust,     // 突き（第186期 追補）: 攻撃型は貫き。指差した敵のいる列を突き抜き、威力は 現在攻撃力 ×（1 ＋ 前の突きから逸らした回数）。
+                // 突いたら回数は 0。**増幅を意図して乗算にしてある**（ポンの判断・ハイパーキャリー）。判定は engine（列の指定と倍率）
+    ThrustPlain,// 突き（素の攻撃力で倍率）: 診断の対照だけが持つ（保持者 0 枚）。威力は 現在攻撃力 ＋ 素の攻撃力 × 回数
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -11137,8 +11140,60 @@ public sealed class DeflectTrait : Trait
         return null;
     }
 
+    /// <summary>
+    /// 殴ってきた本人が指差した敵だったときの差し替え先（第186期 追補・ポンの指示）。
+    /// 敵陣の生存者から殴った本人を除き、(1) 標持ちがいればその中で、(2) いなければ全員の中で
+    /// **現在HP最大・同値は席番号の若いほう**。**乱数を引かない。** 1体もいなければ null。
+    /// <paramref name="marked"/> は (1) で選んだとき真。
+    /// </summary>
+    public static UnitState? Redirect(BattleContext ctx, UnitState self, UnitState attacker, out bool marked)
+    {
+        UnitState? best = null, bestMarked = null;
+        foreach (UnitState u in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        {
+            if (u == attacker) continue;
+            if (best is null || u.Hp > best.Hp || (u.Hp == best.Hp && u.Slot < best.Slot)) best = u;
+            if (u.RawCounter(StatusKeys.Marked) > 0
+                && (bestMarked is null || u.Hp > bestMarked.Hp || (u.Hp == bestMarked.Hp && u.Slot < bestMarked.Slot)))
+                bestMarked = u;
+        }
+        marked = bestMarked is not null;
+        return bestMarked ?? best;
+    }
+
     // `InstanceId` は戦闘ごとに振り直されるので、持ち越すと次の戦闘の無関係な駒に当たる（執着と同じ理由）。
     public override void OnCarryOver(UnitState self) => self.SetCounter(TargetKey, 0);
+}
+
+/// <summary>
+/// 突き（第186期 追補・逸らしのソラの3枚目の札）。<b>本体は engine</b>——列の指定は
+/// <c>SelectTargetChain</c> の貫きの分岐の手前、倍率は <c>PerformAttackBody</c> が <c>atk</c> を作った直後。
+/// この札は「前の突きから逸らした回数」の置き場（<see cref="ChargeKey"/>）だけを持つ。
+///
+/// <para>威力 ＝ <b>現在攻撃力 ×（1 ＋ 回数）</b>。回数は逸らしが実際に起きたときだけ積み（宛先がいなくて
+/// 全部受けた一撃は数えない）、突いたら 0 に戻る。突けなかった手番（痺れ・竦み等）は持ち越す。
+/// <b>設計原則「増幅は加算」に意図して反する</b>（ポンの判断: ハイパーキャリーを作りたい）。
+/// 歯止めは「突くたびに 0」と第四波の軛だけで、上限は置かない。</para>
+/// </summary>
+public sealed class ThrustTrait : Trait
+{
+    /// <summary>前の突きから逸らした回数。<see cref="DeflectTrait"/> の逸らしが起きるたび engine が 1 足す。</summary>
+    public const string ChargeKey = "thrustCharge";
+
+    public override TraitId Id => TraitId.Thrust;
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(ChargeKey, 0);
+}
+
+/// <summary>
+/// 突きの対照（第186期 追補）。倍率を<b>素の攻撃力</b>で掛ける版——威力 ＝ 現在攻撃力 ＋ 素の攻撃力 × 回数。
+/// 強化が倍率に乗る寄与を分けるためだけの札で、<b>保持者は <c>UnitCatalog.All</c> に 0 枚</b>（診断のローカルだけ）。
+/// </summary>
+public sealed class ThrustPlainTrait : Trait
+{
+    public override TraitId Id => TraitId.ThrustPlain;
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(ThrustTrait.ChargeKey, 0);
 }
 
 /// <summary>
@@ -11302,6 +11357,8 @@ public static class TraitCatalog
         new FootingTrait(),    // 第185期
         new PlantedTrait(),    // 第185期
         new DeflectTrait(),    // 第186期
+        new ThrustTrait(),     // 第186期 追補
+        new ThrustPlainTrait(),// 第186期 追補（対照）
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期

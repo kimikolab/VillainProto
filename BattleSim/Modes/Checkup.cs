@@ -192,6 +192,8 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.Shame]      = (HcPlusL,  "動けない敵を優先して狙い、責めると隣の敵を竦ませる。マイナスは責め苦の側"),
         [TraitId.Footing]    = (HcPlusL,  "手番で層を積んで被ダメージを減らし、隣の味方への範囲攻撃を代わりに受ける。代金は別の札（`Planted`）"),
         [TraitId.Deflect]    = (HcPlusL,  "自分への単体の一撃の半分を、指差した敵へ逸らす。代金は `Divert` の側（自分に刺さる標）"),
+        [TraitId.Thrust]     = (HcPlusL,  "逸らした回数だけ攻撃力が倍になる貫きで、指差した敵の列を突く。回数は突くと 0"),
+        [TraitId.ThrustPlain]= (HcPlusL,  "突きの対照（素の攻撃力で倍率）。保持者 0 枚"),
         [TraitId.Planted]    = (HcMinusL, "入れ替えを受け付けないだけ。踏みしめの代金で、外せば `yP` になる"),
     };
 

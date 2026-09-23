@@ -1623,6 +1623,21 @@ public sealed class UnitTally
     public long DeflectHits, DeflectMoved, DeflectLanded, DeflectVulnAdded, DeflectKills, DeflectNoTarget,
                 DeflectBeckonStack, DeflectKeptTaken, DeflectSelf, DeflectExecFeed;
 
+    /// <summary>
+    /// 第186期 追補（逸らし先の内訳と突き）。<b>計数専用で、どの規則も読まない。</b>
+    ///
+    /// <para>逸らした宛先: <c>DeflectToPointed</c> 指差した敵 ／ <c>DeflectToOtherMarked</c> 殴った本人が指差した敵だったので、
+    /// ほかの標持ちへ ／ <c>DeflectToFallback</c> ほかに標持ちがいないので、殴った本人以外の現在HP最大へ。
+    /// （<c>DeflectSelf</c> は差し替えが起きた回数＝後ろ2つの和）</para>
+    ///
+    /// <para>突き: <c>ThrustSwings</c> 突いた回数 ／ <c>ThrustChargeSum</c> 乗った回数の和 ／ <c>ThrustChargeMax</c> 1回の最大 ／
+    /// <c>ThrustAtkSum</c> 威力の和 ／ <c>ThrustAtkMax</c> 最大 ／ <c>ThrustForced</c> 指差した敵の列を突いた回数 ／
+    /// <c>ThrustAtks</c> 威力の一覧（分布用・突きが1度でもあれば確保）。</para>
+    /// </summary>
+    public long DeflectToPointed, DeflectToOtherMarked, DeflectToFallback,
+                ThrustSwings, ThrustChargeSum, ThrustChargeMax, ThrustAtkSum, ThrustAtkMax, ThrustForced;
+    public List<int>? ThrustAtks;
+
     /// <summary>据えの層が最大（3）に届いた最初のターン（0 は届かなかった・第185期 追補4・<b>計数のみ</b>）。戦闘ごとの値で、Merge は最小を取る。</summary>
     public int FootingFullAt;
 
@@ -1821,6 +1836,10 @@ public sealed class UnitTally
         DeflectVulnAdded += o.DeflectVulnAdded; DeflectKills += o.DeflectKills; DeflectNoTarget += o.DeflectNoTarget;
         DeflectBeckonStack += o.DeflectBeckonStack; DeflectKeptTaken += o.DeflectKeptTaken;   // 第186期
         DeflectSelf += o.DeflectSelf; DeflectExecFeed += o.DeflectExecFeed;
+        DeflectToPointed += o.DeflectToPointed; DeflectToOtherMarked += o.DeflectToOtherMarked; DeflectToFallback += o.DeflectToFallback;
+        ThrustSwings += o.ThrustSwings; ThrustChargeSum += o.ThrustChargeSum; ThrustChargeMax = Math.Max(ThrustChargeMax, o.ThrustChargeMax);
+        ThrustAtkSum += o.ThrustAtkSum; ThrustAtkMax = Math.Max(ThrustAtkMax, o.ThrustAtkMax); ThrustForced += o.ThrustForced;
+        if (o.ThrustAtks is not null) (ThrustAtks ??= new List<int>()).AddRange(o.ThrustAtks);
         if (o.FootingFullAt > 0 && (FootingFullAt == 0 || o.FootingFullAt < FootingFullAt)) FootingFullAt = o.FootingFullAt;
         ShuffleAllySwaps += o.ShuffleAllySwaps; ShuffleFoeSwaps += o.ShuffleFoeSwaps;
         ShuffleAllyRefused += o.ShuffleAllyRefused;
