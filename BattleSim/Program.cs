@@ -509,6 +509,8 @@ if (focusId == "rebirth3") { Rebirth3Diag.Run(args.Length > 2 ? args[2] : "phase
 if (focusId == "mark184") { Mark184Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 // rebirtha2 モード（第185期） —— A群の転生 3〜5枚目（クグ・シガ・バン）。本体は `Modes/RebirthA2.cs`。
 if (focusId == "rebirtha2") { RebirthA2Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
+// sora186 モード（第186期） —— 逸らしのソラ（半分を逸らす）。本体は `Modes/Sora186.cs`。
+if (focusId == "sora186") { Sora186Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 
 // rebirth2 モード（第180期） —— B群の転生 3〜5枚目（ムド／ヴィオ／ガン）。本体は `Modes/Rebirth2.cs`。
 if (focusId == "rebirth2")
