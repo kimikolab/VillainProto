@@ -7976,7 +7976,11 @@ public sealed class BattleContext
     /// 隊列を入れ替える。移動した駒すべてに OnMoved を通知するので、
     /// 逃亡・喧噪・庇いのどれが原因でも「動かされた」駒は等しく反応できる。
     /// </summary>
-    public void SwapSlots(UnitState self, int destSlot, UnitState? by = null)
+    /// <returns>
+    /// 入れ替えたか（第185期 追補6）。<b>据えた足で空振りしたときだけ偽</b>。呼び出し側が計数を分けるためだけにあり、
+    /// <b>盤面の分岐には使わない</b>（今の呼び出し口は喧噪だけが読む）。
+    /// </returns>
+    public bool SwapSlots(UnitState self, int destSlot, UnitState? by = null)
     {
         UnitState? occupant = PickOne(
             LivingMembers(self.TeamId).Where(u => u.Slot == destSlot).ToList());
@@ -7993,7 +7997,7 @@ public sealed class BattleContext
                 TallyOf(planted).PlantedRefused++;
                 if (by is not null && by.TeamId != planted.TeamId) TallyOf(planted).PlantedRefusedFoe++;   // 敵が起こした入れ替え（曝き）
                 Log($"    {planted.Name} の据えた足は動かない（入れ替えは空振りした）", LogKind.Trigger);
-                return;
+                return false;
             }
         }
 
@@ -8003,10 +8007,11 @@ public sealed class BattleContext
         self.Slot = destSlot;
         Notify(self, selfFrom);
 
-        if (occupant is null) return;
+        if (occupant is null) return true;
         Row otherFrom = occupant.Row;
         occupant.Slot = origin;
         Notify(occupant, otherFrom);
+        return true;
 
         void Notify(UnitState u, Row from)
         {

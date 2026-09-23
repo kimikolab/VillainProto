@@ -6351,9 +6351,10 @@ public sealed class ShufflerTrait : Trait
         ctx.Log(foes
             ? $"    {self.Name} が敵の隊列をかき回した（{a.Name} ⇔ {b.Name}）"
             : $"    {self.Name} が隊列をかき回した（{a.Name} ⇔ {b.Name}）", LogKind.FriendlyFire);
-        ctx.SwapSlots(a, b.Slot, self);
+        bool moved = ctx.SwapSlots(a, b.Slot, self);
 
-        if (!foes) { tally.ShuffleAllySwaps++; return; }
+        // 第185期 追補6: **据えた足（バン）で空振りした入れ替えは `ShuffleAllySwaps` に数えず、別に数える**（計数のみ）。
+        if (!foes) { if (moved) tally.ShuffleAllySwaps++; else tally.ShuffleAllyRefused++; return; }
         tally.ShuffleFoeSwaps++;
 
         // 前に出たのは高々1体（片方が前へ出れば、もう片方は必ず後ろへ下がる）。

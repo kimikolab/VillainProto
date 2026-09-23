@@ -1635,6 +1635,12 @@ public sealed class UnitTally
     /// 1回の入れ替えで2体に立つので <c>≦ 2 × ShuffleFoeSwaps</c> のほうが上限になる）。</para>
     /// </summary>
     public int ShuffleAllySwaps, ShuffleFoeSwaps, ShuffleAdvanced;
+
+    /// <summary>
+    /// 喧噪の味方側の入れ替えが<b>据えた足（バン）で空振りした</b>回数（第185期 追補6・<b>計数のみ</b>）。
+    /// 空振りは <see cref="ShuffleAllySwaps"/> には数えない（あちらは実際に入れ替えた回数だけ）。
+    /// </summary>
+    public int ShuffleAllyRefused;
     public int ShuffleAdvancedTraited, ShuffleAdvancedFromBack, ShuffleStaggers, ShuffleNoFoePair;
 
     /// <summary>
@@ -1800,6 +1806,7 @@ public sealed class UnitTally
         PlantedRefusedFoe += o.PlantedRefusedFoe; ShieldHalved += o.ShieldHalved; FootingHitSteps += o.FootingHitSteps;
         if (o.FootingFullAt > 0 && (FootingFullAt == 0 || o.FootingFullAt < FootingFullAt)) FootingFullAt = o.FootingFullAt;
         ShuffleAllySwaps += o.ShuffleAllySwaps; ShuffleFoeSwaps += o.ShuffleFoeSwaps;
+        ShuffleAllyRefused += o.ShuffleAllyRefused;
         ShuffleAdvanced += o.ShuffleAdvanced; ShuffleAdvancedTraited += o.ShuffleAdvancedTraited;
         ShuffleAdvancedFromBack += o.ShuffleAdvancedFromBack; ShuffleStaggers += o.ShuffleStaggers;
         ShuffleConfuses += o.ShuffleConfuses;

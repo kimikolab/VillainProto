@@ -871,6 +871,23 @@ static class RebirthA2Diag
                               + " ／ 入れ替えの空振り（台3 を含む）: " + refused);
         }
 
+        // (d') 喧噪の空振りは ShuffleAllySwaps に数えない（第185期 追補6）: 台3（バン×バサ・味方の入れ替えはバサだけ）で
+        //      バサの「空振り」＝バンの「味方が起こした入れ替えの空振り」、になること
+        {
+            Formation f = Benches.First(b => b.Name.StartsWith("台3")).F;
+            long swaps = 0, refused = 0, banAlly = 0, n = 0;
+            for (int st = 1; st < 5; st++)
+                for (int seed = 0; seed < Seeds; seed++)
+                {
+                    BattleResult r = Fight(f, st, seed, New);
+                    n++;
+                    if (r.TallyByUnit.TryGetValue("basa", out UnitTally? b)) { swaps += b.ShuffleAllySwaps; refused += b.ShuffleAllyRefused; }
+                    if (r.TallyByUnit.TryGetValue("ban", out UnitTally? t)) banAlly += t.PlantedRefused - t.PlantedRefusedFoe;
+                }
+            Console.WriteLine("- (d') 台3（" + n + " 戦）: バサの入れ替え 実際 " + swaps + " ／ **空振り " + refused + "** ／ バンが止めた味方の入れ替え " + banAlly
+                              + "（空振りとバンの側が**一致が正**）");
+        }
+
         // (e) PickOne を新しく使っていない
         if (ParryScan.Init())
         {
