@@ -11043,7 +11043,8 @@ public sealed class ShameTrait : Trait
 /// </summary>
 public sealed class FootingTrait : Trait
 {
-    public const int MaxLayers = 3;
+    /// <summary>層の上限（第185期 追補5 で 3 → <b>5</b>。1層 −10% のままなので最大 −50%）。</summary>
+    public const int MaxLayers = 5;
     public const int PercentPerLayer = 10;
 
     /// <summary>

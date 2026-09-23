@@ -635,7 +635,7 @@ static class RebirthA2Diag
 
         Console.WriteLine("## 表H. バン（踏みしめ＋範囲の盾＋据えた足）");
         Console.WriteLine();
-        Console.WriteLine("| 行 | 帯 | 席 | 層の平均 | 層で防いだ | 盾で受けた回数 | 盾で受けた量（半分の後） | 半分で消えた量 | 入れ替えの空振り（うち敵） | 殴られて積んだ層 | 3層に届いた率 | 届いたT（平均） | 生存T | 倒れた率 | 旧の倒れた率 | 旧の被弾 → 新の被弾 |");
+        Console.WriteLine("| 行 | 帯 | 席 | 層の平均 | 層で防いだ | 盾で受けた回数 | 盾で受けた量（半分の後） | 半分で消えた量 | 入れ替えの空振り（うち敵） | 殴られて積んだ層 | 上限に届いた率 | 届いたT（平均） | 生存T | 倒れた率 | 旧の倒れた率 | 旧の被弾 → 新の被弾 |");
         Console.WriteLine("|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|");
         foreach (var r in rows)
         {
@@ -665,7 +665,7 @@ static class RebirthA2Diag
                               + (100.0 * deadOld / n).ToString("F1") + "% | " + (hitOld / n).ToString("F1") + " → " + (hitNew / n).ToString("F1") + " |");
         }
         Console.WriteLine();
-        Console.WriteLine("- `層の平均` はバンが生きていたターン末の層の平均（最大 3）。`生存T` はバンが生きてターン末を迎えた数。");
+        Console.WriteLine("- `層の平均` はバンが生きていたターン末の層の平均（最大 " + FootingTrait.MaxLayers + "）。`生存T` はバンが生きてターン末を迎えた数。");
         Console.WriteLine("- `盾で受けた量` は差し替えた一撃を**半分にした後・層の軽減の前**の量（層・軛はバンの `ApplyDamage` の中で掛かる）。");
         Console.WriteLine();
 
