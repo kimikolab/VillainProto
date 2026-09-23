@@ -66,7 +66,7 @@
 | 53 | `ward` | `WardRule` | `WardRule { Return = Burst, Percent = 50, Threshold = 40, Drip = 10, Cost = Forfeit, BurdenPercent = 50, LadenPer = 10 }` |  | `ward` / `wardcost` | 第153期 | ○ |
 | 54 | `indulgence` | `IndulgenceRule` | `IndulgenceRule { Advance = 30, Threshold = 60, Contracts = 0, Blast = Single }` |  | `toll` | 第155期 | ○ |
 | 55 | `ash` | `AshRule` | `AshRule { CountHavoc = True, CountDot = True, Multiplier = 100, FalloutOnDeath = True, ThrowEvery = 2 }` |  | `susu` | 第179期 | ○ |
-| 56 | `erupt` | `EruptRule` | `EruptRule { Floor = True, Smear = PerErupt, Heavy = False }` |  | `mudohex` / `mudo` | 第180期 | ○ |
+| 56 | `erupt` | `EruptRule` | `EruptRule { Floor = True, Smear = PerErupt, Heavy = True }` |  | `mudohex` / `mudo` | 第180期 | ○ |
 
 引数 56 本（`verbose` と観測子を除く）。
 
@@ -92,7 +92,7 @@
 | `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` | ○ | `divert` / `survive` / `wildfire` / `mark` | 第50期 |
 | `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0 }` | ○ | `survive` / `ember` / `wildfire` / `rebirth` | 第130期 |
 | `EncoreRule` | `EncoreRule { Enabled = True }` | ○ | `encore` / `tempo` / `tomo` / `hold2` / `ledger` / `lit` / `rebirth` | 第104期 |
-| `EruptRule` | `EruptRule { Floor = True, Smear = PerErupt, Heavy = False }` | ○ | `mudohex` / `mudo` | 第180期 |
+| `EruptRule` | `EruptRule { Floor = True, Smear = PerErupt, Heavy = True }` | ○ | `mudohex` / `mudo` | 第180期 |
 | `ExposeRule` | `ExposeRule { MaxPerBattle = 3 }` | ○ | `expose` / `creak3` / `ledger` | 第40期 |
 | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` | ○ | `curse` / `favor` / `turn` / `ledger` | 第58期 |
 | `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` | ○ | `finisher` / `ledger` / `survive` / `wildfire` / `mark` | 第53期 |

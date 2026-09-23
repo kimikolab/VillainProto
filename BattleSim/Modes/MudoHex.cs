@@ -18,9 +18,9 @@ using static Common;
 //
 // 版（比較先は第181期そのもの ＝ H0）:
 //     H0 呪いオフ × 上乗せ 5   （第181期そのもの）
-//     H1 呪いオン × 上乗せ 5   （**採用候補＝既定**）
+//     H1 呪いオン × 上乗せ 5   （第182期の初版の既定）
 //     H2 呪いオフ × 上乗せ 10  （火力だけ上げた場合）
-//     H3 呪いオン × 上乗せ 10  （両方）
+//     H3 呪いオン × 上乗せ 10  （**採用＝既定**。ポンの判断）
 // =====================================================================================
 
 static class MudoHexDiag
@@ -29,13 +29,13 @@ static class MudoHexDiag
 
     readonly record struct Ver(string Tag, CurseRule Curse, EruptRule Erupt);
 
-    static readonly EruptRule E5 = EruptRule.Default;
-    static readonly EruptRule E10 = EruptRule.Default with { Heavy = true };
+    static readonly EruptRule E5 = EruptRule.Phase181;
+    static readonly EruptRule E10 = EruptRule.Phase181 with { Heavy = true };   // ＝ 第182期の既定（H3 を採った）
 
     static readonly Ver H0 = new("H0 第181期", CurseRule.Off, E5);
-    static readonly Ver H1 = new("**H1 採用候補**", CurseRule.Default, E5);
+    static readonly Ver H1 = new("H1 呪いだけ", CurseRule.Default, E5);
     static readonly Ver H2 = new("H2 上乗せ10", CurseRule.Off, E10);
-    static readonly Ver H3 = new("H3 両方", CurseRule.Default, E10);
+    static readonly Ver H3 = new("**H3 採用**", CurseRule.Default, E10);
     static readonly Ver[] Versions = { H0, H1, H2, H3 };
 
     public static void Run(string mode, string arg)
@@ -183,9 +183,9 @@ static class MudoHexDiag
         Console.WriteLine("| 版 | 呪い | 暴発の上乗せ | 1発（素攻 3・床あり） |");
         Console.WriteLine("|---|---|--:|--:|");
         Console.WriteLine("| H0 第181期 | オフ | " + EruptTrait.SwingBonus + " | " + (3 + EruptTrait.SwingBonus) + " |");
-        Console.WriteLine("| **H1 採用候補** | **オン（50%）** | " + EruptTrait.SwingBonus + " | " + (3 + EruptTrait.SwingBonus) + " |");
+        Console.WriteLine("| H1 呪いだけ | オン（50%） | " + EruptTrait.SwingBonus + " | " + (3 + EruptTrait.SwingBonus) + " |");
         Console.WriteLine("| H2 上乗せ10 | オフ | " + EruptTrait.HeavySwingBonus + " | " + (3 + EruptTrait.HeavySwingBonus) + " |");
-        Console.WriteLine("| H3 両方 | オン（50%） | " + EruptTrait.HeavySwingBonus + " | " + (3 + EruptTrait.HeavySwingBonus) + " |");
+        Console.WriteLine("| **H3 採用** | **オン（50%）** | " + EruptTrait.HeavySwingBonus + " | " + (3 + EruptTrait.HeavySwingBonus) + " |");
         Console.WriteLine();
 
         Console.WriteLine("## 表A. ムド在席の行（第2〜5波・seed 0..199）");
@@ -267,6 +267,7 @@ static class MudoHexDiag
         Console.WriteLine();
 
         G2(H1);
+        G2(H3);
     }
 
     // ---- (G2) の再分解（61 行分母） ----------------------------------------------
@@ -439,13 +440,13 @@ static class MudoHexDiag
         {
             if (Has(f, "mudo")) continue;
             rows++;
-            double[] a = Rates(f, H0), b = Rates(f, H1);
+            double[] a = Rates(f, H0), b = Rates(f, H3);
             int moved = 0;
             for (int i = 0; i < 5; i++) if (Math.Abs(a[i] - b[i]) > 0.001) moved++;
             cells += moved;
             if (Has(f, "vio") || Has(f, "gan")) { vg++; if (moved > 0) vgMoved++; }
         }
-        Console.WriteLine("- (a) ムドを含まない " + rows + " 行（`compare` ＋ 交差帯）で動いたセル: **" + cells + " / " + rows * 5
+        Console.WriteLine("- (a) ムドを含まない " + rows + " 行（`compare` ＋ 交差帯）で H0 → H3（既定）に動いたセル: **" + cells + " / " + rows * 5
                           + "**（0 が正）／ うちヴィオ・ガン在席 " + vg + " 行で動いた行 **" + vgMoved + "**");
 
         // (b) H0 が採用前の docs/balance.md と一致する
@@ -518,6 +519,23 @@ static class MudoHexDiag
                 }
             Console.WriteLine("- (e) H2 の診断台の暴発1発の平均: **" + (sw < 1 ? "—" : (atk / sw).ToString("F2"))
                               + "**（床あり・上乗せ 10 ＝ **" + (UnitCatalog.Mudo.Attack + EruptTrait.HeavySwingBonus) + " 以上**が正）");
+        }
+
+        // (g) 既定（引数なしの Run）が H3 と一致する
+        {
+            int moved = 0, n = 0;
+            foreach ((string _, Formation f) in CompareBuilds())
+            {
+                if (!Has(f, "mudo")) continue;
+                for (int st = 1; st < 5; st++)
+                    for (int seed = 0; seed < 50; seed++)
+                    {
+                        n++;
+                        if (BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false).PlayerWon
+                            != Fight(f, st, seed, H3).PlayerWon) moved++;
+                    }
+            }
+            Console.WriteLine("- (g) 引数なしの `Run`（既定）と H3 の勝敗が食い違った戦: **" + moved + " / " + n + "**（0 が正）");
         }
 
         // (f) PickOne / 状態キー

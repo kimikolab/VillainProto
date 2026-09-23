@@ -28,7 +28,7 @@ static class MudoDiag
 
     static readonly EruptRule R0 = EruptRule.Phase180;
     static readonly EruptRule R1 = new(true, SmearWhen.PerHit);
-    static readonly EruptRule R2 = EruptRule.Default;
+    static readonly EruptRule R2 = EruptRule.Phase181;   // 第182期に既定が上乗せ 10 へ動いたので、第181期の採用候補を名指しで引く
     static readonly EruptRule R3 = new(true, SmearWhen.None);
 
     static readonly (string Tag, EruptRule Rule)[] Versions =

@@ -10094,14 +10094,20 @@ public enum SmearWhen
 /// </param>
 /// <param name="Smear">泥散りを撒く周期。</param>
 /// <param name="Heavy">
-/// 第182期の比較用の版。真なら暴発の上乗せを <see cref="EruptTrait.SwingBonus"/>（5）ではなく
-/// <see cref="EruptTrait.HeavySwingBonus"/>（10）にする。<b>既定は偽</b>（採否はポンが遊んでから）。
-/// 「呪いで足りるのか、火力そのものが足りないのか」を分けるためだけにある。
+/// 第182期。真なら暴発の上乗せを <see cref="EruptTrait.SwingBonus"/>（5）ではなく
+/// <see cref="EruptTrait.HeavySwingBonus"/>（10）にする。<b>引数の既定は偽</b>だが、
+/// <see cref="Default"/> は真を渡す（ポンの判断で H3 ＝ 呪い ＋ 上乗せ 10 を採った）。
 /// </param>
 public readonly record struct EruptRule(bool Floor, SmearWhen Smear, bool Heavy = false)
 {
-    /// <summary>第181期の既定（＝採用候補）。</summary>
-    public static EruptRule Default => new(true, SmearWhen.PerErupt);
+    /// <summary>
+    /// 既定（第182期）。第181期の形（床あり × 暴発時の泥）に<b>上乗せ 10</b>（<see cref="Heavy"/>）を載せたもの
+    /// ——ポンの判断で H3（呪い ＋ 上乗せ 10）を採った。<see cref="Phase181"/> が第181期の既定。
+    /// </summary>
+    public static EruptRule Default => new(true, SmearWhen.PerErupt, Heavy: true);
+
+    /// <summary>第181期の既定（上乗せ 5）。回帰の検算に使う。</summary>
+    public static EruptRule Phase181 => new(true, SmearWhen.PerErupt);
 
     /// <summary>第180期そのもの（回帰の検算に使う）。</summary>
     public static EruptRule Phase180 => new(false, SmearWhen.PerHit);
