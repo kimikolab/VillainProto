@@ -632,6 +632,112 @@ public sealed class BattleContext
     }
 
     /// <summary>
+    /// 起爆（第188期・触媒のカタ・<see cref="CatalystTrait"/>）。<b>敵全体の毒と燃焼を、その場でもう1回働かせる。</b>
+    ///
+    /// <para><b><see cref="TickStatuses"/> は1文字も触らない。</b> 1体ぶんの刻みの本体（毒は層の数 ×
+    /// 同じ陣営のベニ、燃焼は <see cref="BurnRules.Damage"/>、熾のホタは焼かれない）だけを写す
+    /// ——同じ量・同じ計算。違うのは3点: <b>層も残りターンも減らさない</b>／刻みの計数（持続係数・業など）を
+    /// 足さない（ターン頭の刻みを数える量なので）／<b>毒と燃焼を両方帯びた敵には
+    /// <see cref="CatalystTrait.DualMultiplier"/> 倍</b>（味方には掛けない）。</para>
+    ///
+    /// <para><b>出どころは null</b>（刻みと同じ）。撃破者はいないので <c>OnKill</c> は走らないが、
+    /// 死亡処理（ラウの飛散・ゾトの破裂・リィカの層）は <c>ApplyDamage</c> の中でその場で走る。
+    /// <b>回すのは手番の開始時点の生存者の写し</b>で、順は 敵全体 → 味方全体（どちらも席番号順・
+    /// <b>乱数を引かない</b>）。途中で書かれた状態（破裂の着火・飛散の毒）は、写しの後ろの駒には同じ起爆で効く。</para>
+    ///
+    /// <para><paramref name="backfire"/> が偽（代金の札を外した <c>yP</c>）なら味方は起爆しない。</para>
+    /// </summary>
+    /// <returns>起爆したか（対象に毒・燃焼が1つも無ければ偽＝何も起きない）。</returns>
+    public bool Detonate(UnitState self, bool backfire)
+    {
+        IReadOnlyList<UnitState> foes = LivingMembers(Opponent(self.TeamId));
+        IReadOnlyList<UnitState> allies = backfire ? LivingMembers(self.TeamId) : Array.Empty<UnitState>();
+        UnitTally kt = TallyOf(self);
+
+        static bool Charged(UnitState u)
+            => u.RawCounter(StatusKeys.Poison) > 0 || u.RawCounter(StatusKeys.Burn) > 0;
+        if (!foes.Any(Charged) && !allies.Any(Charged))
+        {
+            kt.DetonateDry++;
+            Log($"    {self.Name} は弾けさせる毒も火も見当たらない", LogKind.Status);
+            return false;
+        }
+
+        kt.DetonateFires++;
+        EmitSkill(self, new UnitAction(ActionKind.Skill, Label: "起爆"));
+        Log($"    ★ {self.Name} が触媒を撒いた——毒と火が一斉に弾ける", LogKind.Highlight, self);
+
+        foreach (UnitState u in foes) DetonateOne(self, kt, u, dual: true);
+        foreach (UnitState u in allies) DetonateOne(self, kt, u, dual: false);
+        return true;
+    }
+
+    void DetonateOne(UnitState kata, UnitTally kt, UnitState u, bool dual)
+    {
+        if (!u.IsAlive) return;
+        int poison = u.RawCounter(StatusKeys.Poison);
+        int burn = u.RawCounter(StatusKeys.Burn);
+        if (poison <= 0 && burn <= 0) return;
+
+        bool foe = u.TeamId != kata.TeamId;
+        int mult = dual && poison > 0 && burn > 0 ? CatalystTrait.DualMultiplier : 1;
+        if (mult > 1) kt.DetonateDualTargets++;
+
+        if (poison > 0)
+        {
+            // 刻みと同じ計算（ベニの味方の毒 ×2 は、その駒の陣営にベニが生きているときだけ）。
+            if (_units.Any(x => x.IsAlive && x.TeamId == u.TeamId && x.HasTrait(TraitId.Devour)))
+                poison *= DevourTrait.AllyPoisonMultiplier;
+            int dmg = poison * mult;
+            if (foe) { kt.DetonatePoisonNominal += dmg; kt.DetonateDualExtra += dmg - poison; }
+            else kt.DetonateAllyNominal += dmg;
+            if (dmg > Yoke.Cap && YokeBinding) kt.DetonateYokeCut++;
+            Log($"    {u.Name} の毒が弾けた（{dmg}）", LogKind.Status);
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.Status, Turn = _turn, ActorId = kata.InstanceId,
+                TargetId = u.InstanceId, Amount = dmg, Text = "毒"
+            });
+            DetonateHit(kt, u, foe, () => ApplyDamage(u, dmg, null));
+        }
+
+        if (burn > 0 && u.IsAlive)
+        {
+            if (Ember.Fireproof && u.HasTrait(TraitId.Pyre))
+            {
+                // 火には焼かれない（刻みと同じ枝）。
+                if (Ember.TickHeal > 0) Heal(u, Ember.TickHeal);
+            }
+            else
+            {
+                int dmg = BurnRules.Damage * mult;
+                if (foe) { kt.DetonateBurnNominal += dmg; kt.DetonateDualExtra += dmg - BurnRules.Damage; }
+                else kt.DetonateAllyNominal += dmg;
+                Log($"    {u.Name} の火が弾けた（{dmg}）", LogKind.Status);
+                Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.Status, Turn = _turn, ActorId = kata.InstanceId,
+                    TargetId = u.InstanceId, Amount = dmg, Text = "燃焼"
+                });
+                DetonateHit(kt, u, foe, () => ApplyDamage(u, dmg, null, burnTick: true));
+            }
+        }
+    }
+
+    /// <summary>起爆の1段が実際に削った HP と、倒した数（<b>計数のみ</b>）。</summary>
+    static void DetonateHit(UnitTally kt, UnitState u, bool foe, Action hit)
+    {
+        int before = u.Hp;
+        hit();
+        int removed = before - Math.Max(0, u.Hp);
+        if (foe) kt.DetonateFoeDealt += removed; else kt.DetonateAllyDealt += removed;
+        if (!u.IsAlive)
+        {
+            if (foe) kt.DetonateFoeKills++; else kt.DetonateAllyKills++;
+        }
+    }
+
+    /// <summary>
     /// 傷を積む唯一の窓口（第93期）。<b>束ね（<see cref="DeepRule"/>）の入口だけを担う。</b>
     ///
     /// <para><b>通すのは加算だけ。</b> 減算（断ちの 0 戻し・縫いと継ぎ当ての塞ぎ）と

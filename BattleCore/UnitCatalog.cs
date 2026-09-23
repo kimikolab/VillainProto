@@ -755,6 +755,37 @@ public static class UnitCatalog
     };
 
     /// <summary>
+    /// 触媒のカタ（第188期）。<see cref="Nata"/>（断ちのナタ）と入れ替えた——傷軸を畳む方針
+    /// （エグ → キリ → ナタ）の最後の1枚。
+    ///
+    /// <para><b>状態異常のスタックを弾けさせる駒</b>（ポンの要望）。毒は「溜まるまで遅く、その間の耐久が無い」ので、
+    /// 溜めてから毎ターン起爆して<b>刻みを前倒しする</b>。毒と燃焼を両方帯びた敵には倍で効くので、
+    /// <b>毒×燃焼の掛け合わせ（グザ＋ボルグなど）に初めて明確な理由ができる</b>。</para>
+    ///
+    /// <para><b>マイナスは味方にも弾けること</b>（<see cref="BackfireTrait"/>）。グザの漏れ・ボルグの火移り・
+    /// ベニの「味方の毒 ×2」を抱えた編成ほど味方の被害が大きく、倒れた駒はリィカの層の燃料になる。</para>
+    ///
+    /// <para><b>攻3・殴らない</b>（強化の受け皿にならない値）。速6 は瘴気（グザ・<c>OnTurnStart</c>）の後、
+    /// 増幅（ミオ 8）・火の粉（ボルグ 8）・吸い（ヴィオ 7）の後に来る。ベニ（6）とは同速で順は乱数。
+    /// 数値は指示書 §2-3 で測る前に固定した。</para>
+    /// </summary>
+    public static readonly UnitDef Kata = new()
+    {
+        Id = "kata",
+        Name = "触媒のカタ",
+        MaxHp = 48,
+        Attack = 3,
+        Speed = 6,
+        Advances = false,
+        Traits = new[] { TraitId.Catalyst, TraitId.Backfire },
+        // **[Skill] 1要素にする**（`ActionIndex++` は `CanAct` 通過後。第138期 Q0-4）。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "触媒を撒いた") },
+        PlusText = "手番で敵全体の毒と燃焼をその場で弾けさせる。両方を帯びた敵には倍で効く",
+        MinusText = "触媒は敵味方を選ばない。味方の毒と燃焼も一緒に弾ける",
+        Flavor = "混ぜれば燃え、燃やせば腐る。何を混ぜたかは本人にも分からない。"
+    };
+
+    /// <summary>
     /// 置き去りのナラ。速さを読む唯一の駒。
     ///
     /// 速さ8。**7（35体の中央値）から動かしてある（第20期）。**
@@ -1610,7 +1641,7 @@ public static class UnitCatalog
     /// </summary>
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Susu, Gare, Nomi, Nata, Tomo, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Susu, Gare, Nomi, Kata, Tomo, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
     };
 
     /// <summary>
@@ -1630,12 +1661,16 @@ public static class UnitCatalog
     /// ——<c>All</c> は「編成に選べる 52 枚」の定義であって `Presets` が参照できる集合ではない（第108期）。
     /// <b>したがって差し替えだけでは盤面は 1 ビットも動かない</b>（第139期のエグと同じ形）。
     /// <see cref="RendTrait"/> / <see cref="ThinBladeTrait"/> も削除していないので、傷軸の診断はそのまま回る。</item>
+    /// <item><see cref="Nata"/>（断ちのナタ）—— <b>第188期</b>に外し、<see cref="Kata"/>（触媒のカタ）を入れた。
+    /// 傷軸を畳む方針（エグ → キリ → ナタ）の最後の1枚。<b>`Presets` には残している</b>
+    /// （`compare` 1 行 ＝ `刻み×断ち (ノミ×ナタ)`）ので、<b>差し替えだけでは盤面は 1 ビットも動かない</b>。
+    /// <see cref="SeverTrait"/> / <see cref="AwaitTrait"/> も削除していない。</item>
     /// </list>
     ///
     /// <para><b>棄却して定義だけ残した素材（オゴ・ゴウ・ヌキ・オノ）はここに入れない</b>——
     /// あれらは一度も `All` に居なかった。ここは「居たが外した」駒の記録である。</para>
     /// </summary>
-    public static IReadOnlyList<UnitDef> Retired { get; } = new[] { Hari, Egu, Kiri };
+    public static IReadOnlyList<UnitDef> Retired { get; } = new[] { Hari, Egu, Kiri, Nata };
 
     /// <summary>
     /// <b><c>All ∪ Retired</c>（第141期）。辞書のキーや <c>Id</c> の引きに使う集合。</b>

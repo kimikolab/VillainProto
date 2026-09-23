@@ -321,6 +321,14 @@ public enum TraitId
                 // 突いたら回数は 0。**増幅を意図して乗算にしてある**（ポンの判断・ハイパーキャリー）。判定は engine（列の指定と倍率）
     ThrustPlain,// 突き（素の攻撃力で倍率）: 診断の対照だけが持つ（保持者 0 枚）。威力は 現在攻撃力 ＋ 素の攻撃力 × 回数
 
+    // --- 第188期で足した札（**ナタの枠・触媒のカタ**。断ち＝`Sever` / 刃待ち＝`Await` は対照として残置） ---
+    Catalyst,   // 起爆: 手番で攻撃せず、敵全体の毒と燃焼をその場でもう1回働かせる（層も残りターンも減らさない）。
+                // 毒と燃焼を両方帯びた敵には倍（`CatalystTrait.DualMultiplier`）。毒も火も無ければ何も起きない。
+                // **判定は engine（`BattleContext.Detonate`）**——`TickStatuses` の1体ぶんの本体を写してあり、
+                // 刻みそのものは1文字も触っていない
+    Backfire,   // 逆流: 起爆は味方の毒と燃焼も1回余分に働かせる（倍は掛けない）。起爆の代金で、外せば `yP`。
+                // **札そのものは挙動を持たない**（`Detonate` が保持を読むだけ）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -1144,6 +1152,8 @@ public sealed class NecroTrait : Trait
     private static void SetStack(BattleContext ctx, UnitState self, int stack, bool decayed)
     {
         stack = ApplyStack(self, stack);
+        UnitTally nt = ctx.TallyOf(self);   // 第188期・**計数のみ**（層の最大値）
+        if (stack > nt.NecroPeak) nt.NecroPeak = stack;
         if (decayed) ctx.Log($"    {self.Name} の層が薄れた（{stack}層）", LogKind.Status);
     }
 
@@ -11186,6 +11196,41 @@ public sealed class ThrustTrait : Trait
 }
 
 /// <summary>
+/// 起爆（第188期・触媒のカタ）。<b>手番で攻撃せず、敵全体の毒と燃焼をその場でもう1回働かせる。</b>
+///
+/// <para><b>本体は engine（<see cref="BattleContext.Detonate"/>）</b>——毒・燃焼の刻みの計算は
+/// <c>TickStatuses</c> にしか無いので、ここに写すと同じ計算が2箇所に割れる。札は発火口だけを持つ。</para>
+///
+/// <para><b>毒も火も無い手番は何も起きない</b>（殴りもしない）。<c>IdleTurn</c> は立てない
+/// ——手番は使っているので、号令・据えは買い取らない（灰の溜め番と同じ扱い）。</para>
+///
+/// <para><b>代金は別の札（<see cref="BackfireTrait"/>）に切り出してある</b>（第74期の作法）。
+/// 外せば起爆は敵にだけ効く＝<c>yP</c>。</para>
+/// </summary>
+public sealed class CatalystTrait : Trait
+{
+    public override TraitId Id => TraitId.Catalyst;
+
+    /// <summary>毒と燃焼を両方帯びた敵への倍率（指示書 §2-1・測る前に固定）。</summary>
+    public const int DualMultiplier = 2;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        ctx.Detonate(self, backfire: self.HasTrait(TraitId.Backfire));
+    }
+}
+
+/// <summary>
+/// 逆流（第188期・起爆の代金）。<b>起爆が味方の毒と燃焼も1回余分に働かせる</b>（倍は掛けない）。
+/// 判定は <see cref="BattleContext.Detonate"/> の1箇所で、<b>札そのものは挙動を持たない。</b>
+/// </summary>
+public sealed class BackfireTrait : Trait
+{
+    public override TraitId Id => TraitId.Backfire;
+}
+
+/// <summary>
 /// 突きの対照（第186期 追補）。倍率を<b>素の攻撃力</b>で掛ける版——威力 ＝ 現在攻撃力 ＋ 素の攻撃力 × 回数。
 /// 強化が倍率に乗る寄与を分けるためだけの札で、<b>保持者は <c>UnitCatalog.All</c> に 0 枚</b>（診断のローカルだけ）。
 /// </summary>
@@ -11359,6 +11404,8 @@ public static class TraitCatalog
         new DeflectTrait(),    // 第186期
         new ThrustTrait(),     // 第186期 追補
         new ThrustPlainTrait(),// 第186期 追補（対照）
+        new CatalystTrait(),   // 第188期
+        new BackfireTrait(),   // 第188期
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期

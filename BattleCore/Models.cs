@@ -1541,6 +1541,23 @@ public sealed class UnitTally
                 AshHolds, AshFalloutOut;
 
     /// <summary>
+    /// 起爆（第188期・<see cref="TraitId.Catalyst"/>）。<b>保持者（カタ）の側</b>に載せる——
+    /// <c>DetonateFires</c> 起爆した回数 ／ <c>DetonateDry</c> 毒も火も無くて空振りした回数 ／
+    /// <c>DetonateDualTargets</c> 両方持ちで倍になった敵の数（延べ）／
+    /// <c>DetonatePoisonNominal</c>・<c>DetonateBurnNominal</c> 敵への名目量（倍を含む）／
+    /// <c>DetonateDualExtra</c> そのうち倍で上乗せした分 ／ <c>DetonateFoeDealt</c> 敵から実際に削った HP ／
+    /// <c>DetonateAllyNominal</c>・<c>DetonateAllyDealt</c> 味方への名目量と実額 ／
+    /// <c>DetonateFoeKills</c>・<c>DetonateAllyKills</c> 起爆の段で倒れた数 ／
+    /// <c>DetonateYokeCut</c> 軛が効いている間に上限を超えた毒の段の数。<b>計数専用。</b>
+    /// </summary>
+    public long DetonateFires, DetonateDry, DetonateDualTargets, DetonatePoisonNominal, DetonateBurnNominal,
+                DetonateDualExtra, DetonateFoeDealt, DetonateAllyNominal, DetonateAllyDealt,
+                DetonateFoeKills, DetonateAllyKills, DetonateYokeCut;
+
+    /// <summary>墓守の層の最大値（第188期・<b>計数専用</b>。<c>NecroTrait.SetStack</c> が書く）。</summary>
+    public long NecroPeak;
+
+    /// <summary>
     /// 第180期の4枚。<b>計数専用で、どの規則も読まない。</b>
     ///
     /// <para>暴発（ムド）: <c>EruptFuel</c> 数えた被弾 ／ <c>EruptFuelFromAlly</c> うち味方の刃 ／
@@ -1833,6 +1850,12 @@ public sealed class UnitTally
         AshDry += o.AshDry; AshAtDeath += o.AshAtDeath; AshResidual += o.AshResidual;
         AshHolds += o.AshHolds; AshFalloutOut += o.AshFalloutOut;
         if (o.AshPeak > AshPeak) AshPeak = o.AshPeak;
+        DetonateFires += o.DetonateFires; DetonateDry += o.DetonateDry; DetonateDualTargets += o.DetonateDualTargets;
+        DetonatePoisonNominal += o.DetonatePoisonNominal; DetonateBurnNominal += o.DetonateBurnNominal;
+        DetonateDualExtra += o.DetonateDualExtra; DetonateFoeDealt += o.DetonateFoeDealt;
+        DetonateAllyNominal += o.DetonateAllyNominal; DetonateAllyDealt += o.DetonateAllyDealt;
+        DetonateFoeKills += o.DetonateFoeKills; DetonateAllyKills += o.DetonateAllyKills; DetonateYokeCut += o.DetonateYokeCut;
+        if (o.NecroPeak > NecroPeak) NecroPeak = o.NecroPeak;
         BrandFires += o.BrandFires; BrandDealt += o.BrandDealt;
         StallStagger += o.StallStagger;
         GrappleFires += o.GrappleFires; GrappleHolds += o.GrappleHolds; GrappleStalled += o.GrappleStalled;

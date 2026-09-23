@@ -195,6 +195,9 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.Thrust]     = (HcPlusL,  "逸らした回数だけ攻撃力が倍になる貫きで、指差した敵の列を突く。回数は突くと 0"),
         [TraitId.ThrustPlain]= (HcPlusL,  "突きの対照（素の攻撃力で倍率）。保持者 0 枚"),
         [TraitId.Planted]    = (HcMinusL, "入れ替えを受け付けないだけ。踏みしめの代金で、外せば `yP` になる"),
+        // 第188期: カタ（起爆＋逆流）。分類を同じコミットで足す（第132期 段0-a の再発防止）。
+        [TraitId.Catalyst]   = (HcPlusL,  "敵全体の毒と燃焼をもう1回働かせる（両方持ちは倍）。代金は別の札（`Backfire`）に切り出してある"),
+        [TraitId.Backfire]   = (HcMinusL, "起爆が味方の毒と燃焼も働かせるだけ。起爆の代金で、外せば `yP` になる"),
     };
 
     // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------

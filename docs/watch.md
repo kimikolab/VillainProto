@@ -427,7 +427,7 @@ seed 0..199 の 200 試行（`compare` と同じ帯）。**盤面は1ビット�
 
 ## 1-b. 出来事の種類 × 「誰がやったか」（`ActorId`）
 
-`BattleEventKind` 26 種 ／ `BattleEngine.cs` の初期化子 29 箇所。
+`BattleEventKind` 26 種 ／ `BattleEngine.cs` の初期化子 31 箇所。
 
 | 種類 | `ActorId` | 意味 |
 |---|:-:|---|
@@ -439,7 +439,7 @@ seed 0..199 の 200 試行（`compare` と同じ帯）。**盤面は1ビット�
 | `Summon` | ○ | 誰がやったかが引ける |
 | `Revive` | ○ | 誰がやったかが引ける |
 | `Move` | ○ | 誰がやったかが引ける |
-| `Status` | **×** | **起きたことは見えるが、誰がやったかは引けない** |
+| `Status` | ○ | 誰がやったかが引ける |
 | `Highlight` | ○ | 誰がやったかが引ける |
 | `Charge` | ○ | 誰がやったかが引ける |
 | `StatusSnapshot` | **×** | **起きたことは見えるが、誰がやったかは引けない** |
@@ -458,7 +458,7 @@ seed 0..199 の 200 試行（`compare` と同じ帯）。**盤面は1ビット�
 | `HealBlocked` | ○ | 誰がやったかが引ける |
 | `Reveille` | ○ | 誰がやったかが引ける |
 
-**`ActorId` を持たない種類 4 件**: `TurnStart` / `Status` / `StatusSnapshot` / `StatSnapshot`——**起きたことが画面に出ても「誰の仕業か」の線が引けない。**
+**`ActorId` を持たない種類 3 件**: `TurnStart` / `StatusSnapshot` / `StatSnapshot`——**起きたことが画面に出ても「誰の仕業か」の線が引けない。**
 
 > **`Death` は `ActorId` を持つが、それは撃破した駒**（＝普通の一振りの結果）で、
 > 特性の痕跡ではない。`watch cast` の「特性由来」は `Death` を別に数える。
