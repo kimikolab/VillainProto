@@ -36,10 +36,13 @@ public partial class Main
             if (e.Kind == BattleEventKind.TurnStart ||
                 (e.Kind == BattleEventKind.Attack && e.ActorId == attack.ActorId)) break;
             if (e.Kind != BattleEventKind.Intercept || e.Text != InterceptLabels.RangeShield) continue;
-            var hit = events.Skip(i + 1).FirstOrDefault(n => n.Kind is BattleEventKind.Damage
-                or BattleEventKind.Parry or BattleEventKind.Attack or BattleEventKind.Intercept or BattleEventKind.TurnStart);
+            // 肩代わりの中継ダメージは盾本人の被弾より先に出る。
+            // 中継だけを飛ばし、次の攻撃・引受・ターン境界は越えない。
+            var hit = events.Skip(i + 1).FirstOrDefault(n =>
+                ((n.Kind is BattleEventKind.Damage or BattleEventKind.Parry) && !n.Relayed)
+                || n.Kind is BattleEventKind.Attack or BattleEventKind.Intercept or BattleEventKind.TurnStart);
             if (hit is null || hit.Kind is not (BattleEventKind.Damage or BattleEventKind.Parry)
-                || hit.ActorId != attack.ActorId || hit.Pattern != attack.Pattern) continue;
+                || hit.TargetId != e.ActorId || hit.ActorId != attack.ActorId || hit.Pattern != attack.Pattern) continue;
             indices.Add(i);
         }
         return indices;

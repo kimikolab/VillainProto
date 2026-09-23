@@ -12,6 +12,7 @@ public partial class ShieldCowedCheck : Control
     {
         try
         {
+            CheckShieldRouting();
             if (OS.GetCmdlineUserArgs().Contains("--replay"))
             {
                 await CheckReplay();
@@ -112,14 +113,27 @@ public partial class ShieldCowedCheck : Control
         AddChild(main);
         const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
         object? Read(string name) => typeof(Main).GetField(name, flags)!.GetValue(main);
-        var formation = Formation.Build(front1: UnitCatalog.Kugu, front3: UnitCatalog.Ban,
-            center: UnitCatalog.Shiga, back1: UnitCatalog.Gald, back3: UnitCatalog.Dolga);
+        bool shieldReplay = OS.GetCmdlineUserArgs().Contains("--shield-replay");
+        var formation = shieldReplay
+            ? Presets.Compare.First(x => x.Name.Contains("追撃×据え")).F
+            : Formation.Build(front1: UnitCatalog.Kugu, front3: UnitCatalog.Ban,
+                center: UnitCatalog.Shiga, back1: UnitCatalog.Gald, back3: UnitCatalog.Dolga);
         typeof(Main).GetMethod("EnterBattle", flags)!.Invoke(main, new object[] {
             BattleEngine.Materialize(formation, 0), BattleEngine.Materialize(EnemyCatalog.Stages[2].Enemy, 1),
             0, 2, "" });
         for (int i = 0; i < 180 && (bool)Read("_playing")!; i++) await Wait(0.5);
         Require(!(bool)Read("_playing")!, "通常再生が完走");
         var result = (BattleResult)Read("_result")!;
+        int expectedShields = result.Events.Count(e => e.Kind == BattleEventKind.Intercept && e.Text == InterceptLabels.RangeShield);
+        int playedShields = ((System.Collections.Generic.HashSet<int>)Read("_shieldShown")!).Count;
+        Require(expectedShields > 0 && playedShields == expectedShields, "台本の範囲盾を通常再生へ漏れなく渡す");
+        if (shieldReplay)
+        {
+            GD.Print($"SHIELD_REPLAY_OK expected={expectedShields} played={playedShields}");
+            main.QueueFree();
+            await Wait(1);
+            return;
+        }
         int expectedLost = result.Events.Count(e => e.Kind == BattleEventKind.Cowed && e.Text == CowedLabels.Lost);
         Require(expectedLost > 0 && (int)Read("_cowedLostPlays")! == expectedLost, "消費通知を1回ずつ再生");
         var field = (BattlefieldView3D)Read("_battleField")!;
@@ -132,6 +146,29 @@ public partial class ShieldCowedCheck : Control
         main.QueueFree();
         await Wait(1);
     }
+    private static void CheckShieldRouting()
+    {
+        int battles = 0, shares = 0;
+        foreach (var row in Presets.Compare.Where(x => x.F.Occupied().Any(s => s.Def.Id == "ban")))
+        for (int stage = 0; stage < EnemyCatalog.Stages.Count; stage++)
+        for (int seed = 0; seed < 12; seed++)
+        {
+            var result = BattleEngine.Run(BattleEngine.Materialize(row.F, 0),
+                BattleEngine.Materialize(EnemyCatalog.Stages[stage].Enemy, 1), seed, verbose: true);
+            var expected = Enumerable.Range(0, result.Events.Count).Where(i =>
+                result.Events[i].Kind == BattleEventKind.Intercept && result.Events[i].Text == InterceptLabels.RangeShield).ToArray();
+            var routed = Enumerable.Range(0, result.Events.Count)
+                .Where(i => result.Events[i].Kind == BattleEventKind.Attack)
+                .SelectMany(i => Main.ShieldShareIndices(result.Events, i)).ToArray();
+            Require(routed.Distinct().Count() == routed.Length && expected.Order().SequenceEqual(routed.Order()),
+                $"盾の対応漏れ・重複: {row.Name} stage={stage} seed={seed} expected={expected.Length} routed={routed.Length}");
+            battles++;
+            shares += expected.Length;
+        }
+        Require(shares > 0, "範囲盾の検査が空でない");
+        GD.Print($"SHIELD_ROUTING_OK battles={battles} shares={shares}");
+    }
+
     private async Task Capture(string phase)
     {
         string? directory = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--capture-dir="));
