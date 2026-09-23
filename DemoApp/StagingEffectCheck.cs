@@ -37,6 +37,15 @@ public partial class StagingEffectCheck : Control
             }
             if (mode == "character-audio")
                 openings[1] = new DemoOpening(2, 0, "yomi", "ヨミ", 3, 100, 100, 10, AttackPattern.Single, false);
+            if (mode == "poison-drain")
+                openings = new[]
+                {
+                    new DemoOpening(1, 0, "vio", "ヴィオ", 2, 100, 100, 6, AttackPattern.Single, false),
+                    new DemoOpening(2, 0, "gald", "ガルド", 0, 100, 100, 10, AttackPattern.Single, false),
+                    new DemoOpening(3, 0, "sid", "スィド", 1, 100, 100, 10, AttackPattern.Single, false),
+                    new DemoOpening(4, 0, "guza", "グザ", 3, 100, 100, 10, AttackPattern.Single, false),
+                    new DemoOpening(5, 0, "rau", "ラウ", 4, 100, 100, 10, AttackPattern.Single, false),
+                };
             if (mode == "life-audio")
             {
                 field.AddSummon(new DemoOpening(98, 0, "nara", "召喚音確認", 4,
@@ -111,6 +120,108 @@ public partial class StagingEffectCheck : Control
                 target = field.FindPawn(1)!;
                 healer = field.FindPawn(2)!;
                 holder = field.FindPawn(3)!;
+            }
+            if (mode == "poison-drain")
+            {
+                var sources = new[] { healer, holder, field.FindPawn(4)!, field.FindPawn(5)! };
+                foreach (var source in sources) source.SetPoisonRemaining(1);
+                await Wait(0.5);
+                var drain = field.ShowPoisonDrain(sources, target, 2);
+                await Wait(0.24);
+                Require(sources.All(p => p.PoisonIconAmount == 1) && target.AttackValue == 6,
+                    "到着前は毒と攻撃力を更新しない");
+                await Capture("poison-drain-flight");
+                await drain;
+                foreach (var source in sources) source.SetPoisonRemaining(0);
+                target.SetAttack(22);
+                Require(sources.All(p => p.PoisonIconAmount == 0) && target.PoisonIconAmount == 0,
+                    "吸収元の毒を解除し、吸収者の毒には加算しない");
+                Require(target.PowerMistActive, "吸収完了後に攻撃力上昇のオーラ");
+                await Wait(0.12);
+                await Capture("poison-drain-power");
+                healer.SetPoisonRemaining(2);
+                healer.CommitStatusSnapshot();
+                Require(healer.PoisonIconAmount == 2, "残量ありも台本どおり保持");
+                var interrupted = field.ShowPoisonDrain(sources, target, 2);
+                field.BeginBattle(openings, "再開確認", 1);
+                await interrupted;
+                Require(field.Pawns.Values.All(p => p.PoisonIconAmount == 0), "吸収中の再開で古い状態を残さない");
+                target = field.FindPawn(1)!;
+                healer = field.FindPawn(2)!;
+                holder = field.FindPawn(3)!;
+                BattleEvent[] batch =
+                {
+                    new() { Turn = 1, Kind = BattleEventKind.StatusDrain, ActorId = 1, TargetId = 2, Text = StatusKeys.Poison, DrainSeq = 1 },
+                    new() { Turn = 1, Kind = BattleEventKind.StatusDrain, ActorId = 1, TargetId = 3, Text = StatusKeys.Poison, DrainSeq = 1, DrainLast = true, AttackAfter = 22 },
+                    new() { Turn = 1, Kind = BattleEventKind.StatusDrain, ActorId = 1, TargetId = 2, Text = StatusKeys.Poison, DrainSeq = 2, DrainLast = true },
+                };
+                Require(PoisonDrainBatch.End(batch, 0) == 2 && PoisonDrainBatch.End(batch, 2) == 3,
+                    "吸収は通し番号と末尾で分ける");
+            }
+            if (mode is "all" or "poison-transfer")
+            {
+                field.AddSummon(new DemoOpening(4, 1, "nara", "伝染先", 4,
+                    100, 100, 10, AttackPattern.Single, false));
+                var receiver = field.FindPawn(4)!;
+                await Wait(0.5);
+                await field.Attack(target, holder, AttackPattern.Single, new[] { holder });
+                var spread = field.ShowPoisonTransfer(holder, receiver, false, 2);
+                await Wait(0.13);
+                Require(receiver.PoisonIconAmount == 0, "到着前には毒の量を増やさない");
+                await Capture("poison-transfer-flight");
+                await spread;
+                receiver.AddPoisonIconAmount(3);
+                await Wait(0.1);
+                await Capture("poison-transfer-arrival");
+                var leak = field.ShowPoisonTransfer(target, healer, true, 2);
+                await Wait(0.21);
+                await Capture("poison-transfer-leak");
+                await leak;
+                healer.AddPoisonIconAmount(1);
+                Require(receiver.PoisonIconAmount == 3 && healer.PoisonIconAmount == 1, "伝染・漏れの着弾量");
+                await Wait(0.5);
+                var interrupted = field.ShowPoisonTransfer(holder, receiver, false, 2);
+                field.BeginBattle(openings, "再開確認", 1);
+                await interrupted;
+                Require(field.Pawns.Values.All(p => p.PoisonIconAmount == 0), "飛行中の再開で古い量を残さない");
+                target = field.FindPawn(1)!;
+                healer = field.FindPawn(2)!;
+                holder = field.FindPawn(3)!;
+            }
+            if (mode is "all" or "poison-stacks")
+            {
+                foreach (var pawn in new[] { target, holder })
+                {
+                    pawn.AddPoisonIconAmount(1);
+                    pawn.AddPoisonIconAmount(2);
+                    Require(pawn.PoisonIconAmount == 3, "味方・敵の毒を付与量で加算");
+                }
+                await Wait(0.12);
+                await Capture("poison-stacks-gain");
+                await Wait(0.5);
+                target.AddPoisonIconAmount(9);
+                holder.AddPoisonIconAmount(120);
+                await Wait(0.45);
+                await Capture("poison-stacks-many");
+                foreach (var pawn in new[] { target, holder })
+                {
+                    pawn.BeginStatusSnapshot();
+                    pawn.ReadStatusSnapshot(StatusKeys.LabelOf(StatusKeys.Poison), 2);
+                    pawn.CommitStatusSnapshot();
+                    Require(pawn.PoisonIconAmount == 2, "写しは残量で置換");
+                    Require(pawn.StatusIconFlashCount == 0, "残量更新では再点滅しない");
+                    pawn.AddPoisonIconAmount(1);
+                    Require(pawn.PoisonIconAmount == 3, "写しの後は新しい残量から加算");
+                    pawn.BeginStatusSnapshot();
+                    pawn.CommitStatusSnapshot();
+                    Require(pawn.PoisonIconAmount == 0 && !pawn.HasStatusIcon(StatusKeys.Poison), "毒の消失");
+                    pawn.AddPoisonIconAmount(4);
+                    pawn.AnimateDeath();
+                    Require(pawn.PoisonIconAmount == 0, "死亡で量を破棄");
+                    pawn.AnimateRevive();
+                    Require(pawn.PoisonIconAmount == 0, "蘇生で古い量を戻さない");
+                }
+                await Wait(0.5);
             }
             if (mode is "all" or "status")
             {

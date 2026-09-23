@@ -7,7 +7,8 @@ public partial class BattlePawn3D
     private StatusIconRow3D _statusIcons = null!;
     private MeshInstance3D? _curseStain;
     internal bool HasCurseStain => _curseStain is not null;
-    private readonly HashSet<string> _statusSnapshot = new();
+    private readonly Dictionary<string, int> _statusSnapshot = new();
+    internal int PoisonIconAmount => _statusIcons.Amount(StatusKeys.Poison);
     internal int StatusIconCount => _statusIcons.ActiveCount;
     internal int StatusIconFlashCount => _statusIcons.FlashCount;
     internal bool HasStatusIcon(string key) => _statusIcons.Has(key);
@@ -20,14 +21,35 @@ public partial class BattlePawn3D
     public void BeginStatusSnapshot() => _statusSnapshot.Clear();
     public void ReadStatusSnapshot(string label, int amount)
     {
-        if (amount > 0 && StatusIconArt.KeyOf(label) is { } key) _statusSnapshot.Add(key);
+        if (amount > 0 && StatusIconArt.KeyOf(label) is { } key) _statusSnapshot[key] = amount;
     }
     public void CommitStatusSnapshot()
     {
         if (!_alive) return;
-        foreach (string key in StatusIconArt.Keys) _statusIcons.Set(key, _statusSnapshot.Contains(key));
-        _confusion.SetActive(!_victory && _statusSnapshot.Contains(StatusKeys.Confused));
-        SetCurseStain(!_victory && _statusSnapshot.Contains(StatusKeys.Curse));
+        foreach (string key in StatusIconArt.Keys)
+        {
+            if (key == StatusKeys.Poison)
+                _statusIcons.SetAmount(key, _statusSnapshot.GetValueOrDefault(key), false);
+            else _statusIcons.Set(key, _statusSnapshot.ContainsKey(key));
+        }
+        _confusion.SetActive(!_victory && _statusSnapshot.ContainsKey(StatusKeys.Confused));
+        SetCurseStain(!_victory && _statusSnapshot.ContainsKey(StatusKeys.Curse));
+    }
+
+    // 付与は差分、ターン頭の写しは残量。写しを加算すると二重計上になる。
+    public void AddPoisonIconAmount(int amount)
+    {
+        if (_alive && amount > 0)
+            _statusIcons.SetAmount(StatusKeys.Poison, PoisonIconAmount + amount, true);
+    }
+
+    public void SetPoisonRemaining(int amount)
+    {
+        if (!_alive) return;
+        _statusIcons.SetAmount(StatusKeys.Poison, amount, false);
+        if (amount > 0) _statusSnapshot[StatusKeys.Poison] = amount;
+        else _statusSnapshot.Remove(StatusKeys.Poison);
+        SetPoisoned(amount > 0);
     }
     private void SetCurseStain(bool active)
     {

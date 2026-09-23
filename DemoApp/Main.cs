@@ -11,7 +11,7 @@ public partial class Main : Control
 {
     private readonly UnitDef?[] _formation = new UnitDef?[FormationRules.PlayableSlotCount];
     private readonly Dictionary<string, RosterCard> _rosterCards = new(StringComparer.Ordinal);
-    private readonly Dictionary<int, string> _statusByPawn = new();
+    private readonly Dictionary<int, Dictionary<string, int>> _statusByPawn = new();
     private readonly HashSet<int> _burningSnapshot = new();
     private readonly Dictionary<int, (int Marked, int Stunned, int Armor)> _statusEffectSnapshot = new();
     private readonly HashSet<int> _poisonedSnapshot = new();
@@ -139,6 +139,7 @@ public partial class Main : Control
     /// 1発ずつ別の絵・別の音になっていれば、その回数がそのまま発数になる。</para>
     /// </summary>
     private int _attackPlays, _attackRun, _attackRunActor = -1, _attackRunMax;
+    private int _poisonSpreadPlays, _poisonLeakPlays;
     private string _attackRunName = "";
     private readonly Dictionary<BattlePawn3D, int> _comboEnds = new();
     private bool _fastSmoke;
@@ -1083,6 +1084,9 @@ public partial class Main : Control
         int token = ++_playToken;
         _comboEnds.Clear();
         _hexMarksShown = _hexSharePlays = _hexShareHits = 0;
+        _poisonSpreadPlays = _poisonLeakPlays = 0;
+        _poisonDrainIndices.Clear();
+        _poisonDrainPlays = _poisonDrainHits = 0;
         _playing = true;
         _paused = false;
         _pause.Text = "一時停止";
@@ -1141,7 +1145,9 @@ public partial class Main : Control
         {
             GD.Print($"DEMO_SMOKE_COMPLETE events={_eventIndex} turns={_result.Turns} won={_result.PlayerWon}"
                      + $" attackPlays={_attackPlays} maxRun={_attackRunMax} maxRunBy={_attackRunName}"
-                     + $" hexMarks={_hexMarksShown} hexBatches={_hexSharePlays} hexHits={_hexShareHits}");
+                     + $" hexMarks={_hexMarksShown} hexBatches={_hexSharePlays} hexHits={_hexShareHits}"
+                     + $" poisonSpreads={_poisonSpreadPlays} poisonLeaks={_poisonLeakPlays}"
+                     + $" poisonDrains={_poisonDrainPlays} poisonDrainHits={_poisonDrainHits}");
             GetTree().Quit();
         }
     }
@@ -1208,10 +1214,7 @@ public partial class Main : Control
                     _statusEffectSnapshot[target.InstanceId] = effects;
                     if (key == StatusKeys.LabelOf(StatusKeys.Poison)) _poisonedSnapshot.Add(target.InstanceId);
                     string label = DisplayStatusKey(key);
-                    _statusByPawn[target.InstanceId] = string.IsNullOrEmpty(_statusByPawn.GetValueOrDefault(target.InstanceId))
-                        ? $"{label}{e.Amount}"
-                        : _statusByPawn[target.InstanceId] + $"  {label}{e.Amount}";
-                    target.SetStatus(_statusByPawn[target.InstanceId]);
+                    SetDisplayedStatus(target, label, e.Amount);
                 }
                 break;
 
@@ -1473,6 +1476,11 @@ public partial class Main : Control
                 await Delay(0.38);
                 break;
 
+            case BattleEventKind.StatusDrain:
+                if (!_poisonDrainIndices.Contains(eventIndex) && e.Text == StatusKeys.Poison)
+                    await PlayPoisonDrain(eventIndex);
+                break;
+
             case BattleEventKind.StatusGain:
                 if (e.Text == StatusKeys.Curse && target is not null)
                 {
@@ -1486,8 +1494,28 @@ public partial class Main : Control
                 }
                 if (target is not null && e.Text is { } statusKey)
                 {
+                    bool poisonTransfer = statusKey == StatusKeys.Poison
+                        && e.PoisonRoute is PoisonRoute.Touch or PoisonRoute.TouchLeak;
+                    if (poisonTransfer && e.Amount > 0)
+                    {
+                        int token = _playToken;
+                        bool leak = e.PoisonRoute == PoisonRoute.TouchLeak;
+                        var source = leak ? actor : e.SpreadFromId is int fromId ? _battleField.FindPawn(fromId) : null;
+                        await _battleField.ShowPoisonTransfer(source, target, leak, _speed);
+                        if (token != _playToken || !_battleMode) return;
+                        if (source is not null)
+                        {
+                            if (leak) _poisonLeakPlays++;
+                            else _poisonSpreadPlays++;
+                        }
+                    }
                     if (e.Amount > 0) _battleField.PlayStatusGainSound(statusKey);
-                    target.SetStatusIcon(statusKey, e.Amount > 0);
+                    if (statusKey == StatusKeys.Poison)
+                    {
+                        target.AddPoisonIconAmount(e.Amount);
+                        SetDisplayedStatus(target, DisplayStatusKey(statusKey), target.PoisonIconAmount);
+                    }
+                    else target.SetStatusIcon(statusKey, e.Amount > 0);
                     if (statusKey == StatusKeys.Burn) target.SetBurning(e.Amount > 0);
                     if (statusKey == StatusKeys.Poison && e.Amount > 0) target.SetPoisoned(true);
                     // 第124期 3-g: 「テロップは出たが効果量が分からない」（ノミ）への直答。
@@ -1497,7 +1525,7 @@ public partial class Main : Control
                     Color tint = StatusColor(label);
                     if (StatusIconArt.KeyOf(statusKey) is null)
                         _battleField.Float(target, $"＋{e.Amount} {label}", tint, e.Amount >= 2);
-                    if (e.ActorId is not null && e.ActorId != e.TargetId)
+                    if (!poisonTransfer && e.ActorId is not null && e.ActorId != e.TargetId)
                         _battleField.Link(actor, target, tint, $"{label}を書いた");
                     AppendLog($"  [color=#{tint.ToHtml(false)}]＋{e.Amount} {label}[/color] → {NameOf(e.TargetId)}"
                               + $"{WriterSuffix(e.ActorId, e.TargetId)}");
