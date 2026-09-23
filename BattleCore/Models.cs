@@ -1545,6 +1545,7 @@ public sealed class UnitTally
     /// <c>ReveilleMisses</c> 相手がいなかった回数 ／ <c>ReveilleWoken</c> <b>起こされた回数</b>（受け手の側）。</para>
     /// </summary>
     public long EruptFuel, EruptFuelFromAlly, EruptFires, EruptSwings, EruptPeak, EruptHeld,
+                EruptSwingAtk, EruptFloored,
                 SmearDealt, SmearBlocked,
                 SpitStored, SpitMoved, SpitFires,
                 ReveilleFires, ReveilleMisses, ReveilleWoken;

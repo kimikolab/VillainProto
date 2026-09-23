@@ -493,6 +493,13 @@ if (focusId == "susu")
     return;
 }
 
+// mudo モード（第181期） —— 泥人形ムドの手直し。本体は `Modes/Mudo.cs`。
+if (focusId == "mudo")
+{
+    MudoDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3)));
+    return;
+}
+
 // rebirth2 モード（第180期） —— B群の転生 3〜5枚目（ムド／ヴィオ／ガン）。本体は `Modes/Rebirth2.cs`。
 if (focusId == "rebirth2")
 {

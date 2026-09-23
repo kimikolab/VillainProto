@@ -66,8 +66,9 @@
 | 53 | `ward` | `WardRule` | `WardRule { Return = Burst, Percent = 50, Threshold = 40, Drip = 10, Cost = Forfeit, BurdenPercent = 50, LadenPer = 10 }` |  | `ward` / `wardcost` | 第153期 | ○ |
 | 54 | `indulgence` | `IndulgenceRule` | `IndulgenceRule { Advance = 30, Threshold = 60, Contracts = 0, Blast = Single }` |  | `toll` | 第155期 | ○ |
 | 55 | `ash` | `AshRule` | `AshRule { CountHavoc = True, CountDot = True, Multiplier = 100, FalloutOnDeath = True, ThrowEvery = 2 }` |  | `susu` | 第179期 | ○ |
+| 56 | `erupt` | `EruptRule` | `EruptRule { Floor = True, Smear = PerErupt }` |  | `mudo` | 第180期 | ○ |
 
-引数 55 本（`verbose` と観測子を除く）。
+引数 56 本（`verbose` と観測子を除く）。
 
 **`= default(T)` は「その規則が既定で何もしない」の機械的な手がかりであって、判定ではない。**
 採否そのものは**既定値の列**を読むこと——`ThornRule { Wound = None }` は残置、`SoakRule { Poison = True, Burn = False }` は毒側だけ採用、という具合に既定値が全部を語る。
@@ -91,6 +92,7 @@
 | `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` | ○ | `divert` / `survive` / `wildfire` / `mark` | 第50期 |
 | `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0 }` | ○ | `survive` / `ember` / `wildfire` / `rebirth` | 第130期 |
 | `EncoreRule` | `EncoreRule { Enabled = True }` | ○ | `encore` / `tempo` / `tomo` / `hold2` / `ledger` / `lit` / `rebirth` | 第104期 |
+| `EruptRule` | `EruptRule { Floor = True, Smear = PerErupt }` | ○ | `mudo` | 第180期 |
 | `ExposeRule` | `ExposeRule { MaxPerBattle = 3 }` | ○ | `expose` / `creak3` / `ledger` | 第40期 |
 | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` | ○ | `curse` / `favor` / `turn` / `ledger` | 第58期 |
 | `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` | ○ | `finisher` / `ledger` / `survive` / `wildfire` / `mark` | 第53期 |
@@ -134,7 +136,7 @@
 | `WoundRule` | `WoundRule { Enabled = True, Census = False }` | ○ | `curse` / `hex` / `suture2` / `mender` / `gauge` / `gather` / `soak` / `hold2` / `ledger` / `wound2` / `parry` / `cross` | 第85期 |
 | `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `goad` / `wave2` / `ledger` / `parry` / `brace` | 第35期 |
 
-57 型。
+58 型。
 
 ## 3. 規則が使う列挙型
 
@@ -155,6 +157,7 @@
 | `SeverWait` | `Yield`=0 / `Swing`=1 |
 | `ShatterMode` | `Passive`=0 / `Turn`=1 / `Both`=2 |
 | `ShuffleStagger` | `None`=0 / `Advanced`=1 / `Both`=2 / `Confuse`=3 / `ConfuseOnAction`=4 |
+| `SmearWhen` | `PerHit`=0 / `PerErupt`=1 / `None`=2 |
 | `SpillScope` | `All`=0 / `Dense`=1 |
 | `SutureFire` | `Swing`=0 / `OnWound`=1 |
 | `SutureSide` | `Foe`=0 / `Both`=1 |
@@ -165,4 +168,4 @@
 | `WildfireMode` | `None`=0 / `Add`=1 / `Scale`=2 / `Flat`=3 |
 | `YieldMode` | `OwnTurn`=0 / `OwnTurnWindow`=1 / `Immediate`=2 |
 
-22 型。
+23 型。

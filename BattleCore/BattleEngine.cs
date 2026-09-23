@@ -3276,6 +3276,9 @@ public sealed class BattleContext
     /// 入れ子で見送った回数（<c>InInterrupt</c>・<c>InReaction</c> の中で閾値に届いた回数）。</summary>
     public long EruptFuel, EruptFuelFromAlly, EruptFires, EruptSwings, EruptHeld;
 
+    /// <summary>床が効いた発（第181期・<b>計数のみ</b>）。</summary>
+    public long EruptFloored;
+
     /// <summary>泥散りが撒いた総量 ／ 支援拒否（<c>Stoic</c>）で弾かれた回数。</summary>
     public long SmearDealt, SmearBlocked;
 
@@ -3306,8 +3309,19 @@ public sealed class BattleContext
         if (n > t.EruptPeak) t.EruptPeak = n;
     }
 
-    /// <summary>暴発の1発（<b>計数のみ</b>）。</summary>
-    public void NoteEruptSwing(UnitState self) { EruptSwings++; TallyOf(self).EruptSwings++; }
+    /// <summary>
+    /// 暴発の1発（<b>計数のみ</b>・第181期に値を足した）。
+    /// <paramref name="atk"/> はその発の攻撃力、<paramref name="floored"/> は
+    /// <b>床が無ければ素攻より下だった発</b>（＝その時点で <c>AtkBonus &lt; 0</c>）。
+    /// </summary>
+    public void NoteEruptSwing(UnitState self, int atk = 0, bool floored = false)
+    {
+        EruptSwings++;
+        UnitTally t = TallyOf(self);
+        t.EruptSwings++;
+        t.EruptSwingAtk += atk;
+        if (floored) { EruptFloored++; t.EruptFloored++; }
+    }
 
     /// <summary>泥が散った（<b>計数のみ</b>。名目量）。</summary>
     public void NoteSmear(UnitState self, int amount)
@@ -3557,6 +3571,13 @@ public sealed class BattleContext
     /// 溜める側は <see cref="AshBinding"/> で短絡し、撃つ側は特性の中にある。
     /// </summary>
     public AshRule Ash { get; }
+
+    /// <summary>
+    /// 泥人形ムドの規則（第181期。既定は <see cref="EruptRule.Default"/> ＝ 採用候補）。
+    /// <b>保持者がいなければ1ビットも動かない</b>——読むのは <see cref="EruptTrait"/> と
+    /// <see cref="SmearTrait"/> の中だけで、engine には判定が1つも無い。
+    /// </summary>
+    public EruptRule Erupt { get; }
 
     // =====================================================================================
     // 第138期 —— 礫（TraitId.Shrapnel）の計数。**盤面には一切影響しない。**
@@ -3976,7 +3997,7 @@ public sealed class BattleContext
                          BraceRule? brace = null, ShufflerRule? shuffler = null,
                          ConfusionRule? confusion = null, HasteRule? haste = null,
                          WardRule? ward = null, IndulgenceRule? indulgence = null,
-                                   AshRule? ash = null,
+                                   AshRule? ash = null, EruptRule? erupt = null,
                          CounterProbe? probe = null)
     {
         _rng = new Random(seed);
@@ -4036,6 +4057,7 @@ public sealed class BattleContext
         Shatter = shatter ?? ShatterRule.Default;
         Shrapnel = shrapnel ?? ShrapnelRule.Default;
         Ash = ash ?? AshRule.Default;
+        Erupt = erupt ?? EruptRule.Default;
         Shuffler = shuffler ?? ShufflerRule.Default;
         Confusion = confusion ?? ConfusionRule.Default;
         Haste = haste ?? HasteRule.Default;
@@ -7376,7 +7398,7 @@ public static class BattleEngine
                                    BraceRule? brace = null, ShufflerRule? shuffler = null,
                                    ConfusionRule? confusion = null, HasteRule? haste = null,
                                    WardRule? ward = null, IndulgenceRule? indulgence = null,
-                                   AshRule? ash = null,
+                                   AshRule? ash = null, EruptRule? erupt = null,
                                    CounterProbe? probe = null)
         => Run(Materialize(player, BattleContext.PlayerTeam),
                Materialize(enemy, BattleContext.EnemyTeam),
@@ -7385,7 +7407,7 @@ public static class BattleEngine
                creak, sever, thinBlade, thorn, suture, sutureFire, spillWound, mend, woundIgnite,
                gather, soak, deep, curse, betray, encore, rage, menderCost, loose, taillight, reader, boss,
                nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace, shuffler,
-               confusion, haste, ward, indulgence, ash, probe);
+               confusion, haste, ward, indulgence, ash, erupt, probe);
 
     /// <summary>
     /// 駒の状態を直接渡して1戦を回す。会戦（Engagement）が持ち越した UnitState を
@@ -7424,7 +7446,7 @@ public static class BattleEngine
                                    BraceRule? brace = null, ShufflerRule? shuffler = null,
                                    ConfusionRule? confusion = null, HasteRule? haste = null,
                                    WardRule? ward = null, IndulgenceRule? indulgence = null,
-                                   AshRule? ash = null,
+                                   AshRule? ash = null, EruptRule? erupt = null,
                                    CounterProbe? probe = null)
     {
         var ctx = new BattleContext(seed, verbose, colossus, yoke, hush, martyr, expose, shove, bear,
@@ -7433,7 +7455,7 @@ public static class BattleEngine
                                     suture, sutureFire, spillWound, mend, woundIgnite, gather, soak, deep, curse,
                                     betray, encore, rage, menderCost, loose, taillight, reader, boss,
                                     nourish, wound, ember, wildfire, harm, parry, shatter, shrapnel, brace,
-                                    shuffler, confusion, haste, ward, indulgence, ash, probe);
+                                    shuffler, confusion, haste, ward, indulgence, ash, erupt, probe);
 
         foreach (UnitState u in player) ctx.Add(u);
         foreach (UnitState u in enemy) ctx.Add(u);

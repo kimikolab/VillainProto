@@ -29,7 +29,7 @@ public static class UnitCatalog
         Speed = 5,
         Traits = new[] { TraitId.Erupt, TraitId.Smear, TraitId.Hex },
         PlusText = "殴られた回数を溜め、3回で閾を越えた瞬間その場で割り込み、溜めた回数だけ殴り返す（1発ごとに少し回復する）",
-        MinusText = "殴られるたび泥が散り、隣の味方の得物が鈍る（攻撃力低下）。素の攻撃力はほぼ無く、倒れると溜めた怒りは不発",
+        MinusText = "暴れると泥が飛び散り、隣の味方の得物が鈍る（攻撃力低下）。素の攻撃力はほぼ無く、倒れると溜めた怒りは不発",
         Flavor = "殴られないと働かないので、誰も連れて行きたがらない。"
     };
 

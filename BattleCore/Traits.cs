@@ -10050,6 +10050,48 @@ public sealed class BrandTrait : Trait
 }
 
 /// <summary>
+/// 泥散りをいつ撒くか（第181期）。<b>診断が版を差し替えるためだけの選択子。</b>
+/// </summary>
+public enum SmearWhen
+{
+    /// <summary>第180期。<b>数えた被弾1回ごと</b>に <see cref="SmearTrait.PerHit"/>。</summary>
+    PerHit,
+
+    /// <summary>第181期の既定。<b>暴発が起きたとき1回だけ</b> <see cref="SmearTrait.PerErupt"/>。</summary>
+    PerErupt,
+
+    /// <summary>撒かない（代金を 0 にした対照 ＝ 指示書 §3 の R3）。</summary>
+    None
+}
+
+/// <summary>
+/// 泥人形ムドの手直し（第181期）。<b>ノブではなく版の選択子</b>で、
+/// <b>既定が採用候補</b>（床あり × 暴発時 −<see cref="SmearTrait.PerErupt"/>）。
+///
+/// <para><see cref="Phase180"/> に戻すと第180期と1ビットも違わない——
+/// これが回帰の検算になる（<c>compare</c> の R0 列が採用前の <c>docs/balance.md</c> と一致する）。</para>
+///
+/// <para><b>強度の数値そのものは各 <c>Trait</c> の <c>public const</c> のまま</b>
+/// （第180期の作法）。ここで振るのは<b>どの形か</b>だけで、
+/// <c>Threshold</c> / <c>SwingBonus</c> / <c>HealPerSwing</c> は1つも動かしていない。</para>
+/// </summary>
+/// <param name="Floor">
+/// 暴発の1発に<b>素攻の床</b>を置くか。真なら
+/// <c>max(素攻, 現在攻撃力) + SwingBonus</c>——<b>下げ（呪詛の漏れ・他の泥・<c>Dull</c>）は
+/// 素攻より下へ効かず、上げ（号令の鬨・溜め）はそのまま乗る</b>。
+/// 第180期は <c>現在攻撃力 + SwingBonus</c> で、ネルの漏れ（−5）が乗る行では1発が 3 に落ちていた。
+/// </param>
+/// <param name="Smear">泥散りを撒く周期。</param>
+public readonly record struct EruptRule(bool Floor, SmearWhen Smear)
+{
+    /// <summary>第181期の既定（＝採用候補）。</summary>
+    public static EruptRule Default => new(true, SmearWhen.PerErupt);
+
+    /// <summary>第180期そのもの（回帰の検算に使う）。</summary>
+    public static EruptRule Phase180 => new(false, SmearWhen.PerHit);
+}
+
+/// <summary>
 /// 暴発（第180期・泥人形ムド）。<b>殴られた<u>回数</u>を溜め、閾を越えた瞬間その場で割り込み、
 /// 溜めた回数だけ連撃する。1発ごとに少し回復し、倒れたら不発。</b>
 ///
@@ -10107,7 +10149,15 @@ public sealed class EruptTrait : Trait
     /// （後衛特化＝<see cref="SniperTrait"/> が <c>Ready(self)</c> を読むのと同じ形）。
     /// </summary>
     public override int ModifyAttack(UnitState self, int atk)
-        => self.RawCounter(BurstKey) > 0 ? atk + SwingBonus : atk;
+    {
+        if (self.RawCounter(BurstKey) <= 0) return atk;
+        // 第181期。**床は素攻**——下げ（呪詛の漏れ・他の泥・`Dull`）は素攻より下へ効かず、
+        // 上げ（号令の鬨・溜め）は `atk` に乗ったまま残る。
+        // **「素攻 + SwingBonus」に固定しない**のは、ガンの +8 が暴発に届かなくなるため
+        // （号令と暴発の連鎖を切らない・指示書 §1-1）。
+        bool floor = (self.Board?.Erupt ?? EruptRule.Default).Floor;
+        return (floor ? Math.Max(self.Def.Attack, atk) : atk) + SwingBonus;
+    }
 
     public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
     {
@@ -10133,6 +10183,12 @@ public sealed class EruptTrait : Trait
         ctx.Interrupt(() =>
         {
             ctx.Log($"    ★ {self.Name} が溜め込んだ泥を撒き散らす（{n} 連撃）", LogKind.Highlight, self);
+
+            // 第181期。**泥は最初の1発より前に散らす**（「暴れ出した瞬間に泥が飛ぶ」）
+            // ——同じ暴発の後にウツが動けば、下がった値をそのまま読める（指示書 §1-2）。
+            // **暴発が不発なら泥も散らない**（この行はここより上の門を全部通ったあとにある）。
+            if (ctx.Erupt.Smear == SmearWhen.PerErupt) SmearTrait.Scatter(ctx, self, SmearTrait.PerErupt);
+
             self.SetCounter(BurstKey, 1);
             try
             {
@@ -10141,7 +10197,9 @@ public sealed class EruptTrait : Trait
                     // **1発ごとに見る。** 反撃で自分が倒れる／敵が全滅する経路があるので、
                     // 見ないと空振りの PerformAttack が回数ぶん並ぶ（計数にも台本にも空の段が残る）。
                     if (!self.IsAlive || !ctx.TeamAlive(ctx.Opponent(self.TeamId))) break;
-                    ctx.NoteEruptSwing(self);
+                    // **計数のみ**（第181期）。`CurrentAttack` はここで1回だけ読む
+                    // ——`AtkBonus < 0` の発が「床が無ければ素攻より下だった発」である。
+                    ctx.NoteEruptSwing(self, self.CurrentAttack, self.AtkBonus < 0);
                     ctx.PerformAttack(self, "    ");
                     ctx.Heal(self, HealPerSwing, self);
                 }
@@ -10159,62 +10217,73 @@ public sealed class EruptTrait : Trait
 }
 
 /// <summary>
-/// 泥散り（第180期・暴発の代金）。<b>殴られるたび、隣接する味方の攻撃力が下がる</b>（恒久累積）。
+/// 泥散り（第180期に足し、<b>第181期に発火口を「暴発したとき」へ移した</b>）。
+/// <b>暴発が起きた瞬間に1回だけ、隣接する味方の攻撃力が下がる</b>（恒久累積）。
 ///
 /// <para><b>窓口は <see cref="BattleContext.Dull"/>。</b> <c>AtkBonus</c> を直に引かない（第42期の規約）
 /// ——通すことで 逆しま（ウツ）・引き受け（ウケ）・渡し（ワタ）の読み手にそのまま合流し、
 /// <c>dull</c> / <c>carry</c> / <c>spend</c> の帳簿にも経路名で載る。</para>
 ///
-/// <para><b>供給の周期が「相手が殴ってくる回数」で決まる初めての弱体経路。</b>
-/// 既存の10本はどれも自分の手番か開戦時が起点で、撒く側が回数を決めている
-/// ——泥散りは<b>ムドが殴られるほど細かく積む</b>ので、ハネの一括 −2（ウツの1発ぶん 3 に届かない）と違い
-/// ウツの発数（<see cref="PerverseTrait.HitsPerDull"/> ごとに +1）へ届きうる。</para>
+/// <para><b>第180期は「数えた被弾1回ごとに −1」だった。</b> 実測では泥が 2.84〜17.70 点/戦まで積み、
+/// <b>読み手（ウツ）が隣に立つ行が盤面に1行も無い</b>ので在席 8 行すべてで純損になった（R287）。
+/// 第181期は<b>発火口を暴発に束ね</b>、1回の量を −<see cref="PerErupt"/> に上げた
+/// ——総量はおよそ半分になり、<b>「暴れた瞬間に泥が飛ぶ」1つの絵</b>に畳まれる。
+/// <b>−1 のままにしなかった</b>のは、総量が 1〜3 まで落ちるとウツの発数
+/// （<see cref="PerverseTrait.HitsPerDull"/> ごとに +1）へ届かないため
+/// ——ハネの一括 −2 がウツの1発ぶんに届かなかった前例がある。</para>
+///
+/// <para><b>この札は発火口を持たない</b>（<see cref="SmearWhen.PerHit"/> のときだけ
+/// <see cref="OnDamaged"/> が鳴る）。既定では本体は <see cref="EruptTrait"/> の割り込みの中にある
+/// ——引き受け（<see cref="BearTrait"/>）・塞ぎ（<see cref="SealTrait"/>）と同じ「札だけの札」で、
+/// <b>外せば泥は1点も散らない</b>（`checkup` の <c>yP</c> がそのまま組める）。</para>
 ///
 /// <para><b>支援拒否（ガルド）は弾く。隣へ流さない</b>（突き返し＝<see cref="ShoveTrait"/> と同じ側）。
 /// <b>ムド自身には効かせない。</b></para>
-///
-/// <para><b>数える集合は暴発と完全に同一</b>（刻みと自傷を外す）——ムドの札で「1発」の定義が割れないこと。
-/// <b>倒れた被弾でも散る</b>（泥は最後の一撃でも飛ぶ）。</para>
 /// </summary>
 public sealed class SmearTrait : Trait
 {
-    /// <summary>被弾1回ごとに隣の味方から引く攻撃力（指示書 §1-2 が<b>測る前に固定</b>した値）。</summary>
+    /// <summary>第180期の量（被弾1回ごと）。<b>対照（<see cref="SmearWhen.PerHit"/>）でだけ使う。</b></summary>
     public const int PerHit = 1;
+
+    /// <summary>第181期の量（暴発1回ごと）。指示書 §1-2 が<b>測る前に固定</b>した値。</summary>
+    public const int PerErupt = 3;
 
     public override TraitId Id => TraitId.Smear;
 
-    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    /// <summary>
+    /// 隣接する味方へ泥を散らす。<b>呼び口は2つ</b>——第180期の版（<see cref="OnDamaged"/>）と、
+    /// 第181期の既定（<see cref="EruptTrait"/> の割り込みの入口）。
+    /// </summary>
+    public static void Scatter(BattleContext ctx, UnitState self, int amount)
     {
-        if (dmg <= 0) return;
-        if (source is null || ReferenceEquals(source, self)) return;   // 暴発と同じ集合
-
+        if (amount <= 0) return;
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
             if (ally == self) continue;
             if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
             if (!ally.AcceptsSupport) { ctx.NoteSmearBlocked(self); continue; }
-            ctx.Dull(ally, PerHit, DullRoute.Smear, self);
-            ctx.NoteSmear(self, PerHit);
+            ctx.Dull(ally, amount, DullRoute.Smear, self);
+            ctx.NoteSmear(self, amount);
+            // 第181期。**台本に1行残す**——泥は `Dull` の窓口を通るだけなので、
+            // 第180期は戦闘ログに1文字も出ていなかった（「暴れた瞬間に泥が飛ぶ」が読めない）。
+            // **`verbose` のときしか作られない**ので盤面には1ビットも影響しない。
+            ctx.Log($"    {self.Name} の泥が {ally.Name} にかかった（攻撃 -{amount}）", LogKind.FriendlyFire);
         }
+    }
+
+    /// <summary>
+    /// 第180期の版。<b>数える集合は暴発と完全に同一</b>（刻みと自傷を外す）。
+    /// <b>既定（<see cref="SmearWhen.PerErupt"/>）では1行も走らない。</b>
+    /// </summary>
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        if (ctx.Erupt.Smear != SmearWhen.PerHit) return;
+        if (dmg <= 0) return;
+        if (source is null || ReferenceEquals(source, self)) return;   // 暴発と同じ集合
+        Scatter(ctx, self, PerHit);
     }
 }
 
-/// <summary>
-/// 吐き戻し（第180期・澱み喰いのヴィオ）。<b>吸い上げた毒を腹に溜め、
-/// 手番の攻撃が命中したとき、腹から最大 <see cref="SpitMax"/> 層を標的へ毒として移す。</b>
-///
-/// <para><b>澱み喰い（<see cref="BlightfedTrait"/>）の式は1文字も触っていない</b>
-/// ——吸う → 攻撃力、は据え置きで、<b>吐く経路だけを足した</b>（変数を1つに絞る）。
-/// 記帳は <c>BlightfedTrait</c> の中の1行で、<b>この札が無ければ在庫は増えるだけ</b>
-/// （盤面には1ビットも影響しない＝対照がそのまま作れる）。</para>
-///
-/// <para><b>これが chain-out。</b> 澱み喰いは chain-in（グザの漏れ・スィドの漏れ）を持ちながら
-/// 出口が無く、「強くなって殴るだけ」で閉じていた。敵に付いた毒は
-/// 澱み（ミオ・増幅）・疫み（ラウ・死骸から飛散）・毒喰らい（ベニ・喰って回復）の餌になる。</para>
-///
-/// <para><b>毒の窓口（<see cref="BattleContext.Poison"/>）を通す</b>（第90期）
-/// ——滲み則の入口も台本の <c>StatusGain</c> も、ここを通らないと載らない。</para>
-/// </summary>
 public sealed class SpitTrait : Trait
 {
     /// <summary>1回の命中で移せる層の上限（指示書 §2-1 が<b>測る前に固定</b>した値）。</summary>
