@@ -163,6 +163,16 @@
 軛・渇きは `--effect=yoke` / `--effect=drought`、
 粛は `SealEffectCheck.tscn` で確認可能。
 
+## シガの鞭
+
+ユーザー指定の効果音ラボ素材を無加工でコピー。シガの攻撃時に3種類から選び、同じ音の連続を避ける。
+
+| アプリ内ファイル | 元ファイル |
+|---|---|
+| shiga_attack_1.mp3 | D:/Assets/SE/効果音ラボ/戦闘/鞭で攻撃1.mp3 |
+| shiga_attack_2.mp3 | D:/Assets/SE/効果音ラボ/戦闘/鞭で攻撃2.mp3 |
+| shiga_attack_3.mp3 | D:/Assets/SE/効果音ラボ/戦闘/鞭で攻撃3.mp3 |
+
 ## 状態異常音
 
 ユーザー指定の次のファイルを無加工でコピー。通常SEと同じ4音枠・-10 dBで再生する。

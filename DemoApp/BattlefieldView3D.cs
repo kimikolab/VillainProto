@@ -282,6 +282,7 @@ public partial class BattlefieldView3D : Control
     public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName, int stageIndex)
     {
         _shieldCowedGeneration++;
+        TormentHitPlays = 0;
         _attackAudio.StopAll();
         // 波の番号で背景を選ぶ。表示名や戦闘ログの文字列は判定に使わない。
         bool fortress = stageIndex == 3;
@@ -611,7 +612,8 @@ public partial class BattlefieldView3D : Control
                 }
                 break;
             default:
-                if (from.UnitId == "mudo") MakePunchImpact(to, from.AnimationSpeed);
+                if (from.UnitId == "shiga") await ShowWhipAttack(from, to);
+                else if (from.UnitId == "mudo") MakePunchImpact(to, from.AnimationSpeed);
                 else MakeSingleSlash(from, to, color);
                 break;
         }

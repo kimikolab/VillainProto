@@ -1247,7 +1247,10 @@ public partial class Main : Control
                 bool continuingCombo = actor is not null && _comboEnds.ContainsKey(actor);
                 if (e.Reaction && !continuingCombo)
                     await _battleField.ShowBonusAttack(actor);
-                if (!continuingCombo && actor is not null && FindComboEnd(eventIndex, e) is { } comboEnd)
+                // 責め苦も位置保持だけを共用する。Attackの回数・連撃の計数は増やさない。
+                int? holdEnd = FindComboEnd(eventIndex, e)
+                    ?? (actor?.UnitId == "shiga" && _result is not null ? FindTormentEnd(_result.Events, eventIndex) : null);
+                if (!continuingCombo && actor is not null && holdEnd is { } comboEnd)
                 {
                     _comboEnds[actor] = comboEnd;
                 }
@@ -1280,6 +1283,7 @@ public partial class Main : Control
             case BattleEventKind.Parry:
                 if (_batchedDamageIndices.Contains(eventIndex)) break;
                 if (_burstDamageIndices.Contains(eventIndex)) break;
+                await PlayTormentHit(eventIndex, actor, target);
                 if (e.Reaction && StartsDirectReaction(eventIndex, e))
                 {
                     await _battleField.ShowBonusAttack(actor);
@@ -1305,6 +1309,7 @@ public partial class Main : Control
                     await _battleField.ShowBonusAttack(actor);
                     _battleField.PlayDirectReactionSound(actor);
                 }
+                await PlayTormentHit(eventIndex, actor, target);
                 ShowDamage(eventIndex, e, actor, target);
                 await Delay(IsMudoCombo(actor) ? 0.10 : 0.16);
                 if (!e.Relayed && target?.IsGuarding == true)
@@ -1788,6 +1793,8 @@ public partial class Main : Control
     private int ApplyBurstAtOnce(int highlightIndex, BattleEvent highlight)
     {
         if (_result is null || highlight.ActorId is null) return 0;
+        // 責め苦の2発目は個別の鞭。全体攻撃の先取りに吸わせない。
+        if (_battleField.FindPawn(highlight.ActorId)?.UnitId == "shiga") return 0;
 
         var hits = new List<int>();
         for (int i = highlightIndex + 1; i < _result.Events.Count; i++)

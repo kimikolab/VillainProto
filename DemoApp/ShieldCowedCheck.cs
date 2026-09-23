@@ -74,7 +74,10 @@ public partial class ShieldCowedCheck : Control
             await Wait(0.7);
             field.SetBinding(kugu, victim, true);
             await Wait(0.4);
-            await field.Attack(shiga, victim, AttackPattern.Single, new[] { victim });
+            var whipAttack = field.Attack(shiga, victim, AttackPattern.Single, new[] { victim });
+            await Wait(0.10);
+            await Capture("shiga-whip");
+            await whipAttack;
             var scream = field.ShowCowedSpread(victim, recipients, 2);
             await Wait(0.14);
             await Capture("scream-wave");
@@ -120,8 +123,12 @@ public partial class ShieldCowedCheck : Control
         int expectedLost = result.Events.Count(e => e.Kind == BattleEventKind.Cowed && e.Text == CowedLabels.Lost);
         Require(expectedLost > 0 && (int)Read("_cowedLostPlays")! == expectedLost, "消費通知を1回ずつ再生");
         var field = (BattlefieldView3D)Read("_battleField")!;
+        int expectedTorment = Enumerable.Range(0, result.Events.Count).Count(i =>
+            field.FindPawn(result.Events[i].ActorId)?.UnitId == "shiga" && Main.IsTormentHit(result.Events, i));
+        Require(expectedTorment > 0 && field.TormentHitPlays == expectedTorment,
+            "責め苦の特性ダメージごとに鞭と音を1回再生");
         Require(field.Pawns.Values.All(p => !p.HasStatusIcon(StatusKeys.Cowed)), "終了後に竦みを残さない");
-        GD.Print($"SHIELD_COWED_REPLAY_OK events={result.Events.Count} lost={expectedLost}");
+        GD.Print($"SHIELD_COWED_REPLAY_OK events={result.Events.Count} lost={expectedLost} torment={field.TormentHitPlays}");
         main.QueueFree();
         await Wait(1);
     }

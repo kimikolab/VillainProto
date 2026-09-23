@@ -57,6 +57,12 @@ public partial class BattleAttackAudio : Node
         "res://assets/audio/se/mudo_attack_2.mp3",
         "res://assets/audio/se/mudo_attack_3.mp3",
     };
+    private static readonly string[] ShigaAttack =
+    {
+        "res://assets/audio/se/shiga_attack_1.mp3",
+        "res://assets/audio/se/shiga_attack_2.mp3",
+        "res://assets/audio/se/shiga_attack_3.mp3",
+    };
     private static readonly string[] KadoHit = { "res://assets/audio/se/kado_hit.mp3" };
     private static readonly string[] Heal = { "res://assets/audio/se/heal_magic_1.mp3" };
     private static readonly string[] TraitHeal = { "res://assets/audio/se/heal_trait.mp3" };
@@ -134,6 +140,7 @@ public partial class BattleAttackAudio : Node
         LoadSound(YomiAttack[0]);
         foreach (string path in UtsuAttack) LoadSound(path);
         foreach (string path in MudoAttack) LoadSound(path);
+        foreach (string path in ShigaAttack) LoadSound(path);
         LoadSound(KadoHit[0]);
         LoadSound(Heal[0]);
         LoadSound(TraitHeal[0]);
@@ -189,6 +196,7 @@ public partial class BattleAttackAudio : Node
         if (!reaction && unitId == "yomi") { PlayVariation(YomiAttack); return; }
         if (unitId == "utsu") { PlayVariation(UtsuAttack); return; }
         if (unitId == "mudo") { PlayVariation(MudoAttack, 3); return; }
+        if (unitId == "shiga") { PlayVariation(ShigaAttack); return; }
         if (reaction && unitId == "kado") { PlayVariation(KadoCounter); return; }
         string[] paths = _overrides.GetValueOrDefault((unitId, pattern))
             ?? (team == BattleContext.EnemyTeam ? EnemyCommon : Common);
