@@ -66,6 +66,7 @@ public partial class BattleAttackAudio : Node
     private static readonly string[] KadoHit = { "res://assets/audio/se/kado_hit.mp3" };
     private static readonly string[] Heal = { "res://assets/audio/se/heal_magic_1.mp3" };
     private static readonly string[] TraitHeal = { "res://assets/audio/se/heal_trait.mp3" };
+    private static readonly string[] GaldReflect = { "res://assets/audio/se/gald_reflect.mp3" };
     private static readonly string[] KadoCounter = { "res://assets/audio/se/kado_counter.mp3" };
     private static readonly string[] MagicCharge = { "res://assets/audio/se/charge_magic.mp3" };
     private static readonly string[] MagicChargeRelease = { "res://assets/audio/se/charge_magic_release.mp3" };
@@ -79,6 +80,7 @@ public partial class BattleAttackAudio : Node
     private static readonly string[] PoisonDamage = { "res://assets/audio/se/poison_damage.mp3" };
     private static readonly string[] StaggerGain = { "res://assets/audio/se/stagger_gain.mp3" };
     private static readonly string[] ConfusedGain = { "res://assets/audio/se/confused_gain.mp3" };
+    private static readonly string[] CowedGain = { "res://assets/audio/se/cowed_gain.mp3" };
     private static readonly string[] Yoke = { "res://assets/audio/se/rule_yoke.mp3" };
     private static readonly string[] Drought = { "res://assets/audio/se/rule_drought.mp3" };
     private static readonly string[] HushBlock = { "res://assets/audio/se/hush_block.mp3" };
@@ -144,6 +146,7 @@ public partial class BattleAttackAudio : Node
         LoadSound(KadoHit[0]);
         LoadSound(Heal[0]);
         LoadSound(TraitHeal[0]);
+        LoadSound(GaldReflect[0]);
         LoadSound(KadoCounter[0]);
         LoadSound(MagicCharge[0]);
         LoadSound(MagicChargeRelease[0]);
@@ -157,6 +160,7 @@ public partial class BattleAttackAudio : Node
         LoadSound(PoisonDamage[0]);
         LoadSound(StaggerGain[0]);
         LoadSound(ConfusedGain[0]);
+        LoadSound(CowedGain[0]);
         LoadSound(Yoke[0]);
         LoadSound(Drought[0]);
         LoadSound(HushBlock[0]);
@@ -204,6 +208,8 @@ public partial class BattleAttackAudio : Node
     }
 
     public void PlayParry() => PlayVariation(ParrySounds);
+    public void PlayGaldReflect() => PlayVariation(GaldReflect);
+    public void PlayCowedGain() => PlayVariation(CowedGain);
     public void PlayBattleStart() => PlayVariation(BattleStart);
     public void PlayAttackChange(int change)
     {

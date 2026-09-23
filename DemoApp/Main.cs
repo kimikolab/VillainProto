@@ -1649,16 +1649,28 @@ public partial class Main : Control
                 await Delay(0.22);
                 break;
 
-            // 号令と支援拒否の流れ（台本は BattleCore が出す・表示専用）。ここではログに書くだけで絵は出さない
-            // ——絵は design/CODEX_BRIEF_RALLY_STOIC.md §2 の側。
+            // 支援拒否の分配と回復拒否を台本から描く。号令単体と叩き起こしはログのみ。
             case BattleEventKind.Whet:
                 _whetLogs++;
                 if (e.IntendedId is { } via && via != e.TargetId) _whetRelayedLogs++;
                 AppendLog(WhetLogText(e));
+                // 一連の終端で束ね、盾から全員へ同時に分岐させる。
+                if (e.SupportLast && e.IntendedId != e.TargetId
+                    && _battleField.FindPawn(e.IntendedId) is { UnitId: "gald" } relay
+                    && _result is not null)
+                {
+                    var deliveries = _result.Events.Take(eventIndex + 1)
+                        .Where(x => x.Kind == BattleEventKind.Whet && x.SupportSeq == e.SupportSeq
+                            && x.IntendedId == e.IntendedId)
+                        .ToArray();
+                    await _battleField.ShowStoicSupport(actor, relay, deliveries, _speed);
+                }
                 break;
 
             case BattleEventKind.HealBlocked:
                 _healBlockedLogs++;
+                if (target is { UnitId: "gald" })
+                    await _battleField.ShowStoicSupport(actor, target, Array.Empty<BattleEvent>(), _speed);
                 AppendLog($"  [color=#{UiKit.Muted.ToHtml(false)}]{NameOf(e.TargetId)} は回復 {e.Amount} を弾いた（隣へは流れない）[/color]"
                           + WriterSuffix(e.ActorId, e.TargetId));
                 break;

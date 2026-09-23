@@ -92,12 +92,16 @@ public partial class BattlefieldView3D
         }
         await ToSignal(GetTree().CreateTimer(travel), SceneTreeTimer.SignalName.Timeout);
         if (generation != _shieldCowedGeneration) return;
+        bool applied = false;
         foreach (var recipient in recipients)
         {
             if (!GodotObject.IsInstanceValid(recipient) || !recipient.IsInsideTree()) continue;
             recipient.AnimationSpeed = speed;
             recipient.SetStatusIcon(StatusKeys.Cowed, true);
+            applied = true;
         }
+        // 悲鳴が届いて竦みが付く拍に1音。複数への同時付与でも重ねない。
+        if (applied) _attackAudio.PlayCowedGain();
         await ToSignal(GetTree().CreateTimer(Math.Max(0.16, 0.28 / Math.Max(0.1, speed))), SceneTreeTimer.SignalName.Timeout);
     }
 
