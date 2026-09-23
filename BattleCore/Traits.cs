@@ -5917,6 +5917,8 @@ public sealed class BlightfedTrait : Trait
     public override void OnTurnStart(BattleContext ctx, UnitState self)
     {
         int drawn = 0;
+        // 第183期 追補3・**表示専用**。台本を積むときだけ、味方ごとの吸い上げを控える（盤面は読まない）。
+        List<(UnitState, int)>? shown = ctx.Verbose ? new() : null;
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
             if (ally == self) continue;
@@ -5925,6 +5927,7 @@ public sealed class BlightfedTrait : Trait
             ctx.NoteLeakDrawn(self, ally, poison);   // 第183期・**計数のみ**（漏れ由来の上限）
             ally.SetCounter(StatusKeys.Poison, 0);
             drawn += poison;
+            shown?.Add((ally, poison));
         }
         if (drawn == 0) return;
 
@@ -5934,6 +5937,7 @@ public sealed class BlightfedTrait : Trait
         // 盤面には1ビットも影響しない（対照 ＝ `Spit` を外した版はこの行を通っても同値）。
         self.SetCounter(SpitTrait.BellyKey, self.RawCounter(SpitTrait.BellyKey) + drawn);
         ctx.NoteSpitStore(self, drawn);
+        if (shown is not null) ctx.EmitStatusDrain(self, StatusKeys.Poison, shown);   // 第183期 追補3・表示専用（攻撃力を上げた後に打つ）
         ctx.Log($"    {self.Name} が味方の澱みを吸い上げた（{drawn}層 / 攻撃 +{drawn * GainPerStack}）", LogKind.Trigger);
     }
 }

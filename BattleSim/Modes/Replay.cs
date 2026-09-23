@@ -90,6 +90,10 @@ public static void Run(string[] args, int stageIndex)
             shareFrom = e.ShareFromId,   // 第182期・呪いの受け渡しの出どころ（それ以外は null）
             poisonRoute = e.PoisonRoute?.ToString(),   // 第183期 追補2・毒の付与経路（毒の StatusGain 以外は null）
             spreadFrom = e.SpreadFromId,               // 第183期 追補2・伝染の元の敵（Touch 以外は null）
+            remaining = e.StatusRemaining,             // 第183期 追補3・StatusDrain: 吸われた駒に残った量
+            drainSeq = e.DrainSeq,                     // 第183期 追補3・StatusDrain: 同じ吸い上げの一連
+            drainLast = e.DrainLast,                   // 第183期 追補3・StatusDrain: 一連の最後の1件
+            attackAfter = e.AttackAfter,               // 第183期 追補3・StatusDrain: 最後の1件にだけ吸った側の攻撃力
             text = e.Text
         }).ToList()
     };

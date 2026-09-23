@@ -2043,7 +2043,19 @@ public enum BattleEventKind
     /// （渇き＝入るはずだった回復／軛＝切り落とされた量／粛＝0）、
     /// <c>Text</c> = <see cref="SealedLabels"/>。<b>どの規則も読まない。</b></para>
     /// </summary>
-    Sealed
+    Sealed,
+
+    /// <summary>
+    /// 状態を<b>取り上げた瞬間</b>（第183期 追補3・<b>表示専用</b>）。まず澱み喰いのヴィオの吸い上げで出す。
+    ///
+    /// <para><b>吸われた味方1体につき1件</b>。同じ吸い上げの一連は <c>DrainSeq</c> が同じ値で、
+    /// 一連の最後の1件だけ <c>DrainLast</c> が真になり、<c>AttackAfter</c> に吸い上げ後の攻撃力が載る。</para>
+    ///
+    /// <para><c>ActorId</c> = 吸った駒、<c>TargetId</c> = 吸われた駒、<c>Text</c> = 状態のキー（<see cref="StatusKeys"/>）、
+    /// <c>Amount</c> = 吸った量、<c>StatusRemaining</c> = 吸った後にその駒に残った量。
+    /// <b>どの規則も読まない。</b> <c>verbose</c> のときしか積まない。</para>
+    /// </summary>
+    StatusDrain
 }
 
 /// <summary>
@@ -2242,6 +2254,24 @@ public sealed class BattleEvent
     /// それ以外では <c>null</c>。<b>どの規則も読まない。</b>
     /// </summary>
     public int? SpreadFromId { get; init; }
+
+    /// <summary><see cref="BattleEventKind.StatusDrain"/> のときだけ: 取り上げた後に吸われた駒に残った量（第183期 追補3・<b>表示専用</b>）。</summary>
+    public int? StatusRemaining { get; init; }
+
+    /// <summary>
+    /// <see cref="BattleEventKind.StatusDrain"/> のときだけ: 同じ吸い上げの一連を束ねる通し番号（1戦の中で 1 から数える）。
+    /// 同じ値の件が1回の吸い上げ（第183期 追補3・<b>表示専用</b>）。
+    /// </summary>
+    public int? DrainSeq { get; init; }
+
+    /// <summary><see cref="BattleEventKind.StatusDrain"/> のときだけ: 一連の最後の1件か（第183期 追補3・<b>表示専用</b>）。</summary>
+    public bool DrainLast { get; init; }
+
+    /// <summary>
+    /// <see cref="BattleEventKind.StatusDrain"/> の一連の最後の1件にだけ: 吸い上げが終わった時点の吸った側の攻撃力
+    /// （<c>CurrentAttack</c>。第183期 追補3・<b>表示専用</b>）。
+    /// </summary>
+    public int? AttackAfter { get; init; }
 
     /// <summary>Highlight / Status のフレーバー。演出の中身ではなく添え物として扱う。</summary>
     public string? Text { get; init; }

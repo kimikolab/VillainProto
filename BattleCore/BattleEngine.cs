@@ -4800,6 +4800,43 @@ public sealed class BattleContext
     /// <param name="rule"><see cref="SealedLabels"/> の3つのどれか。</param>
     /// <param name="amount">通らなかった量（渇き＝入るはずだった回復／軛＝切り落とされた量／粛＝0）。</param>
     /// <param name="by">相手側の駒（軛なら殴った駒）。粛・渇きは null。</param>
+    /// <summary>吸い上げの通し番号（第183期 追補3・表示専用）。1戦の中で 1 から数える。</summary>
+    private int _drainSeq;
+
+    /// <summary>台本を積むか（表示専用の束ねを特性の側で組むときの番人。<b>盤面の判断に使わないこと</b>）。</summary>
+    public bool Verbose => _verbose;
+
+    /// <summary>
+    /// 状態を取り上げた一連を台本に打つ（第183期 追補3・<b>表示専用</b>）。
+    /// 吸われた駒1体につき1件、同じ <c>DrainSeq</c> を振り、最後の1件にだけ吸った側の攻撃力を載せる。
+    /// <b>盤面には一切影響しない</b>（<c>verbose</c> 偽では何もしない）。
+    /// </summary>
+    public void EmitStatusDrain(UnitState drainer, string key,
+                                IReadOnlyList<(UnitState From, int Amount)> drained)
+    {
+        if (!_verbose || drained.Count == 0) return;
+        int seq = ++_drainSeq;
+        for (int i = 0; i < drained.Count; i++)
+        {
+            bool last = i == drained.Count - 1;
+            (UnitState from, int amount) = drained[i];
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.StatusDrain,
+                Turn = _turn,
+                ActorId = drainer.InstanceId,
+                TargetId = from.InstanceId,
+                Amount = amount,
+                Text = key,
+                Team = drainer.TeamId,
+                StatusRemaining = from.RawCounter(key),
+                DrainSeq = seq,
+                DrainLast = last,
+                AttackAfter = last ? drainer.CurrentAttack : null,
+            });
+        }
+    }
+
     internal void EmitSealed(UnitState target, string rule, int amount, UnitState? by = null)
     {
         if (!_verbose) return;
