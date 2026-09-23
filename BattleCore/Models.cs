@@ -2228,6 +2228,21 @@ public sealed class BattleEvent
     /// </summary>
     public int? ShareFromId { get; init; }
 
+    /// <summary>
+    /// 毒の <c>StatusGain</c> のときだけ、<b>付与経路</b>（<see cref="BattleCore.PoisonRoute"/>）が入る
+    /// （第183期 追補2・<b>表示専用</b>）。毒の窓口（<c>BattleContext.Poison</c>）を通った付与はすべて載る。
+    /// 毒以外の <c>StatusGain</c> と他の種類では <c>null</c>。<b>どの規則も読まない。</b>
+    /// </summary>
+    public PoisonRoute? PoisonRoute { get; init; }
+
+    /// <summary>
+    /// 伝染（<see cref="PoisonRoute.Touch"/>・疫みのラウ）の <c>StatusGain</c> のときだけ、
+    /// <b>うつした元の敵 ＝ ラウに殴られた標的</b>の InstanceId が入る（第183期 追補2・<b>表示専用</b>）。
+    /// <c>ActorId</c> はラウ、<c>TargetId</c> はうつされた隣の敵。線は <c>SpreadFromId</c> → <c>TargetId</c> に引く。
+    /// それ以外では <c>null</c>。<b>どの規則も読まない。</b>
+    /// </summary>
+    public int? SpreadFromId { get; init; }
+
     /// <summary>Highlight / Status のフレーバー。演出の中身ではなく添え物として扱う。</summary>
     public string? Text { get; init; }
 }

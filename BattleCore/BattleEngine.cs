@@ -738,7 +738,13 @@ public sealed class BattleContext
     /// 滲みで深くなったときだけ1行足す。</para>
     /// </summary>
     /// <param name="writer">書いた駒（計数の帰属先。<b>盤面には一切影響しない</b>）。</param>
-    public void Poison(UnitState target, int amount, UnitState writer, PoisonRoute route)
+    /// <param name="spreadFrom">
+    /// <b>表示専用</b>（第183期 追補2）。伝染（<see cref="PoisonRoute.Touch"/>）のときだけ、
+    /// <b>うつした元の敵（殴られた標的）</b>を渡す。台本の <see cref="BattleEvent.SpreadFromId"/> に載るだけで、
+    /// <b>どの規則も読まない</b>。
+    /// </param>
+    public void Poison(UnitState target, int amount, UnitState writer, PoisonRoute route,
+                       UnitState? spreadFrom = null)
     {
         if (!target.IsAlive || amount <= 0) return;
 
@@ -767,7 +773,7 @@ public sealed class BattleContext
         }
 
         target.SetCounter(StatusKeys.Poison, target.RawCounter(StatusKeys.Poison) + add);
-        EmitStatusGain(target, StatusKeys.Poison, add, writer);   // 第97期・表示専用（滲みで増えたぶんも込み）
+        EmitStatusGain(target, StatusKeys.Poison, add, writer, route, spreadFrom);   // 第97期・表示専用（滲みで増えたぶんも込み）。第183期 追補2: 経路と伝染元
         if (add != amount)
             Log($"    {target.Name} の{(deepW ? "深手" : "傷口")}から毒が滲みた（+{add - amount}）", LogKind.Status);
     }
@@ -4675,7 +4681,8 @@ public sealed class BattleContext
     /// 1件も作られない。<b>盤面には一切影響しない</b>——<c>NoteStatusGain</c> の計数にも触っていない。</para>
     /// </summary>
     /// <param name="writer">書いた駒。engine の規則が足したぶんは null。</param>
-    internal void EmitStatusGain(UnitState target, string key, int amount, UnitState? writer)
+    internal void EmitStatusGain(UnitState target, string key, int amount, UnitState? writer,
+                                 PoisonRoute? route = null, UnitState? spreadFrom = null)
     {
         if (!_verbose || amount <= 0) return;
         Emit(new BattleEvent
@@ -4686,6 +4693,8 @@ public sealed class BattleContext
             TargetId = target.InstanceId,
             Amount = amount,
             Text = key,
+            PoisonRoute = route,                     // 第183期 追補2・表示専用（毒の窓口を通ったときだけ）
+            SpreadFromId = spreadFrom?.InstanceId,   // 第183期 追補2・表示専用（伝染のときだけ）
         });
     }
 

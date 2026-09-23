@@ -88,6 +88,8 @@ public static void Run(string[] args, int stageIndex)
             team = e.Team,
             pattern = e.Pattern?.ToString(),
             shareFrom = e.ShareFromId,   // 第182期・呪いの受け渡しの出どころ（それ以外は null）
+            poisonRoute = e.PoisonRoute?.ToString(),   // 第183期 追補2・毒の付与経路（毒の StatusGain 以外は null）
+            spreadFrom = e.SpreadFromId,               // 第183期 追補2・伝染の元の敵（Touch 以外は null）
             text = e.Text
         }).ToList()
     };

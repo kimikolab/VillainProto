@@ -10535,7 +10535,7 @@ public sealed class TouchTrait : Trait
         foreach (UnitState foe in ctx.LivingMembers(target.TeamId))
         {
             if (foe == target || !FormationRules.AreAdjacent(target.Slot, foe.Slot)) continue;
-            ctx.Poison(foe, spread, self, PoisonRoute.Touch);
+            ctx.Poison(foe, spread, self, PoisonRoute.Touch, spreadFrom: target);   // 元の敵は表示専用
             hit++;
         }
         if (hit == 0) { ctx.NoteTouchMiss(self); return; }
