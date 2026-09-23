@@ -72,6 +72,13 @@ public readonly record struct EnemyScaleRule(int HpPercent, int AtkPercent)
     public bool Active => HpPercent != 100 || AtkPercent != 100;
 
     static readonly System.Collections.Concurrent.ConcurrentDictionary<(UnitDef, int, int), UnitDef> _cache = new();
+    static readonly System.Collections.Concurrent.ConcurrentDictionary<UnitDef, EnemyScaleRule> _origin = new();
+
+    /// <summary>
+    /// その定義に掛かっている倍率（写しでなければ <see cref="None"/>）。<b>召喚は呼んだ敵と同じ倍率を引き継ぐ</b>
+    /// ——作戦マップは倍率を掛けずに敵を作る（<c>Map11.EnemyScale</c>）ので、召喚だけ既定の倍率が掛かることが無い。
+    /// </summary>
+    public static EnemyScaleRule Of(UnitDef d) => _origin.TryGetValue(d, out EnemyScaleRule r) ? r : None;
 
     /// <summary>
     /// 倍率を掛けた定義。<b>同じ定義・同じ倍率には同じインスタンスを返す</b>（写しの同一性を揃えるため）。
@@ -82,7 +89,9 @@ public readonly record struct EnemyScaleRule(int HpPercent, int AtkPercent)
         return _cache.GetOrAdd((d, HpPercent, AtkPercent), static k =>
         {
             (UnitDef src, int hp, int atk) = k;
-            return src.WithStats(Math.Max(1, src.MaxHp * hp / 100), Math.Max(1, src.Attack * atk / 100));
+            UnitDef w = src.WithStats(Math.Max(1, src.MaxHp * hp / 100), Math.Max(1, src.Attack * atk / 100));
+            _origin[w] = new EnemyScaleRule(hp, atk);
+            return w;
         });
     }
 }
@@ -7538,9 +7547,10 @@ public sealed class BattleContext
         }
         if (slot < 0) return null;
 
-        // 第187期: 敵の駒が敵陣に呼んだときだけ倍率を掛ける（ソムの餌＝味方が敵陣に呼ぶ駒は掛けない）。
+        // 第187期: 敵の駒が敵陣に呼んだときだけ、**呼んだ敵と同じ倍率**を掛ける（ソムの餌＝味方が敵陣に呼ぶ駒は掛けない）。
+        // 規則の束ではなく呼び手の定義から引くのは、作戦マップ（倍率なしで敵を作る）でも召喚だけ既定が掛からないため。
         // **現行の敵の編成に、敵陣へ駒を呼ぶ敵は 0 体**なので、いまの盤面ではこの枝は1度も走らない。
-        if (teamId == EnemyTeam && by is not null && by.TeamId == EnemyTeam) def = Boss.Scale.Apply(def);
+        if (teamId == EnemyTeam && by is not null && by.TeamId == EnemyTeam) def = EnemyScaleRule.Of(by.Def).Apply(def);
 
         var unit = new UnitState
         {

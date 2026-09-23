@@ -25,6 +25,15 @@ public static class Map11
     /// <summary>1 マップの戦闘回数の上限（第168期 <c>BandCap</c> と同じ）。</summary>
     public const int BattleCap = 24;
 
+    /// <summary>
+    /// 敵の数値の倍率（第187期）。<b>作戦マップには掛けない</b>（ポンの判断）——
+    /// 単発戦（`compare` の波）は <see cref="EnemyScaleRule.Default"/>（115 / 115）のままだが、
+    /// このマップは第168期に斥候級と道中の回復 50% で帯に入れたもので、115 / 115 を掛けると
+    /// 「逆」の踏破率が 35.5% → 8.1% まで落ちる。<b>マップの敵を作る口はすべてこれを読む</b>
+    /// （<see cref="Map11State.Prepare"/> / <c>PrepareIntercept</c> と、マップの敵で1戦を回す検査器具）。
+    /// </summary>
+    public static readonly EnemyScaleRule EnemyScale = EnemyScaleRule.None;
+
     // ---------------- 時間（第174期） ----------------
 
     /// <summary>
@@ -816,7 +825,7 @@ public sealed class Map11State
         // ——敵の拠点のマスでは、そこに立っている湧いた部隊が相手になる（§1-2）。
         Node? node = against ?? (Portal.On ? FoeFacing(squadIndex) : NextNode(s.Road));
         if (node is null || node.Cleared) return null;
-        node.Units ??= BattleEngine.Materialize(node.Def.Enemy, BattleContext.EnemyTeam);
+        node.Units ??= BattleEngine.Materialize(node.Def.Enemy, BattleContext.EnemyTeam, Map11.EnemyScale);
         return (pu, node.Units, Map11.DeriveSeed(Seed, Battles), node);
     }
 
@@ -1123,7 +1132,7 @@ public sealed class Map11State
         if (!pu.Any(u => u.IsAlive)) return null;
         s.Deployed = true;
         if (s.Home < 0) s.Home = node.Def.Road;
-        node.Units ??= BattleEngine.Materialize(node.Def.Enemy, BattleContext.EnemyTeam);
+        node.Units ??= BattleEngine.Materialize(node.Def.Enemy, BattleContext.EnemyTeam, Map11.EnemyScale);
         return (pu, node.Units, Map11.DeriveSeed(Seed, Battles), node);
     }
 

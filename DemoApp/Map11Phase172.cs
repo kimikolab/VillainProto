@@ -78,7 +78,7 @@ public static class Map11Phase172
             {
                 var pu = BattleEngine.Materialize(baseF, BattleContext.PlayerTeam)
                                      .Where(u => keep.Contains(u.Slot)).ToList();
-                var eu = BattleEngine.Materialize(foe, BattleContext.EnemyTeam);
+                var eu = BattleEngine.Materialize(foe, BattleContext.EnemyTeam, Map11.EnemyScale);
                 BattleResult r = BattleEngine.Run(pu, eu, 0, verbose: false);
                 write($"| {string.Join(" / ", keep.Select(k => FormationRules.SeatNames[k]))} "
                     + $"| {pu.Count} | {r.Turns} | {(r.PlayerWon ? "勝" : "負")} | **○** |");

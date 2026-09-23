@@ -75,7 +75,7 @@ public static class Map11ArtGap
                     for (int seed = 0; seed < battlesPerPair; seed++)
                     {
                         var pu = BattleEngine.Materialize(sq.F, BattleContext.PlayerTeam);
-                        var eu = BattleEngine.Materialize(n.Enemy, BattleContext.EnemyTeam);
+                        var eu = BattleEngine.Materialize(n.Enemy, BattleContext.EnemyTeam, Map11.EnemyScale);
                         BattleResult r = BattleEngine.Run(pu, eu, seed, verbose: true);
                         battles++;
                         // **`InstanceId` は `BattleContext.Add` が振る**ので、索引は

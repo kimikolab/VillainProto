@@ -234,7 +234,7 @@ public static class Map11Verify
                 {
                     // 1戦だけ。**盤面には何も残さない**（この場で作って捨てる）。
                     var pu = BattleEngine.Materialize(sq.F, BattleContext.PlayerTeam);
-                    var eu = BattleEngine.Materialize(n.Enemy, BattleContext.EnemyTeam);
+                    var eu = BattleEngine.Materialize(n.Enemy, BattleContext.EnemyTeam, Map11.EnemyScale);
                     BattleResult res = BattleEngine.Run(pu, eu, 0, verbose: false);
                     var notes = Map11Info.RuleNotes(res);
                     if (notes.Count == 0) continue;   // 「0 なら出さない」ので行にもしない

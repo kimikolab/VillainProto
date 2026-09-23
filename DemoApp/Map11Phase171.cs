@@ -234,7 +234,7 @@ public static class Map11Phase171
                     for (int seed = 0; seed < battlesPerPair; seed++)
                     {
                         var pu = BattleEngine.Materialize(sq.F, BattleContext.PlayerTeam);
-                        var eu = BattleEngine.Materialize(n.Enemy, BattleContext.EnemyTeam);
+                        var eu = BattleEngine.Materialize(n.Enemy, BattleContext.EnemyTeam, Map11.EnemyScale);
                         // **台本が要るので `verbose: true`。** 帳簿は verbose に依らず積まれる。
                         BattleResult r = BattleEngine.Run(pu, eu, seed, verbose: true);
                         h += r.BoardRules.HushBlocked[0] + r.BoardRules.HushBlocked[1];

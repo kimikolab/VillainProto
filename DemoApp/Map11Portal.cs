@@ -126,7 +126,7 @@ public static class Map11Portal
         // ---- Q0-4: 湧いた部隊を満タンで作る口 ----
         write("## Q0-4: 湧いた部隊を満タンで作る口");
         write("");
-        var fresh = BattleEngine.Materialize(Map11.SpawnEnemy(0), BattleContext.EnemyTeam);
+        var fresh = BattleEngine.Materialize(Map11.SpawnEnemy(0), BattleContext.EnemyTeam, Map11.EnemyScale);
         bool full = fresh.All(u => u.Hp == u.MaxHp && u.Hp == u.Def.MaxHp);
         ok &= full;
         write($"**`BattleEngine.Materialize` の1本だけ**——`Hp = def.MaxHp` を入れるだけで"
