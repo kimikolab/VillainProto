@@ -635,12 +635,12 @@ static class RebirthA2Diag
 
         Console.WriteLine("## 表H. バン（踏みしめ＋範囲の盾＋据えた足）");
         Console.WriteLine();
-        Console.WriteLine("| 行 | 帯 | 席 | 層の平均 | 層で防いだ | 盾で受けた回数 | 盾で受けた量 | 入れ替えの空振り（うち敵） | 生存T | 倒れた率 | 旧の倒れた率 | 旧の被弾 → 新の被弾 |");
-        Console.WriteLine("|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|---|");
+        Console.WriteLine("| 行 | 帯 | 席 | 層の平均 | 層で防いだ | 盾で受けた回数 | 盾で受けた量（半分の後） | 半分で消えた量 | 入れ替えの空振り（うち敵） | 生存T | 倒れた率 | 旧の倒れた率 | 旧の被弾 → 新の被弾 |");
+        Console.WriteLine("|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|");
         foreach (var r in rows)
         {
             if (!Has(r.F, "ban")) continue;
-            double layerSum = 0, layerTurns = 0, saved = 0, takes = 0, taken = 0, refused = 0, refusedFoe = 0, lifeT = 0, dead = 0, deadOld = 0, hitOld = 0, hitNew = 0; int n = 0;
+            double layerSum = 0, layerTurns = 0, saved = 0, takes = 0, taken = 0, halved = 0, refused = 0, refusedFoe = 0, lifeT = 0, dead = 0, deadOld = 0, hitOld = 0, hitNew = 0; int n = 0;
             for (int st = 1; st < 5; st++)
                 for (int seed = 0; seed < Seeds; seed++)
                 {
@@ -649,7 +649,7 @@ static class RebirthA2Diag
                     if (b.TallyByUnit.TryGetValue("ban", out UnitTally? t))
                     {
                         layerSum += t.FootingLayerSum; layerTurns += t.FootingLayerTurns; saved += t.FootingSaved;
-                        takes += t.ShieldTakes; taken += t.ShieldTaken; refused += t.PlantedRefused; refusedFoe += t.PlantedRefusedFoe;
+                        takes += t.ShieldTakes; taken += t.ShieldTaken; halved += t.ShieldHalved; refused += t.PlantedRefused; refusedFoe += t.PlantedRefusedFoe;
                         lifeT += t.FootingLayerTurns; hitNew += t.DamageTaken;
                     }
                     if (b.PlayerStarterFallen.Contains("ban")) dead++;
@@ -659,13 +659,57 @@ static class RebirthA2Diag
                 }
             Console.WriteLine("| " + r.Name + " | " + r.Band + " | " + SlotName(r.F, "ban") + " | " + (layerTurns == 0 ? 0 : layerSum / layerTurns).ToString("F2") + " | "
                               + (saved / n).ToString("F1") + " | " + (takes / n).ToString("F2") + " | " + (taken / n).ToString("F1") + " | "
-                              + (refused / n).ToString("F2") + "（" + (refusedFoe / n).ToString("F2") + "） | " + (lifeT / n).ToString("F2") + " | " + (100.0 * dead / n).ToString("F1") + "% | "
+                              + (halved / n).ToString("F1") + " | " + (refused / n).ToString("F2") + "（" + (refusedFoe / n).ToString("F2") + "） | " + (lifeT / n).ToString("F2") + " | " + (100.0 * dead / n).ToString("F1") + "% | "
                               + (100.0 * deadOld / n).ToString("F1") + "% | " + (hitOld / n).ToString("F1") + " → " + (hitNew / n).ToString("F1") + " |");
         }
         Console.WriteLine();
         Console.WriteLine("- `層の平均` はバンが生きていたターン末の層の平均（最大 3）。`生存T` はバンが生きてターン末を迎えた数。");
-        Console.WriteLine("- `盾で受けた量` は差し替えた一撃の**軽減の前**の量（層・軛はバンの `ApplyDamage` の中で掛かる）。");
+        Console.WriteLine("- `盾で受けた量` は差し替えた一撃を**半分にした後・層の軽減の前**の量（層・軛はバンの `ApplyDamage` の中で掛かる）。");
         Console.WriteLine();
+
+        // ---- 置き場所（中央／端）: 同じ5枚で、バンの席だけを中央の駒と入れ替える ----
+        Console.WriteLine("## 表H'. 置き場所別のバンの倒れる率（同じ5枚で、バンと中央の駒の席だけを入れ替える・新）");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 元の席 | 端のとき 倒れた率 / 盾の回数 / 勝率 | 中央のとき 倒れた率 / 盾の回数 / 勝率 |");
+        Console.WriteLine("|---|---|---|---|");
+        foreach (var r in rows)
+        {
+            if (!Has(r.F, "ban")) continue;
+            var ban = r.F.Occupied().First(o => o.Def.Id == "ban");
+            Formation edge, center;
+            if (ban.Slot == 2)
+            {
+                // 中央にいる行は、前3（無ければ前1）の駒と入れ替えて端の版を作る
+                int to = r.F.Occupied().Any(o => o.Slot == 1) ? 1 : 0;
+                center = r.F; edge = SwapSeats(r.F, 2, to);
+            }
+            else { edge = r.F; center = SwapSeats(r.F, ban.Slot, 2); }
+            string Cell(Formation f)
+            {
+                double dead = 0, takes = 0, wins = 0; int n = 0;
+                for (int st = 1; st < 5; st++)
+                    for (int seed = 0; seed < Seeds; seed++)
+                    {
+                        BattleResult b = Fight(f, st, seed, New);
+                        n++;
+                        if (b.PlayerWon) wins++;
+                        if (b.PlayerStarterFallen.Contains("ban")) dead++;
+                        if (b.TallyByUnit.TryGetValue("ban", out UnitTally? t)) takes += t.ShieldTakes;
+                    }
+                return (100.0 * dead / n).ToString("F1") + "% / " + (takes / n).ToString("F2") + " / " + (100.0 * wins / n).ToString("F1") + "%";
+            }
+            Console.WriteLine("| " + r.Name + " | " + SlotName(r.F, "ban") + " | " + Cell(edge) + " | " + Cell(center) + " |");
+        }
+        Console.WriteLine();
+        Console.WriteLine("- 勝率は第2〜5波の平均。**席を入れ替えた版は `Presets` に無い**（この表のためだけの配置）。");
+        Console.WriteLine();
+    }
+
+    static Formation SwapSeats(Formation f, int a, int b)
+    {
+        var g = new Formation();
+        foreach ((int slot, UnitDef d) in f.Occupied()) g[slot == a ? b : slot == b ? a : slot] = d;
+        return g;
     }
 
     static readonly Dictionary<string, string> Names = UnitCatalog.Everyone

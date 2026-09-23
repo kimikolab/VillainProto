@@ -3805,16 +3805,23 @@ public sealed class BattleContext
     /// <summary>
     /// 範囲の盾: 同じ一撃が盾の持ち主と<b>その隣の味方</b>に当たるとき、隣の味方の分を盾が受ける。
     /// 盾が倒れていれば（この一撃の途中で倒れた場合も）本人が受ける。
+    ///
+    /// <para><b>第185期 追補: 受け止めた分は半分にしてから盾が受ける</b>（<see cref="FootingTrait.ShieldPercent"/>・
+    /// 1 点を下回らない）。盾自身の層の軽減はその後（盾への <c>ApplyDamage</c> の中）で乗る。
+    /// 盾自身に当たった分は今までどおり（ここを通っても <c>struck == shield</c> で素通りする）。</para>
     /// </summary>
-    UnitState ShieldRecv(UnitState shield, UnitState struck, int amount)
+    UnitState ShieldRecv(UnitState shield, UnitState struck, ref int amount)
     {
         if (struck == shield || !shield.IsAlive || !struck.IsAlive) return struck;
         if (struck.TeamId != shield.TeamId || !FormationRules.AreAdjacent(shield.Slot, struck.Slot)) return struck;
+        int raw = amount;
+        amount = Math.Max(1, raw * FootingTrait.ShieldPercent / 100);
         UnitTally t = TallyOf(shield);
         t.ShieldTakes++;
         t.ShieldTaken += amount;
-        TallyOf(struck).ShieldCovered += amount;
-        Log($"    {shield.Name} が {struck.Name} に及ぶ刃を代わりに受け止めた", LogKind.Trigger);
+        t.ShieldHalved += raw - amount;
+        TallyOf(struck).ShieldCovered += raw;
+        Log($"    {shield.Name} が {struck.Name} に及ぶ刃を代わりに受け止めた（{raw} → {amount}）", LogKind.Trigger);
         return shield;
     }
 
@@ -5814,8 +5821,9 @@ public sealed class BattleContext
 
         // 呪いの共有（第96期）は**単体攻撃の一撃そのもの**にだけ札を付ける。
         // 副次目標（薙ぎ・全体）と貫きの段には付けない——範囲が二乗で伸びるのを止める構造。
-        ApplyDamage(shield is null ? target : ShieldRecv(shield, target, dealt),
-                    dealt, actor, singleHit: pattern == AttackPattern.Single, pattern: pattern);
+        int first = dealt;
+        UnitState firstRecv = shield is null ? target : ShieldRecv(shield, target, ref first);
+        ApplyDamage(firstRecv, first, actor, singleHit: pattern == AttackPattern.Single, pattern: pattern);
 
         // 適用順を混ぜる。同じ一振りで2体以上落ちるとき、死亡順（墓守の層・破裂の連鎖）が
         // 席番号で決まっていた。巻き込む相手の顔ぶれは変わらない——順番だけ。
@@ -5832,7 +5840,8 @@ public sealed class BattleContext
                 TallyOf(actor).ReaderSplash++;
             Log($"    刃が {extra.Name} まで届く", LogKind.Damage);
             int share = Math.Max(1, dealt * SecondaryPercent / 100);
-            ApplyDamage(shield is null ? extra : ShieldRecv(shield, extra, share), share, actor, pattern: pattern);
+            UnitState recv = shield is null ? extra : ShieldRecv(shield, extra, ref share);
+            ApplyDamage(recv, share, actor, pattern: pattern);
         }
 
         // 特性の発動は攻撃1回につき1度、主目標に対してのみ。
@@ -5895,7 +5904,9 @@ public sealed class BattleContext
                 ScaleBackDamage += dmg;
             }
 
-            ApplyDamage(shield is null ? u : ShieldRecv(shield, u, dmg), dmg, actor, pattern: AttackPattern.Pierce);
+            int got = dmg;
+            UnitState recv = shield is null ? u : ShieldRecv(shield, u, ref got);
+            ApplyDamage(recv, got, actor, pattern: AttackPattern.Pierce);
             if (u == entry) primaryDealt = dmg;
             passed++;
         }

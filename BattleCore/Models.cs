@@ -1601,13 +1601,14 @@ public sealed class UnitTally
     /// 敵の側: <c>CowedLost</c> 竦みを消費した回数（失う手番に吸われた分を含む）／ <c>StallCowed</c> 竦みで失った手番。</para>
     ///
     /// <para>踏みしめ（バン）: <c>FootingSteps</c> 層を積んだ手番 ／ <c>FootingFull</c> 満ちていた手番 ／ <c>FootingSaved</c> 層で防いだ量 ／
-    /// <c>ShieldTakes</c> 範囲の盾で代わりに受けた回数 ／ <c>ShieldTaken</c> その量（軽減の前）／
+    /// <c>ShieldTakes</c> 範囲の盾で代わりに受けた回数 ／ <c>ShieldTaken</c> その量（半分にした後・層の軽減の前）／
+    /// <c>ShieldHalved</c> 半分にして消えた量（第185期 追補）／
     /// <c>PlantedRefused</c> 入れ替えを空振りさせた回数（うち敵が起こした入れ替え＝曝き <c>PlantedRefusedFoe</c>）／ <c>FootingLayerSum</c> ÷ <c>FootingLayerTurns</c> ターン末の層の平均。受け手の側: <c>ShieldCovered</c> 盾に受けてもらった量。</para>
     /// </summary>
     public long GrappleFires, GrappleHolds, GrappleStalled, GrappleBreaks, GrappledTimes, StallGrappled,
                 ShamePicks, ShameFires, ShameCowed, ShameBlocked, CowedLost, StallCowed,
                 FootingSteps, FootingFull, FootingSaved, ShieldTakes, ShieldTaken, ShieldCovered, PlantedRefused,
-                FootingLayerSum, FootingLayerTurns, PlantedRefusedFoe;
+                FootingLayerSum, FootingLayerTurns, PlantedRefusedFoe, ShieldHalved;
 
     public int BraceGuards, BraceCuts, BraceRefused, BraceGiven, BraceLost;
     public int BraceShoves, BraceShoveCapped, BraceNoTarget, BraceStaggers, BraceArmorMuted;
@@ -1793,7 +1794,7 @@ public sealed class UnitTally
         FootingSteps += o.FootingSteps; FootingFull += o.FootingFull; FootingSaved += o.FootingSaved;
         ShieldTakes += o.ShieldTakes; ShieldTaken += o.ShieldTaken; ShieldCovered += o.ShieldCovered;
         PlantedRefused += o.PlantedRefused; FootingLayerSum += o.FootingLayerSum; FootingLayerTurns += o.FootingLayerTurns;
-        PlantedRefusedFoe += o.PlantedRefusedFoe;
+        PlantedRefusedFoe += o.PlantedRefusedFoe; ShieldHalved += o.ShieldHalved;
         ShuffleAllySwaps += o.ShuffleAllySwaps; ShuffleFoeSwaps += o.ShuffleFoeSwaps;
         ShuffleAdvanced += o.ShuffleAdvanced; ShuffleAdvancedTraited += o.ShuffleAdvancedTraited;
         ShuffleAdvancedFromBack += o.ShuffleAdvancedFromBack; ShuffleStaggers += o.ShuffleStaggers;

@@ -11016,7 +11016,8 @@ public sealed class ShameTrait : Trait
 /// 層は <see cref="StatusKeys.Footing"/> に置くので、状態の札としてそのまま画面に出る。倒れれば消える。</para>
 ///
 /// <para><b>範囲の盾</b>: 薙ぎ・貫き・全体の一撃が<b>この駒とこの駒に隣接する味方に同時に当たる</b>とき、
-/// <b>隣接する味方の分をこの駒が代わりに受ける</b>（この駒の層の軽減が乗る）。
+/// <b>隣接する味方の分をこの駒が代わりに受ける</b>——<b>半分にしてから</b>（第185期 追補・<see cref="ShieldPercent"/>）受け、
+/// その後にこの駒の層の軽減が乗る。この駒自身に当たった分は半分にしない。
 /// 判定は engine（<see cref="BattleContext.PerformAttack"/> / <c>ResolvePierce</c>）にある——
 /// 「同じ一撃が誰に当たるか」は攻撃の解決の中でしか分からないため（巨躯・分かちと同じ理由）。
 /// <b>庇いの鎖（<c>SelectTargetChain</c>）には入れない</b>——あちらは主目標を差し替えるだけで範囲には触れない。</para>
@@ -11025,6 +11026,12 @@ public sealed class FootingTrait : Trait
 {
     public const int MaxLayers = 3;
     public const int PercentPerLayer = 10;
+
+    /// <summary>
+    /// 範囲の盾で<b>隣の味方から受け止めた分</b>を、盾が受ける前に何 % にするか（第185期 追補・<b>50 ＝ 半分</b>。測る前に固定）。
+    /// 盾自身の層の軽減はその後に乗る。盾自身に当たった分には掛けない。
+    /// </summary>
+    public const int ShieldPercent = 50;
 
     public override TraitId Id => TraitId.Footing;
 
