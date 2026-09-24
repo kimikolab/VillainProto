@@ -331,6 +331,7 @@ public static class StatusKeys
         Cowed => "竦",
         Footing => "据",
         Daunted => "萎",
+        Concentrated => "濃",
         _ => key
     };
 }
@@ -570,10 +571,11 @@ public sealed class BattleContext
             if (_units.Any(x => x.IsAlive && x.TeamId == u.TeamId && x.HasTrait(TraitId.Devour)))
                 poison *= DevourTrait.AllyPoisonMultiplier;
 
-            PoisonTickOnce(u, poison, second: false);
+            int total = TickTotal(u);   // 表示専用（何回目か／全部で何回か）
+            PoisonTickOnce(u, poison, second: false, TickOrd(1, total));
             // 濃縮の印（第194期・ミオ）。**印の数だけ同じ量でもう1回ずつ刻む**（毒の層は刻みで減らないので、1回だけにするものは無い）。
             // 倒れた駒には次の回を当てない。印が1つも無い戦闘は旗1本で抜ける。
-            if (_markLive) RepeatTick(u, () => PoisonTickOnce(u, poison, second: true));
+            if (_markLive) RepeatTick(u, k => PoisonTickOnce(u, poison, second: true, TickOrd(k, total)));
         }
 
         // 燃焼は毒とは別のループで回す。固定量なので増幅も変換もされず、
@@ -592,9 +594,10 @@ public sealed class BattleContext
             // 第134期 段1 —— 燃え尽きた時点で区間を閉じる。**盤面には触らない。**
             if (left - 1 <= 0) CloseBurnEpisode(u, expired: true);
 
-            BurnTickOnce(u, left, bt, second: false);
+            int total = TickTotal(u);   // 表示専用
+            BurnTickOnce(u, left, bt, second: false, TickOrd(1, total));
             // 濃縮の印（第194期）。**残りターンの減算と区間の帳簿は上の1回だけ**で、刻みの本体を印の数だけもう1回ずつ。
-            if (_markLive) RepeatTick(u, () => BurnTickOnce(u, left, bt, second: true));
+            if (_markLive) RepeatTick(u, k => BurnTickOnce(u, left, bt, second: true, TickOrd(k, total)));
         }
     }
 
@@ -602,7 +605,7 @@ public sealed class BattleContext
     /// 毒の刻み1回ぶんの本体（第194期に <see cref="TickStatuses"/> から切り出した。<b>中身は1文字も変えていない</b>）。
     /// <paramref name="second"/> は濃縮の印の2回目（計数の帰属だけに使う）。
     /// </summary>
-    void PoisonTickOnce(UnitState u, int poison, bool second)
+    void PoisonTickOnce(UnitState u, int poison, bool second, (int? Index, int? Count) ord)
     {
         {
             NoteTickLayer(u, poison, burn: false, second);   // 第194期・**計数のみ**
@@ -614,7 +617,9 @@ public sealed class BattleContext
             {
                 Emit(new BattleEvent
                 {
-                    Kind = BattleEventKind.Status, Turn = _turn, TargetId = u.InstanceId, Amount = poison, Text = "毒"
+                    Kind = BattleEventKind.Status, Turn = _turn, TargetId = u.InstanceId, Amount = poison, Text = "毒",
+                    SourceTrait = TraitId.Inverse, InverterId = inverter.InstanceId,
+                    TickIndex = ord.Index, TickCount = ord.Count,
                 });
                 InverseHeal(inverter, u, poison, 0, "毒");
                 return;
@@ -627,7 +632,8 @@ public sealed class BattleContext
                 Turn = _turn,
                 TargetId = u.InstanceId,
                 Amount = poison,
-                Text = "毒"
+                Text = "毒",
+                TickIndex = ord.Index, TickCount = ord.Count,
             });
             // 業（第49期）の帰属。**保持者が盤上にいなければ1回も走らない**（短絡）。
             if (ScapegoatActive) NoteScapegoatDot(u, poison, StatusKeys.Poison);
@@ -650,7 +656,7 @@ public sealed class BattleContext
     /// 燃焼の刻み1回ぶんの本体（第194期に <see cref="TickStatuses"/> から切り出した。<b>中身は1文字も変えていない</b>
     /// ——残りターンの減算と区間の帳簿は呼ぶ側に残した）。<paramref name="left"/> は減らす前の残りターン（ログ用）。
     /// </summary>
-    void BurnTickOnce(UnitState u, int left, UnitTally bt, bool second)
+    void BurnTickOnce(UnitState u, int left, UnitTally bt, bool second, (int? Index, int? Count) ord)
     {
         {
             if (second) bt.BurnTicks++;   // 刻みの回数（計数）。印の2回目も1回と数える
@@ -683,7 +689,9 @@ public sealed class BattleContext
             {
                 Emit(new BattleEvent
                 {
-                    Kind = BattleEventKind.Status, Turn = _turn, TargetId = u.InstanceId, Amount = BurnRules.Damage, Text = "燃焼"
+                    Kind = BattleEventKind.Status, Turn = _turn, TargetId = u.InstanceId, Amount = BurnRules.Damage, Text = "燃焼",
+                    SourceTrait = TraitId.Inverse, InverterId = inverterB.InstanceId,
+                    TickIndex = ord.Index, TickCount = ord.Count,
                 });
                 InverseHeal(inverterB, u, BurnRules.Damage, 1, "火");
                 ClearKindleHeld(u);
@@ -699,7 +707,8 @@ public sealed class BattleContext
                 Turn = _turn,
                 TargetId = u.InstanceId,
                 Amount = BurnRules.Damage,
-                Text = "燃焼"
+                Text = "燃焼",
+                TickIndex = ord.Index, TickCount = ord.Count,
             });
             if (ScapegoatActive) NoteScapegoatDot(u, BurnRules.Damage, StatusKeys.Burn);
             // burnTick: この刻みが破片に吸われた量・HP を削った量を、
@@ -756,25 +765,36 @@ public sealed class BattleContext
     /// </summary>
     void DetonateTwiceIfMarked(UnitState kata, UnitTally kt, UnitState u, bool dual)
     {
-        DetonateOne(kata, kt, u, dual);
-        if (_markLive) RepeatTick(u, () => { kt.DetonateMarkedAgain++; DetonateOne(kata, kt, u, dual); });
+        int total = TickTotal(u);   // 表示専用
+        DetonateOne(kata, kt, u, dual, TickOrd(1, total));
+        if (_markLive) RepeatTick(u, k => { kt.DetonateMarkedAgain++; DetonateOne(kata, kt, u, dual, TickOrd(k, total)); });
     }
+
+    /// <summary>
+    /// 刻み1回ぶんを 1+n 回に広げたときの全体の回数（第194期の台本・<b>表示専用</b>）。印が無ければ 1。
+    /// 印は刻みの途中では増えないので、最初の1回の前に読んでよい。
+    /// </summary>
+    int TickTotal(UnitState u) => _markLive ? 1 + Math.Max(0, u.RawCounter(StatusKeys.Concentrated)) : 1;
+
+    /// <summary>台本の <c>TickIndex</c> / <c>TickCount</c>。<b>印で繰り返す刻み（全部で2回以上）のときだけ</b>値を入れる。</summary>
+    static (int? Index, int? Count) TickOrd(int index, int total)
+        => total > 1 ? (index, total) : (null, null);
 
     /// <summary>
     /// 濃縮の印（第194期）。印の数 n だけ <paramref name="again"/> を呼ぶ（倒れたらそこで止める）。
     /// 1回の刻みで発火した回数（1 + 実際に呼んだ回数）を駒の帳簿に写す。<b>乱数を引かない。</b>
     /// </summary>
-    void RepeatTick(UnitState u, Action again)
+    void RepeatTick(UnitState u, Action<int> again)
     {
         int n = u.RawCounter(StatusKeys.Concentrated);
         int done = 0;
-        for (int k = 0; k < n && u.IsAlive; k++) { again(); done++; }
+        for (int k = 0; k < n && u.IsAlive; k++) { again(k + 2); done++; }   // 引数は何回目か（2 始まり・表示専用）
         if (n <= 0) return;
         UnitTally t = TallyOf(u);
         if (1 + done > t.TickFiresMax) t.TickFiresMax = 1 + done;
     }
 
-    void DetonateOne(UnitState kata, UnitTally kt, UnitState u, bool dual)
+    void DetonateOne(UnitState kata, UnitTally kt, UnitState u, bool dual, (int? Index, int? Count) ord)
     {
         if (!u.IsAlive) return;
         int poison = u.RawCounter(StatusKeys.Poison);
@@ -798,7 +818,9 @@ public sealed class BattleContext
                 Emit(new BattleEvent
                 {
                     Kind = BattleEventKind.Status, Turn = _turn, ActorId = kata.InstanceId,
-                    TargetId = u.InstanceId, Amount = dmg, Text = "毒"
+                    TargetId = u.InstanceId, Amount = dmg, Text = "毒",
+                    SourceTrait = TraitId.Inverse, InverterId = inverter.InstanceId,
+                    TickIndex = ord.Index, TickCount = ord.Count,
                 });
                 InverseHeal(inverter, u, dmg, 2, "弾けた毒");
             }
@@ -811,7 +833,8 @@ public sealed class BattleContext
                 Emit(new BattleEvent
                 {
                     Kind = BattleEventKind.Status, Turn = _turn, ActorId = kata.InstanceId,
-                    TargetId = u.InstanceId, Amount = dmg, Text = "毒"
+                    TargetId = u.InstanceId, Amount = dmg, Text = "毒",
+                    TickIndex = ord.Index, TickCount = ord.Count,
                 });
                 DetonateHit(kt, u, foe, () => ApplyDamage(u, dmg, null));
             }
@@ -830,7 +853,9 @@ public sealed class BattleContext
                 Emit(new BattleEvent
                 {
                     Kind = BattleEventKind.Status, Turn = _turn, ActorId = kata.InstanceId,
-                    TargetId = u.InstanceId, Amount = BurnRules.Damage * mult, Text = "燃焼"
+                    TargetId = u.InstanceId, Amount = BurnRules.Damage * mult, Text = "燃焼",
+                    SourceTrait = TraitId.Inverse, InverterId = inverterB.InstanceId,
+                    TickIndex = ord.Index, TickCount = ord.Count,
                 });
                 InverseHeal(inverterB, u, BurnRules.Damage * mult, 2, "弾けた火");
             }
@@ -843,7 +868,8 @@ public sealed class BattleContext
                 Emit(new BattleEvent
                 {
                     Kind = BattleEventKind.Status, Turn = _turn, ActorId = kata.InstanceId,
-                    TargetId = u.InstanceId, Amount = dmg, Text = "燃焼"
+                    TargetId = u.InstanceId, Amount = dmg, Text = "燃焼",
+                    TickIndex = ord.Index, TickCount = ord.Count,
                 });
                 DetonateHit(kt, u, foe, () => ApplyDamage(u, dmg, null, burnTick: true));
             }
@@ -5664,6 +5690,21 @@ public sealed class BattleContext
                 TargetId = u.InstanceId, Amount = n, Text = label, SourceTrait = TraitId.Concentrate,
             });
         return true;
+    }
+
+    /// <summary>
+    /// 濃縮（旧 <see cref="AmplifierTrait"/> の本体・ミオ）で敵の毒の層が増えた瞬間を台本に打つ（第194期・<b>表示専用</b>）。
+    /// <paramref name="label"/> は <see cref="ThickenLabels"/>（+4 層の濃縮／傷口への着火）。<paramref name="after"/> は足した後の層。
+    /// <b>盤面には一切影響しない</b>（<c>verbose</c> 偽では何もしない）。
+    /// </summary>
+    public void EmitThicken(UnitState mio, UnitState foe, int after, string label)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.PoisonThicken, Turn = _turn, ActorId = mio.InstanceId,
+            TargetId = foe.InstanceId, Amount = after, Text = label, SourceTrait = TraitId.Amplifier,
+        });
     }
 
     /// <summary>

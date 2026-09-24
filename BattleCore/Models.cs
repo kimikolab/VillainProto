@@ -2361,7 +2361,24 @@ public enum BattleEventKind
     /// <c>Text</c> = 「中心」「周り」（敵）／「漏れ」（ミオの隣の味方）。
     /// 印が n の駒は以後の刻みごとに <c>Status</c> → <c>Damage</c> の組が 1+n 組並ぶ。<b>どの規則も読まない。</b></para>
     /// </summary>
-    ConcentrateMark
+    ConcentrateMark,
+
+    /// <summary>
+    /// 濃縮（第194期・<see cref="TraitId.Amplifier"/>・澱みのミオ）で敵の毒の層が増えた瞬間（<b>表示専用</b>）。
+    /// <para><c>ActorId</c> = ミオ、<c>TargetId</c> = 敵、<c>Amount</c> = 足した<b>後</b>の毒の層、
+    /// <c>Text</c> = <see cref="ThickenLabels"/>（+4 層の濃縮／傷口への着火）、<c>SourceTrait</c> = <see cref="TraitId.Amplifier"/>。
+    /// ミオの手番の <c>Skill</c> の後、印（<see cref="ConcentrateMark"/>）より前に並ぶ。<b>どの規則も読まない。</b></para>
+    /// </summary>
+    PoisonThicken
+}
+
+/// <summary><see cref="BattleEventKind.PoisonThicken"/> の <c>Text</c>（<b>表示専用</b>）。</summary>
+public static class ThickenLabels
+{
+    /// <summary>毒のある敵の層を +4 した。</summary>
+    public const string Thicken = "濃縮";
+    /// <summary>毒の無い敵の傷口に毒を1層流し込んだ（<see cref="IgniteRule"/>・既定では走らない）。</summary>
+    public const string Ignite = "着火";
 }
 
 /// <summary><see cref="BattleEventKind.Reveille"/> の <c>Text</c>（<b>表示専用</b>）。</summary>
@@ -2619,6 +2636,26 @@ public sealed class BattleEvent
     /// それ以外では <c>null</c>。<b>どの規則も読まない。</b>
     /// </summary>
     public int? SpreadFromId { get; init; }
+
+    /// <summary>
+    /// 反転（第190期・毒喰らいのベニ）で回復に変わった刻みの <c>Status</c> のときだけ、<b>反転させたベニ</b>の InstanceId
+    /// （第194期・<b>表示専用</b>）。同じ件の <c>SourceTrait</c> は <see cref="TraitId.Inverse"/>。
+    /// 毒・燃焼の刻みと、起爆（カタ）の味方側の両方に載る——起爆の <c>ActorId</c> はカタのままなので、ベニは別の欄にしてある。
+    /// 反転しない刻みでは <c>null</c>。<b>どの規則も読まない。</b>
+    /// </summary>
+    public int? InverterId { get; init; }
+
+    /// <summary>
+    /// 濃縮の印（第194期・ミオ）で 1+n 回に広がった刻みの <c>Status</c> のときだけ: <b>何回目か</b>（1 始まり・<b>表示専用</b>）。
+    /// 毒・燃焼の刻みと起爆に載る。印の無い駒（全部で1回）では <c>null</c>。
+    /// </summary>
+    public int? TickIndex { get; init; }
+
+    /// <summary>
+    /// <see cref="TickIndex"/> と対: <b>全部で何回の予定か</b>（1+n・<b>表示専用</b>）。途中で倒れた駒はここまで届かない
+    /// （最後に並んだ件の <c>TickIndex</c> が <c>TickCount</c> より小さい）。
+    /// </summary>
+    public int? TickCount { get; init; }
 
     /// <summary><see cref="BattleEventKind.StatusDrain"/> のときだけ: 取り上げた後に吸われた駒に残った量（第183期 追補3・<b>表示専用</b>）。</summary>
     public int? StatusRemaining { get; init; }

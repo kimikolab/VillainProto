@@ -419,7 +419,7 @@ seed 0..199 の 200 試行（`compare` と同じ帯）。**盤面は1ビット�
 | `Cowed` | 竦 | **×** | ○ | ○ |
 | `Footing` | 据 | ○ | **×** | ○ |
 | `Daunted` | 萎 | **×** | **×** | ○ |
-| `Concentrated` | concentrated | **×** | **×** | ○ |
+| `Concentrated` | 濃 | **×** | **×** | ○ |
 
 **窓口を持たないキー 14 / 19（うち専用の種類を持つ 4）。** 残量はターン頭に全キーぶん写る（`StatusLabels` は `StatusKeys.All` から作られる）ので、**「いま乗っている」は見えるが「いま書かれた」は見えない**。
 
@@ -429,7 +429,7 @@ seed 0..199 の 200 試行（`compare` と同じ帯）。**盤面は1ビット�
 
 ## 1-b. 出来事の種類 × 「誰がやったか」（`ActorId`）
 
-`BattleEventKind` 29 種 ／ `BattleEngine.cs` の初期化子 38 箇所。
+`BattleEventKind` 30 種 ／ `BattleEngine.cs` の初期化子 39 箇所。
 
 | 種類 | `ActorId` | 意味 |
 |---|:-:|---|
@@ -462,6 +462,7 @@ seed 0..199 の 200 試行（`compare` と同じ帯）。**盤面は1ビット�
 | `HealInverted` | ○ | 誰がやったかが引ける |
 | `InverseSip` | ○ | 誰がやったかが引ける |
 | `ConcentrateMark` | ○ | 誰がやったかが引ける |
+| `PoisonThicken` | ○ | 誰がやったかが引ける |
 
 **`ActorId` を持たない種類 3 件**: `TurnStart` / `StatusSnapshot` / `StatSnapshot`——**起きたことが画面に出ても「誰の仕業か」の線が引けない。**
 

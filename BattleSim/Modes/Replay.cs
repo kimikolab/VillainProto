@@ -101,6 +101,9 @@ public static void Run(string[] args, int stageIndex)
             sourceTrait = e.SourceTrait?.ToString(),   // Whet / HealBlocked: 書き手（回復の出どころ）の札
             supportSeq = e.SupportSeq,                 // Whet: 同じ1回の配りの一連
             supportLast = e.SupportLast,               // Whet: 一連の最後の1件
+            inverter = e.InverterId,                   // 第194期・反転した刻みの Status: 反転させたベニ（sourceTrait = Inverse）
+            tickIndex = e.TickIndex,                   // 第194期・濃縮の印で広がった刻みの Status: 何回目か（1 始まり）
+            tickCount = e.TickCount,                   // 第194期・同: 全部で何回の予定か（1+n）
             text = e.Text
         }).ToList()
     };

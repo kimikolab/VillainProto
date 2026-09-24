@@ -4704,6 +4704,7 @@ public sealed class AmplifierTrait : Trait
                 at.AmpIgniteWoundAfter += ctx.WoundDepthOf(foe);                // 傷は消費しない（自己検査 (g)）
                 at.AmpIgnitePoisonAfter += foe.Counter(StatusKeys.Poison);     // 1 のはず（自己検査 (e)）
                 if (at.AmpFirstIgniteTurn == 0) at.AmpFirstIgniteTurn = Math.Max(1, ctx.Turn);
+                ctx.EmitThicken(self, foe, IgniteAmount, ThickenLabels.Ignite);   // 表示専用
                 ctx.Log($"    {foe.Name} の傷口に澱みが流れ込む（傷 {w} → 毒 {IgniteAmount}）", LogKind.Status);
                 continue;   // ★ 着火したターンは濃くしない
             }
@@ -4713,6 +4714,7 @@ public sealed class AmplifierTrait : Trait
             int grown = poison + Step;
             foe.SetCounter(StatusKeys.Poison, grown);
             at.AmpThickened++;
+            ctx.EmitThicken(self, foe, grown, ThickenLabels.Thicken);   // 表示専用
             ctx.Log($"    {foe.Name} の毒が澱んで濃くなった（{poison} → {grown}）", LogKind.Status);
         }
     }
