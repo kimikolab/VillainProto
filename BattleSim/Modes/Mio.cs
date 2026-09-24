@@ -289,6 +289,59 @@ static partial class MioDiag
                           + "会戦の境界では `StatusKeys.All` と一緒に消える");
         Console.WriteLine();
 
+        // ---------------- Q0-10（2度目の変更で足した） ----------------
+        Console.WriteLine("## Q0-10 刻みごとに発火するものの一覧と、2回反応すると壊れるものがないか");
+        Console.WriteLine();
+        {
+            int a = engine.IndexOf("public void " + "TickStatuses()");
+            int b = a < 0 ? -1 : engine.IndexOf("public bool " + "Detonate(", a);
+            string tick = a < 0 || b < 0 ? "" : engine.Substring(a, b - a);
+            int burnAt = tick.IndexOf("StatusKeys." + "Burn);");
+            if (tick.Length == 0 || burnAt < 0) { Console.WriteLine("**`TickStatuses` が見つからない。走査が空なので止める**（R034）。"); return; }
+            string pz = tick.Substring(0, burnAt), bz = tick.Substring(burnAt);
+            Console.WriteLine("`TickStatuses` の本体（" + tick.Split('\n').Length + " 行）を毒のループと燃焼のループに割り、刻みのたびに走るものを並べた。"
+                              + "**「1回だけ」** は印の2回目で走らせないもの（層・残りターンの減算と、それに付いた区間の帳簿）。");
+            Console.WriteLine();
+            Console.WriteLine("| ループ | 走るもの | 毒 | 燃焼 | 2回目 | 2回走ったとき |");
+            Console.WriteLine("|---|---|:-:|:-:|---|---|");
+            foreach (var (token, what, second, effect) in new[]
+            {
+                ("SetCounter(StatusKeys." + "Burn, left - 1)", "燃焼の残りターンを1減らす", "**1回だけ**", "（指示どおり1回分しか減らさない）"),
+                ("CloseBurnEpisode(", "燃え尽きた区間を閉じる（第134期の帳簿）", "**1回だけ**", "減算に付いているので減算と一緒に1回"),
+                ("bt.BurnTicks++", "燃焼の刻みの回数（計数）", "2回", "計数が2になるだけ"),
+                ("DevourTrait.AllyPoisonMultiplier", "旧ベニの味方の毒 ×2（保持者 0 枚）", "2回", "量の計算。同じ量を2回使う"),
+                ("Ember.TickHeal", "熾のホタの「焼かれない」の枝（既定 0）", "2回", "既定 0 なので何も起きない（ノブを上げると回復が2回）"),
+                ("InvertsTick(", "ベニの反転の判定", "2回", "—"),
+                ("InverseHeal(", "反転の回復（＋啜り）", "2回", "**回復が2回**（指示どおり）。`InverseRecipientTurns` はターンで重複を除くので延べ人数は1"),
+                ("NoteTaintPostBite(", "澱み分けの層の刻みの計数", "2回", "計数だけ"),
+                ("NoteKindlePostBurn(", "ベニの火の刻みの計数", "2回", "計数だけ"),
+                ("ClearKindleHeld(", "ベニの火の印を消す（計数専用）", "2回", "2回目は既に消えている＝何もしない"),
+                ("NoteScapegoatDot(", "業の帰属（保持者 0 枚）", "2回", "燃焼の側は業の借り（`OwedKey`）を1回ごとに1減らす——**2回走ると借りが2倍の速さで尽きる**。計数専用で保持者 0 枚なので盤面は壊れない"),
+                ("NotePoisonBite(", "毒の刻みの額面（陣営別の計数）", "2回", "計数だけ"),
+                ("IgnitePoisonDamage", "傷口の着火の持続係数（計数）", "2回", "計数だけ"),
+                ("ApplyDamage(", "HP を削る（破片・軛・肩代わり・死亡処理・`OnDamaged`）", "2回", "**軛は1回ずつに効く**。1回目で倒れたら2回目は走らせない（生存を見る）"),
+                ("BurnDeaths++", "燃焼で倒れた数（計数）", "2回", "生存を見るので二重には数えない"),
+                ("Emit(", "台本の `Status`（刻みの絵）", "2回", "**同じ駒に `Status` と `Damage` の組が2つ並ぶ**（再生側は `Status` の直後の `Damage` を紐づけるので組のまま読める）"),
+            })
+            {
+                bool inP = pz.Contains(token), inB = bz.Contains(token);
+                Console.WriteLine("| " + (inP && inB ? "両方" : inP ? "毒" : inB ? "燃焼" : "**見つからない**") + " | " + what + " | "
+                                  + (inP ? "○" : "—") + " | " + (inB ? "○" : "—") + " | " + second + " | " + effect + " |");
+            }
+            Console.WriteLine();
+            Console.WriteLine("- `ApplyDamage` の先で刻み（出どころ null）に反応する札は Q0-8 の 5 本（ガルド・カドの棘守り・ドハ・ササ・0 枚1本）。どれも「浴びた量」を読むだけで、2回浴びれば2回読む");
+            Console.WriteLine("- **壊れるもの: 見つからない**。注意は2つ——(1) 1回目で倒れた駒に2回目を当てない（死亡処理が2回走る）、(2) 業の燃焼の借りが2倍の速さで尽きる（計数専用・保持者 0 枚）");
+        }
+        {
+            int di = engine.IndexOf("void " + "DetonateOne(");
+            string db = di < 0 ? "" : engine.Substring(di, Math.Max(0, engine.IndexOf("static void " + "DetonateHit", di) - di));
+            Console.WriteLine("- 起爆（`DetonateOne`）は減算を1つも持たない（層・残りターンを減らさない）: "
+                              + (db.Contains("SetCounter(") ? "**持つ**" : "○") + "。**1体ぶんの本体を2回呼ぶだけで「2回」になり、1回だけにすべきものが無い**");
+            Console.WriteLine("- **判断: 起爆の刻みも印で2回にする**（印の意味を「この駒の刻みは、どの口から来ても2回」に揃える）。両方持ちの ×2 は1回ずつに掛かる"
+                              + "（2回 × 各 ×2）。1回目で倒れたら2回目は当てない");
+        }
+        Console.WriteLine();
+
         // ---------------- Q0-6 ----------------
         Console.WriteLine("## Q0-6 過去の類似測定（`design/` の grep）");
         Console.WriteLine();
