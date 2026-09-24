@@ -18,6 +18,7 @@ static partial class SidDiag
             case "ledger": RunLedger(); handled = true; return;
             case "check": Check(arg); handled = true; return;
             case "beni": RunBeni(); handled = true; return;
+            case "phase196": Phase196(); handled = true; return;
         }
     }
 
