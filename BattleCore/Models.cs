@@ -1605,6 +1605,27 @@ public sealed class UnitTally
                 InverseSelfPoison, InverseSelfBurn, InverseSelfDetonate, InverseLeakSelf, InverseLeakOnHolder,
                 SipEligible, SipRoom, SipGained, SipEarly;
 
+    /// <summary>
+    /// 第194期（濃縮の印・ミオ）。<b>計数専用で、どの規則も読まない。</b>
+    /// <para><b>ミオの側</b>: <c>ConcFires</c> 印を付けようとした手番 ／ <c>ConcDry</c> 次の刻みが 0 の敵しかいなかった手番 ／
+    /// <c>ConcMarkCenter</c>・<c>ConcMarkAround</c>・<c>ConcMarkAlly</c> 足した印（中心・周りの敵・隣の味方。1回 +1）／
+    /// <c>ConcCenterBurning</c> 中心が燃えていた手番 ／ <c>ConcNoNew</c>（第194期の途中の版の名残・常に 0）／
+    /// <c>ConcMarkPeak</c> 1戦で付けた印の最大値。</para>
+    /// <para><b>カタの側</b>: <c>DetonateMarkedAgain</c> 印で起爆をもう1回働かせた延べ（回数ぶん）。</para>
+    /// <para><b>全駒の側</b>: <c>TickFiresMax</c> 1回の刻み（毒・燃焼・起爆のどれか）で発火した回数の最大（印が無ければ 0）。</para>
+    /// <para><b>全駒の側</b>（刻みの時点・<b>旧のミオでも同じ計数が取れる</b>）: <c>PoisonTickMax</c>・<c>BurnTickMax</c> 1回の刻みの最大 ／
+    /// <c>PoisonTickEarly</c>・<c>PoisonTickLate</c>・<c>BurnTickEarly</c>・<c>BurnTickLate</c> 刻みの名目（1〜3 T・4 T〜・2回目も含む）／
+    /// <c>PoisonTickSecond</c>・<c>BurnTickSecond</c> そのうち印の2回目 ／ <c>PoisonReach25</c>・<c>PoisonReach50</c> 毒の刻みが初めて 25・50 に届いたターン
+    /// （0 なら届かず・同じ Id の駒どうしは早いほう）／ <c>PoisonYokeCut</c>・<c>PoisonYokeLost</c>・<c>BurnYokeCut</c> 軛が効いている間に上限を越えた刻み。</para>
+    /// </summary>
+    public long ConcFires, ConcDry, ConcMarkCenter, ConcMarkAround, ConcMarkAlly, ConcCenterBurning, ConcNoNew, DetonateMarkedAgain,
+                PoisonTickMax, BurnTickMax, PoisonTickEarly, PoisonTickLate, BurnTickEarly, BurnTickLate,
+                PoisonTickSecond, BurnTickSecond, PoisonReach25, PoisonReach50, PoisonYokeCut, PoisonYokeLost, BurnYokeCut,
+                ConcMarkPeak, TickFiresMax;
+
+    /// <summary>「初めて届いたターン」の合成（0 は届かず）。</summary>
+    public static long MinReach(long a, long b) => a == 0 ? b : b == 0 ? a : Math.Min(a, b);
+
     /// <summary>墓守の層の最大値（第188期・<b>計数専用</b>。<c>NecroTrait.SetStack</c> が書く）。</summary>
     public long NecroPeak;
 
@@ -1925,6 +1946,14 @@ public sealed class UnitTally
         InverseSelfPoison += o.InverseSelfPoison; InverseSelfBurn += o.InverseSelfBurn; InverseSelfDetonate += o.InverseSelfDetonate;
         InverseLeakSelf += o.InverseLeakSelf; InverseLeakOnHolder += o.InverseLeakOnHolder;
         SipEligible += o.SipEligible; SipRoom += o.SipRoom; SipGained += o.SipGained; SipEarly += o.SipEarly;
+        ConcFires += o.ConcFires; ConcDry += o.ConcDry; ConcMarkCenter += o.ConcMarkCenter; ConcMarkAround += o.ConcMarkAround;
+        ConcMarkAlly += o.ConcMarkAlly; ConcCenterBurning += o.ConcCenterBurning; ConcNoNew += o.ConcNoNew; DetonateMarkedAgain += o.DetonateMarkedAgain;
+        PoisonTickMax = Math.Max(PoisonTickMax, o.PoisonTickMax); BurnTickMax = Math.Max(BurnTickMax, o.BurnTickMax);
+        PoisonTickEarly += o.PoisonTickEarly; PoisonTickLate += o.PoisonTickLate; BurnTickEarly += o.BurnTickEarly; BurnTickLate += o.BurnTickLate;
+        PoisonTickSecond += o.PoisonTickSecond; BurnTickSecond += o.BurnTickSecond;
+        PoisonReach25 = MinReach(PoisonReach25, o.PoisonReach25); PoisonReach50 = MinReach(PoisonReach50, o.PoisonReach50);
+        PoisonYokeCut += o.PoisonYokeCut; PoisonYokeLost += o.PoisonYokeLost; BurnYokeCut += o.BurnYokeCut;
+        ConcMarkPeak = Math.Max(ConcMarkPeak, o.ConcMarkPeak); TickFiresMax = Math.Max(TickFiresMax, o.TickFiresMax);
         if (o.NecroPeak > NecroPeak) NecroPeak = o.NecroPeak;
         BrandFires += o.BrandFires; BrandDealt += o.BrandDealt;
         StallStagger += o.StallStagger;
@@ -2324,7 +2353,15 @@ public enum BattleEventKind
     /// <para><b>直後にベニへの <c>Heal</c>（ベニ → ベニ）が1件並ぶ</b>（ベニが満タンなら増えないので出ない）。
     /// <c>ActorId</c> = ベニ、<c>TargetId</c> = 溢れた隣の味方、<c>Amount</c> = 溢れの量（流し込む名目）。<b>どの規則も読まない。</b></para>
     /// </summary>
-    InverseSip
+    InverseSip,
+
+    /// <summary>
+    /// 濃縮の印（第194期・<see cref="TraitId.Concentrate"/>・澱みのミオ）が +1 された瞬間（<b>表示専用</b>）。
+    /// <para><c>ActorId</c> = ミオ、<c>TargetId</c> = 印が付いた駒、<c>Amount</c> = 足した後の印の数 n、
+    /// <c>Text</c> = 「中心」「周り」（敵）／「漏れ」（ミオの隣の味方）。
+    /// 印が n の駒は以後の刻みごとに <c>Status</c> → <c>Damage</c> の組が 1+n 組並ぶ。<b>どの規則も読まない。</b></para>
+    /// </summary>
+    ConcentrateMark
 }
 
 /// <summary><see cref="BattleEventKind.Reveille"/> の <c>Text</c>（<b>表示専用</b>）。</summary>

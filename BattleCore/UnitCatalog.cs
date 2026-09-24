@@ -236,12 +236,15 @@ public static class UnitCatalog
         Attack = 2,
         Speed = 8,
         Advances = false,
-        Traits = new[] { TraitId.Amplifier },
+        // 第194期: 転生（一点濃縮）。旧 `Amplifier`（+4 層）はそのまま (1) として走り、
+        // 続けて次の刻みが最も大きい敵とその隣に濃縮の印を +1（印が n なら毒と燃焼の刻みを 1+n 回・`Concentrate`）。
+        // 代金は隣の味方にも印 +1（`ConcentrateLeak`）。旧の札は定義だけ残す（保持者 0 枚・回帰の対照）。
+        Traits = new[] { TraitId.Concentrate, TraitId.ConcentrateLeak },
         // 濃縮を手番の行動そのものにする（第11期 Phase BB）。攻撃2 は出なくなる。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "水を濁らせている") },
-        PlusText = "毎ターン、敵に積まれた毒を濃くする（+4層）。毒が無くても、傷のある敵には毒が回り始める",
-        MinusText = "毒も傷も盤面に無ければ完全に無意味。攻撃はしない",
-        Flavor = "水を濁らせることしかできない。それ単体では兵器にならない。"
+        PlusText = "手番で、敵に積まれた毒を濃くし（+4層）、刻みが最も大きい敵とその周りに濃縮の印を1つ重ねる（印1つにつき毒と燃焼の刻みが1回増える。印は戦闘中消えない）。毒が無くても、傷のある敵には毒が回り始める",
+        MinusText = "濃縮は敵味方を選ばない——印を重ねるたび、隣接する味方にも印が1つ重なる。攻撃はしない",
+        Flavor = "澱みは、溜まるほど濃くなる。濃くなるほど、周りも腐る。"
     };
 
     public static readonly UnitDef Rau = new()

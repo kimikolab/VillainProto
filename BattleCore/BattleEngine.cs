@@ -296,7 +296,15 @@ public static class StatusKeys
     /// </summary>
     public const string Daunted = "daunted";
 
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted };
+    /// <summary>
+    /// 濃縮の印（第194期・澱みのミオ・<see cref="TraitId.Concentrate"/>）。値は<b>刻みの追加回数 n</b>（重ねがけ可・上限なし）。
+    /// 印が n の駒は、毒と燃焼の刻み（ターン頭の刻みと起爆）を<b>同じ量で 1+n 回</b>受ける
+    /// ——層と残りターンの減算は1回分だけ。<b>戦闘中は消えない</b>（ミオが倒れても残る）。
+    /// <see cref="All"/> に入れてあるので会戦の境界で消える。
+    /// </summary>
+    public const string Concentrated = "concentrated";
+
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted, Concentrated };
 
     /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
@@ -562,6 +570,43 @@ public sealed class BattleContext
             if (_units.Any(x => x.IsAlive && x.TeamId == u.TeamId && x.HasTrait(TraitId.Devour)))
                 poison *= DevourTrait.AllyPoisonMultiplier;
 
+            PoisonTickOnce(u, poison, second: false);
+            // 濃縮の印（第194期・ミオ）。**印の数だけ同じ量でもう1回ずつ刻む**（毒の層は刻みで減らないので、1回だけにするものは無い）。
+            // 倒れた駒には次の回を当てない。印が1つも無い戦闘は旗1本で抜ける。
+            if (_markLive) RepeatTick(u, () => PoisonTickOnce(u, poison, second: true));
+        }
+
+        // 燃焼は毒とは別のループで回す。固定量なので増幅も変換もされず、
+        // 残りターンを減らすだけ。毒の後に置いてあるのは、同じターンに両方を負った駒が
+        // 「積み上がる方」で先に落ちるようにするため（燃焼のほうが後から効く）。
+        foreach (UnitState u in _units.Where(x => x.IsAlive).ToList())
+        {
+            int left = u.RawCounter(StatusKeys.Burn);
+            if (left <= 0) continue;
+
+            // 燃焼の計数（第57期）。**盤面には触らない。**
+            UnitTally bt = TallyOf(u);
+            bt.BurnTicks++;
+
+            u.SetCounter(StatusKeys.Burn, left - 1);
+            // 第134期 段1 —— 燃え尽きた時点で区間を閉じる。**盤面には触らない。**
+            if (left - 1 <= 0) CloseBurnEpisode(u, expired: true);
+
+            BurnTickOnce(u, left, bt, second: false);
+            // 濃縮の印（第194期）。**残りターンの減算と区間の帳簿は上の1回だけ**で、刻みの本体を印の数だけもう1回ずつ。
+            if (_markLive) RepeatTick(u, () => BurnTickOnce(u, left, bt, second: true));
+        }
+    }
+
+    /// <summary>
+    /// 毒の刻み1回ぶんの本体（第194期に <see cref="TickStatuses"/> から切り出した。<b>中身は1文字も変えていない</b>）。
+    /// <paramref name="second"/> は濃縮の印の2回目（計数の帰属だけに使う）。
+    /// </summary>
+    void PoisonTickOnce(UnitState u, int poison, bool second)
+    {
+        {
+            NoteTickLayer(u, poison, burn: false, second);   // 第194期・**計数のみ**
+
             // 反転（第190期・ベニ）。隣の味方の刻みは `ApplyDamage` を通らず回復になる。
             // **刻みの計数（業・毒の刻み・着火の持続係数）には写さない**（自前の帳簿に数える）。
             UnitState? inverter = InvertsTick(u);
@@ -572,7 +617,7 @@ public sealed class BattleContext
                     Kind = BattleEventKind.Status, Turn = _turn, TargetId = u.InstanceId, Amount = poison, Text = "毒"
                 });
                 InverseHeal(inverter, u, poison, 0, "毒");
-                continue;
+                return;
             }
             NoteTaintPostBite(u, poison);   // 第190期・**計数のみ**
             Log($"    {u.Name} は毒に蝕まれている（{poison}）", LogKind.Status);
@@ -599,22 +644,17 @@ public sealed class BattleContext
 
             ApplyDamage(u, poison, null);
         }
+    }
 
-        // 燃焼は毒とは別のループで回す。固定量なので増幅も変換もされず、
-        // 残りターンを減らすだけ。毒の後に置いてあるのは、同じターンに両方を負った駒が
-        // 「積み上がる方」で先に落ちるようにするため（燃焼のほうが後から効く）。
-        foreach (UnitState u in _units.Where(x => x.IsAlive).ToList())
+    /// <summary>
+    /// 燃焼の刻み1回ぶんの本体（第194期に <see cref="TickStatuses"/> から切り出した。<b>中身は1文字も変えていない</b>
+    /// ——残りターンの減算と区間の帳簿は呼ぶ側に残した）。<paramref name="left"/> は減らす前の残りターン（ログ用）。
+    /// </summary>
+    void BurnTickOnce(UnitState u, int left, UnitTally bt, bool second)
+    {
         {
-            int left = u.RawCounter(StatusKeys.Burn);
-            if (left <= 0) continue;
-
-            // 燃焼の計数（第57期）。**盤面には触らない。**
-            UnitTally bt = TallyOf(u);
-            bt.BurnTicks++;
-
-            u.SetCounter(StatusKeys.Burn, left - 1);
-            // 第134期 段1 —— 燃え尽きた時点で区間を閉じる。**盤面には触らない。**
-            if (left - 1 <= 0) CloseBurnEpisode(u, expired: true);
+            if (second) bt.BurnTicks++;   // 刻みの回数（計数）。印の2回目も1回と数える
+            NoteTickLayer(u, BurnRules.Damage, burn: true, second);   // 第194期・**計数のみ**
 
             // 火には焼かれない（第178期・熾のホタ）。**燃焼の状態は1ビットも消さない**
             // ——残りターンは上で普通に減り、攻 ×4・貫き（`PyreTrait`）も今までどおり立つ。
@@ -634,7 +674,7 @@ public sealed class BattleContext
                 // ノブ（既定 0 ＝ 1ビットも動かない）。**`ctx.Heal` を通す**ので、
                 // 渇き（盤面ルール）にも支援拒否（`Stoic`）にも素直に課税される。
                 if (Ember.TickHeal > 0) Heal(u, Ember.TickHeal);
-                continue;
+                return;
             }
 
             // 反転（第190期・ベニ）。燃焼の残りターンは上で普通に減っている。
@@ -647,7 +687,7 @@ public sealed class BattleContext
                 });
                 InverseHeal(inverterB, u, BurnRules.Damage, 1, "火");
                 ClearKindleHeld(u);
-                continue;
+                return;
             }
             NoteKindlePostBurn(u);   // 第191期・**計数のみ**
             ClearKindleHeld(u);
@@ -705,9 +745,33 @@ public sealed class BattleContext
         EmitSkill(self, new UnitAction(ActionKind.Skill, Label: "起爆"));
         Log($"    ★ {self.Name} が触媒を撒いた——毒と火が一斉に弾ける", LogKind.Highlight, self);
 
-        foreach (UnitState u in foes) DetonateOne(self, kt, u, dual: true);
-        foreach (UnitState u in allies) DetonateOne(self, kt, u, dual: false);
+        foreach (UnitState u in foes) DetonateTwiceIfMarked(self, kt, u, dual: true);
+        foreach (UnitState u in allies) DetonateTwiceIfMarked(self, kt, u, dual: false);
         return true;
+    }
+
+    /// <summary>
+    /// 濃縮の印（第194期）。印が n の駒は起爆も<b>同じ本体を 1+n 回</b>（起爆は層も残りターンも減らさないので、
+    /// 1回だけにすべきものが無い・Q0-10 / Q0-11）。倒れた駒には次の回を当てない。
+    /// </summary>
+    void DetonateTwiceIfMarked(UnitState kata, UnitTally kt, UnitState u, bool dual)
+    {
+        DetonateOne(kata, kt, u, dual);
+        if (_markLive) RepeatTick(u, () => { kt.DetonateMarkedAgain++; DetonateOne(kata, kt, u, dual); });
+    }
+
+    /// <summary>
+    /// 濃縮の印（第194期）。印の数 n だけ <paramref name="again"/> を呼ぶ（倒れたらそこで止める）。
+    /// 1回の刻みで発火した回数（1 + 実際に呼んだ回数）を駒の帳簿に写す。<b>乱数を引かない。</b>
+    /// </summary>
+    void RepeatTick(UnitState u, Action again)
+    {
+        int n = u.RawCounter(StatusKeys.Concentrated);
+        int done = 0;
+        for (int k = 0; k < n && u.IsAlive; k++) { again(); done++; }
+        if (n <= 0) return;
+        UnitTally t = TallyOf(u);
+        if (1 + done > t.TickFiresMax) t.TickFiresMax = 1 + done;
     }
 
     void DetonateOne(UnitState kata, UnitTally kt, UnitState u, bool dual)
@@ -5578,6 +5642,57 @@ public sealed class BattleContext
     /// 吸われた駒1体につき1件、同じ <c>DrainSeq</c> を振り、最後の1件にだけ吸った側の攻撃力を載せる。
     /// <b>盤面には一切影響しない</b>（<c>verbose</c> 偽では何もしない）。
     /// </summary>
+    /// <summary>盤面に濃縮の印が1つでも付いたか（第194期）。偽なら刻みの2回目の判定を比較1つで抜ける。</summary>
+    bool _markLive;
+
+    /// <summary>
+    /// 濃縮の印を +1 する（第194期・<see cref="ConcentrateTrait"/> だけが呼ぶ）。<b>重ねがけ可・上限なし</b>。
+    /// 倒れている駒には何もせず偽を返す。乱数を引かない。印の最大値はミオの帳簿（<c>ConcMarkPeak</c>）に写す。
+    /// </summary>
+    public bool MarkConcentrated(UnitState mio, UnitState u, string label)
+    {
+        if (!u.IsAlive) return false;
+        int n = u.RawCounter(StatusKeys.Concentrated) + 1;
+        u.SetCounter(StatusKeys.Concentrated, n);
+        _markLive = true;
+        UnitTally mt = TallyOf(mio);
+        if (n > mt.ConcMarkPeak) mt.ConcMarkPeak = n;
+        if (_verbose)
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.ConcentrateMark, Turn = _turn, ActorId = mio.InstanceId,
+                TargetId = u.InstanceId, Amount = n, Text = label, SourceTrait = TraitId.Concentrate,
+            });
+        return true;
+    }
+
+    /// <summary>
+    /// 第194期。刻み1回ぶんを駒の帳簿に写す（毒と燃焼を分ける・<b>盤面には触らない</b>）。
+    /// 量は実際に刻む量（毒は層 × 旧 `Devour`、燃焼は定数）。反転で回復になった刻みも数える。
+    /// </summary>
+    void NoteTickLayer(UnitState u, int amount, bool burn, bool second)
+    {
+        UnitTally t = TallyOf(u);
+        bool cut = amount > Yoke.Cap && YokeBinding;
+        if (burn)
+        {
+            if (amount > t.BurnTickMax) t.BurnTickMax = amount;
+            if (_turn <= 3) t.BurnTickEarly += amount; else t.BurnTickLate += amount;
+            if (second) t.BurnTickSecond += amount;
+            if (cut) t.BurnYokeCut++;
+            return;
+        }
+        if (!second)
+        {
+            if (amount >= 25 && (t.PoisonReach25 == 0 || _turn < t.PoisonReach25)) t.PoisonReach25 = _turn;
+            if (amount >= 50 && (t.PoisonReach50 == 0 || _turn < t.PoisonReach50)) t.PoisonReach50 = _turn;
+        }
+        if (amount > t.PoisonTickMax) t.PoisonTickMax = amount;
+        if (_turn <= 3) t.PoisonTickEarly += amount; else t.PoisonTickLate += amount;
+        if (second) t.PoisonTickSecond += amount;
+        if (cut) { t.PoisonYokeCut++; t.PoisonYokeLost += amount - Yoke.Cap; }
+    }
+
     public void EmitStatusDrain(UnitState drainer, string key,
                                 IReadOnlyList<(UnitState From, int Amount)> drained)
     {

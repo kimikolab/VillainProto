@@ -217,6 +217,10 @@ public static class Map11Relations
             "3手番に1回、この駒に火が点く（隣にいる間は反転で薬になる。離れると本物の火に戻る）",
             LinkSign.Both, false, "火→毒→毒"),
         // 第190期。**誰かがこの駒を回復したときだけ起きる**ので点線。支援拒否は回復を弾くので線を引かない。
+        // 第194期（ミオの転生）。**毒か火を帯びているときだけ効く**ので点線（(b) 型）。支援ではないのでガルドにも付く。
+        [TraitId.ConcentrateLeak] = new(Shape.Adjacent, "刻みが重なる",
+            "自分が濃縮するたび、この駒に濃縮の印が1つ重なる（印1つにつき毒と燃焼の刻みが1回増える。毒も火も無ければ何も起きない）",
+            LinkSign.Loss, true, "隣接する味方にも印"),
         [TraitId.InverseLeak] = new(Shape.AdjacentAcceptsSupport, "回復が毒になる",
             "この駒が受ける回復が、同じ量のダメージになる（出どころは回復した駒）",
             LinkSign.Loss, true, "かえって傷つく"),
@@ -259,6 +263,7 @@ public static class Map11Relations
         [TraitId.Hexer] = "敵陣の攻撃力で相手を選ぶ（味方どうしの線ではない）",
         [TraitId.Huddle] = "味方全体の被ダメージを下げる（位置を問わない）",
         [TraitId.Daunt] = "敵陣の隣接を読む（味方どうしの線ではない）",
+        [TraitId.Concentrate] = "敵陣の隣接を読む（味方どうしの線ではない）",
         [TraitId.Rebound] = "敵陣の席を動かす（味方どうしの線ではない）",
     };
 

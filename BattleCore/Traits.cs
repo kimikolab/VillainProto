@@ -348,6 +348,9 @@ public enum TraitId
     Kindle,     // 火を分ける（ベニ・第191期）: 「火を分けた」の手番で、隣接する生存味方全員に着火する（`KindleTrait.Label`）
     InverseLeak,// 反転の裏（ベニ・第190期）: ベニに隣接する味方は、回復を受けるとかえって傷つく（`Heal` の中の1箇所）。
                 // `Inverse` の代金で、外せば `yP`
+    Concentrate,// 濃縮（ミオ・第194期）: 手番で（攻撃しない）毒のある敵全員に +4 層（旧 `Amplifier` のまま・傷の着火も込み）、
+                // 続けて次の刻みが最も大きい敵とその隣の敵に濃縮の印を +1（印が n なら刻みを 1+n 回受ける・`ConcentrateTrait`）
+    ConcentrateLeak,// 濃縮の漏れ（ミオ・第194期）: 手番ごとに、ミオに隣接する味方にも印が +1。`Concentrate` の代金で、外せば `yP`
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -4670,7 +4673,8 @@ public sealed class AmplifierTrait : Trait
         if (!ActsOnPattern(self)) Thicken(ctx, self);
     }
 
-    private static void Thicken(BattleContext ctx, UnitState self)
+    /// <summary>第194期: 濃縮（<see cref="ConcentrateTrait"/>）が (1) としてそのまま呼ぶ。本体は1文字も変えていない。</summary>
+    internal static void Thicken(BattleContext ctx, UnitState self)
     {
         // 計数（第87期）。**盤面には一切影響しない。**
         UnitTally at = ctx.TallyOf(self);
@@ -4712,6 +4716,84 @@ public sealed class AmplifierTrait : Trait
             ctx.Log($"    {foe.Name} の毒が澱んで濃くなった（{poison} → {grown}）", LogKind.Status);
         }
     }
+}
+
+/// <summary>
+/// 濃縮（第194期・澱みのミオの転生）。<b>手番で</b>（攻撃しない）、
+/// (1) 旧 <see cref="AmplifierTrait"/> の本体をそのまま走らせ（毒のある敵全員に +4 層・傷のある敵への着火）、
+/// 続けて (2) <b>次の刻みが最も大きい敵</b>（毒の層 ＋ 燃焼中なら <see cref="BurnRules.Damage"/>。印の分は含めない・
+/// 同値は席番号の小さい方）<b>とその隣の敵に、濃縮の印</b>（<see cref="StatusKeys.Concentrated"/>）を <b>+1</b> する。
+/// 次の刻みが 0 の敵しかいなければ (2) は空振り（数える）。隣接は <see cref="FormationRules.AreAdjacent"/>。
+///
+/// <para><b>印の効果は engine の側</b>（<see cref="BattleContext.TickStatuses"/> と起爆）——印が n の駒は毒と燃焼の刻みを
+/// 同じ量で 1+n 回受ける。<b>重ねがけ可・上限なし</b>（<see cref="BattleContext.MarkConcentrated"/>）。戦闘中は消えない。</para>
+///
+/// <para>マイナス（<see cref="ConcentrateLeakTrait"/>）の札を持っていれば、(2) のたび<b>ミオに隣接する味方にも印 +1</b>
+/// （ミオ自身は含めない）。<b>乱数を引かない</b>（`LivingMembers` は席番号順のスナップショット）。</para>
+/// </summary>
+public sealed class ConcentrateTrait : Trait
+{
+    /// <summary>台本の <c>Text</c>（<see cref="BattleEventKind.ConcentrateMark"/>・<b>表示専用</b>）。</summary>
+    public const string CenterLabel = "中心", AroundLabel = "周り", LeakLabel = "漏れ";
+
+    public override TraitId Id => TraitId.Concentrate;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Concentrate(ctx, self);
+
+    // 行動パターンを持たない保持者は従来どおりターン頭に発火する（Trait.ActsOnPattern）。
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Concentrate(ctx, self);
+    }
+
+    /// <summary>次の刻みの量（印の分は含めない）。</summary>
+    public static int NextTick(UnitState u)
+        => u.RawCounter(StatusKeys.Poison) + (u.RawCounter(StatusKeys.Burn) > 0 ? BurnRules.Damage : 0);
+
+    private static void Concentrate(BattleContext ctx, UnitState self)
+    {
+        AmplifierTrait.Thicken(ctx, self);   // (1) 旧の濃縮（+4・着火・`Amp*` の計数）
+
+        UnitTally t = ctx.TallyOf(self);
+        t.ConcFires++;
+        UnitState? center = null;
+        int best = 0;
+        foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        {
+            int n = NextTick(foe);
+            if (n <= 0) continue;
+            if (center is null || n > best || (n == best && foe.Slot < center.Slot)) { center = foe; best = n; }
+        }
+        if (center is null)
+        {
+            t.ConcDry++;
+            ctx.Log($"    {self.Name} の澱みは寄せる先を見つけられない", LogKind.Status);
+            return;
+        }
+        if (center.RawCounter(StatusKeys.Burn) > 0) t.ConcCenterBurning++;
+
+        if (ctx.MarkConcentrated(self, center, CenterLabel)) t.ConcMarkCenter++;
+        foreach (UnitState foe in ctx.LivingMembers(center.TeamId))
+            if (foe != center && FormationRules.AreAdjacent(center.Slot, foe.Slot) && ctx.MarkConcentrated(self, foe, AroundLabel))
+                t.ConcMarkAround++;
+
+        if (self.HasTrait(TraitId.ConcentrateLeak))
+            foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+                if (ally != self && FormationRules.AreAdjacent(self.Slot, ally.Slot) && ctx.MarkConcentrated(self, ally, LeakLabel))
+                    t.ConcMarkAlly++;
+
+        ctx.Log($"    ★ {self.Name} が澱みを {center.Name} に寄せた——刻みが {1 + center.RawCounter(StatusKeys.Concentrated)} 度来る", LogKind.Highlight, self);
+    }
+}
+
+/// <summary>
+/// 濃縮の漏れ（第194期・ミオのマイナス）。<b>札そのものは挙動を持たない</b>——
+/// <see cref="ConcentrateTrait"/> が印を付けるたび、この札を持っていればミオに隣接する味方にも印を +1 する。
+/// 外せば <c>yP</c>（第74期の作法）。
+/// </summary>
+public sealed class ConcentrateLeakTrait : Trait
+{
+    public override TraitId Id => TraitId.ConcentrateLeak;
 }
 
 /// <summary>
@@ -11890,6 +11972,8 @@ public static class TraitCatalog
         new TaintTrait(),      // 第190期
         new InverseLeakTrait(),// 第190期
         new KindleTrait(),     // 第191期
+        new ConcentrateTrait(),     // 第194期
+        new ConcentrateLeakTrait(), // 第194期
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期

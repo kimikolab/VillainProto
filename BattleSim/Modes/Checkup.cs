@@ -210,6 +210,9 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.Taint]      = (HcPlusL,  "手番で隣の味方全員に毒を1層積む（反転の燃料を自分で配る）"),
         [TraitId.InverseLeak]= (HcMinusL, "隣の味方への回復がダメージになるだけ。外せば `yP` になる"),
         [TraitId.Kindle]     = (HcPlusL,  "周期の火の拍で隣の味方全員に着火する（反転の燃料を自分で配る）"),
+        // 第194期: ミオ（濃縮の印）。分類を同じコミットで足す（第132期 段0-a）。
+        [TraitId.Concentrate]     = (HcPlusL,  "旧の +4 に続けて、刻みが最も大きい敵とその隣に印を +1（印1つにつき毒と燃焼の刻みが1回増える）。代金は別の札（`ConcentrateLeak`）に切り出してある"),
+        [TraitId.ConcentrateLeak] = (HcMinusL, "手番ごとに隣の味方にも印が +1 されるだけ。外せば `yP` になる"),
     };
 
     // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------
