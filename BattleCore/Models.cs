@@ -1626,12 +1626,13 @@ public sealed class UnitTally
     /// <summary>
     /// 第195期（毒吐きのスィド・痺れ毒）。<b>計数専用で、どの規則も読まない。</b>
     /// <para><b>スィドの側</b>: <c>SpewActs</c> 吐いた手番 ／ <c>SpewDry</c> 敵がいなかった手番 ／
-    /// <c>SpewMarks</c>・<c>VenomMarks</c> 新しく印を付けた敵の数（吐いた ／ 殴ってきた）。</para>
+    /// <c>SpewMarks</c>・<c>VenomMarks</c> 新しく印を付けた敵の数（吐いた ／ 殴ってきた）／
+    /// <c>SpewOnMarked</c> 既に印のある敵に吐いた回数（第196期）。</para>
     /// <para><b>振った側</b>（印のある駒）: <c>NumbedSwings</c> 減った一撃の数（層 > 0 のときだけ）／ <c>NumbedCut</c> 減らした打点の合計
     /// （<c>NumbedCutSpew</c>・<c>NumbedCutVenom</c> 印が付いた経路で分けたもの）／ <c>NumbedLayerSum</c>・<c>NumbedLayerMax</c> そのときの毒の層 ／
     /// <c>NumbedCapSwings</c> 上限 60% に届いた一撃 ／ <c>NumbedCapTurn</c> 初めて上限に届いたターン（0 は届かず）。</para>
     /// </summary>
-    public long SpewActs, SpewDry, SpewMarks, VenomMarks,
+    public long SpewActs, SpewDry, SpewMarks, VenomMarks, SpewOnMarked,
                 NumbedSwings, NumbedCut, NumbedCutSpew, NumbedCutVenom, NumbedLayerSum, NumbedLayerMax, NumbedCapSwings, NumbedCapTurn;
 
     /// <summary>「初めて届いたターン」の合成（0 は届かず）。</summary>
@@ -1966,6 +1967,7 @@ public sealed class UnitTally
         PoisonYokeCut += o.PoisonYokeCut; PoisonYokeLost += o.PoisonYokeLost; BurnYokeCut += o.BurnYokeCut;
         ConcMarkPeak = Math.Max(ConcMarkPeak, o.ConcMarkPeak); TickFiresMax = Math.Max(TickFiresMax, o.TickFiresMax);
         SpewActs += o.SpewActs; SpewDry += o.SpewDry; SpewMarks += o.SpewMarks; VenomMarks += o.VenomMarks;   // 第195期
+        SpewOnMarked += o.SpewOnMarked;   // 第196期
         NumbedSwings += o.NumbedSwings; NumbedCut += o.NumbedCut; NumbedCutSpew += o.NumbedCutSpew; NumbedCutVenom += o.NumbedCutVenom;
         NumbedLayerSum += o.NumbedLayerSum; NumbedLayerMax = Math.Max(NumbedLayerMax, o.NumbedLayerMax);
         NumbedCapSwings += o.NumbedCapSwings; NumbedCapTurn = MinReach(NumbedCapTurn, o.NumbedCapTurn);

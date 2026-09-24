@@ -215,6 +215,8 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.ConcentrateLeak] = (HcMinusL, "手番ごとに隣の味方にも印が +1 されるだけ。外せば `yP` になる"),
         [TraitId.Spew]            = (HcPlusL,  "手番で一番手強い敵に毒 +6 と痺れ毒の印。攻撃を捨てた代金は `Actions` の側にある"),
         [TraitId.Numb]            = (HcPlusL,  "印のある敵の与ダメが毒の層 × 3%（上限 60%）下がる。外せば「鈍らせなし」になる"),
+        [TraitId.SpewFixed]       = (HcPlusL,  "第195期の吐き（いつも一番手強い敵）。対照で保持者 0 枚"),
+        [TraitId.VenomHeavy]      = (HcBothL,  "殴られて毒を +8 積むのと、毒が隣接する味方へ漏れるのが同じ発火（S+反の版・保持者 0 枚）"),
     };
 
     // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------

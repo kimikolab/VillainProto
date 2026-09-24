@@ -151,6 +151,9 @@ public static class UnitCatalog
         Flavor = "縫い直された者はもう元の者ではない、と嫌われた。"
     };
 
+    /// <summary>S+HP の版（第196期・<b>診断だけ</b>）のスィドの最大HP。規定の版は 84 のまま。</summary>
+    public const int SidHardyHp = 100;
+
     public static readonly UnitDef Sid = new()
     {
         Id = "sid",
@@ -164,7 +167,8 @@ public static class UnitCatalog
         // 旧スィド（`Venom` だけ・攻撃する）は診断のローカルに写してある（回帰の対照）。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "毒を吐きかける") },
         Traits = new[] { TraitId.Spew, TraitId.Venom, TraitId.Numb },
-        PlusText = "手番で、一番手強い敵に毒を吐きかける。殴ってきた相手にも毒を浴びせる / スィドの毒を浴びた敵は、毒が深いほど手が鈍る（最大6割）",
+        // 第196期: 吐く相手を散らす（まだ毒を浴びていない敵のうち一番手強い敵・`SpewTrait.SpewSpreads`）。
+        PlusText = "手番で、まだ毒を浴びていない一番手強い敵に毒を吐きかける。殴ってきた相手にも毒を浴びせる / スィドの毒を浴びた敵は、毒が深いほど手が鈍る（最大6割）",
         MinusText = "殴られると、隣接する味方にも毒が漏れる / 自分では攻撃しない",
         Flavor = "袋が破れるまで役に立たない。誰も隣に立ちたがらない。"
     };

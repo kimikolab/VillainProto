@@ -355,6 +355,8 @@ public enum TraitId
                 // 選び方はクビの萎縮と同じ `GrappleTrait.Pick`。`Spit`（ヴィオの吐き戻し）とは別の札
     Numb,       // 痺れ毒（スィド・第195期）: 印のある敵は与ダメージが「毒の層 × 3%」下がる（上限 60%）。判定は engine（`PerformAttackBody` の萎縮の直後）。
                 // 印は `Spew` と `Venom` が付ける（どちらもこの札の保持者のときだけ）。外せば「鈍らせなし」
+    SpewFixed,  // 散らさない吐き（第196期・対照・保持者 0 枚）: 第195期の `Spew`（いつも現在攻撃力が最も高い敵）
+    VenomHeavy, // 重い毒撃（第196期・S+反の版・保持者 0 枚）: `Venom` と同じで、殴ってきた敵に積む毒が +8
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -1616,15 +1618,22 @@ public sealed class VenomTrait : Trait
 {
     public const int StackPerHit = 4;
 
+    /// <summary>S+反（第196期・<see cref="VenomHeavyTrait"/>）の殴られたときの毒。<b>診断の版だけ</b>（保持者 0 枚）。</summary>
+    public const int HeavyStackPerHit = 8;
+
     public override TraitId Id => TraitId.Venom;
 
     public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+        => Hit(ctx, self, source, StackPerHit);
+
+    /// <summary>毒撃の本体（第196期に切り出した。<see cref="VenomHeavyTrait"/> と共有。中身は第195期のまま）。</summary>
+    internal static void Hit(BattleContext ctx, UnitState self, UnitState? source, int stack)
     {
         if (source is null || source.TeamId == self.TeamId) return;
         if (!source.IsAlive) return;
 
         // 毒の窓口（第90期）。滲み則の入口だけを担い、加算量もログも現行のまま。
-        ctx.Poison(source, StackPerHit, self, PoisonRoute.Venom);
+        ctx.Poison(source, stack, self, PoisonRoute.Venom);
         ctx.Log($"    {source.Name} の毒が {source.Counter(StatusKeys.Poison)} 層になった", LogKind.Status);
         // 第195期: 痺れ毒の保持者なら、殴ってきた敵に印も付ける（旧スィド＝`Venom` だけの駒では何もしない）。
         if (self.HasTrait(TraitId.Numb) && ctx.MarkNumbed(self, source, SpewTrait.OriginVenom)) ctx.TallyOf(self).VenomMarks++;
@@ -4820,26 +4829,54 @@ public sealed class SpewTrait : Trait
     /// <summary>1回の吐きで積む毒の層（指示書 §2・<b>6</b>）。</summary>
     public const int SpitStack = 6;
 
+    /// <summary>
+    /// 吐く相手を散らす（第196期）。真なら<b>痺れ毒の印がまだ無い敵のうち</b>現在攻撃力が最も高い敵
+    /// （全員に印があれば今までどおり最も高い敵）。<b>偽で第195期に戻る</b>（<see cref="SpewFixedTrait"/> と同じ選び方）。
+    /// </summary>
+    public const bool SpewSpreads = true;
+
     /// <summary>印の値（<b>計数の帰属だけ</b>。規則は二値でしか読まない）: 吐いた敵 ／ 殴ってきた敵。</summary>
     public const int OriginSpew = 1, OriginVenom = 2;
 
     public override TraitId Id => TraitId.Spew;
 
-    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Act(ctx, self);
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Act(ctx, self, SpewSpreads);
 
     // 行動パターンを持たない保持者は従来どおりターン頭に発火する（Trait.ActsOnPattern）。
     public override void OnTurnStart(BattleContext ctx, UnitState self)
     {
-        if (!ActsOnPattern(self)) Act(ctx, self);
+        if (!ActsOnPattern(self)) Act(ctx, self, SpewSpreads);
     }
 
-    private static void Act(BattleContext ctx, UnitState self)
+    /// <summary>
+    /// 吐く相手（第196期）。<paramref name="spreads"/> が真なら、印（<see cref="StatusKeys.Numbed"/>）のまだ無い敵のうち
+    /// 現在攻撃力が最大・同値はスロットの小さい方。印の無い敵がいなければ（または偽なら）<see cref="GrappleTrait.Pick"/>。<b>乱数を引かない。</b>
+    /// </summary>
+    internal static UnitState? PickTarget(BattleContext ctx, UnitState self, bool spreads)
+    {
+        if (spreads)
+        {
+            UnitState? pick = null;
+            foreach (UnitState u in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+            {
+                if (u.RawCounter(StatusKeys.Numbed) > 0) continue;
+                if (pick is null) { pick = u; continue; }
+                int a = u.CurrentAttack, b = pick.CurrentAttack;
+                if (a > b || (a == b && u.Slot < pick.Slot)) pick = u;
+            }
+            if (pick is not null) return pick;
+        }
+        return GrappleTrait.Pick(ctx, self);
+    }
+
+    internal static void Act(BattleContext ctx, UnitState self, bool spreads)
     {
         if (!self.IsAlive) return;
         UnitTally t = ctx.TallyOf(self);
         t.SpewActs++;
-        UnitState? pick = GrappleTrait.Pick(ctx, self);
+        UnitState? pick = PickTarget(ctx, self, spreads);
         if (pick is null) { t.SpewDry++; return; }
+        if (pick.RawCounter(StatusKeys.Numbed) > 0) t.SpewOnMarked++;   // 第196期・計数のみ（既に印のある敵に吐いた）
         ctx.Log($"    {self.Name} が {pick.Name} に毒を吐きかけた", LogKind.Trigger);
         ctx.Poison(pick, SpitStack, self, PoisonRoute.Spew);
         if (self.HasTrait(TraitId.Numb) && ctx.MarkNumbed(self, pick, OriginSpew)) t.SpewMarks++;
@@ -4861,6 +4898,34 @@ public sealed class NumbTrait : Trait
     public const int MaxPercent = 60;
 
     public override TraitId Id => TraitId.Numb;
+}
+
+/// <summary>
+/// 散らさない吐き（第196期・<b>対照</b>・保持者 0 枚）。第195期の <see cref="SpewTrait"/> と同じ選び方
+/// （いつも現在攻撃力が最も高い敵）。<see cref="SpewTrait.SpewSpreads"/> を偽にしたのと同じ本体を通る。
+/// </summary>
+public sealed class SpewFixedTrait : Trait
+{
+    public override TraitId Id => TraitId.SpewFixed;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => SpewTrait.Act(ctx, self, spreads: false);
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) SpewTrait.Act(ctx, self, spreads: false);
+    }
+}
+
+/// <summary>
+/// 重い毒撃（第196期・S+反の版・<b>診断だけ</b>・保持者 0 枚）。<see cref="VenomTrait"/> と同じ本体で、
+/// 殴ってきた敵に積む毒だけが <see cref="VenomTrait.HeavyStackPerHit"/>（8）。漏れと印の付け方は同じ。
+/// </summary>
+public sealed class VenomHeavyTrait : Trait
+{
+    public override TraitId Id => TraitId.VenomHeavy;
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+        => VenomTrait.Hit(ctx, self, source, VenomTrait.HeavyStackPerHit);
 }
 
 /// <summary>
@@ -12043,6 +12108,8 @@ public static class TraitCatalog
         new ConcentrateLeakTrait(), // 第194期
         new SpewTrait(),       // 第195期
         new NumbTrait(),       // 第195期
+        new SpewFixedTrait(),  // 第196期（対照・保持者 0 枚）
+        new VenomHeavyTrait(), // 第196期（S+反の版・保持者 0 枚）
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期

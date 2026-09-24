@@ -19,6 +19,7 @@ static partial class SidDiag
             case "check": Check(arg); handled = true; return;
             case "beni": RunBeni(); handled = true; return;
             case "phase196": Phase196(); handled = true; return;
+            default: RunMore196(mode, arg, ref handled); return;
         }
     }
 
