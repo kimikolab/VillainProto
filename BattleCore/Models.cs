@@ -1597,10 +1597,13 @@ public sealed class UnitTally
     /// <c>KindlePostBurn</c> ベニが点けた火を持ったまま隣から外れた味方が、燃焼の刻みで受けた名目（保持者の側）。
     /// 第192期: <c>InverseSelfPoison</c>・<c>InverseSelfBurn</c>・<c>InverseSelfDetonate</c> 保持者自身が反転で癒えた量 ／
     /// <c>InverseLeakSelf</c> 保持者自身が反転の裏で受けたダメージ（保持者の側）／ <c>InverseLeakOnHolder</c> 同じ量の出どころの側。
+    /// 第193期（啜り）: <c>SipEligible</c> 隣で満タンに溢れた反転の回復（渇き・支援拒否を除く）／ <c>SipRoom</c> そのときベニが受け取れた上限（溢れとベニの失った HP の小さいほう）／
+    /// <c>SipGained</c>・<c>SipEarly</c> 実際にベニに流れ込んだ量（全体・1〜3 ターン目）。
     /// </summary>
     public long KindleActs, KindleDry, KindleTargets, InversePoisonEarly, InverseBurnEarly, InverseDetonateEarly, InverseBurnNominal,
                 KindlePostBurn, InverseBurnNominalEarly,
-                InverseSelfPoison, InverseSelfBurn, InverseSelfDetonate, InverseLeakSelf, InverseLeakOnHolder;
+                InverseSelfPoison, InverseSelfBurn, InverseSelfDetonate, InverseLeakSelf, InverseLeakOnHolder,
+                SipEligible, SipRoom, SipGained, SipEarly;
 
     /// <summary>墓守の層の最大値（第188期・<b>計数専用</b>。<c>NecroTrait.SetStack</c> が書く）。</summary>
     public long NecroPeak;
@@ -1921,6 +1924,7 @@ public sealed class UnitTally
         InverseDetonateEarly += o.InverseDetonateEarly; InverseBurnNominal += o.InverseBurnNominal; KindlePostBurn += o.KindlePostBurn; InverseBurnNominalEarly += o.InverseBurnNominalEarly;
         InverseSelfPoison += o.InverseSelfPoison; InverseSelfBurn += o.InverseSelfBurn; InverseSelfDetonate += o.InverseSelfDetonate;
         InverseLeakSelf += o.InverseLeakSelf; InverseLeakOnHolder += o.InverseLeakOnHolder;
+        SipEligible += o.SipEligible; SipRoom += o.SipRoom; SipGained += o.SipGained; SipEarly += o.SipEarly;
         if (o.NecroPeak > NecroPeak) NecroPeak = o.NecroPeak;
         BrandFires += o.BrandFires; BrandDealt += o.BrandDealt;
         StallStagger += o.StallStagger;
@@ -2313,7 +2317,14 @@ public enum BattleEventKind
     /// <c>TargetId</c> = 受けた駒、<c>Amount</c> = 回復の量（＝ダメージの名目）、<c>Text</c> = 裏の保持者の名前。
     /// <b>どの規則も読まない。</b></para>
     /// </summary>
-    HealInverted
+    HealInverted,
+
+    /// <summary>
+    /// 啜り（第193期・<see cref="TraitId.Inverse"/>）で、隣の溢れた反転の回復がベニに流れ込む瞬間（<b>表示専用</b>）。
+    /// <para><b>直後にベニへの <c>Heal</c>（ベニ → ベニ）が1件並ぶ</b>（ベニが満タンなら増えないので出ない）。
+    /// <c>ActorId</c> = ベニ、<c>TargetId</c> = 溢れた隣の味方、<c>Amount</c> = 溢れの量（流し込む名目）。<b>どの規則も読まない。</b></para>
+    /// </summary>
+    InverseSip
 }
 
 /// <summary><see cref="BattleEventKind.Reveille"/> の <c>Text</c>（<b>表示専用</b>）。</summary>

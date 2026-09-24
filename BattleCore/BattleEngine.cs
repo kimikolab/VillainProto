@@ -4016,15 +4016,50 @@ public sealed class BattleContext
     /// </summary>
     public UnitState? InvertsTick(UnitState u) => _inverseHolders.Count == 0 ? null : AdjacentHolder(_inverseHolders, u);
 
+    /// <summary>
+    /// 啜り（第193期）。反転で隣の味方に入った回復のうち<b>満タンで溢れた分</b>を、その反転を起こしたベニに流す。
+    ///
+    /// <para><b>溢れ ＝ 回復の量 − 実際に増えた HP。</b> 渇き（<see cref="HealOutcome.Drought"/>）・支援拒否（<see cref="HealOutcome.Blocked"/>）で
+    /// 止められた回復は溢れではない（回復が通らなかっただけ）。<b>対象がベニ自身なら流さない。</b>
+    /// ベニへの流し込みは <c>inverted: true</c>（反転の裏でダメージに戻らない）で、ベニが満タンならその分は捨てる（連鎖させない）。</para>
+    ///
+    /// <para><see cref="InverseTrait.OverflowToHolder"/> が偽なら<b>計数だけ</b>取って流さない（第192期の盤面）。乱数は引かない。</para>
+    /// </summary>
+    void InverseSip(UnitState beni, UnitState u, int amount, int gained, HealOutcome res)
+    {
+        if (ReferenceEquals(u, beni) || !beni.IsAlive) return;
+        if (res != HealOutcome.Healed && res != HealOutcome.Full) return;
+        int over = amount - gained;
+        if (over <= 0) return;
+        UnitTally t = TallyOf(beni);
+        t.SipEligible += over;
+        t.SipRoom += Math.Min(over, Math.Max(0, beni.MaxHp - beni.Hp));
+        if (!InverseTrait.OverflowToHolder) return;
+
+        // 表示専用。直後の `Heal`（ベニ → ベニ）が「隣の溢れを啜った」ものだと再生側が分けられるように。
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.InverseSip, Turn = _turn, ActorId = beni.InstanceId,
+            TargetId = u.InstanceId, Amount = over, SourceTrait = TraitId.Inverse,
+        });
+        int b0 = beni.Hp;
+        Heal(beni, over, beni, inverted: true);
+        int g = beni.Hp - b0;
+        t.SipGained += g;
+        if (_turn <= 3) t.SipEarly += g;
+        if (g > 0) Log($"    {beni.Name} が {u.Name} の溢れを啜った（+{g}）", LogKind.Status);
+    }
+
     /// <summary>反転の回復を1段行う（<c>kind</c>: 0 刻みの毒 ／ 1 刻みの燃焼 ／ 2 起爆）。渇き・支援拒否は <see cref="Heal"/> がそのまま掛ける。</summary>
     void InverseHeal(UnitState beni, UnitState u, int amount, int kind, string what)
     {
         Log($"    {u.Name} の{what}は {beni.Name} の隣で薬になる（+{amount}）", LogKind.Status);
         int before = u.Hp;
-        Heal(u, amount, beni, inverted: true);
+        HealOutcome res = Heal(u, amount, beni, inverted: true);
         int gained = u.Hp - before;
         UnitTally t = TallyOf(beni);
         t.InverseNominal += amount;
+        InverseSip(beni, u, amount, gained, res);   // 第193期
         if (ReferenceEquals(u, beni))   // 第192期・**計数のみ**（ベニ自身が受けた分）
         {
             if (kind == 0) t.InverseSelfPoison += gained; else if (kind == 1) t.InverseSelfBurn += gained; else t.InverseSelfDetonate += gained;

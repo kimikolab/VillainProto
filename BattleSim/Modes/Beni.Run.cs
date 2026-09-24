@@ -17,6 +17,7 @@ static partial class BeniDiag
             case "run": RunVersions(); handled = true; return;
             case "ledger": RunLedger(); handled = true; return;
             case "ledger192": RunLedger192(); handled = true; return;
+            case "ledger193": RunLedger193(); handled = true; return;
             case "bench": RunBenches(); handled = true; return;
             case "check": Check(arg); handled = true; return;
         }
