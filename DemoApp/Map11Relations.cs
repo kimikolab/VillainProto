@@ -190,6 +190,18 @@ public static class Map11Relations
         [TraitId.Footing] = new(Shape.Adjacent, "範囲を受ける",
             "薙ぎ・貫き・全体がこの駒と同時に当たるとき、この駒の分を半分にして代わりに受け止める（その後に踏みしめた層の軽減が乗る）",
             LinkSign.Gain, true, "範囲攻撃"),
+        // 第189期（ネルの転生）。**毎手番、隣の味方全員に漏れる**ので実線（突き返しの「腕が鈍る」と同じ形）。
+        [TraitId.HexLeak] = new(Shape.AdjacentAcceptsSupport, "呪いが滲む",
+            "自分が呪うたび（毎手番）、この駒の攻撃力が2下がる（累積して戻らない）",
+            LinkSign.Loss, false, "隣の味方の攻撃力"),
+        // 第189期（クビの転生）。**毎手番、隣の味方全員に伝染る**ので実線。
+        [TraitId.DauntLeak] = new(Shape.Adjacent, "怯えが伝染る",
+            "自分が萎縮させるたび（毎手番）、この駒の次の1回の攻撃のダメージが半分になる（殴らない駒なら何も起きない）",
+            LinkSign.Loss, false, "隣の味方も萎縮"),
+        // 第189期（ハネの転生）。**相手は隣のうち席の番号がいちばん若い1体で、入れ替わるたび変わる**ので点線（(b) 型）。
+        [TraitId.Overrun] = new(Shape.Adjacent, "入れ替わる",
+            "突き返したあと、この駒と場所を入れ替える（相手は隣のうち席の番号がいちばん若い1体。後ろの駒が前へ出ることがある）",
+            LinkSign.Loss, true, "場所を入れ替える"),
     };
 
     /// <summary>
@@ -226,6 +238,10 @@ public static class Map11Relations
         [TraitId.Sniper] = "自分の列だけを読む（相手がいない）",
         [TraitId.Touch] = "敵陣の隣接を読む（味方どうしの線ではない）",
         [TraitId.Shame] = "敵陣の隣接を読む（味方どうしの線ではない）",
+        [TraitId.Hexer] = "敵陣の攻撃力で相手を選ぶ（味方どうしの線ではない）",
+        [TraitId.Huddle] = "味方全体の被ダメージを下げる（位置を問わない）",
+        [TraitId.Daunt] = "敵陣の隣接を読む（味方どうしの線ではない）",
+        [TraitId.Rebound] = "敵陣の席を動かす（味方どうしの線ではない）",
     };
 
     /// <summary>

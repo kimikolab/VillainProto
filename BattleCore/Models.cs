@@ -1554,6 +1554,25 @@ public sealed class UnitTally
                 DetonateDualExtra, DetonateFoeDealt, DetonateAllyNominal, DetonateAllyDealt,
                 DetonateFoeKills, DetonateAllyKills, DetonateYokeCut;
 
+    /// <summary>
+    /// デバッファー3枚（第189期）の帳簿。<b>計数専用</b>（どの規則も読まない）。
+    /// <para>ネル（<see cref="TraitId.Hexer"/>）の側: <c>HexerActs</c> 手番の回数 ／ <c>HexerMarks</c> 呪った回数 ／
+    /// <c>HexerCursedSum</c>・<c>HexerCursedMax</c> 手番ごとの呪い持ちの数の合計と最大 ／ <c>HexerDullTotal</c> 呪い持ちへの攻撃ダウンの名目の総量 ／
+    /// <c>HexLeakTotal</c> 隣の味方への漏れの名目の総量。</para>
+    /// <para>クビ（<see cref="TraitId.Daunt"/>）の側: <c>DauntActs</c> 手番の回数 ／ <c>DauntFoes</c> 萎縮させた敵の延べ数 ／
+    /// <c>DauntFoesAlready</c> 既に萎縮していた敵の延べ数 ／ <c>DauntAllies</c> 萎縮させた隣の味方の延べ数。
+    /// <b>振った側</b>（萎縮を消費した駒）: <c>DauntedSwings</c> 半分になった一撃の数 ／ <c>DauntedCut</c> 削った打点の合計。</para>
+    /// <para>ハネ（<see cref="TraitId.Rebound"/>）の側: <c>ReboundThrusts</c> 突き返した回数 ／ <c>ReboundStaggers</c> 転ばせた回数 ／
+    /// <c>ReboundNoFront</c> 前列に敵がいなかった手番 ／ <c>ReboundRefused</c> 入れ替えが空振りした回数 ／
+    /// <c>OverrunSwaps</c>・<c>OverrunRefused</c>・<c>OverrunNoAlly</c> 勢い余っての入れ替え・空振り（据えた足）・隣に味方なし ／
+    /// <c>OverrunReaderDisplaced</c>・<c>OverrunReaderDrifter</c>・<c>OverrunReaderSniper</c> その入れ替えの通知が届いた読み手
+    /// （ヨミが動かされた・シオに味方の移動が届いた・セロが後ろへ下がった）の延べ数。</para>
+    /// </summary>
+    public long HexerActs, HexerMarks, HexerCursedSum, HexerCursedMax, HexerDullTotal, HexLeakTotal,
+                DauntActs, DauntFoes, DauntFoesAlready, DauntAllies, DauntedSwings, DauntedCut,
+                ReboundThrusts, ReboundStaggers, ReboundNoFront, ReboundRefused,
+                OverrunSwaps, OverrunRefused, OverrunNoAlly, OverrunReaderDisplaced, OverrunReaderDrifter, OverrunReaderSniper;
+
     /// <summary>墓守の層の最大値（第188期・<b>計数専用</b>。<c>NecroTrait.SetStack</c> が書く）。</summary>
     public long NecroPeak;
 
@@ -1855,6 +1874,13 @@ public sealed class UnitTally
         DetonateDualExtra += o.DetonateDualExtra; DetonateFoeDealt += o.DetonateFoeDealt;
         DetonateAllyNominal += o.DetonateAllyNominal; DetonateAllyDealt += o.DetonateAllyDealt;
         DetonateFoeKills += o.DetonateFoeKills; DetonateAllyKills += o.DetonateAllyKills; DetonateYokeCut += o.DetonateYokeCut;
+        HexerActs += o.HexerActs; HexerMarks += o.HexerMarks; HexerCursedSum += o.HexerCursedSum;
+        HexerCursedMax = Math.Max(HexerCursedMax, o.HexerCursedMax); HexerDullTotal += o.HexerDullTotal; HexLeakTotal += o.HexLeakTotal;
+        DauntActs += o.DauntActs; DauntFoes += o.DauntFoes; DauntFoesAlready += o.DauntFoesAlready; DauntAllies += o.DauntAllies;
+        DauntedSwings += o.DauntedSwings; DauntedCut += o.DauntedCut;
+        ReboundThrusts += o.ReboundThrusts; ReboundStaggers += o.ReboundStaggers; ReboundNoFront += o.ReboundNoFront; ReboundRefused += o.ReboundRefused;
+        OverrunSwaps += o.OverrunSwaps; OverrunRefused += o.OverrunRefused; OverrunNoAlly += o.OverrunNoAlly;
+        OverrunReaderDisplaced += o.OverrunReaderDisplaced; OverrunReaderDrifter += o.OverrunReaderDrifter; OverrunReaderSniper += o.OverrunReaderSniper;
         if (o.NecroPeak > NecroPeak) NecroPeak = o.NecroPeak;
         BrandFires += o.BrandFires; BrandDealt += o.BrandDealt;
         StallStagger += o.StallStagger;

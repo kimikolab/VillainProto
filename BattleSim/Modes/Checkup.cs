@@ -198,6 +198,13 @@ public static void Run(string[] args, int stageIndex)
         // 第188期: カタ（起爆＋逆流）。分類を同じコミットで足す（第132期 段0-a の再発防止）。
         [TraitId.Catalyst]   = (HcPlusL,  "敵全体の毒と燃焼をもう1回働かせる（両方持ちは倍）。代金は別の札（`Backfire`）に切り出してある"),
         [TraitId.Backfire]   = (HcMinusL, "起爆が味方の毒と燃焼も働かせるだけ。起爆の代金で、外せば `yP` になる"),
+        [TraitId.Hexer]      = (HcPlusL,  "手番で敵を呪い、呪い持ち全員の攻撃力を下げる。代金は別の札（`HexLeak`）に切り出してある"),
+        [TraitId.HexLeak]    = (HcMinusL, "呪うたび隣の味方の攻撃力が下がるだけ。外せば `yP` になる"),
+        [TraitId.Huddle]     = (HcPlusL,  "味方全体の被ダメ −30%（旧 `Cower` の軽減だけ）"),
+        [TraitId.Daunt]      = (HcPlusL,  "手番で敵を萎縮させる（次の一撃が半分）。代金は別の札（`DauntLeak`）に切り出してある"),
+        [TraitId.DauntLeak]  = (HcMinusL, "萎縮させるたび隣の味方も萎縮するだけ。外せば `yP` になる"),
+        [TraitId.Rebound]    = (HcPlusL,  "手番で前列の敵を後ろへ突き返して転ばせる＋押しのけられたときの突き崩し。代金は別の札（`Overrun`）"),
+        [TraitId.Overrun]    = (HcMinusL, "突き返すたび自分が隣の味方と入れ替わるだけ。外せば `yP` になる"),
     };
 
     // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------

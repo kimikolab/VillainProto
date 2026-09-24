@@ -329,6 +329,19 @@ public enum TraitId
     Backfire,   // 逆流: 起爆は味方の毒と燃焼も1回余分に働かせる（倍は掛けない）。起爆の代金で、外せば `yP`。
                 // **札そのものは挙動を持たない**（`Detonate` が保持を読むだけ）
 
+    // --- 第189期で足した札（**デバッファー3枚の転生**。旧 `Cower` / `Shove` は定義だけ残す・保持者 0 枚） ---
+    Hexer,      // 呪いを広げる（ネル）: 手番で（攻撃しない）まだ呪われていない敵のうち現在攻撃力が最も高い1体に呪い
+                // （`StatusKeys.Curse`・ムドと同じ状態）を付け、そのたび呪われている敵全員の攻撃力を −4（恒久・重なる）
+    HexLeak,    // 呪いの漏れ（ネル）: 呪うたび、ネルに隣接する味方の攻撃力を −2（恒久・重なる）。`Hexer` の代金で、外せば `yP`
+    Huddle,     // 身を寄せる（クビ）: 味方全体の被ダメ −30%（旧 `Cower` の軽減だけ。判定は engine の萎縮の段）
+    Daunt,      // 萎縮させる（クビ）: 手番で（攻撃しない）敵のうち現在攻撃力が最も高い1体と、その敵に隣接する敵全員を萎縮させる
+                // ——萎縮した駒は**次の1回の攻撃のダメージが半分**（`StatusKeys.Daunted`・`PerformAttack` 1回で消える）
+    DauntLeak,  // 萎縮は敵味方を選ばない（クビ）: 萎縮させるたび、クビに隣接する味方も萎縮する。`Daunt` の代金で、外せば `yP`
+    Rebound,    // バネ（ハネ）: 手番で（攻撃しない）前列で現在攻撃力が最も高い敵を後ろへ突き返し、転ばせる（`StatusKeys.Stagger`）。
+                // 味方が押しのけられたときの突き崩し（旧 `Shove` の効果A）も持つ
+    Overrun,    // 勢い余って（ハネ）: 突き返したあと、自分が隣接する味方1体（スロット番号が最小）と場所を入れ替える。
+                // `Rebound` の代金で、外せば `yP`
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -3074,7 +3087,10 @@ public sealed class ShoveTrait : Trait
 
     public override void OnAllyMoved(BattleContext ctx, UnitState self, UnitState moved) => Push(ctx, self);
 
-    private static void Push(BattleContext ctx, UnitState self)
+    private static void Push(BattleContext ctx, UnitState self) => Push(ctx, self, stagger: true);
+
+    /// <param name="stagger">効果B（隣の味方のよろけ）も走らせるか。第189期のバネ（<see cref="ReboundTrait"/>）は効果Aだけを使う。</param>
+    internal static void Push(BattleContext ctx, UnitState self, bool stagger)
     {
         if (!self.IsAlive) return;
 
@@ -3089,7 +3105,7 @@ public sealed class ShoveTrait : Trait
             self.SetCounter(LastTurnKey, ctx.Turn + 1);
             ctx.ShoveFired++;
             ShoveOut(ctx, self);
-            Stagger(ctx, self);
+            if (stagger) Stagger(ctx, self);
         });
     }
 
@@ -3198,12 +3214,15 @@ public enum DullRoute
     Smear        // 泥散り: ムド → 隣接する生存味方・**被弾のたび**（第180期）。
                   // **供給の周期が「相手が殴ってくる回数」で決まる初めての弱体経路**
                   // ——他の9本はどれも自分の手番か開戦時が起点で、撒く側が回数を決めている
+    ,
+    Hexer,        // 呪いを広げる: ネル → 呪われている敵全員・手番ごと（第189期）
+    HexLeak       // 呪いの漏れ: ネル → 隣接する味方・手番ごと（第189期）
 }
 
 /// <summary>経路の名前と本数。診断の表の見出しと配列長をここ1箇所から引く。</summary>
 public static class DullRoutes
 {
-    public static readonly string[] Names = { "その他", "なまり", "呪詛敵", "呪詛漏れ", "突き返し", "萎縮", "渡し", "誹り", "驕り", "火選り", "泥散り" };
+    public static readonly string[] Names = { "その他", "なまり", "呪詛敵", "呪詛漏れ", "突き返し", "萎縮", "渡し", "誹り", "驕り", "火選り", "泥散り", "呪い広げ", "呪いの漏れ" };
     public static int Count => Names.Length;
 }
 
@@ -11252,6 +11271,305 @@ public sealed class PlantedTrait : Trait
     public override TraitId Id => TraitId.Planted;
 }
 
+/// <summary>
+/// 呪いを広げる（第189期・呪詛官ネルの転生。開戦時の呪詛＝<see cref="CurseTrait"/> はそのまま並べる）。
+///
+/// <para><b>手番で</b>（攻撃しない）、<b>まだ呪われていない敵</b>のうち現在攻撃力が最も高い1体（同値はスロットの小さい方）に
+/// 呪い（<see cref="StatusKeys.Curse"/>）を付ける。<b>ムドの祟り（<see cref="HexTrait"/>）と同じ状態</b>で、
+/// 共有（<see cref="CurseRule"/>・単体攻撃の痛みを呪い持ち同士で 50% 分け合う）は誰が付けたかを見ない。
+/// 全員呪われていれば付与しない。<b><see cref="CurseRule.Enabled"/> が偽の版では付与しない</b>（祟りと同じ門）。</para>
+///
+/// <para><b>呪うたび</b>（付与しなかった手番も含む）、<b>呪われている敵全員</b>の攻撃力を −<see cref="HexAtkDown"/>
+/// （<see cref="BattleContext.Dull"/>・<see cref="DullRoute.Hexer"/>）。恒久・重なる。支援拒否の敵は開幕の呪詛と同じく飛ばす。
+/// 呪い持ちが増えるほど1回の下げが広く効き、痛みの共有も広がる——2つの効果が同じ方向に伸びる。</para>
+///
+/// <para>代金は別の札（<see cref="HexLeakTrait"/>）に切り出してある（第74期の作法。外せば <c>yP</c>）。
+/// <b>乱数を1つも引かない。</b></para>
+/// </summary>
+public sealed class HexerTrait : Trait
+{
+    /// <summary>呪うたび、呪われている敵全員から引く攻撃力（指示書 §1-2・測る前に固定）。</summary>
+    public const int HexAtkDown = 4;
+
+    public override TraitId Id => TraitId.Hexer;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Act(ctx, self);
+
+    // 行動パターンを持たない保持者は従来どおりターン頭に発火する（継ぎ当て・組み付きと同じ作法）。
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Act(ctx, self);
+    }
+
+    /// <summary>次に呪う相手（まだ呪われていない敵のうち現在攻撃力が最大。同値はスロットの小さい方）。<b>乱数を引かない。</b></summary>
+    public static UnitState? Pick(BattleContext ctx, UnitState self)
+    {
+        UnitState? pick = null;
+        foreach (UnitState u in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        {
+            if (u.RawCounter(StatusKeys.Curse) > 0) continue;
+            if (pick is null) { pick = u; continue; }
+            int a = u.CurrentAttack, b = pick.CurrentAttack;
+            if (a > b || (a == b && u.Slot < pick.Slot)) pick = u;
+        }
+        return pick;
+    }
+
+    private static void Act(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        UnitTally tally = ctx.TallyOf(self);
+        tally.HexerActs++;
+
+        // 1. 付与
+        if (ctx.Curse.Enabled && Pick(ctx, self) is { } pick)
+        {
+            pick.SetCounter(StatusKeys.Curse, 1);
+            tally.HexerMarks++;
+            ctx.EmitStatusGain(pick, StatusKeys.Curse, 1, self);   // 表示専用（付いた瞬間。書き手はネル）
+            ctx.Log($"    {self.Name} が {pick.Name} に呪いを掛けた", LogKind.Trigger);
+        }
+
+        // 2. 呪われている敵全員の攻撃力を下げる
+        int cursed = 0;
+        foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        {
+            if (foe.RawCounter(StatusKeys.Curse) <= 0) continue;
+            cursed++;
+            if (!foe.AcceptsSupport) continue;   // 開幕の呪詛と同じ（支援拒否の敵は飛ばす）
+            ctx.Dull(foe, HexAtkDown, DullRoute.Hexer, self);
+            tally.HexerDullTotal += HexAtkDown;
+        }
+        tally.HexerCursedSum += cursed;
+        if (cursed > tally.HexerCursedMax) tally.HexerCursedMax = cursed;
+        if (cursed > 0)
+            ctx.Log($"    呪いが広がり、呪われた敵 {cursed} 体の腕が鈍った（攻撃 -{HexAtkDown}）", LogKind.Trigger);
+
+        // 3. 代金（別の札）
+        if (self.HasTrait(TraitId.HexLeak)) HexLeakTrait.Leak(ctx, self);
+    }
+}
+
+/// <summary>
+/// 呪いの漏れ（第189期・<see cref="HexerTrait"/> の代金）。<b>呪うたび、ネルに隣接する味方の攻撃力を
+/// −<see cref="LeakAtkDown"/></b>（恒久・重なる）。<b>札そのものは挙動を持たない</b>——呼ぶのは <see cref="HexerTrait"/>。
+///
+/// <para>支援拒否（ガルド）は弾き、<b>隣へ流さない</b>（突き返しの効果B＝<see cref="ShoveTrait"/> と同じ扱い）。
+/// 開幕の呪詛の漏れ（味方全体・<see cref="BattleContext.SupportTargets"/> を通す）とは別物。</para>
+/// </summary>
+public sealed class HexLeakTrait : Trait
+{
+    /// <summary>呪うたび、隣接する味方から引く攻撃力（指示書 §1-2・測る前に固定）。</summary>
+    public const int LeakAtkDown = 2;
+
+    public override TraitId Id => TraitId.HexLeak;
+
+    internal static void Leak(BattleContext ctx, UnitState self)
+    {
+        var hit = new List<string>();
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            if (!ally.AcceptsSupport) continue;
+            ctx.Dull(ally, LeakAtkDown, DullRoute.HexLeak, self);
+            ctx.TallyOf(self).HexLeakTotal += LeakAtkDown;
+            hit.Add(ally.Name);
+        }
+        if (hit.Count > 0)
+            ctx.Log($"    呪いは隣の {string.Join("・", hit)} にも滲んだ（攻撃 -{LeakAtkDown}）", LogKind.FriendlyFire);
+    }
+}
+
+/// <summary>
+/// 身を寄せる（第189期・萎縮のクビの転生で旧 <see cref="CowerTrait"/> の軽減だけを残した札）。
+/// <b>味方全体の被ダメ −<see cref="CowerTrait.ReductionPercent"/>%</b>。判定は engine（<c>ApplyDamage</c> の萎縮の段・旧と同じ位置）で、
+/// <b>札そのものは挙動を持たない</b>。旧の「味方全体の攻撃 −9」は持たない。
+/// </summary>
+public sealed class HuddleTrait : Trait
+{
+    public override TraitId Id => TraitId.Huddle;
+}
+
+/// <summary>
+/// 萎縮させる（第189期・萎縮のクビの転生）。<b>手番で</b>（攻撃しない）、敵のうち現在攻撃力が最も高い1体
+/// （同値はスロットの小さい方）と、<b>その敵に隣接する敵全員</b>を萎縮させる（<see cref="StatusKeys.Daunted"/>）。
+///
+/// <para>萎縮した駒は<b>次の1回の攻撃のダメージが半分</b>（<see cref="CowerPercent"/>）。
+/// <b>攻撃1回＝<c>PerformAttack</c> 1回</b>で、判定と消費は engine（<c>PerformAttackBody</c> が <c>atk</c> を作り終えた直後）。
+/// 二値で重ねない。手番を失う状態（痺れ・転倒・竦み・組み付き）では消費されず、次に振るまで残る。</para>
+///
+/// <para>代金は別の札（<see cref="DauntLeakTrait"/>）に切り出してある。<b>乱数を1つも引かない。</b></para>
+/// </summary>
+public sealed class DauntTrait : Trait
+{
+    /// <summary>萎縮した駒の次の一撃を何 % 下げるか（指示書 §2-1・<b>50 ＝ 半分</b>。測る前に固定）。</summary>
+    public const int CowerPercent = 50;
+
+    public override TraitId Id => TraitId.Daunt;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Act(ctx, self);
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Act(ctx, self);
+    }
+
+    private static void Act(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        UnitTally tally = ctx.TallyOf(self);
+        tally.DauntActs++;
+
+        UnitState? pick = GrappleTrait.Pick(ctx, self);   // 現在攻撃力が最大・同値はスロットの小さい方（組み付きと同じ選び方）
+        if (pick is not null)
+        {
+            int n = 0;
+            foreach (UnitState u in ctx.LivingMembers(pick.TeamId))
+            {
+                if (u != pick && !FormationRules.AreAdjacent(pick.Slot, u.Slot)) continue;
+                if (Mark(ctx, self, u)) n++; else tally.DauntFoesAlready++;
+            }
+            tally.DauntFoes += n;
+            ctx.Log($"    {self.Name} の怯えが {pick.Name} とその隣へ伝染った（萎縮 {n} 体・次の一撃が半分）", LogKind.Trigger);
+        }
+
+        if (self.HasTrait(TraitId.DauntLeak))
+        {
+            int m = 0;
+            foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+            {
+                if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+                if (Mark(ctx, self, ally)) m++;
+            }
+            tally.DauntAllies += m;
+            if (m > 0) ctx.Log($"    怯えは隣の味方 {m} 体にも伝染った（次の一撃が半分）", LogKind.FriendlyFire);
+        }
+    }
+
+    /// <summary>萎縮を立てる。<b>既に萎縮していれば何もしない</b>（二値）。立てたら真。</summary>
+    private static bool Mark(BattleContext ctx, UnitState self, UnitState u)
+    {
+        if (u.RawCounter(StatusKeys.Daunted) > 0) return false;
+        u.SetCounter(StatusKeys.Daunted, 1);
+        ctx.EmitStatusGain(u, StatusKeys.Daunted, 1, self);   // 表示専用（萎縮した瞬間）
+        return true;
+    }
+}
+
+/// <summary>
+/// 萎縮は敵味方を選ばない（第189期・<see cref="DauntTrait"/> の代金）。萎縮させるたび、<b>クビに隣接する味方</b>も萎縮する。
+/// <b>札そのものは挙動を持たない</b>——呼ぶのは <see cref="DauntTrait"/>。隣が殴らない駒なら代金はゼロ。
+/// </summary>
+public sealed class DauntLeakTrait : Trait
+{
+    public override TraitId Id => TraitId.DauntLeak;
+}
+
+/// <summary>
+/// バネ（第189期・突き返しのハネの転生。旧 <see cref="ShoveTrait"/> は定義だけ残す）。
+///
+/// <para><b>1. 手番で</b>（攻撃しない）、<b>前列で現在攻撃力が最も高い敵</b>（同値はスロットの小さい方・○前2 の召喚枠は対象外）を
+/// <b>同じ側の後列の席</b>（前1 → 後1・前3 → 後3）へ突き返す（<see cref="BattleContext.SwapSlots"/>。そこに敵がいれば入れ替わり、
+/// いなければ空いた席へ）。突き返された敵は<b>転ぶ</b>（<see cref="StatusKeys.Stagger"/>・次の手番を失う）。
+/// 中央は両方のレーンに属して「どちらかの真後ろ」ではないので使わない。</para>
+///
+/// <para><b>2. 味方が押しのけられたときの突き崩し</b>（旧 <see cref="ShoveTrait"/> の効果A・1ターン1回）はそのまま持つ。
+/// 旧の効果B（隣の味方のよろけ）は持たない。</para>
+///
+/// <para>代金は別の札（<see cref="OverrunTrait"/>）。<b>乱数を1つも引かない</b>（入れ替えの窓口が引く分を除く——
+/// 入れ替えの窓口は占有者の候補が 0/1 個なら乱数を引かない）。</para>
+/// </summary>
+public sealed class ReboundTrait : Trait
+{
+    public override TraitId Id => TraitId.Rebound;
+
+    public override void OnMoved(BattleContext ctx, UnitState self, Row from, Row to) => ShoveTrait.Push(ctx, self, stagger: false);
+
+    public override void OnAllyMoved(BattleContext ctx, UnitState self, UnitState moved) => ShoveTrait.Push(ctx, self, stagger: false);
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Act(ctx, self);
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Act(ctx, self);
+    }
+
+    /// <summary>前1（0）→ 後1（3）、前3（1）→ 後3（4）。</summary>
+    private static int BehindOf(int slot) => slot == 0 ? 3 : 4;
+
+    private static void Act(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        UnitTally tally = ctx.TallyOf(self);
+
+        UnitState? pick = null;
+        foreach (UnitState u in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        {
+            if (u.Slot != 0 && u.Slot != 1) continue;   // 前列の編成枠だけ（○前2 は対象外）
+            if (pick is null) { pick = u; continue; }
+            int a = u.CurrentAttack, b = pick.CurrentAttack;
+            if (a > b || (a == b && u.Slot < pick.Slot)) pick = u;
+        }
+        if (pick is null)
+        {
+            tally.ReboundNoFront++;
+            ctx.Log($"    {self.Name} は突き返す相手がいない", LogKind.Action);
+            return;
+        }
+
+        ctx.Log($"    {self.Name} が {pick.Name} を後ろへ突き返した", LogKind.Trigger);
+        if (!ctx.SwapSlots(pick, BehindOf(pick.Slot), self)) { tally.ReboundRefused++; return; }
+        tally.ReboundThrusts++;
+        if (pick.IsAlive)
+        {
+            pick.SetCounter(StatusKeys.Stagger, 1);
+            tally.ReboundStaggers++;
+            ctx.EmitStagger(pick, StaggerLabels.Fell, self);   // 表示専用（付いた瞬間）
+            ctx.Log($"    {pick.Name} は突き返されて転んだ（次の手番を失う）", LogKind.Status);
+        }
+
+        if (self.HasTrait(TraitId.Overrun)) OverrunTrait.Swap(ctx, self);
+    }
+}
+
+/// <summary>
+/// 勢い余って（第189期・<see cref="ReboundTrait"/> の代金）。突き返したあと、<b>ハネ自身が隣接する味方1体と場所を入れ替える</b>。
+/// 相手は<b>隣接する生存味方（召喚枠を除く）のうちスロット番号が最小</b>（乱数を引かない）。
+/// 据えた足（バン）は入れ替えを受け付けないので候補から外し、<b>バンしかいなければバンへ振って空振りする</b>。
+/// <b>札そのものは挙動を持たない</b>——呼ぶのは <see cref="ReboundTrait"/>。
+///
+/// <para>入れ替えは <see cref="BattleContext.Shoving"/> の中で行う——<b>ハネ自身の突き崩し（効果A）はこの入れ替えでは発火しない</b>
+/// （発火させると毎手番、後列で現在HP最大の敵が前へ引き出され、いま突き返した敵が戻ってきうる）。
+/// ほかの移動の読み手（ヨミ・シオ・セロ）には今までどおり通知が届く。</para>
+/// </summary>
+public sealed class OverrunTrait : Trait
+{
+    public override TraitId Id => TraitId.Overrun;
+
+    internal static void Swap(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        UnitTally tally = ctx.TallyOf(self);
+        UnitState? pick = null, planted = null;
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            if (ally == self || FormationRules.IsSummonSlot(ally.Slot)) continue;
+            if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            if (ally.HasTrait(TraitId.Planted)) { if (planted is null || ally.Slot < planted.Slot) planted = ally; continue; }
+            if (pick is null || ally.Slot < pick.Slot) pick = ally;
+        }
+        UnitState? with = pick ?? planted;
+        if (with is null) { tally.OverrunNoAlly++; return; }
+
+        ctx.Log($"    勢い余って {self.Name} は {with.Name} と場所を入れ替えた", LogKind.FriendlyFire);
+        bool moved = false;
+        ctx.OverrunBy = self;
+        try { ctx.Shoving(() => moved = ctx.SwapSlots(self, with.Slot, self)); }
+        finally { ctx.OverrunBy = null; }
+        if (moved) tally.OverrunSwaps++; else tally.OverrunRefused++;
+    }
+}
+
 /// <summary>敵の標を誰が付けたか（第184期・<b>計数専用</b>。§1 の被ダメージ増の出どころを割るためだけ）。</summary>
 public enum MarkOrigin
 {
@@ -11406,6 +11724,13 @@ public static class TraitCatalog
         new ThrustPlainTrait(),// 第186期 追補（対照）
         new CatalystTrait(),   // 第188期
         new BackfireTrait(),   // 第188期
+        new HexerTrait(),      // 第189期
+        new HexLeakTrait(),    // 第189期
+        new HuddleTrait(),     // 第189期
+        new DauntTrait(),      // 第189期
+        new DauntLeakTrait(),  // 第189期
+        new ReboundTrait(),    // 第189期
+        new OverrunTrait(),    // 第189期
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期

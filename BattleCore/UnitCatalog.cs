@@ -55,9 +55,12 @@ public static class UnitCatalog
         Attack = 7,
         Speed = 9,
         Advances = false,
-        Traits = new[] { TraitId.Curse },
-        PlusText = "戦闘開始時、敵全体の攻撃力を下げる",
-        MinusText = "呪詛が味方全体にも漏れる",
+        // 第189期: 転生。開戦時の呪詛（`Curse`）はそのまま、手番で呪いを広げる（`Hexer`）と代金（`HexLeak`）を足した。
+        // **攻撃は捨てる**（`Actions` が `Skill` 1要素）。旧（`Curse` だけ・毎手番殴る）は診断 `debuff` のローカルに残す。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "呪いを広げる") },
+        Traits = new[] { TraitId.Curse, TraitId.Hexer, TraitId.HexLeak },
+        PlusText = "戦闘開始時、敵全体の攻撃力を下げる / 手番で、まだ呪われていない敵のうち最も攻撃力の高い1体を呪い（呪われた者同士は単体攻撃の痛みを半分分け合う）、そのたび呪われている敵全員の攻撃力を4下げる",
+        MinusText = "呪詛が味方全体にも漏れる / 呪うたび、隣の味方の攻撃力が2下がる / 自分では攻撃しない",
         Flavor = "効果は本物。ただし味方の被害が計算に合わないとされた。"
     };
 
@@ -480,9 +483,12 @@ public static class UnitCatalog
         Attack = 3,
         Speed = 4,
         Advances = false,
-        Traits = new[] { TraitId.Cower },
-        PlusText = "味方全体の被ダメージを30%下げる",
-        MinusText = "味方全体の攻撃力が9下がる",
+        // 第189期: 転生。旧 `Cower`（被ダメ −30% と味方全体の攻撃 −9）を、軽減だけの `Huddle` と
+        // 手番の萎縮（`Daunt`）・その代金（`DauntLeak`）に置き換えた。**攻撃は捨てる**（`Actions` が `Skill` 1要素）。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "怯えを伝染す") },
+        Traits = new[] { TraitId.Huddle, TraitId.Daunt, TraitId.DauntLeak },
+        PlusText = "味方全体の被ダメージを30%下げる / 手番で、最も攻撃力の高い敵とその隣の敵を萎縮させる（次の1回の攻撃のダメージが半分）",
+        MinusText = "萎縮は敵味方を選ばない——萎縮させるたび、隣の味方も萎縮する（次の1回の攻撃が半分） / 自分では攻撃しない",
         Flavor = "怯えが伝染する。隊が生き延びても、戦果は上がらなくなる。"
     };
 
@@ -1074,9 +1080,13 @@ public static class UnitCatalog
         MaxHp = 56,
         Attack = 11,
         Speed = 8,
-        Traits = new[] { TraitId.Shove },
-        PlusText = "味方が押しのけられるたび、敵の隊列を突き崩す",
-        MinusText = "勢い余って隣の味方の体勢まで崩し、腕が鈍る（攻撃力が下がる）",
+        // 第189期: 転生（バネ）。旧 `Shove`（効果A＋隣のよろけ）を、手番の突き返し＋効果A（`Rebound`）と
+        // 代金の入れ替え（`Overrun`）に置き換えた。**攻撃は捨てる**ので踏み込みの札は据置（第131期 (a)）。
+        Advances = false,
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "突き返す") },
+        Traits = new[] { TraitId.Rebound, TraitId.Overrun },
+        PlusText = "手番で、前列で最も攻撃力の高い敵を後ろへ突き返して転ばせる（次の手番を失う） / 味方が押しのけられるたび、敵の隊列を突き崩す",
+        MinusText = "勢い余って、突き返すたび自分が隣の味方1体と場所を入れ替える / 自分では攻撃しない",
         Flavor = "押されたら押し返す。それしかできないし、加減も知らない。"
     };
 

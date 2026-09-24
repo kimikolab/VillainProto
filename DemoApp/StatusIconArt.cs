@@ -9,6 +9,8 @@ public static class StatusIconArt
     private static readonly Dictionary<string, (string Color, string Shape)> Art = new()
     {
         [StatusKeys.Cowed] = ("#d9e9eb", "<circle cx='32' cy='23' r='7'/><path d='M20 47q0-17 12-17t12 17M12 18l-4 7 5 7m39-14 4 7-5 7' fill='none'/>"),
+        // 第189期・萎縮（クビ）。次の一撃が半分——縮む矢印。
+        [StatusKeys.Daunted] = ("#c7c9a8", "<path d='M14 14l12 12m24-12L38 26M14 50l12-12m24 12L38 38' fill='none'/><rect x='26' y='26' width='12' height='12' rx='2'/>"),
         [StatusKeys.Footing] = ("#e3b577", "<path d='M17 12h13v21l16 5v8H15V32z'/><path d='M10 53h44' fill='none'/>"),
         [StatusKeys.Poison] = ("#bba0ee", "<path d='M20 17h24v26H20z'/><circle cx='25' cy='29' r='5' fill='#111821'/><circle cx='39' cy='29' r='5' fill='#111821'/><path d='M24 43v7m8-7v7m8-7v7'/>"),
         [StatusKeys.Burn] = ("#ff975b", "<path d='M31 10Q45 25 39 30L46 23Q57 49 34 54Q10 54 17 32L24 20Q22 34 30 35Q38 29 31 10z'/>"),

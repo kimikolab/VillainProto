@@ -288,7 +288,15 @@ public static class StatusKeys
     /// </summary>
     public const string Footing = "footing";
 
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing };
+    /// <summary>
+    /// 萎縮（第189期・クビの <see cref="TraitId.Daunt"/>）。<b>二値</b>で、立っている駒の<b>次の1回の攻撃</b>
+    /// （<c>PerformAttack</c> 1回）のダメージが半分になり、その場で消える。竦み（<see cref="Cowed"/>）・痺れ・転倒は
+    /// 手番そのものを消すが、萎縮は手番を残して一撃だけを軽くする——だから別のキー。
+    /// <see cref="All"/> に入れてあるので会戦の境界で消える。
+    /// </summary>
+    public const string Daunted = "daunted";
+
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted };
 
     /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
@@ -314,6 +322,7 @@ public static class StatusKeys
         Grappled => "組",
         Cowed => "竦",
         Footing => "据",
+        Daunted => "萎",
         _ => key
     };
 }
@@ -3913,6 +3922,15 @@ public sealed class BattleContext
     /// <summary>据えた足の保持者が盤上にいるか（入れ替えの空振りの短絡）。</summary>
     bool _plantedLive;
 
+    /// <summary>萎縮させる駒（第189期・<see cref="TraitId.Daunt"/>）が盤上に来たか。<b>偽なら萎縮の判定を比較1つで抜ける。</b></summary>
+    bool _dauntLive;
+
+    /// <summary>
+    /// ハネの「勢い余って」（第189期・<see cref="OverrunTrait"/>）で入れ替えている最中の保持者（<b>計数専用</b>）。
+    /// <see cref="SwapSlots"/> の通知が移動の読み手に届いた回数をこの駒の帳簿に数えるためだけにある。どの規則も読まない。
+    /// </summary>
+    public UnitState? OverrunBy { get; set; }
+
     /// <summary>1ターンに手番を失った敵の数の分布（0/1/2/3+。<b>計数のみ</b>・毎ターン末に1回）。</summary>
     public readonly long[] FoeStalledHist = new long[4];
 
@@ -4849,6 +4867,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Grapple) || u.HasTrait(TraitId.Shame)) _restrainLive = true;
         if (u.HasTrait(TraitId.Footing)) _shieldHolders.Add(u);
         if (u.HasTrait(TraitId.Planted)) _plantedLive = true;
+        if (u.HasTrait(TraitId.Daunt)) _dauntLive = true;   // 第189期（萎縮の消費を短絡させる）
         if (u.HasTrait(TraitId.Funnel)) FunnelActive = true;
         // 第137期: 砕けの保持者が盤上にいるか（`ShatterSoaked` を短絡させるためだけ。盤面には影響しない）。
         if (u.HasTrait(TraitId.Shatter)) ShatterActive = true;
@@ -6100,6 +6119,21 @@ public sealed class BattleContext
         // 止めの代金（止めた砲火）の分母と拾い上げ。**盤面には触らない。**
         if (FinisherActive && pattern == AttackPattern.Single) NoteFinisherSwing(actor);
 
+        // 萎縮（第189期・クビの `Daunt`）。**攻撃1回＝`PerformAttack` 1回**で、`atk` を作り終えた直後に半分にして消す。
+        // 突き・止め・薄刃の払い直しの**後**なので、この一撃の打点そのものが半分になる。§1 の +50%・萎縮 −30%・
+        // ヒサの半減・層・軛・呪いの共有は `ApplyDamage` の中なので、**半分になった量に今までどおり掛かる**。
+        // 式は萎縮の段と同じ切り捨て（攻1 は 1 のまま）。**保持者がいなければ比較1つで抜ける。**
+        if (_dauntLive && actor.RawCounter(StatusKeys.Daunted) > 0)
+        {
+            actor.SetCounter(StatusKeys.Daunted, 0);
+            int cut = atk * DauntTrait.CowerPercent / 100;
+            atk -= cut;
+            UnitTally dt = TallyOf(actor);
+            dt.DauntedSwings++;
+            dt.DauntedCut += cut;
+            Log($"    {actor.Name} は怯えて腕が縮んだ（この一撃 -{cut}）", LogKind.Status);
+        }
+
         string label = pattern switch
         {
             AttackPattern.Sweep => " 薙ぎ",
@@ -6616,7 +6650,8 @@ public sealed class BattleContext
         }
 
         // 萎縮: 火力と引き換えの被ダメージ減
-        if (teammates.Any(u => u.HasTrait(TraitId.Cower)))
+        // 第189期: 新しいクビの「身を寄せる」（`Huddle`）も同じ段で同じ量（旧 `Cower` は保持者 0 枚で残置）。
+        if (teammates.Any(u => u.HasTrait(TraitId.Cower) || u.HasTrait(TraitId.Huddle)))
             amount -= amount * CowerTrait.ReductionPercent / 100;
 
         // 矢面（第184期 §2・BeckonTrait）: ヒサの標を持つ味方は、攻撃によるダメージが半分になる。
@@ -8364,11 +8399,16 @@ public sealed class BattleContext
             // 味方の反応を先に流す。OnMoved は割り込み攻撃まで含むので、逆順だと
             // シオの強化が「振った後」に乗る（軋みが +5 を載せずに振ってしまう）。
             // 支援が先・本人の反応が後、という順序をここで固定する。
+            // 第189期・計数のみ: ハネの「勢い余って」で後ろへ下がった狙撃（セロ）は構えが整う。
+            if (OverrunBy is not null && u.HasTrait(TraitId.Sniper)
+                && FormationRules.DepthOf(u.Row) > FormationRules.DepthOf(from)) TallyOf(OverrunBy).OverrunReaderSniper++;
+
             foreach (UnitState ally in LivingMembers(u.TeamId))
             {
                 if (ally == u) continue;
                 foreach (Trait t in ally.Traits.ToList())
                 {
+                    if (OverrunBy is not null && t.Id == TraitId.Drifter) TallyOf(OverrunBy).OverrunReaderDrifter++;   // 第189期（計数のみ）
                     TraitMark m = this.BeginTrait(t.Id, ally);   // 第94期 (T2) の印
                     t.OnAllyMoved(this, ally, u);
                     this.EndTrait(m);
@@ -8377,6 +8417,7 @@ public sealed class BattleContext
 
             foreach (Trait t in u.Traits.ToList())
             {
+                if (OverrunBy is not null && t.Id == TraitId.Displaced) TallyOf(OverrunBy).OverrunReaderDisplaced++;   // 第189期（計数のみ）
                 TraitMark m = this.BeginTrait(t.Id, u);   // 第94期 (T2) の印
                 t.OnMoved(this, u, from, u.Row);
                 this.EndTrait(m);
