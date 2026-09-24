@@ -1589,6 +1589,16 @@ public sealed class UnitTally
                 InverseLeakFires, InverseLeakNominal, InverseLeakDealt, InverseLeakKills, TaintPostBite,
                 InverseLeakBy, VioAteTaint;
 
+    /// <summary>
+    /// 第191期（ベニの手番の周期）の帳簿。<b>計数専用。</b>
+    /// <c>KindleActs</c>・<c>KindleDry</c>・<c>KindleTargets</c> 火を分けた手番・隣がいなかった手番・火を点けた延べ人数 ／
+    /// <c>InversePoisonEarly</c>・<c>InverseBurnEarly</c>・<c>InverseDetonateEarly</c> 反転で癒えた量のうち 1〜3 ターン目の分 ／
+    /// <c>InverseBurnNominal</c>・<c>InverseBurnNominalEarly</c> 反転した燃焼の刻みの名目（全体・1〜3 ターン目）／
+    /// <c>KindlePostBurn</c> ベニが点けた火を持ったまま隣から外れた味方が、燃焼の刻みで受けた名目（保持者の側）。
+    /// </summary>
+    public long KindleActs, KindleDry, KindleTargets, InversePoisonEarly, InverseBurnEarly, InverseDetonateEarly, InverseBurnNominal,
+                KindlePostBurn, InverseBurnNominalEarly;
+
     /// <summary>墓守の層の最大値（第188期・<b>計数専用</b>。<c>NecroTrait.SetStack</c> が書く）。</summary>
     public long NecroPeak;
 
@@ -1903,6 +1913,9 @@ public sealed class UnitTally
         TaintActs += o.TaintActs; TaintDry += o.TaintDry; TaintLayers += o.TaintLayers;
         InverseLeakFires += o.InverseLeakFires; InverseLeakNominal += o.InverseLeakNominal; InverseLeakDealt += o.InverseLeakDealt;
         InverseLeakKills += o.InverseLeakKills; TaintPostBite += o.TaintPostBite; InverseLeakBy += o.InverseLeakBy; VioAteTaint += o.VioAteTaint;
+        KindleActs += o.KindleActs; KindleDry += o.KindleDry; KindleTargets += o.KindleTargets;
+        InversePoisonEarly += o.InversePoisonEarly; InverseBurnEarly += o.InverseBurnEarly;
+        InverseDetonateEarly += o.InverseDetonateEarly; InverseBurnNominal += o.InverseBurnNominal; KindlePostBurn += o.KindlePostBurn; InverseBurnNominalEarly += o.InverseBurnNominalEarly;
         if (o.NecroPeak > NecroPeak) NecroPeak = o.NecroPeak;
         BrandFires += o.BrandFires; BrandDealt += o.BrandDealt;
         StallStagger += o.StallStagger;
@@ -2285,7 +2298,17 @@ public enum BattleEventKind
     /// 粛が無ければ起こしていたはずの1体）／<see cref="ReveilleLabels.Held"/>（粛以外の理由で起こせなかった）。
     /// <b>どの規則も読まない。</b></para>
     /// </summary>
-    Reveille
+    Reveille,
+
+    /// <summary>
+    /// 反転の裏（第191期・<see cref="TraitId.InverseLeak"/>・毒喰らいのベニ）で回復がダメージに変わった瞬間（<b>表示専用</b>）。
+    ///
+    /// <para><b>直後に同じ駒への <c>Damage</c> が1件並ぶ</b>（出どころは回復させた駒）。この印が無いと、
+    /// 再生側では「回復役が味方を殴った」と見分けが付かない。<c>ActorId</c> = 回復させた駒（無ければ null）、
+    /// <c>TargetId</c> = 受けた駒、<c>Amount</c> = 回復の量（＝ダメージの名目）、<c>Text</c> = 裏の保持者の名前。
+    /// <b>どの規則も読まない。</b></para>
+    /// </summary>
+    HealInverted
 }
 
 /// <summary><see cref="BattleEventKind.Reveille"/> の <c>Text</c>（<b>表示専用</b>）。</summary>

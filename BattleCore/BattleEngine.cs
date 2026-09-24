@@ -646,8 +646,11 @@ public sealed class BattleContext
                     Kind = BattleEventKind.Status, Turn = _turn, TargetId = u.InstanceId, Amount = BurnRules.Damage, Text = "燃焼"
                 });
                 InverseHeal(inverterB, u, BurnRules.Damage, 1, "火");
+                ClearKindleHeld(u);
                 continue;
             }
+            NoteKindlePostBurn(u);   // 第191期・**計数のみ**
+            ClearKindleHeld(u);
 
             Log($"    {u.Name} が燃えている（残り {left - 1}）", LogKind.Status);
             Emit(new BattleEvent
@@ -4020,8 +4023,14 @@ public sealed class BattleContext
         UnitTally t = TallyOf(beni);
         t.InverseNominal += amount;
         if (kind == 0) t.InversePoisonHealed += gained;
-        else if (kind == 1) t.InverseBurnHealed += gained;
+        else if (kind == 1) { t.InverseBurnHealed += gained; t.InverseBurnNominal += amount; }
         else t.InverseDetonateHealed += gained;
+        if (_turn <= 3)   // 第191期・**計数のみ**（1〜3 ターン目の分）
+        {
+            if (kind == 0) t.InversePoisonEarly += gained;
+            else if (kind == 1) { t.InverseBurnEarly += gained; t.InverseBurnNominalEarly += amount; }
+            else t.InverseDetonateEarly += gained;
+        }
         if (gained <= 0) return;
         if (_inverseTurn != _turn) { _inverseTurn = _turn; _inverseTurnSet.Clear(); }
         if (!_inverseTurnSet.Contains(u.InstanceId))
@@ -4045,10 +4054,32 @@ public sealed class BattleContext
         if (holder is not null) TallyOf(holder).TaintPostBite += poison;
     }
 
+    /// <summary>
+    /// ベニが点けた火を持ったまま、反転の外で燃焼に刻まれた量（第191期・<b>計数専用</b>）。
+    /// </summary>
+    void NoteKindlePostBurn(UnitState u)
+    {
+        if (_inverseHolders.Count == 0 || u.RawCounter(KindleTrait.HeldKey) <= 0) return;
+        UnitState? holder = _inverseHolders.FirstOrDefault(h => h.TeamId == u.TeamId);
+        if (holder is not null) TallyOf(holder).KindlePostBurn += BurnRules.Damage;
+    }
+
+    /// <summary>燃え尽きたら「ベニが点けた火」の印を消す（第191期・<b>計数専用</b>）。</summary>
+    static void ClearKindleHeld(UnitState u)
+    {
+        if (u.RawCounter(StatusKeys.Burn) <= 0 && u.RawCounter(KindleTrait.HeldKey) > 0) u.SetCounter(KindleTrait.HeldKey, 0);
+    }
+
     /// <summary>反転の裏の1段（第190期）。出どころは回復させた駒（味方由来のダメージ）。</summary>
     void InverseLeakHit(UnitState leak, UnitState target, int amount, UnitState? by)
     {
         Log($"    {target.Name} への回復は {leak.Name} の隣で毒に変わった（{amount}）", LogKind.FriendlyFire);
+        // 第191期・**表示専用**。直後の `Damage` が「回復役が殴った」ではなく「反転の裏」だと再生側が分けられるように。
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.HealInverted, Turn = _turn, ActorId = by?.InstanceId,
+            TargetId = target.InstanceId, Amount = amount, Text = leak.Name, SourceTrait = TraitId.InverseLeak,
+        });
         int before = target.Hp;
         ApplyDamage(target, amount, by, isFriendlyFire: by is not null && by.TeamId == target.TeamId);
         int dealt = before - Math.Max(0, target.Hp);
@@ -8333,9 +8364,10 @@ public sealed class BattleContext
     }
 
     /// <param name="inverted">反転（第190期）から来た回復か。<b>真なら反転の裏で再反転しない</b>（無限反転の再入ガード）。</param>
-    public void Heal(UnitState target, int amount, UnitState? by = null, bool inverted = false)
+    /// <returns>何が起きたか（第191期）。<b>呼び出し口のほとんどは読まない</b>——読むのは縫い合わせ（ヴェル）だけ。</returns>
+    public HealOutcome Heal(UnitState target, int amount, UnitState? by = null, bool inverted = false)
     {
-        if (!target.IsAlive || amount <= 0) return;
+        if (!target.IsAlive || amount <= 0) return HealOutcome.None;
         if (!target.AcceptsSupport)
         {
             // 第135期の計数。**支援拒否（Stoic）が弾いた回復**（指示書 Q0-5）。
@@ -8362,7 +8394,7 @@ public sealed class BattleContext
                     SourceTrait = Mark.Owner is null ? null : Mark.Id,
                 });
             }
-            return;
+            return HealOutcome.Blocked;
         }
 
         // 渇き（DroughtTrait）: 保持者が盤上に生きている間、回復は一切通らない。
@@ -8385,7 +8417,7 @@ public sealed class BattleContext
         if (DroughtBinding)
         {
             NoteDroughtBlocked(target, amount);
-            return;
+            return HealOutcome.Drought;
         }
 
         // 反転の裏（第190期・ベニ）。**渇きと支援拒否を通った後**（＝本来なら通っていた回復）で、
@@ -8394,12 +8426,12 @@ public sealed class BattleContext
         if (!inverted && _inverseLeakHolders.Count > 0 && AdjacentHolder(_inverseLeakHolders, target) is UnitState leak)
         {
             InverseLeakHit(leak, target, amount, by);
-            return;
+            return HealOutcome.Inverted;
         }
 
         int before = target.Hp;
         target.Hp = Math.Min(target.MaxHp, target.Hp + amount);
-        if (target.Hp == before) return;
+        if (target.Hp == before) return HealOutcome.Full;
 
         // 実際に増えた分だけを数える（上限で切られた分は「払い戻し」になっていない）。
         // 代金の分解（第9期 bill）が差し引く側の資源。回復役の側ではなく
@@ -8429,6 +8461,7 @@ public sealed class BattleContext
             Amount = target.Hp - before,
             HpAfter = target.Hp
         });
+        return HealOutcome.Healed;
     }
 
     /// <summary>後列に空きか入れ替え先があれば返す。</summary>

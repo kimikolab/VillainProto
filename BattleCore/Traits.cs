@@ -343,7 +343,9 @@ public enum TraitId
                 // `Rebound` の代金で、外せば `yP`
     Inverse,    // 反転（ベニ・第190期）: ベニに隣接する味方は、毒・燃焼の削り（ターン頭の刻みと起爆の味方側）を回復として受ける。
                 // 判定は engine の `TickStatuses` / `DetonateOne` の1箇所ずつ（`BattleContext.InvertsTick`）
-    Taint,      // 澱み分け（ベニ・第190期）: 手番で（攻撃しない）隣接する生存味方全員に毒を +1 層（`TaintTrait.Stack`）
+    Taint,      // 澱み分け（ベニ・第190期）: 手番で（攻撃しない）隣接する生存味方全員に毒を +1 層（`TaintTrait.Stack`）。
+                // 第191期から「火を分けた」以外の手番だけで働く
+    Kindle,     // 火を分ける（ベニ・第191期）: 「火を分けた」の手番で、隣接する生存味方全員に着火する（`KindleTrait.Label`）
     InverseLeak,// 反転の裏（ベニ・第190期）: ベニに隣接する味方は、回復を受けるとかえって傷つく（`Heal` の中の1箇所）。
                 // `Inverse` の代金で、外せば `yP`
 
@@ -2318,6 +2320,26 @@ public readonly record struct EncoreRule(bool Enabled)
     /// 相方のエグが倒す敵はキリが刻んだ相手とは限らない（再行動 0.00〜1.53 回/戦）。</para>
     /// </summary>
     public static EncoreRule Default => new(true);
+}
+
+/// <summary>
+/// <see cref="BattleContext.Heal"/> の結果（第191期）。<b>盤面の分岐に使うのは縫い合わせ（<see cref="StitchTrait"/>）だけ</b>
+/// ——反転の裏でダメージに変わった回（<see cref="Inverted"/>）を、渇きで止められた回（<see cref="Drought"/>）と分けるため。
+/// </summary>
+public enum HealOutcome
+{
+    /// <summary>対象が倒れている・量が 0 以下（何もしていない）。</summary>
+    None,
+    /// <summary>HP が増えた。</summary>
+    Healed,
+    /// <summary>満タンで1点も増えなかった。</summary>
+    Full,
+    /// <summary>支援拒否（<see cref="TraitId.Stoic"/>）が弾いた。</summary>
+    Blocked,
+    /// <summary>渇き（盤面ルール）が止めた。</summary>
+    Drought,
+    /// <summary>反転の裏（<see cref="TraitId.InverseLeak"/>）でダメージに変わった。</summary>
+    Inverted,
 }
 
 public enum PoisonRoute
@@ -10576,9 +10598,16 @@ public sealed class StitchTrait : Trait
         }
 
         int before = p.Hp;
-        ctx.Heal(p, StitchHeal, self);
+        HealOutcome res = ctx.Heal(p, StitchHeal, self);
         int healed = p.Hp - before;
-        if (healed <= 0)
+        // 第191期: 反転の裏（ベニの隣）でダメージに変わった回は**縫った手番**として扱う（殴らない・縫い跡も残す）。
+        // 渇きで止められた回（下の枝）とは分ける——前の期はどちらも `healed <= 0` で同じ枝に落ちていた。
+        if (res == HealOutcome.Inverted)
+        {
+            if (!p.IsAlive) return;
+            healed = 0;
+        }
+        else if (healed <= 0)
         {
             // 渇きに封じられた（Hp < MaxHp を確かめてあるので、通れば必ず 1 以上増える）。
             // 縫い跡は残さず、その手番は普通に殴る（第183期 追補）。
@@ -11288,6 +11317,8 @@ public sealed class TaintTrait : Trait
     public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
     {
         if (!self.IsAlive) return;
+        // 第191期: 「火を分けた」の手番は火を分ける札（`KindleTrait`）の番で、澱みは分けない。
+        if (action.Label == KindleTrait.Label) return;
         var adj = ctx.LivingMembers(self.TeamId)
                      .Where(a => a != self && FormationRules.AreAdjacent(self.Slot, a.Slot)).ToList();
         UnitTally t = ctx.TallyOf(self);
@@ -11318,6 +11349,47 @@ public sealed class TaintTrait : Trait
 public sealed class InverseLeakTrait : Trait
 {
     public override TraitId Id => TraitId.InverseLeak;
+}
+
+/// <summary>
+/// 火を分ける（第191期・ベニの手番の周期の1拍目）。<b>「火を分けた」の手番で、隣接する生存味方全員に着火する</b>
+/// （<see cref="BattleContext.Ignite"/>・<c>friendly: true</c>）。<b>乱数を引かない</b>（席番号順）。
+/// 支援拒否（ガルド）にも点く（着火は支援ではない）。熾のホタは燃えても焼かれないが、燃えている扱い（攻 ×4・貫き）にはなる。
+///
+/// <para>周期は <c>UnitDef.Actions</c>（火 → 毒 → 毒）で、<b>どの拍かはラベルで分ける</b>——この札は <see cref="Label"/> の手番だけ、
+/// 澱み分け（<see cref="TaintTrait"/>）はそれ以外の手番だけで働く。外せば「毒のみ」（火の拍は空振りする）。</para>
+/// </summary>
+public sealed class KindleTrait : Trait
+{
+    /// <summary>火の拍の手番のラベル（<c>UnitDef.Actions</c> と台本の <c>Skill</c> の <c>Text</c> が同じ文字列を使う）。</summary>
+    public const string Label = "火を分けた";
+
+    /// <summary>ベニが点けた火を持っているか（<b>計数専用</b>・離れた後の燃焼の帳簿が読む。燃え尽きると消す）。</summary>
+    public const string HeldKey = "kindleHeld";
+
+    public override TraitId Id => TraitId.Kindle;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive || action.Label != Label) return;
+        var adj = ctx.LivingMembers(self.TeamId)
+                     .Where(a => a != self && FormationRules.AreAdjacent(self.Slot, a.Slot)).ToList();
+        UnitTally t = ctx.TallyOf(self);
+        t.KindleActs++;
+        if (adj.Count == 0)
+        {
+            t.KindleDry++;
+            ctx.Log($"    {self.Name} は火を分ける相手がいない", LogKind.Status);
+            return;
+        }
+        foreach (UnitState a in adj)
+        {
+            ctx.Ignite(a, friendly: true, source: self);
+            a.SetCounter(HeldKey, 1);
+            t.KindleTargets++;
+        }
+        ctx.Log($"    {self.Name} が隣の {adj.Count} 体に火を分けた", LogKind.Trigger);
+    }
 }
 
 /// <summary>
@@ -11805,6 +11877,7 @@ public static class TraitCatalog
         new InverseTrait(),    // 第190期
         new TaintTrait(),      // 第190期
         new InverseLeakTrait(),// 第190期
+        new KindleTrait(),     // 第191期
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期

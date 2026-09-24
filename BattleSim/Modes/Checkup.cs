@@ -209,6 +209,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.Inverse]    = (HcPlusL,  "隣の味方の毒・燃焼の削りを回復に変える。代金は別の札（`InverseLeak`）に切り出してある"),
         [TraitId.Taint]      = (HcPlusL,  "手番で隣の味方全員に毒を1層積む（反転の燃料を自分で配る）"),
         [TraitId.InverseLeak]= (HcMinusL, "隣の味方への回復がダメージになるだけ。外せば `yP` になる"),
+        [TraitId.Kindle]     = (HcPlusL,  "周期の火の拍で隣の味方全員に着火する（反転の燃料を自分で配る）"),
     };
 
     // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------
