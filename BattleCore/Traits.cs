@@ -11296,6 +11296,12 @@ public sealed class BackfireTrait : Trait
 /// </summary>
 public sealed class InverseTrait : Trait
 {
+    /// <summary>
+    /// 第192期: <b>保持者自身も結界の内側に入れる</b>（反転と反転の裏の両方。手番の配り先は変えない）。
+    /// 偽で第191期に戻る（回帰の対照）。判定は <see cref="BattleContext"/> の <c>AdjacentHolder</c> の1箇所。
+    /// </summary>
+    public const bool IncludesSelf = true;
+
     public override TraitId Id => TraitId.Inverse;
 }
 

@@ -3996,14 +3996,17 @@ public sealed class BattleContext
     int _inverseTurn = -1;
 
     /// <summary>
-    /// <paramref name="u"/> に隣接する、同じ陣営の生きている保持者（第190期）。<b>保持者自身は含まない。</b>
+    /// <paramref name="u"/> に隣接する、同じ陣営の生きている保持者（第190期）。
+    /// <b>第192期から、<see cref="InverseTrait.IncludesSelf"/> が真なら保持者自身も返す</b>（呼び出し口は反転と反転の裏の2本）。
     /// 並びは盤に来た順（乱数を引かない）。
     /// </summary>
     static UnitState? AdjacentHolder(List<UnitState> holders, UnitState u)
     {
         foreach (UnitState h in holders)
-            if (h.IsAlive && !ReferenceEquals(h, u) && h.TeamId == u.TeamId && FormationRules.AreAdjacent(h.Slot, u.Slot))
-                return h;
+        {
+            if (!h.IsAlive || h.TeamId != u.TeamId) continue;
+            if (ReferenceEquals(h, u) ? InverseTrait.IncludesSelf : FormationRules.AreAdjacent(h.Slot, u.Slot)) return h;
+        }
         return null;
     }
 
@@ -4022,6 +4025,10 @@ public sealed class BattleContext
         int gained = u.Hp - before;
         UnitTally t = TallyOf(beni);
         t.InverseNominal += amount;
+        if (ReferenceEquals(u, beni))   // 第192期・**計数のみ**（ベニ自身が受けた分）
+        {
+            if (kind == 0) t.InverseSelfPoison += gained; else if (kind == 1) t.InverseSelfBurn += gained; else t.InverseSelfDetonate += gained;
+        }
         if (kind == 0) t.InversePoisonHealed += gained;
         else if (kind == 1) { t.InverseBurnHealed += gained; t.InverseBurnNominal += amount; }
         else t.InverseDetonateHealed += gained;
@@ -4087,6 +4094,11 @@ public sealed class BattleContext
         t.InverseLeakFires++; t.InverseLeakNominal += amount; t.InverseLeakDealt += dealt;
         if (!target.IsAlive) t.InverseLeakKills++;
         if (by is not null) TallyOf(by).InverseLeakBy += dealt;
+        if (ReferenceEquals(target, leak))   // 第192期・**計数のみ**（ベニ自身が受けた分・出どころの側にも）
+        {
+            t.InverseLeakSelf += dealt;
+            if (by is not null) TallyOf(by).InverseLeakOnHolder += dealt;
+        }
     }
 
     /// <summary>

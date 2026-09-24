@@ -16,6 +16,7 @@ static partial class BeniDiag
         {
             case "run": RunVersions(); handled = true; return;
             case "ledger": RunLedger(); handled = true; return;
+            case "ledger192": RunLedger192(); handled = true; return;
             case "bench": RunBenches(); handled = true; return;
             case "check": Check(arg); handled = true; return;
         }
@@ -281,12 +282,17 @@ static partial class BeniDiag
 
     readonly record struct Led2(double PoEarly, double PoLate, double BuEarly, double BuLate, double Det, double BuNom,
                                 double Recip, double MaxSimul, double Fires, double Lit, double Died, double DeathTurn, double BuNomEarly,
-                                double Stalls, double PostPoison, double PostBurn, double Hota, bool HasHota);
+                                double Stalls, double PostPoison, double PostBurn, double Hota, bool HasHota,
+                                double SelfPoison, double SelfBurn, double SelfLeak, double DiedShare, double Nominal, double Healed,
+                                Dictionary<string, double> SelfLeakBy);
 
     static Led2 Ledger191(Formation f)
     {
         double pe = 0, pl = 0, be = 0, bl = 0, de = 0, bn = 0, bne = 0, re = 0, ms = 0, fi = 0, li = 0, di = 0, dt = 0, sl = 0, pp = 0, pbu = 0, ho = 0;
         int n = 0, deaths = 0;
+        double sp = 0, sb = 0, sl2 = 0, nom = 0, hea = 0;
+        var selfBy = new Dictionary<string, double>();
+        var names = f.Occupied().Select(o => o.Def).DistinctBy(d => d.Id).ToDictionary(d => d.Id, d => d.Name);
         bool hasHota = f.Occupied().Any(o => o.Def.Id == "hota");
         for (int st = 1; st < 5; st++)
             for (int seed = 0; seed < Seeds; seed++)
@@ -294,6 +300,12 @@ static partial class BeniDiag
                 BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false);
                 n++;
                 if (hasHota && r.TallyByUnit.TryGetValue("hota", out UnitTally? h)) ho += h.DamageToEnemy;
+                foreach (var (id, t) in r.TallyByUnit)
+                    if (t.InverseLeakOnHolder > 0)
+                    {
+                        string nm = names.TryGetValue(id, out string? s1) ? s1 : id;
+                        selfBy[nm] = selfBy.GetValueOrDefault(nm) + t.InverseLeakOnHolder;
+                    }
                 if (!r.TallyByUnit.TryGetValue("beni", out UnitTally? b)) continue;
                 pe += b.InversePoisonEarly; pl += b.InversePoisonHealed - b.InversePoisonEarly;
                 be += b.InverseBurnEarly; bl += b.InverseBurnHealed - b.InverseBurnEarly;
@@ -301,9 +313,12 @@ static partial class BeniDiag
                 re += b.InverseRecipientTurns; ms += b.InverseMaxSimul; fi += b.KindleActs; li += b.KindleTargets;
                 di += b.Deaths; if (b.Deaths > 0) { deaths++; dt += b.LastActiveTurn; }
                 sl += b.TurnStalls; pp += b.TaintPostBite; pbu += b.KindlePostBurn;
+                sp += b.InverseSelfPoison; sb += b.InverseSelfBurn + b.InverseSelfDetonate; sl2 += b.InverseLeakSelf;
+                nom += b.InverseNominal; hea += b.InversePoisonHealed + b.InverseBurnHealed + b.InverseDetonateHealed;
             }
         return new Led2(pe / n, pl / n, be / n, bl / n, de / n, bn / n, re / n, ms / n, fi / n, li / n, di / n,
-                        deaths == 0 ? 0 : dt / deaths, bne / n, sl / n, pp / n, pbu / n, ho / n, hasHota);
+                        deaths == 0 ? 0 : dt / deaths, bne / n, sl / n, pp / n, pbu / n, ho / n, hasHota,
+                        sp / n, sb / n, sl2 / n, (double)deaths / n, nom / n, hea / n, selfBy.ToDictionary(kv => kv.Key, kv => kv.Value / n));
     }
 
     static void Print191Header()
@@ -319,6 +334,35 @@ static partial class BeniDiag
                           + l.Recip.ToString("F2") + " | " + l.MaxSimul.ToString("F2") + " | " + l.Fires.ToString("F2") + " / " + l.Lit.ToString("F2") + " | "
                           + l.Died.ToString("F2") + " | " + l.DeathTurn.ToString("F2") + " | " + l.Stalls.ToString("F2") + " | "
                           + l.PostPoison.ToString("F1") + " / " + l.PostBurn.ToString("F1") + " | " + (l.HasHota ? l.Hota.ToString("F1") : "—") + " |");
+    }
+
+    static void Print192Header()
+    {
+        Console.WriteLine("| 行 | 倒れた戦の割合 | 倒れたT | 自身が癒えた 毒 / 燃焼 | 自身が裏で受けた（出どころ） | 反転の名目 | 癒えた | 溢れた | 離れた後 毒 / 火 |");
+        Console.WriteLine("|---|--:|--:|---|---|--:|--:|--:|---|");
+    }
+
+    static void Print192Row(string name, Led2 l)
+    {
+        string by = l.SelfLeakBy.Count == 0 ? "" : "（" + string.Join("・", l.SelfLeakBy.OrderByDescending(kv => kv.Value).Select(kv => kv.Key + " " + kv.Value.ToString("F1"))) + "）";
+        Console.WriteLine("| " + name + " | " + (100 * l.DiedShare).ToString("F1") + "% | " + l.DeathTurn.ToString("F2") + " | "
+                          + l.SelfPoison.ToString("F1") + " / " + l.SelfBurn.ToString("F1") + " | " + l.SelfLeak.ToString("F1") + by + " | "
+                          + l.Nominal.ToString("F1") + " | " + l.Healed.ToString("F1") + " | " + (l.Nominal - l.Healed).ToString("F1") + " | "
+                          + l.PostPoison.ToString("F1") + " / " + l.PostBurn.ToString("F1") + " |");
+    }
+
+    /// <summary>第192期の帳簿（今のビルドの `InverseTrait.IncludesSelf` で回る。偽のビルドで回せば第191期の値）。</summary>
+    static void RunLedger192()
+    {
+        Console.WriteLine("# 第192期 `beni ledger192` —— ベニ自身の帳簿（`IncludesSelf = " + InverseTrait.IncludesSelf + "`・1戦あたり・第2〜5波）");
+        Console.WriteLine();
+        Console.WriteLine("`倒れた戦の割合` は ベニが1度でも倒れた戦 ÷ 全戦、`倒れたT` は倒れた戦の `LastActiveTurn` の平均。"
+                          + "`溢れた` ＝ 反転の名目 − 実際に癒えた量（満タン・渇き・支援拒否で捨てた分）。");
+        Console.WriteLine();
+        Print192Header();
+        foreach (var (_, name, f) in BeniRows()) Print192Row(name, Ledger191(f));
+        foreach (var (name, g) in SwapRows()) Print192Row(name, Ledger191(g));
+        Console.WriteLine();
     }
 
     static void RunLedger()

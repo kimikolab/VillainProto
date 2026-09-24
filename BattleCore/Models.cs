@@ -1595,9 +1595,12 @@ public sealed class UnitTally
     /// <c>InversePoisonEarly</c>・<c>InverseBurnEarly</c>・<c>InverseDetonateEarly</c> 反転で癒えた量のうち 1〜3 ターン目の分 ／
     /// <c>InverseBurnNominal</c>・<c>InverseBurnNominalEarly</c> 反転した燃焼の刻みの名目（全体・1〜3 ターン目）／
     /// <c>KindlePostBurn</c> ベニが点けた火を持ったまま隣から外れた味方が、燃焼の刻みで受けた名目（保持者の側）。
+    /// 第192期: <c>InverseSelfPoison</c>・<c>InverseSelfBurn</c>・<c>InverseSelfDetonate</c> 保持者自身が反転で癒えた量 ／
+    /// <c>InverseLeakSelf</c> 保持者自身が反転の裏で受けたダメージ（保持者の側）／ <c>InverseLeakOnHolder</c> 同じ量の出どころの側。
     /// </summary>
     public long KindleActs, KindleDry, KindleTargets, InversePoisonEarly, InverseBurnEarly, InverseDetonateEarly, InverseBurnNominal,
-                KindlePostBurn, InverseBurnNominalEarly;
+                KindlePostBurn, InverseBurnNominalEarly,
+                InverseSelfPoison, InverseSelfBurn, InverseSelfDetonate, InverseLeakSelf, InverseLeakOnHolder;
 
     /// <summary>墓守の層の最大値（第188期・<b>計数専用</b>。<c>NecroTrait.SetStack</c> が書く）。</summary>
     public long NecroPeak;
@@ -1916,6 +1919,8 @@ public sealed class UnitTally
         KindleActs += o.KindleActs; KindleDry += o.KindleDry; KindleTargets += o.KindleTargets;
         InversePoisonEarly += o.InversePoisonEarly; InverseBurnEarly += o.InverseBurnEarly;
         InverseDetonateEarly += o.InverseDetonateEarly; InverseBurnNominal += o.InverseBurnNominal; KindlePostBurn += o.KindlePostBurn; InverseBurnNominalEarly += o.InverseBurnNominalEarly;
+        InverseSelfPoison += o.InverseSelfPoison; InverseSelfBurn += o.InverseSelfBurn; InverseSelfDetonate += o.InverseSelfDetonate;
+        InverseLeakSelf += o.InverseLeakSelf; InverseLeakOnHolder += o.InverseLeakOnHolder;
         if (o.NecroPeak > NecroPeak) NecroPeak = o.NecroPeak;
         BrandFires += o.BrandFires; BrandDealt += o.BrandDealt;
         StallStagger += o.StallStagger;
