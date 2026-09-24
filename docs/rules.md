@@ -55,7 +55,7 @@
 | 42 | `wound` | `WoundRule` | `WoundRule { Enabled = True, Census = False }` |  | `wound2` | 第85期 | ○ |
 | 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0 }` |  | `survive` / `ember` / `wildfire` / `rebirth` | 第130期 | ○ |
 | 44 | `wildfire` | `WildfireRule` | `WildfireRule { Mode = None, Amount = 0, Active = False }` | ○ | `wildfire` | 第133期 | ○ |
-| 45 | `harm` | `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` / `sora186` / `mio` | 第135期 | ○ |
+| 45 | `harm` | `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` / `sora186` / `mio` / `sid` | 第135期 | ○ |
 | 46 | `parry` | `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True, Swing = WhenStocked }` |  | `parry` / `wall` / `stall` | 第135期 | ○ |
 | 47 | `shatter` | `ShatterRule` | `ShatterRule { Mode = Passive, SelfCostPerTurn = 0 }` | ○ | `shard` | 第137期 | ○ |
 | 48 | `shrapnel` | `ShrapnelRule` | `ShrapnelRule { Multiplier = 3, SelfDamagePercent = 100, ArmorCensus = False }` |  | `shard` | 第138期 | ○ |
@@ -101,7 +101,7 @@
 | `FunnelRule` | `FunnelRule { Slowest = True, Both = False }` | ○ | `funnel` / `cross` | 第62期 |
 | `GatherRule` | `GatherRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `parry` / `wall` / `cross` / `demo` | 第89期 |
 | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` | ○ | `derive` / `whet` / `goad` / `ledger` / `mark` | 第52期 |
-| `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` / `sora186` / `mio` | 第135期 |
+| `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` / `sora186` / `mio` / `sid` | 第135期 |
 | `HasteRule` | `HasteRule { Pick = None }` | ○ | `mark` / `haste` | 第149期 |
 | `HushRule` | `HushRule { Active = True }` | ○ | `curse` / `hush` / `goad` / `wave2` / `ledger` | 第35期 |
 | `IgniteRule` | `IgniteRule { Enabled = True }` | ○ | `derive` / `curse` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `cross` / `demo` | 第87期 |

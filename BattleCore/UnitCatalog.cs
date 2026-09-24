@@ -159,9 +159,13 @@ public static class UnitCatalog
         Attack = 4,
         Speed = 9,
         Advances = false,
-        Traits = new[] { TraitId.Venom },
-        PlusText = "殴られると、殴ってきた相手に毒を積む（毒は毎ターン層の分だけ削る）",
-        MinusText = "自分からは毒を積めない。毒が隣接する味方にも漏れる（傷を負った味方には深く入る）。攻撃力もほぼ無い",
+        // 第195期: 転生。攻撃を捨て（`Actions` が `Skill` 1要素）、手番で一番手強い敵に毒 +6 と痺れ毒の印（`Spew`）。
+        // 殴ってきた敵にも +4 と印（`Venom`・漏れは今のまま）。印のある敵は毒の層 × 3%（上限 60%）だけ与ダメが下がる（`Numb`）。
+        // 旧スィド（`Venom` だけ・攻撃する）は診断のローカルに写してある（回帰の対照）。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "毒を吐きかける") },
+        Traits = new[] { TraitId.Spew, TraitId.Venom, TraitId.Numb },
+        PlusText = "手番で、一番手強い敵に毒を吐きかける。殴ってきた相手にも毒を浴びせる / スィドの毒を浴びた敵は、毒が深いほど手が鈍る（最大6割）",
+        MinusText = "殴られると、隣接する味方にも毒が漏れる / 自分では攻撃しない",
         Flavor = "袋が破れるまで役に立たない。誰も隣に立ちたがらない。"
     };
 

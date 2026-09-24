@@ -1320,6 +1320,8 @@ static class TraitKeyMap
         [TraitId.InverseLeak]= Array.Empty<int>(),                                               // 第190期（マイナス側はキーを持たない・下の注と同じ）
         [TraitId.Concentrate]= new[] { UnitTally.CarryPoison, UnitTally.CarryWound },            // 第194期（旧 `Amplifier` と同じ2本・印は毒と燃焼の刻みを2回にする）
         [TraitId.ConcentrateLeak] = Array.Empty<int>(),                                          // 第194期（マイナス側はキーを持たない）
+        [TraitId.Spew]       = new[] { UnitTally.CarryPoison },                                 // 第195期（スィドの吐き・敵に毒を書く）
+        [TraitId.Numb]       = Array.Empty<int>(),                                               // 第195期（印は毒の層を読むだけ・判定は engine）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
         [TraitId.Cinder]     = new[] { UnitTally.CarryBurn },
@@ -1459,6 +1461,8 @@ static class TraitHookMap
         [TraitId.Planted]     = new[] { Engine },                                // 第185期（SwapSlots の入口）
         [TraitId.Concentrate] = new[] { "OnTurnStart", "OnAction", Engine },     // 第194期（印の効果は TickStatuses と起爆）
         [TraitId.ConcentrateLeak] = Array.Empty<string>(),                       // 第194期（濃縮の中で読まれる札）
+        [TraitId.Spew]        = new[] { "OnTurnStart", "OnAction" },             // 第195期（スィドの吐き）
+        [TraitId.Numb]        = new[] { Engine },                                // 第195期（減少は PerformAttackBody の萎縮の直後）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）
         [TraitId.ThrustPlain] = new[] { "OnCarryOver", Engine },                 // 第186期 追補（対照・保持者 0 枚）

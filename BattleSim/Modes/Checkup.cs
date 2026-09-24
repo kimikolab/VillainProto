@@ -213,6 +213,8 @@ public static void Run(string[] args, int stageIndex)
         // 第194期: ミオ（濃縮の印）。分類を同じコミットで足す（第132期 段0-a）。
         [TraitId.Concentrate]     = (HcPlusL,  "旧の +4 に続けて、刻みが最も大きい敵とその隣に印を +1（印1つにつき毒と燃焼の刻みが1回増える）。代金は別の札（`ConcentrateLeak`）に切り出してある"),
         [TraitId.ConcentrateLeak] = (HcMinusL, "手番ごとに隣の味方にも印が +1 されるだけ。外せば `yP` になる"),
+        [TraitId.Spew]            = (HcPlusL,  "手番で一番手強い敵に毒 +6 と痺れ毒の印。攻撃を捨てた代金は `Actions` の側にある"),
+        [TraitId.Numb]            = (HcPlusL,  "印のある敵の与ダメが毒の層 × 3%（上限 60%）下がる。外せば「鈍らせなし」になる"),
     };
 
     // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------

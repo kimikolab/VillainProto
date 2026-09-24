@@ -304,7 +304,16 @@ public static class StatusKeys
     /// </summary>
     public const string Concentrated = "concentrated";
 
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted, Concentrated };
+    /// <summary>
+    /// 痺れ毒の印（第195期・毒吐きのスィド・<see cref="TraitId.Numb"/>）。<b>二値</b>（値は付いた経路＝
+    /// <see cref="SpewTrait.OriginSpew"/> 吐いた ／ <see cref="SpewTrait.OriginVenom"/> 殴ってきた。<b>計数の帰属だけに使い、規則は読まない</b>）。
+    /// 印のある駒は、与えるダメージ（<c>PerformAttack</c> の一撃）が<b>毒の層 × 3%</b>（上限 60%）下がる。
+    /// <b>戦闘中は消えない</b>（スィドが倒れても残る）。毒の層が 0 なら減らない。
+    /// <see cref="All"/> に入れてあるので会戦の境界で消える。
+    /// </summary>
+    public const string Numbed = "numbed";
+
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted, Concentrated, Numbed };
 
     /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
@@ -332,6 +341,7 @@ public static class StatusKeys
         Footing => "据",
         Daunted => "萎",
         Concentrated => "濃",
+        Numbed => "鈍",
         _ => key
     };
 }
@@ -1130,12 +1140,12 @@ public sealed class BattleContext
     }
 
     /// <summary><see cref="UnitTally.SoakSeenByRoute"/> の長さ（毒 9 経路 ＋ 燃焼 1。第180期に吐き戻しで1本、
-    /// 第183期に触れてうつす・その漏れで2本、第190期に澱み分けで1本増えた）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
+    /// 第183期に触れてうつす・その漏れで2本、第190期に澱み分けで1本、第195期にスィドの吐きで1本増えた）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
     /// ——ずらさないと新しい経路の添字が燃焼と重なる。</summary>
-    public const int SoakRouteCount = 10;
+    public const int SoakRouteCount = 11;
 
     /// <summary>燃焼の経路の添字（<see cref="UnitTally.SoakSeenByRoute"/> の末尾）。</summary>
-    public const int SoakBurnRouteIx = 9;
+    public const int SoakBurnRouteIx = 10;
 
     /// <summary>
     /// 巻き込み則（第85期）で最後にこの駒へ傷を書いた駒の <c>InstanceId + 1</c>（第90期の計数専用の札）。
@@ -4075,6 +4085,10 @@ public sealed class BattleContext
     /// <summary>萎縮させる駒（第189期・<see cref="TraitId.Daunt"/>）が盤上に来たか。<b>偽なら萎縮の判定を比較1つで抜ける。</b></summary>
     bool _dauntLive;
 
+    /// <summary>痺れ毒（第195期・<see cref="TraitId.Numb"/>）の保持者が盤上に来たか。<b>偽なら痺れ毒の判定を比較1つで抜ける。</b>
+    /// 一度立てば戦闘の終わりまで立ったまま（保持者が倒れても印は残る）。</summary>
+    bool _numbLive;
+
     /// <summary>反転（第190期・<see cref="TraitId.Inverse"/>）の保持者。</summary>
     readonly List<UnitState> _inverseHolders = new();
     /// <summary>反転の裏（第190期・<see cref="TraitId.InverseLeak"/>）の保持者。</summary>
@@ -5169,6 +5183,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Footing)) _shieldHolders.Add(u);
         if (u.HasTrait(TraitId.Planted)) _plantedLive = true;
         if (u.HasTrait(TraitId.Daunt)) _dauntLive = true;   // 第189期（萎縮の消費を短絡させる）
+        if (u.HasTrait(TraitId.Numb)) _numbLive = true;     // 第195期（痺れ毒の減少を短絡させる）
         // 第190期: 反転の結界（ベニ）。**保持者がいなければ `Count == 0` の比較1つで抜ける**。
         if (u.HasTrait(TraitId.Inverse)) _inverseHolders.Add(u);
         if (u.HasTrait(TraitId.InverseLeak)) _inverseLeakHolders.Add(u);
@@ -5675,6 +5690,35 @@ public sealed class BattleContext
     /// 濃縮の印を +1 する（第194期・<see cref="ConcentrateTrait"/> だけが呼ぶ）。<b>重ねがけ可・上限なし</b>。
     /// 倒れている駒には何もせず偽を返す。乱数を引かない。印の最大値はミオの帳簿（<c>ConcMarkPeak</c>）に写す。
     /// </summary>
+    /// <summary>
+    /// 痺れ毒の印を付ける（第195期・スィド）。<b>二値</b>——既に付いていれば何もしない（付いた経路は最初の1回のもの）。
+    /// 付けたら真。<b>乱数を引かない。</b>印が付いた瞬間は <c>StatusGain</c>（<see cref="StatusKeys.Numbed"/>）で台本に出る。
+    /// </summary>
+    public bool MarkNumbed(UnitState writer, UnitState u, int origin)
+    {
+        if (!u.IsAlive || u.RawCounter(StatusKeys.Numbed) > 0) return false;
+        u.SetCounter(StatusKeys.Numbed, origin);
+        EmitStatusGain(u, StatusKeys.Numbed, 1, writer);   // 表示専用（印が付いた瞬間）
+        Log($"    {u.Name} に痺れ毒が回った（毒の層 × {NumbTrait.PercentPerLayer}% だけ手が鈍る）", LogKind.Status);
+        return true;
+    }
+
+    /// <summary>痺れ毒の計数（第195期）。<b>計数専用・どの規則も読まない。</b>振った側（印のある駒）に付ける。</summary>
+    void NoteNumbed(UnitState actor, int layers, int pct, int cut)
+    {
+        UnitTally t = TallyOf(actor);
+        t.NumbedSwings++;
+        t.NumbedCut += cut;
+        if (actor.RawCounter(StatusKeys.Numbed) == SpewTrait.OriginVenom) t.NumbedCutVenom += cut; else t.NumbedCutSpew += cut;
+        t.NumbedLayerSum += layers;
+        t.NumbedLayerMax = Math.Max(t.NumbedLayerMax, layers);
+        if (pct >= NumbTrait.MaxPercent)
+        {
+            t.NumbedCapSwings++;
+            t.NumbedCapTurn = UnitTally.MinReach(t.NumbedCapTurn, _turn);
+        }
+    }
+
     public bool MarkConcentrated(UnitState mio, UnitState u, string label)
     {
         if (!u.IsAlive) return false;
@@ -6505,6 +6549,24 @@ public sealed class BattleContext
             Log($"    {actor.Name} は怯えて腕が縮んだ（この一撃 -{cut}）", LogKind.Status);
         }
 
+        // 痺れ毒（第195期・スィドの `Numb`）。**萎縮の直後**——萎縮と重なれば 半分 → さらに層の割合（切り捨て2回）。
+        // 印は消えず、減る割合は**その時点の毒の層**で決まる（層 × 3%・上限 60%・層 0 なら減らない）。
+        // 反撃・割り込み・追い打ち・再行動・混乱した一撃もここを通る（敵の与ダメージは全部 `PerformAttack`・Phase 0 Q0-1）。
+        // `CurrentAttack` は下げない（選び方は動かない）。**保持者がいなければ比較1つで抜ける。**
+        int numbCut = 0, numbPct = 0;
+        if (_numbLive && actor.RawCounter(StatusKeys.Numbed) > 0)
+        {
+            int layers = actor.RawCounter(StatusKeys.Poison);
+            if (layers > 0)
+            {
+                numbPct = Math.Min(layers * NumbTrait.PercentPerLayer, NumbTrait.MaxPercent);
+                numbCut = atk * numbPct / 100;
+                atk -= numbCut;
+                NoteNumbed(actor, layers, numbPct, numbCut);
+                if (numbCut > 0) Log($"    {actor.Name} は毒で手が鈍った（-{numbPct}%・この一撃 -{numbCut}）", LogKind.Status);
+            }
+        }
+
         string label = pattern switch
         {
             AttackPattern.Sweep => " 薙ぎ",
@@ -6562,7 +6624,10 @@ public sealed class BattleContext
             // 再生側が追加攻撃の予告を出すには Damage まで待っていては遅い。
             Reaction = InReaction || InInterrupt,
             // 第186期 追補・表示専用。この突きに乗った逸らしの回数（突きの保持者だけ）
-            ThrustCharge = thrustCharge
+            ThrustCharge = thrustCharge,
+            // 第195期・表示専用。痺れ毒で減った割合と量（印があって層 > 0 のときだけ）
+            NumbPercent = numbPct > 0 ? numbPct : null,
+            NumbCut = numbPct > 0 ? numbCut : null
         });
 
         if (pattern == AttackPattern.Pierce)

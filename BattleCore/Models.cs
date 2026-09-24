@@ -1623,6 +1623,17 @@ public sealed class UnitTally
                 PoisonTickSecond, BurnTickSecond, PoisonReach25, PoisonReach50, PoisonYokeCut, PoisonYokeLost, BurnYokeCut,
                 ConcMarkPeak, TickFiresMax;
 
+    /// <summary>
+    /// 第195期（毒吐きのスィド・痺れ毒）。<b>計数専用で、どの規則も読まない。</b>
+    /// <para><b>スィドの側</b>: <c>SpewActs</c> 吐いた手番 ／ <c>SpewDry</c> 敵がいなかった手番 ／
+    /// <c>SpewMarks</c>・<c>VenomMarks</c> 新しく印を付けた敵の数（吐いた ／ 殴ってきた）。</para>
+    /// <para><b>振った側</b>（印のある駒）: <c>NumbedSwings</c> 減った一撃の数（層 > 0 のときだけ）／ <c>NumbedCut</c> 減らした打点の合計
+    /// （<c>NumbedCutSpew</c>・<c>NumbedCutVenom</c> 印が付いた経路で分けたもの）／ <c>NumbedLayerSum</c>・<c>NumbedLayerMax</c> そのときの毒の層 ／
+    /// <c>NumbedCapSwings</c> 上限 60% に届いた一撃 ／ <c>NumbedCapTurn</c> 初めて上限に届いたターン（0 は届かず）。</para>
+    /// </summary>
+    public long SpewActs, SpewDry, SpewMarks, VenomMarks,
+                NumbedSwings, NumbedCut, NumbedCutSpew, NumbedCutVenom, NumbedLayerSum, NumbedLayerMax, NumbedCapSwings, NumbedCapTurn;
+
     /// <summary>「初めて届いたターン」の合成（0 は届かず）。</summary>
     public static long MinReach(long a, long b) => a == 0 ? b : b == 0 ? a : Math.Min(a, b);
 
@@ -1954,6 +1965,10 @@ public sealed class UnitTally
         PoisonReach25 = MinReach(PoisonReach25, o.PoisonReach25); PoisonReach50 = MinReach(PoisonReach50, o.PoisonReach50);
         PoisonYokeCut += o.PoisonYokeCut; PoisonYokeLost += o.PoisonYokeLost; BurnYokeCut += o.BurnYokeCut;
         ConcMarkPeak = Math.Max(ConcMarkPeak, o.ConcMarkPeak); TickFiresMax = Math.Max(TickFiresMax, o.TickFiresMax);
+        SpewActs += o.SpewActs; SpewDry += o.SpewDry; SpewMarks += o.SpewMarks; VenomMarks += o.VenomMarks;   // 第195期
+        NumbedSwings += o.NumbedSwings; NumbedCut += o.NumbedCut; NumbedCutSpew += o.NumbedCutSpew; NumbedCutVenom += o.NumbedCutVenom;
+        NumbedLayerSum += o.NumbedLayerSum; NumbedLayerMax = Math.Max(NumbedLayerMax, o.NumbedLayerMax);
+        NumbedCapSwings += o.NumbedCapSwings; NumbedCapTurn = MinReach(NumbedCapTurn, o.NumbedCapTurn);
         if (o.NecroPeak > NecroPeak) NecroPeak = o.NecroPeak;
         BrandFires += o.BrandFires; BrandDealt += o.BrandDealt;
         StallStagger += o.StallStagger;
@@ -2619,6 +2634,16 @@ public sealed class BattleEvent
     /// <para>逸らしの元の一撃の攻撃者は、逸らしの <c>Damage</c> の <c>ActorId</c> にそのまま入っている（元の攻撃者のまま）。</para>
     /// </summary>
     public int? ThrustCharge { get; init; }
+
+    /// <summary>
+    /// 痺れ毒（第195期・<see cref="NumbTrait"/>）で減った <c>Attack</c> のときだけ入る（<b>表示専用</b>・どの規則も読まない）。
+    /// <c>NumbPercent</c> 減った割合（毒の層 × 3・上限 60）／ <c>NumbCut</c> 減った打点（<c>Amount</c> は減った後の値）。
+    /// 印があっても毒の層が 0 のとき・印の無い駒では <c>null</c>。
+    /// </summary>
+    public int? NumbPercent { get; init; }
+
+    /// <inheritdoc cref="NumbPercent"/>
+    public int? NumbCut { get; init; }
 
     /// <summary>
     /// 毒の <c>StatusGain</c> のときだけ、<b>付与経路</b>（<see cref="BattleCore.PoisonRoute"/>）が入る

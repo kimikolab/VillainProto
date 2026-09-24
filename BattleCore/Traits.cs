@@ -351,6 +351,10 @@ public enum TraitId
     Concentrate,// 濃縮（ミオ・第194期）: 手番で（攻撃しない）毒のある敵全員に +4 層（旧 `Amplifier` のまま・傷の着火も込み）、
                 // 続けて次の刻みが最も大きい敵とその隣の敵に濃縮の印を +1（印が n なら刻みを 1+n 回受ける・`ConcentrateTrait`）
     ConcentrateLeak,// 濃縮の漏れ（ミオ・第194期）: 手番ごとに、ミオに隣接する味方にも印が +1。`Concentrate` の代金で、外せば `yP`
+    Spew,       // 吐く（スィド・第195期）: 手番で（攻撃しない）現在攻撃力が最も高い敵に毒 +6 層と痺れ毒の印（`Numb` を持つときだけ）。
+                // 選び方はクビの萎縮と同じ `GrappleTrait.Pick`。`Spit`（ヴィオの吐き戻し）とは別の札
+    Numb,       // 痺れ毒（スィド・第195期）: 印のある敵は与ダメージが「毒の層 × 3%」下がる（上限 60%）。判定は engine（`PerformAttackBody` の萎縮の直後）。
+                // 印は `Spew` と `Venom` が付ける（どちらもこの札の保持者のときだけ）。外せば「鈍らせなし」
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -1622,6 +1626,8 @@ public sealed class VenomTrait : Trait
         // 毒の窓口（第90期）。滲み則の入口だけを担い、加算量もログも現行のまま。
         ctx.Poison(source, StackPerHit, self, PoisonRoute.Venom);
         ctx.Log($"    {source.Name} の毒が {source.Counter(StatusKeys.Poison)} 層になった", LogKind.Status);
+        // 第195期: 痺れ毒の保持者なら、殴ってきた敵に印も付ける（旧スィド＝`Venom` だけの駒では何もしない）。
+        if (self.HasTrait(TraitId.Numb) && ctx.MarkNumbed(self, source, SpewTrait.OriginVenom)) ctx.TallyOf(self).VenomMarks++;
 
         // 扱いが雑なので隣の味方にもかかる。漏れは前後を含む隣接（味方に及ぶものの定義）。
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
@@ -2364,7 +2370,9 @@ public enum PoisonRoute
     /// <summary>触れてうつすの漏れ（ラウ・隣接味方へ。第183期）。</summary>
     TouchLeak,
     /// <summary>澱み分け（ベニ・隣接味方へ・手番ごと。第190期）。</summary>
-    Taint
+    Taint,
+    /// <summary>吐く（スィド・現在攻撃力が最も高い敵へ・手番ごと。第195期）。</summary>
+    Spew
 }
 
 /// <summary>
@@ -4796,6 +4804,63 @@ public sealed class ConcentrateTrait : Trait
 public sealed class ConcentrateLeakTrait : Trait
 {
     public override TraitId Id => TraitId.ConcentrateLeak;
+}
+
+/// <summary>
+/// 吐く（第195期・毒吐きのスィドの転生）。<b>手番で</b>（攻撃しない）、敵のうち現在攻撃力が最も高い1体
+/// （同値はスロットの小さい方・クビの萎縮と同じ <see cref="GrappleTrait.Pick"/>）に毒 +<see cref="SpitStack"/> 層を吐きかけ、
+/// 保持者が <see cref="TraitId.Numb"/> を持っていれば痺れ毒の印（<see cref="StatusKeys.Numbed"/>）を付ける。
+///
+/// <para>毒は窓口（<see cref="BattleContext.Poison"/>・<see cref="PoisonRoute.Spew"/>）を通すので、滲み則（傷があれば +1/+2）もそのまま乗る。
+/// 痺れ毒で減るのは <c>PerformAttackBody</c> の打点だけで <c>CurrentAttack</c> は下がらないので、<b>同じ敵に吐き続ける</b>。
+/// <b>乱数を引かない。</b></para>
+/// </summary>
+public sealed class SpewTrait : Trait
+{
+    /// <summary>1回の吐きで積む毒の層（指示書 §2・<b>6</b>）。</summary>
+    public const int SpitStack = 6;
+
+    /// <summary>印の値（<b>計数の帰属だけ</b>。規則は二値でしか読まない）: 吐いた敵 ／ 殴ってきた敵。</summary>
+    public const int OriginSpew = 1, OriginVenom = 2;
+
+    public override TraitId Id => TraitId.Spew;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Act(ctx, self);
+
+    // 行動パターンを持たない保持者は従来どおりターン頭に発火する（Trait.ActsOnPattern）。
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Act(ctx, self);
+    }
+
+    private static void Act(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        UnitTally t = ctx.TallyOf(self);
+        t.SpewActs++;
+        UnitState? pick = GrappleTrait.Pick(ctx, self);
+        if (pick is null) { t.SpewDry++; return; }
+        ctx.Log($"    {self.Name} が {pick.Name} に毒を吐きかけた", LogKind.Trigger);
+        ctx.Poison(pick, SpitStack, self, PoisonRoute.Spew);
+        if (self.HasTrait(TraitId.Numb) && ctx.MarkNumbed(self, pick, OriginSpew)) t.SpewMarks++;
+    }
+}
+
+/// <summary>
+/// 痺れ毒（第195期・スィド）。印（<see cref="StatusKeys.Numbed"/>）のある駒は、与えるダメージが
+/// <b>毒の層 × <see cref="PercentPerLayer"/>%</b>（上限 <see cref="MaxPercent"/>%）下がる。
+/// <b>判定は engine</b>（<c>PerformAttackBody</c> の萎縮の直後）で、<b>札そのものは挙動を持たない</b>
+/// ——印を付けるのは <see cref="SpewTrait"/> と <see cref="VenomTrait"/>（どちらもこの札の保持者のときだけ）。外せば「鈍らせなし」。
+/// </summary>
+public sealed class NumbTrait : Trait
+{
+    /// <summary>毒の層1つあたり何 % 鈍らせるか（指示書 §2・<b>3</b>）。</summary>
+    public const int PercentPerLayer = 3;
+
+    /// <summary>上限（指示書 §2・<b>60</b>）。</summary>
+    public const int MaxPercent = 60;
+
+    public override TraitId Id => TraitId.Numb;
 }
 
 /// <summary>
@@ -11976,6 +12041,8 @@ public static class TraitCatalog
         new KindleTrait(),     // 第191期
         new ConcentrateTrait(),     // 第194期
         new ConcentrateLeakTrait(), // 第194期
+        new SpewTrait(),       // 第195期
+        new NumbTrait(),       // 第195期
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期
