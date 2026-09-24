@@ -217,6 +217,11 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.Numb]            = (HcPlusL,  "印のある敵の与ダメが毒の層 × 3%（上限 60%）下がる。外せば「鈍らせなし」になる"),
         [TraitId.SpewFixed]       = (HcPlusL,  "第195期の吐き（いつも一番手強い敵）。対照で保持者 0 枚"),
         [TraitId.VenomHeavy]      = (HcBothL,  "殴られて毒を +8 積むのと、毒が隣接する味方へ漏れるのが同じ発火（S+反の版・保持者 0 枚）"),
+        // 第197期: ベニの紅蓮。分類を同じコミットで足す（第132期 段0-a）。
+        [TraitId.Guren]           = (HcPlusL,  "啜りの余りを溜め、満ちたら敵全員に着火して等分した毒を積む"),
+        [TraitId.GurenStrike]     = (HcPlusL,  "紅蓮の直撃の版（等分を直撃ダメージで）。対照で保持者 0 枚"),
+        [TraitId.GurenLow]        = (HcPlusL,  "紅蓮の低閾の版（閾値 6）。対照で保持者 0 枚"),
+        [TraitId.GurenFull]       = (HcPlusL,  "紅蓮の全額の版（等分せず満額）。参考で保持者 0 枚"),
     };
 
     // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------

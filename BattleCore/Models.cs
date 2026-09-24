@@ -1613,6 +1613,19 @@ public sealed class UnitTally
     public long[]? SipWasteByTurn;
 
     /// <summary>
+    /// 第197期（紅蓮・<b>ベニの側・計数専用</b>）: <c>GurenGained</c> 溜めた量 ／ <c>GurenFires</c> 放った回数 ／ <c>GurenSpent</c> 放った紅蓮の総量 ／
+    /// <c>GurenFirstTurn</c> 初めて放ったターン（0 ＝ 放っていない）／ <c>GurenLitNew</c>・<c>GurenRelit</c> 奔流で新しく火が点いた敵・既に燃えていた敵（延べ）／
+    /// <c>GurenLayers</c> 奔流で積んだ毒の層（滲み則込み）／ <c>GurenPoisonTick</c>・<c>GurenPoisonTickMark</c> その層の刻みの額面（1回目・印の2回目以降）／
+    /// <c>GurenMioLayers</c> 奔流の毒しか無い敵にミオが足した +4 ／ <c>GurenMioTick</c>・<c>GurenMioTickMark</c> その層の刻み ／
+    /// <c>GurenBurnTickNew</c>・<c>GurenBurnTickRelit</c>・<c>GurenBurnTickMark</c> 奔流が点けた・煽った火の刻み（1回目）と印の2回目以降 ／
+    /// <c>GurenStrikeNominal</c>・<c>GurenStrikeDealt</c> 直撃の版の名目と実額。
+    /// </summary>
+    public long GurenGained, GurenFires, GurenSpent, GurenLitNew, GurenRelit, GurenLayers, GurenPoisonTick, GurenPoisonTickMark,
+                GurenMioLayers, GurenMioTick, GurenMioTickMark, GurenBurnTickNew, GurenBurnTickRelit, GurenBurnTickMark,
+                GurenStrikeNominal, GurenStrikeDealt;
+    public int GurenFirstTurn;
+
+    /// <summary>
     /// 第194期（濃縮の印・ミオ）。<b>計数専用で、どの規則も読まない。</b>
     /// <para><b>ミオの側</b>: <c>ConcFires</c> 印を付けようとした手番 ／ <c>ConcDry</c> 次の刻みが 0 の敵しかいなかった手番 ／
     /// <c>ConcMarkCenter</c>・<c>ConcMarkAround</c>・<c>ConcMarkAlly</c> 足した印（中心・周りの敵・隣の味方。1回 +1）／
@@ -1966,6 +1979,12 @@ public sealed class UnitTally
         InverseLeakSelf += o.InverseLeakSelf; InverseLeakOnHolder += o.InverseLeakOnHolder;
         SipEligible += o.SipEligible; SipRoom += o.SipRoom; SipGained += o.SipGained; SipEarly += o.SipEarly;
         SipWaste += o.SipWaste;
+        GurenGained += o.GurenGained; GurenFires += o.GurenFires; GurenSpent += o.GurenSpent; GurenLitNew += o.GurenLitNew; GurenRelit += o.GurenRelit;
+        GurenLayers += o.GurenLayers; GurenPoisonTick += o.GurenPoisonTick; GurenPoisonTickMark += o.GurenPoisonTickMark;
+        GurenMioLayers += o.GurenMioLayers; GurenMioTick += o.GurenMioTick; GurenMioTickMark += o.GurenMioTickMark;
+        GurenBurnTickNew += o.GurenBurnTickNew; GurenBurnTickRelit += o.GurenBurnTickRelit; GurenBurnTickMark += o.GurenBurnTickMark;
+        GurenStrikeNominal += o.GurenStrikeNominal; GurenStrikeDealt += o.GurenStrikeDealt;
+        if (o.GurenFirstTurn > 0 && (GurenFirstTurn == 0 || o.GurenFirstTurn < GurenFirstTurn)) GurenFirstTurn = o.GurenFirstTurn;
         if (o.SipWasteByTurn is not null) { SipWasteByTurn ??= new long[o.SipWasteByTurn.Length]; for (int i = 0; i < o.SipWasteByTurn.Length && i < SipWasteByTurn.Length; i++) SipWasteByTurn[i] += o.SipWasteByTurn[i]; }
         ConcFires += o.ConcFires; ConcDry += o.ConcDry; ConcMarkCenter += o.ConcMarkCenter; ConcMarkAround += o.ConcMarkAround;
         ConcMarkAlly += o.ConcMarkAlly; ConcCenterBurning += o.ConcCenterBurning; ConcNoNew += o.ConcNoNew; DetonateMarkedAgain += o.DetonateMarkedAgain;
@@ -2395,7 +2414,23 @@ public enum BattleEventKind
     /// <c>Text</c> = <see cref="ThickenLabels"/>（+4 層の濃縮／傷口への着火）、<c>SourceTrait</c> = <see cref="TraitId.Amplifier"/>。
     /// ミオの手番の <c>Skill</c> の後、印（<see cref="ConcentrateMark"/>）より前に並ぶ。<b>どの規則も読まない。</b></para>
     /// </summary>
-    PoisonThicken
+    PoisonThicken,
+
+    /// <summary>
+    /// 紅蓮（第197期・<see cref="TraitId.Guren"/>・毒喰らいのベニ）が溜まった瞬間（<b>表示専用</b>）。
+    /// <para><b>啜り（<see cref="InverseSip"/>）の直後</b>に並ぶ。<c>ActorId</c> = ベニ、<c>TargetId</c> = 溢れた隣の味方、
+    /// <c>Amount</c> = 足した紅蓮、<c>StatusRemaining</c> = 足した<b>後</b>の紅蓮の量（アイコン用）。<b>どの規則も読まない。</b></para>
+    /// </summary>
+    GurenGain,
+
+    /// <summary>
+    /// 紅蓮を放った瞬間（第197期・<b>表示専用</b>）。ベニの手番の <c>Skill</c> の直後に並ぶ。
+    /// <para><b>見出しの1件</b>: <c>TargetId</c> = null、<c>ActorId</c> = ベニ、<c>Amount</c> = 放った紅蓮の量、<c>Slot</c> = 敵の数。
+    /// 続いて敵全員への着火（<c>StatusGain</c>・燃焼・書き手 ＝ ベニ）、そのあと<b>敵ごとの1件</b>（<c>TargetId</c> = 敵、
+    /// <c>Amount</c> = 積んだ層・直撃の版は直撃の名目）と、その敵への毒の <c>StatusGain</c>（経路 <see cref="BattleCore.PoisonRoute.Guren"/>）
+    /// ／直撃の版は <c>Damage</c> が並ぶ。等分が 0 なら敵ごとの件は出ない。<b>どの規則も読まない。</b></para>
+    /// </summary>
+    GurenRelease
 }
 
 /// <summary><see cref="BattleEventKind.PoisonThicken"/> の <c>Text</c>（<b>表示専用</b>）。</summary>

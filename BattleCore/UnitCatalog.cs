@@ -309,16 +309,17 @@ public static class UnitCatalog
         // 札を割った（第74期の作法）: `InverseLeak` を外せば `yP`、`Taint` を外せば手番なしの版。
         // 第191期に手番を「火 → 毒 → 毒」の周期にした（火は `Kindle`・外せば毒のみ）。どの拍かはラベルで分ける。
         // 第192期から反転と反転の裏はベニ自身にも効く（`InverseTrait.IncludesSelf`）。手番の配り先は隣の味方のまま。
-        Traits = new[] { TraitId.Inverse, TraitId.Kindle, TraitId.Taint, TraitId.InverseLeak },
+        // 第197期に紅蓮（`Guren`）を足した。**`Kindle` / `Taint` より前に置く**——放つのは手番の頭（周期の火・毒の拍より前）。
+        Traits = new[] { TraitId.Inverse, TraitId.Guren, TraitId.Kindle, TraitId.Taint, TraitId.InverseLeak },
         Actions = new UnitAction[]
         {
             new(ActionKind.Skill, Label: KindleTrait.Label),
             new(ActionKind.Skill, Label: "澱みを分けた"),
             new(ActionKind.Skill, Label: "澱みを分けた"),
         },
-        PlusText = "自分と隣接する味方は、毒と燃焼で削られる代わりに癒える。隣で溢れた分は自分が啜る。手番で、隣接する味方全員に火→毒→毒の順で分け与える",
+        PlusText = "自分と隣接する味方は、毒と燃焼で削られる代わりに癒える。隣で溢れた分は自分が啜り、それでも余れば紅蓮として溜める。紅蓮が満ちると、敵全体に火と澱みを放つ / 手番で、隣接する味方全員に火→毒→毒の順で分け与える",
         MinusText = "自分と隣接する味方は、回復を受けるとかえって傷つく。自分では攻撃しない",
-        Flavor = "紅い澱みを分け与え、その余りを啜って生きている。隣にいる間だけ、火も毒も薬になる。"
+        Flavor = "紅い澱みを分け与え、その余りを啜って生きている。満ちれば、花は燃え、腐らせる。"
     };
 
     public static readonly UnitDef Gan = new()

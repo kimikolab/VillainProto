@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -20,6 +20,7 @@ static partial class BeniDiag
             case "ledger193": RunLedger193(); handled = true; return;
             case "bench": RunBenches(); handled = true; return;
             case "check": Check(arg); handled = true; return;
+            default: RunMore197(mode, arg, ref handled); return;
         }
     }
 

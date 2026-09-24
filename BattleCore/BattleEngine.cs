@@ -313,7 +313,14 @@ public static class StatusKeys
     /// </summary>
     public const string Numbed = "numbed";
 
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted, Concentrated, Numbed };
+    /// <summary>
+    /// 紅蓮（第197期・<see cref="TraitId.Guren"/>・ベニの側）。啜りでもベニに入りきらなかった溢れの量（上限なし）。
+    /// 溜める口は <c>BattleContext.InverseSip</c>、放つ口は <c>GurenTrait.Release</c>（放つと 0）。
+    /// <see cref="All"/> に入れてあるので会戦の境界で消え、状態の札として画面に出る。
+    /// </summary>
+    public const string Guren = "guren";
+
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted, Concentrated, Numbed, Guren };
 
     /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
@@ -342,6 +349,7 @@ public static class StatusKeys
         Daunted => "萎",
         Concentrated => "濃",
         Numbed => "鈍",
+        Guren => "紅",
         _ => key
     };
 }
@@ -608,6 +616,7 @@ public sealed class BattleContext
             BurnTickOnce(u, left, bt, second: false, TickOrd(1, total));
             // 濃縮の印（第194期）。**残りターンの減算と区間の帳簿は上の1回だけ**で、刻みの本体を印の数だけもう1回ずつ。
             if (_markLive) RepeatTick(u, k => BurnTickOnce(u, left, bt, second: true, TickOrd(k, total)));
+            if (left - 1 <= 0 && u.RawCounter(GurenTrait.BurnKey) > 0) u.SetCounter(GurenTrait.BurnKey, 0);   // 第197期・**計数のみ**
         }
     }
 
@@ -635,6 +644,7 @@ public sealed class BattleContext
                 return;
             }
             NoteTaintPostBite(u, poison);   // 第190期・**計数のみ**
+            NoteGurenPoisonTick(u, poison, second);   // 第197期・**計数のみ**
             Log($"    {u.Name} は毒に蝕まれている（{poison}）", LogKind.Status);
             Emit(new BattleEvent
             {
@@ -708,6 +718,7 @@ public sealed class BattleContext
                 return;
             }
             NoteKindlePostBurn(u);   // 第191期・**計数のみ**
+            NoteGurenBurnTick(u, second);   // 第197期・**計数のみ**
             ClearKindleHeld(u);
 
             Log($"    {u.Name} が燃えている（残り {left - 1}）", LogKind.Status);
@@ -1140,12 +1151,12 @@ public sealed class BattleContext
     }
 
     /// <summary><see cref="UnitTally.SoakSeenByRoute"/> の長さ（毒 9 経路 ＋ 燃焼 1。第180期に吐き戻しで1本、
-    /// 第183期に触れてうつす・その漏れで2本、第190期に澱み分けで1本、第195期にスィドの吐きで1本増えた）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
+    /// 第183期に触れてうつす・その漏れで2本、第190期に澱み分けで1本、第195期にスィドの吐きで1本、第197期に紅蓮の奔流で1本増えた）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
     /// ——ずらさないと新しい経路の添字が燃焼と重なる。</summary>
-    public const int SoakRouteCount = 11;
+    public const int SoakRouteCount = 12;
 
     /// <summary>燃焼の経路の添字（<see cref="UnitTally.SoakSeenByRoute"/> の末尾）。</summary>
-    public const int SoakBurnRouteIx = 10;
+    public const int SoakBurnRouteIx = 11;
 
     /// <summary>
     /// 巻き込み則（第85期）で最後にこの駒へ傷を書いた駒の <c>InstanceId + 1</c>（第90期の計数専用の札）。
@@ -4095,6 +4106,74 @@ public sealed class BattleContext
     readonly List<UnitState> _inverseLeakHolders = new();
     /// <summary>澱み分け（第190期・<see cref="TraitId.Taint"/>）の保持者（<b>計数専用</b>・離れた後の刻みの帳簿の帰属先）。</summary>
     readonly List<UnitState> _taintHolders = new();
+    /// <summary>紅蓮（第197期）の保持者（<b>計数専用</b>・奔流の刻みの帰属先）。</summary>
+    readonly List<UnitState> _gurenHolders = new();
+
+    UnitState? GurenHolderAgainst(UnitState u)
+    {
+        foreach (UnitState h in _gurenHolders) if (h.TeamId != u.TeamId) return h;
+        return null;
+    }
+
+    /// <summary>
+    /// 奔流の毒の刻み（第197期・<b>計数専用</b>）。刻みの額面のうち、奔流が積んだ層（<see cref="GurenTrait.HeldKey"/>）と、
+    /// 奔流の毒しか持っていなかった敵にミオが足した層（<see cref="GurenTrait.MioKey"/>）の分を、1回目と印の2回目以降に分けて数える。
+    /// </summary>
+    void NoteGurenPoisonTick(UnitState u, int poison, bool second)
+    {
+        if (_gurenHolders.Count == 0) return;
+        int held = Math.Min(u.RawCounter(GurenTrait.HeldKey), poison);
+        int mio = Math.Min(u.RawCounter(GurenTrait.MioKey), poison - held);
+        if (held <= 0 && mio <= 0) return;
+        UnitState? h = GurenHolderAgainst(u);
+        if (h is null) return;
+        UnitTally t = TallyOf(h);
+        if (second) { t.GurenPoisonTickMark += held; t.GurenMioTickMark += mio; }
+        else { t.GurenPoisonTick += held; t.GurenMioTick += mio; }
+    }
+
+    /// <summary>奔流が点けた火の刻み（第197期・<b>計数専用</b>）。</summary>
+    void NoteGurenBurnTick(UnitState u, bool second)
+    {
+        if (_gurenHolders.Count == 0) return;
+        int k = u.RawCounter(GurenTrait.BurnKey);
+        if (k <= 0) return;
+        UnitState? h = GurenHolderAgainst(u);
+        if (h is null) return;
+        UnitTally t = TallyOf(h);
+        if (second) t.GurenBurnTickMark += BurnRules.Damage;
+        else if (k == 1) t.GurenBurnTickNew += BurnRules.Damage;
+        else t.GurenBurnTickRelit += BurnRules.Damage;
+    }
+
+    /// <summary>
+    /// ミオの +4（第197期・<b>計数専用</b>）。奔流の毒しか持っていなかった敵（毒の層 ≤ 奔流の層 ＋ 奔流の上のミオの層）への +4 を、
+    /// 「奔流が無ければ乗らなかった +4」として数える。
+    /// </summary>
+    public void NoteGurenThicken(UnitState foe, int poisonBefore, int step)
+    {
+        if (_gurenHolders.Count == 0) return;
+        int g = foe.RawCounter(GurenTrait.HeldKey), m = foe.RawCounter(GurenTrait.MioKey);
+        if (g <= 0 || poisonBefore > g + m) return;
+        foe.SetCounter(GurenTrait.MioKey, m + step);
+        UnitState? h = GurenHolderAgainst(foe);
+        if (h is not null) TallyOf(h).GurenMioLayers += step;
+    }
+
+    /// <summary>
+    /// 紅蓮を放った瞬間（第197期・<b>表示専用</b>）。<paramref name="target"/> が null の1件が見出し（<c>Amount</c> = 紅蓮の量・
+    /// <c>Slot</c> = 敵の数）、続く敵ごとの1件が <c>TargetId</c> = 敵・<c>Amount</c> = 積んだ層（直撃の版は直撃の名目）。
+    /// </summary>
+    public void EmitGurenRelease(UnitState beni, UnitState? target, int amount, int foes)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.GurenRelease, Turn = _turn, ActorId = beni.InstanceId, TargetId = target?.InstanceId,
+            Amount = amount, Slot = foes, SourceTrait = TraitId.Guren,
+        });
+    }
+
     /// <summary>反転で癒えた味方の、このターンの <c>InstanceId</c>（<b>計数専用</b>・最大同時人数）。</summary>
     readonly List<int> _inverseTurnSet = new();
     int _inverseTurn = -1;
@@ -4157,6 +4236,19 @@ public sealed class BattleContext
             {
                 t.SipWaste += waste;
                 (t.SipWasteByTurn ??= new long[31])[Math.Clamp(_turn, 0, 30)] += waste;
+            }
+            // 紅蓮（第197期）。**紅蓮の札を持つベニだけ**が溢れの余りを溜める（持たなければ1ビットも動かない）。
+            if (waste > 0 && GurenTrait.Holds(beni))
+            {
+                int total = beni.RawCounter(StatusKeys.Guren) + waste;
+                beni.SetCounter(StatusKeys.Guren, total);
+                t.GurenGained += waste;
+                if (_verbose)   // 表示専用（アイコン用の溜まった量）
+                    Emit(new BattleEvent
+                    {
+                        Kind = BattleEventKind.GurenGain, Turn = _turn, ActorId = beni.InstanceId, TargetId = u.InstanceId,
+                        Amount = waste, StatusRemaining = total, SourceTrait = TraitId.Guren,
+                    });
             }
         }
         if (_turn <= 3) t.SipEarly += g;
@@ -5197,6 +5289,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Inverse)) _inverseHolders.Add(u);
         if (u.HasTrait(TraitId.InverseLeak)) _inverseLeakHolders.Add(u);
         if (u.HasTrait(TraitId.Taint)) _taintHolders.Add(u);
+        if (GurenTrait.Holds(u)) _gurenHolders.Add(u);   // 第197期・**計数専用**（奔流の刻みの帰属先）
         if (u.HasTrait(TraitId.Funnel)) FunnelActive = true;
         // 第137期: 砕けの保持者が盤上にいるか（`ShatterSoaked` を短絡させるためだけ。盤面には影響しない）。
         if (u.HasTrait(TraitId.Shatter)) ShatterActive = true;

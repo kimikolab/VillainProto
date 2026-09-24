@@ -1324,6 +1324,10 @@ static class TraitKeyMap
         [TraitId.Numb]       = Array.Empty<int>(),                                               // 第195期（印は毒の層を読むだけ・判定は engine）
         [TraitId.SpewFixed]  = new[] { UnitTally.CarryPoison },                                 // 第196期（対照・散らさない吐き）
         [TraitId.VenomHeavy] = new[] { UnitTally.CarryPoison, UnitTally.CarryHit },             // 第196期（S+反の版・`Venom` と同じ2本）
+        [TraitId.Guren]      = new[] { UnitTally.CarryPoison, UnitTally.CarryBurn },            // 第197期（紅蓮・敵全員に火と毒を書く）
+        [TraitId.GurenStrike]= new[] { UnitTally.CarryBurn },                                   // 第197期（対照・毒の代わりに直撃）
+        [TraitId.GurenLow]   = new[] { UnitTally.CarryPoison, UnitTally.CarryBurn },            // 第197期（対照・閾値 6）
+        [TraitId.GurenFull]  = new[] { UnitTally.CarryPoison, UnitTally.CarryBurn },            // 第197期（参考・満額）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
         [TraitId.Cinder]     = new[] { UnitTally.CarryBurn },
@@ -1467,6 +1471,10 @@ static class TraitHookMap
         [TraitId.Numb]        = new[] { Engine },                                // 第195期（減少は PerformAttackBody の萎縮の直後）
         [TraitId.SpewFixed]   = new[] { "OnTurnStart", "OnAction" },             // 第196期（対照・保持者 0 枚）
         [TraitId.VenomHeavy]  = new[] { "OnDamaged" },                           // 第196期（S+反の版・保持者 0 枚）
+        [TraitId.Guren]       = new[] { "OnAction", Engine },                    // 第197期（溜めるのは InverseSip）
+        [TraitId.GurenStrike] = new[] { "OnAction", Engine },                    // 第197期（対照・保持者 0 枚）
+        [TraitId.GurenLow]    = new[] { "OnAction", Engine },                    // 第197期（対照・保持者 0 枚）
+        [TraitId.GurenFull]   = new[] { "OnAction", Engine },                    // 第197期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）
         [TraitId.ThrustPlain] = new[] { "OnCarryOver", Engine },                 // 第186期 追補（対照・保持者 0 枚）

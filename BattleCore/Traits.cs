@@ -357,6 +357,11 @@ public enum TraitId
                 // 印は `Spew` と `Venom` が付ける（どちらもこの札の保持者のときだけ）。外せば「鈍らせなし」
     SpewFixed,  // 散らさない吐き（第196期・対照・保持者 0 枚）: 第195期の `Spew`（いつも現在攻撃力が最も高い敵）
     VenomHeavy, // 重い毒撃（第196期・S+反の版・保持者 0 枚）: `Venom` と同じで、殴ってきた敵に積む毒が +8
+    Guren,      // 紅蓮（ベニ・第197期）: 啜りでも入りきらなかった溢れを紅蓮として溜め（`StatusKeys.Guren`）、
+                // 手番の頭で 12 以上なら敵全員に着火し、紅蓮を敵の数で等分した毒の層を積む（`GurenTrait`）
+    GurenStrike,// 紅蓮・直撃の版（第197期・対照・保持者 0 枚）: 等分した量を毒の代わりに直撃ダメージで入れる
+    GurenLow,   // 紅蓮・低閾の版（第197期・対照・保持者 0 枚）: 閾値 6
+    GurenFull,  // 紅蓮・全額の版（第197期・参考・保持者 0 枚）: 等分せず全員に満額の層
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -2381,7 +2386,9 @@ public enum PoisonRoute
     /// <summary>澱み分け（ベニ・隣接味方へ・手番ごと。第190期）。</summary>
     Taint,
     /// <summary>吐く（スィド・現在攻撃力が最も高い敵へ・手番ごと。第195期）。</summary>
-    Spew
+    Spew,
+    /// <summary>紅蓮の奔流（ベニ・溜めた紅蓮を敵全員で等分。第197期）。</summary>
+    Guren
 }
 
 /// <summary>
@@ -4731,6 +4738,7 @@ public sealed class AmplifierTrait : Trait
             int grown = poison + Step;
             foe.SetCounter(StatusKeys.Poison, grown);
             at.AmpThickened++;
+            ctx.NoteGurenThicken(foe, poison, Step);   // 第197期・**計数のみ**
             ctx.EmitThicken(self, foe, grown, ThickenLabels.Thicken);   // 表示専用
             ctx.Log($"    {foe.Name} の毒が澱んで濃くなった（{poison} → {grown}）", LogKind.Status);
         }
@@ -11619,6 +11627,113 @@ public sealed class KindleTrait : Trait
 }
 
 /// <summary>
+/// 紅蓮（第197期・毒喰らいのベニ）。<b>溜める口は engine</b>（<c>BattleContext.InverseSip</c>——啜りでベニへ流したのに
+/// ベニが満タンで入りきらなかった量を <see cref="StatusKeys.Guren"/> に足す。渇き・支援拒否で止まった回とベニ自身の刻みは溜めない）。
+/// <b>放つ口はこの札の <c>OnAction</c></b>——ベニの札の並びで <see cref="KindleTrait"/> / <see cref="TaintTrait"/> より前に置くので、
+/// 周期の火・毒の拍より先に走る。手番を失った手番では呼ばれない（溜まったまま）。
+///
+/// <para>紅蓮が <see cref="Threshold"/> 以上なら (1) 生きている敵全員に着火（<c>Ignite(foe, false, ベニ)</c>）、
+/// (2) 紅蓮を生きている敵の数で等分した毒の層を全員に積む（端数は捨てる・0 なら積まない・窓口 <see cref="BattleContext.Poison"/>・
+/// <see cref="PoisonRoute.Guren"/>）、(3) 紅蓮を 0 に戻す。<b>乱数を引かない</b>（<c>LivingMembers</c> は席番号順）。</para>
+///
+/// <para>版は札で切り替える（第196期 <c>SpewFixed</c> と同じ作法・対照の札は保持者 0 枚）:
+/// <see cref="GurenStrikeTrait"/>（等分を直撃ダメージで）／ <see cref="GurenLowTrait"/>（閾値 <see cref="LowThreshold"/>）／
+/// <see cref="GurenFullTrait"/>（等分せず満額）。</para>
+/// </summary>
+public sealed class GurenTrait : Trait
+{
+    /// <summary>放つ閾値（指示書 §2.2・規定の版）。</summary>
+    public const int Threshold = 12;
+    /// <summary>低閾の版の閾値（指示書 §2.3）。</summary>
+    public const int LowThreshold = 6;
+
+    /// <summary>奔流で積んだ毒の層のうち、まだ持っている分（<b>計数専用</b>・敵の側）。</summary>
+    public const string HeldKey = "gurenHeld";
+    /// <summary>奔流の毒だけを持っていた敵にミオが足した +4 の層（<b>計数専用</b>・敵の側）。</summary>
+    public const string MioKey = "gurenMio";
+    /// <summary>奔流が点けた（1）／煽った（2）火が燃えているか（<b>計数専用</b>・敵の側。燃え尽きると 0）。</summary>
+    public const string BurnKey = "gurenBurn";
+
+    public override TraitId Id => TraitId.Guren;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Release(ctx, self, Threshold, strike: false, full: false);
+
+    /// <summary>紅蓮を溜める札（4版のどれか）を持っているか。溜める口（engine）が問う。</summary>
+    public static bool Holds(UnitState u)
+        => u.HasTrait(TraitId.Guren) || u.HasTrait(TraitId.GurenStrike) || u.HasTrait(TraitId.GurenLow) || u.HasTrait(TraitId.GurenFull);
+
+    /// <summary>放つ本体（4版で共有）。</summary>
+    internal static void Release(BattleContext ctx, UnitState self, int threshold, bool strike, bool full)
+    {
+        if (!self.IsAlive) return;
+        int guren = self.RawCounter(StatusKeys.Guren);
+        if (guren < threshold) return;
+        var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId));
+        if (foes.Count == 0) return;
+        UnitTally t = ctx.TallyOf(self);
+        t.GurenFires++;
+        t.GurenSpent += guren;
+        if (t.GurenFirstTurn == 0) t.GurenFirstTurn = Math.Max(1, ctx.Turn);
+        int share = full ? guren : guren / foes.Count;
+        self.SetCounter(StatusKeys.Guren, 0);
+        ctx.EmitGurenRelease(self, null, guren, foes.Count);   // 表示専用（見出し）
+        ctx.Log($"    ★ {self.Name} の紅蓮が溢れ出した（{guren}）——敵の列が紅と紫に染まる", LogKind.Highlight, self);
+
+        foreach (UnitState foe in foes)   // (1) 着火
+        {
+            if (!foe.IsAlive) continue;
+            bool burning = foe.RawCounter(StatusKeys.Burn) > 0;
+            if (burning) t.GurenRelit++; else t.GurenLitNew++;
+            ctx.Ignite(foe, friendly: false, source: self);
+            foe.SetCounter(BurnKey, burning ? 2 : 1);
+        }
+        if (share <= 0) return;
+        foreach (UnitState foe in foes)   // (2) 等分した毒（直撃の版は直撃ダメージ）
+        {
+            if (!foe.IsAlive) continue;
+            ctx.EmitGurenRelease(self, foe, share, foes.Count);   // 表示専用（1体ぶん）
+            if (strike)
+            {
+                int before = foe.Hp;
+                ctx.ApplyDamage(foe, share, self);
+                t.GurenStrikeDealt += before - Math.Max(0, foe.Hp);
+                t.GurenStrikeNominal += share;
+                continue;
+            }
+            int p0 = foe.RawCounter(StatusKeys.Poison);
+            ctx.Poison(foe, share, self, PoisonRoute.Guren);
+            int added = foe.RawCounter(StatusKeys.Poison) - p0;
+            t.GurenLayers += added;
+            foe.SetCounter(HeldKey, foe.RawCounter(HeldKey) + added);
+        }
+    }
+}
+
+/// <summary>紅蓮・直撃の版（第197期・対照・保持者 0 枚）。等分した量を毒の代わりに直撃ダメージ（出どころ ＝ ベニ）で入れる。</summary>
+public sealed class GurenStrikeTrait : Trait
+{
+    public override TraitId Id => TraitId.GurenStrike;
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+        => GurenTrait.Release(ctx, self, GurenTrait.Threshold, strike: true, full: false);
+}
+
+/// <summary>紅蓮・低閾の版（第197期・対照・保持者 0 枚）。閾値 <see cref="GurenTrait.LowThreshold"/>。</summary>
+public sealed class GurenLowTrait : Trait
+{
+    public override TraitId Id => TraitId.GurenLow;
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+        => GurenTrait.Release(ctx, self, GurenTrait.LowThreshold, strike: false, full: false);
+}
+
+/// <summary>紅蓮・全額の版（第197期・参考・保持者 0 枚）。等分せず全員に満額の層（強すぎる上限の目安）。</summary>
+public sealed class GurenFullTrait : Trait
+{
+    public override TraitId Id => TraitId.GurenFull;
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+        => GurenTrait.Release(ctx, self, GurenTrait.Threshold, strike: false, full: true);
+}
+
+/// <summary>
 /// 突きの対照（第186期 追補）。倍率を<b>素の攻撃力</b>で掛ける版——威力 ＝ 現在攻撃力 ＋ 素の攻撃力 × 回数。
 /// 強化が倍率に乗る寄与を分けるためだけの札で、<b>保持者は <c>UnitCatalog.All</c> に 0 枚</b>（診断のローカルだけ）。
 /// </summary>
@@ -12110,6 +12225,10 @@ public static class TraitCatalog
         new NumbTrait(),       // 第195期
         new SpewFixedTrait(),  // 第196期（対照・保持者 0 枚）
         new VenomHeavyTrait(), // 第196期（S+反の版・保持者 0 枚）
+        new GurenTrait(),       // 第197期
+        new GurenStrikeTrait(), // 第197期（対照・保持者 0 枚）
+        new GurenLowTrait(),    // 第197期（対照・保持者 0 枚）
+        new GurenFullTrait(),   // 第197期（参考・保持者 0 枚）
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期
