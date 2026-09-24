@@ -522,6 +522,8 @@ if (focusId == "debuff") { DebuffDiag.Run(args.Length > 2 ? args[2] : "phase0", 
 if (focusId == "beni") { BeniDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 // mio モード（第194期） —— 澱みのミオの転生（一点濃縮）。本体は `Modes/Mio*.cs`。
 if (focusId == "mio") { MioDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
+// sid モード（第195期） —— 毒吐きのスィドの転生（ガルド抜きで耐える毒パ）。本体は `Modes/Sid*.cs`。
+if (focusId == "sid") { SidDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 
 // rebirth2 モード（第180期） —— B群の転生 3〜5枚目（ムド／ヴィオ／ガン）。本体は `Modes/Rebirth2.cs`。
 if (focusId == "rebirth2")
