@@ -119,7 +119,7 @@ static partial class MioDiag
         // ---------------- Q0-2 ----------------
         Console.WriteLine("## Q0-2 現行の `Thicken` の処理順と計数");
         Console.WriteLine();
-        int ti = traits.IndexOf("private static void " + "Thicken(");
+        int ti = traits.IndexOf("static void " + "Thicken(");
         if (ti < 0) { Console.WriteLine("**`Thicken` が見つからない。走査が空なので止める**（R034）。"); return; }
         string tb = traits.Substring(ti, traits.IndexOf("\n}\n", ti) - ti);
         var counters = System.Text.RegularExpressions.Regex.Matches(tb, @"at\.(Amp\w+)").Select(m => m.Groups[1].Value).Distinct().ToList();
@@ -339,6 +339,34 @@ static partial class MioDiag
                               + (db.Contains("SetCounter(") ? "**持つ**" : "○") + "。**1体ぶんの本体を2回呼ぶだけで「2回」になり、1回だけにすべきものが無い**");
             Console.WriteLine("- **判断: 起爆の刻みも印で2回にする**（印の意味を「この駒の刻みは、どの口から来ても2回」に揃える）。両方持ちの ×2 は1回ずつに掛かる"
                               + "（2回 × 各 ×2）。1回目で倒れたら2回目は当てない");
+        }
+        Console.WriteLine();
+
+        // ---------------- Q0-11（3度目の変更で足した） ----------------
+        Console.WriteLine("## Q0-11 印が重なる（刻みを 1+n 回）とき、何度も反応すると壊れるものがないか");
+        Console.WriteLine();
+        {
+            int a = engine.IndexOf("public void " + "TickStatuses()");
+            int b = a < 0 ? -1 : engine.IndexOf("public bool " + "Detonate(", a);
+            string tick = a < 0 || b < 0 ? "" : engine.Substring(a, b - a);
+            if (tick.Length == 0) { Console.WriteLine("**`TickStatuses` が見つからない。走査が空なので止める**（R034）。"); return; }
+            // 刻みの本体の中で「前の刻みで書いた値を読み直して分岐する」ものがあるか（回数で振る舞いが変わるもの）
+            var readsBack = new[] { "RawCounter(StatusKeys." + "Burn)", "RawCounter(StatusKeys." + "Poison)", "_burnOpen", "OwedKey" }
+                .Where(tok => tick.Contains(tok)).ToList();
+            Console.WriteLine("- Q0-10 の 16 本は、1回の刻みの中で完結するもの（計数・回復・`ApplyDamage`・台本）と、減算とその帳簿（1回だけ）に分かれる。"
+                              + "**回数が 2 から 1+n に増えても、この分け方は変わらない**——n 回目も同じ量で同じ本体を通るだけ");
+            Console.WriteLine("- 刻みの本体が状態を読み直すトークン: " + string.Join("・", readsBack.Select(x => "`" + x + "`"))
+                              + "。層と残りターンは**本体に入る前に1回だけ**読んで量を決めている（毒の層は刻みで減らない・燃焼の減算は本体の外）ので、回数で量は変わらない。"
+                              + "`OwedKey`（業・保持者 0 枚）だけは1回ごとに借りを1減らす——**1+n 倍の速さで尽きる**（計数専用なので盤面は壊れない）");
+            Console.WriteLine("- **倒れた駒に次の回を当てない**（死亡処理・疫みの飛散・破裂・墓守の層が n 回走るのを防ぐ）。回の途中で倒れたら残りは捨てる");
+            Console.WriteLine("- 反転（ベニ）の内側の味方は1回ごとに回復（＋啜り）——**回復が 1+n 回**（指示どおり）。ベニの隣の味方は印が重なるほど削られずに癒える");
+            Console.WriteLine("- 軛は1回ずつに効く（`ApplyDamage` の中）。**回数が増えるほど上限の外側で素通りする量が増える**（1回 25 まで × 1+n 回）");
+            Console.WriteLine("- 回数の上限: 印はミオの手番ごとに中心・周り・隣の味方へ +1。**中心が同じ敵のままなら1ターンに +1**なので、30 ターン戦っても n ≤ 30 程度、"
+                              + "1回の刻みは最大 31 回。台本（`verbose` のときだけ）は刻みごとに `Status` と `Damage` の組が 1+n 組並ぶ");
+            Console.WriteLine("- `int` の桁: 量は1回ぶん（層は +4 と滲みでしか増えない）× 回数なので、1戦の刻みの合計は数万が上限の桁。**桁あふれの心配は無い**");
+            Console.WriteLine("- **判断: 起爆も 1+n 回にする**（第2の変更と同じ理由——起爆は減算を持たないので本体を回数だけ呼べばよく、1回だけにすべきものが無い）。"
+                              + "両方持ちの ×2 は1回ずつに掛かる");
+            Console.WriteLine("- **壊れるものは見つからない**（注意は 業の借りの尽き方と、倒れた駒に当てないことの2つ）");
         }
         Console.WriteLine();
 
