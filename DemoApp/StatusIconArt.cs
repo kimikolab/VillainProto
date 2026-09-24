@@ -8,6 +8,7 @@ public static class StatusIconArt
 {
     private static readonly Dictionary<string, (string Color, string Shape)> Art = new()
     {
+        [StatusKeys.Concentrated] = ("#6fb8a4", "<path d='M32 30q-8-8 1-12t17 11q0 16-20 13T13 22Q20 4 44 12' fill='none'/>"),
         [StatusKeys.Cowed] = ("#d9e9eb", "<circle cx='32' cy='23' r='7'/><path d='M20 47q0-17 12-17t12 17M12 18l-4 7 5 7m39-14 4 7-5 7' fill='none'/>"),
         // 第189期・萎縮（クビ）。次の一撃が半分——縮む矢印。
         [StatusKeys.Daunted] = ("#c7c9a8", "<path d='M14 14l12 12m24-12L38 26M14 50l12-12m24 12L38 38' fill='none'/><rect x='26' y='26' width='12' height='12' rx='2'/>"),
@@ -28,6 +29,22 @@ public static class StatusIconArt
         [StatusKeys.Debt] = ("#ccbdad", "<path d='M18 10h28v44l-7-4-7 4-7-4-7 4z' fill='none'/><path d='M25 26h14m-14 10h14' fill='none'/>"),
     };
     private static readonly Dictionary<string, Texture2D> Cache = new();
+    public static Texture2D ConcentratedTexture(int amount)
+    {
+        var dots = new System.Text.StringBuilder();
+        int columns = System.Math.Min(8, System.Math.Max(1, amount));
+        int rows = (amount + columns - 1) / columns;
+        float radius = System.Math.Min(2.1f, 8f / System.Math.Max(1, rows));
+        for (int i = 0; i < amount; i++)
+        {
+            string x = (8f + (i % columns + 0.5f) * 48f / columns).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            string y = (45f + (i / columns + 0.5f) * 16f / rows).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            dots.Append($"<circle cx='{x}' cy='{y}' r='{radius.ToString(System.Globalization.CultureInfo.InvariantCulture)}'/>");
+        }
+        var image = new Image();
+        image.LoadSvgFromString($"<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64'><rect x='2' y='2' width='60' height='60' rx='11' fill='#101923' stroke='#588d7c' stroke-width='2'/><g stroke='#78baa5' stroke-width='3.5' fill='none'><path d='M32 27q-7-7 2-11t15 12q-1 15-20 12T14 21Q22 5 45 13'/></g><g fill='#b5dac0'>{dots}</g></svg>");
+        return ImageTexture.CreateFromImage(image);
+    }
     public static IEnumerable<string> Keys => Art.Keys;
     public static string? KeyOf(string keyOrLabel)
         => Art.ContainsKey(keyOrLabel) ? keyOrLabel : Art.Keys.FirstOrDefault(k => StatusKeys.LabelOf(k) == keyOrLabel);

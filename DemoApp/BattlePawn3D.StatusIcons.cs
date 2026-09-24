@@ -29,7 +29,7 @@ public partial class BattlePawn3D
         if (!_statusSnapshot.ContainsKey(StatusKeys.Stun)) SetFrightened(false);
         foreach (string key in StatusIconArt.Keys)
         {
-            if (key is StatusKeys.Poison or StatusKeys.Footing)
+            if (key is StatusKeys.Poison or StatusKeys.Footing or StatusKeys.Concentrated)
                 _statusIcons.SetAmount(key, _statusSnapshot.GetValueOrDefault(key), false);
             else _statusIcons.Set(key, _statusSnapshot.ContainsKey(key));
         }
@@ -53,6 +53,12 @@ public partial class BattlePawn3D
         else _statusSnapshot.Remove(StatusKeys.Poison);
         SetPoisoned(amount > 0);
     }
+    public void SetConcentrated(int amount, bool animate = true)
+    {
+        if (_alive) _statusIcons.SetAmount(StatusKeys.Concentrated, amount, animate);
+    }
+    internal int ConcentratedAmount => _statusIcons.Amount(StatusKeys.Concentrated);
+    public void PulsePoisonIcon() => _statusIcons.Pulse(StatusKeys.Poison);
     private void SetCurseStain(bool active)
     {
         if (active && _curseStain is null)

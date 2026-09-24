@@ -15,6 +15,7 @@ public partial class BattlefieldView3D
     {
         _popups.Clear();
         _numbers.Clear();
+        _tickNumbers.Clear();
     }
 
     private void TrimPopups(int pawn)

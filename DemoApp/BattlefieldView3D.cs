@@ -281,6 +281,8 @@ public partial class BattlefieldView3D : Control
 
     public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName, int stageIndex)
     {
+        _inverseHolders.Clear();
+        ConcentratePlays = ThickenPlays = InvertedHealPlays = SipPlays = KindlePlays = TaintPlays = 0;
         _shieldCowedGeneration++;
         TormentHitPlays = 0;
         DeflectionPlays = 0;
@@ -325,7 +327,9 @@ public partial class BattlefieldView3D : Control
             _actorRoot.AddChild(pawn);
             _pawns[opening.InstanceId] = pawn;
             RegisterSealHolder(opening);
+            RegisterInverse(opening);
         }
+        RefreshInverseBarriers();
     }
 
     public void SetTurn(int turn)
@@ -541,6 +545,7 @@ public partial class BattlefieldView3D : Control
         _actorRoot.AddChild(pawn);
         _pawns[opening.InstanceId] = pawn;
         RegisterSealHolder(opening);
+        RegisterInverse(opening);
         ConnectSeals();
         _attackAudio.PlaySummon();
         pawn.AnimateAppear();

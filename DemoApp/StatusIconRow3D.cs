@@ -26,6 +26,12 @@ public partial class StatusIconRow3D : Node3D
         Set(key, amount > 0);
         if (!_icons.TryGetValue(key, out var icon)) return;
         icon.Amount = System.Math.Max(0, amount);
+        if (key == BattleCore.StatusKeys.Concentrated)
+        {
+            if (amount > 0 && before != amount) icon.Sprite.Texture = StatusIconArt.ConcentratedTexture(amount);
+            if (animateGain && amount > before) icon.Bounce = 0.4f;
+            return;
+        }
         if (icon.Count is null && amount > 0)
         {
             icon.Count = new Label3D
@@ -70,6 +76,11 @@ public partial class StatusIconRow3D : Node3D
         Layout();
     }
 
+    public void Pulse(string key)
+    {
+        if (_icons.TryGetValue(key, out var icon) && icon.Active) icon.Bounce = 0.4f;
+    }
+
     public void Clear()
     {
         foreach (var icon in _icons.Values) icon.Sprite.QueueFree();
@@ -91,7 +102,7 @@ public partial class StatusIconRow3D : Node3D
     public override void _Process(double delta)
     {
         bool relayout = false;
-        foreach (var icon in _icons.Values)
+        foreach (var (key, icon) in _icons)
         {
             float before = icon.Flash;
             icon.Flash = System.Math.Max(0, icon.Flash - (float)delta);
@@ -99,7 +110,8 @@ public partial class StatusIconRow3D : Node3D
             float hop = Mathf.Sin(icon.Bounce / 0.4f * Mathf.Pi);
             float glow = icon.Flash / 0.32f;
             icon.Sprite.Modulate = new Color(1 + glow, 1 + glow, 1 + glow, icon.Active ? 1 : glow);
-            icon.Sprite.Scale = Vector3.One * (1 + glow * 0.18f + hop * 0.22f);
+            float weight = key == BattleCore.StatusKeys.Concentrated ? 1 + System.Math.Min(8, icon.Amount) * 0.02f : 1;
+            icon.Sprite.Scale = Vector3.One * (1 + glow * 0.18f + hop * 0.22f) * weight;
             icon.Sprite.Position = icon.RestPosition + Vector3.Up * (hop * 0.085f);
             icon.Sprite.Visible = icon.Active || icon.Flash > 0;
             relayout |= before > 0 && icon.Flash == 0 && !icon.Active;

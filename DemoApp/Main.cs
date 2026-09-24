@@ -1027,6 +1027,8 @@ public partial class Main : Control
 
         _result = BattleEngine.Run(players, enemies, seed, verbose: true);
         IndexStatusDamageEvents(_result.Events);
+        _ticks = TickPresentation.Build(_result.Events);
+        IndexBeniMio(_result.Events);
         IndexTimeline(_result.Events);
         _battleOpening = pending.Select(x => new DemoOpening(
             x.Unit.InstanceId,
@@ -1087,6 +1089,10 @@ public partial class Main : Control
         _poisonSpreadPlays = _poisonLeakPlays = 0;
         _poisonDrainIndices.Clear();
         _poisonDrainPlays = _poisonDrainHits = 0;
+        _tickPlays = _inverseTickPlays = 0;
+        _tickDelayBudget = null;
+        _beniMioShown.Clear();
+        _beniGiftGains.Clear();
         _playing = true;
         _paused = false;
         _pause.Text = "一時停止";
@@ -1101,6 +1107,7 @@ public partial class Main : Control
             int eventIndex = _eventIndex++;
             BattleEvent e = _result.Events[eventIndex];
             await ApplyEvent(e, eventIndex);
+            _tickDelayBudget = null;
             foreach (var combo in _comboEnds.Where(pair => _eventIndex >= pair.Value).ToArray())
             {
                 combo.Key.ReturnFromAttack();
@@ -1197,6 +1204,9 @@ public partial class Main : Control
         if (target is not null) target.AnimationSpeed = Math.Max(0.1, _speed);
         // 第125期 段2: 拍の境目でだけ画面を変える。**ここでは待たない**（間は下の switch の中だけ）。
         EnterBeat(eventIndex, e);
+        _tickDelayBudget = _ticks.Budgets.TryGetValue(eventIndex, out double tickBudget) ? tickBudget : null;
+        if (await PlayBeniMio(e, eventIndex, actor, target)) return;
+        if (await PlayTickEvent(e, eventIndex, target)) return;
         switch (e.Kind)
         {
             case BattleEventKind.TurnStart:
@@ -1610,7 +1620,7 @@ public partial class Main : Control
                     Color tint = StatusColor(label);
                     if (StatusIconArt.KeyOf(statusKey) is null)
                         _battleField.Float(target, $"＋{e.Amount} {label}", tint, e.Amount >= 2);
-                    if (!poisonTransfer && e.ActorId is not null && e.ActorId != e.TargetId)
+                    if (!poisonTransfer && !_beniGiftGains.Contains(eventIndex) && e.ActorId is not null && e.ActorId != e.TargetId)
                         _battleField.Link(actor, target, tint, $"{label}を書いた");
                     AppendLog($"  [color=#{tint.ToHtml(false)}]＋{e.Amount} {label}[/color] → {NameOf(e.TargetId)}"
                               + $"{WriterSuffix(e.ActorId, e.TargetId)}");
@@ -1801,6 +1811,7 @@ public partial class Main : Control
             if (candidate.Kind == BattleEventKind.Attack && candidate.ActorId == attack.ActorId) break;
             if (candidate.Kind is not (BattleEventKind.Damage or BattleEventKind.Parry)) continue;
             if (candidate.DeflectFromId is not null) continue; // 逸らしはマントからの飛行を待つ。
+            if (_invertedDamage.Contains(i)) continue;
             if (candidate.ActorId != attack.ActorId || candidate.Pattern != attack.Pattern) continue;
             if (!_batchedDamageIndices.Add(i)) continue;
             if (candidate.Kind == BattleEventKind.Parry) ShowParry(candidate);
@@ -1842,6 +1853,7 @@ public partial class Main : Control
             if (candidate.Kind is not (BattleEventKind.Damage or BattleEventKind.Parry)) continue;
             if (candidate.ActorId != highlight.ActorId || candidate.Pattern is not null) continue;
             if (candidate.Relayed || candidate.ShareFromId is not null || candidate.DeflectFromId is not null) continue;
+            if (_invertedDamage.Contains(i)) continue;
             hits.Add(i);
         }
         // 灰は敵が最後の1体でも、放つ絵の表示中に着弾まで描く。
@@ -2195,6 +2207,12 @@ public partial class Main : Control
 
     private async Task Delay(double seconds, bool raw = false)
     {
+        if (!raw && _tickDelayBudget is double budget)
+        {
+            seconds = Math.Min(seconds, budget);
+            _tickDelayBudget = Math.Max(0, budget - seconds);
+            if (seconds <= 0) return;
+        }
         if (_fastSmoke && !raw)
         {
             await Task.CompletedTask;
