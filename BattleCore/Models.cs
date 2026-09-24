@@ -1606,6 +1606,13 @@ public sealed class UnitTally
                 SipEligible, SipRoom, SipGained, SipEarly;
 
     /// <summary>
+    /// 第197期 Phase 0（<b>計数専用・どの規則も読まない</b>）: <c>SipWaste</c> 啜りでベニへ流したのに、ベニが満タンで入りきらなかった量
+    /// （ベニへの流し込みが渇き・支援拒否で止まった回は数えない）／ <c>SipWasteByTurn</c> 同じ量のターン別（添字 ＝ ターン番号・0..30）。
+    /// </summary>
+    public long SipWaste;
+    public long[]? SipWasteByTurn;
+
+    /// <summary>
     /// 第194期（濃縮の印・ミオ）。<b>計数専用で、どの規則も読まない。</b>
     /// <para><b>ミオの側</b>: <c>ConcFires</c> 印を付けようとした手番 ／ <c>ConcDry</c> 次の刻みが 0 の敵しかいなかった手番 ／
     /// <c>ConcMarkCenter</c>・<c>ConcMarkAround</c>・<c>ConcMarkAlly</c> 足した印（中心・周りの敵・隣の味方。1回 +1）／
@@ -1958,6 +1965,8 @@ public sealed class UnitTally
         InverseSelfPoison += o.InverseSelfPoison; InverseSelfBurn += o.InverseSelfBurn; InverseSelfDetonate += o.InverseSelfDetonate;
         InverseLeakSelf += o.InverseLeakSelf; InverseLeakOnHolder += o.InverseLeakOnHolder;
         SipEligible += o.SipEligible; SipRoom += o.SipRoom; SipGained += o.SipGained; SipEarly += o.SipEarly;
+        SipWaste += o.SipWaste;
+        if (o.SipWasteByTurn is not null) { SipWasteByTurn ??= new long[o.SipWasteByTurn.Length]; for (int i = 0; i < o.SipWasteByTurn.Length && i < SipWasteByTurn.Length; i++) SipWasteByTurn[i] += o.SipWasteByTurn[i]; }
         ConcFires += o.ConcFires; ConcDry += o.ConcDry; ConcMarkCenter += o.ConcMarkCenter; ConcMarkAround += o.ConcMarkAround;
         ConcMarkAlly += o.ConcMarkAlly; ConcCenterBurning += o.ConcCenterBurning; ConcNoNew += o.ConcNoNew; DetonateMarkedAgain += o.DetonateMarkedAgain;
         PoisonTickMax = Math.Max(PoisonTickMax, o.PoisonTickMax); BurnTickMax = Math.Max(BurnTickMax, o.BurnTickMax);

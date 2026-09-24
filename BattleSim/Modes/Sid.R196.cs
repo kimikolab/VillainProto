@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -39,6 +39,13 @@ static partial class SidDiag
         foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = slot == 2 ? UnitCatalog.Beni : d;
         return g;
     }
+
+    /// <summary>
+    /// 第197期（`beni` の §4-3）が読む主表の3つの形: <b>元</b>（`compare` の行のまま）／ <b>元'</b>（ガルドあり・ベニ中央）／
+    /// <b>S</b>（ベニ中央・ガルドの席に規定の版のスィド）。組み方は第196期の表A と同じ。
+    /// </summary>
+    internal static List<(string Name, Formation Orig, Formation OrigBC, Formation S)> MainForms197()
+        => MainRows().Select(r => (r.Name, r.F, BeniCenter(r.F), GaldTo(BeniCenter(r.F), SidNew))).ToList();
 
     static void RunMore196(string mode, string arg, ref bool handled)
     {

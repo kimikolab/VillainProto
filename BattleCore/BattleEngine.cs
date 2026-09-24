@@ -4147,9 +4147,18 @@ public sealed class BattleContext
             TargetId = u.InstanceId, Amount = over, SourceTrait = TraitId.Inverse,
         });
         int b0 = beni.Hp;
-        Heal(beni, over, beni, inverted: true);
+        HealOutcome br = Heal(beni, over, beni, inverted: true);
         int g = beni.Hp - b0;
         t.SipGained += g;
+        if (br == HealOutcome.Healed || br == HealOutcome.Full)   // 第197期・**計数のみ**（満タンで入りきらなかった分）
+        {
+            int waste = over - g;
+            if (waste > 0)
+            {
+                t.SipWaste += waste;
+                (t.SipWasteByTurn ??= new long[31])[Math.Clamp(_turn, 0, 30)] += waste;
+            }
+        }
         if (_turn <= 3) t.SipEarly += g;
         if (g > 0) Log($"    {beni.Name} が {u.Name} の溢れを啜った（+{g}）", LogKind.Status);
     }
