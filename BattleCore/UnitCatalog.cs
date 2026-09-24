@@ -294,10 +294,13 @@ public static class UnitCatalog
         Attack = 4,
         Speed = 6,
         Advances = false,
-        Traits = new[] { TraitId.Devour },
-        PlusText = "毒に侵された敵の数だけ味方全体を癒す",
-        MinusText = "毒が積まれていなければ何もしない。味方が負った毒は2倍に効く",
-        Flavor = "戦場の澱みを啜って生きている。同席したい者はいない。"
+        // 第190期に転生した（旧 `Devour`＝毒の敵の数 × 4 を味方全体へ・味方の毒 ×2 は定義だけ残す）。
+        // 札を3枚に割った（第74期の作法）: `InverseLeak` を外せば `yP`、`Taint` を外せば手番なしの版。
+        Traits = new[] { TraitId.Inverse, TraitId.Taint, TraitId.InverseLeak },
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "澱みを分けた") },
+        PlusText = "隣接する味方は、毒と燃焼で削られる代わりに癒える。手番で、隣接する味方全員に毒を1層分け与える",
+        MinusText = "隣接する味方は、回復を受けるとかえって傷つく。自分では攻撃しない",
+        Flavor = "澱みを分け与えて生きている。隣にいる間だけ、毒は薬になる。"
     };
 
     public static readonly UnitDef Gan = new()

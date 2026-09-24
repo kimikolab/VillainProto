@@ -341,6 +341,11 @@ public enum TraitId
                 // 味方が押しのけられたときの突き崩し（旧 `Shove` の効果A）も持つ
     Overrun,    // 勢い余って（ハネ）: 突き返したあと、自分が隣接する味方1体（スロット番号が最小）と場所を入れ替える。
                 // `Rebound` の代金で、外せば `yP`
+    Inverse,    // 反転（ベニ・第190期）: ベニに隣接する味方は、毒・燃焼の削り（ターン頭の刻みと起爆の味方側）を回復として受ける。
+                // 判定は engine の `TickStatuses` / `DetonateOne` の1箇所ずつ（`BattleContext.InvertsTick`）
+    Taint,      // 澱み分け（ベニ・第190期）: 手番で（攻撃しない）隣接する生存味方全員に毒を +1 層（`TaintTrait.Stack`）
+    InverseLeak,// 反転の裏（ベニ・第190期）: ベニに隣接する味方は、回復を受けるとかえって傷つく（`Heal` の中の1箇所）。
+                // `Inverse` の代金で、外せば `yP`
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -2332,7 +2337,9 @@ public enum PoisonRoute
     /// <summary>触れてうつす（ラウ・毒を持つ標的の隣の敵へ写す。第183期）。</summary>
     Touch,
     /// <summary>触れてうつすの漏れ（ラウ・隣接味方へ。第183期）。</summary>
-    TouchLeak
+    TouchLeak,
+    /// <summary>澱み分け（ベニ・隣接味方へ・手番ごと。第190期）。</summary>
+    Taint
 }
 
 /// <summary>
@@ -11250,6 +11257,70 @@ public sealed class BackfireTrait : Trait
 }
 
 /// <summary>
+/// 反転（第190期・毒喰らいのベニ）。<b>ベニに隣接する味方は、毒と燃焼の削りを回復として受ける</b>
+/// ——ターン頭の刻み（<see cref="BattleContext.TickStatuses"/>）と、起爆の味方側（<see cref="BattleContext.Detonate"/>）の両方。
+///
+/// <para>判定は engine の2箇所（<see cref="BattleContext.InvertsTick"/> を問う）。<b>札そのものは挙動を持たない。</b>
+/// 回復は <c>Heal(…, inverted: true)</c> を通す——渇き・支援拒否にそのまま課税され、裏（<see cref="InverseLeakTrait"/>）で再反転しない。
+/// 反転した刻みは <c>ApplyDamage</c> を通らないので、被弾で反応する札は反応しない（熾のホタの「焼かれない」と同じ扱い）。
+/// 燃焼の残りターンは今までどおり減る。</para>
+/// </summary>
+public sealed class InverseTrait : Trait
+{
+    public override TraitId Id => TraitId.Inverse;
+}
+
+/// <summary>
+/// 澱み分け（第190期・ベニの手番）。<b>隣接する生存味方全員に毒を <see cref="Stack"/> 層</b>（毒の窓口
+/// <see cref="BattleContext.Poison"/>・<see cref="PoisonRoute.Taint"/>）。<b>乱数を引かない</b>（席番号順）。
+/// 支援拒否（ガルド）にも積む（毒は支援ではない）。隣接する味方が 0 体の手番は何もしない（空振りを数える）。
+/// </summary>
+public sealed class TaintTrait : Trait
+{
+    /// <summary>1手番に隣の味方1体へ積む層（指示書 §3.4・測る前に固定）。</summary>
+    public const int Stack = 1;
+
+    /// <summary>澱み分けで積んだ層のうち、まだ持っている分（<b>計数専用</b>。ヴィオの吸い上げ・離れた後の刻みの帳簿が読む）。</summary>
+    public const string HeldKey = "taintHeld";
+
+    public override TraitId Id => TraitId.Taint;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        var adj = ctx.LivingMembers(self.TeamId)
+                     .Where(a => a != self && FormationRules.AreAdjacent(self.Slot, a.Slot)).ToList();
+        UnitTally t = ctx.TallyOf(self);
+        t.TaintActs++;
+        if (adj.Count == 0)
+        {
+            t.TaintDry++;
+            ctx.Log($"    {self.Name} は澱みを分ける相手がいない", LogKind.Status);
+            return;
+        }
+        foreach (UnitState a in adj)
+        {
+            int before = a.RawCounter(StatusKeys.Poison);
+            ctx.Poison(a, Stack, self, PoisonRoute.Taint);
+            int added = a.RawCounter(StatusKeys.Poison) - before;
+            t.TaintLayers += added;
+            a.SetCounter(HeldKey, a.RawCounter(HeldKey) + added);
+        }
+        ctx.Log($"    {self.Name} が隣の {adj.Count} 体に澱みを分けた（毒 +{Stack}）", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// 反転の裏（第190期・<see cref="InverseTrait"/> の代金）。<b>ベニに隣接する味方は、回復を受けるとかえって傷つく。</b>
+/// 判定は <see cref="BattleContext.Heal"/> の中、渇きと支援拒否の後の1箇所。<b>札そのものは挙動を持たない。</b>
+/// 出どころは回復した駒（味方由来のダメージ）。反転由来の回復は対象外。外せば <c>yP</c>。
+/// </summary>
+public sealed class InverseLeakTrait : Trait
+{
+    public override TraitId Id => TraitId.InverseLeak;
+}
+
+/// <summary>
 /// 突きの対照（第186期 追補）。倍率を<b>素の攻撃力</b>で掛ける版——威力 ＝ 現在攻撃力 ＋ 素の攻撃力 × 回数。
 /// 強化が倍率に乗る寄与を分けるためだけの札で、<b>保持者は <c>UnitCatalog.All</c> に 0 枚</b>（診断のローカルだけ）。
 /// </summary>
@@ -11731,6 +11802,9 @@ public static class TraitCatalog
         new DauntLeakTrait(),  // 第189期
         new ReboundTrait(),    // 第189期
         new OverrunTrait(),    // 第189期
+        new InverseTrait(),    // 第190期
+        new TaintTrait(),      // 第190期
+        new InverseLeakTrait(),// 第190期
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期

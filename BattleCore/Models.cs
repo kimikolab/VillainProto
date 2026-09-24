@@ -1573,6 +1573,22 @@ public sealed class UnitTally
                 ReboundThrusts, ReboundStaggers, ReboundNoFront, ReboundRefused,
                 OverrunSwaps, OverrunRefused, OverrunNoAlly, OverrunReaderDisplaced, OverrunReaderDrifter, OverrunReaderSniper;
 
+    /// <summary>
+    /// 反転の結界（第190期・毒喰らいのベニ）の帳簿。<b>計数専用</b>（どの規則も読まない）。
+    /// <para><b>ベニの側</b>: <c>InversePoisonHealed</c>・<c>InverseBurnHealed</c>・<c>InverseDetonateHealed</c> 反転で実際に癒えた量
+    /// （刻みの毒・刻みの燃焼・起爆の味方側）／ <c>InverseNominal</c> 反転した削りの名目の総量 ／
+    /// <c>InverseRecipientTurns</c> 反転で癒えた味方の延べ人数（1ターンに同じ駒は1回）／ <c>InverseMaxSimul</c> 1ターンに癒えた味方の最大人数 ／
+    /// <c>TaintActs</c>・<c>TaintDry</c>・<c>TaintLayers</c> 澱み分けの手番・空振り・積んだ層 ／
+    /// <c>InverseLeakFires</c>・<c>InverseLeakNominal</c>・<c>InverseLeakDealt</c>・<c>InverseLeakKills</c> 反転の裏の回数・名目・実際に削った HP・倒した数 ／
+    /// <c>TaintPostBite</c> 澱み分けの層を持ったまま隣から離れた味方が、刻みで削られた量。</para>
+    /// <para><b>回復させた駒の側</b>: <c>InverseLeakBy</c> 自分の回復が裏でダメージになった実額。
+    /// <b>ヴィオの側</b>: <c>VioAteTaint</c> 吸い上げた層のうちベニの澱み分けの分。</para>
+    /// </summary>
+    public long InversePoisonHealed, InverseBurnHealed, InverseDetonateHealed, InverseNominal,
+                InverseRecipientTurns, InverseMaxSimul, TaintActs, TaintDry, TaintLayers,
+                InverseLeakFires, InverseLeakNominal, InverseLeakDealt, InverseLeakKills, TaintPostBite,
+                InverseLeakBy, VioAteTaint;
+
     /// <summary>墓守の層の最大値（第188期・<b>計数専用</b>。<c>NecroTrait.SetStack</c> が書く）。</summary>
     public long NecroPeak;
 
@@ -1881,6 +1897,12 @@ public sealed class UnitTally
         ReboundThrusts += o.ReboundThrusts; ReboundStaggers += o.ReboundStaggers; ReboundNoFront += o.ReboundNoFront; ReboundRefused += o.ReboundRefused;
         OverrunSwaps += o.OverrunSwaps; OverrunRefused += o.OverrunRefused; OverrunNoAlly += o.OverrunNoAlly;
         OverrunReaderDisplaced += o.OverrunReaderDisplaced; OverrunReaderDrifter += o.OverrunReaderDrifter; OverrunReaderSniper += o.OverrunReaderSniper;
+        InversePoisonHealed += o.InversePoisonHealed; InverseBurnHealed += o.InverseBurnHealed; InverseDetonateHealed += o.InverseDetonateHealed;
+        InverseNominal += o.InverseNominal; InverseRecipientTurns += o.InverseRecipientTurns;
+        InverseMaxSimul = Math.Max(InverseMaxSimul, o.InverseMaxSimul);
+        TaintActs += o.TaintActs; TaintDry += o.TaintDry; TaintLayers += o.TaintLayers;
+        InverseLeakFires += o.InverseLeakFires; InverseLeakNominal += o.InverseLeakNominal; InverseLeakDealt += o.InverseLeakDealt;
+        InverseLeakKills += o.InverseLeakKills; TaintPostBite += o.TaintPostBite; InverseLeakBy += o.InverseLeakBy; VioAteTaint += o.VioAteTaint;
         if (o.NecroPeak > NecroPeak) NecroPeak = o.NecroPeak;
         BrandFires += o.BrandFires; BrandDealt += o.BrandDealt;
         StallStagger += o.StallStagger;

@@ -202,6 +202,19 @@ public static class Map11Relations
         [TraitId.Overrun] = new(Shape.Adjacent, "入れ替わる",
             "突き返したあと、この駒と場所を入れ替える（相手は隣のうち席の番号がいちばん若い1体。後ろの駒が前へ出ることがある）",
             LinkSign.Loss, true, "場所を入れ替える"),
+        // 第190期（ベニの転生）。**毒か火を帯びているときだけ効く**ので点線（(b) 型）。
+        // 支援拒否（ガルド）は回復を弾くので、隣にいる間は削られも癒えもしない——それも得の側なので `Adjacent`。
+        [TraitId.Inverse] = new(Shape.Adjacent, "毒が薬になる",
+            "この駒が毒・燃焼で削られる代わりに、同じ量だけ癒える（ターン頭の刻みと、触媒の起爆の味方側）",
+            LinkSign.Gain, true, "癒える"),
+        // 第190期。**毎手番、隣の味方全員に積む**ので実線。毒そのものは損だが、隣にいる間は反転で薬になるので「両方」。
+        [TraitId.Taint] = new(Shape.Adjacent, "澱みを分ける",
+            "毎手番、この駒に毒が1層積む（隣にいる間は反転で薬になる。離れると本物の毒に戻る）",
+            LinkSign.Both, false, "毒を1層"),
+        // 第190期。**誰かがこの駒を回復したときだけ起きる**ので点線。支援拒否は回復を弾くので線を引かない。
+        [TraitId.InverseLeak] = new(Shape.AdjacentAcceptsSupport, "回復が毒になる",
+            "この駒が受ける回復が、同じ量のダメージになる（出どころは回復した駒）",
+            LinkSign.Loss, true, "かえって傷つく"),
     };
 
     /// <summary>

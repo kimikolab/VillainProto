@@ -561,6 +561,20 @@ public sealed class BattleContext
             // 浄化（増分と引き算する）と違って閾値で全ゼロにならず、倍率が傾斜として効く。
             if (_units.Any(x => x.IsAlive && x.TeamId == u.TeamId && x.HasTrait(TraitId.Devour)))
                 poison *= DevourTrait.AllyPoisonMultiplier;
+
+            // 反転（第190期・ベニ）。隣の味方の刻みは `ApplyDamage` を通らず回復になる。
+            // **刻みの計数（業・毒の刻み・着火の持続係数）には写さない**（自前の帳簿に数える）。
+            UnitState? inverter = InvertsTick(u);
+            if (inverter is not null)
+            {
+                Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.Status, Turn = _turn, TargetId = u.InstanceId, Amount = poison, Text = "毒"
+                });
+                InverseHeal(inverter, u, poison, 0, "毒");
+                continue;
+            }
+            NoteTaintPostBite(u, poison);   // 第190期・**計数のみ**
             Log($"    {u.Name} は毒に蝕まれている（{poison}）", LogKind.Status);
             Emit(new BattleEvent
             {
@@ -620,6 +634,18 @@ public sealed class BattleContext
                 // ノブ（既定 0 ＝ 1ビットも動かない）。**`ctx.Heal` を通す**ので、
                 // 渇き（盤面ルール）にも支援拒否（`Stoic`）にも素直に課税される。
                 if (Ember.TickHeal > 0) Heal(u, Ember.TickHeal);
+                continue;
+            }
+
+            // 反転（第190期・ベニ）。燃焼の残りターンは上で普通に減っている。
+            UnitState? inverterB = InvertsTick(u);
+            if (inverterB is not null)
+            {
+                Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.Status, Turn = _turn, TargetId = u.InstanceId, Amount = BurnRules.Damage, Text = "燃焼"
+                });
+                InverseHeal(inverterB, u, BurnRules.Damage, 1, "火");
                 continue;
             }
 
@@ -698,16 +724,30 @@ public sealed class BattleContext
             if (_units.Any(x => x.IsAlive && x.TeamId == u.TeamId && x.HasTrait(TraitId.Devour)))
                 poison *= DevourTrait.AllyPoisonMultiplier;
             int dmg = poison * mult;
-            if (foe) { kt.DetonatePoisonNominal += dmg; kt.DetonateDualExtra += dmg - poison; }
-            else kt.DetonateAllyNominal += dmg;
-            if (dmg > Yoke.Cap && YokeBinding) kt.DetonateYokeCut++;
-            Log($"    {u.Name} の毒が弾けた（{dmg}）", LogKind.Status);
-            Emit(new BattleEvent
+            // 反転（第190期）。**味方側だけ**——隣にベニがいれば弾けた毒は薬になる（起爆の帳簿には載せない）。
+            UnitState? inverter = foe ? null : InvertsTick(u);
+            if (inverter is not null)
             {
-                Kind = BattleEventKind.Status, Turn = _turn, ActorId = kata.InstanceId,
-                TargetId = u.InstanceId, Amount = dmg, Text = "毒"
-            });
-            DetonateHit(kt, u, foe, () => ApplyDamage(u, dmg, null));
+                Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.Status, Turn = _turn, ActorId = kata.InstanceId,
+                    TargetId = u.InstanceId, Amount = dmg, Text = "毒"
+                });
+                InverseHeal(inverter, u, dmg, 2, "弾けた毒");
+            }
+            else
+            {
+                if (foe) { kt.DetonatePoisonNominal += dmg; kt.DetonateDualExtra += dmg - poison; }
+                else kt.DetonateAllyNominal += dmg;
+                if (dmg > Yoke.Cap && YokeBinding) kt.DetonateYokeCut++;
+                Log($"    {u.Name} の毒が弾けた（{dmg}）", LogKind.Status);
+                Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.Status, Turn = _turn, ActorId = kata.InstanceId,
+                    TargetId = u.InstanceId, Amount = dmg, Text = "毒"
+                });
+                DetonateHit(kt, u, foe, () => ApplyDamage(u, dmg, null));
+            }
         }
 
         if (burn > 0 && u.IsAlive)
@@ -716,6 +756,16 @@ public sealed class BattleContext
             {
                 // 火には焼かれない（刻みと同じ枝）。
                 if (Ember.TickHeal > 0) Heal(u, Ember.TickHeal);
+            }
+            else if ((foe ? null : InvertsTick(u)) is UnitState inverterB)
+            {
+                // 反転（第190期）。弾けた火も、隣のベニの前では薬になる。
+                Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.Status, Turn = _turn, ActorId = kata.InstanceId,
+                    TargetId = u.InstanceId, Amount = BurnRules.Damage * mult, Text = "燃焼"
+                });
+                InverseHeal(inverterB, u, BurnRules.Damage * mult, 2, "弾けた火");
             }
             else
             {
@@ -986,13 +1036,13 @@ public sealed class BattleContext
             Log($"    {target.Name} の{(deepW ? "深手" : "傷口")}から毒が滲みた（+{add - amount}）", LogKind.Status);
     }
 
-    /// <summary><see cref="UnitTally.SoakSeenByRoute"/> の長さ（毒 8 経路 ＋ 燃焼 1。第180期に吐き戻しで1本、
-    /// 第183期に触れてうつす・その漏れで2本増えた）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
+    /// <summary><see cref="UnitTally.SoakSeenByRoute"/> の長さ（毒 9 経路 ＋ 燃焼 1。第180期に吐き戻しで1本、
+    /// 第183期に触れてうつす・その漏れで2本、第190期に澱み分けで1本増えた）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
     /// ——ずらさないと新しい経路の添字が燃焼と重なる。</summary>
-    public const int SoakRouteCount = 9;
+    public const int SoakRouteCount = 10;
 
     /// <summary>燃焼の経路の添字（<see cref="UnitTally.SoakSeenByRoute"/> の末尾）。</summary>
-    public const int SoakBurnRouteIx = 8;
+    public const int SoakBurnRouteIx = 9;
 
     /// <summary>
     /// 巻き込み則（第85期）で最後にこの駒へ傷を書いた駒の <c>InstanceId + 1</c>（第90期の計数専用の札）。
@@ -3636,6 +3686,13 @@ public sealed class BattleContext
     /// </summary>
     public void NoteLeakDrawn(UnitState reader, UnitState ally, int drawn)
     {
+        // 第190期・**計数のみ**。吸い上げた層のうちベニの澱み分けの分。
+        int taint = ally.RawCounter(TaintTrait.HeldKey);
+        if (taint > 0)
+        {
+            ally.SetCounter(TaintTrait.HeldKey, 0);
+            TallyOf(reader).VioAteTaint += Math.Min(taint, drawn);
+        }
         int mark = ally.RawCounter(TouchLeakMarkKey);
         if (mark <= 0) return;
         ally.SetCounter(TouchLeakMarkKey, 0);
@@ -3924,6 +3981,82 @@ public sealed class BattleContext
 
     /// <summary>萎縮させる駒（第189期・<see cref="TraitId.Daunt"/>）が盤上に来たか。<b>偽なら萎縮の判定を比較1つで抜ける。</b></summary>
     bool _dauntLive;
+
+    /// <summary>反転（第190期・<see cref="TraitId.Inverse"/>）の保持者。</summary>
+    readonly List<UnitState> _inverseHolders = new();
+    /// <summary>反転の裏（第190期・<see cref="TraitId.InverseLeak"/>）の保持者。</summary>
+    readonly List<UnitState> _inverseLeakHolders = new();
+    /// <summary>澱み分け（第190期・<see cref="TraitId.Taint"/>）の保持者（<b>計数専用</b>・離れた後の刻みの帳簿の帰属先）。</summary>
+    readonly List<UnitState> _taintHolders = new();
+    /// <summary>反転で癒えた味方の、このターンの <c>InstanceId</c>（<b>計数専用</b>・最大同時人数）。</summary>
+    readonly List<int> _inverseTurnSet = new();
+    int _inverseTurn = -1;
+
+    /// <summary>
+    /// <paramref name="u"/> に隣接する、同じ陣営の生きている保持者（第190期）。<b>保持者自身は含まない。</b>
+    /// 並びは盤に来た順（乱数を引かない）。
+    /// </summary>
+    static UnitState? AdjacentHolder(List<UnitState> holders, UnitState u)
+    {
+        foreach (UnitState h in holders)
+            if (h.IsAlive && !ReferenceEquals(h, u) && h.TeamId == u.TeamId && FormationRules.AreAdjacent(h.Slot, u.Slot))
+                return h;
+        return null;
+    }
+
+    /// <summary>
+    /// 反転（第190期）。<paramref name="u"/> の毒・燃焼の削りを回復に変えるベニ（いなければ null）。
+    /// <b>保持者がいなければ比較1つで抜ける。</b>
+    /// </summary>
+    public UnitState? InvertsTick(UnitState u) => _inverseHolders.Count == 0 ? null : AdjacentHolder(_inverseHolders, u);
+
+    /// <summary>反転の回復を1段行う（<c>kind</c>: 0 刻みの毒 ／ 1 刻みの燃焼 ／ 2 起爆）。渇き・支援拒否は <see cref="Heal"/> がそのまま掛ける。</summary>
+    void InverseHeal(UnitState beni, UnitState u, int amount, int kind, string what)
+    {
+        Log($"    {u.Name} の{what}は {beni.Name} の隣で薬になる（+{amount}）", LogKind.Status);
+        int before = u.Hp;
+        Heal(u, amount, beni, inverted: true);
+        int gained = u.Hp - before;
+        UnitTally t = TallyOf(beni);
+        t.InverseNominal += amount;
+        if (kind == 0) t.InversePoisonHealed += gained;
+        else if (kind == 1) t.InverseBurnHealed += gained;
+        else t.InverseDetonateHealed += gained;
+        if (gained <= 0) return;
+        if (_inverseTurn != _turn) { _inverseTurn = _turn; _inverseTurnSet.Clear(); }
+        if (!_inverseTurnSet.Contains(u.InstanceId))
+        {
+            _inverseTurnSet.Add(u.InstanceId);
+            t.InverseRecipientTurns++;
+            if (_inverseTurnSet.Count > t.InverseMaxSimul) t.InverseMaxSimul = _inverseTurnSet.Count;
+        }
+    }
+
+    /// <summary>
+    /// 澱み分けの層を持ったまま、反転の外で毒に刻まれた量（第190期・<b>計数専用</b>）。
+    /// 入れ替え・ベニの死亡の後に「溜めた毒が本物のダメージに戻る」分。
+    /// </summary>
+    void NoteTaintPostBite(UnitState u, int poison)
+    {
+        if (_taintHolders.Count == 0) return;
+        int held = Math.Min(u.RawCounter(TaintTrait.HeldKey), u.RawCounter(StatusKeys.Poison));
+        if (held <= 0) return;
+        UnitState? holder = _taintHolders.FirstOrDefault(h => h.TeamId == u.TeamId);
+        if (holder is not null) TallyOf(holder).TaintPostBite += poison;
+    }
+
+    /// <summary>反転の裏の1段（第190期）。出どころは回復させた駒（味方由来のダメージ）。</summary>
+    void InverseLeakHit(UnitState leak, UnitState target, int amount, UnitState? by)
+    {
+        Log($"    {target.Name} への回復は {leak.Name} の隣で毒に変わった（{amount}）", LogKind.FriendlyFire);
+        int before = target.Hp;
+        ApplyDamage(target, amount, by, isFriendlyFire: by is not null && by.TeamId == target.TeamId);
+        int dealt = before - Math.Max(0, target.Hp);
+        UnitTally t = TallyOf(leak);
+        t.InverseLeakFires++; t.InverseLeakNominal += amount; t.InverseLeakDealt += dealt;
+        if (!target.IsAlive) t.InverseLeakKills++;
+        if (by is not null) TallyOf(by).InverseLeakBy += dealt;
+    }
 
     /// <summary>
     /// ハネの「勢い余って」（第189期・<see cref="OverrunTrait"/>）で入れ替えている最中の保持者（<b>計数専用</b>）。
@@ -4868,6 +5001,10 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Footing)) _shieldHolders.Add(u);
         if (u.HasTrait(TraitId.Planted)) _plantedLive = true;
         if (u.HasTrait(TraitId.Daunt)) _dauntLive = true;   // 第189期（萎縮の消費を短絡させる）
+        // 第190期: 反転の結界（ベニ）。**保持者がいなければ `Count == 0` の比較1つで抜ける**。
+        if (u.HasTrait(TraitId.Inverse)) _inverseHolders.Add(u);
+        if (u.HasTrait(TraitId.InverseLeak)) _inverseLeakHolders.Add(u);
+        if (u.HasTrait(TraitId.Taint)) _taintHolders.Add(u);
         if (u.HasTrait(TraitId.Funnel)) FunnelActive = true;
         // 第137期: 砕けの保持者が盤上にいるか（`ShatterSoaked` を短絡させるためだけ。盤面には影響しない）。
         if (u.HasTrait(TraitId.Shatter)) ShatterActive = true;
@@ -8195,7 +8332,8 @@ public sealed class BattleContext
         return true;
     }
 
-    public void Heal(UnitState target, int amount, UnitState? by = null)
+    /// <param name="inverted">反転（第190期）から来た回復か。<b>真なら反転の裏で再反転しない</b>（無限反転の再入ガード）。</param>
+    public void Heal(UnitState target, int amount, UnitState? by = null, bool inverted = false)
     {
         if (!target.IsAlive || amount <= 0) return;
         if (!target.AcceptsSupport)
@@ -8247,6 +8385,15 @@ public sealed class BattleContext
         if (DroughtBinding)
         {
             NoteDroughtBlocked(target, amount);
+            return;
+        }
+
+        // 反転の裏（第190期・ベニ）。**渇きと支援拒否を通った後**（＝本来なら通っていた回復）で、
+        // 隣にベニがいれば HP を増やす代わりに、回復させた駒を出どころとするダメージにする。
+        // **反転由来の回復（`inverted`）は対象外**。保持者がいなければ比較1つで抜ける。
+        if (!inverted && _inverseLeakHolders.Count > 0 && AdjacentHolder(_inverseLeakHolders, target) is UnitState leak)
+        {
+            InverseLeakHit(leak, target, amount, by);
             return;
         }
 

@@ -205,6 +205,10 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.DauntLeak]  = (HcMinusL, "萎縮させるたび隣の味方も萎縮するだけ。外せば `yP` になる"),
         [TraitId.Rebound]    = (HcPlusL,  "手番で前列の敵を後ろへ突き返して転ばせる＋押しのけられたときの突き崩し。代金は別の札（`Overrun`）"),
         [TraitId.Overrun]    = (HcMinusL, "突き返すたび自分が隣の味方と入れ替わるだけ。外せば `yP` になる"),
+        // 第190期: ベニ（反転の結界）。分類を同じコミットで足す（第132期 段0-a）。
+        [TraitId.Inverse]    = (HcPlusL,  "隣の味方の毒・燃焼の削りを回復に変える。代金は別の札（`InverseLeak`）に切り出してある"),
+        [TraitId.Taint]      = (HcPlusL,  "手番で隣の味方全員に毒を1層積む（反転の燃料を自分で配る）"),
+        [TraitId.InverseLeak]= (HcMinusL, "隣の味方への回復がダメージになるだけ。外せば `yP` になる"),
     };
 
     // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------

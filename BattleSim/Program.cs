@@ -1310,6 +1310,9 @@ static class TraitKeyMap
         [TraitId.Amplifier]  = new[] { UnitTally.CarryPoison, UnitTally.CarryWound },   // 第89期 (P1) の採用で 2 本目
         [TraitId.Contagion]  = new[] { UnitTally.CarryPoison },
         [TraitId.Devour]     = new[] { UnitTally.CarryPoison },
+        [TraitId.Inverse]    = new[] { UnitTally.CarryPoison, UnitTally.CarryBurn },            // 第190期（ベニの転生・毒と燃焼の刻みを読む）
+        [TraitId.Taint]      = new[] { UnitTally.CarryPoison },                                 // 第190期（隣の味方に毒を書く）
+        [TraitId.InverseLeak]= Array.Empty<int>(),                                               // 第190期（マイナス側はキーを持たない・下の注と同じ）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
         [TraitId.Cinder]     = new[] { UnitTally.CarryBurn },
