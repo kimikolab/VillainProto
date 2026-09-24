@@ -11306,7 +11306,7 @@ public sealed class InverseTrait : Trait
     /// 第193期: <b>隣で満タンに溢れた反転の回復を、ベニに流す</b>（啜り）。偽で第192期に戻る（回帰の対照・計数だけは取る）。
     /// 判定は <see cref="BattleContext"/> の <c>InverseSip</c> の1箇所。
     /// </summary>
-    public const bool OverflowToHolder = false;
+    public const bool OverflowToHolder = true;
 
     public override TraitId Id => TraitId.Inverse;
 }

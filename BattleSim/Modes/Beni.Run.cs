@@ -537,7 +537,7 @@ static partial class BeniDiag
 
     static void Check(string arg)
     {
-        Console.WriteLine("# 第191期 `beni check` —— 自己検査");
+        Console.WriteLine("# 第193期 `beni check` —— 自己検査");
         Console.WriteLine();
         string path = string.IsNullOrWhiteSpace(arg) ? Path.Combine("docs", "balance.md") : arg.Trim();
         var want = new Dictionary<string, double[]>();
@@ -631,6 +631,44 @@ static partial class BeniDiag
             }
             Console.WriteLine("- (g) 1戦（" + Benches[0].Name + " × 第二波 × seed " + seedUsed + "）の台本: `Status` " + status
                               + " 件のうち直後が同じ駒の `Heal` **" + linked + "** 件（1 件以上が正）");
+        }
+
+        // (i)(j) 啜り（第193期）: 渇きが生きている間・支援拒否の駒からは流れない ／ 流し込みの回復が裏でダメージに戻らない
+        {
+            long sips = 0, sipDrought = 0, sipStoic = 0, sipLeak = 0, droughtBattles = 0;
+            foreach (var (name, f) in Rows193())
+            {
+                var players = f.Occupied().ToList();
+                int beniId = players.FindIndex(o => o.Def.Id == "beni");
+                var stoicIds = players.Select((o, i) => (o, i)).Where(x => x.o.Def.Traits.Contains(TraitId.Stoic)).Select(x => x.i).ToHashSet();
+                for (int st = 1; st < 5; st++)
+                {
+                    Formation enemy = EnemyCatalog.Stages[st].Enemy;
+                    var foes = enemy.Occupied().ToList();
+                    var droughtIds = foes.Select((o, i) => (o, i)).Where(x => x.o.Def.Traits.Contains(TraitId.Drought))
+                                         .Select(x => players.Count + x.i).ToHashSet();
+                    if (droughtIds.Count > 0) droughtBattles += 30;
+                    for (int seed = 0; seed < 30; seed++)
+                    {
+                        BattleResult r = BattleEngine.Run(f, enemy, seed, verbose: true);
+                        var alive = new HashSet<int>(droughtIds);
+                        for (int i = 0; i < r.Events.Count; i++)
+                        {
+                            BattleEvent e = r.Events[i];
+                            if (e.Kind == BattleEventKind.Death && e.TargetId is int dead) alive.Remove(dead);
+                            if (e.Kind != BattleEventKind.InverseSip) continue;
+                            sips++;
+                            if (alive.Count > 0) sipDrought++;
+                            if (e.TargetId is int tg && stoicIds.Contains(tg)) sipStoic++;
+                            for (int j = i + 1; j < r.Events.Count && j <= i + 2; j++)
+                                if (r.Events[j].Kind == BattleEventKind.HealInverted && r.Events[j].TargetId == beniId) sipLeak++;
+                        }
+                    }
+                }
+            }
+            Console.WriteLine("- (i) 啜り " + sips + " 回のうち 渇きの保持者が生きている間 **" + sipDrought + "** 回・支援拒否の駒から **" + sipStoic
+                              + "** 回（どちらも 0 が正・渇きの波を含む戦 " + droughtBattles + "）");
+            Console.WriteLine("- (j) 啜りの直後にベニへの `HealInverted`（裏でダメージに戻った）: **" + sipLeak + "** 回（0 が正）");
         }
 
         // (h) 周期のラベル・火と毒が同じ手番で重ならない・裏の表示専用イベント（第191期）

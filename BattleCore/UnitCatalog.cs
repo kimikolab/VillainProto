@@ -305,9 +305,9 @@ public static class UnitCatalog
             new(ActionKind.Skill, Label: "澱みを分けた"),
             new(ActionKind.Skill, Label: "澱みを分けた"),
         },
-        PlusText = "自分と隣接する味方は、毒と燃焼で削られる代わりに癒える。手番で、隣接する味方全員に火→毒→毒の順で分け与える",
+        PlusText = "自分と隣接する味方は、毒と燃焼で削られる代わりに癒える。隣で溢れた分は自分が啜る。手番で、隣接する味方全員に火→毒→毒の順で分け与える",
         MinusText = "自分と隣接する味方は、回復を受けるとかえって傷つく。自分では攻撃しない",
-        Flavor = "紅い澱みを分け与えて生きている。隣にいる間だけ、火も毒も薬になる。"
+        Flavor = "紅い澱みを分け与え、その余りを啜って生きている。隣にいる間だけ、火も毒も薬になる。"
     };
 
     public static readonly UnitDef Gan = new()
