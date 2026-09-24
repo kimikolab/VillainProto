@@ -31,6 +31,7 @@ static partial class BeniDiag
         switch (mode)
         {
             case "phase0": Phase0(); return;
+            case "phase191": Phase191(); return;
             default:
                 if (RunMore(mode, arg)) return;
                 Console.WriteLine("beni: モードは phase0 / run / ledger / bench / check。");
