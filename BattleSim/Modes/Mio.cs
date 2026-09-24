@@ -209,6 +209,86 @@ static partial class MioDiag
         Console.WriteLine("- ヴィオの吸い上げは `OnTurnStart`＝**刻みの後**。ミオが倍にした味方の毒は、次のターン頭に**1回刻まれてから**吸われる");
         Console.WriteLine();
 
+        // ---------------- Q0-7（指示書の変更で足した） ----------------
+        Console.WriteLine("## Q0-7 起爆（カタ）の刻みに印の2倍を含めてよいか——二重に倍化しないか");
+        Console.WriteLine();
+        {
+            int di = engine.IndexOf("void " + "DetonateOne(");
+            int dj = di < 0 ? -1 : engine.IndexOf("static void " + "DetonateHit", di);
+            string db = di < 0 || dj < 0 ? "" : engine.Substring(di, dj - di);
+            if (db.Length == 0) { Console.WriteLine("**`DetonateOne` が見つからない。走査が空なので止める**（R034）。"); return; }
+            Console.WriteLine("- `DetonateOne` の本体 " + db.Split('\n').Length + " 行。毒は `RawCounter(StatusKeys.Poison)`（**生の層**）から、燃焼は `BurnRules.Damage`（**定数**）から"
+                              + "毎回作り直す: 毒 " + (db.Contains("u.RawCounter(StatusKeys.Poison)") ? "○" : "**×**")
+                              + " ／ 燃焼 " + (db.Contains("BurnRules.Damage * mult") ? "○" : "**×**"));
+            Console.WriteLine("- ターン頭の刻み（`TickStatuses`）の結果を読み直す経路: " + (db.Contains("PoisonTick") || db.Contains("BurnTaken") ? "**ある**" : "無い")
+                              + "——**起爆は刻みを写すのではなく同じ式を別に計算している**ので、印の ×2 を起爆の中で1回掛けても二重にはならない");
+            Console.WriteLine("- 起爆の中の既存の倍: 両方持ちの ×" + CatalystTrait.DualMultiplier + "（敵だけ）と旧 `Devour` の ×" + DevourTrait.AllyPoisonMultiplier
+                              + "（保持者 0 枚）。**印は別の源の倍なので、印あり・両方持ちの敵は ×4 になる**（同じ印を2回掛けるのではない）");
+            Console.WriteLine("- 判断: **起爆の刻みにも印を含める**（指示書の変更どおり）。印の分は起爆の帳簿とは別に数える");
+        }
+        Console.WriteLine();
+
+        // ---------------- Q0-8 ----------------
+        Console.WriteLine("## Q0-8 燃焼の刻みを読む札と、2倍にしたとき二重に倍化する経路");
+        Console.WriteLine();
+        Console.WriteLine("| ファイル | クラス／場所 | 読むもの | 保持者（All） |");
+        Console.WriteLine("|---|---|---|---|");
+        {
+            string[] lines = traits.Split('\n');
+            string cls = "";
+            var seen = new List<string>();
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string l = lines[i];
+                int ci = l.IndexOf("class ");
+                if (ci >= 0 && (l.Contains("sealed class") || l.Contains("abstract class"))) cls = l.Substring(ci + 6).Split(' ', ':', '\r')[0];
+                if (!l.Contains("Counter(StatusKeys." + "Burn)") || l.TrimStart().StartsWith("//") || seen.Contains(cls)) continue;
+                seen.Add(cls);
+                Console.WriteLine("| Traits.cs | " + cls + " | 燃えているか（`> 0`）＝**刻みの量は読まない** | " + HoldersOf(cls) + " |");
+            }
+            if (seen.Count == 0) { Console.WriteLine("**走査が空なので止める**（R034）。"); return; }
+        }
+        int burnConst = (engine.Length - engine.Replace("BurnRules." + "Damage", "").Length) / ("BurnRules." + "Damage").Length;
+        Console.WriteLine("| BattleEngine.cs | `BurnRules.Damage` の出現 " + burnConst + " 箇所 | 刻み（ホタの枝・反転・本体）・起爆（反転・本体）・澱み分けの計数（`KindlePostBurn`） | — |");
+        Console.WriteLine("| BattleEngine.cs | `ApplyDamage(…, burnTick: true)` | 破片の吸い（`BurnSoaked`）・浴びた量（`BurnTaken`）・軛の計数・害の経路 | — |");
+        Console.WriteLine("| BattleEngine.cs | ベニの反転（`InverseHeal`） | 刻みの量をそのまま回復にする——**印があれば回復も2倍**（指示書の想定どおり） | — |");
+        Console.WriteLine();
+        {
+            // OnDamaged で出どころ null（刻み）を弾かない札＝刻みの量を燃料にする札
+            string[] lines = traits.Split('\n');
+            string cls = "";
+            var fuel = new List<string>();
+            for (int i = 0; i < lines.Length; i++)
+            {
+                string l = lines[i];
+                int ci = l.IndexOf("class ");
+                if (ci >= 0 && (l.Contains("sealed class") || l.Contains("abstract class"))) cls = l.Substring(ci + 6).Split(' ', ':', '\r')[0];
+                if (!l.Contains("override void " + "OnDamaged(")) continue;
+                string body = string.Join("\n", lines.Skip(i).Take(14));
+                bool skipsNull = body.Contains("source is null") || body.Contains("source == null") || body.Contains("source is not UnitState")
+                                 || body.Contains("if (source is not");
+                if (!skipsNull) fuel.Add(cls + "（" + HoldersOf(cls) + "）");
+            }
+            Console.WriteLine("- `OnDamaged` で出どころ null（毒・燃焼の刻み）を**弾かない**札（先頭 14 行の走査）: " + fuel.Count + " 本——"
+                              + string.Join("・", fuel));
+            Console.WriteLine("  これらは印で大きくなった刻みを**そのまま大きな被弾として読む**。倍の源は印1つなので二重ではない（流れるだけ）");
+        }
+        Console.WriteLine("- 熾のホタ（`Pyre`）は燃焼の刻みで HP を削られない（`Ember.Fireproof`）ので、印があっても 0 のまま");
+        Console.WriteLine("- 着火の持続係数・`BurnTicks`・業の帰属（`NoteScapegoatDot`）: 回数と量の計数だけ。量の側（業）は印で2倍になった値を受け取る");
+        Console.WriteLine("- **二重に倍化する経路は、起爆の両方持ち（×2 × 印 ×2 ＝ ×4・Q0-7）だけ**。刻みの本体は1箇所で1回だけ掛ける");
+        Console.WriteLine();
+
+        // ---------------- Q0-9 ----------------
+        Console.WriteLine("## Q0-9 印を付ける相手の選び方（測る前に固定）");
+        Console.WriteLine();
+        Console.WriteLine("- 「次の刻み」＝ 毒の層（+4 の後）＋ 燃焼中なら `BurnRules.Damage`（" + BurnRules.Damage + "）。**印の ×2 は含めない**"
+                          + "（含めると既に印のある駒を選び続け、重ねがけしない印が止まる）");
+        Console.WriteLine("- 同値は席番号の小さい方。次の刻みが 0 の敵しかいなければ空振り（数える）");
+        Console.WriteLine("- 印は周りの敵に**毒や火が無くても付く**（あとから来た毒・火に効く）。漏れも同じ（ミオの隣の味方全員）");
+        Console.WriteLine("- **印の寿命は戦闘の終わりまで**（指示書に書かれていないので決めた）。重ねがけしない＝付いている駒にはもう一度付けない。"
+                          + "会戦の境界では `StatusKeys.All` と一緒に消える");
+        Console.WriteLine();
+
         // ---------------- Q0-6 ----------------
         Console.WriteLine("## Q0-6 過去の類似測定（`design/` の grep）");
         Console.WriteLine();
