@@ -518,6 +518,8 @@ if (focusId == "escale") { EnemyScaleDiag.Run(args.Length > 2 ? args[2] : "phase
 if (focusId == "kata") { KataDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 // debuff モード（第189期） —— デバッファー3枚の転生（ネル・クビ・ハネ）。本体は `Modes/Debuff*.cs`。
 if (focusId == "debuff") { DebuffDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
+// beni モード（第190期） —— 毒喰らいのベニの転生（反転の結界）。本体は `Modes/Beni*.cs`。
+if (focusId == "beni") { BeniDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 
 // rebirth2 モード（第180期） —— B群の転生 3〜5枚目（ムド／ヴィオ／ガン）。本体は `Modes/Rebirth2.cs`。
 if (focusId == "rebirth2")
