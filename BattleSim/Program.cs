@@ -528,6 +528,8 @@ if (focusId == "sid") { SidDiag.Run(args.Length > 2 ? args[2] : "phase0", string
 if (focusId == "galdlast") { GaldLastDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 // form2 モード（第200期） —— 味方の陣形パターン2（ひし形）。本体は `Modes/Formation2.cs`。
 if (focusId == "form2") { Formation2Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
+// ep3 モード（第203期） —— 敵にパターン3（前衛1枚）を持たせる。本体は `Modes/EnemyP3*.cs`。
+if (focusId == "ep3") { EnemyP3Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 
 // rebirth2 モード（第180期） —— B群の転生 3〜5枚目（ムド／ヴィオ／ガン）。本体は `Modes/Rebirth2.cs`。
 if (focusId == "rebirth2")
