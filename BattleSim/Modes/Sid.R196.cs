@@ -16,9 +16,9 @@ static partial class SidDiag
     /// <summary>第195期のスィド（散らさない吐き＝`SpewFixed`）。</summary>
     static readonly UnitDef Sid195 = Clone(UnitCatalog.Sid, new[] { TraitId.SpewFixed, TraitId.Venom, TraitId.Numb }, UnitCatalog.Sid.Actions);
     /// <summary>S+反（散らし＋殴られたときの毒 +8＝`VenomHeavy`）。</summary>
-    static readonly UnitDef SidRe = Clone(UnitCatalog.Sid, new[] { TraitId.Spew, TraitId.VenomHeavy, TraitId.Numb }, UnitCatalog.Sid.Actions);
+    internal static readonly UnitDef SidRe = Clone(UnitCatalog.Sid, new[] { TraitId.Spew, TraitId.VenomHeavy, TraitId.Numb }, UnitCatalog.Sid.Actions);
     /// <summary>S+HP（散らし＋最大HP <see cref="UnitCatalog.SidHardyHp"/>）。</summary>
-    static readonly UnitDef SidHp = new()
+    internal static readonly UnitDef SidHp = new()
     {
         Id = "sid", Name = UnitCatalog.Sid.Name, MaxHp = UnitCatalog.SidHardyHp, Attack = UnitCatalog.Sid.Attack, Speed = UnitCatalog.Sid.Speed,
         Pattern = UnitCatalog.Sid.Pattern, Advances = UnitCatalog.Sid.Advances, Actions = UnitCatalog.Sid.Actions,

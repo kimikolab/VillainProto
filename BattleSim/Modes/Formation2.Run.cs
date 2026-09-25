@@ -12,6 +12,9 @@ static partial class Formation2Diag
             case "run": RunTables(); handled = true; return;
             case "check": Check(arg); handled = true; return;
             case "log": Log(arg); handled = true; return;
+            case "phase201": Phase201(); handled = true; return;       // 第201期（`Formation2.P201.cs`）
+            case "run201": Run201(arg); handled = true; return;
+            case "check201": Check201(arg); handled = true; return;
         }
     }
 
@@ -63,7 +66,7 @@ static partial class Formation2Diag
     }
 
     /// <summary>勝率（5波・seed 0..199）と、第2〜5波の帳簿。前衛は「一番前の列に立っていた編成の駒」（X 字は前1・前3 の2体）。</summary>
-    static M Measure(Formation f, bool ledger)
+    static M Measure(Formation f, bool ledger, int seed0 = 0, int seeds = Seeds)
     {
         var m = new M();
         object gate = new();
@@ -72,7 +75,7 @@ static partial class Formation2Diag
             int wins = 0;
             bool led = ledger && st >= 1;
             Formation enemy = EnemyCatalog.Stages[st].Enemy;
-            Parallel.For(0, Seeds, seed =>
+            Parallel.For(seed0, seed0 + seeds, seed =>
             {
                 List<UnitState> pl = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
                 List<UnitState> en = BattleEngine.Materialize(enemy, BattleContext.EnemyTeam);
@@ -139,7 +142,7 @@ static partial class Formation2Diag
                     m._fdCount += fd;
                 }
             });
-            m.W[st] = 100.0 * wins / Seeds;
+            m.W[st] = 100.0 * wins / seeds;
         }
         return m;
     }
