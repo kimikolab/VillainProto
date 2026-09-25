@@ -1626,6 +1626,13 @@ public sealed class UnitTally
     public int GurenFirstTurn;
 
     /// <summary>
+    /// 第198期 Phase 0（<b>計数専用・どの規則も読まない</b>）: 自陣営で<b>最後の1体</b>になった瞬間（味方陣営だけ・召喚された駒も数える）。
+    /// <c>AloneTurn</c> そのターン（0 ＝ 一度もならなかった。蘇生で仲間が戻っても最初の値のまま）／
+    /// <c>AloneHp</c>・<c>AloneMaxHp</c> そのときの HP と最大HP ／ <c>AloneFoes</c> そのとき生きていた敵の数。
+    /// </summary>
+    public int AloneTurn, AloneHp, AloneMaxHp, AloneFoes;
+
+    /// <summary>
     /// 第194期（濃縮の印・ミオ）。<b>計数専用で、どの規則も読まない。</b>
     /// <para><b>ミオの側</b>: <c>ConcFires</c> 印を付けようとした手番 ／ <c>ConcDry</c> 次の刻みが 0 の敵しかいなかった手番 ／
     /// <c>ConcMarkCenter</c>・<c>ConcMarkAround</c>・<c>ConcMarkAlly</c> 足した印（中心・周りの敵・隣の味方。1回 +1）／
@@ -1985,6 +1992,8 @@ public sealed class UnitTally
         GurenBurnTickNew += o.GurenBurnTickNew; GurenBurnTickRelit += o.GurenBurnTickRelit; GurenBurnTickMark += o.GurenBurnTickMark;
         GurenStrikeNominal += o.GurenStrikeNominal; GurenStrikeDealt += o.GurenStrikeDealt;
         if (o.GurenFirstTurn > 0 && (GurenFirstTurn == 0 || o.GurenFirstTurn < GurenFirstTurn)) GurenFirstTurn = o.GurenFirstTurn;
+        // 第198期: ターン番号とその瞬間の値は足さない（`LastActiveTurn` と同じ扱い・後の値が勝つ）。
+        if (o.AloneTurn > 0) { AloneTurn = o.AloneTurn; AloneHp = o.AloneHp; AloneMaxHp = o.AloneMaxHp; AloneFoes = o.AloneFoes; }
         if (o.SipWasteByTurn is not null) { SipWasteByTurn ??= new long[o.SipWasteByTurn.Length]; for (int i = 0; i < o.SipWasteByTurn.Length && i < SipWasteByTurn.Length; i++) SipWasteByTurn[i] += o.SipWasteByTurn[i]; }
         ConcFires += o.ConcFires; ConcDry += o.ConcDry; ConcMarkCenter += o.ConcMarkCenter; ConcMarkAround += o.ConcMarkAround;
         ConcMarkAlly += o.ConcMarkAlly; ConcCenterBurning += o.ConcCenterBurning; ConcNoNew += o.ConcNoNew; DetonateMarkedAgain += o.DetonateMarkedAgain;

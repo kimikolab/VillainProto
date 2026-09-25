@@ -8180,6 +8180,32 @@ public sealed class BattleContext
         // 再行動（第104期・EncoreRule）。**死亡通知の固定順が全部終わってから**走らせる。
         // 既定では計数だけを取って即座に返る（`compare` 305 セル 0 件が検算）。
         NoteEncore(dead);
+        if (dead.TeamId == PlayerTeam) NoteAlone();   // 第198期 Phase 0（計数のみ）
+    }
+
+    /// <summary>
+    /// 第198期 Phase 0（<b>計数専用・盤面には一切影響しない</b>）。味方陣営の死が<b>固定順の通知を全部通った後</b>
+    /// （蘇生・分裂の召喚が済んだ後）に、生き残りが1体だけならその駒に「最後の1体になったターン」を記録する。
+    /// <b>乱数を引かない</b>（走査だけ）。
+    /// </summary>
+    void NoteAlone()
+    {
+        UnitState? only = null;
+        foreach (UnitState u in _units)
+        {
+            if (u.TeamId != PlayerTeam || !u.IsAlive) continue;
+            if (only is not null) return;
+            only = u;
+        }
+        if (only is null) return;
+        UnitTally t = TallyOf(only);
+        if (t.AloneTurn != 0) return;
+        t.AloneTurn = _turn;
+        t.AloneHp = only.Hp;
+        t.AloneMaxHp = only.MaxHp;
+        int foes = 0;
+        foreach (UnitState u in _units) if (u.TeamId == EnemyTeam && u.IsAlive) foes++;
+        t.AloneFoes = foes;
     }
 
     /// <summary>

@@ -524,6 +524,8 @@ if (focusId == "beni") { BeniDiag.Run(args.Length > 2 ? args[2] : "phase0", stri
 if (focusId == "mio") { MioDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 // sid モード（第195期） —— 毒吐きのスィドの転生（ガルド抜きで耐える毒パ）。本体は `Modes/Sid*.cs`。
 if (focusId == "sid") { SidDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
+// galdlast モード（第198期） —— ガルドの最後の段（剣の段）。本体は `Modes/GaldLast*.cs`。
+if (focusId == "galdlast") { GaldLastDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 
 // rebirth2 モード（第180期） —— B群の転生 3〜5枚目（ムド／ヴィオ／ガン）。本体は `Modes/Rebirth2.cs`。
 if (focusId == "rebirth2")
