@@ -98,6 +98,7 @@
 | `ExposeRule` | `ExposeRule { MaxPerBattle = 3 }` | ○ | `expose` / `creak3` / `ledger` | 第40期 |
 | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` | ○ | `curse` / `favor` / `turn` / `ledger` | 第58期 |
 | `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` | ○ | `finisher` / `ledger` / `survive` / `wildfire` / `mark` | 第53期 |
+| `FormationShape` | `BattleCore.FormationShape` |  | `form2` | 第200期 |
 | `FunnelRule` | `FunnelRule { Slowest = True, Both = False }` | ○ | `funnel` / `cross` | 第62期 |
 | `GatherRule` | `GatherRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `parry` / `wall` / `cross` / `demo` | 第89期 |
 | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` | ○ | `derive` / `whet` / `goad` / `ledger` / `mark` | 第52期 |
@@ -139,7 +140,7 @@
 | `WoundRule` | `WoundRule { Enabled = True, Census = False }` | ○ | `wound2` | 第85期 |
 | `YokeRule` | `YokeRule { Cap = 25, Active = True }` | ○ | `curse` / `yoke` / `goad` / `wave2` / `ledger` / `parry` / `brace` | 第35期 |
 
-60 型。
+61 型。
 
 ## 3. 規則が使う列挙型
 

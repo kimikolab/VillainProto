@@ -4242,7 +4242,7 @@ public sealed class BattleContext
         foreach (UnitState h in holders)
         {
             if (!h.IsAlive || h.TeamId != u.TeamId) continue;
-            if (ReferenceEquals(h, u) ? InverseTrait.IncludesSelf : FormationRules.AreAdjacent(h.Slot, u.Slot)) return h;
+            if (ReferenceEquals(h, u) ? InverseTrait.IncludesSelf : FormationRules.AreAdjacent(h, u)) return h;
         }
         return null;
     }
@@ -4538,7 +4538,7 @@ public sealed class BattleContext
     UnitState ShieldRecv(UnitState shield, UnitState struck, ref int amount)
     {
         if (struck == shield || !shield.IsAlive || !struck.IsAlive) return struck;
-        if (struck.TeamId != shield.TeamId || !FormationRules.AreAdjacent(shield.Slot, struck.Slot)) return struck;
+        if (struck.TeamId != shield.TeamId || !FormationRules.AreAdjacent(shield, struck)) return struck;
         int raw = amount;
         amount = Math.Max(1, raw * FootingTrait.ShieldPercent / 100);
         UnitTally t = TallyOf(shield);
@@ -5392,7 +5392,7 @@ public sealed class BattleContext
         if (!u.HasTrait(TraitId.Stoic)) return Array.Empty<UnitState>();
 
         var heads = LivingMembers(u.TeamId)
-            .Where(a => a != u && a.AcceptsSupport && FormationRules.AreAdjacent(u.Slot, a.Slot))
+            .Where(a => a != u && a.AcceptsSupport && FormationRules.AreAdjacent(u, a))
             .ToList();
         // 第135期の計数。**隣へ流した回数と宛先の延べ数**（指示書 Q0-5）。
         // **量は持たない**——この窓口は「誰に配るか」しか知らない。量は素体対照で取る。
@@ -6175,16 +6175,16 @@ public sealed class BattleContext
                 if (aim is not null && foes.Contains(aim))
                 {
                     int best = -1, bestN = -1;
-                    foreach (int l in FormationRules.LanesOf(aim.Slot))
+                    foreach (int l in aim.Shape.LanesOf(aim.Slot))
                     {
-                        int n = LaneOccupants(foes, l).Count;
+                        int n = LaneOccupants(foes, l, aim.Shape).Count;
                         if (n > bestN || (n == bestN && l < best)) { best = l; bestN = n; }
                     }
                     if (best >= 0)
                     {
                         lane = best;
                         TallyOf(attacker).ThrustForced++;
-                        return LaneOccupants(foes, lane)[0];
+                        return LaneOccupants(foes, lane, aim.Shape)[0];
                     }
                 }
             }
@@ -6457,9 +6457,26 @@ public sealed class BattleContext
     private UnitState SelectPierceEntry(List<UnitState> foes, out int lane)
     {
         lane = -1;
+        // 第200期: 経路は受ける隊の陣形から引く（`foes` は1つの隊。混乱で反転していても同じ隊）。
+        FormationShape shape = foes[0].Shape;
 
-        var lanes = Enumerable.Range(0, FormationRules.LaneCount)
-            .Where(l => foes.Any(f => FormationRules.LanesOf(f.Slot).Contains(l)))
+        // パターン2（ひし形）は**乱数を引かない**: 生きている駒が多い方の2レーン、同数なら 1-2（指示書 §2.2 の 4）。
+        // X 字はこの枝を通らないので、下の `Roll` の引き方は第199期と1ビットも違わない。
+        if (shape.DeterministicPierce)
+        {
+            int best = -1, bestN = 0;
+            for (int l = 0; l < shape.LaneCount; l++)
+            {
+                int n = LaneOccupants(foes, l, shape).Count;
+                if (n > bestN) { best = l; bestN = n; }
+            }
+            if (best < 0) return foes[Roll(foes.Count)];
+            lane = best;
+            return LaneOccupants(foes, lane, shape)[0];
+        }
+
+        var lanes = Enumerable.Range(0, shape.LaneCount)
+            .Where(l => foes.Any(f => shape.LanesOf(f.Slot).Contains(l)))
             .ToList();
 
         // ○前2・○後2 はどのレーンにも属さないので、生き残りがそこだけになると
@@ -6467,14 +6484,14 @@ public sealed class BattleContext
         if (lanes.Count == 0) return foes[Roll(foes.Count)];
 
         var deep = lanes
-            .Where(l => foes.Any(f => FormationRules.LanesOf(f.Slot).Contains(l)
+            .Where(l => foes.Any(f => shape.LanesOf(f.Slot).Contains(l)
                                       && f.Row != Row.Front))
             .ToList();
 
         List<int> pick = deep.Count > 0 ? deep : lanes;
         lane = pick[Roll(pick.Count)];
 
-        return LaneOccupants(foes, lane)[0];
+        return LaneOccupants(foes, lane, shape)[0];
     }
 
     /// <summary>
@@ -6482,11 +6499,11 @@ public sealed class BattleContext
     /// 増援は死者の枠に入らなくなった（Summon 参照）ので通常は1枠1体だが、
     /// スロットの一意性は今後も前提にしないこと。ここが落ちると全戦闘が落ちる。
     /// </summary>
-    private static List<UnitState> LaneOccupants(IEnumerable<UnitState> members, int lane)
+    private static List<UnitState> LaneOccupants(IEnumerable<UnitState> members, int lane, FormationShape shape)
     {
         var alive = members.Where(m => m.IsAlive).ToList();
         var line = new List<UnitState>();
-        foreach (int slot in FormationRules.LanePath(lane))
+        foreach (int slot in shape.LanePath(lane))
             line.AddRange(alive.Where(u => u.Slot == slot));
         return line;
     }
@@ -6857,7 +6874,7 @@ public sealed class BattleContext
     {
         List<UnitState> line = lane < 0
             ? new List<UnitState> { entry }
-            : LaneOccupants(LivingMembers(entry.TeamId), lane);
+            : LaneOccupants(LivingMembers(entry.TeamId), lane, entry.Shape);
 
         int passed = 0;
         int primaryDealt = 0;
@@ -6918,7 +6935,7 @@ public sealed class BattleContext
             // 表は非対称（前1を薙げば中央まで届くが、中央を薙いでも前列へは戻らない）なので、
             // 標的の側から引く。前列が削れるほど薙ぎが痩せる、というのがこの形の要。
             AttackPattern.Sweep => foes
-                .Where(f => FormationRules.SweepTargets(primary.Slot).Contains(f.Slot)).ToList(),
+                .Where(f => primary.Shape.SweepTargets(primary.Slot).Contains(f.Slot)).ToList(),
             AttackPattern.All => foes,
             _ => Array.Empty<UnitState>()
         };
@@ -7233,7 +7250,7 @@ public sealed class BattleContext
 
         // 散開: 同じ列に隣り合う味方がいない駒は硬くなる。薙ぎへの対策。
         if (teammates.Any(u => u.HasTrait(TraitId.Loose))
-            && !teammates.Any(u => u != target && FormationRules.AreAdjacent(target.Slot, u.Slot)))
+            && !teammates.Any(u => u != target && FormationRules.AreAdjacent(target, u)))
         {
             amount -= amount * LooseTrait.ReductionPercent / 100;
             // 第97期・表示専用。**隣が空くのは戦闘の途中**（味方が倒れる）なので、
@@ -8278,6 +8295,13 @@ public sealed class BattleContext
     /// （背かれ＝<see cref="BetrayedTrait"/> は ○前2 に湧かないと、
     /// 敵の前列が全滅するまで餌が食べられない）。</para>
     /// </summary>
+    /// <summary>その隊の陣形（第200期）。隊の最初の駒の陣形で、駒がいなければ X 字。</summary>
+    public FormationShape ShapeOfTeam(int teamId)
+    {
+        foreach (UnitState u in _units) if (u.TeamId == teamId) return u.Shape;
+        return FormationShape.X;
+    }
+
     public UnitState? Summon(UnitDef def, int teamId, int? at = null, bool overCorpse = false,
                              UnitState? by = null)
     {
@@ -8297,14 +8321,15 @@ public sealed class BattleContext
             bool free = overCorpse
                 ? !_units.Any(u => u.TeamId == teamId && u.Slot == want && u.IsAlive)
                 : !taken.Contains(want);
-            if (FormationRules.IsSummonSlot(want) && free) slot = want;
+            if (ShapeOfTeam(teamId).IsSummonSlot(want) && free) slot = want;
         }
         else
         {
             // 召喚専用の枠だけを走る。編成枠へ入れると、5体で満席の盤面では一度も湧かない。
             // **走査順（FormationRules.SummonSlots）は調整ノブ。** 貫き経路に入る 中1・中3 から
             // 埋めるので、湧いた駒が減衰1段ぶんの盾として働く。
-            foreach (int i in FormationRules.SummonSlots)
+            // 第200期: 走査順は隊の陣形の召喚枠（X 字は ○中1 → ○中3 → ○前2 → ○後2 のまま）。
+            foreach (int i in ShapeOfTeam(teamId).SummonSlots)
                 if (!taken.Contains(i)) { slot = i; break; }
         }
         if (slot < 0) return null;
@@ -8318,6 +8343,7 @@ public sealed class BattleContext
         {
             Def = def,
             TeamId = teamId,
+            Shape = ShapeOfTeam(teamId),
             Slot = slot,
             Hp = def.MaxHp,
             MaxHp = def.MaxHp,
@@ -8461,7 +8487,7 @@ public sealed class BattleContext
                     .Where(u => u != target
                                 && (u.HasTrait(TraitId.Bear) || (u.HasTrait(TraitId.Relay) && !InRelay)
                                     || (u.HasTrait(TraitId.Funnel) && Funnel.Both))
-                                && FormationRules.AreAdjacent(u.Slot, target.Slot))
+                                && FormationRules.AreAdjacent(u, target))
                     .ToList());
             if (taker is not null && taker.HasTrait(TraitId.Funnel)
                 && !taker.HasTrait(TraitId.Bear) && !taker.HasTrait(TraitId.Relay))
@@ -8682,7 +8708,7 @@ public sealed class BattleContext
                 : PickOne(LivingMembers(target.TeamId)
                           .Where(u => u != target
                                       && u.HasTrait(TraitId.Funnel)
-                                      && FormationRules.AreAdjacent(u.Slot, target.Slot))
+                                      && FormationRules.AreAdjacent(u, target))
                           .ToList());
 
             if (funnel is not null)
@@ -8782,7 +8808,7 @@ public sealed class BattleContext
             .Where(u => u != funnel
                         && u.AcceptsSupport
                         && !u.HasTrait(TraitId.Funnel)
-                        && FormationRules.AreAdjacent(funnel.Slot, u.Slot))
+                        && FormationRules.AreAdjacent(funnel, u))
             .ToList();
         if (cands.Count == 0) return false;
 
@@ -8936,7 +8962,7 @@ public sealed class BattleContext
         var team = LivingMembers(self.TeamId).ToList();
         // **編成枠だけ。** 召喚枠を含めると、空いている ○中1 へ逃げ込んで誰も押しのけないので、
         // 下の「味方がいるなら必ず入れ替える」が空振りして逃亡が純粋な利益になる。
-        var slots = FormationRules.PlayableSlotsOfRow(next.Value).ToList();
+        var slots = self.Shape.PlayableSlotsOfRow(next.Value).ToList();
 
         // 味方がいるなら必ず入れ替える（＝前へ押し出す）。
         // 空きへ逃げるだけだと誰も損をせず、逃亡が純粋な利益になってしまう。
@@ -9734,7 +9760,8 @@ public static class BattleEngine
             {
                 Def = def,
                 TeamId = teamId,
-                Slot = slot,
+                Shape = formation.Shape,
+                Slot = formation.Shape.PlayableSlots[slot],   // 第200期: X 字は恒等（枠 i ＝ 席 i）
                 Hp = def.MaxHp,
                 MaxHp = def.MaxHp,
                 Traits = TraitCatalog.Resolve(def.Traits)

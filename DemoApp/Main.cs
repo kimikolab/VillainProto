@@ -989,6 +989,7 @@ public partial class Main : Control
 
         var formation = new Formation();
         for (int i = 0; i < _formation.Length; i++) formation[i] = _formation[i];
+        formation = ApplyDemoShape(formation);   // 第200期: `--demo-shape=p2`（再生の確認用）
         int stageIndex = _stagePicker.Selected;
         int seed = (int)_seed.Value;
 

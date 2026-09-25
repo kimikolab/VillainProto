@@ -171,6 +171,14 @@ public sealed class UnitState
     /// <summary>0..5。配置は FormationRules を参照。臆病などで戦闘中に変化する。</summary>
     public int Slot { get; set; }
 
+    /// <summary>
+    /// この駒の隊の陣形（第200期）。<b>隣接・薙ぎ・貫きの経路・召喚枠は陣形ごとに違う</b>ので、
+    /// engine はこの駒を通して引く（<see cref="FormationRules.AreAdjacent(UnitState, UnitState)"/> など）。
+    /// 既定は X 字（<see cref="FormationShape.X"/>）で、X 字の表は第199期までと1ビットも違わない。
+    /// <c>BattleEngine.Materialize</c> が編成から写し、召喚は隊の陣形を引く。
+    /// </summary>
+    public FormationShape Shape { get; set; } = FormationShape.X;
+
     public int Hp { get; set; }
     public int MaxHp { get; set; }
 
@@ -456,7 +464,7 @@ public static class FormationRules
     /// 経路に加わる（空席は占有者0で自然に飛ぶ）。召喚駒はもう1体ぶんの減衰として働き、
     /// 後列を守る——「実態があるなら遮る」という判断からの帰結。
     /// </summary>
-    private static readonly int[][] LanePaths =
+    internal static readonly int[][] LanePaths =
     {
         new[] { 0, 2, 5, 3 },
         new[] { 1, 2, 6, 4 }
@@ -467,7 +475,7 @@ public static class FormationRules
     /// 守備範囲が「そのとき召喚駒が湧いているか」で変わってはいけないので、
     /// 貫きの走査順とは分けてある。
     /// </summary>
-    private static readonly int[][] CorePaths =
+    internal static readonly int[][] CorePaths =
     {
         new[] { 0, 2, 3 },
         new[] { 1, 2, 4 }
@@ -485,7 +493,7 @@ public static class FormationRules
     /// 中央は編成5枠すべてと接続する。通常攻撃からは守られるが、味方のマイナスは一身に浴びる席。
     /// 「隣接デメリットの捨て場」を作らないための措置（旧盤面の中列と同じ役割）。
     /// </summary>
-    private static readonly int[][] AdjacencyTable =
+    internal static readonly int[][] AdjacencyTable =
     {
         new[] { 2, 3, 5, 7 },        // 0 前1
         new[] { 2, 4, 6, 7 },        // 1 前3
@@ -505,7 +513,7 @@ public static class FormationRules
     /// 広がらない（召喚が無ければ中央は自分だけ）。前列が削れるほど薙ぎが痩せる、という
     /// 非対称が要。旧盤面の AreLateralNeighbors（対称）はこの形を表現できない。
     /// </summary>
-    private static readonly int[][] SweepTable =
+    internal static readonly int[][] SweepTable =
     {
         new[] { 1, 2, 7 },   // 0 前1 → 前列の相方・中央・○前2
         new[] { 0, 2, 7 },   // 1 前3
@@ -522,6 +530,9 @@ public static class FormationRules
 
     /// <summary>召喚専用の枠か。プレイヤーはここに置けない。</summary>
     public static bool IsSummonSlot(int slot) => slot >= PlayableSlotCount;
+
+    /// <summary>その駒の陣形で召喚専用の枠か（第200期。engine はこちらを使う）。</summary>
+    public static bool IsSummonSlot(UnitState u) => u.Shape.IsSummonSlot(u.Slot);
 
     /// <summary>貫きが走る経路。前から後ろの順。</summary>
     public static IReadOnlyList<int> LanePath(int lane) => LanePaths[lane];
@@ -567,6 +578,12 @@ public static class FormationRules
     public static bool AreAdjacent(int a, int b)
         => a != b && Array.IndexOf(AdjacencyTable[a], b) >= 0;
 
+    /// <summary>
+    /// 隣接（第200期・<b>駒を受け取る版</b>）。<b>engine はこちらを使う</b>——陣形は隊ごとに違うので、
+    /// 席の番号だけでは隣接が決まらない。<paramref name="a"/> の陣形の表を引く（隣接を問うのは同じ隊の2体）。
+    /// </summary>
+    public static bool AreAdjacent(UnitState a, UnitState b) => a.Shape.AreAdjacent(a.Slot, b.Slot);
+
     /// <summary>薙ぎが巻き込む席。敵に及ぶ範囲はこちらを見ること。</summary>
     public static IReadOnlyList<int> SweepTargets(int slot) => SweepTable[slot];
 
@@ -590,6 +607,141 @@ public static class FormationRules
     }
 }
 
+/// <summary>
+/// 味方の陣形（第200期）。<b>9マス（3レーン × 3列）は陣形に依らず同じ</b>で、変わるのは
+/// 「どの5マスに編成が立つか」と、隣接・薙ぎ・貫きの経路・召喚枠の表だけ。列（前・中・後）は
+/// <see cref="FormationRules.RowOf"/> の幾何なので陣形は持たない。
+///
+/// <para><b>X 字（<see cref="X"/>）は <see cref="FormationRules"/> の表をそのまま引く</b>——第199期までと1ビットも違わない。
+/// パターン2（<see cref="Diamond"/>・ひし形・前衛1枚）は指示書 §2.2 の一般規則から作る:</para>
+/// <code>
+///           後   中   前          A＝○中1(5)  B＝○後2(8)  C＝中央(2)  D＝○前2(7)  E＝○中3(6)
+///     1         A              編成の枠 0〜4 が A〜E（枠0＝A … 枠4＝E）
+///     2    B    C    D         召喚は四隅 後1 → 後3 → 前1 → 前3
+///     3         E
+/// </code>
+/// <list type="number">
+///   <item>隣接: 縦横斜めの8方向。同じ列でレーン1と3は、間（レーン2）の席が編成の席でなければ隣接</item>
+///   <item>薙ぎ: 標的の列の全員 ＋ その1つ後ろの列の全員</item>
+///   <item>貫き: 2レーン（1-2 / 2-3）を前の列から後ろへ、同じ列はレーン番号の小さい方から。
+///         どちらを貫くかは生きている駒が多い方（同数なら 1-2）で<b>乱数を引かない</b></item>
+/// </list>
+/// <para><b>列（前・中・後）は陣形に依らない</b>ので「生きている駒がいる一番前の列を狙う」（<c>PoolOf</c>）はそのまま効く。</para>
+/// </summary>
+public sealed class FormationShape
+{
+    public string Name { get; }
+    /// <summary>編成の枠 i（0〜4）が立つ盤の席。</summary>
+    public IReadOnlyList<int> PlayableSlots { get; }
+    /// <summary>召喚の走査順。</summary>
+    public IReadOnlyList<int> SummonSlots { get; }
+    /// <summary>貫きのレーンを乱数ではなく「生きている駒が多い方」で選ぶか（パターン2）。</summary>
+    public bool DeterministicPierce { get; }
+
+    private readonly bool[] _playable;
+    private readonly int[][] _adj, _sweep, _lanes, _core;
+
+    private FormationShape(string name, int[] playable, int[] summon, int[][] adj, int[][] sweep,
+                           int[][] lanes, int[][] core, bool deterministicPierce)
+    {
+        Name = name; PlayableSlots = playable; SummonSlots = summon;
+        _adj = adj; _sweep = sweep; _lanes = lanes; _core = core;
+        DeterministicPierce = deterministicPierce;
+        _playable = new bool[FormationRules.TotalSlots];
+        foreach (int p in playable) _playable[p] = true;
+    }
+
+    /// <summary>X 字（第199期までの盤面そのもの）。</summary>
+    public static readonly FormationShape X = new(
+        "X字", FormationRules.PlayableSlots, FormationRules.SummonSlots,
+        FormationRules.AdjacencyTable, FormationRules.SweepTable,
+        FormationRules.LanePaths, FormationRules.CorePaths, deterministicPierce: false);
+
+    /// <summary>パターン2（ひし形・前衛1枚）。</summary>
+    public static readonly FormationShape Diamond = BuildGrid("パターン2", new[] { 5, 8, 2, 7, 6 }, new[] { 3, 4, 0, 1 });
+
+    public int LaneCount => _lanes.Length;
+    public bool IsPlayable(int slot) => _playable[slot];
+    public bool IsSummonSlot(int slot) => !_playable[slot];
+    public bool AreAdjacent(int a, int b) => a != b && Array.IndexOf(_adj[a], b) >= 0;
+    public IReadOnlyList<int> SweepTargets(int slot) => _sweep[slot];
+    public IReadOnlyList<int> LanePath(int lane) => _lanes[lane];
+
+    public IReadOnlyList<int> LanesOf(int slot)
+    {
+        var lanes = new List<int>(_lanes.Length);
+        for (int l = 0; l < _lanes.Length; l++)
+            if (Array.IndexOf(_lanes[l], slot) >= 0) lanes.Add(l);
+        return lanes;
+    }
+
+    /// <summary>「前」＝ a が b の同じレーンの1つ手前か（召喚枠を除いた経路で数える）。</summary>
+    public bool IsLanePredecessor(int a, int b)
+    {
+        foreach (int[] path in _core)
+        {
+            int ia = Array.IndexOf(path, a), ib = Array.IndexOf(path, b);
+            if (ia >= 0 && ib >= 0 && ib - ia == 1) return true;
+        }
+        return false;
+    }
+
+    /// <summary>その列のうち編成の席だけ（席番号の昇順。X 字では <see cref="FormationRules.PlayableSlotsOfRow"/> と同じ並び）。</summary>
+    public IEnumerable<int> PlayableSlotsOfRow(Row row)
+    {
+        for (int i = 0; i < FormationRules.TotalSlots; i++)
+            if (_playable[i] && FormationRules.RowOf(i) == row) yield return i;
+    }
+
+    /// <summary>9マスの格子のレーン（1〜3・上から）。</summary>
+    public static int GridLane(int slot) => slot switch
+    {
+        0 or 3 or 5 => 1,
+        1 or 4 or 6 => 3,
+        _ => 2
+    };
+
+    /// <summary>§2.2 の一般規則で表を作る（パターン2・3 で共有する）。</summary>
+    private static FormationShape BuildGrid(string name, int[] playable, int[] summon)
+    {
+        const int n = FormationRules.TotalSlots;
+        bool[] seat = new bool[n];
+        foreach (int p in playable) seat[p] = true;
+        static int Depth(int s) => FormationRules.DepthOf(FormationRules.RowOf(s));
+        static int MiddleOf(int depth) => Enumerable.Range(0, n).First(s => GridLane(s) == 2 && Depth(s) == depth);
+
+        var adj = new int[n][];
+        var sweep = new int[n][];
+        for (int a = 0; a < n; a++)
+        {
+            var la = new List<int>();
+            var sa = new List<int>();
+            for (int b = 0; b < n; b++)
+            {
+                if (a == b) continue;
+                int dl = Math.Abs(GridLane(a) - GridLane(b)), dc = Math.Abs(Depth(a) - Depth(b));
+                bool near = dl <= 1 && dc <= 1;
+                bool across = dc == 0 && dl == 2 && !seat[MiddleOf(Depth(a))];
+                if (near || across) la.Add(b);
+                if (Depth(b) == Depth(a) || Depth(b) == Depth(a) + 1) sa.Add(b);
+            }
+            adj[a] = la.ToArray();
+            sweep[a] = sa.ToArray();
+        }
+
+        static int[] Path(int l1, int l2) => Enumerable.Range(0, n)
+            .Where(s => GridLane(s) == l1 || GridLane(s) == l2)
+            .OrderBy(Depth).ThenBy(GridLane).ToArray();
+        int[][] lanes = { Path(1, 2), Path(2, 3) };
+
+        int[][] core = new[] { 1, 2, 3 }
+            .Select(l => playable.Where(s => GridLane(s) == l).OrderBy(Depth).ToArray())
+            .Where(p => p.Length >= 2).ToArray();
+
+        return new FormationShape(name, playable, summon, adj, sweep, lanes, core, deterministicPierce: true);
+    }
+}
+
 /// <summary>編成。スロットに UnitDef を入れる。null は空きスロット。</summary>
 public sealed class Formation
 {
@@ -603,6 +755,9 @@ public sealed class Formation
         set => _slots[slot] = value;
     }
 
+    /// <summary>陣形（第200期）。既定は X 字。枠 i は <see cref="FormationShape.PlayableSlots"/>[i] の席に立つ。</summary>
+    public FormationShape Shape { get; set; } = FormationShape.X;
+
     public int Count => _slots.Count(s => s is not null);
 
     public IEnumerable<(int Slot, UnitDef Def)> Occupied()
@@ -614,7 +769,7 @@ public sealed class Formation
 
     public Formation Clone()
     {
-        var f = new Formation();
+        var f = new Formation { Shape = Shape };
         for (int i = 0; i < _slots.Length; i++) f[i] = _slots[i];
         return f;
     }
@@ -641,6 +796,18 @@ public sealed class Formation
         f[2] = center;
         f[3] = back1;
         f[4] = back3;
+        return f;
+    }
+
+    /// <summary>
+    /// パターン2（ひし形・前衛1枚）の編成（第200期）。枠0〜4 が A〜E。
+    /// A＝1レーン中衛・B＝後衛・C＝中央・D＝前衛（1枚）・E＝3レーン中衛。
+    /// </summary>
+    public static Formation BuildDiamond(
+        UnitDef? a = null, UnitDef? b = null, UnitDef? c = null, UnitDef? d = null, UnitDef? e = null)
+    {
+        var f = new Formation { Shape = FormationShape.Diamond };
+        f[0] = a; f[1] = b; f[2] = c; f[3] = d; f[4] = e;
         return f;
     }
 }

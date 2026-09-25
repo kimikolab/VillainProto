@@ -586,7 +586,7 @@ public sealed class SplashTrait : Trait
         foreach (UnitState ally in ctx.LivingMembersShuffled(self.TeamId))
         {
             if (ally == self) continue;
-            if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            if (!FormationRules.AreAdjacent(self, ally)) continue;
 
             ctx.Log($"    余波: {self.Name} の攻撃が {ally.Name} を巻き込む", LogKind.FriendlyFire);
             ctx.ApplyDamage(ally, spill, self, isFriendlyFire: true);
@@ -651,7 +651,7 @@ public sealed class SacrificeTrait : Trait
         foreach (UnitState ally in ctx.LivingMembersShuffled(self.TeamId))
         {
             if (ally == self) continue;
-            if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            if (!FormationRules.AreAdjacent(self, ally)) continue;
             ctx.Log($"  {self.Name} が隣の {ally.Name} から生気を抜いた（-{Amount}）", LogKind.FriendlyFire);
             // 第118期: `levy` ＝ 徴収の札。**攻撃ではない削り**なので糧（NourishTrait）を渡さない。
             ctx.ApplyDamage(ally, Amount, self, isFriendlyFire: true, lethal: false, levy: true);
@@ -1004,7 +1004,7 @@ public sealed class GuardianTrait : RedirectGainTrait
 
         var pool = ctx.LivingMembers(self.TeamId)
             .Where(a => a != self && a.Counter(StatusKeys.Wound) > 0
-                        && FormationRules.AreAdjacent(self.Slot, a.Slot)).ToList();
+                        && FormationRules.AreAdjacent(self, a)).ToList();
         if (pool.Count == 0) return;
         t.GatherHadDonor++;
         if (!ctx.Gather.Enabled) return;
@@ -1662,7 +1662,7 @@ public sealed class VenomTrait : Trait
         // 扱いが雑なので隣の味方にもかかる。漏れは前後を含む隣接（味方に及ぶものの定義）。
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
-            if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            if (ally == self || !FormationRules.AreAdjacent(self, ally)) continue;
             ctx.Poison(ally, 1, self, PoisonRoute.VenomLeak);
             ctx.Log($"    {ally.Name} にも毒がかかった", LogKind.FriendlyFire);
         }
@@ -2566,7 +2566,7 @@ public sealed class ThornsTrait : Trait
             {
                 if (other == source) continue;
                 // 敵に及ぶ範囲なので薙ぎと同じ表を引く。味方に及ぶものと定義を分けている。
-                if (!FormationRules.SweepTargets(source.Slot).Contains(other.Slot)) continue;
+                if (!source.Shape.SweepTargets(source.Slot).Contains(other.Slot)) continue;
                 ctx.ApplyDamage(other, Math.Max(1, back * SplashPercent / 100), self);
             }
 
@@ -2581,7 +2581,7 @@ public sealed class ThornsTrait : Trait
             foreach (UnitState ally in ctx.LivingMembersShuffled(self.TeamId))
             {
                 if (ally == self) continue;
-                if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+                if (!FormationRules.AreAdjacent(self, ally)) continue;
 
                 int before = ally.Hp;
                 ctx.Log($"    余波: {self.Name} の棘が {ally.Name} を巻き込む", LogKind.FriendlyFire);
@@ -2705,7 +2705,7 @@ public sealed class ThornGuardTrait : Trait
 
         // 前だけ。同じレーンの後ろにいる味方は守らない（守れると後列から前列を
         // 素通しで守れることになり、隊列の意味が消える）。
-        return FormationRules.IsLanePredecessor(ally.Slot, self.Slot);
+        return self.Shape.IsLanePredecessor(ally.Slot, self.Slot);
     }
 
     /// <summary>
@@ -2786,7 +2786,7 @@ public sealed class MarkerTrait : Trait
         // OrderByDescending は安定ソートなので、最大HP が同値だと元の並び＝席番号順に落ちる。
         // 同値の中は乱数で割る（鏡像の配置を同値にするため。PickOne 参照）。
         var adj = ctx.LivingMembers(self.TeamId)
-            .Where(a => a != self && FormationRules.AreAdjacent(self.Slot, a.Slot)).ToList();
+            .Where(a => a != self && FormationRules.AreAdjacent(self, a)).ToList();
         int topHp = adj.Count == 0 ? 0 : adj.Max(a => a.MaxHp);
         UnitState? mark = ctx.PickOne(adj.Where(a => a.MaxHp == topHp).ToList());
 
@@ -3215,7 +3215,7 @@ public sealed class ShoveTrait : Trait
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
             if (ally == self) continue;
-            if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            if (!FormationRules.AreAdjacent(self, ally)) continue;
 
             // 支援拒否（ガルド）は弾く。**隣へ流さない**——呪詛・萎縮が SupportTargets を
             // 通すのとはここが違う。ガルドを隣に置けば代金を1点も払わない。
@@ -3572,7 +3572,7 @@ public sealed class OverbearTrait : Trait
             foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
             {
                 if (ally == self || !ally.IsAlive) continue;
-                if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+                if (!FormationRules.AreAdjacent(self, ally)) continue;
 
                 // 逆行の実測。**削ったのに相手が強くなった量**（逆しまの自己矛盾）を、
                 // 予測ではなく窓口の前後の差で取る。読むだけで盤面は動かさない。
@@ -3640,7 +3640,7 @@ public sealed class OverbearTrait : Trait
         foreach (UnitState a in board.AllUnits)
         {
             if (a == self || !a.IsAlive || a.TeamId != self.TeamId) continue;
-            if (!FormationRules.AreAdjacent(self.Slot, a.Slot)) continue;
+            if (!FormationRules.AreAdjacent(self, a)) continue;
             if (PlainAttack(a) >= mine) return false;
             seen++;
         }
@@ -4242,7 +4242,7 @@ public sealed class GoadTrait : Trait
         // --- 選ぶ（隣接する生存味方のうち CurrentAttack が最大の1体）----------------------
         var adj = ctx.LivingMembers(self.TeamId)
             .Where(a => a != self && a.AcceptsSupport
-                        && FormationRules.AreAdjacent(self.Slot, a.Slot)).ToList();
+                        && FormationRules.AreAdjacent(self, a)).ToList();
         int top = adj.Count == 0 ? 0 : adj.Max(a => a.CurrentAttack);
         UnitState? pick = ctx.PickOne(adj.Where(a => a.CurrentAttack == top).ToList());
 
@@ -4527,7 +4527,7 @@ public sealed class FavorTrait : Trait
                 whetted++;
                 ctx.Whet(a, gain, WhetRoute.Favor);          // gain <= 0 なら Whet が即 return する
             }
-            else if (FormationRules.AreAdjacent(self.Slot, a.Slot))
+            else if (FormationRules.AreAdjacent(self, a))
             {
                 // マイナス側は隣接だけ。
                 dulled++;
@@ -4817,12 +4817,12 @@ public sealed class ConcentrateTrait : Trait
 
         if (ctx.MarkConcentrated(self, center, CenterLabel)) t.ConcMarkCenter++;
         foreach (UnitState foe in ctx.LivingMembers(center.TeamId))
-            if (foe != center && FormationRules.AreAdjacent(center.Slot, foe.Slot) && ctx.MarkConcentrated(self, foe, AroundLabel))
+            if (foe != center && FormationRules.AreAdjacent(center, foe) && ctx.MarkConcentrated(self, foe, AroundLabel))
                 t.ConcMarkAround++;
 
         if (self.HasTrait(TraitId.ConcentrateLeak))
             foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
-                if (ally != self && FormationRules.AreAdjacent(self.Slot, ally.Slot) && ctx.MarkConcentrated(self, ally, LeakLabel))
+                if (ally != self && FormationRules.AreAdjacent(self, ally) && ctx.MarkConcentrated(self, ally, LeakLabel))
                     t.ConcMarkAlly++;
 
         ctx.Log($"    ★ {self.Name} が澱みを {center.Name} に寄せた——刻みが {1 + center.RawCounter(StatusKeys.Concentrated)} 度来る", LogKind.Highlight, self);
@@ -6643,7 +6643,7 @@ public sealed class ShufflerTrait : Trait
 
         var team = ctx.LivingMembers(teamId).Where(u => u != self).ToList();
         // 敵側だけ召喚枠を外す（doc を参照）。味方側はこの行を通らないので従来どおり。
-        if (foes) team = team.Where(u => !FormationRules.IsSummonSlot(u.Slot)).ToList();
+        if (foes) team = team.Where(u => !FormationRules.IsSummonSlot(u)).ToList();
         if (team.Count < 2)
         {
             if (foes) tally.ShuffleNoFoePair++;
@@ -8152,7 +8152,7 @@ public sealed class AshTrait : Trait
         self.SetCounter(StatusKeys.Ash, 0);
 
         var neighbours = ctx.LivingMembers(self.TeamId)
-            .Where(u => u != self && FormationRules.AreAdjacent(self.Slot, u.Slot)).ToList();
+            .Where(u => u != self && FormationRules.AreAdjacent(self, u)).ToList();
         if (neighbours.Count == 0) return;
 
         int share = ash / neighbours.Count;
@@ -8327,7 +8327,7 @@ public static class ShoveRules
 
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
-            if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            if (ally == self || !FormationRules.AreAdjacent(self, ally)) continue;
             if (victim is null || ally.Slot < victim.Slot) victim = ally;
         }
         if (victim is null) return ShoveOutcome.NoTarget;
@@ -8335,11 +8335,11 @@ public static class ShoveRules
         var taken = new HashSet<int>(ctx.LivingMembers(self.TeamId).Select(u => u.Slot));
         int dest = -1;
         int bestRank = int.MaxValue;
-        foreach (int slot in FormationRules.PlayableSlots)
+        foreach (int slot in self.Shape.PlayableSlots)
         {
             if (slot == victim.Slot || slot == self.Slot) continue;
             // 順位は「保持者に隣接しない」→「空席」→「席番号が小さい」。
-            int rank = (FormationRules.AreAdjacent(self.Slot, slot) ? 2 : 0) + (taken.Contains(slot) ? 1 : 0);
+            int rank = (self.Shape.AreAdjacent(self.Slot, slot) ? 2 : 0) + (taken.Contains(slot) ? 1 : 0);
             if (rank >= bestRank) continue;
             bestRank = rank;
             dest = slot;
@@ -8675,7 +8675,7 @@ public sealed class CinderTrait : Trait
         // 味方に及ぶものなので前後を含む隣接を見る（Models.cs の AreAdjacent の但し書き）。
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
-            if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            if (ally == self || !FormationRules.AreAdjacent(self, ally)) continue;
             ctx.Ignite(ally, friendly: true, source: self);
         }
     }
@@ -8749,7 +8749,7 @@ public sealed class PyreTrait : Trait
 
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
-            if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            if (ally == self || !FormationRules.AreAdjacent(self, ally)) continue;
             ctx.Ignite(ally, friendly: true, source: self);
         }
     }
@@ -10648,7 +10648,7 @@ public sealed class SmearTrait : Trait
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
             if (ally == self) continue;
-            if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            if (!FormationRules.AreAdjacent(self, ally)) continue;
             if (!ally.AcceptsSupport) { ctx.NoteSmearBlocked(self); continue; }
             ctx.Dull(ally, amount, DullRoute.Smear, self);
             ctx.NoteSmear(self, amount);
@@ -10813,7 +10813,7 @@ public sealed class StitchTrait : Trait
         foreach (UnitState a in ctx.LivingMembers(self.TeamId))
         {
             if (a == self || !a.AcceptsSupport) continue;
-            if (!FormationRules.AreAdjacent(self.Slot, a.Slot)) continue;
+            if (!FormationRules.AreAdjacent(self, a)) continue;
             int lost = a.MaxHp - a.Hp;
             if (lost <= 0) continue;
             // lost / MaxHp > bestLost / bestMax を交差乗算で（MaxHp は下限 1）。
@@ -10898,7 +10898,7 @@ public sealed class TouchTrait : Trait
         int hit = 0;
         foreach (UnitState foe in ctx.LivingMembers(target.TeamId))
         {
-            if (foe == target || !FormationRules.AreAdjacent(target.Slot, foe.Slot)) continue;
+            if (foe == target || !FormationRules.AreAdjacent(target, foe)) continue;
             ctx.Poison(foe, spread, self, PoisonRoute.Touch, spreadFrom: target);   // 元の敵は表示専用
             hit++;
         }
@@ -10912,7 +10912,7 @@ public sealed class TouchTrait : Trait
         var leaked = new List<string>();
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
-            if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            if (ally == self || !FormationRules.AreAdjacent(self, ally)) continue;
             ctx.Poison(ally, leak, self, PoisonRoute.TouchLeak);
             ctx.NoteTouchLeak(self, ally, leak);
             leaked.Add(ally.Name);
@@ -10978,7 +10978,7 @@ public sealed class BeckonTrait : Trait
         UnitState? pick = null;
         foreach (UnitState a in ctx.LivingMembers(self.TeamId))
         {
-            if (a == self || !FormationRules.AreAdjacent(self.Slot, a.Slot)) continue;
+            if (a == self || !FormationRules.AreAdjacent(self, a)) continue;
             if (pick is null || a.Hp > pick.Hp || (a.Hp == pick.Hp && a.Slot < pick.Slot)) pick = a;
         }
         return pick;
@@ -11063,8 +11063,8 @@ public sealed class FleeTrait : Trait
         foreach (UnitState a in ctx.LivingMembers(self.TeamId))
         {
             if (a == self || ReferenceEquals(a, keep)) continue;
-            if (FormationRules.IsSummonSlot(a.Slot)) continue;
-            if (!FormationRules.AreAdjacent(self.Slot, a.Slot)) continue;
+            if (FormationRules.IsSummonSlot(a)) continue;
+            if (!FormationRules.AreAdjacent(self, a)) continue;
             if (pick is null) { pick = a; continue; }
             bool aBack = FormationRules.DepthOf(a.Row) > myDepth;
             bool pBack = FormationRules.DepthOf(pick.Row) > myDepth;
@@ -11330,7 +11330,7 @@ public sealed class ShameTrait : Trait
         int cowed = 0, blocked = 0;
         foreach (UnitState u in ctx.LivingMembers(target.TeamId))
         {
-            if (u == target || !FormationRules.AreAdjacent(target.Slot, u.Slot)) continue;
+            if (u == target || !FormationRules.AreAdjacent(target, u)) continue;
             if (u.RawCounter(StatusKeys.Cowed) > 0) continue;               // 既に竦んでいる
             if (u.RawCounter(GuardKey) > 0) { blocked++; continue; }       // 竦みが明けたばかり（ハメ防止）
             u.SetCounter(StatusKeys.Cowed, 1);
@@ -11572,7 +11572,7 @@ public sealed class TaintTrait : Trait
         // 第191期: 「火を分けた」の手番は火を分ける札（`KindleTrait`）の番で、澱みは分けない。
         if (action.Label == KindleTrait.Label) return;
         var adj = ctx.LivingMembers(self.TeamId)
-                     .Where(a => a != self && FormationRules.AreAdjacent(self.Slot, a.Slot)).ToList();
+                     .Where(a => a != self && FormationRules.AreAdjacent(self, a)).ToList();
         UnitTally t = ctx.TallyOf(self);
         t.TaintActs++;
         if (adj.Count == 0)
@@ -11625,7 +11625,7 @@ public sealed class KindleTrait : Trait
     {
         if (!self.IsAlive || action.Label != Label) return;
         var adj = ctx.LivingMembers(self.TeamId)
-                     .Where(a => a != self && FormationRules.AreAdjacent(self.Slot, a.Slot)).ToList();
+                     .Where(a => a != self && FormationRules.AreAdjacent(self, a)).ToList();
         UnitTally t = ctx.TallyOf(self);
         t.KindleActs++;
         if (adj.Count == 0)
@@ -12111,7 +12111,7 @@ public sealed class HexLeakTrait : Trait
         var hit = new List<string>();
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
-            if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            if (ally == self || !FormationRules.AreAdjacent(self, ally)) continue;
             if (!ally.AcceptsSupport) continue;
             ctx.Dull(ally, LeakAtkDown, DullRoute.HexLeak, self);
             ctx.TallyOf(self).HexLeakTotal += LeakAtkDown;
@@ -12168,7 +12168,7 @@ public sealed class DauntTrait : Trait
             int n = 0;
             foreach (UnitState u in ctx.LivingMembers(pick.TeamId))
             {
-                if (u != pick && !FormationRules.AreAdjacent(pick.Slot, u.Slot)) continue;
+                if (u != pick && !FormationRules.AreAdjacent(pick, u)) continue;
                 if (Mark(ctx, self, u)) n++; else tally.DauntFoesAlready++;
             }
             tally.DauntFoes += n;
@@ -12180,7 +12180,7 @@ public sealed class DauntTrait : Trait
             int m = 0;
             foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
             {
-                if (ally == self || !FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+                if (ally == self || !FormationRules.AreAdjacent(self, ally)) continue;
                 if (Mark(ctx, self, ally)) m++;
             }
             tally.DauntAllies += m;
@@ -12295,8 +12295,8 @@ public sealed class OverrunTrait : Trait
         UnitState? pick = null, planted = null;
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
-            if (ally == self || FormationRules.IsSummonSlot(ally.Slot)) continue;
-            if (!FormationRules.AreAdjacent(self.Slot, ally.Slot)) continue;
+            if (ally == self || FormationRules.IsSummonSlot(ally)) continue;
+            if (!FormationRules.AreAdjacent(self, ally)) continue;
             if (ally.HasTrait(TraitId.Planted)) { if (planted is null || ally.Slot < planted.Slot) planted = ally; continue; }
             if (pick is null || ally.Slot < pick.Slot) pick = ally;
         }
