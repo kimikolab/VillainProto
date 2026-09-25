@@ -68,6 +68,8 @@ public partial class BattlePawn3D
 
     private void ClearSpecialEffects()
     {
+        SetStigma(false);
+        _liliReach = 0;
         _gurenFlower?.QueueFree(); _gurenFlower = null;
         _numbTime = 0;
         _gurenImpact = 0;

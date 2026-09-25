@@ -1113,6 +1113,8 @@ public partial class Main : Control
         _tickDelayBudget = null;
         _beniMioShown.Clear();
         _specialShown.Clear(); _riposteDamage.Clear(); _numbDamage.Clear();
+        _liliGiven.Clear(); _liliTransfers = _liliDrains = _liliGifts = 0;
+        ResetLiliRitePlayback();
         _beniGiftGains.Clear();
         _playing = true;
         _paused = false;
@@ -1233,6 +1235,7 @@ public partial class Main : Control
         // 第125期 段2: 拍の境目でだけ画面を変える。**ここでは待たない**（間は下の switch の中だけ）。
         EnterBeat(eventIndex, e);
         _tickDelayBudget = _ticks.Budgets.TryGetValue(eventIndex, out double tickBudget) ? tickBudget : null;
+        if (await PlayLili(e, eventIndex, actor, target)) return;
         if (await PlaySpecial(e, eventIndex, actor, target)) return;
         if (await PlayBeniMio(e, eventIndex, actor, target)) return;
         if (await PlayTickEvent(e, eventIndex, target)) return;
@@ -1506,7 +1509,7 @@ public partial class Main : Control
                 _battleField.ClearBindingsFor(target);
                 _battleField.PlayDeath(target, eventIndex == _finishSoundIndex);
                 AppendLog($"  [color=#{UiKit.Hurt.ToHtml(false)}][b]{NameOf(e.TargetId)} 撃破[/b][/color]");
-                await Delay(0.36);
+                if (!InLiliRite(eventIndex)) await Delay(0.36);
                 break;
 
             case BattleEventKind.Move:
@@ -2209,6 +2212,7 @@ public partial class Main : Control
 
     private static string DisplayStatusKey(string key) => key switch
     {
+        StatusKeys.Stigma or "聖" => "聖痕",
         "dull" => "なまり",
         "whet" => "強化",
         _ => StatusKeys.LabelOf(key),

@@ -688,6 +688,7 @@ void fragment() {
             0);
         UpdateRapierGlow();
         UpdateSpecialEffects(animationDelta);
+        ProcessLili(animationDelta);
         float shadowSpread = fall * 0.28f;
         ProcessShieldCowed(animationDelta);
         _shadow.Scale = new Vector3(1.0f - breath * 0.10f + shadowSpread, 1, 1.0f - breath * 0.10f - shadowSpread * 0.35f);

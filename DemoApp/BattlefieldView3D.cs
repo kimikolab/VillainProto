@@ -90,7 +90,7 @@ public partial class BattlefieldView3D : Control
         BuildOverlay();
         _attackAudio = new BattleAttackAudio();
         AddChild(_attackAudio);
-        VisibilityChanged += () => { if (!IsVisibleInTree()) _attackAudio.StopAll(); };
+        VisibilityChanged += () => { if (!IsVisibleInTree()) { _attackAudio.StopAll(); ResetLiliRite(); } };
     }
 
     private void BuildWorld()
@@ -281,6 +281,8 @@ public partial class BattlefieldView3D : Control
 
     public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName, int stageIndex)
     {
+        ResetLiliRite();
+        LiliRites = LiliRiteStrikes = LiliRiteReleases = LiliRiteFinishes = 0;
         _inverseHolders.Clear();
         _specialGeneration++;
         GurenReleases = GurenGains = SwordDraws = SwordRipostes = NumbSwings = VenomReturns = Spews = 0;

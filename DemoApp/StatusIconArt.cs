@@ -8,6 +8,7 @@ public static class StatusIconArt
 {
     private static readonly Dictionary<string, (string Color, string Shape)> Art = new()
     {
+        [StatusKeys.Stigma] = ("#ffa9ca", "<path d='M32 9C27 23 17 30 17 40a15 15 0 0 0 30 0C47 30 37 23 32 9z' fill='#e85c89'/><path d='M28 26q-9 12-5 17' fill='none' stroke='#fff0f5'/>"),
         [StatusKeys.Numbed] = ("#be80eb", "<path d='M14 18l8 10-8 10 8 10m10-34-8 10 8 10-8 10m20-30-8 10 8 10-8 10' fill='none'/>"),
         [StatusKeys.Guren] = ("#f34e64", "<path d='M32 30Q10 8 14 30Q5 47 29 38Q32 59 37 38Q60 44 49 26Q54 8 32 30z' fill='#351735'/><circle cx='32' cy='32' r='6'/>"),
         [StatusKeys.Concentrated] = ("#6fb8a4", "<path d='M32 30q-8-8 1-12t17 11q0 16-20 13T13 22Q20 4 44 12' fill='none'/>"),
@@ -49,7 +50,7 @@ public static class StatusIconArt
     }
     public static IEnumerable<string> Keys => Art.Keys;
     public static string? KeyOf(string keyOrLabel)
-        => Art.ContainsKey(keyOrLabel) ? keyOrLabel : Art.Keys.FirstOrDefault(k => StatusKeys.LabelOf(k) == keyOrLabel);
+        => keyOrLabel == "聖痕" ? StatusKeys.Stigma : Art.ContainsKey(keyOrLabel) ? keyOrLabel : Art.Keys.FirstOrDefault(k => StatusKeys.LabelOf(k) == keyOrLabel);
 
     public static Texture2D Texture(string key)
     {
