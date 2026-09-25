@@ -24,6 +24,7 @@ static partial class GaldLastDiag
         switch (mode)
         {
             case "phase0": Phase0(); return;
+            case "phase199": Phase199(); return;
             default:
                 if (RunMore(mode, arg)) return;
                 Console.WriteLine("galdlast: モードは phase0 / run / ledger / check。");
