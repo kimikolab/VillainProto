@@ -20,6 +20,9 @@ static partial class LiliDiag
             case "run2": Run205(); handled = true; return;
             case "ledger2": Ledger205(); handled = true; return;
             case "check2": Check205(arg); handled = true; return;
+            case "run3": Run206(); handled = true; return;
+            case "ledger3": Ledger206(); handled = true; return;
+            case "check3": Check206(arg); handled = true; return;
         }
     }
 

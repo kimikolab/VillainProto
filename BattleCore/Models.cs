@@ -2822,7 +2822,7 @@ public enum BattleEventKind
     /// 直前に聖痕の <c>StatusGain</c>（キー <c>stigma</c>・書き手 ＝ リリ）、直後に敵への <c>Damage</c>（出どころ ＝ リリ・型なし）が並ぶ。
     /// 続いて状態が移るなら <see cref="StatusTransfer"/> がキーごとに並び、最後に <b>口移し</b>（<see cref="KissLabels.Give"/>）:
     /// <c>TargetId</c> = 受け取った味方、<c>Amount</c> = 吸えた量、<c>SpreadFromId</c> = 吸った敵。その直後に <c>Heal</c>、溢れがあれば <b>破片</b>（<see cref="KissLabels.Armor"/>・<c>Amount</c> = 足した破片、<c>StatusRemaining</c> = 足した後の破片）。</para>
-    /// <para><b>祝福の儀</b>: 見出し（<see cref="KissLabels.Rite"/>・<c>TargetId</c> = null・<c>Slot</c> = 聖痕の敵の数）→ 敵ごとの <see cref="KissLabels.RiteDrain"/>（<c>TargetId</c> = 敵）と <c>Damage</c>
+    /// <para><b>祝福の儀</b>: 見出し（<see cref="KissLabels.Rite"/>・<c>TargetId</c> = null・<c>Slot</c> = 聖痕の敵の数・<b>第206期から <c>Amount</c> = 吸う総量（名目）・<c>StatusRemaining</c> = 1体あたり（余りを足す前）</b>）→ 敵ごとの <see cref="KissLabels.RiteDrain"/>（<c>TargetId</c> = 敵）と <c>Damage</c>
     /// → 味方ごとの <see cref="KissLabels.RiteGive"/>（<c>TargetId</c> = 味方・<c>Amount</c> = 施した量）と <c>Heal</c>・破片。<b>儀式の最後の1件は <see cref="KissLabels.RiteEnd"/></b>（聖痕が消えた瞬間・<c>Amount</c> = 吸えた合計）。</para>
     /// <para><b>祝福が還る</b>（<see cref="KissLabels.Return"/>）: 聖痕の敵の <c>Death</c> の後。<c>TargetId</c> = 受け取った味方、<c>SpreadFromId</c> = 倒れた敵、<c>Amount</c> = 名目。直後に <c>Heal</c>・破片。</para>
     /// <c>HpAfter</c> は<b>その出来事を積んだ時点</b>の対象の HP（吸う前・与える前）で、バーの補間は直後の <c>Damage</c> / <c>Heal</c> で読む。<b>どの規則も読まない。</b>

@@ -235,12 +235,13 @@ public static class UnitCatalog
         Advances = false,
         // 札の並び: 口づけの本体が代金の札（`KissSpill`）と第205期の4枚（痛み・溢れを捨てる・段・強弱を移す）を中から読む。
         // 第204期の姿は `Kiss` ＋ `KissSpill` の2枚（診断 `lili` の V0）。
-        Traits = new[] { TraitId.Kiss, TraitId.KissSpill, TraitId.KissPain, TraitId.KissVoid, TraitId.KissTier, TraitId.KissSteal },
+        // 第206期に段の刻みを三角数（`KissTri`）・祝福の儀を5倍の等分（`KissRite5`）にした。第205期の姿は `KissTri` / `KissRite5` を外した6枚。
+        Traits = new[] { TraitId.Kiss, TraitId.KissSpill, TraitId.KissPain, TraitId.KissVoid, TraitId.KissTier, TraitId.KissSteal, TraitId.KissTri, TraitId.KissRite5 },
         // 吸い取りが手番そのもの（攻撃3 は出ない）。`[Skill]` の1要素（ノノと同じ）。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "精気を吸っている") },
         PlusText = "手番で、まだ聖痕の無い敵のうち最も大きい1体から精気を吸い、最も傷ついた味方に与える。吸う量は、前の手番から味方が受けた傷の半分（最低8）。吸った敵には聖痕が付く / "
-                   + "施した量が積もるほど、1手番に口づけする敵が増える / "
-                   + "生きている敵全員に聖痕が付くと、次の手番で全員から一斉に吸い、味方全員に施す（聖痕は消える） / "
+                   + "施した量が積もるほど、1手番に口づけする敵が増える（段を上がるほど多く要る） / "
+                   + "生きている敵全員に聖痕が付くと、次の手番で祝福の儀。吸う量の5倍を残った敵で分け合って吸い、味方全員に施す（残りが少ないほど深く吸う・聖痕は消える） / "
                    + "聖痕を持つ敵が倒れると、最も傷ついた味方が癒える",
         MinusText = "1体ずつ吸うとき、その敵の状態（毒・火・呪い・痺れなど）と攻撃力の上げ下げも吸い取り、与えた味方に移してしまう。傷ついた味方がいなければ自分が受け取る",
         Flavor = "彼女は惜しみなく与える。誰から奪ったものかは気にしない。"

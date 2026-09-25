@@ -1351,6 +1351,8 @@ static class TraitKeyMap
         [TraitId.KissPain]   = Array.Empty<int>(),                                              // 第205期（口づけの中で読まれる札）
         [TraitId.KissVoid]   = Array.Empty<int>(),                                              // 第205期（溢れを捨てる・何も書かない）
         [TraitId.KissTier]   = Array.Empty<int>(),                                              // 第205期（口づけの中で読まれる札）
+        [TraitId.KissTri]    = Array.Empty<int>(),                                              // 第206期（口づけの中で読まれる札）
+        [TraitId.KissRite5]  = Array.Empty<int>(),                                              // 第206期（口づけの中で読まれる札）
         [TraitId.KissSteal]  = Array.Empty<int>(),                                              // 第205期（AtkBonus を移す・状態キーではない）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
@@ -1514,6 +1516,8 @@ static class TraitHookMap
         [TraitId.KissPain]    = new[] { Engine },                                  // 第205期（痛みは ApplyDamage が陣営ごとに数える）
         [TraitId.KissVoid]    = Array.Empty<string>(),                             // 第205期（口づけの中で読まれる札）
         [TraitId.KissTier]    = Array.Empty<string>(),                             // 第205期（口づけの中で読まれる札）
+        [TraitId.KissTri]     = Array.Empty<string>(),                             // 第206期（口づけの中で読まれる札）
+        [TraitId.KissRite5]   = Array.Empty<string>(),                             // 第206期（口づけの中で読まれる札）
         [TraitId.KissSteal]   = Array.Empty<string>(),                             // 第205期（口づけの中で読まれる札）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）

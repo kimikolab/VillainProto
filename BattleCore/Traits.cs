@@ -381,6 +381,8 @@ public enum TraitId
     KissPain,   // 口づけ・痛みの版（第205期）: 吸う量を「前の手番から味方が失った HP の半分（最低 8）」にする。札は `KissTrait` の中で読まれる
     KissVoid,   // 口づけ・溢れを捨てる版（第205期）: 与えきれずに溢れた分を破片にせず捨てる。札は `KissTrait` の中で読まれる
     KissTier,   // 口づけ・段（第205期）: 施した累計が 40 に届くごとに段が上がり、1手番に吸う敵が 1 ＋ 段 体になる。札は `KissTrait` の中で読まれる
+    KissTri,    // 口づけ・段の刻みを三角数に（第206期）: 段 n に要る施した累計を TierStep × n(n+1)/2 にする。札は `KissTrait` の中で読まれる
+    KissRite5,  // 口づけ・祝福の儀を「5倍の等分」に（第206期）: 儀式の総量を吸う量 × 5 に固定し、生きている聖痕の敵で等分する。札は `KissTrait` の中で読まれる
     KissSteal,  // 口づけ・強弱を移す（第205期）: 1体ずつ吸うとき、その敵の攻撃力の上げ下げ（`AtkBonus`）も受け取った味方へ移す。札は `KissTrait` の中で読まれる
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -12408,6 +12410,21 @@ public sealed class KissTrait : Trait
     public const int TierStep = 40;
     /// <summary>第205期: その戦で実際に癒した量の累計（<see cref="TraitId.KissTier"/> を持つときだけ積む）。</summary>
     public const string HealSumKey = "kissHealSum";
+    /// <summary>第206期（<see cref="TraitId.KissRite5"/>）: 祝福の儀の総量 ＝ その手番の吸う量 × この倍率。</summary>
+    public const int RiteMultiplier = 5;
+
+    /// <summary>
+    /// 施した累計から段を引く（第206期）。<see cref="TraitId.KissTri"/> を持てば段 n に要る累計は <see cref="TierStep"/> × n(n+1)/2（40・120・240・400…・墓守の層と同じ三角数）、
+    /// 持たなければ <see cref="TierStep"/> ごと（第205期）。
+    /// </summary>
+    public static int TierOf(int sum, bool triangular)
+    {
+        if (!triangular) return sum / TierStep;
+        int n = 0;
+        while (TierStep * (n + 1) * (n + 2) / 2 <= sum) n++;
+        return n;
+    }
+
     /// <summary>第206期・計数: 施した累計の格子（段の刻みを三角数にしたときの段1〜4 の閾値）。</summary>
     public static readonly int[] HealCrossProbes = { 40, 120, 240, 400 };
     /// <summary>第205期: 今の段（<see cref="HealSumKey"/> ÷ <see cref="TierStep"/>。下がらない）。</summary>
@@ -12500,7 +12517,9 @@ public sealed class KissTrait : Trait
             if (rite)
             {
                 if (byPain) { t.KissAmountSum += painAmount; EmitPain(ctx, self, pain, painAmount, foes.Count); }
-                Rite(ctx, self, foes, NominalOf);
+                // 第206期: 5倍の等分（痛みの版の吸う量が決まっているときだけ）。
+                int? pool = byPain && self.HasTrait(TraitId.KissRite5) ? painAmount * RiteMultiplier : null;
+                Rite(ctx, self, foes, NominalOf, pool);
                 return;
             }
             // 吸うだけの版（対照）: 儀式を持たないので、聖痕を消して一巡目に戻る。
@@ -12658,7 +12677,7 @@ public sealed class KissTrait : Trait
             for (int k = 0; k < HealCrossProbes.Length; k++)
                 if (cross[k] == 0 && prevSum < HealCrossProbes[k] && sum >= HealCrossProbes[k]) cross[k] = Math.Max(1, ctx.Turn);
         }
-        int tier = sum / TierStep, old = self.RawCounter(TierKey);
+        int tier = TierOf(sum, self.HasTrait(TraitId.KissTri)), old = self.RawCounter(TierKey);
         if (tier <= old) return;
         self.SetCounter(TierKey, tier);
         UnitTally t = ctx.TallyOf(self);
@@ -12697,23 +12716,34 @@ public sealed class KissTrait : Trait
     }
 
     /// <summary>祝福の儀。</summary>
-    static void Rite(BattleContext ctx, UnitState self, IReadOnlyList<UnitState> foes, Func<UnitState, int> nominalOf)
+    /// <param name="pool">
+    /// 第206期（<see cref="TraitId.KissRite5"/>）: 儀式の総量。null なら敵ごとに <paramref name="nominalOf"/>（第204〜205期）。
+    /// 値があれば生きている聖痕の敵の数で等分し、割り切れない余りは最初に吸う敵に足す（順は <paramref name="foes"/> の並び＝席番号順）。
+    /// 1体から吸えるのは残り HP まで（`Drain` の実額）で、吸いきれなかった分はほかの敵へ回さない。
+    /// </param>
+    static void Rite(BattleContext ctx, UnitState self, IReadOnlyList<UnitState> foes, Func<UnitState, int> nominalOf, int? pool = null)
     {
         UnitTally t = ctx.TallyOf(self);
         t.RiteFires++;
         t.RiteTurnSum += ctx.Turn;
         if (t.RiteFirstTurn == 0) t.RiteFirstTurn = Math.Max(1, ctx.Turn);
-        ctx.EmitKiss(self, KissLabels.Rite, null, 0, slot: foes.Count);
-        ctx.Log($"    ★ {self.Name} の祝福の儀——聖痕が一斉に灯る（{foes.Count}体）", LogKind.Highlight, self);
+        int alive = foes.Count(f => f.IsAlive);
+        int each = pool is int p0 && alive > 0 ? p0 / alive : 0, extra = pool is int p1 && alive > 0 ? p1 - each * alive : 0;
+        // 見出しの Amount ＝ 総量（名目）・StatusRemaining ＝ 1体あたり（余りを足す前）。第206期に載せた（表示専用）。
+        int headTotal = pool ?? foes.Where(f => f.IsAlive).Sum(nominalOf);
+        int headEach = pool is not null ? each : (alive > 0 ? nominalOf(foes.First(f => f.IsAlive)) : 0);
+        ctx.EmitKiss(self, KissLabels.Rite, null, headTotal, slot: foes.Count, remaining: headEach);
+        ctx.Log($"    ★ {self.Name} の祝福の儀——聖痕が一斉に灯る（{foes.Count}体・総量 {headTotal}）", LogKind.Highlight, self);
 
         // 第206期・計数: 儀式の頭に生きていた聖痕の敵の数。
-        int alive = foes.Count(f => f.IsAlive);
         if (alive > 0) (t.RiteFoeHist ??= new long[3])[Math.Min(alive, 3) - 1]++;
         int total = 0;
+        bool first = true;
         foreach (UnitState foe in foes)
         {
             if (!foe.IsAlive) continue;
-            int nominal = nominalOf(foe);
+            int nominal = pool is not null ? each + (first ? extra : 0) : nominalOf(foe);
+            first = false;
             ctx.EmitKiss(self, KissLabels.RiteDrain, foe, nominal);
             int got = Drain(ctx, self, foe, nominal);
             total += got;
@@ -12794,6 +12824,18 @@ public sealed class KissTierTrait : Trait
 public sealed class KissStealTrait : Trait
 {
     public override TraitId Id => TraitId.KissSteal;
+}
+
+/// <summary>口づけ・段の刻みを三角数に（第206期）。札そのものは挙動を持たず、<see cref="KissTrait.TierOf"/> の中から読まれる。</summary>
+public sealed class KissTriTrait : Trait
+{
+    public override TraitId Id => TraitId.KissTri;
+}
+
+/// <summary>口づけ・祝福の儀を「5倍の等分」に（第206期）。札そのものは挙動を持たず、<see cref="KissTrait"/> の儀式の中から読まれる。</summary>
+public sealed class KissRite5Trait : Trait
+{
+    public override TraitId Id => TraitId.KissRite5;
 }
 
 /// <summary>口づけ・吸うだけの版（第204期・対照・保持者 0 枚）。儀式と祝福が還るを外す（全員に聖痕が付いたら消して一巡目に戻る）。</summary>
@@ -12964,7 +13006,9 @@ public static class TraitCatalog
         new KissPainTrait(),
         new KissVoidTrait(),
         new KissTierTrait(),
-        new KissStealTrait(),        // 第204期（リリの代金の札）
+        new KissStealTrait(),
+        new KissTriTrait(),
+        new KissRite5Trait(),        // 第204期（リリの代金の札）
         new KissBareTrait(),         // 第204期（対照・保持者 0 枚）
         new Kiss30Trait(),           // 第204期（対照・保持者 0 枚）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）
