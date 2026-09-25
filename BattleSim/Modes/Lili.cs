@@ -48,6 +48,7 @@ static partial class LiliDiag
         {
             case "phase0": Phase0(); return;
             case "phase205": Phase205(); return;
+            case "phase206": Phase206(); return;
             default:
                 if (RunMore(mode, arg)) return;
                 Console.WriteLine("lili: モードは phase0 / run / ledger / check。");

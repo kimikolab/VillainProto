@@ -12408,6 +12408,8 @@ public sealed class KissTrait : Trait
     public const int TierStep = 40;
     /// <summary>第205期: その戦で実際に癒した量の累計（<see cref="TraitId.KissTier"/> を持つときだけ積む）。</summary>
     public const string HealSumKey = "kissHealSum";
+    /// <summary>第206期・計数: 施した累計の格子（段の刻みを三角数にしたときの段1〜4 の閾値）。</summary>
+    public static readonly int[] HealCrossProbes = { 40, 120, 240, 400 };
     /// <summary>第205期: 今の段（<see cref="HealSumKey"/> ÷ <see cref="TierStep"/>。下がらない）。</summary>
     public const string TierKey = "kissTier";
 
@@ -12646,8 +12648,16 @@ public sealed class KissTrait : Trait
     /// <summary>施した累計を積み、段を上げる（第205期・<see cref="TraitId.KissTier"/>）。段は下がらない。</summary>
     static void AddHealed(BattleContext ctx, UnitState self, int gained)
     {
-        int sum = self.RawCounter(HealSumKey) + gained;
+        int prevSum = self.RawCounter(HealSumKey);
+        int sum = prevSum + gained;
         self.SetCounter(HealSumKey, sum);
+        // 第206期・計数（段の刻みに依らず）: 施した累計が格子を越えたターン。
+        {
+            UnitTally ct = ctx.TallyOf(self);
+            var cross = ct.KissHealCross ??= new int[HealCrossProbes.Length];
+            for (int k = 0; k < HealCrossProbes.Length; k++)
+                if (cross[k] == 0 && prevSum < HealCrossProbes[k] && sum >= HealCrossProbes[k]) cross[k] = Math.Max(1, ctx.Turn);
+        }
         int tier = sum / TierStep, old = self.RawCounter(TierKey);
         if (tier <= old) return;
         self.SetCounter(TierKey, tier);
@@ -12696,13 +12706,18 @@ public sealed class KissTrait : Trait
         ctx.EmitKiss(self, KissLabels.Rite, null, 0, slot: foes.Count);
         ctx.Log($"    ★ {self.Name} の祝福の儀——聖痕が一斉に灯る（{foes.Count}体）", LogKind.Highlight, self);
 
+        // 第206期・計数: 儀式の頭に生きていた聖痕の敵の数。
+        int alive = foes.Count(f => f.IsAlive);
+        if (alive > 0) (t.RiteFoeHist ??= new long[3])[Math.Min(alive, 3) - 1]++;
         int total = 0;
         foreach (UnitState foe in foes)
         {
             if (!foe.IsAlive) continue;
             int nominal = nominalOf(foe);
             ctx.EmitKiss(self, KissLabels.RiteDrain, foe, nominal);
-            total += Drain(ctx, self, foe, nominal);
+            int got = Drain(ctx, self, foe, nominal);
+            total += got;
+            if (got > t.RiteMaxPerFoe) t.RiteMaxPerFoe = got;
         }
         t.RiteDrained += total;
         // 第205期・計数: 儀式の吸い取りで敵が全員倒れた（＝儀式が決着を付けた）。

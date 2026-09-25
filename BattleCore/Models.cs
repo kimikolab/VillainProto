@@ -1913,6 +1913,15 @@ public sealed class UnitTally
     public int[]? KissTierTurn;
     public Dictionary<string, (long N, long Sum)>? KissStolenBy;
 
+    /// <summary>
+    /// 第206期（<b>計数専用</b>）: <c>RiteFoeHist</c> 儀式の頭に生きていた聖痕の敵の数（添字 0 ＝ 1体・1 ＝ 2体・2 ＝ 3体以上）／
+    /// <c>RiteMaxPerFoe</c> その戦の儀式で1体から吸えた量の最大 ／ <c>KissHealCross</c> 施した累計が
+    /// <see cref="KissTrait.HealCrossProbes"/>（40・120・240・400）に初めて届いたターン（0 ＝ 未到達・<b>段の刻みに依らず</b>・段の札を持つときだけ積む）。
+    /// </summary>
+    public long[]? RiteFoeHist;
+    public int RiteMaxPerFoe;
+    public int[]? KissHealCross;
+
     /// <summary>第204期（<b>計数専用</b>）: この駒に載っていた破片の最大値（リリの手番の頭の走査と、リリが破片を足した直後に更新）。</summary>
     public int ArmorPeakSeen;
 
@@ -2317,6 +2326,8 @@ public sealed class UnitTally
         KissFoeBonusPos += o.KissFoeBonusPos; KissFoeBonusNeg += o.KissFoeBonusNeg; KissFoeBonusPosSum += o.KissFoeBonusPosSum; KissFoeBonusNegSum += o.KissFoeBonusNegSum;
         KissStealN += o.KissStealN; RiteFinish += o.RiteFinish; KissStealPos += o.KissStealPos; KissStealNeg += o.KissStealNeg;
         KissTierMax = Math.Max(KissTierMax, o.KissTierMax);
+        if (o.RiteFoeHist is not null) { RiteFoeHist ??= new long[3]; for (int i = 0; i < 3; i++) RiteFoeHist[i] += o.RiteFoeHist[i]; }
+        RiteMaxPerFoe = Math.Max(RiteMaxPerFoe, o.RiteMaxPerFoe);
         if (o.KissStolenBy is not null)
         {
             KissStolenBy ??= new();
