@@ -530,6 +530,8 @@ if (focusId == "galdlast") { GaldLastDiag.Run(args.Length > 2 ? args[2] : "phase
 if (focusId == "form2") { Formation2Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 // lili モード（第204期） —— 継ぎ当てのノノを「施しのリリ」に転生させる。本体は `Modes/Lili*.cs`。
 if (focusId == "lili") { LiliDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
+// tsugi モード（第207期） —— 置き去りのナラを「継ぎ当てのツギ」に転生させる。本体は `Modes/Tsugi*.cs`。
+if (focusId == "tsugi") { TsugiDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 // ep3 モード（第203期） —— 敵にパターン3（前衛1枚）を持たせる。本体は `Modes/EnemyP3*.cs`。
 if (focusId == "ep3") { EnemyP3Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 
