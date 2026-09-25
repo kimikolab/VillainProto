@@ -221,6 +221,8 @@ public static class UnitCatalog
     /// <summary>
     /// 施しのリリ（第204期・継ぎ当てのノノの転生）。<b>数値（HP78／攻3／速6）と <c>[Skill]</c> の周期はノノのまま</b>で、
     /// 手番の繕いを口づけ（<see cref="TraitId.Kiss"/>）に差し替えた。代金は状態を移すこと（<see cref="TraitId.KissSpill"/>・外せば「移さない」）。
+    /// <b>第205期</b>に吸う量を「味方が受けた痛み」から取り（<see cref="TraitId.KissPain"/>）、溢れを捨て（<see cref="TraitId.KissVoid"/>）、
+    /// 施した累計で段を上げ（<see cref="TraitId.KissTier"/>）、攻撃力の上げ下げも移す（<see cref="TraitId.KissSteal"/>）形にした。
     /// 旧ノノは下の <see cref="Nono"/> に対照として残す（<see cref="All"/> には入れない）。
     /// </summary>
     public static readonly UnitDef Lili = new()
@@ -231,14 +233,16 @@ public static class UnitCatalog
         Attack = 3,
         Speed = 6,
         Advances = false,
-        // 札の並び: 口づけの本体が代金の札（`KissSpill`）を中から読む。
-        Traits = new[] { TraitId.Kiss, TraitId.KissSpill },
+        // 札の並び: 口づけの本体が代金の札（`KissSpill`）と第205期の4枚（痛み・溢れを捨てる・段・強弱を移す）を中から読む。
+        // 第204期の姿は `Kiss` ＋ `KissSpill` の2枚（診断 `lili` の V0）。
+        Traits = new[] { TraitId.Kiss, TraitId.KissSpill, TraitId.KissPain, TraitId.KissVoid, TraitId.KissTier, TraitId.KissSteal },
         // 吸い取りが手番そのもの（攻撃3 は出ない）。`[Skill]` の1要素（ノノと同じ）。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "精気を吸っている") },
-        PlusText = "手番で、まだ聖痕の無い敵のうち最も大きい1体から精気を吸い（最大HPの2割）、最も傷ついた味方に与える。吸った敵には聖痕が付く / "
+        PlusText = "手番で、まだ聖痕の無い敵のうち最も大きい1体から精気を吸い、最も傷ついた味方に与える。吸う量は、前の手番から味方が受けた傷の半分（最低8）。吸った敵には聖痕が付く / "
+                   + "施した量が積もるほど、1手番に口づけする敵が増える / "
                    + "生きている敵全員に聖痕が付くと、次の手番で全員から一斉に吸い、味方全員に施す（聖痕は消える） / "
-                   + "聖痕を持つ敵が倒れると、最も傷ついた味方が癒える / 与えきれずに溢れた分は、受け取った味方の破片になる",
-        MinusText = "1体ずつ吸うとき、その敵の状態（毒・火・呪い・痺れなど）も吸い取り、与えた味方に移してしまう。傷ついた味方がいなければ自分が受け取る",
+                   + "聖痕を持つ敵が倒れると、最も傷ついた味方が癒える",
+        MinusText = "1体ずつ吸うとき、その敵の状態（毒・火・呪い・痺れなど）と攻撃力の上げ下げも吸い取り、与えた味方に移してしまう。傷ついた味方がいなければ自分が受け取る",
         Flavor = "彼女は惜しみなく与える。誰から奪ったものかは気にしない。"
     };
 

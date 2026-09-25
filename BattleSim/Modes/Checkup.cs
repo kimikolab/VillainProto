@@ -228,6 +228,11 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.KissSpill]       = (HcMinusL, "吸った敵の状態を受け取った味方へ移す代金の札（第204期）"),
         [TraitId.KissBare]        = (HcPlusL,  "口づけ・吸うだけの版（儀式・還るなし）。対照で保持者 0 枚"),
         [TraitId.Kiss30]          = (HcPlusL,  "口づけ・30% の版。対照で保持者 0 枚"),
+        // 第205期: 分類を同じコミットで足す（第132期 段0-a）。
+        [TraitId.KissPain]        = (HcPlusL,  "口づけの吸う量を、前の手番から味方が受けた傷の半分（最低8）にする札"),
+        [TraitId.KissVoid]        = (HcMinusL, "口づけの溢れを破片にせず捨てる札（第205期）"),
+        [TraitId.KissTier]        = (HcPlusL,  "施した累計 40 ごとに段が上がり、1手番に吸う敵が増える札"),
+        [TraitId.KissSteal]       = (HcBothL,  "吸った敵の攻撃力の上げ下げも受け取った味方へ移す札（弱体も強化も）"),
         [TraitId.LastStandHold]   = (HcBothL,  "味方が 0 体になると盾を捨てて剣を抜く（受け止めた刃の1割を力に変え ×2・薙ぎ、斬り返し、相打ちで勝つ）のと、構え直せなくなるのが1つの札"),
         [TraitId.LastStandHoldOldScar]    = (HcBothL, "第199期の剣の段で、傷を身に受けた分だけ数える版。対照で保持者 0 枚"),
         [TraitId.LastStandHoldNoStock]    = (HcBothL, "第199期の剣の段で、抜いた瞬間に在庫を捨てる版。対照で保持者 0 枚"),

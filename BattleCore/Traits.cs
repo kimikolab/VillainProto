@@ -378,6 +378,10 @@ public enum TraitId
     KissSpill,  // 口移しの代金（リリ・第204期）: 1体ずつ吸うとき、その敵の状態を与えた相手へ移す。札は `KissTrait` の中で読まれる（外せば「移さない」）
     KissBare,   // 口づけ・吸うだけの版（第204期・対照・保持者 0 枚）: 儀式と「祝福が還る」を外す（全員に聖痕が付いたら消して一巡目に戻る）
     Kiss30,     // 口づけ・30% の版（第204期・対照・保持者 0 枚）: 吸う量を最大HPの 30% に
+    KissPain,   // 口づけ・痛みの版（第205期）: 吸う量を「前の手番から味方が失った HP の半分（最低 8）」にする。札は `KissTrait` の中で読まれる
+    KissVoid,   // 口づけ・溢れを捨てる版（第205期）: 与えきれずに溢れた分を破片にせず捨てる。札は `KissTrait` の中で読まれる
+    KissTier,   // 口づけ・段（第205期）: 施した累計が 40 に届くごとに段が上がり、1手番に吸う敵が 1 ＋ 段 体になる。札は `KissTrait` の中で読まれる
+    KissSteal,  // 口づけ・強弱を移す（第205期）: 1体ずつ吸うとき、その敵の攻撃力の上げ下げ（`AtkBonus`）も受け取った味方へ移す。札は `KissTrait` の中で読まれる
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -12396,6 +12400,17 @@ public sealed class KissTrait : Trait
     /// <summary>祝福が還るときに与える量（倒れた敵の最大HPに対する %）。</summary>
     public const int ReturnPercent = 10;
 
+    /// <summary>第205期（<see cref="TraitId.KissPain"/>）: 痛みのうち吸う割合（%）。</summary>
+    public const int PainPercent = 50;
+    /// <summary>第205期（<see cref="TraitId.KissPain"/>）: 吸う量の床。</summary>
+    public const int PainFloor = 8;
+    /// <summary>第205期（<see cref="TraitId.KissTier"/>）: 施した累計がこの量に届くごとに段が1つ上がる。</summary>
+    public const int TierStep = 40;
+    /// <summary>第205期: その戦で実際に癒した量の累計（<see cref="TraitId.KissTier"/> を持つときだけ積む）。</summary>
+    public const string HealSumKey = "kissHealSum";
+    /// <summary>第205期: 今の段（<see cref="HealSumKey"/> ÷ <see cref="TierStep"/>。下がらない）。</summary>
+    public const string TierKey = "kissTier";
+
     /// <summary>
     /// 移さない状態キー（Phase 0 Q0-3）。engine の記録（<c>idleTurn</c>）・保持者の内部の残高と燃料（預かり・負債・灰・据えの層・紅蓮）・
     /// 相手と対の記録（組み付き——味方に移すとほどく口が無い）・聖痕。
@@ -12439,7 +12454,15 @@ public sealed class KissTrait : Trait
     public const string PainMarkKey = "kissPainMark";
 
     /// <summary>会戦の境界で痛みの印を 0 に戻す（戦ごとに <see cref="BattleContext.PainLostOf"/> が 0 から数え直すため）。</summary>
-    public override void OnCarryOver(UnitState self) => self.SetCounter(PainMarkKey, 0);
+    public override void OnCarryOver(UnitState self) => CarryOver(self);
+
+    /// <summary>会戦の境界（第205期・Q0-6）: 痛みの印・施した累計・段を 0 に戻す（紅蓮・剣の段と同じ「その戦のあいだ溜まる」作法）。</summary>
+    internal static void CarryOver(UnitState self)
+    {
+        self.SetCounter(PainMarkKey, 0);
+        self.SetCounter(HealSumKey, 0);
+        self.SetCounter(TierKey, 0);
+    }
 
     /// <summary>手番の頭の痛み（第205期）。前の手番の終わり（1手番目は戦の開始）から、味方の陣営が失った HP。</summary>
     internal static int PainNow(BattleContext ctx, UnitState self)
@@ -12453,24 +12476,56 @@ public sealed class KissTrait : Trait
         if (foes.Count == 0) return;
         UnitTally t = ctx.TallyOf(self);
         // 第205期・計数（版に依らず測る）。
+        int pain = PainNow(ctx, self);
         t.KissActs++;
-        t.KissPainSum += PainNow(ctx, self);
-        ActBody(ctx, self, foes, percent, rite, t);
+        t.KissPainSum += pain;
+        ActBody(ctx, self, foes, percent, rite, t, pain);
         self.SetCounter(PainMarkKey, (int)ctx.PainLostOf(self.TeamId));
     }
 
-    static void ActBody(BattleContext ctx, UnitState self, IReadOnlyList<UnitState> foes, int percent, bool rite, UnitTally t)
+    /// <summary>痛みから決まる1体あたりの吸う量（第205期）。</summary>
+    public static int PainAmount(int pain) => Math.Max(PainFloor, pain * PainPercent / 100);
+
+    static void ActBody(BattleContext ctx, UnitState self, IReadOnlyList<UnitState> foes, int percent, bool rite, UnitTally t, int pain)
     {
+        // 第205期: 痛みの版は1体あたりの吸う量が手番の頭で1つに決まる（同じ量を各体から吸う）。
+        bool byPain = self.HasTrait(TraitId.KissPain);
+        int painAmount = byPain ? PainAmount(pain) : 0;
+        int NominalOf(UnitState foe) => byPain ? painAmount : foe.MaxHp * percent / 100;
 
         if (foes.All(f => f.RawCounter(StatusKeys.Stigma) > 0))
         {
-            if (rite) { Rite(ctx, self, foes, percent); return; }
+            if (rite)
+            {
+                if (byPain) { t.KissAmountSum += painAmount; EmitPain(ctx, self, pain, painAmount, foes.Count); }
+                Rite(ctx, self, foes, NominalOf);
+                return;
+            }
             // 吸うだけの版（対照）: 儀式を持たないので、聖痕を消して一巡目に戻る。
             ClearStigma(ctx, self);
             t.KissReset++;
         }
 
-        var fresh = foes.Where(f => f.RawCounter(StatusKeys.Stigma) <= 0).ToList();
+        // 第205期（段）: 吸う体数は手番の頭の段で決める（途中で段が上がっても増えるのは次の手番から）。
+        int count = self.HasTrait(TraitId.KissTier) ? 1 + self.RawCounter(TierKey) : 1;
+        if (byPain) { t.KissAmountSum += painAmount; EmitPain(ctx, self, pain, painAmount, count); }
+        for (int i = 0; i < count; i++)
+        {
+            var fresh = ctx.LivingMembers(ctx.Opponent(self.TeamId)).Where(f => f.RawCounter(StatusKeys.Stigma) <= 0).ToList();
+            if (fresh.Count == 0 || !self.IsAlive) break;
+            DrainOne(ctx, self, fresh, NominalOf, t);
+        }
+    }
+
+    static void EmitPain(BattleContext ctx, UnitState self, int pain, int amount, int count)
+    {
+        ctx.EmitKiss(self, KissLabels.Pain, null, pain, slot: count, remaining: amount);
+        ctx.Log($"    {self.Name} は傷の匂いを嗅いだ（痛み {pain} → 1体から {amount}・{count}体）", LogKind.Trigger);
+    }
+
+    /// <summary>1体ずつ吸う（第204期の手番の本体。第205期に1手番で複数回呼べるよう切り出した）。</summary>
+    static void DrainOne(BattleContext ctx, UnitState self, List<UnitState> fresh, Func<UnitState, int> nominalOf, UnitTally t)
+    {
         int top = fresh.Max(f => f.MaxHp);
         UnitState foe = ctx.PickOne(fresh.Where(f => f.MaxHp == top).ToList())!;
 
@@ -12479,7 +12534,7 @@ public sealed class KissTrait : Trait
         // 第205期・計数（Q0-5）: 吸った敵の攻撃力の上げ下げ。
         if (foe.AtkBonus > 0) { t.KissFoeBonusPos++; t.KissFoeBonusPosSum += foe.AtkBonus; }
         else if (foe.AtkBonus < 0) { t.KissFoeBonusNeg++; t.KissFoeBonusNegSum -= foe.AtkBonus; }
-        int nominal = foe.MaxHp * percent / 100;
+        int nominal = nominalOf(foe);
         t.KissFires++;
         t.KissNominal += nominal;
         ctx.EmitKiss(self, KissLabels.Drain, foe, nominal);
@@ -12493,12 +12548,33 @@ public sealed class KissTrait : Trait
         ctx.Log($"    {self.Name} が {foe.Name} に口づけし、精気を吸った（{drained}）→ {recv.Name}", LogKind.Trigger);
 
         if (self.HasTrait(TraitId.KissSpill)) Transfer(ctx, self, foe, recv, t);
+        if (self.HasTrait(TraitId.KissSteal)) Steal(ctx, self, foe, recv, t);
 
         ctx.EmitKiss(self, KissLabels.Give, recv, drained, from: foe);
         var (healed, armor, blocked) = Give(ctx, self, recv, drained);
         t.KissHealed += healed;
         t.KissArmor += armor;
         t.KissBlocked += blocked;
+    }
+
+    /// <summary>
+    /// 攻撃力の上げ下げを移す（第205期・<see cref="TraitId.KissSteal"/>）。<c>AtkBonus</c> は強化と弱体の差し引きの<b>1つの値</b>（Q0-4）なので丸ごと移す。
+    /// <b><see cref="BattleContext.Whet"/> / <see cref="BattleContext.Dull"/> は通さない</b>——持ち替えであって強化でも弱体でもない
+    /// （通すと引き受け・渡しが移した弱体を横取りし、<c>WhetReceived</c> に「外から押された」が載る）。尾灯の消灯と同じく直に足し引きする。
+    /// 儀式では移さない（第204期の状態と同じ）。
+    /// </summary>
+    static void Steal(BattleContext ctx, UnitState self, UnitState foe, UnitState to, UnitTally t)
+    {
+        int v = foe.AtkBonus;
+        if (v == 0) return;
+        foe.AtkBonus = 0;
+        to.AtkBonus += v;
+        t.KissStealN++;
+        if (v > 0) t.KissStealPos += v; else t.KissStealNeg -= v;
+        var by = t.KissStolenBy ??= new();
+        by[to.Def.Id] = by.TryGetValue(to.Def.Id, out var a) ? (a.N + 1, a.Sum + v) : (1, v);
+        ctx.EmitKiss(self, KissLabels.Steal, to, v, from: foe, remaining: to.AtkBonus);
+        ctx.Log($"    {foe.Name} の攻撃力の{(v > 0 ? "上げ" : "下げ")}（{v:+0;-0}）が {to.Name} へ移った", LogKind.Status);
     }
 
     /// <summary>場面の添字（<see cref="UnitTally.KissSelfWhy"/> の行）。</summary>
@@ -12540,6 +12616,8 @@ public sealed class KissTrait : Trait
     /// <summary>
     /// 与える。溢れ（<see cref="HealOutcome.Healed"/> / <see cref="HealOutcome.Full"/> のときの、HP が増えなかった分）を破片へ。
     /// 戻り値 ＝ (癒えた量, 破片にした量, 止められた量)。
+    /// <para>第205期: <see cref="TraitId.KissVoid"/> を持てば溢れは<b>捨てる</b>（破片にしない・帳簿の <c>KissVoided</c> にだけ数える）。
+    /// <see cref="TraitId.KissTier"/> を持てば癒えた量（HP が実際に増えた分）を累計して段を上げる。</para>
     /// </summary>
     internal static (int Healed, int Armor, int Blocked) Give(BattleContext ctx, UnitState self, UnitState to, int amount)
     {
@@ -12547,15 +12625,38 @@ public sealed class KissTrait : Trait
         int before = to.Hp;
         HealOutcome r = ctx.Heal(to, amount, self);
         int gained = Math.Max(0, to.Hp - before);
+        if (gained > 0 && self.HasTrait(TraitId.KissTier)) AddHealed(ctx, self, gained);
         if (r != HealOutcome.Healed && r != HealOutcome.Full) return (gained, 0, amount - gained);
         int over = amount - gained;
         if (over <= 0) return (gained, 0, 0);
+        if (self.HasTrait(TraitId.KissVoid))
+        {
+            ctx.TallyOf(self).KissVoided += over;
+            ctx.EmitKiss(self, KissLabels.Waste, to, over);
+            return (gained, 0, 0);
+        }
         int after = to.RawCounter(StatusKeys.Armor) + over;
         to.SetCounter(StatusKeys.Armor, after);
         Peak(ctx, to);
         ctx.EmitKiss(self, KissLabels.Armor, to, over, remaining: after);
         ctx.Log($"    溢れた精気が {to.Name} の破片になった（+{over}）", LogKind.Status);
         return (gained, over, 0);
+    }
+
+    /// <summary>施した累計を積み、段を上げる（第205期・<see cref="TraitId.KissTier"/>）。段は下がらない。</summary>
+    static void AddHealed(BattleContext ctx, UnitState self, int gained)
+    {
+        int sum = self.RawCounter(HealSumKey) + gained;
+        self.SetCounter(HealSumKey, sum);
+        int tier = sum / TierStep, old = self.RawCounter(TierKey);
+        if (tier <= old) return;
+        self.SetCounter(TierKey, tier);
+        UnitTally t = ctx.TallyOf(self);
+        if (tier > t.KissTierMax) t.KissTierMax = tier;
+        var turns = t.KissTierTurn ??= new int[3];
+        for (int k = old + 1; k <= Math.Min(tier, 3); k++) if (turns[k - 1] == 0) turns[k - 1] = Math.Max(1, ctx.Turn);
+        ctx.EmitKiss(self, KissLabels.Tier, null, 1 + tier, slot: tier, remaining: sum);
+        ctx.Log($"    ★ {self.Name} の渇きが深まった（段 {tier}・1手番に {1 + tier} 体へ口づけ）", LogKind.Trigger);
     }
 
     /// <summary>状態を移す（代金）。書き手の記録（傷の刻み手）も一緒に移す。</summary>
@@ -12586,7 +12687,7 @@ public sealed class KissTrait : Trait
     }
 
     /// <summary>祝福の儀。</summary>
-    static void Rite(BattleContext ctx, UnitState self, IReadOnlyList<UnitState> foes, int percent)
+    static void Rite(BattleContext ctx, UnitState self, IReadOnlyList<UnitState> foes, Func<UnitState, int> nominalOf)
     {
         UnitTally t = ctx.TallyOf(self);
         t.RiteFires++;
@@ -12599,11 +12700,13 @@ public sealed class KissTrait : Trait
         foreach (UnitState foe in foes)
         {
             if (!foe.IsAlive) continue;
-            int nominal = foe.MaxHp * percent / 100;
+            int nominal = nominalOf(foe);
             ctx.EmitKiss(self, KissLabels.RiteDrain, foe, nominal);
             total += Drain(ctx, self, foe, nominal);
         }
         t.RiteDrained += total;
+        // 第205期・計数: 儀式の吸い取りで敵が全員倒れた（＝儀式が決着を付けた）。
+        if (ctx.LivingMembers(ctx.Opponent(self.TeamId)).Count == 0) t.RiteFinish++;
 
         // 聖痕を消す。**施す前に消す**——儀式の後に倒れた敵で「祝福が還る」が走らないように。
         // （儀式の吸い取りで倒れた敵は、倒れた時点ではまだ聖痕を持っているので還る。）
@@ -12654,10 +12757,35 @@ public sealed class KissSpillTrait : Trait
     public override TraitId Id => TraitId.KissSpill;
 }
 
+/// <summary>口づけ・痛みの版（第205期）。札そのものは挙動を持たず、<see cref="KissTrait"/> の中から読まれる。</summary>
+public sealed class KissPainTrait : Trait
+{
+    public override TraitId Id => TraitId.KissPain;
+}
+
+/// <summary>口づけ・溢れを捨てる版（第205期）。札そのものは挙動を持たず、<see cref="KissTrait.Give"/> の中から読まれる。</summary>
+public sealed class KissVoidTrait : Trait
+{
+    public override TraitId Id => TraitId.KissVoid;
+}
+
+/// <summary>口づけ・段（第205期）。札そのものは挙動を持たず、<see cref="KissTrait"/> の中から読まれる。</summary>
+public sealed class KissTierTrait : Trait
+{
+    public override TraitId Id => TraitId.KissTier;
+}
+
+/// <summary>口づけ・強弱を移す（第205期）。札そのものは挙動を持たず、<see cref="KissTrait"/> の中から読まれる。</summary>
+public sealed class KissStealTrait : Trait
+{
+    public override TraitId Id => TraitId.KissSteal;
+}
+
 /// <summary>口づけ・吸うだけの版（第204期・対照・保持者 0 枚）。儀式と祝福が還るを外す（全員に聖痕が付いたら消して一巡目に戻る）。</summary>
 public sealed class KissBareTrait : Trait
 {
     public override TraitId Id => TraitId.KissBare;
+    public override void OnCarryOver(UnitState self) => KissTrait.CarryOver(self);
     public override void OnTurnStart(BattleContext ctx, UnitState self) => KissTrait.Census(ctx, self);
     public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
         => KissTrait.Act(ctx, self, KissTrait.DrainPercent, rite: false);
@@ -12667,6 +12795,7 @@ public sealed class KissBareTrait : Trait
 public sealed class Kiss30Trait : Trait
 {
     public override TraitId Id => TraitId.Kiss30;
+    public override void OnCarryOver(UnitState self) => KissTrait.CarryOver(self);
     public override void OnTurnStart(BattleContext ctx, UnitState self) => KissTrait.Census(ctx, self);
     public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
         => KissTrait.Act(ctx, self, KissTrait.HighDrainPercent, rite: true);
@@ -12816,7 +12945,11 @@ public static class TraitCatalog
         new GurenFullTrait(),   // 第197期（参考・保持者 0 枚）
         new LastStandHoldTrait(),    // 第199期（規定）
         new KissTrait(),             // 第204期（リリ・規定）
-        new KissSpillTrait(),        // 第204期（リリの代金の札）
+        new KissSpillTrait(),
+        new KissPainTrait(),
+        new KissVoidTrait(),
+        new KissTierTrait(),
+        new KissStealTrait(),        // 第204期（リリの代金の札）
         new KissBareTrait(),         // 第204期（対照・保持者 0 枚）
         new Kiss30Trait(),           // 第204期（対照・保持者 0 枚）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）

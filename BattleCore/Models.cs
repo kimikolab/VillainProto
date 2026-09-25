@@ -1905,10 +1905,10 @@ public sealed class UnitTally
     /// <c>KissTierTurn</c> 段 1・2・3 に初めて届いたターン（0 ＝ 未到達）／
     /// <c>KissFoeBonusPos</c>・<c>KissFoeBonusNeg</c> 1体ずつ吸った敵の <c>AtkBonus</c> が正・負だった回数（Q0-5・版に依らず）と
     /// <c>…Sum</c> その絶対値の合計 ／ <c>KissStealN</c>・<c>KissStealPos</c>・<c>KissStealNeg</c> 移した攻撃力の上げ下げの件数と正・負の量（強弱を移す版だけ）／
-    /// <c>KissStolenBy</c> 受け取った駒の <c>Def.Id</c> → (件数, 符号つきの合計)。
+    /// <c>KissStolenBy</c> 受け取った駒の <c>Def.Id</c> → (件数, 符号つきの合計) ／ <c>RiteFinish</c> 儀式の吸い取りで敵が全員倒れた回数（版に依らず）。
     /// </summary>
     public long KissActs, KissPainSum, KissAmountSum, KissVoided, KissFoeBonusPos, KissFoeBonusNeg, KissFoeBonusPosSum, KissFoeBonusNegSum,
-                KissStealN, KissStealPos, KissStealNeg;
+                KissStealN, KissStealPos, KissStealNeg, RiteFinish;
     public int KissTierMax;
     public int[]? KissTierTurn;
     public Dictionary<string, (long N, long Sum)>? KissStolenBy;
@@ -2315,7 +2315,7 @@ public sealed class UnitTally
         if (o.KissSelfFull is not null) { KissSelfFull ??= new long[3]; for (int i = 0; i < 3; i++) KissSelfFull[i] += o.KissSelfFull[i]; }
         KissActs += o.KissActs; KissPainSum += o.KissPainSum; KissAmountSum += o.KissAmountSum; KissVoided += o.KissVoided;
         KissFoeBonusPos += o.KissFoeBonusPos; KissFoeBonusNeg += o.KissFoeBonusNeg; KissFoeBonusPosSum += o.KissFoeBonusPosSum; KissFoeBonusNegSum += o.KissFoeBonusNegSum;
-        KissStealN += o.KissStealN; KissStealPos += o.KissStealPos; KissStealNeg += o.KissStealNeg;
+        KissStealN += o.KissStealN; RiteFinish += o.RiteFinish; KissStealPos += o.KissStealPos; KissStealNeg += o.KissStealNeg;
         KissTierMax = Math.Max(KissTierMax, o.KissTierMax);
         if (o.KissStolenBy is not null)
         {
@@ -2836,6 +2836,15 @@ public static class KissLabels
     public const string RiteGive = "儀式・施す";
     public const string RiteEnd = "儀式・終わり";
     public const string Return = "祝福が還る";
+    /// <summary>第205期（痛みの版）: 手番の頭の痛み。<c>Amount</c> = 測った痛み、<c>StatusRemaining</c> = そこから決まった1体あたりの吸う量、<c>Slot</c> = この手番に吸う体数（段 ＋ 1。儀式の手番は聖痕の敵の数）。</summary>
+    public const string Pain = "痛み";
+    /// <summary>第205期（段の版）: 段が上がった瞬間。<c>Slot</c> = 新しい段、<c>Amount</c> = 1手番に吸う体数、<c>StatusRemaining</c> = 施した累計。</summary>
+    public const string Tier = "段";
+    /// <summary>第205期（捨てる版）: 溢れて捨てた量。<c>TargetId</c> = 受け取った味方、<c>Amount</c> = 捨てた量（<see cref="Armor"/> の代わりに並ぶ）。</summary>
+    public const string Waste = "溢れ";
+    /// <summary>第205期（強弱を移す版）: 攻撃力の上げ下げが移った瞬間。<c>SpreadFromId</c> = 元の敵、<c>TargetId</c> = 受け取った味方、
+    /// <c>Amount</c> = 移した値（<b>符号つき</b>・負が弱体）、<c>StatusRemaining</c> = 受け取った後の味方の値。<see cref="StatusTransfer"/> の後、口移しの前に並ぶ。</summary>
+    public const string Steal = "強弱";
 }
 
 /// <summary><see cref="BattleEventKind.PoisonThicken"/> の <c>Text</c>（<b>表示専用</b>）。</summary>

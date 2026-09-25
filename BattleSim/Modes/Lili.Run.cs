@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -17,6 +17,9 @@ static partial class LiliDiag
             case "run": RunVersions(); handled = true; return;
             case "ledger": RunLedger(); handled = true; return;
             case "check": Check(arg); handled = true; return;
+            case "run2": Run205(); handled = true; return;
+            case "ledger2": Ledger205(); handled = true; return;
+            case "check2": Check205(arg); handled = true; return;
         }
     }
 

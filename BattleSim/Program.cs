@@ -1348,6 +1348,10 @@ static class TraitKeyMap
                                        UnitTally.CarryMark, UnitTally.CarryWound },             // 第204期（敵の状態を味方へ移す代金）
         [TraitId.KissBare]   = new[] { UnitTally.CarryArmor },                                  // 第204期（対照・吸うだけ）
         [TraitId.Kiss30]     = new[] { UnitTally.CarryArmor },                                  // 第204期（対照・30%）
+        [TraitId.KissPain]   = Array.Empty<int>(),                                              // 第205期（口づけの中で読まれる札）
+        [TraitId.KissVoid]   = Array.Empty<int>(),                                              // 第205期（溢れを捨てる・何も書かない）
+        [TraitId.KissTier]   = Array.Empty<int>(),                                              // 第205期（口づけの中で読まれる札）
+        [TraitId.KissSteal]  = Array.Empty<int>(),                                              // 第205期（AtkBonus を移す・状態キーではない）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1503,10 +1507,14 @@ static class TraitHookMap
         [TraitId.LastStandScar] = new[] { "OnAllyDeath", "OnDamaged", "OnBattleStart", "OnCarryOver" }, // 第198期（剣＋傷・累計は Guardian が書く）
         [TraitId.LastStand]   = new[] { "OnAllyDeath", "OnDamaged", "OnBattleStart", "OnCarryOver" },   // 第198期（剣・対照）
         [TraitId.LastStandPlain] = new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（対照・保持者 0 枚）
-        [TraitId.Kiss]        = new[] { "OnTurnStart", "OnAction", "OnAnyDeath" },  // 第204期（リリ。OnTurnStart は破片の最大値の走査だけ）
+        [TraitId.Kiss]        = new[] { "OnTurnStart", "OnAction", "OnAnyDeath", "OnCarryOver" },  // 第204期（リリ。OnTurnStart は破片の最大値の走査だけ・第205期に OnCarryOver）
         [TraitId.KissSpill]   = Array.Empty<string>(),                             // 第204期（口づけの中で読まれる札）
-        [TraitId.KissBare]    = new[] { "OnTurnStart", "OnAction" },               // 第204期（対照・保持者 0 枚）
-        [TraitId.Kiss30]      = new[] { "OnTurnStart", "OnAction", "OnAnyDeath" }, // 第204期（対照・保持者 0 枚）
+        [TraitId.KissBare]    = new[] { "OnTurnStart", "OnAction", "OnCarryOver" },               // 第204期（対照・保持者 0 枚）
+        [TraitId.Kiss30]      = new[] { "OnTurnStart", "OnAction", "OnAnyDeath", "OnCarryOver" }, // 第204期（対照・保持者 0 枚）
+        [TraitId.KissPain]    = new[] { Engine },                                  // 第205期（痛みは ApplyDamage が陣営ごとに数える）
+        [TraitId.KissVoid]    = Array.Empty<string>(),                             // 第205期（口づけの中で読まれる札）
+        [TraitId.KissTier]    = Array.Empty<string>(),                             // 第205期（口づけの中で読まれる札）
+        [TraitId.KissSteal]   = Array.Empty<string>(),                             // 第205期（口づけの中で読まれる札）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）

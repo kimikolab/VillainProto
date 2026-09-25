@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -7,6 +7,9 @@ using static Common;
 // 指示書は design/PHASE205_LILI2_SPEC.md ／ 報告は design/PHASE205_LILI2.md。**線は置かない。**
 //
 //     dotnet run --project BattleSim -c Release 0 lili phase205   # Q0-2・Q0-3・Q0-5 の数え物（第204期の盤面 ＝ V0 で回す）
+//     dotnet run --project BattleSim -c Release 0 lili run2       # §4.1 在席行 × 版 V0〜V4（第2〜5波）
+//     dotnet run --project BattleSim -c Release 0 lili ledger2    # §4.2 第四波・第五波を別々に（帳簿）＋ §4.3 診断専用の行
+//     dotnet run --project BattleSim -c Release 0 lili check2 [第204期のbalance.md]  # §6 自己検査
 // =====================================================================================
 
 static partial class LiliDiag
