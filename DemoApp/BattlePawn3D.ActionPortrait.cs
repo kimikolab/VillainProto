@@ -32,6 +32,13 @@ public partial class BattlePawn3D
         float height = _portraitHeight;
         float padding = UiKit.BattlePortraitBottomPaddingRatio(key);
         _portraitOffsetX = 0;
+        if (key == "gald" && SwordDrawn)
+        {
+            key = QuietLastStand ? "gald_kneel" : "gald_sword";
+            padding = QuietLastStand ? 0.086f : 0.066f;
+            if (QuietLastStand) height *= 0.76f;
+        }
+        if (key == "beni" && GurenReleasing) { key = "beni_release"; padding = 0.024f; }
         if (key == "susu" && _alive)
         {
             if (_ashReleasing)

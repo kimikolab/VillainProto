@@ -29,13 +29,14 @@ public partial class BattlePawn3D
         if (!_statusSnapshot.ContainsKey(StatusKeys.Stun)) SetFrightened(false);
         foreach (string key in StatusIconArt.Keys)
         {
-            if (key is StatusKeys.Poison or StatusKeys.Footing or StatusKeys.Concentrated)
+            if (key is StatusKeys.Poison or StatusKeys.Footing or StatusKeys.Concentrated or StatusKeys.Guren)
                 _statusIcons.SetAmount(key, _statusSnapshot.GetValueOrDefault(key), false);
             else _statusIcons.Set(key, _statusSnapshot.ContainsKey(key));
         }
         _confusion.SetActive(!_victory && _statusSnapshot.ContainsKey(StatusKeys.Confused));
         SetCowed(!_victory && _statusSnapshot.ContainsKey(StatusKeys.Cowed));
         SetCurseStain(!_victory && _statusSnapshot.ContainsKey(StatusKeys.Curse));
+        SetGuren(_statusSnapshot.GetValueOrDefault(StatusKeys.Guren), false);
     }
 
     // 付与は差分、ターン頭の写しは残量。写しを加算すると二重計上になる。

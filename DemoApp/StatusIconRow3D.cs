@@ -26,6 +26,12 @@ public partial class StatusIconRow3D : Node3D
         Set(key, amount > 0);
         if (!_icons.TryGetValue(key, out var icon)) return;
         icon.Amount = System.Math.Max(0, amount);
+        // 紅蓮は数字でなく、満ち具合と発光で予告する。
+        if (key == BattleCore.StatusKeys.Guren)
+        {
+            if (animateGain && amount > before) icon.Bounce = 0.4f;
+            return;
+        }
         if (key == BattleCore.StatusKeys.Concentrated)
         {
             if (amount > 0 && before != amount) icon.Sprite.Texture = StatusIconArt.ConcentratedTexture(amount);
@@ -109,6 +115,9 @@ public partial class StatusIconRow3D : Node3D
             icon.Bounce = System.Math.Max(0, icon.Bounce - (float)delta);
             float hop = Mathf.Sin(icon.Bounce / 0.4f * Mathf.Pi);
             float glow = icon.Flash / 0.32f;
+            if (key == BattleCore.StatusKeys.Guren && icon.Active)
+                glow += System.Math.Min(1f, icon.Amount / 12f) * 0.35f
+                    + (icon.Amount >= 12 ? 0.45f + 0.25f * Mathf.Sin(Time.GetTicksMsec() * 0.009f) : 0);
             icon.Sprite.Modulate = new Color(1 + glow, 1 + glow, 1 + glow, icon.Active ? 1 : glow);
             float weight = key == BattleCore.StatusKeys.Concentrated ? 1 + System.Math.Min(8, icon.Amount) * 0.02f : 1;
             icon.Sprite.Scale = Vector3.One * (1 + glow * 0.18f + hop * 0.22f) * weight;

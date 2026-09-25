@@ -1093,6 +1093,7 @@ public partial class Main : Control
         _tickPlays = _inverseTickPlays = 0;
         _tickDelayBudget = null;
         _beniMioShown.Clear();
+        _specialShown.Clear(); _riposteDamage.Clear(); _numbDamage.Clear();
         _beniGiftGains.Clear();
         _playing = true;
         _paused = false;
@@ -1206,6 +1207,7 @@ public partial class Main : Control
         // 第125期 段2: 拍の境目でだけ画面を変える。**ここでは待たない**（間は下の switch の中だけ）。
         EnterBeat(eventIndex, e);
         _tickDelayBudget = _ticks.Budgets.TryGetValue(eventIndex, out double tickBudget) ? tickBudget : null;
+        if (await PlaySpecial(e, eventIndex, actor, target)) return;
         if (await PlayBeniMio(e, eventIndex, actor, target)) return;
         if (await PlayTickEvent(e, eventIndex, target)) return;
         switch (e.Kind)
@@ -1258,6 +1260,7 @@ public partial class Main : Control
                 int attackToken = _playToken;
                 AttackPattern pattern = e.Pattern ?? AttackPattern.Single;
                 IReadOnlyList<BattlePawn3D> impactTargets = FindAttackTargets(eventIndex, e);
+                IndexNumbDamage(eventIndex, e);
                 if (e.ThrustCharge is not null)
                     impactTargets = ThrustDamageIndices(eventIndex, e)
                         .Select(i => _battleField.FindPawn(_result!.Events[i].TargetId))
@@ -1278,6 +1281,7 @@ public partial class Main : Control
                     advance: !continuingCombo, holdPosition: actor is not null && _comboEnds.ContainsKey(actor),
                     shieldImpact: shieldShares.Count == 0 ? null :
                         () => _battleField.ShowRangeShield(actor, impactTargets, shieldShares, pattern, _speed),
+                    numbPercent: e.NumbPercent ?? 0,
                     thrustCharge: e.ThrustCharge,
                     thrustImpact: pawn => {
                         if (attackToken == _playToken) ApplyThrustDamage(eventIndex, e, pawn);
@@ -1309,7 +1313,7 @@ public partial class Main : Control
                 if (_batchedDamageIndices.Contains(eventIndex)) break;
                 if (_burstDamageIndices.Contains(eventIndex)) break;
                 await PlayTormentHit(eventIndex, actor, target);
-                if (e.Reaction && StartsDirectReaction(eventIndex, e))
+                if (e.Reaction && !_riposteDamage.Contains(eventIndex) && StartsDirectReaction(eventIndex, e))
                 {
                     await _battleField.ShowBonusAttack(actor);
                     _battleField.PlayDirectReactionSound(actor);
@@ -1339,7 +1343,7 @@ public partial class Main : Control
                 }
                 // 棘（カド）・仇討ちは PerformAttack を通らず、Reaction 付き Damage から始まる。
                 // ヨミのように Reaction 付き Attack を持つ段は上で既にカットイン済みなので二重に出さない。
-                if (e.Reaction && StartsDirectReaction(eventIndex, e))
+                if (e.Reaction && !_riposteDamage.Contains(eventIndex) && StartsDirectReaction(eventIndex, e))
                 {
                     await _battleField.ShowBonusAttack(actor);
                     _battleField.PlayDirectReactionSound(actor);
@@ -1757,7 +1761,7 @@ public partial class Main : Control
         target?.SetHp(e.HpAfter);
         bool poison = _statusCauseByDamageIndex.TryGetValue(eventIndex, out string? status)
             && status == StatusKeys.LabelOf(StatusKeys.Poison);
-        target?.AnimateHit(poison);
+        target?.AnimateHit(poison, _numbDamage.GetValueOrDefault(eventIndex, 1f));
         if (e.Amount > 0) _battleField.PlayStatusDamageSound(status);
         // 毒・燃焼などの継続ダメージや自傷では金属の被弾音を鳴らさない。
         if (e.ShareFromId is null && e.Amount > 0 && actor is not null && actor != target

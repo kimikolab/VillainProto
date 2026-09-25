@@ -261,6 +261,9 @@ render_mode unshaded, cull_disabled, blend_mix, depth_prepass_alpha;
 uniform sampler2D portrait_texture : source_color, filter_linear_mipmap;
 uniform vec4 portrait_tint : source_color = vec4(1.0);
 uniform float aura_amount = 0.0;
+uniform float numb_amount = 0.0;
+uniform float scar_glow = 0.0;
+uniform float guren_flash = 0.0;
 void fragment() {
     vec4 c = texture(portrait_texture, UV);
     vec4 top_left = texture(portrait_texture, vec2(0.02, 0.02));
@@ -284,6 +287,12 @@ void fragment() {
     float alpha = c.a * portrait_tint.a * mask;
     if (alpha < 0.02) discard;
     ALBEDO = mix(c.rgb * portrait_tint.rgb, portrait_tint.rgb, aura_amount);
+    ALBEDO = mix(ALBEDO, ALBEDO * vec3(0.58,0.20,0.78), numb_amount * 0.7);
+    float cracks = smoothstep(0.76,0.98,min(c.r,min(c.g,c.b)));
+    EMISSION = vec3(1.0,0.94,0.78) * cracks * scar_glow * (0.35 + 0.15*sin(TIME*5.0));
+    vec3 guren_color = mix(vec3(1.0,0.09,0.04),vec3(0.51,0.06,0.83),smoothstep(0.25,0.75,UV.x));
+    ALBEDO = mix(ALBEDO, guren_color, guren_flash * 0.65);
+    EMISSION += guren_color * guren_flash * 0.4;
     ALPHA = alpha;
 }"
         };
@@ -451,15 +460,17 @@ void fragment() {
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
     }
 
-    public void AnimateHit(bool poison = false)
+    public void AnimateHit(bool poison = false, float recoil = 1f)
     {
         if (!_alive) return;
+        if (SwordDrawn && !poison) return; // 剣の段はよろめかず、その場で返す。
         Color hit = poison ? new Color(1.05f, 0.48f, 1.35f, 1) : new Color(1.45f, 0.62f, 0.48f, 1);
         if (poison) _poison.Pulse();
         var tween = CreateTween();
         tween.TweenProperty(_sprite, "modulate", hit, 0.045);
         tween.TweenProperty(_sprite, "modulate", Colors.White, 0.18);
         Vector3 kick = new(Team == BattleContext.PlayerTeam ? -0.20f : 0.20f, 0.06f, 0.12f);
+        kick *= recoil;
         if (poison) kick *= 0.25f;
         var shake = BeginMotion();
         shake.TweenProperty(this, "position", RestPosition + kick, 0.045 / AnimationSpeed);
@@ -526,6 +537,17 @@ void fragment() {
         // 保持者が倒れたらルールは消える。**札も一緒に消す**（第171期 §2-2）。
         _ruleTag.Visible = false;
         _attackDelta.Visible = false;
+        ClearSpecialEffects();
+        if (QuietLastStand)
+        {
+            _motion?.Kill();
+            Position = _home;
+            Rotation = Vector3.Zero;
+            RefreshBattlePortrait();
+            _sprite.Modulate = Colors.White;
+            _hpBack.Visible = _hpFill.Visible = _seat.Visible = false;
+            return;
+        }
         var tween = BeginMotion().SetParallel();
         tween.TweenProperty(this, "position", Position + new Vector3(0.38f, -0.68f, 0.25f), 0.46)
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
@@ -537,6 +559,7 @@ void fragment() {
 
     public void AnimateRevive()
     {
+        QuietLastStand = false;
         SetThrustCharge(0);
         _thrustPosition = null;
         ShowLifeTransition(LifeTransition3D.Kind.Revive);
@@ -544,6 +567,7 @@ void fragment() {
         ResetStaggerPose();
         _guardPosition = null;
         _alive = true;
+        RefreshBattlePortrait();
         Visible = true;
         Position = _home + Vector3.Down * 0.45f;
         Rotation = Vector3.Zero;
@@ -577,6 +601,7 @@ void fragment() {
     public void AnimateVictory()
     {
         if (!_alive || Team != BattleContext.PlayerTeam) return;
+        ClearSpecialEffects();
         SetThrustCharge(0);
         _thrustPosition = null;
         CancelCharge();
@@ -657,6 +682,7 @@ void fragment() {
             PortraitGroundY + _portraitGroundDistance * scaleY - fall * 0.30f,
             0);
         UpdateRapierGlow();
+        UpdateSpecialEffects(animationDelta);
         float shadowSpread = fall * 0.28f;
         ProcessShieldCowed(animationDelta);
         _shadow.Scale = new Vector3(1.0f - breath * 0.10f + shadowSpread, 1, 1.0f - breath * 0.10f - shadowSpread * 0.35f);

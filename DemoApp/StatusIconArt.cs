@@ -8,6 +8,8 @@ public static class StatusIconArt
 {
     private static readonly Dictionary<string, (string Color, string Shape)> Art = new()
     {
+        [StatusKeys.Numbed] = ("#be80eb", "<path d='M14 18l8 10-8 10 8 10m10-34-8 10 8 10-8 10m20-30-8 10 8 10-8 10' fill='none'/>"),
+        [StatusKeys.Guren] = ("#f34e64", "<path d='M32 30Q10 8 14 30Q5 47 29 38Q32 59 37 38Q60 44 49 26Q54 8 32 30z' fill='#351735'/><circle cx='32' cy='32' r='6'/>"),
         [StatusKeys.Concentrated] = ("#6fb8a4", "<path d='M32 30q-8-8 1-12t17 11q0 16-20 13T13 22Q20 4 44 12' fill='none'/>"),
         [StatusKeys.Cowed] = ("#d9e9eb", "<circle cx='32' cy='23' r='7'/><path d='M20 47q0-17 12-17t12 17M12 18l-4 7 5 7m39-14 4 7-5 7' fill='none'/>"),
         // 第189期・萎縮（クビ）。次の一撃が半分——縮む矢印。

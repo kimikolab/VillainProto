@@ -282,6 +282,8 @@ public partial class BattlefieldView3D : Control
     public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName, int stageIndex)
     {
         _inverseHolders.Clear();
+        _specialGeneration++;
+        GurenReleases = GurenGains = SwordDraws = SwordRipostes = NumbSwings = VenomReturns = Spews = 0;
         ConcentratePlays = ThickenPlays = InvertedHealPlays = SipPlays = KindlePlays = TaintPlays = 0;
         _shieldCowedGeneration++;
         TormentHitPlays = 0;
@@ -575,7 +577,8 @@ public partial class BattlefieldView3D : Control
         bool holdPosition = false,
         Func<Task>? shieldImpact = null,
         int? thrustCharge = null,
-        Action<BattlePawn3D>? thrustImpact = null)
+        Action<BattlePawn3D>? thrustImpact = null,
+        int numbPercent = 0)
     {
         if (from is null || to is null) return;
         Color color = friendly ? UiKit.Violet : reaction ? UiKit.Gold : from.Team == BattleContext.PlayerTeam ? UiKit.Player : UiKit.Enemy;
@@ -587,6 +590,17 @@ public partial class BattlefieldView3D : Control
         // 到着後に攻撃エフェクトを出してから元の席へ戻る。
         if (advance) await from.AdvanceToAttack(to.RestPosition);
         if (holdPosition) from.HoldComboPosition();
+        if (numbPercent > 0)
+        {
+            NumbSwings++;
+            await from.NumbWindup(numbPercent);
+            if (!IsInstanceValid(from) || !from.IsInsideTree()) return;
+            for (int k = 0; k < 4; k++)
+                SpecialsFx.Travel(_fxRoot, from.FxPoint + Vector3.Right * (k - 1.5f) * 0.18f,
+                    from.FxPoint + Vector3.Up * -0.4f, new Color("a969cf"), 0.22 / from.AnimationSpeed,
+                    kind: 2, arc: 0, size: 0.6f + numbPercent / 60f);
+            color = color.Lerp(new Color("804398"), numbPercent / 60f);
+        }
         bool charged = !reaction && from.IsCharging;
         if (!reaction) from.ReleaseCharge();
         bool stagedThrust = thrustCharge is not null && pattern == AttackPattern.Pierce && shieldImpact is null;
@@ -602,6 +616,7 @@ public partial class BattlefieldView3D : Control
         if (shieldImpact is not null) await shieldImpact();
         else if (thrustCharge is int stacks && pattern == AttackPattern.Pierce)
             await ShowThrust(from, hits, stacks, thrustImpact);
+        else if (from.SwordDrawn) ShowSwordSlash(from, hits, from.AnimationSpeed, playSound: false);
         else switch (pattern)
         {
             case AttackPattern.Sweep:
@@ -682,6 +697,7 @@ public partial class BattlefieldView3D : Control
     public void Parry(BattlePawn3D? attacker, BattlePawn3D? defender)
     {
         if (defender is null) return;
+        if (defender.SwordDrawn) { ShowSwordParry(defender); return; }
         if (defender.UnitId == "gald") _attackAudio.PlayParry();
         Vector3 forward = (attacker?.FxPoint ?? defender.FxPoint + Vector3.Right) - defender.FxPoint;
         forward.Y = 0;
