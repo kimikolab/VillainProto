@@ -75,13 +75,14 @@ public static class UnitCatalog
         // 構えている（`ParryRule.Uses > 0`）あいだ自分の手番では攻撃しないので、踏み込みの札は据置（第131期 (a)）。
         Advances = false,
         // 第198期: 剣の段（`LastStand`）を足した。守る味方が 0 体になったら盾を捨てて剣を抜く。
-        // 規定は剣＋傷（`LastStandScar`）。版は保持者 0 枚の札で並べる（`LastStand` 剣 ／ `LastStandPlain` 返しなし ／ `LastStandShield` 盾剣）。
+        // 第199期から規定は `LastStandHold`（受け流した刃も傷に数える・抜いた瞬間の在庫を残す・相打ちで勝つ）。
+        // 版は保持者 0 枚の札で並べる（`LastStandScar` 第198期 ／ `LastStandHold*` 1点ずつ外した対照 ／ `LastStand` 剣 ／ `LastStandPlain` 返しなし ／ `LastStandShield` 盾剣）。
         // 外せば第197期と1ビットも違わない。
-        Traits = new[] { TraitId.Guardian, TraitId.Stoic, TraitId.Parry, TraitId.LastStandScar },
+        Traits = new[] { TraitId.Guardian, TraitId.Stoic, TraitId.Parry, TraitId.LastStandHold },
         // 第122期に第90期 (P1) 以前の文へ戻した（`GatherRule` を降ろしたので傷は肩代わりしない）。
         // 第136期 段2: 「その傷のぶん強くなる」を受け流しに置き換えた（回数は `ParryRule.Uses`）。
-        PlusText = "味方への単体攻撃を必ず庇う / 向けられた刃を回数ぶん受け流して無かったことにし、毎ターン構え直す。庇って身に受けるたび回数が1つ戻る / 守る味方がいなくなると、盾を捨てて剣を抜く（受け流しを失い、庇って受けた傷の1割を力に変え、倍の力で薙ぎ払い、斬られれば斬り返す）",
-        MinusText = "守る味方がいる間は、自分からは決して攻撃しない / 味方全体に配られる強化も弱体も自分には乗らず、隣接する味方へそのまま流れる（1体を選ぶ回復・強化は受け取れない）",
+        PlusText = "味方への単体攻撃を必ず庇う / 向けられた刃を回数ぶん受け流して無かったことにし、毎ターン構え直す。庇って身に受けるたび回数が1つ戻る / 守る味方がいなくなると、盾を捨てて剣を抜く。これまで受け止めた刃が力になり、倍の力で薙ぎ払い、斬られれば斬り返す。最期の一太刀で敵を倒せば、その戦は勝ち",
+        MinusText = "守る味方がいる間は、自分からは決して攻撃しない / 剣を抜いた後は構え直せない / 味方全体に配られる強化も弱体も自分には乗らず、隣接する味方へそのまま流れる（1体を選ぶ回復・強化は受け取れない）",
         Flavor = "誓約が壊れていて、もう誰の助けも届かない。"
     };
 

@@ -1643,6 +1643,13 @@ public sealed class UnitTally
     public int LastStandTurn, LastStandHp, LastStandMaxHp, LastStandFoes, LastStandBaseDealt;
     /// <summary>第198期（剣＋傷・計数専用）: 剣を抜いたときの「庇って身に受けた傷の累計」（版に依らず）と、加えた攻撃力（剣＋傷の版だけ）。</summary>
     public int LastStandScarTaken, LastStandScarAtk;
+    /// <summary>
+    /// 第199期（計数専用）: <c>LastStandParriedTaken</c> 抜いたときの受け流した刃の累計 ／ <c>LastStandStockAtDraw</c> 抜いたときの受け流しの在庫 ／
+    /// <c>LastStandStancesAtDraw</c>・<c>LastStandRefillGuardAtDraw</c> 抜いたときの <c>ParryStances</c>・<c>ParryRefillGuard</c>（抜いた後に増えていないかの自己検査）／
+    /// <c>LastStandMutualWins</c> 相打ちで最後の敵を倒して勝った回数。
+    /// </summary>
+    public int LastStandParriedTaken, LastStandStockAtDraw, LastStandStancesAtDraw, LastStandRefillGuardAtDraw;
+    public long LastStandMutualWins;
     public long LastStandStockDropped, LastStandRipostes, LastStandRiposteDealt, LastStandDyingRipostes, LastStandDyingDealt,
                 LastStandRiposteSkipped, LastStandRiposteInReaction, LastStandRiposteBlocked, LastStandParried, LastStandRefillBlocked;
 
@@ -2008,7 +2015,8 @@ public sealed class UnitTally
         if (o.GurenFirstTurn > 0 && (GurenFirstTurn == 0 || o.GurenFirstTurn < GurenFirstTurn)) GurenFirstTurn = o.GurenFirstTurn;
         // 第198期: ターン番号とその瞬間の値は足さない（`LastActiveTurn` と同じ扱い・後の値が勝つ）。
         if (o.AloneTurn > 0) { AloneTurn = o.AloneTurn; AloneHp = o.AloneHp; AloneMaxHp = o.AloneMaxHp; AloneFoes = o.AloneFoes; }
-        if (o.LastStandTurn > 0) { LastStandTurn = o.LastStandTurn; LastStandHp = o.LastStandHp; LastStandMaxHp = o.LastStandMaxHp; LastStandFoes = o.LastStandFoes; LastStandBaseDealt = o.LastStandBaseDealt; LastStandScarTaken = o.LastStandScarTaken; LastStandScarAtk = o.LastStandScarAtk; }
+        if (o.LastStandTurn > 0) { LastStandTurn = o.LastStandTurn; LastStandHp = o.LastStandHp; LastStandMaxHp = o.LastStandMaxHp; LastStandFoes = o.LastStandFoes; LastStandBaseDealt = o.LastStandBaseDealt; LastStandScarTaken = o.LastStandScarTaken; LastStandScarAtk = o.LastStandScarAtk; LastStandParriedTaken = o.LastStandParriedTaken; LastStandStockAtDraw = o.LastStandStockAtDraw; LastStandStancesAtDraw = o.LastStandStancesAtDraw; LastStandRefillGuardAtDraw = o.LastStandRefillGuardAtDraw; }
+        LastStandMutualWins += o.LastStandMutualWins;
         LastStandStockDropped += o.LastStandStockDropped; LastStandRipostes += o.LastStandRipostes; LastStandRiposteDealt += o.LastStandRiposteDealt;
         LastStandDyingRipostes += o.LastStandDyingRipostes; LastStandDyingDealt += o.LastStandDyingDealt; LastStandRiposteSkipped += o.LastStandRiposteSkipped;
         LastStandRiposteInReaction += o.LastStandRiposteInReaction; LastStandRiposteBlocked += o.LastStandRiposteBlocked;
@@ -2473,7 +2481,13 @@ public enum BattleEventKind
     /// <para><c>ActorId</c> = ガルド、<c>TargetId</c> = 殴ってきた敵、<c>Amount</c> = 斬り返しの名目、<c>HpAfter</c> = ガルドの HP、
     /// <b><c>Slot</c> = 1 なら相打ち</b>（倒れる一撃への返し。このあとガルドの <c>Death</c> が並ぶ）、0 なら生きているうちの返し。<b>どの規則も読まない。</b></para>
     /// </summary>
-    LastStandRiposte
+    LastStandRiposte,
+
+    /// <summary>
+    /// 相打ちで勝った瞬間（第199期・<b>表示専用</b>）。相打ちの斬り返しで最後の敵が倒れた直後（その敵の <c>Death</c> の後、ガルドの <c>Death</c> の前）に並ぶ。
+    /// <para><c>ActorId</c> = ガルド、<c>TargetId</c> = 最後に倒れた敵、<c>Team</c> = 勝った陣営。この戦は味方が全滅していても勝ち。<b>どの規則も読まない。</b></para>
+    /// </summary>
+    LastStandVictory
 }
 
 /// <summary><see cref="BattleEventKind.PoisonThicken"/> の <c>Text</c>（<b>表示専用</b>）。</summary>

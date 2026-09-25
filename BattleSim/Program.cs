@@ -1330,7 +1330,11 @@ static class TraitKeyMap
         [TraitId.GurenStrike]= new[] { UnitTally.CarryBurn },                                   // 第197期（対照・毒の代わりに直撃）
         [TraitId.GurenLow]   = new[] { UnitTally.CarryPoison, UnitTally.CarryBurn },            // 第197期（対照・閾値 6）
         [TraitId.GurenFull]  = new[] { UnitTally.CarryPoison, UnitTally.CarryBurn },            // 第197期（参考・満額）
-        [TraitId.LastStandScar] = new[] { UnitTally.CarryHit },                                 // 第198期（剣＋傷・規定）
+        [TraitId.LastStandHold] = new[] { UnitTally.CarryHit },                                 // 第199期（規定）
+        [TraitId.LastStandHoldOldScar] = new[] { UnitTally.CarryHit },                          // 第199期（対照）
+        [TraitId.LastStandHoldNoStock] = new[] { UnitTally.CarryHit },                          // 第199期（対照）
+        [TraitId.LastStandHoldMutualLoss] = new[] { UnitTally.CarryHit },                       // 第199期（対照）
+        [TraitId.LastStandScar] = new[] { UnitTally.CarryHit },                                 // 第198期（剣＋傷・対照）
         [TraitId.LastStand]  = new[] { UnitTally.CarryHit },                                    // 第198期（剣の段・被弾に斬り返す）
         [TraitId.LastStandPlain] = Array.Empty<int>(),                                          // 第198期（対照・返しなし）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
@@ -1481,6 +1485,10 @@ static class TraitHookMap
         [TraitId.GurenStrike] = new[] { "OnAction", Engine },                    // 第197期（対照・保持者 0 枚）
         [TraitId.GurenLow]    = new[] { "OnAction", Engine },                    // 第197期（対照・保持者 0 枚）
         [TraitId.GurenFull]   = new[] { "OnAction", Engine },                    // 第197期（参考・保持者 0 枚）
+        [TraitId.LastStandHold] = new[] { "OnAllyDeath", "OnDamaged", "OnBattleStart", "OnCarryOver", Engine }, // 第199期（受け流した刃は engine が書く・勝敗の1行）
+        [TraitId.LastStandHoldOldScar] = new[] { "OnAllyDeath", "OnDamaged", "OnBattleStart", "OnCarryOver", Engine },
+        [TraitId.LastStandHoldNoStock] = new[] { "OnAllyDeath", "OnDamaged", "OnBattleStart", "OnCarryOver", Engine },
+        [TraitId.LastStandHoldMutualLoss] = new[] { "OnAllyDeath", "OnDamaged", "OnBattleStart", "OnCarryOver" },
         [TraitId.LastStandScar] = new[] { "OnAllyDeath", "OnDamaged", "OnBattleStart", "OnCarryOver" }, // 第198期（剣＋傷・累計は Guardian が書く）
         [TraitId.LastStand]   = new[] { "OnAllyDeath", "OnDamaged", "OnBattleStart", "OnCarryOver" },   // 第198期（剣・対照）
         [TraitId.LastStandPlain] = new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（対照・保持者 0 枚）
@@ -1638,6 +1646,7 @@ static class TraitEntryMap
         // 被弾（敵が供給する）
         [TraitId.Rage]       = new[] { (UnitTally.CarryHit, Where.Self) },
         [TraitId.Thorns]     = new[] { (UnitTally.CarryHit, Where.Self) },
+        [TraitId.LastStandHold] = new[] { (UnitTally.CarryHit, Where.Self) },               // 第199期（規定の斬り返し）
         [TraitId.LastStandScar] = new[] { (UnitTally.CarryHit, Where.Self) },               // 第198期（剣＋傷の斬り返し）
         [TraitId.LastStand]  = new[] { (UnitTally.CarryHit, Where.Self) },                  // 第198期（剣の段の斬り返し）
         [TraitId.Shatter]    = new[] { (UnitTally.CarryHit, Where.Self),

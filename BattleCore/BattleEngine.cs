@@ -4180,15 +4180,40 @@ public sealed class BattleContext
         });
     }
 
-    /// <summary>剣の段に入った瞬間（第198期・<b>表示専用</b>）。<see cref="BattleEventKind.LastStand"/>。</summary>
-    public void EmitLastStand(UnitState self, TraitId variant)
+    /// <summary>剣の段に入った瞬間（第198期・<b>表示専用</b>）。<see cref="BattleEventKind.LastStand"/>。第199期に上乗せの量（<c>StatusRemaining</c>）を足した。</summary>
+    public void EmitLastStand(UnitState self, TraitId variant, int bonus)
     {
         if (!_verbose) return;
         Emit(new BattleEvent
         {
             Kind = BattleEventKind.LastStand, Turn = _turn, ActorId = self.InstanceId, TargetId = self.InstanceId,
             Amount = self.CurrentAttack, HpAfter = self.Hp, Slot = self.Slot, SourceTrait = variant,
+            StatusRemaining = bonus,
         });
+    }
+
+    /// <summary>
+    /// 第199期: 相打ちで最後の敵を倒した陣営（-1 ＝ 無し）。<b>立てる口は <see cref="MarkLastStandVictory"/> の1箇所</b>
+    /// （剣の段の相打ちの斬り返しの直後）で、読むのは <c>BattleEngine.Run</c> の勝敗の1行だけ。
+    /// </summary>
+    public int LastStandVictoryTeam { get; private set; } = -1;
+
+    /// <summary>
+    /// 第199期: 相打ちの斬り返しの直後に呼ぶ。<b>相手陣営に生きている駒が1体もいなければ</b>印を立て、表示専用の
+    /// <see cref="BattleEventKind.LastStandVictory"/> を出して真を返す（敵の死亡通知で何かが湧いていれば立たない）。乱数を引かない。
+    /// </summary>
+    public bool MarkLastStandVictory(UnitState self, UnitState killed)
+    {
+        foreach (UnitState u in _units) if (u.TeamId != self.TeamId && u.IsAlive) return false;
+        if (LastStandVictoryTeam >= 0) return false;
+        LastStandVictoryTeam = self.TeamId;
+        Log($"  最期の一太刀が {killed.Name} を斬り伏せた——相打ちで勝つ", LogKind.Highlight);
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.LastStandVictory, Turn = _turn, ActorId = self.InstanceId, TargetId = killed.InstanceId,
+            SourceTrait = TraitId.LastStandHold, Team = self.TeamId,
+        });
+        return true;
     }
 
     /// <summary>斬り返し・相打ちの直前（第198期・<b>表示専用</b>）。<see cref="BattleEventKind.LastStandRiposte"/>。</summary>
@@ -7462,7 +7487,9 @@ public sealed class BattleContext
                 || target.RawCounter(RedirectGainTrait.PendingKey) > 0))
         {
             target.SetCounter(ParryTrait.StockKey, target.RawCounter(ParryTrait.StockKey) - 1);
-            if (LastStandTrait.Drawn(target)) TallyOf(target).LastStandParried++;   // 第198期（計数のみ・剣の版では構造的に 0）
+            if (LastStandTrait.Drawn(target)) TallyOf(target).LastStandParried++;   // 第198期（計数のみ。第199期の版は残った在庫のぶんだけ立つ）
+            // 第199期: 受け流した刃の累計（剣の段の上乗せの元）。**判定の時点の打点**（軛より前）。抜いた後は足さない。
+            else target.SetCounter(LastStandTrait.ParriedKey, target.RawCounter(LastStandTrait.ParriedKey) + amount);
             // **肩代わりの印をここで落とす。** 弾いた時点で OnDamaged が呼ばれなくなるので、
             // 落とさないと印が次の被弾まで残って毒の刻みを肩代わりと取り違える
             // （RedirectGainTrait が元から持っている懸念そのもの）。
@@ -9275,7 +9302,8 @@ public static class BattleEngine
             ctx.NoteFoeStalled();   // 第185期（計数のみ）: このターンに手番を失った敵の数の分布
         }
 
-        bool playerWon = ctx.TeamAlive(BattleContext.PlayerTeam)
+        // 第199期: 剣の段の相打ちで最後の敵を倒した戦だけは、味方が全滅していても勝ち（印を立てる口は相打ちの1箇所）。
+        bool playerWon = (ctx.TeamAlive(BattleContext.PlayerTeam) || ctx.LastStandVictoryTeam == BattleContext.PlayerTeam)
                          && !ctx.TeamAlive(BattleContext.EnemyTeam);
 
         ctx.Log(playerWon ? "=== 勝利 ===" : "=== 敗北 ===", LogKind.System);

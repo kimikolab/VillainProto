@@ -2,7 +2,8 @@ using BattleCore;
 using static Common;
 
 // =====================================================================================
-// galdlast run / ledger / check（第198期） —— 版 × ガルドの在席行・剣の段の帳簿・自己検査
+// galdlast run / ledger / check —— 版 × ガルドの在席行・剣の段の帳簿・自己検査
+// 第198期に作り、第199期に版を差し替えた（第198期の「剣」「返しなし」は札だけ残置。表からは外した）。
 // =====================================================================================
 
 static partial class GaldLastDiag
@@ -33,14 +34,19 @@ static partial class GaldLastDiag
             ? new[] { TraitId.Guardian, TraitId.Stoic, TraitId.Parry, id }
             : new[] { TraitId.Guardian, TraitId.Stoic, TraitId.Parry });
 
-    /// <summary>版の並び（先頭が対照）。規定は 剣＋傷 ＝ <c>UnitCatalog.Gald</c> そのもの。</summary>
+    // 添字（表の列の意味が添字に依るので名前で持つ）
+    const int VNone = 0, V198 = 1, V199 = 2, VOldScar = 3, VNoStock = 4, VMutualLoss = 5, VShield = 6;
+
+    /// <summary>版の並び。規定は 199 ＝ <c>UnitCatalog.Gald</c> そのもの。盾剣は第198期の参考として残す。</summary>
     static readonly (string Name, UnitDef Def)[] Versions =
     {
         ("無", GaldWith(null)),
-        ("剣＋傷", UnitCatalog.Gald),
-        ("剣", GaldWith(TraitId.LastStand)),
-        ("返しなし", GaldWith(TraitId.LastStandPlain)),
-        ("盾剣", GaldWith(TraitId.LastStandShield)),
+        ("198", GaldWith(TraitId.LastStandScar)),
+        ("199", UnitCatalog.Gald),
+        ("199・傷は旧", GaldWith(TraitId.LastStandHoldOldScar)),
+        ("199・在庫なし", GaldWith(TraitId.LastStandHoldNoStock)),
+        ("199・相打ち負け", GaldWith(TraitId.LastStandHoldMutualLoss)),
+        ("盾剣（198 参考）", GaldWith(TraitId.LastStandShield)),
     };
 
     static Formation WithGald(Formation f, UnitDef g) => FvSwap(f, UnitCatalog.Gald, g);
@@ -55,10 +61,10 @@ static partial class GaldLastDiag
         public int[] WaveWins = new int[5], WaveN = new int[5];
         public double TurnsSum;
         // 剣の段（無の版は「最後の1体」で数える）
-        public int InN, InWins, InTimeouts, InDied, InMutual;
+        public int InN, InWins, InTimeouts, InDied, InMutual, MutualWins;
         public double InTurnSum, InRemainSum, InHpPct, InFoes, InDeathAfterSum, InTurnsSum;
-        public double Sweep, Riposte, Dying, RiposteN, DyingN, Blocked, Skipped, InReaction, Parried, RefillBlocked, StockDropped;
-        public double ScarTaken, ScarAtk;
+        public double Sweep, Riposte, Dying, RiposteN, DyingN, Blocked, Skipped, InReaction, ParriedAfter, RefillBlocked, StockDropped;
+        public double ScarTaken, ParriedTaken, ScarAtk, StockAtDraw;
         public int ScarAtkPos;
     }
 
@@ -84,6 +90,7 @@ static partial class GaldLastDiag
         a.InFoes += g.LastStandTurn > 0 ? g.LastStandFoes : g.AloneFoes;
         if (g.Deaths > 0) { a.InDied++; a.InDeathAfterSum += g.LastActiveTurn - entry; }
         if (g.LastStandDyingRipostes > 0) a.InMutual++;
+        if (g.LastStandMutualWins > 0) a.MutualWins++;
         if (g.LastStandTurn > 0)
         {
             double inStage = g.DamageToEnemy - g.LastStandBaseDealt;
@@ -91,8 +98,9 @@ static partial class GaldLastDiag
             a.Sweep += inStage - g.LastStandRiposteDealt - g.LastStandDyingDealt;
             a.RiposteN += g.LastStandRipostes; a.DyingN += g.LastStandDyingRipostes;
             a.Blocked += g.LastStandRiposteBlocked; a.Skipped += g.LastStandRiposteSkipped; a.InReaction += g.LastStandRiposteInReaction;
-            a.Parried += g.LastStandParried; a.RefillBlocked += g.LastStandRefillBlocked; a.StockDropped += g.LastStandStockDropped;
-            a.ScarTaken += g.LastStandScarTaken; a.ScarAtk += g.LastStandScarAtk;
+            a.ParriedAfter += g.LastStandParried; a.RefillBlocked += g.LastStandRefillBlocked; a.StockDropped += g.LastStandStockDropped;
+            a.ScarTaken += g.LastStandScarTaken; a.ParriedTaken += g.LastStandParriedTaken; a.ScarAtk += g.LastStandScarAtk;
+            a.StockAtDraw += g.LastStandStockAtDraw;
             if (g.LastStandScarAtk > 0) a.ScarAtkPos++;
         }
     }
@@ -119,13 +127,13 @@ static partial class GaldLastDiag
         {
             s.N += a.N; s.Wins += a.Wins; s.Timeouts += a.Timeouts; s.TurnsSum += a.TurnsSum;
             for (int w = 0; w < 5; w++) { s.WaveWins[w] += a.WaveWins[w]; s.WaveN[w] += a.WaveN[w]; }
-            s.InN += a.InN; s.InWins += a.InWins; s.InTimeouts += a.InTimeouts; s.InDied += a.InDied; s.InMutual += a.InMutual;
+            s.InN += a.InN; s.InWins += a.InWins; s.InTimeouts += a.InTimeouts; s.InDied += a.InDied; s.InMutual += a.InMutual; s.MutualWins += a.MutualWins;
             s.InTurnSum += a.InTurnSum; s.InRemainSum += a.InRemainSum; s.InHpPct += a.InHpPct; s.InFoes += a.InFoes;
             s.InDeathAfterSum += a.InDeathAfterSum; s.InTurnsSum += a.InTurnsSum;
             s.Sweep += a.Sweep; s.Riposte += a.Riposte; s.Dying += a.Dying; s.RiposteN += a.RiposteN; s.DyingN += a.DyingN;
-            s.Blocked += a.Blocked; s.Skipped += a.Skipped; s.InReaction += a.InReaction; s.Parried += a.Parried;
+            s.Blocked += a.Blocked; s.Skipped += a.Skipped; s.InReaction += a.InReaction; s.ParriedAfter += a.ParriedAfter;
             s.RefillBlocked += a.RefillBlocked; s.StockDropped += a.StockDropped;
-            s.ScarTaken += a.ScarTaken; s.ScarAtk += a.ScarAtk; s.ScarAtkPos += a.ScarAtkPos;
+            s.ScarTaken += a.ScarTaken; s.ParriedTaken += a.ParriedTaken; s.ScarAtk += a.ScarAtk; s.StockAtDraw += a.StockAtDraw; s.ScarAtkPos += a.ScarAtkPos;
         }
         return s;
     }
@@ -142,25 +150,22 @@ static partial class GaldLastDiag
     {
         var rows = GaldRows().ToList();
         Acc[,] acc = MeasureAll(rows);
-        Console.WriteLine("# 第198期 `galdlast run` —— 版 × ガルドの在席行（`compare` 35 行・第2〜5波・seed 0..199）");
+        Console.WriteLine("# 第199期 `galdlast run` —— 版 × ガルドの在席行（`compare` 35 行・第2〜5波・seed 0..199）");
         Console.WriteLine();
-        Console.WriteLine("版: **無**（剣の段なし＝第197期）／ **剣＋傷**（規定）／ 剣 ／ 返しなし（剣から斬り返しを外す）／ 盾剣（受け流しは今のまま・×1・単体）。"
+        Console.WriteLine("版: **無**（剣の段なし＝第197期）／ **198**（第198期の規定・剣＋傷）／ **199**（規定）／ 199・傷は旧 ／ 199・在庫なし ／ 199・相打ち負け ／ 盾剣（第198期の参考）。"
                           + "`入った` ＝ 剣の段に入った戦（無の版は「最後の1体」になった戦）。");
         Console.WriteLine();
         Console.WriteLine("## 表A 行ごとの勝率（第2〜5波の平均・%）");
         Console.WriteLine();
-        Console.WriteLine("| 行 | 入った | " + string.Join(" | ", Versions.Select(v => v.Name)) + " | 剣＋傷 − 無 | 剣 − 無 | 返しなし − 無 | 盾剣 − 無 |");
-        Console.WriteLine("|---|--:|" + string.Concat(Versions.Select(_ => "--:|")) + "--:|--:|--:|--:|");
+        Console.WriteLine("| 行 | 入った | " + string.Join(" | ", Versions.Select(v => v.Name)) + " | 199 − 198 |");
+        Console.WriteLine("|---|--:|" + string.Concat(Versions.Select(_ => "--:|")) + "--:|");
         for (int i = 0; i < rows.Count; i++)
-        {
-            Acc b = acc[i, 0];
-            Console.WriteLine("| " + rows[i].Name + " | " + Pc(acc[i, 1].InN, acc[i, 1].N) + " | "
+            Console.WriteLine("| " + rows[i].Name + " | " + Pc(acc[i, V199].InN, acc[i, V199].N) + " | "
                               + string.Join(" | ", Enumerable.Range(0, Versions.Length).Select(v => Pc(acc[i, v].Wins, acc[i, v].N))) + " | "
-                              + string.Join(" | ", Enumerable.Range(1, Versions.Length - 1).Select(v => Dl(b.Wins, b.N, acc[i, v].Wins, acc[i, v].N))) + " |");
-        }
+                              + Dl(acc[i, V198].Wins, acc[i, V198].N, acc[i, V199].Wins, acc[i, V199].N) + " |");
         var tot = Enumerable.Range(0, Versions.Length).Select(v => Sum(Enumerable.Range(0, rows.Count).Select(i => acc[i, v]))).ToArray();
-        Console.WriteLine("| **計** | " + Pc(tot[1].InN, tot[1].N) + " | " + string.Join(" | ", tot.Select(a => Pc(a.Wins, a.N))) + " | "
-                          + string.Join(" | ", Enumerable.Range(1, Versions.Length - 1).Select(v => Dl(tot[0].Wins, tot[0].N, tot[v].Wins, tot[v].N))) + " |");
+        Console.WriteLine("| **計** | " + Pc(tot[V199].InN, tot[V199].N) + " | " + string.Join(" | ", tot.Select(a => Pc(a.Wins, a.N))) + " | "
+                          + Dl(tot[V198].Wins, tot[V198].N, tot[V199].Wins, tot[V199].N) + " |");
         Console.WriteLine();
 
         Console.WriteLine("## 表B 波ごと（在席行の合計・勝率 %）");
@@ -173,52 +178,57 @@ static partial class GaldLastDiag
 
         Console.WriteLine("## 表C 剣の段に入った戦（在席行の合計）");
         Console.WriteLine();
-        Console.WriteLine("`入った後の残りT` ＝ 決着T − 入ったT。`倒れるまで` ＝ 入ってからガルドが倒れるまでのターン（倒れた戦だけ）。`相打ち` ＝ 倒れる一撃に斬り返した戦。");
+        Console.WriteLine("`残りT` ＝ 決着T − 入ったT。`倒れるまで` ＝ 入ってからガルドが倒れるまでのターン（倒れた戦だけ）。"
+                          + "`相打ち` ＝ 倒れる一撃に斬り返した戦。`相打ち勝ち` ＝ その相打ちで最後の敵を倒して勝った戦（2.3）。");
         Console.WriteLine();
-        Console.WriteLine("| 版 | 入った戦 | 入ったT | HP | 敵の数 | 勝率 | 打ち切り | 倒れた | 相打ち | 残りT | 倒れるまで | 全体の打ち切り | 全体の決着T |");
-        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        Console.WriteLine("| 版 | 入った戦 | 入ったT | HP | 敵の数 | 勝率 | 打ち切り | 倒れた | 相打ち | 相打ち勝ち | 残りT | 倒れるまで | 全体の打ち切り | 全体の決着T |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
         for (int v = 0; v < Versions.Length; v++)
         {
             Acc a = tot[v];
             Console.WriteLine("| " + Versions[v].Name + " | " + a.InN + "（" + Pc(a.InN, a.N) + "%） | " + Avg(a.InTurnSum, a.InN, "F2") + " | "
                               + (a.InN == 0 ? "—" : (a.InHpPct / a.InN).ToString("F0") + "%") + " | " + Avg(a.InFoes, a.InN) + " | "
                               + Pc(a.InWins, a.InN) + " | " + Pc(a.InTimeouts, a.InN) + " | " + Pc(a.InDied, a.InN) + " | " + Pc(a.InMutual, a.InN) + " | "
+                              + Pc(a.MutualWins, a.InN) + " | "
                               + Avg(a.InRemainSum, a.InN, "F1") + " | " + Avg(a.InDeathAfterSum, a.InDied, "F1") + " | "
                               + Pc(a.Timeouts, a.N) + " | " + Avg(a.TurnsSum, a.N) + " |");
         }
         Console.WriteLine();
-        Console.WriteLine("## 表D 剣の段で与えたダメージ（入った戦1戦あたり）");
+        Console.WriteLine("## 表D 剣の段の上乗せと受け流し・与えたダメージ（入った戦1戦あたり）");
         Console.WriteLine();
-        Console.WriteLine("`手番` ＝ 剣の段の `DamageToEnemy` の増分 − 斬り返し − 相打ち（剣の版は薙ぎ・盾剣は単体）。`止められた` ＝ 粛・痺れ・組み付きで返せなかった被弾。");
+        Console.WriteLine("`身に受けた傷` / `受け流した刃` ＝ 抜いたときの累計（版に依らず同じ）。`上乗せ` ＝ 加えた攻撃力（×2 の前）。"
+                          + "`在庫` ＝ 抜いたときの受け流しの在庫。`剣で受け流し` ＝ 抜いた後に受け流した回数。"
+                          + "`手番` ＝ 剣の段の `DamageToEnemy` の増分 − 斬り返し − 相打ち。`止められた` ＝ 粛・痺れ・組み付きで返せなかった被弾。");
         Console.WriteLine();
-        Console.WriteLine("| 版 | 手番 | 斬り返し | 相打ち | 斬り返しの割合 | 返した回数 | 相打ちの回数 | 止められた | 巻き込み等で返さず | 反撃の中 | 傷の累計 | 加えた攻撃力 | 加えた戦 |");
+        Console.WriteLine("| 版 | 身に受けた傷 | 受け流した刃 | 上乗せ | 在庫 | 剣で受け流し | 手番 | 斬り返し | 相打ち | 斬り返しの割合 | 返した回数 | 相打ちの回数 | 止められた |");
         Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
         for (int v = 1; v < Versions.Length; v++)
         {
             Acc a = tot[v];
             double all = a.Sweep + a.Riposte + a.Dying;
-            Console.WriteLine("| " + Versions[v].Name + " | " + Avg(a.Sweep, a.InN, "F1") + " | " + Avg(a.Riposte, a.InN, "F1") + " | " + Avg(a.Dying, a.InN, "F1") + " | "
+            Console.WriteLine("| " + Versions[v].Name + " | " + Avg(a.ScarTaken, a.InN, "F1") + " | " + Avg(a.ParriedTaken, a.InN, "F1") + " | "
+                              + Avg(a.ScarAtk, a.InN) + " | " + Avg(a.StockAtDraw, a.InN) + " | " + Avg(a.ParriedAfter, a.InN) + " | "
+                              + Avg(a.Sweep, a.InN, "F1") + " | " + Avg(a.Riposte, a.InN, "F1") + " | " + Avg(a.Dying, a.InN, "F1") + " | "
                               + (all == 0 ? "—" : (100 * (a.Riposte + a.Dying) / all).ToString("F0") + "%") + " | "
-                              + Avg(a.RiposteN, a.InN) + " | " + Avg(a.DyingN, a.InN) + " | " + Avg(a.Blocked, a.InN) + " | " + Avg(a.Skipped, a.InN) + " | "
-                              + Avg(a.InReaction, a.InN) + " | " + Avg(a.ScarTaken, a.InN, "F1") + " | " + Avg(a.ScarAtk, a.InN) + " | " + Pc(a.ScarAtkPos, a.InN) + "% |");
+                              + Avg(a.RiposteN, a.InN) + " | " + Avg(a.DyingN, a.InN) + " | " + Avg(a.Blocked, a.InN) + " |");
         }
     }
 
     // =================================================================================
-    // ledger —— 波ごと・行ごとの帳簿（剣＋傷と剣）
+    // ledger —— 波ごと・行ごとの帳簿（199 と 198）
     // =================================================================================
 
     static void Ledger()
     {
         var rows = GaldRows().ToList();
-        Console.WriteLine("# 第198期 `galdlast ledger` —— 剣の段の帳簿（剣＋傷・波ごと／行ごと）");
+        Console.WriteLine("# 第199期 `galdlast ledger` —— 剣の段の帳簿（199 と 198・波ごと／行ごと）");
         Console.WriteLine();
-        foreach (int vi in new[] { 1, 2 })
+        foreach (int vi in new[] { V199, V198 })
         {
             Console.WriteLine("## " + Versions[vi].Name + " —— 波ごと");
             Console.WriteLine();
-            Console.WriteLine("| 波 | 入った戦 | 入ったT | 勝率 | 打ち切り | 残りT | 手番 | 斬り返し | 相打ち | 返した回数 | 止められた | 傷の累計 | 加えた攻撃力 |");
-            Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+            Console.WriteLine("| 波 | 入った戦 | 入ったT | 勝率 | 相打ち勝ち | 打ち切り | 倒れるまで | 上乗せ | 在庫 | 剣で受け流し | 手番 | 斬り返し | 相打ち | 止められた |");
+            Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
             var perWave = new Acc[5];
             Parallel.For(1, 5, st =>
             {
@@ -234,49 +244,51 @@ static partial class GaldLastDiag
             {
                 Acc a = perWave[st];
                 Console.WriteLine("| 第" + (st + 1) + "波 | " + Pc(a.InN, a.N) + "% | " + Avg(a.InTurnSum, a.InN, "F1") + " | " + Pc(a.InWins, a.InN) + " | "
-                                  + Pc(a.InTimeouts, a.InN) + " | " + Avg(a.InRemainSum, a.InN, "F1") + " | " + Avg(a.Sweep, a.InN, "F1") + " | "
-                                  + Avg(a.Riposte, a.InN, "F1") + " | " + Avg(a.Dying, a.InN, "F1") + " | " + Avg(a.RiposteN, a.InN) + " | "
-                                  + Avg(a.Blocked, a.InN) + " | " + Avg(a.ScarTaken, a.InN, "F1") + " | " + Avg(a.ScarAtk, a.InN) + " |");
+                                  + Pc(a.MutualWins, a.InN) + " | " + Pc(a.InTimeouts, a.InN) + " | " + Avg(a.InDeathAfterSum, a.InDied, "F1") + " | "
+                                  + Avg(a.ScarAtk, a.InN) + " | " + Avg(a.StockAtDraw, a.InN) + " | " + Avg(a.ParriedAfter, a.InN) + " | "
+                                  + Avg(a.Sweep, a.InN, "F1") + " | " + Avg(a.Riposte, a.InN, "F1") + " | " + Avg(a.Dying, a.InN, "F1") + " | "
+                                  + Avg(a.Blocked, a.InN) + " |");
             }
             Console.WriteLine();
         }
-        Console.WriteLine("## 剣＋傷 —— 行ごと（入った戦だけ）");
+        Console.WriteLine("## 199 —— 行ごと（入った戦だけ）");
         Console.WriteLine();
-        Console.WriteLine("| 行 | 入った | 無の勝率(入った戦) | 剣＋傷の勝率 | 無の打ち切り | 剣＋傷の打ち切り | 残りT 無 → 剣＋傷 | 傷の累計 | 加えた攻撃力 | 斬り返しの割合 |");
+        Console.WriteLine("| 行 | 入った | 198 の勝率 | 199 の勝率 | 相打ち勝ち | 倒れるまで 198 → 199 | 上乗せ 198 → 199 | 在庫 | 剣で受け流し | 斬り返しの割合 |");
         Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
         Acc[,] acc = MeasureAll(rows);
         for (int i = 0; i < rows.Count; i++)
         {
-            Acc b = acc[i, 0], a = acc[i, 1];
+            Acc b = acc[i, V198], a = acc[i, V199];
             double all = a.Sweep + a.Riposte + a.Dying;
             Console.WriteLine("| " + rows[i].Name + " | " + Pc(a.InN, a.N) + "% | " + Pc(b.InWins, b.InN) + " | " + Pc(a.InWins, a.InN) + " | "
-                              + Pc(b.InTimeouts, b.InN) + " | " + Pc(a.InTimeouts, a.InN) + " | "
-                              + Avg(b.InRemainSum, b.InN, "F1") + " → " + Avg(a.InRemainSum, a.InN, "F1") + " | "
-                              + Avg(a.ScarTaken, a.InN, "F1") + " | " + Avg(a.ScarAtk, a.InN) + " | "
+                              + Pc(a.MutualWins, a.InN) + " | "
+                              + Avg(b.InDeathAfterSum, b.InDied, "F1") + " → " + Avg(a.InDeathAfterSum, a.InDied, "F1") + " | "
+                              + Avg(b.ScarAtk, b.InN) + " → " + Avg(a.ScarAtk, a.InN) + " | " + Avg(a.StockAtDraw, a.InN) + " | "
+                              + Avg(a.ParriedAfter, a.InN) + " | "
                               + (all == 0 ? "—" : (100 * (a.Riposte + a.Dying) / all).ToString("F0") + "%") + " |");
         }
     }
 
     // =================================================================================
-    // check —— 自己検査
+    // check —— 自己検査（第199期 §6）
     // =================================================================================
 
     static void Check(string balancePath)
     {
         if (string.IsNullOrWhiteSpace(balancePath)) balancePath = Path.Combine("docs", "balance.md");
-        Console.WriteLine("# 第198期 `galdlast check` —— 自己検査");
+        Console.WriteLine("# 第199期 `galdlast check` —— 自己検査");
         Console.WriteLine();
         bool ok = true;
 
-        // (a) 無の版（全 61 行のガルドを剣の段なしへ）が採用前の balance.md と一致 ／ ガルドを含まない行は規定でも一致
+        // (a) 198 の版（全 61 行のガルドを第198期の札へ）が第198期の balance.md と一致 ／ ガルドを含まない行は規定でも一致
         var before = ParseBalance(balancePath);
-        int cells = 0, diffNo = 0, diffNonGald = 0, nonGaldCells = 0;
-        UnitDef none = Versions[0].Def;
+        int cells = 0, diff198 = 0, diffNonGald = 0, nonGaldCells = 0;
+        UnitDef v198 = Versions[V198].Def;
         foreach (var (name, f) in CompareBuilds())
         {
             if (!before.TryGetValue(name, out double[]? b)) { Console.WriteLine("- 行名が引けない: " + name); ok = false; continue; }
             bool hasGald = f.Occupied().Any(o => o.Def.Id == "gald");
-            Formation f0 = WithGald(f, none);
+            Formation f0 = WithGald(f, v198);
             for (int st = 0; st < 5; st++)
             {
                 int w0 = 0, w1 = 0;
@@ -286,7 +298,7 @@ static partial class GaldLastDiag
                     if (!hasGald && BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false).PlayerWon) w1++;
                 }
                 cells++;
-                if (Math.Abs(100.0 * w0 / Seeds - b[st]) > 0.05) diffNo++;
+                if (Math.Abs(100.0 * w0 / Seeds - b[st]) > 0.05) diff198++;
                 if (!hasGald)
                 {
                     nonGaldCells++;
@@ -294,79 +306,98 @@ static partial class GaldLastDiag
                 }
             }
         }
-        Console.WriteLine($"- (a) 無の版 × 61 行 × 5 波 = {cells} セル中、`{balancePath}` と違うセル: **{diffNo}**");
+        Console.WriteLine($"- (a) 198 の版 × 61 行 × 5 波 = {cells} セル中、`{balancePath}` と違うセル: **{diff198}**");
         Console.WriteLine($"- (a') ガルドを含まない行（規定）{nonGaldCells} セル中、違うセル: **{diffNonGald}**");
-        if (diffNo != 0 || diffNonGald != 0) ok = false;
+        if (diff198 != 0 || diffNonGald != 0) ok = false;
 
-        // (b)(c) 剣の段に入る瞬間は版に依らない ／ 剣の版は入った後に受け流さない ／ 斬り返しは敵の攻撃にだけ
-        int entryMismatch = 0, sword = 0, parriedAfter = 0, riposteBad = 0, riposteEv = 0, mutualEv = 0, drawEv = 0, drawBad = 0;
+        // (b)(c)(d) 版をまたいだ入る瞬間・構え直し・斬り返し・相打ち勝ちの経路
+        int entryMismatch = 0, sword = 0, stanceAfter = 0, refillAfter = 0, riposteBad = 0, riposteEv = 0, mutualEv = 0;
+        int zeroWins = 0, zeroWinsBad = 0, victoryEv = 0, victoryBad = 0, lossVersionZeroWins = 0, parriedAfter = 0;
         foreach (var (_, f) in GaldRows())
         {
-            Formation f0 = WithGald(f, none);
+            Formation fNone = WithGald(f, Versions[VNone].Def);
             for (int st = 1; st <= 4; st++)
                 for (int seed = 0; seed < 50; seed++)
                 {
-                    BattleResult r0 = BattleEngine.Run(f0, EnemyCatalog.Stages[st].Enemy, seed, verbose: false);
+                    BattleResult r0 = BattleEngine.Run(fNone, EnemyCatalog.Stages[st].Enemy, seed, verbose: false);
                     int alone = r0.TallyByUnit.TryGetValue("gald", out UnitTally? g0) ? g0.AloneTurn : 0;
                     for (int v = 1; v < Versions.Length; v++)
                     {
-                        bool verbose = v == 1;
+                        bool verbose = v == V199;
                         BattleResult r = BattleEngine.Run(WithGald(f, Versions[v].Def), EnemyCatalog.Stages[st].Enemy, seed, verbose: verbose);
                         UnitTally g = r.TallyByUnit["gald"];
                         if (g.LastStandTurn != alone) entryMismatch++;
-                        if (g.LastStandTurn > 0 && v <= 3) { sword++; parriedAfter += (int)g.LastStandParried; }
+                        bool swordVer = v != VShield;
+                        if (g.LastStandTurn > 0 && swordVer)
+                        {
+                            sword++;
+                            if (g.ParryStances != g.LastStandStancesAtDraw) stanceAfter++;
+                            if (g.ParryRefillGuard != g.LastStandRefillGuardAtDraw) refillAfter++;
+                            parriedAfter += (int)g.LastStandParried;
+                        }
+                        // 生存 0 の勝ちは相打ち勝ち（印）だけ
+                        if (r.PlayerWon && r.PlayerSurvivors == 0)
+                        {
+                            zeroWins++;
+                            if (g.LastStandMutualWins == 0) zeroWinsBad++;
+                            if (v == VMutualLoss || v == V198) lossVersionZeroWins++;
+                        }
                         if (!verbose) continue;
                         var ev = r.Events;
                         for (int k = 0; k < ev.Count; k++)
                         {
-                            if (ev[k].Kind == BattleEventKind.LastStand) { drawEv++; if (g.LastStandTurn == 0) drawBad++; }
+                            if (ev[k].Kind == BattleEventKind.LastStandVictory)
+                            {
+                                victoryEv++;
+                                // 直前の相打ちの斬り返しが同じ敵に向いているか
+                                BattleEvent? rip = null;
+                                for (int j = k - 1; j >= 0; j--) if (ev[j].Kind == BattleEventKind.LastStandRiposte) { rip = ev[j]; break; }
+                                if (rip is null || rip.Slot != 1 || rip.TargetId != ev[k].TargetId || !r.PlayerWon) victoryBad++;
+                            }
                             if (ev[k].Kind != BattleEventKind.LastStandRiposte) continue;
                             riposteEv++;
                             if (ev[k].Slot == 1) mutualEv++;
-                            // 直前の、ガルドへの Damage を探す
+                            // 直前の「ガルドに向いた Damage か Parry」が、その敵の・巻き込みでも中継でもない Damage であること
                             BattleEvent? hit = null;
                             for (int j = k - 1; j >= 0; j--)
-                                if (ev[j].Kind == BattleEventKind.Damage && ev[j].TargetId == ev[k].ActorId) { hit = ev[j]; break; }
-                            if (hit is null || hit.ActorId != ev[k].TargetId || hit.FriendlyFire || hit.Relayed) riposteBad++;
+                                if ((ev[j].Kind == BattleEventKind.Damage || ev[j].Kind == BattleEventKind.Parry) && ev[j].TargetId == ev[k].ActorId) { hit = ev[j]; break; }
+                            if (hit is null || hit.Kind != BattleEventKind.Damage || hit.ActorId != ev[k].TargetId || hit.FriendlyFire || hit.Relayed) riposteBad++;
                         }
                     }
                 }
         }
-        Console.WriteLine($"- (b) 剣の段に入ったターンが「無」の版の「最後の1体になったターン」と違う戦: **{entryMismatch}**（4 版 × 在席 35 行 × 第2〜5波 × seed 0..49）");
-        Console.WriteLine($"- (c) 剣の版（剣＋傷・剣・返しなし）で剣の段に入った {sword} 戦のうち、入った後に受け流した回数: **{parriedAfter}**");
-        Console.WriteLine($"- (c') 台本（剣＋傷）: 剣の段の印 {drawEv} 件（帳簿と食い違い {drawBad}）・斬り返し {riposteEv} 件（うち相打ち {mutualEv}）。"
-                          + $"直前のガルドへの `Damage` が「その敵の・巻き込みでも中継でもない一撃」でない斬り返し: **{riposteBad}**");
-        if (entryMismatch != 0 || parriedAfter != 0 || riposteBad != 0 || drawBad != 0) ok = false;
+        Console.WriteLine($"- (b) 剣の段に入ったターンが「無」の版の「最後の1体になったターン」と違う戦: **{entryMismatch}**（6 版 × 在席 35 行 × 第2〜5波 × seed 0..49）");
+        Console.WriteLine($"- (c) 盾を捨てる版で剣の段に入った {sword} 戦のうち、抜いた後に構え直した戦: **{stanceAfter}** ／ 庇いで在庫が戻った戦: **{refillAfter}**"
+                          + $"（抜いた後に受け流した回数は {parriedAfter}＝残った在庫のぶん）");
+        Console.WriteLine($"- (c') 台本（199）: 斬り返し {riposteEv} 件（うち相打ち {mutualEv}）。直前のガルドへの一撃が「その敵の・受け流されていない・巻き込みでも中継でもない `Damage`」でない斬り返し: **{riposteBad}**");
+        Console.WriteLine($"- (d) 生存 0 の勝ち {zeroWins} 戦のうち、相打ち勝ちの印が立っていない戦: **{zeroWinsBad}** ／ 198・相打ち負けの版で生存 0 の勝ち: **{lossVersionZeroWins}**");
+        Console.WriteLine($"- (d') 台本（199）: `LastStandVictory` {victoryEv} 件のうち、直前が同じ敵への相打ちの斬り返しでない／勝ちでない: **{victoryBad}**");
+        if (entryMismatch != 0 || stanceAfter != 0 || refillAfter != 0 || riposteBad != 0 || zeroWinsBad != 0 || lossVersionZeroWins != 0 || victoryBad != 0) ok = false;
 
-        // (d) 会戦で次の戦に持ち越さない（最後の1体のまま次の戦に入ったら開戦時に抜き直す）
-        int nextBattles = 0, nextDrawnAtStart = 0, nextStartAlone = 0, nextParriedBefore = 0;
+        // (e) 会戦で生存 0 の勝ちが落ちない（全在席行 × seed 0..99・規定の版）
+        int eng = 0, engZeroWin = 0;
         foreach (var (_, f) in GaldRows())
-            for (int seed = 0; seed < 50; seed++)
+            for (int seed = 0; seed < 100; seed++)
             {
                 EngagementResult e = EngagementEngine.Run(new[] { f }, EnemyCatalog.EngagementColumn, seed, verbose: false);
-                for (int b = 1; b < e.Battles.Count; b++)
-                {
-                    if (!e.Battles[b - 1].TallyByUnit.TryGetValue("gald", out UnitTally? prev) || prev.LastStandTurn == 0 || prev.Deaths > 0) continue;
-                    if (!e.Battles[b].TallyByUnit.TryGetValue("gald", out UnitTally? cur)) continue;
-                    nextBattles++;
-                    if (cur.LastStandTurn == 1) nextDrawnAtStart++;
-                    if (e.PlayerEntries.Count > b && e.PlayerEntries[b].Alive == 1) nextStartAlone++;
-                    if (cur.ParryFires > 0) nextParriedBefore++;
-                }
+                eng++;
+                foreach (BattleResult br in e.Battles) if (br.PlayerWon && br.PlayerSurvivors == 0) engZeroWin++;
             }
-        Console.WriteLine($"- (d) 会戦（`EngagementColumn`・在席 35 行 × seed 0..49）: 前の戦で剣を抜いて生き残ったガルドの次の戦 {nextBattles} 戦。"
-                          + $"そのうち第1ターンに抜いていた戦 {nextDrawnAtStart}（最後の1体のまま入った戦 {nextStartAlone}）、受け流しが働いた戦 {nextParriedBefore}");
+        Console.WriteLine($"- (e) 会戦（`EngagementColumn`・在席 35 行 × seed 0..99 ＝ {eng} 会戦）が例外なく回った。うち生存 0 の勝ちを含む戦 {engZeroWin}");
 
-        // (e) 乱数: 新しい処理は PickOne / Roll を呼ばない（ソースの走査）
+        // (f) 乱数: 新しい処理は PickOne / Roll を呼ばない（ソースの走査）
         string src = File.ReadAllText(Path.Combine("BattleCore", "Traits.cs"));
         int a0 = src.IndexOf("public class LastStandTrait", StringComparison.Ordinal);
         int a1 = src.IndexOf("public sealed class LastStandShieldTrait", StringComparison.Ordinal);
         string body = a0 >= 0 && a1 > a0 ? src.Substring(a0, a1 - a0) : "";
-        if (body.Length == 0) { Console.WriteLine("- (e) 走査が空（止める）"); ok = false; }
+        string eng2 = File.ReadAllText(Path.Combine("BattleCore", "BattleEngine.cs"));
+        int b0 = eng2.IndexOf("public bool MarkLastStandVictory", StringComparison.Ordinal);
+        string body2 = b0 >= 0 ? eng2.Substring(b0, Math.Min(1200, eng2.Length - b0)) : "";
+        if (body.Length == 0 || body2.Length == 0) { Console.WriteLine("- (f) 走査が空（止める）"); ok = false; }
         else
         {
-            bool rng = body.Contains("PickOne" + "(") || body.Contains(".Roll" + "(") || body.Contains("Shuffled" + "(");
-            Console.WriteLine($"- (e) `LastStandTrait` の本文に乱数の呼び出し: **{(rng ? "あり" : "なし")}**");
+            bool rng = (body + body2).Contains("PickOne" + "(") || (body + body2).Contains(".Roll" + "(") || (body + body2).Contains("Shuffled" + "(");
+            Console.WriteLine($"- (f) `LastStandTrait` 系と `MarkLastStandVictory` の本文に乱数の呼び出し: **{(rng ? "あり" : "なし")}**");
             if (rng) ok = false;
         }
 

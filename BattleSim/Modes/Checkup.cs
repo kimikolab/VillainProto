@@ -223,6 +223,11 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.GurenLow]        = (HcPlusL,  "紅蓮の低閾の版（閾値 6）。対照で保持者 0 枚"),
         [TraitId.GurenFull]       = (HcPlusL,  "紅蓮の全額の版（等分せず満額）。参考で保持者 0 枚"),
         // 第198期: ガルドの剣の段。分類を同じコミットで足す（第132期 段0-a）。
+        // 第199期
+        [TraitId.LastStandHold]   = (HcBothL,  "味方が 0 体になると盾を捨てて剣を抜く（受け止めた刃の1割を力に変え ×2・薙ぎ、斬り返し、相打ちで勝つ）のと、構え直せなくなるのが1つの札"),
+        [TraitId.LastStandHoldOldScar]    = (HcBothL, "第199期の剣の段で、傷を身に受けた分だけ数える版。対照で保持者 0 枚"),
+        [TraitId.LastStandHoldNoStock]    = (HcBothL, "第199期の剣の段で、抜いた瞬間に在庫を捨てる版。対照で保持者 0 枚"),
+        [TraitId.LastStandHoldMutualLoss] = (HcBothL, "第199期の剣の段で、相打ちを負けとする版。対照で保持者 0 枚"),
         [TraitId.LastStandScar]   = (HcPlusL,  "味方が 0 体になると盾を捨てて剣を抜く（受け流しを失い、庇った傷の1割を攻撃力に足して ×2・薙ぎで振り、殴られれば斬り返す）"),
         [TraitId.LastStand]       = (HcPlusL,  "剣の段の剣の版（傷を力に換えない）。対照で保持者 0 枚"),
         [TraitId.LastStandPlain]  = (HcPlusL,  "剣の段の返しなしの版。対照で保持者 0 枚"),

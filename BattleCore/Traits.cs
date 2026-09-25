@@ -367,6 +367,11 @@ public enum TraitId
     LastStandScar, // 剣＋傷（ガルド・第198期・規定）: 剣の版に加え、抜いた瞬間にその戦で庇って身に受けた傷の累計の 10%（切り捨て）を攻撃力に加える
     LastStandPlain, // 剣の段・返しなし（第198期・対照・保持者 0 枚）: 斬り返しだけを外した版
     LastStandShield,// 盾剣（第198期・参考・保持者 0 枚）: 受け流しは今のまま構え直し、毎手番 攻撃力 ×1・単体で振る
+    LastStandHold,  // 剣の段・第199期（ガルド・規定）: 剣＋傷に3点——傷に受け流した刃も数える／抜いた瞬間の受け流しの在庫を残す（構え直さない）／
+                    // 相打ちで最後の敵を倒せば勝ち。どれも `LastStandHoldTrait` の const で切り替える
+    LastStandHoldOldScar,   // 第199期・傷は旧（対照・保持者 0 枚）: 上乗せの元を身に受けた傷だけに戻す
+    LastStandHoldNoStock,   // 第199期・在庫なし（対照・保持者 0 枚）: 抜いた瞬間に在庫を捨てる（第198期と同じ）
+    LastStandHoldMutualLoss,// 第199期・相打ち負け（対照・保持者 0 枚）: 相打ちで最後の敵を倒しても負け（第198期と同じ）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -11787,10 +11792,22 @@ public class LastStandTrait : Trait
     /// <summary>剣＋傷で加えた攻撃力（<c>Counters</c> の私有キー）。<see cref="ModifyAttack"/> が読む＝他者の強化ではないので支援拒否に止められない。</summary>
     public const string ScarAtkKey = "lastStandScarAtk";
 
+    /// <summary>
+    /// 第199期: その戦で受け流しが無かったことにした刃の累計（<c>Counters</c> の私有キー）。<b>書くのは engine の受け流しの出口</b>
+    /// （受け流しの判定の時点の打点＝軛で切られる前の値。剣を抜いた後の受け流しは足さない）。読むのは第199期の版だけ。
+    /// </summary>
+    public const string ParriedKey = "parriedScar";
+
     public override TraitId Id => TraitId.LastStand;
 
     /// <summary>抜いた瞬間に傷の累計を攻撃力へ換えるか（剣＋傷の版だけ真）。</summary>
     protected virtual bool Scars => false;
+    /// <summary>第199期: 傷の累計に受け流した刃も数えるか。</summary>
+    protected virtual bool ScarsParried => false;
+    /// <summary>第199期: 抜いた瞬間の受け流しの在庫を残すか（構え直しと庇いの補充はしない）。</summary>
+    protected virtual bool KeepsStock => false;
+    /// <summary>第199期: 相打ちで最後の敵を倒したらその戦を勝ちにするか。</summary>
+    protected virtual bool MutualWins => false;
 
     /// <summary>受け流しを捨てるか（盾剣の版だけ偽）。</summary>
     protected virtual bool DropsShield => true;
@@ -11801,9 +11818,12 @@ public class LastStandTrait : Trait
 
     public static bool Drawn(UnitState u) => u.RawCounter(DrawnKey) > 0;
 
-    /// <summary>剣の段に入っていて、しかも盾を捨てた版（剣／剣・返しなし）か。</summary>
+    /// <summary>
+    /// 剣の段に入っていて、しかも盾を捨てた版（盾剣以外）か。<b>真なら構え直しも庇いの補充もしない</b>
+    /// （第199期の版は抜いた瞬間の在庫だけは残す——在庫が尽きるまでは受け流す）。
+    /// </summary>
     public static bool ShieldDropped(UnitState u)
-        => Drawn(u) && (u.HasTrait(TraitId.LastStandScar) || u.HasTrait(TraitId.LastStand) || u.HasTrait(TraitId.LastStandPlain));
+        => Drawn(u) && !u.HasTrait(TraitId.LastStandShield);
 
     /// <summary>
     /// 戦闘ごとに鞘へ戻す。<b>会戦・作戦マップで最後の1体のまま次の戦に入ったときは、開戦時に抜く</b>
@@ -11815,6 +11835,7 @@ public class LastStandTrait : Trait
         self.SetCounter(DrawnKey, 0);
         self.SetCounter(ScarKey, 0);
         self.SetCounter(ScarAtkKey, 0);
+        self.SetCounter(ParriedKey, 0);
         TryDraw(ctx, self);
     }
 
@@ -11823,6 +11844,7 @@ public class LastStandTrait : Trait
         self.SetCounter(DrawnKey, 0);
         self.SetCounter(ScarKey, 0);
         self.SetCounter(ScarAtkKey, 0);
+        self.SetCounter(ParriedKey, 0);
     }
 
     public override void OnAllyDeath(BattleContext ctx, UnitState self, UnitState dead) => TryDraw(ctx, self);
@@ -11838,23 +11860,29 @@ public class LastStandTrait : Trait
         t.LastStandMaxHp = self.MaxHp;
         t.LastStandBaseDealt = t.DamageToEnemy;
         t.LastStandFoes = ctx.LivingMembers(self.TeamId == BattleContext.PlayerTeam ? BattleContext.EnemyTeam : BattleContext.PlayerTeam).Count;
-        int scar = self.RawCounter(ScarKey);
-        t.LastStandScarTaken = scar;   // 版に依らず数える（計数のみ）
+        int scar = self.RawCounter(ScarKey), parried = self.RawCounter(ParriedKey);
+        t.LastStandScarTaken = scar;         // 版に依らず数える（計数のみ）
+        t.LastStandParriedTaken = parried;   // 第199期（版に依らず・計数のみ）
+        t.LastStandStancesAtDraw = t.ParryStances;        // 第199期 自己検査: 抜いた後に構え直していないか
+        t.LastStandRefillGuardAtDraw = t.ParryRefillGuard;
+        int add = 0;
         if (Scars)
         {
-            int add = scar * LastStandScarPercent / 100;
+            add = (scar + (ScarsParried ? parried : 0)) * LastStandScarPercent / 100;
             self.SetCounter(ScarAtkKey, add);
             t.LastStandScarAtk = add;
         }
-        if (DropsShield && self.HasTrait(TraitId.Parry))
+        if (self.HasTrait(TraitId.Parry)) t.LastStandStockAtDraw = self.RawCounter(ParryTrait.StockKey);
+        if (DropsShield && !KeepsStock && self.HasTrait(TraitId.Parry))
         {
             t.LastStandStockDropped += self.RawCounter(ParryTrait.StockKey);
             self.SetCounter(ParryTrait.StockKey, 0);
         }
-        ctx.EmitLastStand(self, Id);
+        ctx.EmitLastStand(self, Id, add);
         ctx.Log(DropsShield
             ? $"  守る者を失った {self.Name} が盾を捨て、壊れた誓約ごと剣を抜いた"
-              + (Scars ? $"（庇って受けた傷 {scar} → 攻撃 +{self.RawCounter(ScarAtkKey)}）" : "")
+              + (Scars ? $"（背負った傷 {scar + (ScarsParried ? parried : 0)} → 攻撃 +{add}）" : "")
+              + (KeepsStock && self.RawCounter(ParryTrait.StockKey) > 0 ? $"（残った構え {self.RawCounter(ParryTrait.StockKey)}）" : "")
             : $"  守る者を失った {self.Name} が盾を構えたまま剣を抜いた", LogKind.Highlight);
     }
 
@@ -11891,18 +11919,60 @@ public class LastStandTrait : Trait
             long dealt = t.DamageToEnemy - before;
             if (dying) { t.LastStandDyingRipostes++; t.LastStandDyingDealt += dealt; }
             else { t.LastStandRipostes++; t.LastStandRiposteDealt += dealt; }
+            // 第199期: 相打ちで最後の敵を倒したら、その戦は勝ち（印は相打ちのこの1箇所でしか立たない）。
+            if (dying && MutualWins && ctx.MarkLastStandVictory(self, source)) t.LastStandMutualWins++;
         });
     }
 }
 
 /// <summary>
-/// 剣＋傷（第198期・<b>規定の版</b>・廃棄聖騎士ガルド）。剣の版に加え、抜いた瞬間に
+/// 剣＋傷（第198期の規定・<b>第199期から対照・保持者 0 枚</b>）。剣の版に加え、抜いた瞬間に
 /// その戦で庇って身に受けた傷の累計の <see cref="LastStandTrait.LastStandScarPercent"/>%（切り捨て）を攻撃力に加える。
 /// </summary>
 public sealed class LastStandScarTrait : LastStandTrait
 {
     public override TraitId Id => TraitId.LastStandScar;
     protected override bool Scars => true;
+}
+
+/// <summary>
+/// 剣の段・第199期（<b>規定の版</b>・廃棄聖騎士ガルド）。剣＋傷に3点を足す——どれも const で切り替える:
+/// (1) <see cref="HoldCountsParried"/> 上乗せの元に受け流した刃も数える、(2) <see cref="HoldKeepsStock"/> 抜いた瞬間の受け流しの在庫を残す
+/// （構え直しと庇いの補充はしない）、(3) <see cref="HoldMutualWin"/> 相打ちで最後の敵を倒せばその戦は勝ち。
+/// 対照の版は1点ずつ外した札（保持者 0 枚）。
+/// </summary>
+public class LastStandHoldTrait : LastStandTrait
+{
+    public const bool HoldCountsParried = true;
+    public const bool HoldKeepsStock = true;
+    public const bool HoldMutualWin = true;
+
+    public override TraitId Id => TraitId.LastStandHold;
+    protected override bool Scars => true;
+    protected override bool ScarsParried => HoldCountsParried;
+    protected override bool KeepsStock => HoldKeepsStock;
+    protected override bool MutualWins => HoldMutualWin;
+}
+
+/// <summary>第199期・傷は旧（対照・保持者 0 枚）。上乗せの元を身に受けた傷だけに戻す。</summary>
+public sealed class LastStandHoldOldScarTrait : LastStandHoldTrait
+{
+    public override TraitId Id => TraitId.LastStandHoldOldScar;
+    protected override bool ScarsParried => false;
+}
+
+/// <summary>第199期・在庫なし（対照・保持者 0 枚）。抜いた瞬間に在庫を捨てる（第198期と同じ）。</summary>
+public sealed class LastStandHoldNoStockTrait : LastStandHoldTrait
+{
+    public override TraitId Id => TraitId.LastStandHoldNoStock;
+    protected override bool KeepsStock => false;
+}
+
+/// <summary>第199期・相打ち負け（対照・保持者 0 枚）。相打ちで最後の敵を倒しても負け（第198期と同じ）。</summary>
+public sealed class LastStandHoldMutualLossTrait : LastStandHoldTrait
+{
+    public override TraitId Id => TraitId.LastStandHoldMutualLoss;
+    protected override bool MutualWins => false;
 }
 
 /// <summary>剣の段・返しなし（第198期・対照・保持者 0 枚）。斬り返しの寄与を切り分けるためだけの版。</summary>
@@ -12417,7 +12487,11 @@ public static class TraitCatalog
         new GurenStrikeTrait(), // 第197期（対照・保持者 0 枚）
         new GurenLowTrait(),    // 第197期（対照・保持者 0 枚）
         new GurenFullTrait(),   // 第197期（参考・保持者 0 枚）
-        new LastStandScarTrait(),    // 第198期（規定）
+        new LastStandHoldTrait(),    // 第199期（規定）
+        new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）
+        new LastStandHoldNoStockTrait(),   // 第199期（対照・保持者 0 枚）
+        new LastStandHoldMutualLossTrait(),// 第199期（対照・保持者 0 枚）
+        new LastStandScarTrait(),    // 第198期（剣＋傷・対照・保持者 0 枚）
         new LastStandTrait(),        // 第198期（剣・対照・保持者 0 枚）
         new LastStandPlainTrait(),   // 第198期（対照・保持者 0 枚）
         new LastStandShieldTrait(),  // 第198期（参考・保持者 0 枚）
