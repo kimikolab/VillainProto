@@ -112,7 +112,7 @@ public static void Run(string[] args, int stageIndex)
         //   `反撃改2 (ガン×カド)` の ヒサ → ヌキ ／ カド → ノノ。**手で組む**（勝率で採る行ではない）。
         //   ヌキ 前1 の隣は 中央ノノ(速6) と 後1ガン(速9) なので**宛先は必ずノノ**。
         ("横流し罠 (ヌキ×ノノ)", 0,
-            FnBuild((0, UnitCatalog.Nuki), (1, UnitCatalog.Doha), (2, UnitCatalog.Nono),
+            FnBuild((0, UnitCatalog.Nuki), (1, UnitCatalog.Doha), (2, UnitCatalog.Lili),
                     (3, UnitCatalog.Gan), (4, UnitCatalog.Ban))),
         // 5 罠行（**第63期の版・カドが宛先**）。**死蔵の新旧の差を1行で見せるためだけに並べる。**
         //   第63期はこれを「100% 死蔵の罠」と読んだが、カドは棘で攻撃力を読むので捨て場ではない。
@@ -125,7 +125,7 @@ public static void Run(string[] args, int stageIndex)
         //   ——**Q2'' が「何でも通る判定式」ではないことの実測。採否には使わない。**
         ("横流し陰性対照 (ヌキ×強化0)", 0,
             FnBuild((0, UnitCatalog.Nuki), (1, UnitCatalog.Kado), (2, UnitCatalog.Doha),
-                    (3, UnitCatalog.Nel), (4, UnitCatalog.Nono))),
+                    (3, UnitCatalog.Nel), (4, UnitCatalog.Lili))),
         // 7 **Q5 用**（採否には使わない）。`逆しま (ネル×ウツ)` の 逃亡兵セロ（中央） → ヌキ。
         //   選定規則を満たす（測れる席4・強化 15.87）が**総量順で試験行1〜3 には入らない**行。
         //   **ウツ（逆しま）は正の `AtkBonus` で攻撃力が半減する**ので、

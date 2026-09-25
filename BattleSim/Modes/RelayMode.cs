@@ -272,9 +272,9 @@ reVariants:
     Console.WriteLine("**符号ではなく「動くかどうか」だけを読む**。");
     Console.WriteLine();
 
-    var baseF = Formation.Build(front1: UnitCatalog.Nono, front3: UnitCatalog.Gald,
+    var baseF = Formation.Build(front1: UnitCatalog.Lili, front3: UnitCatalog.Gald,
                                 center: UnitCatalog.Wata, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga);
-    var noWata = Formation.Build(front1: UnitCatalog.Nono, front3: UnitCatalog.Gald,
+    var noWata = Formation.Build(front1: UnitCatalog.Lili, front3: UnitCatalog.Gald,
                                  back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga);
 
     Console.WriteLine("| 版 | 平均勝率 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | 横取り/戦 | 渡し/戦 | 敵与ダメ/戦 |");
@@ -309,9 +309,9 @@ reVariants:
     Console.WriteLine("| 版 | 平均勝率 | 第1波 | 第2波 | 第3波 | 第4波 | 第5波 | 横取り/戦 | 渡し/戦 | 敵与ダメ/戦 |");
     Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
     var adj = Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Gald,
-                              center: UnitCatalog.Nono, back1: UnitCatalog.Dolga, back3: UnitCatalog.Doha);
+                              center: UnitCatalog.Lili, back1: UnitCatalog.Dolga, back3: UnitCatalog.Doha);
     var far = Formation.Build(front1: UnitCatalog.Wata, front3: UnitCatalog.Gald,
-                              center: UnitCatalog.Nono, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga);
+                              center: UnitCatalog.Lili, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga);
     foreach (var (vn, vf) in new[] { ("隣接（ワタ前1 / ドルガ後1）", adj), ("非隣接（ワタ前1 / ドルガ後3）", far) })
     {
         double tk = 0, sn = 0, fo = 0;

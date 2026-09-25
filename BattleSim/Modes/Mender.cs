@@ -51,7 +51,7 @@ public static void Run(string[] args, int stageIndex)
     var mdIdx = new Dictionary<string, int>();
     for (int u = 0; u < mdRN; u++) mdIdx[mdRoster[u].Id] = u;
     string[] mdName = mdRoster.Select(d => d.Name).ToArray();
-    int mdNono = mdIdx["nono"];
+    int mdNono = mdIdx["lili"];
     string[] mdWriterIds = { "kado", "borg", "rica", "golm", "zoto", "nara" };   // 味方に傷を書く6枚
     int[] mdWriters = mdWriterIds.Select(i => mdIdx[i]).ToArray();
     string[] mdDenseIds = { "golm", "borg" };                                    // X2 で残る2枚
@@ -278,7 +278,7 @@ public static void Run(string[] args, int stageIndex)
             acc.TeamHealed += pt.Healed; acc.TeamTaken += pt.DamageTaken;
             acc.CarryWoundAlly += pt.CarryCount is null ? 0 : pt.CarryCount[UnitTally.CarryWound];
             acc.DeathWoundAlly += pt.WoundsAtDeath; acc.EndWoundAlly += pt.WoundsAtEnd;
-            if (d.Id == "nono")
+            if (d.Id == "lili")
             {
                 acc.MendFires += pt.MendFires; acc.MendSeen += pt.MendWoundSeen; acc.MendDepth += pt.MendWoundDepth;
                 acc.MendDry += pt.MendDry; acc.MendHealed += pt.MendHealed; acc.MendPaid += pt.MendPaid;
@@ -319,7 +319,7 @@ public static void Run(string[] args, int stageIndex)
 
     var mdAllRows = CompareBuilds();
     bool MdHas(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
-    var mdNonoRows = mdAllRows.Where(rw => MdHas(rw.F, "nono")).ToArray();
+    var mdNonoRows = mdAllRows.Where(rw => MdHas(rw.F, "lili")).ToArray();
     var mdX1Rows = mdNonoRows.Where(rw => mdWriterIds.Any(id => MdHas(rw.F, id))).ToArray();
     var mdX2Rows = mdNonoRows.Where(rw => mdDenseIds.Any(id => MdHas(rw.F, id))).ToArray();
     var mdPrimary = new HashSet<string>(Baseline.PrimaryRows);
@@ -889,7 +889,7 @@ public static void Run(string[] args, int stageIndex)
         var lines = new List<string>();
         for (int i = 0; i < mdAllRows.Length; i++)
         {
-            bool hasNono = MdHas(mdAllRows[i].F, "nono");
+            bool hasNono = MdHas(mdAllRows[i].F, "lili");
             if (mdBalance.TryGetValue(mdAllRows[i].Name, out double[]? doc))
                 for (int wv = 0; wv < mdW; wv++) { cellsDoc++; if (Math.Abs(doc[wv] - c[0][i][wv]) > 0.05) { mismDoc++; lines.Add($"| {mdAllRows[i].Name} | 第{wv + 1}波 | docs {doc[wv]:F1} | X0 {c[0][i][wv]:F1} |"); } }
             else missingDoc++;

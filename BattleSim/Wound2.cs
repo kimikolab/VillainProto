@@ -554,7 +554,7 @@ static class Wound2Diag
         Console.WriteLine("**`Presets` は1行も触っていない。台は診断のローカル。**");
         Console.WriteLine();
         Formation nono = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kado,
-            center: UnitCatalog.Nono, back1: UnitCatalog.Nomi, back3: UnitCatalog.Egu);
+            center: UnitCatalog.Lili, back1: UnitCatalog.Nomi, back3: UnitCatalog.Egu);
         Formation hari = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kado,
             center: UnitCatalog.Hari, back1: UnitCatalog.Nomi, back3: UnitCatalog.Egu);
         Console.WriteLine("| 版 | 勝率（第2〜5波） | 書かれた傷/戦 | 読まれず/戦 | 縫い 敵から | 縫い 味方から | 塞ぎ/戦 |");
@@ -591,7 +591,7 @@ static class Wound2Diag
         string[] readerIds =
         {
             UnitCatalog.Egu.Id, UnitCatalog.Nomi.Id, UnitCatalog.Nata.Id,
-            UnitCatalog.Hari.Id, UnitCatalog.Nono.Id, UnitCatalog.Mio.Id
+            UnitCatalog.Hari.Id, UnitCatalog.Lili.Id, UnitCatalog.Mio.Id
         };
         int hasW = 0, hasR = 0, hasBoth = 0, wrote = 0, read = 0, chain = 0;
         var chainRows = new List<(string Name, double W, double R)>();
@@ -1017,7 +1017,7 @@ static class Wound2Diag
         Console.WriteLine("## P-4 味方の傷の読み手を含む行（**代金が出る行の予告**・§1 の 3）");
         Console.WriteLine();
         var rows = Rows();
-        string[] payers = { UnitCatalog.Nono.Id, UnitCatalog.Gald.Id, UnitCatalog.Hari.Id };
+        string[] payers = { UnitCatalog.Lili.Id, UnitCatalog.Gald.Id, UnitCatalog.Hari.Id };
         string[] payerNames = { "繕い（ノノ）", "引き取り（ガルド）", "縫い（ハリ）" };
         var hit = new List<(string Row, string Who)>();
         for (int r = 0; r < rows.Length; r++)
@@ -1825,14 +1825,14 @@ static class Wound2Diag
         Console.WriteLine();
         Console.WriteLine("| 読み手 | 駒 | ノブ | 現行 | この期 |");
         Console.WriteLine("|---|---|---|---|---|");
-        Console.WriteLine($"| 繕い（`MenderTrait`） | {UnitCatalog.Nono.Name} | `MendRule.Side` | `Wound` | **`Plain`** |");
+        Console.WriteLine($"| 繕い（`MenderTrait`） | {UnitCatalog.Lili.Name} | `MendRule.Side` | `Wound` | **`Plain`** |");
         Console.WriteLine($"| 引き取り（`GuardianTrait`） | {UnitCatalog.Gald.Name} | `GatherRule.Enabled` | `true` | **`false`** |");
         Console.WriteLine($"| 縫い（`SutureTrait`） | {UnitCatalog.Hari.Name} | — | **`Presets` に 0 行**（第108期に外した） | — |");
         Console.WriteLine();
 
         // --- P-3c 行 ---------------------------------------------------------------------
         var rows = Rows();
-        string[] readerIds = { UnitCatalog.Nono.Id, UnitCatalog.Gald.Id, UnitCatalog.Hari.Id };
+        string[] readerIds = { UnitCatalog.Lili.Id, UnitCatalog.Gald.Id, UnitCatalog.Hari.Id };
         var predicted = new List<(string Row, bool Prim, bool Cross, string Why)>();
         foreach (var row in rows)
         {
@@ -1896,14 +1896,14 @@ static class Wound2Diag
         Console.WriteLine();
         Console.WriteLine("**残る差は1つだけ**——ノノの札 `TraitId.Seal` は第92期に採用の作業として足したもので、"
             + "**`MendSide.Plain` では `w == 0` なので `seal` が常に偽**（`HasTrait(Seal)` は読まれるが分岐しない）。");
-        Console.WriteLine($"- ノノの `Traits` = {string.Join(" / ", UnitCatalog.Nono.Traits.Select(t => "`" + t + "`"))}");
+        Console.WriteLine($"- ノノの `Traits` = {string.Join(" / ", UnitCatalog.Lili.Traits.Select(t => "`" + t + "`"))}");
         Console.WriteLine("- **札は残す**（機構は残置。降ろすのは既定値だけ、という §0-1 の形に揃える）。");
         Console.WriteLine();
 
         // --- P-6 旧文 ---------------------------------------------------------------------
         Console.WriteLine("## P-6 ノノ・ガルドの `PlusText` の旧文（§1 の 5・**`git log` から引く。手で書き直さない**）");
         Console.WriteLine();
-        var targets = new (UnitDef U, string Label)[] { (UnitCatalog.Gald, "第90期 (P1)"), (UnitCatalog.Nono, "第92期") };
+        var targets = new (UnitDef U, string Label)[] { (UnitCatalog.Gald, "第90期 (P1)"), (UnitCatalog.Lili, "第92期") };
         var old = new Dictionary<string, (string P, string M)>(StringComparer.Ordinal);
         Console.WriteLine("| 駒 | 採用の期 | 導入コミットの親 | 旧 `PlusText` | 旧 `MinusText` |");
         Console.WriteLine("|---|---|---|---|---|");
@@ -1928,15 +1928,15 @@ static class Wound2Diag
         Console.WriteLine("> ノノの `MinusText` は**第106期（繕いの代金半額）が同じ行の別の箇所を変えている**ので、");
         Console.WriteLine("> 逐語で戻すと第106期の採用を巻き戻すことになる。**戻すのは第92期が足した節だけ。**");
         Console.WriteLine();
-        string nonoMinusNew = UnitCatalog.Nono.MinusText.Replace("繕うとその傷はひとつ塞がる。", "");
+        string nonoMinusNew = UnitCatalog.Lili.MinusText.Replace("繕うとその傷はひとつ塞がる。", "");
         Console.WriteLine("| 駒 | 欄 | この期に書く文 | 逐語の旧文と一致 |");
         Console.WriteLine("|---|---|---|:-:|");
         Console.WriteLine($"| {UnitCatalog.Gald.Name} | Plus | {old[UnitCatalog.Gald.Id].P} | ○ |");
-        Console.WriteLine($"| {UnitCatalog.Nono.Name} | Plus | {old[UnitCatalog.Nono.Id].P} | ○ |");
-        Console.WriteLine($"| {UnitCatalog.Nono.Name} | Minus | {nonoMinusNew} | "
-            + (nonoMinusNew == old[UnitCatalog.Nono.Id].M ? "○" : "**×（第106期の「半分」を保つ）**") + " |");
+        Console.WriteLine($"| {UnitCatalog.Lili.Name} | Plus | {old[UnitCatalog.Lili.Id].P} | ○ |");
+        Console.WriteLine($"| {UnitCatalog.Lili.Name} | Minus | {nonoMinusNew} | "
+            + (nonoMinusNew == old[UnitCatalog.Lili.Id].M ? "○" : "**×（第106期の「半分」を保つ）**") + " |");
         Console.WriteLine();
-        Console.WriteLine($"逐語の旧 `MinusText`: `{old[UnitCatalog.Nono.Id].M}`");
+        Console.WriteLine($"逐語の旧 `MinusText`: `{old[UnitCatalog.Lili.Id].M}`");
         Console.WriteLine();
         Console.WriteLine($"ガルドの `MinusText` は3期とも触っていない（`{UnitCatalog.Gald.MinusText}`）。");
         Console.WriteLine();
@@ -2056,7 +2056,7 @@ static class Wound2Diag
             foreach (int r in big)
             {
                 var who = rows[r].F.Occupied().Select(u => u.Def)
-                    .Where(d => d.Id == UnitCatalog.Nono.Id || d.Id == UnitCatalog.Gald.Id)
+                    .Where(d => d.Id == UnitCatalog.Lili.Id || d.Id == UnitCatalog.Gald.Id)
                     .Select(d => d.Name).ToList();
                 Console.WriteLine($"| {rows[r].Name} | {Avg25(win[2][r]) - Avg25(win[1][r]):+0.0;-0.0;0.0} "
                     + $"| {(who.Count == 0 ? "**いない（残りの書き手を名指しすること）**" : string.Join(" / ", who))} |");
@@ -2596,7 +2596,7 @@ static class Wound2Diag
         foreach (var (u, plusIntro, minusIntro) in new (UnitDef, string, string?)[]
                  {
                      (UnitCatalog.Gald, "味方への攻撃も傷も肩代わりし、その傷のぶん強くなる", null),
-                     (UnitCatalog.Nono, "その味方に傷があれば、傷1つにつき繕いが増える", "繕うとその傷はひとつ塞がる。"),
+                     (UnitCatalog.Lili, "その味方に傷があれば、傷1つにつき繕いが増える", "繕うとその傷はひとつ塞がる。"),
                  })
         {
             string? rev = ParentOfIntroducing(plusIntro);

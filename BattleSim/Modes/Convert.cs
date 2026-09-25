@@ -218,7 +218,7 @@ public static void Run(string[] args, int stageIndex)
     // （`dissect` §12-2・`output` §8 と同じ作法）。
     var rec17 = new (string Name, double A, double C)[]
     {
-        ("惨禍×被弾強化", 263.9, 92), ("毒 (グザ×ミオ×ラウ)", 170.4, 92), ("耐久 (ガルド×ノノ)", 51.3, 0),
+        ("惨禍×被弾強化", 263.9, 92), ("毒 (グザ×ミオ×ラウ)", 170.4, 92), ("耐久 (ガルド×リリ)", 51.3, 0),
     };
     int miss17 = 0;
     Console.WriteLine("**第17期の主台との一致**（P90 = 荷駄5）。値は `output` §5-2 から:");
@@ -551,7 +551,7 @@ public static void Run(string[] args, int stageIndex)
     //
     // 分類は `output` §7 からそのまま写す（**ここで分け直すと「分かれるように分けた」になる**）。
     var kou = new[] { "速攻 (ボルグ×ムド)", "毒+耐久 (ベニ×トウ)", "溜め改 (クグ×バン×ガン)" };
-    var otsu = new[] { "毒 (グザ×ミオ×ラウ)", "燃焼 (ボルグ×ホタ)", "耐久 (ガルド×ノノ)",
+    var otsu = new[] { "毒 (グザ×ミオ×ラウ)", "燃焼 (ボルグ×ホタ)", "耐久 (ガルド×リリ)",
                        "範囲耐性 (ヒビ×ボルグ)", "追撃×死 (ハギ×リィカ)", "死の連鎖 (リィカ軸)" };
     int Ix(string name) => Array.FindIndex(targets, x => x.Name == name);
 

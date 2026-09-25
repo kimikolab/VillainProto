@@ -475,7 +475,7 @@ static partial class BeniDiag
                                     back1: UnitCatalog.Guza, back3: UnitCatalog.Kata)),
         ("台F（燃焼）", Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Mudo, center: UnitCatalog.Beni,
                                       back1: UnitCatalog.Golm, back3: UnitCatalog.Kata)),
-        ("台H（回復役）", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Nono, center: UnitCatalog.Beni,
+        ("台H（回復役）", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Lili, center: UnitCatalog.Beni,
                                         back1: UnitCatalog.Vel, back3: UnitCatalog.Guza)),
     };
 

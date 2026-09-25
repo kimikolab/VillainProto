@@ -60,7 +60,7 @@ public static class Presets
         // ——囃し立ては隣接する<b>最大HP</b>の味方に標を付けるので、**標がカドからガルドへ移って
         // この行の機構（標を集めたカドが反撃する）が丸ごと消える**。上の行の狙いそのもの。
         // 第50期「採用した配置で機構の発火回数が 0 になっていないことを毎回確認する」。
-        ("反撃 (ヒサ×カド)",     Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Gald, center: UnitCatalog.Nel, back1: UnitCatalog.Kado, back3: UnitCatalog.Nono)),
+        ("反撃 (ヒサ×カド)",     Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Gald, center: UnitCatalog.Nel, back1: UnitCatalog.Kado, back3: UnitCatalog.Lili)),
         // ヒサを前1へ回すと隣接はカドとノノになるが、標的は最大HPで選ばれるのでカドのままで狙いは崩れない。
         // カドを前2の中央に置くと巻き込みがヒサ・ムド・セロの3枚へ広がり、成長が速くなる（+7.1pt / 第5波 +19.3）。
         // 旧配置（ムド前1・ヒサ前3）はヒサの隣接をカドだけに絞る形だったが、カドの巻き込み先が2枚に減っていた（reseat 追試）
@@ -71,7 +71,7 @@ public static class Presets
         // 代金は第2〜5波平均 65.4% → 63.5%（**−1.9pt**・帯B でも −2.9pt）で、採否閾値 5.0pt の内側。
         // **勝率の1位ではない**（追順9位）——(G14) は「勝率表の上で何セル情報を持つか」で席を選ぶ規則で、
         // `reseat` の「勝つ席を探す」目的とは向きが違う（第50期・第64期）。
-        ("惨禍×被弾強化",        Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Mudo, center: UnitCatalog.Kado, back1: UnitCatalog.Nono, back3: UnitCatalog.Sero)),
+        ("惨禍×被弾強化",        Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Mudo, center: UnitCatalog.Kado, back1: UnitCatalog.Lili, back3: UnitCatalog.Sero)),
         // 惨禍（味方全体の被ダメ5割増）は位置を問わないので、死の密度は隣接に頼らなくても出る。
         // リィカを後1へ下げて生贄をゾト1枚に絞り、中衛はヴェルに。リィカが開幕で自陣を削りすぎる形をやめた（+19.1pt / 第4波 +57.0）。
         // 旧配置（中衛リィカがカドとゾトを削る）は狙いとしては筋が通っていたが、第4波で 25% まで落ちていた（reseat 追試）
@@ -79,7 +79,8 @@ public static class Presets
         ("惨禍×死の連鎖",        Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Zoto, center: UnitCatalog.Kado, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
         // ガルドは前列でないと庇えない。前1を空けてガルドとゴルムを前2・前3へ寄せた形が探索1位。セロは中衛から被弾後退（layout 1位）
         // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +4.4pt）
-        ("耐久 (ガルド×ノノ)",   Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Nono, back3: UnitCatalog.Dolga)),
+        // 第204期: ノノがリリに転生したので行名も「ノノ → リリ」に変えた（席は1つも変えていない）。
+        ("耐久 (ガルド×リリ)",   Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Lili, back3: UnitCatalog.Dolga)),
         // 礫（第138期・第139期に盤面へ出した）。**破片（`StatusKeys.Armor`）に初めての「出口」を作る駒。**
         // 砕け盾のヒビが範囲攻撃を受けて味方全員へ配った破片を、礫のガレが
         // **最も纏っている1体から砕いて敵全体への一撃に変える**——供給（ヒビ）→ 在庫 → 出口（ガレ）の3枚が要る最小形。
@@ -138,7 +139,7 @@ public static class Presets
         // 全体1位はガルドを後1に置く形（99.4%）だが庇いが死ぬので採らない。この差 +11.5pt は庇いの監査結果そのもの（README 参照）
         ("逆しま改 (クビ×ウツ)", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, center: UnitCatalog.Kubi, back1: UnitCatalog.Nel, back3: UnitCatalog.Utsu)),
         // 旧配置がそのまま全配置1位。ヒサの隣接（カド・ネル）で最大HPはカド（layout 1位）
-        ("反撃改 (ドハ×カド)",   Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Kado, center: UnitCatalog.Doha, back1: UnitCatalog.Nel, back3: UnitCatalog.Nono)),
+        ("反撃改 (ドハ×カド)",   Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Kado, center: UnitCatalog.Doha, back1: UnitCatalog.Nel, back3: UnitCatalog.Lili)),
         // ヒサを中衛へ。横隣接が無いので深さ隣接の前2＝カドだけを指す。前列3枚が受け、カドの巻き込みはドハ・バン・ヒサへ広がる
         // （+12.2pt / 第3波 +39.0）。旧配置はヒサ前3で標的は同じだが、前列が2枚しかなく第3波が 36% だった
         // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +9.3pt）
@@ -176,7 +177,7 @@ public static class Presets
         // X字化に伴う振り直し。機械的な写しではホタが後列でボルグの火種が届かず 7/0/0/0 に潰れていた。
         // ホタを中央（ボルグの隣）へ上げた（reseat 1位＝狙いを満たす最良 / confirm +57.5pt）
         // **第148期 段0 で席を差し替えた**（棚卸し）。帯A 82.2 → 93.0・帯B(seed 200..599) 92.0%（+9.8pt）・狙 ○・情報セル 1 → 1・`reseat` 粗順 1。
-        ("燃焼 (ボルグ×ホタ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Nono, back1: UnitCatalog.Mudo, back3: UnitCatalog.Hota)),
+        ("燃焼 (ボルグ×ホタ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Lili, back1: UnitCatalog.Mudo, back3: UnitCatalog.Hota)),
         // 範囲耐性。砕け盾のヒビ（範囲を浴びて破片を配る）を軸に据えた編成。
         // ガルドは Stoic で回復も強化も受け付けないが、破片は damage 側で消費されるので届く。
         // ドルガ（攻38・薙ぎだが2ターンに1回）は「強い。ただ遅い」という理由で外された駒で、
@@ -499,7 +500,7 @@ public static class Presets
                                           center: UnitCatalog.Utsu, back1: UnitCatalog.Dolga,
                                           back3: UnitCatalog.Hane)),
         ("分かち×逆しま (ドハ×ウツ)", Formation.Build(front1: UnitCatalog.Utsu, front3: UnitCatalog.Gald,
-                                              center: UnitCatalog.Nono, back1: UnitCatalog.Doha,
+                                              center: UnitCatalog.Lili, back1: UnitCatalog.Doha,
                                               back3: UnitCatalog.Dolga)),
         // 集約（第42期）。**台（分かち×逆しま）とメンバーが1枚しか違わない**——ウツをウケに
         // 差し替えただけ。第21期の swap と同じ作法で、同じ席に別の駒を置いた版どうしを比べれば
@@ -510,7 +511,7 @@ public static class Presets
         // **ウケは中央（隣接次数4）。** 上位4通りが全部ウケ中央で、仮置き（ウケ前1）は21位。
         // 第41期のハネ（隣接次数が代金なので角へ逃げた／上位20通り中19通りが角）と
         // **ちょうど逆を向く**——隣接次数がそのまま守備範囲になる駒では、中央が席の値段を回収する。
-        ("引き受け (ウケ×ドハ)", Formation.Build(front1: UnitCatalog.Nono, front3: UnitCatalog.Gald,
+        ("引き受け (ウケ×ドハ)", Formation.Build(front1: UnitCatalog.Lili, front3: UnitCatalog.Gald,
                                           center: UnitCatalog.Uke, back1: UnitCatalog.Doha,
                                           back3: UnitCatalog.Dolga)),
         // 転嫁（第43期）。**第42期の集約行とメンバーが1枚しか違わない**——ウケをワタに
@@ -521,7 +522,7 @@ public static class Presets
         // **代金（HP）の倍率**でもあるので、ウケ（中央が1位）と同じ向きに出るとは限らない
         // ——ウケの代金は AtkBonus で素の攻6 で底を打つが、ワタの代金は HP で底が無い。
         // 実際の席は reseat → confirm で決める（結果は design/PHASE43_RELAY.md）。
-        ("渡し (ワタ×ドハ)", Formation.Build(front1: UnitCatalog.Nono, front3: UnitCatalog.Gald,
+        ("渡し (ワタ×ドハ)", Formation.Build(front1: UnitCatalog.Lili, front3: UnitCatalog.Gald,
                                         center: UnitCatalog.Wata, back1: UnitCatalog.Doha,
                                         back3: UnitCatalog.Dolga)),
         // 鱗（第47期）。**2行の供給源を変えるのがこの期の設計。**
@@ -768,7 +769,7 @@ public static class Presets
         // ノミを採った理由は供給側で、**傷の書き手がカド（被弾ごと）1本から刻み（毎ターン）を足した2本になる**
         // ——エグ（抉り）とノノ（繕い）の読み手が両方鳴る。キリは打点が常に 1 で第92期の規則2
         // （接続子が両方とも出力ゼロの組は入れない）に触れ、ナタは読み手が3枚になって供給が細る。
-        ("傷×被弾 (カド×ノミ×ノノ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kado, center: UnitCatalog.Nono, back1: UnitCatalog.Nomi, back3: UnitCatalog.Egu)),
+        ("傷×被弾 (カド×ノミ×リリ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kado, center: UnitCatalog.Lili, back1: UnitCatalog.Nomi, back3: UnitCatalog.Egu)),
 
         // 弱体 × 破片。引き受け（ウケ）が隣の弱体を破片に変える。供給はネル（呪詛の味方漏れ・開戦時）と
         // ドハ（分かちのなまり・被弾ごと）で、**周期の違う2本**を並べてある（規則5）。ウケは中央（隣接4）。

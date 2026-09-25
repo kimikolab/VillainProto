@@ -266,13 +266,13 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine("```");
         Console.WriteLine();
         Console.WriteLine($"- `MenderTrait.Amount` = {MenderTrait.Amount} ／ `PerWound` = {MenderTrait.PerWound}"
-            + $" ／ ノノの最大HP = {UnitCatalog.Nono.MaxHp}");
+            + $" ／ ノノの最大HP = {UnitCatalog.Lili.MaxHp}");
         var mendHolders = UnitCatalog.All.Where(d => d.Traits.Contains(TraitId.Mender)).ToArray();
         Console.WriteLine($"- 継ぎ当ての保持者（`UnitCatalog.All`）: **{mendHolders.Length} 枚**"
             + $"（{string.Join(" / ", mendHolders.Select(d => d.Name))}）");
         Console.WriteLine("- 敵側の従軍司祭長（`Chaplain`）も同じ特性を持つが、**`Stages` に1体も出ていない**"
             + "（第二波は施しの司祭長に差し替え済み）ので、単発戦では敵側に効かない。");
-        Console.WriteLine($"- ノノの在席行: **{HdRowsWith("nono").Length} 行** — {string.Join(" / ", HdRowsWith("nono"))}");
+        Console.WriteLine($"- ノノの在席行: **{HdRowsWith("lili").Length} 行** — {string.Join(" / ", HdRowsWith("lili"))}");
         Console.WriteLine("- **上限（`self.Hp - 1`）は癒す量のほうに残す**ので、1回の癒しの大きさは1点も変わらない。");
         Console.WriteLine();
 
@@ -459,7 +459,7 @@ public static void Run(string[] args, int stageIndex)
         // 3つのノブがどれも1回も走らないので、盤面も計数も完全に同一になるはず。
         {
             var quiet = hdBuilds.Where(b => !HdHas(b, "mudo") && !HdHas(b, "sekki")
-                                         && !HdHas(b, "nono") && !HdHas(b, "sasa")).ToArray();
+                                         && !HdHas(b, "lili") && !HdHas(b, "sasa")).ToArray();
             int nRow = Math.Min(10, quiet.Length), nSeed = 20;
             long[] v0 = new long[8], v1 = new long[8];
             int cells = 0, diffCells = 0;
@@ -515,7 +515,7 @@ public static void Run(string[] args, int stageIndex)
 
         // (c) 癒す量が変わっていないこと。**1戦の監査**で、最初の繕いの行を突き合わせる。
         {
-            int rowIdx = Array.FindIndex(hdBuilds, b => HdHas(b, "nono"));
+            int rowIdx = Array.FindIndex(hdBuilds, b => HdHas(b, "lili"));
             string l0 = "—", l2 = "—";
             if (rowIdx >= 0)
             {
@@ -677,7 +677,7 @@ public static void Run(string[] args, int stageIndex)
     double hdNonoSum = 0, hdNonoBorg = 0, hdNonoNo = 0; int hdNonoN = 0, hdNonoBn = 0, hdNonoNn = 0;
     for (int b = 0; b < hdBuilds.Length; b++)
     {
-        if (!HdHas(hdBuilds[b], "nono")) continue;
+        if (!HdHas(hdBuilds[b], "lili")) continue;
         bool borg = HdHas(hdBuilds[b], "borg");
         double d = HdAvg(2, b) - HdAvg(0, b);
         hdNonoSum += d; hdNonoN++;
@@ -694,7 +694,7 @@ public static void Run(string[] args, int stageIndex)
     Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|");
     foreach (int p in new[] { 0, 2 })
     {
-        long[] a = HdA(p, "nono");
+        long[] a = HdA(p, "lili");
         double util = a[HdSettle] == 0 ? 0 : (double)a[HdUsed] / a[HdSettle];
         Console.WriteLine($"| {hdVer[p].Tag} | {HdPer(a, HdMendF):0.00} | {HdPer(a, HdMendH):0.0} | **{HdPer(a, HdMendP):0.0}** "
             + $"| **{HdPer(a, HdLive):0.00}** | {HdPer(a, HdSettle):0.00} | {util * 100:0.0}% "

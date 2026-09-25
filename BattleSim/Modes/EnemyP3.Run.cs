@@ -393,7 +393,7 @@ static partial class EnemyP3Diag
         // (4) 召喚・席の重なり
         Console.WriteLine("## (4) 敵陣の召喚（背かれの餌）がパターン3で落ちない・重ならない");
         Console.WriteLine();
-        Formation som = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Som, back1: UnitCatalog.Hisa, back3: UnitCatalog.Nono);
+        Formation som = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Som, back1: UnitCatalog.Hisa, back3: UnitCatalog.Lili);
         int overlap = 0, fodderAt7 = 0, fodder = 0, runs = 0;
         var fodderSlots = new Dictionary<int, int>();
         foreach (EnemyCatalog.Stage stg in EnemyCatalog.Pattern3Copies)

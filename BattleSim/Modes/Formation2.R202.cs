@@ -311,7 +311,7 @@ static partial class Formation2Diag
         bool r2 = body.Length > 0 && rolls == 0;
         ok &= r2;
         Console.WriteLine("- `PickPierceLane` の本文の `Roll(` / `PickOne(` / `Random`: " + rolls + " → " + (r2 ? "○" : "**×**"));
-        Formation probe = Formation.BuildDiamond(UnitCatalog.Hisa, UnitCatalog.Nono, UnitCatalog.Beni, UnitCatalog.Gald, UnitCatalog.Kado);
+        Formation probe = Formation.BuildDiamond(UnitCatalog.Hisa, UnitCatalog.Lili, UnitCatalog.Beni, UnitCatalog.Gald, UnitCatalog.Kado);
         bool det = Enumerable.Range(0, 20).All(s =>
         {
             var x1 = BattleEngine.Run(probe, EnemyCatalog.Stages[4].Enemy, s, verbose: true);

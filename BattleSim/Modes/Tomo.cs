@@ -1356,7 +1356,7 @@ public static void Run(string[] args, int stageIndex)
             ("V2 4体（ミオの席を空ける）", Swap(null)),
             ("V3 ミオ → 抉りのエグ", Swap(UnitCatalog.Egu)),
             ("V4 ミオ → 断ちのナタ", Swap(UnitCatalog.Nata)),
-            ("V5 ミオ → 継ぎ当てのノノ", Swap(UnitCatalog.Nono)),
+            ("V5 ミオ → 継ぎ当てのノノ", Swap(UnitCatalog.Lili)),
         };
 
         Console.WriteLine("### 表E-1 —— 素体差し替えと差し替え版（seed 0.." + (TmSeeds - 1) + "）");

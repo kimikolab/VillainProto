@@ -42,14 +42,14 @@ public static void Run(string[] args, int stageIndex)
     {
         ("S1 耐久（削り3 / 回復1・ナラに不利）", "ノノ（土台）",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald,
-                            center: UnitCatalog.Sero, back1: UnitCatalog.Nono, back3: UnitCatalog.Dolga)),
+                            center: UnitCatalog.Sero, back1: UnitCatalog.Lili, back3: UnitCatalog.Dolga)),
         ("S1 耐久（削り3 / 回復1・ナラに不利）", "ナラ",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald,
                             center: UnitCatalog.Sero, back1: UnitCatalog.Nara, back3: UnitCatalog.Dolga)),
 
         ("S2 守り（削り2 / 回復2・主判定）", "ノノ",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald,
-                            center: UnitCatalog.Nono, back1: UnitCatalog.Tou, back3: UnitCatalog.Kugu)),
+                            center: UnitCatalog.Lili, back1: UnitCatalog.Tou, back3: UnitCatalog.Kugu)),
         ("S2 守り（削り2 / 回復2・主判定）", "ナラ",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald,
                             center: UnitCatalog.Nara, back1: UnitCatalog.Tou, back3: UnitCatalog.Kugu)),
@@ -63,7 +63,7 @@ public static void Run(string[] args, int stageIndex)
         // セロは前1 に置くこと——狙撃化には戦闘中に後退した実績が要るので、後列始まりでは発火しない。
         ("S3 攻め（削り2 / 回復2・ゴルム軸）", "ノノ",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Golm,
-                            center: UnitCatalog.Nono, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
+                            center: UnitCatalog.Lili, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
         ("S3 攻め（削り2 / 回復2・ゴルム軸）", "ナラ",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Golm,
                             center: UnitCatalog.Nara, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
@@ -73,7 +73,7 @@ public static void Run(string[] args, int stageIndex)
 
         ("S4 攻め（削り2 / 回復2・ガルド軸）", "ノノ",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald,
-                            center: UnitCatalog.Nono, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
+                            center: UnitCatalog.Lili, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
         ("S4 攻め（削り2 / 回復2・ガルド軸）", "ナラ",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald,
                             center: UnitCatalog.Nara, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
@@ -88,7 +88,7 @@ public static void Run(string[] args, int stageIndex)
         // 割れ方は S4 と同じ 削り2（ガルド4・ドルガ6）／回復2（ササ12・セロ12）。
         ("S5 分散回復（採用席・削り2 / 回復2）", "ノノ",
             Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald,
-                            center: UnitCatalog.Sero, back1: UnitCatalog.Nono, back3: UnitCatalog.Dolga)),
+                            center: UnitCatalog.Sero, back1: UnitCatalog.Lili, back3: UnitCatalog.Dolga)),
         ("S5 分散回復（採用席・削り2 / 回復2）", "ナラ",
             Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald,
                             center: UnitCatalog.Sero, back1: UnitCatalog.Nara, back3: UnitCatalog.Dolga)),
@@ -153,7 +153,7 @@ public static void Run(string[] args, int stageIndex)
         {
             // 回復役の削り総量。ノノ版は 0（継ぎ当ては味方を削らない）、4体版は該当なし。
             UnitTally? healer = r.Name.Contains("ナラ") ? Get(r.Sum, UnitCatalog.Nara.Id)
-                              : r.Name.Contains("ノノ") ? Get(r.Sum, UnitCatalog.Nono.Id)
+                              : r.Name.Contains("ノノ") ? Get(r.Sum, UnitCatalog.Lili.Id)
                               : null;
             string toAlly = healer is null ? "−" : $"{(double)healer.DamageToAlly / r.Battles:F0}";
             UnitTally golm = Get(r.Sum, UnitCatalog.Golm.Id);

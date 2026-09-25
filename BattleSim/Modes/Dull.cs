@@ -260,9 +260,9 @@ public static void Run(string[] args, int stageIndex)
     Console.WriteLine("**符号ではなく「動くかどうか」だけを読む**。");
     Console.WriteLine();
 
-    Formation ukeRow = Formation.Build(front1: UnitCatalog.Nono, front3: UnitCatalog.Gald,
+    Formation ukeRow = Formation.Build(front1: UnitCatalog.Lili, front3: UnitCatalog.Gald,
         center: UnitCatalog.Uke, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga);
-    Formation ukeGone = Formation.Build(front1: UnitCatalog.Nono, front3: UnitCatalog.Gald,
+    Formation ukeGone = Formation.Build(front1: UnitCatalog.Lili, front3: UnitCatalog.Gald,
         back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga);
 
     Console.WriteLine("| 版 | 平均勝率" + string.Concat(Enumerable.Range(1, duStages.Count).Select(i => $" | 第{i}波")) + " | なまり/戦 | 横取り/戦 |");
@@ -328,7 +328,7 @@ public static void Run(string[] args, int stageIndex)
     Console.WriteLine();
 
     Formation shioOff = Formation.Build(front1: UnitCatalog.Utsu, front3: UnitCatalog.Gald,
-        center: UnitCatalog.Nono, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga);
+        center: UnitCatalog.Lili, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga);
     Formation shioOn = Formation.Build(front1: UnitCatalog.Utsu, front3: UnitCatalog.Gald,
         center: UnitCatalog.Shio, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga);
 

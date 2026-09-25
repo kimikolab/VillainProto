@@ -377,7 +377,7 @@ public static void Phase0(string[] args, int stageIndex)
             back1: SgPlain, back3: UnitCatalog.Nel)),
         ("D5 標燃 (カド×ヒサ×ボルグ×ノノ)", Formation.Build(
             front1: UnitCatalog.Kado, front3: UnitCatalog.Borg, center: UnitCatalog.Hisa,
-            back1: SgPlain, back3: UnitCatalog.Nono)),
+            back1: SgPlain, back3: UnitCatalog.Lili)),
         ("D6 標燃 (カド×ヒサ×ボルグ×ムド)", Formation.Build(
             front1: UnitCatalog.Kado, front3: UnitCatalog.Borg, center: UnitCatalog.Hisa,
             back1: SgPlain, back3: UnitCatalog.Mudo)),
@@ -414,7 +414,7 @@ public static void Phase0(string[] args, int stageIndex)
             front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Hota,
             back1: SgPlain, back3: UnitCatalog.Mudo)),
         ("B5 なし (耐久 ガルド×ノノ のセロ枠)", Formation.Build(
-            front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Nono,
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Lili,
             back1: SgPlain, back3: UnitCatalog.Golm)),
     };
 

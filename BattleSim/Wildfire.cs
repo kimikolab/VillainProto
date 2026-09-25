@@ -125,11 +125,11 @@ static class WildfireDiag
         ("台1 ボルグ単騎火力",
          "土台はガルド（肩代わり）・キリ（薄刃・打点は常に1）・ノノ（繕い）。**ボルグが唯一の火力**",
             Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kiri,
-                            center: UnitCatalog.Nono, back1: UnitCatalog.Sekki, back3: borg)),
+                            center: UnitCatalog.Lili, back1: UnitCatalog.Sekki, back3: borg)),
         ("台2 火力2枚",
          "前3 をドルガ（攻38）に差し替え。**敵が早く落ちる ＝ 燃えている敵が減る**",
             Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga,
-                            center: UnitCatalog.Nono, back1: UnitCatalog.Sekki, back3: borg)),
+                            center: UnitCatalog.Lili, back1: UnitCatalog.Sekki, back3: borg)),
     };
 
     // ==================================================================================

@@ -549,7 +549,7 @@ public static void Run(string[] args, int stageIndex)
     {
         int xcP = args.Length > 3 ? int.Parse(args[3]) : 84;
         bool xcIs84 = xcP == 84;
-        string xcAid = xcIs84 ? "kado" : "nono";
+        string xcAid = xcIs84 ? "kado" : "lili";
         int xcA = xcIdx[xcAid];
         string[] xcIntended = xcIs84
             ? new[] { "kiri", "nomi", "egu", "nata", "hari" }

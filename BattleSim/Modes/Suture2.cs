@@ -419,7 +419,7 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine();
         // ノノの回復/戦（比較の分母）: `耐久 (ガルド×ノノ)` の味方全体の Healed（弱い波・同じ seed 帯）
         {
-            var nonoRow = suAllRows.FirstOrDefault(rw => rw.Name == "耐久 (ガルド×ノノ)");
+            var nonoRow = suAllRows.FirstOrDefault(rw => rw.Name == "耐久 (ガルド×リリ)");
             if (nonoRow.F is not null)
             {
                 double healed = 0, n = 0, taken = 0;

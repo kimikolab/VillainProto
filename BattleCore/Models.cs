@@ -1877,6 +1877,24 @@ public sealed class UnitTally
     public int GurenFirstTurn;
 
     /// <summary>
+    /// 第204期（施しのリリ・<b>リリの側・計数専用・どの規則も読まない</b>）:
+    /// <c>KissFires</c> 1体ずつ吸った回数 ／ <c>KissNominal</c> 吸う名目（最大HPの割合）／ <c>KissDrained</c> 実際に敵の HP から減った量 ／
+    /// <c>KissKills</c> 吸い取りで倒した数 ／ <c>KissHealed</c> 与えて実際に癒えた量 ／ <c>KissArmor</c> 溢れて破片になった量 ／
+    /// <c>KissBlocked</c> 渇き・支援拒否・反転で止められた量（溢れにしない）／ <c>KissToSelf</c> 受け取り手がリリ自身だった回数 ／
+    /// <c>KissMoves</c>・<c>KissMovedLayers</c> 移した状態の件数と値の合計 ／ <c>KissReset</c> 吸うだけの版で聖痕を消して一巡目に戻った回数 ／
+    /// <c>RiteFires</c>・<c>RiteDrained</c>・<c>RiteHealed</c>・<c>RiteArmor</c>・<c>RiteBlocked</c>・<c>RiteTurnSum</c> 祝福の儀 ／ <c>RiteFirstTurn</c> 初回のターン（0 ＝ 無し）／
+    /// <c>ReturnFires</c>・<c>ReturnNominal</c>・<c>ReturnHealed</c>・<c>ReturnArmor</c> 祝福が還る ／
+    /// <c>KissMovedBy</c> 移した状態（キー ＋ "|" ＋ 受け取った駒の <c>Def.Id</c>）→ (件数, 値の合計)。
+    /// </summary>
+    public long KissFires, KissNominal, KissDrained, KissKills, KissHealed, KissArmor, KissBlocked, KissToSelf, KissMoves, KissMovedLayers, KissReset,
+                RiteFires, RiteDrained, RiteHealed, RiteArmor, RiteBlocked, RiteTurnSum, ReturnFires, ReturnNominal, ReturnHealed, ReturnArmor;
+    public int RiteFirstTurn;
+    public Dictionary<string, (long N, long Sum)>? KissMovedBy;
+
+    /// <summary>第204期（<b>計数専用</b>）: この駒に載っていた破片の最大値（リリの手番の頭の走査と、リリが破片を足した直後に更新）。</summary>
+    public int ArmorPeakSeen;
+
+    /// <summary>
     /// 第198期 Phase 0（<b>計数専用・どの規則も読まない</b>）: 自陣営で<b>最後の1体</b>になった瞬間（味方陣営だけ・召喚された駒も数える）。
     /// <c>AloneTurn</c> そのターン（0 ＝ 一度もならなかった。蘇生で仲間が戻っても最初の値のまま）／
     /// <c>AloneHp</c>・<c>AloneMaxHp</c> そのときの HP と最大HP ／ <c>AloneFoes</c> そのとき生きていた敵の数。
@@ -2264,6 +2282,19 @@ public sealed class UnitTally
         GurenBurnTickNew += o.GurenBurnTickNew; GurenBurnTickRelit += o.GurenBurnTickRelit; GurenBurnTickMark += o.GurenBurnTickMark;
         GurenStrikeNominal += o.GurenStrikeNominal; GurenStrikeDealt += o.GurenStrikeDealt;
         if (o.GurenFirstTurn > 0 && (GurenFirstTurn == 0 || o.GurenFirstTurn < GurenFirstTurn)) GurenFirstTurn = o.GurenFirstTurn;
+        // 第204期（リリ）
+        KissFires += o.KissFires; KissNominal += o.KissNominal; KissDrained += o.KissDrained; KissKills += o.KissKills; KissHealed += o.KissHealed;
+        KissArmor += o.KissArmor; KissBlocked += o.KissBlocked; KissToSelf += o.KissToSelf; KissMoves += o.KissMoves; KissMovedLayers += o.KissMovedLayers; KissReset += o.KissReset;
+        RiteFires += o.RiteFires; RiteDrained += o.RiteDrained; RiteHealed += o.RiteHealed; RiteArmor += o.RiteArmor; RiteBlocked += o.RiteBlocked; RiteTurnSum += o.RiteTurnSum;
+        ReturnFires += o.ReturnFires; ReturnNominal += o.ReturnNominal; ReturnHealed += o.ReturnHealed; ReturnArmor += o.ReturnArmor;
+        if (o.RiteFirstTurn > 0 && (RiteFirstTurn == 0 || o.RiteFirstTurn < RiteFirstTurn)) RiteFirstTurn = o.RiteFirstTurn;
+        ArmorPeakSeen = Math.Max(ArmorPeakSeen, o.ArmorPeakSeen);
+        if (o.KissMovedBy is not null)
+        {
+            KissMovedBy ??= new();
+            foreach (var (k, v) in o.KissMovedBy)
+                KissMovedBy[k] = KissMovedBy.TryGetValue(k, out var a) ? (a.N + v.N, a.Sum + v.Sum) : v;
+        }
         // 第198期: ターン番号とその瞬間の値は足さない（`LastActiveTurn` と同じ扱い・後の値が勝つ）。
         if (o.AloneTurn > 0) { AloneTurn = o.AloneTurn; AloneHp = o.AloneHp; AloneMaxHp = o.AloneMaxHp; AloneFoes = o.AloneFoes; }
         if (o.LastStandTurn > 0) { LastStandTurn = o.LastStandTurn; LastStandHp = o.LastStandHp; LastStandMaxHp = o.LastStandMaxHp; LastStandFoes = o.LastStandFoes; LastStandBaseDealt = o.LastStandBaseDealt; LastStandScarTaken = o.LastStandScarTaken; LastStandScarAtk = o.LastStandScarAtk; LastStandParriedTaken = o.LastStandParriedTaken; LastStandStockAtDraw = o.LastStandStockAtDraw; LastStandStancesAtDraw = o.LastStandStancesAtDraw; LastStandRefillGuardAtDraw = o.LastStandRefillGuardAtDraw; }
@@ -2738,7 +2769,39 @@ public enum BattleEventKind
     /// 相打ちで勝った瞬間（第199期・<b>表示専用</b>）。相打ちの斬り返しで最後の敵が倒れた直後（その敵の <c>Death</c> の後、ガルドの <c>Death</c> の前）に並ぶ。
     /// <para><c>ActorId</c> = ガルド、<c>TargetId</c> = 最後に倒れた敵、<c>Team</c> = 勝った陣営。この戦は味方が全滅していても勝ち。<b>どの規則も読まない。</b></para>
     /// </summary>
-    LastStandVictory
+    LastStandVictory,
+
+    /// <summary>
+    /// 施しのリリ（第204期・<see cref="TraitId.Kiss"/>・<b>表示専用</b>）。<c>Text</c> が <see cref="KissLabels"/> のどれかで、場面が分かれる。
+    /// <para><b>吸い取り</b>（<see cref="KissLabels.Drain"/>）: <c>ActorId</c> = リリ、<c>TargetId</c> = 吸った敵、<c>Amount</c> = 吸う名目、<c>HpAfter</c> = 吸う<b>前</b>の HP（受け取る味方は吸った後に決まるので載らない）。
+    /// 直前に聖痕の <c>StatusGain</c>（キー <c>stigma</c>・書き手 ＝ リリ）、直後に敵への <c>Damage</c>（出どころ ＝ リリ・型なし）が並ぶ。
+    /// 続いて状態が移るなら <see cref="StatusTransfer"/> がキーごとに並び、最後に <b>口移し</b>（<see cref="KissLabels.Give"/>）:
+    /// <c>TargetId</c> = 受け取った味方、<c>Amount</c> = 吸えた量、<c>SpreadFromId</c> = 吸った敵。その直後に <c>Heal</c>、溢れがあれば <b>破片</b>（<see cref="KissLabels.Armor"/>・<c>Amount</c> = 足した破片、<c>StatusRemaining</c> = 足した後の破片）。</para>
+    /// <para><b>祝福の儀</b>: 見出し（<see cref="KissLabels.Rite"/>・<c>TargetId</c> = null・<c>Slot</c> = 聖痕の敵の数）→ 敵ごとの <see cref="KissLabels.RiteDrain"/>（<c>TargetId</c> = 敵）と <c>Damage</c>
+    /// → 味方ごとの <see cref="KissLabels.RiteGive"/>（<c>TargetId</c> = 味方・<c>Amount</c> = 施した量）と <c>Heal</c>・破片。<b>儀式の最後の1件は <see cref="KissLabels.RiteEnd"/></b>（聖痕が消えた瞬間・<c>Amount</c> = 吸えた合計）。</para>
+    /// <para><b>祝福が還る</b>（<see cref="KissLabels.Return"/>）: 聖痕の敵の <c>Death</c> の後。<c>TargetId</c> = 受け取った味方、<c>SpreadFromId</c> = 倒れた敵、<c>Amount</c> = 名目。直後に <c>Heal</c>・破片。</para>
+    /// <c>HpAfter</c> は<b>その出来事を積んだ時点</b>の対象の HP（吸う前・与える前）で、バーの補間は直後の <c>Damage</c> / <c>Heal</c> で読む。<b>どの規則も読まない。</b>
+    /// </summary>
+    Kiss,
+
+    /// <summary>
+    /// 状態が移った瞬間（第204期・リリの口移しの代金・<b>表示専用</b>）。<c>ActorId</c> = リリ、<c>SpreadFromId</c> = 元の敵、<c>TargetId</c> = 受け取った味方、
+    /// <c>Text</c> = 状態キー（<see cref="StatusKeys"/>）、<c>Amount</c> = 移した値（層・残りターン・0/1）、<c>StatusRemaining</c> = 受け取った後の値。<b>どの規則も読まない。</b>
+    /// </summary>
+    StatusTransfer
+}
+
+/// <summary><see cref="BattleEventKind.Kiss"/> の <c>Text</c>（第204期・<b>表示専用</b>）。</summary>
+public static class KissLabels
+{
+    public const string Drain = "吸い取り";
+    public const string Give = "口移し";
+    public const string Armor = "破片";
+    public const string Rite = "祝福の儀";
+    public const string RiteDrain = "儀式・吸う";
+    public const string RiteGive = "儀式・施す";
+    public const string RiteEnd = "儀式・終わり";
+    public const string Return = "祝福が還る";
 }
 
 /// <summary><see cref="BattleEventKind.PoisonThicken"/> の <c>Text</c>（<b>表示専用</b>）。</summary>

@@ -253,10 +253,10 @@ public static void Probe(string[] args, int stageIndex)
             back1: UnitCatalog.Sora, back3: UnitCatalog.Nel)),
         ("P2 反撃のネル枠 (カド/ガルド/ヒサ/ノノ/ソラ)", Formation.Build(
             front1: UnitCatalog.Kado, front3: UnitCatalog.Gald, center: UnitCatalog.Hisa,
-            back1: UnitCatalog.Nono, back3: UnitCatalog.Sora)),
+            back1: UnitCatalog.Lili, back3: UnitCatalog.Sora)),
         ("P3 反撃改のドハ枠 (カド/ガルド/ヒサ/ソラ/ノノ)", Formation.Build(
             front1: UnitCatalog.Kado, front3: UnitCatalog.Gald, center: UnitCatalog.Hisa,
-            back1: UnitCatalog.Sora, back3: UnitCatalog.Nono)),
+            back1: UnitCatalog.Sora, back3: UnitCatalog.Lili)),
         ("P4 第49期の土台 (カド/ボルグ/ヒサ/ソラ/ガルド)", Formation.Build(
             front1: UnitCatalog.Kado, front3: UnitCatalog.Borg, center: UnitCatalog.Hisa,
             back1: UnitCatalog.Sora, back3: UnitCatalog.Gald)),
@@ -275,12 +275,12 @@ public static void Probe(string[] args, int stageIndex)
             back1: UnitCatalog.Hisa, back3: UnitCatalog.Guza)),
         // カドを含むが**ヒサを含まない**（外す対象が無い＝焦点と代金だけ）。
         ("P8 カド入りヒサ無し (カド/ガルド/ノノ/ソラ/ネル)", Formation.Build(
-            front1: UnitCatalog.Kado, front3: UnitCatalog.Gald, center: UnitCatalog.Nono,
+            front1: UnitCatalog.Kado, front3: UnitCatalog.Gald, center: UnitCatalog.Lili,
             back1: UnitCatalog.Sora, back3: UnitCatalog.Nel)),
         // --- カド無し・ヒサ入り（外しは走るが反撃役がいない）---
         ("Q1 ヒサ入り (ドルガ/ガルド/ヒサ/ソラ/ノノ)", Formation.Build(
             front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Hisa,
-            back1: UnitCatalog.Sora, back3: UnitCatalog.Nono)),
+            back1: UnitCatalog.Sora, back3: UnitCatalog.Lili)),
         ("Q2 ヒサ入り (ドルガ/ガルド/ヒサ/ソラ/ザン)", Formation.Build(
             front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Hisa,
             back1: UnitCatalog.Sora, back3: UnitCatalog.Zan)),
@@ -292,7 +292,7 @@ public static void Probe(string[] args, int stageIndex)
             front1: UnitCatalog.Egu, front3: UnitCatalog.Golm, center: UnitCatalog.Nomi,
             back1: UnitCatalog.Dolga, back3: UnitCatalog.Sora)),
         ("R2 耐久のセロ枠 (ガルド/ドルガ/ノノ/ソラ/ゴルム)", Formation.Build(
-            front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Nono,
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Lili,
             back1: UnitCatalog.Sora, back3: UnitCatalog.Golm)),
         ("R3 逆しま改のセッキ枠 (ガルド/ゴルム/ウツ/ソラ/クビ)", Formation.Build(
             front1: UnitCatalog.Gald, front3: UnitCatalog.Golm, center: UnitCatalog.Utsu,

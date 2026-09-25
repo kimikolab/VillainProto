@@ -67,7 +67,7 @@ public static void Run(string[] args, int stageIndex)
         Formation c = f.Clone();
         foreach (var (slot, d) in f.Occupied())
         {
-            if (d.Id == "nono") c[slot] = WithActions(d, variants[v].Nono);
+            if (d.Id == "lili") c[slot] = WithActions(d, variants[v].Nono);
             else if (d.Id == "mio") c[slot] = WithActions(d, variants[v].Mio);
         }
         return c;
@@ -77,7 +77,7 @@ public static void Run(string[] args, int stageIndex)
     // **全編成の順位相関は自動的に 1.0 へ引っ張られる。** 第10期の 0.91 と方法を
     // 揃えた全編成の値と、変種が効く編成だけに絞った値の両方を出す。片方だけだと
     // 「動いていない」のか「動く駒が入っていないだけ」なのかが区別できない。
-    bool Affected(Formation f) => f.Occupied().Any(x => x.Def.Id is "nono" or "mio");
+    bool Affected(Formation f) => f.Occupied().Any(x => x.Def.Id is "lili" or "mio");
     var affected = Enumerable.Range(0, targets.Length).Where(t => Affected(targets[t].F)).ToArray();
 
     Console.WriteLine($"# 行動パターンの変種（seed 0..{TimingSeeds - 1} の {TimingSeeds} 試行）");

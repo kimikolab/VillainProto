@@ -49,8 +49,8 @@ public static void Run(string[] args, int stageIndex)
     var picks = new (string Name, Formation Old, Formation New)[]
     {
         ("反撃改 (ドハ×カド)",
-            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Kado, center: UnitCatalog.Doha, back1: UnitCatalog.Nel, back3: UnitCatalog.Nono),
-            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Nel, center: UnitCatalog.Kado, back1: UnitCatalog.Doha, back3: UnitCatalog.Nono)),
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Kado, center: UnitCatalog.Doha, back1: UnitCatalog.Nel, back3: UnitCatalog.Lili),
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Nel, center: UnitCatalog.Kado, back1: UnitCatalog.Doha, back3: UnitCatalog.Lili)),
         // 置き去り（ナラ）の新2編成ぶん。仮置きは「ナラを中央」だったが、reseat の 120通り全探索で
         // 中央はカドの席だと出た（被弾強化側は 42.1% → 91.7%）。速攻側は最良でも +1.4pt で、
         // 仮置きとの差が閾値未満（この2本を1回の追試で並べるために、据え置き側も載せてある）。
@@ -178,19 +178,19 @@ public static void Run(string[] args, int stageIndex)
         // 第42期の台。仮置き（ガルド前1・ウツ前3・ドハ中央）は reseat 12位 63.0%、
         // 候補は reseat 1位 73.1%（ウツを前1へ、ドハを後1へ、ノノを中央へ）。
         ("分かち×逆しま (ドハ×ウツ)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Utsu, center: UnitCatalog.Doha, back1: UnitCatalog.Dolga, back3: UnitCatalog.Nono),
-            Formation.Build(front1: UnitCatalog.Utsu, front3: UnitCatalog.Gald, center: UnitCatalog.Nono, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga)),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Utsu, center: UnitCatalog.Doha, back1: UnitCatalog.Dolga, back3: UnitCatalog.Lili),
+            Formation.Build(front1: UnitCatalog.Utsu, front3: UnitCatalog.Gald, center: UnitCatalog.Lili, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga)),
         // 第42期の集約。仮置き（ウケを前1＝台のウツの席）は reseat 21位 43.5%、
         // 候補は reseat 1位 56.0%（ウケを**中央＝隣接次数4**へ）。予測5の検証点。
         ("引き受け (ウケ×ドハ)",
-            Formation.Build(front1: UnitCatalog.Uke, front3: UnitCatalog.Gald, center: UnitCatalog.Nono, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga),
-            Formation.Build(front1: UnitCatalog.Nono, front3: UnitCatalog.Gald, center: UnitCatalog.Uke, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga)),
+            Formation.Build(front1: UnitCatalog.Uke, front3: UnitCatalog.Gald, center: UnitCatalog.Lili, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga),
+            Formation.Build(front1: UnitCatalog.Lili, front3: UnitCatalog.Gald, center: UnitCatalog.Uke, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga)),
         // 第43期の転嫁。仮置き（集約行と同じ席＝ワタ中央）は reseat 2位 77.6%、
         // 候補は reseat 1位 79.1%（ガルドとノノ／ドハとドルガをそれぞれ入れ替えた鏡像）。
         // **どちらもワタは中央**——上位8通りが全部ワタ中央で、角に落ちるのは19位から。
         ("渡し (ワタ×ドハ)",
-            Formation.Build(front1: UnitCatalog.Nono, front3: UnitCatalog.Gald, center: UnitCatalog.Wata, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga),
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Nono, center: UnitCatalog.Wata, back1: UnitCatalog.Dolga, back3: UnitCatalog.Doha)),
+            Formation.Build(front1: UnitCatalog.Lili, front3: UnitCatalog.Gald, center: UnitCatalog.Wata, back1: UnitCatalog.Doha, back3: UnitCatalog.Dolga),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Lili, center: UnitCatalog.Wata, back1: UnitCatalog.Dolga, back3: UnitCatalog.Doha)),
         // 驕り（第46期）。**新しい作法の1件目**——採否は「現行が `reseat` の上位5通りに入っているか」で決め、
         // 入っていない行だけを追試する（作法2）。`驕り (オゴ×ウケ)` は現行が 4位 なので候補なし。
         //
@@ -240,16 +240,16 @@ public static void Run(string[] args, int stageIndex)
             Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Gald, center: UnitCatalog.Mio, back1: UnitCatalog.Guza, back3: UnitCatalog.Tou)),
         // 第148期 段0。帯A 56.2 → 79.9（+23.7）・狙 ○・情報セル 1 → 1・粗順 2。
         ("反撃 (ヒサ×カド)",
-            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Gald, center: UnitCatalog.Nel, back1: UnitCatalog.Kado, back3: UnitCatalog.Nono),
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Nel, center: UnitCatalog.Kado, back1: UnitCatalog.Hisa, back3: UnitCatalog.Nono)),
+            Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Gald, center: UnitCatalog.Nel, back1: UnitCatalog.Kado, back3: UnitCatalog.Lili),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Nel, center: UnitCatalog.Kado, back1: UnitCatalog.Hisa, back3: UnitCatalog.Lili)),
         // 第148期 段0。帯A 39.3 → 62.9（+23.6）・狙 ○・情報セル 3 → 4・粗順 4。
         ("毒→被弾強化 (グザ×ムド)",
             Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Guza, back3: UnitCatalog.Borg),
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Mudo, back1: UnitCatalog.Borg, back3: UnitCatalog.Guza)),
         // 第148期 段0。帯A 82.2 → 93.0（+10.8）・狙 ○・情報セル 1 → 1・粗順 1。
         ("燃焼 (ボルグ×ホタ)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Nono, center: UnitCatalog.Hota, back1: UnitCatalog.Mudo, back3: UnitCatalog.Borg),
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Nono, back1: UnitCatalog.Mudo, back3: UnitCatalog.Hota)),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Lili, center: UnitCatalog.Hota, back1: UnitCatalog.Mudo, back3: UnitCatalog.Borg),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Lili, back1: UnitCatalog.Mudo, back3: UnitCatalog.Hota)),
         // 第148期 段0。帯A 83.2 → 89.8（+6.6）・狙 ○・情報セル 2 → 2・粗順 1。
         ("範囲耐性 (ヒビ×ボルグ)",
             Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Hibi, back1: UnitCatalog.Borg, back3: UnitCatalog.Rica),

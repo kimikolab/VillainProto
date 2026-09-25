@@ -218,6 +218,34 @@ public static class UnitCatalog
         Flavor = "味方を矢面に立たせて生き延びた男。誰も隣に立ちたがらない。"
     };
 
+    /// <summary>
+    /// 施しのリリ（第204期・継ぎ当てのノノの転生）。<b>数値（HP78／攻3／速6）と <c>[Skill]</c> の周期はノノのまま</b>で、
+    /// 手番の繕いを口づけ（<see cref="TraitId.Kiss"/>）に差し替えた。代金は状態を移すこと（<see cref="TraitId.KissSpill"/>・外せば「移さない」）。
+    /// 旧ノノは下の <see cref="Nono"/> に対照として残す（<see cref="All"/> には入れない）。
+    /// </summary>
+    public static readonly UnitDef Lili = new()
+    {
+        Id = "lili",
+        Name = "施しのリリ",
+        MaxHp = 78,
+        Attack = 3,
+        Speed = 6,
+        Advances = false,
+        // 札の並び: 口づけの本体が代金の札（`KissSpill`）を中から読む。
+        Traits = new[] { TraitId.Kiss, TraitId.KissSpill },
+        // 吸い取りが手番そのもの（攻撃3 は出ない）。`[Skill]` の1要素（ノノと同じ）。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "精気を吸っている") },
+        PlusText = "手番で、まだ聖痕の無い敵のうち最も大きい1体から精気を吸い（最大HPの2割）、最も傷ついた味方に与える。吸った敵には聖痕が付く / "
+                   + "生きている敵全員に聖痕が付くと、次の手番で全員から一斉に吸い、味方全員に施す（聖痕は消える） / "
+                   + "聖痕を持つ敵が倒れると、最も傷ついた味方が癒える / 与えきれずに溢れた分は、受け取った味方の破片になる",
+        MinusText = "1体ずつ吸うとき、その敵の状態（毒・火・呪い・痺れなど）も吸い取り、与えた味方に移してしまう。傷ついた味方がいなければ自分が受け取る",
+        Flavor = "彼女は惜しみなく与える。誰から奪ったものかは気にしない。"
+    };
+
+    /// <summary>
+    /// 継ぎ当てのノノ（第203期まで）。<b>第204期にリリへ転生した</b>——対照として定義だけ残す（<see cref="All"/> にも <c>Retired</c> にも入れない。
+    /// 逆位・まどろみと同じ扱い）。<c>Presets</c> はリリを引く。
+    /// </summary>
     public static readonly UnitDef Nono = new()
     {
         Id = "nono",
@@ -1679,7 +1707,7 @@ public static class UnitCatalog
     /// </summary>
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Nono, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Susu, Gare, Nomi, Kata, Tomo, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Lili, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Susu, Gare, Nomi, Kata, Tomo, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
     };
 
     /// <summary>

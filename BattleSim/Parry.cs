@@ -781,33 +781,33 @@ static class ParryDiag
     {
         ("A 前が薄い", Formation.Build(
             front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Sero,
-            back1: UnitCatalog.Nono, back3: UnitCatalog.Dolga)),
+            back1: UnitCatalog.Lili, back3: UnitCatalog.Dolga)),
         ("B 前が硬い", Formation.Build(
             front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Nel,
             back1: UnitCatalog.Hisa, back3: UnitCatalog.Kiri)),
         ("C 後ろに出力", Formation.Build(
             front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Sero,
-            back1: UnitCatalog.Nono, back3: UnitCatalog.Borg)),
+            back1: UnitCatalog.Lili, back3: UnitCatalog.Borg)),
         ("D 前に出力", Formation.Build(
             front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Sero,
-            back1: UnitCatalog.Nono, back3: UnitCatalog.Egu)),
+            back1: UnitCatalog.Lili, back3: UnitCatalog.Egu)),
         ("E 前が硬い+出力", Formation.Build(
             front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, center: UnitCatalog.Nel,
-            back1: UnitCatalog.Nono, back3: UnitCatalog.Kiri)),
+            back1: UnitCatalog.Lili, back3: UnitCatalog.Kiri)),
         ("F 脆い後列", Formation.Build(
             front1: UnitCatalog.Gald, front3: UnitCatalog.Zan, center: UnitCatalog.Sero,
             back1: UnitCatalog.Hisa, back3: UnitCatalog.Dolga)),
         ("G 前が硬い（HP78）", Formation.Build(
-            front1: UnitCatalog.Gald, front3: UnitCatalog.Nono, center: UnitCatalog.Sero,
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Lili, center: UnitCatalog.Sero,
             back1: UnitCatalog.Mudo, back3: UnitCatalog.Dolga)),
         ("H 呪詛つき", Formation.Build(
             front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel,
-            back1: UnitCatalog.Nono, back3: UnitCatalog.Dolga)),
+            back1: UnitCatalog.Lili, back3: UnitCatalog.Dolga)),
         ("I 中央が回復", Formation.Build(
-            front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Nono,
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Lili,
             back1: UnitCatalog.Sero, back3: UnitCatalog.Dolga)),
         ("J 前が硬い（呪詛）", Formation.Build(
-            front1: UnitCatalog.Gald, front3: UnitCatalog.Nono, center: UnitCatalog.Nel,
+            front1: UnitCatalog.Gald, front3: UnitCatalog.Lili, center: UnitCatalog.Nel,
             back1: UnitCatalog.Sero, back3: UnitCatalog.Dolga)),
         ("K 裂き入り", Formation.Build(
             front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Sero,

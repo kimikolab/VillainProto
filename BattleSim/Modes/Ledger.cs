@@ -96,7 +96,7 @@ public static void Run(string[] args, int stageIndex)
     var ldCrossCands = new[] { UnitCatalog.Nomi, UnitCatalog.Kiri, UnitCatalog.Nata };
     int ldWoundHitIdx = Array.FindIndex(ldCross, b => b.Name.StartsWith("傷×被弾", StringComparison.Ordinal));
     Formation LdCrossWith(UnitDef d) => Formation.Build(
-        front1: UnitCatalog.Gald, front3: UnitCatalog.Kado, center: UnitCatalog.Nono,
+        front1: UnitCatalog.Gald, front3: UnitCatalog.Kado, center: UnitCatalog.Lili,
         back1: d, back3: UnitCatalog.Egu);
 
     // --- `docs/balance.md` の現行値（**戦闘不要**。指示書 §4-1）

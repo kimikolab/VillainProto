@@ -198,9 +198,9 @@ public static void Run(string[] args, int stageIndex)
     //        対照（支援拒否なし）でオノが受け取る強化＋回復が最大の組**＝代金が最大の編成を採る。
     //        測れる組が無ければ受け取り最大の組を採り、床であることを報告する。
     // 配置:  単騎・軸あり は規則配置 H を出発点に `lastslot seats` で reseat → confirm（閾値 5.0pt）。
-    var lsSoloPool = new[] { UnitCatalog.Dolga, UnitCatalog.Rica, UnitCatalog.Mug, UnitCatalog.Nara, UnitCatalog.Nono, UnitCatalog.Sasa, UnitCatalog.Vel };
+    var lsSoloPool = new[] { UnitCatalog.Dolga, UnitCatalog.Rica, UnitCatalog.Mug, UnitCatalog.Nara, UnitCatalog.Lili, UnitCatalog.Sasa, UnitCatalog.Vel };
     var lsTrapPool = new[] { UnitCatalog.Golm, UnitCatalog.Gan, UnitCatalog.Kugu, UnitCatalog.Shio, UnitCatalog.Kari, UnitCatalog.Hiyo,
-                             UnitCatalog.Nono, UnitCatalog.Rica, UnitCatalog.Hari, UnitCatalog.Beni, UnitCatalog.Nara };
+                             UnitCatalog.Lili, UnitCatalog.Rica, UnitCatalog.Hari, UnitCatalog.Beni, UnitCatalog.Nara };
     const int LsPickSeeds = 50;
     IEnumerable<UnitDef[]> LsCombos4(UnitDef[] pool)
     {
@@ -276,8 +276,8 @@ public static void Run(string[] args, int stageIndex)
     // confirm（seed 200..599）で 単騎 +36.8pt / 軸あり +31.7pt（閾値 5.0pt）。上位5通りは**全部オノが前角（次数2）・
     // ドルガ中央**で、次数の読みも一致する。撃破/戦は 0.42 → 0.21 / 0.35 → 0.11 と減るが 0 ではない（第50期の歯止めは通る）。
     // **選定が変わって5枚の顔ぶれが違えば H に戻る**（下の一致検査）。
-    if (lsSoloTeam.Select(d => d.Id).OrderBy(x => x, StringComparer.Ordinal).SequenceEqual(new[] { "dolga", "nono", "ono", "rica", "vel" }))
-        lsSolo = Formation.Build(front1: lsNew, front3: UnitCatalog.Nono, center: UnitCatalog.Dolga, back1: UnitCatalog.Vel, back3: UnitCatalog.Rica);
+    if (lsSoloTeam.Select(d => d.Id).OrderBy(x => x, StringComparer.Ordinal).SequenceEqual(new[] { "dolga", "lili", "ono", "rica", "vel" }))
+        lsSolo = Formation.Build(front1: lsNew, front3: UnitCatalog.Lili, center: UnitCatalog.Dolga, back1: UnitCatalog.Vel, back3: UnitCatalog.Rica);
     if (lsAxisTeam.Select(d => d.Id).OrderBy(x => x, StringComparer.Ordinal).SequenceEqual(new[] { "dolga", "hagi", "ono", "rica", "vel" }))
         lsAxis = Formation.Build(front1: UnitCatalog.Hagi, front3: lsNew, center: UnitCatalog.Dolga, back1: UnitCatalog.Vel, back3: UnitCatalog.Rica);
     Formation lsTrap = lsTrapPick.F;

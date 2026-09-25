@@ -539,7 +539,7 @@ public static void Run(string[] args, int stageIndex)
             {
                 ("抉り（エグ・第30期〜）", "egu", "傷1つにつき +3 を即座に `ApplyDamage`"),
                 ("縫い（ハリ・第85期）",   "hari", "傷を1つ塞いで即座に `ctx.Heal`"),
-                ("継ぎ当て（ノノ・第86期）", "nono", "繕いを即座に `ctx.Heal`"),
+                ("継ぎ当て（ノノ・第86期）", "lili", "繕いを即座に `ctx.Heal`"),
             };
             Console.WriteLine("| 機構 | 台（`compare` の行） | 戦数 | 発火/戦 | **即時出力/戦** | **累積出力/戦** | 1発火あたり | **持続係数** |");
             Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|");

@@ -376,7 +376,7 @@ static partial class Formation2Diag
             Console.WriteLine("- パターン2の貫きの枝の `Roll(`: " + rolls + " 本（生きている駒が0のときの既存の落とし先1本だけ）／ `FormationShape` の中の乱数: " + shapeRolls + " → " + (rOk ? "○" : "**×**"));
         }
         // 実測: 同じ seed で2回回して一致、かつ P2 の戦で乱数列が編成の中身だけで決まる（決定的）
-        Formation probe = Formation.BuildDiamond(UnitCatalog.Hisa, UnitCatalog.Nono, UnitCatalog.Beni, UnitCatalog.Gald, UnitCatalog.Kado);
+        Formation probe = Formation.BuildDiamond(UnitCatalog.Hisa, UnitCatalog.Lili, UnitCatalog.Beni, UnitCatalog.Gald, UnitCatalog.Kado);
         bool det = Enumerable.Range(0, 20).All(s =>
         {
             var r1 = BattleEngine.Run(probe, EnemyCatalog.Stages[4].Enemy, s, verbose: true);

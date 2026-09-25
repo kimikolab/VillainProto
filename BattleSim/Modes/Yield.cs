@@ -283,7 +283,7 @@ public static void Run(string[] args, int stageIndex)
     Console.WriteLine($"- **味方と敵の `Def.Id` 衝突**: {clash.Length} 件"
         + (clash.Length == 0 ? "（受け手側から与ダメを取る前提が成立）"
                              : $" ← **{string.Join(", ", clash)}。敵側の集計に味方が混ざる**"));
-    var nono = rows.Where(r => r.Def.Id == UnitCatalog.Nono.Id).ToArray();
+    var nono = rows.Where(r => r.Def.Id == UnitCatalog.Lili.Id).ToArray();
     Console.WriteLine(nono.Length == 0
         ? "- **ノノの `出力/点`**: 対象編成にいないので測れていない（絞り込みを外すと出る）"
         : $"- **ノノの `出力/点`**: {nono.Average(r => r.All.Yield):F3}（{nono.Length} 編成）"

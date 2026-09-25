@@ -24,7 +24,7 @@ static partial class BeniDiag
     static readonly string[] Writers = { "guza", "sid", "mio", "rau", "borg", "zoto", "kata" };
 
     /// <summary>回復役（指示書 §2.1 が名指しした4枚）。</summary>
-    static readonly string[] Healers = { "nono", "vel", "shio", "nara" };
+    static readonly string[] Healers = { "lili", "vel", "shio", "nara" };
 
     public static void Run(string mode, string arg)
     {
@@ -167,7 +167,7 @@ static partial class BeniDiag
         {
             (UnitCatalog.Beni, "手番（`Actions = [Skill]`）"), (UnitCatalog.Kata, "手番（起爆）"),
             (UnitCatalog.Guza, "手番（瘴気・味方漏れ）"), (UnitCatalog.Vio, "ターン頭（吸い上げ）"),
-            (UnitCatalog.Borg, "攻撃の後（火の粉）"), (UnitCatalog.Nono, "手番（繕い）"), (UnitCatalog.Vel, "手番（縫い合わせ）"),
+            (UnitCatalog.Borg, "攻撃の後（火の粉）"), (UnitCatalog.Lili, "手番（繕い）"), (UnitCatalog.Vel, "手番（縫い合わせ）"),
             (UnitCatalog.Golm, "手番（吸い＝自己回復）"),
         })
             Console.WriteLine("| " + d.Name + " | " + d.Speed + " | " + where + " |");

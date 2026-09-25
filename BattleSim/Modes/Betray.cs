@@ -99,7 +99,7 @@ public static void Run(string[] args, int stageIndex)
         ("ソム×疫み (ソム×ラウ×グザ)", BtFormOf(new[] { Bt("som"), Bt("rau"), Bt("guza"), Bt("gald"), Bt("mio") })),
         ("ソム×抉り (ソム×エグ×ガン)", BtFormOf(new[] { Bt("som"), Bt("egu"), Bt("gan"), Bt("ban"), Bt("gald") })),
         ("ソム×薙ぎ (ソム×ボルグ×ドルガ)", BtFormOf(new[] { Bt("som"), Bt("borg"), Bt("dolga"), Bt("gald"), Bt("hota") })),
-        ("ソム（読み手なし・対照）", BtFormOf(new[] { Bt("som"), Bt("gald"), Bt("golm"), Bt("nono"), Bt("sekki") })),
+        ("ソム（読み手なし・対照）", BtFormOf(new[] { Bt("som"), Bt("gald"), Bt("golm"), Bt("lili"), Bt("sekki") })),
     };
 
     const int BtGateSeeds = 200;

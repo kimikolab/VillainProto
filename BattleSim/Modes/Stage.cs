@@ -287,7 +287,7 @@ static partial class StageDiag
     public static readonly (string Unit, string Dir, string Why)[] Predictions =
     {
         ("vel",  "会戦 < 単発", "蘇生ごとに `MaxHp` が半減し境界を越えて戻らない（実測 46 → 11）"),
-        ("nono", "会戦 < 単発", "尽きると駒1枚を失う。単発では勝率にしか出ない"),
+        ("lili", "会戦 < 単発", "尽きると駒1枚を失う。単発では勝率にしか出ない"),
         ("mudo", "会戦 < 単発", "境界で `AtkBonus` が全部消える"),
         ("utsu", "会戦 < 単発", "境界で `AtkBonus` が全部消える"),
         ("hibi", "会戦 < 単発", "破片は `StatusKeys.All` なので境界で全部消える"),
@@ -1177,7 +1177,7 @@ static partial class StageDiag
     static void Life(string arg)
     {
         var a = arg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var targets = a.Length > 2 ? a.Skip(2).ToArray() : new[] { "nono", "vel", "rica", "gald" };
+        var targets = a.Length > 2 ? a.Skip(2).ToArray() : new[] { "lili", "vel", "rica", "gald" };
         var (col, ver) = PointOf(arg);
         var rows = CompareBuilds()
             .Where(r => r.F.Occupied().Any(o => targets.Contains(o.Def.Id))).ToArray();

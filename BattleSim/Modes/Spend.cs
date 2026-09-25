@@ -336,7 +336,7 @@ public static void Run(string[] args, int stageIndex)
     Console.WriteLine();
     Console.WriteLine("| 駒 | 死蔵(新)/戦 | 受けた総量/戦 | 死蔵率 | 真の捨て場か |");
     Console.WriteLine("|---|--:|--:|--:|:-:|");
-    var spDump = new[] { "nono", "mio", "hiyo" };
+    var spDump = new[] { "lili", "mio", "hiyo" };
     foreach ((string id, double v) in spHoard.OrderByDescending(kv => kv.Value).Take(10))
     {
         double g = spGot.TryGetValue(id, out double gv) ? gv : 0;

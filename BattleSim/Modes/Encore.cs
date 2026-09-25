@@ -65,7 +65,7 @@ public static void Run(string[] args, int stageIndex)
     // 意図した相手（§3-1・**指示書が名指しで固定している5枚**）。仕留める力と、餌を供給する駒。
     string[] enIntended = { "dolga", "hagi", "borg", "tome", "som" };
     // 損の側（Q3）。**傷を消す駒**——記録も一緒に消えるので再行動の機会が奪われる。
-    string[] enLoss = { "nata", "hari", "nono" };
+    string[] enLoss = { "nata", "hari", "lili" };
 
     // ---- 規則配置 H（第81期の写し。HP 上位2枚を前・攻撃力上位2枚を後・残りを中央）----
     int[] EnSeats(UnitDef[] u)

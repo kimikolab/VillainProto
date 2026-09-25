@@ -371,7 +371,7 @@ public static void Run(string[] args, int stageIndex)
     Console.WriteLine();
     long[] TpA(string id) => tpAcc[0].TryGetValue(id, out long[]? a) ? a : new long[TpN];
     long[] aNomi = TpA("nomi"), aKiri = TpA("kiri"), aHagi = TpA("hagi"), aKado = TpA("kado");
-    long[] aNono = TpA("nono"), aHari = TpA("hari");
+    long[] aNono = TpA("lili"), aHari = TpA("hari");
 
     double nomiSwing = aNomi[TpAttacks] == 0 ? 0 : (double)aNomi[TpDmgEnemy] / aNomi[TpAttacks];
     double kiriSwing = aKiri[TpAttacks] == 0 ? 0 : (double)aKiri[TpDmgEnemy] / aKiri[TpAttacks];

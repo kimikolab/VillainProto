@@ -130,6 +130,10 @@ public static class StatusKeys
     ///
     /// 減衰も上限も持たせていない。供給源が「砕け盾のヒビが範囲攻撃を浴びること」だけに
     /// 限られていて、ヒビのHPという有限プールがそのまま天井になるため。
+    ///
+    /// <para><b>第204期の注: 上の「ヒビだけ」は古い。</b> 供給源は 砕け（ヒビ）・引き受け（ウケ・<c>Dull</c> の中）・
+    /// 身構え（ササ）・鱗（ウロ）に続いて、<b>施しのリリの溢れ（<see cref="KissTrait"/>）が5本目</b>。
+    /// リリの供給は敵の最大HPが燃料なので「有限プールが天井」は成り立たない（上限は付けていない。帳簿は `lili ledger`）。</para>
     /// </summary>
     public const string Armor = "armor";
 
@@ -320,7 +324,15 @@ public static class StatusKeys
     /// </summary>
     public const string Guren = "guren";
 
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted, Concentrated, Numbed, Guren };
+    /// <summary>
+    /// 聖痕（第204期・施しのリリ・<see cref="TraitId.Kiss"/>）。<b>二値</b>。リリに精気を吸われた敵に付く<b>数え札</b>で、
+    /// <b>それ自体は何もしない</b>——読むのはリリの札だけ（まだ聖痕の無い敵を選ぶ／全員に付いたら祝福の儀／聖痕の敵が倒れたら祝福が還る）。
+    /// 儀式が終わると全部消える。<b>移さない</b>（<see cref="KissTrait.Excluded"/>）。
+    /// <see cref="All"/> に入れてあるので会戦の境界で消える。
+    /// </summary>
+    public const string Stigma = "stigma";
+
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted, Concentrated, Numbed, Guren, Stigma };
 
     /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
@@ -350,6 +362,7 @@ public static class StatusKeys
         Concentrated => "濃",
         Numbed => "鈍",
         Guren => "紅",
+        Stigma => "聖",
         _ => key
     };
 }
@@ -4164,6 +4177,32 @@ public sealed class BattleContext
         foe.SetCounter(GurenTrait.MioKey, m + step);
         UnitState? h = GurenHolderAgainst(foe);
         if (h is not null) TallyOf(h).GurenMioLayers += step;
+    }
+
+    /// <summary>
+    /// 施しのリリの出来事（第204期・<see cref="BattleEventKind.Kiss"/>・<b>表示専用</b>）。verbose のときだけ積む。
+    /// </summary>
+    public void EmitKiss(UnitState lili, string label, UnitState? target, int amount,
+                         UnitState? from = null, UnitState? intended = null, int slot = 0, int? remaining = null)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Kiss, Turn = _turn, ActorId = lili.InstanceId, TargetId = target?.InstanceId,
+            Amount = amount, Text = label, SpreadFromId = from?.InstanceId, IntendedId = intended?.InstanceId,
+            Slot = slot, StatusRemaining = remaining, SourceTrait = TraitId.Kiss, HpAfter = target?.Hp ?? 0,
+        });
+    }
+
+    /// <summary>状態が移った瞬間（第204期・<see cref="BattleEventKind.StatusTransfer"/>・<b>表示専用</b>）。</summary>
+    public void EmitStatusTransfer(UnitState lili, UnitState from, UnitState to, string key, int amount, int after)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.StatusTransfer, Turn = _turn, ActorId = lili.InstanceId, TargetId = to.InstanceId,
+            SpreadFromId = from.InstanceId, Text = key, Amount = amount, StatusRemaining = after, SourceTrait = TraitId.KissSpill,
+        });
     }
 
     /// <summary>

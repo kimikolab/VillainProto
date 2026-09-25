@@ -1061,10 +1061,10 @@ public static void Run(string[] args, int stageIndex)
         // (b) 濾した集合が (P-5) の一覧と一致するか。**全員が濾しに掛かる台**をローカルに組む。
         //     カド (A・不動) / ハギ (A・追い打ち) / ノノ (B・周期に攻撃が無い) / ドルガ (C・休み番)
         Formation chk1 = Formation.Build(front1: UnitCatalog.Kado, front3: UnitCatalog.Hagi,
-                                         center: UnitCatalog.Nono, back1: UnitCatalog.Tomo, back3: UnitCatalog.Dolga);
+                                         center: UnitCatalog.Lili, back1: UnitCatalog.Tomo, back3: UnitCatalog.Dolga);
         // (c) **W1 でも候補が 0 人になる台**（(C) を持つ駒も入れない）。
         Formation chk2 = Formation.Build(front1: UnitCatalog.Kado, front3: UnitCatalog.Hagi,
-                                         center: UnitCatalog.Nono, back1: UnitCatalog.Tomo, back3: UnitCatalog.Mio);
+                                         center: UnitCatalog.Lili, back1: UnitCatalog.Tomo, back3: UnitCatalog.Mio);
         const int ChkSeeds = 40;
         var chkStat = new LtStat[2, ltVers.Length];
         for (int v = 0; v < ltVers.Length; v++)

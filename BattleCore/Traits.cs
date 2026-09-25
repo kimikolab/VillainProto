@@ -372,6 +372,12 @@ public enum TraitId
     LastStandHoldOldScar,   // 第199期・傷は旧（対照・保持者 0 枚）: 上乗せの元を身に受けた傷だけに戻す
     LastStandHoldNoStock,   // 第199期・在庫なし（対照・保持者 0 枚）: 抜いた瞬間に在庫を捨てる（第198期と同じ）
     LastStandHoldMutualLoss,// 第199期・相打ち負け（対照・保持者 0 枚）: 相打ちで最後の敵を倒しても負け（第198期と同じ）
+    Kiss,       // 口づけ（施しのリリ・第204期）: 手番で、まだ聖痕の無い敵のうち最大HPが最も大きい1体に聖痕を付けて最大HPの 20% を吸い、
+                // 最も傷ついた味方に与える（溢れは破片）。敵全員に聖痕が付けば祝福の儀（全員から吸って味方全員に等分・聖痕を消す）。
+                // 聖痕の敵が倒れると最も傷ついた味方が最大HPの 10% 癒える（`KissTrait`）
+    KissSpill,  // 口移しの代金（リリ・第204期）: 1体ずつ吸うとき、その敵の状態を与えた相手へ移す。札は `KissTrait` の中で読まれる（外せば「移さない」）
+    KissBare,   // 口づけ・吸うだけの版（第204期・対照・保持者 0 枚）: 儀式と「祝福が還る」を外す（全員に聖痕が付いたら消して一巡目に戻る）
+    Kiss30,     // 口づけ・30% の版（第204期・対照・保持者 0 枚）: 吸う量を最大HPの 30% に
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -12360,6 +12366,270 @@ public readonly record struct MarkRule(int VulnerablePercent)
     public static MarkRule Off => new(0);
 }
 
+/// <summary>
+/// 口づけ（第204期・施しのリリ）。<b>手番そのものが吸い取り</b>（<c>Actions = [Skill]</c>・通常攻撃は出ない）。
+///
+/// <para><b>1体ずつ吸う</b>: まだ聖痕の無い敵のうち最大HPが最も大きい1体（同値は <c>PickOne</c>）に聖痕を付け、
+/// その最大HPの <see cref="DrainPercent"/>% を吸う。吸うのは<b>術であって攻撃ではない</b>——<c>PerformAttack</c> を通らず
+/// <c>ApplyDamage</c> を直に呼ぶ（紅蓮の直撃と同じ入口）ので、庇い・受け流し・逸らし・呪いの共有・反撃は起きず、
+/// 敵の破片・軛の上限・§1 の敵の標は効く。<b>実際に敵の HP から減った量</b>が吸えた量。
+/// 受け取るのは最も傷ついた味方（<see cref="BattleContext.MostHurtAlly"/>・いなければリリ自身）で、<b>吸った後に選ぶ</b>
+/// （吸い取りで敵が倒れると「祝福が還る」が先に走るため）。
+/// 代金の札（<see cref="TraitId.KissSpill"/>）を持っていれば、与える前にその敵の状態を受け取る味方へ移す。</para>
+///
+/// <para><b>祝福の儀</b>: 手番の頭に生きている敵全員が聖痕を持っていれば、全員から吸って味方全員に等分する（余りは最も傷ついた味方へ）。
+/// 状態は移さない。<b>聖痕は施す前に全部消す</b>。<b>祝福が還る</b>: 聖痕の敵が倒れたら（リリが生きていれば）
+/// 最も傷ついた味方にその敵の最大HPの <see cref="ReturnPercent"/>% を与える（粛では止めない・Q0-7）。</para>
+///
+/// <para><b>溢れは破片</b>: 与えた量のうち HP が実際に増えなかった分を、受け取った駒の破片に足す。
+/// 溢れとして数えるのは <c>Heal</c> が <see cref="HealOutcome.Healed"/> / <see cref="HealOutcome.Full"/> を返したときだけ
+/// ——渇き・支援拒否・反転で止められた分は破片にもならない（第193期の啜りと同じ区別）。上限は付けない。</para>
+///
+/// <para>乱数は聖痕の相手の同値割り（<c>PickOne</c>）と <c>MostHurtAlly</c> の同値割りでしか引かない。</para>
+/// </summary>
+public sealed class KissTrait : Trait
+{
+    /// <summary>1体から吸う量（最大HPに対する %）。規定の版。</summary>
+    public const int DrainPercent = 20;
+    /// <summary>30% の版（<see cref="Kiss30Trait"/>・対照）。</summary>
+    public const int HighDrainPercent = 30;
+    /// <summary>祝福が還るときに与える量（倒れた敵の最大HPに対する %）。</summary>
+    public const int ReturnPercent = 10;
+
+    /// <summary>
+    /// 移さない状態キー（Phase 0 Q0-3）。engine の記録（<c>idleTurn</c>）・保持者の内部の残高と燃料（預かり・負債・灰・据えの層・紅蓮）・
+    /// 相手と対の記録（組み付き——味方に移すとほどく口が無い）・聖痕。
+    /// </summary>
+    public static readonly string[] Excluded =
+    {
+        StatusKeys.IdleTurn, StatusKeys.Ward, StatusKeys.Debt, StatusKeys.Ash, StatusKeys.Grappled,
+        StatusKeys.Footing, StatusKeys.Guren, StatusKeys.Stigma,
+    };
+
+    /// <summary>移すキー（<see cref="StatusKeys.All"/> から除外を引いた形。キーが増えれば自動で入る）。</summary>
+    public static readonly string[] Moved = StatusKeys.All.Where(k => !Excluded.Contains(k)).ToArray();
+
+    /// <summary>量として足すキー。ほかは大きい方を取る（燃焼は残りターン・二値は 0/1）。</summary>
+    static readonly string[] Additive = { StatusKeys.Poison, StatusKeys.Wound, StatusKeys.Concentrated, StatusKeys.Armor };
+
+    public override TraitId Id => TraitId.Kiss;
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self) => Census(ctx, self);
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Act(ctx, self, DrainPercent, rite: true);
+    public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead) => Return(ctx, self, dead);
+
+    /// <summary>口づけの札（3版のどれか）を持っているか。</summary>
+    public static bool Holds(UnitState u) => u.HasTrait(TraitId.Kiss) || u.HasTrait(TraitId.KissBare) || u.HasTrait(TraitId.Kiss30);
+
+    /// <summary>破片の最大値の走査（<b>計数のみ</b>）。リリの手番の頭に、味方全員の破片を見る。</summary>
+    internal static void Census(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        foreach (UnitState a in ctx.LivingMembers(self.TeamId)) Peak(ctx, a);
+    }
+
+    static void Peak(BattleContext ctx, UnitState a)
+    {
+        int v = a.RawCounter(StatusKeys.Armor);
+        UnitTally t = ctx.TallyOf(a);
+        if (v > t.ArmorPeakSeen) t.ArmorPeakSeen = v;
+    }
+
+    /// <summary>手番の本体（3版で共有）。</summary>
+    internal static void Act(BattleContext ctx, UnitState self, int percent, bool rite)
+    {
+        if (!self.IsAlive) return;
+        var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId));
+        if (foes.Count == 0) return;
+        UnitTally t = ctx.TallyOf(self);
+
+        if (foes.All(f => f.RawCounter(StatusKeys.Stigma) > 0))
+        {
+            if (rite) { Rite(ctx, self, foes, percent); return; }
+            // 吸うだけの版（対照）: 儀式を持たないので、聖痕を消して一巡目に戻る。
+            ClearStigma(ctx, self);
+            t.KissReset++;
+        }
+
+        var fresh = foes.Where(f => f.RawCounter(StatusKeys.Stigma) <= 0).ToList();
+        int top = fresh.Max(f => f.MaxHp);
+        UnitState foe = ctx.PickOne(fresh.Where(f => f.MaxHp == top).ToList())!;
+
+        foe.SetCounter(StatusKeys.Stigma, 1);
+        ctx.EmitStatusGain(foe, StatusKeys.Stigma, 1, self);
+        int nominal = foe.MaxHp * percent / 100;
+        t.KissFires++;
+        t.KissNominal += nominal;
+        ctx.EmitKiss(self, KissLabels.Drain, foe, nominal);
+        int drained = Drain(ctx, self, foe, nominal);
+        t.KissDrained += drained;
+        if (!foe.IsAlive) t.KissKills++;
+
+        // 受け取り手は吸った後に選ぶ（吸い取りで倒れて「祝福が還る」が先に走ることがある）。
+        UnitState recv = ctx.MostHurtAlly(self) ?? self;
+        if (ReferenceEquals(recv, self)) t.KissToSelf++;
+        ctx.Log($"    {self.Name} が {foe.Name} に口づけし、精気を吸った（{drained}）→ {recv.Name}", LogKind.Trigger);
+
+        if (self.HasTrait(TraitId.KissSpill)) Transfer(ctx, self, foe, recv, t);
+
+        ctx.EmitKiss(self, KissLabels.Give, recv, drained, from: foe);
+        var (healed, armor, blocked) = Give(ctx, self, recv, drained);
+        t.KissHealed += healed;
+        t.KissArmor += armor;
+        t.KissBlocked += blocked;
+    }
+
+    static void ClearStigma(BattleContext ctx, UnitState self)
+    {
+        foreach (UnitState u in ctx.AllUnits)
+            if (u.TeamId != self.TeamId && u.RawCounter(StatusKeys.Stigma) > 0) u.SetCounter(StatusKeys.Stigma, 0);
+    }
+
+    /// <summary>吸う（術のダメージ）。戻り値 ＝ 実際に敵の HP から減った量。</summary>
+    static int Drain(BattleContext ctx, UnitState self, UnitState foe, int nominal)
+    {
+        if (nominal <= 0 || !foe.IsAlive) return 0;
+        int before = foe.Hp;
+        ctx.ApplyDamage(foe, nominal, self);
+        return Math.Max(0, before - Math.Max(0, foe.Hp));
+    }
+
+    /// <summary>
+    /// 与える。溢れ（<see cref="HealOutcome.Healed"/> / <see cref="HealOutcome.Full"/> のときの、HP が増えなかった分）を破片へ。
+    /// 戻り値 ＝ (癒えた量, 破片にした量, 止められた量)。
+    /// </summary>
+    internal static (int Healed, int Armor, int Blocked) Give(BattleContext ctx, UnitState self, UnitState to, int amount)
+    {
+        if (amount <= 0 || !to.IsAlive) return (0, 0, 0);
+        int before = to.Hp;
+        HealOutcome r = ctx.Heal(to, amount, self);
+        int gained = Math.Max(0, to.Hp - before);
+        if (r != HealOutcome.Healed && r != HealOutcome.Full) return (gained, 0, amount - gained);
+        int over = amount - gained;
+        if (over <= 0) return (gained, 0, 0);
+        int after = to.RawCounter(StatusKeys.Armor) + over;
+        to.SetCounter(StatusKeys.Armor, after);
+        Peak(ctx, to);
+        ctx.EmitKiss(self, KissLabels.Armor, to, over, remaining: after);
+        ctx.Log($"    溢れた精気が {to.Name} の破片になった（+{over}）", LogKind.Status);
+        return (gained, over, 0);
+    }
+
+    /// <summary>状態を移す（代金）。書き手の記録（傷の刻み手）も一緒に移す。</summary>
+    static void Transfer(BattleContext ctx, UnitState self, UnitState foe, UnitState to, UnitTally t)
+    {
+        foreach (string k in Moved)
+        {
+            int v = foe.RawCounter(k);
+            if (v <= 0) continue;
+            int cur = to.RawCounter(k);
+            int after = Additive.Contains(k) ? cur + v : Math.Max(cur, v);
+            to.SetCounter(k, after);
+            foe.SetCounter(k, 0);
+            t.KissMoves++;
+            t.KissMovedLayers += v;
+            string key = k + "|" + to.Def.Id;
+            var by = t.KissMovedBy ??= new();
+            by[key] = by.TryGetValue(key, out var a) ? (a.N + 1, a.Sum + v) : (1, v);
+            ctx.EmitStatusTransfer(self, foe, to, k, v, after);
+            ctx.Log($"    {foe.Name} の{StatusKeys.LabelOf(k)}（{v}）が {to.Name} へ移った", LogKind.Status);
+        }
+        if (foe.WoundWriters is { Count: > 0 } ws && to.RawCounter(StatusKeys.Wound) > 0)
+        {
+            var list = to.WoundWriters ??= new List<UnitState>(2);
+            foreach (UnitState w in ws) if (!list.Contains(w)) list.Add(w);
+        }
+        ctx.NoteWoundDrop(foe);
+    }
+
+    /// <summary>祝福の儀。</summary>
+    static void Rite(BattleContext ctx, UnitState self, IReadOnlyList<UnitState> foes, int percent)
+    {
+        UnitTally t = ctx.TallyOf(self);
+        t.RiteFires++;
+        t.RiteTurnSum += ctx.Turn;
+        if (t.RiteFirstTurn == 0) t.RiteFirstTurn = Math.Max(1, ctx.Turn);
+        ctx.EmitKiss(self, KissLabels.Rite, null, 0, slot: foes.Count);
+        ctx.Log($"    ★ {self.Name} の祝福の儀——聖痕が一斉に灯る（{foes.Count}体）", LogKind.Highlight, self);
+
+        int total = 0;
+        foreach (UnitState foe in foes)
+        {
+            if (!foe.IsAlive) continue;
+            int nominal = foe.MaxHp * percent / 100;
+            ctx.EmitKiss(self, KissLabels.RiteDrain, foe, nominal);
+            total += Drain(ctx, self, foe, nominal);
+        }
+        t.RiteDrained += total;
+
+        // 聖痕を消す。**施す前に消す**——儀式の後に倒れた敵で「祝福が還る」が走らないように。
+        // （儀式の吸い取りで倒れた敵は、倒れた時点ではまだ聖痕を持っているので還る。）
+        ClearStigma(ctx, self);
+
+        var allies = ctx.LivingMembers(self.TeamId);
+        if (allies.Count > 0 && total > 0)
+        {
+            int share = total / allies.Count;
+            int rest = total - share * allies.Count;
+            if (share > 0)
+                foreach (UnitState a in allies)
+                {
+                    ctx.EmitKiss(self, KissLabels.RiteGive, a, share);
+                    var (h, ar, bl) = Give(ctx, self, a, share);
+                    t.RiteHealed += h; t.RiteArmor += ar; t.RiteBlocked += bl;
+                }
+            if (rest > 0)
+            {
+                UnitState to = ctx.MostHurtAlly(self) ?? self;
+                ctx.EmitKiss(self, KissLabels.RiteGive, to, rest);
+                var (h, ar, bl) = Give(ctx, self, to, rest);
+                t.RiteHealed += h; t.RiteArmor += ar; t.RiteBlocked += bl;
+            }
+        }
+        ctx.EmitKiss(self, KissLabels.RiteEnd, null, total);
+    }
+
+    /// <summary>祝福が還る（規定と 30% の版）。</summary>
+    internal static void Return(BattleContext ctx, UnitState self, UnitState dead)
+    {
+        if (!self.IsAlive || dead.TeamId == self.TeamId || dead.RawCounter(StatusKeys.Stigma) <= 0) return;
+        UnitTally t = ctx.TallyOf(self);
+        int amount = dead.MaxHp * ReturnPercent / 100;
+        t.ReturnFires++;
+        t.ReturnNominal += amount;
+        UnitState to = ctx.MostHurtAlly(self) ?? self;
+        ctx.EmitKiss(self, KissLabels.Return, to, amount, from: dead);
+        ctx.Log($"    {dead.Name} の聖痕から祝福が還る → {to.Name}（{amount}）", LogKind.Trigger);
+        var (h, ar, _) = Give(ctx, self, to, amount);
+        t.ReturnHealed += h; t.ReturnArmor += ar;
+    }
+}
+
+/// <summary>口移しの代金（第204期・リリ）。札そのものは挙動を持たず、<see cref="KissTrait"/> の中から読まれる（外せば「移さない」）。</summary>
+public sealed class KissSpillTrait : Trait
+{
+    public override TraitId Id => TraitId.KissSpill;
+}
+
+/// <summary>口づけ・吸うだけの版（第204期・対照・保持者 0 枚）。儀式と祝福が還るを外す（全員に聖痕が付いたら消して一巡目に戻る）。</summary>
+public sealed class KissBareTrait : Trait
+{
+    public override TraitId Id => TraitId.KissBare;
+    public override void OnTurnStart(BattleContext ctx, UnitState self) => KissTrait.Census(ctx, self);
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+        => KissTrait.Act(ctx, self, KissTrait.DrainPercent, rite: false);
+}
+
+/// <summary>口づけ・30% の版（第204期・対照・保持者 0 枚）。</summary>
+public sealed class Kiss30Trait : Trait
+{
+    public override TraitId Id => TraitId.Kiss30;
+    public override void OnTurnStart(BattleContext ctx, UnitState self) => KissTrait.Census(ctx, self);
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+        => KissTrait.Act(ctx, self, KissTrait.HighDrainPercent, rite: true);
+    public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead) => KissTrait.Return(ctx, self, dead);
+}
+
 public static class TraitCatalog
 {
     private static readonly Dictionary<TraitId, Trait> Map = new Trait[]
@@ -12502,6 +12772,10 @@ public static class TraitCatalog
         new GurenLowTrait(),    // 第197期（対照・保持者 0 枚）
         new GurenFullTrait(),   // 第197期（参考・保持者 0 枚）
         new LastStandHoldTrait(),    // 第199期（規定）
+        new KissTrait(),             // 第204期（リリ・規定）
+        new KissSpillTrait(),        // 第204期（リリの代金の札）
+        new KissBareTrait(),         // 第204期（対照・保持者 0 枚）
+        new Kiss30Trait(),           // 第204期（対照・保持者 0 枚）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldNoStockTrait(),   // 第199期（対照・保持者 0 枚）
         new LastStandHoldMutualLossTrait(),// 第199期（対照・保持者 0 枚）

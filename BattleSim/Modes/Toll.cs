@@ -130,7 +130,7 @@ static class TollDiag
             // 台4 回復が既にいる: 5枚目として重複しないか（ノノ＝継ぎ当て）。
             3 => ("台4 回復同席 (アガ×ノノ)",
                 Formation.Build(front1: A(), front3: B(),
-                                center: UnitCatalog.Nono, back1: aga, back3: C())),
+                                center: UnitCatalog.Lili, back1: aga, back3: C())),
 
             // 台5 陰性対照（予測6）。**アガを1枚も含まない。**
             _ => ("台5 陰性対照 (アガ非在席)",
@@ -186,7 +186,7 @@ static class TollDiag
         Console.WriteLine();
         Console.WriteLine("| 駒 | HP | 攻 | 速 | 手番 |");
         Console.WriteLine("|---|---:|---:|---:|---|");
-        foreach (string id in new[] { "nono", "beni", "shio", "nara" })
+        foreach (string id in new[] { "lili", "beni", "shio", "nara" })
         {
             UnitDef u = UnitCatalog.ById(id);
             Console.WriteLine("| " + u.Name + " | " + u.MaxHp + " | " + u.Attack + " | " + u.Speed
