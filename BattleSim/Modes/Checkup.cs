@@ -222,6 +222,11 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.GurenStrike]     = (HcPlusL,  "紅蓮の直撃の版（等分を直撃ダメージで）。対照で保持者 0 枚"),
         [TraitId.GurenLow]        = (HcPlusL,  "紅蓮の低閾の版（閾値 6）。対照で保持者 0 枚"),
         [TraitId.GurenFull]       = (HcPlusL,  "紅蓮の全額の版（等分せず満額）。参考で保持者 0 枚"),
+        // 第198期: ガルドの剣の段。分類を同じコミットで足す（第132期 段0-a）。
+        [TraitId.LastStandScar]   = (HcPlusL,  "味方が 0 体になると盾を捨てて剣を抜く（受け流しを失い、庇った傷の1割を攻撃力に足して ×2・薙ぎで振り、殴られれば斬り返す）"),
+        [TraitId.LastStand]       = (HcPlusL,  "剣の段の剣の版（傷を力に換えない）。対照で保持者 0 枚"),
+        [TraitId.LastStandPlain]  = (HcPlusL,  "剣の段の返しなしの版。対照で保持者 0 枚"),
+        [TraitId.LastStandShield] = (HcPlusL,  "盾剣の版（受け流しは今のまま・×1・単体で振る）。参考で保持者 0 枚"),
     };
 
     // ---- `Traits.cs` の enum のブロックを走査して既定を引く（**空なら止める**・第117期）--------

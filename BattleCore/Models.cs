@@ -1633,6 +1633,20 @@ public sealed class UnitTally
     public int AloneTurn, AloneHp, AloneMaxHp, AloneFoes;
 
     /// <summary>
+    /// 第198期（剣の段・<b>ガルドの側・計数専用</b>）: <c>LastStandTurn</c> 入ったターン（0 ＝ 入らなかった）／ <c>LastStandHp</c>・<c>LastStandMaxHp</c> そのときの HP ／
+    /// <c>LastStandFoes</c> そのときの敵の数 ／ <c>LastStandBaseDealt</c> そのときまでの <c>DamageToEnemy</c>（剣の段で与えた量 ＝ 終わりの値 − これ）／
+    /// <c>LastStandStockDropped</c> 捨てた受け流しの在庫 ／ <c>LastStandRipostes</c>・<c>LastStandRiposteDealt</c> 斬り返し（生きているうち）／
+    /// <c>LastStandDyingRipostes</c>・<c>LastStandDyingDealt</c> 相打ち ／ <c>LastStandRiposteSkipped</c> 徴収・巻き込み・中継で返さなかった被弾 ／
+    /// <c>LastStandRiposteInReaction</c> 反撃の中で返さなかった被弾 ／ <c>LastStandRiposteBlocked</c> 門（粛・痺れ・組み付き）で返せなかった被弾 ／
+    /// <c>LastStandParried</c> 剣の段に入った後に受け流した回数（盾を捨てた版では構造的に 0）／ <c>LastStandRefillBlocked</c> 庇っても在庫が戻らなかった回数。
+    /// </summary>
+    public int LastStandTurn, LastStandHp, LastStandMaxHp, LastStandFoes, LastStandBaseDealt;
+    /// <summary>第198期（剣＋傷・計数専用）: 剣を抜いたときの「庇って身に受けた傷の累計」（版に依らず）と、加えた攻撃力（剣＋傷の版だけ）。</summary>
+    public int LastStandScarTaken, LastStandScarAtk;
+    public long LastStandStockDropped, LastStandRipostes, LastStandRiposteDealt, LastStandDyingRipostes, LastStandDyingDealt,
+                LastStandRiposteSkipped, LastStandRiposteInReaction, LastStandRiposteBlocked, LastStandParried, LastStandRefillBlocked;
+
+    /// <summary>
     /// 第194期（濃縮の印・ミオ）。<b>計数専用で、どの規則も読まない。</b>
     /// <para><b>ミオの側</b>: <c>ConcFires</c> 印を付けようとした手番 ／ <c>ConcDry</c> 次の刻みが 0 の敵しかいなかった手番 ／
     /// <c>ConcMarkCenter</c>・<c>ConcMarkAround</c>・<c>ConcMarkAlly</c> 足した印（中心・周りの敵・隣の味方。1回 +1）／
@@ -1994,6 +2008,11 @@ public sealed class UnitTally
         if (o.GurenFirstTurn > 0 && (GurenFirstTurn == 0 || o.GurenFirstTurn < GurenFirstTurn)) GurenFirstTurn = o.GurenFirstTurn;
         // 第198期: ターン番号とその瞬間の値は足さない（`LastActiveTurn` と同じ扱い・後の値が勝つ）。
         if (o.AloneTurn > 0) { AloneTurn = o.AloneTurn; AloneHp = o.AloneHp; AloneMaxHp = o.AloneMaxHp; AloneFoes = o.AloneFoes; }
+        if (o.LastStandTurn > 0) { LastStandTurn = o.LastStandTurn; LastStandHp = o.LastStandHp; LastStandMaxHp = o.LastStandMaxHp; LastStandFoes = o.LastStandFoes; LastStandBaseDealt = o.LastStandBaseDealt; LastStandScarTaken = o.LastStandScarTaken; LastStandScarAtk = o.LastStandScarAtk; }
+        LastStandStockDropped += o.LastStandStockDropped; LastStandRipostes += o.LastStandRipostes; LastStandRiposteDealt += o.LastStandRiposteDealt;
+        LastStandDyingRipostes += o.LastStandDyingRipostes; LastStandDyingDealt += o.LastStandDyingDealt; LastStandRiposteSkipped += o.LastStandRiposteSkipped;
+        LastStandRiposteInReaction += o.LastStandRiposteInReaction; LastStandRiposteBlocked += o.LastStandRiposteBlocked;
+        LastStandParried += o.LastStandParried; LastStandRefillBlocked += o.LastStandRefillBlocked;
         if (o.SipWasteByTurn is not null) { SipWasteByTurn ??= new long[o.SipWasteByTurn.Length]; for (int i = 0; i < o.SipWasteByTurn.Length && i < SipWasteByTurn.Length; i++) SipWasteByTurn[i] += o.SipWasteByTurn[i]; }
         ConcFires += o.ConcFires; ConcDry += o.ConcDry; ConcMarkCenter += o.ConcMarkCenter; ConcMarkAround += o.ConcMarkAround;
         ConcMarkAlly += o.ConcMarkAlly; ConcCenterBurning += o.ConcCenterBurning; ConcNoNew += o.ConcNoNew; DetonateMarkedAgain += o.DetonateMarkedAgain;
@@ -2439,7 +2458,22 @@ public enum BattleEventKind
     /// <c>Amount</c> = 積んだ層・直撃の版は直撃の名目）と、その敵への毒の <c>StatusGain</c>（経路 <see cref="BattleCore.PoisonRoute.Guren"/>）
     /// ／直撃の版は <c>Damage</c> が並ぶ。等分が 0 なら敵ごとの件は出ない。<b>どの規則も読まない。</b></para>
     /// </summary>
-    GurenRelease
+    GurenRelease,
+
+    /// <summary>
+    /// 剣の段に入った瞬間（第198期・<see cref="TraitId.LastStand"/>・廃棄聖騎士ガルド・<b>表示専用</b>）。
+    /// <para>最後の味方の <c>Death</c> の後に並ぶ。<c>ActorId</c> = <c>TargetId</c> = ガルド、<c>Amount</c> = 入った後の攻撃力、
+    /// <c>HpAfter</c> = そのときの HP、<c>Slot</c> = ガルドの席、<c>SourceTrait</c> = 版（剣／返しなし／盾剣）。
+    /// 以後のガルドの手番の <c>Attack</c> は剣の段の一撃（剣の版は薙ぎ）。<b>どの規則も読まない。</b></para>
+    /// </summary>
+    LastStand,
+
+    /// <summary>
+    /// 斬り返し（第198期・<b>表示専用</b>）。ガルドへの <c>Damage</c> の直後、斬り返しの <c>Damage</c> の直前に並ぶ。
+    /// <para><c>ActorId</c> = ガルド、<c>TargetId</c> = 殴ってきた敵、<c>Amount</c> = 斬り返しの名目、<c>HpAfter</c> = ガルドの HP、
+    /// <b><c>Slot</c> = 1 なら相打ち</b>（倒れる一撃への返し。このあとガルドの <c>Death</c> が並ぶ）、0 なら生きているうちの返し。<b>どの規則も読まない。</b></para>
+    /// </summary>
+    LastStandRiposte
 }
 
 /// <summary><see cref="BattleEventKind.PoisonThicken"/> の <c>Text</c>（<b>表示専用</b>）。</summary>

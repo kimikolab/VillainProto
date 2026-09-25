@@ -381,7 +381,7 @@ public static class BurnRules
 /// ターン外の行動の呼び出し口（第134期 段2）。<b>計数専用で、どの規則も読まない</b>
 /// ——<see cref="BattleContext.CanActOutOfTurn"/> の答えを1ビットも変えない。
 ///
-/// <para><b>呼び出し口は7本</b>。<c>CLAUDE.md</c> は第27期以来「棘・仇討ち・軋み・追い打ちの
+/// <para><b>呼び出し口は8本</b>（第198期に斬り返しが8本目）。<c>CLAUDE.md</c> は第27期以来「棘・仇討ち・軋み・追い打ちの
 /// 4本だけ」と書いていたが、<b>第110期の譲渡（尾灯・<c>TaillightTrait</c>）が5本目として
 /// 増えていた</b>（第134期 Q0-7 の走査で判明）。<b>第180期に暴発（<c>EruptTrait</c>）と
 /// 叩き起こし（<c>ReveilleTrait</c>）が 6・7 本目になった</b>
@@ -404,6 +404,8 @@ public enum OutOfTurnRoute
     Erupt,
     /// <summary>叩き起こし（<c>ReveilleTrait.OnAfterAttack</c>・第180期。<b>問う相手は起こされる味方</b>）。</summary>
     Reveille,
+    /// <summary>斬り返し（<c>LastStandTrait.OnDamaged</c>・第198期。<b>倒れる一撃でも問う</b>——「生きている」だけを外す）。</summary>
+    LastStand,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -413,7 +415,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -481,13 +483,17 @@ public sealed class BattleContext
     /// どの経路からの問い合わせか（第134期 段2・<b>計数専用。答えは1ビットも変えない</b>）。
     /// <b>呼び出し口は5本</b>——棘・仇討ち・軋み・追い打ちの4本に、第110期の譲渡（尾灯）が加わっている。
     /// </param>
-    public bool CanActOutOfTurn(UnitState u, OutOfTurnRoute route = OutOfTurnRoute.Other)
+    /// <param name="dying">
+    /// 第198期。<b>倒れる一撃の中で問う</b>（剣の段の相打ち）。真なら「生きている」だけを外し、残りの門（痺れ・組み付き・札・粛）は同じ。
+    /// <b>既定（偽）の呼び出しは答えが1ビットも変わらない。</b>
+    /// </param>
+    public bool CanActOutOfTurn(UnitState u, OutOfTurnRoute route = OutOfTurnRoute.Other, bool dying = false)
     {
         // **式のままだと「粛が単独の原因だったか」が数えられない**ので、第134期に
         // 節へほどいた。**評価の順序も結果も第27期から1ビットも変えていない**——
         // 保持者の走査は `AllUnits.Any(...)` から `_hushHolders`（`Add` が積む）へ寄せてあり、
         // 短絡の意味（数百万戦を並列で回すので全駒走査を後ろに置く）はそのまま残る。
-        bool basic = u.IsAlive
+        bool basic = (u.IsAlive || dying)
                      && u.RawCounter(StatusKeys.Stun) == 0
                      && (!_restrainLive || u.RawCounter(StatusKeys.Grappled) == 0)   // 第185期: 組み付かれた駒
                      && u.Traits.All(t => CanReactProbed(t, u));
@@ -4174,6 +4180,29 @@ public sealed class BattleContext
         });
     }
 
+    /// <summary>剣の段に入った瞬間（第198期・<b>表示専用</b>）。<see cref="BattleEventKind.LastStand"/>。</summary>
+    public void EmitLastStand(UnitState self, TraitId variant)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.LastStand, Turn = _turn, ActorId = self.InstanceId, TargetId = self.InstanceId,
+            Amount = self.CurrentAttack, HpAfter = self.Hp, Slot = self.Slot, SourceTrait = variant,
+        });
+    }
+
+    /// <summary>斬り返し・相打ちの直前（第198期・<b>表示専用</b>）。<see cref="BattleEventKind.LastStandRiposte"/>。</summary>
+    public void EmitLastStandRiposte(UnitState self, UnitState foe, int amount, bool dying)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.LastStandRiposte, Turn = _turn, ActorId = self.InstanceId, TargetId = foe.InstanceId,
+            Amount = amount, HpAfter = Math.Max(0, self.Hp), Slot = dying ? 1 : 0, SourceTrait = TraitId.LastStand,
+            Reaction = true,
+        });
+    }
+
     /// <summary>反転で癒えた味方の、このターンの <c>InstanceId</c>（<b>計数専用</b>・最大同時人数）。</summary>
     readonly List<int> _inverseTurnSet = new();
     int _inverseTurn = -1;
@@ -7433,6 +7462,7 @@ public sealed class BattleContext
                 || target.RawCounter(RedirectGainTrait.PendingKey) > 0))
         {
             target.SetCounter(ParryTrait.StockKey, target.RawCounter(ParryTrait.StockKey) - 1);
+            if (LastStandTrait.Drawn(target)) TallyOf(target).LastStandParried++;   // 第198期（計数のみ・剣の版では構造的に 0）
             // **肩代わりの印をここで落とす。** 弾いた時点で OnDamaged が呼ばれなくなるので、
             // 落とさないと印が次の被弾まで残って毒の刻みを肩代わりと取り違える
             // （RedirectGainTrait が元から持っている懸念そのもの）。

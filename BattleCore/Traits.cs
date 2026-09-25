@@ -362,6 +362,11 @@ public enum TraitId
     GurenStrike,// 紅蓮・直撃の版（第197期・対照・保持者 0 枚）: 等分した量を毒の代わりに直撃ダメージで入れる
     GurenLow,   // 紅蓮・低閾の版（第197期・対照・保持者 0 枚）: 閾値 6
     GurenFull,  // 紅蓮・全額の版（第197期・参考・保持者 0 枚）: 等分せず全員に満額の層
+    LastStand,  // 剣の段・剣の版（ガルド・第198期・対照・保持者 0 枚）: 自分以外の味方が 0 体になった瞬間に剣を抜く（戻らない）。受け流しを捨て、
+                // 毎手番 攻撃力 ×2・薙ぎで振り、殴ってきた敵に攻撃力 ×2・単体で斬り返す（倒れる一撃にも返す＝相打ち）
+    LastStandScar, // 剣＋傷（ガルド・第198期・規定）: 剣の版に加え、抜いた瞬間にその戦で庇って身に受けた傷の累計の 10%（切り捨て）を攻撃力に加える
+    LastStandPlain, // 剣の段・返しなし（第198期・対照・保持者 0 枚）: 斬り返しだけを外した版
+    LastStandShield,// 盾剣（第198期・参考・保持者 0 枚）: 受け流しは今のまま構え直し、毎手番 攻撃力 ×1・単体で振る
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -935,6 +940,8 @@ public sealed class GuardianTrait : RedirectGainTrait
         int stock = self.RawCounter(ParryTrait.StockKey);
         UnitTally t = ctx.TallyOf(self);
         t.RedirectGainFires++;          // 発火は数える（版に依らない）。`RedirectGain`（攻撃力）は 0 のまま
+        // 第198期: 剣の段（盾を捨てた版）は庇っても在庫が戻らない（蘇生で味方が戻った後にだけ起きうる）。
+        if (LastStandTrait.ShieldDropped(self)) { t.LastStandRefillBlocked++; return; }
         if (stock >= ctx.Parry.Uses) { t.ParryRefillGuardWasted++; return; }
         self.SetCounter(ParryTrait.StockKey, stock + 1);
         t.ParryRefillGuard++;
@@ -976,6 +983,10 @@ public sealed class GuardianTrait : RedirectGainTrait
     public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
     {
         bool guarded = self.Counter(PendingKey) > 0;      // ★ base より先に読む（base は冒頭で 0 に落とす）
+        // 第198期: 庇って身に受けた傷の累計（剣＋傷が抜いた瞬間に読む）。受け流した一撃はここまで届かない。
+        // 倒れる一撃も入れる（読むのは生きているうちだけなので結果は同じ）。**書くだけで、他の版は誰も読まない。**
+        if (guarded && dmg > 0 && source is not null)
+            self.SetCounter(LastStandTrait.ScarKey, self.RawCounter(LastStandTrait.ScarKey) + dmg);
         base.OnDamaged(ctx, self, dmg, source);
         if (!guarded || !self.IsAlive) return;
 
@@ -7376,6 +7387,7 @@ public sealed class ParryTrait : Trait
     public override void OnTurnStart(BattleContext ctx, UnitState self)
     {
         if (ctx.Parry.Uses <= 0 || !self.IsAlive) return;
+        if (LastStandTrait.ShieldDropped(self)) return;   // 第198期: 剣の段（盾を捨てた版）は構え直さない
         int stock = self.RawCounter(StockKey);
         if (stock >= ctx.Parry.Uses) return;
         UnitTally t = ctx.TallyOf(self);
@@ -7398,6 +7410,7 @@ public sealed class ParryTrait : Trait
     public override bool CanAct(BattleContext ctx, UnitState self, ActionKind kind)
     {
         if (kind != ActionKind.Attack || ctx.Parry.Uses <= 0) return true;
+        if (LastStandTrait.Drawn(self)) return true;   // 第198期: 剣の段は（盾剣の版も）毎手番振る
         return ctx.Parry.Swing switch
         {
             ParrySwing.WhenFull => self.RawCounter(StockKey) >= ctx.Parry.Uses,
@@ -11734,6 +11747,181 @@ public sealed class GurenFullTrait : Trait
 }
 
 /// <summary>
+/// 剣の段（第198期・廃棄聖騎士ガルドの最後の段）。<b>守る味方がいなくなったら、盾を捨てて剣を抜く。</b>
+///
+/// <para><b>入る瞬間</b>: 自分以外の生きている味方が 0 体になった瞬間（<see cref="OnAllyDeath"/>。召喚された駒も数える）。
+/// 死亡通知の固定順（<c>OnKill</c> → <c>OnDeath</c>＝分裂の召喚 → <c>OnAnyDeath</c> → <c>OnAllyDeath</c>＝蘇生）の中で数えるので、
+/// 分裂の胞子は既に湧いている。ヴェルの蘇生はヴェルが生きていないと走らないので、ヴェルが生きている間は 0 にならない。
+/// <b>一度入ったら戻らない</b>（蘇生で味方が戻っても剣の段のまま）。<b>戦闘ごとに戻る</b>（<see cref="OnBattleStart"/> / <see cref="OnCarryOver"/>）。</para>
+///
+/// <para><b>剣（この札）</b>: 受け流しの在庫を 0 にし、以後は構え直さない（<see cref="ParryTrait.OnTurnStart"/> と
+/// <see cref="GuardianTrait"/> の見返りが <see cref="ShieldDropped"/> を見て止まる）。毎手番 攻撃力 ×<see cref="LastStandAtkMultiplier"/>・薙ぎで振り
+/// （<see cref="ModifyAttack"/> / <see cref="ModifyPattern"/>）、殴ってきた敵に同じ攻撃力で斬り返す（<see cref="OnDamaged"/>）。</para>
+///
+/// <para><b>斬り返し</b>: 相手陣営が出どころの、HP に届いたダメージにだけ返す（刻み＝出どころ無し・徴収・巻き込み・中継には返さない）。
+/// 反撃（<see cref="BattleContext.Reaction"/>）の中で受けた一撃には返さない。<b>ターン外の行動なので粛の窓口を通す</b>
+/// （<see cref="OutOfTurnRoute.LastStand"/>）。<b>倒れる一撃にも返す</b>——<c>ApplyDamage</c> は <c>OnDamaged</c> を死亡処理より前に呼ぶので、
+/// 「生きている」だけを外して同じ門を問う（相打ち）。標的選択を通らないので敵の殉教者は横取りしない（棘・仇討ちと同じ）。
+/// <b>乱数を引かない。</b></para>
+///
+/// <para>版（保持者 0 枚の札）: <see cref="LastStandPlainTrait"/>（返しなし）／ <see cref="LastStandShieldTrait"/>（盾剣＝受け流しは今のまま・×1・単体）。</para>
+/// </summary>
+public class LastStandTrait : Trait
+{
+    /// <summary>剣の段の攻撃力の倍率（手番の薙ぎと斬り返しで共有）。</summary>
+    public const int LastStandAtkMultiplier = 2;
+
+    /// <summary>剣の段に入った印（<c>Counters</c> の私有キー。1 ＝ 入った）。</summary>
+    public const string DrawnKey = "lastStand";
+
+    /// <summary>剣＋傷: 抜いた瞬間の「庇って身に受けた傷の累計」のうち攻撃力に加える割合（%・切り捨て）。</summary>
+    public const int LastStandScarPercent = 10;
+
+    /// <summary>
+    /// その戦で庇って身に受けた傷の累計（<c>Counters</c> の私有キー）。<b>書くのは <see cref="GuardianTrait.OnDamaged"/></b>
+    /// （庇いの印が立っていた被弾の実額。受け流しで無かったことにした一撃は <c>OnDamaged</c> まで届かないので入らない）。
+    /// 開戦時と会戦の境界で 0 に戻す。<b>読むのは剣＋傷の版だけ</b>——他の版では盤面に1ビットも影響しない。
+    /// </summary>
+    public const string ScarKey = "guardScar";
+
+    /// <summary>剣＋傷で加えた攻撃力（<c>Counters</c> の私有キー）。<see cref="ModifyAttack"/> が読む＝他者の強化ではないので支援拒否に止められない。</summary>
+    public const string ScarAtkKey = "lastStandScarAtk";
+
+    public override TraitId Id => TraitId.LastStand;
+
+    /// <summary>抜いた瞬間に傷の累計を攻撃力へ換えるか（剣＋傷の版だけ真）。</summary>
+    protected virtual bool Scars => false;
+
+    /// <summary>受け流しを捨てるか（盾剣の版だけ偽）。</summary>
+    protected virtual bool DropsShield => true;
+    /// <summary>攻撃力 ×2・薙ぎにするか（盾剣の版だけ偽）。</summary>
+    protected virtual bool Sword => true;
+    /// <summary>斬り返すか。</summary>
+    protected virtual bool Ripostes => true;
+
+    public static bool Drawn(UnitState u) => u.RawCounter(DrawnKey) > 0;
+
+    /// <summary>剣の段に入っていて、しかも盾を捨てた版（剣／剣・返しなし）か。</summary>
+    public static bool ShieldDropped(UnitState u)
+        => Drawn(u) && (u.HasTrait(TraitId.LastStandScar) || u.HasTrait(TraitId.LastStand) || u.HasTrait(TraitId.LastStandPlain));
+
+    /// <summary>
+    /// 戦闘ごとに鞘へ戻す。<b>会戦・作戦マップで最後の1体のまま次の戦に入ったときは、開戦時に抜く</b>
+    /// ——味方が倒れる瞬間が二度と来ないので、ここで数えないと受け流しで耐えるだけの戦に戻る。
+    /// 札の並びで受け流し（<see cref="ParryTrait"/>）より後ろに置くこと（在庫を満たした後に捨てる）。
+    /// </summary>
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+    {
+        self.SetCounter(DrawnKey, 0);
+        self.SetCounter(ScarKey, 0);
+        self.SetCounter(ScarAtkKey, 0);
+        TryDraw(ctx, self);
+    }
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(DrawnKey, 0);
+        self.SetCounter(ScarKey, 0);
+        self.SetCounter(ScarAtkKey, 0);
+    }
+
+    public override void OnAllyDeath(BattleContext ctx, UnitState self, UnitState dead) => TryDraw(ctx, self);
+
+    void TryDraw(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive || Drawn(self)) return;
+        foreach (UnitState u in ctx.LivingMembers(self.TeamId)) if (u != self) return;
+        self.SetCounter(DrawnKey, 1);
+        UnitTally t = ctx.TallyOf(self);
+        t.LastStandTurn = Math.Max(1, ctx.Turn);
+        t.LastStandHp = self.Hp;
+        t.LastStandMaxHp = self.MaxHp;
+        t.LastStandBaseDealt = t.DamageToEnemy;
+        t.LastStandFoes = ctx.LivingMembers(self.TeamId == BattleContext.PlayerTeam ? BattleContext.EnemyTeam : BattleContext.PlayerTeam).Count;
+        int scar = self.RawCounter(ScarKey);
+        t.LastStandScarTaken = scar;   // 版に依らず数える（計数のみ）
+        if (Scars)
+        {
+            int add = scar * LastStandScarPercent / 100;
+            self.SetCounter(ScarAtkKey, add);
+            t.LastStandScarAtk = add;
+        }
+        if (DropsShield && self.HasTrait(TraitId.Parry))
+        {
+            t.LastStandStockDropped += self.RawCounter(ParryTrait.StockKey);
+            self.SetCounter(ParryTrait.StockKey, 0);
+        }
+        ctx.EmitLastStand(self, Id);
+        ctx.Log(DropsShield
+            ? $"  守る者を失った {self.Name} が盾を捨て、壊れた誓約ごと剣を抜いた"
+              + (Scars ? $"（庇って受けた傷 {scar} → 攻撃 +{self.RawCounter(ScarAtkKey)}）" : "")
+            : $"  守る者を失った {self.Name} が盾を構えたまま剣を抜いた", LogKind.Highlight);
+    }
+
+    /// <summary>
+    /// 剣の段の攻撃力。<b>（素の攻撃力 ＋ 剣＋傷で加えた量）× <see cref="LastStandAtkMultiplier"/></b>
+    /// ——傷は「攻撃力に加える」、倍は「剣の段の攻撃力 ×2」なので、加えた量にも倍が乗る。
+    /// </summary>
+    public override int ModifyAttack(UnitState self, int atk)
+        => Sword && Drawn(self) ? (atk + self.RawCounter(ScarAtkKey)) * LastStandAtkMultiplier : atk;
+
+    public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
+        => Sword && Drawn(self) ? AttackPattern.Sweep : p;
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        if (!Ripostes || !Drawn(self)) return;
+        if (source is null || source.TeamId == self.TeamId || dmg <= 0) return;
+        UnitTally t = ctx.TallyOf(self);
+        if (ctx.Hit.Levy || ctx.Hit.FriendlyFire || ctx.Hit.Relayed) { t.LastStandRiposteSkipped++; return; }
+        if (!source.IsAlive) return;
+        if (ctx.InReaction) { t.LastStandRiposteInReaction++; return; }
+        bool dying = !self.IsAlive;
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.LastStand, dying)) { t.LastStandRiposteBlocked++; return; }
+
+        int atk = Math.Max(1, self.CurrentAttack);
+        ctx.NoteAttackRead(self);   // 攻撃力を出力に変換した（第64期・死蔵の判定）
+        ctx.EmitLastStandRiposte(self, source, atk, dying);
+        ctx.Reaction(() =>
+        {
+            ctx.Log(dying ? $"    倒れゆく {self.Name} が {source.Name} を斬り返す（相打ち）"
+                          : $"    {self.Name} が {source.Name} を斬り返す", LogKind.Trigger);
+            long before = t.DamageToEnemy;
+            ctx.ApplyDamage(source, atk, self);
+            long dealt = t.DamageToEnemy - before;
+            if (dying) { t.LastStandDyingRipostes++; t.LastStandDyingDealt += dealt; }
+            else { t.LastStandRipostes++; t.LastStandRiposteDealt += dealt; }
+        });
+    }
+}
+
+/// <summary>
+/// 剣＋傷（第198期・<b>規定の版</b>・廃棄聖騎士ガルド）。剣の版に加え、抜いた瞬間に
+/// その戦で庇って身に受けた傷の累計の <see cref="LastStandTrait.LastStandScarPercent"/>%（切り捨て）を攻撃力に加える。
+/// </summary>
+public sealed class LastStandScarTrait : LastStandTrait
+{
+    public override TraitId Id => TraitId.LastStandScar;
+    protected override bool Scars => true;
+}
+
+/// <summary>剣の段・返しなし（第198期・対照・保持者 0 枚）。斬り返しの寄与を切り分けるためだけの版。</summary>
+public sealed class LastStandPlainTrait : LastStandTrait
+{
+    public override TraitId Id => TraitId.LastStandPlain;
+    protected override bool Ripostes => false;
+}
+
+/// <summary>盾剣（第198期・参考・保持者 0 枚）。受け流しは今のまま構え直し、毎手番 攻撃力 ×1・単体で振る。斬り返さない。</summary>
+public sealed class LastStandShieldTrait : LastStandTrait
+{
+    public override TraitId Id => TraitId.LastStandShield;
+    protected override bool DropsShield => false;
+    protected override bool Sword => false;
+    protected override bool Ripostes => false;
+}
+
+/// <summary>
 /// 突きの対照（第186期 追補）。倍率を<b>素の攻撃力</b>で掛ける版——威力 ＝ 現在攻撃力 ＋ 素の攻撃力 × 回数。
 /// 強化が倍率に乗る寄与を分けるためだけの札で、<b>保持者は <c>UnitCatalog.All</c> に 0 枚</b>（診断のローカルだけ）。
 /// </summary>
@@ -12229,6 +12417,10 @@ public static class TraitCatalog
         new GurenStrikeTrait(), // 第197期（対照・保持者 0 枚）
         new GurenLowTrait(),    // 第197期（対照・保持者 0 枚）
         new GurenFullTrait(),   // 第197期（参考・保持者 0 枚）
+        new LastStandScarTrait(),    // 第198期（規定）
+        new LastStandTrait(),        // 第198期（剣・対照・保持者 0 枚）
+        new LastStandPlainTrait(),   // 第198期（対照・保持者 0 枚）
+        new LastStandShieldTrait(),  // 第198期（参考・保持者 0 枚）
         new IndulgenceTrait(), // 第155期
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期
