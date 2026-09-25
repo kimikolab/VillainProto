@@ -242,6 +242,14 @@
 | 4 | `docs/` を再生成して `audit` ずれ 0 件・`units.md` の文面 | ○（14 ファイルが動いた・`audit` ずれ 0 件・文面は指示書の案のまま） |
 | 5 | DemoApp の門 `ok=True`・リリ在席行の再生が完走 | ○（`--map11-phase0 / 171 / 172 / 173` とも `ok=True`・燃焼／耐久／反撃改 で `DEMO_SMOKE_COMPLETE`。立ち絵は無い） |
 | 6 | 台本が読める形 | ○（§4。表示専用の種類 `Kiss` / `StatusTransfer` を足した） |
+| (G17) | `All` を触った期は `sweep`（全診断の exit 検査） | △——**585 本・191 分**。上限打ち切り 41 本（既知 20 ／ 新規 21）、**異常終了 13 本。13 本とも第204期の実装前のコミット（`4c69669`・盤面は第203期）で同じ例外を出す**ので、この期が壊したものではない（下） |
+
+**`sweep` の異常終了 13 本の内訳（どれも既存の壊れ）**:
+
+- `blaze2 phase0 / ideal / check`・`deep phase0 / cross / foe / check`・`encore check`（8 本）——`The given key 'kiri' was not present`。**キリを `All` から外した第179期から**、`All` を辞書のキーに使っている診断が落ちたまま（第141期に `Everyone` へ直した 19 本の外側・R159 の再発）。
+- `wcost draft`・`blade draft`（2 本）——`Sequence contains no elements`（ドラフト台の母集団にキリ・ナタが居ないので標本が 0）。
+- `gust gale` / `gust compare` / `form2 log`（3 本）——コマンド表の**説明用の引数（「攻撃力 確率のカンマ区切り」「行名 波 seed」）がそのまま渡っている**（R178・器具の側の問題）。
+- **直していない**（この期の範囲の外。次に器具を触る期の宿題）。
 
 ## 6. ポンが遊んだ後に答える問い（§7 の写し）
 
