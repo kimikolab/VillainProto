@@ -15,6 +15,9 @@ static partial class Formation2Diag
             case "phase201": Phase201(); handled = true; return;       // 第201期（`Formation2.P201.cs`）
             case "run201": Run201(arg); handled = true; return;
             case "check201": Check201(arg); handled = true; return;
+            case "phase202": Phase202(); handled = true; return;       // 第202期（`Formation2.P202.cs`）
+            case "run202": Run202(arg); handled = true; return;
+            case "check202": Check202(arg); handled = true; return;
         }
     }
 
