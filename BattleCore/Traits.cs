@@ -12466,7 +12466,7 @@ public sealed class KissTrait : Trait
         if (!foe.IsAlive) t.KissKills++;
 
         // 受け取り手は吸った後に選ぶ（吸い取りで倒れて「祝福が還る」が先に走ることがある）。
-        UnitState recv = ctx.MostHurtAlly(self) ?? self;
+        UnitState recv = Receiver(ctx, self, SceneDrain);
         if (ReferenceEquals(recv, self)) t.KissToSelf++;
         ctx.Log($"    {self.Name} が {foe.Name} に口づけし、精気を吸った（{drained}）→ {recv.Name}", LogKind.Trigger);
 
@@ -12477,6 +12477,27 @@ public sealed class KissTrait : Trait
         t.KissHealed += healed;
         t.KissArmor += armor;
         t.KissBlocked += blocked;
+    }
+
+    /// <summary>場面の添字（<see cref="UnitTally.KissSelfWhy"/> の行）。</summary>
+    public const int SceneDrain = 0, SceneRiteRest = 1, SceneReturn = 2;
+    /// <summary>自分で受け取った理由の添字（<see cref="UnitTally.KissSelfWhy"/> の列）。</summary>
+    public const int WhyAllFull = 0, WhyOnlyStoic = 1, WhyAlone = 2;
+
+    /// <summary>
+    /// 受け取り手（<see cref="BattleContext.MostHurtAlly"/>・null ならリリ自身）。<b>自分で受け取った回だけ理由を数える（計数のみ・乱数を引かない）</b>——
+    /// ほかの味方が全員満タン ／ 傷ついているのが支援拒否の駒だけ ／ ほかの味方が全滅。
+    /// </summary>
+    static UnitState Receiver(BattleContext ctx, UnitState self, int scene)
+    {
+        UnitState? to = ctx.MostHurtAlly(self);
+        if (to is not null) return to;
+        var others = ctx.LivingMembers(self.TeamId).Where(a => a != self).ToList();
+        int why = others.Count == 0 ? WhyAlone : others.Any(a => a.Hp < a.MaxHp) ? WhyOnlyStoic : WhyAllFull;
+        UnitTally t = ctx.TallyOf(self);
+        (t.KissSelfWhy ??= new long[9])[scene * 3 + why]++;
+        if (self.Hp >= self.MaxHp) (t.KissSelfFull ??= new long[3])[scene]++;
+        return self;
     }
 
     static void ClearStigma(BattleContext ctx, UnitState self)
@@ -12580,7 +12601,7 @@ public sealed class KissTrait : Trait
                 }
             if (rest > 0)
             {
-                UnitState to = ctx.MostHurtAlly(self) ?? self;
+                UnitState to = Receiver(ctx, self, SceneRiteRest);
                 ctx.EmitKiss(self, KissLabels.RiteGive, to, rest);
                 var (h, ar, bl) = Give(ctx, self, to, rest);
                 t.RiteHealed += h; t.RiteArmor += ar; t.RiteBlocked += bl;
@@ -12597,7 +12618,7 @@ public sealed class KissTrait : Trait
         int amount = dead.MaxHp * ReturnPercent / 100;
         t.ReturnFires++;
         t.ReturnNominal += amount;
-        UnitState to = ctx.MostHurtAlly(self) ?? self;
+        UnitState to = Receiver(ctx, self, SceneReturn);
         ctx.EmitKiss(self, KissLabels.Return, to, amount, from: dead);
         ctx.Log($"    {dead.Name} の聖痕から祝福が還る → {to.Name}（{amount}）", LogKind.Trigger);
         var (h, ar, _) = Give(ctx, self, to, amount);

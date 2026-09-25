@@ -220,6 +220,25 @@ static partial class LiliDiag
         }
         Console.WriteLine();
 
+        Console.WriteLine("## 表B'. リリが自分で受け取った回の理由（新・1戦あたり）");
+        Console.WriteLine();
+        Console.WriteLine("**満タン** ＝ ほかの味方が全員満タン ／ **支援拒否** ＝ 傷ついているのが支援拒否の駒（ガルド）だけ ／ **全滅** ＝ ほかの味方が全員倒れた。"
+                          + "括弧はそのうちリリ自身も満タンだった回（与えた全額が破片になる）。");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 吸い取り 満タン | 支援拒否 | 全滅 | (リリも満タン) | 儀式の余り 満タン | 支援拒否 | 全滅 | 還る 満タン | 支援拒否 | 全滅 | 自分で受けた 計/戦 | 吸い取りに占める割合 |");
+        Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        foreach (var (band, name, f) in rows)
+        {
+            Led l = leds[name]["新"]; UnitTally t = l.T;
+            long[] w = t.KissSelfWhy ?? new long[9];
+            long[] fu = t.KissSelfFull ?? new long[3];
+            string c(int i) => P(w[i], l.N);
+            Console.WriteLine("| " + name + " | " + c(0) + " | " + c(1) + " | " + c(2) + " | (" + P(fu[0], l.N) + ") | "
+                              + c(3) + " | " + c(4) + " | " + c(5) + " | " + c(6) + " | " + c(7) + " | " + c(8) + " | "
+                              + P(w.Sum(), l.N) + " | " + (t.KissFires == 0 ? "—" : (100.0 * (w[0] + w[1] + w[2]) / t.KissFires).ToString("F1") + "%") + " |");
+        }
+        Console.WriteLine();
+
         Console.WriteLine("## 表C'. 1手番の回復（渇きの第三波を除く＝第2・4・5波・予測 P2）");
         Console.WriteLine();
         Console.WriteLine("| 行 | 旧（繕い） | 新（1体ずつ吸った回） | 新・30 |");

@@ -1891,6 +1891,13 @@ public sealed class UnitTally
     public int RiteFirstTurn;
     public Dictionary<string, (long N, long Sum)>? KissMovedBy;
 
+    /// <summary>
+    /// 第204期 追補（<b>計数専用</b>）: リリが自分で受け取った回の理由。添字 ＝ 場面 × 3 ＋ 理由
+    /// （場面 0 吸い取り ／ 1 儀式の余り ／ 2 祝福が還る、理由 0 ほかが全員満タン ／ 1 傷ついているのが支援拒否の駒だけ ／ 2 ほかの味方が全滅）。
+    /// <c>KissSelfFull</c> はそのうちリリ自身も満タンだった回（場面ごと・与えた全額が破片になる）。
+    /// </summary>
+    public long[]? KissSelfWhy, KissSelfFull;
+
     /// <summary>第204期（<b>計数専用</b>）: この駒に載っていた破片の最大値（リリの手番の頭の走査と、リリが破片を足した直後に更新）。</summary>
     public int ArmorPeakSeen;
 
@@ -2289,6 +2296,8 @@ public sealed class UnitTally
         ReturnFires += o.ReturnFires; ReturnNominal += o.ReturnNominal; ReturnHealed += o.ReturnHealed; ReturnArmor += o.ReturnArmor;
         if (o.RiteFirstTurn > 0 && (RiteFirstTurn == 0 || o.RiteFirstTurn < RiteFirstTurn)) RiteFirstTurn = o.RiteFirstTurn;
         ArmorPeakSeen = Math.Max(ArmorPeakSeen, o.ArmorPeakSeen);
+        if (o.KissSelfWhy is not null) { KissSelfWhy ??= new long[9]; for (int i = 0; i < 9; i++) KissSelfWhy[i] += o.KissSelfWhy[i]; }
+        if (o.KissSelfFull is not null) { KissSelfFull ??= new long[3]; for (int i = 0; i < 3; i++) KissSelfFull[i] += o.KissSelfFull[i]; }
         if (o.KissMovedBy is not null)
         {
             KissMovedBy ??= new();
