@@ -2425,6 +2425,27 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
         new Stage("第四波・先遣", WithoutBack1(Stages[3].Enemy)),   // 後1 詠唱兵 を抜く
     };
 
+    /// <summary>
+    /// <b>第203期</b> —— 第三波・第五波の<b>パターン3の写し</b>（前衛1枚）。<b>駒も数値も波ルールも元の波のまま</b>で、
+    /// 陣形だけを <see cref="FormationShape.Spear"/> にした。<b>`Stages` / `Columns` / 会戦 / 作戦マップには載せない</b>
+    /// （読むのは `BattleSim` の `ep3` と `DemoApp` の `--demo-enemy-p3` だけ）。
+    ///
+    /// <para>席は測る前に固定（指示書 §3）: 元の X 字の前1 を C（前衛）に、前3・中央を中衛（B・E）に、後1・後3 を後衛（A・D）に置く。</para>
+    /// </summary>
+    public static IReadOnlyList<Stage> Pattern3Copies { get; } = new[]
+    {
+        new Stage("第三波・パターン3", Formation.BuildSpear(a: Archer, b: Hero, c: Knight, d: Axeman, e: Droughter)),
+        new Stage("第五波・パターン3", Formation.BuildSpear(a: Seer, b: Hero2, c: Martyr, d: Lancer, e: Accuser)),
+    };
+
+    /// <summary><paramref name="stageIndex"/>（0 始まり）のパターン3の写し。定義が無い波は null。</summary>
+    public static Formation? Pattern3Of(int stageIndex) => stageIndex switch
+    {
+        2 => Pattern3Copies[0].Enemy,
+        4 => Pattern3Copies[1].Enemy,
+        _ => null,
+    };
+
     /// <summary><paramref name="stageIndex"/>（0 始まり）の先遣隊。定義が無い波は null。</summary>
     public static Formation? VanguardOf(int stageIndex) => stageIndex switch
     {

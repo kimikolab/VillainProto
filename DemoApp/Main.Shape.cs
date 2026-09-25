@@ -77,4 +77,26 @@ public partial class Main
             p.Occupied().Select(o => $"{(char)('A' + o.Slot)}:{o.Def.Name}")));
         return p;
     }
+
+    // 第203期: 敵の陣形パターン3（前衛1枚）の写しで戦を始める口（**再生の確認用**）。
+    //
+    //     -- --demo-enemy-p3 --demo-stage=2|4
+    //
+    // 写しは `EnemyCatalog.Pattern3Copies`（第三波・第五波だけ）。**駒も数値も元の波のまま**で陣形だけが違う。
+    // 写しの無い波では元の波のまま始める。再生側（`BattlefieldView3D.PawnPosition`）は陣営を問わず
+    // 9席すべてに座標を持っているので、描き足しは要らない。
+    private (Formation Enemy, string Name) DemoEnemyFormation(int stageIndex)
+    {
+        EnemyCatalog.Stage stage = EnemyCatalog.Stages[stageIndex];
+        if (!OS.GetCmdlineUserArgs().Contains("--demo-enemy-p3", StringComparer.Ordinal)) return (stage.Enemy, stage.Name);
+        if (EnemyCatalog.Pattern3Of(stageIndex) is not Formation p3)
+        {
+            GD.Print($"DEMO_ENEMY_SHAPE shape=X字 stage={stageIndex} （この波にパターン3の写しは無い）");
+            return (stage.Enemy, stage.Name);
+        }
+        string name = EnemyCatalog.Pattern3Copies.First(s => ReferenceEquals(s.Enemy, p3)).Name;
+        GD.Print($"DEMO_ENEMY_SHAPE shape={p3.Shape.Name} stage={stageIndex} " + string.Join(" ",
+            p3.Occupied().Select(o => $"{p3.Shape.FrameNames[o.Slot]}:{o.Def.Name}")));
+        return (p3, name);
+    }
 }

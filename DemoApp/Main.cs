@@ -1008,8 +1008,9 @@ public partial class Main : Control
         int seed = (int)_seed.Value;
 
         List<UnitState> players = BattleEngine.Materialize(formation, BattleContext.PlayerTeam);
-        List<UnitState> enemies = BattleEngine.Materialize(EnemyCatalog.Stages[stageIndex].Enemy, BattleContext.EnemyTeam);
-        EnterBattle(players, enemies, seed, stageIndex, EnemyCatalog.Stages[stageIndex].Name);
+        (Formation enemyFormation, string enemyName) = DemoEnemyFormation(stageIndex);   // 第203期: `--demo-enemy-p3`
+        List<UnitState> enemies = BattleEngine.Materialize(enemyFormation, BattleContext.EnemyTeam);
+        EnterBattle(players, enemies, seed, stageIndex, enemyName);
     }
 
     /// <summary>

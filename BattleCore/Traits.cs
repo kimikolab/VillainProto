@@ -9401,6 +9401,20 @@ public sealed class BetrayedTrait : Trait
     public const int FodderSlot = 7;
 
     /// <summary>
+    /// 敵陣の陣形での湧く席（第203期）。<b>X 字は <see cref="FodderSlot"/>（○前2）のまま</b>。
+    /// ○前2 が編成の席になる陣形（パターン3の C）では、その陣形の召喚枠のうち<b>前列の最初の1つ</b>
+    /// ——「敵の前列が埋まる」という設計のまま。<c>Summon</c> は指定の席が召喚枠でなければ何もしないので、
+    /// ここで引かないとパターン3の敵には1度も湧かない。
+    /// </summary>
+    public static int FodderSlotOf(FormationShape shape)
+    {
+        if (shape.IsSummonSlot(FodderSlot)) return FodderSlot;
+        foreach (int s in shape.SummonSlots)
+            if (FormationRules.RowOf(s) == Row.Front) return s;
+        return FodderSlot;
+    }
+
+    /// <summary>
     /// その駒が餌か。<b>参照同値で見る</b>——餌は <see cref="UnitCatalog.Fodder"/> から
     /// 実行時に湧くだけで、編成にも診断の素体・弱い波の複製にも一度も入らない。
     /// </summary>
@@ -9423,7 +9437,7 @@ public sealed class BetrayedTrait : Trait
             return;
         }
 
-        UnitState? f = ctx.Summon(UnitCatalog.Fodder, foe, FodderSlot,
+        UnitState? f = ctx.Summon(UnitCatalog.Fodder, foe, FodderSlotOf(ctx.ShapeOfTeam(foe)),
                                   overCorpse: ctx.Betray.Respawn, by: self);
         ctx.NoteBetraySummon(self, f);
         if (f is not null)

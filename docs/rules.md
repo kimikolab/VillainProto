@@ -93,12 +93,12 @@
 | `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` | ○ | `divert` / `survive` / `wildfire` / `mark` | 第50期 |
 | `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0 }` | ○ | `survive` / `ember` / `wildfire` / `rebirth` | 第130期 |
 | `EncoreRule` | `EncoreRule { Enabled = True }` | ○ | `encore` / `tempo` / `tomo` / `hold2` / `ledger` / `lit` / `rebirth` | 第104期 |
-| `EnemyScaleRule` | `EnemyScaleRule { HpPercent = 115, AtkPercent = 115, Active = True }` |  | `escale` / `sid` / `dump` | 第187期 |
+| `EnemyScaleRule` | `EnemyScaleRule { HpPercent = 115, AtkPercent = 115, Active = True }` |  | `escale` / `sid` / `ep3` / `dump` | 第187期 |
 | `EruptRule` | `EruptRule { Floor = True, Smear = PerErupt, Heavy = True }` | ○ | `mudohex` / `mudo` | 第180期 |
 | `ExposeRule` | `ExposeRule { MaxPerBattle = 3 }` | ○ | `expose` / `creak3` / `ledger` | 第40期 |
 | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` | ○ | `curse` / `favor` / `turn` / `ledger` | 第58期 |
 | `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` | ○ | `finisher` / `ledger` / `survive` / `wildfire` / `mark` | 第53期 |
-| `FormationShape` | `BattleCore.FormationShape` |  | `form2` | 第200期 |
+| `FormationShape` | `BattleCore.FormationShape` |  | `form2` / `ep3` | 第200期 |
 | `FunnelRule` | `FunnelRule { Slowest = True, Both = False }` | ○ | `funnel` / `cross` | 第62期 |
 | `GatherRule` | `GatherRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `parry` / `wall` / `cross` / `demo` | 第89期 |
 | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` | ○ | `derive` / `whet` / `goad` / `ledger` / `mark` | 第52期 |

@@ -694,6 +694,22 @@ public sealed class FormationShape
     public static readonly FormationShape Diamond201 = BuildGrid("パターン2（第201期の貫き）", new[] { 5, 8, 2, 7, 6 }, new[] { 3, 4, 0, 1 }, PierceRule.MostOccupied)
         .Named(DiamondFrames);
 
+    private static readonly string[] SpearFrames = { "後衛・上", "中衛・上", "前衛", "後衛・下", "中衛・下" };
+
+    /// <summary>
+    /// パターン3（第203期・前衛1枚・中衛2・後衛2）。<b>今は敵の写しの波（<c>EnemyCatalog.Pattern3Copies</c>）だけが使う。</b>
+    /// <code>
+    ///           後   中   前          A＝後1(3)  B＝○中1(5)  C＝○前2(7)  D＝後3(4)  E＝○中3(6)
+    ///     1    A    B              編成の枠 0〜4 が A〜E（枠0＝A … 枠4＝E）
+    ///     2              C         召喚は編成に使っていない4マスを前から 前1 → 前3 → 中央 → ○後2
+    ///     3    D    E
+    /// </code>
+    /// 表は <see cref="Diamond"/> と同じ一般規則（<c>BuildGrid</c>）で作る。貫きは第202期の <see cref="PierceRule.Facing"/>
+    /// （撃つ側の席の格子のレーン）で、<b>乱数を引かない</b>。
+    /// </summary>
+    public static readonly FormationShape Spear = BuildGrid("パターン3", new[] { 3, 5, 7, 4, 6 }, new[] { 0, 1, 2, 8 }, PierceRule.Facing)
+        .Named(SpearFrames);
+
     /// <summary>経路 <paramref name="lane"/> が格子のレーン <paramref name="gridLane"/>（1〜3）を通るか（第202期）。</summary>
     public bool LaneCovers(int lane, int gridLane) => Array.IndexOf(_laneGrid[lane], gridLane) >= 0;
 
@@ -863,6 +879,18 @@ public sealed class Formation
         UnitDef? a = null, UnitDef? b = null, UnitDef? c = null, UnitDef? d = null, UnitDef? e = null)
     {
         var f = new Formation { Shape = FormationShape.Diamond };
+        f[0] = a; f[1] = b; f[2] = c; f[3] = d; f[4] = e;
+        return f;
+    }
+
+    /// <summary>
+    /// パターン3（前衛1枚・中衛2・後衛2）の編成（第203期）。枠0〜4 が A〜E。
+    /// A＝1レーン後衛・B＝1レーン中衛・C＝前衛（1枚）・D＝3レーン後衛・E＝3レーン中衛。
+    /// </summary>
+    public static Formation BuildSpear(
+        UnitDef? a = null, UnitDef? b = null, UnitDef? c = null, UnitDef? d = null, UnitDef? e = null)
+    {
+        var f = new Formation { Shape = FormationShape.Spear };
         f[0] = a; f[1] = b; f[2] = c; f[3] = d; f[4] = e;
         return f;
     }

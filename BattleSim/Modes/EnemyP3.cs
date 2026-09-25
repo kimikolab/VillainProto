@@ -162,9 +162,12 @@ static partial class EnemyP3Diag
         var summoners = w3.Occupied().Concat(w5.Occupied()).Where(o => o.Def.Traits.Any(t => ClassBody(traitsSrc, TraitCatalog.Get(t).GetType().Name).Contains("ctx.Summon("))).ToList();
         Console.WriteLine("- 第三波・第五波の駒で、札の本文に `ctx.Summon(` を持つもの: **" + summoners.Count + " 体**" + (summoners.Count == 0 ? "" : "（" + string.Join("・", summoners.Select(o => o.Def.Name)) + "）"));
         Console.WriteLine("- 敵陣に湧くのは**味方の**背かれ（ソム）の餌だけ。餌の席は `BetrayedTrait.FodderSlot` = " + BetrayedTrait.FodderSlot + "（○前2）の決め打ちで、"
-                          + "**パターン3ではそこに C が立っている**ので `Summon` は陣形の召喚枠の走査へ落ちる（`IsSummonSlot(7)` が偽）");
-        Console.WriteLine("- **決め: パターン3の召喚枠の走査は 前1 → 前3 → 中央 → ○後2**（9マスのうち編成に使っていない4つ・前から）。"
-                          + "X 字の餌が ○前2（前列）に立つのと同じく、餌は前列に立つ＝「敵の前列が埋まる」という背かれの設計のまま");
+                          + "**パターン3ではそこに C が立っている**");
+        Console.WriteLine("- `BattleContext.Summon(…, at: 席)` は**指定の席が召喚枠でなければ何もしない**（`IsSummonSlot(want) && free` のときだけ湧く。走査へは落ちない）"
+                          + "——**第203期の最初の読みは「走査へ落ちる」で、`ep3 check` (4) が餌 0 回で捕まえた**");
+        Console.WriteLine("- **決め: パターン3の召喚枠の走査は 前1 → 前3 → 中央 → ○後2**（9マスのうち編成に使っていない4つ・前から）、"
+                          + "**餌の席は `BetrayedTrait.FodderSlotOf(陣形)`**——X 字は ○前2 のまま、○前2 が編成の席なら陣形の召喚枠のうち前列の最初（前1）。"
+                          + "X 字の餌が前列に立つのと同じく、餌は前列に立つ＝「敵の前列が埋まる」という背かれの設計のまま");
         Console.WriteLine();
 
         // ---------------- Q0-4 ----------------
