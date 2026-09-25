@@ -45,7 +45,7 @@ public static void Run(string[] args, int stageIndex)
     //   毒        = 敵に毒を積む特性（澱み喰い・毒喰らいは読み手なので入らない）
     //   標        = 敵に標を付ける特性。囃し立て（Marker）は**味方**に付けるので入らない
     var w2Repattern = new[] { TraitId.Sniper, TraitId.Necro, TraitId.Scale, TraitId.Pyre };
-    var w2Poison = new[] { TraitId.Venom, TraitId.Amplifier, TraitId.Contagion, TraitId.Miasma };
+    var w2Poison = new[] { TraitId.Venom, TraitId.VenomHeavy, TraitId.Amplifier, TraitId.Contagion, TraitId.Miasma };
     var w2Mark = new[] { TraitId.Divert };
 
     bool W2HasAny(Formation f, TraitId[] ids)

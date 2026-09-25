@@ -1843,7 +1843,7 @@ static class Wound2Diag
             var rd = defs.Where(d => readerIds.Contains(d.Id)).Select(d => d.Name).ToList();
             if (rd.Count > 0) why.Add("**読み手: " + string.Join("・", rd) + "**");
             // 滲み則は毒／燃焼を持つ駒の傷を**陣営を問わず**読む（第90期）。味方に傷が載らなくなれば往復が消える。
-            bool soak = defs.Any(d => d.Traits.Contains(TraitId.Venom) || d.Traits.Contains(TraitId.Contagion)
+            bool soak = defs.Any(d => d.Traits.Contains(TraitId.Venom) || d.Traits.Contains(TraitId.VenomHeavy) || d.Traits.Contains(TraitId.Contagion)
                                    || d.Traits.Contains(TraitId.Amplifier) || d.Traits.Contains(TraitId.Miasma));
             if (soak && w.Count > 0) why.Add("**滲み則の往復**");
             if (why.Count > 0)

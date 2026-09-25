@@ -18,7 +18,9 @@ public sealed record DemoOpening(
     // 第171期 §2-2。**盤面ルールの保持者を再生側が知るために足した1フィールド**
     // （第170期 §4 の S-3 が名指ししていた欠落）。保持者の札と粛の鎖が読む表示専用の情報。
     // 既定 `null` ＝ 「札を運んでいない」（既存の呼び口はそのまま）。
-    IReadOnlyList<TraitId>? Traits = null);
+    IReadOnlyList<TraitId>? Traits = null,
+    // 第202期（表示専用）。**駒の隊の陣形**——席札を編成画面と同じ名前で出すためだけに運ぶ。既定 `null` ＝ X 字。
+    FormationShape? Shape = null);
 
 public partial class BattlefieldView : Control
 {

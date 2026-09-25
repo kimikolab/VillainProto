@@ -174,7 +174,7 @@ public static void Run(string[] args, int stageIndex)
             id is TraitId.Mender or TraitId.Devour or TraitId.Drifter or TraitId.Reviver))).ToArray();
     var poison = Enumerable.Range(0, targets.Length)
         .Where(t => targets[t].F.Occupied().Any(x => x.Def.Traits.Any(id =>
-            id is TraitId.Venom or TraitId.Miasma or TraitId.Amplifier or TraitId.Contagion))).ToArray();
+            id is TraitId.Venom or TraitId.VenomHeavy or TraitId.Miasma or TraitId.Amplifier or TraitId.Contagion))).ToArray();
 
     Console.WriteLine("## 群差（回復持ち / 毒軸）");
     Console.WriteLine();

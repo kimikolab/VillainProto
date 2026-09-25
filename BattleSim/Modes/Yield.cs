@@ -237,7 +237,7 @@ public static void Run(string[] args, int stageIndex)
     {
         (TraitId.Immobile, "不動"), (TraitId.Sluggish, "のろま"), (TraitId.Sniper, "狙撃"),
         (TraitId.Perverse, "逆しま"), (TraitId.Thorns, "棘"), (TraitId.ThornGuard, "棘守り"),
-        (TraitId.Pursuer, "追打"), (TraitId.Venom, "毒撃"), (TraitId.Miasma, "瘴気"),
+        (TraitId.Pursuer, "追打"), (TraitId.Venom, "毒撃"), (TraitId.VenomHeavy, "毒撃"), (TraitId.Miasma, "瘴気"),
         (TraitId.Cinder, "火粉"), (TraitId.Mender, "繕い"), (TraitId.Coward, "臆病"),
         (TraitId.Bomber, "自爆"), (TraitId.Stoic, "支援拒否"), (TraitId.Rage, "被弾強化"),
     };

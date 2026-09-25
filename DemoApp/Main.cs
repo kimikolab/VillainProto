@@ -123,6 +123,8 @@ public partial class Main : Control
     private string? _armedUnitId;
     private BattleResult? _result;
     private List<DemoOpening> _battleOpening = new();
+    /// <summary>第202期（表示専用）: いま再生している戦の味方の隊の陣形。味方の召喚の席札に使う。</summary>
+    private FormationShape _playerShape = FormationShape.X;
     private int _eventIndex;
     private int _playToken;
     private bool _battleMode;
@@ -1055,7 +1057,10 @@ public partial class Main : Control
             x.Pattern,
             x.Unit.Def.Advances,
             // 第171期 §2-2。**盤面ルールの保持者の札**を再生側が出すための1フィールド。
-            x.Unit.Def.Traits)).ToList();
+            x.Unit.Def.Traits,
+            // 第202期（表示専用）: 隊の陣形。パターン2の席札を編成画面と同じ名前にする
+            x.Unit.Shape)).ToList();
+        _playerShape = players.FirstOrDefault()?.Shape ?? FormationShape.X;
 
         _openingById.Clear();
         foreach (DemoOpening opening in _battleOpening) _openingById[opening.InstanceId] = opening;
@@ -1074,6 +1079,7 @@ public partial class Main : Control
         _field.Visible = false;
         _battleField.Visible = true;
         _battleField.BeginBattle(_battleOpening, title, stageIndex);
+        if (_quitAfterPlayback) PrintSeats("start");
         _battleMusic.PlayWave(stageIndex);
         _partyBar.Begin(_battleOpening);
         _partyBar.Sync(_battleField, -1);
@@ -1171,6 +1177,7 @@ public partial class Main : Control
         }
         else if (_quitAfterPlayback)
         {
+            PrintSeats("end");
             GD.Print($"DEMO_SMOKE_COMPLETE events={_eventIndex} turns={_result.Turns} won={_result.PlayerWon}"
                      + $" attackPlays={_attackPlays} maxRun={_attackRunMax} maxRunBy={_attackRunName}"
                      + $" hexMarks={_hexMarksShown} hexBatches={_hexSharePlays} hexHits={_hexShareHits}"
@@ -1181,6 +1188,12 @@ public partial class Main : Control
             GetTree().Quit();
         }
     }
+
+    /// <summary>第202期（頭なしの門）: 味方の席札。パターン2なら編成画面と同じ名前が並ぶはず。`end` は戦闘中の移動の後。</summary>
+    private void PrintSeats(string when) =>
+        GD.Print($"DEMO_SEATS {when} " + string.Join(" ", _battleField.Pawns.Values
+            .Where(p => p.Team == BattleContext.PlayerTeam && _battleOpening.Any(o => o.InstanceId == p.InstanceId))
+            .OrderBy(p => p.InstanceId).Select(p => p.UnitName + "=" + p.SeatText.Replace(" ", ""))));
 
     // 台本の連撃を先読みする。通常連撃と割り込む反撃連撃は別々に位置を保持し、
     // 最後の一撃のダメージまで出してから帰還する。回数や駒名は決め打ちしない。
@@ -1528,7 +1541,8 @@ public partial class Main : Control
                         def?.Attack ?? 0,
                         def?.Pattern ?? AttackPattern.Single,
                         def?.Advances ?? true,
-                        def?.Traits);
+                        def?.Traits,
+                        (e.Team ?? BattleContext.PlayerTeam) == BattleContext.PlayerTeam ? _playerShape : FormationShape.X);
                     _openingById[summonId] = opening;
                     _battleField.AddSummon(opening);
                     if (e.ActorId is not null)

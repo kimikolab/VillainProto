@@ -356,7 +356,7 @@ public enum TraitId
     Numb,       // 痺れ毒（スィド・第195期）: 印のある敵は与ダメージが「毒の層 × 3%」下がる（上限 60%）。判定は engine（`PerformAttackBody` の萎縮の直後）。
                 // 印は `Spew` と `Venom` が付ける（どちらもこの札の保持者のときだけ）。外せば「鈍らせなし」
     SpewFixed,  // 散らさない吐き（第196期・対照・保持者 0 枚）: 第195期の `Spew`（いつも現在攻撃力が最も高い敵）
-    VenomHeavy, // 重い毒撃（第196期・S+反の版・保持者 0 枚）: `Venom` と同じで、殴ってきた敵に積む毒が +8
+    VenomHeavy, // 重い毒撃（第196期・S+反の版。**第202期にスィドの規定**）: `Venom` と同じで、殴ってきた敵に積む毒が +8
     Guren,      // 紅蓮（ベニ・第197期）: 啜りでも入りきらなかった溢れを紅蓮として溜め（`StatusKeys.Guren`）、
                 // 手番の頭で 12 以上なら敵全員に着火し、紅蓮を敵の数で等分した毒の層を積む（`GurenTrait`）
     GurenStrike,// 紅蓮・直撃の版（第197期・対照・保持者 0 枚）: 等分した量を毒の代わりに直撃ダメージで入れる
@@ -1639,7 +1639,7 @@ public sealed class VenomTrait : Trait
 {
     public const int StackPerHit = 4;
 
-    /// <summary>S+反（第196期・<see cref="VenomHeavyTrait"/>）の殴られたときの毒。<b>診断の版だけ</b>（保持者 0 枚）。</summary>
+    /// <summary>S+反（第196期・<see cref="VenomHeavyTrait"/>）の殴られたときの毒。<b>第202期にスィドの規定</b>（`Venom` の +4 は対照の版・保持者 0 枚）。</summary>
     public const int HeavyStackPerHit = 8;
 
     public override TraitId Id => TraitId.Venom;
@@ -4941,7 +4941,7 @@ public sealed class SpewFixedTrait : Trait
 }
 
 /// <summary>
-/// 重い毒撃（第196期・S+反の版・<b>診断だけ</b>・保持者 0 枚）。<see cref="VenomTrait"/> と同じ本体で、
+/// 重い毒撃（第196期・S+反の版。<b>第202期にスィドの規定</b>）。<see cref="VenomTrait"/> と同じ本体で、
 /// 殴ってきた敵に積む毒だけが <see cref="VenomTrait.HeavyStackPerHit"/>（8）。漏れと印の付け方は同じ。
 /// </summary>
 public sealed class VenomHeavyTrait : Trait
@@ -12482,7 +12482,7 @@ public static class TraitCatalog
         new SpewTrait(),       // 第195期
         new NumbTrait(),       // 第195期
         new SpewFixedTrait(),  // 第196期（対照・保持者 0 枚）
-        new VenomHeavyTrait(), // 第196期（S+反の版・保持者 0 枚）
+        new VenomHeavyTrait(), // 第196期（S+反の版）・第202期にスィドの規定
         new GurenTrait(),       // 第197期
         new GurenStrikeTrait(), // 第197期（対照・保持者 0 枚）
         new GurenLowTrait(),    // 第197期（対照・保持者 0 枚）

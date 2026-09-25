@@ -181,7 +181,7 @@ static partial class Formation2Diag
         var p2A = new List<(string, Formation)>();
         foreach (var (name, orig, _, s) in rowsA)
         {
-            UnitDef sid = s.Occupied().First(o => ReferenceEquals(o.Def, UnitCatalog.Sid)).Def;
+            UnitDef sid = s.Occupied().First(o => ReferenceEquals(o.Def, SidDiag.SidS)).Def;
             UnitDef beni = s.Occupied().First(o => o.Def.Id == "beni").Def;
             Formation p2 = ToDiamond(s, sid, beni, new[] { 0, 4, 1 });
             p2A.Add((name, p2));
@@ -208,7 +208,7 @@ static partial class Formation2Diag
         Console.WriteLine();
         Console.WriteLine("P2 は **D にタンク**、残り4枚を X 字の席の順で A・C・E・B へ。参考の X 字の列は**ガルドの席にそのタンクを置いただけ**（指示書の予測2 を X 字の差と比べるため）。");
         Console.WriteLine();
-        (string Tag, UnitDef D)[] tanks = { ("ゴルム", UnitCatalog.Golm), ("ササ", UnitCatalog.Sasa), ("スィド", UnitCatalog.Sid) };
+        (string Tag, UnitDef D)[] tanks = { ("ゴルム", UnitCatalog.Golm), ("ササ", UnitCatalog.Sasa), ("スィド", SidDiag.SidS) };
         Console.WriteLine("| 行 | X・ガルド | **P2・ガルド** | " + string.Join(" | ", tanks.Select(t => "P2・" + t.Tag)) + " | " + string.Join(" | ", tanks.Select(t => "(参考) X・" + t.Tag)) + " | 差 X（ガルド − 3枚平均） | 差 P2 |");
         Console.WriteLine("|---|--:|--:|" + string.Concat(tanks.Select(_ => "--:|")) + string.Concat(tanks.Select(_ => "--:|")) + "--:|--:|");
         double gapX = 0, gapP = 0, sumXg = 0, sumPg = 0; int nB = 0, pgDown = 0;

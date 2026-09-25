@@ -170,9 +170,11 @@ public static class UnitCatalog
         // 殴ってきた敵にも +4 と印（`Venom`・漏れは今のまま）。印のある敵は毒の層 × 3%（上限 60%）だけ与ダメが下がる（`Numb`）。
         // 旧スィド（`Venom` だけ・攻撃する）は診断のローカルに写してある（回帰の対照）。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "毒を吐きかける") },
-        Traits = new[] { TraitId.Spew, TraitId.Venom, TraitId.Numb },
+        // 第202期: 殴ってきた敵に浴びせる毒を +4 → +8（`VenomHeavy`・第196期の「S+反」の版を規定に）。
+        // 旧の規定（S ＝ `Venom`）は対照の版として残す（`Venom` の保持者は 0 枚になった）。
+        Traits = new[] { TraitId.Spew, TraitId.VenomHeavy, TraitId.Numb },
         // 第196期: 吐く相手を散らす（まだ毒を浴びていない敵のうち一番手強い敵・`SpewTrait.SpewSpreads`）。
-        PlusText = "手番で、まだ毒を浴びていない一番手強い敵に毒を吐きかける。殴ってきた相手にも毒を浴びせる / スィドの毒を浴びた敵は、毒が深いほど手が鈍る（最大6割）",
+        PlusText = "手番で、まだ毒を浴びていない一番手強い敵に毒を吐きかける。殴ってきた相手には濃い毒を浴びせる / スィドの毒を浴びた敵は、毒が深いほど手が鈍る（最大6割）",
         MinusText = "殴られると、隣接する味方にも毒が漏れる / 自分では攻撃しない",
         Flavor = "袋が破れるまで役に立たない。誰も隣に立ちたがらない。"
     };

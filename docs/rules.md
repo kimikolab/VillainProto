@@ -157,6 +157,7 @@
 | `MendSide` | `Plain`=0 / `Wound`=1 |
 | `ParryScope` | `Guarded`=0 / `Any`=1 |
 | `ParrySwing` | `Off`=0 / `WhenFull`=1 / `WhenStocked`=2 |
+| `PierceRule` | `Random`=0 / `MostOccupied`=1 / `Facing`=2 |
 | `RageMode` | `Amount`=0 / `Count`=1 |
 | `SeverWait` | `Yield`=0 / `Swing`=1 |
 | `ShatterMode` | `Passive`=0 / `Turn`=1 / `Both`=2 |
@@ -172,4 +173,4 @@
 | `WildfireMode` | `None`=0 / `Add`=1 / `Scale`=2 / `Flat`=3 |
 | `YieldMode` | `OwnTurn`=0 / `OwnTurnWindow`=1 / `Immediate`=2 |
 
-23 型。
+24 型。

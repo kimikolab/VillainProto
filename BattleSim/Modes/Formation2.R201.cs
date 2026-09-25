@@ -51,7 +51,7 @@ static partial class Formation2Diag
         var picksP = new List<(string Name, Pick P)>();
         foreach (var (name, orig, _, s) in rowsA)
         {
-            UnitDef sid = s.Occupied().First(o => ReferenceEquals(o.Def, UnitCatalog.Sid)).Def;
+            UnitDef sid = s.Occupied().First(o => ReferenceEquals(o.Def, SidDiag.SidS)).Def;
             UnitDef beni = s.Occupied().First(o => o.Def.Id == "beni").Def;
             Formation p200 = ToDiamond(s, sid, beni, new[] { 0, 4, 1 });
             var mem = Members(s);
@@ -72,7 +72,7 @@ static partial class Formation2Diag
                           + " | " + Dp((sum[4] - sum[3]) / nA) + " | " + Dp((sum[4] - sum[2]) / nA) + " | | | |");
         Console.WriteLine();
         Console.WriteLine("- 第200期の P2 − X・スィド（この帯で測り直し）: " + Dp((sum[2] - sum[1]) / nA) + "pt ／ 今期の P2・選 − X・選: " + Dp((sum[4] - sum[3]) / nA) + "pt");
-        Console.WriteLine("- P2・選 で前衛にスィドが来た行: " + picksP.Count(t => ReferenceEquals(t.P.Best[3], UnitCatalog.Sid)) + " / " + picksP.Count);
+        Console.WriteLine("- P2・選 で前衛にスィドが来た行: " + picksP.Count(t => ReferenceEquals(t.P.Best[3], SidDiag.SidS)) + " / " + picksP.Count);
         Console.WriteLine();
 
         // ---------------- 表B ----------------
@@ -80,7 +80,7 @@ static partial class Formation2Diag
         Console.WriteLine();
         Console.WriteLine("**前衛を固定しない**。括弧はタンクが座った席。第200期の列（`X・ガルド・200` ／ `P2・ガルド・200`）は同じ帯で測り直した値。");
         Console.WriteLine();
-        (string Tag, UnitDef D)[] tanks = { ("ゴルム", UnitCatalog.Golm), ("ササ", UnitCatalog.Sasa), ("スィド", UnitCatalog.Sid) };
+        (string Tag, UnitDef D)[] tanks = { ("ゴルム", UnitCatalog.Golm), ("ササ", UnitCatalog.Sasa), ("スィド", SidDiag.SidS) };
         Console.WriteLine("| 行 | X・ガルド・200 | P2・ガルド・200 | **X・ガルド・選** | **P2・ガルド・選** | " + string.Join(" | ", tanks.Select(t => "P2・" + t.Tag + "・選"))
                           + " | 差 P2・選（ガルド − 3枚平均） |");
         Console.WriteLine("|---|--:|--:|--:|--:|" + string.Concat(tanks.Select(_ => "--:|")) + "--:|");
@@ -130,24 +130,24 @@ static partial class Formation2Diag
         Console.WriteLine("表A の P2・選 の並びを固定し、スィドの版だけを替える。**スィドが前衛にいない行は、スィドが前衛の 24 通りの中の最良（選ぶ試行は規定の版 S）でも測る**。"
                           + "`≤2T` ＝ 前衛が2ターン目までに倒れた戦の割合（第2〜5波）。");
         Console.WriteLine();
-        (string Tag, UnitDef D)[] vers = { ("S", UnitCatalog.Sid), ("S+反", SidDiag.SidRe), ("S+HP", SidDiag.SidHp) };
+        (string Tag, UnitDef D)[] vers = { ("S", SidDiag.SidS), ("S+反", SidDiag.SidRe), ("S+HP", SidDiag.SidHp) };
         Console.WriteLine("| 行 | 並び | 前衛 | 勝率 S ／ S+反 ／ S+HP | ≤2T S ／ S+反 ／ S+HP | 前衛が倒れた S ／ S+反 ／ S+HP |");
         Console.WriteLine("|---|---|---|---|---|---|");
         var sumC = new Dictionary<string, (double W, double E, double D, int N)>();
         foreach (var (name, pp) in picksP)
         {
             var arrs = new List<(string Tag, Formation F)> { ("P2・選", pp.Best) };
-            if (!ReferenceEquals(pp.Best[3], UnitCatalog.Sid))
+            if (!ReferenceEquals(pp.Best[3], SidDiag.SidS))
             {
                 int bi = -1;
                 for (int i = 0; i < pp.All.Count; i++)
-                    if (ReferenceEquals(pp.All[i][3], UnitCatalog.Sid) && (bi < 0 || pp.Scores[i] > pp.Scores[bi])) bi = i;
+                    if (ReferenceEquals(pp.All[i][3], SidDiag.SidS) && (bi < 0 || pp.Scores[i] > pp.Scores[bi])) bi = i;
                 arrs.Add(("前衛スィドの最良", pp.All[bi]));
                 bestRows.Add((name, "P2・前衛スィド", pp.All[bi]));
             }
             foreach (var (tag, f) in arrs)
             {
-                var ms = vers.Select(v => MeasB(ReplaceRef(f, UnitCatalog.Sid, v.D))).ToArray();
+                var ms = vers.Select(v => MeasB(ReplaceRef(f, SidDiag.SidS, v.D))).ToArray();
                 if (tag == arrs[^1].Tag)   // 前衛スィドの並び（D のスィドを見るのが目的）で7行平均を取る
                     for (int i = 0; i < vers.Length; i++)
                     {

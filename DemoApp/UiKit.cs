@@ -337,9 +337,12 @@ void fragment() {
         _ => "後列",
     };
 
-    /// <summary>席名と行名（例: <c>前1 / 前列</c>）。<see cref="FormationRules.SeatNames"/> から引く。</summary>
-    public static string SeatLabel(int slot) =>
-        $"{FormationRules.SeatNames[slot]} / {RowLabel(FormationRules.RowOf(slot))}";
+    /// <summary>
+    /// 席名と行名（例: <c>前1 / 前列</c>）。席名は陣形の <see cref="FormationShape.SeatName"/>（第202期）——
+    /// パターン2の編成の席は編成画面と同じ名前（「前衛」「中衛・上」…）、X 字と召喚枠は <see cref="FormationRules.SeatNames"/>。
+    /// </summary>
+    public static string SeatLabel(int slot, FormationShape? shape = null) =>
+        $"{(shape ?? FormationShape.X).SeatName(slot)} / {RowLabel(FormationRules.RowOf(slot))}";
 }
 
 public partial class RosterCard : PanelContainer

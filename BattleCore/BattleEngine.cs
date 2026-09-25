@@ -4404,6 +4404,18 @@ public sealed class BattleContext
     /// <summary>1ターンに手番を失った敵の数の分布（0/1/2/3+。<b>計数のみ</b>・毎ターン末に1回）。</summary>
     public readonly long[] FoeStalledHist = new long[4];
 
+    // 第202期・**計数専用**（どの規則も読まない）。規則で選ぶ陣形の貫き（`PickPierceLane`）の帳簿。
+    // [撃つ敵の格子のレーン 0..2 × 選んだ経路 0..1]・同数の交互・反対側へ回った・選ぶ瞬間の経路ごとの生存数の検算用。
+    public readonly long[] PierceChose = new long[6];
+    public long PierceTies, PierceFallbacks;
+
+    private void NotePierceChoice(UnitState attacker, int gl, int pick, bool tie, bool fallback, int[] occ)
+    {
+        if (pick < 2) PierceChose[(gl - 1) * 2 + pick]++;
+        if (tie) PierceTies++;
+        if (fallback) PierceFallbacks++;
+    }
+
     /// <summary>ターン末に呼ぶ。このターンに <c>IdleTurn</c> が立った敵を数える（倒れた敵も数える）。</summary>
     internal void NoteFoeStalled()
     {
@@ -6188,7 +6200,7 @@ public sealed class BattleContext
                     }
                 }
             }
-            return SelectPierceEntry(foes, out lane);
+            return SelectPierceEntry(attacker, foes, out lane);
         }
 
         // 前から順に、生き残っている最も前の列を狙う。
@@ -6454,22 +6466,17 @@ public sealed class BattleContext
     /// 「後列に1体でも置けば貫きの対象から外れる」逃げ場だった穴を潰した結果であって、
     /// 狙いどおり。ただし「後ろに隠れるへの回答」という元の役割はここでは失われている。
     /// </summary>
-    private UnitState SelectPierceEntry(List<UnitState> foes, out int lane)
+    private UnitState SelectPierceEntry(UnitState attacker, List<UnitState> foes, out int lane)
     {
         lane = -1;
         // 第200期: 経路は受ける隊の陣形から引く（`foes` は1つの隊。混乱で反転していても同じ隊）。
         FormationShape shape = foes[0].Shape;
 
-        // パターン2（ひし形）は**乱数を引かない**: 生きている駒が多い方の2レーン、同数なら 1-2（指示書 §2.2 の 4）。
+        // パターン2（ひし形）・今後の新しい陣形は**乱数を引かない**。選び方は陣形の `PierceRule`（`PickPierceLane`）。
         // X 字はこの枝を通らないので、下の `Roll` の引き方は第199期と1ビットも違わない。
         if (shape.DeterministicPierce)
         {
-            int best = -1, bestN = 0;
-            for (int l = 0; l < shape.LaneCount; l++)
-            {
-                int n = LaneOccupants(foes, l, shape).Count;
-                if (n > bestN) { best = l; bestN = n; }
-            }
+            int best = PickPierceLane(attacker, foes, shape);
             if (best < 0) return foes[Roll(foes.Count)];
             lane = best;
             return LaneOccupants(foes, lane, shape)[0];
@@ -6493,6 +6500,63 @@ public sealed class BattleContext
 
         return LaneOccupants(foes, lane, shape)[0];
     }
+
+    /// <summary>
+    /// 規則で選ぶ陣形の貫きの経路（<b>乱数を引かない</b>）。生きている駒のいる経路が無ければ −1。
+    /// <list type="bullet">
+    ///   <item><see cref="PierceRule.MostOccupied"/>（第200〜201期）: 生きている駒が多い方・同数なら添字の若い方</item>
+    ///   <item><see cref="PierceRule.Facing"/>（第202期）: 撃つ敵のいる格子のレーン（<see cref="FormationShape.GridLane"/>）を通る経路。
+    ///         両方の経路に入る（2レーン）なら多い方・同数ならその敵が貫くたびに交互（最初は添字の若い方）。
+    ///         選んだ経路が空なら反対側（生きている駒の多い方）</item>
+    /// </list>
+    /// 交互の記録は <see cref="_pierceAlt"/>（この戦闘だけ・駒の <c>InstanceId</c> ごと）——会戦の次の戦では最初に戻る。
+    /// </summary>
+    private int PickPierceLane(UnitState attacker, List<UnitState> foes, FormationShape shape)
+    {
+        int nl = shape.LaneCount;
+        var occ = new int[nl];
+        for (int l = 0; l < nl; l++) occ[l] = LaneOccupants(foes, l, shape).Count;
+
+        int MostOf(IEnumerable<int> ls)
+        {
+            int best = -1, bestN = 0;
+            foreach (int l in ls) if (occ[l] > bestN) { best = l; bestN = occ[l]; }
+            return best;
+        }
+
+        if (shape.Pierce == PierceRule.MostOccupied) return MostOf(Enumerable.Range(0, nl));
+
+        int gl = FormationShape.GridLane(attacker.Slot);
+        var facing = Enumerable.Range(0, nl).Where(l => shape.LaneCovers(l, gl)).ToList();
+        int pick;
+        bool tie = false;
+        if (facing.Count == 1) pick = facing[0];
+        else
+        {
+            int top = facing.Max(l => occ[l]);
+            var tops = facing.Where(l => occ[l] == top).ToList();
+            if (tops.Count == 1) pick = tops[0];
+            else
+            {
+                tie = true;
+                int k = _pierceAlt.GetValueOrDefault(attacker.InstanceId);
+                pick = tops[k % tops.Count];
+                _pierceAlt[attacker.InstanceId] = k + 1;
+            }
+        }
+
+        bool fallback = false;
+        if (occ[pick] == 0)
+        {
+            fallback = true;
+            pick = MostOf(Enumerable.Range(0, nl).Where(l => l != pick));
+        }
+        if (pick >= 0) NotePierceChoice(attacker, gl, pick, tie, fallback, occ);
+        return pick;
+    }
+
+    /// <summary>貫きの交互の記録（第202期・この戦闘だけ）。</summary>
+    private readonly Dictionary<int, int> _pierceAlt = new();
 
     /// <summary>
     /// レーン上の生存者を前から後ろの順に並べる。
@@ -6800,7 +6864,9 @@ public sealed class BattleContext
             ThrustCharge = thrustCharge,
             // 第195期・表示専用。痺れ毒で減った割合と量（印があって層 > 0 のときだけ）
             NumbPercent = numbPct > 0 ? numbPct : null,
-            NumbCut = numbPct > 0 ? numbCut : null
+            NumbCut = numbPct > 0 ? numbCut : null,
+            // 第202期・表示専用。規則で選ぶ陣形（パターン2）の貫きが選んだ経路（自己検査が台本で突き合わせる）
+            PierceLane = pattern == AttackPattern.Pierce && pierceLane >= 0 && target.Shape.DeterministicPierce ? pierceLane : null
         });
 
         if (pattern == AttackPattern.Pierce)
@@ -9423,6 +9489,9 @@ public static class BattleEngine
                 (long[])ctx.MarkHits.Clone(), (long[])ctx.MarkHitsByFinisher.Clone(),
                 new Dictionary<string, (long, long, long)>(ctx.MarkOn)),
             FoeStalledHist = (long[])ctx.FoeStalledHist.Clone(),   // 第185期（計数のみ）
+            PierceChose = (long[])ctx.PierceChose.Clone(),         // 第202期（計数のみ）
+            PierceTies = ctx.PierceTies,
+            PierceFallbacks = ctx.PierceFallbacks,
             // 第184期。標の軸（**計数専用**。どの規則も読まない）。
             MarkAxis = new MarkAxisLedger(
                 (long[])ctx.MarkVulnHits.Clone(), (long[])ctx.MarkVulnAdded.Clone(),

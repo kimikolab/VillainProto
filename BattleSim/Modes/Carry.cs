@@ -434,7 +434,7 @@ public static void Run(string[] args, int stageIndex)
             (UnitTally.CarryDull, "分かちのなまり", TraitId.Sharer, "分かちのドハ", "ApplyDamage（engine）", "事象ごと（被弾）"),
             (UnitTally.CarryPoison, "瘴気", TraitId.Miasma, "瘴気袋のグザ", "OnAction", "毎ターン"),
             (UnitTally.CarryPoison, "澱み（増幅）", TraitId.Amplifier, "澱みのミオ", "OnAction", "毎ターン"),
-            (UnitTally.CarryPoison, "毒撃", TraitId.Venom, "毒吐きのスィド", "OnDamaged", "事象ごと（被弾）"),
+            (UnitTally.CarryPoison, "毒撃", TraitId.VenomHeavy, "毒吐きのスィド", "OnDamaged", "事象ごと（被弾）"),
             (UnitTally.CarryPoison, "疫み", TraitId.Contagion, "疫みのラウ", "OnAnyDeath", "事象ごと（死）"),
             (UnitTally.CarryBurn, "火の粉", TraitId.Cinder, "焼け残りのボルグ", "OnAfterAttack", "事象ごと（攻撃）"),
             (UnitTally.CarryBurn, "破裂の着火", TraitId.Bomber, "爆ぜるゾト", "OnDeath", "事象ごと（死）"),

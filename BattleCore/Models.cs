@@ -608,6 +608,23 @@ public static class FormationRules
 }
 
 /// <summary>
+/// 貫きの2レーンの選び方（第202期）。<b>乱数を引くのは <see cref="Random"/>（X 字）だけ</b>。
+/// </summary>
+public enum PierceRule
+{
+    /// <summary>X 字（第199期まで）: 後ろに誰かいるレーンから <c>Roll</c> で選ぶ。</summary>
+    Random,
+    /// <summary>第200〜201期のパターン2: 生きている駒が多い方・同数なら添字の若い方（1-2）。</summary>
+    MostOccupied,
+    /// <summary>
+    /// 第202期: <b>撃つ敵のいるレーン側</b>の経路（格子のレーン 1 なら 1-2、3 なら 2-3）。
+    /// 撃つ敵が2レーン（両方の経路に入る）なら生きている駒の多い方、同数ならその敵が貫くたびに交互（最初は添字の若い方）。
+    /// 選んだ経路に生きている駒がいなければ反対側。
+    /// </summary>
+    Facing,
+}
+
+/// <summary>
 /// 味方の陣形（第200期）。<b>9マス（3レーン × 3列）は陣形に依らず同じ</b>で、変わるのは
 /// 「どの5マスに編成が立つか」と、隣接・薙ぎ・貫きの経路・召喚枠の表だけ。列（前・中・後）は
 /// <see cref="FormationRules.RowOf"/> の幾何なので陣形は持たない。
@@ -624,7 +641,8 @@ public static class FormationRules
 ///   <item>隣接: 縦横斜めの8方向。同じ列でレーン1と3は、間（レーン2）の席が編成の席でなければ隣接</item>
 ///   <item>薙ぎ: 標的の列の全員 ＋ その1つ後ろの列の全員</item>
 ///   <item>貫き: 2レーン（1-2 / 2-3）を前の列から後ろへ、同じ列はレーン番号の小さい方から。
-///         どちらを貫くかは生きている駒が多い方（同数なら 1-2）で<b>乱数を引かない</b></item>
+///         どちらを貫くかは<b>撃つ敵のいるレーン側</b>（第202期・<see cref="PierceRule.Facing"/>）で<b>乱数を引かない</b>。
+///         第200〜201期の「生きている駒が多い方・同数なら 1-2」は <see cref="Diamond201"/>（診断の対照だけ）に残す</item>
 /// </list>
 /// <para><b>列（前・中・後）は陣形に依らない</b>ので「生きている駒がいる一番前の列を狙う」（<c>PoolOf</c>）はそのまま効く。</para>
 /// </summary>
@@ -635,31 +653,60 @@ public sealed class FormationShape
     public IReadOnlyList<int> PlayableSlots { get; }
     /// <summary>召喚の走査順。</summary>
     public IReadOnlyList<int> SummonSlots { get; }
-    /// <summary>貫きのレーンを乱数ではなく「生きている駒が多い方」で選ぶか（パターン2）。</summary>
-    public bool DeterministicPierce { get; }
+    /// <summary>貫きのレーンを乱数ではなく規則で選ぶか（パターン2・今後の新しい陣形）。X 字だけが偽。</summary>
+    public bool DeterministicPierce => Pierce != PierceRule.Random;
+
+    /// <summary>貫きの2レーンの選び方（第202期）。</summary>
+    public PierceRule Pierce { get; }
 
     private readonly bool[] _playable;
     private readonly int[][] _adj, _sweep, _lanes, _core;
+    // 第202期: 経路 l が通る格子のレーン（1〜3）。「撃つ敵のいるレーン側」を引くのに使う。
+    private readonly int[][] _laneGrid;
 
     private FormationShape(string name, int[] playable, int[] summon, int[][] adj, int[][] sweep,
-                           int[][] lanes, int[][] core, bool deterministicPierce)
+                           int[][] lanes, int[][] core, PierceRule pierce)
     {
         Name = name; PlayableSlots = playable; SummonSlots = summon;
         _adj = adj; _sweep = sweep; _lanes = lanes; _core = core;
-        DeterministicPierce = deterministicPierce;
+        Pierce = pierce;
         _playable = new bool[FormationRules.TotalSlots];
         foreach (int p in playable) _playable[p] = true;
+        _laneGrid = lanes.Select(path => path.Select(GridLane).Distinct().OrderBy(g => g).ToArray()).ToArray();
     }
 
     /// <summary>X 字（第199期までの盤面そのもの）。</summary>
     public static readonly FormationShape X = new(
         "X字", FormationRules.PlayableSlots, FormationRules.SummonSlots,
         FormationRules.AdjacencyTable, FormationRules.SweepTable,
-        FormationRules.LanePaths, FormationRules.CorePaths, deterministicPierce: false);
+        FormationRules.LanePaths, FormationRules.CorePaths, PierceRule.Random);
+
+    private static readonly string[] DiamondFrames = { "中衛・上", "後衛", "中衛・中央", "前衛", "中衛・下" };
 
     /// <summary>パターン2（ひし形・前衛1枚）。</summary>
-    public static readonly FormationShape Diamond = BuildGrid("パターン2", new[] { 5, 8, 2, 7, 6 }, new[] { 3, 4, 0, 1 })
-        .Named(new[] { "中衛・上", "後衛", "中衛・中央", "前衛", "中衛・下" });
+    public static readonly FormationShape Diamond = BuildGrid("パターン2", new[] { 5, 8, 2, 7, 6 }, new[] { 3, 4, 0, 1 }, PierceRule.Facing)
+        .Named(DiamondFrames);
+
+    /// <summary>
+    /// パターン2の<b>第200〜201期の貫き</b>（生きている駒が多い方・同数なら 1-2）。<b>診断の対照だけ</b>で、
+    /// 編成画面からは選べない。表は <see cref="Diamond"/> と同じで、違うのは <see cref="Pierce"/> だけ。
+    /// </summary>
+    public static readonly FormationShape Diamond201 = BuildGrid("パターン2（第201期の貫き）", new[] { 5, 8, 2, 7, 6 }, new[] { 3, 4, 0, 1 }, PierceRule.MostOccupied)
+        .Named(DiamondFrames);
+
+    /// <summary>経路 <paramref name="lane"/> が格子のレーン <paramref name="gridLane"/>（1〜3）を通るか（第202期）。</summary>
+    public bool LaneCovers(int lane, int gridLane) => Array.IndexOf(_laneGrid[lane], gridLane) >= 0;
+
+    /// <summary>
+    /// 席の表示名（第202期・<b>表示だけ</b>）。編成の席なら <see cref="FrameNames"/>、召喚枠は <see cref="FormationRules.SeatNames"/>。
+    /// X 字は <see cref="FormationRules.SeatNames"/> と同じ。
+    /// </summary>
+    public string SeatName(int slot)
+    {
+        for (int i = 0; i < PlayableSlots.Count; i++)
+            if (PlayableSlots[i] == slot) return FrameNames[i];
+        return FormationRules.SeatNames[slot];
+    }
 
     /// <summary>
     /// 編成の枠 i（0〜4）の表示名（第201期・編成画面と診断の表示だけ。<b>読んで分岐する規則は 0 件</b>）。
@@ -711,7 +758,7 @@ public sealed class FormationShape
     };
 
     /// <summary>§2.2 の一般規則で表を作る（パターン2・3 で共有する）。</summary>
-    private static FormationShape BuildGrid(string name, int[] playable, int[] summon)
+    private static FormationShape BuildGrid(string name, int[] playable, int[] summon, PierceRule pierce)
     {
         const int n = FormationRules.TotalSlots;
         bool[] seat = new bool[n];
@@ -747,7 +794,7 @@ public sealed class FormationShape
             .Select(l => playable.Where(s => GridLane(s) == l).OrderBy(Depth).ToArray())
             .Where(p => p.Length >= 2).ToArray();
 
-        return new FormationShape(name, playable, summon, adj, sweep, lanes, core, deterministicPierce: true);
+        return new FormationShape(name, playable, summon, adj, sweep, lanes, core, pierce);
     }
 }
 
@@ -2915,6 +2962,12 @@ public sealed class BattleEvent
     public int? ThrustCharge { get; init; }
 
     /// <summary>
+    /// 第202期・<b>表示専用</b>。規則で選ぶ陣形（パターン2）の貫きが抜けた経路（0 ＝ 1-2 ／ 1 ＝ 2-3）。
+    /// X 字の貫き・突き以外の攻撃では null。<b>読んで分岐する規則は 0 件</b>（自己検査が台本で突き合わせる）。
+    /// </summary>
+    public int? PierceLane { get; init; }
+
+    /// <summary>
     /// 痺れ毒（第195期・<see cref="NumbTrait"/>）で減った <c>Attack</c> のときだけ入る（<b>表示専用</b>・どの規則も読まない）。
     /// <c>NumbPercent</c> 減った割合（毒の層 × 3・上限 60）／ <c>NumbCut</c> 減った打点（<c>Amount</c> は減った後の値）。
     /// 印があっても毒の層が 0 のとき・印の無い駒では <c>null</c>。
@@ -3408,6 +3461,12 @@ public sealed class BattleResult
 
     /// <summary>第185期。1ターンに手番を失った敵の数の分布（0/1/2/3+）。<b>計数専用</b>（ターン末に1回数える）。</summary>
     public long[] FoeStalledHist { get; init; } = new long[4];
+
+    /// <summary>第202期・<b>計数専用</b>。規則で選ぶ陣形の貫き: [撃つ敵の格子のレーン 0..2 × 経路 0..1] の回数。</summary>
+    public long[] PierceChose { get; init; } = new long[6];
+    /// <summary>第202期・計数専用。同数で交互に割った回数 ／ 選んだ経路が空で反対側へ回った回数。</summary>
+    public long PierceTies { get; init; }
+    public long PierceFallbacks { get; init; }
 
     /// <summary>盤面ルール（渇き・粛）の帳簿（第134期 段2・<see cref="BoardRuleLedger"/>）。<b>計数専用。</b></summary>
     public required BoardRuleLedger BoardRules { get; init; }

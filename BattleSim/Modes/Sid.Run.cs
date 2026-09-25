@@ -71,7 +71,11 @@ static partial class SidDiag
         PlusText = d.PlusText, MinusText = d.MinusText, Flavor = d.Flavor,
     };
 
-    static readonly UnitDef SidNew = UnitCatalog.Sid;
+    // 第202期: 規定の版が S+反（`VenomHeavy`）になったので、**S は診断のローカルに写す**（第195〜201期の「規定の版」）。
+    // Formation2 の第200〜201期の表もこれを読む（`SidS`）。
+    static readonly UnitDef SidNew = Clone(UnitCatalog.Sid, new[] { TraitId.Spew, TraitId.Venom, TraitId.Numb }, UnitCatalog.Sid.Actions);
+    /// <summary>S（第196〜201期の規定の版）。第202期からは対照の版。</summary>
+    internal static UnitDef SidS => SidNew;
     /// <summary>旧スィド（第194期まで）: 毒撃（`Venom`）だけ・毎手番殴る。</summary>
     static readonly UnitDef SidOld = Clone(UnitCatalog.Sid, new[] { TraitId.Venom }, null);
     /// <summary>新・鈍らせなし（`Numb` を外す＝印が付かない）。</summary>

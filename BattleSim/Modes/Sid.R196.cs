@@ -1,4 +1,4 @@
-﻿using BattleCore;
+using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -8,7 +8,7 @@ using static Common;
 //     dotnet run --project BattleSim -c Release 0 sid ledger196  # 帳簿（印の数のターン別・既に印・減らした量・倒れとベニの回復）
 //     dotnet run --project BattleSim -c Release 0 sid check196 [第195期のbalance.md]  # 自己検査
 //
-// **版は診断のローカルに写した `UnitDef`**（第195期と同じ作法）。規定の版（`UnitCatalog.Sid`）は S。
+// **版は診断のローカルに写した `UnitDef`**（第195期と同じ作法）。規定の版は S（第202期からは `SidNew` ＝ 診断のローカルの写し。`UnitCatalog.Sid` は S+反）。
 // =====================================================================================
 
 static partial class SidDiag

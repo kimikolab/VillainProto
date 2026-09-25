@@ -69,7 +69,8 @@ public static void Run(string[] args, int stageIndex)
         TraitId.Splash,      // 巻き込み（ボルグ）: コスト
         TraitId.Cinder,      // 火の粉（ボルグ）: コスト
         TraitId.Sacrifice,   // 生贄（リィカ）: コスト
-        TraitId.Venom,       // 毒漏れ（スィド）: コスト
+        TraitId.Venom,       // 毒漏れ（旧スィド・対照）: コスト
+        TraitId.VenomHeavy,  // 毒漏れ（スィド・第202期から）: コスト
         TraitId.Thorns,      // 棘（カド）: コスト＋利得
         TraitId.ThornGuard,  // 棘守り（カド）: 利得。AreSameRowPair / IsLanePredecessor
         TraitId.Marker,      // 囃し立て（ヒサ）: 利得

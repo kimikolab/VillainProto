@@ -67,7 +67,7 @@ public partial class PartyBar : PanelContainer
 
             var head = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
             head.AddThemeConstantOverride("separation", 6);
-            Label seat = UiKit.Text(UiKit.SeatLabel(o.Slot), 10, UiKit.Faint);
+            Label seat = UiKit.Text(UiKit.SeatLabel(o.Slot, o.Shape), 10, UiKit.Faint);
             Label name = UiKit.Text(o.Name, 12, UiKit.Ink);
             head.AddChild(seat);
             head.AddChild(name);
@@ -134,7 +134,7 @@ public partial class PartyBar : PanelContainer
                            : UiKit.Heal;
             row.Hp.Text = $"HP {pawn.Hp}/{pawn.MaxHp}";
             row.Atk.Text = $"攻 {pawn.AttackValue} {UiKit.PatternLabel(pawn.Pattern)}";
-            row.Seat.Text = UiKit.SeatLabel(pawn.Slot);
+            row.Seat.Text = UiKit.SeatLabel(pawn.Slot, pawn.Shape);
             row.Status.Text = pawn.StatusText;
 
             bool owner = pawn.InstanceId == turnOwner && pawn.Hp > 0;

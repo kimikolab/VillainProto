@@ -109,11 +109,15 @@ public partial class BattlePawn3D : Node3D
         set
         {
             _slot = value;
-            if (_seat is not null) _seat.Text = UiKit.SeatLabel(_slot);
+            if (_seat is not null) _seat.Text = UiKit.SeatLabel(_slot, Shape);
         }
     }
 
     private int _slot;
+    /// <summary>頭上の席札の文字（第202期・頭なしの門が読む）。</summary>
+    public string SeatText => _seat?.Text ?? "";
+    /// <summary>この駒の隊の陣形（第202期・表示専用。席札の名前だけに使う）。</summary>
+    public FormationShape? Shape { get; private set; }
     public int Hp { get; private set; }
     public int MaxHp { get; private set; }
     public int AttackValue { get; private set; }
@@ -129,6 +133,7 @@ public partial class BattlePawn3D : Node3D
         _unitId = opening.UnitId;
         InstanceId = opening.InstanceId;
         Team = opening.Team;
+        Shape = opening.Shape;
         Slot = opening.Slot;
         Hp = opening.Hp;
         MaxHp = Math.Max(1, opening.MaxHp);
@@ -328,7 +333,7 @@ void fragment() {
         AddChild(_stats);
         // 席名と行名（第123期 §3-3）。`FormationRules.SeatNames` / `RowOf` から引く。
         // 召喚枠（5-8）にも席名があるので、湧いた駒でもそのまま出る。
-        _seat = MakeLabel(UiKit.SeatLabel(Slot), 15, UiKit.Muted, 0.0050f);
+        _seat = MakeLabel(UiKit.SeatLabel(Slot, Shape), 15, UiKit.Muted, 0.0050f);
         _seat.Position = new Vector3(0, seatY, 0);
         AddChild(_seat);
         _status = MakeLabel("", 18, UiKit.Gold, 0.0058f);

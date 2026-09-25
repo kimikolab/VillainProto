@@ -147,7 +147,9 @@ public static class Map11Relations
         [TraitId.Cinder] = new(Shape.Adjacent, "火が移る",
             "自分が殴るたび、この駒にも火が点く（燃焼は毎ターン削るが、火を読む駒には燃料になる）",
             LinkSign.Loss, true, "火が移る"),
-        [TraitId.Venom] = new(Shape.Adjacent, "毒が漏れる",
+        // 第202期: スィドの規定の札が `Venom` → `VenomHeavy`（殴ってきた敵への毒が +8。隣への漏れは同じ1層）。
+        // `Venom` は保持者 0 枚になったので外した（第173期の門は「表の札には保持者がいること」を求める）。
+        [TraitId.VenomHeavy] = new(Shape.Adjacent, "毒が漏れる",
             "自分が殴られるたび、この駒にも毒が1層積む（毒は毎ターン層の分だけ削る）",
             LinkSign.Loss, true, "漏れる"),
         [TraitId.Goad] = new(Shape.AdjacentAcceptsSupport, "前に押し出す",

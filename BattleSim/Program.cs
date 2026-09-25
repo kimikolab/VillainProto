@@ -1626,6 +1626,8 @@ static class TraitEntryMap
         [TraitId.Miasma]     = new[] { (UnitTally.CarryWound, Where.Any) },
         [TraitId.Venom]      = new[] { (UnitTally.CarryWound, Where.Any),
                                        (UnitTally.CarryPoison, Where.Foe) },                // 観測
+        [TraitId.VenomHeavy] = new[] { (UnitTally.CarryWound, Where.Any),
+                                       (UnitTally.CarryPoison, Where.Foe) },                // 第202期（`Venom` と同じ本体）
         // **火の粉（`Cinder`）は第91期に外した**——燃焼は非スタックなので深さを足しても点け直しで消える。
         [TraitId.Blightfed]  = new[] { (UnitTally.CarryPoison, Where.Ally) },
         [TraitId.Pyre]       = new[] { (UnitTally.CarryBurn, Where.Self) },
@@ -1693,6 +1695,8 @@ static class TraitEntryMap
         // 要求の側（隣に傷があること）は `Reads` に立ててある。
         [TraitId.Venom]      = new[] { (UnitTally.CarryPoison, Where.Foe),
                                        (UnitTally.CarryPoison, Where.Ally) },               // 観測（毒撃の隣への漏れ）
+        [TraitId.VenomHeavy] = new[] { (UnitTally.CarryPoison, Where.Foe),
+                                       (UnitTally.CarryPoison, Where.Ally) },               // 第202期（`Venom` と同じ本体）
         [TraitId.Miasma]     = new[] { (UnitTally.CarryPoison, Where.Foe), (UnitTally.CarryPoison, Where.Ally),
                                        (UnitTally.CarryPoison, Where.Self) },               // 観測
         // **疫み（ラウ）と澱み（ミオ）が載っていなかった**（第92期が見つけて別の期に送った2件）。
