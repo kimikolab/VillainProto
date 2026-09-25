@@ -526,6 +526,8 @@ if (focusId == "mio") { MioDiag.Run(args.Length > 2 ? args[2] : "phase0", string
 if (focusId == "sid") { SidDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 // galdlast モード（第198期） —— ガルドの最後の段（剣の段）。本体は `Modes/GaldLast*.cs`。
 if (focusId == "galdlast") { GaldLastDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
+// form2 モード（第200期） —— 味方の陣形パターン2（ひし形）。本体は `Modes/Formation2.cs`。
+if (focusId == "form2") { Formation2Diag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 
 // rebirth2 モード（第180期） —— B群の転生 3〜5枚目（ムド／ヴィオ／ガン）。本体は `Modes/Rebirth2.cs`。
 if (focusId == "rebirth2")
