@@ -12435,6 +12435,16 @@ public sealed class KissTrait : Trait
         if (v > t.ArmorPeakSeen) t.ArmorPeakSeen = v;
     }
 
+    /// <summary>痛みの印（第205期）: 前の手番の終わりに、味方の陣営が失った HP の累計を控える（<see cref="BattleContext.PainLostOf"/>）。</summary>
+    public const string PainMarkKey = "kissPainMark";
+
+    /// <summary>会戦の境界で痛みの印を 0 に戻す（戦ごとに <see cref="BattleContext.PainLostOf"/> が 0 から数え直すため）。</summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(PainMarkKey, 0);
+
+    /// <summary>手番の頭の痛み（第205期）。前の手番の終わり（1手番目は戦の開始）から、味方の陣営が失った HP。</summary>
+    internal static int PainNow(BattleContext ctx, UnitState self)
+        => (int)Math.Max(0, ctx.PainLostOf(self.TeamId) - self.RawCounter(PainMarkKey));
+
     /// <summary>手番の本体（3版で共有）。</summary>
     internal static void Act(BattleContext ctx, UnitState self, int percent, bool rite)
     {
@@ -12442,6 +12452,15 @@ public sealed class KissTrait : Trait
         var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId));
         if (foes.Count == 0) return;
         UnitTally t = ctx.TallyOf(self);
+        // 第205期・計数（版に依らず測る）。
+        t.KissActs++;
+        t.KissPainSum += PainNow(ctx, self);
+        ActBody(ctx, self, foes, percent, rite, t);
+        self.SetCounter(PainMarkKey, (int)ctx.PainLostOf(self.TeamId));
+    }
+
+    static void ActBody(BattleContext ctx, UnitState self, IReadOnlyList<UnitState> foes, int percent, bool rite, UnitTally t)
+    {
 
         if (foes.All(f => f.RawCounter(StatusKeys.Stigma) > 0))
         {
@@ -12457,6 +12476,9 @@ public sealed class KissTrait : Trait
 
         foe.SetCounter(StatusKeys.Stigma, 1);
         ctx.EmitStatusGain(foe, StatusKeys.Stigma, 1, self);
+        // 第205期・計数（Q0-5）: 吸った敵の攻撃力の上げ下げ。
+        if (foe.AtkBonus > 0) { t.KissFoeBonusPos++; t.KissFoeBonusPosSum += foe.AtkBonus; }
+        else if (foe.AtkBonus < 0) { t.KissFoeBonusNeg++; t.KissFoeBonusNegSum -= foe.AtkBonus; }
         int nominal = foe.MaxHp * percent / 100;
         t.KissFires++;
         t.KissNominal += nominal;

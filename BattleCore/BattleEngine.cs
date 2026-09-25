@@ -2838,6 +2838,18 @@ public sealed class BattleContext
     /// </summary>
     public long HpRemoved;
 
+    /// <summary>
+    /// <b>陣営ごとに実際に減った HP の累計</b>（第205期・施しのリリの「痛み」）。<see cref="ApplyDamage"/> が HP を引いた直後に、
+    /// <see cref="HpRemoved"/> と同じ実額（過剰分を除く）を<b>当たった駒の陣営</b>に足す。出どころは問わない（敵の攻撃・巻き込み・刻み・代価すべて）。
+    /// <b>破片で受けた分は数えない</b>（破片は HP を引く前に削られるので、ここへ届かない）。<b>肩代わりは二重にならない</b>
+    /// ——中継の段は別の <c>ApplyDamage</c> 呼び出しで、元の被弾者に残った分と肩代わりした駒の分がそれぞれ1回ずつ入る。
+    /// 読むのは <see cref="KissTrait"/> だけ（痛みの版の札を持つとき）。<c>ApplyDamage</c> を通らない HP の減り（旧ノノの繕いの代価）は入らない。
+    /// </summary>
+    long _painLostPlayer, _painLostEnemy;
+
+    /// <summary>その陣営が戦の開始から実際に失った HP の累計（第205期）。</summary>
+    public long PainLostOf(int team) => team == PlayerTeam ? _painLostPlayer : _painLostEnemy;
+
     // ===== 第132期 段1: 上限（軛）の帳簿 =========================================================
     //
     // **誰も読んで分岐しない。** 盤面にも乱数列にも1ビットも触らない。
@@ -7753,6 +7765,12 @@ public sealed class BattleContext
         target.Hp -= amount;
         // 第120期。**盤面から実際に減った HP**（過剰分を除く）。誰も読んで分岐しない。
         HpRemoved += hpBefore120 - Math.Max(0, target.Hp);
+        // 第205期。陣営ごとの痛み（同じ実額）。読むのはリリの痛みの版だけ。
+        if (hpBefore120 > target.Hp)
+        {
+            long lost = hpBefore120 - Math.Max(0, target.Hp);
+            if (target.TeamId == PlayerTeam) _painLostPlayer += lost; else _painLostEnemy += lost;
+        }
         // 燃焼の刻みが実際に削った量（第57期）。**すべての増減を通した後の値**。
         if (burnTick) TallyOf(target).BurnTaken += amount;
         // 第125期 段1。**中継の段が実際に削った量**（巨躯・分かち）。`Swallowed`（名目量）とは別物。

@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -47,6 +47,7 @@ static partial class LiliDiag
         switch (mode)
         {
             case "phase0": Phase0(); return;
+            case "phase205": Phase205(); return;
             default:
                 if (RunMore(mode, arg)) return;
                 Console.WriteLine("lili: モードは phase0 / run / ledger / check。");

@@ -1898,6 +1898,21 @@ public sealed class UnitTally
     /// </summary>
     public long[]? KissSelfWhy, KissSelfFull;
 
+    /// <summary>
+    /// 第205期（<b>計数専用</b>）: <c>KissActs</c> リリが手番で吸った（儀式を含む）回数 ／ <c>KissPainSum</c> その手番の頭に測った痛みの合計
+    /// （前の手番の終わりから味方が失った HP・<b>版に依らず測る</b>）／ <c>KissAmountSum</c> 痛みから決まった1体あたりの吸う量の合計（痛みの版だけ）／
+    /// <c>KissVoided</c> 溢れて捨てた量（捨てる版だけ・場面を問わない）／ <c>KissTierMax</c> その戦で届いた段の最大 ／
+    /// <c>KissTierTurn</c> 段 1・2・3 に初めて届いたターン（0 ＝ 未到達）／
+    /// <c>KissFoeBonusPos</c>・<c>KissFoeBonusNeg</c> 1体ずつ吸った敵の <c>AtkBonus</c> が正・負だった回数（Q0-5・版に依らず）と
+    /// <c>…Sum</c> その絶対値の合計 ／ <c>KissStealN</c>・<c>KissStealPos</c>・<c>KissStealNeg</c> 移した攻撃力の上げ下げの件数と正・負の量（強弱を移す版だけ）／
+    /// <c>KissStolenBy</c> 受け取った駒の <c>Def.Id</c> → (件数, 符号つきの合計)。
+    /// </summary>
+    public long KissActs, KissPainSum, KissAmountSum, KissVoided, KissFoeBonusPos, KissFoeBonusNeg, KissFoeBonusPosSum, KissFoeBonusNegSum,
+                KissStealN, KissStealPos, KissStealNeg;
+    public int KissTierMax;
+    public int[]? KissTierTurn;
+    public Dictionary<string, (long N, long Sum)>? KissStolenBy;
+
     /// <summary>第204期（<b>計数専用</b>）: この駒に載っていた破片の最大値（リリの手番の頭の走査と、リリが破片を足した直後に更新）。</summary>
     public int ArmorPeakSeen;
 
@@ -2298,6 +2313,16 @@ public sealed class UnitTally
         ArmorPeakSeen = Math.Max(ArmorPeakSeen, o.ArmorPeakSeen);
         if (o.KissSelfWhy is not null) { KissSelfWhy ??= new long[9]; for (int i = 0; i < 9; i++) KissSelfWhy[i] += o.KissSelfWhy[i]; }
         if (o.KissSelfFull is not null) { KissSelfFull ??= new long[3]; for (int i = 0; i < 3; i++) KissSelfFull[i] += o.KissSelfFull[i]; }
+        KissActs += o.KissActs; KissPainSum += o.KissPainSum; KissAmountSum += o.KissAmountSum; KissVoided += o.KissVoided;
+        KissFoeBonusPos += o.KissFoeBonusPos; KissFoeBonusNeg += o.KissFoeBonusNeg; KissFoeBonusPosSum += o.KissFoeBonusPosSum; KissFoeBonusNegSum += o.KissFoeBonusNegSum;
+        KissStealN += o.KissStealN; KissStealPos += o.KissStealPos; KissStealNeg += o.KissStealNeg;
+        KissTierMax = Math.Max(KissTierMax, o.KissTierMax);
+        if (o.KissStolenBy is not null)
+        {
+            KissStolenBy ??= new();
+            foreach (var (k, v) in o.KissStolenBy)
+                KissStolenBy[k] = KissStolenBy.TryGetValue(k, out var a2) ? (a2.N + v.N, a2.Sum + v.Sum) : v;
+        }
         if (o.KissMovedBy is not null)
         {
             KissMovedBy ??= new();
