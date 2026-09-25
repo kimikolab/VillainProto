@@ -54,7 +54,7 @@ public static void Run(string[] args, int stageIndex)
     for (int u = 0; u < suRN; u++) suIdx[suRoster[u].Id] = u;
     string[] suName = suRoster.Select(d => d.Name).ToArray();
     int suHari = suIdx["hari"], suKado = suIdx["kado"], suNata = suIdx["nata"];
-    string[] suWriterIds = { "kado", "borg", "rica", "golm", "zoto", "nara" };   // 味方に傷を書く6枚（W2）
+    string[] suWriterIds = { "kado", "borg", "rica", "golm", "zoto", "tsugi" };   // 味方に傷を書く6枚（W2）
     int[] suWriters = suWriterIds.Select(i => suIdx[i]).ToArray();
     string[] suFoeReaderIds = { "egu", "nomi", "nata" };                        // 敵の傷を読む駒（ハリ以外）。自己検査 (b) の限定に使う
     int[] suOthers = Enumerable.Range(0, suRN).Where(u => u != suHari).ToArray();   // 50 体

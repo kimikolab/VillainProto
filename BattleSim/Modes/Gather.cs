@@ -57,7 +57,7 @@ public static void Run(string[] args, int stageIndex)
 
     int gaGald = gaIdx["gald"], gaMio = gaIdx["mio"];
     // 本編の「意図した相手」7枚（§3-1）: 終端（ハリ）＋ 巻き込み則の書き手6枚
-    string[] gaIntendedIds = { "hari", "golm", "borg", "kado", "nara", "rica", "zoto" };
+    string[] gaIntendedIds = { "hari", "golm", "borg", "kado", "tsugi", "rica", "zoto" };
     // (P1) の「意図した相手」2枚（§1-1。主はキリ・ノミは向きの検証）
     string[] gaP1Ids = { "kiri", "nomi" };
 
@@ -631,7 +631,7 @@ public static void Run(string[] args, int stageIndex)
         var galdRows = allRows.Where(r => Has(r.F, "gald")).ToArray();
         var hariRows = allRows.Where(r => Has(r.F, "hari")).ToArray();
         var bothRows = allRows.Where(r => Has(r.F, "gald") && Has(r.F, "hari")).ToArray();
-        var writerIds = new[] { "kado", "golm", "borg", "rica", "zoto", "nara" };
+        var writerIds = new[] { "kado", "golm", "borg", "rica", "zoto", "tsugi" };
 
         Console.WriteLine("# 第89期 Phase 0（§1-3）—— 傷を引き取る前の地図");
         Console.WriteLine();

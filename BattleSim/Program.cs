@@ -1033,7 +1033,7 @@ static class Baseline
         "溜め改 (クグ×バン×ガン)",            // 溜め
         "逆しま (ネル×ウツ)",                  // 逆しま
         "追撃×据え (ハギ×バン)",              // 追撃
-        "置き去り×分散回復",                   // 置き去り／回復
+        "継ぎ当て×分散回復",                   // 置き去り／回復
         "毒+耐久 (ベニ×トウ)",                 // 毒
         "速攻 (ボルグ×ムド)",                  // 速攻
         "反撃改2 (ガン×カド)",                 // カウンター
@@ -1355,6 +1355,9 @@ static class TraitKeyMap
         [TraitId.KissTier]   = Array.Empty<int>(),                                              // 第205期（口づけの中で読まれる札）
         [TraitId.KissTri]    = Array.Empty<int>(),                                              // 第206期（口づけの中で読まれる札）
         [TraitId.KissRite5]  = Array.Empty<int>(),                                              // 第206期（口づけの中で読まれる札）
+        [TraitId.Plank]      = new[] { UnitTally.CarryArmor },                                  // 第207期（ツギ・板＝味方の破片）
+        [TraitId.PlankTinder]= Array.Empty<int>(),                                              // 第207期（燃焼の付与口で読まれる札）
+        [TraitId.Scrap]      = Array.Empty<int>(),                                              // 第207期（在庫は私有キー）
         [TraitId.KissSteal]  = Array.Empty<int>(),                                              // 第205期（AtkBonus を移す・状態キーではない）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
@@ -1520,6 +1523,9 @@ static class TraitHookMap
         [TraitId.KissTier]    = Array.Empty<string>(),                             // 第205期（口づけの中で読まれる札）
         [TraitId.KissTri]     = Array.Empty<string>(),                             // 第206期（口づけの中で読まれる札）
         [TraitId.KissRite5]   = Array.Empty<string>(),                             // 第206期（口づけの中で読まれる札）
+        [TraitId.Plank]       = new[] { "OnBattleStart", "OnAction" },             // 第207期（ツギ）
+        [TraitId.PlankTinder] = new[] { Engine },                                  // 第207期（Ignite とリリの移しが印を読む）
+        [TraitId.Scrap]       = new[] { "OnAnyDeath", "OnCarryOver", Engine },     // 第207期（破片の減りは SetCounter → NoteArmorLost）
         [TraitId.KissSteal]   = Array.Empty<string>(),                             // 第205期（口づけの中で読まれる札）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
@@ -1991,7 +1997,7 @@ static class OffturnScan
     {
         ("死軸×ヒヨ (ゾト×火選り)",   3, 1),
         ("隊列崩し (バサ×ヨミ×セロ)", 1, 3),
-        ("置き去り×分散回復",         1, 0),
+        ("継ぎ当て×分散回復",         1, 0),
         ("逆しま (ネル×ウツ)",        4, 15),
         ("止め改 (トメ×薙ぎ)",        3, 6),
         ("刻み×抉り (ノミ×エグ)",     4, 0),

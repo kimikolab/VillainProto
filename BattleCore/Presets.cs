@@ -235,7 +235,7 @@ public static class Presets
         // 配置は reseat 1位 → confirm +48.5pt で採用（仮置き＝ナラ中央は 43.0%）。
         // 中央はナラではなくカドの席だった——棘鎧の身代わりは前か横の味方への単体攻撃に反応するので、
         // 隣接次数4の中央に置くと反応先が5枠すべてになる。ナラは速さで対象を選ぶので席を選ばない。
-        ("置き去り×被弾強化", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Nara,
+        ("継ぎ当て×被弾強化", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Tsugi,
                                          center: UnitCatalog.Kado, back1: UnitCatalog.Mudo,
                                          back3: UnitCatalog.Vel)),
         // 置き去りの**回復側**を測る編成（第21期）。`swap` S4 と同じメンバー。
@@ -267,9 +267,9 @@ public static class Presets
         // （狙 ○・情報セル 4）を `confirm`（seed 200..599）で追試して +17.1pt（第2〜5波 +21.4pt）
         // ——帯A の +22.1pt と符号も大きさも揃ったので差し替えた。**動いたのは席だけ。**
         // ササが前1 へ出るのは第143期の身構え（手番で身を固めて隣を弾く）がその席を要求するため。
-        ("置き去り×分散回復", Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald,
+        ("継ぎ当て×分散回復", Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald,
                                            center: UnitCatalog.Sero, back1: UnitCatalog.Dolga,
-                                           back3: UnitCatalog.Nara)),
+                                           back3: UnitCatalog.Tsugi)),
         // 削りを即時払いの変換器に繋ぐ形（第20期）。ゾト(7)・ムグ(6)・リィカ(7) が全員
         // ナラ(8)より遅い＝毎ターン削られる。ゾトは削られるほど早く破裂し、ムグは早く胞子になり、
         // リィカはその死をそのまま層に変える——どれも積み上げ時間を必要としない。
@@ -277,7 +277,7 @@ public static class Presets
         // 既存の「死の連鎖 (リィカ軸)」から中央のゴルムをナラに差し替えた形で、
         // **巨躯がいないので削りが減衰なしで届く**（route で見たとおり、巨躯は燃料を吸って何も返さない）。
         // 配置は reseat 1位 → confirm +12.1pt で採用（仮置き＝ナラ中央は 86.6%）。
-        // 「置き去り×被弾強化」で中央がカドの席だったのと同じ形——**ナラは席を選ばない**
+        // 「継ぎ当て×被弾強化」で中央がカドの席だったのと同じ形——**ナラは席を選ばない**
         // （速さで対象を選ぶので隣接も列も見ない）ので、中央を要求する駒に譲るのが正しい。
         // ここではヴェル（蘇生。守られて完走する側）が中央に上がる。
         //
@@ -285,7 +285,7 @@ public static class Presets
         // ナラ抜きで既に全5波 100.0% なので、削りが効いても勝率が上がる余地が無い
         // （98.8% は土台より下）。ナラの寄与を読むときは ablate の絶対値ではなく、
         // 土台で同じ席にいたゴルムの寄与（-25.5pt）と並べること。
-        ("置き去り×死の連鎖", Formation.Build(front1: UnitCatalog.Nara, front3: UnitCatalog.Mug,   // 第89期 (P2) で席を更新
+        ("継ぎ当て×死の連鎖", Formation.Build(front1: UnitCatalog.Tsugi, front3: UnitCatalog.Mug,   // 第89期 (P2) で席を更新
                                            center: UnitCatalog.Zoto, back1: UnitCatalog.Rica,
                                            back3: UnitCatalog.Vel)),
         // 物理軸の連鎖・第1弾（責め苦のシガ / 仇討ちのザン）。**配置は仮置き**——

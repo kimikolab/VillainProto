@@ -19,7 +19,7 @@ static partial class BeniDiag
     static readonly string[] NoWriterRows =
     {
         "毒爆弾 (ラウ×ヴィオ)", "澱み喰い (グザ×ヴィオ)", "範囲耐性 (ヒビ×ボルグ)",
-        "刻み×澱み (ノミ×ミオ)", "置き去り×死の連鎖", "鱗改 (ウロ×ヒビ)",
+        "刻み×澱み (ノミ×ミオ)", "継ぎ当て×死の連鎖", "鱗改 (ウロ×ヒビ)",
     };
 
     readonly record struct Sip(double Eligible, double Room, double Gained, double Early, double DiedShare, double DeathTurn,

@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using Godot;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +8,8 @@ public static class StatusIconArt
 {
     private static readonly Dictionary<string, (string Color, string Shape)> Art = new()
     {
+        // 第207期・板（ツギ）。釘で留めた板切れ。
+        [StatusKeys.Plank] = ("#c89a62", "<path d='M12 20l40-6v12l-40 6zM14 38l38-4v12l-38 4z'/><circle cx='20' cy='25' r='2' fill='#111821'/><circle cx='44' cy='21' r='2' fill='#111821'/>"),
         [StatusKeys.Stigma] = ("#ffa9ca", "<path d='M32 9C27 23 17 30 17 40a15 15 0 0 0 30 0C47 30 37 23 32 9z' fill='#e85c89'/><path d='M28 26q-9 12-5 17' fill='none' stroke='#fff0f5'/>"),
         [StatusKeys.Numbed] = ("#be80eb", "<path d='M14 18l8 10-8 10 8 10m10-34-8 10 8 10-8 10m20-30-8 10 8 10-8 10' fill='none'/>"),
         [StatusKeys.Guren] = ("#f34e64", "<path d='M32 30Q10 8 14 30Q5 47 29 38Q32 59 37 38Q60 44 49 26Q54 8 32 30z' fill='#351735'/><circle cx='32' cy='32' r='6'/>"),

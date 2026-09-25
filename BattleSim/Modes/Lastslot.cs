@@ -198,9 +198,9 @@ public static void Run(string[] args, int stageIndex)
     //        対照（支援拒否なし）でオノが受け取る強化＋回復が最大の組**＝代金が最大の編成を採る。
     //        測れる組が無ければ受け取り最大の組を採り、床であることを報告する。
     // 配置:  単騎・軸あり は規則配置 H を出発点に `lastslot seats` で reseat → confirm（閾値 5.0pt）。
-    var lsSoloPool = new[] { UnitCatalog.Dolga, UnitCatalog.Rica, UnitCatalog.Mug, UnitCatalog.Nara, UnitCatalog.Lili, UnitCatalog.Sasa, UnitCatalog.Vel };
+    var lsSoloPool = new[] { UnitCatalog.Dolga, UnitCatalog.Rica, UnitCatalog.Mug, UnitCatalog.Tsugi, UnitCatalog.Lili, UnitCatalog.Sasa, UnitCatalog.Vel };
     var lsTrapPool = new[] { UnitCatalog.Golm, UnitCatalog.Gan, UnitCatalog.Kugu, UnitCatalog.Shio, UnitCatalog.Kari, UnitCatalog.Hiyo,
-                             UnitCatalog.Lili, UnitCatalog.Rica, UnitCatalog.Hari, UnitCatalog.Beni, UnitCatalog.Nara };
+                             UnitCatalog.Lili, UnitCatalog.Rica, UnitCatalog.Hari, UnitCatalog.Beni, UnitCatalog.Tsugi };
     const int LsPickSeeds = 50;
     IEnumerable<UnitDef[]> LsCombos4(UnitDef[] pool)
     {

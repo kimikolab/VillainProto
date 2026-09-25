@@ -396,6 +396,8 @@ public sealed class UnitState
         int delta = v - (Counters.TryGetValue(key, out int had) ? had : 0);
         Counters[key] = v;
         if (delta > 0) Board?.NoteStatusGain(this, key, delta);
+        // 第207期: 破片が減った1点（板の印を消す・瓦礫拾い）。**減った分を1回だけ**流す（Q0-5・二重に数えない）。
+        else if (delta < 0 && key == StatusKeys.Armor) Board?.NoteArmorLost(this, -delta, v);
         // 第94期 (T2)。**減った分もここで観測する**——供給と消費を両方数えないと
         // 「中継」（移すだけで盤面の総量を増やさない特性・ガルドの傷）が供給と区別できない。
         // 増えた分は `NoteStatusGain` → `NoteCarry` の側で観測される（二重に数えない）。
@@ -1914,6 +1916,16 @@ public sealed class UnitTally
     public Dictionary<string, (long N, long Sum)>? KissStolenBy;
 
     /// <summary>
+    /// 第207期（<b>計数専用</b>・継ぎ当てのツギ）。ツギの側: <c>PlankPastes</c> 板を貼った回数 ／ <c>PlankGiven</c> 貼った破片の合計 ／
+    /// <c>PlankStockUsed</c> そのうち背中の在庫の分 ／ <c>ScrapArmor</c> 拾った「砕けた破片」の量（生・率を掛ける前）／ <c>ScrapFalls</c> 拾った「倒れた駒」の数 ／
+    /// <c>PlankSelf</c> 自分に貼った回数 ／ <c>PlankOnStoic</c> 支援を受け付けない駒に貼った回数 ／ <c>PlankInDrought</c> 渇きの保持者が生きている間に貼った回数。
+    /// 受け取った側: <c>PlankSoaked</c> 板の印を持っている間に破片が吸った量 ／ <c>PlankFlares</c> 板の印で燃焼が倍になった回数 ／
+    /// <c>PlankFlareTurns</c> 倍で増えた残りターンの合計。
+    /// </summary>
+    public long PlankPastes, PlankGiven, PlankStockUsed, ScrapArmor, ScrapFalls, PlankSelf, PlankOnStoic, PlankInDrought,
+                PlankSoaked, PlankFlares, PlankFlareTurns;
+
+    /// <summary>
     /// 第206期（<b>計数専用</b>）: <c>RiteFoeHist</c> 儀式の頭に生きていた聖痕の敵の数（添字 0 ＝ 1体・1 ＝ 2体・2 ＝ 3体以上）／
     /// <c>RiteMaxPerFoe</c> その戦の儀式で1体から吸えた量の最大 ／ <c>KissHealCross</c> 施した累計が
     /// <see cref="KissTrait.HealCrossProbes"/>（40・120・240・400）に初めて届いたターン（0 ＝ 未到達・<b>段の刻みに依らず</b>・段の札を持つときだけ積む）。
@@ -2325,6 +2337,9 @@ public sealed class UnitTally
         KissActs += o.KissActs; KissPainSum += o.KissPainSum; KissAmountSum += o.KissAmountSum; KissVoided += o.KissVoided;
         KissFoeBonusPos += o.KissFoeBonusPos; KissFoeBonusNeg += o.KissFoeBonusNeg; KissFoeBonusPosSum += o.KissFoeBonusPosSum; KissFoeBonusNegSum += o.KissFoeBonusNegSum;
         KissStealN += o.KissStealN; RiteFinish += o.RiteFinish; KissStealPos += o.KissStealPos; KissStealNeg += o.KissStealNeg;
+        PlankPastes += o.PlankPastes; PlankGiven += o.PlankGiven; PlankStockUsed += o.PlankStockUsed; ScrapArmor += o.ScrapArmor; ScrapFalls += o.ScrapFalls;
+        PlankSelf += o.PlankSelf; PlankOnStoic += o.PlankOnStoic; PlankInDrought += o.PlankInDrought;
+        PlankSoaked += o.PlankSoaked; PlankFlares += o.PlankFlares; PlankFlareTurns += o.PlankFlareTurns;
         KissTierMax = Math.Max(KissTierMax, o.KissTierMax);
         if (o.RiteFoeHist is not null) { RiteFoeHist ??= new long[3]; for (int i = 0; i < 3; i++) RiteFoeHist[i] += o.RiteFoeHist[i]; }
         RiteMaxPerFoe = Math.Max(RiteMaxPerFoe, o.RiteMaxPerFoe);
@@ -2833,7 +2848,26 @@ public enum BattleEventKind
     /// 状態が移った瞬間（第204期・リリの口移しの代金・<b>表示専用</b>）。<c>ActorId</c> = リリ、<c>SpreadFromId</c> = 元の敵、<c>TargetId</c> = 受け取った味方、
     /// <c>Text</c> = 状態キー（<see cref="StatusKeys"/>）、<c>Amount</c> = 移した値（層・残りターン・0/1）、<c>StatusRemaining</c> = 受け取った後の値。<b>どの規則も読まない。</b>
     /// </summary>
-    StatusTransfer
+    StatusTransfer,
+
+    /// <summary>
+    /// 継ぎ当てのツギの出来事（第207期・<b>表示専用</b>）。<c>Text</c> は <see cref="PlankLabels"/> で場面を分ける。<b>どの規則も読まない。</b>
+    /// </summary>
+    Plank
+}
+
+/// <summary><see cref="BattleEventKind.Plank"/> の <c>Text</c>（第207期・<b>表示専用</b>）。</summary>
+public static class PlankLabels
+{
+    /// <summary>板を貼った。<c>ActorId</c> = ツギ、<c>TargetId</c> = 味方、<c>Amount</c> = 貼った破片の量、
+    /// <c>Slot</c> = そのうち背中の在庫の分、<c>StatusRemaining</c> = 貼った後の味方の破片。</summary>
+    public const string Paste = "板を貼った";
+    /// <summary>瓦礫を拾った。<c>ActorId</c> = ツギ、<c>TargetId</c> = 出どころの駒（砕けた破片の持ち主／倒れた駒）、
+    /// <c>SpreadFromId</c> = 同じ、<c>Slot</c> = 0 砕けた破片 ／ 1 倒れた駒、<c>Amount</c> = 拾った量（切り捨て）、<c>StatusRemaining</c> = 在庫の合計（切り捨て）。</summary>
+    public const string Scrap = "瓦礫を拾った";
+    /// <summary>板の印で燃焼が倍になった瞬間。<c>TargetId</c> = 燃えた味方、<c>Amount</c> = 倍にした後の残りターン、
+    /// <c>Slot</c> = 0 <c>Ignite</c>（点く・点け直し）／ 1 リリの移し。<c>ActorId</c> は付けない（書き手は燃焼の書き手）。</summary>
+    public const string Flare = "板が燃えた";
 }
 
 /// <summary><see cref="BattleEventKind.Kiss"/> の <c>Text</c>（第204期・<b>表示専用</b>）。</summary>

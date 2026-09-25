@@ -24,7 +24,7 @@ static partial class BeniDiag
     static readonly string[] Writers = { "guza", "sid", "mio", "rau", "borg", "zoto", "kata" };
 
     /// <summary>回復役（指示書 §2.1 が名指しした4枚）。</summary>
-    static readonly string[] Healers = { "lili", "vel", "shio", "nara" };
+    static readonly string[] Healers = { "lili", "vel", "shio", "tsugi" };
 
     public static void Run(string mode, string arg)
     {

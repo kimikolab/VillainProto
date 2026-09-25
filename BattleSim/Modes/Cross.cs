@@ -553,7 +553,7 @@ public static void Run(string[] args, int stageIndex)
         int xcA = xcIdx[xcAid];
         string[] xcIntended = xcIs84
             ? new[] { "kiri", "nomi", "egu", "nata", "hari" }
-            : new[] { "kado", "golm", "borg", "rica", "zoto", "nara" };
+            : new[] { "kado", "golm", "borg", "rica", "zoto", "tsugi" };
         ThornRule? XcTh(int v) => xcIs84 ? new ThornRule(v == 0 ? ThornWound.None : ThornWound.Foe) : null;
         MendRule? XcMd(int v) => xcIs84 ? null : new MendRule(v == 0 ? MendSide.Plain : MendSide.Wound);
         string XcVN(int v) => xcIs84 ? (v == 0 ? "V0（現行・棘は傷を書かない）" : "V1（棘の傷）")

@@ -332,7 +332,16 @@ public static class StatusKeys
     /// </summary>
     public const string Stigma = "stigma";
 
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted, Concentrated, Numbed, Guren, Stigma };
+    /// <summary>
+    /// 板の印（第207期・継ぎ当てのツギ・<see cref="TraitId.Plank"/>）。ツギが板（破片）を貼った味方に付く。
+    /// <b>値は 1 ＝ 燃えにくい板（T1 の対照）／ 2 ＝ 燃えやすい板（<see cref="TraitId.PlankTinder"/> を持つツギが貼った）</b>。
+    /// 読むのは燃焼の付与の2口（<c>Ignite</c> とリリの移し）だけで、値が 2 なら燃焼の残りターンを倍にする。
+    /// <b>その駒の破片が 0 になった瞬間に消える</b>（<c>BattleContext.NoteArmorLost</c> の1点）。
+    /// <b>移さない</b>（<see cref="KissTrait.Excluded"/>）。<see cref="All"/> に入れてあるので会戦の境界で消える。
+    /// </summary>
+    public const string Plank = "plank";
+
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted, Concentrated, Numbed, Guren, Stigma, Plank };
 
     /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
@@ -363,6 +372,7 @@ public static class StatusKeys
         Numbed => "鈍",
         Guren => "紅",
         Stigma => "聖",
+        Plank => "板",
         _ => key
     };
 }
@@ -1219,6 +1229,8 @@ public sealed class BattleContext
 
         int turns = BurnRules.Turns;
         if (Soak.Burn && wounded) turns += 1;
+        // 第207期: 燃えやすい板（ツギ）の印があれば倍（点く・点け直しの口・Q0-4）。印が無ければ比較1つで抜ける。
+        turns = PlankFlare(target, turns, fromKiss: false);
 
         // 燃焼の計数（第57期）。**盤面には触らない。**
         // 「点いた」と「煽られた」を分けるのが要点——非スタックなので後者は
@@ -4206,6 +4218,69 @@ public sealed class BattleContext
         });
     }
 
+    // =================================================================================
+    // 第207期 —— 継ぎ当てのツギ（板・燃えやすい板・瓦礫拾い）
+    // =================================================================================
+
+    /// <summary>瓦礫拾い（<see cref="TraitId.Scrap"/>）の保持者。<b>空なら破片の減りは比較1つで抜ける。</b></summary>
+    readonly List<UnitState> _scrapHolders = new();
+
+    /// <summary>
+    /// 燃焼が付く2口（<see cref="Ignite"/> とリリの移し）から呼ぶ。<paramref name="target"/> に燃えやすい板の印
+    /// （<see cref="StatusKeys.Plank"/> == <see cref="PlankTrait.Flammable"/>）があれば残りターンを倍にして返す。
+    /// 印が無ければ <paramref name="turns"/> をそのまま返す（<b>乱数を引かない</b>）。
+    /// </summary>
+    public int PlankFlare(UnitState target, int turns, bool fromKiss)
+    {
+        if (target.RawCounter(StatusKeys.Plank) != PlankTrait.Flammable || turns <= 0) return turns;
+        int doubled = turns * 2;
+        UnitTally t = TallyOf(target);
+        t.PlankFlares++;
+        t.PlankFlareTurns += doubled - turns;
+        Log($"    {target.Name} の板に火が回った（燃焼 {turns} → {doubled} ターン）", LogKind.FriendlyFire);
+        if (_verbose)
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.Plank, Turn = _turn, TargetId = target.InstanceId, Amount = doubled,
+                Text = PlankLabels.Flare, Slot = fromKiss ? 1 : 0, SourceTrait = TraitId.PlankTinder,
+            });
+        return doubled;
+    }
+
+    /// <summary>
+    /// 破片が減った（<see cref="UnitState.SetCounter"/> の1点からだけ来る・Q0-5）。減る口は3つ——<see cref="ApplyDamage"/> の破片の段・
+    /// 礫（ガレ）の砕き・鱗（ウロ）の支払い——と、リリの移しで敵の破片が 0 になる口。
+    /// <list type="number">
+    /// <item><b>板の印を消す</b>: 破片が 0 になった瞬間。印があった間に吸った量は <c>PlankSoaked</c>（計数）。</item>
+    /// <item><b>瓦礫拾い</b>: 同じ陣営に生きている <see cref="TraitId.Scrap"/> の保持者が、減った量を拾う（<see cref="ScrapTrait"/>）。</item>
+    /// </list>
+    /// 会戦の境界は <c>Counters.Remove</c> なのでここを通らない（境界で消えた破片は拾わない）。
+    /// </summary>
+    internal void NoteArmorLost(UnitState u, int lost, int after)
+    {
+        if (u.RawCounter(StatusKeys.Plank) > 0)
+        {
+            TallyOf(u).PlankSoaked += lost;
+            if (after <= 0) u.SetCounter(StatusKeys.Plank, 0);
+        }
+        if (_scrapHolders.Count == 0) return;
+        foreach (UnitState h in _scrapHolders)
+            if (h.IsAlive && h.TeamId == u.TeamId) ScrapTrait.Pick(this, h, u, lost, fall: false);
+    }
+
+    /// <summary>ツギの出来事（第207期・<see cref="BattleEventKind.Plank"/>・<b>表示専用</b>）。verbose のときだけ積む。</summary>
+    public void EmitPlank(UnitState tsugi, string label, UnitState? target, int amount, int slot, int? remaining)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Plank, Turn = _turn, ActorId = tsugi.InstanceId, TargetId = target?.InstanceId,
+            SpreadFromId = label == PlankLabels.Scrap ? target?.InstanceId : null,
+            Amount = amount, Text = label, Slot = slot, StatusRemaining = remaining,
+            SourceTrait = label == PlankLabels.Scrap ? TraitId.Scrap : TraitId.Plank, HpAfter = target?.Hp ?? 0,
+        });
+    }
+
     /// <summary>状態が移った瞬間（第204期・<see cref="BattleEventKind.StatusTransfer"/>・<b>表示専用</b>）。</summary>
     public void EmitStatusTransfer(UnitState lili, UnitState from, UnitState to, string key, int amount, int after)
     {
@@ -5402,6 +5477,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Planted)) _plantedLive = true;
         if (u.HasTrait(TraitId.Daunt)) _dauntLive = true;   // 第189期（萎縮の消費を短絡させる）
         if (u.HasTrait(TraitId.Numb)) _numbLive = true;     // 第195期（痺れ毒の減少を短絡させる）
+        if (u.HasTrait(TraitId.Scrap)) _scrapHolders.Add(u); // 第207期（破片の減りを拾う口を短絡させる）
         // 第190期: 反転の結界（ベニ）。**保持者がいなければ `Count == 0` の比較1つで抜ける**。
         if (u.HasTrait(TraitId.Inverse)) _inverseHolders.Add(u);
         if (u.HasTrait(TraitId.InverseLeak)) _inverseLeakHolders.Add(u);

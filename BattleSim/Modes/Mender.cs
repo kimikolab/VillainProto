@@ -52,7 +52,7 @@ public static void Run(string[] args, int stageIndex)
     for (int u = 0; u < mdRN; u++) mdIdx[mdRoster[u].Id] = u;
     string[] mdName = mdRoster.Select(d => d.Name).ToArray();
     int mdNono = mdIdx["lili"];
-    string[] mdWriterIds = { "kado", "borg", "rica", "golm", "zoto", "nara" };   // 味方に傷を書く6枚
+    string[] mdWriterIds = { "kado", "borg", "rica", "golm", "zoto", "tsugi" };   // 味方に傷を書く6枚
     int[] mdWriters = mdWriterIds.Select(i => mdIdx[i]).ToArray();
     string[] mdDenseIds = { "golm", "borg" };                                    // X2 で残る2枚
     int[] mdOthers = Enumerable.Range(0, mdRN).Where(u => u != mdNono).ToArray();   // 50 体

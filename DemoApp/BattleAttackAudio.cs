@@ -1,4 +1,4 @@
-using Godot;
+﻿using Godot;
 using BattleCore;
 using System.Collections.Generic;
 
@@ -239,7 +239,7 @@ public partial class BattleAttackAudio : Node
     public void PlayHeal(string? sourceUnitId, bool selfHeal)
     {
         bool dedicatedHealer = !selfHeal && sourceUnitId is
-            "nara" or "nono" or "lili" or "hari" or "chaplain" or "chaplain_g";
+            "nara" or "tsugi" or "nono" or "lili" or "hari" or "chaplain" or "chaplain_g";
         PlayVariation(dedicatedHealer ? Heal : TraitHeal);
     }
     public void PlaySummon() => PlayVariation(Summon);

@@ -543,7 +543,7 @@ static class TimeDiag
             (UnitCatalog.Golm,  "素"), (UnitCatalog.Gald, "素"),
             (UnitCatalog.Tome, "軸"), (UnitCatalog.Sora, "軸"), (UnitCatalog.Hagi, "軸"),
             (UnitCatalog.Sero, "軸"), (UnitCatalog.Utsu, "軸"), (UnitCatalog.Nomi, "軸"),
-            (UnitCatalog.Egu,  "軸"), (UnitCatalog.Nara, "軸"),
+            (UnitCatalog.Egu,  "軸"), (UnitCatalog.Tsugi, "軸"),
         };
         int agree = 0;
         foreach ((UnitDef d, string want) in named)

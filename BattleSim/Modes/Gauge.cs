@@ -62,7 +62,7 @@ public static void Run(string[] args, int stageIndex)
     {
         (84, "kado", new[] { "kiri", "nomi", "egu", "nata", "hari" },
              "ThornRule.Foe", "第84期 棘に傷を載せる"),
-        (85, "hari", new[] { "kado", "golm", "borg", "rica", "zoto", "nara" },
+        (85, "hari", new[] { "kado", "golm", "borg", "rica", "zoto", "tsugi" },
              "SutureRule.Both ＋ SpillWoundRule(true, All)", "第85期 糸を味方にも通す"),
         (87, "mio",  new[] { "kiri", "nomi" },
              "IgniteRule(true)（ctx.WoundIgnite）", "第87期 傷口に毒を流す"),
@@ -619,7 +619,7 @@ public static void Run(string[] args, int stageIndex)
         var known = p switch
         {
             84 => new (string, double)[] { ("kiri", -0.10), ("nomi", 0.00), ("egu", 0.17), ("nata", -0.02), ("hari", 0.15) },
-            85 => new (string, double)[] { ("golm", 5.25), ("borg", 2.54), ("nara", 0.63), ("zoto", 0.17), ("kado", 0.12), ("rica", -0.90) },
+            85 => new (string, double)[] { ("golm", 5.25), ("borg", 2.54), ("tsugi", 0.63), ("zoto", 0.17), ("kado", 0.12), ("rica", -0.90) },
             _  => new (string, double)[] { ("kiri", 0.98), ("nomi", 0.32) },
         };
         double worst = 0;

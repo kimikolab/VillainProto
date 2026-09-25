@@ -383,6 +383,9 @@ public enum TraitId
     KissTier,   // 口づけ・段（第205期）: 施した累計が 40 に届くごとに段が上がり、1手番に吸う敵が 1 ＋ 段 体になる。札は `KissTrait` の中で読まれる
     KissTri,    // 口づけ・段の刻みを三角数に（第206期）: 段 n に要る施した累計を TierStep × n(n+1)/2 にする。札は `KissTrait` の中で読まれる
     KissRite5,  // 口づけ・祝福の儀を「5倍の等分」に（第206期）: 儀式の総量を吸う量 × 5 に固定し、生きている聖痕の敵で等分する。札は `KissTrait` の中で読まれる
+    Plank,       // 継ぎ当て（第207期・ツギ）: 手番で、破片が最も薄い味方に板（最も強い敵の一撃ぶんの破片・最低6）を貼る
+    PlankTinder, // 板は燃えやすい（第207期・ツギのマイナス）: 板の印を持つ味方に付く燃焼の残りターンを倍にする。札は `PlankTrait` と engine の燃焼の付与口で読まれる
+    Scrap,       // 瓦礫拾い（第207期・ツギ）: 味方の破片が砕けた量の 50% と、倒れた駒1体につき 5 を背中に積み、次の板に上乗せする
     KissSteal,  // 口づけ・強弱を移す（第205期）: 1体ずつ吸うとき、その敵の攻撃力の上げ下げ（`AtkBonus`）も受け取った味方へ移す。札は `KissTrait` の中で読まれる
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -9039,6 +9042,121 @@ public sealed class ForsakeTrait : Trait
 }
 
 /// <summary>
+/// 継ぎ当て（第207期・継ぎ当てのツギ）。<b>治さず、塞ぐ。</b>手番で、<b>破片が最も薄い味方</b>（自分を含む）に板を貼る
+/// ——量は <c>max(<see cref="PlankFloor"/>, 生きている敵の現在攻撃力の最大) ＋ 背中の在庫</c>（<see cref="ScrapTrait"/>）。
+/// 貼った味方には板の印（<see cref="StatusKeys.Plank"/>）が付く。
+///
+/// <para><b>回復ではない</b>ので渇き（<c>Heal</c> の入口）に止められず、支援拒否（ガルドの <c>Stoic</c>）も通らない
+/// ——<c>SetCounter</c> の直書きで、砕け（ヒビ）・身構え（ササ）と同じ形（Q0-3）。<c>MostHurtAlly</c> は使わない（<c>AcceptsSupport</c> で飛ばすため）。</para>
+///
+/// <para>選び方: 破片が最小 → 同値は HP 割合が最小 → それも同値なら <c>ctx.PickOne</c>（候補1なら乱数を引かない）。
+/// 召喚枠の駒（胞子・餌）も「味方」なので候補に入る（指示書 §2.2 の文面どおり）。</para>
+/// </summary>
+public sealed class PlankTrait : Trait
+{
+    /// <summary>板の最低の厚さ（指示書 §2.2・規定 6）。</summary>
+    public const int PlankFloor = 6;
+
+    /// <summary>板の印の値。<see cref="Plain"/> ＝ 燃えにくい板（T1）／ <see cref="Flammable"/> ＝ 燃えやすい板（<see cref="TraitId.PlankTinder"/>）。</summary>
+    public const int Plain = 1, Flammable = 2;
+
+    public override TraitId Id => TraitId.Plank;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+        => ctx.Log($"  {self.Name} は背中の板を揺すった", LogKind.Trigger);
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId));
+        if (foes.Count == 0) return;
+        int heaviest = foes.Max(f => f.CurrentAttack);
+
+        var allies = ctx.LivingMembers(self.TeamId);
+        int thin = allies.Min(a => a.RawCounter(StatusKeys.Armor));
+        var cand = allies.Where(a => a.RawCounter(StatusKeys.Armor) == thin).ToList();
+        int worst = cand.Min(a => a.Hp * 100 / Math.Max(1, a.MaxHp));
+        UnitState? to = ctx.PickOne(cand.Where(a => a.Hp * 100 / Math.Max(1, a.MaxHp) == worst).ToList());
+        if (to is null) return;
+
+        int stock = ScrapTrait.TakeStock(self);
+        int amount = Math.Max(PlankFloor, heaviest) + stock;
+        int after = to.RawCounter(StatusKeys.Armor) + amount;
+        to.SetCounter(StatusKeys.Armor, after);
+        int mark = self.HasTrait(TraitId.PlankTinder) ? Flammable : Plain;
+        to.SetCounter(StatusKeys.Plank, Math.Max(mark, to.RawCounter(StatusKeys.Plank)));
+
+        UnitTally t = ctx.TallyOf(self);
+        t.PlankPastes++;
+        t.PlankGiven += amount;
+        t.PlankStockUsed += stock;
+        if (to == self) t.PlankSelf++;
+        if (!to.AcceptsSupport) t.PlankOnStoic++;
+        if (ctx.DroughtBinding) t.PlankInDrought++;
+        ctx.EmitPlank(self, PlankLabels.Paste, to, amount, stock, after);
+        ctx.Log($"    {self.Name} が {to.Name} に板を貼った（破片 +{amount}" + (stock > 0 ? $"・うち瓦礫 {stock}" : "") + $"・計 {after}）",
+                LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// 板は燃えやすい（第207期・ツギのマイナス）。<b>札そのものは何もしない</b>——<see cref="PlankTrait"/> が貼るときに
+/// この札を見て印を <see cref="PlankTrait.Flammable"/> にし、燃焼の付与の2口（<c>Ignite</c>・リリの移し）が
+/// <c>BattleContext.PlankFlare</c> で印を読んで残りターンを倍にする。<b>ツギ自身は火を点けない</b>ので、火の書き手がいない編成ではマイナスは 0。
+/// </summary>
+public sealed class PlankTinderTrait : Trait
+{
+    public override TraitId Id => TraitId.PlankTinder;
+}
+
+/// <summary>
+/// 瓦礫拾い（第207期・ツギ）。<b>ツギが生きている間だけ</b>、戦場で壊れたものを背中に積む:
+/// 味方の破片が砕けた量の <see cref="ScrapRate"/>%（<c>BattleContext.NoteArmorLost</c> から）／
+/// 駒が倒れたら（敵味方を問わない）1体につき <see cref="ScrapPerFall"/>（<see cref="OnAnyDeath"/>）。
+/// 在庫は次の板に上乗せして使い切る（<see cref="TakeStock"/>）。在庫は 1/100 単位で持ち、貼るときに切り捨てる。
+/// </summary>
+public sealed class ScrapTrait : Trait
+{
+    public const int ScrapRate = 50;
+    public const int ScrapPerFall = 5;
+
+    /// <summary>背中の在庫（私有キー・1/100 単位）。</summary>
+    public const string StockKey = "tsugiScrap";
+
+    public override TraitId Id => TraitId.Scrap;
+
+    public override void OnAnyDeath(BattleContext ctx, UnitState self, UnitState dead)
+    {
+        if (!self.IsAlive || dead == self) return;
+        Pick(ctx, self, dead, 0, fall: true);
+    }
+
+    /// <summary>会戦の境界で在庫を 0 に戻す（その戦のあいだだけ溜まる）。</summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(StockKey, 0);
+
+    internal static void Pick(BattleContext ctx, UnitState self, UnitState from, int lost, bool fall)
+    {
+        if (!self.IsAlive) return;
+        int add = fall ? ScrapPerFall * 100 : lost * ScrapRate;
+        if (add <= 0) return;
+        int stock = self.RawCounter(StockKey) + add;
+        self.SetCounter(StockKey, stock);
+        UnitTally t = ctx.TallyOf(self);
+        if (fall) t.ScrapFalls++; else t.ScrapArmor += lost;
+        ctx.EmitPlank(self, PlankLabels.Scrap, from, add / 100, fall ? 1 : 0, stock / 100);
+    }
+
+    /// <summary>在庫を取り出して 0 に戻す（切り捨て）。札が無ければ 0。</summary>
+    internal static int TakeStock(UnitState self)
+    {
+        int v = self.RawCounter(StockKey);
+        if (v <= 0) return 0;
+        self.SetCounter(StockKey, 0);
+        return v / 100;
+    }
+}
+
+/// <summary>
 /// 逆位。**保持者が盤上に生きている間だけ、行動順が速さ昇順になる。両陣営に等しくかかる。**
 ///
 /// 他の特性と種類が違う。損得を持つ効果ではなく、盤面の読み方そのものを書き換える盤面ルールで、
@@ -12438,6 +12556,8 @@ public sealed class KissTrait : Trait
     {
         StatusKeys.IdleTurn, StatusKeys.Ward, StatusKeys.Debt, StatusKeys.Ash, StatusKeys.Grappled,
         StatusKeys.Footing, StatusKeys.Guren, StatusKeys.Stigma,
+        // 第207期: 板の印はツギが味方に付けるだけで、敵には載らない（移す相手がいない・Q0-3 の分類で名指しする）。
+        StatusKeys.Plank,
     };
 
     /// <summary>移すキー（<see cref="StatusKeys.All"/> から除外を引いた形。キーが増えれば自動で入る）。</summary>
@@ -12696,6 +12816,8 @@ public sealed class KissTrait : Trait
             int v = foe.RawCounter(k);
             if (v <= 0) continue;
             int cur = to.RawCounter(k);
+            // 第207期: 燃えやすい板（ツギ）を貼られた味方へ移る燃焼は、残りターンを倍にしてから比べる（「移される」の口・Q0-4）。
+            if (k == StatusKeys.Burn) v = ctx.PlankFlare(to, v, fromKiss: true);
             int after = Additive.Contains(k) ? cur + v : Math.Max(cur, v);
             to.SetCounter(k, after);
             foe.SetCounter(k, 0);
@@ -13009,6 +13131,9 @@ public static class TraitCatalog
         new KissStealTrait(),
         new KissTriTrait(),
         new KissRite5Trait(),        // 第204期（リリの代金の札）
+        new PlankTrait(),            // 第207期（継ぎ当てのツギ）
+        new PlankTinderTrait(),      // 第207期（ツギのマイナス）
+        new ScrapTrait(),            // 第207期（ツギの在庫）
         new KissBareTrait(),         // 第204期（対照・保持者 0 枚）
         new Kiss30Trait(),           // 第204期（対照・保持者 0 枚）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）

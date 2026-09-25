@@ -57,7 +57,7 @@ public static void Run(string[] args, int stageIndex)
     // 本編の「意図した相手」4枚（§0-4）: 毒 3 枚（瘴気・毒撃・疫み）＋ 燃焼 1 枚（火の粉）
     string[] skIntendedIds = { "guza", "sid", "rau", "borg" };
     // (P1) の「意図した相手」7枚（§1-1）: 終端（ハリ）＋ 巻き込み則の書き手6枚
-    string[] skP1Ids = { "hari", "golm", "borg", "kado", "nara", "rica", "zoto" };
+    string[] skP1Ids = { "hari", "golm", "borg", "kado", "tsugi", "rica", "zoto" };
     // 滲み則の読み手になる4枚（毒3＋燃1）と、傷の書き手2枚
     string[] skReaderIds = { "guza", "sid", "rau", "borg" };
     string[] skWoundIds = { "kiri", "nomi" };

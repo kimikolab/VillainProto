@@ -45,14 +45,14 @@ public static void Run(string[] args, int stageIndex)
                             center: UnitCatalog.Sero, back1: UnitCatalog.Lili, back3: UnitCatalog.Dolga)),
         ("S1 耐久（削り3 / 回復1・ナラに不利）", "ナラ",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald,
-                            center: UnitCatalog.Sero, back1: UnitCatalog.Nara, back3: UnitCatalog.Dolga)),
+                            center: UnitCatalog.Sero, back1: UnitCatalog.Tsugi, back3: UnitCatalog.Dolga)),
 
         ("S2 守り（削り2 / 回復2・主判定）", "ノノ",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald,
                             center: UnitCatalog.Lili, back1: UnitCatalog.Tou, back3: UnitCatalog.Kugu)),
         ("S2 守り（削り2 / 回復2・主判定）", "ナラ",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald,
-                            center: UnitCatalog.Nara, back1: UnitCatalog.Tou, back3: UnitCatalog.Kugu)),
+                            center: UnitCatalog.Tsugi, back1: UnitCatalog.Tou, back3: UnitCatalog.Kugu)),
         ("S2 守り（削り2 / 回復2・主判定）", "4体（中央 空）",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald,
                             back1: UnitCatalog.Tou, back3: UnitCatalog.Kugu)),
@@ -66,7 +66,7 @@ public static void Run(string[] args, int stageIndex)
                             center: UnitCatalog.Lili, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
         ("S3 攻め（削り2 / 回復2・ゴルム軸）", "ナラ",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Golm,
-                            center: UnitCatalog.Nara, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
+                            center: UnitCatalog.Tsugi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
         ("S3 攻め（削り2 / 回復2・ゴルム軸）", "4体（中央 空）",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Golm,
                             back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
@@ -76,7 +76,7 @@ public static void Run(string[] args, int stageIndex)
                             center: UnitCatalog.Lili, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
         ("S4 攻め（削り2 / 回復2・ガルド軸）", "ナラ",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald,
-                            center: UnitCatalog.Nara, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
+                            center: UnitCatalog.Tsugi, back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
         ("S4 攻め（削り2 / 回復2・ガルド軸）", "4体（中央 空）",
             Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald,
                             back1: UnitCatalog.Dolga, back3: UnitCatalog.Sasa)),
@@ -91,7 +91,7 @@ public static void Run(string[] args, int stageIndex)
                             center: UnitCatalog.Sero, back1: UnitCatalog.Lili, back3: UnitCatalog.Dolga)),
         ("S5 分散回復（採用席・削り2 / 回復2）", "ナラ",
             Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald,
-                            center: UnitCatalog.Sero, back1: UnitCatalog.Nara, back3: UnitCatalog.Dolga)),
+                            center: UnitCatalog.Sero, back1: UnitCatalog.Tsugi, back3: UnitCatalog.Dolga)),
         ("S5 分散回復（採用席・削り2 / 回復2）", "4体（後1 空）",
             Formation.Build(front1: UnitCatalog.Sasa, front3: UnitCatalog.Gald,
                             center: UnitCatalog.Sero, back3: UnitCatalog.Dolga)),
@@ -152,7 +152,7 @@ public static void Run(string[] args, int stageIndex)
         foreach (var r in rows)
         {
             // 回復役の削り総量。ノノ版は 0（継ぎ当ては味方を削らない）、4体版は該当なし。
-            UnitTally? healer = r.Name.Contains("ナラ") ? Get(r.Sum, UnitCatalog.Nara.Id)
+            UnitTally? healer = r.Name.Contains("ナラ") ? Get(r.Sum, UnitCatalog.Tsugi.Id)
                               : r.Name.Contains("ノノ") ? Get(r.Sum, UnitCatalog.Lili.Id)
                               : null;
             string toAlly = healer is null ? "−" : $"{(double)healer.DamageToAlly / r.Battles:F0}";

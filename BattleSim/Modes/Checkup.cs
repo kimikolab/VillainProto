@@ -234,6 +234,10 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.KissTier]        = (HcPlusL,  "施した累計 40 ごとに段が上がり、1手番に吸う敵が増える札"),
         [TraitId.KissTri]         = (HcMinusL, "段の刻みを三角数にする札（段 n に 40 × n(n+1)/2 要る・第206期）"),
         [TraitId.KissRite5]       = (HcPlusL,  "祝福の儀の総量を吸う量の5倍に固定し、残った敵で等分する札（第206期）"),
+        // 第207期: 継ぎ当てのツギ。分類を同じコミットで足す（第132期 段0-a）。
+        [TraitId.Plank]           = (HcPlusL,  "手番で破片が最も薄い味方に板（最も強い敵の一撃ぶんの破片）を貼る"),
+        [TraitId.PlankTinder]     = (HcMinusL, "板の印を持つ味方に付く燃焼の残りターンを倍にする、だけの札（第207期）"),
+        [TraitId.Scrap]           = (HcPlusL,  "砕けた破片と倒れた駒を拾って次の板に上乗せする札（第207期）"),
         [TraitId.KissSteal]       = (HcBothL,  "吸った敵の攻撃力の上げ下げも受け取った味方へ移す札（弱体も強化も）"),
         [TraitId.LastStandHold]   = (HcBothL,  "味方が 0 体になると盾を捨てて剣を抜く（受け止めた刃の1割を力に変え ×2・薙ぎ、斬り返し、相打ちで勝つ）のと、構え直せなくなるのが1つの札"),
         [TraitId.LastStandHoldOldScar]    = (HcBothL, "第199期の剣の段で、傷を身に受けた分だけ数える版。対照で保持者 0 枚"),

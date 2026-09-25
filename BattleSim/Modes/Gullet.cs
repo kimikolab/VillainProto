@@ -420,7 +420,7 @@ public static void Run(string[] args, int stageIndex)
         Excerpt("B. 第三波では還しが封じられる（V3 / 渇きの祭司）",
             "**発火はしているのに `届いた 0`。** `ctx.Heal` の入口で渇きが止めている"
             + "（規則は engine の1箇所のまま、特性側は判定を1文字も持っていない）。",
-            "置き去り×被弾強化", 2, 0, vers[2].Rule,
+            "継ぎ当て×被弾強化", 2, 0, vers[2].Rule,
             new[] { "が飲み込んだものが還った", "は倒れた" });
 
         // D は**探して出す**。第三波は「渇きの祭司が生きている間だけ」封じられるので、
@@ -454,7 +454,7 @@ public static void Run(string[] args, int stageIndex)
 
         Excerpt("C. 同じ行の第五波では届く（V3 / 渇きなし）",
             "同じ編成・同じ規則で、渇きの無い波なら回復が通る。**Bとの差は波だけ。**",
-            "置き去り×被弾強化", 4, 0, vers[2].Rule,
+            "継ぎ当て×被弾強化", 4, 0, vers[2].Rule,
             new[] { "が飲み込んだものが還った", "は倒れた" });
         return;
     }
@@ -629,7 +629,7 @@ public static void Run(string[] args, int stageIndex)
               new[] { "グザ", "ゴルム" });
 
         // 5. 燃料の経路（第19期 route の対象編成）
-        Audit("C. 燃料はムドまで届くか", "置き去り×被弾強化", 4, 0,
+        Audit("C. 燃料はムドまで届くか", "継ぎ当て×被弾強化", 4, 0,
               new[] { "ムド", "ゴルム" });
         return;
     }
@@ -672,7 +672,7 @@ public static void Run(string[] args, int stageIndex)
     }
 
     // 燃料の行き先を見る先。route（第19期）が未解決のまま置いていった編成。
-    const string FuelBuild = "置き去り×被弾強化";
+    const string FuelBuild = "継ぎ当て×被弾強化";
 
     int nv = versions.Length, nb = gulletBuilds.Length, nw = gulletStages.Count;
 

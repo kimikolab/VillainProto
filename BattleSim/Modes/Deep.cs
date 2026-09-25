@@ -549,7 +549,7 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine();
 
         // ---- §1-2 の 4: 深手が発生しうる行を名指しする（**測る前に書く**）------------------------
-        var spillWriters = new[] { "golm", "borg", "kado", "nara", "rica", "zoto" };
+        var spillWriters = new[] { "golm", "borg", "kado", "tsugi", "rica", "zoto" };
         var woundWriters = new[] { "kiri", "nomi" };
         Console.WriteLine("## §1-2 の 4 —— 深手が発生しうる行（**拒否権が立つ候補。測る前に名指しする**）");
         Console.WriteLine();

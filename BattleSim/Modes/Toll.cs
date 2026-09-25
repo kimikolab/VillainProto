@@ -186,7 +186,7 @@ static class TollDiag
         Console.WriteLine();
         Console.WriteLine("| 駒 | HP | 攻 | 速 | 手番 |");
         Console.WriteLine("|---|---:|---:|---:|---|");
-        foreach (string id in new[] { "lili", "beni", "shio", "nara" })
+        foreach (string id in new[] { "lili", "beni", "shio", "tsugi" })
         {
             UnitDef u = UnitCatalog.ById(id);
             Console.WriteLine("| " + u.Name + " | " + u.MaxHp + " | " + u.Attack + " | " + u.Speed

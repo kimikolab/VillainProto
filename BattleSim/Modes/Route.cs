@@ -15,7 +15,7 @@ static class RouteDiag
 {
 // route モード: 自傷の燃料が変換器まで届く配置は、勝率で競争力を持つか（第19期）。
 //
-// 「置き去り×被弾強化」の採用配置（reseat 1位）では、ナラの削りがムド（被弾強化）に
+// 「継ぎ当て×被弾強化」の採用配置（reseat 1位）では、ナラの削りがムド（被弾強化）に
 // 届く前にゴルムの巨躯へ 90% 吸われる。ApplyDamage の巨躯の分岐は
 // **DepthOf(壁の列) < DepthOf(標的の列)** を満たす壁だけを働かせるので、
 // ムドを前列へ上げてゴルムと同じ列に並べれば被覆から外れる（同じ列は守らない）。
@@ -37,29 +37,29 @@ public static void Run(string[] args, int stageIndex)
     var variants = new (string Name, string Note, Formation F)[]
     {
         ("V0 採用済み", "ゴルム前1。ムドは後1で被覆下",
-            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Nara,
+            Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Tsugi,
                             center: UnitCatalog.Kado, back1: UnitCatalog.Mudo, back3: UnitCatalog.Vel)),
         ("V1 ムドを前3へ", "ゴルムと同列。同じ列は守らないので削りが満額届く",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Mudo,
-                            center: UnitCatalog.Kado, back1: UnitCatalog.Nara, back3: UnitCatalog.Vel)),
+                            center: UnitCatalog.Kado, back1: UnitCatalog.Tsugi, back3: UnitCatalog.Vel)),
         ("V2 ムドを前1へ", "V1 の前1/前3 入れ替え。席バイアスの確認",
             Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Golm,
-                            center: UnitCatalog.Kado, back1: UnitCatalog.Nara, back3: UnitCatalog.Vel)),
+                            center: UnitCatalog.Kado, back1: UnitCatalog.Tsugi, back3: UnitCatalog.Vel)),
         ("V3 ゴルムを後1へ", "巨躯の被覆ゼロ。前列の壁も消えるので上限側の参考値",
-            Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Nara,
+            Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Tsugi,
                             center: UnitCatalog.Kado, back1: UnitCatalog.Golm, back3: UnitCatalog.Vel)),
         // V3 のムドとヴェルを入れ替えただけ。**巨躯は同じ列を守らない**ので、
         // ゴルム後1・ムド後3 でも被覆はゼロのまま——V3 と V4 の差は「ムドが前列にいるか」だけになる。
         // V0〜V3 では「被覆から出ること」と「前列に晒されること」が同じ操作に潰れていて、
         // 勝率差のどこまでが燃料の経路でどこからが露出かが決まらない。この1本がそれを割る。
         ("V4 ムドを後3へ", "V3 のムド↔ヴェル。被覆ゼロのまま、ムドだけ後列に戻す",
-            Formation.Build(front1: UnitCatalog.Vel, front3: UnitCatalog.Nara,
+            Formation.Build(front1: UnitCatalog.Vel, front3: UnitCatalog.Tsugi,
                             center: UnitCatalog.Kado, back1: UnitCatalog.Golm, back3: UnitCatalog.Mudo)),
     };
 
     Console.WriteLine("# 自傷の燃料は変換器まで届くか（route）");
     Console.WriteLine();
-    Console.WriteLine($"「置き去り×被弾強化」のメンバー固定・席だけを振った4変種 × 全ステージ、seed 0..{RouteSeeds - 1}。");
+    Console.WriteLine($"「継ぎ当て×被弾強化」のメンバー固定・席だけを振った4変種 × 全ステージ、seed 0..{RouteSeeds - 1}。");
     Console.WriteLine("数字は**1戦あたりの平均**（pulse と同じ規約）。診断用なので docs/ には置かない。");
     Console.WriteLine();
     Console.WriteLine("**先に `ムド 被(味)` を見ること。** V0 と V1 でここが跳ねていなければ");
@@ -91,7 +91,7 @@ public static void Run(string[] args, int stageIndex)
                 turnSum += r.Turns;
                 // LastActiveTurn は UnitTally.Add が Max を取る（ターン番号は足しても意味を持たない）ので、
                 // 1戦あたりの平均が欲しいここでは戦闘ごとに自前で足す。
-                if (r.TallyByUnit.TryGetValue(UnitCatalog.Nara.Id, out UnitTally? nt))
+                if (r.TallyByUnit.TryGetValue(UnitCatalog.Tsugi.Id, out UnitTally? nt))
                     naraLastSum += nt.LastActiveTurn;
                 foreach ((string id, UnitTally t) in r.TallyByUnit)
                 {
@@ -104,7 +104,7 @@ public static void Run(string[] args, int stageIndex)
 
         UnitTally Tally(string id) => sum.TryGetValue(id, out UnitTally? x) ? x : new UnitTally();
         UnitTally mudo = Tally(UnitCatalog.Mudo.Id), golm = Tally(UnitCatalog.Golm.Id);
-        UnitTally nara = Tally(UnitCatalog.Nara.Id);
+        UnitTally nara = Tally(UnitCatalog.Tsugi.Id);
 
         rows.Add((vname, note, perStage.Average(), perStage,
                   (double)nara.DamageToAlly / battles,

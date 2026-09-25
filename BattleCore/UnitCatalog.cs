@@ -853,7 +853,34 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 置き去りのナラ。速さを読む唯一の駒。
+    /// 継ぎ当てのツギ（第207期・置き去りのナラの転生）。<b>数値（HP62／攻9／速8）はナラのまま</b>で、
+    /// 手番を板を貼ること（<see cref="TraitId.Plank"/>）に使う（<c>[Skill]</c> の1要素・通常攻撃は出ない）。
+    /// マイナスは板が燃えやすいこと（<see cref="TraitId.PlankTinder"/>）、在庫は瓦礫拾い（<see cref="TraitId.Scrap"/>）。
+    /// 版（指示書 §2.5）は札の差し替えで並べる: T1 ＝ <c>[Plank]</c> ／ T2 ＝ <c>[Plank, PlankTinder]</c> ／ <b>T3（規定）＝ 3枚</b>。
+    /// 旧ナラは下の <see cref="Nara"/> に対照として残す（<see cref="All"/> には入れない）。
+    /// </summary>
+    public static readonly UnitDef Tsugi = new()
+    {
+        Id = "tsugi",
+        Name = "継ぎ当てのツギ",
+        MaxHp = 62,
+        Attack = 9,
+        Speed = 8,
+        Advances = false,
+        Traits = new[] { TraitId.Plank, TraitId.PlankTinder, TraitId.Scrap },
+        // 板を貼るのが手番そのもの（攻撃9 は出ない）。`[Skill]` の1要素。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "板を貼っている") },
+        PlusText = "手番で、破片が最も薄い味方に板を貼る（最も強い敵の一撃ぶんの破片・最低6）。回復ではないので渇きでも止まらず、回復を受け付けない味方にも届く / "
+                   + "味方の破片が砕けたり、誰かが倒れたりすると、瓦礫を拾って背中に積み、次の板を厚くする",
+        MinusText = "板を貼られた味方は燃えやすい。火が付くと、倍の間燃え続ける。自分では攻撃しない",
+        Flavor = "治せない。だから、これ以上壊れないように塞いだ。"
+    };
+
+    /// <summary>
+    /// 置き去りのナラ（第206期まで）。<b>第207期にツギへ転生した</b>——対照として定義だけ残す（<see cref="All"/> にも <c>Retired</c> にも入れない）。
+    /// <c>Presets</c> はツギを引く。以下は転生前の注記のまま。
+    ///
+    /// 速さを読む唯一の駒。
     ///
     /// 速さ8。**7（35体の中央値）から動かしてある（第20期）。**
     /// 7 のときの無風帯（同速）は リィカ・ゾト・ラウ・ヴィオ・ハギ・ホタ で、
@@ -1712,7 +1739,7 @@ public static class UnitCatalog
     /// </summary>
     public static IReadOnlyList<UnitDef> All { get; } = new[]
     {
-        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Lili, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Nara, Shiga, Zan, Susu, Gare, Nomi, Kata, Tomo, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
+        Borg, Mudo, Sero, Nel, Gald, Rica, Golm, Dolga, Mug, Zoto, Vel, Sid, Kado, Hisa, Lili, Mio, Rau, Guza, Tou, Beni, Gan, Vio, Yomi, Basa, Kugu, Ban, Shio, Utsu, Doha, Sasa, Kubi, Hagi, Sekki, Hota, Hibi, Tsugi, Shiga, Zan, Susu, Gare, Nomi, Kata, Tomo, Hane, Uke, Wata, Uro, Sora, Kari, Tome, Hiyo, Som
     };
 
     /// <summary>
