@@ -348,6 +348,8 @@ public partial class Main : Control
             _seed.Value = wantSeed;
 
         AutoFormation();
+        // 第201期: 編成画面の陣形を起動引数でも選べる（ボタンと同じ `SetShape` を通す）。
+        if (userArgs.Contains("--demo-setup-shape=p2", StringComparer.Ordinal)) SetShape(FormationShape.Diamond);
         UpdateStageHeader();
         ShowEnemyDetails();
 
@@ -658,6 +660,10 @@ public partial class Main : Control
         var clear = UiKit.ActionButton("全解除");
         clear.Pressed += ClearFormation;
         _setupActions.AddChild(clear);
+        // 第201期: 陣形の切り替え（X 字 ⇔ パターン2）。
+        _shapeButton = UiKit.ActionButton(ShapeButtonText(), UiKit.Player);
+        _shapeButton.Pressed += ToggleShape;
+        _setupActions.AddChild(_shapeButton);
         _campaignSetup = UiKit.ActionButton("作戦マップへ");
         _campaignSetup.Pressed += GoToCampaign;
         _setupActions.AddChild(_campaignSetup);
@@ -744,7 +750,7 @@ public partial class Main : Control
                 return;
             }
             _formation[empty] = def;
-            Notice($"{def.Name} を {FormationRules.SeatNames[empty]} に配置しました");
+            Notice($"{def.Name} を {SeatLabel(empty)} に配置しました");
         }
         RefreshFormation();
     }
@@ -761,14 +767,14 @@ public partial class Main : Control
             _formation[source] = displaced;
             _formation[slot] = incoming;
             Notice(displaced is null
-                ? $"{incoming.Name} を {FormationRules.SeatNames[slot]} へ移動しました"
-                : $"{FormationRules.SeatNames[source]} と {FormationRules.SeatNames[slot]} を入れ替えました");
+                ? $"{incoming.Name} を {SeatLabel(slot)} へ移動しました"
+                : $"{SeatLabel(source)} と {SeatLabel(slot)} を入れ替えました");
         }
         else if (source < 0)
         {
             _formation[slot] = incoming;
             Notice(displaced is null
-                ? $"{incoming.Name} を {FormationRules.SeatNames[slot]} に配置しました"
+                ? $"{incoming.Name} を {SeatLabel(slot)} に配置しました"
                 : $"{displaced.Name} と交代して {incoming.Name} を配置しました");
         }
         _armedUnitId = incoming.Id;
@@ -824,6 +830,8 @@ public partial class Main : Control
         _presetIndex = Math.Clamp(index, 0, rows.Length - 1);
         var preset = rows[_presetIndex];
         for (int i = 0; i < _formation.Length; i++) _formation[i] = preset.F[i];
+        // 第201期: パターン2のときは X 字の行を前1 → 前衛の規則で詰め替える（`XToDiamond`）。
+        if (ReferenceEquals(_shape, FormationShape.Diamond)) XToDiamond(_formation);
         _presetDirty = false;
         if (_presetPicker.Selected != _presetIndex) _presetPicker.Selected = _presetIndex;
         _armedUnitId = _formation.FirstOrDefault()?.Id;
@@ -934,7 +942,7 @@ public partial class Main : Control
             if (_formation[i] is { } d) seats[i] = d;
 
         var lines = new List<string>();
-        foreach (Map11Relations.Link l in Map11Relations.Of(seats))
+        foreach (Map11Relations.Link l in Map11Relations.Of(seats, _shape))
         {
             bool from = l.From == slot, to = l.To == slot;
             if (!from && !to) continue;
@@ -956,7 +964,7 @@ public partial class Main : Control
     private string PlacementOf(UnitDef def)
     {
         int slot = Array.FindIndex(_formation, u => u?.Id == def.Id);
-        return slot < 0 ? "未編成" : FormationRules.SeatNames[slot];
+        return slot < 0 ? "未編成" : SeatLabel(slot);
     }
 
     private void ShowEnemyDetails()
@@ -987,9 +995,13 @@ public partial class Main : Control
     {
         if (_battleMode || _formation.Any(u => u is null)) return;
 
-        var formation = new Formation();
+        var formation = new Formation { Shape = _shape };   // 第201期: 編成画面で選んだ陣形
         for (int i = 0; i < _formation.Length; i++) formation[i] = _formation[i];
-        formation = ApplyDemoShape(formation);   // 第200期: `--demo-shape=p2`（再生の確認用）
+        if (ReferenceEquals(_shape, FormationShape.X))
+            formation = ApplyDemoShape(formation);   // 第200期: `--demo-shape=p2`（再生の確認用）
+        else
+            GD.Print($"DEMO_SHAPE shape={formation.Shape.Name} source=setup " + string.Join(" ",
+                formation.Occupied().Select(o => $"{formation.Shape.FrameNames[o.Slot]}:{o.Def.Name}")));
         int stageIndex = _stagePicker.Selected;
         int seed = (int)_seed.Value;
 

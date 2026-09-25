@@ -42,6 +42,8 @@ public partial class BattlefieldView : Control
     private SetupLinkLayer _setupLines = null!;
     private SetupLinkLayer _setupWords = null!;
     private int _setupSelected = -1;
+    /// <summary>編成画面の陣形（第201期）。枠 i の位置と席名だけを決める。<b>盤面には何も起きない。</b></summary>
+    private FormationShape _setupShape = FormationShape.X;
 
     public Action<int>? SetupSlotClicked;
     public Action<int>? SetupSlotRemoveRequested;
@@ -144,7 +146,24 @@ public partial class BattlefieldView : Control
     {
         _eyebrow.Text = "FORMATION CAMP  /  配置フェイズ";
         _headline.Text = stageName;
-        _subline.Text = "ロスターから5体を選び、X字の席へ配置してください";
+        _subline.Text = ReferenceEquals(_setupShape, FormationShape.Diamond)
+            ? "ロスターから5体を選び、パターン2（ひし形・前衛1枚）の席へ配置してください"
+            : "ロスターから5体を選び、X字の席へ配置してください";
+    }
+
+    /// <summary>
+    /// 陣形を切り替える（第201期）。枠の位置と席名を付け替えるだけで、<b>置いた駒は枠の番号のまま</b>
+    /// （枠 i ＝ X 字なら席 i ／ パターン2なら <see cref="FormationShape.FrameNames"/> の i 番目）。
+    /// </summary>
+    public void SetSetupShape(FormationShape shape)
+    {
+        _setupShape = shape;
+        for (int i = 0; i < _slots.Length; i++) _slots[i].SetSeatLabel(shape.FrameNames[i]);
+        if (_setupMode)
+            _subline.Text = ReferenceEquals(shape, FormationShape.Diamond)
+                ? "ロスターから5体を選び、パターン2（ひし形・前衛1枚）の席へ配置してください"
+                : "ロスターから5体を選び、X字の席へ配置してください";
+        LayoutActors();
     }
 
     public void UpdateFormation(IReadOnlyList<UnitDef?> formation, int selected = -1)
@@ -164,7 +183,7 @@ public partial class BattlefieldView : Control
         var seats = new Dictionary<int, UnitDef>();
         for (int i = 0; i < formation.Count && i < FormationRules.PlayableSlotCount; i++)
             if (formation[i] is { } def) seats[i] = def;
-        var links = Map11Relations.Of(seats);
+        var links = Map11Relations.Of(seats, _setupShape);
         _setupLines.Set(links, selected);
         _setupWords.Set(links, selected);
         LayoutActors();
@@ -402,6 +421,22 @@ public partial class BattlefieldView : Control
         float top = Math.Max(116, Size.Y * 0.17f);
         float bottom = Math.Min(Size.Y - viewSize.Y - 34, Size.Y * 0.66f);
         float mid = (top + bottom) * 0.5f;
+        if (ReferenceEquals(_setupShape, FormationShape.Diamond))
+        {
+            // パターン2（右が前）: 中衛の3枠を1列に縦に並べ、前衛は右・後衛は左の中段。
+            // 3枠が重ならないよう、中衛の上下は画面の縦幅いっぱいまで広げる。
+            float top3 = Math.Max(92, Size.Y * 0.12f);
+            float bottom3 = Math.Max(top3 + 2 * viewSize.Y, Size.Y - viewSize.Y - 24);
+            float mid3 = (top3 + bottom3) * 0.5f;
+            return slot switch
+            {
+                0 => new Vector2(center, top3),     // 中衛・上
+                1 => new Vector2(left, mid3),       // 後衛
+                2 => new Vector2(center, mid3),     // 中衛・中央
+                3 => new Vector2(right, mid3),      // 前衛
+                _ => new Vector2(center, bottom3),  // 中衛・下
+            };
+        }
         return slot switch
         {
             0 => new Vector2(right, top),

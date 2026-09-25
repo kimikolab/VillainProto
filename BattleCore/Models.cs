@@ -658,7 +658,16 @@ public sealed class FormationShape
         FormationRules.LanePaths, FormationRules.CorePaths, deterministicPierce: false);
 
     /// <summary>パターン2（ひし形・前衛1枚）。</summary>
-    public static readonly FormationShape Diamond = BuildGrid("パターン2", new[] { 5, 8, 2, 7, 6 }, new[] { 3, 4, 0, 1 });
+    public static readonly FormationShape Diamond = BuildGrid("パターン2", new[] { 5, 8, 2, 7, 6 }, new[] { 3, 4, 0, 1 })
+        .Named(new[] { "中衛・上", "後衛", "中衛・中央", "前衛", "中衛・下" });
+
+    /// <summary>
+    /// 編成の枠 i（0〜4）の表示名（第201期・編成画面と診断の表示だけ。<b>読んで分岐する規則は 0 件</b>）。
+    /// X 字は <see cref="FormationRules.SeatNames"/> の先頭5つ。パターン2は位置が分かる名前（右が前・1レーンを上）。
+    /// </summary>
+    public IReadOnlyList<string> FrameNames { get; private set; } = FormationRules.SeatNames.Take(FormationRules.PlayableSlotCount).ToArray();
+
+    private FormationShape Named(string[] names) { FrameNames = names; return this; }
 
     public int LaneCount => _lanes.Length;
     public bool IsPlayable(int slot) => _playable[slot];

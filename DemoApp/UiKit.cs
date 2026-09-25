@@ -453,6 +453,9 @@ public partial class FormationSlot : PanelContainer
     public Action<int>? RemoveRequested;
     public Action<int, string>? Dropped;
 
+    /// <summary>席名だけを付け替える（第201期・陣形を切り替えたとき）。</summary>
+    public void SetSeatLabel(string text) => _seat.Text = text;
+
     public void Configure(int slot, Texture2D atlas)
     {
         Slot = slot;

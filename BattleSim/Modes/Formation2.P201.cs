@@ -22,10 +22,10 @@ static partial class Formation2Diag
 {
     const int PickSeed0 = 0, PickSeeds = 50, MeasSeed0 = 100, MeasSeeds = 200;
 
-    /// <summary>パターン2の枠 A〜E の表示名（指示書 §2・右が前）。1レーンを上とする。</summary>
-    internal static readonly string[] DiamondSeatNames = { "中衛・上", "後衛", "中衛・中央", "前衛", "中衛・下" };
+    /// <summary>パターン2の枠 A〜E の表示名（指示書 §2・右が前・1レーンを上）。編成画面と同じ1本（`FormationShape.FrameNames`）。</summary>
+    internal static IReadOnlyList<string> DiamondSeatNames => FormationShape.Diamond.FrameNames;
 
-    static string SeatName(FormationShape s, int i) => s == FormationShape.Diamond ? DiamondSeatNames[i] : FormationRules.SeatNames[i];
+    static string SeatName(FormationShape s, int i) => s.FrameNames[i];
 
     static string SeatsNamed(Formation f) => string.Join(" ／ ", f.Occupied().Select(o => SeatName(f.Shape, o.Slot) + ":" + o.Def.Name));
 

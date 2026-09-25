@@ -285,6 +285,56 @@ public static class Map11Relations
         return links;
     }
 
+    /// <summary>
+    /// 陣形つきの版（第201期・編成画面）。<paramref name="seats"/> の鍵は<b>編成の枠 0〜4</b>で、
+    /// 述語は枠を盤の席（<see cref="FormationShape.PlayableSlots"/>）に写して<b>陣形の表</b>から引く。
+    /// <b>X 字はそのまま <see cref="Of(IReadOnlyDictionary{int, UnitDef})"/> を呼ぶ</b>（1ビットも変えない）。
+    /// </summary>
+    public static List<Link> Of(IReadOnlyDictionary<int, UnitDef> seats, FormationShape formation)
+    {
+        if (ReferenceEquals(formation, FormationShape.X)) return Of(seats);
+        var links = new List<Link>();
+        foreach ((int from, UnitDef def) in seats.OrderBy(kv => kv.Key))
+            foreach (TraitId t in def.Traits)
+            {
+                if (!Rules.TryGetValue(t, out Rule? rule)) continue;
+                foreach (int to in ResolveOn(formation, rule.Shape, from, seats))
+                    links.Add(new Link(from, to, rule.Word, t, rule.Sign, rule.Conditional));
+            }
+        return links;
+    }
+
+    private static IEnumerable<int> ResolveOn(FormationShape f, Shape shape, int from, IReadOnlyDictionary<int, UnitDef> seats)
+    {
+        int B(int frame) => f.PlayableSlots[frame];
+        bool Adj(int a, int b) => f.AreAdjacent(B(a), B(b));
+        IEnumerable<int> others = seats.Keys.Where(s => s != from);
+        switch (shape)
+        {
+            case Shape.Adjacent:
+                return others.Where(s => Adj(from, s));
+            case Shape.AdjacentAcceptsSupport:
+            case Shape.StoicSpill:
+                return others.Where(s => Adj(from, s) && Accepts(seats[s]));
+            case Shape.AdjacentTopHp:
+            {
+                var adj = others.Where(s => Adj(from, s)).ToList();
+                if (adj.Count == 0) return Array.Empty<int>();
+                int top = adj.Max(s => seats[s].MaxHp);
+                return adj.Where(s => seats[s].MaxHp == top);
+            }
+            case Shape.RowPairOrAhead:
+                // 列は幾何（陣形に依らない）・レーンの前後は陣形の表（第200期の棘守りと同じ）
+                return others.Where(s => FormationRules.RowOf(B(from)) == FormationRules.RowOf(B(s))
+                                      || f.IsLanePredecessor(B(s), B(from)));
+            case Shape.DeeperRow:
+                return others.Where(s => FormationRules.DepthOf(FormationRules.RowOf(B(s)))
+                                       > FormationRules.DepthOf(FormationRules.RowOf(B(from))));
+            default:
+                return Array.Empty<int>();
+        }
+    }
+
     private static IEnumerable<int> Resolve(Shape shape, int from, IReadOnlyDictionary<int, UnitDef> seats)
     {
         IEnumerable<int> others = seats.Keys.Where(s => s != from);

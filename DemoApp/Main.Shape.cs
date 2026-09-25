@@ -5,6 +5,52 @@ using System.Linq;
 
 public partial class Main
 {
+    // =================================================================================
+    // 第201期: 編成画面で陣形を選ぶ（X 字 ⇔ パターン2）
+    //
+    // 置いた駒は**編成の枠 0〜4** に持つ（`_formation`）。X 字なら枠 i ＝ 席 i、パターン2なら
+    // 枠 i ＝ `FormationShape.Diamond.FrameNames[i]`（中衛・上／後衛／中衛・中央／前衛／中衛・下）。
+    // 切り替えたときは**前1 の駒が前衛に来る**ように詰め替える（第200期の `--demo-shape=p2` と同じ規則。
+    // 2回切り替えると元に戻る）。**判定は1つも持たない**——陣形の表は `FormationShape` にしかない。
+    // =================================================================================
+
+    private FormationShape _shape = FormationShape.X;
+    private Button _shapeButton = null!;
+
+    private string SeatLabel(int frame) => _shape.FrameNames[frame];
+
+    private string ShapeButtonText() => ReferenceEquals(_shape, FormationShape.Diamond) ? "陣形: パターン2 ⇄" : "陣形: X字 ⇄";
+
+    private void ToggleShape()
+        => SetShape(ReferenceEquals(_shape, FormationShape.Diamond) ? FormationShape.X : FormationShape.Diamond);
+
+    private void SetShape(FormationShape shape)
+    {
+        if (_battleMode || ReferenceEquals(shape, _shape)) return;
+        if (ReferenceEquals(shape, FormationShape.Diamond)) XToDiamond(_formation); else DiamondToX(_formation);
+        _shape = shape;
+        _shapeButton.Text = ShapeButtonText();
+        _field.SetSetupShape(shape);
+        Notice(ReferenceEquals(shape, FormationShape.Diamond)
+            ? "陣形をパターン2（ひし形・前衛1枚）にしました。前1 の駒が前衛に立ちます"
+            : "陣形を X 字に戻しました");
+        RefreshFormation();
+    }
+
+    /// <summary>X 字の枠 → パターン2の枠: 前1 → 前衛、前3 → 中衛・上、中央 → 中衛・中央、後1 → 中衛・下、後3 → 後衛。</summary>
+    private static void XToDiamond(UnitDef?[] f)
+    {
+        UnitDef?[] x = (UnitDef?[])f.Clone();
+        f[3] = x[0]; f[0] = x[1]; f[2] = x[2]; f[4] = x[3]; f[1] = x[4];
+    }
+
+    /// <summary><see cref="XToDiamond"/> の逆。</summary>
+    private static void DiamondToX(UnitDef?[] f)
+    {
+        UnitDef?[] p = (UnitDef?[])f.Clone();
+        f[0] = p[3]; f[1] = p[0]; f[2] = p[2]; f[3] = p[4]; f[4] = p[1];
+    }
+
     // 第200期: 味方の陣形パターン2（ひし形・前衛1枚）で戦を始める口（**再生の確認用**）。
     //
     //     -- --demo-shape=p2 [--demo-p2-front=<駒Id>]

@@ -62,6 +62,7 @@ static partial class Formation2Diag
         public double AoeSwings, AoeHit; public double SweepSwings, SweepHit, PierceSwings, PierceHit;
         public double NumbedFoes, BeniRing; public int BeniN;
         public double SidEarly, SidDead; public int SidN;
+        public double FrontEarly;           // 前衛が2ターン目までに倒れた（前衛1体あたり）
         public int _fdCount;
     }
 
@@ -89,7 +90,7 @@ static partial class Formation2Diag
 
                 var frontIds = front.Select(u => u.InstanceId).ToHashSet();
                 var playerIds = pl.Select(u => u.InstanceId).ToHashSet();
-                int fd = 0; double fdt = 0; double[] pat = new double[4]; double hits = 0;
+                int fd = 0, fe = 0; double fdt = 0; double[] pat = new double[4]; double hits = 0;
                 double sw = 0, swh = 0, pi = 0, pih = 0;
                 double sidEarly = 0, sidDead = 0;
                 var frontAlive = new HashSet<int>(frontIds);
@@ -123,7 +124,7 @@ static partial class Formation2Diag
                             }
                             break;
                         case BattleEventKind.Death:
-                            if (e.TargetId is int dt && frontAlive.Remove(dt)) { fd++; fdt += e.Turn; }
+                            if (e.TargetId is int dt && frontAlive.Remove(dt)) { fd++; fdt += e.Turn; if (e.Turn <= 2) fe++; }
                             if (sid is not null && e.TargetId == sid.InstanceId) { sidDead++; if (e.Turn <= 2) sidEarly++; }
                             break;
                     }
@@ -133,7 +134,7 @@ static partial class Formation2Diag
                 lock (gate)
                 {
                     m.N++;
-                    m.FrontDead += (double)fd / front.Count; m.FrontDeadTurn += fdt; m.FrontHits += hits;
+                    m.FrontDead += (double)fd / front.Count; m.FrontEarly += (double)fe / front.Count; m.FrontDeadTurn += fdt; m.FrontHits += hits;
                     m.FrontByPat0 += pat[0]; m.FrontByPat1 += pat[1]; m.FrontByPat2 += pat[2]; m.FrontByPat3 += pat[3];
                     m.SweepSwings += sw; m.SweepHit += swh; m.PierceSwings += pi; m.PierceHit += pih;
                     m.NumbedFoes += numbed;
