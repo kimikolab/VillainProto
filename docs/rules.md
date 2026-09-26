@@ -59,7 +59,7 @@
 | 46 | `parry` | `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True, Swing = WhenStocked }` |  | `parry` / `wall` / `stall` | 第135期 | ○ |
 | 47 | `shatter` | `ShatterRule` | `ShatterRule { Mode = Passive, SelfCostPerTurn = 0 }` | ○ | `shard` | 第137期 | ○ |
 | 48 | `shrapnel` | `ShrapnelRule` | `ShrapnelRule { Multiplier = 3, SelfDamagePercent = 100, ArmorCensus = False }` |  | `shard` | 第138期 | ○ |
-| 49 | `brace` | `BraceRule` | `BraceRule { Cap = 7, Refuse = True, Stagger = False }` |  | `brace` | 第143期 | ○ |
+| 49 | `brace` | `BraceRule` | `BraceRule { Cap = 7, Refuse = True, Stagger = False }` |  | `brace` / `tsugi` | 第143期 | ○ |
 | 50 | `shuffler` | `ShufflerRule` | `ShufflerRule { Foes = True, Stagger = Confuse, ConfusePercent = 100, ConfuseUses = 3, GustPercent = 20, GustSecondary = True }` |  | `tumult` / `gust` / `tumult2` / `derange` / `confuse` | 第144期 | ○ |
 | 51 | `confusion` | `ConfusionRule` | `ConfusionRule { Active = False, Percent = 100 }` |  | `mark184` / `derange` / `confuse` | 第146期 | ○ |
 | 52 | `haste` | `HasteRule` | `HasteRule { Pick = None }` | ○ | `mark` / `haste` | 第149期 | ○ |
@@ -84,7 +84,7 @@
 | `BlazeRule` | `BlazeRule { Targets = Both, Allies = True, Foes = True }` | ○ | `blaze` / `ledger` / `ember` | 第59期 |
 | `BossRule` | `BossRule { Census = False, Scale = EnemyScaleRule { HpPercent = 115, AtkPercent = 115, Active = True } }` | ○ | `boss` / `tank` / `time` / `grade` / `escale` / `lili` / `demo` | 第117期 |
 | `BoundaryRule` | `BoundaryRule { Choice = None, Plan = , Active = False }` |  | `stage` / `choice` | 第102期 |
-| `BraceRule` | `BraceRule { Cap = 7, Refuse = True, Stagger = False }` | ○ | `brace` | 第143期 |
+| `BraceRule` | `BraceRule { Cap = 7, Refuse = True, Stagger = False }` | ○ | `brace` / `tsugi` | 第143期 |
 | `ColossusRule` | `ColossusRule { Percent = 90, DamagePerGain = 4, Regurgitate = True, Slumber = False, SlumberThreshold = 60, Refund = True, RefundPercent = 25 }` | ○ | `gullet` / `whet` / `miasma` / `ledger` | 第35期 |
 | `ConfusionRule` | `ConfusionRule { Active = False, Percent = 100 }` | ○ | `mark184` / `derange` / `confuse` | 第146期 |
 | `CreakRule` | `CreakRule { Threshold = 0, Source = Whet }` | ○ | `creak` / `pairs` / `creak3` | 第66期 |

@@ -396,6 +396,9 @@ public enum TraitId
     PlankSkill,    // 腕が上がる（第210期・ツギ）: 板の印を持つ味方が敵の一撃で失った破片の累計が 40 × n(n+1)/2 に届くごとに、基本の厚さが ×(1 ＋ 0.2n)。判定は engine の破片の段と `PlankTrait`
     PlankNeediest, // 板を最も危ない味方へ（第211期・ツギ）: 手番の板を「(HP＋破片)÷最大HP が最も低い味方」に貼る。札は `PlankTrait` の中で読まれる
     FirstAidArmored, // 応急処置を実質の残り体力で（第211期・ツギ）: 条件を「(HP＋破片) が最大HPの 40% 未満」にする（破片を持つ味方にも出る）。札は `FirstAidTrait` と engine の破片の段で読まれる
+    AidSkill,      // 腕で駆け込める回数が増える（第212期・ツギ）: 腕の段（板が砕かれた累計・40 × n(n+1)/2）で、応急処置の1ターンの上限が 1 ＋ 段になる。基本の厚さには掛けない。札は `FirstAidTrait` と engine の `NotePlankSkill` で読まれる
+    PlankOpening,  // 出撃前の板（第212期・ツギ）: 開戦時に、生きている味方の一番前の列の全員へ板を1枚ずつ貼る
+    BraceArmored,  // 破片で受けても身構えは働く（第212期・ササ）: 身を固めている間は破片より先に上限で切り、破片が受け切った一撃でも弾きと配りを起こす。判定は engine の破片の段
     ThornsArmored, // 破片で受けても棘は鳴る（第211期・カド）: 敵の一撃を破片が受け切っても棘を返す。判定は engine の破片の段（`ThornsTrait.Riposte`）
     Scrap,       // 瓦礫拾い（第207期・ツギ）: 味方の破片が砕けた量の 50% と、倒れた駒1体につき 5 を背中に積み、次の板に上乗せする
     KissSteal,  // 口づけ・強弱を移す（第205期）: 1体ずつ吸うとき、その敵の攻撃力の上げ下げ（`AtkBonus`）も受け取った味方へ移す。札は `KissTrait` の中で読まれる
@@ -8519,7 +8522,15 @@ public sealed class BraceTrait : Trait
     public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
     {
         if (dmg <= 0 || !self.IsAlive) return;
+        Struck(ctx, self);
+    }
 
+    /// <summary>
+    /// 第212期: 被弾したときの本体（弾きと配り）を切り出した。<see cref="OnDamaged"/> と、破片が受け切った一撃
+    /// （<see cref="TraitId.BraceArmored"/>・engine の `ArmorOnlyHit`）の2口から来る。
+    /// </summary>
+    internal static void Struck(BattleContext ctx, UnitState self)
+    {
         UnitTally t = ctx.TallyOf(self);
         switch (ShoveRules.Shove(ctx, self, ShoveTurnKey, out UnitState? victim))
         {
@@ -9188,7 +9199,8 @@ public sealed class PlankTrait : Trait
     /// 板を1枚貼る（手番の板と応急処置で共有・第210期に切り出した）。量 ＝ 基本 ＋ 腕 ＋ 背中の在庫（使い切る）。
     /// 印の付け方・計数は第209期のまま（応急処置の分は <c>FirstAid*</c> の計数に分ける）。<b>乱数を引かない。</b>
     /// </summary>
-    internal static void Paste(BattleContext ctx, UnitState self, UnitState to, IReadOnlyList<UnitState> foes, bool firstAid)
+    internal static void Paste(BattleContext ctx, UnitState self, UnitState to, IReadOnlyList<UnitState> foes, bool firstAid,
+                               int? aidOrdinal = null, bool opening = false)
     {
         var (b, sk) = Thickness(self, foes);
         int stock = ScrapTrait.TakeStock(self);
@@ -9203,6 +9215,15 @@ public sealed class PlankTrait : Trait
 
         UnitTally t = ctx.TallyOf(self);
         int row = (int)to.Row;
+        if (opening)
+        {
+            // 第212期: 出撃前の板は手番の板・応急処置の計数に混ぜない。
+            t.OpeningPastes++;
+            t.OpeningGiven += amount;
+            ctx.EmitPlank(self, PlankLabels.Opening, to, amount, stock, after, b, sk);
+            ctx.Log($"    {self.Name} が出撃前に {to.Name} へ板を貼っておいた（破片 +{amount}・計 {after}）", LogKind.Trigger);
+            return;
+        }
         (firstAid ? (t.FirstAidToRow ??= new long[3]) : (t.PlankToRow ??= new long[3]))[row]++;   // 第211期（計数のみ）
         if (firstAid)
         {
@@ -9225,7 +9246,7 @@ public sealed class PlankTrait : Trait
             if (!to.AcceptsSupport) t.PlankOnStoic++;
             if (ctx.DroughtBinding) t.PlankInDrought++;
         }
-        ctx.EmitPlank(self, firstAid ? PlankLabels.FirstAid : PlankLabels.Paste, to, amount, stock, after, b, sk);
+        ctx.EmitPlank(self, firstAid ? PlankLabels.FirstAid : PlankLabels.Paste, to, amount, stock, after, b, sk, firstAid ? aidOrdinal : null);
         ctx.Log($"    {self.Name} が {to.Name} に" + (firstAid ? "駆け込んで" : "") + $"板を貼った（破片 +{amount}" + (stock > 0 ? $"・うち瓦礫 {stock}" : "")
                 + (sk > 0 ? $"・うち腕 {sk}" : "") + $"・計 {after}）", firstAid ? LogKind.Highlight : LogKind.Trigger);
     }
@@ -9262,6 +9283,12 @@ public sealed class FirstAidTrait : Trait
     /// <summary>第212期（計数のみ）: そのターンに最後に応急処置を受けた味方（<c>InstanceId + 1</c>）。</summary>
     public const string LastKey = "tsugiAidLast";
 
+    /// <summary>第212期: そのターンに貼った応急処置の回数（<see cref="TurnKey"/> と組で読む）。</summary>
+    public const string CountKey = "tsugiAidCount";
+
+    /// <summary>第212期（計数のみ）: 最後に判定した被弾の枠の通し番号。</summary>
+    public const string HitKey = "tsugiAidHit";
+
     public override TraitId Id => TraitId.FirstAid;
 
     /// <summary>第210期: 応急処置の条件（生きている・破片 0・HP が閾値未満）。計数の探り（engine）と共有する<b>判定の1本</b>。</summary>
@@ -9296,14 +9323,21 @@ public sealed class FirstAidTrait : Trait
     {
         self.SetCounter(TurnKey, 0);
         self.SetCounter(LastKey, 0);   // 第212期（InstanceId を持つので必ず捨てる）
+        self.SetCounter(CountKey, 0);
     }
 
     static void Try(BattleContext ctx, UnitState self, UnitState to, int dmg)
     {
         if (dmg <= 0 || !self.IsAlive || !NeedsFor(self, to)) return;
         UnitTally t = ctx.TallyOf(self);
+        // 第212期（計数のみ）: 同じ1回の被弾（`ApplyDamage` の枠）で判定が2回来たら数える（1回の被弾につき判定1回の検査）。
+        if (self.RawCounter(HitKey) == ctx.CurrentHitSerial) t.FirstAidSameHit++;
+        self.SetCounter(HitKey, ctx.CurrentHitSerial);
         int tier = Math.Min(3, self.RawCounter(PlankTrait.SkillTierKey));
-        if (self.RawCounter(TurnKey) == ctx.Turn + 1)
+        // 第212期（`AidSkill`）: 1ターンの上限は 1 ＋ 腕の段。札が無ければ 1（第211期のまま）。
+        int limit = 1 + (self.HasTrait(TraitId.AidSkill) ? self.RawCounter(PlankTrait.SkillTierKey) : 0);
+        int used = self.RawCounter(TurnKey) == ctx.Turn + 1 ? Math.Max(1, self.RawCounter(CountKey)) : 0;
+        if (used >= limit)
         {
             t.FirstAidSpent++; ctx.TallyOf(to).FirstAidMissed++;
             (t.FirstAidSpentByTier ??= new long[4])[tier]++;                          // 第212期（計数のみ）
@@ -9319,11 +9353,13 @@ public sealed class FirstAidTrait : Trait
             ctx.TallyOf(to).FirstAidMissed++;
             return;
         }
+        if (used > 0) { t.FirstAidMulti++; if (self.RawCounter(LastKey) == to.InstanceId + 1) t.FirstAidSameAgain++; }   // 第212期（計数のみ）
         self.SetCounter(TurnKey, ctx.Turn + 1);
+        self.SetCounter(CountKey, used + 1);
         self.SetCounter(LastKey, to.InstanceId + 1);                                   // 第212期（計数のみ）
         (t.FirstAidFiredByTier ??= new long[4])[tier]++;
         if ((to.Hp + to.RawCounter(StatusKeys.Armor) + dmg) * 100 >= to.MaxHp * Percent) t.FirstAidCross++;
-        ctx.Interrupt(() => PlankTrait.Paste(ctx, self, to, foes, firstAid: true));
+        ctx.Interrupt(() => PlankTrait.Paste(ctx, self, to, foes, firstAid: true, aidOrdinal: used + 1));
     }
 }
 
@@ -9341,6 +9377,45 @@ public sealed class PlankSkillTrait : Trait
         self.SetCounter(PlankTrait.SkillLostKey, 0);
         self.SetCounter(PlankTrait.SkillTierKey, 0);
     }
+}
+
+/// <summary>腕で駆け込める回数が増える（第212期）。<b>札そのものは何もしない</b>——<see cref="FirstAidTrait"/> が上限を、engine の `NotePlankSkill` が段を読む。</summary>
+public sealed class AidSkillTrait : Trait
+{
+    public override TraitId Id => TraitId.AidSkill;
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(PlankTrait.SkillLostKey, 0);
+        self.SetCounter(PlankTrait.SkillTierKey, 0);
+    }
+}
+
+/// <summary>
+/// 出撃前の板（第212期・ツギ）。開戦時（`OnBattleStart`・行動順より前）に、<b>生きている味方のうち一番前の列</b>の全員へ
+/// 手番の板と同じ式（<see cref="PlankTrait.Paste"/>・基本 ＋ 在庫。開戦時の在庫は 0）で板を1枚ずつ貼る（ツギ自身が前列なら自分にも）。
+/// 応急処置の回数は使わない。会戦では戦ごとに開戦時に貼り直す（境界で破片と印は消える）。<b>乱数を引かない</b>（席番号の順）。
+/// </summary>
+public sealed class PlankOpeningTrait : Trait
+{
+    public override TraitId Id => TraitId.PlankOpening;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId));
+        var allies = ctx.LivingMembers(self.TeamId);
+        if (allies.Count == 0) return;
+        int front = allies.Min(a => FormationRules.DepthOf(a.Row));
+        foreach (UnitState a in allies.Where(a => FormationRules.DepthOf(a.Row) == front).ToList())
+            PlankTrait.Paste(ctx, self, a, foes, firstAid: false, opening: true);
+    }
+}
+
+/// <summary>破片で受けても身構えは働く（第212期・ササ）。<b>札そのものは何もしない</b>——engine の破片の段（上限を先に）と `ArmorOnlyHit`（弾きと配り）が読む。</summary>
+public sealed class BraceArmoredTrait : Trait
+{
+    public override TraitId Id => TraitId.BraceArmored;
 }
 
 /// <summary>板を最も危ない味方へ（第211期）。<b>札そのものは何もしない</b>——<see cref="PlankTrait.OnAction"/> が読む。</summary>
@@ -13451,6 +13526,9 @@ public static class TraitCatalog
         new PlankNeediestTrait(),    // 第211期（板を最も危ない味方へ）
         new FirstAidArmoredTrait(),  // 第211期（応急処置を実質の残り体力で）
         new ThornsArmoredTrait(),    // 第211期（破片で受けても棘は鳴る）
+        new AidSkillTrait(),         // 第212期（腕で駆け込める回数が増える）
+        new PlankOpeningTrait(),     // 第212期（出撃前の板）
+        new BraceArmoredTrait(),     // 第212期（破片で受けても身構えは働く）
         new KissBareTrait(),         // 第204期（対照・保持者 0 枚）
         new Kiss30Trait(),           // 第204期（対照・保持者 0 枚）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）

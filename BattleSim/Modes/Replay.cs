@@ -106,6 +106,7 @@ public static void Run(string[] args, int stageIndex)
             tickCount = e.TickCount,                   // 第194期・同: 全部で何回の予定か（1+n）
             plankBase = e.PlankBase,                   // 第210期・ツギの板（手番・応急処置）: 量のうち基本の分（在庫の分は slot）
             plankSkill = e.PlankSkill,                 // 第210期・同: 腕の分
+            aidOrdinal = e.AidOrdinal,                 // 第212期・応急処置: そのターンの何回目か（1 始まり）
             text = e.Text
         }).ToList()
     };

@@ -4238,6 +4238,11 @@ public sealed class BattleContext
     readonly List<UnitState> _scrapHolders = new();
     /// <summary>第211期: 棘（<see cref="TraitId.Thorns"/>）の保持者が盤上にいるか。偽なら破片で受け切った一撃の口は比較1つで抜ける。</summary>
     bool _thornsLive;
+    int _hitSerial;
+    /// <summary>第212期（<b>計数のみ</b>）: いま処理している1回の `ApplyDamage` の枠の通し番号（入れ子は退避・復帰）。誰も読んで分岐しない。</summary>
+    public int CurrentHitSerial { get; private set; }
+    /// <summary>第212期: 破片で受けても身構えが働く駒（<see cref="TraitId.BraceArmored"/>）が盤上にいるか。</summary>
+    bool _braceArmoredLive;
 
     /// <summary>
     /// 燃焼が付く2口（<see cref="Ignite"/> とリリの移し）から呼ぶ。<paramref name="target"/> に燃えやすい板の印
@@ -4406,7 +4411,7 @@ public sealed class BattleContext
 
     /// <summary>ツギの出来事（第207期・<see cref="BattleEventKind.Plank"/>・<b>表示専用</b>）。verbose のときだけ積む。</summary>
     public void EmitPlank(UnitState tsugi, string label, UnitState? target, int amount, int slot, int? remaining,
-                          int? partBase = null, int? partSkill = null)
+                          int? partBase = null, int? partSkill = null, int? aidOrdinal = null)
     {
         if (!_verbose) return;
         Emit(new BattleEvent
@@ -4415,7 +4420,7 @@ public sealed class BattleContext
             SpreadFromId = label == PlankLabels.Scrap ? target?.InstanceId : null,
             Amount = amount, Text = label, Slot = slot, StatusRemaining = remaining,
             SourceTrait = label == PlankLabels.Scrap ? TraitId.Scrap : label == PlankLabels.FirstAid ? TraitId.FirstAid : label == PlankLabels.Skill ? TraitId.PlankSkill : TraitId.Plank,
-            HpAfter = target?.Hp ?? 0, PlankBase = partBase, PlankSkill = partSkill,
+            HpAfter = target?.Hp ?? 0, PlankBase = partBase, PlankSkill = partSkill, AidOrdinal = aidOrdinal,
         });
     }
 
@@ -4426,7 +4431,7 @@ public sealed class BattleContext
     public void NotePlankSkill(int lost)
     {
         UnitState? h = _reboundTsugi;
-        if (h is null || lost <= 0 || !h.HasTrait(TraitId.PlankSkill)) return;
+        if (h is null || lost <= 0 || !(h.HasTrait(TraitId.PlankSkill) || h.HasTrait(TraitId.AidSkill))) return;   // 第212期: 腕の中身が応急処置の回数でも段は同じ累計で上がる
         int sum = h.RawCounter(PlankTrait.SkillLostKey) + lost;
         h.SetCounter(PlankTrait.SkillLostKey, sum);
         UnitTally t = TallyOf(h);
@@ -4483,6 +4488,14 @@ public sealed class BattleContext
                 ThornsTrait.Riposte(this, target, source);
                 this.EndTrait(m);
             }
+        }
+        // 第212期: 破片で受け切った一撃でも、身構えの弾き（錯乱）と配りを起こす（`BraceArmored`）。
+        if (_braceArmoredLive && target.IsAlive && target.HasTrait(TraitId.BraceArmored) && target.HasTrait(TraitId.Brace))
+        {
+            TallyOf(target).BraceArmorStruck++;
+            TraitMark bm = this.BeginTrait(TraitId.Brace, target);
+            BraceTrait.Struck(this, target);
+            this.EndTrait(bm);
         }
         if (_scrapHolders.Count == 0) return;
         foreach (UnitState h in _scrapHolders.ToList())
@@ -5692,7 +5705,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Daunt)) _dauntLive = true;   // 第189期（萎縮の消費を短絡させる）
         if (u.HasTrait(TraitId.Numb)) _numbLive = true;     // 第195期（痺れ毒の減少を短絡させる）
         if (u.HasTrait(TraitId.Scrap)) _scrapHolders.Add(u); // 第207期（破片の減りを拾う口を短絡させる）
-        if (u.HasTrait(TraitId.Thorns)) _thornsLive = true;  // 第211期（破片で受け切った一撃の棘・計数と Y3 の口を短絡させる）
+        if (u.HasTrait(TraitId.Thorns)) _thornsLive = true;
+        if (u.HasTrait(TraitId.BraceArmored)) _braceArmoredLive = true;   // 第212期（破片の前の身構え・受け切った一撃の弾き）  // 第211期（破片で受け切った一撃の棘・計数と Y3 の口を短絡させる）
         if (u.HasTrait(TraitId.PlankRebound)) { _reboundLive = true; _reboundTsugi ??= u; }   // 第208期（撃ち返す板）
         // 第190期: 反転の結界（ベニ）。**保持者がいなければ `Count == 0` の比較1つで抜ける**。
         if (u.HasTrait(TraitId.Inverse)) _inverseHolders.Add(u);
@@ -7466,6 +7480,7 @@ public sealed class BattleContext
         HitFrame prevHit = Hit;
         Hit = new HitFrame(levy, isFriendlyFire, relayed, pattern);
         // 第208期: 撃ち返す板の控え（1回の `ApplyDamage` の枠ごと。入れ子の呼び出しは退避・復帰する）。
+        int prevHitSerial212 = CurrentHitSerial; CurrentHitSerial = ++_hitSerial;   // 第212期（計数のみ・1回の ApplyDamage の枠の通し番号）
         int prevAmt = _reflectAmt; UnitState? prevFrom = _reflectFrom;
         int prevRest = _reflectRest, prevRatio = _reflectRatio;   // 第209期
         _reflectAmt = 0; _reflectFrom = null; _reflectRest = 0; _reflectRatio = 0;
@@ -7479,6 +7494,7 @@ public sealed class BattleContext
         finally
         {
             Hit = prevHit;
+            CurrentHitSerial = prevHitSerial212;
             myAmt = _reflectAmt; myFrom = _reflectFrom; myRest = _reflectRest; myRatio = _reflectRatio;
             _reflectAmt = prevAmt; _reflectFrom = prevFrom; _reflectRest = prevRest; _reflectRatio = prevRatio;
         }
@@ -7869,6 +7885,17 @@ public sealed class BattleContext
         // 超過分は素通りさせることで、崖ではなく傾斜にしてある。
         int armor = target.RawCounter(StatusKeys.Armor);
         int armorAtEntry211 = armor;   // 第211期（計数のみ）
+        // 第212期（`BraceArmored`・ササ）: 身を固めている間の一撃は、**破片より先に**上限で切る（切り落とした分は今までどおり保留へ）。
+        // 破片が無いときは下の上限の段が同じことをするので、ここは破片があるときだけ——破片の無い駒・札の無い駒は1ビットも動かない。
+        if (_braceArmoredLive && armor > 0 && Brace.Cap > 0 && amount > Brace.Cap && target.HasTrait(TraitId.BraceArmored)
+            && BraceTrait.IsBraced(this, target))
+        {
+            int refused = amount - Brace.Cap;
+            amount = Brace.Cap;
+            BraceTrait.Refuse(this, target, refused);
+            TallyOf(target).BraceArmorEarly++;
+            Log($"    {target.Name} が身構えて一撃を {refused + Brace.Cap} から {Brace.Cap} に抑えた（破片より先に）", LogKind.Trigger);
+        }
         if (armor > 0)
         {
             int soak = Math.Min(armor, amount);
@@ -7939,7 +7966,7 @@ public sealed class BattleContext
                 // 現行の散開にも同じ穴があるので、機構の新しい欠陥ではない。
                 if (Brace.Cap > 0 && target.HasTrait(TraitId.Brace)) TallyOf(target).BraceArmorMuted++;
                 // 第211期: 破片で受け切った一撃。**保持者がいなければ比較1つで抜ける。**
-                if ((_thornsLive || _scrapHolders.Count > 0) && source is not null && source.TeamId != target.TeamId && !burnTick)
+                if ((_thornsLive || _scrapHolders.Count > 0 || _braceArmoredLive) && source is not null && source.TeamId != target.TeamId && !burnTick)
                     ArmorOnlyHit(target, source, soak);
                 return;
             }

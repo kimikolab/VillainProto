@@ -532,8 +532,10 @@ public static class UnitCatalog
         // 周期に「その駒が永久に実行できない種別」を混ぜないこと——engine の行動順ループが
         // その要素で止まって二度と先へ進まない（`TakeTurnCore` のコメント）。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "身を固めている") },
-        Traits = new[] { TraitId.Brace },
-        PlusText = "手番で身を固め、そのターンのあいだ受ける一撃を7までに抑える。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、その味方に、抑えて切り落とした分を破片として付ける",
+        // 第212期（Z3）: 破片で受けても身構えは働く（`BraceArmored`・身を固めている間は破片より先に上限で切る・破片が受け切っても弾きと配りを起こす）。
+        // 第211期の姿はこの札を外した1枚。
+        Traits = new[] { TraitId.Brace, TraitId.BraceArmored },
+        PlusText = "手番で身を固め、そのターンのあいだ受ける一撃を7までに抑える（破片を纏っていても、先に7まで抑えてから破片で受ける）。殴られると錯乱して隣の味方1体を別の席へ突き飛ばし（1ターン1回）、その味方に、抑えて切り落とした分を破片として付ける",
         MinusText = "自分は決して攻撃しない ／ 弾く相手と行き先は選べない ／ 身を固めていないターンは素のまま受ける",
         Flavor = "誰かの隣に立つことができない。近づかれると錯乱する。"
     };
@@ -876,14 +878,17 @@ public static class UnitCatalog
         // 第209期の姿（W0）は3枚を外した5枚（診断 `tsugi` の W0〜W2 は札の差し替え）。
         // 第211期（Y2 のツギ）: 板を実質の残り体力が最も低い味方へ（`PlankNeediest`）・応急処置を (HP＋破片) で（`FirstAidArmored`）。
         // 第210期の姿（Y0）はこの2枚を外した8枚。
+        // 第212期（Z2 のツギ）: 腕の中身を応急処置の回数に（`PlankSkill` → `AidSkill`）・出撃前の板（`PlankOpening`）。
+        // 第211期の姿（Z0）は `AidSkill` を `PlankSkill` に戻し `PlankOpening` を外した10枚。
         Traits = new[] { TraitId.Plank, TraitId.PlankScorch, TraitId.Scrap, TraitId.PlankRebound, TraitId.PlankThick,
-                         TraitId.PlankBase, TraitId.FirstAid, TraitId.PlankSkill, TraitId.PlankNeediest, TraitId.FirstAidArmored },
+                         TraitId.PlankBase, TraitId.FirstAid, TraitId.AidSkill, TraitId.PlankNeediest, TraitId.FirstAidArmored, TraitId.PlankOpening },
         // 板を貼るのが手番そのもの（攻撃9 は出ない）。`[Skill]` の1要素。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "板を貼っている") },
-        PlusText = "手番で、最も危ない味方（HPと破片を合わせて最も少ない者）に板を貼る（自分の最大HPの4割の破片）。回復ではないので渇きでも止まらず、回復を受け付けない味方にも届く / "
-                   + "味方のHPと破片の合計が4割を切ると、手番の外で駆け込んで板を貼る（1ターンに1回） / "
+        PlusText = "戦の始まりに、前列の味方に板を貼っておく / "
+                   + "手番で、最も危ない味方（HPと破片を合わせて最も少ない者）に板を貼る（自分の最大HPの4割の破片）。回復ではないので渇きでも止まらず、回復を受け付けない味方にも届く / "
+                   + "味方のHPと破片の合計が4割を切ると、手番の外で駆け込んで板を貼る。板が砕かれ続けるほど腕が上がり、1ターンに駆け込める回数が増える / "
                    + "板が敵に砕かれると、破片がその敵へ飛ぶ（砕けた量に、残った板の厚さの半分を足したダメージ） / "
-                   + "味方の破片が砕けたり誰かが倒れたりすると瓦礫を拾い、次の板を厚くする。板が砕かれ続けるほど腕が上がり、板そのものが厚くなる",
+                   + "味方の破片が砕けたり誰かが倒れたりすると瓦礫を拾い、次の板を厚くする",
         MinusText = "板は燃えやすい。板を貼られた味方は、燃焼で倍の傷を負う。自分では攻撃しない",
         Flavor = "治せない。だから、これ以上壊れないように塞いだ。"
     };

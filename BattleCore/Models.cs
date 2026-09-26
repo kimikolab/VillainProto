@@ -1983,11 +1983,13 @@ public sealed class UnitTally
     /// <c>FirstAidSpentSame</c> 上限で貼れなかったうち、そのターンに既に応急処置を受けた味方だった回数 ／ <c>FirstAidMulti</c> 同じターンの2回目以降の応急処置 ／
     /// <c>FirstAidSameAgain</c> 同じターンに同じ味方へ2回目以降の応急処置 ／ <c>OpeningPastes</c>・<c>OpeningGiven</c> 出撃前の板の枚数と量。
     /// ササの側: <c>BraceArmorHits</c> 身を固めている間に、上限を超える一撃を破片が先に受けた回数 ／ <c>BraceArmorHypRefused</c> その一撃に上限が先に掛かっていれば切り落とせた量 ／
-    /// <c>BraceArmorExtraBurned</c> 上限が先なら減らずに済んだ破片（min(破片, 一撃) − min(破片, 上限)）／ <c>BraceArmorFullMuted</c> そのうち破片が受け切って弾き（錯乱）も配りも鳴らなかった回数。
+    /// <c>BraceArmorExtraBurned</c> 上限が先なら減らずに済んだ破片（min(破片, 一撃) − min(破片, 上限)）／ <c>BraceArmorFullMuted</c> そのうち破片が受け切って弾き（錯乱）も配りも鳴らなかった回数 ／
+    /// <c>BraceArmorEarly</c> 破片より先に上限で切った回数（`BraceArmored`）／ <c>BraceArmorStruck</c> 破片が受け切った一撃で弾きと配りを起こした回数（`BraceArmored`）。
     /// 受けた側: <c>FirstTurnArmorSoak</c> 1ターン目に破片が吸った被ダメ ／ <c>FirstTurnReflect</c> 1ターン目に板から返った反射の量。
     /// </summary>
     public long FirstAidSpentSame, FirstAidMulti, FirstAidSameAgain, OpeningPastes, OpeningGiven,
-                BraceArmorHits, BraceArmorHypRefused, BraceArmorExtraBurned, BraceArmorFullMuted, FirstTurnArmorSoak, FirstTurnReflect;
+                BraceArmorHits, BraceArmorHypRefused, BraceArmorExtraBurned, BraceArmorFullMuted, FirstTurnArmorSoak, FirstTurnReflect,
+                BraceArmorEarly, BraceArmorStruck, FirstAidSameHit;
     public long[]? FirstAidFiredByTier, FirstAidSpentByTier;
     /// <summary><see cref="ReflectYokeHyp"/> の倍率（百分率）。</summary>
     public static readonly int[] HypRatios = { 0, 25, 50, 100 };
@@ -2431,6 +2433,7 @@ public sealed class UnitTally
         FirstAidSpentSame += o.FirstAidSpentSame; FirstAidMulti += o.FirstAidMulti; FirstAidSameAgain += o.FirstAidSameAgain;
         OpeningPastes += o.OpeningPastes; OpeningGiven += o.OpeningGiven; BraceArmorHits += o.BraceArmorHits; BraceArmorHypRefused += o.BraceArmorHypRefused;
         BraceArmorExtraBurned += o.BraceArmorExtraBurned; BraceArmorFullMuted += o.BraceArmorFullMuted; FirstTurnArmorSoak += o.FirstTurnArmorSoak; FirstTurnReflect += o.FirstTurnReflect;
+        BraceArmorEarly += o.BraceArmorEarly; BraceArmorStruck += o.BraceArmorStruck; FirstAidSameHit += o.FirstAidSameHit;
         if (o.FirstAidFiredByTier is not null) { FirstAidFiredByTier ??= new long[4]; for (int i = 0; i < 4; i++) FirstAidFiredByTier[i] += o.FirstAidFiredByTier[i]; }
         if (o.FirstAidSpentByTier is not null) { FirstAidSpentByTier ??= new long[4]; for (int i = 0; i < 4; i++) FirstAidSpentByTier[i] += o.FirstAidSpentByTier[i]; }
         if (o.PlankToRow is not null) { PlankToRow ??= new long[3]; for (int i = 0; i < 3; i++) PlankToRow[i] += o.PlankToRow[i]; }
@@ -2974,6 +2977,9 @@ public static class PlankLabels
     public const string FirstAid = "応急処置";
     /// <summary>第210期: 腕が上がった瞬間。<c>ActorId</c> = <c>TargetId</c> = ツギ、<c>Slot</c> = 新しい段、<c>Amount</c> = 砕かれた累計。</summary>
     public const string Skill = "腕が上がった";
+    /// <summary>第212期: 出撃前の板（開戦時・`OnBattleStart`）。<c>ActorId</c> = ツギ、<c>TargetId</c> = 前列の味方、<c>Amount</c> = 貼った量、
+    /// <c>StatusRemaining</c> = 貼った後の味方の破片。手番の板（<see cref="Paste"/>）・応急処置（<see cref="FirstAid"/>）と区別する。</summary>
+    public const string Opening = "出撃前の板";
 }
 
 /// <summary><see cref="BattleEventKind.Kiss"/> の <c>Text</c>（第204期・<b>表示専用</b>）。</summary>
@@ -3347,6 +3353,9 @@ public sealed class BattleEvent
     /// <summary>第210期（<b>表示専用</b>）: ツギの板（<see cref="PlankLabels.Paste"/> / <see cref="PlankLabels.FirstAid"/>）の量のうち基本の分と腕の分（在庫の分は <c>Slot</c>）。</summary>
     public int? PlankBase { get; init; }
     public int? PlankSkill { get; init; }
+
+    /// <summary>第212期（<b>表示専用</b>）: 応急処置（<see cref="PlankLabels.FirstAid"/>）が<b>そのターンの何回目か</b>（1 始まり）。ほかの出来事では null。</summary>
+    public int? AidOrdinal { get; init; }
 }
 
 /// <summary>戦闘結果。UIはこれを表示するだけでよい。</summary>
