@@ -20,8 +20,10 @@ static partial class ShockDiag
         PlusText = d.PlusText, MinusText = d.MinusText, Flavor = d.Flavor,
     };
 
-    internal static readonly UnitDef KataK2 = WithTraits(UnitCatalog.Kata, TraitId.Thunder, TraitId.ThunderLeak, TraitId.ShockTick);
-    internal static readonly UnitDef KataK1m = WithTraits(UnitCatalog.Kata, TraitId.Thunder);
+    // 第215期に T1（`ThunderPath`）が規定になったので、K2 と K1− も同じ跳ね方に揃えた（K1 ＝ `UnitCatalog.Kata`）。
+    // 第214期の数字（T0 の跳ね方）は `KataT0` と design/PHASE214_KATA_SHOCK.md に残っている。
+    internal static readonly UnitDef KataK2 = WithTraits(UnitCatalog.Kata, TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockTick);
+    internal static readonly UnitDef KataK1m = WithTraits(UnitCatalog.Kata, TraitId.Thunder, TraitId.ThunderPath);
 
     /// <summary>
     /// 第214期の K1（跳ねの同点は席番号の順＝第215期の T0）。<b>台の席はこれで選ぶ</b>——第215期に規定の札が変わっても、

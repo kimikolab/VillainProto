@@ -879,7 +879,8 @@ public static class UnitCatalog
         Attack = 6,
         Speed = 6,
         Advances = false,
-        Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak },
+        // 第215期: 跳ね先の同点を「行き止まりを先に」（T1・`ThunderPath`）をポンの判断で規定にした。
+        Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath },
         // **[Skill] 1要素にする**（`ActionIndex++` は `CanAct` 通過後。第138期 Q0-4）。通常攻撃は出ない。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "雷を落とした") },
         PlusText = "状態異常を帯びた敵に雷を落とし、帯びた隣の敵へ跳ねる（帯びた種類が多いほど重い）。当たった敵には感電が残り、感電した敵は仲間の一撃で弾けて隣へ放電する",

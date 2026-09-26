@@ -251,6 +251,19 @@ T1 の比べ方: ① 種類が多い → ② その先に跳べる相手（隣�
 → **提案（ポンの判断）**: P2 の線は「割り方で直せない形」を分母に含んでいたので外れた。**割り方由来の取り残しだけで見れば T1 は 0% まで直している**。
 T1 を規定にするなら `UnitCatalog.Kata.Traits` に `TraitId.ThunderPath` を1語足すだけ（台の席は第214期の K1 で固定してあるので動かない）。
 
+### 追記: ポンの判断で T1 を規定にした
+
+報告の後、**T1 を規定にした**（`UnitCatalog.Kata.Traits` ＝ `[Thunder, ThunderLeak, ThunderPath]`）。§7 の規則（P2 が外れたら T0）より、
+§5 の「割り方由来の取り残しは T1 で全セル 0」を採った。`shock run` の K2 / K1− も同じ跳ね方に揃えた（`KataK2` / `KataK1m`）。
+台の席は第214期の K1（T0）で固定したまま動かない。**第214期の表（T0 の跳ね方）は `KataT0` と第214期の報告に残っている。**
+
+| 確認 | 結果 |
+|---|---|
+| `shock check` / `shock check215` | どちらも `ok=True` |
+| `shock run` の K1 | 第215期の表A〜C の T1 の行と全数字一致 |
+| マイナスの代金（K1 − K1−・T1 の跳ね方） | 台1 X の全員生存 97.9 → 68.8（第214期 92.1 → 41.4）／台2 X −4.1・P2 −7.5／台3 X −0.4・P2 ±0.0／台4 X −9.9・P2 −12.4 |
+| `docs/` | 下の §6 の後に追記 |
+
 ## 6. `docs/` の再生成
 
 15 ファイルを作り直して第214期の `docs/` と突き合わせた。**`audit` はずれ 0 件。**
@@ -261,6 +274,9 @@ T1 を規定にするなら `UnitCatalog.Kata.Traits` に `TraitId.ThunderPath` 
 | `roster_audit.md` | 所要時間の1行だけ | 戻した（中身は0行差分） |
 | 他の 13 ファイル | 0 行 | `balance`（**305 セル全文一致＝P1**）/ `quality` / `chain` / `ablation` / `pulse` / `engage` / `crossing` / `harm` / `layout` / `reseat` / `stock` / `watch` / `rules` |
 
+
+**T1 を規定にした後の再生成**（15 ファイル・`audit` ずれ 0）: 動いたのは `units.md`（`ThunderPath` の保持者が `-` → 雷のカタ）と
+`roster_audit.md`（カタの札の列に `ThunderPath`・所要時間の行）の2ファイルだけ。**`balance.md` は 305 セル全文一致**（カタは `compare` に在席 0 枠）、他の 13 ファイルは0行差分。
 
 ## 7. この期の則
 
