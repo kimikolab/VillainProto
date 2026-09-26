@@ -807,7 +807,9 @@ public static class UnitCatalog
     public static readonly UnitDef Susu = new()
     {
         Id = "susu",
-        Name = "拾い屋のスス",
+        // 第214期: 名前・文面だけ「血詠みのアカ」へ差し替えた（**仕組み・数値・札・Id はそのまま**。
+        // DemoApp の立ち絵が `susu` をキーにしている）。台本の `Text`（行動の札の名前・`AshActionLabels`・状態の表示「灰」）は変えない。
+        Name = "血詠みのアカ",
         MaxHp = 64,
         Attack = 3,
         Speed = 6,
@@ -821,9 +823,9 @@ public static class UnitCatalog
         // だから周期は `AshTrait` が `UnitState.Counters` で数え、
         // ここの札は**どちらの拍でも嘘にならない中立の1行**にしてある。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "灰に手を伸ばした") },
-        PlusText = "味方が味方から受けたダメージを灰として溜め、2手番に1度、溜めた量ぶん敵全体を撃つ",
-        MinusText = "灰を溜めたまま倒れると、その灰が隣接する味方に等分で降る / 敵から受けたダメージは灰にならない",
-        Flavor = "誰かの後始末ばかりで、自分の手柄になったことが一度もない。だから投げ返す先を敵に変えた。"
+        PlusText = "味方が味方から受けた傷を血として溜め、2手番に1度、溜めた血で魔法を放ち敵全体を撃つ",
+        MinusText = "血を溜めたまま倒れると、その血が隣接する味方に等分で降りかかる / 敵から受けた傷は血にならない",
+        Flavor = "禁術に手を出して破門された。代償を払うのが自分である必要は、どこにも書いていなかった。"
     };
 
     /// <summary>
@@ -841,7 +843,7 @@ public static class UnitCatalog
     /// 増幅（ミオ 8）・火の粉（ボルグ 8）・吸い（ヴィオ 7）の後に来る。ベニ（6）とは同速で順は乱数。
     /// 数値は指示書 §2-3 で測る前に固定した。</para>
     /// </summary>
-    public static readonly UnitDef Kata = new()
+    public static readonly UnitDef KataOld = new()
     {
         Id = "kata",
         Name = "触媒のカタ",
@@ -855,6 +857,34 @@ public static class UnitCatalog
         PlusText = "手番で敵全体の毒と燃焼をその場で弾けさせる。両方を帯びた敵には倍で効く",
         MinusText = "触媒は敵味方を選ばない。味方の毒と燃焼も一緒に弾ける",
         Flavor = "混ぜれば燃え、燃やせば腐る。何を混ぜたかは本人にも分からない。"
+    };
+
+    /// <summary>
+    /// 雷のカタ（第214期・触媒のカタの作り直し。<b>名前とフレーバーは仮</b>——ポンが決める）。
+    /// 旧カタ（起爆）は <see cref="KataOld"/> に対照として残す（<see cref="All"/> には入れない・K0）。
+    ///
+    /// <para><b>手番で雷を落とす</b>（<see cref="ThunderTrait"/>）: 状態異常を帯びた敵に落とし、帯びた隣の敵へ跳ねる。
+    /// 1発 ＝ 現在攻撃力 ×（1 ＋ 帯びている種類の数）。当たった敵には感電（<see cref="StatusKeys.Shock"/>）が残り、
+    /// <b>感電した駒は HP に届く被弾で起爆して同じ陣営の隣へ放電する</b>。<b>雷は起爆しない</b>——弾くのは仲間の薙ぎ・連撃・全体。</para>
+    ///
+    /// <para><b>マイナス</b>（<see cref="ThunderLeakTrait"/>）: 雷を落とすたび、隣の味方すべてに感電が付く。</para>
+    ///
+    /// <para><b>攻 3 → 6（仮）</b>・HP48・速6 は旧カタのまま。<c>Id</c> も旧カタと同じ <c>kata</c>（再生側の立ち絵のキー）。</para>
+    /// </summary>
+    public static readonly UnitDef Kata = new()
+    {
+        Id = "kata",
+        Name = "雷のカタ",
+        MaxHp = 48,
+        Attack = 6,
+        Speed = 6,
+        Advances = false,
+        Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak },
+        // **[Skill] 1要素にする**（`ActionIndex++` は `CanAct` 通過後。第138期 Q0-4）。通常攻撃は出ない。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "雷を落とした") },
+        PlusText = "状態異常を帯びた敵に雷を落とし、帯びた隣の敵へ跳ねる（帯びた種類が多いほど重い）。当たった敵には感電が残り、感電した敵は仲間の一撃で弾けて隣へ放電する",
+        MinusText = "雷を落とすたび、隣の味方すべてに感電が付く / 雷そのものは感電を弾けさせない",
+        Flavor = "（仮）空が荒れる日にだけ機嫌がいい。落ちる先を選んでいるつもりでいる。"
     };
 
     /// <summary>

@@ -352,7 +352,7 @@ static partial class DebuffDiag
         ("台N（ネル×ウツ×ムド）", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Gald, center: UnitCatalog.Nel,
                                                   back1: UnitCatalog.Utsu, back3: UnitCatalog.Borg)),
         ("台K（クビ×毒）", Formation.Build(front1: UnitCatalog.Guza, front3: UnitCatalog.Rau, center: UnitCatalog.Kubi,
-                                         back1: UnitCatalog.Kata, back3: UnitCatalog.Sid)),
+                                         back1: UnitCatalog.KataOld, back3: UnitCatalog.Sid)),
         ("台H（ハネ×移動）", Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.Gald, center: UnitCatalog.Hane,
                                            back1: UnitCatalog.Yomi, back3: UnitCatalog.Shio)),
     };

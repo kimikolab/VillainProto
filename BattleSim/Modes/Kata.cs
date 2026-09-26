@@ -92,26 +92,26 @@ static class KataDiag
     static readonly (string Name, Formation F)[] Benches =
     {
         ("毒の台", Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Vio, center: UnitCatalog.Guza,
-                                  back1: UnitCatalog.Mio, back3: UnitCatalog.Kata)),
+                                  back1: UnitCatalog.Mio, back3: UnitCatalog.KataOld)),
         ("毒×燃焼の台", Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Hota, center: UnitCatalog.Guza,
-                                      back1: UnitCatalog.Mio, back3: UnitCatalog.Kata)),
+                                      back1: UnitCatalog.Mio, back3: UnitCatalog.KataOld)),
         ("リィカの台", Formation.Build(front1: UnitCatalog.Mug, front3: UnitCatalog.Zoto, center: UnitCatalog.Rica,
-                                     back1: UnitCatalog.Guza, back3: UnitCatalog.Kata)),
+                                     back1: UnitCatalog.Guza, back3: UnitCatalog.KataOld)),
     };
 
     /// <summary>逆流（代金）の札を外したカタ＝`yP`。**Id は同じ**（帳簿を同じキーで引く）。この診断のローカルだけ。</summary>
     static readonly UnitDef KataNoBackfire = new()
     {
-        Id = UnitCatalog.Kata.Id, Name = UnitCatalog.Kata.Name, MaxHp = UnitCatalog.Kata.MaxHp,
-        Attack = UnitCatalog.Kata.Attack, Speed = UnitCatalog.Kata.Speed, Advances = UnitCatalog.Kata.Advances,
-        Actions = UnitCatalog.Kata.Actions, Traits = new[] { TraitId.Catalyst },
+        Id = UnitCatalog.KataOld.Id, Name = UnitCatalog.KataOld.Name, MaxHp = UnitCatalog.KataOld.MaxHp,
+        Attack = UnitCatalog.KataOld.Attack, Speed = UnitCatalog.KataOld.Speed, Advances = UnitCatalog.KataOld.Advances,
+        Actions = UnitCatalog.KataOld.Actions, Traits = new[] { TraitId.Catalyst },
     };
 
     static IEnumerable<(string Tag, Formation F)> Versions(Formation f) => new[]
     {
-        ("素体", SwapDef(f, UnitCatalog.Kata, Plain(UnitCatalog.Kata))),
+        ("素体", SwapDef(f, UnitCatalog.KataOld, Plain(UnitCatalog.KataOld))),
         ("**カタ**", f),
-        ("逆流なし", SwapDef(f, UnitCatalog.Kata, KataNoBackfire)),
+        ("逆流なし", SwapDef(f, UnitCatalog.KataOld, KataNoBackfire)),
     };
 
     static void RunBenches()
@@ -232,10 +232,10 @@ static class KataDiag
             // **書き手は替える候補から外す**——外さないと 27 行中 14 行で書き手そのもの（ボルグ・ゾト・スィド）が抜けて
             // 起爆の燃料が 0 になった（初回の実行・R016）。
             var low = attr.Where(x => !writers.Contains(x.Def.Id)).OrderBy(x => x.A).First();
-            Formation g = SwapDef(f, low.Def, UnitCatalog.Kata);
+            Formation g = SwapDef(f, low.Def, UnitCatalog.KataOld);
             Formation y = SwapDef(f, low.Def, KataNoBackfire);
             double k = Mean25(Rates(g)), yp = Mean25(Rates(y));
-            double pl = Mean25(Rates(SwapDef(f, low.Def, Plain(UnitCatalog.Kata))));
+            double pl = Mean25(Rates(SwapDef(f, low.Def, Plain(UnitCatalog.KataOld))));
             mech.Add(k - pl);
             Led l = LedgerOf(g, 1, 4);
             deltas.Add(k - baseW); costs.Add(k - yp);
@@ -299,12 +299,12 @@ static class KataDiag
         long allyNom = 0, foeNom = 0;
         foreach (var (_, f) in Benches)
         {
-            Formation g = SwapDef(f, UnitCatalog.Kata, KataNoBackfire);
+            Formation g = SwapDef(f, UnitCatalog.KataOld, KataNoBackfire);
             for (int st = 1; st < 5; st++)
                 for (int seed = 0; seed < 50; seed++)
                 {
                     var r = BattleEngine.Run(g, EnemyCatalog.Stages[st].Enemy, seed, verbose: false);
-                    if (r.TallyByUnit.TryGetValue(UnitCatalog.Kata.Id, out UnitTally? t))
+                    if (r.TallyByUnit.TryGetValue(UnitCatalog.KataOld.Id, out UnitTally? t))
                     { allyNom += t.DetonateAllyNominal; foeNom += t.DetonatePoisonNominal + t.DetonateBurnNominal; }
                 }
         }
@@ -379,7 +379,7 @@ static class KataDiag
             {
                 BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false);
                 n++;
-                if (!r.TallyByUnit.TryGetValue(UnitCatalog.Kata.Id, out UnitTally? t)) continue;
+                if (!r.TallyByUnit.TryGetValue(UnitCatalog.KataOld.Id, out UnitTally? t)) continue;
                 fi += t.DetonateFires; dr += t.DetonateDry; du += t.DetonateDualTargets;
                 po += t.DetonatePoisonNominal; bu += t.DetonateBurnNominal; ex += t.DetonateDualExtra;
                 fd += t.DetonateFoeDealt; an += t.DetonateAllyNominal; ad += t.DetonateAllyDealt;

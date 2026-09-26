@@ -165,7 +165,7 @@ static partial class BeniDiag
         Console.WriteLine("|---|--:|---|");
         foreach (var (d, where) in new[]
         {
-            (UnitCatalog.Beni, "手番（`Actions = [Skill]`）"), (UnitCatalog.Kata, "手番（起爆）"),
+            (UnitCatalog.Beni, "手番（`Actions = [Skill]`）"), (UnitCatalog.KataOld, "手番（起爆）"),
             (UnitCatalog.Guza, "手番（瘴気・味方漏れ）"), (UnitCatalog.Vio, "ターン頭（吸い上げ）"),
             (UnitCatalog.Borg, "攻撃の後（火の粉）"), (UnitCatalog.Lili, "手番（繕い）"), (UnitCatalog.Vel, "手番（縫い合わせ）"),
             (UnitCatalog.Golm, "手番（吸い＝自己回復）"),

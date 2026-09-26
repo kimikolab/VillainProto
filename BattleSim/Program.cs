@@ -517,6 +517,7 @@ if (focusId == "escale") { EnemyScaleDiag.Run(args.Length > 2 ? args[2] : "phase
 // kata モード（第188期） —— ナタの枠に新駒「触媒のカタ」（起爆）。本体は `Modes/Kata.cs`。
 if (focusId == "kata") { KataDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 if (focusId == "shock") { ShockDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
+if (focusId == "shockdigest") { ShockDigestDiag.Run(args.Length > 2 ? args[2] : "k0"); return; }
 // debuff モード（第189期） —— デバッファー3枚の転生（ネル・クビ・ハネ）。本体は `Modes/Debuff*.cs`。
 if (focusId == "debuff") { DebuffDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 // beni モード（第190期） —— 毒喰らいのベニの転生（反転の結界）。本体は `Modes/Beni*.cs`。
@@ -1377,6 +1378,9 @@ static class TraitKeyMap
         [TraitId.BraceCapFirst] = Array.Empty<int>(),                                           // 第213期（上限の位置だけ・保留は Brace の印の下）
         [TraitId.BraceHeldDeliver] = Array.Empty<int>(),                                        // 第213期（配りの口だけ・配りは Brace の印の下）
         [TraitId.KissSteal]  = Array.Empty<int>(),                                              // 第205期（AtkBonus を移す・状態キーではない）
+        [TraitId.Thunder]    = Array.Empty<int>(),                                              // 第214期（感電は専用キー・11 本に無い）
+        [TraitId.ThunderLeak]= Array.Empty<int>(),                                              // 第214期（感電は専用キー）
+        [TraitId.ShockTick]  = Array.Empty<int>(),                                              // 第214期（K2・保持者 0 枚）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1562,6 +1566,9 @@ static class TraitHookMap
         [TraitId.BraceCapFirst]= new[] { Engine },                                 // 第213期（破片の段の前の上限）
         [TraitId.BraceHeldDeliver]= new[] { Engine },                              // 第213期（ArmorOnlyHit）
         [TraitId.KissSteal]   = Array.Empty<string>(),                             // 第205期（口づけの中で読まれる札）
+        [TraitId.Thunder]     = new[] { "OnAction", Engine },                    // 第214期（雷・起爆と放電は ApplyDamage）
+        [TraitId.ThunderLeak] = Array.Empty<string>(),                             // 第214期（ThunderTrait.OnAction で読まれる札）
+        [TraitId.ShockTick]   = new[] { Engine },                                  // 第214期（刻みの起爆・保持者 0 枚）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）

@@ -405,6 +405,13 @@ public enum TraitId
     Scrap,       // 瓦礫拾い（第207期・ツギ）: 味方の破片が砕けた量の 50% と、倒れた駒1体につき 5 を背中に積み、次の板に上乗せする
     KissSteal,  // 口づけ・強弱を移す（第205期）: 1体ずつ吸うとき、その敵の攻撃力の上げ下げ（`AtkBonus`）も受け取った味方へ移す。札は `KissTrait` の中で読まれる
 
+    // --- 第214期で足した札（**雷のカタ**。旧 `Catalyst` / `Backfire` は対照として残す） ---
+    Thunder,    // 雷: 手番で（攻撃しない）状態異常を帯びた敵に雷を落とし、状態異常を帯びた隣の敵へ跳ねる（同じ敵には戻らない）。
+                // 1発 ＝ 現在攻撃力 ×（1 ＋ 帯びている種類の数）。当たった敵には感電（`StatusKeys.Shock`）が残る。**雷は感電を起爆しない**
+    ThunderLeak,// 雷は敵味方を選ばない: 雷を落とすたび、カタに隣接する味方すべてに感電が付く。`Thunder` の代金で、外せば `yP`
+    ShockTick,  // 刻みでも弾ける（第214期・K2 の版・保持者 0 枚）: 保持者が戦闘に出ていれば、毒・燃焼の刻みでも感電が起爆する。
+                // **札そのものは挙動を持たない**（engine が保持を読むだけ）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -12079,6 +12086,116 @@ public sealed class BackfireTrait : Trait
 }
 
 /// <summary>
+/// 雷（第214期・雷のカタ）。<b>手番で（攻撃しない）状態異常を帯びた敵に雷を落とし、状態異常を帯びた隣の敵へ跳ねる。</b>
+///
+/// <para><b>最初の一発</b>: 単体攻撃の主目標の候補（<see cref="BattleContext.TargetPool"/>・前列が生きている限り前列）のうち、
+/// 帯びている種類（<see cref="CountedKeys"/>）が最も多い敵。同数は席番号の順。<b>介入の鎖（庇い・殉教）は通らない</b>（止めと同じ扱い）。
+/// 候補に帯びた敵がいなければ、通常の主目標の選び方（<see cref="BattleContext.SelectTarget"/>）で選んだ敵に<b>1発だけ</b>落として止まる。</para>
+///
+/// <para><b>跳ね</b>: 今の敵の隣（同じ陣営・<see cref="FormationRules.AreAdjacent(UnitState, UnitState)"/>）で、まだ当たっていない・帯びた敵のうち
+/// 種類が最も多い敵へ。同数は席番号の順。<b>同じ敵には戻らない。列は無視。</b> 候補が無ければ止まる。</para>
+///
+/// <para><b>1発 ＝ 現在攻撃力 ×（1 ＋ 種類）。種類は命中の前に数える</b>——その雷で付く感電は数えず、前の手番までに付いた感電は数える。
+/// 当たった敵には感電が残る（<see cref="BattleContext.MarkShock"/>）。<b>雷は感電を起爆しない</b>（<see cref="BattleContext.StrikeThunder"/>）
+/// ——カタが1人で「付ける→弾く」を回せないように。<b>乱数は、帯びた敵がいないときの1発（通常の選び方）でしか引かない。</b></para>
+///
+/// <para><b>マイナス</b>（<see cref="TraitId.ThunderLeak"/> の保持者のとき）: 雷を落とすたび、カタに隣接する生きている味方すべてに感電が付く。</para>
+/// </summary>
+public sealed class ThunderTrait : Trait
+{
+    public override TraitId Id => TraitId.Thunder;
+
+    /// <summary>
+    /// 1発の重さに数える状態異常（第214期 Q0-3・16 本）。<c>StatusKeys.All</c> から、敵に付く弱体の状態だけを選んだ
+    /// （手番・破片・預・負・灰・据・紅・板は数えない——engine の帳簿か、味方側の資源か、保持者自身の在庫）。
+    /// </summary>
+    public static readonly IReadOnlyList<string> CountedKeys = new[]
+    {
+        StatusKeys.Poison, StatusKeys.Marked, StatusKeys.Stun, StatusKeys.Burn, StatusKeys.Wound, StatusKeys.Deep,
+        StatusKeys.Curse, StatusKeys.Stagger, StatusKeys.Confused, StatusKeys.Grappled, StatusKeys.Cowed,
+        StatusKeys.Daunted, StatusKeys.Concentrated, StatusKeys.Numbed, StatusKeys.Stigma, StatusKeys.Shock,
+    };
+
+    /// <summary>帯びている状態異常の種類の数（<b>読むだけ</b>・`RawCounter` なので観測子にも触らない）。</summary>
+    public static int KindsOf(UnitState u)
+    {
+        int n = 0;
+        foreach (string k in CountedKeys) if (u.RawCounter(k) > 0) n++;
+        return n;
+    }
+
+    /// <summary>候補のうち種類が最多の敵（同数は席番号の順）。帯びた敵がいなければ null。</summary>
+    static UnitState? Heaviest(IEnumerable<UnitState> cands)
+    {
+        UnitState? best = null;
+        int bestK = 0;
+        foreach (UnitState u in cands.OrderBy(x => x.Slot))
+        {
+            int k = KindsOf(u);
+            if (k > bestK) { best = u; bestK = k; }
+        }
+        return best;
+    }
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        var pool = ctx.TargetPool(self);
+        if (pool.Count == 0) return;
+
+        UnitState? cur = Heaviest(pool);
+        int hits = 0;
+        if (cur is null)
+        {
+            UnitState? t = ctx.SelectTarget(self);
+            if (t is not null)
+            {
+                int k = KindsOf(t);
+                ctx.StrikeThunder(self, t, self.CurrentAttack * (1 + k), 1, k);
+                hits = 1;
+            }
+            ctx.NoteThunderCast(self, hits, fallback: true);
+        }
+        else
+        {
+            var struck = new HashSet<UnitState>();
+            while (cur is not null)
+            {
+                int k = KindsOf(cur);
+                struck.Add(cur);
+                hits++;
+                ctx.StrikeThunder(self, cur, self.CurrentAttack * (1 + k), hits, k);
+                UnitState from = cur;
+                cur = Heaviest(ctx.LivingMembers(from.TeamId).Where(u => !struck.Contains(u) && FormationRules.AreAdjacent(from, u)));
+            }
+            ctx.NoteThunderCast(self, hits, fallback: false);
+        }
+
+        // マイナス（雷は敵味方を選ばない）: 落とすたび、隣の味方すべてに感電。
+        if (self.HasTrait(TraitId.ThunderLeak))
+            foreach (UnitState a in ctx.LivingMembers(self.TeamId))
+                if (a != self && FormationRules.AreAdjacent(self, a)) ctx.MarkShock(a, self);
+    }
+}
+
+/// <summary>
+/// 雷は敵味方を選ばない（第214期・雷の代金）。<b>札そのものは挙動を持たない</b>（<see cref="ThunderTrait"/> が保持を読むだけ）。外せば <c>yP</c>（K1−）。
+/// </summary>
+public sealed class ThunderLeakTrait : Trait
+{
+    public override TraitId Id => TraitId.ThunderLeak;
+}
+
+/// <summary>
+/// 刻みでも弾ける（第214期・K2 の版・保持者 0 枚）。<b>札そのものは挙動を持たない</b>——保持者が戦闘に出ていれば、
+/// engine が毒・燃焼の刻み（旧カタの起爆を含む）でも感電を起爆させる（<c>ApplyDamageBody</c> の起爆の判定）。
+/// </summary>
+public sealed class ShockTickTrait : Trait
+{
+    public override TraitId Id => TraitId.ShockTick;
+}
+
+/// <summary>
 /// 反転（第190期・毒喰らいのベニ）。<b>ベニに隣接する味方は、毒と燃焼の削りを回復として受ける</b>
 /// ——ターン頭の刻み（<see cref="BattleContext.TickStatuses"/>）と、起爆の味方側（<see cref="BattleContext.Detonate"/>）の両方。
 ///
@@ -13509,6 +13626,9 @@ public static class TraitCatalog
         new ThrustTrait(),     // 第186期 追補
         new ThrustPlainTrait(),// 第186期 追補（対照）
         new CatalystTrait(),   // 第188期
+        new ThunderTrait(),        // 第214期
+        new ThunderLeakTrait(),    // 第214期
+        new ShockTickTrait(),      // 第214期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期
         new HexLeakTrait(),    // 第189期

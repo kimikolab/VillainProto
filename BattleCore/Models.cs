@@ -1793,6 +1793,29 @@ public sealed class UnitTally
     public long AshGained, AshFires, AshSpent, AshPeak, AshDry, AshAtDeath, AshResidual,
                 AshHolds, AshFalloutOut;
 
+    /// <summary>第214期: 放電（味方が味方から受けた放電）で溜まった血（灰）の量。<b>保持者（アカ）の側</b>。計数専用。</summary>
+    public long AshFromDischarge;
+
+    /// <summary>
+    /// 雷と感電（第214期）。<b>計数専用。</b>
+    /// <para><b>カタの側</b>: <c>ThunderCasts</c> 雷を落とした回数 ／ <c>ThunderFallback</c> 帯びた敵がいなくて1発だけ落とした回数 ／
+    /// <c>ThunderHits</c> 当たった数 ／ <c>ThunderDealt</c> 削った HP ／ <c>ThunderMax</c> 1発の名目の最大 ／ <c>ThunderKills</c> 雷で倒した数 ／
+    /// <c>ThunderKindsHist</c>[種類] 1発ごとの種類の分布 ／ <c>ThunderPerCastHist</c>[数] 1回の雷で当たった数の分布 ／
+    /// <c>ShockOnFoe</c>・<c>ShockOnAlly</c> 新しく付けた感電（敵・味方）。</para>
+    /// <para><b>連鎖</b>: 根（最初に放電した駒）の側に <c>ChainRoots</c>・<c>ChainUnits</c>（放電した駒の延べ）・<c>ChainSizeHist</c>・<c>ChainDepthMax</c>、
+    /// 起こした一撃の主の側に <c>ShockTriggered</c>、根が刻みなら根の側に <c>ShockTriggeredTick</c>、出どころの無い削りなら <c>ShockTriggeredOther</c>。</para>
+    /// <para><b>放電</b>: 放電した駒に <c>ShockSpent</c>（起爆した回数）・<c>DischargeHits</c>・<c>DischargeDealt</c>、受けた駒に <c>DischargeTaken</c>・<c>DischargeDeaths</c>・
+    /// <c>DischargeInvertedIn</c>（ベニの反転で癒えた量）。<c>ShockLeftAlive</c>・<c>ShockLeftDead</c> 決着時に残っていた感電。</para>
+    /// <para><b>起爆しなかった一撃</b>（感電している駒への一撃・自己検査用）: <c>ShockThunderMuted</c> 雷 ／ <c>ShockTickMuted</c> 刻み（K1）／
+    /// <c>ShockArmorMuted</c> 破片が受け切った。</para>
+    /// </summary>
+    public long ThunderCasts, ThunderFallback, ThunderHits, ThunderDealt, ThunderMax, ThunderKills, ShockOnFoe, ShockOnAlly,
+                ChainRoots, ChainUnits, ChainDepthMax, ShockTriggered, ShockTriggeredTick, ShockTriggeredOther,
+                ShockSpent, DischargeHits, DischargeDealt, DischargeTaken, DischargeDeaths, DischargeInvertedIn,
+                ShockLeftAlive, ShockLeftDead, InverseDischargeHealed,
+                ShockThunderMuted, ShockTickMuted, ShockArmorMuted;
+    public long[]? ThunderKindsHist, ThunderPerCastHist, ChainSizeHist;
+
     /// <summary>
     /// 起爆（第188期・<see cref="TraitId.Catalyst"/>）。<b>保持者（カタ）の側</b>に載せる——
     /// <c>DetonateFires</c> 起爆した回数 ／ <c>DetonateDry</c> 毒も火も無くて空振りした回数 ／
@@ -2373,6 +2396,7 @@ public sealed class UnitTally
         AshDry += o.AshDry; AshAtDeath += o.AshAtDeath; AshResidual += o.AshResidual;
         AshHolds += o.AshHolds; AshFalloutOut += o.AshFalloutOut;
         if (o.AshPeak > AshPeak) AshPeak = o.AshPeak;
+        AddShock(o);   // 第214期
         DetonateFires += o.DetonateFires; DetonateDry += o.DetonateDry; DetonateDualTargets += o.DetonateDualTargets;
         DetonatePoisonNominal += o.DetonatePoisonNominal; DetonateBurnNominal += o.DetonateBurnNominal;
         DetonateDualExtra += o.DetonateDualExtra; DetonateFoeDealt += o.DetonateFoeDealt;
@@ -2599,6 +2623,31 @@ public sealed class UnitTally
                     dst[j] = dst[j] == 0 ? src[j] : src[j] == 0 ? dst[j] : Math.Min(dst[j], src[j]);
             }
         }
+    }
+
+    /// <summary>第214期の雷と感電の帳簿を足し込む。</summary>
+    void AddShock(UnitTally o)
+    {
+        AshFromDischarge += o.AshFromDischarge;
+        ThunderCasts += o.ThunderCasts; ThunderFallback += o.ThunderFallback; ThunderHits += o.ThunderHits;
+        ThunderDealt += o.ThunderDealt; ThunderKills += o.ThunderKills; if (o.ThunderMax > ThunderMax) ThunderMax = o.ThunderMax;
+        ShockOnFoe += o.ShockOnFoe; ShockOnAlly += o.ShockOnAlly;
+        ChainRoots += o.ChainRoots; ChainUnits += o.ChainUnits; if (o.ChainDepthMax > ChainDepthMax) ChainDepthMax = o.ChainDepthMax;
+        ShockTriggered += o.ShockTriggered; ShockTriggeredTick += o.ShockTriggeredTick; ShockTriggeredOther += o.ShockTriggeredOther;
+        ShockSpent += o.ShockSpent; DischargeHits += o.DischargeHits; DischargeDealt += o.DischargeDealt;
+        DischargeTaken += o.DischargeTaken; DischargeDeaths += o.DischargeDeaths; DischargeInvertedIn += o.DischargeInvertedIn;
+        ShockLeftAlive += o.ShockLeftAlive; ShockLeftDead += o.ShockLeftDead; InverseDischargeHealed += o.InverseDischargeHealed;
+        ShockThunderMuted += o.ShockThunderMuted; ShockTickMuted += o.ShockTickMuted; ShockArmorMuted += o.ShockArmorMuted;
+        AddHist(ref ThunderKindsHist, o.ThunderKindsHist);
+        AddHist(ref ThunderPerCastHist, o.ThunderPerCastHist);
+        AddHist(ref ChainSizeHist, o.ChainSizeHist);
+    }
+
+    static void AddHist(ref long[]? mine, long[]? other)
+    {
+        if (other is null) return;
+        mine ??= new long[other.Length];
+        for (int i = 0; i < other.Length; i++) mine[i] += other[i];
     }
 
     /// <summary>害の帳簿の配列を足し込む（第135期）。<b>相手が確保していなければ何もしない。</b></summary>
@@ -2965,7 +3014,28 @@ public enum BattleEventKind
     /// <summary>
     /// 継ぎ当てのツギの出来事（第207期・<b>表示専用</b>）。<c>Text</c> は <see cref="PlankLabels"/> で場面を分ける。<b>どの規則も読まない。</b>
     /// </summary>
-    Plank
+    Plank,
+
+    /// <summary>
+    /// 雷の命中（第214期・雷のカタ・<b>表示専用</b>）。カタの手番の <c>Skill</c>（「雷を落とした」）の後に、当たった順に1件ずつ並ぶ。
+    /// <para><c>ActorId</c> = カタ、<c>TargetId</c> = 当たった敵、<c>Slot</c> = 何発目か（1 始まり・跳ねの順番）、
+    /// <c>Amount</c> = 1発の名目、<c>StatusRemaining</c> = 命中の前に数えた状態異常の種類。
+    /// 直後に <c>Damage</c>（出どころ ＝ カタ・型なし）、生きていれば感電の <c>StatusGain</c>（キー <c>shock</c>）。<b>どの規則も読まない。</b></para>
+    /// </summary>
+    Thunder,
+
+    /// <summary>
+    /// 感電が消えた瞬間＝起爆（第214期・<b>表示専用</b>）。<c>TargetId</c> = 放電する駒、<c>ActorId</c> = 連鎖を起こした一撃の主（刻みなら null）、
+    /// <c>Slot</c> = 連鎖の何段目か（0 ＝ 起点）、<c>HpAfter</c> = その時点の HP（倒れていれば 0）。直後にその駒からの <see cref="Discharge"/> が並ぶ。<b>どの規則も読まない。</b>
+    /// </summary>
+    ShockSpent,
+
+    /// <summary>
+    /// 放電1本（第214期・<b>表示専用</b>）。<c>ActorId</c> = 放電した駒、<c>TargetId</c> = 隣の駒、<c>Amount</c> = 放電の量、
+    /// <c>Slot</c> = 連鎖の何段目の放電か（1 始まり）。ベニの結界で反転したときは <c>SourceTrait = Inverse</c>・<c>InverterId</c> が立ち、直後は <c>Heal</c>。
+    /// それ以外は直後に <c>Damage</c>（出どころ ＝ 放電した駒・同士討ち）。<b>どの規則も読まない。</b>
+    /// </summary>
+    Discharge
 }
 
 /// <summary><see cref="BattleEventKind.Plank"/> の <c>Text</c>（第207期・<b>表示専用</b>）。</summary>

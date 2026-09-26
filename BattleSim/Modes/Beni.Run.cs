@@ -472,9 +472,9 @@ static partial class BeniDiag
     static readonly (string Name, Formation F)[] Benches =
     {
         ("台P（毒）", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Mudo, center: UnitCatalog.Beni,
-                                    back1: UnitCatalog.Guza, back3: UnitCatalog.Kata)),
+                                    back1: UnitCatalog.Guza, back3: UnitCatalog.KataOld)),
         ("台F（燃焼）", Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Mudo, center: UnitCatalog.Beni,
-                                      back1: UnitCatalog.Golm, back3: UnitCatalog.Kata)),
+                                      back1: UnitCatalog.Golm, back3: UnitCatalog.KataOld)),
         ("台H（回復役）", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Lili, center: UnitCatalog.Beni,
                                         back1: UnitCatalog.Vel, back3: UnitCatalog.Guza)),
     };

@@ -341,7 +341,16 @@ public static class StatusKeys
     /// </summary>
     public const string Plank = "plank";
 
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted, Concentrated, Numbed, Guren, Stigma, Plank };
+    /// <summary>
+    /// 感電（第214期・雷のカタ）。<b>0 か 1 の二値。層を持たない</b>（層を持つと毒と同じ軸になる）。
+    /// <b>時間では消えない</b>——感電している駒が HP に届く被弾を受けると<b>起爆</b>し、感電が消えて
+    /// 同じ陣営の隣接する駒すべてへ放電する（<see cref="BattleContext.ShockTrigger"/>）。
+    /// <b>カタの雷と毒・燃焼の刻みは起爆しない</b>（刻みで起爆する版は札 <c>ShockTick</c>）。
+    /// 書き手は <see cref="BattleContext.MarkShock"/> の1箇所。<see cref="All"/> に入れてあるので会戦の境界で消える。
+    /// </summary>
+    public const string Shock = "shock";
+
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted, Concentrated, Numbed, Guren, Stigma, Plank, Shock };
 
     /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
@@ -373,6 +382,7 @@ public static class StatusKeys
         Guren => "紅",
         Stigma => "聖",
         Plank => "板",
+        Shock => "雷",
         _ => key
     };
 }
@@ -398,6 +408,15 @@ public static class BurnRules
 
     /// <summary>着火時に設定される残りターン。再付与でここまで戻る（加算しない）。</summary>
     public const int Turns = 3;
+}
+
+/// <summary>
+/// 感電の規則（第214期）。<b>放電の量は仮置き</b>（指示書 §9・ポンが遊んで決める）。
+/// </summary>
+public static class ShockRule
+{
+    /// <summary>起爆した駒が、同じ陣営の隣接する駒1体ずつへ流す量。</summary>
+    public const int Discharge = 8;
 }
 
 /// <summary>
@@ -699,6 +718,7 @@ public sealed class BattleContext
                 it.IgnitePoisonTicks++;
             }
 
+            MarkTickHit();   // 第214期（刻みは K2 のときだけ感電を起爆する）
             ApplyDamage(u, poison, null);
         }
     }
@@ -768,6 +788,7 @@ public sealed class BattleContext
             if (ScapegoatActive) NoteScapegoatDot(u, burnDmg, StatusKeys.Burn);
             // burnTick: この刻みが破片に吸われた量・HP を削った量を、
             // 毒の刻み（同じく source が null）と混ぜずに数えるための札。**盤面には影響しない。**
+            MarkTickHit();   // 第214期
             ApplyDamage(u, burnDmg, null, burnTick: true);
             if (!u.IsAlive) bt.BurnDeaths++;
         }
@@ -891,7 +912,7 @@ public sealed class BattleContext
                     TargetId = u.InstanceId, Amount = dmg, Text = "毒",
                     TickIndex = ord.Index, TickCount = ord.Count,
                 });
-                DetonateHit(kt, u, foe, () => ApplyDamage(u, dmg, null));
+                DetonateHit(kt, u, foe, () => { MarkTickHit(); ApplyDamage(u, dmg, null); });   // 第214期: 起爆は刻みの写し
             }
         }
 
@@ -927,7 +948,7 @@ public sealed class BattleContext
                     TargetId = u.InstanceId, Amount = dmg, Text = "燃焼",
                     TickIndex = ord.Index, TickCount = ord.Count,
                 });
-                DetonateHit(kt, u, foe, () => ApplyDamage(u, dmg, null, burnTick: true));
+                DetonateHit(kt, u, foe, () => { MarkTickHit(); ApplyDamage(u, dmg, null, burnTick: true); });
             }
         }
     }
@@ -942,6 +963,190 @@ public sealed class BattleContext
         if (!u.IsAlive)
         {
             if (foe) kt.DetonateFoeKills++; else kt.DetonateAllyKills++;
+        }
+    }
+
+    // =================================================================================
+    // 第214期 —— 感電（StatusKeys.Shock）と雷（ThunderTrait）
+    //
+    // **起爆の判定は `ApplyDamageBody` の1箇所**（HP を引いて死亡処理を通した直後）で、ここにあるのは
+    // その先（幅優先の放電）と、雷の1発の窓口と、帳簿だけ。**感電が1度も書かれていない戦闘は `_shockLive` の比較1つで抜ける。**
+    // =================================================================================
+
+    /// <summary>感電が1度でも書かれたか（書かれるまで起爆の判定を1度も走らせない）。</summary>
+    bool _shockLive;
+
+    /// <summary>刻みでも起爆する札（<see cref="TraitId.ShockTick"/>・K2）の保持者が戦闘に出たか。</summary>
+    bool _shockTickLive;
+
+    /// <summary>
+    /// 次の <c>ApplyDamage</c> 1回にだけ効く札（逸らしの <c>_deflectFrom</c> と同じ作法・<c>ApplyDamageBody</c> の最初の行で読んで消す）。
+    /// 0 通常 ／ 1 雷（起爆しない）／ 2 刻み（K2 のときだけ起爆する）／ 3 放電。
+    /// </summary>
+    byte _shockNext;
+
+    /// <summary>次の <c>ApplyDamage</c> 1回にだけ効く撃破者の差し替え（放電で倒れた駒の撃破者 ＝ 連鎖を起こした一撃の主）。</summary>
+    bool _shockKillerSet;
+    UnitState? _shockKiller;
+
+    bool _shockChaining;
+    int _shockDepth;
+    readonly Queue<(UnitState U, int Depth, UnitState? Ini)> _shockQueue = new();
+
+    /// <summary>刻みの <c>ApplyDamage</c> の直前に呼ぶ（感電が書かれた戦闘でだけ札を立てる）。</summary>
+    void MarkTickHit() { if (_shockLive) _shockNext = 2; }
+
+    /// <summary>
+    /// 感電を付ける唯一の窓口（第214期）。<b>二値</b>——既に感電していれば何もしない。倒れた駒には付かない。
+    /// <paramref name="writer"/> は計数と台本の書き手だけに使う。<b>乱数を引かない。</b>
+    /// </summary>
+    /// <returns>新しく付いたか。</returns>
+    public bool MarkShock(UnitState target, UnitState writer)
+    {
+        if (!target.IsAlive) return false;
+        _shockLive = true;
+        if (target.RawCounter(StatusKeys.Shock) > 0) return false;
+        target.SetCounter(StatusKeys.Shock, 1);
+        UnitTally wt = TallyOf(writer);
+        if (writer.TeamId == target.TeamId) wt.ShockOnAlly++; else wt.ShockOnFoe++;
+        EmitStatusGain(target, StatusKeys.Shock, 1, writer);   // 表示専用
+        return true;
+    }
+
+    /// <summary>
+    /// 雷の1発（第214期・<see cref="ThunderTrait"/> だけが呼ぶ）。<b>術</b>——<c>PerformAttack</c> を通らず
+    /// <c>ApplyDamage(敵, 量, カタ)</c> を直に呼ぶ（リリの吸い取りと同じ入口。§1 の +50%・破片・軛は効き、反撃は起きない）。
+    /// <b>この1発は感電を起爆しない。</b> 当てた後に生きていれば感電を付ける。
+    /// </summary>
+    /// <param name="hop">何発目か（1 始まり・表示と計数）。</param>
+    /// <param name="kinds">命中の前に数えた状態異常の種類（表示と計数）。</param>
+    public void StrikeThunder(UnitState kata, UnitState target, int amount, int hop, int kinds)
+    {
+        UnitTally kt = TallyOf(kata);
+        kt.ThunderHits++;
+        (kt.ThunderKindsHist ??= new long[ThunderTrait.CountedKeys.Count + 1])[Math.Min(kinds, ThunderTrait.CountedKeys.Count)]++;
+        if (amount > kt.ThunderMax) kt.ThunderMax = amount;
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Thunder, Turn = _turn, ActorId = kata.InstanceId, TargetId = target.InstanceId,
+            Amount = amount, Slot = hop, StatusRemaining = kinds, Team = target.TeamId,
+            // 表示専用: 数えた状態の表示名（命中の前）。
+            Text = string.Join(",", ThunderTrait.CountedKeys.Where(k => target.RawCounter(k) > 0).Select(StatusKeys.LabelOf)),
+        });
+        Log($"    雷が {target.Name} に落ちた（{hop} 発目・状態 {kinds} 種 → {amount}）", LogKind.Trigger);
+        int before = target.Hp;
+        _shockNext = 1;
+        ApplyDamage(target, amount, kata);
+        _shockNext = 0;
+        kt.ThunderDealt += before - Math.Max(0, target.Hp);
+        if (before > 0 && !target.IsAlive) kt.ThunderKills++;
+        MarkShock(target, kata);
+    }
+
+    /// <summary>雷を落とし終えた（<b>計数のみ</b>）。</summary>
+    public void NoteThunderCast(UnitState kata, int hits, bool fallback)
+    {
+        UnitTally kt = TallyOf(kata);
+        kt.ThunderCasts++;
+        if (fallback) kt.ThunderFallback++;
+        (kt.ThunderPerCastHist ??= new long[10])[Math.Min(hits, 9)]++;
+    }
+
+    /// <summary>
+    /// 起爆（第214期）。<c>ApplyDamageBody</c> が「感電している駒の HP に届いた一撃」で呼ぶ。
+    /// <b>連鎖の中で呼ばれたら起爆せずに列へ積む</b>——外側の1回だけが列を幅優先で回す
+    /// （入れ子の呼び出しのまま起爆すると深さ優先になる）。<b>乱数を引かない。</b>
+    /// </summary>
+    /// <param name="initiator">連鎖を起こした一撃の主（撃破の帰属先）。刻みが起こした連鎖は null。</param>
+    /// <param name="rootKind">根の種類（計数のみ）: 0 攻撃などの一撃 ／ 1 刻み ／ 2 出どころの無い削り。</param>
+    internal void ShockTrigger(UnitState u, UnitState? initiator, int rootKind)
+    {
+        if (_shockChaining) { _shockQueue.Enqueue((u, _shockDepth + 1, initiator)); return; }
+
+        _shockChaining = true;
+        _shockQueue.Clear();
+        _shockQueue.Enqueue((u, 0, initiator));
+        int size = 0, deepest = 0;
+        try
+        {
+            while (_shockQueue.Count > 0)
+            {
+                var (x, d, ini) = _shockQueue.Dequeue();
+                if (x.RawCounter(StatusKeys.Shock) <= 0) continue;   // 既に放電した（1つの駒は1回しか放電しない）
+                x.SetCounter(StatusKeys.Shock, 0);
+                size++;
+                if (d > deepest) deepest = d;
+                _shockDepth = d;
+                TallyOf(x).ShockSpent++;
+                if (_verbose) Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.ShockSpent, Turn = _turn, ActorId = ini?.InstanceId, TargetId = x.InstanceId,
+                    Slot = d, HpAfter = Math.Max(0, x.Hp), Team = x.TeamId,
+                });
+                Log($"    {x.Name} の感電が弾けた（{(d == 0 ? "起点" : d + " 段目")}）", LogKind.Trigger);
+                foreach (UnitState n in LivingMembers(x.TeamId))
+                    if (n != x && FormationRules.AreAdjacent(x, n)) Discharge(x, n, d, ini);
+            }
+        }
+        finally { _shockChaining = false; _shockDepth = 0; }
+
+        UnitTally rt = TallyOf(u);
+        rt.ChainRoots++;
+        rt.ChainUnits += size;
+        (rt.ChainSizeHist ??= new long[12])[Math.Min(size, 11)]++;
+        if (deepest > rt.ChainDepthMax) rt.ChainDepthMax = deepest;
+        if (rootKind == 1) rt.ShockTriggeredTick++;
+        else if (initiator is not null) TallyOf(initiator).ShockTriggered++;
+        else rt.ShockTriggeredOther++;
+    }
+
+    /// <summary>
+    /// 放電1本（第214期）。<b>状態異常のダメージ</b>——行動でも攻撃でもない（粛では止まらない・棘と板の反射は鳴らない）。
+    /// 出どころは<b>放電した駒</b>（同じ陣営・<c>isFriendlyFire</c>）、撃破者は<b>連鎖を起こした一撃の主</b>。
+    /// 隣がベニの結界の内側なら、毒・燃焼の刻みと同じ口（<c>InvertsTick</c> → <c>InverseHeal</c>）で回復に反転する。
+    /// </summary>
+    void Discharge(UnitState from, UnitState to, int depth, UnitState? ini)
+    {
+        int amt = ShockRule.Discharge;
+        UnitTally ft = TallyOf(from), tt = TallyOf(to);
+        ft.DischargeHits++;
+        UnitState? inv = InvertsTick(to);
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Discharge, Turn = _turn, ActorId = from.InstanceId, TargetId = to.InstanceId,
+            Amount = amt, Slot = depth + 1, Team = to.TeamId,
+            SourceTrait = inv is null ? null : TraitId.Inverse, InverterId = inv?.InstanceId,
+        });
+        if (inv is not null)
+        {
+            int hb = to.Hp;
+            InverseHeal(inv, to, amt, 3, "放電");
+            tt.DischargeInvertedIn += to.Hp - hb;
+            return;
+        }
+        Log($"    {from.Name} から {to.Name} へ放電（{amt}）", LogKind.Status);
+        int before = to.Hp;
+        _shockNext = 3;
+        _shockKillerSet = true;
+        _shockKiller = ini;
+        ApplyDamage(to, amt, from, isFriendlyFire: true);
+        _shockNext = 0;
+        _shockKillerSet = false;
+        _shockKiller = null;
+        int removed = before - Math.Max(0, to.Hp);
+        ft.DischargeDealt += removed;
+        tt.DischargeTaken += removed;
+        if (before > 0 && !to.IsAlive) tt.DischargeDeaths++;
+    }
+
+    /// <summary>決着時に残っていた感電を数える（第214期・<b>計数のみ</b>）。</summary>
+    public void CloseShockLedger()
+    {
+        if (!_shockLive) return;
+        foreach (UnitState u in _units)
+        {
+            if (u.RawCounter(StatusKeys.Shock) <= 0) continue;
+            if (u.IsAlive) TallyOf(u).ShockLeftAlive++; else TallyOf(u).ShockLeftDead++;
         }
     }
 
@@ -3655,7 +3860,7 @@ public sealed class BattleContext
     /// <param name="amount">実際に削られた量。</param>
     /// <param name="source">出どころ。<c>null</c> は継続ダメージ（燃焼・毒の刻み）。</param>
     /// <param name="havocExtra">惨禍が上乗せした量（<see cref="AshRule.CountHavoc"/> が偽なら引く）。</param>
-    void NoteAsh(UnitState target, int amount, UnitState? source, int havocExtra)
+    void NoteAsh(UnitState target, int amount, UnitState? source, int havocExtra, bool discharge = false)
     {
         if (amount <= 0 || !AshBinding) return;
 
@@ -3674,6 +3879,7 @@ public sealed class BattleContext
             h.SetCounter(StatusKeys.Ash, h.RawCounter(StatusKeys.Ash) + gained);
             AshGained += gained;
             TallyOf(h).AshGained += gained;
+            if (discharge) TallyOf(h).AshFromDischarge += gained;   // 第214期・計数のみ
         }
     }
 
@@ -4711,6 +4917,7 @@ public sealed class BattleContext
         }
         if (kind == 0) t.InversePoisonHealed += gained;
         else if (kind == 1) { t.InverseBurnHealed += gained; t.InverseBurnNominal += amount; }
+        else if (kind == 3) t.InverseDischargeHealed += gained;   // 第214期: 放電
         else t.InverseDetonateHealed += gained;
         if (_turn <= 3)   // 第191期・**計数のみ**（1〜3 ターン目の分）
         {
@@ -5754,6 +5961,7 @@ public sealed class BattleContext
         // 第179期: 灰の保持者（`NoteAsh` が全駒を走査しないため）。
         if (u.HasTrait(TraitId.Ash)) _ashHolders.Add(u);
         if (u.HasTrait(TraitId.Yoke)) _yokeHolders.Add(u);
+        if (u.HasTrait(TraitId.ShockTick)) _shockTickLive = true;   // 第214期（K2 の札）
         // 第134期 段2: 残り3つの盤面ルールの保持者も同じ形で拾う（**計数専用**。
         // 渇きだけは `Heal` の入口の判定もここに寄せた——`AllUnits.Any(...)` と同値）。
         if (u.HasTrait(TraitId.Drought)) _droughtHolders.Add(u);
@@ -7549,6 +7757,13 @@ public sealed class BattleContext
         _deflectFrom = null;
         int? deflectCharge = _deflectCharge;
         _deflectCharge = null;
+        // 第214期: 感電の札（1回の呼び出しにだけ効く）。**ここで読んで消す**（逸らしの札と同じ作法）。
+        byte shockNote = _shockNext;
+        _shockNext = 0;
+        bool shockKillerSet = _shockKillerSet;
+        UnitState? shockKiller = _shockKiller;
+        _shockKillerSet = false;
+        _shockKiller = null;
 
         if (!target.IsAlive || amount <= 0) return;
 
@@ -8007,6 +8222,8 @@ public sealed class BattleContext
                 // `OnDamaged` が鳴らず**身構えの弾きが立たない**。**この期では塞がない。**
                 // 現行の散開にも同じ穴があるので、機構の新しい欠陥ではない。
                 if (Brace.Cap > 0 && target.HasTrait(TraitId.Brace)) TallyOf(target).BraceArmorMuted++;
+                // 第214期（計数のみ）: 感電している駒への一撃を破片が受け切った（起爆しない）。
+                if (_shockLive && target.RawCounter(StatusKeys.Shock) > 0) TallyOf(target).ShockArmorMuted++;
                 // 第211期: 破片で受け切った一撃。**保持者がいなければ比較1つで抜ける。**
                 if ((_thornsLive || _scrapHolders.Count > 0 || _braceArmoredLive) && source is not null && source.TeamId != target.TeamId && !burnTick)
                 {
@@ -8220,7 +8437,7 @@ public sealed class BattleContext
         // 第179期。**味方が味方から受けたダメージを灰として溜める**（拾い屋のスス）。
         // **HP を引いた直後・死亡判定より手前**——実額で溜め、最後の一撃も落とさない。
         // 保持者が盤上にいなければ `AshBinding` の比較1つで抜ける。
-        NoteAsh(target, amount, source, havocExtra);
+        NoteAsh(target, amount, source, havocExtra, shockNote == 3);
         Log($"    {target.Name} に {amount} ダメージ (残り {Math.Max(0, target.Hp)})",
             isFriendlyFire ? LogKind.FriendlyFire : LogKind.Damage);
         Emit(new BattleEvent
@@ -8325,7 +8542,18 @@ public sealed class BattleContext
         {
             // 第211期（計数のみ）: 倒れた一撃を受ける直前の破片（ツギの盤面だけ）。
             if (_scrapHolders.Count > 0) { UnitTally dt = TallyOf(target); dt.DiedCount++; dt.DiedArmorBefore += armorAtEntry211; }
-            HandleDeath(target, source);
+            HandleDeath(target, shockKillerSet ? shockKiller : source);   // 第214期: 放電で倒れた駒の撃破者は連鎖を起こした一撃の主
+        }
+
+        // 第214期: 感電の起爆。**HP に届いた一撃**（この一撃で倒れた駒も）だけがここまで来る——破片が受け切った一撃・受け流し・
+        // `lethal: false` で 0 になった一撃は上で返っている。**雷（1）は起爆しない。刻み（2 と `burnTick`）は K2 のときだけ。**
+        // 感電が1度も書かれていない戦闘は `_shockLive` の比較1つで抜ける。
+        if (_shockLive && target.RawCounter(StatusKeys.Shock) > 0)
+        {
+            bool tick = shockNote == 2 || burnTick;
+            if (shockNote == 1) TallyOf(target).ShockThunderMuted++;          // 計数のみ（自己検査: 雷は起爆しない）
+            else if (tick && !_shockTickLive) TallyOf(target).ShockTickMuted++; // 計数のみ（自己検査: K1 の刻みは起爆しない）
+            else ShockTrigger(target, shockKillerSet ? shockKiller : tick ? null : source, tick ? 1 : source is null ? 2 : 0);
         }
 
         // 巻き込み則（第85期・W2・SpillWoundRule）。**味方の刃**が通って対象が生きていれば傷 1。
@@ -9932,6 +10160,7 @@ public static class BattleEngine
         // 第155期。決着時に残っていた負債と燃料を数える（収支を閉じるため）。
         ctx.CloseIndulgenceLedger();
         ctx.CloseAshLedger();   // 第179期・**計数のみ**
+        ctx.CloseShockLedger();   // 第214期・**計数のみ**
 
         return new BattleResult
         {

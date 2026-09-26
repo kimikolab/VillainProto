@@ -198,7 +198,7 @@ static partial class MioDiag
         foreach (var (d, where) in new[]
         {
             (UnitCatalog.Mio, "手番（濃縮）"), (UnitCatalog.Sid, "被弾時（毒撃・漏れ）"),
-            (UnitCatalog.Vio, "ターン頭（吸い上げ）・攻撃の後（吐き戻し）"), (UnitCatalog.Kata, "手番（起爆）"),
+            (UnitCatalog.Vio, "ターン頭（吸い上げ）・攻撃の後（吐き戻し）"), (UnitCatalog.KataOld, "手番（起爆）"),
             (UnitCatalog.Beni, "手番（火→毒→毒）・刻みの反転"), (UnitCatalog.Guza, "手番（瘴気）"),
             (UnitCatalog.Rau, "攻撃の後（うつす）・死骸（疫み）"),
         })
