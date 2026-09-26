@@ -8,6 +8,7 @@ public static class StatusIconArt
 {
     private static readonly Dictionary<string, (string Color, string Shape)> Art = new()
     {
+        [StatusKeys.Shock] = ("#8ceaff", "<path d='M36 8L18 34h13l-4 22 21-30H35z'/><path d='M9 17l6 7M50 42l6 7' fill='none'/>"),
         // 第207期・板（ツギ）。釘で留めた板切れ。
         [StatusKeys.Plank] = ("#c89a62", "<path d='M12 20l40-6v12l-40 6zM14 38l38-4v12l-38 4z'/><circle cx='20' cy='25' r='2' fill='#111821'/><circle cx='44' cy='21' r='2' fill='#111821'/>"),
         [StatusKeys.Stigma] = ("#ffa9ca", "<path d='M32 9C27 23 17 30 17 40a15 15 0 0 0 30 0C47 30 37 23 32 9z' fill='#e85c89'/><path d='M28 26q-9 12-5 17' fill='none' stroke='#fff0f5'/>"),

@@ -317,6 +317,7 @@ void fragment() {
             FlipH = Team == BattleContext.EnemyTeam,
         };
         AddChild(_sprite);
+        BuildKataStakes();
 
         _hpBack = MakeBillboardQuad(new Vector2(1.68f, 0.15f), new Color(0.015f, 0.025f, 0.02f, 0.92f), 10);
         _hpBack.Position = new Vector3(0, hpY + 0.55f, 0.02f);
@@ -667,6 +668,7 @@ void fragment() {
     public override void _Process(double delta)
     {
         _phase += (float)delta * 2.1f;
+        UpdateKataStakes();
         if (!_alive || _victory) return;
 
         float animationDelta = (float)delta * (float)Math.Max(0.1, AnimationSpeed);

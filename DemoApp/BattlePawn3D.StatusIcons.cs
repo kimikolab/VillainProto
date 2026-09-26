@@ -38,6 +38,7 @@ public partial class BattlePawn3D
         SetCurseStain(!_victory && _statusSnapshot.ContainsKey(StatusKeys.Curse));
         SetGuren(_statusSnapshot.GetValueOrDefault(StatusKeys.Guren), false);
         SetStigma(_statusSnapshot.ContainsKey(StatusKeys.Stigma));
+        SetShocked(_statusSnapshot.ContainsKey(StatusKeys.Shock));
         SetPlank(_statusSnapshot.ContainsKey(StatusKeys.Plank) ? _statusSnapshot.GetValueOrDefault(StatusKeys.Armor) : 0);
     }
 
@@ -78,6 +79,7 @@ public partial class BattlePawn3D
         if (_alive && StatusIconArt.KeyOf(keyOrLabel) is { } key)
         {
             _statusIcons.Set(key, active);
+            if (key == StatusKeys.Shock) SetShocked(active);
             if (key == StatusKeys.Confused) _confusion.SetActive(active && !_victory);
             if (key == StatusKeys.Curse) SetCurseStain(active && !_victory);
             if (key == StatusKeys.Cowed) SetCowed(active && !_victory);

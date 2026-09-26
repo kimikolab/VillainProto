@@ -1045,6 +1045,7 @@ public partial class Main : Control
         IndexStatusDamageEvents(_result.Events);
         _ticks = TickPresentation.Build(_result.Events);
         IndexBeniMio(_result.Events);
+        IndexThunder(_result.Events);
         IndexTimeline(_result.Events);
         _battleOpening = pending.Select(x => new DemoOpening(
             x.Unit.InstanceId,
@@ -1236,6 +1237,7 @@ public partial class Main : Control
         // 第125期 段2: 拍の境目でだけ画面を変える。**ここでは待たない**（間は下の switch の中だけ）。
         EnterBeat(eventIndex, e);
         _tickDelayBudget = _ticks.Budgets.TryGetValue(eventIndex, out double tickBudget) ? tickBudget : null;
+        if (await PlayThunder(e, eventIndex, actor, target)) return;
         if (await PlayPlank(e, eventIndex, actor, target)) return;
         if (await PlayLili(e, eventIndex, actor, target)) return;
         if (await PlaySpecial(e, eventIndex, actor, target)) return;

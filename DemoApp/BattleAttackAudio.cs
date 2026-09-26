@@ -308,6 +308,7 @@ public partial class BattleAttackAudio : Node
         voice.VolumeDb += boostDb - _voiceBoosts[index];
         _voiceBoosts[index] = boostDb;
         voice.Stream = LoadSound(path);
+        voice.PitchScale = 1f;
         voice.Play();
     }
 
@@ -371,7 +372,7 @@ public partial class BattleAttackAudio : Node
         foreach (var voice in _hushVoices) voice.Stop();
         _duckTween?.Kill();
         _duckTween = null;
-        foreach (var voice in _voices) voice.VolumeDb = NormalVolumeDb;
+        foreach (var voice in _voices) { voice.VolumeDb = NormalVolumeDb; voice.PitchScale = 1f; }
         System.Array.Clear(_voiceBoosts);
         _nextVoice = 0;
         _nextChargeVoice = 0;

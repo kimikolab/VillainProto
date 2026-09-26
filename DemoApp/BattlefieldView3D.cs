@@ -287,6 +287,7 @@ public partial class BattlefieldView3D : Control
         _specialGeneration++;
         GurenReleases = GurenGains = SwordDraws = SwordRipostes = NumbSwings = VenomReturns = Spews = 0;
         ConcentratePlays = ThickenPlays = InvertedHealPlays = SipPlays = KindlePlays = TaintPlays = 0;
+        ThunderPlays = DischargePlays = ShockStagePlays = ShockLeakPlays = ShockInversePlays = 0;
         _shieldCowedGeneration++;
         TormentHitPlays = 0;
         DeflectionPlays = 0;

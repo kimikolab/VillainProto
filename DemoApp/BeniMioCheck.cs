@@ -132,7 +132,7 @@ public partial class BeniMioCheck : Control
         typeof(Main).GetField("_fastSmoke", flags)!.SetValue(main, true);
         typeof(Main).GetField("_speed", flags)!.SetValue(main, 1000.0);
         var formation = support ? Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Rau,
-            center: UnitCatalog.Mio, back1: UnitCatalog.Kata, back3: UnitCatalog.Nono)
+            center: UnitCatalog.Mio, back1: UnitCatalog.KataOld, back3: UnitCatalog.Nono)
             : Presets.Compare.First(x => x.Name.StartsWith("毒+耐久")).F;
         typeof(Main).GetMethod("EnterBattle", flags)!.Invoke(main, new object[] {
             BattleEngine.Materialize(formation, 0), BattleEngine.Materialize(EnemyCatalog.Stages[0].Enemy, 1), 0, 0, "" });

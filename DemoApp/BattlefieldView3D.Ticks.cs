@@ -6,7 +6,7 @@ public partial class BattlefieldView3D
 {
     private readonly Dictionary<int, List<Label3D>> _tickNumbers = new();
 
-    public void ShowTick(BattlePawn3D? pawn, bool burn, bool inverse, bool last, double seconds)
+    public void ShowTick(BattlePawn3D? pawn, bool burn, bool inverse, bool last, double seconds, bool electric = false)
     {
         if (pawn is null) return;
         var material = new ShaderMaterial { Shader = new Shader { Code = @"
@@ -15,6 +15,7 @@ render_mode unshaded, cull_disabled, blend_add, depth_draw_never;
 uniform float progress = 0.0;
 uniform bool burn = false;
 uniform bool inverse = false;
+uniform bool electric = false;
 uniform float strength = 1.0;
 void vertex() {
     MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
@@ -39,6 +40,7 @@ void fragment() {
     float mist = exp(-dot(p * vec2(3.5, 4.2), p * vec2(3.5, 4.2)));
     float veil = (0.55 + 0.45 * sin(p.x * 31.0 + p.y * 23.0 - t * 12.0));
     vec3 base = burn ? vec3(1.0, 0.16, 0.035) : vec3(0.62, 0.13, 0.86);
+    if (electric) base = vec3(0.44, 0.87, 1.0);
     // 同じ泡・火の粉そのものが紅を経て緑白金に変わる。
     vec3 tint = mix(base, vec3(0.95, 0.12, 0.38), inverse ? sin(flip * 3.14159) * 0.6 : 0.0);
     tint = mix(tint, vec3(0.57, 1.0, 0.70), flip);
@@ -50,6 +52,7 @@ void fragment() {
 }" } };
         material.SetShaderParameter("burn", burn);
         material.SetShaderParameter("inverse", inverse);
+        material.SetShaderParameter("electric", electric);
         material.SetShaderParameter("strength", last ? 1.8f : 0.9f);
         var fx = new MeshInstance3D
         {
