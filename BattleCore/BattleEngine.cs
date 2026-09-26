@@ -417,6 +417,14 @@ public static class ShockRule
 {
     /// <summary>起爆した駒が、同じ陣営の隣接する駒1体ずつへ流す量。</summary>
     public const int Discharge = 8;
+
+    /// <summary>感電で痺れる S3（第216期・<see cref="TraitId.ShockStunHalf"/>）の確率（%）。</summary>
+    public const int StunHalfPercent = 50;
+
+    /// <summary>
+    /// 感電で付いた痺れの印（第216期・<b>計数専用</b>・私有キー）。痺れを消費した手番で読んで消す（失った手番を感電の分と、ほかの分に分ける）。
+    /// </summary>
+    public const string StunKey = "shockStun";
 }
 
 /// <summary>
@@ -690,9 +698,12 @@ public sealed class BattleContext
                     SourceTrait = TraitId.Inverse, InverterId = inverter.InstanceId,
                     TickIndex = ord.Index, TickCount = ord.Count,
                 });
+                int hb = u.Hp;
                 InverseHeal(inverter, u, poison, 0, "毒");
+                if (_openingLive) NoteOpeningTick(u, poison, true, u.Hp - hb);   // 第216期・**計数のみ**
                 return;
             }
+            if (_openingLive) NoteOpeningTick(u, poison, false, 0);   // 第216期・**計数のみ**
             NoteTaintPostBite(u, poison);   // 第190期・**計数のみ**
             NoteGurenPoisonTick(u, poison, second);   // 第197期・**計数のみ**
             Log($"    {u.Name} は毒に蝕まれている（{poison}）", LogKind.Status);
@@ -721,6 +732,20 @@ public sealed class BattleContext
             MarkTickHit();   // 第214期（刻みは K2 のときだけ感電を起爆する）
             ApplyDamage(u, poison, null);
         }
+    }
+
+    /// <summary>
+    /// 開戦の撒きの毒の刻み（第216期・<b>計数のみ</b>）。刻んだ層のうち開戦の撒きの分（<c>min(撒いた層, 今の層)</c>）を、
+    /// 受けた駒の側に「反転で回復になった（名目・実際に癒えた分は按分）」「削られた（名目）」に分けて数える。
+    /// </summary>
+    void NoteOpeningTick(UnitState u, int poison, bool inverted, int healed)
+    {
+        int h = u.RawCounter(OpeningSprayTrait.HeldKey);
+        if (h <= 0 || poison <= 0) return;
+        int share = Math.Min(h, poison);
+        UnitTally t = TallyOf(u);
+        if (inverted) { t.OpeningTickInverted += share; t.OpeningHealed += (long)healed * share / poison; }
+        else t.OpeningTickBitten += share;
     }
 
     /// <summary>
@@ -980,6 +1005,18 @@ public sealed class BattleContext
     bool _shockTickLive;
 
     /// <summary>
+    /// 感電で痺れる（第216期）: 0 なし ／ 1 起点だけ（S1）／ 2 弾けた駒すべて（S2）／ 3 それぞれ 50%（S3）。
+    /// 保持者（<see cref="TraitId.ShockStun"/> ほか）が戦闘に出たときに立つ。複数の版が同席したら番号の大きいほう（診断の外では起きない）。
+    /// </summary>
+    byte _shockStun;
+
+    /// <summary>開戦の撒き（第216期）が1度でも走ったか（<b>計数専用</b>・毒の刻みの帳簿を短絡させる）。</summary>
+    bool _openingLive;
+
+    /// <summary>開戦の撒きの札（<see cref="OpeningSprayTrait"/>）が呼ぶ（<b>計数専用</b>）。</summary>
+    public void NoteOpeningLive() => _openingLive = true;
+
+    /// <summary>
     /// 次の <c>ApplyDamage</c> 1回にだけ効く札（逸らしの <c>_deflectFrom</c> と同じ作法・<c>ApplyDamageBody</c> の最初の行で読んで消す）。
     /// 0 通常 ／ 1 雷（起爆しない）／ 2 刻み（K2 のときだけ起爆する）／ 3 放電。
     /// </summary>
@@ -1086,6 +1123,7 @@ public sealed class BattleContext
                     Slot = d, HpAfter = Math.Max(0, x.Hp), Team = x.TeamId,
                 });
                 Log($"    {x.Name} の感電が弾けた（{(d == 0 ? "起点" : d + " 段目")}）", LogKind.Trigger);
+                if (_shockStun != 0) StunByShock(x, d, ini);   // 第216期（S1〜S3・保持者がいなければ比較1つで抜ける）
                 foreach (UnitState n in LivingMembers(x.TeamId))
                     if (n != x && FormationRules.AreAdjacent(x, n)) Discharge(x, n, d, ini);
             }
@@ -1100,6 +1138,25 @@ public sealed class BattleContext
         if (rootKind == 1) rt.ShockTriggeredTick++;
         else if (initiator is not null) TallyOf(initiator).ShockTriggered++;
         else rt.ShockTriggeredOther++;
+    }
+
+    /// <summary>
+    /// 感電で痺れる（第216期・S1〜S3）。<b>弾けた直後、放電より前</b>に痺れを付ける（台本は <c>ShockSpent</c> の直後に <c>StatusGain</c>（<c>stun</c>））。
+    /// 倒れた駒には付けない（S3 の乱数も引かない）。S1 は起点（深さ 0）だけ。既に痺れていれば何も増えない（二値）。
+    /// <b>乱数を引くのは S3 だけ</b>（弾けた生きている駒1体につき1回）。
+    /// </summary>
+    void StunByShock(UnitState x, int depth, UnitState? ini)
+    {
+        UnitTally t = TallyOf(x);
+        if (!x.IsAlive) { t.ShockStunDead++; return; }
+        if (_shockStun == 1 && depth != 0) return;
+        if (_shockStun == 3 && Roll(100) >= ShockRule.StunHalfPercent) { t.ShockStunMissed++; return; }
+        if (x.RawCounter(StatusKeys.Stun) > 0) { t.ShockStunAlready++; return; }
+        t.ShockStunned++;
+        EmitStatusGain(x, StatusKeys.Stun, 1, ini);   // 表示専用（ShockSpent の直後）
+        x.SetCounter(StatusKeys.Stun, 1);
+        x.SetCounter(ShockRule.StunKey, 1);            // 計数専用（失った手番の帰属）
+        Log($"    {x.Name} は感電で痺れた", LogKind.Status);
     }
 
     /// <summary>
@@ -1393,12 +1450,12 @@ public sealed class BattleContext
     }
 
     /// <summary><see cref="UnitTally.SoakSeenByRoute"/> の長さ（毒 9 経路 ＋ 燃焼 1。第180期に吐き戻しで1本、
-    /// 第183期に触れてうつす・その漏れで2本、第190期に澱み分けで1本、第195期にスィドの吐きで1本、第197期に紅蓮の奔流で1本増えた）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
+    /// 第183期に触れてうつす・その漏れで2本、第190期に澱み分けで1本、第195期にスィドの吐きで1本、第197期に紅蓮の奔流で1本、第216期に開戦の撒きで1本増えた）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
     /// ——ずらさないと新しい経路の添字が燃焼と重なる。</summary>
-    public const int SoakRouteCount = 12;
+    public const int SoakRouteCount = 13;
 
     /// <summary>燃焼の経路の添字（<see cref="UnitTally.SoakSeenByRoute"/> の末尾）。</summary>
-    public const int SoakBurnRouteIx = 11;
+    public const int SoakBurnRouteIx = 12;
 
     /// <summary>
     /// 巻き込み則（第85期）で最後にこの駒へ傷を書いた駒の <c>InstanceId + 1</c>（第90期の計数専用の札）。
@@ -5964,6 +6021,10 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Ash)) _ashHolders.Add(u);
         if (u.HasTrait(TraitId.Yoke)) _yokeHolders.Add(u);
         if (u.HasTrait(TraitId.ShockTick)) _shockTickLive = true;   // 第214期（K2 の札）
+        // 第216期（S1〜S3 の札）。**保持者がいなければ 0 のまま**で、起爆の中の比較1つで抜ける。
+        if (u.HasTrait(TraitId.ShockStunHalf)) _shockStun = Math.Max(_shockStun, (byte)3);
+        else if (u.HasTrait(TraitId.ShockStunAll)) _shockStun = Math.Max(_shockStun, (byte)2);
+        else if (u.HasTrait(TraitId.ShockStun)) _shockStun = Math.Max(_shockStun, (byte)1);
         // 第134期 段2: 残り3つの盤面ルールの保持者も同じ形で拾う（**計数専用**。
         // 渇きだけは `Heal` の入口の判定もここに寄せた——`AllUnits.Any(...)` と同値）。
         if (u.HasTrait(TraitId.Drought)) _droughtHolders.Add(u);
@@ -8725,6 +8786,7 @@ public sealed class BattleContext
             actor.SetCounter(StatusKeys.Stun, 0);
             actor.SetCounter(StatusKeys.IdleTurn, Turn);
             TallyOf(actor).StallStun++;   // 第105期（計数のみ）
+            if (actor.RawCounter(ShockRule.StunKey) > 0) { TallyOf(actor).StallShockStun++; actor.SetCounter(ShockRule.StunKey, 0); }   // 第216期（計数のみ）
             // 第146期 段0（表示専用）: 手番を失った瞬間。付与は別のターンなので別の出来事として打つ。
             EmitStun(actor, StunLabels.Lost, null);
             Log($"  {actor.Name} は痺れて動けない", LogKind.Status);

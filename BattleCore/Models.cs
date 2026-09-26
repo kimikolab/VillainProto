@@ -1824,6 +1824,17 @@ public sealed class UnitTally
     public long[]? DeathTurnHist;
 
     /// <summary>
+    /// 第216期（<b>計数専用</b>）。<b>感電で痺れる（S1〜S3）・弾けた駒の側</b>: <c>ShockStunned</c> 痺れた ／ <c>ShockStunAlready</c> 既に痺れていた ／
+    /// <c>ShockStunDead</c> 倒れていて付けなかった ／ <c>ShockStunMissed</c> S3 の 50% で外れた ／ <c>StallShockStun</c> 感電の痺れで失った手番。
+    /// <b>開戦の撒き（O1〜O4）・ベニの側</b>: <c>OpeningFires</c> 撒いた回数 ／ <c>OpeningFoeLayers</c>・<c>OpeningAllyLayers</c> 積んだ層 ／ <c>OpeningBurnLit</c> 点けた火。
+    /// <b>受けた駒の側</b>: 開戦の撒きの層の刻み（名目）を <c>OpeningTickInverted</c>（ベニの反転で回復に）・<c>OpeningTickBitten</c>（削られた）に分け、
+    /// <c>OpeningHealed</c> は反転で実際に癒えた分（按分）。
+    /// </summary>
+    public long ShockStunned, ShockStunAlready, ShockStunDead, ShockStunMissed, StallShockStun,
+                OpeningFires, OpeningFoeLayers, OpeningAllyLayers, OpeningBurnLit,
+                OpeningTickInverted, OpeningTickBitten, OpeningHealed;
+
+    /// <summary>
     /// 起爆（第188期・<see cref="TraitId.Catalyst"/>）。<b>保持者（カタ）の側</b>に載せる——
     /// <c>DetonateFires</c> 起爆した回数 ／ <c>DetonateDry</c> 毒も火も無くて空振りした回数 ／
     /// <c>DetonateDualTargets</c> 両方持ちで倍になった敵の数（延べ）／
@@ -2646,6 +2657,10 @@ public sealed class UnitTally
         ShockLeftAlive += o.ShockLeftAlive; ShockLeftDead += o.ShockLeftDead; InverseDischargeHealed += o.InverseDischargeHealed;
         ShockThunderMuted += o.ShockThunderMuted; ShockTickMuted += o.ShockTickMuted; ShockArmorMuted += o.ShockArmorMuted;
         ThunderCastsT1 += o.ThunderCastsT1; ThunderHitsT1 += o.ThunderHitsT1; ThunderKindsT1 += o.ThunderKindsT1;   // 第216期
+        ShockStunned += o.ShockStunned; ShockStunAlready += o.ShockStunAlready; ShockStunDead += o.ShockStunDead;
+        ShockStunMissed += o.ShockStunMissed; StallShockStun += o.StallShockStun;
+        OpeningFires += o.OpeningFires; OpeningFoeLayers += o.OpeningFoeLayers; OpeningAllyLayers += o.OpeningAllyLayers; OpeningBurnLit += o.OpeningBurnLit;
+        OpeningTickInverted += o.OpeningTickInverted; OpeningTickBitten += o.OpeningTickBitten; OpeningHealed += o.OpeningHealed;
         AddHist(ref DeathTurnHist, o.DeathTurnHist);   // 第216期
         AddHist(ref ThunderKindsHist, o.ThunderKindsHist);
         AddHist(ref ThunderPerCastHist, o.ThunderPerCastHist);

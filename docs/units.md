@@ -246,6 +246,13 @@
 | `ShockTick` | - |
 | `ThunderPath` | 禍導のカタ |
 | `ThunderPathHop` | - |
+| `GurenOpening` | - |
+| `GurenOpeningAll` | - |
+| `GurenOpeningAll3` | - |
+| `GurenOpeningBurn` | - |
+| `ShockStun` | - |
+| `ShockStunAll` | - |
+| `ShockStunHalf` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

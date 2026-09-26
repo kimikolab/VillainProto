@@ -1383,6 +1383,13 @@ static class TraitKeyMap
         [TraitId.ShockTick]  = Array.Empty<int>(),                                              // 第214期（K2・保持者 0 枚）
         [TraitId.ThunderPath]= Array.Empty<int>(),                                              // 第215期（雷の同点の割り方だけ）
         [TraitId.ThunderPathHop]= Array.Empty<int>(),                                           // 第215期（参考・保持者 0 枚）
+        [TraitId.GurenOpening]    = new[] { UnitTally.CarryPoison },                            // 第216期（O1・開戦時に敵全体へ毒）
+        [TraitId.GurenOpeningAll] = new[] { UnitTally.CarryPoison },                            // 第216期（O2・敵味方の全体へ毒）
+        [TraitId.GurenOpeningAll3]= new[] { UnitTally.CarryPoison },                            // 第216期（O3）
+        [TraitId.GurenOpeningBurn]= new[] { UnitTally.CarryPoison, UnitTally.CarryBurn },       // 第216期（O4・毒 ＋ 着火）
+        [TraitId.ShockStun]       = new[] { UnitTally.CarryStun },                              // 第216期（S1・感電で痺れる）
+        [TraitId.ShockStunAll]    = new[] { UnitTally.CarryStun },                              // 第216期（S2）
+        [TraitId.ShockStunHalf]   = new[] { UnitTally.CarryStun },                              // 第216期（S3）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1573,6 +1580,13 @@ static class TraitHookMap
         [TraitId.ShockTick]   = new[] { Engine },                                  // 第214期（刻みの起爆・保持者 0 枚）
         [TraitId.ThunderPath] = Array.Empty<string>(),                             // 第215期（ThunderTrait.Pick で読まれる札）
         [TraitId.ThunderPathHop]= Array.Empty<string>(),                           // 第215期（参考・保持者 0 枚）
+        [TraitId.GurenOpening]    = new[] { "OnBattleStart" },                     // 第216期（O1〜O4・版の中だけ）
+        [TraitId.GurenOpeningAll] = new[] { "OnBattleStart" },
+        [TraitId.GurenOpeningAll3]= new[] { "OnBattleStart" },
+        [TraitId.GurenOpeningBurn]= new[] { "OnBattleStart" },
+        [TraitId.ShockStun]       = new[] { Engine },                              // 第216期（S1〜S3・起爆の中の痺れ）
+        [TraitId.ShockStunAll]    = new[] { Engine },
+        [TraitId.ShockStunHalf]   = new[] { Engine },
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）

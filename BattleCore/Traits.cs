@@ -415,6 +415,15 @@ public enum TraitId
                 // 比べ方は 種類が多い → その先が少ない → 席番号。**札そのものは挙動を持たない**（`ThunderTrait.Pick` が保持を読むだけ）
     ThunderPathHop,// 行き止まりを先に・跳ねだけ（第215期・T1′・参考・保持者 0 枚）: その先の鍵を跳ねにだけ使い、最初の一発は T0 と同じ（種類 → 席番号）
 
+    // --- 第216期で足した札（**版の中だけ・保持者 0 枚**。規定は第215期のまま） ---
+    GurenOpening,    // 開戦の撒き（O1）: 開戦時（会戦は戦ごと）に、ベニが敵全体へ毒 1
+    GurenOpeningAll, // 開戦の撒き（O2）: 敵味方の全体（ベニ自身を含む）へ毒 1。結界の内側の味方への毒は刻みで回復になる
+    GurenOpeningAll3,// 開戦の撒き（O3）: 敵味方の全体へ毒 3
+    GurenOpeningBurn,// 開戦の撒き（O4）: 敵全体へ毒 1 ＋ 着火1回（残り 3 ターン）
+    ShockStun,       // 感電で痺れる（S1）: 連鎖の起点（その一撃で弾けた1体）だけが痺れる。**札そのものは挙動を持たない**（engine が保持を読む）
+    ShockStunAll,    // 感電で痺れる（S2）: その連鎖で弾けた駒すべてが痺れる
+    ShockStunHalf,   // 感電で痺れる（S3）: 弾けた駒それぞれが 50% で痺れる（**乱数を引くのはこの版だけ**）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -2446,7 +2455,9 @@ public enum PoisonRoute
     /// <summary>吐く（スィド・現在攻撃力が最も高い敵へ・手番ごと。第195期）。</summary>
     Spew,
     /// <summary>紅蓮の奔流（ベニ・溜めた紅蓮を敵全員で等分。第197期）。</summary>
-    Guren
+    Guren,
+    /// <summary>開戦の撒き（ベニの版 O1〜O4・開戦時に全体へ。第216期）。</summary>
+    Opening
 }
 
 /// <summary>
@@ -12233,6 +12244,102 @@ public sealed class ThunderPathHopTrait : Trait
 }
 
 /// <summary>
+/// 開戦の撒き（第216期・ベニの版 O1〜O4・<b>保持者 0 枚</b>）。<b>開戦時（<c>OnBattleStart</c>・会戦は戦ごと）に、全体へ毒を撒く。</b>
+/// 毒は窓口（<see cref="BattleContext.Poison"/>・<see cref="PoisonRoute.Opening"/>）を通し、着火は <see cref="BattleContext.Ignite"/>。
+/// <b>乱数を引かない</b>（<c>LivingMembers</c> は席番号順）。味方への毒は、ベニの結界（ベニ自身と隣）の内側なら刻みで回復になる（engine の反転）。
+/// </summary>
+public abstract class OpeningSprayTrait : Trait
+{
+    /// <summary>開戦の撒きで積んだ層（<b>計数専用</b>・受けた駒の側・戦ごとに上書き）。刻みの帳簿（表F）が読む。</summary>
+    public const string HeldKey = "openingHeld";
+
+    protected abstract bool Allies { get; }
+    protected abstract int Layers { get; }
+    protected virtual bool Burn => false;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        UnitTally t = ctx.TallyOf(self);
+        t.OpeningFires++;
+        ctx.NoteOpeningLive();
+        foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        {
+            t.OpeningFoeLayers += Spray(ctx, self, foe);
+            if (Burn) { ctx.Ignite(foe, friendly: false, source: self); t.OpeningBurnLit++; }
+        }
+        if (Allies)
+            foreach (UnitState ally in ctx.LivingMembers(self.TeamId))   // ベニ自身を含む
+                t.OpeningAllyLayers += Spray(ctx, self, ally);
+        ctx.Log($"    ★ {self.Name} が開戦の澱みを撒いた（{(Allies ? "敵味方の全体" : "敵全体")}に毒 +{Layers}{(Burn ? "・火" : "")}）", LogKind.Highlight, self);
+    }
+
+    int Spray(BattleContext ctx, UnitState self, UnitState u)
+    {
+        int before = u.RawCounter(StatusKeys.Poison);
+        ctx.Poison(u, Layers, self, PoisonRoute.Opening);
+        int added = u.RawCounter(StatusKeys.Poison) - before;
+        u.SetCounter(HeldKey, added);
+        return added;
+    }
+}
+
+/// <summary>開戦の撒き O1（第216期）: 敵全体へ毒 1。</summary>
+public sealed class GurenOpeningTrait : OpeningSprayTrait
+{
+    public override TraitId Id => TraitId.GurenOpening;
+    protected override bool Allies => false;
+    protected override int Layers => 1;
+}
+
+/// <summary>開戦の撒き O2（第216期）: 敵味方の全体（ベニ自身を含む）へ毒 1。</summary>
+public sealed class GurenOpeningAllTrait : OpeningSprayTrait
+{
+    public override TraitId Id => TraitId.GurenOpeningAll;
+    protected override bool Allies => true;
+    protected override int Layers => 1;
+}
+
+/// <summary>開戦の撒き O3（第216期）: 敵味方の全体へ毒 3。</summary>
+public sealed class GurenOpeningAll3Trait : OpeningSprayTrait
+{
+    public override TraitId Id => TraitId.GurenOpeningAll3;
+    protected override bool Allies => true;
+    protected override int Layers => 3;
+}
+
+/// <summary>開戦の撒き O4（第216期）: 敵全体へ毒 1 ＋ 着火1回（残り <see cref="BurnRules.Turns"/> ターン）。</summary>
+public sealed class GurenOpeningBurnTrait : OpeningSprayTrait
+{
+    public override TraitId Id => TraitId.GurenOpeningBurn;
+    protected override bool Allies => false;
+    protected override int Layers => 1;
+    protected override bool Burn => true;
+}
+
+/// <summary>
+/// 感電で痺れる（第216期・カタの版 S1〜S3・<b>保持者 0 枚</b>）。<b>札そのものは挙動を持たない</b>——保持者が戦闘に出ていれば、
+/// engine が感電の弾けた駒に痺れ（<see cref="StatusKeys.Stun"/>）を付ける（<see cref="BattleContext"/> の <c>ShockTrigger</c>）。
+/// 敵味方を問わない。倒れた駒には付けない。S1 は連鎖の起点だけ、S2 は弾けた駒すべて、S3 は弾けた駒それぞれ 50%。
+/// </summary>
+public sealed class ShockStunTrait : Trait
+{
+    public override TraitId Id => TraitId.ShockStun;
+}
+
+/// <summary>感電で痺れる S2（第216期）: その連鎖で弾けた駒すべて。<b>札そのものは挙動を持たない。</b></summary>
+public sealed class ShockStunAllTrait : Trait
+{
+    public override TraitId Id => TraitId.ShockStunAll;
+}
+
+/// <summary>感電で痺れる S3（第216期）: 弾けた駒それぞれ <see cref="ShockRule.StunHalfPercent"/>%。<b>札そのものは挙動を持たない。</b></summary>
+public sealed class ShockStunHalfTrait : Trait
+{
+    public override TraitId Id => TraitId.ShockStunHalf;
+}
+
+/// <summary>
 /// 反転（第190期・毒喰らいのベニ）。<b>ベニに隣接する味方は、毒と燃焼の削りを回復として受ける</b>
 /// ——ターン頭の刻み（<see cref="BattleContext.TickStatuses"/>）と、起爆の味方側（<see cref="BattleContext.Detonate"/>）の両方。
 ///
@@ -13668,6 +13775,13 @@ public static class TraitCatalog
         new ShockTickTrait(),      // 第214期
         new ThunderPathTrait(),    // 第215期
         new ThunderPathHopTrait(), // 第215期（参考）
+        new GurenOpeningTrait(),     // 第216期（O1〜O4・版の中だけ）
+        new GurenOpeningAllTrait(),
+        new GurenOpeningAll3Trait(),
+        new GurenOpeningBurnTrait(),
+        new ShockStunTrait(),        // 第216期（S1〜S3・版の中だけ）
+        new ShockStunAllTrait(),
+        new ShockStunHalfTrait(),
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期
         new HexLeakTrait(),    // 第189期
