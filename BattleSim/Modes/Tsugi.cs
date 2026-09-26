@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 
@@ -45,6 +45,7 @@ static partial class TsugiDiag
         switch (mode)
         {
             case "phase0": Phase0(); return;
+            case "phase208": Phase208(); return;
             default:
                 if (RunMore(mode, arg)) return;
                 Console.WriteLine("tsugi: モードは phase0 / run / swap / ledger / check。");
