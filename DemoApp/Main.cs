@@ -655,6 +655,7 @@ public partial class Main : Control
         var legend = UiKit.Text(
             "攻/薙/貫/全＝攻撃の型  ・  特＝特性が直に削った  ・  毒/燃＝継続ダメージ\n"
             + "巻込＝味方の刃（足元が紫の輪）  ・  反撃＝手番外の攻撃  ・  肩代＝肩代わりの中継\n"
+            + "放電＝感電が弾けた駒から隣へ\n"
             + "細い線＝誰の仕業か（回復・蘇生・召喚・移動・見せ場・状態）  ・  戦績 (T) で数字",
             10, UiKit.Faint);
         legend.AutowrapMode = TextServer.AutowrapMode.WordSmart;
@@ -1541,7 +1542,9 @@ public partial class Main : Control
                 _battleField.HealPopup(target, e.Amount);
                 // 第124期 3-h: 段2 で載った書き手から線を引く。
                 _battleField.HealingLight(actor, target, e.Amount);
-                AppendLog($"  [color=#{UiKit.Heal.ToHtml(false)}]＋{e.Amount} 回復[/color] "
+                AppendLog((DischargePresentation.Cause(_result!.Events, eventIndex) is not null
+                              ? $"  [color=#{ThunderFx.Cyan.ToHtml(false)}][放電→回復][/color] " : "  ")
+                          + $"[color=#{UiKit.Heal.ToHtml(false)}]＋{e.Amount} 回復[/color] "
                           + $"{NameOf(e.TargetId)}{WriterSuffix(e.ActorId, e.TargetId)}");
                 await Delay(IsMudoCombo(actor) && actor == target ? 0.05 : 0.15);
                 break;
@@ -2215,6 +2218,8 @@ public partial class Main : Control
 
     private (string Label, Color Color) DamageSource(int eventIndex, BattleEvent damage, BattlePawn3D? actor)
     {
+        if (DischargePresentation.Cause(_result!.Events, eventIndex) is not null)
+            return ($"[放電] {ShortNameOf(damage.ActorId)}", ThunderFx.Cyan);
         if (_statusCauseByDamageIndex.TryGetValue(eventIndex, out string? status))
             return ($"[{status}] 継続", StatusColor(status));
         if (damage.FriendlyFire)

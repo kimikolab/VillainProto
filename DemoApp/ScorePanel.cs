@@ -6,6 +6,7 @@ using System.Linq;
 
 /// <summary>
 /// 戦績パネル（第124期 段1）。<b><c>BattleCore</c> を1行も触らずに「誰が何をしたか」を出す。</b>
+/// 放電の付与者への帰属だけは、台本の StatusGain → ShockSpent → Discharge → Damage から引く。
 ///
 /// <para>第123期の観察でポンが出した×の多くは「<b>機能しているのか</b>わからない」であって
 /// 「1文が読めない」ではない。<b>「1文が読めるか」と「機能しているか」は別の問い</b>で、
@@ -102,10 +103,29 @@ public partial class ScorePanel : PanelContainer
             label[id] = e.Text ?? id;
         }
 
-        Section(result, team, label, BattleContext.PlayerTeam, "味方", UiKit.Player);
-        Section(result, team, label, BattleContext.EnemyTeam, "敵", UiKit.Enemy);
+        var instanceTeams = opening.ToDictionary(o => o.InstanceId, o => o.Team);
+        var instanceUnits = opening.ToDictionary(o => o.InstanceId, o => o.UnitId);
+        foreach (BattleEvent e in result.Events)
+            if (e.Kind == BattleEventKind.Summon && e.TargetId is int id && e.Team is int side)
+            {
+                instanceTeams[id] = side;
+                instanceUnits[id] = SummonIdOf(e.Text) ?? $"summon-{e.Text}";
+            }
+        var byInstance = DischargePresentation.Count(result.Events, instanceTeams);
+        var discharge = new Dictionary<string, DischargePresentation.Credit>();
+        foreach (var (instance, unit) in instanceUnits)
+        {
+            var old = discharge.GetValueOrDefault(unit);
+            var credit = byInstance.GetValueOrDefault(instance);
+            discharge[unit] = new(old.Enemy + credit.Enemy, old.Ally + credit.Ally);
+        }
+        Section(result, team, label, discharge, BattleContext.PlayerTeam, "味方", UiKit.Player);
+        Section(result, team, label, discharge, BattleContext.EnemyTeam, "敵", UiKit.Enemy);
 
         _body.AddChild(new HSeparator());
+
+        Note("放電(敵)・放電(味)＝感電を最後に付けた駒に帰属させた放電ダメージ。敵・味方はその駒から見た陣営。"
+             + "回復に反転した分は含まない。放電は放電した駒の与(味)にも入っているため、合算すると二重になる。", UiKit.Gold);
 
         // ---------------------------------------------------------------------------
         // 読み違えを画面が作らないための注記（受け入れ条件 A6）。
@@ -150,6 +170,7 @@ public partial class ScorePanel : PanelContainer
         BattleResult result,
         IReadOnlyDictionary<string, int> team,
         IReadOnlyDictionary<string, string> label,
+        IReadOnlyDictionary<string, DischargePresentation.Credit> discharge,
         int side,
         string title,
         Color color)
@@ -164,7 +185,7 @@ public partial class ScorePanel : PanelContainer
         _body.AddChild(new HSeparator());
         _body.AddChild(UiKit.Text(title, 13, color));
 
-        var grid = new GridContainer { Columns = Columns.Length + 1 };
+        var grid = new GridContainer { Columns = Columns.Length + 3 };
         grid.AddThemeConstantOverride("h_separation", 10);
         grid.AddThemeConstantOverride("v_separation", 3);
         _body.AddChild(grid);
@@ -173,6 +194,8 @@ public partial class ScorePanel : PanelContainer
         head.CustomMinimumSize = new Vector2(140, 0);
         grid.AddChild(head);
         foreach ((string h, _) in Columns) grid.AddChild(Cell(h, UiKit.Faint, 11));
+        grid.AddChild(Cell("放電(敵)", UiKit.Faint, 11));
+        grid.AddChild(Cell("放電(味)", UiKit.Faint, 11));
 
         foreach ((string id, UnitTally t) in rows)
         {
@@ -185,6 +208,9 @@ public partial class ScorePanel : PanelContainer
                 int v = of(t);
                 grid.AddChild(Cell(v.ToString(), v == 0 ? UiKit.Faint : UiKit.Ink, 12));
             }
+            var credit = discharge.GetValueOrDefault(id);
+            foreach (int value in new[] { credit.Enemy, credit.Ally })
+                grid.AddChild(Cell(value.ToString(), value == 0 ? UiKit.Faint : UiKit.Ink, 12));
         }
     }
 
