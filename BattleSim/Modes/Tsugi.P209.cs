@@ -11,6 +11,7 @@ using static Common;
 //     dotnet run --project BattleSim -c Release 0 tsugi swap3     # リリの席にツギ（L ／ R0〜R3）
 //     dotnet run --project BattleSim -c Release 0 tsugi ledger3   # 反射の帳簿（版ごと・波ごと）＋ 強すぎの確認
 //     dotnet run --project BattleSim -c Release 0 tsugi check3 [第208期のbalance.md]  # 自己検査
+//     dotnet run --project BattleSim -c Release 0 tsugi stall3   # 差し替えの `反撃改` の膠着の内訳（事後に足した）
 //
 // 版は札の差し替えだけ: R0 ＝ [Plank, PlankScorch, Scrap, PlankRebound]（第208期 U3）／ R1 ＝ ＋ PlankThick25 ／
 // R2 ＝ ＋ PlankThick（規定・50%）／ R3 ＝ ＋ PlankThick100。ドハはどれも規定（`SharerArmored`）。
@@ -45,6 +46,7 @@ static partial class TsugiDiag
             case "swap3": Swap209(); handled = true; return;
             case "ledger3": Ledger209(); handled = true; return;
             case "check3": Check209(arg); handled = true; return;
+            case "stall3": Stall209(); handled = true; return;
         }
     }
 
@@ -416,5 +418,51 @@ static partial class TsugiDiag
         }
         Console.WriteLine();
         Console.WriteLine(all ? "**全項目 ○。**" : "**× がある。**");
+    }
+
+    // =================================================================================
+    // stall3 —— 事後: 差し替えの `反撃改` の膠着が倍率で減らない理由
+    // =================================================================================
+
+    static void Stall209()
+    {
+        const string Row = "反撃改 (ドハ×カド)";
+        Console.WriteLine("# 第209期 `tsugi stall3` —— 差し替えの `" + Row + "` の膠着（事後に足した・seed 0..199）");
+        Console.WriteLine();
+        Console.WriteLine("**膠着** ＝ 30 ターン上限の負け（200 戦中）。以下の量は**膠着した戦だけ**の1戦あたり。**与** ＝ 味方が敵に与えた総量 ／ **反射** ＝ そのうち反射 ／ **棘** ＝ カドの与えた量 ／ "
+                          + "**敵の回復** ＝ 敵が回復で実際に増やした HP ／ **量/本** ＝ 反射1本の量 ／ **残り** ＝ 反射の瞬間の残り破片の平均。");
+        Console.WriteLine();
+        Console.WriteLine("| 波 | 版 | 勝率 | 膠着 | 与 | 反射 | 棘 | 敵の回復 | 反射/戦 | 量/本 | 残り |");
+        Console.WriteLine("|--:|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        var (_, f) = CompareBuilds().First(r => r.Name == Row);
+        var players = f.Occupied().Select(o => o.Def.Id).ToHashSet();
+        foreach (int st in new[] { 1, 3, 4 })
+        {
+            Formation enemy = EnemyCatalog.Stages[st].Enemy;
+            var foes = enemy.Occupied().Select(o => o.Def.Id).ToHashSet();
+            foreach (var (tag, def) in new[] { ("L", (UnitDef?)null) }.Concat(RVersions.Select(v => (v.Tag, (UnitDef?)v.Tsugi))))
+            {
+                Formation g = def is null ? f : ApplyR(f, "lili", def);
+                int wins = 0, stalls = 0; double dealt = 0, refl = 0, thorn = 0, heal = 0, cnt = 0, nom = 0, rest = 0;
+                for (int seed = 0; seed < Seeds; seed++)
+                {
+                    var r = BattleEngine.Run(g, enemy, seed, verbose: false);
+                    if (r.PlayerWon) wins++;
+                    if (r.PlayerWon || r.Turns < BattleEngine.MaxTurns) continue;
+                    stalls++;
+                    foreach (var (id, t) in r.TallyByUnit)
+                    {
+                        if (players.Contains(id) || id == "tsugi") { dealt += t.DamageToEnemy; refl += t.ReflectDealt; cnt += t.ReflectCount; nom += t.ReflectNominal; rest += t.ReflectRestSum; }
+                        if (foes.Contains(id)) heal += t.Healed;
+                    }
+                    thorn += r.TallyByUnit.GetValueOrDefault("kado")?.DamageToEnemy ?? 0;
+                }
+                double d = Math.Max(1, stalls);
+                Console.WriteLine("| " + (st + 1) + " | " + tag + " | " + F1(100.0 * wins / Seeds) + " | " + stalls + " | " + (dealt / d).ToString("F0") + " | " + (refl / d).ToString("F0") + " | "
+                                  + (thorn / d).ToString("F0") + " | " + (heal / d).ToString("F0") + " | " + (cnt / d).ToString("F1") + " | "
+                                  + (cnt == 0 ? "—" : (nom / cnt).ToString("F1")) + " | " + (cnt == 0 ? "—" : (rest / cnt).ToString("F1")) + " |");
+            }
+        }
+        Console.WriteLine();
     }
 }
