@@ -516,6 +516,7 @@ if (focusId == "sora186") { Sora186Diag.Run(args.Length > 2 ? args[2] : "phase0"
 if (focusId == "escale") { EnemyScaleDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 // kata モード（第188期） —— ナタの枠に新駒「触媒のカタ」（起爆）。本体は `Modes/Kata.cs`。
 if (focusId == "kata") { KataDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
+if (focusId == "shock") { ShockDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 // debuff モード（第189期） —— デバッファー3枚の転生（ネル・クビ・ハネ）。本体は `Modes/Debuff*.cs`。
 if (focusId == "debuff") { DebuffDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 // beni モード（第190期） —— 毒喰らいのベニの転生（反転の結界）。本体は `Modes/Beni*.cs`。
