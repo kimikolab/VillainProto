@@ -9,6 +9,7 @@ using BattleCore;
 //     dotnet run --project BattleSim -c Release 0 shockdigest aka   # スス／アカの台
 //     dotnet run --project BattleSim -c Release 0 shockdigest t216  # 第216期の台（O0・S0 の台本が第215期と一致すること）
 //     dotnet run --project BattleSim -c Release 0 shockdigest w217  # 第217期の台（G0＝今のシガの台本が実装の前後で一致すること）
+//     dotnet run --project BattleSim -c Release 0 shockdigest m218  # 第218期の台（M0＝今のミオの台本が実装の前後で一致すること）
 //
 // **同じファイルを第213期の worktree に置いても回る**ように書いてある（旧カタは `KataOld`、無ければ `Kata` を引く）。
 // 指紋は `BattleEvent` の公開プロパティを宣言順に並べた文字列の FNV-1a（**見せ場 `Highlight` の `Text` だけは除く**
@@ -21,7 +22,20 @@ static class ShockDigestDiag
     {
         var fKataOld = typeof(UnitCatalog).GetField("KataOld");
         UnitDef kata = (UnitDef)(fKataOld ?? typeof(UnitCatalog).GetField("Kata")!).GetValue(null)!;
-        var benches = mode == "w217"
+        var benches = mode == "m218"
+            ? new (string, Formation)[]
+            {
+                // 第218期（受け入れ 1）: M0（今のミオ）の台本が実装の前後で一致すること。席は Phase 0 で M0 に選んだ仮の席。
+                ("M台1 X", Formation.Build(front1: UnitCatalog.Mio, front3: UnitCatalog.Kubi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Tou)),
+                ("M台2 X", Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Kubi, center: UnitCatalog.Mio, back1: UnitCatalog.Kata, back3: UnitCatalog.Sid)),
+                ("M台2 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.Kata, d: UnitCatalog.Sid, e: UnitCatalog.Kubi)),
+                ("M台3 ポンX", MireDiag.PonX(UnitCatalog.Mio)),
+                ("M台4 ポンP2", MireDiag.PonP2(UnitCatalog.Mio)),
+                ("M台5 毒", Common.CompareBuilds().First(r => r.Name == "毒 (グザ×ミオ×ラウ)").F),
+                ("M台5 毒+耐久", Common.CompareBuilds().First(r => r.Name == "毒+耐久 (ベニ×トウ)").F),
+                ("M台5 刻み×澱み", Common.CompareBuilds().First(r => r.Name == "刻み×澱み (ノミ×ミオ)").F),
+            }
+            : mode == "w217"
             ? new (string, Formation)[]
             {
                 // 第217期（受け入れ 1）: G0（今のシガ）の台本が実装の前後で一致すること。席は Phase 0 で G0 に選んだ参考の席。
