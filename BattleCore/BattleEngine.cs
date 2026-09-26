@@ -425,6 +425,15 @@ public static class ShockRule
     /// 感電で付いた痺れの印（第216期・<b>計数専用</b>・私有キー）。痺れを消費した手番で読んで消す（失った手番を感電の分と、ほかの分に分ける）。
     /// </summary>
     public const string StunKey = "shockStun";
+
+    /// <summary>
+    /// 感電の痺れのハメ防止の印（第217期・G3H・<see cref="TraitId.LiveWireGuard"/>）。<b>痺れで手番を失った手番</b>に 1 を立て、
+    /// <b>その駒の次の手番の頭</b>で 0 に戻す（竦みの <c>ShameTrait.GuardKey</c> と同じ形）。立っている間は感電で痺れない。私有キー（<see cref="StatusKeys.All"/> に入れない）。
+    /// </summary>
+    public const string GuardKey = "shockStunGuard";
+
+    /// <summary>手番を続けて失った数（第217期・<b>計数専用</b>・私有キー）。手番を失うたびに +1、動いたら 0。</summary>
+    public const string StallRunKey = "stallRun";
 }
 
 /// <summary>
@@ -1016,6 +1025,78 @@ public sealed class BattleContext
     /// <summary>開戦の撒きの札（<see cref="OpeningSprayTrait"/>）が呼ぶ（<b>計数専用</b>）。</summary>
     public void NoteOpeningLive() => _openingLive = true;
 
+    // =================================================================================
+    // 第217期 —— 鞭（責め鞭・鞭・電気鞭のシガ）
+    //
+    // **2倍の判定はここの `WhipAmount` の1本**（`PerformAttackBody` が主目標と巻き込みの `ApplyDamage` の直前に呼ぶ）。
+    // 1回の攻撃の間だけ枠（`WhipSwing`）を立て、当たった駒と「振り始めに感電していたか」を控える。
+    // 怖気づき・悲鳴・電気鞭は枠を読む札の側（`OnAfterAttack`）。**保持者（`Scourge`）がいなければ `_whipLive` の比較1つで抜ける。**
+    // =================================================================================
+
+    bool _whipLive;
+
+    /// <summary>感電の痺れのハメ防止（G3H・<see cref="TraitId.LiveWireGuard"/>）の保持者が戦闘に出たか。</summary>
+    bool _shockStunGuard;
+
+    /// <summary>1回の攻撃（鞭の一振り）の枠。<b>乱数を引かない。</b></summary>
+    public sealed class WhipSwing
+    {
+        public required UnitState Actor { get; init; }
+        /// <summary>振り始めに感電していた（電気鞭の札を持つときだけ真）。</summary>
+        public bool Wired { get; init; }
+        /// <summary>感電している敵も2倍に数える（参考 G3K）。</summary>
+        public bool CountShock { get; init; }
+        /// <summary>当たった駒（主目標が先頭・巻き込みは当てた順）。</summary>
+        public readonly List<UnitState> Hits = new();
+        public long PopsBefore;
+    }
+
+    WhipSwing? _whip;
+
+    /// <summary>いま振っている鞭の枠（無ければ null）。札が <c>OnAfterAttack</c> で読む。</summary>
+    public WhipSwing? Whip => _whip;
+
+    /// <summary>当てる前の2倍（当たる駒ごと・加算で「量＋量」）。当たった駒を枠に控える。</summary>
+    int WhipAmount(WhipSwing w, UnitState t, int amount)
+    {
+        w.Hits.Add(t);
+        UnitTally wt = TallyOf(w.Actor);
+        wt.WhipHits++;
+        bool bound = TormentTrait.IsBound(this, t);
+        bool shocked = !bound && w.CountShock && t.RawCounter(StatusKeys.Shock) > 0;
+        if (!bound && !shocked) return amount;
+        wt.WhipDoubled++;
+        if (shocked) wt.WhipDoubledShock++;
+        wt.WhipBonus += amount;
+        Log($"    {w.Actor.Name} の鞭が動けない {t.Name} に二重に入る（{amount} → {amount + amount}）", LogKind.Highlight, w.Actor);
+        return amount + amount;
+    }
+
+    /// <summary>
+    /// 電気鞭（第217期・<see cref="LiveWireTrait"/> が呼ぶ）。当たって生きている敵すべてに感電を付け（<see cref="MarkShock"/>）、
+    /// 自分の感電を<b>弾けさせずに消す</b>（放電しない・痺れない）。台本は <c>BattleEventKind.LiveWire</c>（表示専用）の後に
+    /// 敵ごとの <c>StatusGain</c>（<c>shock</c>・書き手はシガ）が並ぶ。<b>乱数を引かない。</b>
+    /// </summary>
+    public void LiveWire(UnitState self, WhipSwing w)
+    {
+        var targets = w.Hits.Distinct().Where(h => h.IsAlive && h.TeamId != self.TeamId).ToList();
+        UnitTally t = TallyOf(self);
+        t.WiredSwings++;
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.LiveWire, Turn = _turn, ActorId = self.InstanceId, TargetId = self.InstanceId,
+            Amount = targets.Count, Team = self.TeamId, HpAfter = Math.Max(0, self.Hp),
+        });
+        Log($"    {self.Name} の鞭が身の雷を移す（{targets.Count} 体）", LogKind.Trigger);   // 見せ場の出来事は LiveWire（Highlight にすると間に1件挟まる）
+        foreach (UnitState u in targets)
+            if (MarkShock(u, self)) t.WiredMarked++;
+        self.SetCounter(StatusKeys.Shock, 0);   // 弾けさせずに消す（ShockTrigger を通さない）
+    }
+
+    public void NoteWhipCowered(UnitState u) => TallyOf(u).WhipCowered++;
+    public void NoteWhipSpared(UnitState u) => TallyOf(u).WhipWiredSpared++;
+    public void NoteWhipScream(UnitState u, bool fromSplash) { if (fromSplash) TallyOf(u).WhipScreamSplash++; }
+
     /// <summary>
     /// 次の <c>ApplyDamage</c> 1回にだけ効く札（逸らしの <c>_deflectFrom</c> と同じ作法・<c>ApplyDamageBody</c> の最初の行で読んで消す）。
     /// 0 通常 ／ 1 雷（起爆しない）／ 2 刻み（K2 のときだけ起爆する）／ 3 放電。
@@ -1046,6 +1127,7 @@ public sealed class BattleContext
         target.SetCounter(StatusKeys.Shock, 1);
         UnitTally wt = TallyOf(writer);
         if (writer.TeamId == target.TeamId) wt.ShockOnAlly++; else wt.ShockOnFoe++;
+        TallyOf(target).ShockReceived++;   // 第217期（計数のみ）
         EmitStatusGain(target, StatusKeys.Shock, 1, writer);   // 表示専用
         return true;
     }
@@ -1136,7 +1218,7 @@ public sealed class BattleContext
         (rt.ChainSizeHist ??= new long[12])[Math.Min(size, 11)]++;
         if (deepest > rt.ChainDepthMax) rt.ChainDepthMax = deepest;
         if (rootKind == 1) rt.ShockTriggeredTick++;
-        else if (initiator is not null) TallyOf(initiator).ShockTriggered++;
+        else if (initiator is not null) { UnitTally it = TallyOf(initiator); it.ShockTriggered++; it.ShockTriggeredUnits += size; }   // 第217期: 大きさも
         else rt.ShockTriggeredOther++;
     }
 
@@ -1150,6 +1232,8 @@ public sealed class BattleContext
         UnitTally t = TallyOf(x);
         if (!x.IsAlive) { t.ShockStunDead++; return; }
         if (_shockStun == 1 && depth != 0) return;
+        // 第217期（G3H）: 痺れが明けた駒は、次の自分の手番まで感電で痺れない。保持者がいなければ比較1つで抜ける。
+        if (_shockStunGuard && x.RawCounter(ShockRule.GuardKey) > 0) { t.ShockStunGuarded++; return; }
         if (_shockStun == 3 && Roll(100) >= ShockRule.StunHalfPercent) { t.ShockStunMissed++; return; }
         if (x.RawCounter(StatusKeys.Stun) > 0) { t.ShockStunAlready++; return; }
         t.ShockStunned++;
@@ -5999,6 +6083,8 @@ public sealed class BattleContext
         // 第185期: 組み付き・見せしめ（手番の頭の2つのキーと標的の選好を短絡させる）／踏みしめ（範囲の盾・層の軽減）／
         // 据えた足（入れ替えの空振り）。**保持者がいなければ比較1つで抜ける**——既存の行が 0 件差分であることの根拠。
         if (u.HasTrait(TraitId.Grapple) || u.HasTrait(TraitId.Shame)) _restrainLive = true;
+        if (u.HasTrait(TraitId.Scourge)) _whipLive = true;                 // 第217期（鞭の枠と2倍）
+        if (u.HasTrait(TraitId.LiveWireGuard)) _shockStunGuard = true;     // 第217期（G3H）
         if (u.HasTrait(TraitId.Footing)) _shieldHolders.Add(u);
         if (u.HasTrait(TraitId.Planted)) _plantedLive = true;
         if (u.HasTrait(TraitId.Daunt)) _dauntLive = true;   // 第189期（萎縮の消費を短絡させる）
@@ -6906,7 +6992,8 @@ public sealed class BattleContext
         // pool は1体も足さない・引かない（前列の制約の内側）。標の段・庇いの鎖はこの後ろ。
         // 効いた手番は pool の Roll を引かない（執着・断ちと同じ）。**保持者がいなければ比較1つで抜ける。**
         UnitState? shamed = _restrainLive && fixated is null && severed is null
-                            && pattern == AttackPattern.Single && attacker.HasTrait(TraitId.Shame)
+                            && (pattern == AttackPattern.Single || (_whipLive && pattern == AttackPattern.Sweep && attacker.HasTrait(TraitId.Lash)))   // 第217期: 鞭は薙ぎにも
+                            && attacker.HasTrait(TraitId.Shame)
             ? ShameTrait.Preferred(this, pool)
             : null;
         if (shamed is not null) TallyOf(attacker).ShamePicks++;
@@ -7553,6 +7640,22 @@ public sealed class BattleContext
 
         int dealt = atk;
 
+        // 第217期: 鞭の一振りの枠（責め鞭の保持者だけ）。**振り始めに感電していたか**をここで控える（電気鞭）。
+        // 入れ子（一振りの途中で別の駒が攻撃する）に備えて前の枠を退避する。**保持者がいなければ比較1つで抜ける。**
+        WhipSwing? prevWhip = _whip, whip = null;
+        if (_whipLive && actor.HasTrait(TraitId.Scourge))
+        {
+            whip = new WhipSwing
+            {
+                Actor = actor,
+                Wired = actor.HasTrait(TraitId.LiveWire) && actor.RawCounter(StatusKeys.Shock) > 0,
+                CountShock = actor.HasTrait(TraitId.ScourgeShock),
+                PopsBefore = TallyOf(actor).ShockTriggeredUnits,
+            };
+            _whip = whip;
+            TallyOf(actor).WhipSwings++;
+        }
+
         // 範囲の盾（第185期・バン）。**この一撃が盾の持ち主にも当たるか**を、振る前の盤面で決める
         // （巻き込みの顔ぶれは主目標の着弾の後に引き直されるが、盾が「同時に当たる」かはこの時点で読む）。
         // **保持者がいなければ比較1つで抜ける**——SecondaryTargets は乱数を引かないので、引いても盤面は動かない。
@@ -7563,6 +7666,7 @@ public sealed class BattleContext
         // 呪いの共有（第96期）は**単体攻撃の一撃そのもの**にだけ札を付ける。
         // 副次目標（薙ぎ・全体）と貫きの段には付けない——範囲が二乗で伸びるのを止める構造。
         int first = dealt;
+        if (whip is not null) first = WhipAmount(whip, target, first);   // 第217期（当てる前の2倍）
         UnitState firstRecv = shield is null ? target : ShieldRecv(shield, target, ref first);
         ApplyDamage(firstRecv, first, actor, singleHit: pattern == AttackPattern.Single, pattern: pattern);
 
@@ -7581,9 +7685,14 @@ public sealed class BattleContext
                 TallyOf(actor).ReaderSplash++;
             Log($"    刃が {extra.Name} まで届く", LogKind.Damage);
             int share = Math.Max(1, dealt * SecondaryPercent / 100);
+            if (whip is not null) share = WhipAmount(whip, extra, share);   // 第217期（当てる前の2倍・当たる駒ごと）
             UnitState recv = shield is null ? extra : ShieldRecv(shield, extra, ref share);
             ApplyDamage(recv, share, actor, pattern: pattern);
         }
+
+        // 第217期・自己検査用（計数のみ）: 札が「動けるか」を読む時点の値を控える。
+        bool whipPrimBound = whip is not null && TormentTrait.IsBound(this, target);
+        bool whipSplashMovable = whip is not null && whip.Hits.Skip(1).Any(h => !TormentTrait.IsBound(this, h));
 
         // 特性の発動は攻撃1回につき1度、主目標に対してのみ。
         // 範囲攻撃のたびに巻き込みや毒が複数回発動すると、範囲持ちが即座に壊れる。
@@ -7592,6 +7701,20 @@ public sealed class BattleContext
             TraitMark m = this.BeginTrait(t.Id, actor);   // 第94期 (T2) の印
             t.OnAfterAttack(this, actor, target, dealt);
             this.EndTrait(m);
+        }
+
+        if (whip is not null)
+        {
+            UnitTally wt = TallyOf(actor);
+            int hits = whip.Hits.Count, pops = (int)(wt.ShockTriggeredUnits - whip.PopsBefore);
+            // 自己検査用（**計数のみ**）: 主目標が動けず巻き込みに動ける敵がいた振り ／ 電気鞭の後に感電が残った振り ／ 怖気づくべき振り（主目標が動ける・感電していない）。
+            // 「動けるか」は札が読むのと同じ時点（`OnAfterAttack` の前）で控えてある（悲鳴の竦みで後から変わるため）。
+            if (whipPrimBound && whipSplashMovable) wt.WhipCheckSplashMovable++;
+            if (whip.Wired && actor.RawCounter(StatusKeys.Shock) > 0) wt.WhipCheckWiredLeft++;
+            if (!whipPrimBound && !whip.Wired) wt.WhipCheckShouldCower++;
+            (wt.WhipHitsHist ??= new long[8])[Math.Min(hits, 7)]++;
+            (wt.WhipPopsHist ??= new long[8])[Math.Min(pops, 7)]++;
+            _whip = prevWhip;
         }
     }
 
@@ -8748,6 +8871,13 @@ public sealed class BattleContext
         try
         {
             TurnOutcome outcome = TakeTurnCore(actor);
+            // 第217期（**計数のみ**）: 手番を続けて失った数。見せしめか感電がある戦闘でだけ数える（私有キー・誰も読んで分岐しない）。
+            if (_restrainLive || _shockLive)
+            {
+                int run = outcome == TurnOutcome.Stalled ? actor.RawCounter(ShockRule.StallRunKey) + 1 : 0;
+                actor.SetCounter(ShockRule.StallRunKey, run);
+                if (run > tt.StallRunMax) tt.StallRunMax = run;
+            }
             switch (outcome)
             {
                 case TurnOutcome.Attack: tt.TurnAttacks++; break;
@@ -8776,6 +8906,8 @@ public sealed class BattleContext
     {
         // 第185期: 竦みのハメ防止の印は「次の自分の手番の頭」で落とす（ShameTrait.GuardKey）。
         if (_restrainLive && actor.RawCounter(ShameTrait.GuardKey) > 0) actor.SetCounter(ShameTrait.GuardKey, 0);
+        // 第217期（G3H）: 感電の痺れのハメ防止の印も同じく「次の自分の手番の頭」で落とす。
+        if (_shockStunGuard && actor.RawCounter(ShockRule.GuardKey) > 0) actor.SetCounter(ShockRule.GuardKey, 0);
 
         if (actor.RawCounter(StatusKeys.Stun) > 0)
         {
@@ -8787,6 +8919,7 @@ public sealed class BattleContext
             actor.SetCounter(StatusKeys.IdleTurn, Turn);
             TallyOf(actor).StallStun++;   // 第105期（計数のみ）
             if (actor.RawCounter(ShockRule.StunKey) > 0) { TallyOf(actor).StallShockStun++; actor.SetCounter(ShockRule.StunKey, 0); }   // 第216期（計数のみ）
+            if (_shockStunGuard) actor.SetCounter(ShockRule.GuardKey, 1);   // 第217期（G3H）: 痺れが明けた駒は次の自分の手番まで感電で痺れない
             // 第146期 段0（表示専用）: 手番を失った瞬間。付与は別のターンなので別の出来事として打つ。
             EmitStun(actor, StunLabels.Lost, null);
             Log($"  {actor.Name} は痺れて動けない", LogKind.Status);

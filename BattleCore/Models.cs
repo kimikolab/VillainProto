@@ -1830,6 +1830,20 @@ public sealed class UnitTally
     /// <b>受けた駒の側</b>: 開戦の撒きの層の刻み（名目）を <c>OpeningTickInverted</c>（ベニの反転で回復に）・<c>OpeningTickBitten</c>（削られた）に分け、
     /// <c>OpeningHealed</c> は反転で実際に癒えた分（按分）。
     /// </summary>
+    /// <summary>
+    /// 第217期（<b>計数専用</b>）。<b>鞭の保持者（シガ）の側</b>: <c>WhipSwings</c> 振った回数 ／ <c>WhipHits</c> 当たった延べ ／
+    /// <c>WhipDoubled</c> 2倍で入った延べ（うち <c>WhipDoubledShock</c> は参考 G3K の「感電しているから」）／ <c>WhipBonus</c> 2倍で足した名目 ／
+    /// <c>WhipCowered</c> 怖気づいた ／ <c>WhipWiredSpared</c> 感電していて怖気づかなかった ／ <c>WhipScreamSplash</c> 悲鳴の出どころが主目標でなく巻き込んだ敵 ／
+    /// <c>WiredSwings</c> 電気鞭を振った（自分の感電を使い切った）／ <c>WiredMarked</c> 電気鞭で新しく付けた感電 ／
+    /// <c>WhipHitsHist</c>[数]・<c>WhipPopsHist</c>[数] 1振りで当たった数・1振りで弾かせた感電の数（連鎖の延べ）。
+    /// <b>だれの側でも</b>: <c>ShockReceived</c> 新しく感電した回数 ／ <c>ShockTriggeredUnits</c> 自分の一撃が起こした連鎖の大きさの合計 ／
+    /// <c>ShockStunGuarded</c> ハメ防止（G3H）で感電の痺れを受けなかった ／ <c>StallRunMax</c> 手番を続けて失った最大（足し込みは最大）。
+    /// </summary>
+    public long WhipSwings, WhipHits, WhipDoubled, WhipDoubledShock, WhipBonus, WhipCowered, WhipWiredSpared, WhipScreamSplash,
+                WiredSwings, WiredMarked, ShockReceived, ShockTriggeredUnits, ShockStunGuarded, StallRunMax,
+                WhipCheckSplashMovable, WhipCheckWiredLeft, WhipCheckShouldCower;   // 自己検査用（`whip check`）
+    public long[]? WhipHitsHist, WhipPopsHist;
+
     public long ShockStunned, ShockStunAlready, ShockStunDead, ShockStunMissed, StallShockStun,
                 OpeningFires, OpeningFoeLayers, OpeningAllyLayers, OpeningBurnLit,
                 OpeningTickInverted, OpeningTickBitten, OpeningHealed;
@@ -2659,6 +2673,14 @@ public sealed class UnitTally
         ThunderCastsT1 += o.ThunderCastsT1; ThunderHitsT1 += o.ThunderHitsT1; ThunderKindsT1 += o.ThunderKindsT1;   // 第216期
         ShockStunned += o.ShockStunned; ShockStunAlready += o.ShockStunAlready; ShockStunDead += o.ShockStunDead;
         ShockStunMissed += o.ShockStunMissed; StallShockStun += o.StallShockStun;
+        // 第217期
+        WhipSwings += o.WhipSwings; WhipHits += o.WhipHits; WhipDoubled += o.WhipDoubled; WhipDoubledShock += o.WhipDoubledShock;
+        WhipBonus += o.WhipBonus; WhipCowered += o.WhipCowered; WhipWiredSpared += o.WhipWiredSpared; WhipScreamSplash += o.WhipScreamSplash;
+        WiredSwings += o.WiredSwings; WiredMarked += o.WiredMarked; ShockReceived += o.ShockReceived; ShockTriggeredUnits += o.ShockTriggeredUnits;
+        ShockStunGuarded += o.ShockStunGuarded; if (o.StallRunMax > StallRunMax) StallRunMax = o.StallRunMax;
+        WhipCheckSplashMovable += o.WhipCheckSplashMovable; WhipCheckWiredLeft += o.WhipCheckWiredLeft; WhipCheckShouldCower += o.WhipCheckShouldCower;
+        AddHist(ref WhipHitsHist, o.WhipHitsHist);
+        AddHist(ref WhipPopsHist, o.WhipPopsHist);
         OpeningFires += o.OpeningFires; OpeningFoeLayers += o.OpeningFoeLayers; OpeningAllyLayers += o.OpeningAllyLayers; OpeningBurnLit += o.OpeningBurnLit;
         OpeningTickInverted += o.OpeningTickInverted; OpeningTickBitten += o.OpeningTickBitten; OpeningHealed += o.OpeningHealed;
         AddHist(ref DeathTurnHist, o.DeathTurnHist);   // 第216期
@@ -3059,7 +3081,14 @@ public enum BattleEventKind
     /// <c>Slot</c> = 連鎖の何段目の放電か（1 始まり）。ベニの結界で反転したときは <c>SourceTrait = Inverse</c>・<c>InverterId</c> が立ち、直後は <c>Heal</c>。
     /// それ以外は直後に <c>Damage</c>（出どころ ＝ 放電した駒・同士討ち）。<b>どの規則も読まない。</b>
     /// </summary>
-    Discharge
+    Discharge,
+
+    /// <summary>
+    /// 電気鞭（第217期・シガ・<b>表示専用</b>）。鞭の一振りを打ち終えた後（弾けた連鎖の後）に1件。<c>ActorId</c> = <c>TargetId</c> = シガ、
+    /// <c>Amount</c> = 感電を移す相手の数（当たって生きている敵）、<c>HpAfter</c> = シガの HP。シガ自身の感電はここで<b>弾けずに</b>消える（<c>ShockSpent</c> は出ない）。
+    /// 直後に敵ごとの感電の <c>StatusGain</c>（キー <c>shock</c>・<c>ActorId</c> ＝ シガ・既に感電していた敵には出ない）。<b>どの規則も読まない。</b>
+    /// </summary>
+    LiveWire
 }
 
 /// <summary><see cref="BattleEventKind.Plank"/> の <c>Text</c>（第207期・<b>表示専用</b>）。</summary>

@@ -253,6 +253,11 @@
 | `ShockStun` | - |
 | `ShockStunAll` | 禍導のカタ |
 | `ShockStunHalf` | - |
+| `Scourge` | - |
+| `Lash` | - |
+| `LiveWire` | - |
+| `LiveWireGuard` | - |
+| `ScourgeShock` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

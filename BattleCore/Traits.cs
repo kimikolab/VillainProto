@@ -424,6 +424,13 @@ public enum TraitId
     ShockStunAll,    // 感電で痺れる（S2）: その連鎖で弾けた駒すべてが痺れる
     ShockStunHalf,   // 感電で痺れる（S3）: 弾けた駒それぞれが 50% で痺れる（**乱数を引くのはこの版だけ**）
 
+    // --- 第217期で足した札（**シガの版の中だけ・保持者 0 枚**。規定は第216期の追記のまま） ---
+    Scourge,        // 責め鞭（G1〜）: 動けない敵に当たる一撃は2倍（**当てる前・当たる駒ごと**に判定）。動ける主目標を打つと怖気づく（**一撃の後**・今の責め苦と同じ）
+    Lash,           // 鞭（G2〜）: 攻撃型は常に薙ぎ。見せしめの「動けない敵を優先」が薙ぎにも効き、悲鳴は当たった動けない敵から1手番に1回
+    LiveWire,       // 電気鞭（G3〜）: 振り始めに感電していれば怖気づかず、打ち終えたら当たって生きている敵すべてに感電を移し、自分の感電を消す（放電しない）
+    LiveWireGuard,  // 感電の痺れのハメ防止（G3H）: 痺れで手番を失った駒は、次の自分の手番まで感電で痺れない。**札そのものは挙動を持たない**（engine が保持を読む）
+    ScourgeShock,   // 参考（G3K・指示書に無い）: 感電している敵も2倍に数える（S2 では打てば弾けて痺れる敵）。**札そのものは挙動を持たない**
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -11900,7 +11907,26 @@ public sealed class ShameTrait : Trait
 
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
+        // 第217期: 鞭（`Lash`）の保持者は悲鳴の出どころを「主目標が動けないならその敵・でなければ当たった動けない敵のうち席番号の最小」にする
+        // （判定は一撃を打ち終えた後・今の見せしめと同じ時点）。**1手番に1回**（`LashTrait.ScreamKey`）。保持者がいなければ今までどおり。
+        if (self.HasTrait(TraitId.Lash) && ctx.Whip is { } w && w.Actor == self)
+        {
+            if (self.RawCounter(LashTrait.ScreamKey) == ctx.Turn) return;
+            UnitState? src = TormentTrait.IsBound(ctx, target) ? target
+                : w.Hits.Where(h => h != target && TormentTrait.IsBound(ctx, h)).OrderBy(h => h.Slot).FirstOrDefault();
+            if (src is null) return;
+            self.SetCounter(LashTrait.ScreamKey, ctx.Turn);
+            ctx.NoteWhipScream(self, src != target);
+            Scream(ctx, self, src);
+            return;
+        }
         if (!TormentTrait.IsBound(ctx, target)) return;   // 追い打ちが出た一撃だけ（責め苦と同じ判定）
+        Scream(ctx, self, target);
+    }
+
+    /// <summary>悲鳴（第217期に本体を切り出した・中身は第185期のまま）: <paramref name="target"/> の隣の敵全員が竦む。</summary>
+    static void Scream(BattleContext ctx, UnitState self, UnitState target)
+    {
         int cowed = 0, blocked = 0;
         foreach (UnitState u in ctx.LivingMembers(target.TeamId))
         {
@@ -12337,6 +12363,86 @@ public sealed class ShockStunAllTrait : Trait
 public sealed class ShockStunHalfTrait : Trait
 {
     public override TraitId Id => TraitId.ShockStunHalf;
+}
+
+// =====================================================================================
+// 第217期 —— 電気鞭のシガ（責め苦のシガの作り直し・札の差し替えで版を作る）
+//
+//     G0 ＝ [Torment, Shame]（今のシガ）
+//     G1 ＝ [Scourge, Shame]                          追い打ちを2倍の1発にまとめただけ
+//     G2 ＝ [Scourge, Shame, Lash]                    ＋ 鞭（常時薙ぎ）
+//     G3 ＝ [Scourge, Shame, Lash, LiveWire]           ＋ 電気鞭（規定の候補）
+//     G3H ＝ G3 ＋ LiveWireGuard                      ＋ 感電の痺れのハメ防止
+//     G3K ＝ G3 ＋ ScourgeShock（参考）               感電している敵も2倍
+//
+// **2倍の判定は engine の `PerformAttackBody` の1箇所**（主目標と巻き込みの `ApplyDamage` の直前・当たる駒ごと）。
+// 1発なので当てる前に決めるしかなく、**S2 で「打てば弾けて痺れる」敵は2倍にならない**（Phase 0 Q0-2）。
+// 怖気づき・悲鳴は**一撃を打ち終えた後**（今の責め苦・見せしめと同じ時点）。
+// =====================================================================================
+
+/// <summary>
+/// 責め鞭（第217期・G1〜）。<b>2倍は engine</b>（<c>BattleContext.Whip</c> の枠・当てる前・当たる駒ごと・加算で「量＋量」）。
+/// この札が持つのは<b>マイナスだけ</b>: 一撃を打ち終えた後、主目標が動けない敵でなければ怖気づいて1ターン動けない
+/// （今の責め苦と同じ・痺れに乗せる）。<b>電気鞭で振った一撃は怖気づかない。</b>巻き込んだ敵は数えない。
+/// </summary>
+public sealed class ScourgeTrait : Trait
+{
+    public override TraitId Id => TraitId.Scourge;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (TormentTrait.IsBound(ctx, target)) return;
+        if (ctx.Whip is { Wired: true } w && w.Actor == self)
+        {
+            ctx.NoteWhipSpared(self);
+            ctx.Log($"    {self.Name} は雷に打たれていて、動ける {target.Name} にも怖気づかない", LogKind.Trigger, self);
+            return;
+        }
+        self.SetCounter(StatusKeys.Stun, 1);
+        ctx.NoteWhipCowered(self);
+        ctx.Log($"    {self.Name} は動ける {target.Name} に怖気づいた", LogKind.FriendlyFire);
+    }
+}
+
+/// <summary>
+/// 鞭（第217期・G2〜）。攻撃型は常に薙ぎ（<see cref="ModifyPattern"/>）。見せしめの「動けない敵を優先」が薙ぎにも効く（engine の標的の段）。
+/// 悲鳴の出どころは見せしめの札の側（<see cref="ShameTrait"/>）が読む。
+/// </summary>
+public sealed class LashTrait : Trait
+{
+    /// <summary>悲鳴を上げさせたターン（1手番に1回の印・私有キー）。会戦の境界で 0 に戻す。</summary>
+    public const string ScreamKey = "lashScreamTurn";
+
+    public override TraitId Id => TraitId.Lash;
+    public override AttackPattern ModifyPattern(UnitState self, AttackPattern p) => AttackPattern.Sweep;
+    public override void OnCarryOver(UnitState self) => self.SetCounter(ScreamKey, 0);
+}
+
+/// <summary>
+/// 電気鞭（第217期・G3〜）。<b>振り始めに自分が感電していれば</b>（engine が枠の <c>Wired</c> に控える）、
+/// その一撃は怖気づかず（<see cref="ScourgeTrait"/> が読む）、<b>打ち終えたら</b>（弾けた連鎖の処理の後）
+/// 当たって生きている敵すべてに感電を付け、自分の感電を消す（<b>弾けさせずに消す・放電しない</b>）。本体は <c>BattleContext.LiveWire</c>。
+/// </summary>
+public sealed class LiveWireTrait : Trait
+{
+    public override TraitId Id => TraitId.LiveWire;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (ctx.Whip is { Wired: true } w && w.Actor == self) ctx.LiveWire(self, w);
+    }
+}
+
+/// <summary>感電の痺れのハメ防止（第217期・G3H）。<b>札そのものは挙動を持たない</b>（engine の <c>StunByShock</c> と手番の頭が保持を読む）。</summary>
+public sealed class LiveWireGuardTrait : Trait
+{
+    public override TraitId Id => TraitId.LiveWireGuard;
+}
+
+/// <summary>参考（第217期・G3K・指示書に無い）: 感電している敵も2倍に数える。<b>札そのものは挙動を持たない</b>（engine の2倍の判定が読む）。</summary>
+public sealed class ScourgeShockTrait : Trait
+{
+    public override TraitId Id => TraitId.ScourgeShock;
 }
 
 /// <summary>
@@ -13782,6 +13888,11 @@ public static class TraitCatalog
         new ShockStunTrait(),        // 第216期（S1〜S3・版の中だけ）
         new ShockStunAllTrait(),
         new ShockStunHalfTrait(),
+        new ScourgeTrait(),       // 第217期
+        new LashTrait(),
+        new LiveWireTrait(),
+        new LiveWireGuardTrait(),
+        new ScourgeShockTrait(),
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期
         new HexLeakTrait(),    // 第189期

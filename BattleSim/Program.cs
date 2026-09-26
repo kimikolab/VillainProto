@@ -1391,6 +1391,11 @@ static class TraitKeyMap
         [TraitId.ShockStun]       = new[] { UnitTally.CarryStun },                              // 第216期（S1・感電で痺れる）
         [TraitId.ShockStunAll]    = new[] { UnitTally.CarryStun },                              // 第216期（S2）
         [TraitId.ShockStunHalf]   = new[] { UnitTally.CarryStun },                              // 第216期（S3）
+        [TraitId.Scourge]         = new[] { UnitTally.CarryStun, UnitTally.CarryIdle },         // 第217期（責め苦と同じ「動けない」を読む・2倍は engine）
+        [TraitId.Lash]            = new[] { UnitTally.CarryStun, UnitTally.CarryIdle },         // 第217期（鞭・悲鳴の出どころ）
+        [TraitId.LiveWire]        = Array.Empty<int>(),                                         // 第217期（感電は専用キー）
+        [TraitId.LiveWireGuard]   = new[] { UnitTally.CarryStun },                              // 第217期（G3H・感電の痺れを止める）
+        [TraitId.ScourgeShock]    = Array.Empty<int>(),                                         // 第217期（参考・感電は専用キー）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1588,6 +1593,11 @@ static class TraitHookMap
         [TraitId.ShockStun]       = new[] { Engine },                              // 第216期（S1〜S3・起爆の中の痺れ）
         [TraitId.ShockStunAll]    = new[] { Engine },
         [TraitId.ShockStunHalf]   = new[] { Engine },
+        [TraitId.Scourge]         = new[] { "OnAfterAttack", Engine },             // 第217期（2倍は PerformAttackBody の WhipAmount）
+        [TraitId.Lash]            = new[] { "ModifyPattern", "OnCarryOver", Engine }, // 第217期（標的の選好は SelectTargetChain）
+        [TraitId.LiveWire]        = new[] { "OnAfterAttack", Engine },             // 第217期（本体は BattleContext.LiveWire）
+        [TraitId.LiveWireGuard]   = new[] { Engine },                              // 第217期（StunByShock と手番の頭）
+        [TraitId.ScourgeShock]    = new[] { Engine },                              // 第217期（WhipAmount が読む）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）
@@ -1729,6 +1739,7 @@ static class TraitEntryMap
         [TraitId.Shame]      = new[] { (UnitTally.CarryStun, Where.Foe), (UnitTally.CarryIdle, Where.Foe) },   // 第185期
         [TraitId.Torment]    = new[] { (UnitTally.CarryStun, Where.Foe),
                                        (UnitTally.CarryIdle, Where.Foe) },                  // 観測
+        [TraitId.Scourge]    = new[] { (UnitTally.CarryStun, Where.Foe), (UnitTally.CarryIdle, Where.Foe) },   // 第217期（責め苦と同じ）
         [TraitId.Avenge]     = new[] { (UnitTally.CarryMark, Where.Ally), (UnitTally.CarryHit, Where.Ally) },
         [TraitId.Vendetta]   = new[] { (UnitTally.CarryMark, Where.Ally), (UnitTally.CarryHit, Where.Ally) },   // 第184期
         [TraitId.Finisher]   = new[] { (UnitTally.CarryMark, Where.Foe) },
@@ -1804,6 +1815,7 @@ static class TraitEntryMap
         [TraitId.Paralyze]   = new[] { (UnitTally.CarryStun, Where.Foe) },
         [TraitId.Grapple]    = new[] { (UnitTally.CarryStun, Where.Foe) },                  // 第185期（開戦時の大縛り）
         [TraitId.Torment]    = new[] { (UnitTally.CarryStun, Where.Self) },
+        [TraitId.Scourge]    = new[] { (UnitTally.CarryStun, Where.Self) },                 // 第217期（怖気づき）
         [TraitId.Avenge]     = new[] { (UnitTally.CarryStun, Where.Self) },                 // 観測（ターン外の行動の代金）
         [TraitId.Condemn]    = new[] { (UnitTally.CarryStun, Where.Foe) },                  // 観測（敵側の断罪）
         [TraitId.Marker]     = new[] { (UnitTally.CarryMark, Where.Ally) },

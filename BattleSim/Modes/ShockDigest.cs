@@ -8,6 +8,7 @@ using BattleCore;
 //     dotnet run --project BattleSim -c Release 0 shockdigest k0    # 旧カタ（起爆）の台
 //     dotnet run --project BattleSim -c Release 0 shockdigest aka   # スス／アカの台
 //     dotnet run --project BattleSim -c Release 0 shockdigest t216  # 第216期の台（O0・S0 の台本が第215期と一致すること）
+//     dotnet run --project BattleSim -c Release 0 shockdigest w217  # 第217期の台（G0＝今のシガの台本が実装の前後で一致すること）
 //
 // **同じファイルを第213期の worktree に置いても回る**ように書いてある（旧カタは `KataOld`、無ければ `Kata` を引く）。
 // 指紋は `BattleEvent` の公開プロパティを宣言順に並べた文字列の FNV-1a（**見せ場 `Highlight` の `Text` だけは除く**
@@ -20,7 +21,20 @@ static class ShockDigestDiag
     {
         var fKataOld = typeof(UnitCatalog).GetField("KataOld");
         UnitDef kata = (UnitDef)(fKataOld ?? typeof(UnitCatalog).GetField("Kata")!).GetValue(null)!;
-        var benches = mode == "t216"
+        var benches = mode == "w217"
+            ? new (string, Formation)[]
+            {
+                // 第217期（受け入れ 1）: G0（今のシガ）の台本が実装の前後で一致すること。席は Phase 0 で G0 に選んだ参考の席。
+                ("W1 X", Formation.Build(front1: UnitCatalog.Mio, front3: UnitCatalog.Shiga, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Tou)),
+                ("W1 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Kata, c: UnitCatalog.Shiga, d: UnitCatalog.Tou, e: UnitCatalog.Mio)),
+                ("W2 X", Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Shiga, center: UnitCatalog.Mio, back1: UnitCatalog.Kata, back3: UnitCatalog.Kugu)),
+                ("W2 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.Kata, d: UnitCatalog.Shiga, e: UnitCatalog.Kugu)),
+                ("W3 X", Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Mio, center: UnitCatalog.Kata, back1: UnitCatalog.Shiga, back3: UnitCatalog.Guza)),
+                ("W3 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.Kata, d: UnitCatalog.Shiga, e: UnitCatalog.Guza)),
+                ("W4 責め苦", Common.CompareBuilds().First(r => r.Name == "責め苦 (トウ×シガ)").F),
+                ("W4 裂き×責め苦", Common.CompareBuilds().First(r => r.Name == "裂き×責め苦 (キリ×エグ×シガ)").F),
+            }
+            : mode == "t216"
             ? new (string, Formation)[]
             {
                 // 第216期（受け入れ 1）: O0・S0 の台本が第215期と一致すること。台C は Phase 0 で O0 に選んだ参考の席。

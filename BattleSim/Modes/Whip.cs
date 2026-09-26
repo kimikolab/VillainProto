@@ -22,6 +22,7 @@ static partial class WhipDiag
             case "phase0": Phase0(); return;
             case "run": RunImpl(arg); return;
             case "check": CheckImpl(arg); return;
+            case "log": LogImpl(arg); return;
             default:
                 Console.WriteLine("whip: モードは phase0 / run / check。");
                 return;
@@ -30,6 +31,7 @@ static partial class WhipDiag
 
     static partial void RunImpl(string arg);
     static partial void CheckImpl(string arg);
+    static partial void LogImpl(string arg);
 
     // =================================================================================
     // 台（指示書 §6.1）
