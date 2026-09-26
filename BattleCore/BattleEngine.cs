@@ -342,7 +342,7 @@ public static class StatusKeys
     public const string Plank = "plank";
 
     /// <summary>
-    /// 感電（第214期・雷のカタ）。<b>0 か 1 の二値。層を持たない</b>（層を持つと毒と同じ軸になる）。
+    /// 感電（第214期・禍導のカタ）。<b>0 か 1 の二値。層を持たない</b>（層を持つと毒と同じ軸になる）。
     /// <b>時間では消えない</b>——感電している駒が HP に届く被弾を受けると<b>起爆</b>し、感電が消えて
     /// 同じ陣営の隣接する駒すべてへ放電する（<see cref="BattleContext.ShockTrigger"/>）。
     /// <b>カタの雷と毒・燃焼の刻みは起爆しない</b>（刻みで起爆する版は札 <c>ShockTick</c>）。

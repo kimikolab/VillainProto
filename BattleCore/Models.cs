@@ -3017,7 +3017,7 @@ public enum BattleEventKind
     Plank,
 
     /// <summary>
-    /// 雷の命中（第214期・雷のカタ・<b>表示専用</b>）。カタの手番の <c>Skill</c>（「雷を落とした」）の後に、当たった順に1件ずつ並ぶ。
+    /// 雷の命中（第214期・禍導のカタ・<b>表示専用</b>）。カタの手番の <c>Skill</c>（「雷を落とした」）の後に、当たった順に1件ずつ並ぶ。
     /// <para><c>ActorId</c> = カタ、<c>TargetId</c> = 当たった敵、<c>Slot</c> = 何発目か（1 始まり・跳ねの順番）、
     /// <c>Amount</c> = 1発の名目、<c>StatusRemaining</c> = 命中の前に数えた状態異常の種類。
     /// 直後に <c>Damage</c>（出どころ ＝ カタ・型なし）、生きていれば感電の <c>StatusGain</c>（キー <c>shock</c>）。<b>どの規則も読まない。</b></para>

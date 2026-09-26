@@ -860,7 +860,7 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 雷のカタ（第214期・触媒のカタの作り直し。<b>名前とフレーバーは仮</b>——ポンが決める）。
+    /// 禍導のカタ（第214期・触媒のカタの作り直し。仮の名「雷のカタ」から<b>名前とフレーバーをポンが決めた</b>——第215期の後）。
     /// 旧カタ（起爆）は <see cref="KataOld"/> に対照として残す（<see cref="All"/> には入れない・K0）。
     ///
     /// <para><b>手番で雷を落とす</b>（<see cref="ThunderTrait"/>）: 状態異常を帯びた敵に落とし、帯びた隣の敵へ跳ねる。
@@ -874,7 +874,7 @@ public static class UnitCatalog
     public static readonly UnitDef Kata = new()
     {
         Id = "kata",
-        Name = "雷のカタ",
+        Name = "禍導のカタ",
         MaxHp = 48,
         Attack = 6,
         Speed = 6,
@@ -885,7 +885,7 @@ public static class UnitCatalog
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "雷を落とした") },
         PlusText = "状態異常を帯びた敵に雷を落とし、帯びた隣の敵へ跳ねる（帯びた種類が多いほど重い）。当たった敵には感電が残り、感電した敵は仲間の一撃で弾けて隣へ放電する",
         MinusText = "雷を落とすたび、隣の味方すべてに感電が付く / 雷そのものは感電を弾けさせない",
-        Flavor = "（仮）空が荒れる日にだけ機嫌がいい。落ちる先を選んでいるつもりでいる。"
+        Flavor = "雷を呼ぶのではない。落ちる場所を選んでいるだけ。"
     };
 
     /// <summary>

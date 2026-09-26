@@ -35,7 +35,7 @@ ShockSpent   後3（Slot 1）                    …
 
 ## 2. カタ
 
-- Id は **`kata` のまま**（立ち絵のキー）。名前は仮「雷のカタ」。攻 6・手番は `Skill`「雷を落とした」だけ（通常攻撃は出ない）
+- Id は **`kata` のまま**（立ち絵のキー）。**名前は「禍導のカタ」**（第215期の後に決定・仮名は「雷のカタ」）、フレーバー「雷を呼ぶのではない。落ちる場所を選んでいるだけ。」。攻 6・手番は `Skill`「雷を落とした」だけ（通常攻撃は出ない）
 - 旧カタ（起爆）は BattleCore に `UnitCatalog.KataOld` として残っているが、**`UnitCatalog.Kata` は雷のカタになった**。
   `BeniMioCheck.cs`（`support` の台の後1）と `SpecialsCheck.cs`（毒の台の後3）は `UnitCatalog.Kata` を使っているので、**今は雷のカタで再生される**
   （`SpecialsCheck --verify` は `SPECIALS_CHECK_OK`。**`BeniMioCheck --verify` は `support` の台の「回復の反転の陽性対照」で落ちる**——
