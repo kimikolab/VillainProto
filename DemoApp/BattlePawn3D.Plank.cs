@@ -20,10 +20,11 @@ public partial class BattlePawn3D
     private float _plankEmber;
     private Vector3? _plankAidOrigin;
     private float _plankWorkPulse;
+    private float _plankWorkForce = 1, _plankWorkRate = 1;
     internal int PlankCraftTier { get; private set; }
     internal bool PlankAidActive => _plankAidOrigin is not null;
 
-    public void RushToPlank(BattlePawn3D target)
+    public void RushToPlank(BattlePawn3D target, double hurry = 1)
     {
         if (!_alive || _victory) return;
         _plankAidOrigin = Position;
@@ -38,16 +39,21 @@ public partial class BattlePawn3D
         var destination = distance > 1.4f
             ? target.Position + right.Normalized() * (Team == 0 ? -1.25f : 1.25f) + near.Normalized() * 0.35f
             : Position;
-        BeginMotion().TweenProperty(this, "position", destination, 0.10 / Math.Max(0.1, AnimationSpeed))
+        BeginMotion().TweenProperty(this, "position", destination, 0.10 / Math.Max(0.1, AnimationSpeed * hurry))
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
     }
-    public void HammerPlank() => _plankWorkPulse = 0.085f;
-    public void ReturnFromPlank()
+    public void HammerPlank(int ordinal = 1, double hurry = 1)
+    {
+        _plankWorkPulse = 0.085f;
+        _plankWorkForce = 1 + (Math.Clamp(ordinal, 1, 3) - 1) * 0.35f;
+        _plankWorkRate = (float)hurry;
+    }
+    public void ReturnFromPlank(double hurry = 1)
     {
         if (_plankAidOrigin is not { } origin) return;
         _plankAidOrigin = null;
         if (!_alive || _victory) return;
-        BeginMotion().TweenProperty(this, "position", origin, 0.12 / Math.Max(0.1, AnimationSpeed))
+        BeginMotion().TweenProperty(this, "position", origin, 0.12 / Math.Max(0.1, AnimationSpeed * hurry))
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.InOut);
     }
     public void RaisePlankCraft(int tier)
@@ -57,11 +63,11 @@ public partial class BattlePawn3D
     }
     private void ProcessPlankWork(float delta)
     {
-        float pulse = Mathf.Sin(_plankWorkPulse / 0.085f * Mathf.Pi);
+        float pulse = Mathf.Sin(_plankWorkPulse / 0.085f * Mathf.Pi) * _plankWorkForce;
         float direction = Team == 0 ? 1 : -1;
         _sprite.Rotation += new Vector3(0, 0, -direction * pulse * 0.12f);
         _sprite.Position += new Vector3(direction * pulse * 0.055f, -pulse * 0.025f, 0);
-        _plankWorkPulse = Mathf.Max(0, _plankWorkPulse - delta);
+        _plankWorkPulse = Mathf.Max(0, _plankWorkPulse - delta * _plankWorkRate);
     }
     internal int PlankPieceCount => _plankPieces.Count;
     public Vector3 ScrapPoint => UnitId == "tsugi" ? PortraitPoint(0.30f, 0.30f) : FxPoint;

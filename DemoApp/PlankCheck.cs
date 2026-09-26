@@ -83,6 +83,8 @@ public partial class PlankCheck : Control
             Require((int)Read("_plankFlights")! == reflections, "全反射を一度ずつ飛ばす");
             Require((int)Read("_plankVolleys")! == plan.Volleys.Count, "同じ攻撃を一拍にまとめる");
             Require((int)Read("_plankPastes")! == result.Events.Count(e => e.Kind == BattleEventKind.Plank && e.Text == PlankLabels.Paste), "貼る回数が一致");
+            int openings = result.Events.Count(e => e.Kind == BattleEventKind.Plank && e.Text == PlankLabels.Opening);
+            Require(openings > 0 && (int)Read("_plankOpenings")! == openings, "出撃前の板を実台本どおり表示");
             Require((int)Read("_plankScraps")! == result.Events.Count(e => e.Kind == BattleEventKind.Plank && e.Text == PlankLabels.Scrap), "拾う回数が一致");
             int aid = result.Events.Count(e => e.Kind == BattleEventKind.Plank && e.Text == PlankLabels.FirstAid);
             int skill = result.Events.Count(e => e.Kind == BattleEventKind.Plank && e.Text == PlankLabels.Skill);
@@ -106,7 +108,7 @@ public partial class PlankCheck : Control
         Require(aids.Length > 0 && (int)Read("_plankFirstAids")! == aids.Length, "応急処置の陽性対照と表示回数");
         var aidField = (BattlefieldView3D)Read("_battleField")!;
         foreach (var group in aidTape.Events.Where(e => e.TargetId is not null && e.Kind is BattleEventKind.Damage or BattleEventKind.Heal).GroupBy(e => e.TargetId))
-            Require(aidField.FindPawn(group.Key)!.Hp == Math.Max(0, group.Last().HpAfter), "応急処置後もHPは台本に一致");
+            Require(aidField.FindPawn(group.Key)!.Hp == Math.Max(0, group.Last().HpAfter), $"応急処置後もHPは台本に一致 id={group.Key} actual={aidField.FindPawn(group.Key)!.Hp} expected={group.Last().HpAfter}");
         GD.Print($"PLANK_FIRST_AID_REPLAY_OK aid={aids.Length}");
         // 実在する応急処置を単独でも通し、回復していないことと帰還を確認する。
         aidField.BeginBattle((List<DemoOpening>)Read("_battleOpening")!, "", 0);
@@ -122,6 +124,24 @@ public partial class PlankCheck : Control
             new object?[] { aidEvent, -1, worker, patient })!;
         Require(patient.Hp == aidEvent.HpAfter && patient.PlankPieceCount > 0, "応急処置はHPを戻さず板を貼る");
         Require(worker.Position.DistanceTo(home) < 0.01f && !worker.PlankAidActive, "実入口からも帰還する");
+        foreach (int ordinal in new[] { 1, 2, 3 })
+        {
+            var repeated = new BattleEvent { Turn = aidEvent.Turn, Kind = BattleEventKind.Plank, Text = PlankLabels.FirstAid,
+                ActorId = aidEvent.ActorId, TargetId = aidEvent.TargetId, Amount = aidEvent.Amount,
+                StatusRemaining = aidEvent.StatusRemaining, HpAfter = aidEvent.HpAfter, AidOrdinal = ordinal };
+            await (Task<bool>)typeof(Main).GetMethod("PlayPlank", Flags)!.Invoke(main,
+                new object?[] { repeated, -1, worker, patient })!;
+            await Wait(0.08); // 最後の帰還Tweenを描画フレームまで待つ。
+            Require(patient.Hp == aidEvent.HpAfter && worker.Position.DistanceTo(home) < 0.01f,
+                $"応急処置{ordinal}回目でもHPを変えず帰還");
+        }
+        var opening = new BattleEvent { Turn = 0, Kind = BattleEventKind.Plank, Text = PlankLabels.Opening,
+            ActorId = aidEvent.ActorId, TargetId = aidEvent.TargetId, Amount = 20, StatusRemaining = 20 };
+        var openingTask = (Task<bool>)typeof(Main).GetMethod("PlayPlank", Flags)!.Invoke(main,
+            new object?[] { opening, -1, worker, patient })!;
+        Require(openingTask.IsCompleted && patient.PlankPieceCount > 0 && patient.Hp == aidEvent.HpAfter,
+            "出撃前は待たずに板を表示しHPを変えない");
+        GD.Print("PLANK_PHASE212_OK opening=instant aidOrdinals=1,2,3");
         main.QueueFree();
         await Wait(0.05);
     }

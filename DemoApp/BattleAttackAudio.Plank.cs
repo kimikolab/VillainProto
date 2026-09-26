@@ -3,7 +3,7 @@ using Godot;
 public partial class BattleAttackAudio
 {
     // 通常攻撃の4音枠と分離し、直後の攻撃やチャージによる中断・減衰を避ける。
-    private AudioStreamPlayer? _plankPasteVoice, _plankSkillVoice, _plankRushVoice;
+    private AudioStreamPlayer? _plankPasteVoice, _plankSkillVoice, _plankRushVoice, _plankOpeningVoice;
 
     private void PlayPlankAccent(ref AudioStreamPlayer? voice, string path, int polyphony = 1)
     {
@@ -21,6 +21,7 @@ public partial class BattleAttackAudio
         _plankPasteVoice?.Stop();
         _plankSkillVoice?.Stop();
         _plankRushVoice?.Stop();
+        _plankOpeningVoice?.Stop();
     }
     private static readonly string[] ArmorBreak = { "res://assets/audio/se/armor_break.mp3" };
     private static readonly string[] PlankPaste = { "res://assets/audio/se/tsugi_paste.mp3" };
@@ -36,5 +37,12 @@ public partial class BattleAttackAudio
     public void PlayPlankSkillUp() => PlayPlankAccent(ref _plankSkillVoice, PlankSkillUp[0]);
     public void PlayPlankRush() => PlayPlankAccent(ref _plankRushVoice, PlankRush[0]);
     // 既存の同音連続回避により、2種類なら必ず交互になる。
-    public void PlayPlankReflect() => PlayVariation(PlankReflect);
+    public void PlayPlankReflect(int amount = 13)
+        => PlayVariation(PlankReflect, Mathf.Lerp(0, 6, Mathf.Clamp((amount - 6) / 32f, 0, 1)));
+    public void PlayPlankOpening()
+    {
+        if (_plankOpeningVoice?.Playing == true) return; // 前衛全員分を短い一打にまとめる。
+        PlayPlankAccent(ref _plankOpeningVoice, PlankPaste[0]);
+        _plankOpeningVoice!.VolumeDb = -10;
+    }
 }

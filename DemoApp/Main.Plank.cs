@@ -9,14 +9,14 @@ public partial class Main
     private PlankPresentation _planks = new(Array.Empty<BattleEvent>());
     private readonly HashSet<int> _plankKnockouts = new();
     private int _plankVolleys, _plankFlights, _plankPastes, _plankScraps;
-    private int _plankFirstAids, _plankSkillUps;
+    private int _plankFirstAids, _plankSkillUps, _plankOpenings;
 
     private void ResetPlankPlayback()
     {
         _planks = new PlankPresentation(_result!.Events);
         _plankKnockouts.Clear();
         _plankVolleys = _plankFlights = _plankPastes = _plankScraps = 0;
-        _plankFirstAids = _plankSkillUps = 0;
+        _plankFirstAids = _plankSkillUps = _plankOpenings = 0;
     }
 
     private async Task<bool> PlayPlank(BattleEvent e, int index, BattlePawn3D? actor, BattlePawn3D? target)
@@ -36,32 +36,44 @@ public partial class Main
         int token = _playToken;
         switch (e.Text)
         {
+            case PlankLabels.Opening:
+                _plankOpenings++;
+                ApplyPlankPatch(e, null, target);
+                if (target is not null)
+                {
+                    _battleField.PlankImpact(target, 0, _speed * 1.5);
+                    _battleField.PlayPlankOpeningSound();
+                }
+                // 開戦の段取りは待ちを足さず、その場で留める。在庫は消費しない。
+                break;
             case PlankLabels.FirstAid:
                 _plankFirstAids++;
                 if (actor is null || target is null) break;
-                actor.RushToPlank(target);
+                int ordinal = Math.Clamp(e.AidOrdinal ?? 1, 1, 3);
+                double hurry = 1 + (ordinal - 1) * 0.22;
+                actor.RushToPlank(target, hurry);
                 if (actor != target && actor.Position.DistanceTo(target.Position) > 1.4f)
                     _battleField.PlayPlankRushSound();
                 try
                 {
-                    await Delay(0.10);
+                    await Delay(0.10 / hurry);
                     if (token != _playToken || !_battleMode) return true;
                     // 手番外の処置は「駆け寄り→2打」。HPは回復させず、台本の破片だけを反映。
                     for (int hit = 0; hit < 2; hit++)
                     {
-                        actor.HammerPlank();
+                        actor.HammerPlank(ordinal, hurry);
                         if (hit == 0) ApplyPlankPatch(e, actor, target);
                         _battleField.PlankImpact(target, e.Amount / 2, _speed);
                         _battleField.PlayPlankPasteSound();
-                        await Delay(0.085);
+                        await Delay(0.085 / hurry);
                         if (token != _playToken || !_battleMode) return true;
                     }
                 }
                 finally
                 {
-                    if (token == _playToken && Godot.GodotObject.IsInstanceValid(actor)) actor.ReturnFromPlank();
+                    if (token == _playToken && Godot.GodotObject.IsInstanceValid(actor)) actor.ReturnFromPlank(hurry);
                 }
-                await Delay(0.12);
+                await Delay(0.12 / hurry);
                 break;
             case PlankLabels.Skill:
                 _plankSkillUps++;
@@ -95,7 +107,7 @@ public partial class Main
                     int total = volley.Sum(j => events[j].Amount);
                     _battleField.PlankReflectImpact(target, total, _speed);
                     target.AnimateHit();
-                    _battleField.PlayPlankReflectSound();
+                    _battleField.PlayPlankReflectSound(total);
                     int damage = _planks.DamageToReflect.Where(pair => volley.Contains(pair.Value)).Sum(pair => events[pair.Key].Amount);
                     _battleField.DamagePopup(target, damage, "", PlankFx.Rust, volley.Count > 1 || damage >= 25, false);
                 }

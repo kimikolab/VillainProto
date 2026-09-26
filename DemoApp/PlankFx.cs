@@ -14,7 +14,7 @@ public static class PlankFx
         {
             if (_mirror is not null) return _mirror;
             var image = new Image();
-            image.LoadSvgFromString("<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256'><defs><radialGradient id='g'><stop stop-color='#fffbe5' stop-opacity='.85'/><stop offset='.35' stop-color='#ffe0a0' stop-opacity='.12'/><stop offset='.82' stop-color='#9de8ff' stop-opacity='.2'/><stop offset='1' stop-color='#aeeaff' stop-opacity='0'/></radialGradient></defs><circle cx='128' cy='128' r='125' fill='url(#g)'/><circle cx='128' cy='128' r='102' fill='none' stroke='#d3f5ff' stroke-width='5'/><circle cx='128' cy='128' r='112' fill='none' stroke='#efc88a' stroke-width='2' stroke-dasharray='24 10'/><path d='M128 10L137 113 246 128 139 138 128 246 118 140 10 128 116 117Z' fill='#fff9de'/></svg>");
+            image.LoadSvgFromString("<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256'><defs><radialGradient id='g'><stop stop-color='#fffbe5' stop-opacity='.85'/><stop offset='.35' stop-color='#ffe0a0' stop-opacity='.12'/><stop offset='.82' stop-color='#cd763c' stop-opacity='.2'/><stop offset='1' stop-color='#d78343' stop-opacity='0'/></radialGradient></defs><circle cx='128' cy='128' r='125' fill='url(#g)'/><circle cx='128' cy='128' r='102' fill='none' stroke='#edaa68' stroke-width='5'/><circle cx='128' cy='128' r='112' fill='none' stroke='#efc88a' stroke-width='2' stroke-dasharray='24 10'/><path d='M128 10L137 113 246 128 139 138 128 246 118 140 10 128 116 117Z' fill='#ffd19a'/></svg>");
             return _mirror = ImageTexture.CreateFromImage(image);
         }
     }
@@ -28,7 +28,8 @@ public static class PlankFx
         var up = camera?.GlobalBasis.Y ?? Vector3.Up;
         var direction = (to - from).Normalized();
         var focus = from + direction * 0.45f;
-        var shield = LiliFx.Sprite(root, focus, Mirror, 2.35f);
+        float strength = Mathf.Clamp((amount - 6) / 18f, 0, 1);
+        var shield = LiliFx.Sprite(root, focus, Mirror, Mathf.Lerp(1.55f, 2.65f, strength));
         shield.RenderPriority = 7;
         shield.Scale = Vector3.One * 0.3f;
         var ring = shield.CreateTween();
@@ -43,10 +44,10 @@ public static class PlankFx
             int n = k;
             float a = k * Mathf.Tau / count;
             var radial = right * Mathf.Cos(a) + up * Mathf.Sin(a);
-            var edge = focus + radial * (0.85f + k % 3 * 0.10f);
+            var edge = focus + radial * (0.85f + k % 3 * 0.10f) * Mathf.Lerp(0.66f, 1.13f, strength);
             var piece = LiliFx.Sprite(root, from, Piece(k), 0.30f + k % 3 * 0.05f);
             piece.RenderPriority = 9;
-            var trail = LiliFx.Sprite(root, edge, Streak, 1.25f);
+            var trail = LiliFx.Sprite(root, edge, Streak, Mathf.Lerp(0.8f, 1.65f, strength));
             trail.RenderPriority = 8;
             trail.Visible = false;
             trail.Rotation = new Vector3(0, 0, angle);
