@@ -429,6 +429,8 @@ public enum OutOfTurnRoute
     Reveille,
     /// <summary>斬り返し（<c>LastStandTrait.OnDamaged</c>・第198期。<b>倒れる一撃でも問う</b>——「生きている」だけを外す）。</summary>
     LastStand,
+    /// <summary>応急処置（<c>FirstAidTrait</c>・第210期。<b>問う相手はツギ</b>——貼られる味方ではない）。</summary>
+    FirstAid,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -438,7 +440,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -4397,7 +4399,8 @@ public sealed class BattleContext
     }
 
     /// <summary>ツギの出来事（第207期・<see cref="BattleEventKind.Plank"/>・<b>表示専用</b>）。verbose のときだけ積む。</summary>
-    public void EmitPlank(UnitState tsugi, string label, UnitState? target, int amount, int slot, int? remaining)
+    public void EmitPlank(UnitState tsugi, string label, UnitState? target, int amount, int slot, int? remaining,
+                          int? partBase = null, int? partSkill = null)
     {
         if (!_verbose) return;
         Emit(new BattleEvent
@@ -4405,9 +4408,55 @@ public sealed class BattleContext
             Kind = BattleEventKind.Plank, Turn = _turn, ActorId = tsugi.InstanceId, TargetId = target?.InstanceId,
             SpreadFromId = label == PlankLabels.Scrap ? target?.InstanceId : null,
             Amount = amount, Text = label, Slot = slot, StatusRemaining = remaining,
-            SourceTrait = label == PlankLabels.Scrap ? TraitId.Scrap : TraitId.Plank, HpAfter = target?.Hp ?? 0,
+            SourceTrait = label == PlankLabels.Scrap ? TraitId.Scrap : label == PlankLabels.FirstAid ? TraitId.FirstAid : label == PlankLabels.Skill ? TraitId.PlankSkill : TraitId.Plank,
+            HpAfter = target?.Hp ?? 0, PlankBase = partBase, PlankSkill = partSkill,
         });
     }
+
+    /// <summary>
+    /// 第210期: 腕の累計（<see cref="TraitId.PlankSkill"/>）。破片の段が反射の「失った破片」を控えるのと<b>同じ場所・同じ条件</b>で呼ぶ
+    /// （Q0-4: 腕の累計 ＝ 反射の失った破片の累計・空振りの分も含む）。段が上がった瞬間は台本に出す（<see cref="PlankLabels.Skill"/>）。<b>乱数を引かない。</b>
+    /// </summary>
+    public void NotePlankSkill(int lost)
+    {
+        UnitState? h = _reboundTsugi;
+        if (h is null || lost <= 0 || !h.HasTrait(TraitId.PlankSkill)) return;
+        int sum = h.RawCounter(PlankTrait.SkillLostKey) + lost;
+        h.SetCounter(PlankTrait.SkillLostKey, sum);
+        UnitTally t = TallyOf(h);
+        t.PlankSkillLost += lost;
+        int was = h.RawCounter(PlankTrait.SkillTierKey), now = PlankTrait.SkillTierOf(sum);
+        if (now <= was) return;
+        h.SetCounter(PlankTrait.SkillTierKey, now);
+        for (int k = was + 1; k <= now; k++)
+        {
+            int i = Math.Min(k, 3);
+            if (k > 3) continue;
+            (t.PlankSkillReach ??= new long[4])[i]++;
+            (t.PlankSkillReachTurn ??= new long[4])[i] += _turn;
+        }
+        Log($"    {h.Name} の腕が上がった（段 {now}・砕かれた累計 {sum}）", LogKind.Highlight, h);
+        EmitPlank(h, PlankLabels.Skill, h, sum, now, null);
+    }
+
+    /// <summary>
+    /// 第210期（<b>計数のみ</b>）: 応急処置の条件（<see cref="FirstAidTrait.Needs"/>）を満たす被弾が起きたターンを、ツギの帳簿に数える（1ターン1回）。
+    /// 札の有無に依らず、瓦礫拾い（ツギ）が盤上にいれば数える——W0 でも「応急処置があれば何回出番があったか」が読める。<b>盤面に触らない。</b>
+    /// </summary>
+    void NoteFirstAidChance(UnitState target, int amount)
+    {
+        UnitState? h = null;
+        foreach (UnitState x in _scrapHolders) if (x.IsAlive && x.TeamId == target.TeamId) { h = x; break; }
+        if (h is null || !FirstAidTrait.Needs(target)) return;
+        TallyOf(target).FirstAidNeed++;
+        if (_firstAidChanceTurn == _turn) return;
+        _firstAidChanceTurn = _turn;
+        UnitTally t = TallyOf(h);
+        t.FirstAidChance++;
+        if (HushBindingNow) t.FirstAidChanceHushed++;
+        if ((target.Hp + amount) * 100 >= target.MaxHp * FirstAidTrait.Percent) t.FirstAidChanceCross++;
+    }
+    int _firstAidChanceTurn = -1;
 
     /// <summary>状態が移った瞬間（第204期・<see cref="BattleEventKind.StatusTransfer"/>・<b>表示専用</b>）。</summary>
     public void EmitStatusTransfer(UnitState lili, UnitState from, UnitState to, string key, int amount, int after)
@@ -7793,6 +7842,7 @@ public sealed class BattleContext
                 // 第209期: その一撃を受けた後に残った破片と、印の倍率（印は破片が 0 になると消えるので、ここで読む）。
                 _reflectRest = armor - soak;
                 _reflectRatio = PlankTrait.RatioOf(target.RawCounter(StatusKeys.Plank));
+                NotePlankSkill(soak);   // 第210期: 腕の累計（同じ条件・同じ量）
             }
             target.SetCounter(StatusKeys.Armor, armor - soak);
             amount -= soak;
@@ -8121,6 +8171,9 @@ public sealed class BattleContext
         if (FootingTrait.StackOnHit && _shieldHolders.Count > 0 && source is not null && source.TeamId != target.TeamId
             && !burnTick && !levy && !relayed && !hexShare && target.HasTrait(TraitId.Footing))
             QueueFootingHit(target);
+
+        // 第210期（計数のみ）: 応急処置の出番（札が貼る前に数える）。**瓦礫拾いの保持者がいなければ比較1つで抜ける。**
+        if (_scrapHolders.Count > 0 && amount > 0) NoteFirstAidChance(target, amount);
 
         foreach (Trait t in target.Traits.ToList())
         {

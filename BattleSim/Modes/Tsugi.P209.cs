@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -47,8 +47,11 @@ static partial class TsugiDiag
             case "ledger3": Ledger209(); handled = true; return;
             case "check3": Check209(arg); handled = true; return;
             case "stall3": Stall209(); handled = true; return;
+            default: RunMore210(mode, arg, ref handled); return;
         }
     }
+
+    static partial void RunMore210(string mode, string arg, ref bool handled);
 
     /// <summary>ツギの在席行（`tsugi` の席）と差し替え行（`lili` の席）を版 <paramref name="tag"/> で。</summary>
     static IEnumerable<(string Band, string Name, Func<int, Agg> At)> AllRows(string tag)

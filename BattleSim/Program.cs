@@ -1364,6 +1364,9 @@ static class TraitKeyMap
         [TraitId.PlankThick]   = Array.Empty<int>(),                                            // 第209期（反射の倍率・状態キーを書かない）
         [TraitId.PlankThick25] = Array.Empty<int>(),                                            // 第209期（対照）
         [TraitId.PlankThick100]= Array.Empty<int>(),                                            // 第209期（対照）
+        [TraitId.PlankBase]    = Array.Empty<int>(),                                            // 第210期（板の厚さの式を変えるだけ）
+        [TraitId.FirstAid]     = new[] { UnitTally.CarryArmor },                                // 第210期（応急処置＝味方の破片）
+        [TraitId.PlankSkill]   = Array.Empty<int>(),                                            // 第210期（腕は私有キー）
         [TraitId.KissSteal]  = Array.Empty<int>(),                                              // 第205期（AtkBonus を移す・状態キーではない）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
@@ -1538,6 +1541,9 @@ static class TraitHookMap
         [TraitId.PlankThick]  = new[] { Engine },                                  // 第209期（ReflectPlank が印の倍率を読む）
         [TraitId.PlankThick25]= new[] { Engine },                                  // 第209期（対照）
         [TraitId.PlankThick100]= new[] { Engine },                                 // 第209期（対照）
+        [TraitId.PlankBase]   = Array.Empty<string>(),                             // 第210期（PlankTrait.Thickness で読まれる札）
+        [TraitId.FirstAid]    = new[] { "OnDamaged", "OnAllyDamaged", "OnCarryOver" },   // 第210期（応急処置）
+        [TraitId.PlankSkill]  = new[] { "OnCarryOver", Engine },               // 第210期（破片の段の NotePlankSkill）
         [TraitId.KissSteal]   = Array.Empty<string>(),                             // 第205期（口づけの中で読まれる札）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）

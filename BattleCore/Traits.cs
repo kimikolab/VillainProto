@@ -391,6 +391,9 @@ public enum TraitId
     PlankThick,    // 厚い板ほど強く撃ち返す（第209期・ツギ）: 反射に「その一撃の後に残った破片 × 50%」を足す。判定は engine（`ReflectPlank`）
     PlankThick25,  // 同・25% の版（第209期・対照・保持者 0 枚）
     PlankThick100, // 同・100% の版（第209期・対照・保持者 0 枚）
+    PlankBase,     // 板の基本の厚さを自分の最大HPの 40% に（第210期・ツギ）: 敵の攻撃力を読まない。札は `PlankTrait` の中で読まれる
+    FirstAid,      // 応急処置（第210期・ツギ）: 破片の無い味方が HP の 40% を切ると、手番の外で板を貼る（1ターンに1回）
+    PlankSkill,    // 腕が上がる（第210期・ツギ）: 板の印を持つ味方が敵の一撃で失った破片の累計が 40 × n(n+1)/2 に届くごとに、基本の厚さが ×(1 ＋ 0.2n)。判定は engine の破片の段と `PlankTrait`
     Scrap,       // 瓦礫拾い（第207期・ツギ）: 味方の破片が砕けた量の 50% と、倒れた駒1体につき 5 を背中に積み、次の板に上乗せする
     KissSteal,  // 口づけ・強弱を移す（第205期）: 1体ずつ吸うとき、その敵の攻撃力の上げ下げ（`AtkBonus`）も受け取った味方へ移す。札は `KissTrait` の中で読まれる
 
@@ -9096,7 +9099,6 @@ public sealed class PlankTrait : Trait
         if (!self.IsAlive) return;
         var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId));
         if (foes.Count == 0) return;
-        int heaviest = foes.Max(f => f.CurrentAttack);
 
         var allies = ctx.LivingMembers(self.TeamId);
         int thin = allies.Min(a => a.RawCounter(StatusKeys.Armor));
@@ -9104,9 +9106,49 @@ public sealed class PlankTrait : Trait
         int worst = cand.Min(a => a.Hp * 100 / Math.Max(1, a.MaxHp));
         UnitState? to = ctx.PickOne(cand.Where(a => a.Hp * 100 / Math.Max(1, a.MaxHp) == worst).ToList());
         if (to is null) return;
+        Paste(ctx, self, to, foes, firstAid: false);
+    }
 
+    /// <summary>第210期: 基本の厚さ（<see cref="TraitId.PlankBase"/>・自分の最大HPの <see cref="BasePercent"/>%・規定 40）。</summary>
+    public const int BasePercent = 40;
+
+    /// <summary>第210期: 腕の閾値の刻み（段 n に要る累計 ＝ <see cref="SkillStep"/> × n(n+1)/2）と、1段ごとの倍率の上乗せ（百分率・規定 20 ＝ 0.2）。</summary>
+    public const int SkillStep = 40, SkillPerStepPercent = 20;
+
+    /// <summary>第210期: 腕の累計（私有キー・板の印を持つ味方が敵の一撃で失った破片）と段（私有キー）。</summary>
+    public const string SkillLostKey = "tsugiSkillLost", SkillTierKey = "tsugiSkill";
+
+    /// <summary>第210期: 累計から段を引く（<b>判定はここ1本</b>）。段 n に要る累計は <see cref="SkillStep"/> × n(n+1)/2（40 ／ 120 ／ 240 …）。</summary>
+    public static int SkillTierOf(long lost)
+    {
+        int n = 0;
+        while ((long)SkillStep * (n + 1) * (n + 2) / 2 <= lost) n++;
+        return n;
+    }
+
+    /// <summary>
+    /// 第210期: 板の厚さのうち在庫を除いた分を「基本」と「腕」に分けて返す。
+    /// <see cref="TraitId.PlankBase"/> が無ければ第209期のまま（<c>max(<see cref="PlankFloor"/>, 生きている敵の現在攻撃力の最大)</c>・腕 0）。
+    /// 有れば基本 ＝ floor(自分の<b>その時点の</b>最大HP × <see cref="BasePercent"/>%)、腕 ＝ floor(基本 × (100 ＋ 20n) / 100) − 基本（<see cref="TraitId.PlankSkill"/> を持つときだけ）。
+    /// </summary>
+    public static (int Base, int Skill) Thickness(UnitState self, IReadOnlyList<UnitState> foes)
+    {
+        if (!self.HasTrait(TraitId.PlankBase))
+            return (Math.Max(PlankFloor, foes.Count == 0 ? 0 : foes.Max(f => f.CurrentAttack)), 0);
+        int b = self.MaxHp * BasePercent / 100;
+        int tier = self.HasTrait(TraitId.PlankSkill) ? self.RawCounter(SkillTierKey) : 0;
+        return (b, b * (100 + SkillPerStepPercent * tier) / 100 - b);
+    }
+
+    /// <summary>
+    /// 板を1枚貼る（手番の板と応急処置で共有・第210期に切り出した）。量 ＝ 基本 ＋ 腕 ＋ 背中の在庫（使い切る）。
+    /// 印の付け方・計数は第209期のまま（応急処置の分は <c>FirstAid*</c> の計数に分ける）。<b>乱数を引かない。</b>
+    /// </summary>
+    internal static void Paste(BattleContext ctx, UnitState self, UnitState to, IReadOnlyList<UnitState> foes, bool firstAid)
+    {
+        var (b, sk) = Thickness(self, foes);
         int stock = ScrapTrait.TakeStock(self);
-        int amount = Math.Max(PlankFloor, heaviest) + stock;
+        int amount = b + sk + stock;
         int after = to.RawCounter(StatusKeys.Armor) + amount;
         to.SetCounter(StatusKeys.Armor, after);
         int mark = Plain | (self.HasTrait(TraitId.PlankTinder) ? Flammable : 0) | (self.HasTrait(TraitId.PlankScorch) ? Scorch : 0)
@@ -9116,15 +9158,105 @@ public sealed class PlankTrait : Trait
         to.SetCounter(StatusKeys.Plank, mark | to.RawCounter(StatusKeys.Plank));
 
         UnitTally t = ctx.TallyOf(self);
-        t.PlankPastes++;
-        t.PlankGiven += amount;
-        t.PlankStockUsed += stock;
-        if (to == self) t.PlankSelf++;
-        if (!to.AcceptsSupport) t.PlankOnStoic++;
-        if (ctx.DroughtBinding) t.PlankInDrought++;
-        ctx.EmitPlank(self, PlankLabels.Paste, to, amount, stock, after);
-        ctx.Log($"    {self.Name} が {to.Name} に板を貼った（破片 +{amount}" + (stock > 0 ? $"・うち瓦礫 {stock}" : "") + $"・計 {after}）",
-                LogKind.Trigger);
+        if (firstAid)
+        {
+            t.FirstAidFired++;
+            t.FirstAidPaste += amount;
+            t.FirstAidTurnSum += ctx.Turn;
+            if (to == self) t.FirstAidSelf++;
+            ctx.TallyOf(to).FirstAidReceived++;
+        }
+        else
+        {
+            t.PlankPastes++;
+            t.PlankGiven += amount;
+            t.PlankStockUsed += stock;
+            t.PlankBaseGiven += b;
+            t.PlankSkillGiven += sk;
+            (t.PlankBaseHist ??= new long[UnitTally.RestHistSize])[Math.Min(b + sk, UnitTally.RestHistSize - 1)]++;
+            if (to == self) t.PlankSelf++;
+            if (!to.AcceptsSupport) t.PlankOnStoic++;
+            if (ctx.DroughtBinding) t.PlankInDrought++;
+        }
+        ctx.EmitPlank(self, firstAid ? PlankLabels.FirstAid : PlankLabels.Paste, to, amount, stock, after, b, sk);
+        ctx.Log($"    {self.Name} が {to.Name} に" + (firstAid ? "駆け込んで" : "") + $"板を貼った（破片 +{amount}" + (stock > 0 ? $"・うち瓦礫 {stock}" : "")
+                + (sk > 0 ? $"・うち腕 {sk}" : "") + $"・計 {after}）", firstAid ? LogKind.Highlight : LogKind.Trigger);
+    }
+}
+
+/// <summary>基本の厚さ（第210期）。<b>札そのものは何もしない</b>——<see cref="PlankTrait.Thickness"/> が読む。</summary>
+public sealed class PlankBaseTrait : Trait
+{
+    public override TraitId Id => TraitId.PlankBase;
+}
+
+/// <summary>
+/// 応急処置（第210期・ツギ）。<b>破片が 0 の味方</b>（自分を含む）が被弾して <b>HP が最大HPの <see cref="Percent"/>% を下回っている</b>とき、
+/// ツギは手番の外で割り込み、その味方に板を貼る（量は手番の板と同じ式・<see cref="PlankTrait.Paste"/>）。<b>1ターンに1回まで。</b>
+///
+/// <para>条件は「この一撃の後の状態」で読む（<b>跨いだ一撃に限らない</b>・第210期の判断——跨ぎに限ると、同じターンに2体が跨いだとき
+/// 2体目は二度と拾われない）。跨いだかは計数（<c>FirstAidCross</c>）で分けて持つ。</para>
+///
+/// <para>割り込みの作法は暴発（<see cref="EruptTrait"/>）に揃える: 割り込み・反撃の中では出ない（<c>FirstAidHeld</c>）／
+/// <c>ctx.CanActOutOfTurn(ツギ, FirstAid)</c> を通す（痺れ・組み付き・粛で止まる）／本体は <c>ctx.Interrupt</c> で包む。
+/// 倒れた味方（この一撃で HP が 0 以下）には貼らない。同じ一撃で複数の味方が条件を満たしたら、先に通知が来た方（被弾の順）。</para>
+///
+/// <para>窓口は <see cref="OnDamaged"/>（自分）と <see cref="OnAllyDamaged"/>（味方）。どちらも HP を引いた後・死亡判定の前に鳴る
+/// ——破片で受け切った一撃では鳴らない（破片 0 の条件と矛盾しない）。毒・火の刻み（出どころ null）でも鳴る。</para>
+/// </summary>
+public sealed class FirstAidTrait : Trait
+{
+    /// <summary>閾値（HP が最大HPの何%を下回ったら・指示書の `FirstAidPercent`・規定 40）。</summary>
+    public const int Percent = 40;
+
+    /// <summary>その戦で最後に応急処置をしたターン ＋ 1（私有キー・0 ＝ まだ）。</summary>
+    public const string TurnKey = "tsugiAidTurn";
+
+    public override TraitId Id => TraitId.FirstAid;
+
+    /// <summary>第210期: 応急処置の条件（生きている・破片 0・HP が閾値未満）。計数の探り（engine）と共有する<b>判定の1本</b>。</summary>
+    public static bool Needs(UnitState u)
+        => u.IsAlive && u.RawCounter(StatusKeys.Armor) == 0 && u.Hp * 100 < u.MaxHp * Percent;
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source) => Try(ctx, self, self, dmg);
+
+    public override void OnAllyDamaged(BattleContext ctx, UnitState self, UnitState ally, int dmg, UnitState? source) => Try(ctx, self, ally, dmg);
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(TurnKey, 0);
+
+    static void Try(BattleContext ctx, UnitState self, UnitState to, int dmg)
+    {
+        if (dmg <= 0 || !self.IsAlive || !Needs(to)) return;
+        UnitTally t = ctx.TallyOf(self);
+        if (self.RawCounter(TurnKey) == ctx.Turn + 1) { t.FirstAidSpent++; ctx.TallyOf(to).FirstAidMissed++; return; }
+        if (ctx.InInterrupt || ctx.InReaction) { t.FirstAidHeld++; ctx.TallyOf(to).FirstAidMissed++; return; }
+        var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId));
+        if (foes.Count == 0) return;
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.FirstAid))
+        {
+            if (ctx.HushBindingNow) t.FirstAidHushed++; else t.FirstAidHeld++;
+            ctx.TallyOf(to).FirstAidMissed++;
+            return;
+        }
+        self.SetCounter(TurnKey, ctx.Turn + 1);
+        if ((to.Hp + dmg) * 100 >= to.MaxHp * Percent) t.FirstAidCross++;
+        ctx.Interrupt(() => PlankTrait.Paste(ctx, self, to, foes, firstAid: true));
+    }
+}
+
+/// <summary>
+/// 腕が上がる（第210期・ツギ）。累計は engine の破片の段（反射の「失った破片」を控えるのと同じ場所・同じ条件）が
+/// <see cref="BattleContext.NotePlankSkill"/> で足し、段は <see cref="PlankTrait.SkillTierOf"/> の1本で決める。<b>段は戦のあいだ下がらない。</b>
+/// 会戦の境界で 0 に戻す（リリの段と同じ作法）。
+/// </summary>
+public sealed class PlankSkillTrait : Trait
+{
+    public override TraitId Id => TraitId.PlankSkill;
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(PlankTrait.SkillLostKey, 0);
+        self.SetCounter(PlankTrait.SkillTierKey, 0);
     }
 }
 
@@ -13208,6 +13340,9 @@ public static class TraitCatalog
         new PlankThickTrait(),       // 第209期（厚い板ほど強く撃ち返す）
         new PlankThick25Trait(),     // 第209期（対照・保持者 0 枚）
         new PlankThick100Trait(),    // 第209期（対照・保持者 0 枚）
+        new PlankBaseTrait(),        // 第210期（基本の厚さ）
+        new FirstAidTrait(),         // 第210期（応急処置）
+        new PlankSkillTrait(),       // 第210期（腕が上がる）
         new KissBareTrait(),         // 第204期（対照・保持者 0 枚）
         new Kiss30Trait(),           // 第204期（対照・保持者 0 枚）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）

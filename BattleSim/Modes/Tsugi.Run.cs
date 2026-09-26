@@ -73,6 +73,8 @@ static partial class TsugiDiag
         public int TsugiDied;
         /// <summary>第208期: 倒れていた駒（`PlayerStarterFallen`）の数を Id ごとに。</summary>
         public readonly Dictionary<string, int> FallenBy = new();
+        /// <summary>第210期: 応急処置の条件を満たした駒（戦 × 駒）のうち、受けた／受けなかったの数と、その戦を生き延びた数。</summary>
+        public int AidUnits, AidSurvived, NeedNoAidUnits, NeedNoAidSurvived;
 
         public double Win => 100.0 * Wins / Math.Max(1, N);
         /// <summary>全員生存勝ち（全戦に占める割合）。</summary>
@@ -112,6 +114,9 @@ static partial class TsugiDiag
                     if (!ids.Contains(id)) continue;
                     if (!a.T.TryGetValue(id, out var acc)) a.T[id] = acc = new UnitTally();
                     acc.Add(t);
+                    bool alive = !r.PlayerStarterFallen.Contains(id);
+                    if (t.FirstAidReceived > 0) { a.AidUnits++; if (alive) a.AidSurvived++; }
+                    else if (t.FirstAidNeed > 0) { a.NeedNoAidUnits++; if (alive) a.NeedNoAidSurvived++; }
                 }
             }
         });

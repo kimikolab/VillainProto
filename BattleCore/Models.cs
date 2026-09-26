@@ -1948,6 +1948,22 @@ public sealed class UnitTally
     public long[]? ReflectRestHist, ReflectYokeHyp, MultiHitPlankedHist;
     /// <summary><see cref="ReflectRestHist"/> の大きさ（最後の欄は「それ以上」）。</summary>
     public const int RestHistSize = 121;
+    /// <summary>
+    /// 第210期（<b>計数専用</b>）。ツギの側: <c>PlankBaseHist</c> 手番の板の「在庫を除いた分」（基本 ＋ 腕）の値ごとの回数（最後の欄は <see cref="RestHistSize"/> − 1 以上）／
+    /// <c>PlankBaseGiven</c>・<c>PlankSkillGiven</c> 貼った破片のうち基本の分・腕の分（在庫の分は <c>PlankStockUsed</c>）／
+    /// <c>FirstAidChance</c> 応急処置の条件（破片 0・生きている・HP が <see cref="FirstAidTrait.Percent"/>% 未満）を満たす被弾が起きたターンの数（1ターン1回に数える）／
+    /// <c>FirstAidChanceHushed</c> そのうち粛の保持者が生きていた数 ／ <c>FirstAidChanceCross</c> そのうちその一撃で閾値を跨いだ数 ／
+    /// <c>FirstAidFired</c> 応急処置を貼った回数 ／ <c>FirstAidPaste</c> その量の合計 ／ <c>FirstAidTurnSum</c> 貼ったターンの合計 ／
+    /// <c>FirstAidCross</c> そのうち跨いだ一撃で貼った数 ／ <c>FirstAidSelf</c> 自分に貼った数 ／
+    /// <c>FirstAidHushed</c> 粛で止まった数 ／ <c>FirstAidHeld</c> 痺れ・組み付き・割り込みや反撃の中で止まった数 ／ <c>FirstAidSpent</c> そのターンの1回を使い切っていて貼れなかった数 ／
+    /// <c>PlankSkillLost</c> 腕の累計（板の印を持つ味方が敵の一撃で失った破片）／ <c>PlankSkillReach</c>・<c>PlankSkillReachTurn</c> 腕が段 1・2・3（以上）に届いた回数とターンの合計。
+    /// 受け取った側: <c>FirstAidReceived</c> 応急処置を受けた回数 ／ <c>FirstAidMissed</c> 条件を満たしたのに貼られなかった回数 ／
+    /// <c>FirstAidNeed</c> 条件を満たす被弾を受けた回数（札の有無に依らない・ツギが生きている間）。
+    /// </summary>
+    public long PlankBaseGiven, PlankSkillGiven, FirstAidChance, FirstAidChanceHushed, FirstAidChanceCross,
+                FirstAidFired, FirstAidPaste, FirstAidTurnSum, FirstAidCross, FirstAidSelf, FirstAidHushed, FirstAidHeld, FirstAidSpent,
+                PlankSkillLost, FirstAidReceived, FirstAidMissed, FirstAidNeed;
+    public long[]? PlankBaseHist, PlankSkillReach, PlankSkillReachTurn;
     /// <summary><see cref="ReflectYokeHyp"/> の倍率（百分率）。</summary>
     public static readonly int[] HypRatios = { 0, 25, 50, 100 };
 
@@ -2376,6 +2392,13 @@ public sealed class UnitTally
         if (o.ReflectRestHist is not null) { ReflectRestHist ??= new long[RestHistSize]; for (int i = 0; i < RestHistSize; i++) ReflectRestHist[i] += o.ReflectRestHist[i]; }
         if (o.ReflectYokeHyp is not null) { ReflectYokeHyp ??= new long[4]; for (int i = 0; i < 4; i++) ReflectYokeHyp[i] += o.ReflectYokeHyp[i]; }
         if (o.MultiHitPlankedHist is not null) { MultiHitPlankedHist ??= new long[4]; for (int i = 0; i < 4; i++) MultiHitPlankedHist[i] += o.MultiHitPlankedHist[i]; }
+        PlankBaseGiven += o.PlankBaseGiven; PlankSkillGiven += o.PlankSkillGiven; FirstAidChance += o.FirstAidChance; FirstAidChanceHushed += o.FirstAidChanceHushed;
+        FirstAidChanceCross += o.FirstAidChanceCross; FirstAidFired += o.FirstAidFired; FirstAidPaste += o.FirstAidPaste; FirstAidTurnSum += o.FirstAidTurnSum;
+        FirstAidCross += o.FirstAidCross; FirstAidSelf += o.FirstAidSelf; FirstAidHushed += o.FirstAidHushed; FirstAidHeld += o.FirstAidHeld; FirstAidSpent += o.FirstAidSpent;
+        PlankSkillLost += o.PlankSkillLost; FirstAidReceived += o.FirstAidReceived; FirstAidMissed += o.FirstAidMissed; FirstAidNeed += o.FirstAidNeed;
+        if (o.PlankBaseHist is not null) { PlankBaseHist ??= new long[RestHistSize]; for (int i = 0; i < RestHistSize; i++) PlankBaseHist[i] += o.PlankBaseHist[i]; }
+        if (o.PlankSkillReach is not null) { PlankSkillReach ??= new long[4]; for (int i = 0; i < 4; i++) PlankSkillReach[i] += o.PlankSkillReach[i]; }
+        if (o.PlankSkillReachTurn is not null) { PlankSkillReachTurn ??= new long[4]; for (int i = 0; i < 4; i++) PlankSkillReachTurn[i] += o.PlankSkillReachTurn[i]; }
         KissTierMax = Math.Max(KissTierMax, o.KissTierMax);
         if (o.RiteFoeHist is not null) { RiteFoeHist ??= new long[3]; for (int i = 0; i < 3; i++) RiteFoeHist[i] += o.RiteFoeHist[i]; }
         RiteMaxPerFoe = Math.Max(RiteMaxPerFoe, o.RiteMaxPerFoe);
@@ -2909,6 +2932,12 @@ public static class PlankLabels
     /// <para>第209期: <c>Amount</c> ＝ 失った破片 ＋ 残りの厚さの分。<c>StatusRemaining</c> ＝ <b>残りの厚さの分</b>（倍率 0 なら 0）、
     /// <c>Amount − StatusRemaining</c> ＝ <b>失った破片の分</b>、<c>HpAfter</c> ＝ 反射の瞬間に板を持つ味方に残っていた破片。</para></summary>
     public const string Reflect = "板の破片が飛んだ";
+    /// <summary>第210期: 応急処置（手番の外で駆け込んで貼った）。欄は <see cref="Paste"/> と同じ
+    /// ——<c>ActorId</c> = ツギ、<c>TargetId</c> = 味方、<c>Amount</c> = 貼った量、<c>Slot</c> = 在庫の分、<c>PlankBase</c> = 基本の分、<c>PlankSkill</c> = 腕の分、
+    /// <c>StatusRemaining</c> = 貼った後の味方の破片、<c>HpAfter</c> = 味方の HP（倒れかけの深さ）。</summary>
+    public const string FirstAid = "応急処置";
+    /// <summary>第210期: 腕が上がった瞬間。<c>ActorId</c> = <c>TargetId</c> = ツギ、<c>Slot</c> = 新しい段、<c>Amount</c> = 砕かれた累計。</summary>
+    public const string Skill = "腕が上がった";
 }
 
 /// <summary><see cref="BattleEventKind.Kiss"/> の <c>Text</c>（第204期・<b>表示専用</b>）。</summary>
@@ -3278,6 +3307,10 @@ public sealed class BattleEvent
 
     /// <summary>Highlight / Status のフレーバー。演出の中身ではなく添え物として扱う。</summary>
     public string? Text { get; init; }
+
+    /// <summary>第210期（<b>表示専用</b>）: ツギの板（<see cref="PlankLabels.Paste"/> / <see cref="PlankLabels.FirstAid"/>）の量のうち基本の分と腕の分（在庫の分は <c>Slot</c>）。</summary>
+    public int? PlankBase { get; init; }
+    public int? PlankSkill { get; init; }
 }
 
 /// <summary>戦闘結果。UIはこれを表示するだけでよい。</summary>
