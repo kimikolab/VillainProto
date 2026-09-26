@@ -23,6 +23,12 @@ static partial class ShockDiag
     internal static readonly UnitDef KataK2 = WithTraits(UnitCatalog.Kata, TraitId.Thunder, TraitId.ThunderLeak, TraitId.ShockTick);
     internal static readonly UnitDef KataK1m = WithTraits(UnitCatalog.Kata, TraitId.Thunder);
 
+    /// <summary>
+    /// 第214期の K1（跳ねの同点は席番号の順＝第215期の T0）。<b>台の席はこれで選ぶ</b>——第215期に規定の札が変わっても、
+    /// 台の席は第214期と同じまま（指示書 §6「第214期の台・席をそのまま使う」）。
+    /// </summary>
+    internal static readonly UnitDef KataT0 = WithTraits(UnitCatalog.Kata, TraitId.Thunder, TraitId.ThunderLeak);
+
     internal static readonly (string Tag, UnitDef Def)[] Versions =
     {
         ("K1", UnitCatalog.Kata), ("K2", KataK2), ("K1−", KataK1m), ("K0", UnitCatalog.KataOld),
@@ -77,9 +83,10 @@ static partial class ShockDiag
         {
             int i = j / 4, st = 1 + j % 4;
             Formation en = EnemyCatalog.Stages[st].Enemy;
+            Formation f = WithKata(all[i], KataT0);   // 第215期: 席は第214期の K1（T0）で選ぶ
             int w = 0;
             for (int s = PickSeed0; s < PickSeed0 + PickSeeds; s++)
-                if (BattleEngine.Run(all[i], en, s, verbose: false).PlayerWon) w++;
+                if (BattleEngine.Run(f, en, s, verbose: false).PlayerWon) w++;
             Interlocked.Add(ref score[i], w);
         });
         int best = 0;
@@ -279,7 +286,7 @@ static partial class ShockDiag
                 {
                     Agg a = res[(i, sh, v)];
                     long all = a.TriggeredBy.Values.Sum() + a.P.ShockTriggeredTick + a.E.ShockTriggeredTick + a.P.ShockTriggeredOther + a.E.ShockTriggeredOther;
-                    string who = string.Join(" ／ ", a.TriggeredBy.OrderByDescending(kv => kv.Value).Take(5)
+                    string who = string.Join(" ／ ", a.TriggeredBy.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal).Take(5)
                         .Select(kv => NameOf(kv.Key) + " " + F2(Per(kv.Value, a)) + "（" + (100.0 * kv.Value / Math.Max(1, all)).ToString("F0") + "%）"));
                     long tick = a.P.ShockTriggeredTick + a.E.ShockTriggeredTick, other = a.P.ShockTriggeredOther + a.E.ShockTriggeredOther;
                     Console.WriteLine("| " + tables[i].Tag + " | " + ShapeName(sh) + " | " + v + " | " + (who == "" ? "—" : who) + " | "
