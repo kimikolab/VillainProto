@@ -18,6 +18,8 @@ static partial class TsugiDiag
             case "y3diff": Y3Diff(); handled = true; return;
             case "check5": Check211(arg); handled = true; return;
             case "yokeprobe": YokeProbe(); handled = true; return;
+            case "pon5": Pon211(); handled = true; return;
+            case "pon5log": PonLog(arg); handled = true; return;
         }
     }
 
@@ -519,5 +521,93 @@ static partial class TsugiDiag
                                       + " ／ 間の出来事: " + string.Join("・", r.Events.Skip(i + 1).Take(j - i).Select(x => x.Kind + (x.Text is null ? "" : "(" + x.Text + ")") + (x.Amount != 0 ? " " + x.Amount : ""))));
                 }
             }
+    }
+
+    /// <summary>
+    /// 第211期（事後）: ポンが遊んだ編成（`継ぎ当て×分散回復` のガルドをガンに替え、パターン2 で
+    /// 中衛・上 ガン ／ 後衛 ツギ ／ 中衛・中央 ドルガ ／ 前衛 ササ ／ 中衛・下 セロ）を Y0〜Y3 で並べる。
+    /// </summary>
+    static void Pon211()
+    {
+        Console.WriteLine("# 第211期 `tsugi pon5` —— ポンが遊んだ編成（パターン2・ガルド → ガン）× Y0〜Y3（seed 0..199）");
+        Console.WriteLine();
+        Formation baseF = Formation.BuildDiamond(UnitCatalog.Gan, UnitCatalog.Tsugi, UnitCatalog.Dolga, UnitCatalog.Sasa, UnitCatalog.Sero);
+        Console.WriteLine("並び: " + string.Join(" ／ ", baseF.Occupied().Select(o => baseF.Shape.FrameNames[o.Slot] + " " + o.Def.Name)) + "。");
+        Console.WriteLine();
+        Console.WriteLine("**ササ倒れ** ＝ ササが倒れた戦の割合 ／ **ツギの破片** ＝ 戦の終わりにツギが持っていた破片の平均 ／ **ササが倒れる前のツギの板** ＝ ササが倒れた戦で、倒れる前にツギ自身へ貼った最後の板の直後の破片（台本から・その後に砕けた分は引いていないので上限の見当）。");
+        Console.WriteLine();
+        Console.WriteLine("| 波 | 版 | 勝率 | 全員生存 | ササ倒れ | 倒れた駒 | ササへの板 / 応急（回/戦） | ツギ自身への板 / 応急 | ツギの破片（終わり） | ササが倒れる前のツギの板 |");
+        Console.WriteLine("|--:|---|--:|--:|--:|---|---|---|--:|--:|");
+        foreach (int st in Waves)
+            foreach (var tag in YTags)
+            {
+                Formation g = ApplyY(baseF, "tsugi", tag);
+                var a = Measure("pon5|" + tag, g, st);
+                var sa = a.Of("sasa"); var ts = a.Of("tsugi");
+                var (endArmor, atSasaDeath, deaths) = PonArmor(g, st);
+                string fallen = string.Join("・", a.FallenBy.Where(p => p.Value > 0).OrderByDescending(p => p.Value)
+                    .Select(p => (UnitCatalog.Everyone.FirstOrDefault(u => u.Id == p.Key)?.Name ?? p.Key) + " " + F1(100.0 * p.Value / Math.Max(1, a.N)) + "%"));
+                Console.WriteLine("| " + (st + 1) + " | " + tag + " | " + F1(a.Win) + " | " + F1(a.CleanAll) + " | " + F1(100.0 * a.FallenBy.GetValueOrDefault("sasa") / Math.Max(1, a.N)) + "% | "
+                                  + (fallen == "" ? "—" : fallen) + " | " + a.Per(sa.PlankReceived).ToString("F2") + " / " + a.Per(sa.FirstAidReceived).ToString("F2") + " | "
+                                  + a.Per(ts.PlankSelf).ToString("F2") + " / " + a.Per(ts.FirstAidSelf).ToString("F2") + " | " + endArmor.ToString("F1") + " | "
+                                  + (deaths == 0 ? "—" : atSasaDeath.ToString("F1") + "（" + deaths + " 戦）") + " |");
+            }
+        Console.WriteLine();
+        Console.WriteLine("## 1戦ずつ（画面の seed 1 第三波・前に報告した seed 6 第五波）");
+        Console.WriteLine();
+        foreach (var (st, seed) in new[] { (2, 1), (4, 6) })
+            foreach (var tag in YTags)
+            {
+                Formation g = ApplyY(baseF, "tsugi", tag);
+                var players = BattleEngine.Materialize(g, BattleContext.PlayerTeam);
+                var enemies = BattleEngine.Materialize(EnemyCatalog.Stages[st].Enemy, BattleContext.EnemyTeam);
+                var r = BattleEngine.Run(players, enemies, seed, verbose: true);
+                var sasa = players.First(p => p.Def.Id == "sasa"); var tsugi = players.First(p => p.Def.Id == "tsugi");
+                string Nm(int? id) => players.FirstOrDefault(p => p.InstanceId == id)?.Name ?? "?";
+                var pastes = r.Events.Where(e => e.Kind == BattleEventKind.Plank && (e.Text == PlankLabels.Paste || e.Text == PlankLabels.FirstAid))
+                    .Select(e => "T" + e.Turn + (e.Text == PlankLabels.FirstAid ? "応急" : "") + "→" + Nm(e.TargetId).Replace("継ぎ当ての", "").Replace("錯乱の", "").Replace("のろまの巨兵", "").Replace("逃亡兵", "").Replace("鬨の号令", "") + " " + e.Amount);
+                var sd = r.Events.FirstOrDefault(e => e.Kind == BattleEventKind.Death && e.TargetId == sasa.InstanceId);
+                Console.WriteLine("- 第" + (st + 1) + "波 seed " + seed + " " + tag + ": " + (r.PlayerWon ? "勝" : "負") + " " + r.Turns + "T・ササ" + (sd is null ? "生存" : "倒れ（T" + sd.Turn + "）")
+                                  + "・ツギの破片（終わり）" + tsugi.RawCounter(StatusKeys.Armor) + " ／ 板: " + string.Join("、", pastes));
+            }
+    }
+
+    /// <summary>ツギの戦の終わりの破片と、ササが倒れた瞬間のツギの破片（台本の破片の動きから組み直す）。</summary>
+    static (double End, double AtSasaDeath, int Deaths) PonArmor(Formation g, int st)
+    {
+        long end = 0, at = 0; int deaths = 0;
+        object lk = new();
+        Parallel.For(0, Seeds, seed =>
+        {
+            var players = BattleEngine.Materialize(g, BattleContext.PlayerTeam);
+            var enemies = BattleEngine.Materialize(EnemyCatalog.Stages[st].Enemy, BattleContext.EnemyTeam);
+            var tsugi = players.First(p => p.Def.Id == "tsugi"); var sasa = players.First(p => p.Def.Id == "sasa");
+            int armorAtDeath = -1;
+            var r = BattleEngine.Run(players, enemies, seed, verbose: true);
+            var sd = r.Events.FirstOrDefault(e => e.Kind == BattleEventKind.Death && e.TargetId == sasa.InstanceId);
+            if (sd is not null)
+            {
+                // 倒れる前にツギ自身へ貼った最後の板の直後の破片（その後に砕けた分は引かない＝上限の見当）
+                var last = r.Events.TakeWhile(e => e != sd).LastOrDefault(e => e.Kind == BattleEventKind.Plank
+                    && (e.Text == PlankLabels.Paste || e.Text == PlankLabels.FirstAid) && e.TargetId == tsugi.InstanceId);
+                armorAtDeath = last?.StatusRemaining ?? 0;
+            }
+            lock (lk)
+            {
+                end += tsugi.RawCounter(StatusKeys.Armor);
+                if (armorAtDeath >= 0) { at += armorAtDeath; deaths++; }
+            }
+        });
+        return ((double)end / Seeds, deaths == 0 ? 0 : (double)at / deaths, deaths);
+    }
+
+    /// <summary>第211期（事後）: ポンの編成の1戦のログ（引数「波 seed 版」・既定 3 1 Y3）。</summary>
+    static void PonLog(string arg)
+    {
+        var a = (string.IsNullOrWhiteSpace(arg) ? "3 1 Y3" : arg).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        int st = int.Parse(a[0]) - 1, seed = int.Parse(a[1]);
+        Formation g = ApplyY(Formation.BuildDiamond(UnitCatalog.Gan, UnitCatalog.Tsugi, UnitCatalog.Dolga, UnitCatalog.Sasa, UnitCatalog.Sero), "tsugi", a[2]);
+        var r = BattleEngine.Run(g, EnemyCatalog.Stages[st].Enemy, seed, verbose: true);
+        foreach (var l in r.Log) Console.WriteLine(l.Text);
     }
 }
