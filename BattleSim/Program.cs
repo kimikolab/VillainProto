@@ -1381,6 +1381,8 @@ static class TraitKeyMap
         [TraitId.Thunder]    = Array.Empty<int>(),                                              // 第214期（感電は専用キー・11 本に無い）
         [TraitId.ThunderLeak]= Array.Empty<int>(),                                              // 第214期（感電は専用キー）
         [TraitId.ShockTick]  = Array.Empty<int>(),                                              // 第214期（K2・保持者 0 枚）
+        [TraitId.ThunderPath]= Array.Empty<int>(),                                              // 第215期（雷の同点の割り方だけ）
+        [TraitId.ThunderPathHop]= Array.Empty<int>(),                                           // 第215期（参考・保持者 0 枚）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1569,6 +1571,8 @@ static class TraitHookMap
         [TraitId.Thunder]     = new[] { "OnAction", Engine },                    // 第214期（雷・起爆と放電は ApplyDamage）
         [TraitId.ThunderLeak] = Array.Empty<string>(),                             // 第214期（ThunderTrait.OnAction で読まれる札）
         [TraitId.ShockTick]   = new[] { Engine },                                  // 第214期（刻みの起爆・保持者 0 枚）
+        [TraitId.ThunderPath] = Array.Empty<string>(),                             // 第215期（ThunderTrait.Pick で読まれる札）
+        [TraitId.ThunderPathHop]= Array.Empty<string>(),                           // 第215期（参考・保持者 0 枚）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）

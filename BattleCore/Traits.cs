@@ -411,6 +411,9 @@ public enum TraitId
     ThunderLeak,// 雷は敵味方を選ばない: 雷を落とすたび、カタに隣接する味方すべてに感電が付く。`Thunder` の代金で、外せば `yP`
     ShockTick,  // 刻みでも弾ける（第214期・K2 の版・保持者 0 枚）: 保持者が戦闘に出ていれば、毒・燃焼の刻みでも感電が起爆する。
                 // **札そのものは挙動を持たない**（engine が保持を読むだけ）
+    ThunderPath,// 行き止まりを先に（第215期・T1）: 雷の跳ね先（と最初の一発）の同点を「その先に跳べる相手が少ない敵」から割る。
+                // 比べ方は 種類が多い → その先が少ない → 席番号。**札そのものは挙動を持たない**（`ThunderTrait.Pick` が保持を読むだけ）
+    ThunderPathHop,// 行き止まりを先に・跳ねだけ（第215期・T1′・参考・保持者 0 枚）: その先の鍵を跳ねにだけ使い、最初の一発は T0 と同じ（種類 → 席番号）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -12124,17 +12127,33 @@ public sealed class ThunderTrait : Trait
         return n;
     }
 
-    /// <summary>候補のうち種類が最多の敵（同数は席番号の順）。帯びた敵がいなければ null。</summary>
-    static UnitState? Heaviest(IEnumerable<UnitState> cands)
+    /// <summary>
+    /// 雷の相手の選び方（最初の一発と跳ねの両方）。帯びた敵がいなければ null。<b>乱数を引かない。</b>
+    /// <para>比べ方: ① 種類が多い → ②（<paramref name="path"/> のときだけ・第215期 T1）その先に跳べる相手が少ない → ③ 席番号の順。
+    /// 「その先」＝ 候補の隣で、候補自身と <paramref name="struck"/> を除いた、生きている・帯びた <paramref name="team"/> の駒の数。
+    /// <paramref name="path"/> が偽なら第214期（T0）と1ビットも違わない（② が全員 0 になるだけ）。</para>
+    /// </summary>
+    public static UnitState? Pick(IEnumerable<UnitState> cands, IReadOnlyList<UnitState> team, ICollection<UnitState> struck, bool path)
     {
         UnitState? best = null;
-        int bestK = 0;
+        int bestK = 0, bestOn = int.MaxValue;
         foreach (UnitState u in cands.OrderBy(x => x.Slot))
         {
             int k = KindsOf(u);
-            if (k > bestK) { best = u; bestK = k; }
+            if (k == 0) continue;
+            int on = path ? Onward(u, team, struck) : 0;
+            if (k > bestK || (k == bestK && on < bestOn)) { best = u; bestK = k; bestOn = on; }
         }
         return best;
+    }
+
+    /// <summary>候補の先に跳べる相手の数（第215期）。</summary>
+    public static int Onward(UnitState u, IReadOnlyList<UnitState> team, ICollection<UnitState> struck)
+    {
+        int n = 0;
+        foreach (UnitState v in team)
+            if (v != u && v.IsAlive && !struck.Contains(v) && FormationRules.AreAdjacent(u, v) && KindsOf(v) > 0) n++;
+        return n;
     }
 
     public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
@@ -12143,7 +12162,10 @@ public sealed class ThunderTrait : Trait
         var pool = ctx.TargetPool(self);
         if (pool.Count == 0) return;
 
-        UnitState? cur = Heaviest(pool);
+        bool hopOnly = self.HasTrait(TraitId.ThunderPathHop);                   // 第215期（T1′・参考）
+        bool path = hopOnly || self.HasTrait(TraitId.ThunderPath);             // 第215期（T1）
+        var struck = new HashSet<UnitState>();
+        UnitState? cur = Pick(pool, ctx.LivingMembers(pool[0].TeamId), struck, path && !hopOnly);
         int hits = 0;
         if (cur is null)
         {
@@ -12158,7 +12180,6 @@ public sealed class ThunderTrait : Trait
         }
         else
         {
-            var struck = new HashSet<UnitState>();
             while (cur is not null)
             {
                 int k = KindsOf(cur);
@@ -12166,7 +12187,8 @@ public sealed class ThunderTrait : Trait
                 hits++;
                 ctx.StrikeThunder(self, cur, self.CurrentAttack * (1 + k), hits, k);
                 UnitState from = cur;
-                cur = Heaviest(ctx.LivingMembers(from.TeamId).Where(u => !struck.Contains(u) && FormationRules.AreAdjacent(from, u)));
+                var team = ctx.LivingMembers(from.TeamId);
+                cur = Pick(team.Where(u => !struck.Contains(u) && FormationRules.AreAdjacent(from, u)), team, struck, path);
             }
             ctx.NoteThunderCast(self, hits, fallback: false);
         }
@@ -12193,6 +12215,21 @@ public sealed class ThunderLeakTrait : Trait
 public sealed class ShockTickTrait : Trait
 {
     public override TraitId Id => TraitId.ShockTick;
+}
+
+/// <summary>
+/// 行き止まりを先に（第215期・T1）。<b>札そのものは挙動を持たない</b>——<see cref="ThunderTrait.Pick"/> が保持を読み、
+/// 雷の同点を「その先に跳べる相手が少ない敵」から割る。
+/// </summary>
+public sealed class ThunderPathTrait : Trait
+{
+    public override TraitId Id => TraitId.ThunderPath;
+}
+
+/// <summary>行き止まりを先に・跳ねだけ（第215期・T1′・参考・保持者 0 枚）。<b>札そのものは挙動を持たない。</b></summary>
+public sealed class ThunderPathHopTrait : Trait
+{
+    public override TraitId Id => TraitId.ThunderPathHop;
 }
 
 /// <summary>
@@ -13629,6 +13666,8 @@ public static class TraitCatalog
         new ThunderTrait(),        // 第214期
         new ThunderLeakTrait(),    // 第214期
         new ShockTickTrait(),      // 第214期
+        new ThunderPathTrait(),    // 第215期
+        new ThunderPathHopTrait(), // 第215期（参考）
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期
         new HexLeakTrait(),    // 第189期

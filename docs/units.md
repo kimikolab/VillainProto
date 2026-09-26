@@ -244,6 +244,8 @@
 | `Thunder` | 雷のカタ |
 | `ThunderLeak` | 雷のカタ |
 | `ShockTick` | - |
+| `ThunderPath` | - |
+| `ThunderPathHop` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

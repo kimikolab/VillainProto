@@ -259,6 +259,8 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.Thunder]         = (HcPlusL,  "状態異常を帯びた敵に雷を落として跳ね、感電を残す（第214期）。代金は別の札（`ThunderLeak`）に切り出してある"),
         [TraitId.ThunderLeak]     = (HcMinusL, "雷を落とすたび隣の味方に感電が付くだけ。雷の代金で、外せば `yP` になる（第214期）"),
         [TraitId.ShockTick]       = (HcPlusL,  "刻みでも感電が弾ける版の札（第214期・K2・保持者 0 枚）"),
+        [TraitId.ThunderPath]     = (HcPlusL,  "雷の跳ね先の同点を「その先に跳べる相手が少ない敵」から割る札（第215期・T1）"),
+        [TraitId.ThunderPathHop]  = (HcPlusL,  "同じ割り方を跳ねにだけ使う版（第215期・T1′・参考・保持者 0 枚）"),
         [TraitId.LastStandHold]   = (HcBothL,  "味方が 0 体になると盾を捨てて剣を抜く（受け止めた刃の1割を力に変え ×2・薙ぎ、斬り返し、相打ちで勝つ）のと、構え直せなくなるのが1つの札"),
         [TraitId.LastStandHoldOldScar]    = (HcBothL, "第199期の剣の段で、傷を身に受けた分だけ数える版。対照で保持者 0 枚"),
         [TraitId.LastStandHoldNoStock]    = (HcBothL, "第199期の剣の段で、抜いた瞬間に在庫を捨てる版。対照で保持者 0 枚"),
