@@ -1926,6 +1926,16 @@ public sealed class UnitTally
                 PlankSoaked, PlankFlares, PlankFlareTurns;
 
     /// <summary>
+    /// 第208期（<b>計数専用</b>）。板を持つ側: <c>ReflectCount</c> 返した回数 ／ <c>ReflectNominal</c> 返した量（砕けた破片）／ <c>ReflectDealt</c> 実際に削った HP ／
+    /// <c>ReflectKills</c> 返した一撃で敵が倒れた回数 ／ <c>ReflectWasted</c> 殴った敵が既に倒れていて返らなかった量 ／ <c>ReflectMixed</c> ほかの書き手の破片も受けた板からの反射の回数。
+    /// ツギの側: <c>ReflectGroupHist</c> 1回の敵の攻撃で返った本数（1・2・3・4以上）と <c>ReflectGroupKilled</c> その攻撃の主が倒れた数。
+    /// 燃えた側: <c>PlankScorched</c> 燃えやすい板で燃焼の刻みが倍になった回数 ／ <c>PlankScorchExtra</c> 倍で増えた量。
+    /// ドハの側: <c>SharerLate</c> 破片の段の後ろで肩代わりした回数（U3）。
+    /// </summary>
+    public long ReflectCount, ReflectNominal, ReflectDealt, ReflectKills, ReflectWasted, ReflectMixed, PlankScorched, PlankScorchExtra, SharerLate;
+    public long[]? ReflectGroupHist, ReflectGroupKilled;
+
+    /// <summary>
     /// 第206期（<b>計数専用</b>）: <c>RiteFoeHist</c> 儀式の頭に生きていた聖痕の敵の数（添字 0 ＝ 1体・1 ＝ 2体・2 ＝ 3体以上）／
     /// <c>RiteMaxPerFoe</c> その戦の儀式で1体から吸えた量の最大 ／ <c>KissHealCross</c> 施した累計が
     /// <see cref="KissTrait.HealCrossProbes"/>（40・120・240・400）に初めて届いたターン（0 ＝ 未到達・<b>段の刻みに依らず</b>・段の札を持つときだけ積む）。
@@ -2340,6 +2350,10 @@ public sealed class UnitTally
         PlankPastes += o.PlankPastes; PlankGiven += o.PlankGiven; PlankStockUsed += o.PlankStockUsed; ScrapArmor += o.ScrapArmor; ScrapFalls += o.ScrapFalls;
         PlankSelf += o.PlankSelf; PlankOnStoic += o.PlankOnStoic; PlankInDrought += o.PlankInDrought;
         PlankSoaked += o.PlankSoaked; PlankFlares += o.PlankFlares; PlankFlareTurns += o.PlankFlareTurns;
+        ReflectCount += o.ReflectCount; ReflectNominal += o.ReflectNominal; ReflectDealt += o.ReflectDealt; ReflectKills += o.ReflectKills;
+        ReflectWasted += o.ReflectWasted; ReflectMixed += o.ReflectMixed; PlankScorched += o.PlankScorched; PlankScorchExtra += o.PlankScorchExtra; SharerLate += o.SharerLate;
+        if (o.ReflectGroupHist is not null) { ReflectGroupHist ??= new long[4]; for (int i = 0; i < 4; i++) ReflectGroupHist[i] += o.ReflectGroupHist[i]; }
+        if (o.ReflectGroupKilled is not null) { ReflectGroupKilled ??= new long[4]; for (int i = 0; i < 4; i++) ReflectGroupKilled[i] += o.ReflectGroupKilled[i]; }
         KissTierMax = Math.Max(KissTierMax, o.KissTierMax);
         if (o.RiteFoeHist is not null) { RiteFoeHist ??= new long[3]; for (int i = 0; i < 3; i++) RiteFoeHist[i] += o.RiteFoeHist[i]; }
         RiteMaxPerFoe = Math.Max(RiteMaxPerFoe, o.RiteMaxPerFoe);
@@ -2868,6 +2882,9 @@ public static class PlankLabels
     /// <summary>板の印で燃焼が倍になった瞬間。<c>TargetId</c> = 燃えた味方、<c>Amount</c> = 倍にした後の残りターン、
     /// <c>Slot</c> = 0 <c>Ignite</c>（点く・点け直し）／ 1 リリの移し。<c>ActorId</c> は付けない（書き手は燃焼の書き手）。</summary>
     public const string Flare = "板が燃えた";
+    /// <summary>第208期: 板の破片が殴った敵へ飛んだ。<c>ActorId</c> = 板を持つ味方、<c>TargetId</c> = 殴った敵、<c>Amount</c> = 返した量（砕けた破片の量）、
+    /// <c>Slot</c> = 攻撃の通し番号（同じ敵の1回の攻撃で返った反射は同じ番号・攻撃の外なら 0）。直後に敵への <c>Damage</c> が並ぶ。</summary>
+    public const string Reflect = "板の破片が飛んだ";
 }
 
 /// <summary><see cref="BattleEventKind.Kiss"/> の <c>Text</c>（第204期・<b>表示専用</b>）。</summary>

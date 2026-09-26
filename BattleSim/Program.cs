@@ -1358,6 +1358,9 @@ static class TraitKeyMap
         [TraitId.Plank]      = new[] { UnitTally.CarryArmor },                                  // 第207期（ツギ・板＝味方の破片）
         [TraitId.PlankTinder]= Array.Empty<int>(),                                              // 第207期（燃焼の付与口で読まれる札）
         [TraitId.Scrap]      = Array.Empty<int>(),                                              // 第207期（在庫は私有キー）
+        [TraitId.PlankRebound] = Array.Empty<int>(),                                            // 第208期（反射はダメージ・状態キーを書かない）
+        [TraitId.PlankScorch]  = Array.Empty<int>(),                                            // 第208期（燃焼の刻みで読まれる札）
+        [TraitId.SharerArmored]= Array.Empty<int>(),                                            // 第208期（分かちの段の位置だけ）
         [TraitId.KissSteal]  = Array.Empty<int>(),                                              // 第205期（AtkBonus を移す・状態キーではない）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
@@ -1526,6 +1529,9 @@ static class TraitHookMap
         [TraitId.Plank]       = new[] { "OnBattleStart", "OnAction" },             // 第207期（ツギ）
         [TraitId.PlankTinder] = new[] { Engine },                                  // 第207期（Ignite とリリの移しが印を読む）
         [TraitId.Scrap]       = new[] { "OnAnyDeath", "OnCarryOver", Engine },     // 第207期（破片の減りは SetCounter → NoteArmorLost）
+        [TraitId.PlankRebound]= new[] { Engine },                                  // 第208期（破片の段と ApplyDamageCore の出口）
+        [TraitId.PlankScorch] = new[] { Engine },                                  // 第208期（燃焼の刻みの ScorchTick）
+        [TraitId.SharerArmored]= new[] { Engine },                                 // 第208期（ApplyDamage の分かちの段）
         [TraitId.KissSteal]   = Array.Empty<string>(),                             // 第205期（口づけの中で読まれる札）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）

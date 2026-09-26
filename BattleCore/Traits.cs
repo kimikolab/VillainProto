@@ -385,6 +385,9 @@ public enum TraitId
     KissRite5,  // 口づけ・祝福の儀を「5倍の等分」に（第206期）: 儀式の総量を吸う量 × 5 に固定し、生きている聖痕の敵で等分する。札は `KissTrait` の中で読まれる
     Plank,       // 継ぎ当て（第207期・ツギ）: 手番で、破片が最も薄い味方に板（最も強い敵の一撃ぶんの破片・最低6）を貼る
     PlankTinder, // 板は燃えやすい（第207期・ツギのマイナス）: 板の印を持つ味方に付く燃焼の残りターンを倍にする。札は `PlankTrait` と engine の燃焼の付与口で読まれる
+    PlankRebound,  // 撃ち返す板（第208期・ツギ）: 板の印を持つ味方が敵の一撃で失った破片の量だけ、その敵へ返す。判定は engine（`ReflectPlank`）
+    PlankScorch,   // 板は燃えやすい・ダメージ倍（第208期・ツギのマイナス）: 板の印を持つ味方が受ける燃焼の刻みが倍。判定は engine（`ScorchTick`）
+    SharerArmored, // 分かちを破片の段の後ろへ（第208期・ドハ）: 殴られた味方の破片が吸った残りだけを4割肩代わりする。判定は engine（`ApplyDamage`）
     Scrap,       // 瓦礫拾い（第207期・ツギ）: 味方の破片が砕けた量の 50% と、倒れた駒1体につき 5 を背中に積み、次の板に上乗せする
     KissSteal,  // 口づけ・強弱を移す（第205期）: 1体ずつ吸うとき、その敵の攻撃力の上げ下げ（`AtkBonus`）も受け取った味方へ移す。札は `KissTrait` の中で読まれる
 
@@ -9057,8 +9060,15 @@ public sealed class PlankTrait : Trait
     /// <summary>板の最低の厚さ（指示書 §2.2・規定 6）。</summary>
     public const int PlankFloor = 6;
 
-    /// <summary>板の印の値。<see cref="Plain"/> ＝ 燃えにくい板（T1）／ <see cref="Flammable"/> ＝ 燃えやすい板（<see cref="TraitId.PlankTinder"/>）。</summary>
-    public const int Plain = 1, Flammable = 2;
+    /// <summary>
+    /// 板の印の値（<b>ビットの和</b>・第208期）。<see cref="Plain"/> ＝ 板がある ／ <see cref="Flammable"/> ＝ 燃焼の持続が倍（<see cref="TraitId.PlankTinder"/>）／
+    /// <see cref="Scorch"/> ＝ 燃焼の刻みが倍（<see cref="TraitId.PlankScorch"/>）／ <see cref="Rebound"/> ＝ 砕けると撃ち返す（<see cref="TraitId.PlankRebound"/>）。
+    /// 第207期の値（1 ／ 1+2）はそのまま読める。
+    /// </summary>
+    public const int Plain = 1, Flammable = 2, Scorch = 4, Rebound = 8;
+
+    /// <summary>第208期（計数のみ）: その戦でツギ以外の書き手の破片も受けた駒の印（反射の「混ざった板」）。</summary>
+    public const string MixedKey = "plankMixed";
 
     public override TraitId Id => TraitId.Plank;
 
@@ -9083,8 +9093,9 @@ public sealed class PlankTrait : Trait
         int amount = Math.Max(PlankFloor, heaviest) + stock;
         int after = to.RawCounter(StatusKeys.Armor) + amount;
         to.SetCounter(StatusKeys.Armor, after);
-        int mark = self.HasTrait(TraitId.PlankTinder) ? Flammable : Plain;
-        to.SetCounter(StatusKeys.Plank, Math.Max(mark, to.RawCounter(StatusKeys.Plank)));
+        int mark = Plain | (self.HasTrait(TraitId.PlankTinder) ? Flammable : 0) | (self.HasTrait(TraitId.PlankScorch) ? Scorch : 0)
+                   | (self.HasTrait(TraitId.PlankRebound) ? Rebound : 0);
+        to.SetCounter(StatusKeys.Plank, mark | to.RawCounter(StatusKeys.Plank));
 
         UnitTally t = ctx.TallyOf(self);
         t.PlankPastes++;
@@ -9097,6 +9108,24 @@ public sealed class PlankTrait : Trait
         ctx.Log($"    {self.Name} が {to.Name} に板を貼った（破片 +{amount}" + (stock > 0 ? $"・うち瓦礫 {stock}" : "") + $"・計 {after}）",
                 LogKind.Trigger);
     }
+}
+
+/// <summary>撃ち返す板（第208期）。<b>札そのものは何もしない</b>——<see cref="PlankTrait"/> が印に <see cref="PlankTrait.Rebound"/> を立て、engine の破片の段と `ReflectPlank` が読む。</summary>
+public sealed class PlankReboundTrait : Trait
+{
+    public override TraitId Id => TraitId.PlankRebound;
+}
+
+/// <summary>板は燃えやすい・ダメージ倍（第208期・ツギのマイナスの差し替え）。<b>札そのものは何もしない</b>——印の <see cref="PlankTrait.Scorch"/> を engine の燃焼の刻み（`ScorchTick`）が読む。</summary>
+public sealed class PlankScorchTrait : Trait
+{
+    public override TraitId Id => TraitId.PlankScorch;
+}
+
+/// <summary>分かちを破片の段の後ろへ（第208期・ドハ）。<b>札そのものは何もしない</b>——`ApplyDamage` の分かちの段が読む（外せば第207期のまま）。</summary>
+public sealed class SharerArmoredTrait : Trait
+{
+    public override TraitId Id => TraitId.SharerArmored;
 }
 
 /// <summary>
@@ -13134,6 +13163,9 @@ public static class TraitCatalog
         new PlankTrait(),            // 第207期（継ぎ当てのツギ）
         new PlankTinderTrait(),      // 第207期（ツギのマイナス）
         new ScrapTrait(),            // 第207期（ツギの在庫）
+        new PlankReboundTrait(),     // 第208期（撃ち返す板）
+        new PlankScorchTrait(),      // 第208期（燃えやすい板・ダメージ倍）
+        new SharerArmoredTrait(),    // 第208期（分かちを破片の後ろへ）
         new KissBareTrait(),         // 第204期（対照・保持者 0 枚）
         new Kiss30Trait(),           // 第204期（対照・保持者 0 枚）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）

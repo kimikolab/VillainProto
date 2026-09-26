@@ -732,17 +732,20 @@ public sealed class BattleContext
                 return;
             }
 
+            // 第208期: 燃えやすい板（ダメージ倍）。**反転の枝より前**で倍にする——化けた回復も倍（指示書 §2.2・Q0-3）。
+            int burnDmg = ScorchTick(u, BurnRules.Damage);
+
             // 反転（第190期・ベニ）。燃焼の残りターンは上で普通に減っている。
             UnitState? inverterB = InvertsTick(u);
             if (inverterB is not null)
             {
                 Emit(new BattleEvent
                 {
-                    Kind = BattleEventKind.Status, Turn = _turn, TargetId = u.InstanceId, Amount = BurnRules.Damage, Text = "燃焼",
+                    Kind = BattleEventKind.Status, Turn = _turn, TargetId = u.InstanceId, Amount = burnDmg, Text = "燃焼",
                     SourceTrait = TraitId.Inverse, InverterId = inverterB.InstanceId,
                     TickIndex = ord.Index, TickCount = ord.Count,
                 });
-                InverseHeal(inverterB, u, BurnRules.Damage, 1, "火");
+                InverseHeal(inverterB, u, burnDmg, 1, "火");
                 ClearKindleHeld(u);
                 return;
             }
@@ -756,14 +759,14 @@ public sealed class BattleContext
                 Kind = BattleEventKind.Status,
                 Turn = _turn,
                 TargetId = u.InstanceId,
-                Amount = BurnRules.Damage,
+                Amount = burnDmg,
                 Text = "燃焼",
                 TickIndex = ord.Index, TickCount = ord.Count,
             });
-            if (ScapegoatActive) NoteScapegoatDot(u, BurnRules.Damage, StatusKeys.Burn);
+            if (ScapegoatActive) NoteScapegoatDot(u, burnDmg, StatusKeys.Burn);
             // burnTick: この刻みが破片に吸われた量・HP を削った量を、
             // 毒の刻み（同じく source が null）と混ぜずに数えるための札。**盤面には影響しない。**
-            ApplyDamage(u, BurnRules.Damage, null, burnTick: true);
+            ApplyDamage(u, burnDmg, null, burnTick: true);
             if (!u.IsAlive) bt.BurnDeaths++;
         }
     }
@@ -899,6 +902,7 @@ public sealed class BattleContext
             }
             else if ((foe ? null : InvertsTick(u)) is UnitState inverterB)
             {
+                mult *= (u.RawCounter(StatusKeys.Plank) & PlankTrait.Scorch) != 0 ? 2 : 1;   // 第208期: 燃えやすい板
                 // 反転（第190期）。弾けた火も、隣のベニの前では薬になる。
                 Emit(new BattleEvent
                 {
@@ -911,7 +915,7 @@ public sealed class BattleContext
             }
             else
             {
-                int dmg = BurnRules.Damage * mult;
+                int dmg = ScorchTick(u, BurnRules.Damage * mult);   // 第208期: 燃えやすい板
                 if (foe) { kt.DetonateBurnNominal += dmg; kt.DetonateDualExtra += dmg - BurnRules.Damage; }
                 else kt.DetonateAllyNominal += dmg;
                 Log($"    {u.Name} の火が弾けた（{dmg}）", LogKind.Status);
@@ -2446,7 +2450,11 @@ public sealed class BattleContext
         switch (key)
         {
             case StatusKeys.Poison: NoteCarry(u, UnitTally.CarryPoison, delta); break;
-            case StatusKeys.Armor: NoteCarry(u, UnitTally.CarryArmor, delta); break;
+            case StatusKeys.Armor:
+                NoteCarry(u, UnitTally.CarryArmor, delta);
+                // 第208期（計数のみ）: ツギ以外の書き手の破片（反射の「混ざった板」）。
+                if (_reboundLive && Mark.Id != TraitId.Plank) u.SetCounter(PlankTrait.MixedKey, 1);
+                break;
             case StatusKeys.Burn: NoteCarry(u, UnitTally.CarryBurn, delta); break;
             // 第146期 段0（表示専用）: 付いた瞬間。**計数の隣に置くだけで盤面は1ビットも動かない。**
             case StatusKeys.Stun: NoteCarry(u, UnitTally.CarryStun, 1); EmitStun(u, StunLabels.Struck, Mark.Owner); break;
@@ -4232,7 +4240,7 @@ public sealed class BattleContext
     /// </summary>
     public int PlankFlare(UnitState target, int turns, bool fromKiss)
     {
-        if (target.RawCounter(StatusKeys.Plank) != PlankTrait.Flammable || turns <= 0) return turns;
+        if ((target.RawCounter(StatusKeys.Plank) & PlankTrait.Flammable) == 0 || turns <= 0) return turns;
         int doubled = turns * 2;
         UnitTally t = TallyOf(target);
         t.PlankFlares++;
@@ -4266,6 +4274,76 @@ public sealed class BattleContext
         if (_scrapHolders.Count == 0) return;
         foreach (UnitState h in _scrapHolders)
             if (h.IsAlive && h.TeamId == u.TeamId) ScrapTrait.Pick(this, h, u, lost, fall: false);
+    }
+
+    /// <summary>第208期: 撃ち返す板（<see cref="TraitId.PlankRebound"/>）の保持者が盤上にいるか。偽なら破片の段は比較1つで抜ける。</summary>
+    bool _reboundLive;
+    UnitState? _reboundTsugi;
+    int _reflectAmt;
+    UnitState? _reflectFrom;
+    int _attackSerial;
+    readonly Stack<(UnitState Actor, int Serial, int Count)> _reflectFrames = new();
+
+    /// <summary>
+    /// 第208期: 板が敵の一撃で砕けた量だけ、その敵へ撃ち返す。<see cref="ApplyDamageCore"/> の出口から1回だけ来る。
+    /// <b>攻撃ではない</b>（`PerformAttack` を通らない・庇い・受け流し・反撃・割り込みの対象にならない）が、ダメージは
+    /// 通常の入口（敵の破片・軛・§1 の標）を通す。棘と同じく <see cref="Reaction"/> で包む（中では返さない）。
+    /// </summary>
+    void ReflectPlank(UnitState holder, UnitState foe, int amount)
+    {
+        UnitTally ht = TallyOf(holder);
+        if (!foe.IsAlive) { ht.ReflectWasted += amount; return; }
+        ht.ReflectCount++;
+        ht.ReflectNominal += amount;
+        if (holder.RawCounter(PlankTrait.MixedKey) > 0) ht.ReflectMixed++;
+        int serial = 0;
+        if (_reflectFrames.Count > 0 && _reflectFrames.Peek().Actor == foe)
+        {
+            var top = _reflectFrames.Pop();
+            serial = top.Serial;
+            _reflectFrames.Push((top.Actor, top.Serial, top.Count + 1));
+        }
+        if (_verbose)
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.Plank, Turn = _turn, ActorId = holder.InstanceId, TargetId = foe.InstanceId,
+                Amount = amount, Text = PlankLabels.Reflect, Slot = serial, SourceTrait = TraitId.PlankRebound,
+            });
+        int before = foe.Hp;
+        Reaction(() =>
+        {
+            Log($"    {holder.Name} の板の破片が {foe.Name} へ飛んだ（{amount}）", LogKind.Trigger);
+            ApplyDamage(foe, amount, holder);
+        });
+        ht.ReflectDealt += before - Math.Max(0, foe.Hp);
+        if (!foe.IsAlive) ht.ReflectKills++;
+        if (serial == 0) NoteReflectGroup(1, !foe.IsAlive);
+    }
+
+    void CloseReflectFrame()
+    {
+        var f = _reflectFrames.Pop();
+        if (f.Count > 0) NoteReflectGroup(f.Count, !f.Actor.IsAlive);
+    }
+
+    /// <summary>1回の敵の攻撃で返った本数の分布（1・2・3・4以上）と、その攻撃の主が倒れたか（計数のみ・ツギの帳簿に付ける）。</summary>
+    void NoteReflectGroup(int count, bool killed)
+    {
+        if (_reboundTsugi is null) return;
+        UnitTally t = TallyOf(_reboundTsugi);
+        int i = Math.Min(count, 4) - 1;
+        (t.ReflectGroupHist ??= new long[4])[i]++;
+        if (killed) (t.ReflectGroupKilled ??= new long[4])[i]++;
+    }
+
+    /// <summary>第208期: 燃えやすい板（<see cref="TraitId.PlankScorch"/>・印の <see cref="PlankTrait.Scorch"/>）なら燃焼の刻みを倍にする。</summary>
+    int ScorchTick(UnitState u, int dmg)
+    {
+        if ((u.RawCounter(StatusKeys.Plank) & PlankTrait.Scorch) == 0) return dmg;
+        UnitTally t = TallyOf(u);
+        t.PlankScorched++;
+        t.PlankScorchExtra += dmg;
+        return dmg * 2;
     }
 
     /// <summary>ツギの出来事（第207期・<see cref="BattleEventKind.Plank"/>・<b>表示専用</b>）。verbose のときだけ積む。</summary>
@@ -5478,6 +5556,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Daunt)) _dauntLive = true;   // 第189期（萎縮の消費を短絡させる）
         if (u.HasTrait(TraitId.Numb)) _numbLive = true;     // 第195期（痺れ毒の減少を短絡させる）
         if (u.HasTrait(TraitId.Scrap)) _scrapHolders.Add(u); // 第207期（破片の減りを拾う口を短絡させる）
+        if (u.HasTrait(TraitId.PlankRebound)) { _reboundLive = true; _reboundTsugi ??= u; }   // 第208期（撃ち返す板）
         // 第190期: 反転の結界（ベニ）。**保持者がいなければ `Count == 0` の比較1つで抜ける**。
         if (u.HasTrait(TraitId.Inverse)) _inverseHolders.Add(u);
         if (u.HasTrait(TraitId.InverseLeak)) _inverseLeakHolders.Add(u);
@@ -6735,6 +6814,19 @@ public sealed class BattleContext
     {
         // 第185期 追補4: 殴られて積もる据えの層を「1回の攻撃につき1層・攻撃が終わってから」にする枠。
         // **保持者がいなければ比較1つで本体へ直行する**（既存の行が 0 件差分であることの根拠）。
+        // 第208期: 撃ち返す板の「1回の攻撃に何本返ったか」を数える枠（計数・表示専用）。保持者がいなければ比較1つで抜ける。
+        if (_reboundLive)
+        {
+            _reflectFrames.Push((actor, ++_attackSerial, 0));
+            try { PerformAttackFramed(actor, prefix, attackPercent, patternOverride); }
+            finally { CloseReflectFrame(); }
+            return;
+        }
+        PerformAttackFramed(actor, prefix, attackPercent, patternOverride);
+    }
+
+    void PerformAttackFramed(UnitState actor, string prefix, int attackPercent, AttackPattern? patternOverride)
+    {
         if (!FootingTrait.StackOnHit || _shieldHolders.Count == 0)
         {
             PerformAttackBody(actor, prefix, attackPercent, patternOverride);
@@ -7236,12 +7328,22 @@ public sealed class BattleContext
     {
         HitFrame prevHit = Hit;
         Hit = new HitFrame(levy, isFriendlyFire, relayed, pattern);
+        // 第208期: 撃ち返す板の控え（1回の `ApplyDamage` の枠ごと。入れ子の呼び出しは退避・復帰する）。
+        int prevAmt = _reflectAmt; UnitState? prevFrom = _reflectFrom;
+        _reflectAmt = 0; _reflectFrom = null;
+        int myAmt; UnitState? myFrom;
         try
         {
             ApplyDamageBody(target, amount, source, isFriendlyFire, lethal, burnTick, relayed,
                             spillWound, deepBite, singleHit, hexShare, pattern, levy);
         }
-        finally { Hit = prevHit; }
+        finally
+        {
+            Hit = prevHit;
+            myAmt = _reflectAmt; myFrom = _reflectFrom;
+            _reflectAmt = prevAmt; _reflectFrom = prevFrom;
+        }
+        if (myAmt > 0 && myFrom is not null) ReflectPlank(target, myFrom, myAmt);
     }
 
     /// <summary>ダメージ処理の本体。<see cref="ApplyDamageCore"/> だけが呼ぶ。</summary>
@@ -7581,6 +7683,8 @@ public sealed class BattleContext
             }
         }
 
+        UnitState? lateSharer = null;   // 第208期（U3）: 破片の段の後ろで肩代わりするドハ
+
         // 分かち: 型を問わず肩代わりする。庇うと違い、薙ぎや全体でも働く。
         // 味方同士の巻き込み（isFriendlyFire）も引き受ける。ここを除外していたとき、
         // ドハはカドの代金（敵からの被弾）だけを4割肩代わりして守り、収入源（味方への巻き込み）は
@@ -7590,6 +7694,9 @@ public sealed class BattleContext
         {
             UnitState? sharer = PickOne(
                 teammates.Where(u => u.HasTrait(TraitId.Sharer) && u != target).ToList());
+            // 第208期（U3・`SharerArmored`）: 殴られた味方の破片の段の**後ろ**で肩代わりする（板が吸った残りだけを4割）。
+            // 選ぶのはここ（乱数の位置は変えない）で、取るのは破片の段の直後（下の `lateSharer`）。
+            if (sharer is not null && sharer.HasTrait(TraitId.SharerArmored)) { lateSharer = sharer; sharer = null; }
             if (sharer is not null)
             {
                 int taken = amount * SharerTrait.Percent / 100;
@@ -7625,6 +7732,13 @@ public sealed class BattleContext
         if (armor > 0)
         {
             int soak = Math.Min(armor, amount);
+            // 第208期: 撃ち返す板（`PlankRebound`）。印は破片が 0 になると消えるので、減らす前に読む。
+            if (_reboundLive && source is not null && source.TeamId != target.TeamId && !burnTick && !InReaction
+                && (target.RawCounter(StatusKeys.Plank) & PlankTrait.Rebound) != 0)
+            {
+                _reflectAmt += soak;
+                _reflectFrom = source;
+            }
             target.SetCounter(StatusKeys.Armor, armor - soak);
             amount -= soak;
 
@@ -7670,6 +7784,26 @@ public sealed class BattleContext
                 // 現行の散開にも同じ穴があるので、機構の新しい欠陥ではない。
                 if (Brace.Cap > 0 && target.HasTrait(TraitId.Brace)) TallyOf(target).BraceArmorMuted++;
                 return;
+            }
+        }
+
+        // 第208期（U3）: 破片の段の後ろの分かち。板（破片）が吸いきれなかった残りから4割を取る——中身は上の段と同じ。
+        if (lateSharer is not null && lateSharer.IsAlive)
+        {
+            int taken = amount * SharerTrait.Percent / 100;
+            if (taken > 0)
+            {
+                amount -= taken;
+                TallyOf(lateSharer).SharerLate++;
+                Log($"    {lateSharer.Name} が {target.Name} の痛みを引き受けた", LogKind.Trigger);
+                if (deepBite) TallyOf(target).DeepBiteRelayed++;
+                ApplyDamage(lateSharer, taken, source, isFriendlyFire: true, burnTick: burnTick, relayed: true, levy: levy);
+                int dull = taken / SharerTrait.DullDivisor;
+                if (dull > 0)
+                {
+                    Dull(target, dull, DullRoute.Sharer, lateSharer);
+                    Log($"    痛みを取り上げられた {target.Name} の腕がなまる（攻撃 -{dull}）", LogKind.FriendlyFire);
+                }
             }
         }
 

@@ -508,8 +508,9 @@ public static class UnitCatalog
         MaxHp = 104,
         Attack = 4,
         Speed = 3,
-        Traits = new[] { TraitId.Sharer },
-        PlusText = "味方が受けるダメージの4割を肩代わりする（薙ぎでも全体でも効く）。肩代わり込みで受けた痛みに応じて自分の攻撃力も上がる",
+        // 第208期: 分かちを殴られた味方の破片の段の後ろへ（`SharerArmored`・外せば第207期まで）。
+        Traits = new[] { TraitId.Sharer, TraitId.SharerArmored },
+        PlusText = "味方が受けるダメージの4割を肩代わりする（薙ぎでも全体でも効く・味方の破片が受け止めた残りから取る）。肩代わり込みで受けた痛みに応じて自分の攻撃力も上がる",
         MinusText = "自分の火力はほぼ無く、味方が多いほど早く尽きる",
         Flavor = "他人の痛みを勝手に引き受ける。感謝はされず、ただ先に倒れる。"
     };
@@ -867,12 +868,15 @@ public static class UnitCatalog
         Attack = 9,
         Speed = 8,
         Advances = false,
-        Traits = new[] { TraitId.Plank, TraitId.PlankTinder, TraitId.Scrap },
+        // 第208期（U3）: 撃ち返す板（`PlankRebound`）を足し、燃えやすさを持続倍（`PlankTinder`）からダメージ倍（`PlankScorch`）へ差し替えた。
+        // 第207期の姿（T3）は `[Plank, PlankTinder, Scrap]`（診断 `tsugi` の U0）。
+        Traits = new[] { TraitId.Plank, TraitId.PlankScorch, TraitId.Scrap, TraitId.PlankRebound },
         // 板を貼るのが手番そのもの（攻撃9 は出ない）。`[Skill]` の1要素。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "板を貼っている") },
         PlusText = "手番で、破片が最も薄い味方に板を貼る（最も強い敵の一撃ぶんの破片・最低6）。回復ではないので渇きでも止まらず、回復を受け付けない味方にも届く / "
+                   + "板が敵に砕かれると、砕けた破片がその敵へ飛ぶ（砕けた量だけのダメージ） / "
                    + "味方の破片が砕けたり、誰かが倒れたりすると、瓦礫を拾って背中に積み、次の板を厚くする",
-        MinusText = "板を貼られた味方は燃えやすい。火が付くと、倍の間燃え続ける。自分では攻撃しない",
+        MinusText = "板は燃えやすい。板を貼られた味方は、燃焼で倍の傷を負う。自分では攻撃しない",
         Flavor = "治せない。だから、これ以上壊れないように塞いだ。"
     };
 

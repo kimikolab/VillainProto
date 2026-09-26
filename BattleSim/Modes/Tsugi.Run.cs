@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -10,6 +10,8 @@ using static Common;
 
 static partial class TsugiDiag
 {
+    static partial void RunMore208(string mode, string arg, ref bool handled);
+
     static partial void RunMoreImpl(string mode, string arg, ref bool handled)
     {
         switch (mode)
@@ -18,6 +20,7 @@ static partial class TsugiDiag
             case "swap": RunSwap(); handled = true; return;
             case "ledger": RunLedger(); handled = true; return;
             case "check": Check(arg); handled = true; return;
+            default: RunMore208(mode, arg, ref handled); return;
         }
     }
 
@@ -34,7 +37,8 @@ static partial class TsugiDiag
 
     static readonly UnitDef T1 = Clone(UnitCatalog.Tsugi, new[] { TraitId.Plank });
     static readonly UnitDef T2 = Clone(UnitCatalog.Tsugi, new[] { TraitId.Plank, TraitId.PlankTinder });
-    static readonly UnitDef T3 = UnitCatalog.Tsugi;
+    // 第208期に規定のツギ（U3）が変わったので、第207期の T3 は札で写す。
+    static readonly UnitDef T3 = Clone(UnitCatalog.Tsugi, new[] { TraitId.Plank, TraitId.PlankTinder, TraitId.Scrap });
 
     static readonly (string Tag, UnitDef D)[] Versions =
     {
@@ -67,6 +71,8 @@ static partial class TsugiDiag
         /// <summary>味方の駒の帳簿（<c>Def.Id</c> ごとに合算）。</summary>
         public readonly Dictionary<string, UnitTally> T = new();
         public int TsugiDied;
+        /// <summary>第208期: 倒れていた駒（`PlayerStarterFallen`）の数を Id ごとに。</summary>
+        public readonly Dictionary<string, int> FallenBy = new();
 
         public double Win => 100.0 * Wins / Math.Max(1, N);
         /// <summary>全員生存勝ち（全戦に占める割合）。</summary>
@@ -100,6 +106,7 @@ static partial class TsugiDiag
                 a.FallenSum += r.PlayerStarterFallen.Count;
                 a.TurnsSum += r.Turns;
                 if (r.PlayerStarterFallen.Contains("tsugi")) a.TsugiDied++;
+                foreach (string id in r.PlayerStarterFallen) a.FallenBy[id] = a.FallenBy.GetValueOrDefault(id) + 1;
                 foreach (var (id, t) in r.TallyByUnit)
                 {
                     if (!ids.Contains(id)) continue;
