@@ -253,6 +253,8 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.AidSkill]        = (HcPlusL,  "板が砕かれた累計で応急処置の1ターンの上限が増える札（第212期）"),
         [TraitId.PlankOpening]    = (HcPlusL,  "開戦時に前列の味方へ板を貼る札（第212期）"),
         [TraitId.BraceArmored]    = (HcPlusL,  "破片を纏っていても身構えの上限を先に掛け、受け切った一撃でも弾いて配る札（第212期）"),
+        [TraitId.BraceCapFirst]   = (HcPlusL,  "破片を纏っていても身構えの上限を先に掛ける札（受け切った一撃では弾かない・第213期）"),
+        [TraitId.BraceHeldDeliver]= (HcPlusL,  "破片が受け切った一撃でも、そのターンの宛先へ切り落とした分を配る札（第213期）"),
         [TraitId.KissSteal]       = (HcBothL,  "吸った敵の攻撃力の上げ下げも受け取った味方へ移す札（弱体も強化も）"),
         [TraitId.LastStandHold]   = (HcBothL,  "味方が 0 体になると盾を捨てて剣を抜く（受け止めた刃の1割を力に変え ×2・薙ぎ、斬り返し、相打ちで勝つ）のと、構え直せなくなるのが1つの札"),
         [TraitId.LastStandHoldOldScar]    = (HcBothL, "第199期の剣の段で、傷を身に受けた分だけ数える版。対照で保持者 0 枚"),

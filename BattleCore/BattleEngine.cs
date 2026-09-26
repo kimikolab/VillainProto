@@ -4523,6 +4523,13 @@ public sealed class BattleContext
             BraceTrait.Struck(this, target);
             this.EndTrait(bm);
         }
+        // 第213期（`BraceHeldDeliver`・W2）: 受け切った一撃では弾かない。そのターン既に宛先がいれば保留を配るだけ（新しい宛先は作らない）。
+        else if (_braceArmoredLive && target.IsAlive && target.HasTrait(TraitId.BraceHeldDeliver) && target.HasTrait(TraitId.Brace))
+        {
+            TraitMark bm = this.BeginTrait(TraitId.Brace, target);
+            BraceTrait.Deliver(this, target);
+            this.EndTrait(bm);
+        }
         if (_scrapHolders.Count == 0) return;
         foreach (UnitState h in _scrapHolders.ToList())
         {
@@ -5733,7 +5740,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Scrap)) _scrapHolders.Add(u); // 第207期（破片の減りを拾う口を短絡させる）
         if (u.HasTrait(TraitId.Thorns)) _thornsLive = true;
         if (u.HasTrait(TraitId.Brace)) _braceLive = true;   // 第213期（計数のみ）
-        if (u.HasTrait(TraitId.BraceArmored)) _braceArmoredLive = true;   // 第212期（破片の前の身構え・受け切った一撃の弾き）  // 第211期（破片で受け切った一撃の棘・計数と Y3 の口を短絡させる）
+        if (u.HasTrait(TraitId.BraceArmored) || u.HasTrait(TraitId.BraceCapFirst) || u.HasTrait(TraitId.BraceHeldDeliver)) _braceArmoredLive = true;   // 第213期に W1・W2 の札を足した   // 第212期（破片の前の身構え・受け切った一撃の弾き）  // 第211期（破片で受け切った一撃の棘・計数と Y3 の口を短絡させる）
         if (u.HasTrait(TraitId.PlankRebound)) { _reboundLive = true; _reboundTsugi ??= u; }   // 第208期（撃ち返す板）
         // 第190期: 反転の結界（ベニ）。**保持者がいなければ `Count == 0` の比較1つで抜ける**。
         if (u.HasTrait(TraitId.Inverse)) _inverseHolders.Add(u);
@@ -7914,7 +7921,9 @@ public sealed class BattleContext
         int armorAtEntry211 = armor;   // 第211期（計数のみ）
         // 第212期（`BraceArmored`・ササ）: 身を固めている間の一撃は、**破片より先に**上限で切る（切り落とした分は今までどおり保留へ）。
         // 破片が無いときは下の上限の段が同じことをするので、ここは破片があるときだけ——破片の無い駒・札の無い駒は1ビットも動かない。
-        if (_braceArmoredLive && armor > 0 && Brace.Cap > 0 && amount > Brace.Cap && target.HasTrait(TraitId.BraceArmored)
+        // 第213期（`BraceCapFirst`・W1 / W2）: 同じ門を通す（破片が受け切った一撃の扱いだけが `ArmorOnlyHit` で分かれる）。
+        if (_braceArmoredLive && armor > 0 && Brace.Cap > 0 && amount > Brace.Cap
+            && (target.HasTrait(TraitId.BraceArmored) || target.HasTrait(TraitId.BraceCapFirst))
             && BraceTrait.IsBraced(this, target))
         {
             int refused = amount - Brace.Cap;

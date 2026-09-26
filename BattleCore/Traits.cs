@@ -399,6 +399,8 @@ public enum TraitId
     AidSkill,      // 腕で駆け込める回数が増える（第212期・ツギ）: 腕の段（板が砕かれた累計・40 × n(n+1)/2）で、応急処置の1ターンの上限が 1 ＋ 段になる。基本の厚さには掛けない。札は `FirstAidTrait` と engine の `NotePlankSkill` で読まれる
     PlankOpening,  // 出撃前の板（第212期・ツギ）: 開戦時に、生きている味方の一番前の列の全員へ板を1枚ずつ貼る
     BraceArmored,  // 破片で受けても身構えは働く（第212期・ササ）: 身を固めている間は破片より先に上限で切り、破片が受け切った一撃でも弾きと配りを起こす。判定は engine の破片の段
+    BraceCapFirst, // 身構えの上限を破片より先に（第213期・ササ）: 身を固めている間は破片より先に上限で切る。破片が受け切った一撃では何も起こさない（弾かない・配らない）。判定は engine の破片の段
+    BraceHeldDeliver, // 受け切っても配る（第213期・ササ）: 破片が受け切った一撃でも、そのターン既に宛先がいれば保留を配る（弾かない・新しい宛先を作らない）。判定は engine の `ArmorOnlyHit`
     ThornsArmored, // 破片で受けても棘は鳴る（第211期・カド）: 敵の一撃を破片が受け切っても棘を返す。判定は engine の破片の段（`ThornsTrait.Riposte`）
     Scrap,       // 瓦礫拾い（第207期・ツギ）: 味方の破片が砕けた量の 50% と、倒れた駒1体につき 5 を背中に積み、次の板に上乗せする
     KissSteal,  // 口づけ・強弱を移す（第205期）: 1体ずつ吸うとき、その敵の攻撃力の上げ下げ（`AtkBonus`）も受け取った味方へ移す。札は `KissTrait` の中で読まれる
@@ -8569,8 +8571,11 @@ public sealed class BraceTrait : Trait
         self.SetCounter(TargetKey, 0);
     }
 
-    /// <summary>保留をそのターンの宛先へ破片として渡す。宛先が無ければ何もしない（保留は残る）。</summary>
-    static void Deliver(BattleContext ctx, UnitState self)
+    /// <summary>
+    /// 保留をそのターンの宛先へ破片として渡す。宛先が無ければ何もしない（保留は残る）。
+    /// 第213期: 破片が受け切った一撃（<see cref="TraitId.BraceHeldDeliver"/>・engine の `ArmorOnlyHit`）からも直に呼ぶ——弾きは起こさず、新しい宛先も作らない。
+    /// </summary>
+    internal static void Deliver(BattleContext ctx, UnitState self)
     {
         if (!ctx.Brace.Refuse) return;
         if (self.Counter(TurnKey) != ctx.Turn + 1) return;
@@ -8586,7 +8591,11 @@ public sealed class BraceTrait : Trait
         self.SetCounter(PendingKey, 0);
         UnitTally t = ctx.TallyOf(self);
         t.BraceGiven += pending;
-        if (ctx.ArmorOnlyNow) { t.BraceGivenArmorOnly += pending; t.BraceGivenArmorOnlyN++; }   // 第213期（計数のみ）
+        if (ctx.ArmorOnlyNow)   // 第213期（計数のみ）: 受け切った一撃の中の配り。宛先がそのターンの弾きで作られたものでなければ孤児として数える（自己検査で 0 を確かめる）
+        {
+            t.BraceGivenArmorOnly += pending; t.BraceGivenArmorOnlyN++;
+            if (self.Counter(ShoveTurnKey) != ctx.Turn + 1) t.BraceGivenOrphan++;
+        }
         ctx.Log($"    {self.Name} がはね返した {pending} を {to.Name} の破片にした", LogKind.Trigger);
     }
 
@@ -9421,6 +9430,21 @@ public sealed class PlankOpeningTrait : Trait
 public sealed class BraceArmoredTrait : Trait
 {
     public override TraitId Id => TraitId.BraceArmored;
+}
+
+/// <summary>
+/// 身構えの上限を破片より先に（第213期・ササ）。<b>札そのものは何もしない</b>——engine の破片の段（上限を先に）が読む。
+/// <see cref="TraitId.BraceArmored"/> の前半だけで、破片が受け切った一撃では弾きも配りも起こさない。
+/// </summary>
+public sealed class BraceCapFirstTrait : Trait
+{
+    public override TraitId Id => TraitId.BraceCapFirst;
+}
+
+/// <summary>受け切っても配る（第213期・ササ）。<b>札そのものは何もしない</b>——engine の `ArmorOnlyHit` が読み、<see cref="BraceTrait.Deliver"/> だけを呼ぶ。</summary>
+public sealed class BraceHeldDeliverTrait : Trait
+{
+    public override TraitId Id => TraitId.BraceHeldDeliver;
 }
 
 /// <summary>板を最も危ない味方へ（第211期）。<b>札そのものは何もしない</b>——<see cref="PlankTrait.OnAction"/> が読む。</summary>
@@ -13533,7 +13557,9 @@ public static class TraitCatalog
         new ThornsArmoredTrait(),    // 第211期（破片で受けても棘は鳴る）
         new AidSkillTrait(),         // 第212期（腕で駆け込める回数が増える）
         new PlankOpeningTrait(),     // 第212期（出撃前の板）
-        new BraceArmoredTrait(),     // 第212期（破片で受けても身構えは働く）
+        new BraceArmoredTrait(),     // 第212期（破片で受けても身構えは働く・第213期から対照）
+        new BraceCapFirstTrait(),    // 第213期（身構えの上限を破片より先に）
+        new BraceHeldDeliverTrait(), // 第213期（受け切っても配る）
         new KissBareTrait(),         // 第204期（対照・保持者 0 枚）
         new Kiss30Trait(),           // 第204期（対照・保持者 0 枚）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）
