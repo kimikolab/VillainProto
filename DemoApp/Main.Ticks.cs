@@ -12,6 +12,8 @@ public partial class Main
         if (_ticks.Starts.TryGetValue(index, out var cue))
         {
             bool inverse = e.SourceTrait == TraitId.Inverse;
+            if (e.Text == "燃焼" && !inverse && target?.PlankPieceCount > 0)
+                _battleField.PlankImpact(target, 40, _speed, true);
             _battleField.ShowTick(target, e.Text == "燃焼", inverse,
                 cue.Last && e.TickCount > 1, cue.Seconds / System.Math.Max(0.1, _speed));
             _tickPlays++;

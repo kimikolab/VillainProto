@@ -1115,6 +1115,7 @@ public partial class Main : Control
         _specialShown.Clear(); _riposteDamage.Clear(); _numbDamage.Clear();
         _liliGiven.Clear(); _liliTransfers = _liliDrains = _liliGifts = 0;
         ResetLiliRitePlayback();
+        ResetPlankPlayback();
         _beniGiftGains.Clear();
         _playing = true;
         _paused = false;
@@ -1235,6 +1236,7 @@ public partial class Main : Control
         // 第125期 段2: 拍の境目でだけ画面を変える。**ここでは待たない**（間は下の switch の中だけ）。
         EnterBeat(eventIndex, e);
         _tickDelayBudget = _ticks.Budgets.TryGetValue(eventIndex, out double tickBudget) ? tickBudget : null;
+        if (await PlayPlank(e, eventIndex, actor, target)) return;
         if (await PlayLili(e, eventIndex, actor, target)) return;
         if (await PlaySpecial(e, eventIndex, actor, target)) return;
         if (await PlayBeniMio(e, eventIndex, actor, target)) return;
@@ -1508,6 +1510,11 @@ public partial class Main : Control
                 target?.SetFrightened(false);
                 _battleField.ClearBindingsFor(target);
                 _battleField.PlayDeath(target, eventIndex == _finishSoundIndex);
+                if (target is not null && _plankKnockouts.Remove(target.InstanceId))
+                {
+                    _battleField.PlankImpact(target, 100, _speed);
+                    target.PlankKnockout();
+                }
                 AppendLog($"  [color=#{UiKit.Hurt.ToHtml(false)}][b]{NameOf(e.TargetId)} 撃破[/b][/color]");
                 if (!InLiliRite(eventIndex)) await Delay(0.36);
                 break;

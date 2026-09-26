@@ -360,6 +360,7 @@ public partial class BattleAttackAudio : Node
 
     public void StopAll()
     {
+        StopPlankAccents();
         foreach (var voice in _voices) voice.Stop();
         foreach (var voice in _chargeVoices) voice.Stop();
         foreach (var voice in _deathVoices) voice.Stop();

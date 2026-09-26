@@ -38,6 +38,7 @@ public partial class BattlePawn3D
         SetCurseStain(!_victory && _statusSnapshot.ContainsKey(StatusKeys.Curse));
         SetGuren(_statusSnapshot.GetValueOrDefault(StatusKeys.Guren), false);
         SetStigma(_statusSnapshot.ContainsKey(StatusKeys.Stigma));
+        SetPlank(_statusSnapshot.ContainsKey(StatusKeys.Plank) ? _statusSnapshot.GetValueOrDefault(StatusKeys.Armor) : 0);
     }
 
     // 付与は差分、ターン頭の写しは残量。写しを加算すると二重計上になる。

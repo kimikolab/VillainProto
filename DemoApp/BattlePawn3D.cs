@@ -94,6 +94,7 @@ public partial class BattlePawn3D : Node3D
     public void SetStatusEffects(int marked, int stunned, int armor)
     {
         bool active = _alive && !_victory;
+        ObserveArmor(active ? armor : 0);
         _statusEffects.SetAmounts(active ? marked : 0, active ? stunned : 0, active ? armor : 0);
     }
 
@@ -527,6 +528,8 @@ void fragment() {
         SetCurseStain(false);
         _statusSnapshot.Clear();
         _alive = false;
+        SetPlank(0);
+        SetScrapStock(0);
         ResetStaggerPose();
         SetStatusEffects(0,0,0);
         _poison.Clear();
@@ -611,6 +614,8 @@ void fragment() {
         _thrustPosition = null;
         CancelCharge();
         _victory = true;
+        SetPlank(0);
+        SetScrapStock(0);
         _confusion.SetActive(false);
         _statusIcons.Clear();
         SetCurseStain(false);
@@ -689,6 +694,8 @@ void fragment() {
         UpdateRapierGlow();
         UpdateSpecialEffects(animationDelta);
         ProcessLili(animationDelta);
+        ProcessPlankWork(animationDelta);
+        UpdatePlank(animationDelta);
         float shadowSpread = fall * 0.28f;
         ProcessShieldCowed(animationDelta);
         _shadow.Scale = new Vector3(1.0f - breath * 0.10f + shadowSpread, 1, 1.0f - breath * 0.10f - shadowSpread * 0.35f);

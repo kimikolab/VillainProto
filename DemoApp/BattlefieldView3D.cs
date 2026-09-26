@@ -326,6 +326,7 @@ public partial class BattlefieldView3D : Control
         foreach (DemoOpening opening in openings)
         {
             var pawn = new BattlePawn3D();
+            pawn.ArmorDepleted += _attackAudio.PlayArmorBreak;
             pawn.Configure(opening, _atlas);
             pawn.SetHome(PawnPosition(opening.Team, opening.Slot));
             _actorRoot.AddChild(pawn);
@@ -544,6 +545,7 @@ public partial class BattlefieldView3D : Control
     public void AddSummon(DemoOpening opening)
     {
         var pawn = new BattlePawn3D();
+        pawn.ArmorDepleted += _attackAudio.PlayArmorBreak;
         pawn.Configure(opening, _atlas);
         pawn.SetHome(PawnPosition(opening.Team, opening.Slot));
         _actorRoot.AddChild(pawn);
