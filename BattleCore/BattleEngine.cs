@@ -4281,38 +4281,67 @@ public sealed class BattleContext
     UnitState? _reboundTsugi;
     int _reflectAmt;
     UnitState? _reflectFrom;
+    /// <summary>第209期: 反射を控えた破片の段で、その一撃を受けた後に残った破片（<b>板の印がある間は出どころを問わない</b>）と、印の倍率（百分率）。</summary>
+    int _reflectRest, _reflectRatio;
     int _attackSerial;
-    readonly Stack<(UnitState Actor, int Serial, int Count)> _reflectFrames = new();
+
+    /// <summary>第208期: 1回の攻撃の枠（計数・表示専用）。第209期に、その攻撃が当たったツギの陣営の駒と、そのうち板の印を持っていた数を足した。</summary>
+    sealed class ReflectFrame
+    {
+        public required UnitState Actor;
+        public int Serial, Count;
+        public List<int>? Hit;
+        public int Planked;
+    }
+    readonly Stack<ReflectFrame> _reflectFrames = new();
 
     /// <summary>
     /// 第208期: 板が敵の一撃で砕けた量だけ、その敵へ撃ち返す。<see cref="ApplyDamageCore"/> の出口から1回だけ来る。
     /// <b>攻撃ではない</b>（`PerformAttack` を通らない・庇い・受け流し・反撃・割り込みの対象にならない）が、ダメージは
     /// 通常の入口（敵の破片・軛・§1 の標）を通す。棘と同じく <see cref="Reaction"/> で包む（中では返さない）。
+    /// <para>第209期: 返す量 ＝ <paramref name="lost"/>（失った破片）＋ floor(<paramref name="rest"/>（その一撃の後に残った破片）× 倍率)。
+    /// 倍率は板の印（<see cref="PlankTrait.RatioOf"/>）から読む。倍率 0 なら第208期と1ビットも違わない。</para>
     /// </summary>
-    void ReflectPlank(UnitState holder, UnitState foe, int amount)
+    void ReflectPlank(UnitState holder, UnitState foe, int lost, int rest, int ratioPct)
     {
         UnitTally ht = TallyOf(holder);
-        if (!foe.IsAlive) { ht.ReflectWasted += amount; return; }
+        int thick = rest * ratioPct / 100;
+        int amount = lost + thick;
+        if (!foe.IsAlive) { ht.ReflectWasted += amount; ht.ReflectWastedLost += lost; return; }
         ht.ReflectCount++;
         ht.ReflectNominal += amount;
+        ht.ReflectLost += lost;
+        ht.ReflectThick += thick;
+        ht.ReflectRestSum += rest;
+        if (rest == 0) ht.ReflectRestZero++;
+        (ht.ReflectRestHist ??= new long[UnitTally.RestHistSize])[Math.Min(rest, UnitTally.RestHistSize - 1)]++;
+        if (YokeBinding)
+        {
+            ht.ReflectYoke++;
+            if (amount > Yoke.Cap) ht.ReflectYokeOver++;
+            var hyp = ht.ReflectYokeHyp ??= new long[4];
+            for (int i = 0; i < 4; i++)
+                if (lost + rest * UnitTally.HypRatios[i] / 100 > Yoke.Cap) hyp[i]++;
+        }
         if (holder.RawCounter(PlankTrait.MixedKey) > 0) ht.ReflectMixed++;
         int serial = 0;
         if (_reflectFrames.Count > 0 && _reflectFrames.Peek().Actor == foe)
         {
-            var top = _reflectFrames.Pop();
+            var top = _reflectFrames.Peek();
             serial = top.Serial;
-            _reflectFrames.Push((top.Actor, top.Serial, top.Count + 1));
+            top.Count++;
         }
         if (_verbose)
             Emit(new BattleEvent
             {
                 Kind = BattleEventKind.Plank, Turn = _turn, ActorId = holder.InstanceId, TargetId = foe.InstanceId,
-                Amount = amount, Text = PlankLabels.Reflect, Slot = serial, SourceTrait = TraitId.PlankRebound,
+                Amount = amount, StatusRemaining = thick, HpAfter = rest,
+                Text = PlankLabels.Reflect, Slot = serial, SourceTrait = TraitId.PlankRebound,
             });
         int before = foe.Hp;
         Reaction(() =>
         {
-            Log($"    {holder.Name} の板の破片が {foe.Name} へ飛んだ（{amount}）", LogKind.Trigger);
+            Log($"    {holder.Name} の板の破片が {foe.Name} へ飛んだ（{amount}" + (thick > 0 ? $"・うち板の厚さ {thick}" : "") + "）", LogKind.Trigger);
             ApplyDamage(foe, amount, holder);
         });
         ht.ReflectDealt += before - Math.Max(0, foe.Hp);
@@ -4324,6 +4353,27 @@ public sealed class BattleContext
     {
         var f = _reflectFrames.Pop();
         if (f.Count > 0) NoteReflectGroup(f.Count, !f.Actor.IsAlive);
+        // 第209期（計数のみ）: 敵の1回の攻撃がツギの陣営の駒に2体以上当たったとき、当たった数と、そのうち板の印を持っていた数。
+        if (f.Hit is { Count: >= 2 } && _reboundTsugi is not null)
+        {
+            UnitTally t = TallyOf(_reboundTsugi);
+            t.MultiHitAttacks++;
+            t.MultiHitTargets += f.Hit.Count;
+            t.MultiHitPlanked += f.Planked;
+            (t.MultiHitPlankedHist ??= new long[4])[Math.Min(f.Planked, 3)]++;
+        }
+    }
+
+    /// <summary>第209期（計数のみ）: 攻撃の枠の中で、その攻撃の主がツギの陣営の駒に当てた（同じ駒は1回だけ数える）。</summary>
+    void NoteFrameHit(UnitState target, UnitState? source, bool burnTick)
+    {
+        if (_reflectFrames.Count == 0 || source is null || burnTick || _reboundTsugi is null) return;
+        var f = _reflectFrames.Peek();
+        if (f.Actor != source || target.TeamId != _reboundTsugi.TeamId || source.TeamId == target.TeamId) return;
+        f.Hit ??= new List<int>();
+        if (f.Hit.Contains(target.InstanceId)) return;
+        f.Hit.Add(target.InstanceId);
+        if ((target.RawCounter(StatusKeys.Plank) & PlankTrait.Rebound) != 0) f.Planked++;
     }
 
     /// <summary>1回の敵の攻撃で返った本数の分布（1・2・3・4以上）と、その攻撃の主が倒れたか（計数のみ・ツギの帳簿に付ける）。</summary>
@@ -6817,7 +6867,7 @@ public sealed class BattleContext
         // 第208期: 撃ち返す板の「1回の攻撃に何本返ったか」を数える枠（計数・表示専用）。保持者がいなければ比較1つで抜ける。
         if (_reboundLive)
         {
-            _reflectFrames.Push((actor, ++_attackSerial, 0));
+            _reflectFrames.Push(new ReflectFrame { Actor = actor, Serial = ++_attackSerial });
             try { PerformAttackFramed(actor, prefix, attackPercent, patternOverride); }
             finally { CloseReflectFrame(); }
             return;
@@ -7330,8 +7380,10 @@ public sealed class BattleContext
         Hit = new HitFrame(levy, isFriendlyFire, relayed, pattern);
         // 第208期: 撃ち返す板の控え（1回の `ApplyDamage` の枠ごと。入れ子の呼び出しは退避・復帰する）。
         int prevAmt = _reflectAmt; UnitState? prevFrom = _reflectFrom;
-        _reflectAmt = 0; _reflectFrom = null;
-        int myAmt; UnitState? myFrom;
+        int prevRest = _reflectRest, prevRatio = _reflectRatio;   // 第209期
+        _reflectAmt = 0; _reflectFrom = null; _reflectRest = 0; _reflectRatio = 0;
+        if (_reboundLive && amount > 0) NoteFrameHit(target, source, burnTick);   // 第209期（計数のみ）
+        int myAmt, myRest, myRatio; UnitState? myFrom;
         try
         {
             ApplyDamageBody(target, amount, source, isFriendlyFire, lethal, burnTick, relayed,
@@ -7340,10 +7392,10 @@ public sealed class BattleContext
         finally
         {
             Hit = prevHit;
-            myAmt = _reflectAmt; myFrom = _reflectFrom;
-            _reflectAmt = prevAmt; _reflectFrom = prevFrom;
+            myAmt = _reflectAmt; myFrom = _reflectFrom; myRest = _reflectRest; myRatio = _reflectRatio;
+            _reflectAmt = prevAmt; _reflectFrom = prevFrom; _reflectRest = prevRest; _reflectRatio = prevRatio;
         }
-        if (myAmt > 0 && myFrom is not null) ReflectPlank(target, myFrom, myAmt);
+        if (myAmt > 0 && myFrom is not null) ReflectPlank(target, myFrom, myAmt, myRest, myRatio);
     }
 
     /// <summary>ダメージ処理の本体。<see cref="ApplyDamageCore"/> だけが呼ぶ。</summary>
@@ -7738,6 +7790,9 @@ public sealed class BattleContext
             {
                 _reflectAmt += soak;
                 _reflectFrom = source;
+                // 第209期: その一撃を受けた後に残った破片と、印の倍率（印は破片が 0 になると消えるので、ここで読む）。
+                _reflectRest = armor - soak;
+                _reflectRatio = PlankTrait.RatioOf(target.RawCounter(StatusKeys.Plank));
             }
             target.SetCounter(StatusKeys.Armor, armor - soak);
             amount -= soak;

@@ -19,7 +19,8 @@ static partial class TsugiDiag
     static readonly UnitDef U0 = Clone(UnitCatalog.Tsugi, new[] { TraitId.Plank, TraitId.PlankTinder, TraitId.Scrap });
     static readonly UnitDef U1 = Clone(UnitCatalog.Tsugi, new[] { TraitId.Plank, TraitId.PlankTinder, TraitId.Scrap, TraitId.PlankRebound });
     static readonly UnitDef U2 = Clone(UnitCatalog.Tsugi, new[] { TraitId.Plank, TraitId.PlankScorch, TraitId.Scrap, TraitId.PlankRebound });
-    static readonly UnitDef U3 = UnitCatalog.Tsugi;
+    // 第209期に規定のツギ（R2）が変わったので、第208期の U3 は札で写す。
+    static readonly UnitDef U3 = Clone(UnitCatalog.Tsugi, new[] { TraitId.Plank, TraitId.PlankScorch, TraitId.Scrap, TraitId.PlankRebound });
     static readonly UnitDef DohaOld = Clone(UnitCatalog.Doha, new[] { TraitId.Sharer });
 
     static readonly (string Tag, UnitDef Tsugi, UnitDef Doha)[] UVersions =
@@ -36,6 +37,8 @@ static partial class TsugiDiag
         return g;
     }
 
+    static partial void RunMore209(string mode, string arg, ref bool handled);
+
     static partial void RunMore208(string mode, string arg, ref bool handled)
     {
         switch (mode)
@@ -44,6 +47,7 @@ static partial class TsugiDiag
             case "swap2": Swap208(); handled = true; return;
             case "ledger2": Ledger208(); handled = true; return;
             case "check2": Check208(arg); handled = true; return;
+            default: RunMore209(mode, arg, ref handled); return;
         }
     }
 

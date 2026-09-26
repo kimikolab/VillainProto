@@ -388,6 +388,9 @@ public enum TraitId
     PlankRebound,  // 撃ち返す板（第208期・ツギ）: 板の印を持つ味方が敵の一撃で失った破片の量だけ、その敵へ返す。判定は engine（`ReflectPlank`）
     PlankScorch,   // 板は燃えやすい・ダメージ倍（第208期・ツギのマイナス）: 板の印を持つ味方が受ける燃焼の刻みが倍。判定は engine（`ScorchTick`）
     SharerArmored, // 分かちを破片の段の後ろへ（第208期・ドハ）: 殴られた味方の破片が吸った残りだけを4割肩代わりする。判定は engine（`ApplyDamage`）
+    PlankThick,    // 厚い板ほど強く撃ち返す（第209期・ツギ）: 反射に「その一撃の後に残った破片 × 50%」を足す。判定は engine（`ReflectPlank`）
+    PlankThick25,  // 同・25% の版（第209期・対照・保持者 0 枚）
+    PlankThick100, // 同・100% の版（第209期・対照・保持者 0 枚）
     Scrap,       // 瓦礫拾い（第207期・ツギ）: 味方の破片が砕けた量の 50% と、倒れた駒1体につき 5 を背中に積み、次の板に上乗せする
     KissSteal,  // 口づけ・強弱を移す（第205期）: 1体ずつ吸うとき、その敵の攻撃力の上げ下げ（`AtkBonus`）も受け取った味方へ移す。札は `KissTrait` の中で読まれる
 
@@ -9067,6 +9070,19 @@ public sealed class PlankTrait : Trait
     /// </summary>
     public const int Plain = 1, Flammable = 2, Scorch = 4, Rebound = 8;
 
+    /// <summary>
+    /// 第209期: 反射の倍率の印（ビット）。<see cref="Thick"/> ＝ 50%（<see cref="TraitId.PlankThick"/>・規定）／ <see cref="Thick25"/> ＝ 25% ／ <see cref="Thick100"/> ＝ 100%。
+    /// どれも無ければ 0%（第208期）。重なったら大きい方（同じ戦に違う版のツギが並ぶことは診断でも無い）。
+    /// </summary>
+    public const int Thick = 16, Thick25 = 32, Thick100 = 64;
+
+    /// <summary>第209期: 規定の倍率（百分率・指示書 §2.1 の `ReboundRatio` ＝ 0.5）。</summary>
+    public const int ReboundRatioPercent = 50;
+
+    /// <summary>第209期: 板の印から反射の倍率（百分率）を読む。<b>判定はここ1本。</b></summary>
+    public static int RatioOf(int mark)
+        => (mark & Thick100) != 0 ? 100 : (mark & Thick) != 0 ? ReboundRatioPercent : (mark & Thick25) != 0 ? 25 : 0;
+
     /// <summary>第208期（計数のみ）: その戦でツギ以外の書き手の破片も受けた駒の印（反射の「混ざった板」）。</summary>
     public const string MixedKey = "plankMixed";
 
@@ -9094,7 +9110,9 @@ public sealed class PlankTrait : Trait
         int after = to.RawCounter(StatusKeys.Armor) + amount;
         to.SetCounter(StatusKeys.Armor, after);
         int mark = Plain | (self.HasTrait(TraitId.PlankTinder) ? Flammable : 0) | (self.HasTrait(TraitId.PlankScorch) ? Scorch : 0)
-                   | (self.HasTrait(TraitId.PlankRebound) ? Rebound : 0);
+                   | (self.HasTrait(TraitId.PlankRebound) ? Rebound : 0)
+                   | (self.HasTrait(TraitId.PlankThick) ? Thick : 0) | (self.HasTrait(TraitId.PlankThick25) ? Thick25 : 0)
+                   | (self.HasTrait(TraitId.PlankThick100) ? Thick100 : 0);
         to.SetCounter(StatusKeys.Plank, mark | to.RawCounter(StatusKeys.Plank));
 
         UnitTally t = ctx.TallyOf(self);
@@ -9114,6 +9132,27 @@ public sealed class PlankTrait : Trait
 public sealed class PlankReboundTrait : Trait
 {
     public override TraitId Id => TraitId.PlankRebound;
+}
+
+/// <summary>
+/// 厚い板ほど強く撃ち返す（第209期）。<b>札そのものは何もしない</b>——<see cref="PlankTrait"/> が印に <see cref="PlankTrait.Thick"/> を立て、
+/// engine の `ReflectPlank` が <see cref="PlankTrait.RatioOf"/> で倍率を読む。撃ち返す板（<see cref="TraitId.PlankRebound"/>）と一緒に持たせる。
+/// </summary>
+public sealed class PlankThickTrait : Trait
+{
+    public override TraitId Id => TraitId.PlankThick;
+}
+
+/// <summary>同・25% の版（第209期・対照・保持者 0 枚）。</summary>
+public sealed class PlankThick25Trait : Trait
+{
+    public override TraitId Id => TraitId.PlankThick25;
+}
+
+/// <summary>同・100% の版（第209期・対照・保持者 0 枚）。</summary>
+public sealed class PlankThick100Trait : Trait
+{
+    public override TraitId Id => TraitId.PlankThick100;
 }
 
 /// <summary>板は燃えやすい・ダメージ倍（第208期・ツギのマイナスの差し替え）。<b>札そのものは何もしない</b>——印の <see cref="PlankTrait.Scorch"/> を engine の燃焼の刻み（`ScorchTick`）が読む。</summary>
@@ -13166,6 +13205,9 @@ public static class TraitCatalog
         new PlankReboundTrait(),     // 第208期（撃ち返す板）
         new PlankScorchTrait(),      // 第208期（燃えやすい板・ダメージ倍）
         new SharerArmoredTrait(),    // 第208期（分かちを破片の後ろへ）
+        new PlankThickTrait(),       // 第209期（厚い板ほど強く撃ち返す）
+        new PlankThick25Trait(),     // 第209期（対照・保持者 0 枚）
+        new PlankThick100Trait(),    // 第209期（対照・保持者 0 枚）
         new KissBareTrait(),         // 第204期（対照・保持者 0 枚）
         new Kiss30Trait(),           // 第204期（対照・保持者 0 枚）
         new LastStandHoldOldScarTrait(),   // 第199期（対照・保持者 0 枚）

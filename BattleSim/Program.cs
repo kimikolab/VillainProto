@@ -1361,6 +1361,9 @@ static class TraitKeyMap
         [TraitId.PlankRebound] = Array.Empty<int>(),                                            // 第208期（反射はダメージ・状態キーを書かない）
         [TraitId.PlankScorch]  = Array.Empty<int>(),                                            // 第208期（燃焼の刻みで読まれる札）
         [TraitId.SharerArmored]= Array.Empty<int>(),                                            // 第208期（分かちの段の位置だけ）
+        [TraitId.PlankThick]   = Array.Empty<int>(),                                            // 第209期（反射の倍率・状態キーを書かない）
+        [TraitId.PlankThick25] = Array.Empty<int>(),                                            // 第209期（対照）
+        [TraitId.PlankThick100]= Array.Empty<int>(),                                            // 第209期（対照）
         [TraitId.KissSteal]  = Array.Empty<int>(),                                              // 第205期（AtkBonus を移す・状態キーではない）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
@@ -1532,6 +1535,9 @@ static class TraitHookMap
         [TraitId.PlankRebound]= new[] { Engine },                                  // 第208期（破片の段と ApplyDamageCore の出口）
         [TraitId.PlankScorch] = new[] { Engine },                                  // 第208期（燃焼の刻みの ScorchTick）
         [TraitId.SharerArmored]= new[] { Engine },                                 // 第208期（ApplyDamage の分かちの段）
+        [TraitId.PlankThick]  = new[] { Engine },                                  // 第209期（ReflectPlank が印の倍率を読む）
+        [TraitId.PlankThick25]= new[] { Engine },                                  // 第209期（対照）
+        [TraitId.PlankThick100]= new[] { Engine },                                 // 第209期（対照）
         [TraitId.KissSteal]   = Array.Empty<string>(),                             // 第205期（口づけの中で読まれる札）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）

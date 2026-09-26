@@ -1936,6 +1936,22 @@ public sealed class UnitTally
     public long[]? ReflectGroupHist, ReflectGroupKilled;
 
     /// <summary>
+    /// 第209期（<b>計数専用</b>）。板を持つ側: <c>ReflectLost</c> 返した量のうち失った破片の分 ／ <c>ReflectThick</c> 残りの厚さの分（<c>ReflectNominal</c> ＝ 両者の和）／
+    /// <c>ReflectWastedLost</c> 空振りのうち失った破片の分 ／ <c>ReflectRestSum</c>・<c>ReflectRestZero</c>・<c>ReflectRestHist</c> 反射の瞬間に残っていた破片（合計・0 の回数・値ごとの回数）／
+    /// <c>ReflectYoke</c> 軛が効いている間の反射の回数 ／ <c>ReflectYokeOver</c> そのうち返す量が上限を超えた回数 ／
+    /// <c>ReflectYokeHyp</c> 同じ反射に倍率 0・25・50・100% を当てたと仮定して上限を超える回数（見当）。
+    /// ツギの側: <c>MultiHitAttacks</c> 敵の1回の攻撃がツギの陣営の駒に2体以上当たった回数 ／ <c>MultiHitTargets</c> 当たった延べ数 ／
+    /// <c>MultiHitPlanked</c> そのうち撃ち返す板の印を持っていた延べ数 ／ <c>MultiHitPlankedHist</c> 1回の攻撃で板を持っていた数（0・1・2・3以上）。
+    /// </summary>
+    public long ReflectLost, ReflectThick, ReflectWastedLost, ReflectRestSum, ReflectRestZero, ReflectYoke, ReflectYokeOver,
+                MultiHitAttacks, MultiHitTargets, MultiHitPlanked;
+    public long[]? ReflectRestHist, ReflectYokeHyp, MultiHitPlankedHist;
+    /// <summary><see cref="ReflectRestHist"/> の大きさ（最後の欄は「それ以上」）。</summary>
+    public const int RestHistSize = 121;
+    /// <summary><see cref="ReflectYokeHyp"/> の倍率（百分率）。</summary>
+    public static readonly int[] HypRatios = { 0, 25, 50, 100 };
+
+    /// <summary>
     /// 第206期（<b>計数専用</b>）: <c>RiteFoeHist</c> 儀式の頭に生きていた聖痕の敵の数（添字 0 ＝ 1体・1 ＝ 2体・2 ＝ 3体以上）／
     /// <c>RiteMaxPerFoe</c> その戦の儀式で1体から吸えた量の最大 ／ <c>KissHealCross</c> 施した累計が
     /// <see cref="KissTrait.HealCrossProbes"/>（40・120・240・400）に初めて届いたターン（0 ＝ 未到達・<b>段の刻みに依らず</b>・段の札を持つときだけ積む）。
@@ -2354,6 +2370,12 @@ public sealed class UnitTally
         ReflectWasted += o.ReflectWasted; ReflectMixed += o.ReflectMixed; PlankScorched += o.PlankScorched; PlankScorchExtra += o.PlankScorchExtra; SharerLate += o.SharerLate;
         if (o.ReflectGroupHist is not null) { ReflectGroupHist ??= new long[4]; for (int i = 0; i < 4; i++) ReflectGroupHist[i] += o.ReflectGroupHist[i]; }
         if (o.ReflectGroupKilled is not null) { ReflectGroupKilled ??= new long[4]; for (int i = 0; i < 4; i++) ReflectGroupKilled[i] += o.ReflectGroupKilled[i]; }
+        ReflectLost += o.ReflectLost; ReflectThick += o.ReflectThick; ReflectWastedLost += o.ReflectWastedLost; ReflectRestSum += o.ReflectRestSum;
+        ReflectRestZero += o.ReflectRestZero; ReflectYoke += o.ReflectYoke; ReflectYokeOver += o.ReflectYokeOver;
+        MultiHitAttacks += o.MultiHitAttacks; MultiHitTargets += o.MultiHitTargets; MultiHitPlanked += o.MultiHitPlanked;
+        if (o.ReflectRestHist is not null) { ReflectRestHist ??= new long[RestHistSize]; for (int i = 0; i < RestHistSize; i++) ReflectRestHist[i] += o.ReflectRestHist[i]; }
+        if (o.ReflectYokeHyp is not null) { ReflectYokeHyp ??= new long[4]; for (int i = 0; i < 4; i++) ReflectYokeHyp[i] += o.ReflectYokeHyp[i]; }
+        if (o.MultiHitPlankedHist is not null) { MultiHitPlankedHist ??= new long[4]; for (int i = 0; i < 4; i++) MultiHitPlankedHist[i] += o.MultiHitPlankedHist[i]; }
         KissTierMax = Math.Max(KissTierMax, o.KissTierMax);
         if (o.RiteFoeHist is not null) { RiteFoeHist ??= new long[3]; for (int i = 0; i < 3; i++) RiteFoeHist[i] += o.RiteFoeHist[i]; }
         RiteMaxPerFoe = Math.Max(RiteMaxPerFoe, o.RiteMaxPerFoe);
@@ -2882,8 +2904,10 @@ public static class PlankLabels
     /// <summary>板の印で燃焼が倍になった瞬間。<c>TargetId</c> = 燃えた味方、<c>Amount</c> = 倍にした後の残りターン、
     /// <c>Slot</c> = 0 <c>Ignite</c>（点く・点け直し）／ 1 リリの移し。<c>ActorId</c> は付けない（書き手は燃焼の書き手）。</summary>
     public const string Flare = "板が燃えた";
-    /// <summary>第208期: 板の破片が殴った敵へ飛んだ。<c>ActorId</c> = 板を持つ味方、<c>TargetId</c> = 殴った敵、<c>Amount</c> = 返した量（砕けた破片の量）、
-    /// <c>Slot</c> = 攻撃の通し番号（同じ敵の1回の攻撃で返った反射は同じ番号・攻撃の外なら 0）。直後に敵への <c>Damage</c> が並ぶ。</summary>
+    /// <summary>第208期: 板の破片が殴った敵へ飛んだ。<c>ActorId</c> = 板を持つ味方、<c>TargetId</c> = 殴った敵、<c>Amount</c> = 返した量、
+    /// <c>Slot</c> = 攻撃の通し番号（同じ敵の1回の攻撃で返った反射は同じ番号・攻撃の外なら 0）。直後に敵への <c>Damage</c> が並ぶ。
+    /// <para>第209期: <c>Amount</c> ＝ 失った破片 ＋ 残りの厚さの分。<c>StatusRemaining</c> ＝ <b>残りの厚さの分</b>（倍率 0 なら 0）、
+    /// <c>Amount − StatusRemaining</c> ＝ <b>失った破片の分</b>、<c>HpAfter</c> ＝ 反射の瞬間に板を持つ味方に残っていた破片。</para></summary>
     public const string Reflect = "板の破片が飛んだ";
 }
 
