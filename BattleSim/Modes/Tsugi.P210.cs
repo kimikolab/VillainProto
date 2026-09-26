@@ -41,8 +41,11 @@ static partial class TsugiDiag
             case "ledger4": Ledger210(); handled = true; return;
             case "check4": Check210(arg); handled = true; return;
             case "stall4": Stall210(); handled = true; return;
+            default: RunMore211(mode, arg, ref handled); return;
         }
     }
+
+    static partial void RunMore211(string mode, string arg, ref bool handled);
 
     static IEnumerable<(string Band, string Name, Func<int, Agg> At)> WRows(string tag)
     {

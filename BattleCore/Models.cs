@@ -1964,6 +1964,20 @@ public sealed class UnitTally
                 FirstAidFired, FirstAidPaste, FirstAidTurnSum, FirstAidCross, FirstAidSelf, FirstAidHushed, FirstAidHeld, FirstAidSpent,
                 PlankSkillLost, FirstAidReceived, FirstAidMissed, FirstAidNeed;
     public long[]? PlankBaseHist, PlankSkillReach, PlankSkillReachTurn;
+    /// <summary>
+    /// 第211期（<b>計数専用</b>）。書いた側: <c>ArmorOut</c> 味方（自分を含む）に書いた破片の量（戦績表の「破片(与)」・書き手は第94期の印）／
+    /// <c>ReflectByPlank</c> 自分の板から返った反射が実際に削った HP（ツギの帳簿・戦績表の「反射」。板を持っていた駒の <c>ReflectDealt</c> と同じ量を書き手にも付ける）。
+    /// ツギの側: <c>PlankToRow</c>・<c>FirstAidToRow</c> 手番の板・応急処置を貼った相手の列（前・中・後）／
+    /// <c>PlankHypPicks</c> 手番ごとに「実質の残り体力 (HP＋破片)÷最大HP が最小」の候補の数 ／ <c>PlankHypSame</c> 実際に貼った相手がその候補に入っていた数 ／
+    /// <c>PlankHypArmor</c> その候補（1体目）の破片の合計 ／ <c>PlankHypSelf</c> 候補がツギ自身だけだった数。
+    /// 受け取った側: <c>PlankHypChosen</c> その候補に入った回数 ／ <c>PlankReceived</c> 手番の板を受けた回数 ／
+    /// <c>DiedArmorBefore</c>・<c>DiedCount</c> 倒れた一撃を受ける直前の破片と、その回数（ツギの盤面だけ）。
+    /// カドの側: <c>ThornArmorMuted</c> 敵の一撃を破片が受け切って棘が鳴らなかった回数（Y3 では鳴る）／ <c>ThornArmorRiposte</c> 破片で受け切った一撃に返した棘の回数 ／ <c>ThornRipostes</c> 棘を返した回数（どちらの口も）。
+    /// ツギの側: <c>FirstAidArmoredHits</c> 破片で受け切った一撃の後に応急処置の条件を満たした回数（Y2 の窓口）。
+    /// </summary>
+    public long ArmorOut, ReflectByPlank, PlankHypPicks, PlankHypSame, PlankHypArmor, PlankHypSelf, PlankHypChosen, PlankReceived,
+                DiedArmorBefore, DiedCount, ThornArmorMuted, ThornArmorRiposte, FirstAidArmoredHits, ThornRipostes;
+    public long[]? PlankToRow, FirstAidToRow;
     /// <summary><see cref="ReflectYokeHyp"/> の倍率（百分率）。</summary>
     public static readonly int[] HypRatios = { 0, 25, 50, 100 };
 
@@ -2399,6 +2413,12 @@ public sealed class UnitTally
         if (o.PlankBaseHist is not null) { PlankBaseHist ??= new long[RestHistSize]; for (int i = 0; i < RestHistSize; i++) PlankBaseHist[i] += o.PlankBaseHist[i]; }
         if (o.PlankSkillReach is not null) { PlankSkillReach ??= new long[4]; for (int i = 0; i < 4; i++) PlankSkillReach[i] += o.PlankSkillReach[i]; }
         if (o.PlankSkillReachTurn is not null) { PlankSkillReachTurn ??= new long[4]; for (int i = 0; i < 4; i++) PlankSkillReachTurn[i] += o.PlankSkillReachTurn[i]; }
+        ArmorOut += o.ArmorOut; ReflectByPlank += o.ReflectByPlank; PlankHypPicks += o.PlankHypPicks; PlankHypSame += o.PlankHypSame;
+        PlankHypArmor += o.PlankHypArmor; PlankHypSelf += o.PlankHypSelf; PlankHypChosen += o.PlankHypChosen; PlankReceived += o.PlankReceived;
+        DiedArmorBefore += o.DiedArmorBefore; DiedCount += o.DiedCount; ThornArmorMuted += o.ThornArmorMuted; ThornArmorRiposte += o.ThornArmorRiposte;
+        FirstAidArmoredHits += o.FirstAidArmoredHits; ThornRipostes += o.ThornRipostes;
+        if (o.PlankToRow is not null) { PlankToRow ??= new long[3]; for (int i = 0; i < 3; i++) PlankToRow[i] += o.PlankToRow[i]; }
+        if (o.FirstAidToRow is not null) { FirstAidToRow ??= new long[3]; for (int i = 0; i < 3; i++) FirstAidToRow[i] += o.FirstAidToRow[i]; }
         KissTierMax = Math.Max(KissTierMax, o.KissTierMax);
         if (o.RiteFoeHist is not null) { RiteFoeHist ??= new long[3]; for (int i = 0; i < 3; i++) RiteFoeHist[i] += o.RiteFoeHist[i]; }
         RiteMaxPerFoe = Math.Max(RiteMaxPerFoe, o.RiteMaxPerFoe);

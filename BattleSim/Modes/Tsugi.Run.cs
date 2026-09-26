@@ -75,6 +75,9 @@ static partial class TsugiDiag
         public readonly Dictionary<string, int> FallenBy = new();
         /// <summary>第210期: 応急処置の条件を満たした駒（戦 × 駒）のうち、受けた／受けなかったの数と、その戦を生き延びた数。</summary>
         public int AidUnits, AidSurvived, NeedNoAidUnits, NeedNoAidSurvived;
+        /// <summary>第211期: 前列で始めた駒が倒れた戦 ／ 手番の板の「実質の残り体力が最小」の候補の、1戦の中で最も多く候補になった駒の占める割合の合計と、候補になった駒の数の合計（候補が1回以上あった戦だけ）。</summary>
+        public int FrontFell, HypBattles;
+        public double HypTopShareSum, HypDistinctSum;
 
         public double Win => 100.0 * Wins / Math.Max(1, N);
         /// <summary>全員生存勝ち（全戦に占める割合）。</summary>
@@ -109,6 +112,9 @@ static partial class TsugiDiag
                 a.TurnsSum += r.Turns;
                 if (r.PlayerStarterFallen.Contains("tsugi")) a.TsugiDied++;
                 foreach (string id in r.PlayerStarterFallen) a.FallenBy[id] = a.FallenBy.GetValueOrDefault(id) + 1;
+                if (f.Occupied().Any(o => FormationRules.RowOf(o.Slot) == Row.Front && r.PlayerStarterFallen.Contains(o.Def.Id))) a.FrontFell++;
+                var hyp = ids.Select(id => r.TallyByUnit.TryGetValue(id, out var ht) ? ht.PlankHypChosen : 0).Where(x => x > 0).ToList();
+                if (hyp.Count > 0) { a.HypBattles++; a.HypTopShareSum += (double)hyp.Max() / hyp.Sum(); a.HypDistinctSum += hyp.Count; }
                 foreach (var (id, t) in r.TallyByUnit)
                 {
                     if (!ids.Contains(id)) continue;

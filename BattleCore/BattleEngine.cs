@@ -2454,6 +2454,8 @@ public sealed class BattleContext
             case StatusKeys.Poison: NoteCarry(u, UnitTally.CarryPoison, delta); break;
             case StatusKeys.Armor:
                 NoteCarry(u, UnitTally.CarryArmor, delta);
+                // 第211期（計数のみ・戦績表の「破片(与)」）: 味方（自分を含む）に書いた破片の量を、書き手（第94期の印）に付ける。
+                if (Mark.Owner is UnitState aw && aw.TeamId == u.TeamId) TallyOf(aw).ArmorOut += delta;
                 // 第208期（計数のみ）: ツギ以外の書き手の破片（反射の「混ざった板」）。
                 if (_reboundLive && Mark.Id != TraitId.Plank) u.SetCounter(PlankTrait.MixedKey, 1);
                 break;
@@ -4234,6 +4236,8 @@ public sealed class BattleContext
 
     /// <summary>瓦礫拾い（<see cref="TraitId.Scrap"/>）の保持者。<b>空なら破片の減りは比較1つで抜ける。</b></summary>
     readonly List<UnitState> _scrapHolders = new();
+    /// <summary>第211期: 棘（<see cref="TraitId.Thorns"/>）の保持者が盤上にいるか。偽なら破片で受け切った一撃の口は比較1つで抜ける。</summary>
+    bool _thornsLive;
 
     /// <summary>
     /// 燃焼が付く2口（<see cref="Ignite"/> とリリの移し）から呼ぶ。<paramref name="target"/> に燃えやすい板の印
@@ -4347,6 +4351,7 @@ public sealed class BattleContext
             ApplyDamage(foe, amount, holder);
         });
         ht.ReflectDealt += before - Math.Max(0, foe.Hp);
+        if (_reboundTsugi is not null) TallyOf(_reboundTsugi).ReflectByPlank += before - Math.Max(0, foe.Hp);   // 第211期（戦績表の「反射」）
         if (!foe.IsAlive) ht.ReflectKills++;
         if (serial == 0) NoteReflectGroup(1, !foe.IsAlive);
     }
@@ -4447,7 +4452,7 @@ public sealed class BattleContext
     {
         UnitState? h = null;
         foreach (UnitState x in _scrapHolders) if (x.IsAlive && x.TeamId == target.TeamId) { h = x; break; }
-        if (h is null || !FirstAidTrait.Needs(target)) return;
+        if (h is null || !FirstAidTrait.NeedsFor(h, target)) return;
         TallyOf(target).FirstAidNeed++;
         if (_firstAidChanceTurn == _turn) return;
         _firstAidChanceTurn = _turn;
@@ -4455,6 +4460,37 @@ public sealed class BattleContext
         t.FirstAidChance++;
         if (HushBindingNow) t.FirstAidChanceHushed++;
         if ((target.Hp + amount) * 100 >= target.MaxHp * FirstAidTrait.Percent) t.FirstAidChanceCross++;
+    }
+
+    /// <summary>
+    /// 第211期: 敵の一撃を破片が受け切った（HP は減らず、<c>OnDamaged</c> も <c>OnAllyDamaged</c> も鳴らない）。
+    /// (1) 棘の保持者: 計数（<c>ThornArmorMuted</c>）と、<see cref="TraitId.ThornsArmored"/> を持てば棘を返す（門は棘と同じ）。
+    /// (2) 応急処置: 同じ陣営のツギが <see cref="TraitId.FirstAidArmored"/> を持てば、受け切った後の実質の残り体力で条件を見る。
+    /// <b>乱数を引かない。</b>
+    /// </summary>
+    void ArmorOnlyHit(UnitState target, UnitState source, int soaked)
+    {
+        if (_thornsLive && target.HasTrait(TraitId.Thorns))
+        {
+            UnitTally kt = TallyOf(target);
+            kt.ThornArmorMuted++;
+            if (target.HasTrait(TraitId.ThornsArmored) && target.IsAlive && !InReaction
+                && CanActOutOfTurn(target, OutOfTurnRoute.Thorns))
+            {
+                kt.ThornArmorRiposte++;
+                TraitMark m = this.BeginTrait(TraitId.Thorns, target);
+                ThornsTrait.Riposte(this, target, source);
+                this.EndTrait(m);
+            }
+        }
+        if (_scrapHolders.Count == 0) return;
+        foreach (UnitState h in _scrapHolders.ToList())
+        {
+            if (!h.IsAlive || h.TeamId != target.TeamId) continue;
+            TraitMark m = this.BeginTrait(TraitId.FirstAid, h);
+            FirstAidTrait.TryArmoredHit(this, h, target, soaked);
+            this.EndTrait(m);
+        }
     }
     int _firstAidChanceTurn = -1;
 
@@ -5655,6 +5691,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Daunt)) _dauntLive = true;   // 第189期（萎縮の消費を短絡させる）
         if (u.HasTrait(TraitId.Numb)) _numbLive = true;     // 第195期（痺れ毒の減少を短絡させる）
         if (u.HasTrait(TraitId.Scrap)) _scrapHolders.Add(u); // 第207期（破片の減りを拾う口を短絡させる）
+        if (u.HasTrait(TraitId.Thorns)) _thornsLive = true;  // 第211期（破片で受け切った一撃の棘・計数と Y3 の口を短絡させる）
         if (u.HasTrait(TraitId.PlankRebound)) { _reboundLive = true; _reboundTsugi ??= u; }   // 第208期（撃ち返す板）
         // 第190期: 反転の結界（ベニ）。**保持者がいなければ `Count == 0` の比較1つで抜ける**。
         if (u.HasTrait(TraitId.Inverse)) _inverseHolders.Add(u);
@@ -7830,6 +7867,7 @@ public sealed class BattleContext
         // あちらは -4 という最小の刻みで毒軸の第2波が 98% → 0% に落ちた）。
         // 超過分は素通りさせることで、崖ではなく傾斜にしてある。
         int armor = target.RawCounter(StatusKeys.Armor);
+        int armorAtEntry211 = armor;   // 第211期（計数のみ）
         if (armor > 0)
         {
             int soak = Math.Min(armor, amount);
@@ -7888,6 +7926,9 @@ public sealed class BattleContext
                 // `OnDamaged` が鳴らず**身構えの弾きが立たない**。**この期では塞がない。**
                 // 現行の散開にも同じ穴があるので、機構の新しい欠陥ではない。
                 if (Brace.Cap > 0 && target.HasTrait(TraitId.Brace)) TallyOf(target).BraceArmorMuted++;
+                // 第211期: 破片で受け切った一撃。**保持者がいなければ比較1つで抜ける。**
+                if ((_thornsLive || _scrapHolders.Count > 0) && source is not null && source.TeamId != target.TeamId && !burnTick)
+                    ArmorOnlyHit(target, source, soak);
                 return;
             }
         }
@@ -8196,7 +8237,11 @@ public sealed class BattleContext
         }
 
         if (target.Hp <= 0)
+        {
+            // 第211期（計数のみ）: 倒れた一撃を受ける直前の破片（ツギの盤面だけ）。
+            if (_scrapHolders.Count > 0) { UnitTally dt = TallyOf(target); dt.DiedCount++; dt.DiedArmorBefore += armorAtEntry211; }
             HandleDeath(target, source);
+        }
 
         // 巻き込み則（第85期・W2・SpillWoundRule）。**味方の刃**が通って対象が生きていれば傷 1。
         // 「味方の刃」＝ isFriendlyFire かつ source が同陣営。転嫁の代金・深追いの反動（source は null）はこれで外れるが、
