@@ -19,7 +19,7 @@ BattleCoreは変更しない。対象・跳ね・段・反転・HPは発行さ�
 - DemoApp/assets/audio/se/kata_thunder.mp3: 効果音ラボ/戦闘/雷魔法4.mp3（最初の重い落雷）
 - DemoApp/assets/audio/se/kata_discharge.mp3: 効果音ラボ/戦闘/雷魔法1.mp3（短い跳ね・放電）。段ごとに1音、段数で音程と音量を控えめに上げる。再生速度で音程は変えない。
 
-杭なし本体（白目修正版kata-idle-right-body-v2.png）と独立杭（kata-stake-v1.png）を生成し適用済み。ゲーム用の本体はbattle/kata_idle_right.png、杭はassets/fx/kata_stake.png。
+杭なし本体（白目・黒目・描画品質を再調整したkata-idle-right-body-v3.png）と独立杭（kata-stake-v1.png）を生成し適用済み。ゲーム用の本体はbattle/kata_idle_right.png、杭はassets/fx/kata_stake.png。
 KataStakes3Dが3本を浮遊させ、同じスプライトを対象へ発射・帰還させる。死亡時は飛行を解除して非表示、蘇生時に復帰、勝利絵では描き込み済みの杭と重ねない。
 追加の詠唱顔・大きなポーズ差分は必須ではない。
 
