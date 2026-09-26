@@ -1141,6 +1141,7 @@ public sealed class BattleContext
     /// <param name="kinds">命中の前に数えた状態異常の種類（表示と計数）。</param>
     public void StrikeThunder(UnitState kata, UnitState target, int amount, int hop, int kinds)
     {
+        if (_mireDull != 0) amount = MireCut(kata, amount, 1);   // 第218期（澱みのデバフ・雷）
         UnitTally kt = TallyOf(kata);
         kt.ThunderHits++;
         (kt.ThunderKindsHist ??= new long[ThunderTrait.CountedKeys.Count + 1])[Math.Min(kinds, ThunderTrait.CountedKeys.Count)]++;
@@ -1237,6 +1238,15 @@ public sealed class BattleContext
         if (_shockStun == 3 && Roll(100) >= ShockRule.StunHalfPercent) { t.ShockStunMissed++; return; }
         if (x.RawCounter(StatusKeys.Stun) > 0) { t.ShockStunAlready++; return; }
         t.ShockStunned++;
+        // 第218期・**計数のみ**: そのターンの手番をまだ終えていなかったか（＝動く前に止めた）。ミオの一撃が起こした連鎖はミオの帳簿にも。
+        bool early = x.TakenTurn < _turn;
+        if (early) t.ShockStunnedEarly++;
+        if (ini is not null && ini.HasTrait(TraitId.MireSlam))
+        {
+            UnitTally mt = TallyOf(ini);
+            if (x.TeamId == ini.TeamId) mt.MireStunnedAlly++;
+            else { mt.MireStunned++; if (early) mt.MireStunnedEarly++; }
+        }
         EmitStatusGain(x, StatusKeys.Stun, 1, ini);   // 表示専用（ShockSpent の直後）
         x.SetCounter(StatusKeys.Stun, 1);
         x.SetCounter(ShockRule.StunKey, 1);            // 計数専用（失った手番の帰属）
@@ -1254,6 +1264,9 @@ public sealed class BattleContext
         UnitTally ft = TallyOf(from), tt = TallyOf(to);
         ft.DischargeHits++;
         UnitState? inv = InvertsTick(to);
+        // 第218期: 印を運ぶ（放電した駒が印を持っていれば、放電を受けた駒に +1・陣営を問わない）。量の口は澱みのデバフ（反転で回復になる放電には掛けない）。
+        bool carry = _mireCarry && from.RawCounter(StatusKeys.Concentrated) > 0;
+        if (inv is null && _mireDull != 0) amt = MireCut(from, amt, 2);
         if (_verbose) Emit(new BattleEvent
         {
             Kind = BattleEventKind.Discharge, Turn = _turn, ActorId = from.InstanceId, TargetId = to.InstanceId,
@@ -1265,6 +1278,7 @@ public sealed class BattleContext
             int hb = to.Hp;
             InverseHeal(inv, to, amt, 3, "放電");
             tt.DischargeInvertedIn += to.Hp - hb;
+            if (carry) MireCarryTo(to);
             return;
         }
         Log($"    {from.Name} から {to.Name} へ放電（{amt}）", LogKind.Status);
@@ -1280,6 +1294,7 @@ public sealed class BattleContext
         ft.DischargeDealt += removed;
         tt.DischargeTaken += removed;
         if (before > 0 && !to.IsAlive) tt.DischargeDeaths++;
+        if (carry) MireCarryTo(to);
     }
 
     /// <summary>決着時に残っていた感電を数える（第214期・<b>計数のみ</b>）。</summary>
@@ -6085,6 +6100,15 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Grapple) || u.HasTrait(TraitId.Shame)) _restrainLive = true;
         if (u.HasTrait(TraitId.Scourge)) _whipLive = true;                 // 第217期（鞭の枠と2倍）
         if (u.HasTrait(TraitId.LiveWireGuard)) _shockStunGuard = true;     // 第217期（G3H）
+        // 第218期（澱みのミオの版・M3〜M5）。**保持者がいなければ比較1つで抜ける。**
+        if (u.HasTrait(TraitId.MireDull) || u.HasTrait(TraitId.MireDullAll))
+        {
+            _mireDull = Math.Max(_mireDull, u.HasTrait(TraitId.MireDullAll) ? (byte)2 : (byte)1);
+            _mireDullTeam = u.TeamId;
+        }
+        if (u.HasTrait(TraitId.MireCarry)) { _mireCarry = true; _mireHolder ??= u; }
+        if (u.HasTrait(TraitId.MireHandoff)) { _mireHandoff = true; _mireHolder ??= u; }
+        u.TakenTurn = 0;   // 第218期・**計数のみ**
         if (u.HasTrait(TraitId.Footing)) _shieldHolders.Add(u);
         if (u.HasTrait(TraitId.Planted)) _plantedLive = true;
         if (u.HasTrait(TraitId.Daunt)) _dauntLive = true;   // 第189期（萎縮の消費を短絡させる）
@@ -6635,10 +6659,17 @@ public sealed class BattleContext
         }
     }
 
-    public bool MarkConcentrated(UnitState mio, UnitState u, string label)
+    public bool MarkConcentrated(UnitState mio, UnitState u, string label) => MarkConcentrated(mio, u, label, 1, null);
+
+    /// <summary>
+    /// 濃縮の印を <paramref name="add"/> だけ足す（第218期に量を引数にした・1 なら第194期と1ビットも違わない）。
+    /// <paramref name="from"/> は倒れた敵から移った印の出どころ（台本の <c>SpreadFromId</c>・<b>表示専用</b>）。
+    /// 移った印の台本は <c>StatusRemaining</c> ＝ 移した数。
+    /// </summary>
+    public bool MarkConcentrated(UnitState mio, UnitState u, string label, int add, UnitState? from)
     {
         if (!u.IsAlive) return false;
-        int n = u.RawCounter(StatusKeys.Concentrated) + 1;
+        int n = u.RawCounter(StatusKeys.Concentrated) + add;
         u.SetCounter(StatusKeys.Concentrated, n);
         _markLive = true;
         UnitTally mt = TallyOf(mio);
@@ -6648,8 +6679,133 @@ public sealed class BattleContext
             {
                 Kind = BattleEventKind.ConcentrateMark, Turn = _turn, ActorId = mio.InstanceId,
                 TargetId = u.InstanceId, Amount = n, Text = label, SourceTrait = TraitId.Concentrate,
+                SpreadFromId = from?.InstanceId, StatusRemaining = from is null ? null : add,
             });
         return true;
+    }
+
+    // =================================================================================
+    // 第218期 —— 澱みのミオ（叩きつけ・通電・澱みのデバフ・印を運ぶ／移す）
+    //
+    // 叩きつけと通電は `ConcentrateTrait` の最後から `MireSlam` を呼ぶ。デバフは与ダメの量を作る4口で `MireCut`、
+    // 運ぶは `Discharge` の最後、移すは `HandleDeath` の中。**保持者がいなければどれも比較1つで抜ける。乱数を引かない。**
+    // =================================================================================
+
+    /// <summary>澱みのデバフ: 0 なし ／ 1 敵だけ（保持者と違う陣営）／ 2 両方。</summary>
+    byte _mireDull;
+    int _mireDullTeam;
+    bool _mireCarry, _mireHandoff;
+    /// <summary>運ぶ・移るの書き手（最初に加わった保持者）。倒れていても書き手として使う。</summary>
+    UnitState? _mireHolder;
+
+    /// <summary>
+    /// 澱みのデバフ（第218期）。出どころの印 × <see cref="MireDullTrait.PercentPerMark"/>%（上限 <see cref="MireDullTrait.MaxPercent"/>%）を切り捨てで引く。
+    /// 敵だけの版は保持者と同じ陣営の出どころに掛けない。<paramref name="route"/>: 0 攻撃 ／ 1 雷 ／ 2 放電 ／ 3 叩きつけ（計数のみ）。
+    /// </summary>
+    int MireCut(UnitState src, int amount, int route)
+    {
+        if (amount <= 0) return amount;
+        int n = src.RawCounter(StatusKeys.Concentrated);
+        if (n <= 0) return amount;
+        if (_mireDull == 1 && src.TeamId == _mireDullTeam) return amount;
+        int pct = Math.Min(n * MireDullTrait.PercentPerMark, MireDullTrait.MaxPercent);
+        int cut = amount * pct / 100;
+        UnitTally t = TallyOf(src);
+        t.MireDulledHits++;
+        t.MireDulledCut += cut;
+        (t.MireDulledByRoute ??= new long[4])[route] += cut;
+        if (cut > 0) Log($"    {src.Name} は澱みに手を取られた（-{pct}%・この一撃 -{cut}）", LogKind.Status);
+        return amount - cut;
+    }
+
+    /// <summary>印を運ぶ（第218期・M4〜）。放電を受けて生きている駒に印 +1（書き手は保持者）。</summary>
+    void MireCarryTo(UnitState to)
+    {
+        if (_mireHolder is null || !to.IsAlive) return;
+        if (!MarkConcentrated(_mireHolder, to, ConcentrateTrait.CarryLabel)) return;
+        UnitTally ht = TallyOf(_mireHolder);
+        ht.MireCarried++;
+        if (to.TeamId == _mireHolder.TeamId) ht.MireCarriedAlly++;
+    }
+
+    /// <summary>
+    /// 倒れたら印が移る（第218期・M5・敵だけ）。倒れた駒の印を全部、隣の生きている駒（同じ陣営）のうち次の刻みが最も大きい1体へ
+    /// （同値は席番号）。隣が1体もいなければ消える（数える）。
+    /// </summary>
+    void MireHandoff(UnitState dead, int marks)
+    {
+        UnitTally ht = TallyOf(_mireHolder!);
+        UnitState? pick = null;
+        int best = 0;
+        foreach (UnitState u in LivingMembers(dead.TeamId))
+        {
+            if (u == dead || !FormationRules.AreAdjacent(dead, u)) continue;
+            int n = ConcentrateTrait.NextTick(u);
+            if (pick is null || n > best || (n == best && u.Slot < pick.Slot)) { pick = u; best = n; }
+        }
+        if (pick is null) { ht.MireHandoffLost += marks; return; }
+        dead.SetCounter(StatusKeys.Concentrated, 0);
+        MarkConcentrated(_mireHolder!, pick, ConcentrateTrait.HandoffLabel, marks, dead);
+        ht.MireHandedOff += marks;
+        ht.MireHandoffs++;
+        Log($"    {dead.Name} の澱みが {pick.Name} へ流れ込む（印 {marks}）", LogKind.Status);
+    }
+
+    /// <summary>
+    /// 叩きつけ（第218期・<see cref="MireSlamTrait"/>・ミオの手番の最後）。寄せ先（中心）へ <b>ミオの現在攻撃力</b>（澱みのデバフの後）の一撃を
+    /// <c>ApplyDamage</c> で直に入れる（<c>PerformAttack</c> は通らない＝標的の鎖・庇いを通らない。撃破はミオ）。HP に届けば既存の規則で感電が弾ける。
+    /// <para><b>通電</b>（<see cref="MireConductTrait"/>）: 叩きつける相手が<b>当てる前に</b>感電していれば、中心へ当てた後、
+    /// <b>印を持つ生きている敵</b>（席番号順・中心を除く）それぞれに同じ量の一撃。1手番に1回。</para>
+    /// </summary>
+    public void MireSlam(UnitState mio, UnitState center)
+    {
+        UnitTally t = TallyOf(mio);
+        bool shocked = center.RawCounter(StatusKeys.Shock) > 0;
+        bool conduct = shocked && mio.HasTrait(TraitId.MireConduct);
+        int amt = Math.Max(0, mio.CurrentAttack);
+        if (_mireDull != 0) amt = MireCut(mio, amt, 3);
+        List<UnitState>? others = conduct
+            ? LivingMembers(center.TeamId).Where(u => u != center && u.RawCounter(StatusKeys.Concentrated) > 0).ToList()
+            : null;
+        int reach = 1 + (others?.Count ?? 0);
+        t.MireSlams++;
+        if (shocked) t.MireSlamOnShocked++;
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.MireSlam, Turn = _turn, ActorId = mio.InstanceId, TargetId = center.InstanceId,
+            Amount = amt, Slot = conduct ? 1 : 0, StatusRemaining = conduct ? reach : null, Team = center.TeamId,
+        });
+        Log($"    {mio.Name} が澱みを {center.Name} に叩きつけた（{amt}）" + (conduct && reach > 1 ? $"——濁った水が雷を通す（{reach} 体）" : ""), LogKind.Trigger);
+        MireHit(mio, center, amt, t, first: true);
+        if (others is null || others.Count == 0) return;
+
+        t.MireConducts++;
+        if (center.Shape == FormationShape.X && !LivingMembers(center.TeamId).Any(u => u.Slot == 2)) t.MireConductAfterCenter++;
+        int k = 1;
+        foreach (UnitState u in others)
+        {
+            if (!u.IsAlive) continue;
+            k++;
+            t.MireConductHits++;
+            if (_verbose) Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.MireConduct, Turn = _turn, ActorId = mio.InstanceId, TargetId = u.InstanceId,
+                SpreadFromId = center.InstanceId, Amount = amt, Slot = k, StatusRemaining = reach, Team = u.TeamId,
+            });
+            MireHit(mio, u, amt, t, first: false);
+        }
+    }
+
+    void MireHit(UnitState mio, UnitState u, int amt, UnitTally t, bool first)
+    {
+        if (!u.IsAlive || amt <= 0) return;
+        int before = u.Hp;
+        bool wasShocked = u.RawCounter(StatusKeys.Shock) > 0;
+        if (first) ApplyDamage(u, amt, mio, singleHit: true, pattern: AttackPattern.Single);
+        else ApplyDamage(u, amt, mio);
+        t.MireSlamDealt += before - Math.Max(0, u.Hp);
+        if (wasShocked && u.RawCounter(StatusKeys.Shock) <= 0) { if (first) t.MireSlamPops++; else t.MireConductPops++; }
+        if (before > 0 && !u.IsAlive) t.MireSlamKills++;
     }
 
     /// <summary>
@@ -6675,6 +6831,7 @@ public sealed class BattleContext
     {
         UnitTally t = TallyOf(u);
         bool cut = amount > Yoke.Cap && YokeBinding;
+        if (second) (t.ConcExtraByTurn ??= new long[8])[Math.Clamp(_turn, 0, 7)] += amount;   // 第218期・**計数のみ**
         if (burn)
         {
             if (amount > t.BurnTickMax) t.BurnTickMax = amount;
@@ -7565,6 +7722,10 @@ public sealed class BattleContext
                 if (numbCut > 0) Log($"    {actor.Name} は毒で手が鈍った（-{numbPct}%・この一撃 -{numbCut}）", LogKind.Status);
             }
         }
+
+        // 澱みのデバフ（第218期・ミオの `MireDull` / `MireDullAll`）。**痺れ毒の直後**（萎縮 → 痺れ毒 → 澱み・どれも切り捨て）。
+        // 反撃・割り込み・追い打ち・再行動もここを通る。**保持者がいなければ比較1つで抜ける。**
+        if (_mireDull != 0) atk = MireCut(actor, atk, 0);
 
         string label = pattern switch
         {
@@ -8866,6 +9027,7 @@ public sealed class BattleContext
         // 「いま誰の手番か」を立て、帰ってきた種別を数える（観測専用）。
         UnitState? prevActor = TurnActor;
         TurnActor = actor;
+        actor.TakenTurn = _turn;   // 第218期・**計数のみ**（感電の痺れが「動く前」だったか）
         UnitTally tt = TallyOf(actor);
         tt.TurnsTaken++;
         try
@@ -9159,6 +9321,17 @@ public sealed class BattleContext
             TargetId = dead.InstanceId,
             Slot = dead.Slot
         });
+
+        // 第218期: 倒れた瞬間に持っていた濃縮の印（**計数のみ**）と、倒れたら移る（M5・敵だけ）。印が1つも無い戦闘は旗1本で抜ける。
+        if (_markLive)
+        {
+            int cm = dead.RawCounter(StatusKeys.Concentrated);
+            if (cm > 0)
+            {
+                TallyOf(dead).ConcMarksAtDeath += cm;
+                if (_mireHandoff && _mireHolder is not null && dead.TeamId != _mireHolder.TeamId) MireHandoff(dead, cm);
+            }
+        }
 
         // 逸らし（第50期）。**撃破順が本命の指標**なので、敵の駒ごとに倒れたターンを記録する。
         // 標に依存しない切り方なので、素体の対照とそのまま引き算できる。

@@ -431,6 +431,14 @@ public enum TraitId
     LiveWireGuard,  // 感電の痺れのハメ防止（G3H）: 痺れで手番を失った駒は、次の自分の手番まで感電で痺れない。**札そのものは挙動を持たない**（engine が保持を読む）
     ScourgeShock,   // 感電している敵も2倍に数える（G3K・第217期の追記で規定。S2 では打てば弾けて痺れる敵）。**札そのものは挙動を持たない**
 
+    // --- 第218期で足した札（澱みのミオの版 M1〜M5・**どれも保持者 0 枚**。規定のミオは M0 ＝ [Concentrate, ConcentrateLeak] のまま） ---
+    MireSlam,       // 叩きつけ（M1〜）: 手番の最後に寄せ先（中心・感電している敵を優先）へミオの現在攻撃力の一撃。HP に届けば感電が弾ける
+    MireConduct,    // 通電（M2〜）: 叩きつける相手が感電していれば、同じ一撃を印を持つ敵すべてへ（1手番に1回）。**札そのものは挙動を持たない**
+    MireDull,       // 澱みのデバフ（M3〜）: 印を持つ**敵**の与ダメ −10%/印（上限 −40%・通常攻撃・雷・放電・反撃・叩きつけ）。**札そのものは挙動を持たない**（engine が保持を読む）
+    MireDullAll,    // 澱みのデバフ（M3x）: 同じものを**敵味方の両方**に。**札そのものは挙動を持たない**
+    MireCarry,      // 印を運ぶ（M4〜）: 印が 1 以上の駒が放電したら、放電を受けた駒に印 +1（1本につき +1・陣営を問わない）。**札そのものは挙動を持たない**
+    MireHandoff,    // 倒れたら移る（M5）: 印を持つ敵が倒れたら、その印を全部、隣の生きている敵のうち次の刻みが最も大きい1体へ。**札そのものは挙動を持たない**
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -4848,6 +4856,8 @@ public sealed class ConcentrateTrait : Trait
 {
     /// <summary>台本の <c>Text</c>（<see cref="BattleEventKind.ConcentrateMark"/>・<b>表示専用</b>）。</summary>
     public const string CenterLabel = "中心", AroundLabel = "周り", LeakLabel = "漏れ";
+    /// <summary>第218期: 放電で運んだ印・倒れた敵から移った印（<b>表示専用</b>）。</summary>
+    public const string CarryLabel = "運び", HandoffLabel = "移り";
 
     public override TraitId Id => TraitId.Concentrate;
 
@@ -4869,21 +4879,29 @@ public sealed class ConcentrateTrait : Trait
 
         UnitTally t = ctx.TallyOf(self);
         t.ConcFires++;
+        // 第218期: 叩きつけの札を持てば、**感電している敵がいればその中から**寄せ先を選ぶ（次の刻みが最も大きい・同値は席番号）。
+        bool slam = self.HasTrait(TraitId.MireSlam);
         UnitState? center = null;
         int best = 0;
+        bool centerShocked = false;
         foreach (UnitState foe in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
         {
             int n = NextTick(foe);
             if (n <= 0) continue;
-            if (center is null || n > best || (n == best && foe.Slot < center.Slot)) { center = foe; best = n; }
+            bool sh = slam && foe.RawCounter(StatusKeys.Shock) > 0;
+            if (center is null || (sh && !centerShocked)
+                || (sh == centerShocked && (n > best || (n == best && foe.Slot < center.Slot))))
+            { center = foe; best = n; centerShocked = sh; }
         }
         if (center is null)
         {
             t.ConcDry++;
+            if (slam) t.MireSlamDry++;
             ctx.Log($"    {self.Name} の澱みは寄せる先を見つけられない", LogKind.Status);
             return;
         }
         if (center.RawCounter(StatusKeys.Burn) > 0) t.ConcCenterBurning++;
+        if (center.RawCounter(StatusKeys.Concentrated) <= 0) t.ConcCenterFresh++;   // 第218期・**計数のみ**
 
         if (ctx.MarkConcentrated(self, center, CenterLabel)) t.ConcMarkCenter++;
         foreach (UnitState foe in ctx.LivingMembers(center.TeamId))
@@ -4896,6 +4914,9 @@ public sealed class ConcentrateTrait : Trait
                     t.ConcMarkAlly++;
 
         ctx.Log($"    ★ {self.Name} が澱みを {center.Name} に寄せた——刻みが {1 + center.RawCounter(StatusKeys.Concentrated)} 度来る", LogKind.Highlight, self);
+
+        // 第218期: 叩きつけ（手番の最後・1手番に1回）。通電の判定もこの中。
+        if (slam && center.IsAlive) ctx.MireSlam(self, center);
     }
 }
 
@@ -12445,6 +12466,62 @@ public sealed class ScourgeShockTrait : Trait
     public override TraitId Id => TraitId.ScourgeShock;
 }
 
+// =====================================================================================
+// 第218期 —— 澱みのミオの版（札の差し替えだけで作る・`Run` の引数は増やさない）
+//
+//     M0 ＝ [Concentrate, ConcentrateLeak]（今のミオ・規定のまま）
+//     M1 ＝ M0 ＋ MireSlam                         叩きつけ
+//     M2 ＝ M1 ＋ MireConduct                      ＋ 通電
+//     M3 ＝ M2 ＋ MireDull                         ＋ 澱みのデバフ（敵だけ）
+//     M3x ＝ M2 ＋ MireDullAll                     ＋ 澱みのデバフ（敵味方の両方）
+//     M4 ＝ M3 ＋ MireCarry                        ＋ 放電で印を運ぶ（規定の候補）
+//     M5 ＝ M4 ＋ MireHandoff                      ＋ 倒れたら印が移る
+//
+// **叩きつけと通電は `ConcentrateTrait` の最後**（engine の `BattleContext.MireSlam`）。**デバフ・運ぶ・移るは engine**（保持者が戦に出ていれば、
+// 倒れても働く——印そのものが戦の間消えないのと揃えた・痺れ毒と同じ）。**乱数を引かない。**
+// =====================================================================================
+
+/// <summary>叩きつけ（第218期・M1〜）。本体は <see cref="ConcentrateTrait"/> の最後（寄せ先の選び方も変わる）と <c>BattleContext.MireSlam</c>。</summary>
+public sealed class MireSlamTrait : Trait
+{
+    public override TraitId Id => TraitId.MireSlam;
+}
+
+/// <summary>通電（第218期・M2〜）。<b>札そのものは挙動を持たない</b>（<c>BattleContext.MireSlam</c> が保持を読む）。</summary>
+public sealed class MireConductTrait : Trait
+{
+    public override TraitId Id => TraitId.MireConduct;
+}
+
+/// <summary>
+/// 澱みのデバフ（第218期・M3〜・敵だけ）。<b>札そのものは挙動を持たない</b>——engine が与ダメの量を作る4口
+/// （<c>PerformAttackBody</c> の痺れ毒の直後 ／ 雷 ／ 放電 ／ 叩きつけ・通電）で、出どころの印 × <see cref="PercentPerMark"/>%
+/// （上限 <see cref="MaxPercent"/>%）を切り捨てで引く。刻みは出どころが無いので外れる。
+/// </summary>
+public sealed class MireDullTrait : Trait
+{
+    public const int PercentPerMark = 10, MaxPercent = 40;
+    public override TraitId Id => TraitId.MireDull;
+}
+
+/// <summary>澱みのデバフ（第218期・M3x・敵味方の両方）。<b>札そのものは挙動を持たない。</b>数値は <see cref="MireDullTrait"/> と同じ。</summary>
+public sealed class MireDullAllTrait : Trait
+{
+    public override TraitId Id => TraitId.MireDullAll;
+}
+
+/// <summary>印を運ぶ（第218期・M4〜）。<b>札そのものは挙動を持たない</b>（engine の <c>Discharge</c> が保持を読む）。</summary>
+public sealed class MireCarryTrait : Trait
+{
+    public override TraitId Id => TraitId.MireCarry;
+}
+
+/// <summary>倒れたら印が移る（第218期・M5）。<b>札そのものは挙動を持たない</b>（engine の <c>HandleDeath</c> が保持を読む）。</summary>
+public sealed class MireHandoffTrait : Trait
+{
+    public override TraitId Id => TraitId.MireHandoff;
+}
+
 /// <summary>
 /// 反転（第190期・毒喰らいのベニ）。<b>ベニに隣接する味方は、毒と燃焼の削りを回復として受ける</b>
 /// ——ターン頭の刻み（<see cref="BattleContext.TickStatuses"/>）と、起爆の味方側（<see cref="BattleContext.Detonate"/>）の両方。
@@ -13893,6 +13970,12 @@ public static class TraitCatalog
         new LiveWireTrait(),
         new LiveWireGuardTrait(),
         new ScourgeShockTrait(),
+        new MireSlamTrait(),      // 第218期（版の中だけ・保持者 0 枚）
+        new MireConductTrait(),
+        new MireDullTrait(),
+        new MireDullAllTrait(),
+        new MireCarryTrait(),
+        new MireHandoffTrait(),
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期
         new HexLeakTrait(),    // 第189期

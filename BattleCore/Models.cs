@@ -284,6 +284,13 @@ public sealed class UnitState
     public int LastDeathTurn { get; set; }
 
     /// <summary>
+    /// この駒が最後に手番（<see cref="BattleContext.TakeTurn"/>）に入ったターン（第218期・<b>計数専用</b>）。
+    /// 感電で痺れたときに「そのターンの手番をまだ終えていなかったか」を数えるためだけにある。<b>誰も読んで分岐しない。</b>
+    /// 戦闘に加わるとき 0 に戻す（会戦で持ち越された駒の前の戦の値を残さない）。
+    /// </summary>
+    public int TakenTurn { get; set; }
+
+    /// <summary>
     /// この駒に傷を書いた駒（第104期）。<b>挿入順の列で、重複は入れない。</b>
     ///
     /// <para><see cref="BattleContext.Wound"/> が<b>実際に傷を書いたときだけ</b>足す
@@ -1844,6 +1851,25 @@ public sealed class UnitTally
                 WhipCheckSplashMovable, WhipCheckWiredLeft, WhipCheckShouldCower;   // 自己検査用（`whip check`）
     public long[]? WhipHitsHist, WhipPopsHist;
 
+    /// <summary>
+    /// 第218期（<b>計数専用</b>・澱みのミオ）。<b>ミオの側</b>: <c>MireSlams</c> 叩きつけた ／ <c>MireSlamDry</c> 寄せ先が無くて叩けなかった ／
+    /// <c>MireSlamOnShocked</c> 叩きつける相手が感電していた ／ <c>MireSlamPops</c>・<c>MireConductPops</c> その一撃で感電が弾けた（叩きつけ／通電）／
+    /// <c>MireSlamDealt</c>・<c>MireSlamKills</c> 叩きつけと通電で与えた量・倒した数 ／ <c>MireConducts</c> 通電が中心の外へ走った回数 ／
+    /// <c>MireConductHits</c> 通電で当てた延べ（中心を除く）／ <c>MireConductAfterCenter</c> 敵の中央（X字）が空いてから走った通電 ／
+    /// <c>MireStunned</c>・<c>MireStunnedEarly</c> ミオの一撃が起こした連鎖で痺れた敵・うち<b>そのターンの手番をまだ終えていなかった</b>敵 ／
+    /// <c>MireStunnedAlly</c> 同じ連鎖で痺れた味方 ／ <c>MireCarried</c>・<c>MireCarriedAlly</c> 放電で運んだ印（うち味方へ）／
+    /// <c>MireHandedOff</c>・<c>MireHandoffs</c>・<c>MireHandoffLost</c> 倒れた敵から移した印・移した回数・隣がいなくて消えた印 ／
+    /// <c>ConcCenterFresh</c> 中心の印が 0 から付いた手番（一から重ね直した）。
+    /// <b>振った側（印のある駒）</b>: <c>MireDulledHits</c>・<c>MireDulledCut</c> 澱みのデバフで軽くなった一撃・減った量（<c>MireDulledByRoute</c>[0 攻撃 ／ 1 雷 ／ 2 放電 ／ 3 叩きつけ]）。
+    /// <b>だれの側でも</b>: <c>ShockStunnedEarly</c> 感電で痺れたとき、そのターンの手番をまだ終えていなかった ／
+    /// <c>ConcMarksAtDeath</c> 倒れた瞬間に持っていた印 ／ <c>ConcExtraByTurn</c>[ターン] 印による2回目以降の刻みの名目（毒・燃焼）。
+    /// </summary>
+    public long MireSlams, MireSlamDry, MireSlamOnShocked, MireSlamPops, MireConductPops, MireSlamDealt, MireSlamKills,
+                MireConducts, MireConductHits, MireConductAfterCenter, MireStunned, MireStunnedEarly, MireStunnedAlly,
+                MireCarried, MireCarriedAlly, MireHandedOff, MireHandoffs, MireHandoffLost, ConcCenterFresh,
+                MireDulledHits, MireDulledCut, ShockStunnedEarly, ConcMarksAtDeath;
+    public long[]? MireDulledByRoute, ConcExtraByTurn;
+
     public long ShockStunned, ShockStunAlready, ShockStunDead, ShockStunMissed, StallShockStun,
                 OpeningFires, OpeningFoeLayers, OpeningAllyLayers, OpeningBurnLit,
                 OpeningTickInverted, OpeningTickBitten, OpeningHealed;
@@ -2681,6 +2707,16 @@ public sealed class UnitTally
         WhipCheckSplashMovable += o.WhipCheckSplashMovable; WhipCheckWiredLeft += o.WhipCheckWiredLeft; WhipCheckShouldCower += o.WhipCheckShouldCower;
         AddHist(ref WhipHitsHist, o.WhipHitsHist);
         AddHist(ref WhipPopsHist, o.WhipPopsHist);
+        // 第218期
+        MireSlams += o.MireSlams; MireSlamDry += o.MireSlamDry; MireSlamOnShocked += o.MireSlamOnShocked; MireSlamPops += o.MireSlamPops;
+        MireConductPops += o.MireConductPops; MireSlamDealt += o.MireSlamDealt; MireSlamKills += o.MireSlamKills;
+        MireConducts += o.MireConducts; MireConductHits += o.MireConductHits; MireConductAfterCenter += o.MireConductAfterCenter;
+        MireStunned += o.MireStunned; MireStunnedEarly += o.MireStunnedEarly; MireStunnedAlly += o.MireStunnedAlly;
+        MireCarried += o.MireCarried; MireCarriedAlly += o.MireCarriedAlly; MireHandedOff += o.MireHandedOff; MireHandoffs += o.MireHandoffs;
+        MireHandoffLost += o.MireHandoffLost; ConcCenterFresh += o.ConcCenterFresh; MireDulledHits += o.MireDulledHits; MireDulledCut += o.MireDulledCut;
+        ShockStunnedEarly += o.ShockStunnedEarly; ConcMarksAtDeath += o.ConcMarksAtDeath;
+        AddHist(ref MireDulledByRoute, o.MireDulledByRoute);
+        AddHist(ref ConcExtraByTurn, o.ConcExtraByTurn);
         OpeningFires += o.OpeningFires; OpeningFoeLayers += o.OpeningFoeLayers; OpeningAllyLayers += o.OpeningAllyLayers; OpeningBurnLit += o.OpeningBurnLit;
         OpeningTickInverted += o.OpeningTickInverted; OpeningTickBitten += o.OpeningTickBitten; OpeningHealed += o.OpeningHealed;
         AddHist(ref DeathTurnHist, o.DeathTurnHist);   // 第216期
@@ -3088,7 +3124,22 @@ public enum BattleEventKind
     /// <c>Amount</c> = 感電を移す相手の数（当たって生きている敵）、<c>HpAfter</c> = シガの HP。シガ自身の感電はここで<b>弾けずに</b>消える（<c>ShockSpent</c> は出ない）。
     /// 直後に敵ごとの感電の <c>StatusGain</c>（キー <c>shock</c>・<c>ActorId</c> ＝ シガ・既に感電していた敵には出ない）。<b>どの規則も読まない。</b>
     /// </summary>
-    LiveWire
+    LiveWire,
+
+    /// <summary>
+    /// 叩きつけ（第218期・澱みのミオ・<b>表示専用</b>）。ミオの手番の最後に1件。<c>ActorId</c> = ミオ、<c>TargetId</c> = 寄せ先（中心）、
+    /// <c>Amount</c> = 一撃の量（澱みのデバフの後）、<c>Slot</c> = 0 ふつう ／ 1 通電の起点（叩きつける相手が感電していた）、
+    /// <c>StatusRemaining</c> = 通電なら届く敵の数（中心を含む）。直後に中心への <c>Damage</c>（弾ければ <c>ShockSpent</c> と放電の連鎖）、
+    /// 通電なら続けて <see cref="MireConduct"/> が1体ずつ並ぶ。<b>どの規則も読まない。</b>
+    /// </summary>
+    MireSlam,
+
+    /// <summary>
+    /// 通電の1本（第218期・澱みのミオ・<b>表示専用</b>）。<c>ActorId</c> = ミオ、<c>SpreadFromId</c> = 叩きつけた相手（どこから）、
+    /// <c>TargetId</c> = 印を持つ敵（どこへ）、<c>Amount</c> = 一撃の量、<c>Slot</c> = 何体目か（中心が 1 なので 2 から）、
+    /// <c>StatusRemaining</c> = 届く敵の数（中心を含む）。直後にその敵への <c>Damage</c>。<b>どの規則も読まない。</b>
+    /// </summary>
+    MireConduct
 }
 
 /// <summary><see cref="BattleEventKind.Plank"/> の <c>Text</c>（第207期・<b>表示専用</b>）。</summary>

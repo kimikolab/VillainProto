@@ -258,6 +258,12 @@
 | `LiveWire` | 電気鞭のシガ |
 | `LiveWireGuard` | - |
 | `ScourgeShock` | 電気鞭のシガ |
+| `MireSlam` | - |
+| `MireConduct` | - |
+| `MireDull` | - |
+| `MireDullAll` | - |
+| `MireCarry` | - |
+| `MireHandoff` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

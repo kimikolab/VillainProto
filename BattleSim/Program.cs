@@ -1397,6 +1397,12 @@ static class TraitKeyMap
         [TraitId.LiveWire]        = Array.Empty<int>(),                                         // 第217期（感電は専用キー）
         [TraitId.LiveWireGuard]   = new[] { UnitTally.CarryStun },                              // 第217期（G3H・感電の痺れを止める）
         [TraitId.ScourgeShock]    = Array.Empty<int>(),                                         // 第217期（参考・感電は専用キー）
+        [TraitId.MireSlam]        = Array.Empty<int>(),                                         // 第218期（叩きつけ・感電と印は専用キー）
+        [TraitId.MireConduct]     = Array.Empty<int>(),                                         // 第218期（通電）
+        [TraitId.MireDull]        = Array.Empty<int>(),                                         // 第218期（澱みのデバフ・印は専用キー・AtkBonus は動かさない）
+        [TraitId.MireDullAll]     = Array.Empty<int>(),                                         // 第218期（M3x）
+        [TraitId.MireCarry]       = Array.Empty<int>(),                                         // 第218期（放電で印を運ぶ）
+        [TraitId.MireHandoff]     = Array.Empty<int>(),                                         // 第218期（倒れたら印が移る）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1599,6 +1605,12 @@ static class TraitHookMap
         [TraitId.LiveWire]        = new[] { "OnAfterAttack", Engine },             // 第217期（本体は BattleContext.LiveWire）
         [TraitId.LiveWireGuard]   = new[] { Engine },                              // 第217期（StunByShock と手番の頭）
         [TraitId.ScourgeShock]    = new[] { Engine },                              // 第217期（WhipAmount が読む）
+        [TraitId.MireSlam]        = new[] { Engine },                              // 第218期（ConcentrateTrait の最後から BattleContext.MireSlam）
+        [TraitId.MireConduct]     = new[] { Engine },                              // 第218期（MireSlam が読む）
+        [TraitId.MireDull]        = new[] { Engine },                              // 第218期（MireCut・与ダメの4口）
+        [TraitId.MireDullAll]     = new[] { Engine },
+        [TraitId.MireCarry]       = new[] { Engine },                              // 第218期（Discharge）
+        [TraitId.MireHandoff]     = new[] { Engine },                              // 第218期（HandleDeath）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）
