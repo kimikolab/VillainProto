@@ -4351,6 +4351,7 @@ public sealed class BattleContext
             ApplyDamage(foe, amount, holder);
         });
         ht.ReflectDealt += before - Math.Max(0, foe.Hp);
+        if (_turn == 1) ht.FirstTurnReflect += before - Math.Max(0, foe.Hp);   // 第212期（計数のみ）
         if (_reboundTsugi is not null) TallyOf(_reboundTsugi).ReflectByPlank += before - Math.Max(0, foe.Hp);   // 第211期（戦績表の「反射」）
         if (!foe.IsAlive) ht.ReflectKills++;
         if (serial == 0) NoteReflectGroup(1, !foe.IsAlive);
@@ -7871,6 +7872,17 @@ public sealed class BattleContext
         if (armor > 0)
         {
             int soak = Math.Min(armor, amount);
+            // 第212期（計数のみ・Q0-3）: 身を固めている間に、上限を超える一撃を破片が先に受けた。
+            if (Brace.Cap > 0 && amount > Brace.Cap && source is not null && source.TeamId != target.TeamId
+                && target.HasTrait(TraitId.Brace) && BraceTrait.IsBraced(this, target))
+            {
+                UnitTally bt = TallyOf(target);
+                bt.BraceArmorHits++;
+                bt.BraceArmorHypRefused += amount - Brace.Cap;
+                bt.BraceArmorExtraBurned += soak - Math.Min(armor, Brace.Cap);
+                if (amount - soak <= 0) bt.BraceArmorFullMuted++;
+            }
+            if (_turn == 1 && _scrapHolders.Count > 0) TallyOf(target).FirstTurnArmorSoak += soak;   // 第212期（計数のみ）
             // 第208期: 撃ち返す板（`PlankRebound`）。印は破片が 0 になると消えるので、減らす前に読む。
             if (_reboundLive && source is not null && source.TeamId != target.TeamId && !burnTick && !InReaction
                 && (target.RawCounter(StatusKeys.Plank) & PlankTrait.Rebound) != 0)

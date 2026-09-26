@@ -1978,6 +1978,17 @@ public sealed class UnitTally
     public long ArmorOut, ReflectByPlank, PlankHypPicks, PlankHypSame, PlankHypArmor, PlankHypSelf, PlankHypChosen, PlankReceived,
                 DiedArmorBefore, DiedCount, ThornArmorMuted, ThornArmorRiposte, FirstAidArmoredHits, ThornRipostes;
     public long[]? PlankToRow, FirstAidToRow;
+    /// <summary>
+    /// 第212期（<b>計数専用</b>）。ツギの側: <c>FirstAidFiredByTier</c>・<c>FirstAidSpentByTier</c> 応急処置を貼った／1ターンの上限で貼れなかった回数を、その時点の腕の段（0・1・2・3以上）ごとに ／
+    /// <c>FirstAidSpentSame</c> 上限で貼れなかったうち、そのターンに既に応急処置を受けた味方だった回数 ／ <c>FirstAidMulti</c> 同じターンの2回目以降の応急処置 ／
+    /// <c>FirstAidSameAgain</c> 同じターンに同じ味方へ2回目以降の応急処置 ／ <c>OpeningPastes</c>・<c>OpeningGiven</c> 出撃前の板の枚数と量。
+    /// ササの側: <c>BraceArmorHits</c> 身を固めている間に、上限を超える一撃を破片が先に受けた回数 ／ <c>BraceArmorHypRefused</c> その一撃に上限が先に掛かっていれば切り落とせた量 ／
+    /// <c>BraceArmorExtraBurned</c> 上限が先なら減らずに済んだ破片（min(破片, 一撃) − min(破片, 上限)）／ <c>BraceArmorFullMuted</c> そのうち破片が受け切って弾き（錯乱）も配りも鳴らなかった回数。
+    /// 受けた側: <c>FirstTurnArmorSoak</c> 1ターン目に破片が吸った被ダメ ／ <c>FirstTurnReflect</c> 1ターン目に板から返った反射の量。
+    /// </summary>
+    public long FirstAidSpentSame, FirstAidMulti, FirstAidSameAgain, OpeningPastes, OpeningGiven,
+                BraceArmorHits, BraceArmorHypRefused, BraceArmorExtraBurned, BraceArmorFullMuted, FirstTurnArmorSoak, FirstTurnReflect;
+    public long[]? FirstAidFiredByTier, FirstAidSpentByTier;
     /// <summary><see cref="ReflectYokeHyp"/> の倍率（百分率）。</summary>
     public static readonly int[] HypRatios = { 0, 25, 50, 100 };
 
@@ -2417,6 +2428,11 @@ public sealed class UnitTally
         PlankHypArmor += o.PlankHypArmor; PlankHypSelf += o.PlankHypSelf; PlankHypChosen += o.PlankHypChosen; PlankReceived += o.PlankReceived;
         DiedArmorBefore += o.DiedArmorBefore; DiedCount += o.DiedCount; ThornArmorMuted += o.ThornArmorMuted; ThornArmorRiposte += o.ThornArmorRiposte;
         FirstAidArmoredHits += o.FirstAidArmoredHits; ThornRipostes += o.ThornRipostes;
+        FirstAidSpentSame += o.FirstAidSpentSame; FirstAidMulti += o.FirstAidMulti; FirstAidSameAgain += o.FirstAidSameAgain;
+        OpeningPastes += o.OpeningPastes; OpeningGiven += o.OpeningGiven; BraceArmorHits += o.BraceArmorHits; BraceArmorHypRefused += o.BraceArmorHypRefused;
+        BraceArmorExtraBurned += o.BraceArmorExtraBurned; BraceArmorFullMuted += o.BraceArmorFullMuted; FirstTurnArmorSoak += o.FirstTurnArmorSoak; FirstTurnReflect += o.FirstTurnReflect;
+        if (o.FirstAidFiredByTier is not null) { FirstAidFiredByTier ??= new long[4]; for (int i = 0; i < 4; i++) FirstAidFiredByTier[i] += o.FirstAidFiredByTier[i]; }
+        if (o.FirstAidSpentByTier is not null) { FirstAidSpentByTier ??= new long[4]; for (int i = 0; i < 4; i++) FirstAidSpentByTier[i] += o.FirstAidSpentByTier[i]; }
         if (o.PlankToRow is not null) { PlankToRow ??= new long[3]; for (int i = 0; i < 3; i++) PlankToRow[i] += o.PlankToRow[i]; }
         if (o.FirstAidToRow is not null) { FirstAidToRow ??= new long[3]; for (int i = 0; i < 3; i++) FirstAidToRow[i] += o.FirstAidToRow[i]; }
         KissTierMax = Math.Max(KissTierMax, o.KissTierMax);

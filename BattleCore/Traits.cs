@@ -9259,6 +9259,9 @@ public sealed class FirstAidTrait : Trait
     /// <summary>その戦で最後に応急処置をしたターン ＋ 1（私有キー・0 ＝ まだ）。</summary>
     public const string TurnKey = "tsugiAidTurn";
 
+    /// <summary>第212期（計数のみ）: そのターンに最後に応急処置を受けた味方（<c>InstanceId + 1</c>）。</summary>
+    public const string LastKey = "tsugiAidLast";
+
     public override TraitId Id => TraitId.FirstAid;
 
     /// <summary>第210期: 応急処置の条件（生きている・破片 0・HP が閾値未満）。計数の探り（engine）と共有する<b>判定の1本</b>。</summary>
@@ -9289,13 +9292,24 @@ public sealed class FirstAidTrait : Trait
 
     public override void OnAllyDamaged(BattleContext ctx, UnitState self, UnitState ally, int dmg, UnitState? source) => Try(ctx, self, ally, dmg);
 
-    public override void OnCarryOver(UnitState self) => self.SetCounter(TurnKey, 0);
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(TurnKey, 0);
+        self.SetCounter(LastKey, 0);   // 第212期（InstanceId を持つので必ず捨てる）
+    }
 
     static void Try(BattleContext ctx, UnitState self, UnitState to, int dmg)
     {
         if (dmg <= 0 || !self.IsAlive || !NeedsFor(self, to)) return;
         UnitTally t = ctx.TallyOf(self);
-        if (self.RawCounter(TurnKey) == ctx.Turn + 1) { t.FirstAidSpent++; ctx.TallyOf(to).FirstAidMissed++; return; }
+        int tier = Math.Min(3, self.RawCounter(PlankTrait.SkillTierKey));
+        if (self.RawCounter(TurnKey) == ctx.Turn + 1)
+        {
+            t.FirstAidSpent++; ctx.TallyOf(to).FirstAidMissed++;
+            (t.FirstAidSpentByTier ??= new long[4])[tier]++;                          // 第212期（計数のみ）
+            if (self.RawCounter(LastKey) == to.InstanceId + 1) t.FirstAidSpentSame++;
+            return;
+        }
         if (ctx.InInterrupt || ctx.InReaction) { t.FirstAidHeld++; ctx.TallyOf(to).FirstAidMissed++; return; }
         var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId));
         if (foes.Count == 0) return;
@@ -9306,6 +9320,8 @@ public sealed class FirstAidTrait : Trait
             return;
         }
         self.SetCounter(TurnKey, ctx.Turn + 1);
+        self.SetCounter(LastKey, to.InstanceId + 1);                                   // 第212期（計数のみ）
+        (t.FirstAidFiredByTier ??= new long[4])[tier]++;
         if ((to.Hp + to.RawCounter(StatusKeys.Armor) + dmg) * 100 >= to.MaxHp * Percent) t.FirstAidCross++;
         ctx.Interrupt(() => PlankTrait.Paste(ctx, self, to, foes, firstAid: true));
     }

@@ -20,8 +20,11 @@ static partial class TsugiDiag
             case "yokeprobe": YokeProbe(); handled = true; return;
             case "pon5": Pon211(); handled = true; return;
             case "pon5log": PonLog(arg); handled = true; return;
+            default: RunMore212(mode, arg, ref handled); return;
         }
     }
+
+    static partial void RunMore212(string mode, string arg, ref bool handled);
 
     // =================================================================================
     // run5 —— §4.1
