@@ -85,6 +85,10 @@ public partial class Main : Control
     private OptionButton _presetPicker = null!;
     private Label _presetState = null!;
     private SpinBox _seed = null!;
+    private SpinBox _enemyHp = null!;
+    private SpinBox _enemyAttack = null!;
+    private HBoxContainer _enemyScaleSettings = null!;
+    private EnemyScaleRule? _battleEnemyScale;
     private HBoxContainer _setupActions = null!;
     private HBoxContainer _battleActions = null!;
     private Button _deploy = null!;
@@ -478,7 +482,9 @@ public partial class Main : Control
         panel.AddThemeStyleboxOverride("panel", UiKit.Box(new Color(0.055f, 0.085f, 0.075f, 1), UiKit.Line, 0, 0));
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 14);
-        panel.AddChild(row);
+        var headerRows = new VBoxContainer();
+        panel.AddChild(headerRows);
+        headerRows.AddChild(row);
 
         var brand = new VBoxContainer { CustomMinimumSize = new Vector2(210, 0), SizeFlagsHorizontal = SizeFlags.ExpandFill };
         brand.AddThemeConstantOverride("separation", 0);
@@ -530,8 +536,35 @@ public partial class Main : Control
         badgeText.VerticalAlignment = VerticalAlignment.Center;
         badge.AddChild(badgeText);
         row.AddChild(badge);
+        // 波・seed の下に置き、既存のヘッダーを横へ押し広げない。
+        _enemyScaleSettings = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End };
+        _enemyScaleSettings.AddThemeConstantOverride("separation", 14);
+        headerRows.AddChild(_enemyScaleSettings);
+        _enemyScaleSettings.AddChild(HeaderCaption("敵のHP"));
+        _enemyHp = EnemyScaleInput(EnemyScaleRule.Default.HpPercent);
+        _enemyScaleSettings.AddChild(_enemyHp);
+        _enemyScaleSettings.AddChild(HeaderCaption("敵の攻撃"));
+        _enemyAttack = EnemyScaleInput(EnemyScaleRule.Default.AtkPercent);
+        _enemyScaleSettings.AddChild(_enemyAttack);
+        var resetScale = new Button { Text = "115 に戻す", FocusMode = FocusModeEnum.None };
+        resetScale.Pressed += () =>
+        {
+            _enemyHp.Value = EnemyScaleRule.Default.HpPercent;
+            _enemyAttack.Value = EnemyScaleRule.Default.AtkPercent;
+        };
+        _enemyScaleSettings.AddChild(resetScale);
         return panel;
     }
+
+    private static SpinBox EnemyScaleInput(int value) => new()
+    {
+        MinValue = 50,
+        MaxValue = 400,
+        Step = 5,
+        Value = value,
+        Suffix = "%",
+        CustomMinimumSize = new Vector2(110, 36),
+    };
 
     private static Label HeaderCaption(string value)
     {
@@ -1009,7 +1042,10 @@ public partial class Main : Control
 
         List<UnitState> players = BattleEngine.Materialize(formation, BattleContext.PlayerTeam);
         (Formation enemyFormation, string enemyName) = DemoEnemyFormation(stageIndex);   // 第203期: `--demo-enemy-p3`
-        List<UnitState> enemies = BattleEngine.Materialize(enemyFormation, BattleContext.EnemyTeam);
+        _enemyHp.Apply();
+        _enemyAttack.Apply();
+        _battleEnemyScale = new EnemyScaleRule((int)_enemyHp.Value, (int)_enemyAttack.Value);
+        List<UnitState> enemies = BattleEngine.Materialize(enemyFormation, BattleContext.EnemyTeam, _battleEnemyScale.Value);
         EnterBattle(players, enemies, seed, stageIndex, enemyName);
     }
 
@@ -1025,6 +1061,7 @@ public partial class Main : Control
         if (_battleMode || !CampaignSession.HasCarriedBattle) return;
         List<UnitState> players = CampaignSession.CarriedPlayers!;
         List<UnitState> enemies = CampaignSession.CarriedEnemies!;
+        _battleEnemyScale = null; // 持ち込み戦の倍率は作戦マップが管理する。
         int stageIndex = CampaignSession.CarriedStageIndex;
         string title = CampaignSession.CarriedEnemyName ?? EnemyCatalog.Stages[stageIndex].Name;
         _stagePicker.Selected = stageIndex;
@@ -1076,6 +1113,7 @@ public partial class Main : Control
         _stagePicker.Disabled = true;
         _presetPicker.Disabled = true;
         _seed.Editable = false;
+        _enemyScaleSettings.Visible = false;
         _battleSummary.Text = $"{title}\nseed {seed} ・ 予測済み台本 {_result.Events.Count}イベント";
         _battleLog.Clear();
         _field.Visible = false;
@@ -2327,6 +2365,7 @@ public partial class Main : Control
         _stagePicker.Disabled = false;
         _presetPicker.Disabled = false;
         _seed.Editable = true;
+        _enemyScaleSettings.Visible = true;
         _battleField.Visible = false;
         _battleMusic.Stop();
         _partyBar.Visible = false;
@@ -2364,6 +2403,7 @@ public partial class Main : Control
                 _result,
                 _battleOpening,
                 $"{EnemyCatalog.Stages[stage].Name} ・ seed {(int)_seed.Value} ・ "
+                + (_battleEnemyScale is { } scale ? $"敵 HP{scale.HpPercent}% / 攻{scale.AtkPercent}% ・ " : "")
                 + $"{_result.Turns}ターン ・ {(_result.PlayerWon ? "勝利" : "敗北")}"
                 + $"（生存 {_result.PlayerSurvivors}体）。"
                 + "台本は開戦前に計算済み。この表は戦闘全体の最終集計で、再生位置によらない。");
