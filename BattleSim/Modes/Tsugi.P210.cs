@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -40,6 +40,7 @@ static partial class TsugiDiag
             case "swap4": Swap210(); handled = true; return;
             case "ledger4": Ledger210(); handled = true; return;
             case "check4": Check210(arg); handled = true; return;
+            case "stall4": Stall210(); handled = true; return;
         }
     }
 
@@ -411,7 +412,7 @@ static partial class TsugiDiag
         foreach (var (tag, tsugiDef) in WVersions.Skip(1))
         {
             long pastes = 0, badBase = 0, badSum = 0, badSkillPart = 0, aids = 0, aidArmored = 0, aidDead = 0, aidTwice = 0, aidHushed = 0,
-                 skillUps = 0, skillBad = 0, skillDown = 0, lostMismatch = 0, skillWhenNo = 0, battles = 0;
+                 skillUps = 0, skillBad = 0, skillDown = 0, lostMismatch = 0, skillWhenNo = 0, battles = 0, shrunk = 0;
             var tables = TsugiRows().Select(r => ApplyR(r.F, "tsugi", tsugiDef)).Concat(LiliRows().Select(r => ApplyR(r.F, "lili", tsugiDef))).ToList();
             bool hasAid = tsugiDef.Traits.Contains(TraitId.FirstAid), hasSkill = tsugiDef.Traits.Contains(TraitId.PlankSkill);
             foreach (Formation f in tables)
@@ -421,10 +422,12 @@ static partial class TsugiDiag
                         battles++;
                         var players = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
                         var enemies = BattleEngine.Materialize(EnemyCatalog.Stages[st].Enemy, BattleContext.EnemyTeam);
-                        var hushIds = enemies.Where(e => e.HasTrait(TraitId.Hush)).Select(e => e.InstanceId).ToHashSet();
                         var me = players.First(p => p.Def.Id == "tsugi");
                         int maxHp = me.MaxHp;
                         var r = BattleEngine.Run(players, enemies, seed, verbose: true);
+                        // InstanceId は Run の中（`BattleContext.Add`）で振られるので、Run の後に引く
+                        var hushIds = enemies.Where(e => e.HasTrait(TraitId.Hush)).Select(e => e.InstanceId).ToHashSet();
+                        int lastBase = int.MaxValue;
                         int tier = 0; var aidTurns = new HashSet<int>(); var deadHush = new HashSet<int>();
                         foreach (var e in r.Events)
                         {
@@ -441,7 +444,11 @@ static partial class TsugiDiag
                             if (e.Text != PlankLabels.Paste && e.Text != PlankLabels.FirstAid) continue;
                             pastes++;
                             int b = e.PlankBase ?? -1, sk = e.PlankSkill ?? -1;
-                            if (b != maxHp * PlankTrait.BasePercent / 100) badBase++;
+                            // 最大HP は「その時点の値」（縫い合わせ・継ぎ目で減る）。台本は最大HPを運ばないので、
+                            // 「開戦時の値以下のある最大HPの 40%」であり、戦のあいだ増えないことを見る。
+                            if (b > maxHp * PlankTrait.BasePercent / 100 || b > lastBase || !Enumerable.Range(1, maxHp).Any(m => m * PlankTrait.BasePercent / 100 == b)) badBase++;
+                            if (b < maxHp * PlankTrait.BasePercent / 100) shrunk++;
+                            lastBase = b;
                             if (b + sk + e.Slot != e.Amount) badSum++;
                             if (sk != (hasSkill ? b * (100 + PlankTrait.SkillPerStepPercent * tier) / 100 - b : 0)) badSkillPart++;
                             if (e.Text != PlankLabels.FirstAid) continue;
@@ -457,8 +464,8 @@ static partial class TsugiDiag
                         if (!hasSkill && skillUps > 0) skillWhenNo++;
                     }
             Req(pastes > 0 && badBase == 0 && badSum == 0 && badSkillPart == 0,
-                "(4) " + tag + ": 板の量 ＝ 基本（floor(最大HP × 40%)）＋ 腕 ＋ 在庫（" + pastes + " 枚中 基本のずれ " + badBase + " ／ 和のずれ " + badSum + " ／ 腕の分のずれ " + badSkillPart + "）"
-                + "——（最大HPは開戦時の値で比べる。縫い合わせで減った戦があればここに出る）");
+                "(4) " + tag + ": 板の量 ＝ 基本（floor(その時点の最大HP × 40%)）＋ 腕 ＋ 在庫（" + pastes + " 枚中 基本のずれ " + badBase + " ／ 和のずれ " + badSum + " ／ 腕の分のずれ " + badSkillPart
+                + "・最大HPが減った後の板 " + shrunk + "）");
             if (hasAid)
                 Req(aids > 0 && aidArmored == 0 && aidDead == 0 && aidTwice == 0 && aidHushed == 0,
                     "(5) " + tag + ": 応急処置は破片 0 の味方だけ・倒れた味方に貼らない・1ターン1回・粛の保持者が生きている間は出ない（" + aids + " 件中 破片あり " + aidArmored
@@ -480,5 +487,56 @@ static partial class TsugiDiag
         }
         Console.WriteLine();
         Console.WriteLine(all ? "**全項目 ○。**" : "**× がある。**");
+    }
+
+    // =================================================================================
+    // stall4 —— 事後: 差し替えの `反撃` / `反撃改` の第四波が W1 で落ちる理由
+    // =================================================================================
+
+    static void Stall210()
+    {
+        Console.WriteLine("# 第210期 `tsugi stall4` —— 差し替えの `反撃` / `反撃改` の第四波（事後に足した・seed 0..199）");
+        Console.WriteLine();
+        Console.WriteLine("**膠着** ＝ 30 ターン上限の負け（200 戦中）。以下の量は**全戦**の1戦あたり。**与** ＝ 味方が敵に与えた総量 ／ **反射** ＝ そのうち反射 ／ **棘** ＝ カドの与えた量 ／ "
+                          + "**カド被** ＝ カドが HP で受けた量 ／ **敵の回復** ＝ 敵が回復で実際に増やした HP ／ **板** ＝ 手番の板1枚の量 ／ **応急** ＝ 応急処置/戦。");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 波 | 版 | 勝率 | 膠着 | 決着T | 与 | 反射 | 棘 | カド被 | 敵の回復 | 板 | 応急 |");
+        Console.WriteLine("|---|--:|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        foreach (string row in new[] { "反撃 (ヒサ×カド)", "反撃改 (ドハ×カド)" })
+        {
+            var (_, f) = CompareBuilds().First(r => r.Name == row);
+            var players = f.Occupied().Select(o => o.Def.Id).ToHashSet();
+            foreach (int st in new[] { 3, 4 })
+            {
+                Formation enemy = EnemyCatalog.Stages[st].Enemy;
+                var foes = enemy.Occupied().Select(o => o.Def.Id).ToHashSet();
+                foreach (var (tag, def) in new[] { ("L", (UnitDef?)null) }.Concat(WVersions.Select(v => (v.Tag, (UnitDef?)v.Tsugi))))
+                {
+                    Formation g = def is null ? f : ApplyR(f, "lili", def);
+                    int wins = 0, stalls = 0; double turns = 0, dealt = 0, refl = 0, thorn = 0, kadoTaken = 0, heal = 0, pastes = 0, given = 0, aid = 0;
+                    for (int seed = 0; seed < Seeds; seed++)
+                    {
+                        var r = BattleEngine.Run(g, enemy, seed, verbose: false);
+                        if (r.PlayerWon) wins++;
+                        else if (r.Turns >= BattleEngine.MaxTurns) stalls++;
+                        turns += r.Turns;
+                        foreach (var (id, t) in r.TallyByUnit)
+                        {
+                            if (players.Contains(id) || id == "tsugi") { dealt += t.DamageToEnemy; refl += t.ReflectDealt; }
+                            if (foes.Contains(id)) heal += t.Healed;
+                        }
+                        var k = r.TallyByUnit.GetValueOrDefault("kado");
+                        thorn += k?.DamageToEnemy ?? 0; kadoTaken += k?.DamageTaken ?? 0;
+                        var ts = r.TallyByUnit.GetValueOrDefault("tsugi");
+                        if (ts is not null) { pastes += ts.PlankPastes; given += ts.PlankGiven; aid += ts.FirstAidFired; }
+                    }
+                    double d = Seeds;
+                    Console.WriteLine("| " + row + " | " + (st + 1) + " | " + tag + " | " + F1(100.0 * wins / Seeds) + " | " + stalls + " | " + (turns / d).ToString("F1") + " | "
+                                      + (dealt / d).ToString("F0") + " | " + (refl / d).ToString("F0") + " | " + (thorn / d).ToString("F0") + " | " + (kadoTaken / d).ToString("F0") + " | "
+                                      + (heal / d).ToString("F0") + " | " + (pastes == 0 ? "—" : (given / pastes).ToString("F1")) + " | " + (aid / d).ToString("F2") + " |");
+                }
+            }
+        }
+        Console.WriteLine();
     }
 }

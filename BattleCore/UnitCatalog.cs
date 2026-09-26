@@ -871,12 +871,16 @@ public static class UnitCatalog
         // 第208期（U3）: 撃ち返す板（`PlankRebound`）を足し、燃えやすさを持続倍（`PlankTinder`）からダメージ倍（`PlankScorch`）へ差し替えた。
         // 第207期の姿（T3）は `[Plank, PlankTinder, Scrap]`（診断 `tsugi` の U0）。
         // 第209期（R2）: 厚い板ほど強く撃ち返す（`PlankThick`・反射に残った板の厚さの 50% を足す）。第208期の姿（R0）は `PlankThick` を外した4枚。
-        Traits = new[] { TraitId.Plank, TraitId.PlankScorch, TraitId.Scrap, TraitId.PlankRebound, TraitId.PlankThick },
+        // 第210期（W3）: 基本の厚さを自分の最大HPの 40% に（`PlankBase`）・応急処置（`FirstAid`）・腕が上がる（`PlankSkill`）。
+        // 第209期の姿（W0）は3枚を外した5枚（診断 `tsugi` の W0〜W2 は札の差し替え）。
+        Traits = new[] { TraitId.Plank, TraitId.PlankScorch, TraitId.Scrap, TraitId.PlankRebound, TraitId.PlankThick,
+                         TraitId.PlankBase, TraitId.FirstAid, TraitId.PlankSkill },
         // 板を貼るのが手番そのもの（攻撃9 は出ない）。`[Skill]` の1要素。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "板を貼っている") },
-        PlusText = "手番で、破片が最も薄い味方に板を貼る（最も強い敵の一撃ぶんの破片・最低6）。回復ではないので渇きでも止まらず、回復を受け付けない味方にも届く / "
-                   + "板が敵に砕かれると、破片がその敵へ飛ぶ（砕けた量に、残った板の厚さの半分を足したダメージ）。板が厚いほど強く撃ち返す / "
-                   + "味方の破片が砕けたり、誰かが倒れたりすると、瓦礫を拾って背中に積み、次の板を厚くする",
+        PlusText = "手番で、破片が最も薄い味方に板を貼る（自分の最大HPの4割の破片）。回復ではないので渇きでも止まらず、回復を受け付けない味方にも届く / "
+                   + "破片の無い味方がHPの4割を切ると、手番の外で駆け込んで板を貼る（1ターンに1回） / "
+                   + "板が敵に砕かれると、破片がその敵へ飛ぶ（砕けた量に、残った板の厚さの半分を足したダメージ） / "
+                   + "味方の破片が砕けたり誰かが倒れたりすると瓦礫を拾い、次の板を厚くする。板が砕かれ続けるほど腕が上がり、板そのものが厚くなる",
         MinusText = "板は燃えやすい。板を貼られた味方は、燃焼で倍の傷を負う。自分では攻撃しない",
         Flavor = "治せない。だから、これ以上壊れないように塞いだ。"
     };

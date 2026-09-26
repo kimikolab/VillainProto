@@ -104,6 +104,8 @@ public static void Run(string[] args, int stageIndex)
             inverter = e.InverterId,                   // 第194期・反転した刻みの Status: 反転させたベニ（sourceTrait = Inverse）
             tickIndex = e.TickIndex,                   // 第194期・濃縮の印で広がった刻みの Status: 何回目か（1 始まり）
             tickCount = e.TickCount,                   // 第194期・同: 全部で何回の予定か（1+n）
+            plankBase = e.PlankBase,                   // 第210期・ツギの板（手番・応急処置）: 量のうち基本の分（在庫の分は slot）
+            plankSkill = e.PlankSkill,                 // 第210期・同: 腕の分
             text = e.Text
         }).ToList()
     };
