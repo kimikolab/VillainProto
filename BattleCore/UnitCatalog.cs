@@ -973,19 +973,27 @@ public static class UnitCatalog
     ///
     /// 供給ゼロの編成では「1ターンおきにしか動けず、毎回 IdleTurn を差し出す駒」になる。
     /// それも仕様で、差し出したターンは号令（ガン）・据え（バン）が買い取る。
+    ///
+    /// <para><b>第217期の追記（ポンの判断）で「電気鞭のシガ」に作り直した</b>（規定 ＝ G3K）。
+    /// 責め苦（`Torment`）の追い打ちを「動けない敵には2倍の1発」（`Scourge`）にまとめ、鞭で常に薙ぎ（`Lash`）、
+    /// 振り始めに感電していれば怖気づかず打った敵に感電を移し（`LiveWire`）、感電している敵も2倍に数える（`ScourgeShock`）。
+    /// 旧の札 `Torment` は定義だけ残す（保持者 0 枚）。<b>攻撃型は `Def.Pattern` を薙ぎにした</b>——鞭は無条件なので
+    /// 窓口（`LashTrait.ModifyPattern`）と同じ答えになる（`Lash` は見せしめの薙ぎの優先と悲鳴の出どころのために残す）。
+    /// 経緯は design/PHASE217_SHIGA_WHIP.md。</para>
     /// </summary>
     public static readonly UnitDef Shiga = new()
     {
         Id = "shiga",
-        Name = "責め苦のシガ",
+        Name = "電気鞭のシガ",
         MaxHp = 52,
         Attack = 9,
         Speed = 3,
-        // **第185期に見せしめ（`Shame`）を足した**。責め苦はそのまま（動けない判定に組み付き・竦みを足しただけ）。
-        Traits = new[] { TraitId.Torment, TraitId.Shame },
-        PlusText = "動けない敵を優先して狙う。動けない敵を責めると追い打ちを重ね、その悲鳴で隣の敵を竦ませる（竦んだ敵は次の手番を失う）",
-        MinusText = "動ける敵を殴ると、怖気づいて自分が1ターン動けなくなる",
-        Flavor = "縛られた的しか殴れない臆病者。だからこそ、縛る者の隣でだけ牙になる。"
+        Pattern = AttackPattern.Sweep,
+        // 第185期に見せしめ（`Shame`）を足した。第217期の追記で G3K（責め鞭・鞭・電気鞭・感電も2倍）に。
+        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock },
+        PlusText = "動けない敵を優先して鞭で薙ぐ。動けない敵には2倍で入り、その悲鳴で隣の敵を竦ませる（1手番に1回）。感電しているあいだは怖気づかず、打った敵に感電を移す",
+        MinusText = "感電していないとき、動ける敵を主目標に打つと、怖気づいて自分が1ターン動けなくなる",
+        Flavor = "縛られた的しか殴れない臆病者。雷に打たれている間だけは、怖さも痺れて感じない。"
     };
 
     /// <summary>

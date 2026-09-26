@@ -25,14 +25,14 @@ static class ShockDigestDiag
             ? new (string, Formation)[]
             {
                 // 第217期（受け入れ 1）: G0（今のシガ）の台本が実装の前後で一致すること。席は Phase 0 で G0 に選んだ参考の席。
-                ("W1 X", Formation.Build(front1: UnitCatalog.Mio, front3: UnitCatalog.Shiga, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Tou)),
-                ("W1 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Kata, c: UnitCatalog.Shiga, d: UnitCatalog.Tou, e: UnitCatalog.Mio)),
-                ("W2 X", Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Shiga, center: UnitCatalog.Mio, back1: UnitCatalog.Kata, back3: UnitCatalog.Kugu)),
-                ("W2 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.Kata, d: UnitCatalog.Shiga, e: UnitCatalog.Kugu)),
-                ("W3 X", Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Mio, center: UnitCatalog.Kata, back1: UnitCatalog.Shiga, back3: UnitCatalog.Guza)),
-                ("W3 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.Kata, d: UnitCatalog.Shiga, e: UnitCatalog.Guza)),
-                ("W4 責め苦", Common.CompareBuilds().First(r => r.Name == "責め苦 (トウ×シガ)").F),
-                ("W4 裂き×責め苦", Common.CompareBuilds().First(r => r.Name == "裂き×責め苦 (キリ×エグ×シガ)").F),
+                ("W1 X", Formation.Build(front1: UnitCatalog.Mio, front3: WhipDiag.G0Def, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Tou)),
+                ("W1 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Kata, c: WhipDiag.G0Def, d: UnitCatalog.Tou, e: UnitCatalog.Mio)),
+                ("W2 X", Formation.Build(front1: UnitCatalog.Beni, front3: WhipDiag.G0Def, center: UnitCatalog.Mio, back1: UnitCatalog.Kata, back3: UnitCatalog.Kugu)),
+                ("W2 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.Kata, d: WhipDiag.G0Def, e: UnitCatalog.Kugu)),
+                ("W3 X", Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Mio, center: UnitCatalog.Kata, back1: WhipDiag.G0Def, back3: UnitCatalog.Guza)),
+                ("W3 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.Kata, d: WhipDiag.G0Def, e: UnitCatalog.Guza)),
+                ("W4 責め苦", WhipDiag.AsG0(Common.CompareBuilds().First(r => r.Name == "責め苦 (トウ×シガ)").F)),
+                ("W4 裂き×責め苦", WhipDiag.AsG0(Common.CompareBuilds().First(r => r.Name == "裂き×責め苦 (キリ×エグ×シガ)").F)),
             }
             : mode == "t216"
             ? new (string, Formation)[]

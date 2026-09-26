@@ -13,21 +13,27 @@ static partial class WhipDiag
 {
     const int MeasSeeds = 200, PickSeed0 = 1000, PickSeeds = 50;
 
+    /// <summary>
+    /// 版の駒。<b>第217期の追記でシガの規定が G3K（薙ぎ）になったので、型は素の単体で固定する</b>
+    /// （G2 以降は `Lash` が薙ぎにする）——規定の駒を写すと G0・G1 まで薙ぎになる。
+    /// </summary>
     static UnitDef Ver(params TraitId[] traits)
     {
         UnitDef d = UnitCatalog.Shiga;
         return new()
         {
-            Id = d.Id, Name = d.Name, MaxHp = d.MaxHp, Attack = d.Attack, Speed = d.Speed, Advances = d.Advances,
-            Pattern = d.Pattern, Actions = d.Actions, Traits = traits,
-            PlusText = d.PlusText, MinusText = d.MinusText, Flavor = d.Flavor,
+            Id = d.Id, Name = "責め苦のシガ", MaxHp = d.MaxHp, Attack = d.Attack, Speed = d.Speed, Advances = d.Advances,
+            Pattern = AttackPattern.Single, Actions = d.Actions, Traits = traits,
         };
     }
+
+    /// <summary>第217期の実装前のシガ（G0）。`shockdigest w217` と `whip phase0` が読む（規定が変わっても意味が動かない）。</summary>
+    internal static UnitDef G0Def => VerOf("G0");
 
     /// <summary>版（指示書 §3 ＋ 参考 G3K）。<b>初めて読んだときに1度だけ作る</b>（静的初期化子にしない・R277）。</summary>
     internal static (string Tag, UnitDef Def)[] Versions => _versions ??= new[]
     {
-        ("G0", UnitCatalog.Shiga),
+        ("G0", Ver(TraitId.Torment, TraitId.Shame)),   // 第217期の追記の後も実装前のシガ
         ("G1", Ver(TraitId.Scourge, TraitId.Shame)),
         ("G2", Ver(TraitId.Scourge, TraitId.Shame, TraitId.Lash)),
         ("G3", Ver(TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire)),

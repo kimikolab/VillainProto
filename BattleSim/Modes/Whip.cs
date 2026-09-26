@@ -49,6 +49,14 @@ static partial class WhipDiag
     internal static List<(string Name, Formation F)> W4Rows()
         => CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id == "shiga")).Select(r => (r.Name, r.F)).ToList();
 
+    /// <summary>行の中のシガを G0 に差し戻す（第217期の追記の後も Phase 0 が実装前の数字を出すため）。</summary>
+    internal static Formation AsG0(Formation f)
+    {
+        var g = new Formation { Shape = f.Shape };
+        foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = d.Id == "shiga" ? G0Def : d;
+        return g;
+    }
+
     static string F1(double x) => double.IsNaN(x) ? "—" : x.ToString("F1");
     static string F2(double x) => double.IsNaN(x) ? "—" : x.ToString("F2");
 
@@ -174,7 +182,7 @@ static partial class WhipDiag
         var w4 = W4Rows();
         Console.WriteLine("- W4（`compare` でシガのいる行）: " + w4.Count + " 行 —— " + string.Join(" ／ ", w4.Select(r => "`" + r.Name + "`")));
         foreach (var (tag, aim, mem) in Rigs)
-            Console.WriteLine("- " + tag + "（" + aim + "）: " + string.Join("・", mem(UnitCatalog.Shiga).Select(d => Short(d) + "(速" + d.Speed + "・" + d.Pattern + ")")));
+            Console.WriteLine("- " + tag + "（" + aim + "）: " + string.Join("・", mem(G0Def).Select(d => Short(d) + "(速" + d.Speed + "・" + d.Pattern + ")")));
         Console.WriteLine();
         Console.WriteLine("### 参考: 今のシガ（G0）で席を選んだ W1〜W3（**G3 の席は実装後に選び直す**）");
         Console.WriteLine();
@@ -184,7 +192,7 @@ static partial class WhipDiag
         foreach (var (tag, _, mem) in Rigs)
             foreach (FormationShape sh in ShockDiag.Shapes)
             {
-                Formation f = ShockDiag.PickSeats216(mem(UnitCatalog.Shiga), sh, ShockDiag.Scale115);
+                Formation f = ShockDiag.PickSeats216(mem(G0Def), sh, ShockDiag.Scale115);
                 provisional.Add((tag, f));
                 foreach (var (sc, rule) in ShockDiag.Scales216)
                 {
@@ -250,7 +258,7 @@ static partial class WhipDiag
         foreach (var (name, f) in w4)
             foreach (var (sc, rule) in ShockDiag.Scales216)
             {
-                var a = ShockDiag.Measure216(f, rule);
+                var a = ShockDiag.Measure216(AsG0(f), rule);
                 Console.WriteLine("- `" + name + "` × " + sc + ": " + string.Join(" / ", new[] { 1, 2, 3, 4 }.Select(w => F1(a.WinPct(w)))) + "（平均 " + F1(a.Mean25) + "・全員生存 " + F1(a.AllSurvPct) + "）");
             }
         Console.WriteLine();

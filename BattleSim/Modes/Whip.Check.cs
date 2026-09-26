@@ -130,10 +130,29 @@ static partial class WhipDiag
                 "LiveWire の出来事 " + lwEvents + " ＝ 帳簿 " + lwTallies + "・直後の感電の StatusGain " + lwMarkedEv + " ＝ 移した感電 " + lwMarkedTally + "・Amount を超えた " + lwOverAmount);
         Verdict("(6b) 2倍はログで数えられる（台本では Damage の量）", doubledEv == doubledTally, "ログ " + doubledEv + " ＝ 帳簿 " + doubledTally);
 
-        // (1') 新しい札の保持者は 0 枚（規定は変えない）。
-        var cards = new[] { TraitId.Scourge, TraitId.Lash, TraitId.LiveWire, TraitId.LiveWireGuard, TraitId.ScourgeShock };
-        var held = UnitCatalog.Everyone.Where(u => u.Traits.Any(cards.Contains)).Select(u => u.Id).ToList();
-        Verdict("(1') 新しい札の保持者は 0 枚", held.Count == 0, held.Count == 0 ? "0 枚（シガは " + string.Join(", ", UnitCatalog.Shiga.Traits) + "）" : string.Join(", ", held));
+        // (1') 第217期の追記: 新しい札の保持者はシガだけで、札は G3K の並び。LiveWireGuard と旧 Torment は保持者 0 枚。
+        var cards = new[] { TraitId.Scourge, TraitId.Lash, TraitId.LiveWire, TraitId.LiveWireGuard, TraitId.ScourgeShock, TraitId.Torment };
+        var held = UnitCatalog.Everyone.SelectMany(u => u.Traits.Where(cards.Contains).Select(t => u.Id + ":" + t)).ToList();
+        bool heldOk = held.SequenceEqual(new[] { "shiga:Scourge", "shiga:Lash", "shiga:LiveWire", "shiga:ScourgeShock" });
+        Verdict("(1') 札の保持者はシガの G3K の4枚だけ", heldOk, string.Join(" ／ ", held));
+
+        // (1'') 規定のシガ（型は `Def.Pattern` の薙ぎ）と版 G3K（型は単体 ＋ `Lash`）が同じ盤面になる（W1〜W3・席115・第2〜5波 × seed 0..49・倍率 150）。
+        long pairs = 0, pairMism = 0;
+        foreach (var s in SeatSearch(115))
+        {
+            Formation a = WithVer(s.Best, "G3K"), b = new() { Shape = s.Best.Shape };
+            foreach ((int slot, UnitDef d) in s.Best.Occupied()) b[slot] = d.Id == "shiga" ? UnitCatalog.Shiga : d;
+            for (int st = 1; st < 5; st++)
+                for (int sd = 0; sd < 50; sd++)
+                {
+                    var boss = new BossRule(false) { Scale = ShockDiag.Scale150 };
+                    BattleResult x = BattleEngine.Run(a, EnemyCatalog.Stages[st].Enemy, sd, verbose: false, boss: boss);
+                    BattleResult y = BattleEngine.Run(b, EnemyCatalog.Stages[st].Enemy, sd, verbose: false, boss: boss);
+                    pairs++;
+                    if (x.PlayerWon != y.PlayerWon || x.Turns != y.Turns || x.TallyByUnit["shiga"].DamageToEnemy != y.TallyByUnit["shiga"].DamageToEnemy) pairMism++;
+                }
+        }
+        Verdict("(1'') 規定のシガ ＝ 版 G3K", pairMism == 0, pairs + " 戦で勝敗・決着ターン・シガの与ダメの食い違い " + pairMism);
 
         Console.WriteLine();
         Console.WriteLine("WHIP217_CHECK " + (allOk ? "ok=True" : "ok=False") + " 所要 " + (DateTime.Now - t0).TotalSeconds.ToString("F0") + " 秒");
