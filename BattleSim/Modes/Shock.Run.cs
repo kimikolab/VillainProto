@@ -85,7 +85,7 @@ static partial class ShockDiag
         {
             int i = j / 4, st = 1 + j % 4;
             Formation en = EnemyCatalog.Stages[st].Enemy;
-            Formation f = WithKata(all[i], KataT0);   // 第215期: 席は第214期の K1（T0）で選ぶ
+            Formation f = SwapDef(WithKata(all[i], KataT0), UnitCatalog.Beni, BeniBase);   // 第215期: 席は第214期の K1（T0）で選ぶ。第216期の追記: ベニも開戦の撒きの無い姿で（規定の O4 で席が動かないように）
             int w = 0;
             for (int s = PickSeed0; s < PickSeed0 + PickSeeds; s++)
                 if (BattleEngine.Run(f, en, s, verbose: false).PlayerWon) w++;

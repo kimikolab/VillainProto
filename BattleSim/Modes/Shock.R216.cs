@@ -16,14 +16,25 @@ static partial class ShockDiag
 {
     static UnitDef Plus(UnitDef d, TraitId? extra) => extra is TraitId t ? WithTraits(d, d.Traits.Append(t).ToArray()) : d;
 
+    static readonly TraitId[] OpeningCards = { TraitId.GurenOpening, TraitId.GurenOpeningAll, TraitId.GurenOpeningAll3, TraitId.GurenOpeningBurn };
+    static readonly TraitId[] StunCards = { TraitId.ShockStun, TraitId.ShockStunAll, TraitId.ShockStunHalf };
+
+    /// <summary>
+    /// 版の素（第216期の追記）: 規定のベニ・カタから版の札を抜いたもの。**O4・S2 を規定にした後も O0・S0 は第215期の姿**
+    /// ——`UnitCatalog.Beni` / `Kata` をそのまま O0 / S0 に使うと、規定の札の上に版の札が重なる。
+    /// </summary>
+    static UnitDef BeniBase => _beniBase ??= WithTraits(UnitCatalog.Beni, UnitCatalog.Beni.Traits.Where(t => !OpeningCards.Contains(t)).ToArray());
+    static UnitDef KataBase => _kataBase ??= WithTraits(UnitCatalog.Kata, UnitCatalog.Kata.Traits.Where(t => !StunCards.Contains(t)).ToArray());
+    static UnitDef? _beniBase, _kataBase;
+
     /// <summary>
     /// ベニの版（第216期 §1）。<b>初めて読んだときに1度だけ作る</b>——静的フィールドの初期化子にしない（R277）が、
     /// 読むたびに作り直してもいけない（席を選ぶときに差し込んだ版を <c>SwapDef</c>（参照の一致）で元に戻せなくなる。1度踏んだ）。
     /// </summary>
     static (string Tag, UnitDef Def)[] BeniVersions => _beniVersions ??= new[]
     {
-        ("O0", UnitCatalog.Beni), ("O1", Plus(UnitCatalog.Beni, TraitId.GurenOpening)), ("O2", Plus(UnitCatalog.Beni, TraitId.GurenOpeningAll)),
-        ("O3", Plus(UnitCatalog.Beni, TraitId.GurenOpeningAll3)), ("O4", Plus(UnitCatalog.Beni, TraitId.GurenOpeningBurn)),
+        ("O0", BeniBase), ("O1", Plus(BeniBase, TraitId.GurenOpening)), ("O2", Plus(BeniBase, TraitId.GurenOpeningAll)),
+        ("O3", Plus(BeniBase, TraitId.GurenOpeningAll3)), ("O4", Plus(BeniBase, TraitId.GurenOpeningBurn)),
     };
 
     static (string Tag, UnitDef Def)[]? _beniVersions, _kataVersions;
@@ -31,8 +42,8 @@ static partial class ShockDiag
     /// <summary>カタの版（第216期 §2）。作り方は <see cref="BeniVersions"/> と同じ。</summary>
     static (string Tag, UnitDef Def)[] KataVersions => _kataVersions ??= new[]
     {
-        ("S0", UnitCatalog.Kata), ("S1", Plus(UnitCatalog.Kata, TraitId.ShockStun)), ("S2", Plus(UnitCatalog.Kata, TraitId.ShockStunAll)),
-        ("S3", Plus(UnitCatalog.Kata, TraitId.ShockStunHalf)),
+        ("S0", KataBase), ("S1", Plus(KataBase, TraitId.ShockStun)), ("S2", Plus(KataBase, TraitId.ShockStunAll)),
+        ("S3", Plus(KataBase, TraitId.ShockStunHalf)),
     };
 
     static UnitDef BeniOf(string o) => BeniVersions.First(v => v.Tag == o).Def;
@@ -57,9 +68,10 @@ static partial class ShockDiag
         };
         foreach (FormationShape sh in Shapes)
         {
-            var members = TableCMembers.Select(d => d == UnitCatalog.Beni ? BeniOf("O2") : d).ToList();
+            // 席は O2・S0 で選ぶ（第216期の追記: 規定のカタが S2 になったので、S0 の版を明示して差し込む）。
+            var members = TableCMembers.Select(d => d == UnitCatalog.Beni ? BeniOf("O2") : d == UnitCatalog.Kata ? KataOf("S0") : d).ToList();
             Formation picked = PickSeats216(members, sh, Scale115);
-            list.Add(new("台C", SwapDef(picked, BeniOf("O2"), UnitCatalog.Beni), true));
+            list.Add(new("台C", SwapDef(SwapDef(picked, BeniOf("O2"), UnitCatalog.Beni), KataOf("S0"), UnitCatalog.Kata), true));
         }
         var tables = Tables();
         foreach (int i in new[] { 0, 2 })
@@ -254,7 +266,7 @@ static partial class ShockDiag
                 var d = new Dictionary<string, Agg216>();
                 foreach (var (sc, rule) in Scales216)
                 {
-                    d["現行 " + sc] = Measure216(seats, rule);
+                    d["現行 " + sc] = Measure216(Versioned(seats, "O0", "S0"), rule);   // 第216期の追記: 規定が O4・S2 になったので O0・S0 を明示する
                     d["候補 " + sc] = Measure216(Versioned(seats, "O2", "S2"), rule);
                 }
                 rows.Add((pa.Name.Split('の').Last() + "・" + pb.Name.Split('の').Last(), sh, seats, d));
@@ -404,9 +416,11 @@ static partial class ShockDiag
         Verdict("(0) 台に版の定義が残っていない", leftover == 0, leftover + " 枠");
 
         // (S0・O0 は保持者 0) 札の保持者が UnitCatalog.All に居ない。
-        var cards = new[] { TraitId.GurenOpening, TraitId.GurenOpeningAll, TraitId.GurenOpeningAll3, TraitId.GurenOpeningBurn, TraitId.ShockStun, TraitId.ShockStunAll, TraitId.ShockStunHalf };
-        int holders = UnitCatalog.Everyone.Count(u => u.Traits.Any(cards.Contains));
-        Verdict("(1') 版の札の保持者はロスターに 0 枚", holders == 0, holders + " 枚");
+        // 第216期の追記: O4（ベニ）・S2（カタ）を規定にした。ほかの5枚は保持者 0 枚のまま。
+        var cards = OpeningCards.Concat(StunCards).ToArray();
+        var held = UnitCatalog.Everyone.SelectMany(u => u.Traits.Where(cards.Contains).Select(t => u.Id + ":" + t)).OrderBy(x => x, StringComparer.Ordinal).ToList();
+        bool heldOk = held.SequenceEqual(new[] { "beni:GurenOpeningBurn", "kata:ShockStunAll" });
+        Verdict("(1') 版の札の保持者はベニの O4 とカタの S2 だけ", heldOk, held.Count == 0 ? "0 枚" : string.Join(" ／ ", held));
 
         Console.WriteLine();
         Console.WriteLine("SHOCK216_CHECK " + (allOk ? "ok=True" : "ok=False") + " 所要 " + (DateTime.Now - t0).TotalSeconds.ToString("F0") + " 秒");

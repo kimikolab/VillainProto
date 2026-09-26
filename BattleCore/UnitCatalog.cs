@@ -350,14 +350,15 @@ public static class UnitCatalog
         // 第191期に手番を「火 → 毒 → 毒」の周期にした（火は `Kindle`・外せば毒のみ）。どの拍かはラベルで分ける。
         // 第192期から反転と反転の裏はベニ自身にも効く（`InverseTrait.IncludesSelf`）。手番の配り先は隣の味方のまま。
         // 第197期に紅蓮（`Guren`）を足した。**`Kindle` / `Taint` より前に置く**——放つのは手番の頭（周期の火・毒の拍より前）。
-        Traits = new[] { TraitId.Inverse, TraitId.Guren, TraitId.Kindle, TraitId.Taint, TraitId.InverseLeak },
+        // 第216期: 開戦の撒き O4（`GurenOpeningBurn`・開戦時に敵全体へ毒 1 ＋ 着火）をポンの判断で規定にした。
+        Traits = new[] { TraitId.Inverse, TraitId.Guren, TraitId.Kindle, TraitId.Taint, TraitId.InverseLeak, TraitId.GurenOpeningBurn },
         Actions = new UnitAction[]
         {
             new(ActionKind.Skill, Label: KindleTrait.Label),
             new(ActionKind.Skill, Label: "澱みを分けた"),
             new(ActionKind.Skill, Label: "澱みを分けた"),
         },
-        PlusText = "自分と隣接する味方は、毒と燃焼で削られる代わりに癒える。隣で溢れた分は自分が啜り、それでも余れば紅蓮として溜める。紅蓮が満ちると、敵全体に火と澱みを放つ / 手番で、隣接する味方全員に火→毒→毒の順で分け与える",
+        PlusText = "自分と隣接する味方は、毒と燃焼で削られる代わりに癒える。隣で溢れた分は自分が啜り、それでも余れば紅蓮として溜める。紅蓮が満ちると、敵全体に火と澱みを放つ / 手番で、隣接する味方全員に火→毒→毒の順で分け与える / 開戦時に、敵全体へ毒と火を撒く",
         MinusText = "自分と隣接する味方は、回復を受けるとかえって傷つく。自分では攻撃しない",
         Flavor = "紅い澱みを分け与え、その余りを啜って生きている。満ちれば、花は燃え、腐らせる。"
     };
@@ -880,11 +881,12 @@ public static class UnitCatalog
         Speed = 6,
         Advances = false,
         // 第215期: 跳ね先の同点を「行き止まりを先に」（T1・`ThunderPath`）をポンの判断で規定にした。
-        Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath },
+        // 第216期: 感電が弾けた駒すべてが痺れる（S2・`ShockStunAll`）をポンの判断で規定にした。敵味方を問わない。
+        Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockStunAll },
         // **[Skill] 1要素にする**（`ActionIndex++` は `CanAct` 通過後。第138期 Q0-4）。通常攻撃は出ない。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "雷を落とした") },
-        PlusText = "状態異常を帯びた敵に雷を落とし、帯びた隣の敵へ跳ねる（帯びた種類が多いほど重い）。当たった敵には感電が残り、感電した敵は仲間の一撃で弾けて隣へ放電する",
-        MinusText = "雷を落とすたび、隣の味方すべてに感電が付く / 雷そのものは感電を弾けさせない",
+        PlusText = "状態異常を帯びた敵に雷を落とし、帯びた隣の敵へ跳ねる（帯びた種類が多いほど重い）。当たった敵には感電が残り、感電した敵は仲間の一撃で弾けて隣へ放電し、弾けた駒は痺れて次の手番を失う",
+        MinusText = "雷を落とすたび、隣の味方すべてに感電が付く / 雷そのものは感電を弾けさせない / 味方の感電が弾けても、その味方が痺れる",
         Flavor = "雷を呼ぶのではない。落ちる場所を選んでいるだけ。"
     };
 
