@@ -1817,6 +1817,13 @@ public sealed class UnitTally
     public long[]? ThunderKindsHist, ThunderPerCastHist, ChainSizeHist;
 
     /// <summary>
+    /// 第216期（<b>計数専用</b>）。<b>カタの側</b>: 1ターン目に落とした雷 <c>ThunderCastsT1</c> ／ 当たった数 <c>ThunderHitsT1</c> ／
+    /// 当たった1発の種類の合計 <c>ThunderKindsT1</c>。<b>倒れた駒の側</b>: <c>DeathTurnHist</c>[min(ターン, 6)] 倒れたターンの分布（0 は開戦時）。
+    /// </summary>
+    public long ThunderCastsT1, ThunderHitsT1, ThunderKindsT1;
+    public long[]? DeathTurnHist;
+
+    /// <summary>
     /// 起爆（第188期・<see cref="TraitId.Catalyst"/>）。<b>保持者（カタ）の側</b>に載せる——
     /// <c>DetonateFires</c> 起爆した回数 ／ <c>DetonateDry</c> 毒も火も無くて空振りした回数 ／
     /// <c>DetonateDualTargets</c> 両方持ちで倍になった敵の数（延べ）／
@@ -2638,6 +2645,8 @@ public sealed class UnitTally
         DischargeTaken += o.DischargeTaken; DischargeDeaths += o.DischargeDeaths; DischargeInvertedIn += o.DischargeInvertedIn;
         ShockLeftAlive += o.ShockLeftAlive; ShockLeftDead += o.ShockLeftDead; InverseDischargeHealed += o.InverseDischargeHealed;
         ShockThunderMuted += o.ShockThunderMuted; ShockTickMuted += o.ShockTickMuted; ShockArmorMuted += o.ShockArmorMuted;
+        ThunderCastsT1 += o.ThunderCastsT1; ThunderHitsT1 += o.ThunderHitsT1; ThunderKindsT1 += o.ThunderKindsT1;   // 第216期
+        AddHist(ref DeathTurnHist, o.DeathTurnHist);   // 第216期
         AddHist(ref ThunderKindsHist, o.ThunderKindsHist);
         AddHist(ref ThunderPerCastHist, o.ThunderPerCastHist);
         AddHist(ref ChainSizeHist, o.ChainSizeHist);

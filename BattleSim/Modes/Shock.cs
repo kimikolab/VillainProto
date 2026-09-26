@@ -27,6 +27,9 @@ static partial class ShockDiag
             case "run215": Run215(); return;       // 第215期
             case "check215": Check215(); return;   // 第215期
             case "debug215": Debug215(); return;   // 第215期（診断）
+            case "phase216": Phase216(); return;   // 第216期
+            case "run216": Run216(arg); return;    // 第216期
+            case "check216": Check216(arg); return; // 第216期
             default:
                 Console.WriteLine("shock: モードは phase0 / run / check / run215 / check215。");
                 return;
@@ -34,6 +37,8 @@ static partial class ShockDiag
     }
 
     static partial void RunImpl(string arg);
+    static partial void Run216(string arg);
+    static partial void Check216(string arg);
     static partial void CheckImpl(string arg);
 
     // =================================================================================

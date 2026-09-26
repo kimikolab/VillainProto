@@ -1026,6 +1026,7 @@ public sealed class BattleContext
         kt.ThunderHits++;
         (kt.ThunderKindsHist ??= new long[ThunderTrait.CountedKeys.Count + 1])[Math.Min(kinds, ThunderTrait.CountedKeys.Count)]++;
         if (amount > kt.ThunderMax) kt.ThunderMax = amount;
+        if (_turn == 1) { kt.ThunderHitsT1++; kt.ThunderKindsT1 += kinds; }   // 第216期・**計数のみ**
         if (_verbose) Emit(new BattleEvent
         {
             Kind = BattleEventKind.Thunder, Turn = _turn, ActorId = kata.InstanceId, TargetId = target.InstanceId,
@@ -1048,6 +1049,7 @@ public sealed class BattleContext
     {
         UnitTally kt = TallyOf(kata);
         kt.ThunderCasts++;
+        if (_turn == 1) kt.ThunderCastsT1++;   // 第216期・**計数のみ**
         if (fallback) kt.ThunderFallback++;
         (kt.ThunderPerCastHist ??= new long[10])[Math.Min(hits, 9)]++;
     }
@@ -8939,6 +8941,7 @@ public sealed class BattleContext
     {
         dead.Hp = 0;
         TallyOf(dead).Deaths++;
+        (TallyOf(dead).DeathTurnHist ??= new long[7])[Math.Clamp(_turn, 0, 6)]++;   // 第216期・**計数のみ**
         // 第136期・計数のみ。倒れた瞬間に受け流しの在庫が残っていたか（＝在庫切れで死んだのか、上限を素通りしたのか）。
         if (Parry.Uses > 0 && dead.HasTrait(TraitId.Parry))
             TallyOf(dead).ParryStockAtDeath += dead.RawCounter(ParryTrait.StockKey);

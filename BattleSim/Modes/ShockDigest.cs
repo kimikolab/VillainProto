@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Text;
 using BattleCore;
 
@@ -7,6 +7,7 @@ using BattleCore;
 //
 //     dotnet run --project BattleSim -c Release 0 shockdigest k0    # 旧カタ（起爆）の台
 //     dotnet run --project BattleSim -c Release 0 shockdigest aka   # スス／アカの台
+//     dotnet run --project BattleSim -c Release 0 shockdigest t216  # 第216期の台（O0・S0 の台本が第215期と一致すること）
 //
 // **同じファイルを第213期の worktree に置いても回る**ように書いてある（旧カタは `KataOld`、無ければ `Kata` を引く）。
 // 指紋は `BattleEvent` の公開プロパティを宣言順に並べた文字列の FNV-1a（**見せ場 `Highlight` の `Text` だけは除く**
@@ -19,7 +20,18 @@ static class ShockDigestDiag
     {
         var fKataOld = typeof(UnitCatalog).GetField("KataOld");
         UnitDef kata = (UnitDef)(fKataOld ?? typeof(UnitCatalog).GetField("Kata")!).GetValue(null)!;
-        var benches = mode == "aka"
+        var benches = mode == "t216"
+            ? new (string, Formation)[]
+            {
+                // 第216期（受け入れ 1）: O0・S0 の台本が第215期と一致すること。台C は Phase 0 で O0 に選んだ参考の席。
+                ("台A", ShockDiag.TableA216(UnitCatalog.Beni, UnitCatalog.Kata)),
+                ("台B", ShockDiag.TableB216(UnitCatalog.Beni, UnitCatalog.Kata)),
+                ("台C X", Formation.Build(front1: UnitCatalog.Mio, front3: UnitCatalog.Kubi, center: UnitCatalog.Beni, back1: UnitCatalog.Tou, back3: UnitCatalog.Kata)),
+                ("台C P2", Formation.BuildDiamond(a: UnitCatalog.Mio, b: UnitCatalog.Kata, c: UnitCatalog.Beni, d: UnitCatalog.Tou, e: UnitCatalog.Kubi)),
+                ("台1 X", ShockDiag.Tables()[0].Seats[FormationShape.X]),
+                ("台3 X", ShockDiag.Tables()[2].Seats[FormationShape.X]),
+            }
+            : mode == "aka"
             ? new (string, Formation)[]
             {
                 ("惨禍×死の連鎖（ゴルム→スス）", Formation.Build(front1: UnitCatalog.Susu, front3: UnitCatalog.Zoto, center: UnitCatalog.Kado, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel)),
