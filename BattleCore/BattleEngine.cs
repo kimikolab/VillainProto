@@ -4243,6 +4243,32 @@ public sealed class BattleContext
     public int CurrentHitSerial { get; private set; }
     /// <summary>第212期: 破片で受けても身構えが働く駒（<see cref="TraitId.BraceArmored"/>）が盤上にいるか。</summary>
     bool _braceArmoredLive;
+    /// <summary>第213期（<b>計数のみ</b>）: 身構え（<see cref="TraitId.Brace"/>）の保持者が盤上にいるか。偽なら身構えの計数は比較1つで抜ける。</summary>
+    bool _braceLive;
+    /// <summary>第213期（<b>計数のみ</b>）: そのターンの頭に板の印を持っていた身構えの保持者。誰も読んで分岐しない。</summary>
+    readonly HashSet<UnitState> _bracePlankNow = new();
+    /// <summary>第213期（<b>計数のみ</b>）: 「上限が先なら破片が受け切った」一撃の枠の通し番号（Q0-1）。0 は無し。誰も読んで分岐しない。</summary>
+    public int BraceWouldMuteSerial { get; private set; }
+    /// <summary>第213期（<b>計数のみ</b>）: いま `ArmorOnlyHit`（破片が受け切った一撃）の中か。誰も読んで分岐しない。</summary>
+    public bool ArmorOnlyNow { get; private set; }
+    /// <summary>第213期（<b>計数のみ</b>）: 身構えの保持者がそのターンの頭に板の印を持っていたか。</summary>
+    public bool BracePlankTurn(UnitState u) => _bracePlankNow.Contains(u);
+
+    /// <summary>
+    /// 第213期（<b>計数のみ</b>）: ターンの頭に、身構えの保持者が板の印を持っているかを写す（表D）。<b>盤面は読むだけ。</b>
+    /// </summary>
+    public void NoteBraceCensus()
+    {
+        if (!_braceLive) return;
+        _bracePlankNow.Clear();
+        foreach (UnitState u in _units)
+        {
+            if (!u.IsAlive || !u.HasTrait(TraitId.Brace)) continue;
+            UnitTally t = TallyOf(u);
+            if (u.RawCounter(StatusKeys.Plank) != 0) { _bracePlankNow.Add(u); t.BraceTurnsPlank++; }
+            else t.BraceTurnsBare++;
+        }
+    }
 
     /// <summary>
     /// 燃焼が付く2口（<see cref="Ignite"/> とリリの移し）から呼ぶ。<paramref name="target"/> に燃えやすい板の印
@@ -4280,7 +4306,7 @@ public sealed class BattleContext
         if (u.RawCounter(StatusKeys.Plank) > 0)
         {
             TallyOf(u).PlankSoaked += lost;
-            if (after <= 0) u.SetCounter(StatusKeys.Plank, 0);
+            if (after <= 0) { TallyOf(u).PlankBreaks++; u.SetCounter(StatusKeys.Plank, 0); }   // 第213期（計数のみ）: 板が割れた回数
         }
         if (_scrapHolders.Count == 0) return;
         foreach (UnitState h in _scrapHolders)
@@ -5706,6 +5732,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Numb)) _numbLive = true;     // 第195期（痺れ毒の減少を短絡させる）
         if (u.HasTrait(TraitId.Scrap)) _scrapHolders.Add(u); // 第207期（破片の減りを拾う口を短絡させる）
         if (u.HasTrait(TraitId.Thorns)) _thornsLive = true;
+        if (u.HasTrait(TraitId.Brace)) _braceLive = true;   // 第213期（計数のみ）
         if (u.HasTrait(TraitId.BraceArmored)) _braceArmoredLive = true;   // 第212期（破片の前の身構え・受け切った一撃の弾き）  // 第211期（破片で受け切った一撃の棘・計数と Y3 の口を短絡させる）
         if (u.HasTrait(TraitId.PlankRebound)) { _reboundLive = true; _reboundTsugi ??= u; }   // 第208期（撃ち返す板）
         // 第190期: 反転の結界（ベニ）。**保持者がいなければ `Count == 0` の比較1つで抜ける**。
@@ -7894,6 +7921,7 @@ public sealed class BattleContext
             amount = Brace.Cap;
             BraceTrait.Refuse(this, target, refused);
             TallyOf(target).BraceArmorEarly++;
+            TallyOf(target).BraceArmorEarlyAmt += refused;   // 第213期（計数のみ）
             Log($"    {target.Name} が身構えて一撃を {refused + Brace.Cap} から {Brace.Cap} に抑えた（破片より先に）", LogKind.Trigger);
         }
         if (armor > 0)
@@ -7908,7 +7936,12 @@ public sealed class BattleContext
                 bt.BraceArmorHypRefused += amount - Brace.Cap;
                 bt.BraceArmorExtraBurned += soak - Math.Min(armor, Brace.Cap);
                 if (amount - soak <= 0) bt.BraceArmorFullMuted++;
+                // 第213期 Q0-1（計数のみ）: 上限が先なら破片が受け切った（破片 ≧ 上限）のに、いまは残りが HP に届く一撃。
+                else if (armor >= Brace.Cap) { bt.BraceWouldMute++; bt.BraceWouldMuteHp += amount - soak; BraceWouldMuteSerial = CurrentHitSerial; }
             }
+            // 第213期（計数のみ）: 板の印を持つ駒が敵の一撃を破片で受けた回数（表C の「板が割れるまでの一撃の数」）。
+            if (source is not null && source.TeamId != target.TeamId && !burnTick && target.RawCounter(StatusKeys.Plank) != 0)
+                TallyOf(target).PlankHitsTaken++;
             if (_turn == 1 && _scrapHolders.Count > 0) TallyOf(target).FirstTurnArmorSoak += soak;   // 第212期（計数のみ）
             // 第208期: 撃ち返す板（`PlankRebound`）。印は破片が 0 になると消えるので、減らす前に読む。
             if (_reboundLive && source is not null && source.TeamId != target.TeamId && !burnTick && !InReaction
@@ -7967,7 +8000,11 @@ public sealed class BattleContext
                 if (Brace.Cap > 0 && target.HasTrait(TraitId.Brace)) TallyOf(target).BraceArmorMuted++;
                 // 第211期: 破片で受け切った一撃。**保持者がいなければ比較1つで抜ける。**
                 if ((_thornsLive || _scrapHolders.Count > 0 || _braceArmoredLive) && source is not null && source.TeamId != target.TeamId && !burnTick)
-                    ArmorOnlyHit(target, source, soak);
+                {
+                    ArmorOnlyNow = true;   // 第213期（計数のみ）
+                    try { ArmorOnlyHit(target, source, soak); }
+                    finally { ArmorOnlyNow = false; }
+                }
                 return;
             }
         }
@@ -9752,6 +9789,7 @@ public static class BattleEngine
             ctx.NoteWoundCensus();      // 傷の在庫（第120期）。**盤面は読むだけ**
             ctx.NoteArmorCensus();      // 破片の在庫（第138期 段2）。**盤面は読むだけ**
             ctx.NoteWardCensus();       // 重りの在庫（第154期）。**盤面は読むだけ**
+            ctx.NoteBraceCensus();      // 身構えの保持者の板（第213期）。**盤面は読むだけ**
 
             foreach (UnitState u in ctx.AllUnits.Where(x => x.IsAlive).ToList())
                 foreach (Trait t in u.Traits.ToList())

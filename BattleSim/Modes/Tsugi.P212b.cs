@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -74,8 +74,11 @@ static partial class TsugiDiag
             case "z3diff": Z3Diff(); handled = true; return;
             case "check6": Check212(arg); handled = true; return;
             case "sasa6": Sasa212(); handled = true; return;
+            default: RunMore213(mode, arg, ref handled); return;
         }
     }
+
+    static partial void RunMore213(string mode, string arg, ref bool handled);
 
     // =================================================================================
     // run6 —— §4.2

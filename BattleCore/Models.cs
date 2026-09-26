@@ -1990,6 +1990,16 @@ public sealed class UnitTally
     public long FirstAidSpentSame, FirstAidMulti, FirstAidSameAgain, OpeningPastes, OpeningGiven,
                 BraceArmorHits, BraceArmorHypRefused, BraceArmorExtraBurned, BraceArmorFullMuted, FirstTurnArmorSoak, FirstTurnReflect,
                 BraceArmorEarly, BraceArmorStruck, FirstAidSameHit;
+    /// <summary>
+    /// 第213期（<b>計数専用</b>）。ササの側: <c>BraceWouldMute</c>・<c>BraceWouldMuteHp</c> 身を固めている間に上限を超える一撃を破片が一部だけ吸い、残りが HP に届いたが、
+    /// 破片が上限以上あった（＝上限が先なら破片が受け切った）回数とその HP ／ <c>BraceWouldMuteShoved</c> そのうちその一撃で弾いた回数 ／
+    /// <c>BraceArmorEarlyAmt</c> 破片より先に上限で切り落とした量 ／ <c>BraceShovesArmorOnly</c> 破片が受け切った一撃の中で弾いた回数 ／
+    /// <c>BraceGivenArmorOnly</c>・<c>BraceGivenArmorOnlyN</c> 破片が受け切った一撃の中で配った量と回数 ／
+    /// <c>BraceTurnsPlank</c>・<c>BraceTurnsBare</c> ターンの頭に板の印を持っていた／いなかったターンの数 ／ <c>BraceShovesPlank</c>・<c>BraceShovesBare</c> それぞれのターンの弾き。
+    /// 受けた側: <c>PlankHitsTaken</c> 板の印を持っている間に敵の一撃を破片で受けた回数 ／ <c>PlankBreaks</c> 板が割れた（印が消えた）回数。
+    /// </summary>
+    public long BraceWouldMute, BraceWouldMuteHp, BraceWouldMuteShoved, BraceArmorEarlyAmt, BraceShovesArmorOnly, BraceGivenArmorOnly, BraceGivenArmorOnlyN,
+                BraceTurnsPlank, BraceTurnsBare, BraceShovesPlank, BraceShovesBare, PlankHitsTaken, PlankBreaks;
     public long[]? FirstAidFiredByTier, FirstAidSpentByTier;
     /// <summary><see cref="ReflectYokeHyp"/> の倍率（百分率）。</summary>
     public static readonly int[] HypRatios = { 0, 25, 50, 100 };
@@ -2434,6 +2444,10 @@ public sealed class UnitTally
         OpeningPastes += o.OpeningPastes; OpeningGiven += o.OpeningGiven; BraceArmorHits += o.BraceArmorHits; BraceArmorHypRefused += o.BraceArmorHypRefused;
         BraceArmorExtraBurned += o.BraceArmorExtraBurned; BraceArmorFullMuted += o.BraceArmorFullMuted; FirstTurnArmorSoak += o.FirstTurnArmorSoak; FirstTurnReflect += o.FirstTurnReflect;
         BraceArmorEarly += o.BraceArmorEarly; BraceArmorStruck += o.BraceArmorStruck; FirstAidSameHit += o.FirstAidSameHit;
+        BraceWouldMute += o.BraceWouldMute; BraceWouldMuteHp += o.BraceWouldMuteHp; BraceWouldMuteShoved += o.BraceWouldMuteShoved; BraceArmorEarlyAmt += o.BraceArmorEarlyAmt;
+        BraceShovesArmorOnly += o.BraceShovesArmorOnly; BraceGivenArmorOnly += o.BraceGivenArmorOnly; BraceGivenArmorOnlyN += o.BraceGivenArmorOnlyN;
+        BraceTurnsPlank += o.BraceTurnsPlank; BraceTurnsBare += o.BraceTurnsBare; BraceShovesPlank += o.BraceShovesPlank; BraceShovesBare += o.BraceShovesBare;
+        PlankHitsTaken += o.PlankHitsTaken; PlankBreaks += o.PlankBreaks;
         if (o.FirstAidFiredByTier is not null) { FirstAidFiredByTier ??= new long[4]; for (int i = 0; i < 4; i++) FirstAidFiredByTier[i] += o.FirstAidFiredByTier[i]; }
         if (o.FirstAidSpentByTier is not null) { FirstAidSpentByTier ??= new long[4]; for (int i = 0; i < 4; i++) FirstAidSpentByTier[i] += o.FirstAidSpentByTier[i]; }
         if (o.PlankToRow is not null) { PlankToRow ??= new long[3]; for (int i = 0; i < 3; i++) PlankToRow[i] += o.PlankToRow[i]; }

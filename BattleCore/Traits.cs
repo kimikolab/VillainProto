@@ -8536,6 +8536,10 @@ public sealed class BraceTrait : Trait
         {
             case ShoveOutcome.Shoved:
                 t.BraceShoves++;
+                // 第213期（計数のみ）: 板のあるターン／無いターン（表D）・破片が受け切った一撃からの弾き・Q0-1 の一撃で弾いたか。
+                if (ctx.BracePlankTurn(self)) t.BraceShovesPlank++; else t.BraceShovesBare++;
+                if (ctx.ArmorOnlyNow) t.BraceShovesArmorOnly++;
+                if (ctx.BraceWouldMuteSerial != 0 && ctx.BraceWouldMuteSerial == ctx.CurrentHitSerial) t.BraceWouldMuteShoved++;
                 Roll(ctx, self);
                 self.SetCounter(TargetKey, victim!.InstanceId + 1);
                 if (ctx.Brace.Stagger && victim.IsAlive)
@@ -8582,6 +8586,7 @@ public sealed class BraceTrait : Trait
         self.SetCounter(PendingKey, 0);
         UnitTally t = ctx.TallyOf(self);
         t.BraceGiven += pending;
+        if (ctx.ArmorOnlyNow) { t.BraceGivenArmorOnly += pending; t.BraceGivenArmorOnlyN++; }   // 第213期（計数のみ）
         ctx.Log($"    {self.Name} がはね返した {pending} を {to.Name} の破片にした", LogKind.Trigger);
     }
 
