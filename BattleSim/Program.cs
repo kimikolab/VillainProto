@@ -1367,6 +1367,9 @@ static class TraitKeyMap
         [TraitId.PlankBase]    = Array.Empty<int>(),                                            // 第210期（板の厚さの式を変えるだけ）
         [TraitId.FirstAid]     = new[] { UnitTally.CarryArmor },                                // 第210期（応急処置＝味方の破片）
         [TraitId.PlankSkill]   = Array.Empty<int>(),                                            // 第210期（腕は私有キー）
+        [TraitId.PlankNeediest]= Array.Empty<int>(),                                            // 第211期（相手の選び方だけ・書くのは Plank の印の下）
+        [TraitId.FirstAidArmored]= Array.Empty<int>(),                                          // 第211期（条件だけ・書くのは FirstAid の印の下）
+        [TraitId.ThornsArmored]= Array.Empty<int>(),                                            // 第211期（口を開けるだけ・棘は Thorns の印の下）
         [TraitId.KissSteal]  = Array.Empty<int>(),                                              // 第205期（AtkBonus を移す・状態キーではない）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
@@ -1544,6 +1547,9 @@ static class TraitHookMap
         [TraitId.PlankBase]   = Array.Empty<string>(),                             // 第210期（PlankTrait.Thickness で読まれる札）
         [TraitId.FirstAid]    = new[] { "OnDamaged", "OnAllyDamaged", "OnCarryOver" },   // 第210期（応急処置）
         [TraitId.PlankSkill]  = new[] { "OnCarryOver", Engine },               // 第210期（破片の段の NotePlankSkill）
+        [TraitId.PlankNeediest]= Array.Empty<string>(),                            // 第211期（PlankTrait.OnAction で読まれる札）
+        [TraitId.FirstAidArmored]= new[] { Engine },                               // 第211期（FirstAidTrait.NeedsFor と破片の段の ArmorOnlyHit）
+        [TraitId.ThornsArmored]= new[] { Engine },                                 // 第211期（破片の段の ArmorOnlyHit）
         [TraitId.KissSteal]   = Array.Empty<string>(),                             // 第205期（口づけの中で読まれる札）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）

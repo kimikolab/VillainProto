@@ -191,11 +191,12 @@ public static class UnitCatalog
         // OnDamaged を通知し、TraitCatalog.Resolve は Def.Traits の順をそのまま保つので、
         // この配列の順序がそのまま「入れ替え → 反撃」の実行順になる
         // （ThornGuardTrait.OnDamaged 参照）。逆にすると、移動前の隣接に対して刺し返す。
-        Traits = new[] { TraitId.ThornGuard, TraitId.Thorns, TraitId.Immobile, TraitId.Havoc },
+        // 第211期: 破片で受けても棘は鳴る（`ThornsArmored`・判定は engine の破片の段）。第210期の姿はこの札を外した4枚。
+        Traits = new[] { TraitId.ThornGuard, TraitId.Thorns, TraitId.Immobile, TraitId.Havoc, TraitId.ThornsArmored },
         // 棘を張り直すのが手番そのもの（不動は攻撃だけを禁じるので、術の手番は通る）。
         // 1要素なので毎ターン構え直す＝構えは常に張られている状態になる。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "棘を外へ向けて構えている") },
-        PlusText = "殴られると、自分の攻撃力の2倍を敵に返す。反撃は隣の敵にも届き、巻き込んだ味方のダメージ分だけ自分の攻撃力が上がる / 毎ターン構え、前か横の味方への単体攻撃を身代わりして、その味方と位置を入れ替える",
+        PlusText = "殴られると、自分の攻撃力の2倍を敵に返す（破片で受け止めた一撃にも返す）。反撃は隣の敵にも届き、巻き込んだ味方のダメージ分だけ自分の攻撃力が上がる / 毎ターン構え、前か横の味方への単体攻撃を身代わりして、その味方と位置を入れ替える",
         MinusText = "自分からは決して攻撃しない / 反撃が隣の味方も巻き込む（身代わりした相手は入れ替え後も必ず隣にいるので、必ず巻き込む）/ 味方全体の受けるダメージが5割増える",
         Flavor = "命令しても動かない。庇われた者は、庇われたことを後で悔やむ。"
     };
@@ -873,12 +874,14 @@ public static class UnitCatalog
         // 第209期（R2）: 厚い板ほど強く撃ち返す（`PlankThick`・反射に残った板の厚さの 50% を足す）。第208期の姿（R0）は `PlankThick` を外した4枚。
         // 第210期（W3）: 基本の厚さを自分の最大HPの 40% に（`PlankBase`）・応急処置（`FirstAid`）・腕が上がる（`PlankSkill`）。
         // 第209期の姿（W0）は3枚を外した5枚（診断 `tsugi` の W0〜W2 は札の差し替え）。
+        // 第211期（Y2 のツギ）: 板を実質の残り体力が最も低い味方へ（`PlankNeediest`）・応急処置を (HP＋破片) で（`FirstAidArmored`）。
+        // 第210期の姿（Y0）はこの2枚を外した8枚。
         Traits = new[] { TraitId.Plank, TraitId.PlankScorch, TraitId.Scrap, TraitId.PlankRebound, TraitId.PlankThick,
-                         TraitId.PlankBase, TraitId.FirstAid, TraitId.PlankSkill },
+                         TraitId.PlankBase, TraitId.FirstAid, TraitId.PlankSkill, TraitId.PlankNeediest, TraitId.FirstAidArmored },
         // 板を貼るのが手番そのもの（攻撃9 は出ない）。`[Skill]` の1要素。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "板を貼っている") },
-        PlusText = "手番で、破片が最も薄い味方に板を貼る（自分の最大HPの4割の破片）。回復ではないので渇きでも止まらず、回復を受け付けない味方にも届く / "
-                   + "破片の無い味方がHPの4割を切ると、手番の外で駆け込んで板を貼る（1ターンに1回） / "
+        PlusText = "手番で、最も危ない味方（HPと破片を合わせて最も少ない者）に板を貼る（自分の最大HPの4割の破片）。回復ではないので渇きでも止まらず、回復を受け付けない味方にも届く / "
+                   + "味方のHPと破片の合計が4割を切ると、手番の外で駆け込んで板を貼る（1ターンに1回） / "
                    + "板が敵に砕かれると、破片がその敵へ飛ぶ（砕けた量に、残った板の厚さの半分を足したダメージ） / "
                    + "味方の破片が砕けたり誰かが倒れたりすると瓦礫を拾い、次の板を厚くする。板が砕かれ続けるほど腕が上がり、板そのものが厚くなる",
         MinusText = "板は燃えやすい。板を貼られた味方は、燃焼で倍の傷を負う。自分では攻撃しない",
