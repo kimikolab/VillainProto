@@ -12,8 +12,9 @@ public partial class ChargeAura3D : Node3D
     private float _age;
     private float _releaseAge = -1;
     private float _strength;
+    private AkaChargeGlyph3D? _rubyGlyph;
 
-    public void Configure(float height, int percent)
+    public void Configure(float height, int percent, Color? tint = null)
     {
         _height = height;
         SetPower(percent);
@@ -21,7 +22,7 @@ public partial class ChargeAura3D : Node3D
         {
             Mesh = new TorusMesh { InnerRadius = 0.86f, OuterRadius = 0.91f, Rings = 48, RingSegments = 6 },
             Position = new Vector3(0, 0.07f, 0),
-            MaterialOverride = LightMaterial(Color.FromHtml("#ffe2a0")),
+            MaterialOverride = LightMaterial(tint ?? Color.FromHtml("#ffe2a0")),
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
         AddChild(_ring);
@@ -30,7 +31,7 @@ public partial class ChargeAura3D : Node3D
             var light = new MeshInstance3D
             {
                 Mesh = new SphereMesh { Radius = 0.035f, Height = 0.16f, RadialSegments = 8, Rings = 4 },
-                MaterialOverride = LightMaterial(i % 2 == 0 ? Colors.White : Color.FromHtml("#ffc773")),
+                MaterialOverride = LightMaterial(tint ?? (i % 2 == 0 ? Colors.White : Color.FromHtml("#ffc773"))),
                 CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             };
             AddChild(light);
@@ -43,6 +44,7 @@ public partial class ChargeAura3D : Node3D
             MaterialOverride = new ShaderMaterial { Shader = new Shader { Code = @"shader_type spatial;
 render_mode unshaded, cull_disabled, blend_mix, depth_draw_never;
 uniform float pulse = 0.5;
+uniform vec3 tint : source_color = vec3(1.0, 0.78, 0.38);
 void vertex() {
     MODELVIEW_MATRIX = VIEW_MATRIX * mat4(
         INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
@@ -52,12 +54,19 @@ void fragment() {
     float radius = length(p);
     float rim = exp(-pow((radius - 0.78) * 15.0, 2.0));
     float streak = 0.45 + 0.55 * pow(sin(atan(p.y,p.x) * 6.0 + TIME * 2.0), 2.0);
-    ALBEDO = vec3(1.0, 0.78, 0.38);
+    ALBEDO = tint;
     ALPHA = rim * streak * pulse * 0.55;
 }" } },
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         };
         AddChild(_veil);
+        if (tint is { } color) ((ShaderMaterial)_veil.MaterialOverride).SetShaderParameter("tint", color);
+        if (tint is not null)
+        {
+            _rubyGlyph = new AkaChargeGlyph3D();
+            AddChild(_rubyGlyph);
+            _rubyGlyph.Configure(height);
+        }
         _Process(0);
     }
 
@@ -69,7 +78,11 @@ void fragment() {
     };
 
     public void SetPower(int percent) => _strength = Math.Clamp(percent / 300f, 0.3f, 1f);
-    public void Release() => _releaseAge = 0;
+    public void Release()
+    {
+        _releaseAge = 0;
+        if (_rubyGlyph is not null) _rubyGlyph.Visible = false;
+    }
 
     public override void _Process(double delta)
     {

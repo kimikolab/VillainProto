@@ -180,7 +180,7 @@ public static class UiKit
     {
         "rica" => 1.75f,
         "zoto" => 1.58f,
-        "susu" => 1.65f,
+        "susu" => 2.50f, // 血詠みのアカ（内部IDは旧ススのまま）
         "kado" => 2.40f,
         "sid" => 2.55f,
         "borg" => 2.65f,
@@ -240,7 +240,7 @@ public static class UiKit
         "kugu" => 0.02995f,
         "shiga" => 0.03125f,
         "shio" => 0.0182f,
-        "susu" => 0.0352f,
+        "susu" => 0.01628f,
         "basa" => 0.0540f,
         "nara" => 0.1400f,
         "nel" => 0.0378f,

@@ -13,7 +13,7 @@ public partial class BattlePawn3D
         CancelCharge();
         _chargeAura = new ChargeAura3D();
         AddChild(_chargeAura);
-        _chargeAura.Configure(_fxHeight, percent);
+        _chargeAura.Configure(_fxHeight, percent, _unitId == "susu" ? AkaPresentation.Blood : null);
         _charging = true;
         RefreshBattlePortrait();
     }

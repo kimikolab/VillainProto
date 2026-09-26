@@ -72,6 +72,8 @@ public partial class BattleAttackAudio : Node
     private static readonly string[] KadoCounter = { "res://assets/audio/se/kado_counter.mp3" };
     private static readonly string[] MagicCharge = { "res://assets/audio/se/charge_magic.mp3" };
     private static readonly string[] MagicChargeRelease = { "res://assets/audio/se/charge_magic_release.mp3" };
+    private static readonly string[] AkaCharge = { "res://assets/audio/se/aka_circle.mp3" };
+    private static readonly string[] AkaRelease = { "res://assets/audio/se/aka_ruby_burst.mp3" };
     private static readonly string[] PhysicalCharge = { "res://assets/audio/se/charge_physical.mp3" };
     private static readonly string[] PhysicalChargeRelease = { "res://assets/audio/se/charge_physical_release.mp3" };
     private static readonly string[] Summon = { "res://assets/audio/se/summon.mp3" };
@@ -284,6 +286,7 @@ public partial class BattleAttackAudio : Node
     {
         sound = unitId switch
         {
+            "susu" => release ? AkaRelease : AkaCharge,
             "chanter" => release ? MagicChargeRelease : MagicCharge,
             "archer" or "archer_g" => release ? PhysicalChargeRelease : PhysicalCharge,
             _ => null!,

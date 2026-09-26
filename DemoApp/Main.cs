@@ -1671,7 +1671,7 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.Status:
-                string statusName = e.Text ?? "状態効果";
+                string statusName = AkaPresentation.Text(e.Text ?? "状態効果");
                 Color statusColor = StatusColor(statusName);
                 if (!_linkedStatusEventIndices.Contains(eventIndex))
                     _battleField.Float(target, $"[{statusName}] 発動", statusColor);
@@ -1686,7 +1686,7 @@ public partial class Main : Control
                 // ——中央だけだと、5体のどれの話なのかが画面から引けない。
                 // **駒名が本文に既に入っているなら前置しない**——見せ場の文はほとんどが
                 // 「{名前} が〜した」なので、素直に前置すると「粛の伝令 — 粛の伝令 が…」になる。
-                string cue = e.Text ?? "発動";
+                string cue = AkaPresentation.Text(e.Text ?? "発動");
                 string banner = actor is null || cue.Contains(actor.UnitName, StringComparison.Ordinal)
                     ? cue : $"{actor.UnitName} — {cue}";
                 _battleField.ShowBanner(banner, UiKit.Gold, 0.92);
@@ -1706,9 +1706,10 @@ public partial class Main : Control
                 // **`Charge` は次の倍率・攻撃型・溜めの名前を全部持っている**
                 // （`BattleEventKind.Charge` の明文）ので、予告は台本だけで書ける。
                 // 溜めは画面上「何も起きないターン」なので、予告が無いとただの空白になる。
-                string forecast = e.Text == AshActionLabels.Hold ? "貯めた灰を全体へ放つ準備"
+                string forecast = e.Text == AshActionLabels.Hold ? "貯めた血を全体へ放つ準備"
                     : $"次 ×{e.Amount / 100.0:0.#} {UiKit.PatternLabel(e.Pattern ?? AttackPattern.Single)}";
                 _battleField.BeginCharge(actor, e.Amount);
+                if (e.Text == AshActionLabels.Hold) ShowAkaGather(eventIndex, actor);
                 AppendLog($"[color=#{UiKit.Gold.ToHtml(false)}]{NameOf(e.ActorId)} — {e.Text ?? "力を溜める"}"
                           + $"　（{forecast}）[/color]");
                 await Delay(0.34);
@@ -1720,7 +1721,7 @@ public partial class Main : Control
                 if (!e.Reaction && (actor?.UnitId != "susu" || e.Text == AshActionLabels.Release))
                     _battleField.ReleaseChargedSkill(actor);
                 if (e.Text == AshActionLabels.Release) actor?.BeginAshRelease();
-                _battleField.Float(actor, e.Text ?? "SKILL", UiKit.Heal, true);
+                _battleField.Float(actor, AkaPresentation.Text(e.Text ?? "SKILL"), actor?.UnitId == "susu" ? AkaPresentation.Blood : UiKit.Heal, true);
                 AppendLog($"[color=#{UiKit.Heal.ToHtml(false)}]{NameOf(e.ActorId)} — {e.Text ?? "術"}[/color]");
                 await Delay(0.22);
                 break;
@@ -1893,7 +1894,9 @@ public partial class Main : Control
             BattleEvent candidate = _result.Events[i];
             if (candidate.Kind is BattleEventKind.TurnStart or BattleEventKind.Attack or BattleEventKind.Highlight) break;
             if (candidate.Kind is not (BattleEventKind.Damage or BattleEventKind.Parry)) continue;
-            if (candidate.ActorId != highlight.ActorId || candidate.Pattern is not null) continue;
+            if (candidate.ActorId != highlight.ActorId) continue;
+            bool bloodRelease = _battleField.FindPawn(highlight.ActorId)?.IsAshReleasing == true;
+            if (candidate.Pattern is not null && !(bloodRelease && candidate.Pattern == AttackPattern.All)) continue;
             if (candidate.Relayed || candidate.ShareFromId is not null || candidate.DeflectFromId is not null) continue;
             if (_invertedDamage.Contains(i)) continue;
             hits.Add(i);
@@ -1902,10 +1905,11 @@ public partial class Main : Control
         if (hits.Count == 0 || (hits.Count < 2
             && _battleField.FindPawn(highlight.ActorId)?.IsAshReleasing != true)) return 0;
 
-        _battleField.Burst(
-            _battleField.FindPawn(highlight.ActorId),
-            hits.Select(i => _battleField.FindPawn(_result.Events[i].TargetId)).OfType<BattlePawn3D>().ToList(),
-            UiKit.Burn);
+        var sourcePawn = _battleField.FindPawn(highlight.ActorId);
+        var hitPawns = hits.Select(i => _battleField.FindPawn(_result.Events[i].TargetId)).OfType<BattlePawn3D>().ToList();
+        if (sourcePawn?.UnitId == "susu" && sourcePawn.IsAshReleasing)
+            _battleField.ShowBloodRelease(sourcePawn, hitPawns, _speed);
+        else _battleField.Burst(sourcePawn, hitPawns, UiKit.Burn);
 
         int landed = 0;
         foreach (int i in hits)
@@ -2197,11 +2201,12 @@ public partial class Main : Control
     }
 
     private static Color AttackColor(BattlePawn3D? actor, BattleEvent e)
-        => e.FriendlyFire ? UiKit.Violet : e.Reaction ? UiKit.Gold : actor?.Team == 0 ? UiKit.Player : UiKit.Enemy;
+        => actor?.UnitId == "susu" ? AkaPresentation.Blood : e.FriendlyFire ? UiKit.Violet : e.Reaction ? UiKit.Gold : actor?.Team == 0 ? UiKit.Player : UiKit.Enemy;
 
     private static Color StatusColor(string status) => status switch
     {
         "毒" => UiKit.Poison,
+        "灰" or "血" => AkaPresentation.Blood,
         // `StatusGain` は `StatusKeys.LabelOf`（「燃」）、`Status` は特性側の文字列（「燃焼」）で来る。
         // **同じ通貨が2つの名前で来る**ので、両方を同じ色に落とす（第124期 3-g）。
         "燃" or "燃焼" => UiKit.Burn,
@@ -2220,6 +2225,7 @@ public partial class Main : Control
     private static string DisplayStatusKey(string key) => key switch
     {
         StatusKeys.Stigma or "聖" => "聖痕",
+        StatusKeys.Ash or "灰" or "血" => "血",
         "dull" => "なまり",
         "whet" => "強化",
         _ => StatusKeys.LabelOf(key),
@@ -2245,7 +2251,7 @@ public partial class Main : Control
 
     private void AppendLog(string bbcode)
     {
-        _battleLog.AppendText(bbcode + "\n");
+        _battleLog.AppendText(AkaPresentation.Text(bbcode) + "\n");
     }
 
     private async Task Delay(double seconds, bool raw = false)

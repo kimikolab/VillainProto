@@ -885,7 +885,7 @@ public partial class BattlefieldView3D : Control
         TrimPopups(pawn.InstanceId);
         var label = new Label3D
         {
-            Text = value,
+            Text = AkaPresentation.Text(value),
             Position = pawn.RestPosition + new Vector3(0, height, 0),
             Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
             Font = new SystemFont { FontNames = new[] { "Yu Gothic UI", "Meiryo", "Noto Sans CJK JP", "Segoe UI" }, AllowSystemFallback = true },

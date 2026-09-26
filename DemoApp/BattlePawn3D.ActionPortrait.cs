@@ -44,14 +44,11 @@ public partial class BattlePawn3D
             if (_ashReleasing)
             {
                 key = "susu_release";
-                height *= 1.50f;
-                padding = 0.0196f;
-                _portraitOffsetX = (Team == BattleContext.PlayerTeam ? 1 : -1) * 0.25f;
+                // アカは通常・溜め・放出に同じ立ち絵を使用するため、体格と足元を固定する。
             }
             else if (IsCharging)
             {
                 key = "susu_charging";
-                padding = 0.0286f;
             }
         }
         if (key == "kugu" && IsBinding && _alive)

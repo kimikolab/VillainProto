@@ -1,0 +1,11 @@
+# 血詠みのアカ 厨二病風立ち絵 v1
+
+内蔵 image_gen で生成。参照: aka-standing-v1.png。
+顔立ちと衣装を維持し、顔を覆う手・反った姿勢・不敵な笑み・小さな血の術式で演技を強めた比較案。ゲーム未適用。
+
+## 生成プロンプト
+
+Use case: identity-preserve. Create an alternate full-body standing portrait of the EXACT SAME Aka the Blood-Reader in the supplied reference, exploring a much more theatrical CHUUNIBYOU dark forbidden-magic persona through pose and expression. Preserve recognizable androgynous adult face, wine-red layered hair and thin braids, pale skin, slender adult build, charcoal and deep burgundy clerical robes, gold tracery and waist chains, ivory stole with removed insignia, black boots, exact costume identity and high-quality Japanese RPG linework and painted cel shading.
+NEW POSE: deliciously overdramatic but still handsome and convincingly dangerous. Upper body leans back slightly with proud raised chin and a knowing crooked smirk. One hand lifted across the face, long spread fingers framing one sharply visible crimson eye, palm facing inward; do not completely hide the face. Other arm extended diagonally outward and slightly down, palm up with elegantly curled fingers as if announcing a forbidden incantation. Exactly TWO arms, TWO anatomically correct hands, five fingers each. Stable full-body contrapposto, one boot set forward, controlled sweeping robe tails and hair conveying theatrical flair. The visible eye looks toward viewer with smug 'you cannot comprehend my forbidden art' confidence. Not screaming, not angry, not a comedy caricature, not a child.
+A small restrained floating crimson blood-calligraphy seal just above the extended palm, a few droplets becoming written glyphs around its dense red core; keep it compact and contained, do not obscure body. Blood mage, not fire mage. No wounds, gore, weapons, wings, horns or additional accessories. Preserve the outfit rather than redesigning it. Main difference is clearly dramatic pose and expression.
+Single isolated full-body figure on portrait canvas, full hair and hands, robe and boots and small seal safely within frame with generous margins. Genuine clean transparent RGBA background, transparent limb gaps. Opaque character and crisp edges, no surrounding colored haze or halo, no floor, ground shadow, vignette, scenery, opaque background, checkerboard, text or watermark.
