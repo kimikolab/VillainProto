@@ -424,3 +424,14 @@
 - 正式な名前とフレーバー（仮「雷のカタ」／「（仮）空が荒れる日にだけ機嫌がいい。落ちる先を選んでいるつもりでいる。」）
 - 「弾く役」は行動順で決まる——**カタより遅い駒か、ターン外に殴る駒を隣に置けるか**が編成の問いになる（R317）
 - アカの画面の1字（「灰」のアイコン・予告「貯めた灰を全体へ放つ準備」）は台本の文字列を読んでいるので Codex 側で直す（`design/PHASE214_CODEX_MEMO.md`）
+
+## 11. 追記: 規約 (G17) の `sweep`（第214期のビルド・a7d9a2f）
+
+**614 本・197.7 分・異常終了 13 本（不合格）。** ただし **13 本とも第214期の変更とは無関係**——どの診断もカタ・アカ・感電・雷を1行も引いていない。
+
+| 原因 | 本数 | 診断 | 読み |
+|---|--:|---|---|
+| **キリ（第179期に `Retired` へ）を `All` から引いている** | 10 | `wcost draft` / `blade draft`（`Sequence contains no elements`）、`blaze2 phase0 / ideal / check`・`deep phase0 / cross / foe / check`・`encore check`（`KeyNotFound 'kiri'`） | R159 の再発——辞書のキーを `All` から作っているので、`Retired` に移った駒を引けない（第141期の直し方＝`Everyone` に替える） |
+| **`sweep` がコマンド表の穴埋めの字をそのまま引数に渡す** | 3 | `gust gale "攻撃力 確率のカンマ区切り"`・`gust compare "攻撃力 確率 "`（`FormatException`）、`form2 log "行名" 波 seed`（`Sequence contains no matching element`） | R178 の再発——穴埋めの引数も引数 |
+
+**直すのは別の作業**（この期では触っていない）。第215期の札の追加（`ThunderPath`・`ThunderPathHop`）と名前の変更はこの `sweep` の後なので含まれていない。
