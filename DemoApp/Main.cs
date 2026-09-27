@@ -89,6 +89,16 @@ public partial class Main : Control
     private SpinBox _enemyAttack = null!;
     private HBoxContainer _enemyScaleSettings = null!;
     private EnemyScaleRule? _battleEnemyScale;
+    private string _battleTitle = "";
+    private int _battleStageIndex;
+
+    // 区切りの1項目を飛ばして、検証の波だけ別のカタログを引く。
+    private EnemyCatalog.TestStage? SelectedTestStage =>
+        _stagePicker.Selected > EnemyCatalog.Stages.Count
+            ? EnemyCatalog.TestStages[_stagePicker.Selected - EnemyCatalog.Stages.Count - 1]
+            : null;
+    private string SelectedStageName => SelectedTestStage?.Name
+        ?? EnemyCatalog.Stages[_stagePicker.Selected].Name;
     private HBoxContainer _setupActions = null!;
     private HBoxContainer _battleActions = null!;
     private Button _deploy = null!;
@@ -336,6 +346,14 @@ public partial class Main : Control
             && requestedStage < EnemyCatalog.Stages.Count)
             _stagePicker.Selected = requestedStage;
 
+        string? testStageArg = userArgs.FirstOrDefault(arg => arg.StartsWith("--demo-test-stage=", StringComparison.Ordinal));
+        if (testStageArg is not null
+            && int.TryParse(testStageArg["--demo-test-stage=".Length..], out int requestedTestStage)
+            && requestedTestStage >= 0
+            && requestedTestStage < EnemyCatalog.TestStages.Count
+            && !CampaignSession.HasPendingEncounter && !CampaignSession.HasCarriedBattle)
+            _stagePicker.Selected = EnemyCatalog.Stages.Count + 1 + requestedTestStage;
+
         // 行と seed をコマンドラインからも指定できるようにする（第124期 段1）。
         // **`docs/watch.md` の推奨12戦をそのまま再現するため**——行名は部分一致で、
         // `Presets.Compare` ＋ `Presets.Cross` の並び（＝プリセットの一覧）から先頭の一致を採る。
@@ -511,6 +529,8 @@ public partial class Main : Control
         row.AddChild(HeaderCaption("敵ウェーブ"));
         _stagePicker = new OptionButton { CustomMinimumSize = new Vector2(230, 40), FocusMode = FocusModeEnum.None };
         for (int i = 0; i < EnemyCatalog.Stages.Count; i++) _stagePicker.AddItem(EnemyCatalog.Stages[i].Name, i);
+        _stagePicker.AddSeparator("── 検証 ──");
+        foreach (var stage in EnemyCatalog.TestStages) _stagePicker.AddItem(stage.Name);
         _stagePicker.ItemSelected += index =>
         {
             UpdateStageHeader();
@@ -1005,20 +1025,22 @@ public partial class Main : Control
 
     private void ShowEnemyDetails()
     {
-        EnemyCatalog.Stage stage = EnemyCatalog.Stages[_stagePicker.Selected];
-        string rows = string.Join("\n", stage.Enemy.Occupied().Select(x =>
+        var occupied = SelectedTestStage is { } testStage
+            ? testStage.Enemy.Occupied().Select(x => (Slot: x.Seat, x.Def))
+            : EnemyCatalog.Stages[_stagePicker.Selected].Enemy.Occupied();
+        string rows = string.Join("\n", occupied.Select(x =>
             $"[color=#ee7962]◆[/color] [b]{FormationRules.SeatNames[x.Slot]}[/b]  {x.Def.Name}\n" +
             $"   [color=#a9b3a8]HP {x.Def.MaxHp} / 攻 {x.Def.Attack} / 速 {x.Def.Speed} / {UiKit.PatternLabel(x.Def.Pattern)}[/color]"));
         _detail.Text =
-            $"[color=#ee7962][font_size=11]ENEMY WAVE {_stagePicker.Selected + 1}[/font_size][/color]\n" +
-            $"[font_size=22][b]{stage.Name}[/b][/font_size]\n\n{rows}\n\n" +
+            $"[color=#ee7962][font_size=11]{(SelectedTestStage is null ? $"ENEMY WAVE {_stagePicker.Selected + 1}" : "TEST WAVE")}[/font_size][/color]\n" +
+            $"[font_size=22][b]{SelectedStageName}[/b][/font_size]\n\n{rows}\n\n" +
             "[color=#6f7f76]敵の編成と戦闘ルールは、元の GodotApp が参照する EnemyCatalog と同じです。[/color]";
     }
 
     private void UpdateStageHeader()
     {
         if (_field is null) return;
-        _field.SetSetupHeader(EnemyCatalog.Stages[_stagePicker.Selected].Name);
+        _field.SetSetupHeader(SelectedStageName);
     }
 
     private void Notice(string value, Color? color = null)
@@ -1042,11 +1064,23 @@ public partial class Main : Control
         int seed = (int)_seed.Value;
 
         List<UnitState> players = BattleEngine.Materialize(formation, BattleContext.PlayerTeam);
-        (Formation enemyFormation, string enemyName) = DemoEnemyFormation(stageIndex);   // 第203期: `--demo-enemy-p3`
         _enemyHp.Apply();
         _enemyAttack.Apply();
         _battleEnemyScale = new EnemyScaleRule((int)_enemyHp.Value, (int)_enemyAttack.Value);
-        List<UnitState> enemies = BattleEngine.Materialize(enemyFormation, BattleContext.EnemyTeam, _battleEnemyScale.Value);
+        List<UnitState> enemies;
+        string enemyName;
+        if (SelectedTestStage is { } testStage)
+        {
+            enemies = BattleEngine.MaterializeEnemy(testStage.Enemy, _battleEnemyScale.Value);
+            enemyName = testStage.Name;
+            stageIndex = 0; // 検証の波の背景とBGMは第一波を使う。
+        }
+        else
+        {
+            (Formation enemyFormation, string name) = DemoEnemyFormation(stageIndex); // 第203期: `--demo-enemy-p3`
+            enemies = BattleEngine.Materialize(enemyFormation, BattleContext.EnemyTeam, _battleEnemyScale.Value);
+            enemyName = name;
+        }
         EnterBattle(players, enemies, seed, stageIndex, enemyName);
     }
 
@@ -1075,6 +1109,8 @@ public partial class Main : Control
     private void EnterBattle(List<UnitState> players, List<UnitState> enemies,
                              int seed, int stageIndex, string title)
     {
+        _battleTitle = title;
+        _battleStageIndex = stageIndex;
         List<PendingOpening> pending = players.Concat(enemies)
             .Select(u => new PendingOpening(u, u.Slot, u.Hp, u.MaxHp, u.CurrentAttack, u.CurrentPattern))
             .ToList();
@@ -2353,8 +2389,8 @@ public partial class Main : Control
         _shownOwner = -1;
         _battleLog.Clear();
         SetBattleLogVisible(false);
-        _battleField.BeginBattle(_battleOpening, EnemyCatalog.Stages[_stagePicker.Selected].Name, _stagePicker.Selected);
-        _battleMusic.PlayWave(_stagePicker.Selected);
+        _battleField.BeginBattle(_battleOpening, _battleTitle, _battleStageIndex);
+        _battleMusic.PlayWave(_battleStageIndex);
         _partyBar.Begin(_battleOpening);
         _partyBar.Sync(_battleField, -1);
         _partyBar.Visible = true;
@@ -2412,11 +2448,10 @@ public partial class Main : Control
     {
         if (visible && _result is not null)
         {
-            int stage = _stagePicker.Selected;
             _scorePanel.Render(
                 _result,
                 _battleOpening,
-                $"{EnemyCatalog.Stages[stage].Name} ・ seed {(int)_seed.Value} ・ "
+                $"{_battleTitle} ・ seed {(int)_seed.Value} ・ "
                 + (_battleEnemyScale is { } scale ? $"敵 HP{scale.HpPercent}% / 攻{scale.AtkPercent}% ・ " : "")
                 + $"{_result.Turns}ターン ・ {(_result.PlayerWon ? "勝利" : "敗北")}"
                 + $"（生存 {_result.PlayerSurvivors}体）。"
