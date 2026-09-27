@@ -4683,6 +4683,7 @@ public sealed class BattleContext
     /// <summary>第228期: 弾き返し（<c>SpringTrait</c>）の保持者が戦にいるか。いなければ被弾の後の判定を比較1つで抜ける。</summary>
     bool _springLive;
     bool _tailwindLive;   // 第229期（追い風の保持者がいる戦）
+    bool _impactLive;     // 第230期（撃破の衝撃の保持者がいる戦）
 
     /// <summary>
     /// 転倒の穴（第229期・<see cref="ShufflerRule.StaggerHole"/>）: この駒は転倒していて壁にならない・引き受ける介入をしないか。
@@ -5940,7 +5941,111 @@ public sealed class BattleContext
         if (over <= 0) return;
         UnitTally rt = TallyOf(target);
         rt.ShioOverflowEvents++; rt.ShioOverflowRecv += over; rt.ShioOverflowHalf += over / 2;
+        // 第230期（`DriftSurge`・W3/W4）: 溢れの半分（切り捨て）を受け手の攻撃力に。1体1戦 +15 まで。**札が無ければここで抜ける。**
+        if (!shio.HasTrait(TraitId.DriftSurge) || !target.IsAlive) return;
+        int had = _surgeGiven.GetValueOrDefault(target.InstanceId);
+        int gain = Math.Min(over / 2, DriftSurgeTrait.CapPerUnit - had);
+        if (over / 2 > Math.Max(0, gain)) rt.ShioOverflowCapped += over / 2 - Math.Max(0, gain);
+        if (gain <= 0) return;
+        _surgeGiven[target.InstanceId] = had + gain;
+        Whet(target, gain, WhetRoute.Drifter);
+        rt.ShioOverflowGain += gain;
+        Log($"    {shio.Name} の溢れた手当てが {target.Name} の腕に宿った（攻撃 +{gain}）", LogKind.Trigger);
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Overflow, Turn = _turn, ActorId = shio.InstanceId, TargetId = target.InstanceId,
+            Amount = gain, StatusRemaining = had + gain, Team = shio.TeamId,
+        });
     }
+
+    /// <summary>第230期: 溢れを攻撃力にした累計（1戦・受け手の InstanceId ごと）。</summary>
+    readonly Dictionary<int, int> _surgeGiven = new();
+
+    // ---- 第230期: 撃破の衝撃（`KillImpactTrait`） ----
+    readonly Stack<(UnitState Actor, List<(UnitState Dead, int Slot)> Kills)> _impactFrames = new();
+
+    /// <summary>撃破の衝撃の保持者が敵を倒した（<see cref="KillImpactTrait.OnKill"/> だけが呼ぶ）。その保持者の攻撃の枠の中なら控える。</summary>
+    public void NoteImpactKill(UnitState self, UnitState victim)
+    {
+        if (victim.TeamId == self.TeamId) return;
+        if (_impactFrames.Count == 0 || _impactFrames.Peek().Actor != self) { TallyOf(self).ImpactOutside++; return; }
+        _impactFrames.Peek().Kills.Add((victim, victim.Slot));
+        TallyOf(self).ImpactKills++;
+    }
+
+    /// <summary>
+    /// 撃破の衝撃の解決（攻撃が終わってから・倒した順）。後ろに敵がいれば吹き飛ばし、いなければ勢い余って隣の味方と入れ替わる（1ターン2回）。
+    /// </summary>
+    void ResolveImpact(UnitState yomi, List<(UnitState Dead, int Slot)> kills)
+    {
+        if (kills.Count == 0) return;
+        UnitTally t = TallyOf(yomi);
+        int tb = Math.Clamp(_turn, 0, 6);
+        foreach (var (dead, slot) in kills)
+        {
+            if (!yomi.IsAlive) { t.ImpactDead++; continue; }
+            FormationShape shape = dead.Shape;
+            UnitState? behind = null; int dest = -1;
+            foreach (int lane in shape.LanesOf(slot))
+            {
+                var path = shape.LanePath(lane);
+                int idx = -1;
+                for (int k = 0; k < path.Count; k++) if (path[k] == slot) { idx = k; break; }
+                if (idx < 0) continue;
+                for (int k = idx + 1; k < path.Count && behind is null; k++)
+                {
+                    int seat = path[k];
+                    behind = LivingMembers(dead.TeamId).FirstOrDefault(u => u.Slot == seat);
+                    if (behind is not null) dest = k + 1 < path.Count ? path[k + 1] : -1;
+                }
+                if (behind is not null) break;
+            }
+            if (behind is not null)
+            {
+                int to = dest;
+                UnitState? partner = to >= 0 ? LivingMembers(dead.TeamId).FirstOrDefault(u => u.Slot == to) : null;
+                Log(to >= 0 ? $"    {yomi.Name} の一撃の勢いが {dead.Name} を越えて {behind.Name} を吹き飛ばした"
+                            : $"    {yomi.Name} の一撃の勢いで {behind.Name} がよろめいた", LogKind.Trigger);
+                if (_verbose) Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.KillImpact, Turn = _turn, ActorId = yomi.InstanceId, TargetId = behind.InstanceId,
+                    PartnerId = partner?.InstanceId, SpreadFromId = dead.InstanceId, Slot = to >= 0 ? to : behind.Slot,
+                    Text = to >= 0 ? ImpactLabels.Blow : ImpactLabels.Stumble, Team = yomi.TeamId,
+                });
+                if (to >= 0)
+                {
+                    if (SwapSlots(behind, to, yomi)) { t.ImpactBlow++; (t.ImpactBlowByTurn ??= new long[7])[tb]++; }
+                    else t.ImpactRefused++;
+                }
+                else t.ImpactStumble++;
+                if (behind.IsAlive)
+                {
+                    behind.SetCounter(StatusKeys.Stagger, 1);
+                    EmitStagger(behind, StaggerLabels.Fell, yomi);
+                    Log($"    {behind.Name} は転んだ（次の手番を失う）", LogKind.Status);
+                }
+                continue;
+            }
+            // 勢い余って（味方側・1ターン2回）
+            int used = yomi.RawCounter(KillImpactTrait.TurnKey) == _turn + 1 ? yomi.RawCounter(KillImpactTrait.CountKey) : 0;
+            if (used >= KillImpactTrait.TumblesPerTurn) { t.ImpactCapped++; continue; }
+            var cands = LivingMembers(yomi.TeamId).Where(a => a != yomi && !FormationRules.IsSummonSlot(a) && !a.HasTrait(TraitId.Planted)
+                                                          && FormationRules.AreAdjacent(yomi, a)).ToList();
+            UnitState? with = PickOne(cands);
+            if (with is null) { t.ImpactNoAlly++; continue; }
+            yomi.SetCounter(KillImpactTrait.TurnKey, _turn + 1);
+            yomi.SetCounter(KillImpactTrait.CountKey, used + 1);
+            Log($"    勢い余って {yomi.Name} は {with.Name} と場所を入れ替えた", LogKind.FriendlyFire);
+            if (_verbose) Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.KillImpact, Turn = _turn, ActorId = yomi.InstanceId, TargetId = with.InstanceId,
+                SpreadFromId = dead.InstanceId, Slot = used + 1, Text = ImpactLabels.Tumble, Team = yomi.TeamId,
+            });
+            if (SwapSlots(yomi, with.Slot, yomi)) { t.ImpactTumble++; (t.ImpactTumbleByTurn ??= new long[7])[tb]++; }
+            else t.ImpactRefused++;
+        }
+    }
+
 
     /// <summary>手当て（第224期・H2・<b>計数のみ</b>）。</summary>
     public void NoteRegroupTend(UnitState shio, int nominal, int gained)
@@ -6714,6 +6819,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Decoy)) _decoyLive = true;         // 第226期（挑発）
         if (u.HasTrait(TraitId.Spring)) _springLive = true;       // 第228期（弾き返し）
         if (u.HasTrait(TraitId.Tailwind)) _tailwindLive = true;   // 第229期（追い風）
+        if (u.HasTrait(TraitId.KillImpact)) _impactLive = true;   // 第230期（撃破の衝撃）
         if (u.HasTrait(TraitId.Disarray)) _disarrayLive = true;   // 第226期（敵の乱れ）
         // 第185期: 組み付き・見せしめ（手番の頭の2つのキーと標的の選好を短絡させる）／踏みしめ（範囲の盾・層の軽減）／
         // 据えた足（入れ替えの空振り）。**保持者がいなければ比較1つで抜ける**——既存の行が 0 件差分であることの根拠。
@@ -8200,6 +8306,21 @@ public sealed class BattleContext
 
     public void PerformAttack(UnitState actor, string prefix = "  ",
                               int attackPercent = 100, AttackPattern? patternOverride = null)
+    {
+        // 第230期: 撃破の衝撃の枠（ヨミの攻撃の中で倒した敵を控え、攻撃が終わってから解決する）。**保持者がいなければ比較1つで素通り。**
+        if (_impactLive && actor.HasTrait(TraitId.KillImpact))
+        {
+            var frame = new List<(UnitState Dead, int Slot)>();
+            _impactFrames.Push((actor, frame));
+            try { PerformAttackEv(actor, prefix, attackPercent, patternOverride); }
+            finally { _impactFrames.Pop(); }
+            ResolveImpact(actor, frame);
+            return;
+        }
+        PerformAttackEv(actor, prefix, attackPercent, patternOverride);
+    }
+
+    void PerformAttackEv(UnitState actor, string prefix, int attackPercent, AttackPattern? patternOverride)
     {
         // 第223期: 回避の枠（主目標が避けたら `OnAfterAttack` を走らせない）。**保持者がいなければ比較1つで本体へ直行する。**
         if (_evadeLive)
@@ -11136,7 +11257,13 @@ public sealed class BattleContext
             var line = LaneOccupants(allies, lane, shape);
             if (line.Count < 2) continue;
             pair = true;
-            for (int i = line.Count - 1; i >= 1; i--)
+            // 第230期（`TailwindFighter`）: 踏み込むのは「最も前にいない味方」のうち攻撃力（現在値）が最も高い1体（同値は後ろの行・次に席番号）。4割未満は除外。
+            // 札が無ければ第229期の道（最後尾から見て4割以上の最初の駒）。**どちらも乱数を引かない。**
+            List<int> order = Enumerable.Range(1, line.Count - 1).Reverse().ToList();
+            if (by.HasTrait(TraitId.TailwindFighter))
+                order = order.OrderByDescending(i => line[i].CurrentAttack).ThenByDescending(i => FormationRules.DepthOf(line[i].Row))
+                             .ThenBy(i => line[i].Slot).ToList();
+            foreach (int i in order)
             {
                 UnitState step = line[i], back = line[i - 1];
                 if (step.Hp * 100 < step.MaxHp * TailwindTrait.HpGatePercent) { t.TailwindLowHp++; continue; }

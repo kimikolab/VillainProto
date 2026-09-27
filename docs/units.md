@@ -291,6 +291,9 @@
 | `BlastBoth` | - |
 | `Gale` | 喧噪のバサ |
 | `Tailwind` | 喧噪のバサ、突き返しのハネ |
+| `TailwindFighter` | - |
+| `KillImpact` | - |
+| `DriftSurge` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

@@ -2340,6 +2340,15 @@ public sealed class UnitTally
     /// </summary>
     public long ShioOverflowRecv, ShioOverflowHalf, ShioOverflowEvents, ShioOverflowGain, ShioOverflowCapped;
 
+    /// <summary>
+    /// 第230期・撃破の衝撃（ヨミの側・<b>計数専用</b>）: <c>ImpactKills</c> ヨミの攻撃の中で倒した敵 ／ <c>ImpactBlow</c> 後ろの敵を吹き飛ばした ／
+    /// <c>ImpactStumble</c> 後ろの敵に席が無く転倒だけ ／ <c>ImpactTumble</c> 勢い余って味方と入れ替わった ／ <c>ImpactCapped</c> 1ターンの上限で止まった ／
+    /// <c>ImpactNoAlly</c> 入れ替える隣の味方がいない ／ <c>ImpactRefused</c> 入れ替えが空振り（据えた足）／ <c>ImpactDead</c> 解決の時点でヨミが倒れていた ／
+    /// <c>ImpactOutside</c> ヨミの攻撃の外で倒した（毒の刻みほか・衝撃は起きない）。ターン別 <c>ImpactBlowByTurn</c> / <c>ImpactTumbleByTurn</c>（添字 ＝ ターン・6 以上は 6）。
+    /// </summary>
+    public long ImpactKills, ImpactBlow, ImpactStumble, ImpactTumble, ImpactCapped, ImpactNoAlly, ImpactRefused, ImpactDead, ImpactOutside;
+    public long[]? ImpactBlowByTurn, ImpactTumbleByTurn;
+
     public long GaleStirs, GaleAllyMoved,
                 TailwindTriggers, TailwindFromShuffle, TailwindFromBlast, TailwindFromSpring, TailwindFromOther,
                 TailwindSteps, TailwindNoPair, TailwindLowHp, TailwindAllLow, TailwindRefused, TailwindNested, TailwindStepped,
@@ -3426,7 +3435,29 @@ public enum BattleEventKind
     /// 転倒の穴（第229期・G3/G4・<b>表示専用</b>）。<c>ActorId</c> ＝ 攻撃者 ／ <c>TargetId</c> ＝ 選んだ主目標（転倒した列が立っていれば狙えなかった駒）／
     /// <c>Slot</c> ＝ 主目標の席。直後にその攻撃の <c>Attack</c>（介入に差し替えられればその相手へ）。
     /// </summary>
-    StaggerBreach
+    StaggerBreach,
+
+    /// <summary>
+    /// 撃破の衝撃（第230期・ヨミの版 W2/W4・<b>表示専用</b>）。<c>ActorId</c> ＝ ヨミ ／ <c>Text</c> ＝ <see cref="ImpactLabels"/>。
+    /// 吹き飛ばし: <c>TargetId</c> ＝ 吹き飛ばす敵（倒した敵のすぐ後ろ）／ <c>Slot</c> ＝ 飛ばす先の席 ／ <c>PartnerId</c> ＝ そこにいて前へ出る敵（空席なら null）／
+    /// <c>SpreadFromId</c> ＝ 倒した敵。直後に入れ替えの <c>Move</c> と転倒。転倒だけ: <c>Slot</c> ＝ 今の席。
+    /// 勢い余って: <c>TargetId</c> ＝ 入れ替わる味方 ／ <c>SpreadFromId</c> ＝ 倒した敵 ／ <c>Slot</c> ＝ その日（ターン）の何回目。直後に2体の <c>Move</c>。
+    /// </summary>
+    KillImpact,
+
+    /// <summary>
+    /// 溢れを攻撃力に（第230期・シオの版 W3/W4・<b>表示専用</b>）。<c>ActorId</c> ＝ シオ ／ <c>TargetId</c> ＝ 受け手 ／ <c>Amount</c> ＝ 足した攻撃力 ／
+    /// <c>StatusRemaining</c> ＝ この戦でその駒に足した累計（上限 15）。回復の <c>Heal</c> の後に1件。
+    /// </summary>
+    Overflow
+}
+
+/// <summary>撃破の衝撃（第230期）の <c>Text</c>。<b>表示専用。</b></summary>
+public static class ImpactLabels
+{
+    public const string Blow = "吹き飛ばし";
+    public const string Stumble = "転倒だけ";
+    public const string Tumble = "勢い余って";
 }
 
 /// <summary>

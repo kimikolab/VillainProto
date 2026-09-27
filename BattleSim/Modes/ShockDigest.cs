@@ -31,7 +31,7 @@ static class ShockDigestDiag
     /// <summary>後の期に足した出来事の種類（名前で持つ・古い worktree でも回る）。</summary>
     static Formation D222(Formation f) => DriftDiag.Apply(f, DriftDiag.ShioV0, DriftDiag.YomiV0);
 
-    static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff", "MireBurst", "Regroup", "Evade", "EvadeRiposte", "EvadeStage", "Barrage", "StatusArrow", "Retreat", "ShioStage", "Decoy", "Disarray", "DisarrayStage", "Squall", "LastDodge", "Blast", "Spring", "Tailwind", "StaggerBreach" };
+    static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff", "MireBurst", "Regroup", "Evade", "EvadeRiposte", "EvadeStage", "Barrage", "StatusArrow", "Retreat", "ShioStage", "Decoy", "Disarray", "DisarrayStage", "Squall", "LastDodge", "Blast", "Spring", "Tailwind", "StaggerBreach", "KillImpact", "Overflow" };
     /// <summary>後の期に足した <c>BattleEvent</c> の欄。</summary>
     static readonly HashSet<string> SkipProps = new() { "BrittleExtra", "PartnerId" };
 

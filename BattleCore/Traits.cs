@@ -469,7 +469,10 @@ public enum TraitId
     BlastBoth,      // 両方の経路（第228期・H3w）: 敵の乱れの段2 から、吹っ飛ばしを1手番に両方の経路で行う。**札そのものは挙動を持たない**。保持者 0 枚
     Gale,           // 嵐（第229期・バサの版 G1/G4）: 敵の乱れの段で、味方の入れ替えも 2/3/3/4 体に（敵と同じ表）。**札そのものは挙動を持たない**（`ShufflerTrait` が読む）。保持者 0 枚
     Tailwind,       // 追い風（第229期・バサ・ハネの版 G2/G4）: 保持者が敵を後ろの行へ動かしたとき、その敵がいた経路の味方の最後尾（HP 4割以上）が1つ前の味方と入れ替わって踏み込む。
-                    // **判定は engine の `SwapSlots` / `RelocateLane` の通知**（入れ替えが終わってから順に）。保持者 0 枚
+                    // **判定は engine の `SwapSlots` / `RelocateLane` の通知**（入れ替えが終わってから順に）。**第230期 前段で規定**（バサ・ハネ）
+    TailwindFighter,// 追い風の踏み込み先を攻撃力順に（第230期・バサ・ハネの版 W1〜W4）: 経路の「最も前にいない味方」のうち攻撃力（現在値）が最も高い1体が踏み込む。**札そのものは挙動を持たない**。保持者 0 枚
+    KillImpact,     // 撃破の衝撃（第230期・ヨミの版 W2/W4）: ヨミの攻撃で敵を倒すたび、同じ経路の後ろの敵を1つ後ろへ吹き飛ばして転ばせる／後ろに敵がいなければ勢い余って隣の味方と入れ替わる（1ターン2回）。保持者 0 枚
+    DriftSurge,     // 溢れを攻撃力に（第230期・シオの版 W3/W4）: 移り木・手当ての溢れの半分を受け手の攻撃力に（1体1戦 +15 まで）。**札そのものは挙動を持たない**（engine の `ShioOverflow` が読む）。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -14155,6 +14158,50 @@ public sealed class TailwindTrait : Trait
 }
 
 /// <summary>
+/// 追い風の踏み込み先を攻撃力順に（第230期・バサ・ハネの版 W1〜W4）。追い風の経路で<b>最も前にいない味方</b>（その経路で自分より前の席に味方がいる駒）のうち、
+/// HP 4割以上で<b>現在の攻撃力（<see cref="UnitState.CurrentAttack"/>）が最も高い1体</b>が1つ前の味方と入れ替わる（同値は後ろの行が先・次に席番号の順）。
+/// <b>札そのものは挙動を持たない</b>（engine の追い風の本体が読む）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class TailwindFighterTrait : Trait { public override TraitId Id => TraitId.TailwindFighter; }
+
+/// <summary>
+/// 撃破の衝撃（第230期・軋みのヨミの版 W2/W4）。<b>ヨミの攻撃（手番・割り込み・薙ぎ）で敵を倒したとき、倒した敵1体ごとに</b>——
+/// <para>倒した敵と同じ経路（中央は2本・番号の若い方から）で、その後ろに敵がいれば<b>すぐ後ろの1体を1つ後ろへ吹き飛ばす</b>（後ろの席と入れ替え・後ろに席が無ければ転倒だけ）。
+/// 吹き飛ばした敵は転ぶ。敵の移動として数える（敵の乱れの段・前に出た敵の混乱が既存の規則どおり反応する。<b>追い風は動かしたのが保持者のときだけなので起きない</b>）。</para>
+/// <para>後ろに敵がいなければ（倒した敵が経路に属さない席でも）<b>勢い余って、ヨミが隣の味方1体（乱数）と入れ替わる</b>——ヨミ自身の軋みと割り込み・移り木・セロの段が反応する。
+/// 味方側の入れ替えは <b>1ターンに <see cref="TumblesPerTurn"/> 回まで</b>。</para>
+/// <para><b>解決は攻撃が終わってから</b>（ヨミの <c>PerformAttack</c> の一番外側の出口・倒した順）——攻撃の途中で盤面を並べ替えない。
+/// 乱数を引くのは「勢い余っての入れ替えの相手」だけ（候補が2体以上のとき・<c>PickOne</c>）。</para>
+/// </summary>
+public sealed class KillImpactTrait : Trait
+{
+    public const int TumblesPerTurn = 2;
+    public const string TurnKey = "impactTurn";
+    public const string CountKey = "impactCount";
+
+    public override TraitId Id => TraitId.KillImpact;
+
+    public override void OnKill(BattleContext ctx, UnitState self, UnitState victim) => ctx.NoteImpactKill(self, victim);
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(TurnKey, 0);
+        self.SetCounter(CountKey, 0);
+    }
+}
+
+/// <summary>
+/// 溢れを攻撃力に（第230期・移り木のシオの版 W3/W4）。移り木・手当ての回復が相手の減っている HP を超えたとき、<b>溢れた量の半分（切り捨て）を受け手の攻撃力に</b>足す
+/// （<c>Whet</c>・経路は移り木。戦のあいだ残る）。<b>1体につき1戦 <see cref="CapPerUnit"/> まで</b>。渇き・支援拒否・反転で止まった回復は溢れに数えない。
+/// <b>札そのものは挙動を持たない</b>（engine の <c>ShioOverflow</c> が読む）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class DriftSurgeTrait : Trait
+{
+    public const int CapPerUnit = 15;
+    public override TraitId Id => TraitId.DriftSurge;
+}
+
+/// <summary>
 /// 弾き返し（第228期・突き返しのハネの版 H2/H3）。<b>敵の攻撃による被弾（HP に届いた一撃）を受けたら、殴ってきた敵をその経路で1つ後ろの席へ弾く</b>
 /// （後ろの席の敵と入れ替え・空席ならそこへ）。弾かれた敵は転ぶ。入れ替えで前へ出た敵は、バサの対がいれば混乱する（<c>SwapSlots</c> の通知）。
 /// 代金は勢い余っての入れ替え（<see cref="OverrunTrait"/>）。
@@ -14913,6 +14960,9 @@ public static class TraitCatalog
         new BlastBothTrait(),        // 第228期
         new GaleTrait(),             // 第229期
         new TailwindTrait(),         // 第229期
+        new TailwindFighterTrait(),  // 第230期
+        new KillImpactTrait(),       // 第230期
+        new DriftSurgeTrait(),       // 第230期
         new ShioStageSlowTrait(),    // 第226期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期
