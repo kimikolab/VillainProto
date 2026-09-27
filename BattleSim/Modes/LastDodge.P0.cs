@@ -1,4 +1,4 @@
-﻿using BattleCore;
+using BattleCore;
 using static Common;
 
 // lastdodge phase0 —— Q0-1 一撃死の実数 ／ Q0-2 倒れ方の残り（第227期・L0 ＝ 前段の規定だけで回る）。

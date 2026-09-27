@@ -1,4 +1,4 @@
-﻿using BattleCore;
+using BattleCore;
 using static Common;
 
 // lastdodge run —— 表A〜D（第227期）。台 M-ハネ（版ごとに総当たりの1位 ／ セロ前列の1位）・M-ハネ（第225期の席）・参考（雷の編成・ポンの席）
