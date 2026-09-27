@@ -262,7 +262,7 @@ static partial class DecoyDiag
             ("M-ハネ（225）", MHane225, true),
             ("M-ハネ（K0の席）", raw(pickK0[0].F), true),
             ("M-ハネ（セロ前）", raw(pickK3.First(x => x.F.Occupied().Any(o => o.Def.Id == "sero" && FormationRules.RowOf(o.Slot) == Row.Front)).F), true),
-            ("参考 雷（仮の席）", Thunder, false),
+            ("参考 雷（ポンの席）", Thunder, false),
             ("参考 雷（選んだ席）", pickTh[0].F, false),
         };
         foreach (var b in benches) Console.WriteLine($"- {b.Name}: {SeatsNamed(b.F)}");

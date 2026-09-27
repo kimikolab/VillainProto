@@ -95,7 +95,7 @@ static class ShockDigestDiag
             ? new (string, Formation)[]
             {
                 ("M-ハネ（225）", DecoyDiag.MHane225),
-                ("参考 雷（仮）", DecoyDiag.Thunder),
+                ("参考 雷（ポンの席）", DecoyDiag.Thunder),
             }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane")).Select(r => ("compare " + r.Name, r.F))).ToArray()
             : mode == "m219"
             // 第219期（受け入れ 1）: 規定のミオ（cat）と第218期の M5（m5）の台本が一致すること。

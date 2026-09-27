@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // decoy phase0 —— Q0-1〜Q0-8（第226期）。**K0（前段の規定）だけで回る**——実装の前にコミットする。
@@ -51,7 +51,7 @@ static partial class DecoyDiag
         Console.WriteLine();
         Console.WriteLine("| 台 | 標 | 後備え | 庇う | 殉教 | 棘守り | 範囲の盾 | 敵の単体の一撃 |");
         Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|");
-        foreach (var (name, f) in new[] { ("M-ハネ（225）", MHane225), ("参考 雷（仮）", Thunder) })
+        foreach (var (name, f) in new[] { ("M-ハネ（225）", MHane225), ("参考 雷（ポンの席）", Thunder) })
         {
             var cnt = new Dictionary<string, long>(); long single = 0;
             for (int s = 0; s < Seeds; s++)
