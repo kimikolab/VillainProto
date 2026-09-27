@@ -11170,11 +11170,16 @@ public sealed class BattleContext
 
         // 追い風（第229期）: 保持者が敵を後ろの行へ動かした。**ここでは控えるだけ**——入れ替えの途中（同じ席に2体いる瞬間）に味方を動かさない。
         // 追い風の入れ替えの中で起きた敵の移動は追い風を呼ばない（連鎖しない）。**保持者がいなければ比較1つで抜ける。**
-        if (_tailwindLive && by is not null && by.TeamId != u.TeamId && by.HasTrait(TraitId.Tailwind)
+        // 第230期の追記: 撃破の衝撃の吹き飛ばし（`ImpactTailwind` を持つヨミが動かした敵）でも、同じ陣営の生きている追い風の保持者（席番号の若い方）の追い風が起きる。
+        if (_tailwindLive && by is not null && by.TeamId != u.TeamId
             && FormationRules.DepthOf(u.Row) > FormationRules.DepthOf(from))
         {
-            if (_inTailwind) TallyOf(by).TailwindNested++;
-            else _tailwindQ.Enqueue((by, u, fromSlot, by.HasTrait(TraitId.Shuffler) ? 0 : _haneAct == 1 ? 1 : _haneAct == 2 ? 2 : 3));
+            UnitState? tw = by.HasTrait(TraitId.Tailwind) ? by : by.HasTrait(TraitId.ImpactTailwind) ? TailwindHolderOf(by.TeamId) : null;
+            if (tw is not null)
+            {
+                if (_inTailwind) TallyOf(tw).TailwindNested++;
+                else _tailwindQ.Enqueue((tw, u, fromSlot, tw != by ? 4 : by.HasTrait(TraitId.Shuffler) ? 0 : _haneAct == 1 ? 1 : _haneAct == 2 ? 2 : 3));
+            }
         }
 
         // 味方の反応を先に流す。OnMoved は割り込み攻撃まで含むので、逆順だと
@@ -11226,6 +11231,15 @@ public sealed class BattleContext
     int _moveDepth;
     bool _inTailwind;
 
+    /// <summary>第230期の追記: その陣営の生きている追い風の保持者（席番号の若い方）。いなければ null。<b>乱数を引かない。</b></summary>
+    UnitState? TailwindHolderOf(int team)
+    {
+        UnitState? h = null;
+        foreach (UnitState a in LivingMembers(team))
+            if (a.HasTrait(TraitId.Tailwind) && (h is null || a.Slot < h.Slot)) h = a;
+        return h;
+    }
+
     void FlushTailwind()
     {
         if (_inTailwind) return;
@@ -11246,7 +11260,7 @@ public sealed class BattleContext
     {
         UnitTally t = TallyOf(by);
         t.TailwindTriggers++;
-        if (src == 0) t.TailwindFromShuffle++; else if (src == 1) t.TailwindFromBlast++; else if (src == 2) t.TailwindFromSpring++; else t.TailwindFromOther++;
+        if (src == 0) t.TailwindFromShuffle++; else if (src == 1) t.TailwindFromBlast++; else if (src == 2) t.TailwindFromSpring++; else if (src == 4) t.TailwindFromImpact++; else t.TailwindFromOther++;
         var allies = LivingMembers(by.TeamId);
         if (allies.Count < 2) { t.TailwindNoPair++; return; }
         FormationShape shape = allies[0].Shape;

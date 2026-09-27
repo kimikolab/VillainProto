@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // spring run —— 表A〜F（第228期）。台 M-ハネ（H3 で選んだ総当たりの1位 ／ 第227期 L2 の1位の席）・ハネのいる compare の行・参考（雷・ポンの席）

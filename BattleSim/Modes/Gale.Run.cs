@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // gale run —— 表A〜E（§8.2）。
@@ -145,7 +145,7 @@ static partial class GaleDiag
             Parallel.For(0, rows.Count * 5, k =>
             {
                 int ri = k / 5, st = k % 5;
-                var f = Apply(rows[ri].F, v);
+                var f = OldYomiShio(Apply(rows[ri].F, v));
                 int wins = 0;
                 for (int seed = 0; seed < Seeds; seed++)
                     if (BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, seed, verbose: false, shuffler: v.Rule).PlayerWon) wins++;

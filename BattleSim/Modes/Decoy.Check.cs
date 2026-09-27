@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 
@@ -217,8 +217,8 @@ static partial class DecoyDiag
             Parallel.For(0, jobs.Count, i =>
             {
                 var (f, w, sc, s) = jobs[i];
-                var a = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: true);
-                var b = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: false);
+                var a = BattleEngine.Run(BattleEngine.Materialize(OldYomiShio(f), BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: true);
+                var b = BattleEngine.Run(BattleEngine.Materialize(OldYomiShio(f), BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: false);
                 long da = a.TallyByUnit.Values.Sum(t => t.DamageToEnemy), db = b.TallyByUnit.Values.Sum(t => t.DamageToEnemy);
                 res[i] = a.PlayerWon == b.PlayerWon && a.Turns == b.Turns && da == db;
             });

@@ -31,7 +31,7 @@ static partial class SpringDiag
     static BattleContext Ctx9(Formation pl, (int Slot, UnitDef Def)[] foes, int seed, out List<UnitState> p, out List<UnitState> e)
     {
         var ctx = new BattleContext(seed, false);
-        p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
+        p = BattleEngine.Materialize(OldYomiShio(pl), BattleContext.PlayerTeam);
         var wave = EnemyWave.Of(foes.Select(f => (f.Slot, f.Def)).ToArray());
         e = BattleEngine.MaterializeEnemy(wave, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
@@ -176,8 +176,8 @@ static partial class SpringDiag
                 foreach (var v in Versions.Skip(1))
                 {
                     var fv = Apply(f, v);
-                    var a = BattleEngine.Run(BattleEngine.Materialize(fv, BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: true, shuffler: PreHole);
-                    var c = BattleEngine.Run(BattleEngine.Materialize(fv, BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: false, shuffler: PreHole);
+                    var a = BattleEngine.Run(BattleEngine.Materialize(OldYomiShio(fv), BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: true, shuffler: PreHole);
+                    var c = BattleEngine.Run(BattleEngine.Materialize(OldYomiShio(fv), BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: false, shuffler: PreHole);
                     long da = a.TallyByUnit.Values.Sum(t => t.DamageToEnemy), dc = c.TallyByUnit.Values.Sum(t => t.DamageToEnemy);
                     if (a.PlayerWon != c.PlayerWon || a.Turns != c.Turns || da != dc) Interlocked.Increment(ref vdiff[i]);
                 }
@@ -188,8 +188,8 @@ static partial class SpringDiag
             foreach (int w in new[] { 4, 0, 1 })
                 for (int s = 0; s < 20; s++)
                 {
-                    var a = BattleEngine.Run(BattleEngine.Materialize(Apply(Thunder, VerOf("H0")), BattleContext.PlayerTeam), WaveOf(w, Scales[0].Sc)(), s, verbose: true, shuffler: PreHole);
-                    var b = BattleEngine.Run(BattleEngine.Materialize(Apply(Thunder, VerOf("H3w")), BattleContext.PlayerTeam), WaveOf(w, Scales[0].Sc)(), s, verbose: true, shuffler: PreHole);
+                    var a = BattleEngine.Run(BattleEngine.Materialize(OldYomiShio(Apply(Thunder, VerOf("H0"))), BattleContext.PlayerTeam), WaveOf(w, Scales[0].Sc)(), s, verbose: true, shuffler: PreHole);
+                    var b = BattleEngine.Run(BattleEngine.Materialize(OldYomiShio(Apply(Thunder, VerOf("H3w"))), BattleContext.PlayerTeam), WaveOf(w, Scales[0].Sc)(), s, verbose: true, shuffler: PreHole);
                     n++; if (a.Events.Count == b.Events.Count && a.Turns == b.Turns && a.PlayerWon == b.PlayerWon) same++;
                 }
             Expect("ハネのいない台（雷）は H0 と H3w で出来事の数・決着T・勝敗まで一致", same, n);

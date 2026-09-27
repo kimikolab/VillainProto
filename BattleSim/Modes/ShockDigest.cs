@@ -171,6 +171,8 @@ static class ShockDigestDiag
                 ("リィカの台", Formation.Build(front1: UnitCatalog.Mug, front3: UnitCatalog.Zoto, center: UnitCatalog.Rica, back1: UnitCatalog.Guza, back3: kata)),
                 ("毒+ベニ+ラウ（ラウ→旧カタ）", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: kata, back3: UnitCatalog.Beni)),
             };
+        // 第230期の追記: 第230期 W4 が規定になったので、全モードの台の規定のバサ・ハネ・ヨミ・シオを第230期の前段の姿へ戻す（以下の固定はその上に掛かる）。
+        benches = benches.Select(b => (b.Item1, Common.OldCycle(b.Item2))).ToArray();
         // 第227期 前段: バサ・ハネが規定で変わったので、第222〜226期の台は旧のバサ・ハネに戻す（台本が前段の前と一致すること）。
         if (mode is "d222" or "e223" or "f224" or "r225" or "k226")
             benches = benches.Select(b => (b.Item1, Common.OldBasaHane(b.Item2))).ToArray();

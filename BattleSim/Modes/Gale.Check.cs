@@ -37,7 +37,7 @@ static partial class GaleDiag
     static BattleContext Ctx(Formation pl, Formation en, int seed, bool hole, out List<UnitState> p, out List<UnitState> e)
     {
         var ctx = new BattleContext(seed, false, shuffler: ShufflerRule.Default with { StaggerHole = hole });
-        p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
+        p = BattleEngine.Materialize(OldYomiShio(pl), BattleContext.PlayerTeam);
         e = BattleEngine.Materialize(en, BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
         foreach (var u in e) AddUnit.Invoke(ctx, new object[] { u });

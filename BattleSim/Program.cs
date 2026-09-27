@@ -1445,6 +1445,7 @@ static class TraitKeyMap
         [TraitId.TailwindFighter] = new[] { UnitTally.CarryMove },                              // 第230期（追い風の踏み込み先を攻撃力順に）
         [TraitId.KillImpact]      = new[] { UnitTally.CarryMove },                              // 第230期（撃破を移動に）
         [TraitId.DriftSurge]      = new[] { UnitTally.CarryMove },                             // 第230期（溢れた回復を攻撃力に）
+        [TraitId.ImpactTailwind]  = new[] { UnitTally.CarryMove },                              // 第230期の追記（吹き飛ばしでも追い風）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1683,6 +1684,7 @@ static class TraitHookMap
         [TraitId.TailwindFighter] = new[] { Engine },                              // 第230期（追い風の本体が読む）
         [TraitId.KillImpact]      = new[] { "OnKill", "OnCarryOver", Engine },     // 第230期（解決はヨミの PerformAttack の出口）
         [TraitId.DriftSurge]      = new[] { Engine },                              // 第230期（ShioOverflow が読む）
+        [TraitId.ImpactTailwind]  = new[] { Engine },                              // 第230期の追記（追い風の判定 NotifyMoved が読む）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）

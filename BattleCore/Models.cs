@@ -2350,7 +2350,7 @@ public sealed class UnitTally
     public long[]? ImpactBlowByTurn, ImpactTumbleByTurn;
 
     public long GaleStirs, GaleAllyMoved,
-                TailwindTriggers, TailwindFromShuffle, TailwindFromBlast, TailwindFromSpring, TailwindFromOther,
+                TailwindTriggers, TailwindFromShuffle, TailwindFromBlast, TailwindFromSpring, TailwindFromOther, TailwindFromImpact,
                 TailwindSteps, TailwindNoPair, TailwindLowHp, TailwindAllLow, TailwindRefused, TailwindNested, TailwindStepped,
                 HoleSkips, HoleBreaches;
 

@@ -75,14 +75,14 @@ static partial class CycleDiag
         Console.WriteLine();
         Console.WriteLine("踏み込んだ駒 ＝ `Tailwind` の `TargetId`。前へ ＝ 行が前に変わった `Move`（そのうち追い風の分）。味方の移動 ＝ 味方の `Move` の延べ（1ターンあたり ＝ ÷ 決着T）。");
         Console.WriteLine();
-        Console.WriteLine("| 台 | 波 | 版 | 追い風 | 踏み込み: " + string.Join(" ／ ", UnitNames) + " | ヨミが前へ（追い風） | シオが前へ（追い風） | 味方の移動 ／ 1ターン |");
+        Console.WriteLine("| 台 | 波 | 版 | 追い風（うちヨミの吹き飛ばしから） | 踏み込み: " + string.Join(" ／ ", UnitNames) + " | ヨミが前へ（追い風） | シオが前へ（追い風） | 味方の移動 ／ 1ターン |");
         Console.WriteLine("|---|---|---|--:|---|---|---|---|");
         foreach (int w in cells)
             for (int b = 0; b < 2; b++)
                 foreach (var v in Versions)
                 {
                     var a = res[(b, v.Tag, w, 0)];
-                    Console.WriteLine($"| {benches[b].Name} | {WaveNames[w]} | {v.Tag} | {F2(a.Per(a.TailEvents))} | " + string.Join(" ／ ", Units.Select(id => F2(a.Per(a.StepBy.GetValueOrDefault(id)))))
+                    Console.WriteLine($"| {benches[b].Name} | {WaveNames[w]} | {v.Tag} | {F2(a.Per(a.TailEvents))}（{F2(a.Per(a.TailImpact))}） | " + string.Join(" ／ ", Units.Select(id => F2(a.Per(a.StepBy.GetValueOrDefault(id)))))
                                       + $" | {F2(a.Per(a.YomiFwd))}（{F2(a.Per(a.YomiFwdTw))}） | {F2(a.Per(a.ShioFwd))}（{F2(a.Per(a.ShioFwdTw))}） | {F2(a.Per(a.AllyMoves))} ／ {F2(a.AllyMoves / Math.Max(1.0, a.TurnsAll))} |");
                 }
         Console.WriteLine();

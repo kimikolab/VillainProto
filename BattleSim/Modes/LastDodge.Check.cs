@@ -31,7 +31,7 @@ static partial class LastDodgeDiag
     static BattleContext Ctx(Formation pl, Formation en, int seed, out List<UnitState> p, out List<UnitState> e)
     {
         var ctx = new BattleContext(seed, false);
-        p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
+        p = BattleEngine.Materialize(OldYomiShio(pl), BattleContext.PlayerTeam);
         e = BattleEngine.Materialize(en, BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
         foreach (var u in e) AddUnit.Invoke(ctx, new object[] { u });
@@ -177,7 +177,7 @@ static partial class LastDodgeDiag
         }
         // ---- 会戦の次の戦 ----
         {
-            var p = BattleEngine.Materialize(Formation.Build(front1: l1), BattleContext.PlayerTeam);
+            var p = BattleEngine.Materialize(OldYomiShio(Formation.Build(front1: l1)), BattleContext.PlayerTeam);
             p[0].SetCounter(LastDodgeTrait.UsedKey, 2);
             var next = EngagementEngine.CrossBoundary(p);
             Expect("会戦の境界: 使った回数 2 → 0", LastDodgeTrait.UsedOf(next[0]), 0);
@@ -198,12 +198,12 @@ static partial class LastDodgeDiag
             Parallel.For(0, jobs.Count, i =>
             {
                 var (f, w, sc, s) = jobs[i];
-                var a = BattleEngine.Run(BattleEngine.Materialize(Apply(f, VerOf("L0")), BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: true, shuffler: PreHole);
+                var a = BattleEngine.Run(BattleEngine.Materialize(OldYomiShio(Apply(f, VerOf("L0"))), BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: true, shuffler: PreHole);
                 foreach (var tag in new[] { "L1", "L2" })
                 {
                     var fv = Apply(f, VerOf(tag));
-                    var b = BattleEngine.Run(BattleEngine.Materialize(fv, BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: true, shuffler: PreHole);
-                    var c = BattleEngine.Run(BattleEngine.Materialize(fv, BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: false, shuffler: PreHole);
+                    var b = BattleEngine.Run(BattleEngine.Materialize(OldYomiShio(fv), BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: true, shuffler: PreHole);
+                    var c = BattleEngine.Run(BattleEngine.Materialize(OldYomiShio(fv), BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: false, shuffler: PreHole);
                     long db = b.TallyByUnit.Values.Sum(t => t.DamageToEnemy), dc = c.TallyByUnit.Values.Sum(t => t.DamageToEnemy);
                     if (b.PlayerWon != c.PlayerWon || b.Turns != c.Turns || db != dc) Interlocked.Increment(ref vdiff[i]);
                     if (tag != "L1") continue;

@@ -448,6 +448,22 @@ public static class UnitCatalog
         Advances = false,
         // 第223期 前段: 第222期の V3 を規定にした（ポンの判断）——現在の攻撃力 30 以上で単体 → 薙ぎ（`CreakSweep`）。
         // 旧（`Displaced` だけ）は診断 `drift` の `DriftDiag.YomiV0` に残す。
+        // 第230期の追記（ポンの判断）: 第230期 W4——撃破の衝撃（`KillImpact`）と、その吹き飛ばしでも追い風が起きる（`ImpactTailwind`）。旧は <see cref="YomiW0"/>。
+        Traits = new[] { TraitId.Displaced, TraitId.CreakSweep, TraitId.KillImpact, TraitId.ImpactTailwind },
+        PlusText = "隊列を動かされるたび攻撃力が上がり、その場で割り込んで攻撃する。前へ突き出されると上昇が特に大きい。攻撃力が 30 以上になると、攻撃が横に薙ぐ。敵を倒すと、その勢いで後ろの敵を吹き飛ばして転ばせる。後ろに敵がいなければ、勢い余って隣の味方と入れ替わる（1ターン2回）",
+        MinusText = "自分から動くことはない（勢いで転がされるだけ）。誰も乱してくれなければ置物",
+        Flavor = "どこに置いても文句を言わない。だから誰も気に留めなかった。"
+    };
+
+    /// <summary>旧ヨミ（第223〜230期の規定・V3 ＝ `Displaced` / `CreakSweep`）。対照（<see cref="All"/> に入れない）。第222〜230期の器具はこちらに固定した。</summary>
+    public static readonly UnitDef YomiW0 = new()
+    {
+        Id = "yomi",
+        Name = "軋みのヨミ",
+        MaxHp = 92,
+        Attack = 6,
+        Speed = 5,
+        Advances = false,
         Traits = new[] { TraitId.Displaced, TraitId.CreakSweep },
         PlusText = "隊列を動かされるたび攻撃力が上がり、その場で割り込んで攻撃する。前へ突き出されると上昇が特に大きい。攻撃力が 30 以上になると、攻撃が横に薙ぐ",
         MinusText = "自分では動かない。誰も乱してくれなければ置物",
@@ -478,6 +494,22 @@ public static class UnitCatalog
         // 第227期 前段（ポンの判断）: 第226期 K4 から回避盾を除いた札——敵の乱れ（`Disarray`）＋ 動かされて吹く突風（`Squall`）。
         // 旧（第226期 K0・`Shuffler` だけ）は <see cref="BasaK0"/> に対照として残す。
         // 第230期 前段（ポンの判断）: 第229期 G4 の嵐（`Gale`）と追い風（`Tailwind`）を規定に。旧（第229期の前段の規定）は <see cref="BasaG0"/>。
+        // 第230期の追記（ポンの判断）: 第230期 W4——追い風の踏み込み先を攻撃力順に（`TailwindFighter`）。旧（第230期の前段の規定）は <see cref="BasaW0"/>。
+        Traits = new[] { TraitId.Shuffler, TraitId.Disarray, TraitId.Squall, TraitId.Gale, TraitId.Tailwind, TraitId.TailwindFighter },
+        PlusText = "毎ターン、敵2体と味方2体をそれぞれ入れ替える。自分が生きている間は、どんな理由でも前に出た敵は正気を失い、次の攻撃を自軍に向ける。敵の隊列が乱れるほど（動かされた回数 4/8/14）、風が大きくなる——かき回す敵も味方も 3/3/4 体に増え、正気を失わせる回数も 3 → 5 → 8 → 上限なしに増える。敵を後ろへ押しやると、その列で最も腕の立つ味方が追い風に乗って前へ踏み込む（傷の深い味方は踏み込まない）。攻撃は突風となって横に薙ぎ、当たった敵はときどき転ぶ。押しのけられるたび突風を起こす（1ターン2回）",
+        MinusText = "入れ替える相手は選べない。風が大きくなるほど、自分の隊列も大きく乱れる。後列前提の駒や庇う駒の配置を自分で壊す。一撃は軽い",
+        Flavor = "隊列を整えている横で騒ぎ立て、二度と行軍に加えられなかった。"
+    };
+
+    /// <summary>旧バサ（第230期の前段の規定＝嵐・追い風）。対照として残す（<see cref="All"/> にも <see cref="Retired"/> にも入れない）。第230期の器具（`cycle` と `shockdigest w230`）はこちらに固定した。</summary>
+    public static readonly UnitDef BasaW0 = new()
+    {
+        Id = "basa",
+        Name = "喧噪のバサ",
+        MaxHp = 56,
+        Attack = 5,
+        Speed = 8,
+        Pattern = AttackPattern.Sweep,
         Traits = new[] { TraitId.Shuffler, TraitId.Disarray, TraitId.Squall, TraitId.Gale, TraitId.Tailwind },
         PlusText = "毎ターン、敵2体と味方2体をそれぞれ入れ替える。自分が生きている間は、どんな理由でも前に出た敵は正気を失い、次の攻撃を自軍に向ける。敵の隊列が乱れるほど（動かされた回数 4/8/14）、風が大きくなる——かき回す敵も味方も 3/3/4 体に増え、正気を失わせる回数も 3 → 5 → 8 → 上限なしに増える。敵を後ろへ押しやると、その列の味方が追い風に乗って前へ踏み込む（傷の深い味方は踏み込まない）。攻撃は突風となって横に薙ぎ、当たった敵はときどき転ぶ。押しのけられるたび突風を起こす（1ターン2回）",
         MinusText = "入れ替える相手は選べない。風が大きくなるほど、自分の隊列も大きく乱れる。後列前提の駒や庇う駒の配置を自分で壊す。一撃は軽い",
@@ -576,6 +608,26 @@ public static class UnitCatalog
         Advances = false,
         // 第223期 前段: 第222期の V3 を規定にした（ポンの判断）——手番で最も傷ついた味方を後ろの隣と入れ替える（`Regroup`）。
         // **攻撃は捨てる**（`Actions` が `Skill` 1要素）。旧（`Drifter` だけ・毎手番殴る）は診断 `drift` の `DriftDiag.ShioV0` に残す。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "隊を組み替えた") },
+        // 第230期の追記（ポンの判断）: 第230期 W4——溢れを攻撃力に（`DriftSurge`）。旧は <see cref="ShioW0"/>。
+        Traits = new[] { TraitId.Drifter, TraitId.Regroup, TraitId.DrifterMend, TraitId.RegroupTend, TraitId.RegroupTendSelf,
+                         TraitId.ShioStage, TraitId.Retreat, TraitId.DriftSurge },
+        PlusText = "動かされた味方を癒し（最大HPの20%）、攻撃を上げる（+5）。癒しきれずに溢れた分の半分は、受けた味方の攻撃力になる（1体につき +15 まで）。手番で、最も傷ついた味方を後ろの隣と入れ替え、下げた味方をさらに最大HPの20%癒す（自分を下げたときも）。"
+                 + "味方のHPが4割を切ると、手番の外で割り込んでその味方を後ろの隣と入れ替える（緊急退避・1ターン1回）。"
+                 + "隊が乱れるほど（味方が動かされた回数 4/8/14回）手が速くなり、移り木は最大HPの30/40%・攻撃+8/+12、緊急退避は1ターン2/3/4回になる",
+        MinusText = "元気な駒を前へ押し出す。庇う駒を下げると庇いが外れる。自分では攻撃しない",
+        Flavor = "落ち着きのない者にしか懐かない。整った隊では浮く。"
+    };
+
+    /// <summary>旧シオ（第226〜230期の規定・J4）。対照（<see cref="All"/> に入れない）。第226〜230期の器具はこちらに固定した。</summary>
+    public static readonly UnitDef ShioW0 = new()
+    {
+        Id = "shio",
+        Name = "移り木のシオ",
+        MaxHp = 60,
+        Attack = 4,
+        Speed = 8,
+        Advances = false,
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "隊を組み替えた") },
         Traits = new[] { TraitId.Drifter, TraitId.Regroup, TraitId.DrifterMend, TraitId.RegroupTend, TraitId.RegroupTendSelf,
                          TraitId.ShioStage, TraitId.Retreat },
@@ -1348,6 +1400,23 @@ public static class UnitCatalog
         // 第229期 前段（ポンの判断）: 第228期 H3（吹っ飛ばし `Blast` ＋ 弾き返し `Spring`）を規定に。段2 の2体の突き返しは吹っ飛ばしに置き換わる（1回のまま）。
         // 旧（第228期の前段の規定）は <see cref="HaneH0"/>。
         // 第230期 前段（ポンの判断）: 第229期 G4 の追い風（`Tailwind`）を規定に。旧（第229期の前段の規定）は <see cref="HaneG0"/>。
+        // 第230期の追記（ポンの判断）: 第230期 W4——追い風の踏み込み先を攻撃力順に（`TailwindFighter`）。旧は <see cref="HaneW0"/>。
+        Traits = new[] { TraitId.Rebound, TraitId.Overrun, TraitId.Disarray, TraitId.Blast, TraitId.Spring, TraitId.Tailwind, TraitId.TailwindFighter },
+        PlusText = "手番で、前列で最も攻撃力の高い敵をその経路の奥まで吹っ飛ばす（経路の敵すべてを貫いて傷つけ、吹っ飛ばした敵は転び、詰めてきた敵は前へ出る） / 殴られたら、殴ってきた敵を1つ後ろへ弾き返して転ばせる（1ターンに 1 ＋ 敵の乱れの段 回） / 味方が押しのけられるたび、敵の隊列を突き崩す / 敵を後ろへ押しやると、その列で最も腕の立つ味方が追い風に乗って前へ踏み込む（傷の深い味方は踏み込まない）",
+        MinusText = "勢い余って、吹っ飛ばすたび・弾き返すたび自分が隣の味方1体と場所を入れ替える",
+        Flavor = "押されたら押し返す。それしかできないし、加減も知らない。"
+    };
+
+    /// <summary>旧ハネ（第230期の前段の規定＝H3 ＋ 追い風）。対照（<see cref="All"/> に入れない）。第230期の器具はこちらに固定した。</summary>
+    public static readonly UnitDef HaneW0 = new()
+    {
+        Id = "hane",
+        Name = "突き返しのハネ",
+        MaxHp = 56,
+        Attack = 11,
+        Speed = 8,
+        Advances = false,
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "突き返す") },
         Traits = new[] { TraitId.Rebound, TraitId.Overrun, TraitId.Disarray, TraitId.Blast, TraitId.Spring, TraitId.Tailwind },
         PlusText = "手番で、前列で最も攻撃力の高い敵をその経路の奥まで吹っ飛ばす（経路の敵すべてを貫いて傷つけ、吹っ飛ばした敵は転び、詰めてきた敵は前へ出る） / 殴られたら、殴ってきた敵を1つ後ろへ弾き返して転ばせる（1ターンに 1 ＋ 敵の乱れの段 回） / 味方が押しのけられるたび、敵の隊列を突き崩す / 敵を後ろへ押しやると、その列の味方が追い風に乗って前へ踏み込む（傷の深い味方は踏み込まない）",
         MinusText = "勢い余って、吹っ飛ばすたび・弾き返すたび自分が隣の味方1体と場所を入れ替える",

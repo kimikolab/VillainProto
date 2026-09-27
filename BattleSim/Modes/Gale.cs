@@ -124,7 +124,7 @@ static partial class GaleDiag
     internal static (BattleResult R, List<UnitState> P, List<UnitState> E, Dictionary<int, int> Slot0) Fight(
         Formation f, int w, EnemyScaleRule sc, int seed, bool verbose = true, ShufflerRule? shuffler = null)
     {
-        var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
+        var p = BattleEngine.Materialize(OldYomiShio(f), BattleContext.PlayerTeam);
         var e = WaveOf(w, sc)();
         var slotOf = p.Concat(e).ToDictionary(u => u, u => u.Slot);
         var r = BattleEngine.Run(p, e, seed, verbose: verbose, shuffler: shuffler ?? PreHole);

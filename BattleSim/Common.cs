@@ -40,7 +40,30 @@ internal static Formation OldGale(Formation f)
 {
     var g = f.Clone();
     foreach (var (slot, d) in f.Occupied())
-        g[slot] = ReferenceEquals(d, UnitCatalog.Basa) ? UnitCatalog.BasaG0 : ReferenceEquals(d, UnitCatalog.Hane) ? UnitCatalog.HaneG0 : d;
+        g[slot] = ReferenceEquals(d, UnitCatalog.Basa) || ReferenceEquals(d, UnitCatalog.BasaW0) ? UnitCatalog.BasaG0
+                : ReferenceEquals(d, UnitCatalog.Hane) || ReferenceEquals(d, UnitCatalog.HaneW0) ? UnitCatalog.HaneG0 : d;
+    return g;
+}
+
+/// <summary>
+/// 第230期の追記: 第230期 W4（追い風の攻撃力順・撃破の衝撃・溢れを攻撃力に）が規定になったので、第230期の器具は編成の<b>規定のバサ・ハネ・ヨミ・シオ</b>
+/// （同じ参照のものだけ）を旧（<see cref="UnitCatalog.BasaW0"/> ほか）へ戻す。
+/// </summary>
+internal static Formation OldCycle(Formation f)
+{
+    var g = f.Clone();
+    foreach (var (slot, d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Basa) ? UnitCatalog.BasaW0 : ReferenceEquals(d, UnitCatalog.Hane) ? UnitCatalog.HaneW0
+                : ReferenceEquals(d, UnitCatalog.Yomi) ? UnitCatalog.YomiW0 : ReferenceEquals(d, UnitCatalog.Shio) ? UnitCatalog.ShioW0 : d;
+    return g;
+}
+
+/// <summary>第230期の追記: 第222〜229期の器具は、編成の規定のヨミ・シオだけを旧（<see cref="UnitCatalog.YomiW0"/> / <see cref="UnitCatalog.ShioW0"/>）へ戻す（バサ・ハネは各期の固定のまま）。</summary>
+internal static Formation OldYomiShio(Formation f)
+{
+    var g = f.Clone();
+    foreach (var (slot, d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Yomi) ? UnitCatalog.YomiW0 : ReferenceEquals(d, UnitCatalog.Shio) ? UnitCatalog.ShioW0 : d;
     return g;
 }
 
@@ -55,7 +78,7 @@ internal static Formation OldHane(Formation f)
 {
     var g = f.Clone();
     foreach (var (slot, d) in f.Occupied())
-        if (ReferenceEquals(d, UnitCatalog.Hane)) g[slot] = UnitCatalog.HaneH0;
+        if (ReferenceEquals(d, UnitCatalog.Hane) || ReferenceEquals(d, UnitCatalog.HaneW0)) g[slot] = UnitCatalog.HaneH0;
     return g;
 }
 

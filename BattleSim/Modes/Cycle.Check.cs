@@ -69,7 +69,7 @@ static partial class CycleDiag
             foreach (var (tag, basa, wantB, wantA, wantC) in new[]
             {
                 ("W1", BasaF, "前1", "中央", "後1"),
-                ("W0", UnitCatalog.Basa, "後1", "前1", "中央"),
+                ("W0", UnitCatalog.BasaW0, "後1", "前1", "中央"),
             })
             {
                 var ctx = Ctx(Formation.Build(front1: a, front3: basa, center: b, back1: c, back3: d), en, 0, out var p, out var e);
@@ -135,7 +135,7 @@ static partial class CycleDiag
             }
             {
                 // 札の無いヨミ: 何も起きない
-                var ctx = Ctx(Formation.Build(front1: a, front3: c, center: UnitCatalog.Yomi, back1: d, back3: f), Formation.Build(front1: e1, center: e4, back1: e2), 0, out var p, out var e);
+                var ctx = Ctx(Formation.Build(front1: a, front3: c, center: UnitCatalog.YomiW0, back1: d, back3: f), Formation.Build(front1: e1, center: e4, back1: e2), 0, out var p, out var e);
                 ctx.PerformAttack(U(p, "yomi"));
                 Expect("札の無いヨミ（W0）: 中央の敵は動かない", Seat(U(e, "e4")), "中央");
             }
@@ -147,7 +147,7 @@ static partial class CycleDiag
             var en = Formation.Build(front1: Plain("e1"), back1: Plain("e2"));
             // 段（味方が動かされた累計）で移り木の量が変わらないよう、段の札を外したシオで確かめる。
             UnitDef NoStage(UnitDef s) => DecoyDiag.Copy(s, s.Traits.Where(t => t != TraitId.ShioStage).ToArray());
-            foreach (var (tag, shio) in new[] { ("W3", NoStage(ShioS)), ("W0", NoStage(UnitCatalog.Shio)) })
+            foreach (var (tag, shio) in new[] { ("W3", NoStage(ShioS)), ("W0", NoStage(UnitCatalog.ShioW0)) })
             {
                 var ctx = Ctx(Formation.Build(front1: x, front3: a, center: shio, back1: c, back3: d), en, 0, out var p, out var e);
                 var xu = U(p, "x"); var au = U(p, "a");

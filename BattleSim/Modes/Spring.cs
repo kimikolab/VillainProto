@@ -104,7 +104,7 @@ static partial class SpringDiag
             int w = 0, sv = 0, fell = 0; long t = 0;
             for (int s = PickSeed0; s < PickSeed0 + PickSeeds; s++)
             {
-                var r = BattleEngine.Run(BattleEngine.Materialize(perms[i], BattleContext.PlayerTeam), WaveOf(MainWave, sc)(), s, verbose: false, shuffler: PreHole);
+                var r = BattleEngine.Run(BattleEngine.Materialize(OldYomiShio(perms[i]), BattleContext.PlayerTeam), WaveOf(MainWave, sc)(), s, verbose: false, shuffler: PreHole);
                 fell += r.PlayerStarterFallen.Count;
                 if (!r.PlayerWon) continue;
                 w++; t += r.Turns; if (r.PlayerStarterFallen.Count == 0) sv++;

@@ -472,6 +472,7 @@ public enum TraitId
                     // **判定は engine の `SwapSlots` / `RelocateLane` の通知**（入れ替えが終わってから順に）。**第230期 前段で規定**（バサ・ハネ）
     TailwindFighter,// 追い風の踏み込み先を攻撃力順に（第230期・バサ・ハネの版 W1〜W4）: 経路の「最も前にいない味方」のうち攻撃力（現在値）が最も高い1体が踏み込む。**札そのものは挙動を持たない**。保持者 0 枚
     KillImpact,     // 撃破の衝撃（第230期・ヨミの版 W2/W4）: ヨミの攻撃で敵を倒すたび、同じ経路の後ろの敵を1つ後ろへ吹き飛ばして転ばせる／後ろに敵がいなければ勢い余って隣の味方と入れ替わる（1ターン2回）。保持者 0 枚
+    ImpactTailwind, // 衝撃の追い風（第230期の追記・ヨミ）: 撃破の衝撃で敵を後ろへ吹き飛ばしたときも、同じ陣営の追い風の保持者の追い風が起きる。**札そのものは挙動を持たない**（engine の追い風の判定が読む）
     DriftSurge,     // 溢れを攻撃力に（第230期・シオの版 W3/W4）: 移り木・手当ての溢れの半分を受け手の攻撃力に（1体1戦 +15 まで）。**札そのものは挙動を持たない**（engine の `ShioOverflow` が読む）。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -14195,6 +14196,8 @@ public sealed class KillImpactTrait : Trait
 /// （<c>Whet</c>・経路は移り木。戦のあいだ残る）。<b>1体につき1戦 <see cref="CapPerUnit"/> まで</b>。渇き・支援拒否・反転で止まった回復は溢れに数えない。
 /// <b>札そのものは挙動を持たない</b>（engine の <c>ShioOverflow</c> が読む）。<b>乱数を引かない。</b>
 /// </summary>
+public sealed class ImpactTailwindTrait : Trait { public override TraitId Id => TraitId.ImpactTailwind; }
+
 public sealed class DriftSurgeTrait : Trait
 {
     public const int CapPerUnit = 15;
@@ -14963,6 +14966,7 @@ public static class TraitCatalog
         new TailwindFighterTrait(),  // 第230期
         new KillImpactTrait(),       // 第230期
         new DriftSurgeTrait(),       // 第230期
+        new ImpactTailwindTrait(),   // 第230期の追記
         new ShioStageSlowTrait(),    // 第226期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期

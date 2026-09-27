@@ -50,8 +50,8 @@ static partial class DriftDiag
     internal static readonly UnitDef ShioReg = Copy(ShioV0,
         ShioV0.Traits.Append(TraitId.Regroup).ToArray(),
         new UnitAction[] { new(ActionKind.Skill, Label: RegroupLabel) });
-    internal static readonly UnitDef YomiV0 = Copy(UnitCatalog.Yomi,
-        UnitCatalog.Yomi.Traits.Where(t => t != TraitId.CreakSweep).ToArray(), UnitCatalog.Yomi.Actions);
+    internal static readonly UnitDef YomiV0 = Copy(UnitCatalog.YomiW0,
+        UnitCatalog.YomiW0.Traits.Where(t => t != TraitId.CreakSweep).ToArray(), UnitCatalog.YomiW0.Actions);
     internal static readonly UnitDef YomiS30 = Copy(YomiV0, YomiV0.Traits.Append(TraitId.CreakSweep).ToArray(), YomiV0.Actions);
     internal static readonly UnitDef YomiS20 = Copy(YomiV0, YomiV0.Traits.Append(TraitId.CreakSweep20).ToArray(), YomiV0.Actions);
 

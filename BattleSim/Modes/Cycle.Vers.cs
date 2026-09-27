@@ -14,16 +14,18 @@ static partial class CycleDiag
 
     static UnitDef Plus(UnitDef d, params TraitId[] extra) => DecoyDiag.Copy(d, d.Traits.Concat(extra).ToArray());
 
-    static readonly UnitDef BasaF = Plus(UnitCatalog.Basa, TraitId.TailwindFighter), HaneF = Plus(UnitCatalog.Hane, TraitId.TailwindFighter);
-    static readonly UnitDef YomiK = Plus(UnitCatalog.Yomi, TraitId.KillImpact), ShioS = Plus(UnitCatalog.Shio, TraitId.DriftSurge);
+    static readonly UnitDef BasaF = Plus(UnitCatalog.BasaW0, TraitId.TailwindFighter), HaneF = Plus(UnitCatalog.HaneW0, TraitId.TailwindFighter);
+    static readonly UnitDef YomiK = Plus(UnitCatalog.YomiW0, TraitId.KillImpact), ShioS = Plus(UnitCatalog.ShioW0, TraitId.DriftSurge);
 
     internal static readonly Ver[] Versions =
     {
-        new("W0", UnitCatalog.Basa, UnitCatalog.Hane, UnitCatalog.Yomi, UnitCatalog.Shio),
-        new("W1", BasaF, HaneF, UnitCatalog.Yomi, UnitCatalog.Shio),
-        new("W2", BasaF, HaneF, YomiK, UnitCatalog.Shio),
-        new("W3", BasaF, HaneF, UnitCatalog.Yomi, ShioS),
+        new("W0", UnitCatalog.BasaW0, UnitCatalog.HaneW0, UnitCatalog.YomiW0, UnitCatalog.ShioW0),
+        new("W1", BasaF, HaneF, UnitCatalog.YomiW0, UnitCatalog.ShioW0),
+        new("W2", BasaF, HaneF, YomiK, UnitCatalog.ShioW0),
+        new("W3", BasaF, HaneF, UnitCatalog.YomiW0, ShioS),
         new("W4", BasaF, HaneF, YomiK, ShioS),
+        // 第230期の追記: W4 ＋ ヨミの吹き飛ばしでも追い風（`ImpactTailwind`）＝ 第230期の追記の規定（`UnitCatalog` の今の4枚と同じ札）
+        new("W5", BasaF, HaneF, Plus(YomiK, TraitId.ImpactTailwind), ShioS),
     };
     internal static Ver VerOf(string tag) => Versions.First(v => v.Tag == tag);
 
@@ -69,7 +71,7 @@ static partial class CycleDiag
         public long N, Wins, AllSurv, WinTurns, FellTotal, TurnsAll;
         public readonly Dictionary<string, long> Fell = new(), FellT = new();
         // 表B 追い風
-        public long TailEvents, YomiFwd, YomiFwdTw, ShioFwd, ShioFwdTw, AllyMoves;
+        public long TailImpact, TailEvents, YomiFwd, YomiFwdTw, ShioFwd, ShioFwdTw, AllyMoves;
         public readonly Dictionary<string, long> StepBy = new();
         // 表C 撃破の衝撃（ヨミの帳簿）
         public long Kills, Blow, Stumble, Tumble, Capped, NoAlly, Outside, Refused, ImpactMoves, CreakSwings, AllKills;
@@ -85,7 +87,7 @@ static partial class CycleDiag
             N += o.N; Wins += o.Wins; AllSurv += o.AllSurv; WinTurns += o.WinTurns; FellTotal += o.FellTotal; TurnsAll += o.TurnsAll;
             foreach (var (k, v) in o.Fell) Fell[k] = Fell.GetValueOrDefault(k) + v;
             foreach (var (k, v) in o.FellT) FellT[k] = FellT.GetValueOrDefault(k) + v;
-            TailEvents += o.TailEvents; YomiFwd += o.YomiFwd; YomiFwdTw += o.YomiFwdTw; ShioFwd += o.ShioFwd; ShioFwdTw += o.ShioFwdTw; AllyMoves += o.AllyMoves;
+            TailImpact += o.TailImpact; TailEvents += o.TailEvents; YomiFwd += o.YomiFwd; YomiFwdTw += o.YomiFwdTw; ShioFwd += o.ShioFwd; ShioFwdTw += o.ShioFwdTw; AllyMoves += o.AllyMoves;
             foreach (var (k, v) in o.StepBy) StepBy[k] = StepBy.GetValueOrDefault(k) + v;
             Kills += o.Kills; Blow += o.Blow; Stumble += o.Stumble; Tumble += o.Tumble; Capped += o.Capped; NoAlly += o.NoAlly; Outside += o.Outside;
             Refused += o.Refused; ImpactMoves += o.ImpactMoves; CreakSwings += o.CreakSwings; AllKills += o.AllKills;
@@ -118,6 +120,7 @@ static partial class CycleDiag
                     if (t.ImpactBlowByTurn is { } bt) for (int i = 0; i < 7; i++) BlowT[i] += bt[i];
                     if (t.ImpactTumbleByTurn is { } tt) for (int i = 0; i < 7; i++) TumbleT[i] += tt[i];
                 }
+                if (id is "basa" or "hane") TailImpact += t.TailwindFromImpact;
                 Over[id] = Over.GetValueOrDefault(id) + t.ShioOverflowRecv;
                 Gain[id] = Gain.GetValueOrDefault(id) + t.ShioOverflowGain;
                 if (t.ShioOverflowGain >= DriftSurgeTrait.CapPerUnit) CapHit[id] = CapHit.GetValueOrDefault(id) + 1;
