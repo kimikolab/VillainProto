@@ -210,7 +210,7 @@ static partial class BurstDiag
         Console.WriteLine("# 第220期 Phase 0 —— 澱みが爆ぜる（盤面は前段＝燃焼の脆さ F1 の規定化の後・爆発は未実装）");
         Console.WriteLine();
         Console.WriteLine("- `EmberRule.Default` ＝ " + EmberRule.Default);
-        Console.WriteLine("- ミオの札: " + string.Join(", ", UnitCatalog.Mio.Traits) + " ／ フレーバー「" + UnitCatalog.Mio.Flavor + "」");
+        Console.WriteLine("- ミオの札（B0・爆発の札を抜いた駒）: " + string.Join(", ", MioBase().Traits) + " ／ フレーバー「" + UnitCatalog.Mio.Flavor + "」");
         Console.WriteLine("- ラウの札: " + string.Join(", ", UnitCatalog.Rau.Traits));
         Console.WriteLine();
 
@@ -240,22 +240,22 @@ static partial class BurstDiag
         foreach (var (tag, _, mem) in Rigs)
             foreach (var sh in new[] { FormationShape.X, FormationShape.Diamond })
             {
-                var (best, w, ties, ta) = PickSeat(mem(), sh, 200);
+                var (best, w, ties, ta) = PickSeat(mem().Select(d => d.Id == "mio" ? MioBase() : d).ToList(), sh, 200);   // 第220期の追記: B0 に固定
                 benches.Add((tag + " " + ShapeName(sh), best));
                 var a = Scales.Select(x => Measure(best, x)).ToArray();
                 Console.WriteLine("| " + tag + " | " + ShapeName(sh) + " | " + SeatsNamed(best) + " | " + w + " | " + ties + " | " + ta + " | "
                                   + string.Join(" | ", a.Select(x => F1(x.Mean25))) + " | " + F1(a[2].AllSurvPct) + " | " + F2(a[2].MeanWinT) + " |");
             }
         {
-            benches.Add(("R3 ポンの X字", PonX()));
-            var a = Scales.Select(x => Measure(PonX(), x)).ToArray();
+            benches.Add(("R3 ポンの X字", PonX(MioBase())));
+            var a = Scales.Select(x => Measure(PonX(MioBase()), x)).ToArray();
             Console.WriteLine("| R3 | ポンの X字 | " + SeatsNamed(PonX()) + " | — | — | — | " + string.Join(" | ", a.Select(x => F1(x.Mean25))) + " | " + F1(a[2].AllSurvPct) + " | " + F2(a[2].MeanWinT) + " |");
         }
         Console.WriteLine();
         Console.WriteLine("R5（`compare` でミオのいる行）: " + string.Join(" ／ ", R5Rows().Select(r => r.Name)));
         Console.WriteLine("ラウだけの行（版で動かないはずの対照）: " + string.Join(" ／ ", RauOnlyRows().Select(r => r.Name)));
         Console.WriteLine();
-        foreach (var (n, f) in R5Rows()) benches.Add(("R5 " + n, f));
+        foreach (var (n, f) in R5Rows()) benches.Add(("R5 " + n, WithMio(f, MioBase())));
 
         // ---- Q0-1 ----
         Console.WriteLine("## Q0-1 倒れた瞬間の在庫（敵・第2〜5波 × seed 0..199）");

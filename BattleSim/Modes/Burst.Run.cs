@@ -16,20 +16,28 @@ static partial class BurstDiag
     static (string Tag, UnitDef Def)[]? _versions;
     internal static (string Tag, UnitDef Def)[] VersionDefs => _versions ??= new[]
     {
-        ("B0", UnitCatalog.Mio),
+        ("B0", MioBase()),   // 第220期の追記で規定が B2 になったので、爆発の札を抜いた駒に固定
         ("B1", MioWith(TraitId.MireBurst)),
         ("B2", MioWith(TraitId.MireBurstStack)),
         ("B2x", MioWith(TraitId.MireBurstAll)),
     };
     internal static UnitDef VerOf(string tag) => VersionDefs.First(v => v.Tag == tag).Def;
 
+    static readonly TraitId[] BurstTraits = { TraitId.MireBurst, TraitId.MireBurstStack, TraitId.MireBurstAll };
+
+    /// <summary>規定のミオから爆発の札を抜いた駒（＝第220期の B0・M5）。</summary>
+    static UnitDef MioBase() => MioWithTraits(UnitCatalog.Mio.Traits.Where(t => !BurstTraits.Contains(t)).ToArray());
+
     static UnitDef MioWith(TraitId extra)
+        => MioWithTraits(UnitCatalog.Mio.Traits.Where(t => !BurstTraits.Contains(t)).Append(extra).ToArray());
+
+    static UnitDef MioWithTraits(TraitId[] traits)
     {
         UnitDef d = UnitCatalog.Mio;
         return new()
         {
             Id = d.Id, Name = d.Name, MaxHp = d.MaxHp, Attack = d.Attack, Speed = d.Speed, Advances = d.Advances,
-            Pattern = d.Pattern, Actions = d.Actions, Traits = d.Traits.Append(extra).ToArray(),
+            Pattern = d.Pattern, Actions = d.Actions, Traits = traits,
             PlusText = d.PlusText, MinusText = d.MinusText, Flavor = d.Flavor,
         };
     }
