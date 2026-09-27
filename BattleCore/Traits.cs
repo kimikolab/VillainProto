@@ -467,6 +467,9 @@ public enum TraitId
     Blast,          // 吹っ飛ばし（第228期・ハネの版 H1/H3）: 手番の突き返しを、前列の敵 A をその経路の最後尾へ吹っ飛ばす並べ替えに（経路の全員に貫き・A は転ぶ・前へ詰めた敵はバサの対で混乱）。保持者 0 枚
     Spring,         // 弾き返し（第228期・ハネの版 H2/H3）: 敵の攻撃で殴られたら、殴った敵を経路で1つ後ろへ弾いて転ばせ、自分は隣の味方と入れ替わる（1ターン 1 ＋ 敵の乱れの段 回・粛で止まる）。保持者 0 枚
     BlastBoth,      // 両方の経路（第228期・H3w）: 敵の乱れの段2 から、吹っ飛ばしを1手番に両方の経路で行う。**札そのものは挙動を持たない**。保持者 0 枚
+    Gale,           // 嵐（第229期・バサの版 G1/G4）: 敵の乱れの段で、味方の入れ替えも 2/3/3/4 体に（敵と同じ表）。**札そのものは挙動を持たない**（`ShufflerTrait` が読む）。保持者 0 枚
+    Tailwind,       // 追い風（第229期・バサ・ハネの版 G2/G4）: 保持者が敵を後ろの行へ動かしたとき、その敵がいた経路の味方の最後尾（HP 4割以上）が1つ前の味方と入れ替わって踏み込む。
+                    // **判定は engine の `SwapSlots` / `RelocateLane` の通知**（入れ替えが終わってから順に）。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -6641,9 +6644,15 @@ public enum ShuffleStagger
 /// <b>偽にすると供給が 1/3 になる</b>（前1 を薙ぐと主目標 ＋ 巻き込み2体に当たるため）
 /// ——<paramref name="GustPercent"/> とは<b>別の絞り方</b>で、同じ量でも置き場所が違う（第147期 段B / 段B'）。
 /// </param>
+/// <param name="StaggerHole">
+/// 転倒の穴（第229期・G3/G4・<b>既定 false</b>）。真なら<b>転倒（<see cref="StatusKeys.Stagger"/>）している駒は壁にならない</b>
+/// ——「前列が生きている限り後列は狙われない」の判定（<c>PoolOf</c>）で前列に数えず、標的を引き受ける介入（挑発・後備え・庇う・殉教・棘守り・
+/// 範囲の盾・受け流し・逸らし）をしない。敵味方どちらにも同じ。<b>喧噪の札ではなく状態の性質</b>だが、転倒の規則の器がここしか無いので同居させた
+/// （<c>Run</c> の引数を増やさないため）。偽なら第228期と1ビットも違わない。
+/// </param>
 public readonly record struct ShufflerRule(
     bool Foes, ShuffleStagger Stagger, int ConfusePercent = 100, int ConfuseUses = 0,
-    int GustPercent = 0, bool GustSecondary = true)
+    int GustPercent = 0, bool GustSecondary = true, bool StaggerHole = false)
 {
     /// <summary>
     /// 既定は<b>混乱・1戦3回まで</b>（第147期に採用）。敵も乱し、<b>行が前に変わった敵</b>が
@@ -6774,8 +6783,11 @@ public sealed class ShufflerTrait : Trait
         }
 
         // 第226期（敵の乱れ・`Disarray`）: 段で敵の入れ替えを 2/3/3/4 体に。**札が無ければ今の2体の道**（乱数の引き方も同じ）。
-        int k = foes && self.HasTrait(TraitId.Disarray) ? DisarrayTrait.FoeSwaps[DisarrayTrait.StageOf(ctx, self)] : 2;
-        if (k > 2 && team.Count >= 3) { StirMany(ctx, self, team, Math.Min(k, team.Count), tally); return; }
+        // 第229期（嵐・`Gale`）: 味方の側も同じ表で 2/3/3/4 体に（段は敵の乱れの段・`Disarray` が無ければ段0）。
+        int k = foes && self.HasTrait(TraitId.Disarray) ? DisarrayTrait.FoeSwaps[DisarrayTrait.StageOf(ctx, self)]
+              : !foes && self.HasTrait(TraitId.Gale) ? GaleTrait.AllySwaps[self.HasTrait(TraitId.Disarray) ? DisarrayTrait.StageOf(ctx, self) : 0]
+              : 2;
+        if (k > 2 && team.Count >= 3) { StirMany(ctx, self, team, Math.Min(k, team.Count), tally, foes); return; }
 
         UnitState a = team[ctx.Roll(team.Count)];
         var rest = team.Where(u => u != a).ToList();
@@ -6803,27 +6815,38 @@ public sealed class ShufflerTrait : Trait
     /// 第226期（敵の乱れの段・`Disarray`）: 敵を 3 体（3 巡りの輪: a → c の席・b → a の席・c → b の席）か 4 体（2 組）入れ替える。
     /// 乱数は選ぶ体数ぶんだけ（今の2体の道と同じ引き方の延長）。
     /// </summary>
-    private static void StirMany(BattleContext ctx, UnitState self, List<UnitState> team, int k, UnitTally tally)
+    private static void StirMany(BattleContext ctx, UnitState self, List<UnitState> team, int k, UnitTally tally, bool foes = true)
     {
         var picked = new List<UnitState>();
         var pool = team.ToList();
         for (int i = 0; i < k; i++) { UnitState p = pool[ctx.Roll(pool.Count)]; picked.Add(p); pool.Remove(p); }
         var from = picked.Select(u => u.Row).ToList();
-        ctx.Log($"    {self.Name} が敵の隊列を大きくかき回した（{string.Join(" ⇔ ", picked.Select(u => u.Name))}）", LogKind.FriendlyFire);
+        var fromSlot = picked.Select(u => u.Slot).ToList();
+        ctx.Log(foes
+            ? $"    {self.Name} が敵の隊列を大きくかき回した（{string.Join(" ⇔ ", picked.Select(u => u.Name))}）"
+            : $"    {self.Name} の嵐が味方の隊列を大きく揺らした（{string.Join(" ⇔ ", picked.Select(u => u.Name))}）", LogKind.FriendlyFire);
+        int moved = 0;
         if (k == 3)
         {
             int sb = picked[1].Slot, sc = picked[2].Slot;
-            ctx.SwapSlots(picked[0], sb, self);
-            if (picked[0].IsAlive && picked[2].IsAlive) ctx.SwapSlots(picked[0], sc, self);
-            tally.ShuffleFoeSwaps += 2;
+            if (ctx.SwapSlots(picked[0], sb, self)) moved++;
+            if (picked[0].IsAlive && picked[2].IsAlive && ctx.SwapSlots(picked[0], sc, self)) moved++;
         }
         else
         {
             int sb = picked[1].Slot, sd = picked[3].Slot;
-            ctx.SwapSlots(picked[0], sb, self);
-            ctx.SwapSlots(picked[2], sd, self);
-            tally.ShuffleFoeSwaps += 2;
+            if (ctx.SwapSlots(picked[0], sb, self)) moved++;
+            if (ctx.SwapSlots(picked[2], sd, self)) moved++;
         }
+        // 第229期（嵐）: 味方の側は第143期の2体の道と同じく Settle を通らない（混乱・転倒は敵にだけ）。計数だけ。
+        if (!foes)
+        {
+            tally.ShuffleAllySwaps += moved;
+            tally.GaleStirs++;
+            tally.GaleAllyMoved += picked.Where((u, i) => u.Slot != fromSlot[i]).Count();
+            return;
+        }
+        tally.ShuffleFoeSwaps += 2;
         for (int i = 0; i < k; i++) Settle(ctx, self, picked[i], from[i], tally);
     }
 
@@ -13096,7 +13119,7 @@ public sealed class DecoyTrait : Trait
 
     /// <summary>挑発の主（pool の中の相手陣営の保持者）。いなければ null。2体以上なら既存の <c>PickOne</c>。</summary>
     public static UnitState? Pick(BattleContext ctx, UnitState attacker, List<UnitState> pool)
-        => ctx.PickOne(pool.Where(u => u.IsAlive && u.TeamId != attacker.TeamId && u.HasTrait(TraitId.Decoy)).ToList());
+        => ctx.PickOne(pool.Where(u => u.IsAlive && u.TeamId != attacker.TeamId && u.HasTrait(TraitId.Decoy) && !ctx.HoleSkip(u)).ToList());   // 第229期: 転倒の穴
 }
 
 /// <summary>
@@ -14099,6 +14122,31 @@ public sealed class BlastTrait : Trait
 public sealed class BlastBothTrait : Trait { public override TraitId Id => TraitId.BlastBoth; }
 
 /// <summary>
+/// 嵐（第229期・喧噪のバサの版 G1/G4）。<b>敵の乱れの段が上がるほど、味方の入れ替えも大きくなる</b>——敵と同じ表（<see cref="AllySwaps"/> ＝ 2/3/3/4 体・
+/// 3 体は輪・4 体は2組）で、入れ替える味方は今と同じく選べない（乱数）。<b>札そのものは挙動を持たない</b>（<see cref="ShufflerTrait"/> の味方の側が読む）。
+/// 段の条件（敵の移動の累計 4/8/14）も、敵の入れ替えの数・混乱の上限も今のまま。
+/// </summary>
+public sealed class GaleTrait : Trait
+{
+    public static readonly int[] AllySwaps = { 2, 3, 3, 4 };
+    public override TraitId Id => TraitId.Gale;
+}
+
+/// <summary>
+/// 追い風（第229期・バサ・ハネの版 G2/G4）。<b>保持者が敵を後ろの行へ動かしたとき</b>（バサの入れ替え・ハネの吹っ飛ばし・弾き返し・突き返し・突き崩し——
+/// 動かしたのが保持者なら理由を問わない）、<b>その敵がいた席の経路</b>（中央は2本・番号の若い方から）の味方のうち、
+/// <b>最も後ろにいる味方1体</b>が、その経路で1つ前の味方と入れ替わって前へ踏み込む。HP が最大HPの4割を切っている味方は踏み込まない（次に後ろの味方で探す）。
+/// 敵1体を後ろへ動かすたびに1回。<b>判定は engine の入れ替えの窓口の通知</b>（<c>SwapSlots</c> / <c>RelocateLane</c>）で、実行は<b>入れ替えが全部終わってから</b>順に
+/// （入れ替えの途中は同じ席に2体いる瞬間があるため）。追い風の入れ替えの中で起きた敵の移動は追い風を呼ばない（連鎖しない・<c>TailwindNested</c> に数える）。
+/// <b>乱数を引かない</b>（入れ替えの窓口は占有者が 0/1 体なら引かない）。<b>札そのものは挙動を持たない。</b>
+/// </summary>
+public sealed class TailwindTrait : Trait
+{
+    public const int HpGatePercent = 40;
+    public override TraitId Id => TraitId.Tailwind;
+}
+
+/// <summary>
 /// 弾き返し（第228期・突き返しのハネの版 H2/H3）。<b>敵の攻撃による被弾（HP に届いた一撃）を受けたら、殴ってきた敵をその経路で1つ後ろの席へ弾く</b>
 /// （後ろの席の敵と入れ替え・空席ならそこへ）。弾かれた敵は転ぶ。入れ替えで前へ出た敵は、バサの対がいれば混乱する（<c>SwapSlots</c> の通知）。
 /// 代金は勢い余っての入れ替え（<see cref="OverrunTrait"/>）。
@@ -14855,6 +14903,8 @@ public static class TraitCatalog
         new BlastTrait(),            // 第228期
         new SpringTrait(),           // 第228期
         new BlastBothTrait(),        // 第228期
+        new GaleTrait(),             // 第229期
+        new TailwindTrait(),         // 第229期
         new ShioStageSlowTrait(),    // 第226期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期

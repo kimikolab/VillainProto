@@ -4682,6 +4682,21 @@ public sealed class BattleContext
     bool _decoyLive, _disarrayLive;
     /// <summary>第228期: 弾き返し（<c>SpringTrait</c>）の保持者が戦にいるか。いなければ被弾の後の判定を比較1つで抜ける。</summary>
     bool _springLive;
+    bool _tailwindLive;   // 第229期（追い風の保持者がいる戦）
+
+    /// <summary>
+    /// 転倒の穴（第229期・<see cref="ShufflerRule.StaggerHole"/>）: この駒は転倒していて壁にならない・引き受ける介入をしないか。
+    /// 規則が偽なら常に偽（第228期と1ビットも違わない）。
+    /// </summary>
+    public bool IsFallen(UnitState u) => Shuffler.StaggerHole && u.RawCounter(StatusKeys.Stagger) > 0;
+
+    /// <summary>介入の候補から転倒した駒を外す（外したら計数して真）。<b>候補の絞り込みの最後の条件に置く</b>（計数が「ほかの条件は満たしていた」回になるように）。</summary>
+    public bool HoleSkip(UnitState u)
+    {
+        if (!IsFallen(u)) return false;
+        TallyOf(u).HoleSkips++;
+        return true;
+    }
     /// <summary>第228期・<b>計数専用</b>: いまハネが動かしている動作（0 なし ／ 1 吹っ飛ばし ／ 2 弾き返し）。敵の乱れの混乱の帰属だけが読む。</summary>
     int _haneAct;
     /// <summary>挑発が主目標にした駒（標的選択1回ぶん・計数と表示のためだけ）。</summary>
@@ -5689,6 +5704,7 @@ public sealed class BattleContext
         foreach (UnitState h in _shieldHolders)
         {
             if (!h.IsAlive || h.TeamId != target.TeamId) continue;
+            if (HoleSkip(h)) continue;   // 第229期: 転倒の穴（倒れた盾は受け止めない）
             if (h == target) return h;
             extras ??= SecondaryTargets(actor, target, patternOverride);
             if (extras.Contains(h)) return h;
@@ -6684,6 +6700,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
         if (u.HasTrait(TraitId.Decoy)) _decoyLive = true;         // 第226期（挑発）
         if (u.HasTrait(TraitId.Spring)) _springLive = true;       // 第228期（弾き返し）
+        if (u.HasTrait(TraitId.Tailwind)) _tailwindLive = true;   // 第229期（追い風）
         if (u.HasTrait(TraitId.Disarray)) _disarrayLive = true;   // 第226期（敵の乱れ）
         // 第185期: 組み付き・見せしめ（手番の頭の2つのキーと標的の選好を短絡させる）／踏みしめ（範囲の盾・層の軽減）／
         // 据えた足（入れ替えの空振り）。**保持者がいなければ比較1つで抜ける**——既存の行が 0 件差分であることの根拠。
@@ -7786,6 +7803,18 @@ public sealed class BattleContext
 
         UnitState target = fixated ?? severed ?? shamed ?? decoy ?? pool[Roll(pool.Count)];
 
+        // 第229期（転倒の穴）: 転倒した列が立っていれば狙えなかった駒を選んだ（計数 ＋ 表示専用の出来事）。**規則が偽なら比較1つで抜ける。**
+        if (Shuffler.StaggerHole && !PoolOfPlain(foes).Contains(target))
+        {
+            TallyOf(attacker).HoleBreaches++;
+            Log($"    {attacker.Name} は倒れた前列を越えて {target.Name} を狙った", LogKind.Trigger);
+            if (_verbose) Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.StaggerBreach, Turn = _turn, ActorId = attacker.InstanceId, TargetId = target.InstanceId,
+                Slot = target.Slot, Team = attacker.TeamId,
+            });
+        }
+
         if (fixated is not null)
             Log($"    {attacker.Name} は {fixated.Name} から目を離せない", LogKind.Trigger);
         else if (severed is not null)
@@ -7800,7 +7829,7 @@ public sealed class BattleContext
         {
             // 後備えは範囲攻撃にも割り込む。貫きはレーン単位で解決するのでここを通らない。
             UnitState? rearAny = PickOne(foes.Where(
-                f => f.HasTrait(TraitId.RearGuard) && f.Row == Row.Back && f != target).ToList());
+                f => f.HasTrait(TraitId.RearGuard) && f.Row == Row.Back && f != target && !HoleSkip(f)).ToList());   // 第229期: 転倒の穴
 
             if (target.Row != Row.Front && rearAny is not null
                 && Roll(100) < RearGuardTrait.RedirectPercent)
@@ -7851,7 +7880,7 @@ public sealed class BattleContext
         }
 
         UnitState? rear = PickOne(foes.Where(
-            f => f.HasTrait(TraitId.RearGuard) && f.Row == Row.Back && f != target).ToList());
+            f => f.HasTrait(TraitId.RearGuard) && f.Row == Row.Back && f != target && !HoleSkip(f)).ToList());   // 第229期: 転倒の穴
 
         if (target.Row != Row.Front && rear is not null && Roll(100) < RearGuardTrait.RedirectPercent)
         {
@@ -7863,7 +7892,7 @@ public sealed class BattleContext
         }
 
         UnitState? guardian = PickOne(foes.Where(
-            f => f.HasTrait(TraitId.Guardian) && f.Row == Row.Front && f != target).ToList());
+            f => f.HasTrait(TraitId.Guardian) && f.Row == Row.Front && f != target && !HoleSkip(f)).ToList());   // 第229期: 転倒の穴
 
         // 第135期の計数。**鎖が庇いの段まで来て、この駒が判定を振られた回数。**
         // 成立したぶんは InterceptsByLabel の側にあるので、差が「振って外した回数」になる
@@ -7894,7 +7923,7 @@ public sealed class BattleContext
         // **PickOne は候補 0 個・1 個では Roll を消費しない**ので、段を1つ足しても
         // 乱数列は動かない（p=50 の同値検証がその証明）。
         UnitState? martyr = PickOne(foes.Where(
-            f => f.HasTrait(TraitId.Martyr) && f.Row == Row.Front && f != target).ToList());
+            f => f.HasTrait(TraitId.Martyr) && f.Row == Row.Front && f != target && !HoleSkip(f)).ToList());   // 第229期: 転倒の穴
 
         if (martyr is not null && Roll(100) < Martyr.RedirectPercent)
         {
@@ -7918,7 +7947,7 @@ public sealed class BattleContext
         UnitState? thornGuard = PickOne(foes.Where(
             f => f.HasTrait(TraitId.ThornGuard) && f != target
                  && f.RawCounter(ThornGuardTrait.PendingKey) > 0
-                 && ThornGuardTrait.Covers(f, target)).ToList());
+                 && ThornGuardTrait.Covers(f, target) && !HoleSkip(f)).ToList());   // 第229期: 転倒の穴
 
         if (thornGuard is not null)
         {
@@ -7983,7 +8012,25 @@ public sealed class BattleContext
         EmitConfused(actor, ConfusedLabels.Struck, null);
     }
 
-    private static List<UnitState> PoolOf(List<UnitState> foes)
+    private List<UnitState> PoolOf(List<UnitState> foes)
+    {
+        // 第229期（転倒の穴）: 転倒している駒は壁に数えない。**立っている駒がいる一番前の列**までを狙える（その手前の列の転倒した駒も狙える）。
+        // 転倒した駒が1体もいなければ下の道と1ビットも違わない（並びも同じ・乱数も同じ）。
+        if (Shuffler.StaggerHole && foes.Any(f => f.RawCounter(StatusKeys.Stagger) > 0))
+        {
+            foreach (Row r in new[] { Row.Front, Row.Mid, Row.Back })
+            {
+                if (!foes.Any(f => f.Row == r && f.RawCounter(StatusKeys.Stagger) == 0)) continue;
+                int d = FormationRules.DepthOf(r);
+                return foes.Where(f => FormationRules.DepthOf(f.Row) <= d).ToList();
+            }
+            return foes;
+        }
+        return PoolOfPlain(foes);
+    }
+
+    /// <summary>前列の規則（第228期まで）: 前列 → 中列 → 全員。</summary>
+    private static List<UnitState> PoolOfPlain(List<UnitState> foes)
     {
         List<UnitState> pool = foes.Where(f => f.Row == Row.Front).ToList();
         if (pool.Count == 0) pool = foes.Where(f => f.Row == Row.Mid).ToList();
@@ -8553,7 +8600,7 @@ public sealed class BattleContext
         UnitState? shield = null;
         if (_shieldHolders.Count > 0)
             foreach (UnitState h in _shieldHolders)
-                if (h.IsAlive && line.Contains(h)) { shield = h; break; }
+                if (h.IsAlive && line.Contains(h) && !HoleSkip(h)) { shield = h; break; }   // 第229期: 転倒の穴
 
         foreach (UnitState u in line)
         {
@@ -8796,7 +8843,7 @@ public sealed class BattleContext
         bool deflectedHere = false;
         if (_deflectHolders.Count > 0 && pattern == AttackPattern.Single && source is not null
             && source.TeamId != target.TeamId && !burnTick && !levy && !relayed && !hexShare && !isFriendlyFire
-            && target.HasTrait(TraitId.Deflect))
+            && target.HasTrait(TraitId.Deflect) && !HoleSkip(target))   // 第229期: 転倒の穴
         {
             UnitTally dt = TallyOf(target);
             UnitState? to = DeflectTrait.Target(this, target);
@@ -9319,7 +9366,8 @@ public sealed class BattleContext
             && target.HasTrait(TraitId.Parry)
             && target.RawCounter(ParryTrait.StockKey) > 0
             && (Parry.Scope == ParryScope.Any
-                || target.RawCounter(RedirectGainTrait.PendingKey) > 0))
+                || target.RawCounter(RedirectGainTrait.PendingKey) > 0)
+            && !HoleSkip(target))   // 第229期: 転倒の穴
         {
             target.SetCounter(ParryTrait.StockKey, target.RawCounter(ParryTrait.StockKey) - 1);
             if (LastStandTrait.Drawn(target)) TallyOf(target).LastStandParried++;   // 第198期（計数のみ。第199期の版は残った在庫のぶんだけ立つ）
@@ -10897,6 +10945,18 @@ public sealed class BattleContext
     /// </returns>
     public bool SwapSlots(UnitState self, int destSlot, UnitState? by = null)
     {
+        // 第229期（追い風）: 保持者がいなければ比較1つで素通り。いれば入れ替えの外側で控えた追い風を順に流す。
+        if (!_tailwindLive) return SwapSlotsCore(self, destSlot, by);
+        _moveDepth++;
+        bool moved;
+        try { moved = SwapSlotsCore(self, destSlot, by); }
+        finally { _moveDepth--; }
+        if (_moveDepth == 0) FlushTailwind();
+        return moved;
+    }
+
+    bool SwapSlotsCore(UnitState self, int destSlot, UnitState? by)
+    {
         UnitState? occupant = PickOne(
             LivingMembers(self.TeamId).Where(u => u.Slot == destSlot).ToList());
 
@@ -10925,19 +10985,19 @@ public sealed class BattleContext
         try
         {
             self.Slot = destSlot;
-            NotifyMoved(self, selfFrom, by);
+            NotifyMoved(self, selfFrom, origin, by);
 
             if (occupant is null) return true;
             Row otherFrom = occupant.Row;
             occupant.Slot = origin;
-            NotifyMoved(occupant, otherFrom, by);
+            NotifyMoved(occupant, otherFrom, destSlot, by);
             return true;
         }
         finally { CurrentMover = prevMover; }
     }
 
     /// <summary>動かされた駒1体ぶんの通知（第228期に <see cref="SwapSlots"/> の中から切り出した・中身は1文字も変えていない）。</summary>
-    void NotifyMoved(UnitState u, Row from, UnitState? by)
+    void NotifyMoved(UnitState u, Row from, int fromSlot, UnitState? by)
     {
         Emit(new BattleEvent
         {
@@ -10974,6 +11034,15 @@ public sealed class BattleContext
         // 敵の乱れ（第226期）: 陣営ごとの累計と、バサがいる間は前へ出た駒の混乱。**保持者がいなければ比較1つで抜ける。**
         if (_disarrayLive) NoteDisorder(u, from, by);
 
+        // 追い風（第229期）: 保持者が敵を後ろの行へ動かした。**ここでは控えるだけ**——入れ替えの途中（同じ席に2体いる瞬間）に味方を動かさない。
+        // 追い風の入れ替えの中で起きた敵の移動は追い風を呼ばない（連鎖しない）。**保持者がいなければ比較1つで抜ける。**
+        if (_tailwindLive && by is not null && by.TeamId != u.TeamId && by.HasTrait(TraitId.Tailwind)
+            && FormationRules.DepthOf(u.Row) > FormationRules.DepthOf(from))
+        {
+            if (_inTailwind) TallyOf(by).TailwindNested++;
+            else _tailwindQ.Enqueue((by, u, fromSlot, by.HasTrait(TraitId.Shuffler) ? 0 : _haneAct == 1 ? 1 : _haneAct == 2 ? 2 : 3));
+        }
+
         // 味方の反応を先に流す。OnMoved は割り込み攻撃まで含むので、逆順だと
         // シオの強化が「振った後」に乗る（軋みが +5 を載せずに振ってしまう）。
         // 支援が先・本人の反応が後、という順序をここで固定する。
@@ -11009,6 +11078,71 @@ public sealed class BattleContext
     /// </summary>
     public bool RelocateLane(IReadOnlyList<(UnitState U, int Dest)> moves, UnitState by)
     {
+        if (!_tailwindLive) return RelocateLaneCore(moves, by);
+        _moveDepth++;
+        bool done;
+        try { done = RelocateLaneCore(moves, by); }
+        finally { _moveDepth--; }
+        if (_moveDepth == 0) FlushTailwind();
+        return done;
+    }
+
+    // ---- 第229期: 追い風 ----
+    readonly Queue<(UnitState By, UnitState Foe, int FromSlot, int Src)> _tailwindQ = new();
+    int _moveDepth;
+    bool _inTailwind;
+
+    void FlushTailwind()
+    {
+        if (_inTailwind) return;
+        while (_tailwindQ.Count > 0)
+        {
+            var (by, foe, fromSlot, src) = _tailwindQ.Dequeue();
+            _inTailwind = true;
+            try { Tailwind(by, foe, fromSlot, src); }
+            finally { _inTailwind = false; }
+        }
+    }
+
+    /// <summary>
+    /// 追い風の本体（<see cref="TailwindTrait"/>）。敵がいた席の経路（中央は2本・番号の若い方から）で、味方の最後尾（HP 4割以上）を1つ前の味方と入れ替える。
+    /// <b>乱数を引かない</b>（入れ替えの窓口は占有者が 0/1 体なら引かない）。
+    /// </summary>
+    void Tailwind(UnitState by, UnitState foe, int fromSlot, int src)
+    {
+        UnitTally t = TallyOf(by);
+        t.TailwindTriggers++;
+        if (src == 0) t.TailwindFromShuffle++; else if (src == 1) t.TailwindFromBlast++; else if (src == 2) t.TailwindFromSpring++; else t.TailwindFromOther++;
+        var allies = LivingMembers(by.TeamId);
+        if (allies.Count < 2) { t.TailwindNoPair++; return; }
+        FormationShape shape = allies[0].Shape;
+        bool pair = false;
+        foreach (int lane in foe.Shape.LanesOf(fromSlot))
+        {
+            if (lane >= shape.LaneCount) continue;
+            var line = LaneOccupants(allies, lane, shape);
+            if (line.Count < 2) continue;
+            pair = true;
+            for (int i = line.Count - 1; i >= 1; i--)
+            {
+                UnitState step = line[i], back = line[i - 1];
+                if (step.Hp * 100 < step.MaxHp * TailwindTrait.HpGatePercent) { t.TailwindLowHp++; continue; }
+                Log($"    追い風: {by.Name} が {foe.Name} を押し下げた隙に、{step.Name} が {back.Name} の前へ踏み込んだ", LogKind.Trigger);
+                if (_verbose) Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.Tailwind, Turn = _turn, ActorId = by.InstanceId, TargetId = step.InstanceId,
+                    PartnerId = back.InstanceId, SpreadFromId = foe.InstanceId, Slot = lane, Team = by.TeamId,
+                });
+                if (SwapSlots(step, back.Slot, by)) { t.TailwindSteps++; TallyOf(step).TailwindStepped++; }
+                else t.TailwindRefused++;
+                return;
+            }
+        }
+        if (pair) t.TailwindAllLow++; else t.TailwindNoPair++;
+    }
+
+    bool RelocateLaneCore(IReadOnlyList<(UnitState U, int Dest)> moves, UnitState by)
+    {
         if (_plantedLive && moves.Any(m => m.U.HasTrait(TraitId.Planted))) return false;
         var from = moves.Select(m => (m.U, Row: m.U.Row, Slot: m.U.Slot)).ToList();
         foreach (var (u, dest) in moves) u.Slot = dest;
@@ -11018,7 +11152,7 @@ public sealed class BattleContext
         try
         {
             foreach (var (u, row, slot) in from)
-                if (u.Slot != slot) NotifyMoved(u, row, by);
+                if (u.Slot != slot) NotifyMoved(u, row, slot, by);
         }
         finally { CurrentMover = prevMover; _haneAct = 0; }
         return true;

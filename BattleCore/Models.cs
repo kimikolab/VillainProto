@@ -2323,6 +2323,22 @@ public sealed class UnitTally
     public long HavocTaken;
 
     /// <summary>
+    /// 第229期。<b>計数専用で、どの規則も読まない。</b>
+    /// 嵐（バサの側）: <c>GaleStirs</c> 味方を 3 体以上入れ替えた手番 ／ <c>GaleAllyMoved</c> そのとき席が変わった味方。
+    /// 追い風（保持者の側）: <c>TailwindTriggers</c> 敵を後ろの行へ動かした（＝追い風の機会）／ 出どころ別 <c>TailwindFromShuffle</c>（バサの入れ替え）・
+    /// <c>TailwindFromBlast</c>・<c>TailwindFromSpring</c>・<c>TailwindFromOther</c>（突き返し・突き崩しほか）／ <c>TailwindSteps</c> 踏み込ませた ／
+    /// <c>TailwindNoPair</c> 経路に味方が2体いない ／ <c>TailwindLowHp</c> 4割を切った味方を飛ばした（延べ）／ <c>TailwindAllLow</c> 飛ばした結果だれも踏み込めなかった ／
+    /// <c>TailwindRefused</c> 据えた足で空振り ／ <c>TailwindNested</c> 追い風の入れ替えの中で起きた敵の移動（追い風を呼ばない）。
+    /// 追い風で前へ出た味方の側: <c>TailwindStepped</c>。
+    /// 転倒の穴: <c>HoleSkips</c> 転倒していたので介入（挑発・後備え・庇う・殉教・棘守り・範囲の盾・受け流し・逸らし）の候補から外れた（その駒の側・延べ）／
+    /// <c>HoleBreaches</c> 転倒した列を越えて（その列が立っていれば狙えなかった駒を）主目標に選んだ（攻撃者の側）。
+    /// </summary>
+    public long GaleStirs, GaleAllyMoved,
+                TailwindTriggers, TailwindFromShuffle, TailwindFromBlast, TailwindFromSpring, TailwindFromOther,
+                TailwindSteps, TailwindNoPair, TailwindLowHp, TailwindAllLow, TailwindRefused, TailwindNested, TailwindStepped,
+                HoleSkips, HoleBreaches;
+
+    /// <summary>
     /// 第224期・シオの回復（<b>計数専用で、どの規則も読まない</b>）。保持者の側:
     /// <c>DrifterFires</c> 移り木で回復を試みた回数 ／ <c>DrifterNominal</c> 名目の量 ／ <c>DrifterGained</c> 実際に増えた HP（溢れ・渇き・反転を除く）／
     /// <c>DrifterBySrc</c>[出どころ]・<c>DrifterNomBySrc</c>[出どころ] 動かした駒で割った増分と名目（0 シオの手番・1 バサ・2 セロ・3 ハネ・4 ほかの味方・5 敵・6 不明）／
@@ -3390,7 +3406,20 @@ public enum BattleEventKind
     /// 弾き返し（第228期・突き返しのハネの版 H2/H3・<b>表示専用</b>）。<c>ActorId</c> ＝ ハネ ／ <c>TargetId</c> ＝ 殴ってきた敵 ／
     /// <c>Slot</c> ＝ 弾いた先の席 ／ <c>PartnerId</c> ＝ そこにいて前へ出た敵（空席なら null）。直後に入れ替えの <c>Move</c>・転倒・ハネ自身の入れ替え。
     /// </summary>
-    Spring
+    Spring,
+
+    /// <summary>
+    /// 追い風（第229期・バサ・ハネの版 G2/G4・<b>表示専用</b>）。<c>ActorId</c> ＝ 追い風の保持者（敵を後ろへ動かしたバサかハネ）／
+    /// <c>TargetId</c> ＝ 前へ踏み込む味方（経路の最後尾・HP 4割以上）／ <c>PartnerId</c> ＝ 後ろへ回る味方（経路で1つ前にいた）／
+    /// <c>SpreadFromId</c> ＝ 後ろへ動かされた敵（きっかけ）／ <c>Slot</c> ＝ 経路の番号。直後に2体の <c>Move</c>（<c>ActorId</c> ＝ 保持者）。
+    /// </summary>
+    Tailwind,
+
+    /// <summary>
+    /// 転倒の穴（第229期・G3/G4・<b>表示専用</b>）。<c>ActorId</c> ＝ 攻撃者 ／ <c>TargetId</c> ＝ 選んだ主目標（転倒した列が立っていれば狙えなかった駒）／
+    /// <c>Slot</c> ＝ 主目標の席。直後にその攻撃の <c>Attack</c>（介入に差し替えられればその相手へ）。
+    /// </summary>
+    StaggerBreach
 }
 
 /// <summary>
@@ -3819,6 +3848,7 @@ public sealed class BattleEvent
     /// <c>ActorId</c> はラウ、<c>TargetId</c> はうつされた隣の敵。線は <c>SpreadFromId</c> → <c>TargetId</c> に引く。
     /// <para><b>第185期 追補2</b>: 竦み（<see cref="StatusKeys.Cowed"/>）の <c>StatusGain</c> にも入る——
     /// <b>悲鳴の出どころ ＝ シガに責められた敵</b>（波紋の始点）。<c>ActorId</c> はシガ、<c>TargetId</c> は竦んだ隣の敵。</para>
+    /// <para><b>第229期</b>: 追い風（<see cref="BattleEventKind.Tailwind"/>）にも入る——<b>後ろへ動かされた敵</b>（追い風のきっかけ）。</para>
     /// それ以外では <c>null</c>。<b>どの規則も読まない。</b>
     /// </summary>
     public int? SpreadFromId { get; init; }

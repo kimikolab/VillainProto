@@ -1439,6 +1439,8 @@ static class TraitKeyMap
         [TraitId.Blast]           = Array.Empty<int>(),                                          // 第228期（手番の吹っ飛ばし・通貨を読まない）
         [TraitId.Spring]          = new[] { UnitTally.CarryHit },                               // 第228期（殴られたら弾き返す）
         [TraitId.BlastBoth]       = Array.Empty<int>(),                                          // 第228期（H3w）
+        [TraitId.Gale]            = new[] { UnitTally.CarryMove },                              // 第229期（味方の入れ替えを増やす）
+        [TraitId.Tailwind]        = new[] { UnitTally.CarryMove },                              // 第229期（敵の移動を味方の移動に）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1672,6 +1674,8 @@ static class TraitHookMap
         [TraitId.Blast]           = new[] { Engine },                              // 第228期（ReboundTrait の手番の頭で分岐・並べ替えは RelocateLane）
         [TraitId.Spring]          = new[] { "OnCarryOver", Engine },               // 第228期（判定は ApplyDamageBody の OnDamaged の直後）
         [TraitId.BlastBoth]       = new[] { Engine },                              // 第228期（BlastTrait が読む）
+        [TraitId.Gale]            = new[] { Engine },                              // 第229期（ShufflerTrait の味方の側が読む）
+        [TraitId.Tailwind]        = new[] { Engine },                              // 第229期（判定は SwapSlots / RelocateLane の通知）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）

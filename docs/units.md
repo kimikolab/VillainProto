@@ -289,6 +289,8 @@
 | `Blast` | 突き返しのハネ |
 | `Spring` | 突き返しのハネ |
 | `BlastBoth` | - |
+| `Gale` | - |
+| `Tailwind` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
