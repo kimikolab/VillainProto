@@ -2301,6 +2301,12 @@ public sealed class UnitTally
                 SquallFires, SquallCapped, SquallBlocked, SquallNested;
     public int[]? DisarrayStageTurn;
 
+    /// <summary>
+    /// 第227期・必死の逃げ足。<b>計数専用で、どの規則も読まない。</b><c>LastDodges</c> 倒れる一撃をかわした ／
+    /// <c>LastDodgeSpent</c> 倒れる一撃が来たが、その戦の回数を使い切っていた（かわさずに倒れた）。
+    /// </summary>
+    public long LastDodges, LastDodgeSpent;
+
     /// <summary>第225期・惨禍（カド）で増えた被ダメージ（名目・破片と上限の前）。受け手の側。<b>計数専用。</b></summary>
     public long HavocTaken;
 
@@ -3352,7 +3358,14 @@ public enum BattleEventKind
     DisarrayStage,
 
     /// <summary>動かされて吹く突風（第226期・バサの版 K4・<b>表示専用</b>）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ バサ ／ <c>StatusRemaining</c> ＝ そのターンの何回目か。直後にバサの <c>Attack</c>。</summary>
-    Squall
+    Squall,
+
+    /// <summary>
+    /// 必死の逃げ足（第227期・セロの版 L1/L2・<b>表示専用</b>）。倒れる一撃を必ずかわした。<c>ActorId</c> ＝ セロ ／ <c>TargetId</c> ＝ 殴った敵 ／
+    /// <c>Slot</c> ＝ その戦の何回目か（1〜3）／ <c>StatusRemaining</c> ＝ その戦の上限（段で 1/1/2/3）／ <c>Amount</c> ＝ セロの段 ／ <c>Pattern</c> ＝ かわした一撃の型。
+    /// 直後に通常の回避と同じ <c>Evade</c>（→ 入れ替えの <c>Move</c> ・撃ち返し）が並ぶ。
+    /// </summary>
+    LastDodge
 }
 
 /// <summary>

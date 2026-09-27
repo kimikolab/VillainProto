@@ -1433,6 +1433,7 @@ static class TraitKeyMap
         [TraitId.Disarray]        = new[] { UnitTally.CarryMove },                              // 第226期（敵が動かされた累計で段）
         [TraitId.Squall]          = new[] { UnitTally.CarryMove },                              // 第226期（動かされるたび突風）
         [TraitId.ShioStageSlow]   = new[] { UnitTally.CarryMove },                              // 第226期（シオの段を遅く）
+        [TraitId.LastDodge]       = new[] { UnitTally.CarryHit },                               // 第227期（倒れる一撃をかわす・回数は移動の段で）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1662,6 +1663,7 @@ static class TraitHookMap
         [TraitId.Disarray]        = new[] { Engine },                              // 第226期（累計と混乱は SwapSlots の通知・段は ShufflerTrait / ReboundTrait が読む）
         [TraitId.Squall]          = new[] { "OnMoved", "OnCarryOver" },            // 第226期（動かされて吹く突風）
         [TraitId.ShioStageSlow]   = new[] { Engine },                              // 第226期（ShioStageTrait.StageAtOf が読む）
+        [TraitId.LastDodge]       = new[] { "OnCarryOver", Engine },               // 第227期（判定は ApplyDamageBody の HP を引く直前）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）

@@ -462,6 +462,8 @@ public enum TraitId
                     // バサの敵の入れ替えは 2/3/3/4 体、ハネは段2 から2体を突き返す。転倒を「動けない敵」に数える。第227期から規定のバサ・ハネ
     Squall,         // 動かされて吹く突風（第226期・バサの版 K4）: バサが隊列を動かされるたび、手番の外で突風（今の攻撃）を1発（1ターン2回まで）。第227期から規定のバサ
     ShioStageSlow,  // シオの段を遅く（第226期）: 隊の乱れの段の条件を 4/8/14 → 8/16/26 に。**札そのものは挙動を持たない**。保持者 0 枚
+    LastDodge,      // 必死の逃げ足（第227期・セロの版 L1/L2）: 敵の攻撃で倒れる一撃だけは必ずかわす（通常の回避と同じ連鎖）。1戦に 段0〜1 で1回・段2 で2回・段3 で3回。
+                    // 状態異常・味方からのダメージでは発動しない。**判定は engine の `ApplyDamageBody`（HP を引く直前）**。回避（`Evade`）が無ければ働かない。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -12863,13 +12865,22 @@ public sealed class EvadeTrait : Trait
     {
         ctx.NoteEvadeRoll(self);
         if (ctx.Roll(100) >= PercentOf(self)) return false;
+        Dodge(ctx, self, foe, amount, pattern);
+        return true;
+    }
 
+    /// <summary>
+    /// かわした後の連鎖（第227期に <see cref="TryEvade"/> から切り出した・中身は1文字も変えていない）。
+    /// 攻撃力 +3 → 表示 → 入れ替え → 追い撃ち。必死の逃げ足（<see cref="LastDodgeTrait"/>）も乱数を振らずにここを通る。
+    /// </summary>
+    public static void Dodge(BattleContext ctx, UnitState self, UnitState foe, int amount, AttackPattern? pattern)
+    {
         self.SetCounter(GainKey, self.RawCounter(GainKey) + Gain);
         UnitState? partner = self.HasTrait(TraitId.EvadeSwap) ? EvadeSwapTrait.Pick(ctx, self) : null;
         ctx.NoteEvaded(self, foe, amount, partner, pattern);
         if (self.HasTrait(TraitId.EvadeSwap)) EvadeSwapTrait.Swap(ctx, self, partner);
 
-        if (ctx.InReaction) { ctx.NoteRiposteBlocked(self, inReaction: true); return true; }
+        if (ctx.InReaction) { ctx.NoteRiposteBlocked(self, inReaction: true); return; }
         ctx.Reaction(() =>
         {
             if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Evade)) { ctx.NoteRiposteBlocked(self, inReaction: false); return; }
@@ -12883,6 +12894,41 @@ public sealed class EvadeTrait : Trait
                 ctx.EvadeShot(self, foe, pierce, 1);
             }
         });
+    }
+}
+
+/// <summary>
+/// 必死の逃げ足（第227期・セロの版 L1/L2）。<b>敵の攻撃による被弾で倒れる（HP が 0 以下になる）一撃だけは、必ずかわす。</b>
+/// 通常の回避と同じに扱う（<see cref="EvadeTrait.Dodge"/>——攻撃力 +3・入れ替え・撃ち返し、入れ替えで動かされれば段も進む。状態の矢は撃ち返しの矢に乗る）。
+///
+/// <para>判定は engine の <c>ApplyDamageBody</c> の<b>HP を引く直前</b>（破片・受け流し・身構え・軛・猶予の後）。破片で受け切れる一撃はそこへ来ないので発動しない。
+/// 回避の判定（入口）に外れた一撃だけがそこへ来る。対象は回避と同じ「出どころが相手陣営 かつ 刻み・徴収・中継・呪いの共有ではない」一撃——
+/// 状態異常の刻み・放電・澱みの爆発・味方の巻き込みで倒れるときは発動しない。</para>
+///
+/// <para>1戦の回数は段で決まる（<see cref="Limits"/>: 段0〜1 で1回・段2 で2回・段3 で3回。段は <see cref="EvadeTrait.StageOf"/>）。
+/// 使った回数は私有キー（会戦の境界で 0 に戻す）。<b>乱数を引かない</b>（入れ替えの相手を選ぶ乱数は通常の回避と同じ口）。
+/// 回避（<see cref="TraitId.Evade"/>）の保持者でなければ働かない（engine の短絡が回避の保持者で掛かっている）。</para>
+/// </summary>
+public sealed class LastDodgeTrait : Trait
+{
+    public static readonly int[] Limits = { 1, 1, 2, 3 };
+    public const string UsedKey = "lastDodgeUsed";
+
+    public override TraitId Id => TraitId.LastDodge;
+
+    public static int LimitOf(UnitState u) => Limits[Math.Clamp(EvadeTrait.StageOf(u), 0, 3)];
+    public static int UsedOf(UnitState u) => u.RawCounter(UsedKey);
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(UsedKey, 0);
+
+    /// <summary>倒れる一撃が来た（engine の <c>ApplyDamageBody</c> だけが呼ぶ）。回数が残っていればかわして真を返す。</summary>
+    public static bool TryUse(BattleContext ctx, UnitState self, UnitState foe, int amount, AttackPattern? pattern)
+    {
+        int limit = LimitOf(self), used = UsedOf(self);
+        if (used >= limit) { ctx.NoteLastDodgeSpent(self); return false; }
+        self.SetCounter(UsedKey, used + 1);
+        ctx.NoteLastDodge(self, foe, amount, used + 1, limit, pattern);
+        EvadeTrait.Dodge(ctx, self, foe, amount, pattern);
         return true;
     }
 }
@@ -14638,6 +14684,7 @@ public static class TraitCatalog
         new DecoyTrait(),            // 第226期
         new DisarrayTrait(),         // 第226期
         new SquallTrait(),           // 第226期
+        new LastDodgeTrait(),        // 第227期
         new ShioStageSlowTrait(),    // 第226期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期

@@ -4774,6 +4774,21 @@ public sealed class BattleContext
         });
     }
 
+    /// <summary>必死の逃げ足（第227期・表示専用の出来事 ＋ 計数）。<b>盤面は1ビットも触らない。</b></summary>
+    public void NoteLastDodge(UnitState sero, UnitState foe, int amount, int ordinal, int limit, AttackPattern? pattern)
+    {
+        TallyOf(sero).LastDodges++;
+        Log($"    {sero.Name} は倒れる一撃を死ぬ気でかわした（{amount}・この戦 {ordinal}/{limit} 回目）", LogKind.Highlight);
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.LastDodge, Turn = _turn, ActorId = sero.InstanceId, TargetId = foe.InstanceId,
+            Slot = ordinal, StatusRemaining = limit, Amount = EvadeTrait.StageOf(sero), Pattern = pattern, Team = sero.TeamId,
+        });
+    }
+
+    /// <summary>倒れる一撃が来たが必死の逃げ足の回数を使い切っていた（第227期・計数のみ）。</summary>
+    public void NoteLastDodgeSpent(UnitState sero) => TallyOf(sero).LastDodgeSpent++;
+
     /// <summary>回避の判定を振った（第223期・計数のみ）。</summary>
     public void NoteEvadeRoll(UnitState sero) => TallyOf(sero).EvRolls++;
 
@@ -9417,6 +9432,17 @@ public sealed class BattleContext
         {
             // 切られなかったが上限に近い一撃（上限が効いている境界を見るため）。**計数のみ。**
             YokeNearHits[YokeSlot(pattern, target)]++;
+        }
+
+        // 必死の逃げ足（第227期・セロの版 L1/L2・`LastDodgeTrait`）。**HP を引く直前**——破片・受け流し・身構え・軛・猶予はすべて上で済んでいるので、
+        // 破片で受け切れる一撃はここへ来ない。倒れる一撃（`amount >= Hp`）のうち、回避と同じ「相手陣営の攻撃」だけ。
+        // かわしたら入口の回避と同じく `_evadedNow` を立てて返す（その一撃で減った破片などは戻さない）。**回避の保持者がいなければ比較1つで抜ける。**
+        if (_evadeLive && amount >= target.Hp && target.HasTrait(TraitId.LastDodge)
+            && source is not null && source.TeamId != target.TeamId && !burnTick && !levy && !relayed && !hexShare
+            && LastDodgeTrait.TryUse(this, target, source, amount, pattern))
+        {
+            _evadedNow = target;
+            return;
         }
 
         int hpBefore120 = target.Hp;   // 第120期の計数（オーバーキルを除いた実額を取るため）

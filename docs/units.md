@@ -285,6 +285,7 @@
 | `Disarray` | 喧噪のバサ、突き返しのハネ |
 | `Squall` | 喧噪のバサ |
 | `ShioStageSlow` | - |
+| `LastDodge` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

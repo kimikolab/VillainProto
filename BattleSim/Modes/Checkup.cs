@@ -299,6 +299,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.Disarray]        = (HcPlusL,  "敵が動かされた累計で段。バサがいる間はどの理由でも前へ出た敵が混乱・入れ替えと突き返しが増える（第226期・第227期から規定のバサ・ハネ）"),
         [TraitId.Squall]          = (HcPlusL,  "動かされるたび手番の外で突風を1発（1ターン2回・第226期・第227期から規定のバサ）"),
         [TraitId.ShioStageSlow]   = (HcMinusL, "シオの段の条件を 8/16/26 に遅らせる（第226期・保持者 0 枚）"),
+        [TraitId.LastDodge]       = (HcPlusL,  "倒れる一撃だけは必ずかわす（1戦に 段0〜1 で1回・段2 で2回・段3 で3回。第227期・セロの版・保持者 0 枚）"),
         [TraitId.MireBurstAll]    = (HcBothL,  "B2 を敵味方の両方に。漏れの印の味方が倒れると味方側で爆ぜる（第220期・B2x・保持者 0 枚）"),
         [TraitId.LastStandHold]   = (HcBothL,  "味方が 0 体になると盾を捨てて剣を抜く（受け止めた刃の1割を力に変え ×2・薙ぎ、斬り返し、相打ちで勝つ）のと、構え直せなくなるのが1つの札"),
         [TraitId.LastStandHoldOldScar]    = (HcBothL, "第199期の剣の段で、傷を身に受けた分だけ数える版。対照で保持者 0 枚"),

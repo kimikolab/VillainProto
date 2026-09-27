@@ -176,6 +176,7 @@ static partial class LastDodgeDiag
             var byId = player.ToDictionary(u => u.InstanceId);
             var enemyIds = enemy.Select(u => u.InstanceId).ToHashSet();
             UnitState? sero = player.FirstOrDefault(u => u.Def.Id == "sero");
+            bool spent = false;
             if (sero is not null && r.TallyByUnit.TryGetValue("sero", out var t))
             {
                 Drew += t.DecoyDrew; Stolen += t.DecoyStolen; EvRolls += t.EvRolls; Evades += t.Evades; Ripostes += t.EvRipostes;
@@ -183,12 +184,13 @@ static partial class LastDodgeDiag
                 long ld = Tally(t, "LastDodges");
                 Dodges += ld; DodgeSpent += Tally(t, "LastDodgeSpent");
                 if (ld > 0) DodgeBattles++;
+                spent = Tally(t, "LastDodgeSpent") > 0;
             }
 
             var tr = new DecoyDiag.Tracker(slot0, player);
             var lastDmg = new Dictionary<int, BattleEvent>();
             int seroHp = sero?.MaxHp ?? 0, seroHpBefore = seroHp;
-            bool dodged = false, spent = false;
+            bool dodged = false;
             foreach (BattleEvent e in r.Events)
             {
                 switch (e.Kind)
@@ -210,7 +212,6 @@ static partial class LastDodgeDiag
                     case var k when k.ToString() == "LastDodge" && sero is not null && e.ActorId == sero.InstanceId:
                         dodged = true;
                         DodgeByStage[Math.Clamp(e.Amount, 0, 3)]++;
-                        if (e.Slot == 0) spent = true;
                         break;
                     case BattleEventKind.Retreat when sero is not null && e.TargetId == sero.InstanceId && dodged:
                         LoweredAfterDodge++;
