@@ -3188,6 +3188,10 @@ public sealed class BrittleLedger
 
     /// <summary>脆さで足した量（切り上げ・破片や軛で後から削られる前の名目）。[陣営, 経路]。</summary>
     public readonly long[,] Extra = new long[2, 8];
+    /// <summary>脆さが掛かる前の量（その一撃の名目）。[陣営, 経路]。<c>Extra ÷ Base</c> が切り上げ込みの実効の割合。</summary>
+    public readonly long[,] Base = new long[2, 8];
+    /// <summary>反転に掛かった脆さの前の量。</summary>
+    public long InverseBase;
     /// <summary>脆さが掛かった回数。[陣営, 経路]。</summary>
     public readonly long[,] Hits = new long[2, 8];
     /// <summary>反転（ベニ）で回復に化けた刻み・放電に掛かった脆さの分（F3・F4 の味方側）と回数。</summary>
@@ -3196,6 +3200,8 @@ public sealed class BrittleLedger
     public long PlankTimesBrittle;
     /// <summary>熾のホタに掛かった脆さの分（燃えて強くなる駒の代金）。</summary>
     public long PyreExtra;
+    /// <summary>脆さの分のうち軛（1発 25）に切られた量の見積もり（切り落とした量と脆さの分の小さい方）。</summary>
+    public long YokeCutExtra;
 }
 
 /// <summary><see cref="BattleEventKind.Plank"/> の <c>Text</c>（第207期・<b>表示専用</b>）。</summary>
@@ -3495,6 +3501,13 @@ public sealed class BattleEvent
     /// <para>逸らしの元の一撃の攻撃者は、逸らしの <c>Damage</c> の <c>ActorId</c> にそのまま入っている（元の攻撃者のまま）。</para>
     /// </summary>
     public int? ThrustCharge { get; init; }
+
+    /// <summary>
+    /// 燃焼の脆さ（第219期・<c>EmberRule.Brittle</c>）で足した分（<b>表示専用</b>）。<c>Damage</c> にだけ載る。
+    /// <b>破片・軛・身構え・肩代わりで削られる前の名目</b>で、<c>Amount</c>（HP が実際に減った量）の内訳ではない。
+    /// 脆さが掛からなかった一撃では <c>null</c>。
+    /// </summary>
+    public int? BrittleExtra { get; init; }
 
     /// <summary>
     /// 第202期・<b>表示専用</b>。規則で選ぶ陣形（パターン2）の貫きが抜けた経路（0 ＝ 1-2 ／ 1 ＝ 2-3）。

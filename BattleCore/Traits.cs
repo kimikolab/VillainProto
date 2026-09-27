@@ -8883,8 +8883,26 @@ public sealed class PyreTrait : Trait
 /// （<see cref="PyreTrait"/> の doc）、配る／配らないの二値しかない。
 /// 代金・上限も最初から付けていない（第118・126・127・128期と同じ。素の効き方を先に測る）。</para>
 /// </summary>
-public readonly record struct EmberRule(bool Enabled, bool Fireproof = true, int TickHeal = 0)
+public readonly record struct EmberRule(bool Enabled, bool Fireproof = true, int TickHeal = 0, int Brittle = 0, bool BrittleAllies = false)
 {
+    // 第219期: **燃焼の脆さ**（`Brittle`・%）と、それを味方にも掛けるか（`BrittleAllies`）。
+    // 燃焼が付いている間（残りターン 1 以上・燃焼の刻みそのものも含む）、受けるダメージを ×(100 + Brittle)/100（切り上げ）にする。
+    // 判定は engine の2箇所——`ApplyDamageBody` の入口の族（§1 の標 +50% の直後・据え／矢面／巨躯／破片／身構え／軛より前）と、
+    // 反転（ベニ）の `InverseHeal` の入口（伸びた量をそのまま回復に反転する）。**中継（巨躯・分かち）と呪いの共有には掛けない**
+    // （一撃の重さは最初の受け手で決まる）。**既定 0 ＝ 脆さなし（F0）**——比較1つで抜けるので第218期と1ビットも違わない。
+    // 版は F1 ＝ 敵だけ 25 ／ F2 ＝ 敵だけ 50 ／ F3 ＝ 両方 25 ／ F4 ＝ 両方 50（<see cref="Scorched"/>）。**採否はポンが遊んで決める。**
+    // **引数を増やさないために熾火の窓口に同居させた**（第154期・第178期の作法）。
+
+    /// <summary>第219期の版（<paramref name="tag"/> = F0〜F4）。F0 は <see cref="Default"/> と同じ。</summary>
+    public static EmberRule Scorched(string tag) => tag switch
+    {
+        "F1" => Default with { Brittle = 25 },
+        "F2" => Default with { Brittle = 50 },
+        "F3" => Default with { Brittle = 25, BrittleAllies = true },
+        "F4" => Default with { Brittle = 50, BrittleAllies = true },
+        _ => Default,
+    };
+
     /// <summary>
     /// <b>既定は「配らない」＝第130期に測って採用しなかった</b>（<see cref="Off"/> と同じ）。
     /// <b>機構は完全に動く</b>——ボルグの燃焼率 0.0% → 11.2%、

@@ -846,7 +846,14 @@ public sealed class BattleContext
             // burnTick: この刻みが破片に吸われた量・HP を削った量を、
             // 毒の刻み（同じく source が null）と混ぜずに数えるための札。**盤面には影響しない。**
             MarkTickHit();   // 第214期
+            // 第219期: 燃焼の刻みそのもの（最後の刻みは残りターンを減らした後に刻むので、札で「燃えている」と渡す）。
+            if (Ember.Brittle > 0)
+            {
+                _burnTickSelf = true;
+                if (burnDmg > BurnRules.Damage && BrittleApplies(u)) BrittleBook.PlankTimesBrittle++;   // 計数のみ
+            }
             ApplyDamage(u, burnDmg, null, burnTick: true);
+            _burnTickSelf = false;
             if (!u.IsAlive) bt.BurnDeaths++;
         }
     }
@@ -3346,6 +3353,14 @@ public sealed class BattleContext
     /// <summary>燃焼の在り方と脆さの帳簿（第219期・<b>計数専用</b>）。</summary>
     public readonly BrittleLedger BrittleBook = new();
 
+    /// <summary>燃焼の刻みそのものの札（第219期・<see cref="ApplyDamageBody"/> の頭で読んで消す）。</summary>
+    bool _burnTickSelf;
+    /// <summary>叩きつけ・通電の札（第219期・<b>計数の経路だけ</b>）。</summary>
+    bool _brittleSlamNext;
+
+    /// <summary>燃焼の脆さがこの駒の陣営に掛かるか（第219期）。敵だけの版は敵陣営にだけ。</summary>
+    bool BrittleApplies(UnitState u) => Ember.BrittleAllies || u.TeamId != PlayerTeam;
+
     /// <summary>点けられた側の帳簿（<c>Def.Id</c> → 点いた回数・煽られた回数）。</summary>
     public readonly Dictionary<string, (long Lit, long Relit)> BurnOn = new();
 
@@ -5092,6 +5107,15 @@ public sealed class BattleContext
     /// <summary>反転の回復を1段行う（<c>kind</c>: 0 刻みの毒 ／ 1 刻みの燃焼 ／ 2 起爆）。渇き・支援拒否は <see cref="Heal"/> がそのまま掛ける。</summary>
     void InverseHeal(UnitState beni, UnitState u, int amount, int kind, string what)
     {
+        // 第219期: 燃焼の脆さ（F3・F4）。**伸びた量をそのまま回復に反転する**。燃焼の刻み（kind 1）は刻みそのものなので燃えていると数える。
+        if (Ember.Brittle > 0 && amount > 0 && BrittleApplies(u) && (kind == 1 || u.RawCounter(StatusKeys.Burn) > 0))
+        {
+            int extra = (amount * Ember.Brittle + 99) / 100;
+            amount += extra;
+            BrittleBook.InverseBase += amount - extra;
+            BrittleBook.InverseExtra += extra;
+            BrittleBook.InverseHits++;
+        }
         Log($"    {u.Name} の{what}は {beni.Name} の隣で薬になる（+{amount}）", LogKind.Status);
         int before = u.Hp;
         HealOutcome res = Heal(u, amount, beni, inverted: true);
@@ -6845,8 +6869,10 @@ public sealed class BattleContext
         if (!u.IsAlive || amt <= 0) return;
         int before = u.Hp;
         bool wasShocked = u.RawCounter(StatusKeys.Shock) > 0;
+        _brittleSlamNext = true;   // 第219期・計数の経路だけ（1回の呼び出しにだけ効く）
         if (first) ApplyDamage(u, amt, mio, singleHit: true, pattern: AttackPattern.Single);
         else ApplyDamage(u, amt, mio);
+        _brittleSlamNext = false;
         t.MireSlamDealt += before - Math.Max(0, u.Hp);
         if (wasShocked && u.RawCounter(StatusKeys.Shock) <= 0) { if (first) t.MireSlamPops++; else t.MireConductPops++; }
         if (before > 0 && !u.IsAlive) t.MireSlamKills++;
@@ -8155,6 +8181,11 @@ public sealed class BattleContext
         UnitState? shockKiller = _shockKiller;
         _shockKillerSet = false;
         _shockKiller = null;
+        // 第219期: 燃焼の刻みそのものの札・叩きつけの札（1回の呼び出しにだけ効く・ここで読んで消す）。
+        bool burnTickSelf = _burnTickSelf;
+        _burnTickSelf = false;
+        bool slamHit = _brittleSlamNext;
+        _brittleSlamNext = false;
 
         if (!target.IsAlive || amount <= 0) return;
 
@@ -8318,6 +8349,29 @@ public sealed class BattleContext
                 else TallyOf(source).MarkVulnDealt += extra;
                 Log($"    指差された {target.Name} は深く傷ついた（+{extra}）", LogKind.Trigger);
             }
+        }
+
+        // 燃焼の脆さ（第219期・`EmberRule.Brittle`）。**入口の族の最後**（惨禍・荷・§1 の直後）で、
+        // 据え・散開・萎縮・矢面・層・巨躯・分かち・破片・身構え・軛より前＝**一撃の重さそのものが上がる**。
+        // 攻め手側の増減（萎縮・痺れ毒・澱み・呪い則のなまり）は `PerformAttack` と各口で既に掛かっている。
+        // **中継（巨躯・分かち）と呪いの共有には掛けない**——最初の受け手で重さが決まった一撃の分け前なので、
+        // 掛けると同じ一撃に2度乗る。逸らし（ソラ）と棘守りの上限は入口で**素の量**を割るので、それぞれの受け手で1度ずつ乗る。
+        // **増幅は加算・切り上げ**（`amount + ⌈amount × Brittle / 100⌉`）。既定 0 なら比較1つで抜ける。
+        int brittleExtra = 0;
+        if (Ember.Brittle > 0 && !relayed && !hexShare && BrittleApplies(target)
+            && (burnTickSelf || target.RawCounter(StatusKeys.Burn) > 0))
+        {
+            brittleExtra = (amount * Ember.Brittle + 99) / 100;
+            amount += brittleExtra;
+            int route = burnTickSelf ? 6 : slamHit ? 2 : shockNote == 1 ? 1 : shockNote == 3 ? 3
+                      : source is null ? 5 : InReaction ? 4 : levy ? 7
+                      : source.TeamId != target.TeamId ? 0 : 7;
+            int side = SideOf(target);
+            BrittleBook.Base[side, route] += amount - brittleExtra;
+            BrittleBook.Extra[side, route] += brittleExtra;
+            BrittleBook.Hits[side, route]++;
+            if (target.HasTrait(TraitId.Pyre)) BrittleBook.PyreExtra += brittleExtra;
+            Log($"    燃える {target.Name} は脆くなっている（+{brittleExtra}）", LogKind.Status);
         }
 
         // 据え: このターン差し出された駒は硬くなる。
@@ -8783,6 +8837,8 @@ public sealed class BattleContext
             // 第171期・**表示専用**。**`amount` を書き換える前**に打つ（切り落とされた量は
             // ここでしか取れない）。`ActorId` は殴った駒——粛・渇きと違って相手が居る唯一の封じ。
             EmitSealed(target, SealedLabels.Yoke, amount - Yoke.Cap, source);
+            // 第219期・**計数のみ**。脆さの分のうち上限に切られた量（切り落とした量と脆さの分の小さい方＝上限の見積もり）。
+            if (brittleExtra > 0) BrittleBook.YokeCutExtra += Math.Min(brittleExtra, amount - Yoke.Cap);
             amount = Yoke.Cap;
         }
         else if (Yoke.Cap > 0 && amount > Yoke.Cap * 4 / 5 && YokeBinding)
@@ -8849,7 +8905,9 @@ public sealed class BattleContext
             // 第186期・表示専用。逸らしの受け渡しの段だけ、逸らした駒（ソラ）を載せる
             DeflectFromId = deflectFrom?.InstanceId,
             // 第186期 追補・表示専用。この逸らしで積んだ後の溜めの段（突きの保持者だけ）
-            ThrustCharge = deflectCharge
+            ThrustCharge = deflectCharge,
+            // 第219期・表示専用。燃焼の脆さで足した分（破片・軛で削られる前の名目）
+            BrittleExtra = brittleExtra > 0 ? brittleExtra : null,
         });
 
         if (source is not null && !isFriendlyFire)
