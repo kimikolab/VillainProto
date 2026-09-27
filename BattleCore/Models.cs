@@ -3204,6 +3204,45 @@ public sealed class BrittleLedger
     public long YokeCutExtra;
 }
 
+/// <summary>
+/// 倒れた瞬間の在庫（毒の層・濃縮の印・隣の生きている駒）と、澱みの爆発（第220期・<c>MireBurst</c> 系の札）の帳簿。<b>計数専用で、どの規則も読まない。</b>
+/// <para>陣営の添字は <b>0 ＝ 敵 ／ 1 ＝ 味方</b>（倒れた駒・爆発を受けた駒の陣営）。</para>
+/// </summary>
+public sealed class BurstLedger
+{
+    /// <summary>毒の層の段（倒れた瞬間）: 0 ／ 1〜3 ／ 4〜7 ／ 8〜15 ／ 16〜31 ／ 32 以上。</summary>
+    public static readonly string[] PoisonBins = { "0", "1〜3", "4〜7", "8〜15", "16〜31", "32〜" };
+    public static int PoisonBin(int p) => p <= 0 ? 0 : p <= 3 ? 1 : p <= 7 ? 2 : p <= 15 ? 3 : p <= 31 ? 4 : 5;
+
+    /// <summary>倒れた駒の数・そのうち印を持っていた数。</summary>
+    public readonly long[] Deaths = new long[2], DeathsMarked = new long[2];
+    /// <summary>印を持って倒れた駒の、倒れた瞬間の毒の層の段の分布・印の数の分布（1〜4, 5 以上）。</summary>
+    public readonly long[][] PoisonHist = { new long[6], new long[6] }, MarkHist = { new long[6], new long[6] };
+    /// <summary>印を持って倒れた駒の毒の層の和・印の和。</summary>
+    public readonly long[] PoisonSum = new long[2], MarkSum = new long[2];
+    /// <summary>倒れた瞬間に隣にいた生きている同じ陣営の駒の数の分布（0〜4, 5 以上）・和（倒れた駒すべて）。</summary>
+    public readonly long[][] NeighborHist = { new long[6], new long[6] };
+    public readonly long[] NeighborSum = new long[2];
+    /// <summary>同じ死で「印が隣へ移った」と「疫み（ラウ）の毒が飛んだ」が両方起きた回数。</summary>
+    public long HandoffAndContagion;
+    /// <summary>毒の窓口の経路ごとの書いた回数・量（添字は <c>PoisonRoute</c>）。</summary>
+    public readonly long[] PoisonWrites = new long[32], PoisonAmount = new long[32];
+
+    // ---- 澱みの爆発（第220期・札が無ければ 0 のまま）----
+    /// <summary>爆ぜた回数（燃料 0 で何も起きなかった分は <see cref="BurstsEmpty"/>）。</summary>
+    public readonly long[] Bursts = new long[2], BurstsEmpty = new long[2];
+    /// <summary>爆発が当たった回数・名目の量の和・HP が実際に減った量の和・倒した数・受けた駒の感電を弾いた数。[受けた側]</summary>
+    public readonly long[] Hits = new long[2], Nominal = new long[2], Removed = new long[2], Kills = new long[2], ShockPops = new long[2];
+    /// <summary>反転（ベニ）で回復になった爆発の回数・名目の量・実際に癒えた量。</summary>
+    public long InverseHits, InverseNominal, InverseHealed;
+    /// <summary>連鎖の段ごとの爆ぜた回数・名目の量（1発あたり）の和・1発の数（段 0 ＝ 連鎖の最初。9 以上は 9）。</summary>
+    public readonly long[] StageBursts = new long[10], StageNominal = new long[10], StageHits = new long[10];
+    /// <summary>1つの連鎖で爆ぜた数の分布（1〜9, 10 以上は 10）。</summary>
+    public readonly long[] ChainLenHist = new long[11];
+    /// <summary>連鎖の最初の死が放電で倒れた回数・雷で・爆発以外の刻みで。</summary>
+    public long RootByDischarge, RootByThunder;
+}
+
 /// <summary><see cref="BattleEventKind.Plank"/> の <c>Text</c>（第207期・<b>表示専用</b>）。</summary>
 public static class PlankLabels
 {
@@ -4010,6 +4049,9 @@ public sealed class BattleResult
 
     /// <summary>燃焼の在り方と脆さの帳簿（第219期・<see cref="BrittleLedger"/>）。<b>計数専用で、どの規則も読まない。</b></summary>
     public BrittleLedger? Brittle { get; init; }
+
+    /// <summary>倒れた瞬間の在庫と澱みの爆発の帳簿（第220期・<see cref="BurstLedger"/>）。<b>計数専用で、どの規則も読まない。</b></summary>
+    public BurstLedger? Burst { get; init; }
 
     /// <summary>
     /// 第184期。標の軸（§1 被ダメージ増・§2 矢面の半減）の帳簿（<b>計数専用</b>。どの規則も読まない）。

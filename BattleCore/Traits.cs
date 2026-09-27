@@ -8889,18 +8889,19 @@ public readonly record struct EmberRule(bool Enabled, bool Fireproof = true, int
     // 燃焼が付いている間（残りターン 1 以上・燃焼の刻みそのものも含む）、受けるダメージを ×(100 + Brittle)/100（切り上げ）にする。
     // 判定は engine の2箇所——`ApplyDamageBody` の入口の族（§1 の標 +50% の直後・据え／矢面／巨躯／破片／身構え／軛より前）と、
     // 反転（ベニ）の `InverseHeal` の入口（伸びた量をそのまま回復に反転する）。**中継（巨躯・分かち）と呪いの共有には掛けない**
-    // （一撃の重さは最初の受け手で決まる）。**既定 0 ＝ 脆さなし（F0）**——比較1つで抜けるので第218期と1ビットも違わない。
-    // 版は F1 ＝ 敵だけ 25 ／ F2 ＝ 敵だけ 50 ／ F3 ＝ 両方 25 ／ F4 ＝ 両方 50（<see cref="Scorched"/>）。**採否はポンが遊んで決める。**
+    // （一撃の重さは最初の受け手で決まる）。第219期は既定 0（F0）で残置、**第220期の前段で F1（敵だけ 25%）を規定にした**（ポンの判断）。
+    // F0 は `Scorched("F0")`——比較1つで抜けるので第219期の規定と1ビットも違わない。
+    // 版は F1 ＝ 敵だけ 25 ／ F2 ＝ 敵だけ 50 ／ F3 ＝ 両方 25 ／ F4 ＝ 両方 50（<see cref="Scorched"/>）。
     // **引数を増やさないために熾火の窓口に同居させた**（第154期・第178期の作法）。
 
-    /// <summary>第219期の版（<paramref name="tag"/> = F0〜F4）。F0 は <see cref="Default"/> と同じ。</summary>
+    /// <summary>第219期の版（<paramref name="tag"/> = F0〜F4）。<b>第220期から F1 が <see cref="Default"/></b>・F0 は脆さなし。</summary>
     public static EmberRule Scorched(string tag) => tag switch
     {
-        "F1" => Default with { Brittle = 25 },
-        "F2" => Default with { Brittle = 50 },
+        "F1" => Default with { Brittle = 25, BrittleAllies = false },
+        "F2" => Default with { Brittle = 50, BrittleAllies = false },
         "F3" => Default with { Brittle = 25, BrittleAllies = true },
         "F4" => Default with { Brittle = 50, BrittleAllies = true },
-        _ => Default,
+        _ => Default with { Brittle = 0, BrittleAllies = false },
     };
 
     /// <summary>
@@ -8931,7 +8932,8 @@ public readonly record struct EmberRule(bool Enabled, bool Fireproof = true, int
     /// 熾のホタ（<see cref="PyreTrait"/>）1枚にしか掛からない。
     /// <b>引数を1本も増やさないために、熾火の窓口をこの1つにまとめてある</b>（第154期の作法）。</para>
     /// </summary>
-    public static EmberRule Default => new(false);
+    /// <remarks>第220期: 燃焼の脆さ F1（敵だけ 25%）を規定に（ポンの判断）。</remarks>
+    public static EmberRule Default => new(false, Brittle: 25);
 
     /// <summary>配る版（第130期に測った版）。<b>既定ではない。</b></summary>
     public static EmberRule On => new(true);

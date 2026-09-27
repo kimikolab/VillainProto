@@ -1573,6 +1573,7 @@ public sealed class BattleContext
         }
 
         target.SetCounter(StatusKeys.Poison, target.RawCounter(StatusKeys.Poison) + add);
+        BurstBook.PoisonWrites[(int)route]++; BurstBook.PoisonAmount[(int)route] += add;   // 第220期・**計数のみ**
         EmitStatusGain(target, StatusKeys.Poison, add, writer, route, spreadFrom);   // 第97期・表示専用（滲みで増えたぶんも込み）。第183期 追補2: 経路と伝染元
         if (add != amount)
             Log($"    {target.Name} の{(deepW ? "深手" : "傷口")}から毒が滲みた（+{add - amount}）", LogKind.Status);
@@ -3353,10 +3354,34 @@ public sealed class BattleContext
     /// <summary>燃焼の在り方と脆さの帳簿（第219期・<b>計数専用</b>）。</summary>
     public readonly BrittleLedger BrittleBook = new();
 
+    /// <summary>倒れた瞬間の在庫と澱みの爆発の帳簿（第220期・<b>計数専用</b>）。</summary>
+    public readonly BurstLedger BurstBook = new();
+
     /// <summary>燃焼の刻みそのものの札（第219期・<see cref="ApplyDamageBody"/> の頭で読んで消す）。</summary>
     bool _burnTickSelf;
     /// <summary>叩きつけ・通電の札（第219期・<b>計数の経路だけ</b>）。</summary>
     bool _brittleSlamNext;
+
+    /// <summary>倒れた瞬間の在庫（第220期・<b>計数のみ</b>）。</summary>
+    void NoteDeathStock(UnitState dead)
+    {
+        BurstLedger b = BurstBook;
+        int side = SideOf(dead);
+        b.Deaths[side]++;
+        int nb = 0;
+        foreach (UnitState u in _units)
+            if (u != dead && u.IsAlive && u.TeamId == dead.TeamId && FormationRules.AreAdjacent(dead, u)) nb++;
+        b.NeighborHist[side][Math.Min(nb, 5)]++;
+        b.NeighborSum[side] += nb;
+        int cm = dead.RawCounter(StatusKeys.Concentrated);
+        if (cm <= 0) return;
+        int p = dead.RawCounter(StatusKeys.Poison);
+        b.DeathsMarked[side]++;
+        b.PoisonHist[side][BurstLedger.PoisonBin(p)]++;
+        b.MarkHist[side][Math.Min(cm, 5)]++;
+        b.PoisonSum[side] += p;
+        b.MarkSum[side] += cm;
+    }
 
     /// <summary>燃焼の脆さがこの駒の陣営に掛かるか（第219期）。敵だけの版は敵陣営にだけ。</summary>
     bool BrittleApplies(UnitState u) => Ember.BrittleAllies || u.TeamId != PlayerTeam;
@@ -9424,6 +9449,8 @@ public sealed class BattleContext
             Slot = dead.Slot
         });
 
+        NoteDeathStock(dead);   // 第220期・**計数のみ**（倒れた瞬間の毒・印・隣）
+        bool handedOff = false;   // 第220期・計数のみ（疫みと重なったか）
         // 第218期: 倒れた瞬間に持っていた濃縮の印（**計数のみ**）と、倒れたら移る（M5・敵だけ）。印が1つも無い戦闘は旗1本で抜ける。
         if (_markLive)
         {
@@ -9431,7 +9458,7 @@ public sealed class BattleContext
             if (cm > 0)
             {
                 TallyOf(dead).ConcMarksAtDeath += cm;
-                if (_mireHandoff && _mireHolder is not null && dead.TeamId != _mireHolder.TeamId) MireHandoff(dead, cm);
+                if (_mireHandoff && _mireHolder is not null && dead.TeamId != _mireHolder.TeamId) { MireHandoff(dead, cm); handedOff = true; }
             }
         }
 
@@ -9502,6 +9529,9 @@ public sealed class BattleContext
                 this.EndTrait(m);
             }
         if (TaillightImmediate) EndTlChain(tlPrevChain);
+        // 第220期・**計数のみ**: 同じ死で印の移りと疫み（ラウ）の毒の飛びが両方起きた。
+        if (handedOff && dead.RawCounter(StatusKeys.Poison) > 0 && _units.Any(u => u.IsAlive && u.HasTrait(TraitId.Contagion)))
+            BurstBook.HandoffAndContagion++;
 
         // 味方限定の通知。蘇生はこちらで、墓守が強化を得た後に走る。
         foreach (UnitState ally in LivingMembers(dead.TeamId).ToList())
@@ -10679,6 +10709,7 @@ public static class BattleEngine
                 new Dictionary<string, (long, long)>(ctx.ArmorTopBy)),
             // 第134期 段1・段2。**計数専用**（どの規則も読まない）。
             Brittle = ctx.BrittleBook,   // 第219期（計数のみ）
+            Burst = ctx.BurstBook,       // 第220期（計数のみ）
             Burns = new BurnLedger(
                 (long[])ctx.BurnLitSide.Clone(), (long[])ctx.BurnRelitSide.Clone(),
                 (long[])ctx.BurnEpisodes.Clone(), (long[])ctx.BurnRelitSum.Clone(),

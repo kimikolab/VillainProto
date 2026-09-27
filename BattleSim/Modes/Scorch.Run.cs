@@ -300,7 +300,7 @@ static partial class ScorchDiag
         var rows = CompareBuilds();
         foreach (var (name, f) in rows)
         {
-            var a0 = Measure(f, EnemyScaleRule.Adopted, EmberRule.Default, waves: new[] { 3 });
+            var a0 = Measure(f, EnemyScaleRule.Adopted, EmberRule.Scorched("F0"), waves: new[] { 3 });
             if (a0.FoeLitBattles.Sum() == 0) continue;
             foreach (string v in new[] { "F0", "F2" })
             {

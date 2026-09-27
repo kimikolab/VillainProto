@@ -319,7 +319,7 @@ static partial class ScorchDiag
         Console.WriteLine();
         var rows = CompareBuilds();
         var aggs = new SAgg[rows.Length];
-        for (int i = 0; i < rows.Length; i++) aggs[i] = Measure(rows[i].F, EnemyScaleRule.Adopted, EmberRule.Default);
+        for (int i = 0; i < rows.Length; i++) aggs[i] = Measure(rows[i].F, EnemyScaleRule.Adopted, EmberRule.Scorched("F0"));
         var all = new SAgg();
         foreach (var a in aggs) all.Merge(a);
         Console.WriteLine("| 波 | 敵の駒×ターンのうち燃えていた % | 1体でも燃えていたターン % | 敵に火が付いた戦 % | 味方に火が付いた戦 % |");
@@ -380,14 +380,14 @@ static partial class ScorchDiag
         foreach (var (tag, mem) in new[] { ("H1", H1Members()), ("H2", H2Members()) })
             foreach (var sh in new[] { FormationShape.X, FormationShape.Diamond })
             {
-                var (best, w, ties, ta) = PickSeat(mem, sh, EmberRule.Default, ShockDiag.Scale150);
+                var (best, w, ties, ta) = PickSeat(mem, sh, EmberRule.Scorched("F0"), ShockDiag.Scale150);
                 provisional.Add((tag + " " + ShapeName(sh), best));
-                var byScale = new[] { 115, 150, 200, 250 }.Select(x => Measure(best, new EnemyScaleRule(x, x), EmberRule.Default)).ToArray();
+                var byScale = new[] { 115, 150, 200, 250 }.Select(x => Measure(best, new EnemyScaleRule(x, x), EmberRule.Scorched("F0"))).ToArray();
                 Console.WriteLine("| " + tag + " | " + ShapeName(sh) + " | " + SeatsNamed(best) + " | " + w + " | " + ties + " | " + ta + " | "
                                   + string.Join(" | ", byScale.Select(a => F1(a.Mean25))) + " | " + F1(byScale[1].AllSurvPct) + " | " + F1(byScale[2].AllSurvPct) + " |");
             }
         {
-            var byScale = new[] { 115, 150, 200, 250 }.Select(x => Measure(PonX(), new EnemyScaleRule(x, x), EmberRule.Default)).ToArray();
+            var byScale = new[] { 115, 150, 200, 250 }.Select(x => Measure(PonX(), new EnemyScaleRule(x, x), EmberRule.Scorched("F0"))).ToArray();
             Console.WriteLine("| H1 | ポンの X字 | " + SeatsNamed(PonX()) + " | — | — | — | "
                               + string.Join(" | ", byScale.Select(a => F1(a.Mean25))) + " | " + F1(byScale[1].AllSurvPct) + " | " + F1(byScale[2].AllSurvPct) + " |");
         }
@@ -406,7 +406,7 @@ static partial class ScorchDiag
         foreach (var (n, f) in benches)
             foreach (var sc in new[] { ShockDiag.Scale115, ShockDiag.Scale150 })
             {
-                var a = Measure(f, sc, EmberRule.Default);
+                var a = Measure(f, sc, EmberRule.Scorched("F0"));
                 var ids = f.Occupied().Select(o => o.Def.Id).ToHashSet();
                 string top = string.Join("・", a.IgniteFoe.Where(kv => ids.Contains(kv.Key)).OrderByDescending(kv => kv.Value).Take(3)
                     .Select(kv => Short(UnitCatalog.Everyone.First(d => d.Id == kv.Key)) + " " + F2(a.Per(kv.Value))).DefaultIfEmpty("—"));
