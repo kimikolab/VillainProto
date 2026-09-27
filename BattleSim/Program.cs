@@ -1424,6 +1424,9 @@ static class TraitKeyMap
         [TraitId.EvadeVolley]     = new[] { UnitTally.CarryMove },                              // 第224期（F3・段3 で 7 本）
         [TraitId.DrifterMend]     = new[] { UnitTally.CarryMove },                              // 第224期（H1/H2・移り木を最大HPの 20%）
         [TraitId.RegroupTend]     = new[] { UnitTally.CarryMove },                              // 第224期（H2・下げた味方を手当て）
+        [TraitId.RegroupTendSelf] = new[] { UnitTally.CarryMove },                              // 第225期（J1〜J4・手当ては自分にも）
+        [TraitId.ShioStage]       = new[] { UnitTally.CarryMove },                              // 第225期（J2/J4・味方が動かされた累計で段）
+        [TraitId.Retreat]         = new[] { UnitTally.CarryHit },                               // 第225期（J3/J4・4割を切った被弾で緊急退避）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1646,6 +1649,9 @@ static class TraitHookMap
         [TraitId.EvadeVolley]     = new[] { Engine },                              // 第224期（EvadeTrait.ArrowsOf → engine の Barrage）
         [TraitId.DrifterMend]     = new[] { Engine },                              // 第224期（DrifterTrait.HealOf が読む）
         [TraitId.RegroupTend]     = new[] { Engine },                              // 第224期（RegroupTrait が組み替えの後に読む）
+        [TraitId.RegroupTendSelf] = new[] { Engine },                              // 第225期（RegroupTrait が読む）
+        [TraitId.ShioStage]       = new[] { "OnMoved", "OnAllyMoved", "OnCarryOver" }, // 第225期（段の累計）
+        [TraitId.Retreat]         = new[] { "OnDamaged", "OnAllyDamaged", "OnCarryOver" }, // 第225期（緊急退避）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）

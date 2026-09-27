@@ -2279,6 +2279,21 @@ public sealed class UnitTally
                 RegroupLowered, RegroupPushed;
 
     /// <summary>
+    /// 第225期・緊急退避と隊の乱れの段（シオの版 J2〜J4）。<b>計数専用で、どの規則も読まない。</b>
+    /// 保持者の側: <c>RetreatChances</c> 味方が4割を切った被弾（判定に来た回数）／ <c>RetreatNoPartner</c> 後ろ側に相手がいなかった ／
+    /// <c>RetreatSpent</c> そのターンの回数を使い切っていた ／ <c>RetreatHeld</c> 痺れ・組み付き・割り込みの中で出せなかった ／
+    /// <c>RetreatHushed</c> 粛で出せなかった ／ <c>RetreatSwaps</c> 下げた回数 ／ <c>RetreatSelf</c> そのうち自分を下げた ／
+    /// <c>RetreatInReaction</c> そのうち反撃の中 ／ <c>ShioStageTurn</c>[段] その段に初めて届いたターン（0 ＝ 届かない）。
+    /// 受け手の側: <c>RetreatLowered</c> 下げられた ／ <c>RetreatPushed</c> 前へ出された。
+    /// </summary>
+    public long RetreatChances, RetreatNoPartner, RetreatSpent, RetreatHeld, RetreatHushed, RetreatSwaps, RetreatSelf, RetreatInReaction,
+                RetreatLowered, RetreatPushed;
+    public int[]? ShioStageTurn;
+
+    /// <summary>第225期・惨禍（カド）で増えた被ダメージ（名目・破片と上限の前）。受け手の側。<b>計数専用。</b></summary>
+    public long HavocTaken;
+
+    /// <summary>
     /// 第224期・シオの回復（<b>計数専用で、どの規則も読まない</b>）。保持者の側:
     /// <c>DrifterFires</c> 移り木で回復を試みた回数 ／ <c>DrifterNominal</c> 名目の量 ／ <c>DrifterGained</c> 実際に増えた HP（溢れ・渇き・反転を除く）／
     /// <c>DrifterBySrc</c>[出どころ]・<c>DrifterNomBySrc</c>[出どころ] 動かした駒で割った増分と名目（0 シオの手番・1 バサ・2 セロ・3 ハネ・4 ほかの味方・5 敵・6 不明）／
@@ -3292,7 +3307,21 @@ public enum BattleEventKind
     /// 状態の矢（第223期・E2・<b>表示専用</b>）。<c>ActorId</c> ＝ セロ ／ <c>TargetId</c> ＝ 矢が当たった敵 ／
     /// <c>Text</c> ＝ 付けた状態の表示名（「毒,燃焼,感電」の部分集合）。直後に状態ごとの <c>StatusGain</c> が並ぶ。
     /// </summary>
-    StatusArrow
+    StatusArrow,
+
+    /// <summary>
+    /// 緊急退避（第225期・シオの版 J3/J4・<b>表示専用</b>）。<c>ActorId</c> ＝ シオ ／ <c>TargetId</c> ＝ 下げた駒（HP が4割を切った味方）／
+    /// <c>PartnerId</c> ＝ 前へ出した駒（後ろ側の隣）／ <c>Slot</c> ＝ そのときの段（段の札が無ければ 0）／
+    /// <c>StatusRemaining</c> ＝ そのターンの何回目か（1〜）／ <c>HpAfter</c>・<c>Amount</c> ＝ 下げた駒のそのときの HP と最大HP。
+    /// 直後に2体の <c>Move</c>（<c>ActorId</c> ＝ シオ）が続き、移り木の <c>Heal</c> ほかがその後に並ぶ。
+    /// </summary>
+    Retreat,
+
+    /// <summary>
+    /// 隊の乱れの段が上がった（第225期・J2/J4・<b>表示専用</b>）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ シオ ／ <c>Slot</c> ＝ 新しい段（1〜3）／
+    /// <c>Amount</c> ＝ 味方が動かされた累計。
+    /// </summary>
+    ShioStage
 }
 
 /// <summary>

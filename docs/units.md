@@ -278,6 +278,9 @@
 | `EvadeVolley` | - |
 | `DrifterMend` | - |
 | `RegroupTend` | - |
+| `RegroupTendSelf` | - |
+| `ShioStage` | - |
+| `Retreat` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

@@ -453,6 +453,9 @@ public enum TraitId
     EvadeVolley,    // 乱れ撃ちの増し矢（第224期・F3）: 段3 の乱れ撃ちを 5 本 → 7 本に。**札そのものは挙動を持たない**。保持者 0 枚
     DrifterMend,    // 移り木の厚い手当て（第224期・シオの版 H1/H2）: 移り木の回復を +10 → 動かされた味方の最大HPの 20% に。**札そのものは挙動を持たない**（`DrifterTrait` が読む）。保持者 0 枚
     RegroupTend,    // 下げて手当て（第224期・H2）: 組み替えで下げた味方を、さらに最大HPの 20% 回復する（シオ自身を下げたときは癒さない）。**札そのものは挙動を持たない**。保持者 0 枚
+    RegroupTendSelf, // 手当ては自分にも（第225期・シオの版 J1〜J4）: 組み替えでシオ自身を下げたときも手当てが入る。**札そのものは挙動を持たない**（`RegroupTrait` が読む）。保持者 0 枚
+    ShioStage,      // 隊の乱れの段（第225期・J2/J4）: 味方が隊列を動かされた累計（4/8/14）で段が上がり、移り木の回復（20/30/40/40%）と攻撃（+5/+8/+12/+12）・緊急退避の回数（1/2/3/4）が増える。保持者 0 枚
+    Retreat,        // 緊急退避（第225期・J3/J4）: 味方の HP が最大HPの 4 割を切ったら、手番の外で割り込み、その味方を後ろ側の隣の味方と入れ替えて下げる（1ターンの回数は段で 1〜4・段が無ければ 1）。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -7698,7 +7701,15 @@ public sealed class DrifterTrait : Trait
 
     /// <summary>移り木の回復の名目。<see cref="TraitId.DrifterMend"/> を持てば受け手の最大HPの 20%、無ければ <see cref="Heal"/>。</summary>
     public static int HealOf(UnitState self, UnitState moved)
-        => self.HasTrait(TraitId.DrifterMend) ? moved.MaxHp * MendPercent / 100 : Heal;
+        => self.HasTrait(TraitId.ShioStage) ? moved.MaxHp * StagePercent[ShioStageTrait.StageOf(self)] / 100
+         : self.HasTrait(TraitId.DrifterMend) ? moved.MaxHp * MendPercent / 100 : Heal;
+
+    /// <summary>第225期（J2/J4・<see cref="TraitId.ShioStage"/>）: 段 0〜3 の回復（受け手の最大HPの %）と攻撃の上乗せ。</summary>
+    public static readonly int[] StagePercent = { 20, 30, 40, 40 };
+    public static readonly int[] StageGain = { 5, 8, 12, 12 };
+
+    /// <summary>移り木の攻撃の上乗せ。<see cref="TraitId.ShioStage"/> を持てば段で、無ければ <see cref="Gain"/>。</summary>
+    public static int GainOf(UnitState self) => self.HasTrait(TraitId.ShioStage) ? StageGain[ShioStageTrait.StageOf(self)] : Gain;
 
     public override void OnAllyMoved(BattleContext ctx, UnitState self, UnitState moved)
     {
@@ -7707,8 +7718,9 @@ public sealed class DrifterTrait : Trait
         int before = moved.Hp;
         ctx.Heal(moved, heal, self);
         ctx.NoteDrifterHeal(self, heal, moved.Hp - before);   // 第224期・計数のみ
-        ctx.Whet(moved, Gain, WhetRoute.Drifter);
-        ctx.Log($"    {self.Name} が流された {moved.Name} を拾い上げた（+{heal} / 攻撃 +{Gain}）", LogKind.Trigger);
+        int gain = GainOf(self);
+        ctx.Whet(moved, gain, WhetRoute.Drifter);
+        ctx.Log($"    {self.Name} が流された {moved.Name} を拾い上げた（+{heal} / 攻撃 +{gain}）", LogKind.Trigger);
     }
 }
 
@@ -12621,14 +12633,27 @@ public sealed class RegroupTrait : Trait
         });
         foreach (UnitState low in hurt)
         {
-            int depth = FormationRules.DepthOf(low.Row);
-            UnitState? with = team
-                .Where(a => a != low && FormationRules.AreAdjacent(low, a) && FormationRules.DepthOf(a.Row) > depth)
-                .OrderBy(a => a.Slot).FirstOrDefault();
+            UnitState? with = BackOf(team, low);
             if (with is not null) return (low, with);
         }
         return null;
     }
+
+    /// <summary>
+    /// 後ろ側の隣（組み替えと緊急退避が共有する<b>判定の1本</b>・第225期に切り出した）: <paramref name="team"/>（召喚枠と据えた足を除いた生きている味方）のうち、
+    /// <paramref name="low"/> と隣接し、より後ろの行にいる駒を席番号の順で1体。いなければ null。<b>乱数を引かない。</b>
+    /// </summary>
+    public static UnitState? BackOf(IEnumerable<UnitState> team, UnitState low)
+    {
+        int depth = FormationRules.DepthOf(low.Row);
+        return team
+            .Where(a => a != low && FormationRules.AreAdjacent(low, a) && FormationRules.DepthOf(a.Row) > depth)
+            .OrderBy(a => a.Slot).FirstOrDefault();
+    }
+
+    /// <summary>組み替え・緊急退避の相手になれる味方（生きている・召喚枠でない・据えた足でない）。</summary>
+    public static List<UnitState> Movable(BattleContext ctx, int team)
+        => ctx.LivingMembers(team).Where(u => !FormationRules.IsSummonSlot(u) && !u.HasTrait(TraitId.Planted)).ToList();
 
     public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Regroup(ctx, self);
 
@@ -12653,7 +12678,8 @@ public sealed class RegroupTrait : Trait
         ctx.Log($"    {self.Name} が傷ついた {low.Name} を下げ、{with.Name} を前へ出した", LogKind.Trigger);
         ctx.RegroupSwap(self, low, with);   // SwapSlots ＋ 表示専用の出来事 ＋ 計数
         // 第224期（H2）: 下げた味方をさらに手当てする（シオ自身を下げたときは癒さない・移り木と同じく自分は癒さない）。
-        if (self.HasTrait(TraitId.RegroupTend) && low != self && low.IsAlive)
+        // 第225期（J1〜J4・`RegroupTendSelf`）: シオ自身を下げたときも入る（ポンの判断）。
+        if (self.HasTrait(TraitId.RegroupTend) && (low != self || self.HasTrait(TraitId.RegroupTendSelf)) && low.IsAlive)
         {
             int heal = low.MaxHp * DrifterTrait.MendPercent / 100;
             int before = low.Hp;
@@ -12838,6 +12864,107 @@ public sealed class DrifterMendTrait : Trait { public override TraitId Id => Tra
 
 /// <summary>組み替えで下げた味方の手当て（第224期・H2）。<b>札そのものは判定を持たない</b>（<see cref="RegroupTrait"/> が読む）。</summary>
 public sealed class RegroupTendTrait : Trait { public override TraitId Id => TraitId.RegroupTend; }
+
+/// <summary>手当てはシオ自身を下げたときも入る（第225期・J1〜J4）。<b>札そのものは判定を持たない</b>（<see cref="RegroupTrait"/> が読む）。</summary>
+public sealed class RegroupTendSelfTrait : Trait { public override TraitId Id => TraitId.RegroupTendSelf; }
+
+/// <summary>
+/// 隊の乱れの段（第225期・シオの版 J2/J4）。<b>味方が隊列を動かされた累計</b>（誰がどう動かしても1体につき1回・入れ替えなら2回。
+/// シオ自身が動かされた分も数える）が <see cref="StageAt"/>（4/8/14）に届くたび段が上がる。<b>段は戦のあいだ下がらない。</b>
+/// 段で変わるのは移り木の回復と攻撃（<see cref="DrifterTrait.HealOf"/> / <see cref="DrifterTrait.GainOf"/>）と、
+/// 緊急退避の1ターンの回数（<see cref="RetreatTrait.LimitOf"/>）。<b>乱数を引かない。</b>
+///
+/// <para>数えるのは移り木の後——シオの札の並び（移り木が先）なので、段を上げた一つの移動は<b>上がる前の段</b>で癒される。
+/// シオが倒れている間の移動は数えない（<c>OnAllyMoved</c> は生きている味方にしか届かない）。会戦の境界で 0 に戻す。</para>
+/// </summary>
+public sealed class ShioStageTrait : Trait
+{
+    public override TraitId Id => TraitId.ShioStage;
+
+    /// <summary>段1・段2・段3 に要る「味方が動かされた累計」（仮置き・第225期 Phase 0 で見て据え置いた）。</summary>
+    public static readonly int[] StageAt = { 4, 8, 14 };
+    public const string MovesKey = "shioMoves";
+
+    public static int MovesOf(UnitState u) => u.RawCounter(MovesKey);
+    public static int StageOf(UnitState u)
+    {
+        int m = MovesOf(u), st = 0;
+        foreach (int t in StageAt) if (m >= t) st++;
+        return st;
+    }
+
+    public override void OnAllyMoved(BattleContext ctx, UnitState self, UnitState moved) => Count(ctx, self);
+    public override void OnMoved(BattleContext ctx, UnitState self, Row from, Row to) => Count(ctx, self);
+    public override void OnCarryOver(UnitState self) => self.SetCounter(MovesKey, 0);
+
+    static void Count(BattleContext ctx, UnitState self)
+    {
+        int before = StageOf(self);
+        self.SetCounter(MovesKey, MovesOf(self) + 1);
+        int after = StageOf(self);
+        if (after > before) ctx.NoteShioStage(self, after, MovesOf(self));
+    }
+}
+
+/// <summary>
+/// 緊急退避（第225期・シオの版 J3/J4）。<b>味方（シオ自身も）の HP が一撃の後に最大HPの <see cref="Percent"/>% を切っていたら、
+/// シオが手番の外で割り込み、その味方を後ろ側の隣（<see cref="RegroupTrait.BackOf"/>・組み替えと同じ規則）と入れ替えて下げる。</b>
+///
+/// <para>作法は応急処置（<see cref="FirstAidTrait"/>）に揃えた: 判定は被弾ごと（跨いだ一撃に限らない）・
+/// <c>CanActOutOfTurn(シオ, OutOfTurnRoute.Retreat)</c>（痺れ・組み付き・粛で止まる。転倒・竦みでは止まらない）・倒れていれば出ない・敵が 0 体なら出ない・
+/// <c>ctx.Interrupt</c> で包む（割り込みの中では出ない）。<b>一つだけ違う——反撃（<c>Reaction</c>）の中でも出す</b>
+/// （指示書 §1: カドの棘の巻き込みが緊急退避の引き金。巻き込みは反撃の中で起きる）。</para>
+///
+/// <para>1ターンの回数は <see cref="LimitOf"/>（段 0〜3 で 1〜4・段の札が無ければ 1）。<b>後ろ側に相手がいなければ割り込まない（回数も使わない）。</b>
+/// 召喚枠の駒と据えた足の駒は下げない。入れ替えは <c>SwapSlots(下げる駒, 相手の席, by: シオ)</c> なので2体とも「隊列を動かされた」扱い。<b>乱数を引かない。</b></para>
+/// </summary>
+public sealed class RetreatTrait : Trait
+{
+    public const int Percent = 40;
+    public static readonly int[] Limits = { 1, 2, 3, 4 };
+    /// <summary>そのターン ＋ 1（私有キー）と、そのターンに下げた回数。</summary>
+    public const string TurnKey = "shioRetreatTurn";
+    public const string CountKey = "shioRetreatCount";
+
+    public override TraitId Id => TraitId.Retreat;
+
+    public static int LimitOf(UnitState self) => self.HasTrait(TraitId.ShioStage) ? Limits[ShioStageTrait.StageOf(self)] : Limits[0];
+    public static bool Needs(UnitState u) => u.IsAlive && u.Hp * 100 < u.MaxHp * Percent;
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source) => Try(ctx, self, self, dmg);
+    public override void OnAllyDamaged(BattleContext ctx, UnitState self, UnitState ally, int dmg, UnitState? source) => Try(ctx, self, ally, dmg);
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(TurnKey, 0);
+        self.SetCounter(CountKey, 0);
+    }
+
+    static void Try(BattleContext ctx, UnitState self, UnitState low, int dmg)
+    {
+        if (dmg <= 0 || !self.IsAlive || !Needs(low)) return;
+        if (FormationRules.IsSummonSlot(low) || low.HasTrait(TraitId.Planted)) return;
+        UnitTally t = ctx.TallyOf(self);
+        t.RetreatChances++;
+        UnitState? with = RegroupTrait.BackOf(RegroupTrait.Movable(ctx, low.TeamId), low);
+        if (with is null) { t.RetreatNoPartner++; return; }
+        int limit = LimitOf(self);
+        int used = self.RawCounter(TurnKey) == ctx.Turn + 1 ? self.RawCounter(CountKey) : 0;
+        if (used >= limit) { t.RetreatSpent++; return; }
+        if (ctx.InInterrupt) { t.RetreatHeld++; return; }
+        if (ctx.LivingMembers(ctx.Opponent(self.TeamId)).Count == 0) return;
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Retreat))
+        {
+            if (ctx.HushBindingNow) t.RetreatHushed++; else t.RetreatHeld++;
+            return;
+        }
+        self.SetCounter(TurnKey, ctx.Turn + 1);
+        self.SetCounter(CountKey, used + 1);
+        int stage = self.HasTrait(TraitId.ShioStage) ? ShioStageTrait.StageOf(self) : 0;
+        ctx.Log($"    {self.Name} が崩れかけた {low.Name} を割り込んで下げ、{with.Name} を前へ出した（緊急退避）", LogKind.Trigger);
+        ctx.Interrupt(() => ctx.RetreatSwap(self, low, with, stage, used + 1));
+    }
+}
 
 /// <summary>
 /// 状態の矢（第223期・セロの版 E2）。<b>セロの矢が当たるたび</b>（手番・追い撃ち・乱れ撃ちの各1本＝`PerformAttack` 1回の主目標）、
@@ -14333,6 +14460,9 @@ public static class TraitCatalog
         new EvadeVolleyTrait(),      // 第224期
         new DrifterMendTrait(),      // 第224期
         new RegroupTendTrait(),      // 第224期
+        new RegroupTendSelfTrait(),  // 第225期
+        new ShioStageTrait(),        // 第225期
+        new RetreatTrait(),          // 第225期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期
         new HexLeakTrait(),    // 第189期

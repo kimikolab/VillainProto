@@ -469,6 +469,8 @@ public enum OutOfTurnRoute
     FirstAid,
     /// <summary>追い撃ち（<c>EvadeTrait</c>・第223期。避けた後の撃ち返し。<b>避けること自体と入れ替えは問わない</b>——行動ではない）。</summary>
     Evade,
+    /// <summary>緊急退避（<c>RetreatTrait</c>・第225期。<b>問う相手はシオ</b>——下げられる味方ではない）。</summary>
+    Retreat,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -478,7 +480,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -5748,20 +5750,66 @@ public sealed class BattleContext
 
     /// <summary>
     /// 移り木の回復（第224期・<b>計数のみ</b>）。<paramref name="gained"/> は実際に増えた HP（負なら 0）。
-    /// 出どころは <see cref="CurrentMover"/>（シオの手番の入れ替えならシオ自身）。
+    /// 出どころは <see cref="CurrentMover"/>（シオの手番の入れ替えならシオ自身）。第225期: 緊急退避の入れ替えは添字 7。
     /// </summary>
     public void NoteDrifterHeal(UnitState shio, int nominal, int gained)
     {
         UnitTally t = TallyOf(shio);
         UnitState? by = CurrentMover;
         int src = by is null ? 6
-                : by == shio ? 0
+                : by == shio ? (_inRetreatSwap ? 7 : 0)
                 : by.TeamId != shio.TeamId ? 5
                 : by.Def.Id == "basa" ? 1 : by.Def.Id == "sero" ? 2 : by.Def.Id == "hane" ? 3 : 4;
         int g = Math.Max(0, gained);
         t.DrifterFires++; t.DrifterNominal += nominal; t.DrifterGained += g;
-        (t.DrifterBySrc ??= new long[7])[src] += g;
-        (t.DrifterNomBySrc ??= new long[7])[src] += nominal;
+        (t.DrifterBySrc ??= new long[8])[src] += g;
+        (t.DrifterNomBySrc ??= new long[8])[src] += nominal;
+    }
+
+    /// <summary>第225期・計数専用: 緊急退避の入れ替えの最中か（移り木の出どころの帳簿だけが読む）。</summary>
+    bool _inRetreatSwap;
+
+    /// <summary>
+    /// 緊急退避の入れ替え（第225期・<see cref="RetreatTrait"/> だけが呼ぶ）。表示専用の出来事 ＋ <see cref="SwapSlots"/> ＋ 計数。
+    /// <b>盤面を変えるのは <c>SwapSlots</c> だけ</b>（組み替えの <see cref="RegroupSwap"/> と同じ形）。
+    /// </summary>
+    public void RetreatSwap(UnitState shio, UnitState low, UnitState with, int stage, int ordinal)
+    {
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Retreat,
+            Turn = _turn,
+            ActorId = shio.InstanceId,
+            TargetId = low.InstanceId,
+            PartnerId = with.InstanceId,
+            Slot = stage,
+            StatusRemaining = ordinal,
+            HpAfter = low.Hp,
+            Amount = low.MaxHp,
+        });
+        UnitTally t = TallyOf(shio);
+        t.RetreatSwaps++;
+        if (low == shio) t.RetreatSelf++;
+        if (InReaction) t.RetreatInReaction++;
+        TallyOf(low).RetreatLowered++;
+        TallyOf(with).RetreatPushed++;
+        bool prev = _inRetreatSwap;
+        _inRetreatSwap = true;
+        try { SwapSlots(low, with.Slot, shio); }
+        finally { _inRetreatSwap = prev; }
+    }
+
+    /// <summary>隊の乱れの段が上がった（第225期・表示専用の出来事 ＋ 計数）。</summary>
+    public void NoteShioStage(UnitState shio, int stage, int moves)
+    {
+        var st = TallyOf(shio).ShioStageTurn ??= new int[4];
+        if (st[stage] == 0) st[stage] = Math.Max(1, _turn);
+        Log($"    {shio.Name} の拾う手が速くなる（隊の乱れ 段 {stage}）", LogKind.Trigger);
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.ShioStage, Turn = _turn, ActorId = shio.InstanceId, TargetId = shio.InstanceId,
+            Slot = stage, Amount = moves,
+        });
     }
 
     /// <summary>手当て（第224期・H2・<b>計数のみ</b>）。</summary>
@@ -8733,6 +8781,7 @@ public sealed class BattleContext
         {
             havocExtra = amount * HavocTrait.Percent / 100;
             amount += havocExtra;
+            if (havocExtra > 0) TallyOf(target).HavocTaken += havocExtra;   // 第225期・計数のみ（名目・破片と上限の前）
         }
 
         // 荷（BurdenTrait・第154期）: 預かりを抱えている味方は、抱えている間だけ被ダメージが増える。
