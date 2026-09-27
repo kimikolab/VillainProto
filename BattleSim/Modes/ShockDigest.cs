@@ -13,6 +13,7 @@ using BattleCore;
 //                                                                    ——第219期からミオの規定は M5 なので、この台は `MireDiag.VerOf("M0")` を引く
 //     dotnet run --project BattleSim -c Release 0 shockdigest d222  # 第222期の台（V0＝今のシオ・ヨミの台本が実装の前後で一致すること）
 //     dotnet run --project BattleSim -c Release 0 shockdigest f224  # 第224期の台（F0＝第223期 E2・H0＝規定のシオの台本が実装の前後で一致すること）
+//     dotnet run --project BattleSim -c Release 0 shockdigest r225  # 第225期の台（J0＝規定のシオ・規定のセロの台本が実装の前後で一致すること）
 //     dotnet run --project BattleSim -c Release 0 shockdigest m219 cat|m5  # 第219期の台（cat ＝ 規定のミオ ／ m5 ＝ 第218期の診断の版 M5）
 //                                                                    ——**第218期の worktree で `m5`、第219期で `cat` を回して全行一致**なら M5 の規定化が台本を変えていない
 //
@@ -29,7 +30,7 @@ static class ShockDigestDiag
     /// <summary>後の期に足した出来事の種類（名前で持つ・古い worktree でも回る）。</summary>
     static Formation D222(Formation f) => DriftDiag.Apply(f, DriftDiag.ShioV0, DriftDiag.YomiV0);
 
-    static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff", "MireBurst", "Regroup", "Evade", "EvadeRiposte", "EvadeStage", "Barrage", "StatusArrow" };
+    static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff", "MireBurst", "Regroup", "Evade", "EvadeRiposte", "EvadeStage", "Barrage", "StatusArrow", "Retreat", "ShioStage" };
     /// <summary>後の期に足した <c>BattleEvent</c> の欄。</summary>
     static readonly HashSet<string> SkipProps = new() { "BrittleExtra", "PartnerId" };
 
@@ -79,6 +80,15 @@ static class ShockDigestDiag
                 ("K-リリ", SeroShioDiag.Apply(SeroShioDiag.K(UnitCatalog.Lili), SeroShioDiag.F0, SeroShioDiag.H0)),
                 ("K-ツギ", SeroShioDiag.Apply(SeroShioDiag.K(UnitCatalog.Tsugi), SeroShioDiag.F0, SeroShioDiag.H0)),
             }.Concat(SeroShioDiag.S4Rows().Select(r => ("S4 " + r.Name, SeroShioDiag.Apply(r.F, SeroShioDiag.F0, SeroShioDiag.H0)))).ToArray()
+            : mode == "r225"
+            // 第225期（受け入れ 2）: J0（規定のシオ）の台本が実装の前後で一致すること。台は Phase 0 の仮の席 ＋ シオのいる compare の行。
+            // **第223期以降の出来事と `PartnerId` も指紋に入れる**（前段で規定になったセロが出すので）。
+            ? new (string, Formation)[]
+            {
+                ("M-ハネ（仮）", RetreatDiag.RawHane),
+                ("M-カド（仮）", RetreatDiag.RawKado),
+                ("参考 ガルド", RetreatDiag.RefGald),
+            }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id == "shio")).Select(r => ("compare " + r.Name, r.F))).ToArray()
             : mode == "m219"
             // 第219期（受け入れ 1）: 規定のミオ（cat）と第218期の M5（m5）の台本が一致すること。
             ? MireBenches(arg == "m5" ? MireDiag.VerOf("M5") : UnitCatalog.Mio)
@@ -135,12 +145,12 @@ static class ShockDigestDiag
                     int counted = 0;
                     foreach (BattleEvent e in r.Events)
                     {
-                        if (mode != "f224" && SkipKinds.Contains(e.Kind.ToString())) continue;
+                        if (mode is not ("f224" or "r225") && SkipKinds.Contains(e.Kind.ToString())) continue;
                         counted++;
                         var sb = new StringBuilder();
                         foreach (PropertyInfo p in props)
                         {
-                            if (SkipProps.Contains(p.Name) && !(mode == "f224" && p.Name == "PartnerId")) continue;
+                            if (SkipProps.Contains(p.Name) && !(mode is ("f224" or "r225") && p.Name == "PartnerId")) continue;
                             if (p.Name == "Text" && e.Kind == BattleEventKind.Highlight) continue;
                             object? v = p.GetValue(e);
                             sb.Append(p.Name).Append('=').Append(v is System.Collections.IEnumerable en && v is not string ? string.Join(",", en.Cast<object>()) : v).Append('|');
