@@ -905,6 +905,58 @@ public sealed class Formation
     }
 }
 
+/// <summary>
+/// <b>敵専用の9枠の波</b>（第221期）。盤の席 0〜8（<see cref="FormationRules.SeatNames"/>）を<b>直接</b>指定して駒を置く。
+///
+/// <para><b>プレイヤー側の <see cref="Formation"/>（5枠固定）は触らない</b>——あちらは「プレイヤーが置けない席に
+/// 駒が立つ」のを型で防いでいる（長さ 5 の配列）。9枠はこの別の型にだけあり、駒にするのは
+/// <c>BattleEngine.MaterializeEnemy</c> の1本だけ（<b>陣営を引数に取らない＝必ず敵陣営</b>）。</para>
+///
+/// <para><b>盤面の表は1つも触らない</b>——陣形は X 字（<see cref="FormationShape.X"/>）のまま、9体はすべて既存の席に立つ。
+/// 席 5〜8（○中1・○中3・○前2・○後2）は X 字では召喚の枠なので、ここに立った敵は
+/// <b>「召喚の枠に最初から立っている駒」</b>として既存の規則（行・隣接・薙ぎ・貫きの経路）をそのまま受ける。</para>
+/// </summary>
+public sealed class EnemyWave
+{
+    private readonly UnitDef?[] _seats = new UnitDef?[FormationRules.TotalSlots];
+
+    // 作るのは Of / FillAll / FillX だけ（空の波を外から作って席を書き足す道を作らない）。
+    private EnemyWave() { }
+
+    public UnitDef? this[int seat] => _seats[seat];
+
+    public int Count => _seats.Count(s => s is not null);
+
+    /// <summary>席の昇順（<c>Materialize</c> と同じ並び。InstanceId がこの順で振られる）。</summary>
+    public IEnumerable<(int Seat, UnitDef Def)> Occupied()
+    {
+        for (int i = 0; i < _seats.Length; i++)
+            if (_seats[i] is { } d)
+                yield return (i, d);
+    }
+
+    /// <summary>席を明示して置く。同じ席を2度指定したら例外（黙って上書きしない）。</summary>
+    public static EnemyWave Of(params (int Seat, UnitDef Def)[] seats)
+    {
+        var w = new EnemyWave();
+        foreach (var (seat, def) in seats)
+        {
+            if (w._seats[seat] is not null)
+                throw new ArgumentException($"席 {FormationRules.SeatNames[seat]} を2度指定した");
+            w._seats[seat] = def;
+        }
+        return w;
+    }
+
+    /// <summary>同じ駒を 9 マス全部に置く。</summary>
+    public static EnemyWave FillAll(UnitDef def)
+        => Of(Enumerable.Range(0, FormationRules.TotalSlots).Select(i => (i, def)).ToArray());
+
+    /// <summary>X 字の 5 枠（席 0〜4）に同じ駒を置く（9体の波の対照）。</summary>
+    public static EnemyWave FillX(UnitDef def)
+        => Of(FormationRules.PlayableSlots.Select(i => (i, def)).ToArray());
+}
+
 /// <summary>ログ行の種類。UI はこれを見て色を決める。文字列を解析させないための型。</summary>
 public enum LogKind
 {
@@ -4078,6 +4130,8 @@ public sealed class BattleResult
     /// <summary>第202期・計数専用。同数で交互に割った回数 ／ 選んだ経路が空で反対側へ回った回数。</summary>
     public long PierceTies { get; init; }
     public long PierceFallbacks { get; init; }
+    /// <summary>第221期・計数専用。貫きの経路が空で単体1発に落ちた回数（両陣営の合計）。</summary>
+    public long PierceDeadEnds { get; init; }
 
     /// <summary>盤面ルール（渇き・粛）の帳簿（第134期 段2・<see cref="BoardRuleLedger"/>）。<b>計数専用。</b></summary>
     public required BoardRuleLedger BoardRules { get; init; }

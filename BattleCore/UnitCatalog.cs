@@ -2567,6 +2567,23 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
         new Stage("第五波・パターン3", Formation.BuildSpear(a: Seer, b: Hero2, c: Martyr, d: Lancer, e: Accuser)),
     };
 
+    /// <summary>検証の波（第221期）。敵専用の9枠（<see cref="EnemyWave"/>）で組む。</summary>
+    public sealed record TestStage(string Name, EnemyWave Enemy);
+
+    /// <summary>
+    /// <b>第221期</b> —— 検証の波。<b>`Stages` / `Columns` / 会戦 / 作戦マップには載せない</b>
+    /// （本編の表は本編の5波を回す。読むのは `BattleSim` の `nine` と、DemoApp の選択口〈Codex に依頼〉だけ）。
+    ///
+    /// <para><b>新しい数値の駒は作っていない</b>——第一波の討伐隊の新兵（45/11/6）と、第5期の駆り出された農兵（30/8/6）を
+    /// 並べただけ。どちらも特性を1つも持たない。「1体は第一波並み・数が多い」の2段と、同じ駒で5体の対照。</para>
+    /// </summary>
+    public static IReadOnlyList<TestStage> TestStages { get; } = new[]
+    {
+        new TestStage("検証・九 / 新兵", EnemyWave.FillAll(Recruit)),
+        new TestStage("検証・九 / 農兵", EnemyWave.FillAll(Levy)),
+        new TestStage("検証・五 / 新兵（対照）", EnemyWave.FillX(Recruit)),
+    };
+
     /// <summary><paramref name="stageIndex"/>（0 始まり）のパターン3の写し。定義が無い波は null。</summary>
     public static Formation? Pattern3Of(int stageIndex) => stageIndex switch
     {

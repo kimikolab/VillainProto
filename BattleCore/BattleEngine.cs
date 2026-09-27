@@ -5358,6 +5358,8 @@ public sealed class BattleContext
     // [撃つ敵の格子のレーン 0..2 × 選んだ経路 0..1]・同数の交互・反対側へ回った・選ぶ瞬間の経路ごとの生存数の検算用。
     public readonly long[] PierceChose = new long[6];
     public long PierceTies, PierceFallbacks;
+    /// <summary>第221期・<b>計数専用</b>。貫きの経路に生きている駒が1体もいなくて単体1発に落ちた回数（○前2・○後2 だけが残った局面）。</summary>
+    public long PierceDeadEnds;
 
     private void NotePierceChoice(UnitState attacker, int gl, int pick, bool tie, bool fallback, int[] occ)
     {
@@ -7601,7 +7603,7 @@ public sealed class BattleContext
         if (shape.DeterministicPierce)
         {
             int best = PickPierceLane(attacker, foes, shape);
-            if (best < 0) return foes[Roll(foes.Count)];
+            if (best < 0) { PierceDeadEnds++; return foes[Roll(foes.Count)]; }
             lane = best;
             return LaneOccupants(foes, lane, shape)[0];
         }
@@ -7612,7 +7614,7 @@ public sealed class BattleContext
 
         // ○前2・○後2 はどのレーンにも属さないので、生き残りがそこだけになると
         // 走る列が無くなる。落とさずに単体として1体だけ刺す（lane = -1）。
-        if (lanes.Count == 0) return foes[Roll(foes.Count)];
+        if (lanes.Count == 0) { PierceDeadEnds++; return foes[Roll(foes.Count)]; }
 
         var deep = lanes
             .Where(l => foes.Any(f => shape.LanesOf(f.Slot).Contains(l)
@@ -10863,6 +10865,7 @@ public static class BattleEngine
             PierceChose = (long[])ctx.PierceChose.Clone(),         // 第202期（計数のみ）
             PierceTies = ctx.PierceTies,
             PierceFallbacks = ctx.PierceFallbacks,
+            PierceDeadEnds = ctx.PierceDeadEnds,
             // 第184期。標の軸（**計数専用**。どの規則も読まない）。
             MarkAxis = new MarkAxisLedger(
                 (long[])ctx.MarkVulnHits.Clone(), (long[])ctx.MarkVulnAdded.Clone(),
@@ -11209,4 +11212,33 @@ public static class BattleEngine
         }
         return units;
     }
+
+    /// <summary>
+    /// <b>敵専用の9枠の入口</b>（第221期）。<see cref="EnemyWave"/> の席 0〜8 に<b>そのまま</b>立たせる。
+    /// <b>陣営を引数に取らない</b>——作る駒は必ず <see cref="BattleContext.EnemyTeam"/>・陣形は X 字
+    /// （プレイヤー側からこの経路に来る道は無い）。倍率は <see cref="Materialize(Formation, int, EnemyScaleRule)"/> と同じ掛け方。
+    /// </summary>
+    public static List<UnitState> MaterializeEnemy(EnemyWave wave, EnemyScaleRule scale)
+    {
+        var units = new List<UnitState>();
+        foreach ((int seat, UnitDef raw) in wave.Occupied())
+        {
+            UnitDef def = scale.Apply(raw);
+            units.Add(new UnitState
+            {
+                Def = def,
+                TeamId = BattleContext.EnemyTeam,
+                Shape = FormationShape.X,
+                Slot = seat,
+                Hp = def.MaxHp,
+                MaxHp = def.MaxHp,
+                Traits = TraitCatalog.Resolve(def.Traits)
+            });
+        }
+        return units;
+    }
+
+    /// <summary><see cref="MaterializeEnemy(EnemyWave, EnemyScaleRule)"/> の既定の倍率（採用値）版。</summary>
+    public static List<UnitState> MaterializeEnemy(EnemyWave wave)
+        => MaterializeEnemy(wave, EnemyScaleRule.Default);
 }
