@@ -380,6 +380,14 @@ J1′・J3′ ＝ J1・J3 から移り木（`Drifter` / `DrifterMend`）を外�
 **`watch.md` の3行**（`BattleEventKind` 53 → 55 種・`Retreat` / `ShioStage` は書き手が引ける）だけ。`balance.md` をはじめ盤面の表は1行も動いていない。
 `roster_audit.md` は所要秒数の1行だけ違うので置き換えていない。`rules.md` は差分 0 行（`retreat` の列は前段で入っている）。`audit` はずれ 0 件。
 
+## sweep（規約 G17・`Presets` と `All` の駒を触ったので）
+
+666 本・約 6 時間。**異常終了 15 本・うちこの期の変更が原因のもの 0 本**——
+10 本（`wcost draft` / `blade draft` / `blaze2 phase0・ideal・check` / `deep phase0・cross・foe・check` / `encore check`）は**第224期のコミット（`56ff755`）でも同じ例外で落ちる**
+（`'kiri'` が辞書に無い＝第179期にキリを `Retired` へ移したときの R159 の再発・`Sequence contains no elements` の2本も同じ台）。
+残り 5 本（`gust gale` / `gust compare` / `whip log` / `mire log` / `form2 log`）は `CLAUDE.md` のコマンド表の**穴埋めの引数をそのまま渡した**もの（R178）。
+上限に当たった本（新規 19 本）は `layout` / `roster audit` など元から重い診断で、並列の混み具合で 90 秒を跨いだ（異常終了ではない）。**直すのは別の作業**（この期では触っていない）。
+
 ## 次の期に決めること（この期は決めない）
 
 - どの版を規定にするか（ポンが遊んで決める）。**J3 と J4 の差は主判定で +7pt・本編で +3〜4pt**、段は J4 では T1.5（段2）と早く来る。
