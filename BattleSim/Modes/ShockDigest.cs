@@ -56,7 +56,7 @@ static class ShockDigestDiag
             ? new (string, Formation)[]
             {
                 // 第223期 前段で V3 が規定になったので、シオ・ヨミは `DriftDiag` の V0（版の札を抜いた駒）へ差し替える。
-                ("D1 ポン", D222(Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.Sero, back3: UnitCatalog.Basa))),
+                ("D1 ポン", D222(Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa))),
                 ("D2 移動改", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("移動改 (")).F)),
                 ("D3 隊列崩し", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("隊列崩し")).F)),
                 ("D3 突き出し", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("突き出し")).F)),

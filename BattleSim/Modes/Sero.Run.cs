@@ -15,10 +15,10 @@ static partial class SeroDiag
         PlusText = d.PlusText, MinusText = d.MinusText, Flavor = d.Flavor,
     };
 
-    internal static readonly UnitDef E0 = UnitCatalog.Sero;
-    internal static readonly UnitDef E1 = Copy(UnitCatalog.Sero, new[] { TraitId.Evade, TraitId.EvadeSwap });
-    internal static readonly UnitDef E2 = Copy(UnitCatalog.Sero, new[] { TraitId.Evade, TraitId.EvadeSwap, TraitId.StatusArrow });
-    internal static readonly UnitDef E1NoSwap = Copy(UnitCatalog.Sero, new[] { TraitId.Evade });
+    internal static readonly UnitDef E0 = UnitCatalog.SeroOld;
+    internal static readonly UnitDef E1 = Copy(UnitCatalog.SeroOld, new[] { TraitId.Evade, TraitId.EvadeSwap });
+    internal static readonly UnitDef E2 = Copy(UnitCatalog.SeroOld, new[] { TraitId.Evade, TraitId.EvadeSwap, TraitId.StatusArrow });
+    internal static readonly UnitDef E1NoSwap = Copy(UnitCatalog.SeroOld, new[] { TraitId.Evade });
 
     internal static readonly (string Tag, UnitDef Def)[] Versions =
     {
@@ -235,7 +235,7 @@ static partial class SeroDiag
         benches.Add(("S3 選", PickSeats("S3", BenchS3Raw, true)));
         // 参考: S3 は天井で 120 通りが同値（R276）。状態の矢を見るため、セロを中央（隣 4 ＝ カタ・ベニの両方の隣）に置いた並びも測る
         //（`PickSeats` の3位と同じ並び・測る前に固定）。
-        benches.Add(("S3 中央（参考）", Formation.Build(front1: UnitCatalog.Kubi, front3: UnitCatalog.Beni, center: UnitCatalog.Sero,
+        benches.Add(("S3 中央（参考）", Formation.Build(front1: UnitCatalog.Kubi, front3: UnitCatalog.Beni, center: UnitCatalog.SeroOld,
                                                        back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)));
         foreach (var r in CompareRowsWithSero()) benches.Add(("S4 " + r.Name, r.F));
         foreach (var (n, f) in benches) Console.WriteLine($"- {n}: {SeatsNamed(f)}");

@@ -33,7 +33,27 @@ public static class UnitCatalog
         Flavor = "殴られないと働かないので、誰も連れて行きたがらない。"
     };
 
+    /// <summary>
+    /// 逃げ上手のセロ（第225期 前段・ポンの判断）。第223期 E1（回避・追い撃ち・移動の段・入れ替え）＋ E2（状態の矢）＋
+    /// 第224期 F1（段の条件 2/4/7）＋ F2（動かされるたび攻撃力 +2）。**F3（段3 の7本）は入れない**。
+    /// 旧（`Sniper` / `Coward`・E0）は <see cref="SeroOld"/> に対照として残す（<see cref="All"/> には入れない）。
+    /// </summary>
     public static readonly UnitDef Sero = new()
+    {
+        Id = "sero",
+        Name = "逃げ上手のセロ",
+        MaxHp = 42,
+        Attack = 11,
+        Speed = 12,
+        Advances = false,
+        Traits = new[] { TraitId.Evade, TraitId.EvadeSwap, TraitId.StatusArrow, TraitId.EvadeQuick, TraitId.EvadeDrift },
+        PlusText = "敵の攻撃を3割の確率でかわし、かわした相手へ撃ち返す。かわすたび攻撃力+3、隊列を動かされるたび攻撃力+2。動かされた回数で身軽になり、2回で撃ち返しが貫きに、4回で手番が5本の乱れ撃ちに、7回で回避率45%・撃ち返し2本に変わる。自分が毒・燃焼・感電を帯びていれば、矢がそれを敵にうつす（自分の分は減らない）",
+        MinusText = "かわすたび隣の味方と入れ替わり、隊列が乱れる。毒・燃焼・放電・味方の巻き込みはかわせない",
+        Flavor = "逃げ足だけは誰にも負けない。撃ち返す暇まであるくらいに。"
+    };
+
+    /// <summary>旧セロ（第222期まで・E0）。対照として残す（<see cref="All"/> にも <see cref="Retired"/> にも入れない）。</summary>
+    public static readonly UnitDef SeroOld = new()
     {
         Id = "sero",
         Name = "逃亡兵セロ",

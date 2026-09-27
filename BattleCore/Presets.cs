@@ -30,7 +30,8 @@ public static class Presets
     {
         // X字化に伴う振り直し。機械的な写しではガルドが中央に落ちて庇うが死に、全波 0〜3% に潰れていた。
         // ガルドを前1へ戻し、ネルを中央、ボルグを後3へ（reseat 2位＝狙いを満たす最良 / confirm +21.8pt）
-        ("速攻 (ボルグ×ムド)",   Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Nel, back1: UnitCatalog.Sero, back3: UnitCatalog.Borg)),
+        // **第225期 前段で席を差し替えた**（セロの規定化・`retreat seats`）。帯A 88.2 → 96.6・帯B 88.9 → 96.4・狙 ○・情報セル 1 → 3。ボルグは中央に落ちない（後1）。
+        ("速攻 (ボルグ×ムド)",   Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sero, center: UnitCatalog.Mudo, back1: UnitCatalog.Borg, back3: UnitCatalog.Nel)),
         // 脆いムグ・ゾトを前で死なせて連鎖を起こす。中衛ゴルムの吸いが隣のゾトを破裂まで運ぶ（layout 1位）
         // リィカの覚醒（薙ぎ化）追加に伴い reseat で再探索。ムグを前1→前3、ゾトを前2のまま前1を空ける形が上
         // （confirm 追試 +2.2pt、第5波 +10.8。第5波は元々連鎖の畳みかけが弱かった波）。
@@ -71,7 +72,8 @@ public static class Presets
         // 代金は第2〜5波平均 65.4% → 63.5%（**−1.9pt**・帯B でも −2.9pt）で、採否閾値 5.0pt の内側。
         // **勝率の1位ではない**（追順9位）——(G14) は「勝率表の上で何セル情報を持つか」で席を選ぶ規則で、
         // `reseat` の「勝つ席を探す」目的とは向きが違う（第50期・第64期）。
-        ("惨禍×被弾強化",        Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Mudo, center: UnitCatalog.Kado, back1: UnitCatalog.Lili, back3: UnitCatalog.Sero)),
+        // **第225期 前段で席を差し替えた**（セロの規定化・`retreat seats`）。後1 のリリと後3 のセロを入れ替えた（帯A 90.8 → 99.5・帯B 90.8 → 99.6・情報セル 2 → 2）。**線の1位（カドを前1・セロを中央）は採らなかった**——カドが中央を離れ、ヒサの隣からも外れて標がムドへ移る（この行の狙い）。
+        ("惨禍×被弾強化",        Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Mudo, center: UnitCatalog.Kado, back1: UnitCatalog.Sero, back3: UnitCatalog.Lili)),
         // 惨禍（味方全体の被ダメ5割増）は位置を問わないので、死の密度は隣接に頼らなくても出る。
         // リィカを後1へ下げて生贄をゾト1枚に絞り、中衛はヴェルに。リィカが開幕で自陣を削りすぎる形をやめた（+19.1pt / 第4波 +57.0）。
         // 旧配置（中衛リィカがカドとゾトを削る）は狙いとしては筋が通っていたが、第4波で 25% まで落ちていた（reseat 追試）
@@ -109,7 +111,8 @@ public static class Presets
         // グザの瘴気（味方全体に毒）は位置不問。ムドは前1で敵の攻撃も浴びて育ち、ガルドは前3で庇う。セロは中央から被弾後退。
         // X字化に伴う振り直し: 後列のグザとボルグを入れ替えた（reseat 1位＝狙いを満たす最良 / confirm +19.6pt / 第2波 +57.8）
         // **第148期 段0 で席を差し替えた**（棚卸し）。帯A 39.3 → 62.9・帯B(seed 200..599) 60.7%（+21.3pt）・狙 ○・情報セル 3 → 4・`reseat` 粗順 4。
-        ("毒→被弾強化 (グザ×ムド)", Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Mudo, back1: UnitCatalog.Borg, back3: UnitCatalog.Guza)),
+        // **第225期 前段で席を差し替えた**（セロの規定化・`retreat seats`）。帯A 44.4 → 70.4・帯B 43.2 → 68.6・狙 ○・情報セル 4 → 4。ムド前1・ガルド前3 は据え置き。
+        ("毒→被弾強化 (グザ×ムド)", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Gald, center: UnitCatalog.Guza, back1: UnitCatalog.Borg, back3: UnitCatalog.Sero)),
         // ヴィオの吸い上げは全体対象で位置不問。スィドの毒漏れはむしろ燃料なので、中衛に置いて
         // 前後の隣接（後2のミオ）へわざと当てにいく。漏れを利益に反転する側と噛ませた形（+7.8pt / 第5波 +38.8）
         //
@@ -125,7 +128,8 @@ public static class Presets
         // 軋みの割り込み攻撃の追加後に再探索。セロが中衛から後1のヨミを突き飛ばして逃げ、ヨミは中衛へ突き出されて(+22)その場で振る。
         // 旧狙いの二段逃げ型（セロ前列→中のヨミ→後）は割り込み後も 48.8% 止まり（83位）。前列へ突き出されたヨミが削られるだけなので捨てた。
         // 探索1〜3位はガルド後列で庇いが死ぬので採らない（layout 4位）
-        ("突き出し (セロ×ヨミ)",  Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald, center: UnitCatalog.Sero, back1: UnitCatalog.Yomi, back3: UnitCatalog.Nel)),
+        // **第225期 前段で席を差し替えた**（セロの規定化・`retreat seats`）。帯A 69.8 → 78.6・帯B 71.0 → 77.7・狙 ○・情報セル 4 → 4。**上の「セロが逃げてヨミを突き出す」は旧セロ（臆病）の機構で、規定のセロには無い**——いまのセロはかわしたときに隣と入れ替わる。
+        ("突き出し (セロ×ヨミ)",  Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Golm, center: UnitCatalog.Yomi, back1: UnitCatalog.Nel, back3: UnitCatalog.Sero)),
         // 溜め役3体を敵から遠い後列と中衛へ、という狙いはそのまま。前1を空けてカド・クグを前2/前3へ寄せ、
         // 中衛をガンに替えた形が上（+2.1pt）。カドの巻き込み先はクグとガンで変わらない
         // X字化後の全編成 reseat で振り直した（120通り全探索の「狙いを満たす最良」/ confirm +3.5pt）
@@ -211,7 +215,8 @@ public static class Presets
         // **第148期 段0 で測ったが採らなかった。** 帯B +18.2pt だが、候補は**セロを後1へ下げる形**
         // ——逃亡（`if (self.Row == Row.Back) return;`）は後列では1回も発火しないので、
         // 上の「セロは中衛（狙撃化には戦闘中に後退した実績が要る）」が原理的に成立しなくなる（第146期）。
-        ("縛め非収入型 (クグ×速攻)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kugu, center: UnitCatalog.Sero, back1: UnitCatalog.Mudo, back3: UnitCatalog.Borg)),
+        // **第225期 前段で席を差し替えた**（セロの規定化・`retreat seats`）。帯A 52.2 → 88.6・帯B 50.4 → 88.6・狙 ○・情報セル 4 → 4。上の「セロは中衛」は旧セロ（狙撃化）の制約で、規定のセロには当たらない。ボルグは中央に落ちない。
+        ("縛め非収入型 (クグ×速攻)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Kugu, back1: UnitCatalog.Sero, back3: UnitCatalog.Mudo)),
         // 据え（バン）とハギ（追い打ち）の同居。31編成に1本も無い組み合わせなので、
         // `IdleTurn` の会計を据え側で直しても compare が1行も動かず、変更が効いたことを
         // 確認できない。その対照として置く。ハギは `SurrendersTurn == false`（自分の手番を
@@ -679,6 +684,7 @@ public static class Presets
         //     **配置は仮置きのまま据え置き**（confirm の上位5通りが −0.6〜+0.3pt で、採否閾値 5.0pt に届かない。
         //     現行は 120 通り中 11位）。
         // **第148期 段0 で席を差し替えた**（棚卸し）。帯A 33.7 → 60.5・帯B(seed 200..599) 60.0%（+24.8pt）・狙 ○・情報セル 2 → 3・`reseat` 粗順 2。
+        // **第225期 前段で測ったが採らなかった**（`retreat seats`・帯B +9.6pt）——候補はヒヨを中央へ置き、ボルグ（後1）の隣に戻る（上の第148期と同じ理由）。
         ("火選り代金型 (ヒヨ×ムド)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Sero, back1: UnitCatalog.Hiyo, back3: UnitCatalog.Mudo)),
         // (3) 無風の台。`逸らし (ソラ×カド)` は火の粉の帰属が −0.6 / +1.7 ＝ **0**（第57期の
         //     「|帰属| < 1.5pt は 0 と読む」）。グザ（中央・素体差 +0.1pt）をヒヨに差し替えた。

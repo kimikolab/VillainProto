@@ -69,7 +69,7 @@ static partial class DriftDiag
     {
         var g = f.Clone();
         foreach (var (slot, d) in f.Occupied())
-            g[slot] = d.Id == "shio" ? shio : d.Id == "yomi" ? yomi : d;
+            g[slot] = d.Id == "shio" ? shio : d.Id == "yomi" ? yomi : d.Id == "sero" ? UnitCatalog.SeroOld : d;   // 第225期: セロは規定化の前（E0）に固定
         return g;
     }
 
@@ -77,7 +77,7 @@ static partial class DriftDiag
     // 台（指示書 §7.1）
     // =================================================================================
 
-    internal static Formation BenchD1 => Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.Sero, back3: UnitCatalog.Basa);
+    internal static Formation BenchD1 => Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa);
     internal static List<(string Name, Formation F)> CompareRowsWith() =>
         CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "shio" or "yomi")).ToList();
 
