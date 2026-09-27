@@ -1019,7 +1019,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   **感電を付ける窓口は `MarkShock` の1箇所**（書かれるまで `_shockLive` の比較1つで全部抜ける）。**リリの口移しは感電も移す**（`KissTrait.Moved` は All − Excluded）。
   雷の選び方（最初の1発は `TargetPool` の中で種類が最多・同数は席番号・**介入の鎖を通らない**／跳ねは同じ陣営の隣で未命中・種類最多・同数は席番号）は `ThunderTrait` の中にある
   ——**第215期に `ThunderTrait.Pick` の1本にした**（札 `ThunderPath` を持てば、種類の次に「その先に跳べる相手が少ない敵」を先に選ぶ＝T1。**§7 の規則では T0 だったが、ポンの判断で T1 を規定にした**＝雷のカタは `[Thunder, ThunderLeak, ThunderPath]`）
-  ——**第216期に感電で痺れる版を足した**（札 `ShockStun` S1 起点だけ ／ `ShockStunAll` S2 弾けた駒すべて ／ `ShockStunHalf` S3 それぞれ 50%）。**第216期の追記で S2 をポンの判断で規定にした**（`UnitCatalog.Kata` ＝ `[Thunder, ThunderLeak, ThunderPath, ShockStunAll]`・S1 / S3 は保持者 0 枚）。
+  ——**第216期に感電で痺れる版を足した**（札 `ShockStun` S1 起点だけ ／ `ShockStunAll` S2 弾けた駒すべて ／ `ShockStunHalf` S3 それぞれ 50%）。**第216期の追記で S2 をポンの判断で規定にした**が、**第221期の後に S3 へ差し替えた**（ポンの判断・`UnitCatalog.Kata` ＝ `[Thunder, ThunderLeak, ThunderPath, ShockStunHalf]`・S1 / S2 は保持者 0 枚。**規定のカタは痺れの判定で乱数を引く**・`compare` は動かない）。
   判定は `ShockTrigger` の中の `StunByShock` の1箇所——**弾けた直後・放電より前**に `StatusKeys.Stun` を付ける（倒れた駒には付けない・既に痺れていれば増やさない・**乱数は S3 だけ**）。
   台本は `ShockSpent` の直後に `StatusGain`（`stun`）。**敵味方を問わない**ので、弾く役（殴る駒）が自陣で痺れると敵の連鎖が消える（R319）
 - **第216期の開戦の撒き（ベニの版 O1〜O4・`OpeningSprayTrait`）は `OnBattleStart` の中だけ**——**追記で O4（`GurenOpeningBurn`・敵全体に毒 1 ＋ 着火）をポンの判断で規定にした**（O1〜O3 は保持者 0 枚）——毒は窓口 `Poison` を新しい経路 `PoisonRoute.Opening` で通し

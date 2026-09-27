@@ -74,7 +74,7 @@
 | 47 | 喧噪のバサ | +47.58 | +34.83 | 残す | 3 | 1 | 15.0 | どこでも同じ | 上（単独で強い） |  | Shuffler |
 | 48 | 逸らしのソラ | +51.00 | +1.62 | 残す | 6 | 2 | 9.0 | どこでも同じ | 上（単独で強い） |  | Divert / Deflect / Thrust |
 | 49 | 礫のガレ | +57.75 | -3.82 | 転生 | 1 | 0 | 28.0 | 化ける | 左下（送り先を選べば働く） |  | Shrapnel |
-| 50 | 禍導のカタ | — | — | — | 0 | 0 | — | — | — |  | Thunder / ThunderLeak / ThunderPath / ShockStunAll |
+| 50 | 禍導のカタ | — | — | — | 0 | 0 | — | — | — |  | Thunder / ThunderLeak / ThunderPath / ShockStunHalf |
 | 51 | 背かれのソム | — | — | — | 0 | 0 | — | — | — |  | Betrayed |
 | 52 | 血詠みのアカ | — | — | — | 0 | 0 | — | — | — |  | Ash |
 
@@ -84,4 +84,4 @@
 - `checkup ideal` が値を返した駒: 49 / 52 （返さないのは `CompareBuilds()` に在席 0 枠の駒だけ）
 - `stage catalog` が引けた駒: 49 / 52
 
-所要 199.0 秒（うち `stage catalog` が 184.3 秒）。
+所要 199.8 秒（うち `stage catalog` が 183.9 秒）。

@@ -892,11 +892,12 @@ public static class UnitCatalog
         Advances = false,
         // 第215期: 跳ね先の同点を「行き止まりを先に」（T1・`ThunderPath`）をポンの判断で規定にした。
         // 第216期: 感電が弾けた駒すべてが痺れる（S2・`ShockStunAll`）をポンの判断で規定にした。敵味方を問わない。
-        Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockStunAll },
+        // 第221期の後: 弾けた駒それぞれが 50% で痺れる（S3・`ShockStunHalf`）へ差し替えた（ポンの判断）。乱数を引く。
+        Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockStunHalf },
         // **[Skill] 1要素にする**（`ActionIndex++` は `CanAct` 通過後。第138期 Q0-4）。通常攻撃は出ない。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "雷を落とした") },
-        PlusText = "状態異常を帯びた敵に雷を落とし、帯びた隣の敵へ跳ねる（帯びた種類が多いほど重い）。当たった敵には感電が残り、感電した敵は仲間の一撃で弾けて隣へ放電し、弾けた駒は痺れて次の手番を失う",
-        MinusText = "雷を落とすたび、隣の味方すべてに感電が付く / 雷そのものは感電を弾けさせない / 味方の感電が弾けても、その味方が痺れる",
+        PlusText = "状態異常を帯びた敵に雷を落とし、帯びた隣の敵へ跳ねる（帯びた種類が多いほど重い）。当たった敵には感電が残り、感電した敵は仲間の一撃で弾けて隣へ放電し、弾けた駒は半々の確率で痺れて次の手番を失う",
+        MinusText = "雷を落とすたび、隣の味方すべてに感電が付く / 雷そのものは感電を弾けさせない / 味方の感電が弾けても、その味方が半々の確率で痺れる",
         Flavor = "雷を呼ぶのではない。落ちる場所を選んでいるだけ。"
     };
 

@@ -417,10 +417,11 @@ static partial class ShockDiag
 
         // (S0・O0 は保持者 0) 札の保持者が UnitCatalog.All に居ない。
         // 第216期の追記: O4（ベニ）・S2（カタ）を規定にした。ほかの5枚は保持者 0 枚のまま。
+        // 第221期の後: カタの規定を S2 → S3（`ShockStunHalf`）へ差し替えた（ポンの判断）。
         var cards = OpeningCards.Concat(StunCards).ToArray();
         var held = UnitCatalog.Everyone.SelectMany(u => u.Traits.Where(cards.Contains).Select(t => u.Id + ":" + t)).OrderBy(x => x, StringComparer.Ordinal).ToList();
-        bool heldOk = held.SequenceEqual(new[] { "beni:GurenOpeningBurn", "kata:ShockStunAll" });
-        Verdict("(1') 版の札の保持者はベニの O4 とカタの S2 だけ", heldOk, held.Count == 0 ? "0 枚" : string.Join(" ／ ", held));
+        bool heldOk = held.SequenceEqual(new[] { "beni:GurenOpeningBurn", "kata:ShockStunHalf" });
+        Verdict("(1') 版の札の保持者はベニの O4 とカタの S3 だけ", heldOk, held.Count == 0 ? "0 枚" : string.Join(" ／ ", held));
 
         Console.WriteLine();
         Console.WriteLine("SHOCK216_CHECK " + (allOk ? "ok=True" : "ok=False") + " 所要 " + (DateTime.Now - t0).TotalSeconds.ToString("F0") + " 秒");
