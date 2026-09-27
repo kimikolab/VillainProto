@@ -51,10 +51,10 @@ static partial class RetreatDiag
     {
         var extra = names.Select(T).ToList();
         if (extra.Any(x => x is null)) return null;
-        return Copy(UnitCatalog.Shio, UnitCatalog.Shio.Traits.Concat(extra.Select(x => x!.Value)).ToArray());
+        return Copy(UnitCatalog.ShioV3, UnitCatalog.ShioV3.Traits.Concat(extra.Select(x => x!.Value)).ToArray());
     }
     static readonly string[] Base = { "DrifterMend", "RegroupTend", "RegroupTendSelf" };
-    internal static readonly UnitDef J0 = UnitCatalog.Shio;
+    internal static readonly UnitDef J0 = UnitCatalog.ShioV3;
     internal static readonly UnitDef? J1 = ShioWith(Base);
     internal static readonly UnitDef? J2 = ShioWith(Base.Append("ShioStage").ToArray());
     internal static readonly UnitDef? J3 = ShioWith(Base.Append("Retreat").ToArray());
@@ -77,7 +77,7 @@ static partial class RetreatDiag
     // =================================================================================
 
     internal static Formation Raw(UnitDef fifth) => Formation.Build(front1: UnitCatalog.Yomi, front3: fifth,
-        center: UnitCatalog.Shio, back1: UnitCatalog.Sero, back3: UnitCatalog.Basa);
+        center: UnitCatalog.ShioV3, back1: UnitCatalog.Sero, back3: UnitCatalog.Basa);
     internal static Formation RawHane => Raw(UnitCatalog.Hane);
     internal static Formation RawKado => Raw(UnitCatalog.Kado);
     internal static Formation RefGald => Raw(UnitCatalog.Gald);

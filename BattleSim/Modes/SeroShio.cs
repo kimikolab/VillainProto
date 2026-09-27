@@ -63,14 +63,14 @@ static partial class SeroShioDiag
     {
         var extra = names.Select(T).ToList();
         if (extra.Any(x => x is null)) return null;
-        return Copy(UnitCatalog.Shio, UnitCatalog.Shio.Traits.Concat(extra.Select(x => x!.Value)).ToArray());
+        return Copy(UnitCatalog.ShioV3, UnitCatalog.ShioV3.Traits.Concat(extra.Select(x => x!.Value)).ToArray());
     }
 
     internal static readonly UnitDef? F1 = SeroWith("EvadeQuick");
     internal static readonly UnitDef? F2 = SeroWith("EvadeQuick", "EvadeDrift");
     internal static readonly UnitDef? F3 = SeroWith("EvadeQuick", "EvadeDrift", "EvadeVolley");
 
-    internal static readonly UnitDef H0 = UnitCatalog.Shio;
+    internal static readonly UnitDef H0 = UnitCatalog.ShioV3;
     internal static readonly UnitDef? H1 = ShioWith("DrifterMend");
     internal static readonly UnitDef? H2 = ShioWith("DrifterMend", "RegroupTend");
 

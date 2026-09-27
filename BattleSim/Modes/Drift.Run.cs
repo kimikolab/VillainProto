@@ -171,6 +171,6 @@ static partial class DriftDiag
         }
         var best = _d4[0].F;
         // 版の差し替えは Apply が Id で行うので、ここでは規定の駒に戻しておく。
-        return Apply(best, UnitCatalog.Shio, UnitCatalog.Yomi);
+        return Apply(best, UnitCatalog.ShioV3, UnitCatalog.Yomi);
     }
 }

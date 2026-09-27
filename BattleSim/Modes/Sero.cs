@@ -40,14 +40,14 @@ static partial class SeroDiag
 
     /// <summary>S1: ポンの移動改（第222期 D1 の席）。シオ・ヨミは前段で規定になった V3。</summary>
     internal static Formation BenchS1Pon => Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald,
-        center: UnitCatalog.Shio, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa);
+        center: UnitCatalog.ShioV3, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa);
 
     /// <summary>S2 の5枚目（Phase 0 Q0-6 の規則で選んだ・`sero phase0` が出す）。</summary>
     internal static UnitDef S2Fifth => UnitCatalog.Nel;
 
     /// <summary>S2: 庇いの無い移動軸（S1 のガルドの席に5枚目。席は総当たりする。これは仮の並び）。</summary>
     internal static Formation BenchS2Raw => Formation.Build(front1: UnitCatalog.Yomi, front3: S2Fifth,
-        center: UnitCatalog.Shio, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa);
+        center: UnitCatalog.ShioV3, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa);
 
     /// <summary>S3: 状態の矢の台（席は E1 × 九/新兵 × 150/115 で総当たり。これは仮の並び）。</summary>
     internal static Formation BenchS3Raw => Formation.Build(front1: UnitCatalog.Kubi, front3: UnitCatalog.Beni,
@@ -56,7 +56,7 @@ static partial class SeroDiag
     /// <summary>S4: セロのいる `compare` の既存の行（席はそのまま）。</summary>
     internal static List<(string Name, Formation F)> CompareRowsWithSero() =>
         CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id == "sero"))
-            .Select(r => (r.Name, WithSero(r.F, UnitCatalog.SeroOld))).ToList();   // 第225期: 規定化の前のセロ（E0）に固定
+            .Select(r => (r.Name, RetreatDiag.WithShio(WithSero(r.F, UnitCatalog.SeroOld), UnitCatalog.ShioV3))).ToList();   // 第225期: 規定化の前のセロ（E0）に固定・第226期: シオも V3 に固定
 
     /// <summary>
     /// 「庇う・肩代わりする」駒（S2 の候補から外す）。`docs/harm.md` の8枚（ガルド・ゴルム・ドハ・セッキ・ウケ・ワタ・ササ・棘守りのカド）

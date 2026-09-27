@@ -57,7 +57,7 @@ static class ShockDigestDiag
             ? new (string, Formation)[]
             {
                 // 第223期 前段で V3 が規定になったので、シオ・ヨミは `DriftDiag` の V0（版の札を抜いた駒）へ差し替える。
-                ("D1 ポン", D222(Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa))),
+                ("D1 ポン", D222(Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: UnitCatalog.ShioV3, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa))),
                 ("D2 移動改", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("移動改 (")).F)),
                 ("D3 隊列崩し", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("隊列崩し")).F)),
                 ("D3 突き出し", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("突き出し")).F)),
@@ -88,7 +88,7 @@ static class ShockDigestDiag
                 ("M-ハネ（仮）", RetreatDiag.RawHane),
                 ("M-カド（仮）", RetreatDiag.RawKado),
                 ("参考 ガルド", RetreatDiag.RefGald),
-            }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id == "shio")).Select(r => ("compare " + r.Name, r.F))).ToArray()
+            }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id == "shio")).Select(r => ("compare " + r.Name, RetreatDiag.WithShio(r.F, RetreatDiag.J0)))).ToArray()
             : mode == "m219"
             // 第219期（受け入れ 1）: 規定のミオ（cat）と第218期の M5（m5）の台本が一致すること。
             ? MireBenches(arg == "m5" ? MireDiag.VerOf("M5") : UnitCatalog.Mio)

@@ -45,8 +45,8 @@ static partial class DriftDiag
 
     internal const string RegroupLabel = "隊を組み替えた";
     // 第223期 前段で V3 が規定になったので、V0 は**規定から版の札を抜いた駒**に固定する（`drift run` が規定化の前と全文一致する）。
-    internal static readonly UnitDef ShioV0 = Copy(UnitCatalog.Shio,
-        UnitCatalog.Shio.Traits.Where(t => t != TraitId.Regroup).ToArray(), null);
+    internal static readonly UnitDef ShioV0 = Copy(UnitCatalog.ShioV3,
+        UnitCatalog.ShioV3.Traits.Where(t => t != TraitId.Regroup).ToArray(), null);
     internal static readonly UnitDef ShioReg = Copy(ShioV0,
         ShioV0.Traits.Append(TraitId.Regroup).ToArray(),
         new UnitAction[] { new(ActionKind.Skill, Label: RegroupLabel) });
@@ -77,7 +77,7 @@ static partial class DriftDiag
     // 台（指示書 §7.1）
     // =================================================================================
 
-    internal static Formation BenchD1 => Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa);
+    internal static Formation BenchD1 => Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: UnitCatalog.ShioV3, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa);
     internal static List<(string Name, Formation F)> CompareRowsWith() =>
         CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "shio" or "yomi")).ToList();
 

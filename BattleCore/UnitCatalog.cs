@@ -34,14 +34,14 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 逃げ上手のセロ（第225期 前段・ポンの判断）。第223期 E1（回避・追い撃ち・移動の段・入れ替え）＋ E2（状態の矢）＋
+    /// 逃亡兵セロ（第225期 前段・ポンの判断。第226期 前段で名前を「逃げ上手のセロ」から戻した）。第223期 E1（回避・追い撃ち・移動の段・入れ替え）＋ E2（状態の矢）＋
     /// 第224期 F1（段の条件 2/4/7）＋ F2（動かされるたび攻撃力 +2）。**F3（段3 の7本）は入れない**。
     /// 旧（`Sniper` / `Coward`・E0）は <see cref="SeroOld"/> に対照として残す（<see cref="All"/> には入れない）。
     /// </summary>
     public static readonly UnitDef Sero = new()
     {
         Id = "sero",
-        Name = "逃げ上手のセロ",
+        Name = "逃亡兵セロ",
         MaxHp = 42,
         Attack = 11,
         Speed = 12,
@@ -52,11 +52,12 @@ public static class UnitCatalog
         Flavor = "逃げ足だけは誰にも負けない。撃ち返す暇まであるくらいに。"
     };
 
-    /// <summary>旧セロ（第222期まで・E0）。対照として残す（<see cref="All"/> にも <see cref="Retired"/> にも入れない）。</summary>
+    /// <summary>旧セロ（第222期まで・E0）。対照として残す（<see cref="All"/> にも <see cref="Retired"/> にも入れない）。
+    /// 第226期に規定のセロの名前を「逃亡兵セロ」に戻したので、表示名は「旧・逃亡兵セロ」にした。</summary>
     public static readonly UnitDef SeroOld = new()
     {
         Id = "sero",
-        Name = "逃亡兵セロ",
+        Name = "旧・逃亡兵セロ",
         MaxHp = 42,
         Attack = 11,
         Speed = 12,
@@ -508,6 +509,11 @@ public static class UnitCatalog
         Flavor = "一度足を据えたら動かない。動かないから、隣の者の前に立てる。"
     };
 
+    /// <summary>
+    /// 移り木のシオ（第226期 前段・ポンの判断）。第225期 J4 ＝ 第223期 V3（`Drifter` / `Regroup`）＋
+    /// 移り木 20%（`DrifterMend`）＋ 手当て（`RegroupTend` / `RegroupTendSelf`）＋ 段 4/8/14（`ShioStage`）＋ 緊急退避（`Retreat`）。
+    /// 旧（V3）は <see cref="ShioV3"/> に対照として残す（<see cref="All"/> には入れない）。
+    /// </summary>
     public static readonly UnitDef Shio = new()
     {
         Id = "shio",
@@ -518,6 +524,25 @@ public static class UnitCatalog
         Advances = false,
         // 第223期 前段: 第222期の V3 を規定にした（ポンの判断）——手番で最も傷ついた味方を後ろの隣と入れ替える（`Regroup`）。
         // **攻撃は捨てる**（`Actions` が `Skill` 1要素）。旧（`Drifter` だけ・毎手番殴る）は診断 `drift` の `DriftDiag.ShioV0` に残す。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "隊を組み替えた") },
+        Traits = new[] { TraitId.Drifter, TraitId.Regroup, TraitId.DrifterMend, TraitId.RegroupTend, TraitId.RegroupTendSelf,
+                         TraitId.ShioStage, TraitId.Retreat },
+        PlusText = "動かされた味方を癒し（最大HPの20%）、攻撃を上げる（+5）。手番で、最も傷ついた味方を後ろの隣と入れ替え、下げた味方をさらに最大HPの20%癒す（自分を下げたときも）。"
+                 + "味方のHPが4割を切ると、手番の外で割り込んでその味方を後ろの隣と入れ替える（緊急退避・1ターン1回）。"
+                 + "隊が乱れるほど（味方が動かされた回数 4/8/14回）手が速くなり、移り木は最大HPの30/40%・攻撃+8/+12、緊急退避は1ターン2/3/4回になる",
+        MinusText = "元気な駒を前へ押し出す。庇う駒を下げると庇いが外れる。自分では攻撃しない",
+        Flavor = "落ち着きのない者にしか懐かない。整った隊では浮く。"
+    };
+
+    /// <summary>旧シオ（第223〜225期の規定・V3 ＝ `Drifter` / `Regroup`）。対照として残す（<see cref="All"/> にも <see cref="Retired"/> にも入れない）。</summary>
+    public static readonly UnitDef ShioV3 = new()
+    {
+        Id = "shio",
+        Name = "移り木のシオ",
+        MaxHp = 60,
+        Attack = 4,
+        Speed = 8,
+        Advances = false,
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "隊を組み替えた") },
         Traits = new[] { TraitId.Drifter, TraitId.Regroup },
         PlusText = "手番で、いちばん傷ついた味方を後ろの隣の味方と入れ替える。動かされた味方を回復し、攻撃力を上げる",
