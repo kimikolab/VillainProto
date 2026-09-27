@@ -104,6 +104,14 @@ static class ShockDigestDiag
                 ("M-ハネ（225）", LastDodgeDiag.MHane225),
                 ("参考 雷（ポンの席）", LastDodgeDiag.Thunder),
             }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane")).Select(r => ("compare " + r.Name, r.F))).ToArray()
+            : mode == "w230"
+            // 第230期（受け入れ 2）: W0（前段の規定・嵐・追い風・転倒の穴）の台本が追い風の攻撃力順・撃破の衝撃・溢れの実装の前後で一致すること。
+            ? new (string, Formation)[]
+            {
+                ("M-ハネ（228 H3）", CycleDiag.MHane228),
+                ("M-ハネ（229 G4）", CycleDiag.MHane229),
+                ("参考 雷（ポンの席）", CycleDiag.Thunder),
+            }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane" or "shio" or "yomi")).Select(r => ("compare " + r.Name, r.F))).ToArray()
             : mode == "g229"
             // 第229期（受け入れ 2）: G0（前段の規定・ハネは H3）の台本が嵐・追い風・転倒の穴の実装の前後で一致すること。
             ? new (string, Formation)[]
@@ -188,12 +196,12 @@ static class ShockDigestDiag
                     int counted = 0;
                     foreach (BattleEvent e in r.Events)
                     {
-                        if (mode is not ("f224" or "r225" or "k226" or "l227" or "h228" or "g229") && SkipKinds.Contains(e.Kind.ToString())) continue;
+                        if (mode is not ("f224" or "r225" or "k226" or "l227" or "h228" or "g229" or "w230") && SkipKinds.Contains(e.Kind.ToString())) continue;
                         counted++;
                         var sb = new StringBuilder();
                         foreach (PropertyInfo p in props)
                         {
-                            if (SkipProps.Contains(p.Name) && !(mode is ("f224" or "r225" or "k226" or "l227" or "h228" or "g229") && p.Name == "PartnerId")) continue;
+                            if (SkipProps.Contains(p.Name) && !(mode is ("f224" or "r225" or "k226" or "l227" or "h228" or "g229" or "w230") && p.Name == "PartnerId")) continue;
                             if (p.Name == "Text" && e.Kind == BattleEventKind.Highlight) continue;
                             object? v = p.GetValue(e);
                             sb.Append(p.Name).Append('=').Append(v is System.Collections.IEnumerable en && v is not string ? string.Join(",", en.Cast<object>()) : v).Append('|');

@@ -2333,6 +2333,13 @@ public sealed class UnitTally
     /// 転倒の穴: <c>HoleSkips</c> 転倒していたので介入（挑発・後備え・庇う・殉教・棘守り・範囲の盾・受け流し・逸らし）の候補から外れた（その駒の側・延べ）／
     /// <c>HoleBreaches</c> 転倒した列を越えて（その列が立っていれば狙えなかった駒を）主目標に選んだ（攻撃者の側）。
     /// </summary>
+    /// <summary>
+    /// 第230期・シオの回復の溢れ（受け手の側・<b>計数専用で、どの規則も読まない</b>）。移り木・手当ての回復が相手の減っている HP を超えた分
+    /// （<c>Heal</c> が増やした／満タンで増えなかったときだけ）: <c>ShioOverflowRecv</c> 溢れた量 ／ <c>ShioOverflowHalf</c> 1回ごとの半分（切り捨て）の和 ／
+    /// <c>ShioOverflowEvents</c> 溢れた回数 ／ <c>ShioOverflowGain</c> 攻撃力にした量（W3/W4・上限 15 の後）／ <c>ShioOverflowCapped</c> 上限で捨てた量。
+    /// </summary>
+    public long ShioOverflowRecv, ShioOverflowHalf, ShioOverflowEvents, ShioOverflowGain, ShioOverflowCapped;
+
     public long GaleStirs, GaleAllyMoved,
                 TailwindTriggers, TailwindFromShuffle, TailwindFromBlast, TailwindFromSpring, TailwindFromOther,
                 TailwindSteps, TailwindNoPair, TailwindLowHp, TailwindAllLow, TailwindRefused, TailwindNested, TailwindStepped,

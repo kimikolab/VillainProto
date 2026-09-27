@@ -7814,8 +7814,9 @@ public sealed class DrifterTrait : Trait
         if (!moved.AcceptsSupport) return;
         int heal = HealOf(self, moved);
         int before = moved.Hp;
-        ctx.Heal(moved, heal, self);
+        HealOutcome ho = ctx.Heal(moved, heal, self);
         ctx.NoteDrifterHeal(self, heal, moved.Hp - before);   // 第224期・計数のみ
+        ctx.ShioOverflow(self, moved, heal, moved.Hp - before, ho);   // 第230期（溢れ）
         int gain = GainOf(self);
         ctx.Whet(moved, gain, WhetRoute.Drifter);
         ctx.Log($"    {self.Name} が流された {moved.Name} を拾い上げた（+{heal} / 攻撃 +{gain}）", LogKind.Trigger);
@@ -12781,8 +12782,9 @@ public sealed class RegroupTrait : Trait
         {
             int heal = low.MaxHp * DrifterTrait.MendPercent / 100;
             int before = low.Hp;
-            ctx.Heal(low, heal, self);
+            HealOutcome ho = ctx.Heal(low, heal, self);
             ctx.NoteRegroupTend(self, heal, low.Hp - before);
+            ctx.ShioOverflow(self, low, heal, low.Hp - before, ho);   // 第230期（溢れ）
             ctx.Log($"    {self.Name} が下げた {low.Name} の手当てをした（+{heal}）", LogKind.Trigger);
         }
     }

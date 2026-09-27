@@ -5929,6 +5929,19 @@ public sealed class BattleContext
         });
     }
 
+    /// <summary>
+    /// シオの回復の溢れ（第230期）。移り木・手当ての回復が相手の減っている HP を超えた分（<paramref name="outcome"/> が増やした／満タンのときだけ）。
+    /// 受け手の側に数える。
+    /// </summary>
+    public void ShioOverflow(UnitState shio, UnitState target, int nominal, int gained, HealOutcome outcome)
+    {
+        if (outcome is not (HealOutcome.Healed or HealOutcome.Full)) return;
+        int over = nominal - Math.Max(0, gained);
+        if (over <= 0) return;
+        UnitTally rt = TallyOf(target);
+        rt.ShioOverflowEvents++; rt.ShioOverflowRecv += over; rt.ShioOverflowHalf += over / 2;
+    }
+
     /// <summary>手当て（第224期・H2・<b>計数のみ</b>）。</summary>
     public void NoteRegroupTend(UnitState shio, int nominal, int gained)
     {
