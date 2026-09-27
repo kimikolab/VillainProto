@@ -27,7 +27,7 @@ static partial class SeroShioDiag
         var s4 = S4Rows();
         Console.WriteLine($"- S4（セロのいる `compare` の行・{s4.Count} 行）: " + string.Join(" ／ ", s4.Select(r => r.Name)));
         Console.WriteLine($"  - うちシオもいる行: {string.Join(" ／ ", s4.Where(r => r.F.Occupied().Any(o => o.Def.Id == "shio")).Select(r => r.Name).DefaultIfEmpty("なし"))}");
-        var shioRows = CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id == "shio")).ToList();
+        var shioRows = CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id == "shio")).Select(r => (r.Name, F: OldBasaHane(r.F))).ToList();   // 第227期: バサ・ハネは旧に固定
         Console.WriteLine($"- シオのいる `compare` の行（{shioRows.Count} 行）: " + string.Join(" ／ ", shioRows.Select(r => r.Name)));
         Console.WriteLine();
         Console.WriteLine("S1 の隣（中央のシオの隣 4 枚）: " + string.Join("・", S1.Occupied().Where(o => o.Def.Id != "shio").Select(o => o.Def.Name)) + "。S2 の隣: "

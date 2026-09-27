@@ -114,7 +114,7 @@ static partial class RetreatDiag
         foreach (var (n, f) in benches)
             Console.WriteLine($"- {n}: {SeatsNamed(f)} ／ HP 合計 {f.Occupied().Sum(o => o.Def.MaxHp)} ／ 攻 合計 {f.Occupied().Sum(o => o.Def.Attack)}");
         Console.WriteLine();
-        foreach (var d in new[] { UnitCatalog.Basa, UnitCatalog.Yomi, UnitCatalog.Shio, UnitCatalog.Sero, UnitCatalog.Hane, UnitCatalog.Kado, UnitCatalog.Gald })
+        foreach (var d in new[] { UnitCatalog.BasaK0, UnitCatalog.Yomi, UnitCatalog.Shio, UnitCatalog.Sero, UnitCatalog.HaneK0, UnitCatalog.Kado, UnitCatalog.Gald })
             Console.WriteLine($"- {d.Name}: HP {d.MaxHp} ／ 攻 {d.Attack} ／ 速 {d.Speed} ／ 札 {string.Join(", ", d.Traits)}");
         Console.WriteLine();
 

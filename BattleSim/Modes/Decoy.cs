@@ -58,7 +58,7 @@ static partial class DecoyDiag
     {
         get
         {
-            UnitDef s0 = UnitCatalog.Sero, b0 = UnitCatalog.Basa, h0 = UnitCatalog.Hane, sh0 = UnitCatalog.Shio;
+            UnitDef s0 = UnitCatalog.Sero, b0 = UnitCatalog.BasaK0, h0 = UnitCatalog.HaneK0, sh0 = UnitCatalog.Shio;
             UnitDef? s1 = With(s0, "Decoy"), b2 = With(b0, "Disarray"), h2 = With(h0, "Disarray"), b4 = With(b0, "Disarray", "Squall");
             UnitDef? shS = With(sh0, "ShioStageSlow");
             var list = new List<Ver> { new("K0", s0, b0, h0, sh0) };
@@ -86,7 +86,7 @@ static partial class DecoyDiag
     // 台（§8.1）。M-ハネ（第225期の席）と、総当たりで選ぶ M-ハネ（`run`）・参考（雷の編成）。
     // =================================================================================
 
-    internal static Formation MHane225 => Formation.Build(front1: UnitCatalog.Hane, front3: UnitCatalog.Basa,
+    internal static Formation MHane225 => Formation.Build(front1: UnitCatalog.HaneK0, front3: UnitCatalog.BasaK0,
         center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Sero);
 
     /// <summary>

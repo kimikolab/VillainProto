@@ -458,6 +458,24 @@ public static class UnitCatalog
         Attack = 5,
         Speed = 8,
         Pattern = AttackPattern.Sweep,
+        // 第227期 前段（ポンの判断）: 第226期 K4 から回避盾を除いた札——敵の乱れ（`Disarray`）＋ 動かされて吹く突風（`Squall`）。
+        // 旧（第226期 K0・`Shuffler` だけ）は <see cref="BasaK0"/> に対照として残す。
+        Traits = new[] { TraitId.Shuffler, TraitId.Disarray, TraitId.Squall },
+        PlusText = "毎ターン、敵2体と味方2体をそれぞれ入れ替える。自分が生きている間は、どんな理由でも前に出た敵は正気を失い、次の攻撃を自軍に向ける。敵の隊列が乱れるほど（動かされた回数 4/8/14）かき回す敵が 3/3/4 体に増え、正気を失わせる回数も 3 → 5 → 8 → 上限なしに増える。攻撃は突風となって横に薙ぎ、当たった敵はときどき転ぶ。押しのけられるたび突風を起こす（1ターン2回）",
+        MinusText = "入れ替える相手は選べない。後列前提の駒や庇う駒の配置を自分で壊す。一撃は軽い",
+        Flavor = "隊列を整えている横で騒ぎ立て、二度と行軍に加えられなかった。"
+    };
+
+    /// <summary>旧バサ（第226期まで・K0 ＝ `Shuffler` だけ）。対照として残す（<see cref="All"/> にも <see cref="Retired"/> にも入れない）。
+    /// 第222〜226期の器具（`drift` / `sero` / `seroshio` / `retreat` / `decoy` と `shockdigest d222〜k226`）はこちらに固定した。</summary>
+    public static readonly UnitDef BasaK0 = new()
+    {
+        Id = "basa",
+        Name = "喧噪のバサ",
+        MaxHp = 56,
+        Attack = 5,
+        Speed = 8,
+        Pattern = AttackPattern.Sweep,
         Traits = new[] { TraitId.Shuffler },
         PlusText = "毎ターン、敵2体と味方2体をそれぞれ入れ替える。行が前に変わった敵は正気を失い、次の攻撃を自軍に向ける（1戦に3回まで）。攻撃は突風となって横に薙ぎ、当たった敵はときどき転ぶ",
         MinusText = "入れ替える相手は選べない。後列前提の駒や庇う駒の配置を自分で壊す。一撃は軽い",
@@ -1290,6 +1308,24 @@ public static class UnitCatalog
         Speed = 8,
         // 第189期: 転生（バネ）。旧 `Shove`（効果A＋隣のよろけ）を、手番の突き返し＋効果A（`Rebound`）と
         // 代金の入れ替え（`Overrun`）に置き換えた。**攻撃は捨てる**ので踏み込みの札は据置（第131期 (a)）。
+        Advances = false,
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "突き返す") },
+        // 第227期 前段（ポンの判断）: 敵の乱れ（`Disarray`・段2 から前列の2体を突き返す）を規定に。旧は <see cref="HaneK0"/>。
+        Traits = new[] { TraitId.Rebound, TraitId.Overrun, TraitId.Disarray },
+        PlusText = "手番で、前列で最も攻撃力の高い敵を後ろへ突き返して転ばせる（次の手番を失う） / 味方が押しのけられるたび、敵の隊列を突き崩す / 敵の隊列が乱れるほど（動かされた回数 8 回）、前列の2体を突き返す",
+        MinusText = "勢い余って、突き返すたび自分が隣の味方1体と場所を入れ替える / 自分では攻撃しない",
+        Flavor = "押されたら押し返す。それしかできないし、加減も知らない。"
+    };
+
+    /// <summary>旧ハネ（第226期まで・K0 ＝ `Rebound` / `Overrun`）。対照として残す（<see cref="All"/> にも <see cref="Retired"/> にも入れない）。
+    /// 第222〜226期の器具はこちらに固定した（<see cref="BasaK0"/> と同じ）。</summary>
+    public static readonly UnitDef HaneK0 = new()
+    {
+        Id = "hane",
+        Name = "突き返しのハネ",
+        MaxHp = 56,
+        Attack = 11,
+        Speed = 8,
         Advances = false,
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "突き返す") },
         Traits = new[] { TraitId.Rebound, TraitId.Overrun },

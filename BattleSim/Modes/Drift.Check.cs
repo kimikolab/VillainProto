@@ -46,7 +46,7 @@ static partial class DriftDiag
         Console.WriteLine("## (3) シオ: 盤面を直に組んで1手番");
         Console.WriteLine();
         {
-            var f = Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: ShioReg, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa);
+            var f = Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: ShioReg, back1: UnitCatalog.SeroOld, back3: UnitCatalog.BasaK0);
             var ctx = Ctx(f, out var p);
             var slots0 = string.Join(",", p.Select(u => u.Slot));
             Act(ctx, U(p, "shio"));
@@ -55,7 +55,7 @@ static partial class DriftDiag
         }
         {
             // 前1 ヨミ 50% ／ 前3 ガルド 90%。最も傷ついたのはヨミ。前1 の後ろ側の隣は 中央 → 後1 の順 → 中央のシオ。
-            var f = Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: ShioReg, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa);
+            var f = Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: ShioReg, back1: UnitCatalog.SeroOld, back3: UnitCatalog.BasaK0);
             var ctx = Ctx(f, out var p);
             var yomi = U(p, "yomi"); var gald = U(p, "gald"); var shio = U(p, "shio");
             yomi.Hp = yomi.MaxHp / 2; gald.Hp = gald.MaxHp * 9 / 10;
@@ -69,7 +69,7 @@ static partial class DriftDiag
         }
         {
             // 前へ押し出された側の反応: 前1 セロ（傷）／ 中央 ヨミ（満タン）→ ヨミが前へ突き出される（+22）。
-            var f = Formation.Build(front1: UnitCatalog.SeroOld, front3: UnitCatalog.Gald, center: UnitCatalog.Yomi, back1: ShioReg, back3: UnitCatalog.Basa);
+            var f = Formation.Build(front1: UnitCatalog.SeroOld, front3: UnitCatalog.Gald, center: UnitCatalog.Yomi, back1: ShioReg, back3: UnitCatalog.BasaK0);
             var ctx = Ctx(f, out var p);
             var yomi = U(p, "yomi"); var sero = U(p, "sero");
             sero.Hp = sero.MaxHp / 3;
@@ -83,7 +83,7 @@ static partial class DriftDiag
         }
         {
             // 最も傷ついたのが後列（後ろ側の隣が無い）なら、次に傷ついた駒で探す。
-            var f = Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: ShioReg, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa);
+            var f = Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: ShioReg, back1: UnitCatalog.SeroOld, back3: UnitCatalog.BasaK0);
             var ctx = Ctx(f, out var p);
             var basa = U(p, "basa"); var gald = U(p, "gald");
             basa.Hp = basa.MaxHp / 10; gald.Hp = gald.MaxHp / 2;
@@ -93,7 +93,7 @@ static partial class DriftDiag
         }
         {
             // 後列だけが傷ついていれば何もしない。
-            var f = Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: ShioReg, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa);
+            var f = Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: ShioReg, back1: UnitCatalog.SeroOld, back3: UnitCatalog.BasaK0);
             var ctx = Ctx(f, out var p);
             U(p, "basa").Hp = 10; U(p, "sero").Hp = 10;
             var slots0 = string.Join(",", p.Select(u => u.Slot));
@@ -103,7 +103,7 @@ static partial class DriftDiag
         }
         {
             // シオ自身が最も傷ついていればシオ自身を下げる。
-            var f = Formation.Build(front1: ShioReg, front3: UnitCatalog.Gald, center: UnitCatalog.Yomi, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa);
+            var f = Formation.Build(front1: ShioReg, front3: UnitCatalog.Gald, center: UnitCatalog.Yomi, back1: UnitCatalog.SeroOld, back3: UnitCatalog.BasaK0);
             var ctx = Ctx(f, out var p);
             var shio = U(p, "shio");
             shio.Hp = 5;
@@ -113,7 +113,7 @@ static partial class DriftDiag
         }
         {
             // パターン2: 前衛 D（○前2）が傷 → 後ろ側の隣は中衛（席番号の順）。
-            var f = Formation.BuildDiamond(a: UnitCatalog.SeroOld, b: UnitCatalog.Basa, c: ShioReg, d: UnitCatalog.Yomi, e: UnitCatalog.Gald);
+            var f = Formation.BuildDiamond(a: UnitCatalog.SeroOld, b: UnitCatalog.BasaK0, c: ShioReg, d: UnitCatalog.Yomi, e: UnitCatalog.Gald);
             var ctx = Ctx(f, out var p);
             var yomi = U(p, "yomi");
             string from = Seat(yomi);

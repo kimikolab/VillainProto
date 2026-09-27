@@ -96,7 +96,7 @@ static partial class SeroShioDiag
             // 手当て: 最も傷ついたヨミを下げる → 中央のシオが前1 へ。ヨミに 移り木 18 ＋ 手当て 18、押し出したシオには何も無い。
             foreach (var (tag, def, tend) in new[] { ("H1", H1, 0), ("H2", H2, 92 * 20 / 100) })
             {
-                var f = Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: def, back1: UnitCatalog.Tou, back3: UnitCatalog.Basa);
+                var f = Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: def, back1: UnitCatalog.Tou, back3: UnitCatalog.BasaK0);
                 var ctx = Ctx(f, E5, 9, out var p, out _);
                 UnitState yomi = U(p, "yomi"), shio = U(p, "shio");
                 yomi.Hp = yomi.MaxHp / 2; shio.Hp = shio.MaxHp - 30;
@@ -109,7 +109,7 @@ static partial class SeroShioDiag
             }
             {
                 // シオ自身が最も傷ついている → シオを下げる。H2 でも手当ては出ない。
-                var f = Formation.Build(front1: H2, front3: UnitCatalog.Gald, center: UnitCatalog.Tou, back1: UnitCatalog.Yomi, back3: UnitCatalog.Basa);
+                var f = Formation.Build(front1: H2, front3: UnitCatalog.Gald, center: UnitCatalog.Tou, back1: UnitCatalog.Yomi, back3: UnitCatalog.BasaK0);
                 var ctx = Ctx(f, E5, 10, out var p, out _);
                 UnitState shio = U(p, "shio");
                 shio.Hp = shio.MaxHp / 3;

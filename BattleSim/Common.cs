@@ -19,6 +19,18 @@
 
 static class Common
 {
+/// <summary>
+/// 第227期 前段: バサ・ハネが敵の乱れ（＋突風）で規定になったので、第222〜226期の器具は編成のバサ・ハネを
+/// 旧（<see cref="UnitCatalog.BasaK0"/> / <see cref="UnitCatalog.HaneK0"/>）へ戻して回す（`compare` の行から引く台も含む）。
+/// </summary>
+internal static Formation OldBasaHane(Formation f)
+{
+    var g = f.Clone();
+    foreach (var (slot, d) in f.Occupied())
+        g[slot] = d.Id == "basa" ? UnitCatalog.BasaK0 : d.Id == "hane" ? UnitCatalog.HaneK0 : d;
+    return g;
+}
+
 // ヒヨの複製。**移設は第60期に採用したので、`UnitCatalog.Hiyo` の側が V1（手番）である。**
 // 診断のローカルに置くのは**移設前の姿**（V0）と素体2種で、`UnitCatalog` は1バイトも触らない。
 //

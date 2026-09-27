@@ -58,7 +58,7 @@ static class ShockDigestDiag
             ? new (string, Formation)[]
             {
                 // 第223期 前段で V3 が規定になったので、シオ・ヨミは `DriftDiag` の V0（版の札を抜いた駒）へ差し替える。
-                ("D1 ポン", D222(Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: UnitCatalog.ShioV3, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Basa))),
+                ("D1 ポン", D222(Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: UnitCatalog.ShioV3, back1: UnitCatalog.SeroOld, back3: UnitCatalog.BasaK0))),
                 ("D2 移動改", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("移動改 (")).F)),
                 ("D3 隊列崩し", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("隊列崩し")).F)),
                 ("D3 突き出し", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("突き出し")).F)),
@@ -142,6 +142,9 @@ static class ShockDigestDiag
                 ("リィカの台", Formation.Build(front1: UnitCatalog.Mug, front3: UnitCatalog.Zoto, center: UnitCatalog.Rica, back1: UnitCatalog.Guza, back3: kata)),
                 ("毒+ベニ+ラウ（ラウ→旧カタ）", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: kata, back3: UnitCatalog.Beni)),
             };
+        // 第227期 前段: バサ・ハネが規定で変わったので、第222〜226期の台は旧のバサ・ハネに戻す（台本が前段の前と一致すること）。
+        if (mode is "d222" or "e223" or "f224" or "r225" or "k226")
+            benches = benches.Select(b => (b.Item1, Common.OldBasaHane(b.Item2))).ToArray();
         PropertyInfo[] props = typeof(BattleEvent).GetProperties(BindingFlags.Public | BindingFlags.Instance);
         long total = 0;
         foreach (var (name, f) in benches)

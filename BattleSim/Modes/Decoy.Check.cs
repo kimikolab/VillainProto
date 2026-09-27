@@ -57,7 +57,7 @@ static partial class DecoyDiag
         // ---- 挑発 ----
         {
             // 前1 セロ（回避盾）／ 前3 ハネ ／ 中央 ヨミ ／ 後1 シオ ／ 後3 バサ
-            var ctx = Ctx(Formation.Build(front1: k1.Sero, front3: UnitCatalog.Hane, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Basa),
+            var ctx = Ctx(Formation.Build(front1: k1.Sero, front3: UnitCatalog.HaneK0, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.BasaK0),
                           Formation.Build(front1: recruit, front3: sweeper), 3, out var p, out var e);
             UnitState sero = U(p, "sero"), foe = e[0], sw = e[1];
             int hits = 0;
@@ -76,7 +76,7 @@ static partial class DecoyDiag
         }
         {
             // 既存の介入が優先: 前1 セロ ／ 前3 ガルド（庇う・前列）→ 挑発した一撃を庇いが引き剥がす
-            var ctx = Ctx(Formation.Build(front1: k1.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Basa),
+            var ctx = Ctx(Formation.Build(front1: k1.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.BasaK0),
                           Formation.Build(front1: recruit), 5, out var p, out var e);
             UnitState sero = U(p, "sero"), gald = U(p, "gald");
             int toGald = 0;
@@ -87,7 +87,7 @@ static partial class DecoyDiag
         }
         {
             // 標（味方の標・75%）が挑発より先: ハネに標を付ける
-            var ctx = Ctx(Formation.Build(front1: k1.Sero, front3: UnitCatalog.Hane, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Basa),
+            var ctx = Ctx(Formation.Build(front1: k1.Sero, front3: UnitCatalog.HaneK0, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.BasaK0),
                           Formation.Build(front1: recruit), 7, out var p, out var e);
             UnitState sero = U(p, "sero"), hane = U(p, "hane");
             hane.SetCounter(StatusKeys.Marked, 1);
@@ -152,7 +152,7 @@ static partial class DecoyDiag
             UnitState t = e.First(u => u.IsAlive);
             t.SetCounter(StatusKeys.Stagger, 1);
             Expect("動けない敵: 乱れの札の保持者がいる戦では転倒も数える", TormentTrait.IsBound(ctx, t), true);
-            var ctx0 = Ctx(Formation.Build(front1: UnitCatalog.Hane, back3: UnitCatalog.Basa), Formation.Build(front1: recruit), 1, out _, out var e0);
+            var ctx0 = Ctx(Formation.Build(front1: UnitCatalog.HaneK0, back3: UnitCatalog.BasaK0), Formation.Build(front1: recruit), 1, out _, out var e0);
             SetTurn(ctx0, 1);   // ターン 0 のままだと IdleTurn の既定値 0 が「今のターン」に一致してしまう
             e0[0].SetCounter(StatusKeys.Stagger, 1);
             Expect("動けない敵: 札が無ければ転倒は数えない（今のまま）", TormentTrait.IsBound(ctx0, e0[0]), false);
@@ -179,7 +179,7 @@ static partial class DecoyDiag
         }
         // ---- 突風 ----
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Hane, front3: UnitCatalog.Sero, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: k4.Basa),
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.HaneK0, front3: UnitCatalog.Sero, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: k4.Basa),
                           Formation.Build(front1: recruit, front3: recruit, center: recruit), 17, out var p, out var e);
             foreach (var u in e) { u.MaxHp = 99999; u.Hp = 99999; }
             UnitState basa = U(p, "basa"), sero = U(p, "sero");
@@ -205,7 +205,7 @@ static partial class DecoyDiag
         Console.WriteLine("## (3) verbose の有無で勝敗・決着ターン・与ダメが同じ");
         Console.WriteLine();
         {
-            var benches = new[] { MHane225, Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Basa, center: UnitCatalog.Hane, back1: UnitCatalog.Yomi, back3: UnitCatalog.Shio) };
+            var benches = new[] { MHane225, Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.BasaK0, center: UnitCatalog.HaneK0, back1: UnitCatalog.Yomi, back3: UnitCatalog.Shio) };
             int n = 0, diff = 0;
             var jobs = new List<(Formation F, int W, EnemyScaleRule Sc, int S)>();
             foreach (var v in Versions.Skip(1))
@@ -232,7 +232,7 @@ static partial class DecoyDiag
         Console.WriteLine();
         {
             long decoyEv = 0, decoyOk = 0, drew = 0, disEv = 0, disOk = 0, disTally = 0, stEv = 0, stTally = 0, sqEv = 0, sqTally = 0, disOther = 0;
-            var f = Apply(Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Basa, center: UnitCatalog.Hane, back1: UnitCatalog.Yomi, back3: UnitCatalog.Shio), k4);
+            var f = Apply(Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.BasaK0, center: UnitCatalog.HaneK0, back1: UnitCatalog.Yomi, back3: UnitCatalog.Shio), k4);
             foreach (int w in new[] { 4, 0, 3 })
                 for (int s = 0; s < 100; s++)
                 {
