@@ -123,7 +123,7 @@ static partial class RetreatDiag
         }
         {
             // 入れ替えで移動の反応: 下げた駒に移り木（J3 ＝ 最大HPの 20%）・前へ出したセロの動かされた回数 +1
-            var ctx = Ctx(B(J3, UnitCatalog.Sero), E1, 4, out var p, out var e);
+            var ctx = Ctx(B(J3, UnitCatalog.SeroL0), E1, 4, out var p, out var e);
             UnitState tou = U(p, "tou"), sero = U(p, "sero"), foe = e[0];
             SetTurn(ctx, 1);
             tou.Hp = tou.MaxHp * 50 / 100;

@@ -102,7 +102,7 @@ static partial class DecoyDiag
             var got = new List<int>();
             foreach (int m in new[] { 0, 2, 4, 7 }) { sero.SetCounter(EvadeTrait.MovesKey, m); got.Add(EvadeTrait.PercentOf(sero)); }
             Expect("回避率: 段 0/1/2/3 で 40/45/50/60", string.Join("/", got), "40/45/50/60");
-            var ctx0 = Ctx(Formation.Build(front1: UnitCatalog.Sero), Formation.Build(front1: recruit), 1, out var p0, out _);
+            var ctx0 = Ctx(Formation.Build(front1: UnitCatalog.SeroL0), Formation.Build(front1: recruit), 1, out var p0, out _);
             UnitState s0 = U(p0, "sero");
             var got0 = new List<int>();
             foreach (int m in new[] { 0, 2, 4, 7 }) { s0.SetCounter(EvadeTrait.MovesKey, m); got0.Add(EvadeTrait.PercentOf(s0)); }
@@ -111,7 +111,7 @@ static partial class DecoyDiag
         // ---- 敵の乱れ ----
         {
             // 味方: 前1 ハネ（乱れ）／ 前3 セロ ／ 中央 ヨミ ／ 後1 シオ ／ 後3 バサ（乱れ）。敵: 5 体（前1・前3・中央・後1・後3）
-            var ctx = Ctx(Formation.Build(front1: k2.Hane, front3: UnitCatalog.Sero, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: k2.Basa),
+            var ctx = Ctx(Formation.Build(front1: k2.Hane, front3: UnitCatalog.SeroL0, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: k2.Basa),
                           Formation.Build(front1: recruit, front3: recruit, center: recruit, back1: recruit, back3: recruit), 11, out var p, out var e);
             UnitState basa = U(p, "basa"), hane = U(p, "hane");
             SetTurn(ctx, 1);
@@ -159,7 +159,7 @@ static partial class DecoyDiag
         }
         {
             // バサの入れ替えの体数（段で 2/3/3/4）とハネの2体: 段を直に上げて1手番
-            var ctx = Ctx(Formation.Build(front1: k2.Hane, front3: UnitCatalog.Sero, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: k2.Basa),
+            var ctx = Ctx(Formation.Build(front1: k2.Hane, front3: UnitCatalog.SeroL0, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: k2.Basa),
                           Formation.Build(front1: recruit, front3: recruit, center: recruit, back1: recruit, back3: recruit), 13, out var p, out var e);
             UnitState basa = U(p, "basa"), hane = U(p, "hane");
             SetTurn(ctx, 1);
@@ -179,7 +179,7 @@ static partial class DecoyDiag
         }
         // ---- 突風 ----
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.HaneK0, front3: UnitCatalog.Sero, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: k4.Basa),
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.HaneK0, front3: UnitCatalog.SeroL0, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: k4.Basa),
                           Formation.Build(front1: recruit, front3: recruit, center: recruit), 17, out var p, out var e);
             foreach (var u in e) { u.MaxHp = 99999; u.Hp = 99999; }
             UnitState basa = U(p, "basa"), sero = U(p, "sero");
@@ -205,7 +205,7 @@ static partial class DecoyDiag
         Console.WriteLine("## (3) verbose の有無で勝敗・決着ターン・与ダメが同じ");
         Console.WriteLine();
         {
-            var benches = new[] { MHane225, Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.BasaK0, center: UnitCatalog.HaneK0, back1: UnitCatalog.Yomi, back3: UnitCatalog.Shio) };
+            var benches = new[] { MHane225, Formation.Build(front1: UnitCatalog.SeroL0, front3: UnitCatalog.BasaK0, center: UnitCatalog.HaneK0, back1: UnitCatalog.Yomi, back3: UnitCatalog.Shio) };
             int n = 0, diff = 0;
             var jobs = new List<(Formation F, int W, EnemyScaleRule Sc, int S)>();
             foreach (var v in Versions.Skip(1))
@@ -232,7 +232,7 @@ static partial class DecoyDiag
         Console.WriteLine();
         {
             long decoyEv = 0, decoyOk = 0, drew = 0, disEv = 0, disOk = 0, disTally = 0, stEv = 0, stTally = 0, sqEv = 0, sqTally = 0, disOther = 0;
-            var f = Apply(Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.BasaK0, center: UnitCatalog.HaneK0, back1: UnitCatalog.Yomi, back3: UnitCatalog.Shio), k4);
+            var f = Apply(Formation.Build(front1: UnitCatalog.SeroL0, front3: UnitCatalog.BasaK0, center: UnitCatalog.HaneK0, back1: UnitCatalog.Yomi, back3: UnitCatalog.Shio), k4);
             foreach (int w in new[] { 4, 0, 3 })
                 for (int s = 0; s < 100; s++)
                 {

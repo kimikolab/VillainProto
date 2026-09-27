@@ -58,7 +58,7 @@ static partial class DecoyDiag
     {
         get
         {
-            UnitDef s0 = UnitCatalog.Sero, b0 = UnitCatalog.BasaK0, h0 = UnitCatalog.HaneK0, sh0 = UnitCatalog.Shio;
+            UnitDef s0 = UnitCatalog.SeroL0, b0 = UnitCatalog.BasaK0, h0 = UnitCatalog.HaneK0, sh0 = UnitCatalog.Shio;
             UnitDef? s1 = With(s0, "Decoy"), b2 = With(b0, "Disarray"), h2 = With(h0, "Disarray"), b4 = With(b0, "Disarray", "Squall");
             UnitDef? shS = With(sh0, "ShioStageSlow");
             var list = new List<Ver> { new("K0", s0, b0, h0, sh0) };
@@ -87,7 +87,7 @@ static partial class DecoyDiag
     // =================================================================================
 
     internal static Formation MHane225 => Formation.Build(front1: UnitCatalog.HaneK0, front3: UnitCatalog.BasaK0,
-        center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Sero);
+        center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.SeroL0);
 
     /// <summary>
     /// 参考: 雷の編成（ベニ・ミオ・カタ・シガ・ツギ）の**ポンの席**（第226期の報告の後にポンの画面から: 前1 シガ ／ 前3 ツギ ／ 中央 ベニ ／ 後1 カタ ／ 後3 ミオ）。

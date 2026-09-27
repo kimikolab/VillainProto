@@ -77,7 +77,7 @@ static partial class RetreatDiag
     // =================================================================================
 
     internal static Formation Raw(UnitDef fifth) => Formation.Build(front1: UnitCatalog.Yomi, front3: fifth,
-        center: UnitCatalog.ShioV3, back1: UnitCatalog.Sero, back3: UnitCatalog.BasaK0);
+        center: UnitCatalog.ShioV3, back1: UnitCatalog.SeroL0, back3: UnitCatalog.BasaK0);
     internal static Formation RawHane => Raw(UnitCatalog.HaneK0);
     internal static Formation RawKado => Raw(UnitCatalog.Kado);
     internal static Formation RefGald => Raw(UnitCatalog.Gald);

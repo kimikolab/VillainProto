@@ -167,7 +167,7 @@ static partial class LastDodgeDiag
             Expect("肩代わりの中継（relayed）で倒れる: 発動しない", $"{r.IsAlive}/{r.LastDodges}", "False/0");
         }
         {
-            var r = Trial(UnitCatalog.Sero, (ctx, p, e) =>
+            var r = Trial(UnitCatalog.SeroL0, (ctx, p, e) =>
             {
                 var s = U(p, "sero");
                 ctx.ApplyDamage(s, 60, e[0], pattern: AttackPattern.Single);
@@ -188,7 +188,7 @@ static partial class LastDodgeDiag
         Console.WriteLine("## (3) 逃げ足が発動しない戦は L0 と一致 ／ verbose の有無");
         Console.WriteLine();
         {
-            var benches = new[] { MHane225, Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Basa, center: UnitCatalog.Yomi, back1: UnitCatalog.Hane, back3: UnitCatalog.Shio), Thunder };
+            var benches = new[] { MHane225, Formation.Build(front1: UnitCatalog.SeroL0, front3: UnitCatalog.Basa, center: UnitCatalog.Yomi, back1: UnitCatalog.Hane, back3: UnitCatalog.Shio), Thunder };
             var jobs = new List<(Formation F, int W, EnemyScaleRule Sc, int S)>();
             foreach (var b in benches)
                 foreach (int w in new[] { 4, 5, 0, 1, 2, 3 })
@@ -224,7 +224,7 @@ static partial class LastDodgeDiag
         Console.WriteLine();
         {
             long ev = 0, evOk = 0, ordOk = 0, tally = 0, stageOk = 0;
-            var f = Apply(Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Basa, center: UnitCatalog.Yomi, back1: UnitCatalog.Hane, back3: UnitCatalog.Shio), VerOf("L2"));
+            var f = Apply(Formation.Build(front1: UnitCatalog.SeroL0, front3: UnitCatalog.Basa, center: UnitCatalog.Yomi, back1: UnitCatalog.Hane, back3: UnitCatalog.Shio), VerOf("L2"));
             foreach (int w in new[] { 4, 0, 1, 3 })
                 for (int s = 0; s < 200; s++)
                 {

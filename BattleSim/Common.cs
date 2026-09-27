@@ -25,9 +25,21 @@ static class Common
 /// </summary>
 internal static Formation OldBasaHane(Formation f)
 {
+    var g = OldSero(f);
+    foreach (var (slot, d) in f.Occupied())
+        g[slot] = d.Id == "basa" ? UnitCatalog.BasaK0 : d.Id == "hane" ? UnitCatalog.HaneK0 : g[slot];
+    return g;
+}
+
+/// <summary>
+/// 第228期 前段: セロが必死の逃げ足＋回避盾で規定になったので、第225〜227期の器具は編成の<b>規定のセロ</b>
+/// （<see cref="UnitCatalog.Sero"/> と同じ参照のものだけ）を旧（<see cref="UnitCatalog.SeroL0"/>）へ戻す。版の駒（旧セロ・F0 など）には触らない。
+/// </summary>
+internal static Formation OldSero(Formation f)
+{
     var g = f.Clone();
     foreach (var (slot, d) in f.Occupied())
-        g[slot] = d.Id == "basa" ? UnitCatalog.BasaK0 : d.Id == "hane" ? UnitCatalog.HaneK0 : d;
+        if (ReferenceEquals(d, UnitCatalog.Sero)) g[slot] = UnitCatalog.SeroL0;
     return g;
 }
 

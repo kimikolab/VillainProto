@@ -51,7 +51,7 @@ static partial class LastDodgeDiag
     {
         get
         {
-            UnitDef s0 = UnitCatalog.Sero;
+            UnitDef s0 = UnitCatalog.SeroL0;
             UnitDef? l1 = With(s0, "LastDodge"), l2 = With(s0, "LastDodge", "Decoy"), l3 = With(s0, "Decoy");
             var list = new List<Ver> { new("L0", s0) };
             if (l1 is not null) list.Add(new("L1", l1));
@@ -72,7 +72,7 @@ static partial class LastDodgeDiag
 
     // 台（§6.1）
     internal static Formation MHane225 => Formation.Build(front1: UnitCatalog.Hane, front3: UnitCatalog.Basa,
-        center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Sero);
+        center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.SeroL0);
     internal static Formation Thunder => DecoyDiag.Thunder;
 
     internal static readonly string[] WaveNames = DriftDiag.WaveNames;
