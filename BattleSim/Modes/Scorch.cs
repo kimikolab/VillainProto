@@ -123,7 +123,7 @@ static partial class ScorchDiag
         public long Turns;
         public readonly long[][] BurnByTurn = { new long[31], new long[31] }, AliveByTurn = { new long[31], new long[31] };
         public readonly Dictionary<string, long> IgniteFoe = new(), IgniteAlly = new();
-        public readonly long[,] Extra = new long[2, 8], Hits = new long[2, 8], Base = new long[2, 8];
+        public readonly long[,] Extra = new long[2, 9], Hits = new long[2, 9], Base = new long[2, 9];
         public long InverseBase, InverseExtra, InverseHits, PlankTimesBrittle, PyreExtra;
         public readonly UnitTally P = new(), E = new();
         public readonly Dictionary<string, UnitTally> ByUnit = new();
@@ -149,7 +149,7 @@ static partial class ScorchDiag
             {
                 UnitTurns[i] += b.UnitTurns[i]; BurnUnitTurns[i] += b.BurnUnitTurns[i]; TurnsAnyBurn[i] += b.TurnsAnyBurn[i];
                 for (int t = 0; t < 31; t++) { BurnByTurn[i][t] += b.BurnByTurn[i][t]; AliveByTurn[i][t] += b.AliveByTurn[i][t]; }
-                for (int k = 0; k < 8; k++) { Extra[i, k] += b.Extra[i, k]; Hits[i, k] += b.Hits[i, k]; Base[i, k] += b.Base[i, k]; }
+                for (int k = 0; k < 9; k++) { Extra[i, k] += b.Extra[i, k]; Hits[i, k] += b.Hits[i, k]; Base[i, k] += b.Base[i, k]; }
             }
             FoeBurnUT[st] += b.BurnUnitTurns[0]; FoeUT[st] += b.UnitTurns[0]; FoeAnyTurns[st] += b.TurnsAnyBurn[0];
             // 味方（player）が燃やした敵 ＝ 書き手が味方の駒で、相手陣営に付けた分。
@@ -176,7 +176,7 @@ static partial class ScorchDiag
             {
                 UnitTurns[i] += o.UnitTurns[i]; BurnUnitTurns[i] += o.BurnUnitTurns[i]; TurnsAnyBurn[i] += o.TurnsAnyBurn[i];
                 for (int t = 0; t < 31; t++) { BurnByTurn[i][t] += o.BurnByTurn[i][t]; AliveByTurn[i][t] += o.AliveByTurn[i][t]; }
-                for (int k = 0; k < 8; k++) { Extra[i, k] += o.Extra[i, k]; Hits[i, k] += o.Hits[i, k]; Base[i, k] += o.Base[i, k]; }
+                for (int k = 0; k < 9; k++) { Extra[i, k] += o.Extra[i, k]; Hits[i, k] += o.Hits[i, k]; Base[i, k] += o.Base[i, k]; }
             }
             foreach (var (k, v) in o.IgniteFoe) IgniteFoe[k] = IgniteFoe.GetValueOrDefault(k) + v;
             foreach (var (k, v) in o.IgniteAlly) IgniteAlly[k] = IgniteAlly.GetValueOrDefault(k) + v;

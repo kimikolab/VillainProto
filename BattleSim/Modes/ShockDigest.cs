@@ -25,7 +25,7 @@ using BattleCore;
 static class ShockDigestDiag
 {
     /// <summary>後の期に足した出来事の種類（名前で持つ・古い worktree でも回る）。</summary>
-    static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff" };
+    static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff", "MireBurst" };
     /// <summary>後の期に足した <c>BattleEvent</c> の欄。</summary>
     static readonly HashSet<string> SkipProps = new() { "BrittleExtra" };
 

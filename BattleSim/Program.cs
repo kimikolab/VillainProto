@@ -1405,6 +1405,9 @@ static class TraitKeyMap
         [TraitId.MireDullAll]     = Array.Empty<int>(),                                         // 第218期（M3x）
         [TraitId.MireCarry]       = Array.Empty<int>(),                                         // 第218期（放電で印を運ぶ）
         [TraitId.MireHandoff]     = Array.Empty<int>(),                                         // 第218期（倒れたら印が移る）
+        [TraitId.MireBurst]       = Array.Empty<int>(),                                         // 第220期（澱みが爆ぜる・B1）
+        [TraitId.MireBurstStack]  = Array.Empty<int>(),                                         // 第220期（B2）
+        [TraitId.MireBurstAll]    = Array.Empty<int>(),                                         // 第220期（B2x）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1613,6 +1616,9 @@ static class TraitHookMap
         [TraitId.MireDullAll]     = new[] { Engine },
         [TraitId.MireCarry]       = new[] { Engine },                              // 第218期（Discharge）
         [TraitId.MireHandoff]     = new[] { Engine },                              // 第218期（HandleDeath）
+        [TraitId.MireBurst]       = new[] { Engine },                              // 第220期（HandleDeath → EnqueueBurst）
+        [TraitId.MireBurstStack]  = new[] { Engine },
+        [TraitId.MireBurstAll]    = new[] { Engine },
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）

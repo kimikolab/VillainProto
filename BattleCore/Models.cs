@@ -3155,7 +3155,16 @@ public enum BattleEventKind
     /// <c>Amount</c> = 移った印の数、<c>StatusRemaining</c> = 移った後の印の数。直前に同じ印の <see cref="ConcentrateMark"/>（<c>Text</c> =「移り」）。
     /// 隣が1体もいなければ出ない（印は消える）。<b>どの規則も読まない。</b>
     /// </summary>
-    MireHandedOff
+    MireHandedOff,
+
+    /// <summary>
+    /// 澱みが爆ぜた（第220期・<c>MireBurst</c> 系の札・<b>表示専用</b>）。爆発が当たる隣1体ごとに1件、直後にその駒への <c>Damage</c>
+    /// （軛が切れば間に <c>Sealed</c> が1件・ベニの結界の内側なら反転の <c>Heal</c>）が並ぶ。<c>ActorId</c> = ミオ（書き手・倒れていても）、<c>SpreadFromId</c> = 爆ぜた駒（どこから・倒れている）、
+    /// <c>TargetId</c> = 隣の駒（どこへ）、<c>Amount</c> = 爆発の量（名目）、<c>Slot</c> = 連鎖の何段目か（1 ＝ 最初の死）、
+    /// <c>StatusRemaining</c> = 爆ぜた駒の印の数、<c>BrittleExtra</c> = 燃焼の脆さで足される分（相手が燃えていれば）、<c>InverterId</c> = 反転なら結界のベニ。
+    /// <b>どの規則も読まない。</b>
+    /// </summary>
+    MireBurst
 }
 
 /// <summary>
@@ -3166,7 +3175,7 @@ public enum BattleEventKind
 public sealed class BrittleLedger
 {
     /// <summary>経路の名前（<see cref="Extra"/> の2つ目の添字）。</summary>
-    public static readonly string[] Routes = { "攻撃", "雷", "叩きつけ", "放電", "反撃・反射", "毒の刻み", "燃焼の刻み", "その他" };
+    public static readonly string[] Routes = { "攻撃", "雷", "叩きつけ", "放電", "反撃・反射", "毒の刻み", "燃焼の刻み", "その他", "澱みの爆発" };
 
     /// <summary>ターン頭（刻みの前）に生きていた駒の数の和（駒×ターン）。</summary>
     public readonly long[] UnitTurns = new long[2];
@@ -3187,13 +3196,13 @@ public sealed class BrittleLedger
     public readonly Dictionary<string, long> IgniteAlly = new();
 
     /// <summary>脆さで足した量（切り上げ・破片や軛で後から削られる前の名目）。[陣営, 経路]。</summary>
-    public readonly long[,] Extra = new long[2, 8];
+    public readonly long[,] Extra = new long[2, 9];
     /// <summary>脆さが掛かる前の量（その一撃の名目）。[陣営, 経路]。<c>Extra ÷ Base</c> が切り上げ込みの実効の割合。</summary>
-    public readonly long[,] Base = new long[2, 8];
+    public readonly long[,] Base = new long[2, 9];
     /// <summary>反転に掛かった脆さの前の量。</summary>
     public long InverseBase;
     /// <summary>脆さが掛かった回数。[陣営, 経路]。</summary>
-    public readonly long[,] Hits = new long[2, 8];
+    public readonly long[,] Hits = new long[2, 9];
     /// <summary>反転（ベニ）で回復に化けた刻み・放電に掛かった脆さの分（F3・F4 の味方側）と回数。</summary>
     public long InverseExtra, InverseHits;
     /// <summary>燃えやすい板（ツギ）の倍と脆さが同じ燃焼の刻みに重なった回数。</summary>
@@ -3239,6 +3248,8 @@ public sealed class BurstLedger
     public readonly long[] StageBursts = new long[10], StageNominal = new long[10], StageHits = new long[10];
     /// <summary>1つの連鎖で爆ぜた数の分布（1〜9, 10 以上は 10）。</summary>
     public readonly long[] ChainLenHist = new long[11];
+    /// <summary>戦の何本目の連鎖か（0 始まり・9 以上は 9）ごとの連鎖の数・爆ぜた数・名目の量（爆ぜた1回あたりの和）。</summary>
+    public readonly long[] ChainIdxChains = new long[10], ChainIdxBursts = new long[10], ChainIdxNominal = new long[10];
     /// <summary>連鎖の最初の死が放電で倒れた回数・雷で・爆発以外の刻みで。</summary>
     public long RootByDischarge, RootByThunder;
 }

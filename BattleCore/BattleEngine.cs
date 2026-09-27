@@ -1187,7 +1187,9 @@ public sealed class BattleContext
         Log($"    雷が {target.Name} に落ちた（{hop} 発目・状態 {kinds} 種 → {amount}）", LogKind.Trigger);
         int before = target.Hp;
         _shockNext = 1;
+        _thunderDepth++;   // 第220期・計数のみ
         ApplyDamage(target, amount, kata);
+        _thunderDepth--;
         _shockNext = 0;
         kt.ThunderDealt += before - Math.Max(0, target.Hp);
         if (before > 0 && !target.IsAlive) kt.ThunderKills++;
@@ -1316,7 +1318,9 @@ public sealed class BattleContext
         _shockNext = 3;
         _shockKillerSet = true;
         _shockKiller = ini;
+        _dischargeDepth++;   // 第220期・計数のみ（爆発の連鎖の最初の死が放電か）
         ApplyDamage(to, amt, from, isFriendlyFire: true);
+        _dischargeDepth--;
         _shockNext = 0;
         _shockKillerSet = false;
         _shockKiller = null;
@@ -3362,6 +3366,121 @@ public sealed class BattleContext
     /// <summary>叩きつけ・通電の札（第219期・<b>計数の経路だけ</b>）。</summary>
     bool _brittleSlamNext;
 
+    // =================================================================================
+    // 第220期 —— 澱みが爆ぜる（`MireBurst` / `MireBurstStack` / `MireBurstAll`・ミオ）
+    //
+    // 印を持つ駒が倒れると、同じ陣営の隣の生きている駒すべてに爆発（状態異常のダメージ）。**幅優先**——連鎖の最初の死で
+    // `EnqueueBurst` が列を回し、爆発で倒れた駒は列の後ろに積まれる（席番号の順に当てるので積む順も席番号の順）。
+    // **1つの駒は1回しか爆ぜない**（蘇生されても）。倒れた駒ごとに ①爆ぜる → ②印が隣へ移る（M5・爆発の後に生き残った隣へ）。
+    // 出どころは倒れた駒（同じ陣営・`isFriendlyFire`）なので棘・板の反射は鳴らず、粛の窓口も通らない。燃焼の脆さは乗る（経路 8）。
+    // 撃破は連鎖の最初の死を倒した一撃の主（放電と同じ `_shockKiller` の札）。**乱数を引かない。札が無ければ比較1つで抜ける。**
+    // =================================================================================
+
+    /// <summary>0 なし ／ 1 B1（毒 ÷ 2）／ 2 B2（毒 ×（1＋印）÷ 4）。</summary>
+    byte _burstMode;
+    /// <summary>B2x（敵味方の両方）。</summary>
+    bool _burstAll;
+    bool _burstRunning, _burstHitNext;
+    int _burstStage;
+    UnitState? _burstRoot;
+    int _dischargeDepth, _thunderDepth;   // 計数のみ
+    int _burstChainIdx;                   // 計数のみ（戦の何本目の連鎖か）
+    readonly Queue<(UnitState Dead, int Poison, int Marks, int Stage)> _burstQueue = new();
+    readonly HashSet<int> _burstDone = new();
+
+    /// <summary>爆発の量（B1 ＝ 毒 ÷ 2 ／ B2 ＝ 毒 ×（1＋印）÷ 4・切り捨て1回）。</summary>
+    int BurstAmount(int poison, int marks) => _burstMode == 1 ? poison / 2 : poison * (1 + marks) / 4;
+
+    void EnqueueBurst(UnitState dead, int marks, UnitState? killer)
+    {
+        if (!_burstDone.Add(dead.InstanceId))
+        {
+            // 既に爆ぜた駒（蘇生されて再び倒れた）は爆ぜない。印の移りだけは今までどおり。
+            if (_mireHandoff && dead.TeamId != _mireHolder!.TeamId) MireHandoff(dead, marks);
+            return;
+        }
+        int stage = _burstRunning ? _burstStage + 1 : 0;
+        _burstQueue.Enqueue((dead, dead.RawCounter(StatusKeys.Poison), marks, stage));
+        if (_burstRunning) return;
+
+        BurstLedger b = BurstBook;
+        if (_dischargeDepth > 0) b.RootByDischarge++; else if (_thunderDepth > 0) b.RootByThunder++;
+        _burstRunning = true;
+        _burstRoot = killer;
+        int n = 0, burst = 0; long nominal = 0;
+        try
+        {
+            while (_burstQueue.Count > 0)
+            {
+                var q = _burstQueue.Dequeue();
+                _burstStage = q.Stage;
+                int amt = BurstOne(q.Dead, q.Poison, q.Marks, q.Stage);
+                if (amt > 0) { burst++; nominal += amt; }
+                n++;
+                if (_mireHandoff && q.Dead.TeamId != _mireHolder!.TeamId)
+                {
+                    int m = q.Dead.RawCounter(StatusKeys.Concentrated);
+                    if (m > 0) MireHandoff(q.Dead, m);
+                }
+            }
+        }
+        finally { _burstRunning = false; _burstRoot = null; _burstStage = 0; }
+        b.ChainLenHist[Math.Min(n, 10)]++;
+        int ci = Math.Min(_burstChainIdx++, 9);
+        b.ChainIdxChains[ci]++; b.ChainIdxBursts[ci] += burst; b.ChainIdxNominal[ci] += nominal;
+    }
+
+    int BurstOne(UnitState dead, int poison, int marks, int stage)
+    {
+        BurstLedger b = BurstBook;
+        int side = SideOf(dead);
+        int amt = BurstAmount(poison, marks);
+        if (amt <= 0) { b.BurstsEmpty[side]++; return 0; }
+        var targets = LivingMembers(dead.TeamId).Where(u => u != dead && FormationRules.AreAdjacent(dead, u)).OrderBy(u => u.Slot).ToList();
+        int st = Math.Min(stage, 9);
+        b.Bursts[side]++;
+        b.StageBursts[st]++;
+        Log($"    ★ {dead.Name} の澱みが爆ぜた（{amt}・{targets.Count} 体・{stage + 1} 段目）", LogKind.Highlight, _mireHolder);
+        foreach (UnitState u in targets)
+        {
+            if (!u.IsAlive) continue;
+            b.Hits[side]++; b.Nominal[side] += amt;
+            b.StageHits[st]++; b.StageNominal[st] += amt;
+            UnitState? inv = InvertsTick(u);
+            if (_verbose)
+            {
+                int? be = Ember.Brittle > 0 && BrittleApplies(u) && u.RawCounter(StatusKeys.Burn) > 0 ? (amt * Ember.Brittle + 99) / 100 : null;
+                Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.MireBurst, Turn = _turn, ActorId = _mireHolder?.InstanceId, SpreadFromId = dead.InstanceId,
+                    TargetId = u.InstanceId, Amount = amt, Slot = stage + 1, StatusRemaining = marks, BrittleExtra = be,
+                    InverterId = inv?.InstanceId, Team = u.TeamId,
+                    SourceTrait = _burstAll ? TraitId.MireBurstAll : _burstMode == 1 ? TraitId.MireBurst : TraitId.MireBurstStack,
+                });
+            }
+            if (inv is not null)
+            {
+                int hb = u.Hp;
+                InverseHeal(inv, u, amt, 4, "澱みの爆発");
+                b.InverseHits++; b.InverseNominal += amt; b.InverseHealed += u.Hp - hb;
+                continue;
+            }
+            bool shocked = u.RawCounter(StatusKeys.Shock) > 0;
+            int before = u.Hp;
+            _shockKillerSet = true;
+            _shockKiller = _burstRoot;
+            _burstHitNext = true;
+            ApplyDamage(u, amt, dead, isFriendlyFire: true);
+            _burstHitNext = false;
+            _shockKillerSet = false;
+            _shockKiller = null;
+            b.Removed[side] += before - Math.Max(0, u.Hp);
+            if (before > 0 && !u.IsAlive) b.Kills[side]++;
+            if (shocked && u.RawCounter(StatusKeys.Shock) <= 0) b.ShockPops[side]++;
+        }
+        return amt;
+    }
+
     /// <summary>倒れた瞬間の在庫（第220期・<b>計数のみ</b>）。</summary>
     void NoteDeathStock(UnitState dead)
     {
@@ -5155,6 +5274,7 @@ public sealed class BattleContext
         if (kind == 0) t.InversePoisonHealed += gained;
         else if (kind == 1) { t.InverseBurnHealed += gained; t.InverseBurnNominal += amount; }
         else if (kind == 3) t.InverseDischargeHealed += gained;   // 第214期: 放電
+        else if (kind == 4) { }                                   // 第220期: 澱みの爆発（帳簿は BurstLedger）
         else t.InverseDetonateHealed += gained;
         if (_turn <= 3)   // 第191期・**計数のみ**（1〜3 ターン目の分）
         {
@@ -6187,6 +6307,9 @@ public sealed class BattleContext
         }
         if (u.HasTrait(TraitId.MireCarry)) { _mireCarry = true; _mireHolder ??= u; }
         if (u.HasTrait(TraitId.MireHandoff)) { _mireHandoff = true; _mireHolder ??= u; }
+        if (u.HasTrait(TraitId.MireBurst)) { if (_burstMode == 0) _burstMode = 1; _mireHolder ??= u; }                 // 第220期
+        if (u.HasTrait(TraitId.MireBurstStack)) { _burstMode = 2; _mireHolder ??= u; }
+        if (u.HasTrait(TraitId.MireBurstAll)) { _burstMode = 2; _burstAll = true; _mireHolder ??= u; }
         u.TakenTurn = 0;   // 第218期・**計数のみ**
         if (u.HasTrait(TraitId.Footing)) _shieldHolders.Add(u);
         if (u.HasTrait(TraitId.Planted)) _plantedLive = true;
@@ -8211,6 +8334,8 @@ public sealed class BattleContext
         _burnTickSelf = false;
         bool slamHit = _brittleSlamNext;
         _brittleSlamNext = false;
+        bool burstHit = _burstHitNext;   // 第220期（計数の経路だけ）
+        _burstHitNext = false;
 
         if (!target.IsAlive || amount <= 0) return;
 
@@ -8388,7 +8513,7 @@ public sealed class BattleContext
         {
             brittleExtra = (amount * Ember.Brittle + 99) / 100;
             amount += brittleExtra;
-            int route = burnTickSelf ? 6 : slamHit ? 2 : shockNote == 1 ? 1 : shockNote == 3 ? 3
+            int route = burstHit ? 8 : burnTickSelf ? 6 : slamHit ? 2 : shockNote == 1 ? 1 : shockNote == 3 ? 3
                       : source is null ? 5 : InReaction ? 4 : levy ? 7
                       : source.TeamId != target.TeamId ? 0 : 7;
             int side = SideOf(target);
@@ -9458,7 +9583,13 @@ public sealed class BattleContext
             if (cm > 0)
             {
                 TallyOf(dead).ConcMarksAtDeath += cm;
-                if (_mireHandoff && _mireHolder is not null && dead.TeamId != _mireHolder.TeamId) { MireHandoff(dead, cm); handedOff = true; }
+                // 第220期: 澱みが爆ぜる（①爆ぜる → ②印が移る を `EnqueueBurst` の中で行う）。札が無ければ比較1つで抜ける。
+                if (_burstMode != 0 && _mireHolder is not null && (_burstAll || dead.TeamId != _mireHolder.TeamId))
+                {
+                    handedOff = _mireHandoff && dead.TeamId != _mireHolder.TeamId;
+                    EnqueueBurst(dead, cm, killer);
+                }
+                else if (_mireHandoff && _mireHolder is not null && dead.TeamId != _mireHolder.TeamId) { MireHandoff(dead, cm); handedOff = true; }
             }
         }
 

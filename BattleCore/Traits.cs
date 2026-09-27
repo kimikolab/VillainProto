@@ -438,6 +438,9 @@ public enum TraitId
     MireDullAll,    // 澱みのデバフ（M3x）: 同じものを**敵味方の両方**に。**札そのものは挙動を持たない**
     MireCarry,      // 印を運ぶ（M4〜）: 印が 1 以上の駒が放電したら、放電を受けた駒に印 +1（1本につき +1・陣営を問わない）。**札そのものは挙動を持たない**
     MireHandoff,    // 倒れたら移る（M5）: 印を持つ敵が倒れたら、その印を全部、隣の生きている敵のうち次の刻みが最も大きい1体へ。**札そのものは挙動を持たない**
+    MireBurst,      // 澱みが爆ぜる（第220期・B1）: 印を持つ敵が倒れると、隣の生きている敵すべてに 毒の層 ÷ 2。**札そのものは挙動を持たない**（engine の HandleDeath）
+    MireBurstStack, // 澱みが爆ぜる（第220期・B2）: 量が 毒の層 ×（1 ＋ 印）÷ 4。**札そのものは挙動を持たない**
+    MireBurstAll,   // 澱みが爆ぜる（第220期・B2x）: B2 を敵味方の両方に（印の味方が倒れると味方側で爆ぜる）。**札そのものは挙動を持たない**
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -12543,6 +12546,29 @@ public sealed class MireHandoffTrait : Trait
 }
 
 /// <summary>
+/// 澱みが爆ぜる（第220期）。<b>札そのものは挙動を持たない</b>（engine の <c>HandleDeath</c> → <c>BattleContext.EnqueueBurst</c> が保持を読む）。
+/// <para>印（<see cref="StatusKeys.Concentrated"/>）を持つ駒が倒れると、<b>同じ陣営の隣の生きている駒すべて</b>に澱みの爆発
+/// （状態異常のダメージ・出どころは倒れた駒・撃破は連鎖の最初の死を倒した一撃の主）。爆発で倒れた駒も印があれば爆ぜる（幅優先・1つの駒は1回だけ）。
+/// 倒れた駒ごとに ①爆ぜる → ②印が隣へ移る（M5）。量は B1 ＝ 毒の層 ÷ 2 ／ B2 ＝ 毒の層 ×（1 ＋ 印）÷ 4（どちらも切り捨て1回）。</para>
+/// </summary>
+public sealed class MireBurstTrait : Trait
+{
+    public override TraitId Id => TraitId.MireBurst;
+}
+
+/// <summary>澱みが爆ぜる（第220期・B2）。量が印の数で育つ。<b>札そのものは挙動を持たない。</b></summary>
+public sealed class MireBurstStackTrait : Trait
+{
+    public override TraitId Id => TraitId.MireBurstStack;
+}
+
+/// <summary>澱みが爆ぜる（第220期・B2x）。B2 を敵味方の両方に。<b>札そのものは挙動を持たない。</b></summary>
+public sealed class MireBurstAllTrait : Trait
+{
+    public override TraitId Id => TraitId.MireBurstAll;
+}
+
+/// <summary>
 /// 反転（第190期・毒喰らいのベニ）。<b>ベニに隣接する味方は、毒と燃焼の削りを回復として受ける</b>
 /// ——ターン頭の刻み（<see cref="BattleContext.TickStatuses"/>）と、起爆の味方側（<see cref="BattleContext.Detonate"/>）の両方。
 ///
@@ -13996,6 +14022,9 @@ public static class TraitCatalog
         new MireDullAllTrait(),
         new MireCarryTrait(),
         new MireHandoffTrait(),
+        new MireBurstTrait(),        // 第220期
+        new MireBurstStackTrait(),   // 第220期
+        new MireBurstAllTrait(),     // 第220期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期
         new HexLeakTrait(),    // 第189期

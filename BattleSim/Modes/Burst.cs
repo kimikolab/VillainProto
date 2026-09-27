@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -165,6 +165,7 @@ static partial class BurstDiag
             a.InverseHits += b.InverseHits; a.InverseNominal += b.InverseNominal; a.InverseHealed += b.InverseHealed;
             AddArr(a.StageBursts, b.StageBursts); AddArr(a.StageNominal, b.StageNominal); AddArr(a.StageHits, b.StageHits);
             AddArr(a.ChainLenHist, b.ChainLenHist);
+            AddArr(a.ChainIdxChains, b.ChainIdxChains); AddArr(a.ChainIdxBursts, b.ChainIdxBursts); AddArr(a.ChainIdxNominal, b.ChainIdxNominal);
             a.RootByDischarge += b.RootByDischarge; a.RootByThunder += b.RootByThunder;
         }
 

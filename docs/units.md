@@ -264,6 +264,9 @@
 | `MireDullAll` | - |
 | `MireCarry` | 澱みのミオ |
 | `MireHandoff` | 澱みのミオ |
+| `MireBurst` | - |
+| `MireBurstStack` | - |
+| `MireBurstAll` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

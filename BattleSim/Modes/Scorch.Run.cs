@@ -163,9 +163,9 @@ static partial class ScorchDiag
             string inv = side == 1 && a.InverseExtra > 0 ? F2(a.Per(a.InverseExtra)) + "（" + P1(a.InverseExtra, a.InverseBase) + "）" : "—";
             Console.WriteLine("| " + (side == 0 ? "敵" : "味方") + " | " + string.Join(" | ", cells) + " | " + (tot == 0 ? "—" : F2(a.Per(tot)) + "（" + P1(tot, totB) + "）") + " | " + inv + " |");
         }
-        long e0 = Enumerable.Range(0, 8).Sum(k => a.Extra[0, k]);
+        long e0 = Enumerable.Range(0, 9).Sum(k => a.Extra[0, k]);
         if (e0 > 0)
-            Console.WriteLine("\n敵が受けた分の内訳（%）: " + string.Join(" ／ ", Enumerable.Range(0, 8).Where(k => a.Extra[0, k] > 0)
+            Console.WriteLine("\n敵が受けた分の内訳（%）: " + string.Join(" ／ ", Enumerable.Range(0, 9).Where(k => a.Extra[0, k] > 0)
                 .Select(k => BrittleLedger.Routes[k] + " " + P1(a.Extra[0, k], e0))));
         Console.WriteLine();
     }
@@ -264,7 +264,7 @@ static partial class ScorchDiag
             foreach (string v in new[] { "F3", "F4" })
             {
                 var a = res[(b, Array.IndexOf(Versions, v), 150)];
-                long ally = Enumerable.Range(0, 8).Sum(k => a.Extra[1, k]);
+                long ally = Enumerable.Range(0, 9).Sum(k => a.Extra[1, k]);
                 if (ally == 0 && a.InverseExtra == 0) continue;
                 int lo = v == "F3" ? 1 : 2, hi = v == "F3" ? 3 : 4;
                 var x = res[(b, lo, 150)]; var y = res[(b, hi, 150)];
@@ -321,7 +321,7 @@ static partial class ScorchDiag
                         if (dt >= 0) { yokerDead++; yokerTurn += dt; }
                     }
                 });
-                long ex = Enumerable.Range(0, 8).Sum(k => agg.Extra[0, k]);
+                long ex = Enumerable.Range(0, 9).Sum(k => agg.Extra[0, k]);
                 Console.WriteLine("| " + name + " | " + v + " | " + F1(agg.WinPct(3)) + " | " + F2((double)ex / n) + " | " + F2((double)cutH / n) + " | " + F2((double)cutL / n) + " | "
                                   + (agg.Hits[0, 0] == 0 ? "—" : F1((double)agg.Base[0, 0] / agg.Hits[0, 0])) + " | " + P1(yokerDead, n) + " | "
                                   + (yokerDead == 0 ? "—" : F2((double)yokerTurn / yokerDead)) + " | " + (ex == 0 ? "—" : P1(yx, ex)) + " |");
