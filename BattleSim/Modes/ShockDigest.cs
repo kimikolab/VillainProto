@@ -31,7 +31,7 @@ static class ShockDigestDiag
     /// <summary>後の期に足した出来事の種類（名前で持つ・古い worktree でも回る）。</summary>
     static Formation D222(Formation f) => DriftDiag.Apply(f, DriftDiag.ShioV0, DriftDiag.YomiV0);
 
-    static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff", "MireBurst", "Regroup", "Evade", "EvadeRiposte", "EvadeStage", "Barrage", "StatusArrow", "Retreat", "ShioStage", "Decoy", "Disarray", "DisarrayStage", "Squall", "LastDodge", "Blast", "Spring" };
+    static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff", "MireBurst", "Regroup", "Evade", "EvadeRiposte", "EvadeStage", "Barrage", "StatusArrow", "Retreat", "ShioStage", "Decoy", "Disarray", "DisarrayStage", "Squall", "LastDodge", "Blast", "Spring", "Tailwind", "StaggerBreach" };
     /// <summary>後の期に足した <c>BattleEvent</c> の欄。</summary>
     static readonly HashSet<string> SkipProps = new() { "BrittleExtra", "PartnerId" };
 
@@ -104,6 +104,13 @@ static class ShockDigestDiag
                 ("M-ハネ（225）", LastDodgeDiag.MHane225),
                 ("参考 雷（ポンの席）", LastDodgeDiag.Thunder),
             }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane")).Select(r => ("compare " + r.Name, r.F))).ToArray()
+            : mode == "g229"
+            // 第229期（受け入れ 2）: G0（前段の規定・ハネは H3）の台本が嵐・追い風・転倒の穴の実装の前後で一致すること。
+            ? new (string, Formation)[]
+            {
+                ("M-ハネ（228 H3）", GaleDiag.MHane228),
+                ("参考 雷（ポンの席）", GaleDiag.Thunder),
+            }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane" or "shio" or "sasa")).Select(r => ("compare " + r.Name, r.F))).ToArray()
             : mode == "h228"
             // 第228期（受け入れ 2）: H0（前段の規定・セロは L2）の台本が吹っ飛ばし・弾き返しの実装の前後で一致すること。
             ? new (string, Formation)[]
@@ -176,12 +183,12 @@ static class ShockDigestDiag
                     int counted = 0;
                     foreach (BattleEvent e in r.Events)
                     {
-                        if (mode is not ("f224" or "r225" or "k226" or "l227" or "h228") && SkipKinds.Contains(e.Kind.ToString())) continue;
+                        if (mode is not ("f224" or "r225" or "k226" or "l227" or "h228" or "g229") && SkipKinds.Contains(e.Kind.ToString())) continue;
                         counted++;
                         var sb = new StringBuilder();
                         foreach (PropertyInfo p in props)
                         {
-                            if (SkipProps.Contains(p.Name) && !(mode is ("f224" or "r225" or "k226" or "l227" or "h228") && p.Name == "PartnerId")) continue;
+                            if (SkipProps.Contains(p.Name) && !(mode is ("f224" or "r225" or "k226" or "l227" or "h228" or "g229") && p.Name == "PartnerId")) continue;
                             if (p.Name == "Text" && e.Kind == BattleEventKind.Highlight) continue;
                             object? v = p.GetValue(e);
                             sb.Append(p.Name).Append('=').Append(v is System.Collections.IEnumerable en && v is not string ? string.Join(",", en.Cast<object>()) : v).Append('|');
