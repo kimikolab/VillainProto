@@ -270,6 +270,9 @@
 | `Regroup` | 移り木のシオ |
 | `CreakSweep` | 軋みのヨミ |
 | `CreakSweep20` | - |
+| `Evade` | - |
+| `EvadeSwap` | - |
+| `StatusArrow` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

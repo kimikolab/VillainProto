@@ -28,7 +28,7 @@ static class ShockDigestDiag
     /// <summary>後の期に足した出来事の種類（名前で持つ・古い worktree でも回る）。</summary>
     static Formation D222(Formation f) => DriftDiag.Apply(f, DriftDiag.ShioV0, DriftDiag.YomiV0);
 
-    static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff", "MireBurst", "Regroup" };
+    static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff", "MireBurst", "Regroup", "Evade", "EvadeRiposte", "EvadeStage", "Barrage", "StatusArrow" };
     /// <summary>後の期に足した <c>BattleEvent</c> の欄。</summary>
     static readonly HashSet<string> SkipProps = new() { "BrittleExtra", "PartnerId" };
 
@@ -60,6 +60,14 @@ static class ShockDigestDiag
                 ("D3 隊列崩し", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("隊列崩し")).F)),
                 ("D3 突き出し", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("突き出し")).F)),
             }
+            : mode == "e223"
+            // 第223期（受け入れ 2）: E0（今のセロ）の台本が実装の前後で一致すること。S1 ポン・S2（ネル）・S3 仮の並び・S4 compare のセロの12行。
+            ? new (string, Formation)[]
+            {
+                ("S1 ポン", SeroDiag.BenchS1Pon),
+                ("S2 ネル", SeroDiag.BenchS2Raw),
+                ("S3 仮", SeroDiag.BenchS3Raw),
+            }.Concat(SeroDiag.CompareRowsWithSero().Select(r => ("S4 " + r.Name, r.F))).ToArray()
             : mode == "m219"
             // 第219期（受け入れ 1）: 規定のミオ（cat）と第218期の M5（m5）の台本が一致すること。
             ? MireBenches(arg == "m5" ? MireDiag.VerOf("M5") : UnitCatalog.Mio)

@@ -2278,6 +2278,23 @@ public sealed class UnitTally
     public long RegroupSwaps, RegroupSelf, RegroupStuck, RegroupAllFull, RegroupHeal, RegroupWhet, RegroupReaderSwings,
                 RegroupLowered, RegroupPushed;
 
+    /// <summary>
+    /// 第223期・回避（逃げ上手のセロの版 E1/E2）。<b>計数専用で、どの規則も読まない。</b>
+    /// <c>EvRolls</c> 回避の判定を振った回数 ／ <c>Evades</c> 避けた回数 ／ <c>EvadedAmount</c> 避けた一撃の量（名目）／
+    /// <c>EvSwaps</c> 入れ替わった ／ <c>EvSwapNone</c> 隣に誰もいなかった ／ <c>EvSwapRefused</c> 相手が据えた足で空振り ／
+    /// <c>EvRipostes</c> 追い撃ちの本数 ／ <c>EvRipostePierce</c> うち貫き ／ <c>EvRiposteHushed</c> 粛・痺れ・組み付きで撃てなかった回避 ／
+    /// <c>EvRiposteInReaction</c> 反撃の中の回避で撃てなかった ／ <c>EvRiposteDealt</c> 追い撃ちの与ダメ ／
+    /// <c>EvBarrages</c> 乱れ撃ちの手番 ／ <c>EvArrows</c> 乱れ撃ちの矢 ／ <c>EvBarrageDealt</c> 乱れ撃ちの与ダメ ／
+    /// <c>EvStageTurn</c>[段] その段に初めて届いたターン（0 ＝ 届かない）／ <c>EvMoveSrc</c>[出どころ] 動かされた回数
+    /// （0 回避の入れ替え・1 バサ・2 シオ・3 ハネ・4 ほかの味方・5 敵・6 不明）／ <c>EvDeathBy</c>[原因] 倒れた一撃
+    /// （0 敵の攻撃・1 毒と燃焼の刻み（起爆も）・2 放電と爆発・3 味方の刃・4 中継ほか）／ <c>EvDeathTurn</c> ／
+    /// <c>ArrowPoison</c>・<c>ArrowBurn</c>・<c>ArrowShock</c> 状態の矢で付けた数（E2）。
+    /// </summary>
+    public long EvRolls, Evades, EvadedAmount, EvSwaps, EvSwapNone, EvSwapRefused, EvRipostes, EvRipostePierce,
+                EvRiposteHushed, EvRiposteInReaction, EvRiposteDealt, EvBarrages, EvArrows, EvBarrageDealt,
+                EvDeathTurn, ArrowPoison, ArrowBurn, ArrowShock;
+    public int[]? EvStageTurn, EvMoveSrc, EvDeathBy;
+
     public long BeckonFires, BeckonSwitches, BeckonIdle, BeckonGuardSaved, BeckonPicked, BeckonGuardTaken,
                 FleeSwaps, FleeStuck, FleeReaderSwings, FleeReaderWhet, FleeFoeMoves, FleePushed,
                 VendettaFires, VendettaDealt, VendettaMarks, RecoilTaken, MarkVulnDealt,
@@ -3233,7 +3250,39 @@ public enum BattleEventKind
     /// <c>PartnerId</c> ＝ 前へ出した駒 ／ <c>HpAfter</c>・<c>Amount</c> ＝ 下げた駒のそのときの HP と最大HP（なぜ選ばれたか）。
     /// 直後に2体の <c>Move</c>（<c>ActorId</c> ＝ シオ）が続く。
     /// </summary>
-    Regroup
+    Regroup,
+
+    /// <summary>
+    /// 避けた（第223期・逃げ上手のセロ・<b>表示専用</b>）。<c>ActorId</c> ＝ セロ ／ <c>TargetId</c> ＝ 攻撃してきた敵 ／
+    /// <c>Amount</c> ＝ 避けた一撃の量（名目）／ <c>PartnerId</c> ＝ 入れ替わる隣の味方（いなければ null）／
+    /// <c>Pattern</c> ＝ 避けた一撃の型（術・反撃なら null）／ <c>StatusRemaining</c> ＝ 避けた後の攻撃力 ／ <c>Slot</c> ＝ そのときの段。
+    /// 入れ替わるなら直後に2体の <c>Move</c>（<c>ActorId</c> ＝ セロ）、続いて追い撃ち（<c>EvadeRiposte</c> → <c>Attack</c>）が並ぶ。
+    /// </summary>
+    Evade,
+
+    /// <summary>
+    /// 追い撃ち（第223期・<b>表示専用</b>）。<c>ActorId</c> ＝ セロ ／ <c>TargetId</c> ＝ 撃ち返す敵 ／ <c>Pattern</c> ＝ 単体か貫き ／
+    /// <c>Slot</c> ＝ 何本目か（段3 は2本）。直後にその矢の <c>Attack</c>（<c>Reaction</c> ＝ true）と <c>Damage</c> が並ぶ。
+    /// </summary>
+    EvadeRiposte,
+
+    /// <summary>
+    /// 段が上がった（第223期・<b>表示専用</b>）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ セロ ／ <c>Slot</c> ＝ 新しい段（1〜3）／
+    /// <c>Amount</c> ＝ 動かされた回数（累計）。1 ＝ 追い撃ちが貫き ／ 2 ＝ 手番が乱れ撃ち ／ 3 ＝ 回避率が上がり追い撃ちが2本。
+    /// </summary>
+    EvadeStage,
+
+    /// <summary>
+    /// 乱れ撃ちの1本（第223期・<b>表示専用</b>）。<c>ActorId</c> ＝ セロ ／ <c>TargetId</c> ＝ 的（乱数・前列の規則を無視）／
+    /// <c>Slot</c> ＝ 何本目か（1〜5）／ <c>Amount</c> ＝ 矢の数（5）。直後にその矢の <c>Attack</c> と <c>Damage</c> が並ぶ。
+    /// </summary>
+    Barrage,
+
+    /// <summary>
+    /// 状態の矢（第223期・E2・<b>表示専用</b>）。<c>ActorId</c> ＝ セロ ／ <c>TargetId</c> ＝ 矢が当たった敵 ／
+    /// <c>Text</c> ＝ 付けた状態の表示名（「毒,燃焼,感電」の部分集合）。直後に状態ごとの <c>StatusGain</c> が並ぶ。
+    /// </summary>
+    StatusArrow
 }
 
 /// <summary>

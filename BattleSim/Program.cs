@@ -1414,6 +1414,9 @@ static class TraitKeyMap
         [TraitId.Regroup]         = new[] { UnitTally.CarryMove },                              // 第222期（シオの版・入れ替え）
         [TraitId.CreakSweep]      = new[] { UnitTally.CarryMove },                              // 第222期（ヨミの版・動かされて育った攻撃力を読む）
         [TraitId.CreakSweep20]    = new[] { UnitTally.CarryMove },                              // 第222期（V3b）                                         // 第220期（B2x）
+        [TraitId.Evade]           = new[] { UnitTally.CarryMove },                              // 第223期（セロの版・動かされた回数で段が上がる）
+        [TraitId.EvadeSwap]       = new[] { UnitTally.CarryMove },                              // 第223期（回避の代金・入れ替え）
+        [TraitId.StatusArrow]     = new[] { UnitTally.CarryPoison, UnitTally.CarryBurn },       // 第223期（E2・自分の毒と燃焼を矢で写す・感電は専用キー）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1628,6 +1631,9 @@ static class TraitHookMap
         [TraitId.Regroup]         = new[] { "OnAction", "OnTurnStart", Engine },   // 第222期（入れ替えは BattleContext.RegroupSwap → SwapSlots）
         [TraitId.CreakSweep]      = new[] { "ModifyPattern" },                     // 第222期（現在の攻撃力 ≥ 30 で薙ぎ）
         [TraitId.CreakSweep20]    = new[] { "ModifyPattern" },                     // 第222期（V3b・閾値 20）
+        [TraitId.Evade]           = new[] { "ModifyAttack", "OnMoved", "OnCarryOver", Engine },   // 第223期（回避は ApplyDamageBody・乱れ撃ちは SwingTurn・的の固定は SelectTargetChain）
+        [TraitId.EvadeSwap]       = new[] { Engine },                              // 第223期（EvadeTrait.TryEvade が読む）
+        [TraitId.StatusArrow]     = new[] { "OnAfterAttack" },                     // 第223期（E2）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）
@@ -1853,6 +1859,8 @@ static class TraitEntryMap
         [TraitId.Vendetta]   = new[] { (UnitTally.CarryMark, Where.Foe) },                  // 第184期（殴った敵に標）
         [TraitId.Flee]       = new[] { (UnitTally.CarryMove, Where.Ally) },                 // 第184期（入れ替え）
         [TraitId.Regroup]    = new[] { (UnitTally.CarryMove, Where.Ally) },                 // 第222期（シオの版・入れ替え）
+        [TraitId.EvadeSwap]  = new[] { (UnitTally.CarryMove, Where.Ally), (UnitTally.CarryMove, Where.Self) },   // 第223期（回避の入れ替え）
+        [TraitId.StatusArrow]= new[] { (UnitTally.CarryPoison, Where.Foe), (UnitTally.CarryBurn, Where.Foe) },   // 第223期（E2・状態の矢）
         [TraitId.Goad]       = new[] { (UnitTally.CarryMark, Where.Ally), (UnitTally.CarryWhet, Where.Ally) },
         [TraitId.Divert]     = new[] { (UnitTally.CarryMark, Where.Foe), (UnitTally.CarryMark, Where.Self) },
         [TraitId.Rally]      = new[] { (UnitTally.CarryWhet, Where.Ally),

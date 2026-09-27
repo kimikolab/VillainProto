@@ -467,6 +467,8 @@ public enum OutOfTurnRoute
     LastStand,
     /// <summary>応急処置（<c>FirstAidTrait</c>・第210期。<b>問う相手はツギ</b>——貼られる味方ではない）。</summary>
     FirstAid,
+    /// <summary>追い撃ち（<c>EvadeTrait</c>・第223期。避けた後の撃ち返し。<b>避けること自体と入れ替えは問わない</b>——行動ではない）。</summary>
+    Evade,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -476,7 +478,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -1584,12 +1586,12 @@ public sealed class BattleContext
     }
 
     /// <summary><see cref="UnitTally.SoakSeenByRoute"/> の長さ（毒 9 経路 ＋ 燃焼 1。第180期に吐き戻しで1本、
-    /// 第183期に触れてうつす・その漏れで2本、第190期に澱み分けで1本、第195期にスィドの吐きで1本、第197期に紅蓮の奔流で1本、第216期に開戦の撒きで1本増えた）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
+    /// 第183期に触れてうつす・その漏れで2本、第190期に澱み分けで1本、第195期にスィドの吐きで1本、第197期に紅蓮の奔流で1本、第216期に開戦の撒きで1本、第223期に状態の矢で1本増えた）。**毒の経路を足したら燃焼の添字も後ろへずらすこと**
     /// ——ずらさないと新しい経路の添字が燃焼と重なる。</summary>
-    public const int SoakRouteCount = 13;
+    public const int SoakRouteCount = 14;
 
     /// <summary>燃焼の経路の添字（<see cref="UnitTally.SoakSeenByRoute"/> の末尾）。</summary>
-    public const int SoakBurnRouteIx = 12;
+    public const int SoakBurnRouteIx = 13;
 
     /// <summary>
     /// 巻き込み則（第85期）で最後にこの駒へ傷を書いた駒の <c>InstanceId + 1</c>（第90期の計数専用の札）。
@@ -4665,6 +4667,162 @@ public sealed class BattleContext
     /// <summary>突き（第186期 追補）の保持者が盤上に1体でもいるか。いなければ列の指定と倍率の判定を比較1つで抜ける。</summary>
     bool _thrustLive;
 
+    // ---- 第223期: 回避（逃げ上手のセロ・`EvadeTrait`）。**保持者がいなければ `_evadeLive` の比較1つで全部抜ける。** ----
+    bool _evadeLive;
+    /// <summary>次の標的選択1回にだけ効く「的の固定」（追い撃ち・乱れ撃ち）。`SelectTargetChain` の頭で読んで消す。</summary>
+    UnitState? _forcedTarget;
+    /// <summary>いまの `PerformAttack` の枠で回避した駒（主目標なら `OnAfterAttack` を走らせない）。入れ子は `PerformAttack` が退避する。</summary>
+    UnitState? _evadedNow;
+    /// <summary>セロの一撃の出どころ（0 手番 ／ 1 追い撃ち ／ 2 乱れ撃ち・<b>計数専用</b>）。</summary>
+    int _evadeShotKind;
+    /// <summary>回避の保持者が最後に受けた呼び出しの種類（倒れた原因の帳簿・<b>計数専用</b>）。</summary>
+    int _evadeHitClass;
+
+    /// <summary>
+    /// いま `SwapSlots` で駒を動かしている駒（第223期・<b>計数専用・どの規則も読まない</b>）。回避の段の「動かされた出どころ」の帳簿だけが読む。
+    /// `SwapSlots` の外では null。入れ子（入れ替えの中の入れ替え）は退避する。
+    /// </summary>
+    public UnitState? CurrentMover { get; private set; }
+
+    /// <summary>
+    /// 追い撃ち・乱れ撃ちの1本（第223期・<see cref="EvadeTrait"/> だけが呼ぶ）。**的を固定した `PerformAttack`**——
+    /// 標的の鎖（庇い・後備え・標・執着）を通らず、それ以外（痺れ毒・萎縮・澱み・§1・破片・軛・反撃・`OnAfterAttack`）は今までどおり。
+    /// 貫きなら的を通るレーンを前から後ろへ（`SelectTargetChain` の頭・<see cref="ForcedLane"/>）。
+    /// </summary>
+    /// <param name="kind">1 追い撃ち ／ 2 乱れ撃ち（帳簿の割り当てだけ）。</param>
+    public void EvadeShot(UnitState sero, UnitState foe, bool pierce, int kind)
+    {
+        if (!sero.IsAlive || !foe.IsAlive) return;
+        UnitTally t = TallyOf(sero);
+        long before = t.DamageToEnemy;
+        int prevKind = _evadeShotKind;
+        _evadeShotKind = kind;
+        _forcedTarget = foe;
+        try { PerformAttack(sero, patternOverride: pierce ? AttackPattern.Pierce : AttackPattern.Single); }
+        finally { _forcedTarget = null; _evadeShotKind = prevKind; }
+        long d = t.DamageToEnemy - before;
+        if (kind == 1) t.EvRiposteDealt += d; else t.EvBarrageDealt += d;
+    }
+
+    /// <summary>的を通るレーン（第223期）。0 本なら −1（単体）、2 本なら生きている駒が多い方・同数は添字の若い方（<b>乱数を引かない</b>）。</summary>
+    int ForcedLane(UnitState ft)
+    {
+        var lanes = ft.Shape.LanesOf(ft.Slot);
+        if (lanes.Count == 0) return -1;
+        if (lanes.Count == 1) return lanes[0];
+        var team = LivingMembers(ft.TeamId);
+        int best = lanes[0], bestN = -1;
+        foreach (int l in lanes)
+        {
+            int n = LaneOccupants(team, l, ft.Shape).Count;
+            if (n > bestN) { best = l; bestN = n; }
+        }
+        return best;
+    }
+
+    /// <summary>乱れ撃ち（第223期・段2 以上のセロの手番）。5本の矢を生きている敵へ1本ずつ乱数で（前列の規則は無視）。</summary>
+    void Barrage(UnitState sero)
+    {
+        TallyOf(sero).EvBarrages++;
+        for (int i = 1; i <= EvadeTrait.Arrows; i++)
+        {
+            if (!sero.IsAlive) break;
+            var foes = LivingMembers(Opponent(sero.TeamId));
+            if (foes.Count == 0) break;
+            UnitState t = foes.Count == 1 ? foes[0] : foes[Roll(foes.Count)];
+            TallyOf(sero).EvArrows++;
+            Log($"    {sero.Name} の乱れ撃ち（{i} 本目）が {t.Name} へ", LogKind.Action);
+            if (_verbose) Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.Barrage, Turn = _turn, ActorId = sero.InstanceId, TargetId = t.InstanceId,
+                Slot = i, Amount = EvadeTrait.Arrows,
+            });
+            EvadeShot(sero, t, false, 2);
+        }
+    }
+
+    /// <summary>避けた（第223期・表示専用の出来事 ＋ 計数）。<b>盤面は1ビットも触らない。</b></summary>
+    public void NoteEvaded(UnitState sero, UnitState foe, int amount, UnitState? partner, AttackPattern? pattern)
+    {
+        UnitTally t = TallyOf(sero);
+        t.Evades++;
+        t.EvadedAmount += amount;
+        Log($"    {sero.Name} は {foe.Name} の一撃をかわした（{amount}）", LogKind.Trigger);
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Evade, Turn = _turn, ActorId = sero.InstanceId, TargetId = foe.InstanceId,
+            Amount = amount, PartnerId = partner?.InstanceId, Pattern = pattern,
+            StatusRemaining = sero.CurrentAttack, Slot = EvadeTrait.StageOf(sero), Team = sero.TeamId,
+        });
+    }
+
+    /// <summary>回避の判定を振った（第223期・計数のみ）。</summary>
+    public void NoteEvadeRoll(UnitState sero) => TallyOf(sero).EvRolls++;
+
+    /// <summary>入れ替えの結果（第223期・計数のみ）。0 入れ替わった ／ 1 隣がいない ／ 2 据えた足で空振り。</summary>
+    public void NoteEvadeSwap(UnitState sero, int result)
+    {
+        UnitTally t = TallyOf(sero);
+        if (result == 0) t.EvSwaps++; else if (result == 1) t.EvSwapNone++; else t.EvSwapRefused++;
+    }
+
+    /// <summary>追い撃ちを撃てなかった（第223期・計数のみ）。<paramref name="inReaction"/> なら反撃の中の回避。</summary>
+    public void NoteRiposteBlocked(UnitState sero, bool inReaction)
+    {
+        UnitTally t = TallyOf(sero);
+        if (inReaction) t.EvRiposteInReaction++; else t.EvRiposteHushed++;
+    }
+
+    /// <summary>追い撃ちの1本の直前（第223期・表示専用 ＋ 計数）。</summary>
+    public void NoteRiposte(UnitState sero, UnitState foe, bool pierce, int index)
+    {
+        UnitTally t = TallyOf(sero);
+        t.EvRipostes++;
+        if (pierce) t.EvRipostePierce++;
+        Log($"    {sero.Name} が {foe.Name} へ撃ち返す（{(pierce ? "貫き" : "単体")}・{index} 本目）", LogKind.Trigger);
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.EvadeRiposte, Turn = _turn, ActorId = sero.InstanceId, TargetId = foe.InstanceId,
+            Pattern = pierce ? AttackPattern.Pierce : AttackPattern.Single, Slot = index,
+        });
+    }
+
+    /// <summary>動かされた（第223期・計数 ＋ 段が上がれば表示専用の出来事）。<b>盤面は1ビットも触らない。</b></summary>
+    public void NoteEvadeMove(UnitState sero, int stageBefore, int stageAfter)
+    {
+        UnitTally t = TallyOf(sero);
+        UnitState? by = CurrentMover;
+        int src = by is null ? 6
+                : by == sero ? 0
+                : by.TeamId != sero.TeamId ? 5
+                : by.Def.Id == "basa" ? 1 : by.Def.Id == "shio" ? 2 : by.Def.Id == "hane" ? 3 : 4;
+        (t.EvMoveSrc ??= new int[7])[src]++;
+        if (stageAfter <= stageBefore) return;
+        var st = t.EvStageTurn ??= new int[4];
+        for (int k = stageBefore + 1; k <= stageAfter; k++) if (st[k] == 0) st[k] = Math.Max(1, _turn);
+        Log($"    {sero.Name} は動かされるほど身軽になる（段 {stageAfter}）", LogKind.Highlight);
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.EvadeStage, Turn = _turn, ActorId = sero.InstanceId, TargetId = sero.InstanceId,
+            Slot = stageAfter, Amount = EvadeTrait.MovesOf(sero),
+        });
+    }
+
+    /// <summary>状態の矢（第223期・E2・表示専用の出来事 ＋ 計数）。</summary>
+    public void NoteStatusArrow(UnitState sero, UnitState foe, bool poison, bool burn, bool shock)
+    {
+        UnitTally t = TallyOf(sero);
+        if (poison) t.ArrowPoison++;
+        if (burn) t.ArrowBurn++;
+        if (shock) t.ArrowShock++;
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.StatusArrow, Turn = _turn, ActorId = sero.InstanceId, TargetId = foe.InstanceId,
+            Text = string.Join(",", new[] { poison ? StatusKeys.LabelOf(StatusKeys.Poison) : null, burn ? StatusKeys.LabelOf(StatusKeys.Burn) : null,
+                                             shock ? StatusKeys.LabelOf(StatusKeys.Shock) : null }.Where(x => x is not null)),
+        });
+    }
+
     /// <summary>敵の標の出どころ（<c>InstanceId</c> → 最後に付けた書き手）。<b>計数専用。</b></summary>
     readonly Dictionary<int, MarkOrigin> _markOrigin = new();
 
@@ -6338,6 +6496,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Beckon)) _beckonHolders.Add(u);   // 第184期（半減の判定の短絡）
         if (u.HasTrait(TraitId.Deflect)) _deflectHolders.Add(u); // 第186期（逸らしの判定の短絡）
         if (u.HasTrait(TraitId.Thrust) || u.HasTrait(TraitId.ThrustPlain)) _thrustLive = true;   // 第186期 追補
+        if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
         // 第185期: 組み付き・見せしめ（手番の頭の2つのキーと標的の選好を短絡させる）／踏みしめ（範囲の盾・層の軽減）／
         // 据えた足（入れ替えの空振り）。**保持者がいなければ比較1つで抜ける**——既存の行が 0 件差分であることの根拠。
         if (u.HasTrait(TraitId.Grapple) || u.HasTrait(TraitId.Shame)) _restrainLive = true;
@@ -7325,6 +7484,16 @@ public sealed class BattleContext
         // 破片が全額吸って `NoteHarm` に届かなかった介入が、無関係な被弾を「引き受けたぶん」に化けさせる。
         _interceptedInto = null;
 
+        // 第223期: 的の固定（追い撃ち・乱れ撃ち）。**介入の鎖を通さない**——撃ち返す相手・矢の的は決まっている。読んで消す。
+        if (_forcedTarget is not null)
+        {
+            UnitState ft = _forcedTarget;
+            _forcedTarget = null;
+            if (!ft.IsAlive) return null;
+            if ((patternOverride ?? attacker.CurrentPattern) == AttackPattern.Pierce) lane = ForcedLane(ft);
+            return ft;
+        }
+
         List<UnitState> foes = FoesOf(attacker);   // 第146期: 混乱はここで陣営を反転する
         if (foes.Count == 0) return null;
 
@@ -7774,6 +7943,20 @@ public sealed class BattleContext
     public void PerformAttack(UnitState actor, string prefix = "  ",
                               int attackPercent = 100, AttackPattern? patternOverride = null)
     {
+        // 第223期: 回避の枠（主目標が避けたら `OnAfterAttack` を走らせない）。**保持者がいなければ比較1つで本体へ直行する。**
+        if (_evadeLive)
+        {
+            UnitState? prevEv = _evadedNow;
+            _evadedNow = null;
+            try { PerformAttackOuter(actor, prefix, attackPercent, patternOverride); }
+            finally { _evadedNow = prevEv; }
+            return;
+        }
+        PerformAttackOuter(actor, prefix, attackPercent, patternOverride);
+    }
+
+    void PerformAttackOuter(UnitState actor, string prefix, int attackPercent, AttackPattern? patternOverride)
+    {
         // 第185期 追補4: 殴られて積もる据えの層を「1回の攻撃につき1層・攻撃が終わってから」にする枠。
         // **保持者がいなければ比較1つで本体へ直行する**（既存の行が 0 件差分であることの根拠）。
         // 第208期: 撃ち返す板の「1回の攻撃に何本返ったか」を数える枠（計数・表示専用）。保持者がいなければ比較1つで抜ける。
@@ -8119,12 +8302,14 @@ public sealed class BattleContext
 
         // 特性の発動は攻撃1回につき1度、主目標に対してのみ。
         // 範囲攻撃のたびに巻き込みや毒が複数回発動すると、範囲持ちが即座に壊れる。
-        foreach (Trait t in actor.Traits.ToList())
-        {
-            TraitMark m = this.BeginTrait(t.Id, actor);   // 第94期 (T2) の印
-            t.OnAfterAttack(this, actor, target, dealt);
-            this.EndTrait(m);
-        }
+        // 第223期: 主目標が避けた（回避）なら走らせない——「当たらなかった」。
+        if (!_evadeLive || _evadedNow != target)
+            foreach (Trait t in actor.Traits.ToList())
+            {
+                TraitMark m = this.BeginTrait(t.Id, actor);   // 第94期 (T2) の印
+                t.OnAfterAttack(this, actor, target, dealt);
+                this.EndTrait(m);
+            }
 
         if (whip is not null)
         {
@@ -8200,12 +8385,14 @@ public sealed class BattleContext
 
         // 特性の発動は攻撃1回につき1度、レーンの先頭に対してのみ。
         // 貫いた全員に毒や巻き込みが乗ると、貫き持ちが即座に壊れる。
-        foreach (Trait t in actor.Traits.ToList())
-        {
-            TraitMark m = this.BeginTrait(t.Id, actor);   // 第94期 (T2) の印
-            t.OnAfterAttack(this, actor, entry, primaryDealt);
-            this.EndTrait(m);
-        }
+        // 第223期: 先頭が避けた（回避）なら走らせない。
+        if (!_evadeLive || _evadedNow != entry)
+            foreach (Trait t in actor.Traits.ToList())
+            {
+                TraitMark m = this.BeginTrait(t.Id, actor);   // 第94期 (T2) の印
+                t.OnAfterAttack(this, actor, entry, primaryDealt);
+                this.EndTrait(m);
+            }
     }
 
     /// <summary>主目標以外に巻き添えになる敵。</summary>
@@ -8382,6 +8569,24 @@ public sealed class BattleContext
         _burstHitNext = false;
 
         if (!target.IsAlive || amount <= 0) return;
+
+        // 回避（第223期・逃げ上手のセロ・`EvadeTrait`）。**札を読んで消した直後・逸らしより前**——避けて返っても次の呼び出しに札が漏れず、
+        // 破片・受け流し・軛・`OnDamaged` はすべて後ろなので、避けた一撃は破片も減らさない。
+        // 避けるのは「出どころが相手陣営 かつ 刻み・徴収・中継・呪いの共有ではない」一撃だけ——状態異常の刻み（出どころ null）・
+        // 放電と爆発（出どころが同じ陣営）・味方の刃は外れる。**保持者がいなければ比較1つで抜ける。**
+        if (_evadeLive && target.HasTrait(TraitId.Evade))
+        {
+            bool attack = source is not null && source.TeamId != target.TeamId && !burnTick && !levy && !relayed && !hexShare;
+            _evadeHitClass = attack ? 0
+                           : source is null || burnTick ? 1
+                           : burstHit || shockNote == 3 ? 2
+                           : levy || relayed || hexShare ? 4 : 3;
+            if (attack && EvadeTrait.TryEvade(this, target, source!, amount, pattern))
+            {
+                _evadedNow = target;
+                return;
+            }
+        }
 
         // 逸らし（第186期・DeflectTrait・ソラ）: 単体攻撃のダメージを、半分だけ本人が受け、残り半分を
         // 「逸らし（Divert）で標を付けた敵」へ逸らす。**入口に置く**（棘守りの上限・駒の被ダメ修正・惨禍より前）
@@ -9576,6 +9781,9 @@ public sealed class BattleContext
     /// </summary>
     private void SwingTurn(UnitState actor, UnitAction? act)
     {
+        // 第223期: 段2 以上のセロの手番は乱れ撃ち（5本・的は乱数）。**保持者がいなければ比較1つで抜ける。**
+        if (_evadeLive && actor.HasTrait(TraitId.Evade) && EvadeTrait.StageOf(actor) >= 2) { Barrage(actor); return; }
+
         int hits = 1;
         foreach (Trait t in actor.Traits) hits = t.ModifyHitCount(actor, hits);
         if (hits < 1) hits = 1;   // 上限は特性の側。engine が保証するのは「1発は振る」だけ
@@ -9593,6 +9801,12 @@ public sealed class BattleContext
     private void HandleDeath(UnitState dead, UnitState? killer)
     {
         dead.Hp = 0;
+        if (_evadeLive && dead.HasTrait(TraitId.Evade))   // 第223期・**計数のみ**（倒れた一撃の種類）
+        {
+            UnitTally et = TallyOf(dead);
+            (et.EvDeathBy ??= new int[5])[_evadeHitClass]++;
+            et.EvDeathTurn += _turn;
+        }
         TallyOf(dead).Deaths++;
         (TallyOf(dead).DeathTurnHist ??= new long[7])[Math.Clamp(_turn, 0, 6)]++;   // 第216期・**計数のみ**
         // 第136期・計数のみ。倒れた瞬間に受け流しの在庫が残っていたか（＝在庫切れで死んだのか、上限を素通りしたのか）。
@@ -10489,14 +10703,21 @@ public sealed class BattleContext
         int origin = self.Slot;
         Row selfFrom = self.Row;
 
-        self.Slot = destSlot;
-        Notify(self, selfFrom);
+        // 第223期・**計数専用**: 動かしている駒を控える（回避の段の出どころの帳簿だけが読む）。
+        UnitState? prevMover = CurrentMover;
+        CurrentMover = by;
+        try
+        {
+            self.Slot = destSlot;
+            Notify(self, selfFrom);
 
-        if (occupant is null) return true;
-        Row otherFrom = occupant.Row;
-        occupant.Slot = origin;
-        Notify(occupant, otherFrom);
-        return true;
+            if (occupant is null) return true;
+            Row otherFrom = occupant.Row;
+            occupant.Slot = origin;
+            Notify(occupant, otherFrom);
+            return true;
+        }
+        finally { CurrentMover = prevMover; }
 
         void Notify(UnitState u, Row from)
         {

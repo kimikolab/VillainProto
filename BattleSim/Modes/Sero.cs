@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -40,6 +40,13 @@ static partial class SeroDiag
 
     /// <summary>S1: ポンの移動改（第222期 D1 の席）。シオ・ヨミは前段で規定になった V3。</summary>
     internal static Formation BenchS1Pon => Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald,
+        center: UnitCatalog.Shio, back1: UnitCatalog.Sero, back3: UnitCatalog.Basa);
+
+    /// <summary>S2 の5枚目（Phase 0 Q0-6 の規則で選んだ・`sero phase0` が出す）。</summary>
+    internal static UnitDef S2Fifth => UnitCatalog.Nel;
+
+    /// <summary>S2: 庇いの無い移動軸（S1 のガルドの席に5枚目。席は総当たりする。これは仮の並び）。</summary>
+    internal static Formation BenchS2Raw => Formation.Build(front1: UnitCatalog.Yomi, front3: S2Fifth,
         center: UnitCatalog.Shio, back1: UnitCatalog.Sero, back3: UnitCatalog.Basa);
 
     /// <summary>S3: 状態の矢の台（席は E1 × 九/新兵 × 150/115 で総当たり。これは仮の並び）。</summary>

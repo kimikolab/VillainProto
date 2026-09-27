@@ -444,6 +444,10 @@ public enum TraitId
     Regroup,        // 隊を組み替える（第222期・シオの版 V1/V3）: 手番で、最も傷ついた味方を「隣でより後ろの行の味方」と入れ替える（通常攻撃はしない）。保持者 0 枚
     CreakSweep,     // 軋みが薙ぐ（第222期・ヨミの版 V2/V3）: 現在の攻撃力が 30 以上のあいだ、単体の一撃が薙ぎになる。保持者 0 枚
     CreakSweep20,   // 軋みが薙ぐ（第222期・V3b）: 同じもの・閾値 20。保持者 0 枚
+    Evade,          // 回避（第223期・セロの版 E1/E2）: 敵の攻撃を 30%（段3 で 45%）で避け、避けたら攻撃してきた敵へ撃ち返す（段1 から貫き・段3 は2本）。
+                    // 避けるたび攻撃力 +3。動かされた回数で段が上がり、段2 から手番が乱れ撃ち（5本・的は乱数）。保持者 0 枚
+    EvadeSwap,      // 回避の代金（第223期）: 避けるたび、隣の生きている味方1体（乱数）と入れ替わる。保持者 0 枚
+    StatusArrow,    // 状態の矢（第223期・E2）: セロの矢が当たるたび、セロが帯びている毒（+2 層）・燃焼・感電を敵に付ける（セロ自身の状態は減らない）。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -2478,7 +2482,9 @@ public enum PoisonRoute
     /// <summary>紅蓮の奔流（ベニ・溜めた紅蓮を敵全員で等分。第197期）。</summary>
     Guren,
     /// <summary>開戦の撒き（ベニの版 O1〜O4・開戦時に全体へ。第216期）。</summary>
-    Opening
+    Opening,
+    /// <summary>状態の矢（セロの版 E2・矢が当たった敵へ。第223期）。</summary>
+    Arrow
 }
 
 /// <summary>
@@ -12659,6 +12665,153 @@ public sealed class CreakSweep20Trait : CreakSweepTrait
 }
 
 /// <summary>
+/// 回避（第223期・逃げ上手のセロの版 E1/E2）。<b>敵の攻撃による被弾を確率で避け、避けたら攻撃してきた敵へ撃ち返す。</b>
+///
+/// <para><b>判定は engine の1箇所</b>（<c>ApplyDamageBody</c> の頭・逸らしより前）が <see cref="TryEvade"/> を呼ぶ。
+/// 避けるのは「出どころが相手陣営 かつ 刻み・徴収・中継・呪いの共有ではない」一撃（単体・薙ぎ・貫き・全体・術の直撃・反撃・追い打ち）。
+/// 状態異常のダメージ（毒と燃焼の刻み・起爆・放電・澱みの爆発）と味方の刃は避けない。1回の <c>ApplyDamage</c> につき判定1回。
+/// 避けた一撃は 0 で、破片も減らさず、攻撃した側の <c>OnAfterAttack</c> も走らない。</para>
+///
+/// <para><b>段は「隊列を動かされた回数」</b>（<see cref="OnMoved"/>・出どころを問わない）: 3 回で段1（追い撃ちが貫き）／ 6 回で段2（手番が乱れ撃ち）／
+/// 10 回で段3（回避率 45%・追い撃ち2本）。避けるたび攻撃力 +3（戦のあいだ下がらない・<c>AtkBonus</c> ではなく <see cref="ModifyAttack"/>——弱体でも強化の横取りでも動かない）。</para>
+///
+/// <para><b>追い撃ちはターン外の攻撃</b>（<c>CanActOutOfTurn</c>・<see cref="OutOfTurnRoute.Evade"/>）なので粛・痺れ・組み付きで止まる。
+/// <b>避けることと入れ替えは止まらない</b>（行動ではない）。反撃の中で避けたときは撃ち返さない（<c>Reaction</c> の再入禁止）。</para>
+///
+/// <para>乱数を引くのは3箇所だけ——回避の判定（<see cref="TryEvade"/>）・入れ替えの相手（<see cref="EvadeSwapTrait"/>）・乱れ撃ちの的（engine の <c>Barrage</c>）。</para>
+/// </summary>
+public sealed class EvadeTrait : Trait
+{
+    /// <summary>回避率（%）。段3 で <see cref="TopPercent"/>。</summary>
+    public const int Percent = 30;
+    public const int TopPercent = 45;
+    /// <summary>避けるたびに上がる攻撃力。</summary>
+    public const int Gain = 3;
+    /// <summary>乱れ撃ちの矢の数。</summary>
+    public const int Arrows = 5;
+    /// <summary>段1・段2・段3 に要る「動かされた回数」。</summary>
+    public static readonly int[] StageAt = { 3, 6, 10 };
+
+    /// <summary>動かされた回数（私有キー・会戦の境界で 0 に戻す）。</summary>
+    public const string MovesKey = "evadeMoves";
+    /// <summary>避けて上がった攻撃力の累計（私有キー・会戦の境界で 0 に戻す）。</summary>
+    public const string GainKey = "evadeGain";
+
+    public override TraitId Id => TraitId.Evade;
+
+    public static int MovesOf(UnitState u) => u.RawCounter(MovesKey);
+
+    public static int StageOf(UnitState u)
+    {
+        int m = MovesOf(u), st = 0;
+        foreach (int t in StageAt) if (m >= t) st++;
+        return st;
+    }
+
+    public static int PercentOf(UnitState u) => StageOf(u) >= 3 ? TopPercent : Percent;
+
+    public override int ModifyAttack(UnitState self, int atk) => atk + self.RawCounter(GainKey);
+
+    public override void OnMoved(BattleContext ctx, UnitState self, Row from, Row to)
+    {
+        int before = StageOf(self);
+        self.SetCounter(MovesKey, MovesOf(self) + 1);
+        ctx.NoteEvadeMove(self, before, StageOf(self));
+    }
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(MovesKey, 0);
+        self.SetCounter(GainKey, 0);
+    }
+
+    /// <summary>
+    /// 回避の判定（engine の <c>ApplyDamageBody</c> だけが呼ぶ）。避けたら真を返し、その場で
+    /// 攻撃力 +3 → 表示 → 入れ替え（<see cref="EvadeSwapTrait"/> の保持者だけ）→ 追い撃ち の順に走らせる。
+    /// </summary>
+    public static bool TryEvade(BattleContext ctx, UnitState self, UnitState foe, int amount, AttackPattern? pattern)
+    {
+        ctx.NoteEvadeRoll(self);
+        if (ctx.Roll(100) >= PercentOf(self)) return false;
+
+        self.SetCounter(GainKey, self.RawCounter(GainKey) + Gain);
+        UnitState? partner = self.HasTrait(TraitId.EvadeSwap) ? EvadeSwapTrait.Pick(ctx, self) : null;
+        ctx.NoteEvaded(self, foe, amount, partner, pattern);
+        if (self.HasTrait(TraitId.EvadeSwap)) EvadeSwapTrait.Swap(ctx, self, partner);
+
+        if (ctx.InReaction) { ctx.NoteRiposteBlocked(self, inReaction: true); return true; }
+        ctx.Reaction(() =>
+        {
+            if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Evade)) { ctx.NoteRiposteBlocked(self, inReaction: false); return; }
+            int stage = StageOf(self);
+            int shots = stage >= 3 ? 2 : 1;
+            bool pierce = stage >= 1;
+            for (int i = 1; i <= shots; i++)
+            {
+                if (!self.IsAlive || !foe.IsAlive) break;
+                ctx.NoteRiposte(self, foe, pierce, i);
+                ctx.EvadeShot(self, foe, pierce, 1);
+            }
+        });
+        return true;
+    }
+}
+
+/// <summary>
+/// 回避の代金（第223期・セロの版 E1/E2）。<b>避けるたび、隣の生きている味方1体（選べない・乱数）と入れ替わる。</b>
+/// 入れ替えは <c>SwapSlots(セロ, 相手の席, by: セロ)</c> なので、2体とも「隊列を動かされた」扱い（軋み・移り木・混乱・`HasFallenBack` が走る）。
+/// 隣に誰もいなければ入れ替わらない。召喚枠の味方（胞子・餌）は相手にしない（シオの組み替え・ヒサの逃げと同じ）。
+/// 据えた足（バン）が相手なら空振りする（`SwapSlots` の入口）。<b>札そのものは判定を持たない</b>（<see cref="EvadeTrait.TryEvade"/> が読む）。
+/// </summary>
+public sealed class EvadeSwapTrait : Trait
+{
+    public override TraitId Id => TraitId.EvadeSwap;
+
+    /// <summary>入れ替わる相手（隣の生きている味方・召喚枠を除く・席番号の順から乱数で1体）。いなければ null（乱数を引かない）。</summary>
+    public static UnitState? Pick(BattleContext ctx, UnitState self)
+    {
+        var nb = ctx.LivingMembers(self.TeamId)
+            .Where(a => a != self && !FormationRules.IsSummonSlot(a) && FormationRules.AreAdjacent(self, a)).ToList();
+        if (nb.Count == 0) return null;
+        return nb.Count == 1 ? nb[0] : nb[ctx.Roll(nb.Count)];
+    }
+
+    public static void Swap(BattleContext ctx, UnitState self, UnitState? partner)
+    {
+        if (partner is null) { ctx.NoteEvadeSwap(self, 1); return; }
+        bool moved = ctx.SwapSlots(self, partner.Slot, self);
+        ctx.NoteEvadeSwap(self, moved ? 0 : 2);
+        if (moved) ctx.Log($"    {self.Name} は {partner.Name} と入れ替わった（隊列が乱れる）", LogKind.FriendlyFire);
+    }
+}
+
+/// <summary>
+/// 状態の矢（第223期・セロの版 E2）。<b>セロの矢が当たるたび</b>（手番・追い撃ち・乱れ撃ちの各1本＝`PerformAttack` 1回の主目標）、
+/// セロが帯びている状態を敵に付ける——毒なら毒 +2 層（窓口 `Poison`・<see cref="PoisonRoute.Arrow"/>）／燃焼なら着火（残りを 3 に戻す）／感電なら感電。
+/// <b>セロ自身の状態は減らさない</b>（持っている限り撃ち続ける）。当たった一撃で相手の感電が弾けた後に付ける（`OnAfterAttack`）ので、弾けた相手に新しい感電が付く。
+/// 敵が避けた一撃（主目標が回避）では走らない。乱数を引かない。
+/// </summary>
+public sealed class StatusArrowTrait : Trait
+{
+    public const int PoisonStack = 2;
+
+    public override TraitId Id => TraitId.StatusArrow;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (!target.IsAlive || target.TeamId == self.TeamId) return;
+        bool poison = self.RawCounter(StatusKeys.Poison) > 0;
+        bool burn = self.RawCounter(StatusKeys.Burn) > 0;
+        bool shock = self.RawCounter(StatusKeys.Shock) > 0;
+        if (!poison && !burn && !shock) return;
+        ctx.NoteStatusArrow(self, target, poison, burn, shock);
+        if (poison) ctx.Poison(target, PoisonStack, self, PoisonRoute.Arrow);
+        if (burn && target.IsAlive) ctx.Ignite(target, source: self);
+        if (shock && target.IsAlive) ctx.MarkShock(target, self);
+    }
+}
+
+/// <summary>
 /// 反転（第190期・毒喰らいのベニ）。<b>ベニに隣接する味方は、毒と燃焼の削りを回復として受ける</b>
 /// ——ターン頭の刻み（<see cref="BattleContext.TickStatuses"/>）と、起爆の味方側（<see cref="BattleContext.Detonate"/>）の両方。
 ///
@@ -14118,6 +14271,9 @@ public static class TraitCatalog
         new RegroupTrait(),          // 第222期
         new CreakSweepTrait(),       // 第222期
         new CreakSweep20Trait(),     // 第222期
+        new EvadeTrait(),            // 第223期
+        new EvadeSwapTrait(),        // 第223期
+        new StatusArrowTrait(),      // 第223期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期
         new HexLeakTrait(),    // 第189期
