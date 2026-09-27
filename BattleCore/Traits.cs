@@ -448,6 +448,11 @@ public enum TraitId
                     // 避けるたび攻撃力 +3。動かされた回数で段が上がり、段2 から手番が乱れ撃ち（5本・的は乱数）。保持者 0 枚
     EvadeSwap,      // 回避の代金（第223期）: 避けるたび、隣の生きている味方1体（乱数）と入れ替わる。保持者 0 枚
     StatusArrow,    // 状態の矢（第223期・E2）: セロの矢が当たるたび、セロが帯びている毒（+2 層）・燃焼・感電を敵に付ける（セロ自身の状態は減らない）。保持者 0 枚
+    EvadeQuick,     // 身軽さ（第224期・セロの版 F1〜F3）: 段に要る「動かされた回数」を 3/6/10 → 2/4/7 に。**札そのものは挙動を持たない**（`EvadeTrait` が読む）。保持者 0 枚
+    EvadeDrift,     // 流されて研ぐ（第224期・F2/F3）: 隊列を動かされるたび攻撃力 +2（回避の +3 とは別・戦のあいだ下がらない）。**札そのものは挙動を持たない**。保持者 0 枚
+    EvadeVolley,    // 乱れ撃ちの増し矢（第224期・F3）: 段3 の乱れ撃ちを 5 本 → 7 本に。**札そのものは挙動を持たない**。保持者 0 枚
+    DrifterMend,    // 移り木の厚い手当て（第224期・シオの版 H1/H2）: 移り木の回復を +10 → 動かされた味方の最大HPの 20% に。**札そのものは挙動を持たない**（`DrifterTrait` が読む）。保持者 0 枚
+    RegroupTend,    // 下げて手当て（第224期・H2）: 組み替えで下げた味方を、さらに最大HPの 20% 回復する（シオ自身を下げたときは癒さない）。**札そのものは挙動を持たない**。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -7688,14 +7693,22 @@ public sealed class DrifterTrait : Trait
 
     public override TraitId Id => TraitId.Drifter;
 
+    /// <summary>第224期（H1/H2・<see cref="TraitId.DrifterMend"/>）: 回復を受け手の最大HPのこの割合（%・切り捨て）にする。</summary>
+    public const int MendPercent = 20;
+
+    /// <summary>移り木の回復の名目。<see cref="TraitId.DrifterMend"/> を持てば受け手の最大HPの 20%、無ければ <see cref="Heal"/>。</summary>
+    public static int HealOf(UnitState self, UnitState moved)
+        => self.HasTrait(TraitId.DrifterMend) ? moved.MaxHp * MendPercent / 100 : Heal;
+
     public override void OnAllyMoved(BattleContext ctx, UnitState self, UnitState moved)
     {
         if (!moved.AcceptsSupport) return;
+        int heal = HealOf(self, moved);
         int before = moved.Hp;
-        ctx.Heal(moved, Heal, self);
-        ctx.NoteDrifterHeal(self, Heal, moved.Hp - before);   // 第224期・計数のみ
+        ctx.Heal(moved, heal, self);
+        ctx.NoteDrifterHeal(self, heal, moved.Hp - before);   // 第224期・計数のみ
         ctx.Whet(moved, Gain, WhetRoute.Drifter);
-        ctx.Log($"    {self.Name} が流された {moved.Name} を拾い上げた（+{Heal} / 攻撃 +{Gain}）", LogKind.Trigger);
+        ctx.Log($"    {self.Name} が流された {moved.Name} を拾い上げた（+{heal} / 攻撃 +{Gain}）", LogKind.Trigger);
     }
 }
 
@@ -12639,6 +12652,15 @@ public sealed class RegroupTrait : Trait
         var (low, with) = pick.Value;
         ctx.Log($"    {self.Name} が傷ついた {low.Name} を下げ、{with.Name} を前へ出した", LogKind.Trigger);
         ctx.RegroupSwap(self, low, with);   // SwapSlots ＋ 表示専用の出来事 ＋ 計数
+        // 第224期（H2）: 下げた味方をさらに手当てする（シオ自身を下げたときは癒さない・移り木と同じく自分は癒さない）。
+        if (self.HasTrait(TraitId.RegroupTend) && low != self && low.IsAlive)
+        {
+            int heal = low.MaxHp * DrifterTrait.MendPercent / 100;
+            int before = low.Hp;
+            ctx.Heal(low, heal, self);
+            ctx.NoteRegroupTend(self, heal, low.Hp - before);
+            ctx.Log($"    {self.Name} が下げた {low.Name} の手当てをした（+{heal}）", LogKind.Trigger);
+        }
     }
 }
 
@@ -12693,6 +12715,19 @@ public sealed class EvadeTrait : Trait
     public const int Arrows = 5;
     /// <summary>段1・段2・段3 に要る「動かされた回数」。</summary>
     public static readonly int[] StageAt = { 3, 6, 10 };
+    /// <summary>第224期（F1〜F3・<see cref="TraitId.EvadeQuick"/>）の段の条件。</summary>
+    public static readonly int[] QuickStageAt = { 2, 4, 7 };
+    /// <summary>第224期（F2/F3・<see cref="TraitId.EvadeDrift"/>）: 動かされるたびに上がる攻撃力。</summary>
+    public const int DriftGain = 2;
+    /// <summary>第224期（F3・<see cref="TraitId.EvadeVolley"/>）: 段3 の乱れ撃ちの矢の数。</summary>
+    public const int VolleyArrows = 7;
+    /// <summary>動かされて上がった攻撃力の累計（第224期・私有キー・会戦の境界で 0 に戻す）。</summary>
+    public const string DriftKey = "evadeDrift";
+
+    public static int[] StageAtOf(UnitState u) => u.HasTrait(TraitId.EvadeQuick) ? QuickStageAt : StageAt;
+
+    /// <summary>乱れ撃ちの矢の数（段3 ＋ <see cref="TraitId.EvadeVolley"/> なら 7・ほかは 5）。</summary>
+    public static int ArrowsOf(UnitState u) => u.HasTrait(TraitId.EvadeVolley) && StageOf(u) >= 3 ? VolleyArrows : Arrows;
 
     /// <summary>動かされた回数（私有キー・会戦の境界で 0 に戻す）。</summary>
     public const string MovesKey = "evadeMoves";
@@ -12706,18 +12741,19 @@ public sealed class EvadeTrait : Trait
     public static int StageOf(UnitState u)
     {
         int m = MovesOf(u), st = 0;
-        foreach (int t in StageAt) if (m >= t) st++;
+        foreach (int t in StageAtOf(u)) if (m >= t) st++;
         return st;
     }
 
     public static int PercentOf(UnitState u) => StageOf(u) >= 3 ? TopPercent : Percent;
 
-    public override int ModifyAttack(UnitState self, int atk) => atk + self.RawCounter(GainKey);
+    public override int ModifyAttack(UnitState self, int atk) => atk + self.RawCounter(GainKey) + self.RawCounter(DriftKey);
 
     public override void OnMoved(BattleContext ctx, UnitState self, Row from, Row to)
     {
         int before = StageOf(self);
         self.SetCounter(MovesKey, MovesOf(self) + 1);
+        if (self.HasTrait(TraitId.EvadeDrift)) self.SetCounter(DriftKey, self.RawCounter(DriftKey) + DriftGain);   // 第224期（F2/F3）
         ctx.NoteEvadeMove(self, before, StageOf(self));
     }
 
@@ -12725,6 +12761,7 @@ public sealed class EvadeTrait : Trait
     {
         self.SetCounter(MovesKey, 0);
         self.SetCounter(GainKey, 0);
+        self.SetCounter(DriftKey, 0);
     }
 
     /// <summary>
@@ -12786,6 +12823,21 @@ public sealed class EvadeSwapTrait : Trait
         if (moved) ctx.Log($"    {self.Name} は {partner.Name} と入れ替わった（隊列が乱れる）", LogKind.FriendlyFire);
     }
 }
+
+/// <summary>段の条件を 2/4/7 に（第224期・F1〜F3）。<b>札そのものは判定を持たない</b>（<see cref="EvadeTrait.StageAtOf"/> が読む）。</summary>
+public sealed class EvadeQuickTrait : Trait { public override TraitId Id => TraitId.EvadeQuick; }
+
+/// <summary>動かされるたび攻撃力 +2（第224期・F2/F3）。<b>札そのものは判定を持たない</b>（<see cref="EvadeTrait.OnMoved"/> が読む）。</summary>
+public sealed class EvadeDriftTrait : Trait { public override TraitId Id => TraitId.EvadeDrift; }
+
+/// <summary>段3 の乱れ撃ちを 7 本に（第224期・F3）。<b>札そのものは判定を持たない</b>（<see cref="EvadeTrait.ArrowsOf"/> が読む）。</summary>
+public sealed class EvadeVolleyTrait : Trait { public override TraitId Id => TraitId.EvadeVolley; }
+
+/// <summary>移り木の回復を最大HPの 20% に（第224期・H1/H2）。<b>札そのものは判定を持たない</b>（<see cref="DrifterTrait.HealOf"/> が読む）。</summary>
+public sealed class DrifterMendTrait : Trait { public override TraitId Id => TraitId.DrifterMend; }
+
+/// <summary>組み替えで下げた味方の手当て（第224期・H2）。<b>札そのものは判定を持たない</b>（<see cref="RegroupTrait"/> が読む）。</summary>
+public sealed class RegroupTendTrait : Trait { public override TraitId Id => TraitId.RegroupTend; }
 
 /// <summary>
 /// 状態の矢（第223期・セロの版 E2）。<b>セロの矢が当たるたび</b>（手番・追い撃ち・乱れ撃ちの各1本＝`PerformAttack` 1回の主目標）、
@@ -14276,6 +14328,11 @@ public static class TraitCatalog
         new EvadeTrait(),            // 第223期
         new EvadeSwapTrait(),        // 第223期
         new StatusArrowTrait(),      // 第223期
+        new EvadeQuickTrait(),       // 第224期
+        new EvadeDriftTrait(),       // 第224期
+        new EvadeVolleyTrait(),      // 第224期
+        new DrifterMendTrait(),      // 第224期
+        new RegroupTendTrait(),      // 第224期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期
         new HexLeakTrait(),    // 第189期

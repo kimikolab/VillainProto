@@ -4726,7 +4726,8 @@ public sealed class BattleContext
     void Barrage(UnitState sero)
     {
         TallyOf(sero).EvBarrages++;
-        for (int i = 1; i <= EvadeTrait.Arrows; i++)
+        int arrows = EvadeTrait.ArrowsOf(sero);   // 第224期: 段3 ＋ 増し矢（F3）なら 7 本
+        for (int i = 1; i <= arrows; i++)
         {
             if (!sero.IsAlive) break;
             var foes = LivingMembers(Opponent(sero.TeamId));
@@ -4737,7 +4738,7 @@ public sealed class BattleContext
             if (_verbose) Emit(new BattleEvent
             {
                 Kind = BattleEventKind.Barrage, Turn = _turn, ActorId = sero.InstanceId, TargetId = t.InstanceId,
-                Slot = i, Amount = EvadeTrait.Arrows,
+                Slot = i, Amount = arrows,
             });
             EvadeShot(sero, t, false, 2);
         }

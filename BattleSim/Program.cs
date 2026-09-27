@@ -1418,6 +1418,11 @@ static class TraitKeyMap
         [TraitId.Evade]           = new[] { UnitTally.CarryMove },                              // 第223期（セロの版・動かされた回数で段が上がる）
         [TraitId.EvadeSwap]       = new[] { UnitTally.CarryMove },                              // 第223期（回避の代金・入れ替え）
         [TraitId.StatusArrow]     = new[] { UnitTally.CarryPoison, UnitTally.CarryBurn },       // 第223期（E2・自分の毒と燃焼を矢で写す・感電は専用キー）
+        [TraitId.EvadeQuick]      = new[] { UnitTally.CarryMove },                              // 第224期（F1〜F3・段を 2/4/7 に）
+        [TraitId.EvadeDrift]      = new[] { UnitTally.CarryMove },                              // 第224期（F2/F3・動かされるたび攻撃力 +2）
+        [TraitId.EvadeVolley]     = new[] { UnitTally.CarryMove },                              // 第224期（F3・段3 で 7 本）
+        [TraitId.DrifterMend]     = new[] { UnitTally.CarryMove },                              // 第224期（H1/H2・移り木を最大HPの 20%）
+        [TraitId.RegroupTend]     = new[] { UnitTally.CarryMove },                              // 第224期（H2・下げた味方を手当て）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1635,6 +1640,11 @@ static class TraitHookMap
         [TraitId.Evade]           = new[] { "ModifyAttack", "OnMoved", "OnCarryOver", Engine },   // 第223期（回避は ApplyDamageBody・乱れ撃ちは SwingTurn・的の固定は SelectTargetChain）
         [TraitId.EvadeSwap]       = new[] { Engine },                              // 第223期（EvadeTrait.TryEvade が読む）
         [TraitId.StatusArrow]     = new[] { "OnAfterAttack" },                     // 第223期（E2）
+        [TraitId.EvadeQuick]      = new[] { Engine },                              // 第224期（EvadeTrait.StageAtOf が読む）
+        [TraitId.EvadeDrift]      = new[] { Engine },                              // 第224期（EvadeTrait.OnMoved が読む）
+        [TraitId.EvadeVolley]     = new[] { Engine },                              // 第224期（EvadeTrait.ArrowsOf → engine の Barrage）
+        [TraitId.DrifterMend]     = new[] { Engine },                              // 第224期（DrifterTrait.HealOf が読む）
+        [TraitId.RegroupTend]     = new[] { Engine },                              // 第224期（RegroupTrait が組み替えの後に読む）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）

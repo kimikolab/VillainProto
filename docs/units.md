@@ -273,6 +273,11 @@
 | `Evade` | - |
 | `EvadeSwap` | - |
 | `StatusArrow` | - |
+| `EvadeQuick` | - |
+| `EvadeDrift` | - |
+| `EvadeVolley` | - |
+| `DrifterMend` | - |
+| `RegroupTend` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

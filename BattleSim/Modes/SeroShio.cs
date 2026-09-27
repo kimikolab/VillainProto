@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -127,7 +127,7 @@ static partial class SeroShioDiag
         public readonly long[] ReachCount = new long[8];
         public readonly long[] Reach10Turn = new long[11], Reach10Count = new long[11];
         // シオ
-        public long DrFires, DrNom, DrGain, TendFires, TendNom, TendGain, RgSwaps;
+        public long DrFires, DrNom, DrGain, TendFires, TendNom, TendGain, RgSwaps, RgSelf;
         public readonly long[] DrBySrc = new long[7], DrNomBySrc = new long[7];
         // リリ・ツギ
         public long LiliHeal, LiliDealt, TsugiArmorOut, PlankSoaked, HealAllByUnit;
@@ -145,7 +145,7 @@ static partial class SeroShioDiag
             for (int i = 0; i < MovesByTurn.Length; i++) MovesByTurn[i] += o.MovesByTurn[i];
             for (int i = 0; i < 8; i++) { ReachTurn[i] += o.ReachTurn[i]; ReachCount[i] += o.ReachCount[i]; }
             for (int i = 0; i < 11; i++) { Reach10Turn[i] += o.Reach10Turn[i]; Reach10Count[i] += o.Reach10Count[i]; }
-            DrFires += o.DrFires; DrNom += o.DrNom; DrGain += o.DrGain; TendFires += o.TendFires; TendNom += o.TendNom; TendGain += o.TendGain; RgSwaps += o.RgSwaps;
+            DrFires += o.DrFires; DrNom += o.DrNom; DrGain += o.DrGain; TendFires += o.TendFires; TendNom += o.TendNom; TendGain += o.TendGain; RgSwaps += o.RgSwaps; RgSelf += o.RgSelf;
             LiliHeal += o.LiliHeal; LiliDealt += o.LiliDealt; TsugiArmorOut += o.TsugiArmorOut; PlankSoaked += o.PlankSoaked; HealAllByUnit += o.HealAllByUnit;
         }
 
@@ -188,7 +188,7 @@ static partial class SeroShioDiag
                 else if (id == "shio")
                 {
                     DrFires += t.DrifterFires; DrNom += t.DrifterNominal; DrGain += t.DrifterGained;
-                    TendFires += t.TendFires; TendNom += t.TendNominal; TendGain += t.TendGained; RgSwaps += t.RegroupSwaps;
+                    TendFires += t.TendFires; TendNom += t.TendNominal; TendGain += t.TendGained; RgSwaps += t.RegroupSwaps; RgSelf += t.RegroupSelf;
                     if (t.DrifterBySrc is not null) for (int k = 0; k < 7; k++) { DrBySrc[k] += t.DrifterBySrc[k]; DrNomBySrc[k] += t.DrifterNomBySrc![k]; }
                 }
                 else if (id == "lili") { LiliDealt += t.DamageToEnemy; }
