@@ -610,6 +610,7 @@ public partial class BattlefieldView3D : Control
         }
         bool charged = !reaction && from.IsCharging;
         if (!reaction) from.ReleaseCharge();
+        from.AnimateBowAttack();
         bool stagedThrust = thrustCharge is not null && pattern == AttackPattern.Pierce && shieldImpact is null;
         if (!stagedThrust)
         {

@@ -6,6 +6,8 @@ public partial class BattlePawn3D
 {
     private bool _ashReleasing;
     private float _portraitOffsetX;
+    private bool _bowDrawn;
+    private Tween? _bowPortraitTween;
     public bool IsAshReleasing => _ashReleasing;
     public bool IsBinding { get; private set; }
     public bool IsFrightened { get; private set; }
@@ -32,6 +34,11 @@ public partial class BattlePawn3D
         float height = _portraitHeight;
         float padding = UiKit.BattlePortraitBottomPaddingRatio(key);
         _portraitOffsetX = 0;
+        if (key == "sero" && _bowDrawn && _alive)
+        {
+            key = "sero_attack";
+            padding = UiKit.BattlePortraitBottomPaddingRatio(key);
+        }
         if (key == "gald" && SwordDrawn)
         {
             key = QuietLastStand ? "gald_kneel" : "gald_sword";
@@ -74,6 +81,27 @@ public partial class BattlePawn3D
     {
         if (_unitId != "susu" || !_alive || _victory) return;
         _ashReleasing = true;
+        RefreshBattlePortrait();
+    }
+
+    // 射撃の拍だけ弓を構える。連射では前の復帰予約を取り消して表示を延長する。
+    public void AnimateBowAttack()
+    {
+        if (_unitId != "sero" || !_alive || _victory) return;
+        _bowPortraitTween?.Kill();
+        _bowDrawn = true;
+        RefreshBattlePortrait();
+        _bowPortraitTween = CreateTween();
+        _bowPortraitTween.TweenInterval(0.40 / AnimationSpeed);
+        _bowPortraitTween.TweenCallback(Callable.From(ResetBowPortrait));
+    }
+
+    private void ResetBowPortrait()
+    {
+        _bowPortraitTween?.Kill();
+        _bowPortraitTween = null;
+        if (!_bowDrawn) return;
+        _bowDrawn = false;
         RefreshBattlePortrait();
     }
 

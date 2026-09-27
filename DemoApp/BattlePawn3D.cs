@@ -520,6 +520,7 @@ void fragment() {
     public void AnimateDeath()
     {
         if (!_alive) return;
+        ResetBowPortrait();
         SetThrustCharge(0);
         _thrustPosition = null;
         CancelCharge();
@@ -568,6 +569,7 @@ void fragment() {
 
     public void AnimateRevive()
     {
+        ResetBowPortrait();
         QuietLastStand = false;
         SetThrustCharge(0);
         _thrustPosition = null;
@@ -610,6 +612,7 @@ void fragment() {
     public void AnimateVictory()
     {
         if (!_alive || Team != BattleContext.PlayerTeam) return;
+        ResetBowPortrait();
         ClearSpecialEffects();
         SetThrustCharge(0);
         _thrustPosition = null;

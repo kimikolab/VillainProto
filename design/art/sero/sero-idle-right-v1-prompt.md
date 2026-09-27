@@ -1,0 +1,20 @@
+# 逃走兵セロ 戦闘立ち絵・右向き v1
+
+生成日: 2026-09-28
+生成方法: Codex 組み込み ImageGen
+採用デザイン: `sero-standing-remake-v1.png`（オリーブ装備の初回リメイク）。黒装束案は不採用。
+出力: `sero-idle-right-v1.png`（透過PNG）
+参照: 上記の採用デザイン、既存の `DemoApp/assets/portraits/battle/sero_idle_right.png` と `hane_idle_right.png`（戦闘での向き・見せ方）。
+内容: 右向きで弓を引く戦闘姿勢。顔、髪、オリーブのフード付きマント、革装備、腰の矢筒を継承。ゲーム内アセットへの差し替えは未実施。
+
+## プロンプト
+
+```text
+Use case: stylized-concept.
+Asset type: transparent full-body RIGHT-FACING combat standing sprite for Japanese fantasy RPG, Sero the evasive male archer.
+Input images: Image 1 is the APPROVED redesigned Sero; use it as the strict identity, clothing, colors, materials and weapon reference. Image 2 is his OLD battle sprite, use ONLY for the fact that combat faces SCREEN RIGHT, do not copy old frightened face, bulky costume or huge bow. Image 3 is teammate Hane's battle portrait for matching right-facing stage orientation and readable full-body framing; do not copy her anatomy or costume.
+Primary request: re-pose the approved olive-clad Sero into a sharp agile combat-ready archer stance aimed toward enemies OFF-SCREEN RIGHT. Keep his handsome youthful human male face, tousled dark brown hair, warm gray-brown eyes, small confident taunting smile, short worn olive hooded mantle with hood down, rolled ivory sleeves, brown fitted leather protection and harness, practical bracers and fingerless gloves, narrow muted rusty red waist sash, charcoal olive tapered trousers, flexible worn brown boots, original secured hip quiver, and the same wood-and-worn-steel recurved bow from image 1. No black costume version, no long black coat, no silver piping.
+Pose and orientation: entire body, nose, gaze, shoulders and bow are oriented to SCREEN RIGHT in a three-quarter side view. We see enough face for the recognizable smirk, but his eyes look at an enemy to the right, never toward camera or left. A light mobile grounded archer stance, soft flexed knees, feet apart and uncrossed, forward foot planted and rear heel slightly lifted ready to dodge and change places. Upright lean athletic torso with a small poised twist, not hunched frightened, not an extreme squat or rigid wide lunge. Mantle and short sash stream gently behind him toward screen left, expressing lateral mobility. Left bow arm extends naturally toward screen right, right drawing elbow toward screen left, string hand near cheek, one arrow nocked and aimed horizontally right at chest/shoulder height. Clean silhouette with bow and arrow clear of his face. Bow is drawn at a comfortable controlled combat-ready draw. Complete long straight arrow has feathers and nock near drawing hand, shaft supported at bow grip, narrow steel bodkin tip extending past bow to the right. Physical archery mechanics: one bow, one string running continuously from upper limb tip through the nock at drawing hand to lower limb tip, exactly one arrow on string. Do not add a second string or spare arrows to his drawing hand. Spare arrows are secured in his hip quiver. Match the bow's curved wood limbs and restrained metal reinforcements from approved image 1, not an enormous fantasy weapon.
+Character and style invariants: same clothes and same man as image 1, lean quick-footed human survivalist now skilled at evasive counterattacks, confident cool but playful. Precisely detailed delicate lines, painterly layered anime shading, muted earthy colors, cloth and weathered leather textures, same quality as approved portrait. Human ears, two arms and two legs, anatomically coherent fingers and joints.
+Composition: single character entire head-to-toe plus both bow tips and whole arrow included, generous safe padding at top bottom and sides, feet near same ground level, readable on a game battlefield when reduced. Portrait canvas with enough width for bow. Genuine transparent alpha background including all enclosed gaps between bowstring/body/limbs; no scenery, floor shadow, gradient, glow, painted checkerboard, magenta background, text, UI, logo or watermark. No extra people, afterimages, magic effects, motion streaks, animal ears, wings, swords.
+```
