@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // spring phase0 —— Q0-1 経路の並べ替え ／ Q0-3 行の変わり方 ／ Q0-4 ハネの被弾 ／ Q0-5 止まり続け（第228期・H0 ＝ 前段の規定だけで回る）。
@@ -70,7 +70,7 @@ static partial class SpringDiag
         var benches = new (string Name, Formation F)[]
         {
             ("227 L2 の席", MHane227),
-            ("225 の席", Formation.Build(front1: UnitCatalog.HaneH0, front3: UnitCatalog.Basa, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Sero)),
+            ("225 の席", Formation.Build(front1: UnitCatalog.HaneH0, front3: UnitCatalog.BasaG0, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Sero)),
         };
         Console.WriteLine("## Q0-4 ハネの被弾（seed 0..199・H0）");
         Console.WriteLine();

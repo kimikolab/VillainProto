@@ -172,13 +172,18 @@ static class ShockDigestDiag
         // 第229期 前段: ハネが規定で変わったので、第227・228期の台は旧のハネに戻す。
         if (mode is "l227" or "h228")
             benches = benches.Select(b => (b.Item1, Common.OldHane(b.Item2))).ToArray();
+        // 第230期 前段: バサ・ハネが嵐・追い風で規定に（転倒の穴も既定）なったので、第227〜229期の台は旧のバサ・ハネに戻す。
+        if (mode is "l227" or "h228" or "g229")
+            benches = benches.Select(b => (b.Item1, Common.OldGale(b.Item2))).ToArray();
+        // 第230期 前段: 転倒の穴が既定になったので、それより前の期の台は穴なしで回す（w230 だけが今の既定）。
+        ShufflerRule? digestRule = mode == "w230" ? null : ShufflerRule.PreHole;
         PropertyInfo[] props = typeof(BattleEvent).GetProperties(BindingFlags.Public | BindingFlags.Instance);
         long total = 0;
         foreach (var (name, f) in benches)
             for (int st = 0; st < 5; st++)
                 for (int s = 0; s < 20; s++)
                 {
-                    BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, s, verbose: true);
+                    BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, s, verbose: true, shuffler: digestRule);
                     ulong h = 1469598103934665603UL;
                     int counted = 0;
                     foreach (BattleEvent e in r.Events)

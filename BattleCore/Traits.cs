@@ -6645,7 +6645,7 @@ public enum ShuffleStagger
 /// ——<paramref name="GustPercent"/> とは<b>別の絞り方</b>で、同じ量でも置き場所が違う（第147期 段B / 段B'）。
 /// </param>
 /// <param name="StaggerHole">
-/// 転倒の穴（第229期・G3/G4・<b>既定 false</b>）。真なら<b>転倒（<see cref="StatusKeys.Stagger"/>）している駒は壁にならない</b>
+/// 転倒の穴（第229期・G3/G4・<b>第230期 前段で既定 true</b>——ポンの判断。第229期までの既定は <see cref="PreHole"/>）。真なら<b>転倒（<see cref="StatusKeys.Stagger"/>）している駒は壁にならない</b>
 /// ——「前列が生きている限り後列は狙われない」の判定（<c>PoolOf</c>）で前列に数えず、標的を引き受ける介入（挑発・後備え・庇う・殉教・棘守り・
 /// 範囲の盾・受け流し・逸らし）をしない。敵味方どちらにも同じ。<b>喧噪の札ではなく状態の性質</b>だが、転倒の規則の器がここしか無いので同居させた
 /// （<c>Run</c> の引数を増やさないため）。偽なら第228期と1ビットも違わない。
@@ -6692,7 +6692,13 @@ public readonly record struct ShufflerRule(
     /// ——転ばせる相手の列の分布は段B とほとんど同じ（巻き込みは<b>届く先を変えていない</b>）なので、
     /// 差は<b>1回の振りで2体を同時に転ばせること</b>にある（同じラウンドから2手番を抜く）。</para>
     public static ShufflerRule Default
-        => new(true, ShuffleStagger.Confuse, ConfuseUses: 3, GustPercent: 20);
+        => new(true, ShuffleStagger.Confuse, ConfuseUses: 3, GustPercent: 20, StaggerHole: true);
+
+    /// <summary>
+    /// 第229期までの既定（<b>転倒の穴なし</b>）。第230期 前段で <see cref="StaggerHole"/> を既定にした（ポンの判断——
+    /// 「転倒は倒れて壁にならない・痺れは立ったまま前列を守る」）ので、第222〜229期の器具はこちらで回す。
+    /// </summary>
+    public static ShufflerRule PreHole => Default with { StaggerHole = false };
 
     /// <summary>
     /// <b>混乱を立てうる枝か</b>（第148期）。<c>BattleContext.ConfusionLive</c> がこれを読む。

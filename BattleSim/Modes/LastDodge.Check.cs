@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 
@@ -49,7 +49,7 @@ static partial class LastDodgeDiag
         var recruit = EnemyCatalog.TestStages[0].Enemy.Occupied().Select(o => o.Def).First();
         for (int seed = 0; seed < 500; seed++)
         {
-            var ctx = Ctx(Formation.Build(front1: seroDef, front3: UnitCatalog.HaneH0, center: UnitCatalog.Yomi, back1: noShio ? UnitCatalog.Tou : UnitCatalog.Shio, back3: UnitCatalog.Basa),
+            var ctx = Ctx(Formation.Build(front1: seroDef, front3: UnitCatalog.HaneH0, center: UnitCatalog.Yomi, back1: noShio ? UnitCatalog.Tou : UnitCatalog.Shio, back3: UnitCatalog.BasaG0),
                           Formation.Build(front1: recruit, front3: recruit), seed, out var p, out var e);
             var r = act(ctx, p, e);
             var t = Tal(ctx, U(p, "sero"));
@@ -188,7 +188,7 @@ static partial class LastDodgeDiag
         Console.WriteLine("## (3) 逃げ足が発動しない戦は L0 と一致 ／ verbose の有無");
         Console.WriteLine();
         {
-            var benches = new[] { MHane225, Formation.Build(front1: UnitCatalog.SeroL0, front3: UnitCatalog.Basa, center: UnitCatalog.Yomi, back1: UnitCatalog.HaneH0, back3: UnitCatalog.Shio), Thunder };
+            var benches = new[] { MHane225, Formation.Build(front1: UnitCatalog.SeroL0, front3: UnitCatalog.BasaG0, center: UnitCatalog.Yomi, back1: UnitCatalog.HaneH0, back3: UnitCatalog.Shio), Thunder };
             var jobs = new List<(Formation F, int W, EnemyScaleRule Sc, int S)>();
             foreach (var b in benches)
                 foreach (int w in new[] { 4, 5, 0, 1, 2, 3 })
@@ -198,12 +198,12 @@ static partial class LastDodgeDiag
             Parallel.For(0, jobs.Count, i =>
             {
                 var (f, w, sc, s) = jobs[i];
-                var a = BattleEngine.Run(BattleEngine.Materialize(Apply(f, VerOf("L0")), BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: true);
+                var a = BattleEngine.Run(BattleEngine.Materialize(Apply(f, VerOf("L0")), BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: true, shuffler: PreHole);
                 foreach (var tag in new[] { "L1", "L2" })
                 {
                     var fv = Apply(f, VerOf(tag));
-                    var b = BattleEngine.Run(BattleEngine.Materialize(fv, BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: true);
-                    var c = BattleEngine.Run(BattleEngine.Materialize(fv, BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: false);
+                    var b = BattleEngine.Run(BattleEngine.Materialize(fv, BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: true, shuffler: PreHole);
+                    var c = BattleEngine.Run(BattleEngine.Materialize(fv, BattleContext.PlayerTeam), WaveOf(w, sc)(), s, verbose: false, shuffler: PreHole);
                     long db = b.TallyByUnit.Values.Sum(t => t.DamageToEnemy), dc = c.TallyByUnit.Values.Sum(t => t.DamageToEnemy);
                     if (b.PlayerWon != c.PlayerWon || b.Turns != c.Turns || db != dc) Interlocked.Increment(ref vdiff[i]);
                     if (tag != "L1") continue;
@@ -224,7 +224,7 @@ static partial class LastDodgeDiag
         Console.WriteLine();
         {
             long ev = 0, evOk = 0, ordOk = 0, tally = 0, stageOk = 0;
-            var f = Apply(Formation.Build(front1: UnitCatalog.SeroL0, front3: UnitCatalog.Basa, center: UnitCatalog.Yomi, back1: UnitCatalog.HaneH0, back3: UnitCatalog.Shio), VerOf("L2"));
+            var f = Apply(Formation.Build(front1: UnitCatalog.SeroL0, front3: UnitCatalog.BasaG0, center: UnitCatalog.Yomi, back1: UnitCatalog.HaneH0, back3: UnitCatalog.Shio), VerOf("L2"));
             foreach (int w in new[] { 4, 0, 1, 3 })
                 for (int s = 0; s < 200; s++)
                 {

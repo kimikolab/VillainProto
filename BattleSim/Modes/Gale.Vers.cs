@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // gale —— 版（§5）と帳簿（§8.2）。
@@ -18,11 +18,11 @@ static partial class GaleDiag
 
     internal static readonly Ver[] Versions =
     {
-        new("G0", UnitCatalog.Basa, UnitCatalog.Hane, false),
-        new("G1", Plus(UnitCatalog.Basa, TraitId.Gale), UnitCatalog.Hane, false),
-        new("G2", Plus(UnitCatalog.Basa, TraitId.Tailwind), Plus(UnitCatalog.Hane, TraitId.Tailwind), false),
-        new("G3", UnitCatalog.Basa, UnitCatalog.Hane, true),
-        new("G4", Plus(UnitCatalog.Basa, TraitId.Gale, TraitId.Tailwind), Plus(UnitCatalog.Hane, TraitId.Tailwind), true),
+        new("G0", UnitCatalog.BasaG0, UnitCatalog.HaneG0, false),
+        new("G1", Plus(UnitCatalog.BasaG0, TraitId.Gale), UnitCatalog.HaneG0, false),
+        new("G2", Plus(UnitCatalog.BasaG0, TraitId.Tailwind), Plus(UnitCatalog.HaneG0, TraitId.Tailwind), false),
+        new("G3", UnitCatalog.BasaG0, UnitCatalog.HaneG0, true),
+        new("G4", Plus(UnitCatalog.BasaG0, TraitId.Gale, TraitId.Tailwind), Plus(UnitCatalog.HaneG0, TraitId.Tailwind), true),
     };
     internal static Ver VerOf(string tag) => Versions.First(v => v.Tag == tag);
 

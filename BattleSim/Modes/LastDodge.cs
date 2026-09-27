@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -71,7 +71,7 @@ static partial class LastDodgeDiag
     }
 
     // 台（§6.1）
-    internal static Formation MHane225 => Formation.Build(front1: UnitCatalog.HaneH0, front3: UnitCatalog.Basa,
+    internal static Formation MHane225 => Formation.Build(front1: UnitCatalog.HaneH0, front3: UnitCatalog.BasaG0,
         center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.SeroL0);
     internal static Formation Thunder => DecoyDiag.Thunder;
 
@@ -103,7 +103,7 @@ static partial class LastDodgeDiag
             int w = 0, sv = 0, fell = 0; long t = 0;
             for (int s = PickSeed0; s < PickSeed0 + PickSeeds; s++)
             {
-                var r = BattleEngine.Run(BattleEngine.Materialize(perms[i], BattleContext.PlayerTeam), WaveOf(MainWave, sc)(), s, verbose: false);
+                var r = BattleEngine.Run(BattleEngine.Materialize(perms[i], BattleContext.PlayerTeam), WaveOf(MainWave, sc)(), s, verbose: false, shuffler: PreHole);
                 fell += r.PlayerStarterFallen.Count;
                 if (!r.PlayerWon) continue;
                 w++; t += r.Turns; if (r.PlayerStarterFallen.Count == 0) sv++;

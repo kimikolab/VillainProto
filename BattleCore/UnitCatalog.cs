@@ -477,6 +477,23 @@ public static class UnitCatalog
         Pattern = AttackPattern.Sweep,
         // 第227期 前段（ポンの判断）: 第226期 K4 から回避盾を除いた札——敵の乱れ（`Disarray`）＋ 動かされて吹く突風（`Squall`）。
         // 旧（第226期 K0・`Shuffler` だけ）は <see cref="BasaK0"/> に対照として残す。
+        // 第230期 前段（ポンの判断）: 第229期 G4 の嵐（`Gale`）と追い風（`Tailwind`）を規定に。旧（第229期の前段の規定）は <see cref="BasaG0"/>。
+        Traits = new[] { TraitId.Shuffler, TraitId.Disarray, TraitId.Squall, TraitId.Gale, TraitId.Tailwind },
+        PlusText = "毎ターン、敵2体と味方2体をそれぞれ入れ替える。自分が生きている間は、どんな理由でも前に出た敵は正気を失い、次の攻撃を自軍に向ける。敵の隊列が乱れるほど（動かされた回数 4/8/14）、風が大きくなる——かき回す敵も味方も 3/3/4 体に増え、正気を失わせる回数も 3 → 5 → 8 → 上限なしに増える。敵を後ろへ押しやると、その列の味方が追い風に乗って前へ踏み込む（傷の深い味方は踏み込まない）。攻撃は突風となって横に薙ぎ、当たった敵はときどき転ぶ。押しのけられるたび突風を起こす（1ターン2回）",
+        MinusText = "入れ替える相手は選べない。風が大きくなるほど、自分の隊列も大きく乱れる。後列前提の駒や庇う駒の配置を自分で壊す。一撃は軽い",
+        Flavor = "隊列を整えている横で騒ぎ立て、二度と行軍に加えられなかった。"
+    };
+
+    /// <summary>旧バサ（第227〜229期の規定・G0 ＝ `Shuffler` / `Disarray` / `Squall`）。対照として残す（<see cref="All"/> にも <see cref="Retired"/> にも入れない）。
+    /// 第229期の器具（`gale` と `shockdigest g229`）はこちらに固定した。</summary>
+    public static readonly UnitDef BasaG0 = new()
+    {
+        Id = "basa",
+        Name = "喧噪のバサ",
+        MaxHp = 56,
+        Attack = 5,
+        Speed = 8,
+        Pattern = AttackPattern.Sweep,
         Traits = new[] { TraitId.Shuffler, TraitId.Disarray, TraitId.Squall },
         PlusText = "毎ターン、敵2体と味方2体をそれぞれ入れ替える。自分が生きている間は、どんな理由でも前に出た敵は正気を失い、次の攻撃を自軍に向ける。敵の隊列が乱れるほど（動かされた回数 4/8/14）かき回す敵が 3/3/4 体に増え、正気を失わせる回数も 3 → 5 → 8 → 上限なしに増える。攻撃は突風となって横に薙ぎ、当たった敵はときどき転ぶ。押しのけられるたび突風を起こす（1ターン2回）",
         MinusText = "入れ替える相手は選べない。後列前提の駒や庇う駒の配置を自分で壊す。一撃は軽い",
@@ -1330,6 +1347,24 @@ public static class UnitCatalog
         // 第227期 前段（ポンの判断）: 敵の乱れ（`Disarray`・段2 から前列の2体を突き返す）を規定に。旧は <see cref="HaneK0"/>。
         // 第229期 前段（ポンの判断）: 第228期 H3（吹っ飛ばし `Blast` ＋ 弾き返し `Spring`）を規定に。段2 の2体の突き返しは吹っ飛ばしに置き換わる（1回のまま）。
         // 旧（第228期の前段の規定）は <see cref="HaneH0"/>。
+        // 第230期 前段（ポンの判断）: 第229期 G4 の追い風（`Tailwind`）を規定に。旧（第229期の前段の規定）は <see cref="HaneG0"/>。
+        Traits = new[] { TraitId.Rebound, TraitId.Overrun, TraitId.Disarray, TraitId.Blast, TraitId.Spring, TraitId.Tailwind },
+        PlusText = "手番で、前列で最も攻撃力の高い敵をその経路の奥まで吹っ飛ばす（経路の敵すべてを貫いて傷つけ、吹っ飛ばした敵は転び、詰めてきた敵は前へ出る） / 殴られたら、殴ってきた敵を1つ後ろへ弾き返して転ばせる（1ターンに 1 ＋ 敵の乱れの段 回） / 味方が押しのけられるたび、敵の隊列を突き崩す / 敵を後ろへ押しやると、その列の味方が追い風に乗って前へ踏み込む（傷の深い味方は踏み込まない）",
+        MinusText = "勢い余って、吹っ飛ばすたび・弾き返すたび自分が隣の味方1体と場所を入れ替える",
+        Flavor = "押されたら押し返す。それしかできないし、加減も知らない。"
+    };
+
+    /// <summary>旧ハネ（第229期の規定・G0 ＝ 第228期 H3）。対照として残す（<see cref="All"/> にも <see cref="Retired"/> にも入れない）。
+    /// 第229期の器具（`gale` と `shockdigest g229`）はこちらに固定した。</summary>
+    public static readonly UnitDef HaneG0 = new()
+    {
+        Id = "hane",
+        Name = "突き返しのハネ",
+        MaxHp = 56,
+        Attack = 11,
+        Speed = 8,
+        Advances = false,
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "突き返す") },
         Traits = new[] { TraitId.Rebound, TraitId.Overrun, TraitId.Disarray, TraitId.Blast, TraitId.Spring },
         PlusText = "手番で、前列で最も攻撃力の高い敵をその経路の奥まで吹っ飛ばす（経路の敵すべてを貫いて傷つけ、吹っ飛ばした敵は転び、詰めてきた敵は前へ出る） / 殴られたら、殴ってきた敵を1つ後ろへ弾き返して転ばせる（1ターンに 1 ＋ 敵の乱れの段 回） / 味方が押しのけられるたび、敵の隊列を突き崩す",
         MinusText = "勢い余って、吹っ飛ばすたび・弾き返すたび自分が隣の味方1体と場所を入れ替える",

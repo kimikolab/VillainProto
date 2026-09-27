@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 
@@ -120,7 +120,7 @@ static partial class GaleDiag
                 Expect("保持者でない駒が動かした: 機会にならない ／ 味方は動かない", $"{Tal(ctx, bs).TailwindTriggers} / {p.Count(u => u.Slot != before[u])}", "0 / 0");
             }
             {
-                var ctx = Ctx(Formation.Build(front1: a, front3: UnitCatalog.Basa, center: b, back1: c, back3: d), en, 0, false, out var p, out var e);
+                var ctx = Ctx(Formation.Build(front1: a, front3: UnitCatalog.BasaG0, center: b, back1: c, back3: d), en, 0, false, out var p, out var e);
                 var before = p.ToDictionary(u => u, u => u.Slot);
                 ctx.SwapSlots(U(e, "e1"), 3, U(p, "basa"));
                 Expect("G0 のバサ（札なし）: 味方は動かない", p.Count(u => u.Slot != before[u]), 0);
@@ -200,7 +200,7 @@ static partial class GaleDiag
         // ---- (3)(2)(7) 実戦 ----
         Console.WriteLine("## (3)(2)(7) 実戦");
         Console.WriteLine();
-        var benches = new List<(string, Formation)> { ("M-ハネ 228", MHane228), ("M-ハネ 総当たり G4", Formation.Build(front1: UnitCatalog.Shio, front3: UnitCatalog.Basa, center: UnitCatalog.Sero, back1: UnitCatalog.Yomi, back3: UnitCatalog.Hane)) };
+        var benches = new List<(string, Formation)> { ("M-ハネ 228", MHane228), ("M-ハネ 総当たり G4", Formation.Build(front1: UnitCatalog.Shio, front3: UnitCatalog.BasaG0, center: UnitCatalog.Sero, back1: UnitCatalog.Yomi, back3: UnitCatalog.HaneG0)) };
         benches.AddRange(CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "basa" or "hane")).Select(r => ("compare " + r.Name, r.F)));
         int[] waves = { 4, 5, 0, 1, 2, 3 };
         long verbMis = 0, verbN = 0, g3Same = 0, g3N = 0, twEv = 0, twTally = 0, twMoveBad = 0, twCauseBad = 0, twHpBad = 0, brEv = 0, brTally = 0;

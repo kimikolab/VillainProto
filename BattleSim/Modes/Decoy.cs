@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -117,7 +117,7 @@ static partial class DecoyDiag
         var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
         var e = WaveOf(w, sc)();
         var slotOf = p.Concat(e).ToDictionary(u => u, u => u.Slot);
-        var r = BattleEngine.Run(p, e, seed, verbose: verbose);
+        var r = BattleEngine.Run(p, e, seed, verbose: verbose, shuffler: PreHole);   // 第230期 前段: 第222〜229期の器具は転倒の穴なし
         var slot0 = slotOf.ToDictionary(kv => kv.Key.InstanceId, kv => kv.Value);
         return (r, p, e, slot0);
     }

@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -69,11 +69,11 @@ static partial class SpringDiag
 
     // 台（§8.1）
     /// <summary>第227期 L2 の総当たりの1位（前1 セロ ／ 前3 バサ ／ 中央 ヨミ ／ 後1 ハネ ／ 後3 シオ）。セロは前段で L2 が規定。</summary>
-    internal static Formation MHane227 => Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Basa,
+    internal static Formation MHane227 => Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.BasaG0,
         center: UnitCatalog.Yomi, back1: UnitCatalog.HaneH0, back3: UnitCatalog.Shio);
     internal static Formation Thunder => DecoyDiag.Thunder;
     internal static List<(string Name, Formation F)> HaneRows() =>
-        CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id == "hane")).ToList();
+        CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id == "hane")).Select(r => (r.Name, OldGale(r.F))).ToList();   // 第230期 前段: バサを第229期の規定に固定
 
     internal static readonly string[] WaveNames = DriftDiag.WaveNames;
     internal static Func<List<UnitState>> WaveOf(int w, EnemyScaleRule sc) => DriftDiag.WaveOf(w, sc);
@@ -104,7 +104,7 @@ static partial class SpringDiag
             int w = 0, sv = 0, fell = 0; long t = 0;
             for (int s = PickSeed0; s < PickSeed0 + PickSeeds; s++)
             {
-                var r = BattleEngine.Run(BattleEngine.Materialize(perms[i], BattleContext.PlayerTeam), WaveOf(MainWave, sc)(), s, verbose: false);
+                var r = BattleEngine.Run(BattleEngine.Materialize(perms[i], BattleContext.PlayerTeam), WaveOf(MainWave, sc)(), s, verbose: false, shuffler: PreHole);
                 fell += r.PlayerStarterFallen.Count;
                 if (!r.PlayerWon) continue;
                 w++; t += r.Turns; if (r.PlayerStarterFallen.Count == 0) sv++;

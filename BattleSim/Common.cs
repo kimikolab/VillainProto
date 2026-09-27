@@ -32,6 +32,22 @@ internal static Formation OldBasaHane(Formation f)
 }
 
 /// <summary>
+/// 第230期 前段: バサ・ハネが嵐・追い風で規定になったので、第227〜229期の器具は編成の<b>規定のバサ・ハネ</b>
+/// （<see cref="UnitCatalog.Basa"/> / <see cref="UnitCatalog.Hane"/> と同じ参照のものだけ）を旧（<see cref="UnitCatalog.BasaG0"/> / <see cref="UnitCatalog.HaneG0"/>）へ戻す。
+/// 転倒の穴も既定になったので、同じ器具は <see cref="PreHole"/> で回す。
+/// </summary>
+internal static Formation OldGale(Formation f)
+{
+    var g = f.Clone();
+    foreach (var (slot, d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Basa) ? UnitCatalog.BasaG0 : ReferenceEquals(d, UnitCatalog.Hane) ? UnitCatalog.HaneG0 : d;
+    return g;
+}
+
+/// <summary>第229期までの喧噪の規則（転倒の穴なし）。第222〜229期の器具の既定。</summary>
+internal static ShufflerRule PreHole => ShufflerRule.PreHole;
+
+/// <summary>
 /// 第229期 前段: ハネが第228期 H3（吹っ飛ばし＋弾き返し）で規定になったので、第227・228期の器具は編成の<b>規定のハネ</b>
 /// （<see cref="UnitCatalog.Hane"/> と同じ参照のものだけ）を旧（<see cref="UnitCatalog.HaneH0"/>）へ戻す。
 /// </summary>

@@ -33,8 +33,8 @@ static partial class GaleDiag
 
     // 台（§8.1）
     /// <summary>第228期 H3 の総当たりの1位（前1 バサ ／ 前3 セロ ／ 中央 ヨミ ／ 後1 シオ ／ 後3 ハネ）。ハネは前段で H3 が規定。</summary>
-    internal static Formation MHane228 => Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.Sero,
-        center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Hane);
+    internal static Formation MHane228 => Formation.Build(front1: UnitCatalog.BasaG0, front3: UnitCatalog.Sero,
+        center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.HaneG0);
     /// <summary>参考: ポンの席（前1 シガ ／ 前3 ツギ ／ 中央 ベニ ／ 後1 カタ ／ 後3 ミオ）。</summary>
     internal static Formation Thunder => Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Tsugi,
         center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio);
@@ -127,7 +127,7 @@ static partial class GaleDiag
         var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
         var e = WaveOf(w, sc)();
         var slotOf = p.Concat(e).ToDictionary(u => u, u => u.Slot);
-        var r = BattleEngine.Run(p, e, seed, verbose: verbose, shuffler: shuffler);
+        var r = BattleEngine.Run(p, e, seed, verbose: verbose, shuffler: shuffler ?? PreHole);
         var slot0 = slotOf.ToDictionary(kv => kv.Key.InstanceId, kv => kv.Value);
         return (r, p, e, slot0);
     }
