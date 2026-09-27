@@ -28,7 +28,7 @@ public partial class Main
         // 色の反転は Status の絵の中で行う。通常の回復光を重ねて隠さない。
         var status = _result!.Events[cue.Start];
         _battleField.TickNumber(target, e.Amount, heal, cue.Ordinal, cue.Last && status.TickCount > 1,
-            status.Text == "燃焼");
+            status.Text == "燃焼", brittle: e.BrittleExtra > 0);
         if (!heal && e.Amount > 0)
             _battleField.PlayStatusDamageSound(status.Text);
         AppendLog($"  [color=#{(heal ? UiKit.Heal : UiKit.Poison).ToHtml(false)}]"

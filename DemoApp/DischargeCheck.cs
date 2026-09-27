@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 // Godot_console.exe --headless --path DemoApp res://DischargeCheck.tscn
 public partial class DischargeCheck : Control
@@ -14,61 +15,75 @@ public partial class DischargeCheck : Control
         try
         {
             CheckAttribution();
-            var main = GD.Load<PackedScene>("res://Main.tscn").Instantiate<Main>();
-            AddChild(main);
-            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-            var formation = Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Beni,
-                center: UnitCatalog.Mio, back1: UnitCatalog.Guza, back3: UnitCatalog.Kata);
-            var players = BattleEngine.Materialize(formation, 0);
-            var enemies = BattleEngine.Materialize(EnemyCatalog.Stages[4].Enemy, 1);
-            ((OptionButton)typeof(Main).GetField("_stagePicker", Flags)!.GetValue(main)!).Selected = 4;
-            ((SpinBox)typeof(Main).GetField("_seed", Flags)!.GetValue(main)!).Value = 4;
-            typeof(Main).GetField("_fastSmoke", Flags)!.SetValue(main, true);
-            typeof(Main).GetField("_speed", Flags)!.SetValue(main, 1000.0);
-            typeof(Main).GetMethod("EnterBattle", Flags)!.Invoke(main, new object[] { players, enemies, 4, 4, "放電の確認" });
-            var teams = players.Concat(enemies).ToDictionary(u => u.InstanceId, u => u.TeamId);
-            int kata = players.Single(u => u.Def.Id == "kata").InstanceId;
-            var result = (BattleResult)typeof(Main).GetField("_result", Flags)!.GetValue(main)!;
-            var credits = DischargePresentation.Count(result.Events, teams);
-            Require(result.TallyByUnit["kata"].DamageToEnemy == 222 && credits[kata].Enemy == 96, $"第五波 seed4 放電(敵)={credits[kata].Enemy}");
-            int hits = 0, heals = 0;
-            for (int i = 0; i < result.Events.Count; i++)
-            {
-                var e = result.Events[i];
-                if (DischargePresentation.Cause(result.Events, i) is null) continue;
-                if (e.Kind == BattleEventKind.Heal) { heals++; continue; }
-                hits++;
-                var label = ((string, Color))typeof(Main).GetMethod("DamageSource", Flags)!.Invoke(main, new object?[] { i, e, null })!;
-                Require(label.Item1.StartsWith("[放電]") && label.Item2 == ThunderFx.Cyan, "放電ログの字と色");
-            }
-            Require(hits > 0 && heals > 0, "ダメージ・回復反転の陽性対照");
-            for (int i = 0; i < 600 && (bool)typeof(Main).GetField("_playing", Flags)!.GetValue(main)!; i++)
-                await ToSignal(GetTree().CreateTimer(0.05), SceneTreeTimer.SignalName.Timeout);
-            Require(!(bool)typeof(Main).GetField("_playing", Flags)!.GetValue(main)!, "再生完走");
-            var log = (RichTextLabel)typeof(Main).GetField("_battleLog", Flags)!.GetValue(main)!;
-            Require(log.GetParsedText().Contains("[放電]") && log.GetParsedText().Contains("[放電→回復]"), "実際のログに放電と反転回復");
-            typeof(Main).GetMethod("SetScoreVisible", Flags)!.Invoke(main, new object[] { true });
-            var panel = (ScorePanel)typeof(Main).GetField("_scorePanel", Flags)!.GetValue(main)!;
-            var grid = Descendants(panel).OfType<GridContainer>().First();
-            var cells = grid.GetChildren().OfType<Label>().Select(l => l.Text).ToList();
-            int enemyCol = cells.IndexOf("放電(敵)"), allyCol = cells.IndexOf("放電(味)");
-            int row = cells.IndexOf(UnitCatalog.Kata.Name);
-            Require(enemyCol > 0 && allyCol > 0 && row >= grid.Columns && cells[row + enemyCol] == "96", "戦績のカタ行に96");
-            Require(cells[row + allyCol] == "16", "味方への放電を別欄に表示");
-            if (OS.GetCmdlineUserArgs().Contains("--capture"))
-            {
-                await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-                await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-                GetViewport().GetTexture().GetImage().SavePng("res://../.tmp/discharge-score.png");
-            }
-            var quiet = BattleEngine.Run(BattleEngine.Materialize(Formation.Build(front1: UnitCatalog.Gald), 0),
-                BattleEngine.Materialize(EnemyCatalog.Stages[0].Enemy, 1), 0, verbose: true);
-            Require(DischargePresentation.Count(quiet.Events, teams).Count == 0
-                && !Enumerable.Range(0, quiet.Events.Count).Any(i => DischargePresentation.Cause(quiet.Events, i) is not null), "放電なしの陰性対照");
-            GD.Print($"DISCHARGE_CHECK_COMPLETE ok=True enemy={credits[kata].Enemy} ally={credits[kata].Ally} hits={hits} heals={heals}");
+            await CheckReplay(false);
+            await CheckReplay(true);
+            GD.Print("DISCHARGE_CHECK_OK");
             GetTree().Quit();
         }
         catch (Exception ex) { GD.PushError(ex.ToString()); GetTree().Quit(1); }
+    }
+
+    private async Task CheckReplay(bool inverse)
+    {
+        var main = GD.Load<PackedScene>("res://Main.tscn").Instantiate<Main>();
+        AddChild(main);
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        var formation = inverse
+            ? Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Beni,
+                center: UnitCatalog.Kata, back1: UnitCatalog.Mio, back3: UnitCatalog.Guza)
+            : Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Beni,
+                center: UnitCatalog.Mio, back1: UnitCatalog.Guza, back3: UnitCatalog.Kata);
+        int stage = inverse ? 1 : 4, seed = inverse ? 0 : 4;
+        var players = BattleEngine.Materialize(formation, 0);
+        var enemies = BattleEngine.Materialize(EnemyCatalog.Stages[stage].Enemy, 1);
+        ((OptionButton)typeof(Main).GetField("_stagePicker", Flags)!.GetValue(main)!).Selected = stage;
+        ((SpinBox)typeof(Main).GetField("_seed", Flags)!.GetValue(main)!).Value = seed;
+        typeof(Main).GetField("_fastSmoke", Flags)!.SetValue(main, true);
+        typeof(Main).GetField("_speed", Flags)!.SetValue(main, 1000.0);
+        typeof(Main).GetMethod("EnterBattle", Flags)!.Invoke(main, new object[] { players, enemies, seed, stage, "放電の確認" });
+        var teams = players.Concat(enemies).ToDictionary(u => u.InstanceId, u => u.TeamId);
+        int kata = players.Single(u => u.Def.Id == "kata").InstanceId;
+        var result = (BattleResult)typeof(Main).GetField("_result", Flags)!.GetValue(main)!;
+        var credits = DischargePresentation.Count(result.Events, teams);
+        if (!inverse) Require(result.TallyByUnit["kata"].DamageToEnemy == 167 && credits[kata].Enemy == 114,
+            $"第220期B2・第五波 seed4 放電(敵)={credits[kata].Enemy}");
+        int hits = 0, heals = 0;
+        for (int i = 0; i < result.Events.Count; i++)
+        {
+            var e = result.Events[i];
+            if (DischargePresentation.Cause(result.Events, i) is null) continue;
+            if (e.Kind == BattleEventKind.Heal) { heals++; continue; }
+            hits++;
+            var label = ((string, Color))typeof(Main).GetMethod("DamageSource", Flags)!.Invoke(main, new object?[] { i, e, null })!;
+            Require(label.Item1.StartsWith("[放電]") && label.Item2 == ThunderFx.Cyan, "放電ログの字と色");
+        }
+        Require(hits > 0 && (!inverse || heals > 0), $"ダメージ・回復反転の陽性対照 hits={hits} heals={heals} inverse={result.Events.Count(e => e.Kind == BattleEventKind.Discharge && e.SourceTrait == TraitId.Inverse)}");
+        for (int i = 0; i < 600 && (bool)typeof(Main).GetField("_playing", Flags)!.GetValue(main)!; i++)
+            await ToSignal(GetTree().CreateTimer(0.05), SceneTreeTimer.SignalName.Timeout);
+        Require(!(bool)typeof(Main).GetField("_playing", Flags)!.GetValue(main)!, "再生完走");
+        var log = (RichTextLabel)typeof(Main).GetField("_battleLog", Flags)!.GetValue(main)!;
+        Require(log.GetParsedText().Contains("[放電]") && (!inverse || log.GetParsedText().Contains("[放電→回復]")), "実際のログに放電と反転回復");
+        typeof(Main).GetMethod("SetScoreVisible", Flags)!.Invoke(main, new object[] { true });
+        var panel = (ScorePanel)typeof(Main).GetField("_scorePanel", Flags)!.GetValue(main)!;
+        var grid = Descendants(panel).OfType<GridContainer>().First();
+        var cells = grid.GetChildren().OfType<Label>().Select(l => l.Text).ToList();
+        int enemyCol = cells.IndexOf("放電(敵)"), allyCol = cells.IndexOf("放電(味)");
+        int row = cells.IndexOf(UnitCatalog.Kata.Name);
+        Require(enemyCol > 0 && allyCol > 0 && row >= grid.Columns && cells[row + enemyCol] == credits[kata].Enemy.ToString(), "戦績のカタ行に実台本の集計");
+        Require(cells[row + allyCol] == credits[kata].Ally.ToString(), "味方への放電を別欄に表示");
+        if (OS.GetCmdlineUserArgs().Contains("--capture"))
+        {
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+            GetViewport().GetTexture().GetImage().SavePng("res://../.tmp/discharge-score.png");
+        }
+        var quiet = BattleEngine.Run(BattleEngine.Materialize(Formation.Build(front1: UnitCatalog.Gald), 0),
+            BattleEngine.Materialize(EnemyCatalog.Stages[0].Enemy, 1), 0, verbose: true);
+        Require(DischargePresentation.Count(quiet.Events, teams).Count == 0
+            && !Enumerable.Range(0, quiet.Events.Count).Any(i => DischargePresentation.Cause(quiet.Events, i) is not null), "放電なしの陰性対照");
+        GD.Print($"DISCHARGE_CHECK_COMPLETE ok=True enemy={credits[kata].Enemy} ally={credits[kata].Ally} hits={hits} heals={heals}");
+        main.QueueFree();
+        await ToSignal(GetTree().CreateTimer(0.1), SceneTreeTimer.SignalName.Timeout);
     }
 
     private static void CheckAttribution()

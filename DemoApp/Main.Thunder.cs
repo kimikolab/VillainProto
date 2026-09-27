@@ -13,7 +13,8 @@ public partial class Main
 
     private static bool ElectricBoundary(BattleEvent e) => e.Kind is BattleEventKind.Attack
         or BattleEventKind.Skill or BattleEventKind.TurnStart or BattleEventKind.StatusSnapshot
-        or BattleEventKind.StatSnapshot or BattleEventKind.Thunder or BattleEventKind.Charge or BattleEventKind.Status;
+        or BattleEventKind.StatSnapshot or BattleEventKind.Thunder or BattleEventKind.Charge or BattleEventKind.Status
+        or BattleEventKind.MireSlam or BattleEventKind.MireConduct or BattleEventKind.MireBurst or BattleEventKind.LiveWire;
 
     private void IndexThunder(IReadOnlyList<BattleEvent> events)
     {
@@ -89,6 +90,12 @@ public partial class Main
         }
         if (e.Kind == BattleEventKind.Discharge)
         {
+            if (!_shockStageMembers.Contains(index))
+            {
+                _battleField.ShowDischarge(actor, target, _speed);
+                await Delay(0.16);
+                if (token != _playToken || !_battleMode) return true;
+            }
             if (e.SourceTrait == TraitId.Inverse) _battleField.ShowShockInverse(target, _speed);
             return true;
         }

@@ -25,7 +25,8 @@ public partial class SpecialsCheck : Control
     {
         var poison = Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Rau,
             center: UnitCatalog.Beni, back1: UnitCatalog.Mio, back3: UnitCatalog.Kata);
-        await Replay(poison, EnemyCatalog.Stages[0].Enemy, 0, false);
+        // 第220期B2: 第一波は早く決着するため、四つの演出が残る第四波 seed 0 を使う。
+        await Replay(poison, EnemyCatalog.Stages[3].Enemy, 0, false);
         // 実際の代表編成から相打ち勝ちを探す。演出専用の偽イベントは作らない。
         foreach (var entry in Presets.Compare.Where(p => Enumerable.Range(0, 5).Any(i => p.F[i]?.Id == "gald")))
         for (int stage = 1; stage < EnemyCatalog.Stages.Count; stage++)

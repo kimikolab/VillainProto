@@ -364,6 +364,7 @@ public partial class BattleAttackAudio : Node
 
     public void StopAll()
     {
+        StopMireSounds();
         StopPlankAccents();
         foreach (var voice in _voices) voice.Stop();
         foreach (var voice in _chargeVoices) voice.Stop();

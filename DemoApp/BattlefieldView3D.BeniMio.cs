@@ -10,6 +10,7 @@ public partial class BattlefieldView3D
     internal int ConcentratePlays, ThickenPlays, InvertedHealPlays, SipPlays, KindlePlays, TaintPlays;
     private static readonly Color BeniRed = new("db3263");
     private static readonly Color MioWater = new("438a76");
+    private static Shader? _waterShader, _groundWaterShader;
 
     private void RegisterInverse(DemoOpening opening)
     {
@@ -116,15 +117,16 @@ public partial class BattlefieldView3D
         tween.TweenCallback(Callable.From(group.QueueFree));
     }
 
-    private void WaterVortex(Vector3 position, Color tint, double seconds, double delay = 0, float radius = 0.7f)
+    private void WaterVortex(Vector3 position, Color tint, double seconds, double delay = 0, float radius = 0.7f, bool ground = false)
     {
         var material = new ShaderMaterial { Shader = new Shader { Code = @"
 shader_type spatial;
 render_mode unshaded, cull_disabled, blend_mix, depth_draw_never;
 uniform float progress = 0.0;
 uniform vec4 tint : source_color;
+uniform bool ground = false;
 void vertex() {
-    MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
+    if (!ground) MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
 }
 void fragment() {
     vec2 p = UV - vec2(0.5);
@@ -138,8 +140,13 @@ void fragment() {
     EMISSION = tint.rgb * wave * 0.30;
     ALPHA = (edge * (0.55 + 0.4 * curl) + wave * 0.3) * fade;
 }" } };
+        if (ground)
+            material.Shader = _groundWaterShader ??= new Shader { Code = material.Shader.Code.Replace("depth_draw_never;", "depth_draw_never, depth_test_disabled;") };
+        else material.Shader = _waterShader ??= material.Shader;
         material.SetShaderParameter("tint", tint);
+        material.SetShaderParameter("ground", ground);
         var fx = new MeshInstance3D { Mesh = new QuadMesh { Size = Vector2.One * radius * 2 },
+            Rotation = ground ? new Vector3(-Mathf.Pi / 2, 0, 0) : Vector3.Zero,
             Position = _fxRoot.ToLocal(position), MaterialOverride = material,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         _fxRoot.AddChild(fx);

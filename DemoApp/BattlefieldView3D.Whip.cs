@@ -1,10 +1,76 @@
 using Godot;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 public partial class BattlefieldView3D
 {
     internal int TormentHitPlays { get; private set; }
+    internal int WhipSweeps, ElectricWhipSweeps;
+
+    // 一振りの先端を敵の並びに沿って走らせる。電光は革の鞭の上にだけ乗る。
+    public async Task ShowWhipSweep(BattlePawn3D from, IReadOnlyList<BattlePawn3D> targets,
+        Action<BattlePawn3D>? impact = null)
+    {
+        if (targets.Count == 0) return;
+        WhipSweeps++;
+        var hits = targets.OrderBy(p => p.FxPoint.Z).ToArray();
+        bool electric = from.HasShockAura;
+        if (electric) ElectricWhipSweeps++;
+        double speed = Math.Max(0.1, from.AnimationSpeed);
+        var material = MakeMaterial(new Color("936447"), true, true);
+        material.CullMode = BaseMaterial3D.CullModeEnum.Disabled;
+        var mesh = new ImmediateMesh();
+        var whip = new MeshInstance3D { Mesh = mesh, MaterialOverride = material,
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+        _fxRoot.AddChild(whip);
+        int landed = 0;
+        var tween = whip.CreateTween();
+        tween.TweenMethod(Callable.From<float>(t => {
+            float sweep = Mathf.Clamp((t - 0.22f) / 0.55f, 0, 1) * Math.Max(1, hits.Length - 1);
+            int n = Math.Min((int)sweep, hits.Length - 1);
+            Vector3 end = hits[n].FxPoint.Lerp(hits[Math.Min(n + 1, hits.Length - 1)].FxPoint, sweep - n);
+            Vector3 start = from.FxPoint;
+            float reach = Mathf.Clamp(t / 0.22f, 0, 1) * (t > 0.82f ? (1 - t) / 0.18f : 1);
+            Vector3 Point(float u) => start.Lerp(end, u * reach)
+                + Vector3.Up * Mathf.Sin(u * Mathf.Pi) * (0.25f + (1 - reach) * 1.5f)
+                + Vector3.Forward * Mathf.Sin(u * 8 - t * 12) * Mathf.Sin(u * Mathf.Pi) * 0.26f;
+            mesh.ClearSurfaces(); mesh.SurfaceBegin(Mesh.PrimitiveType.Triangles);
+            for (int i = 0; i < 40; i++)
+            {
+                Vector3 a = Point(i / 40f), b = Point((i + 1) / 40f);
+                Vector3 w = (b - a).Cross(_camera.GlobalPosition - a).Normalized() * 0.035f;
+                foreach (var p in new[] { a-w, b-w, a+w, a+w, b-w, b+w })
+                    mesh.SurfaceAddVertex(_fxRoot.ToLocal(p));
+            }
+            mesh.SurfaceEnd();
+            while (landed < hits.Length && t >= 0.22f + 0.55f * landed / Math.Max(1, hits.Length - 1))
+            {
+                var hit = hits[landed++];
+                if (electric)
+                {
+                    for (int k = 0; k < 6; k++)
+                        ThunderFx.Arc(_fxRoot, Point(k / 6f), Point((k + 1) / 6f), 0.018f, 0.20 / speed);
+                    ThunderFx.Burst(_fxRoot, hit.FxPoint, 0.5f, 0.22 / speed);
+                }
+                impact?.Invoke(hit);
+            }
+        }), 0f, 1f, 0.64 / speed);
+        tween.TweenCallback(Callable.From(whip.QueueFree));
+        await ToSignal(GetTree().CreateTimer(0.64 / speed), SceneTreeTimer.SignalName.Timeout);
+    }
+
+    public void ShowWhipFlash(BattlePawn3D target, int amount, double speed)
+    {
+        float size = Math.Clamp(0.18f + amount * 0.008f, 0.22f, 0.85f);
+        for (int i = 0; i < 6; i++)
+        {
+            float a = i * Mathf.Tau / 6;
+            var ray = _camera.GlobalBasis.X * Mathf.Cos(a) + Vector3.Up * Mathf.Sin(a);
+            MakeBeam(target.FxPoint, target.FxPoint + ray * size, new Color("ffe0ba"), 0.035f, 0.18 / speed);
+        }
+    }
     // 責め苦はAttackを増やさない特性ダメージ。踏み込み・追加攻撃のカットインは呼ばない。
     public async Task ShowTormentHit(BattlePawn3D from, BattlePawn3D target)
     {

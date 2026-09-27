@@ -39,7 +39,7 @@ public partial class Main
         if (_invertedDamage.Contains(index))
         {
             target?.SetHp(e.HpAfter);
-            _battleField.DamagePopup(target, e.Amount, "", new Color("765287"), false, false);
+            _battleField.DamagePopup(target, e.Amount, "", new Color("765287"), false, false, brittle: e.BrittleExtra > 0);
             AppendLog($"  回復が反転 → {NameOf(e.TargetId)} −{e.Amount}");
             return true;
         }

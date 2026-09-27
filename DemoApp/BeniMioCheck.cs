@@ -134,8 +134,9 @@ public partial class BeniMioCheck : Control
         var formation = support ? Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Rau,
             center: UnitCatalog.Mio, back1: UnitCatalog.KataOld, back3: UnitCatalog.Nono)
             : Presets.Compare.First(x => x.Name.StartsWith("毒+耐久")).F;
+        // 第220期B2では第一波の反転が消える。旧カタを保ち、第二波 seed 0 の実在する反転を見る。
         typeof(Main).GetMethod("EnterBattle", flags)!.Invoke(main, new object[] {
-            BattleEngine.Materialize(formation, 0), BattleEngine.Materialize(EnemyCatalog.Stages[0].Enemy, 1), 0, 0, "" });
+            BattleEngine.Materialize(formation, 0), BattleEngine.Materialize(EnemyCatalog.Stages[support ? 1 : 0].Enemy, 1), 0, support ? 1 : 0, "" });
         for (int k = 0; k < 240 && (bool)Read("_playing")!; k++) await Wait(0.25);
         Require(!(bool)Read("_playing")!, "通常再生の完走");
         var result = (BattleResult)Read("_result")!;

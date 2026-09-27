@@ -70,7 +70,7 @@ void fragment() {
     }
 
     // 通常ポップアップの合算・2件制限から独立させる。新しい数字が下に入り、前の数字を押し上げる。
-    public void TickNumber(BattlePawn3D? pawn, int amount, bool heal, int ordinal, bool last, bool burn = false)
+    public void TickNumber(BattlePawn3D? pawn, int amount, bool heal, int ordinal, bool last, bool burn = false, bool brittle = false)
     {
         if (pawn is null) return;
         if (!_tickNumbers.TryGetValue(pawn.InstanceId, out var numbers))
@@ -99,6 +99,7 @@ void fragment() {
             RenderPriority = 10,
         };
         _fxRoot.AddChild(label);
+        if (!heal && brittle) label.Modulate = label.Modulate.Lerp(new Color("f49b51"), 0.4f);
         numbers.Add(label);
         var tween = label.CreateTween();
         tween.TweenInterval(0.95);

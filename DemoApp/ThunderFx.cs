@@ -19,7 +19,7 @@ public static class ThunderFx
         }
     }
 
-    public static void Arc(Node3D parent, Vector3 from, Vector3 to, float width, double seconds)
+    public static void Arc(Node3D parent, Vector3 from, Vector3 to, float width, double seconds, bool ground = false)
     {
         var root = new Node3D(); parent.AddChild(root);
         var points = new Vector3[10];
@@ -34,6 +34,7 @@ public static class ThunderFx
         {
             var mesh = new ImmediateMesh();
             var material = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                NoDepthTest = ground,
                 Transparency = BaseMaterial3D.TransparencyEnum.Alpha, CullMode = BaseMaterial3D.CullModeEnum.Disabled,
                 AlbedoColor = new Color(layer.Item2, layer.Item3), EmissionEnabled = true, Emission = layer.Item2 };
             mesh.SurfaceBegin(Mesh.PrimitiveType.Triangles);

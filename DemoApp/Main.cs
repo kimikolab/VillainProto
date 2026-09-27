@@ -1084,6 +1084,7 @@ public partial class Main : Control
         _ticks = TickPresentation.Build(_result.Events);
         IndexBeniMio(_result.Events);
         IndexThunder(_result.Events);
+        _mireBurstsShown.Clear();
         IndexTimeline(_result.Events);
         _battleOpening = pending.Select(x => new DemoOpening(
             x.Unit.InstanceId,
@@ -1152,6 +1153,7 @@ public partial class Main : Control
         _tickPlays = _inverseTickPlays = 0;
         _tickDelayBudget = null;
         _beniMioShown.Clear();
+        _mireBurstsShown.Clear();
         _specialShown.Clear(); _riposteDamage.Clear(); _numbDamage.Clear();
         _liliGiven.Clear(); _liliTransfers = _liliDrains = _liliGifts = 0;
         ResetLiliRitePlayback();
@@ -1277,6 +1279,7 @@ public partial class Main : Control
         EnterBeat(eventIndex, e);
         _tickDelayBudget = _ticks.Budgets.TryGetValue(eventIndex, out double tickBudget) ? tickBudget : null;
         if (await PlayThunder(e, eventIndex, actor, target)) return;
+        if (await PlayMire(e, eventIndex, actor, target)) return;
         if (await PlayPlank(e, eventIndex, actor, target)) return;
         if (await PlayLili(e, eventIndex, actor, target)) return;
         if (await PlaySpecial(e, eventIndex, actor, target)) return;
@@ -1356,6 +1359,9 @@ public partial class Main : Control
                     numbPercent: e.NumbPercent ?? 0,
                     thrustCharge: e.ThrustCharge,
                     thrustImpact: pawn => {
+                        if (attackToken == _playToken) ApplyThrustDamage(eventIndex, e, pawn);
+                    },
+                    whipImpact: pawn => {
                         if (attackToken == _playToken) ApplyThrustDamage(eventIndex, e, pawn);
                     });
                 if (attackToken != _playToken || !_battleMode) return;
@@ -1559,7 +1565,7 @@ public partial class Main : Control
                     target.PlankKnockout();
                 }
                 AppendLog($"  [color=#{UiKit.Hurt.ToHtml(false)}][b]{NameOf(e.TargetId)} 撃破[/b][/color]");
-                if (!InLiliRite(eventIndex)) await Delay(0.36);
+                if (!InLiliRite(eventIndex)) await Delay(MireFollowsDeath(eventIndex, e.TargetId) ? 0.06 : 0.36);
                 break;
 
             case BattleEventKind.Move:
@@ -1843,6 +1849,8 @@ public partial class Main : Control
         bool poison = _statusCauseByDamageIndex.TryGetValue(eventIndex, out string? status)
             && status == StatusKeys.LabelOf(StatusKeys.Poison);
         target?.AnimateHit(poison, _numbDamage.GetValueOrDefault(eventIndex, 1f));
+        if (actor?.UnitId == "shiga" && e.Pattern == AttackPattern.Sweep && target is not null)
+            _battleField.ShowWhipFlash(target, e.Amount, _speed);
         if (e.Amount > 0) _battleField.PlayStatusDamageSound(status);
         // 毒・燃焼などの継続ダメージや自傷では金属の被弾音を鳴らさない。
         if (e.ShareFromId is null && e.Amount > 0 && actor is not null && actor != target
@@ -1858,7 +1866,8 @@ public partial class Main : Control
         (string source, Color sourceColor) = DamageSource(eventIndex, e, actor);
         if (e.ShareFromId is not null) sourceColor = HexMudFx.Tint;
         if (e.DeflectFromId is not null) sourceColor = new Color("ffe3a0");
-        _battleField.DamagePopup(target, e.Amount, source, sourceColor, e.Amount >= 25, withSource, poison);
+        _battleField.DamagePopup(target, e.Amount, source, sourceColor, e.Amount >= 25, withSource, poison,
+            brittle: e.BrittleExtra > 0);
         if (!poison && e.ShareFromId is null)
             _battleField.Impact(target, sourceColor,
                                 _statusCauseByDamageIndex.ContainsKey(eventIndex), e.FriendlyFire && e.DeflectFromId is null);

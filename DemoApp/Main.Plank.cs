@@ -109,7 +109,8 @@ public partial class Main
                     target.AnimateHit();
                     _battleField.PlayPlankReflectSound(total);
                     int damage = _planks.DamageToReflect.Where(pair => volley.Contains(pair.Value)).Sum(pair => events[pair.Key].Amount);
-                    _battleField.DamagePopup(target, damage, "", PlankFx.Rust, volley.Count > 1 || damage >= 25, false);
+                    bool brittle = _planks.DamageToReflect.Any(pair => volley.Contains(pair.Value) && events[pair.Key].BrittleExtra > 0);
+                    _battleField.DamagePopup(target, damage, "", PlankFx.Rust, volley.Count > 1 || damage >= 25, false, brittle: brittle);
                 }
                 // 本数によらず一拍。2倍速なら計0.34秒で、後続の反射には待ちを足さない。
                 await Delay(0.18);

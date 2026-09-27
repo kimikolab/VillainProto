@@ -287,6 +287,7 @@ public partial class BattlefieldView3D : Control
         _specialGeneration++;
         GurenReleases = GurenGains = SwordDraws = SwordRipostes = NumbSwings = VenomReturns = Spews = 0;
         ConcentratePlays = ThickenPlays = InvertedHealPlays = SipPlays = KindlePlays = TaintPlays = 0;
+        MireSlams = MireConducts = MireFlows = MireBursts = WhipSweeps = ElectricWhipSweeps = 0;
         ThunderPlays = DischargePlays = ShockStagePlays = ShockLeakPlays = ShockInversePlays = 0;
         _shieldCowedGeneration++;
         TormentHitPlays = 0;
@@ -583,7 +584,8 @@ public partial class BattlefieldView3D : Control
         Func<Task>? shieldImpact = null,
         int? thrustCharge = null,
         Action<BattlePawn3D>? thrustImpact = null,
-        int numbPercent = 0)
+        int numbPercent = 0,
+        Action<BattlePawn3D>? whipImpact = null)
     {
         if (from is null || to is null) return;
         Color color = friendly ? UiKit.Violet : reaction ? UiKit.Gold : from.Team == BattleContext.PlayerTeam ? UiKit.Player : UiKit.Enemy;
@@ -625,6 +627,11 @@ public partial class BattlefieldView3D : Control
         else switch (pattern)
         {
             case AttackPattern.Sweep:
+                if (from.UnitId == "shiga")
+                {
+                    await ShowWhipSweep(from, hits, whipImpact);
+                    break;
+                }
                 // 第125期 3-f: 「薙ぎ全般が散弾みたいで銃撃戦に見える」への直答。
                 // **標的ごとの細い線をやめ、1枚の弧にする**——線が人数ぶん飛ぶから散弾に見えていた。
                 // 弧は**実際に当たった駒の角度の幅**を覆うので、「どこまで届いたか」は
@@ -814,10 +821,10 @@ public partial class BattlefieldView3D : Control
     /// <para>出どころはログに残し、盤上は数字だけ。同じ駒の連続分は合算する。</para>
     /// </summary>
     public void DamagePopup(BattlePawn3D? pawn, int amount, string source, Color color,
-                            bool large = false, bool withSource = true, bool poison = false)
+                            bool large = false, bool withSource = true, bool poison = false, bool brittle = false)
     {
         if (pawn is null) return;
-        NumberPopup(pawn, amount, false, color, large);
+        NumberPopup(pawn, amount, false, brittle ? color.Lerp(new Color("f49b51"), 0.4f) : color, large);
     }
 
     /// <param name="friendly">

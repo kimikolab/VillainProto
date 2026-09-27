@@ -89,7 +89,7 @@ public partial class Main
             && drain.ActorId == e.ActorId && drain.TargetId == e.TargetId)
         {
             target?.SetHp(e.HpAfter);
-            _battleField.DamagePopup(target, e.Amount, "", LiliFx.Rose, e.Amount >= 25, false);
+            _battleField.DamagePopup(target, e.Amount, "", LiliFx.Rose, e.Amount >= 25, false, brittle: e.BrittleExtra > 0);
             if (!InLiliRite(index)) await Delay(0.04);
             return true;
         }
