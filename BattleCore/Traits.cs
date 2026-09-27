@@ -441,6 +441,9 @@ public enum TraitId
     MireBurst,      // 澱みが爆ぜる（第220期・B1）: 印を持つ敵が倒れると、隣の生きている敵すべてに 毒の層 ÷ 2。**札そのものは挙動を持たない**（engine の HandleDeath）
     MireBurstStack, // 澱みが爆ぜる（第220期・B2）: 量が 毒の層 ×（1 ＋ 印）÷ 4。**札そのものは挙動を持たない**
     MireBurstAll,   // 澱みが爆ぜる（第220期・B2x）: B2 を敵味方の両方に（印の味方が倒れると味方側で爆ぜる）。**札そのものは挙動を持たない**
+    Regroup,        // 隊を組み替える（第222期・シオの版 V1/V3）: 手番で、最も傷ついた味方を「隣でより後ろの行の味方」と入れ替える（通常攻撃はしない）。保持者 0 枚
+    CreakSweep,     // 軋みが薙ぐ（第222期・ヨミの版 V2/V3）: 現在の攻撃力が 30 以上のあいだ、単体の一撃が薙ぎになる。保持者 0 枚
+    CreakSweep20,   // 軋みが薙ぐ（第222期・V3b）: 同じもの・閾値 20。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -12569,6 +12572,93 @@ public sealed class MireBurstAllTrait : Trait
 }
 
 /// <summary>
+/// 隊を組み替える（第222期・移り木のシオの版 V1/V3）。<b>手番で、最も傷ついた味方（HP の割合が最も低い・同値は席番号の順）を、
+/// その味方と隣接し<u>より後ろの行</u>にいる味方（複数なら席番号の順）と入れ替える。通常攻撃はしない</b>（<c>Actions = [Skill]</c>）。
+///
+/// <para>相手がいなければ次に傷ついた味方で探す。<b>無傷の味方は下げない</b>（全員が満タンなら何もしない）。
+/// 押し出す相手は無傷でもよい（それが狙い）。シオ自身が最も傷ついていればシオ自身を下げる。
+/// 召喚枠の駒と、据えた足（<see cref="TraitId.Planted"/>）の駒は相手にも候補にもしない（入れ替えが空振りするため）。</para>
+///
+/// <para><b>移動は <see cref="BattleContext.SwapSlots"/> を通す</b>ので、移動の読み手（軋み・移り木・混乱ほか）は
+/// 入れ替えた2体の両方に今までどおり反応し、前へ押し出された側は「前へ突き出された」（軋みなら +22）になる。
+/// <b>乱数を引かない。</b></para>
+/// </summary>
+public sealed class RegroupTrait : Trait
+{
+    public override TraitId Id => TraitId.Regroup;
+
+    /// <summary>入れ替える組（下げる駒・押し出す駒）。<b>盤面を読むだけ</b>。いなければ null。</summary>
+    public static (UnitState Low, UnitState With)? Pick(BattleContext ctx, UnitState self)
+    {
+        var team = ctx.LivingMembers(self.TeamId)
+            .Where(u => !FormationRules.IsSummonSlot(u) && !u.HasTrait(TraitId.Planted)).ToList();
+        var hurt = team.Where(u => u.Hp < u.MaxHp).ToList();
+        hurt.Sort((a, b) =>
+        {
+            long l = (long)a.Hp * b.MaxHp, r = (long)b.Hp * a.MaxHp;
+            return l != r ? l.CompareTo(r) : a.Slot.CompareTo(b.Slot);
+        });
+        foreach (UnitState low in hurt)
+        {
+            int depth = FormationRules.DepthOf(low.Row);
+            UnitState? with = team
+                .Where(a => a != low && FormationRules.AreAdjacent(low, a) && FormationRules.DepthOf(a.Row) > depth)
+                .OrderBy(a => a.Slot).FirstOrDefault();
+            if (with is not null) return (low, with);
+        }
+        return null;
+    }
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action) => Regroup(ctx, self);
+
+    // 行動パターンを持たない保持者は従来どおりターン頭に発火する（`Trait.ActsOnPattern`・継ぎ当てと同じ作法）。
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!ActsOnPattern(self)) Regroup(ctx, self);
+    }
+
+    private static void Regroup(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        var pick = Pick(ctx, self);
+        if (pick is null)
+        {
+            bool anyHurt = ctx.LivingMembers(self.TeamId).Any(u => u.Hp < u.MaxHp);
+            ctx.NoteRegroupIdle(self, anyHurt);
+            ctx.Log(anyHurt ? $"    {self.Name} は組み替える相手を見つけられなかった" : $"    {self.Name} は隊を眺めた（誰も傷ついていない）", LogKind.Action);
+            return;
+        }
+        var (low, with) = pick.Value;
+        ctx.Log($"    {self.Name} が傷ついた {low.Name} を下げ、{with.Name} を前へ出した", LogKind.Trigger);
+        ctx.RegroupSwap(self, low, with);   // SwapSlots ＋ 表示専用の出来事 ＋ 計数
+    }
+}
+
+/// <summary>
+/// 軋みが薙ぐ（第222期・軋みのヨミの版 V2/V3）。<b>現在の攻撃力（<see cref="UnitState.CurrentAttack"/>）が閾値以上のあいだ、
+/// 単体の一撃が薙ぎになる</b>（割り込みも手番の攻撃も・<see cref="UnitState.CurrentPattern"/> を通るので両方に乗る）。
+/// 弱体で閾値を下回れば単体に戻る。単体以外の型は書き換えない。
+///
+/// <para>第66期の V9（<c>AtkBonus</c> ≥ 閾値）とは読む値が違う——<b>素の攻撃力 6 を含む現在値</b>。
+/// 軋みの上昇は +9 / +22 の2段なので、30 は「動かされた 3 回」か「突き出し 1 回 ＋ 動かされた 1 回」、20 は 2 回か突き出し 1 回にあたる。</para>
+/// </summary>
+public class CreakSweepTrait : Trait
+{
+    public override TraitId Id => TraitId.CreakSweep;
+    public virtual int Threshold => 30;
+
+    public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
+        => p == AttackPattern.Single && self.CurrentAttack >= Threshold ? AttackPattern.Sweep : p;
+}
+
+/// <summary>軋みが薙ぐ（第222期・V3b）。閾値 20。</summary>
+public sealed class CreakSweep20Trait : CreakSweepTrait
+{
+    public override TraitId Id => TraitId.CreakSweep20;
+    public override int Threshold => 20;
+}
+
+/// <summary>
 /// 反転（第190期・毒喰らいのベニ）。<b>ベニに隣接する味方は、毒と燃焼の削りを回復として受ける</b>
 /// ——ターン頭の刻み（<see cref="BattleContext.TickStatuses"/>）と、起爆の味方側（<see cref="BattleContext.Detonate"/>）の両方。
 ///
@@ -14025,6 +14115,9 @@ public static class TraitCatalog
         new MireBurstTrait(),        // 第220期
         new MireBurstStackTrait(),   // 第220期
         new MireBurstAllTrait(),     // 第220期
+        new RegroupTrait(),          // 第222期
+        new CreakSweepTrait(),       // 第222期
+        new CreakSweep20Trait(),     // 第222期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期
         new HexLeakTrait(),    // 第189期

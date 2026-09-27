@@ -267,6 +267,9 @@
 | `MireBurst` | - |
 | `MireBurstStack` | 澱みのミオ |
 | `MireBurstAll` | - |
+| `Regroup` | - |
+| `CreakSweep` | - |
+| `CreakSweep20` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

@@ -5542,6 +5542,48 @@ public sealed class BattleContext
         TallyOf(partner).FleePushed++;
     }
 
+    /// <summary>
+    /// 隊を組み替える（第222期・シオ）。<b>入れ替えは <see cref="SwapSlots"/> そのもの</b>——ここで足すのは
+    /// 表示専用の出来事（<see cref="BattleEventKind.Regroup"/>・誰を下げて誰を出したか）と計数だけ。<b>盤面の分岐は1つも足していない。</b>
+    /// </summary>
+    public void RegroupSwap(UnitState self, UnitState low, UnitState with)
+    {
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Regroup,
+            Turn = _turn,
+            ActorId = self.InstanceId,
+            TargetId = low.InstanceId,      // 下げた駒（最も傷ついた味方）
+            PartnerId = with.InstanceId,    // 前へ出した駒
+            HpAfter = low.Hp,
+            Amount = low.MaxHp,
+        });
+        int hp0 = low.Hp + with.Hp;
+        long whet0 = low.WhetReceived + with.WhetReceived;
+        long atk0 = 0;
+        foreach (UnitState u in _units) atk0 += AttacksOf(u);
+
+        SwapSlots(low, with.Slot, self);
+
+        long atk1 = 0;
+        foreach (UnitState u in _units) atk1 += AttacksOf(u);
+        UnitTally t = TallyOf(self);
+        t.RegroupSwaps++;
+        if (low == self) t.RegroupSelf++;
+        t.RegroupHeal += Math.Max(0, low.Hp + with.Hp - hp0);
+        t.RegroupWhet += low.WhetReceived + with.WhetReceived - whet0;
+        t.RegroupReaderSwings += atk1 - atk0;
+        TallyOf(low).RegroupLowered++;
+        TallyOf(with).RegroupPushed++;
+    }
+
+    /// <summary>隊を組み替える相手がいなかった（<b>計数のみ</b>）。<paramref name="anyHurt"/> が偽なら全員満タン。</summary>
+    public void NoteRegroupIdle(UnitState self, bool anyHurt)
+    {
+        UnitTally t = TallyOf(self);
+        if (anyHurt) t.RegroupStuck++; else t.RegroupAllFull++;
+    }
+
     /// <summary>振った回数を読むだけ（<b>帳簿の行を作らない</b>——<c>TallyOf</c> は無ければ作るので使わない）。</summary>
     long AttacksOf(UnitState u) => TallyByUnit.TryGetValue(u.Def.Id, out UnitTally? t) ? t.Attacks : 0;
 

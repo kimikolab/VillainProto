@@ -11,6 +11,7 @@ using BattleCore;
 //     dotnet run --project BattleSim -c Release 0 shockdigest w217  # 第217期の台（G0＝今のシガの台本が実装の前後で一致すること）
 //     dotnet run --project BattleSim -c Release 0 shockdigest m218  # 第218期の台（M0＝今のミオの台本が実装の前後で一致すること）
 //                                                                    ——第219期からミオの規定は M5 なので、この台は `MireDiag.VerOf("M0")` を引く
+//     dotnet run --project BattleSim -c Release 0 shockdigest d222  # 第222期の台（V0＝今のシオ・ヨミの台本が実装の前後で一致すること）
 //     dotnet run --project BattleSim -c Release 0 shockdigest m219 cat|m5  # 第219期の台（cat ＝ 規定のミオ ／ m5 ＝ 第218期の診断の版 M5）
 //                                                                    ——**第218期の worktree で `m5`、第219期で `cat` を回して全行一致**なら M5 の規定化が台本を変えていない
 //
@@ -25,9 +26,9 @@ using BattleCore;
 static class ShockDigestDiag
 {
     /// <summary>後の期に足した出来事の種類（名前で持つ・古い worktree でも回る）。</summary>
-    static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff", "MireBurst" };
+    static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff", "MireBurst", "Regroup" };
     /// <summary>後の期に足した <c>BattleEvent</c> の欄。</summary>
-    static readonly HashSet<string> SkipProps = new() { "BrittleExtra" };
+    static readonly HashSet<string> SkipProps = new() { "BrittleExtra", "PartnerId" };
 
     static (string, Formation)[] MireBenches(UnitDef mio) => new (string, Formation)[]
     {
@@ -47,7 +48,16 @@ static class ShockDigestDiag
     {
         var fKataOld = typeof(UnitCatalog).GetField("KataOld");
         UnitDef kata = (UnitDef)(fKataOld ?? typeof(UnitCatalog).GetField("Kata")!).GetValue(null)!;
-        var benches = mode == "m219"
+        var benches = mode == "d222"
+            // 第222期（受け入れ 1）: V0（今のシオ・ヨミ）の台本が実装の前後で一致すること。D1＝ポンの台・D2/D3＝compare の行。
+            ? new (string, Formation)[]
+            {
+                ("D1 ポン", Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.Sero, back3: UnitCatalog.Basa)),
+                ("D2 移動改", Common.CompareBuilds().First(r => r.Name.StartsWith("移動改 (")).F),
+                ("D3 隊列崩し", Common.CompareBuilds().First(r => r.Name.StartsWith("隊列崩し")).F),
+                ("D3 突き出し", Common.CompareBuilds().First(r => r.Name.StartsWith("突き出し")).F),
+            }
+            : mode == "m219"
             // 第219期（受け入れ 1）: 規定のミオ（cat）と第218期の M5（m5）の台本が一致すること。
             ? MireBenches(arg == "m5" ? MireDiag.VerOf("M5") : UnitCatalog.Mio)
             : mode == "m218"

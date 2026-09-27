@@ -521,6 +521,7 @@ if (focusId == "mire") { MireDiag.Run(args.Length > 2 ? args[2] : "phase0", stri
 if (focusId == "scorch") { ScorchDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }   // 第219期
 if (focusId == "burst") { BurstDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }   // 第220期
 if (focusId == "nine") { NineDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }   // 第221期
+if (focusId == "drift") { DriftDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }   // 第222期
 if (focusId == "shock") { ShockDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 if (focusId == "shockdigest") { ShockDigestDiag.Run(args.Length > 2 ? args[2] : "k0", args.Length > 3 ? args[3] : ""); return; }
 // debuff モード（第189期） —— デバッファー3枚の転生（ネル・クビ・ハネ）。本体は `Modes/Debuff*.cs`。
@@ -1408,7 +1409,10 @@ static class TraitKeyMap
         [TraitId.MireHandoff]     = Array.Empty<int>(),                                         // 第218期（倒れたら印が移る）
         [TraitId.MireBurst]       = Array.Empty<int>(),                                         // 第220期（澱みが爆ぜる・B1）
         [TraitId.MireBurstStack]  = Array.Empty<int>(),                                         // 第220期（B2）
-        [TraitId.MireBurstAll]    = Array.Empty<int>(),                                         // 第220期（B2x）
+        [TraitId.MireBurstAll]    = Array.Empty<int>(),
+        [TraitId.Regroup]         = new[] { UnitTally.CarryMove },                              // 第222期（シオの版・入れ替え）
+        [TraitId.CreakSweep]      = new[] { UnitTally.CarryMove },                              // 第222期（ヨミの版・動かされて育った攻撃力を読む）
+        [TraitId.CreakSweep20]    = new[] { UnitTally.CarryMove },                              // 第222期（V3b）                                         // 第220期（B2x）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1620,6 +1624,9 @@ static class TraitHookMap
         [TraitId.MireBurst]       = new[] { Engine },                              // 第220期（HandleDeath → EnqueueBurst）
         [TraitId.MireBurstStack]  = new[] { Engine },
         [TraitId.MireBurstAll]    = new[] { Engine },
+        [TraitId.Regroup]         = new[] { "OnAction", "OnTurnStart", Engine },   // 第222期（入れ替えは BattleContext.RegroupSwap → SwapSlots）
+        [TraitId.CreakSweep]      = new[] { "ModifyPattern" },                     // 第222期（現在の攻撃力 ≥ 30 で薙ぎ）
+        [TraitId.CreakSweep20]    = new[] { "ModifyPattern" },                     // 第222期（V3b・閾値 20）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）
@@ -1844,6 +1851,7 @@ static class TraitEntryMap
         [TraitId.Beckon]     = new[] { (UnitTally.CarryMark, Where.Ally) },                 // 第184期
         [TraitId.Vendetta]   = new[] { (UnitTally.CarryMark, Where.Foe) },                  // 第184期（殴った敵に標）
         [TraitId.Flee]       = new[] { (UnitTally.CarryMove, Where.Ally) },                 // 第184期（入れ替え）
+        [TraitId.Regroup]    = new[] { (UnitTally.CarryMove, Where.Ally) },                 // 第222期（シオの版・入れ替え）
         [TraitId.Goad]       = new[] { (UnitTally.CarryMark, Where.Ally), (UnitTally.CarryWhet, Where.Ally) },
         [TraitId.Divert]     = new[] { (UnitTally.CarryMark, Where.Foe), (UnitTally.CarryMark, Where.Self) },
         [TraitId.Rally]      = new[] { (UnitTally.CarryWhet, Where.Ally),

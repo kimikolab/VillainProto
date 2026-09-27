@@ -2268,6 +2268,16 @@ public sealed class UnitTally
     /// <c>VendettaMarks</c> 標を付けた回数 ／ <c>RecoilTaken</c> 返り血の総量。
     /// 殴った側: <c>MarkVulnDealt</c> §1 の被ダメージ増で上乗せした量。</para>
     /// </summary>
+    /// <summary>
+    /// 第222期・隊を組み替える（シオの版）。<b>計数専用で、どの規則も読まない。</b>
+    /// 保持者の側: <c>RegroupSwaps</c> 入れ替えた回数 ／ <c>RegroupSelf</c> そのうち自分を下げた ／ <c>RegroupStuck</c> 傷ついた味方はいたが相手がいなかった ／
+    /// <c>RegroupAllFull</c> 全員が満タンで何もしなかった ／ <c>RegroupHeal</c> 入れ替えの最中に2体が得た HP の純増（移り木ほか）／
+    /// <c>RegroupWhet</c> 同じく受けた強化 ／ <c>RegroupReaderSwings</c> 入れ替えの最中に振られた回数（軋みの割り込みなど）。
+    /// 受け手の側: <c>RegroupLowered</c> 下げられた ／ <c>RegroupPushed</c> 前へ出された。
+    /// </summary>
+    public long RegroupSwaps, RegroupSelf, RegroupStuck, RegroupAllFull, RegroupHeal, RegroupWhet, RegroupReaderSwings,
+                RegroupLowered, RegroupPushed;
+
     public long BeckonFires, BeckonSwitches, BeckonIdle, BeckonGuardSaved, BeckonPicked, BeckonGuardTaken,
                 FleeSwaps, FleeStuck, FleeReaderSwings, FleeReaderWhet, FleeFoeMoves, FleePushed,
                 VendettaFires, VendettaDealt, VendettaMarks, RecoilTaken, MarkVulnDealt,
@@ -3216,7 +3226,14 @@ public enum BattleEventKind
     /// <c>StatusRemaining</c> = 爆ぜた駒の印の数、<c>BrittleExtra</c> = 燃焼の脆さで足される分（相手が燃えていれば）、<c>InverterId</c> = 反転なら結界のベニ。
     /// <b>どの規則も読まない。</b>
     /// </summary>
-    MireBurst
+    MireBurst,
+
+    /// <summary>
+    /// 隊を組み替えた（第222期・シオ・<b>表示専用</b>）。<c>ActorId</c> ＝ シオ ／ <c>TargetId</c> ＝ 下げた駒（最も傷ついた味方）／
+    /// <c>PartnerId</c> ＝ 前へ出した駒 ／ <c>HpAfter</c>・<c>Amount</c> ＝ 下げた駒のそのときの HP と最大HP（なぜ選ばれたか）。
+    /// 直後に2体の <c>Move</c>（<c>ActorId</c> ＝ シオ）が続く。
+    /// </summary>
+    Regroup
 }
 
 /// <summary>
@@ -3591,6 +3608,11 @@ public sealed class BattleEvent
     /// <c>ShareFromId</c>（呪い）とは別の欄にしてある——再生側が呪いの演出に使っているため。</para>
     /// </summary>
     public int? DeflectFromId { get; init; }
+
+    /// <summary>
+    /// 第222期・<see cref="BattleEventKind.Regroup"/> で前へ出した駒（<b>表示専用</b>）。<b>どの規則も読まない。</b>
+    /// </summary>
+    public int? PartnerId { get; init; }
 
     /// <summary>
     /// 突き（第186期 追補・<see cref="ThrustTrait"/>）の溜めの段（<b>表示専用</b>）。<b>どの規則も読まない。</b>
