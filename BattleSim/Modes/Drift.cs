@@ -44,13 +44,16 @@ static partial class DriftDiag
     };
 
     internal const string RegroupLabel = "隊を組み替えた";
-    internal static readonly UnitDef ShioV0 = UnitCatalog.Shio;
-    internal static readonly UnitDef ShioReg = Copy(UnitCatalog.Shio,
-        UnitCatalog.Shio.Traits.Append(TraitId.Regroup).ToArray(),
+    // 第223期 前段で V3 が規定になったので、V0 は**規定から版の札を抜いた駒**に固定する（`drift run` が規定化の前と全文一致する）。
+    internal static readonly UnitDef ShioV0 = Copy(UnitCatalog.Shio,
+        UnitCatalog.Shio.Traits.Where(t => t != TraitId.Regroup).ToArray(), null);
+    internal static readonly UnitDef ShioReg = Copy(ShioV0,
+        ShioV0.Traits.Append(TraitId.Regroup).ToArray(),
         new UnitAction[] { new(ActionKind.Skill, Label: RegroupLabel) });
-    internal static readonly UnitDef YomiV0 = UnitCatalog.Yomi;
-    internal static readonly UnitDef YomiS30 = Copy(UnitCatalog.Yomi, UnitCatalog.Yomi.Traits.Append(TraitId.CreakSweep).ToArray(), UnitCatalog.Yomi.Actions);
-    internal static readonly UnitDef YomiS20 = Copy(UnitCatalog.Yomi, UnitCatalog.Yomi.Traits.Append(TraitId.CreakSweep20).ToArray(), UnitCatalog.Yomi.Actions);
+    internal static readonly UnitDef YomiV0 = Copy(UnitCatalog.Yomi,
+        UnitCatalog.Yomi.Traits.Where(t => t != TraitId.CreakSweep).ToArray(), UnitCatalog.Yomi.Actions);
+    internal static readonly UnitDef YomiS30 = Copy(YomiV0, YomiV0.Traits.Append(TraitId.CreakSweep).ToArray(), YomiV0.Actions);
+    internal static readonly UnitDef YomiS20 = Copy(YomiV0, YomiV0.Traits.Append(TraitId.CreakSweep20).ToArray(), YomiV0.Actions);
 
     internal static readonly (string Tag, UnitDef Shio, UnitDef Yomi)[] Versions =
     {

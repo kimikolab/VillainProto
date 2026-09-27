@@ -26,6 +26,8 @@ using BattleCore;
 static class ShockDigestDiag
 {
     /// <summary>後の期に足した出来事の種類（名前で持つ・古い worktree でも回る）。</summary>
+    static Formation D222(Formation f) => DriftDiag.Apply(f, DriftDiag.ShioV0, DriftDiag.YomiV0);
+
     static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff", "MireBurst", "Regroup" };
     /// <summary>後の期に足した <c>BattleEvent</c> の欄。</summary>
     static readonly HashSet<string> SkipProps = new() { "BrittleExtra", "PartnerId" };
@@ -52,10 +54,11 @@ static class ShockDigestDiag
             // 第222期（受け入れ 1）: V0（今のシオ・ヨミ）の台本が実装の前後で一致すること。D1＝ポンの台・D2/D3＝compare の行。
             ? new (string, Formation)[]
             {
-                ("D1 ポン", Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.Sero, back3: UnitCatalog.Basa)),
-                ("D2 移動改", Common.CompareBuilds().First(r => r.Name.StartsWith("移動改 (")).F),
-                ("D3 隊列崩し", Common.CompareBuilds().First(r => r.Name.StartsWith("隊列崩し")).F),
-                ("D3 突き出し", Common.CompareBuilds().First(r => r.Name.StartsWith("突き出し")).F),
+                // 第223期 前段で V3 が規定になったので、シオ・ヨミは `DriftDiag` の V0（版の札を抜いた駒）へ差し替える。
+                ("D1 ポン", D222(Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: UnitCatalog.Shio, back1: UnitCatalog.Sero, back3: UnitCatalog.Basa))),
+                ("D2 移動改", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("移動改 (")).F)),
+                ("D3 隊列崩し", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("隊列崩し")).F)),
+                ("D3 突き出し", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("突き出し")).F)),
             }
             : mode == "m219"
             // 第219期（受け入れ 1）: 規定のミオ（cat）と第218期の M5（m5）の台本が一致すること。

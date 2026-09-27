@@ -408,8 +408,10 @@ public static class UnitCatalog
         Attack = 6,
         Speed = 5,
         Advances = false,
-        Traits = new[] { TraitId.Displaced },
-        PlusText = "隊列を動かされるたび攻撃力が上がり、その場で割り込んで攻撃する。前へ突き出されると上昇が特に大きい",
+        // 第223期 前段: 第222期の V3 を規定にした（ポンの判断）——現在の攻撃力 30 以上で単体 → 薙ぎ（`CreakSweep`）。
+        // 旧（`Displaced` だけ）は診断 `drift` の `DriftDiag.YomiV0` に残す。
+        Traits = new[] { TraitId.Displaced, TraitId.CreakSweep },
+        PlusText = "隊列を動かされるたび攻撃力が上がり、その場で割り込んで攻撃する。前へ突き出されると上昇が特に大きい。攻撃力が 30 以上になると、攻撃が横に薙ぐ",
         MinusText = "自分では動かない。誰も乱してくれなければ置物",
         Flavor = "どこに置いても文句を言わない。だから誰も気に留めなかった。"
     };
@@ -494,9 +496,12 @@ public static class UnitCatalog
         Attack = 4,
         Speed = 8,
         Advances = false,
-        Traits = new[] { TraitId.Drifter },
-        PlusText = "隊列を動かされた味方を回復し、攻撃力を上げる",
-        MinusText = "隊列が乱れなければ何もしない",
+        // 第223期 前段: 第222期の V3 を規定にした（ポンの判断）——手番で最も傷ついた味方を後ろの隣と入れ替える（`Regroup`）。
+        // **攻撃は捨てる**（`Actions` が `Skill` 1要素）。旧（`Drifter` だけ・毎手番殴る）は診断 `drift` の `DriftDiag.ShioV0` に残す。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "隊を組み替えた") },
+        Traits = new[] { TraitId.Drifter, TraitId.Regroup },
+        PlusText = "手番で、いちばん傷ついた味方を後ろの隣の味方と入れ替える。動かされた味方を回復し、攻撃力を上げる",
+        MinusText = "元気な駒を前へ押し出す。庇う駒を下げると庇いが外れる。自分では攻撃しない",
         Flavor = "落ち着きのない者にしか懐かない。整った隊では浮く。"
     };
 
