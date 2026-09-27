@@ -7691,7 +7691,9 @@ public sealed class DrifterTrait : Trait
     public override void OnAllyMoved(BattleContext ctx, UnitState self, UnitState moved)
     {
         if (!moved.AcceptsSupport) return;
+        int before = moved.Hp;
         ctx.Heal(moved, Heal, self);
+        ctx.NoteDrifterHeal(self, Heal, moved.Hp - before);   // 第224期・計数のみ
         ctx.Whet(moved, Gain, WhetRoute.Drifter);
         ctx.Log($"    {self.Name} が流された {moved.Name} を拾い上げた（+{Heal} / 攻撃 +{Gain}）", LogKind.Trigger);
     }

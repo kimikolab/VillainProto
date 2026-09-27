@@ -2279,6 +2279,15 @@ public sealed class UnitTally
                 RegroupLowered, RegroupPushed;
 
     /// <summary>
+    /// 第224期・シオの回復（<b>計数専用で、どの規則も読まない</b>）。保持者の側:
+    /// <c>DrifterFires</c> 移り木で回復を試みた回数 ／ <c>DrifterNominal</c> 名目の量 ／ <c>DrifterGained</c> 実際に増えた HP（溢れ・渇き・反転を除く）／
+    /// <c>DrifterBySrc</c>[出どころ]・<c>DrifterNomBySrc</c>[出どころ] 動かした駒で割った増分と名目（0 シオの手番・1 バサ・2 セロ・3 ハネ・4 ほかの味方・5 敵・6 不明）／
+    /// <c>TendFires</c>・<c>TendNominal</c>・<c>TendGained</c> 手当て（H2・下げた味方への追加）。
+    /// </summary>
+    public long DrifterFires, DrifterNominal, DrifterGained, TendFires, TendNominal, TendGained;
+    public long[]? DrifterBySrc, DrifterNomBySrc;
+
+    /// <summary>
     /// 第223期・回避（逃げ上手のセロの版 E1/E2）。<b>計数専用で、どの規則も読まない。</b>
     /// <c>EvRolls</c> 回避の判定を振った回数 ／ <c>Evades</c> 避けた回数 ／ <c>EvadedAmount</c> 避けた一撃の量（名目）／
     /// <c>EvSwaps</c> 入れ替わった ／ <c>EvSwapNone</c> 隣に誰もいなかった ／ <c>EvSwapRefused</c> 相手が据えた足で空振り ／
@@ -2292,7 +2301,8 @@ public sealed class UnitTally
     /// </summary>
     public long EvRolls, Evades, EvadedAmount, EvSwaps, EvSwapNone, EvSwapRefused, EvRipostes, EvRipostePierce,
                 EvRiposteHushed, EvRiposteInReaction, EvRiposteDealt, EvBarrages, EvArrows, EvBarrageDealt,
-                EvDeathTurn, ArrowPoison, ArrowBurn, ArrowShock;
+                EvDeathTurn, ArrowPoison, ArrowBurn, ArrowShock,
+                ArrowTickDealt;   // 第224期: 矢で積んだ毒の層が刻んだ名目（min(矢の層, その刻みの層)・計数のみ）
     public int[]? EvStageTurn, EvMoveSrc, EvDeathBy;
 
     public long BeckonFires, BeckonSwitches, BeckonIdle, BeckonGuardSaved, BeckonPicked, BeckonGuardTaken,

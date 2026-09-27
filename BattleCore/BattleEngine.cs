@@ -753,6 +753,8 @@ public sealed class BattleContext
             // 業（第49期）の帰属。**保持者が盤上にいなければ1回も走らない**（短絡）。
             if (ScapegoatActive) NoteScapegoatDot(u, poison, StatusKeys.Poison);
             NotePoisonBite(u, poison);   // 第61期の計数。盤面には触らない
+            if (_arrowPoison.Count > 0 && _arrowPoison.TryGetValue(u.InstanceId, out var arr))   // 第224期・**計数のみ**
+                TallyOf(arr.Sero).ArrowTickDealt += Math.Min(arr.Layers, poison);
 
             // 傷口の着火の帰属（第87期・持続係数の分子）。**盤面には触らない。**
             // 着火の時点でこの駒の毒は 0 だったので、以後の刻みはすべて着火の下流にある。
@@ -4812,7 +4814,12 @@ public sealed class BattleContext
     public void NoteStatusArrow(UnitState sero, UnitState foe, bool poison, bool burn, bool shock)
     {
         UnitTally t = TallyOf(sero);
-        if (poison) t.ArrowPoison++;
+        if (poison)
+        {
+            t.ArrowPoison++;
+            // 第224期・**計数のみ**: 矢で積んだ毒の層を覚えておき、刻みの名目のうち矢の層の分をセロに付ける。
+            _arrowPoison[foe.InstanceId] = (sero, (_arrowPoison.TryGetValue(foe.InstanceId, out var ap) ? ap.Layers : 0) + StatusArrowTrait.PoisonStack);
+        }
         if (burn) t.ArrowBurn++;
         if (shock) t.ArrowShock++;
         if (_verbose) Emit(new BattleEvent
@@ -4822,6 +4829,9 @@ public sealed class BattleContext
                                              shock ? StatusKeys.LabelOf(StatusKeys.Shock) : null }.Where(x => x is not null)),
         });
     }
+
+    /// <summary>状態の矢で積んだ毒の層（第224期・<c>InstanceId</c> → 書いたセロと層・<b>計数専用</b>）。</summary>
+    readonly Dictionary<int, (UnitState Sero, int Layers)> _arrowPoison = new();
 
     /// <summary>敵の標の出どころ（<c>InstanceId</c> → 最後に付けた書き手）。<b>計数専用。</b></summary>
     readonly Dictionary<int, MarkOrigin> _markOrigin = new();
@@ -5733,6 +5743,31 @@ public sealed class BattleContext
         t.RegroupReaderSwings += atk1 - atk0;
         TallyOf(low).RegroupLowered++;
         TallyOf(with).RegroupPushed++;
+    }
+
+    /// <summary>
+    /// 移り木の回復（第224期・<b>計数のみ</b>）。<paramref name="gained"/> は実際に増えた HP（負なら 0）。
+    /// 出どころは <see cref="CurrentMover"/>（シオの手番の入れ替えならシオ自身）。
+    /// </summary>
+    public void NoteDrifterHeal(UnitState shio, int nominal, int gained)
+    {
+        UnitTally t = TallyOf(shio);
+        UnitState? by = CurrentMover;
+        int src = by is null ? 6
+                : by == shio ? 0
+                : by.TeamId != shio.TeamId ? 5
+                : by.Def.Id == "basa" ? 1 : by.Def.Id == "sero" ? 2 : by.Def.Id == "hane" ? 3 : 4;
+        int g = Math.Max(0, gained);
+        t.DrifterFires++; t.DrifterNominal += nominal; t.DrifterGained += g;
+        (t.DrifterBySrc ??= new long[7])[src] += g;
+        (t.DrifterNomBySrc ??= new long[7])[src] += nominal;
+    }
+
+    /// <summary>手当て（第224期・H2・<b>計数のみ</b>）。</summary>
+    public void NoteRegroupTend(UnitState shio, int nominal, int gained)
+    {
+        UnitTally t = TallyOf(shio);
+        t.TendFires++; t.TendNominal += nominal; t.TendGained += Math.Max(0, gained);
     }
 
     /// <summary>隊を組み替える相手がいなかった（<b>計数のみ</b>）。<paramref name="anyHurt"/> が偽なら全員満タン。</summary>

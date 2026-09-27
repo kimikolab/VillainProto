@@ -12,6 +12,7 @@ using BattleCore;
 //     dotnet run --project BattleSim -c Release 0 shockdigest m218  # 第218期の台（M0＝今のミオの台本が実装の前後で一致すること）
 //                                                                    ——第219期からミオの規定は M5 なので、この台は `MireDiag.VerOf("M0")` を引く
 //     dotnet run --project BattleSim -c Release 0 shockdigest d222  # 第222期の台（V0＝今のシオ・ヨミの台本が実装の前後で一致すること）
+//     dotnet run --project BattleSim -c Release 0 shockdigest f224  # 第224期の台（F0＝第223期 E2・H0＝規定のシオの台本が実装の前後で一致すること）
 //     dotnet run --project BattleSim -c Release 0 shockdigest m219 cat|m5  # 第219期の台（cat ＝ 規定のミオ ／ m5 ＝ 第218期の診断の版 M5）
 //                                                                    ——**第218期の worktree で `m5`、第219期で `cat` を回して全行一致**なら M5 の規定化が台本を変えていない
 //
@@ -68,6 +69,16 @@ static class ShockDigestDiag
                 ("S2 ネル", SeroDiag.BenchS2Raw),
                 ("S3 仮", SeroDiag.BenchS3Raw),
             }.Concat(SeroDiag.CompareRowsWithSero().Select(r => ("S4 " + r.Name, r.F))).ToArray()
+            : mode == "f224"
+            // 第224期（受け入れ 1）: F0（＝第223期 E2）・H0（規定のシオ）の台本が実装の前後で一致すること。
+            // **この台だけは第223期の出来事（回避・乱れ撃ちほか）も指紋に入れる**（F0 はそれを出す版なので）。
+            ? new (string, Formation)[]
+            {
+                ("S1 ポン", SeroShioDiag.Apply(SeroShioDiag.S1, SeroShioDiag.F0, SeroShioDiag.H0)),
+                ("S2 ネル", SeroShioDiag.Apply(SeroShioDiag.S2, SeroShioDiag.F0, SeroShioDiag.H0)),
+                ("K-リリ", SeroShioDiag.Apply(SeroShioDiag.K(UnitCatalog.Lili), SeroShioDiag.F0, SeroShioDiag.H0)),
+                ("K-ツギ", SeroShioDiag.Apply(SeroShioDiag.K(UnitCatalog.Tsugi), SeroShioDiag.F0, SeroShioDiag.H0)),
+            }.Concat(SeroShioDiag.S4Rows().Select(r => ("S4 " + r.Name, SeroShioDiag.Apply(r.F, SeroShioDiag.F0, SeroShioDiag.H0)))).ToArray()
             : mode == "m219"
             // 第219期（受け入れ 1）: 規定のミオ（cat）と第218期の M5（m5）の台本が一致すること。
             ? MireBenches(arg == "m5" ? MireDiag.VerOf("M5") : UnitCatalog.Mio)
@@ -124,12 +135,12 @@ static class ShockDigestDiag
                     int counted = 0;
                     foreach (BattleEvent e in r.Events)
                     {
-                        if (SkipKinds.Contains(e.Kind.ToString())) continue;
+                        if (mode != "f224" && SkipKinds.Contains(e.Kind.ToString())) continue;
                         counted++;
                         var sb = new StringBuilder();
                         foreach (PropertyInfo p in props)
                         {
-                            if (SkipProps.Contains(p.Name)) continue;
+                            if (SkipProps.Contains(p.Name) && !(mode == "f224" && p.Name == "PartnerId")) continue;
                             if (p.Name == "Text" && e.Kind == BattleEventKind.Highlight) continue;
                             object? v = p.GetValue(e);
                             sb.Append(p.Name).Append('=').Append(v is System.Collections.IEnumerable en && v is not string ? string.Join(",", en.Cast<object>()) : v).Append('|');
