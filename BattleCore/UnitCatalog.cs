@@ -1328,6 +1328,25 @@ public static class UnitCatalog
         Advances = false,
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "突き返す") },
         // 第227期 前段（ポンの判断）: 敵の乱れ（`Disarray`・段2 から前列の2体を突き返す）を規定に。旧は <see cref="HaneK0"/>。
+        // 第229期 前段（ポンの判断）: 第228期 H3（吹っ飛ばし `Blast` ＋ 弾き返し `Spring`）を規定に。段2 の2体の突き返しは吹っ飛ばしに置き換わる（1回のまま）。
+        // 旧（第228期の前段の規定）は <see cref="HaneH0"/>。
+        Traits = new[] { TraitId.Rebound, TraitId.Overrun, TraitId.Disarray, TraitId.Blast, TraitId.Spring },
+        PlusText = "手番で、前列で最も攻撃力の高い敵をその経路の奥まで吹っ飛ばす（経路の敵すべてを貫いて傷つけ、吹っ飛ばした敵は転び、詰めてきた敵は前へ出る） / 殴られたら、殴ってきた敵を1つ後ろへ弾き返して転ばせる（1ターンに 1 ＋ 敵の乱れの段 回） / 味方が押しのけられるたび、敵の隊列を突き崩す",
+        MinusText = "勢い余って、吹っ飛ばすたび・弾き返すたび自分が隣の味方1体と場所を入れ替える",
+        Flavor = "押されたら押し返す。それしかできないし、加減も知らない。"
+    };
+
+    /// <summary>旧ハネ（第227〜228期の規定・H0 ＝ `Rebound` / `Overrun` / `Disarray`）。対照として残す（<see cref="All"/> にも <see cref="Retired"/> にも入れない）。
+    /// 第227・228期の器具（`lastdodge` / `spring` と `shockdigest l227 / h228`）はこちらに固定した。</summary>
+    public static readonly UnitDef HaneH0 = new()
+    {
+        Id = "hane",
+        Name = "突き返しのハネ",
+        MaxHp = 56,
+        Attack = 11,
+        Speed = 8,
+        Advances = false,
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "突き返す") },
         Traits = new[] { TraitId.Rebound, TraitId.Overrun, TraitId.Disarray },
         PlusText = "手番で、前列で最も攻撃力の高い敵を後ろへ突き返して転ばせる（次の手番を失う） / 味方が押しのけられるたび、敵の隊列を突き崩す / 敵の隊列が乱れるほど（動かされた回数 8 回）、前列の2体を突き返す",
         MinusText = "勢い余って、突き返すたび自分が隣の味方1体と場所を入れ替える / 自分では攻撃しない",

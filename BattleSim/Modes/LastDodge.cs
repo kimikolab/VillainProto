@@ -71,7 +71,7 @@ static partial class LastDodgeDiag
     }
 
     // 台（§6.1）
-    internal static Formation MHane225 => Formation.Build(front1: UnitCatalog.Hane, front3: UnitCatalog.Basa,
+    internal static Formation MHane225 => Formation.Build(front1: UnitCatalog.HaneH0, front3: UnitCatalog.Basa,
         center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.SeroL0);
     internal static Formation Thunder => DecoyDiag.Thunder;
 

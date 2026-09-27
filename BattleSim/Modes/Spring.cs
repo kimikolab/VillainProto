@@ -50,7 +50,7 @@ static partial class SpringDiag
     {
         get
         {
-            UnitDef h0 = UnitCatalog.Hane;
+            UnitDef h0 = UnitCatalog.HaneH0;
             var list = new List<Ver> { new("H0", h0) };
             foreach (var (tag, names) in new[] { ("H1", new[] { "Blast" }), ("H2", new[] { "Spring" }), ("H3", new[] { "Blast", "Spring" }), ("H3w", new[] { "Blast", "Spring", "BlastBoth" }) })
                 if (With(h0, names) is { } d) list.Add(new(tag, d));
@@ -70,7 +70,7 @@ static partial class SpringDiag
     // 台（§8.1）
     /// <summary>第227期 L2 の総当たりの1位（前1 セロ ／ 前3 バサ ／ 中央 ヨミ ／ 後1 ハネ ／ 後3 シオ）。セロは前段で L2 が規定。</summary>
     internal static Formation MHane227 => Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Basa,
-        center: UnitCatalog.Yomi, back1: UnitCatalog.Hane, back3: UnitCatalog.Shio);
+        center: UnitCatalog.Yomi, back1: UnitCatalog.HaneH0, back3: UnitCatalog.Shio);
     internal static Formation Thunder => DecoyDiag.Thunder;
     internal static List<(string Name, Formation F)> HaneRows() =>
         CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id == "hane")).ToList();

@@ -163,7 +163,7 @@ static partial class SpringDiag
         Console.WriteLine("## (3) ハネのいない戦は H0 と一致 ／ verbose の有無");
         Console.WriteLine();
         {
-            var benches = new[] { MHane227, Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.Sero, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Hane), HaneRows()[0].F };
+            var benches = new[] { MHane227, Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.Sero, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.HaneH0), HaneRows()[0].F };
             var jobs = new List<(Formation F, int W, EnemyScaleRule Sc, int S)>();
             foreach (var b in benches)
                 foreach (int w in new[] { 4, 5, 0, 1, 2, 3 })
@@ -201,7 +201,7 @@ static partial class SpringDiag
         Console.WriteLine();
         {
             long bl = 0, blOk = 0, blTally = 0, sp = 0, spOk = 0, spTally = 0;
-            var f = Apply(Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.Sero, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Hane), VerOf("H3"));
+            var f = Apply(Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.Sero, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.HaneH0), VerOf("H3"));
             foreach (int w in new[] { 4, 5, 1, 3 })
                 for (int s = 0; s < 150; s++)
                 {

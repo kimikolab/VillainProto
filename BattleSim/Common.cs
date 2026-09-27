@@ -32,6 +32,18 @@ internal static Formation OldBasaHane(Formation f)
 }
 
 /// <summary>
+/// 第229期 前段: ハネが第228期 H3（吹っ飛ばし＋弾き返し）で規定になったので、第227・228期の器具は編成の<b>規定のハネ</b>
+/// （<see cref="UnitCatalog.Hane"/> と同じ参照のものだけ）を旧（<see cref="UnitCatalog.HaneH0"/>）へ戻す。
+/// </summary>
+internal static Formation OldHane(Formation f)
+{
+    var g = f.Clone();
+    foreach (var (slot, d) in f.Occupied())
+        if (ReferenceEquals(d, UnitCatalog.Hane)) g[slot] = UnitCatalog.HaneH0;
+    return g;
+}
+
+/// <summary>
 /// 第228期 前段: セロが必死の逃げ足＋回避盾で規定になったので、第225〜227期の器具は編成の<b>規定のセロ</b>
 /// （<see cref="UnitCatalog.Sero"/> と同じ参照のものだけ）を旧（<see cref="UnitCatalog.SeroL0"/>）へ戻す。版の駒（旧セロ・F0 など）には触らない。
 /// </summary>

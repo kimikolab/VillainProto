@@ -162,6 +162,9 @@ static class ShockDigestDiag
         // 第228期 前段: セロが規定で変わったので、第227期の台は旧のセロに戻す（バサ・ハネは第227期の規定のまま）。
         if (mode is "l227")
             benches = benches.Select(b => (b.Item1, Common.OldSero(b.Item2))).ToArray();
+        // 第229期 前段: ハネが規定で変わったので、第227・228期の台は旧のハネに戻す。
+        if (mode is "l227" or "h228")
+            benches = benches.Select(b => (b.Item1, Common.OldHane(b.Item2))).ToArray();
         PropertyInfo[] props = typeof(BattleEvent).GetProperties(BindingFlags.Public | BindingFlags.Instance);
         long total = 0;
         foreach (var (name, f) in benches)
