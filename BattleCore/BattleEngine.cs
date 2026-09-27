@@ -471,6 +471,8 @@ public enum OutOfTurnRoute
     Evade,
     /// <summary>緊急退避（<c>RetreatTrait</c>・第225期。<b>問う相手はシオ</b>——下げられる味方ではない）。</summary>
     Retreat,
+    /// <summary>動かされて吹く突風（<c>SquallTrait</c>・第226期。<b>問う相手はバサ</b>）。</summary>
+    Squall,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -480,7 +482,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -4673,6 +4675,17 @@ public sealed class BattleContext
 
     // ---- 第223期: 回避（逃げ上手のセロ・`EvadeTrait`）。**保持者がいなければ `_evadeLive` の比較1つで全部抜ける。** ----
     bool _evadeLive;
+
+    // ---- 第226期: 回避盾（`DecoyTrait`）と敵の乱れ（`DisarrayTrait`）。**保持者がいなければ比較1つで全部抜ける。** ----
+    bool _decoyLive, _disarrayLive;
+    /// <summary>挑発が主目標にした駒（標的選択1回ぶん・計数と表示のためだけ）。</summary>
+    UnitState? _decoyPicked;
+    /// <summary>陣営ごとの「隊列を動かされた」累計（敵の乱れの段）。<c>SwapSlots</c> の通知が数える（保持者がいる戦だけ）。</summary>
+    readonly int[] _disorder = new int[2];
+    /// <summary>敵の乱れの札の保持者が戦にいるか（転倒を「動けない敵」に数えるかを <see cref="TormentTrait.IsBound"/> が読む）。</summary>
+    public bool DisarrayLive => _disarrayLive;
+    /// <summary>その陣営が隊列を動かされた累計（第226期・保持者がいない戦では 0 のまま）。</summary>
+    public int DisorderOf(int teamId) => _disorder[teamId];
     /// <summary>次の標的選択1回にだけ効く「的の固定」（追い撃ち・乱れ撃ち）。`SelectTargetChain` の頭で読んで消す。</summary>
     UnitState? _forcedTarget;
     /// <summary>いまの `PerformAttack` の枠で回避した駒（主目標なら `OnAfterAttack` を走らせない）。入れ子は `PerformAttack` が退避する。</summary>
@@ -5799,6 +5812,69 @@ public sealed class BattleContext
         finally { _inRetreatSwap = prev; }
     }
 
+    /// <summary>
+    /// 挑発（第226期）。主目標の段で挑発が選んだ駒と、鎖を通った後の相手。<b>計数と表示のためだけ</b>（盤面は動かさない）。
+    /// 最後まで挑発の主が的なら <c>DecoyDrew</c> と表示専用の <see cref="BattleEventKind.Decoy"/>、介入に引き剥がされたら <c>DecoyStolen</c>。
+    /// </summary>
+    void NoteDecoy(UnitState decoy, UnitState attacker, UnitState? chosen)
+    {
+        UnitTally t = TallyOf(decoy);
+        if (chosen != decoy) { t.DecoyStolen++; return; }
+        t.DecoyDrew++;
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Decoy, Turn = _turn, ActorId = decoy.InstanceId, TargetId = attacker.InstanceId,
+            Slot = EvadeTrait.StageOf(decoy), Amount = EvadeTrait.PercentOf(decoy),
+        });
+    }
+
+    /// <summary>
+    /// 敵の乱れ（第226期）。<c>SwapSlots</c> の通知が1体ぶん呼ぶ。陣営の累計を1つ進め、相手陣営の保持者の段が上がったら表示と計数、
+    /// 行が前に変わった駒には、相手陣営の生きているバサ（`Shuffler` ＋ `Disarray`・席番号の若い方）が混乱を立てる。<b>乱数を引かない。</b>
+    /// </summary>
+    void NoteDisorder(UnitState u, Row from, UnitState? by)
+    {
+        int team = u.TeamId;
+        int before = DisarrayTrait.StageOfCount(_disorder[team]);
+        _disorder[team]++;
+        int after = DisarrayTrait.StageOfCount(_disorder[team]);
+        if (after > before)
+            foreach (UnitState h in LivingMembers(Opponent(team)))
+            {
+                if (!h.HasTrait(TraitId.Disarray)) continue;
+                var st = TallyOf(h).DisarrayStageTurn ??= new int[4];
+                if (st[after] == 0) st[after] = Math.Max(1, _turn);
+                Log($"    {h.Name} の周りで敵の乱れが深まる（段 {after}）", LogKind.Trigger);
+                if (_verbose) Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.DisarrayStage, Turn = _turn, ActorId = h.InstanceId, TargetId = h.InstanceId,
+                    Slot = after, Amount = _disorder[team],
+                });
+            }
+        if (!u.IsAlive || FormationRules.DepthOf(u.Row) >= FormationRules.DepthOf(from)) return;
+        UnitState? basa = LivingMembers(Opponent(team)).FirstOrDefault(h => h.HasTrait(TraitId.Shuffler) && h.HasTrait(TraitId.Disarray));
+        if (basa is not null) ShufflerTrait.DisarrayConfuse(this, basa, u, by);
+    }
+
+    /// <summary>敵の乱れの混乱（第226期・<b>表示専用</b>）。<c>ActorId</c> ＝ 動かした駒（前へ出した張本人）／ <c>TargetId</c> ＝ 混乱した駒 ／ <c>PartnerId</c> ＝ バサ。</summary>
+    internal void NoteDisarrayConfuse(UnitState basa, UnitState u, UnitState? by)
+    {
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Disarray, Turn = _turn, ActorId = by?.InstanceId, TargetId = u.InstanceId, PartnerId = basa.InstanceId,
+            Slot = u.Slot, Amount = DisarrayTrait.StageOf(this, basa),
+        });
+    }
+
+    /// <summary>動かされて吹く突風（第226期・<b>表示専用</b>）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ バサ ／ <c>StatusRemaining</c> ＝ そのターンの何回目か。直後にバサの <c>Attack</c>。</summary>
+    internal void NoteSquall(UnitState basa, int nth)
+    {
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Squall, Turn = _turn, ActorId = basa.InstanceId, TargetId = basa.InstanceId, StatusRemaining = nth,
+        });
+    }
+
     /// <summary>隊の乱れの段が上がった（第225期・表示専用の出来事 ＋ 計数）。</summary>
     public void NoteShioStage(UnitState shio, int stage, int moves)
     {
@@ -6581,6 +6657,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Deflect)) _deflectHolders.Add(u); // 第186期（逸らしの判定の短絡）
         if (u.HasTrait(TraitId.Thrust) || u.HasTrait(TraitId.ThrustPlain)) _thrustLive = true;   // 第186期 追補
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
+        if (u.HasTrait(TraitId.Decoy)) _decoyLive = true;         // 第226期（挑発）
+        if (u.HasTrait(TraitId.Disarray)) _disarrayLive = true;   // 第226期（敵の乱れ）
         // 第185期: 組み付き・見せしめ（手番の頭の2つのキーと標的の選好を短絡させる）／踏みしめ（範囲の盾・層の軽減）／
         // 据えた足（入れ替えの空振り）。**保持者がいなければ比較1つで抜ける**——既存の行が 0 件差分であることの根拠。
         if (u.HasTrait(TraitId.Grapple) || u.HasTrait(TraitId.Shame)) _restrainLive = true;
@@ -7544,6 +7622,7 @@ public sealed class BattleContext
     private UnitState? SelectTargetCore(UnitState attacker, AttackPattern? patternOverride, out int lane)
     {
         UnitState? chosen = SelectTargetChain(attacker, patternOverride, out lane);
+        if (_decoyPicked is not null) NoteDecoy(_decoyPicked, attacker, chosen);
 
         // 執着（ノミ）は**介入の鎖を通ったあとの相手**を覚える。庇われたら次の手番からは
         // 庇った駒に執着が移る＝「庇うで執着を引き剥がす」（FixateTrait 参照）。
@@ -7567,6 +7646,7 @@ public sealed class BattleContext
         // 第135期。**標的選択1回ごとに印を落とす**（計数専用）。立ったまま次の一撃へ持ち越すと、
         // 破片が全額吸って `NoteHarm` に届かなかった介入が、無関係な被弾を「引き受けたぶん」に化けさせる。
         _interceptedInto = null;
+        _decoyPicked = null;
 
         // 第223期: 的の固定（追い撃ち・乱れ撃ち）。**介入の鎖を通さない**——撃ち返す相手・矢の的は決まっている。読んで消す。
         if (_forcedTarget is not null)
@@ -7670,7 +7750,15 @@ public sealed class BattleContext
             : null;
         if (shamed is not null) TallyOf(attacker).ShamePicks++;
 
-        UnitState target = fixated ?? severed ?? shamed ?? pool[Roll(pool.Count)];
+        // 挑発（第226期・回避盾のセロ）: **主目標の段の最後**（攻撃者側の選好の後・`pool[Roll]` の代わり）。pool は1体も足さない・引かない
+        // （前列の規則の内側）。**以下の介入（標・後備え・庇う・殉教・棘守り）はすべてこの後ろなので挑発より優先。**
+        // 単体の一撃だけ。効いた一撃は `pool[Roll]` を引かない。**保持者がいなければ比較1つで抜ける。**
+        UnitState? decoy = _decoyLive && fixated is null && severed is null && shamed is null && pattern == AttackPattern.Single
+            ? DecoyTrait.Pick(this, attacker, pool)
+            : null;
+        _decoyPicked = decoy;
+
+        UnitState target = fixated ?? severed ?? shamed ?? decoy ?? pool[Roll(pool.Count)];
 
         if (fixated is not null)
             Log($"    {attacker.Name} は {fixated.Name} から目を離せない", LogKind.Trigger);
@@ -10837,6 +10925,9 @@ public sealed class BattleContext
             // どちらの場合も「味方が矢面に立つ」という代償は発生している。
             if (FormationRules.DepthOf(u.Row) > FormationRules.DepthOf(from))
                 u.HasFallenBack = true;
+
+            // 敵の乱れ（第226期）: 陣営ごとの累計と、バサがいる間は前へ出た駒の混乱。**保持者がいなければ比較1つで抜ける。**
+            if (_disarrayLive) NoteDisorder(u, from, by);
 
             // 味方の反応を先に流す。OnMoved は割り込み攻撃まで含むので、逆順だと
             // シオの強化が「振った後」に乗る（軋みが +5 を載せずに振ってしまう）。

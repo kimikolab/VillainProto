@@ -1428,6 +1428,10 @@ static class TraitKeyMap
         [TraitId.RegroupTendSelf] = new[] { UnitTally.CarryMove },                              // 第225期（J1〜J4・手当ては自分にも）
         [TraitId.ShioStage]       = new[] { UnitTally.CarryMove },                              // 第225期（J2/J4・味方が動かされた累計で段）
         [TraitId.Retreat]         = new[] { UnitTally.CarryHit },                               // 第225期（J3/J4・4割を切った被弾で緊急退避）
+        [TraitId.Decoy]           = new[] { UnitTally.CarryMove },                              // 第226期（回避盾・回避率は移動の段で）
+        [TraitId.Disarray]        = new[] { UnitTally.CarryMove },                              // 第226期（敵が動かされた累計で段）
+        [TraitId.Squall]          = new[] { UnitTally.CarryMove },                              // 第226期（動かされるたび突風）
+        [TraitId.ShioStageSlow]   = new[] { UnitTally.CarryMove },                              // 第226期（シオの段を遅く）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1653,6 +1657,10 @@ static class TraitHookMap
         [TraitId.RegroupTendSelf] = new[] { Engine },                              // 第225期（RegroupTrait が読む）
         [TraitId.ShioStage]       = new[] { "OnMoved", "OnAllyMoved", "OnCarryOver" }, // 第225期（段の累計）
         [TraitId.Retreat]         = new[] { "OnDamaged", "OnAllyDamaged", "OnCarryOver" }, // 第225期（緊急退避）
+        [TraitId.Decoy]           = new[] { Engine },                              // 第226期（挑発は SelectTargetChain・回避率は EvadeTrait.PercentOf）
+        [TraitId.Disarray]        = new[] { Engine },                              // 第226期（累計と混乱は SwapSlots の通知・段は ShufflerTrait / ReboundTrait が読む）
+        [TraitId.Squall]          = new[] { "OnMoved", "OnCarryOver" },            // 第226期（動かされて吹く突風）
+        [TraitId.ShioStageSlow]   = new[] { Engine },                              // 第226期（ShioStageTrait.StageAtOf が読む）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）

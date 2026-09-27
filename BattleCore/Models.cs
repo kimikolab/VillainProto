@@ -2290,6 +2290,17 @@ public sealed class UnitTally
                 RetreatLowered, RetreatPushed;
     public int[]? ShioStageTurn;
 
+    /// <summary>
+    /// 第226期・回避盾・敵の乱れ・突風。<b>計数専用で、どの規則も読まない。</b>
+    /// セロの側: <c>DecoyDrew</c> 挑発で的になった（介入の後も的のまま）／ <c>DecoyStolen</c> 挑発したが介入に引き剥がされた。
+    /// バサ・ハネの側: <c>DisarrayStageTurn</c>[段] その段に初めて届いたターン ／ <c>DisarrayConfuses</c> 敵の乱れで立てた混乱（バサ）／
+    /// <c>DisarrayConfusesOther</c> そのうちバサ以外の移動で前へ出た ／ <c>DisarrayCapped</c> 上限で立てなかった ／ <c>DisarrayPushTwo</c> 2体目を突き返した（ハネ）。
+    /// 突風（バサ）: <c>SquallFires</c> 吹いた ／ <c>SquallCapped</c> 1ターンの回数を使い切っていた ／ <c>SquallBlocked</c> 粛・痺れ・組み付きで止まった ／ <c>SquallNested</c> 割り込みの中で動かされた。
+    /// </summary>
+    public long DecoyDrew, DecoyStolen, DisarrayConfuses, DisarrayConfusesOther, DisarrayCapped, DisarrayPushTwo,
+                SquallFires, SquallCapped, SquallBlocked, SquallNested;
+    public int[]? DisarrayStageTurn;
+
     /// <summary>第225期・惨禍（カド）で増えた被ダメージ（名目・破片と上限の前）。受け手の側。<b>計数専用。</b></summary>
     public long HavocTaken;
 
@@ -3321,7 +3332,27 @@ public enum BattleEventKind
     /// 隊の乱れの段が上がった（第225期・J2/J4・<b>表示専用</b>）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ シオ ／ <c>Slot</c> ＝ 新しい段（1〜3）／
     /// <c>Amount</c> ＝ 味方が動かされた累計。
     /// </summary>
-    ShioStage
+    ShioStage,
+
+    /// <summary>
+    /// 挑発（第226期・回避盾のセロ・<b>表示専用</b>）。<c>ActorId</c> ＝ セロ ／ <c>TargetId</c> ＝ 引き寄せた敵（この一撃の主）／
+    /// <c>Slot</c> ＝ セロの段 ／ <c>Amount</c> ＝ そのときの回避率（%）。直後にその敵の <c>Attack</c>（主目標 ＝ セロ）。介入に引き剥がされた一撃では出さない。
+    /// </summary>
+    Decoy,
+
+    /// <summary>
+    /// 敵の乱れの混乱（第226期・<b>表示専用</b>）。<c>ActorId</c> ＝ 動かした駒（前へ出した張本人・null ＝ 不明）／ <c>TargetId</c> ＝ 前へ出て混乱した駒 ／
+    /// <c>PartnerId</c> ＝ バサ ／ <c>Slot</c> ＝ 混乱した駒の席 ／ <c>Amount</c> ＝ バサの段。<c>Move</c> の直後に並ぶ。
+    /// </summary>
+    Disarray,
+
+    /// <summary>
+    /// 敵の乱れの段が上がった（第226期・<b>表示専用</b>）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ 保持者（バサ・ハネ）／ <c>Slot</c> ＝ 新しい段 ／ <c>Amount</c> ＝ 相手陣営が動かされた累計。
+    /// </summary>
+    DisarrayStage,
+
+    /// <summary>動かされて吹く突風（第226期・バサの版 K4・<b>表示専用</b>）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ バサ ／ <c>StatusRemaining</c> ＝ そのターンの何回目か。直後にバサの <c>Attack</c>。</summary>
+    Squall
 }
 
 /// <summary>

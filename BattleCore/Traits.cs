@@ -451,11 +451,17 @@ public enum TraitId
     EvadeQuick,     // 身軽さ（第224期・セロの版 F1〜F3）: 段に要る「動かされた回数」を 3/6/10 → 2/4/7 に。**札そのものは挙動を持たない**（`EvadeTrait` が読む）。保持者 0 枚
     EvadeDrift,     // 流されて研ぐ（第224期・F2/F3）: 隊列を動かされるたび攻撃力 +2（回避の +3 とは別・戦のあいだ下がらない）。**札そのものは挙動を持たない**。保持者 0 枚
     EvadeVolley,    // 乱れ撃ちの増し矢（第224期・F3）: 段3 の乱れ撃ちを 5 本 → 7 本に。**札そのものは挙動を持たない**。保持者 0 枚
-    DrifterMend,    // 移り木の厚い手当て（第224期・シオの版 H1/H2）: 移り木の回復を +10 → 動かされた味方の最大HPの 20% に。**札そのものは挙動を持たない**（`DrifterTrait` が読む）。保持者 0 枚
-    RegroupTend,    // 下げて手当て（第224期・H2）: 組み替えで下げた味方を、さらに最大HPの 20% 回復する（シオ自身を下げたときは癒さない）。**札そのものは挙動を持たない**。保持者 0 枚
-    RegroupTendSelf, // 手当ては自分にも（第225期・シオの版 J1〜J4）: 組み替えでシオ自身を下げたときも手当てが入る。**札そのものは挙動を持たない**（`RegroupTrait` が読む）。保持者 0 枚
-    ShioStage,      // 隊の乱れの段（第225期・J2/J4）: 味方が隊列を動かされた累計（4/8/14）で段が上がり、移り木の回復（20/30/40/40%）と攻撃（+5/+8/+12/+12）・緊急退避の回数（1/2/3/4）が増える。保持者 0 枚
-    Retreat,        // 緊急退避（第225期・J3/J4）: 味方の HP が最大HPの 4 割を切ったら、手番の外で割り込み、その味方を後ろ側の隣の味方と入れ替えて下げる（1ターンの回数は段で 1〜4・段が無ければ 1）。保持者 0 枚
+    DrifterMend,    // 移り木の厚い手当て（第224期・シオの版 H1/H2）: 移り木の回復を +10 → 動かされた味方の最大HPの 20% に。**札そのものは挙動を持たない**（`DrifterTrait` が読む）。第226期から規定のシオ
+    RegroupTend,    // 下げて手当て（第224期・H2）: 組み替えで下げた味方を、さらに最大HPの 20% 回復する（シオ自身を下げたときは癒さない）。**札そのものは挙動を持たない**。第226期から規定のシオ
+    RegroupTendSelf, // 手当ては自分にも（第225期・シオの版 J1〜J4）: 組み替えでシオ自身を下げたときも手当てが入る。**札そのものは挙動を持たない**（`RegroupTrait` が読む）。第226期から規定のシオ
+    ShioStage,      // 隊の乱れの段（第225期・J2/J4）: 味方が隊列を動かされた累計（4/8/14）で段が上がり、移り木の回復（20/30/40/40%）と攻撃（+5/+8/+12/+12）・緊急退避の回数（1/2/3/4）が増える。第226期から規定のシオ
+    Retreat,        // 緊急退避（第225期・J3/J4）: 味方の HP が最大HPの 4 割を切ったら、手番の外で割り込み、その味方を後ろ側の隣の味方と入れ替えて下げる（1ターンの回数は段で 1〜4・段が無ければ 1）。第226期から規定のシオ
+    Decoy,          // 回避盾（第226期・セロの版 K1/K3/K4）: セロが敵の単体攻撃の的になれる列にいる間、敵の単体攻撃の主目標をセロにする（既存の介入より弱い）。
+                    // 回避率を段で 40/45/50/60% に。保持者 0 枚
+    Disarray,       // 敵の乱れ（第226期・バサ・ハネの版 K2〜K4）: 敵が隊列を動かされた累計（4/8/14）で段。バサがいる間はどの理由でも前へ出た敵が混乱（上限 3/5/8/なし）、
+                    // バサの敵の入れ替えは 2/3/3/4 体、ハネは段2 から2体を突き返す。転倒を「動けない敵」に数える。保持者 0 枚
+    Squall,         // 動かされて吹く突風（第226期・バサの版 K4）: バサが隊列を動かされるたび、手番の外で突風（今の攻撃）を1発（1ターン2回まで）。保持者 0 枚
+    ShioStageSlow,  // シオの段を遅く（第226期）: 隊の乱れの段の条件を 4/8/14 → 8/16/26 に。**札そのものは挙動を持たない**。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -5308,7 +5314,8 @@ public sealed class TormentTrait : Trait
         => target.Counter(StatusKeys.Stun) > 0
            || target.Counter(StatusKeys.IdleTurn) == ctx.Turn
            || target.Counter(StatusKeys.Grappled) > 0
-           || target.Counter(StatusKeys.Cowed) > 0;
+           || target.Counter(StatusKeys.Cowed) > 0
+           || (ctx.DisarrayLive && target.Counter(StatusKeys.Stagger) > 0);   // 第226期: 敵の乱れの札の保持者がいる戦だけ、転倒も数える
 
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
@@ -6761,6 +6768,10 @@ public sealed class ShufflerTrait : Trait
             return;
         }
 
+        // 第226期（敵の乱れ・`Disarray`）: 段で敵の入れ替えを 2/3/3/4 体に。**札が無ければ今の2体の道**（乱数の引き方も同じ）。
+        int k = foes && self.HasTrait(TraitId.Disarray) ? DisarrayTrait.FoeSwaps[DisarrayTrait.StageOf(ctx, self)] : 2;
+        if (k > 2 && team.Count >= 3) { StirMany(ctx, self, team, Math.Min(k, team.Count), tally); return; }
+
         UnitState a = team[ctx.Roll(team.Count)];
         var rest = team.Where(u => u != a).ToList();
         UnitState b = rest[ctx.Roll(rest.Count)];
@@ -6779,61 +6790,93 @@ public sealed class ShufflerTrait : Trait
         // 前に出たのは高々1体（片方が前へ出れば、もう片方は必ず後ろへ下がる）。
         // 同じ行どうしの入れ替えでは 0 体——**そこが自己制動**で、無作為が
         // 「当たり／外れ」として読めるようにしている。
-        Settle(ctx, a, fromA);
-        Settle(ctx, b, fromB);
+        Settle(ctx, self, a, fromA, tally);
+        Settle(ctx, self, b, fromB, tally);
+    }
 
-        void Settle(BattleContext c, UnitState u, Row from)
+    /// <summary>
+    /// 第226期（敵の乱れの段・`Disarray`）: 敵を 3 体（3 巡りの輪: a → c の席・b → a の席・c → b の席）か 4 体（2 組）入れ替える。
+    /// 乱数は選ぶ体数ぶんだけ（今の2体の道と同じ引き方の延長）。
+    /// </summary>
+    private static void StirMany(BattleContext ctx, UnitState self, List<UnitState> team, int k, UnitTally tally)
+    {
+        var picked = new List<UnitState>();
+        var pool = team.ToList();
+        for (int i = 0; i < k; i++) { UnitState p = pool[ctx.Roll(pool.Count)]; picked.Add(p); pool.Remove(p); }
+        var from = picked.Select(u => u.Row).ToList();
+        ctx.Log($"    {self.Name} が敵の隊列を大きくかき回した（{string.Join(" ⇔ ", picked.Select(u => u.Name))}）", LogKind.FriendlyFire);
+        if (k == 3)
         {
-            bool advanced = FormationRules.DepthOf(u.Row) < FormationRules.DepthOf(from);
-            if (advanced)
-            {
-                tally.ShuffleAdvanced++;
-                if (u.Traits.Count > 0) tally.ShuffleAdvancedTraited++;
-                if (from == Row.Back) tally.ShuffleAdvancedFromBack++;
-            }
-
-            // 手番版（第148期）は**ターン頭では1件も立てない**。前へ出た敵に印だけを置いて、
-            // 保持者の手番（OnAction）がその中から1体を選ぶ。**印は特性の私有キー**なので
-            // `StatusKeys.All` にも帳簿にも載らない（`UnitState.SetCounter` の doc）。
-            //
-            // **この枝の外では1ビットも書かない。** 印を無条件に置くと他の版の `Counters` が
-            // 変わってしまい、「既定を動かしていない」の検算（305 セル 0 件）が意味を失う。
-            if (c.Shuffler.Stagger == ShuffleStagger.ConfuseOnAction)
-            {
-                if (advanced && u.IsAlive) u.SetCounter(AdvancedTurnKey, c.Turn);
-                return;
-            }
-
-            bool hit = c.Shuffler.Stagger switch
-            {
-                ShuffleStagger.Advanced => advanced,
-                ShuffleStagger.Both => true,
-                // 混乱（第147期）は条件が Advanced とまったく同じ——効果だけが違う。
-                // **転倒と両方は載せない**（ShuffleStagger.Confuse の doc）。
-                ShuffleStagger.Confuse => advanced,
-                _ => false,
-            };
-            if (!hit || !u.IsAlive) return;
-
-            if (c.Shuffler.Stagger == ShuffleStagger.Confuse)
-            {
-                Derange(c, self, u, tally, useStock: true);
-                return;
-            }
-
-            // 転倒は engine 側（TakeTurnCore）が読む二値。**痺れを流用しない**
-            // ——痺れには読み手（責め苦・追い打ち）がいるので、そちらの帳簿に混ざる。
-            // なお engine が立てる `IdleTurn` は敵側にも立つが、それを読む味方の機構は
-            // 責め苦・追い打ち（`target.Counter(IdleTurn) == ctx.Turn`）の1本だけで、
-            // **これは噛み合う側の相互作用である**（第144期 Q0-3）。
-            u.SetCounter(StatusKeys.Stagger, 1);
-            tally.ShuffleStaggers++;
-            // 第145期（表示専用）: 付いた瞬間。**StatusSnapshot では代用できない**
-            // ——あれはターン頭の OnTurnStart より前に撮るので、同じターンのうちに
-            // 立って消える転倒はどの写しにも載らない（BattleEventKind.Stagger の doc）。
-            c.EmitStagger(u, StaggerLabels.Fell, self);
-            c.Log($"    {u.Name} は前へ引きずり出されて転んだ（次の手番を失う）", LogKind.Status);
+            int sb = picked[1].Slot, sc = picked[2].Slot;
+            ctx.SwapSlots(picked[0], sb, self);
+            if (picked[0].IsAlive && picked[2].IsAlive) ctx.SwapSlots(picked[0], sc, self);
+            tally.ShuffleFoeSwaps += 2;
         }
+        else
+        {
+            int sb = picked[1].Slot, sd = picked[3].Slot;
+            ctx.SwapSlots(picked[0], sb, self);
+            ctx.SwapSlots(picked[2], sd, self);
+            tally.ShuffleFoeSwaps += 2;
+        }
+        for (int i = 0; i < k; i++) Settle(ctx, self, picked[i], from[i], tally);
+    }
+
+    private static void Settle(BattleContext c, UnitState self, UnitState u, Row from, UnitTally tally)
+    {
+        bool advanced = FormationRules.DepthOf(u.Row) < FormationRules.DepthOf(from);
+        if (advanced)
+        {
+            tally.ShuffleAdvanced++;
+            if (u.Traits.Count > 0) tally.ShuffleAdvancedTraited++;
+            if (from == Row.Back) tally.ShuffleAdvancedFromBack++;
+        }
+
+        // 手番版（第148期）は**ターン頭では1件も立てない**。前へ出た敵に印だけを置いて、
+        // 保持者の手番（OnAction）がその中から1体を選ぶ。**印は特性の私有キー**なので
+        // `StatusKeys.All` にも帳簿にも載らない（`UnitState.SetCounter` の doc）。
+        //
+        // **この枝の外では1ビットも書かない。** 印を無条件に置くと他の版の `Counters` が
+        // 変わってしまい、「既定を動かしていない」の検算（305 セル 0 件）が意味を失う。
+        if (c.Shuffler.Stagger == ShuffleStagger.ConfuseOnAction)
+        {
+            if (advanced && u.IsAlive) u.SetCounter(AdvancedTurnKey, c.Turn);
+            return;
+        }
+
+        // 第226期（敵の乱れ）: 混乱は engine の入れ替えの窓口（`SwapSlots`）が**どの理由の移動でも**立てる
+        // （<see cref="DisarrayConfuse"/>）ので、ここでは立てない（二重に在庫を数えない）。
+        if (c.Shuffler.Stagger == ShuffleStagger.Confuse && self.HasTrait(TraitId.Disarray)) return;
+
+        bool hit = c.Shuffler.Stagger switch
+        {
+            ShuffleStagger.Advanced => advanced,
+            ShuffleStagger.Both => true,
+            // 混乱（第147期）は条件が Advanced とまったく同じ——効果だけが違う。
+            // **転倒と両方は載せない**（ShuffleStagger.Confuse の doc）。
+            ShuffleStagger.Confuse => advanced,
+            _ => false,
+        };
+        if (!hit || !u.IsAlive) return;
+
+        if (c.Shuffler.Stagger == ShuffleStagger.Confuse)
+        {
+            Derange(c, self, u, tally, useStock: true);
+            return;
+        }
+
+        // 転倒は engine 側（TakeTurnCore）が読む二値。**痺れを流用しない**
+        // ——痺れには読み手（責め苦・追い打ち）がいるので、そちらの帳簿に混ざる。
+        // なお engine が立てる `IdleTurn` は敵側にも立つが、それを読む味方の機構は
+        // 責め苦・追い打ち（`target.Counter(IdleTurn) == ctx.Turn`）の1本だけで、
+        // **これは噛み合う側の相互作用である**（第144期 Q0-3）。
+        u.SetCounter(StatusKeys.Stagger, 1);
+        tally.ShuffleStaggers++;
+        // 第145期（表示専用）: 付いた瞬間。**StatusSnapshot では代用できない**
+        // ——あれはターン頭の OnTurnStart より前に撮るので、同じターンのうちに
+        // 立って消える転倒はどの写しにも載らない（BattleEventKind.Stagger の doc）。
+        c.EmitStagger(u, StaggerLabels.Fell, self);
+        c.Log($"    {u.Name} は前へ引きずり出されて転んだ（次の手番を失う）", LogKind.Status);
     }
 
     /// <summary>
@@ -6875,6 +6918,27 @@ public sealed class ShufflerTrait : Trait
         // （揃えないと `ConfusedSwings ≦ ConfusedMarks` の受け入れ条件が偽になる）。
         c.TallyOf(u).ConfusedMarks++;
         c.Log($"    {u.Name} は正気を失った（次の攻撃を自軍へ向ける）", LogKind.Status);
+    }
+
+    /// <summary>
+    /// 第226期（敵の乱れ・<see cref="TraitId.Disarray"/>）: <b>バサが生きている間、どの理由でも行が前に変わった敵を混乱させる</b>。
+    /// 呼ぶのは engine の入れ替えの窓口（<c>SwapSlots</c> の通知）だけ。上限は段で 3/5/8/なし（<see cref="DisarrayTrait.ConfuseCap"/>・保持者1体・1戦あたり・在庫は第147期と同じ私有キー）。
+    /// <b>乱数を引かない</b>（混乱の確率のノブは読まない）。既に混乱している敵には立て直さない（在庫も使わない）。
+    /// </summary>
+    internal static void DisarrayConfuse(BattleContext c, UnitState basa, UnitState u, UnitState? by)
+    {
+        if (!u.IsAlive || u.RawCounter(StatusKeys.Confused) > 0) return;
+        UnitTally tally = c.TallyOf(basa);
+        int cap = DisarrayTrait.ConfuseCap[DisarrayTrait.StageOf(c, basa)];
+        if (cap > 0 && basa.Counter(ConfuseUsedKey) >= cap) { tally.DisarrayCapped++; return; }
+        u.SetCounter(StatusKeys.Confused, 1);   // 付与のイベントは NoteStatusGain が打つ
+        basa.SetCounter(ConfuseUsedKey, basa.Counter(ConfuseUsedKey) + 1);
+        tally.ShuffleConfuses++;
+        tally.DisarrayConfuses++;
+        if (by != basa) tally.DisarrayConfusesOther++;
+        c.TallyOf(u).ConfusedMarks++;
+        c.NoteDisarrayConfuse(basa, u, by);
+        c.Log($"    {u.Name} は前へ押し出されて正気を失った（次の攻撃を自軍へ向ける）", LogKind.Status);
     }
 
     /// <summary>
@@ -12771,7 +12835,8 @@ public sealed class EvadeTrait : Trait
         return st;
     }
 
-    public static int PercentOf(UnitState u) => StageOf(u) >= 3 ? TopPercent : Percent;
+    public static int PercentOf(UnitState u)
+        => u.HasTrait(TraitId.Decoy) ? DecoyTrait.Percents[StageOf(u)] : StageOf(u) >= 3 ? TopPercent : Percent;   // 第226期: 回避盾は段で 40/45/50/60
 
     public override int ModifyAttack(UnitState self, int atk) => atk + self.RawCounter(GainKey) + self.RawCounter(DriftKey);
 
@@ -12883,13 +12948,16 @@ public sealed class ShioStageTrait : Trait
 
     /// <summary>段1・段2・段3 に要る「味方が動かされた累計」（仮置き・第225期 Phase 0 で見て据え置いた）。</summary>
     public static readonly int[] StageAt = { 4, 8, 14 };
+    /// <summary>第226期（<see cref="TraitId.ShioStageSlow"/>）の遅い条件。</summary>
+    public static readonly int[] SlowStageAt = { 8, 16, 26 };
     public const string MovesKey = "shioMoves";
 
+    public static int[] StageAtOf(UnitState u) => u.HasTrait(TraitId.ShioStageSlow) ? SlowStageAt : StageAt;
     public static int MovesOf(UnitState u) => u.RawCounter(MovesKey);
     public static int StageOf(UnitState u)
     {
         int m = MovesOf(u), st = 0;
-        foreach (int t in StageAt) if (m >= t) st++;
+        foreach (int t in StageAtOf(u)) if (m >= t) st++;
         return st;
     }
 
@@ -12965,6 +13033,94 @@ public sealed class RetreatTrait : Trait
         ctx.Interrupt(() => ctx.RetreatSwap(self, low, with, stage, used + 1));
     }
 }
+
+/// <summary>
+/// 回避盾（第226期・セロの版 K1/K3/K4）。<b>セロが敵の単体攻撃の的になれる列にいる間（前列の規則で pool にいる間）、敵の単体攻撃の主目標をセロにする。</b>
+/// 判定は engine の標的選択の鎖の1箇所（主目標の段の最後・見せしめの後・<c>pool[Roll]</c> の代わり）で、<b>その後ろの介入（標・後備え・庇う・殉教・棘守り）はすべて挑発より優先</b>。
+/// 攻撃者側の選好（執着・断ち・見せしめ）も優先。薙ぎ・貫き・全体の主目標は変えない。挑発が効いた一撃は <c>pool[Roll]</c> を引かない。
+/// 回避率を段で <see cref="Percents"/>（40/45/50/60%）にする（<see cref="EvadeTrait.PercentOf"/> が読む）。
+/// </summary>
+public sealed class DecoyTrait : Trait
+{
+    public static readonly int[] Percents = { 40, 45, 50, 60 };
+    public override TraitId Id => TraitId.Decoy;
+
+    /// <summary>挑発の主（pool の中の相手陣営の保持者）。いなければ null。2体以上なら既存の <c>PickOne</c>。</summary>
+    public static UnitState? Pick(BattleContext ctx, UnitState attacker, List<UnitState> pool)
+        => ctx.PickOne(pool.Where(u => u.IsAlive && u.TeamId != attacker.TeamId && u.HasTrait(TraitId.Decoy)).ToList());
+}
+
+/// <summary>
+/// 敵の乱れ（第226期・バサとハネの版 K2〜K4）。<b>敵が隊列を動かされた累計</b>（出どころを問わない・入れ替えなら2体で2回・
+/// engine の <c>SwapSlots</c> の通知が陣営ごとに数える）が <see cref="StageAt"/>（4/8/14）に届くたび段が上がる（戦のあいだ下がらない）。
+/// 段で変わるのは バサの敵の入れ替えの体数（<see cref="FoeSwaps"/>）・混乱の上限（<see cref="ConfuseCap"/>）と、ハネの突き返しの体数（段2 から2体）。
+/// <b>バサがこの札を持って生きている間、どの理由でも行が前に変わった敵は混乱する</b>（<see cref="ShufflerTrait"/> の <c>DisarrayConfuse</c>）。
+/// 保持者が戦にいる間は、転倒も「動けない敵」に数える（<see cref="TormentTrait.IsBound"/>）。<b>札そのものは挙動を持たない。</b>
+/// </summary>
+public sealed class DisarrayTrait : Trait
+{
+    public static readonly int[] StageAt = { 4, 8, 14 };
+    public static readonly int[] FoeSwaps = { 2, 3, 3, 4 };
+    /// <summary>混乱の上限（保持者1体・1戦あたり）。0 は上限なし。</summary>
+    public static readonly int[] ConfuseCap = { 3, 5, 8, 0 };
+    public const int PushTwoStage = 2;
+
+    public override TraitId Id => TraitId.Disarray;
+
+    public static int StageOfCount(int n)
+    {
+        int st = 0;
+        foreach (int t in StageAt) if (n >= t) st++;
+        return st;
+    }
+
+    /// <summary>保持者から見た段（相手陣営が動かされた累計）。</summary>
+    public static int StageOf(BattleContext ctx, UnitState holder) => StageOfCount(ctx.DisorderOf(ctx.Opponent(holder.TeamId)));
+}
+
+/// <summary>
+/// 動かされて吹く突風（第226期・バサの版 K4）。<b>バサが隊列を動かされるたび、手番の外で突風を1発吹く</b>
+/// （今の攻撃そのもの＝薙ぎ・当たった敵は突風の確率で転ぶ）。ヨミの軋みの割り込みの小型版で、作法も揃えた:
+/// 割り込みの中では吹かない（再入禁止）・<c>CanActOutOfTurn(バサ, OutOfTurnRoute.Squall)</c>（粛・痺れ・組み付きで止まる）・敵がいなければ吹かない・
+/// <c>ctx.Interrupt</c> で包む。<b>1ターン <see cref="PerTurn"/> 回まで。</b>乱数は突風の転倒（既存の口）だけ。
+/// </summary>
+public sealed class SquallTrait : Trait
+{
+    public const int PerTurn = 2;
+    public const string TurnKey = "squallTurn";
+    public const string CountKey = "squallCount";
+
+    public override TraitId Id => TraitId.Squall;
+
+    public override void OnMoved(BattleContext ctx, UnitState self, Row from, Row to)
+    {
+        if (!self.IsAlive) return;
+        UnitTally t = ctx.TallyOf(self);
+        if (ctx.InInterrupt) { t.SquallNested++; return; }
+        int used = self.RawCounter(TurnKey) == ctx.Turn + 1 ? self.RawCounter(CountKey) : 0;
+        if (used >= PerTurn) { t.SquallCapped++; return; }
+        if (!ctx.TeamAlive(ctx.Opponent(self.TeamId))) return;
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Squall)) { t.SquallBlocked++; return; }
+        self.SetCounter(TurnKey, ctx.Turn + 1);
+        self.SetCounter(CountKey, used + 1);
+        t.SquallFires++;
+        ctx.Interrupt(() =>
+        {
+            ctx.NoteSquall(self, used + 1);
+            ctx.Log($"    {self.Name} は押しのけられた勢いで突風を起こした", LogKind.Trigger);
+            ctx.PerformAttack(self, "    ");
+        });
+    }
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(TurnKey, 0);
+        self.SetCounter(CountKey, 0);
+    }
+}
+
+/// <summary>シオの段を遅く（第226期）。<b>札そのものは判定を持たない</b>（<see cref="ShioStageTrait.StageAtOf"/> が読む）。</summary>
+public sealed class ShioStageSlowTrait : Trait { public override TraitId Id => TraitId.ShioStageSlow; }
 
 /// <summary>
 /// 状態の矢（第223期・セロの版 E2）。<b>セロの矢が当たるたび</b>（手番・追い撃ち・乱れ撃ちの各1本＝`PerformAttack` 1回の主目標）、
@@ -13726,18 +13882,34 @@ public sealed class ReboundTrait : Trait
             return;
         }
 
-        ctx.Log($"    {self.Name} が {pick.Name} を後ろへ突き返した", LogKind.Trigger);
-        if (!ctx.SwapSlots(pick, BehindOf(pick.Slot), self)) { tally.ReboundRefused++; return; }
-        tally.ReboundThrusts++;
-        if (pick.IsAlive)
+        // 第226期（敵の乱れの段2 以上・`Disarray`）: 2体目＝もう一方の前列の編成枠の敵（攻撃力の高い順の2番目）。**手番の頭で決める。**
+        UnitState? second = null;
+        if (self.HasTrait(TraitId.Disarray) && DisarrayTrait.StageOf(ctx, self) >= DisarrayTrait.PushTwoStage)
+            second = ctx.LivingMembers(ctx.Opponent(self.TeamId)).FirstOrDefault(u => u != pick && (u.Slot == 0 || u.Slot == 1));
+
+        if (!Push(pick)) return;
+        if (second is not null && second.IsAlive && (second.Slot == 0 || second.Slot == 1))
         {
-            pick.SetCounter(StatusKeys.Stagger, 1);
-            tally.ReboundStaggers++;
-            ctx.EmitStagger(pick, StaggerLabels.Fell, self);   // 表示専用（付いた瞬間）
-            ctx.Log($"    {pick.Name} は突き返されて転んだ（次の手番を失う）", LogKind.Status);
+            tally.DisarrayPushTwo++;
+            Push(second);
         }
 
         if (self.HasTrait(TraitId.Overrun)) OverrunTrait.Swap(ctx, self);
+
+        bool Push(UnitState target)
+        {
+            ctx.Log($"    {self.Name} が {target.Name} を後ろへ突き返した", LogKind.Trigger);
+            if (!ctx.SwapSlots(target, BehindOf(target.Slot), self)) { tally.ReboundRefused++; return false; }
+            tally.ReboundThrusts++;
+            if (target.IsAlive)
+            {
+                target.SetCounter(StatusKeys.Stagger, 1);
+                tally.ReboundStaggers++;
+                ctx.EmitStagger(target, StaggerLabels.Fell, self);   // 表示専用（付いた瞬間）
+                ctx.Log($"    {target.Name} は突き返されて転んだ（次の手番を失う）", LogKind.Status);
+            }
+            return true;
+        }
     }
 }
 
@@ -14463,6 +14635,10 @@ public static class TraitCatalog
         new RegroupTendSelfTrait(),  // 第225期
         new ShioStageTrait(),        // 第225期
         new RetreatTrait(),          // 第225期
+        new DecoyTrait(),            // 第226期
+        new DisarrayTrait(),         // 第226期
+        new SquallTrait(),           // 第226期
+        new ShioStageSlowTrait(),    // 第226期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期
         new HexLeakTrait(),    // 第189期

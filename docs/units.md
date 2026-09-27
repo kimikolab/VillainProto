@@ -281,6 +281,10 @@
 | `RegroupTendSelf` | 移り木のシオ |
 | `ShioStage` | 移り木のシオ |
 | `Retreat` | 移り木のシオ |
+| `Decoy` | - |
+| `Disarray` | - |
+| `Squall` | - |
+| `ShioStageSlow` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
