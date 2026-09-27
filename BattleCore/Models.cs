@@ -3139,7 +3139,63 @@ public enum BattleEventKind
     /// <c>TargetId</c> = 印を持つ敵（どこへ）、<c>Amount</c> = 一撃の量、<c>Slot</c> = 何体目か（中心が 1 なので 2 から）、
     /// <c>StatusRemaining</c> = 届く敵の数（中心を含む）。直後にその敵への <c>Damage</c>。<b>どの規則も読まない。</b>
     /// </summary>
-    MireConduct
+    MireConduct,
+
+    /// <summary>
+    /// 印が放電に乗って運ばれた（第219期・澱みのミオ・<b>表示専用</b>）。<c>ActorId</c> = ミオ（書き手・倒れていても）、
+    /// <c>SpreadFromId</c> = 放電した駒（どこから）、<c>TargetId</c> = 放電を受けた駒（どこへ）、<c>Amount</c> = 運ばれた印の数（1本につき 1）、
+    /// <c>StatusRemaining</c> = 受けた後の印の数。<b>陣営を問わない</b>（味方の印も運ばれる）。
+    /// 直前に同じ印の <see cref="ConcentrateMark"/>（<c>Text</c> =「運び」）が1件並ぶ。<b>どの規則も読まない。</b>
+    /// </summary>
+    MireCarried,
+
+    /// <summary>
+    /// 倒れた敵の印が隣へ移った（第219期・澱みのミオ・<b>表示専用</b>）。倒れた駒の <c>Death</c> の後に並ぶ。
+    /// <c>ActorId</c> = ミオ、<c>SpreadFromId</c> = 倒れた駒（どこから）、<c>TargetId</c> = 移った先の隣の敵（どこへ）、
+    /// <c>Amount</c> = 移った印の数、<c>StatusRemaining</c> = 移った後の印の数。直前に同じ印の <see cref="ConcentrateMark"/>（<c>Text</c> =「移り」）。
+    /// 隣が1体もいなければ出ない（印は消える）。<b>どの規則も読まない。</b>
+    /// </summary>
+    MireHandedOff
+}
+
+/// <summary>
+/// 燃焼の在り方と、燃焼の脆さ（第219期・<c>EmberRule.Brittle</c>）で増えた量の帳簿。<b>計数専用で、どの規則も読まない。</b>
+/// <para>陣営の添字は <b>0 ＝ 敵 ／ 1 ＝ 味方</b>（<c>BattleContext.SideOf</c> と同じ）。
+/// 経路の添字は <see cref="Routes"/>。</para>
+/// </summary>
+public sealed class BrittleLedger
+{
+    /// <summary>経路の名前（<see cref="Extra"/> の2つ目の添字）。</summary>
+    public static readonly string[] Routes = { "攻撃", "雷", "叩きつけ", "放電", "反撃・反射", "毒の刻み", "燃焼の刻み", "その他" };
+
+    /// <summary>ターン頭（刻みの前）に生きていた駒の数の和（駒×ターン）。</summary>
+    public readonly long[] UnitTurns = new long[2];
+    /// <summary>そのうち燃焼が付いていた（残りターン 1 以上）駒の和。</summary>
+    public readonly long[] BurnUnitTurns = new long[2];
+    /// <summary>ターン頭に1体でも燃えていたターンの数。</summary>
+    public readonly long[] TurnsAnyBurn = new long[2];
+    /// <summary>ターン頭の数（決着したターンまで）。</summary>
+    public long Turns;
+    /// <summary>ターンごとの「燃えていた駒」の和（添字はターン・0 は使わない）。陣営ごと。</summary>
+    public readonly long[][] BurnByTurn = { new long[31], new long[31] };
+    /// <summary>ターンごとの「生きていた駒」の和。</summary>
+    public readonly long[][] AliveByTurn = { new long[31], new long[31] };
+
+    /// <summary>燃焼を付けた回数（点いた＋点け直し）を書き手の <c>Def.Id</c> ごとに。<b>相手陣営に付けた分</b>。書き手なしは「-p」（味方に付いた）／「-e」（敵に付いた）でここに入れる。</summary>
+    public readonly Dictionary<string, long> IgniteFoe = new();
+    /// <summary>同じ陣営に付けた分（ボルグの火移り・ベニの火を分ける・味方の破裂 ほか）。</summary>
+    public readonly Dictionary<string, long> IgniteAlly = new();
+
+    /// <summary>脆さで足した量（切り上げ・破片や軛で後から削られる前の名目）。[陣営, 経路]。</summary>
+    public readonly long[,] Extra = new long[2, 8];
+    /// <summary>脆さが掛かった回数。[陣営, 経路]。</summary>
+    public readonly long[,] Hits = new long[2, 8];
+    /// <summary>反転（ベニ）で回復に化けた刻み・放電に掛かった脆さの分（F3・F4 の味方側）と回数。</summary>
+    public long InverseExtra, InverseHits;
+    /// <summary>燃えやすい板（ツギ）の倍と脆さが同じ燃焼の刻みに重なった回数。</summary>
+    public long PlankTimesBrittle;
+    /// <summary>熾のホタに掛かった脆さの分（燃えて強くなる駒の代金）。</summary>
+    public long PyreExtra;
 }
 
 /// <summary><see cref="BattleEventKind.Plank"/> の <c>Text</c>（第207期・<b>表示専用</b>）。</summary>
@@ -3938,6 +3994,9 @@ public sealed class BattleResult
 
     /// <summary>標の一生の帳簿（第150期 段A）。<b>計数専用で、どの規則も読まない。</b></summary>
     public required MarkLedger Marks { get; init; }
+
+    /// <summary>燃焼の在り方と脆さの帳簿（第219期・<see cref="BrittleLedger"/>）。<b>計数専用で、どの規則も読まない。</b></summary>
+    public BrittleLedger? Brittle { get; init; }
 
     /// <summary>
     /// 第184期。標の軸（§1 被ダメージ増・§2 矢面の半減）の帳簿（<b>計数専用</b>。どの規則も読まない）。

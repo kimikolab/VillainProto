@@ -639,9 +639,32 @@ public sealed class BattleContext
     }
 
     /// <summary>毒などの継続ダメージ。ターン開始時に engine から呼ばれる。</summary>
+    /// <summary>ターン頭（刻みの前）の燃焼の在り方を数える（第219期・<b>計数のみ</b>）。</summary>
+    void NoteBurnPresence()
+    {
+        BrittleLedger b = BrittleBook;
+        b.Turns++;
+        int t = Math.Clamp(_turn, 0, 30);
+        bool any0 = false, any1 = false;
+        foreach (UnitState u in _units)
+        {
+            if (!u.IsAlive) continue;
+            int side = SideOf(u);
+            b.UnitTurns[side]++;
+            b.AliveByTurn[side][t]++;
+            if (u.RawCounter(StatusKeys.Burn) <= 0) continue;
+            b.BurnUnitTurns[side]++;
+            b.BurnByTurn[side][t]++;
+            if (side == 0) any0 = true; else any1 = true;
+        }
+        if (any0) b.TurnsAnyBurn[0]++;
+        if (any1) b.TurnsAnyBurn[1]++;
+    }
+
     public void TickStatuses()
     {
         NoteRuleHolders();   // 第134期 段2 —— 保持者が落ちたターンの記録。**盤面には触らない。**
+        NoteBurnPresence();  // 第219期 —— 刻みの前に燃えている駒を数える。**盤面には触らない。**
 
         foreach (UnitState u in _units.Where(x => x.IsAlive).ToList())
         {
@@ -1278,7 +1301,7 @@ public sealed class BattleContext
             int hb = to.Hp;
             InverseHeal(inv, to, amt, 3, "放電");
             tt.DischargeInvertedIn += to.Hp - hb;
-            if (carry) MireCarryTo(to);
+            if (carry) MireCarryTo(to, from);
             return;
         }
         Log($"    {from.Name} から {to.Name} へ放電（{amt}）", LogKind.Status);
@@ -1294,7 +1317,7 @@ public sealed class BattleContext
         ft.DischargeDealt += removed;
         tt.DischargeTaken += removed;
         if (before > 0 && !to.IsAlive) tt.DischargeDeaths++;
-        if (carry) MireCarryTo(to);
+        if (carry) MireCarryTo(to, from);
     }
 
     /// <summary>決着時に残っていた感電を数える（第214期・<b>計数のみ</b>）。</summary>
@@ -3320,6 +3343,9 @@ public sealed class BattleContext
     /// <summary>点けた側の帳簿（<c>Def.Id</c> → 点けた回数・煽った回数）。</summary>
     public readonly Dictionary<string, (long Lit, long Relit)> BurnBy = new();
 
+    /// <summary>燃焼の在り方と脆さの帳簿（第219期・<b>計数専用</b>）。</summary>
+    public readonly BrittleLedger BrittleBook = new();
+
     /// <summary>点けられた側の帳簿（<c>Def.Id</c> → 点いた回数・煽られた回数）。</summary>
     public readonly Dictionary<string, (long Lit, long Relit)> BurnOn = new();
 
@@ -3356,6 +3382,10 @@ public sealed class BattleContext
             BurnBy.TryGetValue(source.Def.Id, out var by);
             BurnBy[source.Def.Id] = relit ? (by.Lit, by.Relit + 1) : (by.Lit + 1, by.Relit);
         }
+        // 第219期・**計数のみ**（書き手ごとに、相手陣営／同じ陣営に付けた回数）
+        var book = source is not null && source.TeamId == target.TeamId ? BrittleBook.IgniteAlly : BrittleBook.IgniteFoe;
+        string key = source?.Def.Id ?? (target.TeamId == PlayerTeam ? "-p" : "-e");   // 書き手なしは付いた側で分ける
+        book[key] = (book.TryGetValue(key, out long c) ? c : 0) + 1;
     }
 
     /// <summary>
@@ -6719,10 +6749,17 @@ public sealed class BattleContext
     }
 
     /// <summary>印を運ぶ（第218期・M4〜）。放電を受けて生きている駒に印 +1（書き手は保持者）。</summary>
-    void MireCarryTo(UnitState to)
+    void MireCarryTo(UnitState to, UnitState? from = null)
     {
         if (_mireHolder is null || !to.IsAlive) return;
         if (!MarkConcentrated(_mireHolder, to, ConcentrateTrait.CarryLabel)) return;
+        if (_verbose && from is not null)   // 第219期・表示専用（どこから・どこへ・何個）
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.MireCarried, Turn = _turn, ActorId = _mireHolder.InstanceId, TargetId = to.InstanceId,
+                SpreadFromId = from.InstanceId, Amount = 1, StatusRemaining = to.RawCounter(StatusKeys.Concentrated),
+                SourceTrait = TraitId.MireCarry,
+            });
         UnitTally ht = TallyOf(_mireHolder);
         ht.MireCarried++;
         if (to.TeamId == _mireHolder.TeamId) ht.MireCarriedAlly++;
@@ -6746,6 +6783,13 @@ public sealed class BattleContext
         if (pick is null) { ht.MireHandoffLost += marks; return; }
         dead.SetCounter(StatusKeys.Concentrated, 0);
         MarkConcentrated(_mireHolder!, pick, ConcentrateTrait.HandoffLabel, marks, dead);
+        if (_verbose)   // 第219期・表示専用（どこから・どこへ・何個）
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.MireHandedOff, Turn = _turn, ActorId = _mireHolder!.InstanceId, TargetId = pick.InstanceId,
+                SpreadFromId = dead.InstanceId, Amount = marks, StatusRemaining = pick.RawCounter(StatusKeys.Concentrated),
+                SourceTrait = TraitId.MireHandoff,
+            });
         ht.MireHandedOff += marks;
         ht.MireHandoffs++;
         Log($"    {dead.Name} の澱みが {pick.Name} へ流れ込む（印 {marks}）", LogKind.Status);
@@ -10576,6 +10620,7 @@ public static class BattleEngine
                 (long[])ctx.ArmorTurnsAny.Clone(), (long[])ctx.ArmorHolders.Clone(),
                 new Dictionary<string, (long, long)>(ctx.ArmorTopBy)),
             // 第134期 段1・段2。**計数専用**（どの規則も読まない）。
+            Brittle = ctx.BrittleBook,   // 第219期（計数のみ）
             Burns = new BurnLedger(
                 (long[])ctx.BurnLitSide.Clone(), (long[])ctx.BurnRelitSide.Clone(),
                 (long[])ctx.BurnEpisodes.Clone(), (long[])ctx.BurnRelitSum.Clone(),

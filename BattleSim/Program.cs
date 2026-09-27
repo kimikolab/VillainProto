@@ -518,8 +518,9 @@ if (focusId == "escale") { EnemyScaleDiag.Run(args.Length > 2 ? args[2] : "phase
 if (focusId == "kata") { KataDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 if (focusId == "whip") { WhipDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }   // 第217期
 if (focusId == "mire") { MireDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }   // 第218期
+if (focusId == "scorch") { ScorchDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }   // 第219期
 if (focusId == "shock") { ShockDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
-if (focusId == "shockdigest") { ShockDigestDiag.Run(args.Length > 2 ? args[2] : "k0"); return; }
+if (focusId == "shockdigest") { ShockDigestDiag.Run(args.Length > 2 ? args[2] : "k0", args.Length > 3 ? args[3] : ""); return; }
 // debuff モード（第189期） —— デバッファー3枚の転生（ネル・クビ・ハネ）。本体は `Modes/Debuff*.cs`。
 if (focusId == "debuff") { DebuffDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 // beni モード（第190期） —— 毒喰らいのベニの転生（反転の結界）。本体は `Modes/Beni*.cs`。
