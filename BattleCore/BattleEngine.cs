@@ -473,6 +473,8 @@ public enum OutOfTurnRoute
     Retreat,
     /// <summary>動かされて吹く突風（<c>SquallTrait</c>・第226期。<b>問う相手はバサ</b>）。</summary>
     Squall,
+    /// <summary>弾き返し（<c>SpringTrait</c>・第228期。<b>問う相手はハネ</b>）。</summary>
+    Spring,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -482,7 +484,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -4678,6 +4680,10 @@ public sealed class BattleContext
 
     // ---- 第226期: 回避盾（`DecoyTrait`）と敵の乱れ（`DisarrayTrait`）。**保持者がいなければ比較1つで全部抜ける。** ----
     bool _decoyLive, _disarrayLive;
+    /// <summary>第228期: 弾き返し（<c>SpringTrait</c>）の保持者が戦にいるか。いなければ被弾の後の判定を比較1つで抜ける。</summary>
+    bool _springLive;
+    /// <summary>第228期・<b>計数専用</b>: いまハネが動かしている動作（0 なし ／ 1 吹っ飛ばし ／ 2 弾き返し）。敵の乱れの混乱の帰属だけが読む。</summary>
+    int _haneAct;
     /// <summary>挑発が主目標にした駒（標的選択1回ぶん・計数と表示のためだけ）。</summary>
     UnitState? _decoyPicked;
     /// <summary>陣営ごとの「隊列を動かされた」累計（敵の乱れの段）。<c>SwapSlots</c> の通知が数える（保持者がいる戦だけ）。</summary>
@@ -5874,6 +5880,10 @@ public sealed class BattleContext
     /// <summary>敵の乱れの混乱（第226期・<b>表示専用</b>）。<c>ActorId</c> ＝ 動かした駒（前へ出した張本人）／ <c>TargetId</c> ＝ 混乱した駒 ／ <c>PartnerId</c> ＝ バサ。</summary>
     internal void NoteDisarrayConfuse(UnitState basa, UnitState u, UnitState? by)
     {
+        if (_haneAct != 0 && by is not null)   // 第228期・計数のみ
+        {
+            if (_haneAct == 1) TallyOf(by).BlastConfused++; else TallyOf(by).SpringConfused++;
+        }
         if (_verbose) Emit(new BattleEvent
         {
             Kind = BattleEventKind.Disarray, Turn = _turn, ActorId = by?.InstanceId, TargetId = u.InstanceId, PartnerId = basa.InstanceId,
@@ -6673,6 +6683,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Thrust) || u.HasTrait(TraitId.ThrustPlain)) _thrustLive = true;   // 第186期 追補
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
         if (u.HasTrait(TraitId.Decoy)) _decoyLive = true;         // 第226期（挑発）
+        if (u.HasTrait(TraitId.Spring)) _springLive = true;       // 第228期（弾き返し）
         if (u.HasTrait(TraitId.Disarray)) _disarrayLive = true;   // 第226期（敵の乱れ）
         // 第185期: 組み付き・見せしめ（手番の頭の2つのキーと標的の選好を短絡させる）／踏みしめ（範囲の盾・層の軽減）／
         // 据えた足（入れ替えの空振り）。**保持者がいなければ比較1つで抜ける**——既存の行が 0 件差分であることの根拠。
@@ -9572,6 +9583,12 @@ public sealed class BattleContext
             this.EndTrait(m);
         }
 
+        // 弾き返し（第228期・突き返しのハネの版 H2/H3・`SpringTrait`）。**敵の攻撃が HP に届いたとき**（入口の回避と同じ条件の攻撃・
+        // 状態異常の刻み・徴収・中継・呪いの共有・味方からのダメージは外れる）。ハネが倒れる一撃では弾かない。**保持者がいなければ比較1つで抜ける。**
+        if (_springLive && target.Hp > 0 && source is not null && source.IsAlive && source.TeamId != target.TeamId
+            && !burnTick && !levy && !relayed && !hexShare && target.HasTrait(TraitId.Spring))
+            SpringTrait.Try(this, target, source);
+
         // 味方への通知。OnAllyDeath の走査と同じ形で、本人以外の生存チームメイトへ流す。
         // 破片で受け切った被弾はここより上の early return で自然に外れる。
         foreach (UnitState ally in LivingMembers(target.TeamId))
@@ -10908,81 +10925,171 @@ public sealed class BattleContext
         try
         {
             self.Slot = destSlot;
-            Notify(self, selfFrom);
+            NotifyMoved(self, selfFrom, by);
 
             if (occupant is null) return true;
             Row otherFrom = occupant.Row;
             occupant.Slot = origin;
-            Notify(occupant, otherFrom);
+            NotifyMoved(occupant, otherFrom, by);
             return true;
         }
         finally { CurrentMover = prevMover; }
+    }
 
-        void Notify(UnitState u, Row from)
+    /// <summary>動かされた駒1体ぶんの通知（第228期に <see cref="SwapSlots"/> の中から切り出した・中身は1文字も変えていない）。</summary>
+    void NotifyMoved(UnitState u, Row from, UnitState? by)
+    {
+        Emit(new BattleEvent
         {
-            Emit(new BattleEvent
+            Kind = BattleEventKind.Move,
+            Turn = _turn,
+            ActorId = by?.InstanceId,   // 第124期 段2: 移動させた駒（押しのけられた側にも同じ駒が載る）
+            TargetId = u.InstanceId,
+            Slot = u.Slot,
+            HpAfter = u.Hp
+        });
+
+        // 第68期。動かされた回数。**動かした側ではなく動いた側**に載せる
+        // （読み手＝軋み・移り木・突き返しが読むのはこちら）。
+        NoteCarry(u, UnitTally.CarryMove, 1);
+
+        // 混乱（第146期）。**動かされた駒に立てる。動かした側の陣営は問わない**
+        // ——自分で逃げても引きずり出されても「動かされた」は同じ。
+        // 押しのけられた側にも同じだけ立つ（Notify は両方に走る）。
+        // **`Active = false` なら 1 バイトも動かない**（軛と同じ短絡の作法）。
+        // **`Percent >= 100` なら `Roll` を引かない**（段B の乱数列を段C のノブで動かさない）。
+        if (Confusion.Active && u.RawCounter(StatusKeys.Confused) == 0
+            && (Confusion.Percent >= 100 || Roll(100) < Confusion.Percent))
+        {
+            u.SetCounter(StatusKeys.Confused, 1);
+            TallyOf(u).ConfusedMarks++;
+            Log($"    {u.Name} は足を取られて向きを見失った", LogKind.Status);
+        }
+
+        // 後ろへ動いた事実を記録する。自分から逃げたか突き飛ばされたかは問わない。
+        // どちらの場合も「味方が矢面に立つ」という代償は発生している。
+        if (FormationRules.DepthOf(u.Row) > FormationRules.DepthOf(from))
+            u.HasFallenBack = true;
+
+        // 敵の乱れ（第226期）: 陣営ごとの累計と、バサがいる間は前へ出た駒の混乱。**保持者がいなければ比較1つで抜ける。**
+        if (_disarrayLive) NoteDisorder(u, from, by);
+
+        // 味方の反応を先に流す。OnMoved は割り込み攻撃まで含むので、逆順だと
+        // シオの強化が「振った後」に乗る（軋みが +5 を載せずに振ってしまう）。
+        // 支援が先・本人の反応が後、という順序をここで固定する。
+        // 第189期・計数のみ: ハネの「勢い余って」で後ろへ下がった狙撃（セロ）は構えが整う。
+        if (OverrunBy is not null && u.HasTrait(TraitId.Sniper)
+            && FormationRules.DepthOf(u.Row) > FormationRules.DepthOf(from)) TallyOf(OverrunBy).OverrunReaderSniper++;
+
+        foreach (UnitState ally in LivingMembers(u.TeamId))
+        {
+            if (ally == u) continue;
+            foreach (Trait t in ally.Traits.ToList())
             {
-                Kind = BattleEventKind.Move,
-                Turn = _turn,
-                ActorId = by?.InstanceId,   // 第124期 段2: 移動させた駒（押しのけられた側にも同じ駒が載る）
-                TargetId = u.InstanceId,
-                Slot = u.Slot,
-                HpAfter = u.Hp
-            });
-
-            // 第68期。動かされた回数。**動かした側ではなく動いた側**に載せる
-            // （読み手＝軋み・移り木・突き返しが読むのはこちら）。
-            NoteCarry(u, UnitTally.CarryMove, 1);
-
-            // 混乱（第146期）。**動かされた駒に立てる。動かした側の陣営は問わない**
-            // ——自分で逃げても引きずり出されても「動かされた」は同じ。
-            // 押しのけられた側にも同じだけ立つ（Notify は両方に走る）。
-            // **`Active = false` なら 1 バイトも動かない**（軛と同じ短絡の作法）。
-            // **`Percent >= 100` なら `Roll` を引かない**（段B の乱数列を段C のノブで動かさない）。
-            if (Confusion.Active && u.RawCounter(StatusKeys.Confused) == 0
-                && (Confusion.Percent >= 100 || Roll(100) < Confusion.Percent))
-            {
-                u.SetCounter(StatusKeys.Confused, 1);
-                TallyOf(u).ConfusedMarks++;
-                Log($"    {u.Name} は足を取られて向きを見失った", LogKind.Status);
-            }
-
-            // 後ろへ動いた事実を記録する。自分から逃げたか突き飛ばされたかは問わない。
-            // どちらの場合も「味方が矢面に立つ」という代償は発生している。
-            if (FormationRules.DepthOf(u.Row) > FormationRules.DepthOf(from))
-                u.HasFallenBack = true;
-
-            // 敵の乱れ（第226期）: 陣営ごとの累計と、バサがいる間は前へ出た駒の混乱。**保持者がいなければ比較1つで抜ける。**
-            if (_disarrayLive) NoteDisorder(u, from, by);
-
-            // 味方の反応を先に流す。OnMoved は割り込み攻撃まで含むので、逆順だと
-            // シオの強化が「振った後」に乗る（軋みが +5 を載せずに振ってしまう）。
-            // 支援が先・本人の反応が後、という順序をここで固定する。
-            // 第189期・計数のみ: ハネの「勢い余って」で後ろへ下がった狙撃（セロ）は構えが整う。
-            if (OverrunBy is not null && u.HasTrait(TraitId.Sniper)
-                && FormationRules.DepthOf(u.Row) > FormationRules.DepthOf(from)) TallyOf(OverrunBy).OverrunReaderSniper++;
-
-            foreach (UnitState ally in LivingMembers(u.TeamId))
-            {
-                if (ally == u) continue;
-                foreach (Trait t in ally.Traits.ToList())
-                {
-                    if (OverrunBy is not null && t.Id == TraitId.Drifter) TallyOf(OverrunBy).OverrunReaderDrifter++;   // 第189期（計数のみ）
-                    TraitMark m = this.BeginTrait(t.Id, ally);   // 第94期 (T2) の印
-                    t.OnAllyMoved(this, ally, u);
-                    this.EndTrait(m);
-                }
-            }
-
-            foreach (Trait t in u.Traits.ToList())
-            {
-                if (OverrunBy is not null && t.Id == TraitId.Displaced) TallyOf(OverrunBy).OverrunReaderDisplaced++;   // 第189期（計数のみ）
-                TraitMark m = this.BeginTrait(t.Id, u);   // 第94期 (T2) の印
-                t.OnMoved(this, u, from, u.Row);
+                if (OverrunBy is not null && t.Id == TraitId.Drifter) TallyOf(OverrunBy).OverrunReaderDrifter++;   // 第189期（計数のみ）
+                TraitMark m = this.BeginTrait(t.Id, ally);   // 第94期 (T2) の印
+                t.OnAllyMoved(this, ally, u);
                 this.EndTrait(m);
             }
         }
+
+        foreach (Trait t in u.Traits.ToList())
+        {
+            if (OverrunBy is not null && t.Id == TraitId.Displaced) TallyOf(OverrunBy).OverrunReaderDisplaced++;   // 第189期（計数のみ）
+            TraitMark m = this.BeginTrait(t.Id, u);   // 第94期 (T2) の印
+            t.OnMoved(this, u, from, u.Row);
+            this.EndTrait(m);
+        }
     }
+
+    /// <summary>
+    /// 経路の並べ替え（第228期・吹っ飛ばし）。<paramref name="moves"/> の駒を一度に指定の席へ置き、<b>席が変わった駒1体につき1回</b>
+    /// 「動かされた」を通知する（<see cref="SwapSlots"/> と同じ通知・順は渡した順）。<b>乱数を引かない。</b>
+    /// 据えた足（バン）の駒が1体でも含まれていれば何もせず偽を返す。
+    /// </summary>
+    public bool RelocateLane(IReadOnlyList<(UnitState U, int Dest)> moves, UnitState by)
+    {
+        if (_plantedLive && moves.Any(m => m.U.HasTrait(TraitId.Planted))) return false;
+        var from = moves.Select(m => (m.U, Row: m.U.Row, Slot: m.U.Slot)).ToList();
+        foreach (var (u, dest) in moves) u.Slot = dest;
+        UnitState? prevMover = CurrentMover;
+        CurrentMover = by;
+        _haneAct = 1;
+        try
+        {
+            foreach (var (u, row, slot) in from)
+                if (u.Slot != slot) NotifyMoved(u, row, by);
+        }
+        finally { CurrentMover = prevMover; _haneAct = 0; }
+        return true;
+    }
+
+    /// <summary>その陣営の経路の上の生きている駒（前から後ろの順・第228期）。</summary>
+    public List<UnitState> LaneMembers(int teamId, int lane, FormationShape shape) => LaneOccupants(LivingMembers(teamId), lane, shape);
+
+    /// <summary>
+    /// 吹っ飛ばしの貫き（第228期・<see cref="BlastTrait"/> だけが呼ぶ）。<b>的を A に固定した貫きの1発</b>（第223期の追い撃ちと同じ作法）——
+    /// 経路の先頭の A から後ろの全員へ、既存の貫きの減衰（1体ごとに −25%）で当たる。敵に与えた量を返す（計数のため）。
+    /// </summary>
+    public long BlastShot(UnitState hane, UnitState a)
+    {
+        if (!hane.IsAlive || !a.IsAlive) return 0;
+        UnitTally t = TallyOf(hane);
+        long before = t.DamageToEnemy;
+        _forcedTarget = a;
+        try { PerformAttack(hane, patternOverride: AttackPattern.Pierce); }
+        finally { _forcedTarget = null; }
+        return t.DamageToEnemy - before;
+    }
+
+    /// <summary>吹っ飛ばしの見出し（第228期・表示専用 ＋ 計数）。<c>Slot</c> ＝ 経路 ／ <c>Amount</c> ＝ 経路の上の敵の数。<b>盤面は1ビットも触らない。</b></summary>
+    public void NoteBlast(UnitState hane, UnitState a, int lane, int count)
+    {
+        TallyOf(hane).BlastCount++;
+        Log($"    {hane.Name} が {a.Name} を経路の奥まで吹っ飛ばす", LogKind.Trigger);
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Blast, Turn = _turn, ActorId = hane.InstanceId, TargetId = a.InstanceId,
+            Slot = lane, Amount = count, Team = hane.TeamId,
+        });
+    }
+
+    /// <summary>
+    /// 弾き返し（第228期・<see cref="SpringTrait"/> だけが呼ぶ・<c>Interrupt</c> の中）。殴ってきた敵を経路で1つ後ろの席へ入れ替え、転ばせ、
+    /// ハネ自身は勢い余って隣の味方と入れ替わる（<see cref="OverrunTrait"/>）。表示専用の <see cref="BattleEventKind.Spring"/> を先に出す。
+    /// </summary>
+    public void SpringSwap(UnitState hane, UnitState foe, int dest)
+    {
+        UnitTally t = TallyOf(hane);
+        UnitState? partner = LivingMembers(foe.TeamId).FirstOrDefault(u => u.Slot == dest);
+        Row partnerFrom = partner?.Row ?? Row.Back;
+        Log($"    {hane.Name} が殴ってきた {foe.Name} を弾き返す", LogKind.Trigger);
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Spring, Turn = _turn, ActorId = hane.InstanceId, TargetId = foe.InstanceId,
+            Slot = dest, PartnerId = partner?.InstanceId, Team = hane.TeamId,
+        });
+        bool moved;
+        _haneAct = 2;
+        try { moved = SwapSlots(foe, dest, hane); }
+        finally { _haneAct = 0; }
+        if (!moved) { t.SpringRefused++; return; }
+        t.SpringCount++;
+        if (partner is not null && FormationRules.DepthOf(partner.Row) < FormationRules.DepthOf(partnerFrom)) t.SpringForward++;
+        if (foe.IsAlive)
+        {
+            foe.SetCounter(StatusKeys.Stagger, 1);
+            EmitStagger(foe, StaggerLabels.Fell, hane);
+            Log($"    {foe.Name} は弾き返されて転んだ（次の手番を失う）", LogKind.Status);
+        }
+        if (hane.HasTrait(TraitId.Overrun))
+        {
+            long before = t.OverrunSwaps;
+            OverrunTrait.Swap(this, hane);
+            t.SpringSwaps += t.OverrunSwaps - before;
+        }
+    }
+
 }
 
 public static class BattleEngine

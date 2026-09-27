@@ -1435,6 +1435,9 @@ static class TraitKeyMap
         [TraitId.Squall]          = new[] { UnitTally.CarryMove },                              // 第226期（動かされるたび突風）
         [TraitId.ShioStageSlow]   = new[] { UnitTally.CarryMove },                              // 第226期（シオの段を遅く）
         [TraitId.LastDodge]       = new[] { UnitTally.CarryHit },                               // 第227期（倒れる一撃をかわす・回数は移動の段で）
+        [TraitId.Blast]           = Array.Empty<int>(),                                          // 第228期（手番の吹っ飛ばし・通貨を読まない）
+        [TraitId.Spring]          = new[] { UnitTally.CarryHit },                               // 第228期（殴られたら弾き返す）
+        [TraitId.BlastBoth]       = Array.Empty<int>(),                                          // 第228期（H3w）
         [TraitId.LastStandShield]= Array.Empty<int>(),                                          // 第198期（参考・盾剣）
         [TraitId.Blightfed]  = new[] { UnitTally.CarryPoison },
         // 燃焼
@@ -1665,6 +1668,9 @@ static class TraitHookMap
         [TraitId.Squall]          = new[] { "OnMoved", "OnCarryOver" },            // 第226期（動かされて吹く突風）
         [TraitId.ShioStageSlow]   = new[] { Engine },                              // 第226期（ShioStageTrait.StageAtOf が読む）
         [TraitId.LastDodge]       = new[] { "OnCarryOver", Engine },               // 第227期（判定は ApplyDamageBody の HP を引く直前）
+        [TraitId.Blast]           = new[] { Engine },                              // 第228期（ReboundTrait の手番の頭で分岐・並べ替えは RelocateLane）
+        [TraitId.Spring]          = new[] { "OnCarryOver", Engine },               // 第228期（判定は ApplyDamageBody の OnDamaged の直後）
+        [TraitId.BlastBoth]       = new[] { Engine },                              // 第228期（BlastTrait が読む）
         [TraitId.LastStandShield]= new[] { "OnAllyDeath", "OnBattleStart", "OnCarryOver" },              // 第198期（参考・保持者 0 枚）
         [TraitId.Deflect]     = new[] { "OnCarryOver", Engine },                 // 第186期（逸らしは ApplyDamage の入口）
         [TraitId.Thrust]      = new[] { "OnCarryOver", Engine },                 // 第186期 追補（列の指定と倍率は engine）

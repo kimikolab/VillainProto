@@ -127,6 +127,8 @@ static partial class SpringDiag
         public long N, Wins, AllSurv, WinTurns, FellTotal;
         public readonly Dictionary<string, long> Fell = new(), FellT = new();
         // ハネ（表D）
+        /// <summary>粛の保持者が倒れた戦の数とそのターンの和（第二波の読み）。</summary>
+        public long HushDead, HushDeadTurn, HushBlocked;
         public long HaneTaken, HaneFell, HaneHits, HaneHitsOnLane, HaneHitsBack, HaneHitsReaction, OverrunSwaps;
         // 吹っ飛ばし・弾き返し（表B・C。帳簿の欄は名前で引く）
         public readonly Dictionary<string, long> Hane = new();
@@ -139,6 +141,7 @@ static partial class SpringDiag
             foreach (var (k, v) in o.Fell) Fell[k] = Fell.GetValueOrDefault(k) + v;
             foreach (var (k, v) in o.FellT) FellT[k] = FellT.GetValueOrDefault(k) + v;
             foreach (var (k, v) in o.Hane) Hane[k] = Hane.GetValueOrDefault(k) + v;
+            HushDead += o.HushDead; HushDeadTurn += o.HushDeadTurn; HushBlocked += o.HushBlocked;
             HaneTaken += o.HaneTaken; HaneFell += o.HaneFell; HaneHits += o.HaneHits; HaneHitsOnLane += o.HaneHitsOnLane;
             HaneHitsBack += o.HaneHitsBack; HaneHitsReaction += o.HaneHitsReaction; OverrunSwaps += o.OverrunSwaps;
             D.Merge(o.D);
@@ -169,9 +172,12 @@ static partial class SpringDiag
                 foreach (var k in HaneKeys) Hane[k] = Hane.GetValueOrDefault(k) + Tally(t, k);
                 OverrunSwaps += t.OverrunSwaps;
             }
+            var hushIds = enemy.Where(u => u.HasTrait(TraitId.Hush)).Select(u => u.InstanceId).ToHashSet();
             var tr = new DecoyDiag.Tracker(slot0, player);
             foreach (BattleEvent e in r.Events)
             {
+                if (e.Kind == BattleEventKind.Death && e.TargetId is int hd && hushIds.Contains(hd)) { HushDead++; HushDeadTurn += e.Turn; }
+                if (e.Kind == BattleEventKind.Sealed && e.Text == SealedLabels.Hush) HushBlocked++;
                 switch (e.Kind)
                 {
                     case BattleEventKind.Damage when hane is not null && e.TargetId == hane.InstanceId && e.Amount > 0:

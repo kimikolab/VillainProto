@@ -286,6 +286,9 @@
 | `Squall` | 喧噪のバサ |
 | `ShioStageSlow` | - |
 | `LastDodge` | 逃亡兵セロ |
+| `Blast` | - |
+| `Spring` | - |
+| `BlastBoth` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

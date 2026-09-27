@@ -463,7 +463,10 @@ public enum TraitId
     Squall,         // 動かされて吹く突風（第226期・バサの版 K4）: バサが隊列を動かされるたび、手番の外で突風（今の攻撃）を1発（1ターン2回まで）。第227期から規定のバサ
     ShioStageSlow,  // シオの段を遅く（第226期）: 隊の乱れの段の条件を 4/8/14 → 8/16/26 に。**札そのものは挙動を持たない**。保持者 0 枚
     LastDodge,      // 必死の逃げ足（第227期・セロの版 L1/L2）: 敵の攻撃で倒れる一撃だけは必ずかわす（通常の回避と同じ連鎖）。1戦に 段0〜1 で1回・段2 で2回・段3 で3回。
-                    // 状態異常・味方からのダメージでは発動しない。**判定は engine の `ApplyDamageBody`（HP を引く直前）**。回避（`Evade`）が無ければ働かない。保持者 0 枚
+                    // 状態異常・味方からのダメージでは発動しない。**判定は engine の `ApplyDamageBody`（HP を引く直前）**。回避（`Evade`）が無ければ働かない。第228期から規定のセロ
+    Blast,          // 吹っ飛ばし（第228期・ハネの版 H1/H3）: 手番の突き返しを、前列の敵 A をその経路の最後尾へ吹っ飛ばす並べ替えに（経路の全員に貫き・A は転ぶ・前へ詰めた敵はバサの対で混乱）。保持者 0 枚
+    Spring,         // 弾き返し（第228期・ハネの版 H2/H3）: 敵の攻撃で殴られたら、殴った敵を経路で1つ後ろへ弾いて転ばせ、自分は隣の味方と入れ替わる（1ターン 1 ＋ 敵の乱れの段 回・粛で止まる）。保持者 0 枚
+    BlastBoth,      // 両方の経路（第228期・H3w）: 敵の乱れの段2 から、吹っ飛ばしを1手番に両方の経路で行う。**札そのものは挙動を持たない**。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -13911,6 +13914,7 @@ public sealed class ReboundTrait : Trait
     private static void Act(BattleContext ctx, UnitState self)
     {
         if (!self.IsAlive) return;
+        if (self.HasTrait(TraitId.Blast)) { BlastTrait.Act(ctx, self); return; }   // 第228期（吹っ飛ばし）
         UnitTally tally = ctx.TallyOf(self);
 
         UnitState? pick = null;
@@ -13994,6 +13998,169 @@ public sealed class OverrunTrait : Trait
         try { ctx.Shoving(() => moved = ctx.SwapSlots(self, with.Slot, self)); }
         finally { ctx.OverrunBy = null; }
         if (moved) tally.OverrunSwaps++; else tally.OverrunRefused++;
+    }
+}
+
+/// <summary>
+/// 吹っ飛ばし（第228期・突き返しのハネの版 H1/H3）。<b>手番の突き返しを置き換える</b>（<see cref="ReboundTrait"/> の手番の頭で分岐する）。
+///
+/// <para><b>1. 狙い</b>: 前列の経路に属する席（前1・前3）の敵のうち現在攻撃力が最も高い1体 A（同値は席番号の小さい方）——突き返しと同じ選び方。
+/// いなければ何もしない（突き返しも同じ席しか狙わないので、「狙えないときは突き返し」は同じ結果になる）。</para>
+/// <para><b>2. ダメージ</b>: A のいる経路（前1 → 中央 → ○中1 → 後1 ／ 前3 → 中央 → ○中3 → 後3）へ、<b>的を A に固定した貫き</b>
+/// （<see cref="BattleContext.BlastShot"/>・既存の減衰 −25%/体・ハネの現在の攻撃力）。A が倒れたら並べ替えない。</para>
+/// <para><b>3. 並べ替え</b>: 経路の上の「駒のいる席」の並びはそのまま、A と A より後ろの駒を「A を最後尾へ回した順」に置き直す
+/// （<see cref="BattleContext.RelocateLane"/>・席が変わった駒1体につき1回「動かされた」＝敵の乱れの累計 +1・行が前に変わった敵はバサの対で混乱）。
+/// 空席の位置は変えない。A は転ぶ（次の手番を失う）。</para>
+/// <para><b>4. 代金</b>: 吹っ飛ばすたび、勢い余って隣の味方と入れ替わる（<see cref="OverrunTrait"/>・今と同じ）。</para>
+/// <para>H3w（<see cref="TraitId.BlastBoth"/>）: 手番の頭で敵の乱れの段が 2 以上なら、もう一方の前列の席の敵も吹っ飛ばす（1手番に2回・代金の入れ替えは1回）。
+/// <b>乱数を引かない</b>（貫きの中の既存の乱数を除く）。</para>
+/// </summary>
+public sealed class BlastTrait : Trait
+{
+    public override TraitId Id => TraitId.Blast;
+
+    static UnitState? PickFront(BattleContext ctx, UnitState self, int skipSlot)
+    {
+        UnitState? pick = null;
+        foreach (UnitState u in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        {
+            if (u.Slot != 0 && u.Slot != 1) continue;   // 前列の経路に属する編成枠だけ（○前2 は対象外）
+            if (u.Slot == skipSlot) continue;
+            if (pick is null) { pick = u; continue; }
+            int a = u.CurrentAttack, b = pick.CurrentAttack;
+            if (a > b || (a == b && u.Slot < pick.Slot)) pick = u;
+        }
+        return pick;
+    }
+
+    public static void Act(BattleContext ctx, UnitState self)
+    {
+        UnitTally tally = ctx.TallyOf(self);
+        UnitState? a = PickFront(ctx, self, -1);
+        if (a is null)
+        {
+            tally.ReboundNoFront++;
+            ctx.Log($"    {self.Name} は吹っ飛ばす相手がいない", LogKind.Action);
+            return;
+        }
+        bool both = self.HasTrait(TraitId.BlastBoth) && self.HasTrait(TraitId.Disarray)
+                    && DisarrayTrait.StageOf(ctx, self) >= DisarrayTrait.PushTwoStage;   // 手番の頭で決める
+        int firstSlot = a.Slot;
+        Blast(ctx, self, a);
+        if (both && self.IsAlive && PickFront(ctx, self, firstSlot) is { } b && b.Slot != firstSlot)
+        {
+            tally.BlastSecond++;
+            Blast(ctx, self, b);
+        }
+        if (self.HasTrait(TraitId.Overrun)) OverrunTrait.Swap(ctx, self);
+    }
+
+    /// <summary>1本の経路を吹っ飛ばす。</summary>
+    public static void Blast(BattleContext ctx, UnitState self, UnitState a)
+    {
+        if (!self.IsAlive || !a.IsAlive) return;
+        UnitTally tally = ctx.TallyOf(self);
+        var lanes = a.Shape.LanesOf(a.Slot);
+        if (lanes.Count == 0) return;
+        int lane = lanes[0];
+        var line = ctx.LaneMembers(a.TeamId, lane, a.Shape);
+        int ia0 = line.IndexOf(a);
+        ctx.NoteBlast(self, a, lane, line.Count);
+        tally.BlastHits += ia0 < 0 ? 1 : line.Count - ia0;
+        tally.BlastDealt += ctx.BlastShot(self, a);
+        if (!a.IsAlive) { tally.BlastKilledA++; return; }
+
+        var after = ctx.LaneMembers(a.TeamId, lane, a.Shape);
+        int ia = after.IndexOf(a);
+        if (ia >= 0)
+        {
+            var seg = after.Skip(ia).ToList();
+            if (seg.Count > 1)
+            {
+                var seats = seg.Select(u => u.Slot).ToList();
+                var order = seg.Skip(1).Append(a).ToList();
+                var moves = order.Select((u, k) => (U: u, Dest: seats[k])).Where(m => m.U.Slot != m.Dest).ToList();
+                int forward = moves.Count(m => FormationRules.DepthOf(FormationRules.RowOf(m.Dest)) < FormationRules.DepthOf(m.U.Row));
+                if (ctx.RelocateLane(moves, self)) { tally.BlastMoved += moves.Count; tally.BlastForward += forward; }
+                else tally.BlastRefused++;
+            }
+        }
+        if (a.IsAlive)
+        {
+            a.SetCounter(StatusKeys.Stagger, 1);
+            tally.ReboundStaggers++;
+            ctx.EmitStagger(a, StaggerLabels.Fell, self);
+            ctx.Log($"    {a.Name} は吹っ飛ばされて転んだ（次の手番を失う）", LogKind.Status);
+        }
+    }
+}
+
+/// <summary>両方の経路（第228期・H3w）。<b>札そのものは挙動を持たない</b>（<see cref="BlastTrait"/> が読む）。</summary>
+public sealed class BlastBothTrait : Trait { public override TraitId Id => TraitId.BlastBoth; }
+
+/// <summary>
+/// 弾き返し（第228期・突き返しのハネの版 H2/H3）。<b>敵の攻撃による被弾（HP に届いた一撃）を受けたら、殴ってきた敵をその経路で1つ後ろの席へ弾く</b>
+/// （後ろの席の敵と入れ替え・空席ならそこへ）。弾かれた敵は転ぶ。入れ替えで前へ出た敵は、バサの対がいれば混乱する（<c>SwapSlots</c> の通知）。
+/// 代金は勢い余っての入れ替え（<see cref="OverrunTrait"/>）。
+///
+/// <para>判定は engine の <c>ApplyDamageBody</c>（<c>OnDamaged</c> の直後・入口の回避と同じ「攻撃」の条件・ハネが倒れる一撃では弾かない）。
+/// 殴った敵が経路に属さない席（○前2・○後2）か、経路の最後尾（後1・後3）なら弾かない（回数も使わない）。中央（2本の経路に属する）は生きている駒が多い経路・同数はレーン0。
+/// 1ターンに <see cref="LimitOf"/>（1 ＋ 敵の乱れの段）回まで・<c>CanActOutOfTurn(ハネ, OutOfTurnRoute.Spring)</c>（粛・痺れ・組み付きで止まる）・
+/// 割り込みの中では弾かない・<c>ctx.Interrupt</c> で包む。<b>乱数を引かない。</b></para>
+/// </summary>
+public sealed class SpringTrait : Trait
+{
+    public const string TurnKey = "springTurn";
+    public const string CountKey = "springCount";
+
+    public override TraitId Id => TraitId.Spring;
+
+    public static int LimitOf(BattleContext ctx, UnitState self) => 1 + (self.HasTrait(TraitId.Disarray) ? DisarrayTrait.StageOf(ctx, self) : 0);
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(TurnKey, 0);
+        self.SetCounter(CountKey, 0);
+    }
+
+    /// <summary>弾く先の席（経路で1つ後ろ）。弾けなければ −1。</summary>
+    public static int DestOf(BattleContext ctx, UnitState foe)
+    {
+        var lanes = foe.Shape.LanesOf(foe.Slot);
+        if (lanes.Count == 0) return -1;
+        int lane = lanes[0];
+        if (lanes.Count > 1)
+        {
+            int best = -1;
+            foreach (int l in lanes)
+            {
+                int n = ctx.LaneMembers(foe.TeamId, l, foe.Shape).Count;
+                if (n > best) { best = n; lane = l; }
+            }
+        }
+        var path = foe.Shape.LanePath(lane);
+        int i = -1;
+        for (int k = 0; k < path.Count; k++) if (path[k] == foe.Slot) { i = k; break; }
+        return i < 0 || i == path.Count - 1 ? -1 : path[i + 1];
+    }
+
+    /// <summary>engine の <c>ApplyDamageBody</c> だけが呼ぶ。</summary>
+    public static void Try(BattleContext ctx, UnitState self, UnitState foe)
+    {
+        UnitTally t = ctx.TallyOf(self);
+        int dest = DestOf(ctx, foe);
+        if (dest < 0) { t.SpringNoSeat++; return; }
+        int used = self.RawCounter(TurnKey) == ctx.Turn + 1 ? self.RawCounter(CountKey) : 0;
+        if (used >= LimitOf(ctx, self)) { t.SpringCapped++; return; }
+        if (ctx.InInterrupt) { t.SpringHeld++; return; }
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Spring))
+        {
+            if (ctx.HushBindingNow) t.SpringHushed++; else t.SpringHeld++;
+            return;
+        }
+        self.SetCounter(TurnKey, ctx.Turn + 1);
+        self.SetCounter(CountKey, used + 1);
+        ctx.Interrupt(() => ctx.SpringSwap(self, foe, dest));
     }
 }
 
@@ -14685,6 +14852,9 @@ public static class TraitCatalog
         new DisarrayTrait(),         // 第226期
         new SquallTrait(),           // 第226期
         new LastDodgeTrait(),        // 第227期
+        new BlastTrait(),            // 第228期
+        new SpringTrait(),           // 第228期
+        new BlastBothTrait(),        // 第228期
         new ShioStageSlowTrait(),    // 第226期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期

@@ -2307,6 +2307,18 @@ public sealed class UnitTally
     /// </summary>
     public long LastDodges, LastDodgeSpent;
 
+    /// <summary>
+    /// 第228期・吹っ飛ばし（ハネの側）。<b>計数専用で、どの規則も読まない。</b><c>BlastCount</c> 吹っ飛ばした ／ <c>BlastMoved</c> 並べ替えで席が変わった敵 ／
+    /// <c>BlastForward</c> そのうち行が前に変わった ／ <c>BlastHits</c> 貫きが当たった敵（経路の上の敵の数）／ <c>BlastDealt</c> 与ダメ ／
+    /// <c>BlastConfused</c> 並べ替えで混乱した敵（バサの対）／ <c>BlastKilledA</c> 貫きで A が倒れた（並べ替えない）／ <c>BlastSecond</c> 段2 で2本目の経路（H3w）／
+    /// <c>BlastRefused</c> 据えた足で並べ替えられなかった。
+    /// 弾き返し: <c>SpringCount</c> 弾いた ／ <c>SpringForward</c> 入れ替えで前へ出た敵 ／ <c>SpringConfused</c> そのうち混乱 ／ <c>SpringCapped</c> 1ターンの回数を使い切っていた ／
+    /// <c>SpringHushed</c> 粛で止まった ／ <c>SpringHeld</c> 痺れ・割り込みの中などで止まった ／ <c>SpringNoSeat</c> 経路に属さない席・後ろに席が無い ／
+    /// <c>SpringSwaps</c> 弾き返しの後に勢い余って入れ替わった ／ <c>SpringRefused</c> 据えた足で空振り。
+    /// </summary>
+    public long BlastCount, BlastMoved, BlastForward, BlastHits, BlastDealt, BlastConfused, BlastKilledA, BlastSecond, BlastRefused,
+                SpringCount, SpringForward, SpringConfused, SpringCapped, SpringHushed, SpringHeld, SpringNoSeat, SpringSwaps, SpringRefused;
+
     /// <summary>第225期・惨禍（カド）で増えた被ダメージ（名目・破片と上限の前）。受け手の側。<b>計数専用。</b></summary>
     public long HavocTaken;
 
@@ -3365,7 +3377,20 @@ public enum BattleEventKind
     /// <c>Slot</c> ＝ その戦の何回目か（1〜3）／ <c>StatusRemaining</c> ＝ その戦の上限（段で 1/1/2/3）／ <c>Amount</c> ＝ セロの段 ／ <c>Pattern</c> ＝ かわした一撃の型。
     /// 直後に通常の回避と同じ <c>Evade</c>（→ 入れ替えの <c>Move</c> ・撃ち返し）が並ぶ。
     /// </summary>
-    LastDodge
+    LastDodge,
+
+    /// <summary>
+    /// 吹っ飛ばし（第228期・突き返しのハネの版 H1/H3・<b>表示専用</b>）。<c>ActorId</c> ＝ ハネ ／ <c>TargetId</c> ＝ 吹っ飛ばす敵（A）／
+    /// <c>Slot</c> ＝ 経路（0 ＝ 前1 → 中央 → ○中1 → 後1 ／ 1 ＝ 前3 → 中央 → ○中3 → 後3）／ <c>Amount</c> ＝ その時の経路の上の敵の数。
+    /// 直後に貫きの <c>Attack</c> と経路の全員への <c>Damage</c>、続いて並べ替えの <c>Move</c>（動いた敵1体に1件・<c>ActorId</c> ＝ ハネ）、A の転倒。
+    /// </summary>
+    Blast,
+
+    /// <summary>
+    /// 弾き返し（第228期・突き返しのハネの版 H2/H3・<b>表示専用</b>）。<c>ActorId</c> ＝ ハネ ／ <c>TargetId</c> ＝ 殴ってきた敵 ／
+    /// <c>Slot</c> ＝ 弾いた先の席 ／ <c>PartnerId</c> ＝ そこにいて前へ出た敵（空席なら null）。直後に入れ替えの <c>Move</c>・転倒・ハネ自身の入れ替え。
+    /// </summary>
+    Spring
 }
 
 /// <summary>
