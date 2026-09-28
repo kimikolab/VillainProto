@@ -15,6 +15,7 @@ static partial class BurnAuditDiag
 {
     public static void Run(string[] args, int stageIndex)
     {
+        _args = args;
         string mode = args.Length > 2 ? args[2] : "";
         switch (mode)
         {
@@ -22,12 +23,23 @@ static partial class BurnAuditDiag
             case "pick": PickImpl(); return;
             case "run": RunImpl(); return;
             case "check": CheckImpl(); return;
+            case "log": LogOne(args.Length > 3 ? args[3] : "", args.Length > 4 ? int.Parse(args[4]) : 0, args.Length > 5 ? int.Parse(args[5]) : MainWave); return;
             default:
                 Console.WriteLine("burnaudit: モードは phase0 / pick / run / check。");
                 return;
         }
     }
 
+    static string[]? _args;
+
+    /// <summary>1戦のログ（席を「前1,前3,中央,後1,後3」の駒 Id で渡す・倍率 200/200）。</summary>
+    static void LogOne(string seats, int seed, int wave)
+    {
+        var f = Seat(seats.Split(',').Select(UnitCatalog.ById).ToArray());
+        var (r, _, _, _) = Fight(f, wave, Scales[0].Sc, seed);
+        Console.WriteLine($"# {SeatsNamed(f)} × {WaveNames[wave]} × 200/200 × seed {seed}");
+        foreach (var l in r.Log) Console.WriteLine(l.Text);
+    }
     static partial void Phase0();
     static partial void PickImpl();
     static partial void RunImpl();
