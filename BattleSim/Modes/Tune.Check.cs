@@ -102,7 +102,7 @@ static partial class TuneDiag
         // ---- 弾き返しの隣 ----
         Console.WriteLine("### ハネの弾き返し（後3 のハネ ／ 隣の前3 の味方 z が敵 e1（前1）に殴られる）");
         Console.WriteLine();
-        foreach (var (tag, hane, want) in new[] { ("VB", HaneGuard, "中央/前3/後3/1/1"), ("V0", UnitCatalog.Hane, "前1/後3/前3/0/0") })
+        foreach (var (tag, hane, want) in new[] { ("VB", HaneGuard, "中央/前3/後3/1/1"), ("V0", UnitCatalog.HaneS0, "前1/後3/前3/0/0") })
         {
             var ctx = Ctx(Formation.Build(front1: Plain("w"), front3: Plain("z"), back3: hane), en, 0, out var p, out var e);
             ctx.ApplyDamage(U(p, "z"), 10, U(e, "e1"));

@@ -58,6 +58,15 @@ internal static Formation OldCycle(Formation f)
     return g;
 }
 
+/// <summary>第232期（S2 の規定化）: 第231・232期の器具は、編成の<b>規定のハネ</b>（同じ参照のものだけ）を旧（<see cref="UnitCatalog.HaneS0"/>）へ戻す。</summary>
+internal static Formation OldSpring2(Formation f)
+{
+    var g = f.Clone();
+    foreach (var (slot, d) in f.Occupied())
+        if (ReferenceEquals(d, UnitCatalog.Hane)) g[slot] = UnitCatalog.HaneS0;
+    return g;
+}
+
 /// <summary>
 /// 第232期 前段: セロ（移動の追撃）・シオ（退避5割）が規定になったので、第231期までの器具は編成の<b>規定のセロ・シオ</b>
 /// （同じ参照のものだけ）を旧（<see cref="UnitCatalog.SeroC0"/> / <see cref="UnitCatalog.ShioA0"/>）へ戻す。

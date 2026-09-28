@@ -195,3 +195,11 @@ M-ハネ（228 H3）: ハネ（後3・角なので次数2）の隣は 前3 セ�
 | 7 | Codex の未コミットの変更 | 触っていない（`UnitCatalog.cs`・`Models.cs` の踏込の説明・`docs/units.md` のヨミとハネの2行・DemoApp はコミットに入れていない） |
 
 所要: `spring2 phase0` 0.7 秒 ／ `spring2 run` 4 秒 ／ `spring2 check` 0.3 秒。
+
+## 12. 追記: S2 を規定にした（ポンの判断）
+
+- 規定のハネ ＋ `SpringGuard` ＋ `SpringStay`。`units.md` は §9 の文面（「自分か隣の味方が殴られたら…（…・隣の味方のときは自分は動かない）」・マイナスの文は今のまま）。旧は `UnitCatalog.HaneS0`（`All` に入れない）。
+- **`compare` 305 セルは不動**（ハネがいるのは `突き返し (ハネ×ウツ)` の1行で、全波 100.0 の天井）。動いたのは勝ち方の表のその1行（`quality`：第三波の実質無傷勝利 95.5 → 94.5・第五波 91.0 → 87.5 ／ 通算の完全勝利 41.0 → 40.9 ほか）と `chain`・`pulse`・`engage`・`crossing`・`ablation`・`stock`・`roster_audit`。`units.md` はハネの1行と札2行。`layout`・`reseat`・`harm`・`watch` は不動。
+- 第231・232期の器具は旧のハネに固定した（`tune` / `spring2` の台は `HaneS0`・`shockdigest` は全モードで `Common.OldSpring2`）。固定の後、`shockdigest` 16 モード（`s232` を含む）と `spring2` / `tune` / `cycle` / `gale` / `spring` / `lastdodge` / `decoy` / `retreat` / `seroshio` / `sero` の phase0・check・run は S2 の規定化の前と所要秒数以外一致。
+  **例外が1つ**: `sero phase0` の「5枚目の候補」の表（`UnitCatalog.All` を総当たりする）はハネが 4位 → 2位（225 → 233）に上がる——ロスター全体を回す表で、これまでの期もハネ・バサの規定化で動いていた（固定していない）。
+- `audit` ずれ 0・DemoApp の門 4 本 ok=True。

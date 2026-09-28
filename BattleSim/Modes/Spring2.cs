@@ -33,7 +33,7 @@ static partial class Spring2Diag
 
     /// <summary>第228期 H3 の1位の席（前1 バサ ／ 前3 セロ ／ 中央 ヨミ ／ 後1 シオ ／ 後3 ハネ）。駒は前段の規定（シオ 退避5割・セロ 移動の追撃）。</summary>
     internal static Formation MHane228 => Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.Sero,
-        center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Hane);
+        center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.HaneS0);
     internal static Formation Thunder => GaleDiag.Thunder;
 
     internal static readonly string[] WaveNames = TuneDiag.WaveNames;
@@ -52,9 +52,9 @@ static partial class Spring2Diag
     // 版（§2）。札の差し替えだけ。
     internal sealed record Ver(string Tag, UnitDef Hane);
     static UnitDef Plus(UnitDef d, params TraitId[] extra) => DecoyDiag.Copy(d, d.Traits.Concat(extra).ToArray());
-    internal static readonly UnitDef HaneS1 = Plus(UnitCatalog.Hane, TraitId.SpringGuard);
-    internal static readonly UnitDef HaneS2 = Plus(UnitCatalog.Hane, TraitId.SpringGuard, TraitId.SpringStay);
-    internal static Ver[] Versions => _versions ??= new[] { new Ver("S0", UnitCatalog.Hane), new Ver("S1", HaneS1), new Ver("S2", HaneS2) };
+    internal static readonly UnitDef HaneS1 = Plus(UnitCatalog.HaneS0, TraitId.SpringGuard);
+    internal static readonly UnitDef HaneS2 = Plus(UnitCatalog.HaneS0, TraitId.SpringGuard, TraitId.SpringStay);
+    internal static Ver[] Versions => _versions ??= new[] { new Ver("S0", UnitCatalog.HaneS0), new Ver("S1", HaneS1), new Ver("S2", HaneS2) };
     static Ver[]? _versions;
     internal static Ver VerOf(string tag) => Versions.First(v => v.Tag == tag);
 

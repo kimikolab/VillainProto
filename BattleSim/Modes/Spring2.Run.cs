@@ -156,7 +156,7 @@ static partial class Spring2Diag
         Console.WriteLine("# 第232期 spring2 check");
         Console.WriteLine();
         var en = Formation.Build(front1: Plain("e1"), front3: Plain("e3"), center: Plain("e2"), back1: Plain("e4"), back3: Plain("e5"));
-        foreach (var (tag, hane, want) in new[] { ("S2", HaneS2, "中央/後3/前3/1/0/1"), ("S1", HaneS1, "中央/前3/後3/1/1/0"), ("S0", UnitCatalog.Hane, "前1/後3/前3/0/0/0") })
+        foreach (var (tag, hane, want) in new[] { ("S2", HaneS2, "中央/後3/前3/1/0/1"), ("S1", HaneS1, "中央/前3/後3/1/1/0"), ("S0", UnitCatalog.HaneS0, "前1/後3/前3/0/0/0") })
         {
             var ctx = Ctx(Formation.Build(front1: Plain("w"), front3: Plain("z"), back3: hane), en, out var p, out var e);
             ctx.ApplyDamage(U(p, "z"), 10, U(e, "e1"));

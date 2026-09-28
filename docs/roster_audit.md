@@ -45,7 +45,7 @@
 | 18 | 後備えのセッキ | +7.17 | +13.02 | 残す | 3 | 0 | 23.0 | 化ける | 上（単独で強い） | −4.6pt | RearGuard / Rage |
 | 19 | 分かちのドハ | +7.38 | +9.03 | 残す | 5 | 1 | 23.0 | 化ける | 上（単独で強い） |  | Sharer / SharerArmored |
 | 20 | 毒吐きのスィド | +7.72 | +15.82 | 残す | 4 | 0 | 18.0 | 化ける | 上（単独で強い） |  | Spew / VenomHeavy / Numb |
-| 21 | 突き返しのハネ | +8.88 | -3.59 | 転生 | 1 | 0 | 47.0 | 化ける | 左下（送り先を選べば働く） | 対照 0.0pt | Rebound / Overrun / Disarray / Blast / Spring / Tailwind / TailwindFighter |
+| 21 | 突き返しのハネ | +8.88 | -3.59 | 転生 | 1 | 0 | 47.0 | 化ける | 左下（送り先を選べば働く） | 対照 0.0pt | Rebound / Overrun / Disarray / Blast / Spring / Tailwind / TailwindFighter / SpringGuard / SpringStay |
 | 22 | 鱗のウロ | +9.12 | +4.52 | 残す | 3 | 1 | 13.0 | どこでも同じ | 上（単独で強い） |  | Scale |
 | 23 | 泥人形ムド | +9.30 | +16.35 | 残す | 8 | 1 | 19.0 | ノイズ | 上（単独で強い） |  | Erupt / Smear / Hex |
 | 24 | 焼け残りのボルグ | +9.39 | -4.51 | 転生 | 12 | 3 | 12.0 | どこでも同じ | 右下（選んでも働かない） | 0.0pt | Splash / Cinder |
@@ -53,8 +53,8 @@
 | 26 | 大喰らいゴルム | +10.09 | +8.03 | 残す | 24 | 5 | 23.0 | 化ける | 上（単独で強い） |  | Colossus / Drain |
 | 27 | 刻みのノミ | +10.69 | +12.05 | 残す | 6 | 2 | 18.0 | 化ける | 上（単独で強い） |  | Carve / Fixate |
 | 28 | 縛めのクグ | +11.04 | +5.91 | 残す | 3 | 1 | 24.0 | 化ける | 上（単独で強い） |  | Grapple |
-| 29 | 瘴気袋のグザ | +13.64 | +21.36 | 残す | 8 | 2 | 22.0 | 化ける | 上（単独で強い） |  | Miasma |
-| 30 | 喧噪のバサ | +13.92 | +34.83 | 残す | 3 | 0 | 40.0 | 化ける | 上（単独で強い） |  | Shuffler / Disarray / Squall / Gale / Tailwind / TailwindFighter |
+| 29 | 喧噪のバサ | +12.50 | +34.83 | 残す | 3 | 0 | 40.0 | 化ける | 上（単独で強い） |  | Shuffler / Disarray / Squall / Gale / Tailwind / TailwindFighter |
+| 30 | 瘴気袋のグザ | +13.64 | +21.36 | 残す | 8 | 2 | 22.0 | 化ける | 上（単独で強い） |  | Miasma |
 | 31 | 廃棄聖騎士ガルド | +16.37 | +15.59 | 残す | 35 | 1 | 12.0 | どこでも同じ | 上（単独で強い） |  | Guardian / Stoic / Parry / LastStandHold |
 | 32 | 棘鎧のカド | +17.68 | +32.59 | 残す | 10 | 4 | 31.0 | 化ける | 上（単独で強い） |  | ThornGuard / Thorns / Immobile / Havoc / ThornsArmored |
 | 33 | 毒喰らいのベニ | +20.06 | +2.11 | 残す | 2 | 0 | 11.0 | どこでも同じ | 上（単独で強い） |  | Inverse / Guren / Kindle / Taint / InverseLeak / GurenOpeningBurn |
@@ -84,4 +84,4 @@
 - `checkup ideal` が値を返した駒: 49 / 52 （返さないのは `CompareBuilds()` に在席 0 枠の駒だけ）
 - `stage catalog` が引けた駒: 49 / 52
 
-所要 238.9 秒（うち `stage catalog` が 222.1 秒）。
+所要 224.6 秒（うち `stage catalog` が 208.4 秒）。

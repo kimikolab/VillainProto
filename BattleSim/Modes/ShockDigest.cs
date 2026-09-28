@@ -203,6 +203,7 @@ static class ShockDigestDiag
             benches = benches.Select(b => (b.Item1, Common.OldGale(b.Item2))).ToArray();
         // 第232期 前段: セロ（移動の追撃）・シオ（退避5割）が規定で変わったので、全モードの台の規定のセロ・シオを第231期の姿へ戻す（上の固定の後に掛ける）。
         if (mode != "s232") benches = benches.Select(b => (b.Item1, Common.OldTune(b.Item2))).ToArray();
+        benches = benches.Select(b => (b.Item1, Common.OldSpring2(b.Item2))).ToArray();   // 第232期（S2 の規定化）: 全モードの規定のハネを第232期の S0 へ
         // 第230期 前段: 転倒の穴が既定になったので、それより前の期の台は穴なしで回す（w230 だけが今の既定）。
         ShufflerRule? digestRule = mode is "w230" or "a231" or "s232" ? null : ShufflerRule.PreHole;
         PropertyInfo[] props = typeof(BattleEvent).GetProperties(BindingFlags.Public | BindingFlags.Instance);
