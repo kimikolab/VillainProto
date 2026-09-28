@@ -295,6 +295,10 @@
 | `KillImpact` | 軋みのヨミ |
 | `ImpactTailwind` | 軋みのヨミ |
 | `DriftSurge` | 移り木のシオ |
+| `RetreatHalf` | - |
+| `RetreatHeavy` | - |
+| `SpringGuard` | - |
+| `EvadeMoveShot` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
