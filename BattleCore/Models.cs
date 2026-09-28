@@ -3550,6 +3550,26 @@ public sealed class BrittleLedger
 }
 
 /// <summary>
+/// 燃焼の繋ぎの発火見込み（第233期・<b>計数専用で、どの規則も読まない</b>）。盤面は変えずに、
+/// 「もし繋ぎがあれば発火していた局面」を数えるだけ。添字 <c>[ph]</c> は 0 ＝ ターン1〜3 ／ 1 ＝ ターン4以降。
+/// <para>「燃えている」＝ 燃焼の残りターン 1 以上（刻みで残りが 0 になってから倒れた駒も、その刻みの中なら燃えていたと数える）。</para>
+/// </summary>
+public sealed class BurnLinkLedger
+{
+    public static int PhaseOf(int turn) => turn <= 3 ? 0 : 1;
+
+    /// <summary>① 延焼: 倒れた敵の数・うち燃えていた数・そのとき隣に生きた敵がいた数・隣に燃えていない生きた敵がいた数・隣の燃えていない敵の和。</summary>
+    public readonly long[] FoeDeaths = new long[2], FoeBurnDeaths = new long[2], FoeBurnDeathNeighbor = new long[2],
+        FoeBurnDeathUnburntNeighbor = new long[2], FoeBurnDeathUnburntSum = new long[2];
+    /// <summary>② 火を運ぶ貫き: 燃えているホタ（`Pyre`）の貫きの回数・抜いた主目標以外の敵の数・そのうち燃えていなかった数。</summary>
+    public readonly long[] PyrePierces = new long[2], PyreExtraHits = new long[2], PyreExtraUnburnt = new long[2];
+    /// <summary>③ 火の受け渡し: 味方が敵を倒した数・うち倒した味方が燃えていた数・そのとき隣に燃えていない生きた味方がいた数・その味方の和。</summary>
+    public readonly long[] AllyKills = new long[2], AllyBurnKills = new long[2], AllyBurnKillUnburntNeighbor = new long[2], AllyBurnKillUnburntSum = new long[2];
+    /// <summary>贔屓（ヒヨ）の手番の数（`NoteFavor` を通った回数）。</summary>
+    public long FavorCalls;
+}
+
+/// <summary>
 /// 倒れた瞬間の在庫（毒の層・濃縮の印・隣の生きている駒）と、澱みの爆発（第220期・<c>MireBurst</c> 系の札）の帳簿。<b>計数専用で、どの規則も読まない。</b>
 /// <para>陣営の添字は <b>0 ＝ 敵 ／ 1 ＝ 味方</b>（倒れた駒・爆発を受けた駒の陣営）。</para>
 /// </summary>
@@ -4405,6 +4425,9 @@ public sealed class BattleResult
 
     /// <summary>倒れた瞬間の在庫と澱みの爆発の帳簿（第220期・<see cref="BurstLedger"/>）。<b>計数専用で、どの規則も読まない。</b></summary>
     public BurstLedger? Burst { get; init; }
+
+    /// <summary>燃焼の繋ぎの発火見込み（第233期・<see cref="BurnLinkLedger"/>）。<b>計数専用で、どの規則も読まない。</b></summary>
+    public BurnLinkLedger? BurnLink { get; init; }
 
     /// <summary>
     /// 第184期。標の軸（§1 被ダメージ増・§2 矢面の半減）の帳簿（<b>計数専用</b>。どの規則も読まない）。

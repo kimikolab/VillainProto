@@ -532,6 +532,7 @@ if (focusId == "gale") { GaleDiag.Run(args, stageIndex); return; }   // 第229�
 if (focusId == "cycle") { CycleDiag.Run(args, stageIndex); return; }   // 第230期
 if (focusId == "tune") { TuneDiag.Run(args, stageIndex); return; }   // 第231期
 if (focusId == "spring2") { Spring2Diag.Run(args, stageIndex); return; }   // 第232期
+if (focusId == "burnaudit") { BurnAuditDiag.Run(args, stageIndex); return; }   // 第233期
 if (focusId == "shock") { ShockDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 if (focusId == "shockdigest") { ShockDigestDiag.Run(args.Length > 2 ? args[2] : "k0", args.Length > 3 ? args[3] : ""); return; }
 // debuff モード（第189期） —— デバッファー3枚の転生（ネル・クビ・ハネ）。本体は `Modes/Debuff*.cs`。

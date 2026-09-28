@@ -713,9 +713,11 @@ public sealed class BattleContext
             if (left - 1 <= 0) CloseBurnEpisode(u, expired: true);
 
             int total = TickTotal(u);   // 表示専用
+            _inBurnTickNow = true;   // 第233期・**計数のみ**
             BurnTickOnce(u, left, bt, second: false, TickOrd(1, total));
             // 濃縮の印（第194期）。**残りターンの減算と区間の帳簿は上の1回だけ**で、刻みの本体を印の数だけもう1回ずつ。
             if (_markLive) RepeatTick(u, k => BurnTickOnce(u, left, bt, second: true, TickOrd(k, total)));
+            _inBurnTickNow = false;
             if (left - 1 <= 0 && u.RawCounter(GurenTrait.BurnKey) > 0) u.SetCounter(GurenTrait.BurnKey, 0);   // 第197期・**計数のみ**
         }
     }
@@ -2742,6 +2744,7 @@ public sealed class BattleContext
     internal void NoteFavor(int whetted, int dulled, int idle, int given, int taken)
     {
         if (whetted > 0 || dulled > 0) FavorFires++;
+        BurnLinkBook.FavorCalls++;   // 第233期・**計数のみ**
         FavorIdle += idle;
         FavorWhetted += whetted;
         FavorDulled += dulled;
@@ -3372,6 +3375,51 @@ public sealed class BattleContext
 
     /// <summary>倒れた瞬間の在庫と澱みの爆発の帳簿（第220期・<b>計数専用</b>）。</summary>
     public readonly BurstLedger BurstBook = new();
+
+    /// <summary>燃焼の繋ぎの発火見込み（第233期・<b>計数専用</b>）。</summary>
+    public readonly BurnLinkLedger BurnLinkBook = new();
+    /// <summary>燃焼の刻みの中か（第233期・<b>計数専用</b>。<see cref="NoteBurnLink"/> が「燃えていた」を数えるためだけに読む）。</summary>
+    bool _inBurnTickNow;
+
+    bool BurningForLink(UnitState u) => u.RawCounter(StatusKeys.Burn) > 0;
+
+    /// <summary>① 延焼 ／ ③ 火の受け渡しの見込み（第233期・<b>計数のみ</b>・乱数を引かない）。倒れた直後（`Death` を打つ前）に呼ぶ。</summary>
+    void NoteBurnLink(UnitState dead, UnitState? killer)
+    {
+        BurnLinkLedger b = BurnLinkBook;
+        int ph = BurnLinkLedger.PhaseOf(_turn);
+        if (dead.TeamId == EnemyTeam)
+        {
+            b.FoeDeaths[ph]++;
+            if (BurningForLink(dead) || _inBurnTickNow)
+            {
+                b.FoeBurnDeaths[ph]++;
+                int any = 0, unburnt = 0;
+                foreach (UnitState x in _units)
+                {
+                    if (x == dead || !x.IsAlive || x.TeamId != dead.TeamId || !FormationRules.AreAdjacent(dead, x)) continue;
+                    any++;
+                    if (!BurningForLink(x)) unburnt++;
+                }
+                if (any > 0) b.FoeBurnDeathNeighbor[ph]++;
+                if (unburnt > 0) b.FoeBurnDeathUnburntNeighbor[ph]++;
+                b.FoeBurnDeathUnburntSum[ph] += unburnt;
+            }
+            if (killer is not null && killer.TeamId == PlayerTeam)
+            {
+                b.AllyKills[ph]++;
+                if (BurningForLink(killer))
+                {
+                    b.AllyBurnKills[ph]++;
+                    int unburnt = 0;
+                    foreach (UnitState x in _units)
+                        if (x != killer && x.IsAlive && x.TeamId == killer.TeamId && FormationRules.AreAdjacent(killer, x) && !BurningForLink(x)) unburnt++;
+                    if (unburnt > 0) b.AllyBurnKillUnburntNeighbor[ph]++;
+                    b.AllyBurnKillUnburntSum[ph] += unburnt;
+                }
+            }
+        }
+    }
 
     /// <summary>燃焼の刻みそのものの札（第219期・<see cref="ApplyDamageBody"/> の頭で読んで消す）。</summary>
     bool _burnTickSelf;
@@ -8809,6 +8857,10 @@ public sealed class BattleContext
 
         int passed = 0;
         int primaryDealt = 0;
+        // 第233期・**計数のみ**（② 火を運ぶ貫きの見込み）: 燃えているホタの貫き。
+        bool pyreLink = actor.TeamId == PlayerTeam && actor.HasTrait(TraitId.Pyre) && BurningForLink(actor);
+        int linkPh = BurnLinkLedger.PhaseOf(_turn);
+        if (pyreLink) BurnLinkBook.PyrePierces[linkPh]++;
 
         // 範囲の盾（第185期）。貫きは同じレーンに並んだ全員に当たるので、盾がこの列にいれば「同時に当たる」。
         UnitState? shield = null;
@@ -8835,6 +8887,11 @@ public sealed class BattleContext
                 ScaleBackDamage += dmg;
             }
 
+            if (pyreLink && u != entry)   // 第233期・**計数のみ**
+            {
+                BurnLinkBook.PyreExtraHits[linkPh]++;
+                if (!BurningForLink(u)) BurnLinkBook.PyreExtraUnburnt[linkPh]++;
+            }
             int got = dmg;
             UnitState recv = shield is null ? u : ShieldRecv(shield, u, ref got);
             ApplyDamage(recv, got, actor, pattern: AttackPattern.Pierce);
@@ -10288,6 +10345,7 @@ public sealed class BattleContext
     private void HandleDeath(UnitState dead, UnitState? killer)
     {
         dead.Hp = 0;
+        NoteBurnLink(dead, killer);   // 第233期・**計数のみ**（燃焼の繋ぎの見込み）
         if (_evadeLive && dead.HasTrait(TraitId.Evade))   // 第223期・**計数のみ**（倒れた一撃の種類）
         {
             UnitTally et = TallyOf(dead);
@@ -11816,6 +11874,7 @@ public static class BattleEngine
             // 第134期 段1・段2。**計数専用**（どの規則も読まない）。
             Brittle = ctx.BrittleBook,   // 第219期（計数のみ）
             Burst = ctx.BurstBook,       // 第220期（計数のみ）
+            BurnLink = ctx.BurnLinkBook, // 第233期（計数のみ）
             Burns = new BurnLedger(
                 (long[])ctx.BurnLitSide.Clone(), (long[])ctx.BurnRelitSide.Clone(),
                 (long[])ctx.BurnEpisodes.Clone(), (long[])ctx.BurnRelitSum.Clone(),
