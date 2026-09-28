@@ -46,7 +46,7 @@ public static void Run(string[] args, int stageIndex)
     var enStages = EnemyCatalog.Stages;
     var enCompare = CompareBuilds();
     var enCross = CrossBuilds();
-    var enRoster = UnitCatalog.All.ToArray();
+    var enRoster = UnitCatalog.Everyone.ToArray();   // 第233期: キリは第179期に Retired へ（R159・第141期と同じ直し）
     int enRN = enRoster.Length;
     var enIdx = new Dictionary<string, int>();
     for (int u = 0; u < enRN; u++) enIdx[enRoster[u].Id] = u;

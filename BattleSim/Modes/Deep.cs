@@ -33,7 +33,7 @@ public static void Run(string[] args, int stageIndex)
 
     IReadOnlyList<EnemyCatalog.Stage> dpStages = EnemyCatalog.Stages;
     int dpW = dpStages.Count;
-    var dpRoster = UnitCatalog.All.ToArray();
+    var dpRoster = UnitCatalog.Everyone.ToArray();   // 第233期: キリは第179期に Retired へ（R159・第141期と同じ直し）
     int dpRN = dpRoster.Length;                       // 51
 
     // ---- 第81期 `pairs2` の定数の写し（**1つも変えていない**）----------------------------------

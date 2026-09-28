@@ -184,8 +184,12 @@ static class SweepDiag
         return list;
     }
 
-    static string[] Tokens(string s) => s.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                                          .Select(t => t.Trim('\r')).Where(t => t.Length > 0).ToArray();
+    /// <summary>空白で割る。**`"..."` は1つのトークン**（引用符ごと残し、子へ渡すときに <see cref="Unquote"/> で外す）。
+    /// 第232期までは引用符を字のまま子へ渡していたので、`whip log "W1 X字 …"` の第1語が `"W1` になって落ちていた。</summary>
+    static string[] Tokens(string s) => Regex.Matches(s, "\"[^\"]*\"|[^ \t\"]+").Select(m => m.Value.Trim('\r'))
+                                          .Where(t => t.Length > 0).ToArray();
+
+    static string Unquote(string t) => t.Length >= 2 && t[0] == '"' && t[^1] == '"' ? t[1..^1] : t;
 
     static (double Sec, int Exit, string Tail) RunOne(string dll, string root, string cmd, int limitSec)
     {
@@ -197,7 +201,7 @@ static class SweepDiag
             UseShellExecute = false,
         };
         psi.ArgumentList.Add(dll);
-        foreach (string t in Tokens(cmd)) psi.ArgumentList.Add(t);
+        foreach (string t in Tokens(cmd)) psi.ArgumentList.Add(Unquote(t));
 
         var err = new StringBuilder();
         var sw = Stopwatch.StartNew();

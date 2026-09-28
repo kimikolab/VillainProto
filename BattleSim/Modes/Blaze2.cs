@@ -35,7 +35,7 @@ public static void Run(string[] args, int stageIndex)
 
     IReadOnlyList<EnemyCatalog.Stage> bzStages = EnemyCatalog.Stages;
     int bzW = bzStages.Count;
-    var bzRoster = UnitCatalog.All.ToArray();
+    var bzRoster = UnitCatalog.Everyone.ToArray();   // 第233期: キリは第179期に Retired へ（R159・第141期と同じ直し）
     int bzRN = bzRoster.Length;                       // 51
 
     // ---- 第81期 `pairs2` の定数の写し（**1つも変えていない**）----------------------------------
