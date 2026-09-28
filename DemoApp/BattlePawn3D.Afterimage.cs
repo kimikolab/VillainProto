@@ -4,7 +4,7 @@ using Godot;
 public partial class BattlePawn3D
 {
     /// <summary>本体の透過処理を共有する青い残像。判定・本体の移動には触れない。</summary>
-    public void BeginBonusAfterimage(Color color, double duration, bool interrupted)
+    public void BeginBonusAfterimage(Color color, double duration, bool interrupted, float opacity = 1)
     {
         var root = new Node3D();
         AddChild(root);
@@ -64,7 +64,7 @@ public partial class BattlePawn3D
                 ghosts[i].Position = _sprite.Position + new Vector3(forward * offset, 0, -0.045f - i * 0.015f);
                 float alpha = (i == 0 ? 0.75f : 0.36f / i) * rise
                     * (interrupted ? 1 - dissolve : 1 - Mathf.SmoothStep(0.55f, 1, t));
-                materials[i].SetShaderParameter("portrait_tint", new Color(color, alpha));
+                materials[i].SetShaderParameter("portrait_tint", new Color(color, alpha * opacity));
             }
             if (!interrupted) return;
             float scatter = Mathf.Clamp((t - 0.45f) / 0.55f, 0, 1);

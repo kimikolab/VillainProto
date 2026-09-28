@@ -1,0 +1,19 @@
+# ハネ・空中ヒップアタック生成プロンプト（2026-09-29）
+
+この案は下半身の構造に問題があるとの指摘で不採用。既存差分を参照せず、通常立ち絵と技の参考画像から作り直す。
+
+## 敵を見据えた空中ヒップアタック・初回プロンプト
+
+ユーザー添付のデイジーの技画像2枚をポーズ・動勢だけの参考とし、ハネの通常立ち絵から衣装・顔・塗りを保持。内蔵image_genを使用。
+
+Use case: stylized-concept. Create a transparent full-body fantasy game battle sprite.
+REFERENCE ROLES: Image 1 is Hane's identity, costume, proportions and painted anime rendering style. Images 2 and 3 are POSE AND ACTION references ONLY: Daisy's airborne hip attack. Apply that unmistakable airborne hip-first attack silhouette to Hane, not Daisy's appearance.
+Hane is the SAME adult silver-haired rabbit woman in image 1. She is jumping forcefully toward SCREEN RIGHT, her clothed buttocks leading the impact while looking intently at the enemy to her RIGHT. Three-quarter view, face clearly visible turned RIGHT, determined eyes. Her pelvis is thrust far RIGHT, shoulders and head remain LEFT of her hips, torso tilted diagonally left. Her back/rear pelvis faces the impact direction with a natural moderate torso turn allowing her to look at her target. Both legs are AIRBORNE, knees bent and both heavy boots tucked back toward LOWER LEFT, clearly off the ground. Compact dynamic sideways leap, NOT a standing or crouching stance, NOT a kick. Her rightmost contact silhouette is the rear of her shorts, never her feet or fists.
+Arms open naturally for balance like the action reference, each shoulder visibly connected to upper arm, each elbow naturally bent; arms stay above/left of the pelvis. Exactly two arms and hands, no arm looping behind the back, no dislocated shoulder or twisted spine. Strong clear full-body action silhouette at small game size.
+Preserve Hane's silver-gray ponytail and white rabbit ears with pink inner fur, amber eyes, rust-red short fur-trimmed jacket, white shirt, dark opaque brown leather shorts and belts/pouch, leather bracers, fur-trimmed brown boots and long red waist cloth. Hair and waist cloth trail to LEFT. Normal athletic proportions, no enlarged body parts. Preserve the original costume; no dress, crown or Daisy accessories.
+Entire figure ears and boots visible with small clear margins. Use a square canvas to accommodate the airborne diagonal pose. Detailed anime fantasy linework and shading matching image 1. Genuine transparent background with alpha. Single character only, no enemy, scenery, floor, shadow, glow, flowers, motion effects, lettering or watermark. Neutral full-body action-game framing.
+
+## 腰と脚の接続・接触部位の修正プロンプト（不採用）
+
+Edit this airborne Hane hip-attack sprite. Keep the face looking RIGHT, both natural arms spread for balance, character identity, original jacket/shirt/shorts/bracers/boots costume, detailed painted anime art, and transparent background.
+Correct ONLY the pelvis and legs so the actual rear of the SHORTS-COVERED BUTTOCKS strikes to the RIGHT. Currently a large bare upper thigh bulges farthest RIGHT beyond the shorts; this makes the wrong body part lead. Restructure the lower body: the rightmost contour at hip height must be the rounded BACK of the dark opaque leather SHORTS, covering the entire buttocks. Both legs emerge from the shorts openings toward LOWER LEFT, with both knees tucked LEFT of the rear pelvis and both boots trailing LEFT. No bare buttock or bare upper thigh projecting to the right. Compact athletic airborne body check, normal human hip and thigh size, not oversized. Pelvis/back angles toward RIGHT while chest angles toward camera and head watches target at RIGHT, with natural moderate twist. Readable two legs connected at hips, knees and boots. Keep the dramatic diagonal upper-body pose and natural shoulder connections intact. Keep hands above contact height and whole body including ears and boots in frame. Remove stray colored fringe specks around silhouette; clean transparent edges. No effects, floor, background, enemy, text, shadow or glow. Neutral full-body action-game sprite.

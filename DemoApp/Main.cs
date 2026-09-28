@@ -1180,6 +1180,7 @@ public partial class Main : Control
     {
         if (_result is null) return;
         _finishSoundIndex = FinishSoundCue.Find(_result.PlayerWon, _battleOpening, _result.Events);
+        _movement = new MovementPresentation(_result.Events);
         int token = ++_playToken;
         _comboEnds.Clear();
         _hexMarksShown = _hexSharePlays = _hexShareHits = 0;
@@ -1314,6 +1315,7 @@ public partial class Main : Control
         // 第125期 段2: 拍の境目でだけ画面を変える。**ここでは待たない**（間は下の switch の中だけ）。
         EnterBeat(eventIndex, e);
         _tickDelayBudget = _ticks.Budgets.TryGetValue(eventIndex, out double tickBudget) ? tickBudget : null;
+        if (await PlayMovement(e, eventIndex, actor, target)) return;
         if (await PlayThunder(e, eventIndex, actor, target)) return;
         if (await PlayMire(e, eventIndex, actor, target)) return;
         if (await PlayPlank(e, eventIndex, actor, target)) return;
@@ -1379,7 +1381,10 @@ public partial class Main : Control
                 var shieldShares = FindShieldShares(eventIndex);
                 // 溜めの解放は踏み込み後の着弾で行う。手番外の攻撃では消費しない。
                 bool continuingCombo = actor is not null && _comboEnds.ContainsKey(actor);
-                if (e.Reaction && !continuingCombo)
+                _movement.Attacks.TryGetValue(eventIndex, out var movementCue);
+                bool flowingAttack = movementCue is not null || actor?.UnitId == "sero"
+                    || actor?.UnitId == "basa" && e.Pattern == AttackPattern.Sweep;
+                if (e.Reaction && !continuingCombo && !flowingAttack)
                     await _battleField.ShowBonusAttack(actor);
                 // 責め苦も位置保持だけを共用する。Attackの回数・連撃の計数は増やさない。
                 int? holdEnd = FindComboEnd(eventIndex, e)
@@ -1399,7 +1404,9 @@ public partial class Main : Control
                     },
                     whipImpact: pawn => {
                         if (attackToken == _playToken) ApplyThrustDamage(eventIndex, e, pawn);
-                    });
+                    }, movementCue: movementCue, arrowStates: _movement.ArrowStates.GetValueOrDefault(eventIndex),
+                    attackPower: e.Amount, blastDestination: movementCue?.TargetId == target?.InstanceId
+                        ? _movement.BlastDestinations.GetValueOrDefault(eventIndex) : null);
                 if (attackToken != _playToken || !_battleMode) return;
                 // 第178期 自己検査 (e)。**計数だけ**（上の1行が「1発ぶんの絵と音」なので、ここで数える）。
                 _attackPlays++;
@@ -1409,8 +1416,8 @@ public partial class Main : Control
                 AppendLog($"[color=#{(actor?.Team == 0 ? UiKit.Player : UiKit.Enemy).ToHtml(false)}]{NameOf(e.ActorId)}[/color] → {NameOf(e.TargetId)}  [color=#a9b3a8]{UiKit.PatternLabel(e.Pattern ?? AttackPattern.Single)} {e.Amount}[/color]");
                 // 第125期 段2: 手番の外の一撃（棘・仇討ち・軋み）は**流れを一度止める**。
                 // **手番の中は詰めてある**（0.16 → 0.14）ので、合計はほぼ動かない（§5-2）。
-                if (e.Reaction && !continuingCombo && !IsMudoCombo(actor)) await Delay(0.24);
-                await Delay(IsMudoCombo(actor) ? 0.08 : 0.14);
+                if (e.Reaction && !continuingCombo && !IsMudoCombo(actor) && !flowingAttack && actor?.UnitId != "yomi") await Delay(0.24);
+                await Delay(actor?.UnitId == "yomi" ? 0.045 : flowingAttack ? 0.045 : IsMudoCombo(actor) ? 0.08 : 0.14);
 
                 // 第124期 3-a: 「薙ぎやゾトの全体攻撃は一斉に入ったほうが爽快感ある」への直答。
                 // **範囲の巻き込みだけを同時着弾にする。単体は現状のまま**
@@ -1602,24 +1609,6 @@ public partial class Main : Control
                 }
                 AppendLog($"  [color=#{UiKit.Hurt.ToHtml(false)}][b]{NameOf(e.TargetId)} 撃破[/b][/color]");
                 if (!InLiliRite(eventIndex)) await Delay(MireFollowsDeath(eventIndex, e.TargetId) ? 0.06 : 0.36);
-                break;
-
-            case BattleEventKind.Move:
-                if (target is not null)
-                {
-                    _battleField.MovePawn(target, e.Slot);
-                    // 第124期 3-h / §5-3。**書き手が居ない移動には線を引かない**
-                    // ——それは書き手ではないので、線を引くと嘘になる。札だけを別色で出す。
-                    if (e.ActorId is null)
-                        _battleField.Orphan(target, "移動（原因不明）", UiKit.Faint);
-                    else if (e.ActorId == e.TargetId)
-                        _battleField.Link(actor, null, UiKit.Player, "自分で動いた");
-                    else
-                        _battleField.Link(actor, target, UiKit.Violet, "動かした");
-                }
-                AppendLog($"  {NameOf(e.TargetId)} → {FormationRules.SeatNames[Math.Clamp(e.Slot, 0, FormationRules.TotalSlots - 1)]}"
-                          + $"{WriterSuffix(e.ActorId, e.TargetId)}");
-                await Delay(0.28);
                 break;
 
             case BattleEventKind.Summon:

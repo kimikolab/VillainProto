@@ -462,13 +462,13 @@ public static class UnitCatalog
         MaxHp = 92,
         Attack = 6,
         Speed = 5,
-        Advances = false,
+        Advances = true, // 表示専用。居合の主目標へ踏み込む。
         // 第223期 前段: 第222期の V3 を規定にした（ポンの判断）——現在の攻撃力 30 以上で単体 → 薙ぎ（`CreakSweep`）。
         // 旧（`Displaced` だけ）は診断 `drift` の `DriftDiag.YomiV0` に残す。
         // 第230期の追記（ポンの判断）: 第230期 W4——撃破の衝撃（`KillImpact`）と、その吹き飛ばしでも追い風が起きる（`ImpactTailwind`）。旧は <see cref="YomiW0"/>。
         Traits = new[] { TraitId.Displaced, TraitId.CreakSweep, TraitId.KillImpact, TraitId.ImpactTailwind },
-        PlusText = "隊列を動かされるたび攻撃力が上がり、その場で割り込んで攻撃する。前へ突き出されると上昇が特に大きい。攻撃力が 30 以上になると、攻撃が横に薙ぐ。敵を倒すと、その勢いで後ろの敵を吹き飛ばして転ばせる。後ろに敵がいなければ、勢い余って隣の味方と入れ替わる（1ターン2回）",
-        MinusText = "自分から動くことはない（勢いで転がされるだけ）。誰も乱してくれなければ置物",
+        PlusText = "隊列を動かされるたび攻撃力が上がり、割り込んで攻撃する。前へ突き出されると上昇が特に大きい。攻撃力が 30 以上になると、攻撃が横に薙ぐ。敵を倒すと、その勢いで後ろの敵を吹き飛ばして転ばせる。後ろに敵がいなければ、勢い余って隣の味方と入れ替わる（1ターン2回）",
+        MinusText = "自分から隊列を動かすことはない（勢いで転がされるだけ）。誰も乱してくれなければ置物",
         Flavor = "どこに置いても文句を言わない。だから誰も気に留めなかった。"
     };
 
@@ -1433,8 +1433,8 @@ public static class UnitCatalog
         Attack = 11,
         Speed = 8,
         // 第189期: 転生（バネ）。旧 `Shove`（効果A＋隣のよろけ）を、手番の突き返し＋効果A（`Rebound`）と
-        // 代金の入れ替え（`Overrun`）に置き換えた。**攻撃は捨てる**ので踏み込みの札は据置（第131期 (a)）。
-        Advances = false,
+        // 代金の入れ替え（`Overrun`）に置き換えた。現在は吹っ飛ばしの貫きに合わせて踏み込む。
+        Advances = true, // 表示専用。吹っ飛ばしの主目標へ踏み込む。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "突き返す") },
         // 第227期 前段（ポンの判断）: 敵の乱れ（`Disarray`・段2 から前列の2体を突き返す）を規定に。旧は <see cref="HaneK0"/>。
         // 第229期 前段（ポンの判断）: 第228期 H3（吹っ飛ばし `Blast` ＋ 弾き返し `Spring`）を規定に。段2 の2体の突き返しは吹っ飛ばしに置き換わる（1回のまま）。
@@ -1457,8 +1457,8 @@ public static class UnitCatalog
         Attack = 11,
         Speed = 8,
         // 第189期: 転生（バネ）。旧 `Shove`（効果A＋隣のよろけ）を、手番の突き返し＋効果A（`Rebound`）と
-        // 代金の入れ替え（`Overrun`）に置き換えた。**攻撃は捨てる**ので踏み込みの札は据置（第131期 (a)）。
-        Advances = false,
+        // 代金の入れ替え（`Overrun`）に置き換えた。現在は吹っ飛ばしの貫きに合わせて踏み込む。
+        Advances = true, // 表示専用。吹っ飛ばしの主目標へ踏み込む。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "突き返す") },
         // 第227期 前段（ポンの判断）: 敵の乱れ（`Disarray`・段2 から前列の2体を突き返す）を規定に。旧は <see cref="HaneK0"/>。
         // 第229期 前段（ポンの判断）: 第228期 H3（吹っ飛ばし `Blast` ＋ 弾き返し `Spring`）を規定に。段2 の2体の突き返しは吹っ飛ばしに置き換わる（1回のまま）。

@@ -281,6 +281,9 @@ public partial class BattlefieldView3D : Control
 
     public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName, int stageIndex)
     {
+        ResetMovement();
+        YomiIaiPlays = YomiIaiExtraPlays = 0;
+        YomiSweepPlays = HaneBlastPlays = HanePinPlays = 0;
         ResetLiliRite();
         LiliRites = LiliRiteStrikes = LiliRiteReleases = LiliRiteFinishes = 0;
         _inverseHolders.Clear();
@@ -585,9 +588,14 @@ public partial class BattlefieldView3D : Control
         int? thrustCharge = null,
         Action<BattlePawn3D>? thrustImpact = null,
         int numbPercent = 0,
-        Action<BattlePawn3D>? whipImpact = null)
+        Action<BattlePawn3D>? whipImpact = null,
+        BattleEvent? movementCue = null,
+        string? arrowStates = null,
+        int? attackPower = null,
+        int? blastDestination = null)
     {
         if (from is null || to is null) return;
+        int attackGeneration = _specialGeneration;
         Color color = friendly ? UiKit.Violet : reaction ? UiKit.Gold : from.Team == BattleContext.PlayerTeam ? UiKit.Player : UiKit.Enemy;
         List<BattlePawn3D> hits = impacted.Distinct().ToList();
         if (hits.Count == 0) hits.Add(to);
@@ -595,18 +603,28 @@ public partial class BattlefieldView3D : Control
 
         // Advances は表示専用。踏み込む駒だけが標的の手前まで移動し、
         // 到着後に攻撃エフェクトを出してから元の席へ戻る。
-        if (advance) await from.AdvanceToAttack(to.RestPosition);
+        if (advance && from.UnitId != "sero") await from.AdvanceToAttack(to.RestPosition);
+        if (attackGeneration != _specialGeneration || !IsInstanceValid(from) || !IsInstanceValid(to)) return;
         if (holdPosition) from.HoldComboPosition();
         if (numbPercent > 0)
         {
             NumbSwings++;
             await from.NumbWindup(numbPercent);
-            if (!IsInstanceValid(from) || !from.IsInsideTree()) return;
+            if (attackGeneration != _specialGeneration || !IsInstanceValid(from) || !from.IsInsideTree()) return;
             for (int k = 0; k < 4; k++)
                 SpecialsFx.Travel(_fxRoot, from.FxPoint + Vector3.Right * (k - 1.5f) * 0.18f,
                     from.FxPoint + Vector3.Up * -0.4f, new Color("a969cf"), 0.22 / from.AnimationSpeed,
                     kind: 2, arc: 0, size: 0.6f + numbPercent / 60f);
             color = color.Lerp(new Color("804398"), numbPercent / 60f);
+        }
+        if (from.UnitId == "yomi")
+        {
+            // 一瞬だけ鞘へ重心を落とす。抜刀音・剣閃・差分はこの溜めのあとに揃える。
+            from.MovementPose(-0.16f, 0.12f);
+            await ToSignal(GetTree().CreateTimer((reaction ? 0.045 : 0.075) / Math.Max(0.1, from.AnimationSpeed)), SceneTreeTimer.SignalName.Timeout);
+            if (attackGeneration != _specialGeneration || !IsInstanceValid(from) || !IsInstanceValid(to)
+                || !from.IsInsideTree() || from.Hp <= 0) return;
+            ShowYomiIai(from, hits, pattern, reaction, attackPower ?? from.AttackValue);
         }
         bool charged = !reaction && from.IsCharging;
         if (!reaction) from.ReleaseCharge();
@@ -615,15 +633,19 @@ public partial class BattlefieldView3D : Control
         if (!stagedThrust)
         {
             if (thrustCharge is int soundCharge) _attackAudio.PlayThrust(from.UnitId, from.Team, soundCharge);
-            else _attackAudio.PlayAttack(from.UnitId, from.Team, pattern, reaction, charged);
+            else if (movementCue?.Kind != BattleEventKind.Blast || shieldImpact is not null)
+                _attackAudio.PlayAttack(from.UnitId, from.Team, pattern, reaction, charged,
+                    barrage: movementCue?.Kind == BattleEventKind.Barrage);
             CameraPunch((from.GlobalPosition + to.GlobalPosition) * 0.5f, pattern);
         }
 
         if (thrustCharge is not null && (shieldImpact is not null || pattern != AttackPattern.Pierce))
             from.SetThrustCharge(0);
         if (shieldImpact is not null) await shieldImpact();
+        else if (from.UnitId == "yomi") { } // 居合の剣閃は上で1回だけ出す。
         else if (thrustCharge is int stacks && pattern == AttackPattern.Pierce)
             await ShowThrust(from, hits, stacks, thrustImpact);
+        else if (await MovementAttack(from, to, hits, pattern, movementCue, arrowStates, blastDestination)) { }
         else if (from.SwordDrawn) ShowSwordSlash(from, hits, from.AnimationSpeed, playSound: false);
         else switch (pattern)
         {

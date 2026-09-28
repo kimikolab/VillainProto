@@ -14,6 +14,10 @@ public partial class SeroPortraitCheck : Node
             main.Call("ClearFormation");
             string[] keys = { "sero", "yomi", "basa", "shio", "hane" };
             for (int i = 0; i < keys.Length; i++) main.Call("DropUnit", i, keys[i]);
+            // 移動軸は初撃で第一波を倒せる。差分の検査中に勝利絵へ移らない検証用の倍率。
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            ((SpinBox)typeof(Main).GetField("_enemyHp", flags)!.GetValue(main)!).GetLineEdit().Text = "400";
+            ((SpinBox)typeof(Main).GetField("_enemyAttack", flags)!.GetValue(main)!).GetLineEdit().Text = "50";
             main.Call("SetSpeed", 1);
             main.Call("StartBattle");
             var pawn = FindChildren("*", "", true, false).OfType<BattlePawn3D>().Single(p => p.UnitId == "sero");

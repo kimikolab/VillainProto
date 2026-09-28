@@ -77,6 +77,7 @@ public partial class BattlePawn3D : Node3D
     private Tween BeginMotion()
     {
         _motion?.Kill();
+        ClearWindCarry();
         return _motion = CreateTween();
     }
 
@@ -241,6 +242,12 @@ void fragment() {
         AddChild(_poison);
 
         Texture2D portrait = UiKit.BattlePortrait(atlas, opening.UnitId);
+        // 弾き返しの途中で初回PNGの復号が入らないよう、開戦時に差分も読み込む。
+        if (opening.UnitId == "hane")
+        {
+            _ = UiKit.BattlePortrait(atlas, "hane_dropkick");
+            _ = UiKit.BattlePortrait(atlas, "hane_palm");
+        }
         bool hasCustomPortrait = UiKit.HasCustomBattlePortrait(opening.UnitId)
             || UiKit.HasCustomPortrait(opening.UnitId);
         _portraitHeight = UiKit.PortraitWorldHeight(opening.UnitId);
@@ -519,6 +526,7 @@ void fragment() {
 
     public void AnimateDeath()
     {
+        ClearMovementPortrait();
         if (!_alive) return;
         ResetBowPortrait();
         SetThrustCharge(0);
@@ -569,6 +577,7 @@ void fragment() {
 
     public void AnimateRevive()
     {
+        ClearMovementPortrait();
         ResetBowPortrait();
         QuietLastStand = false;
         SetThrustCharge(0);
@@ -612,6 +621,7 @@ void fragment() {
     public void AnimateVictory()
     {
         if (!_alive || Team != BattleContext.PlayerTeam) return;
+        ClearMovementPortrait();
         ResetBowPortrait();
         ClearSpecialEffects();
         SetThrustCharge(0);
@@ -703,13 +713,25 @@ void fragment() {
         UpdatePlank(animationDelta);
         float shadowSpread = fall * 0.28f;
         ProcessShieldCowed(animationDelta);
+        ProcessMovementPose(animationDelta);
+        ProcessBlastPose();
+        ProcessBasaFlight(animationDelta);
+        ProcessWindCarry();
+        ProcessDropkickPose();
+        ProcessPalmStrikePose();
         _shadow.Scale = new Vector3(1.0f - breath * 0.10f + shadowSpread, 1, 1.0f - breath * 0.10f - shadowSpread * 0.35f);
         _ring.Rotation = new Vector3(0, _phase * 0.15f, 0);
     }
 
     private void ResetStaggerPose()
     {
+        _movementPoseTime = 0;
+        _basaFlightTime = 0;
+        ClearWindCarry();
+        ClearBlastPose();
         ResetShieldCowed();
+        ClearDropkickPose();
+        ClearPalmStrikePose();
         _staggered = false;
         _staggerPose = 0;
         _staggerRecoverDelay = 0;

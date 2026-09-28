@@ -68,6 +68,17 @@ public partial class BattlePawn3D
             key = "shiga_frightened";
             padding = 0.02083f;
         }
+        if (_movementPortrait is { } movement && _alive)
+        {
+            key = movement;
+            padding = UiKit.BattlePortraitBottomPaddingRatio(key);
+            // 横に踏み込む追加居合は1254角。1536高の待機絵と画素あたりの体格を揃える。
+            if (key == "yomi_iai_extra") height *= 1254f / 1536f;
+            if (key == "basa_flap") height *= 0.90f;
+            if (key == "hane_dropkick") height *= 1024f / 1536f;
+            // 低い踏み込みは1024高。待機絵と画素あたりの体格を揃える。
+            if (key == "hane_palm") height *= 1024f / 1536f;
+        }
         Texture2D portrait = UiKit.BattlePortrait(_atlas, key, _burning);
         _portraitGroundDistance = height * (0.5f - padding);
         _portraitBaseY = PortraitGroundY + _portraitGroundDistance;
@@ -88,6 +99,7 @@ public partial class BattlePawn3D
     public void AnimateBowAttack()
     {
         if (_unitId != "sero" || !_alive || _victory) return;
+        ClearMovementPortrait();
         _bowPortraitTween?.Kill();
         _bowDrawn = true;
         RefreshBattlePortrait();

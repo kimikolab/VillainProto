@@ -144,6 +144,7 @@ public partial class BattleAttackAudio : Node
         foreach (string path in AttackDown) LoadSound(path);
         LoadSound(YomiBonus[0]);
         LoadSound(YomiAttack[0]);
+        foreach (string path in MovementPaths.Values) LoadSound(path);
         foreach (string path in UtsuAttack) LoadSound(path);
         foreach (string path in MudoAttack) LoadSound(path);
         foreach (string path in ShigaAttack) LoadSound(path);
@@ -195,7 +196,7 @@ public partial class BattleAttackAudio : Node
         return stream;
     }
 
-    public void PlayAttack(string unitId, int team, AttackPattern pattern, bool reaction, bool charged)
+    public void PlayAttack(string unitId, int team, AttackPattern pattern, bool reaction, bool charged, bool barrage = false)
     {
         if (charged && TryChargeSound(unitId, release: true, out string[] charge))
         {
@@ -204,6 +205,14 @@ public partial class BattleAttackAudio : Node
         }
         if (reaction && unitId == "yomi") { PlayVariation(YomiBonus); return; }
         if (!reaction && unitId == "yomi") { PlayVariation(YomiAttack); return; }
+        if (unitId == "sero")
+        {
+            PlayMovementSound(pattern == AttackPattern.Pierce ? MovementSound.SeroPierce
+                : barrage ? MovementSound.SeroBarrage : MovementSound.Bow);
+            return;
+        }
+        if (unitId == "basa") { PlayMovementSound(MovementSound.BasaSweep); return; }
+        if (unitId == "hane") { PlayMovementSound(MovementSound.Collision); return; }
         if (unitId == "utsu") { PlayVariation(UtsuAttack); return; }
         if (unitId == "mudo") { PlayVariation(MudoAttack, 3); return; }
         if (unitId == "shiga") { PlayVariation(ShigaAttack); return; }
@@ -364,6 +373,7 @@ public partial class BattleAttackAudio : Node
 
     public void StopAll()
     {
+        ResetMovementSounds();
         StopMireSounds();
         StopPlankAccents();
         foreach (var voice in _voices) voice.Stop();

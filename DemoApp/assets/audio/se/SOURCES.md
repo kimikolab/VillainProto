@@ -207,3 +207,35 @@
 
 残量の写し・解除・転倒の手番喪失・混乱の攻撃時には付与音を鳴らさない。
 燃焼・毒のダメージ音は既存の状態効果とダメージの対応表を使い、正のダメージにのみ鳴らす。
+
+## 移動編成のSE
+
+ユーザー指定の `D:/Assets/SE/効果音ラボ/戦闘` から無加工でコピー（Springin・Helton Yanは下表のフルパス）。元ファイルとSHA-256の一致を確認。
+
+| アプリ内ファイル | 元ファイル | タイミング | 通常時の音量 |
+|---|---|---|---|
+| sero_bow.mp3 | 弓矢を放つ.mp3 | セロの通常単体矢・回避からの単体撃ち返し | -10 dB |
+| sero_pierce.wav | D:/Assets/SE/Helton Yan's Pixel Combat - Single Files/DSGNTonl_SKILL IMPACT-Retro Laser 1_HY_PC-006.wav | セロの貫通矢の発射 | -10 dB |
+| sero_barrage.wav | D:/Assets/SE/Helton Yan's Pixel Combat - Single Files/DSGNMisc_PROJECTILE-Laser Shot_HY_PC-006.wav | セロの乱れ撃ち、1本ごとの発射 | -14 dB |
+| shio_vine_pull.mp3 | 鞭を振り回す2.mp3 | シオの退避・立て直しの蔓 | -12 dB |
+| basa_wind.mp3 | 風魔法1.mp3 | 専用演出に結び付かないバサ由来の隊列移動（予備） | -15 dB |
+| basa_tornado.mp3 | D:/Assets/SE/Springin/強風1.mp3 | 隊列入れ替えの羽ばたき・竜巻発生時、両陣地で1回 | -15 dB |
+| basa_sweep.mp3 | D:/Assets/SE/Springin/強風3.mp3 | バサの攻撃開始（通常の薙ぎ・追加の突風） | -12 dB |
+| basa_tailwind.mp3 | D:/Assets/SE/Springin/強風2.mp3 | 追い風の発動時 | -14 dB |
+| hane_smash_ice.mp3 | 氷魔法1.mp3 | 手番の敵射出（大キックに重ねる）・吹っ飛ばしの巻き込み衝突 | 主 -9 dB / 巻き込み -16 dB |
+| hane_dropkick.mp3 | 大キック.mp3 | 手番の吹っ飛ばしでドロップキックが接触した瞬間 | -10 dB |
+| hane_spring_block.mp3 | パンチを受け止める.mp3 | 被弾からの弾き返し | -12 dB |
+| movement_land.mp3 | 倒れる.mp3 | 吹っ飛ばし・弾き返し・ピンの着地 | 主 -14 dB / ピン -17 dB |
+| yomi_sheathe.mp3 | 刀を鞘にしまう1.mp3 | ヨミの通常・追加攻撃の差分が終了したとき | -13 dB |
+| sero_arrow_hit.mp3 | 弓矢が刺さる.mp3 | セロの矢の飛行終了時、1射につき1回 | -12 dB |
+| sero_evade.mp3 | 逃走.mp3 | 通常回避・必死の回避。必死の回避直後のEvade通知とは重ねない | -12 dB |
+| hane_windup.mp3 | D:/Assets/SE/Springin/高速移動.mp3 | ハネの吹っ飛ばしの射出直前 | -13 dB |
+
+以前の `hane_smash_hit.mp3`（重いキック1.mp3）は比較・差し戻し用に残し、現在は再生しない。
+
+通常SEの4音枠と溜め中の音量抑制を共用し、原音ピッチで再生。
+予備の風と追い風は各140ms・蔓70ms・巻き込み衝突65ms・ピン着地80ms以内の密集を間引く。竜巻・薙ぎ・追い風は独立した再生判定で、直前の別の風に抑止されない。弓・薙ぎ・主衝突・主目標の着地は省略しない。
+着地は描画アニメーション完了時に1回だけ再生し、後続Moveでは重複させない。
+死亡・再開・画面を閉じる操作で古い着地・着弾・納刀の予約を無効化する。
+ヨミの差分が別の姿勢に上書きされた場合も、その攻撃の納刀音はキャンセルする。
+`res://MovementAudioCheck.tscn` で復号・最大音数・原音ピッチ・1/2倍速の着地／着弾／納刀タイミングと停止を検査。

@@ -211,6 +211,98 @@ Godot_console.exe --headless --path DemoApp res://BeniMioCheck.tscn -- --verify
 
 ## 素材
 
+### 移動軸の演出
+
+`design/CODEX_BRIEF_MOVEMENT.md` の表示を通常再生へ接続しています。
+シオの蔓と葉、セロの回避・挑発・矢・必死の逃げ足、バサの灰緑の風と混乱、
+ハネの高い放物線と弾き返し、追い風、ヨミの撃破の衝撃、段・溢れ・転倒の穴を描きます。
+見出しと実際の `Move` / `Attack` を台本の索引で結び、席や発動条件は再計算しません。
+移動は軽く短く、セロの撃ち返しと突風は長い追加攻撃カットインを挟みません。
+画面上の説明文字は追加せず、混乱表示・回復音・攻撃音は既存のものを使用します。
+立ち絵にはセロの回避・必死の逃げ足・挑発、ハネの反動、ヨミのよろめきの透過差分を追加しました。
+`assets/portraits/battle/movement-prompts.md` に生成プロンプトと保存先を記録しています。
+既存絵は上書きせず、台本の演出中だけ差分へ切り替え、射撃・死亡・蘇生・勝利時は解除します。
+
+```powershell
+dotnet build DemoApp/DemoApp.csproj
+Godot_console.exe --headless --path DemoApp res://MovementCheck.tscn -- --replay
+Godot_console.exe --path DemoApp res://MovementCheck.tscn -- --capture-dir=C:/works/VillainProto/.tmp/movement-captures
+Godot_console.exe --path DemoApp res://MovementPortraitCheck.tscn -- --capture-dir=C:/works/VillainProto/.tmp/movement-portraits
+```
+
+`--replay` は九体の新兵（HP200%・攻200%）の実台本と再生し直しで、
+演出件数・矢の本数・最終HP・最終席を照合します。
+通常起動は左右両陣営・1倍速と2倍速の演出、5連射、死亡・蘇生・再開を確認します。
+
+### ヨミの居合
+
+通常攻撃と追加攻撃に抜刀・深い前傾からの横一閃の透過差分を使い、既存の専用SEと金白の剣閃を同期します。
+台本の `Attack.Amount` を開戦時の攻撃力と比べて刃の太さ・残光・火花を強め、4倍で見た目を上限にします。
+専用の段は捏造せず、実際の `Attack.Pattern` が薙ぎになったときに対象を一本の剣閃でつなぎます。
+プロンプトと保存先は `assets/portraits/battle/yomi-iai-prompts.md`。
+追加攻撃の前傾修正版は `assets/portraits/battle/yomi-iai-extra-v2-prompts.md`。
+
+```powershell
+Godot_console.exe --path DemoApp res://YomiIaiCheck.tscn -- --capture-dir=C:/works/VillainProto/.tmp/yomi-iai
+Godot_console.exe --headless --path DemoApp res://MovementCheck.tscn -- --replay
+```
+
+専用検査は左右・1/2倍速・通常/追加・3段階の打点、透過、足元、死亡/蘇生/勝利、抜刀待ち中の再開を確認します。
+実戦検査は通常・追加の居合件数と台本、最終HP・席、再生し直しを照合します。
+
+### 踏込とスマッシュ
+
+現行のヨミとハネは表示専用の `Advances` を有効にし、主目標へ踏み込んでから席へ戻ります。
+ヨミの薙ぎには広い三日月状の面と白い刃先を追加し、単体の細い一閃と描き分けます。
+ハネの吹っ飛ばしは短い溜め、星形の衝撃、カメラの揺れ、高速射出と回転で表現します。
+台本の被弾者だけが少し遅れて左右へ弾け、主目標は台本の `Move` の着地点へ接続します。
+座標の演出がHP・席を先に変更することはなく、死亡・再開時には解除します。
+
+```powershell
+Godot_console.exe --path DemoApp res://SmashCheck.tscn -- --capture-dir=C:/works/VillainProto/.tmp/smash
+Godot_console.exe --headless --path DemoApp res://MovementCheck.tscn -- --replay
+```
+
+左右・1/2倍速、踏込と帰還、経路外の除外、飛行とMoveの接続、Moveなしの復帰、死亡・蘇生・再開を検査します。
+実戦の再生と再生し直しでは薙ぎ・吹っ飛ばしの件数、最終HP・席、飛行姿勢の残留を照合します。
+
+### 移動SE
+
+バサのターン頭の隊列入れ替えは、飛び上がって両翼を振り下ろし、実際に入れ替わる両陣営へ竜巻を出します。
+段0は各陣地に1本、段1で大型化、段2で各2本、段3でさらに大型化します。表示中の段上昇も反映します。
+竜巻で動く対象だけを明るい渦で包み、本体を一回転させながら浮かせて運びます。名前とHPバーは回転しません。
+バサの通常の薙ぎ・追加の突風は、羽ばたきから幅広い風圧の波を叩きつけ、各命中位置で風を弾かせます。
+追い風は太い流線と風圧の輪に加え、進行方向マーク・対象に追従する足元の輪・残像・「追い風」の表示で踏み込む味方を示します。
+羽ばたき差分・接続の詳細と生成プロンプトは `../design/BASA_WIND_PRESENTATION.md` に記録しています。
+`Godot_console.exe --path DemoApp res://BasaWindCheck.tscn` で左右・1/2倍速・段0〜3と中断を確認できます。
+
+セロの通常矢は弓、貫通はRetro Laser 1、乱れ撃ちはLaser Shotを発射ごとに鳴らします。
+シオの退避・立て直しは蔓、バサの攻撃・隊列移動と追い風は風の専用音を使います。
+バサの竜巻はSpringin「強風1」、薙ぎ・追加の突風は「強風3」、追い風は「強風2」を各発動に合わせます。
+セロの矢の着弾には刺さる音、ヨミの通常・追加攻撃の差分が終了した瞬間には納刀音を合わせます。
+セロの回避・必死の回避には効果音ラボ「逃走」を使用します。同じ回避の連続通知では重ねません。
+セロの貫通矢は、白い芯・金色の縁・淡い光の3層の残光を引き、射出と貫通地点で閃きます。
+矢じり・軸・矢羽を持つ先端が0.16秒で飛び、約0.52秒まで残光がほどけます。通常矢と状態異常の色は維持します。
+連撃（乱れ撃ち）は貫通の40%の太さ・48%の光量で約0.30秒まで残光を残します。大きな閃光・光の粒は出さず、貫通と描き分けます。
+`Godot_console.exe --path DemoApp res://SeroPierceCheck.tscn` で左右・1/2倍速・残光と再開を確認できます。
+ハネの手番の吹っ飛ばしは、両足ドロップキックの差分で跳び込み、接触時に「大キック」と衝撃を出して敵を射出します。
+0.055秒の予備動作と0.14秒の跳躍後、実際の接触完了を待って射出へ進みます。接触の「大キック」に敵射出の「氷魔法1」を重ね、手番の威力を強調します。
+跳躍前は高速移動音、ピンの衝突も「氷魔法1」（小さめ）、着地は倒れる音です。
+被弾からの弾き返しは、前膝を深く曲げ、後ろ脚で地面を蹴って両掌を打ち込む双掌打差分（hane_palm）を使います。
+0.08秒の溜めから0.14秒で踏み込み、接触時に「パンチを受け止める」と衝撃を出した後、台本Moveへ進みます。足元を接地したまま0.08秒静止し、0.20秒で構えへ戻ります。
+生成プロンプトは `../design/HANE_PALM_PRESENTATION.md`。手番のドロップキックとは姿勢・動き・音を分けています。
+セロの貫通・連撃SEは従来より各+2 dB（通常時 -10 / -14 dB）です。
+生成プロンプトは `../design/HANE_DROPKICK_PRESENTATION.md`。`res://DropkickCheck.tscn` で左右・1/2倍速・死亡・停止・再開を確認できます。
+弾き返しとヨミの吹き飛ばしにも着地音を使います。通常SEの最大4音枠を共用し、
+風・巻き込み・着地の密集は間引き、巻き込みの音量は主衝突より下げています。倍速でも原音のピッチです。
+元ファイルと音量は `assets/audio/se/SOURCES.md` に記録しています。
+
+```powershell
+Godot_console.exe --path DemoApp res://MovementAudioCheck.tscn
+```
+
+### 既存の素材
+
 - `assets/grassland_battlefield.png`: OpenAI 組み込み画像生成で作成
 - `assets/outcast_atlas.png`: OpenAI 組み込み画像生成で作成（6種アトラス）
 - `assets/portraits/*.png`: ComfyUI で作成した味方5体の個別立ち絵（リィカ／スィド／ボルグ／ゾト／カド）
