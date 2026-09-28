@@ -3888,8 +3888,8 @@ N=4 は効き過ぎ（ガルド死亡率 9.2%・被弾の 91% を無効化）だ
     dotnet run --project BattleSim -c Release 0 gust phase0     # 前提を実装から引き直す（**薙ぎの出力の勘定**・供給の見積り）
     dotnet run --project BattleSim -c Release 0 gust scan       # 台の下見（V0 の第2〜5波平均が 40〜95% か）
     dotnet run --project BattleSim -c Release 0 gust run [攻撃力のカンマ区切り]  # 段A: 薙ぎ化だけ（既定 2,3,4,5）
-    dotnet run --project BattleSim -c Release 0 gust gale "攻撃力 確率のカンマ区切り"  # 段B/C: 転倒の確率と巻き込み（既定 4 と 10,20,30）
-    dotnet run --project BattleSim -c Release 0 gust compare "攻撃力 確率 [primary]"  # 拒否権（`compare` 61行 ＋ 交差帯12行）
+    dotnet run --project BattleSim -c Release 0 gust gale "4 10,20,30"  # 段B/C: 転倒の確率と巻き込み（引数は「攻撃力 確率のカンマ区切り」。既定 4 と 10,20,30）
+    dotnet run --project BattleSim -c Release 0 gust compare "4 20"  # 拒否権（`compare` 61行 ＋ 交差帯12行。引数は「攻撃力 確率 [primary]」）
     dotnet run --project BattleSim -c Release 0 gust check [balance.md]  # 自己検査（必須1・必須4 ＋ (a)〜(f)）
     dotnet run --project BattleSim -c Release 0 mark [モード]     # 標（`Marked`）の軸を診る（第150期・**測定だけ**。盤面は1ビットも動かない）。本体は `Modes/Mark.cs`
     dotnet run --project BattleSim -c Release 0 mark phase0     # Q0-1〜Q0-7 を**実装から引き直す**（戦闘0回）
@@ -4152,7 +4152,7 @@ N=4 は効き過ぎ（ガルド死亡率 9.2%・被弾の 91% を無効化）だ
     dotnet run --project BattleSim -c Release 0 form2 [モード]    # 味方の陣形パターン2（ひし形・前衛1枚・第200期）。本体は `Modes/Formation2*.cs`
     dotnet run --project BattleSim -c Release 0 form2 phase0    # Q0-1〜Q0-7（`FormationRules` の呼び出しの数・列・召喚・席を読む札・表B の行・敵の攻撃型。**戦闘0回**）
     dotnet run --project BattleSim -c Release 0 form2 run       # 表A（毒パ 7 行 × 元／X・スィド／P2）・表B（タンク 6 行 × X／P2 × ガルド・ゴルム・ササ・スィド）・帳簿（7 秒）
-    dotnet run --project BattleSim -c Release 0 form2 log "行名" 波 seed [x]  # 表B の P2・ガルド（x で X 字）の1戦のログ
+    dotnet run --project BattleSim -c Release 0 form2 log "<行名>" <波> <seed> [x]  # 表B の P2・ガルド（x で X 字）の1戦のログ
     dotnet run --project BattleSim -c Release 0 form2 check [採用前のbalance.md]  # 自己検査（表の全セル・X 字の表の一致・`compare` 0 件・乱数なし・召喚の重なり）
     dotnet run --project BattleSim -c Release 0 form2 phase201  # 第201期 Q0-1〜Q0-4（編成画面の入口・席の総当たりの道具・戦闘数・鏡像。**戦闘0回**）。本体は `Modes/Formation2.P201.cs`
     dotnet run --project BattleSim -c Release 0 form2 run201    # 第201期 表A・表B・表C・帳簿・最良の並び（**選ぶ** 120 通り × 第2〜5波 × seed 0..49 ／ **測る** seed 100..299・52 秒）

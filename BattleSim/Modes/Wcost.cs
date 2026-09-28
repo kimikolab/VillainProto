@@ -910,6 +910,17 @@ public static void Run(string[] args, int stageIndex)
             var idx = Enumerable.Range(0, WcN).Where(i => wcDHas[i][8]).ToArray();
             Console.WriteLine("| 版 | 在席時の勝率 | Δ（V0比） | **傾き** | **傾きの改善** | 上限 +8.3 に対する割合 |");
             Console.WriteLine("|---|--:|--:|--:|--:|--:|");
+            // 第233期: ナタは第188期に `All` を外れたので、ドラフトの母集団（`All`）の標本に1枚も入らない
+            // ——その場合は行を「—」で残す（第141期の `draft` と同じ扱い）。
+            if (idx.Length == 0)
+            {
+                foreach (int v in new[] { 0, 3, 8, 9 })
+                    Console.WriteLine($"| {wcVName[v]} | — | — | {WcP1(wcDSlope[v])} | — | — |");
+                Console.WriteLine();
+                Console.WriteLine($"分母（ナタが在席した標本）= **0 / {WcN:N0}**（ナタは母集団 `UnitCatalog.All` に居ない）。**測れていない。**");
+            }
+            else
+            {
             double a0 = idx.Average(i => Enumerable.Range(1, wcW - 1).Average(w => WcDRate(i, 0, w)));
             foreach (int v in new[] { 0, 3, 8, 9 })
             {
@@ -920,6 +931,7 @@ public static void Run(string[] args, int stageIndex)
             }
             Console.WriteLine();
             Console.WriteLine($"分母（ナタが在席した標本）= **{idx.Length:N0} / {WcN:N0}**。**線は傾きの改善 +2.0pt。**");
+            }
         }
         Console.WriteLine();
 
@@ -928,6 +940,13 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine();
         var wcSample = new List<int>();
         for (int i = 0; i < WcN && wcSample.Count < 300; i++) if (wcDHas[i][8]) wcSample.Add(i);
+        if (wcSample.Count == 0)
+        {
+            Console.WriteLine("ナタを含む標本が 0 件（ナタは母集団 `UnitCatalog.All` に居ない）。**この表は測れていない。**");
+            Console.WriteLine();
+            Console.WriteLine($"所要 {wcSw.Elapsed.TotalSeconds:F1} 秒。");
+            return;
+        }
         int[] wcGVer = { 0, 8, 9 };
         var wcGAcc = new double[wcGVer.Length][];
         for (int g = 0; g < wcGVer.Length; g++)

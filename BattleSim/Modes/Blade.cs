@@ -934,9 +934,16 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine();
         {
             var idx = Enumerable.Range(0, BlN).Where(i => blDHas[i][1]).ToArray();
-            double a0 = idx.Average(i => Enumerable.Range(1, blW - 1).Average(w => BlDRate(i, 0, w)));
             Console.WriteLine("| 版 | 在席時の勝率 | **帰属（V0比）** | 傾き | 傾きの改善 |");
             Console.WriteLine("|---|--:|--:|--:|--:|");
+            // 第233期: キリは第179期に `All` を外れたので、ドラフトの母集団（`All`）の標本に1枚も入らない
+            // ——その場合は行を「—」で残す（第141期の `draft` と同じ扱い）。
+            double a0 = idx.Length == 0 ? double.NaN
+                : idx.Average(i => Enumerable.Range(1, blW - 1).Average(w => BlDRate(i, 0, w)));
+            if (idx.Length == 0)
+                for (int v = 0; v <= 5; v++)
+                    Console.WriteLine($"| {blVName[v]} | — | — | {BlP1(blDSlope[v])} | {(v == 0 ? "—" : BlP2(blDSlope[v] - blDSlope0))} |");
+            else
             for (int v = 0; v <= 5; v++)
             {
                 double a = idx.Average(i => Enumerable.Range(1, blW - 1).Average(w => BlDRate(i, v, w)));
@@ -971,6 +978,13 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine();
         var blSample = new List<int>();
         for (int i = 0; i < BlN && blSample.Count < 300; i++) if (blDHas[i][1]) blSample.Add(i);
+        if (blSample.Count == 0)
+        {
+            Console.WriteLine("キリを含む標本が 0 件（キリは母集団 `UnitCatalog.All` に居ない）。**この表は測れていない。**");
+            Console.WriteLine();
+            Console.WriteLine($"所要 {blSw.Elapsed.TotalSeconds:F1} 秒。");
+            return;
+        }
         int[] blGVer = { 0, 1, 2, 3, 4 };
         var blGAcc = new double[blGVer.Length][];
         for (int g = 0; g < blGVer.Length; g++)
