@@ -161,8 +161,8 @@ static partial class TuneDiag
         {
             var extra = new[]
             {
-                VerOf("V0"), VerOf("VA1"), new Ver("VA1+B", ShioHalf, HaneGuard, UnitCatalog.Sero), new Ver("VA1+C", ShioHalf, UnitCatalog.Hane, SeroShot), VerOf("VX1"),
-                VerOf("VA2"), new Ver("VA2+B", ShioHeavy, HaneGuard, UnitCatalog.Sero), new Ver("VA2+C", ShioHeavy, UnitCatalog.Hane, SeroShot), VerOf("VX2"),
+                VerOf("V0"), VerOf("VA1"), new Ver("VA1+B", ShioHalf, HaneGuard, UnitCatalog.SeroC0), new Ver("VA1+C", ShioHalf, UnitCatalog.Hane, SeroShot), VerOf("VX1"),
+                VerOf("VA2"), new Ver("VA2+B", ShioHeavy, HaneGuard, UnitCatalog.SeroC0), new Ver("VA2+C", ShioHeavy, UnitCatalog.Hane, SeroShot), VerOf("VX2"),
             };
             Console.WriteLine("## 追補 組み合わせの分解（228 の席 × 九/新兵 × 400/300 × seed 0..999）");
             Console.WriteLine();
@@ -192,6 +192,6 @@ static partial class TuneDiag
         Console.WriteLine();
         Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F1} 秒");
 
-        static UnitDef Raw(UnitDef d) => d.Id switch { "shio" => UnitCatalog.Shio, "hane" => UnitCatalog.Hane, "sero" => UnitCatalog.Sero, _ => d };
+        static UnitDef Raw(UnitDef d) => d.Id switch { "shio" => UnitCatalog.ShioA0, "hane" => UnitCatalog.Hane, "sero" => UnitCatalog.SeroC0, _ => d };
     }
 }

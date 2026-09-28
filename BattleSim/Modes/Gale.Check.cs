@@ -37,7 +37,7 @@ static partial class GaleDiag
     static BattleContext Ctx(Formation pl, Formation en, int seed, bool hole, out List<UnitState> p, out List<UnitState> e)
     {
         var ctx = new BattleContext(seed, false, shuffler: ShufflerRule.Default with { StaggerHole = hole });
-        p = BattleEngine.Materialize(OldYomiShio(pl), BattleContext.PlayerTeam);
+        p = BattleEngine.Materialize(OldTune(OldYomiShio(pl)), BattleContext.PlayerTeam);
         e = BattleEngine.Materialize(en, BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
         foreach (var u in e) AddUnit.Invoke(ctx, new object[] { u });
@@ -175,7 +175,7 @@ static partial class GaleDiag
                 int sero = 0;
                 for (int seed = 0; seed < 200; seed++)
                 {
-                    var ctx = Ctx(Formation.Build(front1: UnitCatalog.Sero, front3: x, center: b, back1: c, back3: d), foes5, seed, true, out var p, out var e);
+                    var ctx = Ctx(Formation.Build(front1: UnitCatalog.SeroC0, front3: x, center: b, back1: c, back3: d), foes5, seed, true, out var p, out var e);
                     var s = U(p, "sero");
                     if (fallen) s.SetCounter(StatusKeys.Stagger, 1);
                     if (ctx.SelectTarget(U(e, "e1")) == s) sero++;
@@ -200,7 +200,7 @@ static partial class GaleDiag
         // ---- (3)(2)(7) 実戦 ----
         Console.WriteLine("## (3)(2)(7) 実戦");
         Console.WriteLine();
-        var benches = new List<(string, Formation)> { ("M-ハネ 228", MHane228), ("M-ハネ 総当たり G4", Formation.Build(front1: UnitCatalog.Shio, front3: UnitCatalog.BasaG0, center: UnitCatalog.Sero, back1: UnitCatalog.Yomi, back3: UnitCatalog.HaneG0)) };
+        var benches = new List<(string, Formation)> { ("M-ハネ 228", MHane228), ("M-ハネ 総当たり G4", Formation.Build(front1: UnitCatalog.Shio, front3: UnitCatalog.BasaG0, center: UnitCatalog.SeroC0, back1: UnitCatalog.Yomi, back3: UnitCatalog.HaneG0)) };
         benches.AddRange(CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "basa" or "hane")).Select(r => ("compare " + r.Name, r.F)));
         int[] waves = { 4, 5, 0, 1, 2, 3 };
         long verbMis = 0, verbN = 0, g3Same = 0, g3N = 0, twEv = 0, twTally = 0, twMoveBad = 0, twCauseBad = 0, twHpBad = 0, brEv = 0, brTally = 0;

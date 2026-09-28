@@ -14358,13 +14358,20 @@ public sealed class SpringTrait : Trait
         UnitTally t = ctx.TallyOf(self);
         if (guarded is not null) t.SpringGuardChances++;
         int dest = DestOf(ctx, foe);
-        if (dest < 0) { t.SpringNoSeat++; return; }
+        bool g = guarded is not null;   // 第232期・**計数のみ**（隣の分の弾けなかった内訳）
+        if (dest < 0)
+        {
+            t.SpringNoSeat++;
+            if (g) { if (foe.Shape.LanesOf(foe.Slot).Count == 0) t.SpringGuardOffLane++; else t.SpringGuardTail++; }
+            return;
+        }
         int used = self.RawCounter(TurnKey) == ctx.Turn + 1 ? self.RawCounter(CountKey) : 0;
-        if (used >= LimitOf(ctx, self)) { t.SpringCapped++; return; }
-        if (ctx.InInterrupt) { t.SpringHeld++; return; }
+        if (used >= LimitOf(ctx, self)) { t.SpringCapped++; if (g) t.SpringGuardCapped++; return; }
+        if (ctx.InInterrupt) { t.SpringHeld++; if (g) t.SpringGuardHeld++; return; }
         if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Spring))
         {
-            if (ctx.HushBindingNow) t.SpringHushed++; else t.SpringHeld++;
+            if (ctx.HushBindingNow) { t.SpringHushed++; if (g) t.SpringGuardHushed++; }
+            else { t.SpringHeld++; if (g) t.SpringGuardHeld++; }
             return;
         }
         self.SetCounter(TurnKey, ctx.Turn + 1);

@@ -1107,6 +1107,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   （`TailwindHolderOf`・`TailwindFromImpact` に数える・乱数なし）。**5体の波ではほぼ起きない**——中央 → ○中 は同じ中列なので「後ろの行へ動いた」にならない（9体の波で1戦 0.4 回）。
   旧は `UnitCatalog.BasaW0` / `HaneW0` / `YomiW0` / `ShioW0` で、**第222〜230期の器具は `Common.OldCycle`（第230期）・`OldYomiShio`（第222〜229期）で旧に固定した**
   （`cycle` / `gale` / `spring` / `lastdodge` / `decoy` / `drift` の `YomiV0` / `shockdigest` の全モード）
+- **第232期の前段で `RetreatHalf`（シオ）・`EvadeMoveShot`（セロ）を規定にした**（旧は `UnitCatalog.ShioA0` / `SeroC0`・第228〜231期の器具は `Common.OldTune` で旧に固定）
 - **第231期の版（札 `RetreatHalf` / `RetreatHeavy` / `SpringGuard` / `EvadeMoveShot`・4枚とも保持者 0 枚・規定のシオ・ハネ・セロは前段のまま）**——
   **退避の線は `RetreatTrait.NeedOf(保持者, 味方, dmg)` の1本**（0 要らない ／ 1 線の下 ／ 2 線の上だが一撃が最大HPの3割以上＝`RetreatHeavy` だけ）。線は `PercentOf`（`RetreatHalf` で 5割）。
   **隣の弾き返しは `ApplyDamageBody` のハネ自身の弾き返しの直後の1箇所**（同じ「攻撃」の条件・殴られたのがハネでなく召喚枠でもない・隣の生きている `Spring` ＋ `SpringGuard` の保持者の席番号の若い方）→
@@ -1913,6 +1914,8 @@ BattleCore + BattleSim は Windows 以外でも動く（`dotnet run --project Ba
 `docs/` で動いたのは **`rules.md`（ノブ1本 ＝ `HasteRule`）**だけで、`compare` 305 セルは 0 件差分。
 **engine で触ったのは `order` が `.ToList()` で確定した後の1ブロックだけ**
 ——`speedGroups` にも `Shuffle` にも触らないので**乱数列が規則の有無に依らない**（これが 305 セル 0 件の根拠）。
+
+**第232期の前段で緊急退避5割（シオ ＋ `RetreatHalf`）とセロの移動の追撃（セロ ＋ `EvadeMoveShot`）を規定にした（ポンの判断）——`compare` 305 セルは1セルも動かない**（セロ・シオの行は天井か 0.5pt 未満）。動いたのは勝ち方の表だけ。旧は `UnitCatalog.ShioA0` / `SeroC0` で、**第228〜231期の器具は `Common.OldTune` で旧に固定した**（`spring` / `gale` / `cycle` / `tune` の台・`seroshio` / `drift` の `compare` の行・`shockdigest` 全モード）——固定の後、それらの phase0・check・run と `shockdigest` 15 モードは第231期と所要秒数の1行以外一致する（`drift run` の同値の並びは前から走るたびに入れ替わる）
 
 **第231期は盤面を1ビットも動かしていない——緊急退避の線（A1 5割 ／ A2 4割 or 一撃3割）・ハネの弾き返しを隣の味方まで（B）・セロの移動の追撃（C）を札で足し、挑発の表示を全版に入れただけ**（**線は置かない**・規定のシオ・ハネ・セロは前段のまま）。
 `compare` 305 セル全文一致・`shockdigest` 15 モード（新しい `a231` ＝ この期の V0 を含む）が HEAD の worktree と全行一致・`tune check` 31 / 31。**`Run` の引数は増やしていない。**

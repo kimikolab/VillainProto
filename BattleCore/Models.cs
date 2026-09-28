@@ -2302,6 +2302,12 @@ public sealed class UnitTally
     public long SpringGuardChances, SpringGuardFires, SpringGuardCount, SpringGuardSwaps, SpringGuardRefused,
                 MoveShotChances, MoveShots, MoveShotCapped, MoveShotHushed, MoveShotHeld, MoveShotSelfSwap, MoveShotFallback, EvMoveShotDealt;
     public long[]? MoveShotByTurn;
+
+    /// <summary>
+    /// 第232期・<b>計数専用</b>: 隣の味方の被弾で判定に来たが弾けなかった内訳（ハネの側）。<c>SpringGuardOffLane</c> 殴った敵が経路に属さない席（○前2・○後2）／
+    /// <c>SpringGuardTail</c> 経路の最後尾（弾く先が無い）／ <c>SpringGuardCapped</c> 1ターンの上限 ／ <c>SpringGuardHushed</c> 粛 ／ <c>SpringGuardHeld</c> 割り込みの中・痺れ・組み付き。
+    /// </summary>
+    public long SpringGuardOffLane, SpringGuardTail, SpringGuardCapped, SpringGuardHushed, SpringGuardHeld;
     public int[]? ShioStageTurn;
 
     /// <summary>

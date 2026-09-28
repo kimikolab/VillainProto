@@ -61,7 +61,7 @@ static partial class TuneDiag
         // ---- 退避の線 ----
         Console.WriteLine("### 緊急退避の線（前1 の x（最大HP 100）が敵の一撃を受ける・後ろ側の隣は中央の y）");
         Console.WriteLine();
-        var shioVers = new (string Tag, UnitDef Shio)[] { ("V0", UnitCatalog.Shio), ("VA1", ShioHalf), ("VA2", ShioHeavy) };
+        var shioVers = new (string Tag, UnitDef Shio)[] { ("V0", UnitCatalog.ShioA0), ("VA1", ShioHalf), ("VA2", ShioHeavy) };
         // (HP を先に何点削っておくか, 一撃, 版ごとに下げるか V0/VA1/VA2)
         var cases = new (int Pre, int Hit, string Want)[]
         {
@@ -186,7 +186,7 @@ static partial class TuneDiag
             Expect("粛の伝令が生きている間は撃たない（撃った ／ 粛で止まった）", $"{Tal(ctx, sero).MoveShots}/{Tal(ctx, sero).MoveShotHushed}", "0/1");
         }
         {
-            var ctx = Ctx(Formation.Build(front3: UnitCatalog.Sero, center: Plain("y"), back3: Plain("q")), en, 0, out var p, out var e);
+            var ctx = Ctx(Formation.Build(front3: UnitCatalog.SeroC0, center: Plain("y"), back3: Plain("q")), en, 0, out var p, out var e);
             var sero = U(p, "sero");
             sero.SetCounter(EvadeTrait.MovesKey, EvadeTrait.QuickStageAt[1]);
             ctx.SwapSlots(sero, 4, U(p, "q"));

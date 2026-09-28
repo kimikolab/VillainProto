@@ -33,11 +33,11 @@ static partial class CycleDiag
 
     // 台（§8.1）。バサ・ハネは前段の規定（嵐・追い風）。
     /// <summary>第228期 H3 の総当たりの1位（前1 バサ ／ 前3 セロ ／ 中央 ヨミ ／ 後1 シオ ／ 後3 ハネ）。</summary>
-    internal static Formation MHane228 => Formation.Build(front1: UnitCatalog.BasaW0, front3: UnitCatalog.Sero,
+    internal static Formation MHane228 => Formation.Build(front1: UnitCatalog.BasaW0, front3: UnitCatalog.SeroC0,
         center: UnitCatalog.YomiW0, back1: UnitCatalog.ShioW0, back3: UnitCatalog.HaneW0);
     /// <summary>第229期 G4 の総当たりの1位（前1 シオ ／ 前3 バサ ／ 中央 セロ ／ 後1 ヨミ ／ 後3 ハネ）。Phase 0 の仮の席。</summary>
     internal static Formation MHane229 => Formation.Build(front1: UnitCatalog.ShioW0, front3: UnitCatalog.BasaW0,
-        center: UnitCatalog.Sero, back1: UnitCatalog.YomiW0, back3: UnitCatalog.HaneW0);
+        center: UnitCatalog.SeroC0, back1: UnitCatalog.YomiW0, back3: UnitCatalog.HaneW0);
     /// <summary>参考: ポンの席（前1 シガ ／ 前3 ツギ ／ 中央 ベニ ／ 後1 カタ ／ 後3 ミオ）。</summary>
     internal static Formation Thunder => GaleDiag.Thunder;
 

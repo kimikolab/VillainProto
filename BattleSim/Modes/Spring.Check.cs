@@ -60,7 +60,7 @@ static partial class SpringDiag
             var foes = new (int, UnitDef)[] { (0, tough), (1, strong), (2, tough), (3, tough), (4, tough), (5, tough), (6, tough), (7, tough), (8, tough) };
             // 突風（バサが動かされると吹く）と軋み（ヨミ）の割り込みがダメージを混ぜないように、バサは突風の札を抜き、中央はトウにする
             var basaNoSquall = DecoyDiag.Copy(UnitCatalog.BasaG0, UnitCatalog.BasaG0.Traits.Where(x => x != TraitId.Squall).ToArray());
-            var ctx = Ctx9(Formation.Build(front1: h1, front3: basaNoSquall, center: UnitCatalog.Tou, back1: UnitCatalog.Shio, back3: UnitCatalog.Sero), foes, 1, out var p, out var e);
+            var ctx = Ctx9(Formation.Build(front1: h1, front3: basaNoSquall, center: UnitCatalog.Tou, back1: UnitCatalog.Shio, back3: UnitCatalog.SeroC0), foes, 1, out var p, out var e);
             UnitState hane = U(p, "hane");
             var laneSeats = FormationRules.LanePath(1);   // 前3 → 中央 → ○中3 → 後3
             var before = laneSeats.Select(s => e.First(u => u.Slot == s)).ToList();
@@ -87,14 +87,14 @@ static partial class SpringDiag
         // ---- 吹っ飛ばし（空席のある経路・A の後ろに誰もいない経路） ----
         {
             var foes = new (int, UnitDef)[] { (0, strong), (2, tough), (3, tough), (1, tough) };
-            var ctx = Ctx9(Formation.Build(front1: h1, front3: UnitCatalog.BasaG0, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Sero), foes, 2, out var p, out var e);
+            var ctx = Ctx9(Formation.Build(front1: h1, front3: UnitCatalog.BasaG0, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.SeroC0), foes, 2, out var p, out var e);
             UnitState a = e.First(u => u.Slot == 0), b = e.First(u => u.Slot == 2), c = e.First(u => u.Slot == 3);
             BlastTrait.Act(ctx, U(p, "hane"));
             Expect("空席: ○中1 は空のまま・B 前1・C 中央・A 後1", $"{b.Slot}/{c.Slot}/{a.Slot}/{e.Any(u => u.Slot == 5)}", "0/2/3/False");
         }
         {
             var foes = new (int, UnitDef)[] { (0, strong) };
-            var ctx = Ctx9(Formation.Build(front1: h1, back3: UnitCatalog.Sero), foes, 3, out var p, out var e);
+            var ctx = Ctx9(Formation.Build(front1: h1, back3: UnitCatalog.SeroC0), foes, 3, out var p, out var e);
             BlastTrait.Act(ctx, U(p, "hane"));
             var t = Tal(ctx, U(p, "hane"));
             Expect("後ろに誰もいない: A は前1 のまま・転ぶ・動いた 0", $"{e[0].Slot}/{e[0].RawCounter(StatusKeys.Stagger)}/{t.BlastMoved}", "0/1/0");
@@ -104,7 +104,7 @@ static partial class SpringDiag
         {
             var foes = new List<(int, UnitDef)> { (foeSlot, strong) };
             foreach (int s in new[] { 0, 1, 2, 5, 6, 3, 4, 7, 8 }) if (s != foeSlot && foes.Count < 6) foes.Add((s, tough));
-            ctx = Ctx9(Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.BasaG0, center: UnitCatalog.Yomi, back1: h2, back3: UnitCatalog.Shio), foes.ToArray(), seed, out var p, out e);
+            ctx = Ctx9(Formation.Build(front1: UnitCatalog.SeroC0, front3: UnitCatalog.BasaG0, center: UnitCatalog.Yomi, back1: h2, back3: UnitCatalog.Shio), foes.ToArray(), seed, out var p, out e);
             return U(p, "hane");
         }
         {
@@ -152,7 +152,7 @@ static partial class SpringDiag
             // 粛: 敵に粛の保持者（伝令）を置く
             var hushDef = EnemyCatalog.Stages[1].Enemy.Occupied().Select(o => o.Def).First(d => d.Traits.Contains(TraitId.Hush));
             var foes = new (int, UnitDef)[] { (0, strong), (2, hushDef), (1, tough) };
-            var ctx = Ctx9(Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.BasaG0, center: UnitCatalog.Yomi, back1: h2, back3: UnitCatalog.Shio), foes, 6, out var p, out var e);
+            var ctx = Ctx9(Formation.Build(front1: UnitCatalog.SeroC0, front3: UnitCatalog.BasaG0, center: UnitCatalog.Yomi, back1: h2, back3: UnitCatalog.Shio), foes, 6, out var p, out var e);
             UnitState hane = U(p, "hane");
             ctx.ApplyDamage(hane, 5, e.First(u => u.Slot == 0), pattern: AttackPattern.Single);
             Expect("粛: 伝令が生きている間は弾かない（粛で止まった 1）", $"{Tal(ctx, hane).SpringCount}/{Tal(ctx, hane).SpringHushed}", "0/1");
@@ -163,7 +163,7 @@ static partial class SpringDiag
         Console.WriteLine("## (3) ハネのいない戦は H0 と一致 ／ verbose の有無");
         Console.WriteLine();
         {
-            var benches = new[] { MHane227, Formation.Build(front1: UnitCatalog.BasaG0, front3: UnitCatalog.Sero, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.HaneH0), HaneRows()[0].F };
+            var benches = new[] { MHane227, Formation.Build(front1: UnitCatalog.BasaG0, front3: UnitCatalog.SeroC0, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.HaneH0), HaneRows()[0].F };
             var jobs = new List<(Formation F, int W, EnemyScaleRule Sc, int S)>();
             foreach (var b in benches)
                 foreach (int w in new[] { 4, 5, 0, 1, 2, 3 })
@@ -201,7 +201,7 @@ static partial class SpringDiag
         Console.WriteLine();
         {
             long bl = 0, blOk = 0, blTally = 0, sp = 0, spOk = 0, spTally = 0;
-            var f = Apply(Formation.Build(front1: UnitCatalog.BasaG0, front3: UnitCatalog.Sero, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.HaneH0), VerOf("H3"));
+            var f = Apply(Formation.Build(front1: UnitCatalog.BasaG0, front3: UnitCatalog.SeroC0, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.HaneH0), VerOf("H3"));
             foreach (int w in new[] { 4, 5, 1, 3 })
                 for (int s = 0; s < 150; s++)
                 {

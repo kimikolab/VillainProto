@@ -35,11 +35,28 @@ public static class UnitCatalog
 
     /// <summary>
     /// 第228期 前段（ポンの判断）で第227期 L2（必死の逃げ足 `LastDodge` ＋ 回避盾 `Decoy`）を規定にした。旧は <see cref="SeroL0"/>。
+    /// 第232期 前段（ポンの判断）で第231期 C（移動の追撃 `EvadeMoveShot`）を規定にした。旧は <see cref="SeroC0"/>。
     /// 逃亡兵セロ（第225期 前段・ポンの判断。第226期 前段で名前を「逃げ上手のセロ」から戻した）。第223期 E1（回避・追い撃ち・移動の段・入れ替え）＋ E2（状態の矢）＋
     /// 第224期 F1（段の条件 2/4/7）＋ F2（動かされるたび攻撃力 +2）。**F3（段3 の7本）は入れない**。
     /// 旧（`Sniper` / `Coward`・E0）は <see cref="SeroOld"/> に対照として残す（<see cref="All"/> には入れない）。
     /// </summary>
     public static readonly UnitDef Sero = new()
+    {
+        Id = "sero",
+        Name = "逃亡兵セロ",
+        MaxHp = 42,
+        Attack = 11,
+        Speed = 12,
+        Advances = false,
+        Traits = new[] { TraitId.Evade, TraitId.EvadeSwap, TraitId.StatusArrow, TraitId.EvadeQuick, TraitId.EvadeDrift, TraitId.LastDodge, TraitId.Decoy, TraitId.EvadeMoveShot },
+        PlusText = "前列にいる間は敵の単体攻撃を引きつける。敵の攻撃を4割の確率でかわし、かわした相手へ撃ち返す（回避率は段で 45/50/60%）。倒れる一撃だけは、死ぬ気で必ずかわす（1戦に1回・身軽になるほど増える）。かわすたび攻撃力+3、隊列を動かされるたび攻撃力+2。動かされた回数で身軽になり、2回で撃ち返しが貫きに、4回で手番が5本の乱れ撃ちになり、隊列を動かされるたびに列の奥まで矢を射抜く（1ターン2回）。7回で撃ち返し2本に変わる。自分が毒・燃焼・感電を帯びていれば、矢がそれを敵にうつす（自分の分は減らない）",
+        MinusText = "敵の単体攻撃を一身に集める（避け損ねれば HP42 がすぐ削れる）。かわすたび隣の味方と入れ替わり、隊列が乱れる。毒・燃焼・放電・味方の巻き込みはかわせない",
+        Flavor = "逃げ足だけは誰にも負けない。撃ち返す暇まであるくらいに。"
+    };
+
+    /// <summary>第231期までの規定のセロ（第228期 L2）。対照として残す（<see cref="All"/> にも <see cref="Retired"/> にも入れない）。
+    /// 第228〜231期の器具（`spring` / `gale` / `cycle` / `tune` と `shockdigest h228〜a231`）はこちらに固定した。</summary>
+    public static readonly UnitDef SeroC0 = new()
     {
         Id = "sero",
         Name = "逃亡兵セロ",
@@ -599,6 +616,29 @@ public static class UnitCatalog
     /// 旧（V3）は <see cref="ShioV3"/> に対照として残す（<see cref="All"/> には入れない）。
     /// </summary>
     public static readonly UnitDef Shio = new()
+    {
+        Id = "shio",
+        Name = "移り木のシオ",
+        MaxHp = 60,
+        Attack = 4,
+        Speed = 8,
+        Advances = false,
+        // 第223期 前段: 第222期の V3 を規定にした（ポンの判断）——手番で最も傷ついた味方を後ろの隣と入れ替える（`Regroup`）。
+        // **攻撃は捨てる**（`Actions` が `Skill` 1要素）。旧（`Drifter` だけ・毎手番殴る）は診断 `drift` の `DriftDiag.ShioV0` に残す。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "隊を組み替えた") },
+        // 第230期の追記（ポンの判断）: 第230期 W4——溢れを攻撃力に（`DriftSurge`）。旧は <see cref="ShioW0"/>。
+        // 第232期 前段（ポンの判断）: 第231期 A1——緊急退避の線を5割に（`RetreatHalf`）。旧は <see cref="ShioA0"/>。
+        Traits = new[] { TraitId.Drifter, TraitId.Regroup, TraitId.DrifterMend, TraitId.RegroupTend, TraitId.RegroupTendSelf,
+                         TraitId.ShioStage, TraitId.Retreat, TraitId.DriftSurge, TraitId.RetreatHalf },
+        PlusText = "動かされた味方を癒し（最大HPの20%）、攻撃を上げる（+5）。癒しきれずに溢れた分の半分は、受けた味方の攻撃力になる（1体につき +15 まで）。手番で、最も傷ついた味方を後ろの隣と入れ替え、下げた味方をさらに最大HPの20%癒す（自分を下げたときも）。"
+                 + "味方のHPが5割を切ると、手番の外で割り込んでその味方を後ろの隣と入れ替える（緊急退避・1ターン1回）。"
+                 + "隊が乱れるほど（味方が動かされた回数 4/8/14回）手が速くなり、移り木は最大HPの30/40%・攻撃+8/+12、緊急退避は1ターン2/3/4回になる",
+        MinusText = "元気な駒を前へ押し出す。庇う駒を下げると庇いが外れる。自分では攻撃しない",
+        Flavor = "落ち着きのない者にしか懐かない。整った隊では浮く。"
+    };
+
+    /// <summary>第231期までの規定のシオ（第230期の追記・W4）。対照（<see cref="All"/> に入れない）。第231期の器具（`tune` と `shockdigest a231`）はこちらに固定した。</summary>
+    public static readonly UnitDef ShioA0 = new()
     {
         Id = "shio",
         Name = "移り木のシオ",

@@ -172,7 +172,7 @@ static partial class GaleDiag
                 var parts = new P0Agg[Seeds];
                 Parallel.For(0, Seeds, i =>
                 {
-                    var p = BattleEngine.Materialize(OldYomiShio(OldGale(rf)), BattleContext.PlayerTeam);   // 第230期 前段: 第229期の規定に固定
+                    var p = BattleEngine.Materialize(OldTune(OldYomiShio(OldGale(rf))), BattleContext.PlayerTeam);   // 第230期 前段: 第229期の規定に固定
                     var e = BattleEngine.Materialize(EnemyCatalog.Stages[st].Enemy, BattleContext.EnemyTeam, sc115);
                     // InstanceId は Run の中の Add で振られるので、席は Run の後に引き直す
                     var slotOf = p.Concat(e).ToDictionary(u => u, u => u.Slot);

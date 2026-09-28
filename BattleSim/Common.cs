@@ -58,6 +58,18 @@ internal static Formation OldCycle(Formation f)
     return g;
 }
 
+/// <summary>
+/// 第232期 前段: セロ（移動の追撃）・シオ（退避5割）が規定になったので、第231期までの器具は編成の<b>規定のセロ・シオ</b>
+/// （同じ参照のものだけ）を旧（<see cref="UnitCatalog.SeroC0"/> / <see cref="UnitCatalog.ShioA0"/>）へ戻す。
+/// </summary>
+internal static Formation OldTune(Formation f)
+{
+    var g = f.Clone();
+    foreach (var (slot, d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Sero) ? UnitCatalog.SeroC0 : ReferenceEquals(d, UnitCatalog.Shio) ? UnitCatalog.ShioA0 : d;
+    return g;
+}
+
 /// <summary>第230期の追記: 第222〜229期の器具は、編成の規定のヨミ・シオだけを旧（<see cref="UnitCatalog.YomiW0"/> / <see cref="UnitCatalog.ShioW0"/>）へ戻す（バサ・ハネは各期の固定のまま）。</summary>
 internal static Formation OldYomiShio(Formation f)
 {

@@ -70,7 +70,7 @@ static partial class SpringDiag
         var benches = new (string Name, Formation F)[]
         {
             ("227 L2 の席", MHane227),
-            ("225 の席", Formation.Build(front1: UnitCatalog.HaneH0, front3: UnitCatalog.BasaG0, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Sero)),
+            ("225 の席", Formation.Build(front1: UnitCatalog.HaneH0, front3: UnitCatalog.BasaG0, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.SeroC0)),
         };
         Console.WriteLine("## Q0-4 ハネの被弾（seed 0..199・H0）");
         Console.WriteLine();

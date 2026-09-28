@@ -32,8 +32,8 @@ static partial class TuneDiag
     internal const int Seeds = 200;
 
     /// <summary>前段の規定の1位の席（第228期 H3 の1位の席・前1 バサ ／ 前3 セロ ／ 中央 ヨミ ／ 後1 シオ ／ 後3 ハネ）。駒は今の規定。</summary>
-    internal static Formation MHane228 => Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.Sero,
-        center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Hane);
+    internal static Formation MHane228 => Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.SeroC0,
+        center: UnitCatalog.Yomi, back1: UnitCatalog.ShioA0, back3: UnitCatalog.Hane);
     /// <summary>参考: ポンの席（前1 シガ ／ 前3 ツギ ／ 中央 ベニ ／ 後1 カタ ／ 後3 ミオ）。</summary>
     internal static Formation Thunder => GaleDiag.Thunder;
 
@@ -59,16 +59,16 @@ static partial class TuneDiag
 
     static UnitDef Plus(UnitDef d, params TraitId[] extra) => DecoyDiag.Copy(d, d.Traits.Concat(extra).ToArray());
 
-    static readonly UnitDef ShioHalf = Plus(UnitCatalog.Shio, TraitId.RetreatHalf), ShioHeavy = Plus(UnitCatalog.Shio, TraitId.RetreatHeavy);
-    static readonly UnitDef HaneGuard = Plus(UnitCatalog.Hane, TraitId.SpringGuard), SeroShot = Plus(UnitCatalog.Sero, TraitId.EvadeMoveShot);
+    static readonly UnitDef ShioHalf = Plus(UnitCatalog.ShioA0, TraitId.RetreatHalf), ShioHeavy = Plus(UnitCatalog.ShioA0, TraitId.RetreatHeavy);
+    static readonly UnitDef HaneGuard = Plus(UnitCatalog.Hane, TraitId.SpringGuard), SeroShot = Plus(UnitCatalog.SeroC0, TraitId.EvadeMoveShot);
 
     internal static readonly Ver[] Versions =
     {
-        new("V0", UnitCatalog.Shio, UnitCatalog.Hane, UnitCatalog.Sero),
-        new("VA1", ShioHalf, UnitCatalog.Hane, UnitCatalog.Sero),
-        new("VA2", ShioHeavy, UnitCatalog.Hane, UnitCatalog.Sero),
-        new("VB", UnitCatalog.Shio, HaneGuard, UnitCatalog.Sero),
-        new("VC", UnitCatalog.Shio, UnitCatalog.Hane, SeroShot),
+        new("V0", UnitCatalog.ShioA0, UnitCatalog.Hane, UnitCatalog.SeroC0),
+        new("VA1", ShioHalf, UnitCatalog.Hane, UnitCatalog.SeroC0),
+        new("VA2", ShioHeavy, UnitCatalog.Hane, UnitCatalog.SeroC0),
+        new("VB", UnitCatalog.ShioA0, HaneGuard, UnitCatalog.SeroC0),
+        new("VC", UnitCatalog.ShioA0, UnitCatalog.Hane, SeroShot),
         new("VX1", ShioHalf, HaneGuard, SeroShot),
         new("VX2", ShioHeavy, HaneGuard, SeroShot),
     };

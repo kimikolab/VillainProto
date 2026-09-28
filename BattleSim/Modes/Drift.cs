@@ -79,7 +79,7 @@ static partial class DriftDiag
 
     internal static Formation BenchD1 => Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: UnitCatalog.ShioV3, back1: UnitCatalog.SeroOld, back3: UnitCatalog.BasaK0);
     internal static List<(string Name, Formation F)> CompareRowsWith() =>
-        CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "shio" or "yomi")).Select(r => (r.Name, OldBasaHane(r.F))).ToList();   // 第227期: バサ・ハネは旧に固定
+        CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "shio" or "yomi")).Select(r => (r.Name, OldTune(OldBasaHane(r.F)))).ToList();   // 第227期: バサ・ハネは旧に固定
 
     // 波: 本編の第2〜5波 ＋ 検証・九 / 新兵 ＋ 検証・九 / 農兵
     internal static readonly string[] WaveNames = { "第二波", "第三波", "第四波", "第五波", "九/新兵", "九/農兵" };

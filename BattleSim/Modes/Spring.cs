@@ -69,7 +69,7 @@ static partial class SpringDiag
 
     // 台（§8.1）
     /// <summary>第227期 L2 の総当たりの1位（前1 セロ ／ 前3 バサ ／ 中央 ヨミ ／ 後1 ハネ ／ 後3 シオ）。セロは前段で L2 が規定。</summary>
-    internal static Formation MHane227 => Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.BasaG0,
+    internal static Formation MHane227 => Formation.Build(front1: UnitCatalog.SeroC0, front3: UnitCatalog.BasaG0,
         center: UnitCatalog.Yomi, back1: UnitCatalog.HaneH0, back3: UnitCatalog.Shio);
     internal static Formation Thunder => DecoyDiag.Thunder;
     internal static List<(string Name, Formation F)> HaneRows() =>

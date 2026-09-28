@@ -194,6 +194,8 @@ static class ShockDigestDiag
         // 第230期 前段: バサ・ハネが嵐・追い風で規定に（転倒の穴も既定）なったので、第227〜229期の台は旧のバサ・ハネに戻す。
         if (mode is "l227" or "h228" or "g229")
             benches = benches.Select(b => (b.Item1, Common.OldGale(b.Item2))).ToArray();
+        // 第232期 前段: セロ（移動の追撃）・シオ（退避5割）が規定で変わったので、全モードの台の規定のセロ・シオを第231期の姿へ戻す（上の固定の後に掛ける）。
+        benches = benches.Select(b => (b.Item1, Common.OldTune(b.Item2))).ToArray();
         // 第230期 前段: 転倒の穴が既定になったので、それより前の期の台は穴なしで回す（w230 だけが今の既定）。
         ShufflerRule? digestRule = mode is "w230" or "a231" ? null : ShufflerRule.PreHole;
         PropertyInfo[] props = typeof(BattleEvent).GetProperties(BindingFlags.Public | BindingFlags.Instance);

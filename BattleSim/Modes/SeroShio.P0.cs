@@ -27,7 +27,7 @@ static partial class SeroShioDiag
         var s4 = S4Rows();
         Console.WriteLine($"- S4（セロのいる `compare` の行・{s4.Count} 行）: " + string.Join(" ／ ", s4.Select(r => r.Name)));
         Console.WriteLine($"  - うちシオもいる行: {string.Join(" ／ ", s4.Where(r => r.F.Occupied().Any(o => o.Def.Id == "shio")).Select(r => r.Name).DefaultIfEmpty("なし"))}");
-        var shioRows = CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id == "shio")).Select(r => (r.Name, F: OldBasaHane(r.F))).ToList();   // 第227期: バサ・ハネは旧に固定
+        var shioRows = CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id == "shio")).Select(r => (r.Name, F: OldTune(OldBasaHane(r.F)))).ToList();   // 第227期: バサ・ハネは旧に固定
         Console.WriteLine($"- シオのいる `compare` の行（{shioRows.Count} 行）: " + string.Join(" ／ ", shioRows.Select(r => r.Name)));
         Console.WriteLine();
         Console.WriteLine("S1 の隣（中央のシオの隣 4 枚）: " + string.Join("・", S1.Occupied().Where(o => o.Def.Id != "shio").Select(o => o.Def.Name)) + "。S2 の隣: "
@@ -66,7 +66,7 @@ static partial class SeroShioDiag
         Console.WriteLine();
         Console.WriteLine("| 行 | 倍率 | 第2〜5波 勝率 | 回復 ／ 破片(与) | 破片が減った | その駒の与ダメ | 九/新兵 勝率 | 回復 ／ 破片(与) | 破片が減った | 与ダメ |");
         Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|");
-        foreach (var (name, f) in CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "lili" or "tsugi")))
+        foreach (var (name, f) in CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "lili" or "tsugi")).Select(r => (r.Name, F: OldTune(r.F))))
         {
             bool lili = f.Occupied().Any(o => o.Def.Id == "lili");
             string id = lili ? "lili" : "tsugi";
