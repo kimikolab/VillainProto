@@ -6,6 +6,7 @@ internal sealed class MovementPresentation
 {
     internal readonly Dictionary<int, BattleEvent> Moves = new();
     internal readonly Dictionary<int, BattleEvent> Attacks = new();
+    internal readonly Dictionary<int, BattleEvent> SpringGuards = new();
     internal readonly Dictionary<int, string> ArrowStates = new();
     internal readonly Dictionary<int, int?> BlastDestinations = new();
     internal readonly Dictionary<int, List<BattleEvent>> ShuffleStarts = new();
@@ -18,13 +19,28 @@ internal sealed class MovementPresentation
         or BattleEventKind.Decoy or BattleEventKind.LastDodge or BattleEventKind.Barrage or BattleEventKind.StatusArrow
         or BattleEventKind.Disarray or BattleEventKind.DisarrayStage or BattleEventKind.Squall
         or BattleEventKind.Blast or BattleEventKind.Spring or BattleEventKind.Tailwind
-        or BattleEventKind.KillImpact or BattleEventKind.StaggerBreach;
+        or BattleEventKind.KillImpact or BattleEventKind.StaggerBreach
+        or BattleEventKind.SpringGuard or BattleEventKind.DecoyShow or BattleEventKind.MoveShot;
 
     internal MovementPresentation(IReadOnlyList<BattleEvent> events)
     {
         for (int i = 0; i < events.Count; i++)
         {
             var cue = events[i];
+            // 隣への介入と弾く本体は1組。次の別の弾き返しへ持ち越さない。
+            if (cue.Kind == BattleEventKind.SpringGuard)
+                for (int j = i + 1; j < events.Count; j++)
+                {
+                    var next = events[j];
+                    if (next.Kind == BattleEventKind.TurnStart) break;
+                    if (next.ActorId != cue.ActorId) continue;
+                    if (next.Kind == BattleEventKind.Spring)
+                    {
+                        if (next.TargetId == cue.PartnerId) SpringGuards[j] = cue;
+                        break;
+                    }
+                    if (next.Kind is BattleEventKind.SpringGuard or BattleEventKind.Attack) break;
+                }
             if (cue.Kind is BattleEventKind.Retreat or BattleEventKind.Regroup or BattleEventKind.Evade
                 or BattleEventKind.Spring or BattleEventKind.Tailwind or BattleEventKind.KillImpact or BattleEventKind.Blast)
             {
@@ -48,7 +64,8 @@ internal sealed class MovementPresentation
                     }
                 }
             }
-            if (cue.Kind is BattleEventKind.Barrage or BattleEventKind.EvadeRiposte or BattleEventKind.Blast or BattleEventKind.Squall)
+            if (cue.Kind is BattleEventKind.Barrage or BattleEventKind.EvadeRiposte or BattleEventKind.Blast or BattleEventKind.Squall
+                or BattleEventKind.MoveShot)
             {
                 for (int j = i + 1; j < events.Count; j++)
                 {

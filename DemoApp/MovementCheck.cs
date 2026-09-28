@@ -16,7 +16,9 @@ public partial class MovementCheck : Control
         try
         {
             CheckArrowIndex();
-            if (OS.GetCmdlineUserArgs().Contains("--replay")) await Replay();
+            CheckFollowupIndex();
+            if (OS.GetCmdlineUserArgs().Contains("--followup")) await Followup();
+            else if (OS.GetCmdlineUserArgs().Contains("--replay")) await Replay();
             else await Preview();
             GD.Print("MOVEMENT_CHECK_OK");
             GetTree().Quit();
@@ -114,6 +116,11 @@ public partial class MovementCheck : Control
             Require(field.MovementArrowPlays == result.Events.Count(e => e.Kind == BattleEventKind.Attack && e.ActorId == sero), "矢はAttackごとに1本");
             Require(field.MovementPiercePlays == result.Events.Count(e => e.Kind == BattleEventKind.Attack
                 && e.ActorId == sero && e.Pattern == AttackPattern.Pierce), "貫通矢だけを発光させる");
+            Require(field.MovementShotPlays == result.Events.Count(e => e.Kind == BattleEventKind.MoveShot),
+                "移動の追撃は後続Attackで1回だけ撃つ");
+            Require(indexed.SpringGuards.Count == result.Events.Count(e => e.Kind == BattleEventKind.SpringGuard),
+                "隣の味方への介入を直後の弾き返しへ接続");
+            Require(field.Pawns.Values.All(p => !p.DecoyShown), "決着時に挑発の印が残らない");
             foreach (var pawn in field.Pawns.Values)
             {
                 var hp = result.Events.LastOrDefault(e => e.TargetId == pawn.InstanceId && e.Kind is BattleEventKind.Damage or BattleEventKind.Heal);

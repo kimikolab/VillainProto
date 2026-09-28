@@ -13,7 +13,7 @@ public partial class BattlePawn3D
         if (!_alive || _victory || !key.StartsWith(_unitId + "_")) return;
         if (_movementPortrait == "sero_last_dodge" && key == "sero_evade") return;
         if (key != "hane_dropkick") ClearDropkickPose();
-        if (key != "hane_palm") ClearPalmStrikePose();
+        if (key is not ("hane_palm" or "hane_spring_guard")) ClearPalmStrikePose();
         _movementPortraitTween?.Kill();
         ResetBowPortrait();
         _movementPortrait = key;
@@ -36,4 +36,10 @@ public partial class BattlePawn3D
         _movementPortrait = null;
         RefreshBattlePortrait();
     }
+
+    // 差分に描かれた蔓の先・弓の位置からエフェクトを出す。右向き原画を敵側では左右反転する。
+    internal Vector3 MovementPortraitPoint(Vector2 pixel, Camera3D camera)
+        => _sprite.GlobalPosition
+            + camera.GlobalBasis.X * (Team == 0 ? 1 : -1) * (pixel.X - _sprite.Texture.GetWidth() * 0.5f) * _sprite.PixelSize
+            + camera.GlobalBasis.Y * (_sprite.Texture.GetHeight() * 0.5f - pixel.Y) * _sprite.PixelSize;
 }

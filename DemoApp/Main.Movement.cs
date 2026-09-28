@@ -1,5 +1,6 @@
 using BattleCore;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 public partial class Main
@@ -10,7 +11,7 @@ public partial class Main
     {
         if (MovementPresentation.IsCue(e.Kind))
         {
-            double delay = _battleField.ShowMovementCue(e, _speed);
+            double delay = _battleField.ShowMovementCue(e, _speed, _movement.SpringGuards.GetValueOrDefault(index));
             // 両掌が届く前に敵のMoveを始めない。中断時も待機を解除する。
             if (e.Kind == BattleEventKind.Spring && actor is not null) await actor.PalmStrikeImpact;
             else if (delay > 0) await Delay(delay);

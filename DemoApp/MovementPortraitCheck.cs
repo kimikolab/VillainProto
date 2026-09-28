@@ -19,7 +19,10 @@ public partial class MovementPortraitCheck : Control
                 ("sero", "sero_evade", BattleEventKind.Evade),
                 ("sero", "sero_last_dodge", BattleEventKind.LastDodge),
                 ("sero", "sero_decoy", BattleEventKind.Decoy),
+                ("sero", "sero_move_shot", BattleEventKind.MoveShot),
                 ("hane", "hane_palm", BattleEventKind.Spring),
+                ("hane", "hane_spring_guard", BattleEventKind.Spring),
+                ("shio", "shio_retreat", BattleEventKind.Retreat),
                 ("yomi", "yomi_stumble", BattleEventKind.KillImpact),
             };
             foreach (int team in new[] { 0, 1 })
@@ -28,6 +31,7 @@ public partial class MovementPortraitCheck : Control
                 field.BeginBattle(new DemoOpening[] {
                     new(1, team, unit, unit, 2, 100, 100, 10, AttackPattern.Single, false),
                     new(2, 1-team, "knight", "相手", 2, 100, 100, 10, AttackPattern.Single, true),
+                    new(3, team, "sero", "仲間", 0, 100, 100, 10, AttackPattern.Single, false),
                 }, "移動差分の確認", 0);
                 var pawn = field.FindPawn(1)!;
                 pawn.AnimationSpeed = 2;
@@ -37,8 +41,13 @@ public partial class MovementPortraitCheck : Control
                 Require(texture != UiKit.BattlePortrait(atlas, unit), "差分が実ファイルから読み込まれる");
                 using var pixels = texture.GetImage();
                 Require(pixels.GetPixel(0, 0).A == 0, "PNGが透過");
-                field.ShowMovementCue(new BattleEvent { Turn = 1, Kind = kind, ActorId = 1,
-                    TargetId = 2, Text = ImpactLabels.Tumble }, 2);
+                var cue = new BattleEvent { Turn = 1, Kind = kind, ActorId = 1,
+                    TargetId = kind == BattleEventKind.Retreat ? 3 : 2, Text = ImpactLabels.Tumble };
+                field.ShowMovementCue(cue, 2, key == "hane_spring_guard"
+                    ? new BattleEvent { Turn = 1, Kind = BattleEventKind.SpringGuard, ActorId = 1, TargetId = 3, PartnerId = 2 } : null);
+                Task? shot = kind == BattleEventKind.MoveShot
+                    ? field.Attack(pawn, field.FindPawn(2), AttackPattern.Pierce, new[] { field.FindPawn(2)! },
+                        advance: false, movementCue: cue) : null;
                 Require(pawn.MovementPortrait == key && sprite.Texture == texture, "実イベントで差分を選ぶ");
                 // 画像の最下端の不透明な靴底が地面付近へ来る（全差分を同じ基準で測る）。
                 float bottom = sprite.Position.Y - texture.GetHeight() * sprite.PixelSize
@@ -54,6 +63,7 @@ public partial class MovementPortraitCheck : Control
                 }
                 await Wait(0.04);
                 await Capture($"{key}-team{team}");
+                if (shot is not null) await shot;
                 await Wait(0.4);
                 Require(pawn.MovementPortrait is null && sprite.Texture == UiKit.BattlePortrait(atlas, unit), "待機絵へ復帰");
                 pawn.ShowMovementPortrait(key, 0.4);

@@ -9,26 +9,31 @@ public partial class BattlePawn3D
     private TaskCompletionSource? _palmImpact;
     internal bool PalmStrikeActive => _palmTween is not null;
     internal Task PalmStrikeImpact => _palmImpact?.Task ?? Task.CompletedTask;
+    // 1536x1024原画の中心から掌への座標。双掌（1410,425）／救援の片掌（1463,321）。
+    private Vector2 PalmContactPixel => _movementPortrait == "hane_spring_guard" ? new(695, 191) : new(642, 87);
     // 低い構えの掌の高さ。相手の身長に合わせて足まで浮かせない。
-    internal float PalmStrikeHeight(Vector3 cameraUp) => GlobalPosition.Y + _portraitBaseY + cameraUp.Y * 87 * _sprite.PixelSize;
+    internal float PalmStrikeHeight(Vector3 cameraUp) => GlobalPosition.Y + _portraitBaseY + cameraUp.Y * PalmContactPixel.Y * _sprite.PixelSize;
 
     // 地面を蹴って両掌へ体重を伝える。名前・HP・席は動かさない。
-    internal void BeginPalmStrike(Func<Vector3> impact, Vector3 right, Vector3 up, Action hit)
+    internal void BeginPalmStrike(Func<Vector3> impact, Vector3 right, Vector3 up, Action hit, Vector3? guarded = null)
     {
         if (_unitId != "hane" || !CanReceiveMovementImpact) return;
         ClearMovementPortrait();
-        ShowMovementPortrait("hane_palm", 0.65);
+        ShowMovementPortrait(guarded is null ? "hane_palm" : "hane_spring_guard", 0.65);
         _palmImpact = new TaskCompletionSource();
         float sign = Team == 0 ? 1 : -1;
         double speed = Math.Max(0.1, AnimationSpeed);
         Vector3 windup = -right * sign * 0.20f;
+        // 仲間への介入は横へ短く跳ぶ。立ち位置と席は台本のMoveだけが変える。
+        if (guarded is Vector3 ally)
+            windup = (ally - FxPoint).LimitLength(0.85f) + Vector3.Up * 0.16f;
         Vector3 contact = Vector3.Zero;
         _palmTween = CreateTween();
         _palmTween.TweenMethod(Callable.From<float>(t => _palmOffset = windup * t), 0f, 1f, 0.08 / speed);
         _palmTween.TweenMethod(Callable.From<float>(t => {
-            // 1536x1024の差分: 両掌の平均接点（1410,425）を相手の胴へ合わせる。
+            // 自分への弾き返しと味方への救援で、実際に描かれた掌を接触点へ合わせる。
             float pixel = _sprite.PixelSize;
-            Vector3 center = impact() - right * sign * 642 * pixel - up * 87 * pixel;
+            Vector3 center = impact() - right * sign * PalmContactPixel.X * pixel - up * PalmContactPixel.Y * pixel;
             contact = center - (GlobalPosition + Vector3.Up * _portraitBaseY);
             _palmOffset = windup.Lerp(contact, t * t);
         }), 0f, 1f, 0.14 / speed);
@@ -46,7 +51,7 @@ public partial class BattlePawn3D
 
     private void ProcessPalmStrikePose()
     {
-        if (!PalmStrikeActive || _movementPortrait != "hane_palm") return;
+        if (!PalmStrikeActive || _movementPortrait is not ("hane_palm" or "hane_spring_guard")) return;
         _sprite.Position = new Vector3(0, _portraitBaseY, 0) + _palmOffset;
         _sprite.Rotation = Vector3.Zero;
         _sprite.Scale = Vector3.One;

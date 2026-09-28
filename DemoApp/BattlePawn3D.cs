@@ -526,6 +526,7 @@ void fragment() {
 
     public void AnimateDeath()
     {
+        SetDecoyShown(false);
         ClearMovementPortrait();
         if (!_alive) return;
         ResetBowPortrait();
@@ -577,6 +578,7 @@ void fragment() {
 
     public void AnimateRevive()
     {
+        SetDecoyShown(false);
         ClearMovementPortrait();
         ResetBowPortrait();
         QuietLastStand = false;
@@ -621,6 +623,7 @@ void fragment() {
     public void AnimateVictory()
     {
         if (!_alive || Team != BattleContext.PlayerTeam) return;
+        SetDecoyShown(false);
         ClearMovementPortrait();
         ResetBowPortrait();
         ClearSpecialEffects();
@@ -685,6 +688,7 @@ void fragment() {
         if (!_alive || _victory) return;
 
         float animationDelta = (float)delta * (float)Math.Max(0.1, AnimationSpeed);
+        ProcessDecoy(animationDelta);
         if (_staggerRecoverDelay > 0)
         {
             _staggerRecoverDelay -= animationDelta;

@@ -12,6 +12,7 @@ public partial class BattlefieldView3D
     internal int MovementArrowPlays { get; private set; }
     internal int MovementPiercePlays { get; private set; }
     internal int MovementBarragePlays { get; private set; }
+    internal int MovementShotPlays { get; private set; }
 
     private void ResetMovement()
     {
@@ -20,6 +21,7 @@ public partial class BattlefieldView3D
         MovementArrowPlays = 0;
         MovementPiercePlays = 0;
         MovementBarragePlays = 0;
+        MovementShotPlays = 0;
         HaneDropkickPlays = 0;
         HanePalmPlays = 0;
         BasaStormPlays = 0;
@@ -27,7 +29,7 @@ public partial class BattlefieldView3D
         BasaSweepPlays = 0;
     }
 
-    internal double ShowMovementCue(BattleEvent e, double speed)
+    internal double ShowMovementCue(BattleEvent e, double speed, BattleEvent? springGuard = null)
     {
         MovementPlays[e.Kind] = MovementPlays.GetValueOrDefault(e.Kind) + 1;
         var actor = FindPawn(e.ActorId);
@@ -55,7 +57,14 @@ public partial class BattlefieldView3D
                 _attackAudio.PlayMovementSound(MovementSound.Vine);
                 bool urgent = e.Kind == BattleEventKind.Retreat;
                 int nth = Math.Clamp(e.StatusRemaining ?? 1, 1, 3);
-                Flow(actor, target, MovementFx.Leaf, urgent ? 0.48f : 0.16f);
+                if (urgent && actor?.UnitId == "shio")
+                {
+                    actor.ShowMovementPortrait("shio_retreat", 0.36 / (1 + (nth - 1) * 0.08));
+                    if (target is not null)
+                        MovementFx.Flow(_fxRoot, _camera, actor.MovementPortraitPoint(new Vector2(975, 340), _camera),
+                            target.FxPoint, MovementFx.Leaf, 0.32 / s, 0.48f);
+                }
+                else Flow(actor, target, MovementFx.Leaf, urgent ? 0.48f : 0.16f);
                 Coil(target, MovementFx.Leaf, urgent ? 0.58f : 0.78f, urgent ? 0.26 / (1 + nth * 0.12) : 0.45);
                 Flow(target, partner, MovementFx.Leaf, 0.12f);
                 actor?.MovementPose(urgent ? 0.25f + nth * 0.07f : 0.10f);
@@ -84,6 +93,14 @@ public partial class BattlefieldView3D
                 Flow(target, actor, MovementFx.Arrow, 0.12f);
                 Coil(actor, MovementFx.Arrow, 0.35f + Math.Clamp(e.Amount, 0, 100) * 0.002f);
                 return 0.10;
+            case BattleEventKind.DecoyShow:
+                actor?.SetDecoyShown(e.Slot == 1, e.Amount);
+                if (e.Slot == 1)
+                {
+                    actor?.ShowMovementPortrait("sero_decoy", 0.20);
+                    Coil(actor, MovementFx.Arrow, 0.42f, 0.18);
+                }
+                return 0;
             case BattleEventKind.ShioStage:
                 if (actor is not null) MovementFx.Coil(_fxRoot, _camera, actor.Home + Vector3.Up * 0.22f,
                     MovementFx.Leaf, 0.42f + e.Slot * 0.12f, 0.40 / s, 1);
@@ -101,7 +118,11 @@ public partial class BattlefieldView3D
                 Coil(target, MovementFx.Wind, 0.42f);
                 return 0.045;
             case BattleEventKind.Spring:
-                ShowHanePalmStrike(actor, target);
+                ShowHanePalmStrike(actor, target, FindPawn(springGuard?.TargetId));
+                return 0;
+            case BattleEventKind.SpringGuard:
+                // 味方へ手を差し出す因果だけ。掌の接触・音・敵の移動は次のSpringで1回。
+                Flow(actor, target, MovementFx.Bounce, 0.16f);
                 return 0;
             case BattleEventKind.Tailwind:
                 ShowTailwindGust(actor, target, partner, s);
@@ -205,29 +226,38 @@ public partial class BattlefieldView3D
         if (from.UnitId == "sero")
         {
             MovementArrowPlays++;
+            if (cue?.Kind == BattleEventKind.MoveShot)
+            {
+                MovementShotPlays++;
+                from.ShowMovementPortrait("sero_move_shot", 0.40);
+                from.MovementPose(-0.38f, 0.22f);
+                from.BeginBonusAfterimage(MovementFx.Wind, 0.20 / s, false);
+            }
             var arrowHit = MovementCompletionSound(to, MovementSound.ArrowHit);
+            Vector3 origin = cue?.Kind == BattleEventKind.MoveShot
+                ? from.MovementPortraitPoint(new Vector2(938, 425), _camera) : from.FxPoint;
             Vector3 end = pattern == AttackPattern.Pierce
                 ? hits.OrderByDescending(p => p.FxPoint.DistanceSquaredTo(from.FxPoint)).First().FxPoint : to.FxPoint;
             if (pattern == AttackPattern.Pierce) end += (end - from.FxPoint).Normalized() * 0.9f;
             if (pattern == AttackPattern.Pierce)
             {
                 MovementPiercePlays++;
-                MovementFx.PiercingShot(_fxRoot, _camera, from.FxPoint, end,
+                MovementFx.PiercingShot(_fxRoot, _camera, origin, end,
                     hits.Select(p => p.FxPoint).ToArray(), 0.16 / s);
             }
             else if (cue?.Kind == BattleEventKind.Barrage)
             {
                 MovementBarragePlays++;
-                MovementFx.PiercingShot(_fxRoot, _camera, from.FxPoint, end, Array.Empty<Vector3>(), 0.16 / s, barrage: true);
+                MovementFx.PiercingShot(_fxRoot, _camera, origin, end, Array.Empty<Vector3>(), 0.16 / s, barrage: true);
             }
-            else MovementFx.Shot(_fxRoot, _camera, from.FxPoint, end, MovementFx.Arrow, 0.16 / s);
+            else MovementFx.Shot(_fxRoot, _camera, origin, end, MovementFx.Arrow, 0.16 / s);
             foreach (string state in (arrowStates ?? "").Split(','))
             {
                 Color? tint = state switch {
                     "毒" => UiKit.Poison,
                     "燃焼" => new Color("ff943f"), "感電" => ThunderFx.Cyan, _ => null };
                 if (tint is Color color)
-                    MovementFx.Flow(_fxRoot, _camera, from.FxPoint, end, color, 0.22 / s, 0.12f, 1);
+                    MovementFx.Flow(_fxRoot, _camera, origin, end, color, 0.22 / s, 0.12f, 1);
             }
             await ToSignal(GetTree().CreateTimer(Math.Max(0.005, 0.16 / s)), SceneTreeTimer.SignalName.Timeout);
             arrowHit();

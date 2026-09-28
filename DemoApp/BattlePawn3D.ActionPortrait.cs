@@ -77,7 +77,7 @@ public partial class BattlePawn3D
             if (key == "basa_flap") height *= 0.90f;
             if (key == "hane_dropkick") height *= 1024f / 1536f;
             // 低い踏み込みは1024高。待機絵と画素あたりの体格を揃える。
-            if (key == "hane_palm") height *= 1024f / 1536f;
+            if (key is "hane_palm" or "hane_spring_guard") height *= 1024f / 1536f;
         }
         Texture2D portrait = UiKit.BattlePortrait(_atlas, key, _burning);
         _portraitGroundDistance = height * (0.5f - padding);

@@ -12,7 +12,7 @@ public partial class BattlefieldView3D
     internal int HaneDropkickPlays { get; private set; }
     internal int HanePalmPlays { get; private set; }
 
-    private void ShowHanePalmStrike(BattlePawn3D? actor, BattlePawn3D? target)
+    private void ShowHanePalmStrike(BattlePawn3D? actor, BattlePawn3D? target, BattlePawn3D? guarded = null)
     {
         if (actor?.UnitId != "hane" || target is null || !actor.CanReceiveMovementImpact || !target.CanReceiveMovementImpact) return;
         int generation = _specialGeneration;
@@ -36,7 +36,7 @@ public partial class BattlefieldView3D
             _attackAudio.PlayMovementSound(MovementSound.SpringBlock);
             MovementFx.Smash(_fxRoot, _camera, Contact(), MovementFx.Bounce, 0.24 / speed, 1.10f);
             CameraPunch(Contact(), AttackPattern.Single);
-        });
+        }, guarded?.FxPoint);
     }
 
     private async Task<bool> ShowHaneDropkick(BattlePawn3D actor, BattlePawn3D target)
