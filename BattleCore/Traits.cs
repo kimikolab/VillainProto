@@ -477,6 +477,7 @@ public enum TraitId
     RetreatHalf,    // 緊急退避の線を5割に（第231期・シオの版 A1）。**札そのものは挙動を持たない**（`RetreatTrait` が読む）。保持者 0 枚
     RetreatHeavy,   // 緊急退避を「4割未満 または 一撃で最大HPの3割以上」に（第231期・シオの版 A2）。**札そのものは挙動を持たない**。保持者 0 枚
     SpringGuard,    // 隣の味方の被弾でも弾き返す（第231期・ハネの版 B）: そのときハネはその味方と入れ替わる。**札そのものは挙動を持たない**（engine の弾き返しの判定が読む）。保持者 0 枚
+    SpringStay,     // 隣の弾き返しで入れ替わらない（第232期・ハネの版 S2・`SpringGuard` と組む）: 隣の味方が殴られたときは殴った敵を弾くだけ。**札そのものは挙動を持たない**（`BattleContext.SpringSwap` が読む）。保持者 0 枚
     EvadeMoveShot,  // 移動の追撃（第231期・セロの版 C）: 段2 以上で隊列を動かされたら貫きの矢を1本（1ターン2回・自分の回避の入れ替えでは撃たない）。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -13059,6 +13060,9 @@ public sealed class RetreatHalfTrait : Trait { public override TraitId Id => Tra
 /// <summary>緊急退避を「4割未満 または 一撃で最大HPの3割以上」に（第231期・A2）。<b>札そのものは判定を持たない</b>（<see cref="RetreatTrait.NeedOf"/> が読む）。</summary>
 public sealed class RetreatHeavyTrait : Trait { public override TraitId Id => TraitId.RetreatHeavy; }
 
+/// <summary>隣の弾き返しで入れ替わらない（第232期・S2）。<b>札そのものは判定を持たない</b>（<see cref="BattleContext.SpringSwap"/> が読む）。</summary>
+public sealed class SpringStayTrait : Trait { public override TraitId Id => TraitId.SpringStay; }
+
 /// <summary>隣の味方の被弾でも弾き返す（第231期・B）。<b>札そのものは判定を持たない</b>（engine の弾き返しの判定と <see cref="SpringTrait.TryGuard"/> が読む）。</summary>
 public sealed class SpringGuardTrait : Trait { public override TraitId Id => TraitId.SpringGuard; }
 
@@ -15081,6 +15085,7 @@ public static class TraitCatalog
         new RetreatHeavyTrait(),     // 第231期
         new SpringGuardTrait(),      // 第231期
         new EvadeMoveShotTrait(),    // 第231期
+        new SpringStayTrait(),       // 第232期
         new ShioStageSlowTrait(),    // 第226期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期

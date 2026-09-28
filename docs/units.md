@@ -298,6 +298,7 @@
 | `RetreatHalf` | 移り木のシオ |
 | `RetreatHeavy` | - |
 | `SpringGuard` | - |
+| `SpringStay` | - |
 | `EvadeMoveShot` | 逃亡兵セロ |
 | `Inversion` | - |
 | `Drought` | - |

@@ -11474,6 +11474,8 @@ public sealed class BattleContext
         }
         if (guarded is not null)
         {
+            // 第232期（S2・`SpringStay`）: 弾くだけで入れ替わらない（ハネは動かない・勢い余ってもない）。
+            if (hane.HasTrait(TraitId.SpringStay)) { t.SpringGuardStays++; return; }
             // 第231期（B）: 殴られた味方と入れ替わる（弾いた反動で前へ出て、味方を後ろへかばう）。突き崩しは起こさない（勢い余ってと同じ `Shoving` の中）。
             if (!hane.IsAlive || !guarded.IsAlive || guarded.HasTrait(TraitId.Planted)) { t.SpringGuardRefused++; return; }
             bool sw = false;

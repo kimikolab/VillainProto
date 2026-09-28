@@ -2308,6 +2308,8 @@ public sealed class UnitTally
     /// <c>SpringGuardTail</c> 経路の最後尾（弾く先が無い）／ <c>SpringGuardCapped</c> 1ターンの上限 ／ <c>SpringGuardHushed</c> 粛 ／ <c>SpringGuardHeld</c> 割り込みの中・痺れ・組み付き。
     /// </summary>
     public long SpringGuardOffLane, SpringGuardTail, SpringGuardCapped, SpringGuardHushed, SpringGuardHeld;
+    /// <summary>第232期（S2）・<b>計数専用</b>: 隣の弾き返しで入れ替わらなかった（`SpringStay`）。</summary>
+    public long SpringGuardStays;
     public int[]? ShioStageTurn;
 
     /// <summary>

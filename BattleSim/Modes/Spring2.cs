@@ -53,7 +53,8 @@ static partial class Spring2Diag
     internal sealed record Ver(string Tag, UnitDef Hane);
     static UnitDef Plus(UnitDef d, params TraitId[] extra) => DecoyDiag.Copy(d, d.Traits.Concat(extra).ToArray());
     internal static readonly UnitDef HaneS1 = Plus(UnitCatalog.Hane, TraitId.SpringGuard);
-    internal static Ver[] Versions => _versions ??= new[] { new Ver("S0", UnitCatalog.Hane), new Ver("S1", HaneS1) };
+    internal static readonly UnitDef HaneS2 = Plus(UnitCatalog.Hane, TraitId.SpringGuard, TraitId.SpringStay);
+    internal static Ver[] Versions => _versions ??= new[] { new Ver("S0", UnitCatalog.Hane), new Ver("S1", HaneS1), new Ver("S2", HaneS2) };
     static Ver[]? _versions;
     internal static Ver VerOf(string tag) => Versions.First(v => v.Tag == tag);
 
@@ -84,13 +85,13 @@ static partial class Spring2Diag
         // S0: ハネの隣の味方が殴られて緊急退避が起きた回数（S1 なら取り合いになりうる被弾）
         public long AdjRetreat;
         // Q0-2 弾けなかった内訳（隣の分）
-        public long GChances, GFires, GOffLane, GTail, GCapped, GHushed, GHeld;
+        public long GChances, GFires, GOffLane, GTail, GCapped, GHushed, GHeld, GStay;
 
         public void Merge(Agg o)
         {
             T.Merge(o.T);
             GuardBoth += o.GuardBoth; GuardOther += o.GuardOther; GuardSkipped += o.GuardSkipped; GuardNoNeed += o.GuardNoNeed; AdjRetreat += o.AdjRetreat;
-            GChances += o.GChances; GFires += o.GFires; GOffLane += o.GOffLane; GTail += o.GTail; GCapped += o.GCapped; GHushed += o.GHushed; GHeld += o.GHeld;
+            GChances += o.GChances; GFires += o.GFires; GOffLane += o.GOffLane; GTail += o.GTail; GCapped += o.GCapped; GHushed += o.GHushed; GHeld += o.GHeld; GStay += o.GStay;
         }
         public double Per(long x) => T.Per(x);
 
@@ -101,7 +102,7 @@ static partial class Spring2Diag
             {
                 if (id != "hane" || !p.Any(u => u.Def.Id == "hane")) continue;
                 GChances += t.SpringGuardChances; GFires += t.SpringGuardFires; GOffLane += t.SpringGuardOffLane; GTail += t.SpringGuardTail;
-                GCapped += t.SpringGuardCapped; GHushed += t.SpringGuardHushed; GHeld += t.SpringGuardHeld;
+                GCapped += t.SpringGuardCapped; GHushed += t.SpringGuardHushed; GHeld += t.SpringGuardHeld; GStay += t.SpringGuardStays;
             }
             var players = p.Select(u => u.InstanceId).ToHashSet();
             int hane = p.FirstOrDefault(u => u.Def.Id == "hane")?.InstanceId ?? -1;
