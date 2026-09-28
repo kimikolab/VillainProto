@@ -2288,6 +2288,20 @@ public sealed class UnitTally
     /// </summary>
     public long RetreatChances, RetreatNoPartner, RetreatSpent, RetreatHeld, RetreatHushed, RetreatSwaps, RetreatSelf, RetreatInReaction,
                 RetreatLowered, RetreatPushed;
+    /// <summary>第231期（A2）・<b>計数専用</b>: 線の上だが一撃が重くて判定に来た回数 ／ そのうち下げた回数。</summary>
+    public long RetreatHeavyChances, RetreatHeavyOnly;
+
+    /// <summary>
+    /// 第231期（B・C）・<b>計数専用</b>。弾き返し（ハネの側）: <c>SpringGuardChances</c> 隣の味方の被弾で判定に来た ／ <c>SpringGuardFires</c> 弾きに入った ／
+    /// <c>SpringGuardCount</c> 敵を弾いた ／ <c>SpringGuardSwaps</c> その味方と入れ替わった ／ <c>SpringGuardRefused</c> 入れ替わりが空振り。
+    /// 移動の追撃（セロの側）: <c>MoveShotChances</c> 段2 以上で動かされた（自分の回避の入れ替えを除く）／ <c>MoveShots</c> 撃った ／
+    /// <c>MoveShotCapped</c> 1ターン2回で止まった ／ <c>MoveShotHushed</c> 粛で止まった ／ <c>MoveShotHeld</c> 痺れ・組み付きで止まった ／
+    /// <c>MoveShotSelfSwap</c> 自分の回避の入れ替えで動いた（撃たない）／ <c>MoveShotFallback</c> 自分の経路に敵がいなくて別の経路へ ／
+    /// <c>EvMoveShotDealt</c> 移動の追撃の与ダメ ／ <c>MoveShotByTurn</c>[ターン] 撃った数。
+    /// </summary>
+    public long SpringGuardChances, SpringGuardFires, SpringGuardCount, SpringGuardSwaps, SpringGuardRefused,
+                MoveShotChances, MoveShots, MoveShotCapped, MoveShotHushed, MoveShotHeld, MoveShotSelfSwap, MoveShotFallback, EvMoveShotDealt;
+    public long[]? MoveShotByTurn;
     public int[]? ShioStageTurn;
 
     /// <summary>
@@ -3449,7 +3463,27 @@ public enum BattleEventKind
     /// 溢れを攻撃力に（第230期・シオの版 W3/W4・<b>表示専用</b>）。<c>ActorId</c> ＝ シオ ／ <c>TargetId</c> ＝ 受け手 ／ <c>Amount</c> ＝ 足した攻撃力 ／
     /// <c>StatusRemaining</c> ＝ この戦でその駒に足した累計（上限 15）。回復の <c>Heal</c> の後に1件。
     /// </summary>
-    Overflow
+    Overflow,
+
+    /// <summary>
+    /// 挑発が効いているか（第231期・<b>表示専用・盤面の規則はこれを読まない</b>）。<c>ActorId</c> ＝ 挑発の札の保持者（セロ）／
+    /// <c>Slot</c> ＝ 1 効いている（敵の単体攻撃の的になれる列にいる）・0 効いていない ／ <c>Amount</c> ＝ そのときの回避率（%）／ <c>Team</c>。
+    /// <b>切り替わった瞬間にだけ1件</b>（戦の頭の最初の判定で効いていれば 1 が1件）。判定は盤面の挑発と同じ <c>DecoyTrait.Eligible</c>。
+    /// 判定する時点は ターン頭の状態の写し・入れ替えの後・標的選択の頭。
+    /// </summary>
+    DecoyShow,
+
+    /// <summary>
+    /// 隣の味方が殴られた弾き返し（第231期・ハネの版 B・<b>表示専用</b>）。<c>ActorId</c> ＝ ハネ ／ <c>TargetId</c> ＝ 殴られた味方 ／
+    /// <c>PartnerId</c> ＝ 殴った敵 ／ <c>Slot</c> ＝ 弾く先の席。直後にいつもの <see cref="Spring"/> と敵の入れ替え・転倒、最後にハネとその味方の入れ替え（2体の <c>Move</c>）。
+    /// </summary>
+    SpringGuard,
+
+    /// <summary>
+    /// 移動の追撃（第231期・セロの版 C・<b>表示専用</b>）。<c>ActorId</c> ＝ セロ ／ <c>TargetId</c> ＝ 経路の先頭の敵 ／ <c>Slot</c> ＝ 経路 ／
+    /// <c>Amount</c> ＝ そのターンの何本目（1〜2）。直後に貫きの <c>Attack</c> と <c>Damage</c>。
+    /// </summary>
+    MoveShot
 }
 
 /// <summary>撃破の衝撃（第230期）の <c>Text</c>。<b>表示専用。</b></summary>

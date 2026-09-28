@@ -475,6 +475,8 @@ public enum OutOfTurnRoute
     Squall,
     /// <summary>弾き返し（<c>SpringTrait</c>・第228期。<b>問う相手はハネ</b>）。</summary>
     Spring,
+    /// <summary>移動の追撃（<c>EvadeMoveShotTrait</c>・第231期。<b>問う相手はセロ</b>）。</summary>
+    MoveShot,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -484,7 +486,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -4710,6 +4712,10 @@ public sealed class BattleContext
     public int DisorderOf(int teamId) => _disorder[teamId];
     /// <summary>次の標的選択1回にだけ効く「的の固定」（追い撃ち・乱れ撃ち）。`SelectTargetChain` の頭で読んで消す。</summary>
     UnitState? _forcedTarget;
+    /// <summary>第231期（移動の追撃）: 的の固定と一緒に経路も固定する（−1 ＝ 固定しない・的のレーンから引く）。的の固定と同じく読んで消す。</summary>
+    int _forcedLane = -1;
+    /// <summary>第231期（挑発の表示）: いま「効いている」と台本に出している保持者（<b>表示専用・盤面の規則は読まない</b>）。</summary>
+    readonly HashSet<int> _decoyShown = new();
     /// <summary>いまの `PerformAttack` の枠で回避した駒（主目標なら `OnAfterAttack` を走らせない）。入れ子は `PerformAttack` が退避する。</summary>
     UnitState? _evadedNow;
     /// <summary>セロの一撃の出どころ（0 手番 ／ 1 追い撃ち ／ 2 乱れ撃ち・<b>計数専用</b>）。</summary>
@@ -4738,9 +4744,79 @@ public sealed class BattleContext
         _evadeShotKind = kind;
         _forcedTarget = foe;
         try { PerformAttack(sero, patternOverride: pierce ? AttackPattern.Pierce : AttackPattern.Single); }
-        finally { _forcedTarget = null; _evadeShotKind = prevKind; }
+        finally { _forcedTarget = null; _forcedLane = -1; _evadeShotKind = prevKind; }
         long d = t.DamageToEnemy - before;
-        if (kind == 1) t.EvRiposteDealt += d; else t.EvBarrageDealt += d;
+        if (kind == 1) t.EvRiposteDealt += d; else if (kind == 3) t.EvMoveShotDealt += d; else t.EvBarrageDealt += d;
+    }
+
+    /// <summary>
+    /// 移動の追撃の1本（第231期・<see cref="EvadeMoveShotTrait"/> だけが呼ぶ）。セロのいる経路と同じ番号の敵の経路を前から後ろへ貫く
+    /// （中央のセロは生きている敵が多い経路・同数なら経路0）。その経路に敵がいなければ敵が多い方の経路へ落とす。的と経路を固定した
+    /// <see cref="EvadeShot"/>（kind 3）なので、介入の鎖は通らず、状態の矢・痺れ毒・§1・破片・軛・反撃は今までどおり。<b>乱数を引かない</b>（貫きの中の既存の乱数を除く）。
+    /// </summary>
+    public void MoveShot(UnitState sero, int ordinal)
+    {
+        if (!sero.IsAlive) return;
+        var foes = LivingMembers(Opponent(sero.TeamId));
+        if (foes.Count == 0) return;
+        FormationShape es = foes[0].Shape;
+        var mine = sero.Shape.LanesOf(sero.Slot);
+        int lane = mine.Count == 1 ? mine[0] : MostLane(mine.Count > 0 ? mine : new[] { 0, 1 });
+        var occ = LaneOccupants(foes, lane, es);
+        UnitTally t = TallyOf(sero);
+        if (occ.Count == 0)
+        {
+            t.MoveShotFallback++;
+            lane = MostLane(new[] { 0, 1 });
+            occ = LaneOccupants(foes, lane, es);
+            if (occ.Count == 0) return;
+        }
+        t.MoveShots++;
+        (t.MoveShotByTurn ??= new long[7])[Math.Clamp(_turn, 0, 6)]++;
+        UnitState ft = occ[0];
+        Log($"    {sero.Name} は動かされた勢いで {ft.Name} の列へ矢を放った（移動の追撃・{ordinal} 本目）", LogKind.Trigger);
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.MoveShot, Turn = _turn, ActorId = sero.InstanceId, TargetId = ft.InstanceId,
+            Slot = lane, Amount = ordinal, Team = sero.TeamId,
+        });
+        _forcedLane = lane;
+        EvadeShot(sero, ft, true, 3);
+
+        int MostLane(IEnumerable<int> lanes)
+        {
+            int best = -1, bestN = -1;
+            foreach (int l in lanes)
+            {
+                int n = LaneOccupants(foes, l, es).Count;
+                if (n > bestN || (n == bestN && l < best)) { best = l; bestN = n; }
+            }
+            return best;
+        }
+    }
+
+    /// <summary>
+    /// 挑発が効いているか（第231期・<b>表示専用</b>）。盤面の挑発と同じ判定（<see cref="DecoyTrait.Eligible"/>）を、
+    /// 自陣を敵の単体攻撃の的の側から見た pool に当てる。転倒の穴の計数（<see cref="HoleSkip"/>）は触らない。<b>盤面の規則はこれを読まない。</b>
+    /// </summary>
+    public bool DecoyShowNow(UnitState u) => DecoyTrait.Eligible(this, u, PoolOf(LivingMembers(u.TeamId).ToList()), count: false);
+
+    /// <summary>挑発の表示を今の盤面に合わせ、切り替わった保持者だけ <see cref="BattleEventKind.DecoyShow"/> を出す（第231期・verbose のときだけ）。</summary>
+    void RefreshDecoyShow()
+    {
+        if (!_verbose || !_decoyLive) return;
+        foreach (UnitState u in _units)
+        {
+            if (!u.HasTrait(TraitId.Decoy)) continue;
+            bool on = u.IsAlive && DecoyShowNow(u);
+            if (on == _decoyShown.Contains(u.InstanceId)) continue;
+            if (on) _decoyShown.Add(u.InstanceId); else _decoyShown.Remove(u.InstanceId);
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.DecoyShow, Turn = _turn, ActorId = u.InstanceId, Slot = on ? 1 : 0,
+                Amount = EvadeTrait.PercentOf(u), Team = u.TeamId,
+            });
+        }
     }
 
     /// <summary>的を通るレーン（第223期）。0 本なら −1（単体）、2 本なら生きている駒が多い方・同数は添字の若い方（<b>乱数を引かない</b>）。</summary>
@@ -7667,6 +7743,7 @@ public sealed class BattleContext
     internal void EmitStatusSnapshot()
     {
         if (!_verbose) return;
+        RefreshDecoyShow();   // 第231期（表示専用）
 
         foreach (UnitState u in _units)
         {
@@ -7805,6 +7882,7 @@ public sealed class BattleContext
     private UnitState? SelectTargetChain(UnitState attacker, AttackPattern? patternOverride, out int lane)
     {
         lane = -1;
+        RefreshDecoyShow();   // 第231期（表示専用・verbose のときだけ）
         // 第135期。**標的選択1回ごとに印を落とす**（計数専用）。立ったまま次の一撃へ持ち越すと、
         // 破片が全額吸って `NoteHarm` に届かなかった介入が、無関係な被弾を「引き受けたぶん」に化けさせる。
         _interceptedInto = null;
@@ -7815,8 +7893,10 @@ public sealed class BattleContext
         {
             UnitState ft = _forcedTarget;
             _forcedTarget = null;
+            int fl = _forcedLane;
+            _forcedLane = -1;
             if (!ft.IsAlive) return null;
-            if ((patternOverride ?? attacker.CurrentPattern) == AttackPattern.Pierce) lane = ForcedLane(ft);
+            if ((patternOverride ?? attacker.CurrentPattern) == AttackPattern.Pierce) lane = fl >= 0 ? fl : ForcedLane(ft);
             return ft;
         }
 
@@ -9770,6 +9850,15 @@ public sealed class BattleContext
         if (_springLive && target.Hp > 0 && source is not null && source.IsAlive && source.TeamId != target.TeamId
             && !burnTick && !levy && !relayed && !hexShare && target.HasTrait(TraitId.Spring))
             SpringTrait.Try(this, target, source);
+        // 第231期（B・`SpringGuard`）: ハネの隣の味方が同じ条件で殴られたら、ハネが弾く（ハネ自身の分と回数を共有）。
+        // 相手は隣の生きている札の保持者（席番号の若い順の最初の1体）。召喚枠の駒が殴られたときは弾かない。**乱数を引かない。**
+        else if (_springLive && target.Hp > 0 && source is not null && source.IsAlive && source.TeamId != target.TeamId
+            && !burnTick && !levy && !relayed && !hexShare && !FormationRules.IsSummonSlot(target))
+        {
+            UnitState? guard = LivingMembers(target.TeamId).FirstOrDefault(h => h != target && h.HasTrait(TraitId.Spring)
+                && h.HasTrait(TraitId.SpringGuard) && FormationRules.AreAdjacent(h, target));
+            if (guard is not null) SpringTrait.TryGuard(this, guard, target, source);
+        }
 
         // 味方への通知。OnAllyDeath の走査と同じ形で、本人以外の生存チームメイトへ流す。
         // 破片で受け切った被弾はここより上の early return で自然に外れる。
@@ -11080,12 +11169,13 @@ public sealed class BattleContext
     public bool SwapSlots(UnitState self, int destSlot, UnitState? by = null)
     {
         // 第229期（追い風）: 保持者がいなければ比較1つで素通り。いれば入れ替えの外側で控えた追い風を順に流す。
-        if (!_tailwindLive) return SwapSlotsCore(self, destSlot, by);
+        if (!_tailwindLive) { bool m0 = SwapSlotsCore(self, destSlot, by); RefreshDecoyShow(); return m0; }   // 第231期（表示専用）
         _moveDepth++;
         bool moved;
         try { moved = SwapSlotsCore(self, destSlot, by); }
         finally { _moveDepth--; }
         if (_moveDepth == 0) FlushTailwind();
+        RefreshDecoyShow();   // 第231期（表示専用）
         return moved;
     }
 
@@ -11346,11 +11436,22 @@ public sealed class BattleContext
     /// 弾き返し（第228期・<see cref="SpringTrait"/> だけが呼ぶ・<c>Interrupt</c> の中）。殴ってきた敵を経路で1つ後ろの席へ入れ替え、転ばせ、
     /// ハネ自身は勢い余って隣の味方と入れ替わる（<see cref="OverrunTrait"/>）。表示専用の <see cref="BattleEventKind.Spring"/> を先に出す。
     /// </summary>
-    public void SpringSwap(UnitState hane, UnitState foe, int dest)
+    public void SpringSwap(UnitState hane, UnitState foe, int dest, UnitState? guarded = null)
     {
         UnitTally t = TallyOf(hane);
         UnitState? partner = LivingMembers(foe.TeamId).FirstOrDefault(u => u.Slot == dest);
         Row partnerFrom = partner?.Row ?? Row.Back;
+        if (guarded is not null)
+        {
+            // 第231期（B）: 隣の味方が殴られた弾き返し。表示専用の見出しを `Spring` の直前に1件（`TargetId` ＝ 殴られた味方 ／ `PartnerId` ＝ 殴った敵）。
+            t.SpringGuardFires++;
+            Log($"    {hane.Name} が {guarded.Name} を殴った {foe.Name} へ飛び込む", LogKind.Trigger);
+            if (_verbose) Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.SpringGuard, Turn = _turn, ActorId = hane.InstanceId, TargetId = guarded.InstanceId,
+                PartnerId = foe.InstanceId, Slot = dest, Team = hane.TeamId,
+            });
+        }
         Log($"    {hane.Name} が殴ってきた {foe.Name} を弾き返す", LogKind.Trigger);
         if (_verbose) Emit(new BattleEvent
         {
@@ -11363,12 +11464,22 @@ public sealed class BattleContext
         finally { _haneAct = 0; }
         if (!moved) { t.SpringRefused++; return; }
         t.SpringCount++;
+        if (guarded is not null) t.SpringGuardCount++;
         if (partner is not null && FormationRules.DepthOf(partner.Row) < FormationRules.DepthOf(partnerFrom)) t.SpringForward++;
         if (foe.IsAlive)
         {
             foe.SetCounter(StatusKeys.Stagger, 1);
             EmitStagger(foe, StaggerLabels.Fell, hane);
             Log($"    {foe.Name} は弾き返されて転んだ（次の手番を失う）", LogKind.Status);
+        }
+        if (guarded is not null)
+        {
+            // 第231期（B）: 殴られた味方と入れ替わる（弾いた反動で前へ出て、味方を後ろへかばう）。突き崩しは起こさない（勢い余ってと同じ `Shoving` の中）。
+            if (!hane.IsAlive || !guarded.IsAlive || guarded.HasTrait(TraitId.Planted)) { t.SpringGuardRefused++; return; }
+            bool sw = false;
+            Shoving(() => sw = SwapSlots(hane, guarded.Slot, hane));
+            if (sw) t.SpringGuardSwaps++; else t.SpringGuardRefused++;
+            return;
         }
         if (hane.HasTrait(TraitId.Overrun))
         {

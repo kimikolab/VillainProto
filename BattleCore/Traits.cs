@@ -474,6 +474,10 @@ public enum TraitId
     KillImpact,     // 撃破の衝撃（第230期・ヨミの版 W2/W4）: ヨミの攻撃で敵を倒すたび、同じ経路の後ろの敵を1つ後ろへ吹き飛ばして転ばせる／後ろに敵がいなければ勢い余って隣の味方と入れ替わる（1ターン2回）。保持者 0 枚
     ImpactTailwind, // 衝撃の追い風（第230期の追記・ヨミ）: 撃破の衝撃で敵を後ろへ吹き飛ばしたときも、同じ陣営の追い風の保持者の追い風が起きる。**札そのものは挙動を持たない**（engine の追い風の判定が読む）
     DriftSurge,     // 溢れを攻撃力に（第230期・シオの版 W3/W4）: 移り木・手当ての溢れの半分を受け手の攻撃力に（1体1戦 +15 まで）。**札そのものは挙動を持たない**（engine の `ShioOverflow` が読む）。保持者 0 枚
+    RetreatHalf,    // 緊急退避の線を5割に（第231期・シオの版 A1）。**札そのものは挙動を持たない**（`RetreatTrait` が読む）。保持者 0 枚
+    RetreatHeavy,   // 緊急退避を「4割未満 または 一撃で最大HPの3割以上」に（第231期・シオの版 A2）。**札そのものは挙動を持たない**。保持者 0 枚
+    SpringGuard,    // 隣の味方の被弾でも弾き返す（第231期・ハネの版 B）: そのときハネはその味方と入れ替わる。**札そのものは挙動を持たない**（engine の弾き返しの判定が読む）。保持者 0 枚
+    EvadeMoveShot,  // 移動の追撃（第231期・セロの版 C）: 段2 以上で隊列を動かされたら貫きの矢を1本（1ターン2回・自分の回避の入れ替えでは撃たない）。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -12886,6 +12890,7 @@ public sealed class EvadeTrait : Trait
         self.SetCounter(MovesKey, MovesOf(self) + 1);
         if (self.HasTrait(TraitId.EvadeDrift)) self.SetCounter(DriftKey, self.RawCounter(DriftKey) + DriftGain);   // 第224期（F2/F3）
         ctx.NoteEvadeMove(self, before, StageOf(self));
+        if (self.HasTrait(TraitId.EvadeMoveShot)) EvadeMoveShotTrait.Try(ctx, self, before);   // 第231期（C）
     }
 
     public override void OnCarryOver(UnitState self)
@@ -12993,11 +12998,69 @@ public sealed class EvadeSwapTrait : Trait
     public static void Swap(BattleContext ctx, UnitState self, UnitState? partner)
     {
         if (partner is null) { ctx.NoteEvadeSwap(self, 1); return; }
-        bool moved = ctx.SwapSlots(self, partner.Slot, self);
+        // 第231期（移動の追撃）: 自分の回避の入れ替えの間だけ印を立てる（撃ち返しと二重にしない）。私有キー・この入れ替えの外では 0。
+        self.SetCounter(EvadeMoveShotTrait.SwapKey, 1);
+        bool moved;
+        try { moved = ctx.SwapSlots(self, partner.Slot, self); }
+        finally { self.SetCounter(EvadeMoveShotTrait.SwapKey, 0); }
         ctx.NoteEvadeSwap(self, moved ? 0 : 2);
         if (moved) ctx.Log($"    {self.Name} は {partner.Name} と入れ替わった（隊列が乱れる）", LogKind.FriendlyFire);
     }
 }
+
+/// <summary>
+/// 移動の追撃（第231期・セロの版 C）。<b>段2 以上のセロが隊列を動かされたら、貫きの矢を1本撃つ</b>（理由を問わない——嵐・追い風・組み替え・緊急退避・ハネ・撃破の衝撃ほか）。
+/// 段は動かされる前の段で見る（この移動で段2 に届いた分は撃たない）。<b>セロ自身の回避の入れ替えでは撃たない</b>（撃ち返しがある）。
+/// ダメージ ＝ 現在の攻撃力（状態の矢も乗る）。狙いはセロのいる経路と同じ番号の敵の経路（<see cref="BattleContext.MoveShot"/>）。
+/// 1ターン <see cref="PerTurn"/> 回まで・<c>CanActOutOfTurn(セロ, OutOfTurnRoute.MoveShot)</c>（粛・痺れ・組み付きで止まる）・敵がいなければ撃たない。
+/// 割り込みの外では <c>ctx.Interrupt</c> で包み、<b>割り込みの中（緊急退避・弾き返しの入れ替え）ではそのまま撃つ</b>（包むと撃てないため・回数の上限が連鎖を止める）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class EvadeMoveShotTrait : Trait
+{
+    public const int PerTurn = 2;
+    public const string TurnKey = "moveShotTurn";
+    public const string CountKey = "moveShotCount";
+    /// <summary>自分の回避の入れ替えの最中（<see cref="EvadeSwapTrait.Swap"/> が立てる）。</summary>
+    public const string SwapKey = "evadeSwapping";
+
+    public override TraitId Id => TraitId.EvadeMoveShot;
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(TurnKey, 0);
+        self.SetCounter(CountKey, 0);
+        self.SetCounter(SwapKey, 0);
+    }
+
+    internal static void Try(BattleContext ctx, UnitState self, int stageBefore)
+    {
+        if (!self.IsAlive || stageBefore < 2) return;
+        UnitTally t = ctx.TallyOf(self);
+        if (self.RawCounter(SwapKey) > 0) { t.MoveShotSelfSwap++; return; }
+        t.MoveShotChances++;
+        int used = self.RawCounter(TurnKey) == ctx.Turn + 1 ? self.RawCounter(CountKey) : 0;
+        if (used >= PerTurn) { t.MoveShotCapped++; return; }
+        if (!ctx.TeamAlive(ctx.Opponent(self.TeamId))) return;
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.MoveShot))
+        {
+            if (ctx.HushBindingNow) t.MoveShotHushed++; else t.MoveShotHeld++;
+            return;
+        }
+        self.SetCounter(TurnKey, ctx.Turn + 1);
+        self.SetCounter(CountKey, used + 1);
+        if (ctx.InInterrupt) ctx.MoveShot(self, used + 1);
+        else ctx.Interrupt(() => ctx.MoveShot(self, used + 1));
+    }
+}
+
+/// <summary>緊急退避の線を5割に（第231期・A1）。<b>札そのものは判定を持たない</b>（<see cref="RetreatTrait.PercentOf"/> が読む）。</summary>
+public sealed class RetreatHalfTrait : Trait { public override TraitId Id => TraitId.RetreatHalf; }
+
+/// <summary>緊急退避を「4割未満 または 一撃で最大HPの3割以上」に（第231期・A2）。<b>札そのものは判定を持たない</b>（<see cref="RetreatTrait.NeedOf"/> が読む）。</summary>
+public sealed class RetreatHeavyTrait : Trait { public override TraitId Id => TraitId.RetreatHeavy; }
+
+/// <summary>隣の味方の被弾でも弾き返す（第231期・B）。<b>札そのものは判定を持たない</b>（engine の弾き返しの判定と <see cref="SpringTrait.TryGuard"/> が読む）。</summary>
+public sealed class SpringGuardTrait : Trait { public override TraitId Id => TraitId.SpringGuard; }
 
 /// <summary>段の条件を 2/4/7 に（第224期・F1〜F3）。<b>札そのものは判定を持たない</b>（<see cref="EvadeTrait.StageAtOf"/> が読む）。</summary>
 public sealed class EvadeQuickTrait : Trait { public override TraitId Id => TraitId.EvadeQuick; }
@@ -13083,6 +13146,26 @@ public sealed class RetreatTrait : Trait
     public static int LimitOf(UnitState self) => self.HasTrait(TraitId.ShioStage) ? Limits[ShioStageTrait.StageOf(self)] : Limits[0];
     public static bool Needs(UnitState u) => u.IsAlive && u.Hp * 100 < u.MaxHp * Percent;
 
+    /// <summary>第231期（A1・<see cref="TraitId.RetreatHalf"/>）の線。</summary>
+    public const int HalfPercent = 50;
+    /// <summary>第231期（A2・<see cref="TraitId.RetreatHeavy"/>）: 一撃で最大HPのこの割合以上を削られたら、線の上でも下げる。</summary>
+    public const int HeavyPercent = 30;
+
+    /// <summary>保持者の線（%）。<see cref="TraitId.RetreatHalf"/> なら 5割・ほかは 4割。</summary>
+    public static int PercentOf(UnitState self) => self.HasTrait(TraitId.RetreatHalf) ? HalfPercent : Percent;
+
+    /// <summary>
+    /// 退避が要るか（第231期に版つきへ・判定はここ1本）。0 要らない ／ 1 線の下 ／ 2 線の上だが一撃が重い（<see cref="TraitId.RetreatHeavy"/> だけ）。
+    /// 札が無ければ第225期の <see cref="Needs"/> と同じ。
+    /// </summary>
+    public static int NeedOf(UnitState self, UnitState u, int dmg)
+    {
+        if (!u.IsAlive) return 0;
+        if (u.Hp * 100 < u.MaxHp * PercentOf(self)) return 1;
+        if (self.HasTrait(TraitId.RetreatHeavy) && dmg * 100 >= u.MaxHp * HeavyPercent) return 2;
+        return 0;
+    }
+
     public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source) => Try(ctx, self, self, dmg);
     public override void OnAllyDamaged(BattleContext ctx, UnitState self, UnitState ally, int dmg, UnitState? source) => Try(ctx, self, ally, dmg);
 
@@ -13094,10 +13177,12 @@ public sealed class RetreatTrait : Trait
 
     static void Try(BattleContext ctx, UnitState self, UnitState low, int dmg)
     {
-        if (dmg <= 0 || !self.IsAlive || !Needs(low)) return;
+        int need = dmg <= 0 || !self.IsAlive ? 0 : NeedOf(self, low, dmg);
+        if (need == 0) return;
         if (FormationRules.IsSummonSlot(low) || low.HasTrait(TraitId.Planted)) return;
         UnitTally t = ctx.TallyOf(self);
         t.RetreatChances++;
+        if (need == 2) t.RetreatHeavyChances++;
         UnitState? with = RegroupTrait.BackOf(RegroupTrait.Movable(ctx, low.TeamId), low);
         if (with is null) { t.RetreatNoPartner++; return; }
         int limit = LimitOf(self);
@@ -13112,6 +13197,7 @@ public sealed class RetreatTrait : Trait
         }
         self.SetCounter(TurnKey, ctx.Turn + 1);
         self.SetCounter(CountKey, used + 1);
+        if (need == 2) t.RetreatHeavyOnly++;
         int stage = self.HasTrait(TraitId.ShioStage) ? ShioStageTrait.StageOf(self) : 0;
         ctx.Log($"    {self.Name} が崩れかけた {low.Name} を割り込んで下げ、{with.Name} を前へ出した（緊急退避）", LogKind.Trigger);
         ctx.Interrupt(() => ctx.RetreatSwap(self, low, with, stage, used + 1));
@@ -13131,7 +13217,15 @@ public sealed class DecoyTrait : Trait
 
     /// <summary>挑発の主（pool の中の相手陣営の保持者）。いなければ null。2体以上なら既存の <c>PickOne</c>。</summary>
     public static UnitState? Pick(BattleContext ctx, UnitState attacker, List<UnitState> pool)
-        => ctx.PickOne(pool.Where(u => u.IsAlive && u.TeamId != attacker.TeamId && u.HasTrait(TraitId.Decoy) && !ctx.HoleSkip(u)).ToList());   // 第229期: 転倒の穴
+        => ctx.PickOne(pool.Where(u => u.TeamId != attacker.TeamId && Eligible(ctx, u, pool, count: true)).ToList());   // 第229期: 転倒の穴
+
+    /// <summary>
+    /// 挑発が効いているか（第231期に1本へまとめた・盤面の <see cref="Pick"/> と表示の <c>BattleContext.DecoyShowNow</c> が共有）。
+    /// pool（敵の単体攻撃の的になれる列）にいて・生きていて・札を持ち・転倒の穴に落ちていない。
+    /// <paramref name="count"/> が真なら転倒の穴を計数つき（<c>HoleSkip</c>）で問う——盤面の側だけが真を渡す（表示は計数を動かさない）。
+    /// </summary>
+    public static bool Eligible(BattleContext ctx, UnitState u, List<UnitState> pool, bool count)
+        => pool.Contains(u) && u.IsAlive && u.HasTrait(TraitId.Decoy) && (count ? !ctx.HoleSkip(u) : !ctx.IsFallen(u));
 }
 
 /// <summary>
@@ -14251,9 +14345,18 @@ public sealed class SpringTrait : Trait
     }
 
     /// <summary>engine の <c>ApplyDamageBody</c> だけが呼ぶ。</summary>
-    public static void Try(BattleContext ctx, UnitState self, UnitState foe)
+    public static void Try(BattleContext ctx, UnitState self, UnitState foe) => Try(ctx, self, foe, null);
+
+    /// <summary>
+    /// 第231期（B・<see cref="TraitId.SpringGuard"/>）: 隣の味方 <paramref name="guarded"/> が殴られた。弾き方・回数（ハネ自身の分と共有）・止まり方は同じで、
+    /// 代金の入れ替えだけが「ハネがその味方と入れ替わる」になる。engine の <c>ApplyDamageBody</c> だけが呼ぶ。
+    /// </summary>
+    public static void TryGuard(BattleContext ctx, UnitState self, UnitState guarded, UnitState foe) => Try(ctx, self, foe, guarded);
+
+    static void Try(BattleContext ctx, UnitState self, UnitState foe, UnitState? guarded)
     {
         UnitTally t = ctx.TallyOf(self);
+        if (guarded is not null) t.SpringGuardChances++;
         int dest = DestOf(ctx, foe);
         if (dest < 0) { t.SpringNoSeat++; return; }
         int used = self.RawCounter(TurnKey) == ctx.Turn + 1 ? self.RawCounter(CountKey) : 0;
@@ -14266,7 +14369,7 @@ public sealed class SpringTrait : Trait
         }
         self.SetCounter(TurnKey, ctx.Turn + 1);
         self.SetCounter(CountKey, used + 1);
-        ctx.Interrupt(() => ctx.SpringSwap(self, foe, dest));
+        ctx.Interrupt(() => ctx.SpringSwap(self, foe, dest, guarded));
     }
 }
 
@@ -14967,6 +15070,10 @@ public static class TraitCatalog
         new KillImpactTrait(),       // 第230期
         new DriftSurgeTrait(),       // 第230期
         new ImpactTailwindTrait(),   // 第230期の追記
+        new RetreatHalfTrait(),      // 第231期
+        new RetreatHeavyTrait(),     // 第231期
+        new SpringGuardTrait(),      // 第231期
+        new EvadeMoveShotTrait(),    // 第231期
         new ShioStageSlowTrait(),    // 第226期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期

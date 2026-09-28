@@ -32,6 +32,8 @@ static class ShockDigestDiag
     static Formation D222(Formation f) => DriftDiag.Apply(f, DriftDiag.ShioV0, DriftDiag.YomiV0);
 
     static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff", "MireBurst", "Regroup", "Evade", "EvadeRiposte", "EvadeStage", "Barrage", "StatusArrow", "Retreat", "ShioStage", "Decoy", "Disarray", "DisarrayStage", "Squall", "LastDodge", "Blast", "Spring", "Tailwind", "StaggerBreach", "KillImpact", "Overflow" };
+    /// <summary>第231期以後に足した出来事の種類（<b>どのモードでも外す</b>——挑発の表示は規定のセロにも出るので、前の期の台本と揃えるには必ず外す）。</summary>
+    static readonly HashSet<string> SkipAlways = new() { "DecoyShow", "SpringGuard", "MoveShot" };
     /// <summary>後の期に足した <c>BattleEvent</c> の欄。</summary>
     static readonly HashSet<string> SkipProps = new() { "BrittleExtra", "PartnerId" };
 
@@ -104,6 +106,13 @@ static class ShockDigestDiag
                 ("M-ハネ（225）", LastDodgeDiag.MHane225),
                 ("参考 雷（ポンの席）", LastDodgeDiag.Thunder),
             }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane")).Select(r => ("compare " + r.Name, r.F))).ToArray()
+            : mode == "a231"
+            // 第231期（受け入れ 2）: V0（前段の規定＝第230期の追記の規定）の台本が、退避の線・隣の弾き返し・移動の追撃・挑発の表示の実装の前後で一致すること。
+            ? new (string, Formation)[]
+            {
+                ("M-ハネ（228 H3・規定）", Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.Sero, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Hane)),
+                ("参考 雷（ポンの席）", CycleDiag.Thunder),
+            }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane" or "shio" or "yomi")).Select(r => ("compare " + r.Name, r.F))).ToArray()
             : mode == "w230"
             // 第230期（受け入れ 2）: W0（前段の規定・嵐・追い風・転倒の穴）の台本が追い風の攻撃力順・撃破の衝撃・溢れの実装の前後で一致すること。
             ? new (string, Formation)[]
@@ -172,7 +181,7 @@ static class ShockDigestDiag
                 ("毒+ベニ+ラウ（ラウ→旧カタ）", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Sid, center: UnitCatalog.Guza, back1: kata, back3: UnitCatalog.Beni)),
             };
         // 第230期の追記: 第230期 W4 が規定になったので、全モードの台の規定のバサ・ハネ・ヨミ・シオを第230期の前段の姿へ戻す（以下の固定はその上に掛かる）。
-        benches = benches.Select(b => (b.Item1, Common.OldCycle(b.Item2))).ToArray();
+        if (mode != "a231") benches = benches.Select(b => (b.Item1, Common.OldCycle(b.Item2))).ToArray();   // 第231期の台は今の規定のまま
         // 第227期 前段: バサ・ハネが規定で変わったので、第222〜226期の台は旧のバサ・ハネに戻す（台本が前段の前と一致すること）。
         if (mode is "d222" or "e223" or "f224" or "r225" or "k226")
             benches = benches.Select(b => (b.Item1, Common.OldBasaHane(b.Item2))).ToArray();
@@ -186,7 +195,7 @@ static class ShockDigestDiag
         if (mode is "l227" or "h228" or "g229")
             benches = benches.Select(b => (b.Item1, Common.OldGale(b.Item2))).ToArray();
         // 第230期 前段: 転倒の穴が既定になったので、それより前の期の台は穴なしで回す（w230 だけが今の既定）。
-        ShufflerRule? digestRule = mode == "w230" ? null : ShufflerRule.PreHole;
+        ShufflerRule? digestRule = mode is "w230" or "a231" ? null : ShufflerRule.PreHole;
         PropertyInfo[] props = typeof(BattleEvent).GetProperties(BindingFlags.Public | BindingFlags.Instance);
         long total = 0;
         foreach (var (name, f) in benches)
@@ -198,6 +207,7 @@ static class ShockDigestDiag
                     int counted = 0;
                     foreach (BattleEvent e in r.Events)
                     {
+                        if (SkipAlways.Contains(e.Kind.ToString())) continue;
                         if (mode is not ("f224" or "r225" or "k226" or "l227" or "h228" or "g229" or "w230") && SkipKinds.Contains(e.Kind.ToString())) continue;
                         counted++;
                         var sb = new StringBuilder();
