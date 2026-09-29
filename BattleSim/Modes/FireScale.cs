@@ -30,12 +30,15 @@ static partial class FireScaleDiag
             case "run": RunImpl(); return;
             case "check": CheckImpl(); return;
             case "digest": Digest(); return;
+            case "feed0": Feed0(); return;   // 第240期
+            case "feed": FeedRun(); return;
+            case "feedcheck": FeedCheck(); return;
             case "log":
                 LogOne(args.Length > 3 ? args[3] : "T3", args.Length > 4 ? int.Parse(args[4]) : 0,
                     args.Length > 5 ? int.Parse(args[5]) : BA.MainWave, args.Length > 6 ? int.Parse(args[6]) : 0);
                 return;
             default:
-                Console.WriteLine("firescale: モードは moved / phase0 / run / check / digest / log。");
+                Console.WriteLine("firescale: モードは moved / phase0 / run / check / digest / log ／ feed0 / feed / feedcheck（第240期）。");
                 return;
         }
     }
