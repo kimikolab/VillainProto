@@ -3513,7 +3513,14 @@ public enum BattleEventKind
     /// 「燃え移る」: <c>TargetId</c> ＝ 殴った敵（攻撃が終わった直後・続いて着火の <c>StatusGain</c>）／ 「自火」: <c>TargetId</c> ＝ 保持者 ／
     /// 「半減」: <c>TargetId</c> ＝ 保持者・<c>Amount</c> ＝ 切った量（直後にその一撃の <c>Damage</c>）／ 「焼け残り」: <c>Amount</c> ＝ 止めた量（HP1 で止まり火が消える）。
     /// </summary>
-    FireArmor
+    FireArmor,
+
+    /// <summary>
+    /// 着地の反動（第237期・ハネの <see cref="TraitId.Landing"/>・<b>表示専用</b>）。直後に入れ替わりの <c>Move</c> が2件（<c>ActorId</c> ＝ ハネ）続く。
+    /// <c>ActorId</c> ＝ ハネ ／ <c>TargetId</c> ＝ 動かされた隣の味方 ／ <c>PartnerId</c> ＝ 入れ替わった相手 ／ <c>Slot</c> ＝ その戦で何回目か（1 始まり）。
+    /// 据えた足で空振りしたときは見出しだけで <c>Move</c> は続かない。
+    /// </summary>
+    Landing
 }
 
 /// <summary>撃破の衝撃（第230期）の <c>Text</c>。<b>表示専用。</b></summary>

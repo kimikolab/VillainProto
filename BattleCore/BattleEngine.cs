@@ -5777,6 +5777,17 @@ public sealed class BattleContext
     }
 
     /// <summary>竦みを消費した瞬間を台本に打つ（第185期 追補3・<b>表示専用</b>。<c>verbose</c> のときだけ）。</summary>
+    /// <summary>第237期（表示専用）: 着地の反動の見出し。<see cref="LandingTrait.Run"/> が入れ替えの直前に呼ぶ。</summary>
+    internal void EmitLanding(UnitState hane, UnitState ally, UnitState with, int ordinal)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Landing, Turn = _turn, ActorId = hane.InstanceId, TargetId = ally.InstanceId,
+            PartnerId = with.InstanceId, Slot = ordinal, Team = hane.TeamId,
+        });
+    }
+
     internal void EmitCowed(UnitState target, string phase, int byId, int fromId)
     {
         if (!_verbose) return;

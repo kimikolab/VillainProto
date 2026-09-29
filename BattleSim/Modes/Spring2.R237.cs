@@ -86,7 +86,7 @@ static partial class Spring2Diag
             ctx.SwapSlots(U(p, "hane"), 3, U(e, "e1"));   // 後3 → 後1（空席）
             Expect("隣が1体でその隣に別の味方がいない——候補なし", Tal(ctx, U(p, "hane")).LandingNoPair, 1L);
         }
-        long battles = 0, diff = 0, s2land = 0, land = 0;
+        long battles = 0, diff = 0, s2land = 0, land = 0, head = 0, headOk = 0; long betweenN = 0; var between = new Dictionary<string, long>();
         var lk = new object();
         foreach (var v in V237)
             for (int w = 0; w < WaveNames.Length; w++)
@@ -99,11 +99,33 @@ static partial class Spring2Diag
                         bool same = r.PlayerWon == r2.PlayerWon && r.Turns == r2.Turns
                                     && string.Join(",", r.PlayerStarterFallen.OrderBy(x => x)) == string.Join(",", r2.PlayerStarterFallen.OrderBy(x => x));
                         long l = r.TallyByUnit.Where(kv => kv.Key == "hane").Sum(kv => kv.Value.LandingSwaps);
-                        lock (lk) { battles++; if (!same) diff++; if (v.Tag is "S2" or "①") s2land += l; else land += l; }
+                        long h = 0, hok = 0;
+                        var evs = r.Events;
+                        for (int i = 0; i < evs.Count; i++)
+                        {
+                            var x = evs[i];
+                            if (x.Kind != BattleEventKind.Landing) continue;
+                            h++;
+                            // 次の見出し・TurnStart・Attack までに、見出しの2体の Move（ActorId ＝ ハネ）が1件ずつ（その間に反応の出来事——突風・移動の追撃の攻撃まで——が挟まってよい）
+                            var got = new List<int?>();
+                            for (int j = i + 1; j < evs.Count; j++)
+                            {
+                                var y = evs[j];
+                                if (y.Kind is BattleEventKind.Landing or BattleEventKind.TurnStart) break;
+                                if (y.Kind == BattleEventKind.Move && y.ActorId == x.ActorId) { got.Add(y.TargetId); if (got.Count == 2) break; }
+                                else if (got.Count < 2 && System.Threading.Interlocked.Increment(ref betweenN) < 0) { }
+                                if (got.Count >= 1 && got.Count < 2 && y.Kind != BattleEventKind.Move) lock (between) between[y.Kind.ToString()] = between.GetValueOrDefault(y.Kind.ToString()) + 1;
+                            }
+                            if (got.Count == 2 && got[0] == x.TargetId && got[1] == x.PartnerId) hok++;
+                        }
+                        lock (lk) { battles++; if (!same) diff++; if (v.Tag is "S2" or "①") s2land += l; else land += l; head += h; headOk += hok; }
                     });
         Expect($"verbose の有無で勝敗・決着T・倒れた駒が違う戦（{battles} 戦）", diff, 0L);
         Expect("札の無い版（S2・①）で着地の反動が起きた回数", s2land, 0L);
         Expect("札のある版（②・①＋②）で着地の反動が起きた", land > 0, true);
+        Expect("台本の見出し Landing の数 ＝ 帳簿の入れ替え（据えた足の空振りはこの台に無い）", head, land);
+        Expect("見出しの後に、見出しの2体の Move（動かされた味方 → 相手の順・ActorId ＝ ハネ）", headOk, head);
+        Console.WriteLine("  （参考）2件の Move の間に挟まった出来事: " + string.Join(" ・ ", between.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value}")));
         Console.WriteLine();
         Console.WriteLine($"**{ok} / {ok + ng}**");
     }

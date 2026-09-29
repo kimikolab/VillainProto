@@ -13174,6 +13174,7 @@ public sealed class LandingTrait : Trait
         UnitState with = ctx.PickOne(PartnersOf(ally))!;
         hane.SetCounter(CountKey, used + 1);
         ctx.Log($"    着地の反動: {hane.Name} の着地で {ally.Name} が {with.Name} と入れ替わった", LogKind.Trigger);
+        ctx.EmitLanding(hane, ally, with, (int)(t.LandingSwaps + t.LandingRefused + 1));   // 表示専用（盤面は動かない）
         if (ctx.SwapSlots(ally, with.Slot, hane)) t.LandingSwaps++; else t.LandingRefused++;
     }
 }
