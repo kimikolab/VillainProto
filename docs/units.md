@@ -309,6 +309,11 @@
 | `FireFeed` | - |
 | `SpringRow` | 突き返しのハネ |
 | `Landing` | 突き返しのハネ |
+| `FireWard` | - |
+| `FireWardAll` | - |
+| `FireConvert` | - |
+| `FireConvertHalf` | - |
+| `FireConvertDry` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

@@ -53,7 +53,7 @@
 | 40 | `boss` | `BossRule` | `BossRule { Census = False, Scale = EnemyScaleRule { HpPercent = 115, AtkPercent = 115, Active = True } }` | ○ | `boss` / `tank` / `time` / `grade` / `escale` / `whip` / `mire` / `scorch` / `burst` / `shock` / `lili` / `demo` | 第117期 | ○ |
 | 41 | `nourish` | `NourishRule` | `NourishRule { Gain = 2 }` |  | `tank` / `time` | 第117期 | ○ |
 | 42 | `wound` | `WoundRule` | `WoundRule { Enabled = True, Census = False }` |  | `wound2` | 第85期 | ○ |
-| 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0, Brittle = 25, BrittleAllies = False }` |  | `survive` / `ember` / `wildfire` / `scorch` / `burst` / `burnaudit` / `rebirth` | 第130期 | ○ |
+| 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0, Brittle = 25, BrittleAllies = False }` |  | `survive` / `ember` / `wildfire` / `scorch` / `burst` / `burnaudit` / `fireward` / `rebirth` | 第130期 | ○ |
 | 44 | `wildfire` | `WildfireRule` | `WildfireRule { Mode = None, Amount = 0, Active = False }` | ○ | `wildfire` | 第133期 | ○ |
 | 45 | `harm` | `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` / `sora186` / `mio` / `sid` | 第135期 | ○ |
 | 46 | `parry` | `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True, Swing = WhenStocked }` |  | `parry` / `wall` / `stall` | 第135期 | ○ |
@@ -91,9 +91,9 @@
 | `CurseRule` | `CurseRule { Enabled = True, SharePercent = 50 }` | ○ | `curse` / `hex` / `lit` / `mudohex` | 第95期 |
 | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` / `wound2` | 第93期 |
 | `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` | ○ | `divert` / `survive` / `wildfire` / `mark` | 第50期 |
-| `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0, Brittle = 25, BrittleAllies = False }` | ○ | `survive` / `ember` / `wildfire` / `scorch` / `burst` / `burnaudit` / `rebirth` | 第130期 |
+| `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0, Brittle = 25, BrittleAllies = False }` | ○ | `survive` / `ember` / `wildfire` / `scorch` / `burst` / `burnaudit` / `fireward` / `rebirth` | 第130期 |
 | `EncoreRule` | `EncoreRule { Enabled = True }` | ○ | `encore` / `tempo` / `tomo` / `hold2` / `ledger` / `lit` / `rebirth` | 第104期 |
-| `EnemyScaleRule` | `EnemyScaleRule { HpPercent = 115, AtkPercent = 115, Active = True }` |  | `escale` / `whip` / `mire` / `scorch` / `burst` / `nine` / `drift` / `sero` / `seroshio` / `retreat` / `decoy` / `lastdodge` / `spring` / `gale` / `cycle` / `tune` / `spring2` / `burnaudit` / `borgguard` / `borgfront` / `shock` / `sid` / `ep3` / `dump` | 第187期 |
+| `EnemyScaleRule` | `EnemyScaleRule { HpPercent = 115, AtkPercent = 115, Active = True }` |  | `escale` / `whip` / `mire` / `scorch` / `burst` / `nine` / `drift` / `sero` / `seroshio` / `retreat` / `decoy` / `lastdodge` / `spring` / `gale` / `cycle` / `tune` / `spring2` / `burnaudit` / `borgguard` / `borgfront` / `fireward` / `shock` / `sid` / `ep3` / `dump` | 第187期 |
 | `EruptRule` | `EruptRule { Floor = True, Smear = PerErupt, Heavy = True }` | ○ | `mudohex` / `mudo` | 第180期 |
 | `ExposeRule` | `ExposeRule { MaxPerBattle = 3 }` | ○ | `expose` / `creak3` / `ledger` | 第40期 |
 | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` | ○ | `curse` / `favor` / `turn` / `ledger` / `burnaudit` | 第58期 |
