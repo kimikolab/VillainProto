@@ -31,8 +31,8 @@ static partial class FireScaleDiag
     // ---------------------------------------------------------------------------------
     // 足跡（1戦を一度だけ読む）
     // ---------------------------------------------------------------------------------
-    internal enum StepK { Round, Ignite, Hand, Heat, SelfLit, Death, Alive, Smolder }
-    internal readonly record struct Step(StepK K, int A, int B);   // Round: A=周回 ／ Ignite: A=駒 ／ Hand: A=駒, B=手番の番号 ／ Heat: A=ボルグ, B=量 ／ SelfLit: A=ボルグ ／ Death/Alive/Smolder: A=駒
+    internal enum StepK { Round, Ignite, Hand, Heat, SelfLit, Death, Alive, Smolder, Swing, Hit }   // Swing・Hit は第241期（第240期の再生は読まない）
+    internal readonly record struct Step(StepK K, int A, int B);   // Round: A=周回 ／ Ignite: A=駒, B=1 なら開幕（周回0）の着火 ／ Swing: A=攻撃した駒 ／ Hit: A=攻撃した駒, B=当たった敵 ／ Hand: A=駒, B=手番の番号 ／ Heat: A=ボルグ, B=量 ／ SelfLit: A=ボルグ ／ Death/Alive/Smolder: A=駒
 
     internal sealed class Trace
     {
@@ -88,7 +88,12 @@ static partial class FireScaleDiag
             switch (x.Kind)
             {
                 case BattleEventKind.TurnStart: tr.Steps.Add(new Step(StepK.Round, x.Turn, 0)); break;
-                case BattleEventKind.StatusGain when x.Text == StatusKeys.Burn && x.TargetId is int tid: tr.Steps.Add(new Step(StepK.Ignite, tid, 0)); break;
+                case BattleEventKind.StatusGain when x.Text == StatusKeys.Burn && x.TargetId is int tid: tr.Steps.Add(new Step(StepK.Ignite, tid, x.Turn <= 0 ? 1 : 0)); break;
+                // 第241期: 攻撃（`PerformAttack` の一振り）と、その一振りが敵に当てたダメージ（攻撃型の載った段・中継でない・味方の刃でない）
+                case BattleEventKind.Attack when x.ActorId is int sw: tr.Steps.Add(new Step(StepK.Swing, sw, 0)); break;
+                case BattleEventKind.Damage when x.Pattern is not null && !x.Relayed && !x.FriendlyFire && x.ActorId is int ha && x.TargetId is int ht
+                    && tr.Info.TryGetValue(ha, out var hi) && hi.Team == BattleContext.PlayerTeam && tr.Info.TryGetValue(ht, out var hti) && hti.Team != BattleContext.PlayerTeam:
+                    tr.Steps.Add(new Step(StepK.Hit, ha, ht)); break;
                 case BattleEventKind.FireArmor when x.Text == FireArmorLabels.Guard && x.ActorId is int ga:
                     tr.Steps.Add(new Step(StepK.Heat, ga, x.Amount)); tr.HeatGuard += x.Amount; break;
                 case BattleEventKind.FireArmor when x.Text == FireArmorLabels.Ward && x.ActorId is int wa:
