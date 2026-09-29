@@ -2317,6 +2317,12 @@ public sealed class UnitTally
     /// </summary>
     public long FireArmorFoeLit, FireArmorSelfLit, FireArmorGuardHits, FireArmorSaved, SmolderUsed;
     public int SmolderTurn;
+    /// <summary>
+    /// 第235期・<b>計数専用</b>（ボルグの版 S・O・H1・H2）: 燃える巻き込みの 回数 ／ 名目 ／ 焼かれない駒で消えた名目 ／ ベニの反転に回った名目 ／ そのうち実際に癒えた量 ／ 普通に受けた HP の減り、
+    /// くすぶりの着火、火の癒しの 名目 ／ 癒えた量 ／ 渇きで止まった回数 ／ 刻み以外（燃える巻き込みを受けた火の癒し）で癒えた量、焼き返しの 回数 ／ 名目 ／ 癒えた量 ／ 渇きで止まった回数。
+    /// </summary>
+    public long FireSplashHits, FireSplashNominal, FireSplashImmune, FireSplashInverted, FireSplashInvHealed, FireSplashTaken;
+    public long SelfKindleLit, FireMendNominal, FireMendHealed, FireMendDry, FireMendSplash, FireFeedFires, FireFeedNominal, FireFeedHealed, FireFeedDry;
     public int[]? ShioStageTurn;
 
     /// <summary>
@@ -3516,6 +3522,14 @@ public static class FireArmorLabels
     public const string Self = "自火";
     public const string Guard = "半減";
     public const string Smolder = "焼け残り";
+    /// <summary>第235期（S）: <c>ActorId</c> ＝ ボルグ ／ <c>TargetId</c> ＝ 巻き込まれた隣の味方 ／ <c>Amount</c> ＝ 量（直後に その味方の <c>Damage</c>、または反転の <c>Heal</c>、焼かれない駒なら何も続かない）。</summary>
+    public const string Splash = "燃える巻き込み";
+    /// <summary>第235期（O）: 開戦時（ターン 0）・<c>TargetId</c> ＝ 保持者（続いて着火の <c>StatusGain</c>）。</summary>
+    public const string Kindle = "くすぶり";
+    /// <summary>第235期（H1）: <c>TargetId</c> ＝ 保持者 ／ <c>Amount</c> ＝ 名目の回復（続いて <c>Heal</c>・満タンなら続かない）。</summary>
+    public const string Mend = "火の癒し";
+    /// <summary>第235期（H2）: <c>TargetId</c> ＝ 保持者 ／ <c>Amount</c> ＝ 名目の回復（続いて <c>Heal</c> と自分への着火の <c>StatusGain</c>）。</summary>
+    public const string Feed = "焼き返し";
 }
 
 public static class ImpactLabels

@@ -483,6 +483,13 @@ public enum TraitId
                     // **判定は engine**（着火は `PerformAttack` の枠の出口・半減は `ApplyDamageBody` の軽減の族の最後・焼かれないは燃焼の刻みの2箇所）。保持者 0 枚
     Smolder,        // 焼け残り（第234期・ボルグの版 G2/G4・`FireArmor` と組む）: 燃えている間に倒れる一撃を受けても HP1 で踏みとどまり、火が消える（1戦1回）。その被弾では火の鎧の自分への着火をしない。
                     // **判定は engine**（`ApplyDamageBody` の HP を引く直前・逃げ足と同じ箇所）。保持者 0 枚
+    FireSplash,     // 燃える巻き込み（第235期・ボルグの版 S）: 巻き込み（`Splash`）の量はそのまま、燃焼ダメージとして与える——火に焼かれない駒（熾のホタ・火の鎧）は受けず、ベニの結界の内側では回復に反転する。
+                    // **札そのものは挙動を持たない**（`SplashTrait` が読み、`BattleContext.FireSplashHit` が配る）。保持者 0 枚
+    SelfKindle,     // くすぶり（第235期・ボルグの版 O）: 開戦時に自分に火が点く（残り 3・通常の着火）。保持者 0 枚
+    FireMend,       // 火の癒し（第235期・ボルグの版 H1・`FireArmor` と組む）: 「火に焼かれない」を置き換え、燃焼の刻み（と起爆）が自分には回復になる（刻みの量と同じ）。
+                    // 回復は「火の回復」——ベニの反転の裏（回復がダメージに化ける）は通らず、**渇きには封じられない**（`FireMendDry` を持てば封じられる）。**判定は engine**（燃焼の刻みと起爆の2箇所）。保持者 0 枚
+    FireMendDry,    // 火の回復が渇きに封じられる（第235期・ボルグの版 H1b）。**札そのものは挙動を持たない**（`BattleContext.FireHeal` が読む）。保持者 0 枚
+    FireFeed,       // 焼き返し（第235期・ボルグの版 H2）: 殴る前から燃えていた敵を主目標として殴ると、与えた量の半分を回復し、自分に火が点く。**札の並びで火の粉（`Cinder`）より前に置く**。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -700,7 +707,8 @@ public sealed class SplashTrait : Trait
             if (!FormationRules.AreAdjacent(self, ally)) continue;
 
             ctx.Log($"    余波: {self.Name} の攻撃が {ally.Name} を巻き込む", LogKind.FriendlyFire);
-            ctx.ApplyDamage(ally, spill, self, isFriendlyFire: true);
+            if (self.HasTrait(TraitId.FireSplash)) ctx.FireSplashHit(ally, spill, self);   // 第235期（燃える巻き込み・量は同じ）
+            else ctx.ApplyDamage(ally, spill, self, isFriendlyFire: true);
         }
     }
 }
@@ -8971,6 +8979,38 @@ public sealed class SmolderTrait : Trait
     public override void OnCarryOver(UnitState self) => self.SetCounter(UsedKey, 0);
 }
 
+/// <summary>燃える巻き込み（第235期・ボルグの版 S・<b>保持者 0 枚</b>）。札は判定を持たない——<see cref="SplashTrait"/> が読む。</summary>
+public sealed class FireSplashTrait : Trait { public override TraitId Id => TraitId.FireSplash; }
+
+/// <summary>くすぶり（第235期・ボルグの版 O・<b>保持者 0 枚</b>）。<b>開戦時に自分に火が点く</b>（残り 3・通常の着火・速さ順の <c>OnBattleStart</c> の中）。乱数を引かない。</summary>
+public sealed class SelfKindleTrait : Trait
+{
+    public override TraitId Id => TraitId.SelfKindle;
+    public override void OnBattleStart(BattleContext ctx, UnitState self) => ctx.SelfKindle(self);
+}
+
+/// <summary>火の癒し（第235期・ボルグの版 H1・<b>保持者 0 枚</b>）。札は判定を持たない——engine の燃焼の刻みと起爆が読む。</summary>
+public sealed class FireMendTrait : Trait { public override TraitId Id => TraitId.FireMend; }
+
+/// <summary>火の回復が渇きに封じられる（第235期・ボルグの版 H1b・<b>保持者 0 枚</b>）。札は判定を持たない——<c>BattleContext.FireHeal</c> が読む。</summary>
+public sealed class FireMendDryTrait : Trait { public override TraitId Id => TraitId.FireMendDry; }
+
+/// <summary>
+/// 焼き返し（第235期・ボルグの版 H2・<b>保持者 0 枚</b>）。<b>殴る前から燃えていた敵を主目標として殴ると、与えた量の半分（巻き込みと同じ <c>max(1, dealt / 2)</c>）を回復し、自分に火が点く</b>（通常の着火）。
+/// 「殴る前から」は<b>札の並びで火の粉（<see cref="CinderTrait"/>）より前に置く</b>ことで取る（攻撃1回につき特性は主目標に1度なので、薙ぎの巻き込みは数えない）。
+/// 混乱して味方を殴ったときは働かない。回復は火の癒しと同じ「火の回復」。乱数を引かない。
+/// </summary>
+public sealed class FireFeedTrait : Trait
+{
+    public override TraitId Id => TraitId.FireFeed;
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (dealt <= 0 || target.TeamId == self.TeamId) return;
+        if (target.RawCounter(StatusKeys.Burn) <= 0) return;
+        ctx.FireFeed(self, target, Math.Max(1, dealt / 2));
+    }
+}
+
 /// <summary>
 /// 熾火。自分が燃えている間だけ本領を発揮し、火が消えるとほぼ無力になる。
 ///
@@ -15011,6 +15051,11 @@ public static class TraitCatalog
         new CinderTrait(),
         new FireArmorTrait(),
         new SmolderTrait(),
+        new FireSplashTrait(),
+        new SelfKindleTrait(),
+        new FireMendTrait(),
+        new FireMendDryTrait(),
+        new FireFeedTrait(),
         new PyreTrait(),
         new CondemnTrait(),
         new ThornGuardTrait(),

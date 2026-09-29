@@ -816,8 +816,10 @@ public sealed class BattleContext
             // `Ember.Fireproof` は **既定 true ＝ 採用した版**。偽にすると第177期までの盤面に戻る
             // （`EmberRule.Charred`。自己検査 (a) がそれで 305 セルを突き合わせる）。
             // 保持者はロスターに熾のホタ1枚だけなので、他の 51 枚は比較1つで抜ける。
-            if (Ember.Fireproof && (u.HasTrait(TraitId.Pyre) || (_fireArmorLive && u.HasTrait(TraitId.FireArmor))))   // 第234期: 火の鎧も焼かれない
+            if (Ember.Fireproof && (u.HasTrait(TraitId.Pyre) || (_fireArmorLive && FireproofArmor(u))))   // 第234期: 火の鎧も焼かれない
             {
+                // 第235期: 火の癒し（H1）。「焼かれない」を置き換え、刻みの量だけ回復する（火の回復・ベニの反転の裏は通らない）。
+                if (_fireArmorLive && u.HasTrait(TraitId.FireMend)) { FireHeal(u, ScorchTick(u, BurnRules.Damage), FireArmorLabels.Mend, tick: true); return; }
                 Log($"    {u.Name} は燃えているが焼かれない（残り {left - 1}）", LogKind.Status);
                 // ノブ（既定 0 ＝ 1ビットも動かない）。**`ctx.Heal` を通す**ので、
                 // 渇き（盤面ルール）にも支援拒否（`Stoic`）にも素直に課税される。
@@ -996,10 +998,11 @@ public sealed class BattleContext
 
         if (burn > 0 && u.IsAlive)
         {
-            if (Ember.Fireproof && (u.HasTrait(TraitId.Pyre) || (_fireArmorLive && u.HasTrait(TraitId.FireArmor))))   // 第234期: 火の鎧も焼かれない
+            if (Ember.Fireproof && (u.HasTrait(TraitId.Pyre) || (_fireArmorLive && FireproofArmor(u))))   // 第234期: 火の鎧も焼かれない
             {
-                // 火には焼かれない（刻みと同じ枝）。
-                if (Ember.TickHeal > 0) Heal(u, Ember.TickHeal);
+                // 火には焼かれない（刻みと同じ枝）。第235期: 火の癒しなら刻みの量だけ回復（倍は掛けない＝刻みと同じ量）。
+                if (_fireArmorLive && u.HasTrait(TraitId.FireMend)) FireHeal(u, ScorchTick(u, BurnRules.Damage), FireArmorLabels.Mend, tick: true);
+                else if (Ember.TickHeal > 0) Heal(u, Ember.TickHeal);
             }
             else if ((foe ? null : InvertsTick(u)) is UnitState inverterB)
             {
@@ -5620,8 +5623,9 @@ public sealed class BattleContext
         else if (kind == 1) { t.InverseBurnHealed += gained; t.InverseBurnNominal += amount; }
         else if (kind == 3) t.InverseDischargeHealed += gained;   // 第214期: 放電
         else if (kind == 4) { }                                   // 第220期: 澱みの爆発（帳簿は BurstLedger）
+        else if (kind == 5) { }                                   // 第235期: 燃える巻き込み（帳簿はボルグの側）
         else t.InverseDetonateHealed += gained;
-        if (_turn <= 3)   // 第191期・**計数のみ**（1〜3 ターン目の分）
+        if (_turn <= 3 && kind != 5)   // 第191期・**計数のみ**（1〜3 ターン目の分）
         {
             if (kind == 0) t.InversePoisonEarly += gained;
             else if (kind == 1) { t.InverseBurnEarly += gained; t.InverseBurnNominalEarly += amount; }
@@ -6940,7 +6944,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Deflect)) _deflectHolders.Add(u); // 第186期（逸らしの判定の短絡）
         if (u.HasTrait(TraitId.Thrust) || u.HasTrait(TraitId.ThrustPlain)) _thrustLive = true;   // 第186期 追補
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
-        if (u.HasTrait(TraitId.FireArmor) || u.HasTrait(TraitId.Smolder)) _fireArmorLive = true;   // 第234期（火の鎧・焼け残り）
+        if (u.HasTrait(TraitId.FireArmor) || u.HasTrait(TraitId.Smolder)
+            || u.HasTrait(TraitId.FireMend) || u.HasTrait(TraitId.FireFeed)) _fireArmorLive = true;   // 第234期（火の鎧・焼け残り）・第235期（火の癒し・焼き返し）
         if (u.HasTrait(TraitId.Decoy)) _decoyLive = true;         // 第226期（挑発）
         if (u.HasTrait(TraitId.Spring)) _springLive = true;       // 第228期（弾き返し）
         if (u.HasTrait(TraitId.Tailwind)) _tailwindLive = true;   // 第229期（追い風）
@@ -8529,6 +8534,86 @@ public sealed class BattleContext
             ActorId = holder.InstanceId, TargetId = target.InstanceId,
             Amount = amount, HpAfter = Math.Max(0, target.Hp), Text = label,
         });
+    }
+
+    // =====================================================================================
+    // 第235期 —— 燃える巻き込み（S）・くすぶり（O）・火の癒し（H1）・焼き返し（H2）。どれも乱数を引かない。
+    // 台本は `FireArmor` の種類に札（`FireArmorLabels`）を足しただけ（表示専用・verbose のときだけ）。
+    // =====================================================================================
+
+    /// <summary>火の鎧か火の癒しを持つか（「火に焼かれない」の判定・呼び出し側で <c>_fireArmorLive</c> を先に見る）。</summary>
+    static bool FireproofArmor(UnitState u) => u.HasTrait(TraitId.FireArmor) || u.HasTrait(TraitId.FireMend);
+
+    /// <summary>
+    /// 燃える巻き込み（第235期・S）の1体ぶん。<b>量は巻き込みと同じ</b>で、燃焼の刻みと同じ順に分ける——
+    /// 火に焼かれない駒（熾のホタ・火の鎧）は受けない（火の癒しなら回復）／ベニの結界の内側では回復に反転（<see cref="InverseHeal"/> の kind 5）／
+    /// それ以外は<b>今までと同じ味方の刃</b>（<c>ApplyDamage(ally, spill, borg, isFriendlyFire: true)</c>）なので、脆さ（規定は敵だけ）・巨躯・分かち・破片・身構え・軛の順と、
+    /// 被弾で動く札の反応は巻き込みのまま。乱数を引かない。
+    /// </summary>
+    public void FireSplashHit(UnitState ally, int spill, UnitState borg)
+    {
+        UnitTally t = TallyOf(borg);
+        t.FireSplashHits++; t.FireSplashNominal += spill;
+        EmitFireArmor(borg, ally, FireArmorLabels.Splash, spill);
+        if (Ember.Fireproof && (ally.HasTrait(TraitId.Pyre) || (_fireArmorLive && FireproofArmor(ally))))
+        {
+            t.FireSplashImmune += spill;
+            Log($"    {ally.Name} は燃える巻き込みに焼かれない（{spill}）", LogKind.Status);
+            if (_fireArmorLive && ally.HasTrait(TraitId.FireMend)) FireHeal(ally, spill, FireArmorLabels.Mend, tick: false);
+            return;
+        }
+        if (InvertsTick(ally) is UnitState beni)
+        {
+            int h0 = ally.Hp;
+            InverseHeal(beni, ally, spill, 5, "燃える巻き込み");
+            t.FireSplashInverted += spill; t.FireSplashInvHealed += Math.Max(0, ally.Hp - h0);
+            return;
+        }
+        int b0 = ally.Hp;
+        ApplyDamage(ally, spill, borg, isFriendlyFire: true);
+        t.FireSplashTaken += b0 - Math.Max(0, ally.Hp);
+    }
+
+    /// <summary>くすぶり（第235期・O）。開戦時に自分に火（通常の着火・残り 3）。</summary>
+    public void SelfKindle(UnitState u)
+    {
+        if (!u.IsAlive) return;
+        TallyOf(u).SelfKindleLit++;
+        EmitFireArmor(u, u, FireArmorLabels.Kindle, 0);
+        Log($"    {u.Name} の身体がくすぶり始めた", LogKind.Trigger);
+        Ignite(u, friendly: true, source: u);
+    }
+
+    /// <summary>焼き返し（第235期・H2）。殴る前から燃えていた主目標を殴った: 与えた量の半分を回復し、自分に火。</summary>
+    public void FireFeed(UnitState self, UnitState target, int amount)
+    {
+        if (!self.IsAlive) return;
+        UnitTally t = TallyOf(self);
+        t.FireFeedFires++;
+        Log($"    {self.Name} が {target.Name} の火を焼き返した", LogKind.Trigger);
+        FireHeal(self, amount, FireArmorLabels.Feed, tick: false);
+        Ignite(self, friendly: true, source: self);
+    }
+
+    /// <summary>
+    /// 火の回復（第235期・H1 / H2）。<see cref="Heal"/> を <c>inverted: true</c>（ベニの反転の裏でダメージに化けない）で通し、
+    /// <b>渇きは <see cref="TraitId.FireMendDry"/> を持たなければ素通り</b>（H1a）。上限は <c>Heal</c> がそのまま守る。
+    /// </summary>
+    public void FireHeal(UnitState u, int amount, string label, bool tick)
+    {
+        if (!u.IsAlive || amount <= 0) return;
+        UnitTally t = TallyOf(u);
+        EmitFireArmor(u, u, label, amount);
+        int before = u.Hp;
+        HealOutcome res = Heal(u, amount, u, inverted: true, fireHeal: !u.HasTrait(TraitId.FireMendDry));
+        int g = Math.Max(0, u.Hp - before);
+        if (label == FireArmorLabels.Feed) { t.FireFeedNominal += amount; t.FireFeedHealed += g; if (res == HealOutcome.Drought) t.FireFeedDry++; }
+        else
+        {
+            t.FireMendNominal += amount; t.FireMendHealed += g; if (res == HealOutcome.Drought) t.FireMendDry++;
+            if (!tick) t.FireMendSplash += g;
+        }
+        if (g > 0) Log($"    {u.Name} は火で癒える（+{g}）", LogKind.Status);
     }
 
     void PerformAttackFramed(UnitState actor, string prefix, int attackPercent, AttackPattern? patternOverride)
@@ -11191,7 +11276,8 @@ public sealed class BattleContext
 
     /// <param name="inverted">反転（第190期）から来た回復か。<b>真なら反転の裏で再反転しない</b>（無限反転の再入ガード）。</param>
     /// <returns>何が起きたか（第191期）。<b>呼び出し口のほとんどは読まない</b>——読むのは縫い合わせ（ヴェル）だけ。</returns>
-    public HealOutcome Heal(UnitState target, int amount, UnitState? by = null, bool inverted = false)
+    /// <param name="fireHeal">火の回復（第235期・ボルグの火の癒し／焼き返し）。<b>真なら渇きを素通りする</b>（支援拒否は通常どおり）。</param>
+    public HealOutcome Heal(UnitState target, int amount, UnitState? by = null, bool inverted = false, bool fireHeal = false)
     {
         if (!target.IsAlive || amount <= 0) return HealOutcome.None;
         if (!target.AcceptsSupport)
@@ -11240,7 +11326,7 @@ public sealed class BattleContext
         // **第134期 段2**: 判定は `_droughtHolders`（`Add` が積む）に寄せた。
         // `AllUnits.Any(u => u.IsAlive && u.HasTrait(TraitId.Drought))` と**同値**で、
         // 足したのは `NoteDroughtBlocked`（計数専用）だけ。
-        if (DroughtBinding)
+        if (DroughtBinding && !fireHeal)
         {
             NoteDroughtBlocked(target, amount);
             return HealOutcome.Drought;
