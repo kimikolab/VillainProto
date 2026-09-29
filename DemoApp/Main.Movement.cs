@@ -18,8 +18,6 @@ public partial class Main
             else if (delay > 0) await Delay(delay);
             return true;
         }
-        if (e.Kind == BattleEventKind.Heal && actor?.UnitId == "shio" && target is not null)
-            _battleField.MovementLeaves(target);
         if (e.Kind != BattleEventKind.Move) return false;
         _movement.Moves.TryGetValue(index, out var cue);
         bool storm = actor?.UnitId == "basa" && _movement.ShuffleMoves.Contains(index);

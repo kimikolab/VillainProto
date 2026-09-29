@@ -23,6 +23,8 @@ public partial class BattlefieldView3D
         MovementPiercePlays = 0;
         MovementBarragePlays = 0;
         MovementShotPlays = 0;
+        ShioHealPlays = 0;
+        ShioStrengthPlays = 0;
         HaneDropkickPlays = 0;
         HanePalmPlays = 0;
         BasaStormPlays = 0;
@@ -145,16 +147,8 @@ public partial class BattlefieldView3D
                 }
                 return 0.045;
             case BattleEventKind.Overflow:
-                if (target is not null)
-                {
-                    float strength = Math.Clamp((e.StatusRemaining ?? 0) / 15f, 0, 1);
-                    Vector3 fist = target.FxPoint + Vector3.Right * (target.Team == 0 ? 0.35f : -0.35f);
-                    for (int i = 0; i < 3; i++)
-                        MovementFx.Flow(_fxRoot, _camera, target.Home + new Vector3((i - 1) * 0.45f, 0.35f, 0),
-                            fist, MovementFx.Leaf.Lerp(new Color("d9e99d"), strength), 0.32 / s, 0.12f, 1);
-                    MovementFx.Coil(_fxRoot, _camera, fist, MovementFx.Leaf, 0.10f + strength * 0.18f, 0.32 / s, 1);
-                }
-                return 0.025;
+                // 溢れも直前のWhetで表示済み。横流し先を含む実際の受け手へ1回だけ描く。
+                return 0;
             case BattleEventKind.StaggerBreach:
                 if (actor is not null && target is not null)
                     MovementFx.Ribbon(_fxRoot, _camera,

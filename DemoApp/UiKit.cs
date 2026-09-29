@@ -258,6 +258,7 @@ public static class UiKit
         "shiga" => 0.03125f,
         "shio" => 0.0182f,
         "shio_retreat" => 0.0546875f,
+        "shio_support" => 0.0279948f,
         "susu" => 0.01628f,
         "kata" => 0.02214f,
         "basa" => 0.0540f,

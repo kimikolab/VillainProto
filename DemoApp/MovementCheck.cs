@@ -19,6 +19,7 @@ public partial class MovementCheck : Control
             CheckFollowupIndex();
             CheckLandingIndex();
             if (OS.GetCmdlineUserArgs().Contains("--landing")) await LandingPreview();
+            else if (OS.GetCmdlineUserArgs().Contains("--shio")) await ShioPreview();
             else if (OS.GetCmdlineUserArgs().Contains("--followup")) await Followup();
             else if (OS.GetCmdlineUserArgs().Contains("--replay")) await Replay();
             else await Preview();
@@ -95,6 +96,12 @@ public partial class MovementCheck : Control
                 GD.Print($"MOVEMENT_EVENT {group.Key}={group.Count()}");
             }
             int sero = field.Pawns.Values.Single(p => p.UnitId == "sero").InstanceId;
+            int shio = field.Pawns.Values.Single(p => p.UnitId == "shio").InstanceId;
+            Require(field.ShioHealPlays == result.Events.Count(e => e.Kind == BattleEventKind.Heal && e.ActorId == shio && e.Amount > 0),
+                "シオの回復を実台本の件数どおり表示");
+            Require(field.ShioStrengthPlays == result.Events.Count(e => e.Kind == BattleEventKind.Whet && e.ActorId == shio
+                && e.WhetRoute == WhetRoute.Drifter && e.AttackAfter is not null && e.Amount > 0), "通常・溢れの強化を各Whetで1回");
+            GD.Print($"SHIO_REPLAY_OK heals={field.ShioHealPlays} buffs={field.ShioStrengthPlays}");
             int yomi = field.Pawns.Values.Single(p => p.UnitId == "yomi").InstanceId;
             var iais = result.Events.Where(e => e.Kind == BattleEventKind.Attack && e.ActorId == yomi).ToList();
             int hane = field.Pawns.Values.Single(p => p.UnitId == "hane").InstanceId;

@@ -1590,7 +1590,9 @@ public partial class Main : Control
                 // **ダメージと同じ大きさ・同じ形**で出す（ナラ・ゴルムの還しに効く）。
                 _battleField.HealPopup(target, e.Amount);
                 // 第124期 3-h: 段2 で載った書き手から線を引く。
-                _battleField.HealingLight(actor, target, e.Amount);
+                if (actor?.UnitId == "shio" && target is not null)
+                    _battleField.ShowShioHealing(actor, target, e.Amount, _speed);
+                else _battleField.HealingLight(actor, target, e.Amount);
                 AppendLog((DischargePresentation.Cause(_result!.Events, eventIndex) is not null
                               ? $"  [color=#{ThunderFx.Cyan.ToHtml(false)}][放電→回復][/color] " : "  ")
                           + $"[color=#{UiKit.Heal.ToHtml(false)}]＋{e.Amount} 回復[/color] "
@@ -1805,6 +1807,9 @@ public partial class Main : Control
                 _whetLogs++;
                 if (e.IntendedId is { } via && via != e.TargetId) _whetRelayedLogs++;
                 AppendLog(WhetLogText(e));
+                if (actor is not null && target is not null
+                    && _battleField.ShowShioStrength(actor, target, e, _speed))
+                    await Delay(0.14);
                 // 一連の終端で束ね、盾から全員へ同時に分岐させる。
                 if (e.SupportLast && e.IntendedId != e.TargetId
                     && _battleField.FindPawn(e.IntendedId) is { UnitId: "gald" } relay

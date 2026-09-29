@@ -382,13 +382,13 @@ void fragment() {
         _stats.Text = $"HP {Hp}/{MaxHp}  ・  攻 {AttackValue} {PatternGlyph(Pattern)}";
     }
 
-    public void SetAttack(int attack, AttackPattern? pattern = null)
+    public void SetAttack(int attack, AttackPattern? pattern = null, bool animate = true)
     {
         int change = attack - AttackValue;
         AttackValue = attack;
         if (pattern is { } value) Pattern = value;
         _stats.Text = $"HP {Hp}/{MaxHp}  ・  攻 {AttackValue} {PatternGlyph(Pattern)}";
-        ShowAttackChange(change);
+        ShowAttackChange(animate ? change : 0);
     }
 
     /// <summary>
