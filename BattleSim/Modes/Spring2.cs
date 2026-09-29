@@ -54,7 +54,9 @@ static partial class Spring2Diag
     static UnitDef Plus(UnitDef d, params TraitId[] extra) => DecoyDiag.Copy(d, d.Traits.Concat(extra).ToArray());
     internal static readonly UnitDef HaneS1 = Plus(UnitCatalog.HaneS0, TraitId.SpringGuard);
     internal static readonly UnitDef HaneS2 = Plus(UnitCatalog.HaneS0, TraitId.SpringGuard, TraitId.SpringStay);
-    internal static Ver[] Versions => _versions ??= new[] { new Ver("S0", UnitCatalog.HaneS0), new Ver("S1", HaneS1), new Ver("S2", HaneS2) };
+    // 第236期: S3 ＝ S2 ＋ 同じ列も弾く（`SpringRow`）。
+    internal static readonly UnitDef HaneS3 = Plus(UnitCatalog.HaneS0, TraitId.SpringGuard, TraitId.SpringStay, TraitId.SpringRow);
+    internal static Ver[] Versions => _versions ??= new[] { new Ver("S0", UnitCatalog.HaneS0), new Ver("S1", HaneS1), new Ver("S2", HaneS2), new Ver("S3", HaneS3) };
     static Ver[]? _versions;
     internal static Ver VerOf(string tag) => Versions.First(v => v.Tag == tag);
 

@@ -313,6 +313,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.RetreatHeavy]    = (HcPlusL,  "緊急退避を「4割未満 または 一撃で最大HPの3割以上」に（第231期・シオの版 A2・保持者 0 枚）"),
         [TraitId.SpringGuard]     = (HcBothL,  "隣の味方の被弾でも弾き返し、ハネがその味方と入れ替わる（第231期・ハネの版 B・保持者 0 枚）"),
         [TraitId.SpringStay]      = (HcPlusL,  "隣の味方の被弾での弾き返しでは入れ替わらない（弾くだけ。第232期・ハネの版 S2・`SpringGuard` と組む・保持者 0 枚）"),
+        [TraitId.SpringRow]       = (HcPlusL,  "隣接に加えて同じ列（前列・中列・後列）の味方の被弾でも弾き返す（第236期・ハネの版 S3・`SpringGuard` と組む）"),
         [TraitId.EvadeMoveShot]   = (HcPlusL,  "段2 以上で隊列を動かされたら貫きの矢を1本（1ターン2回・自分の回避の入れ替えでは撃たない。第231期・セロの版 C・保持者 0 枚）"),
         [TraitId.MireBurstAll]    = (HcBothL,  "B2 を敵味方の両方に。漏れの印の味方が倒れると味方側で爆ぜる（第220期・B2x・保持者 0 枚）"),
         [TraitId.LastStandHold]   = (HcBothL,  "味方が 0 体になると盾を捨てて剣を抜く（受け止めた刃の1割を力に変え ×2・薙ぎ、斬り返し、相打ちで勝つ）のと、構え直せなくなるのが1つの札"),

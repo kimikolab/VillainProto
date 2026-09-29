@@ -79,7 +79,7 @@ static partial class BurnAuditDiag
         center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio);
     /// <summary>参考 移動: 第228期 H3 の1位の席（前1 バサ ／ 前3 セロ ／ 中央 ヨミ ／ 後1 シオ ／ 後3 ハネ）。駒は第232期の規定。</summary>
     internal static Formation RefMove => Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.Sero,
-        center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Hane);
+        center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.HaneR0);
 
     internal static Formation Seat(UnitDef[] p) => Formation.Build(front1: p[0], front3: p[1], center: p[2], back1: p[3], back3: p[4]);
 

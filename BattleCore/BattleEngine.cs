@@ -10104,12 +10104,13 @@ public sealed class BattleContext
             && !burnTick && !levy && !relayed && !hexShare && target.HasTrait(TraitId.Spring))
             SpringTrait.Try(this, target, source);
         // 第231期（B・`SpringGuard`）: ハネの隣の味方が同じ条件で殴られたら、ハネが弾く（ハネ自身の分と回数を共有）。
-        // 相手は隣の生きている札の保持者（席番号の若い順の最初の1体）。召喚枠の駒が殴られたときは弾かない。**乱数を引かない。**
+        // 相手は隣（`SpringRow` を持てば同じ列も）の生きている札の保持者（席番号の若い順の最初の1体）。召喚枠の駒が殴られたときは弾かない。**乱数を引かない。**
         else if (_springLive && target.Hp > 0 && source is not null && source.IsAlive && source.TeamId != target.TeamId
             && !burnTick && !levy && !relayed && !hexShare && !FormationRules.IsSummonSlot(target))
         {
             UnitState? guard = LivingMembers(target.TeamId).FirstOrDefault(h => h != target && h.HasTrait(TraitId.Spring)
-                && h.HasTrait(TraitId.SpringGuard) && FormationRules.AreAdjacent(h, target));
+                && h.HasTrait(TraitId.SpringGuard)
+                && (FormationRules.AreAdjacent(h, target) || (h.HasTrait(TraitId.SpringRow) && h.Row == target.Row)));   // 第236期（S3）: 同じ列も
             if (guard is not null) SpringTrait.TryGuard(this, guard, target, source);
         }
 

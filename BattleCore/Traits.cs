@@ -490,6 +490,7 @@ public enum TraitId
                     // 回復は「火の回復」——ベニの反転の裏（回復がダメージに化ける）は通らず、**渇きには封じられない**（`FireMendDry` を持てば封じられる）。**判定は engine**（燃焼の刻みと起爆の2箇所）。保持者 0 枚
     FireMendDry,    // 火の回復が渇きに封じられる（第235期・ボルグの版 H1b）。**札そのものは挙動を持たない**（`BattleContext.FireHeal` が読む）。保持者 0 枚
     FireFeed,       // 焼き返し（第235期・ボルグの版 H2）: 殴る前から燃えていた敵を主目標として殴ると、与えた量の半分を回復し、自分に火が点く。**札の並びで火の粉（`Cinder`）より前に置く**。保持者 0 枚
+    SpringRow,      // 同じ列の味方の被弾でも弾き返す（第236期・ハネの版 S3・`SpringGuard` と組む）: 隣接に加えて同じ行（前列・中列・後列）の味方も守る。**札そのものは挙動を持たない**（engine の弾き返しの判定が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -13134,6 +13135,7 @@ public sealed class RetreatHeavyTrait : Trait { public override TraitId Id => Tr
 
 /// <summary>隣の弾き返しで入れ替わらない（第232期・S2）。<b>札そのものは判定を持たない</b>（<see cref="BattleContext.SpringSwap"/> が読む）。</summary>
 public sealed class SpringStayTrait : Trait { public override TraitId Id => TraitId.SpringStay; }
+public sealed class SpringRowTrait : Trait { public override TraitId Id => TraitId.SpringRow; }
 
 /// <summary>隣の味方の被弾でも弾き返す（第231期・B）。<b>札そのものは判定を持たない</b>（engine の弾き返しの判定と <see cref="SpringTrait.TryGuard"/> が読む）。</summary>
 public sealed class SpringGuardTrait : Trait { public override TraitId Id => TraitId.SpringGuard; }
@@ -15165,6 +15167,7 @@ public static class TraitCatalog
         new SpringGuardTrait(),      // 第231期
         new EvadeMoveShotTrait(),    // 第231期
         new SpringStayTrait(),       // 第232期
+        new SpringRowTrait(),        // 第236期
         new ShioStageSlowTrait(),    // 第226期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期

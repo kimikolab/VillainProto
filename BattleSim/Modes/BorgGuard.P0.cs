@@ -73,7 +73,7 @@ static partial class BorgGuardDiag
         var boards = new (string Name, Formation F)[]
         {
             ("233 B3-1（シオ＋ササ・1位）", BA.Seat(new[] { UnitCatalog.Hota, UnitCatalog.Sasa, UnitCatalog.Hiyo, UnitCatalog.Shio, g0 })),
-            ("233 B3-2（シオ＋ハネ・1位）", BA.Seat(new[] { UnitCatalog.Hiyo, UnitCatalog.Hota, UnitCatalog.Shio, UnitCatalog.Hane, g0 })),
+            ("233 B3-2（シオ＋ハネ・1位）", BA.Seat(new[] { UnitCatalog.Hiyo, UnitCatalog.Hota, UnitCatalog.Shio, UnitCatalog.HaneR0, g0 })),
             ("233 B3-1 のボルグとホタを入れ替え（ボルグ前1）", BA.Seat(new[] { g0, UnitCatalog.Sasa, UnitCatalog.Hiyo, UnitCatalog.Shio, UnitCatalog.Hota })),
             ("参考 燃焼（`compare` の行・ガルド入り）", BA.RefBurn),
         };

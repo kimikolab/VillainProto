@@ -172,6 +172,19 @@ static partial class Spring2Diag
             Expect($"S2: 隣の分とハネ自身の分は同じ上限（1ターン {limit} 回）を分け合う（弾いた計 ／ 上限で止まった）", $"{t.SpringCount}/{t.SpringCapped}", $"{limit}/{4 - limit}");
             Expect("S2: ハネは隣の分で動かず、自分の分は上限で弾かないので後3 のまま", Seat(U(p, "hane")), "後3");
         }
+        // 第236期（S3）: 同じ列（後1）の味方 z が殴られた——S3 は弾き、S2 は弾かない（後1 と後3 は隣接しない）。中央（隣接）は両方とも弾く。
+        foreach (var (tag, hane, want) in new[] { ("S3", HaneS3, "1/後3"), ("S2", HaneS2, "0/後3") })
+        {
+            var ctx = Ctx(Formation.Build(front1: Plain("w"), back1: Plain("z"), back3: hane), en, out var p, out var e);
+            ctx.ApplyDamage(U(p, "z"), 10, U(e, "e1"));
+            var t = Tal(ctx, U(p, "hane"));
+            Expect($"{tag}: 同じ列（後1）の z が殴られた——弾いた ／ ハネの席（後1 と後3 は隣接しない: {FormationRules.AreAdjacent(3, 4)}）", $"{t.SpringGuardCount}/{Seat(U(p, "hane"))}", want);
+        }
+        {
+            var ctx = Ctx(Formation.Build(front1: Plain("w"), front3: Plain("z"), back3: HaneS3), en, out var p, out var e);
+            ctx.ApplyDamage(U(p, "w"), 10, U(e, "e1"));
+            Expect("S3: 前1 の w（ハネは後3・別の列で隣接もしない）は弾かない", Tal(ctx, U(p, "hane")).SpringGuardChances, 0L);
+        }
         // 実戦: verbose の有無・台本の数
         long battles = 0, diff = 0, guardEv = 0, guardTal = 0, stayMove = 0;
         var lk = new object();
@@ -192,7 +205,7 @@ static partial class Spring2Diag
                         {
                             if (evs[i].Kind != BattleEventKind.SpringGuard) continue;
                             ge++;
-                            if (v.Tag != "S2") continue;
+                            if (v.Tag is not ("S2" or "S3")) continue;
                             // S2: 見出しの後、次の Damage / Attack / TurnStart までにハネの Move が無い（敵の入れ替えは除く）
                             for (int j = i + 1; j < evs.Count; j++)
                             {
@@ -208,7 +221,7 @@ static partial class Spring2Diag
                     });
         Expect($"verbose の有無で勝敗・決着T・倒れた駒が違う戦（{battles} 戦）", diff, 0L);
         Expect("台本の SpringGuard の数 ＝ 帳簿", guardEv == guardTal && guardEv > 0, true);
-        Expect("S2: 隣の弾き返しの直後にハネが殴られた味方と入れ替わった回数", stayMove, 0L);
+        Expect("S2・S3: 隣の弾き返しの直後にハネが殴られた味方と入れ替わった回数", stayMove, 0L);
         Console.WriteLine();
         Console.WriteLine($"**{ok} / {ok + ng}**（所要 {sw.Elapsed.TotalSeconds:F1} 秒）");
     }
