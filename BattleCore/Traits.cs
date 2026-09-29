@@ -491,6 +491,8 @@ public enum TraitId
     FireMendDry,    // 火の回復が渇きに封じられる（第235期・ボルグの版 H1b）。**札そのものは挙動を持たない**（`BattleContext.FireHeal` が読む）。保持者 0 枚
     FireFeed,       // 焼き返し（第235期・ボルグの版 H2）: 殴る前から燃えていた敵を主目標として殴ると、与えた量の半分を回復し、自分に火が点く。**札の並びで火の粉（`Cinder`）より前に置く**。保持者 0 枚
     SpringRow,      // 同じ列の味方の被弾でも弾き返す（第236期・ハネの版 S3・`SpringGuard` と組む）: 隣接に加えて同じ行（前列・中列・後列）の味方も守る。**札そのものは挙動を持たない**（engine の弾き返しの判定が読む）
+    Landing,        // 着地の反動（第237期・ハネの版 ②）: ハネが動かされるたび、隣の味方1体（乱数・HP5割未満は除く）をその味方の隣の別の味方と入れ替える（1ターンに 1 ＋ 敵の乱れの段 回）。
+                    // **判定は engine**（`SwapSlots` / `RelocateLane` の一番外側の出口で控えを流す——入れ替えの途中に味方を動かさない）。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -13137,6 +13139,45 @@ public sealed class RetreatHeavyTrait : Trait { public override TraitId Id => Tr
 public sealed class SpringStayTrait : Trait { public override TraitId Id => TraitId.SpringStay; }
 public sealed class SpringRowTrait : Trait { public override TraitId Id => TraitId.SpringRow; }
 
+/// <summary>
+/// 着地の反動（第237期・ハネの版 ②・<see cref="TraitId.Landing"/>）。ハネが動かされるたび（理由を問わない）、隣の味方1体を、その味方の隣の別の味方と入れ替える。
+/// <para>動かす味方: ハネの隣（隣接表）の生きている味方のうち、ハネ自身・召喚枠・HP5割未満を除き、さらに「入れ替える相手がいる」駒から <c>PickOne</c>（乱数）。
+/// 相手: その味方の隣の生きている味方のうち、ハネ・召喚枠を除いて <c>PickOne</c>。1ターンに <see cref="SpringTrait.LimitOf"/>（1 ＋ 敵の乱れの段）回まで（私有キー）。
+/// 候補が無いときは回数を使わない。行動ではないので粛の窓口は通らない。<b>engine の移動の一番外側の出口（<c>FlushLanding</c>）だけが呼ぶ。</b></para>
+/// </summary>
+public sealed class LandingTrait : Trait
+{
+    public const int HpGatePercent = 50;
+    public const string TurnKey = "landTurn";
+    public const string CountKey = "landCount";
+    public override TraitId Id => TraitId.Landing;
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(TurnKey, 0);
+        self.SetCounter(CountKey, 0);
+    }
+
+    public static void Run(BattleContext ctx, UnitState hane)
+    {
+        if (!hane.IsAlive) return;
+        UnitTally t = ctx.TallyOf(hane);
+        t.LandingChances++;
+        var mates = ctx.LivingMembers(hane.TeamId).Where(a => a != hane && !FormationRules.IsSummonSlot(a)).ToList();
+        List<UnitState> PartnersOf(UnitState a) => mates.Where(p => p != a && FormationRules.AreAdjacent(a, p)).ToList();
+        var cands = mates.Where(a => FormationRules.AreAdjacent(hane, a) && a.Hp * 100 >= a.MaxHp * HpGatePercent && PartnersOf(a).Count > 0).ToList();
+        if (cands.Count == 0) { t.LandingNoPair++; return; }
+        if (hane.RawCounter(TurnKey) != ctx.Turn + 1) { hane.SetCounter(TurnKey, ctx.Turn + 1); hane.SetCounter(CountKey, 0); }
+        int used = hane.RawCounter(CountKey);
+        if (used >= SpringTrait.LimitOf(ctx, hane)) { t.LandingCapped++; return; }
+        UnitState ally = ctx.PickOne(cands)!;
+        UnitState with = ctx.PickOne(PartnersOf(ally))!;
+        hane.SetCounter(CountKey, used + 1);
+        ctx.Log($"    着地の反動: {hane.Name} の着地で {ally.Name} が {with.Name} と入れ替わった", LogKind.Trigger);
+        if (ctx.SwapSlots(ally, with.Slot, hane)) t.LandingSwaps++; else t.LandingRefused++;
+    }
+}
+
 /// <summary>隣の味方の被弾でも弾き返す（第231期・B）。<b>札そのものは判定を持たない</b>（engine の弾き返しの判定と <see cref="SpringTrait.TryGuard"/> が読む）。</summary>
 public sealed class SpringGuardTrait : Trait { public override TraitId Id => TraitId.SpringGuard; }
 
@@ -15168,6 +15209,7 @@ public static class TraitCatalog
         new EvadeMoveShotTrait(),    // 第231期
         new SpringStayTrait(),       // 第232期
         new SpringRowTrait(),        // 第236期
+        new LandingTrait(),          // 第237期
         new ShioStageSlowTrait(),    // 第226期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期

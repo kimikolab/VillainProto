@@ -19,6 +19,8 @@ static partial class Spring2Diag
             case "phase0": Phase0(); return;
             case "run": RunImpl(); return;
             case "check": CheckImpl(); return;
+            case "run237": Run237(); return;
+            case "check237": Check237(); return;
             default:
                 Console.WriteLine("spring2: モードは phase0 / run / check。");
                 return;
@@ -28,6 +30,8 @@ static partial class Spring2Diag
     static partial void Phase0();
     static partial void RunImpl();
     static partial void CheckImpl();
+    static partial void Run237();
+    static partial void Check237();
 
     internal const int Seeds = 200;
 
@@ -88,11 +92,14 @@ static partial class Spring2Diag
         public long AdjRetreat;
         // Q0-2 弾けなかった内訳（隣の分）
         public long GChances, GFires, GOffLane, GTail, GCapped, GHushed, GHeld, GStay;
+        // 第237期: 味方の移動（味方が動かされた Move の件数）・着地の反動（入れ替えた ／ 動かされた回数 ／ 候補なし ／ 上限）
+        public long AllyMoves, LandSwaps, LandChances, LandNoPair, LandCapped;
 
         public void Merge(Agg o)
         {
             T.Merge(o.T);
             GuardBoth += o.GuardBoth; GuardOther += o.GuardOther; GuardSkipped += o.GuardSkipped; GuardNoNeed += o.GuardNoNeed; AdjRetreat += o.AdjRetreat;
+            AllyMoves += o.AllyMoves; LandSwaps += o.LandSwaps; LandChances += o.LandChances; LandNoPair += o.LandNoPair; LandCapped += o.LandCapped;
             GChances += o.GChances; GFires += o.GFires; GOffLane += o.GOffLane; GTail += o.GTail; GCapped += o.GCapped; GHushed += o.GHushed; GHeld += o.GHeld; GStay += o.GStay;
         }
         public double Per(long x) => T.Per(x);
@@ -105,6 +112,7 @@ static partial class Spring2Diag
                 if (id != "hane" || !p.Any(u => u.Def.Id == "hane")) continue;
                 GChances += t.SpringGuardChances; GFires += t.SpringGuardFires; GOffLane += t.SpringGuardOffLane; GTail += t.SpringGuardTail;
                 GCapped += t.SpringGuardCapped; GHushed += t.SpringGuardHushed; GHeld += t.SpringGuardHeld; GStay += t.SpringGuardStays;
+                LandSwaps += t.LandingSwaps; LandChances += t.LandingChances; LandNoPair += t.LandingNoPair; LandCapped += t.LandingCapped;
             }
             var players = p.Select(u => u.InstanceId).ToHashSet();
             int hane = p.FirstOrDefault(u => u.Def.Id == "hane")?.InstanceId ?? -1;
@@ -113,6 +121,7 @@ static partial class Spring2Diag
             for (int i = 0; i < evs.Count; i++)
             {
                 var ev = evs[i];
+                if (ev.Kind == BattleEventKind.Move && ev.TargetId is int mv && players.Contains(mv)) AllyMoves++;
                 if (ev.Kind == BattleEventKind.SpringGuard && ev.TargetId is int ally)
                 {
                     bool need = b.Hp[ally] * 100 < b.MaxHp[ally] * RetreatTrait.HalfPercent;

@@ -6949,6 +6949,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Decoy)) _decoyLive = true;         // 第226期（挑発）
         if (u.HasTrait(TraitId.Spring)) _springLive = true;       // 第228期（弾き返し）
         if (u.HasTrait(TraitId.Tailwind)) _tailwindLive = true;   // 第229期（追い風）
+        if (u.HasTrait(TraitId.Landing)) _landingLive = true;     // 第237期（着地の反動）
         if (u.HasTrait(TraitId.KillImpact)) _impactLive = true;   // 第230期（撃破の衝撃）
         if (u.HasTrait(TraitId.Disarray)) _disarrayLive = true;   // 第226期（敵の乱れ）
         // 第185期: 組み付き・見せしめ（手番の頭の2つのキーと標的の選好を短絡させる）／踏みしめ（範囲の盾・層の軽減）／
@@ -11425,12 +11426,12 @@ public sealed class BattleContext
     public bool SwapSlots(UnitState self, int destSlot, UnitState? by = null)
     {
         // 第229期（追い風）: 保持者がいなければ比較1つで素通り。いれば入れ替えの外側で控えた追い風を順に流す。
-        if (!_tailwindLive) { bool m0 = SwapSlotsCore(self, destSlot, by); RefreshDecoyShow(); return m0; }   // 第231期（表示専用）
+        if (!_tailwindLive && !_landingLive) { bool m0 = SwapSlotsCore(self, destSlot, by); RefreshDecoyShow(); return m0; }   // 第231期（表示専用）
         _moveDepth++;
         bool moved;
         try { moved = SwapSlotsCore(self, destSlot, by); }
         finally { _moveDepth--; }
-        if (_moveDepth == 0) FlushTailwind();
+        if (_moveDepth == 0) { FlushTailwind(); FlushLanding(); }
         RefreshDecoyShow();   // 第231期（表示専用）
         return moved;
     }
@@ -11514,6 +11515,9 @@ public sealed class BattleContext
         // 敵の乱れ（第226期）: 陣営ごとの累計と、バサがいる間は前へ出た駒の混乱。**保持者がいなければ比較1つで抜ける。**
         if (_disarrayLive) NoteDisorder(u, from, by);
 
+        // 着地の反動（第237期）: 保持者が動かされた。**ここでは控えるだけ**（追い風と同じ理由）。**保持者がいなければ比較1つで抜ける。**
+        if (_landingLive && u.HasTrait(TraitId.Landing)) _landingQ.Enqueue(u);
+
         // 追い風（第229期）: 保持者が敵を後ろの行へ動かした。**ここでは控えるだけ**——入れ替えの途中（同じ席に2体いる瞬間）に味方を動かさない。
         // 追い風の入れ替えの中で起きた敵の移動は追い風を呼ばない（連鎖しない）。**保持者がいなければ比較1つで抜ける。**
         // 第230期の追記: 撃破の衝撃の吹き飛ばし（`ImpactTailwind` を持つヨミが動かした敵）でも、同じ陣営の生きている追い風の保持者（席番号の若い方）の追い風が起きる。
@@ -11563,12 +11567,12 @@ public sealed class BattleContext
     /// </summary>
     public bool RelocateLane(IReadOnlyList<(UnitState U, int Dest)> moves, UnitState by)
     {
-        if (!_tailwindLive) return RelocateLaneCore(moves, by);
+        if (!_tailwindLive && !_landingLive) return RelocateLaneCore(moves, by);
         _moveDepth++;
         bool done;
         try { done = RelocateLaneCore(moves, by); }
         finally { _moveDepth--; }
-        if (_moveDepth == 0) FlushTailwind();
+        if (_moveDepth == 0) { FlushTailwind(); FlushLanding(); }
         return done;
     }
 
@@ -11584,6 +11588,19 @@ public sealed class BattleContext
         foreach (UnitState a in LivingMembers(team))
             if (a.HasTrait(TraitId.Tailwind) && (h is null || a.Slot < h.Slot)) h = a;
         return h;
+    }
+
+    // ---- 第237期: 着地の反動 ----
+    // ハネ（札の保持者）が動かされたら控え、入れ替えの一番外側の出口で順に流す（入れ替えの途中は同じ席に2体いる瞬間がある）。
+    bool _landingLive, _inLanding;
+    readonly Queue<UnitState> _landingQ = new();
+
+    void FlushLanding()
+    {
+        if (_inLanding) return;
+        _inLanding = true;
+        try { while (_landingQ.Count > 0) LandingTrait.Run(this, _landingQ.Dequeue()); }
+        finally { _inLanding = false; }
     }
 
     void FlushTailwind()

@@ -2311,6 +2311,8 @@ public sealed class UnitTally
     public long SpringGuardOffLane, SpringGuardTail, SpringGuardCapped, SpringGuardHushed, SpringGuardHeld;
     /// <summary>第232期（S2）・<b>計数専用</b>: 隣の弾き返しで入れ替わらなかった（`SpringStay`）。</summary>
     public long SpringGuardStays;
+    /// <summary>第237期（着地の反動）・<b>計数専用</b>: 動かされた回数 ／ 入れ替えた ／ 候補なし ／ 1ターンの上限 ／ 据えた足で空振り。</summary>
+    public long LandingChances, LandingSwaps, LandingNoPair, LandingCapped, LandingRefused;
     /// <summary>
     /// 第234期・<b>計数専用</b>（火の鎧・焼け残り・ボルグの版 G1〜G4）: <c>FireArmorFoeLit</c> 殴った敵に点けた回数 ／ <c>FireArmorSelfLit</c> 自分に点けた回数 ／
     /// <c>FireArmorGuardHits</c> 燃えていて半分にした一撃 ／ <c>FireArmorSaved</c> 半分にして切った量 ／ <c>SmolderUsed</c> 焼け残った回数（1戦1回）／ <c>SmolderTurn</c> 焼け残ったターン。
