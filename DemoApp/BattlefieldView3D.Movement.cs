@@ -127,7 +127,7 @@ public partial class BattlefieldView3D
                 return 0;
             case BattleEventKind.Landing:
                 ShowHaneLanding(actor, target, s);
-                return 0.06;
+                return 0;
             case BattleEventKind.Tailwind:
                 ShowTailwindGust(actor, target, partner, s);
                 return 0.12;
@@ -190,18 +190,20 @@ public partial class BattlefieldView3D
         }
         if (storm) { arc = 0.95f; seconds = 0.64; }
         bool landing = cue?.Kind == BattleEventKind.Landing;
-        if (landing) { arc = 0.85f; seconds = 0.30; tint = MovementFx.Bounce; }
+        if (landing) { arc = 0.38f; seconds = 0.28; }
         if (cue?.Kind == BattleEventKind.Tailwind) { arc = 0.32f; seconds = 0.26; }
         if (mover?.UnitId == "basa" && !storm && cue?.Kind != BattleEventKind.Tailwind)
             _attackAudio.PlayMovementSound(MovementSound.Wind);
         Vector3 start = pawn.FxPoint;
         Vector3 end = PawnPosition(pawn.Team, slot);
         float curl = mover?.UnitId == "basa" ? 0.30f + _windStages.GetValueOrDefault(mover.InstanceId) * 0.14f : 0.15f;
-        MovementFx.Flow(_fxRoot, _camera, start, end + Vector3.Up * 0.85f, tint,
-            (seconds + 0.10) / pawn.AnimationSpeed, curl, thrown ? 5 : 2);
+        if (!landing)
+            MovementFx.Flow(_fxRoot, _camera, start, end + Vector3.Up * 0.85f, tint,
+                (seconds + 0.10) / pawn.AnimationSpeed, curl, thrown ? 5 : 2);
         pawn.Slot = slot;
-        pawn.AnimateMovement(end, arc, seconds, thrown || landing ? MovementLandingSound(pawn, landing) : null, windCarry: storm || landing);
-        if (storm || landing) MovementFx.CarryVortex(_fxRoot, _camera, pawn, seconds / pawn.AnimationSpeed);
+        pawn.AnimateMovement(end, arc, seconds, thrown ? MovementLandingSound(pawn) : null,
+            windCarry: storm, allyBounce: landing);
+        if (storm) MovementFx.CarryVortex(_fxRoot, _camera, pawn, seconds / pawn.AnimationSpeed);
     }
 
     // 着地を台本のMove時刻ではなく、実際の描画の終了へ合わせる。停止・再開で古い予約は無効。

@@ -12,8 +12,9 @@ public partial class Main
         if (MovementPresentation.IsCue(e.Kind))
         {
             double delay = _battleField.ShowMovementCue(e, _speed, _movement.SpringGuards.GetValueOrDefault(index));
-            // 両掌が届く前に敵のMoveを始めない。中断時も待機を解除する。
+            // 掌・味方弾きの接触前に次のMoveを始めない。中断時も待機を解除する。
             if (e.Kind == BattleEventKind.Spring && actor is not null) await actor.PalmStrikeImpact;
+            else if (e.Kind == BattleEventKind.Landing && actor is not null) await actor.AllyBumpImpact;
             else if (delay > 0) await Delay(delay);
             return true;
         }

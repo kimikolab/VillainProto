@@ -78,6 +78,7 @@ public partial class BattlePawn3D : Node3D
     {
         _motion?.Kill();
         ClearWindCarry();
+        ClearAllyBounce();
         return _motion = CreateTween();
     }
 
@@ -723,6 +724,8 @@ void fragment() {
         ProcessWindCarry();
         ProcessDropkickPose();
         ProcessPalmStrikePose();
+        ProcessAllyBumpPose();
+        ProcessAllyBounce();
         _shadow.Scale = new Vector3(1.0f - breath * 0.10f + shadowSpread, 1, 1.0f - breath * 0.10f - shadowSpread * 0.35f);
         _ring.Rotation = new Vector3(0, _phase * 0.15f, 0);
     }
@@ -732,6 +735,8 @@ void fragment() {
         _movementPoseTime = 0;
         _basaFlightTime = 0;
         ClearWindCarry();
+        ClearAllyBounce();
+        ClearAllyBumpPose();
         ClearBlastPose();
         ResetShieldCowed();
         ClearDropkickPose();

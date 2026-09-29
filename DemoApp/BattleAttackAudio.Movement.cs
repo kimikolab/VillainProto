@@ -1,7 +1,7 @@
 using Godot;
 using System.Collections.Generic;
 
-internal enum MovementSound { Bow, Vine, Wind, Collision, Landing, Sheathe, ArrowHit, Windup, Tornado, BasaSweep, Tailwind, Evade, SeroPierce, SeroBarrage, Dropkick, SpringBlock }
+internal enum MovementSound { Bow, Vine, Wind, Collision, Landing, Sheathe, ArrowHit, Windup, Tornado, BasaSweep, Tailwind, Evade, SeroPierce, SeroBarrage, Dropkick, SpringBlock, AllyBump }
 
 public partial class BattleAttackAudio
 {
@@ -22,6 +22,7 @@ public partial class BattleAttackAudio
         [MovementSound.SeroBarrage] = "res://assets/audio/se/sero_barrage.wav",
         [MovementSound.Dropkick] = "res://assets/audio/se/hane_dropkick.mp3",
         [MovementSound.SpringBlock] = "res://assets/audio/se/hane_spring_block.mp3",
+        [MovementSound.AllyBump] = "res://assets/audio/se/hane_ally_bump.mp3",
     };
     private readonly Dictionary<MovementSound, ulong> _movementSoundTimes = new();
     internal readonly Dictionary<MovementSound, int> MovementSoundPlays = new();

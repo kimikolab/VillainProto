@@ -225,6 +225,7 @@
 | hane_smash_ice.mp3 | 氷魔法1.mp3 | 手番の敵射出（大キックに重ねる）・吹っ飛ばしの巻き込み衝突 | 主 -9 dB / 巻き込み -16 dB |
 | hane_dropkick.mp3 | 大キック.mp3 | 手番の吹っ飛ばしでドロップキックが接触した瞬間 | -10 dB |
 | hane_spring_block.mp3 | パンチを受け止める.mp3 | 被弾からの弾き返し | -12 dB |
+| hane_ally_bump.mp3 | D:/Assets/SE/効果音ラボ/演出/ボヨン.mp3 | 着地の反動で味方に接触した瞬間、1回 | -10 dB |
 | movement_land.mp3 | 倒れる.mp3 | 吹っ飛ばし・弾き返し・ピンの着地 | 主 -14 dB / ピン -17 dB |
 | yomi_sheathe.mp3 | 刀を鞘にしまう1.mp3 | ヨミの通常・追加攻撃の差分が終了したとき | -13 dB |
 | sero_arrow_hit.mp3 | 弓矢が刺さる.mp3 | セロの矢の飛行終了時、1射につき1回 | -12 dB |

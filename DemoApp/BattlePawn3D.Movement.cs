@@ -26,7 +26,8 @@ public partial class BattlePawn3D
         _sprite.Position += Vector3.Down * Math.Abs(_movementLean) * wave * 0.25f;
     }
 
-    public void AnimateMovement(Vector3 target, float arc = 0.12f, double seconds = 0.18, Action? landed = null, bool windCarry = false)
+    public void AnimateMovement(Vector3 target, float arc = 0.12f, double seconds = 0.18, Action? landed = null, bool windCarry = false,
+        bool allyBounce = false)
     {
         if (!_alive || _victory) return;
         if (_blastActive) Position = _blastVisualPosition;
@@ -37,9 +38,12 @@ public partial class BattlePawn3D
         Vector3 start = Position;
         var tween = BeginMotion();
         _windCarryActive = windCarry;
+        _allyBounceActive = allyBounce;
         Vector3 side = (target - start).Cross(Vector3.Up).Normalized();
         tween.TweenMethod(Callable.From<float>(t => {
             float travel = windCarry ? Mathf.SmoothStep(0, 1, t) : t;
+            // 弾かれた勢いで素早く飛び出し、低い山を越えて減速する。旋回はしない。
+            if (allyBounce) { travel = 1 - (1 - t) * (1 - t); _allyBounceProgress = t; }
             Position = start.Lerp(target, travel) + Vector3.Up * Mathf.Sin(t * Mathf.Pi) * arc;
             if (windCarry)
             {
@@ -48,6 +52,7 @@ public partial class BattlePawn3D
             }
         }), 0f, 1f, Math.Max(0.005, seconds / AnimationSpeed));
         if (windCarry) tween.TweenCallback(Callable.From(ClearWindCarry));
+        if (allyBounce) tween.TweenCallback(Callable.From(ClearAllyBounce));
         if (landed is not null) tween.TweenCallback(Callable.From(() => { if (_alive && !_victory) landed(); }));
     }
 
@@ -55,6 +60,25 @@ public partial class BattlePawn3D
     private float _windCarryProgress;
     internal bool WindCarried => _windCarryActive;
     internal Vector3 WindCarryCenter => GlobalPosition + Vector3.Up * _portraitBaseY;
+
+    private bool _allyBounceActive;
+    private float _allyBounceProgress;
+    internal bool AllyBouncing => _allyBounceActive;
+
+    private void ClearAllyBounce()
+    {
+        _allyBounceActive = false;
+        _allyBounceProgress = 0;
+    }
+
+    private void ProcessAllyBounce()
+    {
+        if (!_allyBounceActive) return;
+        float t = _allyBounceProgress;
+        float squash = t < 0.20f ? 1 - t / 0.20f : -Mathf.Sin((t - 0.20f) / 0.80f * Mathf.Pi) * 0.45f;
+        _sprite.Scale *= new Vector3(1 + squash * 0.22f, 1 - squash * 0.18f, 1);
+        _sprite.Rotation += Vector3.Back * Mathf.Sin(t * Mathf.Pi) * (Team == 0 ? -0.18f : 0.18f);
+    }
 
     private void ClearWindCarry()
     {
