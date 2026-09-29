@@ -248,7 +248,7 @@ static partial class BorgGuardDiag
             {
                 var x = Group(bi, s, ws); var a = x.A;
                 long all = a.Taken.Values.Sum(v => v.Sum());
-                long borg = a.Taken.GetValueOrDefault(UnitCatalog.Borg.Name)?.Sum() ?? 0;
+                long borg = a.Taken.GetValueOrDefault(UnitCatalog.BorgF0.Name)?.Sum() ?? 0;
                 Console.WriteLine($"| {bi + 1} | {boards[bi].Ver} | " + string.Join("・", boards[bi].F.Occupied().Select(o => $"{SN(o.Def.Id)} {BA.F1(a.Per(a.Taken.GetValueOrDefault(o.Def.Name)?.Sum() ?? 0))}"))
                     + $" | {Pct(borg, all)} | {BA.F2(a.Per(x.BorgEnemyHits))} | {BA.F2(a.Per(x.GuardHits))} | {BA.F1(a.Per(x.Saved))} |");
             }

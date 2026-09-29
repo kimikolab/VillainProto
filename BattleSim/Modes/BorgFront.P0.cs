@@ -48,7 +48,7 @@ static partial class BorgFrontDiag
         int inv2 = src.IndexOf("InvertsTick(u)) is UnitState inverterB", det, StringComparison.Ordinal);
         Console.WriteLine($"- 起爆: 焼かれない枝が反転の枝より{(pyre2 < inv2 ? "前" : "後")}");
         // 実測: ホタがベニの隣で燃えたとき、反転の回復が届いているか
-        var f1 = BA.Seat(new[] { UnitCatalog.Borg, UnitCatalog.Hiyo, UnitCatalog.Hota, UnitCatalog.Beni, UnitCatalog.Mio });
+        var f1 = BA.Seat(new[] { UnitCatalog.BorgF0, UnitCatalog.HiyoF0, UnitCatalog.Hota, UnitCatalog.Beni, UnitCatalog.Mio });
         long hotaBurnTicks = 0, hotaInverted = 0, hotaBurning = 0, adj = 0;
         for (int w = 0; w < BA.WaveNames.Length; w++)
             for (int s = 0; s < 50; s++)

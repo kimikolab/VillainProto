@@ -105,7 +105,7 @@ static partial class FireWardDiag
             AddB("T3-1", "T3-1 シオ＋ササ", t31, false);
             if (!all[0].BestIsFront) AddB("T3", $"T3-1位 {PairName(all[0])}・前列", all[0], true);
             if (!p3[0].BestIsFront) AddB("T3′", $"T3′-1位 {PairName(p3[0])}・前列", p3[0], true);
-            if (v.Hiyo == UnitCatalog.Hiyo) boards.Add(new Board(v.Name, "雷置換", "雷 前1 シガ → ボルグ", BF_ThunderSwap(v.Borg), null));
+            if (v.Hiyo == UnitCatalog.HiyoF0) boards.Add(new Board(v.Name, "雷置換", "雷 前1 シガ → ボルグ", BF_ThunderSwap(v.Borg), null));
         }
         boards.Add(new Board("参考", "参考", "雷（ポンの席）", BA.RefThunder, null));
         boards.Add(new Board("参考", "参考", "移動（第232期の規定）", BA.RefMove, null));
@@ -238,7 +238,7 @@ static partial class FireWardDiag
                 if (boards[bi].Kind == "参考") continue;
                 var z = Group(bi, s, ws); var a = z.A;
                 string F(long x) => BA.F1(a.Per(x));
-                long burnTick = a.Taken.Where(kv => kv.Key != UnitCatalog.Borg.Name).Sum(kv => kv.Value[3]);
+                long burnTick = a.Taken.Where(kv => kv.Key != UnitCatalog.BorgF0.Name).Sum(kv => kv.Value[3]);
                 Console.WriteLine($"| {bi + 1} | {boards[bi].Ver} | {boards[bi].Label} | {BA.F2(a.Per(z.WardHits))} ／ {F(z.WardSaved)} | "
                     + (z.WardTakenBy.Count == 0 ? "—" : string.Join("・", z.WardTakenBy.OrderByDescending(kv => kv.Value).Select(kv => $"{SN(kv.Key)} {F(kv.Value)}"))) + " | "
                     + $"{F(z.ConvTickNom)} → {F(z.ConvTickHealed)} | {F(z.ConvSplashNom)} → {F(z.ConvSplashHealed)} | {F(z.PrecPyre)} ／ {F(z.PrecMend)} ／ {F(z.PrecBeni)} ／ {F(z.PrecV)} | "
@@ -269,7 +269,7 @@ static partial class FireWardDiag
         for (int bi = 0; bi < boards.Count; bi++)
         {
             var v = Versions.FirstOrDefault(x => x.Name == boards[bi].Ver);
-            if (v is null || v.Hiyo == UnitCatalog.Hiyo || boards[bi].Kind is not ("T3" or "T3′")) continue;
+            if (v is null || v.Hiyo == UnitCatalog.HiyoF0 || boards[bi].Kind is not ("T3" or "T3′")) continue;
             var fb = Dec(Enc(boards[bi].F), v.Borg, DryOf(v.Hiyo));
             foreach (int s in new[] { 0, 1, 2 })
             {

@@ -106,8 +106,8 @@ static partial class FireWardDiag
             {
                 var z = Measure(Dec(enc, vA), BA.MainWave, BA.Scales[s].Sc);
                 var a = z.A;
-                long burnTick = a.Taken.Where(kv => kv.Key != UnitCatalog.Borg.Name).Sum(kv => kv.Value[3]);
-                long foeAtk = a.Taken.Where(kv => kv.Key != UnitCatalog.Borg.Name).Sum(kv => kv.Value[0]);
+                long burnTick = a.Taken.Where(kv => kv.Key != UnitCatalog.BorgF0.Name).Sum(kv => kv.Value[3]);
+                long foeAtk = a.Taken.Where(kv => kv.Key != UnitCatalog.BorgF0.Name).Sum(kv => kv.Value[0]);
                 Console.WriteLine($"| {nm} | {BA.Scales[s].Name} | {BA.F1(a.Surv)} ／ {BA.F1(a.Win)} | {BA.F2((double)z.BurnAllies / Math.Max(1, z.CensusTurns))} | {BA.F2((double)z.BurnAdj / Math.Max(1, z.CensusTurns))} | "
                     + $"{(z.BurnAllies == 0 ? "—" : BA.F1(100.0 * z.BurnAdj / z.BurnAllies) + "%")} | {BA.F1(a.Per(z.Y.SplashNominal))} ／ {BA.F1(a.Per(z.Y.SplashTaken))} | {BA.F1(a.Per(burnTick))} | {BA.F1(a.Per(foeAtk))} | "
                     + string.Join("／", ZAgg.Roles.Select(r => BA.F2(a.Per(z.FellBy.GetValueOrDefault(r))))) + " |");

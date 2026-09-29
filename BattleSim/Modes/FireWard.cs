@@ -55,7 +55,7 @@ static partial class FireWardDiag
     internal static readonly UnitDef BorgA = BF.VerBorg("全部");
     internal static UnitDef BorgD(TraitId d) => With(BorgA, BorgA.Traits.Append(d));
     internal static UnitDef HiyoV(TraitId v, bool dry = false)
-        => With(UnitCatalog.Hiyo, dry ? UnitCatalog.Hiyo.Traits.Append(v).Append(TraitId.FireConvertDry) : UnitCatalog.Hiyo.Traits.Append(v));
+        => With(UnitCatalog.HiyoF0, dry ? UnitCatalog.HiyoF0.Traits.Append(v).Append(TraitId.FireConvertDry) : UnitCatalog.HiyoF0.Traits.Append(v));
 
     internal sealed record Ver(string Name, string Key, string What, UnitDef Borg, UnitDef Hiyo);
 
@@ -64,10 +64,10 @@ static partial class FireWardDiag
     /// <summary>版。<c>Key</c> はファイル名に使う（ASCII）。A は第235期「全部」の駒そのもの（受け入れ 1）。</summary>
     internal static readonly Ver[] Versions =
     {
-        new("G0", "G0", "規定（対照）", UnitCatalog.Borg, UnitCatalog.Hiyo),
-        new("A", "A", "第235期「全部」", BorgA, UnitCatalog.Hiyo),
-        new("A+D1", "AD1", "＋盾の配り（隣）", D1, UnitCatalog.Hiyo),
-        new("A+D2", "AD2", "＋盾の配り（全員）", D2, UnitCatalog.Hiyo),
+        new("G0", "G0", "規定（対照）", UnitCatalog.BorgF0, UnitCatalog.HiyoF0),
+        new("A", "A", "第235期「全部」", BorgA, UnitCatalog.HiyoF0),
+        new("A+D1", "AD1", "＋盾の配り（隣）", D1, UnitCatalog.HiyoF0),
+        new("A+D2", "AD2", "＋盾の配り（全員）", D2, UnitCatalog.HiyoF0),
         new("A+V1", "AV1", "＋火の変換（全量）", BorgA, V1),
         new("A+V2", "AV2", "＋火の変換（半分）", BorgA, V2),
         new("A+D1+V1", "AD1V1", "隣 ＋ 全量", D1, V1),

@@ -73,7 +73,7 @@ static partial class BorgFrontDiag
             var ctx = Ctx(Formation.Build(front1: UnitCatalog.Hota, center: VerBorg("B")), Formation.Build(front1: Plain("e1", hp: 1000)), out var p, out _);
             var hota = U(p, "hota"); int h0 = hota.Hp;
             ctx.PerformAttack(U(p, "borg"));
-            Expect("（対照）B の巻き込みはホタも削る", h0 - hota.Hp, UnitCatalog.Borg.Attack / 2);
+            Expect("（対照）B の巻き込みはホタも削る", h0 - hota.Hp, UnitCatalog.BorgF0.Attack / 2);
         }
         // O: くすぶりは開戦時に1回（実戦で）
         {
@@ -81,7 +81,7 @@ static partial class BorgFrontDiag
             foreach (var w in new[] { 0, 4 })
                 for (int s = 0; s < 20; s++)
                 {
-                    var f = BA.Seat(new[] { all, UnitCatalog.Hota, UnitCatalog.Hiyo, UnitCatalog.Golm, UnitCatalog.Susu });
+                    var f = BA.Seat(new[] { all, UnitCatalog.Hota, UnitCatalog.HiyoF0, UnitCatalog.Golm, UnitCatalog.Susu });
                     var (r, p, _, _) = BA.Fight(f, w, BA.Scales[0].Sc, s);
                     var k = r.Events.Where(x => x.Kind == BattleEventKind.FireArmor && x.Text == FireArmorLabels.Kindle).ToList();
                     battles++;
@@ -138,8 +138,8 @@ static partial class BorgFrontDiag
         var boards = new List<Formation>();
         foreach (var (_, _, _, borg) in Versions.Skip(1))
         {
-            boards.Add(BA.Seat(new[] { borg, UnitCatalog.Hota, UnitCatalog.Hiyo, UnitCatalog.Beni, UnitCatalog.Sasa }));
-            boards.Add(BA.Seat(new[] { UnitCatalog.Golm, borg, UnitCatalog.Hota, UnitCatalog.Hiyo, UnitCatalog.Shio }));
+            boards.Add(BA.Seat(new[] { borg, UnitCatalog.Hota, UnitCatalog.HiyoF0, UnitCatalog.Beni, UnitCatalog.Sasa }));
+            boards.Add(BA.Seat(new[] { UnitCatalog.Golm, borg, UnitCatalog.Hota, UnitCatalog.HiyoF0, UnitCatalog.Shio }));
             boards.Add(ThunderSwap(borg, true));
         }
         long battles2 = 0, diff = 0, deathMismatch = 0, deaths = 0, evMismatch = 0, evs2 = 0;

@@ -10389,6 +10389,14 @@ public sealed class BattleContext
     /// その手番で何が起きたか（第104期に足した。<b>盤面には一切影響しない</b>——
     /// 再行動（<c>EncoreRule</c>）の Q4 の内訳を、差分ではなく直接数えるため）。
     /// </returns>
+    /// <summary>
+    /// 手番の枠（第239期・<b>計数のみ</b>）。<see cref="TakeTurn"/> が verbose のときだけ1手番1件を積む
+    /// ——その手番の間に台本（<see cref="Events"/>）へ積まれた出来事の範囲 [<c>EventStart</c>, <c>EventEnd</c>) を持つ。
+    /// <b>台本そのものには1件も足していない</b>（手番の絵の単調さを数えるためだけ・誰も読んで分岐しない）。
+    /// 再行動は手番の中から <see cref="TakeTurn"/> を呼ぶので、内側の枠が先に積まれ、外側の枠がそれを含む。
+    /// </summary>
+    public List<HandRecord> Hands { get; } = new();
+
     public TurnOutcome TakeTurn(UnitState actor)
     {
         // 第105期。**中身は1文字も触っていない**——枠だけを被せて
@@ -10398,9 +10406,11 @@ public sealed class BattleContext
         actor.TakenTurn = _turn;   // 第218期・**計数のみ**（感電の痺れが「動く前」だったか）
         UnitTally tt = TallyOf(actor);
         tt.TurnsTaken++;
+        int handEv0 = _events.Count;   // 第239期・**計数のみ**（手番の枠。verbose のときだけ `Hands` に積む）
         try
         {
             TurnOutcome outcome = TakeTurnCore(actor);
+            if (_verbose) Hands.Add(new HandRecord(_turn, actor.InstanceId, actor.TeamId, outcome, handEv0, _events.Count));
             // 第217期（**計数のみ**）: 手番を続けて失った数。見せしめか感電がある戦闘でだけ数える（私有キー・誰も読んで分岐しない）。
             if (_restrainLive || _shockLive)
             {
@@ -12180,6 +12190,7 @@ public static class BattleEngine
             TallyByUnit = new Dictionary<string, UnitTally>(ctx.TallyByUnit),
             MaxEnemyKillsInOneTurn = ctx.MaxEnemyKillsInOneTurn,
             Events = ctx.Events.ToList(),
+            Hands = ctx.Hands.ToList(),   // 第239期（計数のみ）
             Wounds = new WoundLedger(
                 (int[])ctx.WoundWriteAlly.Clone(), (int[])ctx.WoundWriteFoe.Clone(),
                 (int[])ctx.WoundLossAll.Clone(), (int[])ctx.WoundLossAlly.Clone(),

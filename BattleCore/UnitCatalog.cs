@@ -10,6 +10,24 @@ public static class UnitCatalog
     {
         Id = "borg",
         Name = "焼け残りのボルグ",
+        // 第239期 前段（ポンの判断）: 第238期 A+D2（第235期「全部」＝火の鎧・HP100・燃える巻き込み・くすぶり・火の癒し・焼き返し ＋ 盾の配り（全員））。
+        // 札の並びは第238期の器具（`FireWardDiag.D2`）と同じ——焼き返しは火の粉より前（殴る前から燃えていた主目標を読む）。旧は <see cref="BorgF0"/>。
+        MaxHp = 100,
+        Attack = 18,
+        Speed = 8,
+        Traits = new[] { TraitId.Splash, TraitId.FireFeed, TraitId.Cinder, TraitId.FireArmor, TraitId.FireSplash, TraitId.SelfKindle, TraitId.FireMend, TraitId.FireWardAll },
+        Pattern = AttackPattern.Sweep,
+        PlusText = "火力が高く、薙ぎ払いが敵の両隣にも届く。斬った相手に燃焼を移す。戦いの前から身体がくすぶり、殴られると殴った敵に火を返す。燃えている間は受ける傷が半分になり、火に焼かれるほど傷が塞がる。燃えている敵を斬ると、その火で自分も癒える。燃えている味方は、受ける傷が半分になる",
+        MinusText = "同じ一振りが、自分の両隣の味方も巻き込む（燃え移る火として——火に強い味方には効かない）。隣の味方にも火が移る",
+        Flavor = "三度、味方の部隊を半壊させて追い出された。"
+    };
+
+    /// <summary>旧ボルグ（第238期までの規定・`Splash` ／ `Cinder`・HP60）。対照（<see cref="All"/> に入れない）。
+    /// 第233〜238期の器具（`burnaudit` / `borgguard` / `borgfront` / `fireward` と `shockdigest` の全モード）はこちらに固定した（`Common.OldFire`）。</summary>
+    public static readonly UnitDef BorgF0 = new()
+    {
+        Id = "borg",
+        Name = "焼け残りのボルグ",
         MaxHp = 60,
         Attack = 18,
         Speed = 8,
@@ -1939,6 +1957,28 @@ public static class UnitCatalog
     /// 分からなくなる（第34期「1変数を振るときは、その変数が他に何を一緒に動かすかを先に数える」）。</para>
     /// </summary>
     public static readonly UnitDef Hiyo = new()
+    {
+        Id = "hiyo",
+        Name = "火選りのヒヨ",
+        MaxHp = 70,
+        Attack = 5,
+        Speed = 6,
+        Advances = false,
+        // 第239期 前段（ポンの判断）: 第238期 V1（火の変換・全量）。渇きには封じられない（第238期の主の版）。旧は <see cref="HiyoF0"/>。
+        Traits = new[] { TraitId.Favor, TraitId.FireConvert },
+        // **贔屓を手番の行動そのものにする**（第60期）。攻5 は出なくなる。
+        // `OnTurnStart` に置くと火の粉（`OnAfterAttack`）に対して構造的に1ターン遅れ、
+        // **第1ターンだけ熾のホタを鈍らせていた**（弱体の受け手に 2.00 量/戦）。
+        // 手番へ降ろすとヒヨ（速6）の番はボルグ（速8）の後なので、火は既に点いている。
+        // **[Skill] 1つだけの周期で移すのは、挙動の差を「攻撃が出ない」だけに絞るため**（ノノと同じ）。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "火のそばを見ている") },
+        PlusText = "毎ターン、燃えている味方の攻撃力を上げる（位置を問わない）。燃えている味方は、火に焼かれる代わりにその火で癒える",
+        MinusText = "自分の隣で燃えていない味方は、逆に腕が鈍る。攻撃はしない（贔屓が手番そのもの）",
+        Flavor = "人を見る基準はただ一つ。燃えているか、いないか。"
+    };
+
+    /// <summary>旧ヒヨ（第238期までの規定・`Favor` だけ）。対照（<see cref="All"/> に入れない）。第233〜238期の器具はこちらに固定した（`Common.OldFire`）。</summary>
+    public static readonly UnitDef HiyoF0 = new()
     {
         Id = "hiyo",
         Name = "火選りのヒヨ",

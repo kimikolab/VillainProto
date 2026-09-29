@@ -82,7 +82,7 @@ static partial class BorgGuardDiag
             int hp0 = borg.Hp;
             typeof(BattleContext).GetMethod("TickStatuses", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)!.Invoke(ctx, Array.Empty<object>());
             Expect("③ 燃焼の刻みで HP が減らない（残りターンは減る）", $"{hp0 - borg.Hp}/{Burn(borg)}", $"0/{BurnRules.Turns - 1}");
-            var ctx0 = Ctx(Formation.Build(front1: UnitCatalog.Borg), Formation.Build(front1: Plain("e1")), out var p0, out _);
+            var ctx0 = Ctx(Formation.Build(front1: UnitCatalog.BorgF0), Formation.Build(front1: Plain("e1")), out var p0, out _);
             var b0 = U(p0, "borg"); ctx0.Ignite(b0); int h0 = b0.Hp;
             typeof(BattleContext).GetMethod("TickStatuses", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)!.Invoke(ctx0, Array.Empty<object>());
             Expect("（対照）G0 のボルグは刻みで減る", h0 - b0.Hp, BurnRules.Damage);
@@ -109,8 +109,8 @@ static partial class BorgGuardDiag
         var boards = new List<Formation>();
         foreach (var (ver, _, borg) in Versions.Skip(1))
         {
-            boards.Add(BA.Seat(new[] { borg, UnitCatalog.Sasa, UnitCatalog.Hiyo, UnitCatalog.Shio, UnitCatalog.Hota }));
-            boards.Add(BA.Seat(new[] { UnitCatalog.Hota, borg, UnitCatalog.Hiyo, UnitCatalog.Kado, UnitCatalog.Nel }));
+            boards.Add(BA.Seat(new[] { borg, UnitCatalog.Sasa, UnitCatalog.HiyoF0, UnitCatalog.Shio, UnitCatalog.Hota }));
+            boards.Add(BA.Seat(new[] { UnitCatalog.Hota, borg, UnitCatalog.HiyoF0, UnitCatalog.Kado, UnitCatalog.Nel }));
         }
         long battles = 0, diff = 0, deathMismatch = 0, deaths = 0, evMismatch = 0, borgTick = 0, fireEvents = 0;
         var lk = new object();
@@ -135,7 +135,7 @@ static partial class BorgGuardDiag
                             if (x.A.Cause.Sum() != x.A.DeathEvents || x.A.FellSum != x.A.DeathEvents) deathMismatch++;
                             if (evs != want) evMismatch++;
                             fireEvents += evs;
-                            borgTick += x.A.Taken.GetValueOrDefault(UnitCatalog.Borg.Name)?[3] ?? 0;
+                            borgTick += x.A.Taken.GetValueOrDefault(UnitCatalog.BorgF0.Name)?[3] ?? 0;
                         }
                     });
         Expect($"verbose の有無で勝敗・決着T・倒れた駒・火の鎧の帳簿が違う戦（{battles} 戦）", diff, 0L);

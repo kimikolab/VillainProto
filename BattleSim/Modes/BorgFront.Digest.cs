@@ -8,9 +8,9 @@ static partial class BorgFrontDiag
 {
     internal static Formation[] DigestBoards(UnitDef borg) => new[]
     {
-        BA.Seat(new[] { borg, UnitCatalog.Hota, UnitCatalog.Hiyo, UnitCatalog.Shio, UnitCatalog.Sasa }),
-        BA.Seat(new[] { UnitCatalog.Hota, UnitCatalog.Hiyo, UnitCatalog.Shio, UnitCatalog.Sasa, borg }),
-        BA.Seat(new[] { UnitCatalog.Golm, borg, UnitCatalog.Hota, UnitCatalog.Hiyo, UnitCatalog.Beni }),
+        BA.Seat(new[] { borg, UnitCatalog.Hota, UnitCatalog.HiyoF0, UnitCatalog.Shio, UnitCatalog.Sasa }),
+        BA.Seat(new[] { UnitCatalog.Hota, UnitCatalog.HiyoF0, UnitCatalog.Shio, UnitCatalog.Sasa, borg }),
+        BA.Seat(new[] { UnitCatalog.Golm, borg, UnitCatalog.Hota, UnitCatalog.HiyoF0, UnitCatalog.Beni }),
         BA.Seat(new[] { borg, UnitCatalog.Tsugi, UnitCatalog.Beni, UnitCatalog.Kata, UnitCatalog.Mio }),
     };
 
@@ -18,7 +18,7 @@ static partial class BorgFrontDiag
     {
         string outPath = _args is { Length: > 3 } ? _args[3] : "borgfront_digest.txt";
         var lines = new List<string>();
-        foreach (var (vn, borg) in new[] { ("G0", UnitCatalog.Borg), ("B", BorgGuardDiag.VerBorg("G3")) })
+        foreach (var (vn, borg) in new[] { ("G0", UnitCatalog.BorgF0), ("B", BorgGuardDiag.VerBorg("G3")) })
         {
             var boards = DigestBoards(borg);
             for (int bi = 0; bi < boards.Length; bi++)

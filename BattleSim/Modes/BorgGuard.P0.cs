@@ -69,12 +69,12 @@ static partial class BorgGuardDiag
         // Q0-3 G0 の確認
         Console.WriteLine("## Q0-3 G0（第233期の規定）の確認（九 / 新兵 × 200/200・seed 0..199）");
         Console.WriteLine();
-        var g0 = UnitCatalog.Borg;
+        var g0 = UnitCatalog.BorgF0;
         var boards = new (string Name, Formation F)[]
         {
-            ("233 B3-1（シオ＋ササ・1位）", BA.Seat(new[] { UnitCatalog.Hota, UnitCatalog.Sasa, UnitCatalog.Hiyo, UnitCatalog.Shio, g0 })),
-            ("233 B3-2（シオ＋ハネ・1位）", BA.Seat(new[] { UnitCatalog.Hiyo, UnitCatalog.Hota, UnitCatalog.Shio, UnitCatalog.HaneR0, g0 })),
-            ("233 B3-1 のボルグとホタを入れ替え（ボルグ前1）", BA.Seat(new[] { g0, UnitCatalog.Sasa, UnitCatalog.Hiyo, UnitCatalog.Shio, UnitCatalog.Hota })),
+            ("233 B3-1（シオ＋ササ・1位）", BA.Seat(new[] { UnitCatalog.Hota, UnitCatalog.Sasa, UnitCatalog.HiyoF0, UnitCatalog.Shio, g0 })),
+            ("233 B3-2（シオ＋ハネ・1位）", BA.Seat(new[] { UnitCatalog.HiyoF0, UnitCatalog.Hota, UnitCatalog.Shio, UnitCatalog.HaneR0, g0 })),
+            ("233 B3-1 のボルグとホタを入れ替え（ボルグ前1）", BA.Seat(new[] { g0, UnitCatalog.Sasa, UnitCatalog.HiyoF0, UnitCatalog.Shio, UnitCatalog.Hota })),
             ("参考 燃焼（`compare` の行・ガルド入り）", BA.RefBurn),
         };
         Console.WriteLine("| 台 | 全員生存 ／ 勝率 | ボルグ 生きていたT/戦 | 燃えていた | 前列にいた | 受けた敵の一撃/戦 | 受けた被ダメ/戦（敵 ／ 巻き込み ／ 刻み） | ボルグが倒れた | ボルグの被ダメ ÷ 味方全体 |");

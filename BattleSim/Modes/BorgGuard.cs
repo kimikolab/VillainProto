@@ -47,14 +47,14 @@ static partial class BorgGuardDiag
     // ---------------------------------------------------------------------------------
     static UnitDef BorgWith(int hp, params TraitId[] extra) => new()
     {
-        Id = UnitCatalog.Borg.Id, Name = UnitCatalog.Borg.Name, MaxHp = hp, Attack = UnitCatalog.Borg.Attack, Speed = UnitCatalog.Borg.Speed,
-        Traits = UnitCatalog.Borg.Traits.Concat(extra).ToArray(), Pattern = UnitCatalog.Borg.Pattern, Advances = UnitCatalog.Borg.Advances,
-        Actions = UnitCatalog.Borg.Actions, PlusText = UnitCatalog.Borg.PlusText, MinusText = UnitCatalog.Borg.MinusText, Flavor = UnitCatalog.Borg.Flavor,
+        Id = UnitCatalog.BorgF0.Id, Name = UnitCatalog.BorgF0.Name, MaxHp = hp, Attack = UnitCatalog.BorgF0.Attack, Speed = UnitCatalog.BorgF0.Speed,
+        Traits = UnitCatalog.BorgF0.Traits.Concat(extra).ToArray(), Pattern = UnitCatalog.BorgF0.Pattern, Advances = UnitCatalog.BorgF0.Advances,
+        Actions = UnitCatalog.BorgF0.Actions, PlusText = UnitCatalog.BorgF0.PlusText, MinusText = UnitCatalog.BorgF0.MinusText, Flavor = UnitCatalog.BorgF0.Flavor,
     };
 
     internal static readonly (string Name, string What, UnitDef Borg)[] Versions =
     {
-        ("G0", "第233期の規定（対照）", UnitCatalog.Borg),
+        ("G0", "第233期の規定（対照）", UnitCatalog.BorgF0),
         ("G1", "火の鎧", BorgWith(60, TraitId.FireArmor)),
         ("G2", "火の鎧 ＋ 焼け残り", BorgWith(60, TraitId.FireArmor, TraitId.Smolder)),
         ("G3", "火の鎧 ＋ HP100", BorgWith(100, TraitId.FireArmor)),
@@ -62,7 +62,7 @@ static partial class BorgGuardDiag
     };
     internal static UnitDef VerBorg(string name) => Versions.First(v => v.Name == name).Borg;
 
-    internal static UnitDef[] CoreOf(UnitDef borg) => new[] { borg, UnitCatalog.Hota, UnitCatalog.Hiyo };
+    internal static UnitDef[] CoreOf(UnitDef borg) => new[] { borg, UnitCatalog.Hota, UnitCatalog.HiyoF0 };
 
     /// <summary>X 字の編成で、ボルグが前列（前1 ／ 前3）にいるか。</summary>
     internal static bool BorgFront(Formation f) => f[0]?.Id == "borg" || f[1]?.Id == "borg";

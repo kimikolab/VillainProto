@@ -58,6 +58,16 @@ internal static Formation OldCycle(Formation f)
     return g;
 }
 
+/// <summary>第239期 前段（ボルグ A+D2・ヒヨ V1 の規定化）: 第233〜238期の器具（`burnaudit` / `borgguard` / `borgfront` / `fireward`）と `shockdigest` の全モードは、
+/// 編成の<b>規定のボルグ・ヒヨ</b>（同じ参照のものだけ）を旧（<see cref="UnitCatalog.BorgF0"/> / <see cref="UnitCatalog.HiyoF0"/>）へ戻す。版の駒には触らない。</summary>
+internal static Formation OldFire(Formation f)
+{
+    var g = f.Clone();
+    foreach (var (slot, d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Borg) ? UnitCatalog.BorgF0 : ReferenceEquals(d, UnitCatalog.Hiyo) ? UnitCatalog.HiyoF0 : d;
+    return g;
+}
+
 /// <summary>第232期（S2 の規定化）: 第231・232期の器具は、編成の<b>規定のハネ</b>（同じ参照のものだけ）を旧（<see cref="UnitCatalog.HaneS0"/>）へ戻す。</summary>
 internal static Formation OldSpring2(Formation f)
 {

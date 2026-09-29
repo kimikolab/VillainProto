@@ -58,7 +58,7 @@ static partial class BorgFrontDiag
         if (o) tr.Add(TraitId.SelfKindle);
         if (h1) tr.Add(TraitId.FireMend);
         if (dry) tr.Add(TraitId.FireMendDry);
-        var g = UnitCatalog.Borg;
+        var g = UnitCatalog.BorgF0;
         return new UnitDef
         {
             Id = g.Id, Name = g.Name, MaxHp = 100, Attack = g.Attack, Speed = g.Speed, Traits = tr.ToArray(), Pattern = g.Pattern,
@@ -69,7 +69,7 @@ static partial class BorgFrontDiag
     /// <summary>版。<c>Key</c> はファイル名に使う（ASCII）。B は第234期 G3 の駒そのもの（受け入れ 1）。</summary>
     internal static readonly (string Name, string Key, string What, UnitDef Borg)[] Versions =
     {
-        ("G0", "G0", "規定（対照）", UnitCatalog.Borg),
+        ("G0", "G0", "規定（対照）", UnitCatalog.BorgF0),
         ("B", "B", "火の鎧 ＋ HP100（第234期 G3）", BG.VerBorg("G3")),
         ("B+S", "BS", "＋燃える巻き込み", Mk(true, false, false, false)),
         ("B+S+O", "BSO", "＋くすぶり", Mk(true, true, false, false)),
@@ -188,7 +188,7 @@ static partial class BorgFrontDiag
                 BorgHealed += t.Healed;
                 if (r.PlayerStarterFallen.Contains("borg")) BorgFell++;
             }
-            if (borgU is not null) BorgTaken += X.A.Taken.GetValueOrDefault(UnitCatalog.Borg.Name)?.Sum() ?? 0;
+            if (borgU is not null) BorgTaken += X.A.Taken.GetValueOrDefault(UnitCatalog.BorgF0.Name)?.Sum() ?? 0;
             if (r.TallyByUnit.TryGetValue("kata", out var kt) && p.Any(u => u.Def.Id == "kata"))
             {
                 KataCasts += kt.ThunderCasts; KataHits += kt.ThunderHits; KataDealt += kt.ThunderDealt;

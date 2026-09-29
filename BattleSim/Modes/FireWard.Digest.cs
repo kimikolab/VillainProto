@@ -11,7 +11,7 @@ static partial class FireWardDiag
     {
         string outPath = _args is { Length: > 3 } ? _args[3] : "fireward_digest.txt";
         var lines = new List<string>();
-        foreach (var (vn, borg) in new[] { ("G0", UnitCatalog.Borg), ("A", BF.VerBorg("全部")) })
+        foreach (var (vn, borg) in new[] { ("G0", UnitCatalog.BorgF0), ("A", BF.VerBorg("全部")) })
         {
             var boards = BF.DigestBoards(borg);
             for (int bi = 0; bi < boards.Length; bi++)

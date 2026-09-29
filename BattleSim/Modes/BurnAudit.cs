@@ -66,7 +66,7 @@ static partial class BurnAuditDiag
     // ---------------------------------------------------------------------------------
     // 台（§3）
     // ---------------------------------------------------------------------------------
-    internal static readonly UnitDef[] Core = { UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo };
+    internal static readonly UnitDef[] Core = { UnitCatalog.BorgF0, UnitCatalog.Hota, UnitCatalog.HiyoF0 };
     static readonly HashSet<string> Excluded = new() { "borg", "hota", "hiyo", "gald", "tsugi" };
     /// <summary>相方の候補: 52 枚から ボルグ・ホタ・ヒヨ・ガルド・ツギ を除いた全員（召喚専用は `All` に居ない）。B3 はベニを含む。</summary>
     internal static List<UnitDef> Candidates => UnitCatalog.All.Where(u => !Excluded.Contains(u.Id)).ToList();
@@ -108,7 +108,7 @@ static partial class BurnAuditDiag
         int sv = 0, fell = 0, w = 0; long t = 0;
         for (int i = 0; i < seeds; i++)
         {
-            var r = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), WaveOf(wave, s)(), seed0 + i, verbose: false);
+            var r = BattleEngine.Run(BattleEngine.Materialize(OldFire(f), BattleContext.PlayerTeam), WaveOf(wave, s)(), seed0 + i, verbose: false);
             fell += r.PlayerStarterFallen.Count;
             if (!r.PlayerWon) continue;
             w++; t += r.Turns;
@@ -144,7 +144,7 @@ static partial class BurnAuditDiag
     internal static (BattleResult R, List<UnitState> P, List<UnitState> E, Dictionary<int, int> Slot0) Fight(
         Formation f, int w, EnemyScaleRule sc, int seed, bool verbose = true)
     {
-        var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
+        var p = BattleEngine.Materialize(OldFire(f), BattleContext.PlayerTeam);
         var e = WaveOf(w, sc)();
         var slotOf = p.Concat(e).ToDictionary(u => u, u => u.Slot);   // InstanceId は `Run` の中で振られる
         var r = BattleEngine.Run(p, e, seed, verbose: verbose);

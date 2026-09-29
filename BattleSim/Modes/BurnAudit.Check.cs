@@ -68,8 +68,8 @@ static partial class BurnAuditDiag
 
         // 実戦: verbose の有無・帳簿が verbose に依らない・死因の合計 ＝ 倒れた駒
         var boards = new List<Formation> { RefBurn, RefThunder, RefMove,
-            Seat(new[] { UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo, UnitCatalog.Beni, UnitCatalog.Golm }),
-            Seat(new[] { UnitCatalog.Hota, UnitCatalog.Borg, UnitCatalog.Hiyo, UnitCatalog.Sekki, UnitCatalog.Zoto }) };
+            Seat(new[] { UnitCatalog.BorgF0, UnitCatalog.Hota, UnitCatalog.HiyoF0, UnitCatalog.Beni, UnitCatalog.Golm }),
+            Seat(new[] { UnitCatalog.Hota, UnitCatalog.BorgF0, UnitCatalog.HiyoF0, UnitCatalog.Sekki, UnitCatalog.Zoto }) };
         long battles = 0, diff = 0, ledgerDiff = 0, deathMismatch = 0, deaths = 0, unknown = 0, fallenGap = 0;
         var lk = new object();
         foreach (var f in boards)

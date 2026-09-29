@@ -4412,8 +4412,13 @@ public readonly record struct BoardRuleLedger(
     public const int RuleCount = 4;
 }
 
+/// <summary>1手番の枠（第239期・<b>計数のみ</b>）。<see cref="BattleContext.Hands"/> を参照。</summary>
+public readonly record struct HandRecord(int Turn, int ActorId, int Team, TurnOutcome Outcome, int EventStart, int EventEnd);
+
 public sealed class BattleResult
 {
+    /// <summary>手番の枠（第239期・<b>計数のみ</b>・verbose のときだけ）。<see cref="BattleContext.Hands"/>。</summary>
+    public IReadOnlyList<HandRecord> Hands { get; init; } = Array.Empty<HandRecord>();
     public required bool PlayerWon { get; init; }
     public required int Turns { get; init; }
     public required IReadOnlyList<LogLine> Log { get; init; }
