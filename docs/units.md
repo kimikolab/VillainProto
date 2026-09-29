@@ -302,6 +302,11 @@
 | `EvadeMoveShot` | 逃亡兵セロ |
 | `FireArmor` | - |
 | `Smolder` | - |
+| `FireSplash` | - |
+| `SelfKindle` | - |
+| `FireMend` | - |
+| `FireMendDry` | - |
+| `FireFeed` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

@@ -50,6 +50,9 @@ static class SweepDiag
         "0 stage short", "0 stage catalog seeds=800",
         // 第233期。`burnaudit pick` は 1,127 組 × 席 120 × seed 40 ＝ 541 万戦で **4.2 分**、`run` は段1 の TSV が無ければ回し直すので同じだけ（報告書の実測）。
         "0 burnaudit pick", "0 burnaudit run",
+        // 第234期（載せ忘れ）・第235期。`borgguard pick` は 5 版 × 1,081 組で **22.6 分**、`borgfront pick` は 9 版 × (1,081 ＋ 44) 組で約 1 時間。
+        // `run` はどちらも段1 の TSV が無ければ回し直す（報告書の実測）。
+        "0 borgguard pick", "0 borgguard run", "0 borgfront pick", "0 borgfront run",
     };
 
     /// <summary>コマンド表の行頭。**連結で組む**（この診断自身が `CLAUDE.md` に載るので、素直に書くと自分の行に当たる＝第123期）。</summary>
