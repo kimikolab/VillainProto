@@ -163,7 +163,8 @@ static partial class FireScaleDiag
         // 時計かどうか（燃えている味方・周回の終わり）: 相関の和（x ＝ 周回 ／ y ＝ 影）と一致（影 ＝ min(周回, 4)）
         public readonly double[,] Corr = new double[5, 6];   // n, Σx, Σy, Σxy, Σx², Σy²
         public readonly double[,] CorrK1 = new double[5, 6]; // 第239期の K1（同じ標本）
-        public readonly long[] ClockN = new long[5], ClockHit = new long[5], ClockHitK1 = new long[5];
+        public readonly long[] ClockN = new long[5], ClockHit = new long[5], ClockHitK1 = new long[5], ClockN2 = new long[5], ClockHit2 = new long[5], ClockHitK12 = new long[5];
+        public long BattleReach4;   // 味方のだれかが影 4 に届いた戦
         public readonly double[] BMeanSum = new double[5], BMeanSq = new double[5]; public readonly long[] BMeanN = new long[5];   // 戦ごとの平均の散らばり
         public readonly long[] Simul4 = new long[5];   // 周回の終わりに影 4 の味方の数 0 / 1 / 2 / 3 / 4+
         public long RoundsP;
@@ -181,13 +182,13 @@ static partial class FireScaleDiag
 
         public void Merge(FAgg o)
         {
-            N += o.N; Wins += o.Wins; AllSurv += o.AllSurv; Turns += o.Turns; RoundsP += o.RoundsP;
+            N += o.N; Wins += o.Wins; AllSurv += o.AllSurv; Turns += o.Turns; RoundsP += o.RoundsP; BattleReach4 += o.BattleReach4;
             for (int i = 0; i < 5; i++)
             {
                 SSum[i] += o.SSum[i]; SCnt[i] += o.SCnt[i]; Eq4[i] += o.Eq4[i]; UnitN[i] += o.UnitN[i]; Reach4[i] += o.Reach4[i]; Reach4T[i] += o.Reach4T[i];
                 for (int j = 0; j <= Max; j++) Hist[i, j] += o.Hist[i, j];
                 for (int j = 0; j < 6; j++) { Corr[i, j] += o.Corr[i, j]; CorrK1[i, j] += o.CorrK1[i, j]; }
-                ClockN[i] += o.ClockN[i]; ClockHit[i] += o.ClockHit[i]; ClockHitK1[i] += o.ClockHitK1[i];
+                ClockN[i] += o.ClockN[i]; ClockHit[i] += o.ClockHit[i]; ClockHitK1[i] += o.ClockHitK1[i]; ClockN2[i] += o.ClockN2[i]; ClockHit2[i] += o.ClockHit2[i]; ClockHitK12[i] += o.ClockHitK12[i];
                 BMeanSum[i] += o.BMeanSum[i]; BMeanSq[i] += o.BMeanSq[i]; BMeanN[i] += o.BMeanN[i];
                 Simul4[i] += o.Simul4[i]; Over[i] += o.Over[i];
             }
@@ -257,6 +258,12 @@ static partial class FireScaleDiag
                         acc.ClockN[ro]++;
                         if (s == Math.Min(t, Max)) acc.ClockHit[ro]++;
                         if (k1.Of(id) == Math.Min(t, Max)) acc.ClockHitK1[ro]++;
+                        if (t >= 2)
+                        {
+                            acc.ClockN2[ro]++;
+                            if (s == Math.Min(t, Max)) acc.ClockHit2[ro]++;
+                            if (k1.Of(id) == Math.Min(t, Max)) acc.ClockHitK12[ro]++;
+                        }
                     }
                 }
             }
@@ -370,6 +377,7 @@ static partial class FireScaleDiag
         }
         Finalize(round);
 
+        if (reach4.Keys.Any(Mine)) acc.BattleReach4++;
         foreach (var (id, i2) in info)
         {
             if (i2.Id == "summon") continue;
@@ -516,6 +524,13 @@ static partial class FireScaleDiag
         long n = PRoles.Sum(r => a.ClockN[r]), h = PRoles.Sum(r => k1 ? a.ClockHitK1[r] : a.ClockHit[r]);
         return n == 0 ? double.NaN : 100.0 * h / n;
     }
+    /// <summary>周回 2 以降だけの時計（周回1 は保つ火でも 1 ＝ min(1,4) なので必ず一致する）。</summary>
+    static double Clock2(FAgg a, bool k1 = false)
+    {
+        long n = PRoles.Sum(r => a.ClockN2[r]), h = PRoles.Sum(r => k1 ? a.ClockHitK12[r] : a.ClockHit2[r]);
+        return n == 0 ? double.NaN : 100.0 * h / n;
+    }
+    static double Reach4Battle(FAgg a) => a.N == 0 ? 0 : 100.0 * a.BattleReach4 / a.N;
     static double Reach4Any(FAgg a) => a.N == 0 ? 0 : 100.0 * (a.Reach4[0] + a.Reach4[1] + a.Reach4[3]) / Math.Max(1, a.UnitN[0] + a.UnitN[1] + a.UnitN[3]);
 
     static void FeedRun()
@@ -539,33 +554,43 @@ static partial class FireScaleDiag
             for (int s = 0; s < BA.Scales.Length; s++)
             {
                 var ag = s1[(bn, s)];
-                Console.WriteLine($"### {bn} × 九/新兵 × {BA.Scales[s].Name}（第239期 K1 の時計 {ClockAll(ag[0], true):F1}% ／ r {R2(CorrOf(SumCorr(ag[0].CorrK1, PRoles), 0))}）");
+                Console.WriteLine($"### {bn} × 九/新兵 × {BA.Scales[s].Name}（第239期 K1 の時計 {ClockAll(ag[0], true):F1}% ・周回2〜 {Clock2(ag[0], true):F1}% ／ r {R2(CorrOf(SumCorr(ag[0].CorrK1, PRoles), 0))}）");
                 Console.WriteLine();
-                Console.WriteLine("| 組 | 時計 % | r | 届4 % | 影4 の周回 %（ボルグ ／ ホタ ／ 相方） | 放つ/戦 | ギフト/戦 | 煽り/戦（余熱 %） | 煽りの相手の種類/戦 | 余熱で育つ/戦（4 で余った） |");
+                Console.WriteLine("| 組 | 時計 %（周回2〜） | r | 届4 駒 % ／ **戦 %** | 影4 の周回 %（ボルグ ／ ホタ ／ 相方） | 放つ/戦 | ギフト/戦 | 煽り/戦（余熱 %） | 煽りの相手の種類/戦 | 余熱で育つ/戦（4 で余った） |");
                 Console.WriteLine("|---|---|---|---|---|---|---|---|---|---|");
                 for (int k = 0; k < AllRules.Length; k++)
                 {
                     var a = ag[k];
-                    Console.WriteLine($"| {AllRules[k].Name} | {ClockAll(a):F1} | {R2(CorrOf(SumCorr(a.Corr, PRoles), 0))} | {Reach4Any(a):F1} | {Pct(a.Eq4[0], a.SCnt[0])} ／ {Pct(a.Eq4[1], a.SCnt[1])} ／ {Pct(a.Eq4[3], a.SCnt[3])} | "
+                    Console.WriteLine($"| {AllRules[k].Name} | {ClockAll(a):F1}（{Clock2(a):F1}） | {R2(CorrOf(SumCorr(a.Corr, PRoles), 0))} | {Reach4Any(a):F1} ／ **{Reach4Battle(a):F1}** | {Pct(a.Eq4[0], a.SCnt[0])} ／ {Pct(a.Eq4[1], a.SCnt[1])} ／ {Pct(a.Eq4[3], a.SCnt[3])} | "
                         + $"{(double)a.Releases / Math.Max(1, a.BorgBattles):F2} | {(double)a.Gifts / a.N:F2} | {(double)a.Feeds / a.N:F2}（{Pct(a.FeedOver, a.Feeds)}） | {Avg(a.FeedTargetsDistinctSum, a.HiyoBattles)} | {(double)a.HeatG / a.N:F2}（{(double)a.HeatO / a.N:F2}） |");
                 }
                 Console.WriteLine();
             }
 
-        // ---------------- 組の選び方（測る前に固定した規則）----------------
-        // T3 × 九/新兵 × 200/200 で「届4 ≥ 50%」を満たす組のうち、W1・W2 それぞれで時計 % が最も低い 3 組（同値は放つ/戦の多い方 → 列挙順）＋ 対照 W0・Y1・30・B0。
+        // ---------------- 組の選び方 ----------------
+        // 測る前に固定した規則は「届4（駒の割合）≥ 50%」だったが、相方2体が分母に入るので上限がちょうど 50% で、1組も選ばなかった（報告に記録）。
+        // 直した規則（段1 を見た後）: 「味方のだれかが影 4 に届いた戦 ≥ 50%」を満たす組のうち、W1・W2 それぞれで時計 % が最も低い 3 組（同値は放つ/戦の多い方 → 列挙順）＋ 対照 W0・Y1・30・B0。
         var main = s1[("T3", 0)];
+        int oldPass = Enumerable.Range(0, AllRules.Length).Count(k => Reach4Any(main[k]) >= 50);
         var picked = new List<int>();
         foreach (int w in new[] { 1, 2 })
         {
-            var cand = Enumerable.Range(0, AllRules.Length).Where(k => AllRules[k].W == w && Reach4Any(main[k]) >= 50)
+            var cand = Enumerable.Range(0, AllRules.Length).Where(k => AllRules[k].W == w && Reach4Battle(main[k]) >= 50)
                 .OrderBy(k => ClockAll(main[k])).ThenByDescending(k => (double)main[k].Releases / Math.Max(1, main[k].BorgBattles)).ThenBy(k => k).Take(3);
             picked.AddRange(cand);
         }
         int ctl = Array.FindIndex(AllRules, r => r.W == 0 && r.Y == 1 && r.Heat == 30 && !r.BPlus);
         picked.Insert(0, ctl);
+        // 参考（選び方の規則の外）: 選ばれた組は Y3 に寄るので、煽りの選び方を比べるために W1・閾値 30・B+ の Y2・Y4 を足す
+        foreach (int y in new[] { 2, 4 })
+        {
+            int k = Array.FindIndex(AllRules, r => r.W == 1 && r.Y == y && r.Heat == 30 && r.BPlus);
+            if (!picked.Contains(k)) picked.Add(k);
+        }
         var rules = picked.Select(k => AllRules[k]).ToArray();
-        Console.WriteLine("## 段2 の組（規則: T3 × 九/新兵 × 200/200 で 届4 ≥ 50% を満たし、W1・W2 それぞれ時計 % が最も低い 3 組 ＋ 対照 W0・Y1・30・B0）");
+        Console.WriteLine("## 段2 の組（規則: T3 × 九/新兵 × 200/200 で 届4（戦）≥ 50% を満たし、W1・W2 それぞれ時計 % が最も低い 3 組 ＋ 対照 W0・Y1・30・B0）");
+        Console.WriteLine();
+        Console.WriteLine($"測る前に固定した線（届4 駒 ≥ 50%）を通った組: {oldPass} ／ {AllRules.Length}。直した線（届4 戦 ≥ 50%）を通った組: {Enumerable.Range(0, AllRules.Length).Count(k => Reach4Battle(main[k]) >= 50)} ／ {AllRules.Length}。");
         Console.WriteLine();
         foreach (var r in rules) Console.WriteLine($"- {r.Name}");
         Console.WriteLine();
@@ -612,7 +637,7 @@ static partial class FireScaleDiag
         {
             Console.WriteLine($"## 表B 時計でなくなったか —— {FeedConds[ci].Name}");
             Console.WriteLine();
-            Console.WriteLine("燃えている味方の周回の終わり: 時計 ＝ 影 ＝ min(周回, 4) の %（括弧は同じ標本の第239期 K1）／ r ＝ 影と周回の相関（括弧は K1）。SD ＝ 戦ごとの平均の影の、戦をまたいだ標準偏差。同時に影4 ＝ 周回の終わりに影 4 の味方の数の分布。");
+            Console.WriteLine("燃えている味方の周回の終わり: 時計 ＝ 影 ＝ min(周回, 4) の %（括弧は同じ標本の第239期 K1・「2〜」は周回2 以降だけ）／ r ＝ 影と周回の相関（括弧は K1）。SD ＝ 戦ごとの平均の影の、戦をまたいだ標準偏差。同時に影4 ＝ 周回の終わりに影 4 の味方の数の分布。");
             Console.WriteLine();
             Console.WriteLine("| 台 | 組 | ボルグ 時計（K1）／ r（K1） | ホタ 時計（K1）／ r（K1） | 相方 時計（K1）／ r（K1） | SD ボルグ ／ ホタ ／ 相方 | 同時に影4 0 ／ 1 ／ 2 ／ 3 ／ 4+ % |");
             Console.WriteLine("|---|---|---|---|---|---|---|");
@@ -622,7 +647,7 @@ static partial class FireScaleDiag
                 for (int k = 0; k < rules.Length; k++)
                 {
                     var a = Cond(b, ci, k);
-                    string C(int ro) => a.ClockN[ro] == 0 ? "—" : $"{Pct(a.ClockHit[ro], a.ClockN[ro])}（{Pct(a.ClockHitK1[ro], a.ClockN[ro])}）／ {R2(CorrOf(a.Corr, ro))}（{R2(CorrOf(a.CorrK1, ro))}）";
+                    string C(int ro) => a.ClockN[ro] == 0 ? "—" : $"{Pct(a.ClockHit[ro], a.ClockN[ro])}（{Pct(a.ClockHitK1[ro], a.ClockN[ro])}）・2〜 {Pct(a.ClockHit2[ro], a.ClockN2[ro])}（{Pct(a.ClockHitK12[ro], a.ClockN2[ro])}）／ {R2(CorrOf(a.Corr, ro))}（{R2(CorrOf(a.CorrK1, ro))}）";
                     Console.WriteLine($"| {(k == 0 ? boards[b].Name : "")} | {rules[k].Name} | {C(0)} | {C(1)} | {C(3)} | {Sd(a, 0)} ／ {Sd(a, 1)} ／ {Sd(a, 3)} | {string.Join(" ／ ", a.Simul4.Select(x => Pct(x, a.RoundsP)))} |");
                 }
             }
