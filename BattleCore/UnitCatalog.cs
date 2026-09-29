@@ -15,6 +15,25 @@ public static class UnitCatalog
         MaxHp = 100,
         Attack = 18,
         Speed = 8,
+        // 第244期 前段（ポンの判断）: 第242期 R3 の2本（火の粉・広・火を保つ）と火勢の土台を足した。旧は <see cref="BorgL0"/>。
+        Traits = new[] { TraitId.Splash, TraitId.FireFeed, TraitId.Cinder, TraitId.FireArmor, TraitId.FireSplash, TraitId.SelfKindle, TraitId.FireMend, TraitId.FireWardAll,
+                         TraitId.FireLevel, TraitId.CinderWide, TraitId.FireKeep },
+        Pattern = AttackPattern.Sweep,
+        PlusText = "火力が高く、薙ぎ払いが敵の両隣にも届く。斬った相手全員に燃焼を移す。斬った後は自分の火も燃え続ける。戦いの前から身体がくすぶり、殴られると殴った敵に火を返す。燃えている間は受ける傷が半分になり、火に焼かれるほど傷が塞がる。燃えている敵を斬ると、その火で自分も癒える。燃えている味方は、受ける傷が半分になる",
+        MinusText = "同じ一振りが、自分の両隣の味方も巻き込む（燃え移る火として——火に強い味方には効かない）。隣の味方にも火が移る",
+        Flavor = "三度、味方の部隊を半壊させて追い出された。"
+    };
+
+    /// <summary>第239〜242期の規定のボルグ（第238期 A+D2）。対照（<see cref="All"/> に入れない）。第239〜242期の器具（`firescale` / `firelevel`）はこちらに固定した（`Common.OldLevel`）。</summary>
+    public static readonly UnitDef BorgL0 = new()
+    {
+        Id = "borg",
+        Name = "焼け残りのボルグ",
+        // 第239期 前段（ポンの判断）: 第238期 A+D2（第235期「全部」＝火の鎧・HP100・燃える巻き込み・くすぶり・火の癒し・焼き返し ＋ 盾の配り（全員））。
+        // 札の並びは第238期の器具（`FireWardDiag.D2`）と同じ——焼き返しは火の粉より前（殴る前から燃えていた主目標を読む）。旧は <see cref="BorgF0"/>。
+        MaxHp = 100,
+        Attack = 18,
+        Speed = 8,
         Traits = new[] { TraitId.Splash, TraitId.FireFeed, TraitId.Cinder, TraitId.FireArmor, TraitId.FireSplash, TraitId.SelfKindle, TraitId.FireMend, TraitId.FireWardAll },
         Pattern = AttackPattern.Sweep,
         PlusText = "火力が高く、薙ぎ払いが敵の両隣にも届く。斬った相手に燃焼を移す。戦いの前から身体がくすぶり、殴られると殴った敵に火を返す。燃えている間は受ける傷が半分になり、火に焼かれるほど傷が塞がる。燃えている敵を斬ると、その火で自分も癒える。燃えている味方は、受ける傷が半分になる",
@@ -939,6 +958,21 @@ public static class UnitCatalog
     /// <b>供給源のボルグだけが燃えない</b>＝ヒヨの強化対象になれない、という穴は<b>まだ空いている。</b></para>
     /// </summary>
     public static readonly UnitDef Hota = new()
+    {
+        Id = "hota",
+        Name = "熾のホタ",
+        MaxHp = 78,
+        Attack = 6,
+        Speed = 7,
+        // 第244期 前段（ポンの判断）: 第242期 R3 の段（`PyreStage`）。旧は <see cref="HotaL0"/>。
+        Traits = new[] { TraitId.Pyre, TraitId.PyreStage },
+        PlusText = "自分が燃えている間、火の強さで振り方が変わる——弱い火は一撃（攻撃力 4 倍）、育つと炎が列を貫き（当たった敵に火が点く）、燃え盛ると同じ敵に 5 連撃（1 回 1.6 倍・当てるたびに火が点く）。火には焼かれない",
+        MinusText = "火が消えればただの湿った薪。自分では火を点けられない",
+        Flavor = "焚きつけられている間だけ働く。誰かが火を放つのを待っている。"
+    };
+
+    /// <summary>第243期までの規定のホタ（熾火だけ）。対照（<see cref="All"/> に入れない）。第233〜242期の器具はこちらに固定した（`Common.OldFire` / `Common.OldLevel`）。</summary>
+    public static readonly UnitDef HotaL0 = new()
     {
         Id = "hota",
         Name = "熾のホタ",
@@ -1984,6 +2018,29 @@ public static class UnitCatalog
     /// 分からなくなる（第34期「1変数を振るときは、その変数が他に何を一緒に動かすかを先に数える」）。</para>
     /// </summary>
     public static readonly UnitDef Hiyo = new()
+    {
+        Id = "hiyo",
+        Name = "火選りのヒヨ",
+        MaxHp = 70,
+        Attack = 5,
+        Speed = 6,
+        Advances = false,
+        // 第239期 前段（ポンの判断）: 第238期 V1（火の変換・全量）。渇きには封じられない（第238期の主の版）。旧は <see cref="HiyoF0"/>。
+        // 第244期 前段（ポンの判断）: 第242期 R3（煽り・自分の火の育ち・ターンギフト G3）。旧は <see cref="HiyoL0"/>。
+        Traits = new[] { TraitId.Favor, TraitId.FireConvert, TraitId.FireStoke, TraitId.TurnGift },
+        // **贔屓を手番の行動そのものにする**（第60期）。攻5 は出なくなる。
+        // `OnTurnStart` に置くと火の粉（`OnAfterAttack`）に対して構造的に1ターン遅れ、
+        // **第1ターンだけ熾のホタを鈍らせていた**（弱体の受け手に 2.00 量/戦）。
+        // 手番へ降ろすとヒヨ（速6）の番はボルグ（速8）の後なので、火は既に点いている。
+        // **[Skill] 1つだけの周期で移すのは、挙動の差を「攻撃が出ない」だけに絞るため**（ノノと同じ）。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "火を煽る／火を渡す") },
+        PlusText = "毎ターン、燃えている味方の攻撃力を上げ、いちばん強い味方の火を煽って育てる。自分の火が燃え盛ると、代わりに火を渡す——燃え盛る味方 1〜2 体が、すぐにもう一度動く。燃えている味方は、火に焼かれる代わりにその火で癒える",
+        MinusText = "自分の隣で燃えていない味方は、逆に腕が鈍る。攻撃はしない（贔屓が手番そのもの）",
+        Flavor = "人を見る基準はただ一つ。燃えているか、いないか。"
+    };
+
+    /// <summary>第239〜243期の規定のヒヨ（贔屓 ＋ 火の変換）。対照（<see cref="All"/> に入れない）。第239〜242期の器具（`firescale` / `firelevel`）はこちらに固定した（`Common.OldLevel`）。</summary>
+    public static readonly UnitDef HiyoL0 = new()
     {
         Id = "hiyo",
         Name = "火選りのヒヨ",

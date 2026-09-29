@@ -55,21 +55,21 @@ static partial class BurnAuditDiag
         {
             // 敵は経路0（前1 → 中央 → 後1）の前1 と後1 だけ（経路1 は空なので経路0 を貫く）。中央を空けて後1 まで届かせる。
             var en = Formation.Build(front1: Plain("e1"), back1: Plain("e3"));
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Hota), en, 1, out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.HotaL0), en, 1, out var p, out var e);
             var hota = U(p, "hota");
             ctx.Ignite(hota);
             ctx.PerformAttack(hota);
             var l = ctx.BurnLinkBook;
             Expect("② 燃えているホタの貫き・抜いた他の敵（後1）・うち燃えていない", $"{l.PyrePierces[0]}/{l.PyreExtraHits[0]}/{l.PyreExtraUnburnt[0]}", "1/1/1");
-            var ctx2 = Ctx(Formation.Build(front1: UnitCatalog.Hota), en, 1, out var p2, out _);
+            var ctx2 = Ctx(Formation.Build(front1: UnitCatalog.HotaL0), en, 1, out var p2, out _);
             ctx2.PerformAttack(U(p2, "hota"));
             Expect("燃えていないホタ（単体）は ② に入らない", ctx2.BurnLinkBook.PyrePierces[0], 0L);
         }
 
         // 実戦: verbose の有無・帳簿が verbose に依らない・死因の合計 ＝ 倒れた駒
         var boards = new List<Formation> { RefBurn, RefThunder, RefMove,
-            Seat(new[] { UnitCatalog.BorgF0, UnitCatalog.Hota, UnitCatalog.HiyoF0, UnitCatalog.Beni, UnitCatalog.Golm }),
-            Seat(new[] { UnitCatalog.Hota, UnitCatalog.BorgF0, UnitCatalog.HiyoF0, UnitCatalog.Sekki, UnitCatalog.Zoto }) };
+            Seat(new[] { UnitCatalog.BorgF0, UnitCatalog.HotaL0, UnitCatalog.HiyoF0, UnitCatalog.Beni, UnitCatalog.Golm }),
+            Seat(new[] { UnitCatalog.HotaL0, UnitCatalog.BorgF0, UnitCatalog.HiyoF0, UnitCatalog.Sekki, UnitCatalog.Zoto }) };
         long battles = 0, diff = 0, ledgerDiff = 0, deathMismatch = 0, deaths = 0, unknown = 0, fallenGap = 0;
         var lk = new object();
         foreach (var f in boards)

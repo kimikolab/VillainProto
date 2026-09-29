@@ -84,14 +84,14 @@ static partial class FireScaleDiag
         // (d) 規定の駒 ＝ 第238期の版（A+D2+V1）
         {
             var d2 = FireWardDiag.D2; var v1 = FireWardDiag.V1;
-            Ok(d2.Traits.SequenceEqual(UnitCatalog.Borg.Traits) && d2.MaxHp == UnitCatalog.Borg.MaxHp && d2.Attack == UnitCatalog.Borg.Attack && d2.Speed == UnitCatalog.Borg.Speed,
+            Ok(d2.Traits.SequenceEqual(UnitCatalog.BorgL0.Traits) && d2.MaxHp == UnitCatalog.BorgL0.MaxHp && d2.Attack == UnitCatalog.BorgL0.Attack && d2.Speed == UnitCatalog.BorgL0.Speed,
                 "規定のボルグ ＝ 第238期の A+D2（札の並び・HP・攻・速）");
-            Ok(v1.Traits.SequenceEqual(UnitCatalog.Hiyo.Traits) && v1.MaxHp == UnitCatalog.Hiyo.MaxHp, "規定のヒヨ ＝ 第238期の V1");
+            Ok(v1.Traits.SequenceEqual(UnitCatalog.HiyoL0.Traits) && v1.MaxHp == UnitCatalog.HiyoL0.MaxHp, "規定のヒヨ ＝ 第238期の V1");
             Ok(!UnitCatalog.All.Contains(UnitCatalog.BorgF0) && !UnitCatalog.All.Contains(UnitCatalog.HiyoF0) && UnitCatalog.All.Contains(UnitCatalog.Borg),
                 "旧（`BorgF0` / `HiyoF0`）は `All` に入れていない");
             // 同じ席・同じ seed で規定の駒と版の駒の台本が一致
             var fa = T3;
-            var fb = Formation.Build(front1: v1, front3: UnitCatalog.Hota, center: d2, back1: UnitCatalog.Doha, back3: UnitCatalog.Sora);
+            var fb = Formation.Build(front1: v1, front3: UnitCatalog.HotaL0, center: d2, back1: UnitCatalog.Doha, back3: UnitCatalog.Sora);
             int bad = 0;
             for (int s = 0; s < 40; s++)
                 foreach (int sc in new[] { 0, 1 })

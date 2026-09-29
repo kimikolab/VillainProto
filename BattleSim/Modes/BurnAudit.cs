@@ -66,7 +66,7 @@ static partial class BurnAuditDiag
     // ---------------------------------------------------------------------------------
     // 台（§3）
     // ---------------------------------------------------------------------------------
-    internal static readonly UnitDef[] Core = { UnitCatalog.BorgF0, UnitCatalog.Hota, UnitCatalog.HiyoF0 };
+    internal static readonly UnitDef[] Core = { UnitCatalog.BorgF0, UnitCatalog.HotaL0, UnitCatalog.HiyoF0 };
     static readonly HashSet<string> Excluded = new() { "borg", "hota", "hiyo", "gald", "tsugi" };
     /// <summary>相方の候補: 52 枚から ボルグ・ホタ・ヒヨ・ガルド・ツギ を除いた全員（召喚専用は `All` に居ない）。B3 はベニを含む。</summary>
     internal static List<UnitDef> Candidates => UnitCatalog.All.Where(u => !Excluded.Contains(u.Id)).ToList();

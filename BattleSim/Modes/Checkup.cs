@@ -180,6 +180,13 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.FireMend]    = (HcPlusL, "燃焼の刻みで自分が癒えるだけ"),
         [TraitId.FireWardAll] = (HcPlusL, "燃えている味方は敵の攻撃が半分になるだけ"),
         [TraitId.FireConvert] = (HcPlusL, "燃えている味方の燃焼ダメージが回復になるだけ"),
+        // 第244期 前段: 第242期 R3 の規定化で保持者が付いた札（ボルグ3本・ホタ1本・ヒヨ2本）。分類を同じコミットで足す（第132期 段0-a の再発防止）。
+        [TraitId.FireLevel]   = (HcPlusL, "燃えている駒に火勢（1〜4）を持たせるだけ（育つ・萎むは盤面の規則）"),
+        [TraitId.CinderWide]  = (HcPlusL, "火の粉を、その攻撃で当たった敵全員に広げるだけ"),
+        [TraitId.FireKeep]    = (HcPlusL, "攻撃した後、自分にも火が点くだけ（火の鎧の半減を保つ）"),
+        [TraitId.PyreStage]   = (HcBothL, "火勢で型が変わる——段1 の単体は熾火の貫きより弱い（R346）が、段3 以上は 5連撃"),
+        [TraitId.FireStoke]   = (HcPlusL, "燃えている味方の火を煽って育てるだけ（贔屓の後に1つ）"),
+        [TraitId.TurnGift]    = (HcPlusL, "火勢3 以上なら煽る代わりに、燃えている味方 1〜2 体にもう1手番を渡すだけ"),
         // 第180期: ムド（暴発＋泥散り）・ヴィオ（吐き戻し）・ガン（叩き起こし）。
         // **マイナスを別の `TraitId` に切り出してあるので `yP` が組める**（第74期の作法）。
         [TraitId.Erupt]      = (HcPlusL,  "殴られた回数を溜めて割り込み連撃する。代金は別の札（`Smear`）に切り出してある"),

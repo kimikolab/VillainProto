@@ -62,14 +62,14 @@ static partial class BorgGuardDiag
     };
     internal static UnitDef VerBorg(string name) => Versions.First(v => v.Name == name).Borg;
 
-    internal static UnitDef[] CoreOf(UnitDef borg) => new[] { borg, UnitCatalog.Hota, UnitCatalog.HiyoF0 };
+    internal static UnitDef[] CoreOf(UnitDef borg) => new[] { borg, UnitCatalog.HotaL0, UnitCatalog.HiyoF0 };
 
     /// <summary>X 字の編成で、ボルグが前列（前1 ／ 前3）にいるか。</summary>
     internal static bool BorgFront(Formation f) => f[0]?.Id == "borg" || f[1]?.Id == "borg";
 
     /// <summary>席の並び（駒 Id）の駒を版のボルグで引き直す。</summary>
     internal static Formation Dec(string enc, UnitDef borg)
-        => BA.Seat(enc.Split(',').Select(id => id == "borg" ? borg : UnitCatalog.ById(id)).ToArray());
+        => BA.Seat(enc.Split(',').Select(id => id == "borg" ? borg : id == "hota" ? UnitCatalog.HotaL0 : UnitCatalog.ById(id)).ToArray());
     internal static string Enc(Formation f) => string.Join(",", Enumerable.Range(0, 5).Select(i => f[i]!.Id));
 
     static void LogOne(string ver, string seats, int seed, int wave, int sc)

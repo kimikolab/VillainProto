@@ -80,10 +80,10 @@ static partial class FireWardDiag
     internal static UnitDef DryOf(UnitDef hiyo) => hiyo.Traits.Contains(TraitId.FireConvert) ? HiyoV(TraitId.FireConvert, true)
         : hiyo.Traits.Contains(TraitId.FireConvertHalf) ? HiyoV(TraitId.FireConvertHalf, true) : hiyo;
 
-    internal static UnitDef[] CoreOf(Ver v) => new[] { v.Borg, UnitCatalog.Hota, v.Hiyo };
+    internal static UnitDef[] CoreOf(Ver v) => new[] { v.Borg, UnitCatalog.HotaL0, v.Hiyo };
     internal static Formation Dec(string enc, Ver v) => Dec(enc, v.Borg, v.Hiyo);
     internal static Formation Dec(string enc, UnitDef borg, UnitDef hiyo)
-        => BA.Seat(enc.Split(',').Select(id => id == "borg" ? borg : id == "hiyo" ? hiyo : UnitCatalog.ById(id)).ToArray());
+        => BA.Seat(enc.Split(',').Select(id => id == "borg" ? borg : id == "hiyo" ? hiyo : id == "hota" ? UnitCatalog.HotaL0 : UnitCatalog.ById(id)).ToArray());
     internal static string Enc(Formation f) => string.Join(",", Enumerable.Range(0, 5).Select(i => f[i]!.Id));
 
     static void LogOne(string ver, string seats, int seed, int wave, int sc)

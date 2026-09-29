@@ -64,17 +64,17 @@ static partial class FireLevelDiag
         Id = g.Id, Name = g.Name, MaxHp = g.MaxHp, Attack = g.Attack, Speed = g.Speed, Traits = tr.ToArray(), Pattern = g.Pattern,
         Advances = g.Advances, Actions = g.Actions, PlusText = g.PlusText, MinusText = g.MinusText, Flavor = g.Flavor,
     };
-    internal static readonly UnitDef BorgR1 = With(UnitCatalog.Borg, UnitCatalog.Borg.Traits.Concat(new[] { TraitId.FireLevel, TraitId.CinderWide, TraitId.FireKeep }));
-    internal static readonly UnitDef HotaR2 = With(UnitCatalog.Hota, UnitCatalog.Hota.Traits.Append(TraitId.PyreStage));
-    internal static readonly UnitDef HiyoR3 = With(UnitCatalog.Hiyo, UnitCatalog.Hiyo.Traits.Concat(new[] { TraitId.FireStoke, TraitId.TurnGift }));
-    internal static readonly UnitDef HiyoR3g4 = With(UnitCatalog.Hiyo, UnitCatalog.Hiyo.Traits.Concat(new[] { TraitId.FireStoke, TraitId.TurnGiftWait }));
+    internal static readonly UnitDef BorgR1 = With(UnitCatalog.BorgL0, UnitCatalog.BorgL0.Traits.Concat(new[] { TraitId.FireLevel, TraitId.CinderWide, TraitId.FireKeep }));
+    internal static readonly UnitDef HotaR2 = With(UnitCatalog.HotaL0, UnitCatalog.HotaL0.Traits.Append(TraitId.PyreStage));
+    internal static readonly UnitDef HiyoR3 = With(UnitCatalog.HiyoL0, UnitCatalog.HiyoL0.Traits.Concat(new[] { TraitId.FireStoke, TraitId.TurnGift }));
+    internal static readonly UnitDef HiyoR3g4 = With(UnitCatalog.HiyoL0, UnitCatalog.HiyoL0.Traits.Concat(new[] { TraitId.FireStoke, TraitId.TurnGiftWait }));
 
     internal sealed record Ver(string Name, string What, UnitDef Borg, UnitDef Hota, UnitDef Hiyo);
     internal static readonly Ver[] Versions =
     {
-        new("R0", "規定（対照）", UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo),
-        new("R1", "火勢の土台 ＋ ボルグ2本", BorgR1, UnitCatalog.Hota, UnitCatalog.Hiyo),
-        new("R2", "R1 ＋ ホタの段", BorgR1, HotaR2, UnitCatalog.Hiyo),
+        new("R0", "規定（対照）", UnitCatalog.BorgL0, UnitCatalog.HotaL0, UnitCatalog.HiyoL0),
+        new("R1", "火勢の土台 ＋ ボルグ2本", BorgR1, UnitCatalog.HotaL0, UnitCatalog.HiyoL0),
+        new("R2", "R1 ＋ ホタの段", BorgR1, HotaR2, UnitCatalog.HiyoL0),
         new("R3", "R2 ＋ ヒヨ（煽り・自分の育ち・G3）", BorgR1, HotaR2, HiyoR3),
         new("R3g4", "R3 のギフトを G4（待ち）に", BorgR1, HotaR2, HiyoR3g4),
     };

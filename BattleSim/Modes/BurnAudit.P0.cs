@@ -49,7 +49,7 @@ static partial class BurnAuditDiag
         Parallel.For(0, list.Count, ci =>
         {
             var cand = list[ci];
-            var others = cand.Id == "beni" ? new[] { UnitCatalog.BorgF0, UnitCatalog.Hota, UnitCatalog.HiyoF0, plain } : new[] { UnitCatalog.BorgF0, UnitCatalog.Hota, UnitCatalog.HiyoF0, UnitCatalog.Beni };
+            var others = cand.Id == "beni" ? new[] { UnitCatalog.BorgF0, UnitCatalog.HotaL0, UnitCatalog.HiyoF0, plain } : new[] { UnitCatalog.BorgF0, UnitCatalog.HotaL0, UnitCatalog.HiyoF0, UnitCatalog.Beni };
             var rates = new double[7];   // 回復・守り・火・読み（反転）・状態異常・移動・破片（量）
             int n = 0;
             for (int seat = 0; seat < 5; seat++)
@@ -129,7 +129,7 @@ static partial class BurnAuditDiag
         Console.WriteLine();
 
         // 所要の見積もり
-        var probe = new[] { UnitCatalog.BorgF0, UnitCatalog.Hota, UnitCatalog.HiyoF0, UnitCatalog.Beni, cands4[0] };
+        var probe = new[] { UnitCatalog.BorgF0, UnitCatalog.HotaL0, UnitCatalog.HiyoF0, UnitCatalog.Beni, cands4[0] };
         var t0 = sw.Elapsed;
         AllSeats(probe, 20);
         double per = (sw.Elapsed - t0).TotalSeconds / (120 * 20);

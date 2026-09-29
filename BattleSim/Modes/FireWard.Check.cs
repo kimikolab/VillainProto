@@ -76,7 +76,7 @@ static partial class FireWardDiag
         // ---- V: 火の変換（刻み）----
         foreach (var (nm, hiyo, gain) in new[] { ("V1", V1, BurnRules.Damage), ("V2", V2, BurnRules.Damage / 2) })
         {
-            var ctx = Ctx(Formation.Build(front1: Plain("a1"), back3: hiyo, center: UnitCatalog.Hota, back1: BorgA), e1, out var p, out _);
+            var ctx = Ctx(Formation.Build(front1: Plain("a1"), back3: hiyo, center: UnitCatalog.HotaL0, back1: BorgA), e1, out var p, out _);
             var a1 = U(p, "a1"); var hota = U(p, "hota"); var borg = U(p, "borg");
             foreach (var u in new[] { a1, hota, borg }) { u.Hp = u.MaxHp - 20; Burn(u); }
             a1.SetCounter(StatusKeys.Poison, 0);
@@ -115,7 +115,7 @@ static partial class FireWardDiag
         }
         // V: 燃える巻き込み（燃えている隣だけが回復・燃えていない隣は巻き込みのまま）
         {
-            var ctx = Ctx(Formation.Build(front1: Plain("hot"), front3: Plain("cold"), center: BorgA, back3: V1, back1: UnitCatalog.Hota), e1, out var p, out _);
+            var ctx = Ctx(Formation.Build(front1: Plain("hot"), front3: Plain("cold"), center: BorgA, back3: V1, back1: UnitCatalog.HotaL0), e1, out var p, out _);
             var borg = U(p, "borg"); var hot = U(p, "hot"); var cold = U(p, "cold");
             hot.Hp = hot.MaxHp - 30; cold.Hp = cold.MaxHp - 30; Burn(hot);
             int h1 = hot.Hp, h2 = cold.Hp;

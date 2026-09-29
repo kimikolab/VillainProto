@@ -55,12 +55,12 @@ static partial class FireScaleDiag
     // 台（§4）。駒は**規定**（前段の後のボルグ・ヒヨ）。
     // ---------------------------------------------------------------------------------
     /// <summary>T3: 第238期の最良（A+D2+V1 の T3′-1・前1 ヒヨ ／ 前3 ホタ ／ 中央 ボルグ ／ 後1 ドハ ／ 後3 ソラ）。</summary>
-    internal static Formation T3 => Formation.Build(front1: UnitCatalog.Hiyo, front3: UnitCatalog.Hota, center: UnitCatalog.Borg,
+    internal static Formation T3 => Formation.Build(front1: UnitCatalog.HiyoL0, front3: UnitCatalog.HotaL0, center: UnitCatalog.BorgL0,
         back1: UnitCatalog.Doha, back3: UnitCatalog.Sora);
     /// <summary>雷＋ボルグ: ポンの席の前1 シガ → ボルグ（席はそのまま）。</summary>
-    internal static Formation ThunderBorg => Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Tsugi,
+    internal static Formation ThunderBorg => Formation.Build(front1: UnitCatalog.BorgL0, front3: UnitCatalog.Tsugi,
         center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio);
-    internal static readonly UnitDef[] T31Members = { UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo, UnitCatalog.Shio, UnitCatalog.Sasa };
+    internal static readonly UnitDef[] T31Members = { UnitCatalog.BorgL0, UnitCatalog.HotaL0, UnitCatalog.HiyoL0, UnitCatalog.Shio, UnitCatalog.Sasa };
 
     /// <summary>T3-1 の席（規定で 120 通りを総当たり・並びは 200/200 → 400/300 → 落ちた駒 → 決着T → 列挙順）。一度だけ決める。</summary>
     static Formation? _t31;

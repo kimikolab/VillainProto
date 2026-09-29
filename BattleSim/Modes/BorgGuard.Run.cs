@@ -295,7 +295,7 @@ static partial class BorgGuardDiag
                 var x = Group(bi, s, ws); var a = x.A;
                 long all = a.Dealt.Values.Sum();
                 Console.WriteLine($"| {bi + 1} | {boards[bi].Ver} | " + string.Join("・", boards[bi].F.Occupied().Select(o => $"{SN(o.Def.Id)} {BA.F1(a.Per(a.Dealt.GetValueOrDefault(o.Def.Name)))}"))
-                    + $" | {BA.F1(a.Per(x.BorgDealtSweep))} | {Pct(a.Dealt.GetValueOrDefault(UnitCatalog.Hota.Name), all)} |");
+                    + $" | {BA.F1(a.Per(x.BorgDealtSweep))} | {Pct(a.Dealt.GetValueOrDefault(UnitCatalog.HotaL0.Name), all)} |");
             }
             Console.WriteLine();
         }

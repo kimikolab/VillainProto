@@ -8,9 +8,9 @@ static partial class BorgFrontDiag
 {
     internal static Formation[] DigestBoards(UnitDef borg) => new[]
     {
-        BA.Seat(new[] { borg, UnitCatalog.Hota, UnitCatalog.HiyoF0, UnitCatalog.Shio, UnitCatalog.Sasa }),
-        BA.Seat(new[] { UnitCatalog.Hota, UnitCatalog.HiyoF0, UnitCatalog.Shio, UnitCatalog.Sasa, borg }),
-        BA.Seat(new[] { UnitCatalog.Golm, borg, UnitCatalog.Hota, UnitCatalog.HiyoF0, UnitCatalog.Beni }),
+        BA.Seat(new[] { borg, UnitCatalog.HotaL0, UnitCatalog.HiyoF0, UnitCatalog.Shio, UnitCatalog.Sasa }),
+        BA.Seat(new[] { UnitCatalog.HotaL0, UnitCatalog.HiyoF0, UnitCatalog.Shio, UnitCatalog.Sasa, borg }),
+        BA.Seat(new[] { UnitCatalog.Golm, borg, UnitCatalog.HotaL0, UnitCatalog.HiyoF0, UnitCatalog.Beni }),
         BA.Seat(new[] { borg, UnitCatalog.Tsugi, UnitCatalog.Beni, UnitCatalog.Kata, UnitCatalog.Mio }),
     };
 

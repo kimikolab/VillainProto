@@ -64,7 +64,19 @@ internal static Formation OldFire(Formation f)
 {
     var g = f.Clone();
     foreach (var (slot, d) in f.Occupied())
-        g[slot] = ReferenceEquals(d, UnitCatalog.Borg) ? UnitCatalog.BorgF0 : ReferenceEquals(d, UnitCatalog.Hiyo) ? UnitCatalog.HiyoF0 : d;
+        g[slot] = ReferenceEquals(d, UnitCatalog.Borg) ? UnitCatalog.BorgF0 : ReferenceEquals(d, UnitCatalog.Hiyo) ? UnitCatalog.HiyoF0
+                : ReferenceEquals(d, UnitCatalog.Hota) ? UnitCatalog.HotaL0 : d;   // 第244期 前段: ホタも（段が規定になったので）
+    return g;
+}
+
+/// <summary>第244期 前段（第242期 R3 の規定化）: 第239〜242期の器具（`firescale` / `firelevel`）は、編成の<b>規定のボルグ・ホタ・ヒヨ</b>
+/// （同じ参照のものだけ）を旧（<see cref="UnitCatalog.BorgL0"/> / <see cref="UnitCatalog.HotaL0"/> / <see cref="UnitCatalog.HiyoL0"/>）へ戻す。版の駒には触らない。</summary>
+internal static Formation OldLevel(Formation f)
+{
+    var g = f.Clone();
+    foreach (var (slot, d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Borg) ? UnitCatalog.BorgL0 : ReferenceEquals(d, UnitCatalog.Hiyo) ? UnitCatalog.HiyoL0
+                : ReferenceEquals(d, UnitCatalog.Hota) ? UnitCatalog.HotaL0 : d;
     return g;
 }
 
