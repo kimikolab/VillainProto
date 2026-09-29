@@ -18,6 +18,7 @@ public partial class BattlefieldView3D
     {
         MovementPlays.Clear();
         _windStages.Clear();
+        _landingVariants.Clear();
         MovementArrowPlays = 0;
         MovementPiercePlays = 0;
         MovementBarragePlays = 0;
@@ -124,6 +125,9 @@ public partial class BattlefieldView3D
                 // 味方へ手を差し出す因果だけ。掌の接触・音・敵の移動は次のSpringで1回。
                 Flow(actor, target, MovementFx.Bounce, 0.16f);
                 return 0;
+            case BattleEventKind.Landing:
+                ShowHaneLanding(actor, target, s);
+                return 0.06;
             case BattleEventKind.Tailwind:
                 ShowTailwindGust(actor, target, partner, s);
                 return 0.12;
@@ -185,6 +189,8 @@ public partial class BattlefieldView3D
             pawn.MovementPose(0.95f, (float)seconds);
         }
         if (storm) { arc = 0.95f; seconds = 0.64; }
+        bool landing = cue?.Kind == BattleEventKind.Landing;
+        if (landing) { arc = 0.85f; seconds = 0.30; tint = MovementFx.Bounce; }
         if (cue?.Kind == BattleEventKind.Tailwind) { arc = 0.32f; seconds = 0.26; }
         if (mover?.UnitId == "basa" && !storm && cue?.Kind != BattleEventKind.Tailwind)
             _attackAudio.PlayMovementSound(MovementSound.Wind);
@@ -194,8 +200,8 @@ public partial class BattlefieldView3D
         MovementFx.Flow(_fxRoot, _camera, start, end + Vector3.Up * 0.85f, tint,
             (seconds + 0.10) / pawn.AnimationSpeed, curl, thrown ? 5 : 2);
         pawn.Slot = slot;
-        pawn.AnimateMovement(end, arc, seconds, thrown ? MovementLandingSound(pawn) : null, windCarry: storm);
-        if (storm) MovementFx.CarryVortex(_fxRoot, _camera, pawn, seconds / pawn.AnimationSpeed);
+        pawn.AnimateMovement(end, arc, seconds, thrown || landing ? MovementLandingSound(pawn, landing) : null, windCarry: storm || landing);
+        if (storm || landing) MovementFx.CarryVortex(_fxRoot, _camera, pawn, seconds / pawn.AnimationSpeed);
     }
 
     // 着地を台本のMove時刻ではなく、実際の描画の終了へ合わせる。停止・再開で古い予約は無効。

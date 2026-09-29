@@ -15,21 +15,35 @@ public partial class BattlePawn3D
     internal float PalmStrikeHeight(Vector3 cameraUp) => GlobalPosition.Y + _portraitBaseY + cameraUp.Y * PalmContactPixel.Y * _sprite.PixelSize;
 
     // 地面を蹴って両掌へ体重を伝える。名前・HP・席は動かさない。
-    internal void BeginPalmStrike(Func<Vector3> impact, Vector3 right, Vector3 up, Action hit, Vector3? guarded = null)
+    internal void BeginPalmStrike(Func<Vector3> impact, Vector3 right, Vector3 up, Action hit, Vector3? guarded = null,
+        bool rescue = false)
     {
         if (_unitId != "hane" || !CanReceiveMovementImpact) return;
         ClearMovementPortrait();
-        ShowMovementPortrait(guarded is null ? "hane_palm" : "hane_spring_guard", 0.65);
+        ShowMovementPortrait(rescue ? "hane_rescue" : guarded is null ? "hane_palm" : "hane_spring_guard", rescue ? 0.85 : 0.65);
         _palmImpact = new TaskCompletionSource();
         float sign = Team == 0 ? 1 : -1;
         double speed = Math.Max(0.1, AnimationSpeed);
         Vector3 windup = -right * sign * 0.20f;
-        // 仲間への介入は横へ短く跳ぶ。立ち位置と席は台本のMoveだけが変える。
+        // 隣は短く、同列の遠い仲間へは全距離を跳ぶ。席は台本のMoveだけが変える。
         if (guarded is Vector3 ally)
-            windup = (ally - FxPoint).LimitLength(0.85f) + Vector3.Up * 0.16f;
+            windup = (rescue ? ally - FxPoint : (ally - FxPoint).LimitLength(0.85f)) + Vector3.Up * (rescue ? 0.42f : 0.16f);
+        if (rescue)
+        {
+            _movementFlip = windup.Dot(right) < 0;
+            _sprite.FlipH = _movementFlip.Value;
+            BeginBonusAfterimage(MovementFx.Bounce, 0.20 / speed, false);
+        }
         Vector3 contact = Vector3.Zero;
         _palmTween = CreateTween();
-        _palmTween.TweenMethod(Callable.From<float>(t => _palmOffset = windup * t), 0f, 1f, 0.08 / speed);
+        _palmTween.TweenMethod(Callable.From<float>(t => _palmOffset = windup * t
+            + (rescue ? Vector3.Up * Mathf.Sin(t * Mathf.Pi) * 0.35f : Vector3.Zero)), 0f, 1f, (rescue ? 0.20 : 0.08) / speed);
+        if (rescue) _palmTween.TweenCallback(Callable.From(() => {
+            // 移動差分から掌へ。ShowMovementPortraitは掌のTweenを解除するためここでは使わない。
+            _movementPortrait = "hane_spring_guard";
+            _movementFlip = null;
+            RefreshBattlePortrait();
+        }));
         _palmTween.TweenMethod(Callable.From<float>(t => {
             // 自分への弾き返しと味方への救援で、実際に描かれた掌を接触点へ合わせる。
             float pixel = _sprite.PixelSize;
@@ -51,7 +65,7 @@ public partial class BattlePawn3D
 
     private void ProcessPalmStrikePose()
     {
-        if (!PalmStrikeActive || _movementPortrait is not ("hane_palm" or "hane_spring_guard")) return;
+        if (!PalmStrikeActive || _movementPortrait is not ("hane_palm" or "hane_spring_guard" or "hane_rescue")) return;
         _sprite.Position = new Vector3(0, _portraitBaseY, 0) + _palmOffset;
         _sprite.Rotation = Vector3.Zero;
         _sprite.Scale = Vector3.One;

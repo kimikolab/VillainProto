@@ -17,7 +17,9 @@ public partial class MovementCheck : Control
         {
             CheckArrowIndex();
             CheckFollowupIndex();
-            if (OS.GetCmdlineUserArgs().Contains("--followup")) await Followup();
+            CheckLandingIndex();
+            if (OS.GetCmdlineUserArgs().Contains("--landing")) await LandingPreview();
+            else if (OS.GetCmdlineUserArgs().Contains("--followup")) await Followup();
             else if (OS.GetCmdlineUserArgs().Contains("--replay")) await Replay();
             else await Preview();
             GD.Print("MOVEMENT_CHECK_OK");

@@ -36,7 +36,9 @@ public partial class BattlefieldView3D
             _attackAudio.PlayMovementSound(MovementSound.SpringBlock);
             MovementFx.Smash(_fxRoot, _camera, Contact(), MovementFx.Bounce, 0.24 / speed, 1.10f);
             CameraPunch(Contact(), AttackPattern.Single);
-        }, guarded?.FxPoint);
+        }, guarded?.FxPoint, guarded is not null
+            && FormationRules.AreSameRowPair(actor.Slot, guarded.Slot)
+            && !(actor.Shape?.AreAdjacent(actor.Slot, guarded.Slot) ?? FormationRules.AreAdjacent(actor.Slot, guarded.Slot)));
     }
 
     private async Task<bool> ShowHaneDropkick(BattlePawn3D actor, BattlePawn3D target)

@@ -20,7 +20,7 @@ internal sealed class MovementPresentation
         or BattleEventKind.Disarray or BattleEventKind.DisarrayStage or BattleEventKind.Squall
         or BattleEventKind.Blast or BattleEventKind.Spring or BattleEventKind.Tailwind
         or BattleEventKind.KillImpact or BattleEventKind.StaggerBreach
-        or BattleEventKind.SpringGuard or BattleEventKind.DecoyShow or BattleEventKind.MoveShot;
+        or BattleEventKind.SpringGuard or BattleEventKind.DecoyShow or BattleEventKind.MoveShot or BattleEventKind.Landing;
 
     internal MovementPresentation(IReadOnlyList<BattleEvent> events)
     {
@@ -42,7 +42,8 @@ internal sealed class MovementPresentation
                     if (next.Kind is BattleEventKind.SpringGuard or BattleEventKind.Attack) break;
                 }
             if (cue.Kind is BattleEventKind.Retreat or BattleEventKind.Regroup or BattleEventKind.Evade
-                or BattleEventKind.Spring or BattleEventKind.Tailwind or BattleEventKind.KillImpact or BattleEventKind.Blast)
+                or BattleEventKind.Spring or BattleEventKind.Tailwind or BattleEventKind.KillImpact or BattleEventKind.Blast
+                or BattleEventKind.Landing)
             {
                 var pending = new HashSet<int>();
                 if (cue.Kind == BattleEventKind.Evade || cue.Kind == BattleEventKind.KillImpact && cue.Text == ImpactLabels.Tumble)
@@ -57,7 +58,10 @@ internal sealed class MovementPresentation
                     if (next.Kind == BattleEventKind.Death && next.TargetId is int dead) pending.Remove(dead);
                     if (next.ActorId == cue.ActorId)
                     {
-                        if (next.Kind == BattleEventKind.Attack && ++attacks > (cue.Kind == BattleEventKind.Blast ? 1 : 0)) break;
+                        // 着地の2件には攻撃が挟まる。追い風の未消化分は着地へ持ち越さない。
+                        if (next.Kind == BattleEventKind.Landing) break;
+                        if (cue.Kind != BattleEventKind.Landing && next.Kind == BattleEventKind.Attack
+                            && ++attacks > (cue.Kind == BattleEventKind.Blast ? 1 : 0)) break;
                         if (next.Kind == cue.Kind) break;
                         if (next.Kind == BattleEventKind.Move && next.TargetId is int moved && pending.Remove(moved))
                             Moves[j] = cue;
