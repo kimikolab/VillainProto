@@ -27,6 +27,7 @@ static partial class FireBurstDiag
             case "pick": PickImpl(); return;
             case "run": RunImpl(); return;
             case "check": CheckImpl(); return;
+            case "digest": Digest(); return;
             case "log":
                 LogOne(args.Length > 3 ? args[3] : "S2R", args.Length > 4 ? args[4] : "hiyo,hota,borg,doha,sora", args.Length > 5 ? int.Parse(args[5]) : 0,
                     args.Length > 6 ? int.Parse(args[6]) : BA.MainWave, args.Length > 7 ? int.Parse(args[7]) : 0);

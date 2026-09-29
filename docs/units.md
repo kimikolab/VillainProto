@@ -324,6 +324,13 @@
 | `FireStoke` | 火選りのヒヨ |
 | `TurnGift` | 火選りのヒヨ |
 | `TurnGiftWait` | - |
+| `FireSpreadCap` | - |
+| `StokeBaseAtk` | - |
+| `FireUnleash` | - |
+| `PyreBurnout` | - |
+| `PyreEmbers` | - |
+| `CallFire` | - |
+| `FireRainOrdered` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

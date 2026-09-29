@@ -2373,6 +2373,13 @@ public sealed class UnitTally
     public long BlastCount, BlastMoved, BlastForward, BlastHits, BlastDealt, BlastConfused, BlastKilledA, BlastSecond, BlastRefused,
                 SpringCount, SpringForward, SpringConfused, SpringCapped, SpringHushed, SpringHeld, SpringNoSeat, SpringSwaps, SpringRefused;
 
+    /// <summary>
+    /// 吹っ飛ばしの空振りの内訳（ハネの版 ①〜③・<b>計数専用</b>）。<c>BlastNoLane</c> 狙った敵が経路に属さない席（○前2・○後2）にいて何もしなかった ／
+    /// <c>BlastPinned</c> 押せなかった（経路の最後尾・経路の外・据えた足）が打撃と転倒は入れた（② の口）／ <c>BlastFallbacks</c> 狙えずに通常攻撃にした（③）／
+    /// <c>BlastReached</c> 前1・前3 の外の敵を狙った（①）。
+    /// </summary>
+    public long BlastNoLane, BlastPinned, BlastFallbacks, BlastReached;
+
     /// <summary>第225期・惨禍（カド）で増えた被ダメージ（名目・破片と上限の前）。受け手の側。<b>計数専用。</b></summary>
     public long HavocTaken;
 
@@ -3574,6 +3581,18 @@ public static class FireLevelLabels
     public const string GiftTurn = "ギフトの手番";
     /// <summary>見出し: ホタの段（手番の頭）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ホタ ／ <c>Amount</c> ＝ 段（手番の時点の火勢・燃えていなければ 0）。</summary>
     public const string Stage = "段";
+    /// <summary>見出し: 放つ（第244期・ボルグの大技）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ボルグ ／ <c>Amount</c> ＝ 撃つ前の火勢（4）。直後に「撃った」（1 に戻る）と、薙ぎ ×3 の <c>Attack</c> / <c>Damage</c>。</summary>
+    public const string Unleash = "放つ";
+    /// <summary>見出し: 焼き尽くす（第244期・ホタの大技）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ホタ ／ <c>Amount</c> ＝ 撃つ前の火勢（4）。直後に「撃った」、全体 ×4 の1発、続いて火の雨。</summary>
+    public const string Burnout = "焼き尽くす";
+    /// <summary>見出し: 火の雨の1発（第244期）。<c>ActorId</c> ＝ ホタ ／ <c>TargetId</c> ＝ 落ちる敵 ／ <c>Slot</c> ＝ 何発目（1〜10）／ <c>Amount</c> ＝ その瞬間の生きている敵の数。直後にその1発の <c>Attack</c> / <c>Damage</c>。</summary>
+    public const string Rain = "火の雨";
+    /// <summary>見出し: 残り火（第244期）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ホタ ／ <c>Slot</c> ＝ 1（段の代わりの全体 ×2）／ 2（敵が2体以下の追加の全体 ×2）。直後にその1発。</summary>
+    public const string Embers = "残り火";
+    /// <summary>見出し: 呼び火（第244期）。<c>ActorId</c> ＝ 放ったボルグ ／ ギフトを撃ったヒヨ ／ <c>TargetId</c> ＝ ホタ。続いて「育つ・呼び火」。</summary>
+    public const string CallFire = "呼び火";
+    /// <summary>呼び火で育った（第244期・<c>ActorId</c> ＝ 呼んだ駒）。</summary>
+    public const string GrowCall = "育つ・呼び火";
 }
 
 /// <summary>撃破の衝撃（第230期）の <c>Text</c>。<b>表示専用。</b></summary>
@@ -3673,6 +3692,12 @@ public sealed class FireLevelLedger
     public int FirstGiftTurn;
     /// <summary>ギフトを撃った時のヒヨの火勢の分布（3 ／ 4）。</summary>
     public readonly long[] GiftAtLevel = new long[5];
+    /// <summary>第244期: 燃え広がりの上限で捨てた育ち（本人 ／ ヒヨ自身）。</summary>
+    public long SpreadCapped, SelfCapped;
+    /// <summary>第244期: 大技（放つ ／ 焼き尽くす ／ 残り火 ／ 残り火の追加）・火の雨の発数・呼び火（回 ／ 育った）。</summary>
+    public long Unleashes, Burnouts, Embers, EmbersExtra, RainDrops, CallFires, CallGrowth;
+    /// <summary>第244期: 大技の記録（ターン・種類 1 放つ ／ 2 焼き尽くす ／ 3 残り火・駒）。</summary>
+    public readonly List<(int Turn, int Kind, int Id)> Moves = new();
 }
 
 public sealed class BurnLinkLedger

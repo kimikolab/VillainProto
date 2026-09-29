@@ -496,6 +496,11 @@ public enum TraitId
     SpringStrike,   // 弾き返しの打撃（第243期・ハネの版 ③）: 弾き返すたび、殴ってきた敵へハネの現在の攻撃力ぶんのダメージ（攻撃ではない・`ApplyDamage` を直に）。**判定は engine**（`SpringSwap`）。保持者 0 枚
     ConfuseHalf,    // 半分の混乱（第243期・バサの版 ④）: 保持者がいる戦では、混乱した駒の次の攻撃は 50% で自軍へ・50% で普段どおり（どちらでも混乱は消える）。
                     // **判定は engine**（`PerformAttackBody` の頭・標的選択の前に `Roll(100)` を1回）。保持者 0 枚
+    BlastReach,     // 吹っ飛ばしの狙いを「今狙える一番前の列」に（ハネの版 ①）: 前1・前3 だけでなく、生きている敵がいる一番前の列の敵すべてから攻撃力最大を選ぶ（同値は席番号の小さい方）。
+                    // **札そのものは挙動を持たない**（`BlastTrait` が読む）。保持者 0 枚
+    BlastStay,      // 押せなくても当てる（ハネの版 ②）: 狙った敵が経路の外（○前2・○後2）でも1体に打撃を入れ、押せなかったとき（最後尾・経路の外・据えた足）も転倒と萎縮（`SpringDaunt` を持てば）は入れる。
+                    // **札そのものは挙動を持たない**（`BlastTrait` が読む）。保持者 0 枚
+    BlastFallback,  // 狙えなければ殴る（ハネの版 ③）: 吹っ飛ばす相手がいない手番は通常攻撃（`PerformAttack`・今の攻撃型）。**札そのものは挙動を持たない**（`BlastTrait` が読む）。保持者 0 枚
     SpringDaunt,    // 押されて怯む（第243期・ハネの版 ⑤）: 吹っ飛ばし・弾き返しで動かした敵を萎縮させる（既存の `Daunted`・次の攻撃が半分）。**判定は engine / `BlastTrait`**。保持者 0 枚
     FireWard,      // 盾の配り・隣（第238期・ボルグの版 D1）: 保持者が生きている間、保持者の隣の燃えている味方は敵の攻撃から受けるダメージが半分（切り上げ）。保持者自身は対象外（火の鎧と重ねない）。
                     // **判定は engine**（`ApplyDamageBody` の軽減の族・火の鎧の半減の直後）。保持者 0 枚
@@ -512,6 +517,13 @@ public enum TraitId
     FireStoke,      // 煽り（第242期・ヒヨの版 R3〜）: 手番で、燃えている味方（ヒヨ以外・火勢4 は除く）のうち攻撃力最大の1体の火勢 +1。ヒヨが燃えている間は、煽るたび・味方が燃え広がりで育つたびに自分も +1。保持者 0 枚
     TurnGift,       // ターンギフト・即撃ち（第242期・ヒヨの版 R3・G3）: 手番の時点でヒヨの火勢が 3 以上なら煽る代わりに撃つ（3 で1体・4 で2体に通常の手番を1回ずつ渡す）。**札そのものは挙動を持たない**（`FireStokeTrait` が読む）。保持者 0 枚
     TurnGiftWait,   // ターンギフト・待ち（第242期・ヒヨの版 R3g4・G4）: 火勢4 のときだけ2体に撃つ（3 の手番は煽る）。**札そのものは挙動を持たない**。保持者 0 枚
+    FireSpreadCap,  // 燃え広がりの上限（第244期・版 S1〜・ボルグに持たせる）: 保持者の陣営では、燃え広がりで育つのは1回の攻撃で +1 まで（ヒヨ自身の育ちも）。**判定は engine**。保持者 0 枚
+    StokeBaseAtk,   // 攻撃力を倍率の前で比べる（第244期・版 S1〜・ヒヨ）: 煽り・ギフトの相手選びの攻撃力を「元の攻撃力 ＋ 上乗せ」に。**判定は `FireStokeTrait`**。保持者 0 枚
+    FireUnleash,    // 放つ（第244期・ボルグの版 S2）: ギフトの手番で火勢4 なら、薙ぎで攻撃力 ×3・当たった敵全員に着火。撃つと火勢 1。**判定は engine**。保持者 0 枚
+    PyreBurnout,    // 焼き尽くす（第244期・ホタの版 S2）: ギフトの手番で火勢4 なら、全体に1発（×4）＋ 火の雨 10 発（1発 ×1.5）・1発ごとに着火。撃つと火勢 1。**判定は engine**。保持者 0 枚
+    PyreEmbers,     // 残り火（第244期・ホタの版 S2）: 焼き尽くすの次の自分の手番は、段の代わりに全体攻撃（×2）・敵が2体以下なら追加で全体に ×2。**判定は engine**。保持者 0 枚
+    CallFire,       // 呼び火（第244期・ホタの版 S2）: 味方のボルグが放つ・ヒヨがギフトを撃つたびに、自分の火勢 +1（燃えている間のみ）。**判定は engine**。保持者 0 枚
+    FireRainOrdered,// 火の雨・決まった順（第244期・ホタの版 S2D）: 火の雨の落ち先を「その瞬間の HP が最も多い敵（同値は席の番号順）」に（無ければ乱数）。**札そのものは挙動を持たない**。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -9075,6 +9087,9 @@ public sealed class PyreTrait : Trait
 
     public override int ModifyAttack(UnitState self, int atk)
     {
+        // 第244期（大技）: 焼き尽くす・火の雨・残り火の最中だけ、その倍率（燃えていなくても）。**印が無ければ比較1つで抜ける。**
+        int mv = self.RawCounter(FireBurstRule.MoveKey);
+        if (mv > 0) return FireBurstRule.Multiply(mv, atk);
         if (self.Counter(StatusKeys.Burn) <= 0) return atk;
         // 第242期（ホタの段）: 火勢3 以上は 5連撃の1回 ×1.6（合計 ×8）。1・2 は今の ×4。
         if (self.HasTrait(TraitId.PyreStage) && FireLevelRule.Of(self) >= PyreStageTrait.BurstLevel)
@@ -13183,6 +13198,12 @@ public sealed class ConfuseHalfTrait : Trait
 }
 /// <summary>押されて怯む（第243期・ハネの版 ⑤）。<b>札そのものは挙動を持たない</b>（<see cref="BlastTrait"/> と engine の <c>SpringSwap</c> が読む）。</summary>
 public sealed class SpringDauntTrait : Trait { public override TraitId Id => TraitId.SpringDaunt; }
+/// <summary>吹っ飛ばしの狙いを一番前の列へ（ハネの版 ①）。<b>札そのものは挙動を持たない</b>（<see cref="BlastTrait"/> が読む）。</summary>
+public sealed class BlastReachTrait : Trait { public override TraitId Id => TraitId.BlastReach; }
+/// <summary>押せなくても当てる（ハネの版 ②）。<b>札そのものは挙動を持たない</b>（<see cref="BlastTrait"/> が読む）。</summary>
+public sealed class BlastStayTrait : Trait { public override TraitId Id => TraitId.BlastStay; }
+/// <summary>狙えなければ殴る（ハネの版 ③）。<b>札そのものは挙動を持たない</b>（<see cref="BlastTrait"/> が読む）。</summary>
+public sealed class BlastFallbackTrait : Trait { public override TraitId Id => TraitId.BlastFallback; }
 
 /// <summary>
 /// 着地の反動（第237期・ハネの版 ②・<see cref="TraitId.Landing"/>）。ハネが動かされるたび（理由を問わない）、隣の味方1体を、その味方の隣の別の味方と入れ替える。
@@ -13234,14 +13255,20 @@ public static class FireLevelRule
     public static int Of(UnitState u) => u.RawCounter(StatusKeys.Burn) <= 0 ? 0 : Math.Max(1, u.RawCounter(LvKey));
     /// <summary>この期の札のどれかを持つ（その陣営に火勢を持たせる）。</summary>
     public static bool Holds(UnitState u) => u.HasTrait(TraitId.FireLevel) || u.HasTrait(TraitId.CinderWide) || u.HasTrait(TraitId.FireKeep)
-        || u.HasTrait(TraitId.PyreStage) || u.HasTrait(TraitId.FireStoke) || u.HasTrait(TraitId.TurnGift) || u.HasTrait(TraitId.TurnGiftWait);
+        || u.HasTrait(TraitId.PyreStage) || u.HasTrait(TraitId.FireStoke) || u.HasTrait(TraitId.TurnGift) || u.HasTrait(TraitId.TurnGiftWait)
+        || u.HasTrait(TraitId.FireSpreadCap) || u.HasTrait(TraitId.StokeBaseAtk) || u.HasTrait(TraitId.FireUnleash) || u.HasTrait(TraitId.PyreBurnout)
+        || u.HasTrait(TraitId.PyreEmbers) || u.HasTrait(TraitId.CallFire) || u.HasTrait(TraitId.FireRainOrdered);   // 第244期
 }
 
 /// <summary>火勢の土台（第242期・ボルグの版 R1〜・<b>保持者 0 枚</b>）。札は判定を持たない——engine が読む（保つ・燃え広がり・萎む・消える）。</summary>
 public sealed class FireLevelTrait : Trait
 {
     public override TraitId Id => TraitId.FireLevel;
-    public override void OnCarryOver(UnitState self) { self.SetCounter(FireLevelRule.LvKey, 0); self.SetCounter(FireLevelRule.GrewKey, 0); }
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(FireLevelRule.LvKey, 0); self.SetCounter(FireLevelRule.GrewKey, 0);
+        self.SetCounter(FireBurstRule.MoveKey, 0); self.SetCounter(FireBurstRule.EmbersKey, 0);   // 第244期（大技の印・残り火の印）
+    }
 }
 
 /// <summary>火の粉・広（第242期・ボルグの版 R1〜・<b>保持者 0 枚</b>）。札は判定を持たない——<see cref="CinderTrait"/> が読む。</summary>
@@ -13314,13 +13341,50 @@ public sealed class FireStokeTrait : Trait
     /// <summary>ギフトの相手の並び（燃えている味方・ヒヨ以外）。</summary>
     public static IEnumerable<UnitState> GiftTargets(BattleContext ctx, UnitState self)
         => ctx.LivingMembers(self.TeamId).Where(a => a != self && a.IsAlive && FireLevelRule.Of(a) > 0)
-            .OrderByDescending(FireLevelRule.Of).ThenByDescending(a => a.CurrentAttack).ThenBy(a => a.Slot);
+            .OrderByDescending(FireLevelRule.Of).ThenByDescending(a => AtkFor(self, a)).ThenBy(a => a.Slot);
+
+    /// <summary>相手選びで比べる攻撃力（第244期 ③）。<see cref="TraitId.StokeBaseAtk"/> を持てば倍率の前（元の攻撃力 ＋ 上乗せ・熾火の ×4 や 5連撃の ×1.6 を掛けない）、無ければ <c>CurrentAttack</c>（第242期）。</summary>
+    public static int AtkFor(UnitState hiyo, UnitState a)
+        => hiyo.HasTrait(TraitId.StokeBaseAtk) ? Math.Max(0, a.Def.Attack + a.AtkBonus) : a.CurrentAttack;
 
     /// <summary>煽りの相手（燃えている味方・ヒヨ以外・火勢4 は除く・攻撃力最大・同値は席の番号順）。</summary>
     public static UnitState? StokeTarget(BattleContext ctx, UnitState self)
         => ctx.LivingMembers(self.TeamId).Where(a => a != self && a.IsAlive && FireLevelRule.Of(a) is > 0 and < FireLevelRule.Max)
-            .OrderByDescending(a => a.CurrentAttack).ThenBy(a => a.Slot).FirstOrDefault();
+            .OrderByDescending(a => AtkFor(self, a)).ThenBy(a => a.Slot).FirstOrDefault();
 }
+
+// =====================================================================================
+// 第244期 —— 火勢の大技（放つ・焼き尽くす・残り火・呼び火）と、燃え広がりの上限・攻撃力の比べ方。**7 枚とも保持者 0 枚**
+// （版は診断 `fireburst` のローカルの駒）。判定はどれも engine（`SwingTurn` の火勢の枝・`ResolveSpread`・`QueueGift`・`DrainGifts`）。
+// 乱数を引くのは火の雨の R（決まった順の札が無いとき）だけ。
+// =====================================================================================
+
+/// <summary>大技の数値と私有キー（第244期）。</summary>
+public static class FireBurstRule
+{
+    /// <summary>大技の最中だけ立つ（<see cref="PyreTrait.ModifyAttack"/> が読む）: 1 焼き尽くすの全体 ×4 ／ 2 火の雨 ×1.5 ／ 3 残り火 ×2。</summary>
+    public const string MoveKey = "fireMove";
+    /// <summary>残り火の印（焼き尽くすを撃った後・次の自分の手番の入口で消える）。</summary>
+    public const string EmbersKey = "fireEmbers";
+    public const int UnleashPercent = 300, RainDrops = 10, EmbersExtraFoes = 2;
+    public const int MoveBlast = 1, MoveRain = 2, MoveEmbers = 3;
+    public static int Multiply(int move, int atk) => move switch { MoveBlast => atk * 4, MoveRain => atk * 3 / 2, MoveEmbers => atk * 2, _ => atk };
+}
+
+/// <summary>燃え広がりの上限（第244期 ②・<b>保持者 0 枚</b>）。札は判定を持たない——engine（燃え広がりの出口）が陣営ごとに読む。</summary>
+public sealed class FireSpreadCapTrait : Trait { public override TraitId Id => TraitId.FireSpreadCap; }
+/// <summary>攻撃力を倍率の前で比べる（第244期 ③・<b>保持者 0 枚</b>）。<see cref="FireStokeTrait.AtkFor"/> が読む。</summary>
+public sealed class StokeBaseAtkTrait : Trait { public override TraitId Id => TraitId.StokeBaseAtk; }
+/// <summary>放つ（第244期・ボルグ・<b>保持者 0 枚</b>）。ギフトの手番で火勢4 のとき、engine が薙ぎ ×3 に差し替える。</summary>
+public sealed class FireUnleashTrait : Trait { public override TraitId Id => TraitId.FireUnleash; }
+/// <summary>焼き尽くす（第244期・ホタ・<b>保持者 0 枚</b>）。ギフトの手番で火勢4 のとき、engine が全体 ×4 ＋ 火の雨に差し替える。</summary>
+public sealed class PyreBurnoutTrait : Trait { public override TraitId Id => TraitId.PyreBurnout; }
+/// <summary>残り火（第244期・ホタ・<b>保持者 0 枚</b>）。焼き尽くすの次の自分の手番を、engine が全体 ×2 に差し替える。</summary>
+public sealed class PyreEmbersTrait : Trait { public override TraitId Id => TraitId.PyreEmbers; }
+/// <summary>呼び火（第244期・ホタ・<b>保持者 0 枚</b>）。味方の放つ・ギフトのたびに engine が +1。</summary>
+public sealed class CallFireTrait : Trait { public override TraitId Id => TraitId.CallFire; }
+/// <summary>火の雨・決まった順（第244期・S2D・<b>保持者 0 枚</b>）。engine が読む。</summary>
+public sealed class FireRainOrderedTrait : Trait { public override TraitId Id => TraitId.FireRainOrdered; }
 
 public sealed class LandingTrait : Trait
 {
@@ -14457,10 +14521,18 @@ public sealed class BlastTrait : Trait
 
     static UnitState? PickFront(BattleContext ctx, UnitState self, int skipSlot)
     {
+        // ハネの版 ①（`BlastReach`）: 生きている敵がいる一番前の列（前 → 中 → 後）の全員から選ぶ（召喚枠も含む）。
+        bool reach = self.HasTrait(TraitId.BlastReach);
+        var foes = ctx.LivingMembers(ctx.Opponent(self.TeamId));
+        Row? row = null;
+        if (reach)
+            foreach (Row r in new[] { Row.Front, Row.Mid, Row.Back })
+                if (foes.Any(u => u.Row == r && u.Slot != skipSlot)) { row = r; break; }
         UnitState? pick = null;
-        foreach (UnitState u in ctx.LivingMembers(ctx.Opponent(self.TeamId)))
+        foreach (UnitState u in foes)
         {
-            if (u.Slot != 0 && u.Slot != 1) continue;   // 前列の経路に属する編成枠だけ（○前2 は対象外）
+            if (reach) { if (u.Row != row) continue; }
+            else if (u.Slot != 0 && u.Slot != 1) continue;   // 前列の経路に属する編成枠だけ（○前2 は対象外）
             if (u.Slot == skipSlot) continue;
             if (pick is null) { pick = u; continue; }
             int a = u.CurrentAttack, b = pick.CurrentAttack;
@@ -14477,8 +14549,15 @@ public sealed class BlastTrait : Trait
         {
             tally.ReboundNoFront++;
             ctx.Log($"    {self.Name} は吹っ飛ばす相手がいない", LogKind.Action);
+            // ハネの版 ③（`BlastFallback`）: 狙えなければ通常攻撃。
+            if (self.HasTrait(TraitId.BlastFallback) && self.IsAlive)
+            {
+                tally.BlastFallbacks++;
+                ctx.PerformAttack(self);
+            }
             return;
         }
+        if (a.Slot != 0 && a.Slot != 1) tally.BlastReached++;
         bool both = self.HasTrait(TraitId.BlastBoth) && self.HasTrait(TraitId.Disarray)
                     && DisarrayTrait.StageOf(ctx, self) >= DisarrayTrait.PushTwoStage;   // 手番の頭で決める
         int firstSlot = a.Slot;
@@ -14497,7 +14576,18 @@ public sealed class BlastTrait : Trait
         if (!self.IsAlive || !a.IsAlive) return;
         UnitTally tally = ctx.TallyOf(self);
         var lanes = a.Shape.LanesOf(a.Slot);
-        if (lanes.Count == 0) return;
+        bool stay = self.HasTrait(TraitId.BlastStay);   // ハネの版 ②
+        if (lanes.Count == 0)
+        {
+            if (!stay) { tally.BlastNoLane++; ctx.Log($"    {a.Name} は経路の外にいて吹っ飛ばせない", LogKind.Action); return; }
+            // ② 経路の外（○前2・○後2）: 1体だけに打撃（的を固定した貫き＝経路が無いので1発）・転倒・萎縮。
+            ctx.NoteBlast(self, a, -1, 1);
+            tally.BlastHits++;
+            tally.BlastDealt += ctx.BlastShot(self, a);
+            if (!a.IsAlive) { tally.BlastKilledA++; return; }
+            Pinned();
+            return;
+        }
         int lane = lanes[0];
         var line = ctx.LaneMembers(a.TeamId, lane, a.Shape);
         int ia0 = line.IndexOf(a);
@@ -14508,6 +14598,7 @@ public sealed class BlastTrait : Trait
 
         var after = ctx.LaneMembers(a.TeamId, lane, a.Shape);
         int ia = after.IndexOf(a);
+        bool pushed = false;
         if (ia >= 0)
         {
             var seg = after.Skip(ia).ToList();
@@ -14519,6 +14610,7 @@ public sealed class BlastTrait : Trait
                 int forward = moves.Count(m => FormationRules.DepthOf(FormationRules.RowOf(m.Dest)) < FormationRules.DepthOf(m.U.Row));
                 if (ctx.RelocateLane(moves, self))
                 {
+                    pushed = moves.Count > 0;
                     tally.BlastMoved += moves.Count; tally.BlastForward += forward;
                     // 第243期（⑤）: 吹っ飛ばしで動かした敵（A を含む・席が変わった駒）を萎縮させる。
                     if (self.HasTrait(TraitId.SpringDaunt)) foreach (var m in moves) DauntTrait.MarkPushed(ctx, self, m.U);
@@ -14526,12 +14618,24 @@ public sealed class BlastTrait : Trait
                 else tally.BlastRefused++;
             }
         }
+        if (a.IsAlive && !pushed && stay) { Pinned(); return; }   // ② 押せなかった: 転倒 ＋ 萎縮
         if (a.IsAlive)
         {
             a.SetCounter(StatusKeys.Stagger, 1);
             tally.ReboundStaggers++;
             ctx.EmitStagger(a, StaggerLabels.Fell, self);
             ctx.Log($"    {a.Name} は吹っ飛ばされて転んだ（次の手番を失う）", LogKind.Status);
+        }
+
+        // ハネの版 ②: 押せなかった A にも転倒と萎縮（`SpringDaunt` を持てば）を入れる。
+        void Pinned()
+        {
+            tally.BlastPinned++;
+            a.SetCounter(StatusKeys.Stagger, 1);
+            tally.ReboundStaggers++;
+            ctx.EmitStagger(a, StaggerLabels.Fell, self);
+            ctx.Log($"    {a.Name} は押し込めなかったが、打たれて転んだ（次の手番を失う）", LogKind.Status);
+            if (self.HasTrait(TraitId.SpringDaunt)) DauntTrait.MarkPushed(ctx, self, a);
         }
     }
 }
@@ -15406,6 +15510,9 @@ public static class TraitCatalog
         new SpringStrikeTrait(),     // 第243期
         new ConfuseHalfTrait(),      // 第243期
         new SpringDauntTrait(),      // 第243期
+        new BlastReachTrait(),       // ハネの版 ①
+        new BlastStayTrait(),        // ハネの版 ②
+        new BlastFallbackTrait(),    // ハネの版 ③
         new FireWardTrait(),         // 第238期
         new FireWardAllTrait(),      // 第238期
         new FireConvertTrait(),      // 第238期
@@ -15418,6 +15525,13 @@ public static class TraitCatalog
         new FireStokeTrait(),        // 第242期
         new TurnGiftTrait(),         // 第242期
         new TurnGiftWaitTrait(),     // 第242期
+        new FireSpreadCapTrait(),    // 第244期
+        new StokeBaseAtkTrait(),     // 第244期
+        new FireUnleashTrait(),      // 第244期
+        new PyreBurnoutTrait(),      // 第244期
+        new PyreEmbersTrait(),       // 第244期
+        new CallFireTrait(),         // 第244期
+        new FireRainOrderedTrait(),  // 第244期
         new ShioStageSlowTrait(),    // 第226期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期
