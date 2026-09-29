@@ -300,6 +300,8 @@
 | `SpringGuard` | 突き返しのハネ |
 | `SpringStay` | 突き返しのハネ |
 | `EvadeMoveShot` | 逃亡兵セロ |
+| `FireArmor` | - |
+| `Smolder` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
