@@ -56,6 +56,47 @@ static partial class FireLevelDiag
         return (r, p, e);
     }
 
+    // ---------------------------------------------------------------------------------
+    // 版（§3）——札の差し替えだけ。R0 は規定の駒そのもの。
+    // ---------------------------------------------------------------------------------
+    static UnitDef With(UnitDef g, IEnumerable<TraitId> tr) => new()
+    {
+        Id = g.Id, Name = g.Name, MaxHp = g.MaxHp, Attack = g.Attack, Speed = g.Speed, Traits = tr.ToArray(), Pattern = g.Pattern,
+        Advances = g.Advances, Actions = g.Actions, PlusText = g.PlusText, MinusText = g.MinusText, Flavor = g.Flavor,
+    };
+    internal static readonly UnitDef BorgR1 = With(UnitCatalog.Borg, UnitCatalog.Borg.Traits.Concat(new[] { TraitId.FireLevel, TraitId.CinderWide, TraitId.FireKeep }));
+    internal static readonly UnitDef HotaR2 = With(UnitCatalog.Hota, UnitCatalog.Hota.Traits.Append(TraitId.PyreStage));
+    internal static readonly UnitDef HiyoR3 = With(UnitCatalog.Hiyo, UnitCatalog.Hiyo.Traits.Concat(new[] { TraitId.FireStoke, TraitId.TurnGift }));
+    internal static readonly UnitDef HiyoR3g4 = With(UnitCatalog.Hiyo, UnitCatalog.Hiyo.Traits.Concat(new[] { TraitId.FireStoke, TraitId.TurnGiftWait }));
+
+    internal sealed record Ver(string Name, string What, UnitDef Borg, UnitDef Hota, UnitDef Hiyo);
+    internal static readonly Ver[] Versions =
+    {
+        new("R0", "規定（対照）", UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo),
+        new("R1", "火勢の土台 ＋ ボルグ2本", BorgR1, UnitCatalog.Hota, UnitCatalog.Hiyo),
+        new("R2", "R1 ＋ ホタの段", BorgR1, HotaR2, UnitCatalog.Hiyo),
+        new("R3", "R2 ＋ ヒヨ（煽り・自分の育ち・G3）", BorgR1, HotaR2, HiyoR3),
+        new("R3g4", "R3 のギフトを G4（待ち）に", BorgR1, HotaR2, HiyoR3g4),
+    };
+    internal static Ver VerOf(string name) => Versions.First(v => v.Name == name);
+
+    /// <summary>ボルグ・ホタ・ヒヨを版の駒に差し替える（ほかの駒・席はそのまま）。</summary>
+    internal static Formation Apply(Formation f, Ver v)
+    {
+        UnitDef? M(UnitDef? d) => d is null ? null : d.Id switch { "borg" => v.Borg, "hota" => v.Hota, "hiyo" => v.Hiyo, _ => d };
+        return Formation.Build(front1: M(f[0]), front3: M(f[1]), center: M(f[2]), back1: M(f[3]), back3: M(f[4]));
+    }
+    internal static Formation Dec(string enc) => BA.Seat(enc.Split(',').Select(UnitCatalog.ById).ToArray());
+    internal static string Enc(Formation f) => string.Join(",", Enumerable.Range(0, 5).Select(i => f[i]!.Id));
+
+    static partial void LogOne(string ver, string seats, int seed, int wave, int sc)
+    {
+        var f = Apply(Dec(seats), VerOf(ver));
+        var (r, _, _) = Fight(f, wave, BA.Scales[sc].Sc, seed);
+        Console.WriteLine($"# {ver} × {BA.SeatsNamed(f)} × {BA.WaveNames[wave]} × {BA.Scales[sc].Name} × seed {seed} → {(r.PlayerWon ? "勝ち" : "負け")} T{r.Turns}");
+        foreach (var l in r.Log) Console.WriteLine(l.Text);
+    }
+
     internal static string Pct(long a, long n) => n == 0 ? "—" : (100.0 * a / n).ToString("F1");
     internal static string Per(long a, long n) => n == 0 ? "—" : ((double)a / n).ToString("F2");
 }

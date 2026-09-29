@@ -306,6 +306,9 @@ static partial class FireScaleDiag
         BattleEventKind.Move => "移動",
         BattleEventKind.Death => "撃破",
         BattleEventKind.FireArmor => ev.Text,
+        // 第242期（火勢）: 段は数字つき・育ちは1語にまとめる。第241期までの盤面には出ない。
+        BattleEventKind.FireLevel => ev.Text == FireLevelLabels.Stage ? "段" + ev.Amount
+            : ev.Text is FireLevelLabels.GrowSpread or FireLevelLabels.GrowStoke or FireLevelLabels.GrowSelf ? "育つ" : ev.Text,
         BattleEventKind.Skill => null,   // 手番の種類（術）で数える
         _ => KindJa.TryGetValue(ev.Kind.ToString(), out var ja) ? ja : ev.Kind.ToString(),
     };

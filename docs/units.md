@@ -314,6 +314,13 @@
 | `FireConvert` | 火選りのヒヨ |
 | `FireConvertHalf` | - |
 | `FireConvertDry` | - |
+| `FireLevel` | - |
+| `CinderWide` | - |
+| `FireKeep` | - |
+| `PyreStage` | - |
+| `FireStoke` | - |
+| `TurnGift` | - |
+| `TurnGiftWait` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

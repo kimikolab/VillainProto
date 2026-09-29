@@ -500,6 +500,14 @@ public enum TraitId
                     // 熾火（ホタ）・火の鎧／火の癒し（ボルグ）・ベニの結界の内側が先で、そこでは何もしない。回復は「火の回復」（ベニの反転の裏を通らない・渇きは素通り）。**判定は engine**。保持者 0 枚
     FireConvertHalf,// 火の変換・半分（第238期・ヒヨの版 V2）: 同上、回復は半分（切り捨て）。**判定は engine**。保持者 0 枚
     FireConvertDry, // 火の変換の回復が渇きに封じられる（第238期・ヒヨの版 V の b）。**札そのものは挙動を持たない**（`BattleContext.FireConvert` が読む）。保持者 0 枚
+    FireLevel,      // 火勢の土台（第242期・ボルグの版 R1〜）: 保持者の陣営の駒に火勢（0〜4）を持たせる。点け直しは保つだけ・燃え広がりで育つ・育たなければ萎む。**判定は engine**（`FireLevelRule`）。保持者 0 枚
+    CinderWide,     // 火の粉・広（第242期・ボルグの版 R1〜）: 火の粉の敵側の着火を、その攻撃で当たった敵全員に広げる（隣の味方への着火はそのまま）。**札そのものは挙動を持たない**（`CinderTrait` が読む）。保持者 0 枚
+    FireKeep,       // 火を保つ（第242期・ボルグの版 R1〜）: 攻撃した後、自分にも火が点く（保つ火・火勢は上げない）。保持者 0 枚
+    PyreStage,      // ホタの段（第242期・ホタの版 R2〜）: 燃えている間の型を手番の時点の火勢で決める（1 単体 ×4 ／ 2 貫き ×4 ＋着火 ／ 3 以上 5連撃 ×1.6 ＋1回ごとに着火）。
+                    // **判定は `PyreTrait`（型・倍率）と engine の攻撃の枠の出口（着火）**。保持者 0 枚
+    FireStoke,      // 煽り（第242期・ヒヨの版 R3〜）: 手番で、燃えている味方（ヒヨ以外・火勢4 は除く）のうち攻撃力最大の1体の火勢 +1。ヒヨが燃えている間は、煽るたび・味方が燃え広がりで育つたびに自分も +1。保持者 0 枚
+    TurnGift,       // ターンギフト・即撃ち（第242期・ヒヨの版 R3・G3）: 手番の時点でヒヨの火勢が 3 以上なら煽る代わりに撃つ（3 で1体・4 で2体に通常の手番を1回ずつ渡す）。**札そのものは挙動を持たない**（`FireStokeTrait` が読む）。保持者 0 枚
+    TurnGiftWait,   // ターンギフト・待ち（第242期・ヒヨの版 R3g4・G4）: 火勢4 のときだけ2体に撃つ（3 の手番は煽る）。**札そのものは挙動を持たない**。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -8951,6 +8959,10 @@ public sealed class CinderTrait : Trait
         if (dealt <= 0) return;
 
         ctx.Ignite(target, source: self);
+        // 第242期（火の粉・広）: この攻撃で当たったほかの敵全員にも点ける（主目標は上で点けた）。**札が無ければ比較1つで抜ける。**
+        if (self.HasTrait(TraitId.CinderWide))
+            foreach (UnitState foe in ctx.FoesHitThisAttack(self))
+                if (foe != target) ctx.Ignite(foe, source: self);
 
         // 味方に及ぶものなので前後を含む隣接を見る（Models.cs の AreAdjacent の但し書き）。
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
@@ -9058,10 +9070,22 @@ public sealed class PyreTrait : Trait
     public override TraitId Id => TraitId.Pyre;
 
     public override int ModifyAttack(UnitState self, int atk)
-        => self.Counter(StatusKeys.Burn) > 0 ? atk * Multiplier : atk;
+    {
+        if (self.Counter(StatusKeys.Burn) <= 0) return atk;
+        // 第242期（ホタの段）: 火勢3 以上は 5連撃の1回 ×1.6（合計 ×8）。1・2 は今の ×4。
+        if (self.HasTrait(TraitId.PyreStage) && FireLevelRule.Of(self) >= PyreStageTrait.BurstLevel)
+            return atk * PyreStageTrait.BurstNum / PyreStageTrait.BurstDen;
+        return atk * Multiplier;
+    }
 
     public override AttackPattern ModifyPattern(UnitState self, AttackPattern p)
-        => self.Counter(StatusKeys.Burn) > 0 ? AttackPattern.Pierce : p;
+    {
+        if (self.Counter(StatusKeys.Burn) <= 0) return p;
+        // 第242期（ホタの段）: 1 単体 ／ 2 貫き ／ 3 以上 単体（5連撃）。札が無ければ今の「燃えている間は貫き」。
+        if (self.HasTrait(TraitId.PyreStage))
+            return FireLevelRule.Of(self) == 2 ? AttackPattern.Pierce : p;
+        return AttackPattern.Pierce;
+    }
 
     // 火を配る（第130期・**測って採用しなかった。既定は `EmberRule.Off` で残置**）。
     // 落ちた理由と逃げ道は `EmberRule` の doc を参照。
@@ -13179,6 +13203,111 @@ public sealed class FireConvertHalfTrait : Trait { public override TraitId Id =>
 /// <summary>火の変換の回復が渇きに封じられる（第238期・ヒヨの版 V の b・<b>保持者 0 枚</b>）。</summary>
 public sealed class FireConvertDryTrait : Trait { public override TraitId Id => TraitId.FireConvertDry; }
 
+// =====================================================================================
+// 第242期 —— 火勢（燃え広がり・ヒヨのターンギフト・ホタの段）。**7 枚とも保持者 0 枚**（版は診断 `firelevel` のローカルの駒）。
+// 火勢は私有カウンタ（`FireLevelRule.LvKey`）で、読みは `FireLevelRule.Of` の1本（燃えていなければ 0・燃えていれば max(1, 値)）。
+// **保持者（7 枚のどれか）がいない陣営では何もしない**——engine は `_fireLvTeams` の比較1つで抜ける。乱数を引かない。
+// =====================================================================================
+
+/// <summary>火勢の読み（第242期）。<b>私有カウンタ</b>なので <see cref="StatusKeys.All"/> には入らない（口移し・雷の種類数・会戦の一括消去に触らない）。</summary>
+public static class FireLevelRule
+{
+    public const string LvKey = "fireLv";
+    /// <summary>育ったターンの番号（萎むの判定・ターンをまたいで戻す処理が要らない）。</summary>
+    public const string GrewKey = "fireGrewT";
+    public const int Max = 4;
+    /// <summary>燃えていなければ 0、燃えていれば max(1, 値)。燃焼がどの口で消えても 0 に読め、燃焼だけが移っても 1 に読める。</summary>
+    public static int Of(UnitState u) => u.RawCounter(StatusKeys.Burn) <= 0 ? 0 : Math.Max(1, u.RawCounter(LvKey));
+    /// <summary>この期の札のどれかを持つ（その陣営に火勢を持たせる）。</summary>
+    public static bool Holds(UnitState u) => u.HasTrait(TraitId.FireLevel) || u.HasTrait(TraitId.CinderWide) || u.HasTrait(TraitId.FireKeep)
+        || u.HasTrait(TraitId.PyreStage) || u.HasTrait(TraitId.FireStoke) || u.HasTrait(TraitId.TurnGift) || u.HasTrait(TraitId.TurnGiftWait);
+}
+
+/// <summary>火勢の土台（第242期・ボルグの版 R1〜・<b>保持者 0 枚</b>）。札は判定を持たない——engine が読む（保つ・燃え広がり・萎む・消える）。</summary>
+public sealed class FireLevelTrait : Trait
+{
+    public override TraitId Id => TraitId.FireLevel;
+    public override void OnCarryOver(UnitState self) { self.SetCounter(FireLevelRule.LvKey, 0); self.SetCounter(FireLevelRule.GrewKey, 0); }
+}
+
+/// <summary>火の粉・広（第242期・ボルグの版 R1〜・<b>保持者 0 枚</b>）。札は判定を持たない——<see cref="CinderTrait"/> が読む。</summary>
+public sealed class CinderWideTrait : Trait { public override TraitId Id => TraitId.CinderWide; }
+
+/// <summary>
+/// 火を保つ（第242期・ボルグの版 R1〜・<b>保持者 0 枚</b>）。<b>攻撃した後、自分にも火が点く</b>（保つ火・火勢は上げない）。
+/// 攻撃1回ごと（主目標に1度＝<c>OnAfterAttack</c>）。燃え広がりの判定は攻撃の中で済んでいるので、この火は判定に入らない。乱数を引かない。
+/// </summary>
+public sealed class FireKeepTrait : Trait
+{
+    public override TraitId Id => TraitId.FireKeep;
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (!self.IsAlive) return;
+        ctx.NoteFireKeep(self);
+        ctx.Ignite(self, friendly: true, source: self);
+    }
+}
+
+/// <summary>
+/// ホタの段（第242期・ホタの版 R2〜・<b>保持者 0 枚</b>）。燃えている間の型を<b>手番の時点の火勢</b>で決める——
+/// 1 単体 ×4 ／ 2 貫き ×4 ＋ 当たった敵に着火 ／ 3 以上 同じ敵に 5 回・1回 ×1.6（合計 ×8）＋ 1回ごとに着火（倒れたら残りは次の敵へ）。
+/// 型と倍率は <see cref="PyreTrait"/>、回数はここ（<see cref="ModifyHitCount"/>・手番の中だけ）、着火は engine の攻撃の枠の出口。
+/// 手番の間に火勢は動かない（育ちは攻撃の出口でまとめて入り、萎むのはターンの終わり）。
+/// </summary>
+public sealed class PyreStageTrait : Trait
+{
+    public const int BurstLevel = 3, BurstHits = 5, BurstNum = 8, BurstDen = 5;
+    public override TraitId Id => TraitId.PyreStage;
+    public override int ModifyHitCount(UnitState self, int hits)
+        => FireLevelRule.Of(self) >= BurstLevel ? Math.Max(hits, BurstHits) : hits;
+}
+
+/// <summary>ターンギフト・即撃ち（第242期・G3・<b>保持者 0 枚</b>）。札は判定を持たない——<see cref="FireStokeTrait"/> が読む。</summary>
+public sealed class TurnGiftTrait : Trait { public override TraitId Id => TraitId.TurnGift; }
+/// <summary>ターンギフト・待ち（第242期・G4・<b>保持者 0 枚</b>）。札は判定を持たない——<see cref="FireStokeTrait"/> が読む。</summary>
+public sealed class TurnGiftWaitTrait : Trait { public override TraitId Id => TraitId.TurnGiftWait; }
+
+/// <summary>
+/// 煽り・ヒヨ自身の火の育ち・ターンギフト（第242期・ヒヨの版 R3・<b>保持者 0 枚</b>）。手番（<c>OnAction</c>）で、贔屓（<see cref="FavorTrait"/>・札の並びで先）の後に1つだけ:
+/// <list type="bullet">
+///   <item><b>ギフト</b>——ヒヨの火勢が 3 以上（<see cref="TraitId.TurnGift"/>）／ 4（<see cref="TraitId.TurnGiftWait"/>）なら、燃えている味方（ヒヨ以外）を
+///     火勢の高い順 → 攻撃力（<c>CurrentAttack</c>）の高い順 → 席の番号順に、火勢3 で1体・4 で2体選んで控える（ヒヨの手番が返った後に通常の手番を1回ずつ）。撃ったらヒヨの火勢は 1。相手がいなければ煽る。</item>
+///   <item><b>煽り</b>——燃えている味方（ヒヨ以外・火勢4 は除く）のうち攻撃力が最も高い1体（同値は席の番号順）の火勢 +1。ヒヨが燃えていれば自分も +1。</item>
+/// </list>
+/// 味方が燃え広がりで育つたびの自分の +1 は engine（燃え広がりの出口）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class FireStokeTrait : Trait
+{
+    public override TraitId Id => TraitId.FireStoke;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        int lv = FireLevelRule.Of(self);
+        int n = self.HasTrait(TraitId.TurnGift) ? (lv >= 4 ? 2 : lv == 3 ? 1 : 0)
+              : self.HasTrait(TraitId.TurnGiftWait) ? (lv >= 4 ? 2 : 0) : 0;
+        if (n > 0)
+        {
+            var recips = GiftTargets(ctx, self).Take(n).ToList();
+            if (recips.Count > 0) { ctx.QueueGift(self, recips, lv); return; }
+            ctx.NoteGiftNoTarget(self);
+        }
+        UnitState? t = StokeTarget(ctx, self);
+        if (t is null) { ctx.NoteStokeNoTarget(self); return; }
+        ctx.Stoke(self, t);
+    }
+
+    /// <summary>ギフトの相手の並び（燃えている味方・ヒヨ以外）。</summary>
+    public static IEnumerable<UnitState> GiftTargets(BattleContext ctx, UnitState self)
+        => ctx.LivingMembers(self.TeamId).Where(a => a != self && a.IsAlive && FireLevelRule.Of(a) > 0)
+            .OrderByDescending(FireLevelRule.Of).ThenByDescending(a => a.CurrentAttack).ThenBy(a => a.Slot);
+
+    /// <summary>煽りの相手（燃えている味方・ヒヨ以外・火勢4 は除く・攻撃力最大・同値は席の番号順）。</summary>
+    public static UnitState? StokeTarget(BattleContext ctx, UnitState self)
+        => ctx.LivingMembers(self.TeamId).Where(a => a != self && a.IsAlive && FireLevelRule.Of(a) is > 0 and < FireLevelRule.Max)
+            .OrderByDescending(a => a.CurrentAttack).ThenBy(a => a.Slot).FirstOrDefault();
+}
+
 public sealed class LandingTrait : Trait
 {
     public const int HpGatePercent = 50;
@@ -15250,6 +15379,13 @@ public static class TraitCatalog
         new FireConvertTrait(),      // 第238期
         new FireConvertHalfTrait(),  // 第238期
         new FireConvertDryTrait(),   // 第238期
+        new FireLevelTrait(),        // 第242期
+        new CinderWideTrait(),       // 第242期
+        new FireKeepTrait(),         // 第242期
+        new PyreStageTrait(),        // 第242期
+        new FireStokeTrait(),        // 第242期
+        new TurnGiftTrait(),         // 第242期
+        new TurnGiftWaitTrait(),     // 第242期
         new ShioStageSlowTrait(),    // 第226期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期

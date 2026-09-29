@@ -712,6 +712,7 @@ public sealed class BattleContext
             u.SetCounter(StatusKeys.Burn, left - 1);
             // 第134期 段1 —— 燃え尽きた時点で区間を閉じる。**盤面には触らない。**
             if (left - 1 <= 0) CloseBurnEpisode(u, expired: true);
+            if (left - 1 <= 0 && _fireLvLive) FireOut(u);   // 第242期（火勢: 燃焼が切れたら 0）
 
             int total = TickTotal(u);   // 表示専用
             _inBurnTickNow = true;   // 第233期・**計数のみ**
@@ -1687,6 +1688,7 @@ public sealed class BattleContext
 
         target.SetCounter(StatusKeys.Burn, turns);
         EmitStatusGain(target, StatusKeys.Burn, turns, source);   // 第97期・表示専用（量ではなく残ターン）
+        if (_fireLvLive) FireKeepLit(target, source, relit);   // 第242期（保つ火: 0 なら 1・1 以上は上げない）
         Log(relit
                 ? $"    {target.Name} の火が煽られた（残り {turns}）"
                 : $"    {target.Name} に火が点いた（残り {turns}）",
@@ -6975,6 +6977,7 @@ public sealed class BattleContext
             || u.HasTrait(TraitId.FireMend) || u.HasTrait(TraitId.FireFeed)) _fireArmorLive = true;   // 第234期（火の鎧・焼け残り）・第235期（火の癒し・焼き返し）
         if (u.HasTrait(TraitId.FireWard) || u.HasTrait(TraitId.FireWardAll)) _fireWardHolders.Add(u);             // 第238期（盾の配り）
         if (u.HasTrait(TraitId.FireConvert) || u.HasTrait(TraitId.FireConvertHalf)) _fireConvertHolders.Add(u);   // 第238期（火の変換）
+        if (FireLevelRule.Holds(u)) { _fireLvLive = true; _fireLvTeams[u.TeamId] = true; }   // 第242期（火勢）
         if (u.HasTrait(TraitId.Decoy)) _decoyLive = true;         // 第226期（挑発）
         if (u.HasTrait(TraitId.Spring)) _springLive = true;       // 第228期（弾き返し）
         if (u.HasTrait(TraitId.Tailwind)) _tailwindLive = true;   // 第229期（追い風）
@@ -8567,6 +8570,241 @@ public sealed class BattleContext
     }
 
     // =====================================================================================
+    // 第242期 —— 火勢（燃え広がり・ヒヨのターンギフト・ホタの段）。**保持者（`FireLevelRule.Holds`）がいない陣営では何もしない**——
+    // `_fireLvLive` と `_fireLvTeams[陣営]` の比較で抜ける（R0 が第241期と台本ごと一致する根拠）。**乱数を引かない。**
+    // 火勢は私有カウンタ `FireLevelRule.LvKey`。読みは `FireLevelRule.Of` の1本。
+    // =====================================================================================
+    bool _fireLvLive;
+    readonly bool[] _fireLvTeams = new bool[2];
+    /// <summary>火勢の帳簿（計数のみ）。</summary>
+    public readonly FireLevelLedger FireBook = new();
+    public bool FireLvLive => _fireLvLive;
+
+    /// <summary>燃え広がりの枠（手番の一振り全体、または手番の外の1回の攻撃）。敵ごとに「最初に当たった瞬間に、本人も敵も燃えていたか」を控える。</summary>
+    sealed class SpreadScope
+    {
+        public required UnitState Actor { get; init; }
+        public readonly List<(UnitState Foe, bool Counts)> First = new();
+    }
+    readonly List<SpreadScope> _spreadScopes = new();
+    SpreadScope? SpreadScopeOf(UnitState actor)
+    {
+        for (int i = _spreadScopes.Count - 1; i >= 0; i--) if (_spreadScopes[i].Actor == actor) return _spreadScopes[i];
+        return null;
+    }
+
+    /// <summary>火勢の攻撃の枠（1回の `PerformAttack`）。当てた敵（重複なし・当てた順）と、枠を開いた時点のホタの段。</summary>
+    sealed class FireAtkFrame
+    {
+        public required UnitState Actor { get; init; }
+        public int Stage { get; init; }
+        public readonly List<UnitState> Hit = new();
+    }
+    readonly List<FireAtkFrame> _fireAtkFrames = new();
+    /// <summary>ホタの 5連撃の的（直前の1発の主目標）。</summary>
+    UnitState? _burstLock;
+    FireAtkFrame? FireAtkFrameOf(UnitState actor)
+    {
+        for (int i = _fireAtkFrames.Count - 1; i >= 0; i--) if (_fireAtkFrames[i].Actor == actor) return _fireAtkFrames[i];
+        return null;
+    }
+
+    /// <summary>この攻撃で当てた敵（火の粉・広が読む）。枠の外なら空。</summary>
+    public IReadOnlyList<UnitState> FoesHitThisAttack(UnitState actor)
+        => FireAtkFrameOf(actor)?.Hit ?? (IReadOnlyList<UnitState>)Array.Empty<UnitState>();
+
+    /// <summary>攻撃が敵に当たる直前（`PerformAttackBody` の主目標・巻き込み、`ResolvePierce` の段）。</summary>
+    void NoteFireContact(UnitState actor, UnitState hit)
+    {
+        if (!_fireLvTeams[actor.TeamId] || hit.TeamId == actor.TeamId) return;
+        if (FireAtkFrameOf(actor) is FireAtkFrame fa && !fa.Hit.Contains(hit)) fa.Hit.Add(hit);
+        if (SpreadScopeOf(actor) is not SpreadScope sc) return;
+        foreach (var x in sc.First) if (x.Foe == hit) return;   // 同じ敵は1回まで（最初に当たった瞬間で決める）
+        bool actorBurning = actor.RawCounter(StatusKeys.Burn) > 0, foeBurning = hit.RawCounter(StatusKeys.Burn) > 0;
+        if (foeBurning && !actorBurning) FireBook.SpreadNotBurning++;
+        sc.First.Add((hit, actorBurning && foeBurning));
+    }
+
+    /// <summary>燃え広がりの枠が閉じた: 当たる前から燃えていた敵の数だけ本人 +1。ヒヨ（煽りの札）はその数だけ自分 +1。</summary>
+    void ResolveSpread(SpreadScope sc)
+    {
+        var foes = sc.First.Where(x => x.Counts).Select(x => x.Foe).ToList();
+        if (foes.Count == 0) return;
+        UnitState a = sc.Actor;
+        FireBook.SpreadHits += foes.Count;
+        foreach (UnitState f in foes) EmitFireLevel(a, f, FireLevelLabels.Spread, 0, 0);
+        if (!GrowFire(a, foes.Count, a, FireLevelLabels.GrowSpread)) { FireBook.SpreadWasted += foes.Count; return; }
+        FireBook.SpreadGrowth += foes.Count;
+        foreach (UnitState h in LivingMembers(a.TeamId))
+            if (h != a && h.HasTrait(TraitId.FireStoke) && FireLevelRule.Of(h) > 0)
+            {
+                FireBook.SelfGrowth += foes.Count;
+                GrowFire(h, foes.Count, a, FireLevelLabels.GrowSelf);
+            }
+    }
+
+    /// <summary>
+    /// 育てる: 燃えていなければ捨てる（偽を返す）。燃えていれば「育った」の印を付け、上限 4 まで上げる（4 の上は捨てる・印は付ける）。
+    /// </summary>
+    bool GrowFire(UnitState u, int n, UnitState? cause, string label)
+    {
+        if (!u.IsAlive || n <= 0 || !_fireLvTeams[u.TeamId]) return false;
+        int lv = FireLevelRule.Of(u);
+        if (lv == 0) return false;
+        u.SetCounter(FireLevelRule.GrewKey, _turn);
+        int to = Math.Min(FireLevelRule.Max, lv + n);
+        if (to == lv) return true;
+        u.SetCounter(FireLevelRule.LvKey, to);
+        EmitFireLevel(cause, u, label, to, lv);
+        Log($"    {u.Name} の火勢が {to} に育った", LogKind.Status);
+        return true;
+    }
+
+    /// <summary>保つ火（`Ignite` の出口）: 燃えていなかった駒なら 1。点け直しでは上げない。</summary>
+    void FireKeepLit(UnitState target, UnitState? source, bool relit)
+    {
+        if (!_fireLvTeams[target.TeamId]) return;
+        if (relit && target.RawCounter(FireLevelRule.LvKey) > 0) { FireBook.Relit++; return; }
+        FireBook.Lit++;
+        target.SetCounter(FireLevelRule.LvKey, 1);
+        target.SetCounter(FireLevelRule.GrewKey, 0);
+        EmitFireLevel(source, target, FireLevelLabels.Lit, 1, 0);
+    }
+
+    /// <summary>燃焼が切れた（刻みの減算で 0・焼け残り）: 火勢 0。</summary>
+    void FireOut(UnitState u)
+    {
+        if (!_fireLvTeams[u.TeamId]) return;
+        int lv = u.RawCounter(FireLevelRule.LvKey);
+        if (lv <= 0) return;
+        u.SetCounter(FireLevelRule.LvKey, 0);
+        FireBook.Outs++;
+        EmitFireLevel(null, u, FireLevelLabels.Out, 0, lv);
+    }
+
+    /// <summary>ターンの終わり: そのターン一度も育たなかった駒は −1（燃えている間は 1 未満にしない）。</summary>
+    public void WiltFire()
+    {
+        if (!_fireLvLive) return;
+        foreach (UnitState u in _units)
+        {
+            if (!u.IsAlive || !_fireLvTeams[u.TeamId]) continue;
+            int lv = FireLevelRule.Of(u);
+            if (lv <= 1 || u.RawCounter(FireLevelRule.GrewKey) == _turn) continue;
+            u.SetCounter(FireLevelRule.LvKey, lv - 1);
+            FireBook.Wilts++;
+            EmitFireLevel(null, u, FireLevelLabels.Wilt, lv - 1, lv);
+        }
+    }
+
+    /// <summary>ターンの頭（刻みの後）の写し（計数のみ）。</summary>
+    public void NoteFireLevelCensus()
+    {
+        if (!_fireLvLive) return;
+        foreach (UnitState u in _units)
+            if (u.IsAlive && _fireLvTeams[u.TeamId])
+                FireBook.Snaps.Add(new FireLevelLedger.Snap(_turn, u.InstanceId, u.TeamId, FireLevelRule.Of(u), u.RawCounter(StatusKeys.Burn) > 0));
+    }
+
+    /// <summary>攻撃の枠が閉じた: ホタの段 2 以上なら、この攻撃で当てた敵（生きている）に着火（保つ火）。</summary>
+    void ResolveStageIgnite(FireAtkFrame fa)
+    {
+        if (fa.Stage < 2 || !fa.Actor.IsAlive) return;
+        foreach (UnitState f in fa.Hit) if (f.IsAlive) Ignite(f, source: fa.Actor);
+    }
+
+    /// <summary>ホタの段（手番の頭・計数と台本だけ）。</summary>
+    void NoteHotaStage(UnitState actor)
+    {
+        if (!actor.HasTrait(TraitId.PyreStage)) return;
+        int st = FireLevelRule.Of(actor);
+        FireBook.StageHands[st]++;
+        EmitFireLevel(actor, actor, FireLevelLabels.Stage, st, st);
+    }
+
+    /// <summary>火を保つ（計数のみ）。</summary>
+    public void NoteFireKeep(UnitState u) => FireBook.FireKeeps++;
+    public void NoteStokeNoTarget(UnitState u) => FireBook.StokeNoTarget++;
+    public void NoteGiftNoTarget(UnitState u) => FireBook.GiftNoTarget++;
+
+    /// <summary>煽り: 相手 +1、ヒヨが燃えていれば自分も +1。</summary>
+    public void Stoke(UnitState hiyo, UnitState target)
+    {
+        FireBook.Stokes++;
+        EmitFireLevel(hiyo, target, FireLevelLabels.Stoke, FireLevelRule.Of(target), FireLevelRule.Of(target));
+        Log($"    {hiyo.Name} が {target.Name} の火を煽った", LogKind.Trigger);
+        GrowFire(target, 1, hiyo, FireLevelLabels.GrowStoke);
+        if (FireLevelRule.Of(hiyo) > 0) { FireBook.SelfGrowth++; GrowFire(hiyo, 1, hiyo, FireLevelLabels.GrowSelf); }
+    }
+
+    readonly Queue<(UnitState Giver, UnitState To, int Ord)> _giftQueue = new();
+    bool _inGift;
+
+    /// <summary>ターンギフトを撃つ: 相手を控え、ヒヨの火勢を 1 に戻す。手番はヒヨの `TakeTurn` が返った後に渡す。</summary>
+    public void QueueGift(UnitState hiyo, IReadOnlyList<UnitState> to, int level)
+    {
+        FireBook.Gifts++;
+        FireBook.GiftRecipients += to.Count;
+        FireBook.GiftAtLevel[Math.Clamp(level, 0, 4)]++;
+        if (FireBook.FirstGiftTurn == 0) FireBook.FirstGiftTurn = _turn;
+        for (int i = 0; i < to.Count; i++)
+        {
+            _giftQueue.Enqueue((hiyo, to[i], i + 1));
+            if (_verbose) Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.FireLevel, Turn = _turn, ActorId = hiyo.InstanceId, TargetId = to[i].InstanceId,
+                Amount = level, Slot = i + 1, HpAfter = Math.Max(0, to[i].Hp), Text = FireLevelLabels.Gift,
+            });
+        }
+        Log($"    {hiyo.Name} が火を渡した（{string.Join("・", to.Select(u => u.Name))}）", LogKind.Highlight, hiyo);
+        int lv = FireLevelRule.Of(hiyo);
+        if (lv > 1)
+        {
+            hiyo.SetCounter(FireLevelRule.LvKey, 1);
+            EmitFireLevel(hiyo, hiyo, FireLevelLabels.Spent, 1, lv);
+        }
+    }
+
+    /// <summary>控えた相手へ通常の手番を1回ずつ（`TakeTurn`・粛の窓口は通らない）。倒れていれば飛ばす。</summary>
+    void DrainGifts()
+    {
+        _inGift = true;
+        try
+        {
+            while (_giftQueue.Count > 0)
+            {
+                var (giver, to, ord) = _giftQueue.Dequeue();
+                if (!to.IsAlive) { FireBook.GiftTurnsSkipped++; continue; }
+                if (!TeamAlive(Opponent(to.TeamId))) { FireBook.GiftTurnsSkipped += 1 + _giftQueue.Count; _giftQueue.Clear(); break; }
+                FireBook.GiftTurns++;
+                if (HushHolderAlive) FireBook.GiftHushTurns++;
+                if (_verbose) Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.FireLevel, Turn = _turn, ActorId = giver.InstanceId, TargetId = to.InstanceId,
+                    Amount = FireLevelRule.Of(to), Slot = ord, HpAfter = Math.Max(0, to.Hp), Text = FireLevelLabels.GiftTurn,
+                });
+                Log($"  {to.Name} は {giver.Name} から火を受け取って動く", LogKind.Highlight, to);
+                TurnOutcome o = TakeTurn(to);
+                FireBook.GiftOutcome[(int)o]++;
+                if (o == TurnOutcome.Stalled) FireBook.GiftStalled++;
+                if (o == TurnOutcome.Attack && HushHolderAlive) FireBook.GiftHushAttacks++;
+            }
+        }
+        finally { _inGift = false; }
+    }
+
+    /// <summary>火勢の台本（表示専用・verbose のときだけ）。</summary>
+    void EmitFireLevel(UnitState? actor, UnitState target, string label, int amount, int slot)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.FireLevel, Turn = _turn, ActorId = actor?.InstanceId, TargetId = target.InstanceId,
+            Amount = amount, Slot = slot, HpAfter = Math.Max(0, target.Hp), Text = label,
+        });
+    }
+
+    // =====================================================================================
     // 第235期 —— 燃える巻き込み（S）・くすぶり（O）・火の癒し（H1）・焼き返し（H2）。どれも乱数を引かない。
     // 台本は `FireArmor` の種類に札（`FireArmorLabels`）を足しただけ（表示専用・verbose のときだけ）。
     // =====================================================================================
@@ -8723,6 +8961,29 @@ public sealed class BattleContext
     }
 
     void PerformAttackFramed(UnitState actor, string prefix, int attackPercent, AttackPattern? patternOverride)
+    {
+        // 第242期: 火勢の攻撃の枠（当てた敵の控え・燃え広がりの控え・ホタの段の着火）。**保持者がいなければ比較1つで素通り。**
+        if (_fireLvLive && _fireLvTeams[actor.TeamId])
+        {
+            var fa = new FireAtkFrame { Actor = actor, Stage = actor.HasTrait(TraitId.PyreStage) ? FireLevelRule.Of(actor) : 0 };
+            SpreadScope? own = SpreadScopeOf(actor) is null ? new SpreadScope { Actor = actor } : null;
+            if (own is not null) _spreadScopes.Add(own);
+            _fireAtkFrames.Add(fa);
+            try { PerformAttackArmored(actor, prefix, attackPercent, patternOverride); }
+            finally
+            {
+                _fireAtkFrames.RemoveAt(_fireAtkFrames.Count - 1);
+                if (own is not null) _spreadScopes.Remove(own);
+            }
+            if (own is not null) ResolveSpread(own);
+            if (fa.Stage >= PyreStageTrait.BurstLevel) _burstLock = fa.Hit.Count > 0 ? fa.Hit[0] : null;
+            ResolveStageIgnite(fa);
+            return;
+        }
+        PerformAttackArmored(actor, prefix, attackPercent, patternOverride);
+    }
+
+    void PerformAttackArmored(UnitState actor, string prefix, int attackPercent, AttackPattern? patternOverride)
     {
         if (_fireArmorLive)
         {
@@ -8972,7 +9233,20 @@ public sealed class BattleContext
         // どちらも `ModifyAttack` / `ModifyPattern` が毎回その場で評価するので、
         // 出来事としては1つも残らない（`ModifyAttack` は ctx を受け取らないので特性側では打てない）。
         if (actor.HasTrait(TraitId.Pyre) && actor.RawCounter(StatusKeys.Burn) > 0)
-            HighlightOnce(actor, "pyre", $"  {actor.Name} は燃えたまま振り抜いた（攻 ×{PyreTrait.Multiplier}・貫き）");
+        {
+            // 第242期（ホタの段）: 段ごとに1度ずつ（1 単体 ×4 ／ 2 貫き ×4 ＋着火 ／ 3 以上 5連撃）。札が無ければ今の1行。
+            if (actor.HasTrait(TraitId.PyreStage))
+            {
+                int st = Math.Min(FireLevelRule.Of(actor), PyreStageTrait.BurstLevel);
+                HighlightOnce(actor, "pyre" + st, st switch
+                {
+                    1 => $"  {actor.Name} は燃えたまま振り抜いた（段1・攻 ×{PyreTrait.Multiplier}・単体）",
+                    2 => $"  {actor.Name} の炎が列を貫いた（段2・攻 ×{PyreTrait.Multiplier}・貫き・当たった敵に着火）",
+                    _ => $"  {actor.Name} が燃え盛って連撃に入った（段3・1回 ×1.6 を {PyreStageTrait.BurstHits} 回・1回ごとに着火）",
+                });
+            }
+            else HighlightOnce(actor, "pyre", $"  {actor.Name} は燃えたまま振り抜いた（攻 ×{PyreTrait.Multiplier}・貫き）");
+        }
         if (actor.HasTrait(TraitId.Sniper) && actor.HasFallenBack && actor.Row == Row.Back)
         {
             // 第129期・**計数のみ**。狙撃の成立は `PerformAttack` がその場で評価して
@@ -9040,6 +9314,7 @@ public sealed class BattleContext
         int first = dealt;
         if (whip is not null) first = WhipAmount(whip, target, first);   // 第217期（当てる前の2倍）
         UnitState firstRecv = shield is null ? target : ShieldRecv(shield, target, ref first);
+        if (_fireLvLive) NoteFireContact(actor, firstRecv);   // 第242期（燃え広がりの控え・当てる前）
         ApplyDamage(firstRecv, first, actor, singleHit: pattern == AttackPattern.Single, pattern: pattern);
 
         // 適用順を混ぜる。同じ一振りで2体以上落ちるとき、死亡順（墓守の層・破裂の連鎖）が
@@ -9059,6 +9334,7 @@ public sealed class BattleContext
             int share = Math.Max(1, dealt * SecondaryPercent / 100);
             if (whip is not null) share = WhipAmount(whip, extra, share);   // 第217期（当てる前の2倍・当たる駒ごと）
             UnitState recv = shield is null ? extra : ShieldRecv(shield, extra, ref share);
+            if (_fireLvLive) NoteFireContact(actor, recv);   // 第242期
             ApplyDamage(recv, share, actor, pattern: pattern);
         }
 
@@ -9153,6 +9429,7 @@ public sealed class BattleContext
             }
             int got = dmg;
             UnitState recv = shield is null ? u : ShieldRecv(shield, u, ref got);
+            if (_fireLvLive) NoteFireContact(actor, recv);   // 第242期
             ApplyDamage(recv, got, actor, pattern: AttackPattern.Pierce);
             if (u == entry) primaryDealt = dmg;
             passed++;
@@ -10077,6 +10354,7 @@ public sealed class BattleContext
             amount = Math.Max(0, target.Hp - 1);
             target.SetCounter(StatusKeys.Burn, 0);
             CloseBurnEpisode(target, expired: true);
+            if (_fireLvLive) FireOut(target);   // 第242期（火勢: 火が消えたら 0）
             UnitTally st = TallyOf(target);
             st.SmolderUsed++;
             st.SmolderTurn = Turn;
@@ -10399,6 +10677,14 @@ public sealed class BattleContext
 
     public TurnOutcome TakeTurn(UnitState actor)
     {
+        TurnOutcome o = TakeTurnFramed(actor);
+        // 第242期: ヒヨのターンギフト。手番（と手番の枠）が閉じた後に、控えた相手へ通常の手番を1回ずつ渡す。**控えが無ければ比較1つで返る。**
+        if (_giftQueue.Count > 0 && !_inGift) DrainGifts();
+        return o;
+    }
+
+    TurnOutcome TakeTurnFramed(UnitState actor)
+    {
         // 第105期。**中身は1文字も触っていない**——枠だけを被せて
         // 「いま誰の手番か」を立て、帰ってきた種別を数える（観測専用）。
         UnitState? prevActor = TurnActor;
@@ -10658,6 +10944,22 @@ public sealed class BattleContext
     /// </summary>
     private void SwingTurn(UnitState actor, UnitAction? act)
     {
+        // 第242期: 燃え広がりの枠（手番の一振り全体で「同じ敵は1回まで」・5連撃も1つ）。**保持者がいなければ比較1つで本体へ直行する。**
+        if (_fireLvLive && _fireLvTeams[actor.TeamId])
+        {
+            NoteHotaStage(actor);
+            var sc = new SpreadScope { Actor = actor };
+            _spreadScopes.Add(sc);
+            try { SwingTurnBody(actor, act); }
+            finally { _spreadScopes.RemoveAt(_spreadScopes.Count - 1); }
+            ResolveSpread(sc);
+            return;
+        }
+        SwingTurnBody(actor, act);
+    }
+
+    private void SwingTurnBody(UnitState actor, UnitAction? act)
+    {
         // 第223期: 段2 以上のセロの手番は乱れ撃ち（5本・的は乱数）。**保持者がいなければ比較1つで抜ける。**
         if (_evadeLive && actor.HasTrait(TraitId.Evade) && EvadeTrait.StageOf(actor) >= 2) { Barrage(actor); return; }
 
@@ -10665,10 +10967,14 @@ public sealed class BattleContext
         foreach (Trait t in actor.Traits) hits = t.ModifyHitCount(actor, hits);
         if (hits < 1) hits = 1;   // 上限は特性の側。engine が保証するのは「1発は振る」だけ
 
+        // 第242期（ホタの段3 の 5連撃）: 同じ敵に続けて振る——2発目以降は直前の1発の主目標に的を固定する（倒れていれば通常どおり選び直す）。
+        bool burst = _fireLvLive && hits > 1 && actor.HasTrait(TraitId.PyreStage);
+        _burstLock = null;
         for (int i = 0; i < hits; i++)
         {
             if (!actor.IsAlive) break;
             if (i > 0) TallyOf(actor).ExtraSwings++;   // 第178期・**計数専用**
+            if (burst && i > 0 && _burstLock is { IsAlive: true } lk) _forcedTarget = lk;
             if (act is null) PerformAttack(actor);
             else PerformAttack(actor, attackPercent: act.AttackPercent,
                                patternOverride: act.PatternOverride);
@@ -12044,6 +12350,7 @@ public static class BattleEngine
             ctx.NoteArmorCensus();      // 破片の在庫（第138期 段2）。**盤面は読むだけ**
             ctx.NoteWardCensus();       // 重りの在庫（第154期）。**盤面は読むだけ**
             ctx.NoteBraceCensus();      // 身構えの保持者の板（第213期）。**盤面は読むだけ**
+            ctx.NoteFireLevelCensus();  // 火勢（第242期）。**盤面は読むだけ**
 
             foreach (UnitState u in ctx.AllUnits.Where(x => x.IsAlive).ToList())
                 foreach (Trait t in u.Traits.ToList())
@@ -12142,6 +12449,7 @@ public static class BattleEngine
                 ctx.TakeTurn(actor);
             }
 
+            ctx.WiltFire();         // 第242期: 育たなかった駒の火勢が萎む（ターンの終わり）。保持者がいなければ比較1つで抜ける
             ctx.NoteFoeStalled();   // 第185期（計数のみ）: このターンに手番を失った敵の数の分布
         }
 
@@ -12226,6 +12534,7 @@ public static class BattleEngine
             Brittle = ctx.BrittleBook,   // 第219期（計数のみ）
             Burst = ctx.BurstBook,       // 第220期（計数のみ）
             BurnLink = ctx.BurnLinkBook, // 第233期（計数のみ）
+            FireLevels = ctx.FireLvLive ? ctx.FireBook : null,   // 第242期（計数のみ）
             Burns = new BurnLedger(
                 (long[])ctx.BurnLitSide.Clone(), (long[])ctx.BurnRelitSide.Clone(),
                 (long[])ctx.BurnEpisodes.Clone(), (long[])ctx.BurnRelitSum.Clone(),

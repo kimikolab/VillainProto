@@ -3531,7 +3531,43 @@ public enum BattleEventKind
     /// <c>ActorId</c> ＝ ハネ ／ <c>TargetId</c> ＝ 動かされた隣の味方 ／ <c>PartnerId</c> ＝ 入れ替わった相手 ／ <c>Slot</c> ＝ その戦で何回目か（1 始まり）。
     /// 据えた足で空振りしたときは見出しだけで <c>Move</c> は続かない。
     /// </summary>
-    Landing
+    Landing,
+
+    /// <summary>
+    /// 火勢（第242期・<b>表示専用</b>）。<c>Text</c> は <see cref="FireLevelLabels"/>。火勢の変化（点く・育つ・萎む・消える・撃った）は
+    /// <c>TargetId</c> ＝ 駒 ／ <c>Amount</c> ＝ 変化の後の火勢 ／ <c>Slot</c> ＝ 変化の前の火勢 ／ <c>ActorId</c> ＝ 原因（着火した駒・燃え広がりの本人・煽ったヒヨ）。
+    /// 燃え広がり・煽り・ギフト・ギフトの手番・段は見出し（<see cref="FireLevelLabels"/> の各札の doc）。
+    /// </summary>
+    FireLevel
+}
+
+/// <summary>火勢の台本の札（第242期・<see cref="BattleEventKind.FireLevel"/> の <c>Text</c>）。<b>表示専用。</b></summary>
+public static class FireLevelLabels
+{
+    /// <summary>燃えていなかった駒に火が点いた（0 → 1）。点け直しでは出ない（保つ火）。</summary>
+    public const string Lit = "点く";
+    /// <summary>燃え広がりで育った（<c>ActorId</c> ＝ 本人）。直前に燃え広がりの見出しが相手の数だけ並ぶ。</summary>
+    public const string GrowSpread = "育つ・燃え広がり";
+    /// <summary>ヒヨの煽りで育った（<c>ActorId</c> ＝ ヒヨ）。</summary>
+    public const string GrowStoke = "育つ・煽り";
+    /// <summary>ヒヨ自身が育った（煽ったとき・味方が燃え広がりで育ったとき。<c>ActorId</c> ＝ 育ちのもとになった駒）。</summary>
+    public const string GrowSelf = "育つ・ヒヨ";
+    /// <summary>ターンの終わりに萎んだ（そのターン一度も育たなかった・燃えている間は 1 未満にならない）。</summary>
+    public const string Wilt = "萎む";
+    /// <summary>燃焼が切れて 0 に戻った。</summary>
+    public const string Out = "消える";
+    /// <summary>ターンギフトを撃ってヒヨが 1 に戻った。</summary>
+    public const string Spent = "撃った";
+    /// <summary>見出し: 燃え広がり。<c>ActorId</c> ＝ 燃えている味方（殴った本人）／ <c>TargetId</c> ＝ 当たる前から燃えていた敵。1回の攻撃で同じ敵は1回。</summary>
+    public const string Spread = "燃え広がり";
+    /// <summary>見出し: 煽り。<c>ActorId</c> ＝ ヒヨ ／ <c>TargetId</c> ＝ 煽った味方（続いて その味方とヒヨの「育つ」）。</summary>
+    public const string Stoke = "煽り";
+    /// <summary>見出し: ターンギフト。<c>ActorId</c> ＝ ヒヨ ／ <c>TargetId</c> ＝ 相手 ／ <c>Slot</c> ＝ 何体目（1 始まり）／ <c>Amount</c> ＝ 撃った時のヒヨの火勢。ヒヨの手番の中で出る。</summary>
+    public const string Gift = "ターンギフト";
+    /// <summary>見出し: ギフトの手番が始まる（ヒヨの手番の直後・続いて相手の手番の出来事）。<c>ActorId</c> ＝ ヒヨ ／ <c>TargetId</c> ＝ 相手 ／ <c>Slot</c> ＝ 何体目。</summary>
+    public const string GiftTurn = "ギフトの手番";
+    /// <summary>見出し: ホタの段（手番の頭）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ホタ ／ <c>Amount</c> ＝ 段（手番の時点の火勢・燃えていなければ 0）。</summary>
+    public const string Stage = "段";
 }
 
 /// <summary>撃破の衝撃（第230期）の <c>Text</c>。<b>表示専用。</b></summary>
@@ -3614,6 +3650,25 @@ public sealed class BrittleLedger
 /// 「もし繋ぎがあれば発火していた局面」を数えるだけ。添字 <c>[ph]</c> は 0 ＝ ターン1〜3 ／ 1 ＝ ターン4以降。
 /// <para>「燃えている」＝ 燃焼の残りターン 1 以上（刻みで残りが 0 になってから倒れた駒も、その刻みの中なら燃えていたと数える）。</para>
 /// </summary>
+/// <summary>
+/// 火勢の帳簿（第242期）。<b>計数専用で、どの規則も読まない。</b>写し（<see cref="Snaps"/>）はターンの頭（刻みの後）に、火勢を持つ陣営の生きている駒ごと。
+/// </summary>
+public sealed class FireLevelLedger
+{
+    public readonly record struct Snap(int Turn, int Id, int Team, int Level, bool Burning);
+    public readonly List<Snap> Snaps = new();
+    public long Lit, Relit, Outs, Wilts, SpreadHits, SpreadGrowth, SpreadWasted, SpreadNotBurning, Stokes, StokeNoTarget, SelfGrowth;
+    public long Gifts, GiftRecipients, GiftNoTarget, GiftTurns, GiftTurnsSkipped, GiftStalled, GiftHushTurns, GiftHushAttacks, FireKeeps;
+    /// <summary>ギフトの手番の中身（`TurnOutcome` の添字）。</summary>
+    public readonly long[] GiftOutcome = new long[4];
+    /// <summary>ホタの段の手番（添字 ＝ 段 0〜4）。</summary>
+    public readonly long[] StageHands = new long[5];
+    /// <summary>初めてギフトが出たターン（出なければ 0）。</summary>
+    public int FirstGiftTurn;
+    /// <summary>ギフトを撃った時のヒヨの火勢の分布（3 ／ 4）。</summary>
+    public readonly long[] GiftAtLevel = new long[5];
+}
+
 public sealed class BurnLinkLedger
 {
     public static int PhaseOf(int turn) => turn <= 3 ? 0 : 1;
@@ -4493,6 +4548,8 @@ public sealed class BattleResult
 
     /// <summary>燃焼の繋ぎの発火見込み（第233期・<see cref="BurnLinkLedger"/>）。<b>計数専用で、どの規則も読まない。</b></summary>
     public BurnLinkLedger? BurnLink { get; init; }
+    /// <summary>火勢の帳簿（第242期・<see cref="FireLevelLedger"/>）。<b>計数専用で、どの規則も読まない。</b>保持者のいない戦では空。</summary>
+    public FireLevelLedger? FireLevels { get; init; }
 
     /// <summary>
     /// 第184期。標の軸（§1 被ダメージ増・§2 矢面の半減）の帳簿（<b>計数専用</b>。どの規則も読まない）。
