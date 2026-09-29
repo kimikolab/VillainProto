@@ -2325,6 +2325,17 @@ public sealed class UnitTally
     /// </summary>
     public long FireSplashHits, FireSplashNominal, FireSplashImmune, FireSplashInverted, FireSplashInvHealed, FireSplashTaken;
     public long SelfKindleLit, FireMendNominal, FireMendHealed, FireMendDry, FireMendSplash, FireFeedFires, FireFeedNominal, FireFeedHealed, FireFeedDry;
+    /// <summary>
+    /// 第238期・<b>計数専用</b>（ボルグの版 D・ヒヨの版 V）。保持者（ボルグ）の側: <c>FireWardHits</c> 盾の配りで半分にした一撃 ／ <c>FireWardSaved</c> 切った量。
+    /// 受け手の側: <c>FireWardTaken</c> 盾の配りで切ってもらった量。
+    /// 保持者（ヒヨ）の側: <c>FireConvTick*</c> 燃焼の刻み・起爆を変えた 名目 ／ 癒えた ／ <c>FireConvSplash*</c> 燃える巻き込みを変えた 名目 ／ 癒えた ／ <c>FireConvDry</c> 渇きで止まった回数、
+    /// 優先順位（燃えている味方が燃焼ダメージを受けた名目）: <c>FireConvPrecPyre</c> 熾火・火の鎧で焼かれない ／ <c>FireConvPrecMend</c> 火の癒し ／ <c>FireConvPrecBeni</c> ベニの結界 ／ <c>FireConvPrecV</c> 火の変換。
+    /// 燃える味方の数（ボルグの側・ターン頭）: <c>WardCensusTurns</c> ボルグが生きていたターン ／ <c>WardBurnAllies</c> 燃えている味方（ボルグを除く）の延べ ／ <c>WardBurnAdj</c> そのうちボルグの隣の延べ。
+    /// </summary>
+    public long FireWardHits, FireWardSaved, FireWardTaken;
+    public long FireConvTickNominal, FireConvTickHealed, FireConvSplashNominal, FireConvSplashHealed, FireConvDry;
+    public long FireConvPrecPyre, FireConvPrecMend, FireConvPrecBeni, FireConvPrecV;
+    public long WardCensusTurns, WardBurnAllies, WardBurnAdj;
     public int[]? ShioStageTurn;
 
     /// <summary>
@@ -3539,6 +3550,10 @@ public static class FireArmorLabels
     public const string Mend = "火の癒し";
     /// <summary>第235期（H2）: <c>TargetId</c> ＝ 保持者 ／ <c>Amount</c> ＝ 名目の回復（続いて <c>Heal</c> と自分への着火の <c>StatusGain</c>）。</summary>
     public const string Feed = "焼き返し";
+    /// <summary>第238期（D1/D2）: <c>ActorId</c> ＝ ボルグ ／ <c>TargetId</c> ＝ 燃えている味方 ／ <c>Amount</c> ＝ 切った量（続いて その一撃の <c>Damage</c>）。</summary>
+    public const string Ward = "盾の配り";
+    /// <summary>第238期（V1/V2）: <c>ActorId</c> ＝ ヒヨ ／ <c>TargetId</c> ＝ 燃えている味方 ／ <c>Amount</c> ＝ 変えた燃焼ダメージの名目（続いて <c>Heal</c>・満タンなら続かない）。燃焼の刻み・起爆の位置（<c>Status</c> の代わり）か、燃える巻き込みの札の直後に出る。</summary>
+    public const string Convert = "火の変換";
 }
 
 public static class ImpactLabels

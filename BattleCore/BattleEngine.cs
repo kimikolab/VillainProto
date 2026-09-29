@@ -675,6 +675,7 @@ public sealed class BattleContext
     {
         NoteRuleHolders();   // 第134期 段2 —— 保持者が落ちたターンの記録。**盤面には触らない。**
         NoteBurnPresence();  // 第219期 —— 刻みの前に燃えている駒を数える。**盤面には触らない。**
+        if (_fireArmorLive || _fireWardHolders.Count > 0) NoteFireWardCensus();   // 第238期 —— **計数のみ**
 
         foreach (UnitState u in _units.Where(x => x.IsAlive).ToList())
         {
@@ -819,6 +820,7 @@ public sealed class BattleContext
             if (Ember.Fireproof && (u.HasTrait(TraitId.Pyre) || (_fireArmorLive && FireproofArmor(u))))   // 第234期: 火の鎧も焼かれない
             {
                 // 第235期: 火の癒し（H1）。「焼かれない」を置き換え、刻みの量だけ回復する（火の回復・ベニの反転の裏は通らない）。
+                if (_fireConvertHolders.Count > 0) NoteConvertPrec(u, ScorchTick(u, BurnRules.Damage), _fireArmorLive && u.HasTrait(TraitId.FireMend) ? 1 : 0);   // 第238期・**計数のみ**
                 if (_fireArmorLive && u.HasTrait(TraitId.FireMend)) { FireHeal(u, ScorchTick(u, BurnRules.Damage), FireArmorLabels.Mend, tick: true); return; }
                 Log($"    {u.Name} は燃えているが焼かれない（残り {left - 1}）", LogKind.Status);
                 // ノブ（既定 0 ＝ 1ビットも動かない）。**`ctx.Heal` を通す**ので、
@@ -834,6 +836,7 @@ public sealed class BattleContext
             UnitState? inverterB = InvertsTick(u);
             if (inverterB is not null)
             {
+                if (_fireConvertHolders.Count > 0) NoteConvertPrec(u, burnDmg, 2);   // 第238期・**計数のみ**
                 Emit(new BattleEvent
                 {
                     Kind = BattleEventKind.Status, Turn = _turn, TargetId = u.InstanceId, Amount = burnDmg, Text = "燃焼",
@@ -841,6 +844,13 @@ public sealed class BattleContext
                     TickIndex = ord.Index, TickCount = ord.Count,
                 });
                 InverseHeal(inverterB, u, burnDmg, 1, "火");
+                ClearKindleHeld(u);
+                return;
+            }
+            // 第238期: 火の変換（ヒヨ・V）。熾火・火の癒し・ベニの結界の後。刻みを受ける代わりに回復（ベニの反転と同じく刻みの計数には写さない）。
+            if (_fireConvertHolders.Count > 0 && FireConvertHolder(u) is UnitState hiyoB)
+            {
+                FireConvert(hiyoB, u, burnDmg, tick: true);
                 ClearKindleHeld(u);
                 return;
             }
@@ -1000,12 +1010,14 @@ public sealed class BattleContext
         {
             if (Ember.Fireproof && (u.HasTrait(TraitId.Pyre) || (_fireArmorLive && FireproofArmor(u))))   // 第234期: 火の鎧も焼かれない
             {
+                if (!foe && _fireConvertHolders.Count > 0) NoteConvertPrec(u, ScorchTick(u, BurnRules.Damage), _fireArmorLive && u.HasTrait(TraitId.FireMend) ? 1 : 0);   // 第238期・**計数のみ**
                 // 火には焼かれない（刻みと同じ枝）。第235期: 火の癒しなら刻みの量だけ回復（倍は掛けない＝刻みと同じ量）。
                 if (_fireArmorLive && u.HasTrait(TraitId.FireMend)) FireHeal(u, ScorchTick(u, BurnRules.Damage), FireArmorLabels.Mend, tick: true);
                 else if (Ember.TickHeal > 0) Heal(u, Ember.TickHeal);
             }
             else if ((foe ? null : InvertsTick(u)) is UnitState inverterB)
             {
+                if (_fireConvertHolders.Count > 0) NoteConvertPrec(u, BurnRules.Damage * mult * ((u.RawCounter(StatusKeys.Plank) & PlankTrait.Scorch) != 0 ? 2 : 1), 2);   // 第238期・**計数のみ**
                 mult *= (u.RawCounter(StatusKeys.Plank) & PlankTrait.Scorch) != 0 ? 2 : 1;   // 第208期: 燃えやすい板
                 // 反転（第190期）。弾けた火も、隣のベニの前では薬になる。
                 Emit(new BattleEvent
@@ -1016,6 +1028,10 @@ public sealed class BattleContext
                     TickIndex = ord.Index, TickCount = ord.Count,
                 });
                 InverseHeal(inverterB, u, BurnRules.Damage * mult, 2, "弾けた火");
+            }
+            else if (!foe && _fireConvertHolders.Count > 0 && FireConvertHolder(u) is UnitState hiyoD)
+            {
+                FireConvert(hiyoD, u, ScorchTick(u, BurnRules.Damage * mult), tick: true);   // 第238期: 火の変換（弾けた火も刻みと同じ）
             }
             else
             {
@@ -6957,6 +6973,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
         if (u.HasTrait(TraitId.FireArmor) || u.HasTrait(TraitId.Smolder)
             || u.HasTrait(TraitId.FireMend) || u.HasTrait(TraitId.FireFeed)) _fireArmorLive = true;   // 第234期（火の鎧・焼け残り）・第235期（火の癒し・焼き返し）
+        if (u.HasTrait(TraitId.FireWard) || u.HasTrait(TraitId.FireWardAll)) _fireWardHolders.Add(u);             // 第238期（盾の配り）
+        if (u.HasTrait(TraitId.FireConvert) || u.HasTrait(TraitId.FireConvertHalf)) _fireConvertHolders.Add(u);   // 第238期（火の変換）
         if (u.HasTrait(TraitId.Decoy)) _decoyLive = true;         // 第226期（挑発）
         if (u.HasTrait(TraitId.Spring)) _springLive = true;       // 第228期（弾き返し）
         if (u.HasTrait(TraitId.Tailwind)) _tailwindLive = true;   // 第229期（追い風）
@@ -8567,8 +8585,10 @@ public sealed class BattleContext
         UnitTally t = TallyOf(borg);
         t.FireSplashHits++; t.FireSplashNominal += spill;
         EmitFireArmor(borg, ally, FireArmorLabels.Splash, spill);
+        bool conv = _fireConvertHolders.Count > 0 && ally.RawCounter(StatusKeys.Burn) > 0;   // 第238期: 火の変換は燃えている味方だけ
         if (Ember.Fireproof && (ally.HasTrait(TraitId.Pyre) || (_fireArmorLive && FireproofArmor(ally))))
         {
+            if (conv) NoteConvertPrec(ally, spill, _fireArmorLive && ally.HasTrait(TraitId.FireMend) ? 1 : 0);   // **計数のみ**
             t.FireSplashImmune += spill;
             Log($"    {ally.Name} は燃える巻き込みに焼かれない（{spill}）", LogKind.Status);
             if (_fireArmorLive && ally.HasTrait(TraitId.FireMend)) FireHeal(ally, spill, FireArmorLabels.Mend, tick: false);
@@ -8576,14 +8596,88 @@ public sealed class BattleContext
         }
         if (InvertsTick(ally) is UnitState beni)
         {
+            if (conv) NoteConvertPrec(ally, spill, 2);   // 第238期・**計数のみ**
             int h0 = ally.Hp;
             InverseHeal(beni, ally, spill, 5, "燃える巻き込み");
             t.FireSplashInverted += spill; t.FireSplashInvHealed += Math.Max(0, ally.Hp - h0);
             return;
         }
+        if (conv && FireConvertHolder(ally) is UnitState hiyo)
+        {
+            FireConvert(hiyo, ally, spill, tick: false);   // 第238期: 火の変換（燃えている味方には薬）
+            return;
+        }
         int b0 = ally.Hp;
         ApplyDamage(ally, spill, borg, isFriendlyFire: true);
         t.FireSplashTaken += b0 - Math.Max(0, ally.Hp);
+    }
+
+    // =====================================================================================
+    // 第238期 —— 盾の配り（ボルグ・D1 隣 ／ D2 全員）・火の変換（ヒヨ・V1 全量 ／ V2 半分）。どれも乱数を引かない。
+    // 保持者がいなければ `_fireWardHolders` / `_fireConvertHolders` の件数の比較1つで抜ける。台本は `FireArmor` の札（`Ward` / `Convert`）。
+    // =====================================================================================
+    readonly List<UnitState> _fireWardHolders = new();
+    readonly List<UnitState> _fireConvertHolders = new();
+
+    /// <summary>燃えている味方 <paramref name="u"/> に働く火の変換の保持者（同じ陣営で生きている・最初の1枚）。</summary>
+    UnitState? FireConvertHolder(UnitState u)
+    {
+        foreach (UnitState h in _fireConvertHolders)
+            if (h.IsAlive && h.TeamId == u.TeamId) return h;
+        return null;
+    }
+
+    /// <summary>盾の配りの保持者（同じ陣営で生きていて、D1 なら <paramref name="u"/> の隣）。保持者自身は対象外。</summary>
+    UnitState? FireWardHolder(UnitState u)
+    {
+        foreach (UnitState h in _fireWardHolders)
+            if (h.IsAlive && h != u && h.TeamId == u.TeamId && (h.HasTrait(TraitId.FireWardAll) || FormationRules.AreAdjacent(h, u))) return h;
+        return null;
+    }
+
+    /// <summary>
+    /// 火の変換（第238期・V）。燃焼ダメージ <paramref name="amount"/> を受ける代わりに、同じ量（V2 は半分・切り捨て）の火の回復
+    /// （<c>Heal(…, inverted: true, fireHeal: …)</c>＝ベニの反転の裏を通らず、渇きは <see cref="TraitId.FireConvertDry"/> を持たなければ素通り）。
+    /// 溢れた分は捨てる。支援拒否と上限は <c>Heal</c> がそのまま守る。
+    /// </summary>
+    void FireConvert(UnitState hiyo, UnitState u, int amount, bool tick)
+    {
+        UnitTally t = TallyOf(hiyo);
+        t.FireConvPrecV += amount;
+        EmitFireArmor(hiyo, u, FireArmorLabels.Convert, amount);
+        int heal = hiyo.HasTrait(TraitId.FireConvert) ? amount : amount / 2;
+        int before = u.Hp;
+        HealOutcome res = heal > 0 ? Heal(u, heal, hiyo, inverted: true, fireHeal: !hiyo.HasTrait(TraitId.FireConvertDry)) : HealOutcome.None;
+        int g = Math.Max(0, u.Hp - before);
+        if (res == HealOutcome.Drought) t.FireConvDry++;
+        if (tick) { t.FireConvTickNominal += amount; t.FireConvTickHealed += g; }
+        else { t.FireConvSplashNominal += amount; t.FireConvSplashHealed += g; }
+        Log($"    {hiyo.Name} の火が {u.Name} の燃焼を癒しに変えた（{amount} → +{g}）", LogKind.Status);
+    }
+
+    /// <summary>優先順位の内訳（<b>計数のみ</b>）: 火の変換の保持者がいるとき、燃えている味方の燃焼ダメージがどの規則に回ったか。0 焼かれない ／ 1 火の癒し ／ 2 ベニの結界。</summary>
+    void NoteConvertPrec(UnitState u, int amount, int kind)
+    {
+        if (FireConvertHolder(u) is not UnitState h) return;
+        UnitTally t = TallyOf(h);
+        if (kind == 0) t.FireConvPrecPyre += amount; else if (kind == 1) t.FireConvPrecMend += amount; else t.FireConvPrecBeni += amount;
+    }
+
+    /// <summary>ターン頭の燃える味方の数（<b>計数のみ</b>・ボルグ＝火の鎧か盾の配りの保持者ごと）。</summary>
+    void NoteFireWardCensus()
+    {
+        foreach (UnitState b in _units)
+        {
+            if (!b.IsAlive || !(b.HasTrait(TraitId.FireArmor) || b.HasTrait(TraitId.FireWard) || b.HasTrait(TraitId.FireWardAll))) continue;
+            UnitTally t = TallyOf(b);
+            t.WardCensusTurns++;
+            foreach (UnitState a in _units)
+            {
+                if (a == b || !a.IsAlive || a.TeamId != b.TeamId || a.RawCounter(StatusKeys.Burn) <= 0) continue;
+                t.WardBurnAllies++;
+                if (FormationRules.AreAdjacent(b, a)) t.WardBurnAdj++;
+            }
+        }
     }
 
     /// <summary>くすぶり（第235期・O）。開戦時に自分に火（通常の着火・残り 3）。</summary>
@@ -9551,6 +9645,26 @@ public sealed class BattleContext
                     EmitFireArmor(target, target, FireArmorLabels.Guard, saved);
                     Log($"    燃える {target.Name} の鎧が痛みを半分に抑えた（-{saved}）", LogKind.Trigger);
                 }
+            }
+        }
+
+        // 盾の配り（第238期・ボルグの版 D1 隣 ／ D2 全員）。火の鎧の半減の直後（巨躯・分かち・破片・身構え・軛より前）。
+        // 敵の攻撃（相手陣営の出どころ・刻み／徴収／中継／共有ではない）を燃えている味方が受けたら半分（切り上げ）。保持者自身は対象外。
+        // **保持者がいなければ件数の比較1つで抜ける。乱数を引かない。**
+        if (_fireWardHolders.Count > 0 && amount > 0 && target.RawCounter(StatusKeys.Burn) > 0
+            && source is not null && source.TeamId != target.TeamId && !burnTick && !levy && !relayed && !hexShare
+            && FireWardHolder(target) is UnitState ward)
+        {
+            int saved = amount * FireWardTrait.GuardPercent / 100;
+            if (saved > 0)
+            {
+                amount -= saved;
+                UnitTally wt = TallyOf(ward);
+                wt.FireWardHits++;
+                wt.FireWardSaved += saved;
+                TallyOf(target).FireWardTaken += saved;
+                EmitFireArmor(ward, target, FireArmorLabels.Ward, saved);
+                Log($"    {ward.Name} の火が燃える {target.Name} を守った（-{saved}）", LogKind.Trigger);
             }
         }
 

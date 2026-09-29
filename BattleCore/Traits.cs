@@ -493,6 +493,13 @@ public enum TraitId
     SpringRow,      // 同じ列の味方の被弾でも弾き返す（第236期・ハネの版 S3・`SpringGuard` と組む）: 隣接に加えて同じ行（前列・中列・後列）の味方も守る。**札そのものは挙動を持たない**（engine の弾き返しの判定が読む）
     Landing,        // 着地の反動（第237期・ハネの版 ②）: ハネが動かされるたび、隣の味方1体（乱数・HP5割未満は除く）をその味方の隣の別の味方と入れ替える（1ターンに 1 ＋ 敵の乱れの段 回）。
                     // **判定は engine**（`SwapSlots` / `RelocateLane` の一番外側の出口で控えを流す——入れ替えの途中に味方を動かさない）。保持者 0 枚
+    FireWard,       // 盾の配り・隣（第238期・ボルグの版 D1）: 保持者が生きている間、保持者の隣の燃えている味方は敵の攻撃から受けるダメージが半分（切り上げ）。保持者自身は対象外（火の鎧と重ねない）。
+                    // **判定は engine**（`ApplyDamageBody` の軽減の族・火の鎧の半減の直後）。保持者 0 枚
+    FireWardAll,    // 盾の配り・全員（第238期・ボルグの版 D2）: 同上、位置を問わず燃えている味方全員。**判定は engine**。保持者 0 枚
+    FireConvert,    // 火の変換・全量（第238期・ヒヨの版 V1）: 保持者が生きている間、燃えている味方が受ける燃焼ダメージ（燃焼の刻み・起爆・燃える巻き込み）は、受ける代わりに同じ量の回復になる。
+                    // 熾火（ホタ）・火の鎧／火の癒し（ボルグ）・ベニの結界の内側が先で、そこでは何もしない。回復は「火の回復」（ベニの反転の裏を通らない・渇きは素通り）。**判定は engine**。保持者 0 枚
+    FireConvertHalf,// 火の変換・半分（第238期・ヒヨの版 V2）: 同上、回復は半分（切り捨て）。**判定は engine**。保持者 0 枚
+    FireConvertDry, // 火の変換の回復が渇きに封じられる（第238期・ヒヨの版 V の b）。**札そのものは挙動を持たない**（`BattleContext.FireConvert` が読む）。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -13145,6 +13152,33 @@ public sealed class SpringRowTrait : Trait { public override TraitId Id => Trait
 /// 相手: その味方の隣の生きている味方のうち、ハネ・召喚枠を除いて <c>PickOne</c>。1ターンに <see cref="SpringTrait.LimitOf"/>（1 ＋ 敵の乱れの段）回まで（私有キー）。
 /// 候補が無いときは回数を使わない。行動ではないので粛の窓口は通らない。<b>engine の移動の一番外側の出口（<c>FlushLanding</c>）だけが呼ぶ。</b></para>
 /// </summary>
+/// <summary>
+/// 盾の配り（第238期・ボルグの版 D1 隣 ／ D2 全員・<b>保持者 0 枚</b>）。保持者が生きている間、（隣の／全員の）<b>燃えている味方</b>は
+/// 敵の攻撃から受けるダメージが半分（切り上げ）。保持者自身は対象外（火の鎧の半減と重ねない）。燃焼ダメージ・味方の攻撃は対象外。
+/// <b>札そのものは判定を持たない</b>（engine の <c>ApplyDamageBody</c>・火の鎧の半減の直後が読む）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class FireWardTrait : Trait
+{
+    public override TraitId Id => TraitId.FireWard;
+    /// <summary>燃えている味方の軽減（%・切り捨てで引く＝受ける側は切り上げ）。火の鎧と同じ。</summary>
+    public const int GuardPercent = 50;
+}
+/// <summary>盾の配り・全員（第238期・ボルグの版 D2・<b>保持者 0 枚</b>）。<see cref="FireWardTrait"/> と同じ判定で、隣に限らない。</summary>
+public sealed class FireWardAllTrait : Trait { public override TraitId Id => TraitId.FireWardAll; }
+
+/// <summary>
+/// 火の変換（第238期・ヒヨの版 V1 全量 ／ V2 半分・<b>保持者 0 枚</b>）。保持者が生きている間、<b>燃えている味方</b>が受ける燃焼ダメージ
+/// （燃焼の刻み・起爆・燃える巻き込み）は、受ける代わりに同じ量（V2 は半分・切り捨て）の回復になる。
+/// 優先順位: 熾火（焼かれない）→ 火の癒し → ベニの結界 → 火の変換（前の3つでは何もしない）。回復は「火の回復」
+/// （ベニの反転の裏を通らない・渇きは <see cref="TraitId.FireConvertDry"/> を持たなければ素通り・支援拒否と上限はそのまま）。
+/// <b>札そのものは判定を持たない</b>（engine の燃焼の刻み・起爆・<c>FireSplashHit</c> が読む）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class FireConvertTrait : Trait { public override TraitId Id => TraitId.FireConvert; }
+/// <summary>火の変換・半分（第238期・ヒヨの版 V2・<b>保持者 0 枚</b>）。</summary>
+public sealed class FireConvertHalfTrait : Trait { public override TraitId Id => TraitId.FireConvertHalf; }
+/// <summary>火の変換の回復が渇きに封じられる（第238期・ヒヨの版 V の b・<b>保持者 0 枚</b>）。</summary>
+public sealed class FireConvertDryTrait : Trait { public override TraitId Id => TraitId.FireConvertDry; }
+
 public sealed class LandingTrait : Trait
 {
     public const int HpGatePercent = 50;
@@ -15211,6 +15245,11 @@ public static class TraitCatalog
         new SpringStayTrait(),       // 第232期
         new SpringRowTrait(),        // 第236期
         new LandingTrait(),          // 第237期
+        new FireWardTrait(),         // 第238期
+        new FireWardAllTrait(),      // 第238期
+        new FireConvertTrait(),      // 第238期
+        new FireConvertHalfTrait(),  // 第238期
+        new FireConvertDryTrait(),   // 第238期
         new ShioStageSlowTrait(),    // 第226期
         new BackfireTrait(),   // 第188期
         new HexerTrait(),      // 第189期
