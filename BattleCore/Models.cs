@@ -2311,6 +2311,12 @@ public sealed class UnitTally
     public long SpringGuardOffLane, SpringGuardTail, SpringGuardCapped, SpringGuardHushed, SpringGuardHeld;
     /// <summary>第232期（S2）・<b>計数専用</b>: 隣の弾き返しで入れ替わらなかった（`SpringStay`）。</summary>
     public long SpringGuardStays;
+    /// <summary>
+    /// 第234期・<b>計数専用</b>（火の鎧・焼け残り・ボルグの版 G1〜G4）: <c>FireArmorFoeLit</c> 殴った敵に点けた回数 ／ <c>FireArmorSelfLit</c> 自分に点けた回数 ／
+    /// <c>FireArmorGuardHits</c> 燃えていて半分にした一撃 ／ <c>FireArmorSaved</c> 半分にして切った量 ／ <c>SmolderUsed</c> 焼け残った回数（1戦1回）／ <c>SmolderTurn</c> 焼け残ったターン。
+    /// </summary>
+    public long FireArmorFoeLit, FireArmorSelfLit, FireArmorGuardHits, FireArmorSaved, SmolderUsed;
+    public int SmolderTurn;
     public int[]? ShioStageTurn;
 
     /// <summary>
@@ -3492,10 +3498,26 @@ public enum BattleEventKind
     /// 移動の追撃（第231期・セロの版 C・<b>表示専用</b>）。<c>ActorId</c> ＝ セロ ／ <c>TargetId</c> ＝ 経路の先頭の敵 ／ <c>Slot</c> ＝ 経路 ／
     /// <c>Amount</c> ＝ そのターンの何本目（1〜2）。直後に貫きの <c>Attack</c> と <c>Damage</c>。
     /// </summary>
-    MoveShot
+    MoveShot,
+
+    /// <summary>
+    /// 火の鎧・焼け残り（第234期・ボルグの版 G1〜G4・<b>表示専用</b>）。<c>ActorId</c> ＝ 保持者（ボルグ）／ <c>Text</c> ＝ <see cref="FireArmorLabels"/>。
+    /// 「燃え移る」: <c>TargetId</c> ＝ 殴った敵（攻撃が終わった直後・続いて着火の <c>StatusGain</c>）／ 「自火」: <c>TargetId</c> ＝ 保持者 ／
+    /// 「半減」: <c>TargetId</c> ＝ 保持者・<c>Amount</c> ＝ 切った量（直後にその一撃の <c>Damage</c>）／ 「焼け残り」: <c>Amount</c> ＝ 止めた量（HP1 で止まり火が消える）。
+    /// </summary>
+    FireArmor
 }
 
 /// <summary>撃破の衝撃（第230期）の <c>Text</c>。<b>表示専用。</b></summary>
+/// <summary>火の鎧・焼け残りの台本の札（第234期・<see cref="BattleEventKind.FireArmor"/> の <c>Text</c>）。</summary>
+public static class FireArmorLabels
+{
+    public const string Foe = "燃え移る";
+    public const string Self = "自火";
+    public const string Guard = "半減";
+    public const string Smolder = "焼け残り";
+}
+
 public static class ImpactLabels
 {
     public const string Blow = "吹き飛ばし";

@@ -479,6 +479,10 @@ public enum TraitId
     SpringGuard,    // 隣の味方の被弾でも弾き返す（第231期・ハネの版 B）: そのときハネはその味方と入れ替わる。**札そのものは挙動を持たない**（engine の弾き返しの判定が読む）。保持者 0 枚
     SpringStay,     // 隣の弾き返しで入れ替わらない（第232期・ハネの版 S2・`SpringGuard` と組む）: 隣の味方が殴られたときは殴った敵を弾くだけ。**札そのものは挙動を持たない**（`BattleContext.SpringSwap` が読む）。保持者 0 枚
     EvadeMoveShot,  // 移動の追撃（第231期・セロの版 C）: 段2 以上で隊列を動かされたら貫きの矢を1本（1ターン2回・自分の回避の入れ替えでは撃たない）。保持者 0 枚
+    FireArmor,      // 火の鎧（第234期・ボルグの版 G1〜G4）: 敵の攻撃を受けると、攻撃が終わってから殴った敵と自分に火が点く（攻撃1回ごと）／燃えている間は受けるダメージが半分（切り上げ）／火に焼かれない。
+                    // **判定は engine**（着火は `PerformAttack` の枠の出口・半減は `ApplyDamageBody` の軽減の族の最後・焼かれないは燃焼の刻みの2箇所）。保持者 0 枚
+    Smolder,        // 焼け残り（第234期・ボルグの版 G2/G4・`FireArmor` と組む）: 燃えている間に倒れる一撃を受けても HP1 で踏みとどまり、火が消える（1戦1回）。その被弾では火の鎧の自分への着火をしない。
+                    // **判定は engine**（`ApplyDamageBody` の HP を引く直前・逃げ足と同じ箇所）。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -8940,6 +8944,34 @@ public sealed class CinderTrait : Trait
 }
 
 /// <summary>
+/// 火の鎧（第234期・焼け残りのボルグの版 G1〜G4・<b>保持者 0 枚</b>——版は診断 <c>borgguard</c> のローカルの駒）。
+/// <para>① <b>敵の攻撃を受けると、その攻撃が終わってから、殴った敵と自分に火が点く</b>（攻撃1回ごと・薙ぎ／貫き／全体で当たっても殴った敵1体に1回）。
+/// 「攻撃」は敵の <c>PerformAttack</c> の枠の中で、その枠の主（攻撃者）が出どころの一撃——手番の攻撃・割り込み・反撃・追い打ち。
+/// 巻き込み・刻み・毒・味方の攻撃・枠の外の直のダメージ（棘の反射など）では点かない。破片で受け切った一撃も「受けた」に数える。</para>
+/// <para>② <b>燃えている間、受けるダメージが半分</b>（切り上げ＝ <c>amount − amount / 2</c>）。種類を問わない。置き場所は軽減の族の最後（層の直後・巨躯／分かち／破片／身構え／軛より前）。</para>
+/// <para>③ <b>火に焼かれない</b>（熾のホタと同じ枝・燃焼の刻みと起爆の2箇所）。</para>
+/// <para><b>札そのものは判定を持たない</b>（すべて engine が読む）。<b>乱数を引かない。</b></para>
+/// </summary>
+public sealed class FireArmorTrait : Trait
+{
+    public override TraitId Id => TraitId.FireArmor;
+    /// <summary>燃えている間の軽減（%・切り捨てで引く＝受ける側は切り上げ）。</summary>
+    public const int GuardPercent = 50;
+}
+
+/// <summary>
+/// 焼け残り（第234期・ボルグの版 G2/G4・<b>保持者 0 枚</b>）。<b>燃えている間に倒れる一撃を受けても HP1 で踏みとどまり、火が消える。1戦1回。</b>
+/// 判定は engine の <c>ApplyDamageBody</c> の HP を引く直前（破片・受け流し・身構え・軛の後＝本当に倒れる一撃だけ・逃げ足と同じ箇所）で、出どころは問わない。
+/// その一撃が敵の攻撃なら、火の鎧の<b>自分への</b>着火をしない（殴った敵には点く）。会戦の境界で回数を戻す。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class SmolderTrait : Trait
+{
+    public const string UsedKey = "smolderUsed";
+    public override TraitId Id => TraitId.Smolder;
+    public override void OnCarryOver(UnitState self) => self.SetCounter(UsedKey, 0);
+}
+
+/// <summary>
 /// 熾火。自分が燃えている間だけ本領を発揮し、火が消えるとほぼ無力になる。
 ///
 /// 毒の変換役（ヴィオ・ラウ＝量を読む / ベニ・ミオ＝数を読む）とは読むものが違う。
@@ -14977,6 +15009,8 @@ public static class TraitCatalog
         new PursuerTrait(),
         new RearGuardTrait(),
         new CinderTrait(),
+        new FireArmorTrait(),
+        new SmolderTrait(),
         new PyreTrait(),
         new CondemnTrait(),
         new ThornGuardTrait(),

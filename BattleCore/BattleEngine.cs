@@ -816,7 +816,7 @@ public sealed class BattleContext
             // `Ember.Fireproof` は **既定 true ＝ 採用した版**。偽にすると第177期までの盤面に戻る
             // （`EmberRule.Charred`。自己検査 (a) がそれで 305 セルを突き合わせる）。
             // 保持者はロスターに熾のホタ1枚だけなので、他の 51 枚は比較1つで抜ける。
-            if (Ember.Fireproof && u.HasTrait(TraitId.Pyre))
+            if (Ember.Fireproof && (u.HasTrait(TraitId.Pyre) || (_fireArmorLive && u.HasTrait(TraitId.FireArmor))))   // 第234期: 火の鎧も焼かれない
             {
                 Log($"    {u.Name} は燃えているが焼かれない（残り {left - 1}）", LogKind.Status);
                 // ノブ（既定 0 ＝ 1ビットも動かない）。**`ctx.Heal` を通す**ので、
@@ -996,7 +996,7 @@ public sealed class BattleContext
 
         if (burn > 0 && u.IsAlive)
         {
-            if (Ember.Fireproof && u.HasTrait(TraitId.Pyre))
+            if (Ember.Fireproof && (u.HasTrait(TraitId.Pyre) || (_fireArmorLive && u.HasTrait(TraitId.FireArmor))))   // 第234期: 火の鎧も焼かれない
             {
                 // 火には焼かれない（刻みと同じ枝）。
                 if (Ember.TickHeal > 0) Heal(u, Ember.TickHeal);
@@ -6940,6 +6940,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Deflect)) _deflectHolders.Add(u); // 第186期（逸らしの判定の短絡）
         if (u.HasTrait(TraitId.Thrust) || u.HasTrait(TraitId.ThrustPlain)) _thrustLive = true;   // 第186期 追補
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
+        if (u.HasTrait(TraitId.FireArmor) || u.HasTrait(TraitId.Smolder)) _fireArmorLive = true;   // 第234期（火の鎧・焼け残り）
         if (u.HasTrait(TraitId.Decoy)) _decoyLive = true;         // 第226期（挑発）
         if (u.HasTrait(TraitId.Spring)) _springLive = true;       // 第228期（弾き返し）
         if (u.HasTrait(TraitId.Tailwind)) _tailwindLive = true;   // 第229期（追い風）
@@ -8477,7 +8478,74 @@ public sealed class BattleContext
         PerformAttackFramed(actor, prefix, attackPercent, patternOverride);
     }
 
+    // =====================================================================================
+    // 第234期 —— 火の鎧（`FireArmorTrait`）・焼け残り（`SmolderTrait`）。**保持者がいなければ `_fireArmorLive` の比較1つで全部抜ける。**
+    // =====================================================================================
+    bool _fireArmorLive;
+
+    /// <summary>火の鎧の枠（1回の攻撃ごと）。殴られた保持者を控え、攻撃が終わってから火を点ける。</summary>
+    sealed class FireArmorFrame
+    {
+        public required UnitState Actor { get; init; }
+        public readonly List<UnitState> Hit = new();
+        /// <summary>この攻撃で焼け残りが働いた保持者（自分には点けない）。</summary>
+        public readonly List<UnitState> NoSelf = new();
+    }
+    readonly Stack<FireArmorFrame> _fireArmorFrames = new();
+
+    /// <summary>いまの攻撃の枠（その主が <paramref name="source"/> のときだけ）。枠の外・他人の枠なら null。</summary>
+    FireArmorFrame? FireArmorFrameOf(UnitState source)
+        => _fireArmorFrames.Count > 0 && _fireArmorFrames.Peek().Actor == source ? _fireArmorFrames.Peek() : null;
+
+    /// <summary>攻撃の枠が閉じた: 殴られた保持者ごとに、殴った敵と自分に火を点ける（乱数を引かない）。</summary>
+    void ResolveFireArmor(FireArmorFrame fr)
+    {
+        foreach (UnitState b in fr.Hit)
+        {
+            UnitTally bt = TallyOf(b);
+            if (fr.Actor.IsAlive)
+            {
+                bt.FireArmorFoeLit++;
+                EmitFireArmor(b, fr.Actor, FireArmorLabels.Foe, 0);
+                Log($"    {b.Name} の火の鎧が {fr.Actor.Name} に燃え移った", LogKind.Trigger);
+                Ignite(fr.Actor, source: b);
+            }
+            if (b.IsAlive && !fr.NoSelf.Contains(b))
+            {
+                bt.FireArmorSelfLit++;
+                EmitFireArmor(b, b, FireArmorLabels.Self, 0);
+                Ignite(b, friendly: true, source: b);
+            }
+        }
+    }
+
+    /// <summary>火の鎧・焼け残りの台本（第234期・<b>表示専用</b>）。<c>verbose</c> のときだけ。</summary>
+    void EmitFireArmor(UnitState holder, UnitState target, string label, int amount)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.FireArmor, Turn = _turn,
+            ActorId = holder.InstanceId, TargetId = target.InstanceId,
+            Amount = amount, HpAfter = Math.Max(0, target.Hp), Text = label,
+        });
+    }
+
     void PerformAttackFramed(UnitState actor, string prefix, int attackPercent, AttackPattern? patternOverride)
+    {
+        if (_fireArmorLive)
+        {
+            var fr = new FireArmorFrame { Actor = actor };
+            _fireArmorFrames.Push(fr);
+            try { PerformAttackFooting(actor, prefix, attackPercent, patternOverride); }
+            finally { _fireArmorFrames.Pop(); }
+            ResolveFireArmor(fr);
+            return;
+        }
+        PerformAttackFooting(actor, prefix, attackPercent, patternOverride);
+    }
+
+    void PerformAttackFooting(UnitState actor, string prefix, int attackPercent, AttackPattern? patternOverride)
     {
         if (!FootingTrait.StackOnHit || _shieldHolders.Count == 0)
         {
@@ -9365,6 +9433,30 @@ public sealed class BattleContext
             }
         }
 
+        // 火の鎧（第234期・`FireArmorTrait`）。**軽減の族の最後**（層の直後、巨躯・分かち・破片・身構え・軛より前）。
+        // ① 敵の攻撃（いまの攻撃の枠の主が出どころ・刻み／徴収／中継／共有ではない）を受けたら控える——火は攻撃が終わってから点く。
+        // ② 燃えている間は半分（切り上げ）。種類を問わない（燃焼の刻みは手前で焼かれないので来ない）。
+        // **保持者がいなければ比較1つで抜ける。乱数を引かない。**
+        if (_fireArmorLive && target.HasTrait(TraitId.FireArmor))
+        {
+            if (source is not null && source.TeamId != target.TeamId && !burnTick && !levy && !relayed && !hexShare
+                && FireArmorFrameOf(source) is FireArmorFrame fr && !fr.Hit.Contains(target))
+                fr.Hit.Add(target);
+            if (amount > 0 && target.RawCounter(StatusKeys.Burn) > 0)
+            {
+                int saved = amount * FireArmorTrait.GuardPercent / 100;
+                if (saved > 0)
+                {
+                    amount -= saved;
+                    UnitTally ft = TallyOf(target);
+                    ft.FireArmorGuardHits++;
+                    ft.FireArmorSaved += saved;
+                    EmitFireArmor(target, target, FireArmorLabels.Guard, saved);
+                    Log($"    燃える {target.Name} の鎧が痛みを半分に抑えた（-{saved}）", LogKind.Trigger);
+                }
+            }
+        }
+
         if (amount <= 0) return;
 
         // 巨躯: 自分より前の列に立つ壁が、後ろの味方への攻撃を引き受ける。
@@ -9762,6 +9854,25 @@ public sealed class BattleContext
         {
             // 切られなかったが上限に近い一撃（上限が効いている境界を見るため）。**計数のみ。**
             YokeNearHits[YokeSlot(pattern, target)]++;
+        }
+
+        // 焼け残り（第234期・`SmolderTrait`）。**逃げ足と同じ HP を引く直前**——破片・受け流し・身構え・軛の後なので本当に倒れる一撃だけが来る。
+        // 燃えている間・1戦1回・出どころは問わない。HP1 で止め、火を消す（区間は燃え尽きとして閉じる）。この攻撃では火の鎧の自分への着火をしない。
+        if (_fireArmorLive && amount >= target.Hp && target.HasTrait(TraitId.Smolder)
+            && target.RawCounter(StatusKeys.Burn) > 0 && target.RawCounter(SmolderTrait.UsedKey) == 0)
+        {
+            target.SetCounter(SmolderTrait.UsedKey, 1);
+            int cut = amount - Math.Max(0, target.Hp - 1);
+            amount = Math.Max(0, target.Hp - 1);
+            target.SetCounter(StatusKeys.Burn, 0);
+            CloseBurnEpisode(target, expired: true);
+            UnitTally st = TallyOf(target);
+            st.SmolderUsed++;
+            st.SmolderTurn = Turn;
+            if (source is not null && FireArmorFrameOf(source) is FireArmorFrame sf && !sf.NoSelf.Contains(target)) sf.NoSelf.Add(target);
+            EmitFireArmor(target, target, FireArmorLabels.Smolder, cut);
+            Log($"    {target.Name} は焼け残った（残り 1・火が消えた）", LogKind.Highlight);
+            if (amount <= 0) return;
         }
 
         // 必死の逃げ足（第227期・セロの版 L1/L2・`LastDodgeTrait`）。**HP を引く直前**——破片・受け流し・身構え・軛・猶予はすべて上で済んでいるので、
