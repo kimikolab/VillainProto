@@ -205,6 +205,11 @@ static partial class FireScaleDiag
         public readonly long[,] UnitN = new long[3, 5], Reach3 = new long[3, 5], Reach4 = new long[3, 5], Reach3T = new long[3, 5], Reach4T = new long[3, 5];
         public readonly long[,] ShadowNoBurn = new long[3, 5], BurnNoShadow = new long[3, 5], StartCnt = new long[3, 5], BurnStart = new long[3, 5];
         public readonly long[] Ignites = new long[5], IgnitesRelit = new long[5];
+        // 敵への着火の出どころ: ボルグの手番の中（火の粉・焼き返し）／ ボルグの手番の外（火の鎧の返し）／ ほかの駒 ／ 出どころなし
+        public readonly long[] FoeIgniteSrc = new long[4];
+        public long FoeReach3, FoeReach3OutBorg;   // K1 で火勢3 に届いた敵（駒・戦）と、そのうち着火の過半がボルグの手番の外だった敵
+        public const int TMax = 8;
+        public readonly long[,,] TurnSum = new long[3, 5, TMax + 1], TurnCnt = new long[3, 5, TMax + 1];   // ターン（8 以上はまとめる）ごとの影
         // §3.3: 駒（Id。敵は "敵"）→ 絵
         public readonly Dictionary<string, PicAgg> Pics = new();
         // §3.4
@@ -222,6 +227,9 @@ static partial class FireScaleDiag
             AddA(UnitN, o.UnitN); AddA(Reach3, o.Reach3); AddA(Reach4, o.Reach4); AddA(Reach3T, o.Reach3T); AddA(Reach4T, o.Reach4T);
             AddA(ShadowNoBurn, o.ShadowNoBurn); AddA(BurnNoShadow, o.BurnNoShadow); AddA(StartCnt, o.StartCnt); AddA(BurnStart, o.BurnStart);
             for (int i = 0; i < 5; i++) { Ignites[i] += o.Ignites[i]; IgnitesRelit[i] += o.IgnitesRelit[i]; }
+            for (int i = 0; i < 4; i++) FoeIgniteSrc[i] += o.FoeIgniteSrc[i];
+            FoeReach3 += o.FoeReach3; FoeReach3OutBorg += o.FoeReach3OutBorg;
+            for (int a = 0; a < 3; a++) for (int b = 0; b < 5; b++) for (int c = 0; c <= TMax; c++) { TurnSum[a, b, c] += o.TurnSum[a, b, c]; TurnCnt[a, b, c] += o.TurnCnt[a, b, c]; }
             foreach (var (k, v) in o.Pics) { if (!Pics.TryGetValue(k, out var x)) Pics[k] = x = new PicAgg(); x.Merge(v); }
             AddA(HotaStage, o.HotaStage); AddA(BorgStage, o.BorgStage); AddA(HiyoSum, o.HiyoSum);
             for (int i = 0; i < 3; i++)
@@ -240,12 +248,14 @@ static partial class FireScaleDiag
         public string Name = "";
         public long Battles, Hands, DistinctSum, RunSum, RunMax, TopSum;   // TopSum は「最も多い絵の手番数」（戦ごと）の合計
         public long BoneDistinctSum, BoneRunSum, BoneTopSum;
+        public long Pairs, Repeats, BoneRepeats;   // 隣り合う2手番（同じ戦）のうち同じ絵 ／ 同じ骨格
         public readonly Dictionary<string, long> Freq = new(), BoneFreq = new();
         public void Merge(PicAgg o)
         {
             if (Name == "") Name = o.Name;
             Battles += o.Battles; Hands += o.Hands; DistinctSum += o.DistinctSum; RunSum += o.RunSum; RunMax = Math.Max(RunMax, o.RunMax); TopSum += o.TopSum;
             BoneDistinctSum += o.BoneDistinctSum; BoneRunSum += o.BoneRunSum; BoneTopSum += o.BoneTopSum;
+            Pairs += o.Pairs; Repeats += o.Repeats; BoneRepeats += o.BoneRepeats;
             foreach (var (k, v) in o.Freq) Freq[k] = Freq.GetValueOrDefault(k) + v;
             foreach (var (k, v) in o.BoneFreq) BoneFreq[k] = BoneFreq.GetValueOrDefault(k) + v;
         }
@@ -253,10 +263,9 @@ static partial class FireScaleDiag
         {
             if (seq.Count == 0) return;
             Battles++; Hands += seq.Count;
+            for (int i = 1; i < seq.Count; i++) { Pairs++; if (seq[i].Pic == seq[i - 1].Pic) Repeats++; if (seq[i].Bone == seq[i - 1].Bone) BoneRepeats++; }
             Take(seq.Select(x => x.Pic).ToList(), Freq, ref DistinctSum, ref RunSum, ref TopSum, true);
-            long dummy = 0;
             Take(seq.Select(x => x.Bone).ToList(), BoneFreq, ref BoneDistinctSum, ref BoneRunSum, ref BoneTopSum, false);
-            _ = dummy;
         }
         void Take(List<string> seq, Dictionary<string, long> freq, ref long distinct, ref long runSum, ref long topSum, bool trackMax)
         {
@@ -292,7 +301,16 @@ static partial class FireScaleDiag
         BattleEventKind.Death => "撃破",
         BattleEventKind.FireArmor => ev.Text,
         BattleEventKind.Skill => null,   // 手番の種類（術）で数える
-        _ => ev.Kind.ToString(),
+        _ => KindJa.TryGetValue(ev.Kind.ToString(), out var ja) ? ja : ev.Kind.ToString(),
+    };
+
+    /// <summary>台本の種類の読み替え（表示だけ・読み替えの無い種類は英名のまま）。</summary>
+    static readonly Dictionary<string, string> KindJa = new()
+    {
+        ["Whet"] = "強化", ["Intercept"] = "庇い", ["Sealed"] = "封じ", ["Highlight"] = "見せ場", ["Stagger"] = "転倒", ["Stun"] = "痺れ",
+        ["Regroup"] = "組み替え", ["Overflow"] = "溢れ", ["Parry"] = "受け流し", ["Evade"] = "回避", ["Thunder"] = "雷", ["Plank"] = "板",
+        ["GurenGain"] = "紅蓮", ["GurenRelease"] = "紅蓮の奔流", ["InverseSip"] = "啜り", ["HealInverted"] = "反転", ["Status"] = "刻み",
+        ["Confused"] = "混乱", ["Tailwind"] = "追い風", ["Blast"] = "吹っ飛ばし", ["Disarray"] = "乱れ", ["KillImpact"] = "撃破の衝撃",
     };
 
     /// <summary>1戦を読む。<paramref name="acc"/> に足す。</summary>
@@ -327,6 +345,13 @@ static partial class FireScaleDiag
         var hands = r.Hands.OrderBy(h => h.EventStart).ThenByDescending(h => h.EventEnd).ToList();
         var handsAt = hands.GroupBy(h => h.EventStart).ToDictionary(g => g.Key, g => g.ToList());
 
+        // 各出来事がボルグの手番の枠の中か（敵への着火の出どころを分けるため）
+        var inBorgHand = new bool[ev.Count];
+        foreach (var h in hands)
+            if (info.TryGetValue(h.ActorId, out var hi) && hi.Id == "borg" && hi.Team == BattleContext.PlayerTeam)
+                for (int j = h.EventStart; j < h.EventEnd && j < ev.Count; j++) inBorgHand[j] = true;
+        var foeIgn = new Dictionary<int, (int In, int Out)>();
+
         int round = 1;
         void Track(int k, int id, int turn)
         {
@@ -345,6 +370,7 @@ static partial class FireScaleDiag
                     acc.SSum[k, ro] += s; acc.SCnt[k, ro]++; acc.Hist[k, ro, s]++;
                     if (s >= 3) acc.Ge3[k, ro]++;
                     if (s >= 4) acc.Eq4[k, ro]++;
+                    int ti = Math.Min(Agg.TMax, t); acc.TurnSum[k, ro, ti] += s; acc.TurnCnt[k, ro, ti]++;
                 }
                 sh[k].Decay(alive); rel[k].Decay(alive);
             }
@@ -405,6 +431,14 @@ static partial class FireScaleDiag
                 {
                     int ro = Role(tid);
                     acc.Ignites[ro]++;
+                    if (ro == 4)
+                    {
+                        bool byBorg = x.ActorId is int wa && info.TryGetValue(wa, out var wi) && wi.Id == "borg" && wi.Team == BattleContext.PlayerTeam;
+                        int src = x.ActorId is null ? 3 : !byBorg ? 2 : inBorgHand[i] ? 0 : 1;
+                        acc.FoeIgniteSrc[src]++;
+                        var fi = foeIgn.GetValueOrDefault(tid);
+                        foeIgn[tid] = src == 1 ? (fi.In, fi.Out + 1) : (fi.In + 1, fi.Out);
+                    }
                     if (sh[0].Of(tid) > 0) acc.IgnitesRelit[ro]++;
                     for (int k = 0; k < 3; k++) { sh[k].Ignite(tid); rel[k].Ignite(tid); Track(k, tid, Math.Max(1, x.Turn)); }
                     break;
@@ -433,6 +467,8 @@ static partial class FireScaleDiag
                 if (reached4[k].TryGetValue(id, out int t4)) { acc.Reach4[k, ro]++; acc.Reach4T[k, ro] += t4; }
             }
         }
+        foreach (var (id, _) in reached3[0])
+            if (Role(id) == 4) { acc.FoeReach3++; var fi = foeIgn.GetValueOrDefault(id); if (fi.Out * 2 > fi.In + fi.Out) acc.FoeReach3OutBorg++; }
         for (int k = 0; k < 3; k++)
         {
             acc.Releases[k] += relCount[k];

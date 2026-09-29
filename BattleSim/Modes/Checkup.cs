@@ -172,6 +172,14 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.GradeStep]  = (HcPlusL,  "閾値を越えているあいだ薙ぎ・その `GradeTrait.StepFactor` 倍で全体。積めないのは条件（`Overload` と同型）"),
         // 第179期: 灰（スス）を足したときに分類も足した（第128期の穴＝分類を足さずに `checkup` が止まる、を繰り返さない）。
         [TraitId.Ash]        = (HcBothL,  "味方の自傷を灰として溜めて撒くのと、抱えたまま倒れると隣へ降るのが1つの在庫の表と裏"),
+        // 第239期: ボルグ（第238期 A+D2）・ヒヨ（V1）の規定化で保持者が付いた札。**7 枚とも代金を持たない手当て**（代金は `Splash` / `Cinder` / `Favor` の側のまま）。
+        [TraitId.FireFeed]    = (HcPlusL, "燃えている敵を斬るとその火で自分が癒え、自分にも火が点く（火の鎧の半減の燃料）"),
+        [TraitId.FireArmor]   = (HcPlusL, "殴ってきた敵と自分に火を点け、燃えている間は受ける傷が半分・火に焼かれない"),
+        [TraitId.FireSplash]  = (HcPlusL, "巻き込みを燃える火にして、火に強い味方には効かなくする（`Splash` の代金を軽くするだけ）"),
+        [TraitId.SelfKindle]  = (HcPlusL, "開戦時に自分に火を点けるだけ（火の鎧の半減を1ターン目から）"),
+        [TraitId.FireMend]    = (HcPlusL, "燃焼の刻みで自分が癒えるだけ"),
+        [TraitId.FireWardAll] = (HcPlusL, "燃えている味方は敵の攻撃が半分になるだけ"),
+        [TraitId.FireConvert] = (HcPlusL, "燃えている味方の燃焼ダメージが回復になるだけ"),
         // 第180期: ムド（暴発＋泥散り）・ヴィオ（吐き戻し）・ガン（叩き起こし）。
         // **マイナスを別の `TraitId` に切り出してあるので `yP` が組める**（第74期の作法）。
         [TraitId.Erupt]      = (HcPlusL,  "殴られた回数を溜めて割り込み連撃する。代金は別の札（`Smear`）に切り出してある"),
