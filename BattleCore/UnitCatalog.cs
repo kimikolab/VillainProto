@@ -1462,6 +1462,33 @@ public static class UnitCatalog
         // 第232期（ポンの判断）: 第232期 S2——隣の味方が殴られても弾く・自分は入れ替わらない（`SpringGuard` ＋ `SpringStay`）。旧は <see cref="HaneS0"/>。
         // 第236期（ポンの判断）: S3——隣接に加えて同じ列（前列・中列・後列）の味方が殴られても弾く（`SpringRow`）。旧は <see cref="HaneR0"/>。
         // 第237期（ポンの判断）: ①＋②——着地の反動（`Landing`）を足した。旧は <see cref="HaneR1"/>。
+        // 第243期（ポンの判断）: ③ 弾き返しの打撃（`SpringStrike`）＋ ⑤ 押されて怯む（`SpringDaunt`）を足した。旧は <see cref="HaneR2"/>。
+        Traits = new[] { TraitId.Rebound, TraitId.Overrun, TraitId.Disarray, TraitId.Blast, TraitId.Spring, TraitId.Tailwind, TraitId.TailwindFighter, TraitId.SpringGuard, TraitId.SpringStay, TraitId.SpringRow, TraitId.Landing, TraitId.SpringStrike, TraitId.SpringDaunt },
+        PlusText = "手番で、前列で最も攻撃力の高い敵をその経路の奥まで吹っ飛ばす（経路の敵すべてを貫いて傷つけ、吹っ飛ばした敵は転び、詰めてきた敵は前へ出る） / 自分か、隣か同じ列の味方が殴られたら、殴ってきた敵を1つ後ろへ弾き返して転ばせる（1ターンに 1 ＋ 敵の乱れの段 回・味方のときは自分は動かない）。弾き返すたび、その敵に自分の攻撃力ぶんの打撃を与える / 吹っ飛ばし・弾き返しで動かした敵は怯む（次の一撃が半分） / 味方が押しのけられるたび、敵の隊列を突き崩す / 敵を後ろへ押しやると、その列で最も腕の立つ味方が追い風に乗って前へ踏み込む（傷の深い味方は踏み込まない）",
+        MinusText = "勢い余って、吹っ飛ばすたび・弾き返すたび自分が隣の味方1体と場所を入れ替える / 着地の反動で、自分が動かされるたび隣の味方1体（HP5割未満は除く）がその隣の別の味方と場所を入れ替わる（1ターンに 1 ＋ 敵の乱れの段 回）",
+        Flavor = "押されたら押し返す。それしかできないし、加減も知らない。"
+    };
+
+    /// <summary>旧ハネ（第237期の規定＝①＋②）。対照（<see cref="All"/> に入れない）。第243期の器具（`spring2 adopt243` の「規定」）はこちらに固定した。</summary>
+    public static readonly UnitDef HaneR2 = new()
+    {
+        Id = "hane",
+        Name = "突き返しのハネ",
+        MaxHp = 56,
+        Attack = 11,
+        Speed = 8,
+        // 第189期: 転生（バネ）。旧 `Shove`（効果A＋隣のよろけ）を、手番の突き返し＋効果A（`Rebound`）と
+        // 代金の入れ替え（`Overrun`）に置き換えた。現在は吹っ飛ばしの貫きに合わせて踏み込む。
+        Advances = true, // 表示専用。吹っ飛ばしの主目標へ踏み込む。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "突き返す") },
+        // 第227期 前段（ポンの判断）: 敵の乱れ（`Disarray`・段2 から前列の2体を突き返す）を規定に。旧は <see cref="HaneK0"/>。
+        // 第229期 前段（ポンの判断）: 第228期 H3（吹っ飛ばし `Blast` ＋ 弾き返し `Spring`）を規定に。段2 の2体の突き返しは吹っ飛ばしに置き換わる（1回のまま）。
+        // 旧（第228期の前段の規定）は <see cref="HaneH0"/>。
+        // 第230期 前段（ポンの判断）: 第229期 G4 の追い風（`Tailwind`）を規定に。旧（第229期の前段の規定）は <see cref="HaneG0"/>。
+        // 第230期の追記（ポンの判断）: 第230期 W4——追い風の踏み込み先を攻撃力順に（`TailwindFighter`）。旧は <see cref="HaneW0"/>。
+        // 第232期（ポンの判断）: 第232期 S2——隣の味方が殴られても弾く・自分は入れ替わらない（`SpringGuard` ＋ `SpringStay`）。旧は <see cref="HaneS0"/>。
+        // 第236期（ポンの判断）: S3——隣接に加えて同じ列（前列・中列・後列）の味方が殴られても弾く（`SpringRow`）。旧は <see cref="HaneR0"/>。
+        // 第237期（ポンの判断）: ①＋②——着地の反動（`Landing`）を足した。旧は <see cref="HaneR1"/>。
         Traits = new[] { TraitId.Rebound, TraitId.Overrun, TraitId.Disarray, TraitId.Blast, TraitId.Spring, TraitId.Tailwind, TraitId.TailwindFighter, TraitId.SpringGuard, TraitId.SpringStay, TraitId.SpringRow, TraitId.Landing },
         PlusText = "手番で、前列で最も攻撃力の高い敵をその経路の奥まで吹っ飛ばす（経路の敵すべてを貫いて傷つけ、吹っ飛ばした敵は転び、詰めてきた敵は前へ出る） / 自分か、隣か同じ列の味方が殴られたら、殴ってきた敵を1つ後ろへ弾き返して転ばせる（1ターンに 1 ＋ 敵の乱れの段 回・味方のときは自分は動かない） / 味方が押しのけられるたび、敵の隊列を突き崩す / 敵を後ろへ押しやると、その列で最も腕の立つ味方が追い風に乗って前へ踏み込む（傷の深い味方は踏み込まない）",
         MinusText = "勢い余って、吹っ飛ばすたび・弾き返すたび自分が隣の味方1体と場所を入れ替える / 着地の反動で、自分が動かされるたび隣の味方1体（HP5割未満は除く）がその隣の別の味方と場所を入れ替わる（1ターンに 1 ＋ 敵の乱れの段 回）",

@@ -21,6 +21,9 @@ static partial class Spring2Diag
             case "check": CheckImpl(); return;
             case "run237": Run237(); return;
             case "check237": Check237(); return;
+            case "run243": Run243(); return;
+            case "check243": Check243(); return;
+            case "adopt243": RunAdopt(); return;
             default:
                 Console.WriteLine("spring2: モードは phase0 / run / check。");
                 return;
@@ -32,6 +35,9 @@ static partial class Spring2Diag
     static partial void CheckImpl();
     static partial void Run237();
     static partial void Check237();
+    static partial void Run243();
+    static partial void Check243();
+    static partial void RunAdopt();
 
     internal const int Seeds = 200;
 

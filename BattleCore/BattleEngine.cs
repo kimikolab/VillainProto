@@ -5069,6 +5069,7 @@ public sealed class BattleContext
 
     /// <summary>萎縮させる駒（第189期・<see cref="TraitId.Daunt"/>）が盤上に来たか。<b>偽なら萎縮の判定を比較1つで抜ける。</b></summary>
     bool _dauntLive;
+    bool _confuseHalf;   // 第243期（④）
 
     /// <summary>痺れ毒（第195期・<see cref="TraitId.Numb"/>）の保持者が盤上に来たか。<b>偽なら痺れ毒の判定を比較1つで抜ける。</b>
     /// 一度立てば戦闘の終わりまで立ったまま（保持者が倒れても印は残る）。</summary>
@@ -6982,6 +6983,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Spring)) _springLive = true;       // 第228期（弾き返し）
         if (u.HasTrait(TraitId.Tailwind)) _tailwindLive = true;   // 第229期（追い風）
         if (u.HasTrait(TraitId.Landing)) _landingLive = true;     // 第237期（着地の反動）
+        if (u.HasTrait(TraitId.SpringDaunt)) _dauntLive = true;   // 第243期（⑤ 動かした敵の萎縮を消費させる）
+        if (u.HasTrait(TraitId.ConfuseHalf)) _confuseHalf = true; // 第243期（④ 半分の混乱）
         if (u.HasTrait(TraitId.KillImpact)) _impactLive = true;   // 第230期（撃破の衝撃）
         if (u.HasTrait(TraitId.Disarray)) _disarrayLive = true;   // 第226期（敵の乱れ）
         // 第185期: 組み付き・見せしめ（手番の頭の2つのキーと標的の選好を短絡させる）／踏みしめ（範囲の盾・層の軽減）／
@@ -9015,6 +9018,20 @@ public sealed class BattleContext
     private void PerformAttackBody(UnitState actor, string prefix, int attackPercent, AttackPattern? patternOverride)
     {
         if (!actor.IsAlive) return;
+
+        // 第243期（④・バサの版 `ConfuseHalf`）: 保持者がいる戦では、混乱した駒の攻撃は標的を選ぶ前に `Roll(100)` を1回——
+        // 50% で今までどおり自軍へ、残りは混乱をここで消して普段どおり振る。**保持者がいなければ比較1つで抜ける。**
+        if (_confuseHalf && ConfusionLive && actor.RawCounter(StatusKeys.Confused) > 0)
+        {
+            UnitTally ct = TallyOf(actor);
+            if (Roll(100) < ConfuseHalfTrait.SelfPercent) ct.ConfuseHalfSelf++;
+            else
+            {
+                actor.SetCounter(StatusKeys.Confused, 0);
+                ct.ConfuseHalfNormal++;
+                Log($"    {actor.Name} は我に返った（混乱が解けた）", LogKind.Status);
+            }
+        }
 
         AttackPattern pattern = patternOverride ?? actor.CurrentPattern;
 
@@ -12185,6 +12202,23 @@ public sealed class BattleContext
             foe.SetCounter(StatusKeys.Stagger, 1);
             EmitStagger(foe, StaggerLabels.Fell, hane);
             Log($"    {foe.Name} は弾き返されて転んだ（次の手番を失う）", LogKind.Status);
+        }
+        // 第243期（⑤）: 弾き返しで動かした敵（殴ってきた敵と、入れ替わって前へ出た敵）を萎縮させる。
+        if (hane.HasTrait(TraitId.SpringDaunt))
+        {
+            DauntTrait.MarkPushed(this, hane, foe);
+            if (partner is not null) DauntTrait.MarkPushed(this, hane, partner);
+        }
+        // 第243期（③）: 弾き返しの打撃——殴ってきた敵へハネの現在の攻撃力ぶん（攻撃ではない・`ApplyDamage` を直に・反撃は起きない）。
+        if (hane.HasTrait(TraitId.SpringStrike) && foe.IsAlive && hane.IsAlive)
+        {
+            int amount = hane.CurrentAttack;
+            int before = foe.Hp;
+            t.SpringStrikeHits++;
+            Log($"    {hane.Name} の弾き返しが {foe.Name} を打つ（{amount}）", LogKind.Trigger);
+            Reaction(() => ApplyDamage(foe, amount, hane));
+            t.SpringStrikeDealt += Math.Max(0, before - Math.Max(0, foe.Hp));
+            if (!foe.IsAlive) t.SpringStrikeKills++;
         }
         if (guarded is not null)
         {

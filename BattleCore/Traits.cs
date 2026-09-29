@@ -493,7 +493,11 @@ public enum TraitId
     SpringRow,      // 同じ列の味方の被弾でも弾き返す（第236期・ハネの版 S3・`SpringGuard` と組む）: 隣接に加えて同じ行（前列・中列・後列）の味方も守る。**札そのものは挙動を持たない**（engine の弾き返しの判定が読む）
     Landing,        // 着地の反動（第237期・ハネの版 ②）: ハネが動かされるたび、隣の味方1体（乱数・HP5割未満は除く）をその味方の隣の別の味方と入れ替える（1ターンに 1 ＋ 敵の乱れの段 回）。
                     // **判定は engine**（`SwapSlots` / `RelocateLane` の一番外側の出口で控えを流す——入れ替えの途中に味方を動かさない）。保持者 0 枚
-    FireWard,       // 盾の配り・隣（第238期・ボルグの版 D1）: 保持者が生きている間、保持者の隣の燃えている味方は敵の攻撃から受けるダメージが半分（切り上げ）。保持者自身は対象外（火の鎧と重ねない）。
+    SpringStrike,   // 弾き返しの打撃（第243期・ハネの版 ③）: 弾き返すたび、殴ってきた敵へハネの現在の攻撃力ぶんのダメージ（攻撃ではない・`ApplyDamage` を直に）。**判定は engine**（`SpringSwap`）。保持者 0 枚
+    ConfuseHalf,    // 半分の混乱（第243期・バサの版 ④）: 保持者がいる戦では、混乱した駒の次の攻撃は 50% で自軍へ・50% で普段どおり（どちらでも混乱は消える）。
+                    // **判定は engine**（`PerformAttackBody` の頭・標的選択の前に `Roll(100)` を1回）。保持者 0 枚
+    SpringDaunt,    // 押されて怯む（第243期・ハネの版 ⑤）: 吹っ飛ばし・弾き返しで動かした敵を萎縮させる（既存の `Daunted`・次の攻撃が半分）。**判定は engine / `BlastTrait`**。保持者 0 枚
+    FireWard,      // 盾の配り・隣（第238期・ボルグの版 D1）: 保持者が生きている間、保持者の隣の燃えている味方は敵の攻撃から受けるダメージが半分（切り上げ）。保持者自身は対象外（火の鎧と重ねない）。
                     // **判定は engine**（`ApplyDamageBody` の軽減の族・火の鎧の半減の直後）。保持者 0 枚
     FireWardAll,    // 盾の配り・全員（第238期・ボルグの版 D2）: 同上、位置を問わず燃えている味方全員。**判定は engine**。保持者 0 枚
     FireConvert,    // 火の変換・全量（第238期・ヒヨの版 V1）: 保持者が生きている間、燃えている味方が受ける燃焼ダメージ（燃焼の刻み・起爆・燃える巻き込み）は、受ける代わりに同じ量の回復になる。
@@ -13169,6 +13173,16 @@ public sealed class RetreatHeavyTrait : Trait { public override TraitId Id => Tr
 /// <summary>隣の弾き返しで入れ替わらない（第232期・S2）。<b>札そのものは判定を持たない</b>（<see cref="BattleContext.SpringSwap"/> が読む）。</summary>
 public sealed class SpringStayTrait : Trait { public override TraitId Id => TraitId.SpringStay; }
 public sealed class SpringRowTrait : Trait { public override TraitId Id => TraitId.SpringRow; }
+/// <summary>弾き返しの打撃（第243期・ハネの版 ③）。<b>札そのものは挙動を持たない</b>（engine の <c>SpringSwap</c> が読む）。</summary>
+public sealed class SpringStrikeTrait : Trait { public override TraitId Id => TraitId.SpringStrike; }
+/// <summary>半分の混乱（第243期・バサの版 ④）。<b>札そのものは挙動を持たない</b>（engine の <c>PerformAttackBody</c> の頭が読む）。</summary>
+public sealed class ConfuseHalfTrait : Trait
+{
+    public const int SelfPercent = 50;
+    public override TraitId Id => TraitId.ConfuseHalf;
+}
+/// <summary>押されて怯む（第243期・ハネの版 ⑤）。<b>札そのものは挙動を持たない</b>（<see cref="BlastTrait"/> と engine の <c>SpringSwap</c> が読む）。</summary>
+public sealed class SpringDauntTrait : Trait { public override TraitId Id => TraitId.SpringDaunt; }
 
 /// <summary>
 /// 着地の反動（第237期・ハネの版 ②・<see cref="TraitId.Landing"/>）。ハネが動かされるたび（理由を問わない）、隣の味方1体を、その味方の隣の別の味方と入れ替える。
@@ -14272,6 +14286,16 @@ public sealed class DauntTrait : Trait
         }
     }
 
+    /// <summary>第243期（ハネの版 ⑤・<see cref="TraitId.SpringDaunt"/>）: 吹っ飛ばし・弾き返しで動かした敵を萎縮させる。立てたら真。</summary>
+    public static bool MarkPushed(BattleContext ctx, UnitState hane, UnitState u)
+    {
+        if (!u.IsAlive) return false;
+        UnitTally t = ctx.TallyOf(hane);
+        if (Mark(ctx, hane, u)) { t.SpringDaunts++; return true; }
+        t.SpringDauntsAlready++;
+        return false;
+    }
+
     /// <summary>萎縮を立てる。<b>既に萎縮していれば何もしない</b>（二値）。立てたら真。</summary>
     private static bool Mark(BattleContext ctx, UnitState self, UnitState u)
     {
@@ -14493,7 +14517,12 @@ public sealed class BlastTrait : Trait
                 var order = seg.Skip(1).Append(a).ToList();
                 var moves = order.Select((u, k) => (U: u, Dest: seats[k])).Where(m => m.U.Slot != m.Dest).ToList();
                 int forward = moves.Count(m => FormationRules.DepthOf(FormationRules.RowOf(m.Dest)) < FormationRules.DepthOf(m.U.Row));
-                if (ctx.RelocateLane(moves, self)) { tally.BlastMoved += moves.Count; tally.BlastForward += forward; }
+                if (ctx.RelocateLane(moves, self))
+                {
+                    tally.BlastMoved += moves.Count; tally.BlastForward += forward;
+                    // 第243期（⑤）: 吹っ飛ばしで動かした敵（A を含む・席が変わった駒）を萎縮させる。
+                    if (self.HasTrait(TraitId.SpringDaunt)) foreach (var m in moves) DauntTrait.MarkPushed(ctx, self, m.U);
+                }
                 else tally.BlastRefused++;
             }
         }
@@ -15374,6 +15403,9 @@ public static class TraitCatalog
         new SpringStayTrait(),       // 第232期
         new SpringRowTrait(),        // 第236期
         new LandingTrait(),          // 第237期
+        new SpringStrikeTrait(),     // 第243期
+        new ConfuseHalfTrait(),      // 第243期
+        new SpringDauntTrait(),      // 第243期
         new FireWardTrait(),         // 第238期
         new FireWardAllTrait(),      // 第238期
         new FireConvertTrait(),      // 第238期
