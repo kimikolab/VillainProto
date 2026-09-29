@@ -498,6 +498,22 @@ static partial class FireScaleDiag
                 Console.WriteLine();
                 Console.WriteLine($"- **Q0-4 決着T**: 平均 {trs.Average(x => x.Turns):F2} ／ 分布（1〜9・10+）{string.Join(" ／ ", turnsH.Skip(1).Select(x => Pct(x, trs.Length)))} %");
                 Console.WriteLine($"- **Q0-3 ヒヨ**: 手番/戦 {hiyoH / n:F2} ／ 手番の頭で自分が燃えている {Pct(hiyoBurn, hiyoH)}%（周回1〜4: {string.Join(" ／ ", Enumerable.Range(1, 4).Select(k => Pct(hiyoBurnAt[k], hiyoHAt[k])))}）／ その周回に先に動いていた: ホタ {Pct(hotaBeforeHiyo, roundsWithHiyo)}% ・ボルグ {Pct(borgBeforeHiyo, roundsWithHiyo)}%");
+                {
+                    // （測定の後に足した）ボルグ・ホタ・ヒヨが周回の頭で燃えている割合（周回1〜4）
+                    string BurnPct(string who) => string.Join(" ／ ", Enumerable.Range(1, 4).Select(k =>
+                    {
+                        long c = 0, b = 0;
+                        foreach (var t in trs)
+                        {
+                            if (t.Turns < k) continue;
+                            var id = t.Info.Where(kv => kv.Value.Id == who && kv.Value.Team == BattleContext.PlayerTeam).Select(kv => kv.Key).DefaultIfEmpty(-1).First();
+                            if (id < 0) continue;
+                            c++; if ((t.BurnAt.GetValueOrDefault(k) ?? new()).Contains(id)) b++;
+                        }
+                        return Pct(b, c);
+                    }));
+                    Console.WriteLine($"- **（追記）周回の頭で燃えている %（周回1〜4・その周回まで戦が続いた戦）**: ボルグ {BurnPct("borg")} ／ ホタ {BurnPct("hota")} ／ ヒヨ {BurnPct("hiyo")}");
+                }
                 Console.WriteLine($"- **Q0-5 ギフトの相手（燃えている味方のうち周回の頭の攻撃力が最大）**: ボルグ {Pct(topAtk[0], topN)} ／ ホタ {Pct(topAtk[1], topN)} ／ 相方 {Pct(topAtk[3], topN)} %");
                 Console.WriteLine();
                 Console.WriteLine("**Q0-2 周回ごと**: 燃えている敵（周回の頭の写し）／ 生きている敵、1戦あたりの「当たった敵（一振りごとに数える）」と「そのうち当たる前から燃えていた敵」＝ F1 の育ちの上限（燃えていない駒は育たないので上限）。");
