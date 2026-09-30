@@ -26,6 +26,7 @@ public partial class Main
         {
             // 一斉射の数値は着弾時に表示済み。HP は台本の位置で反映して順序を守る。
             target?.SetHp(e.HpAfter);
+            AppendLog($"  [color=#{PlankFx.Rust.ToHtml(false)}][板反射] {NameOf(e.ActorId)} → {NameOf(e.TargetId)}  −{e.Amount}[/color]");
             if (e.HpAfter <= 0 && e.TargetId is int dead) _plankKnockouts.Add(dead);
             return true;
         }
@@ -146,6 +147,7 @@ public partial class Main
 
     private void ApplyPlankPatch(BattleEvent e, BattlePawn3D? actor, BattlePawn3D? target)
     {
+        AppendLog($"  [color=#{PlankFx.Rust.ToHtml(false)}][{(e.Text == PlankLabels.FirstAid ? "応急処置" : "板貼り")}] {NameOf(e.ActorId)} → {NameOf(e.TargetId)}  板＋{e.Amount}[/color]");
         actor?.SetScrapStock(0);
         if (target is null) return;
         target.SetPlank(e.StatusRemaining ?? e.Amount);

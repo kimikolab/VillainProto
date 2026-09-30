@@ -75,6 +75,8 @@ public partial class Main
                 _specialShown.Add(j);
                 _liliTransfers++;
             }
+            AppendLog($"  [color=#{LiliFx.Rose.ToHtml(false)}][状態移し] {NameOf(e.ActorId)}：{NameOf(e.SpreadFromId)} → {NameOf(e.TargetId)}  "
+                + string.Join("・", indices.Select(j => $"{DisplayStatusKey(events[j].Text!)} {events[j].Amount}")) + "[/color]");
             int give = indices[^1] + 1;
             if (give < events.Count && events[give].Kind == BattleEventKind.Kiss
                 && events[give].Text == KissLabels.Give && events[give].ActorId == e.ActorId
@@ -89,6 +91,7 @@ public partial class Main
             && drain.ActorId == e.ActorId && drain.TargetId == e.TargetId)
         {
             target?.SetHp(e.HpAfter);
+            AppendLog($"  [color=#{LiliFx.Rose.ToHtml(false)}][吸い取り] {NameOf(e.ActorId)} ← {NameOf(e.TargetId)}  HP {e.Amount}[/color]");
             _battleField.DamagePopup(target, e.Amount, "", LiliFx.Rose, e.Amount >= 25, false, brittle: e.BrittleExtra > 0);
             if (!InLiliRite(index)) await Delay(0.04);
             return true;
@@ -100,6 +103,7 @@ public partial class Main
         {
             target?.SetHp(e.HpAfter);
             target?.AnimateHeal();
+            AppendLog($"  [color=#{UiKit.Heal.ToHtml(false)}][施し] {NameOf(e.ActorId)} → {NameOf(e.TargetId)}  HP＋{e.Amount}[/color]");
             _battleField.HealPopup(target, e.Amount);
             if (!InLiliRite(index)) await Delay(0.10);
             return true;
@@ -144,6 +148,7 @@ public partial class Main
                 await Delay(0.32);
                 break;
             case KissLabels.Armor:
+                AppendLog($"  [color=#{LiliFx.Rose.ToHtml(false)}][施し] {NameOf(e.ActorId)} → {NameOf(e.TargetId)}  装甲＋{e.Amount}[/color]");
                 ApplyLiliStatus(target, StatusKeys.Armor, e.StatusRemaining ?? e.Amount);
                 if (target is not null) _battleField.LiliOverflow(target, _speed);
                 break;

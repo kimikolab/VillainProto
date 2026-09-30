@@ -44,6 +44,17 @@ public partial class LiliCheck : Control
             Require(!(bool)Read("_playing")!, "再生が完走する");
             var result = (BattleResult)Read("_result")!;
             var field = (BattlefieldView3D)Read("_battleField")!;
+            string log = ((RichTextLabel)Read("_battleLog")!).GetParsedText();
+            for (int i = 1; i < result.Events.Count; i++)
+            {
+                var hit = result.Events[i];
+                var kiss = result.Events[i - 1];
+                if (kiss.Kind != BattleEventKind.Kiss || kiss.ActorId != hit.ActorId || kiss.TargetId != hit.TargetId) continue;
+                if (hit.Kind == BattleEventKind.Damage && kiss.Text is KissLabels.Drain or KissLabels.RiteDrain)
+                    Require(log.Contains($"[吸い取り] {field.FindPawn(hit.ActorId)!.UnitName} ← {field.FindPawn(hit.TargetId)!.UnitName}  HP {hit.Amount}"), "吸った相手と実量が文字ログにある");
+                if (hit.Kind == BattleEventKind.Heal && kiss.Text is KissLabels.Give or KissLabels.RiteGive or KissLabels.Return)
+                    Require(log.Contains($"[施し] {field.FindPawn(hit.ActorId)!.UnitName} → {field.FindPawn(hit.TargetId)!.UnitName}  HP＋{hit.Amount}"), "与えた相手と実量が文字ログにある");
+            }
             int transfers = result.Events.Count(e => e.Kind == BattleEventKind.StatusTransfer);
             Require(transfers > 0, "状態移動の陽性対照");
             Require((int)Read("_liliTransfers")! == transfers, "状態を漏れなく一度ずつ移す");

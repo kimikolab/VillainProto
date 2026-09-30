@@ -78,6 +78,17 @@ public partial class PlankCheck : Control
             int reflections = result.Events.Count(e => e.Kind == BattleEventKind.Plank && e.Text == PlankLabels.Reflect);
             Require(reflections > 0, "反射の陽性対照");
             Require(plan.DamageToReflect.Count == reflections, "各反射の直後の打点を紐づける");
+            string log = ((RichTextLabel)Read("_battleLog")!).GetParsedText();
+            Require(log.Split("[板反射]").Length - 1 == reflections, "板反射の文字ログを一度ずつ出す");
+            foreach (int i in plan.DamageToReflect.Keys)
+            {
+                var hit = result.Events[i];
+                Require(log.Contains($"[板反射] {field.FindPawn(hit.ActorId)!.UnitName} → {field.FindPawn(hit.TargetId)!.UnitName}  −{hit.Amount}"),
+                    "板反射の味方・相手・実ダメージが文字ログにある");
+            }
+            foreach (var patch in result.Events.Where(e => e.Kind == BattleEventKind.Plank && e.Text == PlankLabels.Paste))
+                Require(log.Contains($"[板貼り] {field.FindPawn(patch.ActorId)!.UnitName} → {field.FindPawn(patch.TargetId)!.UnitName}  板＋{patch.Amount}"),
+                    "手番で貼った相手と量が文字ログにある");
             Require(plan.DamageToReflect.Keys.Any(i => result.Events[i].HpAfter <= 0), "反射で倒す陽性対照");
             Require(plan.Volleys.Values.Any(v => v.Count > 1), "複数反射の陽性対照");
             Require((int)Read("_plankFlights")! == reflections, "全反射を一度ずつ飛ばす");
