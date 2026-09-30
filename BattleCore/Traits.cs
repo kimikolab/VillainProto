@@ -524,6 +524,7 @@ public enum TraitId
     PyreEmbers,     // 残り火（第244期・ホタの版 S2）: 焼き尽くすの次の自分の手番は、段の代わりに全体攻撃（×2）・敵が2体以下なら追加で全体に ×2。**判定は engine**。保持者 0 枚
     CallFire,       // 呼び火（第244期・ホタの版 S2）: 味方のボルグが放つ・ヒヨがギフトを撃つたびに、自分の火勢 +1（燃えている間のみ）。**判定は engine**。保持者 0 枚
     FireRainOrdered,// 火の雨・決まった順（第244期・ホタの版 S2D）: 火の雨の落ち先を「その瞬間の HP が最も多い敵（同値は席の番号順）」に（無ければ乱数）。**札そのものは挙動を持たない**。保持者 0 枚
+    StokeStageAtk,  // 攻撃力を「倍率の前 × 次の手番の段の倍率」で比べる（第245期 前段 ③′・ヒヨ）: 煽り・ギフトの相手選び。ホタは段1・2 ×4 ／ 段3・4 ×8 ／ 残り火が控えていれば ×2（燃えていなければ ×1）、ほかは ×1。**判定は `FireStokeTrait.AtkFor`**
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -13257,7 +13258,8 @@ public static class FireLevelRule
     public static bool Holds(UnitState u) => u.HasTrait(TraitId.FireLevel) || u.HasTrait(TraitId.CinderWide) || u.HasTrait(TraitId.FireKeep)
         || u.HasTrait(TraitId.PyreStage) || u.HasTrait(TraitId.FireStoke) || u.HasTrait(TraitId.TurnGift) || u.HasTrait(TraitId.TurnGiftWait)
         || u.HasTrait(TraitId.FireSpreadCap) || u.HasTrait(TraitId.StokeBaseAtk) || u.HasTrait(TraitId.FireUnleash) || u.HasTrait(TraitId.PyreBurnout)
-        || u.HasTrait(TraitId.PyreEmbers) || u.HasTrait(TraitId.CallFire) || u.HasTrait(TraitId.FireRainOrdered);   // 第244期
+        || u.HasTrait(TraitId.PyreEmbers) || u.HasTrait(TraitId.CallFire) || u.HasTrait(TraitId.FireRainOrdered)   // 第244期
+        || u.HasTrait(TraitId.StokeStageAtk);   // 第245期
 }
 
 /// <summary>火勢の土台（第242期・ボルグの版 R1〜・<b>保持者 0 枚</b>）。札は判定を持たない——engine が読む（保つ・燃え広がり・萎む・消える）。</summary>
@@ -13345,7 +13347,21 @@ public sealed class FireStokeTrait : Trait
 
     /// <summary>相手選びで比べる攻撃力（第244期 ③）。<see cref="TraitId.StokeBaseAtk"/> を持てば倍率の前（元の攻撃力 ＋ 上乗せ・熾火の ×4 や 5連撃の ×1.6 を掛けない）、無ければ <c>CurrentAttack</c>（第242期）。</summary>
     public static int AtkFor(UnitState hiyo, UnitState a)
-        => hiyo.HasTrait(TraitId.StokeBaseAtk) ? Math.Max(0, a.Def.Attack + a.AtkBonus) : a.CurrentAttack;
+        => hiyo.HasTrait(TraitId.StokeStageAtk) ? Math.Max(0, a.Def.Attack + a.AtkBonus) * StageMultiplier(a)
+         : hiyo.HasTrait(TraitId.StokeBaseAtk) ? Math.Max(0, a.Def.Attack + a.AtkBonus) : a.CurrentAttack;
+
+    /// <summary>
+    /// 第245期 前段 ③′: その駒の<b>次の手番の段の合計倍率</b>（大技の倍率は含めない）。熾火（<see cref="TraitId.Pyre"/>）が燃えていれば、
+    /// 残り火が控えていれば ×2、段（<see cref="TraitId.PyreStage"/>）の火勢 3 以上なら 5連撃 ×8、それ以外は ×4。燃えていない駒・ほかの駒は ×1。
+    /// 火勢は<b>いまの値</b>で読む（煽りで上がる前）。
+    /// </summary>
+    public static int StageMultiplier(UnitState a)
+    {
+        if (!a.HasTrait(TraitId.Pyre) || a.RawCounter(StatusKeys.Burn) <= 0) return 1;
+        if (a.HasTrait(TraitId.PyreEmbers) && a.RawCounter(FireBurstRule.EmbersKey) > 0) return 2;
+        if (a.HasTrait(TraitId.PyreStage) && FireLevelRule.Of(a) >= PyreStageTrait.BurstLevel) return PyreStageTrait.BurstNum;
+        return 4;
+    }
 
     /// <summary>煽りの相手（燃えている味方・ヒヨ以外・火勢4 は除く・攻撃力最大・同値は席の番号順）。</summary>
     public static UnitState? StokeTarget(BattleContext ctx, UnitState self)
@@ -13375,6 +13391,8 @@ public static class FireBurstRule
 public sealed class FireSpreadCapTrait : Trait { public override TraitId Id => TraitId.FireSpreadCap; }
 /// <summary>攻撃力を倍率の前で比べる（第244期 ③・<b>保持者 0 枚</b>）。<see cref="FireStokeTrait.AtkFor"/> が読む。</summary>
 public sealed class StokeBaseAtkTrait : Trait { public override TraitId Id => TraitId.StokeBaseAtk; }
+/// <summary>攻撃力を「倍率の前 × 次の手番の段の倍率」で比べる（第245期 前段 ③′）。<see cref="FireStokeTrait.AtkFor"/> が読む。</summary>
+public sealed class StokeStageAtkTrait : Trait { public override TraitId Id => TraitId.StokeStageAtk; }
 /// <summary>放つ（第244期・ボルグ・<b>保持者 0 枚</b>）。ギフトの手番で火勢4 のとき、engine が薙ぎ ×3 に差し替える。</summary>
 public sealed class FireUnleashTrait : Trait { public override TraitId Id => TraitId.FireUnleash; }
 /// <summary>焼き尽くす（第244期・ホタ・<b>保持者 0 枚</b>）。ギフトの手番で火勢4 のとき、engine が全体 ×4 ＋ 火の雨に差し替える。</summary>
@@ -15527,6 +15545,7 @@ public static class TraitCatalog
         new TurnGiftWaitTrait(),     // 第242期
         new FireSpreadCapTrait(),    // 第244期
         new StokeBaseAtkTrait(),     // 第244期
+        new StokeStageAtkTrait(),    // 第245期
         new FireUnleashTrait(),      // 第244期
         new PyreBurnoutTrait(),      // 第244期
         new PyreEmbersTrait(),       // 第244期

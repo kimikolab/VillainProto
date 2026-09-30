@@ -187,6 +187,13 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.PyreStage]   = (HcBothL, "火勢で型が変わる——段1 の単体は熾火の貫きより弱い（R346）が、段3 以上は 5連撃"),
         [TraitId.FireStoke]   = (HcPlusL, "燃えている味方の火を煽って育てるだけ（贔屓の後に1つ）"),
         [TraitId.TurnGift]    = (HcPlusL, "火勢3 以上なら煽る代わりに、燃えている味方 1〜2 体にもう1手番を渡すだけ"),
+        // 第245期 前段: 第244期の大技と P′ の規定化で保持者が付いた札（ボルグ2本・ホタ3本・ヒヨ1本）。分類を同じコミットで足す（第132期 段0-a の再発防止）。
+        [TraitId.FireSpreadCap] = (HcMinusL, "燃え広がりの育ちを1回の攻撃で +1 に抑えるだけ（大技の代わりに払う代金・陣営の規則）"),
+        [TraitId.FireUnleash]   = (HcPlusL,  "ギフトの手番で火勢4 なら攻撃力 ×3 の薙ぎで当てた敵全員に火を点けるだけ（撃つと火勢 1）"),
+        [TraitId.PyreBurnout]   = (HcPlusL,  "ギフトの手番で火勢4 なら全体 ×4 ＋ 火の雨 10 発を撃つだけ（撃つと火勢 1）"),
+        [TraitId.PyreEmbers]    = (HcPlusL,  "焼き尽くすの次の手番を全体 ×2 にするだけ"),
+        [TraitId.CallFire]      = (HcPlusL,  "味方が火を放つ・渡すたびに自分の火勢 +1 だけ"),
+        [TraitId.StokeStageAtk] = (HcPlusL,  "煽り・ギフトの相手を次の手番の段の倍率込みで選ぶだけ"),
         // 第180期: ムド（暴発＋泥散り）・ヴィオ（吐き戻し）・ガン（叩き起こし）。
         // **マイナスを別の `TraitId` に切り出してあるので `yP` が組める**（第74期の作法）。
         [TraitId.Erupt]      = (HcPlusL,  "殴られた回数を溜めて割り込み連撃する。代金は別の札（`Smear`）に切り出してある"),

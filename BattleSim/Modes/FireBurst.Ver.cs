@@ -3,6 +3,7 @@ using static Common;
 using BA = BurnAuditDiag;
 
 // fireburst の版（§4）——札の差し替えだけ。S0 は規定の駒そのもの（＝第242期 R3）。
+// 第245期 前段で大技が規定になったので、版はすべて第244期の規定（`UnitCatalog.BorgR3` / `HotaR3` / `HiyoR3`）から組む。
 static partial class FireBurstDiag
 {
     static UnitDef With(UnitDef g, IEnumerable<TraitId> tr) => new()
@@ -11,20 +12,20 @@ static partial class FireBurstDiag
         Advances = g.Advances, Actions = g.Actions, PlusText = g.PlusText, MinusText = g.MinusText, Flavor = g.Flavor,
     };
     // S1: ② 燃え広がりの上限（ボルグに持たせる・陣営の規則）＋ ③ 攻撃力を倍率の前で比べる（ヒヨ）
-    internal static readonly UnitDef BorgS1 = With(UnitCatalog.Borg, UnitCatalog.Borg.Traits.Append(TraitId.FireSpreadCap));
-    internal static readonly UnitDef HiyoS1 = With(UnitCatalog.Hiyo, UnitCatalog.Hiyo.Traits.Append(TraitId.StokeBaseAtk));
+    internal static readonly UnitDef BorgS1 = With(UnitCatalog.BorgR3, UnitCatalog.BorgR3.Traits.Append(TraitId.FireSpreadCap));
+    internal static readonly UnitDef HiyoS1 = With(UnitCatalog.HiyoR3, UnitCatalog.HiyoR3.Traits.Append(TraitId.StokeBaseAtk));
     // S2: ＋ ① 大技（ボルグ 放つ ／ ホタ 焼き尽くす・残り火・呼び火）
-    internal static readonly UnitDef BorgS2 = With(UnitCatalog.Borg, UnitCatalog.Borg.Traits.Concat(new[] { TraitId.FireSpreadCap, TraitId.FireUnleash }));
-    internal static readonly UnitDef HotaS2R = With(UnitCatalog.Hota, UnitCatalog.Hota.Traits.Concat(new[] { TraitId.PyreBurnout, TraitId.PyreEmbers, TraitId.CallFire }));
-    internal static readonly UnitDef HotaS2D = With(UnitCatalog.Hota, UnitCatalog.Hota.Traits.Concat(new[] { TraitId.PyreBurnout, TraitId.PyreEmbers, TraitId.CallFire, TraitId.FireRainOrdered }));
-    internal static readonly UnitDef HiyoS2g4 = With(UnitCatalog.Hiyo,
-        UnitCatalog.Hiyo.Traits.Select(t => t == TraitId.TurnGift ? TraitId.TurnGiftWait : t).Append(TraitId.StokeBaseAtk));
+    internal static readonly UnitDef BorgS2 = With(UnitCatalog.BorgR3, UnitCatalog.BorgR3.Traits.Concat(new[] { TraitId.FireSpreadCap, TraitId.FireUnleash }));
+    internal static readonly UnitDef HotaS2R = With(UnitCatalog.HotaR3, UnitCatalog.HotaR3.Traits.Concat(new[] { TraitId.PyreBurnout, TraitId.PyreEmbers, TraitId.CallFire }));
+    internal static readonly UnitDef HotaS2D = With(UnitCatalog.HotaR3, UnitCatalog.HotaR3.Traits.Concat(new[] { TraitId.PyreBurnout, TraitId.PyreEmbers, TraitId.CallFire, TraitId.FireRainOrdered }));
+    internal static readonly UnitDef HiyoS2g4 = With(UnitCatalog.HiyoR3,
+        UnitCatalog.HiyoR3.Traits.Select(t => t == TraitId.TurnGift ? TraitId.TurnGiftWait : t).Append(TraitId.StokeBaseAtk));
 
     internal sealed record Ver(string Name, string What, UnitDef Borg, UnitDef Hota, UnitDef Hiyo);
     internal static readonly Ver[] Versions =
     {
-        new("S0", "規定（第242期 R3・対照）", UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo),
-        new("S1", "S0 ＋ 燃え広がりの上限 ＋ 攻撃力の比べ方", BorgS1, UnitCatalog.Hota, HiyoS1),
+        new("S0", "規定（第242期 R3・対照）", UnitCatalog.BorgR3, UnitCatalog.HotaR3, UnitCatalog.HiyoR3),
+        new("S1", "S0 ＋ 燃え広がりの上限 ＋ 攻撃力の比べ方", BorgS1, UnitCatalog.HotaR3, HiyoS1),
         new("S2R", "S1 ＋ 大技・火の雨は乱数", BorgS2, HotaS2R, HiyoS1),
         new("S2D", "S1 ＋ 大技・火の雨は決まった順", BorgS2, HotaS2D, HiyoS1),
         new("S2R-g4", "S2R のギフトを G4 待ち", BorgS2, HotaS2R, HiyoS2g4),
