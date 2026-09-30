@@ -60,6 +60,23 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine($"| `{id}` | {(owners.Count == 0 ? "-" : string.Join("、", owners))} |");
     }
 
+    // 第246期 前段: 敵の火勢（第245期 E2）は駒ではなく燃焼そのものの規則として書く。札の持ち主（火勢の土台を持つ駒）が味方にいるときだけ働くので、
+    // 持ち主は `UnitCatalog.All` から引く（手で名前を書かない）。持ち主がいなければ節ごと出さない。
+    var fireRuleOwners = UnitCatalog.All.Where(u => u.Traits.Contains(TraitId.FoeFireLevel)).Select(u => u.Name).ToList();
+    if (fireRuleOwners.Count > 0)
+    {
+        Console.WriteLine();
+        Console.WriteLine("## 燃焼の規則");
+        Console.WriteLine();
+        Console.WriteLine($"味方に{string.Join("・", fireRuleOwners)}がいるとき（第245期 E2・第246期に規定）:");
+        Console.WriteLine();
+        Console.WriteLine($"- 燃えている敵には火の強さ（1〜4）がある。燃えている味方が燃えている敵を叩くたびに1つ育ち、育たない周回は弱まる。"
+                          + $"火が強いほど、燃焼の刻みは火の強さの回数だけ入り（1回 {BurnRules.Damage}）、受ける傷は大きくなる（"
+                          + string.Join(" ／ ", Enumerable.Range(1, 4).Select(l => $"{l} +{FoeFireRule.BrittlePercent[l]}%")) + "）。");
+        Console.WriteLine($"- 火の強さ 4 の敵が倒れると、隣の敵に火が移る（燃えていなければ火の強さ {FoeFireRule.SpreadLevel} で点く・燃えていれば 1つ育つ）。");
+        Console.WriteLine("- 味方の燃焼の刻みも、火の強さの回数だけ入る。");
+    }
+
     Console.WriteLine();
     Console.WriteLine("## ステージ");
     Console.WriteLine();

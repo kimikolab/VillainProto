@@ -8663,6 +8663,8 @@ public sealed class BattleContext
         public int Stage { get; init; }
         /// <summary>第244期: 大技の一撃（当てた敵に保つ火を点ける・段に依らない）。</summary>
         public bool MoveIgnite { get; init; }
+        /// <summary>第246期: 臨界の一撃（当てた敵の火勢 +1・着火の後）。</summary>
+        public bool Critical { get; init; }
         public readonly List<UnitState> Hit = new();
     }
     readonly List<FireAtkFrame> _fireAtkFrames = new();
@@ -8718,6 +8720,8 @@ public sealed class BattleContext
             {
                 // 第245期 追記 B: ギフトで得た手番の攻撃の燃え広がりでは、札（`GiftQuiet`）を持つヒヨは育たない（撃った本人は育つ）。
                 if (_giftTurnActor == a && h.HasTrait(TraitId.GiftQuiet)) { FireBook.GiftQuietSkipped += n; continue; }
+                // 第246期（`HiyoSpark`）: 味方の燃え広がりでは育たない（煽りと火の粉で育つ）。
+                if (h.HasTrait(TraitId.HiyoSpark)) { FireBook.SparkSpreadSkipped += n; continue; }
                 FireBook.SelfGrowth += n;
                 FireBook.SelfCapped += foes.Count - n;
                 GrowFire(h, n, a, FireLevelLabels.GrowSelf);
@@ -8794,6 +8798,18 @@ public sealed class BattleContext
         foreach (UnitState f in fa.Hit) if (f.IsAlive) Ignite(f, source: fa.Actor);
     }
 
+    /// <summary>第246期: 臨界の出口——当てた敵（生きていて燃えている・敵の火勢の門の中）の火勢 +1（燃え広がりの育ちとは別）。</summary>
+    void ResolveCritical(FireAtkFrame fa)
+    {
+        foreach (UnitState f in fa.Hit)
+        {
+            if (!f.IsAlive || !LvTracked(f.TeamId)) continue;
+            FireBook.CriticalFoeHits++;
+            int b = FireLevelRule.Of(f);
+            if (GrowFire(f, 1, fa.Actor, FireLevelLabels.GrowCritical) && FireLevelRule.Of(f) > b) FireBook.CriticalFoeGrowth++;
+        }
+    }
+
     /// <summary>ホタの段（手番の頭・計数と台本だけ）。</summary>
     void NoteHotaStage(UnitState actor)
     {
@@ -8801,6 +8817,9 @@ public sealed class BattleContext
         int st = FireLevelRule.Of(actor);
         FireBook.StageHands[st]++;
         EmitFireLevel(actor, actor, FireLevelLabels.Stage, st, st);
+        // 第246期: 大火槍・臨界の手番（計数と見出し）。札が無ければ比較1つで抜ける。
+        if (PyreStageTrait.IsCritical(actor)) { FireBook.Criticals++; EmitFireLevel(actor, actor, FireLevelLabels.Critical, st, st); }
+        else if (PyreStageTrait.IsLance(actor)) FireBook.Lances++;
     }
 
     /// <summary>火を保つ（計数のみ）。</summary>
@@ -8812,6 +8831,12 @@ public sealed class BattleContext
     public void Stoke(UnitState hiyo, UnitState target)
     {
         FireBook.Stokes++;
+        // 第246期（`StokePick`・表示と計数だけ）: 選んだ理由——「+1 で型が変わる」なら見出しを1件。
+        if (hiyo.HasTrait(TraitId.StokePick))
+        {
+            if (FireStokeTrait.FormChanges(target)) { FireBook.StokeForm++; EmitFireLevel(hiyo, target, FireLevelLabels.StokeForm, FireLevelRule.Of(target), FireLevelRule.Of(target) + 1); }
+            else FireBook.StokeFallback++;
+        }
         EmitFireLevel(hiyo, target, FireLevelLabels.Stoke, FireLevelRule.Of(target), FireLevelRule.Of(target));
         Log($"    {hiyo.Name} が {target.Name} の火を煽った", LogKind.Trigger);
         GrowFire(target, 1, hiyo, FireLevelLabels.GrowStoke);
@@ -8830,6 +8855,12 @@ public sealed class BattleContext
         if (FireBook.FirstGiftTurn == 0) FireBook.FirstGiftTurn = _turn;
         for (int i = 0; i < to.Count; i++)
         {
+            // 第246期（`StokePick`・表示と計数だけ）: 大技の準備ができた相手なら見出しを1件（`Slot` ＝ 何体目）。
+            if (hiyo.HasTrait(TraitId.StokePick))
+            {
+                if (FireStokeTrait.BigMoveReady(to[i])) { FireBook.GiftReady++; EmitFireLevel(hiyo, to[i], FireLevelLabels.GiftReady, FireLevelRule.Of(to[i]), i + 1); }
+                else FireBook.GiftNotReady++;
+            }
             _giftQueue.Enqueue((hiyo, to[i], i + 1));
             if (_verbose) Emit(new BattleEvent
             {
@@ -8981,6 +9012,7 @@ public sealed class BattleContext
             }
             finally { actor.SetCounter(FireBurstRule.MoveKey, 0); _fireMoveIgnite = false; }
             if (actor.IsAlive && actor.HasTrait(TraitId.PyreEmbers)) actor.SetCounter(FireBurstRule.EmbersKey, 1);
+            BurnoutEchoes(actor);   // 第246期（火の粉・放熱）: 札の持ち主がいなければ何もしない
             return;
         }
         // 残り火: 段の代わりに全体 ×2。敵が2体以下なら追加で全体 ×2。着火はしない（燃え広がりは通常どおり）。
@@ -9025,6 +9057,44 @@ public sealed class BattleContext
             n.SetCounter(FireLevelRule.GrewKey, _turn);
             EmitFireLevel(dead, n, FireLevelLabels.GrowFoe, FoeFireRule.SpreadLevel, b);
         }
+    }
+
+    /// <summary>
+    /// 第246期: 焼き尽くすの返し——味方の火の粉の持ち主（`HiyoSpark`・燃えている）は火勢 +1、放熱の持ち主（`BorgRadiate`・燃えている）は放熱を1つ蓄える（重ねない）。
+    /// <b>乱数を引かない。</b>席の番号の順。
+    /// </summary>
+    void BurnoutEchoes(UnitState hota)
+    {
+        foreach (UnitState h in LivingMembers(hota.TeamId))
+        {
+            if (h == hota || FireLevelRule.Of(h) == 0) continue;
+            if (h.HasTrait(TraitId.HiyoSpark))
+            {
+                FireBook.Sparks++;
+                int b = FireLevelRule.Of(h);
+                EmitFireLevel(hota, h, FireLevelLabels.Spark, b, b);
+                GrowFire(h, 1, hota, FireLevelLabels.GrowSpark);
+                FireBook.SparkGrowth += FireLevelRule.Of(h) - b;
+            }
+            if (h.HasTrait(TraitId.BorgRadiate))
+            {
+                if (h.RawCounter(FireCycleRule.RadiateKey) > 0) { FireBook.RadiateStacked++; continue; }
+                FireBook.Radiates++;
+                h.SetCounter(FireCycleRule.RadiateKey, 1);
+                EmitFireLevel(hota, h, FireLevelLabels.Radiate, FireLevelRule.Of(h), 1);
+                Log($"    {h.Name} が {hota.Name} の放熱を受け止めた", LogKind.Trigger);
+            }
+        }
+    }
+
+    /// <summary>第246期: 放熱を使う（通常の手番の頭）。燃えていれば火勢 +1、燃えていなければ捨てる。</summary>
+    void UseRadiate(UnitState u)
+    {
+        u.SetCounter(FireCycleRule.RadiateKey, 0);
+        int b = FireLevelRule.Of(u);
+        EmitFireLevel(u, u, FireLevelLabels.RadiateUse, b, b);
+        if (b > 0 && GrowFire(u, 1, u, FireLevelLabels.GrowRadiate)) { FireBook.RadiateUsed++; FireBook.RadiateGrowth += FireLevelRule.Of(u) - b; }
+        else FireBook.RadiateWasted++;
     }
 
     /// <summary>呼び火: 味方の呼び火の持ち主（燃えている・生きている・本人以外）の火勢 +1（上限 4）。</summary>
@@ -9213,7 +9283,8 @@ public sealed class BattleContext
         // 第242期: 火勢の攻撃の枠（当てた敵の控え・燃え広がりの控え・ホタの段の着火）。**保持者がいなければ比較1つで素通り。**
         if (_fireLvLive && _fireLvTeams[actor.TeamId])
         {
-            var fa = new FireAtkFrame { Actor = actor, Stage = actor.HasTrait(TraitId.PyreStage) ? FireLevelRule.Of(actor) : 0, MoveIgnite = _fireMoveIgnite };
+            var fa = new FireAtkFrame { Actor = actor, Stage = actor.HasTrait(TraitId.PyreStage) ? FireLevelRule.Of(actor) : 0, MoveIgnite = _fireMoveIgnite,
+                                        Critical = !_fireMoveIgnite && actor.HasTrait(TraitId.PyreCritical) && PyreStageTrait.IsCritical(actor) };
             SpreadScope? own = SpreadScopeOf(actor) is null ? new SpreadScope { Actor = actor } : null;
             if (own is not null) _spreadScopes.Add(own);
             _fireAtkFrames.Add(fa);
@@ -9226,6 +9297,7 @@ public sealed class BattleContext
             if (own is not null) ResolveSpread(own);
             if (fa.Stage >= PyreStageTrait.BurstLevel) _burstLock = fa.Hit.Count > 0 ? fa.Hit[0] : null;
             ResolveStageIgnite(fa);
+            if (fa.Critical) ResolveCritical(fa);   // 第246期（臨界）
             return;
         }
         PerformAttackArmored(actor, prefix, attackPercent, patternOverride);
@@ -9500,6 +9572,11 @@ public sealed class BattleContext
             if (actor.HasTrait(TraitId.PyreStage))
             {
                 int st = Math.Min(FireLevelRule.Of(actor), PyreStageTrait.BurstLevel);
+                if (PyreStageTrait.IsCritical(actor))   // 第246期（表示だけ）
+                    HighlightOnce(actor, "pyreCrit", $"  {actor.Name} の炎が臨界に達した（段4・貫き ×{FireCycleRule.HeavyMultiplier}・当たった敵に着火・敵の火を煽る）");
+                else if (PyreStageTrait.IsLance(actor))
+                    HighlightOnce(actor, "pyreLance", $"  {actor.Name} の炎が大火槍になった（段3・貫き ×{FireCycleRule.HeavyMultiplier}・当たった敵に着火）");
+                else
                 HighlightOnce(actor, "pyre" + st, st switch
                 {
                     1 => $"  {actor.Name} は燃えたまま振り抜いた（段1・攻 ×{PyreTrait.Multiplier}・単体）",
@@ -10948,6 +11025,8 @@ public sealed class BattleContext
             actor.SetCounter(FireBurstRule.EmbersKey, 0);
             _embersNow = actor;
         }
+        // 第246期（放熱）: 印は「ギフトでない次の手番」の頭で使う（火勢 +1 してから動く）。**印が無ければ比較1つで抜ける。**
+        if (_fireLvLive && !_inGift && actor.RawCounter(FireCycleRule.RadiateKey) > 0) UseRadiate(actor);
         TurnOutcome o;
         try { o = TakeTurnFramed(actor); }
         finally { _embersNow = prevEmbers; }

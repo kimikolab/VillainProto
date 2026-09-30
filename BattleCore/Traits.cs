@@ -532,6 +532,11 @@ public enum TraitId
     AllyFireTick,   // 味方の刻みも火勢の回数に（第245期・E2）: 保持者の陣営の燃焼の刻みも火勢の回数だけ（熾火・火の癒し・ベニの反転・火の変換は1回ごと）。**判定は engine**。保持者 0 枚
     GiftQuiet,      // ギフトの手番の燃え広がりでは育たない（第245期 追記 B・ヒヨ）: ギフトで得た手番の攻撃による燃え広がりでは、ヒヨ自身の火勢は上がらない（撃った本人は今までどおり）。**判定は engine**（`ResolveSpread`）
     UnleashStoke,   // 放つで敵の火を育てる（第245期 追記 A・版 E1+放・ボルグ）: 放つで当てた敵は、燃え広がりの +1 に加えてさらに +1（当たる前に燃えていなければ着火して火勢2）。**判定は engine**（`BigMove`）。保持者 0 枚
+    StokePick,      // 煽り・ギフトの相手選び（第246期・ヒヨの版 Q1〜）: 煽りは「火勢 +1 で手番の型が変わる味方」（ホタの段・大技の準備）を優先、ギフトは「大技の準備ができた味方」（火勢4 で大技を持つ）を優先。**判定は `FireStokeTrait`**。保持者 0 枚
+    HiyoSpark,      // 火の粉で育つ（第246期・ヒヨの版 Q1〜）: 味方の燃え広がりでは育たない。代わりに、味方のホタが焼き尽くすを撃つたびに +1（燃えている間）。煽るたびの +1 は今のまま。**判定は engine**（`ResolveSpread`・`BigMove`）。保持者 0 枚
+    BorgRadiate,    // 放熱（第246期・ボルグの版 Q1〜）: 味方のホタが焼き尽くすを撃つと放熱を1つ蓄え（燃えている間・重ねない）、次の通常の手番の頭で使って自分の火勢 +1。ギフトの手番では使わない。**判定は engine**（`BigMove`・`TakeTurn`）。保持者 0 枚
+    PyreCritical,   // 臨界（第246期・ホタの版 Q2）: 自分の手番の火勢4 は、貫き ×7 ＋ 当たった敵に着火 ＋ 当たった敵の火勢 +1（通常の育ちと別）。ギフトの手番の火勢4 は今までどおり焼き尽くす。**判定は `PyreTrait`（型・倍率）と engine の攻撃の枠の出口**。保持者 0 枚
+    PyreLance,      // 大火槍（第246期・ホタの版 HP）: 火勢3（臨界が無ければ 4 も）の型を 5連撃から「貫き ×7 ＋ 着火」に。**判定は `PyreTrait` / `PyreStageTrait`**。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -9099,6 +9104,8 @@ public sealed class PyreTrait : Trait
         int mv = self.RawCounter(FireBurstRule.MoveKey);
         if (mv > 0) return FireBurstRule.Multiply(mv, atk);
         if (self.Counter(StatusKeys.Burn) <= 0) return atk;
+        // 第246期: 大火槍・臨界は貫き ×7。札が無ければ比較2つで抜ける。
+        if (self.HasTrait(TraitId.PyreStage) && PyreStageTrait.IsHeavy(self)) return atk * FireCycleRule.HeavyMultiplier;
         // 第242期（ホタの段）: 火勢3 以上は 5連撃の1回 ×1.6（合計 ×8）。1・2 は今の ×4。
         if (self.HasTrait(TraitId.PyreStage) && FireLevelRule.Of(self) >= PyreStageTrait.BurstLevel)
             return atk * PyreStageTrait.BurstNum / PyreStageTrait.BurstDen;
@@ -9110,7 +9117,7 @@ public sealed class PyreTrait : Trait
         if (self.Counter(StatusKeys.Burn) <= 0) return p;
         // 第242期（ホタの段）: 1 単体 ／ 2 貫き ／ 3 以上 単体（5連撃）。札が無ければ今の「燃えている間は貫き」。
         if (self.HasTrait(TraitId.PyreStage))
-            return FireLevelRule.Of(self) == 2 ? AttackPattern.Pierce : p;
+            return FireLevelRule.Of(self) == 2 || PyreStageTrait.IsHeavy(self) ? AttackPattern.Pierce : p;   // 第246期: 大火槍・臨界も貫き
         return AttackPattern.Pierce;
     }
 
@@ -13267,7 +13274,8 @@ public static class FireLevelRule
         || u.HasTrait(TraitId.FireSpreadCap) || u.HasTrait(TraitId.StokeBaseAtk) || u.HasTrait(TraitId.FireUnleash) || u.HasTrait(TraitId.PyreBurnout)
         || u.HasTrait(TraitId.PyreEmbers) || u.HasTrait(TraitId.CallFire) || u.HasTrait(TraitId.FireRainOrdered)   // 第244期
         || u.HasTrait(TraitId.StokeStageAtk) || u.HasTrait(TraitId.FoeFireLevel) || u.HasTrait(TraitId.FoeFireTick) || u.HasTrait(TraitId.FoeFireBrittle)
-        || u.HasTrait(TraitId.FoeFireSpread) || u.HasTrait(TraitId.AllyFireTick) || u.HasTrait(TraitId.GiftQuiet) || u.HasTrait(TraitId.UnleashStoke);   // 第245期
+        || u.HasTrait(TraitId.FoeFireSpread) || u.HasTrait(TraitId.AllyFireTick) || u.HasTrait(TraitId.GiftQuiet) || u.HasTrait(TraitId.UnleashStoke)   // 第245期
+        || u.HasTrait(TraitId.StokePick) || u.HasTrait(TraitId.HiyoSpark) || u.HasTrait(TraitId.BorgRadiate) || u.HasTrait(TraitId.PyreCritical) || u.HasTrait(TraitId.PyreLance);   // 第246期
 }
 
 /// <summary>火勢の土台（第242期・ボルグの版 R1〜・<b>保持者 0 枚</b>）。札は判定を持たない——engine が読む（保つ・燃え広がり・萎む・消える）。</summary>
@@ -13278,6 +13286,7 @@ public sealed class FireLevelTrait : Trait
     {
         self.SetCounter(FireLevelRule.LvKey, 0); self.SetCounter(FireLevelRule.GrewKey, 0);
         self.SetCounter(FireBurstRule.MoveKey, 0); self.SetCounter(FireBurstRule.EmbersKey, 0);   // 第244期（大技の印・残り火の印）
+        self.SetCounter(FireCycleRule.RadiateKey, 0);   // 第246期（放熱の印）
     }
 }
 
@@ -13310,7 +13319,30 @@ public sealed class PyreStageTrait : Trait
     public const int BurstLevel = 3, BurstHits = 5, BurstNum = 8, BurstDen = 5;
     public override TraitId Id => TraitId.PyreStage;
     public override int ModifyHitCount(UnitState self, int hits)
-        => FireLevelRule.Of(self) >= BurstLevel ? Math.Max(hits, BurstHits) : hits;
+        => FireLevelRule.Of(self) >= BurstLevel && !IsHeavy(self) ? Math.Max(hits, BurstHits) : hits;
+
+    /// <summary>第246期: 臨界（札 <see cref="TraitId.PyreCritical"/>・火勢4・大技の最中でない）。</summary>
+    public static bool IsCritical(UnitState u)
+        => u.HasTrait(TraitId.PyreCritical) && FireLevelRule.Of(u) >= FireLevelRule.Max && u.RawCounter(FireBurstRule.MoveKey) == 0;
+    /// <summary>第246期: 大火槍（札 <see cref="TraitId.PyreLance"/>・火勢3 以上で臨界でない）。</summary>
+    public static bool IsLance(UnitState u)
+        => u.HasTrait(TraitId.PyreLance) && FireLevelRule.Of(u) >= BurstLevel && !IsCritical(u);
+    /// <summary>第246期: 貫き ×7 の型（大火槍か臨界）——5連撃の代わり。</summary>
+    public static bool IsHeavy(UnitState u) => IsCritical(u) || IsLance(u);
+
+    /// <summary>
+    /// 第246期: 火勢 <paramref name="lv"/> のときの手番の型の札（0 燃えていない ／ 1 単体 ×4 ／ 2 貫き ×4 ／ 3 5連撃 ／ 4 大火槍 ／ 5 臨界）。
+    /// 煽りの相手選び（<see cref="FireStokeTrait"/>）が「+1 で型が変わるか」を引くのに使う。段の札が無ければ燃えている間は 2（貫き ×4）。
+    /// </summary>
+    public static int FormAt(UnitState u, int lv)
+    {
+        if (lv <= 0 || !u.HasTrait(TraitId.Pyre)) return 0;
+        if (!u.HasTrait(TraitId.PyreStage)) return 2;
+        if (lv == 1) return 1;
+        if (lv == 2) return 2;
+        if (lv >= FireLevelRule.Max && u.HasTrait(TraitId.PyreCritical)) return 5;
+        return u.HasTrait(TraitId.PyreLance) ? 4 : 3;
+    }
 }
 
 /// <summary>ターンギフト・即撃ち（第242期・G3・<b>保持者 0 枚</b>）。札は判定を持たない——<see cref="FireStokeTrait"/> が読む。</summary>
@@ -13348,10 +13380,29 @@ public sealed class FireStokeTrait : Trait
         ctx.Stoke(self, t);
     }
 
-    /// <summary>ギフトの相手の並び（燃えている味方・ヒヨ以外）。</summary>
+    /// <summary>ギフトの相手の並び（燃えている味方・ヒヨ以外）。第246期（<see cref="TraitId.StokePick"/>）: 大技の準備ができた味方を先に。</summary>
     public static IEnumerable<UnitState> GiftTargets(BattleContext ctx, UnitState self)
-        => ctx.LivingMembers(self.TeamId).Where(a => a != self && a.IsAlive && FireLevelRule.Of(a) > 0)
-            .OrderByDescending(FireLevelRule.Of).ThenByDescending(a => AtkFor(self, a)).ThenBy(a => a.Slot);
+    {
+        var xs = ctx.LivingMembers(self.TeamId).Where(a => a != self && a.IsAlive && FireLevelRule.Of(a) > 0);
+        var o = self.HasTrait(TraitId.StokePick) ? xs.OrderByDescending(BigMoveReady).ThenByDescending(FireLevelRule.Of) : xs.OrderByDescending(FireLevelRule.Of);
+        return o.ThenByDescending(a => AtkFor(self, a)).ThenBy(a => a.Slot);
+    }
+
+    /// <summary>第246期: 大技の準備ができた（火勢4 で、ギフトの手番に撃つ大技——放つ・焼き尽くす——を持つ）。</summary>
+    public static bool BigMoveReady(UnitState a)
+        => FireLevelRule.Of(a) >= FireLevelRule.Max && (a.HasTrait(TraitId.FireUnleash) || a.HasTrait(TraitId.PyreBurnout));
+
+    /// <summary>
+    /// 第246期: 火勢を +1 すると型が変わるか——ホタの段の型（<see cref="PyreStageTrait.FormAt"/>）が変わる、
+    /// または +1 で火勢4 に届いて大技の準備ができる（放つ・焼き尽くすを持つ）。
+    /// </summary>
+    public static bool FormChanges(UnitState a)
+    {
+        int lv = FireLevelRule.Of(a);
+        if (lv <= 0 || lv >= FireLevelRule.Max) return false;
+        if (PyreStageTrait.FormAt(a, lv) != PyreStageTrait.FormAt(a, lv + 1)) return true;
+        return lv + 1 == FireLevelRule.Max && (a.HasTrait(TraitId.FireUnleash) || a.HasTrait(TraitId.PyreBurnout));
+    }
 
     /// <summary>相手選びで比べる攻撃力（第244期 ③）。<see cref="TraitId.StokeBaseAtk"/> を持てば倍率の前（元の攻撃力 ＋ 上乗せ・熾火の ×4 や 5連撃の ×1.6 を掛けない）、無ければ <c>CurrentAttack</c>（第242期）。</summary>
     public static int AtkFor(UnitState hiyo, UnitState a)
@@ -13367,14 +13418,19 @@ public sealed class FireStokeTrait : Trait
     {
         if (!a.HasTrait(TraitId.Pyre) || a.RawCounter(StatusKeys.Burn) <= 0) return 1;
         if (a.HasTrait(TraitId.PyreEmbers) && a.RawCounter(FireBurstRule.EmbersKey) > 0) return 2;
+        if (a.HasTrait(TraitId.PyreStage) && PyreStageTrait.IsHeavy(a)) return FireCycleRule.HeavyMultiplier;   // 第246期（大火槍・臨界）
         if (a.HasTrait(TraitId.PyreStage) && FireLevelRule.Of(a) >= PyreStageTrait.BurstLevel) return PyreStageTrait.BurstNum;
         return 4;
     }
 
     /// <summary>煽りの相手（燃えている味方・ヒヨ以外・火勢4 は除く・攻撃力最大・同値は席の番号順）。</summary>
     public static UnitState? StokeTarget(BattleContext ctx, UnitState self)
-        => ctx.LivingMembers(self.TeamId).Where(a => a != self && a.IsAlive && FireLevelRule.Of(a) is > 0 and < FireLevelRule.Max)
-            .OrderByDescending(a => AtkFor(self, a)).ThenBy(a => a.Slot).FirstOrDefault();
+    {
+        var xs = ctx.LivingMembers(self.TeamId).Where(a => a != self && a.IsAlive && FireLevelRule.Of(a) is > 0 and < FireLevelRule.Max);
+        // 第246期（`StokePick`）: 「+1 で型が変わる味方」を先に（その中も、該当が無ければ全体も P′）。
+        var o = self.HasTrait(TraitId.StokePick) ? xs.OrderByDescending(FormChanges).ThenByDescending(a => AtkFor(self, a)) : xs.OrderByDescending(a => AtkFor(self, a));
+        return o.ThenBy(a => a.Slot).FirstOrDefault();
+    }
 }
 
 // =====================================================================================
@@ -13427,6 +13483,30 @@ public sealed class AllyFireTickTrait : Trait { public override TraitId Id => Tr
 public sealed class GiftQuietTrait : Trait { public override TraitId Id => TraitId.GiftQuiet; }
 /// <summary>放つで敵の火を育てる（第245期 追記 A・<b>保持者 0 枚</b>）。engine の `BigMove` が読む。</summary>
 public sealed class UnleashStokeTrait : Trait { public override TraitId Id => TraitId.UnleashStoke; }
+
+// =====================================================================================
+// 第246期 —— 三角の循環（ホタから返す）・ホタの段の作り直し・ヒヨの相手選び。**5 枚とも保持者 0 枚**（版は診断 `firecycle` のローカルの駒）。
+// 判定はどれも engine（`BigMove` の火の粉・放熱 ／ `TakeTurn` の放熱の消費 ／ `ResolveSpread` の育ちの置き換え ／ 攻撃の枠の出口の臨界）と
+// `FireStokeTrait`（相手選び）・`PyreTrait` / `PyreStageTrait`（型・倍率）。**乱数を引かない。**
+// =====================================================================================
+/// <summary>三角の循環の数値と私有キー（第246期）。</summary>
+public static class FireCycleRule
+{
+    /// <summary>放熱の印（焼き尽くすで蓄え、次の通常の手番の頭で消費）。</summary>
+    public const string RadiateKey = "fireRadiate";
+    /// <summary>大火槍・臨界の倍率（貫き）。</summary>
+    public const int HeavyMultiplier = 7;
+}
+/// <summary>煽り・ギフトの相手選び（第246期・ヒヨ）。<see cref="FireStokeTrait"/> が読む。</summary>
+public sealed class StokePickTrait : Trait { public override TraitId Id => TraitId.StokePick; }
+/// <summary>火の粉で育つ（第246期・ヒヨ）。engine が読む。</summary>
+public sealed class HiyoSparkTrait : Trait { public override TraitId Id => TraitId.HiyoSpark; }
+/// <summary>放熱（第246期・ボルグ）。engine が読む。</summary>
+public sealed class BorgRadiateTrait : Trait { public override TraitId Id => TraitId.BorgRadiate; }
+/// <summary>臨界（第246期・ホタ）。<see cref="PyreTrait"/> と engine が読む。</summary>
+public sealed class PyreCriticalTrait : Trait { public override TraitId Id => TraitId.PyreCritical; }
+/// <summary>大火槍（第246期・ホタの版 HP）。<see cref="PyreTrait"/> と <see cref="PyreStageTrait"/> が読む。</summary>
+public sealed class PyreLanceTrait : Trait { public override TraitId Id => TraitId.PyreLance; }
 /// <summary>放つ（第244期・ボルグ・<b>保持者 0 枚</b>）。ギフトの手番で火勢4 のとき、engine が薙ぎ ×3 に差し替える。</summary>
 public sealed class FireUnleashTrait : Trait { public override TraitId Id => TraitId.FireUnleash; }
 /// <summary>焼き尽くす（第244期・ホタ・<b>保持者 0 枚</b>）。ギフトの手番で火勢4 のとき、engine が全体 ×4 ＋ 火の雨に差し替える。</summary>
@@ -15587,6 +15667,11 @@ public static class TraitCatalog
         new AllyFireTickTrait(),     // 第245期
         new GiftQuietTrait(),        // 第245期 追記 B
         new UnleashStokeTrait(),     // 第245期 追記 A
+        new StokePickTrait(),        // 第246期
+        new HiyoSparkTrait(),        // 第246期
+        new BorgRadiateTrait(),      // 第246期
+        new PyreCriticalTrait(),     // 第246期
+        new PyreLanceTrait(),        // 第246期
         new FireUnleashTrait(),      // 第244期
         new PyreBurnoutTrait(),      // 第244期
         new PyreEmbersTrait(),       // 第244期

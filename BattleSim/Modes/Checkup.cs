@@ -195,6 +195,12 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.CallFire]      = (HcPlusL,  "味方が火を放つ・渡すたびに自分の火勢 +1 だけ"),
         [TraitId.StokeStageAtk] = (HcPlusL,  "煽り・ギフトの相手を次の手番の段の倍率込みで選ぶだけ"),
         [TraitId.GiftQuiet]     = (HcMinusL, "ギフトの手番の燃え広がりで自分の火勢が上がらないだけ（追記 B）"),
+        // 第246期 前段: 第245期 E2 の規定化で保持者（ボルグ）が付いた札。分類を同じコミットで足す（第132期 段0-a の再発防止）。
+        [TraitId.FoeFireLevel]   = (HcPlusL, "敵の燃焼にも火勢（1〜4）を持たせるだけ（育つ・萎むは盤面の規則）"),
+        [TraitId.FoeFireTick]    = (HcPlusL, "敵の燃焼の刻みを火勢の回数だけ入れるだけ"),
+        [TraitId.FoeFireBrittle] = (HcPlusL, "敵の燃焼の脆さを火勢で 25/40/55/70% に上げるだけ"),
+        [TraitId.FoeFireSpread]  = (HcPlusL, "火勢4 の敵が倒れると隣の敵へ火が移るだけ"),
+        [TraitId.AllyFireTick]   = (HcBothL, "味方の燃焼の刻みも火勢の回数だけ入る——火に強い味方・火の変換では癒えるが、ほかは焼かれる"),
         // 第180期: ムド（暴発＋泥散り）・ヴィオ（吐き戻し）・ガン（叩き起こし）。
         // **マイナスを別の `TraitId` に切り出してあるので `yP` が組める**（第74期の作法）。
         [TraitId.Erupt]      = (HcPlusL,  "殴られた回数を溜めて割り込み連撃する。代金は別の札（`Smear`）に切り出してある"),

@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using BA = BurnAuditDiag;
 using FB = FireBurstDiag;
@@ -6,7 +6,7 @@ using FB = FireBurstDiag;
 // enemyfire の版（指示書 §4）——札の差し替えだけ（ボルグに持たせる・保持者 0 枚）。E0 は前段の規定の駒そのもの。
 static partial class EnemyFireDiag
 {
-    static UnitDef BorgWith(params TraitId[] tr) => With(UnitCatalog.Borg, UnitCatalog.Borg.Traits.Concat(tr));
+    static UnitDef BorgWith(params TraitId[] tr) => With(UnitCatalog.BorgE0, UnitCatalog.BorgE0.Traits.Concat(tr));   // 第246期: E2 が規定になったので第245期の規定（`BorgE0`）から組む
     internal static readonly UnitDef BorgTick = BorgWith(TraitId.FoeFireLevel, TraitId.FoeFireTick);
     internal static readonly UnitDef BorgBrittle = BorgWith(TraitId.FoeFireLevel, TraitId.FoeFireBrittle);
     internal static readonly UnitDef BorgE1 = BorgWith(TraitId.FoeFireLevel, TraitId.FoeFireTick, TraitId.FoeFireBrittle, TraitId.FoeFireSpread);
@@ -15,7 +15,7 @@ static partial class EnemyFireDiag
 
     internal static readonly FB.Ver[] Versions =
     {
-        new("E0", "前段の規定（対照）", UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo),
+        new("E0", "前段の規定（対照）", UnitCatalog.BorgE0, UnitCatalog.Hota, UnitCatalog.Hiyo),
         new("E-刻み", "敵の火勢（育つ・萎む）＋ 刻みの回数", BorgTick, UnitCatalog.Hota, UnitCatalog.Hiyo),
         new("E-脆さ", "敵の火勢 ＋ 脆さの上昇", BorgBrittle, UnitCatalog.Hota, UnitCatalog.Hiyo),
         new("E1", "敵の火勢 ＋ 刻みの回数 ＋ 脆さの上昇 ＋ 延焼（味方の刻みはそのまま）", BorgE1, UnitCatalog.Hota, UnitCatalog.Hiyo),

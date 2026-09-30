@@ -3595,6 +3595,22 @@ public static class FireLevelLabels
     public const string GrowCall = "育つ・呼び火";
     /// <summary>第245期: 敵の火勢が育った（燃え広がり・<c>ActorId</c> ＝ 殴った燃えている味方 ／ 延焼・<c>ActorId</c> ＝ 倒れた敵）。<c>Amount</c> ＝ 育った後 ／ <c>Slot</c> ＝ 育つ前。</summary>
     public const string GrowFoe = "育つ・敵";
+    /// <summary>第246期: 見出し: 煽りの理由（<c>StokePick</c>）——+1 で型が変わる味方を選んだ。<c>ActorId</c> ＝ ヒヨ ／ <c>TargetId</c> ＝ 相手 ／ <c>Amount</c> ＝ 今の火勢 ／ <c>Slot</c> ＝ 煽った後の火勢。直後に「煽り」。</summary>
+    public const string StokeForm = "煽り・型が変わる";
+    /// <summary>第246期: 見出し: ギフトの理由（<c>StokePick</c>）——大技の準備ができた味方に渡す。<c>ActorId</c> ＝ ヒヨ ／ <c>TargetId</c> ＝ 相手 ／ <c>Amount</c> ＝ 相手の火勢（4）／ <c>Slot</c> ＝ 何体目。直後に「ターンギフト」。</summary>
+    public const string GiftReady = "渡す・大技の準備";
+    /// <summary>第246期: 見出し: 火の粉（ホタの焼き尽くすの後）。<c>ActorId</c> ＝ ホタ ／ <c>TargetId</c> ＝ ヒヨ。続いて「育つ・火の粉」。</summary>
+    public const string Spark = "火の粉";
+    public const string GrowSpark = "育つ・火の粉";
+    /// <summary>第246期: 見出し: 放熱を蓄えた（ホタの焼き尽くすの後）。<c>ActorId</c> ＝ ホタ ／ <c>TargetId</c> ＝ ボルグ ／ <c>Amount</c> ＝ ボルグの火勢。</summary>
+    public const string Radiate = "放熱";
+    /// <summary>第246期: 見出し: 放熱を使う（ボルグの通常の手番の頭）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ボルグ。続いて「育つ・放熱」（燃えていなければ無し）。</summary>
+    public const string RadiateUse = "放熱を使う";
+    public const string GrowRadiate = "育つ・放熱";
+    /// <summary>第246期: 見出し: 臨界（ホタの自分の手番・火勢4）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ホタ。続いて貫き ×7 の <c>Attack</c> / <c>Damage</c>、当たった敵の「育つ・臨界」。</summary>
+    public const string Critical = "臨界";
+    /// <summary>第246期: 臨界で当たった敵の火勢が育った（<c>ActorId</c> ＝ ホタ ／ <c>Amount</c> ＝ 後 ／ <c>Slot</c> ＝ 前）。</summary>
+    public const string GrowCritical = "育つ・臨界";
     /// <summary>第245期: 見出し: 延焼。<c>ActorId</c> ＝ 火勢4 で倒れた敵 ／ <c>TargetId</c> ＝ 隣の生きている敵 ／ <c>Slot</c> ＝ 1 燃えていなかった（続いて「点く」と「育つ・敵」で火勢2）／ 2 燃えていた（続いて「育つ・敵」で +1）。</summary>
     public const string FoeSpread = "延焼";
 }
@@ -3714,6 +3730,10 @@ public sealed class FireLevelLedger
     public long UnleashFoeStoked, UnleashFoeRaised, UnleashFoeAt4;
     /// <summary>第245期: 敵の脆さの名目（添字 ＝ 火勢）・うち 25% を超えた分。</summary>
     public readonly long[] FoeBrittle = new long[5], FoeBrittleUp = new long[5];
+    /// <summary>第246期: 相手選び（煽り 型が変わる ／ P′ ・ギフト 大技の準備 ／ それ以外）・火の粉（回 ／ 育った）・燃え広がりで育たなかった分・
+    /// 放熱（蓄えた ／ 重ねずに捨てた ／ 使って育った ／ 燃えていなくて捨てた ／ 育った量）・臨界（手番 ／ 当たった敵 ／ 育った敵）・大火槍の手番。</summary>
+    public long StokeForm, StokeFallback, GiftReady, GiftNotReady, Sparks, SparkGrowth, SparkSpreadSkipped;
+    public long Radiates, RadiateStacked, RadiateUsed, RadiateWasted, RadiateGrowth, Criticals, CriticalFoeHits, CriticalFoeGrowth, Lances;
 }
 
 public sealed class BurnLinkLedger

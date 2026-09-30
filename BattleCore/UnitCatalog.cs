@@ -17,6 +17,29 @@ public static class UnitCatalog
         Speed = 8,
         // 第244期 前段（ポンの判断）: 第242期 R3 の2本（火の粉・広・火を保つ）と火勢の土台を足した。旧は <see cref="BorgL0"/>。
         // 第245期 前段（ポンの判断・指示書 §2.3）: 第244期の大技——放つ（`FireUnleash`）と燃え広がりの上限（`FireSpreadCap`・陣営の規則）。旧は <see cref="BorgR3"/>。
+        // 第246期 前段（指示書 §2）: 第245期 E2——敵の火勢（育つ・萎む）・刻みを火勢の回数に・脆さ 25/40/55/70%・火勢4 で倒れると延焼・味方の刻みも回数。
+        // 5 枚ともボルグに持たせる（第245期の版と同じ置き場所・陣営の規則）。旧は <see cref="BorgE0"/>。
+        Traits = new[] { TraitId.Splash, TraitId.FireFeed, TraitId.Cinder, TraitId.FireArmor, TraitId.FireSplash, TraitId.SelfKindle, TraitId.FireMend, TraitId.FireWardAll,
+                         TraitId.FireLevel, TraitId.CinderWide, TraitId.FireKeep, TraitId.FireSpreadCap, TraitId.FireUnleash,
+                         TraitId.FoeFireLevel, TraitId.FoeFireTick, TraitId.FoeFireBrittle, TraitId.FoeFireSpread, TraitId.AllyFireTick },
+        Pattern = AttackPattern.Sweep,
+        PlusText = "火力が高く、薙ぎ払いが敵の両隣にも届く。斬った相手全員に燃焼を移す。斬った後は自分の火も燃え続ける。戦いの前から身体がくすぶり、殴られると殴った敵に火を返す。燃えている間は受ける傷が半分になり、火に焼かれるほど傷が塞がる。燃えている敵を斬ると、その火で自分も癒える。燃えている味方は、受ける傷が半分になる。火を渡されて燃え盛っていれば、溜めた火を放つ——攻撃力 3 倍の薙ぎで、当たった敵すべてに火が移る。放った火はまた小さくなる",
+        MinusText = "同じ一振りが、自分の両隣の味方も巻き込む（燃え移る火として——火に強い味方には効かない）。隣の味方にも火が移る",
+        Flavor = "三度、味方の部隊を半壊させて追い出された。"
+    };
+
+    /// <summary>第245期の規定のボルグ（大技まで）。対照（<see cref="All"/> に入れない）。第245期の器具（`enemyfire`）の E0 はこちらに固定した。</summary>
+    public static readonly UnitDef BorgE0 = new()
+    {
+        Id = "borg",
+        Name = "焼け残りのボルグ",
+        // 第239期 前段（ポンの判断）: 第238期 A+D2（第235期「全部」＝火の鎧・HP100・燃える巻き込み・くすぶり・火の癒し・焼き返し ＋ 盾の配り（全員））。
+        // 札の並びは第238期の器具（`FireWardDiag.D2`）と同じ——焼き返しは火の粉より前（殴る前から燃えていた主目標を読む）。旧は <see cref="BorgF0"/>。
+        MaxHp = 100,
+        Attack = 18,
+        Speed = 8,
+        // 第244期 前段（ポンの判断）: 第242期 R3 の2本（火の粉・広・火を保つ）と火勢の土台を足した。旧は <see cref="BorgL0"/>。
+        // 第245期 前段（ポンの判断・指示書 §2.3）: 第244期の大技——放つ（`FireUnleash`）と燃え広がりの上限（`FireSpreadCap`・陣営の規則）。旧は <see cref="BorgR3"/>。
         Traits = new[] { TraitId.Splash, TraitId.FireFeed, TraitId.Cinder, TraitId.FireArmor, TraitId.FireSplash, TraitId.SelfKindle, TraitId.FireMend, TraitId.FireWardAll,
                          TraitId.FireLevel, TraitId.CinderWide, TraitId.FireKeep, TraitId.FireSpreadCap, TraitId.FireUnleash },
         Pattern = AttackPattern.Sweep,
