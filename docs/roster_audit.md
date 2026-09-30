@@ -43,9 +43,9 @@
 | 16 | 火選りのヒヨ | +3.03 | -12.35 | 転生 | 4 | 0 | 10.0 | どこでも同じ | 右下（選んでも働かない） |  | Favor / FireConvert / FireStoke / TurnGift |
 | 17 | 縛めのクグ | +3.33 | +5.91 | 残す | 3 | 1 | 20.0 | 化ける | 上（単独で強い） |  | Grapple |
 | 18 | 逃亡兵セロ | +4.58 | +1.42 | 転生 | 12 | 0 | 13.0 | どこでも同じ | 右下（選んでも働かない） | +0.3pt | Evade / EvadeSwap / StatusArrow / EvadeQuick / EvadeDrift / LastDodge / Decoy / EvadeMoveShot |
-| 19 | 喧噪のバサ | +4.67 | +34.83 | 残す | 3 | 0 | 37.0 | 化ける | 上（単独で強い） |  | Shuffler / Disarray / Squall / Gale / Tailwind / TailwindFighter |
+| 19 | 喧噪のバサ | +4.67 | +34.83 | 残す | 3 | 0 | 34.0 | 化ける | 上（単独で強い） |  | Shuffler / Disarray / Squall / Gale / Tailwind / TailwindFighter |
 | 20 | 軋みのヨミ | +4.92 | +10.38 | 残す | 3 | 0 | 16.0 | どこでも同じ | 上（単独で強い） |  | Displaced / CreakSweep / KillImpact / ImpactTailwind |
-| 21 | 萎縮のクビ | +5.25 | -12.52 | 転生 | 2 | 0 | 25.0 | 化ける | 左下（送り先を選べば働く） | +2.3pt | Huddle / Daunt / DauntLeak |
+| 21 | 萎縮のクビ | +5.25 | -12.52 | 転生 | 2 | 0 | 26.0 | 化ける | 左下（送り先を選べば働く） | +2.3pt | Huddle / Daunt / DauntLeak |
 | 22 | 澱み喰いのヴィオ | +6.00 | +2.62 | 残す | 2 | 0 | 17.0 | 化ける | 上（単独で強い） |  | Blightfed / Spit |
 | 23 | 後備えのセッキ | +7.17 | +13.02 | 残す | 3 | 0 | 24.0 | 化ける | 上（単独で強い） | −4.6pt | RearGuard / Rage |
 | 24 | 鱗のウロ | +7.29 | +4.52 | 残す | 3 | 1 | 6.0 | どこでも同じ | 上（単独で強い） |  | Scale |
@@ -53,11 +53,11 @@
 | 26 | 毒吐きのスィド | +7.72 | +15.82 | 残す | 4 | 0 | 17.0 | 化ける | 上（単独で強い） |  | Spew / VenomHeavy / Numb |
 | 27 | 廃棄聖騎士ガルド | +8.22 | +15.59 | 残す | 35 | 0 | 11.0 | どこでも同じ | 上（単独で強い） |  | Guardian / Stoic / Parry / LastStandHold |
 | 28 | 大喰らいゴルム | +8.87 | +8.03 | 残す | 24 | 4 | 27.0 | 化ける | 上（単独で強い） |  | Colossus / Drain |
-| 29 | 突き返しのハネ | +8.88 | -3.59 | 転生 | 1 | 0 | 42.0 | 化ける | 左下（送り先を選べば働く） | 対照 0.0pt | Rebound / Overrun / Disarray / Blast / Spring / Tailwind / TailwindFighter / SpringGuard / SpringStay / SpringRow / Landing / SpringStrike / SpringDaunt |
+| 29 | 突き返しのハネ | +8.88 | -3.59 | 転生 | 1 | 0 | 41.0 | 化ける | 左下（送り先を選べば働く） | 対照 0.0pt | Rebound / Overrun / Disarray / Blast / Spring / Tailwind / TailwindFighter / SpringGuard / SpringStay / SpringRow / Landing / SpringStrike / SpringDaunt / BlastReach / BlastStay |
 | 30 | 刻みのノミ | +10.69 | +12.05 | 残す | 6 | 2 | 19.0 | 化ける | 上（単独で強い） |  | Carve / Fixate |
 | 31 | 瘴気袋のグザ | +12.64 | +21.36 | 残す | 8 | 0 | 21.0 | 化ける | 上（単独で強い） |  | Miasma |
 | 32 | 焼け残りのボルグ | +14.58 | -4.51 | 転生 | 12 | 0 | 43.0 | 化ける | 左下（送り先を選べば働く） | 0.0pt | Splash / FireFeed / Cinder / FireArmor / FireSplash / SelfKindle / FireMend / FireWardAll / FireLevel / CinderWide / FireKeep |
-| 33 | 砕け盾のヒビ | +14.75 | +4.64 | 残す | 4 | 0 | 12.0 | どこでも同じ | 上（単独で強い） |  | Shatter / Frail |
+| 33 | 砕け盾のヒビ | +14.75 | +4.64 | 残す | 4 | 0 | 13.0 | どこでも同じ | 上（単独で強い） |  | Shatter / Frail |
 | 34 | 棘鎧のカド | +16.09 | +32.59 | 残す | 10 | 2 | 25.0 | 化ける | 上（単独で強い） |  | ThornGuard / Thorns / Immobile / Havoc / ThornsArmored |
 | 35 | 毒喰らいのベニ | +20.06 | +2.11 | 残す | 2 | 0 | 11.0 | どこでも同じ | 上（単独で強い） |  | Inverse / Guren / Kindle / Taint / InverseLeak / GurenOpeningBurn |
 | 36 | 囃し立てのヒサ | +20.64 | +0.86 | 転生 | 9 | 1 | 12.0 | どこでも同じ | 右下（選んでも働かない） |  | Beckon / Flee |
@@ -84,4 +84,4 @@
 - `checkup ideal` が値を返した駒: 49 / 52 （返さないのは `CompareBuilds()` に在席 0 枠の駒だけ）
 - `stage catalog` が引けた駒: 49 / 52
 
-所要 492.2 秒（うち `stage catalog` が 468.0 秒）。
+所要 259.0 秒（うち `stage catalog` が 242.8 秒）。

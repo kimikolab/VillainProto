@@ -532,6 +532,7 @@ if (focusId == "gale") { GaleDiag.Run(args, stageIndex); return; }   // 第229�
 if (focusId == "cycle") { CycleDiag.Run(args, stageIndex); return; }   // 第230期
 if (focusId == "tune") { TuneDiag.Run(args, stageIndex); return; }   // 第231期
 if (focusId == "spring2") { Spring2Diag.Run(args, stageIndex); return; }   // 第232期
+if (focusId == "hanereach") { HaneReachDiag.Run(args, stageIndex); return; }   // ハネの空振り（ポンの観察）
 if (focusId == "burnaudit") { BurnAuditDiag.Run(args, stageIndex); return; }   // 第233期
 if (focusId == "borgguard") { BorgGuardDiag.Run(args, stageIndex); return; }   // 第234期
 if (focusId == "borgfront") { BorgFrontDiag.Run(args, stageIndex); return; }   // 第235期

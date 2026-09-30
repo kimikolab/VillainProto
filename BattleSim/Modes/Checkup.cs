@@ -333,6 +333,8 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.SpringStrike]    = (HcPlusL,  "弾き返すたび、殴ってきた敵にハネの攻撃力ぶんの打撃（第243期・ハネの版 ③・第243期の追記で規定＝ハネ）"),
         [TraitId.ConfuseHalf]     = (HcMinusL, "混乱した駒の攻撃が 50% で普段どおりになる（第243期・バサの版 ④・保持者 0 枚）"),
         [TraitId.SpringDaunt]     = (HcPlusL,  "吹っ飛ばし・弾き返しで動かした敵を萎縮させる（第243期・ハネの版 ⑤・第243期の追記で規定＝ハネ）"),
+        [TraitId.BlastReach]      = (HcPlusL,  "吹っ飛ばしの狙いを一番前の列の全員から選ぶ（ハネの版 ①・規定＝ハネ）"),
+        [TraitId.BlastStay]       = (HcPlusL,  "押し込めない敵にも打撃・転倒・萎縮を入れる（ハネの版 ②・規定＝ハネ）"),
         [TraitId.EvadeMoveShot]   = (HcPlusL,  "段2 以上で隊列を動かされたら貫きの矢を1本（1ターン2回・自分の回避の入れ替えでは撃たない。第231期・セロの版 C・保持者 0 枚）"),
         [TraitId.MireBurstAll]    = (HcBothL,  "B2 を敵味方の両方に。漏れの印の味方が倒れると味方側で爆ぜる（第220期・B2x・保持者 0 枚）"),
         [TraitId.LastStandHold]   = (HcBothL,  "味方が 0 体になると盾を捨てて剣を抜く（受け止めた刃の1割を力に変え ×2・薙ぎ、斬り返し、相打ちで勝つ）のと、構え直せなくなるのが1つの札"),
