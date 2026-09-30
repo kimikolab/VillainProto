@@ -3593,6 +3593,10 @@ public static class FireLevelLabels
     public const string CallFire = "呼び火";
     /// <summary>呼び火で育った（第244期・<c>ActorId</c> ＝ 呼んだ駒）。</summary>
     public const string GrowCall = "育つ・呼び火";
+    /// <summary>第245期: 敵の火勢が育った（燃え広がり・<c>ActorId</c> ＝ 殴った燃えている味方 ／ 延焼・<c>ActorId</c> ＝ 倒れた敵）。<c>Amount</c> ＝ 育った後 ／ <c>Slot</c> ＝ 育つ前。</summary>
+    public const string GrowFoe = "育つ・敵";
+    /// <summary>第245期: 見出し: 延焼。<c>ActorId</c> ＝ 火勢4 で倒れた敵 ／ <c>TargetId</c> ＝ 隣の生きている敵 ／ <c>Slot</c> ＝ 1 燃えていなかった（続いて「点く」と「育つ・敵」で火勢2）／ 2 燃えていた（続いて「育つ・敵」で +1）。</summary>
+    public const string FoeSpread = "延焼";
 }
 
 /// <summary>撃破の衝撃（第230期）の <c>Text</c>。<b>表示専用。</b></summary>
@@ -3698,6 +3702,14 @@ public sealed class FireLevelLedger
     public long Unleashes, Burnouts, Embers, EmbersExtra, RainDrops, CallFires, CallGrowth;
     /// <summary>第244期: 大技の記録（ターン・種類 1 放つ ／ 2 焼き尽くす ／ 3 残り火・駒）。</summary>
     public readonly List<(int Turn, int Kind, int Id)> Moves = new();
+    /// <summary>第245期: 敵の火勢——燃え広がりで育つ判定（のべ）／ 実際に上がった回数 ／ 延焼（火勢4 で倒れた敵・隣へ移った回数・うち点けた ／ うち育てた）。</summary>
+    public long FoeGrowHits, FoeGrowth, FoeLv4Deaths, FoeSpreads, FoeSpreadLit, FoeSpreadGrow;
+    /// <summary>第245期: 燃焼の刻み（添字 ＝ 刻みの時点の火勢 1〜4）。敵の 1回目 ／ 追加の回数と HP を削った量。味方は削った量と回復した量（火の変換・ベニ・火の癒し）と倒れた数。</summary>
+    public readonly long[] FoeTickN = new long[5], FoeTickHp = new long[5], FoeTickExtraN = new long[5], FoeTickExtraHp = new long[5];
+    public readonly long[] AllyTickN = new long[5], AllyTickDmg = new long[5], AllyTickHeal = new long[5], AllyTickExtraN = new long[5], AllyTickExtraDmg = new long[5], AllyTickExtraHeal = new long[5];
+    public long AllyTickDeaths, AllyTickExtraDeaths;
+    /// <summary>第245期: 敵の脆さの名目（添字 ＝ 火勢）・うち 25% を超えた分。</summary>
+    public readonly long[] FoeBrittle = new long[5], FoeBrittleUp = new long[5];
 }
 
 public sealed class BurnLinkLedger

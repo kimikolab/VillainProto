@@ -709,19 +709,50 @@ public sealed class BattleContext
             UnitTally bt = TallyOf(u);
             bt.BurnTicks++;
 
+            // 第245期: 刻みの回数と脆さは、残りターンを減らす前の火勢で読む（最後の刻みは減らした後に刻むので `Of` は 0 を返す）。
+            int preLv = _foeFireLive ? FireLevelRule.Of(u) : 0;
+            int extra = _foeFireLive && _lvTickTeams[u.TeamId] && preLv > 1 ? preLv - 1 : 0;
             u.SetCounter(StatusKeys.Burn, left - 1);
             // 第134期 段1 —— 燃え尽きた時点で区間を閉じる。**盤面には触らない。**
             if (left - 1 <= 0) CloseBurnEpisode(u, expired: true);
             if (left - 1 <= 0 && _fireLvLive) FireOut(u);   // 第242期（火勢: 燃焼が切れたら 0）
 
-            int total = TickTotal(u);   // 表示専用
+            int total = TickTotal(u) + extra;   // 表示専用
             _inBurnTickNow = true;   // 第233期・**計数のみ**
+            if (_foeFireLive) { _tickLvUnit = u; _tickLv = preLv; }
+            int hb0 = u.Hp;
             BurnTickOnce(u, left, bt, second: false, TickOrd(1, total));
-            // 濃縮の印（第194期）。**残りターンの減算と区間の帳簿は上の1回だけ**で、刻みの本体を印の数だけもう1回ずつ。
-            if (_markLive) RepeatTick(u, k => BurnTickOnce(u, left, bt, second: true, TickOrd(k, total)));
+            if (_foeFireLive) NoteLvTick(u, preLv, hb0, extraTick: false);
+            // 第245期: 火勢の回数（燃焼の刻み 6 を火勢の回数だけ別々に・倒れたら止める）。**残りターンの減算と区間の帳簿は上の1回だけ。**
+            for (int k = 0; k < extra && u.IsAlive; k++)
+            {
+                int hb = u.Hp;
+                BurnTickOnce(u, left, bt, second: true, TickOrd(k + 2, total));
+                NoteLvTick(u, preLv, hb, extraTick: true);
+            }
+            // 濃縮の印（第194期）。**残りターンの減算と区間の帳簿は上の1回だけ**で、刻みの本体を印の数だけもう1回ずつ（第245期の火勢の回数の後ろに足し算）。
+            if (_markLive) RepeatTick(u, k => BurnTickOnce(u, left, bt, second: true, TickOrd(k + extra, total)));
+            _tickLvUnit = null;
             _inBurnTickNow = false;
             if (left - 1 <= 0 && u.RawCounter(GurenTrait.BurnKey) > 0) u.SetCounter(GurenTrait.BurnKey, 0);   // 第197期・**計数のみ**
         }
+    }
+
+    /// <summary>第245期: 燃焼の刻み1回ぶんの帳簿（<b>計数のみ</b>）。刻みの前後の HP の差で、削った量と回復した量（火の変換・ベニ・火の癒し）を分ける。</summary>
+    void NoteLvTick(UnitState u, int lv, int hpBefore, bool extraTick)
+    {
+        int l = Math.Clamp(lv, 0, 4);
+        int d = Math.Max(0, u.Hp) - hpBefore;
+        bool foe = _foeFireTeams[u.TeamId];
+        if (foe)
+        {
+            if (extraTick) { FireBook.FoeTickExtraN[l]++; FireBook.FoeTickExtraHp[l] += Math.Max(0, -d); }
+            else { FireBook.FoeTickN[l]++; FireBook.FoeTickHp[l] += Math.Max(0, -d); }
+            return;
+        }
+        if (!_fireLvTeams[u.TeamId]) return;
+        if (extraTick) { FireBook.AllyTickExtraN[l]++; if (d < 0) FireBook.AllyTickExtraDmg[l] -= d; else FireBook.AllyTickExtraHeal[l] += d; if (!u.IsAlive) FireBook.AllyTickExtraDeaths++; }
+        else { FireBook.AllyTickN[l]++; if (d < 0) FireBook.AllyTickDmg[l] -= d; else FireBook.AllyTickHeal[l] += d; if (!u.IsAlive) FireBook.AllyTickDeaths++; }
     }
 
     /// <summary>
@@ -3530,7 +3561,7 @@ public sealed class BattleContext
             UnitState? inv = InvertsTick(u);
             if (_verbose)
             {
-                int? be = Ember.Brittle > 0 && BrittleApplies(u) && u.RawCounter(StatusKeys.Burn) > 0 ? (amt * Ember.Brittle + 99) / 100 : null;
+                int? be = Ember.Brittle > 0 && BrittleApplies(u) && u.RawCounter(StatusKeys.Burn) > 0 ? (amt * BrittlePct(u, out _) + 99) / 100 : null;
                 Emit(new BattleEvent
                 {
                     Kind = BattleEventKind.MireBurst, Turn = _turn, ActorId = _mireHolder?.InstanceId, SpreadFromId = dead.InstanceId,
@@ -5621,7 +5652,7 @@ public sealed class BattleContext
         // 第219期: 燃焼の脆さ（F3・F4）。**伸びた量をそのまま回復に反転する**。燃焼の刻み（kind 1）は刻みそのものなので燃えていると数える。
         if (Ember.Brittle > 0 && amount > 0 && BrittleApplies(u) && (kind == 1 || u.RawCounter(StatusKeys.Burn) > 0))
         {
-            int extra = (amount * Ember.Brittle + 99) / 100;
+            int extra = (amount * BrittlePct(u, out _) + 99) / 100;
             amount += extra;
             BrittleBook.InverseBase += amount - extra;
             BrittleBook.InverseExtra += extra;
@@ -6980,6 +7011,11 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.FireConvert) || u.HasTrait(TraitId.FireConvertHalf)) _fireConvertHolders.Add(u);   // 第238期（火の変換）
         if (FireLevelRule.Holds(u)) { _fireLvLive = true; _fireLvTeams[u.TeamId] = true; }   // 第242期（火勢）
         if (u.HasTrait(TraitId.FireSpreadCap)) _spreadCapTeams[u.TeamId] = true;              // 第244期（燃え広がりの上限）
+        if (u.HasTrait(TraitId.FoeFireLevel)) { _foeFireLive = true; _foeFireTeams[Opponent(u.TeamId)] = true; }   // 第245期（敵の火勢）
+        if (u.HasTrait(TraitId.FoeFireTick)) { _foeFireLive = true; _lvTickTeams[Opponent(u.TeamId)] = true; }
+        if (u.HasTrait(TraitId.AllyFireTick)) { _foeFireLive = true; _lvTickTeams[u.TeamId] = true; }
+        if (u.HasTrait(TraitId.FoeFireBrittle)) { _foeFireLive = true; _foeBrittleTeams[Opponent(u.TeamId)] = true; }
+        if (u.HasTrait(TraitId.FoeFireSpread)) { _foeFireLive = true; _foeSpreadTeams[Opponent(u.TeamId)] = true; }
         if (u.HasTrait(TraitId.Decoy)) _decoyLive = true;         // 第226期（挑発）
         if (u.HasTrait(TraitId.Spring)) _springLive = true;       // 第228期（弾き返し）
         if (u.HasTrait(TraitId.Tailwind)) _tailwindLive = true;   // 第229期（追い風）
@@ -8582,6 +8618,27 @@ public sealed class BattleContext
     readonly bool[] _fireLvTeams = new bool[2];
     /// <summary>第244期 ②: 燃え広がりの上限（1回の攻撃で +1 まで）を持つ陣営。</summary>
     readonly bool[] _spreadCapTeams = new bool[2];
+    /// <summary>第245期: 敵の火勢の門（保持者の相手の陣営）・刻みを火勢の回数にする陣営・脆さを火勢で上げる陣営・延焼の陣営。どれも札が無ければ偽のまま。</summary>
+    bool _foeFireLive;
+    readonly bool[] _foeFireTeams = new bool[2], _lvTickTeams = new bool[2], _foeBrittleTeams = new bool[2], _foeSpreadTeams = new bool[2];
+    /// <summary>第245期: いま燃焼の刻みを受けている駒と、残りターンを減らす前の火勢（最後の刻みは減らした後に刻むので `Of` は 0 を返す）。</summary>
+    UnitState? _tickLvUnit;
+    int _tickLv;
+    /// <summary>火勢が動く陣営か（味方の火勢の門 ／ 第245期の敵の火勢の門）。</summary>
+    bool LvTracked(int team) => _fireLvTeams[team] || _foeFireTeams[team];
+    /// <summary>第245期: 刻みの間はその刻みの前の火勢、ほかは今の火勢。</summary>
+    int LvNow(UnitState u) => _tickLvUnit == u ? _tickLv : FireLevelRule.Of(u);
+    /// <summary>
+    /// 燃焼の脆さの割合（第219期の `Ember.Brittle`・第245期に火勢で上げる口を足した）。脆さを上げる陣営の駒なら火勢 2〜4 で 40 / 55 / 70%
+    /// （<see cref="FoeFireRule.BrittlePercent"/>）、ほかは `Ember.Brittle`。<paramref name="lv"/> は脆さを上げる陣営のときだけ火勢（ほかは 0）。
+    /// </summary>
+    int BrittlePct(UnitState u, out int lv)
+    {
+        lv = 0;
+        if (!_foeFireLive || !_foeBrittleTeams[u.TeamId]) return Ember.Brittle;
+        lv = LvNow(u);
+        return lv >= 2 ? FoeFireRule.BrittlePercent[lv] : Ember.Brittle;
+    }
     /// <summary>火勢の帳簿（計数のみ）。</summary>
     public readonly FireLevelLedger FireBook = new();
     public bool FireLvLive => _fireLvLive;
@@ -8641,6 +8698,15 @@ public sealed class BattleContext
         UnitState a = sc.Actor;
         FireBook.SpreadHits += foes.Count;
         foreach (UnitState f in foes) EmitFireLevel(a, f, FireLevelLabels.Spread, 0, 0);
+        // 第245期: 敵の火勢——当たる前から燃えていた敵は、その攻撃で1回ずつ +1（味方の上限は掛けない）。札が無ければ比較1つで抜ける。
+        if (_foeFireLive)
+            foreach (UnitState f in foes)
+            {
+                if (!_foeFireTeams[f.TeamId] || !f.IsAlive) continue;
+                FireBook.FoeGrowHits++;
+                int b = FireLevelRule.Of(f);
+                if (GrowFire(f, 1, a, FireLevelLabels.GrowFoe) && FireLevelRule.Of(f) > b) FireBook.FoeGrowth++;
+            }
         // 第244期 ②: 上限の陣営では、育つのは1回の攻撃で +1 まで（ヒヨ自身の育ちも）。上限が無ければ相手の数だけ（第242期）。
         int n = _spreadCapTeams[a.TeamId] ? 1 : foes.Count;
         if (!GrowFire(a, n, a, FireLevelLabels.GrowSpread)) { FireBook.SpreadWasted += foes.Count; return; }
@@ -8660,7 +8726,7 @@ public sealed class BattleContext
     /// </summary>
     bool GrowFire(UnitState u, int n, UnitState? cause, string label)
     {
-        if (!u.IsAlive || n <= 0 || !_fireLvTeams[u.TeamId]) return false;
+        if (!u.IsAlive || n <= 0 || !LvTracked(u.TeamId)) return false;
         int lv = FireLevelRule.Of(u);
         if (lv == 0) return false;
         u.SetCounter(FireLevelRule.GrewKey, _turn);
@@ -8675,7 +8741,7 @@ public sealed class BattleContext
     /// <summary>保つ火（`Ignite` の出口）: 燃えていなかった駒なら 1。点け直しでは上げない。</summary>
     void FireKeepLit(UnitState target, UnitState? source, bool relit)
     {
-        if (!_fireLvTeams[target.TeamId]) return;
+        if (!LvTracked(target.TeamId)) return;
         if (relit && target.RawCounter(FireLevelRule.LvKey) > 0) { FireBook.Relit++; return; }
         FireBook.Lit++;
         target.SetCounter(FireLevelRule.LvKey, 1);
@@ -8686,7 +8752,7 @@ public sealed class BattleContext
     /// <summary>燃焼が切れた（刻みの減算で 0・焼け残り）: 火勢 0。</summary>
     void FireOut(UnitState u)
     {
-        if (!_fireLvTeams[u.TeamId]) return;
+        if (!LvTracked(u.TeamId)) return;
         int lv = u.RawCounter(FireLevelRule.LvKey);
         if (lv <= 0) return;
         u.SetCounter(FireLevelRule.LvKey, 0);
@@ -8700,7 +8766,7 @@ public sealed class BattleContext
         if (!_fireLvLive) return;
         foreach (UnitState u in _units)
         {
-            if (!u.IsAlive || !_fireLvTeams[u.TeamId]) continue;
+            if (!u.IsAlive || !LvTracked(u.TeamId)) continue;
             int lv = FireLevelRule.Of(u);
             if (lv <= 1 || u.RawCounter(FireLevelRule.GrewKey) == _turn) continue;
             u.SetCounter(FireLevelRule.LvKey, lv - 1);
@@ -8714,7 +8780,7 @@ public sealed class BattleContext
     {
         if (!_fireLvLive) return;
         foreach (UnitState u in _units)
-            if (u.IsAlive && _fireLvTeams[u.TeamId])
+            if (u.IsAlive && LvTracked(u.TeamId))
                 FireBook.Snaps.Add(new FireLevelLedger.Snap(_turn, u.InstanceId, u.TeamId, FireLevelRule.Of(u), u.RawCounter(StatusKeys.Burn) > 0));
     }
 
@@ -8904,6 +8970,31 @@ public sealed class BattleContext
             }
         }
         finally { actor.SetCounter(FireBurstRule.MoveKey, 0); }
+    }
+
+    /// <summary>
+    /// 延焼（第245期）: 倒れた瞬間の火勢が 4 なら、同じ陣営の隣の生きている駒（席番号の順）に火を移す——燃えていれば +1（上限 4）、
+    /// 燃えていなければ点けて火勢 2（その周回は萎まない）。延焼では誰も倒れないので連鎖しない。<b>乱数を引かない。</b>
+    /// </summary>
+    void FoeFireSpread(UnitState dead)
+    {
+        if (LvNow(dead) < FireLevelRule.Max) return;
+        FireBook.FoeLv4Deaths++;
+        Log($"    {dead.Name} の燃え盛る火が隣へ移る", LogKind.Highlight, dead);
+        foreach (UnitState n in LivingMembers(dead.TeamId).Where(x => x != dead && FormationRules.AreAdjacent(dead, x)).OrderBy(x => x.Slot))
+        {
+            bool burning = n.RawCounter(StatusKeys.Burn) > 0;
+            FireBook.FoeSpreads++;
+            EmitFireLevel(dead, n, FireLevelLabels.FoeSpread, FireLevelRule.Of(n), burning ? 2 : 1);
+            if (burning) { FireBook.FoeSpreadGrow++; GrowFire(n, 1, dead, FireLevelLabels.GrowFoe); continue; }
+            FireBook.FoeSpreadLit++;
+            Ignite(n, source: dead);
+            if (!n.IsAlive || n.RawCounter(StatusKeys.Burn) <= 0) continue;
+            int b = FireLevelRule.Of(n);
+            n.SetCounter(FireLevelRule.LvKey, FoeFireRule.SpreadLevel);
+            n.SetCounter(FireLevelRule.GrewKey, _turn);
+            EmitFireLevel(dead, n, FireLevelLabels.GrowFoe, FoeFireRule.SpreadLevel, b);
+        }
     }
 
     /// <summary>呼び火: 味方の呼び火の持ち主（燃えている・生きている・本人以外）の火勢 +1（上限 4）。</summary>
@@ -9954,7 +10045,8 @@ public sealed class BattleContext
         if (Ember.Brittle > 0 && !relayed && !hexShare && BrittleApplies(target)
             && (burnTickSelf || target.RawCounter(StatusKeys.Burn) > 0))
         {
-            brittleExtra = (amount * Ember.Brittle + 99) / 100;
+            brittleExtra = (amount * BrittlePct(target, out int lvB) + 99) / 100;   // 第245期: 敵の火勢で割合が上がる（札が無ければ `Ember.Brittle`）
+            if (lvB > 0) { FireBook.FoeBrittle[lvB] += brittleExtra; FireBook.FoeBrittleUp[lvB] += brittleExtra - (amount * Ember.Brittle + 99) / 100; }   // **計数のみ**
             amount += brittleExtra;
             int route = burstHit ? 8 : burnTickSelf ? 6 : slamHit ? 2 : shockNote == 1 ? 1 : shockNote == 3 ? 3
                       : source is null ? 5 : InReaction ? 4 : levy ? 7
@@ -11186,6 +11278,8 @@ public sealed class BattleContext
                 else if (_mireHandoff && _mireHolder is not null && dead.TeamId != _mireHolder.TeamId) { MireHandoff(dead, cm); handedOff = true; }
             }
         }
+
+        if (_foeFireLive && _foeSpreadTeams[dead.TeamId]) FoeFireSpread(dead);   // 第245期（延焼）: 札が無ければ比較1つで抜ける
 
         // 逸らし（第50期）。**撃破順が本命の指標**なので、敵の駒ごとに倒れたターンを記録する。
         // 標に依存しない切り方なので、素体の対照とそのまま引き算できる。

@@ -525,6 +525,11 @@ public enum TraitId
     CallFire,       // 呼び火（第244期・ホタの版 S2）: 味方のボルグが放つ・ヒヨがギフトを撃つたびに、自分の火勢 +1（燃えている間のみ）。**判定は engine**。保持者 0 枚
     FireRainOrdered,// 火の雨・決まった順（第244期・ホタの版 S2D）: 火の雨の落ち先を「その瞬間の HP が最も多い敵（同値は席の番号順）」に（無ければ乱数）。**札そのものは挙動を持たない**。保持者 0 枚
     StokeStageAtk,  // 攻撃力を「倍率の前 × 次の手番の段の倍率」で比べる（第245期 前段 ③′・ヒヨ）: 煽り・ギフトの相手選び。ホタは段1・2 ×4 ／ 段3・4 ×8 ／ 残り火が控えていれば ×2（燃えていなければ ×1）、ほかは ×1。**判定は `FireStokeTrait.AtkFor`**
+    FoeFireLevel,   // 敵の火勢（第245期・版 E-刻み〜E2・ボルグに持たせる）: 保持者の相手の陣営の駒にも火勢（0〜4）——点くと 1・燃えている味方の攻撃が当たる前から燃えていた敵に当たると +1（1回の攻撃で同じ敵は1回）・育たなかった周回の終わりに −1・燃焼が切れたら 0。**判定は engine**。保持者 0 枚
+    FoeFireTick,    // 敵の刻みを火勢の回数に（第245期）: 燃焼の刻み（1回 6）を火勢の回数だけ別々に。**判定は engine**（`TickStatuses`）。保持者 0 枚
+    FoeFireBrittle, // 敵の脆さを火勢で上げる（第245期）: 燃焼の脆さ（第219期 F1）の割合を火勢 1〜4 で 25 / 40 / 55 / 70%。**判定は engine**（`BrittlePct`）。保持者 0 枚
+    FoeFireSpread,  // 延焼（第245期）: 火勢4 の敵が倒れると、隣の生きている敵に火が移る（燃えていなければ火勢2 で点く・燃えていれば +1）。**判定は engine**（`HandleDeath`）。保持者 0 枚
+    AllyFireTick,   // 味方の刻みも火勢の回数に（第245期・E2）: 保持者の陣営の燃焼の刻みも火勢の回数だけ（熾火・火の癒し・ベニの反転・火の変換は1回ごと）。**判定は engine**。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -13259,7 +13264,8 @@ public static class FireLevelRule
         || u.HasTrait(TraitId.PyreStage) || u.HasTrait(TraitId.FireStoke) || u.HasTrait(TraitId.TurnGift) || u.HasTrait(TraitId.TurnGiftWait)
         || u.HasTrait(TraitId.FireSpreadCap) || u.HasTrait(TraitId.StokeBaseAtk) || u.HasTrait(TraitId.FireUnleash) || u.HasTrait(TraitId.PyreBurnout)
         || u.HasTrait(TraitId.PyreEmbers) || u.HasTrait(TraitId.CallFire) || u.HasTrait(TraitId.FireRainOrdered)   // 第244期
-        || u.HasTrait(TraitId.StokeStageAtk);   // 第245期
+        || u.HasTrait(TraitId.StokeStageAtk) || u.HasTrait(TraitId.FoeFireLevel) || u.HasTrait(TraitId.FoeFireTick) || u.HasTrait(TraitId.FoeFireBrittle)
+        || u.HasTrait(TraitId.FoeFireSpread) || u.HasTrait(TraitId.AllyFireTick);   // 第245期
 }
 
 /// <summary>火勢の土台（第242期・ボルグの版 R1〜・<b>保持者 0 枚</b>）。札は判定を持たない——engine が読む（保つ・燃え広がり・萎む・消える）。</summary>
@@ -13393,6 +13399,28 @@ public sealed class FireSpreadCapTrait : Trait { public override TraitId Id => T
 public sealed class StokeBaseAtkTrait : Trait { public override TraitId Id => TraitId.StokeBaseAtk; }
 /// <summary>攻撃力を「倍率の前 × 次の手番の段の倍率」で比べる（第245期 前段 ③′）。<see cref="FireStokeTrait.AtkFor"/> が読む。</summary>
 public sealed class StokeStageAtkTrait : Trait { public override TraitId Id => TraitId.StokeStageAtk; }
+
+// =====================================================================================
+// 第245期 —— 敵の火勢（敵には災害）。**5 枚とも保持者 0 枚**（版は診断 `enemyfire` のローカルの駒）。判定はどれも engine
+// （`ResolveSpread` の敵の育ち・`TickStatuses` の刻みの回数・`BrittlePct`・`HandleDeath` の延焼）。**乱数を引かない。**
+// =====================================================================================
+/// <summary>敵の火勢の数値（第245期）。脆さの割合は火勢 1〜4 の順（火勢1 は第219期 F1 の 25 のまま）。</summary>
+public static class FoeFireRule
+{
+    public static readonly int[] BrittlePercent = { 0, 25, 40, 55, 70 };
+    /// <summary>延焼で燃えていなかった隣に点く火勢。</summary>
+    public const int SpreadLevel = 2;
+}
+/// <summary>敵の火勢（第245期・<b>保持者 0 枚</b>）。engine が保持者の相手の陣営に火勢を持たせる。</summary>
+public sealed class FoeFireLevelTrait : Trait { public override TraitId Id => TraitId.FoeFireLevel; }
+/// <summary>敵の刻みを火勢の回数に（第245期・<b>保持者 0 枚</b>）。</summary>
+public sealed class FoeFireTickTrait : Trait { public override TraitId Id => TraitId.FoeFireTick; }
+/// <summary>敵の脆さを火勢で上げる（第245期・<b>保持者 0 枚</b>）。</summary>
+public sealed class FoeFireBrittleTrait : Trait { public override TraitId Id => TraitId.FoeFireBrittle; }
+/// <summary>延焼（第245期・<b>保持者 0 枚</b>）。</summary>
+public sealed class FoeFireSpreadTrait : Trait { public override TraitId Id => TraitId.FoeFireSpread; }
+/// <summary>味方の刻みも火勢の回数に（第245期・E2・<b>保持者 0 枚</b>）。</summary>
+public sealed class AllyFireTickTrait : Trait { public override TraitId Id => TraitId.AllyFireTick; }
 /// <summary>放つ（第244期・ボルグ・<b>保持者 0 枚</b>）。ギフトの手番で火勢4 のとき、engine が薙ぎ ×3 に差し替える。</summary>
 public sealed class FireUnleashTrait : Trait { public override TraitId Id => TraitId.FireUnleash; }
 /// <summary>焼き尽くす（第244期・ホタ・<b>保持者 0 枚</b>）。ギフトの手番で火勢4 のとき、engine が全体 ×4 ＋ 火の雨に差し替える。</summary>
@@ -15546,6 +15574,11 @@ public static class TraitCatalog
         new FireSpreadCapTrait(),    // 第244期
         new StokeBaseAtkTrait(),     // 第244期
         new StokeStageAtkTrait(),    // 第245期
+        new FoeFireLevelTrait(),     // 第245期
+        new FoeFireTickTrait(),      // 第245期
+        new FoeFireBrittleTrait(),   // 第245期
+        new FoeFireSpreadTrait(),    // 第245期
+        new AllyFireTickTrait(),     // 第245期
         new FireUnleashTrait(),      // 第244期
         new PyreBurnoutTrait(),      // 第244期
         new PyreEmbersTrait(),       // 第244期
