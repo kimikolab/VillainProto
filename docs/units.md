@@ -335,17 +335,30 @@
 | `CallFire` | 熾のホタ |
 | `FireRainOrdered` | - |
 | `StokeStageAtk` | 火選りのヒヨ |
-| `FoeFireLevel` | - |
-| `FoeFireTick` | - |
-| `FoeFireBrittle` | - |
-| `FoeFireSpread` | - |
-| `AllyFireTick` | - |
+| `FoeFireLevel` | 焼け残りのボルグ |
+| `FoeFireTick` | 焼け残りのボルグ |
+| `FoeFireBrittle` | 焼け残りのボルグ |
+| `FoeFireSpread` | 焼け残りのボルグ |
+| `AllyFireTick` | 焼け残りのボルグ |
 | `GiftQuiet` | 火選りのヒヨ |
 | `UnleashStoke` | - |
+| `StokePick` | - |
+| `HiyoSpark` | - |
+| `BorgRadiate` | - |
+| `PyreCritical` | - |
+| `PyreLance` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
 | `Hush` | - |
+
+## 燃焼の規則
+
+味方に焼け残りのボルグがいるとき（第245期 E2・第246期に規定）:
+
+- 燃えている敵には火の強さ（1〜4）がある。燃えている味方が燃えている敵を叩くたびに1つ育ち、育たない周回は弱まる。火が強いほど、燃焼の刻みは火の強さの回数だけ入り（1回 6）、受ける傷は大きくなる（1 +25% ／ 2 +40% ／ 3 +55% ／ 4 +70%）。
+- 火の強さ 4 の敵が倒れると、隣の敵に火が移る（燃えていなければ火の強さ 2 で点く・燃えていれば 1つ育つ）。
+- 味方の燃焼の刻みも、火の強さの回数だけ入る。
 
 ## ステージ
 

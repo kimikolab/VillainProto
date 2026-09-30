@@ -19,7 +19,7 @@ static partial class FireCycleDiag
         public readonly long[] FirstGift = new long[TM + 1], Interval = new long[5];   // 間隔 1,2,3,4 以上（添字 1〜4）
         // 表C（三角の循環）
         public long Burnouts, Radiates, RadiateUsed, RadiateGrew, Unleashes, Triangles, TriBattles, BurnThenUnleash, BurnThenUnleashBattles, Sparks, SparkGrew, SparkSkipped;
-        public readonly long[] TriBreak = new long[4];   // 途切れた場所: 0 放熱を蓄えなかった ／ 1 放熱を使えなかった（戦が終わった）／ 2 使ったが育たなかった ／ 3 育ったが放たなかった
+        public readonly long[] TriBreak = new long[5];   // 途切れた場所: 0 放熱を蓄えなかった ／ 1 使う前に戦が終わった ／ 2 使ったときボルグが既に火勢4 ／ 3 使ったとき燃えていなかった ／ 4 育ったが放たなかった
         // 表D（相手選び）
         public long Stokes, StokeForm, StokeFormAvail;
         public readonly long[] StokeRole = new long[4];
@@ -45,7 +45,8 @@ static partial class FireCycleDiag
         public void Merge(CAgg o)
         {
             N += o.N; Wins += o.Wins; AllSurv += o.AllSurv; Turns += o.Turns; Fell += o.Fell;
-            for (int i = 0; i < 4; i++) { FellRole[i] += o.FellRole[i]; StokeRole[i] += o.StokeRole[i]; GiftRole[i] += o.GiftRole[i]; TriBreak[i] += o.TriBreak[i]; }
+            for (int i = 0; i < 4; i++) { FellRole[i] += o.FellRole[i]; StokeRole[i] += o.StokeRole[i]; GiftRole[i] += o.GiftRole[i]; }
+            for (int i = 0; i < 5; i++) TriBreak[i] += o.TriBreak[i];
             GiftBattles += o.GiftBattles; Gifts += o.Gifts; GiftsMulti += o.GiftsMulti;
             for (int i = 0; i < 5; i++) { Interval[i] += o.Interval[i]; StageReachT[i] += o.StageReachT[i]; StageReachN[i] += o.StageReachN[i]; }
             Burnouts += o.Burnouts; Radiates += o.Radiates; RadiateUsed += o.RadiateUsed; RadiateGrew += o.RadiateGrew; Unleashes += o.Unleashes; Triangles += o.Triangles; TriBattles += o.TriBattles;
@@ -111,21 +112,21 @@ static partial class FireCycleDiag
             for (int k = 0; k < burnIdx.Count; k++)
             {
                 int i0 = burnIdx[k], i1 = k + 1 < burnIdx.Count ? burnIdx[k + 1] : ev.Count;
-                bool stored = false, used = false, grew = false, unl = false;
+                bool stored = false, used = false, grew = false, unl = false, at4 = false;
                 for (int j = i0 + 1; j < i1; j++)
                 {
                     var y = ev[j];
                     if (y.Turn > cut) break;
                     if (y.Kind != BattleEventKind.FireLevel || borgId is null) continue;
                     if (y.Text == FireLevelLabels.Radiate && y.TargetId == borgId) stored = true;
-                    if (y.Text == FireLevelLabels.RadiateUse && y.TargetId == borgId && stored) used = true;
+                    if (y.Text == FireLevelLabels.RadiateUse && y.TargetId == borgId && stored) { used = true; at4 = y.Amount >= FireLevelRule.Max; }
                     if (y.Text == FireLevelLabels.GrowRadiate && y.TargetId == borgId && used) grew = true;
                     if (y.Text == FireLevelLabels.Unleash && y.ActorId == borgId) { unl = true; break; }
                 }
                 if (unl) btu++;
                 if (stored && used && grew && unl) tri++;
                 else if (borg is not null && borg.Def.Traits.Contains(TraitId.BorgRadiate))
-                    TriBreak[!stored ? 0 : !used ? 1 : !grew ? 2 : 3]++;
+                    TriBreak[!stored ? 0 : !used ? 1 : !grew ? (at4 ? 2 : 3) : 4]++;
             }
             Burnouts += burnIdx.Count; BurnThenUnleash += btu; if (btu > 0) BurnThenUnleashBattles++;
             Triangles += tri; if (tri > 0) TriBattles++;
