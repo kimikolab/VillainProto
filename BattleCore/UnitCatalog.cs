@@ -2092,8 +2092,9 @@ public static class UnitCatalog
         Advances = false,
         // 第239期 前段（ポンの判断）: 第238期 V1（火の変換・全量）。渇きには封じられない（第238期の主の版）。旧は <see cref="HiyoF0"/>。
         // 第244期 前段（ポンの判断）: 第242期 R3（煽り・自分の火の育ち・ターンギフト G3）。旧は <see cref="HiyoL0"/>。
-        // 第245期 前段（ポンの判断・指示書 §2.3）: 煽り・ギフトの相手選びを P′（倍率の前 × 次の手番の段の倍率・`StokeStageAtk`）に。旧は <see cref="HiyoR3"/>。
-        Traits = new[] { TraitId.Favor, TraitId.FireConvert, TraitId.FireStoke, TraitId.TurnGift, TraitId.StokeStageAtk },
+        // 第245期 前段（ポンの判断・指示書 §2.3）: 煽り・ギフトの相手選びを P′（倍率の前 × 次の手番の段の倍率・`StokeStageAtk`）に。
+        // 追記 B: ギフトで得た手番の燃え広がりでは自分は育たない（`GiftQuiet`）。旧は <see cref="HiyoR3"/>。
+        Traits = new[] { TraitId.Favor, TraitId.FireConvert, TraitId.FireStoke, TraitId.TurnGift, TraitId.StokeStageAtk, TraitId.GiftQuiet },
         // **贔屓を手番の行動そのものにする**（第60期）。攻5 は出なくなる。
         // `OnTurnStart` に置くと火の粉（`OnAfterAttack`）に対して構造的に1ターン遅れ、
         // **第1ターンだけ熾のホタを鈍らせていた**（弱体の受け手に 2.00 量/戦）。
@@ -2101,7 +2102,7 @@ public static class UnitCatalog
         // **[Skill] 1つだけの周期で移すのは、挙動の差を「攻撃が出ない」だけに絞るため**（ノノと同じ）。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "火を煽る／火を渡す") },
         PlusText = "毎ターン、燃えている味方の攻撃力を上げ、次の手番にいちばん強く振るう味方の火を煽って育てる。自分の火が燃え盛ると、代わりに火を渡す——燃え盛る味方 1〜2 体が、すぐにもう一度動く。燃えている味方は、火に焼かれる代わりにその火で癒える",
-        MinusText = "自分の隣で燃えていない味方は、逆に腕が鈍る。攻撃はしない（贔屓が手番そのもの）",
+        MinusText = "自分の隣で燃えていない味方は、逆に腕が鈍る。攻撃はしない（贔屓が手番そのもの）。火を渡した相手の手番では、自分の火は育たない",
         Flavor = "人を見る基準はただ一つ。燃えているか、いないか。"
     };
 

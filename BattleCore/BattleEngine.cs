@@ -8715,6 +8715,8 @@ public sealed class BattleContext
         foreach (UnitState h in LivingMembers(a.TeamId))
             if (h != a && h.HasTrait(TraitId.FireStoke) && FireLevelRule.Of(h) > 0)
             {
+                // 第245期 追記 B: ギフトで得た手番の攻撃の燃え広がりでは、札（`GiftQuiet`）を持つヒヨは育たない（撃った本人は育つ）。
+                if (_giftTurnActor == a && h.HasTrait(TraitId.GiftQuiet)) { FireBook.GiftQuietSkipped += n; continue; }
                 FireBook.SelfGrowth += n;
                 FireBook.SelfCapped += foes.Count - n;
                 GrowFire(h, n, a, FireLevelLabels.GrowSelf);

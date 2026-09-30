@@ -20,6 +20,7 @@ static partial class EnemyFireDiag
         public long FoesReached3, FoesReached4, Foes;
         public long TickNominal, TickExtra, BrittleNow, BrittleExtraShadow, EnemyDamage;
         public long HotaDealt, BorgDealt, AllyTicks, AllyTickExtra, AllyTickExtraNoHiyo;
+        public long Unleashes, UnleashThenBurn, HotaAfterUnleash, HotaAfterUnleashN, HotaHands, HotaHandDmg;
         public void Merge(ShadowAgg o)
         {
             N += o.N; Turns += o.Turns; Wins += o.Wins;
@@ -28,6 +29,7 @@ static partial class EnemyFireDiag
             FoesReached3 += o.FoesReached3; FoesReached4 += o.FoesReached4; Foes += o.Foes;
             TickNominal += o.TickNominal; TickExtra += o.TickExtra; BrittleNow += o.BrittleNow; BrittleExtraShadow += o.BrittleExtraShadow; EnemyDamage += o.EnemyDamage;
             HotaDealt += o.HotaDealt; BorgDealt += o.BorgDealt; AllyTicks += o.AllyTicks; AllyTickExtra += o.AllyTickExtra; AllyTickExtraNoHiyo += o.AllyTickExtraNoHiyo;
+            Unleashes += o.Unleashes; UnleashThenBurn += o.UnleashThenBurn; HotaAfterUnleash += o.HotaAfterUnleash; HotaAfterUnleashN += o.HotaAfterUnleashN; HotaHands += o.HotaHands; HotaHandDmg += o.HotaHandDmg;
         }
 
         public void Take(BattleResult r, List<UnitState> p, List<UnitState> e)
@@ -120,6 +122,24 @@ static partial class EnemyFireDiag
                 }
             }
             FoesReached3 += r3.Count; FoesReached4 += r4.Count; GrowFoes += grownFoes.Count;
+            // 追記 A の見込み: 放つ（ボルグ）の後の、ホタの最初の手番の与ダメ ／ ホタの手番の平均・放つ → 焼き尽くす の順で撃てた戦
+            if (hota is int ht)
+            {
+                var ev = r.Events;
+                var hands = r.Hands.Where(h => h.ActorId == ht).OrderBy(h => h.EventStart).ToList();
+                long HandDmg(HandRecord h) { long d = 0; for (int j = h.EventStart; j < h.EventEnd && j < ev.Count; j++) if (ev[j].Kind == BattleEventKind.Damage && ev[j].ActorId == ht && ev[j].TargetId is int tt && foeIds.Contains(tt)) d += ev[j].Amount; return d; }
+                foreach (var h in hands) { HotaHands++; HotaHandDmg += HandDmg(h); }
+                bool ub = false;
+                for (int i = 0; i < ev.Count; i++)
+                {
+                    if (ev[i] is not { Kind: BattleEventKind.FireLevel, Text: FireLevelLabels.Unleash }) continue;
+                    Unleashes++;
+                    var nx = hands.FirstOrDefault(h => h.EventStart > i);
+                    if (nx.EventEnd > 0) { HotaAfterUnleash += HandDmg(nx); HotaAfterUnleashN++; }
+                    for (int j = i + 1; j < ev.Count; j++) if (ev[j] is { Kind: BattleEventKind.FireLevel, Text: FireLevelLabels.Burnout } b && b.ActorId == ht) { ub = true; break; }
+                }
+                if (ub) UnleashThenBurn++;
+            }
             // 味方の刻み（E2 の見込み）: 火勢の写し（周回の頭）で燃えている味方の火勢 L → 追加の刻み L−1 回（ホタは焼かれない）。
             if (r.FireLevels is FireLevelLedger fl)
             {
@@ -158,8 +178,8 @@ static partial class EnemyFireDiag
         Console.WriteLine("影の規則: 点く → 1 ／ 燃え広がり（燃えている味方の攻撃が当たる前から燃えていた敵に当たる・1回の攻撃で同じ敵は1回）→ +1（上限 4）／ 育たなかったターンの終わり −1 ／ 燃焼が切れたら 0。");
         Console.WriteLine("「刻みの上乗せ」＝ 影の火勢 L の敵の燃焼の刻みに 6 × (L − 1) を足した名目。「脆さの上乗せ」＝ 今の脆さの分（+25%）を 25/40/55/70% に置き直した名目の差。どちらも上限・破片・過剰殺傷を無視した上界。");
         Console.WriteLine();
-        Console.WriteLine("| 台 | 波 | 倍率 | 全員勝率 ／ 決着T | 周回の頭の燃えている敵の火勢 1 ／ 2 ／ 3 ／ 4（体/戦） T2 | T3 | T4 | 火勢3 に届いた敵 ／ 4 （/戦・初めて届いた周回 T1 ／ T2 ／ T3 ／ T4+ %） | 燃え広がり/戦（育った敵） | 火勢4 で倒れた敵/戦（そのとき隣の生きた敵 ／ うち燃えている） | 燃えて倒れた敵/戦 | 刻みの名目/戦 → 上乗せ | 脆さの分/戦 → 上乗せ | 敵への与ダメ/戦（ホタ ／ ボルグ） | 味方の刻み/戦 ・ E2 の追加の刻み/戦 |");
-        Console.WriteLine("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+        Console.WriteLine("| 台 | 波 | 倍率 | 全員勝率 ／ 決着T | 周回の頭の燃えている敵の火勢 1 ／ 2 ／ 3 ／ 4（体/戦） T2 | T3 | T4 | 火勢3 に届いた敵 ／ 4 （/戦・初めて届いた周回 T1 ／ T2 ／ T3 ／ T4+ %） | 燃え広がり/戦（育った敵） | 火勢4 で倒れた敵/戦（そのとき隣の生きた敵 ／ うち燃えている） | 燃えて倒れた敵/戦 | 刻みの名目/戦 → 上乗せ | 脆さの分/戦 → 上乗せ | 敵への与ダメ/戦（ホタ ／ ボルグ） | 味方の刻み/戦 ・ E2 の追加の刻み/戦 | 放つ/戦 ・ 放つ→焼き尽くすの戦 % | 放つの直後のホタの手番の与ダメ ／ ホタの手番の平均 |");
+        Console.WriteLine("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
         foreach (var (n, f) in boards)
             foreach (int w in new[] { BA.MainWave, 0, 1, 2, 3 })
                 foreach (int s in w == BA.MainWave ? new[] { 0, 1 } : new[] { 1 })
@@ -168,7 +188,7 @@ static partial class EnemyFireDiag
                     string H(int t) => string.Join(" ／ ", Enumerable.Range(1, 4).Select(l => Per(a.LvHead[t, l], a.N)));
                     long f3 = a.FirstReach3.Sum(), f4 = a.FirstReach4.Sum();
                     string first4 = f4 == 0 ? "—" : string.Join(" ／ ", Pct(a.FirstReach4[1], f4), Pct(a.FirstReach4[2], f4), Pct(a.FirstReach4[3], f4), Pct(a.FirstReach4.Skip(4).Sum(), f4));
-                    Console.WriteLine($"| {n} | {BA.WaveNames[w]} | {BA.Scales[s].Name} | {Pct(a.Wins, a.N)} ／ {Per(a.Turns, a.N)} | {H(2)} | {H(3)} | {H(4)} | {Per(a.FoesReached3, a.N)} ／ {Per(a.FoesReached4, a.N)}（{first4}） | {Per(a.Grow, a.N)}（{Per(a.GrowFoes, a.N)}） | {Per(a.Lv4Deaths, a.N)}（{Per(a.Lv4DeathNb, a.N)} ／ {Per(a.Lv4DeathNbBurning, a.N)}） | {Per(a.BurnDeaths, a.N)} | {Per(a.TickNominal, a.N)} → +{Per(a.TickExtra, a.N)} | {Per(a.BrittleNow, a.N)} → +{Per(a.BrittleExtraShadow, a.N)} | {Per(a.EnemyDamage, a.N)}（{Per(a.HotaDealt, a.N)} ／ {Per(a.BorgDealt, a.N)}） | {Per(a.AllyTicks, a.N)} ・ +{Per(a.AllyTickExtra, a.N)} |");
+                    Console.WriteLine($"| {n} | {BA.WaveNames[w]} | {BA.Scales[s].Name} | {Pct(a.Wins, a.N)} ／ {Per(a.Turns, a.N)} | {H(2)} | {H(3)} | {H(4)} | {Per(a.FoesReached3, a.N)} ／ {Per(a.FoesReached4, a.N)}（{first4}） | {Per(a.Grow, a.N)}（{Per(a.GrowFoes, a.N)}） | {Per(a.Lv4Deaths, a.N)}（{Per(a.Lv4DeathNb, a.N)} ／ {Per(a.Lv4DeathNbBurning, a.N)}） | {Per(a.BurnDeaths, a.N)} | {Per(a.TickNominal, a.N)} → +{Per(a.TickExtra, a.N)} | {Per(a.BrittleNow, a.N)} → +{Per(a.BrittleExtraShadow, a.N)} | {Per(a.EnemyDamage, a.N)}（{Per(a.HotaDealt, a.N)} ／ {Per(a.BorgDealt, a.N)}） | {Per(a.AllyTicks, a.N)} ・ +{Per(a.AllyTickExtra, a.N)} | {Per(a.Unleashes, a.N)} ・ {Pct(a.UnleashThenBurn, a.N)} | {Per(a.HotaAfterUnleash, a.HotaAfterUnleashN)} ／ {Per(a.HotaHandDmg, a.HotaHands)} |");
                 }
         Console.WriteLine();
         Console.WriteLine($"（所要 {sw.Elapsed.TotalSeconds:F0} 秒）");

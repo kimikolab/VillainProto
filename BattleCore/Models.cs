@@ -3708,6 +3708,8 @@ public sealed class FireLevelLedger
     public readonly long[] FoeTickN = new long[5], FoeTickHp = new long[5], FoeTickExtraN = new long[5], FoeTickExtraHp = new long[5];
     public readonly long[] AllyTickN = new long[5], AllyTickDmg = new long[5], AllyTickHeal = new long[5], AllyTickExtraN = new long[5], AllyTickExtraDmg = new long[5], AllyTickExtraHeal = new long[5];
     public long AllyTickDeaths, AllyTickExtraDeaths;
+    /// <summary>第245期 追記 B: ギフトの手番の燃え広がりで、ヒヨが育たなかった分（のべ）。</summary>
+    public long GiftQuietSkipped;
     /// <summary>第245期: 敵の脆さの名目（添字 ＝ 火勢）・うち 25% を超えた分。</summary>
     public readonly long[] FoeBrittle = new long[5], FoeBrittleUp = new long[5];
 }

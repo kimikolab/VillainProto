@@ -194,6 +194,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.PyreEmbers]    = (HcPlusL,  "焼き尽くすの次の手番を全体 ×2 にするだけ"),
         [TraitId.CallFire]      = (HcPlusL,  "味方が火を放つ・渡すたびに自分の火勢 +1 だけ"),
         [TraitId.StokeStageAtk] = (HcPlusL,  "煽り・ギフトの相手を次の手番の段の倍率込みで選ぶだけ"),
+        [TraitId.GiftQuiet]     = (HcMinusL, "ギフトの手番の燃え広がりで自分の火勢が上がらないだけ（追記 B）"),
         // 第180期: ムド（暴発＋泥散り）・ヴィオ（吐き戻し）・ガン（叩き起こし）。
         // **マイナスを別の `TraitId` に切り出してあるので `yP` が組める**（第74期の作法）。
         [TraitId.Erupt]      = (HcPlusL,  "殴られた回数を溜めて割り込み連撃する。代金は別の札（`Smear`）に切り出してある"),
