@@ -27,6 +27,8 @@ static partial class EnemyFireDiag
         // 表F（終盤: 生きている敵が 2 体以下）
         public long EndBattles, EndTurns, EndDmg, EndMaxHit, EndHota, EndBorg;
         public readonly long[] EndPerTurnMax = new long[1];
+        // 表C′（追記 A）: 放つ ／ 放つ → 焼き尽くす の順で撃てた戦 ／ 放つの直後のホタの手番の与ダメ ／ ホタの手番の平均 ／ 放つで育てた敵
+        public long Unleashes, UnleashThenBurn, HotaAfterU, HotaAfterUN, HotaHands, HotaHandDmg, UnleashStoked, UnleashRaised, UnleashAt4, UnleashKilled;
 
         public void Merge(EAgg o)
         {
@@ -43,6 +45,7 @@ static partial class EnemyFireDiag
             ATickDeaths += o.ATickDeaths; ATickXDeaths += o.ATickXDeaths;
             EndBattles += o.EndBattles; EndTurns += o.EndTurns; EndDmg += o.EndDmg; EndMaxHit = Math.Max(EndMaxHit, o.EndMaxHit); EndHota += o.EndHota; EndBorg += o.EndBorg;
             EndPerTurnMax[0] = Math.Max(EndPerTurnMax[0], o.EndPerTurnMax[0]);
+            Unleashes += o.Unleashes; UnleashThenBurn += o.UnleashThenBurn; HotaAfterU += o.HotaAfterU; HotaAfterUN += o.HotaAfterUN; HotaHands += o.HotaHands; HotaHandDmg += o.HotaHandDmg; UnleashStoked += o.UnleashStoked; UnleashRaised += o.UnleashRaised; UnleashAt4 += o.UnleashAt4; UnleashKilled += o.UnleashKilled;
         }
 
         public void Take(BattleResult r, List<UnitState> p, List<UnitState> e)
@@ -67,6 +70,24 @@ static partial class EnemyFireDiag
                     ATickN[l] += fl.AllyTickN[l]; ATickDmg[l] += fl.AllyTickDmg[l]; ATickHeal[l] += fl.AllyTickHeal[l]; ATickXN[l] += fl.AllyTickExtraN[l]; ATickXDmg[l] += fl.AllyTickExtraDmg[l]; ATickXHeal[l] += fl.AllyTickExtraHeal[l];
                 }
                 ATickDeaths += fl.AllyTickDeaths; ATickXDeaths += fl.AllyTickExtraDeaths;
+                UnleashStoked += fl.UnleashFoeStoked; UnleashRaised += fl.UnleashFoeRaised; UnleashAt4 += fl.UnleashFoeAt4;
+            }
+            if (hota is int ht)
+            {
+                var hands = r.Hands.Where(h => h.ActorId == ht).OrderBy(h => h.EventStart).ToList();
+                long HandDmg(HandRecord h) { long d = 0; for (int j = h.EventStart; j < h.EventEnd && j < ev.Count; j++) if (ev[j].Kind == BattleEventKind.Damage && ev[j].ActorId == ht && ev[j].TargetId is int tt && foe.Contains(tt)) d += ev[j].Amount; return d; }
+                foreach (var h in hands) { HotaHands++; HotaHandDmg += HandDmg(h); }
+                bool ub = false;
+                for (int i = 0; i < ev.Count; i++)
+                {
+                    if (ev[i] is not { Kind: BattleEventKind.FireLevel, Text: FireLevelLabels.Unleash }) continue;
+                    Unleashes++;
+                    for (int j = i + 1; j < ev.Count; j++) { if (ev[j].Kind == BattleEventKind.FireLevel && ev[j].Text == FireLevelLabels.Spent) continue; if (ev[j].Kind == BattleEventKind.Attack && ev[j].ActorId != ev[i].ActorId) break; if (ev[j].Kind == BattleEventKind.FireLevel && ev[j].Text is FireLevelLabels.Spread or FireLevelLabels.CallFire) break; if (ev[j].Kind == BattleEventKind.Death && ev[j].ActorId == ev[i].ActorId && ev[j].TargetId is int kt && foe.Contains(kt)) UnleashKilled++; }
+                    var nx = hands.FirstOrDefault(h => h.EventStart > i);
+                    if (nx.EventEnd > 0) { HotaAfterU += HandDmg(nx); HotaAfterUN++; }
+                    for (int j = i + 1; j < ev.Count; j++) if (ev[j] is { Kind: BattleEventKind.FireLevel, Text: FireLevelLabels.Burnout } b && b.ActorId == ht) { ub = true; break; }
+                }
+                if (ub) UnleashThenBurn++;
             }
             var r3 = new HashSet<int>(); var r4 = new HashSet<int>(); int first4 = 0;
             int alive = e.Count; var dead = new HashSet<int>();
@@ -168,7 +189,7 @@ static partial class EnemyFireDiag
         foreach (var v in Versions) foreach (string bn in BoardNames) Console.WriteLine($"- {v.Name} × {bn}: {BA.SeatsNamed(BoardOf(bn, v, ranked))}");
         foreach (var (rn, rf) in Refs) Console.WriteLine($"- {rn}（版に依らない）: {BA.SeatsNamed(rf())}");
         Console.WriteLine();
-        TableA(cells); TableA2(cells); TableB(cells); TableC(cells); TableD(cells); TableE(cells); TableF(cells);
+        TableA(cells); TableA2(cells); TableB(cells); TableC(cells); TableC2(cells); TableD(cells); TableE(cells); TableF(cells);
         CompareMoves();
         Console.WriteLine($"（所要 {sw.Elapsed.TotalSeconds:F0} 秒）");
     }
@@ -285,6 +306,27 @@ static partial class EnemyFireDiag
                         string bu = string.Join(" ／ ", Enumerable.Range(2, 3).Select(l => Per(e.BritUp[l], e.N)));
                         long add = e.TickXHp.Sum() + e.BritUp.Sum();
                         Console.WriteLine($"| {b} | {v.Name} | {BA.WaveNames[w]} | {BA.Scales[s].Name} | {Per(e.FoeDmg, e.N)} | {Per(e.FoeDirect, e.N)} | {Per(e.FoeTickDmg, e.N)} | {Per(e.FoeBrittleAll, e.N)} | {tk} | {bu} | {Pct(add, e.FoeDmg)} |");
+                    }
+        Console.WriteLine();
+    }
+
+    static void TableC2(Dictionary<(string B, string V, int W, int S), (FB.LAgg L, EAgg E)> cells)
+    {
+        Console.WriteLine("## 表C′ —— 放つ → 焼き尽くす（追記 A・E0 ／ E1 ／ E1+放）");
+        Console.WriteLine();
+        Console.WriteLine("放つ/戦・放つで育てた敵/戦（E1+放 の追加の育ち）・放つ → 焼き尽くす の順で撃てた戦・**放つの直後のホタの最初の手番の与ダメ** と ホタの手番の平均・ホタの1戦の与ダメ。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 版 | 波 | 倍率 | 放つ/戦 | 放つで倒した/戦 | 放つで育てた/戦（上がった ／ 既に4） | 放つ → 焼き尽くす の戦 % | 放つの直後のホタの手番 ／ ホタの手番の平均 | ホタの1戦 | 全員生存 ／ 勝率 ／ 決着T |");
+        Console.WriteLine("|---|---|---|---|--:|--:|---|--:|---|--:|---|");
+        foreach (string b in BoardNames)
+            foreach (var v in new[] { "E0", "E1", "E1+放" })
+                for (int w = 0; w < BA.WaveNames.Length; w++)
+                    for (int s = 0; s < 3; s++)
+                    {
+                        if (w != BA.MainWave && s != 1) continue;
+                        var (l, e) = cells[(b, v, w, s)];
+                        string hota = l.OutSum.TryGetValue("hota", out var hs) ? Per(hs[0], l.N) : "—";
+                        Console.WriteLine($"| {b} | {v} | {BA.WaveNames[w]} | {BA.Scales[s].Name} | {Per(e.Unleashes, e.N)} | {Per(e.UnleashKilled, e.N)} | {Per(e.UnleashStoked, e.N)}（{Per(e.UnleashRaised, e.N)} ／ {Per(e.UnleashAt4, e.N)}） | {Pct(e.UnleashThenBurn, e.N)} | {Per(e.HotaAfterU, e.HotaAfterUN)} ／ {Per(e.HotaHandDmg, e.HotaHands)} | {hota} | {Pct(l.AllSurv, l.N)} ／ {Pct(l.Wins, l.N)} ／ {Per(l.Turns, l.N)} |");
                     }
         Console.WriteLine();
     }

@@ -8683,6 +8683,7 @@ public sealed class BattleContext
     {
         if (!_fireLvTeams[actor.TeamId] || hit.TeamId == actor.TeamId) return;
         if (FireAtkFrameOf(actor) is FireAtkFrame fa && !fa.Hit.Contains(hit)) fa.Hit.Add(hit);
+        if (_unleashHits is not null && !_unleashHits.Contains(hit)) _unleashHits.Add(hit);   // 第245期 追記 A
         if (SpreadScopeOf(actor) is not SpreadScope sc) return;
         foreach (var x in sc.First) if (x.Foe == hit) return;   // 同じ敵は1回まで（最初に当たった瞬間で決める）
         bool actorBurning = actor.RawCounter(StatusKeys.Burn) > 0, foeBurning = hit.RawCounter(StatusKeys.Burn) > 0;
@@ -8888,6 +8889,8 @@ public sealed class BattleContext
     UnitState? _embersNow;
     /// <summary>大技の一撃の枠（当てた敵に保つ火）。</summary>
     bool _fireMoveIgnite;
+    /// <summary>第245期 追記 A: 放つで当てた敵（`NoteFireContact` が控える・放つの間だけ非 null）。</summary>
+    List<UnitState>? _unleashHits;
 
     /// <summary>この手番の大技: 0 なし ／ 1 放つ ／ 2 焼き尽くす ／ 3 残り火。残り火は段より先、放つ・焼き尽くすはギフトの手番で火勢4 のときだけ。</summary>
     int BigMoveOf(UnitState actor)
@@ -8914,9 +8917,34 @@ public sealed class BattleContext
         {
             FireBook.Unleashes++;
             Log($"  {actor.Name} が溜めた火を放った（薙ぎ・攻 ×{FireBurstRule.UnleashPercent / 100}・当たった敵全員に火）", LogKind.Highlight, actor);
+            // 第245期 追記 A: 放つで敵の火を育てる（札 `UnleashStoke`・敵の火勢の門が開いているときだけ）。当たる前の燃えていたかを先に控える。
+            bool stoke = _foeFireLive && actor.HasTrait(TraitId.UnleashStoke);
+            HashSet<UnitState>? wasBurning = null;
+            if (stoke) { wasBurning = LivingMembers(Opponent(actor.TeamId)).Where(f => f.RawCounter(StatusKeys.Burn) > 0).ToHashSet(); _unleashHits = new List<UnitState>(); }
             _fireMoveIgnite = true;
             try { PerformAttack(actor, attackPercent: FireBurstRule.UnleashPercent, patternOverride: AttackPattern.Sweep); }
             finally { _fireMoveIgnite = false; }
+            if (stoke)
+            {
+                var hits = _unleashHits!; _unleashHits = null;
+                foreach (UnitState f in hits)
+                {
+                    if (!f.IsAlive || !_foeFireTeams[f.TeamId] || f.RawCounter(StatusKeys.Burn) <= 0) continue;
+                    FireBook.UnleashFoeStoked++;
+                    int b = FireLevelRule.Of(f);
+                    if (wasBurning!.Contains(f))
+                    {
+                        GrowFire(f, 1, actor, FireLevelLabels.GrowFoe);   // 燃え広がりの +1 は手番の枠の出口で入る（合わせて +2）
+                        if (FireLevelRule.Of(f) > b) FireBook.UnleashFoeRaised++; else FireBook.UnleashFoeAt4++;   // **計数のみ**
+                        continue;
+                    }
+                    if (b >= FoeFireRule.SpreadLevel) continue;
+                    FireBook.UnleashFoeRaised++;   // **計数のみ**
+                    f.SetCounter(FireLevelRule.LvKey, FoeFireRule.SpreadLevel);
+                    f.SetCounter(FireLevelRule.GrewKey, _turn);
+                    EmitFireLevel(actor, f, FireLevelLabels.GrowFoe, FoeFireRule.SpreadLevel, b);
+                }
+            }
             CallFire(actor);
             return;
         }

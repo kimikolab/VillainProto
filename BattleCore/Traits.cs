@@ -531,6 +531,7 @@ public enum TraitId
     FoeFireSpread,  // 延焼（第245期）: 火勢4 の敵が倒れると、隣の生きている敵に火が移る（燃えていなければ火勢2 で点く・燃えていれば +1）。**判定は engine**（`HandleDeath`）。保持者 0 枚
     AllyFireTick,   // 味方の刻みも火勢の回数に（第245期・E2）: 保持者の陣営の燃焼の刻みも火勢の回数だけ（熾火・火の癒し・ベニの反転・火の変換は1回ごと）。**判定は engine**。保持者 0 枚
     GiftQuiet,      // ギフトの手番の燃え広がりでは育たない（第245期 追記 B・ヒヨ）: ギフトで得た手番の攻撃による燃え広がりでは、ヒヨ自身の火勢は上がらない（撃った本人は今までどおり）。**判定は engine**（`ResolveSpread`）
+    UnleashStoke,   // 放つで敵の火を育てる（第245期 追記 A・版 E1+放・ボルグ）: 放つで当てた敵は、燃え広がりの +1 に加えてさらに +1（当たる前に燃えていなければ着火して火勢2）。**判定は engine**（`BigMove`）。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -13266,7 +13267,7 @@ public static class FireLevelRule
         || u.HasTrait(TraitId.FireSpreadCap) || u.HasTrait(TraitId.StokeBaseAtk) || u.HasTrait(TraitId.FireUnleash) || u.HasTrait(TraitId.PyreBurnout)
         || u.HasTrait(TraitId.PyreEmbers) || u.HasTrait(TraitId.CallFire) || u.HasTrait(TraitId.FireRainOrdered)   // 第244期
         || u.HasTrait(TraitId.StokeStageAtk) || u.HasTrait(TraitId.FoeFireLevel) || u.HasTrait(TraitId.FoeFireTick) || u.HasTrait(TraitId.FoeFireBrittle)
-        || u.HasTrait(TraitId.FoeFireSpread) || u.HasTrait(TraitId.AllyFireTick) || u.HasTrait(TraitId.GiftQuiet);   // 第245期
+        || u.HasTrait(TraitId.FoeFireSpread) || u.HasTrait(TraitId.AllyFireTick) || u.HasTrait(TraitId.GiftQuiet) || u.HasTrait(TraitId.UnleashStoke);   // 第245期
 }
 
 /// <summary>火勢の土台（第242期・ボルグの版 R1〜・<b>保持者 0 枚</b>）。札は判定を持たない——engine が読む（保つ・燃え広がり・萎む・消える）。</summary>
@@ -13424,6 +13425,8 @@ public sealed class FoeFireSpreadTrait : Trait { public override TraitId Id => T
 public sealed class AllyFireTickTrait : Trait { public override TraitId Id => TraitId.AllyFireTick; }
 /// <summary>ギフトの手番の燃え広がりではヒヨが育たない（第245期 追記 B）。engine の `ResolveSpread` が読む。</summary>
 public sealed class GiftQuietTrait : Trait { public override TraitId Id => TraitId.GiftQuiet; }
+/// <summary>放つで敵の火を育てる（第245期 追記 A・<b>保持者 0 枚</b>）。engine の `BigMove` が読む。</summary>
+public sealed class UnleashStokeTrait : Trait { public override TraitId Id => TraitId.UnleashStoke; }
 /// <summary>放つ（第244期・ボルグ・<b>保持者 0 枚</b>）。ギフトの手番で火勢4 のとき、engine が薙ぎ ×3 に差し替える。</summary>
 public sealed class FireUnleashTrait : Trait { public override TraitId Id => TraitId.FireUnleash; }
 /// <summary>焼き尽くす（第244期・ホタ・<b>保持者 0 枚</b>）。ギフトの手番で火勢4 のとき、engine が全体 ×4 ＋ 火の雨に差し替える。</summary>
@@ -15583,6 +15586,7 @@ public static class TraitCatalog
         new FoeFireSpreadTrait(),    // 第245期
         new AllyFireTickTrait(),     // 第245期
         new GiftQuietTrait(),        // 第245期 追記 B
+        new UnleashStokeTrait(),     // 第245期 追記 A
         new FireUnleashTrait(),      // 第244期
         new PyreBurnoutTrait(),      // 第244期
         new PyreEmbersTrait(),       // 第244期

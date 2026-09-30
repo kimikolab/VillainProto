@@ -216,12 +216,49 @@ static partial class EnemyFireDiag
             }
         }
 
+        // ---- 追記 A: 放つで敵の火を育てる ----
+        foreach (bool stoke in new[] { false, true })
+        {
+            var hiyo = new UnitDef { Id = "hiyo", Name = "hiyo", MaxHp = 1000, Attack = 5, Speed = 1, Actions = new UnitAction[] { new(ActionKind.Skill, Label: "火を煽る／火を渡す") },
+                Traits = new[] { TraitId.FireStoke, TraitId.TurnGift } };
+            var cards = E1Cards.Append(TraitId.FireUnleash);
+            if (stoke) cards = cards.Append(TraitId.UnleashStoke);
+            var ctx = Ctx(Formation.Build(front1: hiyo, front3: Borg(cards.ToArray())), Formation.Build(front1: Plain("e1"), front3: Plain("e3"), center: Plain("ec")), out var p, out var e);
+            var hy = U(p, "hiyo"); var bo = U(p, "borg");
+            SetLv(hy, 3); SetLv(bo, 4);
+            SetLv(U(e, "e1"), 1); SetLv(U(e, "e3"), 2);   // ec は燃えていない
+            int n0 = ctx.Events.Count;
+            ctx.TakeTurn(hy);   // 火勢3 のギフト: 相手はボルグ → 放つ（薙ぎ ×3・当てた敵に火）
+            var ev = Since(ctx, n0);
+            var lv = e.Select(x => FireLevelRule.Of(x)).ToArray();
+            Expect(stoke ? "追記 A: 放つで当たった敵は、燃えていれば +2（1 → 3 ／ 2 → 4）、燃えていなければ着火して 2" : "追記 A の対照（E1）: 放つで当たった敵は、燃えていれば +1、燃えていなければ着火して 1",
+                $"{FL(ev, FireLevelLabels.Unleash)}/{lv[0]}/{lv[1]}/{lv[2]}", stoke ? "1/3/4/2" : "1/2/3/1");
+        }
+
+        // ---- 追記 B: ギフトの手番の燃え広がりでヒヨは育たない ----
+        foreach (bool quiet in new[] { false, true })
+        {
+            var hiyo = new UnitDef { Id = "hiyo", Name = "hiyo", MaxHp = 1000, Attack = 5, Speed = 1, Actions = new UnitAction[] { new(ActionKind.Skill, Label: "火を煽る／火を渡す") },
+                Traits = quiet ? new[] { TraitId.FireStoke, TraitId.TurnGift, TraitId.GiftQuiet } : new[] { TraitId.FireStoke, TraitId.TurnGift } };
+            var ctx = Ctx(Formation.Build(front1: hiyo, front3: Borg(TraitId.FireLevel)), Formation.Build(front1: Plain("e1"), front3: Plain("e3"), center: Plain("ec")), out var p, out var e);
+            var hy = U(p, "hiyo"); var bo = U(p, "borg");
+            SetLv(hy, 3); SetLv(bo, 2);
+            foreach (var x in e) SetLv(x, 1);
+            ctx.TakeTurn(hy);   // ギフト（ヒヨ 3 → 1）→ ボルグのギフトの手番（燃えていた敵 3 体に薙ぎ → ボルグ +3 で 4）
+            Expect(quiet ? "追記 B: ギフトの手番の燃え広がりでヒヨは育たない（撃って 1 のまま）・ボルグは育つ" : "追記 B の対照: ギフトの手番の燃え広がりでヒヨも育つ",
+                $"{FireLevelRule.Of(hy)}/{FireLevelRule.Of(bo)}", quiet ? "1/4" : "4/4");
+            SetLv(hy, 1); SetLv(bo, 1);
+            foreach (var x in e) if (x.IsAlive) SetLv(x, 1);
+            ctx.TakeTurn(bo);   // 通常の手番
+            Expect(quiet ? "追記 B: 通常の手番の燃え広がりでは、B があってもヒヨは育つ" : "追記 B の対照: 通常の手番の燃え広がりでヒヨは育つ", FireLevelRule.Of(hy) > 1, true);
+        }
+
         // ---- 乱数を引かない ----
         {
             var cnt = new Dictionary<bool, int>();
             foreach (bool on in new[] { false, true })
             {
-                var cards = on ? E1Cards.Append(TraitId.AllyFireTick).ToArray() : new[] { TraitId.FireLevel };
+                var cards = on ? E1Cards.Append(TraitId.AllyFireTick).Append(TraitId.UnleashStoke).ToArray() : new[] { TraitId.FireLevel };
                 var ctx = Ctx(Formation.Build(front1: Borg(cards), front3: Plain("ally")),
                     Formation.Build(front1: Plain("e1", hp: 40), front3: Plain("e3"), center: Plain("ec"), back1: Plain("b1")), out var p, out var e);
                 SetLv(U(p, "borg"), 1); SetLv(U(p, "ally"), 3);
@@ -322,13 +359,18 @@ static partial class EnemyFireDiag
         // 刻み: 同じ駒・同じターンの「燃焼」の Status の数と TickCount
         var tickRuns = new Dictionary<(int T, int Id), (int N, int? Count)>();
         var diedAt = new HashSet<(int, int)>();
+        var unleashing = new HashSet<int>();
         for (int i = 0; i < ev.Count; i++)
         {
             var x = ev[i];
+            // 追記 A: 放つの見出しの後、同じ駒の燃え広がりの見出しが出るまでの「育つ・敵」は放つの育ち（燃え広がりとは別に数える）
+            if (x.Kind == BattleEventKind.FireLevel && x.Text == FireLevelLabels.Unleash && x.ActorId is int ua) unleashing.Add(ua);
+            if (x.Kind == BattleEventKind.FireLevel && x.Text == FireLevelLabels.Spread && x.ActorId is int sa) unleashing.Remove(sa);
             if (x.Kind == BattleEventKind.FireLevel && x.Text == FireLevelLabels.GrowFoe && x.TargetId is int t && foe.Contains(t))
             {
                 growN++;
                 bool fromSpread = x.ActorId is int a0 && foe.Contains(a0);
+                if (!fromSpread && x.ActorId is int au && unleashing.Contains(au)) { if (x.Amount - x.Slot != 1 && !(x.Slot == 1 && x.Amount == 2)) growBad++; continue; }
                 if (!fromSpread)
                 {
                     if (x.Amount - x.Slot != 1 && !(x.Amount == 4 && x.Slot == 4)) growBad++;

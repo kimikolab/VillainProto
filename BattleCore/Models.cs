@@ -3710,6 +3710,8 @@ public sealed class FireLevelLedger
     public long AllyTickDeaths, AllyTickExtraDeaths;
     /// <summary>第245期 追記 B: ギフトの手番の燃え広がりで、ヒヨが育たなかった分（のべ）。</summary>
     public long GiftQuietSkipped;
+    /// <summary>第245期 追記 A: 放つで敵の火を育てた（のべ・当てた燃えている敵）。</summary>
+    public long UnleashFoeStoked, UnleashFoeRaised, UnleashFoeAt4;
     /// <summary>第245期: 敵の脆さの名目（添字 ＝ 火勢）・うち 25% を超えた分。</summary>
     public readonly long[] FoeBrittle = new long[5], FoeBrittleUp = new long[5];
 }

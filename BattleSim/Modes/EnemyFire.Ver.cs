@@ -10,6 +10,7 @@ static partial class EnemyFireDiag
     internal static readonly UnitDef BorgTick = BorgWith(TraitId.FoeFireLevel, TraitId.FoeFireTick);
     internal static readonly UnitDef BorgBrittle = BorgWith(TraitId.FoeFireLevel, TraitId.FoeFireBrittle);
     internal static readonly UnitDef BorgE1 = BorgWith(TraitId.FoeFireLevel, TraitId.FoeFireTick, TraitId.FoeFireBrittle, TraitId.FoeFireSpread);
+    internal static readonly UnitDef BorgE1U = BorgWith(TraitId.FoeFireLevel, TraitId.FoeFireTick, TraitId.FoeFireBrittle, TraitId.FoeFireSpread, TraitId.UnleashStoke);
     internal static readonly UnitDef BorgE2 = BorgWith(TraitId.FoeFireLevel, TraitId.FoeFireTick, TraitId.FoeFireBrittle, TraitId.FoeFireSpread, TraitId.AllyFireTick);
 
     internal static readonly FB.Ver[] Versions =
@@ -19,6 +20,7 @@ static partial class EnemyFireDiag
         new("E-脆さ", "敵の火勢 ＋ 脆さの上昇", BorgBrittle, UnitCatalog.Hota, UnitCatalog.Hiyo),
         new("E1", "敵の火勢 ＋ 刻みの回数 ＋ 脆さの上昇 ＋ 延焼（味方の刻みはそのまま）", BorgE1, UnitCatalog.Hota, UnitCatalog.Hiyo),
         new("E2", "E1 ＋ 味方の刻みも回数", BorgE2, UnitCatalog.Hota, UnitCatalog.Hiyo),
+        new("E1+放", "E1 ＋ 放つで当てた敵はさらに +1（燃えていなければ火勢2・追記 A）", BorgE1U, UnitCatalog.Hota, UnitCatalog.Hiyo),
     };
     internal static FB.Ver VerOf(string name) => Versions.First(v => v.Name == name);
     internal static Formation Apply(Formation f, FB.Ver v) => Apply(f, v.Borg, v.Hota, v.Hiyo);
