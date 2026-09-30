@@ -51,7 +51,7 @@ static partial class EnemyFireDiag
 
         // ---- 前段: 規定の駒が P′ の版と同じ（札の並びまで）----
         Expect("前段: 規定のボルグ ＝ 第244期 R3 ＋ 上限・放つ", string.Join(",", UnitCatalog.BorgE0.Traits), string.Join(",", UnitCatalog.BorgR3.Traits.Concat(new[] { TraitId.FireSpreadCap, TraitId.FireUnleash })));
-        Expect("前段: 規定のホタ ＝ R3 ＋ 焼き尽くす・残り火・呼び火", string.Join(",", UnitCatalog.Hota.Traits), string.Join(",", UnitCatalog.HotaR3.Traits.Concat(new[] { TraitId.PyreBurnout, TraitId.PyreEmbers, TraitId.CallFire })));
+        Expect("前段: 規定のホタ ＝ R3 ＋ 焼き尽くす・残り火・呼び火", string.Join(",", UnitCatalog.HotaQ0.Traits), string.Join(",", UnitCatalog.HotaR3.Traits.Concat(new[] { TraitId.PyreBurnout, TraitId.PyreEmbers, TraitId.CallFire })));
         Expect("前段: 規定のヒヨ ＝ R3 ＋ P′ ＋ B", string.Join(",", UnitCatalog.Hiyo.Traits), string.Join(",", UnitCatalog.HiyoR3.Traits.Concat(new[] { TraitId.StokeStageAtk, TraitId.GiftQuiet })));
         // ③′: 段3 のホタ（5 × 8 ＝ 40）はボルグ（18）より先、燃えていないホタは ×1
         {

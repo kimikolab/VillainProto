@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using BA = BurnAuditDiag;
 using FB = FireBurstDiag;
@@ -57,16 +57,16 @@ static partial class FireCycleDiag
     internal static readonly UnitDef BorgR = Plus(UnitCatalog.Borg, TraitId.BorgRadiate);
     internal static readonly UnitDef HiyoQ1 = Plus(UnitCatalog.Hiyo, TraitId.StokePick, TraitId.HiyoSpark);
     internal static readonly UnitDef HiyoPick = Plus(UnitCatalog.Hiyo, TraitId.StokePick);
-    internal static readonly UnitDef HotaH5 = Plus(UnitCatalog.Hota, TraitId.PyreCritical);
-    internal static readonly UnitDef HotaHP = Plus(UnitCatalog.Hota, TraitId.PyreLance, TraitId.PyreCritical);
+    internal static readonly UnitDef HotaH5 = Plus(UnitCatalog.HotaQ0, TraitId.PyreCritical);
+    internal static readonly UnitDef HotaHP = Plus(UnitCatalog.HotaQ0, TraitId.PyreLance, TraitId.PyreCritical);
 
     internal static readonly FB.Ver[] Versions =
     {
-        new("Q0", "規定（第245期 E2・対照）", UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo),
-        new("Q1", "Q0 ＋ ヒヨの相手選び・育ちの置き換え ＋ ボルグの放熱", BorgR, UnitCatalog.Hota, HiyoQ1),
+        new("Q0", "規定（第245期 E2・対照）", UnitCatalog.Borg, UnitCatalog.HotaQ0, UnitCatalog.Hiyo),
+        new("Q1", "Q0 ＋ ヒヨの相手選び・育ちの置き換え ＋ ボルグの放熱", BorgR, UnitCatalog.HotaQ0, HiyoQ1),
         new("Q2-H5", "Q1 ＋ ホタ H5 に臨界", BorgR, HotaH5, HiyoQ1),
         new("Q2-HP", "Q1 ＋ ホタ HP（段3 大火槍）＋ 臨界", BorgR, HotaHP, HiyoQ1),
-        new("Q1-選", "Q0 ＋ ヒヨの相手選びだけ（切り分け）", UnitCatalog.Borg, UnitCatalog.Hota, HiyoPick),
+        new("Q1-選", "Q0 ＋ ヒヨの相手選びだけ（切り分け）", UnitCatalog.Borg, UnitCatalog.HotaQ0, HiyoPick),
     };
     internal static FB.Ver VerOf(string name) => Versions.First(v => v.Name == name);
 

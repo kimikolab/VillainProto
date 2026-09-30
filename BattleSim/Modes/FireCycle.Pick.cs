@@ -27,7 +27,7 @@ static partial class FireCycleDiag
         return best;
     }
 
-    static List<FB.Pick> RunPick(FB.Ver v, out double seconds)
+    internal static List<FB.Pick> RunPick(FB.Ver v, out double seconds)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var core = new[] { v.Borg, v.Hota, v.Hiyo };
@@ -51,14 +51,14 @@ static partial class FireCycleDiag
     static string S4(FB.Score4 s) => string.Join("\t", s.S.Sv, s.Sv4, s.S.Fell, s.S.W, s.S.T);
     static FB.Score4 P4(string[] c, int i) => new(new BA.SeatScore(int.Parse(c[i]), int.Parse(c[i + 2]), int.Parse(c[i + 3]), long.Parse(c[i + 4])), int.Parse(c[i + 1]));
 
-    static void SavePick(List<FB.Pick> ps, string path, double seconds)
+    internal static void SavePick(List<FB.Pick> ps, string path, double seconds)
     {
         using var w = new StreamWriter(path);
         w.WriteLine($"# seconds\t{seconds.ToString("F1", CultureInfo.InvariantCulture)}");
         foreach (var p in ps) w.WriteLine(string.Join("\t", p.Ver, string.Join(",", p.Partners), p.Best, S4(p.BestS)));
     }
 
-    static List<FB.Pick> LoadPick(string path, out double seconds)
+    internal static List<FB.Pick> LoadPick(string path, out double seconds)
     {
         seconds = double.NaN;
         var res = new List<FB.Pick>();

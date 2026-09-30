@@ -3611,6 +3611,18 @@ public static class FireLevelLabels
     public const string Critical = "臨界";
     /// <summary>第246期: 臨界で当たった敵の火勢が育った（<c>ActorId</c> ＝ ホタ ／ <c>Amount</c> ＝ 後 ／ <c>Slot</c> ＝ 前）。</summary>
     public const string GrowCritical = "育つ・臨界";
+    /// <summary>第247期 前段: 見出し: 大火槍（ホタの手番・段3・`段` の直後）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ホタ ／ <c>Amount</c> ＝ 段（3）。
+    /// 段2 の火槍（貫き ×4）は `段` の <c>Amount</c> ＝ 2 だけで、この見出しは出ない。<b>表示専用。</b></summary>
+    public const string Lance = "大火槍";
+    /// <summary>第247期: 見出し: 放熱の印が灯った（ホタの焼き尽くすの後・火の粉の後）。<c>ActorId</c> ＝ ホタ ／ <c>TargetId</c> ＝ ボルグ ／ <c>Amount</c> ＝ ボルグの火勢。<b>表示専用。</b></summary>
+    public const string CallMark = "放熱の印";
+    /// <summary>第247期: 放熱の印が消えた（ボルグが燃えていなくなった）。<c>ActorId</c> ＝ null ／ <c>TargetId</c> ＝ ボルグ。指名で消えたときは「指名」だけが出る。</summary>
+    public const string CallLost = "放熱の印・消える";
+    /// <summary>第247期: 見出し: 指名——ギフトの相手が放熱の印を持つボルグだった（ヒヨの手番・その「ターンギフト」の直前）。
+    /// <c>ActorId</c> ＝ ヒヨ ／ <c>TargetId</c> ＝ ボルグ ／ <c>Amount</c> ＝ ボルグの火勢（4 なら放つ・4 未満なら通常の手番）／ <c>Slot</c> ＝ 何体目。<b>表示専用。</b></summary>
+    public const string Called = "指名";
+    /// <summary>第247期: 見出し: 火勢3 で準備のできた2体に渡した（(b)・ヒヨの手番・「ターンギフト」の前）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ヒヨ ／ <c>Amount</c> ＝ 3。</summary>
+    public const string GiftPair = "二体に渡す";
     /// <summary>第245期: 見出し: 延焼。<c>ActorId</c> ＝ 火勢4 で倒れた敵 ／ <c>TargetId</c> ＝ 隣の生きている敵 ／ <c>Slot</c> ＝ 1 燃えていなかった（続いて「点く」と「育つ・敵」で火勢2）／ 2 燃えていた（続いて「育つ・敵」で +1）。</summary>
     public const string FoeSpread = "延焼";
 }
@@ -3734,6 +3746,10 @@ public sealed class FireLevelLedger
     /// 放熱（蓄えた ／ 重ねずに捨てた ／ 使って育った ／ 燃えていなくて捨てた ／ 育った量）・臨界（手番 ／ 当たった敵 ／ 育った敵）・大火槍の手番。</summary>
     public long StokeForm, StokeFallback, GiftReady, GiftNotReady, Sparks, SparkGrowth, SparkSpreadSkipped;
     public long Radiates, RadiateStacked, RadiateUsed, RadiateWasted, RadiateGrowth, Criticals, CriticalFoeHits, CriticalFoeGrowth, Lances;
+    /// <summary>第247期: 放熱の印（付いた ／ 重ねずに捨てた ／ 燃えていなくなって消えた）・指名（ギフトを受けた・そのときの火勢 添字 0〜4）・
+    /// 火の粉（添字 0 焼き尽くす ／ 1 放つ・回 ／ 育った量）・(b)（火勢3 で2体に渡した回）。<b>計数のみ。</b></summary>
+    public long CallMarks, CallStacked, CallLost, GiftPairs, GiftPairChance;
+    public readonly long[] Called = new long[5], SparkBy = new long[2], SparkGrowBy = new long[2];
 }
 
 public sealed class BurnLinkLedger

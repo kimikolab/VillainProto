@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 using BA = BurnAuditDiag;
@@ -64,7 +64,7 @@ static partial class FireCycleDiag
         Expect("前段: 規定のボルグ ＝ 第245期の規定 ＋ E2 の5枚", string.Join(",", UnitCatalog.Borg.Traits),
             string.Join(",", UnitCatalog.BorgE0.Traits.Concat(new[] { TraitId.FoeFireLevel, TraitId.FoeFireTick, TraitId.FoeFireBrittle, TraitId.FoeFireSpread, TraitId.AllyFireTick })));
         Expect("前段: 第245期の器具の E0 は旧のボルグ", EnemyFireDiag.VerOf("E0").Borg == UnitCatalog.BorgE0, true);
-        foreach (TraitId t in new[] { TraitId.StokePick, TraitId.HiyoSpark, TraitId.BorgRadiate, TraitId.PyreCritical, TraitId.PyreLance })
+        foreach (TraitId t in new[] { TraitId.StokePick, TraitId.HiyoSpark, TraitId.BorgRadiate })   // 第247期 前段: 臨界・大火槍は規定のホタが持つようになった
             Expect($"札 {t} の保持者は `All` に 0 枚", UnitCatalog.All.Count(u => u.Traits.Contains(t)), 0);
 
         // ---- 煽りの相手: 型が変わる味方を優先 ----

@@ -1009,6 +1009,23 @@ public static class UnitCatalog
         Speed = 7,
         // 第244期 前段（ポンの判断）: 第242期 R3 の段（`PyreStage`）。旧は <see cref="HotaL0"/>。
         // 第245期 前段（ポンの判断・指示書 §2.3）: 第244期の大技——焼き尽くす（火の雨は乱数）・残り火・呼び火。旧は <see cref="HotaR3"/>。
+        // 第247期 前段（ポンの判断・指示書 §2）: 第246期 Q2-HP の段——段3 は大火槍（貫き ×7 ＋ 着火）、自分の手番の火勢4 は臨界。旧は <see cref="HotaQ0"/>。
+        Traits = new[] { TraitId.Pyre, TraitId.PyreStage, TraitId.PyreBurnout, TraitId.PyreEmbers, TraitId.CallFire, TraitId.PyreLance, TraitId.PyreCritical },
+        PlusText = "自分が燃えている間、火の強さで振り方が変わる——弱い火は一撃（攻撃力 4 倍）、育つと炎が列を貫き（当たった敵に火が点く）、燃え盛ると大火槍（攻撃力 7 倍の貫き・当たった敵に火が点く）。極まると臨界——攻撃力 7 倍で列を貫き、当たった敵の火を煽る。火を渡されて燃え盛っていれば、焼き尽くす——敵全体を攻撃力 4 倍で焼き、火の雨を 10 発降らせる（1 発 1.5 倍・当てるたびに火が点く）。次の自分の手番は残り火が敵全体を焼く（2 倍・敵が 2 体以下ならもう一度）。仲間が火を放ち、火を渡すたびに、自分の火も育つ。火には焼かれない",
+        MinusText = "火が消えればただの湿った薪。自分では火を点けられない",
+        Flavor = "焚きつけられている間だけ働く。誰かが火を放つのを待っている。"
+    };
+
+    /// <summary>第246期の規定のホタ（段3 は 5連撃・臨界なし）。対照（<see cref="All"/> に入れない）。第245・246期の器具（`enemyfire` / `firecycle`）はこちらに固定した。</summary>
+    public static readonly UnitDef HotaQ0 = new()
+    {
+        Id = "hota",
+        Name = "熾のホタ",
+        MaxHp = 78,
+        Attack = 6,
+        Speed = 7,
+        // 第244期 前段（ポンの判断）: 第242期 R3 の段（`PyreStage`）。旧は <see cref="HotaL0"/>。
+        // 第245期 前段（ポンの判断・指示書 §2.3）: 第244期の大技——焼き尽くす（火の雨は乱数）・残り火・呼び火。旧は <see cref="HotaR3"/>。
         Traits = new[] { TraitId.Pyre, TraitId.PyreStage, TraitId.PyreBurnout, TraitId.PyreEmbers, TraitId.CallFire },
         PlusText = "自分が燃えている間、火の強さで振り方が変わる——弱い火は一撃（攻撃力 4 倍）、育つと炎が列を貫き（当たった敵に火が点く）、燃え盛ると同じ敵に 5 連撃（1 回 1.6 倍・当てるたびに火が点く）。火を渡されて燃え盛っていれば、焼き尽くす——敵全体を攻撃力 4 倍で焼き、火の雨を 10 発降らせる（1 発 1.5 倍・当てるたびに火が点く）。次の自分の手番は残り火が敵全体を焼く（2 倍・敵が 2 体以下ならもう一度）。仲間が火を放ち、火を渡すたびに、自分の火も育つ。火には焼かれない",
         MinusText = "火が消えればただの湿った薪。自分では火を点けられない",

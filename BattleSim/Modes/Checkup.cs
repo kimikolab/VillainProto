@@ -201,6 +201,9 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.FoeFireBrittle] = (HcPlusL, "敵の燃焼の脆さを火勢で 25/40/55/70% に上げるだけ"),
         [TraitId.FoeFireSpread]  = (HcPlusL, "火勢4 の敵が倒れると隣の敵へ火が移るだけ"),
         [TraitId.AllyFireTick]   = (HcBothL, "味方の燃焼の刻みも火勢の回数だけ入る——火に強い味方・火の変換では癒えるが、ほかは焼かれる"),
+        // 第247期 前段: 第246期 Q2-HP の規定化で保持者（ホタ）が付いた札。分類を同じコミットで足す（第132期 段0-a の再発防止）。
+        [TraitId.PyreLance]      = (HcBothL, "段3 の型を 5連撃から大火槍（攻撃力 7 倍の貫き・当たった敵に着火）に替える——1発は重いが、軛には 5連撃より多く切られる"),
+        [TraitId.PyreCritical]   = (HcPlusL, "自分の手番の火勢4 を臨界（攻撃力 7 倍の貫き・着火・当たった敵の火勢 +1）にするだけ"),
         // 第180期: ムド（暴発＋泥散り）・ヴィオ（吐き戻し）・ガン（叩き起こし）。
         // **マイナスを別の `TraitId` に切り出してあるので `yP` が組める**（第74期の作法）。
         [TraitId.Erupt]      = (HcPlusL,  "殴られた回数を溜めて割り込み連撃する。代金は別の札（`Smear`）に切り出してある"),

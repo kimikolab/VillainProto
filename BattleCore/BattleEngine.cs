@@ -8760,6 +8760,13 @@ public sealed class BattleContext
     void FireOut(UnitState u)
     {
         if (!LvTracked(u.TeamId)) return;
+        // 第247期（放熱・指名）: 燃えていなくなったら印は消える。**印が無ければ比較1つで抜ける。**
+        if (u.RawCounter(FireCycleRule.CallKey) > 0)
+        {
+            u.SetCounter(FireCycleRule.CallKey, 0);
+            FireBook.CallLost++;
+            EmitFireLevel(null, u, FireLevelLabels.CallLost, 0, 0);
+        }
         int lv = u.RawCounter(FireLevelRule.LvKey);
         if (lv <= 0) return;
         u.SetCounter(FireLevelRule.LvKey, 0);
@@ -8819,13 +8826,16 @@ public sealed class BattleContext
         EmitFireLevel(actor, actor, FireLevelLabels.Stage, st, st);
         // 第246期: 大火槍・臨界の手番（計数と見出し）。札が無ければ比較1つで抜ける。
         if (PyreStageTrait.IsCritical(actor)) { FireBook.Criticals++; EmitFireLevel(actor, actor, FireLevelLabels.Critical, st, st); }
-        else if (PyreStageTrait.IsLance(actor)) FireBook.Lances++;
+        else if (PyreStageTrait.IsLance(actor)) { FireBook.Lances++; EmitFireLevel(actor, actor, FireLevelLabels.Lance, st, st); }   // 第247期 前段: 大火槍の見出し（段2 の火槍と区別）
     }
 
     /// <summary>火を保つ（計数のみ）。</summary>
     public void NoteFireKeep(UnitState u) => FireBook.FireKeeps++;
     public void NoteStokeNoTarget(UnitState u) => FireBook.StokeNoTarget++;
     public void NoteGiftNoTarget(UnitState u) => FireBook.GiftNoTarget++;
+    /// <summary>第247期 (b): 火勢3 で準備のできた2体に渡す（計数と見出し）。</summary>
+    public void NoteGiftPairChance(UnitState hiyo) => FireBook.GiftPairChance++;
+    public void NoteGiftPair(UnitState hiyo) { FireBook.GiftPairs++; EmitFireLevel(hiyo, hiyo, FireLevelLabels.GiftPair, FireLevelRule.Of(hiyo), 2); }
 
     /// <summary>煽り: 相手 +1、ヒヨが燃えていれば自分も +1。</summary>
     public void Stoke(UnitState hiyo, UnitState target)
@@ -8855,6 +8865,15 @@ public sealed class BattleContext
         if (FireBook.FirstGiftTurn == 0) FireBook.FirstGiftTurn = _turn;
         for (int i = 0; i < to.Count; i++)
         {
+            // 第247期（放熱・指名）: 放熱の印を持つ相手なら、印を消して見出しを1件（`Amount` ＝ そのときの火勢）。印が無ければ比較1つで抜ける。
+            if (to[i].RawCounter(FireCycleRule.CallKey) > 0)
+            {
+                to[i].SetCounter(FireCycleRule.CallKey, 0);
+                int cl = FireLevelRule.Of(to[i]);
+                FireBook.Called[Math.Clamp(cl, 0, 4)]++;
+                EmitFireLevel(hiyo, to[i], FireLevelLabels.Called, cl, i + 1);
+                Log($"    {hiyo.Name} は放熱の灯った {to[i].Name} に真っ先に火を渡す", LogKind.Trigger);
+            }
             // 第246期（`StokePick`・表示と計数だけ）: 大技の準備ができた相手なら見出しを1件（`Slot` ＝ 何体目）。
             if (hiyo.HasTrait(TraitId.StokePick))
             {
@@ -8976,6 +8995,7 @@ public sealed class BattleContext
                     EmitFireLevel(actor, f, FireLevelLabels.GrowFoe, FoeFireRule.SpreadLevel, b);
                 }
             }
+            UnleashSparks(actor);   // 第247期（火の粉・放つ）: 札の持ち主がいなければ何もしない
             CallFire(actor);
             return;
         }
@@ -9068,13 +9088,25 @@ public sealed class BattleContext
         foreach (UnitState h in LivingMembers(hota.TeamId))
         {
             if (h == hota || FireLevelRule.Of(h) == 0) continue;
-            if (h.HasTrait(TraitId.HiyoSpark))
+            if (h.HasTrait(TraitId.HiyoSpark) || h.HasTrait(TraitId.SparkCatch))   // 第247期: 旧育ちの火の粉（`SparkCatch`）も同じ口
             {
                 FireBook.Sparks++;
                 int b = FireLevelRule.Of(h);
                 EmitFireLevel(hota, h, FireLevelLabels.Spark, b, b);
                 GrowFire(h, 1, hota, FireLevelLabels.GrowSpark);
                 FireBook.SparkGrowth += FireLevelRule.Of(h) - b;
+                FireBook.SparkBy[0]++; FireBook.SparkGrowBy[0] += FireLevelRule.Of(h) - b;
+            }
+            if (h.HasTrait(TraitId.RadiateCall))   // 第247期（放熱・指名）: 燃えている間だけ印（重ねない）
+            {
+                if (h.RawCounter(FireCycleRule.CallKey) > 0) FireBook.CallStacked++;
+                else
+                {
+                    FireBook.CallMarks++;
+                    h.SetCounter(FireCycleRule.CallKey, 1);
+                    EmitFireLevel(hota, h, FireLevelLabels.CallMark, FireLevelRule.Of(h), 1);
+                    Log($"    {h.Name} の鎧に {hota.Name} の放熱が灯った（次の火は自分に）", LogKind.Trigger);
+                }
             }
             if (h.HasTrait(TraitId.BorgRadiate))
             {
@@ -9084,6 +9116,21 @@ public sealed class BattleContext
                 EmitFireLevel(hota, h, FireLevelLabels.Radiate, FireLevelRule.Of(h), 1);
                 Log($"    {h.Name} が {hota.Name} の放熱を受け止めた", LogKind.Trigger);
             }
+        }
+    }
+
+    /// <summary>第247期: 放つの火の粉——味方の `SparkUnleash` の持ち主（燃えている・放った本人以外）は火勢 +1。<b>乱数を引かない。</b>席の番号の順。</summary>
+    void UnleashSparks(UnitState borg)
+    {
+        foreach (UnitState h in LivingMembers(borg.TeamId))
+        {
+            if (h == borg || FireLevelRule.Of(h) == 0 || !h.HasTrait(TraitId.SparkUnleash)) continue;
+            FireBook.Sparks++;
+            int b = FireLevelRule.Of(h);
+            EmitFireLevel(borg, h, FireLevelLabels.Spark, b, b);
+            GrowFire(h, 1, borg, FireLevelLabels.GrowSpark);
+            FireBook.SparkGrowth += FireLevelRule.Of(h) - b;
+            FireBook.SparkBy[1]++; FireBook.SparkGrowBy[1] += FireLevelRule.Of(h) - b;
         }
     }
 

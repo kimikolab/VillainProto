@@ -15,12 +15,12 @@ static partial class EnemyFireDiag
 
     internal static readonly FB.Ver[] Versions =
     {
-        new("E0", "前段の規定（対照）", UnitCatalog.BorgE0, UnitCatalog.Hota, UnitCatalog.Hiyo),
-        new("E-刻み", "敵の火勢（育つ・萎む）＋ 刻みの回数", BorgTick, UnitCatalog.Hota, UnitCatalog.Hiyo),
-        new("E-脆さ", "敵の火勢 ＋ 脆さの上昇", BorgBrittle, UnitCatalog.Hota, UnitCatalog.Hiyo),
-        new("E1", "敵の火勢 ＋ 刻みの回数 ＋ 脆さの上昇 ＋ 延焼（味方の刻みはそのまま）", BorgE1, UnitCatalog.Hota, UnitCatalog.Hiyo),
-        new("E2", "E1 ＋ 味方の刻みも回数", BorgE2, UnitCatalog.Hota, UnitCatalog.Hiyo),
-        new("E1+放", "E1 ＋ 放つで当てた敵はさらに +1（燃えていなければ火勢2・追記 A）", BorgE1U, UnitCatalog.Hota, UnitCatalog.Hiyo),
+        new("E0", "前段の規定（対照）", UnitCatalog.BorgE0, UnitCatalog.HotaQ0, UnitCatalog.Hiyo),
+        new("E-刻み", "敵の火勢（育つ・萎む）＋ 刻みの回数", BorgTick, UnitCatalog.HotaQ0, UnitCatalog.Hiyo),
+        new("E-脆さ", "敵の火勢 ＋ 脆さの上昇", BorgBrittle, UnitCatalog.HotaQ0, UnitCatalog.Hiyo),
+        new("E1", "敵の火勢 ＋ 刻みの回数 ＋ 脆さの上昇 ＋ 延焼（味方の刻みはそのまま）", BorgE1, UnitCatalog.HotaQ0, UnitCatalog.Hiyo),
+        new("E2", "E1 ＋ 味方の刻みも回数", BorgE2, UnitCatalog.HotaQ0, UnitCatalog.Hiyo),
+        new("E1+放", "E1 ＋ 放つで当てた敵はさらに +1（燃えていなければ火勢2・追記 A）", BorgE1U, UnitCatalog.HotaQ0, UnitCatalog.Hiyo),
     };
     internal static FB.Ver VerOf(string name) => Versions.First(v => v.Name == name);
     internal static Formation Apply(Formation f, FB.Ver v) => Apply(f, v.Borg, v.Hota, v.Hiyo);
