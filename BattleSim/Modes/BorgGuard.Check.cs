@@ -146,13 +146,15 @@ static partial class BorgGuardDiag
         // 乱数: 新しい処理は Roll / PickOne を呼ばない（本文の走査）
         string src = File.ReadAllText(Path.Combine("BattleCore", "BattleEngine.cs")).Replace("\r\n", "\n");
         var spans = new List<string>();
-        foreach (var (a, b) in new[] { ("sealed class FireArmorFrame", "void PerformAttackFooting("), ("// 火の鎧（第234期・`FireArmorTrait`）", "// 巨躯: 自分より前の列"), ("// 焼け残り（第234期・`SmolderTrait`）", "// 必死の逃げ足（第227期") })
+        // 第250期 前段: 第1の区間（`FireArmorFrame` 〜 `PerformAttackFooting`）には第242〜249期の火勢の処理（火の雨の `Roll`）が後から入ったので、
+        // 第234期の本文だけ（枠のクラス 〜 第242期の見出し ／ `PerformAttackFramed` 〜 `PerformAttackFooting`）の2区間に割った。
+        foreach (var (a, b) in new[] { ("sealed class FireArmorFrame", "// 第242期 —— 火勢（燃え広がり"), ("void PerformAttackFramed(", "void PerformAttackFooting("), ("// 火の鎧（第234期・`FireArmorTrait`）", "// 巨躯: 自分より前の列"), ("// 焼け残り（第234期・`SmolderTrait`）", "// 必死の逃げ足（第227期") })
         {
             int i = src.IndexOf(a, StringComparison.Ordinal), j = src.IndexOf(b, i, StringComparison.Ordinal);
             if (i < 0 || j < 0) throw new InvalidOperationException("走査の目印が見つからない（R034）: " + a);
             spans.Add(src[i..j]);
         }
-        Expect("新しい処理の本文に Roll( / PickOne( が無い（3 区間）", spans.Count(s => s.Contains("Roll(") || s.Contains("PickOne(")), 0);
+        Expect("新しい処理の本文に Roll( / PickOne( が無い（4 区間）", spans.Count(s => s.Contains("Roll(") || s.Contains("PickOne(")), 0);
 
         Console.WriteLine();
         Console.WriteLine($"**{ok} / {ok + ng}**（所要 {sw.Elapsed.TotalSeconds:F1} 秒）");

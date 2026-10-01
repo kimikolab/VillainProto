@@ -58,10 +58,10 @@ static partial class FireFinishDiag
         Console.WriteLine();
 
         // ---- ③ ホタの火の癒し: 刻みは回復・火の変換と反転より先・二重にしない ----
-        foreach (var (hota, name) in new[] { (UnitCatalog.Hota, "K0"), (HotaK1, "K1") })
+        foreach (var (hota, name) in new[] { (UnitCatalog.HotaK0, "K0"), (HotaK1, "K1") })
         {
             // ホタ（前1）の隣にベニ（中央）、ヒヨ（後3）——火の変換も反転も効く位置
-            var ctx = Ctx(Formation.Build(front1: hota, center: UnitCatalog.Beni, back3: UnitCatalog.Hiyo), Formation.Build(front1: Plain("e1")), out var p, out _);
+            var ctx = Ctx(Formation.Build(front1: hota, center: UnitCatalog.Beni, back3: UnitCatalog.HiyoK0), Formation.Build(front1: Plain("e1")), out var p, out _);
             var h = U(p, "hota"); var hy = U(p, "hiyo");
             ctx.Ignite(h); h.Hp = h.MaxHp - 30; int h0 = h.Hp;
             int n0 = ctx.Events.Count;
@@ -72,9 +72,9 @@ static partial class FireFinishDiag
             Expect($"{name}: ホタの刻み → HP の増え ／ 火の変換 ／ 反転", $"{h.Hp - h0}/{conv}/{inv}", name == "K0" ? "0/0/0" : $"{BurnRules.Damage}/0/0");
         }
         // 燃える巻き込み（ボルグの隣のホタ）
-        foreach (var (hota, name) in new[] { (UnitCatalog.Hota, "K0"), (HotaK1, "K1") })
+        foreach (var (hota, name) in new[] { (UnitCatalog.HotaK0, "K0"), (HotaK1, "K1") })
         {
-            var ctx = Ctx(Formation.Build(front1: hota, center: UnitCatalog.Borg), Formation.Build(front1: Plain("e1", hp: 5000)), out var p, out _);
+            var ctx = Ctx(Formation.Build(front1: hota, center: UnitCatalog.BorgK0), Formation.Build(front1: Plain("e1", hp: 5000)), out var p, out _);
             var h = U(p, "hota"); var b = U(p, "borg");
             ctx.Ignite(h); h.Hp = h.MaxHp - 50; int h0 = h.Hp;
             ctx.FireSplashHit(h, 12, b);
@@ -82,7 +82,7 @@ static partial class FireFinishDiag
         }
 
         // ---- ① 贔屓・火勢: 上乗せは 3 × 相手の火勢・隣の燃えていない味方は −2 ----
-        foreach (var (hiyo, name) in new[] { (UnitCatalog.Hiyo, "K0"), (HiyoK2a, "K2a") })
+        foreach (var (hiyo, name) in new[] { (UnitCatalog.HiyoK0, "K0"), (HiyoK2a, "K2a") })
         {
             for (int lv = 1; lv <= 4; lv++)
             {
@@ -96,7 +96,7 @@ static partial class FireFinishDiag
         }
 
         // ---- ② 爆炎: 敵全体 ×3・味方全体（ボルグ以外）に燃焼ダメージ・全員に着火・巻き込みは別に起きない ----
-        foreach (var (borg, name) in new[] { (UnitCatalog.Borg, "K2a（放つ）"), (BorgK3, "K3（爆炎）") })
+        foreach (var (borg, name) in new[] { (UnitCatalog.BorgK0, "K2a（放つ）"), (BorgK3, "K3（爆炎）") })
         {
             // ボルグ（中央）・ヒヨ（前1・ギフト）・ホタ（前3）・ベニ（後1）・素の味方 a（後3）。ベニの隣は 前1・中央（X 字）
             var ctx = Ctx(Formation.Build(front1: HiyoK2a, front3: HotaK1, center: borg, back1: UnitCatalog.Beni, back3: Plain("a3", hp: 200)),
@@ -269,8 +269,13 @@ static partial class FireFinishDiag
 
         // ---- K0 ＝ 規定（札を1枚も足していない）----
         var k0 = VerOf("K0");
-        Expect("K0 の駒 ＝ 規定の駒（参照）", ReferenceEquals(k0.Borg, UnitCatalog.Borg) && ReferenceEquals(k0.Hota, UnitCatalog.Hota) && ReferenceEquals(k0.Hiyo, UnitCatalog.Hiyo), true);
-        Expect("新しい札の保持者（`UnitCatalog.All`）", UnitCatalog.All.Count(d => d.Traits.Any(t => t is TraitId.PyreMend or TraitId.FavorLevel or TraitId.UnleashBlaze or TraitId.EmbersChain or TraitId.TickOnce)), 0);
+        Expect("K0 の駒 ＝ 規定の駒（参照）", ReferenceEquals(k0.Borg, UnitCatalog.BorgK0) && ReferenceEquals(k0.Hota, UnitCatalog.HotaK0) && ReferenceEquals(k0.Hiyo, UnitCatalog.HiyoK0), true);
+        // 第250期 前段: K4 が規定になった——K4 の4枚の保持者は規定のボルグ・ホタ・ヒヨの3枚、刻み・一撃は 0 枚のまま。
+        Expect("K4 の札の保持者（`UnitCatalog.All`・第250期 前段から規定の3枚）", UnitCatalog.All.Count(d => d.Traits.Any(t => t is TraitId.PyreMend or TraitId.FavorLevel or TraitId.UnleashBlaze or TraitId.EmbersChain)), 3);
+        Expect("刻み・一撃の保持者（`UnitCatalog.All`）", UnitCatalog.All.Count(d => d.Traits.Contains(TraitId.TickOnce)), 0);
+        var k4 = VerOf("K4");
+        Expect("K4 の札 ＝ 規定の札（第250期 前段）", string.Join(",", k4.Borg.Traits) == string.Join(",", UnitCatalog.Borg.Traits) && string.Join(",", k4.Hota.Traits) == string.Join(",", UnitCatalog.Hota.Traits)
+            && string.Join(",", k4.Hiyo.Traits) == string.Join(",", UnitCatalog.Hiyo.Traits) && k4.Hota.Attack == UnitCatalog.Hota.Attack, true);
 
         Console.WriteLine();
         Console.WriteLine($"**{ok} / {ok + ng}**（所要 {sw.Elapsed.TotalSeconds:F0} 秒）");

@@ -1725,6 +1725,12 @@ public sealed class BattleContext
         target.SetCounter(StatusKeys.Burn, turns);
         EmitStatusGain(target, StatusKeys.Burn, turns, source);   // 第97期・表示専用（量ではなく残ターン）
         if (_fireLvLive) FireKeepLit(target, source, relit);   // 第242期（保つ火: 0 なら 1・1 以上は上げない）
+        // 第250期（くべられる火・札 `PyreFed`）: 燃えていたホタに、ホタ以外の味方が火を点けた——攻撃力 +2（火勢は上げない）。札が無ければ比較1つで抜ける。
+        if (relit && source is not null && source != target && source.TeamId == target.TeamId && target.HasTrait(TraitId.PyreStage))
+        {
+            FireBook.FedChanceBy[source.Def.Id] = FireBook.FedChanceBy.GetValueOrDefault(source.Def.Id) + 1;   // 第250期 Phase 0（計数のみ）
+            if (target.HasTrait(TraitId.PyreFed)) FeedAtk(target, source, FireFeedRule.FedAtk, overflow: false);
+        }
         Log(relit
                 ? $"    {target.Name} の火が煽られた（残り {turns}）"
                 : $"    {target.Name} に火が点いた（残り {turns}）",
@@ -8746,6 +8752,13 @@ public sealed class BattleContext
         int lv = FireLevelRule.Of(u);
         if (lv == 0) return false;
         u.SetCounter(FireLevelRule.GrewKey, _turn);
+        // 第250期（あぶれた火・札 `PyreOverflow`）: 火勢4 のときに来た育ちは攻撃力 +4 に変わる（1回につき）。札が無ければ比較1つで抜ける。
+        if (lv == FireLevelRule.Max && u.HasTrait(TraitId.PyreStage))   // 第250期 Phase 0（計数のみ）: 札が無くても機会を数える
+        {
+            string cid = cause?.Def.Id ?? "—";
+            FireBook.OverflowChanceBy[cid] = FireBook.OverflowChanceBy.GetValueOrDefault(cid) + 1;
+            if (u.HasTrait(TraitId.PyreOverflow)) FeedAtk(u, cause, FireFeedRule.OverflowAtk, overflow: true);
+        }
         int to = Math.Min(FireLevelRule.Max, lv + n);
         if (to == lv) return true;
         u.SetCounter(FireLevelRule.LvKey, to);
@@ -8959,7 +8972,10 @@ public sealed class BattleContext
     int BigMoveOf(UnitState actor)
     {
         if (_embersNow == actor && actor.HasTrait(TraitId.PyreEmbers)) return 3;
-        if (_giftTurnActor != actor || FireLevelRule.Of(actor) < FireLevelRule.Max) return 0;
+        if (FireLevelRule.Of(actor) < FireLevelRule.Max) return 0;
+        // 第250期（爆炎・独り・札 `BlazeSolo`）: 盤面に火を渡す者（ヒヨ）がいなければ、自分の手番の火勢4 で爆炎を撃つ。札が無ければ比較1つで抜ける。
+        if (_giftTurnActor != actor)
+            return actor.HasTrait(TraitId.BlazeSolo) && actor.HasTrait(TraitId.FireUnleash) && actor.HasTrait(TraitId.UnleashBlaze) && !GiverAlive(actor.TeamId) ? 1 : 0;
         if (actor.HasTrait(TraitId.FireUnleash)) return 1;
         if (actor.HasTrait(TraitId.PyreBurnout)) return 2;
         return 0;
@@ -8969,6 +8985,12 @@ public sealed class BattleContext
     {
         int lv = FireLevelRule.Of(actor);
         FireBook.Moves.Add((_turn, move, actor.InstanceId));
+        if (move == 1 && _giftTurnActor != actor)   // 第250期（爆炎・独り）: ギフトでない手番の放つは独りの爆炎だけ
+        {
+            FireBook.BlazeSolos++;
+            EmitFireLevel(actor, actor, FireLevelLabels.BlazeSolo, lv, 0);
+            Log($"  {actor.Name} の火を渡す者はいない——独りで火を放つ", LogKind.Highlight, actor);
+        }
         if (move is 1 or 2)
         {
             // 撃つ直前に火勢を 1 に戻す（燃え広がりはこの手番の枠の出口で数える＝撃った直後に 2 になりうる）。
@@ -8997,7 +9019,12 @@ public sealed class BattleContext
             _fireMoveIgnite = true;
             try { PerformAttack(actor, attackPercent: FireBurstRule.UnleashPercent, patternOverride: blaze ? AttackPattern.All : AttackPattern.Sweep); }
             finally { _fireMoveIgnite = false; BlazeActor = null; }
-            if (blaze && actor.IsAlive) BlazeAllies(actor, blazeAmt);
+            if (blaze && actor.IsAlive)
+            {
+                _blazeSoloNow = _giftTurnActor != actor;   // 第250期（爆炎・独り）: 帳簿を分けるだけ
+                try { BlazeAllies(actor, blazeAmt); }
+                finally { _blazeSoloNow = false; }
+            }
             if (stoke)
             {
                 var hits = _unleashHits!; _unleashHits = null;
@@ -9026,7 +9053,7 @@ public sealed class BattleContext
         if (move == 2)
         {
             FireBook.Burnouts++;
-            Log($"  {actor.Name} が焼き尽くす（全体 ×4 ＋ 火の雨 {FireBurstRule.RainDrops} 発）", LogKind.Highlight, actor);
+            Log($"  {actor.Name} が焼き尽くす（全体 ×{(actor.HasTrait(TraitId.BurnoutHeavy) ? FireCycleRule.HeavyMultiplier : 4)} ＋ 火の雨 {FireBurstRule.RainDrops} 発）", LogKind.Highlight, actor);
             _fireMoveIgnite = true;
             try
             {
@@ -9082,10 +9109,40 @@ public sealed class BattleContext
     // =====================================================================================
     // 第249期 —— 爆炎（ボルグ）・残り火の連撃（ホタ）。**札の持ち主がいなければ呼ばれない。乱数を引かない。**
     // =====================================================================================
+    /// <summary>第250期: 火を渡す者（ターンギフトの札の持ち主）が陣営に生きているか（爆炎・独りの条件）。</summary>
+    bool GiverAlive(int team)
+    {
+        foreach (UnitState u in _units)
+            if (u.TeamId == team && u.IsAlive && (u.HasTrait(TraitId.TurnGift) || u.HasTrait(TraitId.TurnGiftWait))) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// 第250期: ホタの攻撃力の育ち（あぶれた火 ／ くべられる火）。`AtkBonus` に直に足す（自分の火で自分が強くなる札・強化の窓口を通さない）。
+    /// 台本は `FireLevel` の見出し1件（<c>Slot</c> ＝ その戦の累計）。<b>乱数を引かない。</b>
+    /// </summary>
+    void FeedAtk(UnitState hota, UnitState? cause, int amount, bool overflow)
+    {
+        if (!hota.IsAlive) return;
+        hota.AtkBonus += amount;
+        string id = cause?.Def.Id ?? "—";
+        long sum;
+        if (overflow) { FireBook.OverflowN++; sum = FireBook.OverflowAtk += amount; FireBook.OverflowBy[id] = FireBook.OverflowBy.GetValueOrDefault(id) + 1; }
+        else { FireBook.FedN++; sum = FireBook.FedAtk += amount; FireBook.FedBy[id] = FireBook.FedBy.GetValueOrDefault(id) + 1; }
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.FireLevel, Turn = _turn, ActorId = cause?.InstanceId, TargetId = hota.InstanceId,
+            Amount = amount, Slot = (int)Math.Min(int.MaxValue, sum), HpAfter = Math.Max(0, hota.Hp), Text = overflow ? FireLevelLabels.Overflow : FireLevelLabels.Fed,
+        });
+        Log(overflow ? $"    {hota.Name} の火があぶれて刃に凝る（攻撃力 +{amount}）" : $"    {hota.Name} に火がくべられた（攻撃力 +{amount}）", LogKind.Status);
+    }
+
     /// <summary>爆炎の敵への一撃の最中だけ非 null（<see cref="SplashTrait"/> が巻き込みを起こさない）。</summary>
     public UnitState? BlazeActor { get; private set; }
     /// <summary>爆炎の味方への燃焼ダメージの最中（ホタの火の癒しの帳簿の出どころ・<b>計数のみ</b>）。</summary>
     bool _blazeNow;
+    /// <summary>第250期: いま配っている爆炎が独りの爆炎か（帳簿を分けるだけ・<b>計数のみ</b>）。</summary>
+    bool _blazeSoloNow;
 
     /// <summary>
     /// 爆炎の味方の側（第249期）: 味方全体（ボルグ以外・席番号の順）に着火してから、燃焼ダメージ <paramref name="amount"/> を燃焼の規則どおりに配る
@@ -9121,6 +9178,13 @@ public sealed class BattleContext
             FireBook.BlazeHp[kind] += Math.Abs(d);
             if (d > 0) row[1] += d; else row[2] -= d;
             if (!ally.IsAlive) { FireBook.BlazeAllyKills++; row[3]++; }
+            if (_blazeSoloNow)
+            {
+                if (!FireBook.BlazeSoloById.TryGetValue(ally.Def.Id, out var sr)) FireBook.BlazeSoloById[ally.Def.Id] = sr = new long[4];
+                sr[0] += amount; if (d > 0) sr[1] += d; else sr[2] -= d;
+                FireBook.BlazeSoloNom[kind] += amount; FireBook.BlazeSoloHp[kind] += Math.Abs(d);
+                if (!ally.IsAlive) { FireBook.BlazeSoloAllyKills++; sr[3]++; }
+            }
         }
     }
 

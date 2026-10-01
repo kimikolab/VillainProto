@@ -546,6 +546,10 @@ public enum TraitId
     FavorLevel,     // 贔屓・火勢（第249期・ヒヨの版 K2a〜）: 贔屓の上乗せを「+3 × 相手のその時の火勢」に（今の +4 固定を置き換え・隣の燃えていない味方の −2 はそのまま）。**判定は `FavorTrait`**。保持者 0 枚
     UnleashBlaze,   // 放つ・爆炎（第249期・ボルグの版 K3〜）: 放つを「敵全体 ×3 ＋ 味方全体（ボルグ以外）にボルグの攻撃力 ×1 の燃焼ダメージ・全員に着火」に。爆炎の手番では巻き込みを別に起こさない。**判定は engine**（`BigMove`・`BlazeAllyHit`・`SplashTrait`）。保持者 0 枚
     EmbersChain,    // 残り火・連撃（第249期・ホタの版 K4〜）: 残り火を全体 ×2 の代わりに5連撃（1回 ×2・着火）に。主目標（前列の席番号の最初）から席番号の順に1発ずつ巡回、敵が1体なら5発ともその敵。**判定は engine**（`BigMove`）。**乱数を引かない**。保持者 0 枚
+    PyreOverflow,   // あぶれた火（第250期・ホタの版 L-A1〜）: 火勢4 のホタに育ちが来たら（燃え広がり・煽り・呼び火・火の粉ほか、上限で捨てていた分）、1回につき攻撃力 +4（大技で火勢が 1 に戻っても残る）。**判定は engine**（`GrowFire` の1箇所）。保持者 0 枚
+    PyreFed,        // くべられる火（第250期・ホタの版 L-A2〜）: 燃えているホタに、ホタ以外の味方が火を点けるたび（点け直し・火の粉・爆炎・ベニの配りほか）攻撃力 +2。火勢は上げない。**判定は engine**（`Ignite` の1箇所）。保持者 0 枚
+    BurnoutHeavy,   // 焼き尽くす・重（第250期・ホタの版 L2〜）: 焼き尽くすの全体の1発を ×4 → ×7（臨界・大火槍と同じ）。火の雨はそのまま。**判定は `PyreTrait.ModifyAttack`**。保持者 0 枚
+    BlazeSolo,      // 爆炎・独り（第250期・ボルグの版 L3〜）: 盤面にヒヨ（火を渡す者）がいないとき、自分の手番で火勢4 なら爆炎を撃つ（撃ったら火勢 1）。ヒヨがいる間はギフトの手番だけ。**判定は engine**（`BigMoveOf`）。保持者 0 枚
     TickOnce,       // 刻み・一撃（第249期・ボルグの版 K4t・比較の1版）: 燃焼の刻みを「6 を火勢の回数」から「6 × 火勢 を1回」に（敵・味方とも・刻みの回数の札がある陣営で）。**判定は engine**（`TickStatuses`）。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -9116,7 +9120,8 @@ public sealed class PyreTrait : Trait
     {
         // 第244期（大技）: 焼き尽くす・火の雨・残り火の最中だけ、その倍率（燃えていなくても）。**印が無ければ比較1つで抜ける。**
         int mv = self.RawCounter(FireBurstRule.MoveKey);
-        if (mv > 0) return FireBurstRule.Multiply(mv, atk);
+        // 第250期（焼き尽くす・重・札 `BurnoutHeavy`）: 焼き尽くすの全体の1発だけ ×7（臨界・大火槍と同じ）。札が無ければ ×4 のまま。
+        if (mv > 0) return mv == FireBurstRule.MoveBlast && self.HasTrait(TraitId.BurnoutHeavy) ? atk * FireCycleRule.HeavyMultiplier : FireBurstRule.Multiply(mv, atk);
         if (self.Counter(StatusKeys.Burn) <= 0) return atk;
         // 第246期: 大火槍・臨界は貫き ×7。札が無ければ比較2つで抜ける。
         if (self.HasTrait(TraitId.PyreStage) && PyreStageTrait.IsHeavy(self)) return atk * FireCycleRule.HeavyMultiplier;
@@ -13292,7 +13297,8 @@ public static class FireLevelRule
         || u.HasTrait(TraitId.StokePick) || u.HasTrait(TraitId.HiyoSpark) || u.HasTrait(TraitId.BorgRadiate) || u.HasTrait(TraitId.PyreCritical) || u.HasTrait(TraitId.PyreLance)   // 第246期
         || u.HasTrait(TraitId.RadiateCall) || u.HasTrait(TraitId.SparkCatch) || u.HasTrait(TraitId.SparkUnleash) || u.HasTrait(TraitId.GiftPair)   // 第247期
         || u.HasTrait(TraitId.CallFull)   // 第248期
-        || u.HasTrait(TraitId.FavorLevel) || u.HasTrait(TraitId.UnleashBlaze) || u.HasTrait(TraitId.EmbersChain) || u.HasTrait(TraitId.TickOnce);   // 第249期
+        || u.HasTrait(TraitId.FavorLevel) || u.HasTrait(TraitId.UnleashBlaze) || u.HasTrait(TraitId.EmbersChain) || u.HasTrait(TraitId.TickOnce)   // 第249期
+        || u.HasTrait(TraitId.PyreOverflow) || u.HasTrait(TraitId.PyreFed) || u.HasTrait(TraitId.BurnoutHeavy) || u.HasTrait(TraitId.BlazeSolo);   // 第250期
 }
 
 /// <summary>火勢の土台（第242期・ボルグの版 R1〜・<b>保持者 0 枚</b>）。札は判定を持たない——engine が読む（保つ・燃え広がり・萎む・消える）。</summary>
@@ -13583,6 +13589,27 @@ public sealed class UnleashBlazeTrait : Trait { public override TraitId Id => Tr
 public sealed class EmbersChainTrait : Trait { public override TraitId Id => TraitId.EmbersChain; }
 /// <summary>刻み・一撃（第249期・ボルグ・比較の1版）。engine の `TickStatuses` が読む。</summary>
 public sealed class TickOnceTrait : Trait { public override TraitId Id => TraitId.TickOnce; }
+
+// =====================================================================================
+// 第250期 —— ホタの攻撃力の育ち（あぶれた火・くべられる火）・焼き尽くす・重・爆炎・独り。**4 枚とも保持者 0 枚**（版は診断 `fireatk` のローカルの駒）。
+// 上乗せは `AtkBonus` に直に足す（自分の火で自分が強くなる札——強化の窓口 `Whet` の横取りに晒さない・第56期の自己強化と同じ扱い）。**乱数を引かない。**
+// =====================================================================================
+/// <summary>第250期の数値（仮置き・ポンが遊んで決める）。</summary>
+public static class FireFeedRule
+{
+    /// <summary>あぶれた火: 火勢4 のホタに育ちが来たときの攻撃力の上乗せ（1回につき）。</summary>
+    public const int OverflowAtk = 4;
+    /// <summary>くべられる火: 燃えているホタに味方が火を点けたときの攻撃力の上乗せ（1回につき）。</summary>
+    public const int FedAtk = 2;
+}
+/// <summary>あぶれた火（第250期・ホタ）。engine の `GrowFire` が読む。</summary>
+public sealed class PyreOverflowTrait : Trait { public override TraitId Id => TraitId.PyreOverflow; }
+/// <summary>くべられる火（第250期・ホタ）。engine の `Ignite` が読む。</summary>
+public sealed class PyreFedTrait : Trait { public override TraitId Id => TraitId.PyreFed; }
+/// <summary>焼き尽くす・重（第250期・ホタ）。<see cref="PyreTrait.ModifyAttack"/> が読む。</summary>
+public sealed class BurnoutHeavyTrait : Trait { public override TraitId Id => TraitId.BurnoutHeavy; }
+/// <summary>爆炎・独り（第250期・ボルグ）。engine の `BigMoveOf` が読む。</summary>
+public sealed class BlazeSoloTrait : Trait { public override TraitId Id => TraitId.BlazeSolo; }
 /// <summary>火の粉（焼き尽くす）（第247期・ヒヨ・燃え広がりの育ちはそのまま）。engine が読む。</summary>
 public sealed class SparkCatchTrait : Trait { public override TraitId Id => TraitId.SparkCatch; }
 /// <summary>火の粉（放つ）（第247期・ヒヨ）。engine が読む。</summary>
@@ -15761,6 +15788,10 @@ public static class TraitCatalog
         new UnleashBlazeTrait(),     // 第249期
         new EmbersChainTrait(),      // 第249期
         new TickOnceTrait(),         // 第249期
+        new PyreOverflowTrait(),     // 第250期
+        new PyreFedTrait(),          // 第250期
+        new BurnoutHeavyTrait(),     // 第250期
+        new BlazeSoloTrait(),        // 第250期
         new SparkCatchTrait(),       // 第247期
         new SparkUnleashTrait(),     // 第247期
         new GiftPairTrait(),         // 第247期

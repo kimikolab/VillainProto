@@ -215,6 +215,11 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.UnleashBlaze]   = (HcBothL, "放つを敵全体 ×3 にする——代わりに味方全体にも燃焼ダメージ（火に強い味方・火の変換・ベニの結界では癒える）"),
         [TraitId.EmbersChain]    = (HcPlusL, "残り火を全体 ×2 から5連撃（1発 ×2・着火）に替えるだけ"),
         [TraitId.TickOnce]       = (HcBothL, "燃焼の刻みを火勢の回数から1回の大きな刻みにする——敵にも味方にも同じ（上限に切られやすくなる）"),
+        // 第250期: 保持者 0 枚（版は `fireatk` のローカルの駒）。規定にした期に分類が無いと `checkup ideal` が止まるので先に足す。
+        [TraitId.PyreOverflow]   = (HcPlusL, "火勢4 で受けた育ちを攻撃力 +4 に変えるだけ"),
+        [TraitId.PyreFed]        = (HcPlusL, "燃えている間に味方から火を点けられるたび攻撃力 +2 だけ"),
+        [TraitId.BurnoutHeavy]   = (HcPlusL, "焼き尽くすの全体の1発を ×4 から ×7 にするだけ"),
+        [TraitId.BlazeSolo]      = (HcBothL, "ヒヨがいなければ自分の手番の火勢4 で爆炎を撃つ——味方全体に燃焼ダメージ（ヒヨの火の変換が無いので焼かれる）"),
         // 第180期: ムド（暴発＋泥散り）・ヴィオ（吐き戻し）・ガン（叩き起こし）。
         // **マイナスを別の `TraitId` に切り出してあるので `yP` が組める**（第74期の作法）。
         [TraitId.Erupt]      = (HcPlusL,  "殴られた回数を溜めて割り込み連撃する。代金は別の札（`Smear`）に切り出してある"),

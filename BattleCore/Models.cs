@@ -3630,6 +3630,15 @@ public static class FireLevelLabels
     public const string Blaze = "爆炎";
     /// <summary>第249期: 見出し: 残り火の連撃の1発（`残り火` の直後に5回）。<c>ActorId</c> ＝ ホタ ／ <c>TargetId</c> ＝ 当たる敵 ／ <c>Slot</c> ＝ 何発目（1〜5）／ <c>Amount</c> ＝ その瞬間の生きている敵の数。直後にその1発（単体 ×2・着火）の <c>Attack</c> / <c>Damage</c>。<b>表示専用。</b></summary>
     public const string EmbersHit = "残り火・連撃";
+    /// <summary>第250期: 見出し: あぶれた火（火勢4 のホタに育ちが来て、攻撃力に変わった）。<c>ActorId</c> ＝ 育ちを起こした駒（煽りのヒヨ・燃え広がりのホタ自身・呼び火の主ほか）／
+    /// <c>TargetId</c> ＝ ホタ ／ <c>Amount</c> ＝ 上乗せ（+4）／ <c>Slot</c> ＝ その戦のあぶれた火の累計の上乗せ。火勢は 4 のまま。<b>表示専用。</b></summary>
+    public const string Overflow = "あぶれた火";
+    /// <summary>第250期: 見出し: くべられる火（燃えているホタに味方が火を点けた）。<c>ActorId</c> ＝ 火を点けた味方（ボルグの火の粉・爆炎・ベニの配りほか）／
+    /// <c>TargetId</c> ＝ ホタ ／ <c>Amount</c> ＝ 上乗せ（+2）／ <c>Slot</c> ＝ その戦のくべられる火の累計の上乗せ。火勢は上げない。<b>表示専用。</b></summary>
+    public const string Fed = "くべられる火";
+    /// <summary>第250期: 見出し: 爆炎・独り（ヒヨがいないので、ボルグが自分の手番で爆炎を撃つ）。`放つ` の直前に1件。
+    /// <c>ActorId</c> ＝ <c>TargetId</c> ＝ ボルグ ／ <c>Amount</c> ＝ 4（火勢）。続く `放つ`・`爆炎` はギフトの手番の爆炎と同じ。<b>表示専用。</b></summary>
+    public const string BlazeSolo = "爆炎・独り";
 }
 
 /// <summary>撃破の衝撃（第230期）の <c>Text</c>。<b>表示専用。</b></summary>
@@ -3770,6 +3779,16 @@ public sealed class FireLevelLedger
     /// <summary>第249期（残り火・連撃）: 撃った回数・発数・当てた敵の異なり（和）。刻み・一撃: 1回にまとめた刻みの回数（添字 ＝ 火勢）。<b>計数のみ。</b></summary>
     public long EmbersChains, EmbersChainHits, EmbersChainDistinct;
     public readonly long[] TickOnceN = new long[5];
+    /// <summary>第250期: あぶれた火（回 ／ 上乗せの和・育ちを起こした駒の Id ごとの回）・くべられる火（回 ／ 上乗せの和・火を点けた駒の Id ごとの回）・爆炎・独り（回）。<b>計数のみ。</b></summary>
+    public long OverflowN, OverflowAtk, FedN, FedAtk, BlazeSolos;
+    public readonly Dictionary<string, long> OverflowBy = new(), FedBy = new();
+    /// <summary>第250期: 爆炎・独りの味方の側（<see cref="BlazeNom"/> ／ <see cref="BlazeHp"/> ／ <see cref="BlazeById"/> のうち、独りの爆炎の分だけ・同じ添字）。<b>計数のみ。</b></summary>
+    public long BlazeSoloAllyKills;
+    /// <summary>第250期 Phase 0: 札が無くても数える機会——段を持つ駒（ホタ）が火勢4 で育ちを受けた（起こし手の Id ごと）／
+    /// 燃えていた段の持ち主に味方が火を点けた（書き手の Id ごと）。<b>計数のみ・誰も読んで分岐しない。</b></summary>
+    public readonly Dictionary<string, long> OverflowChanceBy = new(), FedChanceBy = new();
+    public readonly long[] BlazeSoloNom = new long[5], BlazeSoloHp = new long[5];
+    public readonly Dictionary<string, long[]> BlazeSoloById = new();
 }
 
 public sealed class BurnLinkLedger

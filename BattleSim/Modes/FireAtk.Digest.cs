@@ -1,20 +1,19 @@
 ﻿using BattleCore;
 using static Common;
 
-// firefinish digest —— 台本の指紋（受け入れ 2: K0 ＝ 規定と盤面・台本が、第249期の札の実装の前後で一致すること）。
-// **このファイルだけで閉じている**（第249期の札も `FireFinishDiag` も引かない・駒は規定そのもの）ので、実装の前のコミットに置いても同じものが回る。
-// 第250期 前段: K4 が規定になったので、駒を第249期までの規定（`BorgK0` / `HotaK0` / `HiyoK0`）に固定した（第250期より前のコミットでは `K0` を外して回す）。
-// 波は第245期の6波 ＋ 重い波（城塞の重装兵 ×3）＋ 的・一 ／ 的・九。
-static class FireFinishDigestDiag
+// fireatk digest —— 台本の指紋（受け入れ 2: L0 ＝ 前段の規定と盤面・台本が、第250期の札の実装の前後で一致すること）。
+// **このファイルだけで閉じている**（第250期の札も `FireAtkDiag` も引かない・駒は規定そのもの）ので、前段だけを入れたコードにも置ける。
+// 台・波は `firefinish digest` と同じ（第245期の6波 ＋ 重い波 ＋ 的・一 ／ 的・九）。
+static class FireAtkDigestDiag
 {
     public static void Run(string[] args)
     {
-        string outPath = args.Length > 3 ? args[3] : "firefinish_digest.txt";
+        string outPath = args.Length > 3 ? args[3] : "fireatk_digest.txt";
         var boards = new (string Name, Formation F)[]
         {
-            ("T3-244", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hisa, center: UnitCatalog.BorgK0, back1: UnitCatalog.HotaK0, back3: UnitCatalog.HiyoK0)),
-            ("T3-238", Formation.Build(front1: UnitCatalog.HiyoK0, front3: UnitCatalog.HotaK0, center: UnitCatalog.BorgK0, back1: UnitCatalog.Doha, back3: UnitCatalog.Sora)),
-            ("雷＋ボルグ", Formation.Build(front1: UnitCatalog.BorgK0, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)),
+            ("T3-244", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hisa, center: UnitCatalog.Borg, back1: UnitCatalog.Hota, back3: UnitCatalog.Hiyo)),
+            ("T3-238", Formation.Build(front1: UnitCatalog.Hiyo, front3: UnitCatalog.Hota, center: UnitCatalog.Borg, back1: UnitCatalog.Doha, back3: UnitCatalog.Sora)),
+            ("雷＋ボルグ", Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)),
         };
         var target = new UnitDef { Id = "mato", Name = "的", MaxHp = 9999, Attack = 1, Speed = 5, Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Single };
         var heavy = Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.Warden, center: EnemyCatalog.Warden);

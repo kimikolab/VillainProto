@@ -7,7 +7,8 @@ using FC = FireCycleDiag;
 // =====================================================================================
 // firefinish —— 第249期「燃焼の軸の仕上げ（ホタの火力・ボルグの爆炎・ホタの火の癒し・残した論点の片付け）」。
 // 指示書は design/PHASE249_FIRE_FINISH_SPEC.md ／ 報告は design/PHASE249_FIRE_FINISH.md。
-// 版（§4・積み上げ）は札の差し替えとホタの元の攻撃力だけで作り、`Run` の引数は増やさない。波・倍率・台は第246〜248期と同じ。
+// 版（§4・積み上げ）は札の差し替えとホタの元の攻撃力だけで作り、`Run` の引数は増やさない。
+// 第250期 前段: K4 が規定になったので、K0 は第249期までの規定の駒（`BorgK0` / `HotaK0` / `HiyoK0`）に固定した。波・倍率・台は第246〜248期と同じ。
 //   K0 ＝ 規定（第248期 U2・対照）       K1 ＝ K0 ＋ ホタの火の癒し（`PyreMend`）
 //   K2a ＝ K1 ＋ 贔屓・火勢（`FavorLevel`） K2b ＝ K1 ＋ ホタの元の攻撃力 6 → 10
 //   K3 ＝ K2a ＋ 放つ・爆炎（`UnleashBlaze`） K4 ＝ K3 ＋ 残り火・連撃（`EmbersChain`）  K4t ＝ K4 ＋ 刻み・一撃（`TickOnce`）
@@ -56,19 +57,19 @@ static partial class FireFinishDiag
         Advances = g.Advances, Actions = g.Actions, PlusText = g.PlusText, MinusText = g.MinusText, Flavor = g.Flavor,
     };
     internal const int Hota10 = 10;
-    internal static readonly UnitDef HotaK1 = Plus(UnitCatalog.Hota, TraitId.PyreMend);
+    internal static readonly UnitDef HotaK1 = Plus(UnitCatalog.HotaK0, TraitId.PyreMend);
     internal static readonly UnitDef HotaK2b = Atk(HotaK1, Hota10);
     internal static readonly UnitDef HotaK4 = Plus(HotaK1, TraitId.EmbersChain);
-    internal static readonly UnitDef HiyoK2a = Plus(UnitCatalog.Hiyo, TraitId.FavorLevel);
-    internal static readonly UnitDef BorgK3 = Plus(UnitCatalog.Borg, TraitId.UnleashBlaze);
+    internal static readonly UnitDef HiyoK2a = Plus(UnitCatalog.HiyoK0, TraitId.FavorLevel);
+    internal static readonly UnitDef BorgK3 = Plus(UnitCatalog.BorgK0, TraitId.UnleashBlaze);
     internal static readonly UnitDef BorgK4t = Plus(BorgK3, TraitId.TickOnce);
 
     internal static readonly FB.Ver[] Versions =
     {
-        new("K0", "規定（第248期 U2・対照）", UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo),
-        new("K1", "K0 ＋ ホタの火の癒し", UnitCatalog.Borg, HotaK1, UnitCatalog.Hiyo),
-        new("K2a", "K1 ＋ 贔屓・火勢（+3 × 相手の火勢）", UnitCatalog.Borg, HotaK1, HiyoK2a),
-        new("K2b", "K1 ＋ ホタの元の攻撃力 6 → 10", UnitCatalog.Borg, HotaK2b, UnitCatalog.Hiyo),
+        new("K0", "規定（第248期 U2・対照）", UnitCatalog.BorgK0, UnitCatalog.HotaK0, UnitCatalog.HiyoK0),
+        new("K1", "K0 ＋ ホタの火の癒し", UnitCatalog.BorgK0, HotaK1, UnitCatalog.HiyoK0),
+        new("K2a", "K1 ＋ 贔屓・火勢（+3 × 相手の火勢）", UnitCatalog.BorgK0, HotaK1, HiyoK2a),
+        new("K2b", "K1 ＋ ホタの元の攻撃力 6 → 10", UnitCatalog.BorgK0, HotaK2b, UnitCatalog.HiyoK0),
         new("K3", "K2a ＋ 放つ・爆炎", BorgK3, HotaK1, HiyoK2a),
         new("K4", "K3 ＋ 残り火・連撃", BorgK3, HotaK4, HiyoK2a),
         new("K4t", "K4 ＋ 刻み・一撃", BorgK4t, HotaK4, HiyoK2a),
