@@ -66,10 +66,11 @@ static partial class FireTriDiag
         Console.WriteLine();
 
         // ---- 前段 ----
-        Expect("前段: 規定のホタ ＝ 第246期の規定 ＋ 大火槍・臨界", string.Join(",", UnitCatalog.Hota.Traits),
+        // 第249期 前段: 規定が後の期に札を足しても崩れないよう「先頭が一致」で見る（器具の版は `FC.HotaHP` に固定した）。
+        Expect("前段: 規定のホタの札の先頭 ＝ 第246期の規定 ＋ 大火槍・臨界", string.Join(",", UnitCatalog.Hota.Traits.Take(UnitCatalog.HotaQ0.Traits.Count + 2)),
             string.Join(",", UnitCatalog.HotaQ0.Traits.Concat(new[] { TraitId.PyreLance, TraitId.PyreCritical })));
         Expect("前段: 第246期の器具の Q0 ／ 第245期の器具の E0 は旧のホタ", FC.VerOf("Q0").Hota == UnitCatalog.HotaQ0 && EnemyFireDiag.VerOf("E0").Hota == UnitCatalog.HotaQ0, true);
-        Expect("前段: 第246期の Q2-HP のホタの札 ＝ 規定のホタの札", string.Join(",", FC.VerOf("Q2-HP").Hota.Traits), string.Join(",", UnitCatalog.Hota.Traits));
+        Expect("前段: 第246期の Q2-HP のホタの札 ＝ 器具の版のホタ（T0）の札", string.Join(",", FC.VerOf("Q2-HP").Hota.Traits), string.Join(",", VerOf("T0").Hota.Traits));
         // 第248期: 放熱（ボルグ）と火の粉（ヒヨ）は規定になった（保持者 1 枚）。(b) は保持者 0 枚のまま。
         foreach (TraitId t in new[] { TraitId.RadiateCall, TraitId.SparkCatch, TraitId.SparkUnleash, TraitId.GiftPair })
             Expect($"札 {t} の保持者は `All` に {(t == TraitId.GiftPair ? 0 : 1)} 枚（第248期に規定）", UnitCatalog.All.Count(u => u.Traits.Contains(t)), t == TraitId.GiftPair ? 0 : 1);

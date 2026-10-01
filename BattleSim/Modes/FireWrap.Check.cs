@@ -120,8 +120,9 @@ static partial class FireWrapDiag
         Console.WriteLine($"規定化: {(adopted ? "済み" : "まだ")}");
         if (adopted)
         {
-            Expect("規定のボルグ ＝ U2 のボルグの札", string.Join(",", UnitCatalog.Borg.Traits), string.Join(",", BorgU2.Traits));
-            Expect("規定のヒヨ ＝ U1 ／ U2 のヒヨの札", string.Join(",", UnitCatalog.Hiyo.Traits), string.Join(",", HiyoU1.Traits));
+            // 第249期 前段: 後の期に札を足しても崩れないよう「先頭が一致」で見る。
+            Expect("規定のボルグの札の先頭 ＝ U2 のボルグの札", string.Join(",", UnitCatalog.Borg.Traits.Take(BorgU2.Traits.Count)), string.Join(",", BorgU2.Traits));
+            Expect("規定のヒヨの札の先頭 ＝ U1 ／ U2 のヒヨの札", string.Join(",", UnitCatalog.Hiyo.Traits.Take(HiyoU1.Traits.Count)), string.Join(",", HiyoU1.Traits));
             Expect("第247期の器具 T0 ／ 第246期の Q0 ／ 第245期の E0 は旧のボルグ・ヒヨ",
                 FireTriDiag.VerOf("T0").Borg == UnitCatalog.BorgU0 && FireTriDiag.VerOf("T0").Hiyo == UnitCatalog.HiyoU0
                 && FC.VerOf("Q0").Borg == UnitCatalog.BorgU0 && FC.VerOf("Q0").Hiyo == UnitCatalog.HiyoU0 && EnemyFireDiag.VerOf("E0").Hiyo == UnitCatalog.HiyoU0, true);

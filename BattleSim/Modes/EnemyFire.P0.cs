@@ -170,7 +170,7 @@ static partial class EnemyFireDiag
     static partial void Phase0()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var boards = new (string Name, Formation F)[] { ("T3-244（仮の T3）", T3244), ("T3-238", T3238), ("雷＋ボルグ", ThunderBorg) };
+        var boards = new (string Name, Formation F)[] { ("T3-244（仮の T3）", E0(T3244)), ("T3-238", E0(T3238)), ("雷＋ボルグ", E0(ThunderBorg)) };   // 第249期 前段: E0 に固定
         Console.WriteLine("# 第245期 Phase 0 —— Q0-6（E0 ＝ 前段の規定の駒・seed 0..199・verbose・台本から敵の火勢の影を組み直す）");
         Console.WriteLine();
         foreach (var (n, f) in boards) Console.WriteLine($"- {n}: {BA.SeatsNamed(f)}");

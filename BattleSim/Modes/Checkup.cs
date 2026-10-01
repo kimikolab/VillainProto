@@ -209,6 +209,12 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.CallFull]       = (HcPlusL, "指名を火勢4 のときだけに絞るだけ（未満なら印を残す）"),
         [TraitId.SparkCatch]     = (HcPlusL, "味方のホタが焼き尽くすたびに自分の火勢 +1 だけ"),
         [TraitId.SparkUnleash]   = (HcPlusL, "味方のボルグが放つたびに自分の火勢 +1 だけ"),
+        // 第249期: 保持者 0 枚（版は `firefinish` のローカルの駒）。規定にした期に分類が無いと `checkup ideal` が止まる（第132期 段0-a・第179期）ので先に足す。
+        [TraitId.PyreMend]       = (HcPlusL, "火に焼かれない代わりに、燃焼ダメージを同じ量の回復にするだけ"),
+        [TraitId.FavorLevel]     = (HcPlusL, "贔屓の上乗せを相手の火勢 × 3 にするだけ（隣の燃えていない味方の −2 は `Favor` のまま）"),
+        [TraitId.UnleashBlaze]   = (HcBothL, "放つを敵全体 ×3 にする——代わりに味方全体にも燃焼ダメージ（火に強い味方・火の変換・ベニの結界では癒える）"),
+        [TraitId.EmbersChain]    = (HcPlusL, "残り火を全体 ×2 から5連撃（1発 ×2・着火）に替えるだけ"),
+        [TraitId.TickOnce]       = (HcBothL, "燃焼の刻みを火勢の回数から1回の大きな刻みにする——敵にも味方にも同じ（上限に切られやすくなる）"),
         // 第180期: ムド（暴発＋泥散り）・ヴィオ（吐き戻し）・ガン（叩き起こし）。
         // **マイナスを別の `TraitId` に切り出してあるので `yP` が組める**（第74期の作法）。
         [TraitId.Erupt]      = (HcPlusL,  "殴られた回数を溜めて割り込み連撃する。代金は別の札（`Smear`）に切り出してある"),

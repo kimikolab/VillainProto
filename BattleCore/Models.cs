@@ -3625,6 +3625,11 @@ public static class FireLevelLabels
     public const string GiftPair = "二体に渡す";
     /// <summary>第245期: 見出し: 延焼。<c>ActorId</c> ＝ 火勢4 で倒れた敵 ／ <c>TargetId</c> ＝ 隣の生きている敵 ／ <c>Slot</c> ＝ 1 燃えていなかった（続いて「点く」と「育つ・敵」で火勢2）／ 2 燃えていた（続いて「育つ・敵」で +1）。</summary>
     public const string FoeSpread = "延焼";
+    /// <summary>第249期: 見出し: 爆炎（放つの代わり・`放つ` と「撃った」の直後）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ボルグ ／ <c>Amount</c> ＝ 味方への燃焼ダメージの量（ボルグの攻撃力 ×1）。
+    /// 続いて敵全体 ×3 の <c>Attack</c> / <c>Damage</c>、そのあと味方1体ごとに `FireArmor` の「爆炎・味方」（着火と、ダメージか回復が続く）。<b>表示専用。</b></summary>
+    public const string Blaze = "爆炎";
+    /// <summary>第249期: 見出し: 残り火の連撃の1発（`残り火` の直後に5回）。<c>ActorId</c> ＝ ホタ ／ <c>TargetId</c> ＝ 当たる敵 ／ <c>Slot</c> ＝ 何発目（1〜5）／ <c>Amount</c> ＝ その瞬間の生きている敵の数。直後にその1発（単体 ×2・着火）の <c>Attack</c> / <c>Damage</c>。<b>表示専用。</b></summary>
+    public const string EmbersHit = "残り火・連撃";
 }
 
 /// <summary>撃破の衝撃（第230期）の <c>Text</c>。<b>表示専用。</b></summary>
@@ -3647,6 +3652,9 @@ public static class FireArmorLabels
     public const string Ward = "盾の配り";
     /// <summary>第238期（V1/V2）: <c>ActorId</c> ＝ ヒヨ ／ <c>TargetId</c> ＝ 燃えている味方 ／ <c>Amount</c> ＝ 変えた燃焼ダメージの名目（続いて <c>Heal</c>・満タンなら続かない）。燃焼の刻み・起爆の位置（<c>Status</c> の代わり）か、燃える巻き込みの札の直後に出る。</summary>
     public const string Convert = "火の変換";
+    /// <summary>第249期（爆炎）: <c>ActorId</c> ＝ ボルグ ／ <c>TargetId</c> ＝ 味方 ／ <c>Amount</c> ＝ 燃焼ダメージの名目。続いて着火の <c>StatusGain</c>、
+    /// そのあと「火の癒し」（ホタ）／「火の変換」（ヒヨ）／反転の <c>Heal</c>（ベニの結界）／その味方の <c>Damage</c>（それ以外）。<b>表示専用。</b></summary>
+    public const string BlazeAlly = "爆炎・味方";
 }
 
 public static class ImpactLabels
@@ -3752,6 +3760,16 @@ public sealed class FireLevelLedger
     public readonly long[] Called = new long[5], SparkBy = new long[2], SparkGrowBy = new long[2];
     /// <summary>第248期（`CallFull`）: 印を持つが火勢4 未満で指名しなかったギフトの手番 ／ そのボルグが指名ではなくギフトを受けた（印は残る）。<b>計数のみ。</b></summary>
     public long CallHeld, CallHeldGift;
+    /// <summary>第249期（爆炎）: 撃った回数・味方への燃焼ダメージの名目と結果（添字 0 火の癒し ／ 1 火の変換 ／ 2 反転 ／ 3 受けた ／ 4 焼かれない）。
+    /// <c>BlazeHp</c> は 0〜2 が癒えた HP、3 が削られた HP。駒ごと（Id → [名目, 癒えた, 削られた, 倒れた]）。<b>計数のみ。</b></summary>
+    public long Blazes, BlazeAllyKills;
+    public readonly long[] BlazeNom = new long[5], BlazeHp = new long[5];
+    public readonly Dictionary<string, long[]> BlazeById = new();
+    /// <summary>第249期（ホタの火の癒し）: 名目 ／ 癒えた HP（添字 0 刻み・起爆 ／ 1 燃える巻き込み ／ 2 爆炎）。<b>計数のみ。</b></summary>
+    public readonly long[] PyreMendNom = new long[3], PyreMendHp = new long[3];
+    /// <summary>第249期（残り火・連撃）: 撃った回数・発数・当てた敵の異なり（和）。刻み・一撃: 1回にまとめた刻みの回数（添字 ＝ 火勢）。<b>計数のみ。</b></summary>
+    public long EmbersChains, EmbersChainHits, EmbersChainDistinct;
+    public readonly long[] TickOnceN = new long[5];
 }
 
 public sealed class BurnLinkLedger

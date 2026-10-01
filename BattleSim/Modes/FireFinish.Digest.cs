@@ -1,26 +1,19 @@
 ﻿using BattleCore;
 using static Common;
 
-// firetri digest —— 台本の指紋（受け入れ 2: T0 ＝ 前段の規定と盤面・台本が、第247期の札の実装の前後で一致すること）。
-// **このファイルだけで閉じている**（第247期の札も `FireTriDiag` も引かない・駒は規定そのもの）ので、実装の前のコミット（＋前段の規定化だけ）に置いても同じものが回る。
-// 波は第245期の6波 ＋ 重い波（城塞の重装兵 ×3）＋ 的・一 ／ 的・九（追記 A）。
-static class FireTriDigestDiag
+// firefinish digest —— 台本の指紋（受け入れ 2: K0 ＝ 規定と盤面・台本が、第249期の札の実装の前後で一致すること）。
+// **このファイルだけで閉じている**（第249期の札も `FireFinishDiag` も引かない・駒は規定そのもの）ので、実装の前のコミットに置いても同じものが回る。
+// 波は第245期の6波 ＋ 重い波（城塞の重装兵 ×3）＋ 的・一 ／ 的・九。
+static class FireFinishDigestDiag
 {
     public static void Run(string[] args)
     {
-        // 第249期 前段: ホタは第247期 前段の規定（第246期の規定 ＋ 大火槍・臨界）に固定した（規定が動いても台本が動かない）。
-        var hota = new UnitDef
-        {
-            Id = UnitCatalog.HotaQ0.Id, Name = UnitCatalog.HotaQ0.Name, MaxHp = UnitCatalog.HotaQ0.MaxHp, Attack = UnitCatalog.HotaQ0.Attack, Speed = UnitCatalog.HotaQ0.Speed,
-            Traits = UnitCatalog.HotaQ0.Traits.Concat(new[] { TraitId.PyreLance, TraitId.PyreCritical }).ToArray(), Pattern = UnitCatalog.HotaQ0.Pattern,
-            Advances = UnitCatalog.HotaQ0.Advances, Actions = UnitCatalog.HotaQ0.Actions, PlusText = UnitCatalog.HotaQ0.PlusText, MinusText = UnitCatalog.HotaQ0.MinusText, Flavor = UnitCatalog.HotaQ0.Flavor,
-        };
-        string outPath = args.Length > 3 ? args[3] : "firetri_digest.txt";
+        string outPath = args.Length > 3 ? args[3] : "firefinish_digest.txt";
         var boards = new (string Name, Formation F)[]
         {
-            ("T3-244", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hisa, center: UnitCatalog.BorgU0, back1: hota, back3: UnitCatalog.HiyoU0)),
-            ("T3-238", Formation.Build(front1: UnitCatalog.HiyoU0, front3: hota, center: UnitCatalog.BorgU0, back1: UnitCatalog.Doha, back3: UnitCatalog.Sora)),
-            ("雷＋ボルグ", Formation.Build(front1: UnitCatalog.BorgU0, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)),
+            ("T3-244", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hisa, center: UnitCatalog.Borg, back1: UnitCatalog.Hota, back3: UnitCatalog.Hiyo)),
+            ("T3-238", Formation.Build(front1: UnitCatalog.Hiyo, front3: UnitCatalog.Hota, center: UnitCatalog.Borg, back1: UnitCatalog.Doha, back3: UnitCatalog.Sora)),
+            ("雷＋ボルグ", Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)),
         };
         var target = new UnitDef { Id = "mato", Name = "的", MaxHp = 9999, Attack = 1, Speed = 5, Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Single };
         var heavy = Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.Warden, center: EnemyCatalog.Warden);

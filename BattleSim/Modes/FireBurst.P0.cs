@@ -13,7 +13,7 @@ static partial class FireBurstDiag
         Console.WriteLine();
         var boards = new (string Name, Formation F)[]
         {
-            ("T3-238", T3238), ("T3（242 R3 の1位）", T3r3), ("雷＋ボルグ", ThunderBorg), ("参考 移動", BA.RefMove),
+            ("T3-238", Apply(T3238, VerOf("S0"))), ("T3（242 R3 の1位）", Apply(T3r3, VerOf("S0"))), ("雷＋ボルグ", Apply(ThunderBorg, VerOf("S0"))), ("参考 移動", BA.RefMove),   // 第249期 前段: S0 に固定
         };
         foreach (var (bn, f) in boards) Console.WriteLine($"- {bn}: {BA.SeatsNamed(f)}");
         Console.WriteLine();

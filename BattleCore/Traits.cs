@@ -542,6 +542,11 @@ public enum TraitId
     SparkUnleash,   // 火の粉（放つ）（第247期・ヒヨの版 T1〜）: 味方のボルグが放つを撃つたびにも +1（燃えている間）。**判定は engine**（`BigMove`）。保持者 0 枚
     GiftPair,       // 準備のできた2体に渡す（第247期・ヒヨの版 (b)）: 火勢3 でも、大技の準備ができた味方（火勢4 で放つ・焼き尽くすを持つ）が2体いれば2体に渡す。**判定は `FireStokeTrait`**。保持者 0 枚
     CallFull,       // 指名は火勢4 のときだけ（第248期・ボルグ・`RadiateCall` の直し）: 放熱の印を持つこのボルグが火勢4 のときだけ、ヒヨのギフトの最優先の相手になる。**火勢4 未満なら指名せず、印は残す**（相手は今の相手選びのまま・指名でない受け取りでは印は消えない）。**判定は `FireStokeTrait.Nominated`**（並びと `QueueGift` の消費の2口）
+    PyreMend,       // 火の癒し（第249期・ホタの版 K1〜）: 熾火の「火に焼かれない」を置き換え、ホタが受ける燃焼ダメージ（刻み・起爆・燃える巻き込み・爆炎）を同じ量の火の回復に（ボルグの火の癒しと同じ・火の変換・反転より先）。**判定は engine**（燃焼の刻み・起爆・`FireSplashHit`・爆炎）。保持者 0 枚
+    FavorLevel,     // 贔屓・火勢（第249期・ヒヨの版 K2a〜）: 贔屓の上乗せを「+3 × 相手のその時の火勢」に（今の +4 固定を置き換え・隣の燃えていない味方の −2 はそのまま）。**判定は `FavorTrait`**。保持者 0 枚
+    UnleashBlaze,   // 放つ・爆炎（第249期・ボルグの版 K3〜）: 放つを「敵全体 ×3 ＋ 味方全体（ボルグ以外）にボルグの攻撃力 ×1 の燃焼ダメージ・全員に着火」に。爆炎の手番では巻き込みを別に起こさない。**判定は engine**（`BigMove`・`BlazeAllyHit`・`SplashTrait`）。保持者 0 枚
+    EmbersChain,    // 残り火・連撃（第249期・ホタの版 K4〜）: 残り火を全体 ×2 の代わりに5連撃（1回 ×2・着火）に。主目標（前列の席番号の最初）から席番号の順に1発ずつ巡回、敵が1体なら5発ともその敵。**判定は engine**（`BigMove`）。**乱数を引かない**。保持者 0 枚
+    TickOnce,       // 刻み・一撃（第249期・ボルグの版 K4t・比較の1版）: 燃焼の刻みを「6 を火勢の回数」から「6 × 火勢 を1回」に（敵・味方とも・刻みの回数の札がある陣営で）。**判定は engine**（`TickStatuses`）。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -751,6 +756,7 @@ public sealed class SplashTrait : Trait
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
         if (dealt <= 0) return;
+        if (ctx.BlazeActor == self) return;   // 第249期（爆炎）: 爆炎の手番では巻き込みを別に起こさない（味方への燃焼ダメージが代わり）
         int spill = Math.Max(1, dealt / 2);
 
         foreach (UnitState ally in ctx.LivingMembersShuffled(self.TeamId))
@@ -4698,7 +4704,7 @@ public sealed class FavorTrait : Trait
         var allies = ctx.LivingMembers(self.TeamId);
 
         int gain = ctx.Favor.Gain, loss = ctx.Favor.Loss;
-        int whetted = 0, dulled = 0;
+        int whetted = 0, dulled = 0, whetSum = 0;
 
         foreach (UnitState a in allies)
         {
@@ -4710,7 +4716,10 @@ public sealed class FavorTrait : Trait
             {
                 // プラス側は位置を問わない。
                 whetted++;
-                ctx.Whet(a, gain, WhetRoute.Favor);          // gain <= 0 なら Whet が即 return する
+                // 第249期（贔屓・火勢）: 上乗せを「+3 × 相手のその時の火勢」に。札が無ければ今の +gain。
+                int g = self.HasTrait(TraitId.FavorLevel) ? FireFinishRule.FavorPerLevel * FireLevelRule.Of(a) : gain;
+                whetSum += g;
+                ctx.Whet(a, g, WhetRoute.Favor);          // g <= 0 なら Whet が即 return する
             }
             else if (FormationRules.AreAdjacent(self, a))
             {
@@ -4721,10 +4730,10 @@ public sealed class FavorTrait : Trait
         }
 
         // 空振り＝盤上に燃えている味方が1体もいなかった手番。**第1ターンは構造的にここへ落ちる。**
-        ctx.NoteFavor(whetted, dulled, whetted == 0 ? 1 : 0, gain * whetted, loss * dulled);
+        ctx.NoteFavor(whetted, dulled, whetted == 0 ? 1 : 0, whetSum, loss * dulled);
 
         if (whetted > 0 || dulled > 0)
-            ctx.Log($"    {self.Name} が火のそばを贔屓した（燃 {whetted} 体に +{gain} / 隣の非燃 {dulled} 体に -{loss}）",
+            ctx.Log($"    {self.Name} が火のそばを贔屓した（燃 {whetted} 体に {(self.HasTrait(TraitId.FavorLevel) ? $"計 +{whetSum}（火勢 × {FireFinishRule.FavorPerLevel}）" : $"+{gain}")} / 隣の非燃 {dulled} 体に -{loss}）",
                     LogKind.FriendlyFire);
     }
 }
@@ -13282,7 +13291,8 @@ public static class FireLevelRule
         || u.HasTrait(TraitId.FoeFireSpread) || u.HasTrait(TraitId.AllyFireTick) || u.HasTrait(TraitId.GiftQuiet) || u.HasTrait(TraitId.UnleashStoke)   // 第245期
         || u.HasTrait(TraitId.StokePick) || u.HasTrait(TraitId.HiyoSpark) || u.HasTrait(TraitId.BorgRadiate) || u.HasTrait(TraitId.PyreCritical) || u.HasTrait(TraitId.PyreLance)   // 第246期
         || u.HasTrait(TraitId.RadiateCall) || u.HasTrait(TraitId.SparkCatch) || u.HasTrait(TraitId.SparkUnleash) || u.HasTrait(TraitId.GiftPair)   // 第247期
-        || u.HasTrait(TraitId.CallFull);   // 第248期
+        || u.HasTrait(TraitId.CallFull)   // 第248期
+        || u.HasTrait(TraitId.FavorLevel) || u.HasTrait(TraitId.UnleashBlaze) || u.HasTrait(TraitId.EmbersChain) || u.HasTrait(TraitId.TickOnce);   // 第249期
 }
 
 /// <summary>火勢の土台（第242期・ボルグの版 R1〜・<b>保持者 0 枚</b>）。札は判定を持たない——engine が読む（保つ・燃え広がり・萎む・消える）。</summary>
@@ -13548,6 +13558,31 @@ public sealed class PyreLanceTrait : Trait { public override TraitId Id => Trait
 public sealed class RadiateCallTrait : Trait { public override TraitId Id => TraitId.RadiateCall; }
 /// <summary>指名は火勢4 のときだけ（第248期・ボルグ）。<see cref="FireStokeTrait.Nominated"/> が読む。</summary>
 public sealed class CallFullTrait : Trait { public override TraitId Id => TraitId.CallFull; }
+
+// =====================================================================================
+// 第249期 —— 燃焼の軸の仕上げ（ホタの火の癒し・贔屓・火勢・放つ・爆炎・残り火・連撃・刻み・一撃）。**5 枚とも保持者 0 枚**（版は診断 `firefinish` のローカルの駒）。
+// 判定はどれも engine（燃焼の刻み・起爆・`FireSplashHit`・`BigMove`・`TickStatuses`）と `FavorTrait`。**乱数を引かない。**
+// =====================================================================================
+/// <summary>第249期の数値。</summary>
+public static class FireFinishRule
+{
+    /// <summary>贔屓・火勢: 相手の火勢 1 あたりの上乗せ。</summary>
+    public const int FavorPerLevel = 3;
+    /// <summary>爆炎: 味方への燃焼ダメージ ＝ ボルグの攻撃力 × これ ÷ 100。</summary>
+    public const int BlazeAllyPercent = 100;
+    /// <summary>残り火・連撃の発数。</summary>
+    public const int EmbersHits = 5;
+}
+/// <summary>ホタの火の癒し（第249期）。engine が読む。</summary>
+public sealed class PyreMendTrait : Trait { public override TraitId Id => TraitId.PyreMend; }
+/// <summary>贔屓・火勢（第249期・ヒヨ）。<see cref="FavorTrait"/> が読む。</summary>
+public sealed class FavorLevelTrait : Trait { public override TraitId Id => TraitId.FavorLevel; }
+/// <summary>放つ・爆炎（第249期・ボルグ）。engine の `BigMove` が読む。</summary>
+public sealed class UnleashBlazeTrait : Trait { public override TraitId Id => TraitId.UnleashBlaze; }
+/// <summary>残り火・連撃（第249期・ホタ）。engine の `BigMove` が読む。</summary>
+public sealed class EmbersChainTrait : Trait { public override TraitId Id => TraitId.EmbersChain; }
+/// <summary>刻み・一撃（第249期・ボルグ・比較の1版）。engine の `TickStatuses` が読む。</summary>
+public sealed class TickOnceTrait : Trait { public override TraitId Id => TraitId.TickOnce; }
 /// <summary>火の粉（焼き尽くす）（第247期・ヒヨ・燃え広がりの育ちはそのまま）。engine が読む。</summary>
 public sealed class SparkCatchTrait : Trait { public override TraitId Id => TraitId.SparkCatch; }
 /// <summary>火の粉（放つ）（第247期・ヒヨ）。engine が読む。</summary>
@@ -15721,6 +15756,11 @@ public static class TraitCatalog
         new PyreLanceTrait(),        // 第246期
         new RadiateCallTrait(),      // 第247期
         new CallFullTrait(),         // 第248期
+        new PyreMendTrait(),         // 第249期
+        new FavorLevelTrait(),       // 第249期
+        new UnleashBlazeTrait(),     // 第249期
+        new EmbersChainTrait(),      // 第249期
+        new TickOnceTrait(),         // 第249期
         new SparkCatchTrait(),       // 第247期
         new SparkUnleashTrait(),     // 第247期
         new GiftPairTrait(),         // 第247期

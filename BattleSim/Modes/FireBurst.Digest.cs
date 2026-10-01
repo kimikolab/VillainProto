@@ -11,7 +11,8 @@ static partial class FireBurstDiag
         string outPath = _args is { Length: > 3 } ? _args[3] : "fireburst_digest.txt";
         var boards = new (string Name, Formation F)[]
         {
-            ("T3-238", T3238), ("T3（242 R3 の1位）", T3r3), ("雷＋ボルグ", ThunderBorg), ("燃焼（compare）", BA.RefBurn),
+            // 第249期 前段: 台はすべて S0（第244期の規定 ＝ `UnitCatalog.BorgR3` / `HotaR3` / `HiyoR3`）に固定した（規定が動いても台本が動かない）。
+            ("T3-238", Apply(T3238, VerOf("S0"))), ("T3（242 R3 の1位）", Apply(T3r3, VerOf("S0"))), ("雷＋ボルグ", Apply(ThunderBorg, VerOf("S0"))), ("燃焼（compare）", Apply(BA.RefBurn, VerOf("S0"))),
         };
         var lines = new List<string>();
         foreach (var (bn, f) in boards)

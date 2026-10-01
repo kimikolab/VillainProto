@@ -712,6 +712,8 @@ public sealed class BattleContext
             // 第245期: 刻みの回数と脆さは、残りターンを減らす前の火勢で読む（最後の刻みは減らした後に刻むので `Of` は 0 を返す）。
             int preLv = _foeFireLive ? FireLevelRule.Of(u) : 0;
             int extra = _foeFireLive && _lvTickTeams[u.TeamId] && preLv > 1 ? preLv - 1 : 0;
+            // 第249期（刻み・一撃）: 火勢の回数を「6 × 火勢 を1回」にまとめる（札 `TickOnce` の持ち主がいるときだけ）。
+            if (_tickOnceLive && extra > 0) { _burnTickAmt = BurnRules.Damage * (extra + 1); FireBook.TickOnceN[Math.Clamp(preLv, 0, 4)]++; extra = 0; }
             u.SetCounter(StatusKeys.Burn, left - 1);
             // 第134期 段1 —— 燃え尽きた時点で区間を閉じる。**盤面には触らない。**
             if (left - 1 <= 0) CloseBurnEpisode(u, expired: true);
@@ -733,6 +735,7 @@ public sealed class BattleContext
             // 濃縮の印（第194期）。**残りターンの減算と区間の帳簿は上の1回だけ**で、刻みの本体を印の数だけもう1回ずつ（第245期の火勢の回数の後ろに足し算）。
             if (_markLive) RepeatTick(u, k => BurnTickOnce(u, left, bt, second: true, TickOrd(k + extra, total)));
             _tickLvUnit = null;
+            _burnTickAmt = 0;
             _inBurnTickNow = false;
             if (left - 1 <= 0 && u.RawCounter(GurenTrait.BurnKey) > 0) u.SetCounter(GurenTrait.BurnKey, 0);   // 第197期・**計数のみ**
         }
@@ -835,7 +838,9 @@ public sealed class BattleContext
     {
         {
             if (second) bt.BurnTicks++;   // 刻みの回数（計数）。印の2回目も1回と数える
-            NoteTickLayer(u, BurnRules.Damage, burn: true, second);   // 第194期・**計数のみ**
+            // 第249期（刻み・一撃）: 1回の量（既定は `BurnRules.Damage`・まとめた刻みでは 6 × 火勢）。
+            int baseD = _burnTickAmt > 0 ? _burnTickAmt : BurnRules.Damage;
+            NoteTickLayer(u, baseD, burn: true, second);   // 第194期・**計数のみ**
 
             // 火には焼かれない（第178期・熾のホタ）。**燃焼の状態は1ビットも消さない**
             // ——残りターンは上で普通に減り、攻 ×4・貫き（`PyreTrait`）も今までどおり立つ。
@@ -852,8 +857,8 @@ public sealed class BattleContext
             if (Ember.Fireproof && (u.HasTrait(TraitId.Pyre) || (_fireArmorLive && FireproofArmor(u))))   // 第234期: 火の鎧も焼かれない
             {
                 // 第235期: 火の癒し（H1）。「焼かれない」を置き換え、刻みの量だけ回復する（火の回復・ベニの反転の裏は通らない）。
-                if (_fireConvertHolders.Count > 0) NoteConvertPrec(u, ScorchTick(u, BurnRules.Damage), _fireArmorLive && u.HasTrait(TraitId.FireMend) ? 1 : 0);   // 第238期・**計数のみ**
-                if (_fireArmorLive && u.HasTrait(TraitId.FireMend)) { FireHeal(u, ScorchTick(u, BurnRules.Damage), FireArmorLabels.Mend, tick: true); return; }
+                if (_fireConvertHolders.Count > 0) NoteConvertPrec(u, ScorchTick(u, baseD), MendsFire(u) ? 1 : 0);   // 第238期・**計数のみ**
+                if (MendsFire(u)) { FireHeal(u, ScorchTick(u, baseD), FireArmorLabels.Mend, tick: true); return; }   // 第249期: ホタの火の癒しも
                 Log($"    {u.Name} は燃えているが焼かれない（残り {left - 1}）", LogKind.Status);
                 // ノブ（既定 0 ＝ 1ビットも動かない）。**`ctx.Heal` を通す**ので、
                 // 渇き（盤面ルール）にも支援拒否（`Stoic`）にも素直に課税される。
@@ -862,7 +867,7 @@ public sealed class BattleContext
             }
 
             // 第208期: 燃えやすい板（ダメージ倍）。**反転の枝より前**で倍にする——化けた回復も倍（指示書 §2.2・Q0-3）。
-            int burnDmg = ScorchTick(u, BurnRules.Damage);
+            int burnDmg = ScorchTick(u, baseD);
 
             // 反転（第190期・ベニ）。燃焼の残りターンは上で普通に減っている。
             UnitState? inverterB = InvertsTick(u);
@@ -908,7 +913,7 @@ public sealed class BattleContext
             if (Ember.Brittle > 0)
             {
                 _burnTickSelf = true;
-                if (burnDmg > BurnRules.Damage && BrittleApplies(u)) BrittleBook.PlankTimesBrittle++;   // 計数のみ
+                if (burnDmg > baseD && BrittleApplies(u)) BrittleBook.PlankTimesBrittle++;   // 計数のみ
             }
             ApplyDamage(u, burnDmg, null, burnTick: true);
             _burnTickSelf = false;
@@ -1042,9 +1047,9 @@ public sealed class BattleContext
         {
             if (Ember.Fireproof && (u.HasTrait(TraitId.Pyre) || (_fireArmorLive && FireproofArmor(u))))   // 第234期: 火の鎧も焼かれない
             {
-                if (!foe && _fireConvertHolders.Count > 0) NoteConvertPrec(u, ScorchTick(u, BurnRules.Damage), _fireArmorLive && u.HasTrait(TraitId.FireMend) ? 1 : 0);   // 第238期・**計数のみ**
-                // 火には焼かれない（刻みと同じ枝）。第235期: 火の癒しなら刻みの量だけ回復（倍は掛けない＝刻みと同じ量）。
-                if (_fireArmorLive && u.HasTrait(TraitId.FireMend)) FireHeal(u, ScorchTick(u, BurnRules.Damage), FireArmorLabels.Mend, tick: true);
+                if (!foe && _fireConvertHolders.Count > 0) NoteConvertPrec(u, ScorchTick(u, BurnRules.Damage), MendsFire(u) ? 1 : 0);   // 第238期・**計数のみ**
+                // 火には焼かれない（刻みと同じ枝）。第235期: 火の癒しなら刻みの量だけ回復（倍は掛けない＝刻みと同じ量）。第249期: ホタの火の癒しも。
+                if (MendsFire(u)) FireHeal(u, ScorchTick(u, BurnRules.Damage), FireArmorLabels.Mend, tick: true);
                 else if (Ember.TickHeal > 0) Heal(u, Ember.TickHeal);
             }
             else if ((foe ? null : InvertsTick(u)) is UnitState inverterB)
@@ -7016,6 +7021,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.AllyFireTick)) { _foeFireLive = true; _lvTickTeams[u.TeamId] = true; }
         if (u.HasTrait(TraitId.FoeFireBrittle)) { _foeFireLive = true; _foeBrittleTeams[Opponent(u.TeamId)] = true; }
         if (u.HasTrait(TraitId.FoeFireSpread)) { _foeFireLive = true; _foeSpreadTeams[Opponent(u.TeamId)] = true; }
+        if (u.HasTrait(TraitId.TickOnce)) _tickOnceLive = true;   // 第249期（刻み・一撃）
         if (u.HasTrait(TraitId.Decoy)) _decoyLive = true;         // 第226期（挑発）
         if (u.HasTrait(TraitId.Spring)) _springLive = true;       // 第228期（弾き返し）
         if (u.HasTrait(TraitId.Tailwind)) _tailwindLive = true;   // 第229期（追い風）
@@ -8620,6 +8626,9 @@ public sealed class BattleContext
     readonly bool[] _spreadCapTeams = new bool[2];
     /// <summary>第245期: 敵の火勢の門（保持者の相手の陣営）・刻みを火勢の回数にする陣営・脆さを火勢で上げる陣営・延焼の陣営。どれも札が無ければ偽のまま。</summary>
     bool _foeFireLive;
+    /// <summary>第249期（刻み・一撃）: 札の持ち主がいる ／ いま刻む1回の量（0 なら <see cref="BurnRules.Damage"/>）。</summary>
+    bool _tickOnceLive;
+    int _burnTickAmt;
     readonly bool[] _foeFireTeams = new bool[2], _lvTickTeams = new bool[2], _foeBrittleTeams = new bool[2], _foeSpreadTeams = new bool[2];
     /// <summary>第245期: いま燃焼の刻みを受けている駒と、残りターンを減らす前の火勢（最後の刻みは減らした後に刻むので `Of` は 0 を返す）。</summary>
     UnitState? _tickLvUnit;
@@ -8975,9 +8984,20 @@ public sealed class BattleContext
             bool stoke = _foeFireLive && actor.HasTrait(TraitId.UnleashStoke);
             HashSet<UnitState>? wasBurning = null;
             if (stoke) { wasBurning = LivingMembers(Opponent(actor.TeamId)).Where(f => f.RawCounter(StatusKeys.Burn) > 0).ToHashSet(); _unleashHits = new List<UnitState>(); }
+            // 第249期（爆炎・札 `UnleashBlaze`）: 薙ぎの代わりに敵全体 ×3。巻き込みは起こさず（`SplashTrait` が `BlazeActor` を見る）、続いて味方全体に燃焼ダメージ。
+            bool blaze = actor.HasTrait(TraitId.UnleashBlaze);
+            int blazeAmt = blaze ? Math.Max(0, actor.CurrentAttack) * FireFinishRule.BlazeAllyPercent / 100 : 0;
+            if (blaze)
+            {
+                FireBook.Blazes++;
+                EmitFireLevel(actor, actor, FireLevelLabels.Blaze, blazeAmt, 0);
+                Log($"  {actor.Name} の火が爆ぜた——敵陣も味方も炎に包まれる（敵全体 ×{FireBurstRule.UnleashPercent / 100}・味方全体に燃焼 {blazeAmt}）", LogKind.Highlight, actor);
+                BlazeActor = actor;
+            }
             _fireMoveIgnite = true;
-            try { PerformAttack(actor, attackPercent: FireBurstRule.UnleashPercent, patternOverride: AttackPattern.Sweep); }
-            finally { _fireMoveIgnite = false; }
+            try { PerformAttack(actor, attackPercent: FireBurstRule.UnleashPercent, patternOverride: blaze ? AttackPattern.All : AttackPattern.Sweep); }
+            finally { _fireMoveIgnite = false; BlazeActor = null; }
+            if (blaze && actor.IsAlive) BlazeAllies(actor, blazeAmt);
             if (stoke)
             {
                 var hits = _unleashHits!; _unleashHits = null;
@@ -9041,6 +9061,7 @@ public sealed class BattleContext
         }
         // 残り火: 段の代わりに全体 ×2。敵が2体以下なら追加で全体 ×2。着火はしない（燃え広がりは通常どおり）。
         FireBook.Embers++;
+        if (actor.HasTrait(TraitId.EmbersChain)) { EmbersChain(actor, lv); return; }   // 第249期（残り火・連撃）
         Log($"  {actor.Name} の残り火が燃え広がる（全体 ×2）", LogKind.Highlight, actor);
         try
         {
@@ -9056,6 +9077,91 @@ public sealed class BattleContext
             }
         }
         finally { actor.SetCounter(FireBurstRule.MoveKey, 0); }
+    }
+
+    // =====================================================================================
+    // 第249期 —— 爆炎（ボルグ）・残り火の連撃（ホタ）。**札の持ち主がいなければ呼ばれない。乱数を引かない。**
+    // =====================================================================================
+    /// <summary>爆炎の敵への一撃の最中だけ非 null（<see cref="SplashTrait"/> が巻き込みを起こさない）。</summary>
+    public UnitState? BlazeActor { get; private set; }
+    /// <summary>爆炎の味方への燃焼ダメージの最中（ホタの火の癒しの帳簿の出どころ・<b>計数のみ</b>）。</summary>
+    bool _blazeNow;
+
+    /// <summary>
+    /// 爆炎の味方の側（第249期）: 味方全体（ボルグ以外・席番号の順）に着火してから、燃焼ダメージ <paramref name="amount"/> を燃焼の規則どおりに配る
+    /// ——火に焼かれない駒（熾のホタ・火の鎧）は受けず、火の癒し（ホタ・ボルグ）なら回復 ／ ベニの結界の内側は反転で回復 ／ 火の変換（ヒヨ）で回復 ／
+    /// それ以外は味方の刃（<c>ApplyDamage(ally, amount, borg, isFriendlyFire: true)</c>・燃える巻き込みと同じ口）。
+    /// </summary>
+    void BlazeAllies(UnitState borg, int amount)
+    {
+        foreach (UnitState ally in LivingMembers(borg.TeamId))
+        {
+            if (ally == borg || !ally.IsAlive) continue;
+            EmitFireArmor(borg, ally, FireArmorLabels.BlazeAlly, amount);
+            Ignite(ally, friendly: true, source: borg);
+            if (!FireBook.BlazeById.TryGetValue(ally.Def.Id, out var row)) FireBook.BlazeById[ally.Def.Id] = row = new long[4];
+            row[0] += amount;
+            int h0 = ally.Hp;
+            int kind;
+            _blazeNow = true;
+            try
+            {
+                if (Ember.Fireproof && (ally.HasTrait(TraitId.Pyre) || (_fireArmorLive && FireproofArmor(ally))))
+                {
+                    if (MendsFire(ally)) { kind = 0; FireHeal(ally, amount, FireArmorLabels.Mend, tick: false); }
+                    else { kind = 4; Log($"    {ally.Name} は爆炎に焼かれない（{amount}）", LogKind.Status); }
+                }
+                else if (InvertsTick(ally) is UnitState beni) { kind = 2; InverseHeal(beni, ally, amount, 5, "爆炎"); }
+                else if (_fireConvertHolders.Count > 0 && ally.RawCounter(StatusKeys.Burn) > 0 && FireConvertHolder(ally) is UnitState hiyo) { kind = 1; FireConvert(hiyo, ally, amount, tick: false); }
+                else { kind = 3; ApplyDamage(ally, amount, borg, isFriendlyFire: true); }
+            }
+            finally { _blazeNow = false; }
+            int d = Math.Max(0, ally.Hp) - h0;
+            FireBook.BlazeNom[kind] += amount;
+            FireBook.BlazeHp[kind] += Math.Abs(d);
+            if (d > 0) row[1] += d; else row[2] -= d;
+            if (!ally.IsAlive) { FireBook.BlazeAllyKills++; row[3]++; }
+        }
+    }
+
+    /// <summary>
+    /// 残り火の連撃（第249期）: 全体 ×2 の代わりに <see cref="FireFinishRule.EmbersHits"/> 発の単体 ×2（大技の一撃なので当てた敵に保つ火）。
+    /// 主目標は前列（攻撃の標的になりうる列）の席番号の最初の敵、そこから生きている敵を席番号の順に1発ずつ巡回する（敵が1体なら全部その敵）。<b>乱数を引かない。</b>
+    /// </summary>
+    void EmbersChain(UnitState actor, int lv)
+    {
+        FireBook.EmbersChains++;
+        Log($"  {actor.Name} の残り火が{FireFinishRule.EmbersHits}発の燃えさしになって降る（1発 ×2・着火）", LogKind.Highlight, actor);
+        var hit = new HashSet<UnitState>();
+        try
+        {
+            actor.SetCounter(FireBurstRule.MoveKey, FireBurstRule.MoveEmbers);
+            EmitFireLevel(actor, actor, FireLevelLabels.Embers, lv, 1);
+            var foes0 = LivingMembers(Opponent(actor.TeamId)).ToList();
+            var pool = PoolOf(foes0);
+            int cursor = (pool.Count > 0 ? pool : foes0).Select(f => f.Slot).DefaultIfEmpty(0).Min();
+            for (int k = 1; k <= FireFinishRule.EmbersHits; k++)
+            {
+                if (!actor.IsAlive) break;
+                var foes = LivingMembers(Opponent(actor.TeamId)).OrderBy(f => f.Slot).ToList();
+                if (foes.Count == 0) break;
+                UnitState t = foes.FirstOrDefault(f => f.Slot >= cursor) ?? foes[0];
+                cursor = t.Slot + 1;
+                hit.Add(t);
+                FireBook.EmbersChainHits++;
+                if (_verbose) Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.FireLevel, Turn = _turn, ActorId = actor.InstanceId, TargetId = t.InstanceId,
+                    Amount = foes.Count, Slot = k, HpAfter = Math.Max(0, t.Hp), Text = FireLevelLabels.EmbersHit,
+                });
+                _fireMoveIgnite = true;
+                _forcedTarget = t;
+                try { PerformAttack(actor, patternOverride: AttackPattern.Single); }
+                finally { _forcedTarget = null; _fireMoveIgnite = false; }
+            }
+        }
+        finally { actor.SetCounter(FireBurstRule.MoveKey, 0); }
+        FireBook.EmbersChainDistinct += hit.Count;
     }
 
     /// <summary>
@@ -9180,6 +9286,8 @@ public sealed class BattleContext
 
     /// <summary>火の鎧か火の癒しを持つか（「火に焼かれない」の判定・呼び出し側で <c>_fireArmorLive</c> を先に見る）。</summary>
     static bool FireproofArmor(UnitState u) => u.HasTrait(TraitId.FireArmor) || u.HasTrait(TraitId.FireMend);
+    /// <summary>「焼かれない」の枝で、燃焼ダメージを同じ量の火の回復に変えるか（第235期 ボルグの火の癒し ／ 第249期 ホタの火の癒し）。呼ぶのは「焼かれない」の枝の中だけ。</summary>
+    bool MendsFire(UnitState u) => (_fireArmorLive && u.HasTrait(TraitId.FireMend)) || u.HasTrait(TraitId.PyreMend);
 
     /// <summary>
     /// 燃える巻き込み（第235期・S）の1体ぶん。<b>量は巻き込みと同じ</b>で、燃焼の刻みと同じ順に分ける——
@@ -9195,10 +9303,10 @@ public sealed class BattleContext
         bool conv = _fireConvertHolders.Count > 0 && ally.RawCounter(StatusKeys.Burn) > 0;   // 第238期: 火の変換は燃えている味方だけ
         if (Ember.Fireproof && (ally.HasTrait(TraitId.Pyre) || (_fireArmorLive && FireproofArmor(ally))))
         {
-            if (conv) NoteConvertPrec(ally, spill, _fireArmorLive && ally.HasTrait(TraitId.FireMend) ? 1 : 0);   // **計数のみ**
+            if (conv) NoteConvertPrec(ally, spill, MendsFire(ally) ? 1 : 0);   // **計数のみ**
             t.FireSplashImmune += spill;
             Log($"    {ally.Name} は燃える巻き込みに焼かれない（{spill}）", LogKind.Status);
-            if (_fireArmorLive && ally.HasTrait(TraitId.FireMend)) FireHeal(ally, spill, FireArmorLabels.Mend, tick: false);
+            if (MendsFire(ally)) FireHeal(ally, spill, FireArmorLabels.Mend, tick: false);   // 第249期: ホタの火の癒しも
             return;
         }
         if (InvertsTick(ally) is UnitState beni)
@@ -9325,6 +9433,7 @@ public sealed class BattleContext
         {
             t.FireMendNominal += amount; t.FireMendHealed += g; if (res == HealOutcome.Drought) t.FireMendDry++;
             if (!tick) t.FireMendSplash += g;
+            if (u.HasTrait(TraitId.PyreMend)) { int k = tick ? 0 : _blazeNow ? 2 : 1; FireBook.PyreMendNom[k] += amount; FireBook.PyreMendHp[k] += g; }   // 第249期・**計数のみ**
         }
         if (g > 0) Log($"    {u.Name} は火で癒える（+{g}）", LogKind.Status);
     }

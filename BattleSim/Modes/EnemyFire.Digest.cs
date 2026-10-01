@@ -7,12 +7,14 @@ using FB = FireBurstDiag;
 // 規定の駒だけで組む（版の札を1枚も引かない）ので、実装の前のコミットにこのファイルを置いても同じものが回る。
 static partial class EnemyFireDiag
 {
+    static Formation E0(Formation f) => Apply(f, UnitCatalog.BorgE0, UnitCatalog.HotaQ0, UnitCatalog.HiyoU0);
     static partial void Digest()
     {
         string outPath = _args is { Length: > 3 } ? _args[3] : "enemyfire_digest.txt";
         var boards = new (string Name, Formation F)[]
         {
-            ("T3-244", T3244), ("T3-238", T3238), ("雷＋ボルグ", ThunderBorg), ("燃焼（compare）", BA.RefBurn),
+            // 第249期 前段: 台はすべて E0（第245期 前段の規定 ＝ `UnitCatalog.BorgE0` / `HotaQ0` / `HiyoU0`）に固定した（規定が動いても台本が動かない）。
+            ("T3-244", E0(T3244)), ("T3-238", E0(T3238)), ("雷＋ボルグ", E0(ThunderBorg)), ("燃焼（compare）", E0(BA.RefBurn)),
         };
         var lines = new List<string>();
         foreach (var (bn, f) in boards)

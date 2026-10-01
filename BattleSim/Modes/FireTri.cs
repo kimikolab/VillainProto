@@ -60,14 +60,15 @@ static partial class FireTriDiag
     /// <summary>T1 から「ボルグの放つでの火の粉」を抜いた（切り分け）。</summary>
     internal static readonly UnitDef HiyoOldNoU = Plus(UnitCatalog.HiyoU0, TraitId.SparkCatch);
 
+    // 第249期 前段: ホタは第247期 前段の規定（`FC.HotaHP` ＝ 第246期 Q2-HP ＝ 第248期までの規定のホタ）に固定した。
     internal static readonly FB.Ver[] Versions =
     {
-        new("T0", "前段の規定（対照）", UnitCatalog.BorgU0, UnitCatalog.Hota, UnitCatalog.HiyoU0),
-        new("T1", "T0 ＋ 放熱（指名）＋ 火の粉（両大技）＋ 旧育ち", BorgC, UnitCatalog.Hota, HiyoOld),
-        new("T2", "T0 ＋ 放熱（指名）＋ 火の粉（両大技）＋ 新育ち", BorgC, UnitCatalog.Hota, HiyoNew),
-        new("T1b", "T1 ＋ (b) 準備のできた2体に渡す", BorgC, UnitCatalog.Hota, HiyoOldB),
-        new("T2b", "T2 ＋ (b) 準備のできた2体に渡す", BorgC, UnitCatalog.Hota, HiyoNewB),
-        new("T1-放粉", "T1 から放つの火の粉を抜く（切り分け）", BorgC, UnitCatalog.Hota, HiyoOldNoU),
+        new("T0", "前段の規定（対照）", UnitCatalog.BorgU0, FC.HotaHP, UnitCatalog.HiyoU0),
+        new("T1", "T0 ＋ 放熱（指名）＋ 火の粉（両大技）＋ 旧育ち", BorgC, FC.HotaHP, HiyoOld),
+        new("T2", "T0 ＋ 放熱（指名）＋ 火の粉（両大技）＋ 新育ち", BorgC, FC.HotaHP, HiyoNew),
+        new("T1b", "T1 ＋ (b) 準備のできた2体に渡す", BorgC, FC.HotaHP, HiyoOldB),
+        new("T2b", "T2 ＋ (b) 準備のできた2体に渡す", BorgC, FC.HotaHP, HiyoNewB),
+        new("T1-放粉", "T1 から放つの火の粉を抜く（切り分け）", BorgC, FC.HotaHP, HiyoOldNoU),
     };
     internal static FB.Ver VerOf(string name) => Versions.First(v => v.Name == name);
     internal static Formation Apply(Formation f, FB.Ver v) => FC.Apply(f, v);

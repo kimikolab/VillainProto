@@ -46,11 +46,12 @@ static partial class FireWrapDiag
     /// <summary>旧育ち ＋ 火の粉（焼き尽くす・放つ）＝ 第247期 T1 のヒヨ。</summary>
     internal static readonly UnitDef HiyoU1 = Plus(UnitCatalog.HiyoU0, TraitId.SparkCatch, TraitId.SparkUnleash);
 
+    // 第249期 前段: ホタは第248期の規定（`FC.HotaHP` ＝ 第246期 Q2-HP）に固定した。
     internal static readonly FB.Ver[] Versions =
     {
-        new("U0", "第247期の規定（対照）", UnitCatalog.BorgU0, UnitCatalog.Hota, UnitCatalog.HiyoU0),
-        new("U1", "第247期 T1（指名は火勢に関わらず ＋ 火の粉 両大技）", BorgU1, UnitCatalog.Hota, HiyoU1),
-        new("U2", "U1 の指名を「ボルグが火勢4 のときだけ」に直す", BorgU2, UnitCatalog.Hota, HiyoU1),
+        new("U0", "第247期の規定（対照）", UnitCatalog.BorgU0, FC.HotaHP, UnitCatalog.HiyoU0),
+        new("U1", "第247期 T1（指名は火勢に関わらず ＋ 火の粉 両大技）", BorgU1, FC.HotaHP, HiyoU1),
+        new("U2", "U1 の指名を「ボルグが火勢4 のときだけ」に直す", BorgU2, FC.HotaHP, HiyoU1),
     };
     internal static FB.Ver VerOf(string name) => Versions.First(v => v.Name == name);
     internal static Formation Apply(Formation f, FB.Ver v) => FC.Apply(f, v);
