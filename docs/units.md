@@ -352,6 +352,11 @@
 | `SparkUnleash` | 火選りのヒヨ |
 | `GiftPair` | - |
 | `CallFull` | 焼け残りのボルグ |
+| `PyreMend` | - |
+| `FavorLevel` | - |
+| `UnleashBlaze` | - |
+| `EmbersChain` | - |
+| `TickOnce` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
