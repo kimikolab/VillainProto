@@ -541,6 +541,7 @@ public enum TraitId
     SparkCatch,     // 火の粉（焼き尽くす）（第247期・ヒヨの版 T1〜・旧育ち）: 味方のホタが焼き尽くすを撃つたびに +1（燃えている間）。**燃え広がりの育ちはそのまま**（`HiyoSpark` との違い）。**判定は engine**（`BigMove`）。保持者 0 枚
     SparkUnleash,   // 火の粉（放つ）（第247期・ヒヨの版 T1〜）: 味方のボルグが放つを撃つたびにも +1（燃えている間）。**判定は engine**（`BigMove`）。保持者 0 枚
     GiftPair,       // 準備のできた2体に渡す（第247期・ヒヨの版 (b)）: 火勢3 でも、大技の準備ができた味方（火勢4 で放つ・焼き尽くすを持つ）が2体いれば2体に渡す。**判定は `FireStokeTrait`**。保持者 0 枚
+    CallFull,       // 指名は火勢4 のときだけ（第248期・ボルグ・`RadiateCall` の直し）: 放熱の印を持つこのボルグが火勢4 のときだけ、ヒヨのギフトの最優先の相手になる。**火勢4 未満なら指名せず、印は残す**（相手は今の相手選びのまま・指名でない受け取りでは印は消えない）。**判定は `FireStokeTrait.Nominated`**（並びと `QueueGift` の消費の2口）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -13280,7 +13281,8 @@ public static class FireLevelRule
         || u.HasTrait(TraitId.StokeStageAtk) || u.HasTrait(TraitId.FoeFireLevel) || u.HasTrait(TraitId.FoeFireTick) || u.HasTrait(TraitId.FoeFireBrittle)
         || u.HasTrait(TraitId.FoeFireSpread) || u.HasTrait(TraitId.AllyFireTick) || u.HasTrait(TraitId.GiftQuiet) || u.HasTrait(TraitId.UnleashStoke)   // 第245期
         || u.HasTrait(TraitId.StokePick) || u.HasTrait(TraitId.HiyoSpark) || u.HasTrait(TraitId.BorgRadiate) || u.HasTrait(TraitId.PyreCritical) || u.HasTrait(TraitId.PyreLance)   // 第246期
-        || u.HasTrait(TraitId.RadiateCall) || u.HasTrait(TraitId.SparkCatch) || u.HasTrait(TraitId.SparkUnleash) || u.HasTrait(TraitId.GiftPair);   // 第247期
+        || u.HasTrait(TraitId.RadiateCall) || u.HasTrait(TraitId.SparkCatch) || u.HasTrait(TraitId.SparkUnleash) || u.HasTrait(TraitId.GiftPair)   // 第247期
+        || u.HasTrait(TraitId.CallFull);   // 第248期
 }
 
 /// <summary>火勢の土台（第242期・ボルグの版 R1〜・<b>保持者 0 枚</b>）。札は判定を持たない——engine が読む（保つ・燃え広がり・萎む・消える）。</summary>
@@ -13384,6 +13386,8 @@ public sealed class FireStokeTrait : Trait
         }
         if (n > 0)
         {
+            // 第248期: 印を持つが火勢4 未満で指名しなかった手番（計数のみ・乱数を引かない）
+            if (ctx.LivingMembers(self.TeamId).Any(a => a != self && Called(a) && !Nominated(a))) ctx.NoteCallHeld(self);
             var recips = GiftTargets(ctx, self).Take(n).ToList();
             if (recips.Count > 0) { ctx.QueueGift(self, recips, lv); return; }
             ctx.NoteGiftNoTarget(self);
@@ -13398,13 +13402,17 @@ public sealed class FireStokeTrait : Trait
     {
         var xs = ctx.LivingMembers(self.TeamId).Where(a => a != self && a.IsAlive && FireLevelRule.Of(a) > 0);
         // 第247期（放熱・指名）: 放熱の印を持つ味方が最優先（火勢に関わらず）。印が無ければ全員同じ鍵なので、並びは第246期と1ビットも違わない（安定な並べ替え）。
-        var o0 = xs.OrderByDescending(Called);
+        // 第248期（`CallFull`）: 指名は印のボルグが火勢4 のときだけ（`Nominated`）。札が無ければ `Called` と同じ。
+        var o0 = xs.OrderByDescending(Nominated);
         var o = self.HasTrait(TraitId.StokePick) ? o0.ThenByDescending(BigMoveReady).ThenByDescending(FireLevelRule.Of) : o0.ThenByDescending(FireLevelRule.Of);
         return o.ThenByDescending(a => AtkFor(self, a)).ThenBy(a => a.Slot);
     }
 
     /// <summary>第247期: 放熱の印（指名）を持つ（<see cref="TraitId.RadiateCall"/> のボルグ・燃えている間だけ付く）。</summary>
     public static bool Called(UnitState a) => a.RawCounter(FireCycleRule.CallKey) > 0;
+
+    /// <summary>第248期: 指名される（印を持ち、<see cref="TraitId.CallFull"/> の持ち主なら火勢4 のときだけ）。札が無ければ <see cref="Called"/> と同じ（第247期の T1）。</summary>
+    public static bool Nominated(UnitState a) => Called(a) && (!a.HasTrait(TraitId.CallFull) || FireLevelRule.Of(a) >= FireLevelRule.Max);
 
     /// <summary>第247期 (b): 大技の準備ができた味方（ヒヨ以外・生きている）の数。</summary>
     public static int ReadyAllies(BattleContext ctx, UnitState self)
@@ -13538,6 +13546,8 @@ public sealed class PyreLanceTrait : Trait { public override TraitId Id => Trait
 // =====================================================================================
 /// <summary>放熱（指名）（第247期・ボルグ）。engine と <see cref="FireStokeTrait.GiftTargets"/> が読む。</summary>
 public sealed class RadiateCallTrait : Trait { public override TraitId Id => TraitId.RadiateCall; }
+/// <summary>指名は火勢4 のときだけ（第248期・ボルグ）。<see cref="FireStokeTrait.Nominated"/> が読む。</summary>
+public sealed class CallFullTrait : Trait { public override TraitId Id => TraitId.CallFull; }
 /// <summary>火の粉（焼き尽くす）（第247期・ヒヨ・燃え広がりの育ちはそのまま）。engine が読む。</summary>
 public sealed class SparkCatchTrait : Trait { public override TraitId Id => TraitId.SparkCatch; }
 /// <summary>火の粉（放つ）（第247期・ヒヨ）。engine が読む。</summary>
@@ -15710,6 +15720,7 @@ public static class TraitCatalog
         new PyreCriticalTrait(),     // 第246期
         new PyreLanceTrait(),        // 第246期
         new RadiateCallTrait(),      // 第247期
+        new CallFullTrait(),         // 第248期
         new SparkCatchTrait(),       // 第247期
         new SparkUnleashTrait(),     // 第247期
         new GiftPairTrait(),         // 第247期

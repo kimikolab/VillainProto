@@ -11,9 +11,9 @@ static class FireCycleDigestDiag
         string outPath = args.Length > 3 ? args[3] : "firecycle_digest.txt";
         var boards = new (string Name, Formation F)[]
         {
-            ("T3-244", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hisa, center: UnitCatalog.Borg, back1: UnitCatalog.HotaQ0, back3: UnitCatalog.Hiyo)),
-            ("T3-238", Formation.Build(front1: UnitCatalog.Hiyo, front3: UnitCatalog.HotaQ0, center: UnitCatalog.Borg, back1: UnitCatalog.Doha, back3: UnitCatalog.Sora)),
-            ("雷＋ボルグ", Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)),
+            ("T3-244", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hisa, center: UnitCatalog.BorgU0, back1: UnitCatalog.HotaQ0, back3: UnitCatalog.HiyoU0)),
+            ("T3-238", Formation.Build(front1: UnitCatalog.HiyoU0, front3: UnitCatalog.HotaQ0, center: UnitCatalog.BorgU0, back1: UnitCatalog.Doha, back3: UnitCatalog.Sora)),
+            ("雷＋ボルグ", Formation.Build(front1: UnitCatalog.BorgU0, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)),
         };
         var target = new UnitDef { Id = "mato", Name = "的", MaxHp = 9999, Attack = 1, Speed = 5, Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Single };
         var heavy = Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.Warden, center: EnemyCatalog.Warden);

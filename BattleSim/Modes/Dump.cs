@@ -68,13 +68,17 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine();
         Console.WriteLine("## 燃焼の規則");
         Console.WriteLine();
-        Console.WriteLine($"味方に{string.Join("・", fireRuleOwners)}がいるとき（第245期 E2・第246期に規定）:");
+        // 第248期: 燃焼の軸の一区切り——味方の火勢（育つ・萎む・大技で戻る）も今の規定に合わせて書く。数値は規則の定数から引く。
+        Console.WriteLine($"味方に{string.Join("・", fireRuleOwners)}がいるとき（第242〜248期に規定）:");
         Console.WriteLine();
-        Console.WriteLine($"- 燃えている敵には火の強さ（1〜4）がある。燃えている味方が燃えている敵を叩くたびに1つ育ち、育たない周回は弱まる。"
+        Console.WriteLine($"- 燃えている駒には火の強さ（1〜{FireLevelRule.Max}）がある。燃えていなかった駒に火が点くと 1（点け直しでは上がらない）。燃焼が切れると消える。");
+        Console.WriteLine("- 燃えている駒の攻撃が、当たる前から燃えていた敵に当たると、その駒の火が育つ（1回の攻撃で 1 つまで）。そのとき火選りの駒も育つ。そのターン一度も育たなかった駒は、ターンの終わりに 1 つ弱まる（1 より下にはならない）。");
+        Console.WriteLine("- 火を渡した駒・大技（放つ・焼き尽くす）を撃った駒の火は 1 に戻る。");
+        Console.WriteLine($"- 燃えている敵にも火の強さがある。燃えている味方が燃えている敵を叩くたびに1つ育ち、育たない周回は弱まる。"
                           + $"火が強いほど、燃焼の刻みは火の強さの回数だけ入り（1回 {BurnRules.Damage}）、受ける傷は大きくなる（"
                           + string.Join(" ／ ", Enumerable.Range(1, 4).Select(l => $"{l} +{FoeFireRule.BrittlePercent[l]}%")) + "）。");
         Console.WriteLine($"- 火の強さ 4 の敵が倒れると、隣の敵に火が移る（燃えていなければ火の強さ {FoeFireRule.SpreadLevel} で点く・燃えていれば 1つ育つ）。");
-        Console.WriteLine("- 味方の燃焼の刻みも、火の強さの回数だけ入る。");
+        Console.WriteLine("- 味方の燃焼の刻みも、火の強さの回数だけ入る（火に焼かれない駒は焼かれず、火選りの駒が生きている間は、燃えている味方は焼かれる代わりに癒える）。");
     }
 
     Console.WriteLine();

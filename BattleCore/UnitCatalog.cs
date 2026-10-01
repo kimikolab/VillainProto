@@ -19,6 +19,31 @@ public static class UnitCatalog
         // 第245期 前段（ポンの判断・指示書 §2.3）: 第244期の大技——放つ（`FireUnleash`）と燃え広がりの上限（`FireSpreadCap`・陣営の規則）。旧は <see cref="BorgR3"/>。
         // 第246期 前段（指示書 §2）: 第245期 E2——敵の火勢（育つ・萎む）・刻みを火勢の回数に・脆さ 25/40/55/70%・火勢4 で倒れると延焼・味方の刻みも回数。
         // 5 枚ともボルグに持たせる（第245期の版と同じ置き場所・陣営の規則）。旧は <see cref="BorgE0"/>。
+        // 第248期（ポンの判断・指示書 §3・線を通った U2）: 放熱の印（`RadiateCall`）と、指名は火勢4 のときだけ（`CallFull`）。旧は <see cref="BorgU0"/>。
+        Traits = new[] { TraitId.Splash, TraitId.FireFeed, TraitId.Cinder, TraitId.FireArmor, TraitId.FireSplash, TraitId.SelfKindle, TraitId.FireMend, TraitId.FireWardAll,
+                         TraitId.FireLevel, TraitId.CinderWide, TraitId.FireKeep, TraitId.FireSpreadCap, TraitId.FireUnleash,
+                         TraitId.FoeFireLevel, TraitId.FoeFireTick, TraitId.FoeFireBrittle, TraitId.FoeFireSpread, TraitId.AllyFireTick,
+                         TraitId.RadiateCall, TraitId.CallFull },
+        Pattern = AttackPattern.Sweep,
+        PlusText = "燃える盾。薙ぎ払いで斬った敵すべてに火を移し、自分の火も燃え続ける（戦いの前からくすぶっている）。燃えている間は自分も燃えている味方も受ける傷が半分になり、火に焼かれるほど傷が塞がる。殴られると殴った敵に火を返し、燃えている敵を斬るとその火で癒える。燃え盛ってから火を渡されると、溜めた火を放つ——攻撃力 3 倍の薙ぎで、当たった敵すべてに火が移る。仲間の熾火が焼き尽くすと、その放熱が鎧に灯る。灯っている間に燃え盛っていれば、ヒヨの次の火は真っ先に自分へ渡る",
+        MinusText = "同じ一振りが、自分の両隣の味方も巻き込む（燃え移る火として——火に強い味方には効かない）。隣の味方にも火が移る",
+        Flavor = "三度、味方の部隊を半壊させて追い出された。"
+    };
+
+    /// <summary>第247期の規定のボルグ（放熱の印・指名なし）。対照（<see cref="All"/> に入れない）。第245〜247期の器具（`enemyfire` / `firecycle` / `firetri`）と第248期の器具（`firewrap`）の U0 はこちらに固定した。</summary>
+    public static readonly UnitDef BorgU0 = new()
+    {
+        Id = "borg",
+        Name = "焼け残りのボルグ",
+        // 第239期 前段（ポンの判断）: 第238期 A+D2（第235期「全部」＝火の鎧・HP100・燃える巻き込み・くすぶり・火の癒し・焼き返し ＋ 盾の配り（全員））。
+        // 札の並びは第238期の器具（`FireWardDiag.D2`）と同じ——焼き返しは火の粉より前（殴る前から燃えていた主目標を読む）。旧は <see cref="BorgF0"/>。
+        MaxHp = 100,
+        Attack = 18,
+        Speed = 8,
+        // 第244期 前段（ポンの判断）: 第242期 R3 の2本（火の粉・広・火を保つ）と火勢の土台を足した。旧は <see cref="BorgL0"/>。
+        // 第245期 前段（ポンの判断・指示書 §2.3）: 第244期の大技——放つ（`FireUnleash`）と燃え広がりの上限（`FireSpreadCap`・陣営の規則）。旧は <see cref="BorgR3"/>。
+        // 第246期 前段（指示書 §2）: 第245期 E2——敵の火勢（育つ・萎む）・刻みを火勢の回数に・脆さ 25/40/55/70%・火勢4 で倒れると延焼・味方の刻みも回数。
+        // 5 枚ともボルグに持たせる（第245期の版と同じ置き場所・陣営の規則）。旧は <see cref="BorgE0"/>。
         Traits = new[] { TraitId.Splash, TraitId.FireFeed, TraitId.Cinder, TraitId.FireArmor, TraitId.FireSplash, TraitId.SelfKindle, TraitId.FireMend, TraitId.FireWardAll,
                          TraitId.FireLevel, TraitId.CinderWide, TraitId.FireKeep, TraitId.FireSpreadCap, TraitId.FireUnleash,
                          TraitId.FoeFireLevel, TraitId.FoeFireTick, TraitId.FoeFireBrittle, TraitId.FoeFireSpread, TraitId.AllyFireTick },
@@ -1011,7 +1036,7 @@ public static class UnitCatalog
         // 第245期 前段（ポンの判断・指示書 §2.3）: 第244期の大技——焼き尽くす（火の雨は乱数）・残り火・呼び火。旧は <see cref="HotaR3"/>。
         // 第247期 前段（ポンの判断・指示書 §2）: 第246期 Q2-HP の段——段3 は大火槍（貫き ×7 ＋ 着火）、自分の手番の火勢4 は臨界。旧は <see cref="HotaQ0"/>。
         Traits = new[] { TraitId.Pyre, TraitId.PyreStage, TraitId.PyreBurnout, TraitId.PyreEmbers, TraitId.CallFire, TraitId.PyreLance, TraitId.PyreCritical },
-        PlusText = "自分が燃えている間、火の強さで振り方が変わる——弱い火は一撃（攻撃力 4 倍）、育つと炎が列を貫き（当たった敵に火が点く）、燃え盛ると大火槍（攻撃力 7 倍の貫き・当たった敵に火が点く）。極まると臨界——攻撃力 7 倍で列を貫き、当たった敵の火を煽る。火を渡されて燃え盛っていれば、焼き尽くす——敵全体を攻撃力 4 倍で焼き、火の雨を 10 発降らせる（1 発 1.5 倍・当てるたびに火が点く）。次の自分の手番は残り火が敵全体を焼く（2 倍・敵が 2 体以下ならもう一度）。仲間が火を放ち、火を渡すたびに、自分の火も育つ。火には焼かれない",
+        PlusText = "焼き尽くす者。燃えている間、火の強さで振り方が変わる——弱い火は一撃（攻撃力 4 倍）、育つと炎が列を貫き（当たった敵に火が点く）、燃え盛ると大火槍（攻撃力 7 倍の貫き）、極まると臨界（攻撃力 7 倍で列を貫き、当たった敵の火を煽る）。燃え盛ってから火を渡されると、焼き尽くす——敵全体を攻撃力 4 倍で焼き、火の雨を 10 発降らせる。次の自分の手番は残り火が敵全体を焼く。焼き尽くした熱は仲間の鎧に灯る。仲間が火を放ち、火を渡すたびに、自分の火も育つ。火には焼かれない",
         MinusText = "火が消えればただの湿った薪。自分では火を点けられない",
         Flavor = "焚きつけられている間だけ働く。誰かが火を放つのを待っている。"
     };
@@ -2123,6 +2148,32 @@ public static class UnitCatalog
     /// 分からなくなる（第34期「1変数を振るときは、その変数が他に何を一緒に動かすかを先に数える」）。</para>
     /// </summary>
     public static readonly UnitDef Hiyo = new()
+    {
+        Id = "hiyo",
+        Name = "火選りのヒヨ",
+        MaxHp = 70,
+        Attack = 5,
+        Speed = 6,
+        Advances = false,
+        // 第239期 前段（ポンの判断）: 第238期 V1（火の変換・全量）。渇きには封じられない（第238期の主の版）。旧は <see cref="HiyoF0"/>。
+        // 第244期 前段（ポンの判断）: 第242期 R3（煽り・自分の火の育ち・ターンギフト G3）。旧は <see cref="HiyoL0"/>。
+        // 第245期 前段（ポンの判断・指示書 §2.3）: 煽り・ギフトの相手選びを P′（倍率の前 × 次の手番の段の倍率・`StokeStageAtk`）に。
+        // 追記 B: ギフトで得た手番の燃え広がりでは自分は育たない（`GiftQuiet`）。旧は <see cref="HiyoR3"/>。
+        // 第248期（ポンの判断・指示書 §3・線を通った U2）: 火の粉（焼き尽くす・放つで +1）。指名は放熱の印を持つボルグの側（`CallFull`）。旧は <see cref="HiyoU0"/>。
+        Traits = new[] { TraitId.Favor, TraitId.FireConvert, TraitId.FireStoke, TraitId.TurnGift, TraitId.StokeStageAtk, TraitId.GiftQuiet, TraitId.SparkCatch, TraitId.SparkUnleash },
+        // **贔屓を手番の行動そのものにする**（第60期）。攻5 は出なくなる。
+        // `OnTurnStart` に置くと火の粉（`OnAfterAttack`）に対して構造的に1ターン遅れ、
+        // **第1ターンだけ熾のホタを鈍らせていた**（弱体の受け手に 2.00 量/戦）。
+        // 手番へ降ろすとヒヨ（速6）の番はボルグ（速8）の後なので、火は既に点いている。
+        // **[Skill] 1つだけの周期で移すのは、挙動の差を「攻撃が出ない」だけに絞るため**（ノノと同じ）。
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "火を煽る／火を渡す") },
+        PlusText = "燃え上がらせる者。毎ターン、燃えている味方の攻撃力を上げ、次の手番にいちばん強く振るう味方の火を煽って育てる。自分の火が燃え盛ると、代わりに火を渡す——燃え盛る味方 1〜2 体が、すぐにもう一度動く（放熱の灯った仲間が燃え盛っていれば真っ先に）。燃えている味方は、火に焼かれる代わりにその火で癒える。仲間が焼き尽くし、火を放つたびに、舞った火の粉で自分の火も強まる",
+        MinusText = "自分の隣で燃えていない味方は、逆に腕が鈍る。攻撃はしない（贔屓が手番そのもの）。火を渡した相手の手番では、自分の火は育たない",
+        Flavor = "人を見る基準はただ一つ。燃えているか、いないか。"
+    };
+
+    /// <summary>第247期の規定のヒヨ（火の粉・指名なし）。対照（<see cref="All"/> に入れない）。第245〜247期の器具（`enemyfire` / `firecycle` / `firetri`）と第248期の器具（`firewrap`）の U0 はこちらに固定した。</summary>
+    public static readonly UnitDef HiyoU0 = new()
     {
         Id = "hiyo",
         Name = "火選りのヒヨ",

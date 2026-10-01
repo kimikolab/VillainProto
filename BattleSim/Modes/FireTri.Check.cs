@@ -70,8 +70,9 @@ static partial class FireTriDiag
             string.Join(",", UnitCatalog.HotaQ0.Traits.Concat(new[] { TraitId.PyreLance, TraitId.PyreCritical })));
         Expect("前段: 第246期の器具の Q0 ／ 第245期の器具の E0 は旧のホタ", FC.VerOf("Q0").Hota == UnitCatalog.HotaQ0 && EnemyFireDiag.VerOf("E0").Hota == UnitCatalog.HotaQ0, true);
         Expect("前段: 第246期の Q2-HP のホタの札 ＝ 規定のホタの札", string.Join(",", FC.VerOf("Q2-HP").Hota.Traits), string.Join(",", UnitCatalog.Hota.Traits));
+        // 第248期: 放熱（ボルグ）と火の粉（ヒヨ）は規定になった（保持者 1 枚）。(b) は保持者 0 枚のまま。
         foreach (TraitId t in new[] { TraitId.RadiateCall, TraitId.SparkCatch, TraitId.SparkUnleash, TraitId.GiftPair })
-            Expect($"札 {t} の保持者は `All` に 0 枚", UnitCatalog.All.Count(u => u.Traits.Contains(t)), 0);
+            Expect($"札 {t} の保持者は `All` に {(t == TraitId.GiftPair ? 0 : 1)} 枚（第248期に規定）", UnitCatalog.All.Count(u => u.Traits.Contains(t)), t == TraitId.GiftPair ? 0 : 1);
         // 大火槍の見出しは段3 だけ
         foreach (int lv in new[] { 2, 3, 4 })
         {

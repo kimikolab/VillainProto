@@ -57,7 +57,7 @@ static partial class EnemyFireDiag
     /// <summary>台（駒は何でもよい——版は <c>Apply</c> で差し替える）。</summary>
     internal static Formation T3238 => FB.T3238;
     /// <summary>第244期 S2R の段1 の1位（前1 ゴルム ／ 前3 ヒサ ／ 中央 ボルグ ／ 後1 ホタ ／ 後3 ヒヨ）。</summary>
-    internal static Formation T3244 => Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hisa, center: UnitCatalog.Borg, back1: UnitCatalog.Hota, back3: UnitCatalog.Hiyo);
+    internal static Formation T3244 => Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hisa, center: UnitCatalog.BorgU0, back1: UnitCatalog.Hota, back3: UnitCatalog.HiyoU0);
     internal static Formation ThunderBorg => FB.ThunderBorg;
 
     /// <summary>ボルグ・ホタ・ヒヨを渡された駒に差し替える（ほかの駒・席はそのまま）。</summary>

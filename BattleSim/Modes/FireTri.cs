@@ -50,19 +50,19 @@ static partial class FireTriDiag
     // ---------------------------------------------------------------------------------
     static UnitDef Plus(UnitDef g, params TraitId[] tr) => FC.With(g, g.Traits.Concat(tr));
     /// <summary>ボルグ ＋ 放熱（指名）。</summary>
-    internal static readonly UnitDef BorgC = Plus(UnitCatalog.Borg, TraitId.RadiateCall);
+    internal static readonly UnitDef BorgC = Plus(UnitCatalog.BorgU0, TraitId.RadiateCall);
     /// <summary>旧育ち（規定の育ち・P′）＋ 火の粉（焼き尽くす・放つ）。</summary>
-    internal static readonly UnitDef HiyoOld = Plus(UnitCatalog.Hiyo, TraitId.SparkCatch, TraitId.SparkUnleash);
+    internal static readonly UnitDef HiyoOld = Plus(UnitCatalog.HiyoU0, TraitId.SparkCatch, TraitId.SparkUnleash);
     /// <summary>新育ち（第246期 Q1: 相手選び・燃え広がりでは育たず焼き尽くすの火の粉）＋ 放つの火の粉。</summary>
-    internal static readonly UnitDef HiyoNew = Plus(UnitCatalog.Hiyo, TraitId.StokePick, TraitId.HiyoSpark, TraitId.SparkUnleash);
+    internal static readonly UnitDef HiyoNew = Plus(UnitCatalog.HiyoU0, TraitId.StokePick, TraitId.HiyoSpark, TraitId.SparkUnleash);
     internal static readonly UnitDef HiyoOldB = Plus(HiyoOld, TraitId.GiftPair);
     internal static readonly UnitDef HiyoNewB = Plus(HiyoNew, TraitId.GiftPair);
     /// <summary>T1 から「ボルグの放つでの火の粉」を抜いた（切り分け）。</summary>
-    internal static readonly UnitDef HiyoOldNoU = Plus(UnitCatalog.Hiyo, TraitId.SparkCatch);
+    internal static readonly UnitDef HiyoOldNoU = Plus(UnitCatalog.HiyoU0, TraitId.SparkCatch);
 
     internal static readonly FB.Ver[] Versions =
     {
-        new("T0", "前段の規定（対照）", UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo),
+        new("T0", "前段の規定（対照）", UnitCatalog.BorgU0, UnitCatalog.Hota, UnitCatalog.HiyoU0),
         new("T1", "T0 ＋ 放熱（指名）＋ 火の粉（両大技）＋ 旧育ち", BorgC, UnitCatalog.Hota, HiyoOld),
         new("T2", "T0 ＋ 放熱（指名）＋ 火の粉（両大技）＋ 新育ち", BorgC, UnitCatalog.Hota, HiyoNew),
         new("T1b", "T1 ＋ (b) 準備のできた2体に渡す", BorgC, UnitCatalog.Hota, HiyoOldB),

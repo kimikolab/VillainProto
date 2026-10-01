@@ -3750,6 +3750,8 @@ public sealed class FireLevelLedger
     /// 火の粉（添字 0 焼き尽くす ／ 1 放つ・回 ／ 育った量）・(b)（火勢3 で2体に渡した回）。<b>計数のみ。</b></summary>
     public long CallMarks, CallStacked, CallLost, GiftPairs, GiftPairChance;
     public readonly long[] Called = new long[5], SparkBy = new long[2], SparkGrowBy = new long[2];
+    /// <summary>第248期（`CallFull`）: 印を持つが火勢4 未満で指名しなかったギフトの手番 ／ そのボルグが指名ではなくギフトを受けた（印は残る）。<b>計数のみ。</b></summary>
+    public long CallHeld, CallHeldGift;
 }
 
 public sealed class BurnLinkLedger

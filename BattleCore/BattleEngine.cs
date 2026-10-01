@@ -8835,6 +8835,8 @@ public sealed class BattleContext
     public void NoteGiftNoTarget(UnitState u) => FireBook.GiftNoTarget++;
     /// <summary>第247期 (b): 火勢3 で準備のできた2体に渡す（計数と見出し）。</summary>
     public void NoteGiftPairChance(UnitState hiyo) => FireBook.GiftPairChance++;
+    /// <summary>第248期: ギフトの手番に、印を持つが火勢4 未満で指名しなかったボルグがいた（計数のみ）。</summary>
+    public void NoteCallHeld(UnitState hiyo) => FireBook.CallHeld++;
     public void NoteGiftPair(UnitState hiyo) { FireBook.GiftPairs++; EmitFireLevel(hiyo, hiyo, FireLevelLabels.GiftPair, FireLevelRule.Of(hiyo), 2); }
 
     /// <summary>煽り: 相手 +1、ヒヨが燃えていれば自分も +1。</summary>
@@ -8866,7 +8868,9 @@ public sealed class BattleContext
         for (int i = 0; i < to.Count; i++)
         {
             // 第247期（放熱・指名）: 放熱の印を持つ相手なら、印を消して見出しを1件（`Amount` ＝ そのときの火勢）。印が無ければ比較1つで抜ける。
-            if (to[i].RawCounter(FireCycleRule.CallKey) > 0)
+            // 第248期（`CallFull`）: 火勢4 未満の印のボルグは指名ではない——ギフトを受けても印は残す（計数だけ）。
+            if (to[i].RawCounter(FireCycleRule.CallKey) > 0 && !FireStokeTrait.Nominated(to[i])) FireBook.CallHeldGift++;
+            else if (to[i].RawCounter(FireCycleRule.CallKey) > 0)
             {
                 to[i].SetCounter(FireCycleRule.CallKey, 0);
                 int cl = FireLevelRule.Of(to[i]);
