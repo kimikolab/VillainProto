@@ -550,6 +550,13 @@ public enum TraitId
     PyreFed,        // くべられる火（第250期・ホタの版 L-A2〜）: 燃えているホタに、ホタ以外の味方が火を点けるたび（点け直し・火の粉・爆炎・ベニの配りほか）攻撃力 +2。火勢は上げない。**判定は engine**（`Ignite` の1箇所）。保持者 0 枚
     BurnoutHeavy,   // 焼き尽くす・重（第250期・ホタの版 L2〜）: 焼き尽くすの全体の1発を ×4 → ×7（臨界・大火槍と同じ）。火の雨はそのまま。**判定は `PyreTrait.ModifyAttack`**。保持者 0 枚
     BlazeSolo,      // 爆炎・独り（第250期・ボルグの版 L3〜）: 盤面にヒヨ（火を渡す者）がいないとき、自分の手番で火勢4 なら爆炎を撃つ（撃ったら火勢 1）。ヒヨがいる間はギフトの手番だけ。**判定は engine**（`BigMoveOf`）。保持者 0 枚
+    KindleGuard,    // 守るほど燃え上がる（第252期・ボルグの版 B1）: 火の鎧の半減と盾の配りで切った被ダメの累計が 30 に達するごとに火勢 +1（燃えている間だけ数える・火勢4 ならあぶれた火）。**判定は engine**（火の鎧・盾の配りの段）。保持者 0 枚
+    KindleOpen,     // 開幕の火勢（第252期・ボルグの版 B2）: くすぶりで点く火を火勢2 から始める（その周回は萎まない）。**判定は engine**（`SelfKindle`）。保持者 0 枚
+    RadiateGrow,    // 放熱で育つ（第252期・ボルグの版 B3）: 味方のホタが焼き尽くすを撃つと、その場で火勢 +1（燃えている間・放熱の印と指名はそのまま）。**判定は engine**（`BurnoutEchoes`）。保持者 0 枚
+    BlazeHoard,     // 溜め火（第252期・ボルグの版 O1）: 火勢4 で来た育ちを溜め +1（上限なし）。次の爆炎で敵への倍率と味方への燃焼ダメージに溜め × 0.5 を足し、撃ったら 0。**判定は engine**（`GrowFire`・`BigMove`）。保持者 0 枚
+    ArmorFlame,     // 鎧の火（第252期・ボルグの版 O2）: 火勢4 で来た育ちを破片 +6 に。**判定は engine**（`GrowFire`）。保持者 0 枚
+    GiftHoard,      // 渡す火（第252期・ヒヨの版 H1）: 火勢4 で来た育ちを溜め +1（上限 3）。ギフトを撃つとき相手1体ごとに相手の火勢を溜めの数だけ上げ（上限 4・あぶれた火にはならない）、撃ったら 0。**判定は engine**（`GrowFire`・`QueueGift`）。保持者 0 枚
+    MendGlow,       // 癒しの灯（第252期・ヒヨの版 H2）: 火勢4 で来た育ち1回につき、燃えている味方全員（自分を含む）を 4 回復（火の回復・ベニの反転の裏は通らない）。**判定は engine**（`GrowFire`）。保持者 0 枚
     TickOnce,       // 刻み・一撃（第249期・ボルグの版 K4t・比較の1版）: 燃焼の刻みを「6 を火勢の回数」から「6 × 火勢 を1回」に（敵・味方とも・刻みの回数の札がある陣営で）。**判定は engine**（`TickStatuses`）。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -13298,7 +13305,8 @@ public static class FireLevelRule
         || u.HasTrait(TraitId.RadiateCall) || u.HasTrait(TraitId.SparkCatch) || u.HasTrait(TraitId.SparkUnleash) || u.HasTrait(TraitId.GiftPair)   // 第247期
         || u.HasTrait(TraitId.CallFull)   // 第248期
         || u.HasTrait(TraitId.FavorLevel) || u.HasTrait(TraitId.UnleashBlaze) || u.HasTrait(TraitId.EmbersChain) || u.HasTrait(TraitId.TickOnce)   // 第249期
-        || u.HasTrait(TraitId.PyreOverflow) || u.HasTrait(TraitId.PyreFed) || u.HasTrait(TraitId.BurnoutHeavy) || u.HasTrait(TraitId.BlazeSolo);   // 第250期
+        || u.HasTrait(TraitId.PyreOverflow) || u.HasTrait(TraitId.PyreFed) || u.HasTrait(TraitId.BurnoutHeavy) || u.HasTrait(TraitId.BlazeSolo)   // 第250期
+        || FireKindleRule.Holds(u);   // 第252期
 }
 
 /// <summary>火勢の土台（第242期・ボルグの版 R1〜・<b>保持者 0 枚</b>）。札は判定を持たない——engine が読む（保つ・燃え広がり・萎む・消える）。</summary>
@@ -13610,6 +13618,63 @@ public sealed class PyreFedTrait : Trait { public override TraitId Id => TraitId
 public sealed class BurnoutHeavyTrait : Trait { public override TraitId Id => TraitId.BurnoutHeavy; }
 /// <summary>爆炎・独り（第250期・ボルグ）。engine の `BigMoveOf` が読む。</summary>
 public sealed class BlazeSoloTrait : Trait { public override TraitId Id => TraitId.BlazeSolo; }
+
+// =====================================================================================
+// 第252期 —— ボルグが育つ口（守るほど燃え上がる・開幕の火勢・放熱で育つ）と、ボルグ・ヒヨのあぶれた火
+// （溜め火・鎧の火 ／ 渡す火・癒しの灯）。札は判定を持たない——engine が読む。**7枚とも保持者 0 枚。乱数を引かない。**
+// 指示書は design/PHASE252_BORG_KINDLE_SPEC.md。
+// =====================================================================================
+/// <summary>第252期の数値（仮置き・ポンが遊んで決める）と私有キー。</summary>
+public static class FireKindleRule
+{
+    /// <summary>守るほど燃え上がる: 切った被ダメの累計がこれに達するごとに火勢 +1。</summary>
+    public const int GuardStep = 30;
+    /// <summary>開幕の火勢: くすぶりで点く火の火勢。</summary>
+    public const int OpenLevel = 2;
+    /// <summary>溜め火: 溜め1つあたり、爆炎の敵への倍率と味方への燃焼ダメージに足す百分率（0.5 ＝ 50）。</summary>
+    public const int HoardPercent = 50;
+    /// <summary>鎧の火: あぶれた火1回の破片。</summary>
+    public const int ArmorFlame = 6;
+    /// <summary>渡す火: 溜めの上限。</summary>
+    public const int GiftHoardMax = 3;
+    /// <summary>癒しの灯: あぶれた火1回に燃えている味方1体を癒す量。</summary>
+    public const int MendGlow = 4;
+    /// <summary>守るほど燃え上がるの累計（30 を引いた残り）。</summary>
+    public const string GuardKey = "kindleGuard";
+    /// <summary>溜め火の溜め。</summary>
+    public const string HoardKey = "blazeHoard";
+    /// <summary>渡す火の溜め。</summary>
+    public const string GiftHoardKey = "giftHoard";
+
+    public static bool Holds(UnitState u) => u.HasTrait(TraitId.KindleGuard) || u.HasTrait(TraitId.KindleOpen) || u.HasTrait(TraitId.RadiateGrow)
+        || u.HasTrait(TraitId.BlazeHoard) || u.HasTrait(TraitId.ArmorFlame) || u.HasTrait(TraitId.GiftHoard) || u.HasTrait(TraitId.MendGlow);
+}
+/// <summary>守るほど燃え上がる（第252期・ボルグ B1）。engine の火の鎧・盾の配りの段が読む。累計は会戦の境界で 0。</summary>
+public sealed class KindleGuardTrait : Trait
+{
+    public override TraitId Id => TraitId.KindleGuard;
+    public override void OnCarryOver(UnitState self) => self.SetCounter(FireKindleRule.GuardKey, 0);
+}
+/// <summary>開幕の火勢（第252期・ボルグ B2）。engine の `SelfKindle` が読む。</summary>
+public sealed class KindleOpenTrait : Trait { public override TraitId Id => TraitId.KindleOpen; }
+/// <summary>放熱で育つ（第252期・ボルグ B3）。engine の `BurnoutEchoes` が読む。</summary>
+public sealed class RadiateGrowTrait : Trait { public override TraitId Id => TraitId.RadiateGrow; }
+/// <summary>溜め火（第252期・ボルグ O1）。engine の `GrowFire`・`BigMove` が読む。溜めは会戦の境界で 0。</summary>
+public sealed class BlazeHoardTrait : Trait
+{
+    public override TraitId Id => TraitId.BlazeHoard;
+    public override void OnCarryOver(UnitState self) => self.SetCounter(FireKindleRule.HoardKey, 0);
+}
+/// <summary>鎧の火（第252期・ボルグ O2）。engine の `GrowFire` が読む。</summary>
+public sealed class ArmorFlameTrait : Trait { public override TraitId Id => TraitId.ArmorFlame; }
+/// <summary>渡す火（第252期・ヒヨ H1）。engine の `GrowFire`・`QueueGift` が読む。溜めは会戦の境界で 0。</summary>
+public sealed class GiftHoardTrait : Trait
+{
+    public override TraitId Id => TraitId.GiftHoard;
+    public override void OnCarryOver(UnitState self) => self.SetCounter(FireKindleRule.GiftHoardKey, 0);
+}
+/// <summary>癒しの灯（第252期・ヒヨ H2）。engine の `GrowFire` が読む。</summary>
+public sealed class MendGlowTrait : Trait { public override TraitId Id => TraitId.MendGlow; }
 /// <summary>火の粉（焼き尽くす）（第247期・ヒヨ・燃え広がりの育ちはそのまま）。engine が読む。</summary>
 public sealed class SparkCatchTrait : Trait { public override TraitId Id => TraitId.SparkCatch; }
 /// <summary>火の粉（放つ）（第247期・ヒヨ）。engine が読む。</summary>
@@ -15792,6 +15857,13 @@ public static class TraitCatalog
         new PyreFedTrait(),          // 第250期
         new BurnoutHeavyTrait(),     // 第250期
         new BlazeSoloTrait(),        // 第250期
+        new KindleGuardTrait(),      // 第252期
+        new KindleOpenTrait(),       // 第252期
+        new RadiateGrowTrait(),      // 第252期
+        new BlazeHoardTrait(),       // 第252期
+        new ArmorFlameTrait(),       // 第252期
+        new GiftHoardTrait(),        // 第252期
+        new MendGlowTrait(),         // 第252期
         new SparkCatchTrait(),       // 第247期
         new SparkUnleashTrait(),     // 第247期
         new GiftPairTrait(),         // 第247期

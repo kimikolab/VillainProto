@@ -7022,6 +7022,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.FireConvert) || u.HasTrait(TraitId.FireConvertHalf)) _fireConvertHolders.Add(u);   // 第238期（火の変換）
         if (FireLevelRule.Holds(u)) { _fireLvLive = true; _fireLvTeams[u.TeamId] = true; }   // 第242期（火勢）
         if (u.HasTrait(TraitId.FireSpreadCap)) _spreadCapTeams[u.TeamId] = true;              // 第244期（燃え広がりの上限）
+        if (FireKindleRule.Holds(u)) _kindleLive = true;                                      // 第252期（ボルグが育つ口・あぶれた火）
         if (u.HasTrait(TraitId.FoeFireLevel)) { _foeFireLive = true; _foeFireTeams[Opponent(u.TeamId)] = true; }   // 第245期（敵の火勢）
         if (u.HasTrait(TraitId.FoeFireTick)) { _foeFireLive = true; _lvTickTeams[Opponent(u.TeamId)] = true; }
         if (u.HasTrait(TraitId.AllyFireTick)) { _foeFireLive = true; _lvTickTeams[u.TeamId] = true; }
@@ -8572,6 +8573,8 @@ public sealed class BattleContext
     // 第234期 —— 火の鎧（`FireArmorTrait`）・焼け残り（`SmolderTrait`）。**保持者がいなければ `_fireArmorLive` の比較1つで全部抜ける。**
     // =====================================================================================
     bool _fireArmorLive;
+    /// <summary>第252期: ボルグが育つ口・ボルグとヒヨのあぶれた火の札（7枚のどれか）の持ち主がいる。**いなければ比較1つで全部抜ける。**</summary>
+    bool _kindleLive;
 
     /// <summary>火の鎧の枠（1回の攻撃ごと）。殴られた保持者を控え、攻撃が終わってから火を点ける。</summary>
     sealed class FireArmorFrame
@@ -8759,6 +8762,12 @@ public sealed class BattleContext
             FireBook.OverflowChanceBy[cid] = FireBook.OverflowChanceBy.GetValueOrDefault(cid) + 1;
             if (u.HasTrait(TraitId.PyreOverflow)) FeedAtk(u, cause, FireFeedRule.OverflowAtk, overflow: true);
         }
+        // 第252期: ボルグ・ヒヨのあぶれた火（溜め火・鎧の火・渡す火・癒しの灯）。機会は札が無くても数える（計数のみ）。札が無ければ比較1つで抜ける。
+        if (lv == FireLevelRule.Max)
+        {
+            FireBook.MaxGrowChanceBy[u.Def.Id] = FireBook.MaxGrowChanceBy.GetValueOrDefault(u.Def.Id) + 1;
+            if (_kindleLive) KindleOverflow(u, cause);
+        }
         int to = Math.Min(FireLevelRule.Max, lv + n);
         if (to == lv) return true;
         u.SetCounter(FireLevelRule.LvKey, to);
@@ -8883,6 +8892,8 @@ public sealed class BattleContext
     /// <summary>ターンギフトを撃つ: 相手を控え、ヒヨの火勢を 1 に戻す。手番はヒヨの `TakeTurn` が返った後に渡す。</summary>
     public void QueueGift(UnitState hiyo, IReadOnlyList<UnitState> to, int level)
     {
+        // 第252期（H1 渡す火）: 撃つときの溜め（札が無ければ 0）。相手1体ごとに相手の火勢を溜めの数だけ上げる（上限 4・あぶれた火にはならない）。
+        int lift = _kindleLive && hiyo.HasTrait(TraitId.GiftHoard) ? hiyo.RawCounter(FireKindleRule.GiftHoardKey) : 0;
         FireBook.Gifts++;
         FireBook.GiftRecipients += to.Count;
         FireBook.GiftAtLevel[Math.Clamp(level, 0, 4)]++;
@@ -8912,6 +8923,13 @@ public sealed class BattleContext
                 Kind = BattleEventKind.FireLevel, Turn = _turn, ActorId = hiyo.InstanceId, TargetId = to[i].InstanceId,
                 Amount = level, Slot = i + 1, HpAfter = Math.Max(0, to[i].Hp), Text = FireLevelLabels.Gift,
             });
+            if (lift > 0) LiftGift(hiyo, to[i], lift);
+        }
+        if (lift > 0)
+        {
+            hiyo.SetCounter(FireKindleRule.GiftHoardKey, 0);
+            FireBook.GiftHoardGifts++;
+            FireBook.GiftHoardSpent += lift;
         }
         Log($"    {hiyo.Name} が火を渡した（{string.Join("・", to.Select(u => u.Name))}）", LogKind.Highlight, hiyo);
         int lv = FireLevelRule.Of(hiyo);
@@ -8945,14 +8963,121 @@ public sealed class BattleContext
                 UnitState? prevGift = _giftTurnActor;
                 _giftTurnActor = to;   // 第244期（大技はギフトの手番だけ）
                 TurnOutcome o;
+                int mv0 = FireBook.Moves.Count;
                 try { o = TakeTurn(to); }
                 finally { _giftTurnActor = prevGift; }
+                // 第252期（H1）: 渡す火で 4 に届いた相手が、このギフトの手番で大技（放つ・焼き尽くす）を撃った（**計数のみ**）。
+                if (_giftLifted.Remove(to))
+                    for (int k = mv0; k < FireBook.Moves.Count; k++)
+                        if (FireBook.Moves[k].Id == to.InstanceId && FireBook.Moves[k].Kind is 1 or 2) { FireBook.GiftHoardBig++; break; }
                 FireBook.GiftOutcome[(int)o]++;
                 if (o == TurnOutcome.Stalled) FireBook.GiftStalled++;
                 if (o == TurnOutcome.Attack && HushHolderAlive) FireBook.GiftHushAttacks++;
             }
         }
-        finally { _inGift = false; }
+        finally { _inGift = false; _giftLifted.Clear(); }
+    }
+
+    // =====================================================================================
+    // 第252期 —— ボルグが育つ口（守るほど燃え上がる）と、ボルグ・ヒヨのあぶれた火（溜め火・鎧の火 ／ 渡す火・癒しの灯）。
+    // **札の持ち主がいなければ `_kindleLive` の比較1つで呼ばれない。乱数を引かない。**
+    // =====================================================================================
+    /// <summary>第252期（H1）: 渡す火で 4 に届いた相手（そのギフトの手番の大技を数えるだけ・**計数のみ**）。</summary>
+    readonly HashSet<UnitState> _giftLifted = new();
+
+    /// <summary>
+    /// 守るほど燃え上がる（B1）: ボルグ（札の持ち主）が火の鎧（<paramref name="kind"/> 0）か盾の配り（1）で切った被ダメ <paramref name="saved"/> を累計し、
+    /// 30 に達するごとに火勢 +1（`GrowFire`・火勢4 ならあぶれた火）。燃えていない間は数えない。
+    /// </summary>
+    void KindleGuard(UnitState b, int saved, int kind)
+    {
+        if (saved <= 0 || !b.HasTrait(TraitId.KindleGuard)) return;
+        if (!b.IsAlive || b.RawCounter(StatusKeys.Burn) <= 0) { FireBook.GuardOff += saved; return; }
+        FireBook.GuardSaved[kind] += saved;
+        int acc = b.RawCounter(FireKindleRule.GuardKey) + saved;
+        while (acc >= FireKindleRule.GuardStep && b.IsAlive)
+        {
+            acc -= FireKindleRule.GuardStep;
+            FireBook.GuardSteps++;
+            int lv = FireLevelRule.Of(b);
+            EmitFireLevel(b, b, FireLevelLabels.KindleGuard, lv, acc);
+            Log($"    {b.Name} は守るほどに燃え上がる", LogKind.Trigger);
+            GrowFire(b, 1, b, FireLevelLabels.GrowGuard);
+            if (FireLevelRule.Of(b) > lv) FireBook.GuardRaised++;
+        }
+        b.SetCounter(FireKindleRule.GuardKey, acc);
+    }
+
+    /// <summary>
+    /// 火勢4 の駒に育ちが来た（`GrowFire`・1回の呼び出しにつき1回）: 溜め火（O1）・鎧の火（O2）・渡す火（H1）・癒しの灯（H2）。
+    /// </summary>
+    void KindleOverflow(UnitState u, UnitState? cause)
+    {
+        if (u.HasTrait(TraitId.BlazeHoard))
+        {
+            int h = u.RawCounter(FireKindleRule.HoardKey) + 1;
+            u.SetCounter(FireKindleRule.HoardKey, h);
+            FireBook.HoardAdds++;
+            EmitFireLevel(cause, u, FireLevelLabels.Hoard, 1, h);
+            Log($"    {u.Name} の大剣に火が溜まる（溜め {h}）", LogKind.Status);
+        }
+        if (u.HasTrait(TraitId.ArmorFlame))
+        {
+            TraitMark m = BeginTrait(TraitId.ArmorFlame, u);
+            u.SetCounter(StatusKeys.Armor, u.RawCounter(StatusKeys.Armor) + FireKindleRule.ArmorFlame);
+            EndTrait(m);
+            FireBook.ArmorFlameN++;
+            FireBook.ArmorFlameAmt += FireKindleRule.ArmorFlame;
+            EmitFireLevel(cause, u, FireLevelLabels.ArmorFlame, FireKindleRule.ArmorFlame, u.RawCounter(StatusKeys.Armor));
+            Log($"    {u.Name} の鎧に炎の破片がまとわりつく（破片 +{FireKindleRule.ArmorFlame}）", LogKind.Status);
+        }
+        if (u.HasTrait(TraitId.GiftHoard))
+        {
+            int h = u.RawCounter(FireKindleRule.GiftHoardKey);
+            if (h >= FireKindleRule.GiftHoardMax) FireBook.GiftHoardCapped++;
+            else
+            {
+                u.SetCounter(FireKindleRule.GiftHoardKey, h + 1);
+                FireBook.GiftHoardAdds++;
+                EmitFireLevel(cause, u, FireLevelLabels.GiftHoardAdd, 1, h + 1);
+                Log($"    {u.Name} が渡す火を溜めた（{h + 1}）", LogKind.Status);
+            }
+        }
+        if (u.HasTrait(TraitId.MendGlow)) MendGlow(u);
+    }
+
+    /// <summary>癒しの灯（H2）: 燃えている味方全員（自分を含む・席番号の順）を 4 回復（火の回復——ベニの反転の裏は通らず、渇きは素通り）。</summary>
+    void MendGlow(UnitState hiyo)
+    {
+        var allies = LivingMembers(hiyo.TeamId).Where(a => a.RawCounter(StatusKeys.Burn) > 0).ToList();
+        FireBook.MendGlowN++;
+        EmitFireLevel(hiyo, hiyo, FireLevelLabels.MendGlow, FireKindleRule.MendGlow, allies.Count);
+        Log($"    {hiyo.Name} から燃える味方へ小さな灯が飛ぶ", LogKind.Trigger);
+        foreach (UnitState a in allies)
+        {
+            if (!a.IsAlive) continue;
+            int before = a.Hp;
+            Heal(a, FireKindleRule.MendGlow, hiyo, inverted: true, fireHeal: true);
+            int g = Math.Max(0, a.Hp - before);
+            FireBook.MendGlowNom += FireKindleRule.MendGlow;
+            FireBook.MendGlowHp += g;
+            EmitFireLevel(hiyo, a, FireLevelLabels.MendGlowHeal, g, FireKindleRule.MendGlow);
+        }
+    }
+
+    /// <summary>渡す火（H1）: ギフトの相手の火勢を <paramref name="lift"/> だけ上げる（上限 4・燃えていなければ何もしない・既に 4 なら何もしない）。`GrowFire` を通さない（あぶれた火にならない）。</summary>
+    void LiftGift(UnitState hiyo, UnitState to, int lift)
+    {
+        int b = FireLevelRule.Of(to);
+        if (b <= 0) return;
+        if (b >= FireLevelRule.Max) { FireBook.GiftHoardAt4++; return; }
+        int a = Math.Min(FireLevelRule.Max, b + lift);
+        to.SetCounter(FireLevelRule.LvKey, a);
+        to.SetCounter(FireLevelRule.GrewKey, _turn);
+        FireBook.GiftHoardRaised++;
+        if (a == FireLevelRule.Max) { FireBook.GiftHoardTo4++; _giftLifted.Add(to); }
+        EmitFireLevel(hiyo, to, FireLevelLabels.GiftHoard, a, b);
+        Log($"    {hiyo.Name} が溜めた火を {to.Name} に渡す（火勢 {b} → {a}）", LogKind.Trigger);
     }
 
     // =====================================================================================
@@ -9008,16 +9133,31 @@ public sealed class BattleContext
             if (stoke) { wasBurning = LivingMembers(Opponent(actor.TeamId)).Where(f => f.RawCounter(StatusKeys.Burn) > 0).ToHashSet(); _unleashHits = new List<UnitState>(); }
             // 第249期（爆炎・札 `UnleashBlaze`）: 薙ぎの代わりに敵全体 ×3。巻き込みは起こさず（`SplashTrait` が `BlazeActor` を見る）、続いて味方全体に燃焼ダメージ。
             bool blaze = actor.HasTrait(TraitId.UnleashBlaze);
-            int blazeAmt = blaze ? Math.Max(0, actor.CurrentAttack) * FireFinishRule.BlazeAllyPercent / 100 : 0;
+            // 第252期（O1 溜め火）: 次の爆炎で、敵への倍率と味方への燃焼ダメージに溜め × 0.5 を足す。撃ったら 0。札が無ければ溜めは 0。
+            int hoard = blaze && _kindleLive && actor.HasTrait(TraitId.BlazeHoard) ? actor.RawCounter(FireKindleRule.HoardKey) : 0;
+            int unleashPct = FireBurstRule.UnleashPercent + hoard * FireKindleRule.HoardPercent;
+            int blazeAmt = blaze ? Math.Max(0, actor.CurrentAttack) * (FireFinishRule.BlazeAllyPercent + hoard * FireKindleRule.HoardPercent) / 100 : 0;
+            if (blaze && _kindleLive && actor.HasTrait(TraitId.BlazeHoard))
+            {
+                FireBook.HoardLog.Add((_turn, hoard, unleashPct));
+                if (hoard > 0)
+                {
+                    actor.SetCounter(FireKindleRule.HoardKey, 0);
+                    FireBook.HoardBlazes++;
+                    FireBook.HoardSpent += hoard;
+                    EmitFireLevel(actor, actor, FireLevelLabels.HoardRelease, hoard, unleashPct);
+                    Log($"  {actor.Name} が溜めた火 {hoard} を解き放つ（敵全体 ×{unleashPct / 100.0:0.#}）", LogKind.Highlight, actor);
+                }
+            }
             if (blaze)
             {
                 FireBook.Blazes++;
                 EmitFireLevel(actor, actor, FireLevelLabels.Blaze, blazeAmt, 0);
-                Log($"  {actor.Name} の火が爆ぜた——敵陣も味方も炎に包まれる（敵全体 ×{FireBurstRule.UnleashPercent / 100}・味方全体に燃焼 {blazeAmt}）", LogKind.Highlight, actor);
+                Log($"  {actor.Name} の火が爆ぜた——敵陣も味方も炎に包まれる（敵全体 ×{unleashPct / 100.0:0.#}・味方全体に燃焼 {blazeAmt}）", LogKind.Highlight, actor);
                 BlazeActor = actor;
             }
             _fireMoveIgnite = true;
-            try { PerformAttack(actor, attackPercent: FireBurstRule.UnleashPercent, patternOverride: blaze ? AttackPattern.All : AttackPattern.Sweep); }
+            try { PerformAttack(actor, attackPercent: unleashPct, patternOverride: blaze ? AttackPattern.All : AttackPattern.Sweep); }
             finally { _fireMoveIgnite = false; BlazeActor = null; }
             if (blaze && actor.IsAlive)
             {
@@ -9282,6 +9422,14 @@ public sealed class BattleContext
                     Log($"    {h.Name} の鎧に {hota.Name} の放熱が灯った（次の火は自分に）", LogKind.Trigger);
                 }
             }
+            if (h.HasTrait(TraitId.RadiateGrow))   // 第252期（B3 放熱で育つ）: その場で +1（放熱の印・指名はそのまま）
+            {
+                FireBook.RadiateGrowN++;
+                int b = FireLevelRule.Of(h);
+                EmitFireLevel(hota, h, FireLevelLabels.RadiateGrow, b, b);
+                GrowFire(h, 1, hota, FireLevelLabels.GrowRadiateNow);
+                if (FireLevelRule.Of(h) > b) FireBook.RadiateGrowRaised++;
+            }
             if (h.HasTrait(TraitId.BorgRadiate))
             {
                 if (h.RawCounter(FireCycleRule.RadiateKey) > 0) { FireBook.RadiateStacked++; continue; }
@@ -9467,6 +9615,19 @@ public sealed class BattleContext
         EmitFireArmor(u, u, FireArmorLabels.Kindle, 0);
         Log($"    {u.Name} の身体がくすぶり始めた", LogKind.Trigger);
         Ignite(u, friendly: true, source: u);
+        // 第252期（B2 開幕の火勢）: くすぶりの火を火勢2 から（その周回は萎まない＝延焼と同じ扱い）。札が無ければ比較1つで抜ける。
+        if (_kindleLive && u.HasTrait(TraitId.KindleOpen) && LvTracked(u.TeamId))
+        {
+            int b = FireLevelRule.Of(u);
+            if (b > 0 && b < FireKindleRule.OpenLevel)
+            {
+                u.SetCounter(FireLevelRule.LvKey, FireKindleRule.OpenLevel);
+                u.SetCounter(FireLevelRule.GrewKey, Math.Max(1, _turn));
+                FireBook.OpenLv++;
+                EmitFireLevel(u, u, FireLevelLabels.KindleOpen, FireKindleRule.OpenLevel, b);
+                Log($"    {u.Name} のくすぶりは初めから強い（火勢 {FireKindleRule.OpenLevel}）", LogKind.Status);
+            }
+        }
     }
 
     /// <summary>焼き返し（第235期・H2）。殴る前から燃えていた主目標を殴った: 与えた量の半分を回復し、自分に火。</summary>
@@ -10485,6 +10646,7 @@ public sealed class BattleContext
                     ft.FireArmorSaved += saved;
                     EmitFireArmor(target, target, FireArmorLabels.Guard, saved);
                     Log($"    燃える {target.Name} の鎧が痛みを半分に抑えた（-{saved}）", LogKind.Trigger);
+                    if (_kindleLive) KindleGuard(target, saved, 0);   // 第252期（B1・札が無ければ何もしない）
                 }
             }
         }
@@ -10506,6 +10668,7 @@ public sealed class BattleContext
                 TallyOf(target).FireWardTaken += saved;
                 EmitFireArmor(ward, target, FireArmorLabels.Ward, saved);
                 Log($"    {ward.Name} の火が燃える {target.Name} を守った（-{saved}）", LogKind.Trigger);
+                if (_kindleLive) KindleGuard(ward, saved, 1);   // 第252期（B1・札が無ければ何もしない）
             }
         }
 

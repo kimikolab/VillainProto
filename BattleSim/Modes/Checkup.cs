@@ -220,6 +220,14 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.PyreFed]        = (HcPlusL, "燃えている間に味方から火を点けられるたび攻撃力 +2 だけ"),
         [TraitId.BurnoutHeavy]   = (HcPlusL, "焼き尽くすの全体の1発を ×4 から ×7 にするだけ"),
         [TraitId.BlazeSolo]      = (HcBothL, "ヒヨがいなければ自分の手番の火勢4 で爆炎を撃つ——味方全体に燃焼ダメージ（ヒヨの火の変換が無いので焼かれる）"),
+        // 第252期: 保持者 0 枚（版は `firekindle` のローカルの駒）。規定にした期に分類が無いと `checkup ideal` が止まるので先に足す。
+        [TraitId.KindleGuard]    = (HcPlusL, "火の鎧・盾の配りで切った被ダメ 30 ごとに火勢 +1 だけ"),
+        [TraitId.KindleOpen]     = (HcPlusL, "くすぶりの火を火勢2 から始めるだけ"),
+        [TraitId.RadiateGrow]    = (HcPlusL, "味方のホタが焼き尽くすとその場で火勢 +1 だけ"),
+        [TraitId.BlazeHoard]     = (HcBothL, "火勢4 で来た育ちを溜め、次の爆炎の敵への倍率を上げる——味方への燃焼ダメージも同じだけ重くなる"),
+        [TraitId.ArmorFlame]     = (HcPlusL, "火勢4 で来た育ちを破片 +6 に変えるだけ"),
+        [TraitId.GiftHoard]      = (HcPlusL, "火勢4 で来た育ちを溜め、ギフトの相手の火勢をその数だけ上げるだけ"),
+        [TraitId.MendGlow]       = (HcPlusL, "火勢4 で来た育ちのたびに燃えている味方全員を 4 回復するだけ"),
         // 第180期: ムド（暴発＋泥散り）・ヴィオ（吐き戻し）・ガン（叩き起こし）。
         // **マイナスを別の `TraitId` に切り出してあるので `yP` が組める**（第74期の作法）。
         [TraitId.Erupt]      = (HcPlusL,  "殴られた回数を溜めて割り込み連撃する。代金は別の札（`Smear`）に切り出してある"),

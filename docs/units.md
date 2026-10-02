@@ -360,6 +360,13 @@
 | `PyreFed` | 熾のホタ |
 | `BurnoutHeavy` | 熾のホタ |
 | `BlazeSolo` | 焼け残りのボルグ |
+| `KindleGuard` | - |
+| `KindleOpen` | - |
+| `RadiateGrow` | - |
+| `BlazeHoard` | - |
+| `ArmorFlame` | - |
+| `GiftHoard` | - |
+| `MendGlow` | - |
 | `TickOnce` | - |
 | `Inversion` | - |
 | `Drought` | - |

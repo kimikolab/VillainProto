@@ -3639,6 +3639,29 @@ public static class FireLevelLabels
     /// <summary>第250期: 見出し: 爆炎・独り（ヒヨがいないので、ボルグが自分の手番で爆炎を撃つ）。`放つ` の直前に1件。
     /// <c>ActorId</c> ＝ <c>TargetId</c> ＝ ボルグ ／ <c>Amount</c> ＝ 4（火勢）。続く `放つ`・`爆炎` はギフトの手番の爆炎と同じ。<b>表示専用。</b></summary>
     public const string BlazeSolo = "爆炎・独り";
+    /// <summary>第252期（B1）: 見出し: 守るほど燃え上がる（火の鎧・盾の配りで切った被ダメの累計が 30 に達した）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ボルグ ／
+    /// <c>Amount</c> ＝ そのときの火勢 ／ <c>Slot</c> ＝ 30 を引いた後の累計の残り。続いて「育つ・守り」（火勢4 ならあぶれた火）。<b>表示専用。</b></summary>
+    public const string KindleGuard = "守るほど燃え上がる";
+    public const string GrowGuard = "育つ・守り";
+    /// <summary>第252期（B2）: 開幕の火勢（くすぶりの火が 2 から始まる）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ボルグ ／ <c>Amount</c> ＝ 2 ／ <c>Slot</c> ＝ 前（1）。<b>表示専用。</b></summary>
+    public const string KindleOpen = "開幕の火勢";
+    /// <summary>第252期（B3）: 放熱で育つ（ホタの焼き尽くすの後・その場で +1）。<c>ActorId</c> ＝ ホタ ／ <c>TargetId</c> ＝ ボルグ ／ <c>Amount</c> ＝ <c>Slot</c> ＝ 育つ前の火勢。続いて「育つ・放熱（即）」。<b>表示専用。</b></summary>
+    public const string RadiateGrow = "放熱で育つ";
+    public const string GrowRadiateNow = "育つ・放熱（即）";
+    /// <summary>第252期（O1）: 溜め火（火勢4 のボルグに育ちが来て溜めた）。<c>ActorId</c> ＝ 育ちを起こした駒 ／ <c>TargetId</c> ＝ ボルグ ／ <c>Amount</c> ＝ 1 ／ <c>Slot</c> ＝ 溜めた後の数。<b>表示専用。</b></summary>
+    public const string Hoard = "溜め火";
+    /// <summary>第252期（O1）: 溜め火を解き放つ（爆炎の直前・`爆炎` の見出しより前）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ボルグ ／ <c>Amount</c> ＝ 使った溜め ／ <c>Slot</c> ＝ 敵への倍率（百分率・300 ＋ 50 × 溜め）。<b>表示専用。</b></summary>
+    public const string HoardRelease = "溜め火・解き放つ";
+    /// <summary>第252期（O2）: 鎧の火（火勢4 のボルグに育ちが来て破片 +6）。<c>ActorId</c> ＝ 育ちを起こした駒 ／ <c>TargetId</c> ＝ ボルグ ／ <c>Amount</c> ＝ 6 ／ <c>Slot</c> ＝ 付けた後の破片。<b>表示専用。</b></summary>
+    public const string ArmorFlame = "鎧の火";
+    /// <summary>第252期（H1）: 渡す火を溜めた（火勢4 のヒヨに育ちが来た）。<c>ActorId</c> ＝ 育ちを起こした駒 ／ <c>TargetId</c> ＝ ヒヨ ／ <c>Amount</c> ＝ 1 ／ <c>Slot</c> ＝ 溜めた後の数（上限 3）。<b>表示専用。</b></summary>
+    public const string GiftHoardAdd = "渡す火・溜め";
+    /// <summary>第252期（H1）: 渡す火（ギフトの相手の火勢を溜めの数だけ上げた・`ターンギフト` の直後）。<c>ActorId</c> ＝ ヒヨ ／ <c>TargetId</c> ＝ 相手 ／ <c>Amount</c> ＝ 上げた後 ／ <c>Slot</c> ＝ 上げる前。<b>表示専用。</b></summary>
+    public const string GiftHoard = "渡す火";
+    /// <summary>第252期（H2）: 見出し: 癒しの灯（火勢4 のヒヨに育ちが来た）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ヒヨ ／ <c>Amount</c> ＝ 4 ／ <c>Slot</c> ＝ 燃えている味方の数。続いて味方ごとの「癒しの灯・癒す」。<b>表示専用。</b></summary>
+    public const string MendGlow = "癒しの灯";
+    /// <summary>第252期（H2）: 癒しの灯で癒えた味方。<c>ActorId</c> ＝ ヒヨ ／ <c>TargetId</c> ＝ 味方 ／ <c>Amount</c> ＝ 増えた HP ／ <c>Slot</c> ＝ 名目（4）。<b>表示専用。</b></summary>
+    public const string MendGlowHeal = "癒しの灯・癒す";
 }
 
 /// <summary>撃破の衝撃（第230期）の <c>Text</c>。<b>表示専用。</b></summary>
@@ -3789,6 +3812,23 @@ public sealed class FireLevelLedger
     public readonly Dictionary<string, long> OverflowChanceBy = new(), FedChanceBy = new();
     public readonly long[] BlazeSoloNom = new long[5], BlazeSoloHp = new long[5];
     public readonly Dictionary<string, long[]> BlazeSoloById = new();
+    /// <summary>第252期（B1 守るほど燃え上がる）: 切った被ダメ（燃えている間・添字 0 火の鎧 ／ 1 盾の配り）・燃えていなくて数えなかった量・+1 の回数・実際に火勢が上がった回数。<b>計数のみ。</b></summary>
+    public readonly long[] GuardSaved = new long[2];
+    public long GuardOff, GuardSteps, GuardRaised;
+    /// <summary>第252期（B2 開幕の火勢 ／ B3 放熱で育つ）: 回数 ／ 放熱で育った回数・実際に上がった回数。<b>計数のみ。</b></summary>
+    public long OpenLv, RadiateGrowN, RadiateGrowRaised;
+    /// <summary>第252期（O1 溜め火）: 溜めた回数・溜めを使った爆炎の数・使った溜めの和・爆炎ごとの（溜め, 敵への倍率）。<b>計数のみ。</b></summary>
+    public long HoardAdds, HoardBlazes, HoardSpent;
+    public readonly List<(int Turn, int Hoard, int Percent)> HoardLog = new();
+    /// <summary>第252期（O2 鎧の火）: 回数・破片の和。<b>計数のみ。</b></summary>
+    public long ArmorFlameN, ArmorFlameAmt;
+    /// <summary>第252期（H1 渡す火）: 溜めた回数・上限で捨てた回数・溜めを使ったギフト・使った溜めの和・上げた相手・4 に届いた相手・既に 4 だった相手・
+    /// 4 に届いた相手がそのギフトの手番で大技を撃った回数。<b>計数のみ。</b></summary>
+    public long GiftHoardAdds, GiftHoardCapped, GiftHoardGifts, GiftHoardSpent, GiftHoardRaised, GiftHoardTo4, GiftHoardAt4, GiftHoardBig;
+    /// <summary>第252期（H2 癒しの灯）: 回数・名目の和・増えた HP の和。<b>計数のみ。</b></summary>
+    public long MendGlowN, MendGlowNom, MendGlowHp;
+    /// <summary>第252期 Phase 0: 札が無くても数える機会——火勢4 で育ちを受けた（受けた駒の Id ごと）。<b>計数のみ・誰も読んで分岐しない。</b></summary>
+    public readonly Dictionary<string, long> MaxGrowChanceBy = new();
 }
 
 public sealed class BurnLinkLedger
