@@ -1,0 +1,16 @@
+{
+  "generator": "built-in image_gen",
+  "effects": "炎・光・火柱はゲーム内エフェクト。立ち絵には描き込まない。",
+  "assets": [
+    {
+      "name": "hota_sword_raise",
+      "destination": "DemoApp/assets/portraits/battle/hota_sword_raise_idle_right.png",
+      "prompt": "Use case: identity-preserve. Asset type: transparent battle sprite for a 2.5D game. Reference image is Hota; preserve exactly her face, copper long hair, turquoise eyes, black and bronze armor, maroon torn cloth tails, slim steel sword with blue gem guard, proportions and detailed anime rendering. Full body right-facing three-quarter view. True transparent alpha outside character; no matte, halo, background, shadow, fire, glow, particles or energy effects. Effects are added separately in-game. Fit entire sword and both feet inside 1024x1536 with margins. Change pose to a powerful overhead sword raising stance: BOTH hands gripping the same single sword hilt just above her forehead, blade pointing straight vertically up. Feet wide planted, torso upright, fierce focused face visible below hands. Hair and cloth flowing back toward left. This is the held pose before slamming a gigantic energy sword downward. Keep sword entirely visible, physical metal blade only. Allow space above head for raised sword; no extra weapons."
+    },
+    {
+      "name": "hota_sword_slam",
+      "destination": "DemoApp/assets/portraits/battle/hota_sword_slam_idle_right.png",
+      "prompt": "Use case: identity-preserve. Asset type: transparent battle sprite for a 2.5D game. Reference image is Hota; preserve exactly her face, copper long hair, turquoise eyes, black and bronze armor, maroon torn cloth tails, slim steel sword with blue gem guard, proportions and detailed anime rendering. Full body right-facing three-quarter view. True transparent alpha outside character; no matte, halo, background, shadow, fire, glow, particles or energy effects. Effects are added separately in-game. Fit entire sword and both feet inside 1024x1536 with margins. Change pose to a powerful overhead sword slam FOLLOW-THROUGH to screen right. Front knee deeply bent, rear leg braced, torso leaning forward toward right, BOTH hands gripping her single sword hilt in front of waist; long sword extends diagonally DOWN and RIGHT ending near the ground at the right edge. Hair and cloth stream up and back toward left from the force. Determined face facing right. No straight horizontal thrust: unmistakable heavy downward chop. Both feet and entire metal sword visible."
+    }
+  ]
+}

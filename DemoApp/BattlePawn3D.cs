@@ -86,6 +86,7 @@ public partial class BattlePawn3D : Node3D
     {
         bool active = burning && _alive && !_victory;
         _fire.Visible = active;
+        if (!active) ClearFireVisual();
         if (_burning == active) return;
         _burning = active;
         // 勝利絵の表示後に遅れた通知が来ても、戦闘絵で上書きしない。
@@ -179,64 +180,7 @@ public partial class BattlePawn3D : Node3D
         };
         AddChild(_turnRing);
 
-        // サークルの周囲へ炎を立てる。奥側は駒に隠れ、手前側は足に重なる。
-        // 面は Y 軸だけでカメラへ向け、炎の根元を地面に固定する。
-        var fireShader = new Shader { Code = @"shader_type spatial;
-render_mode unshaded, cull_disabled, blend_mix, depth_draw_never;
-uniform float phase = 0.0;
-void vertex() {
-    vec3 right = normalize(vec3(INV_VIEW_MATRIX[0].x, 0.0, INV_VIEW_MATRIX[0].z));
-    vec3 up = vec3(0.0, 1.0, 0.0);
-    vec3 forward = cross(right, up);
-    MODELVIEW_MATRIX = VIEW_MATRIX * mat4(
-        vec4(right * length(MODEL_MATRIX[0].xyz), 0.0),
-        vec4(up * length(MODEL_MATRIX[1].xyz), 0.0),
-        vec4(forward * length(MODEL_MATRIX[2].xyz), 0.0), MODEL_MATRIX[3]);
-}
-void fragment() {
-    float t = TIME * 2.8 + phase;
-    float y = 1.0 - UV.y;
-    float flame = 0.0;
-    for (int i = 0; i < 2; i++) {
-        float k = float(i);
-        float h = 0.48 + 0.20 * sin(t * 1.3 + k * 2.1);
-        float x = 0.27 + k * 0.46 + sin(y * 8.0 - t * 2.0 + k) * 0.12 * y;
-        float width = 0.26 * max(0.0, 1.0 - y / h);
-        flame = max(flame, (1.0 - smoothstep(width * 0.35, width + 0.012, abs(UV.x - x))) * (1.0 - smoothstep(h - 0.10, h, y)));
-    }
-    float sparks = 0.0;
-    for (int i = 0; i < 5; i++) {
-        float k = float(i);
-        float rise = fract(t * 0.23 + k * 0.21);
-        vec2 p = vec2(0.15 + k * 0.17 + sin(t + k) * 0.035, rise);
-        sparks = max(sparks, (1.0 - smoothstep(0.004, 0.015, length(UV - vec2(p.x, 1.0 - p.y)))) * sin(rise * 3.14159));
-    }
-    vec3 fire = mix(vec3(1.0, 0.82, 0.18), vec3(1.0, 0.15, 0.015), smoothstep(0.04, 0.65, y));
-    ALBEDO = fire;
-    EMISSION = fire * 1.4;
-    ALPHA = max(flame * 0.85 * smoothstep(0.0, 0.04, y), sparks);
-}" };
-        _fire = new Node3D { Visible = false };
-        AddChild(_fire);
-        var fireMesh = new QuadMesh { Size = new Vector2(0.52f, 1.1f) };
-        const int flameCount = 12;
-        for (int i = 0; i < flameCount; i++)
-        {
-            // 駒ごとに固定したばらつき。隣同士の順序を保ち、均等な柵に見えない程度に崩す。
-            float spacing = Mathf.Tau / flameCount;
-            float angle = spacing * (i + 0.22f * Mathf.Sin(i * 2.399f + _phase));
-            float heightScale = 1.0f + 0.22f * Mathf.Sin(i * 4.137f + _phase * 1.7f);
-            var fireMaterial = new ShaderMaterial { Shader = fireShader };
-            fireMaterial.SetShaderParameter("phase", _phase + i * 1.73f);
-            _fire.AddChild(new MeshInstance3D
-            {
-                Mesh = fireMesh,
-                Position = new Vector3(Mathf.Cos(angle) * 0.78f, 0.05f + 0.55f * heightScale, Mathf.Sin(angle) * 0.78f),
-                Scale = new Vector3(1, heightScale, 1),
-                MaterialOverride = fireMaterial,
-                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-            });
-        }
+        BuildFireVisual();
 
         _poison = new PoisonEffect3D();
         _poison.Configure(_phase);
@@ -278,6 +222,9 @@ uniform float aura_amount = 0.0;
 uniform float numb_amount = 0.0;
 uniform float scar_glow = 0.0;
 uniform float guren_flash = 0.0;
+uniform vec4 fire_tint : source_color = vec4(1.0,0.3,0.03,1.0);
+uniform float fire_heat = 0.0;
+uniform float fire_damage = 0.0;
 void fragment() {
     vec4 c = texture(portrait_texture, UV);
     vec4 top_left = texture(portrait_texture, vec2(0.02, 0.02));
@@ -307,6 +254,12 @@ void fragment() {
     vec3 guren_color = mix(vec3(1.0,0.09,0.04),vec3(0.51,0.06,0.83),smoothstep(0.25,0.75,UV.x));
     ALBEDO = mix(ALBEDO, guren_color, guren_flash * 0.65);
     EMISSION += guren_color * guren_flash * 0.4;
+    // 光は輪郭と金属の縁へ。侵食だけ細い亀裂と煤を重ね、顔の色は保つ。
+    float metal_edge = smoothstep(0.18,0.7,dot(c.rgb,vec3(0.3,0.59,0.11)));
+    float heat_zone = smoothstep(0.25,0.65,UV.y);
+    float fire_crack = pow(max(0.0,1.0-abs(sin(UV.y*61.0+sin(UV.x*39.0)*2.0))),24.0);
+    ALBEDO *= 1.0-fire_damage*heat_zone*0.22;
+    EMISSION += fire_tint.rgb*heat_zone*(metal_edge*fire_heat*0.35+fire_crack*fire_damage*0.65);
     ALPHA = alpha;
 }"
         };
@@ -713,6 +666,7 @@ void fragment() {
             0);
         UpdateRapierGlow();
         UpdateSpecialEffects(animationDelta);
+        UpdateFireVisual((float)delta);
         ProcessLili(animationDelta);
         ProcessPlankWork(animationDelta);
         UpdatePlank(animationDelta);

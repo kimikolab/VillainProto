@@ -1,0 +1,61 @@
+{
+  "generator": "built-in image_gen",
+  "effects": "炎・火の粉・放熱の印はエフェクト側で描画する。画像には追加しない。",
+  "integration": "hota_burning は既存参照先を差し替え。追加8ポーズはMain.Fire / BattlefieldView3D.Fireでイベントへ接続済み。",
+  "assets": [
+    {
+      "name": "hota_burning_idle_right.png",
+      "prompt": "Use case: precise-object-edit. Edit target: first image, Hota burning battle portrait. Supporting identity reference: second image, normal Hota. Create a clean replacement for the burning portrait with ALL flames, sparks, embers, glowing outlines and fire reflections removed. Preserve the first image's confident slight smile, relaxed left arm, sword, exact character identity, copper long hair, turquoise eyes, black bronze armor, maroon torn cloth, body proportions, full-body right-facing three-quarter stance and foot placement. Clean natural anime game sprite shading, same crisp detailed rendering. No new effects. Entire sword and both feet visible. 1024x1536 portrait canvas, character scale and framing matching source. Genuinely transparent background, no green, no black matte, no ground shadow, no text. This is only the character layer; all fire will be rendered separately in the game.",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a0f753-911a-7002-aa56-19d1563282f0\\exec-c0878fb1-8cce-41e9-af60-6c84296c9231.png",
+      "destination": "DemoApp/assets/portraits/battle/hota_burning_idle_right.png"
+    },
+    {
+      "name": "hota_charge_idle_right.png",
+      "prompt": "Use case: identity-preserve. Edit the reference into ONE full-body battle action sprite of the SAME character. Gathering-power pose: knees bent slightly, torso inclined, both hands close around the sword hilt at chest height, sword aimed diagonally upward to screen right. Intense focused expression. Hair drawn back by motion. Keep both feet planted and visible. Preserve exact face, copper hair, turquoise eyes, black bronze armor, maroon skirt and torn tails, original sword design, anatomy and detailed anime linework/shading. Right-facing three-quarter view, 1024x1536 canvas, entire character and weapon within frame with small safety margins. NO FIRE, no flames, no particles, no smoke, no aura, no glow, no lighting halo, no ground or shadow. Opaque character only with truly transparent alpha outside the silhouette, not a black/green background. Effects will be added in game. No text or layout panels.",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a0f753-911a-7002-aa56-19d1563282f0\\exec-7268c83d-9be9-4228-aae4-5f6d4d1fd8e2.png",
+      "destination": "DemoApp/assets/portraits/battle/hota_charge_idle_right.png"
+    },
+    {
+      "name": "hota_release_idle_right.png",
+      "prompt": "Use case: identity-preserve. Edit the reference into ONE full-body battle action sprite of the SAME character. Powerful release pose: a decisive forward step to screen right, torso open, right arm thrusting her same sword toward screen right, left arm extended backward for balance. Fierce confident expression. Long hair and torn cloth sweep left. Full sword fits within canvas. Preserve exact face, copper hair, turquoise eyes, black bronze armor, maroon skirt and torn tails, original sword design, anatomy and detailed anime linework/shading. Right-facing three-quarter view, 1024x1536 canvas, entire character and weapon within frame with small safety margins. NO FIRE, no flames, no particles, no smoke, no aura, no glow, no lighting halo, no ground or shadow. Opaque character only with truly transparent alpha outside the silhouette, not a black/green background. Effects will be added in game. No text or layout panels.",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a0f753-911a-7002-aa56-19d1563282f0\\exec-430fa837-5021-4afc-8166-d247b3632c2b.png",
+      "destination": "DemoApp/assets/portraits/battle/hota_release_idle_right.png"
+    },
+    {
+      "name": "hiyo_fan_idle_right.png",
+      "prompt": "Use case: identity-preserve. Reference is Hiyo's existing sprite. Make ONE separate action sprite of exactly this same elf mage girl. Leaning slightly toward screen right, one hand holding her original ornate red-gem staff angled behind her shoulder, other open palm sweeping forward at chest height as if gently fanning power toward an ally. Bright encouraging smile. Both feet visible. Preserve blonde ponytail red bow, amber eyes, pointed ears, red gold star cape and layered red white outfit, brown gloves boots pouches and staff design, original body proportions and crisp anime game illustration. Full body, facing right three-quarter view, 1024x1536. No fire, flames, sparks, magic beams, light effects, aura, mist, shadow or backdrop. Only the physical character and equipment, genuinely transparent alpha around her. Keep generous margin around all edges, no clipping. No text.",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a0f753-911a-7002-aa56-19d1563282f0\\exec-9c7f9486-1e36-4e17-90d3-2ec539f87031.png",
+      "destination": "DemoApp/assets/portraits/battle/hiyo_fan_idle_right.png"
+    },
+    {
+      "name": "hiyo_gift_idle_right.png",
+      "prompt": "Use case: identity-preserve. Reference is Hiyo's existing sprite. Make ONE separate action sprite of exactly this same elf mage girl. Grand giving-power pose, arms spread expansively, one hand holding her original ornate red-gem staff upright, other palm extended toward screen right. Chest open, delighted determined expression, red cape and ribbons flowing left. Keep entire staff, both hands and both feet inside frame. Preserve blonde ponytail red bow, amber eyes, pointed ears, red gold star cape and layered red white outfit, brown gloves boots pouches and staff design, original body proportions and crisp anime game illustration. Full body, facing right three-quarter view, 1024x1536. No fire, flames, sparks, magic beams, light effects, aura, mist, shadow or backdrop. Only the physical character and equipment, genuinely transparent alpha around her. Keep generous margin around all edges, no clipping. No text.",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a0f753-911a-7002-aa56-19d1563282f0\\exec-cd3799ab-602e-4318-a0f6-b4c6353f6d56.png",
+      "destination": "DemoApp/assets/portraits/battle/hiyo_gift_idle_right.png"
+    },
+    {
+      "name": "borg_guard_idle_right.png",
+      "prompt": "Use case: identity-preserve. Reference is Borg's existing sprite. Create ONE full-body alternate battle sprite of the SAME tall muscular black-haired red-eyed male warrior. Defensive bracing pose: knees bent, heavy torso twisted toward screen right, left armored forearm held protectively across chest, right hand keeps his original heavy greatsword low angled to screen right. Stern enduring expression. Do not add a shield. Preserve armor silhouette and original dark steel spiked pauldrons, gauntlets and boots, exposed upper arms, torn red waist cloth, broad sword proportions, anime line art style. Existing red scars may remain as thin dull red scars, but remove their emitted glow. No flames, sparks, aura, particles, smoke, speed lines or glow. Right-facing three-quarter view. True transparent alpha background, character and equipment only, no shadow. 1024x1536 portrait canvas, full body and full sword visible with margin. No text.",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a0f753-911a-7002-aa56-19d1563282f0\\exec-4943a5b2-2279-4cdc-a654-3a3e768273a3.png",
+      "destination": "DemoApp/assets/portraits/battle/borg_guard_idle_right.png"
+    },
+    {
+      "name": "borg_release_idle_right.png",
+      "prompt": "Use case: identity-preserve. Reference is Borg's existing sprite. Create ONE full-body alternate battle sprite of the SAME tall muscular black-haired red-eyed male warrior. Powerful broad horizontal slash follow-through toward screen right, both hands firmly gripping his original broad heavy greatsword, hips and shoulders rotating, forward foot planted, long black hair and red cloth trailing left. Sword angled across foreground toward screen right, blade entirely inside canvas. Forceful stoic expression. Preserve armor silhouette and original dark steel spiked pauldrons, gauntlets and boots, exposed upper arms, torn red waist cloth, broad sword proportions, anime line art style. Existing red scars may remain as thin dull red scars, but remove their emitted glow. No flames, sparks, aura, particles, smoke, speed lines or glow. Right-facing three-quarter view. True transparent alpha background, character and equipment only, no shadow. 1024x1536 portrait canvas, full body and full sword visible with margin. No text.",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a0f753-911a-7002-aa56-19d1563282f0\\exec-11183ed9-ea5a-49a2-a260-2d9140291498.png",
+      "destination": "DemoApp/assets/portraits/battle/borg_release_idle_right.png"
+    },
+    {
+      "name": "hota_embers_idle_right.png",
+      "prompt": "Use case: identity-preserve. Make ONE alternate full-body action sprite based on the attached original character. After releasing a great attack: tired but composed, shoulders relaxed, torso leaning forward slightly, knees mildly bent, sword hanging down diagonally toward screen right, free hand resting lightly near her chest. Eyes still open and focused right, small satisfied smile. Not injured, not kneeling or dying. Same copper hair, turquoise eyes, black bronze armor and maroon torn cloth. Preserve exact character identity, outfit, weapon design, body proportions and detailed crisp anime game art. Face screen right in three-quarter view. 1024x1536 portrait, entire body and equipment visible with safety margins. Transparent background with clean alpha edges, NO flames, fire, embers, smoke, particles, aura, glow, backlight, backdrop, shadow or text. All special effects will be added separately in game.",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a0f753-911a-7002-aa56-19d1563282f0\\exec-5d3eab1f-1f44-4863-82cd-267e7e1e5c5d.png",
+      "destination": "DemoApp/assets/portraits/battle/hota_embers_idle_right.png"
+    },
+    {
+      "name": "hiyo_collect_idle_right.png",
+      "prompt": "Use case: identity-preserve. Make ONE alternate full-body action sprite based on the attached original character. Collecting invisible motes: hold her original red gem staff in one hand behind the shoulder, other hand cupped gracefully close to chest, looking toward that empty palm with a delighted gentle smile, slight forward lean. The hand is EMPTY, no actual motes. Same blonde ponytail, pointed ears, amber eyes, red gold white cape dress, brown boots. Preserve exact character identity, outfit, weapon design, body proportions and detailed crisp anime game art. Face screen right in three-quarter view. 1024x1536 portrait, entire body and equipment visible with safety margins. Transparent background with clean alpha edges, NO flames, fire, embers, smoke, particles, aura, glow, backlight, backdrop, shadow or text. All special effects will be added separately in game.",
+      "source": "C:\\Users\\Pon\\.codex\\generated_images\\01a0f753-911a-7002-aa56-19d1563282f0\\exec-a4fb2e6e-ec43-479d-b761-db5da1e8ab00.png",
+      "destination": "DemoApp/assets/portraits/battle/hiyo_collect_idle_right.png"
+    }
+  ]
+}

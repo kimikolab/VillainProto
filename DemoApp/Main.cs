@@ -1181,6 +1181,8 @@ public partial class Main : Control
         if (_result is null) return;
         _finishSoundIndex = FinishSoundCue.Find(_result.PlayerWon, _battleOpening, _result.Events);
         _movement = new MovementPresentation(_result.Events);
+        _firePresentation = new FirePresentation(_result.Events);
+        _fireFastEvent = false;
         int token = ++_playToken;
         _comboEnds.Clear();
         _hexMarksShown = _hexSharePlays = _hexShareHits = 0;
@@ -1211,6 +1213,7 @@ public partial class Main : Control
             BattleEvent e = _result.Events[eventIndex];
             await ApplyEvent(e, eventIndex);
             _tickDelayBudget = null;
+            _fireFastEvent = false;
             foreach (var combo in _comboEnds.Where(pair => _eventIndex >= pair.Value).ToArray())
             {
                 combo.Key.ReturnFromAttack();
@@ -1315,6 +1318,8 @@ public partial class Main : Control
         // 第125期 段2: 拍の境目でだけ画面を変える。**ここでは待たない**（間は下の switch の中だけ）。
         EnterBeat(eventIndex, e);
         _tickDelayBudget = _ticks.Budgets.TryGetValue(eventIndex, out double tickBudget) ? tickBudget : null;
+        _fireFastEvent = _firePresentation.FastEvents.Contains(eventIndex);
+        if (await PlayFire(e, eventIndex, actor, target)) return;
         if (await PlayMovement(e, eventIndex, actor, target)) return;
         if (await PlayThunder(e, eventIndex, actor, target)) return;
         if (await PlayMire(e, eventIndex, actor, target)) return;
@@ -1393,7 +1398,9 @@ public partial class Main : Control
                 {
                     _comboEnds[actor] = comboEnd;
                 }
-                await _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire,
+                if (_firePresentation.Attacks.TryGetValue(eventIndex, out var fireAttack))
+                    await _battleField.PlayFireAttack(actor, target, impactTargets, fireAttack, _speed);
+                else await _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire,
                     advance: !continuingCombo, holdPosition: actor is not null && _comboEnds.ContainsKey(actor),
                     shieldImpact: shieldShares.Count == 0 ? null :
                         () => _battleField.ShowRangeShield(actor, impactTargets, shieldShares, pattern, _speed),
@@ -2340,6 +2347,7 @@ public partial class Main : Control
 
     private async Task Delay(double seconds, bool raw = false)
     {
+        if (!raw && _fireFastEvent) return;
         if (!raw && _tickDelayBudget is double budget)
         {
             seconds = Math.Min(seconds, budget);

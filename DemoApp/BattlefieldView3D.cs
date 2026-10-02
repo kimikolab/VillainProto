@@ -90,7 +90,7 @@ public partial class BattlefieldView3D : Control
         BuildOverlay();
         _attackAudio = new BattleAttackAudio();
         AddChild(_attackAudio);
-        VisibilityChanged += () => { if (!IsVisibleInTree()) { _attackAudio.StopAll(); ResetLiliRite(); } };
+        VisibilityChanged += () => { if (!IsVisibleInTree()) { _attackAudio.StopAll(); ResetLiliRite(); ResetFire(); } };
     }
 
     private void BuildWorld()
@@ -112,11 +112,16 @@ public partial class BattlefieldView3D : Control
             AmbientLightEnergy = 0.42f,
             ReflectedLightSource = Godot.Environment.ReflectionSource.Sky,
             TonemapMode = Godot.Environment.ToneMapper.Filmic,
+            GlowEnabled = false,
+            GlowIntensity = 0.30f,
+            GlowBloom = 0,
+            GlowHdrThreshold = 2.1f,
             FogEnabled = true,
             FogLightColor = Color.FromHtml("#a8b6ae"),
             FogLightEnergy = 0.62f,
             FogDensity = 0.0035f,
         };
+        _fireEnvironment = environment;
         _world.AddChild(new WorldEnvironment { Environment = environment });
         _world.AddChild(new DirectionalLight3D
         {
@@ -281,6 +286,7 @@ public partial class BattlefieldView3D : Control
 
     public void BeginBattle(IReadOnlyList<DemoOpening> openings, string stageName, int stageIndex)
     {
+        ResetFire();
         ResetMovement();
         YomiIaiPlays = YomiIaiExtraPlays = 0;
         YomiSweepPlays = HaneBlastPlays = HanePinPlays = 0;

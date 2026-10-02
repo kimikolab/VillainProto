@@ -14,7 +14,20 @@ public partial class Main
             bool inverse = e.SourceTrait == TraitId.Inverse;
             if (e.Text == "燃焼" && !inverse && target?.PlankPieceCount > 0)
                 _battleField.PlankImpact(target, 40, _speed, true);
-            _battleField.ShowTick(target, e.Text == "燃焼", inverse,
+            if (e.Text == "燃焼")
+            {
+                // 体質やヒヨの生死を推定しない。この刻みの実際の帰結だけを読む。
+                bool damage = false, healing = false;
+                foreach (var outcome in _ticks.Outcomes)
+                    if (outcome.Value.Start == index)
+                    {
+                        damage |= _result!.Events[outcome.Key].Kind == BattleEventKind.Damage
+                            && _result.Events[outcome.Key].Amount > 0;
+                        healing |= _result!.Events[outcome.Key].Kind == BattleEventKind.Heal;
+                    }
+                _battleField.ShowFireTick(target, healing, damage, cue.Seconds / System.Math.Max(0.1, _speed));
+            }
+            else _battleField.ShowTick(target, false, inverse,
                 cue.Last && e.TickCount > 1, cue.Seconds / System.Math.Max(0.1, _speed));
             _tickPlays++;
             if (inverse) _inverseTickPlays++;

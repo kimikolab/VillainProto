@@ -15,8 +15,10 @@ public partial class BattlefieldView3D
         if (beni is null) return;
         GurenGains++;
         beni.SetGuren(remaining);
+        beni.TintGurenFire(source?.FireLevel ?? 1);
         if (source is not null)
-            FlowDrops(source.FxPoint, beni.FlowerPoint, new Color("f1394c"), 0.24 / speed, false, pull: true);
+            FlowDrops(source.FxPoint, beni.FlowerPoint,
+                new Color("f1394c").Lerp(FireFx.ColorOf(source.FireLevel), source.FireLevel / 5f), 0.24 / speed, false, pull: true);
     }
 
     public void ShowGurenRelease(BattlePawn3D? beni, IReadOnlyList<BattlePawn3D> targets, double speed)

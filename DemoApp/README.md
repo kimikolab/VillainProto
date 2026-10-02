@@ -301,7 +301,50 @@ Godot_console.exe --headless --path DemoApp res://MovementCheck.tscn -- --replay
 Godot_console.exe --path DemoApp res://MovementAudioCheck.tscn
 ```
 
-### 既存の素材
+### 燃焼軸の演出
+
+`FireLevel` / `FireArmor` の表示専用通知を `Main.Fire.cs` で受け、
+`FirePresentation` が段・放つ・爆炎・焼き尽くす・火の雨・残り火の連撃を対応する次の `Attack` に結ぶ。
+`BattleCore` の規則やHPは書き換えない。火勢の色と燃焼残りターンの大きさは別に管理する。
+立ち絵差分10枚を接続し、炎は `FireFx` / `FireUltimateFx` のシェーダーで重ねる。
+焼き尽くすは掲剣→巨大な炎剣の振り下ろし→大火柱・螺旋・地面の衝撃波。
+大火柱は敵の並び幅に合わせた炎の壁と各標的の噴火を重ね、敵陣全体を覆う。
+段2は橙の鋭い火槍、段3は一拍溜める白金の大火槍。段3には螺旋・衝撃輪・着弾の火柱を足す。
+台本の火の雨は高速の連続噴火として描き、通常攻撃の後隙を挟まない。
+旧版の放つは溜め→踏み込み→巨大な三日月。規定の爆炎は鎧への圧縮→全方向への解放→敵全体の噴火。
+味方への爆炎は、その区間の台本の癒し・反転・ダメージを読み、身体のオーラと被災の炎に分ける。
+満タンでHealが出ない場合も「火の癒し」「火の変換」から癒しを表示する。独りの爆炎も同じ処理を通る。
+残り火・連撃は1件につき1発を素早く叩き込み、1体への5連撃も各着弾とHP表示を揃える。
+あぶれた火は青白い光を武器へ凝縮し、くべられる火は赤い熾を強める。火勢は変えない。
+攻撃中はステータスの上に技名と「一撃の攻」を表示する。倍率込みのAttack.Amountをそのまま読み、
+ターン頭のStatSnapshotへ再び倍率を掛けない。次の行動・ターン・死亡・勝利で表示を消す。
+焼き尽くすの大火柱は爆炎・大火槍より大きい演出を引き継ぐ。攻撃回数・順序は維持する。
+ギフト、盾、放熱の印、敵の侵食、味方の無害な上昇オーラも描画する。
+ターンギフトはヒヨから受け手へ流れる二筋の炎の帯と時計の光紋で手番の受け渡しを示す。
+実際の「ギフトの手番」で針が一周し、「追加手番」の表示と身体の炎の発光を続く行動へ繋ぐ。
+味方のオーラは `FireMantleFx` が現在の立ち絵のシルエットから描く。
+肩・腕・装備に沿う短い炎と衣服の上を流れる火の筋で力を纏わせ、味方の地面には炎を出さない。
+味方の纏う炎は火勢1→4で厚みと伸びを段階的に増やす。描画余白とUVを同時に広げ、身体への密着を保つ。
+ポーズ差分と左右反転に追従する。敵の燃焼は足元からの侵食として区別する。
+大技には暗部・地形への照り返し・HDR発光を使い、UIの操作を遮らない。
+SEは指定の掲剣音、大剣＋爆発2、火柱・爆炎・ギフト・凝縮などの専用素材を使用する。
+大技の4層は独立した音枠で保護し、連続する着火で余韻が切れないようにする。
+再生速度に合わせて音の末尾をフェードし、ピッチは原音。素材と音量は `assets/audio/se/SOURCES.md`。
+
+```powershell
+dotnet build DemoApp/DemoApp.csproj
+Godot_console.exe --path DemoApp res://FireCheck.tscn
+Godot_console.exe --headless --path DemoApp res://FireCheck.tscn -- --replay
+Godot_console.exe --headless --path DemoApp res://FireCheck.tscn -- --replay --solo
+Godot_console.exe --headless --path DemoApp res://FireCheck.tscn -- --audio
+```
+
+前者は左右・段1〜4・ギフト・大技・死亡と再戦の描画を検証し、`outputs/fire-check/` に画像を保存する。
+後者は `golm,hisa,borg,hota,hiyo`・第四波・HP400%/攻300%・seed 0を二度再生し、
+炎の通知・攻撃・火の雨・爆炎・残り火の発数と最終HPが台本どおりであることを検査する。
+`--solo` はヒヨをシオに替え、独りの爆炎と味方側の癒し・被災を同じ入口で検査する。
+
+### 既存の素材一覧
 
 - `assets/grassland_battlefield.png`: OpenAI 組み込み画像生成で作成
 - `assets/outcast_atlas.png`: OpenAI 組み込み画像生成で作成（6種アトラス）
