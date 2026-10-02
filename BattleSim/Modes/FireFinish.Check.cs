@@ -274,8 +274,9 @@ static partial class FireFinishDiag
         Expect("K4 の札の保持者（`UnitCatalog.All`・第250期 前段から規定の3枚）", UnitCatalog.All.Count(d => d.Traits.Any(t => t is TraitId.PyreMend or TraitId.FavorLevel or TraitId.UnleashBlaze or TraitId.EmbersChain)), 3);
         Expect("刻み・一撃の保持者（`UnitCatalog.All`）", UnitCatalog.All.Count(d => d.Traits.Contains(TraitId.TickOnce)), 0);
         var k4 = VerOf("K4");
-        Expect("K4 の札 ＝ 規定の札（第250期 前段）", string.Join(",", k4.Borg.Traits) == string.Join(",", UnitCatalog.Borg.Traits) && string.Join(",", k4.Hota.Traits) == string.Join(",", UnitCatalog.Hota.Traits)
-            && string.Join(",", k4.Hiyo.Traits) == string.Join(",", UnitCatalog.Hiyo.Traits) && k4.Hota.Attack == UnitCatalog.Hota.Attack, true);
+        // 第251期: L3 が規定になったので、K4 の突き合わせ先を第250期までの規定（`BorgK4` / `HotaK4`）に移した（ヒヨは第250期から変わっていない）。
+        Expect("K4 の札 ＝ 第250期までの規定の札（BorgK4 / HotaK4 / Hiyo）", string.Join(",", k4.Borg.Traits) == string.Join(",", UnitCatalog.BorgK4.Traits) && string.Join(",", k4.Hota.Traits) == string.Join(",", UnitCatalog.HotaK4.Traits)
+            && string.Join(",", k4.Hiyo.Traits) == string.Join(",", UnitCatalog.Hiyo.Traits) && k4.Hota.Attack == UnitCatalog.HotaK4.Attack, true);
 
         Console.WriteLine();
         Console.WriteLine($"**{ok} / {ok + ng}**（所要 {sw.Elapsed.TotalSeconds:F0} 秒）");

@@ -12,6 +12,7 @@ using FC = FireCycleDiag;
 //   L-A1 ＝ L0 ＋ あぶれた火（`PyreOverflow`）     L-A2 ＝ L0 ＋ くべられる火（`PyreFed`）
 //   L1 ＝ L0 ＋ 両方                               L2 ＝ L1 ＋ 焼き尽くす・重（`BurnoutHeavy`）
 //   L3 ＝ L2 ＋ 爆炎・独り（`BlazeSolo`）
+// 第251期: L3 が規定になったので、L0 と版の土台は第250期までの規定の駒（`BorgK4` / `HotaK4` / `Hiyo`）に固定した（L3 の札 ＝ 今の規定の札）。
 //
 //     dotnet run --project BattleSim -c Release 0 fireatk phase0          # Q0-1〜Q0-4（L0 で台を数える・予測の材料）
 //     dotnet run --project BattleSim -c Release 0 fireatk pick [dir] [版]  # T3 の段1（L0 と L3 だけ・1,081 組 × 席 120 × seed 40）
@@ -51,19 +52,19 @@ static partial class FireAtkDiag
     // 版（§4）
     // ---------------------------------------------------------------------------------
     static UnitDef Plus(UnitDef g, params TraitId[] tr) => FC.With(g, g.Traits.Concat(tr));
-    internal static readonly UnitDef HotaA1 = Plus(UnitCatalog.Hota, TraitId.PyreOverflow);
-    internal static readonly UnitDef HotaA2 = Plus(UnitCatalog.Hota, TraitId.PyreFed);
-    internal static readonly UnitDef HotaL1 = Plus(UnitCatalog.Hota, TraitId.PyreOverflow, TraitId.PyreFed);
+    internal static readonly UnitDef HotaA1 = Plus(UnitCatalog.HotaK4, TraitId.PyreOverflow);
+    internal static readonly UnitDef HotaA2 = Plus(UnitCatalog.HotaK4, TraitId.PyreFed);
+    internal static readonly UnitDef HotaL1 = Plus(UnitCatalog.HotaK4, TraitId.PyreOverflow, TraitId.PyreFed);
     internal static readonly UnitDef HotaL2 = Plus(HotaL1, TraitId.BurnoutHeavy);
-    internal static readonly UnitDef BorgL3 = Plus(UnitCatalog.Borg, TraitId.BlazeSolo);
+    internal static readonly UnitDef BorgL3 = Plus(UnitCatalog.BorgK4, TraitId.BlazeSolo);
 
     internal static readonly FB.Ver[] Versions =
     {
-        new("L0", "規定（第250期 前段 ＝ 第249期 K4・対照）", UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo),
-        new("L-A1", "L0 ＋ あぶれた火（火勢4 の育ち → 攻撃力 +4）", UnitCatalog.Borg, HotaA1, UnitCatalog.Hiyo),
-        new("L-A2", "L0 ＋ くべられる火（味方の着火 → 攻撃力 +2）", UnitCatalog.Borg, HotaA2, UnitCatalog.Hiyo),
-        new("L1", "L0 ＋ あぶれた火 ＋ くべられる火", UnitCatalog.Borg, HotaL1, UnitCatalog.Hiyo),
-        new("L2", "L1 ＋ 焼き尽くす・重（全体の1発 ×4 → ×7）", UnitCatalog.Borg, HotaL2, UnitCatalog.Hiyo),
+        new("L0", "第250期までの規定（第249期 K4・対照）", UnitCatalog.BorgK4, UnitCatalog.HotaK4, UnitCatalog.Hiyo),
+        new("L-A1", "L0 ＋ あぶれた火（火勢4 の育ち → 攻撃力 +4）", UnitCatalog.BorgK4, HotaA1, UnitCatalog.Hiyo),
+        new("L-A2", "L0 ＋ くべられる火（味方の着火 → 攻撃力 +2）", UnitCatalog.BorgK4, HotaA2, UnitCatalog.Hiyo),
+        new("L1", "L0 ＋ あぶれた火 ＋ くべられる火", UnitCatalog.BorgK4, HotaL1, UnitCatalog.Hiyo),
+        new("L2", "L1 ＋ 焼き尽くす・重（全体の1発 ×4 → ×7）", UnitCatalog.BorgK4, HotaL2, UnitCatalog.Hiyo),
         new("L3", "L2 ＋ 爆炎・独り（ヒヨがいなければ自分の手番の火勢4 で爆炎）", BorgL3, HotaL2, UnitCatalog.Hiyo),
     };
     internal static FB.Ver VerOf(string name) => Versions.First(v => v.Name == name);

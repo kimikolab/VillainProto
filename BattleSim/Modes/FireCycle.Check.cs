@@ -263,10 +263,14 @@ static partial class FireCycleDiag
         // ---- `compare`: Q0 が docs/balance.md と一致 ----
         var rates = CompareRates();
         var rows = CompareBuilds();
+        // 第251期: Q0 はその期の駒なので、燃焼の規定化のたびにボルグ・ホタ・ヒヨのいる行が docs/balance.md と合わなくなる（第250期 前段で `死軸×ヒヨ` 第五波が 1 セル動いてから落ちていた）。
+        // 突き合わせは3体のいない行だけにした（第250期 前段の `firelevel check` と同じ直し・いる行は「どの版でも 0 セル」の側で見る）。
+        bool HasFire3(Formation f) => f.Occupied().Any(o => o.Def.Id is "borg" or "hota" or "hiyo");
         var bal = File.ReadAllLines("docs/balance.md", System.Text.Encoding.UTF8).Where(l => l.StartsWith("| ") && l.Contains('%')).ToList();
         int cellBad = 0, cells = 0;
         for (int i = 0; i < rows.Length; i++)
         {
+            if (HasFire3(rows[i].F)) continue;
             var line = bal.FirstOrDefault(l => l.StartsWith("| " + rows[i].Name + " |"));
             if (line is null) { cellBad += 5; continue; }
             var c = line.Split('|').Select(x => x.Trim()).Where(x => x.EndsWith('%')).ToArray();

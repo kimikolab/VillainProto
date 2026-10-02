@@ -3,6 +3,7 @@ using static Common;
 
 // fireatk digest —— 台本の指紋（受け入れ 2: L0 ＝ 前段の規定と盤面・台本が、第250期の札の実装の前後で一致すること）。
 // **このファイルだけで閉じている**（第250期の札も `FireAtkDiag` も引かない・駒は規定そのもの）ので、前段だけを入れたコードにも置ける。
+// 第251期: L3 が規定になったので、駒を第250期までの規定（`BorgK4` / `HotaK4` / `Hiyo`）に固定した（第251期より前のコミットでは `K4` を外して回す）。
 // 台・波は `firefinish digest` と同じ（第245期の6波 ＋ 重い波 ＋ 的・一 ／ 的・九）。
 static class FireAtkDigestDiag
 {
@@ -11,9 +12,9 @@ static class FireAtkDigestDiag
         string outPath = args.Length > 3 ? args[3] : "fireatk_digest.txt";
         var boards = new (string Name, Formation F)[]
         {
-            ("T3-244", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hisa, center: UnitCatalog.Borg, back1: UnitCatalog.Hota, back3: UnitCatalog.Hiyo)),
-            ("T3-238", Formation.Build(front1: UnitCatalog.Hiyo, front3: UnitCatalog.Hota, center: UnitCatalog.Borg, back1: UnitCatalog.Doha, back3: UnitCatalog.Sora)),
-            ("雷＋ボルグ", Formation.Build(front1: UnitCatalog.Borg, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)),
+            ("T3-244", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hisa, center: UnitCatalog.BorgK4, back1: UnitCatalog.HotaK4, back3: UnitCatalog.Hiyo)),
+            ("T3-238", Formation.Build(front1: UnitCatalog.Hiyo, front3: UnitCatalog.HotaK4, center: UnitCatalog.BorgK4, back1: UnitCatalog.Doha, back3: UnitCatalog.Sora)),
+            ("雷＋ボルグ", Formation.Build(front1: UnitCatalog.BorgK4, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)),
         };
         var target = new UnitDef { Id = "mato", Name = "的", MaxHp = 9999, Attack = 1, Speed = 5, Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Single };
         var heavy = Formation.Build(front1: EnemyCatalog.Warden, front3: EnemyCatalog.Warden, center: EnemyCatalog.Warden);

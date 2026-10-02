@@ -52,7 +52,7 @@ static partial class FireAtkDiag
         Console.WriteLine();
 
         // ---- A1 あぶれた火: 火勢4 のホタへの育ちだけ・1回 +4・火勢は 4 のまま・乱数を引かない ----
-        foreach (var (hota, name, card) in new[] { (UnitCatalog.Hota, "L0", false), (HotaA1, "L-A1", true), (HotaA2, "L-A2", false) })
+        foreach (var (hota, name, card) in new[] { (UnitCatalog.HotaK4, "L0", false), (HotaA1, "L-A1", true), (HotaA2, "L-A2", false) })
             foreach (int lv in new[] { 3, 4 })
             {
                 var ctx = Ctx(Formation.Build(front1: UnitCatalog.Hiyo, back3: hota), Formation.Build(front1: Plain("e1")), out var p, out _);
@@ -76,9 +76,9 @@ static partial class FireAtkDiag
         }
 
         // ---- A2 くべられる火: 燃えていたホタにホタ以外の味方が点けたときだけ・1回 +2・火勢は上げない ----
-        foreach (var (hota, name, card) in new[] { (UnitCatalog.Hota, "L0", false), (HotaA2, "L-A2", true), (HotaA1, "L-A1", false) })
+        foreach (var (hota, name, card) in new[] { (UnitCatalog.HotaK4, "L0", false), (HotaA2, "L-A2", true), (HotaA1, "L-A1", false) })
         {
-            var ctx = Ctx(Formation.Build(front1: hota, center: UnitCatalog.Borg, back3: UnitCatalog.Beni), Formation.Build(front1: Plain("e1")), out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: hota, center: UnitCatalog.BorgK4, back3: UnitCatalog.Beni), Formation.Build(front1: Plain("e1")), out var p, out var e);
             var h = U(p, "hota"); var bo = U(p, "borg"); var be = U(p, "beni"); var e1 = U(e, "e1");
             var cr = new CountingRandom(0); RngF.SetValue(ctx, cr);
             int a0 = h.AtkBonus;
@@ -97,7 +97,7 @@ static partial class FireAtkDiag
         }
 
         // ---- 上乗せは大技で火勢が 1 に戻っても残る（焼き尽くすの前後）・焼き尽くす・重は全体の1発 ×7 ----
-        foreach (var (hota, name) in new[] { (UnitCatalog.Hota, "L0"), (HotaL1, "L1"), (HotaL2, "L2") })
+        foreach (var (hota, name) in new[] { (UnitCatalog.HotaK4, "L0"), (HotaL1, "L1"), (HotaL2, "L2") })
         {
             var ctx = Ctx(Formation.Build(front1: hota), Formation.Build(front1: Plain("e1", hp: 50000), front3: Plain("e2", hp: 50000)), out var p, out _);
             var h = U(p, "hota"); SetLv(h, 4);
@@ -126,11 +126,11 @@ static partial class FireAtkDiag
         }
 
         // ---- 爆炎・独り: ヒヨが盤面にいないときだけ・自分の手番で火勢4 ----
-        foreach (var (borg, name, hiyoState) in new[] { (UnitCatalog.Borg, "L0・ヒヨなし", 0), (BorgL3, "L3・ヒヨなし", 0), (BorgL3, "L3・ヒヨが生きている", 1), (BorgL3, "L3・ヒヨが倒れた", 2) })
+        foreach (var (borg, name, hiyoState) in new[] { (UnitCatalog.BorgK4, "L0・ヒヨなし", 0), (BorgL3, "L3・ヒヨなし", 0), (BorgL3, "L3・ヒヨが生きている", 1), (BorgL3, "L3・ヒヨが倒れた", 2) })
             foreach (int lv in new[] { 3, 4 })
             {
-                var pl = hiyoState == 0 ? Formation.Build(front1: Plain("a1", hp: 500), center: borg, back3: UnitCatalog.Hota)
-                                        : Formation.Build(front1: Plain("a1", hp: 500), center: borg, back3: UnitCatalog.Hota, back1: UnitCatalog.Hiyo);
+                var pl = hiyoState == 0 ? Formation.Build(front1: Plain("a1", hp: 500), center: borg, back3: UnitCatalog.HotaK4)
+                                        : Formation.Build(front1: Plain("a1", hp: 500), center: borg, back3: UnitCatalog.HotaK4, back1: UnitCatalog.Hiyo);
                 var ctx = Ctx(pl, Formation.Build(front1: Plain("e1", hp: 5000), front3: Plain("e2", hp: 5000)), out var p, out _);
                 var bo = U(p, "borg"); var a1 = U(p, "a1");
                 if (hiyoState == 2) U(p, "hiyo").Hp = 0;
@@ -231,12 +231,15 @@ static partial class FireAtkDiag
             Expect($"L3 と L2: ヒヨが落ちなかった戦の台本が一致（一致 {same} 戦・ヒヨが落ちた {fell} 戦でのうち独りの爆炎 {soloInFell} 回）", diff, 0L);
         }
 
-        // ---- L0 ＝ 規定 ----
+        // ---- L0 ＝ 第250期までの規定（第251期に L3 を規定にしたので旧の駒に固定）・L3 ＝ 今の規定 ----
         var l0 = VerOf("L0");
-        Expect("L0 の駒 ＝ 規定の駒（参照）", ReferenceEquals(l0.Borg, UnitCatalog.Borg) && ReferenceEquals(l0.Hota, UnitCatalog.Hota) && ReferenceEquals(l0.Hiyo, UnitCatalog.Hiyo), true);
-        Expect("新しい札の保持者（`UnitCatalog.All`）", UnitCatalog.All.Count(d => d.Traits.Any(t => t is TraitId.PyreOverflow or TraitId.PyreFed or TraitId.BurnoutHeavy or TraitId.BlazeSolo)), 0);
-        Expect("規定の駒は第249期 K4（札の数: ボルグ ／ ホタ ／ ヒヨ）", $"{UnitCatalog.Borg.Traits.Count}/{UnitCatalog.Hota.Traits.Count}/{UnitCatalog.Hiyo.Traits.Count}",
+        Expect("L0 の駒 ＝ 第250期までの規定の駒（BorgK4 / HotaK4 / Hiyo・参照）", ReferenceEquals(l0.Borg, UnitCatalog.BorgK4) && ReferenceEquals(l0.Hota, UnitCatalog.HotaK4) && ReferenceEquals(l0.Hiyo, UnitCatalog.Hiyo), true);
+        Expect("旧の駒は第249期 K4（札の数: ボルグ ／ ホタ ／ ヒヨ）", $"{UnitCatalog.BorgK4.Traits.Count}/{UnitCatalog.HotaK4.Traits.Count}/{UnitCatalog.Hiyo.Traits.Count}",
             $"{UnitCatalog.BorgK0.Traits.Count + 1}/{UnitCatalog.HotaK0.Traits.Count + 2}/{UnitCatalog.HiyoK0.Traits.Count + 1}");
+        var l3v = VerOf("L3");
+        Expect("第251期: 規定の札 ＝ L3 の札（並びまで・ボルグ ／ ホタ ／ ヒヨ）", string.Join(",", UnitCatalog.Borg.Traits) == string.Join(",", l3v.Borg.Traits)
+            && string.Join(",", UnitCatalog.Hota.Traits) == string.Join(",", l3v.Hota.Traits) && ReferenceEquals(l3v.Hiyo, UnitCatalog.Hiyo), true);
+        Expect("新しい札の保持者（`UnitCatalog.All`・規定のボルグ ／ ホタの2枚だけ）", string.Join(",", UnitCatalog.All.Where(d => d.Traits.Any(t => t is TraitId.PyreOverflow or TraitId.PyreFed or TraitId.BurnoutHeavy or TraitId.BlazeSolo)).Select(d => d.Id)), "borg,hota");
 
         Console.WriteLine();
         Console.WriteLine($"**{ok} / {ok + ng}**（所要 {sw.Elapsed.TotalSeconds:F0} 秒）");

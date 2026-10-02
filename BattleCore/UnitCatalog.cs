@@ -21,6 +21,33 @@ public static class UnitCatalog
         // 5 枚ともボルグに持たせる（第245期の版と同じ置き場所・陣営の規則）。旧は <see cref="BorgE0"/>。
         // 第248期（ポンの判断・指示書 §3・線を通った U2）: 放熱の印（`RadiateCall`）と、指名は火勢4 のときだけ（`CallFull`）。旧は <see cref="BorgU0"/>。
         // 第250期 前段（指示書 §2.1）: 第249期 K4——放つを爆炎に（`UnleashBlaze`）。旧は <see cref="BorgK0"/>。
+        // 第251期（ポンの判断・指示書 §2）: 第250期 L3——爆炎・独り（`BlazeSolo`・火を渡す者がいなければ自分の手番の火勢4 で爆炎）。旧は <see cref="BorgK4"/>。
+        Traits = new[] { TraitId.Splash, TraitId.FireFeed, TraitId.Cinder, TraitId.FireArmor, TraitId.FireSplash, TraitId.SelfKindle, TraitId.FireMend, TraitId.FireWardAll,
+                         TraitId.FireLevel, TraitId.CinderWide, TraitId.FireKeep, TraitId.FireSpreadCap, TraitId.FireUnleash,
+                         TraitId.FoeFireLevel, TraitId.FoeFireTick, TraitId.FoeFireBrittle, TraitId.FoeFireSpread, TraitId.AllyFireTick,
+                         TraitId.RadiateCall, TraitId.CallFull, TraitId.UnleashBlaze, TraitId.BlazeSolo },
+        Pattern = AttackPattern.Sweep,
+        PlusText = "燃える盾。薙ぎ払いで斬った敵すべてに火を移し、自分の火も燃え続ける（戦いの前からくすぶっている）。燃えている間は自分も燃えている味方も受ける傷が半分になり、火に焼かれるほど傷が塞がる。殴られると殴った敵に火を返し、燃えている敵を斬るとその火で癒える。燃え盛ってから火を渡されると、溜めた火を全身から放つ——攻撃力 3 倍の炎が敵すべてを包み、当たった敵に火が移る。その炎は味方も包むが、火に強い仲間や火を癒しに変える仲間には力になる。火を渡す仲間がいなければ、燃え盛った自分の手番で溜めた火を放つ——そのときは誰も炎を癒しに変えてくれない。仲間の熾火が焼き尽くすと、その放熱が鎧に灯る。灯っている間に燃え盛っていれば、ヒヨの次の火は真っ先に自分へ渡る",
+        MinusText = "同じ一振りが、自分の両隣の味方も巻き込む（燃え移る火として——火に強い味方には効かない）。隣の味方にも火が移る。放った炎は味方も焼く",
+        Flavor = "三度、味方の部隊を半壊させて追い出された。"
+    };
+
+    /// <summary>第250期までの規定のボルグ（第249期 K4・爆炎はヒヨのギフトの手番だけ）。対照（<see cref="All"/> に入れない）。第250期の器具（`fireatk`）の L0 はこちらに固定した。</summary>
+    public static readonly UnitDef BorgK4 = new()
+    {
+        Id = "borg",
+        Name = "焼け残りのボルグ",
+        // 第239期 前段（ポンの判断）: 第238期 A+D2（第235期「全部」＝火の鎧・HP100・燃える巻き込み・くすぶり・火の癒し・焼き返し ＋ 盾の配り（全員））。
+        // 札の並びは第238期の器具（`FireWardDiag.D2`）と同じ——焼き返しは火の粉より前（殴る前から燃えていた主目標を読む）。旧は <see cref="BorgF0"/>。
+        MaxHp = 100,
+        Attack = 18,
+        Speed = 8,
+        // 第244期 前段（ポンの判断）: 第242期 R3 の2本（火の粉・広・火を保つ）と火勢の土台を足した。旧は <see cref="BorgL0"/>。
+        // 第245期 前段（ポンの判断・指示書 §2.3）: 第244期の大技——放つ（`FireUnleash`）と燃え広がりの上限（`FireSpreadCap`・陣営の規則）。旧は <see cref="BorgR3"/>。
+        // 第246期 前段（指示書 §2）: 第245期 E2——敵の火勢（育つ・萎む）・刻みを火勢の回数に・脆さ 25/40/55/70%・火勢4 で倒れると延焼・味方の刻みも回数。
+        // 5 枚ともボルグに持たせる（第245期の版と同じ置き場所・陣営の規則）。旧は <see cref="BorgE0"/>。
+        // 第248期（ポンの判断・指示書 §3・線を通った U2）: 放熱の印（`RadiateCall`）と、指名は火勢4 のときだけ（`CallFull`）。旧は <see cref="BorgU0"/>。
+        // 第250期 前段（指示書 §2.1）: 第249期 K4——放つを爆炎に（`UnleashBlaze`）。旧は <see cref="BorgK0"/>。
         Traits = new[] { TraitId.Splash, TraitId.FireFeed, TraitId.Cinder, TraitId.FireArmor, TraitId.FireSplash, TraitId.SelfKindle, TraitId.FireMend, TraitId.FireWardAll,
                          TraitId.FireLevel, TraitId.CinderWide, TraitId.FireKeep, TraitId.FireSpreadCap, TraitId.FireUnleash,
                          TraitId.FoeFireLevel, TraitId.FoeFireTick, TraitId.FoeFireBrittle, TraitId.FoeFireSpread, TraitId.AllyFireTick,
@@ -1052,6 +1079,26 @@ public static class UnitCatalog
     /// <b>供給源のボルグだけが燃えない</b>＝ヒヨの強化対象になれない、という穴は<b>まだ空いている。</b></para>
     /// </summary>
     public static readonly UnitDef Hota = new()
+    {
+        Id = "hota",
+        Name = "熾のホタ",
+        MaxHp = 78,
+        Attack = 6,
+        Speed = 7,
+        // 第244期 前段（ポンの判断）: 第242期 R3 の段（`PyreStage`）。旧は <see cref="HotaL0"/>。
+        // 第245期 前段（ポンの判断・指示書 §2.3）: 第244期の大技——焼き尽くす（火の雨は乱数）・残り火・呼び火。旧は <see cref="HotaR3"/>。
+        // 第247期 前段（ポンの判断・指示書 §2）: 第246期 Q2-HP の段——段3 は大火槍（貫き ×7 ＋ 着火）、自分の手番の火勢4 は臨界。旧は <see cref="HotaQ0"/>。
+        // 第250期 前段（指示書 §2.1）: 第249期 K4——火の癒し（`PyreMend`）と残り火の5連撃（`EmbersChain`）。旧は <see cref="HotaK0"/>。
+        // 第251期（ポンの判断・指示書 §2）: 第250期 L3——あぶれた火（`PyreOverflow`）・くべられる火（`PyreFed`）・焼き尽くす・重（`BurnoutHeavy`）。旧は <see cref="HotaK4"/>。
+        Traits = new[] { TraitId.Pyre, TraitId.PyreStage, TraitId.PyreBurnout, TraitId.PyreEmbers, TraitId.CallFire, TraitId.PyreLance, TraitId.PyreCritical,
+                         TraitId.PyreMend, TraitId.EmbersChain, TraitId.PyreOverflow, TraitId.PyreFed, TraitId.BurnoutHeavy },
+        PlusText = "焼き尽くす者。燃えている間、火の強さで振り方が変わる——弱い火は一撃（攻撃力 4 倍）、育つと炎が列を貫き（当たった敵に火が点く）、燃え盛ると大火槍（攻撃力 7 倍の貫き）、極まると臨界（攻撃力 7 倍で列を貫き、当たった敵の火を煽る）。燃え盛ってから火を渡されると、焼き尽くす——敵全体を攻撃力 7 倍で焼き、火の雨を 10 発降らせる。焼き尽くした次の手番は、燃えさしを5発、敵に順に叩き込む（1体なら5発とも同じ敵へ）。焼き尽くした熱は仲間の鎧に灯る。仲間が火を放ち、火を渡すたびに、自分の火も育つ。燃え盛っていて火があぶれると、その火は刃に凝る（攻撃力が上がる）。燃えている間に仲間から火をくべられるたび、攻撃力が上がる。火に焼かれる代わりに、その火で癒える",
+        MinusText = "火が消えればただの湿った薪。自分では火を点けられない",
+        Flavor = "焚きつけられている間だけ働く。誰かが火を放つのを待っている。"
+    };
+
+    /// <summary>第250期までの規定のホタ（第249期 K4・攻撃力は贔屓だけで上がる・焼き尽くすの全体は ×4）。対照（<see cref="All"/> に入れない）。第250期の器具（`fireatk`）の L0 はこちらに固定した。</summary>
+    public static readonly UnitDef HotaK4 = new()
     {
         Id = "hota",
         Name = "熾のホタ",
