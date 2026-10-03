@@ -113,5 +113,5 @@ static partial class CheckWaveDiag
         Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F0} 秒。");
     }
 
-    static string Short(string b) => b switch { "燃焼 T3-244" => "燃244", "燃焼 T3-255" => "燃255", "混ぜ-255" => "混ぜ", _ => b };
+    static string Short(string b) => b switch { "燃焼 T3-244" => "燃244", "燃焼 T3-255" => "燃255", "混ぜ-255" => "混ぜ", Poison2 => "毒2", _ => b };
 }

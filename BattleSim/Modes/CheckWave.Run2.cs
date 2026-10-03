@@ -43,7 +43,7 @@ static partial class CheckWaveDiag
 
     static void Run261() => RunSet(Spec261);
     static void Run262() => RunSet(Spec262);
-    static partial void RunImpl() => RunSet(Spec263);
+    static partial void RunImpl() => RunSet(Spec264);
 
     static void RunSet(RunSpec s)
     {

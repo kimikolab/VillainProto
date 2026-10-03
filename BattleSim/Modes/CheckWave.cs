@@ -13,8 +13,10 @@ using FS = FoeSurgeDiag;
 // 波・台は `firecycle` ／ `foesurge` の定義を引く（複製しない）。倍率はすべて「なし」。
 //
 //     dotnet run --project BattleSim -c Release 0 checkwave phase0          # Phase 0 の数え物 ＋ 段1 の棚卸し（6台 × 8波 × seed 0..199）
-//     dotnet run --project BattleSim -c Release 0 checkwave run             # 第263期: 桁合わせ版 B3-桁 ／ W3-割合 と勝率の帯
-//     dotnet run --project BattleSim -c Release 0 checkwave ranks           # 第263期: 第260〜263期の全版の連続量（倒しT・回復を上回った窓・窓の出力・癒し手を割ったT・純実入り）と順位の逆転
+//     dotnet run --project BattleSim -c Release 0 checkwave run             # 第264期: 規定の組（ボス B3-桁 ／ 手数 W3-割合）を7台で（連続量が主・勝率は副）
+//     dotnet run --project BattleSim -c Release 0 checkwave ranks           # 第264期: 第260〜263期の全版の連続量と順位の逆転（7台）
+//     dotnet run --project BattleSim -c Release 0 checkwave poison          # 第264期: 7台目（毒台）の選定の表
+//     dotnet run --project BattleSim -c Release 0 checkwave run263 ／ ranks263   # 第263期の再現（6台）
 //     dotnet run --project BattleSim -c Release 0 checkwave run262          # 第262期: 400/300 の第四波＋癒し手 W2-* ＋ 全体攻撃の動じないボス B2-*（棄却・対照）
 //     dotnet run --project BattleSim -c Release 0 checkwave run261          # 第261期: 重装兵の体の癒し手 W-* ＋ 動じないボス B-*（棄却・対照）
 //     dotnet run --project BattleSim -c Release 0 checkwave run260          # 第260期の段2・段3（棄却・対照）
@@ -29,11 +31,14 @@ static partial class CheckWaveDiag
         switch (mode)
         {
             case "phase0": Phase0(); return;
-            case "run": RunImpl(); return;
+            case "run": Boards = Boards7; RunImpl(); return;
+            case "run263": RunSet(Spec263); return;
+            case "poison": PoisonPick(); return;
             case "run260": Run260(); return;
             case "run261": Run261(); return;
             case "run262": Run262(); return;
-            case "ranks": Ranks(); return;
+            case "ranks": Boards = Boards7; Ranks(); return;
+            case "ranks263": Ranks(); return;
             case "check": CheckImpl(); return;
             case "log":
                 LogOne(args.Length > 3 ? args[3] : "燃焼 T3-244", args.Length > 4 ? args[4] : "B-全4", args.Length > 5 ? int.Parse(args[5]) : 0);
@@ -55,9 +60,11 @@ static partial class CheckWaveDiag
     // 台（§2）——駒は今の規定（ボルグ・ホタ・ヒヨは `UnitCatalog` の規定）。席は各期の定義を引く。
     // ---------------------------------------------------------------------------------
     internal static readonly FB.Ver Now = new("規定", "第258期の規定（ボルグ W4・ホタ・ヒヨ）", UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo);
-    internal static readonly string[] Boards = { "燃焼 T3-244", "燃焼 T3-255", "移動", "雷", "毒", "混ぜ-255" };
+    /// <summary>いま回している台の並び。既定は第260〜263期の6台（<see cref="Boards6"/>）で、第264期の器具（`run` ／ `ranks`）だけが7台（<see cref="Boards7"/>）に切り替える。</summary>
+    internal static string[] Boards { get => _boards ?? Boards6; set => _boards = value; }
+    static string[]? _boards;
     /// <summary>軸（予測の向きを書くための札・判定には使わない）。</summary>
-    internal static string AxisOf(string b) => b switch { "燃焼 T3-244" or "燃焼 T3-255" => "燃焼", "混ぜ-255" => "混ぜ", _ => b };
+    internal static string AxisOf(string b) => b switch { "燃焼 T3-244" or "燃焼 T3-255" => "燃焼", "混ぜ-255" => "混ぜ", Poison2 => "毒", _ => b };
     internal static Formation BoardOf(string b) => b switch
     {
         "燃焼 T3-244" => FS.BoardOf("T3-244", Now),
@@ -67,6 +74,7 @@ static partial class CheckWaveDiag
         "移動" => Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.Sero, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Hane),
         "雷" => BA.RefThunder,
         "毒" => CompareBuilds().First(r => r.Name.StartsWith("毒 (グザ×ミオ×ラウ)")).F,
+        Poison2 => CompareBuilds().First(r => r.Name == Poison2).F,   // 第264期の7台目
         _ => throw new ArgumentException(b),
     };
 

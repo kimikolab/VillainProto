@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using BattleCore;
 using static Common;
 
@@ -223,6 +223,20 @@ static partial class CheckWaveDiag
             bool sameW = w2.MaxHp == w3.MaxHp && w2.Attack == w3.Attack && w2.Speed == w3.Speed && w2.Pattern == w3.Pattern && w3.Traits.Single() == TraitId.CheckMendPct40;
             Ok($"(r) W3-割合: 1件の回復 ≤ 最大HPの {PartyMendPctTrait.Pct}%・ちょうどの件がある・癒し手は W2-50後 と札だけが違う", over == 0 && exact > 0 && sameW, $"超え {over}・ちょうど {exact}");
         }
+
+        // ---- 第264期 ----
+        // (s) 7台目（毒台）: `compare` の行と同じ席・ほかの軸の核を含まない・選定を測り直すと同じ行が選ばれる・6台の並びは第260〜263期のまま
+        {
+            var row = CompareBuilds().First(r => r.Name == Poison2).F;
+            var board = BoardOf(Poison2);
+            bool sameSeats = Enumerable.Range(0, 5).All(i => ReferenceEquals(row[i], board[i]));
+            bool pure = board.Occupied().All(o => !OtherAxisCores.Contains(o.Def.Id));
+            string? picked = PickPoisonName();
+            bool six = Boards6.SequenceEqual(new[] { "燃焼 T3-244", "燃焼 T3-255", "移動", "雷", "毒", "混ぜ-255" }) && Boards7.Length == 7 && Boards7[6] == Poison2;
+            Ok($"(s) 7台目 `{Poison2}` ＝ `compare` の行そのまま・ほかの軸の核なし・選定を測り直しても同じ行・6台の並びは不変", sameSeats && pure && picked == Poison2 && six, $"選ばれた行 {picked}");
+        }
+        // (t) 規定の組は B3-桁 ／ W3-割合
+        Ok("(t) 規定の組 ＝ ボス B3-桁 ／ 手数 W3-割合（`checkwave run` の既定）", DefaultBoss == "B3-桁" && DefaultHand == "W3-割合" && CWaveOf(DefaultBoss).IsBoss && !CWaveOf(DefaultHand).IsBoss);
 
         Console.WriteLine();
         Console.WriteLine($"合計: ○ {pass} ／ × {fail}");
