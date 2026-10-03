@@ -372,3 +372,19 @@ Godot_console.exe --headless --path DemoApp res://StagingEffectCheck.tscn -- --e
 
 `--effect=fire-growth` / `--effect=fire-gift` は守りによる育ち・大剣の溜め火・
 渡す火・ボルグ→ホタのギフト手番を確認する。炎の量は台本の解放量、威力の数字は `Attack.Amount` を使う。
+
+`--effect=fire-foesurge` は爆炎の直後の一斉の敵上げを確認する。敵上げ2（1→3）は黄、敵上げ満は青白。
+
+第257期 `foesurge log` の混ぜ-255・第四波・400/300・seed 0を、本番の再生口で一戦表示する:
+
+```powershell
+Godot_console.exe --path DemoApp res://StagingEffectCheck.tscn -- --effect=fire-w0 --keep-open
+Godot_console.exe --path DemoApp res://StagingEffectCheck.tscn -- --effect=fire-w4 --keep-open
+```
+
+`--fire-speed=2` で開始速度、`--verify` で高速検査と再戦、`--capture-dir=<絶対パス>` で爆炎後の画面保存。
+`--foesurge-log=<絶対パス>` を加えると BattleSim の `0 foesurge log W0|W4 混ぜ-255 0 2 1` のログ全文と照合する。
+W0は敵上げなし、W4は敵上げ満の確認用の写し。本編の札や規則を変更せず、表示は実際の出来事に従う。
+
+`--effect=fire-thunder --verify` は同じ器具の「雷＋ボルグ」で、カタの雷の着弾と被弾燃焼・再戦を確認する。
+起爆の `Skill` 見出しがある区間は、ActorId付きの燃焼でも従来の刻み演出を保つ。

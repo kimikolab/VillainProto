@@ -18,7 +18,7 @@ public partial class BattlefieldView3D
         if (beat.FireDamage)
         {
             FireUltimateFx.Pillar(_fxRoot, pawn.GlobalPosition + Vector3.Up * 0.05f,
-                1.3f + pawn.FireLevel * 0.70f, 0.65f + pawn.FireLevel * 0.36f, 0.38 / speed, _camera, false);
+                1.3f + pawn.FireLevel * 0.70f, 0.65f + pawn.FireLevel * 0.36f, 0.38 / speed, _camera, false, tint);
             FireFx.Bloom(_fxRoot, pawn.FxPoint, tint, 1.6f + pawn.FireLevel * 0.38f, 0.30 / speed, 1);
             _attackAudio.PlayFireSound("impact");
         }

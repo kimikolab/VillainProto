@@ -1330,7 +1330,7 @@ public partial class Main : Control
             : _ticks.Budgets.TryGetValue(eventIndex, out double tickBudget) ? tickBudget : null;
         _fireFastEvent = _firePresentation.FastEvents.Contains(eventIndex);
         if (PlayFireHitSource(e, eventIndex, actor, target)) return;
-        _fireFastEvent |= _fireHits.Contacts.ContainsKey(eventIndex);
+        _fireFastEvent |= e.Kind == BattleEventKind.Attack && _fireHits.Contacts.ContainsKey(eventIndex);
         if (e.Kind == BattleEventKind.Spring)
         {
             int contactToken = _playToken;
@@ -1406,6 +1406,9 @@ public partial class Main : Control
                         .Select(i => _battleField.FindPawn(_result!.Events[i].TargetId))
                         .OfType<BattlePawn3D>().Distinct().ToArray();
                 var shieldShares = FindShieldShares(eventIndex);
+                if (_fireHits.Contacts.TryGetValue(eventIndex, out var fireContacts))
+                    impactTargets = impactTargets.Concat(fireContacts.Select(c => _battleField.FindPawn(c.Target))
+                        .OfType<BattlePawn3D>()).Distinct().ToArray();
                 // 溜めの解放は踏み込み後の着弾で行う。手番外の攻撃では消費しない。
                 bool continuingCombo = actor is not null && _comboEnds.ContainsKey(actor);
                 _movement.Attacks.TryGetValue(eventIndex, out var movementCue);

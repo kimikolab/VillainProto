@@ -19,10 +19,13 @@ public partial class Main
         if (e.Kind == BattleEventKind.StatusGain && e.Text is StatusKeys.Burn or "燃" or "燃焼")
             target?.SetFireRemaining(e.Amount);
         if (e.Kind is not (BattleEventKind.FireLevel or BattleEventKind.FireArmor)) return false;
+        if (_firePresentation.FoeSurges.TryGetValue(index, out var surge))
+            _battleField.ShowFireFoeSurge(surge, _speed);
         double seconds = _battleField.ShowFireCue(e, actor, target, _speed,
-            _firePresentation.AllyOutcomes.GetValueOrDefault(index));
+            _firePresentation.AllyOutcomes.GetValueOrDefault(index), groupedFoeSurge: _firePresentation.FoeSurgeMembers.Contains(index));
         AppendLog($"  [color=#ffbd72]{e.Text}[/color] → {NameOf(e.TargetId)}");
         if (seconds > 0) await Delay(System.Math.Min(seconds, _tickDelayBudget ?? seconds));
+        if (_firePresentation.FoeSurges.ContainsKey(index)) await Delay(0.24);
         return true;
     }
 }

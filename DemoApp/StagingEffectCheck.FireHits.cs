@@ -38,6 +38,24 @@ public partial class StagingEffectCheck
         Require(cues.Take(3).All(c => c.Beat.FirePulses == 4 && c.Beat.Numbers.Single().Amount == 24), "各発24の一数字と4回の小火");
         Require(cues.Skip(3).All(c => c.Beat.FireHeal && !c.Beat.FireDamage), "反転・変換のオーラ");
         Require(!plan.Sources.ContainsKey(script.Count - 2) && script.SequenceEqual(original), "ターン頭を混ぜず台本を変更しない");
+        BattleEvent[] absorbed = [
+            new() { Turn = 1, Kind = BattleEventKind.Attack, ActorId = 1, TargetId = 2, Pattern = AttackPattern.All },
+            new() { Turn = 1, Kind = BattleEventKind.Status, ActorId = 1, TargetId = 3, Text = "燃焼" },
+            new() { Turn = 1, Kind = BattleEventKind.Damage, TargetId = 3, Amount = 6 },
+            new() { Turn = 1, Kind = BattleEventKind.Attack, ActorId = 1, TargetId = 2 },
+            new() { Turn = 1, Kind = BattleEventKind.FireArmor, ActorId = 3, TargetId = 2, Text = FireArmorLabels.Mend },
+            new() { Turn = 1, Kind = BattleEventKind.Heal, ActorId = 3, TargetId = 2, Amount = 6 }];
+        var shielded = FireHitPresentation.Build(absorbed);
+        Require(shielded.Contacts[0].Single().Target == 3 && shielded.Contacts[3].Single().Beat.FireHeal,
+            "破片で直撃が消えた範囲の巻き込み・回復も実在するAttackへ結ぶ");
+        BattleEvent[] detonate = [
+            new() { Turn = 1, Kind = BattleEventKind.Attack, ActorId = 1, TargetId = 2 },
+            new() { Turn = 1, Kind = BattleEventKind.Damage, ActorId = 1, TargetId = 2 },
+            new() { Turn = 1, Kind = BattleEventKind.Skill, ActorId = 1, Text = "起爆" },
+            new() { Turn = 1, Kind = BattleEventKind.Status, ActorId = 1, TargetId = 2, Text = "燃焼" },
+            new() { Turn = 1, Kind = BattleEventKind.Damage, TargetId = 2, Amount = 12 }];
+        var detonated = FireHitPresentation.Build(detonate);
+        Require(detonated.Contacts.Count == 0 && detonated.Unpaired.Count == 0, "起爆の見出しがある刻みを古い一撃へ合算しない");
         DemoOpening[] openings = [
             new(1, 0, "mudo", "ムド", 0, 100, 100, 10, AttackPattern.Single, true),
             new(3, 0, "hiyo", "ヒヨ", 2, 100, 100, 10, AttackPattern.Single, false),

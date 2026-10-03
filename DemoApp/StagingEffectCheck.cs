@@ -15,6 +15,22 @@ public partial class StagingEffectCheck : Control
             var field = new BattlefieldView3D();
             field.SetAnchorsPreset(LayoutPreset.FullRect);
             AddChild(field);
+            if (mode is "fire-w0" or "fire-w4" or "fire-thunder")
+            {
+                field.Hide();
+                await CheckFireReplay(mode == "fire-w0" ? "W0" : "W4", OS.GetCmdlineUserArgs().Contains("--verify"),
+                    mode == "fire-thunder" ? "雷＋ボルグ" : "混ぜ-255");
+                GD.Print("STAGING_EFFECT_CHECK_OK " + mode + " foesurge phase257 replay");
+                if (!OS.GetCmdlineUserArgs().Contains("--keep-open")) GetTree().Quit();
+                return;
+            }
+            if (mode is "fire-foesurge" or "fire-foe-surge")
+            {
+                await CheckFireFoeSurge(field);
+                GD.Print("STAGING_EFFECT_CHECK_OK fire-foesurge simultaneous enemy-only W2 W4 restart");
+                GetTree().Quit();
+                return;
+            }
             if (mode == "fire-hit")
             {
                 await CheckFireHits(field);

@@ -104,9 +104,9 @@ void fragment(){
         tween.TweenCallback(Callable.From(sword.QueueFree));
     }
 
-    internal static void Pillar(Node3D root, Vector3 ground, float height, float width, double seconds, Camera3D camera, bool grand)
+    internal static void Pillar(Node3D root, Vector3 ground, float height, float width, double seconds, Camera3D camera, bool grand, Color? tint = null)
     {
-        var material = Energy(1, new("ffac28"));
+        var material = Energy(1, tint ?? new("ffac28"));
         var node = FireFx.Card(root, root.ToLocal(ground + Vector3.Up * height * 0.5f), new(width, height), material);
         // 柱は垂直。カメラのピッチで根元が浮かないよう、Y軸を固定する。
         Vector3 across = new Vector3(camera.GlobalBasis.X.X, 0, camera.GlobalBasis.X.Z).Normalized();

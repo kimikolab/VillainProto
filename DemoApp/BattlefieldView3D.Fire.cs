@@ -27,6 +27,7 @@ public partial class BattlefieldView3D
         TurnTickBeatPlays = TurnTickFirePulses = TurnTickNumberPlays = 0;
         FireHitPlays = FireHitNumberPlays = FireHitPulses = 0;
         AttackContact = null;
+        FireFoeSurgePlays = FireFoeSurgeTargets = 0;
     }
 
     private void FireShade(BattlePawn3D pawn, double seconds)
@@ -72,7 +73,7 @@ void fragment(){
     }
 
     internal double ShowFireCue(BattleEvent e, BattlePawn3D? actor, BattlePawn3D? target, double speed,
-        FireAllyOutcome allyOutcome = FireAllyOutcome.Quiet, bool groupedTick = false)
+        FireAllyOutcome allyOutcome = FireAllyOutcome.Quiet, bool groupedTick = false, bool groupedFoeSurge = false)
     {
         speed = Math.Max(0.1, speed);
         FireCuePlays++;
@@ -81,6 +82,11 @@ void fragment(){
         Color tint = FireFx.ColorOf(target?.FireLevel ?? 2);
         if (e.Kind == BattleEventKind.FireLevel)
         {
+            if (e.Text == FireLevelLabels.BlazeFoeSurge)
+            {
+                if (!groupedFoeSurge) ShowFireFoeSurge(new[] { e }, speed);
+                return 0;
+            }
             if (FirePresentation.ChangesLevel(e.Text))
             {
                 bool reachedFull = target is not null && target.FireLevel < 4 && e.Amount == 4;

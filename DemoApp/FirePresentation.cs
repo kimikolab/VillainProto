@@ -10,6 +10,8 @@ internal sealed class FirePresentation
     internal readonly Dictionary<int, FireAttackCue> Attacks = new();
     internal readonly HashSet<int> FastEvents = new();
     internal readonly Dictionary<int, FireAllyOutcome> AllyOutcomes = new();
+    internal readonly Dictionary<int, IReadOnlyList<BattleEvent>> FoeSurges = new();
+    internal readonly HashSet<int> FoeSurgeMembers = new();
     internal static bool ChangesLevel(string? label) => label is FireLevelLabels.Lit
         or FireLevelLabels.GrowSpread or FireLevelLabels.GrowStoke or FireLevelLabels.GrowSelf
         or FireLevelLabels.GrowCall or FireLevelLabels.GrowFoe or FireLevelLabels.GrowSpark
@@ -24,6 +26,19 @@ internal sealed class FirePresentation
         for (int i = 0; i < events.Count; i++)
         {
             var e = events[i];
+            if (e.Kind == BattleEventKind.FireLevel && e.Text == FireLevelLabels.BlazeFoeSurge
+                && !FoeSurgeMembers.Contains(i))
+            {
+                var group = new List<BattleEvent>();
+                for (int j = i; j < events.Count; j++)
+                {
+                    var next = events[j];
+                    if (next.Kind != BattleEventKind.FireLevel || next.Text != FireLevelLabels.BlazeFoeSurge
+                        || next.Turn != e.Turn || next.ActorId != e.ActorId) break;
+                    group.Add(next); FoeSurgeMembers.Add(j);
+                }
+                FoeSurges[i] = group;
+            }
             if (e.Kind == BattleEventKind.FireArmor && e.Text == FireArmorLabels.BlazeAlly)
                 AllyOutcomes[i] = ReadAllyOutcome(events, i);
             if (e.Kind == BattleEventKind.TurnStart) { pending.Clear(); released.Clear(); }
