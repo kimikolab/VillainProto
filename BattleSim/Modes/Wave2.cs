@@ -32,7 +32,7 @@ public static void Run(string[] args, int stageIndex)
     // 肩代わり（庇う・分かち・巨躯・後備え・棘守り）はダメージの再分配であって行動ではないので入らない。
     var w2OutOfTurn = new[] { TraitId.Thorns, TraitId.Avenge, TraitId.Displaced, TraitId.Pursuer };
 
-    // 回復 = ctx.Heal の呼び出し元9経路（CLAUDE.md の「駒の説明文から数えると必ず抜ける」）。
+    // 回復 = ctx.Heal の呼び出し元9経路（design/ENGINE_HOOKS.md の「駒の説明文から数えると必ず抜ける」）。
     // 巨躯（吸い・還し）と墓守は説明文のどこにも回復と書いていないが回復する。
     var w2Healers = new[]
     {

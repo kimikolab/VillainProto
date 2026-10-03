@@ -2,15 +2,109 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**原則（第259期）: 毎セッション必ず要るもの以外はここに置かない。履歴は `design/` へ、本文は索引で引く。**
+上限は **500 行 / 50 KB**（`audit` が門にする）。期が `CLAUDE.md` に書けるのは
+**(a) 変わった規則 と (b)「現状値」ブロックの差し替え** の2つだけ。
+期の一行は `design/PHASE_INDEX.md` の末尾へ、測定の中身・予測の○×・踏んだ穴は `design/PHASEnnn_*.md` と `design/LESSONS_*.md` へ、
+engine の窓口に足したものは `design/ENGINE_HOOKS.md` へ、新しいコマンドは `design/COMMANDS.md` へ書く。
+**「n本目」「第nn期に足した」をここに書かない**——数は生成物（`docs/rules.md` / `docs/watch.md` / `docs/units.md`）で引く（R151）。
+
 ## 概要
 
 「捨てられた駒に役割を与えて噛み合わせる」編成が面白いかどうかだけを確かめる実験装置（オートバトラーのプロトタイプ）。グラフィックや演出は対象外。コメント・ユニット名・ログはすべて日本語で書かれており、追加するコードもそれに合わせる。
 
+## 構成と絶対のルール
+
+    BattleCore/     戦闘ロジック。net8.0 素のクラスライブラリ。UI を一切参照しない
+    BattleSim/      コンソール総当たりシミュレータ（テスト代わり）。
+                    新しいモードは `Program.cs` ではなく `BattleSim/Modes/<名前>.cs` に
+                    `static class <名前>Diag { public static void Run(string[] args, int stageIndex) }` で足し、
+                    `Program.cs` に書くのは振り分けの1行だけ。共有ヘルパは `BattleSim/Common.cs`（`using static Common;`）
+    PrototypeApp/   WPF (net8.0-windows)。編成を組んで結果を眺めるだけ
+    GodotApp/       Godot 4 (C#) の戦闘再生装置。sln には入っておらず単独ビルド。台本を再生するだけで判定はしない。
+                    会戦（`EngagementEngine`）を目で見られるのはここだけ
+    DemoApp/        Godot 4 (C#) のデモ。sln には入っておらず単独ビルド。編成 → 戦闘の 2.5D 再生と、
+                    検証用マップ 1-1（`Map11*.cs`・編成画面の「作戦マップへ」）。**`BattleCore` をそのまま参照し、写しを持たない。**
+                    進行の規則は `Map11State` の1箇所で、画面（`Map11Main`）は判定を1つも持たない。
+                    `Map11.cs` / `Map11Orders.cs` には Godot の型が1つも入っていない（頭なしの門 `--map11-verify` が同じクラスを回す）。
+                    再生側が知らない `BattleEventKind` は素通りする。経緯は `design/DEMOAPP_HISTORY.md`
+    docs/           BattleSim が吐く生成物（balance / units / chain / ablation / pulse / engage / layout / reseat /
+                    crossing / rules / watch / quality / stock / harm / roster_audit）。**手で編集しない。** 整合は `audit` で見る。
+                    `units.md` の列は末尾側に足す（`checkup check` が 2〜4 列目を位置で読む）。
+                    `balance.md` に節を足してはいけない（行を位置で読む自己検査が壊れる——だから `quality.md` は別ファイル）。
+                    ファイルごとの由来は `design/DEMOAPP_HISTORY.md`
+    design/         設計文書（コンセプトメモ・指示書・測定報告・則の本文・履歴）。手で編集する
+
+**`docs/` は生成物のみ・手書き文書は `design/`。** 測定報告や指示書を `docs/` に置かない。
+
+- **BattleCore に UI の参照を足さない**。`INotifyPropertyChanged` も `ObservableCollection` も不可。本番を Godot / Unity にする場合にそのまま持っていくため。
+- **PrototypeApp / DemoApp に戦闘ルールを書かない**。ViewModel やコードビハインドにダメージ計算が漏れた瞬間に移植できなくなる。
+- **`Def.Pattern` を直接読まない**。必ず `UnitState.CurrentPattern` を経由する（特性が状況でパターンを書き換えるため）。
+
 ## アーキテクチャ
+
+**窓口ごとの「第nnn期に何を足したか」は `design/ENGINE_HOOKS.md`**（この節から逐語で移した）。ここには窓口の名前と不変条件だけを置く。
+窓口の本数・札の保持者の数はそこにも書かない——`docs/rules.md`（ノブ）・`docs/units.md`（札と保持者）・`docs/watch.md`（出来事の窓口）で引く。
+
+### 特性 = イベントハンドラ（Traits.cs）
+
+特性はすべて `Trait` を継承した「戦闘イベントへの反応」。`OnBattleStart` / `OnTurnStart` / `OnDamaged` / `OnDeath` / `OnMoved` などの virtual フックを上書きする。イベント駆動にしてあるので、意図していない組み合わせでも勝手に噛み合う。それが狙い。
+
+- 追加手順: `Trait` 継承クラスを書く → `TraitId` に列挙子を足す → `TraitCatalog` の配列に登録する。
+- **Trait インスタンスは全ユニットで共有されるシングルトン**。インスタンスフィールドで状態を持ってはいけない。ユニットごとの状態は `UnitState.Counters`（文字列キーの int カウンタ）に置く。再入禁止フラグも Trait の static に置かない（`layout` は戦闘を並列実行する）。
+- 調整用の数値は各 Trait の `public const` に置く。**版の切り替えは駒の `Traits` の配列を差し替える**（マイナスは別の `TraitId` に切り出す。`Run` の引数は増やさない——増やすと `docs/rules.md` の既定値の列が動く）。
+- `InstanceId` を `Counters` に持つ記憶は `OnCarryOver` で**必ず捨てる**（戦闘ごとに振り直される）。
+- 能動的な機構は手番（`OnAction`・`Actions = [Skill]`）に置く。`OnTurnStart` は「全員より先」という speed = ∞ の席で、粛（`Hush`）にも封じられない。**手番で撃つが相手がいなければ殴る**は `OnAction` の中で `ctx.PerformAttack` を直に呼ぶ形（`CanAct` を偽にすると `IdleTurn` が立ち、号令・据えが無償で買い取る）。
+- **手番に何発振るかを書き換える窓口は `Trait.ModifyHitCount` の1本**（問うのは `SwingTurn` の1箇所＝手番の中だけ。反撃・割り込み・追い打ち・再行動は1発のまま）。上限は特性の側で掛ける。
+- **盤面ルール（`Inversion` / `Drought` / `Yoke` / `Hush`）だけは例外で、判定が engine 側にある**（全員に一度にかかる状態は駒ごとのフックで書けない）。Trait 本体はログを出すだけで、**保持者がいなければ完全に不活性**（`compare` 差分ゼロで確認してから盤面に載せる）。保持者の走査は既存条件の後ろ（`&&` の短絡）に置く。**止めるのは入口ではなく出口**（入口だと惨禍や脆弱が上限を押し戻す）。
+- 盤面ルールを足すときは、**そのルールが触るメソッドの呼び出し元を全部数える**。駒の説明文から数えると必ず抜ける（ゴルムもリィカも「回復」と書いていないのに `ctx.Heal` を呼ぶ）。**窓口を1本足す作業には、その本数を数えている文の一覧を添える**——いまは `docs/rules.md` / `docs/watch.md` の再生成がその一覧。
+- **「1発の重さ」に課金すると、課金されるのは「1発を育てる機構」で、大打点の駒ではない。** 定数の大打点は引き算にしかならず、積み上げ系には上限が天井として効く。
+- 符号の違う2つの効果を1つの動作に持つ機構は、**片側だけを 0 にする対照（ノブではなく対照の札）を必ず対にして作る**。
+
+### BattleContext = 盤面への唯一の窓口（BattleEngine.cs）
+
+- **`ApplyDamage` がダメージ処理の単一窓口。** 敵の攻撃も味方の巻き込みも生贄もここを通るので、「被弾で強くなる」駒がどれにも等しく反応する。味方全体に効く効果（惨禍・据え・散開・萎縮・分かち）は駒の特性側ではなく `ApplyDamage` の中で解決する。
+  **段の並び**: 入口の族（回避・逸らし・棘守りの上限・駒の被ダメ修正・惨禍・荷・敵の標 +50%・燃焼の脆さ）→ 軽減の族（据え・散開・萎縮・矢面・層・火の鎧）→ 肩代わり（巨躯・分かち）→ 破片 → 身構えの上限 → **軛（`YokeTrait.Cap`・`target.Hp -=` の直前）** → HP を引く → `OnDamaged` → 死亡処理 → 感電の起爆。
+  **軛より後ろに新しい増減を足さない**（上限が守られなくなる）。上限の外側で効かせたい資源（破片）はこの行より前。肩代わりで分割された各段は別の `ApplyDamage` 呼び出しなので**段ごとに独立して切られる**（意図した帰結）。
+  肩代わりを足すときは **`u != source` を必ず入れる**（自分が出どころのダメージまで肩代わりすると打ち消しになる）。
+  「攻撃によるダメージ」と「コスト徴収」は `levy`、中継は `relayed`、刻みは `burnTick`、呪いの共有は `hexShare` の札で分ける。**肩代わりの中継は被弾の燃焼・回避の対象外**（中継は元の削りの一部）。
+- **死亡通知の順序は固定**: killer の `OnKill` → 本人の `OnDeath`（分裂など）→ 全員の `OnAnyDeath`（墓守）→ 味方の `OnAllyDeath`（蘇生）。順序依存がある。連鎖する死（放電・澱みの爆発）は**幅優先**で、1つの駒は1回の連鎖で1回しか爆ぜない。
+- **ターン外の行動は3つの包みで再入を止める**: 反撃は `ctx.Reaction(...)`、割り込みは `ctx.Interrupt(...)`、移動の読み手は `ctx.Shoving`。別の連鎖なので別フラグ。**粛（`Hush`）が止めるのは `CanActOutOfTurn` を通る経路だけ**で、肩代わり（ダメージの再分配）と `OnAfterAttack`（自分の手番の中）は通らない。この2つを「反応する駒」とひとくくりにすると設計が壊れる。経路は `OutOfTurnRoute` の列挙で数える。
+- **標的選択の介入（庇う・後備え・標・殉教・棘守り・挑発）はすべて `SelectTarget` で主目標を差し替えるだけ**なので、範囲攻撃の巻き込み（`PerformAttack` が個別に `ApplyDamage` する）には触れない。貫きは `ResolvePierce` がレーンを直接走るので標的選択自体を通らない。範囲に対処する駒は damage の層（`ApplyDamage` / `OnDamaged`）に置く。範囲かどうかは `source.CurrentPattern != Single` で取れる。
+  攻撃者側の選好（執着・断ち・見せしめ・挑発）は `SelectTargetCore` の **pool から無作為に選ぶ直前**の1段。**pool 自体は1体も足さず引かず**（「前列が生きている限り後列は狙われない」を破らせない）、効いた手番は `Roll` を引かない。候補集合は `BattleContext.TargetPool` の1箇所を選好と `CanAct` が共有する。
+- **「最も傷ついた味方」の選択は `BattleContext.MostHurtAlly` の1箇所。** 止まる条件は呼び出し側に残す。失った HP の量で選ぶと固定量の回復は最大HPの大きい壁に吸われる（割合で選ぶ）。
+- **弱体化（`AtkBonus` を負にする）の窓口は `BattleContext.Dull`、他者強化は `BattleContext.Whet` の1箇所ずつ。直接足し引きしない。** 窓口は横取り（集約・転嫁・横流し）の立ち位置で、`Dull` と `Whet` は統合しない（符号で意味が変わる）。**自己強化（自分の被弾を自分の出力に変える型）と持ち替え（尾灯の消灯・リリの強弱の移し）は意図的に直叩き**——他人が横取りできる形にしてはいけない。`AcceptsSupport` の判定は窓口に入れず呼び出し側に残す。
+- **状態異常は `StatusKeys` のカウンタ**で持ち、`TickStatuses` がターン開始時にまとめて処理する。新しいキーは **`StatusKeys.All` にも必ず足す**（会戦が部隊戦の境界で消す一覧。漏らすとその状態だけが会戦を跨ぐ）。`TickStatuses` に何も足さないキー（傷・標・感電）もある——「状態異常＝勝手に削るもの」ではない。私有の帳簿（火勢・紅蓮・腕の累計など）は `All` に入れない私有キーにし、`OnCarryOver` で自分で消す。
+- **燃焼の刻みは `BurnTickOnce`、毒は `PoisonTickOnce`、起爆は `Detonate` の1箇所**（濃縮の印・火勢の回数・被弾の燃焼はこれらを呼び直す）。熾のホタ・火の鎧・火の癒しの「焼かれない」の枝 → ベニの反転（`InverseHeal`）→ 火の変換 の順で、**切るのは `ApplyDamage` の中ではなく呼び出しの手前**（中で 0 にすると「浴びた量」を読む札が 0 で発火する）。
+- 回復は `BattleContext.Heal` の入口1箇所（渇き・支援拒否 `Stoic`・反転の裏がここに立つ。`HealOutcome` を返す）。破片（`StatusKeys.Armor`）は HP の前に削られる別資源で、`Heal` を通らないので `Stoic` にも届く。**破片の減りは `UnitState.SetCounter` の1点**が `NoteArmorLost` へ流す。
+- 1回の呼び出しにだけ効く札（`_deflectFrom` / `_shockNext` / `_forcedTarget` など）は**本体の最初の行で読んで消す**（引数を足さない）。保持者がいない戦は `_xxxLive` の比較1つで全部抜ける——**新しい窓口は必ずこの形**（layout は数百万戦を並列で回す）。
+- **`ctx.PickOne` を新たに使わない**（候補2個以上で `Roll` を消費し、乱数列がずれて `compare` 全セルが動く）。決定的な選び方（席番号・HP 割合）で書き、乱数を引かないことを自己検査に入れる。
+- **`LivingMembers` は必ずスナップショット（`ToList`）を返す**（特性の中から召喚・蘇生が呼ばれる）。
+- **特性の発動（`OnAfterAttack`）は攻撃1回につき1度、主目標に対してのみ。** 範囲攻撃のたびに複数回発動させると範囲パターンの駒が即座に壊れる。
+- 会戦（`Engagement.cs`）は Battle を連結し、勝った側の生存駒を持ち越す。境界で `StatusKeys.All` と `AtkBonus` を一律に消し、持ち越したい状態は各特性の `Trait.OnCarryOver` が再構成する（エンジンはホワイトリストを持たない）。**この engine の負けは全滅である**（「負けたら退く」は無い）。
+- **敵の数値の倍率（`EnemyScaleRule`・採用値 115 / 115）** は `BattleEngine.Materialize` と敵が呼んだ `Summon` の2口だけで掛かる（`UnitDef.WithStats` の写しを `Def` に差す・`AtkBonus` には掛けない・`BossRule.Scale` に相乗り）。**作戦マップ（`Map11.EnemyScale = None`）には掛けない。** `EnemyCatalog` の数値は素の値のまま。
 
 ### 決定性
 
 `BattleEngine.Run(player, enemy, seed, verbose)` は seed 決定的で副作用も外部依存もない。行動順は速さ降順 → チーム → スロットで安定ソートしてある。BattleSim はこれを前提に seed を振って勝率を測る。`verbose: false` はログを作らないので一括シミュレーションが速い。
+
+### 隊列と攻撃パターン（Models.cs）
+
+スロットは9つ。**編成枠は 0-4 の5つで、プレイヤーはここにしか置けない**（0=前1・1=前3 が前列、2=中央、3=後1・4=後3 が後列）。**5-8 は召喚専用**（5=○中1・6=○中3・7=○前2・8=○後2）で、`Summon` がこの並び順に埋める。
+敵は `EnemyWave` / `BattleEngine.MaterializeEnemy` で9席に直接立てる（陣形は X 字のまま。会戦と診断の大半は敵を `Formation` でしか受け取らない）。
+
+盤面はX字で、レーンは2本。中央は両方のレーンに属するので、スロットからレーンは単数で引けない（`LanesOf` を使う）。貫きはレーンを前から走り、1体貫くごとに威力が25%落ちる。
+隣接は**表**（`AdjacencyTable`）で持つ。幾何計算で導出しない。薙ぎの巻き込みは別表（`SweepTargets`）で、「標的と同じ列の全員＋中列」の**非対称**な対応。
+**逃亡・後退の行き先は `PlayableSlotsOfRow` を使うこと**（`SlotsOfRow` は召喚枠まで返すので、空の○中1へ逃げ込むと逃亡が純粋な利益になる）。
+
+**陣形は隊ごとに1つ（`FormationShape`）。** 9マスは陣形に依らず同じで、変わるのは「どの5マスに編成が立つか」と隣接・薙ぎ・貫き・召喚枠の表だけ。列（前・中・後）は `RowOf` の幾何なので陣形は持たない。
+**X 字（`FormationShape.X`）は `FormationRules` の静的な表をそのまま引く。** パターン2（`Diamond`・前衛1枚）とパターン3（`Spear`）は一般規則（`BuildGrid`）から表を作り、貫きは「撃つ敵のいるレーン側」（`PierceRule.Facing`・乱数を引かない）。
+engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitState)` / `u.Shape.SweepTargets` など）を使う。**席番号の版は X 字の表**で、`BattleSim` の診断と `DemoApp` の画面はこちら。
+枠の表示名は `FormationShape.FrameNames`（表示だけ・読んで分岐する規則は 0 件）。
+
+`AttackPattern` は Single / Sweep / Pierce / All の4つで、**増やしても4つまで**。1つ増えるたびに庇う・標的・巻き込みなど既存の全特性との相互作用を監査する必要がある。庇う・標的の介入は Single にしか効かない（薙ぎ・全体は止められず、貫きはレーン単位で解決されて割り込めない）という非対称が設計の中核。編成の定義は `Formation.Build`（名前付き引数）で書く。
+
+配置を決めるときは人手の勘ではなく `layout` モードで測る。編成の狙い（隣接ペア・後列必須など）と探索1位が食い違ったら狙いを優先し、理由をコメントに残す。
 
 ### ログ（LogKind）
 
@@ -220,6 +314,61 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **ノイズ床は 3.26pt（フィルタ前）/ 5.61pt（フィルタ後）・N3 = 3**（第88期・A ＝ ミオ・seed 0..7）。
 **この値をそのまま次の期に使わない**——下の 8-2 の理由で、**測り直すべき量である**。
 
+## 指示書を書くときに当てる一般則
+
+**本文と索引は `design/RULES_*.md`**（`RULES_001_097.md` / `RULES_098_173.md` / `RULES_174_242.md` / `RULES_243_.md`・索引の表は `design/RULES_INDEX.md`）。
+**ID（`R001`〜）で grep すること。ID は永続で、欠番になっても再利用しない。**
+新しい則は `RULES_243_.md` の末尾に次の ID（`R361` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
+
+## 現状値
+
+**期ごとの報告は `design/HISTORY_PHASES.md`**（この節から逐語で移した。以後の期はそちらの冒頭に足し、ここのブロックは差し替える）。
+
+**最後に動かした期: 第258期**（爆炎・敵上げ満 W4 を規定のボルグに。測定なし・`compare` 0 セル）。
+**最後に `compare` が動いた期: 第256期**（被弾の燃焼 H-分担 を規定にし、セロの状態の矢を外した。動いたのはゾトの死軸 8 行・24 セル）。
+
+    編成:       61 行（`CompareBuilds()`）＋ 交差帯 12 行（`CrossBuilds()`）
+    全61行:     100 / 89.7 / 88.5 / 82.3 / 81.7     （第1〜5波の平均勝率・seed 0..199）
+    主判定19行: 100 / 82.5 / 89.5 / 83.8 / 79.8     （第244期前段の値。第256期で動いていない）
+    歯止め:     主判定の第五波 33.2%                 ← 余裕 +46.6pt
+    情報セル:   全61行 76 / 主判定 29                （第2〜5波の 0 < x < 100 のセル数・第244期前段）
+    ロスター:   52 枚（上限 52・第103期に確定）。残り枠 0。入れ替えは 4 度（ハリ→トモ・エグ→ガレ・キリ→スス・ナタ→カタ）
+    敵の倍率:   115 / 115（第187期）
+
+**規則（動かさない）**
+
+- **第五波の歯止めは `Baseline.PrimaryRows`（BattleSim/Program.cs）の 19 行で読む。** 全行平均は行が増えるたびに勝手に動く量なので歯止めにしない。記録は「主判定 / 全61行」の両方を必ず併記する（`spread` の §4 が出す）。
+- **情報セルの定義が2つある。** `spread` §1 の中間帯は `5 < x < 95` を全5波、§4（主判定）の情報セルは `0 < x < 100` を第2〜5波。別の量なので混ぜない。情報セルは `compare` が使う帯（seed 0..199）で数える（(G14)）。
+- **波を作り直すときは、同じ行数で前後を測り直して採否を決める。計測器と測定対象を同時に動かさない。** 行を足したときの平均の低下を波の難度と読み違えないこと。
+- **判定に使う分母は第2〜5波**（(G10)）。第一波は全行が 100% 勝つ教習波。
+- **`UnitCatalog.All` は「編成に選べる 52 枚」の定義であって `Presets` が参照できる集合ではない。** 外した駒は `Retired` へ移し、辞書のキーと `Id` の引きは `Everyone`（`All ∪ Retired`）を使う。`All` / `Retired` / `Presets` に触る期は `sweep` を受け入れ条件に入れる（(G17)）。測って棄却した駒の定義は対照として残置する（`All` にも `Presets` にも入れない）。
+- **駒を転生させるときは旧の駒を `UnitCatalog.<名前><版>` に残し、その駒を使う過去の器具を旧に固定する**（台本の指紋 `shockdigest` / 各 `digest` が規定化の前後で全行一致するのが門）。
+- **採用で既定が動いたら、その期のうちに診断の対照（V0）を作り直す**（放置すると V0 と V1 が同じものを指す）。
+
+## コマンド
+
+テストプロジェクトは無い。検証はすべて BattleSim の実行結果で行う。
+**全診断モードの一覧は `design/COMMANDS.md`**（この節から逐語で移した。`sweep` はその表を読んで走らせる本を組むので、新しいモードはそこに足す）。
+
+    dotnet build                                                        # 全体ビルド（WPF を含むので Windows のみ）
+    dotnet run --project BattleSim -c Release 0 compare > docs/balance.md          # 代表編成 × 全ステージの勝率（毎期）
+    dotnet run --project BattleSim -c Release 0 compare quality > docs/quality.md  # 勝ち方の質
+    dotnet run --project BattleSim -c Release 0 dump > docs/units.md               # ユニット・特性・ステージ一覧（毎期）
+    dotnet run --project BattleSim -c Release 0 audit                              # docs/ の整合 ＋ CLAUDE.md の行数の門（戦闘0回）
+    dotnet run --project BattleSim -c Release 0 chain > docs/chain.md              # 連鎖の深さ（最大同時撃破・決着T）
+    dotnet run --project BattleSim -c Release 0 derive rules > docs/rules.md       # ノブ一覧（CLAUDE.md を書き終えた後に最後に回す）
+    dotnet run --project BattleSim -c Release 0 reseat [絞り込み] / confirm        # 席の測り直しと別 seed の追試（採否は confirm で）
+    dotnet run --project BattleSim -c Release 0 sweep [上限秒] [絞り込み]          # 全診断の exit 検査（80 分前後・毎期は回さない）
+    dotnet run --project BattleSim -c Release 0 sweep list                         # 走らせる一覧だけ（戦闘0回）
+    dotnet run --project BattleSim -c Release <n> demo "編成名" [seed]             # 1戦の詳細ログ
+    dotnet run --project BattleSim -c Release <n> replay "編成名" <seed>           # 1戦を再生用JSON（台本）で吐く
+    Godot_console.exe --path DemoApp --headless -- --map11-verify[=N]             # 作戦マップの進行を頭なしで N seed 回す（第168期の5量と差 0.0pt が門）
+    Godot_console.exe --path DemoApp --headless --quit-after 120000 -- --demo-autoplay --demo-quit --demo-fast --demo-preset=<行名> --demo-stage=<n> --demo-seed=<n>
+                                                                                   # 単発の戦闘を頭なしで再生。合否は `DEMO_SMOKE_COMPLETE` の行で読む
+
+`docs/` の全再生成は約 5 分（`roster audit` だけ 130 秒・毎回は回さない）。
+DemoApp の頭なしの門（`--map11-flow-smoke` など）は**終了コードが 0 にならない**ので、合否は `*_COMPLETE` の行で読む。
+
 ### バランス調整のたびにやること（CONTRIBUTING.md より）
 
 1. 数値や特性を変える
@@ -250,3 +399,8 @@ README.md の「調整メモ」「検証で分かったこと」「未解決の�
 | `design/LESSONS_061_080.md` | 第61〜80期 | 素体対照・情報帯・ドラフト台・2×2 の相乗・傷軸の代金の分解。**帰属の測り方を決めるとき** |
 | `design/LESSONS_081_100.md` | 第81〜100期 | 規約 (G1)〜(G10) が出た帯。巻き込み則・滲み則・呪い則を採り、棘の傷・深手・呪いを落とした。**採否の線を引くとき** |
 | `design/LESSONS_101_.md` | 第101期〜 | 会戦の境界・手番という通貨・再行動・背かれ・尾灯・段（格上げ）・**害の帳簿**。**いま盤面がどうなっているかを知るとき**。以後の期はここに追記する |
+
+### 主題別・期別
+
+**主題 → 期 の表と、期ごとの一行（第84期以降）は `design/PHASE_INDEX.md`**（この節から逐語で移した。以後の期はその末尾に足す）。
+**第1〜83期は各 `LESSONS_*.md` の冒頭の目次から引く**（期 → 診断名の表を各ファイルが持っている）。

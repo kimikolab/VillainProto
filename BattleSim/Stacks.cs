@@ -260,7 +260,7 @@ static class StacksDiag
         int engineHeal = Regex.Matches(engine, @"\bHeal\(").Count;
         Console.WriteLine($"- `BattleEngine.cs` 側の `Heal(` の出現: **{engineHeal} 件**（宣言と内部呼び出しを含む）");
         Console.WriteLine();
-        Console.WriteLine($"> **`CLAUDE.md` は第39期以来「`ctx.Heal` を呼ぶのは9経路」と書いているが、"
+        Console.WriteLine($"> **`design/ENGINE_HOOKS.md`（第259期までは `CLAUDE.md`）は第39期以来「`ctx.Heal` を呼ぶのは9経路」と書いているが、"
             + $"走査では {healCalls.Count} 経路ある。** 第39期（7→8→9）の数え方のまま"
             + "更新されていない——**Q0-7 の「4本だけ」と同じ形の取り残し**で、"
             + "どちらも**規則を足したのに説明文が増えていない。**");
@@ -304,7 +304,7 @@ static class StacksDiag
                 ? " —— **粛は在庫の側で非対称。実効は 味方 100% / 敵 0%**（予測 P4）"
                 : ""));
         Console.WriteLine();
-        Console.WriteLine($"> **`CLAUDE.md` は「止まるのはこの窓口を通る4本だけ」と書いているが、走査では {outOfTurn.Count} 本ある**"
+        Console.WriteLine($"> **`design/ENGINE_HOOKS.md`（第259期までは `CLAUDE.md`）は「止まるのはこの窓口を通る4本だけ」と書いているが、走査では {outOfTurn.Count} 本ある**"
             + " ——**第110期の譲渡（尾灯・`TaillightTrait`）が5本目**で、"
             + "第27期以来の一文が**24期ぶんのあいだ更新されていなかった。**"
             + "第122期「規則を降ろすと、その規則を前提に書かれた説明文が静かに嘘になる」の**逆側**"
