@@ -9388,7 +9388,7 @@ public sealed class BattleContext
             FireBook.SurgeAllyOver += FireBook.OverflowN + FireBook.GiftHoardAdds + FireBook.GiftHoardCapped - over0;
         }
         EmitFireLevel(borg, u, FireLevelLabels.BlazeSurge, a, b);
-        Log($"    爆炎で {u.Name} の火勢が {b} → {a} に跳ね上がる", LogKind.Status);
+        Log(a > b ? $"    爆炎で {u.Name} の火勢が {b} → {a} に跳ね上がる" : $"    爆炎の火が {u.Name} にあふれる（火勢 {a} のまま）", LogKind.Status);
     }
 
     /// <summary>
