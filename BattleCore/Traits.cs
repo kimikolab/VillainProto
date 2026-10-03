@@ -569,6 +569,14 @@ public enum TraitId
     MendGlow,       // 癒しの灯（第252期・ヒヨの版 H2）: 火勢4 で来た育ち1回につき、燃えている味方全員（自分を含む）を 4 回復（火の回復・ベニの反転の裏は通らない）。**判定は engine**（`GrowFire`）。保持者 0 枚
     TickOnce,       // 刻み・一撃（第249期・ボルグの版 K4t・比較の1版）: 燃焼の刻みを「6 を火勢の回数」から「6 × 火勢 を1回」に（敵・味方とも・刻みの回数の札がある陣営で）。**判定は engine**（`TickStatuses`）。保持者 0 枚
 
+    // --- 第260期で足した札（**検証波の敵だけ**。チェック波 `checkwave` のローカルの敵が持つ。ロスターの駒には付けない・`Stages` にも載せない） ---
+    CheckMend30,    // 癒し手・30（第260期・手数チェック T-30）: ターン頭（`OnTurnStart`）に自陣の生存全員（自分を含む）を 30 ずつ回復（`ctx.Heal` 経由）。保持者を倒せば止まる。保持者 0 枚
+    CheckMend50,    // 癒し手・50（第260期・手数チェック T-50）: 同上で 50 ずつ。保持者 0 枚
+    BossMendFull,   // 全快（第260期・ボス B-全）: ターン頭に自分を全快（HP のみ・状態は消さない）。保持者 0 枚
+    BossMendHalf,   // 半ば癒える（第260期・ボス B-半）: ターン頭に自分を最大HPの 50% 回復（HP のみ）。保持者 0 枚
+    BossRise4,      // 天井・4（第260期・ボス）: 攻撃力が毎ターン +4（線形・ターン数からの再計算で、強化の窓口を通らない・横取りされない）。保持者 0 枚
+    BossRise8,      // 天井・8（第260期・ボス）: 同上で +8。保持者 0 枚
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -13702,6 +13710,78 @@ public sealed class BlazeSurgeMaxTrait : Trait { public override TraitId Id => T
 /// <summary>爆炎・敵上げ2 ／ 敵上げ満（第257期・ボルグ W2 ／ W4）。engine の `BigMove` が読む（爆炎で当たった敵だけ火勢を上げる・味方は上げない）。</summary>
 public sealed class BlazeFoeSurge2Trait : Trait { public override TraitId Id => TraitId.BlazeFoeSurge2; }
 public sealed class BlazeFoeSurgeMaxTrait : Trait { public override TraitId Id => TraitId.BlazeFoeSurgeMax; }
+
+/// <summary>
+/// 癒し手（第260期・手数チェック波の敵だけ）。<b>ターン頭に自陣の生存全員（自分を含む）を <see cref="Amount"/> ずつ回復する。</b>
+///
+/// <para>施し（<see cref="AlmsTrait"/>）と同じくターン頭（<c>OnTurnStart</c>）で配る——<b>燃焼・毒の刻み（<c>TickStatuses</c>）の後</b>に入るので、
+/// 刻んだ分はその場で押し返される。回復役の手番には紐づけない（保持者を倒せば止まる、という勾配は「倒す」だけで立つ）。
+/// 回復は <c>ctx.Heal</c> の入口を通る（渇き・支援拒否・反転の裏はそこに立つ。反転の裏は同じ陣営の隣にしか立たない）。</para>
+///
+/// <para><b>保持者は <c>checkwave</c> のローカルの敵だけ</b>（従軍司祭 40/9/8 と数値・型を同じにし、差分をこの札1枚に閉じる）。
+/// 量は版の札（30 ／ 50）で分ける——<c>Run</c> の引数は増やさない。乱数は引かない（自陣の席の順に配る）。</para>
+/// </summary>
+public sealed class PartyMendTrait : Trait
+{
+    public const int Low = 30, High = 50;
+    readonly TraitId _id;
+    public int Amount { get; }
+    public PartyMendTrait(TraitId id, int amount) { _id = id; Amount = amount; }
+    public override TraitId Id => _id;
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        int healed = 0;
+        foreach (UnitState u in ctx.LivingMembers(self.TeamId))
+        {
+            int b = u.Hp;
+            ctx.Heal(u, Amount, self);
+            healed += u.Hp - b;
+        }
+        ctx.Log($"    {self.Name} が味方全員を癒した（各 +{Amount}・計 +{healed}）", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// ボスの回復（第260期・1ターン火力チェック波の敵だけ）。<b>ターン頭に自分を最大HPの <see cref="Percent"/>% 回復する</b>（100 ＝ 全快）。
+/// <b>HP だけを戻し、状態（毒・燃焼・火勢・破片）は消さない</b>——<c>ctx.Heal</c> は HP しか書かない。刻みの後に入る（<see cref="PartyMendTrait"/> と同じ席）。
+/// </summary>
+public sealed class BossMendTrait : Trait
+{
+    public const int HalfPct = 50;
+    readonly TraitId _id;
+    public int Percent { get; }
+    public BossMendTrait(TraitId id, int percent) { _id = id; Percent = percent; }
+    public override TraitId Id => _id;
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        int amount = Percent >= 100 ? self.MaxHp - self.Hp : self.MaxHp * Percent / 100;
+        if (amount <= 0) return;
+        int b = self.Hp;
+        ctx.Heal(self, amount, self);
+        ctx.Log($"    {self.Name} の傷が塞がる（+{self.Hp - b}・HP {self.Hp}/{self.MaxHp}）", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// ボスの天井（第260期・1ターン火力チェック波の敵だけ）。<b>攻撃力が毎ターン +<see cref="Step"/></b>（ターン t で +Step × (t − 1)）。
+/// <b>蓄積ではなくターン数からの再計算</b>——<c>AtkBonus</c> に積まないので、弱体の窓口（<c>Dull</c>）にも横取りにも触れず、会戦の境界で消す必要もない。
+/// 「耐えればいずれ勝てる」を消す装置。
+/// </summary>
+public sealed class BossRiseTrait : Trait
+{
+    public const int Low = 4, High = 8;
+    readonly TraitId _id;
+    public int Step { get; }
+    public BossRiseTrait(TraitId id, int step) { _id = id; Step = step; }
+    public override TraitId Id => _id;
+
+    public override int ModifyAttack(UnitState self, int atk)
+        => self.Board is { } b && b.Turn > 1 ? atk + Step * (b.Turn - 1) : atk;
+}
 /// <summary>被弾の燃焼（第255期・版 H-足す ／ H-分担 ／ H-分担1 ／ H-敵だけ）。engine の `ApplyDamageCore`・`TickStatuses` が読む。札そのものは挙動を持たない。</summary>
 public sealed class BurnHitAddTrait : Trait { public override TraitId Id => TraitId.BurnHitAdd; }
 public sealed class BurnHitSplitTrait : Trait { public override TraitId Id => TraitId.BurnHitSplit; }
@@ -15905,6 +15985,12 @@ public static class TraitCatalog
         new BlazeSurgeMaxTrait(),    // 第254期
         new BlazeFoeSurge2Trait(),   // 第257期
         new BlazeFoeSurgeMaxTrait(), // 第257期
+        new PartyMendTrait(TraitId.CheckMend30, PartyMendTrait.Low),   // 第260期（検証波の敵だけ）
+        new PartyMendTrait(TraitId.CheckMend50, PartyMendTrait.High),  // 第260期
+        new BossMendTrait(TraitId.BossMendFull, 100),                  // 第260期
+        new BossMendTrait(TraitId.BossMendHalf, BossMendTrait.HalfPct), // 第260期
+        new BossRiseTrait(TraitId.BossRise4, BossRiseTrait.Low),       // 第260期
+        new BossRiseTrait(TraitId.BossRise8, BossRiseTrait.High),      // 第260期
         new BurnHitAddTrait(),       // 第255期
         new BurnHitSplitTrait(),     // 第255期
         new BurnHitSplitOnceTrait(), // 第255期
