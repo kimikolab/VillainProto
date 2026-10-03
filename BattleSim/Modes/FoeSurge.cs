@@ -167,7 +167,7 @@ static partial class FoeSurgeDiag
         foreach (var v in Versions) Console.WriteLine($"- {v.Name}: {v.What}");
         Console.WriteLine();
         FK.TableA(); FK.TableA2();
-        TableQ2(); TableB(); TableC(); TableD(); BS.TableF(); BS.TableE(); TableF(); BS.TableH();
+        TableQ2(); TableB(); TableC(); TableD(); TableD2(); BS.TableF(); BS.TableE(); TableF(); BS.TableH();
         FK.TableDeath();
         Console.WriteLine($"（所要 {sw.Elapsed.TotalSeconds:F0} 秒・seed 0..{BA.Seeds - 1}・verbose・燃焼の規則は規定）");
     }

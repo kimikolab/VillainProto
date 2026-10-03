@@ -9314,7 +9314,9 @@ public sealed class BattleContext
             bool blaze = actor.HasTrait(TraitId.UnleashBlaze);
             // 第254期（爆炎・上げ）: 当てた敵を控える（`NoteFireContact` が `_unleashHits` に足す）。札が無ければ控えない。
             int surge = blaze ? SurgeOf(actor) : 0;
-            if (surge > 0 && _unleashHits is null) _unleashHits = new List<UnitState>();
+            // 第257期（爆炎・敵上げ）: 敵の側に渡す量は別の1本（第254期の上げがあればそれ、無ければ敵上げの札）。味方には `surge` のまま。
+            int foeSurge = blaze ? FoeSurgeOf(actor) : 0;
+            if (foeSurge > 0 && _unleashHits is null) _unleashHits = new List<UnitState>();
             // 第252期（O1 溜め火）: 次の爆炎で、敵への倍率と味方への燃焼ダメージに溜め × 0.5 を足す。撃ったら 0。札が無ければ溜めは 0。
             int hoard = blaze && _kindleLive && actor.HasTrait(TraitId.BlazeHoard) ? actor.RawCounter(FireKindleRule.HoardKey) : 0;
             int unleashPct = FireBurstRule.UnleashPercent + hoard * FireKindleRule.HoardPercent;
@@ -9344,12 +9346,12 @@ public sealed class BattleContext
             if (blaze)
             {
                 // 第254期（爆炎・上げ）: 当てた敵のうち生き残った敵（席番号の順）の火勢を上げる。爆炎の瞬間の敵の火勢の分布は札が無くても数える（計数のみ）。
-                List<UnitState>? hitFoes = surge > 0 ? _unleashHits!.ToList() : null;
-                if (surge > 0 && !stoke) _unleashHits = null;
+                List<UnitState>? hitFoes = foeSurge > 0 ? _unleashHits!.ToList() : null;
+                if (foeSurge > 0 && !stoke) _unleashHits = null;
                 var living = LivingMembers(Opponent(actor.TeamId));
                 foreach (UnitState f in living) FireBook.BlazeFoeLvPre[FireLevelRule.Of(f)]++;
                 if (hitFoes is not null)
-                    foreach (UnitState f in hitFoes.OrderBy(x => x.Slot)) BlazeSurge(actor, f, surge);
+                    foreach (UnitState f in hitFoes.OrderBy(x => x.Slot)) BlazeSurge(actor, f, foeSurge);
                 foreach (UnitState f in living) FireBook.BlazeFoeLvPost[FireLevelRule.Of(f)]++;
             }
             if (blaze && actor.IsAlive)
@@ -9530,6 +9532,10 @@ public sealed class BattleContext
 
     /// <summary>第254期（爆炎・上げ）: 0 なし ／ 2 上げ2（`BlazeSurge2`）／ 4 上げ満（`BlazeSurgeMax`・両方持てば上げ満）。</summary>
     static int SurgeOf(UnitState borg) => borg.HasTrait(TraitId.BlazeSurgeMax) ? 4 : borg.HasTrait(TraitId.BlazeSurge2) ? 2 : 0;
+    /// <summary>第257期（爆炎・敵上げ）: 敵の側の量。第254期の上げ（敵と味方）があればそれ、無ければ 4 敵上げ満（`BlazeFoeSurgeMax`）／ 2 敵上げ2（`BlazeFoeSurge2`）／ 0。
+    /// 味方の側は今の <see cref="SurgeOf"/> のまま（敵上げの札だけなら 0＝味方は上げない）。</summary>
+    static int FoeSurgeOf(UnitState borg) => SurgeOf(borg) is int s && s > 0 ? s
+        : borg.HasTrait(TraitId.BlazeFoeSurgeMax) ? 4 : borg.HasTrait(TraitId.BlazeFoeSurge2) ? 2 : 0;
 
     /// <summary>
     /// 第254期（爆炎・上げ）: 爆炎で当たった駒（ボルグ以外）の火勢を上げる。上げは「育ち」（`GrowFire`）として通す——
@@ -9552,7 +9558,8 @@ public sealed class BattleContext
             FireBook.SurgeAlly++; FireBook.SurgeAllySteps += a - b; if (a == FireLevelRule.Max && b < a) FireBook.SurgeAllyTo4++;
             FireBook.SurgeAllyOver += FireBook.OverflowN + FireBook.GiftHoardAdds + FireBook.GiftHoardCapped - over0;
         }
-        EmitFireLevel(borg, u, FireLevelLabels.BlazeSurge, a, b);
+        // 第257期: 敵上げの札だけ（第254期の上げが無い）なら見出しは「爆炎・敵上げ」——敵の火が一斉に跳ね上がる瞬間（表示専用）。
+        EmitFireLevel(borg, u, foe && SurgeOf(borg) == 0 ? FireLevelLabels.BlazeFoeSurge : FireLevelLabels.BlazeSurge, a, b);
         Log(a > b ? $"    爆炎で {u.Name} の火勢が {b} → {a} に跳ね上がる" : $"    爆炎の火が {u.Name} にあふれる（火勢 {a} のまま）", LogKind.Status);
     }
 

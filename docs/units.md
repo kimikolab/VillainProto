@@ -369,6 +369,8 @@
 | `BlazeSurge2` | - |
 | `BlazeSurgeMax` | - |
 | `BurnHitAdd` | - |
+| `BlazeFoeSurge2` | - |
+| `BlazeFoeSurgeMax` | - |
 | `BurnHitSplit` | - |
 | `BurnHitSplitOnce` | - |
 | `BurnHitCount` | - |

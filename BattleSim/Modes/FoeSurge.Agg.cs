@@ -17,6 +17,8 @@ static partial class FoeSurgeDiag
         // 表B: 敵に入った被弾の燃焼（回 ／ 名目 ／ HP）——戦全体 ／ 爆炎の後。ターン頭の刻み（名目 ／ HP）も同じく。
         public long HitAll, HitAllNom, HitAllHp, HitAft, HitAftNom, HitAftHp, TickAll, TickAllHp, TickAft, TickAftHp;
         public long HitKillsAft;
+        // 表D′: 最初の爆炎の手番の中の敵の育ち（`育つ・敵`・爆炎の一撃の燃え広がりが枠の出口で育てた分）と、そのうち 4 に届いた件・敵上げの見出しの数
+        public long HandGrow, HandGrow4, HandSurge, HandSurge4;
         // 表C: 駒（味方の Def.Id）→ { 爆炎の後の直の与ダメ, 爆炎の後に起こした被弾の燃焼の HP, 爆炎の後の当てた回数, 爆炎の後に起こした被弾の燃焼の回数, 戦全体の直の与ダメ }
         public readonly Dictionary<string, long[]> ByUnit = new();
         // 表D: 周回の頭の敵（生きている）——火勢4 の数・燃えている数（T1..T8）・爆炎の次の周回の火勢4 の数
@@ -30,6 +32,7 @@ static partial class FoeSurgeDiag
             N += o.N; BlazeBattles += o.BlazeBattles; Blazes += o.Blazes; FirstBlazeTurnSum += o.FirstBlazeTurnSum; AftTurns += o.AftTurns; FoeDeathsAft += o.FoeDeathsAft; Wins += o.Wins;
             HitAll += o.HitAll; HitAllNom += o.HitAllNom; HitAllHp += o.HitAllHp; HitAft += o.HitAft; HitAftNom += o.HitAftNom; HitAftHp += o.HitAftHp;
             TickAll += o.TickAll; TickAllHp += o.TickAllHp; TickAft += o.TickAft; TickAftHp += o.TickAftHp; HitKillsAft += o.HitKillsAft;
+            HandGrow += o.HandGrow; HandGrow4 += o.HandGrow4; HandSurge += o.HandSurge; HandSurge4 += o.HandSurge4;
             foreach (var (k, v) in o.ByUnit)
             {
                 if (!ByUnit.TryGetValue(k, out var r)) ByUnit[k] = r = new long[5];
@@ -59,14 +62,14 @@ static partial class FoeSurgeDiag
             int lastTurn = target ? Math.Min(r.Turns, TM) : r.Turns;
 
             // 最初の爆炎（その手番の枠の終わり）
-            int he = int.MaxValue, bt = 0;
+            int he = int.MaxValue, bt = 0, i0 = -1;
             for (int i = 0; i < n; i++)
             {
                 var x = ev[i];
                 if (x.Kind != BattleEventKind.FireLevel || x.Text != FireLevelLabels.Blaze || x.ActorId != borg) continue;
                 Blazes++;
                 if (bt != 0) continue;
-                bt = x.Turn;
+                bt = x.Turn; i0 = i;
                 he = n;
                 foreach (var h in r.Hands) if (h.ActorId == borg && h.EventStart <= i && i < h.EventEnd) he = Math.Min(he, h.EventEnd);
             }
@@ -77,6 +80,14 @@ static partial class FoeSurgeDiag
             }
             else BlazeTurnHist[0]++;
             for (int t = 1; t <= Math.Min(lastTurn, TM); t++) TurnReached[t]++;
+            if (i0 >= 0)
+                for (int j = i0; j < Math.Min(he, n); j++)
+                {
+                    var y = ev[j];
+                    if (y.Kind != BattleEventKind.FireLevel || y.TargetId is not int gt || !foes.Contains(gt)) continue;
+                    if (y.Text == FireLevelLabels.GrowFoe) { HandGrow++; if (y.Amount >= 4) HandGrow4++; }
+                    if (y.Text == FireLevelLabels.BlazeFoeSurge || y.Text == FireLevelLabels.BlazeSurge) { HandSurge++; if (y.Amount >= 4) HandSurge4++; }
+                }
 
             long[] U(string id) { if (!ByUnit.TryGetValue(id, out var a)) ByUnit[id] = a = new long[5]; return a; }
             for (int j = 0; j < n; j++)
@@ -231,6 +242,23 @@ static partial class FoeSurgeDiag
                 var x = XG(b, v, cells);
                 string lv = string.Join(" | ", Enumerable.Range(1, TM).Select(t => x.TurnReached[t] == 0 ? "—" : $"{(double)x.FoeLv4Sum[t] / x.TurnReached[t]:F2}（{(double)x.FoeBurnSum[t] / x.TurnReached[t]:F2}）"));
                 Console.WriteLine($"| {b} | {v} | {gn} | {lv} | {Per(x.AfterFoeLv4Sum, x.AfterFoeLv4N)} |");
+            }
+        Console.WriteLine();
+    }
+
+    static void TableD2()
+    {
+        Console.WriteLine("## 表D′ —— 最初の爆炎の手番の中の敵の火勢: 上げ（敵上げ／上げの見出し）と、爆炎の一撃の燃え広がりが手番の枠の出口で育てた分（`育つ・敵`）");
+        Console.WriteLine();
+        Console.WriteLine("/最初の爆炎。上げ ＝ 上げた敵（うち 4 に届いた）。枠の出口 ＝ 育った敵（うち 4 に届いた）——爆炎の前から燃えていた敵は、上げが無くても枠の出口で +1 育つ。");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 版 | 波 | 上げ/爆炎（4 に） | 枠の出口の育ち/爆炎（4 に） |");
+        Console.WriteLine("|---|---|---|---|---|");
+        foreach (var (b, v) in Rows())
+            foreach (var (gn, cells) in BS.Groups.Where(g => CGroups.Contains(g.Name)))
+            {
+                var x = XG(b, v, cells);
+                Console.WriteLine($"| {b} | {v} | {gn} | {Per(x.HandSurge, x.BlazeBattles)}（{Per(x.HandSurge4, x.BlazeBattles)}） | {Per(x.HandGrow, x.BlazeBattles)}（{Per(x.HandGrow4, x.BlazeBattles)}） |");
             }
         Console.WriteLine();
     }
