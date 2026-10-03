@@ -74,8 +74,9 @@ public partial class MovementCheck : Control
             var sample = BattleEngine.Run(BattleEngine.Materialize(formation, 0),
                 BattleEngine.MaterializeEnemy(EnemyCatalog.TestStages[0].Enemy, new EnemyScaleRule(200, 200)), seed);
             int kinds = sample.Events.Where(e => MovementPresentation.IsCue(e.Kind)).Select(e => e.Kind).Distinct().Count();
-            if (kinds > coverage && sample.Events.Any(e => e.Kind == BattleEventKind.Retreat)
-                && sample.Events.Any(e => e.Kind == BattleEventKind.Blast)) { chosen = seed; coverage = kinds; }
+            var indexed = new MovementPresentation(sample.Events);
+            if (kinds > coverage && indexed.Moves.Values.Any(e => e.Kind == BattleEventKind.Retreat)
+                && indexed.Moves.Values.Any(e => e.Kind == BattleEventKind.Blast)) { chosen = seed; coverage = kinds; }
         }
         Require(chosen >= 0, "緊急退避と吹っ飛ばしの実台本を見つける");
         Read<SpinBox>("_seed").Value = chosen;
