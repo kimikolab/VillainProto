@@ -808,11 +808,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 foesurge digest <版> [path]  # 版の台本の指紋（W0 は実装の前と 834,087 行で一致）
     dotnet run --project BattleSim -c Release 0 foesurge log <版> <台> [seed] [波 0〜8] [倍率 0/1/2]   # 1戦のログ（台は T3-244 ／ T3-238 ／ T3-255 ／ 混ぜ-255 ／ 雷＋ボルグ）
     dotnet run --project BattleSim -c Release 0 checkwave phase0     # 第260期 Phase 0（刻みと回復の順・第四波の写しの一致・軛と回復・ボスの攻撃力・机上計算）＋ 段1 の棚卸し（6台 × 8波 × seed 0..199・窓の与ダメと命中・5 秒）。本体は `Modes/CheckWave*.cs`
-    dotnet run --project BattleSim -c Release 0 checkwave run        # 第262期 段2・段3（6台 × 400/300 の手数チェック W2-対照 ／ W2-50後 ／ W2-50奥 ＋ 全体攻撃の動じないボス B2-全4 ／ B2-半4 ＋ 対照・ボスの入った ／ 名目・味方の回復〈表C′〉・倒しT の順位・2 秒）
+    dotnet run --project BattleSim -c Release 0 checkwave run        # 第263期 桁合わせ版（B3-桁 天井 +11 ／ W3-割合 回復 40% ＋ 対照・勝率の帯 D-4・4 秒）
+    dotnet run --project BattleSim -c Release 0 checkwave ranks      # 第263期 第260〜263期の全版の連続量（倒しT・回復を上回った窓・窓あたり出力・癒し手を割ったT・純実入り）の順位と、ボス × 手数の順位の逆転（4 秒）
+    dotnet run --project BattleSim -c Release 0 checkwave run262     # 第262期 段2・段3（400/300 の手数チェック W2-* ＋ 全体攻撃の動じないボス B2-*・棄却・対照・第262期の run と全行一致）
     dotnet run --project BattleSim -c Release 0 checkwave run261     # 第261期 段2・段3（重装兵の体の癒し手 W-* ＋ 単体の動じないボス B-*・棄却・対照・第261期の run と全行一致）
     dotnet run --project BattleSim -c Release 0 checkwave run260     # 第260期の段2・段3（司祭の体の癒し手 T-* ＋ 動じない無しのボス・HP 500 の参考）と採否の表 D-1〜D-4（棄却・対照・3 秒）
-    dotnet run --project BattleSim -c Release 0 checkwave check      # 自己検査（写しの台本一致・癒し手 ＝ 従軍司祭＋札1枚・保持者 0・回復は状態を消さない・刻みの後・軛に切られない・ボスの攻撃力・verbose・乱数・動じない札・重装兵の体の癒し手・全体のボス・400/300 の癒し手・22 項目）
-    dotnet run --project BattleSim -c Release 0 checkwave log <台> <波> [seed]   # 1戦のログ（台は 燃焼 T3-244 ／ 燃焼 T3-255 ／ 移動 ／ 雷 ／ 毒 ／ 混ぜ-255・波は W2-対照 ／ W2-50後 ／ W2-50奥 ／ B2-全4 ／ B2-半4、第261期の版は `261:`・第260期の版は `260:` を前に付ける）
+    dotnet run --project BattleSim -c Release 0 checkwave check      # 自己検査（写しの台本一致・癒し手 ＝ 従軍司祭＋札1枚・保持者 0・回復は状態を消さない・刻みの後・軛に切られない・ボスの攻撃力・verbose・乱数・動じない札・重装兵の体の癒し手・全体のボス・400/300 の癒し手・天井 +11・割合の回復・24 項目）
+    dotnet run --project BattleSim -c Release 0 checkwave log <台> <波> [seed]   # 1戦のログ（台は 燃焼 T3-244 ／ 燃焼 T3-255 ／ 移動 ／ 雷 ／ 毒 ／ 混ぜ-255・波は B3-桁 ／ W3-割合 ／ W2-対照 ／ W2-50後 ／ W2-50奥 ／ B2-全4 ／ B2-半4、第261期の版は `261:`・第260期の版は `260:` を前に付ける）
     dotnet run --project BattleSim -c Release 0 shockdigest s232 # 第232期の台（前段の規定・固定なし）
     dotnet run --project BattleSim -c Release 0 shockdigest a231 # 第231期の台（V0＝前段の規定の台本が実装の前後で一致すること）
     dotnet run --project BattleSim -c Release 0 shockdigest w230 # 第230期の台（W0＝前段の規定の台本が実装の前後で一致すること・今の既定の規則で回す唯一のモード）

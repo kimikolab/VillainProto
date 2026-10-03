@@ -384,6 +384,8 @@
 | `BossMendHalf` | - |
 | `BossRise4` | - |
 | `BossRise8` | - |
+| `BossRise11` | - |
+| `CheckMendPct40` | - |
 | `BossSteadfast` | - |
 | `Inversion` | - |
 | `Drought` | - |
