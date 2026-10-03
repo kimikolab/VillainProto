@@ -368,6 +368,11 @@
 | `GiftHoard` | 火選りのヒヨ |
 | `BlazeSurge2` | - |
 | `BlazeSurgeMax` | - |
+| `BurnHitAdd` | - |
+| `BurnHitSplit` | - |
+| `BurnHitSplitOnce` | - |
+| `BurnHitCount` | - |
+| `BurnHitFoeOnly` | - |
 | `GiftOrder` | 火選りのヒヨ |
 | `MendGlow` | - |
 | `TickOnce` | - |

@@ -3755,6 +3755,34 @@ public sealed class BrittleLedger
 /// <para>「燃えている」＝ 燃焼の残りターン 1 以上（刻みで残りが 0 になってから倒れた駒も、その刻みの中なら燃えていたと数える）。</para>
 /// </summary>
 /// <summary>
+/// 被弾の燃焼の帳簿（第255期・<b>計数専用で、どの規則も読まない</b>）。添字の陣営は<b>燃えている駒（受けた側）</b>の陣営（0 味方 ／ 1 敵）。
+/// 「刻み」はターン頭の燃焼の刻み、「被弾」は被弾の燃焼。HP の量は刻みの前後の HP の差で、減った分（Dmg）と増えた分（Heal＝火の変換・ベニの反転・火の癒し）に分ける。
+/// </summary>
+public sealed class BurnHitLedger
+{
+    /// <summary>被弾の燃焼が起きた回数（1回の一撃で1回）／ 6 の刻みの回数（火勢の回数の和）／ 削った HP ／ 回復になった HP。</summary>
+    public readonly long[] Fires = new long[2], Units = new long[2], HitDmg = new long[2], HitHeal = new long[2];
+    /// <summary>ターン頭の燃焼の刻み（比べるため・同じ戦の中で数える）。</summary>
+    public readonly long[] TickFires = new long[2], TickDmg = new long[2], TickHeal = new long[2];
+    /// <summary>被弾の燃焼で倒れた駒（燃焼の後で HP 0）。</summary>
+    public readonly long[] Kills = new long[2];
+    /// <summary>同じ1回の攻撃の中で、同じ駒に2回目以上起きた被弾の燃焼（跳ね）／ 分担1 で止めた回数。</summary>
+    public readonly long[] Repeats = new long[2], Skipped = new long[2];
+    /// <summary>燃えている駒が受けた一撃のうち、起きなかった理由（計数のみ）: 出どころの陣営の門で外れた（敵だけの版の味方）。</summary>
+    public readonly long[] GateOff = new long[2];
+    /// <summary>機会（計数のみ・版に依らず数える）: 被弾の燃焼が起きうる一撃の数 ／ その瞬間の火勢の和（6 の刻みの回数の見込み）。</summary>
+    public readonly long[] Chances = new long[2], ChanceLv = new long[2];
+    /// <summary>殴った駒（`陣営:Def.Id`）→ { 機会, 火勢の和 }。</summary>
+    public readonly Dictionary<string, long[]> ChanceBy = new();
+    /// <summary>殴った駒（`陣営:Def.Id`）→ { 起きた回数, 6 の刻みの回数, 削った HP, 回復になった HP }。</summary>
+    public readonly Dictionary<string, long[]> ByActor = new();
+    /// <summary>燃えていた駒（`陣営:Def.Id`）→ { 起きた回数, 削った HP, 回復になった HP }。</summary>
+    public readonly Dictionary<string, long[]> ByTarget = new();
+    /// <summary>1回の攻撃の枠の中で起きた被弾の燃焼の数の分布（0..9＋・枠を開いた攻撃だけ）。</summary>
+    public readonly long[] PerScope = new long[11];
+}
+
+/// <summary>
 /// 火勢の帳簿（第242期）。<b>計数専用で、どの規則も読まない。</b>写し（<see cref="Snaps"/>）はターンの頭（刻みの後）に、火勢を持つ陣営の生きている駒ごと。
 /// </summary>
 public sealed class FireLevelLedger
@@ -4727,6 +4755,8 @@ public sealed class BattleResult
     public BurnLinkLedger? BurnLink { get; init; }
     /// <summary>火勢の帳簿（第242期・<see cref="FireLevelLedger"/>）。<b>計数専用で、どの規則も読まない。</b>保持者のいない戦では空。</summary>
     public FireLevelLedger? FireLevels { get; init; }
+    /// <summary>被弾の燃焼の帳簿（第255期・<see cref="BurnHitLedger"/>）。<b>計数専用で、どの規則も読まない。</b>札の持ち主のいない戦では null。</summary>
+    public BurnHitLedger? BurnHit { get; init; }
 
     /// <summary>
     /// 第184期。標の軸（§1 被ダメージ増・§2 矢面の半減）の帳簿（<b>計数専用</b>。どの規則も読まない）。

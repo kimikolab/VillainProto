@@ -558,6 +558,11 @@ public enum TraitId
     GiftHoard,      // 渡す火（第252期・ヒヨの版 H1）: 火勢4 で来た育ちを溜め +1（上限 3）。ギフトを撃つとき相手1体ごとに相手の火勢を溜めの数だけ上げ（上限 4・あぶれた火にはならない）、撃ったら 0。**判定は engine**（`GrowFire`・`QueueGift`）。保持者 0 枚
     BlazeSurge2,    // 爆炎・上げ2（第254期・ボルグの版 V2）: 爆炎で当たった敵と味方（ボルグ以外）の火勢を +2（上限 4・+1 ずつ2回の育ちとして通す＝4 を超えた分はあぶれた火）。爆炎・独りでも同じ。**判定は engine**（`BigMove`・`BlazeAllies`・`BlazeSurge`）。保持者 0 枚
     BlazeSurgeMax,  // 爆炎・上げ満（第254期・ボルグの版 V4）: 爆炎で当たった敵と味方（ボルグ以外）の火勢を 4 に（既に 4 なら +1 の育ち1回＝あぶれた火1回分）。爆炎・独りでも同じ。**判定は engine**（`BigMove`・`BlazeAllies`・`BlazeSurge`）。保持者 0 枚
+    BurnHitAdd,     // 被弾の燃焼・足す（第255期・版 H-足す）: 燃えている駒が出どころのある一撃を受けるたび（その一撃より前から燃えていたときだけ・刻み／徴収／中継／呪いの共有／逸らしの受け渡し／放電／澱みの爆発は除く）、燃焼 6 を火勢の回数だけ刻む（刻みと同じ規則・残りターンは減らさない）。ターン頭の刻みはそのまま。**保持者が戦に出ていれば両陣営に効く**。**判定は engine**（`ApplyDamageCore`・`BurnOnHit`）。保持者 0 枚
+    BurnHitSplit,   // 被弾の燃焼・分担（第255期・版 H-分担）: 被弾の燃焼は H-足す と同じ・ターン頭の燃焼の刻みは火勢に関わらず 6 × 1。両陣営。**判定は engine**（`TickStatuses`・`BurnOnHit`）。保持者 0 枚
+    BurnHitSplitOnce, // 被弾の燃焼・分担1（第255期・版 H-分担1）: H-分担 ＋ 1回の攻撃（手番の一振り全体・手番の外の1回の攻撃）で同じ駒は1回まで。**判定は engine**（`BurnHitScope`）。保持者 0 枚
+    BurnHitCount,   // 被弾の燃焼の機会を数える（第255期・**計数専用**）: 盤面を1ビットも動かさず、被弾の燃焼が起きうる一撃（その一撃より前から燃えていた駒が出どころのある一撃で HP か破片を減らした）を数えるだけ。Phase 0 の材料。保持者 0 枚
+    BurnHitFoeOnly, // 被弾の燃焼・敵だけ（第255期・版 H-敵だけ）: 保持者の相手の陣営だけ H-分担（被弾の燃焼 ＋ ターン頭 6 × 1）。保持者の陣営はターン頭のまま・被弾の燃焼なし。**判定は engine**。保持者 0 枚
     GiftOrder,      // 渡す順（第253期・ヒヨ）: 2体にギフトを渡すとき、相手に放つ（`FireUnleash`＝ボルグ）の持ち主がいれば、その手番を先にする（もう1体はその後）。相手の選び方は今のまま・1体のときは変えない。**判定は engine**（`QueueGift`・安定な並べ替え1回・乱数を引かない）
     MendGlow,       // 癒しの灯（第252期・ヒヨの版 H2）: 火勢4 で来た育ち1回につき、燃えている味方全員（自分を含む）を 4 回復（火の回復・ベニの反転の裏は通らない）。**判定は engine**（`GrowFire`）。保持者 0 枚
     TickOnce,       // 刻み・一撃（第249期・ボルグの版 K4t・比較の1版）: 燃焼の刻みを「6 を火勢の回数」から「6 × 火勢 を1回」に（敵・味方とも・刻みの回数の札がある陣営で）。**判定は engine**（`TickStatuses`）。保持者 0 枚
@@ -13683,6 +13688,13 @@ public sealed class GiftOrderTrait : Trait { public override TraitId Id => Trait
 public sealed class BlazeSurge2Trait : Trait { public override TraitId Id => TraitId.BlazeSurge2; }
 /// <summary>爆炎・上げ満（第254期・ボルグ V4）。engine の `BigMove`・`BlazeAllies` が読む（爆炎で当たった駒の火勢を 4 に）。</summary>
 public sealed class BlazeSurgeMaxTrait : Trait { public override TraitId Id => TraitId.BlazeSurgeMax; }
+/// <summary>被弾の燃焼（第255期・版 H-足す ／ H-分担 ／ H-分担1 ／ H-敵だけ）。engine の `ApplyDamageCore`・`TickStatuses` が読む。札そのものは挙動を持たない。</summary>
+public sealed class BurnHitAddTrait : Trait { public override TraitId Id => TraitId.BurnHitAdd; }
+public sealed class BurnHitSplitTrait : Trait { public override TraitId Id => TraitId.BurnHitSplit; }
+public sealed class BurnHitSplitOnceTrait : Trait { public override TraitId Id => TraitId.BurnHitSplitOnce; }
+public sealed class BurnHitFoeOnlyTrait : Trait { public override TraitId Id => TraitId.BurnHitFoeOnly; }
+/// <summary>被弾の燃焼の機会を数える（第255期・計数専用）。盤面は動かさない。</summary>
+public sealed class BurnHitCountTrait : Trait { public override TraitId Id => TraitId.BurnHitCount; }
 /// <summary>癒しの灯（第252期・ヒヨ H2）。engine の `GrowFire` が読む。</summary>
 public sealed class MendGlowTrait : Trait { public override TraitId Id => TraitId.MendGlow; }
 /// <summary>火の粉（焼き尽くす）（第247期・ヒヨ・燃え広がりの育ちはそのまま）。engine が読む。</summary>
@@ -15877,6 +15889,11 @@ public static class TraitCatalog
         new GiftOrderTrait(),        // 第253期
         new BlazeSurge2Trait(),      // 第254期
         new BlazeSurgeMaxTrait(),    // 第254期
+        new BurnHitAddTrait(),       // 第255期
+        new BurnHitSplitTrait(),     // 第255期
+        new BurnHitSplitOnceTrait(), // 第255期
+        new BurnHitFoeOnlyTrait(),   // 第255期
+        new BurnHitCountTrait(),     // 第255期（計数専用）
         new SparkCatchTrait(),       // 第247期
         new SparkUnleashTrait(),     // 第247期
         new GiftPairTrait(),         // 第247期

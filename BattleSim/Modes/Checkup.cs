@@ -232,6 +232,11 @@ public static void Run(string[] args, int stageIndex)
         // 第254期: 保持者 0 枚（版は `blazesurge` のローカルの駒）。
         [TraitId.BlazeSurge2]    = (HcBothL, "爆炎で当たった敵と味方の火勢を +2——味方の燃焼の刻みも回数が増える"),
         [TraitId.BlazeSurgeMax]  = (HcBothL, "爆炎で当たった敵と味方の火勢を 4 に——味方の燃焼の刻みも回数が増える"),
+        [TraitId.BurnHitAdd] = (HcBothL, "燃えている駒が殴られるたび燃焼が燃え上がる——敵にも味方にも同じ"),
+        [TraitId.BurnHitSplit] = (HcBothL, "燃焼を被弾で燃え上がらせ、ターン頭の刻みを 6 に——敵にも味方にも同じ"),
+        [TraitId.BurnHitSplitOnce] = (HcBothL, "被弾の燃焼（分担）を1回の攻撃で同じ駒1回まで——敵にも味方にも同じ"),
+        [TraitId.BurnHitCount] = (HcPlusL, "被弾の燃焼が起きうる一撃を数えるだけ（盤面は動かない）"),
+        [TraitId.BurnHitFoeOnly] = (HcBothL, "相手の陣営だけ被弾の燃焼（分担）——味方はターン頭のまま"),
         // 第180期: ムド（暴発＋泥散り）・ヴィオ（吐き戻し）・ガン（叩き起こし）。
         // **マイナスを別の `TraitId` に切り出してあるので `yP` が組める**（第74期の作法）。
         [TraitId.Erupt]      = (HcPlusL,  "殴られた回数を溜めて割り込み連撃する。代金は別の札（`Smear`）に切り出してある"),

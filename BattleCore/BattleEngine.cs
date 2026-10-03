@@ -712,6 +712,7 @@ public sealed class BattleContext
             // 第245期: 刻みの回数と脆さは、残りターンを減らす前の火勢で読む（最後の刻みは減らした後に刻むので `Of` は 0 を返す）。
             int preLv = _foeFireLive ? FireLevelRule.Of(u) : 0;
             int extra = _foeFireLive && _lvTickTeams[u.TeamId] && preLv > 1 ? preLv - 1 : 0;
+            if (_burnHitLive && _splitTickTeams[u.TeamId]) extra = 0;   // 第255期（分担）: ターン頭の刻みは火勢に関わらず 6 × 1
             // 第249期（刻み・一撃）: 火勢の回数を「6 × 火勢 を1回」にまとめる（札 `TickOnce` の持ち主がいるときだけ）。
             if (_tickOnceLive && extra > 0) { _burnTickAmt = BurnRules.Damage * (extra + 1); FireBook.TickOnceN[Math.Clamp(preLv, 0, 4)]++; extra = 0; }
             u.SetCounter(StatusKeys.Burn, left - 1);
@@ -737,6 +738,12 @@ public sealed class BattleContext
             _tickLvUnit = null;
             _burnTickAmt = 0;
             _inBurnTickNow = false;
+            if (_burnHitLive)   // 第255期・**計数のみ**（ターン頭の刻みの量）
+            {
+                int sd = BhSide(u), dd = Math.Max(0, u.Hp) - hb0;
+                BurnHitBook.TickFires[sd]++;
+                if (dd < 0) BurnHitBook.TickDmg[sd] -= dd; else BurnHitBook.TickHeal[sd] += dd;
+            }
             if (left - 1 <= 0 && u.RawCounter(GurenTrait.BurnKey) > 0) u.SetCounter(GurenTrait.BurnKey, 0);   // 第197期・**計数のみ**
         }
     }
@@ -837,7 +844,7 @@ public sealed class BattleContext
     void BurnTickOnce(UnitState u, int left, UnitTally bt, bool second, (int? Index, int? Count) ord)
     {
         {
-            if (second) bt.BurnTicks++;   // 刻みの回数（計数）。印の2回目も1回と数える
+            if (second && _inBurnHit == 0) bt.BurnTicks++;   // 刻みの回数（計数）。印の2回目も1回と数える（第255期: 被弾の燃焼は数えない）
             // 第249期（刻み・一撃）: 1回の量（既定は `BurnRules.Damage`・まとめた刻みでは 6 × 火勢）。
             int baseD = _burnTickAmt > 0 ? _burnTickAmt : BurnRules.Damage;
             NoteTickLayer(u, baseD, burn: true, second);   // 第194期・**計数のみ**
@@ -878,6 +885,7 @@ public sealed class BattleContext
                 {
                     Kind = BattleEventKind.Status, Turn = _turn, TargetId = u.InstanceId, Amount = burnDmg, Text = "燃焼",
                     SourceTrait = TraitId.Inverse, InverterId = inverterB.InstanceId,
+                    ActorId = _inBurnHit > 0 ? _burnHitBy?.InstanceId : null,   // 第255期: 被弾の燃焼なら一撃の主
                     TickIndex = ord.Index, TickCount = ord.Count,
                 });
                 InverseHeal(inverterB, u, burnDmg, 1, "火");
@@ -895,11 +903,13 @@ public sealed class BattleContext
             NoteGurenBurnTick(u, second);   // 第197期・**計数のみ**
             ClearKindleHeld(u);
 
-            Log($"    {u.Name} が燃えている（残り {left - 1}）", LogKind.Status);
+            if (_inBurnHit > 0) Log($"    {u.Name} は叩かれて炎が燃え上がった（{burnDmg}）", LogKind.Status);   // 第255期（被弾の燃焼）
+            else Log($"    {u.Name} が燃えている（残り {left - 1}）", LogKind.Status);
             Emit(new BattleEvent
             {
                 Kind = BattleEventKind.Status,
                 Turn = _turn,
+                ActorId = _inBurnHit > 0 ? _burnHitBy?.InstanceId : null,   // 第255期: 被弾の燃焼なら一撃の主（刻みは null のまま）
                 TargetId = u.InstanceId,
                 Amount = burnDmg,
                 Text = "燃焼",
@@ -7029,6 +7039,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.FoeFireBrittle)) { _foeFireLive = true; _foeBrittleTeams[Opponent(u.TeamId)] = true; }
         if (u.HasTrait(TraitId.FoeFireSpread)) { _foeFireLive = true; _foeSpreadTeams[Opponent(u.TeamId)] = true; }
         if (u.HasTrait(TraitId.TickOnce)) _tickOnceLive = true;   // 第249期（刻み・一撃）
+        NoteBurnHitHolder(u);                                      // 第255期（被弾の燃焼）
         if (u.HasTrait(TraitId.Decoy)) _decoyLive = true;         // 第226期（挑発）
         if (u.HasTrait(TraitId.Spring)) _springLive = true;       // 第228期（弾き返し）
         if (u.HasTrait(TraitId.Tailwind)) _tailwindLive = true;   // 第229期（追い風）
@@ -8527,6 +8538,18 @@ public sealed class BattleContext
     public void PerformAttack(UnitState actor, string prefix = "  ",
                               int attackPercent = 100, AttackPattern? patternOverride = null)
     {
+        // 第255期（被弾の燃焼）: 1回の攻撃の枠。札が無ければ比較1つで素通り。
+        if (OpenBurnHitScope(actor))
+        {
+            try { PerformAttackImpact(actor, prefix, attackPercent, patternOverride); }
+            finally { CloseBurnHitScope(); }
+            return;
+        }
+        PerformAttackImpact(actor, prefix, attackPercent, patternOverride);
+    }
+
+    void PerformAttackImpact(UnitState actor, string prefix, int attackPercent, AttackPattern? patternOverride)
+    {
         // 第230期: 撃破の衝撃の枠（ヨミの攻撃の中で倒した敵を控え、攻撃が終わってから解決する）。**保持者がいなければ比較1つで素通り。**
         if (_impactLive && actor.HasTrait(TraitId.KillImpact))
         {
@@ -8638,6 +8661,141 @@ public sealed class BattleContext
     /// <summary>第249期（刻み・一撃）: 札の持ち主がいる ／ いま刻む1回の量（0 なら <see cref="BurnRules.Damage"/>）。</summary>
     bool _tickOnceLive;
     int _burnTickAmt;
+
+    // =====================================================================================
+    // 第255期 —— 被弾の燃焼（札 `BurnHitAdd` / `BurnHitSplit` / `BurnHitSplitOnce` / `BurnHitFoeOnly`・保持者 0 枚）。
+    // 燃えている駒が出どころのある一撃を受けるたび（その一撃より前から燃えていたときだけ）、燃焼の刻み 6 を火勢の回数だけ入れる。
+    // 刻みの本体は `BurnTickOnce` をそのまま使う（熾火・火の癒し・ベニの反転・火の変換・燃えやすい板・脆さ・濃縮の印が刻みと同じに通る）。
+    // **札の持ち主がいなければ `_burnHitLive` の比較1つで全部抜ける。乱数を引かない。**
+    // =====================================================================================
+    bool _burnHitLive;
+    /// <summary>被弾の燃焼が起きる陣営 ／ ターン頭の燃焼の刻みを 6 × 1 にする陣営（分担）。</summary>
+    readonly bool[] _burnHitTeams = new bool[2], _splitTickTeams = new bool[2];
+    /// <summary>分担1: 1回の攻撃で同じ駒は1回まで。</summary>
+    bool _burnHitOnce;
+    /// <summary>いま被弾の燃焼を刻んでいる（入れ子の深さ）／ その一撃の主（台本の `ActorId`・ログ）。</summary>
+    int _inBurnHit;
+    UnitState? _burnHitBy;
+    /// <summary>被弾の燃焼の帳簿（計数のみ）。</summary>
+    public readonly BurnHitLedger BurnHitBook = new();
+    public bool BurnHitLive => _burnHitLive;
+
+    /// <summary>札の持ち主を盤に足すとき（`Add`）に門を立てる。足す・分担・分担1 は両陣営、敵だけは持ち主の相手の陣営だけ。</summary>
+    void NoteBurnHitHolder(UnitState u)
+    {
+        if (u.HasTrait(TraitId.BurnHitAdd)) { _burnHitLive = true; _burnHitTeams[0] = _burnHitTeams[1] = true; }
+        if (u.HasTrait(TraitId.BurnHitSplit) || u.HasTrait(TraitId.BurnHitSplitOnce))
+        {
+            _burnHitLive = true; _burnHitTeams[0] = _burnHitTeams[1] = true; _splitTickTeams[0] = _splitTickTeams[1] = true;
+            if (u.HasTrait(TraitId.BurnHitSplitOnce)) _burnHitOnce = true;
+        }
+        if (u.HasTrait(TraitId.BurnHitCount)) _burnHitLive = true;   // 計数専用（門は立てない・機会だけ数える）
+        if (u.HasTrait(TraitId.BurnHitFoeOnly))
+        {
+            int op = Opponent(u.TeamId);
+            _burnHitLive = true; _burnHitTeams[op] = true; _splitTickTeams[op] = true;
+        }
+    }
+
+    /// <summary>帳簿の添字（0 味方 ／ 1 敵）。</summary>
+    static int BhSide(UnitState u) => u.TeamId == PlayerTeam ? 0 : 1;
+    static string BhKey(UnitState u) => $"{BhSide(u)}:{u.Def.Id}";
+
+    /// <summary>1回の攻撃の枠（手番の一振り全体、または手番の外の1回の攻撃）。分担1 の「同じ駒は1回まで」と跳ねの計数に使う。</summary>
+    sealed class BurnHitScope
+    {
+        public required UnitState Actor { get; init; }
+        public readonly HashSet<int> Hit = new();
+        public int Fires;
+    }
+    readonly List<BurnHitScope> _burnHitScopes = new();
+
+    /// <summary>枠を開く（いまの枠の主が <paramref name="actor"/> なら開かない・その枠を使う）。開いたら true。</summary>
+    bool OpenBurnHitScope(UnitState actor)
+    {
+        if (!_burnHitLive) return false;
+        if (_burnHitScopes.Count > 0 && _burnHitScopes[^1].Actor == actor) return false;
+        _burnHitScopes.Add(new BurnHitScope { Actor = actor });
+        return true;
+    }
+    void CloseBurnHitScope()
+    {
+        var sc = _burnHitScopes[^1];
+        _burnHitScopes.RemoveAt(_burnHitScopes.Count - 1);
+        if (sc.Fires > 0) BurnHitBook.PerScope[Math.Min(sc.Fires, 10)]++;
+    }
+
+    /// <summary>
+    /// この一撃が被弾の燃焼の対象か（<c>ApplyDamageCore</c> が本体の前に読む）。出どころのある一撃で、
+    /// 刻み・徴収・中継・呪いの共有・逸らしの受け渡し・放電・澱みの爆発・自分の一撃でなく、その一撃より前から燃えていること。
+    /// </summary>
+    bool BurnHitEligible(UnitState target, UnitState? source, bool burnTick, bool relayed, bool hexShare, bool levy)
+    {
+        if (source is null || source == target || burnTick || levy || relayed || hexShare) return false;
+        if (_deflectFrom is not null || _shockNext == 3 || _burstHitNext) return false;
+        if (!target.IsAlive || target.RawCounter(StatusKeys.Burn) <= 0) return false;
+        return true;
+    }
+
+    /// <summary>
+    /// 被弾の燃焼（第255期）。<paramref name="u"/> が <paramref name="by"/> の一撃を受けた直後に、燃焼の刻み（6）を火勢の回数だけ入れる
+    /// （倒れたら止める・残りターンは減らさない・濃縮の印の回数も刻みと同じに足す）。<b>乱数を引かない。</b>
+    /// </summary>
+    void NoteBurnHitChance(UnitState u, UnitState by)
+    {
+        BurnHitLedger b = BurnHitBook;
+        int side = BhSide(u), lv = Math.Max(1, FireLevelRule.Of(u));
+        b.Chances[side]++; b.ChanceLv[side] += lv;
+        string k = BhKey(by);
+        if (!b.ChanceBy.TryGetValue(k, out var a)) b.ChanceBy[k] = a = new long[2];
+        a[0]++; a[1] += lv;
+    }
+
+    void BurnOnHit(UnitState u, UnitState by)
+    {
+        BurnHitLedger b = BurnHitBook;
+        int side = BhSide(u);
+        BurnHitScope? sc = _burnHitScopes.Count > 0 && _burnHitScopes[^1].Actor == by ? _burnHitScopes[^1] : null;
+        if (sc is not null)
+        {
+            if (!sc.Hit.Add(u.InstanceId))
+            {
+                if (_burnHitOnce) { b.Skipped[side]++; return; }
+                b.Repeats[side]++;
+            }
+            sc.Fires++;
+        }
+        int lv = Math.Max(1, FireLevelRule.Of(u));
+        int left = u.RawCounter(StatusKeys.Burn);
+        UnitTally bt = TallyOf(u);
+        int hb = u.Hp;
+        int prevAmt = _burnTickAmt; _burnTickAmt = 0;
+        UnitState? prevBy = _burnHitBy; _burnHitBy = by;
+        _inBurnHit++;
+        int marks = _markLive ? Math.Max(0, u.RawCounter(StatusKeys.Concentrated)) : 0;
+        int total = lv + marks;
+        int done = 0;
+        try
+        {
+            for (int k = 0; k < lv && u.IsAlive; k++) { BurnTickOnce(u, left + 1, bt, second: k > 0, TickOrd(k + 1, total)); done++; }
+            if (_markLive && u.IsAlive) RepeatTick(u, k => { BurnTickOnce(u, left + 1, bt, second: true, TickOrd(lv + k - 1, total)); done++; });
+        }
+        finally
+        {
+            _inBurnHit--;
+            _burnHitBy = prevBy;
+            _burnTickAmt = prevAmt;
+        }
+        int d = Math.Max(0, u.Hp) - hb;
+        b.Fires[side]++; b.Units[side] += done;
+        if (d < 0) b.HitDmg[side] -= d; else b.HitHeal[side] += d;
+        if (!u.IsAlive) b.Kills[side]++;
+        string ak = BhKey(by), tk = BhKey(u);
+        if (!b.ByActor.TryGetValue(ak, out var av)) b.ByActor[ak] = av = new long[4];
+        av[0]++; av[1] += done; if (d < 0) av[2] -= d; else av[3] += d;
+        if (!b.ByTarget.TryGetValue(tk, out var tv)) b.ByTarget[tk] = tv = new long[3];
+        tv[0]++; if (d < 0) tv[1] -= d; else tv[2] += d;
+    }
     readonly bool[] _foeFireTeams = new bool[2], _lvTickTeams = new bool[2], _foeBrittleTeams = new bool[2], _foeSpreadTeams = new bool[2];
     /// <summary>第245期: いま燃焼の刻みを受けている駒と、残りターンを減らす前の火勢（最後の刻みは減らした後に刻むので `Of` は 0 を返す）。</summary>
     UnitState? _tickLvUnit;
@@ -10362,6 +10520,9 @@ public sealed class BattleContext
         int prevRest = _reflectRest, prevRatio = _reflectRatio;   // 第209期
         _reflectAmt = 0; _reflectFrom = null; _reflectRest = 0; _reflectRatio = 0;
         if (_reboundLive && amount > 0) NoteFrameHit(target, source, burnTick);   // 第209期（計数のみ）
+        // 第255期（被弾の燃焼）: 本体の前に「前から燃えていたか」と HP＋破片を控え、本体の後で減っていれば燃焼を刻む。札が無ければ比較1つで抜ける。
+        bool burnHit = _burnHitLive && amount > 0 && BurnHitEligible(target, source, burnTick, relayed, hexShare, levy);
+        int burnHitBefore = burnHit ? target.Hp + target.RawCounter(StatusKeys.Armor) : 0;
         int myAmt, myRest, myRatio; UnitState? myFrom;
         try
         {
@@ -10374,6 +10535,13 @@ public sealed class BattleContext
             CurrentHitSerial = prevHitSerial212;
             myAmt = _reflectAmt; myFrom = _reflectFrom; myRest = _reflectRest; myRatio = _reflectRatio;
             _reflectAmt = prevAmt; _reflectFrom = prevFrom; _reflectRest = prevRest; _reflectRatio = prevRatio;
+        }
+        if (burnHit && target.IsAlive && target.RawCounter(StatusKeys.Burn) > 0
+            && target.Hp + target.RawCounter(StatusKeys.Armor) < burnHitBefore)
+        {
+            NoteBurnHitChance(target, source!);   // 計数のみ（版に依らず）
+            if (_burnHitTeams[target.TeamId]) BurnOnHit(target, source!);
+            else BurnHitBook.GateOff[BhSide(target)]++;
         }
         if (myAmt > 0 && myFrom is not null) ReflectPlank(target, myFrom, myAmt, myRest, myRatio);
     }
@@ -11745,6 +11913,18 @@ public sealed class BattleContext
     /// ——どれも <see cref="TakeTurnCore"/> の頭で、この呼び出しより手前にある。</para>
     /// </summary>
     private void SwingTurn(UnitState actor, UnitAction? act)
+    {
+        // 第255期（被弾の燃焼）: 手番の一振り全体を1回の攻撃の枠にする（5連撃・火の雨も1つ）。札が無ければ比較1つで素通り。
+        if (OpenBurnHitScope(actor))
+        {
+            try { SwingTurnFire(actor, act); }
+            finally { CloseBurnHitScope(); }
+            return;
+        }
+        SwingTurnFire(actor, act);
+    }
+
+    private void SwingTurnFire(UnitState actor, UnitAction? act)
     {
         // 第242期: 燃え広がりの枠（手番の一振り全体で「同じ敵は1回まで」・5連撃も1つ）。**保持者がいなければ比較1つで本体へ直行する。**
         if (_fireLvLive && _fireLvTeams[actor.TeamId])
@@ -13357,6 +13537,7 @@ public static class BattleEngine
             Burst = ctx.BurstBook,       // 第220期（計数のみ）
             BurnLink = ctx.BurnLinkBook, // 第233期（計数のみ）
             FireLevels = ctx.FireLvLive ? ctx.FireBook : null,   // 第242期（計数のみ）
+            BurnHit = ctx.BurnHitLive ? ctx.BurnHitBook : null,  // 第255期（計数のみ）
             Burns = new BurnLedger(
                 (long[])ctx.BurnLitSide.Clone(), (long[])ctx.BurnRelitSide.Clone(),
                 (long[])ctx.BurnEpisodes.Clone(), (long[])ctx.BurnRelitSum.Clone(),
