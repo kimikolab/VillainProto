@@ -337,12 +337,21 @@ Godot_console.exe --path DemoApp res://FireCheck.tscn
 Godot_console.exe --headless --path DemoApp res://FireCheck.tscn -- --replay
 Godot_console.exe --headless --path DemoApp res://FireCheck.tscn -- --replay --solo
 Godot_console.exe --headless --path DemoApp res://FireCheck.tscn -- --audio
+Godot_console.exe --path DemoApp res://StagingEffectCheck.tscn -- --effect=fire-tick
+Godot_console.exe --headless --path DemoApp res://StagingEffectCheck.tscn -- --effect=fire-tick --verify
 ```
 
 前者は左右・段1〜4・ギフト・大技・死亡と再戦の描画を検証し、`outputs/fire-check/` に画像を保存する。
 後者は `golm,hisa,borg,hota,hiyo`・第四波・HP400%/攻300%・seed 0を二度再生し、
 炎の通知・攻撃・火の雨・爆炎・残り火の発数と最終HPが台本どおりであることを検査する。
 `--solo` はヒヨをシオに替え、独りの爆炎と味方側の癒し・被災を同じ入口で検査する。
+
+`fire-tick` はターン頭の毒と燃焼を駒ごとの一拍で表示する。毒と火の数字は同時に出し、
+複数刻みの数字は合算、小さな火の弾けだけを実際の刻み数ぶん出す。
+反転・火の変換・火の癒しはオーラ、燃焼ダメージは焼かれる絵にする。
+台本は元の順で通し、死亡・延焼・別の駒への割り込みの前で区間を切る。
+手番中の起爆と爆炎は従来の再生を使う。`--verify` は本番の再生経路も二度通し、
+駒ごとの拍数・合算数字の数・元の通知件数・最終HPを検査する。
 
 ### 既存の素材一覧
 

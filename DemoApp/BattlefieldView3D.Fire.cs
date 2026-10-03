@@ -24,6 +24,7 @@ public partial class BattlefieldView3D
         FireCuePlays = FireAttackPlays = FireRainPlays = 0;
         FireBlazePlays = FireEmbersHitPlays = 0;
         FireLabelsShown.Clear();
+        TurnTickBeatPlays = TurnTickFirePulses = TurnTickNumberPlays = 0;
     }
 
     private void FireShade(BattlePawn3D pawn, double seconds)
@@ -69,7 +70,7 @@ void fragment(){
     }
 
     internal double ShowFireCue(BattleEvent e, BattlePawn3D? actor, BattlePawn3D? target, double speed,
-        FireAllyOutcome allyOutcome = FireAllyOutcome.Quiet)
+        FireAllyOutcome allyOutcome = FireAllyOutcome.Quiet, bool groupedTick = false)
     {
         speed = Math.Max(0.1, speed);
         FireCuePlays++;
@@ -187,6 +188,7 @@ void fragment(){
             case FireArmorLabels.Convert:
             case FireArmorLabels.Mend:
             case FireArmorLabels.Feed:
+                if (groupedTick) return 0;
                 target.SetFireInvasive(false);
                 ShowFireTick(target, true, false, 0.35 / speed);
                 return 0.10;

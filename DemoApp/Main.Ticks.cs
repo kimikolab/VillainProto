@@ -1,11 +1,67 @@
 using BattleCore;
+using System.Linq;
 using System.Threading.Tasks;
 
 public partial class Main
 {
     private TickPresentation _ticks = new();
+    private TurnTickPresentation _turnTicks = new();
+    private TurnTickRange? _collectingTurnTicks;
     private double? _tickDelayBudget;
     private int _tickPlays, _inverseTickPlays;
+
+    private void CollectTurnTick(BattleEvent e, BattlePawn3D? actor, BattlePawn3D? target)
+    {
+        // 台本は元の順で通る。HPと数字の表示だけは、この区間の駒ごとの拍へ渡す。
+        if (e.Kind == BattleEventKind.Status)
+        {
+            _tickPlays++;
+            if (e.SourceTrait == TraitId.Inverse) _inverseTickPlays++;
+            AppendLog($"  [{e.Text}] → {NameOf(e.TargetId)}");
+        }
+        else if (e.Kind == BattleEventKind.FireArmor)
+        {
+            _battleField.ShowFireCue(e, actor, target, _speed, groupedTick: true);
+            AppendLog($"  [color=#ffbd72]{e.Text}[/color] → {NameOf(e.TargetId)}");
+        }
+        else
+        {
+            bool heal = e.Kind == BattleEventKind.Heal;
+            AppendLog($"  [color=#{(heal ? UiKit.Heal : UiKit.Poison).ToHtml(false)}]"
+                + $"{(heal ? "＋" : "−")}{e.Amount}[/color] → {NameOf(e.TargetId)}");
+        }
+    }
+
+    private async Task PlayTurnTicks(TurnTickRange range, int token)
+    {
+        var events = _result!.Events;
+        _collectingTurnTicks = range;
+        try
+        {
+            for (int i = range.Start; i < range.End; i++)
+            {
+                if (token != _playToken || !_battleMode) return;
+                _eventIndex = i + 1;
+                await ApplyEvent(events[i], i);
+            }
+        }
+        finally { _collectingTurnTicks = null; _tickDelayBudget = null; _fireFastEvent = false; }
+        foreach (var beat in range.Beats)
+        {
+            while (_paused && token == _playToken && _battleMode) await Delay(0.06, raw: true);
+            if (token != _playToken || !_battleMode) return;
+            var pawn = _battleField.FindPawn(beat.TargetId);
+            // 啜りなど同区間の副作用も含め、最後の写しを表示する。足し引きでHPを再計算しない。
+            var hp = events.Skip(range.Start).Take(range.End - range.Start).LastOrDefault(e =>
+                e.TargetId == beat.TargetId && e.Kind is BattleEventKind.Damage or BattleEventKind.Heal);
+            if (hp is not null) pawn?.SetHp(hp.HpAfter);
+            _partyBar.Sync(_battleField, _shownOwner);
+            if (beat.FireDamage && pawn?.PlankPieceCount > 0)
+                _battleField.PlankImpact(pawn, 40, _speed, true);
+            _battleField.ShowTurnTickBeat(pawn, beat, _speed);
+            await Delay(beat.Seconds);
+        }
+    }
 
     private async Task<bool> PlayTickEvent(BattleEvent e, int index, BattlePawn3D? target)
     {

@@ -1118,6 +1118,7 @@ public partial class Main : Control
         _result = BattleEngine.Run(players, enemies, seed, verbose: true);
         IndexStatusDamageEvents(_result.Events);
         _ticks = TickPresentation.Build(_result.Events);
+        _turnTicks = TurnTickPresentation.Build(_result.Events);
         IndexBeniMio(_result.Events);
         IndexThunder(_result.Events);
         _mireBurstsShown.Clear();
@@ -1211,7 +1212,9 @@ public partial class Main : Control
             if (token != _playToken || !_battleMode) return;
             int eventIndex = _eventIndex++;
             BattleEvent e = _result.Events[eventIndex];
-            await ApplyEvent(e, eventIndex);
+            if (_turnTicks.Starts.TryGetValue(eventIndex, out var ticks))
+                await PlayTurnTicks(ticks, token);
+            else await ApplyEvent(e, eventIndex);
             _tickDelayBudget = null;
             _fireFastEvent = false;
             foreach (var combo in _comboEnds.Where(pair => _eventIndex >= pair.Value).ToArray())
@@ -1317,7 +1320,13 @@ public partial class Main : Control
         if (target is not null) target.AnimationSpeed = Math.Max(0.1, _speed);
         // 第125期 段2: 拍の境目でだけ画面を変える。**ここでは待たない**（間は下の switch の中だけ）。
         EnterBeat(eventIndex, e);
-        _tickDelayBudget = _ticks.Budgets.TryGetValue(eventIndex, out double tickBudget) ? tickBudget : null;
+        if (_collectingTurnTicks is { } collecting && collecting.Primary.ContainsKey(eventIndex))
+        {
+            CollectTurnTick(e, actor, target);
+            return;
+        }
+        _tickDelayBudget = _collectingTurnTicks is not null ? 0
+            : _ticks.Budgets.TryGetValue(eventIndex, out double tickBudget) ? tickBudget : null;
         _fireFastEvent = _firePresentation.FastEvents.Contains(eventIndex);
         if (await PlayFire(e, eventIndex, actor, target)) return;
         if (await PlayMovement(e, eventIndex, actor, target)) return;

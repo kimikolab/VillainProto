@@ -15,6 +15,13 @@ public partial class StagingEffectCheck : Control
             var field = new BattlefieldView3D();
             field.SetAnchorsPreset(LayoutPreset.FullRect);
             AddChild(field);
+            if (mode == "fire-tick")
+            {
+                await CheckFireTicks(field);
+                GD.Print("STAGING_EFFECT_CHECK_OK fire-tick grouped numbers aura damage death spread restart");
+                GetTree().Quit();
+                return;
+            }
             DemoOpening[] openings =
             [
                 new(1, 0, "kado", "カド", 0, 100, 100, 20, AttackPattern.Single, false),
