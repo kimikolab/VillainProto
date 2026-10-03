@@ -9,7 +9,7 @@ static partial class CheckWaveDiag
 
     /// <summary>1期ぶんの表の組。<c>Waves</c> は（表の列名, 版）。<c>Tv</c> ／ <c>Bv</c> は判定に使う版、<c>TvRows</c> ／ <c>BossRows</c> は表B ／ 表C に並べる行。</summary>
     internal sealed record RunSpec(string Header, string Intro, CWave[] Listed, string ControlsLine, (string Key, CWave W)[] Waves,
-        string[] Cols, string[] Tv, string[] TvRows, string[] Bv, string[] BossRows, bool Heals = false);
+        string[] Cols, string[] Tv, string[] TvRows, string[] Bv, string[] BossRows, bool Heals = false, bool Band = false);
 
     static RunSpec Spec261 => new(
         "# 第261期 段2・段3 —— 重装兵の体の癒し手 ＋ 動じないボス（6台 × 6版・倍率なし・seed 0..199）",
@@ -31,8 +31,19 @@ static partial class CheckWaveDiag
         new[] { "W2-50後", "W2-50奥" }, new[] { "W2-対照", "261:W-50後", "W2-50後", "W2-50奥" },
         new[] { "B2-全4", "B2-半4" }, new[] { "261:B-全4", "B2-全4", "B2-半4" }, Heals: true);
 
+    static RunSpec Spec263 => new(
+        "# 第263期 —— 桁合わせ版（B3-桁 ／ W3-割合・6台・seed 0..199）",
+        $"打ち切り {BossTurns} ターン（撃破が {BossTurns} ターンを超えた勝ちは負けに数える）。B3-桁 は B2-全4 の天井の傾きだけを +4 → +{BossRiseTrait.Calc}、W3-割合 は W2-50後 の回復だけを「固定 50」→「最大HPの {PartyMendPctTrait.Pct}%」に。",
+        CheckWaves263,
+        "- 対照: `第四波`（倍率なし）・`W2-対照`（400/300 の素の第四波）・`W2-50後`（回復 50）・`B2-全4`（天井 +4）",
+        CheckWaves263.Select(c => (c.Name, c)).Append(("W2-対照", CWaveOf("W2-対照"))).Append(("W2-50後", CWaveOf("W2-50後"))).Append(("B2-全4", CWaveOf("B2-全4"))).ToArray(),
+        new[] { "第四波", "W2-対照", "W2-50後", "W3-割合", "B2-全4", "B3-桁" },
+        new[] { "W3-割合" }, new[] { "W2-対照", "W2-50後", "W3-割合" },
+        new[] { "B3-桁" }, new[] { "B2-全4", "B3-桁" }, Heals: true, Band: true);
+
     static void Run261() => RunSet(Spec261);
-    static partial void RunImpl() => RunSet(Spec262);
+    static void Run262() => RunSet(Spec262);
+    static partial void RunImpl() => RunSet(Spec263);
 
     static void RunSet(RunSpec s)
     {
@@ -49,7 +60,7 @@ static partial class CheckWaveDiag
         BossHp = ChosenBossHp;
         foreach (string b in Boards)
         {
-            foreach (var (key, c) in s.Waves) res[(b, key)] = Measure(BoardOf(b), CheckWave(c), c.IsBoss ? Kind.Boss : Kind.Normal, c.Mend);
+            foreach (var (key, c) in s.Waves) res[(b, key)] = MeasureWave(BoardOf(b), c);
             res[(b, "第四波")] = Measure(BoardOf(b), InvWave(Wave4), Kind.Normal, 0);
         }
 
@@ -151,6 +162,19 @@ static partial class CheckWaveDiag
                 + $"{(fall.Count == 0 ? "—" : string.Join(" ＜ ", fall.Select(x => $"{x.b} T{x.T:F1}")))} |");
         }
         Console.WriteLine();
+        if (s.Band)
+        {
+            Console.WriteLine("### D-4 勝率が 5〜95% に入った台（0 ／ 100 への張り付きが解けたか・指示書 §4 従）");
+            Console.WriteLine();
+            Console.WriteLine("| 版 | 帯に入った台 | 台数 |");
+            Console.WriteLine("|---|---|--:|");
+            foreach (string v in s.Tv.Concat(s.Bv))
+            {
+                var inBand = Boards.Where(b => res[(b, v)].Win > 5 && res[(b, v)].Win < 95).ToList();
+                Console.WriteLine($"| {v} | {(inBand.Count == 0 ? "—" : string.Join("・", inBand.Select(b => $"{b} {F1(res[(b, v)].Win)}")))} | {inBand.Count} |");
+            }
+            Console.WriteLine();
+        }
         Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F0} 秒。");
     }
 }

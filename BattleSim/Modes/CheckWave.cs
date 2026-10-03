@@ -13,7 +13,9 @@ using FS = FoeSurgeDiag;
 // 波・台は `firecycle` ／ `foesurge` の定義を引く（複製しない）。倍率はすべて「なし」。
 //
 //     dotnet run --project BattleSim -c Release 0 checkwave phase0          # Phase 0 の数え物 ＋ 段1 の棚卸し（6台 × 8波 × seed 0..199）
-//     dotnet run --project BattleSim -c Release 0 checkwave run             # 第262期: 400/300 の第四波＋癒し手 W2-* ＋ 全体攻撃の動じないボス B2-*（6台 × 5版）と採否の表
+//     dotnet run --project BattleSim -c Release 0 checkwave run             # 第263期: 桁合わせ版 B3-桁 ／ W3-割合 と勝率の帯
+//     dotnet run --project BattleSim -c Release 0 checkwave ranks           # 第263期: 第260〜263期の全版の連続量（倒しT・回復を上回った窓・窓の出力・癒し手を割ったT・純実入り）と順位の逆転
+//     dotnet run --project BattleSim -c Release 0 checkwave run262          # 第262期: 400/300 の第四波＋癒し手 W2-* ＋ 全体攻撃の動じないボス B2-*（棄却・対照）
 //     dotnet run --project BattleSim -c Release 0 checkwave run261          # 第261期: 重装兵の体の癒し手 W-* ＋ 動じないボス B-*（棄却・対照）
 //     dotnet run --project BattleSim -c Release 0 checkwave run260          # 第260期の段2・段3（棄却・対照）
 //     dotnet run --project BattleSim -c Release 0 checkwave check           # 自己検査
@@ -30,6 +32,8 @@ static partial class CheckWaveDiag
             case "run": RunImpl(); return;
             case "run260": Run260(); return;
             case "run261": Run261(); return;
+            case "run262": Run262(); return;
+            case "ranks": Ranks(); return;
             case "check": CheckImpl(); return;
             case "log":
                 LogOne(args.Length > 3 ? args[3] : "燃焼 T3-244", args.Length > 4 ? args[4] : "B-全4", args.Length > 5 ? int.Parse(args[5]) : 0);
@@ -118,7 +122,7 @@ static partial class CheckWaveDiag
         Pattern = EnemyCatalog.Warden.Pattern, Advances = EnemyCatalog.Warden.Advances, Actions = EnemyCatalog.Warden.Actions,
         Traits = new[] { mend }, PlusText = "ターン頭に味方全員を回復する（検証波・重装兵の体）",
     };
-    static readonly UnitDef WardHealer30 = WardHealer(TraitId.CheckMend30), WardHealer50 = WardHealer(TraitId.CheckMend50);
+    internal static readonly UnitDef WardHealer30 = WardHealer(TraitId.CheckMend30), WardHealer50 = WardHealer(TraitId.CheckMend50);
 
     /// <summary>第四波の <see cref="EnemyWave"/> 写し（Phase 0-4）。席 0〜4 に元の第四波と同じ駒。<paramref name="back3"/> を差し替え、<paramref name="deep"/> があれば ○後2 に置く。</summary>
     internal static EnemyWave Wave4Copy(UnitDef? back3, UnitDef? deep = null)
@@ -134,7 +138,8 @@ static partial class CheckWaveDiag
         return EnemyWave.Of(seats.ToArray());
     }
 
-    internal sealed record CWave(string Name, string What, bool IsBoss, int Mend, Func<EnemyWave> Make, EnemyScaleRule? Scale = null);
+    internal sealed record CWave(string Name, string What, bool IsBoss, int Mend, Func<EnemyWave> Make, EnemyScaleRule? Scale = null, int MendPct = 0);
+    internal static Agg MeasureWave(Formation f, CWave c) => Measure(f, CheckWave(c), c.IsBoss ? Kind.Boss : Kind.Normal, c.Mend, mendPct: c.MendPct);
     /// <summary>第260期の版（棄却・対照として残す）。`run260` が回す。</summary>
     internal static readonly CWave[] CheckWaves260 =
     {
@@ -171,11 +176,22 @@ static partial class CheckWaveDiag
         new("B2-半4", "全体攻撃の動じないボス（HP 3,000・毎ターン最大HPの50%・攻撃力 +4/ターン）", true, 0, () => EnemyWave.Of((2, Boss3(TraitId.BossMendHalf, TraitId.BossRise4, ChosenBossHp)))),
     };
 
+    /// <summary>
+    /// 第263期の桁合わせ版（指示書 §3）。<b>動かすノブは1つずつ</b>: B3-桁 は B2-全4 の天井の傾きだけを +4 → +11（逆算値）に、
+    /// W3-割合 は W2-50後 の回復の式だけを「固定 50」→「最大HPの 40%」に。
+    /// </summary>
+    internal static UnitDef WardHealerPct => WardHealer(TraitId.CheckMendPct40);
+    internal static readonly CWave[] CheckWaves263 =
+    {
+        new("B3-桁", "全体攻撃の動じないボス（HP 3,000・毎ターン全快・攻 12・天井 +11/ターン〈逆算値〉）", true, 0, () => EnemyWave.Of((2, Boss3(TraitId.BossMendFull, TraitId.BossRise11, ChosenBossHp)))),
+        new("W3-割合", "第四波（400/300）の後3 の従軍司祭 → 重装兵の体の癒し手（全員に最大HPの 40%）", false, 0, () => Wave4Copy(WardHealerPct), Scale400, PartyMendPctTrait.Pct),
+    };
+
     /// <summary>第262期の版 → 第261期の版 → 対照の第四波写し → 第260期の版（名前が重なる B-全4 ／ B-半4 は第261期が先）。`261:` ／ `260:` を前に付けても引ける。</summary>
     internal static CWave CWaveOf(string n) => n == Copy4.Name ? Copy4
         : n.StartsWith("260:") ? CWave260(n[4..])
         : n.StartsWith("261:") ? CheckWaves.First(w => w.Name == n[4..])
-        : CheckWaves262.FirstOrDefault(w => w.Name == n) ?? CheckWaves.FirstOrDefault(w => w.Name == n) ?? CWave260(n);
+        : CheckWaves263.FirstOrDefault(w => w.Name == n) ?? CheckWaves262.FirstOrDefault(w => w.Name == n) ?? CheckWaves.FirstOrDefault(w => w.Name == n) ?? CWave260(n);
     internal static CWave CWave260(string n) => n == Copy4.Name ? Copy4 : CheckWaves260.First(w => w.Name == n);
 
     internal static (BattleResult R, List<UnitState> P, List<UnitState> E) Fight(Formation f, Func<List<UnitState>> wave, int seed, bool verbose = true)
@@ -237,7 +253,8 @@ static partial class CheckWaveDiag
             foreach (var (k, v) in o.HealerKiller) HealerKiller[k] = HealerKiller.GetValueOrDefault(k) + v;
         }
 
-        public void Take(BattleResult r, List<UnitState> p, List<UnitState> e, Kind kind, int mend)
+        /// <param name="mendPct">第263期: 回復が割合（最大HPの n%）のときの n。0 なら <paramref name="mend"/>（固定量 × 生存数）で名目を数える。</param>
+        public void Take(BattleResult r, List<UnitState> p, List<UnitState> e, Kind kind, int mend, int mendPct = 0)
         {
             N++;
             var foes = e.Select(u => u.InstanceId).ToHashSet();
@@ -250,7 +267,7 @@ static partial class CheckWaveDiag
 
             var dmg = new Dictionary<int, long>(); var hits = new Dictionary<int, long>();
             var aliveFoes = new HashSet<int>(foes.Where(id => e.Any(u => u.InstanceId == id)));
-            var livingAtHead = new Dictionary<int, int>(); var healerAtHead = new Dictionary<int, bool>();
+            var livingAtHead = new Dictionary<int, int>(); var healerAtHead = new Dictionary<int, bool>(); var livingHpAtHead = new Dictionary<int, long>();
             int turn = 0; bool snap = false; int? killT = null, firstDeathT = null, healerDeadT = null;
             var names = p.Concat(e).ToDictionary(u => u.InstanceId, u => u.Def.Name);
             string? lastHitOnHealer = null;
@@ -264,6 +281,7 @@ static partial class CheckWaveDiag
                     case BattleEventKind.StatSnapshot when !snap:
                         snap = true;
                         livingAtHead[turn] = aliveFoes.Count;
+                        livingHpAtHead[turn] = e.Where(u => aliveFoes.Contains(u.InstanceId)).Sum(u => (long)u.MaxHp * mendPct / 100);
                         healerAtHead[turn] = healer is int h0 && aliveFoes.Contains(h0);
                         if (boss is int b0 && aliveFoes.Contains(b0) && turn <= cut) BossAlive++;
                         break;
@@ -331,7 +349,8 @@ static partial class CheckWaveDiag
                     if (healerAtHead.GetValueOrDefault(w + 1) && livingAtHead.TryGetValue(w + 1, out int live))
                     {
                         HealTurns++;
-                        if (d > (long)mend * live) OverTurns++;
+                        long nominalHeal = mendPct > 0 ? livingHpAtHead.GetValueOrDefault(w + 1) : (long)mend * live;
+                        if (d > nominalHeal) OverTurns++;
                     }
             }
         }
@@ -340,13 +359,13 @@ static partial class CheckWaveDiag
         public double SurvPct => N == 0 ? double.NaN : 100.0 * Surv / N;
     }
 
-    internal static Agg Measure(Formation f, Func<List<UnitState>> wave, Kind kind, int mend, int seed0 = 0, int seeds = Seeds)
+    internal static Agg Measure(Formation f, Func<List<UnitState>> wave, Kind kind, int mend, int seed0 = 0, int seeds = Seeds, int mendPct = 0)
     {
         var parts = new Agg[seeds];
         Parallel.For(0, seeds, i =>
         {
             var (r, p, e) = Fight(f, wave, seed0 + i);
-            var a = new Agg(); a.Take(r, p, e, kind, mend); parts[i] = a;
+            var a = new Agg(); a.Take(r, p, e, kind, mend, mendPct); parts[i] = a;
         });
         var all = new Agg();
         foreach (var a in parts) all.Merge(a);

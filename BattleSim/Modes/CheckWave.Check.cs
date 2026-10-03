@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 
@@ -183,6 +183,45 @@ static partial class CheckWaveDiag
                     over += r.Events.Count(x => x.Kind == BattleEventKind.Heal && x.ActorId == hid && x.Amount > PartyMendTrait.High);
                 }
             Ok("(p) W2-50後: 癒し手 580/36/3・軛の重装兵 580、1件の回復が 50 を超えたことが 0 件（6台 × seed 0..9）", scaled && over == 0, $"癒し手 {h.MaxHp}/{h.Def.Attack}/{h.Def.Speed}・超え {over}");
+        }
+
+        // ---- 第263期 ----
+        // (q) B3-桁 ＝ B2-全4 と HP・攻・速・攻撃型・回復・動じないが同じで、天井の札だけが +4 → +11
+        {
+            var b2 = Boss3(TraitId.BossMendFull, TraitId.BossRise4, ChosenBossHp); var b3 = Boss3(TraitId.BossMendFull, TraitId.BossRise11, ChosenBossHp);
+            var diff = b2.Traits.Except(b3.Traits).Concat(b3.Traits.Except(b2.Traits)).ToList();
+            bool eq = b2.MaxHp == b3.MaxHp && b2.Attack == b3.Attack && b2.Speed == b3.Speed && b2.Pattern == b3.Pattern
+                      && diff.Count == 2 && diff.Contains(TraitId.BossRise4) && diff.Contains(TraitId.BossRise11);
+            // 写しを直に数える（`RiseCensus` は版の名前の末尾で傾きを決めるので使わない）
+            long ok11 = 0, n11 = 0;
+            foreach (string bd in Boards)
+                for (int sd = 0; sd < 5; sd++)
+                {
+                    var (r, _, e) = Fight(BoardOf(bd), CheckWave(CWaveOf("B3-桁")), sd);
+                    int boss = e[0].InstanceId;
+                    foreach (var x in r.Events.Where(x => x.Kind == BattleEventKind.StatSnapshot && x.TargetId == boss)) { n11++; if (x.Amount == 12 + BossRiseTrait.Calc * (x.Turn - 1)) ok11++; }
+                }
+            Ok($"(q) B3-桁 ＝ B2-全4 ＋ 天井の札の差し替え（+4 → +{BossRiseTrait.Calc}）だけ・ボスの攻撃力の写しが全件 12 + {BossRiseTrait.Calc} × (t − 1)", eq && ok11 == n11 && n11 > 0, $"{ok11}/{n11}");
+        }
+        // (r) W3-割合: 1件の回復は受け手の最大HPの 40% 以下で、満タンでない受け手には 40% ちょうどが入った件がある。W2-50後 とは癒し手の札だけが違う
+        {
+            long over = 0, exact = 0;
+            foreach (string bd in Boards)
+                for (int sd = 0; sd < 10; sd++)
+                {
+                    var (r, _, e) = Fight(BoardOf(bd), CheckWave(CWaveOf("W3-割合")), sd);
+                    var maxHp = e.ToDictionary(u => u.InstanceId, u => u.MaxHp);
+                    int hid = e.First(u => u.Def.Id == "cw_healer").InstanceId;
+                    foreach (var x in r.Events.Where(x => x.Kind == BattleEventKind.Heal && x.ActorId == hid && x.TargetId is int t && maxHp.ContainsKey(t)))
+                    {
+                        int cap = maxHp[x.TargetId!.Value] * PartyMendPctTrait.Pct / 100;
+                        if (x.Amount > cap) over++;
+                        if (x.Amount == cap) exact++;
+                    }
+                }
+            var w2 = WardHealer50; var w3 = WardHealerPct;
+            bool sameW = w2.MaxHp == w3.MaxHp && w2.Attack == w3.Attack && w2.Speed == w3.Speed && w2.Pattern == w3.Pattern && w3.Traits.Single() == TraitId.CheckMendPct40;
+            Ok($"(r) W3-割合: 1件の回復 ≤ 最大HPの {PartyMendPctTrait.Pct}%・ちょうどの件がある・癒し手は W2-50後 と札だけが違う", over == 0 && exact > 0 && sameW, $"超え {over}・ちょうど {exact}");
         }
 
         Console.WriteLine();
