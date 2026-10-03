@@ -576,6 +576,8 @@ public enum TraitId
     BossMendHalf,   // 半ば癒える（第260期・ボス B-半）: ターン頭に自分を最大HPの 50% 回復（HP のみ）。保持者 0 枚
     BossRise4,      // 天井・4（第260期・ボス）: 攻撃力が毎ターン +4（線形・ターン数からの再計算で、強化の窓口を通らない・横取りされない）。保持者 0 枚
     BossRise8,      // 天井・8（第260期・ボス）: 同上で +8。保持者 0 枚
+    BossRise11,     // 天井・11（第263期・ボスの桁合わせ版 B3-桁）: 攻撃力が毎ターン +11（第262期の実測からの逆算値）。保持者 0 枚
+    CheckMendPct40, // 癒し手・割合（第263期・手数チェック W3-割合）: ターン頭に自陣の生存全員を、それぞれの最大HPの 40% ずつ回復。保持者 0 枚
     BossSteadfast,  // 動じない（第261期・ボス）: 手番を奪う状態（痺れ・転倒・組み付き・竦み・混乱）が付かない（入口 `UnitState.SetCounter`）。毒・燃焼・感電のダメージと層は通る。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -13748,6 +13750,33 @@ public sealed class PartyMendTrait : Trait
 }
 
 /// <summary>
+/// 癒し手・割合（第263期・手数チェック W3-割合）。<b>ターン頭に自陣の生存全員を、それぞれの最大HPの <see cref="Percent"/>% ずつ回復する</b>。
+/// <see cref="PartyMendTrait"/>（固定量）と同じ席（刻みの後）・同じ入口（<c>ctx.Heal</c>）で、違うのは量の式だけ。
+/// 倍率（400/300）は最大HPに乗っているので、回復も倍率に比例する。乱数は引かない。
+/// </summary>
+public sealed class PartyMendPctTrait : Trait
+{
+    public const int Pct = 40;
+    readonly TraitId _id;
+    public int Percent { get; }
+    public PartyMendPctTrait(TraitId id, int percent) { _id = id; Percent = percent; }
+    public override TraitId Id => _id;
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        int healed = 0;
+        foreach (UnitState u in ctx.LivingMembers(self.TeamId))
+        {
+            int b = u.Hp;
+            ctx.Heal(u, u.MaxHp * Percent / 100, self);
+            healed += u.Hp - b;
+        }
+        ctx.Log($"    {self.Name} が味方全員を癒した（各 最大HPの {Percent}%・計 +{healed}）", LogKind.Trigger);
+    }
+}
+
+/// <summary>
 /// ボスの回復（第260期・1ターン火力チェック波の敵だけ）。<b>ターン頭に自分を最大HPの <see cref="Percent"/>% 回復する</b>（100 ＝ 全快）。
 /// <b>HP だけを戻し、状態（毒・燃焼・火勢・破片）は消さない</b>——<c>ctx.Heal</c> は HP しか書かない。刻みの後に入る（<see cref="PartyMendTrait"/> と同じ席）。
 /// </summary>
@@ -13789,6 +13818,8 @@ public sealed class BossSteadfastTrait : Trait
 public sealed class BossRiseTrait : Trait
 {
     public const int Low = 4, High = 8;
+    /// <summary>第263期の逆算値（第262期の実測から「隊が T9 前後に尽きる」傾き）。</summary>
+    public const int Calc = 11;
     readonly TraitId _id;
     public int Step { get; }
     public BossRiseTrait(TraitId id, int step) { _id = id; Step = step; }
@@ -16007,6 +16038,8 @@ public static class TraitCatalog
         new BossRiseTrait(TraitId.BossRise4, BossRiseTrait.Low),       // 第260期
         new BossRiseTrait(TraitId.BossRise8, BossRiseTrait.High),      // 第260期
         new BossSteadfastTrait(),                                      // 第261期
+        new BossRiseTrait(TraitId.BossRise11, BossRiseTrait.Calc),     // 第263期
+        new PartyMendPctTrait(TraitId.CheckMendPct40, PartyMendPctTrait.Pct), // 第263期
         new BurnHitAddTrait(),       // 第255期
         new BurnHitSplitTrait(),     // 第255期
         new BurnHitSplitOnceTrait(), // 第255期
