@@ -8894,6 +8894,20 @@ public sealed class BattleContext
     {
         // 第252期（H1 渡す火）: 撃つときの溜め（札が無ければ 0）。相手1体ごとに相手の火勢を溜めの数だけ上げる（上限 4・あぶれた火にはならない）。
         int lift = _kindleLive && hiyo.HasTrait(TraitId.GiftHoard) ? hiyo.RawCounter(FireKindleRule.GiftHoardKey) : 0;
+        // 第253期（渡す順・札 `GiftOrder`）: 2体に渡すとき、放つ（`FireUnleash`）の持ち主を先に（安定な並べ替え・乱数なし）。
+        // 2体のギフトに放つの持ち主がいた回は、札が無くても数える（計数のみ）。
+        if (to.Count == 2 && (to[0].HasTrait(TraitId.FireUnleash) || to[1].HasTrait(TraitId.FireUnleash)))
+        {
+            FireBook.OrderPairs++;
+            if (to[0].HasTrait(TraitId.FireUnleash)) FireBook.OrderAlready++;
+            else if (hiyo.HasTrait(TraitId.GiftOrder))
+            {
+                to = new[] { to[1], to[0] };
+                FireBook.OrderSwapped++;
+                EmitFireLevel(hiyo, to[0], FireLevelLabels.GiftOrder, FireLevelRule.Of(to[0]), 1);
+                Log($"    {hiyo.Name} は先に {to[0].Name} へ火を渡す", LogKind.Trigger);
+            }
+        }
         FireBook.Gifts++;
         FireBook.GiftRecipients += to.Count;
         FireBook.GiftAtLevel[Math.Clamp(level, 0, 4)]++;

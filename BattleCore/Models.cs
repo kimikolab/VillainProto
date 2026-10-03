@@ -3623,6 +3623,8 @@ public static class FireLevelLabels
     public const string Called = "指名";
     /// <summary>第247期: 見出し: 火勢3 で準備のできた2体に渡した（(b)・ヒヨの手番・「ターンギフト」の前）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ヒヨ ／ <c>Amount</c> ＝ 3。</summary>
     public const string GiftPair = "二体に渡す";
+    /// <summary>第253期（渡す順・ヒヨの `GiftOrder`）: 2体に渡すギフトで、放つの持ち主（ボルグ）を先に並べ替えた（<c>TargetId</c> ＝ 先に動く相手・<c>Amount</c> ＝ その火勢・<c>Slot</c> ＝ 1）。直後に「火を渡す」が2件（<c>Slot</c> 1 ＝ ボルグ・2 ＝ もう1体）。並びが元からボルグ先なら出ない。</summary>
+    public const string GiftOrder = "先に渡す";
     /// <summary>第245期: 見出し: 延焼。<c>ActorId</c> ＝ 火勢4 で倒れた敵 ／ <c>TargetId</c> ＝ 隣の生きている敵 ／ <c>Slot</c> ＝ 1 燃えていなかった（続いて「点く」と「育つ・敵」で火勢2）／ 2 燃えていた（続いて「育つ・敵」で +1）。</summary>
     public const string FoeSpread = "延焼";
     /// <summary>第249期: 見出し: 爆炎（放つの代わり・`放つ` と「撃った」の直後）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ボルグ ／ <c>Amount</c> ＝ 味方への燃焼ダメージの量（ボルグの攻撃力 ×1）。
@@ -3789,6 +3791,8 @@ public sealed class FireLevelLedger
     /// <summary>第247期: 放熱の印（付いた ／ 重ねずに捨てた ／ 燃えていなくなって消えた）・指名（ギフトを受けた・そのときの火勢 添字 0〜4）・
     /// 火の粉（添字 0 焼き尽くす ／ 1 放つ・回 ／ 育った量）・(b)（火勢3 で2体に渡した回）。<b>計数のみ。</b></summary>
     public long CallMarks, CallStacked, CallLost, GiftPairs, GiftPairChance;
+    /// <summary>第253期（渡す順・**計数のみ**・札が無くても数える）: 2体のギフトで放つの持ち主（ボルグ）が相手にいた回 ／ 元からボルグ先だった回 ／ 札で並べ替えた回。</summary>
+    public long OrderPairs, OrderAlready, OrderSwapped;
     public readonly long[] Called = new long[5], SparkBy = new long[2], SparkGrowBy = new long[2];
     /// <summary>第248期（`CallFull`）: 印を持つが火勢4 未満で指名しなかったギフトの手番 ／ そのボルグが指名ではなくギフトを受けた（印は残る）。<b>計数のみ。</b></summary>
     public long CallHeld, CallHeldGift;

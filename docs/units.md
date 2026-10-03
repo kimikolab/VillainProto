@@ -366,6 +366,7 @@
 | `BlazeHoard` | - |
 | `ArmorFlame` | - |
 | `GiftHoard` | - |
+| `GiftOrder` | - |
 | `MendGlow` | - |
 | `TickOnce` | - |
 | `Inversion` | - |

@@ -51,21 +51,21 @@ static partial class FireKindleDiag
     // 版（§3）
     // ---------------------------------------------------------------------------------
     static UnitDef Plus(UnitDef g, params TraitId[] tr) => FC.With(g, g.Traits.Concat(tr));
-    internal static readonly UnitDef BorgB1 = Plus(UnitCatalog.Borg, TraitId.KindleGuard);
-    internal static readonly UnitDef BorgB2 = Plus(UnitCatalog.Borg, TraitId.KindleOpen);
-    internal static readonly UnitDef BorgB3 = Plus(UnitCatalog.Borg, TraitId.RadiateGrow);
-    internal static readonly UnitDef BorgM1 = Plus(UnitCatalog.Borg, TraitId.KindleGuard, TraitId.BlazeHoard);
+    internal static readonly UnitDef BorgB1 = Plus(UnitCatalog.BorgM0, TraitId.KindleGuard);
+    internal static readonly UnitDef BorgB2 = Plus(UnitCatalog.BorgM0, TraitId.KindleOpen);
+    internal static readonly UnitDef BorgB3 = Plus(UnitCatalog.BorgM0, TraitId.RadiateGrow);
+    internal static readonly UnitDef BorgM1 = Plus(UnitCatalog.BorgM0, TraitId.KindleGuard, TraitId.BlazeHoard);
     internal static readonly UnitDef BorgM1P = Plus(BorgM1, TraitId.KindleOpen, TraitId.RadiateGrow);
-    internal static readonly UnitDef BorgM2 = Plus(UnitCatalog.Borg, TraitId.KindleGuard, TraitId.ArmorFlame);
-    internal static readonly UnitDef HiyoH1 = Plus(UnitCatalog.Hiyo, TraitId.GiftHoard);
-    internal static readonly UnitDef HiyoH2 = Plus(UnitCatalog.Hiyo, TraitId.MendGlow);
+    internal static readonly UnitDef BorgM2 = Plus(UnitCatalog.BorgM0, TraitId.KindleGuard, TraitId.ArmorFlame);
+    internal static readonly UnitDef HiyoH1 = Plus(UnitCatalog.HiyoM0, TraitId.GiftHoard);
+    internal static readonly UnitDef HiyoH2 = Plus(UnitCatalog.HiyoM0, TraitId.MendGlow);
 
     internal static readonly FB.Ver[] Versions =
     {
-        new("M0", "規定（第251期・対照）", UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo),
-        new("M-B1", "M0 ＋ 守るほど燃え上がる（切った被ダメ 30 ごとに火勢 +1）", BorgB1, UnitCatalog.Hota, UnitCatalog.Hiyo),
-        new("M-B2", "M0 ＋ 開幕の火勢（くすぶりを火勢2 から）", BorgB2, UnitCatalog.Hota, UnitCatalog.Hiyo),
-        new("M-B3", "M0 ＋ 放熱で育つ（焼き尽くすで火勢 +1）", BorgB3, UnitCatalog.Hota, UnitCatalog.Hiyo),
+        new("M0", "規定（第251期・対照）", UnitCatalog.BorgM0, UnitCatalog.Hota, UnitCatalog.HiyoM0),
+        new("M-B1", "M0 ＋ 守るほど燃え上がる（切った被ダメ 30 ごとに火勢 +1）", BorgB1, UnitCatalog.Hota, UnitCatalog.HiyoM0),
+        new("M-B2", "M0 ＋ 開幕の火勢（くすぶりを火勢2 から）", BorgB2, UnitCatalog.Hota, UnitCatalog.HiyoM0),
+        new("M-B3", "M0 ＋ 放熱で育つ（焼き尽くすで火勢 +1）", BorgB3, UnitCatalog.Hota, UnitCatalog.HiyoM0),
         new("M1", "M0 ＋ B1 ＋ 溜め火 ＋ 渡す火", BorgM1, UnitCatalog.Hota, HiyoH1),
         new("M1+", "M1 ＋ B2 ＋ B3", BorgM1P, UnitCatalog.Hota, HiyoH1),
         new("M2", "M0 ＋ B1 ＋ 鎧の火 ＋ 癒しの灯", BorgM2, UnitCatalog.Hota, HiyoH2),

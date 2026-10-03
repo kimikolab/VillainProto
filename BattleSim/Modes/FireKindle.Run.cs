@@ -7,9 +7,9 @@ using FC = FireCycleDiag;
 // firekindle run —— 段2 ＋ 表A〜H（指示書 §5.3）。phase0 は同じ集計を M0 だけで出す（予測の材料・Q0-1〜Q0-5）。
 static partial class FireKindleDiag
 {
-    static readonly string[] FixedBoards = { "T3-244", "T3-238", "雷＋ボルグ" };
-    static string[] BoardNames = FixedBoards;
-    static Formation BoardOf(string name, FB.Ver v, Dictionary<string, List<FB.Pick>>? ranked) => name switch
+    internal static readonly string[] FixedBoards = { "T3-244", "T3-238", "雷＋ボルグ" };
+    internal static string[] BoardNames = FixedBoards;
+    internal static Formation BoardOf(string name, FB.Ver v, Dictionary<string, List<FB.Pick>>? ranked) => name switch
     {
         "T3-244" => Apply(FC.T3244, v),
         "T3-238" => Apply(FC.T3238, v),
@@ -18,16 +18,16 @@ static partial class FireKindleDiag
         "T3(M1選)" => Apply(FB.Dec(ranked!["M1"][0].Best), v),
         _ => throw new ArgumentException(name),
     };
-    static readonly (string Name, Func<Formation> F)[] Refs = { ("参考 移動", () => BA.RefMove), ("参考 雷", () => BA.RefThunder) };
-    const string RefVer = "—";
-    static readonly int[] MainWaves = { 0, 1, 2, 3 };
+    internal static readonly (string Name, Func<Formation> F)[] Refs = { ("参考 移動", () => BA.RefMove), ("参考 雷", () => BA.RefThunder) };
+    internal const string RefVer = "—";
+    internal static readonly int[] MainWaves = { 0, 1, 2, 3 };
     const int WaveHush = FC.WaveHush, WaveYoke = FC.WaveYoke, WaveHeavy = FC.WaveHeavy, WaveT1 = FC.WaveTarget1, WaveT9 = FC.WaveTarget9;
 
-    static Dictionary<(string B, string V, int W, int S), Cell> _cells = new();
-    static FB.Ver[] _vers = Versions;
-    static Cell At(string b, string v, int w, int s) => _cells[(b, v, w, IsTarget(w) ? 0 : s)];
+    internal static Dictionary<(string B, string V, int W, int S), Cell> _cells = new();
+    internal static FB.Ver[] _vers = Versions;
+    internal static Cell At(string b, string v, int w, int s) => _cells[(b, v, w, IsTarget(w) ? 0 : s)];
 
-    static void Put(string b, string vn, Formation f)
+    internal static void Put(string b, string vn, Formation f)
     {
         for (int w = 0; w < WaveNames.Length; w++)
             for (int s = 0; s < (IsTarget(w) ? 1 : BA.Scales.Length); s++)
@@ -35,7 +35,7 @@ static partial class FireKindleDiag
     }
 
     /// <summary>波のまとまり（表B〜H の列）: 九/新兵 400/300 ／ 本編 第2〜5波 400/300 ／ 重い波 400/300 ／ 的・一 ／ 的・九。</summary>
-    static readonly (string Name, (int W, int S)[] Cells)[] Groups =
+    internal static (string Name, (int W, int S)[] Cells)[] Groups =
     {
         ("九/新兵 400/300", new[] { (BA.MainWave, 1) }),
         ("九/新兵 200/200", new[] { (BA.MainWave, 0) }),
@@ -44,7 +44,7 @@ static partial class FireKindleDiag
         ("的・一（8T）", new[] { (WaveT1, 0) }),
         ("的・九（8T）", new[] { (WaveT9, 0) }),
     };
-    static MAgg Grp(string b, string v, (int W, int S)[] cells)
+    internal static MAgg Grp(string b, string v, (int W, int S)[] cells)
     {
         var m = new MAgg();
         foreach (var (w, s) in cells) m.Merge(At(b, v, w, s).M);
@@ -134,13 +134,13 @@ static partial class FireKindleDiag
         Console.WriteLine();
     }
 
-    static string F1(double x) => double.IsNaN(x) ? "—" : x.ToString("F1");
+    internal static string F1(double x) => double.IsNaN(x) ? "—" : x.ToString("F1");
     static double MainAvg(string b, string v, int s, Func<FC.CAgg, double> f) => MainWaves.Average(w => f(At(b, v, w, s).C));
-    static double WinP(FC.CAgg c) => c.N == 0 ? double.NaN : 100.0 * c.Wins / c.N;
-    static double SurvP(FC.CAgg c) => c.N == 0 ? double.NaN : 100.0 * c.AllSurv / c.N;
-    static string Avg(long a, long n) => n == 0 ? "—" : ((double)a / n).ToString("F2");
+    internal static double WinP(FC.CAgg c) => c.N == 0 ? double.NaN : 100.0 * c.Wins / c.N;
+    internal static double SurvP(FC.CAgg c) => c.N == 0 ? double.NaN : 100.0 * c.AllSurv / c.N;
+    internal static string Avg(long a, long n) => n == 0 ? "—" : ((double)a / n).ToString("F2");
 
-    static void TableA()
+    internal static void TableA()
     {
         Console.WriteLine("## 表A —— 台 × 版（勝率 ／ 全員生存 ／ 決着T ／ 落ちた駒）");
         Console.WriteLine();
@@ -156,7 +156,7 @@ static partial class FireKindleDiag
         Console.WriteLine();
     }
 
-    static void TableA2()
+    internal static void TableA2()
     {
         Console.WriteLine("### 表A′ —— 全セル（勝率 ／ 全員生存 ／ 決着T ／ 落ちた/戦）");
         Console.WriteLine();
@@ -168,7 +168,7 @@ static partial class FireKindleDiag
         Console.WriteLine();
     }
 
-    static void TableB()
+    internal static void TableB()
     {
         Console.WriteLine("## 表B —— ボルグの爆炎（1戦の回数 ／ 撃った戦 % ／ 初めて撃ったターン ／ 2回以上撃った戦 %・独りの爆炎/戦）");
         Console.WriteLine();
@@ -194,7 +194,7 @@ static partial class FireKindleDiag
         Console.WriteLine();
     }
 
-    static void TableC()
+    internal static void TableC()
     {
         Console.WriteLine("## 表C —— ボルグの火勢（周回の頭の写し・生きているボルグの平均 ／ 火勢4 の割合）と育ちの内訳（実際に上がった段の和/戦）");
         Console.WriteLine();
@@ -212,7 +212,7 @@ static partial class FireKindleDiag
         Console.WriteLine();
     }
 
-    static void TableD()
+    internal static void TableD()
     {
         Console.WriteLine("## 表D —— ヒヨのギフト（ギフトの手番/戦 ／ 初めてのターン ／ 相手 ボルグ・ホタ・ほか %）と、火勢4 未満のボルグに渡った手番・渡す火");
         Console.WriteLine();
@@ -230,7 +230,7 @@ static partial class FireKindleDiag
         Console.WriteLine();
     }
 
-    static void TableE()
+    internal static void TableE()
     {
         Console.WriteLine("## 表E —— 味方の回復（HP/戦）と、回復が初めて入ったターン");
         Console.WriteLine();
@@ -247,7 +247,7 @@ static partial class FireKindleDiag
         Console.WriteLine();
     }
 
-    static void TableF()
+    internal static void TableF()
     {
         Console.WriteLine("## 表F —— 溜め火（1回の爆炎あたりの溜め・敵への倍率・爆炎の敵への与ダメ）／ 鎧の火・守るほど燃え上がる・癒しの灯の帳簿");
         Console.WriteLine();
@@ -262,7 +262,7 @@ static partial class FireKindleDiag
         Console.WriteLine();
     }
 
-    static void TableG()
+    internal static void TableG()
     {
         Console.WriteLine("## 表G —— ホタ（焼き尽くす/戦 ／ 画面の攻撃力の1戦の最大 平均 ／ 最大 ／ 落ちた %）");
         Console.WriteLine();
@@ -279,7 +279,7 @@ static partial class FireKindleDiag
         Console.WriteLine();
     }
 
-    static void TableH()
+    internal static void TableH()
     {
         Console.WriteLine("## 表H —— 三角の循環（焼き尽くす → 指名 → ボルグの爆炎 → 呼び火・第247期の数え方）/戦（ある戦 %）・呼び火/戦");
         Console.WriteLine();
@@ -294,7 +294,7 @@ static partial class FireKindleDiag
         Console.WriteLine();
     }
 
-    static void TableDeath()
+    internal static void TableDeath()
     {
         long cs = 0, de = 0, fs = 0, fr = 0;
         foreach (var c in _cells.Values) { cs += c.K.CauseSum; de += c.K.DeathEv; fs += c.K.FellSum; fr += c.K.FellRes; }

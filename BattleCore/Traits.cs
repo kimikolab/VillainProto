@@ -556,6 +556,7 @@ public enum TraitId
     BlazeHoard,     // 溜め火（第252期・ボルグの版 O1）: 火勢4 で来た育ちを溜め +1（上限なし）。次の爆炎で敵への倍率と味方への燃焼ダメージに溜め × 0.5 を足し、撃ったら 0。**判定は engine**（`GrowFire`・`BigMove`）。保持者 0 枚
     ArmorFlame,     // 鎧の火（第252期・ボルグの版 O2）: 火勢4 で来た育ちを破片 +6 に。**判定は engine**（`GrowFire`）。保持者 0 枚
     GiftHoard,      // 渡す火（第252期・ヒヨの版 H1）: 火勢4 で来た育ちを溜め +1（上限 3）。ギフトを撃つとき相手1体ごとに相手の火勢を溜めの数だけ上げ（上限 4・あぶれた火にはならない）、撃ったら 0。**判定は engine**（`GrowFire`・`QueueGift`）。保持者 0 枚
+    GiftOrder,      // 渡す順（第253期・ヒヨ）: 2体にギフトを渡すとき、相手に放つ（`FireUnleash`＝ボルグ）の持ち主がいれば、その手番を先にする（もう1体はその後）。相手の選び方は今のまま・1体のときは変えない。**判定は engine**（`QueueGift`・安定な並べ替え1回・乱数を引かない）
     MendGlow,       // 癒しの灯（第252期・ヒヨの版 H2）: 火勢4 で来た育ち1回につき、燃えている味方全員（自分を含む）を 4 回復（火の回復・ベニの反転の裏は通らない）。**判定は engine**（`GrowFire`）。保持者 0 枚
     TickOnce,       // 刻み・一撃（第249期・ボルグの版 K4t・比較の1版）: 燃焼の刻みを「6 を火勢の回数」から「6 × 火勢 を1回」に（敵・味方とも・刻みの回数の札がある陣営で）。**判定は engine**（`TickStatuses`）。保持者 0 枚
 
@@ -13673,6 +13674,8 @@ public sealed class GiftHoardTrait : Trait
     public override TraitId Id => TraitId.GiftHoard;
     public override void OnCarryOver(UnitState self) => self.SetCounter(FireKindleRule.GiftHoardKey, 0);
 }
+/// <summary>渡す順（第253期・ヒヨ）。engine の `QueueGift` が読む（2体のとき、放つの持ち主を先に）。</summary>
+public sealed class GiftOrderTrait : Trait { public override TraitId Id => TraitId.GiftOrder; }
 /// <summary>癒しの灯（第252期・ヒヨ H2）。engine の `GrowFire` が読む。</summary>
 public sealed class MendGlowTrait : Trait { public override TraitId Id => TraitId.MendGlow; }
 /// <summary>火の粉（焼き尽くす）（第247期・ヒヨ・燃え広がりの育ちはそのまま）。engine が読む。</summary>
@@ -15864,6 +15867,7 @@ public static class TraitCatalog
         new ArmorFlameTrait(),       // 第252期
         new GiftHoardTrait(),        // 第252期
         new MendGlowTrait(),         // 第252期
+        new GiftOrderTrait(),        // 第253期
         new SparkCatchTrait(),       // 第247期
         new SparkUnleashTrait(),     // 第247期
         new GiftPairTrait(),         // 第247期

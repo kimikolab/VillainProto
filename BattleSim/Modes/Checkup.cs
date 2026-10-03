@@ -228,6 +228,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.ArmorFlame]     = (HcPlusL, "火勢4 で来た育ちを破片 +6 に変えるだけ"),
         [TraitId.GiftHoard]      = (HcPlusL, "火勢4 で来た育ちを溜め、ギフトの相手の火勢をその数だけ上げるだけ"),
         [TraitId.MendGlow]       = (HcPlusL, "火勢4 で来た育ちのたびに燃えている味方全員を 4 回復するだけ"),
+        [TraitId.GiftOrder]      = (HcPlusL, "2体に渡すギフトで、放つの持ち主（ボルグ）の手番を先にするだけ"),
         // 第180期: ムド（暴発＋泥散り）・ヴィオ（吐き戻し）・ガン（叩き起こし）。
         // **マイナスを別の `TraitId` に切り出してあるので `yP` が組める**（第74期の作法）。
         [TraitId.Erupt]      = (HcPlusL,  "殴られた回数を溜めて割り込み連撃する。代金は別の札（`Smear`）に切り出してある"),
