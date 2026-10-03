@@ -807,6 +807,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 foesurge check       # 自己検査（渡す量の振り分け・敵上げの量と見出しを盤面を直に組んで・6,300 戦で敵だけ・味方は前 ＝ 後・独りでも・爆炎の出ない戦は W0 と一致・死因の合計・27 項目）
     dotnet run --project BattleSim -c Release 0 foesurge digest <版> [path]  # 版の台本の指紋（W0 は実装の前と 834,087 行で一致）
     dotnet run --project BattleSim -c Release 0 foesurge log <版> <台> [seed] [波 0〜8] [倍率 0/1/2]   # 1戦のログ（台は T3-244 ／ T3-238 ／ T3-255 ／ 混ぜ-255 ／ 雷＋ボルグ）
+    dotnet run --project BattleSim -c Release 0 checkwave phase0     # 第260期 Phase 0（刻みと回復の順・第四波の写しの一致・軛と回復・ボスの攻撃力・机上計算）＋ 段1 の棚卸し（6台 × 8波 × seed 0..199・窓の与ダメと命中・5 秒）。本体は `Modes/CheckWave*.cs`
+    dotnet run --project BattleSim -c Release 0 checkwave run        # 段2・段3（6台 × 手数チェック T-30後 ／ T-50後 ／ T-50奥 ＋ ボス B-全4 ／ B-全8 ／ B-半4 ＋ 第四波の写し・HP 500 の参考）と採否の表 D-1〜D-4（3 秒）
+    dotnet run --project BattleSim -c Release 0 checkwave check      # 自己検査（写しの台本一致・癒し手 ＝ 従軍司祭＋札1枚・保持者 0・回復は状態を消さない・刻みの後・軛に切られない・ボスの攻撃力・verbose・乱数・15 項目）
+    dotnet run --project BattleSim -c Release 0 checkwave log <台> <波> [seed]   # 1戦のログ（台は 燃焼 T3-244 ／ 燃焼 T3-255 ／ 移動 ／ 雷 ／ 毒 ／ 混ぜ-255・波は T-30後 ／ T-50後 ／ T-50奥 ／ B-全4 ／ B-全8 ／ B-半4 ／ 第四波写し）
     dotnet run --project BattleSim -c Release 0 shockdigest s232 # 第232期の台（前段の規定・固定なし）
     dotnet run --project BattleSim -c Release 0 shockdigest a231 # 第231期の台（V0＝前段の規定の台本が実装の前後で一致すること）
     dotnet run --project BattleSim -c Release 0 shockdigest w230 # 第230期の台（W0＝前段の規定の台本が実装の前後で一致すること・今の既定の規則で回す唯一のモード）
