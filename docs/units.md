@@ -366,6 +366,8 @@
 | `BlazeHoard` | 焼け残りのボルグ |
 | `ArmorFlame` | - |
 | `GiftHoard` | 火選りのヒヨ |
+| `BlazeSurge2` | - |
+| `BlazeSurgeMax` | - |
 | `GiftOrder` | 火選りのヒヨ |
 | `MendGlow` | - |
 | `TickOnce` | - |

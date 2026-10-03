@@ -229,6 +229,9 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.GiftHoard]      = (HcPlusL, "火勢4 で来た育ちを溜め、ギフトの相手の火勢をその数だけ上げるだけ"),
         [TraitId.MendGlow]       = (HcPlusL, "火勢4 で来た育ちのたびに燃えている味方全員を 4 回復するだけ"),
         [TraitId.GiftOrder]      = (HcPlusL, "2体に渡すギフトで、放つの持ち主（ボルグ）の手番を先にするだけ"),
+        // 第254期: 保持者 0 枚（版は `blazesurge` のローカルの駒）。
+        [TraitId.BlazeSurge2]    = (HcBothL, "爆炎で当たった敵と味方の火勢を +2——味方の燃焼の刻みも回数が増える"),
+        [TraitId.BlazeSurgeMax]  = (HcBothL, "爆炎で当たった敵と味方の火勢を 4 に——味方の燃焼の刻みも回数が増える"),
         // 第180期: ムド（暴発＋泥散り）・ヴィオ（吐き戻し）・ガン（叩き起こし）。
         // **マイナスを別の `TraitId` に切り出してあるので `yP` が組める**（第74期の作法）。
         [TraitId.Erupt]      = (HcPlusL,  "殴られた回数を溜めて割り込み連撃する。代金は別の札（`Smear`）に切り出してある"),

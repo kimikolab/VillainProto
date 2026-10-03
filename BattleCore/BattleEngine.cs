@@ -8749,7 +8749,7 @@ public sealed class BattleContext
     /// <summary>
     /// 育てる: 燃えていなければ捨てる（偽を返す）。燃えていれば「育った」の印を付け、上限 4 まで上げる（4 の上は捨てる・印は付ける）。
     /// </summary>
-    bool GrowFire(UnitState u, int n, UnitState? cause, string label)
+    bool GrowFire(UnitState u, int n, UnitState? cause, string label, bool emit = true)
     {
         if (!u.IsAlive || n <= 0 || !LvTracked(u.TeamId)) return false;
         int lv = FireLevelRule.Of(u);
@@ -8771,7 +8771,7 @@ public sealed class BattleContext
         int to = Math.Min(FireLevelRule.Max, lv + n);
         if (to == lv) return true;
         u.SetCounter(FireLevelRule.LvKey, to);
-        EmitFireLevel(cause, u, label, to, lv);
+        if (emit) EmitFireLevel(cause, u, label, to, lv);
         Log($"    {u.Name} の火勢が {to} に育った", LogKind.Status);
         return true;
     }
@@ -9147,6 +9147,9 @@ public sealed class BattleContext
             if (stoke) { wasBurning = LivingMembers(Opponent(actor.TeamId)).Where(f => f.RawCounter(StatusKeys.Burn) > 0).ToHashSet(); _unleashHits = new List<UnitState>(); }
             // 第249期（爆炎・札 `UnleashBlaze`）: 薙ぎの代わりに敵全体 ×3。巻き込みは起こさず（`SplashTrait` が `BlazeActor` を見る）、続いて味方全体に燃焼ダメージ。
             bool blaze = actor.HasTrait(TraitId.UnleashBlaze);
+            // 第254期（爆炎・上げ）: 当てた敵を控える（`NoteFireContact` が `_unleashHits` に足す）。札が無ければ控えない。
+            int surge = blaze ? SurgeOf(actor) : 0;
+            if (surge > 0 && _unleashHits is null) _unleashHits = new List<UnitState>();
             // 第252期（O1 溜め火）: 次の爆炎で、敵への倍率と味方への燃焼ダメージに溜め × 0.5 を足す。撃ったら 0。札が無ければ溜めは 0。
             int hoard = blaze && _kindleLive && actor.HasTrait(TraitId.BlazeHoard) ? actor.RawCounter(FireKindleRule.HoardKey) : 0;
             int unleashPct = FireBurstRule.UnleashPercent + hoard * FireKindleRule.HoardPercent;
@@ -9173,10 +9176,21 @@ public sealed class BattleContext
             _fireMoveIgnite = true;
             try { PerformAttack(actor, attackPercent: unleashPct, patternOverride: blaze ? AttackPattern.All : AttackPattern.Sweep); }
             finally { _fireMoveIgnite = false; BlazeActor = null; }
+            if (blaze)
+            {
+                // 第254期（爆炎・上げ）: 当てた敵のうち生き残った敵（席番号の順）の火勢を上げる。爆炎の瞬間の敵の火勢の分布は札が無くても数える（計数のみ）。
+                List<UnitState>? hitFoes = surge > 0 ? _unleashHits!.ToList() : null;
+                if (surge > 0 && !stoke) _unleashHits = null;
+                var living = LivingMembers(Opponent(actor.TeamId));
+                foreach (UnitState f in living) FireBook.BlazeFoeLvPre[FireLevelRule.Of(f)]++;
+                if (hitFoes is not null)
+                    foreach (UnitState f in hitFoes.OrderBy(x => x.Slot)) BlazeSurge(actor, f, surge);
+                foreach (UnitState f in living) FireBook.BlazeFoeLvPost[FireLevelRule.Of(f)]++;
+            }
             if (blaze && actor.IsAlive)
             {
                 _blazeSoloNow = _giftTurnActor != actor;   // 第250期（爆炎・独り）: 帳簿を分けるだけ
-                try { BlazeAllies(actor, blazeAmt); }
+                try { BlazeAllies(actor, blazeAmt, surge); }
                 finally { _blazeSoloNow = false; }
             }
             if (stoke)
@@ -9303,7 +9317,7 @@ public sealed class BattleContext
     /// ——火に焼かれない駒（熾のホタ・火の鎧）は受けず、火の癒し（ホタ・ボルグ）なら回復 ／ ベニの結界の内側は反転で回復 ／ 火の変換（ヒヨ）で回復 ／
     /// それ以外は味方の刃（<c>ApplyDamage(ally, amount, borg, isFriendlyFire: true)</c>・燃える巻き込みと同じ口）。
     /// </summary>
-    void BlazeAllies(UnitState borg, int amount)
+    void BlazeAllies(UnitState borg, int amount, int surge = 0)
     {
         foreach (UnitState ally in LivingMembers(borg.TeamId))
         {
@@ -9339,7 +9353,42 @@ public sealed class BattleContext
                 FireBook.BlazeSoloNom[kind] += amount; FireBook.BlazeSoloHp[kind] += Math.Abs(d);
                 if (!ally.IsAlive) { FireBook.BlazeSoloAllyKills++; sr[3]++; }
             }
+            // 第254期（爆炎・上げ）: 燃焼ダメージ（か回復）の後に、生きていれば火勢を上げる。分布は札が無くても数える（計数のみ）。
+            if (!ally.IsAlive) continue;
+            int pre = FireLevelRule.Of(ally);
+            FireBook.BlazeAllyLvPre[pre]++;
+            if (surge > 0) BlazeSurge(borg, ally, surge);
+            FireBook.BlazeAllyLvPost[FireLevelRule.Of(ally)]++;
+            FireBook.BlazeAllyLog.Add((_turn, ally.InstanceId, pre, FireLevelRule.Of(ally)));
         }
+    }
+
+    /// <summary>第254期（爆炎・上げ）: 0 なし ／ 2 上げ2（`BlazeSurge2`）／ 4 上げ満（`BlazeSurgeMax`・両方持てば上げ満）。</summary>
+    static int SurgeOf(UnitState borg) => borg.HasTrait(TraitId.BlazeSurgeMax) ? 4 : borg.HasTrait(TraitId.BlazeSurge2) ? 2 : 0;
+
+    /// <summary>
+    /// 第254期（爆炎・上げ）: 爆炎で当たった駒（ボルグ以外）の火勢を上げる。上げは「育ち」（`GrowFire`）として通す——
+    /// 上げ2 は +1 の育ちを2回（3 → 4 → あぶれた火1回 ／ 4 → あぶれた火2回）、上げ満は 4 に届くまでの育ち1回（既に 4 なら +1 の育ち1回＝あぶれた火1回）。
+    /// 燃えていない駒・火勢が動かない陣営の駒には何もしない（`GrowFire` が捨てる）。台本は駒ごとに「爆炎・上げ」を1件（前後の火勢）。<b>乱数を引かない。</b>
+    /// </summary>
+    void BlazeSurge(UnitState borg, UnitState u, int surge)
+    {
+        if (u == borg || !u.IsAlive || !LvTracked(u.TeamId)) return;
+        int b = FireLevelRule.Of(u);
+        if (b == 0) return;
+        bool foe = u.TeamId != borg.TeamId;
+        long over0 = FireBook.OverflowN + FireBook.GiftHoardAdds + FireBook.GiftHoardCapped;
+        if (surge >= FireLevelRule.Max) GrowFire(u, b < FireLevelRule.Max ? FireLevelRule.Max - b : 1, borg, FireLevelLabels.BlazeSurge, emit: false);
+        else for (int i = 0; i < surge; i++) GrowFire(u, 1, borg, FireLevelLabels.BlazeSurge, emit: false);
+        int a = FireLevelRule.Of(u);
+        if (foe) { FireBook.SurgeFoe++; FireBook.SurgeFoeSteps += a - b; if (a == FireLevelRule.Max && b < a) FireBook.SurgeFoeTo4++; }
+        else
+        {
+            FireBook.SurgeAlly++; FireBook.SurgeAllySteps += a - b; if (a == FireLevelRule.Max && b < a) FireBook.SurgeAllyTo4++;
+            FireBook.SurgeAllyOver += FireBook.OverflowN + FireBook.GiftHoardAdds + FireBook.GiftHoardCapped - over0;
+        }
+        EmitFireLevel(borg, u, FireLevelLabels.BlazeSurge, a, b);
+        Log($"    爆炎で {u.Name} の火勢が {b} → {a} に跳ね上がる", LogKind.Status);
     }
 
     /// <summary>

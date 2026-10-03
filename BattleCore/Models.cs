@@ -3625,6 +3625,11 @@ public static class FireLevelLabels
     public const string GiftPair = "二体に渡す";
     /// <summary>第253期（渡す順・ヒヨの `GiftOrder`）: 2体に渡すギフトで、放つの持ち主（ボルグ）を先に並べ替えた（<c>TargetId</c> ＝ 先に動く相手・<c>Amount</c> ＝ その火勢・<c>Slot</c> ＝ 1）。直後に「火を渡す」が2件（<c>Slot</c> 1 ＝ ボルグ・2 ＝ もう1体）。並びが元からボルグ先なら出ない。</summary>
     public const string GiftOrder = "先に渡す";
+    /// <summary>第254期（爆炎・上げ・ボルグの `BlazeSurge2` ／ `BlazeSurgeMax`）: 爆炎で当たった駒の火勢を上げた（1体ごとに1件）。
+    /// <c>ActorId</c> ＝ ボルグ ／ <c>TargetId</c> ＝ 上げた駒（敵・味方）／ <c>Amount</c> ＝ 上げた後の火勢 ／ <c>Slot</c> ＝ 上げる前の火勢。
+    /// 敵の分は爆炎の敵への一撃（<c>Attack</c> / <c>Damage</c>）の後・「爆炎・味方」より前に生き残った敵の席番号の順、味方の分は「爆炎・味方」の燃焼ダメージ（か回復）の直後。
+    /// 上限を超えた分は直前に「あぶれた火」（ホタ）／「渡す火・溜め」（ヒヨ）が出る。<b>表示専用。</b></summary>
+    public const string BlazeSurge = "爆炎・上げ";
     /// <summary>第245期: 見出し: 延焼。<c>ActorId</c> ＝ 火勢4 で倒れた敵 ／ <c>TargetId</c> ＝ 隣の生きている敵 ／ <c>Slot</c> ＝ 1 燃えていなかった（続いて「点く」と「育つ・敵」で火勢2）／ 2 燃えていた（続いて「育つ・敵」で +1）。</summary>
     public const string FoeSpread = "延焼";
     /// <summary>第249期: 見出し: 爆炎（放つの代わり・`放つ` と「撃った」の直後）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ボルグ ／ <c>Amount</c> ＝ 味方への燃焼ダメージの量（ボルグの攻撃力 ×1）。
@@ -3793,6 +3798,12 @@ public sealed class FireLevelLedger
     public long CallMarks, CallStacked, CallLost, GiftPairs, GiftPairChance;
     /// <summary>第253期（渡す順・**計数のみ**・札が無くても数える）: 2体のギフトで放つの持ち主（ボルグ）が相手にいた回 ／ 元からボルグ先だった回 ／ 札で並べ替えた回。</summary>
     public long OrderPairs, OrderAlready, OrderSwapped;
+    /// <summary>第254期（爆炎・上げ・**計数のみ**）: 上げた駒（敵 ／ 味方）・上がった段の和・4 に届いた駒・あぶれた火になった育ちの回数（味方）。
+    /// 爆炎の瞬間の火勢の分布（敵は一撃の後・生きている敵、味方は燃焼ダメージの後・生きている味方・添字 0〜4）は札が無くても数える（前 ／ 後＝上げた後）。</summary>
+    public long SurgeFoe, SurgeAlly, SurgeFoeSteps, SurgeAllySteps, SurgeFoeTo4, SurgeAllyTo4, SurgeAllyOver;
+    public readonly long[] BlazeFoeLvPre = new long[5], BlazeFoeLvPost = new long[5], BlazeAllyLvPre = new long[5], BlazeAllyLvPost = new long[5];
+    /// <summary>第254期: 爆炎の味方の側の記録（ターン・駒・上げる前の火勢・上げた後の火勢＝札が無ければ同じ）。<b>計数のみ。</b></summary>
+    public readonly List<(int Turn, int Id, int Pre, int Post)> BlazeAllyLog = new();
     public readonly long[] Called = new long[5], SparkBy = new long[2], SparkGrowBy = new long[2];
     /// <summary>第248期（`CallFull`）: 印を持つが火勢4 未満で指名しなかったギフトの手番 ／ そのボルグが指名ではなくギフトを受けた（印は残る）。<b>計数のみ。</b></summary>
     public long CallHeld, CallHeldGift;

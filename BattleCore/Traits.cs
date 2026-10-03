@@ -556,6 +556,8 @@ public enum TraitId
     BlazeHoard,     // 溜め火（第252期・ボルグの版 O1）: 火勢4 で来た育ちを溜め +1（上限なし）。次の爆炎で敵への倍率と味方への燃焼ダメージに溜め × 0.5 を足し、撃ったら 0。**判定は engine**（`GrowFire`・`BigMove`）。保持者 0 枚
     ArmorFlame,     // 鎧の火（第252期・ボルグの版 O2）: 火勢4 で来た育ちを破片 +6 に。**判定は engine**（`GrowFire`）。保持者 0 枚
     GiftHoard,      // 渡す火（第252期・ヒヨの版 H1）: 火勢4 で来た育ちを溜め +1（上限 3）。ギフトを撃つとき相手1体ごとに相手の火勢を溜めの数だけ上げ（上限 4・あぶれた火にはならない）、撃ったら 0。**判定は engine**（`GrowFire`・`QueueGift`）。保持者 0 枚
+    BlazeSurge2,    // 爆炎・上げ2（第254期・ボルグの版 V2）: 爆炎で当たった敵と味方（ボルグ以外）の火勢を +2（上限 4・+1 ずつ2回の育ちとして通す＝4 を超えた分はあぶれた火）。爆炎・独りでも同じ。**判定は engine**（`BigMove`・`BlazeAllies`・`BlazeSurge`）。保持者 0 枚
+    BlazeSurgeMax,  // 爆炎・上げ満（第254期・ボルグの版 V4）: 爆炎で当たった敵と味方（ボルグ以外）の火勢を 4 に（既に 4 なら +1 の育ち1回＝あぶれた火1回分）。爆炎・独りでも同じ。**判定は engine**（`BigMove`・`BlazeAllies`・`BlazeSurge`）。保持者 0 枚
     GiftOrder,      // 渡す順（第253期・ヒヨ）: 2体にギフトを渡すとき、相手に放つ（`FireUnleash`＝ボルグ）の持ち主がいれば、その手番を先にする（もう1体はその後）。相手の選び方は今のまま・1体のときは変えない。**判定は engine**（`QueueGift`・安定な並べ替え1回・乱数を引かない）
     MendGlow,       // 癒しの灯（第252期・ヒヨの版 H2）: 火勢4 で来た育ち1回につき、燃えている味方全員（自分を含む）を 4 回復（火の回復・ベニの反転の裏は通らない）。**判定は engine**（`GrowFire`）。保持者 0 枚
     TickOnce,       // 刻み・一撃（第249期・ボルグの版 K4t・比較の1版）: 燃焼の刻みを「6 を火勢の回数」から「6 × 火勢 を1回」に（敵・味方とも・刻みの回数の札がある陣営で）。**判定は engine**（`TickStatuses`）。保持者 0 枚
@@ -13307,6 +13309,7 @@ public static class FireLevelRule
         || u.HasTrait(TraitId.CallFull)   // 第248期
         || u.HasTrait(TraitId.FavorLevel) || u.HasTrait(TraitId.UnleashBlaze) || u.HasTrait(TraitId.EmbersChain) || u.HasTrait(TraitId.TickOnce)   // 第249期
         || u.HasTrait(TraitId.PyreOverflow) || u.HasTrait(TraitId.PyreFed) || u.HasTrait(TraitId.BurnoutHeavy) || u.HasTrait(TraitId.BlazeSolo)   // 第250期
+        || u.HasTrait(TraitId.BlazeSurge2) || u.HasTrait(TraitId.BlazeSurgeMax)   // 第254期
         || FireKindleRule.Holds(u);   // 第252期
 }
 
@@ -13676,6 +13679,10 @@ public sealed class GiftHoardTrait : Trait
 }
 /// <summary>渡す順（第253期・ヒヨ）。engine の `QueueGift` が読む（2体のとき、放つの持ち主を先に）。</summary>
 public sealed class GiftOrderTrait : Trait { public override TraitId Id => TraitId.GiftOrder; }
+/// <summary>爆炎・上げ2（第254期・ボルグ V2）。engine の `BigMove`・`BlazeAllies` が読む（爆炎で当たった駒の火勢 +2）。</summary>
+public sealed class BlazeSurge2Trait : Trait { public override TraitId Id => TraitId.BlazeSurge2; }
+/// <summary>爆炎・上げ満（第254期・ボルグ V4）。engine の `BigMove`・`BlazeAllies` が読む（爆炎で当たった駒の火勢を 4 に）。</summary>
+public sealed class BlazeSurgeMaxTrait : Trait { public override TraitId Id => TraitId.BlazeSurgeMax; }
 /// <summary>癒しの灯（第252期・ヒヨ H2）。engine の `GrowFire` が読む。</summary>
 public sealed class MendGlowTrait : Trait { public override TraitId Id => TraitId.MendGlow; }
 /// <summary>火の粉（焼き尽くす）（第247期・ヒヨ・燃え広がりの育ちはそのまま）。engine が読む。</summary>
@@ -15868,6 +15875,8 @@ public static class TraitCatalog
         new GiftHoardTrait(),        // 第252期
         new MendGlowTrait(),         // 第252期
         new GiftOrderTrait(),        // 第253期
+        new BlazeSurge2Trait(),      // 第254期
+        new BlazeSurgeMaxTrait(),    // 第254期
         new SparkCatchTrait(),       // 第247期
         new SparkUnleashTrait(),     // 第247期
         new GiftPairTrait(),         // 第247期
