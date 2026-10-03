@@ -8,22 +8,25 @@ using System.Threading.Tasks;
 
 public partial class StagingEffectCheck
 {
-    // 第257期 foesurge log <版> 混ぜ-255 0 2 1 と同じ席・札・敵。
-    // W4は確認用の駒の写しだけ。本編のカタログや燃焼規則は変更しない。
+    // foesurgeの席・札・敵を本番で再生する。W4は第258期の規定、W0は固定された旧ボルグ。
+    // --fire-board=T3-244 は仕様書§8の W4 T3-244 0 4 1（九/新兵）を使う。
     private async Task CheckFireReplay(string version, bool verify, string board = "混ぜ-255")
     {
         const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
-        UnitDef borg = UnitCatalog.Borg;
-        var traits = borg.Traits.Where(t => t is not (TraitId.BlazeFoeSurgeMax or TraitId.BlazeFoeSurge2));
-        if (version == "W4") traits = traits.Append(TraitId.BlazeFoeSurgeMax);
-        borg = new UnitDef {
-            Id = borg.Id, Name = borg.Name, MaxHp = borg.MaxHp, Attack = borg.Attack, Speed = borg.Speed,
-            Traits = traits.ToArray(), Pattern = borg.Pattern,
-            Advances = borg.Advances, Actions = borg.Actions, PlusText = borg.PlusText,
-            MinusText = borg.MinusText, Flavor = borg.Flavor };
-        var formation = board == "雷＋ボルグ"
-            ? Formation.Build(front1: borg, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)
-            : Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Beni, center: borg, back1: UnitCatalog.Hiyo, back3: UnitCatalog.Hane);
+        string? requestedBoard = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--fire-board="));
+        if (requestedBoard is not null) board = requestedBoard[13..];
+        UnitDef borg = version == "W0" ? UnitCatalog.BorgW0 : UnitCatalog.Borg;
+        var formation = board switch
+        {
+            "T3-244" => Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hisa, center: borg, back1: UnitCatalog.Hota, back3: UnitCatalog.Hiyo),
+            "雷＋ボルグ" => Formation.Build(front1: borg, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio),
+            "混ぜ-255" => Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Beni, center: borg, back1: UnitCatalog.Hiyo, back3: UnitCatalog.Hane),
+            _ => throw new ArgumentException($"燃焼確認の台が未対応: {board}"),
+        };
+        bool nine = board == "T3-244";
+        int stageIndex = nine ? 0 : 3;
+        int pickerIndex = nine ? EnemyCatalog.Stages.Count + 1 : stageIndex;
+        string title = $"{(version == "W4" ? "第258期の規定" : "旧ボルグの対照")} {version}・{board}・{(nine ? "九/新兵" : "第四波")}・400/300・seed 0";
         var main = GD.Load<PackedScene>("res://Main.tscn").Instantiate<Main>();
         AddChild(main);
         T Read<T>(string name) => (T)typeof(Main).GetField(name, flags)!.GetValue(main)!;
@@ -34,12 +37,12 @@ public partial class StagingEffectCheck
         for (int i = 0; i < setup.Length; i++) setup[i] = formation[i];
         Call("RefreshFormation");
         var picker = Read<OptionButton>("_stagePicker");
-        picker.Select(3); picker.EmitSignal(OptionButton.SignalName.ItemSelected, 3);
+        picker.Select(pickerIndex); picker.EmitSignal(OptionButton.SignalName.ItemSelected, pickerIndex);
         Read<SpinBox>("_seed").Value = 0;
         Read<SpinBox>("_enemyHp").Value = 400;
         Read<SpinBox>("_enemyAttack").Value = 300;
         Read<OptionButton>("_presetPicker").Hide();
-        Read<Label>("_presetState").Text = $"第257期・{board}・{version} 確認用";
+        Read<Label>("_presetState").Text = title;
         if (verify) { Set("_fastSmoke", true); Set("_speed", 1000.0); }
         else
         {
@@ -48,9 +51,9 @@ public partial class StagingEffectCheck
         }
         var scale = new EnemyScaleRule(400, 300);
         Set("_battleEnemyScale", scale);
-        Call("EnterBattle", BattleEngine.Materialize(formation, 0),
-            BattleEngine.Materialize(EnemyCatalog.Stages[3].Enemy, 1, scale), 0, 3,
-            $"第257期 {version}・{board}・400/300・seed 0");
+        var enemies = nine ? BattleEngine.MaterializeEnemy(EnemyCatalog.TestStages[0].Enemy, scale)
+            : BattleEngine.Materialize(EnemyCatalog.Stages[stageIndex].Enemy, 1, scale);
+        Call("EnterBattle", BattleEngine.Materialize(formation, 0), enemies, 0, stageIndex, title);
         var result = Read<BattleResult>("_result");
         var original = result.Events.ToArray();
         var plan = new FirePresentation(result.Events);
@@ -61,7 +64,7 @@ public partial class StagingEffectCheck
         if (board == "雷＋ボルグ") Require(hits.Contacts.Keys.Any(i => result.Events[i].Kind == BattleEventKind.Thunder),
             "カタの雷の着弾に実在する被弾燃焼が重なる");
         Require(version != "W0" || plan.FoeSurges.Count == 0, "W0に敵上げを補わない");
-        if (version == "W4" && board == "混ぜ-255") Require(plan.FoeSurges.Count > 0, "混ぜ-255のW4に敵上げの陽性対照がある");
+        if (version == "W4" && board is "混ぜ-255" or "T3-244") Require(plan.FoeSurges.Count > 0, "W4に敵上げの陽性対照がある");
         string[] actual = result.Log.Select(l => l.Text).ToArray();
         string? source = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--foesurge-log="));
         if (source is not null)

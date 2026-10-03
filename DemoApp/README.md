@@ -384,7 +384,17 @@ Godot_console.exe --path DemoApp res://StagingEffectCheck.tscn -- --effect=fire-
 
 `--fire-speed=2` で開始速度、`--verify` で高速検査と再戦、`--capture-dir=<絶対パス>` で爆炎後の画面保存。
 `--foesurge-log=<絶対パス>` を加えると BattleSim の `0 foesurge log W0|W4 混ぜ-255 0 2 1` のログ全文と照合する。
-W0は敵上げなし、W4は敵上げ満の確認用の写し。本編の札や規則を変更せず、表示は実際の出来事に従う。
+W0は敵上げなしの旧ボルグ（`BorgW0`）に固定した対照、W4は第258期の規定のボルグ。
+表示は実際の出来事に従う。
+
+仕様書§8の現行確認用の一戦（W4・T3-244・九/新兵・400/300・seed 0）:
+
+```powershell
+dotnet run --project BattleSim -c Release -- 0 foesurge log W4 T3-244 0 4 1 > .tmp/foesurge-current.log
+Godot_console.exe --path DemoApp res://StagingEffectCheck.tscn -- --effect=fire-w4 --fire-board=T3-244 --keep-open
+```
+
+この指定にも `--verify --foesurge-log=<絶対パス>` を加えて、全文一致・件数・最終HP・再戦を確認できる。
 
 `--effect=fire-thunder --verify` は同じ器具の「雷＋ボルグ」で、カタの雷の着弾と被弾燃焼・再戦を確認する。
 起爆の `Skill` 見出しがある区間は、ActorId付きの燃焼でも従来の刻み演出を保つ。
