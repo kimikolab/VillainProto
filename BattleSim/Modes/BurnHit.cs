@@ -68,6 +68,8 @@ static partial class BurnHitDiag
     /// <summary>札を足す（ボルグがいればボルグ、いなければ編成の最初の駒）。<paramref name="card"/> が null ならそのまま。</summary>
     internal static Formation Mark(Formation f, TraitId? card)
     {
+        // 第258期: 規定のボルグに敵上げ満が入ったので、この期（第255期）の台のボルグは旧（`BorgW0`）に固定する。
+        f = Pin(f);
         if (card is null) return f;
         var g = f.Clone();
         int slot = f.Occupied().Where(o => o.Def.Id == "borg").Select(o => o.Slot).DefaultIfEmpty(f.Occupied().First().Slot).First();
@@ -75,9 +77,17 @@ static partial class BurnHitDiag
         g[slot] = FC.With(d, d.Traits.Concat(new[] { card.Value }));
         return g;
     }
+    /// <summary>第258期: 規定のボルグ（参照）を旧（`BorgW0`）に差し替える。ほかの駒・席は触らない。</summary>
+    internal static Formation Pin(Formation f)
+    {
+        if (!f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Borg))) return f;
+        var g = f.Clone();
+        foreach (var o in f.Occupied()) if (ReferenceEquals(o.Def, UnitCatalog.Borg)) g[o.Slot] = UnitCatalog.BorgW0;
+        return g;
+    }
     /// <summary>段1 の器具（`FC.RunPick`）に渡す形（ボルグに札）。</summary>
     internal static FB.Ver PickVer(HVer v) => new(v.Name, v.What,
-        v.Card is null ? UnitCatalog.Borg : FC.With(UnitCatalog.Borg, UnitCatalog.Borg.Traits.Concat(new[] { v.Card.Value })),
+        v.Card is null ? UnitCatalog.BorgW0 : FC.With(UnitCatalog.BorgW0, UnitCatalog.BorgW0.Traits.Concat(new[] { v.Card.Value })),
         UnitCatalog.Hota, UnitCatalog.Hiyo);
 
     // ---------------------------------------------------------------------------------

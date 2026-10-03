@@ -163,8 +163,8 @@ static partial class BlazeSurgeDiag
         Expect("落ちた駒（死因の帳簿）＝ 落ちた駒（結果）", fellSum, fellRes);
 
         // ---- 版の駒・札 ----
-        Expect("V0 の駒 ＝ 第253期の規定（Borg / Hota / Hiyo・参照）", ReferenceEquals(v0.Borg, UnitCatalog.Borg) && ReferenceEquals(v0.Hota, UnitCatalog.Hota) && ReferenceEquals(v0.Hiyo, UnitCatalog.Hiyo), true);
-        Expect("V2 ／ V4 ＝ 規定のボルグ ＋ 上げの札1枚", BorgV2.Traits.SequenceEqual(UnitCatalog.Borg.Traits.Append(TraitId.BlazeSurge2)) && BorgV4.Traits.SequenceEqual(UnitCatalog.Borg.Traits.Append(TraitId.BlazeSurgeMax)), true);
+        Expect("V0 の駒 ＝ 第253期の規定（Borg / Hota / Hiyo・参照）", ReferenceEquals(v0.Borg, UnitCatalog.BorgW0) && ReferenceEquals(v0.Hota, UnitCatalog.Hota) && ReferenceEquals(v0.Hiyo, UnitCatalog.Hiyo), true);
+        Expect("V2 ／ V4 ＝ 規定のボルグ ＋ 上げの札1枚", BorgV2.Traits.SequenceEqual(UnitCatalog.BorgW0.Traits.Append(TraitId.BlazeSurge2)) && BorgV4.Traits.SequenceEqual(UnitCatalog.BorgW0.Traits.Append(TraitId.BlazeSurgeMax)), true);
         Expect("上げの札の保持者は `UnitCatalog.All` に 0 枚", UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.BlazeSurge2) || u.Traits.Contains(TraitId.BlazeSurgeMax)), 0);
         Expect("上げの札は `TraitCatalog` に登録されている", $"{TraitCatalog.Get(TraitId.BlazeSurge2).Id}/{TraitCatalog.Get(TraitId.BlazeSurgeMax).Id}", "BlazeSurge2/BlazeSurgeMax");
 

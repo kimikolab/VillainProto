@@ -52,7 +52,7 @@ static partial class FoeSurgeDiag
         // ---- 受け入れ 2（直に）: 敵と味方に渡す量の振り分け ／ 敵上げの見出し ／ 乱数を引かない ----
         int Foe(UnitDef d) => (int)FoeSurgeOfM.Invoke(null, new object[] { BattleEngine.Materialize(Formation.Build(center: d), BattleContext.PlayerTeam)[0] })!;
         int Ally(UnitDef d) => (int)SurgeOfM.Invoke(null, new object[] { BattleEngine.Materialize(Formation.Build(center: d), BattleContext.PlayerTeam)[0] })!;
-        Expect("渡す量（敵 ／ 味方）: W0", $"{Foe(UnitCatalog.Borg)}/{Ally(UnitCatalog.Borg)}", "0/0");
+        Expect("渡す量（敵 ／ 味方）: W0", $"{Foe(UnitCatalog.BorgW0)}/{Ally(UnitCatalog.BorgW0)}", "0/0");
         Expect("渡す量（敵 ／ 味方）: W2 敵上げ2", $"{Foe(BorgW2)}/{Ally(BorgW2)}", "2/0");
         Expect("渡す量（敵 ／ 味方）: W4 敵上げ満", $"{Foe(BorgW4)}/{Ally(BorgW4)}", "4/0");
         Expect("渡す量（敵 ／ 味方）: ref（第254期の上げ2）", $"{Foe(BorgRef)}/{Ally(BorgRef)}", "2/2");
@@ -159,10 +159,12 @@ static partial class FoeSurgeDiag
         Expect("落ちた駒（死因の帳簿）＝ 落ちた駒（結果）", fellSum, fellRes);
 
         // ---- 版の駒・札 ----
-        Expect("W0 の駒 ＝ 規定（Borg / Hota / Hiyo・参照）", ReferenceEquals(w0.Borg, UnitCatalog.Borg) && ReferenceEquals(w0.Hota, UnitCatalog.Hota) && ReferenceEquals(w0.Hiyo, UnitCatalog.Hiyo), true);
-        Expect("W2 ／ W4 ／ ref ＝ 規定のボルグ ＋ 札1枚", BorgW2.Traits.SequenceEqual(UnitCatalog.Borg.Traits.Append(TraitId.BlazeFoeSurge2))
-            && BorgW4.Traits.SequenceEqual(UnitCatalog.Borg.Traits.Append(TraitId.BlazeFoeSurgeMax)) && BorgRef.Traits.SequenceEqual(UnitCatalog.Borg.Traits.Append(TraitId.BlazeSurge2)), true);
-        Expect("敵上げの札の保持者は `UnitCatalog.All` に 0 枚", UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.BlazeFoeSurge2) || u.Traits.Contains(TraitId.BlazeFoeSurgeMax)), 0);
+        Expect("W0 の駒 ＝ 規定（Borg / Hota / Hiyo・参照）", ReferenceEquals(w0.Borg, UnitCatalog.BorgW0) && ReferenceEquals(w0.Hota, UnitCatalog.Hota) && ReferenceEquals(w0.Hiyo, UnitCatalog.Hiyo), true);
+        Expect("W2 ／ W4 ／ ref ＝ 規定のボルグ ＋ 札1枚", BorgW2.Traits.SequenceEqual(UnitCatalog.BorgW0.Traits.Append(TraitId.BlazeFoeSurge2))
+            && BorgW4.Traits.SequenceEqual(UnitCatalog.BorgW0.Traits.Append(TraitId.BlazeFoeSurgeMax)) && BorgRef.Traits.SequenceEqual(UnitCatalog.BorgW0.Traits.Append(TraitId.BlazeSurge2)), true);
+        // 第258期: 敵上げ満は規定のボルグに入った（保持者 1 枚）。敵上げ2 は対照の札のまま（保持者 0 枚）。
+        Expect("敵上げの札の保持者（`UnitCatalog.All`）: 敵上げ2 ／ 敵上げ満", $"{UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.BlazeFoeSurge2))}/{UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.BlazeFoeSurgeMax))}", "0/1");
+        Expect("規定のボルグ ＝ W4 の札（第258期）", UnitCatalog.Borg.Traits.SequenceEqual(BorgW4.Traits), true);
         Expect("敵上げの札は `TraitCatalog` に登録されている", $"{TraitCatalog.Get(TraitId.BlazeFoeSurge2).Id}/{TraitCatalog.Get(TraitId.BlazeFoeSurgeMax).Id}", "BlazeFoeSurge2/BlazeFoeSurgeMax");
         Expect("敵上げの札は火勢の札（`FireLevelRule.Holds`）", FireLevelRule.Holds(BattleEngine.Materialize(Formation.Build(center: Plus(Plain("x"), TraitId.BlazeFoeSurge2)), BattleContext.PlayerTeam)[0]), true);
 

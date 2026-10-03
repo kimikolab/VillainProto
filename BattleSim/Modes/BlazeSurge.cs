@@ -46,12 +46,12 @@ static partial class BlazeSurgeDiag
     // 版（§3）——駒は今の規定（第253期）に札を足す。
     // ---------------------------------------------------------------------------------
     static UnitDef Plus(UnitDef g, params TraitId[] tr) => FC.With(g, g.Traits.Concat(tr));
-    internal static readonly UnitDef BorgV2 = Plus(UnitCatalog.Borg, TraitId.BlazeSurge2);
-    internal static readonly UnitDef BorgV4 = Plus(UnitCatalog.Borg, TraitId.BlazeSurgeMax);
+    internal static readonly UnitDef BorgV2 = Plus(UnitCatalog.BorgW0, TraitId.BlazeSurge2);
+    internal static readonly UnitDef BorgV4 = Plus(UnitCatalog.BorgW0, TraitId.BlazeSurgeMax);
 
     internal static readonly FB.Ver[] Versions =
     {
-        new("V0", "規定（第253期・対照）", UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo),
+        new("V0", "規定（第253期・対照）", UnitCatalog.BorgW0, UnitCatalog.Hota, UnitCatalog.Hiyo),
         new("V2", "V0 ＋ 爆炎・上げ2（当たった敵と味方の火勢 +2）", BorgV2, UnitCatalog.Hota, UnitCatalog.Hiyo),
         new("V4", "V0 ＋ 爆炎・上げ満（当たった敵と味方の火勢を 4 に）", BorgV4, UnitCatalog.Hota, UnitCatalog.Hiyo),
     };

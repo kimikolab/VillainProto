@@ -49,13 +49,13 @@ static partial class FoeSurgeDiag
     // 版（§3）——ボルグの札だけを差し替える。
     // ---------------------------------------------------------------------------------
     static UnitDef Plus(UnitDef g, params TraitId[] tr) => FC.With(g, g.Traits.Concat(tr));
-    internal static readonly UnitDef BorgW2 = Plus(UnitCatalog.Borg, TraitId.BlazeFoeSurge2);
-    internal static readonly UnitDef BorgW4 = Plus(UnitCatalog.Borg, TraitId.BlazeFoeSurgeMax);
-    internal static readonly UnitDef BorgRef = Plus(UnitCatalog.Borg, TraitId.BlazeSurge2);
+    internal static readonly UnitDef BorgW2 = Plus(UnitCatalog.BorgW0, TraitId.BlazeFoeSurge2);
+    internal static readonly UnitDef BorgW4 = Plus(UnitCatalog.BorgW0, TraitId.BlazeFoeSurgeMax);
+    internal static readonly UnitDef BorgRef = Plus(UnitCatalog.BorgW0, TraitId.BlazeSurge2);
 
     internal static readonly FB.Ver[] Versions =
     {
-        new("W0", "規定（第256期・対照）", UnitCatalog.Borg, UnitCatalog.Hota, UnitCatalog.Hiyo),
+        new("W0", "規定（第256期・対照）", UnitCatalog.BorgW0, UnitCatalog.Hota, UnitCatalog.Hiyo),
         new("W2", "W0 ＋ 爆炎・敵上げ2（当たった敵だけ火勢 +2）", BorgW2, UnitCatalog.Hota, UnitCatalog.Hiyo),
         new("W4", "W0 ＋ 爆炎・敵上げ満（当たった敵だけ火勢を 4 に）", BorgW4, UnitCatalog.Hota, UnitCatalog.Hiyo),
         new("ref", "W0 ＋ 第254期の爆炎・上げ2（敵と味方を +2・参考）", BorgRef, UnitCatalog.Hota, UnitCatalog.Hiyo),
