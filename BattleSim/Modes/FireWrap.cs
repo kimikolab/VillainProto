@@ -86,7 +86,7 @@ static partial class FireWrapDiag
         {
             var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
             var e = FC.WaveOf(w, sc)();
-            var r = BattleEngine.Run(p, e, i, verbose: true);
+            var r = BattleEngine.Run(p, e, i, verbose: true, ember: EmberRule.Pre256);
             var c = new FC.CAgg(); c.Take(r, p, e, target); cs[i] = c;
             var t = new FT.TAgg(); t.Take(r, p, target); ts[i] = t;
             if (r.FireLevels is FireLevelLedger led) { held[i] = led.CallHeld; heldG[i] = led.CallHeldGift; }

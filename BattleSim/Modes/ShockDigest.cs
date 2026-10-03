@@ -205,6 +205,7 @@ static class ShockDigestDiag
         if (mode != "s232") benches = benches.Select(b => (b.Item1, Common.OldTune(b.Item2))).ToArray();
         benches = benches.Select(b => (b.Item1, Common.OldSpring2(b.Item2))).ToArray();   // 第232期（S2 の規定化）: 全モードの規定のハネを第232期の S0 へ
         benches = benches.Select(b => (b.Item1, Common.OldFire(b.Item2))).ToArray();   // 第239期（ボルグ・ヒヨの規定化）: 全モードの規定のボルグ・ヒヨを第238期の規定へ
+        benches = benches.Select(b => (b.Item1, Common.OldArrow(b.Item2))).ToArray();   // 第256期（セロの状態の矢を外した）: 全モードの規定のセロを第255期の規定へ
         // 第230期 前段: 転倒の穴が既定になったので、それより前の期の台は穴なしで回す（w230 だけが今の既定）。
         ShufflerRule? digestRule = mode is "w230" or "a231" or "s232" ? null : ShufflerRule.PreHole;
         PropertyInfo[] props = typeof(BattleEvent).GetProperties(BindingFlags.Public | BindingFlags.Instance);
@@ -213,7 +214,7 @@ static class ShockDigestDiag
             for (int st = 0; st < 5; st++)
                 for (int s = 0; s < 20; s++)
                 {
-                    BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, s, verbose: true, shuffler: digestRule);
+                    BattleResult r = BattleEngine.Run(f, EnemyCatalog.Stages[st].Enemy, s, verbose: true, shuffler: digestRule, ember: EmberRule.Pre256);
                     ulong h = 1469598103934665603UL;
                     int counted = 0;
                     foreach (BattleEvent e in r.Events)

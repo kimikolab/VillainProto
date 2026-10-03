@@ -141,7 +141,7 @@ static partial class EnemyFireDiag
             var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
             var e = BA.WaveOf(w, sc)();
             var slotOf = p.Concat(e).ToDictionary(u => u, u => u.Slot);
-            var r = BattleEngine.Run(p, e, i, verbose: true);
+            var r = BattleEngine.Run(p, e, i, verbose: true, ember: EmberRule.Pre256);
             var a = new FB.LAgg(); a.Take(r, p, e, slotOf.ToDictionary(kv => kv.Key.InstanceId, kv => kv.Value)); ls[i] = a;
             var b = new EAgg(); b.Take(r, p, e); es[i] = b;
         });

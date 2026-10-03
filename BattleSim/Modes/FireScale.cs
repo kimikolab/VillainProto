@@ -85,7 +85,7 @@ static partial class FireScaleDiag
         int sv = 0, fell = 0, w = 0; long t = 0;
         for (int i = 0; i < seeds; i++)
         {
-            var r = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BA.WaveOf(BA.MainWave, sc)(), seed0 + i, verbose: false);
+            var r = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BA.WaveOf(BA.MainWave, sc)(), seed0 + i, verbose: false, ember: EmberRule.Pre256);
             fell += r.PlayerStarterFallen.Count;
             if (!r.PlayerWon) continue;
             w++; t += r.Turns;
@@ -122,7 +122,7 @@ static partial class FireScaleDiag
     {
         var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
         var e = BA.WaveOf(w, sc)();
-        var r = BattleEngine.Run(p, e, seed, verbose: verbose);
+        var r = BattleEngine.Run(p, e, seed, verbose: verbose, ember: EmberRule.Pre256);
         return (r, p, e);
     }
 

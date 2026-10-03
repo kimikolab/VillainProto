@@ -16,7 +16,7 @@ static partial class BurnAuditDiag
     }
     static BattleContext Ctx(Formation pl, Formation en, int turn, out List<UnitState> p, out List<UnitState> e)
     {
-        var ctx = new BattleContext(0, false);
+        var ctx = new BattleContext(0, false, ember: EmberRule.Pre256);
         p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
         e = BattleEngine.Materialize(en, BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });

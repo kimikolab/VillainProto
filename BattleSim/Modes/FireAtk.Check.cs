@@ -29,7 +29,7 @@ static partial class FireAtkDiag
     }
     static BattleContext Ctx(Formation pl, Formation en, out List<UnitState> p, out List<UnitState> e)
     {
-        var ctx = new BattleContext(0, true);
+        var ctx = new BattleContext(0, true, ember: EmberRule.Pre256);
         p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
         e = BattleEngine.Materialize(en, BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
@@ -174,9 +174,9 @@ static partial class FireAtkDiag
                         {
                             var pl = BattleEngine.Materialize(f, BattleContext.PlayerTeam); var en = FC.WaveOf(w, sc)();
                             var slot0 = pl.Concat(en).ToDictionary(u => u, u => u.Slot);
-                            var r = BattleEngine.Run(pl, en, seed, verbose: true);
-                            var r2 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), FC.WaveOf(w, sc)(), seed, verbose: false);
-                            var r3 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), FC.WaveOf(w, sc)(), seed, verbose: true);
+                            var r = BattleEngine.Run(pl, en, seed, verbose: true, ember: EmberRule.Pre256);
+                            var r2 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), FC.WaveOf(w, sc)(), seed, verbose: false, ember: EmberRule.Pre256);
+                            var r3 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), FC.WaveOf(w, sc)(), seed, verbose: true, ember: EmberRule.Pre256);
                             var agg = new BA.Agg(); agg.Take(r, pl, en, slot0.ToDictionary(kv => kv.Key.InstanceId, kv => kv.Value));
                             var fl = r.FireLevels!;
                             int eo = r.Events.Count(x => x.Kind == BattleEventKind.FireLevel && x.Text == FireLevelLabels.Overflow);

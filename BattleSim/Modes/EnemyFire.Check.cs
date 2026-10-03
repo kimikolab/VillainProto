@@ -25,7 +25,7 @@ static partial class EnemyFireDiag
     }
     static BattleContext Ctx(Formation pl, Formation en, out List<UnitState> p, out List<UnitState> e)
     {
-        var ctx = new BattleContext(0, true);
+        var ctx = new BattleContext(0, true, ember: EmberRule.Pre256);
         p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
         e = BattleEngine.Materialize(en, BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
@@ -291,10 +291,10 @@ static partial class EnemyFireDiag
                             var pl = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
                             var en = BA.WaveOf(w, BA.Scales[s].Sc)();
                             var slotOf = pl.Concat(en).ToDictionary(u => u, u => u.Slot);
-                            var r = BattleEngine.Run(pl, en, seed, verbose: true);
+                            var r = BattleEngine.Run(pl, en, seed, verbose: true, ember: EmberRule.Pre256);
                             var slot0 = slotOf.ToDictionary(kv => kv.Key.InstanceId, kv => kv.Value);
-                            var r2 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BA.WaveOf(w, BA.Scales[s].Sc)(), seed, verbose: false);
-                            var r3 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BA.WaveOf(w, BA.Scales[s].Sc)(), seed, verbose: true);
+                            var r2 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BA.WaveOf(w, BA.Scales[s].Sc)(), seed, verbose: false, ember: EmberRule.Pre256);
+                            var r3 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BA.WaveOf(w, BA.Scales[s].Sc)(), seed, verbose: true, ember: EmberRule.Pre256);
                             var agg = new BA.Agg(); agg.Take(r, pl, en, slot0);
                             var st = Audit(r, pl, en, v, slot0);
                             lock (lk)
@@ -322,7 +322,8 @@ static partial class EnemyFireDiag
         var rows = CompareBuilds();
         // 第251期: E0 はその期の駒なので、燃焼の規定化のたびにボルグ・ホタ・ヒヨのいる行が docs/balance.md と合わなくなる（第250期 前段で `死軸×ヒヨ` 第五波が 1 セル動いてから落ちていた）。
         // 突き合わせは3体のいない行だけにした（第250期 前段の `firelevel check` と同じ直し・いる行は「どの版でも 0 セル」の側で見る）。
-        bool HasFire3(Formation f) => f.Occupied().Any(o => o.Def.Id is "borg" or "hota" or "hiyo");
+        // 第256期: 被弾の燃焼が規定になり、ゾト（破裂で味方も燃やす）の行も docs/balance.md と合わなくなった（この器具は `EmberRule.Pre256` に固定）ので、突き合わせから外す。
+        bool HasFire3(Formation f) => f.Occupied().Any(o => o.Def.Id is "borg" or "hota" or "hiyo" or "zoto");
         var bal = File.ReadAllLines("docs/balance.md", System.Text.Encoding.UTF8).Where(l => l.StartsWith("| ") && l.Contains('%')).ToList();
         int cellBad = 0, cells = 0;
         for (int i = 0; i < rows.Length; i++)
@@ -431,7 +432,7 @@ static partial class EnemyFireDiag
                 {
                     var stage = EnemyCatalog.Stages[st].Enemy;
                     var res = new bool[BA.Seeds];
-                    Parallel.For(0, BA.Seeds, seed => res[seed] = BattleEngine.Run(f, stage, seed, verbose: false).PlayerWon);
+                    Parallel.For(0, BA.Seeds, seed => res[seed] = BattleEngine.Run(f, stage, seed, verbose: false, ember: EmberRule.Pre256).PlayerWon);
                     w[v, i, st] = 100.0 * res.Count(x => x) / BA.Seeds;
                 }
             }

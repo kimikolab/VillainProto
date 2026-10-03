@@ -187,7 +187,7 @@ static partial class FireFinishDiag
             var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
             var e = FC.WaveOf(w, sc)();
             var slotOf = p.Concat(e).ToDictionary(u => u, u => u.Slot);   // 席は Run の前（InstanceId は Run の中で振られる）
-            var r = BattleEngine.Run(p, e, seed0 + i, verbose: true);
+            var r = BattleEngine.Run(p, e, seed0 + i, verbose: true, ember: EmberRule.Pre256);
             var slot0 = slotOf.ToDictionary(kv => kv.Key.InstanceId, kv => kv.Value);
             var la = new FB.LAgg(); if (!target) la.Take(r, p, e, slot0); ls[i] = la;
             var c = new FC.CAgg(); c.Take(r, p, e, target); cs[i] = c;

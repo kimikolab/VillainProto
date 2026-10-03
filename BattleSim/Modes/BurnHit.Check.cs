@@ -27,7 +27,7 @@ static partial class BurnHitDiag
     /// <summary>盤面を直に組む。味方: 枠0 札の持ち主（素の駒）・枠1 的（燃やす）・枠2 中央（任意）。敵: 枠0 殴り手。</summary>
     static (BattleContext Ctx, UnitState Holder, UnitState Target, UnitState Foe, UnitState? Center) Bench(TraitId? card, UnitDef? targetDef = null, UnitDef? center = null, bool foeSideTarget = false)
     {
-        var ctx = new BattleContext(0, true);
+        var ctx = new BattleContext(0, true, ember: EmberRule.Pre256);
         var tdef = targetDef ?? Plain("tgt", "的A");
         var pl = Formation.Build(front1: WithCard(Plain("hold", "持ち主"), card), front3: foeSideTarget ? null : tdef, center: center);
         var en = Formation.Build(front1: Plain("foe", "殴り手"), front3: foeSideTarget ? tdef : null);
@@ -140,7 +140,7 @@ static partial class BurnHitDiag
         // (l) 分担: ターン頭の刻みは火勢に関わらず 6 × 1（足すは 6 × 火勢）。ボルグ（E2: 敵の刻みを火勢の回数に）がいる盤面。
         foreach (var (card, expTicks) in new (TraitId?, int)[] { (null, 3), (TraitId.BurnHitAdd, 3), (TraitId.BurnHitSplit, 1), (TraitId.BurnHitSplitOnce, 1) })
         {
-            var ctx = new BattleContext(0, true);
+            var ctx = new BattleContext(0, true, ember: EmberRule.Pre256);
             var pl = Formation.Build(front1: WithCard(UnitCatalog.Borg, card));
             var en = Formation.Build(front1: Plain("foe", "殴り手"));
             var p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
@@ -158,7 +158,7 @@ static partial class BurnHitDiag
             int evaded = 0, bad = 0, hits = 0;
             for (int seed = 0; seed < 200; seed++)
             {
-                var ctx = new BattleContext(seed, true);
+                var ctx = new BattleContext(seed, true, ember: EmberRule.Pre256);
                 var pl = Formation.Build(front1: WithCard(Plain("hold", "持ち主"), TraitId.BurnHitAdd), front3: UnitCatalog.Sero);
                 var en = Formation.Build(front1: Plain("foe", "殴り手"));
                 var p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);

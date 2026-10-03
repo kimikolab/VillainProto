@@ -1349,6 +1349,11 @@ public sealed class UnitTally
     /// 「たくさん殴られている」と「何で死んだか」は別の量である（第134期）。</para>
     /// </summary>
     public int[]? HarmAmount, HarmHits, HarmGuardAmount, HarmGuardHits, HarmFatal;
+    /// <summary>
+    /// 第256期（<b>計数のみ</b>）: <c>HarmAmount[Burn]</c> のうち<b>肩代わりの中継で受けた燃焼</b>（分かち・巨躯が燃焼の刻みを引き受けた量と、それで倒れた回数）。
+    /// <c>NoteHarm</c> は <c>burnTick</c> を先に見るので、中継の燃焼は経路 Burn に入る——自分の燃焼と分けるための札。誰も読んで分岐しない。
+    /// </summary>
+    public int HarmBurnRelayed, HarmBurnRelayedFatal;
 
     /// <summary>
     /// <b>受け流し</b>（第135期・<see cref="TraitId.Parry"/>）。<b>誰も読んで分岐しない計数。</b>
@@ -2850,6 +2855,7 @@ public sealed class UnitTally
         MergeHarm(ref HarmGuardAmount, o.HarmGuardAmount);
         MergeHarm(ref HarmGuardHits, o.HarmGuardHits);
         MergeHarm(ref HarmFatal, o.HarmFatal);
+        HarmBurnRelayed += o.HarmBurnRelayed; HarmBurnRelayedFatal += o.HarmBurnRelayedFatal;   // 第256期
         ParryFires += o.ParryFires; ParryBlocked += o.ParryBlocked;
         ParryBlockedMax = Math.Max(ParryBlockedMax, o.ParryBlockedMax);
         MergeHarm(ref ParryByRoute, o.ParryByRoute);
@@ -3780,6 +3786,11 @@ public sealed class BurnHitLedger
     public readonly Dictionary<string, long[]> ByTarget = new();
     /// <summary>1回の攻撃の枠の中で起きた被弾の燃焼の数の分布（0..9＋・枠を開いた攻撃だけ）。</summary>
     public readonly long[] PerScope = new long[11];
+    /// <summary>
+    /// 第256期（<b>計数のみ</b>）: 肩代わりの中継（分かち・巨躯）で燃えている駒が HP か破片を減らした一撃——被弾の燃焼の<b>対象外</b>（`relayed`）だが、
+    /// 対象に入れたら起きていた機会。燃えていた駒（`陣営:Def.Id`）→ { 回数, その瞬間の火勢の和 }。誰も読んで分岐しない。
+    /// </summary>
+    public readonly Dictionary<string, long[]> RelayChanceBy = new();
 }
 
 /// <summary>

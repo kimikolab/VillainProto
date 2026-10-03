@@ -33,7 +33,7 @@ static class FireAtkDigestDiag
                 for (int s = 0; s < (w >= 7 ? 1 : scales.Length); s++)
                     for (int seed = 0; seed < 6; seed++)
                     {
-                        var r = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), Wave(w, scales[s])(), seed, verbose: true);
+                        var r = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), Wave(w, scales[s])(), seed, verbose: true, ember: EmberRule.Pre256);
                         lines.Add($"## {bn} 波{w} 倍率{s} seed{seed} won={r.PlayerWon} T={r.Turns}");
                         foreach (var l in r.Log) lines.Add(l.Text);
                         foreach (var ev in r.Events)

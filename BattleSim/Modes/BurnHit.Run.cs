@@ -285,7 +285,7 @@ static partial class BurnHitDiag
                 {
                     var stage = EnemyCatalog.Stages[st].Enemy;
                     var res = new BattleResult[BA.Seeds];
-                    Parallel.For(0, BA.Seeds, seed => res[seed] = BattleEngine.Run(f, stage, seed, verbose: false));
+                    Parallel.For(0, BA.Seeds, seed => res[seed] = BattleEngine.Run(f, stage, seed, verbose: false, ember: EmberRule.Pre256));
                     win[v, i, st] = 100.0 * res.Count(x => x.PlayerWon) / BA.Seeds;
                     if (vs[v] == Probe && res.Any(x => x.BurnHit is { } bh && (bh.TickFires.Sum() > 0 || bh.Chances.Sum() > 0))) burn[i] = true;
                 }

@@ -52,7 +52,7 @@ static partial class FireLevelDiag
     {
         var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
         var e = BA.WaveOf(w, sc)();
-        var r = BattleEngine.Run(p, e, seed, verbose: verbose);
+        var r = BattleEngine.Run(p, e, seed, verbose: verbose, ember: EmberRule.Pre256);
         return (r, p, e);
     }
 

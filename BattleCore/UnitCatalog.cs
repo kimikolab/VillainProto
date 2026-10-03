@@ -226,8 +226,32 @@ public static class UnitCatalog
     /// 逃亡兵セロ（第225期 前段・ポンの判断。第226期 前段で名前を「逃げ上手のセロ」から戻した）。第223期 E1（回避・追い撃ち・移動の段・入れ替え）＋ E2（状態の矢）＋
     /// 第224期 F1（段の条件 2/4/7）＋ F2（動かされるたび攻撃力 +2）。**F3（段3 の7本）は入れない**。
     /// 旧（`Sniper` / `Coward`・E0）は <see cref="SeroOld"/> に対照として残す（<see cref="All"/> には入れない）。
+    /// 第256期（ポンの判断）で状態の矢（`StatusArrow`）を外した（1文が長すぎる・測る台でほぼ撃たれない・汎用のレリック「状態の弾」へ移す前段）。旧は <see cref="SeroS0"/>。
     /// </summary>
     public static readonly UnitDef Sero = new()
+    {
+        Id = "sero",
+        Name = "逃亡兵セロ",
+        MaxHp = 42,
+        Attack = 11,
+        Speed = 12,
+        Advances = false,
+        Traits = new[] { TraitId.Evade, TraitId.EvadeSwap, TraitId.EvadeQuick, TraitId.EvadeDrift, TraitId.LastDodge, TraitId.Decoy, TraitId.EvadeMoveShot },
+        PlusText = "前列にいる間は敵の単体攻撃を引きつける。敵の攻撃を4割の確率でかわし、かわした相手へ撃ち返す（回避率は段で 45/50/60%）。倒れる一撃だけは、死ぬ気で必ずかわす（1戦に1回・身軽になるほど増える）。かわすたび攻撃力+3、隊列を動かされるたび攻撃力+2。動かされた回数で身軽になり、2回で撃ち返しが貫きに、4回で手番が5本の乱れ撃ちになり、隊列を動かされるたびに列の奥まで矢を射抜く（1ターン2回）。7回で撃ち返し2本に変わる",
+        MinusText = "敵の単体攻撃を一身に集める（避け損ねれば HP42 がすぐ削れる）。かわすたび隣の味方と入れ替わり、隊列が乱れる。毒・燃焼・放電・味方の巻き込みはかわせない",
+        Flavor = "逃げ足だけは誰にも負けない。撃ち返す暇まであるくらいに。"
+    };
+
+    /// <summary>
+    /// <b>第255期までの規定のセロ</b>（状態の矢あり）。第256期に状態の矢を外したので対照として残す（<see cref="All"/> にも <see cref="Retired"/> にも入れない）。
+    /// 第232〜255期の器具はこちらに固定した。
+    /// 第228期 前段（ポンの判断）で第227期 L2（必死の逃げ足 `LastDodge` ＋ 回避盾 `Decoy`）を規定にした。旧は <see cref="SeroL0"/>。
+    /// 第232期 前段（ポンの判断）で第231期 C（移動の追撃 `EvadeMoveShot`）を規定にした。旧は <see cref="SeroC0"/>。
+    /// 逃亡兵セロ（第225期 前段・ポンの判断。第226期 前段で名前を「逃げ上手のセロ」から戻した）。第223期 E1（回避・追い撃ち・移動の段・入れ替え）＋ E2（状態の矢）＋
+    /// 第224期 F1（段の条件 2/4/7）＋ F2（動かされるたび攻撃力 +2）。**F3（段3 の7本）は入れない**。
+    /// 旧（`Sniper` / `Coward`・E0）は <see cref="SeroOld"/> に対照として残す（<see cref="All"/> には入れない）。
+    /// </summary>
+    public static readonly UnitDef SeroS0 = new()
     {
         Id = "sero",
         Name = "逃亡兵セロ",

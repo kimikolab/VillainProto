@@ -17,7 +17,7 @@ static partial class FireWardDiag
     }
     static BattleContext Ctx(Formation pl, Formation en, out List<UnitState> p, out List<UnitState> e)
     {
-        var ctx = new BattleContext(0, true);
+        var ctx = new BattleContext(0, true, ember: EmberRule.Pre256);
         p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
         e = BattleEngine.Materialize(en, BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });

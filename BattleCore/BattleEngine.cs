@@ -6395,6 +6395,7 @@ public sealed class BattleContext
         int[] cnt = t.HarmHits ??= new int[DamageRoutes.Count];
         amt[i] += amount;
         cnt[i]++;
+        if (burnTick && relayed) { t.HarmBurnRelayed += amount; if (fatal) t.HarmBurnRelayedFatal++; }   // 第256期・**計数のみ**
 
         // 介入で引き受けた一撃か。**印は1件で消費する**（同じ差し替えを2度数えない）。
         if (_interceptedInto == target)
@@ -6768,6 +6769,12 @@ public sealed class BattleContext
         Favor = favor ?? FavorRule.Default;
         Blaze = blaze ?? BlazeRule.Default;
         Ember = ember ?? EmberRule.Default;
+        if (Ember.BurnHit)   // 第256期: 被弾の燃焼 H-分担 を規定に（札 `BurnHitSplit` と同じ門を両陣営に立てる）
+        {
+            _burnHitLive = true;
+            _burnHitTeams[0] = _burnHitTeams[1] = true;
+            _splitTickTeams[0] = _splitTickTeams[1] = true;
+        }
         Wildfire = wildfire ?? WildfireRule.Default;
         Funnel = funnel ?? FunnelRule.Default;
         WhetBlock = whetMask ?? WhetMask.None;
@@ -10523,6 +10530,9 @@ public sealed class BattleContext
         // 第255期（被弾の燃焼）: 本体の前に「前から燃えていたか」と HP＋破片を控え、本体の後で減っていれば燃焼を刻む。札が無ければ比較1つで抜ける。
         bool burnHit = _burnHitLive && amount > 0 && BurnHitEligible(target, source, burnTick, relayed, hexShare, levy);
         int burnHitBefore = burnHit ? target.Hp + target.RawCounter(StatusKeys.Armor) : 0;
+        // 第256期（計数のみ）: 中継の一撃で燃えている駒が削られた機会（被弾の燃焼の対象外）。
+        bool relayProbe = _burnHitLive && relayed && amount > 0 && source is not null && target.IsAlive && target.RawCounter(StatusKeys.Burn) > 0;
+        int relayBefore = relayProbe ? target.Hp + target.RawCounter(StatusKeys.Armor) : 0;
         int myAmt, myRest, myRatio; UnitState? myFrom;
         try
         {
@@ -10542,6 +10552,13 @@ public sealed class BattleContext
             NoteBurnHitChance(target, source!);   // 計数のみ（版に依らず）
             if (_burnHitTeams[target.TeamId]) BurnOnHit(target, source!);
             else BurnHitBook.GateOff[BhSide(target)]++;
+        }
+        if (relayProbe && target.IsAlive && target.RawCounter(StatusKeys.Burn) > 0
+            && target.Hp + target.RawCounter(StatusKeys.Armor) < relayBefore)
+        {
+            string rk = BhKey(target);
+            if (!BurnHitBook.RelayChanceBy.TryGetValue(rk, out var rc)) BurnHitBook.RelayChanceBy[rk] = rc = new long[2];
+            rc[0]++; rc[1] += Math.Max(1, FireLevelRule.Of(target));
         }
         if (myAmt > 0 && myFrom is not null) ReflectPlank(target, myFrom, myAmt, myRest, myRatio);
     }

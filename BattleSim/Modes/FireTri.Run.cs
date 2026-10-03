@@ -347,7 +347,7 @@ static partial class FireTriDiag
                 {
                     var stage = EnemyCatalog.Stages[st].Enemy;
                     var res = new bool[BA.Seeds];
-                    Parallel.For(0, BA.Seeds, seed => res[seed] = BattleEngine.Run(f, stage, seed, verbose: false).PlayerWon);
+                    Parallel.For(0, BA.Seeds, seed => res[seed] = BattleEngine.Run(f, stage, seed, verbose: false, ember: EmberRule.Pre256).PlayerWon);
                     w[v, i, st] = 100.0 * res.Count(x => x) / BA.Seeds;
                 }
             }

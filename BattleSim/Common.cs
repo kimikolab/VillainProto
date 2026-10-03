@@ -69,6 +69,16 @@ internal static Formation OldFire(Formation f)
     return g;
 }
 
+/// <summary>第256期（セロの状態の矢を外した）: 第232〜255期の器具と `shockdigest` の全モードは、編成の<b>規定のセロ</b>
+/// （同じ参照のものだけ）を旧（<see cref="UnitCatalog.SeroS0"/>・状態の矢あり）へ戻す。</summary>
+internal static Formation OldArrow(Formation f)
+{
+    var g = f.Clone();
+    foreach (var (slot, d) in f.Occupied())
+        if (ReferenceEquals(d, UnitCatalog.Sero)) g[slot] = UnitCatalog.SeroS0;
+    return g;
+}
+
 /// <summary>第244期 前段（第242期 R3 の規定化）: 第239〜242期の器具（`firescale` / `firelevel`）は、編成の<b>規定のボルグ・ホタ・ヒヨ</b>
 /// （同じ参照のものだけ）を旧（<see cref="UnitCatalog.BorgL0"/> / <see cref="UnitCatalog.HotaL0"/> / <see cref="UnitCatalog.HiyoL0"/>）へ戻す。版の駒には触らない。</summary>
 internal static Formation OldLevel(Formation f)

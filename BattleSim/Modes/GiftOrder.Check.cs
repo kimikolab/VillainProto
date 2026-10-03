@@ -29,7 +29,7 @@ static partial class GiftOrderDiag
     }
     static BattleContext Ctx(Formation pl, out List<UnitState> p)
     {
-        var ctx = new BattleContext(0, true);
+        var ctx = new BattleContext(0, true, ember: EmberRule.Pre256);
         p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
         var e = BattleEngine.Materialize(Formation.Build(front1: Plain("e1")), BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
@@ -104,10 +104,10 @@ static partial class GiftOrderDiag
                     {
                         var pl = BattleEngine.Materialize(f2, BattleContext.PlayerTeam); var en = FC.WaveOf(w, sc)();
                         var slotOf = pl.Concat(en).ToDictionary(u => u, u => u.Slot);
-                        var r = BattleEngine.Run(pl, en, seed, verbose: true);
+                        var r = BattleEngine.Run(pl, en, seed, verbose: true, ember: EmberRule.Pre256);
                         var slot0 = slotOf.ToDictionary(kv => kv.Key.InstanceId, kv => kv.Value);
-                        var rq = BattleEngine.Run(BattleEngine.Materialize(f2, BattleContext.PlayerTeam), FC.WaveOf(w, sc)(), seed, verbose: false);
-                        var r1 = BattleEngine.Run(BattleEngine.Materialize(f1, BattleContext.PlayerTeam), FC.WaveOf(w, sc)(), seed, verbose: true);
+                        var rq = BattleEngine.Run(BattleEngine.Materialize(f2, BattleContext.PlayerTeam), FC.WaveOf(w, sc)(), seed, verbose: false, ember: EmberRule.Pre256);
+                        var r1 = BattleEngine.Run(BattleEngine.Materialize(f1, BattleContext.PlayerTeam), FC.WaveOf(w, sc)(), seed, verbose: true, ember: EmberRule.Pre256);
                         var agg = new BA.Agg(); agg.Take(r, pl, en, slot0);
                         var fl = r.FireLevels!;
                         int lbl = r.Events.Count(x => x.Kind == BattleEventKind.FireLevel && x.Text == FireLevelLabels.GiftOrder);

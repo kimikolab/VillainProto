@@ -186,7 +186,7 @@ static partial class FireTriDiag
             var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
             var e = FC.WaveOf(w, sc)();
             var slotOf = p.Concat(e).ToDictionary(u => u, u => u.Slot);   // 席は Run の前（InstanceId は Run の中で振られる）
-            var r = BattleEngine.Run(p, e, seed0 + i, verbose: true);
+            var r = BattleEngine.Run(p, e, seed0 + i, verbose: true, ember: EmberRule.Pre256);
             var la = new FB.LAgg(); if (!target) la.Take(r, p, e, slotOf.ToDictionary(kv => kv.Key.InstanceId, kv => kv.Value)); ls[i] = la;
             var c = new FC.CAgg(); c.Take(r, p, e, target); cs[i] = c;
             var t = new TAgg(); t.Take(r, p, target); ts[i] = t;

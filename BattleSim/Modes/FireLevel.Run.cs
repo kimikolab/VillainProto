@@ -170,7 +170,7 @@ static partial class FireLevelDiag
             var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
             var e = BA.WaveOf(w, sc)();
             var slotOf = p.Concat(e).ToDictionary(u => u, u => u.Slot);
-            var r = BattleEngine.Run(p, e, seed0 + i, verbose: true);
+            var r = BattleEngine.Run(p, e, seed0 + i, verbose: true, ember: EmberRule.Pre256);
             var a = new LAgg();
             a.Take(r, p, e, slotOf.ToDictionary(kv => kv.Key.InstanceId, kv => kv.Value));
             parts[i] = a;
@@ -493,7 +493,7 @@ static partial class FireLevelDiag
                     int wins = 0;
                     var stage = EnemyCatalog.Stages[st].Enemy;
                     var res = new bool[BA.Seeds];
-                    Parallel.For(0, BA.Seeds, seed => res[seed] = BattleEngine.Run(f, stage, seed, verbose: false).PlayerWon);
+                    Parallel.For(0, BA.Seeds, seed => res[seed] = BattleEngine.Run(f, stage, seed, verbose: false, ember: EmberRule.Pre256).PlayerWon);
                     wins = res.Count(x => x);
                     w[v, i, st] = 100.0 * wins / BA.Seeds;
                 }

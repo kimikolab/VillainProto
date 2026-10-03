@@ -9204,8 +9204,13 @@ public sealed class PyreTrait : Trait
 /// （<see cref="PyreTrait"/> の doc）、配る／配らないの二値しかない。
 /// 代金・上限も最初から付けていない（第118・126・127・128期と同じ。素の効き方を先に測る）。</para>
 /// </summary>
-public readonly record struct EmberRule(bool Enabled, bool Fireproof = true, int TickHeal = 0, int Brittle = 0, bool BrittleAllies = false)
+public readonly record struct EmberRule(bool Enabled, bool Fireproof = true, int TickHeal = 0, int Brittle = 0, bool BrittleAllies = false, bool BurnHit = false)
 {
+    // 第256期: **被弾の燃焼 H-分担**（`BurnHit`）——第255期の札 `BurnHitSplit` と同じ規則を、札の持ち主に依らず両陣営に掛ける
+    // （燃えている駒が出どころのある一撃を受けるたび燃焼 6 × 火勢・ターン頭の燃焼の刻みは 6 × 1）。判定は engine（`BattleContext` の
+    // 構築で門を立てるだけ・中身は第255期の `BurnOnHit` / `TickStatuses`）。**第256期に規定にした**（ポンの判断）。
+    // 第255期までの規則は <see cref="Pre256"/>（＝ <c>Default with { BurnHit = false }</c>）——第233〜255期の器具はこれで回す。
+    // 札（`BurnHitAdd` / `BurnHitSplitOnce` / `BurnHitFoeOnly`）は対照として残す（重ねると門は和になる）。
     // 第219期: **燃焼の脆さ**（`Brittle`・%）と、それを味方にも掛けるか（`BrittleAllies`）。
     // 燃焼が付いている間（残りターン 1 以上・燃焼の刻みそのものも含む）、受けるダメージを ×(100 + Brittle)/100（切り上げ）にする。
     // 判定は engine の2箇所——`ApplyDamageBody` の入口の族（§1 の標 +50% の直後・据え／矢面／巨躯／破片／身構え／軛より前）と、
@@ -9215,14 +9220,14 @@ public readonly record struct EmberRule(bool Enabled, bool Fireproof = true, int
     // 版は F1 ＝ 敵だけ 25 ／ F2 ＝ 敵だけ 50 ／ F3 ＝ 両方 25 ／ F4 ＝ 両方 50（<see cref="Scorched"/>）。
     // **引数を増やさないために熾火の窓口に同居させた**（第154期・第178期の作法）。
 
-    /// <summary>第219期の版（<paramref name="tag"/> = F0〜F4）。<b>第220期から F1 が <see cref="Default"/></b>・F0 は脆さなし。</summary>
+    /// <summary>第219期の版（<paramref name="tag"/> = F0〜F4）。<b>第220期から F1 が <see cref="Default"/></b>・F0 は脆さなし。第256期から被弾の燃焼の無い <see cref="Pre256"/> を土台にする（第219期の器具を動かさない）。</summary>
     public static EmberRule Scorched(string tag) => tag switch
     {
-        "F1" => Default with { Brittle = 25, BrittleAllies = false },
-        "F2" => Default with { Brittle = 50, BrittleAllies = false },
-        "F3" => Default with { Brittle = 25, BrittleAllies = true },
-        "F4" => Default with { Brittle = 50, BrittleAllies = true },
-        _ => Default with { Brittle = 0, BrittleAllies = false },
+        "F1" => Pre256 with { Brittle = 25, BrittleAllies = false },
+        "F2" => Pre256 with { Brittle = 50, BrittleAllies = false },
+        "F3" => Pre256 with { Brittle = 25, BrittleAllies = true },
+        "F4" => Pre256 with { Brittle = 50, BrittleAllies = true },
+        _ => Pre256 with { Brittle = 0, BrittleAllies = false },
     };
 
     /// <summary>
@@ -9253,8 +9258,11 @@ public readonly record struct EmberRule(bool Enabled, bool Fireproof = true, int
     /// 熾のホタ（<see cref="PyreTrait"/>）1枚にしか掛からない。
     /// <b>引数を1本も増やさないために、熾火の窓口をこの1つにまとめてある</b>（第154期の作法）。</para>
     /// </summary>
-    /// <remarks>第220期: 燃焼の脆さ F1（敵だけ 25%）を規定に（ポンの判断）。</remarks>
-    public static EmberRule Default => new(false, Brittle: 25);
+    /// <remarks>第220期: 燃焼の脆さ F1（敵だけ 25%）を規定に（ポンの判断）。第256期: 被弾の燃焼 H-分担 を規定に（ポンの判断）。</remarks>
+    public static EmberRule Default => new(false, Brittle: 25, BurnHit: true);
+
+    /// <summary>第255期までの規定（被弾の燃焼なし・ターン頭の刻みは 6 × 火勢）。第233〜255期の器具はこれで回す（第256期）。</summary>
+    public static EmberRule Pre256 => Default with { BurnHit = false };
 
     /// <summary>配る版（第130期に測った版）。<b>既定ではない。</b></summary>
     public static EmberRule On => new(true);

@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -69,7 +69,8 @@ static partial class BurnAuditDiag
     internal static readonly UnitDef[] Core = { UnitCatalog.BorgF0, UnitCatalog.HotaL0, UnitCatalog.HiyoF0 };
     static readonly HashSet<string> Excluded = new() { "borg", "hota", "hiyo", "gald", "tsugi" };
     /// <summary>相方の候補: 52 枚から ボルグ・ホタ・ヒヨ・ガルド・ツギ を除いた全員（召喚専用は `All` に居ない）。B3 はベニを含む。</summary>
-    internal static List<UnitDef> Candidates => UnitCatalog.All.Where(u => !Excluded.Contains(u.Id)).ToList();
+    internal static List<UnitDef> Candidates => UnitCatalog.All.Where(u => !Excluded.Contains(u.Id))
+        .Select(u => ReferenceEquals(u, UnitCatalog.Sero) ? UnitCatalog.SeroS0 : u).ToList();   // 第256期: セロは状態の矢ありの旧に固定
     internal static List<UnitDef> CandidatesB4 => Candidates.Where(u => u.Id != "beni").ToList();
 
     /// <summary>参考 燃焼: `compare` の `燃焼 (ボルグ×ホタ)` の行そのまま（ガルド入り）。</summary>
@@ -78,7 +79,7 @@ static partial class BurnAuditDiag
     internal static Formation RefThunder => Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Tsugi,
         center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio);
     /// <summary>参考 移動: 第228期 H3 の1位の席（前1 バサ ／ 前3 セロ ／ 中央 ヨミ ／ 後1 シオ ／ 後3 ハネ）。駒は第232期の規定。</summary>
-    internal static Formation RefMove => Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.Sero,
+    internal static Formation RefMove => Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.SeroS0,   // 第256期: 状態の矢ありの旧セロに固定
         center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.HaneR0);
 
     internal static Formation Seat(UnitDef[] p) => Formation.Build(front1: p[0], front3: p[1], center: p[2], back1: p[3], back3: p[4]);
@@ -108,7 +109,7 @@ static partial class BurnAuditDiag
         int sv = 0, fell = 0, w = 0; long t = 0;
         for (int i = 0; i < seeds; i++)
         {
-            var r = BattleEngine.Run(BattleEngine.Materialize(OldFire(f), BattleContext.PlayerTeam), WaveOf(wave, s)(), seed0 + i, verbose: false);
+            var r = BattleEngine.Run(BattleEngine.Materialize(OldFire(f), BattleContext.PlayerTeam), WaveOf(wave, s)(), seed0 + i, verbose: false, ember: EmberRule.Pre256);
             fell += r.PlayerStarterFallen.Count;
             if (!r.PlayerWon) continue;
             w++; t += r.Turns;
@@ -147,7 +148,7 @@ static partial class BurnAuditDiag
         var p = BattleEngine.Materialize(OldFire(f), BattleContext.PlayerTeam);
         var e = WaveOf(w, sc)();
         var slotOf = p.Concat(e).ToDictionary(u => u, u => u.Slot);   // InstanceId は `Run` の中で振られる
-        var r = BattleEngine.Run(p, e, seed, verbose: verbose);
+        var r = BattleEngine.Run(p, e, seed, verbose: verbose, ember: EmberRule.Pre256);
         return (r, p, e, slotOf.ToDictionary(kv => kv.Key.InstanceId, kv => kv.Value));
     }
 

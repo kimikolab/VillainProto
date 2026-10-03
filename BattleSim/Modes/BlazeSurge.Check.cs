@@ -30,7 +30,7 @@ static partial class BlazeSurgeDiag
     static UnitDef Plain(string id) => new() { Id = id, Name = id, MaxHp = 1000, Attack = 10, Speed = 1, Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Single };
     static BattleContext Ctx(UnitDef borg, out List<UnitState> p, out List<UnitState> e)
     {
-        var ctx = new BattleContext(0, true);
+        var ctx = new BattleContext(0, true, ember: EmberRule.Pre256);
         p = BattleEngine.Materialize(Formation.Build(front1: UnitCatalog.Hiyo, center: borg, back1: UnitCatalog.Hota, back3: Plain("a1")), BattleContext.PlayerTeam);
         e = BattleEngine.Materialize(Formation.Build(front1: Plain("e1"), front3: Plain("e2")), BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
@@ -109,10 +109,10 @@ static partial class BlazeSurgeDiag
                         {
                             var pl = BattleEngine.Materialize(f1, BattleContext.PlayerTeam); var en = FC.WaveOf(w, sc)();
                             var slotOf = pl.Concat(en).ToDictionary(u => u, u => u.Slot);
-                            var r = BattleEngine.Run(pl, en, seed, verbose: true);
+                            var r = BattleEngine.Run(pl, en, seed, verbose: true, ember: EmberRule.Pre256);
                             var slot0 = slotOf.ToDictionary(kv => kv.Key.InstanceId, kv => kv.Value);
-                            var rq = BattleEngine.Run(BattleEngine.Materialize(f1, BattleContext.PlayerTeam), FC.WaveOf(w, sc)(), seed, verbose: false);
-                            var r0 = BattleEngine.Run(BattleEngine.Materialize(f0, BattleContext.PlayerTeam), FC.WaveOf(w, sc)(), seed, verbose: true);
+                            var rq = BattleEngine.Run(BattleEngine.Materialize(f1, BattleContext.PlayerTeam), FC.WaveOf(w, sc)(), seed, verbose: false, ember: EmberRule.Pre256);
+                            var r0 = BattleEngine.Run(BattleEngine.Materialize(f0, BattleContext.PlayerTeam), FC.WaveOf(w, sc)(), seed, verbose: true, ember: EmberRule.Pre256);
                             var agg = new BA.Agg(); agg.Take(r, pl, en, slot0);
                             int borg = pl.First(u => u.Def.Id == "borg").InstanceId;
                             var mine = new HashSet<int>(pl.Select(u => u.InstanceId));

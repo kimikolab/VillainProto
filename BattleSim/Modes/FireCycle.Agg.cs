@@ -281,7 +281,7 @@ static partial class FireCycleDiag
             var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
             var e = WaveOf(w, sc)();
             var slotOf = p.Concat(e).ToDictionary(u => u, u => u.Slot);
-            var r = BattleEngine.Run(p, e, seed0 + i, verbose: true);
+            var r = BattleEngine.Run(p, e, seed0 + i, verbose: true, ember: EmberRule.Pre256);
             var la = new FB.LAgg(); if (!target) la.Take(r, p, e, slotOf.ToDictionary(kv => kv.Key.InstanceId, kv => kv.Value)); ls[i] = la;
             var c = new CAgg(); c.Take(r, p, e, target); cs[i] = c;
             var ea = new EnemyFireDiag.EAgg(); if (!target) ea.Take(r, p, e); es[i] = ea;

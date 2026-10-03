@@ -18,7 +18,7 @@ static partial class FireLevelDiag
     }
     static BattleContext Ctx(Formation pl, Formation en, out List<UnitState> p, out List<UnitState> e)
     {
-        var ctx = new BattleContext(0, true);
+        var ctx = new BattleContext(0, true, ember: EmberRule.Pre256);
         p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
         e = BattleEngine.Materialize(en, BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
@@ -164,10 +164,10 @@ static partial class FireLevelDiag
                             var pl = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
                             var en = BA.WaveOf(w, BA.Scales[s].Sc)();
                             var slotOf = pl.Concat(en).ToDictionary(u => u, u => u.Slot);
-                            var r = BattleEngine.Run(pl, en, seed, verbose: true);
+                            var r = BattleEngine.Run(pl, en, seed, verbose: true, ember: EmberRule.Pre256);
                             var slot0 = slotOf.ToDictionary(kv => kv.Key.InstanceId, kv => kv.Value);
-                            var r2 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BA.WaveOf(w, BA.Scales[s].Sc)(), seed, verbose: false);
-                            var r3 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BA.WaveOf(w, BA.Scales[s].Sc)(), seed, verbose: true);
+                            var r2 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BA.WaveOf(w, BA.Scales[s].Sc)(), seed, verbose: false, ember: EmberRule.Pre256);
+                            var r3 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BA.WaveOf(w, BA.Scales[s].Sc)(), seed, verbose: true, ember: EmberRule.Pre256);
                             var agg = new BA.Agg(); agg.Take(r, pl, en, slot0);
                             var st = Audit(r, pl, v);
                             lock (lk)
@@ -198,7 +198,8 @@ static partial class FireLevelDiag
         // 突き合わせはボルグ・ホタ・ヒヨのいない行だけにした（いる行は下の「どの版でも 0 セル」と同じ分母の裏側）。
         var rates = CompareRates();
         var rows = CompareBuilds();
-        bool Has(Formation f) => f.Occupied().Any(o => o.Def.Id is "borg" or "hota" or "hiyo");
+        // 第256期: 被弾の燃焼が規定になり、ゾト（破裂で味方も燃やす）の行も docs/balance.md と合わなくなった（この器具は `EmberRule.Pre256` に固定）ので、突き合わせから外す。
+        bool Has(Formation f) => f.Occupied().Any(o => o.Def.Id is "borg" or "hota" or "hiyo" or "zoto");
         var bal = File.ReadAllLines("docs/balance.md", System.Text.Encoding.UTF8).Where(l => l.StartsWith("| ") && l.Contains('%')).ToList();
         int cellBad = 0, cells = 0;
         for (int i = 0; i < rows.Length; i++)

@@ -53,9 +53,9 @@
 | 40 | `boss` | `BossRule` | `BossRule { Census = False, Scale = EnemyScaleRule { HpPercent = 115, AtkPercent = 115, Active = True } }` | ○ | `boss` / `tank` / `time` / `grade` / `escale` / `whip` / `mire` / `scorch` / `burst` / `shock` / `lili` / `demo` | 第117期 | ○ |
 | 41 | `nourish` | `NourishRule` | `NourishRule { Gain = 2 }` |  | `tank` / `time` | 第117期 | ○ |
 | 42 | `wound` | `WoundRule` | `WoundRule { Enabled = True, Census = False }` |  | `wound2` | 第85期 | ○ |
-| 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0, Brittle = 25, BrittleAllies = False }` |  | `survive` / `ember` / `wildfire` / `scorch` / `burst` / `burnaudit` / `fireward` / `rebirth` | 第130期 | ○ |
+| 43 | `ember` | `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0, Brittle = 25, BrittleAllies = False, BurnHit = True }` |  | `survive` / `ember` / `wildfire` / `scorch` / `burst` / `burnaudit` / `borgguard` / `borgfront` / `fireward` / `firescale` / `firelevel` / `fireburst` / `enemyfire` / `firecycle` / `firetri` / `firewrap` / `firefinish` / `fireatk` / `firekindle` / `giftorder` / `blazesurge` / `burnhit` / `burnadopt` / `shockdigest` / `rebirth` / `dump` | 第130期 | ○ |
 | 44 | `wildfire` | `WildfireRule` | `WildfireRule { Mode = None, Amount = 0, Active = False }` | ○ | `wildfire` | 第133期 | ○ |
-| 45 | `harm` | `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` / `sora186` / `mio` / `sid` | 第135期 | ○ |
+| 45 | `harm` | `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` / `sora186` / `burnadopt` / `mio` / `sid` | 第135期 | ○ |
 | 46 | `parry` | `ParryRule` | `ParryRule { Uses = 2, Scope = Any, Relay = True, Swing = WhenStocked }` |  | `parry` / `wall` / `stall` | 第135期 | ○ |
 | 47 | `shatter` | `ShatterRule` | `ShatterRule { Mode = Passive, SelfCostPerTurn = 0 }` | ○ | `shard` | 第137期 | ○ |
 | 48 | `shrapnel` | `ShrapnelRule` | `ShrapnelRule { Multiplier = 3, SelfDamagePercent = 100, ArmorCensus = False }` |  | `shard` | 第138期 | ○ |
@@ -91,7 +91,7 @@
 | `CurseRule` | `CurseRule { Enabled = True, SharePercent = 50 }` | ○ | `curse` / `hex` / `lit` / `mudohex` | 第95期 |
 | `DeepRule` | `DeepRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `deep` / `wound2` | 第93期 |
 | `DivertRule` | `DivertRule { TargetCount = 1, SelfMark = True, Audit = False }` | ○ | `divert` / `survive` / `wildfire` / `mark` | 第50期 |
-| `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0, Brittle = 25, BrittleAllies = False }` | ○ | `survive` / `ember` / `wildfire` / `scorch` / `burst` / `burnaudit` / `fireward` / `rebirth` | 第130期 |
+| `EmberRule` | `EmberRule { Enabled = False, Fireproof = True, TickHeal = 0, Brittle = 25, BrittleAllies = False, BurnHit = True }` | ○ | `survive` / `ember` / `wildfire` / `scorch` / `burst` / `burnaudit` / `borgguard` / `borgfront` / `fireward` / `firescale` / `firelevel` / `fireburst` / `enemyfire` / `firecycle` / `firetri` / `firewrap` / `firefinish` / `fireatk` / `firekindle` / `giftorder` / `blazesurge` / `burnhit` / `burnadopt` / `shockdigest` / `rebirth` / `dump` | 第130期 |
 | `EncoreRule` | `EncoreRule { Enabled = True }` | ○ | `encore` / `tempo` / `tomo` / `hold2` / `ledger` / `lit` / `rebirth` | 第104期 |
 | `EnemyScaleRule` | `EnemyScaleRule { HpPercent = 115, AtkPercent = 115, Active = True }` |  | `escale` / `whip` / `mire` / `scorch` / `burst` / `nine` / `drift` / `sero` / `seroshio` / `retreat` / `decoy` / `lastdodge` / `spring` / `gale` / `cycle` / `tune` / `spring2` / `hanereach` / `burnaudit` / `borgguard` / `borgfront` / `fireward` / `firescale` / `firelevel` / `fireburst` / `enemyfire` / `firecycle` / `firetri` / `firewrap` / `firefinish` / `fireatk` / `firekindle` / `giftorder` / `blazesurge` / `burnhit` / `shock` / `sid` / `ep3` / `dump` | 第187期 |
 | `EruptRule` | `EruptRule { Floor = True, Smear = PerErupt, Heavy = True }` | ○ | `mudohex` / `mudo` | 第180期 |
@@ -102,7 +102,7 @@
 | `FunnelRule` | `FunnelRule { Slowest = True, Both = False }` | ○ | `funnel` / `cross` | 第62期 |
 | `GatherRule` | `GatherRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `parry` / `wall` / `cross` / `demo` | 第89期 |
 | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` | ○ | `derive` / `whet` / `goad` / `ledger` / `mark` | 第52期 |
-| `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` / `sora186` / `mio` / `sid` | 第135期 |
+| `HarmRule` | `HarmRule { Census = False }` | ○ | `parry` / `wall` / `sora186` / `burnadopt` / `mio` / `sid` | 第135期 |
 | `HasteRule` | `HasteRule { Pick = None }` | ○ | `mark` / `haste` | 第149期 |
 | `HushRule` | `HushRule { Active = True }` | ○ | `curse` / `hush` / `goad` / `wave2` / `ledger` | 第35期 |
 | `IgniteRule` | `IgniteRule { Enabled = True }` | ○ | `derive` / `curse` / `blaze2` / `gauge` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `cross` / `demo` | 第87期 |

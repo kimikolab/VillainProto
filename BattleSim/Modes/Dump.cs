@@ -63,11 +63,25 @@ public static void Run(string[] args, int stageIndex)
     // 第246期 前段: 敵の火勢（第245期 E2）は駒ではなく燃焼そのものの規則として書く。札の持ち主（火勢の土台を持つ駒）が味方にいるときだけ働くので、
     // 持ち主は `UnitCatalog.All` から引く（手で名前を書かない）。持ち主がいなければ節ごと出さない。
     var fireRuleOwners = UnitCatalog.All.Where(u => u.Traits.Contains(TraitId.FoeFireLevel)).Select(u => u.Name).ToList();
-    if (fireRuleOwners.Count > 0)
+    // 第256期: 被弾の燃焼（H-分担）は駒の札ではなく `EmberRule.Default` の規則なので、持ち主に依らず節を出す。
+    bool burnHit = EmberRule.Default.BurnHit;
+    if (fireRuleOwners.Count > 0 || burnHit)
     {
         Console.WriteLine();
         Console.WriteLine("## 燃焼の規則");
         Console.WriteLine();
+    }
+    if (burnHit)
+    {
+        Console.WriteLine("どの編成でも（第256期に規定）:");
+        Console.WriteLine();
+        Console.WriteLine($"- 燃えている駒は、出どころのある一撃を受けるたびに炎が燃え上がり、燃焼 {BurnRules.Damage} を火の強さの回数だけ（火の強さを持たない編成では1回）受ける"
+                          + "（その一撃より前から燃えていたときだけ。毒と燃焼そのもの・肩代わりで受けた分・自分の一撃・かわした一撃では燃え上がらない）。殴られても燃焼の残りターンは減らない。");
+        Console.WriteLine($"- ターンの頭の燃焼は火の強さに関わらず {BurnRules.Damage}。");
+        Console.WriteLine();
+    }
+    if (fireRuleOwners.Count > 0)
+    {
         // 第248期: 燃焼の軸の一区切り——味方の火勢（育つ・萎む・大技で戻る）も今の規定に合わせて書く。数値は規則の定数から引く。
         Console.WriteLine($"味方に{string.Join("・", fireRuleOwners)}がいるとき（第242〜248期に規定）:");
         Console.WriteLine();
@@ -75,10 +89,13 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine("- 燃えている駒の攻撃が、当たる前から燃えていた敵に当たると、その駒の火が育つ（1回の攻撃で 1 つまで）。そのとき火選りの駒も育つ。そのターン一度も育たなかった駒は、ターンの終わりに 1 つ弱まる（1 より下にはならない）。");
         Console.WriteLine("- 火を渡した駒・大技（放つ・焼き尽くす）を撃った駒の火は 1 に戻る。");
         Console.WriteLine($"- 燃えている敵にも火の強さがある。燃えている味方が燃えている敵を叩くたびに1つ育ち、育たない周回は弱まる。"
-                          + $"火が強いほど、燃焼の刻みは火の強さの回数だけ入り（1回 {BurnRules.Damage}）、受ける傷は大きくなる（"
+                          + (burnHit ? $"火が強いほど、殴られたときの燃え上がりは火の強さの回数だけ入り（1回 {BurnRules.Damage}）、受ける傷は大きくなる（"
+                                     : $"火が強いほど、燃焼の刻みは火の強さの回数だけ入り（1回 {BurnRules.Damage}）、受ける傷は大きくなる（")
                           + string.Join(" ／ ", Enumerable.Range(1, 4).Select(l => $"{l} +{FoeFireRule.BrittlePercent[l]}%")) + "）。");
         Console.WriteLine($"- 火の強さ 4 の敵が倒れると、隣の敵に火が移る（燃えていなければ火の強さ {FoeFireRule.SpreadLevel} で点く・燃えていれば 1つ育つ）。");
-        Console.WriteLine("- 味方の燃焼の刻みも、火の強さの回数だけ入る（火に焼かれない駒は焼かれず、火選りの駒が生きている間は、燃えている味方は焼かれる代わりに癒える）。");
+        Console.WriteLine(burnHit
+            ? "- 味方の燃え上がりも、火の強さの回数だけ入る（火に焼かれない駒は焼かれず、火選りの駒が生きている間は、燃えている味方は焼かれる代わりに癒える）。"
+            : "- 味方の燃焼の刻みも、火の強さの回数だけ入る（火に焼かれない駒は焼かれず、火選りの駒が生きている間は、燃えている味方は焼かれる代わりに癒える）。");
     }
 
     Console.WriteLine();

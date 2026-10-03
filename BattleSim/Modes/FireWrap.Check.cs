@@ -26,7 +26,7 @@ static partial class FireWrapDiag
     }
     static BattleContext Ctx(Formation pl, Formation en, out List<UnitState> p, out CountingRandom cr)
     {
-        var ctx = new BattleContext(0, true);
+        var ctx = new BattleContext(0, true, ember: EmberRule.Pre256);
         p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
         var e = BattleEngine.Materialize(en, BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
@@ -137,8 +137,8 @@ static partial class FireWrapDiag
                     var f = Apply(bf(), VerOf("U2"));
                     var sc = IsTarget(w) ? EnemyScaleRule.None : BA.Scales[1].Sc;
                     var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
-                    var r = BattleEngine.Run(p, FC.WaveOf(w, sc)(), seed, verbose: true);
-                    var r2 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), FC.WaveOf(w, sc)(), seed, verbose: false);
+                    var r = BattleEngine.Run(p, FC.WaveOf(w, sc)(), seed, verbose: true, ember: EmberRule.Pre256);
+                    var r2 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), FC.WaveOf(w, sc)(), seed, verbose: false, ember: EmberRule.Pre256);
                     if (r.PlayerWon != r2.PlayerWon || r.Turns != r2.Turns) verboseDiff++;
                     foreach (var x in r.Events)
                         if (x.Kind == BattleEventKind.FireLevel && x.Text == FireLevelLabels.Called) { calls++; if (x.Amount < FireLevelRule.Max) miss++; }

@@ -17,7 +17,7 @@ static partial class BorgGuardDiag
     }
     static BattleContext Ctx(Formation pl, Formation en, out List<UnitState> p, out List<UnitState> e, bool verbose = true)
     {
-        var ctx = new BattleContext(0, verbose);
+        var ctx = new BattleContext(0, verbose, ember: EmberRule.Pre256);
         p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
         e = BattleEngine.Materialize(en, BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
