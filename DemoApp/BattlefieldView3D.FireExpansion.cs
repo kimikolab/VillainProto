@@ -53,6 +53,7 @@ public partial class BattlefieldView3D
                 3.8f, 2.8f, 0.6 / speed, _camera, false);
             FireFx.Bloom(_fxRoot, hit.FxPoint, new("ffad4a"), 3.5f, 0.42 / speed);
             FireFx.Light(_fxRoot, hit.FxPoint, new("ffad4a"), 1.8f, 0.35 / speed);
+            NotifyAttackContact(hit);
         }
     }
 
@@ -104,6 +105,7 @@ public partial class BattlefieldView3D
         FireFx.Bloom(_fxRoot, target.FxPoint, new("ffae59"), 2.6f, 0.24 / speed);
         FireFx.Bloom(_fxRoot, target.FxPoint, new("fff0bc"), 2.2f, 0.13 / speed, 7);
         _attackAudio.PlayFireSound("embers");
+        NotifyAttackContact(target);
     }
 
     private void ShowFireFuel(BattlePawn3D? actor, BattlePawn3D? target, BattleEvent e, double speed)

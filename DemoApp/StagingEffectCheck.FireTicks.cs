@@ -158,6 +158,10 @@ public partial class StagingEffectCheck
             var result = Read<BattleResult>("_result");
             var field = Read<BattlefieldView3D>("_battleField");
             var plan = TurnTickPresentation.Build(result.Events);
+            var hitPlan = FireHitPresentation.Build(result.Events);
+            var hitCues = hitPlan.Contacts.Values.SelectMany(c => c).ToArray();
+            Require(field.FireHitPlays == hitCues.Length && field.FireHitNumberPlays == hitCues.Sum(c => c.Beat.Numbers.Count), "本番の着弾ごとに燃焼数字を一度だけ表示");
+            Require(hitPlan.Unpaired.Count == 0, "本番の被弾燃焼は全件を台本の着弾へ結べる");
             Require(field.TurnTickBeatPlays == plan.Starts.Values.Sum(r => r.Beats.Count), "本番でも予定した駒ごとの拍だけ表示");
             Require(field.TurnTickNumberPlays == plan.Starts.Values.Sum(r => r.Beats.Sum(b => b.Numbers.Count)), "本番でも刻み数字を重ねず合算");
             Require(Read<int>("_tickPlays") == result.Events.Count(TickPresentation.IsTick), "Statusの元の出来事を一件ずつ通す");

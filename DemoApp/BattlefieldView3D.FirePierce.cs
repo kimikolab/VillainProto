@@ -52,6 +52,7 @@ public partial class BattlefieldView3D
                 FireUltimateFx.Pillar(_fxRoot, hit.GlobalPosition + Vector3.Up * 0.05f, 3.2f, 2.1f, 0.38 / speed, _camera, false);
                 FireFx.Light(_fxRoot, hit.FxPoint, color, 1.8f, 0.35 / speed);
             }
+            NotifyAttackContact(hit);
         }
     }
 }

@@ -263,6 +263,7 @@ public partial class BattlefieldView3D
             }
             await ToSignal(GetTree().CreateTimer(Math.Max(0.005, 0.16 / s)), SceneTreeTimer.SignalName.Timeout);
             arrowHit();
+            foreach (var hit in hits) NotifyAttackContact(hit);
             return true;
         }
         if (from.UnitId == "basa" && (pattern == AttackPattern.Sweep || cue?.Kind == BattleEventKind.Squall))

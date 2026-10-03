@@ -15,6 +15,13 @@ public partial class StagingEffectCheck : Control
             var field = new BattlefieldView3D();
             field.SetAnchorsPreset(LayoutPreset.FullRect);
             AddChild(field);
+            if (mode == "fire-hit")
+            {
+                await CheckFireHits(field);
+                GD.Print("STAGING_EFFECT_CHECK_OK fire-hit contact combined numbers healing multihit restart");
+                GetTree().Quit();
+                return;
+            }
             if (mode == "fire-tick")
             {
                 await CheckFireTicks(field);

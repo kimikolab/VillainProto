@@ -75,6 +75,7 @@ public partial class BattlefieldView3D
             FireUltimateFx.Pillar(_fxRoot, hit.GlobalPosition + Vector3.Up * 0.05f, 7.0f, 4.0f, 0.85 / speed, _camera, false);
             FireFx.Bloom(_fxRoot, hit.FxPoint, new("ffac42"), 5.3f, 0.50 / speed);
             FireFx.Light(_fxRoot, hit.FxPoint, new("ffc66d"), 3.4f, 0.48 / speed);
+            NotifyAttackContact(hit);
         }
         // HPの反映はこの直後。火柱が立ち切る前にダメージを出す。
     }
@@ -111,6 +112,7 @@ public partial class BattlefieldView3D
             FireFx.Bloom(_fxRoot, hit.FxPoint, new("fff0bf"), 4.1f, 0.20 / speed, 7);
             FireFx.Bloom(_fxRoot, hit.GlobalPosition + Vector3.Up * 0.08f, new("ffab3c"), 4.3f, 0.5 / speed, 2, true);
             FireFx.Light(_fxRoot, hit.FxPoint, new("ffb550"), 2.5f, 0.35 / speed);
+            NotifyAttackContact(hit);
         }
         actor.ReturnFromAttack();
     }

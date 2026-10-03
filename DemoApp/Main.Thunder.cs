@@ -63,6 +63,7 @@ public partial class Main
             if (token != _playToken || !_battleMode) return true;
             _battleField.StrikeThunder(_battleField.FindPawn(_thunderPrevious.GetValueOrDefault(index)),
                 target, e.Slot, e.StatusRemaining ?? 0, _speed);
+            if (target is not null) FireHitContact(index, target);
             await Delay(0.12);
             return true;
         }

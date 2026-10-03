@@ -27,5 +27,6 @@ public partial class Main
             if (damage.Kind == BattleEventKind.Parry) ShowParry(damage);
             else ShowDamage(i, damage, _battleField.FindPawn(damage.ActorId), pawn, withSource: false);
         }
+        FireHitContact(index, pawn);
     }
 }

@@ -25,6 +25,8 @@ public partial class BattlefieldView3D
         FireBlazePlays = FireEmbersHitPlays = 0;
         FireLabelsShown.Clear();
         TurnTickBeatPlays = TurnTickFirePulses = TurnTickNumberPlays = 0;
+        FireHitPlays = FireHitNumberPlays = FireHitPulses = 0;
+        AttackContact = null;
     }
 
     private void FireShade(BattlePawn3D pawn, double seconds)
@@ -251,6 +253,7 @@ void fragment(){
             FireFx.Bloom(_fxRoot, target.GlobalPosition + Vector3.Up * 0.08f, new("ffc35b"), 2.9f, 0.3 / speed, 2, true);
             FireFx.Light(_fxRoot, target.FxPoint, new("ffbb59"), 1.4f, 0.20 / speed);
             _attackAudio.PlayFireSound("rain");
+            NotifyAttackContact(target);
             await Wait(0.065);
             return;
         }
@@ -302,6 +305,7 @@ void fragment(){
                 0.40 / speed, embers ? 0 : 1);
             FireFx.Bloom(_fxRoot, hit.GlobalPosition + Vector3.Up * 0.10f, color, 2.6f,
                 0.55 / speed, 2, true);
+            NotifyAttackContact(hit);
         }
         await Wait(0.08);
     }

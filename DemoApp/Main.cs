@@ -1183,6 +1183,7 @@ public partial class Main : Control
         _finishSoundIndex = FinishSoundCue.Find(_result.PlayerWon, _battleOpening, _result.Events);
         _movement = new MovementPresentation(_result.Events);
         _firePresentation = new FirePresentation(_result.Events);
+        IndexFireHits(_result.Events);
         _fireFastEvent = false;
         int token = ++_playToken;
         _comboEnds.Clear();
@@ -1328,6 +1329,15 @@ public partial class Main : Control
         _tickDelayBudget = _collectingTurnTicks is not null ? 0
             : _ticks.Budgets.TryGetValue(eventIndex, out double tickBudget) ? tickBudget : null;
         _fireFastEvent = _firePresentation.FastEvents.Contains(eventIndex);
+        if (PlayFireHitSource(e, eventIndex, actor, target)) return;
+        _fireFastEvent |= _fireHits.Contacts.ContainsKey(eventIndex);
+        if (e.Kind == BattleEventKind.Spring)
+        {
+            int contactToken = _playToken;
+            _battleField.AttackContact = pawn => {
+                if (contactToken == _playToken && _battleMode) FireHitContact(eventIndex, pawn);
+            };
+        }
         if (await PlayFire(e, eventIndex, actor, target)) return;
         if (await PlayMovement(e, eventIndex, actor, target)) return;
         if (await PlayThunder(e, eventIndex, actor, target)) return;
@@ -1385,6 +1395,9 @@ public partial class Main : Control
             case BattleEventKind.Attack:
             {
                 int attackToken = _playToken;
+                _battleField.AttackContact = pawn => {
+                    if (attackToken == _playToken && _battleMode) FireHitContact(eventIndex, pawn);
+                };
                 AttackPattern pattern = e.Pattern ?? AttackPattern.Single;
                 IReadOnlyList<BattlePawn3D> impactTargets = FindAttackTargets(eventIndex, e);
                 IndexNumbDamage(eventIndex, e);
@@ -1919,6 +1932,7 @@ public partial class Main : Control
                                 _statusCauseByDamageIndex.ContainsKey(eventIndex), e.FriendlyFire && e.DeflectFromId is null);
         AppendLog($"  [color=#{sourceColor.ToHtml(false)}]{source}[/color] → {NameOf(e.TargetId)}  "
                   + $"[color=#{(poison ? UiKit.Poison : UiKit.Hurt).ToHtml(false)}]−{e.Amount}[/color]");
+        FireHitDamage(eventIndex, target);
     }
 
     private void ShowParry(BattleEvent e)

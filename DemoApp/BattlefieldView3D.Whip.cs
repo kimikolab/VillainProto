@@ -55,6 +55,7 @@ public partial class BattlefieldView3D
                     ThunderFx.Burst(_fxRoot, hit.FxPoint, 0.5f, 0.22 / speed);
                 }
                 impact?.Invoke(hit);
+                NotifyAttackContact(hit);
             }
         }), 0f, 1f, 0.64 / speed);
         tween.TweenCallback(Callable.From(whip.QueueFree));
@@ -120,6 +121,7 @@ public partial class BattlefieldView3D
             if (!cracked && t >= 0.62f)
             {
                 cracked = true;
+                NotifyAttackContact(target);
                 Color flash = new("ffe0ba");
                 for (int i = 0; i < 5; i++)
                 {

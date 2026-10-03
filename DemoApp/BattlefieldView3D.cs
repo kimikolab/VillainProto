@@ -631,6 +631,7 @@ public partial class BattlefieldView3D : Control
             if (attackGeneration != _specialGeneration || !IsInstanceValid(from) || !IsInstanceValid(to)
                 || !from.IsInsideTree() || from.Hp <= 0) return;
             ShowYomiIai(from, hits, pattern, reaction, attackPower ?? from.AttackValue);
+            foreach (var hit in hits) NotifyAttackContact(hit);
         }
         bool charged = !reaction && from.IsCharging;
         if (!reaction) from.ReleaseCharge();
@@ -699,6 +700,8 @@ public partial class BattlefieldView3D : Control
                 break;
         }
 
+        if (attackGeneration == _specialGeneration)
+            foreach (var hit in hits) NotifyAttackContact(hit);
         if (IsInstanceValid(from) && from.IsInsideTree() && !holdPosition) from.ReturnFromAttack();
     }
 

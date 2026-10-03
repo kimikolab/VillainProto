@@ -76,6 +76,7 @@ public partial class BattlefieldView3D
         foreach (var hit in hits.Where(p => IsInstanceValid(p) && p.IsInsideTree() && p.Hp > 0))
         {
             MovementFx.WindBurst(_fxRoot, _camera, hit.FxPoint, 0.30 / speed);
+            NotifyAttackContact(hit);
             MakeGroundRing(hit.Home, new Color("d0ffed"), 0.8f, 0.30 / speed);
         }
         if (points.Length > 0) CameraPunch(points[0], AttackPattern.Sweep);

@@ -36,6 +36,7 @@ public partial class BattlefieldView3D
             _attackAudio.PlayMovementSound(MovementSound.SpringBlock);
             MovementFx.Smash(_fxRoot, _camera, Contact(), MovementFx.Bounce, 0.24 / speed, 1.10f);
             CameraPunch(Contact(), AttackPattern.Single);
+            NotifyAttackContact(target);
         }, guarded?.FxPoint, guarded is not null
             && FormationRules.AreSameRowPair(actor.Slot, guarded.Slot)
             && !(actor.Shape?.AreAdjacent(actor.Slot, guarded.Slot) ?? FormationRules.AreAdjacent(actor.Slot, guarded.Slot)));
@@ -57,6 +58,7 @@ public partial class BattlefieldView3D
             HaneDropkickPlays++;
             contacted = true;
             sound();
+            NotifyAttackContact(target);
         });
         MovementFx.Flow(_fxRoot, _camera, actor.FxPoint, impact, MovementFx.Bounce, 0.22 / speed, 0.18f, 3);
         // 接触してから射出する。中断時には元の吹っ飛ばしへ進めない。
