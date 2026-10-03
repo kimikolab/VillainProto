@@ -276,7 +276,7 @@ static partial class FireFinishDiag
         var k4 = VerOf("K4");
         // 第251期: L3 が規定になったので、K4 の突き合わせ先を第250期までの規定（`BorgK4` / `HotaK4`）に移した（ヒヨは第250期から変わっていない）。
         Expect("K4 の札 ＝ 第250期までの規定の札（BorgK4 / HotaK4 / Hiyo）", string.Join(",", k4.Borg.Traits) == string.Join(",", UnitCatalog.BorgK4.Traits) && string.Join(",", k4.Hota.Traits) == string.Join(",", UnitCatalog.HotaK4.Traits)
-            && string.Join(",", k4.Hiyo.Traits) == string.Join(",", UnitCatalog.Hiyo.Traits) && k4.Hota.Attack == UnitCatalog.HotaK4.Attack, true);
+            && string.Join(",", k4.Hiyo.Traits) == string.Join(",", UnitCatalog.HiyoM0.Traits) && k4.Hota.Attack == UnitCatalog.HotaK4.Attack, true);
 
         Console.WriteLine();
         Console.WriteLine($"**{ok} / {ok + ng}**（所要 {sw.Elapsed.TotalSeconds:F0} 秒）");

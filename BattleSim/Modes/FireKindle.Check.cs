@@ -52,7 +52,7 @@ static partial class FireKindleDiag
         Console.WriteLine();
 
         // ---- B1 守るほど燃え上がる: 火の鎧で切った量 30 ごとに +1・盾の配りの分も数える・燃えていない間は数えない ----
-        foreach (var (borg, name, card) in new[] { (UnitCatalog.Borg, "M0", false), (BorgB1, "M-B1", true) })
+        foreach (var (borg, name, card) in new[] { (UnitCatalog.BorgM0, "M0", false), (BorgB1, "M-B1", true) })
         {
             var ctx = Ctx(Formation.Build(front1: Plain("a1"), center: borg), Formation.Build(front1: Plain("e1")), out var p, out var e);
             var bo = U(p, "borg"); var a1 = U(p, "a1"); var e1 = U(e, "e1");
@@ -85,7 +85,7 @@ static partial class FireKindleDiag
         }
 
         // ---- B2 開幕の火勢: くすぶりで火勢2・その周回は萎まない ----
-        foreach (var (borg, name, card) in new[] { (UnitCatalog.Borg, "M0", false), (BorgB2, "M-B2", true) })
+        foreach (var (borg, name, card) in new[] { (UnitCatalog.BorgM0, "M0", false), (BorgB2, "M-B2", true) })
         {
             var ctx = Ctx(Formation.Build(center: borg), Formation.Build(front1: Plain("e1")), out var p, out _, turn: 0);
             var bo = U(p, "borg");
@@ -99,7 +99,7 @@ static partial class FireKindleDiag
         }
 
         // ---- B3 放熱で育つ: ホタの焼き尽くすで +1（燃えている間）・印はそのまま ----
-        foreach (var (borg, name, card) in new[] { (UnitCatalog.Borg, "M0", false), (BorgB3, "M-B3", true) })
+        foreach (var (borg, name, card) in new[] { (UnitCatalog.BorgM0, "M0", false), (BorgB3, "M-B3", true) })
             foreach (bool burning in new[] { true, false })
             {
                 var ctx = Ctx(Formation.Build(front1: UnitCatalog.Hota, center: borg), Formation.Build(front1: Plain("e1", hp: 50000)), out var p, out _);
@@ -114,7 +114,7 @@ static partial class FireKindleDiag
 
         // ---- O1 溜め火: 火勢4 の育ちで +1・次の爆炎で ×(3 ＋ 0.5 × 溜め)・味方への燃焼も ×(1 ＋ 0.5 × 溜め)・撃ったら 0 ----
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Hiyo, center: BorgM1), Formation.Build(front1: Plain("e1")), out var p, out _);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.HiyoM0, center: BorgM1), Formation.Build(front1: Plain("e1")), out var p, out _);
             var hy = U(p, "hiyo"); var bo = U(p, "borg");
             SetLv(hy, 1); SetLv(bo, 3);
             var cr = new CountingRandom(0); RngF.SetValue(ctx, cr);
@@ -147,9 +147,9 @@ static partial class FireKindleDiag
         }
 
         // ---- O2 鎧の火: 火勢4 の育ちで破片 +6・4 未満では付かない ----
-        foreach (var (borg, name, card) in new[] { (UnitCatalog.Borg, "M0", false), (BorgM2, "M2", true) })
+        foreach (var (borg, name, card) in new[] { (UnitCatalog.BorgM0, "M0", false), (BorgM2, "M2", true) })
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Hiyo, center: borg), Formation.Build(front1: Plain("e1")), out var p, out _);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.HiyoM0, center: borg), Formation.Build(front1: Plain("e1")), out var p, out _);
             var hy = U(p, "hiyo"); var bo = U(p, "borg");
             SetLv(hy, 1); SetLv(bo, 3);
             var cr = new CountingRandom(0); RngF.SetValue(ctx, cr);
@@ -160,7 +160,7 @@ static partial class FireKindleDiag
         }
 
         // ---- H1 渡す火: ヒヨの火勢4 の育ちで溜め +1（上限 3）・ギフトで相手を溜めの数だけ上げる（上限 4・あぶれた火にならない）・撃ったら 0 ----
-        foreach (var (hiyo, name, card) in new[] { (UnitCatalog.Hiyo, "M0", false), (HiyoH1, "M1", true) })
+        foreach (var (hiyo, name, card) in new[] { (UnitCatalog.HiyoM0, "M0", false), (HiyoH1, "M1", true) })
         {
             var ctx = Ctx(Formation.Build(front1: hiyo, center: BorgM1, back1: UnitCatalog.Hota, back3: Plain("a1")), Formation.Build(front1: Plain("e1")), out var p, out _);
             var hy = U(p, "hiyo"); var bo = U(p, "borg"); var h = U(p, "hota"); var a1 = U(p, "a1");
@@ -188,7 +188,7 @@ static partial class FireKindleDiag
         }
 
         // ---- H2 癒しの灯: 火勢4 の育ち1回につき燃えている味方全員を 4 回復（燃えていない味方は癒さない・ベニの反転の裏を通らない）----
-        foreach (var (hiyo, name, card) in new[] { (UnitCatalog.Hiyo, "M0", false), (HiyoH2, "M2", true) })
+        foreach (var (hiyo, name, card) in new[] { (UnitCatalog.HiyoM0, "M0", false), (HiyoH2, "M2", true) })
         {
             var ctx = Ctx(Formation.Build(front1: hiyo, front3: Plain("a2"), center: UnitCatalog.Beni, back1: Plain("a1"), back3: Plain("a3")), Formation.Build(front1: Plain("e1")), out var p, out _);
             var hy = U(p, "hiyo"); var a1 = U(p, "a1"); var a2 = U(p, "a2"); var a3 = U(p, "a3");
@@ -267,8 +267,9 @@ static partial class FireKindleDiag
 
         // ---- M0 ＝ 規定の駒（参照）・新しい札の保持者は 0 枚 ----
         var m0 = VerOf("M0");
-        Expect("M0 の駒 ＝ 規定の駒（Borg / Hota / Hiyo・参照）", ReferenceEquals(m0.Borg, UnitCatalog.Borg) && ReferenceEquals(m0.Hota, UnitCatalog.Hota) && ReferenceEquals(m0.Hiyo, UnitCatalog.Hiyo), true);
-        Expect("新しい札の保持者（`UnitCatalog.Everyone`）", UnitCatalog.Everyone.Count(d => d.Traits.Any(FireKindleRuleHas)), 0);
+        // 第253期: 規定のボルグ・ヒヨに B1・B2・溜め火・渡す火が入ったので、M0 は旧の駒（BorgM0 / HiyoM0）に固定し、保持者は規定の2枚になった。
+        Expect("M0 の駒 ＝ 第251期の規定（BorgM0 / Hota / HiyoM0・参照）", ReferenceEquals(m0.Borg, UnitCatalog.BorgM0) && ReferenceEquals(m0.Hota, UnitCatalog.Hota) && ReferenceEquals(m0.Hiyo, UnitCatalog.HiyoM0), true);
+        Expect("新しい札の保持者（`UnitCatalog.Everyone`・第253期から規定のボルグ・ヒヨの2枚）", string.Join(",", UnitCatalog.Everyone.Where(d => d.Traits.Any(FireKindleRuleHas)).Select(d => d.Id)), "borg,hiyo");
         Expect("新しい札は7枚とも `TraitCatalog` に登録されている", new[] { TraitId.KindleGuard, TraitId.KindleOpen, TraitId.RadiateGrow, TraitId.BlazeHoard, TraitId.ArmorFlame, TraitId.GiftHoard, TraitId.MendGlow }.All(t => TraitCatalog.Get(t).Id == t), true);
 
         Console.WriteLine();

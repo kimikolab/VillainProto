@@ -70,9 +70,10 @@ static partial class GiftOrderDiag
                 }
                 if (FL(x, FireLevelLabels.GiftTurn) && x.ActorId == hy && cur is not null && x.TargetId is int to)
                 {
-                    int end = n;
-                    foreach (var h in r.Hands) if (h.EventStart == i + 1 && h.ActorId == to) { end = Math.Min(h.EventEnd, n); break; }
-                    cur.Turns.Add((to, i + 1, end));
+                    // その手番の枠＝この見出しの後で最初に始まる、相手の手番（見出しと枠のあいだに「見せ場」の出来事が1件挟まる）
+                    int start = n, end = n;
+                    foreach (var h in r.Hands) if (h.ActorId == to && h.EventStart > i && h.EventStart < start) { start = h.EventStart; end = Math.Min(h.EventEnd, n); }
+                    cur.Turns.Add((to, start, end));
                 }
             }
 

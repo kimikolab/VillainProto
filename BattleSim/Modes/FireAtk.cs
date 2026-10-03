@@ -60,12 +60,12 @@ static partial class FireAtkDiag
 
     internal static readonly FB.Ver[] Versions =
     {
-        new("L0", "第250期までの規定（第249期 K4・対照）", UnitCatalog.BorgK4, UnitCatalog.HotaK4, UnitCatalog.Hiyo),
-        new("L-A1", "L0 ＋ あぶれた火（火勢4 の育ち → 攻撃力 +4）", UnitCatalog.BorgK4, HotaA1, UnitCatalog.Hiyo),
-        new("L-A2", "L0 ＋ くべられる火（味方の着火 → 攻撃力 +2）", UnitCatalog.BorgK4, HotaA2, UnitCatalog.Hiyo),
-        new("L1", "L0 ＋ あぶれた火 ＋ くべられる火", UnitCatalog.BorgK4, HotaL1, UnitCatalog.Hiyo),
-        new("L2", "L1 ＋ 焼き尽くす・重（全体の1発 ×4 → ×7）", UnitCatalog.BorgK4, HotaL2, UnitCatalog.Hiyo),
-        new("L3", "L2 ＋ 爆炎・独り（ヒヨがいなければ自分の手番の火勢4 で爆炎）", BorgL3, HotaL2, UnitCatalog.Hiyo),
+        new("L0", "第250期までの規定（第249期 K4・対照）", UnitCatalog.BorgK4, UnitCatalog.HotaK4, UnitCatalog.HiyoM0),
+        new("L-A1", "L0 ＋ あぶれた火（火勢4 の育ち → 攻撃力 +4）", UnitCatalog.BorgK4, HotaA1, UnitCatalog.HiyoM0),
+        new("L-A2", "L0 ＋ くべられる火（味方の着火 → 攻撃力 +2）", UnitCatalog.BorgK4, HotaA2, UnitCatalog.HiyoM0),
+        new("L1", "L0 ＋ あぶれた火 ＋ くべられる火", UnitCatalog.BorgK4, HotaL1, UnitCatalog.HiyoM0),
+        new("L2", "L1 ＋ 焼き尽くす・重（全体の1発 ×4 → ×7）", UnitCatalog.BorgK4, HotaL2, UnitCatalog.HiyoM0),
+        new("L3", "L2 ＋ 爆炎・独り（ヒヨがいなければ自分の手番の火勢4 で爆炎）", BorgL3, HotaL2, UnitCatalog.HiyoM0),
     };
     internal static FB.Ver VerOf(string name) => Versions.First(v => v.Name == name);
     internal static Formation Apply(Formation f, FB.Ver v) => FC.Apply(f, v);

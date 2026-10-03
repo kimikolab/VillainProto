@@ -140,6 +140,8 @@ static partial class GiftOrderDiag
         Expect("N0 の駒 ＝ 第251期の規定（BorgM0 / Hota / HiyoM0・参照）", ReferenceEquals(n0.Borg, UnitCatalog.BorgM0) && ReferenceEquals(n0.Hota, UnitCatalog.Hota) && ReferenceEquals(n0.Hiyo, UnitCatalog.HiyoM0), true);
         Expect("N1 ＝ ref から放熱で育つ（B3）を抜いた札（並びは問わない）",
             BorgN1.Traits.OrderBy(t => t).SequenceEqual(BorgRef.Traits.Where(t => t != TraitId.RadiateGrow).OrderBy(t => t)) && HiyoN1.Traits.SequenceEqual(FK.HiyoH1.Traits), true);
+
+        Expect("N2 の札 ＝ 第253期の規定の札（ボルグ・ヒヨ・並びも）", n2.Borg.Traits.SequenceEqual(UnitCatalog.Borg.Traits) && n2.Hiyo.Traits.SequenceEqual(UnitCatalog.Hiyo.Traits) && ReferenceEquals(n2.Hota, UnitCatalog.Hota), true);
         Expect("渡す順の札は `TraitCatalog` に登録されている", TraitCatalog.Get(TraitId.GiftOrder).Id, TraitId.GiftOrder);
 
         Console.WriteLine();

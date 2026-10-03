@@ -22,12 +22,14 @@ public static class UnitCatalog
         // 第248期（ポンの判断・指示書 §3・線を通った U2）: 放熱の印（`RadiateCall`）と、指名は火勢4 のときだけ（`CallFull`）。旧は <see cref="BorgU0"/>。
         // 第250期 前段（指示書 §2.1）: 第249期 K4——放つを爆炎に（`UnleashBlaze`）。旧は <see cref="BorgK0"/>。
         // 第251期（ポンの判断・指示書 §2）: 第250期 L3——爆炎・独り（`BlazeSolo`・火を渡す者がいなければ自分の手番の火勢4 で爆炎）。旧は <see cref="BorgK4"/>。
+        // 第253期（ポンの判断・指示書 §4・線を通った N2）: 第252期 B1 ＋ B2 ＋ O1——守るほど燃え上がる（`KindleGuard`）・溜め火（`BlazeHoard`）・開幕の火勢（`KindleOpen`）。旧は <see cref="BorgM0"/>。
         Traits = new[] { TraitId.Splash, TraitId.FireFeed, TraitId.Cinder, TraitId.FireArmor, TraitId.FireSplash, TraitId.SelfKindle, TraitId.FireMend, TraitId.FireWardAll,
                          TraitId.FireLevel, TraitId.CinderWide, TraitId.FireKeep, TraitId.FireSpreadCap, TraitId.FireUnleash,
                          TraitId.FoeFireLevel, TraitId.FoeFireTick, TraitId.FoeFireBrittle, TraitId.FoeFireSpread, TraitId.AllyFireTick,
-                         TraitId.RadiateCall, TraitId.CallFull, TraitId.UnleashBlaze, TraitId.BlazeSolo },
+                         TraitId.RadiateCall, TraitId.CallFull, TraitId.UnleashBlaze, TraitId.BlazeSolo,
+                         TraitId.KindleGuard, TraitId.BlazeHoard, TraitId.KindleOpen },
         Pattern = AttackPattern.Sweep,
-        PlusText = "燃える盾。薙ぎ払いで斬った敵すべてに火を移し、自分の火も燃え続ける（戦いの前からくすぶっている）。燃えている間は自分も燃えている味方も受ける傷が半分になり、火に焼かれるほど傷が塞がる。殴られると殴った敵に火を返し、燃えている敵を斬るとその火で癒える。燃え盛ってから火を渡されると、溜めた火を全身から放つ——攻撃力 3 倍の炎が敵すべてを包み、当たった敵に火が移る。その炎は味方も包むが、火に強い仲間や火を癒しに変える仲間には力になる。火を渡す仲間がいなければ、燃え盛った自分の手番で溜めた火を放つ——そのときは誰も炎を癒しに変えてくれない。仲間の熾火が焼き尽くすと、その放熱が鎧に灯る。灯っている間に燃え盛っていれば、ヒヨの次の火は真っ先に自分へ渡る",
+        PlusText = "燃える盾。薙ぎ払いで斬った敵すべてに火を移し、自分の火も燃え続ける（戦いの前からくすぶっている）。燃えている間は自分も燃えている味方も受ける傷が半分になり、火に焼かれるほど傷が塞がる。殴られると殴った敵に火を返し、燃えている敵を斬るとその火で癒える。燃え盛ってから火を渡されると、溜めた火を全身から放つ——攻撃力 3 倍の炎が敵すべてを包み、当たった敵に火が移る。その炎は味方も包むが、火に強い仲間や火を癒しに変える仲間には力になる。火を渡す仲間がいなければ、燃え盛った自分の手番で溜めた火を放つ——そのときは誰も炎を癒しに変えてくれない。仲間の熾火が焼き尽くすと、その放熱が鎧に灯る。灯っている間に燃え盛っていれば、ヒヨの次の火は真っ先に自分へ渡る。戦いの前からくすぶる火は、初めから強い。味方の傷を炎の膜で受け止めるほど、自分の火が燃え上がる。燃え盛ってなお火が流れ込むと、大剣に溜めておき、次に放つ炎をそのぶん大きくする——その炎は味方もより強く包む",
         MinusText = "同じ一振りが、自分の両隣の味方も巻き込む（燃え移る火として——火に強い味方には効かない）。隣の味方にも火が移る。放った炎は味方も焼く",
         Flavor = "三度、味方の部隊を半壊させて追い出された。"
     };
@@ -2280,10 +2282,11 @@ public static class UnitCatalog
         // 追記 B: ギフトで得た手番の燃え広がりでは自分は育たない（`GiftQuiet`）。旧は <see cref="HiyoR3"/>。
         // 第248期（ポンの判断・指示書 §3・線を通った U2）: 火の粉（焼き尽くす・放つで +1）。指名は放熱の印を持つボルグの側（`CallFull`）。旧は <see cref="HiyoU0"/>。
         // 第250期 前段（指示書 §2.1）: 第249期 K4——贔屓・火勢（+3 × 相手の火勢・`FavorLevel`）。旧は <see cref="HiyoK0"/>。
+        // 第253期（ポンの判断・指示書 §4・線を通った N2）: 第252期 H1——渡す火（`GiftHoard`）と、渡す順（`GiftOrder`・2体に渡すときは放つの持ち主＝ボルグを先に）。旧は <see cref="HiyoM0"/>。
         Traits = new[] { TraitId.Favor, TraitId.FireConvert, TraitId.FireStoke, TraitId.TurnGift, TraitId.StokeStageAtk, TraitId.GiftQuiet, TraitId.SparkCatch, TraitId.SparkUnleash,
-                         TraitId.FavorLevel },
+                         TraitId.FavorLevel, TraitId.GiftHoard, TraitId.GiftOrder },
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "火を煽る／火を渡す") },
-        PlusText = "燃え上がらせる者。毎ターン、燃えている味方の攻撃力を上げ（火が強いほど大きく）、次の手番にいちばん強く振るう味方の火を煽って育てる。自分の火が燃え盛ると、代わりに火を渡す——燃え盛る味方 1〜2 体が、すぐにもう一度動く（放熱の灯った仲間が燃え盛っていれば真っ先に）。燃えている味方は、火に焼かれる代わりにその火で癒える。仲間が焼き尽くし、火を放つたびに、舞った火の粉で自分の火も強まる",
+        PlusText = "燃え上がらせる者。毎ターン、燃えている味方の攻撃力を上げ（火が強いほど大きく）、次の手番にいちばん強く振るう味方の火を煽って育てる。自分の火が燃え盛ると、代わりに火を渡す——燃え盛る味方 1〜2 体が、すぐにもう一度動く（放熱の灯った仲間が燃え盛っていれば真っ先に）。燃えている味方は、火に焼かれる代わりにその火で癒える。仲間が焼き尽くし、火を放つたびに、舞った火の粉で自分の火も強まる。自分の火が燃え盛ってなお煽られると、その火を溜めておき、次に火を渡す相手の火をそのぶん強めてから送り出す。二体に火を渡すときは、溜めた火を放つ仲間に先に渡す——その炎が敵陣を焼き味方を癒してから、熾火が焼き尽くす",
         MinusText = "自分の隣で燃えていない味方は、逆に腕が鈍る。攻撃はしない（贔屓が手番そのもの）。火を渡した相手の手番では、自分の火は育たない",
         Flavor = "人を見る基準はただ一つ。燃えているか、いないか。"
     };

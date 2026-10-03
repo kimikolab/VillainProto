@@ -55,7 +55,7 @@ static partial class FireAtkDiag
         foreach (var (hota, name, card) in new[] { (UnitCatalog.HotaK4, "L0", false), (HotaA1, "L-A1", true), (HotaA2, "L-A2", false) })
             foreach (int lv in new[] { 3, 4 })
             {
-                var ctx = Ctx(Formation.Build(front1: UnitCatalog.Hiyo, back3: hota), Formation.Build(front1: Plain("e1")), out var p, out _);
+                var ctx = Ctx(Formation.Build(front1: UnitCatalog.HiyoM0, back3: hota), Formation.Build(front1: Plain("e1")), out var p, out _);
                 var hy = U(p, "hiyo"); var h = U(p, "hota");
                 SetLv(hy, 1); SetLv(h, lv);
                 var cr = new CountingRandom(0); RngF.SetValue(ctx, cr);
@@ -67,7 +67,7 @@ static partial class FireAtkDiag
             }
         // 燃えていないホタ・ヒヨ（段の札を持たない）への育ちでは起きない
         {
-            var ctx = Ctx(Formation.Build(front1: Plus(UnitCatalog.Hiyo, TraitId.PyreOverflow), back3: HotaA1), Formation.Build(front1: Plain("e1")), out var p, out _);
+            var ctx = Ctx(Formation.Build(front1: Plus(UnitCatalog.HiyoM0, TraitId.PyreOverflow), back3: HotaA1), Formation.Build(front1: Plain("e1")), out var p, out _);
             var hy = U(p, "hiyo"); var h = U(p, "hota");
             SetLv(hy, 4); SetLv(h, 2);
             int ha0 = hy.AtkBonus;
@@ -130,7 +130,7 @@ static partial class FireAtkDiag
             foreach (int lv in new[] { 3, 4 })
             {
                 var pl = hiyoState == 0 ? Formation.Build(front1: Plain("a1", hp: 500), center: borg, back3: UnitCatalog.HotaK4)
-                                        : Formation.Build(front1: Plain("a1", hp: 500), center: borg, back3: UnitCatalog.HotaK4, back1: UnitCatalog.Hiyo);
+                                        : Formation.Build(front1: Plain("a1", hp: 500), center: borg, back3: UnitCatalog.HotaK4, back1: UnitCatalog.HiyoM0);
                 var ctx = Ctx(pl, Formation.Build(front1: Plain("e1", hp: 5000), front3: Plain("e2", hp: 5000)), out var p, out _);
                 var bo = U(p, "borg"); var a1 = U(p, "a1");
                 if (hiyoState == 2) U(p, "hiyo").Hp = 0;
@@ -233,12 +233,12 @@ static partial class FireAtkDiag
 
         // ---- L0 ＝ 第250期までの規定（第251期に L3 を規定にしたので旧の駒に固定）・L3 ＝ 今の規定 ----
         var l0 = VerOf("L0");
-        Expect("L0 の駒 ＝ 第250期までの規定の駒（BorgK4 / HotaK4 / Hiyo・参照）", ReferenceEquals(l0.Borg, UnitCatalog.BorgK4) && ReferenceEquals(l0.Hota, UnitCatalog.HotaK4) && ReferenceEquals(l0.Hiyo, UnitCatalog.Hiyo), true);
-        Expect("旧の駒は第249期 K4（札の数: ボルグ ／ ホタ ／ ヒヨ）", $"{UnitCatalog.BorgK4.Traits.Count}/{UnitCatalog.HotaK4.Traits.Count}/{UnitCatalog.Hiyo.Traits.Count}",
+        Expect("L0 の駒 ＝ 第250期までの規定の駒（BorgK4 / HotaK4 / HiyoM0・参照）", ReferenceEquals(l0.Borg, UnitCatalog.BorgK4) && ReferenceEquals(l0.Hota, UnitCatalog.HotaK4) && ReferenceEquals(l0.Hiyo, UnitCatalog.HiyoM0), true);
+        Expect("旧の駒は第249期 K4（札の数: ボルグ ／ ホタ ／ ヒヨ）", $"{UnitCatalog.BorgK4.Traits.Count}/{UnitCatalog.HotaK4.Traits.Count}/{UnitCatalog.HiyoM0.Traits.Count}",
             $"{UnitCatalog.BorgK0.Traits.Count + 1}/{UnitCatalog.HotaK0.Traits.Count + 2}/{UnitCatalog.HiyoK0.Traits.Count + 1}");
         var l3v = VerOf("L3");
-        Expect("第251期: 規定の札 ＝ L3 の札（並びまで・ボルグ ／ ホタ ／ ヒヨ）", string.Join(",", UnitCatalog.Borg.Traits) == string.Join(",", l3v.Borg.Traits)
-            && string.Join(",", UnitCatalog.Hota.Traits) == string.Join(",", l3v.Hota.Traits) && ReferenceEquals(l3v.Hiyo, UnitCatalog.Hiyo), true);
+        Expect("第251期: 規定の札 ＝ L3 の札（並びまで・ボルグ ／ ホタ ／ ヒヨ・第253期からボルグ・ヒヨは BorgM0 / HiyoM0 と比べる）", string.Join(",", UnitCatalog.BorgM0.Traits) == string.Join(",", l3v.Borg.Traits)
+            && string.Join(",", UnitCatalog.Hota.Traits) == string.Join(",", l3v.Hota.Traits) && ReferenceEquals(l3v.Hiyo, UnitCatalog.HiyoM0), true);
         Expect("新しい札の保持者（`UnitCatalog.All`・規定のボルグ ／ ホタの2枚だけ）", string.Join(",", UnitCatalog.All.Where(d => d.Traits.Any(t => t is TraitId.PyreOverflow or TraitId.PyreFed or TraitId.BurnoutHeavy or TraitId.BlazeSolo)).Select(d => d.Id)), "borg,hota");
 
         Console.WriteLine();
