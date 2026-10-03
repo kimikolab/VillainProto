@@ -199,8 +199,17 @@ public static void Run(string[] args, int stageIndex)
             dvClaude = File.ReadAllText(Path.Combine(dvRoot, "CLAUDE.md"));
         string dvDesignDir = Path.Combine(dvRoot, "design");
         if (Directory.Exists(dvDesignDir))
+        {
             foreach (string f in Directory.GetFiles(dvDesignDir, "LESSONS_*.md").OrderBy(x => x, StringComparer.Ordinal))
                 dvClaude += "\n" + File.ReadAllText(f);
+            // 第259期: `CLAUDE.md` の履歴の節を逐語で移した先も索く（移動で ○ が消えないように。
+            // どれも `PHASE*.md` ではないので「初出」の列には1ビットも効かない）。
+            foreach (string name in new[] { "ENGINE_HOOKS.md", "HISTORY_PHASES.md", "COMMANDS.md", "RULES_INDEX.md", "DEMOAPP_HISTORY.md", "PHASE_INDEX.md" })
+            {
+                string f = Path.Combine(dvDesignDir, name);
+                if (File.Exists(f)) dvClaude += "\n" + File.ReadAllText(f);
+            }
+        }
     }
 
     int[] DvPhases(string name)

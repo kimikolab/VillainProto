@@ -144,7 +144,7 @@ public static void Run(string[] args, int stageIndex)
     }
 
     // ------------------------------------------------------------------------------
-    // (B) 索引の穴（§2）。**`CLAUDE.md` の `→ LESSONS_*.md` の全参照を抜き、
+    // (B) 索引の穴（§2）。**コマンド表（第259期からは `design/COMMANDS.md`）の `→ LESSONS_*.md` の全参照を抜き、
     // その期の節がその文書に実在するかを機械照合する。戦闘0回。**
     // ------------------------------------------------------------------------------
     static (int Refs, List<(int Phase, string File, List<int> Lines)> Missing) RdIndexAudit()
@@ -164,7 +164,9 @@ public static void Run(string[] args, int stageIndex)
             secs[Path.GetFileName(path)] = set;
         }
         var bag = new Dictionary<(int, string), List<int>>();
-        string[] claude = File.ReadAllLines(Path.Combine(root, "CLAUDE.md"));
+        // 第259期: コマンド表は `design/COMMANDS.md` へ移った（無ければ `CLAUDE.md` を読む＝古い worktree）。
+        string cmdTable = Path.Combine(root, "design", "COMMANDS.md");
+        string[] claude = File.ReadAllLines(File.Exists(cmdTable) ? cmdTable : Path.Combine(root, "CLAUDE.md"));
         int refs = 0;
         for (int i = 0; i < claude.Length; i++)
         {
@@ -895,13 +897,13 @@ public static void Run(string[] args, int stageIndex)
 
         // --- 表P-1: (B) の索引照合
         Console.WriteLine();
-        Console.WriteLine("## 表P-1. (B) 索引の穴（`CLAUDE.md` → `design/LESSONS_*.md`）");
+        Console.WriteLine("## 表P-1. (B) 索引の穴（コマンド表 → `design/LESSONS_*.md`）");
         Console.WriteLine();
         var (refs, missing) = RdIndexAudit();
-        Console.WriteLine($"`CLAUDE.md` のコマンド索引にある `→ LESSONS_*.md` の参照を「行 × 期」で数えると **{refs} 件**。");
+        Console.WriteLine($"コマンド表（`design/COMMANDS.md`）の索引にある `→ LESSONS_*.md` の参照を「行 × 期」で数えると **{refs} 件**。");
         Console.WriteLine($"そのうち**参照先にその期の節が実在しないもの**が **{missing.Count} 件**。");
         Console.WriteLine();
-        Console.WriteLine("| 期 | 参照先 | `CLAUDE.md` の行 |");
+        Console.WriteLine("| 期 | 参照先 | コマンド表の行 |");
         Console.WriteLine("|---|---|---|");
         foreach (var (ph, file, lines) in missing)
             Console.WriteLine($"| 第{ph}期 | `{file}` | {string.Join(", ", lines.Select(l => "L" + l))} |");

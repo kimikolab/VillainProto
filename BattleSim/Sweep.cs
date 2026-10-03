@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 // sweep モード（第141期） —— 全診断の exit 検査
 //
 // **第140期の走査（Python の一時スクリプト・CRLF で1度壊れた）をリポジトリの器具にしたもの。**
-// `CLAUDE.md` のコマンド表を**自分で読んで**「引数の穴が無い」コマンドを組み、1本ずつ上限つきで
+// コマンド表（`design/COMMANDS.md`・第259期までは `CLAUDE.md`）を**自分で読んで**「引数の穴が無い」コマンドを組み、1本ずつ上限つきで
 // 子プロセスとして走らせ、exit code と所要を記録する。**戦闘はすべて子プロセスの中**で、
 // このモード自身は盤面に触らない。**標準出力は捨てる**（`> docs/*.md` の向き先も含めて、ファイルは1つも書かない）。
 //
@@ -57,7 +57,7 @@ static class SweepDiag
         "0 fireward pick", "0 fireward run",
     };
 
-    /// <summary>コマンド表の行頭。**連結で組む**（この診断自身が `CLAUDE.md` に載るので、素直に書くと自分の行に当たる＝第123期）。</summary>
+    /// <summary>コマンド表の行頭。**連結で組む**（この診断自身がコマンド表＝`design/COMMANDS.md` に載るので、素直に書くと自分の行に当たる＝第123期）。</summary>
     static readonly string Prefix = string.Concat("    dotnet run --project ", "BattleSim -c Release ");
 
     public static void Run(string[] rest)
@@ -74,12 +74,13 @@ static class SweepDiag
 
         string root = FindRoot() ?? throw new InvalidOperationException("CLAUDE.md と BattleSim/ を持つディレクトリが見つからない（リポジトリの中で回すこと）");
         string dll = typeof(SweepDiag).Assembly.Location;
-        var cmds = Extract(Path.Combine(root, "CLAUDE.md"));
+        // 第259期: コマンド表は `CLAUDE.md` から `design/COMMANDS.md` へ逐語で移った（行の書式は同じ）。
+        var cmds = Extract(Path.Combine(root, "design", "COMMANDS.md"));
         if (filters.Count > 0) cmds = cmds.Where(c => filters.Any(f => c.Contains(f, StringComparison.Ordinal))).ToList();
 
         Console.WriteLine("# 全診断の exit 検査（`sweep`・第141期）");
         Console.WriteLine();
-        Console.WriteLine($"`CLAUDE.md` のコマンド表から引数の穴（`<...>`）の無い行を抜き出し、`[...]` を落として **{cmds.Count} 本**。");
+        Console.WriteLine($"`design/COMMANDS.md` のコマンド表から引数の穴（`<...>`）の無い行を抜き出し、`[...]` を落として **{cmds.Count} 本**。");
         Console.WriteLine($"1本ずつ **{limit} 秒**の上限で子プロセスとして走らせる（標準出力は捨てる・ファイルは書かない）。");
         Console.WriteLine($"`{Path.GetFileName(dll)}` を `{root}` で回す。");
         Console.WriteLine();
@@ -157,7 +158,7 @@ static class SweepDiag
     static string ExitText(int e) => e == 0 ? "0" : e == 124 ? "124（上限）" : unchecked((uint)e) >= 0x80000000u ? $"0x{unchecked((uint)e):X8}" : e.ToString();
     static string Verdict(int e) => e == 0 ? "" : e == 124 ? "上限" : "**異常終了**";
 
-    /// <summary>`CLAUDE.md` から走らせるコマンドを組む。**行を読んでトークンに割る**（連結や文字列の再解釈をしない）。</summary>
+    /// <summary>コマンド表（第259期からは `design/COMMANDS.md`）から走らせるコマンドを組む。**行を読んでトークンに割る**（連結や文字列の再解釈をしない）。</summary>
     public static List<string> Extract(string claudeMd)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
