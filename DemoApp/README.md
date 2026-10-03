@@ -363,8 +363,12 @@ Godot_console.exe --headless --path DemoApp res://StagingEffectCheck.tscn -- --e
 - `assets/campaign_enemy_squad.png`: OpenAI 組み込み画像生成で作成（敵部隊トークン）
 
 画像は本デモ用のオリジナル生成物です。編成画面では通常立ち絵、戦闘中は透過済みの戦闘待機立ち絵、勝利後は生存者の通常立ち絵を使います。専用シェーダーは透過画像のアルファを保持し、明るい中性色背景の画像だけ背景色を抜きます。個別立ち絵が無いユニットは従来の `outcast_atlas.png` へフォールバックします。
-# 燃焼演出の追加確認
+
+## 燃焼演出の追加確認
 
 `Godot_console.exe --path DemoApp res://StagingEffectCheck.tscn -- --effect=fire-hit`
 で被弾の燃焼を単独再生する。`--verify` は本番の再戦・数字・最終HPも検査する。
 進捗と仕様の範囲は `design/CODEX_FIRE_PROGRESS.md` に記録する。
+
+`--effect=fire-growth` / `--effect=fire-gift` は守りによる育ち・大剣の溜め火・
+渡す火・ボルグ→ホタのギフト手番を確認する。炎の量は台本の解放量、威力の数字は `Attack.Amount` を使う。

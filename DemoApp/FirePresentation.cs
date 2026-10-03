@@ -2,7 +2,7 @@ using BattleCore;
 using System.Collections.Generic;
 
 // 台本の見出しを、その書き手の次の攻撃だけへ結ぶ。戦闘ルールは読み直さない。
-public sealed record FireAttackCue(string Kind, int Level, int Ordinal);
+public sealed record FireAttackCue(string Kind, int Level, int Ordinal, int Stored = 0, int Percent = 0);
 internal enum FireAllyOutcome { Quiet, Heal, Damage }
 
 internal sealed class FirePresentation
@@ -14,19 +14,23 @@ internal sealed class FirePresentation
         or FireLevelLabels.GrowSpread or FireLevelLabels.GrowStoke or FireLevelLabels.GrowSelf
         or FireLevelLabels.GrowCall or FireLevelLabels.GrowFoe or FireLevelLabels.GrowSpark
         or FireLevelLabels.GrowCritical or FireLevelLabels.GrowRadiate
+        or FireLevelLabels.GrowGuard or FireLevelLabels.KindleOpen or FireLevelLabels.GiftHoard
         or FireLevelLabels.Wilt or FireLevelLabels.Out or FireLevelLabels.Spent;
 
     internal FirePresentation(IReadOnlyList<BattleEvent> events)
     {
         var pending = new Dictionary<int, FireAttackCue>();
+        var released = new Dictionary<int, (int Count, int Percent)>();
         for (int i = 0; i < events.Count; i++)
         {
             var e = events[i];
             if (e.Kind == BattleEventKind.FireArmor && e.Text == FireArmorLabels.BlazeAlly)
                 AllyOutcomes[i] = ReadAllyOutcome(events, i);
-            if (e.Kind == BattleEventKind.TurnStart) pending.Clear();
+            if (e.Kind == BattleEventKind.TurnStart) { pending.Clear(); released.Clear(); }
             if (e.Kind == BattleEventKind.Death && e.TargetId is int dead) pending.Remove(dead);
             if (e.ActorId is not int actor) continue;
+            if (e.Kind == BattleEventKind.FireLevel && e.Text == FireLevelLabels.HoardRelease)
+                released[actor] = (e.Amount, e.Slot);
             if (e.Kind == BattleEventKind.FireLevel && e.Text is FireLevelLabels.Stage
                 or FireLevelLabels.Lance or FireLevelLabels.Critical or FireLevelLabels.Unleash
                 or FireLevelLabels.Burnout or FireLevelLabels.Rain or FireLevelLabels.Embers
@@ -34,7 +38,11 @@ internal sealed class FirePresentation
                 pending[actor] = new(e.Text!, e.Text is FireLevelLabels.Critical or FireLevelLabels.Blaze ? 4
                     : e.Text == FireLevelLabels.Lance ? 3 : e.Text == FireLevelLabels.EmbersHit ? 1 : e.Amount, e.Slot);
             if (e.Kind == BattleEventKind.Attack && pending.Remove(actor, out var cue))
+            {
+                if (cue.Kind == FireLevelLabels.Blaze && released.Remove(actor, out var hoard))
+                    cue = cue with { Stored = hoard.Count, Percent = hoard.Percent };
                 Attacks[i] = cue;
+            }
         }
         foreach (var (index, cue) in Attacks)
         {

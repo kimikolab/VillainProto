@@ -7,7 +7,7 @@ public partial class BattlefieldView3D
 {
     internal int FireBlazePlays, FireEmbersHitPlays;
 
-    private async Task FireBlaze(BattlePawn3D actor, BattlePawn3D[] hits, double speed)
+    private async Task FireBlaze(BattlePawn3D actor, BattlePawn3D[] hits, double speed, int stored = 0)
     {
         int generation = _fireGeneration;
         int soundGeneration = _attackAudio.FireSoundGeneration;
@@ -15,13 +15,16 @@ public partial class BattlefieldView3D
             && IsInstanceValid(actor) && actor.IsInsideTree() && actor.Hp > 0;
         async Task Wait(double seconds) => await ToSignal(GetTree().CreateTimer(Math.Max(0.001, seconds / speed)), SceneTreeTimer.SignalName.Timeout);
         FireBlazePlays++;
+        // 台本の解放量だけで炎の量を変える。威力はAttack.Amountの表示に任せる。
+        float abundance = 1 + Math.Min(Math.Max(0, stored), 12) * 0.10f;
         actor.ShowMovementPortrait("borg_guard", 0.7);
         FireShade(actor, 1.3 / speed);
         _attackAudio.PlayFireSound("charge", speed, 0.44);
         // 鎧へ圧縮してから、ボルグを中心に全方向へ爆ぜる。
-        for (int i = 0; i < 8; i++)
+        int streams = 8 + Math.Min(Math.Max(0, stored), 12);
+        for (int i = 0; i < streams; i++)
         {
-            float a = i * Mathf.Tau / 8;
+            float a = i * Mathf.Tau / streams;
             Vector3 edge = actor.FxPoint + _camera.GlobalBasis.X * Mathf.Cos(a) * 2.0f
                 + _camera.GlobalBasis.Y * Mathf.Sin(a) * 1.6f;
             FireFx.Ribbon(_fxRoot, edge, actor.FxPoint, new("ff8a37"), 0.11f, 0.15f, 0.42 / speed, _camera.GlobalBasis.Z);
@@ -33,7 +36,7 @@ public partial class BattlefieldView3D
         actor.PulseFireGift();
         FireImpactCamera(actor.FxPoint, speed, 0.85f);
         _attackAudio.PlayFireSound("blaze", speed);
-        FireFx.Bloom(_fxRoot, actor.FxPoint, new("ff8b2c"), 10.5f, 0.64 / speed);
+        FireFx.Bloom(_fxRoot, actor.FxPoint, new("ff8b2c"), 10.5f * abundance, 0.64 / speed);
         FireFx.Bloom(_fxRoot, actor.FxPoint, new("fff0bb"), 5.5f, 0.18 / speed, 7);
         FireUltimateFx.Sparks(_fxRoot, actor.FxPoint, _camera, 0.70 / speed);
         for (int i = 0; i < 3; i++)
@@ -50,7 +53,7 @@ public partial class BattlefieldView3D
         {
             if (!IsInstanceValid(hit)) continue;
             FireUltimateFx.Pillar(_fxRoot, hit.GlobalPosition + Vector3.Up * 0.05f,
-                3.8f, 2.8f, 0.6 / speed, _camera, false);
+                3.8f * abundance, 2.8f * abundance, 0.6 / speed, _camera, false);
             FireFx.Bloom(_fxRoot, hit.FxPoint, new("ffad4a"), 3.5f, 0.42 / speed);
             FireFx.Light(_fxRoot, hit.FxPoint, new("ffad4a"), 1.8f, 0.35 / speed);
             NotifyAttackContact(hit);

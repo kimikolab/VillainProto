@@ -22,6 +22,13 @@ public partial class StagingEffectCheck : Control
                 GetTree().Quit();
                 return;
             }
+            if (mode is "fire-growth" or "fire-gift")
+            {
+                await CheckFireGrowth(field);
+                GD.Print("STAGING_EFFECT_CHECK_OK " + mode + " guard hoard gift order blaze burnout restart");
+                GetTree().Quit();
+                return;
+            }
             if (mode == "fire-tick")
             {
                 await CheckFireTicks(field);

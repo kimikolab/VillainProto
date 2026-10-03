@@ -92,6 +92,10 @@ public partial class BattlePawn3D
     private void ClearFireVisual()
     {
         ClearFirePower();
+        SetFireHoard(0);
+        SetFireGiftHoard(0);
+        SetFireGiftOrder(0);
+        UpdateFireGrowth();
         FireLevel = 0;
         _fireRemaining = 1;
         FireInvasive = false;
@@ -110,6 +114,7 @@ public partial class BattlePawn3D
         if (_fireBodyMaterial is null) return;
         float dt = delta * (float)Math.Clamp(AnimationSpeed, 0.1, 8);
         _fireClock += dt;
+        UpdateFireGrowth();
         _firePulse = Math.Max(0, _firePulse - dt * 2);
         _fireSpent = Math.Max(0, _fireSpent - dt * 2.5f);
         int level = Math.Max(1, FireLevel);

@@ -87,6 +87,14 @@ void fragment(){
                 target?.SetFireLevel(e.Amount, e.Text == FireLevelLabels.Spent);
                 if (target is null) return 0;
                 tint = FireFx.ColorOf(e.Amount);
+                if (e.Text == FireLevelLabels.GiftHoard)
+                {
+                    actor?.SetFireGiftHoard(0);
+                    target.PulseFireGift();
+                    FireFlow(actor, target, tint, speed, true);
+                    FireGiftFx.Dial(_fxRoot, target, _camera, false, 0.30 / speed);
+                    return 0.18;
+                }
                 if (e.Text == FireLevelLabels.Out)
                     FireFx.Bloom(_fxRoot, target.FxPoint, new Color("87858b"), 2, 0.65 / speed, 5);
                 else if (e.Text == FireLevelLabels.Spent)
@@ -106,6 +114,12 @@ void fragment(){
                 case FireLevelLabels.Fed:
                     ShowFireFuel(actor, target, e, speed);
                     return 0.22;
+                case FireLevelLabels.KindleGuard:
+                case FireLevelLabels.Hoard:
+                case FireLevelLabels.HoardRelease:
+                case FireLevelLabels.GiftHoardAdd:
+                case FireLevelLabels.GiftOrder:
+                    return ShowFireGrowth(e, actor, target, speed);
                 case FireLevelLabels.BlazeSolo:
                     Float(actor, "独りで解放", new("ffb773"), true);
                     actor?.PulseFireGift();
@@ -116,6 +130,7 @@ void fragment(){
                     _attackAudio.PlayFireSound("flow");
                     return 0.28;
                 case FireLevelLabels.Gift:
+                    target?.SetFireGiftOrder(e.Slot);
                     actor?.ShowMovementPortrait("hiyo_gift", 0.9);
                     if (actor is not null && target is not null)
                     {
@@ -126,6 +141,7 @@ void fragment(){
                     _attackAudio.PlayFireSound("gift");
                     return 0.68;
                 case FireLevelLabels.GiftTurn:
+                    target?.SetFireGiftOrder(0);
                     if (target is not null)
                     {
                         _attackAudio.PlayFireSound("gift_turn");
@@ -239,7 +255,7 @@ void fragment(){
         Color color = FireFx.ColorOf(rain ? 3 : level);
         var hits = targets.Count > 0 ? targets.Distinct().ToArray() : new[] { target };
         if (burnout) { await FireSwordSlam(actor, hits, speed); return; }
-        if (cue.Kind == FireLevelLabels.Blaze) { await FireBlaze(actor, hits, speed); return; }
+        if (cue.Kind == FireLevelLabels.Blaze) { await FireBlaze(actor, hits, speed, cue.Stored); return; }
         if (cue.Kind == FireLevelLabels.EmbersHit) { await FireEmbersHit(actor, target, cue.Ordinal, speed); return; }
         if (sweep) { await FireGreatCleave(actor, hits, speed); return; }
         if (rain)
