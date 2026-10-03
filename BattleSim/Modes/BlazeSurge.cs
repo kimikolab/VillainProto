@@ -80,7 +80,7 @@ static partial class BlazeSurgeDiag
 
     internal static Dictionary<(string B, string V, int W, int S), SAgg> _s = new();
     internal static Dictionary<(string B, string V, int W, int S), GO.OAgg> _o = new();
-    static FB.Ver[] _vers = Versions;
+    internal static FB.Ver[] _vers = Versions;
     internal static SAgg SAt(string b, string v, int w, int s) => _s[(b, v, w, FK.IsTarget(w) ? 0 : s)];
 
     static void Setup(FB.Ver[] vers, bool refs)

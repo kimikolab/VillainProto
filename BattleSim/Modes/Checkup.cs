@@ -232,7 +232,10 @@ public static void Run(string[] args, int stageIndex)
         // 第254期: 保持者 0 枚（版は `blazesurge` のローカルの駒）。
         [TraitId.BlazeSurge2]    = (HcBothL, "爆炎で当たった敵と味方の火勢を +2——味方の燃焼の刻みも回数が増える"),
         [TraitId.BlazeSurgeMax]  = (HcBothL, "爆炎で当たった敵と味方の火勢を 4 に——味方の燃焼の刻みも回数が増える"),
-        [TraitId.BurnHitAdd] = (HcBothL, "燃えている駒が殴られるたび燃焼が燃え上がる——敵にも味方にも同じ"),
+        // 第257期: 保持者 0 枚（版は `foesurge` のローカルの駒）。
+        [TraitId.BlazeFoeSurge2]   = (HcPlusL, "爆炎で当たった敵だけ火勢を +2 するだけ（味方は上げない）"),
+        [TraitId.BlazeFoeSurgeMax] = (HcPlusL, "爆炎で当たった敵だけ火勢を 4 にするだけ（味方は上げない）"),
+        [TraitId.BurnHitAdd] =(HcBothL, "燃えている駒が殴られるたび燃焼が燃え上がる——敵にも味方にも同じ"),
         [TraitId.BurnHitSplit] = (HcBothL, "燃焼を被弾で燃え上がらせ、ターン頭の刻みを 6 に——敵にも味方にも同じ"),
         [TraitId.BurnHitSplitOnce] = (HcBothL, "被弾の燃焼（分担）を1回の攻撃で同じ駒1回まで——敵にも味方にも同じ"),
         [TraitId.BurnHitCount] = (HcPlusL, "被弾の燃焼が起きうる一撃を数えるだけ（盤面は動かない）"),

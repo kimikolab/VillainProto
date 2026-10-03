@@ -559,6 +559,8 @@ public enum TraitId
     BlazeSurge2,    // 爆炎・上げ2（第254期・ボルグの版 V2）: 爆炎で当たった敵と味方（ボルグ以外）の火勢を +2（上限 4・+1 ずつ2回の育ちとして通す＝4 を超えた分はあぶれた火）。爆炎・独りでも同じ。**判定は engine**（`BigMove`・`BlazeAllies`・`BlazeSurge`）。保持者 0 枚
     BlazeSurgeMax,  // 爆炎・上げ満（第254期・ボルグの版 V4）: 爆炎で当たった敵と味方（ボルグ以外）の火勢を 4 に（既に 4 なら +1 の育ち1回＝あぶれた火1回分）。爆炎・独りでも同じ。**判定は engine**（`BigMove`・`BlazeAllies`・`BlazeSurge`）。保持者 0 枚
     BurnHitAdd,     // 被弾の燃焼・足す（第255期・版 H-足す）: 燃えている駒が出どころのある一撃を受けるたび（その一撃より前から燃えていたときだけ・刻み／徴収／中継／呪いの共有／逸らしの受け渡し／放電／澱みの爆発は除く）、燃焼 6 を火勢の回数だけ刻む（刻みと同じ規則・残りターンは減らさない）。ターン頭の刻みはそのまま。**保持者が戦に出ていれば両陣営に効く**。**判定は engine**（`ApplyDamageCore`・`BurnOnHit`）。保持者 0 枚
+    BlazeFoeSurge2,   // 爆炎・敵上げ2（第257期・ボルグの版 W2）: 爆炎で当たった**敵だけ**、火勢を +2（上限 4・+1 ずつ2回の育ちとして通す。燃えていなかった敵は爆炎の着火で 1 → 3）。味方は上げない。爆炎・独りでも同じ。**判定は engine**（`BigMove`・`BlazeSurge`）。保持者 0 枚
+    BlazeFoeSurgeMax, // 爆炎・敵上げ満（第257期・ボルグの版 W4）: 爆炎で当たった**敵だけ**、火勢を 4 に（既に 4 なら +1 の育ち1回）。味方は上げない。爆炎・独りでも同じ。**判定は engine**（`BigMove`・`BlazeSurge`）。保持者 0 枚
     BurnHitSplit,   // 被弾の燃焼・分担（第255期・版 H-分担）: 被弾の燃焼は H-足す と同じ・ターン頭の燃焼の刻みは火勢に関わらず 6 × 1。両陣営。**判定は engine**（`TickStatuses`・`BurnOnHit`）。保持者 0 枚
     BurnHitSplitOnce, // 被弾の燃焼・分担1（第255期・版 H-分担1）: H-分担 ＋ 1回の攻撃（手番の一振り全体・手番の外の1回の攻撃）で同じ駒は1回まで。**判定は engine**（`BurnHitScope`）。保持者 0 枚
     BurnHitCount,   // 被弾の燃焼の機会を数える（第255期・**計数専用**）: 盤面を1ビットも動かさず、被弾の燃焼が起きうる一撃（その一撃より前から燃えていた駒が出どころのある一撃で HP か破片を減らした）を数えるだけ。Phase 0 の材料。保持者 0 枚
@@ -13323,6 +13325,7 @@ public static class FireLevelRule
         || u.HasTrait(TraitId.FavorLevel) || u.HasTrait(TraitId.UnleashBlaze) || u.HasTrait(TraitId.EmbersChain) || u.HasTrait(TraitId.TickOnce)   // 第249期
         || u.HasTrait(TraitId.PyreOverflow) || u.HasTrait(TraitId.PyreFed) || u.HasTrait(TraitId.BurnoutHeavy) || u.HasTrait(TraitId.BlazeSolo)   // 第250期
         || u.HasTrait(TraitId.BlazeSurge2) || u.HasTrait(TraitId.BlazeSurgeMax)   // 第254期
+        || u.HasTrait(TraitId.BlazeFoeSurge2) || u.HasTrait(TraitId.BlazeFoeSurgeMax)   // 第257期
         || FireKindleRule.Holds(u);   // 第252期
 }
 
@@ -13696,6 +13699,9 @@ public sealed class GiftOrderTrait : Trait { public override TraitId Id => Trait
 public sealed class BlazeSurge2Trait : Trait { public override TraitId Id => TraitId.BlazeSurge2; }
 /// <summary>爆炎・上げ満（第254期・ボルグ V4）。engine の `BigMove`・`BlazeAllies` が読む（爆炎で当たった駒の火勢を 4 に）。</summary>
 public sealed class BlazeSurgeMaxTrait : Trait { public override TraitId Id => TraitId.BlazeSurgeMax; }
+/// <summary>爆炎・敵上げ2 ／ 敵上げ満（第257期・ボルグ W2 ／ W4）。engine の `BigMove` が読む（爆炎で当たった敵だけ火勢を上げる・味方は上げない）。</summary>
+public sealed class BlazeFoeSurge2Trait : Trait { public override TraitId Id => TraitId.BlazeFoeSurge2; }
+public sealed class BlazeFoeSurgeMaxTrait : Trait { public override TraitId Id => TraitId.BlazeFoeSurgeMax; }
 /// <summary>被弾の燃焼（第255期・版 H-足す ／ H-分担 ／ H-分担1 ／ H-敵だけ）。engine の `ApplyDamageCore`・`TickStatuses` が読む。札そのものは挙動を持たない。</summary>
 public sealed class BurnHitAddTrait : Trait { public override TraitId Id => TraitId.BurnHitAdd; }
 public sealed class BurnHitSplitTrait : Trait { public override TraitId Id => TraitId.BurnHitSplit; }
@@ -15897,6 +15903,8 @@ public static class TraitCatalog
         new GiftOrderTrait(),        // 第253期
         new BlazeSurge2Trait(),      // 第254期
         new BlazeSurgeMaxTrait(),    // 第254期
+        new BlazeFoeSurge2Trait(),   // 第257期
+        new BlazeFoeSurgeMaxTrait(), // 第257期
         new BurnHitAddTrait(),       // 第255期
         new BurnHitSplitTrait(),     // 第255期
         new BurnHitSplitOnceTrait(), // 第255期

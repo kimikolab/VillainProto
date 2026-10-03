@@ -243,7 +243,7 @@ static partial class BlazeSurgeDiag
     // ---------------------------------------------------------------------------------
     // 表
     // ---------------------------------------------------------------------------------
-    static void TableQ02()
+    internal static void TableQ02()
     {
         Console.WriteLine("## 表Q —— 爆炎の瞬間のホタ ／ ヒヨの火勢と、同じギフトの中のホタの手番（Q0-2）");
         Console.WriteLine();
@@ -262,7 +262,7 @@ static partial class BlazeSurgeDiag
         Console.WriteLine();
     }
 
-    static void TableB()
+    internal static void TableB()
     {
         Console.WriteLine("## 表B —— ホタの焼き尽くす（/戦）と、爆炎の直後（同じギフトで先に動いたボルグが爆炎）に撃った回数（/戦・与ダメ/回・倒した/回）");
         Console.WriteLine();
@@ -277,7 +277,7 @@ static partial class BlazeSurgeDiag
         Console.WriteLine();
     }
 
-    static void TableC()
+    internal static void TableC()
     {
         Console.WriteLine("## 表C —— 爆炎の上げでホタに入った攻撃力（あぶれた火・/戦 ／ /爆炎）と、爆炎の後のホタの最初の1発（攻撃の値・焼き尽くすだった %）");
         Console.WriteLine();
@@ -294,7 +294,7 @@ static partial class BlazeSurgeDiag
         Console.WriteLine();
     }
 
-    static void TableD()
+    internal static void TableD()
     {
         Console.WriteLine("## 表D —— ヒヨのギフトの間隔（回/戦・間隔 1 ／ 2 ／ 3 ／ 4以上 の %）と、爆炎の上げで溜まった渡す火（/戦）");
         Console.WriteLine();
@@ -311,7 +311,7 @@ static partial class BlazeSurgeDiag
         Console.WriteLine();
     }
 
-    static void TableE()
+    internal static void TableE()
     {
         Console.WriteLine("## 表E —— 延焼（/戦・火勢4 で倒れた敵/戦）と、爆炎で倒した敵 ／ 爆炎の後に倒れた敵（同じ周回 ／ 次の周回・/爆炎）");
         Console.WriteLine();
@@ -326,7 +326,7 @@ static partial class BlazeSurgeDiag
         Console.WriteLine();
     }
 
-    static void TableF()
+    internal static void TableF()
     {
         Console.WriteLine("## 表F —— 爆炎の瞬間の敵の火勢（爆炎の一撃の後に生きていた敵・上げる前 → 後・0〜4 の %）と、上げの帳簿・脆さの上乗せの名目（/戦）");
         Console.WriteLine();
@@ -344,7 +344,7 @@ static partial class BlazeSurgeDiag
     }
 
     static readonly string[] SoloKinds = { "火の癒し", "火の変換", "反転", "受けた", "焼かれない" };
-    static void TableG()
+    internal static void TableG()
     {
         Console.WriteLine("## 表G —— 爆炎・独り（雷＋ボルグ）: 味方への燃焼ダメージの行き先と、味方の燃焼の刻み");
         Console.WriteLine();
@@ -364,7 +364,7 @@ static partial class BlazeSurgeDiag
         Console.WriteLine();
     }
 
-    static void TableH()
+    internal static void TableH()
     {
         Console.WriteLine("## 表H —— 周回の頭に同時に火勢4 の味方の数（生きている味方の平均・括弧は 3 体以上の %）と、爆炎の次の周回 ／ 次の次の周回の平均");
         Console.WriteLine();

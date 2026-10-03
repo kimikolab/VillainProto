@@ -3636,6 +3636,10 @@ public static class FireLevelLabels
     /// 敵の分は爆炎の敵への一撃（<c>Attack</c> / <c>Damage</c>）の後・「爆炎・味方」より前に生き残った敵の席番号の順、味方の分は「爆炎・味方」の燃焼ダメージ（か回復）の直後。
     /// 上限を超えた分は直前に「あぶれた火」（ホタ）／「渡す火・溜め」（ヒヨ）が出る。<b>表示専用。</b></summary>
     public const string BlazeSurge = "爆炎・上げ";
+    /// <summary>第257期（爆炎・敵上げ・ボルグの `BlazeFoeSurge2` ／ `BlazeFoeSurgeMax`）: 爆炎で当たった<b>敵だけ</b>の火勢を上げた（敵1体ごとに1件・味方には出ない）。
+    /// <c>ActorId</c> ＝ ボルグ ／ <c>TargetId</c> ＝ 上げた敵 ／ <c>Amount</c> ＝ 上げた後の火勢 ／ <c>Slot</c> ＝ 上げる前の火勢（爆炎の着火の後なので 1 以上）。
+    /// 爆炎の敵への一撃（<c>Attack</c> / <c>Damage</c>）の後・「爆炎・味方」より前に、生き残った敵の席番号の順で続けて出る（＝「敵の火が一斉に跳ね上がる」瞬間）。<b>表示専用。</b></summary>
+    public const string BlazeFoeSurge = "爆炎・敵上げ";
     /// <summary>第245期: 見出し: 延焼。<c>ActorId</c> ＝ 火勢4 で倒れた敵 ／ <c>TargetId</c> ＝ 隣の生きている敵 ／ <c>Slot</c> ＝ 1 燃えていなかった（続いて「点く」と「育つ・敵」で火勢2）／ 2 燃えていた（続いて「育つ・敵」で +1）。</summary>
     public const string FoeSpread = "延焼";
     /// <summary>第249期: 見出し: 爆炎（放つの代わり・`放つ` と「撃った」の直後）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ボルグ ／ <c>Amount</c> ＝ 味方への燃焼ダメージの量（ボルグの攻撃力 ×1）。
