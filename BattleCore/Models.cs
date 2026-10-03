@@ -246,7 +246,18 @@ public sealed class UnitState
     /// </summary>
     public int WhetReceived { get; set; }
 
-    public IReadOnlyList<Trait> Traits { get; init; } = Array.Empty<Trait>();
+    public IReadOnlyList<Trait> Traits
+    {
+        get => _traits;
+        init { _traits = value; ControlProof = value.Any(t => t.BlocksControl); }
+    }
+    private readonly IReadOnlyList<Trait> _traits = Array.Empty<Trait>();
+
+    /// <summary>
+    /// 手番を奪う状態を受け付けない駒か（第261期・<see cref="Trait.BlocksControl"/>）。<see cref="Traits"/> を入れたときに1回だけ求める
+    /// ——<see cref="SetCounter"/> は熱い経路なので、保持者がいなければ bool の比較1つで抜ける。
+    /// </summary>
+    public bool ControlProof { get; private init; }
 
     /// <summary>特性が自由に使えるカウンタ置き場。特性ごとにキーを分ける。</summary>
     public Dictionary<string, int> Counters { get; } = new();
@@ -401,6 +412,9 @@ public sealed class UnitState
     /// </summary>
     public void SetCounter(string key, int v)
     {
+        // 第261期: 手番を奪う状態（痺れ・転倒・組み付き・竦み・混乱）を受け付けない駒は、**入口で付かない**（支援拒否と同じ作法）。
+        // 書き手は何十箇所あってもここを通るので、塞ぎ漏れが出ない。付かないので「動けない駒」を読む札も効かない。
+        if (ControlProof && v > 0 && StatusKeys.IsControl(key)) return;
         int delta = v - (Counters.TryGetValue(key, out int had) ? had : 0);
         Counters[key] = v;
         if (delta > 0) Board?.NoteStatusGain(this, key, delta);

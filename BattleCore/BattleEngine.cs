@@ -353,6 +353,13 @@ public static class StatusKeys
     public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted, Concentrated, Numbed, Guren, Stigma, Plank, Shock };
 
     /// <summary>
+    /// 手番を奪う状態（第261期）: 痺れ・転倒・組み付き・竦み・混乱。<see cref="Trait.BlocksControl"/> の保持者には付かない（<c>UnitState.SetCounter</c> の入口）。
+    /// まどろみ（巨躯の腹）と <c>CanAct</c> の否決は本人の札なので入れない。萎縮・毒の鈍りは一撃を軽くするだけなので入れない。
+    /// </summary>
+    public static readonly string[] Control = { Stun, Stagger, Grappled, Cowed, Confused };
+    public static bool IsControl(string key) => key is Stun or Stagger or Grappled or Cowed or Confused;
+
+    /// <summary>
     /// キーの表示名。<b>ログと診断が同じ名前を使うためだけ</b>にある（規則は1つも読まない）。
     /// <see cref="BattleContext"/> のスナップショット用ラベルと重複するが、あちらは
     /// 「台本に載せる継続効果」の一覧で、こちらは全キーの索引——目的が違うので分けてある。

@@ -576,6 +576,7 @@ public enum TraitId
     BossMendHalf,   // 半ば癒える（第260期・ボス B-半）: ターン頭に自分を最大HPの 50% 回復（HP のみ）。保持者 0 枚
     BossRise4,      // 天井・4（第260期・ボス）: 攻撃力が毎ターン +4（線形・ターン数からの再計算で、強化の窓口を通らない・横取りされない）。保持者 0 枚
     BossRise8,      // 天井・8（第260期・ボス）: 同上で +8。保持者 0 枚
+    BossSteadfast,  // 動じない（第261期・ボス）: 手番を奪う状態（痺れ・転倒・組み付き・竦み・混乱）が付かない（入口 `UnitState.SetCounter`）。毒・燃焼・感電のダメージと層は通る。保持者 0 枚
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -596,6 +597,9 @@ public abstract class Trait
 
     /// <summary>true を返すと、この駒は回復・強化・弱体をすべて受け付けなくなる。</summary>
     public virtual bool BlocksSupport => false;
+
+    /// <summary>true を返すと、この駒には手番を奪う状態（<see cref="StatusKeys.Control"/>）が付かなくなる（第261期・入口は <c>UnitState.SetCounter</c>）。</summary>
+    public virtual bool BlocksControl => false;
 
     public virtual void OnBattleStart(BattleContext ctx, UnitState self) { }
     public virtual void OnTurnStart(BattleContext ctx, UnitState self) { }
@@ -13771,6 +13775,17 @@ public sealed class BossMendTrait : Trait
 /// <b>蓄積ではなくターン数からの再計算</b>——<c>AtkBonus</c> に積まないので、弱体の窓口（<c>Dull</c>）にも横取りにも触れず、会戦の境界で消す必要もない。
 /// 「耐えればいずれ勝てる」を消す装置。
 /// </summary>
+/// <summary>
+/// 動じない（第261期・1ターン火力チェック波のボスだけ）。<b>手番を奪う状態（痺れ・転倒・組み付き・竦み・混乱）が付かない</b>。
+/// 支援拒否（<see cref="StoicTrait"/>）と同じく札は印を返すだけで、判定は入口（<c>UnitState.SetCounter</c>）にある。
+/// 毒・燃焼・感電の<b>ダメージと層は通る</b>（削りの軸は生かし、制御の軸だけをこの波の解答から外す）。
+/// </summary>
+public sealed class BossSteadfastTrait : Trait
+{
+    public override TraitId Id => TraitId.BossSteadfast;
+    public override bool BlocksControl => true;
+}
+
 public sealed class BossRiseTrait : Trait
 {
     public const int Low = 4, High = 8;
@@ -15991,6 +16006,7 @@ public static class TraitCatalog
         new BossMendTrait(TraitId.BossMendHalf, BossMendTrait.HalfPct), // 第260期
         new BossRiseTrait(TraitId.BossRise4, BossRiseTrait.Low),       // 第260期
         new BossRiseTrait(TraitId.BossRise8, BossRiseTrait.High),      // 第260期
+        new BossSteadfastTrait(),                                      // 第261期
         new BurnHitAddTrait(),       // 第255期
         new BurnHitSplitTrait(),     // 第255期
         new BurnHitSplitOnceTrait(), // 第255期
