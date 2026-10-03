@@ -378,6 +378,12 @@
 | `GiftOrder` | 火選りのヒヨ |
 | `MendGlow` | - |
 | `TickOnce` | - |
+| `CheckMend30` | - |
+| `CheckMend50` | - |
+| `BossMendFull` | - |
+| `BossMendHalf` | - |
+| `BossRise4` | - |
+| `BossRise8` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
