@@ -1,35 +1,60 @@
 using BattleCore;
 using static Common;
 
-// checkwave run —— 第261期 段2・段3（重装兵の体の癒し手 W-* ・動じないボス B-*）と採否の表。
+// checkwave run261 ／ run —— 第261期・第262期の段2・段3 と採否の表（版の組を `RunSpec` で渡す。第261期の出力は第261期の `run` と全行一致）。
 static partial class CheckWaveDiag
 {
     /// <summary>報告書 §2 の予測の順（倒しT は早い順・崩れ始めは早い順）。測る前に固定した。</summary>
     static readonly string[] PredKill = { "燃焼 T3-244", "燃焼 T3-255", "雷", "混ぜ-255", "移動" };
 
-    static partial void RunImpl()
+    /// <summary>1期ぶんの表の組。<c>Waves</c> は（表の列名, 版）。<c>Tv</c> ／ <c>Bv</c> は判定に使う版、<c>TvRows</c> ／ <c>BossRows</c> は表B ／ 表C に並べる行。</summary>
+    internal sealed record RunSpec(string Header, string Intro, CWave[] Listed, string ControlsLine, (string Key, CWave W)[] Waves,
+        string[] Cols, string[] Tv, string[] TvRows, string[] Bv, string[] BossRows, bool Heals = false);
+
+    static RunSpec Spec261 => new(
+        "# 第261期 段2・段3 —— 重装兵の体の癒し手 ＋ 動じないボス（6台 × 6版・倍率なし・seed 0..199）",
+        $"打ち切り {BossTurns} ターン（撃破が {BossTurns} ターンを超えた勝ちは負けに数える）。癒し手は城塞の重装兵（145/12/3）の写し＋札1枚。ボスは攻12・速5・単体＋「動じない」。",
+        CheckWaves,
+        "- 対照: `第四波`（倍率なし）・`260:T-50後`（司祭の体の癒し手）・`260:B-全4`（動じない無し・HP 3,000）",
+        CheckWaves.Select(c => (c.Name, c)).Append((Copy4.Name, Copy4)).Append(("260:T-50後", CWave260("T-50後"))).Append(("260:B-全4", CWave260("B-全4"))).ToArray(),
+        new[] { "第四波", "第四波写し", "260:T-50後", "W-30後", "W-50後", "W-50奥", "260:B-全4", "B-全4", "B-半4", "B-参500" },
+        new[] { "W-30後", "W-50後", "W-50奥" }, new[] { "260:T-50後", "W-30後", "W-50後", "W-50奥" },
+        new[] { "B-全4", "B-半4" }, new[] { "260:B-全4", "B-全4", "B-半4", "B-参500" });
+
+    static RunSpec Spec262 => new(
+        "# 第262期 段2・段3 —— 400/300 の第四波＋癒し手 ／ 全体攻撃の動じないボス（6台 × 5版・seed 0..199）",
+        $"打ち切り {BossTurns} ターン（撃破が {BossTurns} ターンを超えた勝ちは負けに数える）。手数チェックは倍率 400/300（癒し手も 580/36/3・回復 50 は倍率に乗らない）。ボスは倍率なし・HP 3,000・攻12・速5・**全体**＋「動じない」。",
+        CheckWaves262,
+        "- 対照: `第四波`（倍率なし）・`261:W-50後`（倍率なしの重装兵の体の癒し手）・`261:B-全4`（単体の動じないボス）",
+        CheckWaves262.Select(c => (c.Name, c)).Append(("261:W-50後", CWaveOf("261:W-50後"))).Append(("261:B-全4", CWaveOf("261:B-全4"))).ToArray(),
+        new[] { "第四波", "W2-対照", "261:W-50後", "W2-50後", "W2-50奥", "261:B-全4", "B2-全4", "B2-半4" },
+        new[] { "W2-50後", "W2-50奥" }, new[] { "W2-対照", "261:W-50後", "W2-50後", "W2-50奥" },
+        new[] { "B2-全4", "B2-半4" }, new[] { "261:B-全4", "B2-全4", "B2-半4" }, Heals: true);
+
+    static void Run261() => RunSet(Spec261);
+    static partial void RunImpl() => RunSet(Spec262);
+
+    static void RunSet(RunSpec s)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        Console.WriteLine("# 第261期 段2・段3 —— 重装兵の体の癒し手 ＋ 動じないボス（6台 × 6版・倍率なし・seed 0..199）");
+        Console.WriteLine(s.Header);
         Console.WriteLine();
-        Console.WriteLine($"打ち切り {BossTurns} ターン（撃破が {BossTurns} ターンを超えた勝ちは負けに数える）。癒し手は城塞の重装兵（145/12/3）の写し＋札1枚。ボスは攻12・速5・単体＋「動じない」。");
+        Console.WriteLine(s.Intro);
         Console.WriteLine();
-        foreach (var c in CheckWaves) Console.WriteLine($"- {c.Name}: {c.What}");
-        Console.WriteLine("- 対照: `第四波`（倍率なし）・`260:T-50後`（司祭の体の癒し手）・`260:B-全4`（動じない無し・HP 3,000）");
+        foreach (var c in s.Listed) Console.WriteLine($"- {c.Name}: {c.What}");
+        Console.WriteLine(s.ControlsLine);
         Console.WriteLine();
 
         var res = new Dictionary<(string, string), Agg>();
-        var waves = CheckWaves.Concat(new[] { Copy4, CWave260("T-50後"), CWave260("B-全4") }).ToList();
-        string Key(CWave c) => CheckWaves.Contains(c) || c == Copy4 ? c.Name : "260:" + c.Name;
         BossHp = ChosenBossHp;
         foreach (string b in Boards)
         {
-            foreach (var c in waves) res[(b, Key(c))] = Measure(BoardOf(b), CheckWave(c), c.IsBoss ? Kind.Boss : Kind.Normal, c.Mend);
+            foreach (var (key, c) in s.Waves) res[(b, key)] = Measure(BoardOf(b), CheckWave(c), c.IsBoss ? Kind.Boss : Kind.Normal, c.Mend);
             res[(b, "第四波")] = Measure(BoardOf(b), InvWave(Wave4), Kind.Normal, 0);
         }
 
         // ---- 表A ----
-        string[] cols = { "第四波", "第四波写し", "260:T-50後", "W-30後", "W-50後", "W-50奥", "260:B-全4", "B-全4", "B-半4", "B-参500" };
+        string[] cols = s.Cols;
         Console.WriteLine("## 表A 勝率 ／ 全員生存（%）");
         Console.WriteLine();
         Console.WriteLine("| 台 | " + string.Join(" | ", cols) + " |");
@@ -39,13 +64,13 @@ static partial class CheckWaveDiag
         Console.WriteLine();
 
         // ---- 表B 手数チェック ----
-        string[] tv = { "W-30後", "W-50後", "W-50奥" };
+        string[] tv = s.Tv;
         Console.WriteLine("## 表B 手数チェック —— 窓の与ダメと命中・癒し手");
         Console.WriteLine();
         Console.WriteLine("| 台 | 版 | 勝率 | 決着T | 与ダメ ／ 窓 | 命中 ／ 窓 | 1発 | 回復を上回った窓 | 癒し手を割った戦 | 割ったターン | 癒し手が1窓で受けた最大 | 実回復 ／ 戦 | 最後の一撃 |");
         Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|");
         foreach (string b in Boards)
-            foreach (string v in tv.Prepend("260:T-50後"))
+            foreach (string v in s.TvRows)
             {
                 var a = res[(b, v)];
                 string killers = string.Join("・", a.HealerKiller.OrderByDescending(kv => kv.Value).Take(3).Select(kv => $"{kv.Key} {kv.Value}"));
@@ -55,20 +80,37 @@ static partial class CheckWaveDiag
         Console.WriteLine();
 
         // ---- 表C ボス ----
-        string[] bv = { "B-全4", "B-半4" };
+        string[] bv = s.Bv;
         Console.WriteLine("## 表C ボス —— 振れた手番・倒しT・崩れ始め");
         Console.WriteLine();
         Console.WriteLine("| 台 | 版 | 勝率 | 全員生存 | 窓の最大（平均 ／ 最大）| 倒しT（勝ちの平均）| 崩れ始め T（最初の死亡・割合）| 全滅（20T 以内）| 打ち切り | ボスの攻撃 ／ 生きていたターン | 入った ／ 名目（1戦）|");
         Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
         foreach (string b in Boards)
-            foreach (string v in new[] { "260:B-全4", "B-全4", "B-半4", "B-参500" })
+            foreach (string v in s.BossRows)
             {
                 var a = res[(b, v)];
                 long cut = a.N - a.Wins - a.Wiped;
                 Console.WriteLine($"| {b} | {v} | {F1(a.Win)} | {F1(a.SurvPct)} | {Per(a.MaxWinSum, a.N)} ／ {a.MaxWinMax} | {(a.Kill == 0 ? "—" : "T" + Per(a.KillT, a.Kill))} | "
-                    + $"{(a.FirstDeath == 0 ? "—" : "T" + Per(a.FirstDeathT, a.FirstDeath))}（{Pct(a.FirstDeath, a.N)}%）| {Pct(a.Wiped, a.N)} | {Pct(cut, a.N)} | {a.BossActs} ／ {a.BossAlive}（{Pct(a.BossActs, a.BossAlive)}%）| {Per(a.BossDealt, a.N)} ／ {Per(a.BossNominal, a.N)}（{Pct(a.BossDealt, a.BossNominal)}%）|");
+                    + $"{(a.FirstDeath == 0 ? "—" : "T" + Per(a.FirstDeathT, a.FirstDeath))}（{Pct(a.FirstDeath, a.N)}%）| {Pct(a.Wiped, a.N)} | {Pct(cut, a.N)} | {a.BossActs} ／ {a.BossAlive}（{Pct(a.BossActs, a.BossAlive)}%）| {Per(a.BossDealt, a.N)} ／ {Per(a.BossNominal, a.N * 10)}（{Pct(a.BossDealt * 10, a.BossNominal)}%）|");
             }
         Console.WriteLine();
+
+        if (s.Heals)
+        {
+            Console.WriteLine("### 表C′ ボスの打点と、味方の体・回復（1戦あたり・20 ターンまで）");
+            Console.WriteLine();
+            Console.WriteLine("| 台 | 版 | ボスが入れた | 味方が受けた回復 | 味方の開戦時の HP | 入れた − 回復 | 倒しT |");
+            Console.WriteLine("|---|---|--:|--:|--:|--:|--:|");
+            foreach (string b in Boards)
+                foreach (string v in s.BossRows)
+                {
+                    var a = res[(b, v)];
+                    Console.WriteLine($"| {b} | {v} | {Per(a.BossDealt, a.N)} | {Per(a.MineHealed, a.N)} | {Per(a.MineStartHp, a.N)} | {Per(a.BossDealt - a.MineHealed, a.N)} | {(a.Kill == 0 ? "—" : "T" + Per(a.KillT, a.Kill))} |");
+                }
+            Console.WriteLine();
+            Console.WriteLine("「味方が受けた回復」は HP が実際に増えた分（Heal の出来事）。破片・据えなどの「受ける前に削る」守りは入らない（ボスが入れた量の側に既に出ている）。");
+            Console.WriteLine();
+        }
 
         // ---- 表D 採否 ----
         double Dev(string b, string v) => res[(b, v)].Win - Boards.Average(x => res[(x, v)].Win);

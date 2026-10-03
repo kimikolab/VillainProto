@@ -161,6 +161,30 @@ static partial class CheckWaveDiag
             Ok("(n) `BossSteadfast` の保持者がロスター・本編・検証・先遣・パターン3 の敵に 0 枚", h2 == 0, $"{h2} 枚");
         }
 
+        // ---- 第262期 ----
+        // (o) 全体のボス ＝ 第261期のボスと数値・札が同じで、攻撃型だけが全体
+        {
+            var b2 = Boss2(TraitId.BossMendFull, TraitId.BossRise4, ChosenBossHp); var b3 = Boss3(TraitId.BossMendFull, TraitId.BossRise4, ChosenBossHp);
+            bool eq = b2.MaxHp == b3.MaxHp && b2.Attack == b3.Attack && b2.Speed == b3.Speed && b2.Advances == b3.Advances && b2.Traits.SequenceEqual(b3.Traits)
+                      && b2.Pattern == AttackPattern.Single && b3.Pattern == AttackPattern.All;
+            Ok("(o) 全体のボス（B2）＝ 第261期のボス（B）と HP・攻・速・踏み込み・札が同じで、攻撃型だけが単体 → 全体", eq);
+        }
+        // (p) 400/300 の手数チェック: 癒し手を含む敵全員に倍率が乗り（癒し手 580/36/3）、1件の回復は 50 を超えない（回復は倍率に乗らない）
+        {
+            var e = CheckWave(CWaveOf("W2-50後"))();
+            var h = e.First(u => u.Def.Id == "cw_healer");
+            bool scaled = h.MaxHp == 580 && h.Def.Attack == 36 && h.Def.Speed == 3 && e.First(u => u.Def.Id == "yoker").MaxHp == 580;
+            long over = 0;
+            foreach (string b in Boards)
+                for (int sd = 0; sd < 10; sd++)
+                {
+                    var (r, _, ee) = Fight(BoardOf(b), CheckWave(CWaveOf("W2-50後")), sd);
+                    int hid = ee.First(u => u.Def.Id == "cw_healer").InstanceId;
+                    over += r.Events.Count(x => x.Kind == BattleEventKind.Heal && x.ActorId == hid && x.Amount > PartyMendTrait.High);
+                }
+            Ok("(p) W2-50後: 癒し手 580/36/3・軛の重装兵 580、1件の回復が 50 を超えたことが 0 件（6台 × seed 0..9）", scaled && over == 0, $"癒し手 {h.MaxHp}/{h.Def.Attack}/{h.Def.Speed}・超え {over}");
+        }
+
         Console.WriteLine();
         Console.WriteLine($"合計: ○ {pass} ／ × {fail}");
         if (fail > 0) Environment.ExitCode = 1;
