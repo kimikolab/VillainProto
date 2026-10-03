@@ -96,6 +96,34 @@ public static void Run(string[] args, int stageIndex)
         Console.WriteLine($"## {file} — {missing.Length} 編成が現れない");
         foreach (string n in missing) Console.WriteLine($"- {n}");
     }
+
+    // 第259期: `CLAUDE.md` の門。**500 行 / 50 KB を超えたら ×**（毎セッション丸ごと載るファイルなので、
+    // 履歴を書き足すと読む側の注意が薄まる。履歴は `design/` へ、本文は索引で引く）。
+    // 警告（× にしない）: 「n本目」「第nn期に…足した」の文——数は生成物で引くものなので `CLAUDE.md` に書かない（R151）。
+    const int MaxLines = 500, MaxBytes = 50 * 1024, WarnHistoryRefs = 5;
+    string claudePath = Path.Combine(root, "CLAUDE.md");
+    if (File.Exists(claudePath))
+    {
+        string[] cl = File.ReadAllLines(claudePath);
+        long bytes = new FileInfo(claudePath).Length;
+        int refs = cl.Count(l => l.Contains("本目", StringComparison.Ordinal)
+                              || System.Text.RegularExpressions.Regex.IsMatch(l, @"第\d+期に.*足した"));
+        bool over = cl.Length > MaxLines || bytes > MaxBytes;
+        Console.WriteLine();
+        Console.WriteLine("## `CLAUDE.md` の門（第259期）");
+        Console.WriteLine();
+        Console.WriteLine($"| 項目 | 値 | 上限 | 判定 |");
+        Console.WriteLine($"|---|--:|--:|:-:|");
+        Console.WriteLine($"| 行数 | {cl.Length} | {MaxLines} | {(cl.Length > MaxLines ? "**×**" : "OK")} |");
+        Console.WriteLine($"| バイト | {bytes:N0} | {MaxBytes:N0} | {(bytes > MaxBytes ? "**×**" : "OK")} |");
+        Console.WriteLine($"| 「本目」／「第nn期に…足した」の行 | {refs} | 警告 {WarnHistoryRefs} | {(refs >= WarnHistoryRefs ? "**警告**（履歴は design/ へ）" : "OK")} |");
+        if (over)
+        {
+            Console.WriteLine();
+            Console.WriteLine("**× `CLAUDE.md` が上限を超えている。** 履歴は `design/HISTORY_PHASES.md` / `design/ENGINE_HOOKS.md` / `design/PHASE_INDEX.md` へ、新しいコマンドは `design/COMMANDS.md` へ。");
+            Environment.ExitCode = 1;
+        }
+    }
     return;
 }
 }
