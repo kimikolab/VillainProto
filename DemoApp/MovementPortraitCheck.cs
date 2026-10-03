@@ -20,7 +20,7 @@ public partial class MovementPortraitCheck : Control
                 ("sero", "sero_last_dodge", BattleEventKind.LastDodge),
                 ("sero", "sero_decoy", BattleEventKind.Decoy),
                 ("sero", "sero_move_shot", BattleEventKind.MoveShot),
-                ("hane", "hane_palm", BattleEventKind.Spring),
+                ("hane", "hane_flying_kick", BattleEventKind.Spring),
                 ("hane", "hane_spring_guard", BattleEventKind.Spring),
                 ("shio", "shio_retreat", BattleEventKind.Retreat),
                 ("yomi", "yomi_stumble", BattleEventKind.KillImpact),

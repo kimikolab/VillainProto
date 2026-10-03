@@ -191,6 +191,7 @@ public partial class BattlePawn3D : Node3D
         if (opening.UnitId == "hane")
         {
             _ = UiKit.BattlePortrait(atlas, "hane_dropkick");
+            _ = UiKit.BattlePortrait(atlas, "hane_flying_kick");
             _ = UiKit.BattlePortrait(atlas, "hane_palm");
         }
         bool hasCustomPortrait = UiKit.HasCustomBattlePortrait(opening.UnitId)

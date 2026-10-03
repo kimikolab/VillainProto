@@ -14,7 +14,7 @@ public partial class BattlePawn3D
         if (!_alive || _victory || !key.StartsWith(_unitId + "_")) return;
         if (_movementPortrait == "sero_last_dodge" && key == "sero_evade") return;
         ClearAllyBumpPose();
-        if (key != "hane_dropkick") ClearDropkickPose();
+        if (key is not ("hane_dropkick" or "hane_flying_kick")) ClearDropkickPose();
         if (key is not ("hane_palm" or "hane_spring_guard")) ClearPalmStrikePose();
         _movementPortraitTween?.Kill();
         ResetBowPortrait();

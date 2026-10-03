@@ -240,6 +240,7 @@ public static class UiKit
         "sero_decoy" => 0.03190f,
         "hane_spring" => 0.07227f,
         "hane_dropkick" => 0.01855f,
+        "hane_flying_kick" => 0.04492f,
         "hane_palm" => 0.014648f,
         "hane_spring_guard" => 0.0146484f,
         "hane_rescue" => 0.148f,

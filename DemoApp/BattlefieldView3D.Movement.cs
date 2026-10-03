@@ -121,7 +121,8 @@ public partial class BattlefieldView3D
                 Coil(target, MovementFx.Wind, 0.42f);
                 return 0.045;
             case BattleEventKind.Spring:
-                ShowHanePalmStrike(actor, target, FindPawn(springGuard?.TargetId));
+                if (springGuard is null) ShowHaneSpringKick(actor, target);
+                else ShowHanePalmStrike(actor, target, FindPawn(springGuard.TargetId));
                 return 0;
             case BattleEventKind.SpringGuard:
                 // 味方へ手を差し出す因果だけ。掌の接触・音・敵の移動は次のSpringで1回。

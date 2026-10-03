@@ -12,6 +12,30 @@ public partial class BattlefieldView3D
     internal int HaneDropkickPlays { get; private set; }
     internal int HanePalmPlays { get; private set; }
 
+    private void ShowHaneSpringKick(BattlePawn3D? actor, BattlePawn3D? target)
+    {
+        if (actor?.UnitId != "hane" || target is null || !actor.CanReceiveMovementImpact || !target.CanReceiveMovementImpact) return;
+        int generation = _specialGeneration;
+        int audioGeneration = _attackAudio.MovementSoundGeneration;
+        double speed = Math.Max(0.1, actor.AnimationSpeed);
+        Vector3 edge = -_camera.GlobalBasis.X * (actor.Team == 0 ? 1 : -1) * 0.65f
+            + _camera.GlobalBasis.Z * 0.10f;
+        Vector3 last = target.FxPoint + edge;
+        Vector3 Contact() => IsInstanceValid(target) ? target.FxPoint + edge : last;
+        actor.BeginDropkick(Contact, _camera.GlobalBasis.X, _camera.GlobalBasis.Y, () => {
+            if (generation != _specialGeneration || audioGeneration != _attackAudio.MovementSoundGeneration
+                || !IsInsideTree() || !IsInstanceValid(actor) || !IsInstanceValid(target)
+                || !actor.IsInsideTree() || !target.IsInsideTree() || !actor.CanReceiveMovementImpact || !target.CanReceiveMovementImpact) return;
+            _attackAudio.PlayMovementSound(MovementSound.SpringKick);
+            // 踵の接触と同じ拍に白い芯・金色の衝撃波・放射光を出す。
+            // 相手の本体だけを短くのけぞらせ、席の移動は後続の台本に任せる。
+            Vector3 point = Contact();
+            MakeContactImpact(point + _camera.GlobalBasis.Z * 0.18f, speed, 2.5f, 0.18, "HaneKickImpact");
+            target.MovementPose(0.36f, 0.16f);
+            CameraPunch(point, AttackPattern.Single);
+        }, springKick: true);
+    }
+
     private void ShowHanePalmStrike(BattlePawn3D? actor, BattlePawn3D? target, BattlePawn3D? guarded = null)
     {
         if (actor?.UnitId != "hane" || target is null || !actor.CanReceiveMovementImpact || !target.CanReceiveMovementImpact) return;

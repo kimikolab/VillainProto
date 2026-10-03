@@ -23,7 +23,7 @@ public partial class DropkickCheck : Control
                 field.BeginBattle(new DemoOpening[] {
                     new(1, team, "hane", "ハネ", 0, 100, 100, 11, AttackPattern.Single, true),
                     new(2, 1-team, "knight", "押し返す相手", 0, 100, 100, 10, AttackPattern.Single, true),
-                }, "ハネ・ドロップキックと双掌打", 0);
+                }, "ハネ・ドロップキックと飛び蹴り", 0);
                 foreach (var p in field.Pawns.Values) p.AnimationSpeed = speed;
             }
             foreach (int team in new[] { 0, 1 })
@@ -69,34 +69,34 @@ public partial class DropkickCheck : Control
                 foe.ReturnFromAttack();
                 var spring = new BattleEvent { Kind = BattleEventKind.Spring, ActorId = 1, TargetId = 2, Turn = 1 };
                 field.ShowMovementCue(spring, speed);
-                Require(hane.MovementPortrait == "hane_palm" && hane.PalmStrikeActive && !hane.DropkickActive,
-                    "弾き返しは両掌を打ち出す専用差分");
-                Require(!hane.PalmStrikeImpact.IsCompleted && !audio.MovementSoundPlays.ContainsKey(MovementSound.SpringBlock),
-                    "両掌の接触前は押し返しも音も待つ");
-                await hane.PalmStrikeImpact;
-                Require(field.HanePalmPlays == 1 && foe.Slot == 0 && foe.Hp == 100 && !foe.BlastActive,
+                Require(hane.MovementPortrait == "hane_flying_kick" && hane.DropkickActive && !hane.PalmStrikeActive,
+                    "本人の弾き返しは片脚の飛び蹴り差分");
+                Require(!hane.SpringImpact.IsCompleted && !audio.MovementSoundPlays.ContainsKey(MovementSound.SpringKick),
+                    "踵の接触前は押し返しも音も待つ");
+                await hane.SpringImpact;
+                Require(audio.MovementSoundPlays.GetValueOrDefault(MovementSound.SpringKick) == 1 && foe.Slot == 0 && foe.Hp == 100 && !foe.BlastActive,
                     "接触は1回、手番の射出を混ぜない");
-                var palmSprite = hane.GetChildren().OfType<Sprite3D>().Single();
-                float soleY = palmSprite.Position.Y - palmSprite.Texture.GetHeight() * palmSprite.PixelSize
-                    * (0.5f - UiKit.BattlePortraitBottomPaddingRatio("hane_palm"));
-                Require(Math.Abs(soleY - 0.05f) < 0.005f, "両掌の接触時にも足元を浮かせない");
-                await Capture($"palm-team{team}-speed{speed}-impact");
-                Require(audio.MovementSoundPlays.GetValueOrDefault(MovementSound.SpringBlock) == 1
+                var camera = (Camera3D)typeof(BattlefieldView3D).GetField("_camera", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(field)!;
+                Vector3 heel = hane.MovementPortraitPoint(new Vector2(1504, 486), camera);
+                Vector3 edge = foe.FxPoint - camera.GlobalBasis.X * (team == 0 ? 1 : -1) * 0.65f + camera.GlobalBasis.Z * 0.10f;
+                Require(heel.DistanceTo(edge) < 0.03f, "帰還中の相手にも左右の踵を接触させる");
+                await Capture($"spring-kick-team{team}-speed{speed}-impact");
+                Require(!audio.MovementSoundPlays.ContainsKey(MovementSound.SpringBlock)
                     && !audio.MovementSoundPlays.ContainsKey(MovementSound.Dropkick)
-                    && !audio.MovementSoundPlays.ContainsKey(MovementSound.Collision), "弾き返しはパンチを受け止める音だけ");
+                    && !audio.MovementSoundPlays.ContainsKey(MovementSound.Collision), "本人の弾き返しは中キックだけ");
                 field.MoveWithCue(foe, 3, spring, hane);
                 await Wait(0.60 / speed);
-                Require(!hane.PalmStrikeActive && hane.MovementPortrait is null && hane.Home == home
+                Require(!hane.DropkickActive && hane.MovementPortrait is null && hane.Home == home
                     && hane.Position.DistanceTo(home) < 0.01f && foe.Slot == 3 && foe.Position.DistanceTo(foe.Home) < 0.01f,
-                    "両掌の差分と押し返しが完了し、待機へ戻る");
+                    "飛び蹴りと押し返しが完了し、待機へ戻る");
                 GD.Print($"DROPKICK_OK team={team} speed={speed}");
             }
-            foreach (bool palm in new[] { false, true })
+            foreach (bool springKick in new[] { false, true })
             foreach (string cancel in new[] { "actor-death", "target-death", "stop", "reset", "portrait" })
             {
                 Reset(0, 1);
-                if (palm) field.ShowMovementCue(new BattleEvent { Turn = 1, Kind = BattleEventKind.Spring, ActorId = 1, TargetId = 2 }, 1);
-                var attack = palm ? field.FindPawn(1)!.PalmStrikeImpact
+                if (springKick) field.ShowMovementCue(new BattleEvent { Turn = 1, Kind = BattleEventKind.Spring, ActorId = 1, TargetId = 2 }, 1);
+                var attack = springKick ? field.FindPawn(1)!.SpringImpact
                     : field.Attack(field.FindPawn(1), field.FindPawn(2), AttackPattern.Pierce,
                         new[] { field.FindPawn(2)! }, advance: false, movementCue: cue, blastDestination: 3);
                 if (cancel == "actor-death") { field.FindPawn(1)!.AnimateDeath(); field.FindPawn(1)!.AnimateRevive(); }
@@ -109,6 +109,7 @@ public partial class DropkickCheck : Control
                 Require(!audio.MovementSoundPlays.ContainsKey(MovementSound.Dropkick)
                     && !audio.MovementSoundPlays.ContainsKey(MovementSound.Collision)
                     && !audio.MovementSoundPlays.ContainsKey(MovementSound.SpringBlock)
+                    && !audio.MovementSoundPlays.ContainsKey(MovementSound.SpringKick)
                     && field.HaneDropkickPlays == 0 && field.HanePalmPlays == 0, "中断後に古い接触音を出さない: " + cancel);
                 Require(!field.FindPawn(1)!.DropkickActive && !field.FindPawn(1)!.PalmStrikeActive, "中断後に攻撃姿勢を残さない");
             }

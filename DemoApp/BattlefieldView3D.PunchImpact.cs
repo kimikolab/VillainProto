@@ -6,6 +6,10 @@ public partial class BattlefieldView3D
 
     // 打点を中心に白い芯・太い衝撃波・短い放射光を一瞬だけ広げる。
     private void MakePunchImpact(BattlePawn3D target, double speed)
+        => MakeContactImpact(target.FxPoint, speed);
+
+    private void MakeContactImpact(Vector3 point, double speed, float size = 2.2f, double seconds = 0.22,
+        string name = "PunchImpact")
     {
         _punchImpactShader ??= new Shader { Code = @"
 shader_type spatial;
@@ -30,8 +34,9 @@ void fragment() {
         var material = new ShaderMaterial { Shader = _punchImpactShader };
         var impact = new MeshInstance3D
         {
-            Mesh = new QuadMesh { Size = new Vector2(2.2f, 2.2f) },
-            Position = target.FxPoint,
+            Name = name,
+            Mesh = new QuadMesh { Size = new Vector2(size, size) },
+            Position = _fxRoot.ToLocal(point),
             MaterialOverride = material,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             ExtraCullMargin = 2,
@@ -39,7 +44,7 @@ void fragment() {
         _fxRoot.AddChild(impact);
         var tween = impact.CreateTween();
         tween.TweenMethod(Callable.From<float>(p => material.SetShaderParameter("progress", p)),
-            0f, 1f, 0.22 / System.Math.Max(0.1, speed));
+            0f, 1f, seconds / System.Math.Max(0.1, speed));
         tween.TweenCallback(Callable.From(impact.QueueFree));
     }
 }

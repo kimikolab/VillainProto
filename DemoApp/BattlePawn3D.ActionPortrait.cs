@@ -77,7 +77,7 @@ public partial class BattlePawn3D
             if (key == "basa_flap") height *= 0.90f;
             // 掲剣は剣先までを含む。頭から足の身長を待機絵と揃える。
             if (key == "hota_sword_raise") height *= 1.42f;
-            if (key == "hane_dropkick") height *= 1024f / 1536f;
+            if (key is "hane_dropkick" or "hane_flying_kick") height *= 1024f / 1536f;
             // 低い踏み込みは1024高。待機絵と画素あたりの体格を揃える。
             if (key is "hane_palm" or "hane_spring_guard") height *= 1024f / 1536f;
             if (key is "hane_rescue" or "hane_bump_rebound") height *= 1024f / 1536f;

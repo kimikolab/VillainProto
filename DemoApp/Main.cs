@@ -579,7 +579,7 @@ public partial class Main : Control
     private static SpinBox EnemyScaleInput(int value) => new()
     {
         MinValue = 50,
-        MaxValue = 400,
+        MaxValue = 1000,
         Step = 5,
         Value = value,
         Suffix = "%",

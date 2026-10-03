@@ -1,7 +1,7 @@
 using Godot;
 using System.Collections.Generic;
 
-internal enum MovementSound { Bow, Vine, Wind, Collision, Landing, Sheathe, ArrowHit, Windup, Tornado, BasaSweep, Tailwind, Evade, SeroPierce, SeroBarrage, Dropkick, SpringBlock, AllyBump }
+internal enum MovementSound { Bow, Vine, Wind, Collision, Landing, Sheathe, ArrowHit, Windup, Tornado, BasaSweep, Tailwind, Evade, SeroPierce, SeroBarrage, Dropkick, SpringBlock, SpringKick, AllyBump }
 
 public partial class BattleAttackAudio
 {
@@ -22,6 +22,7 @@ public partial class BattleAttackAudio
         [MovementSound.SeroBarrage] = "res://assets/audio/se/sero_barrage.wav",
         [MovementSound.Dropkick] = "res://assets/audio/se/hane_dropkick.mp3",
         [MovementSound.SpringBlock] = "res://assets/audio/se/hane_spring_block.mp3",
+        [MovementSound.SpringKick] = "res://assets/audio/se/hane_spring_kick.mp3",
         [MovementSound.AllyBump] = "res://assets/audio/se/hane_ally_bump.mp3",
     };
     private readonly Dictionary<MovementSound, ulong> _movementSoundTimes = new();
@@ -44,7 +45,7 @@ public partial class BattleAttackAudio
             MovementSound.Tornado => -5, MovementSound.BasaSweep => -2, MovementSound.Tailwind => -4,
             MovementSound.Evade => -2,
             MovementSound.SeroPierce => 0, MovementSound.SeroBarrage => -4, MovementSound.Dropkick => 0,
-            MovementSound.SpringBlock => -2,
+            MovementSound.SpringBlock or MovementSound.SpringKick => -2,
             MovementSound.Collision => secondary ? -6 : 1,
             MovementSound.Sheathe => -3, MovementSound.ArrowHit => -2, MovementSound.Windup => -3,
             MovementSound.Landing => secondary ? -7 : -4, _ => 0,

@@ -1,0 +1,10 @@
+# ハネ・被弾時の飛び蹴り差分 v1
+
+内蔵 image_gen で生成。当初は画像のみ作成し、2026-09-29の追加依頼でゲーム内へ組み込み。
+手番の両足ドロップキックより軽い反撃として、片脚を伸ばし、反対の脚を畳み、上体を起こした飛び蹴り。
+出力: `hane-flying-kick-right-v1.png`
+参照: `DemoApp/assets/portraits/battle/hane_idle_right.png`、`hane_dropkick_idle_right.png`。
+
+## 生成プロンプト
+
+Use case: stylized-concept. Asset type: transparent full-body 2D battle sprite variant for Hane. Input image 1 is the definitive identity, costume and rendering style reference. Input image 2 is her existing powerful DOUBLE-FOOT DROPKICK, provided only to distinguish the new lighter move. Create the SAME adult rabbit-eared woman performing a quick, compact airborne SINGLE-LEG FRONT KICK toward SCREEN RIGHT as a reactive counter after being hit. ONE leg extends toward right at waist height, knee slightly unlocked, boot heel leading with toes naturally up; show mostly boot side with only narrow sole edge, anatomically correct hip-knee-ankle alignment. The OTHER leg is clearly bent and tucked under the pelvis, its boot pointing down and slightly back. BOTH feet off ground. Torso mostly upright with a modest backward lean, head above hips, arms bent in a compact defensive guard near chest, focused closed-mouth expression. This should read as a light short-hop snap counterkick, distinctly less heavy and less horizontal than the reference two-foot dropkick; not a standing kick, not a back kick, no splits. Preserve silver-gray ponytail, amber eyes, white rabbit ears with pink inner fur, rust-red cropped fur-trimmed jacket, white shirt, opaque brown shorts, leather belts and pouch, bracers, heavy brown fur-trimmed buckled boots and red waist sash. Same detailed hand-painted anime fantasy style and earthy colors. Slight front three-quarter side view facing right; clear separate silhouettes for the two legs. Natural adult athletic anatomy, exactly two arms and two legs. Entire ears, ponytail, sash, hands and both boots inside canvas with clear margins. Single character only. Genuine transparent alpha background; NO gradient or glow or dark backdrop from references. No shadow, floor, opponent, speed lines, impact effects, text or watermark. Landscape canvas.

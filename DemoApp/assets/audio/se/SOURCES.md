@@ -224,7 +224,8 @@
 | basa_tailwind.mp3 | D:/Assets/SE/Springin/強風2.mp3 | 追い風の発動時 | -14 dB |
 | hane_smash_ice.mp3 | 氷魔法1.mp3 | 手番の敵射出（大キックに重ねる）・吹っ飛ばしの巻き込み衝突 | 主 -9 dB / 巻き込み -16 dB |
 | hane_dropkick.mp3 | 大キック.mp3 | 手番の吹っ飛ばしでドロップキックが接触した瞬間 | -10 dB |
-| hane_spring_block.mp3 | パンチを受け止める.mp3 | 被弾からの弾き返し | -12 dB |
+| hane_spring_block.mp3 | パンチを受け止める.mp3 | 味方を守る弾き返しの掌の接触 | -12 dB |
+| hane_spring_kick.mp3 | 中キック.mp3 | 本人の被弾からの飛び蹴りの接触 | -12 dB |
 | hane_ally_bump.mp3 | D:/Assets/SE/効果音ラボ/演出/ボヨン.mp3 | 着地の反動で味方に接触した瞬間、1回 | -10 dB |
 | movement_land.mp3 | 倒れる.mp3 | 吹っ飛ばし・弾き返し・ピンの着地 | 主 -14 dB / ピン -17 dB |
 | yomi_sheathe.mp3 | 刀を鞘にしまう1.mp3 | ヨミの通常・追加攻撃の差分が終了したとき | -13 dB |
