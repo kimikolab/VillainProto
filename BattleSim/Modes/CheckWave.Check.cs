@@ -62,7 +62,7 @@ static partial class CheckWaveDiag
         }
 
         // (e) 癒し手の回復は刻みの後（その手番の最初の StatSnapshot より前に出ない）・刻みで削られた後に入るターンがある
-        var o = OrderCensus(CWaveOf("T-50後"), 20);
+        var o = OrderCensus(CWave260("T-50後"), 20);
         Ok("(e-1) 癒し手の回復が刻みより前に出たことが 0 件", o.HealBeforeSnap == 0 && o.Heals > 0, $"{o.Heals} 件中 {o.HealBeforeSnap}");
         Ok("(e-2) 刻みで削られた後に回復が入ったターンがある", o.TickThenHeal > 0, $"{o.TickThenHeal} ターン");
 
@@ -71,7 +71,7 @@ static partial class CheckWaveDiag
         Ok("(f) 軛が生きている間に 25 を超えた回復がある（最大 50）", y.Over25 > 0 && y.Max == PartyMendTrait.High, $"{y.Over25} 件・最大 {y.Max}");
 
         // (g) ボスの攻撃力 ＝ 12 + X × (t − 1)（StatSnapshot の写しで）
-        foreach (var c in new[] { CWaveOf("B-全4"), CWaveOf("B-全8") })
+        foreach (var c in new[] { CWave260("B-全4"), CWave260("B-全8") })
         {
             var (ok, n, _) = RiseCensus(c, 10);
             Ok($"(g) {c.Name} のボスの攻撃力の写しが全件 12 + X × (t − 1)", ok == n && n > 0, $"{ok}/{n}");
@@ -83,7 +83,7 @@ static partial class CheckWaveDiag
             foreach (string b in Boards)
                 for (int sd = 0; sd < 10; sd++)
                 {
-                    var (r, _, e) = Fight(BoardOf(b), CheckWave(CWaveOf("T-30後")), sd);
+                    var (r, _, e) = Fight(BoardOf(b), CheckWave(CWave260("T-30後")), sd);
                     int healer = e.First(u => u.Def.Id == "cw_healer").InstanceId;
                     foreach (var g in r.Events.Where(x => x.Kind == BattleEventKind.Heal && x.ActorId == healer).GroupBy(x => x.Turn))
                     {
@@ -97,7 +97,7 @@ static partial class CheckWaveDiag
         // (i) verbose の有無で結果が変わらない（チェック波 6 版 × 6台 × seed 0..4）
         {
             int diff = 0, n = 0;
-            foreach (var c in CheckWaves)
+            foreach (var c in CheckWaves260.Concat(CheckWaves))
                 foreach (string b in Boards)
                     for (int sd = 0; sd < 5; sd++)
                     {
@@ -118,6 +118,47 @@ static partial class CheckWaveDiag
             string tool = string.Concat(Directory.GetFiles("BattleSim/Modes", "CheckWave*.cs").Where(f => !f.EndsWith("CheckWave.Check.cs")).Select(File.ReadAllText));
             bool clean = body.Length > 0 && !new[] { "PickOne", "Roll(", "Shuffle(" }.Any(k => body.Contains(k) || tool.Contains(k));
             Ok("(j) 新しい札 3 クラスと `checkwave`（検査の本体を除く）が `PickOne` ／ `Roll(` ／ `Shuffle(` を使っていない", clean);
+        }
+
+        // ---- 第261期 ----
+        // (k) 動じない: 手番を奪う5つのキーは入口で付かず、ほかのキー（毒・燃焼・萎縮・感電・破片）は付く。保持者でない駒には5つとも付く
+        {
+            var boss = BattleEngine.MaterializeEnemy(EnemyWave.Of((2, Boss2(TraitId.BossMendFull, TraitId.BossRise4, ChosenBossHp))), EnemyScaleRule.None)[0];
+            var plain = BattleEngine.MaterializeEnemy(EnemyWave.Of((2, Boss(TraitId.BossMendFull, TraitId.BossRise4))), EnemyScaleRule.None)[0];
+            string[] pass2 = { StatusKeys.Poison, StatusKeys.Burn, StatusKeys.Daunted, StatusKeys.Shock, StatusKeys.Armor, StatusKeys.Numbed };
+            foreach (var k in StatusKeys.Control) { boss.SetCounter(k, 1); plain.SetCounter(k, 1); }
+            foreach (var k in pass2) boss.SetCounter(k, 2);
+            bool blocked = StatusKeys.Control.All(k => boss.RawCounter(k) == 0), plainSet = StatusKeys.Control.All(k => plain.RawCounter(k) == 1), others = pass2.All(k => boss.RawCounter(k) == 2);
+            Ok("(k) 動じない: 痺れ・転倒・組み付き・竦み・混乱は付かず、毒・燃焼・萎縮・感電・破片・毒の鈍りは付く。持たない駒には5つとも付く", blocked && plainSet && others && boss.ControlProof && !plain.ControlProof);
+        }
+        // (l) 動じないボスは 6台 × 2版 × seed 0..9 で一度も手番を失わない・ハネの押し込み失敗（転ばせる試み）は起きていてハネの手番は普通に終わる
+        {
+            long stalls = 0, tries = 0, haneActs = 0, n = 0;
+            foreach (var c in new[] { CWaveOf("B-全4"), CWaveOf("B-半4") })
+                foreach (string b in Boards)
+                    for (int sd = 0; sd < 10; sd++)
+                    {
+                        var (r, p, _) = Fight(BoardOf(b), CheckWave(c), sd);
+                        n++;
+                        stalls += r.Log.Count(l => l.Text.Contains("ボス は痺れて動けない") || l.Text.Contains("ボス は転んで動けない") || l.Text.Contains("ボス は組み付かれて") || l.Text.Contains("ボス は竦んで") || l.Text.Contains("ボス は足を取られて"));
+                        tries += r.Log.Count(l => l.Text.Contains("ボス は押し込めなかったが") || l.Text.Contains("ボス は吹っ飛ばされて転んだ"));
+                        int? hane = p.FirstOrDefault(u => u.Def.Id == "hane")?.InstanceId;
+                        if (hane is int h) haneActs += r.Events.Count(x => x.Kind == BattleEventKind.Attack && x.ActorId == h);
+                    }
+            Ok("(l) 動じないボスが手番を失った・混乱した行が 0／ハネの転ばせる試みは起きていて、ハネは手番を振っている", stalls == 0 && tries > 0 && haneActs > 0, $"{n} 戦・失った {stalls}・試み {tries}・ハネの攻撃 {haneActs}");
+        }
+        // (m) 重装兵の体の癒し手 ＝ 城塞の重装兵＋札1枚
+        foreach (var h in new[] { WardHealer(TraitId.CheckMend30), WardHealer(TraitId.CheckMend50) })
+        {
+            var w = EnemyCatalog.Warden;
+            bool eq = h.MaxHp == w.MaxHp && h.Attack == w.Attack && h.Speed == w.Speed && h.Pattern == w.Pattern && h.Advances == w.Advances
+                      && ReferenceEquals(h.Actions, w.Actions) && w.Traits.Count == 0 && h.Traits.Count == 1;
+            Ok($"(m) 癒し手（{h.Traits[0]}）＝ 城塞の重装兵 {w.MaxHp}/{w.Attack}/{w.Speed}・{w.Pattern}・踏み込み {w.Advances} ＋ 札1枚", eq);
+        }
+        // (n) 動じないの保持者もロスター・本編の敵に 0 枚
+        {
+            int h2 = UnitCatalog.Everyone.Concat(enemyDefs).Count(u => u.Traits.Contains(TraitId.BossSteadfast));
+            Ok("(n) `BossSteadfast` の保持者がロスター・本編・検証・先遣・パターン3 の敵に 0 枚", h2 == 0, $"{h2} 枚");
         }
 
         Console.WriteLine();

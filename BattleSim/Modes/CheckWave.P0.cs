@@ -19,7 +19,7 @@ static partial class CheckWaveDiag
         // ---- Q0-1 ターン頭の順序（台本で確かめる）----
         Console.WriteLine("## Q0-1 ターン頭の順序（T-50後 × 6台 × seed 0..19 の台本で数える）");
         Console.WriteLine();
-        var o = OrderCensus(CWaveOf("T-50後"), 20);
+        var o = OrderCensus(CWave260("T-50後"), 20);
         Console.WriteLine($"- 癒し手の回復（Heal）: {o.Heals} 件。うち同じターンの最初の StatSnapshot（＝刻みの直後）より**前**に出たもの {o.HealBeforeSnap} 件");
         Console.WriteLine($"- ターン頭の刻みで敵が削られたターン: {o.TickTurns}（刻み {o.TickDmg}）。そのうち同じターンに癒し手の回復が後から入ったターン: {o.TickThenHeal}");
         Console.WriteLine();
@@ -41,7 +41,7 @@ static partial class CheckWaveDiag
         // ---- Q0-6 ボスの攻撃力 ----
         Console.WriteLine("## Q0-6 ボスの攻撃力（StatSnapshot の写し・B-全4 ／ B-全8 × 6台 × seed 0..9）");
         Console.WriteLine();
-        foreach (var c in new[] { CWaveOf("B-全4"), CWaveOf("B-全8") })
+        foreach (var c in new[] { CWave260("B-全4"), CWave260("B-全8") })
         {
             var (ok, n, ex) = RiseCensus(c, 10);
             Console.WriteLine($"- {c.Name}: ターン t の写し ＝ 12 + {(c.Name.EndsWith("8") ? 8 : 4)} × (t − 1) が {ok}/{n} 件（例: {ex}）");
@@ -192,7 +192,7 @@ static partial class CheckWaveDiag
         foreach (string b in Boards)
             for (int sd = 0; sd < seeds; sd++)
             {
-                var (r, _, e) = Fight(BoardOf(b), CheckWave(CWaveOf("T-50後")), sd);
+                var (r, _, e) = Fight(BoardOf(b), CheckWave(CWave260("T-50後")), sd);
                 int healer = e.First(u => u.Def.Id == "cw_healer").InstanceId, yoker = e.First(u => u.Def.Id == "yoker").InstanceId;
                 bool yokeAlive = true;
                 foreach (var x in r.Events)

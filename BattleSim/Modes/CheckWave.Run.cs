@@ -2,7 +2,7 @@ using BattleCore;
 using static Common;
 using BA = BurnAuditDiag;
 
-// checkwave run —— 段2（手数チェック）・段3（ボス）の測定と採否の表。
+// checkwave run260 —— 第260期の段2（手数チェック）・段3（ボス）の測定と採否の表（棄却・対照として残す。出力は第260期の `run` と同じ）。
 static partial class CheckWaveDiag
 {
     /// <summary>ボスの HP の初版（指示書 §4.1 の候補）。HP を 3,000 にした根拠を示すための参考の版（判定には使わない）。</summary>
@@ -10,7 +10,7 @@ static partial class CheckWaveDiag
     /// <summary>採った HP（報告書 §3: 段1 の的・一で、移動の窓の最大 2,870 を上回り、燃焼の窓の最大の平均 3,000〜4,000 台を下回る）。</summary>
     internal const int ChosenBossHp = 3000;
 
-    static partial void RunImpl()
+    static void Run260()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         BossHp = ChosenBossHp;
@@ -18,19 +18,19 @@ static partial class CheckWaveDiag
         Console.WriteLine();
         Console.WriteLine($"ボスの HP {BossHp}・攻 12・速 5・単体。打ち切り {BossTurns} ターン（撃破が {BossTurns} ターンを超えた勝ちは負けに数える）。癒し手は従軍司祭（40/9/8）の写し＋札1枚。");
         Console.WriteLine();
-        foreach (var c in CheckWaves) Console.WriteLine($"- {c.Name}: {c.What}");
+        foreach (var c in CheckWaves260) Console.WriteLine($"- {c.Name}: {c.What}");
         Console.WriteLine();
 
         var res = new Dictionary<(string, string), Agg>();
         foreach (string b in Boards)
         {
-            foreach (var c in CheckWaves.Append(Copy4)) res[(b, c.Name)] = Measure(BoardOf(b), CheckWave(c), c.IsBoss ? Kind.Boss : Kind.Normal, c.Mend);
+            foreach (var c in CheckWaves260.Append(Copy4)) res[(b, c.Name)] = Measure(BoardOf(b), CheckWave(c), c.IsBoss ? Kind.Boss : Kind.Normal, c.Mend);
             res[(b, "第四波")] = Measure(BoardOf(b), InvWave(Wave4), Kind.Normal, 0);
             res[(b, "第四波 400/300")] = Measure(BoardOf(b), FireCycleDiag.WaveOf(Wave4, BA.Scales[1].Sc), Kind.Normal, 0);
         }
         // 参考: 初版の HP 500（判定には使わない）
         BossHp = DraftBossHp;
-        foreach (string b in Boards) res[(b, "B-全4@500")] = Measure(BoardOf(b), CheckWave(CWaveOf("B-全4")), Kind.Boss, 0);
+        foreach (string b in Boards) res[(b, "B-全4@500")] = Measure(BoardOf(b), CheckWave(CWave260("B-全4")), Kind.Boss, 0);
         BossHp = ChosenBossHp;
 
         // ---- 表A 勝率 ----
