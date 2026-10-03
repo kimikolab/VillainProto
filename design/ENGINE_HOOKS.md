@@ -958,6 +958,8 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   印を付けるのは `BattleContext.MarkConcentrated` の1箇所（+1・上限なし・戦闘中は消えない）で、印が1つも無い戦闘は `_markLive` の比較1つで抜ける。
   **2回目以降の刻みは台本に `Status` → `Damage` の組として回数ぶん並ぶ**（再生側は1組ずつ紐づけるので変更 0 行）。印が付いた瞬間は表示専用の `ConcentrateMark`。
 
+- **手番を奪う状態を受け付けない入口（第261期）は `UnitState.SetCounter` の頭**——`Trait.BlocksControl` が真の札を持つ駒（`UnitState.ControlProof`・`Traits` を入れたときに1回だけ求める）には、`StatusKeys.Control`（痺れ・転倒・組み付き・竦み・混乱）を 0 から上げない。支援拒否（`BlocksSupport` → `AcceptsSupport`）と同じ「入口で付かない」作法で、**書き手が何十箇所あっても1点で塞がる**（直書き 28 箇所はすべて `SetCounter` を通る・辞書への代入はこの中だけ）。付かないので「動けない駒」を読む札（シガの責め苦の二重）も効かない。まどろみ（巨躯の腹）と `CanAct` の否決は本人の札、萎縮・毒の鈍りは一撃を軽くするだけなので入れない。保持者はチェック波のボス（`BossSteadfast`）だけ。
+
 ### 敵の数値の倍率（第187期・`EnemyScaleRule`）
 
 **敵陣営の駒は盤面に出るとき最大HPと素の攻撃力に倍率が掛かる**（採用値 **115 / 115**・`EnemyScaleRule.Adopted`）。

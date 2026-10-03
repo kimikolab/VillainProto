@@ -384,6 +384,7 @@
 | `BossMendHalf` | - |
 | `BossRise4` | - |
 | `BossRise8` | - |
+| `BossSteadfast` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
