@@ -12,3 +12,18 @@ obj/
 # シミュレーション結果の一時ファイル
 *.log
 /out/
+
+# ローカル検証・素材生成の作業用出力（採用した素材は DemoApp/assets/ や design/art/ に置く）
+/.tmp/
+/outputs/
+/meshy_output/
+
+# Claude Code の個人用設定（共有設定 settings.json は追跡する）
+/.claude/settings.local.json
+
+# 素材原本・プロンプトは残し、背景合成プレビューと確認用キャプチャを除外する
+/design/art/**/*-preview.jpg
+/design/art/**/*-preview.png
+/design/art/**/game-check/
+/design/art/shio/shio-repair-inspection.png
+/design/art/shio/shio-standing-v4-detail.png
