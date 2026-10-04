@@ -599,6 +599,15 @@ public enum TraitId
     VenomTaxHalf,   // 蝕み・半（第268期・版 V-半）: 勇者の自前の回復（`BossMendTrait`）が、勇者に積まれた毒の層 × N だけ減る（下限 0・層は消費しない）。N は机上で「回復半減」に届く値。保持者 0 枚
     VenomTaxSeal,   // 蝕み・封（第268期・版 V-封）: 同上で、N は机上で「回復ゼロ」に届く値。保持者 0 枚
 
+    // --- 第270期で足した札（レリック・`RelicCatalog`・BattleCore/Relics.cs）。編成で枠に付けるだけで、駒の素の札としての保持者は 0 枚 ---
+    // 弾性は新しい札ではなく既存の `Spring`（弾き返し）をそのまま流用する。
+    RelicCreak,     // 軋む足（繋ぎ）: 動かされるたび攻撃力 +2（ヨミの軋みの汎用化・割り込みなし）
+    RelicFireArrow, // 火付けの矢（繋ぎ）: 攻撃が当たった敵に火を点ける
+    RelicVenomStep, // 毒の足跡（繋ぎ）: 動かされるたび、向かいの敵（自分のレーンの最前）に毒 1
+    RelicWilt,      // 萎える心（ゴミ）: 敵に殴られて削られると攻撃力 −2（読み手: ウツ）
+    RelicNumbStep,  // 痺れる足（ゴミ）: 動かされると転倒（次の手番を失う。読み手: ガン）
+    RelicHarden,    // 身を固める（変換）: 開戦時に素の攻撃力 × 3 を最大HPに足し、攻撃力は 0
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -16295,6 +16304,12 @@ public static class TraitCatalog
         new TollTrait(),       // 第155期
         new BrandTrait(),      // 第155期
         new MartyrTrait(),
+        new RelicCreakTrait(),      // 第270期（レリック）
+        new RelicFireArrowTrait(),  // 第270期（レリック）
+        new RelicVenomStepTrait(),  // 第270期（レリック）
+        new RelicWiltTrait(),       // 第270期（レリック）
+        new RelicNumbStepTrait(),   // 第270期（レリック）
+        new RelicHardenTrait(),     // 第270期（レリック）
         new InversionTrait(),
         new DroughtTrait(),
         new YokeTrait(),

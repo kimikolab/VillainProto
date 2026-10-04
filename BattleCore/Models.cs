@@ -394,6 +394,12 @@ public sealed class UnitState
     public bool HasTrait(TraitId id) => Traits.Any(t => t.Id == id);
 
     /// <summary>
+    /// 編成で付けたレリック（第270期）。無ければ null。<b>どの規則もこれを読まない</b>（札そのものは <see cref="Traits"/> の末尾に入っている）
+    /// ——表示と測定のための印。素の札と同じ札だったときは <see cref="Traits"/> に足されない（<see cref="RelicCatalog.Attach"/>）が、ここには残る。
+    /// </summary>
+    public TraitId? Relic { get; init; }
+
+    /// <summary>
     /// 観測を通らない読み（第94期 (T2)）。<b>engine の内部はこちらを使う。</b>
     ///
     /// <para><see cref="Counter"/> は「いま実行中の特性がこのカウンタを読んだ」を観測するが、
@@ -879,10 +885,40 @@ public sealed class Formation
                 yield return (i, d);
     }
 
+    // 第270期: 枠ごとのレリック（1枠1枚まで＝配列の1要素がそのまま上限）。駒（_slots）とは別の配列に持つ
+    // ——駒を差し替えても札は枠に残る（「この枠に付けた札」であって「この駒の札」ではない）。空き枠の札は効かない。
+    private readonly TraitId?[] _relics = new TraitId?[FormationRules.PlayableSlotCount];
+
+    /// <summary>枠 <paramref name="slot"/> に付けたレリック（第270期）。無ければ null。</summary>
+    public TraitId? RelicAt(int slot) => _relics[slot];
+
+    /// <summary>
+    /// 枠 <paramref name="slot"/> にレリックを付ける（null で外す）。<b>1枠1枚まで</b>——2枚目を付けると前の札を置き換える（積まない）。
+    /// <see cref="RelicCatalog"/> に無い札は例外（素の特性を後付けする道を作らない）。
+    /// </summary>
+    public void SetRelic(int slot, TraitId? relic)
+    {
+        if (relic is TraitId r && !RelicCatalog.IsRelic(r))
+            throw new ArgumentException($"{r} はレリックではない（RelicCatalog に無い）");
+        _relics[slot] = relic;
+    }
+
+    /// <summary>レリックを1枚付けた写し（元の編成は変えない）。</summary>
+    public Formation WithRelic(int slot, TraitId? relic)
+    {
+        var f = Clone();
+        f.SetRelic(slot, relic);
+        return f;
+    }
+
+    /// <summary>レリックが1枚でも付いているか。</summary>
+    public bool HasRelics => _relics.Any(r => r is not null);
+
     public Formation Clone()
     {
         var f = new Formation { Shape = Shape };
         for (int i = 0; i < _slots.Length; i++) f[i] = _slots[i];
+        for (int i = 0; i < _relics.Length; i++) f._relics[i] = _relics[i];
         return f;
     }
 

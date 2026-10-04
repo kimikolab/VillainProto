@@ -13944,6 +13944,7 @@ public static class BattleEngine
         foreach ((int slot, UnitDef raw) in formation.Occupied())
         {
             UnitDef def = teamId == BattleContext.EnemyTeam ? scale.Apply(raw) : raw;
+            TraitId? relic = formation.RelicAt(slot);   // 第270期: 付けない枠は従来と同じ1本道（Attach を通らない）
             units.Add(new UnitState
             {
                 Def = def,
@@ -13952,7 +13953,8 @@ public static class BattleEngine
                 Slot = formation.Shape.PlayableSlots[slot],   // 第200期: X 字は恒等（枠 i ＝ 席 i）
                 Hp = def.MaxHp,
                 MaxHp = def.MaxHp,
-                Traits = TraitCatalog.Resolve(def.Traits)
+                Traits = relic is TraitId r ? RelicCatalog.Attach(def.Traits, r) : TraitCatalog.Resolve(def.Traits),
+                Relic = relic,
             });
         }
         return units;
