@@ -106,6 +106,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 **engine で触ったのは `order` が `.ToList()` で確定した後の1ブロックだけ**
 ——`speedGroups` にも `Shuffle` にも触らないので**乱数列が規則の有無に依らない**（これが 305 セル 0 件の根拠）。
 
+**第274期は盤面を1ビットも動かしていない——測定なし・記録のみで、レリック段（第270〜274期）を締めた**（指示書は design/PHASE274_RELIC_CLOSE_SPEC.md）。第273期の判定の反映（ポンの決定）: 帯電の足は残置・「供給待ち」（`compare` にカタの行が無い・感電軸の行が立ったら再測）、毒を招くは残置・読み手をヴィオに訂正（第273期のゴミの × は書き換えない）、ゴルムの溢れ 10 件は橋に数えず「発見」として別分類（除いた後の橋は回復 2・毒 3 の 5 件で線は通過）、ゴルム × 溢れの刃 × 弾性を外れ値監視に追加。`RELIC_MEASURES.md` に区分と分類を足した。まとめは design/RELIC_SUMMARY.md、引き継ぎは design/HANDOFF_AFTER_RELIC.md——経緯は design/PHASE274_RELIC_CLOSE.md
+
 **第273期は盤面を1ビットも動かしていない——レリックを機構として採用し、札を5枚足した**（指示書は design/PHASE273_RELIC_ADOPT_EXPAND_SPEC.md）。採用はポンの決定（個性の保存を札種で分け、変換は符号反転の成立で測る＝結果を見た後の物差しの変更として記録・第272期の判定は書き換えない）。物差しの確定版は design/RELIC_MEASURES.md。新札は帯電の足・押し毒・溢れの刃・勢い余り・毒を招く（`RelicCatalog.Added273`・engine は `Heal` と `Poison` に1行ずつ・保持者がいなければ比較1つで抜ける）。`relic expand`（61 行 × 12 枚 × 枠5 × 本編4波・seed 600..799 ／ 800..999）: 新札で固有の勝者 3 ／ 5 枚・橋 15 件・個性 98 ／ 98・身を固めるの符号反転は成立、毒を招く × ベニのゴミだけ ×。回帰は既存4本・第271期 `relic grid`・第272期 `relic rejudge` が出力一致。経緯は design/PHASE273_RELIC_EXPAND.md
 
 **第272期は盤面を1ビットも動かしていない——レリックを再判定し、事前の線では個性の保存の1つだけが下限に届かなかった**（指示書は design/PHASE272_RELIC_REJUDGE_SPEC.md）。分母を本編第2〜5波の素が負けるセル（帯A seed 200..399 で 86 セル・34 行）に置き直し、火付けの矢の弾数制（`RelicFireArrow3` ／ `RelicFireArrow5`・`RelicCatalog.Versions`）を足した。`relic rejudge`: G1 で固有の勝者 25 行（火付けの矢以外 20 行）・混成の成立 73 件・ウツ × 萎える心は再現・個性の保存 109 ／ 112（×3 件はすべて身を固める）。弾数制では火付けの矢の最大の上げが +100 → +94pt にしか下がらない。回帰は既存4本と第271期の `relic grid` が出力一致。経緯は design/PHASE272_RELIC_REJUDGE.md

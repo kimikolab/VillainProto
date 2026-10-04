@@ -55,7 +55,7 @@ engine の窓口に足したものは `design/ENGINE_HOOKS.md` へ、新しい�
 - 調整用の数値は各 Trait の `public const` に置く。**版の切り替えは駒の `Traits` の配列を差し替える**（マイナスは別の `TraitId` に切り出す。`Run` の引数は増やさない——増やすと `docs/rules.md` の既定値の列が動く）。
 - `InstanceId` を `Counters` に持つ記憶は `OnCarryOver` で**必ず捨てる**（戦闘ごとに振り直される）。
 - 能動的な機構は手番（`OnAction`・`Actions = [Skill]`）に置く。`OnTurnStart` は「全員より先」という speed = ∞ の席で、粛（`Hush`）にも封じられない。**手番で撃つが相手がいなければ殴る**は `OnAction` の中で `ctx.PerformAttack` を直に呼ぶ形（`CanAct` を偽にすると `IdleTurn` が立ち、号令・据えが無償で買い取る）。
-- **レリック（第270期・第273期に機構として採用）は編成の枠に付ける札**（`Formation.SetRelic`・1枠1枚・札は `RelicCatalog` だけ）。**札を足す・作り替えるときは `design/RELIC_MEASURES.md` の物差しで測る。**`Materialize` が `UnitState.Traits` の**末尾**に足し、**`Def.Traits` には入れない**（説明文・ロスター・転生の評価は素の駒のまま）。素の札と同じ札は積まない。**レリックの測定結果を転生の評価に書き戻さない。**
+- **レリック（第270期・第273期に機構として採用）は編成の枠に付ける札**（`Formation.SetRelic`・1枠1枚・札は `RelicCatalog` だけ）。**札を足す・作り替えるときは `design/RELIC_MEASURES.md` の物差しで測る**（まとめは `design/RELIC_SUMMARY.md`）。`Materialize` が `UnitState.Traits` の**末尾**に足し、**`Def.Traits` には入れない**（説明文・ロスター・転生の評価は素の駒のまま）。素の札と同じ札は積まない。**レリックの測定結果を転生の評価に書き戻さない。**
 - **手番に何発振るかを書き換える窓口は `Trait.ModifyHitCount` の1本**（問うのは `SwingTurn` の1箇所＝手番の中だけ。反撃・割り込み・追い打ち・再行動は1発のまま）。上限は特性の側で掛ける。
 - **盤面ルール（`Inversion` / `Drought` / `Yoke` / `Hush`）だけは例外で、判定が engine 側にある**（全員に一度にかかる状態は駒ごとのフックで書けない）。Trait 本体はログを出すだけで、**保持者がいなければ完全に不活性**（`compare` 差分ゼロで確認してから盤面に載せる）。保持者の走査は既存条件の後ろ（`&&` の短絡）に置く。**止めるのは入口ではなく出口**（入口だと惨禍や脆弱が上限を押し戻す）。
 - 盤面ルールを足すときは、**そのルールが触るメソッドの呼び出し元を全部数える**。駒の説明文から数えると必ず抜ける（ゴルムもリィカも「回復」と書いていないのに `ctx.Heal` を呼ぶ）。**窓口を1本足す作業には、その本数を数えている文の一覧を添える**——いまは `docs/rules.md` / `docs/watch.md` の再生成がその一覧。
@@ -325,7 +325,7 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 
 **期ごとの報告は `design/HISTORY_PHASES.md`**（この節から逐語で移した。以後の期はそちらの冒頭に足し、ここのブロックは差し替える）。
 
-**最後に動かした期: 第273期**（レリックを機構として採用〈ポンの決定・物差しは `design/RELIC_MEASURES.md`〉・札を5枚足して12枚〈`RelicCatalog.All`〉。新札の判定は 3 ／ 4〈毒を招く × ベニのゴミだけ ×〉。報告は `design/PHASE273_RELIC_EXPAND.md`・`compare` 0 セル）。
+**最後に動かした期: 第274期**（レリック段の締め・測定なし。札 12 枚のうち帯電の足は供給待ち・毒を招くの読み手はヴィオ・外れ値監視は火付けの矢とゴルム。まとめは `design/RELIC_SUMMARY.md`・引き継ぎは `design/HANDOFF_AFTER_RELIC.md`・`compare` 0 セル）。
 **最後に `compare` が動いた期: 第256期**（被弾の燃焼 H-分担 を規定にし、セロの状態の矢を外した。動いたのはゾトの死軸 8 行・24 セル）。
 
     編成:       61 行（`CompareBuilds()`）＋ 交差帯 12 行（`CrossBuilds()`）
