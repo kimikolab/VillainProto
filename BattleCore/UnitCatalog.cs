@@ -3498,6 +3498,22 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
         new BossStage("H-回復税", "癒し手が ○後2（貫きが届かない）・支えが 後1", EnemyWave.Of((2, BossHero), (3, BossWard), (8, BossMender))),
     };
 
+    // ---------------------------------------------------------------------------------
+    // 第269期 —— **ボスの規定形**（第265〜268期の結論・まとめは design/BOSS_SUMMARY.md）。
+    // 勇者1体（中央）・全体・HP 3,000・攻 12・速 14・天井 +11・動じない・自前の回復（ターン頭に最大HPの 40%）・蝕み N=37（回復が毒の層 × 37 だけ減る）。
+    // **`Stages` には載せていない**（`Stage` は5枠の `Formation` で、作り替えは作戦マップ設計の期に送った）。読むのは `BattleSim` の `bosswave` だけ。
+    // 蝕みは毒を書く全ての台に効く（混ぜのベニの開戦の澱みを含む）——「毒の書き手を1枚差す」はボス戦の編成の選択肢として意図した帰結。
+    // ---------------------------------------------------------------------------------
+    /// <summary>ボスの規定形（第269期）。勇者候補（95/20/14・単体・処刑）との差: HP 3,000・攻 12・全体・処刑 → 天井 +11 ／ 動じない ／ 自前の回復 40% ／ 蝕み N=37（速 14 は同じ）。</summary>
+    public static readonly UnitDef BossRegular = new()
+    {
+        Id = "boss_regular", Name = "勇者", MaxHp = 3000, Attack = 12, Speed = 14, Pattern = AttackPattern.All,
+        Traits = new[] { TraitId.BossRise11, TraitId.BossMend40, TraitId.BossSteadfast, TraitId.VenomTaxSeal },
+        PlusText = "全員を薙ぎ払い、毎ターン攻撃力が 11 上がる。転ばず痺れない。ターン頭に最大HPの 40% 癒えるが、毒の層 × 37 だけ塞がりきらない",
+    };
+    /// <summary>ボスの規定形の波（第269期・中央に1体）。</summary>
+    public static EnemyWave BossRegularWave => EnemyWave.Of((2, BossRegular));
+
     /// <summary><paramref name="stageIndex"/>（0 始まり）のパターン3の写し。定義が無い波は null。</summary>
     public static Formation? Pattern3Of(int stageIndex) => stageIndex switch
     {

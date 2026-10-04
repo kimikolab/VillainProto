@@ -9,8 +9,12 @@ using CW = CheckWaveDiag;
 // 波は `EnemyCatalog.BossStages`（H-制御税 ／ H-回復税）。台はチェック波の7台（`CheckWaveDiag.Boards7`）。倍率なし。
 // **`Stages` には載せていない**（Phase 0-1・報告書 §1）ので、`compare` ほか `Stages` を数える器具は1つも動かない。
 //
-//     dotnet run --project BattleSim -c Release 0 bosswave run            # 7台 × 2版 ＋ 対照2つ（B3-桁 ／ B3-速14）× seed 0..199
-//     dotnet run --project BattleSim -c Release 0 bosswave check          # 自己検査
+//     dotnet run --project BattleSim -c Release 0 bosswave run            # 第269期: ボスの規定形（N=37）＋ 版 V-0 ／ V-18 × 7台（`BossWave.Adopt.cs`）
+//     dotnet run --project BattleSim -c Release 0 bosswave compare        # 第269期: `compare` の全行 × 規定形（別表・`compare` 本体には列を足さない）
+//     dotnet run --project BattleSim -c Release 0 bosswave knobs          # 第269期 参考: ノブを1つ緩めた3版 × `compare` の全行（集計だけ）
+//     dotnet run --project BattleSim -c Release 0 bosswave check          # 第269期: 自己検査を全部（check265 ／ check266 ／ check267 ／ check268 ／ check269）
+//     dotnet run --project BattleSim -c Release 0 bosswave run265         # 第265期: 7台 × 2版 ＋ 対照2つ（B3-桁 ／ B3-速14）× seed 0..199
+//     dotnet run --project BattleSim -c Release 0 bosswave check265       # 第265期の自己検査
 //     dotnet run --project BattleSim -c Release 0 bosswave indom0 ／ indom ／ check266 ／ log266   # 第266期（不屈・`BossWave.Indom.cs`）
 //     dotnet run --project BattleSim -c Release 0 bosswave guard0 ／ guard ／ guardbody ／ check267 ／ log267   # 第267期（勇者が癒し手を庇う・`BossWave.Guard.cs`）
 //     dotnet run --project BattleSim -c Release 0 bosswave venom0 ／ venom ／ check268 ／ log268   # 第268期（蝕み・`BossWave.Venom.cs`）
@@ -25,11 +29,16 @@ static partial class BossWaveDiag
 
     public static void Run(string[] args, int stageIndex)
     {
-        string mode = args.Length > 2 ? args[2] : "run";
+        string mode = args.Length > 2 ? args[2] : "run";   // 第269期: `run` は規定形（第265期の `run` は `run265`）
         switch (mode)
         {
-            case "run": RunAll(); return;
-            case "check": Check(); return;
+            case "run265": RunAll(); return;
+            case "check265": Check(); return;
+            case "run": RegularRun(); return;
+            case "compare": RegularCompare(); return;
+            case "knobs": RegularKnobs(); return;
+            case "check": CheckAll(); return;
+            case "check269": Check269(); return;
             case "body": Body(); return;
             case "indom0": Indom0(); return;
             case "indom": IndomRun(); return;

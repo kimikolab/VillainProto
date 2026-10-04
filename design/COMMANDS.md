@@ -816,9 +816,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 checkwave run262     # 第262期 段2・段3（400/300 の手数チェック W2-* ＋ 全体攻撃の動じないボス B2-*・棄却・対照・第262期の run と全行一致）
     dotnet run --project BattleSim -c Release 0 checkwave run261     # 第261期 段2・段3（重装兵の体の癒し手 W-* ＋ 単体の動じないボス B-*・棄却・対照・第261期の run と全行一致）
     dotnet run --project BattleSim -c Release 0 checkwave run260     # 第260期の段2・段3（司祭の体の癒し手 T-* ＋ 動じない無しのボス・HP 500 の参考）と採否の表 D-1〜D-4（棄却・対照・3 秒）
-    dotnet run --project BattleSim -c Release 0 bosswave run         # 第265期 本編ボス波「勇者パーティー」2版（H-制御税 ／ H-回復税）＋ 対照（B3-桁 ／ B3-速14）× 7台・倒しT・割った順・取り巻きを割ったT・勇者の手番・純実入り・採否（棄却・対照・1 秒）。本体は `Modes/BossWave.cs`
+    dotnet run --project BattleSim -c Release 0 bosswave run265      # 第265期 本編ボス波「勇者パーティー」2版（H-制御税 ／ H-回復税）＋ 対照（B3-桁 ／ B3-速14）× 7台・倒しT・割った順・取り巻きを割ったT・勇者の手番・純実入り・採否（棄却・対照・1 秒）。本体は `Modes/BossWave.cs`
     dotnet run --project BattleSim -c Release 0 bosswave body        # 第265期 参考: 取り巻きの HP だけを ×1 ／ ×2 ／ ×4 ／ ×8 にしたときの割った順（採否には使わない・2 秒）
-    dotnet run --project BattleSim -c Release 0 bosswave check       # 第265期 自己検査（16 項目: 取り巻き ＝ 重装兵 ＋ 札1枚・2版は席だけ・勇者の印の条件・癒し手は勇者だけ・保持者 0・乱数なし・決定性）
+    dotnet run --project BattleSim -c Release 0 bosswave check265    # 第265期 自己検査（16 項目: 取り巻き ＝ 重装兵 ＋ 札1枚・2版は席だけ・勇者の印の条件・癒し手は勇者だけ・保持者 0・乱数なし・決定性）
     dotnet run --project BattleSim -c Release 0 bosswave indom0      # 第266期 Phase 0: 不屈 N=0（素通し）で各台が手番を奪う回数・振れた手番（完全無効 D-40 と並べる）・N=11 ／ 22 の積みの見積もり（1 秒）。本体は `Modes/BossWave.Indom.cs`
     dotnet run --project BattleSim -c Release 0 bosswave indom       # 第266期 勇者1体・不屈 N = 0 ／ 11 ／ 22 ＋ 対照（D-40 ／ B3-速14）× 7台・倒しT・勝率・手番を奪った回数・不屈と天井の積み・採否（棄却・対照・1 秒）
     dotnet run --project BattleSim -c Release 0 bosswave check266    # 第266期 自己検査（15 項目: 5 種が通る・上がったときだけ数える・手番を奪わない状態は数えない・天井と別の箱・F-0 は札なしと台本一致）
@@ -829,6 +829,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 bosswave venom0      # 第268期 Phase 0: D-40 で勇者に積まれる毒の層（回復が入るときの値・T1〜T15）× 7台・毒の書き手の棚卸し（1 秒）。本体は `Modes/BossWave.Venom.cs`
     dotnet run --project BattleSim -c Release 0 bosswave venom       # 第268期 蝕み N=18 ／ 37 ＋ V-0（D-40）× 7台・勝率・倒しT・蝕みで減った回復・層・採否（1 秒）
     dotnet run --project BattleSim -c Release 0 bosswave check268    # 第268期 自己検査（8 項目: 層 × N を引く・層は消費しない・下限 0・札なしは 1,200・V-0 ＝ D-40・保持者 0・決定性）
+    dotnet run --project BattleSim -c Release 0 bosswave run         # 第269期 ボスの規定形（`EnemyCatalog.BossRegular`・蝕み N=37）＋ 版 V-18 ／ V-0 × 7台・正式な指標を見出しに（1 秒）。本体は `Modes/BossWave.Adopt.cs`・まとめは design/BOSS_SUMMARY.md
+    dotnet run --project BattleSim -c Release 0 bosswave compare     # 第269期 ボス別表: `compare` の全行 × 規定形（勝率・倒しT・崩れ始め・層・蝕みで減った回復・毒の書き手の枚数・`compare` 本体には列を足さない・2 秒）
+    dotnet run --project BattleSim -c Release 0 bosswave knobs       # 第269期 参考: 規定形からノブを1つ緩めた3版（HP 1,500 ／ 天井 +4 ／ 回復なし）× `compare` の全行（集計だけ・6 秒）
+    dotnet run --project BattleSim -c Release 0 bosswave check       # 第269期 自己検査を全部（check265 ／ check266 ／ check267 ／ check268 ／ check269・53 項目）
+    dotnet run --project BattleSim -c Release 0 bosswave check269    # 第269期 自己検査（5 項目: 規定形の定義・第268期の V-封 と台本一致・`Stages` に載っていない・保持者 0・書き手5体）
     dotnet run --project BattleSim -c Release 0 checkwave check      # 自己検査（写しの台本一致・癒し手 ＝ 従軍司祭＋札1枚・保持者 0・回復は状態を消さない・刻みの後・軛に切られない・ボスの攻撃力・verbose・乱数・動じない札・重装兵の体の癒し手・全体のボス・400/300 の癒し手・天井 +11・割合の回復・7台目の毒台・規定の組・26 項目）
     dotnet run --project BattleSim -c Release 0 checkwave log <台> <波> [seed]   # 1戦のログ（台は 燃焼 T3-244 ／ 燃焼 T3-255 ／ 移動 ／ 雷 ／ 毒 ／ 混ぜ-255・波は B3-桁 ／ W3-割合 ／ W2-対照 ／ W2-50後 ／ W2-50奥 ／ B2-全4 ／ B2-半4、第261期の版は `261:`・第260期の版は `260:` を前に付ける）
     dotnet run --project BattleSim -c Release 0 shockdigest s232 # 第232期の台（前段の規定・固定なし）
