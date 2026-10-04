@@ -58,7 +58,8 @@ public partial class Main
         }
         if (e.Kind == BattleEventKind.InverseSip)
         {
-            double seconds = Math.Min(0.36, _tickDelayBudget ?? 0.36);
+            // ターン頭では全員の吸収を同時に描く。待ちはDelay側で0にし、粒子の寿命は残す。
+            double seconds = _collectingTurnTicks is not null ? 0.36 : Math.Min(0.36, _tickDelayBudget ?? 0.36);
             _battleField.ShowInverseSip(target, actor, _speed, seconds);
             await Delay(seconds);
             return true;

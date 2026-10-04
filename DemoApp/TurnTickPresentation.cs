@@ -2,7 +2,7 @@ using BattleCore;
 using System.Collections.Generic;
 using System.Linq;
 
-// TurnStart → 最初の写しだけを読む。死亡・延焼・割り込みを跨がず、表示の拍だけを駒ごとにまとめる。
+// TurnStart → 最初の写しだけを読む。死亡・延焼・割り込みを跨がず、駒ごとの数字をまとめて同時に表示する。
 internal sealed class TurnTickBeat
 {
     internal int TargetId;
@@ -81,6 +81,10 @@ internal sealed class TurnTickPresentation
                 { sip = e; continue; }
                 // 啜ったベニ自身の回復は、元の駒の数字へ混ぜない。
                 if (sip is not null && e.Kind == BattleEventKind.Heal && e.TargetId == sip.ActorId && e.ActorId == sip.ActorId)
+                    continue;
+                // 啜り切れなかった回復の紅蓮化も、同じ刻みの帰結。ここで切ると1体ずつ待つ再生へ戻ってしまう。
+                if (sip is not null && e.Kind == BattleEventKind.GurenGain
+                    && e.ActorId == sip.ActorId && e.TargetId == sip.TargetId && e.SourceTrait == TraitId.Guren)
                     continue;
                 bool outcome = sip is null && e.TargetId == root.TargetId &&
                     (e.Kind == BattleEventKind.Damage && e.ActorId is null

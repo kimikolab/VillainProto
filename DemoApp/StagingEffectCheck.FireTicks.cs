@@ -62,11 +62,13 @@ public partial class StagingEffectCheck
                     && e.Kind is BattleEventKind.Damage or BattleEventKind.Heal);
                 if (hp is not null) pawn.SetHp(hp.HpAfter);
                 field.ShowTurnTickBeat(pawn, beat, speed);
-                await Wait(0.18 / speed);
-                Require(pawn.FireInvasive == beat.FireDamage, "焼かれる／オーラを台本の帰結で出し分ける");
-                await Capture($"fire-tick-{beat.TargetId}-speed{speed}");
-                await Wait(beat.Seconds / speed);
             }
+            await Wait(0.18 / speed);
+            foreach (var beat in range.Beats)
+                Require(field.FindPawn(beat.TargetId)!.FireInvasive == beat.FireDamage,
+                    "同時表示でも焼かれる／オーラを台本の帰結で出し分ける");
+            await Capture($"fire-tick-all-speed{speed}");
+            await Wait(range.Beats.Max(b => b.Seconds) / speed);
             Require(field.TurnTickBeatPlays == 4 && field.TurnTickNumberPlays == 6 && field.TurnTickFirePulses == 7,
                 "4体を各一拍、毒と火の6数字、火の7刻みで表示");
             Require(field.FindPawn(3)!.Hp == 69, "合計数字と最終HP");
@@ -78,7 +80,11 @@ public partial class StagingEffectCheck
         await Wait(0.8);
         Require(field.TurnTickBeatPlays == 0 && field.TurnTickNumberPlays == 0 && field.TurnTickFirePulses == 0,
             "再開で古い火の弾け・数字・計数を残さない");
-        if (OS.GetCmdlineUserArgs().Contains("--verify")) await CheckFireTickReplay();
+        if (OS.GetCmdlineUserArgs().Contains("--verify"))
+        {
+            await CheckFireTickReplay();
+            await CheckFireTickReplay(inverse: true);
+        }
     }
 
     private static void CheckTickBarriers()
@@ -102,10 +108,17 @@ public partial class StagingEffectCheck
         BattleEvent[] sip = [new() { Turn = 1, Kind = BattleEventKind.TurnStart },
             Tick(1, "毒", inverse: true), TickHp(1, 3, 100, true, 2),
             new() { Turn = 1, Kind = BattleEventKind.InverseSip, ActorId = 2, TargetId = 1 }, TickHp(2, 9, 90, true, 2),
+            new() { Turn = 1, Kind = BattleEventKind.GurenGain, ActorId = 2, TargetId = 1,
+                Amount = 2, StatusRemaining = 2, SourceTrait = TraitId.Guren },
             new() { Turn = 1, Kind = BattleEventKind.FireArmor, ActorId = 2, TargetId = 1, Text = FireArmorLabels.Convert },
             TickHp(1, 6, 100, true, 2), new() { Turn = 1, Kind = BattleEventKind.StatSnapshot }];
         var beat = TurnTickPresentation.Build(sip).Starts.Values.Single().Beats.Single();
-        Require(beat.Numbers.Sum(n => n.Amount) == 9 && beat.FireHeal, "啜りの回復を混ぜず、火の変換は同じ拍へ");
+        Require(beat.Numbers.Sum(n => n.Amount) == 9 && beat.FireHeal, "啜りの回復を混ぜず、紅蓮の蓄積・火の変換は同じ拍へ");
+        var unrelatedGain = sip.ToArray();
+        unrelatedGain[5] = new() { Turn = 1, Kind = BattleEventKind.GurenGain, ActorId = 3, TargetId = 1,
+            SourceTrait = TraitId.Guren };
+        Require(TurnTickPresentation.Build(unrelatedGain).Starts.Values.First().End == 5,
+            "同じ啜りに結び付かない紅蓮は束ねない");
         BattleEvent[] reaction = [new() { Turn = 1, Kind = BattleEventKind.TurnStart },
             new() { Turn = 1, Kind = BattleEventKind.FireArmor, TargetId = 1, Text = FireArmorLabels.Mend, Reaction = true },
             new() { Turn = 1, Kind = BattleEventKind.StatSnapshot }];
@@ -133,7 +146,7 @@ public partial class StagingEffectCheck
         GD.Print($"FIRE_TICK_PLAN_OK roots={roots} beats={beats}");
     }
 
-    private async Task CheckFireTickReplay()
+    private async Task CheckFireTickReplay(bool inverse = false)
     {
         const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
         var main = GD.Load<PackedScene>("res://Main.tscn").Instantiate<Main>();
@@ -143,7 +156,7 @@ public partial class StagingEffectCheck
         typeof(Main).GetField("_fastSmoke", flags)!.SetValue(main, true);
         typeof(Main).GetField("_speed", flags)!.SetValue(main, 1000.0);
         Call("ClearFormation");
-        string[] keys = { "golm", "hisa", "borg", "hota", "hiyo" };
+        string[] keys = inverse ? ["beni", "gald", "mio", "guza", "tou"] : ["golm", "hisa", "borg", "hota", "hiyo"];
         for (int i = 0; i < keys.Length; i++) Call("DropUnit", i, keys[i]);
         var picker = Read<OptionButton>("_stagePicker");
         picker.Select(3); picker.EmitSignal(OptionButton.SignalName.ItemSelected, 3);
@@ -166,14 +179,52 @@ public partial class StagingEffectCheck
             Require(field.TurnTickNumberPlays == plan.Starts.Values.Sum(r => r.Beats.Sum(b => b.Numbers.Count)), "本番でも刻み数字を重ねず合算");
             Require(Read<int>("_tickPlays") == result.Events.Count(TickPresentation.IsTick), "Statusの元の出来事を一件ずつ通す");
             Require(field.FireCuePlays == result.Events.Count(e => e.Kind is BattleEventKind.FireLevel or BattleEventKind.FireArmor), "変換・癒しの通知も一件ずつ通す");
+            Require(field.GurenGains == result.Events.Count(e => e.Kind == BattleEventKind.GurenGain), "紅蓮の蓄積通知を一件ずつ通す");
+            Require(field.SipPlays == result.Events.Count(e => e.Kind == BattleEventKind.InverseSip), "溢れの吸収通知を一件ずつ通す");
             foreach (var pawn in field.Pawns.Values)
             {
                 var hp = result.Events.LastOrDefault(e => e.TargetId == pawn.InstanceId
                     && e.Kind is BattleEventKind.Damage or BattleEventKind.Heal or BattleEventKind.Death or BattleEventKind.Revive);
                 if (hp is not null) Require(pawn.Hp == Math.Clamp(hp.HpAfter, 0, pawn.MaxHp), "本番の最終HPが台本と一致");
             }
-            GD.Print($"FIRE_TICK_REPLAY_OK pass={pass} beats={field.TurnTickBeatPlays} numbers={field.TurnTickNumberPlays}");
-            if (pass == 0) Call("ReplayBattle");
+            GD.Print($"FIRE_TICK_REPLAY_OK inverse={inverse} pass={pass} beats={field.TurnTickBeatPlays} numbers={field.TurnTickNumberPlays}");
+            if (pass == 0)
+            {
+                // 通常速度の本番入口で、最初の待ちより前に敵味方全員が更新されることを確認する。
+                var openings = Read<List<DemoOpening>>("_battleOpening");
+                var simultaneous = plan.Starts.Values.First(r => r.Beats.Count > 1
+                    && r.Beats.All(b => openings.Any(o => o.InstanceId == b.TargetId))
+                    && r.Beats.Select(b => openings.First(o => o.InstanceId == b.TargetId).Team).Distinct().Count() == 2
+                    && (inverse
+                        ? result.Events.Skip(r.Start).Take(r.End - r.Start).Count(e => e.Kind == BattleEventKind.GurenGain) >= 2
+                        : Enumerable.Range(r.Start, r.End - r.Start).All(r.Primary.ContainsKey)));
+                foreach (double speed in new[] { 1.0, 2.0 })
+                {
+                    field.BeginBattle(openings, "敵味方同時のターン頭", 1);
+                    typeof(Main).GetField("_fastSmoke", flags)!.SetValue(main, false);
+                    typeof(Main).GetField("_speed", flags)!.SetValue(main, speed);
+                    var play = (Task)typeof(Main).GetMethod("PlayTurnTicks", flags)!
+                        .Invoke(main, new object[] { simultaneous, Read<int>("_playToken") })!;
+                    Require(!play.IsCompleted && field.TurnTickBeatPlays == simultaneous.Beats.Count,
+                        "最初の演出待ちの前に敵味方全員を同時表示");
+                    var batch = result.Events.Skip(simultaneous.Start).Take(simultaneous.End - simultaneous.Start).ToArray();
+                    Require(field.GurenGains == batch.Count(e => e.Kind == BattleEventKind.GurenGain)
+                        && field.SipPlays == batch.Count(e => e.Kind == BattleEventKind.InverseSip),
+                        "最初の演出待ちの前に吸収と紅蓮の蓄積も全件表示");
+                    foreach (var beat in simultaneous.Beats)
+                    {
+                        var hp = result.Events.Skip(simultaneous.Start).Take(simultaneous.End - simultaneous.Start)
+                            .LastOrDefault(e => e.TargetId == beat.TargetId && e.Kind is BattleEventKind.Damage or BattleEventKind.Heal);
+                        if (hp is not null) Require(field.FindPawn(beat.TargetId)!.Hp == hp.HpAfter,
+                            "最初の演出待ちの前に全員のHPを台本どおり反映");
+                    }
+                    await play;
+                    GD.Print($"FIRE_TICK_SIMULTANEOUS_OK inverse={inverse} speed={speed} targets={simultaneous.Beats.Count} guren={field.GurenGains}");
+                }
+                typeof(Main).GetField("_fastSmoke", flags)!.SetValue(main, true);
+                typeof(Main).GetField("_speed", flags)!.SetValue(main, 1000.0);
+                Call("ReplayBattle");
+            }
         }
         main.QueueFree();
         await Wait(0.1);
