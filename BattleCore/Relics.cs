@@ -35,7 +35,17 @@ public static class RelicCatalog
         new(TraitId.RelicHarden, "身を固める", "変換", $"開戦時に素の攻撃力 × {RelicHardenTrait.HpPerAtk} を最大HPに足し、攻撃力は 0 になる", "壁・挑発役化（攻 → HP）"),
     };
 
-    private static readonly Dictionary<TraitId, RelicInfo> Map = All.ToDictionary(r => r.Id);
+    /// <summary>
+    /// 札の版（第272期）。<b><see cref="All"/> には入れない</b>——第270・271期の器具（`relic sweep ／ grid`）が回す7枚は変えない。
+    /// <see cref="Formation.SetRelic"/> は受け付ける（測りで差し替えるため）。版の切り替えは札そのものを差し替える（`Run` の引数は増やさない）。
+    /// </summary>
+    public static IReadOnlyList<RelicInfo> Versions { get; } = new RelicInfo[]
+    {
+        new(TraitId.RelicFireArrow3, "火付けの矢・3", "繋ぎ", $"攻撃が当たった敵に火を点ける（1戦 {RelicFireArrow3Trait.Shots} 回まで）", "攻撃 → 燃焼（第272期の版 G1・弾数制）"),
+        new(TraitId.RelicFireArrow5, "火付けの矢・5", "繋ぎ", $"攻撃が当たった敵に火を点ける（1戦 {RelicFireArrow5Trait.Shots} 回まで）", "攻撃 → 燃焼（第272期の版 G2・弾数制）"),
+    };
+
+    private static readonly Dictionary<TraitId, RelicInfo> Map = All.Concat(Versions).ToDictionary(r => r.Id);
 
     public static bool IsRelic(TraitId id) => Map.ContainsKey(id);
     public static RelicInfo Info(TraitId id) => Map[id];
@@ -178,4 +188,44 @@ public sealed class RelicHardenTrait : Trait
     }
 
     public override int ModifyAttack(UnitState self, int atk) => 0;
+}
+
+/// <summary>
+/// 火付けの矢・弾数制（第272期・版 G1 ／ G2）。<see cref="RelicFireArrowTrait"/> と同じ着火を、<b>1戦 <see cref="ShotsOf"/> 回まで</b>に絞る。
+/// 数えるのは<b>実際に着火した回数</b>（攻撃が通らなかった・相手が倒れた手番は数えない）。尽きた後は攻撃が当たっても燃焼を付けない。
+/// 私有のカウンタ（<c>StatusKeys.All</c> に入れない）で持ち、会戦の境界（<c>OnCarryOver</c>）で 0 に戻す——「1戦」は部隊戦1回。
+/// <b>燃焼の脆さ・被弾の燃焼の規則本体には触らない</b>（減るのは着火の回数だけ。点いた火の持続・燃え上がりは G0 と同じ）。
+/// </summary>
+public abstract class RelicFireArrowCappedTrait : Trait
+{
+    public const string ShotsKey = "relicFireShots";
+    protected abstract int ShotsOf { get; }
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (dealt <= 0 || !target.IsAlive || target.TeamId == self.TeamId) return;
+        int used = self.RawCounter(ShotsKey);
+        if (used >= ShotsOf) return;
+        self.SetCounter(ShotsKey, used + 1);
+        ctx.Ignite(target, friendly: false, source: self);
+        ctx.Log($"    {self.Name} の火付けの矢が {target.Name} に火を点けた（残り {ShotsOf - used - 1}）", LogKind.Trigger);
+    }
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(ShotsKey, 0);
+}
+
+/// <summary>火付けの矢・3（第272期・版 G1）。</summary>
+public sealed class RelicFireArrow3Trait : RelicFireArrowCappedTrait
+{
+    public override TraitId Id => TraitId.RelicFireArrow3;
+    public const int Shots = 3;
+    protected override int ShotsOf => Shots;
+}
+
+/// <summary>火付けの矢・5（第272期・版 G2）。</summary>
+public sealed class RelicFireArrow5Trait : RelicFireArrowCappedTrait
+{
+    public override TraitId Id => TraitId.RelicFireArrow5;
+    public const int Shots = 5;
+    protected override int ShotsOf => Shots;
 }

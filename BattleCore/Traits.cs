@@ -607,6 +607,8 @@ public enum TraitId
     RelicWilt,      // 萎える心（ゴミ）: 敵に殴られて削られると攻撃力 −2（読み手: ウツ）
     RelicNumbStep,  // 痺れる足（ゴミ）: 動かされると転倒（次の手番を失う。読み手: ガン）
     RelicHarden,    // 身を固める（変換）: 開戦時に素の攻撃力 × 3 を最大HPに足し、攻撃力は 0
+    RelicFireArrow3, // 火付けの矢・3（第272期・版 G1）: 着火は1戦3回まで（`RelicCatalog.Versions`・`All` には入れない）
+    RelicFireArrow5, // 火付けの矢・5（第272期・版 G2）: 着火は1戦5回まで
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -16310,6 +16312,8 @@ public static class TraitCatalog
         new RelicWiltTrait(),       // 第270期（レリック）
         new RelicNumbStepTrait(),   // 第270期（レリック）
         new RelicHardenTrait(),     // 第270期（レリック）
+        new RelicFireArrow3Trait(), // 第272期（レリックの版 G1）
+        new RelicFireArrow5Trait(), // 第272期（レリックの版 G2）
         new InversionTrait(),
         new DroughtTrait(),
         new YokeTrait(),
