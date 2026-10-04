@@ -106,6 +106,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 **engine で触ったのは `order` が `.ToList()` で確定した後の1ブロックだけ**
 ——`speedGroups` にも `Shuffle` にも触らないので**乱数列が規則の有無に依らない**（これが 305 セル 0 件の根拠）。
 
+**第271期は盤面を1ビットも動かしていない——レリックの本判定で、機構として採用しなかった**（指示書は design/PHASE271_RELIC_JUDGE_SPEC.md）。`relic grid`（`compare` 61 行 × 札7枚 × 枠5・部隊に1枚 × ボス規定形 ＋ 本編第2〜5波・seed 0..199）で四つの物差しを測り、固有の勝者（ボス）0 行・混成率 0 波・ゴミの成立 1 ／ 2 組（ウツ × 萎える心）・個性の保存は該当なし——下限を全部は超えなかった。素の版の本編 244 セルは `docs/balance.md` と全一致。参考に本編の波へ同じ手続きを当てると固有の勝者は 6 行（火付けの矢 10 ／ 11・個性は 11 ／ 11 保存）。経緯は design/PHASE271_RELIC_JUDGE.md
+
 **第270期は盤面を1ビットも動かしていない——レリックの器と最初の札7枚を足した**（指示書は design/PHASE270_RELIC_FOUNDATION_SPEC.md）。器は `Formation.SetRelic`（枠ごとに1枚）で、`Materialize` が札を `UnitState.Traits` の末尾に足す（`UnitDef` は書き換えない）。札は `RelicCatalog`（BattleCore/Relics.cs）の7枚——繋ぎ4（軋む足・火付けの矢・毒の足跡・弾性＝既存の `Spring`）・ゴミ2（萎える心・痺れる足）・変換1（身を固める）。レリック無しの `compare` 305 セル・`bosswave run` ／ `compare`・`checkwave run` は変更前の HEAD と出力一致、`relic check` 10 項目すべて ○。気配の確認（`relic sweep`）では火付けの矢 × 毒の台（ガルド）が勝率 45 → 100%（燃焼の脆さと被弾の燃焼が毒の隊の手数に乗る）。経緯は design/PHASE270_RELIC_FOUNDATION.md
 
 **第269期は盤面を1ビットも動かしていない——ボスの規定形を確定し、第265〜269期を閉じた**（指示書は design/PHASE269_BOSS_ADOPT_SPEC.md）。規定形は `EnemyCatalog.BossRegular`（1体・中央・全体・HP 3,000・攻 12・速 14・天井 +11・動じない・自前の回復 40%・蝕み N=37）で、`Stages` には載せていない。`bosswave run` を規定形に差し替え（第265期の `run` ／ `check` は `run265` ／ `check265`）、`bosswave compare` で `compare` の全 61 行を当てた——100% 5 行・0% 52 行・平均 11.2%。ノブを1つ緩めた参考（HP 1,500 ／ 天井 +4 ／ 回復なし）でも 0% は 47 ／ 52 ／ 44 行。`compare` 305 セル 0 件・`bosswave check` 53 項目すべて ○。まとめは design/BOSS_SUMMARY.md、引き継ぎは design/HANDOFF_AFTER_BOSS.md——経緯は design/PHASE269_BOSS_ADOPT.md
