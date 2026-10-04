@@ -404,6 +404,8 @@
 | `RelicWilt` | - |
 | `RelicNumbStep` | - |
 | `RelicHarden` | - |
+| `RelicFireArrow3` | - |
+| `RelicFireArrow5` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

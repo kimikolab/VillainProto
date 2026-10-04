@@ -839,9 +839,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 relic sweep          # 第270期 気配の確認: ボスの規定形 × 7台 × 札7枚 × 付け先の規則2つ（攻 ／ 前）・倒しT と勝率の差・発火・付けた駒の与ダメ（5 秒）
     dotnet run --project BattleSim -c Release 0 relic keep           # 第270期 個性の保存: 移動の台のヨミに軋む足 ／ 身を固める（ヨミの軋みの回数と与ダメ・1 秒）
     dotnet run --project BattleSim -c Release 0 relic p0j            # 第271期 Phase 0: 総当たりの規模・61 行の軸タグ（混成 ＝ 2軸以上の核）・ウツ ／ ガンを含む行（戦闘0回）。本体は `Modes/Relic.Grid.cs`
-    dotnet run --project BattleSim -c Release 0 relic grid           # 第271期 本判定: 61 行 × 札7枚 × 枠5（部隊に1枚）× ボス ＋ 本編第2〜5波・固有の勝者（帯B で追試）・個性の保存・混成率・ゴミの成立・既存波の桁・素の本編 244 セルの回帰（110 秒）
+    dotnet run --project BattleSim -c Release 0 relic grid [帯の頭]  # 第271期（第272期に帯の頭を引数にした・既定 0） 本判定: 61 行 × 札7枚 × 枠5（部隊に1枚）× ボス ＋ 本編第2〜5波・固有の勝者（帯B で追試）・個性の保存・混成率・ゴミの成立・既存波の桁・素の本編 244 セルの回帰（110 秒）
     dotnet run --project BattleSim -c Release 0 relic junk           # 第271期 ゴミの成立だけ（ウツ × 萎える心 ／ ガン × 痺れる足・対照は読み手のいない行・総当たりを回すので 110 秒）
     dotnet run --project BattleSim -c Release 0 relic mainwin        # 第271期 参考（採否には使わない）: 固有の勝者の手続きを本編第2〜5波に当てる ＋ 個性の保存（111 秒）
+    dotnet run --project BattleSim -c Release 0 relic p0r            # 第272期 Phase 0: 帯A（seed 200..399）で素が負けるセル（本編第2〜5波 × 61 行）の数と行（7 秒）。本体は `Modes/Relic.Rejudge.cs`
+    dotnet run --project BattleSim -c Release 0 relic rejudge        # 第272期 再判定: 版 G0 ／ G1（火付けの矢 N=3）／ G2（N=5）× 61 行 × 札7枚 × 枠5 × 本編第2〜5波・固有の勝者（帯B 400..599 で追試）・混成の成立・個性の保存・ゴミの再現・弾数制の効き・ボスの付録（310 秒）
+    dotnet run --project BattleSim -c Release 0 relic check272       # 第272期 弾数制の自己検査（6 項目: 版の札は `All` の外・保持者 0・3発を超えない・3発以内の戦は G0 と台本一致・4発以上の戦がある・境界で弾数が戻る）
     dotnet run --project BattleSim -c Release 0 relic log <台> <札> <規則> [seed]   # 第270期 1戦のログ（札は日本語名・規則は 攻 ／ 前）
     dotnet run --project BattleSim -c Release 0 checkwave check      # 自己検査（写しの台本一致・癒し手 ＝ 従軍司祭＋札1枚・保持者 0・回復は状態を消さない・刻みの後・軛に切られない・ボスの攻撃力・verbose・乱数・動じない札・重装兵の体の癒し手・全体のボス・400/300 の癒し手・天井 +11・割合の回復・7台目の毒台・規定の組・26 項目）
     dotnet run --project BattleSim -c Release 0 checkwave log <台> <波> [seed]   # 1戦のログ（台は 燃焼 T3-244 ／ 燃焼 T3-255 ／ 移動 ／ 雷 ／ 毒 ／ 混ぜ-255・波は B3-桁 ／ W3-割合 ／ W2-対照 ／ W2-50後 ／ W2-50奥 ／ B2-全4 ／ B2-半4、第261期の版は `261:`・第260期の版は `260:` を前に付ける）

@@ -106,6 +106,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 **engine で触ったのは `order` が `.ToList()` で確定した後の1ブロックだけ**
 ——`speedGroups` にも `Shuffle` にも触らないので**乱数列が規則の有無に依らない**（これが 305 セル 0 件の根拠）。
 
+**第272期は盤面を1ビットも動かしていない——レリックを再判定し、事前の線では個性の保存の1つだけが下限に届かなかった**（指示書は design/PHASE272_RELIC_REJUDGE_SPEC.md）。分母を本編第2〜5波の素が負けるセル（帯A seed 200..399 で 86 セル・34 行）に置き直し、火付けの矢の弾数制（`RelicFireArrow3` ／ `RelicFireArrow5`・`RelicCatalog.Versions`）を足した。`relic rejudge`: G1 で固有の勝者 25 行（火付けの矢以外 20 行）・混成の成立 73 件・ウツ × 萎える心は再現・個性の保存 109 ／ 112（×3 件はすべて身を固める）。弾数制では火付けの矢の最大の上げが +100 → +94pt にしか下がらない。回帰は既存4本と第271期の `relic grid` が出力一致。経緯は design/PHASE272_RELIC_REJUDGE.md
+
 **第271期は盤面を1ビットも動かしていない——レリックの本判定で、機構として採用しなかった**（指示書は design/PHASE271_RELIC_JUDGE_SPEC.md）。`relic grid`（`compare` 61 行 × 札7枚 × 枠5・部隊に1枚 × ボス規定形 ＋ 本編第2〜5波・seed 0..199）で四つの物差しを測り、固有の勝者（ボス）0 行・混成率 0 波・ゴミの成立 1 ／ 2 組（ウツ × 萎える心）・個性の保存は該当なし——下限を全部は超えなかった。素の版の本編 244 セルは `docs/balance.md` と全一致。参考に本編の波へ同じ手続きを当てると固有の勝者は 6 行（火付けの矢 10 ／ 11・個性は 11 ／ 11 保存）。経緯は design/PHASE271_RELIC_JUDGE.md
 
 **第270期は盤面を1ビットも動かしていない——レリックの器と最初の札7枚を足した**（指示書は design/PHASE270_RELIC_FOUNDATION_SPEC.md）。器は `Formation.SetRelic`（枠ごとに1枚）で、`Materialize` が札を `UnitState.Traits` の末尾に足す（`UnitDef` は書き換えない）。札は `RelicCatalog`（BattleCore/Relics.cs）の7枚——繋ぎ4（軋む足・火付けの矢・毒の足跡・弾性＝既存の `Spring`）・ゴミ2（萎える心・痺れる足）・変換1（身を固める）。レリック無しの `compare` 305 セル・`bosswave run` ／ `compare`・`checkwave run` は変更前の HEAD と出力一致、`relic check` 10 項目すべて ○。気配の確認（`relic sweep`）では火付けの矢 × 毒の台（ガルド）が勝率 45 → 100%（燃焼の脆さと被弾の燃焼が毒の隊の手数に乗る）。経緯は design/PHASE270_RELIC_FOUNDATION.md
