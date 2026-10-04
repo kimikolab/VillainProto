@@ -4162,6 +4162,8 @@ public static class InterceptLabels
     public const string Martyr = "殉教";
     /// <summary>棘守り（カド）。鎖の最後。</summary>
     public const string ThornGuard = "棘守り";
+    /// <summary>勇者の庇い（第267期・`bosswave` の勇者だけ）。<b><see cref="All"/> には入れない</b>（`harm` の段別の内訳を動かさない）。</summary>
+    public const string HeroShield = "勇者の庇い";
 
     /// <summary>
     /// 範囲の盾（バン・第185期 追補2・<b>表示専用</b>）。<b>鎖の段ではない</b>——標的選択を差し替えるのではなく、

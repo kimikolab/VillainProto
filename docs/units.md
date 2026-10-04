@@ -394,6 +394,8 @@
 | `Indomitable0` | - |
 | `Indomitable11` | - |
 | `Indomitable22` | - |
+| `HeroShield75` | - |
+| `HeroShield100` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

@@ -4804,6 +4804,7 @@ public sealed class BattleContext
 
     /// <summary>突き（第186期 追補）の保持者が盤上に1体でもいるか。いなければ列の指定と倍率の判定を比較1つで抜ける。</summary>
     bool _thrustLive;
+    bool _heroShieldLive;   // 第267期（勇者の庇いの短絡・保持者は bosswave の勇者だけ）
 
     // ---- 第223期: 回避（逃げ上手のセロ・`EvadeTrait`）。**保持者がいなければ `_evadeLive` の比較1つで全部抜ける。** ----
     bool _evadeLive;
@@ -7039,6 +7040,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Beckon)) _beckonHolders.Add(u);   // 第184期（半減の判定の短絡）
         if (u.HasTrait(TraitId.Deflect)) _deflectHolders.Add(u); // 第186期（逸らしの判定の短絡）
         if (u.HasTrait(TraitId.Thrust) || u.HasTrait(TraitId.ThrustPlain)) _thrustLive = true;   // 第186期 追補
+        if (HeroShieldTrait.Holds(u)) _heroShieldLive = true;   // 第267期（勇者の庇い）
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
         if (u.HasTrait(TraitId.FireArmor) || u.HasTrait(TraitId.Smolder)
             || u.HasTrait(TraitId.FireMend) || u.HasTrait(TraitId.FireFeed)) _fireArmorLive = true;   // 第234期（火の鎧・焼け残り）・第235期（火の癒し・焼き返し）
@@ -8297,6 +8299,23 @@ public sealed class BattleContext
             NoteConfusedGuard(attacker, martyr);   // 第147期（計数のみ）
             EmitIntercept(martyr, target, InterceptLabels.Martyr);   // 第125期 段1（表示専用）
             return martyr;
+        }
+
+        // 勇者の庇い（第267期・`bosswave` の勇者だけ）。**殉教の向き替え**——守る相手を癒し手（`HeroMend` の持ち主）に限り、列は問わない。
+        // 保持者がいなければ `_heroShieldLive` の比較1つで抜ける。100% の版は `Roll` を引かない（候補が1体なら `PickOne` も引かない）。
+        if (_heroShieldLive && target.HasTrait(TraitId.HeroMend))
+        {
+            UnitState? shield = PickOne(foes.Where(f => f != target && HeroShieldTrait.Holds(f) && !HoleSkip(f)).ToList());
+            if (shield is not null)
+            {
+                int pct = HeroShieldTrait.PercentOf(shield);
+                if (pct >= 100 || Roll(100) < pct)
+                {
+                    Log($"    {shield.Name} が {target.Name} を庇った", LogKind.Trigger);
+                    EmitIntercept(shield, target, InterceptLabels.HeroShield);
+                    return shield;
+                }
+            }
         }
 
         // 棘守り（カド）。**鎖の最後に置く。** 庇う（ガルド）は 50% の確率判定を持つ

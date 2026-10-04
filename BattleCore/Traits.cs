@@ -591,6 +591,10 @@ public enum TraitId
     Indomitable11,  // 不屈・11（第266期・版 F-11）: 手番を奪う状態が通るたびに攻撃力 +11（天井1ターン分）。入口は `UnitState.SetCounter`（`Trait.OnControlGained`）。保持者 0 枚
     Indomitable22,  // 不屈・22（第266期・版 F-22）: 同上で +22（天井2ターン分）。保持者 0 枚
 
+    // --- 第267期で足した札（`bosswave` の勇者だけ。ロスターと本編の敵の保持者 0 枚） ---
+    HeroShield75,   // 勇者の庇い・75（第267期・版 G-庇75）: 同じ陣営の癒し手（`HeroMend` の持ち主）への単体攻撃を 75% で自分へ差し替える（殉教の向き替え・列を問わない・肩代わりで育たない）。**判定は engine**（`SelectTargetChain`・殉教の直後）。薙ぎ・貫き・全体・刻みは通らない。保持者 0 枚
+    HeroShield100,  // 勇者の庇い・100（第267期・版 G-庇100）: 同上で 100%（`Roll` を引かない）。保持者 0 枚
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -13921,6 +13925,22 @@ public sealed class IndomitableTrait : Trait
     }
 }
 
+/// <summary>
+/// 勇者の庇い（第267期・`bosswave` の勇者だけ）。<b>同じ陣営の癒し手（<see cref="TraitId.HeroMend"/> の持ち主）への単体攻撃を、<see cref="Percent"/>% で自分へ差し替える</b>。
+/// 殉教（<see cref="MartyrTrait"/>）の向き替えで、違いは3つ——列を問わない（勇者は中央）・守る相手を癒し手に限る・肩代わりで育たない（<see cref="RedirectGainTrait"/> を継がない）。
+/// 判定は engine の <c>SelectTargetChain</c>（殉教の段の直後）。主目標を差し替えるだけなので、薙ぎ・貫き・全体と毒・燃焼の刻みは通らない（設計の中核規則のまま）。
+/// </summary>
+public sealed class HeroShieldTrait : Trait
+{
+    public const int Mid = 75, Full = 100;
+    readonly TraitId _id;
+    public int Percent { get; }
+    public HeroShieldTrait(TraitId id, int percent) { _id = id; Percent = percent; }
+    public override TraitId Id => _id;
+    public static bool Holds(UnitState u) => u.HasTrait(TraitId.HeroShield75) || u.HasTrait(TraitId.HeroShield100);
+    public static int PercentOf(UnitState u) => u.HasTrait(TraitId.HeroShield100) ? Full : Mid;
+}
+
 public sealed class BossRiseTrait : Trait
 {
     public const int Low = 4, High = 8;
@@ -16153,6 +16173,8 @@ public static class TraitCatalog
         new IndomitableTrait(TraitId.Indomitable0, 0),                 // 第266期
         new IndomitableTrait(TraitId.Indomitable11, IndomitableTrait.Mid), // 第266期
         new IndomitableTrait(TraitId.Indomitable22, IndomitableTrait.High), // 第266期
+        new HeroShieldTrait(TraitId.HeroShield75, HeroShieldTrait.Mid),   // 第267期（bosswave の勇者だけ）
+        new HeroShieldTrait(TraitId.HeroShield100, HeroShieldTrait.Full), // 第267期
         new BurnHitAddTrait(),       // 第255期
         new BurnHitSplitTrait(),     // 第255期
         new BurnHitSplitOnceTrait(), // 第255期
