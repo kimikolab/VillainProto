@@ -845,6 +845,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 relic p0r            # 第272期 Phase 0: 帯A（seed 200..399）で素が負けるセル（本編第2〜5波 × 61 行）の数と行（7 秒）。本体は `Modes/Relic.Rejudge.cs`
     dotnet run --project BattleSim -c Release 0 relic rejudge        # 第272期 再判定: 版 G0 ／ G1（火付けの矢 N=3）／ G2（N=5）× 61 行 × 札7枚 × 枠5 × 本編第2〜5波・固有の勝者（帯B 400..599 で追試）・混成の成立・個性の保存・ゴミの再現・弾数制の効き・ボスの付録（310 秒）
     dotnet run --project BattleSim -c Release 0 relic check272       # 第272期 弾数制の自己検査（6 項目: 版の札は `All` の外・保持者 0・3発を超えない・3発以内の戦は G0 と台本一致・4発以上の戦がある・境界で弾数が戻る）
+    dotnet run --project BattleSim -c Release 0 relic p0x            # 第273期 Phase 0: 新札5枚の読み手の在籍（`compare` 61 行・戦闘0回）。本体は `Modes/Relic.Expand.cs`・物差しは design/RELIC_MEASURES.md
+    dotnet run --project BattleSim -c Release 0 relic check273       # 第273期 新札5枚の自己検査（14 項目: 一覧の並び・保持者 0・発火・発火しない戦は素と台本一致・毒を招くの2倍・カタの検証台で帯電の足が発火。帯電の足の `compare` 行での発火 0 は × のまま記録）
+    dotnet run --project BattleSim -c Release 0 relic expand         # 第273期 本判定: 61 行 × 札12枚 × 枠5 × 本編第2〜5波・帯A 600..799 ／ 帯B 800..999・固有の勝者・橋の内訳・ゴミ（ベニ ／ ヴィオ ／ ウツ）・個性の保存（札種別）・符号反転（175 秒）
+    dotnet run --project BattleSim -c Release 0 relic logrow <行名> <札> <枠0-4> <波1-4> [seed]   # 第273期 `compare` の行に札を付けた1戦のログ
     dotnet run --project BattleSim -c Release 0 relic log <台> <札> <規則> [seed]   # 第270期 1戦のログ（札は日本語名・規則は 攻 ／ 前）
     dotnet run --project BattleSim -c Release 0 checkwave check      # 自己検査（写しの台本一致・癒し手 ＝ 従軍司祭＋札1枚・保持者 0・回復は状態を消さない・刻みの後・軛に切られない・ボスの攻撃力・verbose・乱数・動じない札・重装兵の体の癒し手・全体のボス・400/300 の癒し手・天井 +11・割合の回復・7台目の毒台・規定の組・26 項目）
     dotnet run --project BattleSim -c Release 0 checkwave log <台> <波> [seed]   # 1戦のログ（台は 燃焼 T3-244 ／ 燃焼 T3-255 ／ 移動 ／ 雷 ／ 毒 ／ 混ぜ-255・波は B3-桁 ／ W3-割合 ／ W2-対照 ／ W2-50後 ／ W2-50奥 ／ B2-全4 ／ B2-半4、第261期の版は `261:`・第260期の版は `260:` を前に付ける）

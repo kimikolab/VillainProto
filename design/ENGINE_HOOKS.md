@@ -964,6 +964,7 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **勇者の庇い（第267期）は `SelectTargetChain` の殉教の段の直後に1段**——同じ陣営の癒し手（`HeroMend` の持ち主）が単体の主目標になったとき、`HeroShield75` ／ `HeroShield100` の持ち主へ 75 ／ 100% で差し替える（列を問わない・`RedirectGainTrait` を継がないので育たない・100% は `Roll` を引かない）。保持者のいない戦は `_heroShieldLive` の比較1つで抜ける。出来事は既存の `Intercept`（`InterceptLabels.HeroShield`・`All` には入れない）。保持者は `bosswave` の勇者だけ。
 - **蝕み（第268期）は `BossMendTrait.OnTurnStart` の中の1行**——回復の量を決めた直後に `VenomTaxTrait.Apply` が「毒の層 × N」を引く（下限 0・層は消費しない・減った名目は私有キー `venomCut`）。`ctx.Heal`（渇き・支援拒否の入口）より手前で量を決めるだけなので、渇きと二重には引かない。札が無ければ素通り。保持者は `bosswave` の勇者だけ。
 - **レリック（第270期）は `BattleEngine.Materialize` の1行**——`Formation.RelicAt(枠)` が null でなければ `RelicCatalog.Attach(def.Traits, 札)` で `UnitState.Traits` の末尾に足す（null の枠は従来の `TraitCatalog.Resolve(def.Traits)` のまま）。`UnitDef` は書き換えないので `Def.Traits` に札は入らず、`UnitState.Relic` は表示と測定の印（どの規則も読まない）。素の札と同じ札は積まない。召喚・分裂の子は継がず、蘇生・会戦の持ち越しは同じ `UnitState` なので継ぐ。`MaterializeEnemy`（9枠の敵）と `Summon` は触っていない
+- **レリックの受け取り側の窓口（第273期）は2行**——`BattleContext.Heal` の HP を足した直後に溢れ（最大HPで切られた分・全快の回復も含む）を `RelicOverflowEdgeTrait.Gain` へ（`_overflowLive`）、`BattleContext.Poison` の滲みの後・書く直前に毒を招くの2倍（`_poisonMagnetLive`）。どちらも保持者がいない戦は bool 1つで抜ける。`ctx.Poison` を通らない毒の書き込み（ミオの濃縮・リリの口移し・身代わり・会戦の持ち越し）は2倍にならない
 
 ### 敵の数値の倍率（第187期・`EnemyScaleRule`）
 

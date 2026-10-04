@@ -406,6 +406,11 @@
 | `RelicHarden` | - |
 | `RelicFireArrow3` | - |
 | `RelicFireArrow5` | - |
+| `RelicShockStep` | - |
+| `RelicVenomShove` | - |
+| `RelicOverflowEdge` | - |
+| `RelicMomentum` | - |
+| `RelicPoisonMagnet` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
