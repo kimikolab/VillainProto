@@ -16,7 +16,7 @@ using CW = CheckWaveDiag;
 // **測るのは向き（札の文面と合っているか）まで。** 固有の勝者探し・混成率・総当たりは第271期。
 // **レリックの測定結果は転生の評価（`roster_audit`・転生候補の棚）に書き戻さない**（指示書 §0）。
 // =====================================================================================
-static class RelicDiag
+static partial class RelicDiag
 {
     const int Seeds = 200;
     const int Window = CW.BossTurns;
@@ -30,8 +30,12 @@ static class RelicDiag
             case "check": Check(); return;
             case "sweep": Sweep(); return;
             case "keep": Keep(); return;
+            case "p0j": P0Judge(); return;               // 第271期
+            case "grid": Grid(); return;                 // 第271期
+            case "junk": Junk(); return;                 // 第271期
+            case "mainwin": MainWin(); return;           // 第271期（参考）
             case "log": LogOne(args.Length > 3 ? args[3] : "移動", args.Length > 4 ? args[4] : "軋む足", args.Length > 5 ? args[5] : "攻", args.Length > 6 ? int.Parse(args[6]) : 0); return;
-            default: Console.WriteLine("relic: モードは p0 / check / sweep / keep / log。"); return;
+            default: Console.WriteLine("relic: モードは p0 / check / sweep / keep / log ／ p0j / grid / junk（第271期）。"); return;
         }
     }
 
