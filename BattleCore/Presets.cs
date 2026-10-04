@@ -737,7 +737,14 @@ public static class Presets
         // 第111〜113期の席（後1 トモ / 後3 ボルグ）は W0 では情報セル 4 で、**W2 で 3 に落ちたのはこの席のほう。**
         ("灯×薙ぎ (トモ×ドルガ)", Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald,
                                               center: UnitCatalog.Sora, back1: UnitCatalog.Borg,
-                                              back3: UnitCatalog.Tomo))
+                                              back3: UnitCatalog.Tomo)),
+        // **第276期に足した（62 行目）。感電の行**——ソムの転生（S1x・喚ばれた餌が雷を纏って立つ）で、`compare` に初めてカタとソムが入る。
+        // ポンの雷の席（前1 シガ ／ 前3 ツギ ／ 中央 ベニ ／ 後1 カタ ／ 後3 ミオ）の**中央 ベニ → ソム**（指示書の「検証・雷ソムA」）。
+        // ミオ → ソムの B 行は旧ソムでも全波 100% で情報セルが 0 なので採らなかった。席は入れ替えただけで `layout` ／ `reseat` は回していない。
+        // 経緯は design/PHASE276_SOM_REBIRTH.md。
+        ("感電 (シガ×カタ×ソム)", Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Tsugi,
+                                              center: UnitCatalog.Som, back1: UnitCatalog.Kata,
+                                              back3: UnitCatalog.Mio))
     };
 
     // 第92期の交差帯。**`CompareBuilds()` とは完全に別の入口**で、生成物も `docs/crossing.md` と分けてある

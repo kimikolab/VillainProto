@@ -128,7 +128,7 @@ static class TumultDiag
         Console.WriteLine("|---|---:|---:|");
         {
             Formation f = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga,
-                                          center: UnitCatalog.Som, back1: UnitCatalog.Nomi,
+                                          center: UnitCatalog.SomS0, back1: UnitCatalog.Nomi,
                                           back3: UnitCatalog.Basa);
             long battles = 0, summoned = 0;
             for (int st = 1; st < EnemyCatalog.Stages.Count; st++)

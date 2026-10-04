@@ -92,7 +92,7 @@ public static void Run(string[] args, int stageIndex)
 
     // ---- 試験行（門と紙のための理想台）。`CompareBuilds()` は1行も触っていない ----
     // **席は規則配置 H で機械的に決める**（手で選ばない）。
-    UnitDef Bt(string id) => UnitCatalog.ById(id);
+    UnitDef Bt(string id) => id == BtAId ? UnitCatalog.SomS0 : UnitCatalog.ById(id);   // 第276期: 旧ソム（背かれ）に固定
     (string Name, Formation F)[] BtRows() => new[]
     {
         ("ソム×追い打ち (ソム×ハギ)", BtFormOf(new[] { Bt("som"), Bt("hagi"), Bt("gald"), Bt("golm"), Bt("dolga") })),

@@ -616,6 +616,13 @@ public enum TraitId
     RelicMomentum,     // 勢い余り（繋ぎ）: 敵を倒すと、隣の味方と入れ替わる
     RelicPoisonMagnet, // 毒を招く（ゴミ）: 受ける毒の層が2倍（判定は engine `Poison` の1行・読み手: ベニ・ヴィオ）
 
+    // --- 第276期で足した札（ソムの転生の版。`UnitCatalog.SomS1` ／ `SomS2` だけが持つ） ---
+    BetrayedShock,       // 背かれ・雷（S1）: 背かれと同じに喚び、喚ばれた餌は感電を帯びて立つ
+    BetrayedShockSpread, // 背かれ・雷移し（S2）: 同上で、立ったときに餌と隣り合う敵すべてにも感電を移す
+    BetrayedShockNeighbors, // 背かれ・隣だけ（S2′・対照）: 餌は感電せず、立ったときに餌と隣り合う敵すべてに感電を付ける（S2 から餌の感電だけを抜いた札）
+    BetrayedShockNoThunder, // 背かれ・雷避け（S1x）: S1 で、纏った餌はカタの雷の「帯びた敵を選ぶ」経路と跳ね先から外れる（判定は `ThunderTrait.Pick` ／ `Onward`）
+    BetrayedShockThunderPop,// 背かれ・雷で弾ける（S1p）: S1 で、纏った餌は雷でも感電が弾ける（判定は engine の起爆の1行・保持者がいなければ比較1つで抜ける）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -10425,9 +10432,16 @@ public sealed class BetrayedTrait : Trait
 
     public override TraitId Id => TraitId.Betrayed;
 
-    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    public override void OnTurnStart(BattleContext ctx, UnitState self) => Call(ctx, self);
+
+    /// <summary>
+    /// 喚び出しの本体（第276期に <see cref="OnTurnStart"/> から切り出した。<b>中身は1文字も変えていない</b>
+    /// ——旧ソムを含む戦の台本の指紋が切り出しの前後で一致することが門）。湧いた餌を返す（湧かなければ null）。
+    /// <see cref="BetrayedShockTrait"/> が同じ口を呼んでから感電を付ける。
+    /// </summary>
+    internal static UnitState? Call(BattleContext ctx, UnitState self)
     {
-        if (!ctx.Betray.Enabled) return;
+        if (!ctx.Betray.Enabled) return null;
 
         int foe = ctx.Opponent(self.TeamId);
 
@@ -10437,7 +10451,7 @@ public sealed class BetrayedTrait : Trait
         if (ctx.AllUnits.Any(u => u.IsAlive && u.TeamId == foe && IsFodder(u)))
         {
             ctx.NoteBetraySummon(self, null);
-            return;
+            return null;
         }
 
         UnitState? f = ctx.Summon(UnitCatalog.Fodder, foe, FodderSlotOf(ctx.ShapeOfTeam(foe)),
@@ -10445,6 +10459,55 @@ public sealed class BetrayedTrait : Trait
         ctx.NoteBetraySummon(self, f);
         if (f is not null)
             ctx.Log($"    {self.Name} が喚んだものは向こう側に立った", LogKind.Trigger);
+        return f;
+    }
+}
+
+/// <summary>
+/// 背かれ・雷（第276期・ソムの転生の版）。<b>背かれ（<see cref="BetrayedTrait"/>）と同じ口で喚び、湧いた餌に感電を付ける</b>
+/// ——「喚ばれたものは背いて敵につく。ただし、雷を纏ったまま。」
+///
+/// <para><b>感電は二値で層を持たない</b>（<see cref="StatusKeys.Shock"/>）ので、指示書 §2 の「2層 ／ 4層」は書けない。
+/// 版の軸を「連鎖が通る駒の数」に読み替えた（報告書 §1）:
+/// S1（<see cref="TraitId.BetrayedShock"/>）＝ 餌だけが感電して立つ ／
+/// S2（<see cref="TraitId.BetrayedShockSpread"/>）＝ 立ったとき、餌と隣り合う敵すべてにも感電を移す ／
+/// S2′（<see cref="TraitId.BetrayedShockNeighbors"/>・対照）＝ 餌は感電せず、隣り合う敵にだけ付ける（S2 − S2′ ＝ 餌が纏う感電そのものの値）。</para>
+///
+/// <para><b>S1 の作り直し（第276期・ポンの判断で同じ期に測った）。</b> S1 は、感電した餌が「状態異常を帯びた敵」としてカタの雷の標的に入り、
+/// 雷 1発（6 ×（1 ＋ 1種）＝ 12）が餌の HP 12 ちょうどで、<b>雷は起爆しない</b>ので餌を黙って消していた。穴を塞ぐ2版:
+/// S1x（<see cref="TraitId.BetrayedShockNoThunder"/>）＝ 纏った餌には雷が落ちない（<see cref="NoThunderKey"/>）／
+/// S1p（<see cref="TraitId.BetrayedShockThunderPop"/>）＝ 纏った餌は雷でも弾ける（<see cref="ThunderPopKey"/>）。
+/// どちらの印も餌にだけ立つ私有キー（<see cref="StatusKeys.All"/> に入れない・餌は <see cref="TraitId.Ephemeral"/> で会戦を跨がない）。</para>
+///
+/// <para>餌の定義（<see cref="UnitCatalog.Fodder"/>）は触らない——旧ソム（S0）と餌を共有したまま、差分をこの札1枚に閉じる。
+/// 書き手は <see cref="BattleContext.MarkShock"/> の1箇所（ソム）。<b>乱数を引かない。</b>
+/// 感電の起爆・放電・痺れは既存の規則のまま（餌は敵陣の駒なので、弾ければ敵陣の隣へ放電し、撃破は弾けさせた一撃の主に帰る）。</para>
+/// </summary>
+public sealed class BetrayedShockTrait : Trait
+{
+    /// <summary>S1x の印（私有キー）: 立っている餌には雷が落ちない（<see cref="ThunderTrait.Pick"/> ／ <see cref="ThunderTrait.Onward"/> が読む）。</summary>
+    public const string NoThunderKey = "somNoThunder";
+    /// <summary>S1p の印（私有キー）: この餌の感電は雷でも弾ける（engine の起爆の判定が読む）。</summary>
+    public const string ThunderPopKey = "somThunderPop";
+
+    readonly TraitId _id;
+    readonly bool _self, _spread;
+    readonly string? _key;
+
+    public BetrayedShockTrait(TraitId id, bool self, bool spread, string? key = null) { _id = id; _self = self; _spread = spread; _key = key; }
+
+    public override TraitId Id => _id;
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        UnitState? f = BetrayedTrait.Call(ctx, self);
+        if (f is null) return;
+        if (_key is not null) f.SetCounter(_key, 1);
+        if (_self) ctx.MarkShock(f, self);
+        if (_spread)
+            foreach (UnitState n in ctx.LivingMembers(f.TeamId))
+                if (n != f && FormationRules.AreAdjacent(f, n)) ctx.MarkShock(n, self);
+        ctx.Log(!_self ? "    喚ばれたものの隣に雷が落ちた" : _spread ? "    喚ばれたものは雷を纏っていた。雷は隣の敵にも移った" : "    喚ばれたものは雷を纏っていた", LogKind.Trigger);
     }
 }
 
@@ -12614,6 +12677,7 @@ public sealed class ThunderTrait : Trait
         {
             int k = KindsOf(u);
             if (k == 0) continue;
+            if (u.RawCounter(BetrayedShockTrait.NoThunderKey) > 0) continue;   // 第276期（S1x・雷を纏った餌には落ちない。印の無い戦では素通り）
             int on = path ? Onward(u, team, struck) : 0;
             if (k > bestK || (k == bestK && on < bestOn)) { best = u; bestK = k; bestOn = on; }
         }
@@ -12625,7 +12689,8 @@ public sealed class ThunderTrait : Trait
     {
         int n = 0;
         foreach (UnitState v in team)
-            if (v != u && v.IsAlive && !struck.Contains(v) && FormationRules.AreAdjacent(u, v) && KindsOf(v) > 0) n++;
+            if (v != u && v.IsAlive && !struck.Contains(v) && FormationRules.AreAdjacent(u, v) && KindsOf(v) > 0
+                && v.RawCounter(BetrayedShockTrait.NoThunderKey) <= 0) n++;   // 第276期（S1x）
         return n;
     }
 
@@ -16016,6 +16081,11 @@ public static class TraitCatalog
         new TaillightTrait(),
         new OverloadTrait(),
         new BetrayedTrait(),
+        new BetrayedShockTrait(TraitId.BetrayedShock, self: true, spread: false),           // 第276期（S1）
+        new BetrayedShockTrait(TraitId.BetrayedShockSpread, self: true, spread: true),      // 第276期（S2）
+        new BetrayedShockTrait(TraitId.BetrayedShockNeighbors, self: false, spread: true),  // 第276期（S2′・対照）
+        new BetrayedShockTrait(TraitId.BetrayedShockNoThunder, self: true, spread: false, key: BetrayedShockTrait.NoThunderKey),   // 第276期（S1x）
+        new BetrayedShockTrait(TraitId.BetrayedShockThunderPop, self: true, spread: false, key: BetrayedShockTrait.ThunderPopKey), // 第276期（S1p）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

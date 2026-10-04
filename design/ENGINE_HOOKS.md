@@ -726,6 +726,11 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   ——**第216期に感電で痺れる版を足した**（札 `ShockStun` S1 起点だけ ／ `ShockStunAll` S2 弾けた駒すべて ／ `ShockStunHalf` S3 それぞれ 50%）。**第216期の追記で S2 をポンの判断で規定にした**が、**第221期の後に S3 へ差し替えた**（ポンの判断・`UnitCatalog.Kata` ＝ `[Thunder, ThunderLeak, ThunderPath, ShockStunHalf]`・S1 / S2 は保持者 0 枚。**規定のカタは痺れの判定で乱数を引く**・`compare` は動かない）。
   判定は `ShockTrigger` の中の `StunByShock` の1箇所——**弾けた直後・放電より前**に `StatusKeys.Stun` を付ける（倒れた駒には付けない・既に痺れていれば増やさない・**乱数は S3 だけ**）。
   台本は `ShockSpent` の直後に `StatusGain`（`stun`）。**敵味方を問わない**ので、弾く役（殴る駒）が自陣で痺れると敵の連鎖が消える（R319）
+- **第276期のソムの転生（`BetrayedShockTrait`・札 `BetrayedShock` ／ `BetrayedShockNoThunder` ／ `BetrayedShockThunderPop` ／ `BetrayedShockSpread` ／ `BetrayedShockNeighbors`）は背かれの口 `BetrayedTrait.Call` を呼んでから `MarkShock` を当てるだけ**
+  （`Call` は `BetrayedTrait.OnTurnStart` の中身を1文字も変えずに切り出したもの・旧ソムの台本の指紋が前後で一致）。窓口に足したのは2つ:
+  **規定（S1x）の印 `somNoThunder`（餌にだけ立つ私有キー）を `ThunderTrait.Pick` と `Onward` が読み、その駒を「帯びた敵を選ぶ」経路と跳ね先から外す**
+  （帯びた敵がいないときの通常の一発＝`SelectTarget` は外さない——ボスの台では雷が餌に当たる）。
+  **対照 S1p の印 `somThunderPop` は起爆の判定の「雷は起爆しない」に例外を1つ作る**（`_thunderPopLive`・保持者がいなければ比較1つで抜ける）。どちらも乱数を引かない
 - **第216期の開戦の撒き（ベニの版 O1〜O4・`OpeningSprayTrait`）は `OnBattleStart` の中だけ**——**追記で O4（`GurenOpeningBurn`・敵全体に毒 1 ＋ 着火）をポンの判断で規定にした**（O1〜O3 は保持者 0 枚）——毒は窓口 `Poison` を新しい経路 `PoisonRoute.Opening` で通し
   （**`SoakRouteCount` 13・燃焼の添字 12**）、O4 の火は `Ignite`。engine に足したのは刻みの帳簿（計数のみ）だけ。**毒は刻みで減らない**ので開戦の毒1は倒れるまで残る
 - **第217期の鞭（電気鞭のシガ・札 `Scourge` / `Lash` / `LiveWire` / `ScourgeShock` が規定＝G3K・`LiveWireGuard` は保持者 0 枚）の2倍は engine の `WhipAmount` の1本**——

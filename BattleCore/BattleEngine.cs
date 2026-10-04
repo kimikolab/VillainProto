@@ -1130,6 +1130,9 @@ public sealed class BattleContext
     /// <summary>刻みでも起爆する札（<see cref="TraitId.ShockTick"/>・K2）の保持者が戦闘に出たか。</summary>
     bool _shockTickLive;
 
+    /// <summary>雷で弾ける餌の札（<see cref="TraitId.BetrayedShockThunderPop"/>・第276期 S1p）の保持者が戦闘に出たか。立っていなければ雷は従来どおり起爆しない。</summary>
+    bool _thunderPopLive;
+
     /// <summary>
     /// 感電で痺れる（第216期）: 0 なし ／ 1 起点だけ（S1）／ 2 弾けた駒すべて（S2）／ 3 それぞれ 50%（S3）。
     /// 保持者（<see cref="TraitId.ShockStun"/> ほか）が戦闘に出たときに立つ。複数の版が同席したら番号の大きいほう（診断の外では起きない）。
@@ -7108,6 +7111,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Ash)) _ashHolders.Add(u);
         if (u.HasTrait(TraitId.Yoke)) _yokeHolders.Add(u);
         if (u.HasTrait(TraitId.ShockTick)) _shockTickLive = true;   // 第214期（K2 の札）
+        if (u.HasTrait(TraitId.BetrayedShockThunderPop)) _thunderPopLive = true;   // 第276期（S1p・雷で弾ける餌）
         // 第216期（S1〜S3 の札）。**保持者がいなければ 0 のまま**で、起爆の中の比較1つで抜ける。
         if (u.HasTrait(TraitId.ShockStunHalf)) _shockStun = Math.Max(_shockStun, (byte)3);
         else if (u.HasTrait(TraitId.ShockStunAll)) _shockStun = Math.Max(_shockStun, (byte)2);
@@ -11557,7 +11561,8 @@ public sealed class BattleContext
         if (_shockLive && target.RawCounter(StatusKeys.Shock) > 0)
         {
             bool tick = shockNote == 2 || burnTick;
-            if (shockNote == 1) TallyOf(target).ShockThunderMuted++;          // 計数のみ（自己検査: 雷は起爆しない）
+            bool thunderPop = shockNote == 1 && _thunderPopLive && target.RawCounter(BetrayedShockTrait.ThunderPopKey) > 0;   // 第276期（S1p）
+            if (shockNote == 1 && !thunderPop) TallyOf(target).ShockThunderMuted++;          // 計数のみ（自己検査: 雷は起爆しない）
             else if (tick && !_shockTickLive) TallyOf(target).ShockTickMuted++; // 計数のみ（自己検査: K1 の刻みは起爆しない）
             else ShockTrigger(target, shockKillerSet ? shockKiller : tick ? null : source, tick ? 1 : source is null ? 2 : 0);
         }

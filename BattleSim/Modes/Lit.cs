@@ -170,7 +170,7 @@ public static void Run(string[] args, int stageIndex)
     {
         ("トモ×ドルガ", UnitCatalog.Dolga),
         ("トモ×ムド",   UnitCatalog.Mudo),
-        ("トモ×ソム",   UnitCatalog.Som),
+        ("トモ×ソム",   UnitCatalog.SomS0),   // 第276期: 旧ソムに固定
         ("トモ×ハギ",   UnitCatalog.Hagi),
     };
     Formation LtBench(UnitDef partner, UnitDef tomo) => Formation.Build(

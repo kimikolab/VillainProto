@@ -88,7 +88,7 @@ public static void Run(string[] args, int stageIndex)
         for (int k = 0; k < 5; k++) f[seats[k]] = u[k];
         return f;
     }
-    UnitDef En(string id) => UnitCatalog.ById(id);
+    UnitDef En(string id) => id == "som" ? UnitCatalog.SomS0 : UnitCatalog.ById(id);   // 第276期: 旧ソム（背かれ）に固定
 
     // ---- 傷軸の行（Q2）。**行名は `CompareBuilds()` から引いて数え直す**（手で書かない）----
     string[] enWoundRowNames =

@@ -166,6 +166,11 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.Finisher]   = (HcBothL,  "標を必ず狙って倍で殴るのと、標を消費するのが1サイクル"),
         [TraitId.Favor]      = (HcBothL,  "燃えている味方を上げるのと、隣の燃えていない味方を鈍らせるのが1つの動作"),
         [TraitId.Betrayed]   = (HcBothL,  "喚び出しと、喚んだものが敵につくことが1つの動作"),
+        [TraitId.BetrayedShock]       = (HcBothL, "喚び出しと、喚んだもの（雷を纏う）が敵につくことが1つの動作（第276期）"),
+        [TraitId.BetrayedShockSpread] = (HcBothL, "同上で、纏った雷が隣の敵にも移る（第276期）"),
+        [TraitId.BetrayedShockNeighbors] = (HcBothL, "対照: 餌は纏わず、隣の敵にだけ雷（第276期）"),
+        [TraitId.BetrayedShockNoThunder] = (HcBothL, "S1 で、纏った餌には雷が落ちない（第276期）"),
+        [TraitId.BetrayedShockThunderPop] = (HcBothL, "S1 で、纏った餌は雷でも弾ける（第276期）"),
         // 第132期 段0-a: 第128期に `GradeStep` を ドルガ に載せたとき、この表に足さなかったので
         // `checkup` が「分類の無い札がある」で**3期ぶん止まっていた**（第131期に判明）。
         // 分類は積み過ぎ（`Overload`）と同じ——読む値も閾値も共有し、違うのは上がる先の段だけ。

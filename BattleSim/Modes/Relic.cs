@@ -40,6 +40,7 @@ static partial class RelicDiag
             case "p0x": P0Expand(); return;              // 第273期
             case "check273": Check273(); return;         // 第273期
             case "expand": Expand(); return;             // 第273期
+            case "shock276": Shock276(); return;         // 第276期（帯電の足の再測）
             case "logrow": LogRow(args[3], args[4], int.Parse(args[5]), int.Parse(args[6]), args.Length > 7 ? int.Parse(args[7]) : 0); return;   // 第273期
             case "log": LogOne(args.Length > 3 ? args[3] : "移動", args.Length > 4 ? args[4] : "軋む足", args.Length > 5 ? args[5] : "攻", args.Length > 6 ? int.Parse(args[6]) : 0); return;
             default: Console.WriteLine("relic: モードは p0 / check / sweep / keep / log ／ p0j / grid [帯の頭] / junk / mainwin（第271期）／ p0r / rejudge / check272（第272期）。"); return;

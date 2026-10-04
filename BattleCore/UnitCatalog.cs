@@ -1058,11 +1058,32 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 背かれのソム（第103期・<b>最後の1枠</b>）。
-    /// <para>数値は<b>振らない</b>（指示書 §6）。出力を持たせているのは、第87期の
-    /// 「接続子が出力ゼロの軸は5枠盤で橋が架からない」に当たらないため。</para>
+    /// 背かれのソム（第103期・<b>最後の1枠</b>）。<b>第276期に転生した</b>（規定 ＝ S1x・ポンの判断）——
+    /// 喚ばれた餌が感電を纏って立ち（<see cref="TraitId.BetrayedShockNoThunder"/>）、纏った餌にはカタの雷が落ちない。
+    /// 餌はそのまま敵の前列を埋め、味方の一撃で弾けて敵陣の隣（前1・前3・中央）へ放電する。
+    /// 旧ソム（背かれのみ）は <see cref="SomS0"/> に対照として残し、旧ソムを使う過去の器具はそちらに固定した。
+    /// 経緯は design/PHASE276_SOM_REBIRTH.md。<b>名前・フレーバーの最終はポン</b>（フレーバーは指示書の叩き台）。
+    /// <para>数値は第103期のまま（振らない）。</para>
     /// </summary>
     public static readonly UnitDef Som = new()
+    {
+        Id = "som",
+        Name = "背かれのソム",
+        MaxHp = 54,
+        Attack = 7,
+        Speed = 6,
+        Advances = false,
+        Traits = new[] { TraitId.BetrayedShockNoThunder },
+        PlusText = "毎ターン、敵陣に喚び出す。喚ばれたものは雷を纏って立ち、雷はそこへは落ちない",
+        MinusText = "喚ばれたものは背いて敵につく。敵の前列が埋まる",
+        Flavor = "喚ばれたものは背いて敵につく。ただし、雷を纏ったまま。"
+    };
+
+    /// <summary>
+    /// 旧ソム（第103〜275期の規定・背かれのみ）。<b>第276期の転生の対照</b>（S0）。<see cref="All"/> には入れない。
+    /// 旧ソムを使う過去の器具（<c>betray</c> ／ <c>encore</c> ／ <c>tomo</c> ／ <c>lit</c> ／ <c>tumult</c> ／ <c>form2</c> ／ <c>ep3</c> ／ <c>stage map</c>）はこれに固定してある。
+    /// </summary>
+    public static readonly UnitDef SomS0 = new()
     {
         Id = "som",
         Name = "背かれのソム",
@@ -1074,6 +1095,85 @@ public static class UnitCatalog
         PlusText = "毎ターン、敵陣に喚び出す",
         MinusText = "喚ばれたものは背いて敵につく。敵の前列が埋まる",
         Flavor = "誰よりも召喚術に長け、誰よりも召喚獣に嫌われた。呼べば来る。ただし向こう側に立つ。"
+    };
+
+    /// <summary>
+    /// ソムの転生の版（第276期）。<b>数値・型・行動は <see cref="Som"/> と1つも違わない</b>。札だけを背かれ・雷に差し替えた。
+    /// S1 ＝ 喚ばれた餌が感電を帯びて立つ（<see cref="TraitId.BetrayedShock"/>）。<see cref="All"/> には入れない（採否は報告書）。
+    /// </summary>
+    public static readonly UnitDef SomS1 = new()
+    {
+        Id = "som",
+        Name = "背かれのソム",
+        MaxHp = 54,
+        Attack = 7,
+        Speed = 6,
+        Advances = false,
+        Traits = new[] { TraitId.BetrayedShock },
+        PlusText = "毎ターン、敵陣に喚び出す。喚ばれたものは雷を纏って立つ",
+        MinusText = "喚ばれたものは背いて敵につく。敵の前列が埋まる",
+        Flavor = "喚ばれたものは背いて敵につく。ただし、雷を纏ったまま。"
+    };
+
+    /// <summary>ソムの転生の版 S2（第276期）。S1 に加えて、餌が立ったとき隣り合う敵すべてにも感電を移す（<see cref="TraitId.BetrayedShockSpread"/>）。</summary>
+    public static readonly UnitDef SomS2 = new()
+    {
+        Id = "som",
+        Name = "背かれのソム",
+        MaxHp = 54,
+        Attack = 7,
+        Speed = 6,
+        Advances = false,
+        Traits = new[] { TraitId.BetrayedShockSpread },
+        PlusText = "毎ターン、敵陣に喚び出す。喚ばれたものは雷を纏って立ち、隣の敵にも雷を移す",
+        MinusText = "喚ばれたものは背いて敵につく。敵の前列が埋まる",
+        Flavor = "喚ばれたものは背いて敵につく。ただし、雷を纏ったまま。"
+    };
+
+    /// <summary>ソムの転生の版 S1x（第276期・S1 の作り直し）。S1 で、纏った餌にはカタの雷が落ちない（<see cref="TraitId.BetrayedShockNoThunder"/>）。
+    /// <b>第276期の規定（<see cref="Som"/>）と同じ中身</b>——`som276` の器具はこちらに固定（規定が後で動いても版の表が動かない）。</summary>
+    public static readonly UnitDef SomS1x = new()
+    {
+        Id = "som",
+        Name = "背かれのソム",
+        MaxHp = 54,
+        Attack = 7,
+        Speed = 6,
+        Advances = false,
+        Traits = new[] { TraitId.BetrayedShockNoThunder },
+        PlusText = "毎ターン、敵陣に喚び出す。喚ばれたものは雷を纏って立ち、雷はそこへは落ちない",
+        MinusText = "喚ばれたものは背いて敵につく。敵の前列が埋まる",
+        Flavor = "喚ばれたものは背いて敵につく。ただし、雷を纏ったまま。"
+    };
+
+    /// <summary>ソムの転生の版 S1p（第276期・S1 の作り直し）。S1 で、纏った餌は雷でも感電が弾ける（<see cref="TraitId.BetrayedShockThunderPop"/>）。</summary>
+    public static readonly UnitDef SomS1p = new()
+    {
+        Id = "som",
+        Name = "背かれのソム",
+        MaxHp = 54,
+        Attack = 7,
+        Speed = 6,
+        Advances = false,
+        Traits = new[] { TraitId.BetrayedShockThunderPop },
+        PlusText = "毎ターン、敵陣に喚び出す。喚ばれたものは雷を纏って立ち、雷が落ちれば弾ける",
+        MinusText = "喚ばれたものは背いて敵につく。敵の前列が埋まる",
+        Flavor = "喚ばれたものは背いて敵につく。ただし、雷を纏ったまま。"
+    };
+
+    /// <summary>ソムの対照 S2′（第276期）。餌は感電せず、立ったとき隣り合う敵すべてに感電を付ける（<see cref="TraitId.BetrayedShockNeighbors"/>）。S2 − S2′ が「餌が纏う感電」の値。</summary>
+    public static readonly UnitDef SomS2N = new()
+    {
+        Id = "som",
+        Name = "背かれのソム",
+        MaxHp = 54,
+        Attack = 7,
+        Speed = 6,
+        Advances = false,
+        Traits = new[] { TraitId.BetrayedShockNeighbors },
+        PlusText = "毎ターン、敵陣に喚び出す。喚んだものの隣の敵に雷を落とす（対照）",
+        MinusText = "喚ばれたものは背いて敵につく。敵の前列が埋まる",
+        Flavor = "（第276期の対照）"
     };
 
     /// <summary>

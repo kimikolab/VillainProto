@@ -849,6 +849,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 relic check273       # 第273期 新札5枚の自己検査（14 項目: 一覧の並び・保持者 0・発火・発火しない戦は素と台本一致・毒を招くの2倍・カタの検証台で帯電の足が発火。帯電の足の `compare` 行での発火 0 は × のまま記録）
     dotnet run --project BattleSim -c Release 0 relic expand         # 第273期 本判定: 61 行 × 札12枚 × 枠5 × 本編第2〜5波・帯A 600..799 ／ 帯B 800..999・固有の勝者・橋の内訳・ゴミ（ベニ ／ ヴィオ ／ ウツ）・個性の保存（札種別）・符号反転（175 秒）
     dotnet run --project BattleSim -c Release 0 relic logrow <行名> <札> <枠0-4> <波1-4> [seed]   # 第273期 `compare` の行に札を付けた1戦のログ
+    dotnet run --project BattleSim -c Release 0 relic shock276       # 第276期 帯電の足の再測: 62 行 × 帯電の足 × 枠5 × 本編第2〜5波・帯A 1000..1199 ／ 帯B 1200..1399・感電の行の全枠の発火（20 秒）
+    dotnet run --project BattleSim -c Release 0 som276 run           # 第276期 ソムの転生: 検証行 A ／ B × 版 S0 ／ S1 ／ S1x ／ S1p ／ S2 ／ S2′ × 本編第2〜5波・ボス規定形・チェック波（B3-桁 ／ W3-割合）・機構の実測（5 秒）
+    dotnet run --project BattleSim -c Release 0 som276 digest        # 第276期 旧ソム（`SomS0`）を含む戦の台本の指紋（背かれの切り出し・規定化の前後で一致が門）
+    dotnet run --project BattleSim -c Release 0 som276 bands         # 第276期 感電の行の第2〜5波を 200 seed の帯ごとに（参考）
+    dotnet run --project BattleSim -c Release 0 som276 log <A|B> <S0|S1|S1x|S1p|S2|S2′> <2..5|ボス|B3|W3> [seed]   # 第276期 1戦のログ
     dotnet run --project BattleSim -c Release 0 relic log <台> <札> <規則> [seed]   # 第270期 1戦のログ（札は日本語名・規則は 攻 ／ 前）
     dotnet run --project BattleSim -c Release 0 checkwave check      # 自己検査（写しの台本一致・癒し手 ＝ 従軍司祭＋札1枚・保持者 0・回復は状態を消さない・刻みの後・軛に切られない・ボスの攻撃力・verbose・乱数・動じない札・重装兵の体の癒し手・全体のボス・400/300 の癒し手・天井 +11・割合の回復・7台目の毒台・規定の組・26 項目）
     dotnet run --project BattleSim -c Release 0 checkwave log <台> <波> [seed]   # 1戦のログ（台は 燃焼 T3-244 ／ 燃焼 T3-255 ／ 移動 ／ 雷 ／ 毒 ／ 混ぜ-255・波は B3-桁 ／ W3-割合 ／ W2-対照 ／ W2-50後 ／ W2-50奥 ／ B2-全4 ／ B2-半4、第261期の版は `261:`・第260期の版は `260:` を前に付ける）

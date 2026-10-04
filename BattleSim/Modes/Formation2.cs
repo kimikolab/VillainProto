@@ -121,7 +121,7 @@ static partial class Formation2Diag
         // ---------------- Q0-3 ----------------
         Console.WriteLine("## Q0-3 召喚の湧き先");
         Console.WriteLine();
-        var summoners = UnitCatalog.All.Where(d => d.Traits.Any(t => t is TraitId.Splitter or TraitId.Betrayed)).Select(d => d.Name).ToList();
+        var summoners = UnitCatalog.All.Where(d => d.Traits.Any(t => t is TraitId.Splitter or TraitId.Betrayed or TraitId.BetrayedShockNoThunder)).Select(d => d.Name).ToList();   // 第276期: ソムの札が背かれ・雷避けに
         Console.WriteLine("- 味方陣に湧く召喚は `ctx.Summon(…, self.TeamId)` の1本（分裂の胞子）。敵陣に湧くのは背かれの餌（ソム・**敵陣 ○前2 固定**。敵は X 字のままなので変わらない）");
         Console.WriteLine("- 保持者: " + string.Join("・", summoners));
         Console.WriteLine("- **決め: パターン2の湧き先は四隅、後ろから `後1 → 後3 → 前1 → 前3`**（X 字の `○中1 → ○中3 → ○前2 → ○後2` は今のまま）。"

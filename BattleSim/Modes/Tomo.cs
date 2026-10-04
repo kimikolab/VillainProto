@@ -66,7 +66,7 @@ public static void Yield(string[] args, int stageIndex)
     {
         ("トモ×ドルガ", UnitCatalog.Dolga),
         ("トモ×ムド",   UnitCatalog.Mudo),
-        ("トモ×ソム",   UnitCatalog.Som),
+        ("トモ×ソム",   UnitCatalog.SomS0),
         ("トモ×ハギ",   UnitCatalog.Hagi),
     };
 
@@ -985,7 +985,7 @@ public static void Run(string[] args, int stageIndex)
     {
         ("トモ×ドルガ", UnitCatalog.Dolga, "**速6 は遅い層ではない**。土台を速8以上で固めて初めて対象になる"),
         ("トモ×ムド",   UnitCatalog.Mudo,  "**灯と被弾の2本の成長経路**が同じ駒に乗る（速5）"),
-        ("トモ×ソム",   UnitCatalog.Som,   "**餌が毎ターン湧いて倒れる**＝譲渡の条件が安定して満たされる（速6）"),
+        ("トモ×ソム",   UnitCatalog.SomS0,   "**餌が毎ターン湧いて倒れる**＝譲渡の条件が安定して満たされる（速6）"),
         ("トモ×ハギ",   UnitCatalog.Hagi,  "**撃破を作る側**。譲渡と追い打ちが同じ出来事で立つか（速7）"),
     };
 

@@ -555,6 +555,7 @@ if (focusId == "foesurge") { FoeSurgeDiag.Run(args, stageIndex); return; }   // 
 if (focusId == "checkwave") { CheckWaveDiag.Run(args, stageIndex); return; }   // 第260期
 if (focusId == "bosswave") { BossWaveDiag.Run(args, stageIndex); return; }   // 第265期
 if (focusId == "relic") { RelicDiag.Run(args, stageIndex); return; }   // 第270期
+if (focusId == "som276") { Som276Diag.Run(args, stageIndex); return; }   // 第276期
 if (focusId == "shock") { ShockDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 if (focusId == "shockdigest") { ShockDigestDiag.Run(args.Length > 2 ? args[2] : "k0", args.Length > 3 ? args[3] : ""); return; }
 // debuff モード（第189期） —— デバッファー3枚の転生（ネル・クビ・ハネ）。本体は `Modes/Debuff*.cs`。
@@ -1539,6 +1540,11 @@ static class TraitKeyMap
         // ——餌を敵陣に置くのは「体を1つ増やす」であって、通貨を1つも書かない
         // （`derive scan` の観測でも `Betrayed` は 0 件）。
         [TraitId.Betrayed]    = Array.Empty<int>(),
+        [TraitId.BetrayedShock]       = Array.Empty<int>(),                       // 第276期（感電は専用キー）
+        [TraitId.BetrayedShockSpread] = Array.Empty<int>(),                       // 第276期
+        [TraitId.BetrayedShockNeighbors] = Array.Empty<int>(),                    // 第276期（対照）
+        [TraitId.BetrayedShockNoThunder] = Array.Empty<int>(),                    // 第276期（S1x）
+        [TraitId.BetrayedShockThunderPop] = Array.Empty<int>(),                   // 第276期（S1p）
         // 敵側の2枚（第94期 (T2) の観測で出た欠落）。**`UnitCatalog.All` の 51 体は1枚も持たない**ので、
         // 第80〜83期のロスター側の派生値は動かない（`KeysOf` が変わるのは敵の駒だけ）。
         [TraitId.Condemn]     = new[] { UnitTally.CarryStun },     // 観測（断罪）
@@ -1598,6 +1604,11 @@ static class TraitHookMap
         [TraitId.Reviver]     = new[] { "OnAllyDeath" },
         [TraitId.Ephemeral]   = Array.Empty<string>(),                         // 旗。誰も反応しない
         [TraitId.Betrayed]    = new[] { "OnTurnStart" },                       // 第103期
+        [TraitId.BetrayedShock]       = new[] { "OnTurnStart" },               // 第276期（背かれの口 ＋ MarkShock）
+        [TraitId.BetrayedShockSpread] = new[] { "OnTurnStart" },               // 第276期
+        [TraitId.BetrayedShockNeighbors] = new[] { "OnTurnStart" },            // 第276期（対照）
+        [TraitId.BetrayedShockNoThunder] = new[] { "OnTurnStart" },            // 第276期（S1x・印は ThunderTrait.Pick が読む）
+        [TraitId.BetrayedShockThunderPop] = new[] { "OnTurnStart", Engine },   // 第276期（S1p・起爆の判定）
         [TraitId.Venom]       = new[] { "OnDamaged" },
         [TraitId.Thorns]      = new[] { "OnDamaged" },
         [TraitId.Marker]      = new[] { "OnBattleStart" },
