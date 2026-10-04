@@ -1,0 +1,22 @@
+# ハネ・後屈立ち風の戦闘待機案 v1
+
+2026-10-04、内蔵 image_gen で生成。後ろ脚を沈めた2枚目をユーザーが選び、通常時の戦闘立ち絵へ採用。
+両足を接地し、後ろ脚を曲げて前脚を伸ばした蹴り主体の構え。
+
+- 出力: `hane-back-stance-right-v1.png`（1024 × 1536、透過 RGBA PNG）
+- 採用先: `DemoApp/assets/portraits/battle/hane_idle_right.png`。下端余白62pxに接地位置を調整。
+- キャラクター参照: 生成時の `DemoApp/assets/portraits/battle/hane_idle_right.png`（片膝を上げた案。現在は `hane-kick-ready-right-v1.png` に保存）
+- ポーズ参照: ユーザー添付の格闘ゲームキャラクター画像3枚。衣装・顔はハネを保持。
+
+## 初回生成プロンプト
+
+Use case: precise-object-edit.
+Asset type: alternate transparent full-body normal battle idle sprite for Hane.
+Input image 1 is the EDIT TARGET and sole reference for character identity, costume, colors and illustration style. Images 2, 3 and 4 are POSE REFERENCES ONLY: grounded, poised fighting-game kick specialists. Do not copy their identities, outfits, hairstyles, backgrounds or logos.
+Replace image 1's raised-knee one-legged stance with a stable TWO-FEET-GROUNDED, rear-weighted fighting stance (kokutsu-dachi inspired), facing SCREEN RIGHT. Both boots visibly contact the same implied ground plane, spaced comfortably wide front-to-back. The rear leg at screen left is noticeably bent and carries about 70 percent of her weight, pelvis settled above that rear leg. The lead leg extends diagonally toward screen right, knee softly flexed, boot planted lightly and ready to release into a kick. Clear asymmetric leg silhouette: bent supporting rear leg, longer relaxed lead leg. Torso upright, modest backward inclination naturally aligned over the rear hip, not an exaggerated backbend; shoulders relaxed and turned three-quarter toward the viewer, head and eyes focused toward screen right. One compact fist near the cheek, the other near the lower ribs; elbows bent close, no arms reaching out to push. Legs and weight distribution communicate a kick fighter's readiness. Athletic, confident, composed normal idle pose, not an attack, not a jump, not one-foot balancing, not deep squat.
+Preserve EXACTLY the same adult rabbit-eared woman from image 1: silver-gray high ponytail, amber eyes, large white floppy rabbit ears with pink inner fur, rust-red cropped fur-trimmed jacket, white shirt, opaque brown shorts, leather belts and pouch, brown buckled bracers, heavy brown fur-trimmed buckled boots, tattered red waist sash. Preserve her face and body proportions. Same detailed hand-painted anime fantasy illustration, fine linework, soft painterly shading, muted earthy colors. No redesign or added accessories.
+Full body with entire ears, hair, sash, hands and boots inside frame, portrait 1024x1536 canvas, clean comfortable margins. Single character only, genuine transparent alpha background. No reference-image dark backdrop, glow, gradient, floor, shadow, energy effects, UI, text, logos or watermark. Exactly two arms and two legs with natural joints.
+
+## 採用画像への修正プロンプト
+
+Edit this same Hane illustration, changing ONLY the lower-body stance and the resulting natural torso position. The current pose is too symmetric and centered. Make a clearly ASYMMETRIC REAR-WEIGHTED KOKUTSU-DACHI stance facing SCREEN RIGHT. Rear means SCREEN LEFT. Shift her pelvis substantially toward SCREEN LEFT so her hip is vertically above the SCREEN-LEFT rear knee/ankle region, not between both boots. Bend the SCREEN-LEFT rear knee visibly and deeply enough to bear the weight, about 110-125 degrees knee angle, with the knee over the rear foot. The SCREEN-RIGHT lead leg must be LONGER and MUCH STRAIGHTER, gently relaxed at the knee, extended diagonally to the right, boot lightly resting on the ground. BOTH BOOTS PLANTED, soles on the same implied ground plane. Aim for a clear 75/25 rear/front weight distribution visible from the silhouette, a stable low poised kick-fighter guard. Front right knee must NOT bend more than the rear left knee. Do not use a symmetric wide straddle, horse stance, lunge toward screen right, one-foot stance or kick. Upright torso carried back above the rear hip without arching the spine, shoulders relaxed, head still looking screen right. Keep the existing compact hands guarding near cheek and ribs. Preserve exactly her adult face, rabbit ears, silver ponytail, outfit, opaque shorts, boots, colors, body proportions, fine linework and painterly anime fantasy style. Full body portrait 1024x1536, every ear/hand/boot/sash inside canvas, clean margins. True transparent alpha background, no floor, shadow, glow, background, text or effects.
