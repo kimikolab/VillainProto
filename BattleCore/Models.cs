@@ -259,6 +259,14 @@ public sealed class UnitState
     /// </summary>
     public bool ControlProof { get; private init; }
 
+    /// <summary>第265期: 塞ぐ札のどれかが<b>いま</b>塞いでいるか。<see cref="ControlProof"/> の駒でしか呼ばれない。</summary>
+    private bool ControlBlockedNow()
+    {
+        foreach (Trait t in _traits)
+            if (t.BlocksControl && t.BlocksControlNow(this)) return true;
+        return false;
+    }
+
     /// <summary>特性が自由に使えるカウンタ置き場。特性ごとにキーを分ける。</summary>
     public Dictionary<string, int> Counters { get; } = new();
 
@@ -414,7 +422,8 @@ public sealed class UnitState
     {
         // 第261期: 手番を奪う状態（痺れ・転倒・組み付き・竦み・混乱）を受け付けない駒は、**入口で付かない**（支援拒否と同じ作法）。
         // 書き手は何十箇所あってもここを通るので、塞ぎ漏れが出ない。付かないので「動けない駒」を読む札も効かない。
-        if (ControlProof && v > 0 && StatusKeys.IsControl(key)) return;
+        // 第265期: 条件付きで塞ぐ札（勇者の印）は `BlocksControlNow` で「いま塞いでいるか」を問う（第261期の動じないは常に true）。
+        if (ControlProof && v > 0 && StatusKeys.IsControl(key) && ControlBlockedNow()) return;
         int delta = v - (Counters.TryGetValue(key, out int had) ? had : 0);
         Counters[key] = v;
         if (delta > 0) Board?.NoteStatusGain(this, key, delta);

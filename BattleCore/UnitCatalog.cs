@@ -3454,6 +3454,50 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
         new TestStage("検証・五 / 新兵（対照）", EnemyWave.FillX(Recruit)),
     };
 
+    // ---------------------------------------------------------------------------------
+    // 第265期 —— 本編ボス波「勇者パーティー」（指示書 design/PHASE265_BOSS_WAVE_SPEC.md・報告 design/PHASE265_BOSS_WAVE.md）。
+    // 勇者（中央）＋ 支え ＋ 癒し手。勇者はチェック波の B3-桁 の本体（全体攻撃・HP 3,000・攻 12・天井 +11）を速 14 にし、
+    // **動じないと回復を自前で持たず取り巻きから受ける**（支えが生きている間だけ動じない・癒し手がターン頭に最大HPの 40%）。
+    // 取り巻きは城塞の重装兵（145/12/3）と数値・型を1つも変えず、札1枚だけを足した写し。2版の差分は席だけ。
+    //
+    // **`Stages` にはまだ載せていない**（第265期 Phase 0-1）: `Stage` は5枠の `Formation` を持つので ○後2 を表せず、
+    // `Stages` を数える器具が数百あるため。載せ方はポンが決める（報告書 §1）。読むのは `BattleSim` の `bosswave` だけ。
+    // ---------------------------------------------------------------------------------
+    /// <summary>勇者（第265期）。勇者候補（95/20/14・処刑）との差: HP 95 → 3,000・攻 20 → 12・単体 → 全体・処刑 → 天井 +11 と勇者の印（速 14 は同じ）。</summary>
+    public static readonly UnitDef BossHero = new()
+    {
+        Id = "boss_hero", Name = "勇者", MaxHp = 3000, Attack = 12, Speed = 14, Pattern = AttackPattern.All,
+        Traits = new[] { TraitId.BossRise11, TraitId.HeroCrest },
+        PlusText = "全員を薙ぎ払い、毎ターン攻撃力が 11 上がる。支えが生きている間は転ばず痺れない。回復は癒し手から受ける",
+    };
+    /// <summary>支え（第265期）。城塞の重装兵（<see cref="Warden"/>）と数値・型が同一で、差分は札1枚（<see cref="TraitId.HeroWard"/>）。</summary>
+    public static readonly UnitDef BossWard = new()
+    {
+        Id = "boss_ward", Name = "支え", MaxHp = Warden.MaxHp, Attack = Warden.Attack, Speed = Warden.Speed,
+        Pattern = Warden.Pattern, Advances = Warden.Advances, Actions = Warden.Actions,
+        Traits = new[] { TraitId.HeroWard }, PlusText = "生きている間、勇者は手番を奪われない",
+    };
+    /// <summary>癒し手（第265期）。城塞の重装兵（<see cref="Warden"/>）と数値・型が同一で、差分は札1枚（<see cref="TraitId.HeroMend"/>）。</summary>
+    public static readonly UnitDef BossMender = new()
+    {
+        Id = "boss_mend", Name = "癒し手", MaxHp = Warden.MaxHp, Attack = Warden.Attack, Speed = Warden.Speed,
+        Pattern = Warden.Pattern, Advances = Warden.Advances, Actions = Warden.Actions,
+        Traits = new[] { TraitId.HeroMend }, PlusText = "ターン頭に勇者を最大HPの 40% 癒す",
+    };
+
+    /// <summary>本編ボス波の版（第265期）。<c>Tax</c> は課税の向き（表示だけ）。</summary>
+    public sealed record BossStage(string Name, string Tax, EnemyWave Enemy);
+
+    /// <summary>
+    /// <b>第265期</b> —— 第六波の2版。席だけが違う（勇者は中央・取り巻きは 後1 と ○後2）。
+    /// ○後2 は後列でどのレーンにも属さない（貫きが届かない）。後1 は貫きの2体目。前列が空なので単体は勇者が倒れるまで後列に届かない。
+    /// </summary>
+    public static IReadOnlyList<BossStage> BossStages { get; } = new[]
+    {
+        new BossStage("H-制御税", "支えが ○後2（貫きが届かない）・癒し手が 後1", EnemyWave.Of((2, BossHero), (3, BossMender), (8, BossWard))),
+        new BossStage("H-回復税", "癒し手が ○後2（貫きが届かない）・支えが 後1", EnemyWave.Of((2, BossHero), (3, BossWard), (8, BossMender))),
+    };
+
     /// <summary><paramref name="stageIndex"/>（0 始まり）のパターン3の写し。定義が無い波は null。</summary>
     public static Formation? Pattern3Of(int stageIndex) => stageIndex switch
     {

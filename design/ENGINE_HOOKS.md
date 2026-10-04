@@ -959,6 +959,7 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   **2回目以降の刻みは台本に `Status` → `Damage` の組として回数ぶん並ぶ**（再生側は1組ずつ紐づけるので変更 0 行）。印が付いた瞬間は表示専用の `ConcentrateMark`。
 
 - **手番を奪う状態を受け付けない入口（第261期）は `UnitState.SetCounter` の頭**——`Trait.BlocksControl` が真の札を持つ駒（`UnitState.ControlProof`・`Traits` を入れたときに1回だけ求める）には、`StatusKeys.Control`（痺れ・転倒・組み付き・竦み・混乱）を 0 から上げない。支援拒否（`BlocksSupport` → `AcceptsSupport`）と同じ「入口で付かない」作法で、**書き手が何十箇所あっても1点で塞がる**（直書き 28 箇所はすべて `SetCounter` を通る・辞書への代入はこの中だけ）。付かないので「動けない駒」を読む札（シガの責め苦の二重）も効かない。まどろみ（巨躯の腹）と `CanAct` の否決は本人の札、萎縮・毒の鈍りは一撃を軽くするだけなので入れない。保持者はチェック波のボス（`BossSteadfast`）だけ。
+- **条件付きで塞ぐ札（第265期）は `Trait.BlocksControlNow(self)`**——入口 `SetCounter` は `ControlProof` の駒でだけ、塞ぐ札それぞれに「いま塞いでいるか」を問う。既定は `=> BlocksControl`（第261期の動じないは常に塞ぐ）で、上書きするのは勇者の印（`HeroCrest`・同じ陣営に支え `HeroWard` が生きている間だけ塞ぐ）だけ。**`ControlProof` が偽の駒は問われない**ので、保持者のいない戦の熱い経路は bool 1つのまま。生きている間は入口で付かないので、支えが倒れた瞬間に解く状態は無い。保持者は本編ボス波の勇者（`EnemyCatalog.BossHero`・`Stages` には載っていない）だけ。
 
 ### 敵の数値の倍率（第187期・`EnemyScaleRule`）
 

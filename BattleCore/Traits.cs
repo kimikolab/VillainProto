@@ -580,6 +580,11 @@ public enum TraitId
     CheckMendPct40, // 癒し手・割合（第263期・手数チェック W3-割合）: ターン頭に自陣の生存全員を、それぞれの最大HPの 40% ずつ回復。保持者 0 枚
     BossSteadfast,  // 動じない（第261期・ボス）: 手番を奪う状態（痺れ・転倒・組み付き・竦み・混乱）が付かない（入口 `UnitState.SetCounter`）。毒・燃焼・感電のダメージと層は通る。保持者 0 枚
 
+    // --- 第265期で足した札（本編ボス波「勇者パーティー」の敵だけ。`EnemyCatalog.BossStages` の3体が持つ。ロスターの駒には付けない） ---
+    HeroCrest,      // 勇者の印（第265期・勇者）: 同じ陣営に支え（`HeroWard`）が生きている間だけ、手番を奪う状態が付かない（入口は `UnitState.SetCounter`・判定は `Trait.BlocksControlNow`）。支えが倒れたその場から通る。保持者 0 枚（ロスター）
+    HeroWard,       // 支え（第265期・勇者の取り巻き）: 印だけ。生きている間、同じ陣営の勇者の印の持ち主を動じなくする（判定は `HeroCrestTrait`）。保持者 0 枚（ロスター）
+    HeroMend,       // 癒し手・勇者（第265期・勇者の取り巻き）: ターン頭に同じ陣営の勇者の印の持ち主だけを、その最大HPの 40% 回復（W3-割合 の式・`ctx.Heal` 経由）。保持者を倒せば止まる。保持者 0 枚（ロスター）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -602,6 +607,12 @@ public abstract class Trait
 
     /// <summary>true を返すと、この駒には手番を奪う状態（<see cref="StatusKeys.Control"/>）が付かなくなる（第261期・入口は <c>UnitState.SetCounter</c>）。</summary>
     public virtual bool BlocksControl => false;
+
+    /// <summary>
+    /// 第265期: <see cref="BlocksControl"/> が true の札が、<b>いま</b>塞いでいるか（既定は常に塞ぐ＝第261期の動じないと同じ）。
+    /// 条件付きで塞ぐ札（勇者の印）だけが上書きする。問うのは <c>UnitState.SetCounter</c> の入口だけで、<see cref="BlocksControl"/> が false の駒は問われない。
+    /// </summary>
+    public virtual bool BlocksControlNow(UnitState self) => BlocksControl;
 
     public virtual void OnBattleStart(BattleContext ctx, UnitState self) { }
     public virtual void OnTurnStart(BattleContext ctx, UnitState self) { }
@@ -13815,6 +13826,52 @@ public sealed class BossSteadfastTrait : Trait
     public override bool BlocksControl => true;
 }
 
+/// <summary>
+/// 勇者の印（第265期・本編ボス波「勇者パーティー」の勇者だけ）。<b>同じ陣営に支え（<see cref="TraitId.HeroWard"/>）が生きている間だけ、手番を奪う状態が付かない</b>。
+/// 第261期の動じない（<see cref="BossSteadfastTrait"/>）を「源のある耐性」にした形——札は <see cref="BlocksControl"/> を立てて入口の速い経路に乗り、
+/// <see cref="BlocksControlNow"/> で支えの生死を問う（勇者以外の駒は問われない）。
+///
+/// <para><b>支えが倒れたときに既に付いている状態は無い</b>——生きている間は入口で付かないので、倒れた瞬間に解くものが無い。
+/// 倒れた<b>その場から</b>（同じ手番の次の一撃から）付くようになる。乱数は引かない。</para>
+/// </summary>
+public sealed class HeroCrestTrait : Trait
+{
+    public override TraitId Id => TraitId.HeroCrest;
+    public override bool BlocksControl => true;
+    public override bool BlocksControlNow(UnitState self)
+    {
+        if (self.Board is not { } b) return false;
+        foreach (UnitState u in b.LivingMembers(self.TeamId))
+            if (u != self && u.HasTrait(TraitId.HeroWard)) return true;
+        return false;
+    }
+}
+
+/// <summary>支え（第265期・勇者の取り巻き）。札そのものは挙動を持たない（読むのは <see cref="HeroCrestTrait"/>）。</summary>
+public sealed class HeroWardTrait : Trait { public override TraitId Id => TraitId.HeroWard; }
+
+/// <summary>
+/// 癒し手・勇者（第265期・勇者の取り巻き）。<b>ターン頭に同じ陣営の勇者の印の持ち主だけを、その最大HPの <see cref="Pct"/>% 回復する</b>。
+/// <see cref="PartyMendPctTrait"/>（W3-割合）と同じ席（刻みの後）・同じ入口（<c>ctx.Heal</c>）・同じ式で、違うのは対象が勇者だけなこと。保持者を倒せば止まる。乱数は引かない。
+/// </summary>
+public sealed class HeroMendTrait : Trait
+{
+    public const int Pct = PartyMendPctTrait.Pct;
+    public override TraitId Id => TraitId.HeroMend;
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        foreach (UnitState u in ctx.LivingMembers(self.TeamId))
+        {
+            if (!u.HasTrait(TraitId.HeroCrest)) continue;
+            int b = u.Hp;
+            ctx.Heal(u, u.MaxHp * Pct / 100, self);
+            if (u.Hp > b) ctx.Log($"    {self.Name} が{u.Name}を癒した（+{u.Hp - b}・HP {u.Hp}/{u.MaxHp}）", LogKind.Trigger);
+        }
+    }
+}
+
 public sealed class BossRiseTrait : Trait
 {
     public const int Low = 4, High = 8;
@@ -16040,6 +16097,9 @@ public static class TraitCatalog
         new BossSteadfastTrait(),                                      // 第261期
         new BossRiseTrait(TraitId.BossRise11, BossRiseTrait.Calc),     // 第263期
         new PartyMendPctTrait(TraitId.CheckMendPct40, PartyMendPctTrait.Pct), // 第263期
+        new HeroCrestTrait(),                                          // 第265期（本編ボス波の敵だけ）
+        new HeroWardTrait(),                                           // 第265期
+        new HeroMendTrait(),                                           // 第265期
         new BurnHitAddTrait(),       // 第255期
         new BurnHitSplitTrait(),     // 第255期
         new BurnHitSplitOnceTrait(), // 第255期

@@ -318,13 +318,13 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 
 **本文と索引は `design/RULES_*.md`**（`RULES_001_097.md` / `RULES_098_173.md` / `RULES_174_242.md` / `RULES_243_.md`・索引の表は `design/RULES_INDEX.md`）。
 **ID（`R001`〜）で grep すること。ID は永続で、欠番になっても再利用しない。**
-新しい則は `RULES_243_.md` の末尾に次の ID（`R361` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
+新しい則は `RULES_243_.md` の末尾に次の ID（`R364` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
 
 ## 現状値
 
 **期ごとの報告は `design/HISTORY_PHASES.md`**（この節から逐語で移した。以後の期はそちらの冒頭に足し、ここのブロックは差し替える）。
 
-**最後に動かした期: 第264期**（チェック波を連続量の物差しとして採用・規定の組 B3-桁 ／ W3-割合・7台目に毒台。まとめは `design/CHECK_WAVE_SUMMARY.md`・`compare` 0 セル）。
+**最後に動かした期: 第265期**（本編ボス波「勇者パーティー」を2版測って2版とも棄却——取り巻きは全台が T1〜3 に席の順で割り、割る順序が軸で分かれなかった。波は `EnemyCatalog.BossStages` に対照として残し、`Stages` には載せていない。報告は `design/PHASE265_BOSS_WAVE.md`・`compare` 0 セル）。
 **最後に `compare` が動いた期: 第256期**（被弾の燃焼 H-分担 を規定にし、セロの状態の矢を外した。動いたのはゾトの死軸 8 行・24 セル）。
 
     編成:       61 行（`CompareBuilds()`）＋ 交差帯 12 行（`CrossBuilds()`）

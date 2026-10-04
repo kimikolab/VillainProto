@@ -387,6 +387,9 @@
 | `BossRise11` | - |
 | `CheckMendPct40` | - |
 | `BossSteadfast` | - |
+| `HeroCrest` | - |
+| `HeroWard` | - |
+| `HeroMend` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
