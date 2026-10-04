@@ -398,6 +398,12 @@
 | `HeroShield100` | - |
 | `VenomTaxHalf` | - |
 | `VenomTaxSeal` | - |
+| `RelicCreak` | - |
+| `RelicFireArrow` | - |
+| `RelicVenomStep` | - |
+| `RelicWilt` | - |
+| `RelicNumbStep` | - |
+| `RelicHarden` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

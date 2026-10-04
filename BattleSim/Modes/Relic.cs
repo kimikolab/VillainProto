@@ -323,9 +323,9 @@ static class RelicDiag
 
         foreach (string rule in Rules)
         {
-            Console.WriteLine($"## 表1-{rule} 札ごとの差（規則 {rule}・セルは 勇者への与ダメの差 ／ 勝率の差 pt）");
+            Console.WriteLine($"## 表1-{rule} 札ごとの差（規則 {rule}・セルは **倒しT の差** ／ 勝率の差 pt。倒しT は倒した戦の平均で、負の差 ＝ 早く倒せた）");
             Console.WriteLine();
-            Console.WriteLine("| 札 | " + string.Join(" | ", CW.Boards7) + " | 向き（与ダメ ＋ ／ − ／ ±0 の台数） |");
+            Console.WriteLine("| 札 | " + string.Join(" | ", CW.Boards7) + " | 向き（早い ／ 遅い ／ ±0 の台数・|差| < 0.1T を ±0） |");
             Console.WriteLine("|---|" + string.Concat(CW.Boards7.Select(_ => "--:|")) + "---|");
             foreach (var r in RelicCatalog.All)
             {
@@ -333,12 +333,25 @@ static class RelicDiag
                 var parts = CW.Boards7.Select(b =>
                 {
                     var a = res[(b, rule, r.Id)]; var z = res[(b, "", null)];
-                    double d = a.PerN(a.ToHero) - z.PerN(z.ToHero), w = a.Win - z.Win;
-                    if (Math.Abs(d) < 0.5) flat++; else if (d > 0) up++; else down++;
-                    return $"{d:+0;−0;±0} ／ {w:+0.0;−0.0;±0.0}";
+                    double w = a.Win - z.Win;
+                    if (a.Kill == 0 || z.Kill == 0) return $"— ／ {w:+0.0;−0.0;±0.0}";
+                    double d = (double)a.KillT / a.Kill - (double)z.KillT / z.Kill;
+                    if (Math.Abs(d) < 0.1) flat++; else if (d < 0) up++; else down++;
+                    return $"{d:+0.0;−0.0;±0.0} ／ {w:+0.0;−0.0;±0.0}";
                 }).ToList();
-                Console.WriteLine($"| {r.Name} | " + string.Join(" | ", parts) + $" | ＋{up} ／ −{down} ／ ±0 {flat} |");
+                Console.WriteLine($"| {r.Name} | " + string.Join(" | ", parts) + $" | 早{up} ／ 遅{down} ／ ±0 {flat} |");
             }
+            Console.WriteLine();
+            Console.WriteLine($"## 表3-{rule} 勇者への与ダメの差（{Window} ターンまで・1戦あたり）——**参考**。早く倒すほど勇者の回復が入らず合計は減り、負けた戦は窓いっぱい回るので増える（交絡する）");
+            Console.WriteLine();
+            Console.WriteLine("| 札 | " + string.Join(" | ", CW.Boards7) + " |");
+            Console.WriteLine("|---|" + string.Concat(CW.Boards7.Select(_ => "--:|")));
+            foreach (var r in RelicCatalog.All)
+                Console.WriteLine($"| {r.Name} | " + string.Join(" | ", CW.Boards7.Select(b =>
+                {
+                    var a = res[(b, rule, r.Id)]; var z = res[(b, "", null)];
+                    return $"{a.PerN(a.ToHero) - z.PerN(z.ToHero):+0;−0;±0}";
+                })) + " |");
             Console.WriteLine();
             Console.WriteLine($"## 表2-{rule} 発火（1戦あたり）／ 付けた駒の勇者への与ダメ（札なし → 札あり）");
             Console.WriteLine();

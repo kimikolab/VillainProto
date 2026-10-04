@@ -834,6 +834,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 bosswave knobs       # 第269期 参考: 規定形からノブを1つ緩めた3版（HP 1,500 ／ 天井 +4 ／ 回復なし）× `compare` の全行（集計だけ・6 秒）
     dotnet run --project BattleSim -c Release 0 bosswave check       # 第269期 自己検査を全部（check265 ／ check266 ／ check267 ／ check268 ／ check269・53 項目）
     dotnet run --project BattleSim -c Release 0 bosswave check269    # 第269期 自己検査（5 項目: 規定形の定義・第268期の V-封 と台本一致・`Stages` に載っていない・保持者 0・書き手5体）
+    dotnet run --project BattleSim -c Release 0 relic p0             # 第270期 レリックの一覧・素の保持者・ゴミの読み手の在籍・7台の付け先（戦闘0回）。本体は `Modes/Relic.cs`・札は `BattleCore/Relics.cs`
+    dotnet run --project BattleSim -c Release 0 relic check          # 第270期 器の自己検査（10 項目: 付けない編成は素の札と同一・付けて外すと台本一致・レリック以外は例外・1枠1枚・重複は積まない・写し・保持者 0・読み手・身を固めるの1度きり・7枚とも発火）
+    dotnet run --project BattleSim -c Release 0 relic sweep          # 第270期 気配の確認: ボスの規定形 × 7台 × 札7枚 × 付け先の規則2つ（攻 ／ 前）・倒しT と勝率の差・発火・付けた駒の与ダメ（5 秒）
+    dotnet run --project BattleSim -c Release 0 relic keep           # 第270期 個性の保存: 移動の台のヨミに軋む足 ／ 身を固める（ヨミの軋みの回数と与ダメ・1 秒）
+    dotnet run --project BattleSim -c Release 0 relic log <台> <札> <規則> [seed]   # 第270期 1戦のログ（札は日本語名・規則は 攻 ／ 前）
     dotnet run --project BattleSim -c Release 0 checkwave check      # 自己検査（写しの台本一致・癒し手 ＝ 従軍司祭＋札1枚・保持者 0・回復は状態を消さない・刻みの後・軛に切られない・ボスの攻撃力・verbose・乱数・動じない札・重装兵の体の癒し手・全体のボス・400/300 の癒し手・天井 +11・割合の回復・7台目の毒台・規定の組・26 項目）
     dotnet run --project BattleSim -c Release 0 checkwave log <台> <波> [seed]   # 1戦のログ（台は 燃焼 T3-244 ／ 燃焼 T3-255 ／ 移動 ／ 雷 ／ 毒 ／ 混ぜ-255・波は B3-桁 ／ W3-割合 ／ W2-対照 ／ W2-50後 ／ W2-50奥 ／ B2-全4 ／ B2-半4、第261期の版は `261:`・第260期の版は `260:` を前に付ける）
     dotnet run --project BattleSim -c Release 0 shockdigest s232 # 第232期の台（前段の規定・固定なし）

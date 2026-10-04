@@ -55,6 +55,7 @@ engine の窓口に足したものは `design/ENGINE_HOOKS.md` へ、新しい�
 - 調整用の数値は各 Trait の `public const` に置く。**版の切り替えは駒の `Traits` の配列を差し替える**（マイナスは別の `TraitId` に切り出す。`Run` の引数は増やさない——増やすと `docs/rules.md` の既定値の列が動く）。
 - `InstanceId` を `Counters` に持つ記憶は `OnCarryOver` で**必ず捨てる**（戦闘ごとに振り直される）。
 - 能動的な機構は手番（`OnAction`・`Actions = [Skill]`）に置く。`OnTurnStart` は「全員より先」という speed = ∞ の席で、粛（`Hush`）にも封じられない。**手番で撃つが相手がいなければ殴る**は `OnAction` の中で `ctx.PerformAttack` を直に呼ぶ形（`CanAct` を偽にすると `IdleTurn` が立ち、号令・据えが無償で買い取る）。
+- **レリック（第270期）は編成の枠に付ける札**（`Formation.SetRelic`・1枠1枚・札は `RelicCatalog` だけ）。`Materialize` が `UnitState.Traits` の**末尾**に足し、**`Def.Traits` には入れない**（説明文・ロスター・転生の評価は素の駒のまま）。素の札と同じ札は積まない。**レリックの測定結果を転生の評価に書き戻さない。**
 - **手番に何発振るかを書き換える窓口は `Trait.ModifyHitCount` の1本**（問うのは `SwingTurn` の1箇所＝手番の中だけ。反撃・割り込み・追い打ち・再行動は1発のまま）。上限は特性の側で掛ける。
 - **盤面ルール（`Inversion` / `Drought` / `Yoke` / `Hush`）だけは例外で、判定が engine 側にある**（全員に一度にかかる状態は駒ごとのフックで書けない）。Trait 本体はログを出すだけで、**保持者がいなければ完全に不活性**（`compare` 差分ゼロで確認してから盤面に載せる）。保持者の走査は既存条件の後ろ（`&&` の短絡）に置く。**止めるのは入口ではなく出口**（入口だと惨禍や脆弱が上限を押し戻す）。
 - 盤面ルールを足すときは、**そのルールが触るメソッドの呼び出し元を全部数える**。駒の説明文から数えると必ず抜ける（ゴルムもリィカも「回復」と書いていないのに `ctx.Heal` を呼ぶ）。**窓口を1本足す作業には、その本数を数えている文の一覧を添える**——いまは `docs/rules.md` / `docs/watch.md` の再生成がその一覧。
@@ -318,13 +319,13 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 
 **本文と索引は `design/RULES_*.md`**（`RULES_001_097.md` / `RULES_098_173.md` / `RULES_174_242.md` / `RULES_243_.md`・索引の表は `design/RULES_INDEX.md`）。
 **ID（`R001`〜）で grep すること。ID は永続で、欠番になっても再利用しない。**
-新しい則は `RULES_243_.md` の末尾に次の ID（`R364` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
+新しい則は `RULES_243_.md` の末尾に次の ID（`R365` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
 
 ## 現状値
 
 **期ごとの報告は `design/HISTORY_PHASES.md`**（この節から逐語で移した。以後の期はそちらの冒頭に足し、ここのブロックは差し替える）。
 
-**最後に動かした期: 第269期**（ボスの規定形を確定〈`EnemyCatalog.BossRegular`・蝕み N=37・`Stages` には載せない〉。`compare` 61 行の別表では 100% が 5 行・0% が 52 行。まとめは `design/BOSS_SUMMARY.md`・引き継ぎは `design/HANDOFF_AFTER_BOSS.md`・`compare` 0 セル）。
+**最後に動かした期: 第270期**（レリックの器〈`Formation.SetRelic`・枠ごとに1枚〉と最初の札7枚〈`RelicCatalog`〉。レリック無しの測りは変更前と出力一致。報告は `design/PHASE270_RELIC_FOUNDATION.md`・`compare` 0 セル）。
 **最後に `compare` が動いた期: 第256期**（被弾の燃焼 H-分担 を規定にし、セロの状態の矢を外した。動いたのはゾトの死軸 8 行・24 セル）。
 
     編成:       61 行（`CompareBuilds()`）＋ 交差帯 12 行（`CrossBuilds()`）

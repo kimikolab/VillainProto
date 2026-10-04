@@ -963,6 +963,7 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **手番を奪う状態が上がったことを知らせる窓口（第266期）は `Trait.TaxesControl` ／ `Trait.OnControlGained(self, key)`**——同じ `SetCounter` の、値を書いた**後**で、5キーのどれかが**実際に上がった**ときだけ呼ぶ（同じ値・下げる書き込みは呼ばない）。拒否はしない（動じないの1行は書く前・こちらは書いた後）。保持者の無い駒は `UnitState.ControlTaxed`（`Traits` を入れたときに1回だけ求める bool）で抜ける。保持者は `bosswave` の勇者（不屈 `IndomitableTrait`）だけ。
 - **勇者の庇い（第267期）は `SelectTargetChain` の殉教の段の直後に1段**——同じ陣営の癒し手（`HeroMend` の持ち主）が単体の主目標になったとき、`HeroShield75` ／ `HeroShield100` の持ち主へ 75 ／ 100% で差し替える（列を問わない・`RedirectGainTrait` を継がないので育たない・100% は `Roll` を引かない）。保持者のいない戦は `_heroShieldLive` の比較1つで抜ける。出来事は既存の `Intercept`（`InterceptLabels.HeroShield`・`All` には入れない）。保持者は `bosswave` の勇者だけ。
 - **蝕み（第268期）は `BossMendTrait.OnTurnStart` の中の1行**——回復の量を決めた直後に `VenomTaxTrait.Apply` が「毒の層 × N」を引く（下限 0・層は消費しない・減った名目は私有キー `venomCut`）。`ctx.Heal`（渇き・支援拒否の入口）より手前で量を決めるだけなので、渇きと二重には引かない。札が無ければ素通り。保持者は `bosswave` の勇者だけ。
+- **レリック（第270期）は `BattleEngine.Materialize` の1行**——`Formation.RelicAt(枠)` が null でなければ `RelicCatalog.Attach(def.Traits, 札)` で `UnitState.Traits` の末尾に足す（null の枠は従来の `TraitCatalog.Resolve(def.Traits)` のまま）。`UnitDef` は書き換えないので `Def.Traits` に札は入らず、`UnitState.Relic` は表示と測定の印（どの規則も読まない）。素の札と同じ札は積まない。召喚・分裂の子は継がず、蘇生・会戦の持ち越しは同じ `UnitState` なので継ぐ。`MaterializeEnemy`（9枠の敵）と `Summon` は触っていない
 
 ### 敵の数値の倍率（第187期・`EnemyScaleRule`）
 
