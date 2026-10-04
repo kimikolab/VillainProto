@@ -31,11 +31,14 @@ static partial class RelicDiag
             case "sweep": Sweep(); return;
             case "keep": Keep(); return;
             case "p0j": P0Judge(); return;               // 第271期
-            case "grid": Grid(); return;                 // 第271期
+            case "grid": Grid(args.Length > 3 ? int.Parse(args[3]) : 0); return;   // 第271期（第272期に帯の頭を引数にした）
             case "junk": Junk(); return;                 // 第271期
             case "mainwin": MainWin(); return;           // 第271期（参考）
+            case "p0r": P0Rejudge(); return;             // 第272期
+            case "rejudge": Rejudge(); return;           // 第272期
+            case "check272": Check272(); return;         // 第272期
             case "log": LogOne(args.Length > 3 ? args[3] : "移動", args.Length > 4 ? args[4] : "軋む足", args.Length > 5 ? args[5] : "攻", args.Length > 6 ? int.Parse(args[6]) : 0); return;
-            default: Console.WriteLine("relic: モードは p0 / check / sweep / keep / log ／ p0j / grid / junk（第271期）。"); return;
+            default: Console.WriteLine("relic: モードは p0 / check / sweep / keep / log ／ p0j / grid [帯の頭] / junk / mainwin（第271期）／ p0r / rejudge / check272（第272期）。"); return;
         }
     }
 
@@ -58,7 +61,7 @@ static partial class RelicDiag
     static bool Fired(TraitId id, string holder, string line) => id switch
     {
         TraitId.RelicCreak => line.Contains($"{holder} の軋む足（"),
-        TraitId.RelicFireArrow => line.Contains($"{holder} の火付けの矢が"),
+        TraitId.RelicFireArrow or TraitId.RelicFireArrow3 or TraitId.RelicFireArrow5 => line.Contains($"{holder} の火付けの矢が"),
         TraitId.RelicVenomStep => line.Contains($"{holder} の毒の足跡が"),
         TraitId.Spring => line.Contains($"{holder} が殴ってきた"),
         TraitId.RelicWilt => line.Contains($"{holder} の心が萎えた"),

@@ -52,7 +52,7 @@ static partial class RelicDiag
                 if (f[s] is not null) list.Add(new(list.Count, r.Id, s));
         return list.ToArray();
     }
-    static Formation Apply(Formation f, GVar v) => v.Relic is TraitId r ? f.WithRelic(v.Frame, r) : f;
+    static Formation Apply(Formation f, GVar v, Func<TraitId, TraitId>? map = null) => v.Relic is TraitId r ? f.WithRelic(v.Frame, map is null ? r : map(r)) : f;
     static string VarName(Formation f, GVar v) => v.Relic is TraitId r ? $"{RelicCatalog.Info(r).Name}→{f[v.Frame]!.Name}" : "素";
 
     static BattleResult FightWave(Formation f, int wave, int seed, bool verbose = false)
@@ -139,19 +139,23 @@ static partial class RelicDiag
         public required Cell[][][] C;   // [行][版][波]
     }
 
-    static GridData RunGrid()
+    /// <param name="from">帯の頭の seed（第272期に引数にした。既定 0 ＝ 第271期と同じ帯 0..199）。</param>
+    /// <param name="waves">回す波の添字（既定は5つ全部）。回さない波のセルは N = 0 のまま。</param>
+    /// <param name="map">札の差し替え（第272期の版 G1 ／ G2 で火付けの矢を弾数制の札に替える）。null なら第270期の札のまま。</param>
+    static GridData RunGrid(int from = 0, int[]? waves = null, Func<TraitId, TraitId>? map = null)
     {
         var rows = CompareBuilds();
         var vars = rows.Select(r => VarsOf(r.F)).ToArray();
         var c = rows.Select((r, i) => vars[i].Select(_ => new Cell[WaveNames.Length]).ToArray()).ToArray();
+        var ws = waves ?? Enumerable.Range(0, WaveNames.Length).ToArray();
         var tasks = new List<(int R, int V, int W)>();
         for (int i = 0; i < rows.Length; i++)
             for (int v = 0; v < vars[i].Length; v++)
-                for (int w = 0; w < WaveNames.Length; w++) tasks.Add((i, v, w));
+                foreach (int w in ws) tasks.Add((i, v, w));
         Parallel.ForEach(tasks, t =>
         {
-            var f = Apply(rows[t.R].F, vars[t.R][t.V]);
-            c[t.R][t.V][t.W] = MeasureCell(f, t.W, 0, GridSeeds);
+            var f = Apply(rows[t.R].F, vars[t.R][t.V], map);
+            c[t.R][t.V][t.W] = MeasureCell(f, t.W, from, GridSeeds);
         });
         return new GridData { Rows = rows, Vars = vars, C = c };
     }
@@ -170,17 +174,19 @@ static partial class RelicDiag
 
     static string WT(Cell c) => $"{c.Win:F1}%" + (c.Wins > 0 ? $"・T{c.T:F1}" : "");
 
-    static void Grid()
+    /// <param name="from">帯A の頭の seed（第272期に引数にした・既定 0）。帯B は from + 200 から。</param>
+    static void Grid(int from = 0)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var g = RunGrid();
+        var g = RunGrid(from);
         var rows = g.Rows;
-        Console.WriteLine($"# relic grid —— 第271期 総当たり（61 行 × 札7枚 × 枠5・部隊に1枚 × 波5・seed 0..{GridSeeds - 1}）");
+        Console.WriteLine($"# relic grid —— 第271期 総当たり（61 行 × 札7枚 × 枠5・部隊に1枚 × 波5・seed {from}..{from + GridSeeds - 1}）");
         Console.WriteLine();
         Console.WriteLine($"総当たり {sw.Elapsed.TotalSeconds:F0} 秒。主指標は勝率と倒しT（勝った戦の平均ターン）。ボスは規定形（倍率なし）、本編は `compare` と同じ（倍率 115/115）。");
         Console.WriteLine();
 
-        // ---- 回帰: 素の版の本編4波は docs/balance.md と一致するか ----
+        // ---- 回帰: 素の版の本編4波は docs/balance.md と一致するか（帯が 0..199 のときだけ） ----
+        if (from == 0)
         {
             var bal = File.ReadAllLines("docs/balance.md")
                 .Where(l => l.StartsWith("| ") && l.Contains('%'))
@@ -199,7 +205,7 @@ static partial class RelicDiag
         // ---- 物差し1: 固有の勝者（ボス） ----
         Console.WriteLine("## 1. 固有の勝者（ボスで素 0% → 札1枚で有意に正）");
         Console.WriteLine();
-        Console.WriteLine($"選抜は帯A（seed 0..{GridSeeds - 1}）で最良の版（勝率 → 倒しT）。**帯A で {MinWinsA} 勝以上**の行だけを、帯B（seed {ConfirmFrom}..{ConfirmFrom + ConfirmSeeds - 1}）で素と最良の版を測り直し、片側フィッシャー p < 0.05 なら固有の勝者に数える（35 版から最良を選ぶ選抜の偏りを帯B で外す）。");
+        Console.WriteLine($"選抜は帯A（seed {from}..{from + GridSeeds - 1}）で最良の版（勝率 → 倒しT）。**帯A で {MinWinsA} 勝以上**の行だけを、帯B（seed {from + ConfirmFrom}..{from + ConfirmFrom + ConfirmSeeds - 1}）で素と最良の版を測り直し、片側フィッシャー p < 0.05 なら固有の勝者に数える（35 版から最良を選ぶ選抜の偏りを帯B で外す）。");
         Console.WriteLine();
         var zeroRows = Enumerable.Range(0, rows.Length).Where(i => g.C[i][0][0].Wins == 0).ToList();
         Console.WriteLine($"ボスで素 0% の行: **{zeroRows.Count}** ／ {rows.Length}");
@@ -214,8 +220,8 @@ static partial class RelicDiag
             var (bv, bc) = BestVar(g, i, 0, relicOnly: true);
             int many = g.Vars[i].Count(v => v.Relic is not null && g.C[i][v.Ix][0].Wins >= MinWinsA);
             if (bc.Wins < MinWinsA) { lines[k] = (i, $"| {rows[i].Name} | {AxisTag(rows[i].F)} | {VarName(rows[i].F, bv)} | {WT(bc)} | {many} | | | | |"); return; }
-            var b0 = MeasureCell(rows[i].F, 0, ConfirmFrom, ConfirmSeeds);
-            var b1 = MeasureCell(Apply(rows[i].F, bv), 0, ConfirmFrom, ConfirmSeeds);
+            var b0 = MeasureCell(rows[i].F, 0, from + ConfirmFrom, ConfirmSeeds);
+            var b1 = MeasureCell(Apply(rows[i].F, bv), 0, from + ConfirmFrom, ConfirmSeeds);
             double p = FisherGreater(b0.Wins, b0.N, b1.Wins, b1.N);
             bool win = p < 0.05;
             if (win) lock (winners) winners.Add((i, bv));
@@ -245,7 +251,7 @@ static partial class RelicDiag
         Console.WriteLine();
         Console.WriteLine("| 行 | 版 | 駒 | 与ダメ 素 → 札 | 回復 素 → 札 | 状態の付与 素 → 札 | 受けたダメ 素 → 札 | 主の指標 | 判定 |");
         Console.WriteLine("|---|---|---|--:|--:|--:|--:|---|:-:|");
-        foreach (var (i, v) in winners) Console.WriteLine(KeepLine(rows[i].Name, rows[i].F, v));
+        foreach (var (i, v) in winners) Console.WriteLine(KeepLine(rows[i].Name, rows[i].F, v, 0, from));
         Console.WriteLine();
 
         // ---- 物差し2: 混成率 ----
@@ -350,7 +356,7 @@ static partial class RelicDiag
     // ---------------------------------------------------------------------------------
     // 個性の保存の1行（ボス・verbose・seed 0..199・20 ターンまで）
     // ---------------------------------------------------------------------------------
-    static string KeepLine(string name, Formation f0, GVar v, int wave = 0)
+    static string KeepLine(string name, Formation f0, GVar v, int wave = 0, int from = 0, Func<TraitId, TraitId>? map = null)
     {
         int holderIx = f0.Occupied().TakeWhile(o => o.Slot != v.Frame).Count();
         (double Dealt, double Healed, double Status, double Taken) M(Formation f)
@@ -361,7 +367,7 @@ static partial class RelicDiag
                 var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
                 var e = wave == 0 ? BattleEngine.MaterializeEnemy(EnemyCatalog.BossRegularWave, EnemyScaleRule.None)
                                   : BattleEngine.Materialize(EnemyCatalog.Stages[wave].Enemy, BattleContext.EnemyTeam);
-                var r = BattleEngine.Run(p, e, s, verbose: true);
+                var r = BattleEngine.Run(p, e, from + s, verbose: true);
                 int id = p[holderIx].InstanceId; long d1 = 0, h1 = 0, s1 = 0, t1 = 0;
                 foreach (var x in r.Events)
                 {
@@ -375,7 +381,7 @@ static partial class RelicDiag
             });
             return ((double)d / GridSeeds, (double)h / GridSeeds, (double)st / GridSeeds, (double)tk / GridSeeds);
         }
-        var a = M(f0); var b = M(Apply(f0, v));
+        var a = M(f0); var b = M(Apply(f0, v, map));
         var opts = new (string N, double A, double B)[] { ("与ダメ", a.Dealt, b.Dealt), ("回復", a.Healed, b.Healed), ("状態の付与", a.Status, b.Status), ("受けたダメ", a.Taken, b.Taken) };
         var main = opts.OrderByDescending(o => o.N == "受けたダメ" ? o.A * 0.25 : o.A).First();   // 受けた量は「壁」の駒でだけ主になる（重みを下げる）
         bool kept = main.A <= 0 || main.B >= main.A * 0.5;
