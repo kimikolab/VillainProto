@@ -390,6 +390,10 @@
 | `HeroCrest` | - |
 | `HeroWard` | - |
 | `HeroMend` | - |
+| `BossMend40` | - |
+| `Indomitable0` | - |
+| `Indomitable11` | - |
+| `Indomitable22` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

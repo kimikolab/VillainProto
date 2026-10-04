@@ -249,7 +249,7 @@ public sealed class UnitState
     public IReadOnlyList<Trait> Traits
     {
         get => _traits;
-        init { _traits = value; ControlProof = value.Any(t => t.BlocksControl); }
+        init { _traits = value; ControlProof = value.Any(t => t.BlocksControl); ControlTaxed = value.Any(t => t.TaxesControl); }
     }
     private readonly IReadOnlyList<Trait> _traits = Array.Empty<Trait>();
 
@@ -258,6 +258,9 @@ public sealed class UnitState
     /// ——<see cref="SetCounter"/> は熱い経路なので、保持者がいなければ bool の比較1つで抜ける。
     /// </summary>
     public bool ControlProof { get; private init; }
+
+    /// <summary>第266期: 手番を奪う状態が上がったことを知らせる札（<see cref="Trait.TaxesControl"/>・不屈）を持つ駒か。<see cref="SetCounter"/> の熱い経路は保持者がいなければ bool 1つで抜ける。</summary>
+    public bool ControlTaxed { get; private init; }
 
     /// <summary>第265期: 塞ぐ札のどれかが<b>いま</b>塞いでいるか。<see cref="ControlProof"/> の駒でしか呼ばれない。</summary>
     private bool ControlBlockedNow()
@@ -426,6 +429,10 @@ public sealed class UnitState
         if (ControlProof && v > 0 && StatusKeys.IsControl(key) && ControlBlockedNow()) return;
         int delta = v - (Counters.TryGetValue(key, out int had) ? had : 0);
         Counters[key] = v;
+        // 第266期: 不屈。手番を奪う状態が実際に上がったときだけ、札に知らせる（拒否はしない・動じないの1行の後ろ）。
+        if (ControlTaxed && delta > 0 && StatusKeys.IsControl(key))
+            foreach (Trait t in _traits)
+                if (t.TaxesControl) t.OnControlGained(this, key);
         if (delta > 0) Board?.NoteStatusGain(this, key, delta);
         // 第207期: 破片が減った1点（板の印を消す・瓦礫拾い）。**減った分を1回だけ**流す（Q0-5・二重に数えない）。
         else if (delta < 0 && key == StatusKeys.Armor) Board?.NoteArmorLost(this, -delta, v);

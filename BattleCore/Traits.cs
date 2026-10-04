@@ -585,6 +585,12 @@ public enum TraitId
     HeroWard,       // 支え（第265期・勇者の取り巻き）: 印だけ。生きている間、同じ陣営の勇者の印の持ち主を動じなくする（判定は `HeroCrestTrait`）。保持者 0 枚（ロスター）
     HeroMend,       // 癒し手・勇者（第265期・勇者の取り巻き）: ターン頭に同じ陣営の勇者の印の持ち主だけを、その最大HPの 40% 回復（W3-割合 の式・`ctx.Heal` 経由）。保持者を倒せば止まる。保持者 0 枚（ロスター）
 
+    // --- 第266期で足した札（`bosswave` の勇者1体だけ。ロスターと本編の敵の保持者 0 枚） ---
+    BossMend40,     // 自前の回復・40%（第266期）: ターン頭に自分を最大HPの 40% 回復（`BossMendTrait`・W3-割合 の式）。保持者 0 枚
+    Indomitable0,   // 不屈・0（第266期・版 F-0）: 手番を奪う状態（痺れ・転倒・組み付き・竦み・混乱）は通り、通った回数を数えるだけ（攻撃力は上がらない・素通しの対照）。保持者 0 枚
+    Indomitable11,  // 不屈・11（第266期・版 F-11）: 手番を奪う状態が通るたびに攻撃力 +11（天井1ターン分）。入口は `UnitState.SetCounter`（`Trait.OnControlGained`）。保持者 0 枚
+    Indomitable22,  // 不屈・22（第266期・版 F-22）: 同上で +22（天井2ターン分）。保持者 0 枚
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -613,6 +619,14 @@ public abstract class Trait
     /// 条件付きで塞ぐ札（勇者の印）だけが上書きする。問うのは <c>UnitState.SetCounter</c> の入口だけで、<see cref="BlocksControl"/> が false の駒は問われない。
     /// </summary>
     public virtual bool BlocksControlNow(UnitState self) => BlocksControl;
+
+    /// <summary>
+    /// 第266期: true の札を持つ駒は、手番を奪う状態（<see cref="StatusKeys.Control"/>）が<b>実際に上がった</b>とき
+    /// <see cref="OnControlGained"/> を呼ばれる（入口は <c>UnitState.SetCounter</c>・<c>Traits</c> を入れたときに1回だけ求める）。
+    /// </summary>
+    public virtual bool TaxesControl => false;
+    /// <summary>第266期: 手番を奪う状態 <paramref name="key"/> が上がった直後に1回（同じキーの値が増えたときだけ・減った／変わらないときは呼ばない）。</summary>
+    public virtual void OnControlGained(UnitState self, string key) { }
 
     public virtual void OnBattleStart(BattleContext ctx, UnitState self) { }
     public virtual void OnTurnStart(BattleContext ctx, UnitState self) { }
@@ -13872,6 +13886,41 @@ public sealed class HeroMendTrait : Trait
     }
 }
 
+/// <summary>
+/// 不屈（第266期・`bosswave` の勇者だけ）。<b>手番を奪う状態（痺れ・転倒・組み付き・竦み・混乱）は通る。ただし通るたびに攻撃力が +<see cref="Step"/></b>。
+/// 第261期の動じない（完全無効）を「コスト付きの許可」にした形。入口は動じないと同じ <c>UnitState.SetCounter</c> の1点で、
+/// 状態の値が<b>実際に上がった</b>ときだけ数える（同じ手番に転倒と痺れを受ければ 2 回・既に痺れている駒にもう一度痺れを書いて値が変わらなければ 0 回）。
+/// 回復・萎縮・毒の鈍りなど手番を奪わない効果は数えない（<see cref="StatusKeys.IsControl"/> の5キーだけ）。
+///
+/// <para><b>天井（<see cref="BossRiseTrait"/>）とは別の箱</b>——回数は私有キー <see cref="CountKey"/> に持ち、<see cref="ModifyAttack"/> で回数 × Step を足す。
+/// <c>AtkBonus</c> に積まないので弱体の窓口・横取りに触れない（天井と同じ作法）。会戦の境界で 0 に戻す。乱数は引かない。</para>
+/// </summary>
+public sealed class IndomitableTrait : Trait
+{
+    public const string CountKey = "indomitable";
+    public const int Mid = 11, High = 22;
+    readonly TraitId _id;
+    public int Step { get; }
+    public IndomitableTrait(TraitId id, int step) { _id = id; Step = step; }
+    public override TraitId Id => _id;
+    public override bool TaxesControl => true;
+
+    public override void OnControlGained(UnitState self, string key)
+    {
+        int n = self.RawCounter(CountKey) + 1;
+        self.SetCounter(CountKey, n);
+        self.SetCounter(CountKey + ":" + key, self.RawCounter(CountKey + ":" + key) + 1);   // 内訳（計数だけ・攻撃力は読まない）
+        self.Board?.Log($"    {self.Name} は屈しない（{StatusKeys.LabelOf(key)}・{n} 回目{(Step > 0 ? $"・攻撃 +{Step}" : "")}）", LogKind.Trigger);
+    }
+
+    public override int ModifyAttack(UnitState self, int atk) => atk + Step * self.RawCounter(CountKey);
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(CountKey, 0);
+        foreach (string k in StatusKeys.Control) self.SetCounter(CountKey + ":" + k, 0);
+    }
+}
+
 public sealed class BossRiseTrait : Trait
 {
     public const int Low = 4, High = 8;
@@ -16100,6 +16149,10 @@ public static class TraitCatalog
         new HeroCrestTrait(),                                          // 第265期（本編ボス波の敵だけ）
         new HeroWardTrait(),                                           // 第265期
         new HeroMendTrait(),                                           // 第265期
+        new BossMendTrait(TraitId.BossMend40, PartyMendPctTrait.Pct),  // 第266期（bosswave の勇者だけ）
+        new IndomitableTrait(TraitId.Indomitable0, 0),                 // 第266期
+        new IndomitableTrait(TraitId.Indomitable11, IndomitableTrait.Mid), // 第266期
+        new IndomitableTrait(TraitId.Indomitable22, IndomitableTrait.High), // 第266期
         new BurnHitAddTrait(),       // 第255期
         new BurnHitSplitTrait(),     // 第255期
         new BurnHitSplitOnceTrait(), // 第255期
