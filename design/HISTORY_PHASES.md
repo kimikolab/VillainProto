@@ -106,6 +106,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 **engine で触ったのは `order` が `.ToList()` で確定した後の1ブロックだけ**
 ——`speedGroups` にも `Shuffle` にも触らないので**乱数列が規則の有無に依らない**（これが 305 セル 0 件の根拠）。
 
+**第268期は盤面を1ビットも動かしていない——勇者の規定形を D-40 で確定し、毒の解答「蝕み」を2版（N=18 ／ 37）測った。指示書の4条件すべて ○**（指示書は design/PHASE268_BOSS_VENOM_TAX_SPEC.md）。札 2 枚（`VenomTaxHalf` ／ `VenomTaxSeal`）を足し、`BossMendTrait` が回復の量を決めた直後に「毒の層 × N」を引く（下限 0・層は消費しない）。N は Phase 0 の層の実測（毒の2台は T3 で 33〜40 層・上限も減衰も無い）から「T3 で回復ゼロ」＝ 37・「T3 で半減」＝ 18 に決めた。毒 0 → 7.0 ／ 45.0%・毒+ベニ+ラウ 0 → 64.0 ／ 87.0%・雷 T5.7 → T5.2・混ぜ T6.2 → T4.5 ／ T4.3（ベニの開戦の澱みで混ぜも毒を書く）・燃焼2・移動は不変。`compare` 305 セル 0 件・`checkwave` ／ `bosswave` の再現は全行一致・`check268` 8 / 8——経緯は design/PHASE268_BOSS_VENOM_TAX.md
+
 **第267期は盤面を1ビットも動かしていない——動じないに戻し、回復を癒し手に預けて勇者が癒し手への単体を庇う形を2版（75 ／ 100）測り、採らなかった**（指示書は design/PHASE267_BOSS_GUARDED_HEALER_SPEC.md）。札 2 枚（`HeroShield75` ／ `HeroShield100`）と engine の1段（`SelectTargetChain`・殉教の直後・列を問わず癒し手だけを守る・育たない）を足した。庇いが働く席は前1 だけ（`guard0`）。毒は刻みで癒し手を割り（T3〜5・刻み 80〜100%）、毒 0 → 100%・毒+ベニ+ラウ 0 → 31〜50.5%。ほかの台は範囲で癒し手を T1〜2 に割り、回復の無い勇者を D-40 より 1.6〜2.3T 早く倒す（条件3 ×）。癒し手を ×2〜×8 にすると毒+ベニ+ラウが先に 0% へ落ちる。`compare` 305 セル 0 件・`checkwave` ／ `bosswave` の再現は全行一致・`check267` 9 / 9——経緯は design/PHASE267_BOSS_GUARDED_HEALER.md
 
 **第266期は盤面を1ビットも動かしていない——勇者1体に戻し、動じないを「不屈」に替えて3版（N = 0 ／ 11 ／ 22）を測り、棄却した**（指示書は design/PHASE266_BOSS_INDOMITABLE_SPEC.md）。札 4 枚（`BossMend40`・`Indomitable0/11/22`）と `Trait.TaxesControl` ／ `OnControlGained`（`SetCounter` で手番を奪う状態が上がったときに知らせる）を足した。移動・混ぜは勇者を毎ターン転ばせ続け（転倒 8.1 ／ 6.3 回・振れた手番 11.1 ／ 14.4%）、積んだ攻撃力（N=22 で +177 ／ +139）が一度も払われず、3版で全指標が同一。勾配は雷だけ。完全無効（D-40）のほうが移動に厳しい（全員生存 80.5%）。`compare` 305 セル 0 件・`checkwave` ／ `bosswave` の再現は全行一致・`check266` 15 / 15——経緯は design/PHASE266_BOSS_INDOMITABLE.md

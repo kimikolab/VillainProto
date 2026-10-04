@@ -826,6 +826,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 bosswave guard       # 第267期 勇者が癒し手を庇う（前1・75 ／ 100）＋ D-40 × 7台・勝率・倒しT・割ったT と手段（単体 ／ 範囲 ／ 刻み ／ その他）・採否（採らない・対照・1 秒）
     dotnet run --project BattleSim -c Release 0 bosswave guardbody   # 第267期 参考: 癒し手の HP だけを ×1 ／ ×2 ／ ×4 ／ ×8 にした G-庇75（採否には使わない・3 秒）
     dotnet run --project BattleSim -c Release 0 bosswave check267    # 第267期 自己検査（9 項目: 庇い 100 ／ 75 の割合・癒し手がいなければ差し替えない・薙ぎは差し替えない・刻みは癒し手に入る・保持者 0・決定性）
+    dotnet run --project BattleSim -c Release 0 bosswave venom0      # 第268期 Phase 0: D-40 で勇者に積まれる毒の層（回復が入るときの値・T1〜T15）× 7台・毒の書き手の棚卸し（1 秒）。本体は `Modes/BossWave.Venom.cs`
+    dotnet run --project BattleSim -c Release 0 bosswave venom       # 第268期 蝕み N=18 ／ 37 ＋ V-0（D-40）× 7台・勝率・倒しT・蝕みで減った回復・層・採否（1 秒）
+    dotnet run --project BattleSim -c Release 0 bosswave check268    # 第268期 自己検査（8 項目: 層 × N を引く・層は消費しない・下限 0・札なしは 1,200・V-0 ＝ D-40・保持者 0・決定性）
     dotnet run --project BattleSim -c Release 0 checkwave check      # 自己検査（写しの台本一致・癒し手 ＝ 従軍司祭＋札1枚・保持者 0・回復は状態を消さない・刻みの後・軛に切られない・ボスの攻撃力・verbose・乱数・動じない札・重装兵の体の癒し手・全体のボス・400/300 の癒し手・天井 +11・割合の回復・7台目の毒台・規定の組・26 項目）
     dotnet run --project BattleSim -c Release 0 checkwave log <台> <波> [seed]   # 1戦のログ（台は 燃焼 T3-244 ／ 燃焼 T3-255 ／ 移動 ／ 雷 ／ 毒 ／ 混ぜ-255・波は B3-桁 ／ W3-割合 ／ W2-対照 ／ W2-50後 ／ W2-50奥 ／ B2-全4 ／ B2-半4、第261期の版は `261:`・第260期の版は `260:` を前に付ける）
     dotnet run --project BattleSim -c Release 0 shockdigest s232 # 第232期の台（前段の規定・固定なし）

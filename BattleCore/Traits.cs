@@ -595,6 +595,10 @@ public enum TraitId
     HeroShield75,   // 勇者の庇い・75（第267期・版 G-庇75）: 同じ陣営の癒し手（`HeroMend` の持ち主）への単体攻撃を 75% で自分へ差し替える（殉教の向き替え・列を問わない・肩代わりで育たない）。**判定は engine**（`SelectTargetChain`・殉教の直後）。薙ぎ・貫き・全体・刻みは通らない。保持者 0 枚
     HeroShield100,  // 勇者の庇い・100（第267期・版 G-庇100）: 同上で 100%（`Roll` を引かない）。保持者 0 枚
 
+    // --- 第268期で足した札（`bosswave` の勇者だけ。ロスターと本編の敵の保持者 0 枚） ---
+    VenomTaxHalf,   // 蝕み・半（第268期・版 V-半）: 勇者の自前の回復（`BossMendTrait`）が、勇者に積まれた毒の層 × N だけ減る（下限 0・層は消費しない）。N は机上で「回復半減」に届く値。保持者 0 枚
+    VenomTaxSeal,   // 蝕み・封（第268期・版 V-封）: 同上で、N は机上で「回復ゼロ」に届く値。保持者 0 枚
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -13821,6 +13825,8 @@ public sealed class BossMendTrait : Trait
     {
         if (!self.IsAlive) return;
         int amount = Percent >= 100 ? self.MaxHp - self.Hp : self.MaxHp * Percent / 100;
+        // 第268期: 蝕み（`VenomTaxTrait`）。回復が入る直前に「毒の層 × N」だけ減らす（下限 0・層は消費しない）。札が無ければ何もしない。
+        if (amount > 0) amount = VenomTaxTrait.Apply(ctx, self, amount);
         if (amount <= 0) return;
         int b = self.Hp;
         ctx.Heal(self, amount, self);
@@ -13939,6 +13945,40 @@ public sealed class HeroShieldTrait : Trait
     public override TraitId Id => _id;
     public static bool Holds(UnitState u) => u.HasTrait(TraitId.HeroShield75) || u.HasTrait(TraitId.HeroShield100);
     public static int PercentOf(UnitState u) => u.HasTrait(TraitId.HeroShield100) ? Full : Mid;
+}
+
+/// <summary>
+/// 蝕み（第268期・`bosswave` の勇者だけ）。<b>勇者の自前の回復（<see cref="BossMendTrait"/>）が、勇者に積まれた毒の層 × <see cref="Step"/> だけ減る</b>（下限 0）。
+/// 毒の層は消費しない（刻みは従来どおり別に入る）。読むのは <see cref="BossMendTrait.OnTurnStart"/> の1箇所で、`ctx.Heal`（渇き・支援拒否の入口）は通る前に量を決めるだけ——
+/// 渇きと同じ経路ではないので重複して効かない（渇きが立っていれば、減った後の量がさらに 0 になるだけ）。減った量（名目）は私有キー <see cref="CutKey"/> に積む。乱数は引かない。
+/// </summary>
+public sealed class VenomTaxTrait : Trait
+{
+    public const string CutKey = "venomCut";
+    /// <summary>机上で「回復半減」に届く N ／「回復ゼロ」に届く N（第268期 Phase 0・報告書 §1）。</summary>
+    public const int Half = 18, Seal = 37;
+    readonly TraitId _id;
+    public int Step { get; }
+    public VenomTaxTrait(TraitId id, int step) { _id = id; Step = step; }
+    public override TraitId Id => _id;
+
+    /// <summary>回復の名目 <paramref name="amount"/> から蝕みの分を引いた量を返す（札が無ければそのまま）。</summary>
+    public static int Apply(BattleContext ctx, UnitState self, int amount)
+    {
+        foreach (Trait t in self.Traits)
+        {
+            if (t is not VenomTaxTrait v) continue;
+            int layers = self.RawCounter(StatusKeys.Poison);
+            if (layers <= 0) return amount;
+            int cut = Math.Min(amount, layers * v.Step);
+            self.SetCounter(CutKey, self.RawCounter(CutKey) + cut);
+            ctx.Log($"    {self.Name} は毒に蝕まれて傷が塞がりきらない（毒 {layers} 層・回復 −{cut}）", LogKind.Trigger);
+            return amount - cut;
+        }
+        return amount;
+    }
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(CutKey, 0);
 }
 
 public sealed class BossRiseTrait : Trait
@@ -16175,6 +16215,8 @@ public static class TraitCatalog
         new IndomitableTrait(TraitId.Indomitable22, IndomitableTrait.High), // 第266期
         new HeroShieldTrait(TraitId.HeroShield75, HeroShieldTrait.Mid),   // 第267期（bosswave の勇者だけ）
         new HeroShieldTrait(TraitId.HeroShield100, HeroShieldTrait.Full), // 第267期
+        new VenomTaxTrait(TraitId.VenomTaxHalf, VenomTaxTrait.Half),     // 第268期（bosswave の勇者だけ）
+        new VenomTaxTrait(TraitId.VenomTaxSeal, VenomTaxTrait.Seal),     // 第268期
         new BurnHitAddTrait(),       // 第255期
         new BurnHitSplitTrait(),     // 第255期
         new BurnHitSplitOnceTrait(), // 第255期

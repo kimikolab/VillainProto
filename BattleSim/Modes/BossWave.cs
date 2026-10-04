@@ -13,6 +13,7 @@ using CW = CheckWaveDiag;
 //     dotnet run --project BattleSim -c Release 0 bosswave check          # 自己検査
 //     dotnet run --project BattleSim -c Release 0 bosswave indom0 ／ indom ／ check266 ／ log266   # 第266期（不屈・`BossWave.Indom.cs`）
 //     dotnet run --project BattleSim -c Release 0 bosswave guard0 ／ guard ／ guardbody ／ check267 ／ log267   # 第267期（勇者が癒し手を庇う・`BossWave.Guard.cs`）
+//     dotnet run --project BattleSim -c Release 0 bosswave venom0 ／ venom ／ check268 ／ log268   # 第268期（蝕み・`BossWave.Venom.cs`）
 //     dotnet run --project BattleSim -c Release 0 bosswave body           # 参考: 取り巻きの HP だけを ×1 ／ ×2 ／ ×4 ／ ×8 にしたとき、割る順序が軸で分かれ始めるか（採否には使わない）
 //     dotnet run --project BattleSim -c Release 0 bosswave log <台> <版> [seed]   # 1戦のログ（版は H-制御税 ／ H-回復税 ／ B3-桁 ／ B3-速14）
 // =====================================================================================
@@ -36,6 +37,10 @@ static partial class BossWaveDiag
             case "guard0": Guard0(); return;
             case "guard": GuardRun(); return;
             case "guardbody": GuardBody(); return;
+            case "venom0": Venom0(); return;
+            case "venom": VenomRun(); return;
+            case "check268": Check268(); return;
+            case "log268": Log268(args.Length > 3 ? args[3] : "毒", args.Length > 4 ? args[4] : "V-封", args.Length > 5 ? int.Parse(args[5]) : 0); return;
             case "check267": Check267(); return;
             case "log267": Log267(args.Length > 3 ? args[3] : "毒", args.Length > 4 ? args[4] : "G-庇75", args.Length > 5 ? int.Parse(args[5]) : 0); return;
             case "log266": Log266(args.Length > 3 ? args[3] : "移動", args.Length > 4 ? args[4] : "F-11", args.Length > 5 ? int.Parse(args[5]) : 0); return;

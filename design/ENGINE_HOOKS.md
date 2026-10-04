@@ -962,6 +962,7 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **条件付きで塞ぐ札（第265期）は `Trait.BlocksControlNow(self)`**——入口 `SetCounter` は `ControlProof` の駒でだけ、塞ぐ札それぞれに「いま塞いでいるか」を問う。既定は `=> BlocksControl`（第261期の動じないは常に塞ぐ）で、上書きするのは勇者の印（`HeroCrest`・同じ陣営に支え `HeroWard` が生きている間だけ塞ぐ）だけ。**`ControlProof` が偽の駒は問われない**ので、保持者のいない戦の熱い経路は bool 1つのまま。生きている間は入口で付かないので、支えが倒れた瞬間に解く状態は無い。保持者は本編ボス波の勇者（`EnemyCatalog.BossHero`・`Stages` には載っていない）だけ。
 - **手番を奪う状態が上がったことを知らせる窓口（第266期）は `Trait.TaxesControl` ／ `Trait.OnControlGained(self, key)`**——同じ `SetCounter` の、値を書いた**後**で、5キーのどれかが**実際に上がった**ときだけ呼ぶ（同じ値・下げる書き込みは呼ばない）。拒否はしない（動じないの1行は書く前・こちらは書いた後）。保持者の無い駒は `UnitState.ControlTaxed`（`Traits` を入れたときに1回だけ求める bool）で抜ける。保持者は `bosswave` の勇者（不屈 `IndomitableTrait`）だけ。
 - **勇者の庇い（第267期）は `SelectTargetChain` の殉教の段の直後に1段**——同じ陣営の癒し手（`HeroMend` の持ち主）が単体の主目標になったとき、`HeroShield75` ／ `HeroShield100` の持ち主へ 75 ／ 100% で差し替える（列を問わない・`RedirectGainTrait` を継がないので育たない・100% は `Roll` を引かない）。保持者のいない戦は `_heroShieldLive` の比較1つで抜ける。出来事は既存の `Intercept`（`InterceptLabels.HeroShield`・`All` には入れない）。保持者は `bosswave` の勇者だけ。
+- **蝕み（第268期）は `BossMendTrait.OnTurnStart` の中の1行**——回復の量を決めた直後に `VenomTaxTrait.Apply` が「毒の層 × N」を引く（下限 0・層は消費しない・減った名目は私有キー `venomCut`）。`ctx.Heal`（渇き・支援拒否の入口）より手前で量を決めるだけなので、渇きと二重には引かない。札が無ければ素通り。保持者は `bosswave` の勇者だけ。
 
 ### 敵の数値の倍率（第187期・`EnemyScaleRule`）
 

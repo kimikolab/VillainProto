@@ -396,6 +396,8 @@
 | `Indomitable22` | - |
 | `HeroShield75` | - |
 | `HeroShield100` | - |
+| `VenomTaxHalf` | - |
+| `VenomTaxSeal` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
