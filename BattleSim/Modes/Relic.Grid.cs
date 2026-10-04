@@ -44,10 +44,11 @@ static partial class RelicDiag
     // 版: 0 ＝ 素、1.. ＝ 札 r × 枠 s（枠が空なら作らない）。
     // ---------------------------------------------------------------------------------
     sealed record GVar(int Ix, TraitId? Relic, int Frame);
-    static GVar[] VarsOf(Formation f)
+    /// <param name="cards">回す札（既定は第270期の7枚 `RelicCatalog.Initial`——第271・272期の器具の出力を変えないため。第273期の `relic expand` は12枚を渡す）。</param>
+    static GVar[] VarsOf(Formation f, IReadOnlyList<RelicInfo>? cards = null)
     {
         var list = new List<GVar> { new(0, null, -1) };
-        foreach (var r in RelicCatalog.All)
+        foreach (var r in cards ?? RelicCatalog.Initial)
             for (int s = 0; s < FormationRules.PlayableSlotCount; s++)
                 if (f[s] is not null) list.Add(new(list.Count, r.Id, s));
         return list.ToArray();
@@ -108,7 +109,7 @@ static partial class RelicDiag
         Console.WriteLine();
         Console.WriteLine("## 1. 規模");
         Console.WriteLine();
-        Console.WriteLine($"- 版: 61 行それぞれ 素 ＋ 札 {RelicCatalog.All.Count} 枚 × 埋まった枠 ＝ **{vars} 版**（行あたり {(double)vars / rows.Length:F1}）");
+        Console.WriteLine($"- 版: 61 行それぞれ 素 ＋ 札 {RelicCatalog.Initial.Count} 枚 × 埋まった枠 ＝ **{vars} 版**（行あたり {(double)vars / rows.Length:F1}）");
         Console.WriteLine($"- 戦闘数: {vars} 版 × 波 {WaveNames.Length} × seed {GridSeeds} ＝ **{(long)vars * WaveNames.Length * GridSeeds:N0} 戦**（`compare` 本体は 61 × 5 × 200 ＝ 61,000 戦・5〜6 秒）");
         Console.WriteLine($"- 見積もり: `compare` の約 {(double)vars * WaveNames.Length / (rows.Length * 5):F0} 倍 ≒ 3〜4 分。**絞らない**（seed も波も減らさない）。固有の勝者の追試（帯B seed {ConfirmFrom}..{ConfirmFrom + ConfirmSeeds - 1}）は数行ぶんだけ足す");
         Console.WriteLine();
@@ -142,10 +143,10 @@ static partial class RelicDiag
     /// <param name="from">帯の頭の seed（第272期に引数にした。既定 0 ＝ 第271期と同じ帯 0..199）。</param>
     /// <param name="waves">回す波の添字（既定は5つ全部）。回さない波のセルは N = 0 のまま。</param>
     /// <param name="map">札の差し替え（第272期の版 G1 ／ G2 で火付けの矢を弾数制の札に替える）。null なら第270期の札のまま。</param>
-    static GridData RunGrid(int from = 0, int[]? waves = null, Func<TraitId, TraitId>? map = null)
+    static GridData RunGrid(int from = 0, int[]? waves = null, Func<TraitId, TraitId>? map = null, IReadOnlyList<RelicInfo>? cards = null)
     {
         var rows = CompareBuilds();
-        var vars = rows.Select(r => VarsOf(r.F)).ToArray();
+        var vars = rows.Select(r => VarsOf(r.F, cards)).ToArray();
         var c = rows.Select((r, i) => vars[i].Select(_ => new Cell[WaveNames.Length]).ToArray()).ToArray();
         var ws = waves ?? Enumerable.Range(0, WaveNames.Length).ToArray();
         var tasks = new List<(int R, int V, int W)>();
@@ -237,7 +238,7 @@ static partial class RelicDiag
         Console.WriteLine();
         Console.WriteLine("帯A で 5 勝以上に届いた版を、札ごとに数えた（固有の勝者の候補の広がり・行の重複あり）:");
         Console.WriteLine();
-        foreach (var r in RelicCatalog.All)
+        foreach (var r in RelicCatalog.Initial)
         {
             int rowsHit = zeroRows.Count(i => g.Vars[i].Any(v => v.Relic == r.Id && g.C[i][v.Ix][0].Wins >= MinWinsA));
             Console.WriteLine($"- {r.Name}: {rowsHit} 行");
@@ -317,7 +318,7 @@ static partial class RelicDiag
                 }
             int room = Enumerable.Range(0, rows.Length).Count(i => g.C[i][0][w].Wins < GridSeeds);
             int lifted = Enumerable.Range(0, rows.Length).Count(i => g.C[i][0][w].Wins < GridSeeds && BestVar(g, i, w, true).C.Win - g.C[i][0][w].Win >= 5);
-            string per = string.Join("・", RelicCatalog.All.Select(r =>
+            string per = string.Join("・", RelicCatalog.Initial.Select(r =>
             {
                 double m = Enumerable.Range(0, rows.Length).Max(i => g.Vars[i].Where(v => v.Relic == r.Id).Select(v => g.C[i][v.Ix][w].Win - g.C[i][0][w].Win).DefaultIfEmpty(0).Max());
                 return $"{r.Name} {m:+0.0;−0.0;±0.0}";

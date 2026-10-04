@@ -37,6 +37,10 @@ static partial class RelicDiag
             case "p0r": P0Rejudge(); return;             // 第272期
             case "rejudge": Rejudge(); return;           // 第272期
             case "check272": Check272(); return;         // 第272期
+            case "p0x": P0Expand(); return;              // 第273期
+            case "check273": Check273(); return;         // 第273期
+            case "expand": Expand(); return;             // 第273期
+            case "logrow": LogRow(args[3], args[4], int.Parse(args[5]), int.Parse(args[6]), args.Length > 7 ? int.Parse(args[7]) : 0); return;   // 第273期
             case "log": LogOne(args.Length > 3 ? args[3] : "移動", args.Length > 4 ? args[4] : "軋む足", args.Length > 5 ? args[5] : "攻", args.Length > 6 ? int.Parse(args[6]) : 0); return;
             default: Console.WriteLine("relic: モードは p0 / check / sweep / keep / log ／ p0j / grid [帯の頭] / junk / mainwin（第271期）／ p0r / rejudge / check272（第272期）。"); return;
         }
@@ -142,7 +146,7 @@ static partial class RelicDiag
         Console.WriteLine();
         Console.WriteLine("| 札 | 種別 | 文面 | 橋 ／ 読み手 | TraitId | 素の保持者（`Everyone`） |");
         Console.WriteLine("|---|---|---|---|---|---|");
-        foreach (var r in RelicCatalog.All)
+        foreach (var r in RelicCatalog.Initial)
         {
             var holders = UnitCatalog.Everyone.Where(u => u.Traits.Contains(r.Id)).Select(u => u.Name).Distinct().ToList();
             Console.WriteLine($"| {r.Name} | {r.Kind} | {r.Text} | {r.Bridge} | `{r.Id}` | {(holders.Count == 0 ? "0 枚" : string.Join("・", holders))} |");
@@ -239,7 +243,7 @@ static partial class RelicDiag
         }
         {
             // (g) 札は素の駒の保持者 0 枚（弾性＝Spring はハネの素の札なので除く）。
-            var own = RelicCatalog.All.Where(r => r.Id != TraitId.Spring).Select(r => r.Id).ToHashSet();
+            var own = RelicCatalog.Initial.Where(r => r.Id != TraitId.Spring).Select(r => r.Id).ToHashSet();
             int holders = UnitCatalog.Everyone.Count(u => u.Traits.Any(own.Contains));
             Ok("(g) 新しい6枚の札の素の保持者がロスター（`Everyone`）に 0 枚", holders == 0, $"{holders} 枚");
         }
@@ -265,7 +269,7 @@ static partial class RelicDiag
         {
             // (j) 7枚それぞれが、規則「攻」「前」のどちらかで7台のどこかで1度以上発火する（札が繋がっているか＝鎖の門）。
             var miss = new List<string>();
-            foreach (var r in RelicCatalog.All)
+            foreach (var r in RelicCatalog.Initial)
             {
                 long fires = 0;
                 foreach (string b in CW.Boards7)
@@ -300,7 +304,7 @@ static partial class RelicDiag
         foreach (string b in CW.Boards7)
         {
             cells.Add((b, "", null));
-            foreach (string rule in Rules) foreach (var r in RelicCatalog.All) cells.Add((b, rule, r));
+            foreach (string rule in Rules) foreach (var r in RelicCatalog.Initial) cells.Add((b, rule, r));
         }
         var res = new Dictionary<(string, string, TraitId?), Agg>();
         var holderBase = new Dictionary<(string, string), Agg>();
@@ -334,7 +338,7 @@ static partial class RelicDiag
             Console.WriteLine();
             Console.WriteLine("| 札 | " + string.Join(" | ", CW.Boards7) + " | 向き（早い ／ 遅い ／ ±0 の台数・|差| < 0.1T を ±0） |");
             Console.WriteLine("|---|" + string.Concat(CW.Boards7.Select(_ => "--:|")) + "---|");
-            foreach (var r in RelicCatalog.All)
+            foreach (var r in RelicCatalog.Initial)
             {
                 int up = 0, down = 0, flat = 0;
                 var parts = CW.Boards7.Select(b =>
@@ -353,7 +357,7 @@ static partial class RelicDiag
             Console.WriteLine();
             Console.WriteLine("| 札 | " + string.Join(" | ", CW.Boards7) + " |");
             Console.WriteLine("|---|" + string.Concat(CW.Boards7.Select(_ => "--:|")));
-            foreach (var r in RelicCatalog.All)
+            foreach (var r in RelicCatalog.Initial)
                 Console.WriteLine($"| {r.Name} | " + string.Join(" | ", CW.Boards7.Select(b =>
                 {
                     var a = res[(b, rule, r.Id)]; var z = res[(b, "", null)];
@@ -364,7 +368,7 @@ static partial class RelicDiag
             Console.WriteLine();
             Console.WriteLine("| 札 | " + string.Join(" | ", CW.Boards7) + " |");
             Console.WriteLine("|---|" + string.Concat(CW.Boards7.Select(_ => "--:|")));
-            foreach (var r in RelicCatalog.All)
+            foreach (var r in RelicCatalog.Initial)
                 Console.WriteLine($"| {r.Name} | " + string.Join(" | ", CW.Boards7.Select(b =>
                 {
                     var a = res[(b, rule, r.Id)]; var z = holderBase[(b, rule)];

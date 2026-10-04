@@ -49,7 +49,7 @@ static partial class RelicDiag
             {
                 Cell a0 = g.C[i][0][w];
                 if (a0.Wins >= GridSeeds) continue;
-                foreach (var r in RelicCatalog.All)
+                foreach (var r in RelicCatalog.Initial)
                 {
                     GVar? best = null;
                     foreach (var v in g.Vars[i].Where(v => v.Relic == r.Id))
@@ -117,7 +117,7 @@ static partial class RelicDiag
         Console.WriteLine("# relic check272 —— 第272期 弾数制の自己検査");
         Console.WriteLine();
         Ok("(a) 版の札は `Versions` にあり `All` には無い（第270・271期の器具の7枚は不変）",
-            RelicCatalog.All.Count == 7 && RelicCatalog.Versions.Count == 2 && RelicCatalog.All.All(r => !RelicCatalog.Versions.Contains(r))
+            RelicCatalog.Initial.Count == 7 && RelicCatalog.Versions.Count == 2 && RelicCatalog.Initial.All(r => !RelicCatalog.Versions.Contains(r))
             && RelicCatalog.IsRelic(TraitId.RelicFireArrow3) && RelicCatalog.IsRelic(TraitId.RelicFireArrow5));
         Ok("(b) 版の札の素の保持者 0 枚", UnitCatalog.Everyone.Count(u => u.Traits.Contains(TraitId.RelicFireArrow3) || u.Traits.Contains(TraitId.RelicFireArrow5)) == 0);
         {
@@ -201,7 +201,7 @@ static partial class RelicDiag
             var h = hits[v.Name];
             var nf = h.Where(x => x.Relic != TraitId.RelicFireArrow).ToList();
             Console.WriteLine($"| {v.Name} | {h.Count} | {h.Select(x => x.Row).Distinct().Count()} | {nf.Count} | {nf.Select(x => x.Row).Distinct().Count()} | "
-                + string.Join("・", RelicCatalog.All.Select(r => $"{r.Name} {h.Count(x => x.Relic == r.Id)}")) + " |");
+                + string.Join("・", RelicCatalog.Initial.Select(r => $"{r.Name} {h.Count(x => x.Relic == r.Id)}")) + " |");
         }
         Console.WriteLine();
         Console.WriteLine("### G1 の件（本判定）");
