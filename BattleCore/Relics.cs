@@ -23,8 +23,11 @@ public sealed record RelicInfo(TraitId Id, string Name, string Kind, string Text
 
 public static class RelicCatalog
 {
-    /// <summary>レリックとして付けられる札の一覧（第270期の7枚）。<b>ここに無い札は <see cref="Formation.SetRelic"/> が弾く。</b></summary>
-    public static IReadOnlyList<RelicInfo> All { get; } = new RelicInfo[]
+    /// <summary>
+    /// 第270期の7枚（第273期に名前を付けて固定した）。<b>第270〜272期の器具（`relic sweep ／ grid ／ rejudge`）はこれだけを回す</b>
+    /// ——札を足しても過去の期の出力が変わらないため。
+    /// </summary>
+    public static IReadOnlyList<RelicInfo> Initial { get; } = new RelicInfo[]
     {
         new(TraitId.RelicCreak, "軋む足", "繋ぎ", $"動かされるたび攻撃力 +{RelicCreakTrait.Gain}", "移動 → 火力（ヨミの軋みの汎用化・割り込みは無い）"),
         new(TraitId.RelicFireArrow, "火付けの矢", "繋ぎ", "攻撃が当たった敵に火を点ける（燃焼）", "攻撃 → 燃焼"),
@@ -44,6 +47,21 @@ public static class RelicCatalog
         new(TraitId.RelicFireArrow3, "火付けの矢・3", "繋ぎ", $"攻撃が当たった敵に火を点ける（1戦 {RelicFireArrow3Trait.Shots} 回まで）", "攻撃 → 燃焼（第272期の版 G1・弾数制）"),
         new(TraitId.RelicFireArrow5, "火付けの矢・5", "繋ぎ", $"攻撃が当たった敵に火を点ける（1戦 {RelicFireArrow5Trait.Shots} 回まで）", "攻撃 → 燃焼（第272期の版 G2・弾数制）"),
     };
+
+    /// <summary>
+    /// 第273期に足した札（橋の多様化）。
+    /// </summary>
+    public static IReadOnlyList<RelicInfo> Added273 { get; } = new RelicInfo[]
+    {
+        new(TraitId.RelicShockStep, "帯電の足", "繋ぎ", "動かされたとき自分が感電していれば、向かいの敵（自分のレーンの最前）に感電を付ける", "移動 → 感電"),
+        new(TraitId.RelicVenomShove, "押し毒", "繋ぎ", "毒を帯びた敵を殴ると、その敵を自分のレーンで1つ後ろへ押す（後ろの駒とは入れ替わる）", "毒 → 敵の移動"),
+        new(TraitId.RelicOverflowEdge, "溢れの刃", "繋ぎ", "回復が溢れた（最大HPで切られた）分だけ、そのターン攻撃力 +同値", "回復 → 火力"),
+        new(TraitId.RelicMomentum, "勢い余り", "繋ぎ", "敵を倒すと、隣の味方（席番号の小さいほう）と入れ替わる", "撃破 → 移動"),
+        new(TraitId.RelicPoisonMagnet, "毒を招く", "ゴミ", $"受ける毒の層が {RelicPoisonMagnetTrait.Factor} 倍", "読み手: ベニ（結界の中では毒の刻みが回復）・ヴィオ（味方の毒を吸って攻撃力と腹に変える）"),
+    };
+
+    /// <summary>レリックとして付けられる札の一覧（<see cref="Initial"/> ＋ <see cref="Added273"/>）。<b>ここと <see cref="Versions"/> に無い札は <see cref="Formation.SetRelic"/> が弾く。</b></summary>
+    public static IReadOnlyList<RelicInfo> All { get; } = Initial.Concat(Added273).ToArray();
 
     private static readonly Dictionary<TraitId, RelicInfo> Map = All.Concat(Versions).ToDictionary(r => r.Id);
 
@@ -228,4 +246,130 @@ public sealed class RelicFireArrow5Trait : RelicFireArrowCappedTrait
     public override TraitId Id => TraitId.RelicFireArrow5;
     public const int Shots = 5;
     protected override int ShotsOf => Shots;
+}
+
+// =====================================================================================
+// 第273期の札（橋の多様化・指示書 design/PHASE273_RELIC_ADOPT_EXPAND_SPEC.md）
+// =====================================================================================
+
+/// <summary>
+/// 帯電の足（第273期・繋ぎ: 移動 → 感電）。動かされるたび（誰が動かしても・自分で動いても）、<b>自分が感電していれば</b>、
+/// 向かいの敵（自分の席が属するレーンそれぞれの敵の最前）に感電を付ける（<see cref="BattleContext.MarkShock"/>・感電は二値なので「感電 1」＝ 付ける）。
+/// 自分の感電は消さない（起爆は被弾の側の規則のまま）。<b>乱数を引かない。</b> <c>MarkShock</c> が保持者の門（<c>_shockLive</c>）を自分で立てる。
+/// </summary>
+public sealed class RelicShockStepTrait : Trait
+{
+    public override TraitId Id => TraitId.RelicShockStep;
+
+    public override void OnMoved(BattleContext ctx, UnitState self, Row from, Row to)
+    {
+        if (!self.IsAlive || self.RawCounter(StatusKeys.Shock) <= 0) return;
+        foreach (UnitState f in RelicLanes.Facing(ctx, self))
+            if (ctx.MarkShock(f, self))
+                ctx.Log($"    {self.Name} の帯電の足が {f.Name} に感電を移した", LogKind.Status);
+    }
+}
+
+/// <summary>向かいの敵（第270期の毒の足跡と同じ読み替え: 自分の席が属するレーンそれぞれの、敵の最前の駒・重複なし）。</summary>
+internal static class RelicLanes
+{
+    public static List<UnitState> Facing(BattleContext ctx, UnitState self)
+    {
+        var hit = new List<UnitState>(2);
+        int opp = ctx.Opponent(self.TeamId);
+        var foes = ctx.LivingMembers(opp);
+        if (foes.Count == 0) return hit;
+        FormationShape foeShape = foes[0].Shape;
+        foreach (int lane in self.Shape.LanesOf(self.Slot))
+        {
+            if (lane >= foeShape.LaneCount) continue;
+            var line = ctx.LaneMembers(opp, lane, foeShape);
+            if (line.Count > 0 && !hit.Contains(line[0])) hit.Add(line[0]);
+        }
+        return hit;
+    }
+}
+
+/// <summary>
+/// 押し毒（第273期・繋ぎ: 毒 → 敵の移動）。自分の攻撃が通った主目標（<c>dealt &gt; 0</c>）が<b>毒を帯びていれば</b>、その敵を
+/// 自分のレーンの経路で1つ後ろへ押す（行き先は弾き返しと同じ <see cref="SpringTrait.DestOf"/>・後ろに駒がいれば入れ替わる・据わり〈バン〉は動かない）。
+/// <b>転倒は付けない</b>（弾き返しとの違い）。最後尾・経路に乗っていない敵は押さない。<b>乱数を引かない。</b>
+/// 発火は攻撃1回につき主目標に1度（<c>OnAfterAttack</c> の規約どおり）。札は素の札の後ろなので、同じ手番で自分の札が付けた毒も「帯びている」に入る。
+/// </summary>
+public sealed class RelicVenomShoveTrait : Trait
+{
+    public override TraitId Id => TraitId.RelicVenomShove;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (dealt <= 0 || !target.IsAlive || target.TeamId == self.TeamId || target.RawCounter(StatusKeys.Poison) <= 0) return;
+        int dest = SpringTrait.DestOf(ctx, target);
+        if (dest < 0) return;
+        if (ctx.SwapSlots(target, dest, self))
+            ctx.Log($"    {self.Name} の押し毒が {target.Name} を後ろへ押した", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// 溢れの刃（第273期・繋ぎ: 回復 → 火力）。自分への回復が溢れた（最大HPで切られた）分だけ、<b>そのターン（全員の手番が一巡する間）</b>攻撃力 +同値。
+/// 同じターンに何度溢れても足し合わせる。判定は engine の <see cref="BattleContext.Heal"/> の1行（全快で 0 しか増えなかった回復も溢れに数える・
+/// 支援拒否・渇き・反転の裏で止まった回復は来ない・<b>ベニの反転の回復〈刻みが回復に変わったもの〉も回復として数える</b>）。
+/// 強化は窓口 <c>Whet</c> を通さない自己強化（<see cref="ModifyAttack"/>・札列の末尾なので他の倍率の後に足す）。会戦の境界で消す。
+/// </summary>
+public sealed class RelicOverflowEdgeTrait : Trait
+{
+    public override TraitId Id => TraitId.RelicOverflowEdge;
+    const string TurnKey = "relicOverflowTurn", AmtKey = "relicOverflowAmt";
+
+    internal static void Gain(BattleContext ctx, UnitState self, int over)
+    {
+        int stamp = ctx.Turn + 1;
+        int had = self.RawCounter(TurnKey) == stamp ? self.RawCounter(AmtKey) : 0;
+        self.SetCounter(TurnKey, stamp);
+        self.SetCounter(AmtKey, had + over);
+        ctx.Log($"    {self.Name} の溢れの刃（攻撃 +{over} → このターン +{had + over}）", LogKind.Trigger);
+    }
+
+    public override int ModifyAttack(UnitState self, int atk)
+        => self.Board is { } b && self.RawCounter(TurnKey) == b.Turn + 1 ? atk + self.RawCounter(AmtKey) : atk;
+
+    public override void OnCarryOver(UnitState self) { self.SetCounter(TurnKey, 0); self.SetCounter(AmtKey, 0); }
+}
+
+/// <summary>
+/// 勢い余り（第273期・繋ぎ: 撃破 → 移動）。敵を倒すと、隣の味方（隣接の表・召喚枠は除く・<b>席番号の小さいほう</b>）と入れ替わる。
+/// 据わり（バン）しかいなければ入れ替わらない。選び方は踏み込みの代金（<see cref="OverrunTrait"/>）と同じで<b>乱数を引かない</b>（ヨミの撃破の衝撃は乱数を引くので真似ない）。
+/// 押し出しの再入は <c>ctx.Shoving</c> で止める。倒した瞬間（攻撃の途中）に動くので、入れ替わった2体の移動の読み手はその場で動く。
+/// </summary>
+public sealed class RelicMomentumTrait : Trait
+{
+    public override TraitId Id => TraitId.RelicMomentum;
+
+    public override void OnKill(BattleContext ctx, UnitState self, UnitState victim)
+    {
+        if (!self.IsAlive || victim.TeamId == self.TeamId) return;
+        UnitState? with = null;
+        foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
+        {
+            if (ally == self || FormationRules.IsSummonSlot(ally) || ally.HasTrait(TraitId.Planted)) continue;
+            if (!FormationRules.AreAdjacent(self, ally)) continue;
+            if (with is null || ally.Slot < with.Slot) with = ally;
+        }
+        if (with is null) return;
+        bool moved = false;
+        ctx.Shoving(() => moved = ctx.SwapSlots(self, with.Slot, self));
+        if (moved) ctx.Log($"    {self.Name} は勢い余って {with.Name} と入れ替わった", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// 毒を招く（第273期・ゴミ）。受ける毒の層が2倍。判定は engine の <see cref="BattleContext.Poison"/> の1行（滲みの後・書く直前）
+/// ——<b><c>ctx.Poison</c> を通らない書き込み</b>（ミオの濃縮・リリの口移し・身代わり・会戦の持ち越し）は2倍にならない。
+/// <b>読み手</b>: ベニ（結界の中＝ベニ本人と隣の味方では、毒の刻みが層と同じ量の回復になる——層が2倍なら回復も2倍）・
+/// ヴィオ（ターン頭に味方全員の毒を吸って攻撃力と腹に変える——ヴィオ以外の味方に付ければ吸う量が増える。ヴィオ本人は自分の毒を吸わない）。
+/// </summary>
+public sealed class RelicPoisonMagnetTrait : Trait
+{
+    public override TraitId Id => TraitId.RelicPoisonMagnet;
+    public const int Factor = 2;
 }

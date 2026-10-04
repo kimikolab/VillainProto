@@ -609,6 +609,12 @@ public enum TraitId
     RelicHarden,    // 身を固める（変換）: 開戦時に素の攻撃力 × 3 を最大HPに足し、攻撃力は 0
     RelicFireArrow3, // 火付けの矢・3（第272期・版 G1）: 着火は1戦3回まで（`RelicCatalog.Versions`・`All` には入れない）
     RelicFireArrow5, // 火付けの矢・5（第272期・版 G2）: 着火は1戦5回まで
+    // --- 第273期で足した札（レリック・橋の多様化。`RelicCatalog.Added273`） ---
+    RelicShockStep,    // 帯電の足（繋ぎ）: 動かされたとき自分が感電していれば、向かいの敵（自分のレーンの最前）に感電
+    RelicVenomShove,   // 押し毒（繋ぎ）: 毒を帯びた敵を殴ると、その敵を自分のレーンで1つ後ろへ押す
+    RelicOverflowEdge, // 溢れの刃（繋ぎ）: 回復が溢れた分だけ、そのターン攻撃力 +同値（判定は engine `Heal` の1行）
+    RelicMomentum,     // 勢い余り（繋ぎ）: 敵を倒すと、隣の味方と入れ替わる
+    RelicPoisonMagnet, // 毒を招く（ゴミ）: 受ける毒の層が2倍（判定は engine `Poison` の1行・読み手: ベニ・ヴィオ）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -16314,6 +16320,11 @@ public static class TraitCatalog
         new RelicHardenTrait(),     // 第270期（レリック）
         new RelicFireArrow3Trait(), // 第272期（レリックの版 G1）
         new RelicFireArrow5Trait(), // 第272期（レリックの版 G2）
+        new RelicShockStepTrait(),    // 第273期（レリック）
+        new RelicVenomShoveTrait(),   // 第273期（レリック）
+        new RelicOverflowEdgeTrait(), // 第273期（レリック）
+        new RelicMomentumTrait(),     // 第273期（レリック）
+        new RelicPoisonMagnetTrait(), // 第273期（レリック）
         new InversionTrait(),
         new DroughtTrait(),
         new YokeTrait(),

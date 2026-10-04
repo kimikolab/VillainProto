@@ -1663,6 +1663,8 @@ public sealed class BattleContext
             NoteWoundRead(target, WoundReader.Soak, 1, bump, 0);
         }
 
+        // 第273期（レリック・毒を招く）: 受ける層を2倍（滲みの後・書く直前）。保持者がいない戦は比較1つで抜ける。
+        if (_poisonMagnetLive && target.HasTrait(TraitId.RelicPoisonMagnet)) add *= RelicPoisonMagnetTrait.Factor;
         target.SetCounter(StatusKeys.Poison, target.RawCounter(StatusKeys.Poison) + add);
         BurstBook.PoisonWrites[(int)route]++; BurstBook.PoisonAmount[(int)route] += add;   // 第220期・**計数のみ**
         EmitStatusGain(target, StatusKeys.Poison, add, writer, route, spreadFrom);   // 第97期・表示専用（滲みで増えたぶんも込み）。第183期 追補2: 経路と伝染元
@@ -4813,6 +4815,7 @@ public sealed class BattleContext
     bool _decoyLive, _disarrayLive;
     /// <summary>第228期: 弾き返し（<c>SpringTrait</c>）の保持者が戦にいるか。いなければ被弾の後の判定を比較1つで抜ける。</summary>
     bool _springLive;
+    bool _overflowLive, _poisonMagnetLive;   // 第273期（レリック・溢れの刃 ／ 毒を招く）
     bool _tailwindLive;   // 第229期（追い風の保持者がいる戦）
     bool _impactLive;     // 第230期（撃破の衝撃の保持者がいる戦）
 
@@ -7058,6 +7061,8 @@ public sealed class BattleContext
         NoteBurnHitHolder(u);                                      // 第255期（被弾の燃焼）
         if (u.HasTrait(TraitId.Decoy)) _decoyLive = true;         // 第226期（挑発）
         if (u.HasTrait(TraitId.Spring)) _springLive = true;       // 第228期（弾き返し）
+        if (u.HasTrait(TraitId.RelicOverflowEdge)) _overflowLive = true;      // 第273期（レリック・溢れの刃）
+        if (u.HasTrait(TraitId.RelicPoisonMagnet)) _poisonMagnetLive = true;  // 第273期（レリック・毒を招く）
         if (u.HasTrait(TraitId.Tailwind)) _tailwindLive = true;   // 第229期（追い風）
         if (u.HasTrait(TraitId.Landing)) _landingLive = true;     // 第237期（着地の反動）
         if (u.HasTrait(TraitId.SpringDaunt)) _dauntLive = true;   // 第243期（⑤ 動かした敵の萎縮を消費させる）
@@ -12821,6 +12826,10 @@ public sealed class BattleContext
 
         int before = target.Hp;
         target.Hp = Math.Min(target.MaxHp, target.Hp + amount);
+        // 第273期（レリック・溢れの刃）: 溢れた分（最大HPで切られた分）を札へ渡す。全快で 0 しか増えなかった回復も溢れに数える。
+        // 支援拒否・渇き・反転の裏で止まった回復はここまで来ない。保持者がいない戦は比較1つで抜ける。
+        if (_overflowLive && amount - (target.Hp - before) > 0 && target.HasTrait(TraitId.RelicOverflowEdge))
+            RelicOverflowEdgeTrait.Gain(this, target, amount - (target.Hp - before));
         if (target.Hp == before) return HealOutcome.Full;
 
         // 実際に増えた分だけを数える（上限で切られた分は「払い戻し」になっていない）。
