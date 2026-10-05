@@ -79,7 +79,7 @@ public partial class BattlePawn3D
             _firePowerLabel.NoDepthTest = true;
             AddChild(_firePowerLabel);
         }
-        _firePowerLabel.Position = _stats.Position + Vector3.Up * 0.28f;
+        _firePowerLabel.Position = _headLabelBase + Vector3.Up * 0.28f;
         _firePowerLabel.Text = _firePowerText;
         _firePowerLabel.Visible = _alive && !_victory;
     }

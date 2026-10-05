@@ -41,7 +41,7 @@ public partial class BattlePawn3D
         }
         if (_fireReserveLabel is null) return;
         _fireReserveLabel.Text = FireHoard > 0 ? $"溜め火 {FireHoard}" : $"渡す火 {FireGiftHoard}";
-        _fireReserveLabel.Position = _stats.Position + Vector3.Up * 0.50f;
+        _fireReserveLabel.Position = _headLabelBase + Vector3.Up * 0.50f;
         _fireReserveLabel.Visible = _alive && !_victory && (FireHoard > 0 || FireGiftHoard > 0);
     }
     internal void SetFireGiftOrder(int order)
@@ -54,7 +54,7 @@ public partial class BattlePawn3D
             AddChild(_fireGiftOrderLabel);
         }
         if (_fireGiftOrderLabel is null) return;
-        _fireGiftOrderLabel.Position = _stats.Position + Vector3.Up * 0.73f;
+        _fireGiftOrderLabel.Position = _headLabelBase + Vector3.Up * 0.73f;
         _fireGiftOrderLabel.Text = $"ギフト {order}";
         _fireGiftOrderLabel.Visible = order > 0 && _alive && !_victory;
     }

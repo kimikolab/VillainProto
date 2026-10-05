@@ -4,25 +4,16 @@ using System;
 public partial class BattlePawn3D
 {
     private int _baseAttack;
-    private Label3D _attackDelta = null!;
-    internal string AttackDeltaText => _attackDelta.Text;
-    internal bool AttackDeltaVisible => _attackDelta.Visible;
-
-    private void BuildAttackChange()
-    {
-        _attackDelta = MakeLabel("", 20, UiKit.Hurt, 0.006f);
-        _attackDelta.Position = new Vector3(1.05f, _hpBack.Position.Y, 0.04f);
-        AddChild(_attackDelta);
-    }
+    // 増減の札は頭上の札（`PawnHud2D`）が持つ。
+    internal string AttackDeltaText => Hud.DeltaText;
+    internal bool AttackDeltaVisible => Hud.DeltaVisible;
 
     private void ShowAttackChange(int change)
     {
         int delta = AttackValue - _baseAttack;
         Color up = Color.FromHtml("#ff746b");
         Color down = Color.FromHtml("#6eaaff");
-        _attackDelta.Text = delta > 0 ? "+" + delta : delta.ToString();
-        _attackDelta.Modulate = delta > 0 ? up : down;
-        _attackDelta.Visible = _alive && delta != 0;
+        Hud.SetAttackDelta(delta > 0 ? "+" + delta : delta.ToString(), delta > 0 ? up : down, _alive && delta != 0);
         if (change == 0 || !_alive) return;
         ShowPowerMist(change);
         float sign = Math.Sign(change);

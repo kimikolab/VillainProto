@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public partial class BattlePawn3D
 {
-    private StatusIconRow3D _statusIcons = null!;
+    private StatusIconRow2D _statusIcons = null!;
     private MeshInstance3D? _curseStain;
     internal bool HasCurseStain => _curseStain is not null;
     private readonly Dictionary<string, int> _statusSnapshot = new();
@@ -13,11 +13,8 @@ public partial class BattlePawn3D
     internal int StatusIconFlashCount => _statusIcons.FlashCount;
     internal bool HasStatusIcon(string key) => _statusIcons.Has(key);
     internal bool HasConfusionEffect => _confusion.Visible;
-    private void BuildStatusIcons()
-    {
-        _statusIcons = new StatusIconRow3D { Position = new Vector3(0, _hpBack.Position.Y - 0.23f, 0.06f) };
-        AddChild(_statusIcons);
-    }
+    // 頭上の札の上に並ぶ（`PawnHud2D` が置き場を持つ）。
+    private void BuildStatusIcons() => _statusIcons = Hud.Icons;
     public void BeginStatusSnapshot() => _statusSnapshot.Clear();
     public void ReadStatusSnapshot(string label, int amount)
     {

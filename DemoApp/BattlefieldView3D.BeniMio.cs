@@ -16,7 +16,11 @@ public partial class BattlefieldView3D
     {
         if (opening.Traits?.Contains(TraitId.Inverse) == true) _inverseHolders.Add(opening.InstanceId);
     }
-    public override void _Process(double delta) => RefreshInverseBarriers();
+    public override void _Process(double delta)
+    {
+        RefreshInverseBarriers();
+        PlacePawnHuds(delta);
+    }
 
     // 既存の隣接表に現在の表示席を当てるだけ。HPや状態の判定・書き換えはしない。
     public void RefreshInverseBarriers()

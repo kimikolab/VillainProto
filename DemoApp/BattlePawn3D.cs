@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using Godot;
 using System;
 using System.Linq;
@@ -13,14 +13,18 @@ public partial class BattlePawn3D : Node3D
     private MeshInstance3D _shadow = null!;
     private MeshInstance3D _ring = null!;
     private MeshInstance3D _turnRing = null!;
-    private MeshInstance3D _hpBack = null!;
-    private MeshInstance3D _hpFill = null!;
-    private QuadMesh _hpFillMesh = null!;
-    private Label3D _name = null!;
-    private Label3D _seat = null!;
-    private Label3D _stats = null!;
-    private Label3D _status = null!;
-    private Label3D _forecast = null!;
+    /// <summary>
+    /// 頭上の札（HP・名前・攻撃・状態アイコン）。<b>画面の平面に描くので 3D の木には入れない</b>
+    /// ——`BattlefieldView3D` が引き取って毎フレーム頭の位置へ置く。駒が消えるときに一緒に消す。
+    /// </summary>
+    public PawnHud2D Hud { get; private set; } = null!;
+    /// <summary>札を置く高さ（駒の原点から上へ）。立ち絵の頭のすぐ上。</summary>
+    private float _hudY = 1.88f;
+    public Vector3 HudAnchor => GlobalPosition + new Vector3(0, _hudY, 0);
+    /// <summary>火勢などの 3D の札を積む基準（旧 HP 行の高さ）。</summary>
+    private Vector3 _headLabelBase;
+    private string _seatText = "";
+    private string _statusText = "";
     /// <summary>盤面ルールの保持者の札（第171期・<b>表示専用</b>）。<b>倒れるまで出しっぱなし。</b></summary>
     private Node3D _ruleTag = null!;
     private Vector3 _home;
@@ -113,13 +117,13 @@ public partial class BattlePawn3D : Node3D
         set
         {
             _slot = value;
-            if (_seat is not null) _seat.Text = UiKit.SeatLabel(_slot, Shape);
+            _seatText = UiKit.SeatLabel(_slot, Shape);
         }
     }
 
     private int _slot;
     /// <summary>頭上の席札の文字（第202期・頭なしの門が読む）。</summary>
-    public string SeatText => _seat?.Text ?? "";
+    public string SeatText => _seatText;
     /// <summary>この駒の隊の陣形（第202期・表示専用。席札の名前だけに使う）。</summary>
     public FormationShape? Shape { get; private set; }
     public int Hp { get; private set; }
@@ -210,9 +214,8 @@ public partial class BattlePawn3D : Node3D
         _fxHeight = Math.Clamp(_portraitHeight * 0.58f, 0.90f, 1.65f);
         float seatY = hasCustomPortrait ? _portraitHeight + 0.06f : 1.88f;
         float statsY = hasCustomPortrait ? seatY + 0.17f : 2.05f;
-        float hpY = hasCustomPortrait ? seatY + 0.34f : 2.22f;
-        float nameY = hasCustomPortrait ? seatY + 0.61f : 2.49f;
-        float statusY = hasCustomPortrait ? seatY + 0.88f : 2.76f;
+        _hudY = seatY;
+        _headLabelBase = new Vector3(0, statsY, 0);
         var shader = new Shader
         {
             Code = @"shader_type spatial;
@@ -281,38 +284,8 @@ void fragment() {
         AddChild(_sprite);
         BuildKataStakes();
 
-        _hpBack = MakeBillboardQuad(new Vector2(1.68f, 0.15f), new Color(0.015f, 0.025f, 0.02f, 0.92f), 10);
-        _hpBack.Position = new Vector3(0, hpY + 0.55f, 0.02f);
-        AddChild(_hpBack);
-        _hpFill = MakeBillboardQuad(new Vector2(1.58f, 0.095f), teamColor.Lightened(0.08f), 11);
-        _hpFillMesh = (QuadMesh)_hpFill.Mesh;
-        _hpFill.Position = new Vector3(0, hpY, 0.04f);
-        AddChild(_hpFill);
-
-        _name = MakeLabel(opening.Name, 22, Colors.White, 0.0063f);
-        _name.Position = new Vector3(0, nameY + 0.55f, 0);
-        AddChild(_name);
-        _stats = MakeLabel("", 17, Color.FromHtml("#e2e7dd"), 0.0056f);
-        _stats.Position = new Vector3(0, statsY, 0);
-        AddChild(_stats);
-        // 席名と行名（第123期 §3-3）。`FormationRules.SeatNames` / `RowOf` から引く。
-        // 召喚枠（5-8）にも席名があるので、湧いた駒でもそのまま出る。
-        _seat = MakeLabel(UiKit.SeatLabel(Slot, Shape), 15, UiKit.Muted, 0.0050f);
-        _seat.Position = new Vector3(0, seatY, 0);
-        AddChild(_seat);
-        _status = MakeLabel("", 18, UiKit.Gold, 0.0058f);
-        _status.Position = new Vector3(0, statusY, 0);
-        AddChild(_status);
-
-        // 溜めの予告（第125期 段3-b）。**ターンをまたいで残る**ので `_status` とは別に持つ
-        // （`SetTurn` が毎ターン status を消すので、そこへ書くと予告が次の手番まで残らない）。
-        _forecast = MakeLabel("", 17, UiKit.Gold, 0.0056f);
-        _forecast.Position = new Vector3(0, statusY + 0.19f, 0);
-        _forecast.Visible = false;
-        AddChild(_forecast);
-
+        Hud = new PawnHud2D(Team == BattleContext.EnemyTeam, opening.Name);
         BuildRuleMarks(opening);
-        BuildAttackChange();
         BuildStatusIcons();
 
         SetHp(Hp);
@@ -328,12 +301,7 @@ void fragment() {
     public void SetHp(int hp)
     {
         Hp = Math.Clamp(hp, 0, MaxHp);
-        float ratio = Math.Clamp(Hp / (float)MaxHp, 0.001f, 1.0f);
-        _hpFill.Scale = Vector3.One;
-        _hpFillMesh.Size = new Vector2(1.58f * ratio, 0.095f);
-        _hpFillMesh.CenterOffset = new Vector3(-0.79f * (1.0f - ratio), 0, 0);
-        _hpFill.Position = new Vector3(0, _hpBack.Position.Y, 0.04f);
-        _stats.Text = $"HP {Hp}/{MaxHp}  ・  攻 {AttackValue} {PatternGlyph(Pattern)}";
+        Hud.SetHp(Hp, MaxHp);
     }
 
     public void SetAttack(int attack, AttackPattern? pattern = null, bool animate = true)
@@ -341,7 +309,7 @@ void fragment() {
         int change = attack - AttackValue;
         AttackValue = attack;
         if (pattern is { } value) Pattern = value;
-        _stats.Text = $"HP {Hp}/{MaxHp}  ・  攻 {AttackValue} {PatternGlyph(Pattern)}";
+        Hud.SetAttack(AttackValue, PatternGlyph(Pattern));
         ShowAttackChange(animate ? change : 0);
     }
 
@@ -362,14 +330,10 @@ void fragment() {
     }
 
     /// <summary>いま出している状態異常の札（第125期 段3-e。画面下の一覧が引く）。</summary>
-    public string StatusText => _status?.Text ?? "";
+    public string StatusText => _statusText;
 
-    public void SetStatus(string value)
-    {
-        _status.Text = value;
-        // 文章は画面下の一覧に残す。駒の上にはアイコンだけを描く。
-        _status.Visible = false;
-    }
+    // 文章は画面下の一覧に残す。駒の上にはアイコンだけを描く。
+    public void SetStatus(string value) => _statusText = value;
 
     /// <summary>
     /// 次の手番に何が来るかの予告（第125期 段3-b）。<b>溜めは画面上ただの空白のターン</b>なので、
@@ -378,8 +342,7 @@ void fragment() {
     /// </summary>
     public void SetForecast(string value)
     {
-        _forecast.Text = value;
-        _forecast.Visible = _alive && !string.IsNullOrWhiteSpace(value);
+        Hud.SetForecast(_alive ? value : "");
     }
 
     public async Task AdvanceToAttack(Vector3 targetPosition)
@@ -504,13 +467,11 @@ void fragment() {
         _guardPosition = null;
         _ring.Visible = false;
         _turnRing.Visible = false;
-        _status.Visible = false;
-        _forecast.Visible = false;
-        _name.Visible = false;
-        _stats.Visible = false;
+        Hud.SetForecast("");
+        Hud.Retire(fade: !QuietLastStand);
         // 保持者が倒れたらルールは消える。**札も一緒に消す**（第171期 §2-2）。
         _ruleTag.Visible = false;
-        _attackDelta.Visible = false;
+        ShowAttackChange(0);
         ClearSpecialEffects();
         if (QuietLastStand)
         {
@@ -519,7 +480,6 @@ void fragment() {
             Rotation = Vector3.Zero;
             RefreshBattlePortrait();
             _sprite.Modulate = Colors.White;
-            _hpBack.Visible = _hpFill.Visible = _seat.Visible = false;
             return;
         }
         var tween = BeginMotion().SetParallel();
@@ -527,8 +487,6 @@ void fragment() {
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
         tween.TweenProperty(this, "rotation:z", Team == BattleContext.PlayerTeam ? -0.32f : 0.32f, 0.42);
         tween.TweenProperty(_sprite, "modulate:a", 0.24f, 0.48).SetDelay(0.10);
-        tween.TweenProperty(_hpBack, "scale", new Vector3(0.01f, 0.01f, 0.01f), 0.28);
-        tween.TweenProperty(_hpFill, "scale", new Vector3(0.01f, 0.01f, 0.01f), 0.28);
     }
 
     public void AnimateRevive()
@@ -551,12 +509,10 @@ void fragment() {
         Scale = Vector3.One;
         _sprite.Modulate = new Color(1, 1, 1, 0.12f);
         _ring.Visible = true;
-        _name.Visible = true;
-        _stats.Visible = true;
+        Hud.Restore();
         // 戻ってきたらルールも戻る（保持者の生死がそのまま規則の生死・第171期 §2-2）。
         _ruleTag.Visible = true;
         ShowAttackChange(0);
-        _hpBack.Scale = Vector3.One;
         SetHp(Hp);
         var tween = BeginMotion().SetParallel();
         tween.TweenProperty(this, "position", _home, 0.38)
@@ -602,12 +558,7 @@ void fragment() {
         Scale = Vector3.One;
         _sprite.Scale = Vector3.One;
         _ring.Visible = false;
-        _hpBack.Visible = false;
-        _hpFill.Visible = false;
-        _name.Visible = false;
-        _seat.Visible = false;
-        _stats.Visible = false;
-        _status.Visible = false;
+        Hud.Retire(fade: false);
 
         Texture2D victoryPortrait = UiKit.Portrait(_atlas, _unitId);
         var tween = CreateTween();
@@ -634,6 +585,12 @@ void fragment() {
         tween.TweenProperty(this, "position", target + Vector3.Up * 0.24f, 0.22)
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
         tween.TweenProperty(this, "position", target, 0.12);
+    }
+
+    public override void _Notification(int what)
+    {
+        // 頭上の札は 3D の木の外（画面の平面）にいるので、駒と一緒には消えない。
+        if (what == NotificationPredelete && Hud is not null && IsInstanceValid(Hud)) Hud.QueueFree();
     }
 
     public override void _Process(double delta)

@@ -119,7 +119,7 @@ public partial class BattlePawn3D
     {
         // AnimateDeath の後で動きだけ差し替える。死亡状態・UI の掃除は既存経路に任せる。
         double seconds = 0.38 / Math.Max(0.1, AnimationSpeed);
-        _hpBack.Visible = _hpFill.Visible = false;
+        Hud.Retire(fade: false);
         var tween = BeginMotion().SetParallel();
         tween.TweenProperty(this, "position", Position + new Vector3(Team == 0 ? -0.85f : 0.85f, 0.12f, 0.2f), seconds);
         tween.TweenProperty(this, "rotation:z", Team == 0 ? 0.65f : -0.65f, seconds);

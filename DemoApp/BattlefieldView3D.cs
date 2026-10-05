@@ -155,6 +155,7 @@ public partial class BattlefieldView3D : Control
 
     private void BuildOverlay()
     {
+        BuildHudLayer();
         var topShade = new ColorRect
         {
             Color = new Color(0.012f, 0.025f, 0.021f, 0.78f),
@@ -328,7 +329,7 @@ public partial class BattlefieldView3D : Control
         _beat.Text = "";
         _bonusAttackCutIn.Visible = false;
         _headline.Text = $"{stageName} — {(_fortress ? "城門前の攻防" : "草原遭遇戦")}";
-        _subline.Text = "Space: 一時停止   1–4: 再生速度   T: 戦績   細い線＝誰の仕業か   ▶＝手番の主 / ▷＝ターン頭 / ⚡＝手番の外";
+        _subline.Text = "Space: 一時停止   1–4: 再生速度   T: 戦績   Alt／カーソル: 詳細   細い線＝誰の仕業か   ▶＝手番の主 / ▷＝ターン頭 / ⚡＝手番の外";
         _cameraMotion?.Kill();
         _camera.Position = _cameraHome;
         _camera.Fov = CameraFov;
@@ -342,6 +343,7 @@ public partial class BattlefieldView3D : Control
             pawn.SetHome(PawnPosition(opening.Team, opening.Slot));
             _actorRoot.AddChild(pawn);
             _pawns[opening.InstanceId] = pawn;
+            AdoptHud(pawn);
             RegisterSealHolder(opening);
             RegisterInverse(opening);
         }
@@ -561,6 +563,7 @@ public partial class BattlefieldView3D : Control
         pawn.SetHome(PawnPosition(opening.Team, opening.Slot));
         _actorRoot.AddChild(pawn);
         _pawns[opening.InstanceId] = pawn;
+        AdoptHud(pawn);
         RegisterSealHolder(opening);
         RegisterInverse(opening);
         ConnectSeals();
