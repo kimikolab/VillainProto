@@ -1,0 +1,144 @@
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready().
+If you want to set size, change the anchors or consider using set_deferred().
+   at: _set_size (scene/gui/control.cpp:1519)
+   GDScript backtrace (most recent call first):
+       [0] capture (res://../design/art/zoto/capture-integration.gd:24)
+   C# backtrace (most recent call first):
+       [0] void Godot.NativeCalls.godot_icall_1_36(nint, nint, Godot.Vector2*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/NativeCalls.cs:322)
+       [1] void Godot.Control._SetSize(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:1941)
+       [2] void Godot.Control.set_Size(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:691)
+       [3] void PartyBar.Begin(System.Collections.Generic.IReadOnlyList`1[DemoOpening]) (C:\works\VillainProto\DemoApp\PartyBar.cs:82)
+       [4] void Main.EnterBattle(System.Collections.Generic.List`1[BattleCore.UnitState], System.Collections.Generic.List`1[BattleCore.UnitState], int, int, string) (C:\works\VillainProto\DemoApp\Main.cs:1163)
+       [5] void Main.StartBattle() (C:\works\VillainProto\DemoApp\Main.cs:1084)
+       [6] bool Main.InvokeGodotClassMethod(Godot.NativeInterop.godot_string_name&, Godot.NativeInterop.NativeVariantPtrArgs, Godot.NativeInterop.godot_variant&) (C:\works\VillainProto\DemoApp\.godot\mono\temp\obj\Debug\Godot.SourceGenerators\Godot.SourceGenerators.ScriptMethodsGenerator\Main_ScriptMethods.generated.cs:404)
+       [7] Godot.NativeInterop.godot_bool Godot.Bridge.CSharpInstanceBridge.Call(nint, Godot.NativeInterop.godot_string_name*, Godot.NativeInterop.godot_variant**, int, Godot.NativeInterop.godot_variant_call_error*, Godot.NativeInterop.godot_variant*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Core/Bridge/CSharpInstanceBridge.cs:24)
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready().
+If you want to set size, change the anchors or consider using set_deferred().
+   at: _set_size (scene/gui/control.cpp:1519)
+   GDScript backtrace (most recent call first):
+       [0] capture (res://../design/art/zoto/capture-integration.gd:24)
+   C# backtrace (most recent call first):
+       [0] void Godot.NativeCalls.godot_icall_1_36(nint, nint, Godot.Vector2*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/NativeCalls.cs:322)
+       [1] void Godot.Control._SetSize(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:1941)
+       [2] void Godot.Control.set_Size(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:691)
+       [3] void PartyBar.Begin(System.Collections.Generic.IReadOnlyList`1[DemoOpening]) (C:\works\VillainProto\DemoApp\PartyBar.cs:82)
+       [4] void Main.EnterBattle(System.Collections.Generic.List`1[BattleCore.UnitState], System.Collections.Generic.List`1[BattleCore.UnitState], int, int, string) (C:\works\VillainProto\DemoApp\Main.cs:1163)
+       [5] void Main.StartBattle() (C:\works\VillainProto\DemoApp\Main.cs:1084)
+       [6] bool Main.InvokeGodotClassMethod(Godot.NativeInterop.godot_string_name&, Godot.NativeInterop.NativeVariantPtrArgs, Godot.NativeInterop.godot_variant&) (C:\works\VillainProto\DemoApp\.godot\mono\temp\obj\Debug\Godot.SourceGenerators\Godot.SourceGenerators.ScriptMethodsGenerator\Main_ScriptMethods.generated.cs:404)
+       [7] Godot.NativeInterop.godot_bool Godot.Bridge.CSharpInstanceBridge.Call(nint, Godot.NativeInterop.godot_string_name*, Godot.NativeInterop.godot_variant**, int, Godot.NativeInterop.godot_variant_call_error*, Godot.NativeInterop.godot_variant*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Core/Bridge/CSharpInstanceBridge.cs:24)
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready().
+If you want to set size, change the anchors or consider using set_deferred().
+   at: _set_size (scene/gui/control.cpp:1519)
+   GDScript backtrace (most recent call first):
+       [0] capture (res://../design/art/zoto/capture-integration.gd:24)
+   C# backtrace (most recent call first):
+       [0] void Godot.NativeCalls.godot_icall_1_36(nint, nint, Godot.Vector2*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/NativeCalls.cs:322)
+       [1] void Godot.Control._SetSize(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:1941)
+       [2] void Godot.Control.set_Size(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:691)
+       [3] void PartyBar.Begin(System.Collections.Generic.IReadOnlyList`1[DemoOpening]) (C:\works\VillainProto\DemoApp\PartyBar.cs:82)
+       [4] void Main.EnterBattle(System.Collections.Generic.List`1[BattleCore.UnitState], System.Collections.Generic.List`1[BattleCore.UnitState], int, int, string) (C:\works\VillainProto\DemoApp\Main.cs:1163)
+       [5] void Main.StartBattle() (C:\works\VillainProto\DemoApp\Main.cs:1084)
+       [6] bool Main.InvokeGodotClassMethod(Godot.NativeInterop.godot_string_name&, Godot.NativeInterop.NativeVariantPtrArgs, Godot.NativeInterop.godot_variant&) (C:\works\VillainProto\DemoApp\.godot\mono\temp\obj\Debug\Godot.SourceGenerators\Godot.SourceGenerators.ScriptMethodsGenerator\Main_ScriptMethods.generated.cs:404)
+       [7] Godot.NativeInterop.godot_bool Godot.Bridge.CSharpInstanceBridge.Call(nint, Godot.NativeInterop.godot_string_name*, Godot.NativeInterop.godot_variant**, int, Godot.NativeInterop.godot_variant_call_error*, Godot.NativeInterop.godot_variant*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Core/Bridge/CSharpInstanceBridge.cs:24)
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready().
+If you want to set size, change the anchors or consider using set_deferred().
+   at: _set_size (scene/gui/control.cpp:1519)
+   GDScript backtrace (most recent call first):
+       [0] capture (res://../design/art/zoto/capture-integration.gd:24)
+   C# backtrace (most recent call first):
+       [0] void Godot.NativeCalls.godot_icall_1_36(nint, nint, Godot.Vector2*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/NativeCalls.cs:322)
+       [1] void Godot.Control._SetSize(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:1941)
+       [2] void Godot.Control.set_Size(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:691)
+       [3] void PartyBar.Begin(System.Collections.Generic.IReadOnlyList`1[DemoOpening]) (C:\works\VillainProto\DemoApp\PartyBar.cs:82)
+       [4] void Main.EnterBattle(System.Collections.Generic.List`1[BattleCore.UnitState], System.Collections.Generic.List`1[BattleCore.UnitState], int, int, string) (C:\works\VillainProto\DemoApp\Main.cs:1163)
+       [5] void Main.StartBattle() (C:\works\VillainProto\DemoApp\Main.cs:1084)
+       [6] bool Main.InvokeGodotClassMethod(Godot.NativeInterop.godot_string_name&, Godot.NativeInterop.NativeVariantPtrArgs, Godot.NativeInterop.godot_variant&) (C:\works\VillainProto\DemoApp\.godot\mono\temp\obj\Debug\Godot.SourceGenerators\Godot.SourceGenerators.ScriptMethodsGenerator\Main_ScriptMethods.generated.cs:404)
+       [7] Godot.NativeInterop.godot_bool Godot.Bridge.CSharpInstanceBridge.Call(nint, Godot.NativeInterop.godot_string_name*, Godot.NativeInterop.godot_variant**, int, Godot.NativeInterop.godot_variant_call_error*, Godot.NativeInterop.godot_variant*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Core/Bridge/CSharpInstanceBridge.cs:24)
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready().
+If you want to set size, change the anchors or consider using set_deferred().
+   at: _set_size (scene/gui/control.cpp:1519)
+   GDScript backtrace (most recent call first):
+       [0] capture (res://../design/art/zoto/capture-integration.gd:24)
+   C# backtrace (most recent call first):
+       [0] void Godot.NativeCalls.godot_icall_1_36(nint, nint, Godot.Vector2*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/NativeCalls.cs:322)
+       [1] void Godot.Control._SetSize(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:1941)
+       [2] void Godot.Control.set_Size(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:691)
+       [3] void PartyBar.Begin(System.Collections.Generic.IReadOnlyList`1[DemoOpening]) (C:\works\VillainProto\DemoApp\PartyBar.cs:82)
+       [4] void Main.EnterBattle(System.Collections.Generic.List`1[BattleCore.UnitState], System.Collections.Generic.List`1[BattleCore.UnitState], int, int, string) (C:\works\VillainProto\DemoApp\Main.cs:1163)
+       [5] void Main.StartBattle() (C:\works\VillainProto\DemoApp\Main.cs:1084)
+       [6] bool Main.InvokeGodotClassMethod(Godot.NativeInterop.godot_string_name&, Godot.NativeInterop.NativeVariantPtrArgs, Godot.NativeInterop.godot_variant&) (C:\works\VillainProto\DemoApp\.godot\mono\temp\obj\Debug\Godot.SourceGenerators\Godot.SourceGenerators.ScriptMethodsGenerator\Main_ScriptMethods.generated.cs:404)
+       [7] Godot.NativeInterop.godot_bool Godot.Bridge.CSharpInstanceBridge.Call(nint, Godot.NativeInterop.godot_string_name*, Godot.NativeInterop.godot_variant**, int, Godot.NativeInterop.godot_variant_call_error*, Godot.NativeInterop.godot_variant*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Core/Bridge/CSharpInstanceBridge.cs:24)
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready().
+If you want to set size, change the anchors or consider using set_deferred().
+   at: _set_size (scene/gui/control.cpp:1519)
+   GDScript backtrace (most recent call first):
+       [0] capture (res://../design/art/zoto/capture-integration.gd:24)
+   C# backtrace (most recent call first):
+       [0] void Godot.NativeCalls.godot_icall_1_36(nint, nint, Godot.Vector2*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/NativeCalls.cs:322)
+       [1] void Godot.Control._SetSize(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:1941)
+       [2] void Godot.Control.set_Size(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:691)
+       [3] void PartyBar.Sync(BattlefieldView3D, int) (C:\works\VillainProto\DemoApp\PartyBar.cs:130)
+       [4] void Main.EnterBattle(System.Collections.Generic.List`1[BattleCore.UnitState], System.Collections.Generic.List`1[BattleCore.UnitState], int, int, string) (C:\works\VillainProto\DemoApp\Main.cs:1164)
+       [5] void Main.StartBattle() (C:\works\VillainProto\DemoApp\Main.cs:1084)
+       [6] bool Main.InvokeGodotClassMethod(Godot.NativeInterop.godot_string_name&, Godot.NativeInterop.NativeVariantPtrArgs, Godot.NativeInterop.godot_variant&) (C:\works\VillainProto\DemoApp\.godot\mono\temp\obj\Debug\Godot.SourceGenerators\Godot.SourceGenerators.ScriptMethodsGenerator\Main_ScriptMethods.generated.cs:404)
+       [7] Godot.NativeInterop.godot_bool Godot.Bridge.CSharpInstanceBridge.Call(nint, Godot.NativeInterop.godot_string_name*, Godot.NativeInterop.godot_variant**, int, Godot.NativeInterop.godot_variant_call_error*, Godot.NativeInterop.godot_variant*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Core/Bridge/CSharpInstanceBridge.cs:24)
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready().
+If you want to set size, change the anchors or consider using set_deferred().
+   at: _set_size (scene/gui/control.cpp:1519)
+   GDScript backtrace (most recent call first):
+       [0] capture (res://../design/art/zoto/capture-integration.gd:24)
+   C# backtrace (most recent call first):
+       [0] void Godot.NativeCalls.godot_icall_1_36(nint, nint, Godot.Vector2*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/NativeCalls.cs:322)
+       [1] void Godot.Control._SetSize(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:1941)
+       [2] void Godot.Control.set_Size(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:691)
+       [3] void PartyBar.Sync(BattlefieldView3D, int) (C:\works\VillainProto\DemoApp\PartyBar.cs:130)
+       [4] void Main.EnterBattle(System.Collections.Generic.List`1[BattleCore.UnitState], System.Collections.Generic.List`1[BattleCore.UnitState], int, int, string) (C:\works\VillainProto\DemoApp\Main.cs:1164)
+       [5] void Main.StartBattle() (C:\works\VillainProto\DemoApp\Main.cs:1084)
+       [6] bool Main.InvokeGodotClassMethod(Godot.NativeInterop.godot_string_name&, Godot.NativeInterop.NativeVariantPtrArgs, Godot.NativeInterop.godot_variant&) (C:\works\VillainProto\DemoApp\.godot\mono\temp\obj\Debug\Godot.SourceGenerators\Godot.SourceGenerators.ScriptMethodsGenerator\Main_ScriptMethods.generated.cs:404)
+       [7] Godot.NativeInterop.godot_bool Godot.Bridge.CSharpInstanceBridge.Call(nint, Godot.NativeInterop.godot_string_name*, Godot.NativeInterop.godot_variant**, int, Godot.NativeInterop.godot_variant_call_error*, Godot.NativeInterop.godot_variant*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Core/Bridge/CSharpInstanceBridge.cs:24)
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready().
+If you want to set size, change the anchors or consider using set_deferred().
+   at: _set_size (scene/gui/control.cpp:1519)
+   GDScript backtrace (most recent call first):
+       [0] capture (res://../design/art/zoto/capture-integration.gd:24)
+   C# backtrace (most recent call first):
+       [0] void Godot.NativeCalls.godot_icall_1_36(nint, nint, Godot.Vector2*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/NativeCalls.cs:322)
+       [1] void Godot.Control._SetSize(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:1941)
+       [2] void Godot.Control.set_Size(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:691)
+       [3] void PartyBar.Sync(BattlefieldView3D, int) (C:\works\VillainProto\DemoApp\PartyBar.cs:130)
+       [4] void Main.EnterBattle(System.Collections.Generic.List`1[BattleCore.UnitState], System.Collections.Generic.List`1[BattleCore.UnitState], int, int, string) (C:\works\VillainProto\DemoApp\Main.cs:1164)
+       [5] void Main.StartBattle() (C:\works\VillainProto\DemoApp\Main.cs:1084)
+       [6] bool Main.InvokeGodotClassMethod(Godot.NativeInterop.godot_string_name&, Godot.NativeInterop.NativeVariantPtrArgs, Godot.NativeInterop.godot_variant&) (C:\works\VillainProto\DemoApp\.godot\mono\temp\obj\Debug\Godot.SourceGenerators\Godot.SourceGenerators.ScriptMethodsGenerator\Main_ScriptMethods.generated.cs:404)
+       [7] Godot.NativeInterop.godot_bool Godot.Bridge.CSharpInstanceBridge.Call(nint, Godot.NativeInterop.godot_string_name*, Godot.NativeInterop.godot_variant**, int, Godot.NativeInterop.godot_variant_call_error*, Godot.NativeInterop.godot_variant*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Core/Bridge/CSharpInstanceBridge.cs:24)
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready().
+If you want to set size, change the anchors or consider using set_deferred().
+   at: _set_size (scene/gui/control.cpp:1519)
+   GDScript backtrace (most recent call first):
+       [0] capture (res://../design/art/zoto/capture-integration.gd:24)
+   C# backtrace (most recent call first):
+       [0] void Godot.NativeCalls.godot_icall_1_36(nint, nint, Godot.Vector2*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/NativeCalls.cs:322)
+       [1] void Godot.Control._SetSize(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:1941)
+       [2] void Godot.Control.set_Size(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:691)
+       [3] void PartyBar.Sync(BattlefieldView3D, int) (C:\works\VillainProto\DemoApp\PartyBar.cs:130)
+       [4] void Main.EnterBattle(System.Collections.Generic.List`1[BattleCore.UnitState], System.Collections.Generic.List`1[BattleCore.UnitState], int, int, string) (C:\works\VillainProto\DemoApp\Main.cs:1164)
+       [5] void Main.StartBattle() (C:\works\VillainProto\DemoApp\Main.cs:1084)
+       [6] bool Main.InvokeGodotClassMethod(Godot.NativeInterop.godot_string_name&, Godot.NativeInterop.NativeVariantPtrArgs, Godot.NativeInterop.godot_variant&) (C:\works\VillainProto\DemoApp\.godot\mono\temp\obj\Debug\Godot.SourceGenerators\Godot.SourceGenerators.ScriptMethodsGenerator\Main_ScriptMethods.generated.cs:404)
+       [7] Godot.NativeInterop.godot_bool Godot.Bridge.CSharpInstanceBridge.Call(nint, Godot.NativeInterop.godot_string_name*, Godot.NativeInterop.godot_variant**, int, Godot.NativeInterop.godot_variant_call_error*, Godot.NativeInterop.godot_variant*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Core/Bridge/CSharpInstanceBridge.cs:24)
+WARNING: Nodes with non-equal opposite anchors will have their size overridden after _ready().
+If you want to set size, change the anchors or consider using set_deferred().
+   at: _set_size (scene/gui/control.cpp:1519)
+   GDScript backtrace (most recent call first):
+       [0] capture (res://../design/art/zoto/capture-integration.gd:24)
+   C# backtrace (most recent call first):
+       [0] void Godot.NativeCalls.godot_icall_1_36(nint, nint, Godot.Vector2*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/NativeCalls.cs:322)
+       [1] void Godot.Control._SetSize(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:1941)
+       [2] void Godot.Control.set_Size(Godot.Vector2) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Generated/GodotObjects/Control.cs:691)
+       [3] void PartyBar.Sync(BattlefieldView3D, int) (C:\works\VillainProto\DemoApp\PartyBar.cs:130)
+       [4] void Main.EnterBattle(System.Collections.Generic.List`1[BattleCore.UnitState], System.Collections.Generic.List`1[BattleCore.UnitState], int, int, string) (C:\works\VillainProto\DemoApp\Main.cs:1164)
+       [5] void Main.StartBattle() (C:\works\VillainProto\DemoApp\Main.cs:1084)
+       [6] bool Main.InvokeGodotClassMethod(Godot.NativeInterop.godot_string_name&, Godot.NativeInterop.NativeVariantPtrArgs, Godot.NativeInterop.godot_variant&) (C:\works\VillainProto\DemoApp\.godot\mono\temp\obj\Debug\Godot.SourceGenerators\Godot.SourceGenerators.ScriptMethodsGenerator\Main_ScriptMethods.generated.cs:404)
+       [7] Godot.NativeInterop.godot_bool Godot.Bridge.CSharpInstanceBridge.Call(nint, Godot.NativeInterop.godot_string_name*, Godot.NativeInterop.godot_variant**, int, Godot.NativeInterop.godot_variant_call_error*, Godot.NativeInterop.godot_variant*) (/root/godot/modules/mono/glue/GodotSharp/GodotSharp/Core/Bridge/CSharpInstanceBridge.cs:24)
+WARNING: 1 RID of type "CanvasItem" was leaked.
+   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2733)
+WARNING: 6 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)

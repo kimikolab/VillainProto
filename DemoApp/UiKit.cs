@@ -229,7 +229,7 @@ public static class UiKit
         "hiyo_fan" => 0.015f,
         "hiyo_gift" => 0.004f,
         "hiyo_collect" => 0.012f,
-        "zoto" => 0.1108f,
+        "zoto" => 0.0f, // 鉱石の浮遊体。画像下端の透明な空間を残して地面から浮かせる。
         "kado" => 0.0198f,
         "gald" => 0.0547f,
         "sero" => 0.02309f,
