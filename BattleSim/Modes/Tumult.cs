@@ -81,7 +81,7 @@ static class TumultDiag
         // （味方側は1文字も変えていないので、**変わらないはず**）。
         ("台4 肩代わり (バサ×ゴルム)",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald,
-                            center: UnitCatalog.Gan, back1: UnitCatalog.Nomi, back3: UnitCatalog.Basa)),
+                            center: UnitCatalog.Gan, back1: UnitCatalog.NomiN0, back3: UnitCatalog.Basa)),
     };
 
     /// <summary><c>compare</c> 61 行のうちバサを含む行。</summary>
@@ -128,7 +128,7 @@ static class TumultDiag
         Console.WriteLine("|---|---:|---:|");
         {
             Formation f = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga,
-                                          center: UnitCatalog.SomS0, back1: UnitCatalog.Nomi,
+                                          center: UnitCatalog.SomS0, back1: UnitCatalog.NomiN0,
                                           back3: UnitCatalog.Basa);
             long battles = 0, summoned = 0;
             for (int st = 1; st < EnemyCatalog.Stages.Count; st++)
@@ -299,7 +299,7 @@ static class TumultDiag
         // 1枚でも混ざると、動いたぶんがどちら由来か割れなくなる。
         // **敵の数値に触る駒（ネル＝呪詛・クビ＝萎縮）も入れない**（第143期の則）。
         UnitDef[] cand = { UnitCatalog.Dolga, UnitCatalog.Borg, UnitCatalog.Gald, UnitCatalog.Rica,
-                           UnitCatalog.Nomi, UnitCatalog.Mug, UnitCatalog.Vel, UnitCatalog.Zan,
+                           UnitCatalog.NomiN0, UnitCatalog.Mug, UnitCatalog.Vel, UnitCatalog.Zan,
                            UnitCatalog.Gan, UnitCatalog.Kado, UnitCatalog.Hagi, UnitCatalog.Uro,
                            Plain("c", 70, 12), Plain("d", 60, 9) };
         (string Bed, (int Slot, UnitDef Def)[] Fixed)[] beds =

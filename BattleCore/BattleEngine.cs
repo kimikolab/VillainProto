@@ -6657,6 +6657,12 @@ public sealed class BattleContext
             {
                 if (!w.IsAlive) continue;                          // 連鎖の途中で落ちうる
                 if (!TeamAlive(Opponent(w.TeamId))) break;         // 行動順ループと同じ番人
+                // 第277期: 豆鉄砲の一振りの中の撃破では、再行動は1振り1回（2体目以降は止める）。一振りの外では `_volley` は null。
+                if (_volley is { } pv && pv.Actor == w)
+                {
+                    if (pv.Encored) { TallyOf(w).PelletEncoreCapped++; continue; }
+                    pv.Encored = true;
+                }
                 EncoreFired++;
                 if (w.TeamId != PlayerTeam) EncoreOnEnemySide++;   // 自己検査 (g)
                 if (w.Def.Actions is { Count: > 0 }) EncoreWithActions++;   // 自己検査 (h)
@@ -7048,6 +7054,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Thrust) || u.HasTrait(TraitId.ThrustPlain)) _thrustLive = true;   // 第186期 追補
         if (HeroShieldTrait.Holds(u)) _heroShieldLive = true;   // 第267期（勇者の庇い）
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
+        if (u.HasTrait(TraitId.Pellet)) _pelletLive = true;   // 第277期（豆鉄砲の一振り・1発の打点・再行動の上限）
         if (u.HasTrait(TraitId.FireArmor) || u.HasTrait(TraitId.Smolder)
             || u.HasTrait(TraitId.FireMend) || u.HasTrait(TraitId.FireFeed)) _fireArmorLive = true;   // 第234期（火の鎧・焼け残り）・第235期（火の癒し・焼き返し）
         if (u.HasTrait(TraitId.FireWard) || u.HasTrait(TraitId.FireWardAll)) _fireWardHolders.Add(u);             // 第238期（盾の配り）
@@ -10055,6 +10062,10 @@ public sealed class BattleContext
             ? actor.CurrentAttack
             : actor.CurrentAttack * attackPercent / 100;
 
+        // 第277期（豆鉄砲）: 1発の打点は攻撃力に依らず `ShotDamage`（攻撃力は弾数の側・`PelletTrait.ModifyHitCount`）。
+        // 萎縮・痺れ毒・澱み・止めの倍率はこの後ろなので、今までどおりこの 1 点に掛かる（切り捨てなので 1 は 1 のまま）。**保持者がいなければ比較1つで抜ける。**
+        if (_pelletLive && actor.HasTrait(TraitId.Pellet)) atk = PelletTrait.ShotDamage;
+
         // 突き（第186期 追補）: 威力 ＝ 現在攻撃力 ×（1 ＋ 前の突きから逸らした回数）。突いたら 0 に戻す。
         // **増幅を意図して乗算にしてある**（ポンの判断）。対照（`ThrustPlain`）は 現在攻撃力 ＋ 素の攻撃力 × 回数。
         int? thrustCharge = null;   // 表示専用（台本の Attack の ThrustCharge）
@@ -12010,6 +12021,9 @@ public sealed class BattleContext
         foreach (Trait t in actor.Traits) hits = t.ModifyHitCount(actor, hits);
         if (hits < 1) hits = 1;   // 上限は特性の側。engine が保証するのは「1発は振る」だけ
 
+        // 第277期: 豆鉄砲の一振り（1 点 × 弾数）。**保持者がいなければ比較1つで抜ける。**
+        if (_pelletLive && actor.HasTrait(TraitId.Pellet)) { PelletVolley(actor, act, hits); return; }
+
         // 第242期（ホタの段3 の 5連撃）: 同じ敵に続けて振る——2発目以降は直前の1発の主目標に的を固定する（倒れていれば通常どおり選び直す）。
         bool burst = _fireLvLive && hits > 1 && actor.HasTrait(TraitId.PyreStage);
         _burstLock = null;
@@ -12022,6 +12036,46 @@ public sealed class BattleContext
             else PerformAttack(actor, attackPercent: act.AttackPercent,
                                patternOverride: act.PatternOverride);
         }
+    }
+
+    // =====================================================================================
+    // 第277期 —— 豆鉄砲（`PelletTrait`・ノミの転生の版 N1 ／ N2）。**保持者がいなければ `_pelletLive` の比較1つで全部抜ける。乱数を引かない。**
+    // 一振りの枠（`Volley`）を立てて、1発ずつ独立した `PerformAttack` を弾数だけ呼ぶ。枠が持つのは「いま何発目か」（刻みの N1 が読む）と
+    // 「この一振りで再行動したか」（1振り1回の上限・`NoteEncore` が読む）の2つだけ。再行動の一振りは入れ子の別の枠（終われば外の枠に戻る）。
+    // =====================================================================================
+    bool _pelletLive;
+
+    sealed class Volley
+    {
+        public required UnitState Actor { get; init; }
+        public int Shot;
+        public bool Encored;
+    }
+    Volley? _volley;
+
+    /// <summary>いまの一振りが <paramref name="u"/> の豆鉄砲の一振りなら何発目か（0 始まり）。一振りの外・他人の一振りなら 0。</summary>
+    public int VolleyShotOf(UnitState u) => _volley is { } v && v.Actor == u ? v.Shot : 0;
+
+    void PelletVolley(UnitState actor, UnitAction? act, int hits)
+    {
+        Volley? prev = _volley;
+        var v = new Volley { Actor = actor };
+        _volley = v;
+        UnitTally pt = TallyOf(actor);
+        pt.PelletVolleys++;   // 計数のみ
+        try
+        {
+            for (int i = 0; i < hits; i++)
+            {
+                if (!actor.IsAlive) break;
+                v.Shot = i;
+                if (i > 0) pt.ExtraSwings++;   // 第178期・**計数専用**
+                pt.PelletShots++;
+                if (act is null) PerformAttack(actor);
+                else PerformAttack(actor, attackPercent: act.AttackPercent, patternOverride: act.PatternOverride);
+            }
+        }
+        finally { _volley = prev; }
     }
 
     private void HandleDeath(UnitState dead, UnitState? killer)

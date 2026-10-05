@@ -51,16 +51,16 @@ public static void Run(string[] args, int stageIndex)
     var tlBenches = new (string Name, Formation F, string Expect)[]
     {
         // 速さ: ゴルム3 < ドルガ6 < ノミ7 < キリ12。トモ（3）は自分なので対象外。
-        ("(b) 一意", TlF(UnitCatalog.Golm, UnitCatalog.Dolga, UnitCatalog.Tomo, UnitCatalog.Nomi, UnitCatalog.Kiri),
+        ("(b) 一意", TlF(UnitCatalog.Golm, UnitCatalog.Dolga, UnitCatalog.Tomo, UnitCatalog.NomiN0, UnitCatalog.Kiri),
             UnitCatalog.Golm.Name),
         // 速さ: バン2 = セッキ2 < ドルガ6 < ノミ7。**同速は席番号の昇順**なので前1のバン。
-        ("(b) 同速→席番号", TlF(UnitCatalog.Ban, UnitCatalog.Sekki, UnitCatalog.Tomo, UnitCatalog.Dolga, UnitCatalog.Nomi),
+        ("(b) 同速→席番号", TlF(UnitCatalog.Ban, UnitCatalog.Sekki, UnitCatalog.Tomo, UnitCatalog.Dolga, UnitCatalog.NomiN0),
             UnitCatalog.Ban.Name),
         // 速さ: ガルド4 < ザン5 < ノミ7 < キリ12。**ガルドは支援拒否**なので飛ばしてザンへ。
-        ("(b) 支援拒否を飛ばす", TlF(UnitCatalog.Gald, UnitCatalog.Zan, UnitCatalog.Tomo, UnitCatalog.Nomi, UnitCatalog.Kiri),
+        ("(b) 支援拒否を飛ばす", TlF(UnitCatalog.Gald, UnitCatalog.Zan, UnitCatalog.Tomo, UnitCatalog.NomiN0, UnitCatalog.Kiri),
             UnitCatalog.Zan.Name),
         // トモ2枚。**互いに譲り合っても無限に往復しない**ことの確認（1ホップ）。
-        ("(f) トモ2枚", TlF(UnitCatalog.Tomo, UnitCatalog.Tomo, UnitCatalog.Golm, UnitCatalog.Dolga, UnitCatalog.Nomi),
+        ("(f) トモ2枚", TlF(UnitCatalog.Tomo, UnitCatalog.Tomo, UnitCatalog.Golm, UnitCatalog.Dolga, UnitCatalog.NomiN0),
             UnitCatalog.Golm.Name),
     };
 

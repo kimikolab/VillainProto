@@ -82,13 +82,13 @@ static class BraceDiag
         // 壁だけ: 破片の読み手ゼロ・肩代わりゼロ。火力はある（台が床に落ちないように）。
         ("台2 壁だけ (ササ×読み手なし)",
             Formation.Build(front1: sasa, front3: UnitCatalog.Dolga,
-                            center: UnitCatalog.Mug, back1: UnitCatalog.Nomi, back3: UnitCatalog.Rica)),
+                            center: UnitCatalog.Mug, back1: UnitCatalog.NomiN0, back3: UnitCatalog.Rica)),
 
         // 肩代わりと同席: ゴルム（巨躯）がササより前で吸うと、ササには小さい一撃しか届かず
         // 切り落としが出ない（Q0-1 の「分割は上限を回避する経路」）。**噛まないことの確認。**
         ("台3 肩代わり (ササ×ゴルム)",
             Formation.Build(front1: sasa, front3: UnitCatalog.Dolga,
-                            center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.Nomi)),
+                            center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.NomiN0)),
 
         // 手番市場: 号令（ガン）が差し出された手番を買う。転倒が収入に化けるか。
         ("台4 手番市場 (ササ×ガン)",
@@ -255,7 +255,7 @@ static class BraceDiag
         // 測りたい供給（切り落とし）が台の側の理由で消える（Q0-1 の「分割は上限を回避する経路」）。
         UnitDef[] cand = { UnitCatalog.Dolga, UnitCatalog.Borg, UnitCatalog.Mudo, UnitCatalog.Rica,
                            UnitCatalog.Hagi, UnitCatalog.Zan, UnitCatalog.Nel, UnitCatalog.Vel,
-                           UnitCatalog.Nomi, UnitCatalog.Mug };
+                           UnitCatalog.NomiN0, UnitCatalog.Mug };
 
         // 台ごとに「動かさない駒」（ササは常に 前1）と、候補から埋める空き席を決める。
         (string Bed, (int Slot, UnitDef Def)[] Fixed)[] beds =

@@ -554,9 +554,9 @@ static class Wound2Diag
         Console.WriteLine("**`Presets` は1行も触っていない。台は診断のローカル。**");
         Console.WriteLine();
         Formation nono = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kado,
-            center: UnitCatalog.Lili, back1: UnitCatalog.Nomi, back3: UnitCatalog.Egu);
+            center: UnitCatalog.Lili, back1: UnitCatalog.NomiN0, back3: UnitCatalog.Egu);
         Formation hari = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kado,
-            center: UnitCatalog.Hari, back1: UnitCatalog.Nomi, back3: UnitCatalog.Egu);
+            center: UnitCatalog.Hari, back1: UnitCatalog.NomiN0, back3: UnitCatalog.Egu);
         Console.WriteLine("| 版 | 勝率（第2〜5波） | 書かれた傷/戦 | 読まれず/戦 | 縫い 敵から | 縫い 味方から | 塞ぎ/戦 |");
         Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|");
         foreach ((string nm, Formation f) in new[] { ("終端 ノノ（＝現行の交差帯）", nono), ("終端 ハリ（参考）", hari) })
@@ -587,10 +587,10 @@ static class Wound2Diag
         Console.WriteLine("## 表D —— W4 鎖が繋がっている行と、傷を丸ごと外したときの帰属");
         Console.WriteLine();
 
-        string[] writerIds = { UnitCatalog.Kiri.Id, UnitCatalog.Nomi.Id };
+        string[] writerIds = { UnitCatalog.Kiri.Id, UnitCatalog.NomiN0.Id };
         string[] readerIds =
         {
-            UnitCatalog.Egu.Id, UnitCatalog.Nomi.Id, UnitCatalog.Nata.Id,
+            UnitCatalog.Egu.Id, UnitCatalog.NomiN0.Id, UnitCatalog.Nata.Id,
             UnitCatalog.Hari.Id, UnitCatalog.Lili.Id, UnitCatalog.Mio.Id
         };
         int hasW = 0, hasR = 0, hasBoth = 0, wrote = 0, read = 0, chain = 0;

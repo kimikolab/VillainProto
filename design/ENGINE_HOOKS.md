@@ -731,6 +731,7 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   **規定（S1x）の印 `somNoThunder`（餌にだけ立つ私有キー）を `ThunderTrait.Pick` と `Onward` が読み、その駒を「帯びた敵を選ぶ」経路と跳ね先から外す**
   （帯びた敵がいないときの通常の一発＝`SelectTarget` は外さない——ボスの台では雷が餌に当たる）。
   **対照 S1p の印 `somThunderPop` は起爆の判定の「雷は起爆しない」に例外を1つ作る**（`_thunderPopLive`・保持者がいなければ比較1つで抜ける）。どちらも乱数を引かない
+- **第277期の豆鉄砲（ノミの転生の版・札 `Pellet` ／ `CarveOnce`・**第277期の追記で規定のノミ（＝ `NomiN1`）が保持**・N2 は `NomiN2`・旧ノミは `NomiN0`）は手番の連撃の窓口 `ModifyHitCount` に乗せただけ**——弾数 ＝ `CurrentAttack`（`ModifyAttack` は触らない）。engine に足したのは3つ: **(1) `SwingTurnBody` の分岐 `PelletVolley`**（一振りの枠 `Volley` を立てて1発ずつ `PerformAttack`・枠は「何発目か」と「この一振りで再行動したか」だけを持つ・再行動の一振りは入れ子の別の枠）、**(2) `PerformAttackBody` の `atk` を作った直後に `atk = PelletTrait.ShotDamage`（1）**（萎縮・痺れ毒・澱み・止めはこの後ろ）、**(3) `NoteEncore` の「豆鉄砲の一振りの中の2体目以降の撃破では再行動しない」**。`CarveTrait` は `ctx.VolleyShotOf(self) > 0` かつ `CarveOnce` なら何もしない（N1）。**保持者がいなければ `_pelletLive` の比較1つで全部抜ける・乱数を引かない**。**1発を割ると、手番単位だった他人の判定（標の引き 75%・殉教の肩代わり）が発単位で振られる**（R369）
 - **第216期の開戦の撒き（ベニの版 O1〜O4・`OpeningSprayTrait`）は `OnBattleStart` の中だけ**——**追記で O4（`GurenOpeningBurn`・敵全体に毒 1 ＋ 着火）をポンの判断で規定にした**（O1〜O3 は保持者 0 枚）——毒は窓口 `Poison` を新しい経路 `PoisonRoute.Opening` で通し
   （**`SoakRouteCount` 13・燃焼の添字 12**）、O4 の火は `Ignite`。engine に足したのは刻みの帳簿（計数のみ）だけ。**毒は刻みで減らない**ので開戦の毒1は倒れるまで残る
 - **第217期の鞭（電気鞭のシガ・札 `Scourge` / `Lash` / `LiveWire` / `ScourgeShock` が規定＝G3K・`LiveWireGuard` は保持者 0 枚）の2倍は engine の `WhipAmount` の1本**——

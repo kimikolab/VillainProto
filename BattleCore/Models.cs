@@ -1238,6 +1238,12 @@ public sealed class UnitTally
     public int ExtraSwings;
 
     /// <summary>
+    /// 豆鉄砲（第277期・<c>PelletTrait</c>）の<b>計数専用</b>。<c>PelletVolleys</c> 一振りの数（再行動の一振りも1つ）／
+    /// <c>PelletShots</c> 撃った発の数 ／ <c>PelletEncoreCapped</c> 一振りの2体目以降の撃破で再行動を止めた回数（1振り1回の上限）。<b>誰も読んで分岐しない。</b>
+    /// </summary>
+    public int PelletVolleys, PelletShots, PelletEncoreCapped;
+
+    /// <summary>
     /// <b>この駒の <c>CurrentAttack</c> が出力（ダメージ量）に変換された回数</b>（第64期）。
     ///
     /// <para><see cref="Attacks"/>（<c>PerformAttack</c> を通った回数）では
@@ -2939,6 +2945,7 @@ public sealed class UnitTally
         Whetted += o.Whetted; Dulled += o.Dulled;
         BurnLit += o.BurnLit; BurnRelit += o.BurnRelit; BurnLitAlly += o.BurnLitAlly;
         ExtraSwings += o.ExtraSwings;   // 第178期（計数専用）
+        PelletVolleys += o.PelletVolleys; PelletShots += o.PelletShots; PelletEncoreCapped += o.PelletEncoreCapped;   // 第277期（計数専用）
         BurnTicks += o.BurnTicks; BurnTaken += o.BurnTaken; BurnSoaked += o.BurnSoaked;
         BurnDeaths += o.BurnDeaths; BurnAttacks += o.BurnAttacks;
         // FirstBurnTurn は**加算しない**。0（一度も点かなかった）を除いた最小値を取る

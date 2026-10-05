@@ -854,6 +854,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 som276 digest        # 第276期 旧ソム（`SomS0`）を含む戦の台本の指紋（背かれの切り出し・規定化の前後で一致が門）
     dotnet run --project BattleSim -c Release 0 som276 bands         # 第276期 感電の行の第2〜5波を 200 seed の帯ごとに（参考）
     dotnet run --project BattleSim -c Release 0 som276 log <A|B> <S0|S1|S1x|S1p|S2|S2′> <2..5|ボス|B3|W3> [seed]   # 第276期 1戦のログ
+    dotnet run --project BattleSim -c Release 0 nomi277 run          # 第277期 ノミの転生: ノミ在席の `compare` 6 行・交差帯 2 行・燃焼の検証行 × 版 N0 ／ N1 ／ N2 × 本編第2〜5波・ボス規定形・チェック波（B3 ／ W3）・機構の実測（5 秒）
+    dotnet run --project BattleSim -c Release 0 nomi277 bandb        # 第277期 帯B（seed 200..599）の追試: 9 台 × 版 × 本編第2〜5波の勝率
+    dotnet run --project BattleSim -c Release 0 nomi277 seat         # 第277期 燃焼×ノミの行の席: ボルグ入りの `compare` 行の火の駒以外の全枠に N0 ／ N1 を差して本編第2〜5波（情報セル・被弾の燃焼・25 秒）
+    dotnet run --project BattleSim -c Release 0 nomi277 check        # 第277期 自己検査（保持者 0・N0 の写しの台本一致・弾数・再行動の上限・刻みの回数・決定性・verbose・9 項目）
+    dotnet run --project BattleSim -c Release 0 nomi277 log <行 0..8> <N0|N1|N2> <2..5|ボス|B3|W3> [seed]   # 第277期 1戦のログ
     dotnet run --project BattleSim -c Release 0 relic log <台> <札> <規則> [seed]   # 第270期 1戦のログ（札は日本語名・規則は 攻 ／ 前）
     dotnet run --project BattleSim -c Release 0 checkwave check      # 自己検査（写しの台本一致・癒し手 ＝ 従軍司祭＋札1枚・保持者 0・回復は状態を消さない・刻みの後・軛に切られない・ボスの攻撃力・verbose・乱数・動じない札・重装兵の体の癒し手・全体のボス・400/300 の癒し手・天井 +11・割合の回復・7台目の毒台・規定の組・26 項目）
     dotnet run --project BattleSim -c Release 0 checkwave log <台> <波> [seed]   # 1戦のログ（台は 燃焼 T3-244 ／ 燃焼 T3-255 ／ 移動 ／ 雷 ／ 毒 ／ 混ぜ-255・波は B3-桁 ／ W3-割合 ／ W2-対照 ／ W2-50後 ／ W2-50奥 ／ B2-全4 ／ B2-半4、第261期の版は `261:`・第260期の版は `260:` を前に付ける）

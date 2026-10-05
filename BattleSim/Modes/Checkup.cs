@@ -171,6 +171,8 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.BetrayedShockNeighbors] = (HcBothL, "対照: 餌は纏わず、隣の敵にだけ雷（第276期）"),
         [TraitId.BetrayedShockNoThunder] = (HcBothL, "S1 で、纏った餌には雷が落ちない（第276期）"),
         [TraitId.BetrayedShockThunderPop] = (HcBothL, "S1 で、纏った餌は雷でも弾ける（第276期）"),
+        [TraitId.Pellet]      = (HcBothL, "攻撃力を連撃の回数に変える——手数が増えるのと、1発が 1 点に潰れるのが1つの動作（第277期）"),
+        [TraitId.CarveOnce]   = (HcMinusL, "豆鉄砲の一振りで刻むのは1発目だけ（第277期・N1）"),
         // 第132期 段0-a: 第128期に `GradeStep` を ドルガ に載せたとき、この表に足さなかったので
         // `checkup` が「分類の無い札がある」で**3期ぶん止まっていた**（第131期に判明）。
         // 分類は積み過ぎ（`Overload`）と同じ——読む値も閾値も共有し、違うのは上がる先の段だけ。

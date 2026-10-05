@@ -744,7 +744,14 @@ public static class Presets
         // 経緯は design/PHASE276_SOM_REBIRTH.md。
         ("感電 (シガ×カタ×ソム)", Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Tsugi,
                                               center: UnitCatalog.Som, back1: UnitCatalog.Kata,
-                                              back3: UnitCatalog.Mio))
+                                              back3: UnitCatalog.Mio)),
+        // **第277期に足した（63 行目）。燃焼×刻みの行**——ノミの転生（N1・豆鉄砲＝1 点 × 攻撃力の連撃）で、燃えた敵を1点ずつ叩くたびに被弾の燃焼が起きる橋（ポンの判断）。
+        // `燃焼 (ボルグ×ホタ)` の**後1 ムド → ノミ**（`nomi277` の検証行と同じ）。**第2〜5波は N0 でも N1 でも全波 100%＝情報セル 0**——
+        // ボルグ入りの全 `compare` 行の全席（`nomi277 seat`・42 通り）で同じく 100% だったので、席で情報セルは作れない（燃焼軸そのものが飽和している）。
+        // 役目は回帰の番人（燃焼×ノミの勝ち筋が壊れたら落ちる）。違いが出るのは W3（0 → 60%）と倒しT（2.50 → 2.00 ほか）。経緯は design/PHASE277_NOMI_REBIRTH.md。
+        ("燃焼×刻み (ボルグ×ホタ×ノミ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg,
+                                                  center: UnitCatalog.Lili, back1: UnitCatalog.Nomi,
+                                                  back3: UnitCatalog.Hota))
     };
 
     // 第92期の交差帯。**`CompareBuilds()` とは完全に別の入口**で、生成物も `docs/crossing.md` と分けてある

@@ -1741,8 +1741,29 @@ public static class UnitCatalog
     ///
     /// **単体攻撃であることは執着の前提**。範囲型に変えると巻き込みの中心が固定されて
     /// マイナスの意味が変わる（<see cref="FixateTrait"/> の但し書き）。
+    ///
+    /// <para><b>第277期に転生した（豆鉄砲・N1・ポンの判断）</b>——攻撃力を連撃の回数に変える（1 点 × 攻撃力の発・<see cref="TraitId.Pellet"/>）。
+    /// 刻みは一振りの1発目だけ（<see cref="TraitId.CarveOnce"/>）なので傷の供給量は旧と同じで、手数だけが 10 倍。執着・もう一度動く（一振りに1回）は残る。
+    /// 旧ノミは <see cref="NomiN0"/> に残し、旧ノミを直接使う過去の器具はそちらに固定した。経緯は design/PHASE277_NOMI_REBIRTH.md。<b>名前・フレーバーの最終はポン</b>。</para>
     /// </summary>
     public static readonly UnitDef Nomi = new()
+    {
+        Id = "nomi",
+        Name = "刻みのノミ",
+        MaxHp = 52,
+        Attack = 10,
+        Speed = 7,
+        Traits = new[] { TraitId.Pellet, TraitId.Carve, TraitId.CarveOnce, TraitId.Fixate },
+        PlusText = "攻撃力の数だけ 1 ずつ連打する。一振りの最初の1発で傷を刻み、相手の傷1つにつき2を上乗せする。刻んだ相手が倒れると、もう一度動く（一振りに1回）",
+        MinusText = "一度狙った敵が倒れるまで、他の敵に目を向けられない",
+        Flavor = "一撃を十に割り、同じ場所を彫り続ける。一彫りは浅い。"
+    };
+
+    /// <summary>
+    /// 旧ノミ（第276期までの規定・N0）。<b>第277期に規定が N1（豆鉄砲）へ転生した</b>ので対照として残し、旧ノミを直接使う過去の器具はこちらに固定した。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。経緯は design/PHASE277_NOMI_REBIRTH.md。
+    /// </summary>
+    public static readonly UnitDef NomiN0 = new()
     {
         Id = "nomi",
         Name = "刻みのノミ",
@@ -1753,6 +1774,41 @@ public static class UnitCatalog
         PlusText = "攻撃した相手に傷を刻み、相手の傷1つにつき2を上乗せする。刻んだ相手が倒れると、もう一度動く",
         MinusText = "一度狙った敵が倒れるまで、他の敵に目を向けられない",
         Flavor = "同じ場所を彫り続けることしかできない。彫り上がる頃には、戦は終わっている。"
+    };
+
+    /// <summary>
+    /// 第277期 N1（豆鉄砲・<see cref="TraitId.Pellet"/>）。手番の攻撃が 1 点 × 攻撃力（10）発の連撃になる。
+    /// <b>刻みは一振りに1回</b>（<see cref="TraitId.CarveOnce"/>・1発目だけがなぞって刻む）——傷の供給量は N0 と同じで、手数だけが 10 倍。
+    /// 数値は N0 のまま（振らない）。<b>名前・フレーバーの最終はポン</b>（フレーバーは指示書の叩き台）。
+    /// </summary>
+    public static readonly UnitDef NomiN1 = new()
+    {
+        Id = "nomi",
+        Name = "刻みのノミ",
+        MaxHp = 52,
+        Attack = 10,
+        Speed = 7,
+        Traits = new[] { TraitId.Pellet, TraitId.Carve, TraitId.CarveOnce, TraitId.Fixate },
+        PlusText = "攻撃力の数だけ 1 ずつ連打する。一振りの最初の1発で傷を刻み、相手の傷1つにつき2を上乗せする。刻んだ相手が倒れると、もう一度動く（一振りに1回）",
+        MinusText = "一度狙った敵が倒れるまで、他の敵に目を向けられない",
+        Flavor = "一撃を十に割り、同じ場所を彫り続ける。一彫りは浅い。"
+    };
+
+    /// <summary>
+    /// 第277期 N2（豆鉄砲・傷の機関銃）。N1 から <see cref="TraitId.CarveOnce"/> を抜いた形——<b>1発ごとになぞって刻む</b>
+    /// （傷1つにつき +2 が発ごとに乗るので、一振りの中で 1 ＋ 3 ＋ 5 ＋ … と自己増幅する）。壊れを織り込んで測る版。
+    /// </summary>
+    public static readonly UnitDef NomiN2 = new()
+    {
+        Id = "nomi",
+        Name = "刻みのノミ",
+        MaxHp = 52,
+        Attack = 10,
+        Speed = 7,
+        Traits = new[] { TraitId.Pellet, TraitId.Carve, TraitId.Fixate },
+        PlusText = "攻撃力の数だけ 1 ずつ連打し、1発ごとに傷を刻み、相手の傷1つにつき2を上乗せする。刻んだ相手が倒れると、もう一度動く（一振りに1回）",
+        MinusText = "一度狙った敵が倒れるまで、他の敵に目を向けられない",
+        Flavor = "一撃を十に割り、同じ場所を彫り続ける。一彫りは浅い。"
     };
 
     /// <summary>

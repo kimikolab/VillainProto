@@ -623,6 +623,10 @@ public enum TraitId
     BetrayedShockNoThunder, // 背かれ・雷避け（S1x）: S1 で、纏った餌はカタの雷の「帯びた敵を選ぶ」経路と跳ね先から外れる（判定は `ThunderTrait.Pick` ／ `Onward`）
     BetrayedShockThunderPop,// 背かれ・雷で弾ける（S1p）: S1 で、纏った餌は雷でも感電が弾ける（判定は engine の起爆の1行・保持者がいなければ比較1つで抜ける）
 
+    // --- 第277期で足した札（ノミの転生の版。`UnitCatalog.NomiN1` ／ `NomiN2` だけが持つ） ---
+    Pellet,      // 豆鉄砲: 手番の攻撃が「1 点 × 攻撃力の回数」の連撃になる（回数は `ModifyHitCount`・1発の打点は engine `PerformAttackBody` の1行・再行動は1振り1回）
+    CarveOnce,   // 刻みは一振りに1回（N1）: 豆鉄砲の一振りでは1発目だけがなぞって刻む（**札そのものは挙動を持たない**・`CarveTrait` が読む）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -5701,6 +5705,10 @@ public sealed class CarveTrait : Trait
         // 二度と殴られない駒にカウンタを積んでログを濁すだけになる。
         if (!target.IsAlive) return;
 
+        // 第277期（N1・`CarveOnce`）: 豆鉄砲の一振りでは1発目だけがなぞって刻む（2発目以降は何もしない）。
+        // 一振りの外（再行動の一振りは別の一振り）では `VolleyShotOf` が 0 なので素の刻みと同じ。
+        if (ctx.VolleyShotOf(self) > 0 && self.HasTrait(TraitId.CarveOnce)) return;
+
         // **足す前に読む。** ここを入れ替えると自己給餌で二次関数に伸びる（上の但し書き）。
         // 第93期: **深手は「傷1つぶん」として読む**（`WoundDepthOf`）。
         int w = ctx.WoundDepthOf(target);
@@ -6140,6 +6148,32 @@ public sealed class FixateTrait : Trait
     /// <summary>InstanceId は戦闘ごとに振り直されるので、境界で必ず捨てる（上の但し書き）。</summary>
     public override void OnCarryOver(UnitState self) => self.SetCounter(MemoryKey, 0);
 }
+
+/// <summary>
+/// 豆鉄砲（第277期・ノミの転生の版 N1 ／ N2）。<b>攻撃力を連撃の回数に変える</b>——攻10 なら 1 点 × 10 発。
+///
+/// <para><b>回数はここ（<see cref="ModifyHitCount"/>・手番の中だけ）、1発の打点は engine</b>
+/// （<c>PerformAttackBody</c> が <c>atk</c> を作った直後に <see cref="ShotDamage"/> へ置き換える・<c>_pelletLive</c>）。
+/// <see cref="Trait.ModifyAttack"/> は触らない——<c>CurrentAttack</c> は素の攻撃力のまま（＝弾数）なので、
+/// 号令・贔屓などの上乗せは<b>そのまま弾数になり</b>、呪いは弾数を減らす。駆り立ての選択・<c>StatSnapshot</c> から見ても攻撃力は 10 のまま。</para>
+///
+/// <para>1発ずつ独立した <c>PerformAttack</c> なので、刻み・被弾の燃焼・庇い・殉教・軛は1発ごとに走る（報告書 §1-3）。
+/// 割合の増減は切り捨てなので 1 点は軽減でも上乗せでも動かない（§1-4）。
+/// <b>再行動（もう一度動く）は1振りに1回</b>（engine の <c>NoteEncore</c>・一振りの枠 <c>Volley</c>）。上限は掛けない（弾数の調整はこの期に決めない）。</para>
+/// </summary>
+public sealed class PelletTrait : Trait
+{
+    /// <summary>1発の打点。</summary>
+    public const int ShotDamage = 1;
+
+    public override TraitId Id => TraitId.Pellet;
+
+    /// <summary>弾数 ＝ 現在の攻撃力（床 1）。他の札が足した回数はそのまま足す。</summary>
+    public override int ModifyHitCount(UnitState self, int hits) => hits - 1 + Math.Max(1, self.CurrentAttack);
+}
+
+/// <summary>刻みは一振りに1回（第277期・N1）。<b>札そのものは判定を持たない</b>（<see cref="CarveTrait"/> が読む）。</summary>
+public sealed class CarveOnceTrait : Trait { public override TraitId Id => TraitId.CarveOnce; }
 
 /// <summary>
 /// <b>断ちの待ち方（第74期）。</b> <see cref="AwaitTrait"/> と <see cref="SeverTrait"/> が読む。
@@ -16086,6 +16120,8 @@ public static class TraitCatalog
         new BetrayedShockTrait(TraitId.BetrayedShockNeighbors, self: false, spread: true),  // 第276期（S2′・対照）
         new BetrayedShockTrait(TraitId.BetrayedShockNoThunder, self: true, spread: false, key: BetrayedShockTrait.NoThunderKey),   // 第276期（S1x）
         new BetrayedShockTrait(TraitId.BetrayedShockThunderPop, self: true, spread: false, key: BetrayedShockTrait.ThunderPopKey), // 第276期（S1p）
+        new PelletTrait(),      // 第277期（N1 ／ N2）
+        new CarveOnceTrait(),   // 第277期（N1）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),
