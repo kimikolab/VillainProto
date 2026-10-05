@@ -289,7 +289,7 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 **`All` から駒を外す作業は「`UnitCatalog.Retired` へ移す」の1行**で、辞書のキーや `Id` の引きは `Everyone`（`All ∪ Retired`）を使う。
 第139期の則「`All` を辞書のキーに使っている診断の一覧を添えること」は**人の記憶に頼る形だったので次の期に守られず**、
 第140期の走査で **19 本が黙って落ちていた**（ハリ側 6 本は第108期から 32 期ぶん）。**一覧を添える則は `sweep` に置き換わった。**
-`sweep` は 80 分前後かかるので毎期は回さない。合格は**異常終了（exit が 0 でも上限でもない）が 0 本**。
+**期中は `sweep fast`、コミット前に `sweep full`**（第278期・指紋照合と並列化。鍵が動かなかった本は前回の結果で照合する）。合格は**異常終了（exit が 0 でも上限でもない）が 0 本**。
 
 ## 新機構の判定規約
 
@@ -319,13 +319,13 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 
 **本文と索引は `design/RULES_*.md`**（`RULES_001_097.md` / `RULES_098_173.md` / `RULES_174_242.md` / `RULES_243_.md`・索引の表は `design/RULES_INDEX.md`）。
 **ID（`R001`〜）で grep すること。ID は永続で、欠番になっても再利用しない。**
-新しい則は `RULES_243_.md` の末尾に次の ID（`R370` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
+新しい則は `RULES_243_.md` の末尾に次の ID（`R371` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
 
 ## 現状値
 
 **期ごとの報告は `design/HISTORY_PHASES.md`**（この節から逐語で移した。以後の期はそちらの冒頭に足し、ここのブロックは差し替える）。
 
-**最後に動かした期: 第277期**（**転生段の2駒目——ノミの転生**。規定は N1「豆鉄砲（1 点 × 攻撃力の連撃）・刻みは一振りに1回」・旧ノミは `UnitCatalog.NomiN0`。`compare` に燃焼×刻みの行を足した。報告は `design/PHASE277_NOMI_REBIRTH.md`）。転生段の棚卸しは `design/PHASE275_ROSTER_INVENTORY.md`、レリック段（第270〜274期）のまとめは `design/RELIC_SUMMARY.md`。
+**最後に動かした期: 第278期**（**整備の期——sweep の応答改善**。指紋照合・`fast` ／ `full`。盤面は動かない。並列は判定が揃わず既定にしなかった。凍結候補 78 本の採否はポン。報告は `design/PHASE278_SWEEP_SPEEDUP.md`）。第277期のノミの転生（N1）は `design/PHASE277_NOMI_REBIRTH.md`。転生段の棚卸しは `design/PHASE275_ROSTER_INVENTORY.md`、レリック段（第270〜274期）のまとめは `design/RELIC_SUMMARY.md`。
 **最後に `compare` が動いた期: 第277期**（ノミの在席 6 行と 63 行目 `燃焼×刻み (ボルグ×ホタ×ノミ)`。ノミを含まない 56 行の 280 セルは 0 件）。
 
     編成:       63 行（`CompareBuilds()`・第277期に 62 → 63）＋ 交差帯 12 行（`CrossBuilds()`）
@@ -359,7 +359,7 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
     dotnet run --project BattleSim -c Release 0 chain > docs/chain.md              # 連鎖の深さ（最大同時撃破・決着T）
     dotnet run --project BattleSim -c Release 0 derive rules > docs/rules.md       # ノブ一覧（CLAUDE.md を書き終えた後に最後に回す）
     dotnet run --project BattleSim -c Release 0 reseat [絞り込み] / confirm        # 席の測り直しと別 seed の追試（採否は confirm で）
-    dotnet run --project BattleSim -c Release 0 sweep [上限秒] [絞り込み]          # 全診断の exit 検査（80 分前後・毎期は回さない）
+    dotnet run --project BattleSim -c Release 0 sweep full / fast                  # 全診断の exit 検査（第278期: full はコミット前・fast は期中。`nocache` / `j=N` / `check` は COMMANDS.md）
     dotnet run --project BattleSim -c Release 0 sweep list                         # 走らせる一覧だけ（戦闘0回）
     dotnet run --project BattleSim -c Release <n> demo "編成名" [seed]             # 1戦の詳細ログ
     dotnet run --project BattleSim -c Release <n> replay "編成名" <seed>           # 1戦を再生用JSON（台本）で吐く

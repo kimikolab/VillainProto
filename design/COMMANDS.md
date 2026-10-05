@@ -1050,5 +1050,9 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
 `BattleSim` の表に戻る。
 
     dotnet run --project BattleSim -c Release 0 gust scan probe  # **第152期 段0**: 埋め草の強さを掃引して台を帯（40〜95%）へ戻す
-    dotnet run --project BattleSim -c Release 0 sweep [上限秒] [絞り込み]  # **全診断の exit 検査**（第141期・本体は `Sweep.cs`）。この表を自分で読んで引数の穴の無い本を子プロセスで回す。**80 分前後・毎期は回さない**（規約 (G17)）
+    dotnet run --project BattleSim -c Release 0 sweep [上限秒] [絞り込み]  # **全診断の exit 検査**（第141期・本体は `Sweep.cs`）。この表を自分で読んで引数の穴の無い本を子プロセスで回す。引数なしは `full`（規約 (G17)）
+    dotnet run --project BattleSim -c Release 0 sweep full      # 第278期 全量（指紋照合あり・直列）。**コミット前に1回**。鍵が動かなかった本は走らせず前回の結果を `（照合）` で返す
+    dotnet run --project BattleSim -c Release 0 sweep fast      # 第278期 主判定系の系統だけ（`SweepDiag.FastFamilies`: compare ／ dump ／ audit ／ derive ／ spread ／ chain ／ cross ／ checkup ／ checkwave ／ bosswave ／ relic・58 本）。**期中の判定用**
+    dotnet run --project BattleSim -c Release 0 sweep full nocache   # 第278期 指紋照合を使わず全部走らせる（キャッシュ `.sweep/cache.tsv` は更新する）。`j=N`（または環境変数 SWEEP_JOBS）で並列（**早見用・上限の判定が直列と揃わない**。既定は `j=1` の直列）
+    dotnet run --project BattleSim -c Release 0 sweep check     # 第278期 自己検査（鍵の作り方: 同じ入力で同じ鍵・BattleCore 1文字で全本・器具1本で辿る系統だけ・design で読む本だけ・振り分け1行で生ソースを読む本だけ）。子プロセス0本
     dotnet run --project BattleSim -c Release 0 sweep list      # 走らせる一覧だけ（戦闘0回・子プロセス0本）
