@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public partial class BattlefieldView3D
 {
-    private readonly Dictionary<int, List<Label3D>> _tickNumbers = new();
+    private readonly Dictionary<int, List<PopupLabel2D>> _tickNumbers = new();
 
     public void ShowTick(BattlePawn3D? pawn, bool burn, bool inverse, bool last, double seconds, bool electric = false)
     {
@@ -76,7 +76,7 @@ void fragment() {
         if (!_tickNumbers.TryGetValue(pawn.InstanceId, out var numbers))
             _tickNumbers[pawn.InstanceId] = numbers = new();
         numbers.RemoveAll(x => !LivePopup(x));
-        foreach (var prior in numbers) prior.Position += Vector3.Up * 0.32f;
+        foreach (var prior in numbers) prior.WorldPosition += Vector3.Up * 0.32f;
         // 多数の印でも画面を埋めない。1発ごとの出現は省かず、古いものから消す。
         while (numbers.Count >= 6)
         {
@@ -84,21 +84,9 @@ void fragment() {
             numbers[0].QueueFree();
             numbers.RemoveAt(0);
         }
-        var label = new Label3D
-        {
-            Text = (heal ? "＋" : "−") + amount,
-            Position = _fxRoot.ToLocal(pawn.FxPoint + _camera.GlobalBasis.X * (1.85f + ordinal % 2 * 0.12f)
-                + Vector3.Up * 0.60f),
-            Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
-            FontSize = last ? 38 : 31,
-            PixelSize = 0.010f,
-            Modulate = heal ? UiKit.Heal : burn ? new Color("ff8d45") : UiKit.Poison,
-            OutlineSize = 10,
-            OutlineModulate = new Color(0.01f, 0.015f, 0.01f),
-            NoDepthTest = true,
-            RenderPriority = 10,
-        };
-        _fxRoot.AddChild(label);
+        var label = CreatePopup(pawn.FxPoint + _camera.GlobalBasis.X * (1.85f + ordinal % 2 * 0.12f)
+                + Vector3.Up * 0.60f, (heal ? "＋" : "−") + amount,
+            heal ? UiKit.Heal : burn ? new Color("ff8d45") : UiKit.Poison, last ? 27 : 22);
         if (!heal && brittle) label.Modulate = label.Modulate.Lerp(new Color("f49b51"), 0.4f);
         numbers.Add(label);
         var tween = label.CreateTween();

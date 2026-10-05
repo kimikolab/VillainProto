@@ -156,6 +156,7 @@ public partial class BattlefieldView3D : Control
     private void BuildOverlay()
     {
         BuildHudLayer();
+        BuildPopupLayer();
         var topShade = new ColorRect
         {
             Color = new Color(0.012f, 0.025f, 0.021f, 0.78f),
@@ -922,27 +923,17 @@ public partial class BattlefieldView3D : Control
     public void Float(BattlePawn3D? pawn, string value, Color color, bool large = false)
         => Float(pawn, value, color, large, 3.05f);
 
-    private Label3D? Float(BattlePawn3D? pawn, string value, Color color, bool large, float height, float scale = 1.0f)
+    private PopupLabel2D? Float(BattlePawn3D? pawn, string value, Color color, bool large, float height, float scale = 1.0f)
     {
         if (pawn is null) return null;
         TrimPopups(pawn.InstanceId);
-        var label = new Label3D
-        {
-            Text = AkaPresentation.Text(value),
-            Position = pawn.RestPosition + new Vector3(0, height, 0),
-            Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
-            Font = new SystemFont { FontNames = new[] { "Yu Gothic UI", "Meiryo", "Noto Sans CJK JP", "Segoe UI" }, AllowSystemFallback = true },
-            FontSize = large ? 29 : 23,
-            PixelSize = (large ? 0.0072f : 0.0064f) * scale,
-            Modulate = color,
-            OutlineSize = 12,
-            OutlineModulate = new Color(0.005f, 0.008f, 0.006f, 0.98f),
-            NoDepthTest = true,
-        };
-        _fxRoot.AddChild(label);
+        Vector3 start = pawn.RestPosition + new Vector3(0, height, 0);
+        var label = CreatePopup(start, AkaPresentation.Text(value), color,
+            Mathf.RoundToInt((large ? 18 : 15) * scale));
         _popups.Add((pawn.InstanceId, label));
         var tween = label.CreateTween().SetParallel();
-        tween.TweenProperty(label, "position:y", height + pawn.Home.Y + 0.95f, 0.78)
+        tween.TweenMethod(Callable.From<float>(y => label.WorldPosition = new Vector3(label.WorldPosition.X, y, label.WorldPosition.Z)),
+            start.Y, height + pawn.Home.Y + 0.95f, 0.78)
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
         tween.TweenProperty(label, "modulate:a", 0.0f, 0.78).SetDelay(0.22);
         tween.Finished += label.QueueFree;

@@ -58,7 +58,7 @@ public partial class BattlefieldView3D
         if (label is not null)
             label.CreateTween().TweenMethod(Callable.From<float>(_ => {
                 if (IsInstanceValid(target) && target.IsInsideTree())
-                    label.Position = new Vector3(target.GlobalPosition.X, label.Position.Y, target.GlobalPosition.Z);
+                    label.WorldPosition = new Vector3(target.GlobalPosition.X, label.WorldPosition.Y, target.GlobalPosition.Z);
             }), 0f, 1f, 0.82 / speed);
         target.MovementPose(-0.24f, 0.34f);
     }

@@ -447,6 +447,10 @@ public partial class StagingEffectCheck : Control
                 Require(field.PopupCount <= 2, "駒ごとの上限");
                 await Wait(1.2);
                 Require(field.PopupCount == 0, "寿命後に消える");
+                await CheckPopupOverlay(field, target, openings);
+                target = field.FindPawn(1)!;
+                healer = field.FindPawn(2)!;
+                holder = field.FindPawn(3)!;
             }
             if (mode is "all" or "yoke")
             {
@@ -545,6 +549,48 @@ public partial class StagingEffectCheck : Control
         if (directory is null) return;
         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
         Require(GetViewport().GetTexture().GetImage().SavePng(directory[14..] + "/staging-" + phase + ".png") == Error.Ok, "画像保存");
+    }
+
+    private async Task CheckPopupOverlay(BattlefieldView3D field, BattlePawn3D target, DemoOpening[] openings)
+    {
+        Control layer = field.GetNode<Control>("PopupLayer");
+        Require(layer.GetIndex() > target.Hud.GetParent().GetIndex(), "浮き文字はHP札より手前");
+        foreach (int elevation in new[] { 11, 50 })
+        {
+            field.SetCameraElevation(elevation);
+            // HP札と意図的に重ね、低い視点・高い視点の双方で文字が欠けないか画像でも確認する。
+            foreach (string kind in new[] { "damage", "heal", "tick" })
+            {
+                if (kind == "damage") field.DamagePopup(target, 123, "", UiKit.Hurt);
+                else if (kind == "heal") field.HealPopup(target, 45);
+                else field.TickNumber(target, 67, false, 1, true, burn: true);
+                PopupLabel2D label = layer.GetChildren().OfType<PopupLabel2D>()
+                    .Single(p => !p.IsQueuedForDeletion());
+                await Wait(0.05);
+                // このフレームではバー上に置く。浮上・寿命のTweenはそのまま進める。
+                label.WorldPosition = target.HudAnchor;
+                label._Process(0);
+                Require(label.Visible && label.Text.Length > 0, "数字が画面上に表示される");
+                await Capture($"popup-overlay-{kind}-{elevation}");
+                await Wait(1.5);
+                Require(layer.GetChildCount() == 0, "通常・回復・刻みの浮き文字が寿命で消える");
+            }
+        }
+        for (int i = 0; i < 8; i++) field.TickNumber(target, i + 1, false, i, false);
+        var ticks = layer.GetChildren().OfType<PopupLabel2D>().Where(p => !p.IsQueuedForDeletion()).ToArray();
+        Require(ticks.Length == 6, "刻み数字は古い順に消して6件まで");
+        Require(ticks.Select(p => p.Text).SequenceEqual(new[] { "−3", "−4", "−5", "−6", "−7", "−8" }),
+            "刻み数字の順と値を維持");
+        await Wait(0.05);
+        Vector2 before = ticks[^1].Position;
+        field.SetCameraYaw(25);
+        await Wait(0.05);
+        Require(ticks[^1].Position.DistanceTo(before) > 1, "表示中の数字もカメラ変更に追従");
+        field.BeginBattle(openings, "浮き文字の消去確認", 1);
+        Require(ticks.All(p => !p.Visible && p.IsQueuedForDeletion()), "再戦したフレームで刻み数字を消去");
+        await Wait(0.05);
+        Require(layer.GetChildCount() == 0, "再戦で2D層に古い数字を残さない");
+        field.ResetCameraView();
     }
 
     private async Task Wait(double seconds)

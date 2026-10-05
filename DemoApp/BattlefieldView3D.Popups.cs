@@ -5,14 +5,37 @@ using System.Linq;
 public partial class BattlefieldView3D
 {
     // 文字の寿命は実時間。2倍速でも読み取る時間を残し、同じ駒の数字は合算する。
-    private readonly List<(int Pawn, Label3D Label)> _popups = new();
-    private readonly Dictionary<(int Pawn, bool Heal), (Label3D Label, long Amount)> _numbers = new();
+    private Control _popupLayer = null!;
+    private readonly List<(int Pawn, PopupLabel2D Label)> _popups = new();
+    private readonly Dictionary<(int Pawn, bool Heal), (PopupLabel2D Label, long Amount)> _numbers = new();
     internal int PopupCount => _popups.Count(p => LivePopup(p.Label));
-    private static bool LivePopup(Label3D label)
+    private static bool LivePopup(PopupLabel2D label)
         => IsInstanceValid(label) && !label.IsQueuedForDeletion();
+
+    private void BuildPopupLayer()
+    {
+        // HP 札の後、見出し・カットインの前。同じ親の順序で描画を保証する。
+        _popupLayer = new Control { Name = "PopupLayer", MouseFilter = MouseFilterEnum.Ignore };
+        _popupLayer.SetAnchorsPreset(LayoutPreset.FullRect);
+        AddChild(_popupLayer);
+    }
+
+    private PopupLabel2D CreatePopup(Vector3 position, string text, Color color, int fontSize)
+    {
+        var label = new PopupLabel2D();
+        _popupLayer.AddChild(label);
+        label.Configure(_camera, position, text, color, fontSize);
+        return label;
+    }
 
     private void ResetPopups()
     {
+        // 3D の _fxRoot とは別の所有物。再戦したフレームから古い文字を消す。
+        foreach (Node child in _popupLayer.GetChildren())
+        {
+            ((CanvasItem)child).Hide();
+            child.QueueFree();
+        }
         _popups.Clear();
         _numbers.Clear();
         _tickNumbers.Clear();
