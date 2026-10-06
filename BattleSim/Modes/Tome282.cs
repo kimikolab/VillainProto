@@ -39,8 +39,8 @@ static class Tome282Diag
     static readonly Ver[] Vers =
     {
         new("T0", "旧トメ（止め・対照）", UnitCatalog.TomeT0),
-        new("T1", "炸裂 ＋ 爪痕 ＋ 乱射（第282期の規定）", UnitCatalog.Tome),
-        new("T1n", "T1 ＋ 層を残す（消費の廃止・規定候補）", UnitCatalog.TomeT1n),
+        new("T1", "炸裂 ＋ 爪痕 ＋ 乱射（第282期の規定・第283期は対照）", UnitCatalog.TomeT1),
+        new("T1n", "T1 ＋ 層を残す（消費の廃止・第283期の規定）", UnitCatalog.TomeT1n),
     };
     static Ver VerOf(string n) => Vers.First(v => v.Name == n);
 
@@ -308,9 +308,9 @@ static class Tome282Diag
         Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
         foreach (var wall in WallCands)
         {
-            var b1 = Measure(FvSwap(EconomyWith(wall), UnitCatalog.Tome, UnitCatalog.Tome), BossWave.Make);
+            var b1 = Measure(FvSwap(EconomyWith(wall), UnitCatalog.Tome, UnitCatalog.TomeT1), BossWave.Make);
             var bn = Measure(FvSwap(EconomyWith(wall), UnitCatalog.Tome, UnitCatalog.TomeT1n), BossWave.Make);
-            double main1 = Waves.Where(w => w.Group == "本編").Average(w => Measure(EconomyWith(wall), w.Make).Win);
+            double main1 = Waves.Where(w => w.Group == "本編").Average(w => Measure(FvSwap(EconomyWith(wall), UnitCatalog.Tome, UnitCatalog.TomeT1), w.Make).Win);
             double mainN = Waves.Where(w => w.Group == "本編").Average(w => Measure(FvSwap(EconomyWith(wall), UnitCatalog.Tome, UnitCatalog.TomeT1n), w.Make).Win);
             Console.WriteLine($"| {wall.Name} | {wall.MaxHp} | {Per(b1.Vend, b1.N)} | {Per(b1.LayerAdds, b1.N)} | {AvgT(b1.FirstDeathT, b1.FirstDeath)} | {AvgT(b1.TomeDeathT, b1.TomeDied)} | {Per1(b1.RScar, b1.N)} | {Per1(bn.RScar, bn.N)} | {Per1(bn.BossMaxEnd, bn.N)} | {F1(main1)} | {F1(mainN)} |");
         }
@@ -326,11 +326,11 @@ static class Tome282Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var cells = new (string Board, string Ver, Formation F)[]
         {
-            ("旧台（ガルド壁）", "T1", Boards[2].Make(UnitCatalog.Tome)),
+            ("旧台（ガルド壁）", "T1", Boards[2].Make(UnitCatalog.TomeT1)),
             ("旧台（ガルド壁）", "T1n", Boards[2].Make(UnitCatalog.TomeT1n)),
-            ($"新台（{NewWall.Name}）", "T1", Boards[4].Make(UnitCatalog.Tome)),
+            ($"新台（{NewWall.Name}）", "T1", Boards[4].Make(UnitCatalog.TomeT1)),
             ($"新台（{NewWall.Name}）", "T1n", Boards[4].Make(UnitCatalog.TomeT1n)),
-            ("標台S（参考）", "T1", Boards[3].Make(UnitCatalog.Tome)),
+            ("標台S（参考）", "T1", Boards[3].Make(UnitCatalog.TomeT1)),
             ("標台S（参考）", "T1n", Boards[3].Make(UnitCatalog.TomeT1n)),
         };
         Console.WriteLine($"# 第282期 段2 —— ボスの到達度（規定形・HP {EnemyCatalog.BossRegular.MaxHp}・回復は最大HPの 40%・seed 0..199・倍率なし）");
@@ -437,15 +437,18 @@ static class Tome282Diag
         }
         Console.WriteLine("# 第282期 tome282 check —— 自己検査");
         Console.WriteLine();
-        Expect("(a) 規定のトメは T1（炸裂・爪痕・乱射）・`TomeT1` は規定と同じ物",
-            UnitCatalog.Tome.Traits.SequenceEqual(new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.Spray }) && ReferenceEquals(UnitCatalog.TomeT1, UnitCatalog.Tome));
+        // 第283期に T1n を規定にしたので、(a)〜(c) は「規定 ＝ T1n」の形に直した（第282期の版は「規定 ＝ T1」を確かめていた）。
+        Expect("(a) 規定のトメは T1n（炸裂・爪痕・乱射・層を残す）・`TomeT1n` は規定と同じ物・`TomeT1` は別の物",
+            UnitCatalog.Tome.Traits.SequenceEqual(new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.Spray, TraitId.RuptureKeep })
+            && ReferenceEquals(UnitCatalog.TomeT1n, UnitCatalog.Tome) && !ReferenceEquals(UnitCatalog.TomeT1, UnitCatalog.Tome));
         Expect("(b) T0 は旧トメ（止め）・T1n は T1 ＋ 層を残す の1札だけが違う",
             UnitCatalog.TomeT0.Traits.SequenceEqual(new[] { TraitId.Finisher })
-            && UnitCatalog.TomeT1n.Traits.Except(UnitCatalog.Tome.Traits).SequenceEqual(new[] { TraitId.RuptureKeep })
-            && !UnitCatalog.Tome.Traits.Except(UnitCatalog.TomeT1n.Traits).Any());
-        int keepHolders = UnitCatalog.Everyone.Count(d => d.Traits.Contains(TraitId.RuptureKeep))
-                          + CompareBuilds().Concat(CrossBuilds()).Sum(r => r.F.Occupied().Count(o => o.Def.Traits.Contains(TraitId.RuptureKeep)));
-        Expect("(c) 層を残す札の保持者は `Everyone` と `compare` ／ 交差帯に 0 枚", keepHolders == 0, $"{keepHolders}");
+            && UnitCatalog.TomeT1n.Traits.Except(UnitCatalog.TomeT1.Traits).SequenceEqual(new[] { TraitId.RuptureKeep })
+            && !UnitCatalog.TomeT1.Traits.Except(UnitCatalog.TomeT1n.Traits).Any());
+        int keepHolders = UnitCatalog.Everyone.Count(d => d.Traits.Contains(TraitId.RuptureKeep));
+        int keepRows = CompareBuilds().Concat(CrossBuilds()).Sum(r => r.F.Occupied().Count(o => o.Def.Traits.Contains(TraitId.RuptureKeep)));
+        int tomeRows = CompareBuilds().Concat(CrossBuilds()).Sum(r => r.F.Occupied().Count(o => ReferenceEquals(o.Def, UnitCatalog.Tome)));
+        Expect("(c) 層を残す札の保持者は `Everyone` で規定のトメ1枚・行の保持者はトメの在席数と同じ", keepHolders == 1 && keepRows == tomeRows, $"{keepHolders} ／ {keepRows} ／ トメ {tomeRows}");
 
         // (d) T1n ＝ T1-c（`FinisherRule(2, Consume: false)`）の台本一致（4 台 × 本編第2〜5波 ＋ ボス × seed 0..29）
         int diff = 0, tot = 0;
@@ -455,7 +458,7 @@ static class Tome282Diag
                 {
                     var p1 = BattleEngine.Materialize(Boards[bi].Make(UnitCatalog.TomeT1n), BattleContext.PlayerTeam);
                     var a = BattleEngine.Run(p1, w.Make(), s, verbose: true);
-                    var p2 = BattleEngine.Materialize(Boards[bi].Make(UnitCatalog.Tome), BattleContext.PlayerTeam);
+                    var p2 = BattleEngine.Materialize(Boards[bi].Make(UnitCatalog.TomeT1), BattleContext.PlayerTeam);
                     var b = BattleEngine.Run(p2, w.Make(), s, verbose: true, finisher: new FinisherRule(2, false));
                     tot++;
                     if (a.PlayerWon != b.PlayerWon || a.Turns != b.Turns || !a.Log.Select(l => l.Text).SequenceEqual(b.Log.Select(l => l.Text))) diff++;

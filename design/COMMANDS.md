@@ -881,8 +881,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 tome282 wall      # 第282期 段2 の Phase 0: 標経済の前3 → 壁の候補 8 枚 × ボス・本編（ザンの仇指しが立つか・採る条件は固定）
     dotnet run --project BattleSim -c Release 0 tome282 boss      # 第282期 段2: ボスの到達度 2×2（{旧台 ガルド, 新台 ドハ} × {T1, T1n}）＋ 標台S ＋ 寿命だけを伸ばした仮想の版
     dotnet run --project BattleSim -c Release 0 tome282 feed      # 第282期 段3: 乱射の餌化（ムド・ドハ・ウツ同席・ソラの供給が途中で断たれる台・帯B）
-    dotnet run --project BattleSim -c Release 0 tome282 check     # 第282期 自己検査（規定 ＝ T1・T1n ＝ T1-c の台本一致・層化のゲート・`CompareT0`・9 項目）
+    dotnet run --project BattleSim -c Release 0 tome282 check     # 第282期 自己検査（規定 ＝ T1n（第283期に直した・第282期は T1）・T1n ＝ T1-c の台本一致・層化のゲート・`CompareT0`・9 項目）
     dotnet run --project BattleSim -c Release 0 tome282 log <台 0..4> <版 T0|T1|T1n> <波 2..5|ボス> [seed]   # 第282期 1戦のログ
+    dotnet run --project BattleSim -c Release 0 boss283 p0        # 第283期 Phase 0: 回復・破片・味方の標の書き手（Traits.cs を走査）と保持者・ヒーラーの機械的定義・第282期の新台の後1 → 候補でボスに働くか（ドルガ対照つき）・格子の所要（17 秒）。本体は `Modes/Boss283.cs`
+    dotnet run --project BattleSim -c Release 0 boss283 grid      # 第283期 段1: 固定枠（トメ T1n ＋ ザン）＋ 探索枠3（寿命側 11 ＋ ヒーラー 7・ヒーラー ≦ 1）× 席 120 ＝ 66,000 台 × ボス・足切り（seed 0..19）→ seed 0..199 → 届いた台の帯B とドルガ対照（約 11 分）
+    dotnet run --project BattleSim -c Release 0 boss283 ctl       # 第283期 代表の台 × トメの版（T1n ／ T1 ／ T1-s ／ T0 ／ ドルガ）・中身（崩れ・トメの死亡・回復）・余裕（隊の全員の最大HP × 0.5〜2.0）（5 秒）
+    dotnet run --project BattleSim -c Release 0 boss283 check     # 第283期 自己検査（書き手の分類の漏れ 0・ヒーラー 2 枚の組 0・ツギとリリ・席 120・規定 T1n・軽い口と詳しい口の一致・第282期の爪痕 1,400 の再現・決定性・9 項目）
+    dotnet run --project BattleSim -c Release 0 boss283 log <Id×5 をカンマで（前1,前3,中央,後1,後3）> [seed]   # 第283期 ボス戦1戦のログ（例 `golm,hisa,zan,tome,ban`）
     dotnet run --project BattleSim -c Release 0 relic log <台> <札> <規則> [seed]   # 第270期 1戦のログ（札は日本語名・規則は 攻 ／ 前）
     dotnet run --project BattleSim -c Release 0 checkwave check      # 自己検査（写しの台本一致・癒し手 ＝ 従軍司祭＋札1枚・保持者 0・回復は状態を消さない・刻みの後・軛に切られない・ボスの攻撃力・verbose・乱数・動じない札・重装兵の体の癒し手・全体のボス・400/300 の癒し手・天井 +11・割合の回復・7台目の毒台・規定の組・26 項目）
     dotnet run --project BattleSim -c Release 0 checkwave log <台> <波> [seed]   # 1戦のログ（台は 燃焼 T3-244 ／ 燃焼 T3-255 ／ 移動 ／ 雷 ／ 毒 ／ 混ぜ-255・波は B3-桁 ／ W3-割合 ／ W2-対照 ／ W2-50後 ／ W2-50奥 ／ B2-全4 ／ B2-半4、第261期の版は `261:`・第260期の版は `260:` を前に付ける）
