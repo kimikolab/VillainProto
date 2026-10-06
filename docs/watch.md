@@ -594,7 +594,7 @@ seed 0..199 の 200 試行（`compare` と同じ帯）。**盤面は1ビット�
 
 ## 4. デモの編成プリセットと照合する数
 
-`Presets.Compare` **63** ＋ `Presets.Cross` **12** ＝ **75 行**（`DemoApp` の「編成プリセット」に出る数）。
+`Presets.Compare` **64** ＋ `Presets.Cross` **12** ＝ **76 行**（`DemoApp` の「編成プリセット」に出る数）。
 
 軸コメントの出どころ: BattleSim/Program.cs の `PrimaryRows` 行末コメント 19 件。
 

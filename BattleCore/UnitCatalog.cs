@@ -2501,6 +2501,60 @@ public static class UnitCatalog
         Flavor = "誰かが指を差した相手にしか本気になれない。差されれば、確実に仕留める。"
     };
 
+    // ---------------------------------------------------------------------------------
+    // 第281期 —— トメの転生の版（指示書 design/PHASE281_TOME_REBIRTH_SPEC.md・報告 design/PHASE281_TOME_REBIRTH.md）。
+    // **規定のトメは動かさない**（T0 のまま）。どの版も `All` ／ `Retired` ／ `Presets` に入れない。Id は規定と同じ（`TallyByUnit` で引ける）。
+    // ステータスは据え置き（HP 58 ／ 攻 12 ／ 速 6・単体）。差分は札の並びと周期だけ。
+    // ---------------------------------------------------------------------------------
+    /// <summary>第281期 T0（旧トメの受け皿・規定と同じ定義）。採用のときに旧トメを使う器具をここへ固定する（第277期の <see cref="NomiN0"/> と同じ）。</summary>
+    public static readonly UnitDef TomeT0 = new()
+    {
+        Id = Tome.Id, Name = Tome.Name, MaxHp = Tome.MaxHp, Attack = Tome.Attack, Speed = Tome.Speed,
+        Traits = Tome.Traits, PlusText = Tome.PlusText, MinusText = Tome.MinusText, Flavor = Tome.Flavor,
+    };
+
+    /// <summary>第281期 T1（規定候補）。炸裂（層 × 倍率・列越え・消費）＋ 爪痕 ＋ 乱射。毎手番。</summary>
+    public static readonly UnitDef TomeT1 = new()
+    {
+        Id = "tome",
+        Name = "止めのトメ",
+        MaxHp = 58,
+        Attack = 12,
+        Speed = 6,
+        Traits = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.Spray },
+        PlusText = "最も深く指差された敵へ、指差しの数だけ重い一撃で炸裂する。どの列にも届き、抉った傷は塞がらない",
+        MinusText = "誰も指を差していないと、敵味方構わず乱射する",
+        Flavor = "指を差されないと、自分がどこを撃っているのか分からない。差されれば——その傷は二度と塞がらない。"
+    };
+
+    /// <summary>第281期 T2。T1 ＋ 周期 <c>[溜め, 溜め, 術]</c>（3手番に1回、溜めた層で炸裂する・乱射も術の手番だけ）。</summary>
+    public static readonly UnitDef TomeT2 = new()
+    {
+        Id = "tome",
+        Name = "止めのトメ",
+        MaxHp = 58,
+        Attack = 12,
+        Speed = 6,
+        Traits = TomeT1.Traits,
+        Actions = new UnitAction[]
+        {
+            new(ActionKind.Charge, Label: "狙いを溜めている"),
+            new(ActionKind.Charge, Label: "狙いを溜めている"),
+            new(ActionKind.Skill, Label: "炸裂"),
+        },
+        PlusText = "三手番に一度、最も深く指差された敵へ、指差しの数だけ重い一撃で炸裂する。どの列にも届き、抉った傷は塞がらない",
+        MinusText = TomeT1.MinusText,
+        Flavor = TomeT1.Flavor,
+    };
+
+    /// <summary>第281期 T1-s（爪痕の寄与の分離・対照）。T1 から <see cref="TraitId.RuptureScar"/> だけを抜いた形。</summary>
+    public static readonly UnitDef TomeT1s = new()
+    {
+        Id = "tome", Name = TomeT1.Name, MaxHp = 58, Attack = 12, Speed = 6,
+        Traits = new[] { TraitId.Rupture, TraitId.Spray },
+        PlusText = TomeT1.PlusText, MinusText = TomeT1.MinusText, Flavor = TomeT1.Flavor,
+    };
+
     /// <summary>
     /// 火選りのヒヨ。<b>ロスターで初めて「味方に付いた燃焼」を読む駒</b>（第58期）。
     ///

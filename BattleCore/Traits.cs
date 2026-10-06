@@ -631,6 +631,11 @@ public enum TraitId
     ChargedPowder,     // 帯電の粉: 手番の一撃の後、主目標に感電（`MarkShock`・二値・乱数を引かない）。即時の痺れ（`Paralyze`）の作り直し
     ChargedPowderLeak, // 粉の漏れ（T1）: 粉を撒くたび、隣の味方すべてにも感電（**札そのものは挙動を持たない**・`ChargedPowderTrait` が読む・外せば T2）
 
+    // --- 第281期で足した札（トメの転生の版。`UnitCatalog.TomeT1` ほかだけが持つ） ---
+    Rupture,     // 炸裂: 層が最も深い敵の標持ちへ（列越え）、攻 × 層 × `FinisherRule.Multiplier` で殴り、層を消す（判定は engine の標の段・`PerformAttackBody`・`RuptureAfter`）。保持者がいる戦だけ敵の標が層になる
+    RuptureScar, // 爪痕: 炸裂で実際に減らした HP と同量、相手の最大HPを恒久に削る（**札そのものは挙動を持たない**・`RuptureAfter` が読む・外せば T1-s）
+    Spray,       // 乱射（マイナス）: 敵に標持ちが 0 の手番は、自分以外の生存全駒（敵味方）へ 攻/2 × 3 発（**札そのものは挙動を持たない**・engine `SwingTurnBody` が読む）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -4398,7 +4403,7 @@ public sealed class DivertTrait : Trait
             if (remember && i == 0) self.SetCounter(DeflectTrait.TargetKey, pick.InstanceId + 1);
 
             bool fresh = pick.Counter(StatusKeys.Marked) <= 0;
-            pick.SetCounter(StatusKeys.Marked, 1);
+            ctx.LayerMark(pick, self);   // 第281期: 炸裂の保持者がいる戦だけ層を足す（いなければ従来どおり 1 にする）
             if (fresh) ctx.NoteMarkOrigin(pick, MarkOrigin.Divert);   // 第184期（計数のみ）
             ctx.NoteDivertFocus(pick.Def.Name, fresh);
             focused++;
@@ -4703,6 +4708,68 @@ public readonly record struct FinisherRule(int Multiplier, bool Consume)
 
     /// <summary>探索段階の初期値（第53期）。</summary>
     public static FinisherRule Default => new(2, true);
+}
+
+/// <summary>
+/// 炸裂（第281期・止めのトメの転生の版 T1 ／ T2）。<b>旧トメ（<see cref="FinisherTrait"/>）と同じ標の段</b>で狙い、
+/// 打点だけを<b>層の深さ</b>で読む——攻 × その敵の層 × <see cref="FinisherRule.Multiplier"/>（敵の標の +50% は従来どおり engine の <c>ApplyDamage</c>）。
+///
+/// <list type="bullet">
+///   <item><b>狙い</b>: 敵の標持ちのうち<b>層が最も深い1体</b>（同値は現在HPが高い方、それも同値なら <c>PickOne</c>＝旧トメと同じ作法）。
+///   候補は <c>pool</c> ではなく <c>foes</c>（<b>列越えは旧トメのまま</b>）。判定は engine の <c>SelectTargetChain</c> の標の段</item>
+///   <item><b>爪痕</b>（<see cref="TraitId.RuptureScar"/> の保持者のとき）: 実際に減らした HP と同量、相手の最大HPを恒久に削る（下限 1・縫い＝<see cref="StitchTrait"/> の2行と同じ形）</item>
+///   <item><b>消費</b>: 炸裂した相手の層を全部消す（<see cref="FinisherRule.Consume"/>・倒していても消す＝旧トメの作法）</item>
+///   <item><b>乱射</b>（<see cref="TraitId.Spray"/> の保持者のとき・マイナス）: 敵に標持ちが 0 の手番は engine の <c>Spray</c></item>
+/// </list>
+///
+/// <para><b>層</b>: 保持者が盤上にいる戦（<see cref="BattleContext.MarkLayers"/>）だけ、敵への標の書き込み（逸らしの焦点・仇指し）が加算になる。
+/// engine と既存の読み手はすべて「&gt; 0」のままなので、層の深さを読むのはこの札だけ。</para>
+///
+/// <para><b>手番の持ち方</b>: 周期を持たない版（T1）は毎手番 <c>SwingTurnBody</c> が分岐する。周期の版（T2・<c>[溜め, 溜め, 術]</c>）は
+/// 術の手番に <see cref="OnAction"/> から同じ一振り（<see cref="BattleContext.RuptureSkill"/>）を呼ぶ。</para>
+/// </summary>
+public sealed class RuptureTrait : Trait
+{
+    public override TraitId Id => TraitId.Rupture;
+
+    /// <summary>狙う相手（標の段・<c>foes</c> から）。層が最も深い → 現在HPが高い → <c>PickOne</c>。候補 0・1 個では乱数を引かない。</summary>
+    public static UnitState? Preferred(BattleContext ctx, List<UnitState> foes)
+    {
+        List<UnitState> marked = foes.Where(f => f.RawCounter(StatusKeys.Marked) > 0).ToList();
+        if (marked.Count == 0) return null;
+        int deep = marked.Max(f => f.RawCounter(StatusKeys.Marked));
+        marked = marked.Where(f => f.RawCounter(StatusKeys.Marked) == deep).ToList();
+        int top = marked.Max(f => f.Hp);
+        return ctx.PickOne(marked.Where(f => f.Hp == top).ToList());
+    }
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+        => ctx.RuptureAfter(self, target);
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+        => ctx.RuptureSkill(self);
+}
+
+/// <summary>爪痕（第281期）。<b>札そのものは挙動を持たない</b>（<see cref="BattleContext.RuptureAfter"/> が保持を読む）。外せば T1-s（爪痕の寄与の分離）。</summary>
+public sealed class RuptureScarTrait : Trait
+{
+    public override TraitId Id => TraitId.RuptureScar;
+}
+
+/// <summary>
+/// 乱射（第281期・炸裂の代金）。<b>札そのものは挙動を持たない</b>（engine の <c>SwingTurnBody</c> が保持を読む）。
+/// 敵に標持ちが 0 の手番、<see cref="Shots"/> 発・1発 ＝ 攻撃力の半分を、自分以外の生存全駒（敵味方）から等確率・毎発独立に選んで撃つ。
+/// 各発は<b>標の段だけ</b>を通す（相手の陣営の標持ちに <c>MarkPullPercent</c> で引かれる）——庇い・後備え・殉教・棘守りは通さない。標は消さない。
+/// </summary>
+public sealed class SprayTrait : Trait
+{
+    /// <summary>1手番の発の数（指示書 §1 の4）。</summary>
+    public const int Shots = 3;
+
+    /// <summary>1発の打点 ＝ 攻撃力 × <see cref="Percent"/> / 100（床 1）。</summary>
+    public const int Percent = 50;
+
+    public override TraitId Id => TraitId.Spray;
 }
 
 /// <summary>
@@ -12290,6 +12357,12 @@ public sealed class VendettaTrait : Trait
                 ctx.Log($"    {self.Name} が {source.Name} を仇として指差した", LogKind.Trigger);
                 marked = true;
             }
+            // 第281期: 炸裂の保持者がいる戦だけ、既に標のある仇にも層を1つ足す（いなければ何もしない＝従来どおり）。
+            else if (source.IsAlive && ctx.MarkLayers)
+            {
+                ctx.LayerMark(source, self);
+                ctx.Log($"    {self.Name} が {source.Name} をさらに指差した（層 {source.RawCounter(StatusKeys.Marked)}）", LogKind.Trigger);
+            }
             ctx.NoteVendetta(self, dealt, marked);
 
             if (self.HasTrait(TraitId.Recoil) && self.IsAlive)
@@ -16157,6 +16230,9 @@ public static class TraitCatalog
         new CarveOnceTrait(),   // 第277期（N1）
         new ChargedPowderTrait(),      // 第279期（T1 ／ T2）
         new ChargedPowderLeakTrait(),  // 第279期（T1）
+        new RuptureTrait(),            // 第281期（T1 ／ T2）
+        new RuptureScarTrait(),        // 第281期（T1 ／ T2）
+        new SprayTrait(),              // 第281期（T1 ／ T2）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

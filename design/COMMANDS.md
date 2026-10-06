@@ -869,6 +869,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 tou279 relic      # 第279期 帯電の足の再測: 移動の台（M0 ／ M1 ／ M2）・感電の行の2形・責め苦 × 版 × 札の枠5 × 本編第2〜5波・帯A 1400..1599 ／ 帯B 1600..1799（固有の勝者と発火）
     dotnet run --project BattleSim -c Release 0 tou279 check      # 第279期 自己検査（T0 の写しが規定と台本一致・粉の付与と漏れ・旧の痺れ粉・カタのいない台でも感電で痺れる・決定性・verbose）
     dotnet run --project BattleSim -c Release 0 tou279 log <台 0..6> <版 T0|T1|T2> <波 2..5|ボス|B3|W3> [seed]   # 第279期 1戦のログ
+    dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
+    dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
+    dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）
+    dotnet run --project BattleSim -c Release 0 tome281 mult      # 第281期 倍率の掃引（`FinisherRule.Multiplier` 1..4 ／ T1）。張り付きは T0 でも張り付く台と分けて書く
+    dotnet run --project BattleSim -c Release 0 tome281 seat [a|b|c]   # 第281期 新行の席（120 通り × T1 × 帯A → 上位8を帯B）。b ＝ `仇討ち (ヒサ×ザン)` のドルガ → トメ（採った顔ぶれ）
+    dotnet run --project BattleSim -c Release 0 tome281 check     # 第281期 自己検査（T0 の写し・診断の口・層の分布・消費・乱射の宛先・爪痕と最大HP・決定性・verbose・12 項目）
+    dotnet run --project BattleSim -c Release 0 tome281 log <台 0..4> <版 T0|T1|T2|T1-s|T1-c> <波 2..5|ボス> [seed]   # 第281期 1戦のログ
     dotnet run --project BattleSim -c Release 0 relic log <台> <札> <規則> [seed]   # 第270期 1戦のログ（札は日本語名・規則は 攻 ／ 前）
     dotnet run --project BattleSim -c Release 0 checkwave check      # 自己検査（写しの台本一致・癒し手 ＝ 従軍司祭＋札1枚・保持者 0・回復は状態を消さない・刻みの後・軛に切られない・ボスの攻撃力・verbose・乱数・動じない札・重装兵の体の癒し手・全体のボス・400/300 の癒し手・天井 +11・割合の回復・7台目の毒台・規定の組・26 項目）
     dotnet run --project BattleSim -c Release 0 checkwave log <台> <波> [seed]   # 1戦のログ（台は 燃焼 T3-244 ／ 燃焼 T3-255 ／ 移動 ／ 雷 ／ 毒 ／ 混ぜ-255・波は B3-桁 ／ W3-割合 ／ W2-対照 ／ W2-50後 ／ W2-50奥 ／ B2-全4 ／ B2-半4、第261期の版は `261:`・第260期の版は `260:` を前に付ける）

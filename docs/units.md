@@ -420,6 +420,9 @@
 | `CarveOnce` | 刻みのノミ |
 | `ChargedPowder` | - |
 | `ChargedPowderLeak` | - |
+| `Rupture` | - |
+| `RuptureScar` | - |
+| `Spray` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

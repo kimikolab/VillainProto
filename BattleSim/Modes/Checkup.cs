@@ -175,6 +175,9 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.CarveOnce]   = (HcMinusL, "豆鉄砲の一振りで刻むのは1発目だけ（第277期・N1）"),
         [TraitId.ChargedPowder]     = (HcPlusL,  "殴った相手に感電を付けるだけ（第279期・T1 ／ T2）。止めるのは弾けたとき（S3 の札と一緒に持つ）"),
         [TraitId.ChargedPowderLeak] = (HcMinusL, "粉を撒くたび隣の味方に感電が付くだけ。粉の代金で、外せば T2 になる（第279期）"),
+        [TraitId.Rupture]     = (HcBothL,  "層の深い標持ちを層の数だけ重く殴り、層を消す——打点と、味方の集中砲火を自分で止めるのが1つの動作（第281期・T1 ／ T2）"),
+        [TraitId.RuptureScar] = (HcPlusL,  "炸裂で減らした HP と同量、相手の最大HPを削るだけ（第281期）。外せば T1-s"),
+        [TraitId.Spray]       = (HcMinusL, "敵に標持ちがいない手番は敵味方構わず乱射するだけ（第281期・炸裂の代金）"),
         // 第132期 段0-a: 第128期に `GradeStep` を ドルガ に載せたとき、この表に足さなかったので
         // `checkup` が「分類の無い札がある」で**3期ぶん止まっていた**（第131期に判明）。
         // 分類は積み過ぎ（`Overload`）と同じ——読む値も閾値も共有し、違うのは上がる先の段だけ。

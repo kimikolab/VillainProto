@@ -1244,6 +1244,21 @@ public sealed class UnitTally
     public int PelletVolleys, PelletShots, PelletEncoreCapped;
 
     /// <summary>
+    /// 炸裂・爪痕・乱射（第281期・トメの転生の版 T1 ／ T2・<c>RuptureTrait</c> ／ <c>SprayTrait</c>）の<b>計数専用</b>。誰も読んで分岐しない。
+    /// 炸裂: <c>RuptureFires</c> 撃った数 ／ <c>RuptureCross</c> うち前列の規則の外（列越え）／ <c>RuptureLayerSum</c>・<c>RuptureLayerMax</c> 撃った時の層の和・最大 ／
+    /// <c>RuptureLayerHist</c>[層・9 以上は 9] ／ <c>RuptureDealt</c> 実際に減らした HP ／ <c>RuptureScar</c> 爪痕で削った最大HP ／ <c>RuptureKills</c> その一撃で倒した数 ／
+    /// <c>RuptureConsumed</c> 層を消した数。
+    /// 乱射: <c>SprayTurns</c> 乱射した手番 ／ <c>SprayFoe</c>・<c>SprayAlly</c> 敵・味方に当たった発 ／ <c>SprayPulled</c> 標に引かれた発 ／
+    /// <c>SprayFoeDealt</c>・<c>SprayAllyDealt</c> 減らした HP ／ <c>SprayAllyKills</c> 味方を倒した発。
+    /// 書き手の側: <c>MarkLayerAdds</c> 既に標のある敵に層を足した回数（逸らしの焦点・仇指し）。
+    /// </summary>
+    public int RuptureFires, RuptureCross, RuptureLayerSum, RuptureLayerMax, RuptureDealt, RuptureScar, RuptureKills, RuptureConsumed;
+    public int SprayTurns, SprayFoe, SprayAlly, SprayPulled, SprayFoeDealt, SprayAllyDealt, SprayAllyKills, MarkLayerAdds;
+    public long[]? RuptureLayerHist;
+    /// <summary>第281期・計数専用。爪痕で削った最大HPのターン別（[ターン・20 以上は 20]）。</summary>
+    public long[]? RuptureScarByTurn;
+
+    /// <summary>
     /// <b>この駒の <c>CurrentAttack</c> が出力（ダメージ量）に変換された回数</b>（第64期）。
     ///
     /// <para><see cref="Attacks"/>（<c>PerformAttack</c> を通った回数）では
@@ -2946,6 +2961,13 @@ public sealed class UnitTally
         BurnLit += o.BurnLit; BurnRelit += o.BurnRelit; BurnLitAlly += o.BurnLitAlly;
         ExtraSwings += o.ExtraSwings;   // 第178期（計数専用）
         PelletVolleys += o.PelletVolleys; PelletShots += o.PelletShots; PelletEncoreCapped += o.PelletEncoreCapped;   // 第277期（計数専用）
+        RuptureFires += o.RuptureFires; RuptureCross += o.RuptureCross; RuptureLayerSum += o.RuptureLayerSum;   // 第281期（計数専用）
+        RuptureLayerMax = Math.Max(RuptureLayerMax, o.RuptureLayerMax); RuptureDealt += o.RuptureDealt; RuptureScar += o.RuptureScar;
+        RuptureKills += o.RuptureKills; RuptureConsumed += o.RuptureConsumed;
+        SprayTurns += o.SprayTurns; SprayFoe += o.SprayFoe; SprayAlly += o.SprayAlly; SprayPulled += o.SprayPulled;
+        SprayFoeDealt += o.SprayFoeDealt; SprayAllyDealt += o.SprayAllyDealt; SprayAllyKills += o.SprayAllyKills; MarkLayerAdds += o.MarkLayerAdds;
+        if (o.RuptureLayerHist is { } rlh) { var h = RuptureLayerHist ??= new long[10]; for (int i = 0; i < h.Length; i++) h[i] += rlh[i]; }
+        if (o.RuptureScarByTurn is { } rst) { var h = RuptureScarByTurn ??= new long[21]; for (int i = 0; i < h.Length; i++) h[i] += rst[i]; }
         BurnTicks += o.BurnTicks; BurnTaken += o.BurnTaken; BurnSoaked += o.BurnSoaked;
         BurnDeaths += o.BurnDeaths; BurnAttacks += o.BurnAttacks;
         // FirstBurnTurn は**加算しない**。0（一度も点かなかった）を除いた最小値を取る

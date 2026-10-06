@@ -7055,6 +7055,7 @@ public sealed class BattleContext
         if (HeroShieldTrait.Holds(u)) _heroShieldLive = true;   // 第267期（勇者の庇い）
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
         if (u.HasTrait(TraitId.Pellet)) _pelletLive = true;   // 第277期（豆鉄砲の一振り・1発の打点・再行動の上限）
+        if (u.HasTrait(TraitId.Rupture)) _ruptureLive = true; // 第281期（炸裂の標の段・打点・乱射・敵の標の層）
         if (u.HasTrait(TraitId.FireArmor) || u.HasTrait(TraitId.Smolder)
             || u.HasTrait(TraitId.FireMend) || u.HasTrait(TraitId.FireFeed)) _fireArmorLive = true;   // 第234期（火の鎧・焼け残り）・第235期（火の癒し・焼き返し）
         if (u.HasTrait(TraitId.FireWard) || u.HasTrait(TraitId.FireWardAll)) _fireWardHolders.Add(u);             // 第238期（盾の配り）
@@ -8232,8 +8233,12 @@ public sealed class BattleContext
         //
         // **`Roll` を引かない**（執着・断ちと同じ）。候補が 2 体以上のときだけ Preferred の中の
         // PickOne が引くが、それは「同じ資格の駒が複数いたら乱数で選ぶ」既存の作法そのもの。
-        bool finisher = attacker.HasTrait(TraitId.Finisher);
-        UnitState? marked = finisher
+        // 第281期: 炸裂（新トメ）も同じ段で 100%・決定的に狙う。選好だけが違う（層が最も深い1体）。**保持者がいなければ比較1つで抜ける。**
+        bool rupture = _ruptureLive && attacker.HasTrait(TraitId.Rupture);
+        bool finisher = rupture || attacker.HasTrait(TraitId.Finisher);
+        UnitState? marked = rupture
+            ? RuptureTrait.Preferred(this, foes)
+            : finisher
             ? FinisherTrait.Preferred(this, foes)
             : PickOne(foes.Where(f => f.RawCounter(StatusKeys.Marked) > 0).ToList());
 
@@ -10162,6 +10167,21 @@ public sealed class BattleContext
         // 止めの代金（止めた砲火）の分母と拾い上げ。**盤面には触らない。**
         if (FinisherActive && pattern == AttackPattern.Single) NoteFinisherSwing(actor);
 
+        // 第281期（炸裂）: 攻 × 層 × 倍率。止めと同じく**攻撃の解決時**に掛ける（敵の標の +50% はこの後の `ApplyDamage`）。
+        // 爪痕と消費は `OnAfterAttack`（`RuptureAfter`）——ここでは「この一撃が炸裂か」と相手の HP を控えるだけ。
+        if (_ruptureLive && pattern == AttackPattern.Single && actor.HasTrait(TraitId.Rupture))
+        {
+            int layers = target.TeamId != actor.TeamId ? target.RawCounter(StatusKeys.Marked) : 0;
+            if (layers > 0)
+            {
+                atk *= layers * Finisher.Multiplier;
+                _ruptureTarget = target;
+                _ruptureHpBefore = target.Hp;
+                NoteRupture(actor, layers, !TargetPool(actor).Contains(target));
+            }
+            else _ruptureTarget = null;
+        }
+
         // 萎縮（第189期・クビの `Daunt`）。**攻撃1回＝`PerformAttack` 1回**で、`atk` を作り終えた直後に半分にして消す。
         // 突き・止め・薄刃の払い直しの**後**なので、この一撃の打点そのものが半分になる。§1 の +50%・萎縮 −30%・
         // ヒサの半減・層・軛・呪いの共有は `ApplyDamage` の中なので、**半分になった量に今までどおり掛かる**。
@@ -12017,6 +12037,9 @@ public sealed class BattleContext
         // 第223期: 段2 以上のセロの手番は乱れ撃ち（5本・的は乱数）。**保持者がいなければ比較1つで抜ける。**
         if (_evadeLive && actor.HasTrait(TraitId.Evade) && EvadeTrait.StageOf(actor) >= 2) { Barrage(actor); return; }
 
+        // 第281期: 炸裂の保持者の手番で、敵に標持ちが 0 なら乱射（札 `Spray` の保持者だけ）。**保持者がいなければ比較1つで抜ける。**
+        if (_ruptureLive && actor.HasTrait(TraitId.Spray) && !AnyMarkedFoe(actor)) { Spray(actor); return; }
+
         int hits = 1;
         foreach (Trait t in actor.Traits) hits = t.ModifyHitCount(actor, hits);
         if (hits < 1) hits = 1;   // 上限は特性の側。engine が保証するのは「1発は振る」だけ
@@ -12044,6 +12067,127 @@ public sealed class BattleContext
     // 「この一振りで再行動したか」（1振り1回の上限・`NoteEncore` が読む）の2つだけ。再行動の一振りは入れ子の別の枠（終われば外の枠に戻る）。
     // =====================================================================================
     bool _pelletLive;
+
+    // =====================================================================================
+    // 第281期 —— 炸裂・爪痕・乱射（`RuptureTrait` ／ `RuptureScarTrait` ／ `SprayTrait`・トメの転生の版 T1 ／ T2）と、敵側の標の層。
+    // **保持者がいなければ `_ruptureLive` の比較1つで全部抜ける**（層の書き込みも従来どおり 1 にする）。乱射だけが乱数を引く（保持者の戦だけ）。
+    // =====================================================================================
+    bool _ruptureLive;
+    UnitState? _ruptureTarget;
+    int _ruptureHpBefore;
+
+    /// <summary>敵側の標を層にする戦か（炸裂の保持者が盤上にいる）。書き手（逸らしの焦点・仇指し）は <see cref="LayerMark"/> を通す。</summary>
+    public bool MarkLayers => _ruptureLive;
+
+    /// <summary>
+    /// 標を書く（第281期）。<see cref="MarkLayers"/> が真で、相手が<b>敵陣営</b>（プレイヤーの相手）で既に標があるなら層を1つ足す。
+    /// それ以外は従来どおり 1 にする（＝ <c>SetCounter(Marked, 1)</c> と1ビットも違わない）。
+    /// </summary>
+    public void LayerMark(UnitState u, UnitState writer)
+    {
+        int cur = u.RawCounter(StatusKeys.Marked);
+        if (_ruptureLive && u.TeamId != PlayerTeam && cur > 0)
+        {
+            u.SetCounter(StatusKeys.Marked, cur + 1);
+            TallyOf(writer).MarkLayerAdds++;   // 計数のみ
+            return;
+        }
+        u.SetCounter(StatusKeys.Marked, 1);
+    }
+
+    bool AnyMarkedFoe(UnitState actor)
+    {
+        foreach (UnitState f in LivingMembers(Opponent(actor.TeamId)))
+            if (f.RawCounter(StatusKeys.Marked) > 0) return true;
+        return false;
+    }
+
+    void NoteRupture(UnitState actor, int layers, bool crossed)
+    {
+        UnitTally t = TallyOf(actor);
+        t.RuptureFires++;
+        if (crossed) t.RuptureCross++;
+        t.RuptureLayerSum += layers;
+        if (layers > t.RuptureLayerMax) t.RuptureLayerMax = layers;
+        (t.RuptureLayerHist ??= new long[10])[Math.Min(layers, 9)]++;
+        Log($"    {actor.Name} の炸裂（層 {layers} × {Finisher.Multiplier}）", LogKind.Trigger);
+    }
+
+    /// <summary>
+    /// 炸裂の後始末（<see cref="RuptureTrait.OnAfterAttack"/> だけが呼ぶ）。この一撃が炸裂なら、爪痕（札 <see cref="TraitId.RuptureScar"/>）と消費。
+    /// 爪痕は<b>実際に減らした HP</b>（肩代わり・上限・破片の後）と同量。下限 1・現在HPは新しい最大HPで切る（縫いの2行と同じ）。
+    /// </summary>
+    public void RuptureAfter(UnitState self, UnitState target)
+    {
+        if (!ReferenceEquals(_ruptureTarget, target)) return;
+        _ruptureTarget = null;
+        UnitTally t = TallyOf(self);
+        int lost = Math.Max(0, _ruptureHpBefore - Math.Max(0, target.Hp));
+        t.RuptureDealt += lost;
+        if (!target.IsAlive) t.RuptureKills++;
+        if (self.HasTrait(TraitId.RuptureScar) && target.IsAlive && lost > 0)
+        {
+            int maxBefore = target.MaxHp;
+            target.MaxHp = Math.Max(1, target.MaxHp - lost);
+            target.Hp = Math.Min(target.Hp, target.MaxHp);
+            t.RuptureScar += maxBefore - target.MaxHp;
+            (t.RuptureScarByTurn ??= new long[21])[Math.Clamp(_turn, 0, 20)] += maxBefore - target.MaxHp;
+            Log($"    {target.Name} に塞がらない爪痕が残った（最大HP {maxBefore} → {target.MaxHp}）", LogKind.Trigger);
+        }
+        if (!Finisher.Consume) return;
+        target.SetCounter(StatusKeys.Marked, 0);
+        t.RuptureConsumed++;
+        NoteMarkConsumed(target);   // 第150期の帳簿（計数のみ）
+    }
+
+    /// <summary>周期の版（T2）の術の手番。周期を持たない版と同じ一振り（乱射の分岐を含む）。</summary>
+    public void RuptureSkill(UnitState actor)
+    {
+        if (!actor.IsAlive) return;
+        SwingTurn(actor, null);
+    }
+
+    /// <summary>
+    /// 乱射（第281期・<see cref="SprayTrait"/>）。<see cref="SprayTrait.Shots"/> 発・1発 ＝ 攻 × <see cref="SprayTrait.Percent"/>%（床 1）。
+    /// 的は自分以外の生存全駒（<c>AllUnits</c> の並び）から等確率・毎発独立（<c>Roll</c>）。各発は標の段だけを通す
+    /// ——的の陣営に標持ちがいて、的がそれでなければ <see cref="MarkPullPercent"/>% で引かれる（引く先は層が深い → 席番号の順・乱数を引かない）。
+    /// <c>ApplyDamage</c> を直に呼ぶ（味方なら <c>isFriendlyFire</c>）。<c>PerformAttack</c> を通らないので庇い・介入・<c>OnAfterAttack</c> は走らない。標は消さない。
+    /// </summary>
+    void Spray(UnitState actor)
+    {
+        UnitTally t = TallyOf(actor);
+        t.SprayTurns++;
+        int dmg = Math.Max(1, actor.CurrentAttack * SprayTrait.Percent / 100);
+        NoteAttackRead(actor);
+        Log($"  {actor.Name} は指差す者がおらず、敵味方構わず乱射した", LogKind.FriendlyFire);
+        for (int i = 1; i <= SprayTrait.Shots; i++)
+        {
+            if (!actor.IsAlive) break;
+            var cands = AllUnits.Where(u => u.IsAlive && u != actor).ToList();
+            if (cands.Count == 0) break;
+            UnitState pick = cands.Count == 1 ? cands[0] : cands[Roll(cands.Count)];
+            UnitState? pull = null;
+            foreach (UnitState u in LivingMembers(pick.TeamId))
+            {
+                if (u == actor || u.RawCounter(StatusKeys.Marked) <= 0) continue;
+                if (pull is null || u.RawCounter(StatusKeys.Marked) > pull.RawCounter(StatusKeys.Marked)
+                    || (u.RawCounter(StatusKeys.Marked) == pull.RawCounter(StatusKeys.Marked) && u.Slot < pull.Slot)) pull = u;
+            }
+            if (pull is not null && pull != pick && Roll(100) < MarkPullPercent)
+            {
+                t.SprayPulled++;
+                Log($"    乱射の {i} 発目は指差された {pull.Name} へ逸れた", LogKind.Trigger);
+                pick = pull;
+            }
+            bool ally = pick.TeamId == actor.TeamId;
+            int before = pick.Hp;
+            Log($"    乱射（{i} 発目）が {pick.Name} へ（{dmg}）", ally ? LogKind.FriendlyFire : LogKind.Damage);
+            ApplyDamage(pick, dmg, actor, isFriendlyFire: ally, pattern: AttackPattern.Single);
+            int lost = Math.Max(0, before - Math.Max(0, pick.Hp));
+            if (ally) { t.SprayAlly++; t.SprayAllyDealt += lost; if (!pick.IsAlive) t.SprayAllyKills++; }
+            else { t.SprayFoe++; t.SprayFoeDealt += lost; }
+        }
+    }
 
     sealed class Volley
     {

@@ -751,7 +751,14 @@ public static class Presets
         // 役目は回帰の番人（燃焼×ノミの勝ち筋が壊れたら落ちる）。違いが出るのは W3（0 → 60%）と倒しT（2.50 → 2.00 ほか）。経緯は design/PHASE277_NOMI_REBIRTH.md。
         ("燃焼×刻み (ボルグ×ホタ×ノミ)", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg,
                                                   center: UnitCatalog.Lili, back1: UnitCatalog.Nomi,
-                                                  back3: UnitCatalog.Hota))
+                                                  back3: UnitCatalog.Hota)),
+        // **第281期に足した（64 行目）。標経済の行**——トメの転生（炸裂・爪痕・乱射）の検証行。ヒサ＝味方の半減標（矢面）／ ザン＝敵の標の供給（標持ちの味方を殴った敵を指差す）／ トメ＝消費。
+        // 顔ぶれは `仇討ち (ヒサ×ザン)` の**ドルガ → トメ**（1枚だけ違う・第21期 swap の作法）。第184期の診断台1（ムド・ボルグ）は全 120 席が第2〜5波 100%（情報セル 0）なので採らなかった。
+        // **席は `tome281 seat b`（120 通り × T1 × 帯A → 上位8を帯B）で選んだ**: 狙（ヒサの隣に壁のガルド）を満たす最上位＝探索4位（帯A 73.1・帯B 72.8・情報セル 3）。
+        // 1〜3位（73.6 ／ 73.5 ／ 73.2）は狙で落ちた（ヒサがガルドの隣にいない）。**規定のトメ（T0）のまま入れてある**——席は T1 で選んだ。経緯は design/PHASE281_TOME_REBIRTH.md。
+        ("標経済 (ヒサ×ザン×トメ)", Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.Gald,
+                                              center: UnitCatalog.Zan, back1: UnitCatalog.Gan,
+                                              back3: UnitCatalog.Hisa))
     };
 
     // 第92期の交差帯。**`CompareBuilds()` とは完全に別の入口**で、生成物も `docs/crossing.md` と分けてある
