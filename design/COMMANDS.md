@@ -850,6 +850,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 relic expand         # 第273期 本判定: 61 行 × 札12枚 × 枠5 × 本編第2〜5波・帯A 600..799 ／ 帯B 800..999・固有の勝者・橋の内訳・ゴミ（ベニ ／ ヴィオ ／ ウツ）・個性の保存（札種別）・符号反転（175 秒）
     dotnet run --project BattleSim -c Release 0 relic logrow <行名> <札> <枠0-4> <波1-4> [seed]   # 第273期 `compare` の行に札を付けた1戦のログ
     dotnet run --project BattleSim -c Release 0 relic shock276       # 第276期 帯電の足の再測: 62 行 × 帯電の足 × 枠5 × 本編第2〜5波・帯A 1000..1199 ／ 帯B 1200..1399・感電の行の全枠の発火（20 秒）
+    dotnet run --project BattleSim -c Release 0 relic grid smoke     # 第279期 煙試験（sweep が回す形）: `relic grid` を seed 20（本体 200・帯B の追試も 20）で。数字は測定に使わない——完走して同じ指紋を返すかだけ
+    dotnet run --project BattleSim -c Release 0 relic junk smoke     # 第279期 煙試験: `relic junk` を seed 20 で
+    dotnet run --project BattleSim -c Release 0 relic mainwin smoke  # 第279期 煙試験: `relic mainwin` を seed 20 で
+    dotnet run --project BattleSim -c Release 0 relic rejudge smoke  # 第279期 煙試験: `relic rejudge` を seed 20（帯A ／ 帯B とも）で
+    dotnet run --project BattleSim -c Release 0 relic expand smoke   # 第279期 煙試験: `relic expand` を seed 20（帯A ／ 帯B とも）で
     dotnet run --project BattleSim -c Release 0 som276 run           # 第276期 ソムの転生: 検証行 A ／ B × 版 S0 ／ S1 ／ S1x ／ S1p ／ S2 ／ S2′ × 本編第2〜5波・ボス規定形・チェック波（B3-桁 ／ W3-割合）・機構の実測（5 秒）
     dotnet run --project BattleSim -c Release 0 som276 digest        # 第276期 旧ソム（`SomS0`）を含む戦の台本の指紋（背かれの切り出し・規定化の前後で一致が門）
     dotnet run --project BattleSim -c Release 0 som276 bands         # 第276期 感電の行の第2〜5波を 200 seed の帯ごとに（参考）
@@ -859,6 +864,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 nomi277 seat         # 第277期 燃焼×ノミの行の席: ボルグ入りの `compare` 行の火の駒以外の全枠に N0 ／ N1 を差して本編第2〜5波（情報セル・被弾の燃焼・25 秒）
     dotnet run --project BattleSim -c Release 0 nomi277 check        # 第277期 自己検査（保持者 0・N0 の写しの台本一致・弾数・再行動の上限・刻みの回数・決定性・verbose・9 項目）
     dotnet run --project BattleSim -c Release 0 nomi277 log <行 0..8> <N0|N1|N2> <2..5|ボス|B3|W3> [seed]   # 第277期 1戦のログ
+    dotnet run --project BattleSim -c Release 0 tou279 run        # 第279期 トウの転生: トウ在席の `compare` 2 行・感電の行の2形（E1 後3 ミオ → トウ ／ E2 中央 ソム → トウ）・移動の台2つ（M1 ／ M2）・感電の行そのまま × 版 T0 ／ T1 ／ T2 × 本編第2〜5波・ボス・B3 ／ W3 × seed 0..199。本体は `Modes/Tou279.cs`
+    dotnet run --project BattleSim -c Release 0 tou279 bandb      # 第279期 帯B（seed 200..599）の追試: 7 台 × 版 × 本編第2〜5波の勝率
+    dotnet run --project BattleSim -c Release 0 tou279 relic      # 第279期 帯電の足の再測: 移動の台（M0 ／ M1 ／ M2）・感電の行の2形・責め苦 × 版 × 札の枠5 × 本編第2〜5波・帯A 1400..1599 ／ 帯B 1600..1799（固有の勝者と発火）
+    dotnet run --project BattleSim -c Release 0 tou279 check      # 第279期 自己検査（T0 の写しが規定と台本一致・粉の付与と漏れ・旧の痺れ粉・カタのいない台でも感電で痺れる・決定性・verbose）
+    dotnet run --project BattleSim -c Release 0 tou279 log <台 0..6> <版 T0|T1|T2> <波 2..5|ボス|B3|W3> [seed]   # 第279期 1戦のログ
     dotnet run --project BattleSim -c Release 0 relic log <台> <札> <規則> [seed]   # 第270期 1戦のログ（札は日本語名・規則は 攻 ／ 前）
     dotnet run --project BattleSim -c Release 0 checkwave check      # 自己検査（写しの台本一致・癒し手 ＝ 従軍司祭＋札1枚・保持者 0・回復は状態を消さない・刻みの後・軛に切られない・ボスの攻撃力・verbose・乱数・動じない札・重装兵の体の癒し手・全体のボス・400/300 の癒し手・天井 +11・割合の回復・7台目の毒台・規定の組・26 項目）
     dotnet run --project BattleSim -c Release 0 checkwave log <台> <波> [seed]   # 1戦のログ（台は 燃焼 T3-244 ／ 燃焼 T3-255 ／ 移動 ／ 雷 ／ 毒 ／ 混ぜ-255・波は B3-桁 ／ W3-割合 ／ W2-対照 ／ W2-50後 ／ W2-50奥 ／ B2-全4 ／ B2-半4、第261期の版は `261:`・第260期の版は `260:` を前に付ける）
@@ -1056,3 +1066,6 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 sweep full nocache   # 第278期 指紋照合を使わず全部走らせる（キャッシュ `.sweep/cache.tsv` は更新する）。`j=N`（または環境変数 SWEEP_JOBS）で並列（**早見用・上限の判定が直列と揃わない**。既定は `j=1` の直列）
     dotnet run --project BattleSim -c Release 0 sweep check     # 第278期 自己検査（鍵の作り方: 同じ入力で同じ鍵・BattleCore 1文字で全本・器具1本で辿る系統だけ・design で読む本だけ・振り分け1行で生ソースを読む本だけ）。子プロセス0本
     dotnet run --project BattleSim -c Release 0 sweep list      # 走らせる一覧だけ（戦闘0回・子プロセス0本）
+    dotnet run --project BattleSim -c Release 0 sweep frozen    # 第279期 凍結庫の一覧と封印（`design/SWEEP_FREEZER.md`・子プロセス0本）。凍結 70 本 ／ audit が正の生成器 2 本（layout ／ reseat）／ 煙試験に置き換えた relic 5 本は sweep の一覧から外れる。既定の上限は 150 秒・`roster audit` は 600 秒・**上限は異常に数える**
+    dotnet run --project BattleSim -c Release 0 sweep seal [上限秒] [j=N] [群か絞り込み]   # 第279期 凍結した本を上限つきで完走させ、出力の指紋を `design/freezer/seals.tsv` に封印する（完走した出力は `design/freezer/out/`）
+    dotnet run --project BattleSim -c Release 0 sweep thaw <絞り込み> [上限秒]  # 第279期 解凍: 凍結した本を走らせて封印と照合（既定の上限 7200 秒・出力は `.sweep/thaw/`）。不一致なら git bisect で原因のコミットを探す

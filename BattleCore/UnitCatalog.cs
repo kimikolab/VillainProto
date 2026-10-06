@@ -644,6 +644,58 @@ public static class UnitCatalog
         Flavor = "自分の粉で味方を眠らせた前科がある。"
     };
 
+    /// <summary>
+    /// 旧トウ（第278期までの規定・T0・痺れ粉）。<b>第279期の転生の対照</b>。数値・札・文は <see cref="Tou"/> と同じ（規定はまだ T0 のまま）。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。経緯は design/PHASE279_TOU_REBIRTH.md。
+    /// </summary>
+    public static readonly UnitDef TouT0 = new()
+    {
+        Id = "tou",
+        Name = "痺れ粉のトウ",
+        MaxHp = 46,
+        Attack = 3,
+        Speed = 11,
+        Advances = false,
+        Traits = new[] { TraitId.Paralyze },
+        PlusText = "攻撃した相手を高確率で1ターン動けなくする",
+        MinusText = "自分の火力はほぼ無い。粉が尽きれば何も残らない",
+        Flavor = "自分の粉で味方を眠らせた前科がある。"
+    };
+
+    /// <summary>
+    /// 第279期 T1（帯電の粉・<see cref="TraitId.ChargedPowder"/>）。殴った相手に感電を付け、<b>粉は隣の味方にも漏れる</b>（<see cref="TraitId.ChargedPowderLeak"/>）。
+    /// 感電が弾けた駒は 50% で痺れる（<see cref="TraitId.ShockStunHalf"/>・カタと同じ S3——持たないとカタのいない戦で誰も痺れない）。
+    /// 体は T0 のまま（振らない）。<b>名前・フレーバーの最終はポン</b>（名前は仮に T0 のまま・フレーバーの前科はそのまま機構になった）。
+    /// </summary>
+    public static readonly UnitDef TouT1 = new()
+    {
+        Id = "tou",
+        Name = "痺れ粉のトウ",
+        MaxHp = 46,
+        Attack = 3,
+        Speed = 11,
+        Advances = false,
+        Traits = new[] { TraitId.ChargedPowder, TraitId.ChargedPowderLeak, TraitId.ShockStunHalf },
+        PlusText = "攻撃した相手に帯電の粉を付ける。帯電した駒は一撃で弾けて隣へ放電し、半々の確率で痺れて次の手番を失う",
+        MinusText = "粉は隣の味方にも漏れ、味方も帯電する / 自分の火力はほぼ無い",
+        Flavor = "自分の粉で味方を眠らせた前科がある。"
+    };
+
+    /// <summary>第279期 T2（漏れの代金の対照）。T1 から <see cref="TraitId.ChargedPowderLeak"/> だけを抜いた形（敵への付与のみ）。</summary>
+    public static readonly UnitDef TouT2 = new()
+    {
+        Id = "tou",
+        Name = "痺れ粉のトウ",
+        MaxHp = 46,
+        Attack = 3,
+        Speed = 11,
+        Advances = false,
+        Traits = new[] { TraitId.ChargedPowder, TraitId.ShockStunHalf },
+        PlusText = "攻撃した相手に帯電の粉を付ける。帯電した駒は一撃で弾けて隣へ放電し、半々の確率で痺れて次の手番を失う",
+        MinusText = "自分の火力はほぼ無い（対照: 粉は味方に漏れない）",
+        Flavor = "（第279期の対照）"
+    };
+
     public static readonly UnitDef Beni = new()
     {
         Id = "beni",

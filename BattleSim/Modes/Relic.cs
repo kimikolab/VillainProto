@@ -20,10 +20,20 @@ static partial class RelicDiag
 {
     const int Seeds = 200;
     const int Window = CW.BossTurns;
+    /// <summary>煙試験（第279期・`smoke`）の seed 数。</summary>
+    const int SmokeSeeds = 20;
 
     public static void Run(string[] args, int stageIndex)
     {
         string mode = args.Length > 2 ? args[2] : "check";
+        // 第279期: 煙試験（`relic grid smoke` など・sweep が回す形）。seed を 200 → 20 に縮める。**数字は測定に使わない**——完走して同じ指紋を返すかだけを見る。
+        if (args.Length > 3 && args[^1] == "smoke")
+        {
+            GridSeeds = ConfirmSeeds = SmokeSeeds;
+            args = args[..^1];
+            Console.WriteLine($"**煙試験（smoke）: seed {SmokeSeeds}（本体は 200）。数字は測定に使わない。**");
+            Console.WriteLine();
+        }
         switch (mode)
         {
             case "p0": P0(); return;

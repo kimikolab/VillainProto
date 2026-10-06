@@ -627,6 +627,10 @@ public enum TraitId
     Pellet,      // 豆鉄砲: 手番の攻撃が「1 点 × 攻撃力の回数」の連撃になる（回数は `ModifyHitCount`・1発の打点は engine `PerformAttackBody` の1行・再行動は1振り1回）
     CarveOnce,   // 刻みは一振りに1回（N1）: 豆鉄砲の一振りでは1発目だけがなぞって刻む（**札そのものは挙動を持たない**・`CarveTrait` が読む）
 
+    // --- 第279期で足した札（トウの転生の版。`UnitCatalog.TouT1` ／ `TouT2` だけが持つ） ---
+    ChargedPowder,     // 帯電の粉: 手番の一撃の後、主目標に感電（`MarkShock`・二値・乱数を引かない）。即時の痺れ（`Paralyze`）の作り直し
+    ChargedPowderLeak, // 粉の漏れ（T1）: 粉を撒くたび、隣の味方すべてにも感電（**札そのものは挙動を持たない**・`ChargedPowderTrait` が読む・外せば T2）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -5396,6 +5400,35 @@ public sealed class ParalyzeTrait : Trait
         target.SetCounter(StatusKeys.Stun, 1);
         ctx.Log($"    {target.Name} の体が痺れて動かない", LogKind.Status);
     }
+}
+
+/// <summary>
+/// 帯電の粉（第279期・痺れ粉のトウの転生の版 T1 ／ T2）。手番の一撃の後（<c>OnAfterAttack</c>・主目標に1度）、主目標に感電を付ける
+/// （<see cref="BattleContext.MarkShock"/>・感電は二値なので「感電 1」＝ 付ける）。<b>止めるのは感電が弾けたとき</b>——即時の痺れ（<see cref="ParalyzeTrait"/>）を、
+/// 弾けて初めて止まる遅延の痺れに置き換えた。痺れるかは盤面の S1〜S3 の札で決まるので、版は <see cref="TraitId.ShockStunHalf"/> も一緒に持つ（カタと同じ S3）。
+/// <para><b>マイナス</b>（<see cref="TraitId.ChargedPowderLeak"/> の保持者のとき）: 粉を撒くたび、隣の生きている味方すべてにも感電が付く
+/// （カタの <see cref="ThunderLeakTrait"/> と同じ形・「自分の粉で味方を眠らせた前科」を機構にしたもの）。</para>
+/// <b>乱数を引かない。</b> 状態は持たない（感電は <c>StatusKeys.Shock</c>）。
+/// </summary>
+public sealed class ChargedPowderTrait : Trait
+{
+    public override TraitId Id => TraitId.ChargedPowder;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (ctx.MarkShock(target, self))
+            ctx.Log($"    {target.Name} に帯電の粉が付いた", LogKind.Status);
+        if (!self.HasTrait(TraitId.ChargedPowderLeak)) return;
+        foreach (UnitState a in ctx.LivingMembers(self.TeamId))
+            if (a != self && FormationRules.AreAdjacent(self, a) && ctx.MarkShock(a, self))
+                ctx.Log($"    粉が漏れて {a.Name} も帯電した", LogKind.FriendlyFire);
+    }
+}
+
+/// <summary>粉の漏れ（第279期・T1）。<b>札そのものは挙動を持たない</b>（<see cref="ChargedPowderTrait"/> が保持を読むだけ）。外せば T2。</summary>
+public sealed class ChargedPowderLeakTrait : Trait
+{
+    public override TraitId Id => TraitId.ChargedPowderLeak;
 }
 
 /// <summary>
@@ -16122,6 +16155,8 @@ public static class TraitCatalog
         new BetrayedShockTrait(TraitId.BetrayedShockThunderPop, self: true, spread: false, key: BetrayedShockTrait.ThunderPopKey), // 第276期（S1p）
         new PelletTrait(),      // 第277期（N1 ／ N2）
         new CarveOnceTrait(),   // 第277期（N1）
+        new ChargedPowderTrait(),      // 第279期（T1 ／ T2）
+        new ChargedPowderLeakTrait(),  // 第279期（T1）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

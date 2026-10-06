@@ -418,6 +418,8 @@
 | `BetrayedShockThunderPop` | - |
 | `Pellet` | 刻みのノミ |
 | `CarveOnce` | 刻みのノミ |
+| `ChargedPowder` | - |
+| `ChargedPowderLeak` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

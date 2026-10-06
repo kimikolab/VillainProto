@@ -557,6 +557,7 @@ if (focusId == "bosswave") { BossWaveDiag.Run(args, stageIndex); return; }   // 
 if (focusId == "relic") { RelicDiag.Run(args, stageIndex); return; }   // 第270期
 if (focusId == "som276") { Som276Diag.Run(args, stageIndex); return; }   // 第276期
 if (focusId == "nomi277") { Nomi277Diag.Run(args, stageIndex); return; }   // 第277期
+if (focusId == "tou279") { Tou279Diag.Run(args, stageIndex); return; }   // 第279期
 if (focusId == "shock") { ShockDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 if (focusId == "shockdigest") { ShockDigestDiag.Run(args.Length > 2 ? args[2] : "k0", args.Length > 3 ? args[3] : ""); return; }
 // debuff モード（第189期） —— デバッファー3枚の転生（ネル・クビ・ハネ）。本体は `Modes/Debuff*.cs`。
@@ -1548,6 +1549,8 @@ static class TraitKeyMap
         [TraitId.BetrayedShockThunderPop] = Array.Empty<int>(),                   // 第276期（S1p）
         [TraitId.Pellet]      = Array.Empty<int>(),                                // 第277期（豆鉄砲・回数の窓口。通貨を書かない）
         [TraitId.CarveOnce]   = Array.Empty<int>(),                                // 第277期（N1・刻みの旗）
+        [TraitId.ChargedPowder]     = Array.Empty<int>(),                          // 第279期（帯電の粉・感電は専用キー）
+        [TraitId.ChargedPowderLeak] = Array.Empty<int>(),                          // 第279期（T1・感電は専用キー）
         // 敵側の2枚（第94期 (T2) の観測で出た欠落）。**`UnitCatalog.All` の 51 体は1枚も持たない**ので、
         // 第80〜83期のロスター側の派生値は動かない（`KeysOf` が変わるのは敵の駒だけ）。
         [TraitId.Condemn]     = new[] { UnitTally.CarryStun },     // 観測（断罪）
@@ -1614,6 +1617,8 @@ static class TraitHookMap
         [TraitId.BetrayedShockThunderPop] = new[] { "OnTurnStart", Engine },   // 第276期（S1p・起爆の判定）
         [TraitId.Pellet]      = new[] { "ModifyHitCount", Engine },             // 第277期（弾数・1発の打点は PerformAttackBody・再行動の上限は NoteEncore）
         [TraitId.CarveOnce]   = new[] { Engine },                              // 第277期（CarveTrait が VolleyShotOf と合わせて読む）
+        [TraitId.ChargedPowder]     = new[] { "OnAfterAttack" },               // 第279期（MarkShock・起爆と痺れは engine）
+        [TraitId.ChargedPowderLeak] = Array.Empty<string>(),                       // 第279期（ChargedPowderTrait.OnAfterAttack で読まれる札）
         [TraitId.Venom]       = new[] { "OnDamaged" },
         [TraitId.Thorns]      = new[] { "OnDamaged" },
         [TraitId.Marker]      = new[] { "OnBattleStart" },

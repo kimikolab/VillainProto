@@ -173,6 +173,8 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.BetrayedShockThunderPop] = (HcBothL, "S1 で、纏った餌は雷でも弾ける（第276期）"),
         [TraitId.Pellet]      = (HcBothL, "攻撃力を連撃の回数に変える——手数が増えるのと、1発が 1 点に潰れるのが1つの動作（第277期）"),
         [TraitId.CarveOnce]   = (HcMinusL, "豆鉄砲の一振りで刻むのは1発目だけ（第277期・N1）"),
+        [TraitId.ChargedPowder]     = (HcPlusL,  "殴った相手に感電を付けるだけ（第279期・T1 ／ T2）。止めるのは弾けたとき（S3 の札と一緒に持つ）"),
+        [TraitId.ChargedPowderLeak] = (HcMinusL, "粉を撒くたび隣の味方に感電が付くだけ。粉の代金で、外せば T2 になる（第279期）"),
         // 第132期 段0-a: 第128期に `GradeStep` を ドルガ に載せたとき、この表に足さなかったので
         // `checkup` が「分類の無い札がある」で**3期ぶん止まっていた**（第131期に判明）。
         // 分類は積み過ぎ（`Overload`）と同じ——読む値も閾値も共有し、違うのは上がる先の段だけ。

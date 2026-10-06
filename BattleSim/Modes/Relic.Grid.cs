@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -17,9 +17,11 @@ using static Common;
 // =====================================================================================
 static partial class RelicDiag
 {
-    const int GridSeeds = 200;
+    // 第279期: const → static。`smoke`（sweep の煙試験）のときだけ `Run` が 1/10 に縮める——測定の本体（引数なし）は 200 のまま。
+    static int GridSeeds = 200;
     /// <summary>固有の勝者の追試に使う帯（(G14): 席の追試は帯B でよい・選抜に使った帯A とは独立）。</summary>
-    const int ConfirmFrom = 200, ConfirmSeeds = 200;
+    const int ConfirmFrom = 200;
+    static int ConfirmSeeds = 200;
     /// <summary>「有意に正」: 帯A で 5 勝以上（0/200 との片側フィッシャーで p ≈ 0.03）かつ 帯B で素に対し片側フィッシャー p &lt; 0.05。</summary>
     const int MinWinsA = 5;
 
