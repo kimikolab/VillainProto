@@ -29,7 +29,7 @@ engine の窓口に足したものは `design/ENGINE_HOOKS.md` へ、新しい�
                     `Map11.cs` / `Map11Orders.cs` には Godot の型が1つも入っていない（頭なしの門 `--map11-verify` が同じクラスを回す）。
                     再生側が知らない `BattleEventKind` は素通りする。経緯は `design/DEMOAPP_HISTORY.md`
     docs/           BattleSim が吐く生成物（balance / units / chain / ablation / pulse / engage / layout / reseat /
-                    crossing / rules / watch / quality / stock / harm / roster_audit）。**手で編集しない。** 整合は `audit` で見る。
+                    crossing / rules / watch / quality / stock / harm / roster_audit / elite）。**手で編集しない。** 整合は `audit` で見る。
                     `units.md` の列は末尾側に足す（`checkup check` が 2〜4 列目を位置で読む）。
                     `balance.md` に節を足してはいけない（行を位置で読む自己検査が壊れる——だから `quality.md` は別ファイル）。
                     ファイルごとの由来は `design/DEMOAPP_HISTORY.md`
@@ -320,13 +320,13 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 
 **本文と索引は `design/RULES_*.md`**（`RULES_001_097.md` / `RULES_098_173.md` / `RULES_174_242.md` / `RULES_243_.md`・索引の表は `design/RULES_INDEX.md`）。
 **ID（`R001`〜）で grep すること。ID は永続で、欠番になっても再利用しない。**
-新しい則は `RULES_243_.md` の末尾に次の ID（`R380` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
+新しい則は `RULES_243_.md` の末尾に次の ID（`R381` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
 
 ## 現状値
 
 **期ごとの報告は `design/HISTORY_PHASES.md`**（この節から逐語で移した。以後の期はそちらの冒頭に足し、ここのブロックは差し替える）。
 
-**最後に動かした期: 第283期**（**A2 の確定（規定のトメ ＝ T1n・消費廃止）＋ ボスの標台の寿命探索（固定枠 トメ ＋ ザン・探索枠3・ヒーラー ≦ 1）**。報告は `design/PHASE283_BOSS_MARK_SQUAD.md`）。第282期のトメ A 確定と T1n は `design/PHASE282_TOME_NO_CONSUME.md`、第281期のトメの転生は `design/PHASE281_TOME_REBIRTH.md`、第280期の sweep 現役網（57 本）は `design/PHASE280_SWEEP_REBUILD.md`、第279期の凍結庫とトウの転生は `design/PHASE279_TOU_REBIRTH.md`、第277期のノミの転生は `design/PHASE277_NOMI_REBIRTH.md`。転生段の棚卸しは `design/PHASE275_ROSTER_INVENTORY.md`、レリック段のまとめは `design/RELIC_SUMMARY.md`。
+**最後に動かした期: 第284期**（**精鋭波（HP 1000% ／ 攻 300%）を評価軸として正式化・A4**。盤面は動かしていない。報告は `design/PHASE284_ELITE_WAVE.md`）。第283期の A2 確定とボスの標台は `design/PHASE283_BOSS_MARK_SQUAD.md`、第282期のトメ A 確定と T1n は `design/PHASE282_TOME_NO_CONSUME.md`、第281期のトメの転生は `design/PHASE281_TOME_REBIRTH.md`、第280期の sweep 現役網（57 本）は `design/PHASE280_SWEEP_REBUILD.md`、第279期の凍結庫とトウの転生は `design/PHASE279_TOU_REBIRTH.md`、第277期のノミの転生は `design/PHASE277_NOMI_REBIRTH.md`。転生段の棚卸しは `design/PHASE275_ROSTER_INVENTORY.md`、レリック段のまとめは `design/RELIC_SUMMARY.md`。
 **最後に `compare` が動いた期: 第283期**（規定のトメ T1 → T1n。動いたのはトメ在席の 止め 第5波 93.5 → 93.0 と 標経済 第4波 99.0 → 100・第5波 92.5 → 93.5 だけ・ほかの 62 行 310 セルは 0 件）。
 
     編成:       64 行（`CompareBuilds()`・第281期に 63 → 64）＋ 交差帯 12 行（`CrossBuilds()`）
@@ -346,6 +346,7 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 - **`UnitCatalog.All` は「編成に選べる 52 枚」の定義であって `Presets` が参照できる集合ではない。** 外した駒は `Retired` へ移し、辞書のキーと `Id` の引きは `Everyone`（`All ∪ Retired`）を使う。`All` / `Retired` / `Presets` に触る期は `sweep` を受け入れ条件に入れる（(G17)）。測って棄却した駒の定義は対照として残置する（`All` にも `Presets` にも入れない）。
 - **駒を転生させるときは旧の駒を `UnitCatalog.<名前><版>` に残し、その駒を使う過去の器具を旧に固定する**（台本の指紋 `shockdigest` / 各 `digest` が規定化の前後で全行一致するのが門）。
 - **採用で既定が動いたら、その期のうちに診断の対照（V0）を作り直す**（放置すると V0 と V1 が同じものを指す）。
+- **軸テコ入れの期は `docs/elite.md`（精鋭波・素の構成 × HP 1000% ／ 攻 300%・波ルールなし）の該当行を卒業指標として見る**（第284期 A4）。精鋭は評価軸で本編の波ではない——`Stages` / `TestStages` に載せない。
 
 ## コマンド
 

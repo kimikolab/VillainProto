@@ -888,6 +888,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 boss283 ctl       # 第283期 代表の台 × トメの版（T1n ／ T1 ／ T1-s ／ T0 ／ ドルガ）・中身（崩れ・トメの死亡・回復）・余裕（隊の全員の最大HP × 0.5〜2.0）（5 秒）
     dotnet run --project BattleSim -c Release 0 boss283 check     # 第283期 自己検査（書き手の分類の漏れ 0・ヒーラー 2 枚の組 0・ツギとリリ・席 120・規定 T1n・軽い口と詳しい口の一致・第282期の爪痕 1,400 の再現・決定性・9 項目）
     dotnet run --project BattleSim -c Release 0 boss283 log <Id×5 をカンマで（前1,前3,中央,後1,後3）> [seed]   # 第283期 ボス戦1戦のログ（例 `golm,hisa,zan,tome,ban`）
+    dotnet run --project BattleSim -c Release 0 elite > docs/elite.md   # 第284期 精鋭波（HP 1000% ／ 攻 300%）: `compare` 全行 × {精鋭・五（新兵×5）, 精鋭・九（農兵×9）} × seed 0..199（勝率・決着T・打ち切り・全員生存）＋ 本編第5波との r・解法の軸・五と九の割れ ＋ 参考の刻み 1000/200・1000/250（約 10 秒）。本体は `Modes/Elite.cs`・**`docs/` の標準の生成物**
+    dotnet run --project BattleSim -c Release 0 elite p0          # 第284期 Phase 0: 桁と写しのキャッシュ・打ち切りの値・決定性（seed 0..19）・乱射の累積（止め改 × 精鋭・五/九 × seed 0）
+    dotnet run --project BattleSim -c Release 0 elite poison [seed]   # 第284期 §5-3: 毒 (グザ×ミオ×ラウ) × 精鋭・九 の1本（ターンごとの層・毒の刻み・崩れ）と 115/115・精鋭・五 の対照
+    dotnet run --project BattleSim -c Release 0 elite check       # 第284期 自己検査（構成 ＝ TestStages・100/100 と 115/115 で `nine` の口と全戦一致・§7 の照合 17 行 × 2 列・既定の写しが不変・TestStages は3本のまま）
     dotnet run --project BattleSim -c Release 0 relic log <台> <札> <規則> [seed]   # 第270期 1戦のログ（札は日本語名・規則は 攻 ／ 前）
     dotnet run --project BattleSim -c Release 0 checkwave check      # 自己検査（写しの台本一致・癒し手 ＝ 従軍司祭＋札1枚・保持者 0・回復は状態を消さない・刻みの後・軛に切られない・ボスの攻撃力・verbose・乱数・動じない札・重装兵の体の癒し手・全体のボス・400/300 の癒し手・天井 +11・割合の回復・7台目の毒台・規定の組・26 項目）
     dotnet run --project BattleSim -c Release 0 checkwave log <台> <波> [seed]   # 1戦のログ（台は 燃焼 T3-244 ／ 燃焼 T3-255 ／ 移動 ／ 雷 ／ 毒 ／ 混ぜ-255・波は B3-桁 ／ W3-割合 ／ W2-対照 ／ W2-50後 ／ W2-50奥 ／ B2-全4 ／ B2-半4、第261期の版は `261:`・第260期の版は `260:` を前に付ける）
