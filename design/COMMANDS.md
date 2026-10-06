@@ -876,6 +876,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 tome281 seat [a|b|c]   # 第281期 新行の席（120 通り × T1 × 帯A → 上位8を帯B）。b ＝ `仇討ち (ヒサ×ザン)` のドルガ → トメ（採った顔ぶれ）
     dotnet run --project BattleSim -c Release 0 tome281 check     # 第281期 自己検査（T0 の写し・診断の口・層の分布・消費・乱射の宛先・爪痕と最大HP・決定性・verbose・12 項目）
     dotnet run --project BattleSim -c Release 0 tome281 log <台 0..4> <版 T0|T1|T2|T1-s|T1-c> <波 2..5|ボス> [seed]   # 第281期 1戦のログ
+    dotnet run --project BattleSim -c Release 0 tome282 run       # 第282期 段1: トメ在席の `compare` 3 行 ＋ 標台S ＋ 新台（標経済の前3 ガルド → ドハ）× 版 T0 ／ T1（規定）／ T1n（消費廃止）× 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome282.cs`
+    dotnet run --project BattleSim -c Release 0 tome282 bandb     # 第282期 段1: 帯B（seed 200..599）の追試
+    dotnet run --project BattleSim -c Release 0 tome282 wall      # 第282期 段2 の Phase 0: 標経済の前3 → 壁の候補 8 枚 × ボス・本編（ザンの仇指しが立つか・採る条件は固定）
+    dotnet run --project BattleSim -c Release 0 tome282 boss      # 第282期 段2: ボスの到達度 2×2（{旧台 ガルド, 新台 ドハ} × {T1, T1n}）＋ 標台S ＋ 寿命だけを伸ばした仮想の版
+    dotnet run --project BattleSim -c Release 0 tome282 feed      # 第282期 段3: 乱射の餌化（ムド・ドハ・ウツ同席・ソラの供給が途中で断たれる台・帯B）
+    dotnet run --project BattleSim -c Release 0 tome282 check     # 第282期 自己検査（規定 ＝ T1・T1n ＝ T1-c の台本一致・層化のゲート・`CompareT0`・9 項目）
+    dotnet run --project BattleSim -c Release 0 tome282 log <台 0..4> <版 T0|T1|T1n> <波 2..5|ボス> [seed]   # 第282期 1戦のログ
     dotnet run --project BattleSim -c Release 0 relic log <台> <札> <規則> [seed]   # 第270期 1戦のログ（札は日本語名・規則は 攻 ／ 前）
     dotnet run --project BattleSim -c Release 0 checkwave check      # 自己検査（写しの台本一致・癒し手 ＝ 従軍司祭＋札1枚・保持者 0・回復は状態を消さない・刻みの後・軛に切られない・ボスの攻撃力・verbose・乱数・動じない札・重装兵の体の癒し手・全体のボス・400/300 の癒し手・天井 +11・割合の回復・7台目の毒台・規定の組・26 項目）
     dotnet run --project BattleSim -c Release 0 checkwave log <台> <波> [seed]   # 1戦のログ（台は 燃焼 T3-244 ／ 燃焼 T3-255 ／ 移動 ／ 雷 ／ 毒 ／ 混ぜ-255・波は B3-桁 ／ W3-割合 ／ W2-対照 ／ W2-50後 ／ W2-50奥 ／ B2-全4 ／ B2-半4、第261期の版は `261:`・第260期の版は `260:` を前に付ける）

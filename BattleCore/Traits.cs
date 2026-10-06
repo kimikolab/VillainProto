@@ -634,6 +634,7 @@ public enum TraitId
     // --- 第281期で足した札（トメの転生の版。`UnitCatalog.TomeT1` ほかだけが持つ） ---
     Rupture,     // 炸裂: 層が最も深い敵の標持ちへ（列越え）、攻 × 層 × `FinisherRule.Multiplier` で殴り、層を消す（判定は engine の標の段・`PerformAttackBody`・`RuptureAfter`）。保持者がいる戦だけ敵の標が層になる
     RuptureScar, // 爪痕: 炸裂で実際に減らした HP と同量、相手の最大HPを恒久に削る（**札そのものは挙動を持たない**・`RuptureAfter` が読む・外せば T1-s）
+    RuptureKeep, // 層を残す（第282期・T1n）: 炸裂の後に層を消さない（**札そのものは挙動を持たない**・`RuptureAfter` が読む・外せば T1）
     Spray,       // 乱射（マイナス）: 敵に標持ちが 0 の手番は、自分以外の生存全駒（敵味方）へ 攻/2 × 3 発（**札そのものは挙動を持たない**・engine `SwingTurnBody` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -4754,6 +4755,12 @@ public sealed class RuptureTrait : Trait
 public sealed class RuptureScarTrait : Trait
 {
     public override TraitId Id => TraitId.RuptureScar;
+}
+
+/// <summary>層を残す（第282期・T1n）。<b>札そのものは挙動を持たない</b>（<see cref="BattleContext.RuptureAfter"/> が保持を読み、層を消さない）。外せば T1。</summary>
+public sealed class RuptureKeepTrait : Trait
+{
+    public override TraitId Id => TraitId.RuptureKeep;
 }
 
 /// <summary>
@@ -16233,6 +16240,7 @@ public static class TraitCatalog
         new RuptureTrait(),            // 第281期（T1 ／ T2）
         new RuptureScarTrait(),        // 第281期（T1 ／ T2）
         new SprayTrait(),              // 第281期（T1 ／ T2）
+        new RuptureKeepTrait(),        // 第282期（T1n）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

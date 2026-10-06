@@ -33,7 +33,7 @@ static class FinisherDiag
 //     dotnet run --project BattleSim -c Release 0 finisher alt      # 機構の帰属を別 seed 帯で追試
 public static void Run(string[] args, int stageIndex)
 {
-    var fnBuilds = CompareBuilds();
+    var fnBuilds = CompareT0;   // 第282期: 旧トメに固定（行の中の規定のトメ → T0）
     IReadOnlyList<EnemyCatalog.Stage> fnStages = EnemyCatalog.Stages;
     const int FnSeeds = 200;   // compare / spread / divert / goad と揃える
     int FnMain = FinisherRule.Default.Multiplier;
@@ -41,7 +41,7 @@ public static void Run(string[] args, int stageIndex)
 
     string fnMode = args.Length > 2 ? args[2] : "";
 
-    static bool FnHasTome(Formation f) => f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Tome));
+    static bool FnHasTome(Formation f) => f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.TomeT0));
 
     var fnTargets = fnBuilds.Where(b => FnHasTome(b.F)).ToArray();
     if (fnMode.Length > 0 && fnMode != "sweep" && fnMode != "confirm"
@@ -54,15 +54,15 @@ public static void Run(string[] args, int stageIndex)
     // 「機構が効いたのか、ただ 58/12/6 の体が入っただけか」が割れない。
     UnitDef FnPlainDef = new()
     {
-        Id = "tome_plain", Name = "素体のトメ", MaxHp = UnitCatalog.Tome.MaxHp,
-        Attack = UnitCatalog.Tome.Attack, Speed = UnitCatalog.Tome.Speed,
-        Traits = Array.Empty<TraitId>(), Pattern = UnitCatalog.Tome.Pattern
+        Id = "tome_plain", Name = "素体のトメ", MaxHp = UnitCatalog.TomeT0.MaxHp,
+        Attack = UnitCatalog.TomeT0.Attack, Speed = UnitCatalog.TomeT0.Speed,
+        Traits = Array.Empty<TraitId>(), Pattern = UnitCatalog.TomeT0.Pattern
     };
     Formation FnPlain(Formation f)
     {
         var g = new Formation();
         foreach ((int slot, UnitDef d) in f.Occupied())
-            g[slot] = ReferenceEquals(d, UnitCatalog.Tome) ? FnPlainDef : d;
+            g[slot] = ReferenceEquals(d, UnitCatalog.TomeT0) ? FnPlainDef : d;
         return g;
     }
     // トメを外した4体版（対照3）。**第21期の飽和検査**も兼ねる。
@@ -70,7 +70,7 @@ public static void Run(string[] args, int stageIndex)
     {
         var g = new Formation();
         foreach ((int slot, UnitDef d) in f.Occupied())
-            if (!ReferenceEquals(d, UnitCatalog.Tome)) g[slot] = d;
+            if (!ReferenceEquals(d, UnitCatalog.TomeT0)) g[slot] = d;
         return g;
     }
     // ソラを外した版（**供給を断つ**）。トメが素の攻12として振る舞うことの確認（指示書 §7-4）。
@@ -91,10 +91,10 @@ public static void Run(string[] args, int stageIndex)
     // トメの席だけを振った5変種（他の4枚は元の相対順のまま詰める）。
     static Formation FnSeat(Formation f, int seat)
     {
-        var others = f.Occupied().Where(o => !ReferenceEquals(o.Def, UnitCatalog.Tome))
+        var others = f.Occupied().Where(o => !ReferenceEquals(o.Def, UnitCatalog.TomeT0))
                       .Select(o => o.Def).ToList();
         var g = new Formation();
-        g[seat] = UnitCatalog.Tome;
+        g[seat] = UnitCatalog.TomeT0;
         int k = 0;
         for (int i = 0; i < FormationRules.PlayableSlotCount && k < others.Count; i++)
             if (i != seat) g[i] = others[k++];
@@ -443,17 +443,17 @@ public static void Run(string[] args, int stageIndex)
             // ソラが毎ターン味方の標を外すので、ザンはもともと飢えている（第50期）。
             ("ザン同居（トメ後1 / ザン後3）",
              Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald,
-                             center: UnitCatalog.Sora, back1: UnitCatalog.Tome,
+                             center: UnitCatalog.Sora, back1: UnitCatalog.TomeT0,
                              back3: UnitCatalog.Zan)),
             // カリ同居。**カリは味方に標を付ける**ので、トメの対象集合は1体も増えない。
             ("カリ同居（トメ後1 / カリ後3）",
              Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald,
-                             center: UnitCatalog.Sora, back1: UnitCatalog.Tome,
+                             center: UnitCatalog.Sora, back1: UnitCatalog.TomeT0,
                              back3: UnitCatalog.Kari)),
             // 対照（同じ顔ぶれで5枚目を素体に）。**この3行の差が干渉の帰属。**
             ("対照（トメ後1 / 5枚目は素体のカリ）",
              Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald,
-                             center: UnitCatalog.Sora, back1: UnitCatalog.Tome,
+                             center: UnitCatalog.Sora, back1: UnitCatalog.TomeT0,
                              back3: new UnitDef
                              {
                                  Id = "kari_plain", Name = "素体のカリ", MaxHp = UnitCatalog.Kari.MaxHp,
@@ -685,7 +685,7 @@ public static void Run(string[] args, int stageIndex)
             int Seat(Formation f)
             {
                 foreach ((int slot, UnitDef d) in f.Occupied())
-                    if (ReferenceEquals(d, UnitCatalog.Tome)) return slot;
+                    if (ReferenceEquals(d, UnitCatalog.TomeT0)) return slot;
                 return -1;
             }
             int Deg(int slot)

@@ -261,7 +261,7 @@ static class Mark184Diag
 
     static IEnumerable<(string Band, string Name, Formation F)> Bands()
     {
-        foreach ((string n, Formation f) in CompareBuilds()) yield return ("compare", n, f);
+        foreach ((string n, Formation f) in CompareT0) yield return ("compare", n, f);
         foreach ((string n, Formation f) in CrossBuilds()) yield return ("交差帯", n, f);
     }
 
@@ -348,7 +348,7 @@ static class Mark184Diag
         // ---- (G2) ----
         Console.WriteLine("## 表B. (G2) の「壊れ／制約」の分解（`compare` 61 行の分母・**報告のみ**）");
         Console.WriteLine();
-        var builds = CompareBuilds().ToList();
+        var builds = CompareT0.ToList();
         double[] O(string n) => res[("compare/" + n, V0.Name)];
         double[] N(string n) => res[("compare/" + n, New.Name)];
         var dropped = new List<(string Name, int Wave, double Delta)>();
@@ -539,8 +539,8 @@ static class Mark184Diag
     static readonly (string Name, Formation F)[] Benches =
     {
         ("台1 ヒサ中央（ムド・ボルグ・トメ・ザン）", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Borg,
-            center: UnitCatalog.Hisa, back1: UnitCatalog.Tome, back3: UnitCatalog.Zan)),
-        ("台2 ヒサ後列（ムド・トメ・ザン・ボルグ）", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Tome,
+            center: UnitCatalog.Hisa, back1: UnitCatalog.TomeT0, back3: UnitCatalog.Zan)),
+        ("台2 ヒサ後列（ムド・トメ・ザン・ボルグ）", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.TomeT0,
             center: UnitCatalog.Zan, back1: UnitCatalog.Hisa, back3: UnitCatalog.Borg)),
     };
 
@@ -641,7 +641,7 @@ static class Mark184Diag
         {
             var want = ReadBalance(path);
             int cells = 0, miss = 0, rowsSeen = 0;
-            foreach ((string name, Formation f) in CompareBuilds())
+            foreach ((string name, Formation f) in CompareT0)
             {
                 if (!want.TryGetValue(name, out double[]? w)) { miss++; continue; }
                 rowsSeen++;

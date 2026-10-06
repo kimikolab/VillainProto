@@ -12134,7 +12134,7 @@ public sealed class BattleContext
             (t.RuptureScarByTurn ??= new long[21])[Math.Clamp(_turn, 0, 20)] += maxBefore - target.MaxHp;
             Log($"    {target.Name} に塞がらない爪痕が残った（最大HP {maxBefore} → {target.MaxHp}）", LogKind.Trigger);
         }
-        if (!Finisher.Consume) return;
+        if (!Finisher.Consume || self.HasTrait(TraitId.RuptureKeep)) return;   // 第282期: 層を残す札（T1n）
         target.SetCounter(StatusKeys.Marked, 0);
         t.RuptureConsumed++;
         NoteMarkConsumed(target);   // 第150期の帳簿（計数のみ）

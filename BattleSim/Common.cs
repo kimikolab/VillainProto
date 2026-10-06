@@ -282,6 +282,10 @@ public static IEnumerable<List<T>> Permute<T>(List<T> items)
 // 写しを持つと必ずずれる（第94期の手写しの表で 29 件）。
 // **機械的な移動で、行名・順序・中身は1文字も変えていない**（docs/ 10ファイルが差分 0）。
 public static (string Name, Formation F)[] CompareBuilds() => Presets.Compare;
+// 第282期: 旧トメ（止め・`UnitCatalog.TomeT0`）に固定した器具が読む `compare` の行。規定のトメ（第282期から T1）を T0 に差し替えた写し
+// ——第281期までの行と中身が同じになる（finisher ／ survive ／ escale が使う。出力が規定化の前後で一致するのが門）。
+public static readonly (string Name, Formation F)[] CompareT0 =
+    Presets.Compare.Select(r => (r.Name, FvSwap(r.F, UnitCatalog.Tome, UnitCatalog.TomeT0))).ToArray();
 // 第92期の交差帯。**CompareBuilds() とは完全に別の入口**で、生成物も docs/crossing.md と分けてある。
 // 定義は Presets.Cross（上と同じ理由で移した）。
 public static (string Name, Formation F)[] CrossBuilds() => Presets.Cross;

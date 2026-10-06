@@ -2495,37 +2495,34 @@ public static class UnitCatalog
         MaxHp = 58,
         Attack = 12,
         Speed = 6,
-        Traits = new[] { TraitId.Finisher },
-        PlusText = "標的にされた敵を必ず狙い、倍の力で殴る（列の壁を越えて届く）",
-        MinusText = "殴ると標的が外れるので味方の集中砲火が止まる。誰も指差さなければただの雑魚",
-        Flavor = "誰かが指を差した相手にしか本気になれない。差されれば、確実に仕留める。"
+        // 第282期: ポンの判断（第281期の案 A）で T1 を規定にした（炸裂 ＋ 爪痕 ＋ 乱射）。旧トメ（止め）は `TomeT0`。
+        Traits = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.Spray },
+        PlusText = "最も深く指差された敵へ、指差しの数だけ重い一撃で炸裂する。どの列にも届き、抉った傷は塞がらない",
+        MinusText = "誰も指を差していないと、敵味方構わず乱射する",
+        Flavor = "指を差されないと、自分がどこを撃っているのか分からない。差されれば——その傷は二度と塞がらない。"
     };
 
     // ---------------------------------------------------------------------------------
     // 第281期 —— トメの転生の版（指示書 design/PHASE281_TOME_REBIRTH_SPEC.md・報告 design/PHASE281_TOME_REBIRTH.md）。
-    // **規定のトメは動かさない**（T0 のまま）。どの版も `All` ／ `Retired` ／ `Presets` に入れない。Id は規定と同じ（`TallyByUnit` で引ける）。
+    // **第282期に T1 を規定にした**（`Tome` ＝ `TomeT1`）。どの版も `All` ／ `Retired` ／ `Presets` に入れない。Id は規定と同じ（`TallyByUnit` で引ける）。
     // ステータスは据え置き（HP 58 ／ 攻 12 ／ 速 6・単体）。差分は札の並びと周期だけ。
     // ---------------------------------------------------------------------------------
-    /// <summary>第281期 T0（旧トメの受け皿・規定と同じ定義）。採用のときに旧トメを使う器具をここへ固定する（第277期の <see cref="NomiN0"/> と同じ）。</summary>
+    /// <summary>第281期 T0（旧トメ・止め）。第282期の規定化で旧の受け皿になった。旧トメを使う過去の器具はここへ固定する（第277期の <see cref="NomiN0"/> と同じ）。</summary>
     public static readonly UnitDef TomeT0 = new()
-    {
-        Id = Tome.Id, Name = Tome.Name, MaxHp = Tome.MaxHp, Attack = Tome.Attack, Speed = Tome.Speed,
-        Traits = Tome.Traits, PlusText = Tome.PlusText, MinusText = Tome.MinusText, Flavor = Tome.Flavor,
-    };
-
-    /// <summary>第281期 T1（規定候補）。炸裂（層 × 倍率・列越え・消費）＋ 爪痕 ＋ 乱射。毎手番。</summary>
-    public static readonly UnitDef TomeT1 = new()
     {
         Id = "tome",
         Name = "止めのトメ",
         MaxHp = 58,
         Attack = 12,
         Speed = 6,
-        Traits = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.Spray },
-        PlusText = "最も深く指差された敵へ、指差しの数だけ重い一撃で炸裂する。どの列にも届き、抉った傷は塞がらない",
-        MinusText = "誰も指を差していないと、敵味方構わず乱射する",
-        Flavor = "指を差されないと、自分がどこを撃っているのか分からない。差されれば——その傷は二度と塞がらない。"
+        Traits = new[] { TraitId.Finisher },
+        PlusText = "標的にされた敵を必ず狙い、倍の力で殴る（列の壁を越えて届く）",
+        MinusText = "殴ると標的が外れるので味方の集中砲火が止まる。誰も指差さなければただの雑魚",
+        Flavor = "誰かが指を差した相手にしか本気になれない。差されれば、確実に仕留める。"
     };
+
+    /// <summary>第281期 T1（第282期に規定）。規定の <see cref="Tome"/> と同じ定義（同じ物）。</summary>
+    public static readonly UnitDef TomeT1 = Tome;
 
     /// <summary>第281期 T2。T1 ＋ 周期 <c>[溜め, 溜め, 術]</c>（3手番に1回、溜めた層で炸裂する・乱射も術の手番だけ）。</summary>
     public static readonly UnitDef TomeT2 = new()
@@ -2545,6 +2542,18 @@ public static class UnitCatalog
         PlusText = "三手番に一度、最も深く指差された敵へ、指差しの数だけ重い一撃で炸裂する。どの列にも届き、抉った傷は塞がらない",
         MinusText = TomeT1.MinusText,
         Flavor = TomeT1.Flavor,
+    };
+
+    /// <summary>
+    /// 第282期 T1n（消費の廃止・規定候補）。T1 に <see cref="TraitId.RuptureKeep"/> を足しただけ——炸裂の後に層を消さない
+    /// （第281期の対照 T1-c ＝ <c>FinisherRule.Consume = false</c> と同じ挙動を、ノブではなく札で持つ）。乱射の条件・爪痕・列越えは T1 と同一。
+    /// </summary>
+    public static readonly UnitDef TomeT1n = new()
+    {
+        Id = "tome", Name = Tome.Name, MaxHp = 58, Attack = 12, Speed = 6,
+        Traits = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.Spray, TraitId.RuptureKeep },
+        PlusText = "最も深く指差された敵へ、指差しの数だけ重い一撃で炸裂する。指差しは消えずに積もり、どの列にも届き、抉った傷は塞がらない",
+        MinusText = Tome.MinusText, Flavor = Tome.Flavor,
     };
 
     /// <summary>第281期 T1-s（爪痕の寄与の分離・対照）。T1 から <see cref="TraitId.RuptureScar"/> だけを抜いた形。</summary>

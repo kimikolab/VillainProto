@@ -520,19 +520,23 @@ static class Tome281Diag
         Console.WriteLine("# 第281期 tome281 check —— 自己検査");
         Console.WriteLine();
 
-        // (a) 新札の保持者は選べる駒・退役・プリセットに 0 枚
+        // 第282期に T1 を規定にしたので、(a)〜(c) は「規定 ＝ T1」の形に直した（第281期の版は「規定 ＝ T0」を確かめていた）。
+        // (a) 新札の保持者は規定のトメ1枚だけ・行はトメ在席の行だけ
         var news = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.Spray };
         int holders = UnitCatalog.Everyone.Count(d => d.Traits.Any(news.Contains));
+        bool onlyTome = UnitCatalog.Everyone.Where(d => d.Traits.Any(news.Contains)).All(d => ReferenceEquals(d, UnitCatalog.Tome));
         int presetHolders = CompareBuilds().Concat(CrossBuilds()).Sum(r => r.F.Occupied().Count(o => o.Def.Traits.Any(news.Contains)));
-        Expect("(a) 炸裂・爪痕・乱射の保持者は `UnitCatalog.Everyone` と `compare` ／ 交差帯の行に 0 枚", holders == 0 && presetHolders == 0, $"{holders} ／ {presetHolders}");
+        int tomeRows = CompareBuilds().Concat(CrossBuilds()).Sum(r => r.F.Occupied().Count(o => ReferenceEquals(o.Def, UnitCatalog.Tome)));
+        Expect("(a) 炸裂・爪痕・乱射の保持者は `Everyone` で規定のトメ1枚だけ・行の保持者はトメの在席数と同じ（第282期の規定化の後）",
+            holders == 1 && onlyTome && presetHolders == tomeRows, $"{holders} ／ {presetHolders} ／ トメ {tomeRows}");
 
-        // (b) T0 の定義は規定のトメと同じ
-        Expect("(b) T0 の定義（札・数値・文）は規定のトメと同じ",
-            UnitCatalog.TomeT0.Traits.SequenceEqual(UnitCatalog.Tome.Traits) && UnitCatalog.TomeT0.MaxHp == UnitCatalog.Tome.MaxHp
-            && UnitCatalog.TomeT0.Attack == UnitCatalog.Tome.Attack && UnitCatalog.TomeT0.Speed == UnitCatalog.Tome.Speed
-            && UnitCatalog.TomeT0.PlusText == UnitCatalog.Tome.PlusText && UnitCatalog.TomeT0.Actions is null);
+        // (b) T1 は規定のトメと同じ物・T0 は旧トメ（止め）
+        Expect("(b) T1 は規定のトメと同じ物・T0 は旧トメ（止め）の定義",
+            ReferenceEquals(UnitCatalog.TomeT1, UnitCatalog.Tome) && UnitCatalog.TomeT0.Traits.SequenceEqual(new[] { TraitId.Finisher })
+            && UnitCatalog.TomeT0.MaxHp == UnitCatalog.Tome.MaxHp && UnitCatalog.TomeT0.Attack == UnitCatalog.Tome.Attack
+            && UnitCatalog.TomeT0.Speed == UnitCatalog.Tome.Speed && UnitCatalog.TomeT0.Actions is null);
 
-        // (c) T0 の写しの台本が規定のトメと一致（台 × 本編第2〜5波 × seed 0..49）
+        // (c) 版の台本: 台を規定のトメで組んでから T1 に差し替えても台本は変わらない（台 × 本編第2〜5波 × seed 0..49）
         int diff = 0, total = 0;
         for (int bi = 0; bi < Boards.Length; bi++)
             for (int w = 1; w <= 4; w++)
@@ -541,11 +545,11 @@ static class Tome281Diag
                     int ww = w;
                     Func<List<UnitState>> mk = () => BattleEngine.Materialize(EnemyCatalog.Stages[ww].Enemy, BattleContext.EnemyTeam);
                     var a = Fight(Boards[bi].Make(UnitCatalog.Tome), mk, s, FinisherRule.Default).R;
-                    var b = Fight(Boards[bi].Make(UnitCatalog.TomeT0), mk, s, FinisherRule.Default).R;
+                    var b = Fight(Boards[bi].Make(UnitCatalog.TomeT1), mk, s, FinisherRule.Default).R;
                     total++;
                     if (a.PlayerWon != b.PlayerWon || a.Turns != b.Turns || !a.Log.Select(l => l.Text).SequenceEqual(b.Log.Select(l => l.Text))) diff++;
                 }
-        Expect("(c) T0 の写しの台本は規定のトメと一致", diff == 0, $"{total} 戦中 {diff} 件ずれ");
+        Expect("(c) T1 の台本は規定のトメと一致", diff == 0, $"{total} 戦中 {diff} 件ずれ");
 
         // (d) T0 の勝率が `docs/balance.md` の止めの2行と同じ口で出る（Formation 版の Run と UnitState 版の Run が同じ）
         int dd = 0;

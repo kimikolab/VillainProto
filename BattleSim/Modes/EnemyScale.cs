@@ -57,7 +57,7 @@ static partial class EnemyScaleDiag
     static void Phase0()
     {
         var bal = ReadBalance("docs/balance.md");
-        var rows = CompareBuilds();
+        var rows = CompareT0;
         Console.WriteLine("# 第187期 `escale phase0` —— 現行 `docs/balance.md` の数え物（戦闘0回）");
         Console.WriteLine();
         Console.WriteLine($"`compare` の行 {rows.Length} ／ `docs/balance.md` で引けた行 {rows.Count(r => bal.ContainsKey(r.Name))}");

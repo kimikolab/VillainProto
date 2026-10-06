@@ -36,8 +36,8 @@ static partial class EnemyScaleDiag
         ("ハイパーキャリー（ソラ×ガン×ガルド＋ヒサ）", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Gan,
             center: UnitCatalog.Sora, back1: UnitCatalog.Dolga, back3: UnitCatalog.Hisa)),
         ("ヒサ×ムド×ザン×トメ（ヒサ中央）", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Borg,
-            center: UnitCatalog.Hisa, back1: UnitCatalog.Tome, back3: UnitCatalog.Zan)),
-        ("ヒサ×ムド×ザン×トメ（ヒサ後列）", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Tome,
+            center: UnitCatalog.Hisa, back1: UnitCatalog.TomeT0, back3: UnitCatalog.Zan)),
+        ("ヒサ×ムド×ザン×トメ（ヒサ後列）", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.TomeT0,
             center: UnitCatalog.Zan, back1: UnitCatalog.Hisa, back3: UnitCatalog.Borg)),
         ("クグ×シガ", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kugu, center: UnitCatalog.Shiga,
             back1: UnitCatalog.Borg, back3: UnitCatalog.Dolga)),
@@ -51,7 +51,7 @@ static partial class EnemyScaleDiag
     /// </summary>
     static void Fine()
     {
-        var rows = CompareBuilds();
+        var rows = CompareT0;
         var prim = Baseline.PrimaryRows.Select(n => Array.FindIndex(rows, r => r.Name == n)).Where(i => i >= 0).ToArray();
         Console.WriteLine("# 第187期 `escale fine` —— 参考の刻み（**採否には使わない**）");
         Console.WriteLine();
@@ -72,7 +72,7 @@ static partial class EnemyScaleDiag
 
     static void Sweep(string balancePath)
     {
-        var rows = CompareBuilds();
+        var rows = CompareT0;
         var bench = BenchRows();
         int nv = Versions.Length, nr = rows.Length, nb = bench.Length;
         var t = new double[nv][][];
