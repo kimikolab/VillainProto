@@ -7056,6 +7056,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
         if (u.HasTrait(TraitId.Pellet)) _pelletLive = true;   // 第277期（豆鉄砲の一振り・1発の打点・再行動の上限）
         if (u.HasTrait(TraitId.Rupture)) _ruptureLive = true; // 第281期（炸裂の標の段・打点・乱射・敵の標の層）
+        if (u.HasTrait(TraitId.Feathers)) _featherLive = true; // 第285期（羽の一振り・羽の書き込み・1発の打点）
         if (u.HasTrait(TraitId.FireArmor) || u.HasTrait(TraitId.Smolder)
             || u.HasTrait(TraitId.FireMend) || u.HasTrait(TraitId.FireFeed)) _fireArmorLive = true;   // 第234期（火の鎧・焼け残り）・第235期（火の癒し・焼き返し）
         if (u.HasTrait(TraitId.FireWard) || u.HasTrait(TraitId.FireWardAll)) _fireWardHolders.Add(u);             // 第238期（盾の配り）
@@ -10174,10 +10175,13 @@ public sealed class BattleContext
             int layers = target.TeamId != actor.TeamId ? target.RawCounter(StatusKeys.Marked) : 0;
             if (layers > 0)
             {
-                atk *= layers * Finisher.Multiplier;
+                // 第285期: 羽の1発は層を掛けない（攻 × 倍率だけ）。層は的の順番と §1 の +50% にだけ効く。
+                bool feather = _featherLive && actor.HasTrait(TraitId.Feathers);
+                atk *= feather ? Finisher.Multiplier : layers * Finisher.Multiplier;
                 _ruptureTarget = target;
                 _ruptureHpBefore = target.Hp;
-                NoteRupture(actor, layers, !TargetPool(actor).Contains(target));
+                if (feather) _featherLast = target;
+                NoteRupture(actor, layers, !TargetPool(actor).Contains(target), feather);
             }
             else _ruptureTarget = null;
         }
@@ -12037,6 +12041,9 @@ public sealed class BattleContext
         // 第223期: 段2 以上のセロの手番は乱れ撃ち（5本・的は乱数）。**保持者がいなければ比較1つで抜ける。**
         if (_evadeLive && actor.HasTrait(TraitId.Evade) && EvadeTrait.StageOf(actor) >= 2) { Barrage(actor); return; }
 
+        // 第285期: 羽の保持者の手番は羽の一振り（標を追う発と乱射の発を1つの枠で）。**保持者がいなければ比較1つで抜ける。**
+        if (_featherLive && actor.HasTrait(TraitId.Feathers)) { FeatherVolley(actor); return; }
+
         // 第281期: 炸裂の保持者の手番で、敵に標持ちが 0 なら乱射（札 `Spray` の保持者だけ）。**保持者がいなければ比較1つで抜ける。**
         if (_ruptureLive && actor.HasTrait(TraitId.Spray) && !AnyMarkedFoe(actor)) { Spray(actor); return; }
 
@@ -12085,6 +12092,7 @@ public sealed class BattleContext
     /// </summary>
     public void LayerMark(UnitState u, UnitState writer)
     {
+        if (_featherLive) GainFeathers(u, writer);   // 第285期（保持者がいなければ比較1つで抜ける）
         int cur = u.RawCounter(StatusKeys.Marked);
         if (_ruptureLive && u.TeamId != PlayerTeam && cur > 0)
         {
@@ -12102,7 +12110,7 @@ public sealed class BattleContext
         return false;
     }
 
-    void NoteRupture(UnitState actor, int layers, bool crossed)
+    void NoteRupture(UnitState actor, int layers, bool crossed, bool feather = false)
     {
         UnitTally t = TallyOf(actor);
         t.RuptureFires++;
@@ -12110,7 +12118,8 @@ public sealed class BattleContext
         t.RuptureLayerSum += layers;
         if (layers > t.RuptureLayerMax) t.RuptureLayerMax = layers;
         (t.RuptureLayerHist ??= new long[10])[Math.Min(layers, 9)]++;
-        Log($"    {actor.Name} の炸裂（層 {layers} × {Finisher.Multiplier}）", LogKind.Trigger);
+        if (feather) Log($"    {actor.Name} の羽が標を捉えた（× {Finisher.Multiplier}・層 {layers}）", LogKind.Trigger);
+        else Log($"    {actor.Name} の炸裂（層 {layers} × {Finisher.Multiplier}）", LogKind.Trigger);
     }
 
     /// <summary>
@@ -12163,8 +12172,16 @@ public sealed class BattleContext
         for (int i = 1; i <= SprayTrait.Shots; i++)
         {
             if (!actor.IsAlive) break;
+            if (!SprayShot(actor, i, dmg, t)) break;
+        }
+    }
+
+    /// <summary>乱射の1発（第285期に <see cref="Spray"/> から切り出した・中身は1行も変えていない）。的が1体もいなければ偽を返す（撃たない）。</summary>
+    bool SprayShot(UnitState actor, int i, int dmg, UnitTally t)
+    {
+        {
             var cands = AllUnits.Where(u => u.IsAlive && u != actor).ToList();
-            if (cands.Count == 0) break;
+            if (cands.Count == 0) return false;
             UnitState pick = cands.Count == 1 ? cands[0] : cands[Roll(cands.Count)];
             UnitState? pull = null;
             foreach (UnitState u in LivingMembers(pick.TeamId))
@@ -12186,6 +12203,94 @@ public sealed class BattleContext
             int lost = Math.Max(0, before - Math.Max(0, pick.Hp));
             if (ally) { t.SprayAlly++; t.SprayAllyDealt += lost; if (!pick.IsAlive) t.SprayAllyKills++; }
             else { t.SprayFoe++; t.SprayFoeDealt += lost; }
+        }
+        return true;
+    }
+
+    // =====================================================================================
+    // 第285期 —— 羽（`FeathersTrait` ／ `FeatherLossTrait`・ミサの連射化の版 M-a ／ M-b）。
+    // **保持者がいなければ `_featherLive` の比較1つで全部抜ける。** 標を追う発は乱数を引かない（標の段の `Preferred` の同値割りだけ）。乱射の発だけが引く。
+    // =====================================================================================
+    bool _featherLive;
+    /// <summary>直前の羽の1発の的（流れた発の計数だけが読む・<b>計数専用</b>）。</summary>
+    UnitState? _featherLast;
+
+    /// <summary>敵に標が書かれた（<see cref="LayerMark"/> の頭）。書き手の陣営の羽の保持者の羽を1枚ずつ増やす。味方への標では増えない。</summary>
+    void GainFeathers(UnitState marked, UnitState writer)
+    {
+        if (marked.TeamId == writer.TeamId) return;
+        foreach (UnitState h in LivingMembers(writer.TeamId))
+        {
+            if (!h.HasTrait(TraitId.Feathers)) continue;
+            h.SetCounter(FeathersTrait.ExtraKey, h.RawCounter(FeathersTrait.ExtraKey) + 1);
+            UnitTally t = TallyOf(h);
+            t.FeatherGained++;
+            int f = FeathersTrait.Count(h);
+            if (f > t.FeatherMax) t.FeatherMax = f;
+            Log($"    {h.Name} の羽が1枚増えた（{f} 枚）", LogKind.Trigger);
+        }
+    }
+
+    /// <summary>
+    /// 羽の一振り（第285期）。羽の枚数だけ1発ずつ: 敵に標持ちがいれば単体の <c>PerformAttack</c>（的は標の段・列越え・1発 ＝ 攻 × 倍率）、
+    /// いなければ乱射の1発（<see cref="SprayShot"/>）。敵が全滅したら残りは撃たない。M-b は乱射した数だけ羽を失う（下限 1）。
+    /// 豆鉄砲と同じ一振りの枠（<see cref="Volley"/>）を立てる——再行動は1振り1回、<see cref="VolleyShotOf"/> は何発目か。
+    /// </summary>
+    void FeatherVolley(UnitState actor)
+    {
+        UnitTally t = TallyOf(actor);
+        int f = FeathersTrait.Count(actor);
+        t.FeatherVolleys++;
+        t.FeatherShots += f;
+        if (f > t.FeatherMax) t.FeatherMax = f;
+        Volley? prev = _volley;
+        var v = new Volley { Actor = actor };
+        _volley = v;
+        int chased = 0, sprayed = 0, dmg = 0;
+        _featherLast = null;
+        try
+        {
+            for (int i = 0; i < f; i++)
+            {
+                if (!actor.IsAlive) break;
+                if (!TeamAlive(Opponent(actor.TeamId))) break;
+                v.Shot = i;
+                if (AnyMarkedFoe(actor))
+                {
+                    if (_featherLast is { IsAlive: false }) t.FeatherFlow++;
+                    PerformAttack(actor);
+                    chased++;
+                    continue;
+                }
+                if (sprayed == 0)
+                {
+                    if (chased > 0)
+                    {
+                        t.FeatherTurned++;
+                        Log($"  {actor.Name} の追う標が尽き、残りの羽が敵味方構わず飛んだ", LogKind.FriendlyFire);
+                    }
+                    else Log($"  {actor.Name} は指差す者がおらず、羽が敵味方構わず飛んだ", LogKind.FriendlyFire);
+                    t.SprayTurns++;
+                    dmg = Math.Max(1, actor.CurrentAttack * SprayTrait.Percent / 100);
+                    NoteAttackRead(actor);
+                }
+                if (!SprayShot(actor, i + 1, dmg, t)) break;
+                sprayed++;
+            }
+        }
+        finally { _volley = prev; _featherLast = null; }
+        t.FeatherChased += chased;
+        t.FeatherSprayed += sprayed;
+        if (sprayed > 0 && actor.HasTrait(TraitId.FeatherLoss))
+        {
+            int extra = actor.RawCounter(FeathersTrait.ExtraKey);
+            int lost = Math.Min(extra, sprayed);
+            if (lost > 0)
+            {
+                actor.SetCounter(FeathersTrait.ExtraKey, extra - lost);
+                t.FeatherLost += lost;
+                Log($"    {actor.Name} の羽が {lost} 枚戻らなかった（{FeathersTrait.Count(actor)} 枚）", LogKind.Trigger);
+            }
         }
     }
 

@@ -282,6 +282,15 @@ public static IEnumerable<List<T>> Permute<T>(List<T> items)
 // 写しを持つと必ずずれる（第94期の手写しの表で 29 件）。
 // **機械的な移動で、行名・順序・中身は1文字も変えていない**（docs/ 10ファイルが差分 0）。
 public static (string Name, Formation F)[] CompareBuilds() => Presets.Compare;
+
+/// <summary>
+/// 駒の改名（旧名 → 新名）。<b>過去の報告書（`design/`）の表を駒の名前で引く器具</b>が、改名の後も同じ行を引けるようにする（第285期）。
+/// 報告書は書き換えない（指示書の作法）。
+/// </summary>
+public static readonly (string Was, string Now)[] UnitRenames =
+{
+    ("止めのトメ", "見境なしのミサ"),   // 第285期
+};
 // 第282期: 旧トメ（止め・`UnitCatalog.TomeT0`）に固定した器具が読む `compare` の行。規定のトメ（第282期から T1）を T0 に差し替えた写し
 // ——第281期までの行と中身が同じになる（finisher ／ survive ／ escale が使う。出力が規定化の前後で一致するのが門）。
 public static readonly (string Name, Formation F)[] CompareT0 =

@@ -636,7 +636,7 @@ public static class Presets
         // ——ドルガ（薙ぎ38）をトメに差し替えただけ（第21期 swap の作法。ablate だと
         // 「5体目の体そのもの」が必ず混ざる）。**5枚全員が単体攻撃**なので、
         // トメが標を消すたびに他の4枚の引きが消える。ゴルムが後列を覆うので**ソラが長く生き＝供給が厚い。**
-        ("止め (トメ×ソラ)", Formation.Build(front1: UnitCatalog.Egu, front3: UnitCatalog.Golm,
+        ("見境 (ミサ×ソラ)", Formation.Build(front1: UnitCatalog.Egu, front3: UnitCatalog.Golm,
                                         center: UnitCatalog.Nomi, back1: UnitCatalog.Tome,
                                         back3: UnitCatalog.Sora)),
         // 薙ぎだらけの台（代金がゼロ）。**単体攻撃はトメとソラの2枚だけ**で、
@@ -652,7 +652,7 @@ public static class Presets
         // **発火も列越えも 0 になっていない**（1.65 / 0.63）ので、機構を無効化する席ではない。
         // 空振りが 1.86 → 0.32 に落ちるのが動かした実体で、**トメが前に出るとソラより先に
         // 標を使い切って死ぬ**（標が尽きた後の手番が消える）。
-        ("止め改 (トメ×薙ぎ)", Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.Hagi,
+        ("見境改 (ミサ×薙ぎ)", Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.Hagi,
                                           center: UnitCatalog.Sora, back1: UnitCatalog.Dolga,
                                           back3: UnitCatalog.Borg)),
         // 火選り（第58期）。**3行を火の粉の帰属の符号で分けるのがこの期の設計**（指示書 §2-3）。
@@ -756,7 +756,7 @@ public static class Presets
         // 顔ぶれは `仇討ち (ヒサ×ザン)` の**ドルガ → トメ**（1枚だけ違う・第21期 swap の作法）。第184期の診断台1（ムド・ボルグ）は全 120 席が第2〜5波 100%（情報セル 0）なので採らなかった。
         // **席は `tome281 seat b`（120 通り × T1 × 帯A → 上位8を帯B）で選んだ**: 狙（ヒサの隣に壁のガルド）を満たす最上位＝探索4位（帯A 73.1・帯B 72.8・情報セル 3）。
         // 1〜3位（73.6 ／ 73.5 ／ 73.2）は狙で落ちた（ヒサがガルドの隣にいない）。**規定のトメ（T0）のまま入れてある**——席は T1 で選んだ。経緯は design/PHASE281_TOME_REBIRTH.md。
-        ("標経済 (ヒサ×ザン×トメ)", Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.Gald,
+        ("標経済 (ヒサ×ザン×ミサ)", Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.Gald,
                                               center: UnitCatalog.Zan, back1: UnitCatalog.Gan,
                                               back3: UnitCatalog.Hisa))
     };

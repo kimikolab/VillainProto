@@ -49,15 +49,15 @@ static class Tome282Diag
     /// <summary>新台の壁（`wall` で選んだもの・指示書 §3-1）。標経済の前3 ガルドをこの駒に替える。</summary>
     internal static UnitDef NewWall => UnitCatalog.Doha;
 
-    static Formation EconomyWith(UnitDef wall) => FvSwap(Row("標経済 (ヒサ×ザン×トメ)"), UnitCatalog.Gald, wall);
+    static Formation EconomyWith(UnitDef wall) => FvSwap(Row("標経済 (ヒサ×ザン×ミサ)"), UnitCatalog.Gald, wall);
 
     /// <summary>台（規定のトメ＝T1 で定義し、版はトメだけを差し替える）。</summary>
     static readonly (string Name, string Group, Func<UnitDef, Formation> Make)[] Boards =
     {
-        ("止め (トメ×ソラ)", "compare", d => FvSwap(Row("止め (トメ×ソラ)"), UnitCatalog.Tome, d)),
-        ("止め改 (トメ×薙ぎ)", "compare", d => FvSwap(Row("止め改 (トメ×薙ぎ)"), UnitCatalog.Tome, d)),
-        ("標経済 (ヒサ×ザン×トメ)", "compare", d => FvSwap(Row("標経済 (ヒサ×ザン×トメ)"), UnitCatalog.Tome, d)),
-        ("標台S 止めの中央 ノミ → ザン", "ボス台", d => FvSwap(FvSwap(Row("止め (トメ×ソラ)"), UnitCatalog.Nomi, UnitCatalog.Zan), UnitCatalog.Tome, d)),
+        ("見境 (ミサ×ソラ)", "compare", d => FvSwap(Row("見境 (ミサ×ソラ)"), UnitCatalog.Tome, d)),
+        ("見境改 (ミサ×薙ぎ)", "compare", d => FvSwap(Row("見境改 (ミサ×薙ぎ)"), UnitCatalog.Tome, d)),
+        ("標経済 (ヒサ×ザン×ミサ)", "compare", d => FvSwap(Row("標経済 (ヒサ×ザン×ミサ)"), UnitCatalog.Tome, d)),
+        ("標台S 止めの中央 ノミ → ザン", "ボス台", d => FvSwap(FvSwap(Row("見境 (ミサ×ソラ)"), UnitCatalog.Nomi, UnitCatalog.Zan), UnitCatalog.Tome, d)),
         ("新台 標経済の前3 ガルド → 壁", "ボス台", d => FvSwap(EconomyWith(NewWall), UnitCatalog.Tome, d)),
     };
 

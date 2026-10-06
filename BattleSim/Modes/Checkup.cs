@@ -179,6 +179,8 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.RuptureScar] = (HcPlusL,  "炸裂で減らした HP と同量、相手の最大HPを削るだけ（第281期）。外せば T1-s"),
         [TraitId.RuptureKeep] = (HcPlusL,  "炸裂の後に層を消さないだけ（第282期・T1n）。外せば T1"),
         [TraitId.Spray]       = (HcMinusL, "敵に標持ちがいない手番は敵味方構わず乱射するだけ（第281期・炸裂の代金）"),
+        [TraitId.Feathers]    = (HcBothL,  "標が書かれるたび羽が増えて連射が厚くなるのと、追う標が尽きた羽が敵味方構わず飛ぶのが1つの在庫の表と裏（第285期・M-a ／ M-b）"),
+        [TraitId.FeatherLoss] = (HcMinusL, "乱射した羽の数だけ羽を失うだけ（第285期・M-b）。外せば M-a"),
         // 第132期 段0-a: 第128期に `GradeStep` を ドルガ に載せたとき、この表に足さなかったので
         // `checkup` が「分類の無い札がある」で**3期ぶん止まっていた**（第131期に判明）。
         // 分類は積み過ぎ（`Overload`）と同じ——読む値も閾値も共有し、違うのは上がる先の段だけ。

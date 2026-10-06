@@ -5,9 +5,9 @@ using static Common;
 // elite —— 第284期「精鋭波（HP 1000% ／ 攻 300%）を耐久と火力の評価軸として正式化する」。
 // 指示書は design/PHASE284_ELITE_WAVE_SPEC.md ／ 報告は design/PHASE284_ELITE_WAVE.md。
 //
-//     dotnet run --project BattleSim -c Release 0 elite > docs/elite.md   # 本体: compare 全行 × {精鋭・五, 精鋭・九} × seed 0..199 ＋ 参考の刻み
+//     dotnet run --project BattleSim -c Release 0 elite > docs/elite.md   # 本体: compare 全行 × {近衛, 大隊} × seed 0..199 ＋ 参考の刻み
 //     dotnet run --project BattleSim -c Release 0 elite p0       # Phase 0: 桁・写しのキャッシュ・打ち切りの値・乱射の累積・決定性（seed 0..19）
-//     dotnet run --project BattleSim -c Release 0 elite poison   # §5-3: 毒 (グザ×ミオ×ラウ) × 精鋭・九 × seed 0 の1本（層・毒の与ダメ・崩れT）
+//     dotnet run --project BattleSim -c Release 0 elite poison   # §5-3: 毒 (グザ×ミオ×ラウ) × 大隊 × seed 0 の1本（層・毒の与ダメ・崩れT）
 //     dotnet run --project BattleSim -c Release 0 elite check    # 自己検査 (a) 素の波の一致 (b) §7 の照合（seed 0..49）
 //
 // **精鋭の波は `TestStages` に足さない**（`nine check` が `TestStages.Count == 3` を門にしている・DemoApp の選択口も数える）。
@@ -31,9 +31,9 @@ static class EliteDiag
     // ---------------------------------------------------------------------------------
     // 定義（指示書 §2・測る前に固定）
     // ---------------------------------------------------------------------------------
-    /// <summary>精鋭・五 ＝ 討伐隊の新兵（45/11/6）× 5・X 字。素の構成は `TestStages[2]`（検証・五 / 新兵）と同じ。</summary>
+    /// <summary>近衛 ＝ 討伐隊の新兵（45/11/6）× 5・X 字。素の構成は `TestStages[2]`（検証・五 / 新兵）と同じ。</summary>
     internal static readonly EnemyWave Five = EnemyWave.FillX(EnemyCatalog.Recruit);
-    /// <summary>精鋭・九 ＝ 駆り出された農兵（30/8/6）× 9・全席。素の構成は `TestStages[1]`（検証・九 / 農兵）と同じ。</summary>
+    /// <summary>大隊 ＝ 駆り出された農兵（30/8/6）× 9・全席。素の構成は `TestStages[1]`（検証・九 / 農兵）と同じ。</summary>
     internal static readonly EnemyWave Nine = EnemyWave.FillAll(EnemyCatalog.Levy);
     /// <summary>照合用（§7 の「九・新兵」列）。主表には出さない。</summary>
     internal static readonly EnemyWave NineRecruit = EnemyWave.FillAll(EnemyCatalog.Recruit);
@@ -45,7 +45,7 @@ static class EliteDiag
 
     const int Seeds = 200;
 
-    static readonly (string Name, EnemyWave W)[] Waves = { ("精鋭・五", Five), ("精鋭・九", Nine) };
+    static readonly (string Name, EnemyWave W)[] Waves = { ("近衛", Five), ("大隊", Nine) };
 
     /// <summary>
     /// 解法の軸（§5-1）。**測る前に行名で固定**——先に当たった語で決める（「毒→被弾強化」は被弾強化、「燃焼×刻み」は燃焼）。
@@ -55,7 +55,7 @@ static class EliteDiag
         ("被弾強化", "被弾強化"), ("速攻", "被弾強化"),
         ("燃焼", "燃焼"), ("火選り", "燃焼"), ("灯", "燃焼"), ("ヒヨ", "燃焼"), ("範囲耐性", "燃焼"),
         ("毒", "毒"), ("澱み喰い", "毒"),
-        ("止め", "標"), ("標経済", "標"), ("仇討ち", "標"),
+        ("見境", "標"), ("標経済", "標"), ("仇討ち", "標"),
         ("鱗", "鱗"), ("礫", "鱗"),
         ("反撃", "反撃"), ("逸らし (ソラ×カド)", "反撃"),
         ("隊列崩し", "移動"), ("突き出し", "移動"), ("移動", "移動"),
@@ -151,7 +151,7 @@ static class EliteDiag
         Console.WriteLine("`dotnet run --project BattleSim -c Release 0 elite > docs/elite.md` の出力。手で編集しない。");
         Console.WriteLine($"`compare` の {rows.Length} 行 × 精鋭の2波、seed 0..{Seeds - 1} の {Seeds} 試行。第284期（`design/PHASE284_ELITE_WAVE.md`）。");
         Console.WriteLine();
-        Console.WriteLine($"- **精鋭・五** ＝ 討伐隊の新兵 × 5（X 字）、**精鋭・九** ＝ 駆り出された農兵 × 9（全席）。倍率は HP {Elite.HpPercent}% ／ 攻 {Elite.AtkPercent}%（既定の 115/115 の代わりに掛ける）");
+        Console.WriteLine($"- **近衛** ＝ 討伐隊の新兵 × 5（X 字）、**大隊** ＝ 駆り出された農兵 × 9（全席）。倍率は HP {Elite.HpPercent}% ／ 攻 {Elite.AtkPercent}%（既定の 115/115 の代わりに掛ける）");
         Console.WriteLine($"- 実効値: 五 ＝ HP {Elite.Apply(EnemyCatalog.Recruit).MaxHp}・攻 {Elite.Apply(EnemyCatalog.Recruit).Attack} × 5 ／ 九 ＝ HP {Elite.Apply(EnemyCatalog.Levy).MaxHp}・攻 {Elite.Apply(EnemyCatalog.Levy).Attack} × 9");
         Console.WriteLine("- **波ルール（粛・渇き・軛・断罪）は掛けない**——本編の波との差分はスケールと構成だけ。`Stages` / `TestStages` には載せていない");
         Console.WriteLine($"- 打ち切り ＝ {BattleEngine.MaxTurns}T に達して両陣営とも立っている戦（負けに数える）。全員生存 ＝ 出撃した5枚が1枚も欠けずに勝った戦");
@@ -358,9 +358,9 @@ static class EliteDiag
         Console.WriteLine();
 
         // §3 乱射の長期戦累積
-        Console.WriteLine("## 3. 乱射の累積（止め改 (トメ×薙ぎ) × 精鋭・五 × seed 0・verbose）");
+        Console.WriteLine("## 3. 乱射の累積（見境改 (ミサ×薙ぎ) × 近衛 × seed 0・verbose）");
         Console.WriteLine();
-        var row = rows.First(x => x.Name.StartsWith("止め改"));
+        var row = rows.First(x => x.Name.StartsWith("見境改"));
         foreach (var (name, w) in Waves)
         {
             var p = BattleEngine.Materialize(row.F, BattleContext.PlayerTeam);
@@ -382,9 +382,9 @@ static class EliteDiag
     {
         var rows = CompareBuilds();
         var row = rows.First(x => x.Name == "毒 (グザ×ミオ×ラウ)");
-        Console.WriteLine($"# elite poison —— 毒 (グザ×ミオ×ラウ) × 精鋭・九 × seed {seed}");
+        Console.WriteLine($"# elite poison —— 毒 (グザ×ミオ×ラウ) × 大隊 × seed {seed}");
         Console.WriteLine();
-        foreach (var (label, w, sc) in new[] { ("精鋭・九 1000/300", Nine, Elite), ("同じ構成 115/115（対照）", Nine, EnemyScaleRule.Default), ("精鋭・五 1000/300", Five, Elite) })
+        foreach (var (label, w, sc) in new[] { ("大隊 1000/300", Nine, Elite), ("同じ構成 115/115（対照）", Nine, EnemyScaleRule.Default), ("近衛 1000/300", Five, Elite) })
         {
             var p = BattleEngine.Materialize(row.F, BattleContext.PlayerTeam);
             var e = BattleEngine.MaterializeEnemy(w, sc);
@@ -443,8 +443,8 @@ static class EliteDiag
 
         // (a) 素の構成が TestStages と同じ・倍率を既定／素に戻すと検証の波と全戦一致
         static bool SameWave(EnemyWave a, EnemyWave b) => Enumerable.Range(0, 9).All(i => ReferenceEquals(a[i], b[i]));
-        Ok("(a-1) 精鋭・五 の構成 ＝ `TestStages[2]`（検証・五 / 新兵）", SameWave(Five, EnemyCatalog.TestStages[2].Enemy));
-        Ok("(a-2) 精鋭・九 の構成 ＝ `TestStages[1]`（検証・九 / 農兵）", SameWave(Nine, EnemyCatalog.TestStages[1].Enemy));
+        Ok("(a-1) 近衛 の構成 ＝ `TestStages[2]`（検証・五 / 新兵）", SameWave(Five, EnemyCatalog.TestStages[2].Enemy));
+        Ok("(a-2) 大隊 の構成 ＝ `TestStages[1]`（検証・九 / 農兵）", SameWave(Nine, EnemyCatalog.TestStages[1].Enemy));
         foreach (var sc in new[] { EnemyScaleRule.None, EnemyScaleRule.Default })
         {
             int diff = 0, n = 0;
@@ -464,7 +464,7 @@ static class EliteDiag
         // (b) §7 の照合（九・新兵 ／ 九・農兵・seed 0..49）
         var expect = new (string Row, double NineRecruit, double NineLevy)[]
         {
-            ("止め改 (トメ×薙ぎ)", 100, 100), ("燃焼 (ボルグ×ホタ)", 100, 100), ("速攻 (ボルグ×ムド)", 100, 100),
+            ("見境改 (ミサ×薙ぎ)", 100, 100), ("燃焼 (ボルグ×ホタ)", 100, 100), ("速攻 (ボルグ×ムド)", 100, 100),
             ("毒→被弾強化 (グザ×ムド)", 100, 100), ("鱗改 (ウロ×ヒビ)", 100, 100), ("範囲耐性 (ヒビ×ボルグ)", 100, 100),
             ("逸らし (ソラ×カド)", 100, 100), ("移動改 (バサ×ヨミ×シオ)", 88, 98), ("継ぎ当て×分散回復", 6, 100),
             ("隊列崩し (バサ×ヨミ×セロ)", 0, 36), ("反撃 (ヒサ×カド)", 0, 58), ("感電 (シガ×カタ×ソム)", 0, 76),

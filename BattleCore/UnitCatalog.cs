@@ -2459,7 +2459,7 @@ public static class UnitCatalog
 
 
     /// <summary>
-    /// 止めのトメ。<b>ロスターで初めて「敵に付いた標」を読む駒</b>（第53期）。
+    /// 見境なしのミサ（第285期に止めのトメから改名）。<b>ロスターで初めて「敵に付いた標」を読む駒</b>（第53期）。
     ///
     /// <para><b>標の書き手は第52期に3枚になったのに、読み手は仇討ち（ザン）1枚のままだった</b>
     /// ——しかもザンが読むのは<b>味方</b>の標。第50期にソラが敵へ標を付けられるようになったのに、
@@ -2491,7 +2491,7 @@ public static class UnitCatalog
     public static readonly UnitDef Tome = new()
     {
         Id = "tome",
-        Name = "止めのトメ",
+        Name = "見境なしのミサ",
         MaxHp = 58,
         Attack = 12,
         Speed = 6,
@@ -2500,7 +2500,8 @@ public static class UnitCatalog
         Traits = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.Spray, TraitId.RuptureKeep },
         PlusText = "最も深く指差された敵へ、指差しの数だけ重い一撃で炸裂する。指差しは消えずに積もり、どの列にも届き、抉った傷は塞がらない",
         MinusText = "誰も指を差していないと、敵味方構わず乱射する",
-        Flavor = "指を差されないと、自分がどこを撃っているのか分からない。差されれば——その傷は二度と塞がらない。"
+        // 第285期: 止めのトメ → 見境なしのミサ（名前とフレーバーだけ・Id と識別子は据え置き）。旧版（`TomeT0` ほか）のフレーバーは旧のまま。
+        Flavor = "狙うのは得意。見分けるのが苦手。"
     };
 
     // ---------------------------------------------------------------------------------
@@ -2513,7 +2514,7 @@ public static class UnitCatalog
     public static readonly UnitDef TomeT0 = new()
     {
         Id = "tome",
-        Name = "止めのトメ",
+        Name = "見境なしのミサ",
         MaxHp = 58,
         Attack = 12,
         Speed = 6,
@@ -2526,7 +2527,7 @@ public static class UnitCatalog
     /// <summary>第281期 T1（第282期に規定・第283期に対照へ戻った）。炸裂 ＋ 爪痕 ＋ 乱射で、炸裂の後に層を消す。旧の定義を<b>明示的に</b>持つ。</summary>
     public static readonly UnitDef TomeT1 = new()
     {
-        Id = "tome", Name = "止めのトメ", MaxHp = 58, Attack = 12, Speed = 6,
+        Id = "tome", Name = "見境なしのミサ", MaxHp = 58, Attack = 12, Speed = 6,
         Traits = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.Spray },
         PlusText = "最も深く指差された敵へ、指差しの数だけ重い一撃で炸裂する。どの列にも届き、抉った傷は塞がらない",
         MinusText = "誰も指を差していないと、敵味方構わず乱射する",
@@ -2537,7 +2538,7 @@ public static class UnitCatalog
     public static readonly UnitDef TomeT2 = new()
     {
         Id = "tome",
-        Name = "止めのトメ",
+        Name = "見境なしのミサ",
         MaxHp = 58,
         Attack = 12,
         Speed = 6,
@@ -2565,6 +2566,31 @@ public static class UnitCatalog
         Id = "tome", Name = TomeT1.Name, MaxHp = 58, Attack = 12, Speed = 6,
         Traits = new[] { TraitId.Rupture, TraitId.Spray },
         PlusText = TomeT1.PlusText, MinusText = TomeT1.MinusText, Flavor = TomeT1.Flavor,
+    };
+
+    // ---------------------------------------------------------------------------------
+    // 第285期 —— ミサの連射化（羽）の版（指示書 design/PHASE285_MISA_FEATHERS_SPEC.md・報告 design/PHASE285_MISA_FEATHERS.md）。
+    // **規定（`Tome` ＝ T1n）は動かさない**。どちらも `All` ／ `Retired` ／ `Presets` に入れない。Id は規定と同じ（`TallyByUnit` で引ける）。
+    // 差分は札の並びだけ（炸裂 ＋ 爪痕 ＋ 層を残す ＋ 羽）。乱射の札（`Spray`）は持たない——羽の乱射は羽の一振りの中で解決する。
+    // ---------------------------------------------------------------------------------
+    /// <summary>第285期 M-a（乱射した羽は戻ってくる）。</summary>
+    public static readonly UnitDef TomeMa = new()
+    {
+        Id = "tome", Name = "見境なしのミサ", MaxHp = 58, Attack = 12, Speed = 6,
+        Traits = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.RuptureKeep, TraitId.Feathers },
+        PlusText = "指差されるたび羽が1枚増える。羽は1枚ずつ最も深く指差された敵を追って撃ち、倒れれば次の標へ流れる。どの列にも届き、抉った傷は塞がらない",
+        MinusText = "追う標が無い羽は、敵味方構わず飛んでいく",
+        Flavor = Tome.Flavor,
+    };
+
+    /// <summary>第285期 M-b（乱射した数だけ羽を失う・下限 1）。M-a ＋ <see cref="TraitId.FeatherLoss"/> の1札だけが違う。</summary>
+    public static readonly UnitDef TomeMb = new()
+    {
+        Id = "tome", Name = "見境なしのミサ", MaxHp = 58, Attack = 12, Speed = 6,
+        Traits = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.RuptureKeep, TraitId.Feathers, TraitId.FeatherLoss },
+        PlusText = TomeMa.PlusText,
+        MinusText = "追う標が無い羽は、敵味方構わず飛んで、戻ってこない",
+        Flavor = Tome.Flavor,
     };
 
     /// <summary>

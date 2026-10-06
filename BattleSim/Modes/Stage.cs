@@ -2450,6 +2450,9 @@ static partial class StageDiag
             if (!double.TryParse(c[4], out double solo)) continue;
             d[name] = (grp, solo);
         }
+        // 第285期: 表A は過去の報告なので書き換えない。改名した駒は旧名の行を新しい名前でも引けるようにする。
+        foreach (var (was, now) in Common.UnitRenames)
+            if (d.TryGetValue(was, out var v) && !d.ContainsKey(now)) d[now] = v;
         return d;
     }
 

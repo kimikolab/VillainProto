@@ -204,7 +204,7 @@ public static void Run(string[] args, int stageIndex)
                 dvClaude += "\n" + File.ReadAllText(f);
             // 第259期: `CLAUDE.md` の履歴の節を逐語で移した先も索く（移動で ○ が消えないように。
             // どれも `PHASE*.md` ではないので「初出」の列には1ビットも効かない）。
-            foreach (string name in new[] { "ENGINE_HOOKS.md", "HISTORY_PHASES.md", "COMMANDS.md", "RULES_INDEX.md", "DEMOAPP_HISTORY.md", "PHASE_INDEX.md" })
+            foreach (string name in new[] { "ENGINE_HOOKS.md", "HISTORY_PHASES.md", "COMMANDS.md", "RULES_INDEX.md", "DEMOAPP_HISTORY.md", "PHASE_INDEX.md", "CONVENTIONS_G.md" })
             {
                 string f = Path.Combine(dvDesignDir, name);
                 if (File.Exists(f)) dvClaude += "\n" + File.ReadAllText(f);

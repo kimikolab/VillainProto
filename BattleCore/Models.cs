@@ -1242,6 +1242,13 @@ public sealed class UnitTally
     /// <c>PelletShots</c> 撃った発の数 ／ <c>PelletEncoreCapped</c> 一振りの2体目以降の撃破で再行動を止めた回数（1振り1回の上限）。<b>誰も読んで分岐しない。</b>
     /// </summary>
     public int PelletVolleys, PelletShots, PelletEncoreCapped;
+    /// <summary>
+    /// 羽（第285期・<c>FeathersTrait</c>）の<b>計数専用</b>。誰も読んで分岐しない。
+    /// <c>FeatherVolleys</c> 羽の一振り ／ <c>FeatherShots</c> 一振りの初めの羽の枚数の和 ／ <c>FeatherChased</c> 標を追った発 ／
+    /// <c>FeatherFlow</c> うち前の的が倒れて次の標へ流れた発 ／ <c>FeatherSprayed</c> 乱射した発 ／ <c>FeatherTurned</c> 一振りの途中で標が尽きて乱射に化けた回数 ／
+    /// <c>FeatherGained</c>・<c>FeatherLost</c> 増えた・失った羽 ／ <c>FeatherMax</c> 羽の最大。
+    /// </summary>
+    public int FeatherVolleys, FeatherShots, FeatherChased, FeatherFlow, FeatherSprayed, FeatherTurned, FeatherGained, FeatherLost, FeatherMax;
 
     /// <summary>
     /// 炸裂・爪痕・乱射（第281期・トメの転生の版 T1 ／ T2・<c>RuptureTrait</c> ／ <c>SprayTrait</c>）の<b>計数専用</b>。誰も読んで分岐しない。
@@ -2961,6 +2968,9 @@ public sealed class UnitTally
         BurnLit += o.BurnLit; BurnRelit += o.BurnRelit; BurnLitAlly += o.BurnLitAlly;
         ExtraSwings += o.ExtraSwings;   // 第178期（計数専用）
         PelletVolleys += o.PelletVolleys; PelletShots += o.PelletShots; PelletEncoreCapped += o.PelletEncoreCapped;   // 第277期（計数専用）
+        FeatherVolleys += o.FeatherVolleys; FeatherShots += o.FeatherShots; FeatherChased += o.FeatherChased; FeatherFlow += o.FeatherFlow;   // 第285期（計数専用）
+        FeatherSprayed += o.FeatherSprayed; FeatherTurned += o.FeatherTurned; FeatherGained += o.FeatherGained; FeatherLost += o.FeatherLost;
+        FeatherMax = Math.Max(FeatherMax, o.FeatherMax);
         RuptureFires += o.RuptureFires; RuptureCross += o.RuptureCross; RuptureLayerSum += o.RuptureLayerSum;   // 第281期（計数専用）
         RuptureLayerMax = Math.Max(RuptureLayerMax, o.RuptureLayerMax); RuptureDealt += o.RuptureDealt; RuptureScar += o.RuptureScar;
         RuptureKills += o.RuptureKills; RuptureConsumed += o.RuptureConsumed;

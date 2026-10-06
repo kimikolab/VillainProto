@@ -562,6 +562,7 @@ if (focusId == "tome281") { Tome281Diag.Run(args, stageIndex); return; }   // �
 if (focusId == "tome282") { Tome282Diag.Run(args, stageIndex); return; }   // 第282期
 if (focusId == "boss283") { Boss283Diag.Run(args, stageIndex); return; }   // 第283期
 if (focusId == "elite") { EliteDiag.Run(args, stageIndex); return; }   // 第284期
+if (focusId == "misa285") { Misa285Diag.Run(args, stageIndex); return; }   // 第285期
 if (focusId == "shock") { ShockDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }
 if (focusId == "shockdigest") { ShockDigestDiag.Run(args.Length > 2 ? args[2] : "k0", args.Length > 3 ? args[3] : ""); return; }
 // debuff モード（第189期） —— デバッファー3枚の転生（ネル・クビ・ハネ）。本体は `Modes/Debuff*.cs`。
@@ -1021,7 +1022,7 @@ sealed class GdStat
 //
 // 中身は第31期の16行 + `突き出し`（17行）から、第60期に**1行を差し替え・2行を足した**もの:
 //   差し替え `裂き (キリ×エグ)` → `裂き×責め苦 (キリ×エグ×シガ)`（情報セル 2 → 3）
-//   追加     `止め改 (トメ×薙ぎ)`   ——標の**敵側**の読み手（第53期）。#4 は味方側で無代表だった
+//   追加     `見境改 (ミサ×薙ぎ)`   ——標の**敵側**の読み手（第53期）。#4 は味方側で無代表だった
 //   追加     `引き受け (ウケ×ドハ)` ——`ctx.Dull` を通る行が主判定に1つも無かった（第42期）
 // **`死軸×ホタ (ゾト×熾)` は保留のまま第111期に `Presets.Compare` から落ちた**
 // ——`後衛特化+後備え`（#16）との r が **+1.0000**・max|Δ| **0.5pt** で 61 行でいちばん冗長で、
@@ -1088,7 +1089,7 @@ static class Baseline
         "惨禍×死の連鎖",                       // 死（番人）
         "後衛特化+後備え",                     // 後備え（番人。情報セルでは測らない）
         "突き出し (セロ×ヨミ)",                // 移動（予備）
-        "止め改 (トメ×薙ぎ)",                  // 標（敵側の読み手）**第60期に追加**
+        "見境改 (ミサ×薙ぎ)",                  // 標（敵側の読み手）**第60期に追加**
         "引き受け (ウケ×ドハ)",                // 弱体の窓口（`ctx.Dull` の横取り）**第60期に追加**
     };
 
@@ -2212,7 +2213,7 @@ static class OffturnScan
         ("隊列崩し (バサ×ヨミ×セロ)", 1, 3),
         ("継ぎ当て×分散回復",         1, 0),
         ("逆しま (ネル×ウツ)",        4, 15),
-        ("止め改 (トメ×薙ぎ)",        3, 6),
+        ("見境改 (ミサ×薙ぎ)",        3, 6),
         ("刻み×抉り (ノミ×エグ)",     4, 0),
     };
 

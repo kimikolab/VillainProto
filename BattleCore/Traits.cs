@@ -637,6 +637,10 @@ public enum TraitId
     RuptureKeep, // 層を残す（第282期・T1n）: 炸裂の後に層を消さない（**札そのものは挙動を持たない**・`RuptureAfter` が読む・外せば T1）
     Spray,       // 乱射（マイナス）: 敵に標持ちが 0 の手番は、自分以外の生存全駒（敵味方）へ 攻/2 × 3 発（**札そのものは挙動を持たない**・engine `SwingTurnBody` が読む）
 
+    // --- 第285期で足した札（ミサの連射化の版。`UnitCatalog.TomeMa` ／ `TomeMb` だけが持つ） ---
+    Feathers,    // 羽: 手番は羽の枚数だけ1発ずつ撃つ（1発 ＝ 攻 × `FinisherRule.Multiplier`・標持ちを層の深い順に追う・尽きたら残りは乱射）。羽は初期 1・味方が敵に標を書くたび +1（判定は engine の `FeatherVolley` ／ `LayerMark`）
+    FeatherLoss, // 羽を失う（M-b）: 乱射した羽の数だけ羽を失う・下限 1（**札そのものは挙動を持たない**・`FeatherVolley` が読む・外せば M-a）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -4777,6 +4781,42 @@ public sealed class SprayTrait : Trait
     public const int Percent = 50;
 
     public override TraitId Id => TraitId.Spray;
+}
+
+/// <summary>
+/// 羽（第285期・ミサの連射化の版 M-a ／ M-b）。<b>札は在庫の帳簿だけを持ち、撃つのは engine</b>（<c>SwingTurnBody</c> → <c>FeatherVolley</c>）。
+///
+/// <list type="bullet">
+///   <item><b>在庫</b>: 初期 <see cref="Initial"/> 枚（下限も同じ）。<b>味方陣営の書き手が敵に標を書くたび +1</b>（新規・層の追加の両方。口は <see cref="BattleContext.LayerMark"/> の1箇所）。
+///   私有キー <see cref="ExtraKey"/> に初期の1枚を除いた枚数を持つ（<c>StatusKeys.All</c> に入れない・<see cref="OnCarryOver"/> で捨てる）</item>
+///   <item><b>手番</b>: 羽の枚数だけ1発ずつ撃つ。1発 ＝ 単体の <c>PerformAttack</c> 1回で、的は標の段（<see cref="RuptureTrait.Preferred"/>・列越え）。
+///   打点は 攻 × <see cref="FinisherRule.Multiplier"/>（層は掛けない）。爪痕は1発ごと（<see cref="BattleContext.RuptureAfter"/>）</item>
+///   <item><b>乱射</b>: 標持ちが尽きた（または初めからいない）残りの羽は、乱射（<see cref="SprayTrait"/>）の1発と同じ形で撃つ</item>
+///   <item><b>M-b</b>（<see cref="TraitId.FeatherLoss"/> の保持者）: 乱射した羽の数だけ在庫を失う（下限 <see cref="Initial"/>）</item>
+/// </list>
+/// <b>炸裂（<see cref="TraitId.Rupture"/>）と一緒に持つ</b>——標の段・層・爪痕の口は炸裂の札が開ける。乱射の札（<see cref="TraitId.Spray"/>）は持たない（羽の乱射は羽の一振りの中で解決する）。
+/// </summary>
+public sealed class FeathersTrait : Trait
+{
+    /// <summary>戦の初めの羽（下限も同じ）。</summary>
+    public const int Initial = 1;
+
+    /// <summary>初期の1枚を除いた羽の枚数（私有キー）。</summary>
+    public const string ExtraKey = "featherExtra";
+
+    public override TraitId Id => TraitId.Feathers;
+
+    /// <summary>いまの羽の枚数。</summary>
+    public static int Count(UnitState u) => Initial + u.RawCounter(ExtraKey);
+
+    /// <summary>部隊戦の境界で羽を初期に戻す（標は境界で消えるので、羽だけを持ち越すと書き込みの無い在庫が残る）。</summary>
+    public override void OnCarryOver(UnitState self) => self.SetCounter(ExtraKey, 0);
+}
+
+/// <summary>羽を失う（第285期・M-b）。<b>札そのものは挙動を持たない</b>（engine の <c>FeatherVolley</c> が保持を読む）。外せば M-a。</summary>
+public sealed class FeatherLossTrait : Trait
+{
+    public override TraitId Id => TraitId.FeatherLoss;
 }
 
 /// <summary>
@@ -12358,7 +12398,7 @@ public sealed class VendettaTrait : Trait
             bool marked = false;
             if (source.IsAlive && !alreadyMarked)
             {
-                source.SetCounter(StatusKeys.Marked, 1);
+                ctx.LayerMark(source, self);   // 第285期: 新規の標も口を通す（標が 0 なので `SetCounter(Marked, 1)` と同じ・羽の書き込みを数えるため）
                 ctx.NoteMarkOrigin(source, MarkOrigin.Vendetta);
                 ctx.EmitStatusGain(source, StatusKeys.Marked, 1, self);   // 表示専用
                 ctx.Log($"    {self.Name} が {source.Name} を仇として指差した", LogKind.Trigger);
@@ -16241,6 +16281,8 @@ public static class TraitCatalog
         new RuptureScarTrait(),        // 第281期（T1 ／ T2）
         new SprayTrait(),              // 第281期（T1 ／ T2）
         new RuptureKeepTrait(),        // 第282期（T1n）
+        new FeathersTrait(),           // 第285期（M-a ／ M-b）
+        new FeatherLossTrait(),        // 第285期（M-b）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),
