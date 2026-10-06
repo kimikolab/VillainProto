@@ -117,6 +117,108 @@ static class SweepDiag
         ("0 relic rejudge", "0 relic rejudge smoke"), ("0 relic expand", "0 relic expand smoke"),
     };
 
+    /// <summary>
+    /// **現役網（第280期・加点方式）**——sweep が回すのはこの一覧だけ。**ここに無い本はすべて凍結庫**（第279期の `Frozen` ＋ 第280期の残り＝群 G6）。
+    /// 選ぶ基準（指示書 design/PHASE280_SWEEP_REBUILD_SPEC.md §1）: (a) 現行の規定の盤面を直接測る本 ／ (b) 現行の判定・歯止めが依存する本。
+    /// 台帳（所要つき）は `sweep roster` が書く `design/SWEEP_ROSTER.md`。**新しい器具はこの一覧に足さない限り sweep に入らない**——入れるかは期の報告で決める。
+    /// </summary>
+    internal static readonly (string Cmd, char Layer, string Reason)[] Active =
+    {
+        ("0 compare", 'a', "代表編成 × 全波の勝率（`docs/balance.md`）。盤面そのもの"),
+        ("0 compare quality", 'a', "勝ち方の質（`docs/quality.md`）"),
+        ("0 dump", 'a', "駒・札・ステージの一覧（`docs/units.md`）。説明文と挙動のずれを止める"),
+        ("0 chain", 'a', "連鎖の深さ（`docs/chain.md`）"),
+        ("0 ablate", 'a', "1体抜きの勝率変化（`docs/ablation.md`）"),
+        ("0 pulse", 'a', "駒ごとの活動量（`docs/pulse.md`）"),
+        ("0 engage", 'a', "会戦（`docs/engage.md`）"),
+        ("0 cross quality", 'a', "交差帯 12 行（`docs/crossing.md`）"),
+        ("0 grade2 stock", 'a', "在庫（`docs/stock.md`）"),
+        ("0 parry harm", 'a', "害の帳簿（`docs/harm.md`）"),
+        ("0 watch", 'a', "見る地図の主表（`docs/watch.md` の前半）"),
+        ("0 watch phase0", 'a', "出来事の窓口の一覧（`docs/watch.md` の後半・ソースを読む）"),
+        ("0 derive rules", 'a', "ノブ一覧（`docs/rules.md`・ソースと文書を読む）"),
+        ("0 roster audit", 'a', "ロスターの棚卸し（`docs/roster_audit.md`・`audit` の対象に無い）"),
+        ("0 audit", 'a', "docs/ の整合と `CLAUDE.md` の門（戦闘0回）"),
+        ("0 bosswave run", 'a', "ボスの規定形 × 7台"),
+        ("0 bosswave compare", 'a', "`compare` の全行 × ボスの規定形"),
+        ("0 bosswave check", 'a', "ボスの規則の自己検査（第265〜269期の 53 項目）"),
+        ("0 checkwave run", 'a', "チェック波の規定の組 × 7台"),
+        ("0 checkwave check", 'a', "チェック波の規則の自己検査"),
+        ("0 relic check", 'a', "レリックの器の自己検査（付けない編成は素と同一 ほか）"),
+        ("0 relic check273", 'a', "現役の札 12 枚の自己検査"),
+        ("0 relic grid smoke", 'a', "レリックの物差し（第271期）の煙試験"),
+        ("0 relic junk smoke", 'a', "ゴミの成立の煙試験"),
+        ("0 relic mainwin smoke", 'a', "本編の固有の勝者の煙試験"),
+        ("0 relic rejudge smoke", 'a', "再判定（第272期）の煙試験"),
+        ("0 relic expand smoke", 'a', "確定版の物差し（第273期）の煙試験"),
+        ("0 shockdigest k0|aka", 'a', "台本の指紋（感電・カタ ／ スス）"),
+        ("0 shockdigest t216", 'a', "台本の指紋（第216期の台）"),
+        ("0 shockdigest w217", 'a', "台本の指紋（シガの台）"),
+        ("0 shockdigest m218", 'a', "台本の指紋（ミオの台）"),
+        ("0 shockdigest m219 cat|m5", 'a', "台本の指紋（規定のミオ）"),
+        ("0 shockdigest e223", 'a', "台本の指紋（セロの台）"),
+        ("0 shockdigest k226", 'a', "台本の指紋（第226期の台）"),
+        ("0 shockdigest l227", 'a', "台本の指紋（第227期の台）"),
+        ("0 shockdigest h228", 'a', "台本の指紋（第228期の台）"),
+        ("0 shockdigest g229", 'a', "台本の指紋（第229期の台）"),
+        ("0 shockdigest s232", 'a', "台本の指紋（第232期の台）"),
+        ("0 shockdigest a231", 'a', "台本の指紋（第231期の台）"),
+        ("0 shockdigest w230", 'a', "台本の指紋（第230期の台・今の既定の規則で回す）"),
+        ("0 shockdigest r225", 'a', "台本の指紋（シオ ／ セロの台）"),
+        ("0 shockdigest f224", 'a', "台本の指紋（第224期の台）"),
+        ("0 shockdigest d222", 'a', "台本の指紋（シオ ／ ヨミの台）"),
+        ("0 borgfront digest", 'a', "燃焼の指紋（第235期の台）"),
+        ("0 fireward digest", 'a', "燃焼の指紋（第238期の台）"),
+        ("0 firescale digest", 'a', "燃焼の指紋（火の段の台）"),
+        ("0 fireburst digest", 'a', "燃焼の指紋（第244期の台）"),
+        ("0 enemyfire digest", 'a', "燃焼の指紋（第245期の台）"),
+        ("0 firecycle digest", 'a', "燃焼の指紋（第246期の台）"),
+        ("0 firetri digest", 'a', "燃焼の指紋（第247期の台）"),
+        ("0 firefinish digest", 'a', "燃焼の指紋（第249期の台）"),
+        ("0 fireatk digest", 'a', "燃焼の指紋（第250期の台）"),
+        ("0 firekindle digest", 'a', "燃焼の指紋（第252期の台）"),
+        ("0 som276 digest", 'a', "感電の指紋（ソムの転生の台）"),
+        ("0 spread", 'b', "主判定19行・歯止め（第五波）・情報セルの算出（§4）"),
+        ("0 cross check", 'b', "`compare` の全セル・規則の既定・`PickOne` の自己検査（主判定の分母）"),
+        ("0 derive check", 'b', "`compare` の全セル・交差帯12行・印の全列挙の自己検査"),
+    };
+
+    static bool IsActive(string cmd) => Active.Any(a => a.Cmd == cmd);
+
+    /// <summary>
+    /// 凍結庫の全本（第280期）: コマンド表の本のうち、現役網にも audit が正にも煙試験の本体にも無いもの。
+    /// 第279期に凍結した 70 本は `Frozen` の群（G2 ／ G3 ／ G4）のまま、第280期に外した本は群 **G6**（期はコマンド表の注記から）。
+    /// </summary>
+    static List<(string Cmd, string Group, int Phase)> FrozenAll(string root, List<string> table)
+    {
+        var phaseOf = PhaseNotes(root);
+        var l = new List<(string, string, int)>();
+        foreach (string c in table)
+        {
+            if (IsActive(c) || DocsByAudit.Contains(c) || SmokeReplaced.Any(s => s.Full == c)) continue;
+            int i = Array.FindIndex(Frozen, f => f.Cmd == c);
+            l.Add(i >= 0 ? Frozen[i] : (c, "G6", phaseOf.TryGetValue(c, out int p) ? p : 0));
+        }
+        return l;
+    }
+
+    /// <summary>コマンド表の行の注記にある最初の「第nnn期」（無ければ引かない）。台帳の表示用。</summary>
+    static Dictionary<string, int> PhaseNotes(string root)
+    {
+        var d = new Dictionary<string, int>(StringComparer.Ordinal);
+        var re = new Regex(@"第(\d+)期");
+        foreach (string raw in File.ReadLines(Path.Combine(root, "design", "COMMANDS.md")))
+        {
+            string line = raw.TrimEnd('\r');
+            if (!line.StartsWith(Prefix, StringComparison.Ordinal)) continue;
+            var m = re.Match(line);
+            if (!m.Success) continue;
+            foreach (string c in Extract(new[] { line }))
+                d.TryAdd(c, int.Parse(m.Groups[1].Value));
+        }
+        return d;
+    }
+
     /// <summary>本ごとの上限（秒・第279期）。既定より長く要る本だけ。`roster audit` は単独で 130〜280 秒（全コア）。</summary>
     static readonly Dictionary<string, int> LimitOverride = new(StringComparer.Ordinal)
     {
@@ -125,8 +227,8 @@ static class SweepDiag
 
     static int LimitOf(string cmd, int limit) => LimitOverride.TryGetValue(cmd, out int s) ? Math.Max(s, limit) : limit;
 
-    /// <summary>sweep の一覧から外す本（凍結 ＋ audit が正 ＋ 煙試験に置き換えた本体）。</summary>
-    static bool Excluded(string cmd) => Frozen.Any(f => f.Cmd == cmd) || DocsByAudit.Contains(cmd) || SmokeReplaced.Any(s => s.Full == cmd);
+    /// <summary>sweep の一覧から外す本。第279期は「凍結 ＋ audit が正 ＋ 煙試験に置き換えた本体」を外す減点方式、**第280期から「現役網に無い本」を外す加点方式**。</summary>
+    static bool Excluded(string cmd) => !IsActive(cmd);
 
     /// <summary>
     /// **`sweep fast` の系統（第278期）**——主判定系（`compare` と、それを読む生成物・現役の物差し）。期中の判定用。
@@ -153,6 +255,10 @@ static class SweepDiag
         // 第278期: **既定は直列**（j=1）。並列は j=N か環境変数 SWEEP_JOBS で明示したときだけ——上限 90 秒が壁時計なので、並べると 54〜90 秒の本の判定が揺れる（報告 §3）。
         int jobs = int.TryParse(Environment.GetEnvironmentVariable("SWEEP_JOBS"), out int ej) && ej > 0 ? ej : 1;
         if (rest.Length > 0 && rest[0] is "frozen" or "seal" or "thaw") { Freezer(rest); return; }
+        if (rest.Length > 0 && rest[0] == "roster") { Roster(); return; }
+        // 第280期: 夜間の full（現役網・指紋照合なし・直列）。前回の指紋と比べた朝のサマリを `.sweep/nightly/<日付>.md` に書く。
+        bool nightly = rest.Length > 0 && rest[0] == "nightly";
+        if (nightly) { rest = rest[1..]; noCache = true; jobs = 1; }
         foreach (string a in rest)
         {
             if (a == "list") listOnly = true;
@@ -168,16 +274,18 @@ static class SweepDiag
         string dll = typeof(SweepDiag).Assembly.Location;
         // 第259期: コマンド表は `CLAUDE.md` から `design/COMMANDS.md` へ逐語で移った（行の書式は同じ）。
         var all = Extract(Path.Combine(root, "design", "COMMANDS.md"));
-        // 第279期: 凍結庫 ／ audit が正の生成器 ／ 煙試験に置き換えた本体は一覧から外す。
+        // 第280期: 回すのは現役網（`Active`）だけ。ほかは凍結庫 ／ audit が正の生成器 ／ 煙試験に置き換えた本体。
         var cmds = all.Where(c => !Excluded(c)).ToList();
-        int nFrozen = all.Count(c => Frozen.Any(f => f.Cmd == c)), nDocs = all.Count(DocsByAudit.Contains), nSmoke = all.Count(c => SmokeReplaced.Any(s => s.Full == c));
+        int nFrozen = FrozenAll(root, all).Count, nDocs = all.Count(DocsByAudit.Contains), nSmoke = all.Count(c => SmokeReplaced.Any(s => s.Full == c));
+        var missing = Active.Where(a => !all.Contains(a.Cmd)).Select(a => a.Cmd).ToList();
+        if (missing.Count > 0) { Console.WriteLine("**現役網の本がコマンド表に無い**: " + string.Join(" ／ ", missing.Select(m => $"`{m}`"))); Environment.ExitCode = 2; return; }
         if (mode == "fast") cmds = cmds.Where(c => FastFamilies.Contains(FamilyOf(c))).ToList();
         if (filters.Count > 0) cmds = cmds.Where(c => filters.Any(f => c.Contains(f, StringComparison.Ordinal))).ToList();
 
         Console.WriteLine("# 全診断の exit 検査（`sweep`・第141期）");
         Console.WriteLine();
         Console.WriteLine($"`design/COMMANDS.md` のコマンド表から引数の穴（`<...>`）の無い行を抜き出し、`[...]` を落として **{cmds.Count} 本**。");
-        Console.WriteLine($"外した本（第279期）: 凍結庫 {nFrozen} ／ audit が正の docs 生成器 {nDocs} ／ 煙試験に置き換えた本体 {nSmoke}（`design/SWEEP_FREEZER.md`）。");
+        Console.WriteLine($"**現役網（第280期・`design/SWEEP_ROSTER.md`）だけを回す**。外した本: 凍結庫 {nFrozen} ／ audit が正の docs 生成器 {nDocs} ／ 煙試験に置き換えた本体 {nSmoke}（`design/SWEEP_FREEZER.md`）。");
         Console.WriteLine($"1本ずつ **{limit} 秒**の上限で子プロセスとして走らせる（{string.Join(" ／ ", LimitOverride.Select(kv => $"`{kv.Key}` は {kv.Value} 秒"))}・標準出力は捨てる・ファイルは書かない）。**上限は異常終了に数える**（第279期）。");
         Console.WriteLine($"`{Path.GetFileName(dll)}` を `{root}` で回す。");
         Console.WriteLine($"層 **{mode}** ／ 並列度 {jobs}（CPU 予算 {PhysicalCores} コア＝物理）／ 指紋照合 {(noCache ? "**使わない**（nocache）" : "あり（`.sweep/cache.tsv`）")}（第278期）。");
@@ -194,6 +302,7 @@ static class SweepDiag
 
         var keys = new KeyBuilder(root, null);
         var cache = SweepCache.Load(root);
+        var prevOut = cmds.ToDictionary(c => c, c => cache.LastOut(c));
         var total = Stopwatch.StartNew();
         var rows = RunAll(dll, root, cmds, limit, jobs, keys, cache, noCache);
         total.Stop();
@@ -243,6 +352,76 @@ static class SweepDiag
         int fail = bad.Count + timeouts.Count;
         Console.WriteLine(fail == 0 ? "**合格**（異常終了 0 本・上限 0 本）。" : $"**不合格**（異常終了 {bad.Count} 本・上限 {timeouts.Count} 本）。");
         Environment.ExitCode = fail == 0 ? 0 : 1;
+        if (nightly) WriteNightly(root, rows, prevOut, total.Elapsed.TotalMinutes, bad.Count, timeouts.Count);
+    }
+
+    /// <summary>
+    /// 朝のサマリ（第280期・`sweep nightly`）。`.sweep/nightly/<日付>.md` に1枚: 指紋の差分（差分があった本の名）・異常終了 ／ 打ち切りの本数・所要・前回との差。
+    /// 指紋の比較の相手は**この回を走らせる前のキャッシュの指紋**（前回の夜間か日中の fast の結果）。最後の行に機械が読む1行（`<!-- nightly … -->`）を置く。
+    /// </summary>
+    static void WriteNightly(string root, List<Result> rows, Dictionary<string, string?> prev, double minutes, int bad, int timeouts)
+    {
+        string dir = Path.Combine(root, ".sweep", "nightly");
+        Directory.CreateDirectory(dir);
+        string date = DateTime.Now.ToString("yyyy-MM-dd");
+        var last = Directory.GetFiles(dir, "*.md").Where(f => Path.GetFileNameWithoutExtension(f) != date).OrderBy(f => f, StringComparer.Ordinal).LastOrDefault();
+        double? lastMin = null;
+        if (last is not null)
+        {
+            var m = Regex.Match(File.ReadAllText(last), @"<!-- nightly minutes=([\d.]+)");
+            if (m.Success) lastMin = double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+        }
+        var changed = rows.Where(r => r.Exit == 0 && prev[r.Cmd] is { } p && p != "—" && p != r.Out).ToList();
+        var fresh = rows.Where(r => r.Exit == 0 && (prev[r.Cmd] is null || prev[r.Cmd] == "—")).ToList();
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"# sweep 夜間サマリ {date}（{HeadSha(root)}）");
+        sb.AppendLine();
+        string verdict = bad + timeouts == 0 && changed.Count == 0 ? "**異常なし**" : "**要確認**";
+        sb.AppendLine($"{verdict} —— 現役網 {rows.Count} 本・所要 {minutes:F1} 分{(lastMin is double lm ? $"（前回 {lm:F1} 分・差 {minutes - lm:+0.0;-0.0;0.0} 分）" : "（前回なし）")}");
+        sb.AppendLine();
+        sb.AppendLine("| 項目 | 本数 |");
+        sb.AppendLine("|---|--:|");
+        sb.AppendLine($"| 指紋の差分（前回と出力が違う） | {changed.Count} |");
+        sb.AppendLine($"| 異常終了 | {bad} |");
+        sb.AppendLine($"| 打ち切り（上限） | {timeouts} |");
+        sb.AppendLine($"| 前回の指紋が無い（初回・新しく現役網に入った本） | {fresh.Count} |");
+        sb.AppendLine();
+        if (changed.Count > 0) { sb.AppendLine("## 指紋の差分があった本（翌朝の最初の仕事は原因の特定・`git bisect`）"); sb.AppendLine(); foreach (var r in changed) sb.AppendLine($"- `{r.Cmd}`（{prev[r.Cmd]} → {r.Out}）"); sb.AppendLine(); }
+        var ng = rows.Where(r => r.Exit != 0).ToList();
+        if (ng.Count > 0) { sb.AppendLine("## 異常終了 ／ 打ち切り"); sb.AppendLine(); foreach (var r in ng) sb.AppendLine($"- `{r.Cmd}` exit {ExitText(r.Exit)} {r.Tail}"); sb.AppendLine(); }
+        sb.AppendLine(System.FormattableString.Invariant($"<!-- nightly minutes={minutes:F1} changed={changed.Count} bad={bad} timeouts={timeouts} -->"));
+        string path = Path.Combine(dir, date + ".md");
+        File.WriteAllText(path, sb.ToString());
+        Console.WriteLine();
+        Console.WriteLine($"夜間サマリ: `{Path.GetRelativePath(root, path)}`（指紋の差分 {changed.Count}・異常終了 {bad}・打ち切り {timeouts}）");
+    }
+
+    /// <summary>現役網の台帳（第280期・`sweep roster`）。`design/SWEEP_ROSTER.md` に貼る markdown を出す（所要は単独で走った回の記録・キャッシュから）。末尾に検算。</summary>
+    static void Roster()
+    {
+        string root = FindRoot() ?? throw new InvalidOperationException("リポジトリの中で回すこと");
+        var table = Extract(Path.Combine(root, "design", "COMMANDS.md"));
+        var cache = SweepCache.Load(root);
+        var frozen = FrozenAll(root, table);
+        Console.WriteLine("| # | 本 | 層 | 所要（秒） | 理由 |");
+        Console.WriteLine("|--:|---|:-:|--:|---|");
+        double sum = 0;
+        for (int i = 0; i < Active.Length; i++)
+        {
+            var (c, layer, why) = Active[i];
+            string sec = cache.TrySched(c, out var r) && r.Exit == 0 ? r.Sec.ToString("F1") : "—";
+            if (r is { Exit: 0 }) sum += r.Sec;
+            Console.WriteLine($"| {i + 1} | `{c}` | {layer} | {sec} | {why} |");
+        }
+        Console.WriteLine();
+        Console.WriteLine($"現役網 {Active.Length} 本（a {Active.Count(a => a.Layer == 'a')} ／ b {Active.Count(a => a.Layer == 'b')}）・所要の合計 {sum / 60:F1} 分（単独で走った回の記録）。");
+        Console.WriteLine();
+        Console.WriteLine("## 検算（コマンド表の本の分割）");
+        Console.WriteLine();
+        int nDocs = table.Count(DocsByAudit.Contains), nSmoke = table.Count(c => SmokeReplaced.Any(x => x.Full == c));
+        int f279 = frozen.Count(f => f.Group != "G6"), f280 = frozen.Count(f => f.Group == "G6");
+        Console.WriteLine($"- コマンド表 {table.Count} 本 ＝ 現役網 {Active.Length} ＋ 凍結庫 {frozen.Count}（第279期 {f279} ＋ 第280期 {f280}）＋ audit が正 {nDocs} ＋ 煙試験の本体 {nSmoke} ＝ {Active.Length + frozen.Count + nDocs + nSmoke}");
+        Console.WriteLine($"- 第279期の full の {table.Count - f279 - nDocs - nSmoke} 本 ＝ 現役網 {Active.Length} ＋ 第280期に凍結 {f280} ＝ {Active.Length + f280}");
     }
 
     // ---------------------------------------------------------------------------------
@@ -358,11 +537,13 @@ static class SweepDiag
     static string Verdict(int e) => e == 0 ? "" : e == 124 ? "上限" : "**異常終了**";
 
     /// <summary>コマンド表（第259期からは `design/COMMANDS.md`）から走らせるコマンドを組む。**行を読んでトークンに割る**（連結や文字列の再解釈をしない）。</summary>
-    public static List<string> Extract(string claudeMd)
+    public static List<string> Extract(string claudeMd) => Extract(File.ReadLines(claudeMd));
+
+    static List<string> Extract(IEnumerable<string> lines)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var list = new List<string>();
-        foreach (string raw in File.ReadLines(claudeMd))
+        foreach (string raw in lines)
         {
             string line = raw.TrimEnd('\r');
             if (!line.StartsWith(Prefix, StringComparison.Ordinal)) continue;
@@ -499,9 +680,10 @@ static class SweepDiag
 
     static void SaveSeals(string root, Dictionary<string, Seal> seals)
     {
+        var order = FrozenAll(root, Extract(Path.Combine(root, "design", "COMMANDS.md")));
         var inv = System.Globalization.CultureInfo.InvariantCulture;
-        var lines = new List<string> { "# sweep の凍結庫の封印（第279期・`sweep seal` が書く。手で編集しない）: コマンド\t群\t期\t封印の版\t日付\t上限\texit\t秒\t出力の指紋\t出力の行数" };
-        foreach (var (cmd, _, _) in Frozen)
+        var lines = new List<string> { "# sweep の凍結庫の封印（第279期・`sweep seal` が書く。G6 の行は第280期に第279期の full（b563685）の指紋から写した。手で編集しない）: コマンド\t群\t期\t封印の版\t日付\t上限\texit\t秒\t出力の指紋\t出力の行数" };
+        foreach (var (cmd, _, _) in order)
             if (seals.TryGetValue(cmd, out var s))
                 lines.Add(string.Join('\t', s.Cmd, s.Group, s.Phase, s.Sha, s.Date, s.Limit, s.Exit, s.Sec.ToString("F1", inv), s.Fp, s.Lines));
         Directory.CreateDirectory(Path.GetDirectoryName(SealPath(root))!);
@@ -544,11 +726,12 @@ static class SweepDiag
         }
         var table = Extract(Path.Combine(root, "design", "COMMANDS.md"));
         var seals = LoadSeals(root);
-        var pick = Frozen.Where(f => filters.Count == 0 || filters.Any(x => x == f.Group || f.Cmd.Contains(x, StringComparison.Ordinal))).ToList();
+        var frozenAll = FrozenAll(root, table);
+        var pick = frozenAll.Where(f => filters.Count == 0 || filters.Any(x => x == f.Group || f.Cmd.Contains(x, StringComparison.Ordinal))).ToList();
 
         if (verb == "frozen")
         {
-            Console.WriteLine($"# sweep の凍結庫（第279期）—— {Frozen.Length} 本（G2 {Frozen.Count(f => f.Group == "G2")} ／ G3 {Frozen.Count(f => f.Group == "G3")} ／ G4 {Frozen.Count(f => f.Group == "G4")}）・封印 `design/freezer/seals.tsv`");
+            Console.WriteLine($"# sweep の凍結庫（第279〜280期）—— {frozenAll.Count} 本（G2 {frozenAll.Count(f => f.Group == "G2")} ／ G3 {frozenAll.Count(f => f.Group == "G3")} ／ G4 {frozenAll.Count(f => f.Group == "G4")} ／ G6 {frozenAll.Count(f => f.Group == "G6")}）・封印 `design/freezer/seals.tsv`");
             Console.WriteLine();
             Console.WriteLine("| コマンド | 群 | 期 | コマンド表 | 封印の版 | 封印 |");
             Console.WriteLine("|---|---|--:|:-:|---|---|");
@@ -830,6 +1013,12 @@ static class SweepDiag
             r = null!; return false;
         }
 
+        /// <summary>前回の結果の出力の指紋（鍵に依らない・無ければ null）。夜間のサマリが「前回と比べて動いたか」に使う（第280期）。</summary>
+        public string? LastOut(string cmd)
+        {
+            lock (_rows) return _rows.TryGetValue(cmd, out var v) ? v.R.Out : null;
+        }
+
         /// <summary>並べ方用の履歴（単独で走った回の結果・鍵に依らない）。</summary>
         public bool TrySched(string cmd, out Result r)
         {
@@ -907,7 +1096,18 @@ static class SweepDiag
         var table = cmds;
         Ok($"(h) 凍結した {Frozen.Length} 本はすべてコマンド表にある（重複なし）", Frozen.All(f => table.Contains(f.Cmd)) && Frozen.Select(f => f.Cmd).Distinct().Count() == Frozen.Length);
         Ok("(i) audit が正の生成器 ／ 煙試験の本体と煙試験の形はすべてコマンド表にある", DocsByAudit.All(table.Contains) && SmokeReplaced.All(x => table.Contains(x.Full) && table.Contains(x.Smoke)));
-        Ok("(j) 凍結した本に `sweep fast` の系統は無い", Frozen.All(f => !FastFamilies.Contains(FamilyOf(f.Cmd))));
+        Ok("(j) 第279期に凍結した本に `sweep fast` の系統は無い", Frozen.All(f => !FastFamilies.Contains(FamilyOf(f.Cmd))));
+        // 第280期: 現役網（加点方式）。
+        var frozenAll = FrozenAll(root, table);
+        int nDocs = table.Count(DocsByAudit.Contains), nSmoke = table.Count(c => SmokeReplaced.Any(x => x.Full == c));
+        var parts = Active.Select(a => a.Cmd).Concat(frozenAll.Select(f => f.Cmd)).Concat(table.Where(DocsByAudit.Contains)).Concat(table.Where(c => SmokeReplaced.Any(x => x.Full == c))).ToList();
+        Ok($"(k) コマンド表 {table.Count} 本 ＝ 現役網 {Active.Length} ＋ 凍結庫 {frozenAll.Count} ＋ audit が正 {nDocs} ＋ 煙試験の本体 {nSmoke}（重なり 0・漏れ 0）",
+           parts.Count == table.Count && parts.ToHashSet().SetEquals(table) && Active.Select(a => a.Cmd).Distinct().Count() == Active.Length && Active.All(a => table.Contains(a.Cmd)));
+        int f279 = frozenAll.Count(f => f.Group != "G6"), f280 = frozenAll.Count(f => f.Group == "G6");
+        Ok($"(l) 第279期の full の本 {table.Count - f279 - nDocs - nSmoke} ＝ 現役網 {Active.Length} ＋ 第280期に凍結 {f280}", table.Count - f279 - nDocs - nSmoke == Active.Length + f280);
+        var activeIdx = cmds.Select((c, i) => (c, i)).Where(x => IsActive(x.c)).Select(x => x.i).ToList();
+        var kb1 = Keys(new KeyBuilder(root, new Dictionary<string, string> { ["BattleCore/Traits.cs"] = Rd("BattleCore/Traits.cs") + " " }));
+        Ok($"(m) BattleCore に1文字足すと現役網の全 {activeIdx.Count} 本の鍵が動く（再実行に戻る）", activeIdx.All(i => kb1[i] != k0[i]));
         Console.WriteLine();
         Console.WriteLine(bad == 0 ? "自己検査: すべて ○" : $"自己検査: × が {bad} 件");
         Environment.ExitCode = bad == 0 ? 0 : 1;

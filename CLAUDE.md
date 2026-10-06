@@ -289,8 +289,8 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 **`All` から駒を外す作業は「`UnitCatalog.Retired` へ移す」の1行**で、辞書のキーや `Id` の引きは `Everyone`（`All ∪ Retired`）を使う。
 第139期の則「`All` を辞書のキーに使っている診断の一覧を添えること」は**人の記憶に頼る形だったので次の期に守られず**、
 第140期の走査で **19 本が黙って落ちていた**（ハリ側 6 本は第108期から 32 期ぶん）。**一覧を添える則は `sweep` に置き換わった。**
-**期中は `sweep fast`、コミット前に `sweep full`**（第278期・指紋照合と並列化。鍵が動かなかった本は前回の結果で照合する）。合格は**異常終了 0 本かつ上限 0 本**（第279期から上限 150 秒も異常に数える）。
-**凍結庫（第279期・`design/SWEEP_FREEZER.md`）**: 上限に当たり続けた本は `SweepDiag.Frozen` に移して sweep から外す（コードは消さない）。**凍結した本を使う期は Phase 0 で `sweep thaw <絞り込み>` を1回走らせ、封印（`design/freezer/seals.tsv`）と照合する**——不一致なら `git bisect`。
+**日中は `sweep fast`・full は夜間（`sweep nightly`）、朝にサマリを確認。差分があれば翌朝の最初の仕事は原因特定（`git bisect`）**（第280期・`design/SWEEP_NIGHTLY.md`）。sweep が回すのは**現役網（`design/SWEEP_ROSTER.md`・加点方式）だけ**で、新しい器具は入れると決めたときだけ `SweepDiag.Active` に足す。合格は**異常終了 0 本かつ上限 0 本**（上限 150 秒）。
+**凍結庫（第279期・`design/SWEEP_FREEZER.md`）**: 現役網に無い本はすべて凍結庫（コードは消さない）。**凍結した本を使う期は Phase 0 で `sweep thaw <絞り込み>` を1回走らせ、封印（`design/freezer/seals.tsv`）と照合する**——不一致なら `git bisect`。
 
 ## 新機構の判定規約
 
@@ -326,7 +326,7 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 
 **期ごとの報告は `design/HISTORY_PHASES.md`**（この節から逐語で移した。以後の期はそちらの冒頭に足し、ここのブロックは差し替える）。
 
-**最後に動かした期: 第279期**（**凍結庫の実施 ＋ 転生段の3駒目——トウの転生（帯電の粉）**。sweep から 77 本を外した（凍結 70・audit が正 2・煙試験に置き換え 5）。トウは版 T1（漏れあり）／ T2（漏れなし）を測り、**規定は T0 のまま**（採否はポン）。報告は `design/PHASE279_TOU_REBIRTH.md`）。第278期の sweep の応答改善は `design/PHASE278_SWEEP_SPEEDUP.md`、第277期のノミの転生（N1）は `design/PHASE277_NOMI_REBIRTH.md`。転生段の棚卸しは `design/PHASE275_ROSTER_INVENTORY.md`、レリック段（第270〜274期）のまとめは `design/RELIC_SUMMARY.md`。
+**最後に動かした期: 第280期**（**整備の期——sweep 現役網の白紙選定（加点方式・57 本・11.2 分）＋ 夜間 full の運用化**。盤面は動かない。報告は `design/PHASE280_SWEEP_REBUILD.md`）。第279期の凍結庫とトウの転生（版 T1 ／ T2 を測定・規定は T0・採否はポン）は `design/PHASE279_TOU_REBIRTH.md`、第277期のノミの転生は `design/PHASE277_NOMI_REBIRTH.md`。転生段の棚卸しは `design/PHASE275_ROSTER_INVENTORY.md`、レリック段のまとめは `design/RELIC_SUMMARY.md`。
 **最後に `compare` が動いた期: 第277期**（ノミの在席 6 行と 63 行目 `燃焼×刻み (ボルグ×ホタ×ノミ)`。ノミを含まない 56 行の 280 セルは 0 件）。
 
     編成:       63 行（`CompareBuilds()`・第277期に 62 → 63）＋ 交差帯 12 行（`CrossBuilds()`）
@@ -360,7 +360,7 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
     dotnet run --project BattleSim -c Release 0 chain > docs/chain.md              # 連鎖の深さ（最大同時撃破・決着T）
     dotnet run --project BattleSim -c Release 0 derive rules > docs/rules.md       # ノブ一覧（CLAUDE.md を書き終えた後に最後に回す）
     dotnet run --project BattleSim -c Release 0 reseat [絞り込み] / confirm        # 席の測り直しと別 seed の追試（採否は confirm で）
-    dotnet run --project BattleSim -c Release 0 sweep full / fast                  # 全診断の exit 検査（第278期: full はコミット前・fast は期中。`nocache` / `j=N` / `check` / 凍結庫の `frozen` / `thaw` は COMMANDS.md）
+    dotnet run --project BattleSim -c Release 0 sweep fast / nightly               # 現役網の exit 検査（第280期: fast は日中・nightly は夜間で朝のサマリ。`full` / `roster` / `check` / 凍結庫の `frozen` / `thaw` は COMMANDS.md）
     dotnet run --project BattleSim -c Release 0 sweep list                         # 走らせる一覧だけ（戦闘0回）
     dotnet run --project BattleSim -c Release <n> demo "編成名" [seed]             # 1戦の詳細ログ
     dotnet run --project BattleSim -c Release <n> replay "編成名" <seed>           # 1戦を再生用JSON（台本）で吐く

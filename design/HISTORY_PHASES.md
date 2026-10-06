@@ -106,6 +106,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 **engine で触ったのは `order` が `.ToList()` で確定した後の1ブロックだけ**
 ——`speedGroups` にも `Shuffle` にも触らないので**乱数列が規則の有無に依らない**（これが 305 セル 0 件の根拠）。
 
+**第280期は盤面を1ビットも動かしていない——sweep 現役網の白紙選定（加点方式）＋ 夜間 full の運用化（整備の期）**（指示書は design/PHASE280_SWEEP_REBUILD_SPEC.md）。sweep が回すのは現役網 57 本（`SweepDiag.Active`・11.2 分）だけになり、第279期の full のほかの 704 本は凍結庫（G6・封印は第279期の full の指紋）。夜間は `sweep nightly` ／ `tools/sweep_nightly.ps1`（朝のサマリ `.sweep/nightly/<日付>.md`）。現役網の指紋は 57 本とも第279期と一致——経緯は design/PHASE280_SWEEP_REBUILD.md
+
 **第279期は盤面を1ビットも動かしていない——凍結庫の実施 ＋ トウの転生（版を測っただけ・規定は T0 のまま）**（指示書は design/PHASE279_TOU_REBIRTH_SPEC.md）。sweep の一覧から 77 本を外した（凍結 70・audit が正の docs 生成器 2・煙試験に置き換えた relic 5）。凍結後の full は 761 本・178.2 分・異常終了 0・上限 0（上限 150 秒）。封印を取るために完走させた G4 の 6 本が異常終了した（90 秒で切っていたので見えなかった・R373）。トウは帯電の粉の T1（漏れあり）／ T2（漏れなし）を測り、T1 はシガ・感電の台で −19〜−30pt（漏れが味方の中で連鎖する）、T2 は T0 並み。`compare` ／ 主判定 ／ 情報セルは 0 件——経緯は design/PHASE279_TOU_REBIRTH.md と design/SWEEP_FREEZER.md
 
 **第278期は盤面を1ビットも動かしていない——sweep の応答改善（整備の期）**（指示書は design/PHASE278_SWEEP_SPEEDUP_SPEC.md）。変えたのは `BattleSim/Sweep.cs` だけ（指紋照合・`fast` ／ `full`・並列は早見用）。`compare` ／ docs/ は 0 件。転生の期の full は 286 分のままで、短縮の残りは凍結（候補 78 本・ポン）——経緯は design/PHASE278_SWEEP_SPEEDUP.md

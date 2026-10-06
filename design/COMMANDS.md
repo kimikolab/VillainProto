@@ -1061,11 +1061,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
 
     dotnet run --project BattleSim -c Release 0 gust scan probe  # **第152期 段0**: 埋め草の強さを掃引して台を帯（40〜95%）へ戻す
     dotnet run --project BattleSim -c Release 0 sweep [上限秒] [絞り込み]  # **全診断の exit 検査**（第141期・本体は `Sweep.cs`）。この表を自分で読んで引数の穴の無い本を子プロセスで回す。引数なしは `full`（規約 (G17)）
-    dotnet run --project BattleSim -c Release 0 sweep full      # 第278期 全量（指紋照合あり・直列）。**コミット前に1回**。鍵が動かなかった本は走らせず前回の結果を `（照合）` で返す
-    dotnet run --project BattleSim -c Release 0 sweep fast      # 第278期 主判定系の系統だけ（`SweepDiag.FastFamilies`: compare ／ dump ／ audit ／ derive ／ spread ／ chain ／ cross ／ checkup ／ checkwave ／ bosswave ／ relic・58 本）。**期中の判定用**
+    dotnet run --project BattleSim -c Release 0 sweep full      # 第278期 全量（指紋照合あり・直列）。鍵が動かなかった本は走らせず前回の結果を `（照合）` で返す。**第280期から「全量」は現役網（`SweepDiag.Active`・57 本）**——ほかは凍結庫。作法は「日中は fast・full は夜間（`sweep nightly`）」
+    dotnet run --project BattleSim -c Release 0 sweep fast      # 第278期 主判定系の系統だけ（`SweepDiag.FastFamilies`: compare ／ dump ／ audit ／ derive ／ spread ／ chain ／ cross ／ checkup ／ checkwave ／ bosswave ／ relic・58 本 → 第280期から現役網のうち 22 本）。**期中の判定用**
     dotnet run --project BattleSim -c Release 0 sweep full nocache   # 第278期 指紋照合を使わず全部走らせる（キャッシュ `.sweep/cache.tsv` は更新する）。`j=N`（または環境変数 SWEEP_JOBS）で並列（**早見用・上限の判定が直列と揃わない**。既定は `j=1` の直列）
     dotnet run --project BattleSim -c Release 0 sweep check     # 第278期 自己検査（鍵の作り方: 同じ入力で同じ鍵・BattleCore 1文字で全本・器具1本で辿る系統だけ・design で読む本だけ・振り分け1行で生ソースを読む本だけ）。子プロセス0本
     dotnet run --project BattleSim -c Release 0 sweep list      # 走らせる一覧だけ（戦闘0回・子プロセス0本）
     dotnet run --project BattleSim -c Release 0 sweep frozen    # 第279期 凍結庫の一覧と封印（`design/SWEEP_FREEZER.md`・子プロセス0本）。凍結 70 本 ／ audit が正の生成器 2 本（layout ／ reseat）／ 煙試験に置き換えた relic 5 本は sweep の一覧から外れる。既定の上限は 150 秒・`roster audit` は 600 秒・**上限は異常に数える**
     dotnet run --project BattleSim -c Release 0 sweep seal [上限秒] [j=N] [群か絞り込み]   # 第279期 凍結した本を上限つきで完走させ、出力の指紋を `design/freezer/seals.tsv` に封印する（完走した出力は `design/freezer/out/`）
     dotnet run --project BattleSim -c Release 0 sweep thaw <絞り込み> [上限秒]  # 第279期 解凍: 凍結した本を走らせて封印と照合（既定の上限 7200 秒・出力は `.sweep/thaw/`）。不一致なら git bisect で原因のコミットを探す
+    dotnet run --project BattleSim -c Release 0 sweep roster    # 第280期 現役網の台帳（本・層 a ／ b・所要・理由）と検算を markdown で出す（`design/SWEEP_ROSTER.md` に貼る・子プロセス0本）。一覧の本体は `SweepDiag.Active`
+    dotnet run --project BattleSim -c Release 0 sweep nightly   # 第280期 夜間の full: 現役網・指紋照合なし・直列。前回の指紋と比べた朝のサマリを `.sweep/nightly/<日付>.md` に書く（指紋の差分の本の名・異常終了 ／ 打ち切りの本数・所要・前回との差・末尾に `<!-- nightly minutes=… -->`）。無人で回すのは `tools/sweep_nightly.ps1`（DemoApp の門も足す・手順は design/SWEEP_NIGHTLY.md）
