@@ -11,9 +11,13 @@ using CW = CheckWaveDiag;
 //     dotnet run --project BattleSim -c Release 0 tou279 bandb      # 帯B（seed 200..599）の追試: 7 台 × 版 × 本編第2〜5波の勝率
 //     dotnet run --project BattleSim -c Release 0 tou279 relic      # 帯電の足の再測: 移動の台（M0 ／ M1 ／ M2）と感電の行の2形 × 版 × 札の枠5 × 本編第2〜5波・帯A 1400..1599 ／ 帯B 1600..1799・固有の勝者と発火
 //     dotnet run --project BattleSim -c Release 0 tou279 check      # 自己検査（T0 の写しが規定と台本一致・粉の付与と漏れ・痺れの出どころ・乱数・verbose）
-//     dotnet run --project BattleSim -c Release 0 tou279 log <台 0..6> <版 T0|T1|T2> <波 2..5|ボス|B3|W3> [seed]   # 1戦のログ
+//     dotnet run --project BattleSim -c Release 0 tou279 log <台 0..6> <版 T0|T1|T2|T3|T3n> <波 2..5|ボス|B3|W3> [seed]   # 1戦のログ
+//     dotnet run --project BattleSim -c Release 0 tou279 compare    # 第286期: `compare` 64 行 × 5 波 × 版（トウのいない行のずれ・主判定・歯止め）
+//     dotnet run --project BattleSim -c Release 0 tou279 elite      # 第286期: 精鋭（近衛 ／ 大隊）× トウ在席の行 × 版（勝率と機構）
+//     dotnet run --project BattleSim -c Release 0 tou279 p0         # 第286期 Phase 0: 敵の盤面（X 字 ／ 9 席 ／ ボス）で主目標の席ごとの「隣の敵」の数・感電の書き手
 //
 // **規定のトウは動かさない**（T0 のまま）。T1 ／ T2 は `UnitCatalog.TouT1` ／ `TouT2`（`All` ／ `Retired` ／ `Presets` に入れない）。採否はポン。
+// 第286期: 対称の粉 T3 ／ T3n（`UnitCatalog.TouT3` ／ `TouT3n`）を版に足した（指示書 design/PHASE286_TOU_SPREAD_SPEC.md）。
 // =====================================================================================
 static class Tou279Diag
 {
@@ -26,6 +30,9 @@ static class Tou279Diag
             case "check": Check(); return;
             case "bandb": BandB(); return;
             case "relic": Relic(); return;
+            case "p0": P0(); return;
+            case "compare": CompareAll(); return;
+            case "elite": EliteRows(); return;
             case "log": LogOne(args.Length > 3 ? int.Parse(args[3]) : 1, args.Length > 4 ? args[4] : "T1", args.Length > 5 ? args[5] : "5", args.Length > 6 ? int.Parse(args[6]) : 0); return;
             default: Console.WriteLine("tou279: モードは run / bandb / relic / check / log。"); return;
         }
@@ -38,6 +45,8 @@ static class Tou279Diag
         ("T0", "旧トウ（痺れ粉・規定のまま・対照）", UnitCatalog.TouT0),
         ("T1", "帯電の粉（敵へ感電 ＋ 隣の味方へ漏れ）＋ S3", UnitCatalog.TouT1),
         ("T2", "帯電の粉（敵へ感電のみ・漏れの対照）＋ S3", UnitCatalog.TouT2),
+        ("T3", "対称の粉（主目標 ＋ その隣の敵へ感電 ＋ 隣の味方へ漏れ）＋ S3（第286期）", UnitCatalog.TouT3),
+        ("T3n", "対称の粉・漏れなし（漏れの代金の対照）＋ S3（第286期）", UnitCatalog.TouT3n),
     };
 
     static Formation Row(string prefix) => CompareBuilds().First(r => r.Name.StartsWith(prefix)).F;
@@ -82,6 +91,8 @@ static class Tou279Diag
         public long FoeDischarge, AllyDischarge;                          // 放電で削れた HP（受けた側）
         public long Wired, Cowered, ShigaSwings, RelicMoves;              // シガの電気鞭 ／ 怖気づき ／ 鞭の一振り ／ 帯電の足が感電を移した数
         public long BaitPops, TouRoots;                                   // 弾けた敵のうちソムの餌（背いた獣）／ トウの一撃が起こした連鎖（起点の数）
+        public long PowderMain, PowderSpread;                             // 第286期: 粉で新しく感電した敵のうち主目標 ／ 主目標の隣
+        public long FoeChains, FoeChainUnits, FoeChains2;                 // 第286期: 敵側の起爆（根の数）／ 弾けた敵の延べ ／ 2体以上が弾けた起爆
 
         public void Merge(Agg o)
         {
@@ -92,6 +103,7 @@ static class Tou279Diag
             FoeDischarge += o.FoeDischarge; AllyDischarge += o.AllyDischarge;
             Wired += o.Wired; Cowered += o.Cowered; ShigaSwings += o.ShigaSwings; RelicMoves += o.RelicMoves;
             BaitPops += o.BaitPops; TouRoots += o.TouRoots;
+            PowderMain += o.PowderMain; PowderSpread += o.PowderSpread; FoeChains += o.FoeChains; FoeChainUnits += o.FoeChainUnits; FoeChains2 += o.FoeChains2;
         }
 
         public void Take(BattleResult r, List<UnitState> p, List<UnitState> e)
@@ -112,9 +124,14 @@ static class Tou279Diag
             {
                 bool ally = mine.Contains(id);
                 if (ally) { AllyPops += t.ShockSpent; AllyStunned += t.ShockStunned; AllyStall += t.StallStun; AllyStallShock += t.StallShockStun; AllyDischarge += t.DischargeTaken; }
-                else { FoePops += t.ShockSpent; FoeStunned += t.ShockStunned; FoeStunEarly += t.ShockStunnedEarly; FoeStall += t.StallStun; FoeStallShock += t.StallShockStun; FoeDischarge += t.DischargeTaken; }
+                else
+                {
+                    FoePops += t.ShockSpent; FoeStunned += t.ShockStunned; FoeStunEarly += t.ShockStunnedEarly; FoeStall += t.StallStun; FoeStallShock += t.StallShockStun; FoeDischarge += t.DischargeTaken;
+                    FoeChains += t.ChainRoots; FoeChainUnits += t.ChainUnits;
+                    if (t.ChainSizeHist is { } ch) for (int k = 2; k < ch.Length; k++) FoeChains2 += ch[k];
+                }
             }
-            if (r.TallyByUnit.TryGetValue(UnitCatalog.Tou.Id, out var tt)) { TouAttacks += tt.Attacks; PowderFoe += tt.ShockOnFoe; PowderAlly += tt.ShockOnAlly; TouRoots += tt.ShockTriggered; }
+            if (r.TallyByUnit.TryGetValue(UnitCatalog.Tou.Id, out var tt)) { TouAttacks += tt.Attacks; PowderFoe += tt.ShockOnFoe; PowderAlly += tt.ShockOnAlly; TouRoots += tt.ShockTriggered; PowderMain += tt.PowderMain; PowderSpread += tt.PowderSpread; }
             if (r.TallyByUnit.TryGetValue(UnitCatalog.Fodder.Id, out var ft)) BaitPops += ft.ShockSpent;
             if (r.TallyByUnit.TryGetValue(UnitCatalog.Shiga.Id, out var st)) { Wired += st.WiredSwings; Cowered += st.WhipCowered; ShigaSwings += st.Attacks; }
             foreach (var l in r.Log)
@@ -196,15 +213,17 @@ static class Tou279Diag
         Console.WriteLine("痺敵（先）＝ 感電で痺れた敵（そのターンにまだ動いていなかった数）／ 痺味 ＝ 感電で痺れた味方 ／ 潰敵（感）＝ 痺れで潰れた敵の手番（うち感電の痺れ）／ 潰味（感）＝ 同・味方 ／ ");
         Console.WriteLine("放敵・放味 ＝ 放電で削れた HP（受けた側）／ 鞭 ＝ シガの一振り（うち電気鞭・怖気づき）／ 餌 ＝ 弾敵のうちソムの餌（背いた獣）／ ト起 ＝ トウの一撃が起こした連鎖の数 ／ T ＝ 決着T");
         Console.WriteLine();
-        Console.WriteLine("| 台 | 版 | 群 | 攻 | 粉敵 | 粉味 | 旧痺 | 弾敵 | 弾味 | 痺敵（先） | 痺味 | 潰敵（感） | 潰味（感） | 放敵 | 放味 | 鞭（電・怖） | 餌 | ト起 | T |");
-        Console.WriteLine("|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        Console.WriteLine("第286期に足した列: 粉敵（主・隣）＝ 粉で新しく感電した敵のうち主目標 ／ 主目標の隣 ／ 連鎖 ＝ 敵側の1回の起爆で弾けた敵の平均（2体以上が弾けた起爆の数／戦）");
+        Console.WriteLine();
+        Console.WriteLine("| 台 | 版 | 群 | 攻 | 粉敵（主・隣） | 粉味 | 旧痺 | 弾敵 | 弾味 | 連鎖（2体以上） | 痺敵（先） | 痺味 | 潰敵（感） | 潰味（感） | 放敵 | 放味 | 鞭（電・怖） | 餌 | ト起 | T |");
+        Console.WriteLine("|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
         for (int bi = 0; bi < Boards.Length; bi++)
             foreach (var v in Vers)
                 foreach (string g in new[] { "本編", "ボス", "B3", "W3" })
                 {
                     var a = new Agg();
                     foreach (var w in Waves.Where(w => w.Group == g)) a.Merge(res[(bi, v.Name, w.Name)]);
-                    Console.WriteLine($"| {bi} | {v.Name} | {g} | {Per(a.TouAttacks, a.N)} | {Per(a.PowderFoe, a.N)} | {Per(a.PowderAlly, a.N)} | {Per(a.OldStuns, a.N)} | {Per(a.FoePops, a.N)} | {Per(a.AllyPops, a.N)} | {Per(a.FoeStunned, a.N)}（{Per(a.FoeStunEarly, a.N)}）| {Per(a.AllyStunned, a.N)} | {Per(a.FoeStall, a.N)}（{Per(a.FoeStallShock, a.N)}）| {Per(a.AllyStall, a.N)}（{Per(a.AllyStallShock, a.N)}）| {Per(a.FoeDischarge, a.N)} | {Per(a.AllyDischarge, a.N)} | {Per(a.ShigaSwings, a.N)}（{Per(a.Wired, a.N)}・{Per(a.Cowered, a.N)}）| {Per(a.BaitPops, a.N)} | {Per(a.TouRoots, a.N)} | {Per(a.Turns, a.N)} |");
+                    Console.WriteLine($"| {bi} | {v.Name} | {g} | {Per(a.TouAttacks, a.N)} | {Per(a.PowderFoe, a.N)}（{Per(a.PowderMain, a.N)}・{Per(a.PowderSpread, a.N)}）| {Per(a.PowderAlly, a.N)} | {Per(a.OldStuns, a.N)} | {Per(a.FoePops, a.N)} | {Per(a.AllyPops, a.N)} | {(a.FoeChains == 0 ? "—" : ((double)a.FoeChainUnits / a.FoeChains).ToString("F2"))}（{Per(a.FoeChains2, a.N)}）| {Per(a.FoeStunned, a.N)}（{Per(a.FoeStunEarly, a.N)}）| {Per(a.AllyStunned, a.N)} | {Per(a.FoeStall, a.N)}（{Per(a.FoeStallShock, a.N)}）| {Per(a.AllyStall, a.N)}（{Per(a.AllyStallShock, a.N)}）| {Per(a.FoeDischarge, a.N)} | {Per(a.AllyDischarge, a.N)} | {Per(a.ShigaSwings, a.N)}（{Per(a.Wired, a.N)}・{Per(a.Cowered, a.N)}）| {Per(a.BaitPops, a.N)} | {Per(a.TouRoots, a.N)} | {Per(a.Turns, a.N)} |");
                 }
         Console.WriteLine();
         Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F0} 秒。");
@@ -324,9 +343,12 @@ static class Tou279Diag
         Ok("(b) T0 は規定のトウと定義が同じ（体・札・文）",
            UnitCatalog.TouT0.MaxHp == UnitCatalog.Tou.MaxHp && UnitCatalog.TouT0.Attack == UnitCatalog.Tou.Attack && UnitCatalog.TouT0.Speed == UnitCatalog.Tou.Speed
            && UnitCatalog.TouT0.Traits.SequenceEqual(UnitCatalog.Tou.Traits) && UnitCatalog.TouT0.PlusText == UnitCatalog.Tou.PlusText && UnitCatalog.TouT0.Pattern == UnitCatalog.Tou.Pattern);
-        Ok("(b2) T1 ／ T2 の体・型は T0 と同じで、違うのは札だけ（T2 ＝ T1 − 漏れ）",
-           new[] { UnitCatalog.TouT1, UnitCatalog.TouT2 }.All(d => d.MaxHp == 46 && d.Attack == 3 && d.Speed == 11 && d.Pattern == UnitCatalog.Tou.Pattern)
-           && UnitCatalog.TouT1.Traits.Except(new[] { TraitId.ChargedPowderLeak }).SequenceEqual(UnitCatalog.TouT2.Traits));
+        Ok("(b2) T1 ／ T2 ／ T3 ／ T3n の体・型は T0 と同じで、違うのは札だけ（T2 ＝ T1 − 漏れ ／ T3 ＝ T1 ＋ 舞う ／ T3n ＝ T2 ＋ 舞う）・舞う札の保持者は `Everyone` に 0 枚",
+           new[] { UnitCatalog.TouT1, UnitCatalog.TouT2, UnitCatalog.TouT3, UnitCatalog.TouT3n }.All(d => d.MaxHp == 46 && d.Attack == 3 && d.Speed == 11 && d.Pattern == UnitCatalog.Tou.Pattern && d.Advances == UnitCatalog.Tou.Advances)
+           && UnitCatalog.TouT1.Traits.Except(new[] { TraitId.ChargedPowderLeak }).SequenceEqual(UnitCatalog.TouT2.Traits)
+           && UnitCatalog.TouT3.Traits.SequenceEqual(UnitCatalog.TouT1.Traits.Append(TraitId.ChargedPowderSpread))
+           && UnitCatalog.TouT3n.Traits.SequenceEqual(UnitCatalog.TouT2.Traits.Append(TraitId.ChargedPowderSpread))
+           && !UnitCatalog.Everyone.Any(d => d.Traits.Contains(TraitId.ChargedPowderSpread)));
 
         // (c) T0 の写しで組んだ台と規定のトウの台の台本が一致（トウ在席の6台 × 本編第2〜5波 × seed 0..49）。
         bool same = true;
@@ -355,12 +377,20 @@ static class Tou279Diag
         long s0 = Stunned(UnitCatalog.TouT0), s1 = Stunned(UnitCatalog.TouT1);
         Ok($"(g) カタのいない台（責め苦）: 感電で痺れた敵 T1 {s1} ＞ 0 ・ T0 {s0} ＝ 0（S3 はトウの札が立てる）", s1 > 0 && s0 == 0);
 
+        // (j)(k) 第286期: 舞う粉は T3 ／ T3n にだけ出る・T3n は味方に漏れない・粉敵 ＝ 主 ＋ 隣
+        Ok($"(j) 主目標の隣への粉は T3 ／ T3n にだけ出る（T3 {sum["T3"].PowderSpread} ／ T3n {sum["T3n"].PowderSpread} ／ T1 {sum["T1"].PowderSpread} ／ T2 {sum["T2"].PowderSpread}）",
+           sum["T3"].PowderSpread > 0 && sum["T3n"].PowderSpread > 0 && sum["T1"].PowderSpread == 0 && sum["T2"].PowderSpread == 0);
+        Ok($"(k) 漏れ: T3n は味方に感電を付けない（{sum["T3n"].PowderAlly}）・T3 は付ける（{sum["T3"].PowderAlly}）・粉敵 ＝ 主 ＋ 隣（T3 {sum["T3"].PowderFoe} ＝ {sum["T3"].PowderMain} ＋ {sum["T3"].PowderSpread}）",
+           sum["T3n"].PowderAlly == 0 && sum["T3"].PowderAlly > 0
+           && Vers.Skip(1).All(v => sum[v.Name].PowderFoe == sum[v.Name].PowderMain + sum[v.Name].PowderSpread));
+
         // (h) 決定性: 同じ seed の T1 を2度回して台本が一致。
         bool det = true;
         foreach (var b in Boards.Take(4))
             for (int s = 0; s < 20; s++)
-                det &= CW.Dig(CW.Fight(b.Make(UnitCatalog.TouT1), Waves[2].Make, s).R).SequenceEqual(CW.Dig(CW.Fight(b.Make(UnitCatalog.TouT1), Waves[2].Make, s).R));
-        Ok("(h) T1 は seed 決定的（同じ seed の2戦の台本が一致）", det);
+                foreach (var d in new[] { UnitCatalog.TouT1, UnitCatalog.TouT3 })
+                    det &= CW.Dig(CW.Fight(b.Make(d), Waves[2].Make, s).R).SequenceEqual(CW.Dig(CW.Fight(b.Make(d), Waves[2].Make, s).R));
+        Ok("(h) T1 ／ T3 は seed 決定的（同じ seed の2戦の台本が一致）", det);
 
         // (i) verbose の有無で結果が変わらない（イベントを積む処理が盤面を変えていない）。
         bool vb = true;
@@ -372,10 +402,128 @@ static class Tou279Diag
                     var c = CW.Fight(b.Make(v.Tou), Waves[1].Make, s, verbose: false).R;
                     vb &= a.PlayerWon == c.PlayerWon && a.Turns == c.Turns;
                 }
-        Ok("(i) verbose の有無で勝敗と決着T が一致（T1 ／ T2 × 7 台 × 第3波 × seed 0..19）", vb);
+        Ok("(i) verbose の有無で勝敗と決着T が一致（T1 ／ T2 ／ T3 ／ T3n × 7 台 × 第3波 × seed 0..19）", vb);
 
         Console.WriteLine(bad == 0 ? "自己検査: すべて ○" : $"自己検査: × が {bad} 件");
         Environment.ExitCode = bad == 0 ? 0 : 1;
+    }
+
+    // ---------------------------------------------------------------------------------
+    // 第286期 Phase 0: 主目標の席ごとの「隣の敵」の数（敵の盤面ごと）と感電の書き手
+    // ---------------------------------------------------------------------------------
+    static void P0()
+    {
+        Console.WriteLine("# 第286期 Phase 0 —— 敵の盤面で主目標の席ごとの「隣の敵」の数（`FormationRules.AreAdjacent(target, n)`・全員生存のとき）");
+        Console.WriteLine();
+        var boards = new List<(string Name, List<UnitState> E)>();
+        for (int w = 1; w < EnemyCatalog.Stages.Count; w++) boards.Add(($"本編 第{w + 1}波", BattleEngine.Materialize(EnemyCatalog.Stages[w].Enemy, BattleContext.EnemyTeam)));
+        boards.Add(("近衛（X 字 5 席）", BattleEngine.MaterializeEnemy(EliteDiag.Five, EliteDiag.Elite)));
+        boards.Add(("大隊（9 席）", BattleEngine.MaterializeEnemy(EliteDiag.Nine, EliteDiag.Elite)));
+        boards.Add(("ボス（規定形）", BattleEngine.MaterializeEnemy(EnemyCatalog.BossRegularWave, EnemyScaleRule.None)));
+        Console.WriteLine("| 盤面 | 体数 | 主目標の席 → 隣の敵の数 | 最大 | 平均 |");
+        Console.WriteLine("|---|--:|---|--:|--:|");
+        foreach (var (name, e) in boards)
+        {
+            var cnt = e.Select(u => (u, n: e.Count(x => x != u && FormationRules.AreAdjacent(u, x)))).OrderBy(t => t.u.Slot).ToList();
+            string cells = string.Join(" ／ ", cnt.Select(t => $"{t.u.Slot}:{t.u.Name} → {t.n}"));
+            Console.WriteLine($"| {name} | {e.Count} | {cells} | {cnt.Max(t => t.n)} | {cnt.Average(t => t.n):F2} |");
+        }
+        Console.WriteLine();
+        string root = Directory.GetCurrentDirectory();
+        var writes = Directory.GetFiles(Path.Combine(root, "BattleCore"), "*.cs")
+            .SelectMany(f => File.ReadAllLines(f).Select((l, i) => (File: Path.GetFileName(f), Line: i + 1, Text: l.Trim())))
+            .Where(x => x.Text.Contains("SetCounter(StatusKeys.Shock, 1)", StringComparison.Ordinal) && !x.Text.StartsWith("//"))
+            .ToList();
+        Console.WriteLine($"## 感電を付ける書き込み（`SetCounter(StatusKeys.Shock, 1)`）: {writes.Count} 箇所");
+        Console.WriteLine();
+        foreach (var w in writes) Console.WriteLine($"- `{w.File}:{w.Line}` `{w.Text}`");
+    }
+
+    // ---------------------------------------------------------------------------------
+    // 第286期: `compare` 64 行 × 版 ／ 精鋭 × トウ在席の行 × 版
+    // ---------------------------------------------------------------------------------
+    static bool HasTou(Formation f) => f.Occupied().Any(o => o.Def.Id == UnitCatalog.Tou.Id);
+
+    static double[,] Grid(UnitDef d)
+    {
+        var rows = CompareBuilds();
+        var g = new double[rows.Length, EnemyCatalog.Stages.Count];
+        Parallel.For(0, rows.Length * EnemyCatalog.Stages.Count, k =>
+        {
+            int ri = k / EnemyCatalog.Stages.Count, wi = k % EnemyCatalog.Stages.Count;
+            var f = FvSwap(rows[ri].F, UnitCatalog.Tou, d);
+            int wins = 0;
+            for (int s = 0; s < Seeds; s++) if (BattleEngine.Run(f, EnemyCatalog.Stages[wi].Enemy, s, verbose: false).PlayerWon) wins++;
+            g[ri, wi] = 100.0 * wins / Seeds;
+        });
+        return g;
+    }
+
+    static void CompareAll()
+    {
+        var rows = CompareBuilds();
+        int nw = EnemyCatalog.Stages.Count;
+        var grids = Vers.ToDictionary(v => v.Name, v => Grid(v.Tou));
+        var basis = grids["T0"];
+        Console.WriteLine("# 第286期 `compare` 64 行 × トウの版（seed 0..199・トウ在席の行だけ `UnitCatalog.Tou` を版に差し替える）");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 版 | " + string.Join(" | ", Enumerable.Range(1, nw).Select(w => $"第{w}波")) + " | 第2〜5波 平均 | T0 差 |");
+        Console.WriteLine("|---|---|" + string.Concat(Enumerable.Range(0, nw).Select(_ => "--:|")) + "--:|--:|");
+        for (int ri = 0; ri < rows.Length; ri++)
+        {
+            if (!HasTou(rows[ri].F)) continue;
+            double m0 = Enumerable.Range(1, nw - 1).Average(w => basis[ri, w]);
+            foreach (var v in Vers)
+            {
+                var g = grids[v.Name];
+                double m = Enumerable.Range(1, nw - 1).Average(w => g[ri, w]);
+                Console.WriteLine($"| {rows[ri].Name} | {v.Name} | " + string.Join(" | ", Enumerable.Range(0, nw).Select(w => F1(g[ri, w]))) + $" | {F1(m)} | {(v.Name == "T0" ? "" : (m - m0).ToString("+0.0;-0.0;0.0"))} |");
+            }
+        }
+        Console.WriteLine();
+        foreach (var v in Vers.Skip(1))
+        {
+            int bad = 0, cells = 0;
+            for (int ri = 0; ri < rows.Length; ri++)
+            {
+                if (HasTou(rows[ri].F)) continue;
+                for (int w = 0; w < nw; w++) { cells++; if (grids[v.Name][ri, w] != basis[ri, w]) bad++; }
+            }
+            Console.WriteLine($"- トウのいない行のずれ（{v.Name} − T0）: {cells} セル中 **{bad} 件**");
+        }
+        var prim = Baseline.PrimaryRows.Select(n => Array.FindIndex(rows, r => r.Name == n)).ToArray();
+        Console.WriteLine();
+        Console.WriteLine($"| 版 | 全64行 第1〜5波 | 主判定19行 第1〜5波 | 主判定の第五波 − 歯止め（{Baseline.PrimaryFifthFloor}%） |");
+        Console.WriteLine("|---|---|---|--:|");
+        foreach (var v in Vers)
+        {
+            var g = grids[v.Name];
+            Console.WriteLine($"| {v.Name} | " + string.Join(" / ", Enumerable.Range(0, nw).Select(w => F1(Enumerable.Range(0, rows.Length).Average(ri => g[ri, w]))))
+                + " | " + string.Join(" / ", Enumerable.Range(0, nw).Select(w => F1(prim.Average(ri => g[ri, w]))))
+                + $" | {(prim.Average(ri => g[ri, nw - 1]) - Baseline.PrimaryFifthFloor):+0.0;-0.0} |");
+        }
+    }
+
+    static void EliteRows()
+    {
+        var rows = CompareBuilds().Where(r => HasTou(r.F)).ToArray();
+        var waves = new (string Name, Func<List<UnitState>> Make)[]
+        {
+            ("近衛", () => BattleEngine.MaterializeEnemy(EliteDiag.Five, EliteDiag.Elite)),
+            ("大隊", () => BattleEngine.MaterializeEnemy(EliteDiag.Nine, EliteDiag.Elite)),
+        };
+        Console.WriteLine($"# 第286期 精鋭（近衛 ／ 大隊・HP {EliteDiag.Elite.HpPercent}% ／ 攻 {EliteDiag.Elite.AtkPercent}%）× トウ在席の行 × 版（seed 0..199）");
+        Console.WriteLine();
+        Console.WriteLine("| 行 | 波 | 版 | 勝率 | 倒しT | 粉敵（主・隣） | 粉味 | 弾敵 | 弾味 | 連鎖（2体以上） | 潰敵（感） | 潰味（感） | 放敵 | 放味 |");
+        Console.WriteLine("|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
+        foreach (var (name, f) in rows)
+            foreach (var (wn, mk) in waves)
+                foreach (var v in Vers)
+                {
+                    var a = Measure(FvSwap(f, UnitCatalog.Tou, v.Tou), mk);
+                    Console.WriteLine($"| {name} | {wn} | {v.Name} | {F1(a.Win)} | {WinT(a)} | {Per(a.PowderFoe, a.N)}（{Per(a.PowderMain, a.N)}・{Per(a.PowderSpread, a.N)}）| {Per(a.PowderAlly, a.N)} | {Per(a.FoePops, a.N)} | {Per(a.AllyPops, a.N)} | "
+                        + $"{(a.FoeChains == 0 ? "—" : ((double)a.FoeChainUnits / a.FoeChains).ToString("F2"))}（{Per(a.FoeChains2, a.N)}）| {Per(a.FoeStall, a.N)}（{Per(a.FoeStallShock, a.N)}）| {Per(a.AllyStall, a.N)}（{Per(a.AllyStallShock, a.N)}）| {Per(a.FoeDischarge, a.N)} | {Per(a.AllyDischarge, a.N)} |");
+                }
     }
 
     static void LogOne(int board, string ver, string wave, int seed)

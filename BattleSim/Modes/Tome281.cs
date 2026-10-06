@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using BA = BurnAuditDiag;
 using CW = CheckWaveDiag;
@@ -530,13 +530,13 @@ static class Tome281Diag
         Expect("(a) 炸裂・爪痕・乱射の保持者は `Everyone` で規定のトメ1枚だけ・行の保持者はトメの在席数と同じ（第282期の規定化の後）",
             holders == 1 && onlyTome && presetHolders == tomeRows, $"{holders} ／ {presetHolders} ／ トメ {tomeRows}");
 
-        // (b) T1 は規定のトメと同じ札（第283期の規定化で層を残す札が足された分を除く）・T0 は旧トメ（止め）
-        Expect("(b) T1 は規定のトメから層を残す札を除いた物（第283期の規定 T1n）・T0 は旧トメ（止め）の定義",
-            UnitCatalog.Tome.Traits.Except(new[] { TraitId.RuptureKeep }).SequenceEqual(UnitCatalog.TomeT1.Traits) && UnitCatalog.TomeT0.Traits.SequenceEqual(new[] { TraitId.Finisher })
+        // (b) T1 は T1n（第283〜285期の規定・第286期から `TomeT1n` が明示的に持つ）から層を残す札を除いた物・T0 は旧トメ（止め）
+        Expect("(b) T1 は T1n（第283〜285期の規定）から層を残す札を除いた物・T0 は旧トメ（止め）の定義",
+            UnitCatalog.TomeT1n.Traits.Except(new[] { TraitId.RuptureKeep }).SequenceEqual(UnitCatalog.TomeT1.Traits) && UnitCatalog.TomeT0.Traits.SequenceEqual(new[] { TraitId.Finisher })
             && UnitCatalog.TomeT0.MaxHp == UnitCatalog.Tome.MaxHp && UnitCatalog.TomeT0.Attack == UnitCatalog.Tome.Attack
             && UnitCatalog.TomeT0.Speed == UnitCatalog.Tome.Speed && UnitCatalog.TomeT0.Actions is null);
 
-        // (c) 版の台本: 規定のトメ（第283期に T1n）は T1 ＋ `Consume=false`（T1-c）と台本が一致する（台 × 本編第2〜5波 × seed 0..49）
+        // (c) 版の台本: T1n（第283〜285期の規定・第286期から `TomeT1n`）は T1 ＋ `Consume=false`（T1-c）と台本が一致する（台 × 本編第2〜5波 × seed 0..49）
         int diff = 0, total = 0;
         for (int bi = 0; bi < Boards.Length; bi++)
             for (int w = 1; w <= 4; w++)
@@ -544,12 +544,12 @@ static class Tome281Diag
                 {
                     int ww = w;
                     Func<List<UnitState>> mk = () => BattleEngine.Materialize(EnemyCatalog.Stages[ww].Enemy, BattleContext.EnemyTeam);
-                    var a = Fight(Boards[bi].Make(UnitCatalog.Tome), mk, s, FinisherRule.Default).R;
+                    var a = Fight(Boards[bi].Make(UnitCatalog.TomeT1n), mk, s, FinisherRule.Default).R;
                     var b = Fight(Boards[bi].Make(UnitCatalog.TomeT1), mk, s, new FinisherRule(2, false)).R;
                     total++;
                     if (a.PlayerWon != b.PlayerWon || a.Turns != b.Turns || !a.Log.Select(l => l.Text).SequenceEqual(b.Log.Select(l => l.Text))) diff++;
                 }
-        Expect("(c) 規定のトメ（T1n）の台本は T1-c と一致", diff == 0, $"{total} 戦中 {diff} 件ずれ");
+        Expect("(c) T1n（`TomeT1n`）の台本は T1-c と一致", diff == 0, $"{total} 戦中 {diff} 件ずれ");
 
         // (d) T0 の勝率が `docs/balance.md` の止めの2行と同じ口で出る（Formation 版の Run と UnitState 版の Run が同じ）
         int dd = 0;

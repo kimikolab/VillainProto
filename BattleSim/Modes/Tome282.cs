@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using BA = BurnAuditDiag;
 
@@ -438,9 +438,11 @@ static class Tome282Diag
         Console.WriteLine("# 第282期 tome282 check —— 自己検査");
         Console.WriteLine();
         // 第283期に T1n を規定にしたので、(a)〜(c) は「規定 ＝ T1n」の形に直した（第282期の版は「規定 ＝ T1」を確かめていた）。
-        Expect("(a) 規定のトメは T1n（炸裂・爪痕・乱射・層を残す）・`TomeT1n` は規定と同じ物・`TomeT1` は別の物",
-            UnitCatalog.Tome.Traits.SequenceEqual(new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.Spray, TraitId.RuptureKeep })
-            && ReferenceEquals(UnitCatalog.TomeT1n, UnitCatalog.Tome) && !ReferenceEquals(UnitCatalog.TomeT1, UnitCatalog.Tome));
+        // 第286期に M-b を規定にしたので、(a) は「`TomeT1n` が T1n の定義を明示的に持ち、規定（M-b）とは別の物」の形に直した。
+        Expect("(a) `TomeT1n` は T1n（炸裂・爪痕・乱射・層を残す）を明示的に持つ・規定（第286期から M-b）とも `TomeT1` とも別の物",
+            UnitCatalog.TomeT1n.Traits.SequenceEqual(new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.Spray, TraitId.RuptureKeep })
+            && !ReferenceEquals(UnitCatalog.TomeT1n, UnitCatalog.Tome) && !ReferenceEquals(UnitCatalog.TomeT1, UnitCatalog.Tome)
+            && ReferenceEquals(UnitCatalog.TomeMb, UnitCatalog.Tome));
         Expect("(b) T0 は旧トメ（止め）・T1n は T1 ＋ 層を残す の1札だけが違う",
             UnitCatalog.TomeT0.Traits.SequenceEqual(new[] { TraitId.Finisher })
             && UnitCatalog.TomeT1n.Traits.Except(UnitCatalog.TomeT1.Traits).SequenceEqual(new[] { TraitId.RuptureKeep })

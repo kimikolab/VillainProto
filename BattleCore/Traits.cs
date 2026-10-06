@@ -631,6 +631,9 @@ public enum TraitId
     ChargedPowder,     // 帯電の粉: 手番の一撃の後、主目標に感電（`MarkShock`・二値・乱数を引かない）。即時の痺れ（`Paralyze`）の作り直し
     ChargedPowderLeak, // 粉の漏れ（T1）: 粉を撒くたび、隣の味方すべてにも感電（**札そのものは挙動を持たない**・`ChargedPowderTrait` が読む・外せば T2）
 
+    // --- 第286期で足した札（トウの対称の粉。`UnitCatalog.TouT3` ／ `TouT3n` だけが持つ） ---
+    ChargedPowderSpread, // 粉が舞う（T3 ／ T3n）: 粉を撒くたび、主目標の隣の生存敵すべてにも感電（主目標が倒れても隣には付く）（**札そのものは挙動を持たない**・`ChargedPowderTrait` が読む）
+
     // --- 第281期で足した札（トメの転生の版。`UnitCatalog.TomeT1` ほかだけが持つ） ---
     Rupture,     // 炸裂: 層が最も深い敵の標持ちへ（列越え）、攻 × 層 × `FinisherRule.Multiplier` で殴り、層を消す（判定は engine の標の段・`PerformAttackBody`・`RuptureAfter`）。保持者がいる戦だけ敵の標が層になる
     RuptureScar, // 爪痕: 炸裂で実際に減らした HP と同量、相手の最大HPを恒久に削る（**札そのものは挙動を持たない**・`RuptureAfter` が読む・外せば T1-s）
@@ -5531,7 +5534,18 @@ public sealed class ChargedPowderTrait : Trait
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
         if (ctx.MarkShock(target, self))
+        {
             ctx.Log($"    {target.Name} に帯電の粉が付いた", LogKind.Status);
+            ctx.NotePowder(self, spread: false);
+        }
+        // 第286期（T3 ／ T3n）: 粉は殴った相手の周りにも舞う。主目標が倒れていても隣には付く（席は残る）。乱数を引かない。
+        if (self.HasTrait(TraitId.ChargedPowderSpread))
+            foreach (UnitState n in ctx.LivingMembers(target.TeamId))
+                if (n != target && FormationRules.AreAdjacent(target, n) && ctx.MarkShock(n, self))
+                {
+                    ctx.Log($"    粉が舞って {n.Name} にも付いた", LogKind.Status);
+                    ctx.NotePowder(self, spread: true);
+                }
         if (!self.HasTrait(TraitId.ChargedPowderLeak)) return;
         foreach (UnitState a in ctx.LivingMembers(self.TeamId))
             if (a != self && FormationRules.AreAdjacent(self, a) && ctx.MarkShock(a, self))
@@ -5543,6 +5557,12 @@ public sealed class ChargedPowderTrait : Trait
 public sealed class ChargedPowderLeakTrait : Trait
 {
     public override TraitId Id => TraitId.ChargedPowderLeak;
+}
+
+/// <summary>粉が舞う（第286期・T3 ／ T3n）。<b>札そのものは挙動を持たない</b>（<see cref="ChargedPowderTrait"/> が保持を読むだけ）。外せば T1 ／ T2。</summary>
+public sealed class ChargedPowderSpreadTrait : Trait
+{
+    public override TraitId Id => TraitId.ChargedPowderSpread;
 }
 
 /// <summary>
@@ -16277,6 +16297,7 @@ public static class TraitCatalog
         new CarveOnceTrait(),   // 第277期（N1）
         new ChargedPowderTrait(),      // 第279期（T1 ／ T2）
         new ChargedPowderLeakTrait(),  // 第279期（T1）
+        new ChargedPowderSpreadTrait(), // 第286期（T3 ／ T3n）
         new RuptureTrait(),            // 第281期（T1 ／ T2）
         new RuptureScarTrait(),        // 第281期（T1 ／ T2）
         new SprayTrait(),              // 第281期（T1 ／ T2）

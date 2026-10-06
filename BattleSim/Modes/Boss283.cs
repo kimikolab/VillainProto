@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using BattleCore;
 using static Common;
 using BA = BurnAuditDiag;
@@ -536,7 +536,7 @@ static class Boss283Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var vers = new (string Name, UnitDef D)[]
         {
-            ("T1n（規定）", UnitCatalog.Tome), ("T1（層を消す）", UnitCatalog.TomeT1), ("T1-s（爪痕なし）", UnitCatalog.TomeT1s),
+            ("T1n（第283期の規定）", UnitCatalog.TomeT1n), ("T1（層を消す）", UnitCatalog.TomeT1), ("T1-s（爪痕なし）", UnitCatalog.TomeT1s),
             ("T0（旧トメ）", UnitCatalog.TomeT0), ("ドルガ", UnitCatalog.Dolga),
         };
         Console.WriteLine("# 第283期 —— 代表の台の対照（トメの版を同じ席で差し替え）と余裕（隊の全員の最大HP × k）");
@@ -609,7 +609,8 @@ static class Boss283Diag
         Expect("(d) 固定枠と探索枠は重ならない・ドルガは候補に無い（対照の駒）",
             !LifePool.Concat(HealPool).Any(Fixed.Contains) && !LifePool.Concat(HealPool).Contains(UnitCatalog.Dolga));
         Expect("(e) 席の並べ方は 120 通りで重複なし", Perms(Fixed.Concat(lu[0]).ToArray()).Select(o => string.Join(",", o.Select(d => d.Id))).Distinct().Count() == 120);
-        Expect("(f) 規定のトメは T1n（層を残す札を持つ）", UnitCatalog.Tome.Traits.Contains(TraitId.RuptureKeep));
+        // 第286期に M-b を規定にしたので、(f)(h) は T1n を `TomeT1n` で明示して読む（第283期の測定は T1n で行った）。
+        Expect("(f) `TomeT1n` は層を残す札を持つ・規定（第286期から M-b）も層を残す", UnitCatalog.TomeT1n.Traits.Contains(TraitId.RuptureKeep) && UnitCatalog.Tome.Traits.Contains(TraitId.RuptureKeep));
         // (g) 口の一致: 軽い口（verbose なし）と詳しい口（verbose）で勝敗・爪痕が一致（第282期の新台 × seed 0..49）
         var basis = Seat(CtlBoards[0].Order);
         int bad = 0;
@@ -620,8 +621,8 @@ static class Boss283Diag
         }
         Expect("(g) 軽い口と詳しい口で勝敗・爪痕・仇指しが一致（第282期の新台 × seed 0..49）", bad == 0, $"{bad} 件");
         // (h) 第282期の新台 × T1n の爪痕が第282期の報告（1,400.?）と一致
-        var c = MeasureLite(basis, 0, 200);
-        Expect("(h) 第282期の新台 × 規定（T1n）の爪痕累計が第282期の報告（1,400）と同じ桁", Math.Abs(c.ScarAvg - 1400) < 1.0, $"{c.ScarAvg:F1}");
+        var c = MeasureLite(Swap(basis, UnitCatalog.Tome, UnitCatalog.TomeT1n), 0, 200);
+        Expect("(h) 第282期の新台 × T1n（`TomeT1n`）の爪痕累計が第282期の報告（1,400）と同じ桁", Math.Abs(c.ScarAvg - 1400) < 1.0, $"{c.ScarAvg:F1}");
         // (i) 決定性
         int nd = 0;
         for (int s = 0; s < 30; s++) if (FightLite(basis, s) != FightLite(basis, s)) nd++;

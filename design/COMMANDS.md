@@ -868,7 +868,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 tou279 bandb      # 第279期 帯B（seed 200..599）の追試: 7 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tou279 relic      # 第279期 帯電の足の再測: 移動の台（M0 ／ M1 ／ M2）・感電の行の2形・責め苦 × 版 × 札の枠5 × 本編第2〜5波・帯A 1400..1599 ／ 帯B 1600..1799（固有の勝者と発火）
     dotnet run --project BattleSim -c Release 0 tou279 check      # 第279期 自己検査（T0 の写しが規定と台本一致・粉の付与と漏れ・旧の痺れ粉・カタのいない台でも感電で痺れる・決定性・verbose）
-    dotnet run --project BattleSim -c Release 0 tou279 log <台 0..6> <版 T0|T1|T2> <波 2..5|ボス|B3|W3> [seed]   # 第279期 1戦のログ
+    dotnet run --project BattleSim -c Release 0 tou279 log <台 0..6> <版 T0|T1|T2|T3|T3n> <波 2..5|ボス|B3|W3> [seed]   # 第279期 1戦のログ
+    dotnet run --project BattleSim -c Release 0 tou279 p0         # 第286期 Phase 0: 敵の盤面（本編 ／ 近衛 ／ 大隊 ／ ボス）で主目標の席ごとの「隣の敵」の数・感電の書き込みの箇所（戦闘0回）
+    dotnet run --project BattleSim -c Release 0 tou279 compare    # 第286期: `compare` 64 行 × 5 波 × トウの版 T0 ／ T1 ／ T2 ／ T3 ／ T3n（トウのいない 310 セルのずれ・主判定・歯止め）（25 秒）
+    dotnet run --project BattleSim -c Release 0 tou279 elite      # 第286期: 精鋭（近衛 ／ 大隊）× トウ在席の2行 × 5版（勝率・粉 主／隣・連鎖・潰れた手番・放電）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

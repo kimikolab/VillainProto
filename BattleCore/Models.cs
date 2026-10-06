@@ -1968,6 +1968,8 @@ public sealed class UnitTally
     /// <para><b>起爆しなかった一撃</b>（感電している駒への一撃・自己検査用）: <c>ShockThunderMuted</c> 雷 ／ <c>ShockTickMuted</c> 刻み（K1）／
     /// <c>ShockArmorMuted</c> 破片が受け切った。</para>
     /// </summary>
+    /// <summary>帯電の粉（第286期・<c>ChargedPowderTrait</c>）が新しく付けた感電のうち、主目標（<c>PowderMain</c>）と主目標の隣（<c>PowderSpread</c>）。<b>計数専用。</b></summary>
+    public long PowderMain, PowderSpread;
     public long ThunderCasts, ThunderFallback, ThunderHits, ThunderDealt, ThunderMax, ThunderKills, ShockOnFoe, ShockOnAlly,
                 ChainRoots, ChainUnits, ChainDepthMax, ShockTriggered, ShockTriggeredTick, ShockTriggeredOther,
                 ShockSpent, DischargeHits, DischargeDealt, DischargeTaken, DischargeDeaths, DischargeInvertedIn,
@@ -3027,6 +3029,7 @@ public sealed class UnitTally
         ThunderCasts += o.ThunderCasts; ThunderFallback += o.ThunderFallback; ThunderHits += o.ThunderHits;
         ThunderDealt += o.ThunderDealt; ThunderKills += o.ThunderKills; if (o.ThunderMax > ThunderMax) ThunderMax = o.ThunderMax;
         ShockOnFoe += o.ShockOnFoe; ShockOnAlly += o.ShockOnAlly;
+        PowderMain += o.PowderMain; PowderSpread += o.PowderSpread;   // 第286期（計数専用）
         ChainRoots += o.ChainRoots; ChainUnits += o.ChainUnits; if (o.ChainDepthMax > ChainDepthMax) ChainDepthMax = o.ChainDepthMax;
         ShockTriggered += o.ShockTriggered; ShockTriggeredTick += o.ShockTriggeredTick; ShockTriggeredOther += o.ShockTriggeredOther;
         ShockSpent += o.ShockSpent; DischargeHits += o.DischargeHits; DischargeDealt += o.DischargeDealt;

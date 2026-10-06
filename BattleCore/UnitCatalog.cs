@@ -696,6 +696,39 @@ public static class UnitCatalog
         Flavor = "（第279期の対照）"
     };
 
+    /// <summary>
+    /// 第286期 T3（対称の粉）。T1 ＋ <see cref="TraitId.ChargedPowderSpread"/>——粉は殴った敵の周り（主目標の隣の敵すべて）にも、自分の周りの味方にも舞う。
+    /// 体は T0 のまま。名前・文面・フレーバーはポン確定（指示書 design/PHASE286_TOU_SPREAD_SPEC.md §3-2）。<b>規定（<see cref="Tou"/> ＝ T0）は動かさない。</b>
+    /// </summary>
+    public static readonly UnitDef TouT3 = new()
+    {
+        Id = "tou",
+        Name = "痺れ粉のトウ",
+        MaxHp = 46,
+        Attack = 3,
+        Speed = 11,
+        Advances = false,
+        Traits = new[] { TraitId.ChargedPowder, TraitId.ChargedPowderLeak, TraitId.ShockStunHalf, TraitId.ChargedPowderSpread },
+        PlusText = "攻撃した相手とその隣の敵に帯電の粉を付ける。帯電した駒は一撃で弾けて隣へ放電し、半々の確率で痺れて次の手番を失う",
+        MinusText = "粉は隣の味方にも漏れ、味方も帯電する / 自分の火力はほぼ無い",
+        Flavor = "粉のせいで、捨てられた。最近は、触れると痛い。それでも、どこかで…誰かと、並んで歩きたいのに。"
+    };
+
+    /// <summary>第286期 T3n（漏れの代金の対照）。T2 ＋ <see cref="TraitId.ChargedPowderSpread"/>（T3 から漏れだけを抜いた形）。</summary>
+    public static readonly UnitDef TouT3n = new()
+    {
+        Id = "tou",
+        Name = "痺れ粉のトウ",
+        MaxHp = 46,
+        Attack = 3,
+        Speed = 11,
+        Advances = false,
+        Traits = new[] { TraitId.ChargedPowder, TraitId.ShockStunHalf, TraitId.ChargedPowderSpread },
+        PlusText = TouT3.PlusText,
+        MinusText = "自分の火力はほぼ無い（対照: 粉は味方に漏れない）",
+        Flavor = "（第286期の対照）"
+    };
+
     public static readonly UnitDef Beni = new()
     {
         Id = "beni",
@@ -2497,10 +2530,11 @@ public static class UnitCatalog
         Speed = 6,
         // 第282期: ポンの判断（第281期の案 A）で T1 を規定にした（炸裂 ＋ 爪痕 ＋ 乱射）。旧トメ（止め）は `TomeT0`。
         // 第283期: ポンの判断（第282期の案 A2）で T1n を規定にした（T1 ＋ 層を残す＝消費の廃止）。T1 は `TomeT1`（対照として残置）。
-        Traits = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.Spray, TraitId.RuptureKeep },
-        PlusText = "最も深く指差された敵へ、指差しの数だけ重い一撃で炸裂する。指差しは消えずに積もり、どの列にも届き、抉った傷は塞がらない",
-        MinusText = "誰も指を差していないと、敵味方構わず乱射する",
-        // 第285期: 止めのトメ → 見境なしのミサ（名前とフレーバーだけ・Id と識別子は据え置き）。旧版（`TomeT0` ほか）のフレーバーは旧のまま。
+        // 第285期: 止めのトメ → 見境なしのミサ（名前とフレーバーだけ・Id と識別子は据え置き）。
+        // 第286期: ポンの判断（第285期の案 A5b）で M-b を規定にした（羽の連射・乱射した羽は失う）。T1n は `TomeT1n`（対照として残置）。
+        Traits = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.RuptureKeep, TraitId.Feathers, TraitId.FeatherLoss },
+        PlusText = "指差されるたび羽が1枚増える。羽は1枚ずつ最も深く指差された敵を追って撃ち、倒れれば次の標へ流れる。どの列にも届き、抉った傷は塞がらない",
+        MinusText = "追う標が無い羽は、敵味方構わず飛んで、戻ってこない",
         Flavor = "狙うのは得意。見分けるのが苦手。"
     };
 
@@ -2555,10 +2589,17 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 第282期 T1n（消費の廃止）。<b>第283期に規定にした</b>——規定の <see cref="Tome"/> と同じ物。
+    /// 第282期 T1n（消費の廃止）。<b>第283〜285期の規定</b>。第286期に M-b を規定にしたので、旧の定義を<b>明示的に</b>持つ（対照として残置）。
     /// T1 に <see cref="TraitId.RuptureKeep"/> を足しただけ（第281期の対照 T1-c ＝ <c>FinisherRule.Consume = false</c> と同じ挙動を、ノブではなく札で持つ）。
     /// </summary>
-    public static readonly UnitDef TomeT1n = Tome;
+    public static readonly UnitDef TomeT1n = new()
+    {
+        Id = "tome", Name = "見境なしのミサ", MaxHp = 58, Attack = 12, Speed = 6,
+        Traits = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.Spray, TraitId.RuptureKeep },
+        PlusText = "最も深く指差された敵へ、指差しの数だけ重い一撃で炸裂する。指差しは消えずに積もり、どの列にも届き、抉った傷は塞がらない",
+        MinusText = "誰も指を差していないと、敵味方構わず乱射する",
+        Flavor = "狙うのは得意。見分けるのが苦手。"
+    };
 
     /// <summary>第281期 T1-s（爪痕の寄与の分離・対照）。T1 から <see cref="TraitId.RuptureScar"/> だけを抜いた形。</summary>
     public static readonly UnitDef TomeT1s = new()
@@ -2570,7 +2611,7 @@ public static class UnitCatalog
 
     // ---------------------------------------------------------------------------------
     // 第285期 —— ミサの連射化（羽）の版（指示書 design/PHASE285_MISA_FEATHERS_SPEC.md・報告 design/PHASE285_MISA_FEATHERS.md）。
-    // **規定（`Tome` ＝ T1n）は動かさない**。どちらも `All` ／ `Retired` ／ `Presets` に入れない。Id は規定と同じ（`TallyByUnit` で引ける）。
+    // 第285期は規定（T1n）を動かさなかった。**第286期に M-b を規定にした**（`TomeMb` ＝ `Tome`）。M-a は `All` ／ `Retired` ／ `Presets` に入れない。Id は規定と同じ（`TallyByUnit` で引ける）。
     // 差分は札の並びだけ（炸裂 ＋ 爪痕 ＋ 層を残す ＋ 羽）。乱射の札（`Spray`）は持たない——羽の乱射は羽の一振りの中で解決する。
     // ---------------------------------------------------------------------------------
     /// <summary>第285期 M-a（乱射した羽は戻ってくる）。</summary>
@@ -2583,15 +2624,8 @@ public static class UnitCatalog
         Flavor = Tome.Flavor,
     };
 
-    /// <summary>第285期 M-b（乱射した数だけ羽を失う・下限 1）。M-a ＋ <see cref="TraitId.FeatherLoss"/> の1札だけが違う。</summary>
-    public static readonly UnitDef TomeMb = new()
-    {
-        Id = "tome", Name = "見境なしのミサ", MaxHp = 58, Attack = 12, Speed = 6,
-        Traits = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.RuptureKeep, TraitId.Feathers, TraitId.FeatherLoss },
-        PlusText = TomeMa.PlusText,
-        MinusText = "追う標が無い羽は、敵味方構わず飛んで、戻ってこない",
-        Flavor = Tome.Flavor,
-    };
+    /// <summary>第285期 M-b（乱射した数だけ羽を失う・下限 1）。M-a ＋ <see cref="TraitId.FeatherLoss"/> の1札だけが違う。<b>第286期に規定にした</b>——規定の <see cref="Tome"/> と同じ物。</summary>
+    public static readonly UnitDef TomeMb = Tome;
 
     /// <summary>
     /// 火選りのヒヨ。<b>ロスターで初めて「味方に付いた燃焼」を読む駒</b>（第58期）。

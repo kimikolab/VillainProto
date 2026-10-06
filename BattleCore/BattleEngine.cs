@@ -1252,6 +1252,13 @@ public sealed class BattleContext
         return true;
     }
 
+    /// <summary>帯電の粉が新しく感電を付けた（第286期・<see cref="ChargedPowderTrait"/> だけが呼ぶ・<b>計数のみ</b>）。</summary>
+    public void NotePowder(UnitState tou, bool spread)
+    {
+        UnitTally t = TallyOf(tou);
+        if (spread) t.PowderSpread++; else t.PowderMain++;
+    }
+
     /// <summary>
     /// 雷の1発（第214期・<see cref="ThunderTrait"/> だけが呼ぶ）。<b>術</b>——<c>PerformAttack</c> を通らず
     /// <c>ApplyDamage(敵, 量, カタ)</c> を直に呼ぶ（リリの吸い取りと同じ入口。§1 の +50%・破片・軛は効き、反撃は起きない）。

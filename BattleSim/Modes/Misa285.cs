@@ -37,7 +37,7 @@ static class Misa285Diag
     internal sealed record Ver(string Name, string What, UnitDef D);
     internal static readonly Ver[] Vers =
     {
-        new("T1n", "規定（炸裂の一撃・層を残す・乱射）＝ 対照", UnitCatalog.Tome),
+        new("T1n", "第283〜285期の規定（炸裂の一撃・層を残す・乱射）＝ 対照", UnitCatalog.TomeT1n),
         new("Ma", "M-a 羽の連射（乱射した羽は戻ってくる）", UnitCatalog.TomeMa),
         new("Mb", "M-b 羽の連射（乱射した羽は失う・下限 1）", UnitCatalog.TomeMb),
     };
@@ -357,16 +357,18 @@ static class Misa285Diag
         Expect("(a) ミサ在席の `compare` 行は3行で、行名は新しい名前", misaRows.Length == 3 && want.All(misaRows.Contains), string.Join("・", misaRows));
         Expect("(a) 旧い行名（止め・トメ）を持つ `compare` 行が無い", !Rows.Any(r => r.Name.Contains("トメ") || r.Name.StartsWith("止め")));
 
-        // (b) 規定は動いていない: 羽の札は版だけが持つ
-        bool noHolders = UnitCatalog.Everyone.All(d => !d.Traits.Contains(TraitId.Feathers) && !d.Traits.Contains(TraitId.FeatherLoss))
-                         && Rows.All(r => r.F.Occupied().All(o => !o.Def.Traits.Contains(TraitId.Feathers)));
-        Expect("(b) 羽の札の保持者は `Everyone` ／ `compare` に 0 枚（規定は T1n のまま）", noHolders && UnitCatalog.Tome == UnitCatalog.TomeT1n);
+        // (b) 規定 ＝ M-b
+        // 第286期に M-b を規定にしたので、(b)(c) は「規定 ＝ M-b」の形に直した（第285期の版は「規定 ＝ T1n・羽の保持者 0」を確かめていた）。
+        bool onlyDefault = UnitCatalog.Everyone.Where(d => d.Traits.Contains(TraitId.Feathers) || d.Traits.Contains(TraitId.FeatherLoss)).All(d => ReferenceEquals(d, UnitCatalog.Tome))
+                           && Rows.All(r => r.F.Occupied().All(o => !o.Def.Traits.Contains(TraitId.Feathers) || ReferenceEquals(o.Def, UnitCatalog.Tome)));
+        Expect("(b) 羽の札の保持者は `Everyone` ／ `compare` で規定のミサだけ・規定 ＝ M-b（`TomeMb`）・T1n は `TomeT1n` が明示的に持つ",
+            onlyDefault && ReferenceEquals(UnitCatalog.Tome, UnitCatalog.TomeMb) && !ReferenceEquals(UnitCatalog.Tome, UnitCatalog.TomeT1n));
         Expect("(b) M-b は M-a ＋ 羽を失う の1札だけが違う",
             UnitCatalog.TomeMb.Traits.SequenceEqual(UnitCatalog.TomeMa.Traits.Append(TraitId.FeatherLoss)));
 
-        // (c) T1n の `compare` が docs/balance.md と一致（ミサ在席の3行）
+        // (c) 規定（M-b）の `compare` が docs/balance.md と一致
         var bal = ReadBalance();
-        var g0 = CompareGrid(VerOf("T1n"));
+        var g0 = CompareGrid(VerOf("Mb"));
         int bad = 0, cells = 0;
         var rows = Rows;
         for (int ri = 0; ri < rows.Length; ri++)
@@ -374,7 +376,7 @@ static class Misa285Diag
             if (!bal.TryGetValue(rows[ri].Name, out var cellsRow)) { bad++; continue; }
             for (int w = 0; w < Main.Length; w++) { cells++; if (Math.Abs(cellsRow[w] - g0[ri, w]) > 0.05) bad++; }
         }
-        Expect("(c) T1n の `compare` 64 行 × 5 波が `docs/balance.md` と一致", bad == 0, $"{cells} セル中 {bad} 件ずれ");
+        Expect("(c) 規定（M-b）の `compare` 64 行 × 5 波が `docs/balance.md` と一致", bad == 0, $"{cells} セル中 {bad} 件ずれ");
 
         // (d) 羽の帳簿: 初期 1・下限 1・増えるのは敵への書き込みだけ
         long minEnd = long.MaxValue, gainNoWriter = 0, shotsOver = 0, sprayLostOver = 0, logGain = 0, tallyGain = 0;
