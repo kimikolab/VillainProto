@@ -267,6 +267,7 @@ public static class UiKit
         "zan" => 0.0078f,
         "kugu" => 0.02995f,
         "shiga" => 0.03125f,
+        "tou" => 0.0201823f, // 1536px の下端から足元まで31px。
         "shio" => 0.0182f,
         "shio_retreat" => 0.0546875f,
         "shio_support" => 0.0279948f,
