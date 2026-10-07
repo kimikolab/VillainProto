@@ -1,0 +1,23 @@
+Tool: built-in image_gen
+Edit target: DemoApp/assets/portraits/battle/tome_idle_right.png
+Output: misa-battle-idle-right-v1.png (1024 x 1536, transparent PNG)
+Runtime: DemoApp/assets/portraits/battle/tome_ready_right.png
+Body bounds (alpha > 128): y=15..1503. Foot center for placement: x=660.
+Integration: prefer tome_ready_right.png for battle idle; retain the existing frontal source.
+Alignment: bottom padding 32/1536; horizontal origin shift 148/1024 of image width, mirrored for enemies.
+Attack scale: 1488/1371 relative to idle. Detached feather sprites remain separate.
+Validation: MISA_CHECK_OK (rendered, both teams, speeds 1 and 2); compare/dump unchanged; audit 0 mismatches.
+
+Use case: identity-preserve
+Asset type: transparent full-body battle idle sprite for a premium Japanese fantasy RPG.
+Input image 1 is the edit target and the exact identity, costume, coloring and rendering-quality reference: Misa, the silver-haired mage in an ornate navy/ivory hooded dress with SILVER filigree and blue-violet crystal pendants.
+
+Create ONE new battle-idle pose variant of this SAME character. The essential change is orientation: her entire torso, shoulders, hips, feet AND head are turned toward SCREEN RIGHT, about 55–65 degrees away from a front view, a clear right-facing three-quarter side view. Her nose points right, her eyes look at an offscreen enemy on the RIGHT. Do not have her look at the viewer. Do not retain the frontal chest/face orientation of the reference. Keep enough of her face visible to recognize the exact same Misa, with the same soft half-lidded lilac eyes and gently absentminded expression.
+
+Pose: quiet, balanced readiness BETWEEN attacks. Both boots supported at the same ground plane, natural hip/shoulder alignment, comfortably spaced uncrossed legs, slightly relaxed knees, one foot a little ahead toward the right. One hand rests low near her waist with softly relaxed fingers; the other arm hangs naturally, slightly away from the cloak. Anatomically natural hands, thumbs, ears, and healthy thigh/calf proportions. No dramatic pointing, raised attack arm, sprinting, jumping or floating. Hair and cloak fall mainly behind her toward screen left with a gentle continuous flow.
+
+Invariants: preserve the original face, age impression, body proportions, long pale silver/lavender hair, hood shape, white ruffled layered dress, navy corset and cloak, silver floral tracery, crystal pendants, garter and decorated short boots. Keep the exact same detailed, polished high-rarity illustration style and delicate shading. Do not simplify it into a generic anime character. Hair must consist of clean coherent flowing locks, no hard zigzags or tangled solid clumps around the neck and ears. Silver decoration belongs only to fabric/accessories, never smeared into the hair. Sharp coherent details; no blurry repaint, mosaic patches, or heavy bloom.
+
+Framing: portrait 1024x1536, entire hood through both boot soles visible, centered full-length character, modest safe margins, approximately 30 px above hood and 30 px below the lowest boot. Body scale and face size close to the reference.
+Background: TRUE TRANSPARENT ALPHA. Character only. No cast shadow, background, scenery, platform, lettering, watermark, weapon, staff, floating feathers, wings, magic circles, projectiles or particles. The detached feather devices are rendered separately by the game.
+Output: one finished right-facing battle-idle sprite, not a sheet or comparison.

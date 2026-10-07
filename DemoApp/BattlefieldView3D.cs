@@ -290,6 +290,7 @@ public partial class BattlefieldView3D : Control
     {
         ResetFire();
         ResetMovement();
+        MisaShots = MisaSprays = MisaFlows = 0;
         YomiIaiPlays = YomiIaiExtraPlays = 0;
         YomiSweepPlays = HaneBlastPlays = HanePinPlays = 0;
         ResetLiliRite();

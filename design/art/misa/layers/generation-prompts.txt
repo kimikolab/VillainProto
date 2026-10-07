@@ -1,0 +1,29 @@
+Mode: built-in image_gen
+
+misa-idle-body.png
+Use case: precise-object-edit / background-extraction.
+Prepare the supplied approved Misa illustration as the CHARACTER-ONLY layer for a game. Make ONLY these removals: remove every floating feather-shaped magical weapon and its hanging components, crystal particles, detached glints and external glow. These are the separate hovering objects around the head and shoulders. There must be ZERO floating feather weapons remaining.
+KEEP the entire woman exactly as in the input: identical face, expression, hair strands, bonnet, ornate silver jewelry, navy-and-ivory clothing, pose, body proportions, hands, boots, lavish painted rendering and all costume-attached crystals. Do not mistake the ornaments sewn to her costume for floating weapons. Do not simplify or repaint the character. Reconstruct hair only if a removed weapon actually occluded it. No global smoothing, no change of style, no facial drift, no loss of crisp embroidery detail.
+The removed areas and ALL backdrop space must become completely transparent with alpha=0. This includes the gray/violet cloudy backdrop behind the original image: it must not remain as a background layer. Clean cutout around every hair strand, coat ribbon and lace edge. No baked-in glow, light cloud, gradient, ground shadow, scenery, text or extra objects.
+Keep the same 1024x1536 canvas, character scale, position and pose. Preserve the head and foot positions to permit stable game registration. The output is ONE full-body character-only transparent PNG.
+
+--------------------
+
+misa-attack-body.png
+Use case: precise-object-edit / background-extraction.
+Prepare the supplied Misa combat illustration as a CHARACTER-ONLY game animation layer. Remove ALL six hovering feather-shaped weapons, every attached weapon chain/crystal, projectile streak, tiny airborne crystal and detached magic particle. The output must contain ONLY Misa herself, no floating weapons and no effects.
+PRESERVE the woman exactly: same combat pose, entire extended hand, waist hand, face and expression, silver-white hair, ornate navy bonnet, fluttering coat and ribbons, intricate SILVER embroidery, ivory lace, body proportions, thighs, boots and costume-attached chains and crystals. No redesign, no pose change, no face drift, no simplified detail, no style change, no overall smoothing. Reconstruct the few hair areas behind removed floating weapons as natural continuous locks without zigzag clumps. Keep the sharp premium illustration finish.
+All space outside the character must be genuine alpha=0 transparency. Remove the cloudy violet/gray background and every outer glow. No replacement backdrop, ground shadow, fog, gradients, captions or extra objects. Preserve wispy hair and semi-transparent cloth edges with correct alpha.
+Maintain the same 1024x1536 canvas, character scale, position, head and foot locations as the reference. Full body character-only PNG, nothing cropped.
+
+--------------------
+
+misa-feather.png
+Use case: stylized-concept / game asset extraction.
+Create ONE SINGLE isolated feather-shaped magical artifact from the supplied Misa reference, as a reusable game sprite. No character. The input is the authoritative design and rendering reference: ornate silver-and-dark-navy metal feather weapon, blue-violet crystalline feather barbs and jewel core, luxurious Japanese fantasy RPG illustration.
+
+Exactly ONE complete weapon only, no duplicates or multiple views. Orient its long axis HORIZONTALLY with the sharp feather TIP pointing directly RIGHT (+X), and the narrow quill base at LEFT. Clear near-front orthographic-like view of the broad decorated feather face with only subtle bevel depth; no strong perspective foreshortening. Center the object in a landscape canvas with generous transparent margins.
+Faithfully recreate a single reference feather as a coherent self-contained artifact: long elegantly tapered dark navy central blade with pointed tip, fine polished SILVER filigree frame, one circular violet-blue jewel core mounted near the quill end, and translucent crystalline barbs layered along both sides in a feather arrangement. Silver has dark blue-gray recessed details and bright crisp edge reflections; crystals have clear lavender/violet facets and a soft internal blue core light. Small attached quill jewel/ornament may trail inline toward the LEFT, as part of the object, not hanging downward. No gold and no organic bird feathers. Preserve the refined intricate craftsmanship, not a simplified icon or generic sword.
+
+Production requirements: the whole silhouette is distinct and easy to rotate in 2D. Clean readable layers and fine controlled details that remain coherent when reduced. The feather's outer dimensions occupy about 80% of image width. High quality sharp finished anime game rendering matching the source. No smeared silver lines, mosaic texture, noisy microdetail or blur.
+Genuine transparent alpha=0 background and transparent gaps between crystalline barbs. NO outer aura, glowing cloud, detached sparks, projectile streaks, motion blur, target mark, floor shadow or backdrop. Keep mild emission INSIDE crystals only; stronger glow and trails will be added by the game. No text, border, sheet layout, human hands or character.

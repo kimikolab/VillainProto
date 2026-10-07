@@ -282,7 +282,9 @@ void fragment() {
             FlipH = Team == BattleContext.EnemyTeam,
         };
         AddChild(_sprite);
+        AlignMisaPortrait(_unitId);
         BuildKataStakes();
+        BuildMisaFeathers(opening);
 
         Hud = new PawnHud2D(Team == BattleContext.EnemyTeam, opening.Name);
         BuildRuleMarks(opening);
@@ -457,6 +459,7 @@ void fragment() {
         SetCurseStain(false);
         _statusSnapshot.Clear();
         _alive = false;
+        _misaFeathers?.SetActive(false);
         SetPlank(0);
         SetScrapStock(0);
         ResetStaggerPose();
@@ -502,6 +505,7 @@ void fragment() {
         ResetStaggerPose();
         _guardPosition = null;
         _alive = true;
+        _misaFeathers?.SetActive(true);
         RefreshBattlePortrait();
         Visible = true;
         Position = _home + Vector3.Down * 0.45f;
@@ -542,6 +546,7 @@ void fragment() {
         _thrustPosition = null;
         CancelCharge();
         _victory = true;
+        _misaFeathers?.SetActive(false);
         SetPlank(0);
         SetScrapStock(0);
         _confusion.SetActive(false);
@@ -568,6 +573,7 @@ void fragment() {
         {
             SetPortraitGeometry(victoryPortrait, 0.0f);
             _sprite.Texture = victoryPortrait;
+            AlignMisaPortrait("");
             _sprite.PixelSize = _portraitHeight / Math.Max(1, victoryPortrait.GetHeight());
             _sprite.Position = new Vector3(0, _portraitBaseY, 0);
             _sprite.Modulate = new Color(1, 1, 1, 0);

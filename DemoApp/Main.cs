@@ -1150,6 +1150,7 @@ public partial class Main : Control
         _turnTicks = TurnTickPresentation.Build(_result.Events);
         IndexBeniMio(_result.Events);
         IndexThunder(_result.Events);
+        _misa = MisaPresentation.Build(_result.Events);
         _mireBurstsShown.Clear();
         IndexTimeline(_result.Events);
         _battleOpening = pending.Select(x => new DemoOpening(
@@ -1367,6 +1368,7 @@ public partial class Main : Control
                 if (contactToken == _playToken && _battleMode) FireHitContact(eventIndex, pawn);
             };
         }
+        if (await PlayMisa(e, eventIndex, actor, target)) return;
         if (await PlayFire(e, eventIndex, actor, target)) return;
         if (await PlayMovement(e, eventIndex, actor, target)) return;
         if (await PlayThunder(e, eventIndex, actor, target)) return;
@@ -1441,7 +1443,8 @@ public partial class Main : Control
                 // 溜めの解放は踏み込み後の着弾で行う。手番外の攻撃では消費しない。
                 bool continuingCombo = actor is not null && _comboEnds.ContainsKey(actor);
                 _movement.Attacks.TryGetValue(eventIndex, out var movementCue);
-                bool flowingAttack = movementCue is not null || actor?.UnitId == "sero"
+                bool misaAttack = _misa.Attacks.Contains(eventIndex);
+                bool flowingAttack = misaAttack || movementCue is not null || actor?.UnitId == "sero"
                     || actor?.UnitId == "basa" && e.Pattern == AttackPattern.Sweep;
                 if (e.Reaction && !continuingCombo && !flowingAttack)
                     await _battleField.ShowBonusAttack(actor);
@@ -1452,7 +1455,12 @@ public partial class Main : Control
                 {
                     _comboEnds[actor] = comboEnd;
                 }
-                if (_firePresentation.Attacks.TryGetValue(eventIndex, out var fireAttack))
+                if (misaAttack)
+                {
+                    // 射出は直前のFeatherで再生済み。通常斬撃を重ねず、接触通知だけ渡す。
+                    foreach (var hit in impactTargets) FireHitContact(eventIndex, hit);
+                }
+                else if (_firePresentation.Attacks.TryGetValue(eventIndex, out var fireAttack))
                     await _battleField.PlayFireAttack(actor, target, impactTargets, fireAttack, _speed);
                 else await _battleField.Attack(actor, target, pattern, impactTargets, e.Reaction, e.FriendlyFire,
                     advance: !continuingCombo, holdPosition: actor is not null && _comboEnds.ContainsKey(actor),
@@ -1506,8 +1514,13 @@ public partial class Main : Control
                 break;
 
             case BattleEventKind.Damage:
-                if (_batchedDamageIndices.Contains(eventIndex)) break;   // 3-a で同時に描き終えている
-                if (_burstDamageIndices.Contains(eventIndex)) break;     // 破裂（第125期 3-a）で描き終えている
+                if (_batchedDamageIndices.Contains(eventIndex) || _burstDamageIndices.Contains(eventIndex))
+                {
+                    // 数字は同時着弾で先に描くが、HPは元の位置でも同期する。
+                    // 間に回復があると、先取りした後続ダメージのHPを回復表示が上書きするため。
+                    target?.SetHp(e.HpAfter);
+                    break;
+                }
                 if (e.ShareFromId is not null)
                 {
                     await PlayHexShares(eventIndex);

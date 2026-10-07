@@ -1,0 +1,21 @@
+Generated using built-in image_gen. References: v9 silver colorway for identity/design and original user sheet for art direction. Fresh rendering request focused on clarity while preserving detail and character identity.
+
+Use case: stylized-concept.
+Create a freshly painted final-quality full-body illustration of the SAME Misa shown in input image 1, using it as a character design reference. Input 1 is the approved SILVER colorway and is authoritative for face, costume, palette, silhouette and weapon design. Input 2, the original reference sheet, is only a reference for the delicate, luxurious polished anime illustration quality. All metal must be SILVER, never gold.
+
+This is a fresh clean rendering of the approved design, not another blurred local retouch. Preserve her recognizable delicate face, lilac eyes, gentle absent-minded smile, silver-white hair, ornate dark bonnet, luxurious midnight-navy and ivory layered gothic costume, elaborate SILVER embroidery and jewelry, six elaborate floating blue-violet crystal feather weapons. Preserve the high-rarity SSR impression and exact character identity. Do not simplify the outfit, change to generic cel shading or make a different character. Retain the opulent layered coat, fine lace, ornamental buckles, hanging crystals and silver filigree.
+
+The PRIMARY correction is rendering clarity. Reconstruct every material cleanly:
+- Eyes: sharply resolved irises, lashes and pupil boundaries.
+- Skin: clean continuous soft gradients, no blotches or pale noise.
+- Hair: smooth white-silver locks with continuous fine strand flow and clear tapered edges, lavender shadows. No jagged accordion folds or metal fragments in the hair near the bonnet, ears or neck. Small natural ears, subtly nestled under hair.
+- Dark cloth: large coherent deep navy folds with controlled smooth shading, no random faceted patches or gray haze.
+- Silver embroidery: fine continuous ornamental lines visibly resting ON cloth. Draw coherent recognizable filigree curves with crisp edges, not tangled shiny speckles.
+- Lace: clear delicate scallops and connected floral motifs, not mottled white masses.
+- Metal: crisp edges, dark blue-gray recesses and small bright platinum highlights, clear separation from hair and cloth.
+- Crystals: distinct polished facets, tightly contained internal violet light; no bloom covering nearby details.
+Keep intricate richness through deliberate precise drawing and material definition, not noisy texture. Clean sophisticated anime painting with fine confident contours and elegant soft shading. High resolution, preferably 2048x3072, directly rendered sharp rather than digitally sharpened. NO mosaic textures, smudged details, blocky brush patches, grain, overexposed glare, global blur, halos or washed-out colors.
+
+Whole character remains in a similar graceful three-quarter standing pose: gently tilted head, one hand softly palm-up beside the waist, other arm relaxed down. Natural hand anatomy with one thumb plus four fingers each, no extreme finger spread. Balanced posture supported by legs, rounded healthy thighs and calves, both boots grounded. Hands, face and hair fully readable. Keep the same flowing luxurious silhouette. Six independent feather-shaped arcane weapons frame the upper body, all entirely within frame and separated from face and fingers.
+
+Portrait 2:3, complete figure and all floating weapons inside comfortable margins. Genuine transparent alpha background. No scenery, gradient, fog, floor, text, panels or watermark.

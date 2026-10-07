@@ -81,12 +81,15 @@ public partial class BattlePawn3D
             // 低い踏み込みは1024高。待機絵と画素あたりの体格を揃える。
             if (key is "hane_palm" or "hane_spring_guard") height *= 1024f / 1536f;
             if (key is "hane_rescue" or "hane_bump_rebound") height *= 1024f / 1536f;
+            // 右向き待機絵は頭〜足が1488px、攻撃絵は1371px。同じ身長へ揃える。
+            if (key == "tome_attack") height *= 1488f / 1371f;
         }
         Texture2D portrait = UiKit.BattlePortrait(_atlas, key, _burning);
         _portraitGroundDistance = height * (0.5f - padding);
         _portraitBaseY = PortraitGroundY + _portraitGroundDistance;
         _sprite.Texture = portrait;
         _sprite.FlipH = _movementFlip ?? (Team == BattleContext.EnemyTeam);
+        AlignMisaPortrait(key);
         _sprite.PixelSize = height / Math.Max(1, portrait.GetHeight());
         _sprite.Position = new Vector3(_portraitOffsetX, _portraitBaseY, 0);
         _portraitMaterial.SetShaderParameter("portrait_texture", portrait);

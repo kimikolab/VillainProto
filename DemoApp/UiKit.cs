@@ -44,7 +44,10 @@ public static class UiKit
     {
         if (BattlePortraitPathCache.TryGetValue(key, out string? cached)) return cached;
         string path = BattlePortraitPathOf(key);
-        string? found = Godot.FileAccess.FileExists(path) ? path : null;
+        // 待機の構え差分を優先し、従来の立ち絵も素材として残す。
+        string ready = $"res://assets/portraits/battle/{key}_ready_right.png";
+        string? found = Godot.FileAccess.FileExists(ready) ? ready
+            : Godot.FileAccess.FileExists(path) ? path : null;
         BattlePortraitPathCache[key] = found;
         return found;
     }
@@ -105,11 +108,13 @@ public static class UiKit
         return button;
     }
 
-    public static Texture2D LoadTexture(string path)
+    public static Texture2D LoadTexture(string path, bool mipmaps = false)
     {
         Image image = Image.LoadFromFile(ProjectSettings.GlobalizePath(path));
         if (image.IsEmpty())
             throw new InvalidOperationException($"画像を読み込めません: {path}");
+        // 細かい銀の装飾は戦場で縮小するとちらつくため、縮小用の画像も持つ。
+        if (mipmaps) image.GenerateMipmaps();
         return ImageTexture.CreateFromImage(image);
     }
 
@@ -119,7 +124,7 @@ public static class UiKit
         {
             if (!PortraitCache.TryGetValue(key, out Texture2D? portrait))
             {
-                portrait = LoadTexture(path);
+                portrait = LoadTexture(path, mipmaps: key == "tome");
                 PortraitCache[key] = portrait;
             }
             return portrait;
@@ -154,7 +159,7 @@ public static class UiKit
         {
             if (!BattlePortraitCache.TryGetValue(key, out Texture2D? portrait))
             {
-                portrait = LoadTexture(path);
+                portrait = LoadTexture(path, mipmaps: key is "tome" or "tome_attack");
                 BattlePortraitCache[key] = portrait;
             }
             return portrait;
@@ -253,7 +258,8 @@ public static class UiKit
         "golm" => 0.0871f,
         "dolga" => 0.0699f,
         "sasa" => 0.0267f,
-        "tome" => 0.0195f,
+        "tome" => 0.02083f, // 右向き待機絵。1536px の下端に32px。
+        "tome_attack" => 0.05859f, // 攻撃絵の足元は1446px。
         "sora" => 0.0951f,
         "egu" => 0.1139f,
         "nomi" => 0.0430f,
