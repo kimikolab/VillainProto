@@ -42,10 +42,10 @@ static class Tou279Diag
 
     internal static readonly (string Name, string What, UnitDef Tou)[] Vers =
     {
-        ("T0", "旧トウ（痺れ粉・規定のまま・対照）", UnitCatalog.TouT0),
+        ("T0", "旧トウ（痺れ粉・第278〜286期の規定・対照）", UnitCatalog.TouT0),
         ("T1", "帯電の粉（敵へ感電 ＋ 隣の味方へ漏れ）＋ S3", UnitCatalog.TouT1),
         ("T2", "帯電の粉（敵へ感電のみ・漏れの対照）＋ S3", UnitCatalog.TouT2),
-        ("T3", "対称の粉（主目標 ＋ その隣の敵へ感電 ＋ 隣の味方へ漏れ）＋ S3（第286期）", UnitCatalog.TouT3),
+        ("T3", "対称の粉（主目標 ＋ その隣の敵へ感電 ＋ 隣の味方へ漏れ）＋ S3（第286期・第287期の規定）", UnitCatalog.TouT3),
         ("T3n", "対称の粉・漏れなし（漏れの代金の対照）＋ S3（第286期）", UnitCatalog.TouT3n),
     };
 
@@ -338,25 +338,27 @@ static class Tou279Diag
         int bad = 0;
         void Ok(string what, bool ok) { Console.WriteLine($"{(ok ? "○" : "×")} {what}"); if (!ok) bad++; }
 
-        Ok("(a) 帯電の粉 ／ 粉の漏れの保持者は `UnitCatalog.Everyone` に 0 枚（版は `All` ／ `Retired` の外）",
-           !UnitCatalog.Everyone.Any(d => d.Traits.Contains(TraitId.ChargedPowder) || d.Traits.Contains(TraitId.ChargedPowderLeak)));
-        Ok("(b) T0 は規定のトウと定義が同じ（体・札・文）",
-           UnitCatalog.TouT0.MaxHp == UnitCatalog.Tou.MaxHp && UnitCatalog.TouT0.Attack == UnitCatalog.Tou.Attack && UnitCatalog.TouT0.Speed == UnitCatalog.Tou.Speed
-           && UnitCatalog.TouT0.Traits.SequenceEqual(UnitCatalog.Tou.Traits) && UnitCatalog.TouT0.PlusText == UnitCatalog.Tou.PlusText && UnitCatalog.TouT0.Pattern == UnitCatalog.Tou.Pattern);
-        Ok("(b2) T1 ／ T2 ／ T3 ／ T3n の体・型は T0 と同じで、違うのは札だけ（T2 ＝ T1 − 漏れ ／ T3 ＝ T1 ＋ 舞う ／ T3n ＝ T2 ＋ 舞う）・舞う札の保持者は `Everyone` に 0 枚",
+        // 第287期に T3 を規定にしたので、(a)(b)(b2)(c) は「規定 ＝ T3・旧の規定は `TouT0`」の形に直した（第279〜286期の版は「規定 ＝ T0」を確かめていた）。
+        Ok("(a) 帯電の粉 ／ 粉の漏れ ／ 舞う粉の保持者は `UnitCatalog.Everyone` で規定のトウ1枚だけ",
+           UnitCatalog.Everyone.Where(d => d.Traits.Contains(TraitId.ChargedPowder) || d.Traits.Contains(TraitId.ChargedPowderLeak) || d.Traits.Contains(TraitId.ChargedPowderSpread))
+               .All(d => ReferenceEquals(d, UnitCatalog.Tou)));
+        Ok("(b) 規定のトウは T3（`TouT3` と同じ物）・`TouT0` は旧の規定（痺れ粉）を明示的に持ち、体は同じ",
+           ReferenceEquals(UnitCatalog.TouT3, UnitCatalog.Tou) && UnitCatalog.TouT0.Traits.SequenceEqual(new[] { TraitId.Paralyze })
+           && UnitCatalog.TouT0.MaxHp == UnitCatalog.Tou.MaxHp && UnitCatalog.TouT0.Attack == UnitCatalog.Tou.Attack && UnitCatalog.TouT0.Speed == UnitCatalog.Tou.Speed
+           && UnitCatalog.TouT0.Pattern == UnitCatalog.Tou.Pattern && UnitCatalog.TouT0.Advances == UnitCatalog.Tou.Advances);
+        Ok("(b2) T1 ／ T2 ／ T3 ／ T3n の体・型は T0 と同じで、違うのは札だけ（T2 ＝ T1 − 漏れ ／ T3 ＝ T1 ＋ 舞う ／ T3n ＝ T2 ＋ 舞う）",
            new[] { UnitCatalog.TouT1, UnitCatalog.TouT2, UnitCatalog.TouT3, UnitCatalog.TouT3n }.All(d => d.MaxHp == 46 && d.Attack == 3 && d.Speed == 11 && d.Pattern == UnitCatalog.Tou.Pattern && d.Advances == UnitCatalog.Tou.Advances)
            && UnitCatalog.TouT1.Traits.Except(new[] { TraitId.ChargedPowderLeak }).SequenceEqual(UnitCatalog.TouT2.Traits)
            && UnitCatalog.TouT3.Traits.SequenceEqual(UnitCatalog.TouT1.Traits.Append(TraitId.ChargedPowderSpread))
-           && UnitCatalog.TouT3n.Traits.SequenceEqual(UnitCatalog.TouT2.Traits.Append(TraitId.ChargedPowderSpread))
-           && !UnitCatalog.Everyone.Any(d => d.Traits.Contains(TraitId.ChargedPowderSpread)));
+           && UnitCatalog.TouT3n.Traits.SequenceEqual(UnitCatalog.TouT2.Traits.Append(TraitId.ChargedPowderSpread)));
 
-        // (c) T0 の写しで組んだ台と規定のトウの台の台本が一致（トウ在席の6台 × 本編第2〜5波 × seed 0..49）。
+        // (c) 規定のトウで組んだ台と `TouT3` の台の台本が一致（トウ在席の6台 × 本編第2〜5波 × seed 0..49）。
         bool same = true;
         foreach (var b in Boards.Where(b => b.Group != "参照"))
             foreach (var w in Waves.Where(w => w.Group == "本編"))
                 for (int s = 0; s < 50 && same; s++)
-                    same &= CW.Dig(CW.Fight(b.Make(UnitCatalog.Tou), w.Make, s).R).SequenceEqual(CW.Dig(CW.Fight(b.Make(UnitCatalog.TouT0), w.Make, s).R));
-        Ok("(c) T0 の写しの台本が規定のトウと一致（6 台 × 本編第2〜5波 × seed 0..49）", same);
+                    same &= CW.Dig(CW.Fight(b.Make(UnitCatalog.Tou), w.Make, s).R).SequenceEqual(CW.Dig(CW.Fight(b.Make(UnitCatalog.TouT3), w.Make, s).R));
+        Ok("(c) 規定のトウの台本が `TouT3` と一致（6 台 × 本編第2〜5波 × seed 0..49）", same);
 
         // (d)〜(g) 粉の付与・漏れ・痺れの出どころ（6 台 × 本編4波 × seed 0..19）。
         var sum = Vers.ToDictionary(v => v.Name, _ => new Agg());

@@ -59,7 +59,7 @@ static partial class SeroShioDiag
                                                         ("F2", F2, "0,1,1,2,2,2,3,3,3,3,3", 2), ("F3", F3, "0,1,1,2,2,2,3,3,3,3,3", 2) })
         {
             // 入れ替えの相手は回避を持たない素のトウ（セロだけが動かされた回数を数える）
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Tou, center: def), E5, 4, out var p, out _);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.TouT0, center: def), E5, 4, out var p, out _);
             UnitState sero = U(p, "sero"), tou = U(p, "tou");
             int atk0 = sero.CurrentAttack;
             var got = new List<int>();
@@ -83,7 +83,7 @@ static partial class SeroShioDiag
             // 移り木: H0 は +10・H1 は受け手の最大HPの 20%（溢れは切る）
             foreach (var (tag, def, deficit, want) in new[] { ("H0", H0, 50, 10), ("H1", H1, 50, 92 * 20 / 100), ("H1 溢れ", H1, 5, 5), ("H2", H2, 50, 92 * 20 / 100) })
             {
-                var ctx = Ctx(Formation.Build(front1: UnitCatalog.Yomi, center: def, back3: UnitCatalog.Tou), E5, 8, out var p, out _);
+                var ctx = Ctx(Formation.Build(front1: UnitCatalog.Yomi, center: def, back3: UnitCatalog.TouT0), E5, 8, out var p, out _);
                 UnitState yomi = U(p, "yomi"), tou = U(p, "tou");
                 yomi.Hp = yomi.MaxHp - deficit;
                 int hp0 = yomi.Hp;
@@ -96,7 +96,7 @@ static partial class SeroShioDiag
             // 手当て: 最も傷ついたヨミを下げる → 中央のシオが前1 へ。ヨミに 移り木 18 ＋ 手当て 18、押し出したシオには何も無い。
             foreach (var (tag, def, tend) in new[] { ("H1", H1, 0), ("H2", H2, 92 * 20 / 100) })
             {
-                var f = Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: def, back1: UnitCatalog.Tou, back3: UnitCatalog.BasaK0);
+                var f = Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: def, back1: UnitCatalog.TouT0, back3: UnitCatalog.BasaK0);
                 var ctx = Ctx(f, E5, 9, out var p, out _);
                 UnitState yomi = U(p, "yomi"), shio = U(p, "shio");
                 yomi.Hp = yomi.MaxHp / 2; shio.Hp = shio.MaxHp - 30;
@@ -109,7 +109,7 @@ static partial class SeroShioDiag
             }
             {
                 // シオ自身が最も傷ついている → シオを下げる。H2 でも手当ては出ない。
-                var f = Formation.Build(front1: H2, front3: UnitCatalog.Gald, center: UnitCatalog.Tou, back1: UnitCatalog.Yomi, back3: UnitCatalog.BasaK0);
+                var f = Formation.Build(front1: H2, front3: UnitCatalog.Gald, center: UnitCatalog.TouT0, back1: UnitCatalog.Yomi, back3: UnitCatalog.BasaK0);
                 var ctx = Ctx(f, E5, 10, out var p, out _);
                 UnitState shio = U(p, "shio");
                 shio.Hp = shio.MaxHp / 3;
@@ -121,7 +121,7 @@ static partial class SeroShioDiag
             }
             {
                 // 支援拒否（ガルド）を下げても手当ては入らない（`Heal` が弾く）
-                var f = Formation.Build(front1: UnitCatalog.Gald, center: H2, back1: UnitCatalog.Tou);
+                var f = Formation.Build(front1: UnitCatalog.Gald, center: H2, back1: UnitCatalog.TouT0);
                 var ctx = Ctx(f, E5, 11, out var p, out _);
                 UnitState gald = U(p, "gald"), shio = U(p, "shio");
                 gald.Hp = gald.MaxHp / 2; int hg = gald.Hp;

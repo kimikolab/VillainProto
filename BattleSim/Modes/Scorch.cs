@@ -40,7 +40,7 @@ static partial class ScorchDiag
     // =================================================================================
 
     internal static List<UnitDef> H1Members() => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, UnitCatalog.Guza, UnitCatalog.Kubi };
-    internal static List<UnitDef> H2Members() => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, UnitCatalog.Tou, UnitCatalog.Kugu };
+    internal static List<UnitDef> H2Members() => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, UnitCatalog.TouT0, UnitCatalog.Kugu };
 
     /// <summary>ポンの X字の席（第216期の台A・H1 の顔ぶれ）。</summary>
     internal static Formation PonX() => Formation.Build(

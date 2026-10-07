@@ -51,7 +51,7 @@ static partial class BurstDiag
         foreach (var (ver, pois, marks, want) in new[] { ("B0", 8, 2, 0), ("B1", 8, 2, 4), ("B2", 8, 2, 6), ("B2x", 8, 2, 6), ("B2", 3, 1, 1), ("B1", 1, 5, 0) })
         {
             var mio = VerOf(ver);
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Tou, back3: mio), E5, out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.TouT0, back3: mio), E5, out var p, out var e);
             UnitState dead = e[0];
             var adj = e.Where(u => u != dead && FormationRules.AreAdjacent(dead, u)).ToList();
             var far = e.Where(u => u != dead && !adj.Contains(u)).ToList();
@@ -79,7 +79,7 @@ static partial class BurstDiag
 
         // 連鎖: 倒れた隣も印があれば爆ぜる・1回だけ・段・倒れた隣には外側の印が移らない
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Tou, back3: VerOf("B2")), E5, out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.TouT0, back3: VerOf("B2")), E5, out var p, out var e);
             UnitState d0 = e[0];
             UnitState n1 = e.First(u => u != d0 && FormationRules.AreAdjacent(d0, u) && u.Slot == 2);   // 中央
             d0.SetCounter(StatusKeys.Poison, 8); ctx.MarkConcentrated(p[1], d0, "検査"); ctx.MarkConcentrated(p[1], d0, "検査");   // 8 × 3 ÷ 4 ＝ 6
@@ -106,7 +106,7 @@ static partial class BurstDiag
         // 味方側: B2 は爆ぜない・B2x は爆ぜる・ベニの結界の内側は回復
         foreach (var (ver, want) in new[] { ("B2", 0L), ("B2x", 1L) })
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Tou, center: UnitCatalog.Kubi, back1: UnitCatalog.Beni, back3: VerOf(ver)), E5, out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.TouT0, center: UnitCatalog.Kubi, back1: UnitCatalog.Beni, back3: VerOf(ver)), E5, out var p, out var e);
             UnitState tou = p.First(u => u.Def.Id == "tou");
             tou.SetCounter(StatusKeys.Poison, 8); ctx.MarkConcentrated(p.First(u => u.Def.Id == "mio"), tou, "検査");   // 8 × 2 ÷ 4 ＝ 4
             tou.Hp = 1;

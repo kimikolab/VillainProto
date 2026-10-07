@@ -37,18 +37,24 @@ static class ShockDigestDiag
     /// <summary>後の期に足した <c>BattleEvent</c> の欄。</summary>
     static readonly HashSet<string> SkipProps = new() { "BrittleExtra", "PartnerId" };
 
+    /// <summary>
+    /// 第287期: `compare` の行の規定のトウ（第287期から T3）を旧の規定 `TouT0` に戻した行。指紋の台は規定化の前（第286期まで）の台本を写すので、
+    /// トウの在席する行（責め苦・毒+耐久）を旧に固定する（第282〜283期のミサの `CompareT0` と同じ作法）。トウのいない行は1ビットも変わらない。
+    /// </summary>
+    static (string Name, Formation F)[] CompareTou0() => Common.CompareBuilds().Select(r => (r.Name, Common.FvSwap(r.F, UnitCatalog.Tou, UnitCatalog.TouT0))).ToArray();
+
     static (string, Formation)[] MireBenches(UnitDef mio) => new (string, Formation)[]
     {
-        ("M台1 X", Formation.Build(front1: mio, front3: UnitCatalog.Kubi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Tou)),
+        ("M台1 X", Formation.Build(front1: mio, front3: UnitCatalog.Kubi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.TouT0)),
         ("M台2 X", Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Kubi, center: mio, back1: UnitCatalog.Kata, back3: UnitCatalog.Sid)),
         ("M台2 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: mio, c: UnitCatalog.Kata, d: UnitCatalog.Sid, e: UnitCatalog.Kubi)),
         ("M台3 ポンX", MireDiag.PonX(mio)),
         ("M台4 ポンP2", MireDiag.PonP2(mio)),
-        ("M台5 毒", MireDiag.WithMio(Common.CompareBuilds().First(r => r.Name == "毒 (グザ×ミオ×ラウ)").F, mio)),
-        ("M台5 毒+耐久", MireDiag.WithMio(Common.CompareBuilds().First(r => r.Name == "毒+耐久 (ベニ×トウ)").F, mio)),
-        ("M台5 刻み×澱み", MireDiag.WithMio(Common.CompareBuilds().First(r => r.Name == "刻み×澱み (ノミ×ミオ)").F, mio)),
-        ("M台5 追撃×毒", MireDiag.WithMio(Common.CompareBuilds().First(r => r.Name.StartsWith("追撃×毒")).F, mio)),
-        ("M台5 澱み喰い", MireDiag.WithMio(Common.CompareBuilds().First(r => r.Name.StartsWith("澱み喰い")).F, mio)),
+        ("M台5 毒", MireDiag.WithMio(CompareTou0().First(r => r.Name == "毒 (グザ×ミオ×ラウ)").F, mio)),
+        ("M台5 毒+耐久", MireDiag.WithMio(CompareTou0().First(r => r.Name == "毒+耐久 (ベニ×トウ)").F, mio)),
+        ("M台5 刻み×澱み", MireDiag.WithMio(CompareTou0().First(r => r.Name == "刻み×澱み (ノミ×ミオ)").F, mio)),
+        ("M台5 追撃×毒", MireDiag.WithMio(CompareTou0().First(r => r.Name.StartsWith("追撃×毒")).F, mio)),
+        ("M台5 澱み喰い", MireDiag.WithMio(CompareTou0().First(r => r.Name.StartsWith("澱み喰い")).F, mio)),
     };
 
     public static void Run(string mode, string arg = "")
@@ -61,9 +67,9 @@ static class ShockDigestDiag
             {
                 // 第223期 前段で V3 が規定になったので、シオ・ヨミは `DriftDiag` の V0（版の札を抜いた駒）へ差し替える。
                 ("D1 ポン", D222(Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Gald, center: UnitCatalog.ShioV3, back1: UnitCatalog.SeroOld, back3: UnitCatalog.BasaK0))),
-                ("D2 移動改", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("移動改 (")).F)),
-                ("D3 隊列崩し", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("隊列崩し")).F)),
-                ("D3 突き出し", D222(Common.CompareBuilds().First(r => r.Name.StartsWith("突き出し")).F)),
+                ("D2 移動改", D222(CompareTou0().First(r => r.Name.StartsWith("移動改 (")).F)),
+                ("D3 隊列崩し", D222(CompareTou0().First(r => r.Name.StartsWith("隊列崩し")).F)),
+                ("D3 突き出し", D222(CompareTou0().First(r => r.Name.StartsWith("突き出し")).F)),
             }
             : mode == "e223"
             // 第223期（受け入れ 2）: E0（今のセロ）の台本が実装の前後で一致すること。S1 ポン・S2（ネル）・S3 仮の並び・S4 compare のセロの12行。
@@ -91,35 +97,35 @@ static class ShockDigestDiag
                 ("M-ハネ（仮）", RetreatDiag.RawHane),
                 ("M-カド（仮）", RetreatDiag.RawKado),
                 ("参考 ガルド", RetreatDiag.RefGald),
-            }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id == "shio")).Select(r => ("compare " + r.Name, RetreatDiag.WithShio(r.F, RetreatDiag.J0)))).ToArray()
+            }.Concat(CompareTou0().Where(r => r.F.Occupied().Any(o => o.Def.Id == "shio")).Select(r => ("compare " + r.Name, RetreatDiag.WithShio(r.F, RetreatDiag.J0)))).ToArray()
             : mode == "k226"
             // 第226期（受け入れ 2）: K0（前段の規定）の台本が実装の前後で一致すること。M-ハネ（第225期の席）・参考の雷（仮の席）・セロ／バサ／ハネのいる compare の行。
             ? new (string, Formation)[]
             {
                 ("M-ハネ（225）", DecoyDiag.MHane225),
                 ("参考 雷（ポンの席）", DecoyDiag.Thunder),
-            }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane")).Select(r => ("compare " + r.Name, r.F))).ToArray()
+            }.Concat(CompareTou0().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane")).Select(r => ("compare " + r.Name, r.F))).ToArray()
             : mode == "l227"
             // 第227期（受け入れ 2）: L0（前段の規定・バサ／ハネは敵の乱れ＋突風）の台本が必死の逃げ足の実装の前後で一致すること。
             ? new (string, Formation)[]
             {
                 ("M-ハネ（225）", LastDodgeDiag.MHane225),
                 ("参考 雷（ポンの席）", LastDodgeDiag.Thunder),
-            }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane")).Select(r => ("compare " + r.Name, r.F))).ToArray()
+            }.Concat(CompareTou0().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane")).Select(r => ("compare " + r.Name, r.F))).ToArray()
             : mode == "s232"
             // 第232期（受け入れ 2）: S0（前段の規定＝退避5割・移動の追撃）の台本が、S2（入れ替わらない弾き返し）の実装の前後で一致すること。
             ? new (string, Formation)[]
             {
                 ("M-ハネ（228 H3・規定）", Spring2Diag.MHane228),
                 ("参考 雷（ポンの席）", Spring2Diag.Thunder),
-            }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane" or "shio" or "yomi")).Select(r => ("compare " + r.Name, r.F))).ToArray()
+            }.Concat(CompareTou0().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane" or "shio" or "yomi")).Select(r => ("compare " + r.Name, r.F))).ToArray()
             : mode == "a231"
             // 第231期（受け入れ 2）: V0（前段の規定＝第230期の追記の規定）の台本が、退避の線・隣の弾き返し・移動の追撃・挑発の表示の実装の前後で一致すること。
             ? new (string, Formation)[]
             {
                 ("M-ハネ（228 H3・規定）", Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.Sero, center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.Hane)),
                 ("参考 雷（ポンの席）", CycleDiag.Thunder),
-            }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane" or "shio" or "yomi")).Select(r => ("compare " + r.Name, r.F))).ToArray()
+            }.Concat(CompareTou0().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane" or "shio" or "yomi")).Select(r => ("compare " + r.Name, r.F))).ToArray()
             : mode == "w230"
             // 第230期（受け入れ 2）: W0（前段の規定・嵐・追い風・転倒の穴）の台本が追い風の攻撃力順・撃破の衝撃・溢れの実装の前後で一致すること。
             ? new (string, Formation)[]
@@ -127,21 +133,21 @@ static class ShockDigestDiag
                 ("M-ハネ（228 H3）", CycleDiag.MHane228),
                 ("M-ハネ（229 G4）", CycleDiag.MHane229),
                 ("参考 雷（ポンの席）", CycleDiag.Thunder),
-            }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane" or "shio" or "yomi")).Select(r => ("compare " + r.Name, r.F))).ToArray()
+            }.Concat(CompareTou0().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane" or "shio" or "yomi")).Select(r => ("compare " + r.Name, r.F))).ToArray()
             : mode == "g229"
             // 第229期（受け入れ 2）: G0（前段の規定・ハネは H3）の台本が嵐・追い風・転倒の穴の実装の前後で一致すること。
             ? new (string, Formation)[]
             {
                 ("M-ハネ（228 H3）", GaleDiag.MHane228),
                 ("参考 雷（ポンの席）", GaleDiag.Thunder),
-            }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane" or "shio" or "sasa")).Select(r => ("compare " + r.Name, r.F))).ToArray()
+            }.Concat(CompareTou0().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane" or "shio" or "sasa")).Select(r => ("compare " + r.Name, r.F))).ToArray()
             : mode == "h228"
             // 第228期（受け入れ 2）: H0（前段の規定・セロは L2）の台本が吹っ飛ばし・弾き返しの実装の前後で一致すること。
             ? new (string, Formation)[]
             {
                 ("M-ハネ（227 L2）", SpringDiag.MHane227),
                 ("参考 雷（ポンの席）", SpringDiag.Thunder),
-            }.Concat(Common.CompareBuilds().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane")).Select(r => ("compare " + r.Name, r.F))).ToArray()
+            }.Concat(CompareTou0().Where(r => r.F.Occupied().Any(o => o.Def.Id is "sero" or "basa" or "hane")).Select(r => ("compare " + r.Name, r.F))).ToArray()
             : mode == "m219"
             // 第219期（受け入れ 1）: 規定のミオ（cat）と第218期の M5（m5）の台本が一致すること。
             ? MireBenches(arg == "m5" ? MireDiag.VerOf("M5") : UnitCatalog.Mio)
@@ -153,14 +159,14 @@ static class ShockDigestDiag
             ? new (string, Formation)[]
             {
                 // 第217期（受け入れ 1）: G0（今のシガ）の台本が実装の前後で一致すること。席は Phase 0 で G0 に選んだ参考の席。
-                ("W1 X", Formation.Build(front1: UnitCatalog.Mio, front3: WhipDiag.G0Def, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Tou)),
-                ("W1 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Kata, c: WhipDiag.G0Def, d: UnitCatalog.Tou, e: UnitCatalog.Mio)),
+                ("W1 X", Formation.Build(front1: UnitCatalog.Mio, front3: WhipDiag.G0Def, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.TouT0)),
+                ("W1 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Kata, c: WhipDiag.G0Def, d: UnitCatalog.TouT0, e: UnitCatalog.Mio)),
                 ("W2 X", Formation.Build(front1: UnitCatalog.Beni, front3: WhipDiag.G0Def, center: UnitCatalog.Mio, back1: UnitCatalog.Kata, back3: UnitCatalog.Kugu)),
                 ("W2 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.Kata, d: WhipDiag.G0Def, e: UnitCatalog.Kugu)),
                 ("W3 X", Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Mio, center: UnitCatalog.Kata, back1: WhipDiag.G0Def, back3: UnitCatalog.Guza)),
                 ("W3 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.Kata, d: WhipDiag.G0Def, e: UnitCatalog.Guza)),
-                ("W4 責め苦", WhipDiag.AsG0(Common.CompareBuilds().First(r => r.Name == "責め苦 (トウ×シガ)").F)),
-                ("W4 裂き×責め苦", WhipDiag.AsG0(Common.CompareBuilds().First(r => r.Name == "裂き×責め苦 (キリ×エグ×シガ)").F)),
+                ("W4 責め苦", WhipDiag.AsG0(CompareTou0().First(r => r.Name == "責め苦 (トウ×シガ)").F)),
+                ("W4 裂き×責め苦", WhipDiag.AsG0(CompareTou0().First(r => r.Name == "裂き×責め苦 (キリ×エグ×シガ)").F)),
             }
             : mode == "t216"
             ? new (string, Formation)[]
@@ -168,8 +174,8 @@ static class ShockDigestDiag
                 // 第216期（受け入れ 1）: O0・S0 の台本が第215期と一致すること。台C は Phase 0 で O0 に選んだ参考の席。
                 ("台A", ShockDiag.TableA216(UnitCatalog.Beni, UnitCatalog.Kata)),
                 ("台B", ShockDiag.TableB216(UnitCatalog.Beni, UnitCatalog.Kata)),
-                ("台C X", Formation.Build(front1: UnitCatalog.Mio, front3: UnitCatalog.Kubi, center: UnitCatalog.Beni, back1: UnitCatalog.Tou, back3: UnitCatalog.Kata)),
-                ("台C P2", Formation.BuildDiamond(a: UnitCatalog.Mio, b: UnitCatalog.Kata, c: UnitCatalog.Beni, d: UnitCatalog.Tou, e: UnitCatalog.Kubi)),
+                ("台C X", Formation.Build(front1: UnitCatalog.Mio, front3: UnitCatalog.Kubi, center: UnitCatalog.Beni, back1: UnitCatalog.TouT0, back3: UnitCatalog.Kata)),
+                ("台C P2", Formation.BuildDiamond(a: UnitCatalog.Mio, b: UnitCatalog.Kata, c: UnitCatalog.Beni, d: UnitCatalog.TouT0, e: UnitCatalog.Kubi)),
                 ("台1 X", ShockDiag.Tables()[0].Seats[FormationShape.X]),
                 ("台3 X", ShockDiag.Tables()[2].Seats[FormationShape.X]),
             }

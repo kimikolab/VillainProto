@@ -39,7 +39,7 @@ static partial class MireDiag
     /// <summary>M台1〜M台4 の顔ぶれ（席は総当たりで選ぶ）。<paramref name="mio"/> に版のミオを渡す。</summary>
     internal static readonly (string Tag, string Aim, Func<UnitDef, List<UnitDef>> Members)[] Rigs =
     {
-        ("M台1", "トウが殴る", m => new() { UnitCatalog.Beni, m, UnitCatalog.Kata, UnitCatalog.Kubi, UnitCatalog.Tou }),
+        ("M台1", "トウが殴る", m => new() { UnitCatalog.Beni, m, UnitCatalog.Kata, UnitCatalog.Kubi, UnitCatalog.TouT0 }),
         ("M台2", "殴る駒が少ない（スィド）", m => new() { UnitCatalog.Beni, m, UnitCatalog.Kata, UnitCatalog.Kubi, UnitCatalog.Sid }),
         ("M台3", "ポンの X字（グザ・クビ）", m => new() { UnitCatalog.Beni, m, UnitCatalog.Kata, UnitCatalog.Guza, UnitCatalog.Kubi }),
         ("M台4", "ポンのパターン2（グザ・スィド）", m => new() { UnitCatalog.Beni, m, UnitCatalog.Kata, UnitCatalog.Guza, UnitCatalog.Sid }),

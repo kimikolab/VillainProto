@@ -49,7 +49,7 @@ static partial class LastDodgeDiag
         var recruit = EnemyCatalog.TestStages[0].Enemy.Occupied().Select(o => o.Def).First();
         for (int seed = 0; seed < 500; seed++)
         {
-            var ctx = Ctx(Formation.Build(front1: seroDef, front3: UnitCatalog.HaneH0, center: UnitCatalog.Yomi, back1: noShio ? UnitCatalog.Tou : UnitCatalog.Shio, back3: UnitCatalog.BasaG0),
+            var ctx = Ctx(Formation.Build(front1: seroDef, front3: UnitCatalog.HaneH0, center: UnitCatalog.Yomi, back1: noShio ? UnitCatalog.TouT0 : UnitCatalog.Shio, back3: UnitCatalog.BasaG0),
                           Formation.Build(front1: recruit, front3: recruit), seed, out var p, out var e);
             var r = act(ctx, p, e);
             var t = Tal(ctx, U(p, "sero"));

@@ -250,7 +250,7 @@ static partial class ShockDiag
         var t0 = DateTime.Now;
         Console.WriteLine("# 第216期 `shock run216 g` —— 表G. 雷の編成の2枠の比較（**線は置かない**）");
         Console.WriteLine();
-        UnitDef[] extra = { UnitCatalog.Guza, UnitCatalog.Sid, UnitCatalog.Kubi, UnitCatalog.Tou, UnitCatalog.Nel, UnitCatalog.Kugu };
+        UnitDef[] extra = { UnitCatalog.Guza, UnitCatalog.Sid, UnitCatalog.Kubi, UnitCatalog.TouT0, UnitCatalog.Nel, UnitCatalog.Kugu };
         var pairs = new List<(UnitDef A, UnitDef B)>();
         for (int i = 0; i < extra.Length; i++) for (int j = i + 1; j < extra.Length; j++) pairs.Add((extra[i], extra[j]));
         Console.WriteLine("席: 陣形ごとに 120 通りを**候補（O2・S2）× 倍率 115** で総当たり（第2〜5波 × seed " + PickSeed0 + ".." + (PickSeed0 + PickSeeds - 1)

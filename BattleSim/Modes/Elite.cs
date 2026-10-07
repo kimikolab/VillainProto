@@ -471,7 +471,8 @@ static class EliteDiag
             ("毒 (グザ×ミオ×ラウ)", 0, 0), ("毒+耐久 (ベニ×トウ)", 0, 0), ("毒+ベニ+ラウ", 0, 0), ("毒爆弾 (ラウ×ヴィオ)", 0, 0),
             ("耐久 (ガルド×リリ)", 0, 0),
         };
-        var sel = expect.Select(e => rows.First(r => r.Name == e.Row)).ToArray();
+        // 第287期: §7 は第284期の記録なので、規定のトウ（第287期から T3）を旧の規定 `TouT0` に戻して照合する。
+        var sel = expect.Select(e => rows.First(r => r.Name == e.Row)).Select(r => (r.Name, F: FvSwap(r.F, UnitCatalog.Tou, UnitCatalog.TouT0))).ToArray();
         var gb = Cells(Grid(sel, new[] { NineRecruit, Nine }, Elite, 0, 50));
         Console.WriteLine();
         Console.WriteLine("| 行 | 九・新兵 §7 | 実測 | 九・農兵 §7 | 実測 |");

@@ -60,7 +60,7 @@ static partial class SpringDiag
             var foes = new (int, UnitDef)[] { (0, tough), (1, strong), (2, tough), (3, tough), (4, tough), (5, tough), (6, tough), (7, tough), (8, tough) };
             // 突風（バサが動かされると吹く）と軋み（ヨミ）の割り込みがダメージを混ぜないように、バサは突風の札を抜き、中央はトウにする
             var basaNoSquall = DecoyDiag.Copy(UnitCatalog.BasaG0, UnitCatalog.BasaG0.Traits.Where(x => x != TraitId.Squall).ToArray());
-            var ctx = Ctx9(Formation.Build(front1: h1, front3: basaNoSquall, center: UnitCatalog.Tou, back1: UnitCatalog.Shio, back3: UnitCatalog.SeroC0), foes, 1, out var p, out var e);
+            var ctx = Ctx9(Formation.Build(front1: h1, front3: basaNoSquall, center: UnitCatalog.TouT0, back1: UnitCatalog.Shio, back3: UnitCatalog.SeroC0), foes, 1, out var p, out var e);
             UnitState hane = U(p, "hane");
             var laneSeats = FormationRules.LanePath(1);   // 前3 → 中央 → ○中3 → 後3
             var before = laneSeats.Select(s => e.First(u => u.Slot == s)).ToList();

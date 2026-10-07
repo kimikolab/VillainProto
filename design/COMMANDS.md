@@ -872,6 +872,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 tou279 p0         # 第286期 Phase 0: 敵の盤面（本編 ／ 近衛 ／ 大隊 ／ ボス）で主目標の席ごとの「隣の敵」の数・感電の書き込みの箇所（戦闘0回）
     dotnet run --project BattleSim -c Release 0 tou279 compare    # 第286期: `compare` 64 行 × 5 波 × トウの版 T0 ／ T1 ／ T2 ／ T3 ／ T3n（トウのいない 310 セルのずれ・主判定・歯止め）（25 秒）
     dotnet run --project BattleSim -c Release 0 tou279 elite      # 第286期: 精鋭（近衛 ／ 大隊）× トウ在席の2行 × 5版（勝率・粉 主／隣・連鎖・潰れた手番・放電）
+    dotnet run --project BattleSim -c Release 0 shock287 p0       # 第287期 Phase 0: 格子の台数と所要の見積もり（無作為 600 台）・ボスへの感電のログ・クグの組み付きが精鋭に掛かるか（20 秒）。本体は `Modes/Shock287.cs`
+    dotnet run --project BattleSim -c Release 0 shock287 shiga    # 第287期 段1: 責め苦 × 近衛 ／ 大隊 × トウ T3 ／ T3n のシガの振（電気鞭・怖気・縛られた的）と帯電率
+    dotnet run --project BattleSim -c Release 0 shock287 grid <ボス|近衛|大隊>   # 第287期 段2: 感電軸の格子（トウ T3 ＋ シガ ＋ 探索枠3・候補 21 枚・ヒーラー ≦ 1 × 席 120 ＝ 120,120 台）→ 足切り seed 0..19 → seed 0..199 → ドルガ対照（各 3〜18 分）
+    dotnet run --project BattleSim -c Release 0 shock287 check    # 第287期 自己検査（固定枠・組・席・軽い口と詳しい口・ドルガ対照・決定性）
+    dotnet run --project BattleSim -c Release 0 shock287 log <波> <短い名前を ・ で5つ（前1・前3・中央・後1・後3）> [seed]   # 第287期 1戦のログ
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

@@ -57,7 +57,7 @@ static partial class SeroDiag
         const int N = 1000;
 
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Tou, center: E1, back1: UnitCatalog.Gald), E5, 1, out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.TouT0, center: E1, back1: UnitCatalog.Gald), E5, 1, out var p, out var e);
             UnitState sero = p.First(u => u.Def.Id == "sero"), ally = p.First(u => u.Def.Id == "tou");
             UnitTally t = Tal(ctx, sero);
             int hp0 = sero.Hp;
@@ -70,7 +70,7 @@ static partial class SeroDiag
             Expect("同じく HP の減り", hp0 - sero.Hp, 5 * 5 * N);
         }
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Tou, center: E1, back1: UnitCatalog.Gald), E5, 2, out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.TouT0, center: E1, back1: UnitCatalog.Gald), E5, 2, out var p, out var e);
             UnitState sero = p.First(u => u.Def.Id == "sero");
             UnitTally t = Tal(ctx, sero);
             sero.SetCounter(StatusKeys.Armor, 99999);
@@ -95,7 +95,7 @@ static partial class SeroDiag
             Expect("動かされた回数（入れ替わっていないので 0）", EvadeTrait.MovesOf(sero), 0);
         }
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Tou, center: E1NoSwap), E5, 6, out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.TouT0, center: E1NoSwap), E5, 6, out var p, out var e);
             UnitState sero = p.First(u => u.Def.Id == "sero");
             for (int i = 0; i < N; i++) { ctx.ApplyDamage(sero, 5, e[i % 5], singleHit: true, pattern: AttackPattern.Single); foreach (var x in e) x.Hp = x.MaxHp; }
             ExpectIn("入れ替えなし（段0 のまま）で避けた回数（30%・±4σ）", Tal(ctx, sero).Evades, 300 - 58, 300 + 58);
@@ -103,7 +103,7 @@ static partial class SeroDiag
             Expect("段0 の追い撃ちに貫きは無い", Tal(ctx, sero).EvRipostePierce, 0);
         }
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Tou, center: E1NoSwap), E5, 4, out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.TouT0, center: E1NoSwap), E5, 4, out var p, out var e);
             UnitState sero = p.First(u => u.Def.Id == "sero"), tou = p.First(u => u.Def.Id == "tou");
             var got = new List<int>();
             for (int k = 1; k <= 11; k++)

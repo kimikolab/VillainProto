@@ -46,7 +46,7 @@ static partial class ScorchDiag
         Console.WriteLine("## (4a) 盤面を直に組んで1発ずつ");
         Console.WriteLine();
         var knight = EnemyCatalog.Stages[1].Enemy.Occupied().Select(o => o.Def).First(d => d.Traits.Count == 0);
-        Formation P1f = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Tou);
+        Formation P1f = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.TouT0);
         Formation E1f = Formation.Build(front1: knight, front3: knight);
         foreach (var (ver, pct) in new[] { ("F0", 0), ("F1", 25), ("F2", 50), ("F3", 25), ("F4", 50) })
         {
@@ -89,7 +89,7 @@ static partial class ScorchDiag
         }
         // 分かち: 殴られた味方の脆さは1度だけ（ドハの取り分は中継なので2度目は乗らない）。
         {
-            var ctx = Ctx("F4", Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.Tou), E1f, out var p, out var e);
+            var ctx = Ctx("F4", Formation.Build(front1: UnitCatalog.Doha, front3: UnitCatalog.TouT0), E1f, out var p, out var e);
             UnitState doha = p[0], tou = p[1];
             foreach (var u in p) { u.Hp = 999; u.MaxHp = 999; u.SetCounter(StatusKeys.Burn, 2); }
             ctx.ApplyDamage(tou, 20, e[0]);
@@ -124,7 +124,7 @@ static partial class ScorchDiag
         // 反転（ベニの隣の味方の燃焼の刻み）: F0・F1 は 6、F3 は 8、F4 は 9 だけ回復する。
         foreach (var (ver, want) in new[] { ("F0", 6), ("F1", 6), ("F3", 8), ("F4", 9) })
         {
-            var ctx = Ctx(ver, Formation.Build(front1: UnitCatalog.Beni, center: UnitCatalog.Tou), E1f, out var p, out var e);
+            var ctx = Ctx(ver, Formation.Build(front1: UnitCatalog.Beni, center: UnitCatalog.TouT0), E1f, out var p, out var e);
             UnitState tou = p.First(u => u.Def.Id == "tou");
             tou.MaxHp = 999; tou.Hp = 500;
             tou.SetCounter(StatusKeys.Burn, 2);

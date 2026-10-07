@@ -39,14 +39,14 @@ static class Boss283Diag
     /// 寿命側の候補（ヒーラー以外）。Phase 0 §2 の棚卸し: 被ダメを減らす・肩代わりする・逸らす駒 ＋ 味方に標を書く駒（ザンの供給の入口）。
     /// ボスは全体攻撃1体なので、単体攻撃への介入（庇う・後備え・引き寄せ）は効かないが、**ヒサ・ソラは「味方に標を書く」ので候補に残す**。
     /// </summary>
-    static readonly UnitDef[] LifePool =
+    internal static readonly UnitDef[] LifePool =
     {
         UnitCatalog.Hisa, UnitCatalog.Sora, UnitCatalog.Doha, UnitCatalog.Golm, UnitCatalog.Ban, UnitCatalog.Kubi,
         UnitCatalog.Sekki, UnitCatalog.Gald, UnitCatalog.Kado, UnitCatalog.Uke, UnitCatalog.Gan,
     };
 
     /// <summary>ヒーラー（Phase 0 §1 の機械的定義 ＝ 味方に回復または破片を2回以上書ける駒）。台に最大1枚。</summary>
-    static UnitDef[] HealPool => Healers().Select(h => h.Def).ToArray();
+    internal static UnitDef[] HealPool => Healers().Select(h => h.Def).ToArray();
 
     /// <summary>
     /// Phase 0 §1 の境界の判定（ソースの走査結果に人が付ける列）。
@@ -239,7 +239,7 @@ static class Boss283Diag
     static string Short(UnitDef d) => KanaTail.Match(d.Name) is { Success: true } m ? m.Value : d.Name;
 
     /// <summary>5 枚を 0..4 の席へ並べた全 120 通り。</summary>
-    static IEnumerable<UnitDef[]> Perms(UnitDef[] a)
+    internal static IEnumerable<UnitDef[]> Perms(UnitDef[] a)
     {
         if (a.Length <= 1) { yield return a; yield break; }
         for (int i = 0; i < a.Length; i++)
@@ -249,7 +249,7 @@ static class Boss283Diag
         }
     }
 
-    static Formation Seat(UnitDef[] order)
+    internal static Formation Seat(UnitDef[] order)
     {
         var f = new Formation();
         for (int i = 0; i < order.Length; i++) f[i] = order[i];

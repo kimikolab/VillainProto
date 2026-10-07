@@ -25,7 +25,7 @@ static partial class ShockDiag
         a: kata, b: UnitCatalog.Guza, c: beni, d: UnitCatalog.Sid, e: UnitCatalog.Mio);
 
     /// <summary>台C（3体で完結の試し・グザ無し）の顔ぶれ。席は総当たりで選ぶ。</summary>
-    internal static List<UnitDef> TableCMembers => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, UnitCatalog.Kubi, UnitCatalog.Tou };
+    internal static List<UnitDef> TableCMembers => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, UnitCatalog.Kubi, UnitCatalog.TouT0 };
 
     /// <summary>その陣形で「前衛」にあたる枠（X字 ＝ 前1・前3 ／ パターン2 ＝ 前衛）。</summary>
     static int[] FrontFrames(FormationShape s) => s == FormationShape.X ? new[] { 0, 1 } : new[] { 3 };
@@ -177,7 +177,7 @@ static partial class ShockDiag
         Console.WriteLine("`BattleEngine.Run` は開戦の通知を**速さの降順**で回し、同速の群だけを `ctx.Shuffle` で混ぜる（行動順と同じ）。");
         Console.WriteLine();
         var pool = new List<UnitDef> { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, UnitCatalog.Guza, UnitCatalog.Kubi, UnitCatalog.Sid,
-                                       UnitCatalog.Tou, UnitCatalog.Nel, UnitCatalog.Kugu };
+                                       UnitCatalog.TouT0, UnitCatalog.Nel, UnitCatalog.Kugu };
         Console.WriteLine("| 駒 | 速 | `OnBattleStart` を上書きする札 |");
         Console.WriteLine("|---|--:|---|");
         foreach (UnitDef d in pool.OrderByDescending(d => d.Speed))

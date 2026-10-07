@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using BA = BurnAuditDiag;
 using FC = FireCycleDiag;
@@ -39,10 +39,14 @@ static partial class CheckWaveDiag
     static (string Name, Agg A, bool Pure) Pick(List<(string Name, Agg A, bool Pure)> scored)
         => scored.Where(x => x.Pure && x.A.Win > 50).OrderByDescending(x => x.A.Win).ThenByDescending(x => x.A.SurvPct).ThenBy(x => (double)x.A.Turns / x.A.N).FirstOrDefault();
 
-    /// <summary>選定を測り直して選ばれた行の名前を返す（自己検査用）。</summary>
-    internal static string? PickPoisonName()
+    /// <summary>
+    /// 選定を測り直して選ばれた行の名前を返す（自己検査用）。選定は第264期（規定のトウ ＝ T0）の記録なので、
+    /// 第287期からは行のトウを旧の規定 `TouT0` に戻して測り直す（規定の T3 のまま測ると `毒+耐久 (ベニ×トウ)` が選ばれる・第287期の報告 §6）。
+    /// </summary>
+    internal static string? PickPoisonName(bool asOf264 = true)
     {
         var scored = CompareBuilds().Where(r => r.Name.Contains('毒'))
+            .Select(r => (r.Name, F: asOf264 ? FvSwap(r.F, UnitCatalog.Tou, UnitCatalog.TouT0) : r.F))
             .Select(r => (r.Name, A: MeasureWave(r.F, CWaveOf("W2-対照")), Pure: r.F.Occupied().All(o => !OtherAxisCores.Contains(o.Def.Id)))).ToList();
         return Pick(scored).Name;
     }

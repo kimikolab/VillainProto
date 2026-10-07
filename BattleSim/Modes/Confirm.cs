@@ -60,8 +60,8 @@ public static void Run(string[] args, int stageIndex)
         // **この編成は第21期に compare から外した**（100/0/0/0/0 で情報が出ていなかった）。
         // 行は記録として残す——消すと「追試して据え置いた」事実まで消える。
         ("置き去り×速攻",
-            Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Borg, center: UnitCatalog.Tsugi, back1: UnitCatalog.Tou, back3: UnitCatalog.Sasa),
-            Formation.Build(front1: UnitCatalog.Tou, front3: UnitCatalog.Sasa, center: UnitCatalog.Sero, back1: UnitCatalog.Borg, back3: UnitCatalog.Tsugi)),
+            Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Borg, center: UnitCatalog.Tsugi, back1: UnitCatalog.TouT0, back3: UnitCatalog.Sasa),
+            Formation.Build(front1: UnitCatalog.TouT0, front3: UnitCatalog.Sasa, center: UnitCatalog.Sero, back1: UnitCatalog.Borg, back3: UnitCatalog.Tsugi)),
         // route 診断（第19期）の V4。自傷の燃料をムドの被弾強化まで通す配置で、
         // seed 0..199 では -1.5pt と閾値の内側に入った。**閾値の境目なので追試が要る。**
         // reseat と違って勝率の探索から出た候補ではなく、「巨躯の被覆から出す」という
@@ -86,8 +86,8 @@ public static void Run(string[] args, int stageIndex)
         // 候補＝reseat 1位。3本とも狙い（ガルド前列）を満たす席が最良だったので、
         // 「狙いを満たす最良」と全体1位が食い違う行は無い。
         ("責め苦 (トウ×シガ)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Tou, center: UnitCatalog.Shiga, back1: UnitCatalog.Gan, back3: UnitCatalog.Dolga),
-            Formation.Build(front1: UnitCatalog.Tou, front3: UnitCatalog.Gald, center: UnitCatalog.Gan, back1: UnitCatalog.Shiga, back3: UnitCatalog.Dolga)),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.TouT0, center: UnitCatalog.Shiga, back1: UnitCatalog.Gan, back3: UnitCatalog.Dolga),
+            Formation.Build(front1: UnitCatalog.TouT0, front3: UnitCatalog.Gald, center: UnitCatalog.Gan, back1: UnitCatalog.Shiga, back3: UnitCatalog.Dolga)),
         // ヒサは中央でなくてよい、と出た行。中央に置くと隣接次数4で最大HPのガルドが確実に
         // 標的になるが、reseat 1位はガンを前3へ上げてドルガを後3へ下げる形（標的はガルドのまま）。
         ("仇討ち (ヒサ×ザン)",
@@ -236,8 +236,8 @@ public static void Run(string[] args, int stageIndex)
             Formation.Build(front1: UnitCatalog.Mio, front3: UnitCatalog.Gald, center: UnitCatalog.Guza, back1: UnitCatalog.Sid, back3: UnitCatalog.Rau)),
         // 第148期 段0。帯A 88.4 → 94.5（+6.1）・狙 ○・情報セル 2 → 3・粗順 2。
         ("毒+耐久 (ベニ×トウ)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.Tou, back1: UnitCatalog.Mio, back3: UnitCatalog.Beni),
-            Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Gald, center: UnitCatalog.Mio, back1: UnitCatalog.Guza, back3: UnitCatalog.Tou)),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Guza, center: UnitCatalog.TouT0, back1: UnitCatalog.Mio, back3: UnitCatalog.Beni),
+            Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Gald, center: UnitCatalog.Mio, back1: UnitCatalog.Guza, back3: UnitCatalog.TouT0)),
         // 第148期 段0。帯A 56.2 → 79.9（+23.7）・狙 ○・情報セル 1 → 1・粗順 2。
         ("反撃 (ヒサ×カド)",
             Formation.Build(front1: UnitCatalog.Hisa, front3: UnitCatalog.Gald, center: UnitCatalog.Nel, back1: UnitCatalog.Kado, back3: UnitCatalog.Lili),

@@ -59,7 +59,7 @@ static partial class RetreatDiag
         var knight = EnemyCatalog.Stages[1].Enemy.Occupied().Select(o => o.Def).First(d => d.Traits.Count == 0);
         Formation E1 = Formation.Build(front1: knight);
         // 前1 トウ ／ 前3 ハネ ／ 中央 クビ ／ 後1 シオ ／ 後3 ネル（前1 の後ろ側の隣は 中央（席 2）・前3 も 中央）
-        Formation B(UnitDef shio, UnitDef? center = null) => Formation.Build(front1: UnitCatalog.Tou, front3: UnitCatalog.HaneK0,
+        Formation B(UnitDef shio, UnitDef? center = null) => Formation.Build(front1: UnitCatalog.TouT0, front3: UnitCatalog.HaneK0,
             center: center ?? UnitCatalog.Kubi, back1: shio, back3: UnitCatalog.Nel);
 
         Console.WriteLine("## (4) 盤面を直に組んで");
@@ -169,7 +169,7 @@ static partial class RetreatDiag
         }
         {
             // 手当て: J1 はシオ自身を下げたときも入る（最大HP 60 の 20% ＝ 12）
-            var f = Formation.Build(front1: J1, front3: UnitCatalog.Gald, center: UnitCatalog.Tou, back1: UnitCatalog.Yomi, back3: UnitCatalog.BasaK0);
+            var f = Formation.Build(front1: J1, front3: UnitCatalog.Gald, center: UnitCatalog.TouT0, back1: UnitCatalog.Yomi, back3: UnitCatalog.BasaK0);
             var ctx = Ctx(f, E1, 8, out var p, out _);
             UnitState shio = U(p, "shio");
             shio.Hp = shio.MaxHp / 3; int hs = shio.Hp;

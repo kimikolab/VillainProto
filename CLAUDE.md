@@ -185,21 +185,21 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 
 **本文と索引は `design/RULES_*.md`**（`RULES_001_097.md` / `RULES_098_173.md` / `RULES_174_242.md` / `RULES_243_.md`・索引の表は `design/RULES_INDEX.md`）。
 **ID（`R001`〜）で grep すること。ID は永続で、欠番になっても再利用しない。**
-新しい則は `RULES_243_.md` の末尾に次の ID（`R383` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
+新しい則は `RULES_243_.md` の末尾に次の ID（`R384` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
 
 ## 現状値
 
 **期ごとの報告は `design/HISTORY_PHASES.md`**（この節から逐語で移した。以後の期はそちらの冒頭に足し、ここのブロックは差し替える）。
 
-**最後に動かした期: 第286期**（**ミサを M-b（羽の連射・乱射した羽は失う）に規定化・A5b ＋ トウの対称の粉 T3 ／ T3n を測定（規定のトウは T0 のまま・採否はポン）**。報告は `design/PHASE286_TOU_SPREAD.md`）。第285期の改名・羽の版・`CLAUDE.md` の圧縮は `design/PHASE285_MISA_FEATHERS.md`、第284期の精鋭波は `design/PHASE284_ELITE_WAVE.md`、第283期のボスの標台は `design/PHASE283_BOSS_MARK_SQUAD.md`、第281〜282期のミサ（旧トメ）の転生と T1n は `design/PHASE281_TOME_REBIRTH.md` ／ `design/PHASE282_TOME_NO_CONSUME.md`、第279期のトウの転生（T1 ／ T2）と凍結庫は `design/PHASE279_TOU_REBIRTH.md`、第280期の sweep 現役網は `design/PHASE280_SWEEP_REBUILD.md`。転生段の棚卸しは `design/PHASE275_ROSTER_INVENTORY.md`、レリック段のまとめは `design/RELIC_SUMMARY.md`。
+**最後に動かした期: 第287期**（**トウを T3（対称の粉・漏れあり）に規定化・A6 ＋ シガの怖気の確認 ＋ 感電軸の台探索（ボス・近衛・大隊・`shock287`）**。報告は `design/PHASE287_SHOCK_AXIS_GRID.md`）。第286期のミサ M-b の規定化とトウ T3 の測定は `design/PHASE286_TOU_SPREAD.md`、第285期の改名・羽・`CLAUDE.md` の圧縮は `design/PHASE285_MISA_FEATHERS.md`、第284期の精鋭波は `design/PHASE284_ELITE_WAVE.md`、第283期のボスの標台（標軸の格子）は `design/PHASE283_BOSS_MARK_SQUAD.md`、第279期のトウの転生と凍結庫は `design/PHASE279_TOU_REBIRTH.md`、第280期の sweep 現役網は `design/PHASE280_SWEEP_REBUILD.md`。転生段の棚卸しは `design/PHASE275_ROSTER_INVENTORY.md`、レリック段のまとめは `design/RELIC_SUMMARY.md`。
 **改名の対応（第285期）**: 止めのトメ → 見境なしのミサ（`Id = "tome"`・識別子 `UnitCatalog.Tome` ほかは据え置き）／ 行名 `止め (トメ×ソラ)` → `見境 (ミサ×ソラ)`・`止め改 (トメ×薙ぎ)` → `見境改 (ミサ×薙ぎ)`・`標経済 (ヒサ×ザン×トメ)` → `標経済 (ヒサ×ザン×ミサ)` ／ 精鋭の波 `精鋭・五` → `近衛`・`精鋭・九` → `大隊`。過去の `design/` は旧名のまま（名前で引く器具は `Common.UnitRenames`）。
-**最後に `compare` が動いた期: 第286期**（規定のミサ T1n → M-b。動いたのは 見境 第5波 93.0 → 97.0 と 標経済 第2波 1.0 → 0.5・第5波 93.5 → 95.0 だけ・ほかの 61 行 305 セルは 0 件）。
+**最後に `compare` が動いた期: 第287期**（規定のトウ T0 → T3。動いたのは 責め苦 第2波 100 → 96.0・第5波 91.0 → 85.0 と 毒+耐久 第5波 100 → 99.5 だけ・ほかの 62 行 310 セルは 0 件）。
 
     編成:       64 行（`CompareBuilds()`・第281期に 63 → 64）＋ 交差帯 12 行（`CrossBuilds()`）
-    全64行:     100 / 88.0 / 89.2 / 83.3 / 82.6     （第1〜5波の平均勝率・seed 0..199・`spread` §4・第286期。第283期は第5波 82.5）
+    全64行:     100 / 87.9 / 89.2 / 83.3 / 82.5     （第1〜5波の平均勝率・seed 0..199・`spread` §4・第287期。第286期は 88.0 ／ 82.6）
     主判定19行: 100 / 82.5 / 89.1 / 82.4 / 79.7     （第277期・`spread` §4。第276期の HEAD は 100 / 82.5 / 88.8 / 82.4 / 79.5）
     歯止め:     主判定の第五波 33.2%                 ← 余裕 +46.5pt
-    情報セル:   全64行 81 / 主判定 29                （第2〜5波の 0 < x < 100 のセル数・64 行目は 2）
+    情報セル:   全64行 83 / 主判定 30                （第2〜5波の 0 < x < 100 のセル数・第287期にトウの規定化で 81 ／ 29 から）
     ロスター:   52 枚（上限 52・第103期に確定）。残り枠 0。入れ替えは 4 度（ハリ→トモ・エグ→ガレ・キリ→スス・ナタ→カタ）
     敵の倍率:   115 / 115（第187期）
 

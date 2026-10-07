@@ -638,14 +638,15 @@ public static class UnitCatalog
         Attack = 3,
         Speed = 11,
         Advances = false,
-        Traits = new[] { TraitId.Paralyze },
-        PlusText = "攻撃した相手を高確率で1ターン動けなくする",
-        MinusText = "自分の火力はほぼ無い。粉が尽きれば何も残らない",
-        Flavor = "自分の粉で味方を眠らせた前科がある。"
+        // 第287期: ポンの判断（第286期の案 A6）で T3（対称の粉・漏れあり）を規定にした。旧の規定（痺れ粉）は `TouT0`。
+        Traits = new[] { TraitId.ChargedPowder, TraitId.ChargedPowderLeak, TraitId.ShockStunHalf, TraitId.ChargedPowderSpread },
+        PlusText = "攻撃した相手とその隣の敵に帯電の粉を付ける。帯電した駒は一撃で弾けて隣へ放電し、半々の確率で痺れて次の手番を失う",
+        MinusText = "粉は隣の味方にも漏れ、味方も帯電する / 自分の火力はほぼ無い",
+        Flavor = "粉のせいで、捨てられた。最近は、触れると痛い。それでも、どこかで…誰かと、並んで歩きたいのに。"
     };
 
     /// <summary>
-    /// 旧トウ（第278期までの規定・T0・痺れ粉）。<b>第279期の転生の対照</b>。数値・札・文は <see cref="Tou"/> と同じ（規定はまだ T0 のまま）。
+    /// 旧トウ（第278〜286期の規定・T0・痺れ粉）。<b>第279期の転生の対照</b>。第287期に T3 を規定にしたので、旧の規定の定義を明示的に持つ。
     /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。経緯は design/PHASE279_TOU_REBIRTH.md。
     /// </summary>
     public static readonly UnitDef TouT0 = new()
@@ -698,21 +699,9 @@ public static class UnitCatalog
 
     /// <summary>
     /// 第286期 T3（対称の粉）。T1 ＋ <see cref="TraitId.ChargedPowderSpread"/>——粉は殴った敵の周り（主目標の隣の敵すべて）にも、自分の周りの味方にも舞う。
-    /// 体は T0 のまま。名前・文面・フレーバーはポン確定（指示書 design/PHASE286_TOU_SPREAD_SPEC.md §3-2）。<b>規定（<see cref="Tou"/> ＝ T0）は動かさない。</b>
+    /// 体は T0 のまま。名前・文面・フレーバーはポン確定（指示書 design/PHASE286_TOU_SPREAD_SPEC.md §3-2）。<b>第287期に規定にした</b>——規定の <see cref="Tou"/> と同じ物。
     /// </summary>
-    public static readonly UnitDef TouT3 = new()
-    {
-        Id = "tou",
-        Name = "痺れ粉のトウ",
-        MaxHp = 46,
-        Attack = 3,
-        Speed = 11,
-        Advances = false,
-        Traits = new[] { TraitId.ChargedPowder, TraitId.ChargedPowderLeak, TraitId.ShockStunHalf, TraitId.ChargedPowderSpread },
-        PlusText = "攻撃した相手とその隣の敵に帯電の粉を付ける。帯電した駒は一撃で弾けて隣へ放電し、半々の確率で痺れて次の手番を失う",
-        MinusText = "粉は隣の味方にも漏れ、味方も帯電する / 自分の火力はほぼ無い",
-        Flavor = "粉のせいで、捨てられた。最近は、触れると痛い。それでも、どこかで…誰かと、並んで歩きたいのに。"
-    };
+    public static readonly UnitDef TouT3 = Tou;
 
     /// <summary>第286期 T3n（漏れの代金の対照）。T2 ＋ <see cref="TraitId.ChargedPowderSpread"/>（T3 から漏れだけを抜いた形）。</summary>
     public static readonly UnitDef TouT3n = new()
@@ -724,7 +713,7 @@ public static class UnitCatalog
         Speed = 11,
         Advances = false,
         Traits = new[] { TraitId.ChargedPowder, TraitId.ShockStunHalf, TraitId.ChargedPowderSpread },
-        PlusText = TouT3.PlusText,
+        PlusText = "攻撃した相手とその隣の敵に帯電の粉を付ける。帯電した駒は一撃で弾けて隣へ放電し、半々の確率で痺れて次の手番を失う",
         MinusText = "自分の火力はほぼ無い（対照: 粉は味方に漏れない）",
         Flavor = "（第286期の対照）"
     };

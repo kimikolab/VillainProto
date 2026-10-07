@@ -40,7 +40,7 @@ static partial class WhipDiag
     /// <summary>W1〜W3 の顔ぶれ（席は総当たりで選ぶ）。</summary>
     internal static readonly (string Tag, string Aim, Func<UnitDef, List<UnitDef>> Members)[] Rigs =
     {
-        ("W1", "弾く役（トウ）", s => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, s, UnitCatalog.Tou }),
+        ("W1", "弾く役（トウ）", s => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, s, UnitCatalog.TouT0 }),
         ("W2", "止める役（クグ）", s => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, s, UnitCatalog.Kugu }),
         ("W3", "台A の枠（グザ）", s => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, s, UnitCatalog.Guza }),
     };
