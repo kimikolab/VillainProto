@@ -41,7 +41,7 @@ static class ShockDigestDiag
     /// 第287期: `compare` の行の規定のトウ（第287期から T3）を旧の規定 `TouT0` に戻した行。指紋の台は規定化の前（第286期まで）の台本を写すので、
     /// トウの在席する行（責め苦・毒+耐久）を旧に固定する（第282〜283期のミサの `CompareT0` と同じ作法）。トウのいない行は1ビットも変わらない。
     /// </summary>
-    static (string Name, Formation F)[] CompareTou0() => Common.CompareBuilds().Select(r => (r.Name, Common.FvSwap(r.F, UnitCatalog.Tou, UnitCatalog.TouT0))).ToArray();
+    static (string Name, Formation F)[] CompareTou0() => Common.CompareBuilds().Select(r => (r.Name, Common.FvSwap(Common.FvSwap(r.F, UnitCatalog.Tou, UnitCatalog.TouT0), UnitCatalog.Shiga, UnitCatalog.ShigaG3K))).ToArray();
 
     static (string, Formation)[] MireBenches(UnitDef mio) => new (string, Formation)[]
     {

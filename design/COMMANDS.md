@@ -882,7 +882,14 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 shiga288 boards   # 第288期: 代表台 15 台 × 版（勝率・振・怖気・蓄電・雷霆・与ダメの内訳・供給源・手数の判定材料・トウ ／ シガ ／ カタ → ドルガ）（10 秒）
     dotnet run --project BattleSim -c Release 0 shiga288 grid <ボス|近衛|大隊|boss|guard|bat> <規定|SG-a|SG-b|SG-c|SG-c′|def|a|b|c|cp>   # 第288期: 第287期の格子（トウ ＋ シガの版 ＋ 探索枠3）・届いた台のシガ → ドルガ（ボス 約 85 秒・精鋭 12〜15 分）
     dotnet run --project BattleSim -c Release 0 shiga288 check    # 第288期 自己検査（規定は不変・版の札・蓄電の帳簿と上限・電気鞭で減らない・雷霆は 4 のときだけ／起爆しない・孤立・軽い口と詳しい口・決定性・乱数の走査）
-    dotnet run --project BattleSim -c Release 0 shiga288 log <波> <版> <短い名前を ・ で5つ> [seed]   # 第288期 1戦のログ
+    dotnet run --project BattleSim -c Release 0 shiga288 log <波> <版> <短い名前を ・ で5つ> [seed]   # 第288期 1戦のログ（第289期から版「規定」は `G3K`＝`ShigaG3K`）
+    dotnet run --project BattleSim -c Release 0 shock289 p0       # 第289期 Phase 0: 規定のシガ（SG-a）・規定のカタで、敵の感電の連鎖（起点・その時点の蓄電・生き残り）と雷までに弾けた敵の数・敵の殴り返しの札（代表台 17 台・1 秒）。本体は `Modes/Shock289.cs`
+    dotnet run --project BattleSim -c Release 0 shock289 compare  # 第289期: `compare` 64 行 × シガ SG-a ／ SI-a ／ SI-b・カタ 旧 ／ KR-a ／ KR-b（その駒のいない行のずれ・主判定・情報セル・割り込みと粛）（25 秒）
+    dotnet run --project BattleSim -c Release 0 shock289 boards   # 第289期: 代表台 17 台 × 版（振り 手番 ／ 割り込み・雷霆・与ダメの内訳・雷雲・1発・対照 トウ ／ シガ ／ カタ → ドルガ）（10 秒）
+    dotnet run --project BattleSim -c Release 0 shock289 grid <boss|guard|bat> <shiga|kata> <sga|sia|sib|old|kra|krb>   # 第289期: 第287期の格子（固定枠 トウ ＋ シガ ／ トウ ＋ カタ・カタ固定の候補はカタ → 規定のシガ）（ボス 約 85 秒・精鋭 11〜29 分）
+    dotnet run --project BattleSim -c Release 0 shock289 beni     # 第289期 段3: ベニの札を1枚ずつ外した版（＋ 組の版 −③ ／ −②③）× 台 × 波 ＋ ベニ → ドルガ（4 秒）
+    dotnet run --project BattleSim -c Release 0 shock289 check    # 第289期 自己検査（規定 ＝ SG-a・版の札・連鎖1つに1回・蓄電の帳簿・怖気・雷雲・粛・軽い口と詳しい口・決定性・乱数の走査）
+    dotnet run --project BattleSim -c Release 0 shock289 log <boss|guard|bat> <版> <短い名前を ・ で5つ> [seed]   # 第289期 1戦のログ
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

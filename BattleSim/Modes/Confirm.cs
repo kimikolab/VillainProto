@@ -86,8 +86,8 @@ public static void Run(string[] args, int stageIndex)
         // 候補＝reseat 1位。3本とも狙い（ガルド前列）を満たす席が最良だったので、
         // 「狙いを満たす最良」と全体1位が食い違う行は無い。
         ("責め苦 (トウ×シガ)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.TouT0, center: UnitCatalog.Shiga, back1: UnitCatalog.Gan, back3: UnitCatalog.Dolga),
-            Formation.Build(front1: UnitCatalog.TouT0, front3: UnitCatalog.Gald, center: UnitCatalog.Gan, back1: UnitCatalog.Shiga, back3: UnitCatalog.Dolga)),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.TouT0, center: UnitCatalog.ShigaG3K, back1: UnitCatalog.Gan, back3: UnitCatalog.Dolga),
+            Formation.Build(front1: UnitCatalog.TouT0, front3: UnitCatalog.Gald, center: UnitCatalog.Gan, back1: UnitCatalog.ShigaG3K, back3: UnitCatalog.Dolga)),
         // ヒサは中央でなくてよい、と出た行。中央に置くと隣接次数4で最大HPのガルドが確実に
         // 標的になるが、reseat 1位はガンを前3へ上げてドルガを後3へ下げる形（標的はガルドのまま）。
         ("仇討ち (ヒサ×ザン)",
@@ -123,8 +123,8 @@ public static void Run(string[] args, int stageIndex)
         // 傷を持つ敵を読むので、どちらも隣接も列も見ない。中央を要求しない駒が並んだら、
         // 完走することに価値がある駒に譲る（第20期・第21期のナラと同じ結論の3例目）。
         ("裂き×責め苦 (キリ×エグ×シガ)",
-            Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Kiri, center: UnitCatalog.Rica, back1: UnitCatalog.Vel, back3: UnitCatalog.Egu),
-            Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Kiri, center: UnitCatalog.Vel, back1: UnitCatalog.Rica, back3: UnitCatalog.Egu)),
+            Formation.Build(front1: UnitCatalog.ShigaG3K, front3: UnitCatalog.Kiri, center: UnitCatalog.Rica, back1: UnitCatalog.Vel, back3: UnitCatalog.Egu),
+            Formation.Build(front1: UnitCatalog.ShigaG3K, front3: UnitCatalog.Kiri, center: UnitCatalog.Vel, back1: UnitCatalog.Rica, back3: UnitCatalog.Egu)),
         // 傷軸・第3弾の新2編成（第30期）。旧＝仮置き（ノミを前1に出した形）、候補＝reseat 1位。
         // どちらもガルド・セッキを含まないので「狙いを満たす最良」と全体1位が一致する。
         //

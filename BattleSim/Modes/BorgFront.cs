@@ -89,7 +89,7 @@ static partial class BorgFrontDiag
     /// <summary>雷＋ボルグ（置き換え）: ポンの席の前1 シガ → ボルグ ／ 前3 ツギ → ボルグ。</summary>
     internal static Formation ThunderSwap(UnitDef borg, bool front1) => front1
         ? Formation.Build(front1: borg, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)
-        : Formation.Build(front1: UnitCatalog.Shiga, front3: borg, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio);
+        : Formation.Build(front1: UnitCatalog.ShigaG3K, front3: borg, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio);
 
     static void LogOne(string ver, string seats, int seed, int wave, int sc)
     {

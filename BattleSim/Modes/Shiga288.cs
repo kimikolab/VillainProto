@@ -15,7 +15,7 @@ using BA = BurnAuditDiag;
 //     dotnet run --project BattleSim -c Release 0 shiga288 check         # 自己検査
 //     dotnet run --project BattleSim -c Release 0 shiga288 log <波> <版> <席の並び（短い名前を ・ で5つ）> [seed]
 //
-// 規定のシガは触らない（版は `UnitCatalog.ShigaSGa` ／ `ShigaSGb` ／ `ShigaSGc`）。
+// 第288期の規定は G3K（第289期から `UnitCatalog.ShigaG3K`・規定のシガは SG-a ＝ `ShigaSGa`）。版の名前「G3K」は第288期の報告の「規定」の列と同じもの。
 // =====================================================================================
 static class Shiga288Diag
 {
@@ -27,7 +27,7 @@ static class Shiga288Diag
             case "p0": P0(); return;
             case "compare": CompareAll(); return;
             case "boards": BoardsAll(); return;
-            case "grid": Grid(args.Length > 3 ? args[3] : "ボス", args.Length > 4 ? args[4] : "規定"); return;
+            case "grid": Grid(args.Length > 3 ? args[3] : "ボス", args.Length > 4 ? args[4] : "G3K"); return;
             case "check": Check(); return;
             case "log": LogOne(args.Length > 3 ? args[3] : "ボス", args.Length > 4 ? args[4] : "SG-b", args.Length > 5 ? args[5] : "", args.Length > 6 ? int.Parse(args[6]) : 0); return;
             default: Console.WriteLine("shiga288: モードは p0 / compare / boards / grid / check / log。"); return;
@@ -39,10 +39,10 @@ static class Shiga288Diag
     // ---------------------------------------------------------------------------------
     internal static readonly (string Name, UnitDef Def)[] Vers =
     {
-        ("規定", UnitCatalog.Shiga), ("SG-a", UnitCatalog.ShigaSGa), ("SG-b", UnitCatalog.ShigaSGb), ("SG-c", UnitCatalog.ShigaSGc), ("SG-c′", UnitCatalog.ShigaSGcAny),
+        ("G3K", UnitCatalog.ShigaG3K), ("SG-a", UnitCatalog.ShigaSGa), ("SG-b", UnitCatalog.ShigaSGb), ("SG-c", UnitCatalog.ShigaSGc), ("SG-c′", UnitCatalog.ShigaSGcAny),
     };
     /// <summary>版と波は ASCII の別名でも引ける（シェルを跨ぐ起動で日本語の引数が化けないように）: def ／ a ／ b ／ c ／ cp、boss ／ guard ／ bat。</summary>
-    static string VerName(string n) => n switch { "def" => "規定", "a" => "SG-a", "b" => "SG-b", "c" => "SG-c", "cp" => "SG-c′", _ => n };
+    static string VerName(string n) => n switch { "def" => "G3K", "g3k" => "G3K", "a" => "SG-a", "b" => "SG-b", "c" => "SG-c", "cp" => "SG-c′", _ => n };
     static UnitDef VerOf(string n) => Vers.First(v => v.Name == VerName(n)).Def;
 
     static S287.Wave WaveOf(string n) => S287.Waves.First(w => w.Name == (n switch { "boss" => "ボス", "guard" => "近衛", "bat" => "大隊", _ => n }));
@@ -211,7 +211,7 @@ static class Shiga288Diag
         foreach (var b in Boards())
         {
             var w = WaveOf(b.Wave);
-            var f = b.Make();
+            var f = SwapShiga(b.Make(), UnitCatalog.ShigaG3K);   // 第289期: Phase 0 は第288期の規定（G3K）で数える
             // 0 → 4 の手番は「付いた感電の累計」で数える（規定のシガには蓄電が無い・上限を掛けない）。
             var parts = new (Deep D, int T4, int Turns)[Seeds];
             Parallel.For(0, Seeds, i =>
@@ -268,7 +268,7 @@ static class Shiga288Diag
         var rows = CompareBuilds();
         int nw = EnemyCatalog.Stages.Count;
         var grids = Vers.ToDictionary(v => v.Name, v => CompareGrid(v.Def));
-        var basis = grids["規定"];
+        var basis = grids["G3K"];
         Console.WriteLine("# 第288期 `compare` 64 行 × シガの版（seed 0..199・シガ在席の行だけ `UnitCatalog.Shiga` を版に差し替える）");
         Console.WriteLine();
         Console.WriteLine("| 行 | 版 | " + string.Join(" | ", Enumerable.Range(1, nw).Select(w => $"第{w}波")) + " | 第2〜5波 平均 | 規定との差 | 最大の落ち（波） |");
@@ -283,7 +283,7 @@ static class Shiga288Diag
                 double m = Enumerable.Range(1, nw - 1).Average(w => g[ri, w]);
                 double drop = Enumerable.Range(0, nw).Min(w => g[ri, w] - basis[ri, w]);
                 Console.WriteLine($"| {rows[ri].Name} | {v.Name} | " + string.Join(" | ", Enumerable.Range(0, nw).Select(w => F1(g[ri, w]))) + $" | {F1(m)} | "
-                    + $"{(v.Name == "規定" ? "" : (m - m0).ToString("+0.0;-0.0;0.0"))} | {(v.Name == "規定" ? "" : drop.ToString("+0.0;-0.0;0.0"))} |");
+                    + $"{(v.Name == "G3K" ? "" : (m - m0).ToString("+0.0;-0.0;0.0"))} | {(v.Name == "G3K" ? "" : drop.ToString("+0.0;-0.0;0.0"))} |");
             }
         }
         Console.WriteLine();
@@ -539,16 +539,18 @@ static class Shiga288Diag
         Console.WriteLine("# shiga288 check");
         Console.WriteLine();
         var g3k = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock };
-        Expect("(a) 規定のシガは G3K のまま（蓄電の札を持たない）・版は規定の札の末尾に足しただけ",
-            UnitCatalog.Shiga.Traits.SequenceEqual(g3k)
+        Expect("(a) 旧の規定 `ShigaG3K` は G3K のまま（蓄電の札を持たない）・規定（第289期から）は SG-a・版は G3K の札の末尾に足しただけ",
+            UnitCatalog.ShigaG3K.Traits.SequenceEqual(g3k) && ReferenceEquals(UnitCatalog.Shiga, UnitCatalog.ShigaSGa)
             && UnitCatalog.ShigaSGa.Traits.SequenceEqual(g3k.Append(TraitId.StoredCharge))
             && UnitCatalog.ShigaSGb.Traits.SequenceEqual(g3k.Append(TraitId.StoredCharge).Append(TraitId.Thunderclap))
             && UnitCatalog.ShigaSGc.Traits.SequenceEqual(g3k.Append(TraitId.StoredCharge).Append(TraitId.Thunderclap).Append(TraitId.ThunderclapLone))
             && UnitCatalog.ShigaSGcAny.Traits.SequenceEqual(UnitCatalog.ShigaSGc.Traits.Append(TraitId.ThunderclapAny)));
-        Expect("(b) 版は体・Id・マイナス・フレーバーが規定と同じ・`All` ／ `Retired` に入っていない",
+        Expect("(b) 版は体・Id・マイナス・フレーバーが G3K と同じ・SG-a（規定）のほかは `All` ／ `Retired` に入っていない",
             Vers.Skip(1).All(v => v.Def.Id == "shiga" && v.Def.MaxHp == 52 && v.Def.Attack == 9 && v.Def.Speed == 3 && v.Def.Pattern == AttackPattern.Sweep
-                && v.Def.MinusText == UnitCatalog.Shiga.MinusText && v.Def.Flavor == UnitCatalog.Shiga.Flavor && !UnitCatalog.Everyone.Contains(v.Def)));
-        Expect("(c) 蓄電の札の保持者は `All` に 0 枚", !UnitCatalog.All.Any(u => u.Traits.Any(t => t is TraitId.StoredCharge or TraitId.Thunderclap or TraitId.ThunderclapLone or TraitId.ThunderclapAny)));
+                && v.Def.MinusText == UnitCatalog.ShigaG3K.MinusText && v.Def.Flavor == UnitCatalog.ShigaG3K.Flavor && (v.Name == "SG-a" || !UnitCatalog.Everyone.Contains(v.Def))));
+        Expect("(c) 蓄電の保持者は `All` に規定のシガ1枚・雷霆の札の保持者は 0 枚",
+            UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.StoredCharge)) == 1 && UnitCatalog.Shiga.Traits.Contains(TraitId.StoredCharge)
+            && !UnitCatalog.All.Any(u => u.Traits.Any(t => t is TraitId.Thunderclap or TraitId.ThunderclapLone or TraitId.ThunderclapAny)));
 
         // (d)〜(h): 責め苦 × 近衛 ／ 大隊 ／ ボス と 感電 × 近衛 × seed 0..39 で、版ごとの帳簿を突き合わせる
         var rows = new[] { ("責め苦 (トウ×シガ)", "近衛"), ("責め苦 (トウ×シガ)", "大隊"), ("責め苦 (トウ×シガ)", "ボス"), ("感電 (シガ×カタ×ソム)", "近衛"), ("感電 (シガ×カタ×ソム)", "ボス") };
@@ -564,7 +566,7 @@ static class Shiga288Diag
                     var r = BattleEngine.Run(p, w.Make(), s, verbose: true);
                     var sh = p.First(u => u.Def.Id == "shiga");
                     var t = r.TallyByUnit["shiga"];
-                    if (v.Name == "規定") { if (t.ChargeGains + t.ChargeCapped + t.BoltCasts + t.WhipBase != 0) defaultTally++; continue; }
+                    if (v.Name == "G3K") { if (t.ChargeGains + t.ChargeCapped + t.BoltCasts + t.WhipBase != 0) defaultTally++; continue; }
                     // 蓄電の増減をログから追う（増える ＝ シガへの感電の付与・減る ＝ 雷霆だけ）
                     int charge = 0, maxSeen = 0;
                     foreach (var ev in r.Events)
@@ -586,7 +588,7 @@ static class Shiga288Diag
                     if (t.WiredSwings > 0 && t.BoltCasts == 0) { wiredSeen++; if (sh.RawCounter(StoredChargeTrait.Key) == Math.Min(StoredChargeTrait.Cap, (int)t.ShockReceived)) wiredKeep++; }
                 }
         }
-        Expect("(d) 規定のシガの帳簿は蓄電・雷霆・鞭の名目がすべて 0（計数の口は保持者だけ）", defaultTally == 0, $"{defaultTally} 戦");
+        Expect("(d) G3K のシガの帳簿は蓄電・雷霆・鞭の名目がすべて 0（計数の口は保持者だけ）", defaultTally == 0, $"{defaultTally} 戦");
         Expect("(e) 蓄電は上限 4 を超えない・増えた数 ＋ 上限で溜まらなかった数 ＝ シガに新しく付いた感電（書き手を問わない）", badCap == 0 && badGain == 0, $"上限超え {badCap} ／ 帳簿ずれ {badGain}");
         Expect("(f) SG-a は雷霆を撃たない・SG-b ／ SG-c の雷霆は蓄電 4 のときだけで、撃てば 0（帳簿: 増えた数 − 4 × 雷霆 ＝ 終わりの蓄電）", aBolt == 0 && bReset == 0 && bBolts > 0, $"SG-a 雷霆 {aBolt} ／ SG-b・c 雷霆 {bBolts}・帳簿ずれ {bReset}");
         Expect("(g) 電気鞭で自分の感電を消しても蓄電は減らない（電気鞭を振り雷霆の無い戦で 終わりの蓄電 ＝ min(4, 付いた数)）", wiredSeen > 0 && wiredKeep == wiredSeen, $"{wiredKeep} ／ {wiredSeen} 戦");

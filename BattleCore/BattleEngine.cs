@@ -484,6 +484,8 @@ public enum OutOfTurnRoute
     Spring,
     /// <summary>移動の追撃（<c>EvadeMoveShotTrait</c>・第231期。<b>問う相手はセロ</b>）。</summary>
     MoveShot,
+    /// <summary>感電の割り込み（<c>ShockWhipTrait</c>・第289期。<b>問う相手はシガ</b>）。</summary>
+    ShockWhip,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -493,7 +495,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -1173,12 +1175,19 @@ public sealed class BattleContext
         public bool Bolt { get; init; }
         /// <summary>第288期（参考 SG-c′）: 雷霆の的を当たった敵すべてにする。</summary>
         public bool BoltAny { get; init; }
+        /// <summary>第289期: 割り込みの鞭（怖気の判定から外す）。</summary>
+        public bool NoCower { get; init; }
         /// <summary>第288期: 当たったとき感電していた敵（雷霆の的・当てた順）。</summary>
         public readonly List<UnitState> BoltTargets = new();
     }
 
     /// <summary>蓄電（第288期・<see cref="TraitId.StoredCharge"/>）の保持者が戦闘に出たか。<b>いなければ <c>MarkShock</c> は比較1つで抜ける。</b></summary>
     bool _chargeLive;
+
+    /// <summary>第289期: 連鎖の後の口（<see cref="AfterChain"/>）を読む駒——蓄電・雷の保持者。空なら連鎖の後は比較1つで抜ける。</summary>
+    readonly List<UnitState> _chainReaders = new();
+    /// <summary>第289期: いま割り込みの鞭を振っている駒（怖気の判定から外す・<see cref="ShockWhip"/> の中だけ）。</summary>
+    UnitState? _shockWhipActor;
 
     WhipSwing? _whip;
 
@@ -1294,13 +1303,16 @@ public sealed class BattleContext
     /// 攻撃力 × <see cref="ThunderclapTrait.Multiplier"/>（孤立への雷霆の保持者なら、隣の味方が1体もいない敵には ×<see cref="ThunderclapLoneTrait.Factor"/>）を
     /// <c>ApplyDamage</c> の直呼びで足す（<b>起爆しない</b>・札 4）。撃ち終えたら蓄電 0。<b>乱数を引かない。</b>
     /// </summary>
-    public void Thunderclap(UnitState self, WhipSwing w)
+    public void Thunderclap(UnitState self, WhipSwing w) => Thunderclap(self, w.BoltTargets);
+
+    /// <summary>雷霆の本体（第289期に的の列を引数にした——SI-a の割り込みは「その連鎖で弾けた敵」を渡す）。</summary>
+    void Thunderclap(UnitState self, IEnumerable<UnitState> boltTargets)
     {
         UnitTally t = TallyOf(self);
         t.BoltCasts++;
         int atk = self.CurrentAttack;   // 蓄電 4 の攻撃力（0 に戻す前）
         bool loneRule = self.HasTrait(TraitId.ThunderclapLone);
-        var targets = w.BoltTargets.Distinct().Where(h => h.IsAlive && h.TeamId != self.TeamId).ToList();
+        var targets = boltTargets.Distinct().Where(h => h.IsAlive && h.TeamId != self.TeamId).ToList();
         if (targets.Count == 0) t.BoltDry++;
         else Log($"    {self.Name} の溜めた雷が鞭から迸る——雷霆（{targets.Count} 体）", LogKind.Highlight, self);
         foreach (UnitState u in targets)
@@ -1350,6 +1362,7 @@ public sealed class BattleContext
         kt.ThunderHits++;
         (kt.ThunderKindsHist ??= new long[ThunderTrait.CountedKeys.Count + 1])[Math.Min(kinds, ThunderTrait.CountedKeys.Count)]++;
         if (amount > kt.ThunderMax) kt.ThunderMax = amount;
+        kt.ThunderNominal += amount;   // 第289期・計数のみ
         if (_turn == 1) { kt.ThunderHitsT1++; kt.ThunderKindsT1 += kinds; }   // 第216期・**計数のみ**
         if (_verbose) Emit(new BattleEvent
         {
@@ -1378,6 +1391,12 @@ public sealed class BattleContext
         if (_turn == 1) kt.ThunderCastsT1++;   // 第216期・**計数のみ**
         if (fallback) kt.ThunderFallback++;
         (kt.ThunderPerCastHist ??= new long[10])[Math.Min(hits, 9)]++;
+        // 第289期・**計数のみ**: 前の雷からいまの雷までに弾けた敵の数（KR-a の雷雲と同じ量）と、いまの雷雲
+        (kt.ThunderPopsHist ??= new long[16])[(int)Math.Min(kt.ThunderPopsPending, 15)]++;
+        kt.ThunderPopsPending = 0;
+        int cloud = ThundercloudTrait.Of(kata);
+        kt.CloudAtCastSum += cloud;
+        if (cloud > kt.CloudAtCastMax) kt.CloudAtCastMax = cloud;
     }
 
     /// <summary>
@@ -1395,6 +1414,7 @@ public sealed class BattleContext
         _shockQueue.Clear();
         _shockQueue.Enqueue((u, 0, initiator));
         int size = 0, deepest = 0;
+        List<UnitState>? popped = _chainReaders.Count > 0 ? new List<UnitState>() : null;   // 第289期（連鎖の後の口）
         try
         {
             while (_shockQueue.Count > 0)
@@ -1403,6 +1423,7 @@ public sealed class BattleContext
                 if (x.RawCounter(StatusKeys.Shock) <= 0) continue;   // 既に放電した（1つの駒は1回しか放電しない）
                 x.SetCounter(StatusKeys.Shock, 0);
                 size++;
+                popped?.Add(x);
                 if (d > deepest) deepest = d;
                 _shockDepth = d;
                 TallyOf(x).ShockSpent++;
@@ -1427,6 +1448,81 @@ public sealed class BattleContext
         if (rootKind == 1) rt.ShockTriggeredTick++;
         else if (initiator is not null) { UnitTally it = TallyOf(initiator); it.ShockTriggered++; it.ShockTriggeredUnits += size; }   // 第217期: 大きさも
         else rt.ShockTriggeredOther++;
+
+        if (popped is not null) AfterChain(u.TeamId, popped, rootKind == 1 ? null : initiator);
+    }
+
+    /// <summary>
+    /// 連鎖の後の口（第289期）。<see cref="ShockTrigger"/> の外側の1回が終わった直後に1度だけ呼ぶ。<paramref name="popped"/> はその連鎖で弾けた駒（すべて <paramref name="team"/> の側）。
+    /// 雷雲（カタ・KR）と、蓄電の保持者の計数と、割り込み（シガ・SI）。<b>乱数を引かない。</b>
+    /// </summary>
+    void AfterChain(int team, List<UnitState> popped, UnitState? ini)
+    {
+        foreach (UnitState h in _chainReaders.ToList())
+        {
+            if (h.TeamId == team) continue;
+            UnitTally ht = TallyOf(h);
+            if (h.HasTrait(TraitId.Thunder))
+            {
+                ht.ThunderPopsPending += popped.Count;   // 計数のみ（雷を落とすまでに弾けた敵の数）
+                if (h.HasTrait(TraitId.Thundercloud))
+                {
+                    int c = ThundercloudTrait.Of(h) + popped.Count;
+                    if (h.HasTrait(TraitId.ThundercloudKeep)) c = Math.Min(ThundercloudTrait.KeepCap, c);
+                    h.SetCounter(ThundercloudTrait.Key, c);
+                }
+                continue;
+            }
+            if (ini == h) { ht.ChainOwn++; continue; }   // シガ自身の一撃で起きた連鎖では割り込まない
+            // 計数のみ（Phase 0）: 連鎖の起点の書き手・その時点の蓄電・連鎖の後に生きている敵
+            int cat = ini is null ? 4 : ini.TeamId == h.TeamId ? (ini.Def.Id == "tou" ? 0 : ini.Def.Id == "kata" ? 1 : 3) : 5;
+            (ht.ChainIniHist ??= new long[6])[cat]++;
+            (ht.ChainChargeHist ??= new long[StoredChargeTrait.Cap + 1])[Math.Min(StoredChargeTrait.Cap, StoredChargeTrait.Of(h))]++;
+            int alive = 0;
+            foreach (UnitState x in popped) if (x.IsAlive) alive++;
+            (ht.ChainAliveHist ??= new long[10])[Math.Min(alive, 9)]++;
+            if (h.HasTrait(TraitId.ShockWhipBolt) || h.HasTrait(TraitId.ShockWhipFlurry)) ShockWhip(h, popped);
+        }
+    }
+
+    /// <summary>
+    /// シガの割り込み（第289期・SI-a ／ SI-b）。連鎖で弾けた生きている敵から主目標を選び（動けない敵を優先・弾けた順）、
+    /// <see cref="Interrupt"/> の中で的を固定した鞭を1振り。SI-a はその後、弾けた生きている敵それぞれに雷霆（蓄電 0）、
+    /// SI-b は蓄電を1減らす（振り終えた後）。<b>乱数を引かない。</b>
+    /// </summary>
+    void ShockWhip(UnitState h, List<UnitState> popped)
+    {
+        UnitTally t = TallyOf(h);
+        t.SwAsked++;
+        bool bolt = h.HasTrait(TraitId.ShockWhipBolt);
+        int c = StoredChargeTrait.Of(h);
+        if (bolt ? c < StoredChargeTrait.Cap : c < 1) { t.SwNoCharge++; return; }
+        UnitState? target = null;
+        foreach (UnitState x in popped) if (x.IsAlive && TormentTrait.IsBound(this, x)) { target = x; break; }
+        if (target is null) foreach (UnitState x in popped) if (x.IsAlive) { target = x; break; }
+        if (target is null) { t.SwNoTarget++; return; }
+        if (InInterrupt) { t.SwNested++; return; }
+        bool hush = Hush.Active && HushHolderAlive;
+        if (!CanActOutOfTurn(h, OutOfTurnRoute.ShockWhip)) { if (hush) t.SwHushed++; else t.SwBlocked++; return; }
+        Interrupt(() =>
+        {
+            t.SwFires++;
+            Log($"    そばで弾けた電気に、{h.Name} の鞭が割り込む", LogKind.Highlight, h);
+            long before = t.DamageToEnemy;
+            UnitState? prevActor = _shockWhipActor;
+            _shockWhipActor = h;
+            _forcedTarget = target;
+            try { PerformAttack(h); }
+            finally { _forcedTarget = null; _shockWhipActor = prevActor; }
+            t.SwWhipDealt += t.DamageToEnemy - before;
+            if (bolt)
+            {
+                long b2 = t.DamageToEnemy;
+                Thunderclap(h, popped);
+                t.SwBoltDealt += t.DamageToEnemy - b2;
+            }
+            else h.SetCounter(StoredChargeTrait.Key, Math.Max(0, StoredChargeTrait.Of(h) - 1));
+        });
     }
 
     /// <summary>
@@ -7170,6 +7266,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Grapple) || u.HasTrait(TraitId.Shame)) _restrainLive = true;
         if (u.HasTrait(TraitId.Scourge)) _whipLive = true;                 // 第217期（鞭の枠と2倍）
         if (u.HasTrait(TraitId.StoredCharge)) _chargeLive = true;          // 第288期（蓄電の口・雷霆の枠）
+        if (u.HasTrait(TraitId.StoredCharge) || u.HasTrait(TraitId.Thunder)) _chainReaders.Add(u);   // 第289期（連鎖の後の口）
         if (u.HasTrait(TraitId.LiveWireGuard)) _shockStunGuard = true;     // 第217期（G3H）
         // 第218期（澱みのミオの版・M3〜M5）。**保持者がいなければ比較1つで抜ける。**
         if (u.HasTrait(TraitId.MireDull) || u.HasTrait(TraitId.MireDullAll))
@@ -10414,6 +10511,7 @@ public sealed class BattleContext
                 // 第288期: 雷霆は手番の鞭だけ（反撃・割り込みの一振りでは撃たない）。保持者がいなければ比較1つで抜ける。
                 Bolt = _chargeLive && actor.HasTrait(TraitId.Thunderclap) && StoredChargeTrait.Of(actor) >= StoredChargeTrait.Cap && !InReaction && !InInterrupt,
                 BoltAny = _chargeLive && actor.HasTrait(TraitId.ThunderclapAny),
+                NoCower = _shockWhipActor == actor,
             };
             _whip = whip;
             TallyOf(actor).WhipSwings++;

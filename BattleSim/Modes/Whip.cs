@@ -95,8 +95,8 @@ static partial class WhipDiag
                           + (UnitCatalog.Beni.Traits.Contains(TraitId.GurenOpeningBurn) ? " **あり**" : " **なし**"));
         Console.WriteLine("- カタの札: " + string.Join(", ", UnitCatalog.Kata.Traits) + " → S2（`ShockStunAll`）"
                           + (UnitCatalog.Kata.Traits.Contains(TraitId.ShockStunAll) ? " **あり**" : " **なし**"));
-        Console.WriteLine("- シガ: HP" + UnitCatalog.Shiga.MaxHp + "・攻" + UnitCatalog.Shiga.Attack + "・速" + UnitCatalog.Shiga.Speed + "・" + UnitCatalog.Shiga.Pattern
-                          + "・札 " + string.Join(", ", UnitCatalog.Shiga.Traits));
+        Console.WriteLine("- シガ: HP" + UnitCatalog.ShigaG3K.MaxHp + "・攻" + UnitCatalog.ShigaG3K.Attack + "・速" + UnitCatalog.ShigaG3K.Speed + "・" + UnitCatalog.ShigaG3K.Pattern
+                          + "・札 " + string.Join(", ", UnitCatalog.ShigaG3K.Traits));
         Console.WriteLine();
 
         // ---- Q0-1 ----

@@ -36,7 +36,7 @@ static class Shock287Diag
     // 候補と波（測る前に固定・指示書 §4-1）
     // ---------------------------------------------------------------------------------
     /// <summary>固定枠: トウ（規定 T3）＋ シガ。</summary>
-    internal static readonly UnitDef[] Fixed = { UnitCatalog.Tou, UnitCatalog.Shiga };
+    internal static readonly UnitDef[] Fixed = { UnitCatalog.Tou, UnitCatalog.ShigaG3K };
 
     /// <summary>感電の駒（カタ・クグ・ソム）。</summary>
     internal static readonly UnitDef[] ShockPool = { UnitCatalog.Kata, UnitCatalog.Kugu, UnitCatalog.Som };
@@ -127,9 +127,9 @@ static class Shock287Diag
             if (mine.Contains(id)) d.AllyDis += t.DischargeTaken;
             else { d.FoeDis += t.DischargeTaken; d.Chains += t.ChainRoots; d.ChainUnits += t.ChainUnits; d.FoeStall += t.StallStun + t.StallGrappled; }
         }
-        if (r.TallyByUnit.TryGetValue(UnitCatalog.Shiga.Id, out var st)) { d.Cower += st.WhipCowered; d.Swings += st.WhipSwings; d.Wired += st.WiredSwings; }
+        if (r.TallyByUnit.TryGetValue(UnitCatalog.ShigaG3K.Id, out var st)) { d.Cower += st.WhipCowered; d.Swings += st.WhipSwings; d.Wired += st.WiredSwings; }
         if (r.TallyByUnit.TryGetValue(UnitCatalog.Kugu.Id, out var kt)) { d.Grapple += kt.GrappleFires; d.GrappleStall += kt.GrappleStalled; }
-        UnitState? tou = p.FirstOrDefault(u => u.Def.Id == UnitCatalog.Tou.Id), shiga = p.FirstOrDefault(u => u.Def.Id == UnitCatalog.Shiga.Id);
+        UnitState? tou = p.FirstOrDefault(u => u.Def.Id == UnitCatalog.Tou.Id), shiga = p.FirstOrDefault(u => u.Def.Id == UnitCatalog.ShigaG3K.Id);
         foreach (var ev in r.Events.Where(ev => ev.Kind == BattleEventKind.Death))
         {
             if (tou is not null && ev.TargetId == tou.InstanceId && d.ToumDied == 0) { d.ToumDied = 1; d.ToumDeathT = ev.Turn; }
@@ -186,7 +186,7 @@ static class Shock287Diag
 
         Console.WriteLine("## §2 ボスに対する感電（放電先が無いとき）——ログ1本");
         Console.WriteLine();
-        var basis = Seat(new[] { UnitCatalog.Tou, UnitCatalog.Gald, UnitCatalog.Kata, UnitCatalog.Shiga, UnitCatalog.Hisa });
+        var basis = Seat(new[] { UnitCatalog.Tou, UnitCatalog.Gald, UnitCatalog.Kata, UnitCatalog.ShigaG3K, UnitCatalog.Hisa });
         var bp = BattleEngine.Materialize(basis, BattleContext.PlayerTeam);
         var br = BattleEngine.Run(bp, WaveOf("ボス").Make(), 0, verbose: true);
         Console.WriteLine($"台 ＝ {BA.SeatsNamed(basis)} × ボス × seed 0 → {(br.PlayerWon ? "勝ち" : "負け")} T{br.Turns}");
@@ -212,7 +212,7 @@ static class Shock287Diag
         Console.WriteLine();
         Console.WriteLine("| 波 | 組み付いた（1戦） | 組んだまま維持 | 止めた敵の手番 | ほどけた |");
         Console.WriteLine("|---|--:|--:|--:|--:|");
-        var kRow = FvSwap(CompareBuilds().First(r => r.Name == "責め苦 (トウ×シガ)").F, UnitCatalog.Dolga, UnitCatalog.Kugu);
+        var kRow = FvSwap(FvSwap(CompareBuilds().First(r => r.Name == "責め苦 (トウ×シガ)").F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Dolga, UnitCatalog.Kugu);
         foreach (var w in Waves)
         {
             long f = 0, h = 0, s = 0, b = 0;
@@ -241,7 +241,7 @@ static class Shock287Diag
         Console.WriteLine();
         Console.WriteLine("| 波 | 版 | 勝率 | 振 | 電 | 怖 | 縛 | 帯電率 | 怖 ÷ 振 | シガが倒れたT（倒れた戦の割合） | 潰れた敵の手番 |");
         Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
-        var row = CompareBuilds().First(r => r.Name == "責め苦 (トウ×シガ)").F;
+        var row = FvSwap(CompareBuilds().First(r => r.Name == "責め苦 (トウ×シガ)").F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K);   // 第289期: シガを旧の規定（G3K）に固定
         foreach (var w in Waves.Where(w => !w.Boss))
             foreach (var (vn, d) in new[] { ("T3", UnitCatalog.TouT3), ("T3n", UnitCatalog.TouT3n) })
             {
@@ -357,7 +357,7 @@ static class Shock287Diag
             var f = Seat(r.Order);
             var d = MeasureDeep(f, w, 0, Seeds);
             int dt = Wins(ToDolga(f, UnitCatalog.Tou), w, 0, Seeds, out _);
-            int ds = Wins(ToDolga(f, UnitCatalog.Shiga), w, 0, Seeds, out _);
+            int ds = Wins(ToDolga(f, UnitCatalog.ShigaG3K), w, 0, Seeds, out _);
             Console.WriteLine($"| {Order(r.Order)} | {F1(d.Win)} | {Per(d.WinT, d.Wins)} | {Per1(d.FoeDis, d.N)} | {Per1(d.AllyDis, d.N)} | {Per(d.ChainUnits, d.Chains)} | {Per(d.FoeStall, d.N)} | {Per(d.Cower, d.N)}（{Per(d.Swings, d.N)}） | "
                 + $"{Per1(d.ToumDeathT, d.ToumDied)}（{F1(100.0 * d.ToumDied / d.N)}%） | {Per1(d.ShigaDeathT, d.ShigaDied)}（{F1(100.0 * d.ShigaDied / d.N)}%） | {Per(d.Grapple, d.N)} | {F1(100.0 * dt / Seeds)} | {F1(100.0 * ds / Seeds)} |");
         }

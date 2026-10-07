@@ -955,7 +955,7 @@ public static void Run(string[] args, int stageIndex)
             ("刻み×抉り（消費なし）", new[] { UnitCatalog.Nomi, UnitCatalog.Egu, UnitCatalog.Golm, UnitCatalog.Gald, UnitCatalog.Dolga }),
             ("刻み×裂き（書き手2枚）", new[] { UnitCatalog.Nomi, UnitCatalog.Kiri, UnitCatalog.Egu, UnitCatalog.Gald, UnitCatalog.Dolga }),
             ("刻み×毒（滲みの下流）", new[] { UnitCatalog.Nomi, UnitCatalog.Guza, UnitCatalog.Mio, UnitCatalog.Gald, UnitCatalog.Dolga }),
-            ("刻み×責め苦（振りを増やす）", new[] { UnitCatalog.Nomi, UnitCatalog.Shiga, UnitCatalog.Egu, UnitCatalog.Gald, UnitCatalog.Dolga }),
+            ("刻み×責め苦（振りを増やす）", new[] { UnitCatalog.Nomi, UnitCatalog.ShigaG3K, UnitCatalog.Egu, UnitCatalog.Gald, UnitCatalog.Dolga }),
             ("刻み×断ち（消費あり・対照）", new[] { UnitCatalog.Nomi, UnitCatalog.Nata, UnitCatalog.Egu, UnitCatalog.Gald, UnitCatalog.Dolga }),
         };
         var foeForms = foeRows.Select(r =>

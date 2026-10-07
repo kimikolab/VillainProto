@@ -1598,6 +1598,40 @@ public static class UnitCatalog
         Flavor = "雷を呼ぶのではない。落ちる場所を選んでいるだけ。"
     };
 
+    // 第289期 —— カタの雷雲の版（指示書 §4）。規定のカタの末尾に札を足すだけ。体・速さ・跳ね方・マイナスは規定のまま。`All` にも `Retired` にも入れない。
+
+    /// <summary>第289期 KR-a（溜めて一発）。規定 ＋ <see cref="TraitId.Thundercloud"/>（敵の感電が弾けるたび雷雲 +1・雷の1発に雷雲を足す・落とすと 0）。</summary>
+    public static readonly UnitDef KataKRa = new()
+    {
+        Id = "kata",
+        Name = Kata.Name,
+        MaxHp = Kata.MaxHp,
+        Attack = Kata.Attack,
+        Speed = Kata.Speed,
+        Advances = false,
+        Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockStunHalf, TraitId.Thundercloud },
+        Actions = Kata.Actions,
+        PlusText = Kata.PlusText + "。盤上で感電が弾けるたび雷雲が湧き、次の雷はそのぶん重くなる",
+        MinusText = Kata.MinusText,
+        Flavor = Kata.Flavor
+    };
+
+    /// <summary>第289期 KR-b（育ち続ける）。KR-a ＋ <see cref="TraitId.ThundercloudKeep"/>（雷雲は落としても減らない・上限 8）。</summary>
+    public static readonly UnitDef KataKRb = new()
+    {
+        Id = "kata",
+        Name = Kata.Name,
+        MaxHp = Kata.MaxHp,
+        Attack = Kata.Attack,
+        Speed = Kata.Speed,
+        Advances = false,
+        Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockStunHalf, TraitId.Thundercloud, TraitId.ThundercloudKeep },
+        Actions = Kata.Actions,
+        PlusText = Kata.PlusText + "。盤上で感電が弾けるたび雷雲が湧き、雷は戦が進むほど重くなる",
+        MinusText = Kata.MinusText,
+        Flavor = Kata.Flavor
+    };
+
     /// <summary>
     /// 継ぎ当てのツギ（第207期・置き去りのナラの転生）。<b>数値（HP62／攻9／速8）はナラのまま</b>で、
     /// 手番を板を貼ること（<see cref="TraitId.Plank"/>）に使う（<c>[Skill]</c> の1要素・通常攻撃は出ない）。
@@ -1698,17 +1732,19 @@ public static class UnitCatalog
         Speed = 3,
         Pattern = AttackPattern.Sweep,
         // 第185期に見せしめ（`Shame`）を足した。第217期の追記で G3K（責め鞭・鞭・電気鞭・感電も2倍）に。
-        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock },
-        PlusText = "動けない敵を優先して鞭で薙ぐ。動けない敵には2倍で入り、その悲鳴で隣の敵を竦ませる（1手番に1回）。感電しているあいだは怖気づかず、打った敵に感電を移す",
+        // 第289期: ポンの判断（第288期の案 A7a）で SG-a（蓄電・`StoredCharge`）を規定にした。旧の規定（G3K）は `ShigaG3K`。
+        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge },
+        PlusText = "動けない敵を優先して鞭で薙ぐ。動けない敵には2倍で入り、その悲鳴で隣の敵を竦ませる（1手番に1回）。感電しているあいだは怖気づかず、打った敵に感電を移す。"
+                 + "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる",
         MinusText = "感電していないとき、動ける敵を主目標に打つと、怖気づいて自分が1ターン動けなくなる",
         Flavor = "縛られた的しか殴れない臆病者。雷に打たれている間だけは、怖さも痺れて感じない。"
     };
 
-    // 第288期 —— シガの蓄電の版（指示書 design/PHASE288_SHIGA_CHARGE_SPEC.md）。**規定のシガは触らない**（採否はポン）。
-    // 体・札の並び・マイナス・フレーバーは規定のまま、末尾に札を足すだけ。`All` にも `Retired` にも入れない。
-
-    /// <summary>第288期 SG-a（育つだけ）。規定 ＋ <see cref="TraitId.StoredCharge"/>（帯電するたび蓄電 +1・上限 4・蓄電1つにつき攻撃力 +3）。</summary>
-    public static readonly UnitDef ShigaSGa = new()
+    /// <summary>
+    /// 旧シガ（第217〜288期の規定・G3K・電気鞭）。第289期に SG-a を規定にしたので、旧の規定の定義を明示的に持つ。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。過去の器具はこちらに固定する（第287期のトウ `TouT0` と同じ作法）。
+    /// </summary>
+    public static readonly UnitDef ShigaG3K = new()
     {
         Id = "shiga",
         Name = "電気鞭のシガ",
@@ -1716,12 +1752,17 @@ public static class UnitCatalog
         Attack = 9,
         Speed = 3,
         Pattern = AttackPattern.Sweep,
-        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge },
-        PlusText = "動けない敵を優先して鞭で薙ぐ。動けない敵には2倍で入り、その悲鳴で隣の敵を竦ませる（1手番に1回）。感電しているあいだは怖気づかず、打った敵に感電を移す。"
-                 + "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる",
+        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock },
+        PlusText = "動けない敵を優先して鞭で薙ぐ。動けない敵には2倍で入り、その悲鳴で隣の敵を竦ませる（1手番に1回）。感電しているあいだは怖気づかず、打った敵に感電を移す",
         MinusText = Shiga.MinusText,
         Flavor = Shiga.Flavor
     };
+
+    // 第288期 —— シガの蓄電の版（指示書 design/PHASE288_SHIGA_CHARGE_SPEC.md）。**規定のシガは触らない**（採否はポン）。
+    // 体・札の並び・マイナス・フレーバーは規定のまま、末尾に札を足すだけ。`All` にも `Retired` にも入れない。
+
+    /// <summary>第288期 SG-a（育つだけ）。規定 G3K ＋ <see cref="TraitId.StoredCharge"/>。<b>第289期に規定にした</b>——規定の <see cref="Shiga"/> と同じ物。</summary>
+    public static readonly UnitDef ShigaSGa = Shiga;
 
     /// <summary>第288期 SG-b（育てて放つ）。SG-a ＋ <see cref="TraitId.Thunderclap"/>（蓄電 4 で迎えた手番の鞭が雷霆になる・撃ち終えたら蓄電 0）。</summary>
     public static readonly UnitDef ShigaSGb = new()
@@ -1749,6 +1790,38 @@ public static class UnitCatalog
         Pattern = AttackPattern.Sweep,
         Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.Thunderclap, TraitId.ThunderclapLone },
         PlusText = ShigaSGb.PlusText + "。孤立した敵ほど深く焼く",
+        MinusText = Shiga.MinusText,
+        Flavor = Shiga.Flavor
+    };
+
+    // 第289期 —— シガの割り込みの版（指示書 design/PHASE289_SHOCK_ATTACKERS_SPEC.md §3）。規定（SG-a）の末尾に札を1枚足すだけ。`All` にも `Retired` にも入れない。
+
+    /// <summary>第289期 SI-a（雷霆の割り込み）。SG-a ＋ <see cref="TraitId.ShockWhipBolt"/>（敵の感電の連鎖の直後・蓄電 4 で割り込み、鞭 ＋ 弾けた敵に雷霆・蓄電 0）。</summary>
+    public static readonly UnitDef ShigaSIa = new()
+    {
+        Id = "shiga",
+        Name = "電気鞭のシガ",
+        MaxHp = 52,
+        Attack = 9,
+        Speed = 3,
+        Pattern = AttackPattern.Sweep,
+        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.ShockWhipBolt },
+        PlusText = Shiga.PlusText + "。溜まりきると、そばで感電が弾けた瞬間に割り込み、雷霆の鞭を叩き込む",
+        MinusText = Shiga.MinusText,
+        Flavor = Shiga.Flavor
+    };
+
+    /// <summary>第289期 SI-b（振りまくる）。SG-a ＋ <see cref="TraitId.ShockWhipFlurry"/>（敵の感電の連鎖の直後・蓄電 1 以上で割り込み、鞭を1振り・蓄電 −1）。</summary>
+    public static readonly UnitDef ShigaSIb = new()
+    {
+        Id = "shiga",
+        Name = "電気鞭のシガ",
+        MaxHp = 52,
+        Attack = 9,
+        Speed = 3,
+        Pattern = AttackPattern.Sweep,
+        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.ShockWhipFlurry },
+        PlusText = Shiga.PlusText + "。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう",
         MinusText = Shiga.MinusText,
         Flavor = Shiga.Flavor
     };

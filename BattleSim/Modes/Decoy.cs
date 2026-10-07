@@ -93,7 +93,7 @@ static partial class DecoyDiag
     /// 参考: 雷の編成（ベニ・ミオ・カタ・シガ・ツギ）の**ポンの席**（第226期の報告の後にポンの画面から: 前1 シガ ／ 前3 ツギ ／ 中央 ベニ ／ 後1 カタ ／ 後3 ミオ）。
     /// 報告の最初の版は記録が無かったので後1 ミオ ／ 後3 カタ の仮の席で測っていた（`shockdigest k226` の台もこの席に替えた）。
     /// </summary>
-    internal static Formation Thunder => Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Tsugi,
+    internal static Formation Thunder => Formation.Build(front1: UnitCatalog.ShigaG3K, front3: UnitCatalog.Tsugi,
         center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio);
 
     // 波: 本編の第2〜5波 ＋ 検証・九 / 新兵（主判定）＋ 検証・九 / 農兵（`DriftDiag.WaveOf` の 0..5）

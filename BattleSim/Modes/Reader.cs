@@ -1048,7 +1048,7 @@ public static void Run(string[] args, int stageIndex)
             Console.WriteLine($"| {++i2} | {(d?.Name ?? kv.Key)} | {kv.Value:N0} | {(rows.TryGetValue(kv.Key, out int n2) ? n2 : 0)} |");
         }
         Console.WriteLine();
-        foreach (string id in new[] { UnitCatalog.Ban.Id, UnitCatalog.Shiga.Id, UnitCatalog.Uke.Id })
+        foreach (string id in new[] { UnitCatalog.Ban.Id, UnitCatalog.ShigaG3K.Id, UnitCatalog.Uke.Id })
         {
             UnitDef? d = UnitCatalog.All.FirstOrDefault(x => x.Id == id);
             bool ok = got.TryGetValue(id, out long v) && v > 0;

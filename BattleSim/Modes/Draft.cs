@@ -80,7 +80,7 @@ public static void Run(string[] args, int stageIndex)
         UnitCatalog.Mudo, UnitCatalog.Sid,  UnitCatalog.Mio,  UnitCatalog.Rau,  UnitCatalog.Beni,
         UnitCatalog.Vio,  UnitCatalog.Yomi, UnitCatalog.Basa, UnitCatalog.Shio, UnitCatalog.Utsu,
         UnitCatalog.Doha, UnitCatalog.Kubi, UnitCatalog.Sekki, UnitCatalog.Hota, UnitCatalog.Hibi,
-        UnitCatalog.Shiga, UnitCatalog.Zan, UnitCatalog.Kiri, UnitCatalog.Egu,  UnitCatalog.Nata,
+        UnitCatalog.ShigaG3K, UnitCatalog.Zan, UnitCatalog.Kiri, UnitCatalog.Egu,  UnitCatalog.Nata,
         UnitCatalog.Hari, UnitCatalog.Hane, UnitCatalog.Uke,  UnitCatalog.Wata, UnitCatalog.Kari,
         UnitCatalog.Tome, UnitCatalog.Hiyo,
         // (3) 対照
@@ -101,7 +101,7 @@ public static void Run(string[] args, int stageIndex)
         [UnitCatalog.Yomi.Id] = 51.0, [UnitCatalog.Basa.Id] = 34.3, [UnitCatalog.Shio.Id] = 29.6,
         [UnitCatalog.Utsu.Id] = 57.5, [UnitCatalog.Doha.Id] = 34.5, [UnitCatalog.Kubi.Id] = 45.0,
         [UnitCatalog.Sekki.Id] = 21.1, [UnitCatalog.Hota.Id] = 36.3, [UnitCatalog.Hibi.Id] = 32.5,
-        [UnitCatalog.Shiga.Id] = 27.4, [UnitCatalog.Zan.Id] = 33.4, [UnitCatalog.Kiri.Id] = 13.9,
+        [UnitCatalog.ShigaG3K.Id] = 27.4, [UnitCatalog.Zan.Id] = 33.4, [UnitCatalog.Kiri.Id] = 13.9,
         [UnitCatalog.Egu.Id] = 26.8, [UnitCatalog.Nata.Id] = 19.5, [UnitCatalog.Hari.Id] = 28.6,
         [UnitCatalog.Hane.Id] = 14.6, [UnitCatalog.Uke.Id] = 23.0, [UnitCatalog.Wata.Id] = 44.6,
         [UnitCatalog.Kari.Id] = 26.4, [UnitCatalog.Tome.Id] = 36.7, [UnitCatalog.Hiyo.Id] = 15.8,

@@ -746,6 +746,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   **蓄電の口は `MarkShock` の1行**（新しく感電が付いたとき・`_chargeLive` の比較1つで抜ける → `GainCharge`・上限 4・私有キー `StoredChargeTrait.Key`）。攻撃力の上乗せは `ModifyAttack`（自己強化なので窓口を通さない）。
   **雷霆の枠は `WhipSwing.Bolt`**（振り始めに蓄電 4・手番の鞭だけ）で、的は `WhipAmount` が控える（当たる前に感電していた敵・参考 `ThunderclapAny` なら当たった敵すべて）。撃つのは `BattleContext.Thunderclap`（`ApplyDamage` の直呼び）。
   **感電の札に 4（雷霆・起爆しない）を足した**——`ApplyDamageBody` の起爆の段で 4 は何もしない（電気鞭が付け直した感電を雷霆が弾かせない）。
+- **第289期: 規定のシガを SG-a にした**（旧の規定は `ShigaG3K`）。**連鎖の後の口 `BattleContext.AfterChain` を足した**——`ShockTrigger` の外側の1回（＝1つの連鎖）が終わった直後に1度だけ呼ぶ。弾けた駒の列を作るのは蓄電・雷の保持者（`_chainReaders`）がいる戦だけ。
+  読み手は3つ: カタの雷雲（札 `Thundercloud` ／ `ThundercloudKeep`・KR-a ／ KR-b）、シガの割り込み（札 `ShockWhipBolt` ／ `ShockWhipFlurry`・SI-a ／ SI-b → `BattleContext.ShockWhip`）、計数だけの帳簿（連鎖の起点・その時点の蓄電・生き残り・雷までに弾けた数）。
+  割り込みは `CanActOutOfTurn` の**新しい経路 `OutOfTurnRoute.ShockWhip`**（粛で止まる）→ `Interrupt` → 的を固定した `PerformAttack`。鞭の枠に `NoCower` を立て、`ScourgeTrait` は割り込みの鞭では怖気づかない。雷雲の読みは `ThunderTrait.OnAction` の打点の式（攻 × (1 ＋ 種類 ＋ 雷雲)）だけ。
 - **第218期の澱みのミオの版（札 `MireSlam` / `MireConduct` / `MireDull` / `MireDullAll` / `MireCarry` / `MireHandoff`・**第219期に M5 ＝ `MireDullAll` 以外の5枚をミオの規定にした**（ポンの判断・札の並びは `MireDiag.VerOf("M5")` と同じ）・M0 は `mire` の診断のローカル）**——
   **叩きつけ・通電は `ConcentrateTrait` の最後から `BattleContext.MireSlam`**（寄せ先は「感電している敵がいればその中から」・`ApplyDamage` を直に呼ぶ＝標的の鎖を通らない・撃破はミオ）。
   **澱みのデバフは `MireCut` の1本を4口**（`PerformAttackBody` の**痺れ毒の直後** ／ `StrikeThunder` ／ `Discharge`（反転しない側）／ 叩きつけ・通電）で、出どころの印 × 10%（上限 40%）を切り捨てで引く。

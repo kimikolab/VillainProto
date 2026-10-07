@@ -141,7 +141,7 @@ static partial class WhipDiag
         foreach (var s in SeatSearch(115))
         {
             Formation a = WithVer(s.Best, "G3K"), b = new() { Shape = s.Best.Shape };
-            foreach ((int slot, UnitDef d) in s.Best.Occupied()) b[slot] = d.Id == "shiga" ? UnitCatalog.Shiga : d;
+            foreach ((int slot, UnitDef d) in s.Best.Occupied()) b[slot] = d.Id == "shiga" ? UnitCatalog.ShigaG3K : d;
             for (int st = 1; st < 5; st++)
                 for (int sd = 0; sd < 50; sd++)
                 {

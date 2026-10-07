@@ -200,7 +200,7 @@ static partial class MireDiag
         Console.WriteLine();
         UnitDef mio = UnitCatalog.Mio;
         Console.WriteLine("- ミオ: HP" + mio.MaxHp + "・攻" + mio.Attack + "・速" + mio.Speed + "・札 " + string.Join(", ", mio.Traits) + "・手番 " + string.Join(", ", mio.Actions!.Select(a => a.Kind + "「" + a.Label + "」")));
-        Console.WriteLine("- シガ: " + UnitCatalog.Shiga.Name + "・" + UnitCatalog.Shiga.Pattern + "・札 " + string.Join(", ", UnitCatalog.Shiga.Traits));
+        Console.WriteLine("- シガ: " + UnitCatalog.ShigaG3K.Name + "・" + UnitCatalog.ShigaG3K.Pattern + "・札 " + string.Join(", ", UnitCatalog.ShigaG3K.Traits));
         Console.WriteLine("- ベニの札: " + string.Join(", ", UnitCatalog.Beni.Traits) + "（O4 " + (UnitCatalog.Beni.Traits.Contains(TraitId.GurenOpeningBurn) ? "**あり**" : "なし") + "）");
         Console.WriteLine("- カタの札: " + string.Join(", ", UnitCatalog.Kata.Traits) + "（S2 " + (UnitCatalog.Kata.Traits.Contains(TraitId.ShockStunAll) ? "**あり**" : "なし") + "）");
         Console.WriteLine();

@@ -4,7 +4,7 @@ using static Common;
 // =====================================================================================
 // whip run / check（第217期）—— 表A〜E と自己検査。指示書 §6・§7。
 //
-// 版は**シガの札の差し替えだけ**で作る（`Ver`）。**保持者は版の中だけ**（`UnitCatalog.Shiga` は G0 のまま）。
+// 版は**シガの札の差し替えだけ**で作る（`Ver`）。**保持者は版の中だけ**（`UnitCatalog.ShigaG3K` は G0 のまま）。
 // W1〜W3 の席は G3 × 倍率 115 × 第2〜5波 × seed 1000..1049 で総当たりし（勝ち数最大・同値は列挙順で最初）、**全版に同じ席**を使う。
 // W4 は `compare` の元の席のまま。測る: 第2〜5波 × seed 0..199（verbose: false）。
 // =====================================================================================
@@ -19,7 +19,7 @@ static partial class WhipDiag
     /// </summary>
     static UnitDef Ver(params TraitId[] traits)
     {
-        UnitDef d = UnitCatalog.Shiga;
+        UnitDef d = UnitCatalog.ShigaG3K;
         return new()
         {
             Id = d.Id, Name = "責め苦のシガ", MaxHp = d.MaxHp, Attack = d.Attack, Speed = d.Speed, Advances = d.Advances,

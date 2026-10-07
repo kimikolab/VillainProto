@@ -49,7 +49,7 @@ static class Tou279Diag
         ("T3n", "対称の粉・漏れなし（漏れの代金の対照）＋ S3（第286期）", UnitCatalog.TouT3n),
     };
 
-    static Formation Row(string prefix) => CompareBuilds().First(r => r.Name.StartsWith(prefix)).F;
+    static Formation Row(string prefix) => FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K);   // 第289期: シガを旧の規定（G3K）に固定
     static Formation ShockRow => Row("感電 (シガ×カタ×ソム)");
     /// <summary>第273期の帯電の足の検証台（`relic check273` (f)）。</summary>
     static Formation Bench273(UnitDef center) => Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Basa, center: center, back1: UnitCatalog.Sero, back3: UnitCatalog.Hane);
@@ -133,7 +133,7 @@ static class Tou279Diag
             }
             if (r.TallyByUnit.TryGetValue(UnitCatalog.Tou.Id, out var tt)) { TouAttacks += tt.Attacks; PowderFoe += tt.ShockOnFoe; PowderAlly += tt.ShockOnAlly; TouRoots += tt.ShockTriggered; PowderMain += tt.PowderMain; PowderSpread += tt.PowderSpread; }
             if (r.TallyByUnit.TryGetValue(UnitCatalog.Fodder.Id, out var ft)) BaitPops += ft.ShockSpent;
-            if (r.TallyByUnit.TryGetValue(UnitCatalog.Shiga.Id, out var st)) { Wired += st.WiredSwings; Cowered += st.WhipCowered; ShigaSwings += st.Attacks; }
+            if (r.TallyByUnit.TryGetValue(UnitCatalog.ShigaG3K.Id, out var st)) { Wired += st.WiredSwings; Cowered += st.WhipCowered; ShigaSwings += st.Attacks; }
             foreach (var l in r.Log)
             {
                 if (l.Text.Contains("の体が痺れて動かない", StringComparison.Ordinal)) OldStuns++;

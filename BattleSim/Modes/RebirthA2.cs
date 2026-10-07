@@ -55,7 +55,7 @@ static class RebirthA2Diag
         "縛る味方は選べない。縛られた味方はそのターン動けない。第1ターンは味方の縛りが起きない");
 
     /// <summary>第184期のシガ（責め苦だけ）。</summary>
-    static readonly UnitDef ShigaOld = Remake(UnitCatalog.Shiga, new[] { TraitId.Torment }, null,
+    static readonly UnitDef ShigaOld = Remake(UnitCatalog.ShigaG3K, new[] { TraitId.Torment }, null,
         "動きを封じられた敵を殴ると、同じ重さの追い打ちを重ねる");
 
     /// <summary>第184期のバン（据え＋積み過ぎ・手番は攻5）。</summary>
@@ -86,7 +86,7 @@ static class RebirthA2Diag
     {
         Formation g = f;
         g = Swap(g, "kugu", v.NewKugu ? UnitCatalog.Kugu : KuguOld);
-        g = Swap(g, "shiga", v.NewShiga ? UnitCatalog.Shiga : ShigaOld);
+        g = Swap(g, "shiga", v.NewShiga ? UnitCatalog.ShigaG3K : ShigaOld);
         g = Swap(g, "ban", v.BanAs ?? (v.NewBan ? UnitCatalog.Ban : BanOld));
         return g;
     }
@@ -108,16 +108,16 @@ static class RebirthA2Diag
     /// <summary>診断台（**`Presets` には足さない**）。</summary>
     static readonly (string Name, Formation F)[] Benches =
     {
-        ("台1 クグ×シガ", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kugu, center: UnitCatalog.Shiga,
+        ("台1 クグ×シガ", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kugu, center: UnitCatalog.ShigaG3K,
                                           back1: UnitCatalog.Borg, back3: UnitCatalog.Dolga)),
-        ("台2 シガ×ガン（クグ無し）", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Shiga, center: UnitCatalog.Gan,
+        ("台2 シガ×ガン（クグ無し）", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.ShigaG3K, center: UnitCatalog.Gan,
                                                  back1: UnitCatalog.Borg, back3: UnitCatalog.Dolga)),
         // 台2 は叩き起こしが**のろまのドルガ**（攻38・2ターンに1回休む）を毎回選ぶので、シガが起こされない
         // （叩き起こしは休んだ味方のうち攻撃力が最大の1体）。**起こす相手がシガしかいない台**を別に置く。
         // 前列は大喰らいゴルム（後ろの列の傷を飲み込む）と分かちのドハ、シガは後列
         // （前列に置くと先に倒れて順序が回らない。棘のカドは味方を巻き込むので外した）。
         ("台2' シガ×ガン（起こす相手はシガだけ）", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Doha, center: UnitCatalog.Gan,
-                                                          back1: UnitCatalog.Shiga, back3: UnitCatalog.Borg)),
+                                                          back1: UnitCatalog.ShigaG3K, back3: UnitCatalog.Borg)),
         ("台3 バン×バサ（据えた足）", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Ban, center: UnitCatalog.Basa,
                                                back1: UnitCatalog.Borg, back3: UnitCatalog.Dolga)),
     };

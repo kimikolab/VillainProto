@@ -39,7 +39,7 @@ static partial class EnemyScaleDiag
             center: UnitCatalog.Hisa, back1: UnitCatalog.TomeT0, back3: UnitCatalog.Zan)),
         ("ヒサ×ムド×ザン×トメ（ヒサ後列）", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.TomeT0,
             center: UnitCatalog.Zan, back1: UnitCatalog.Hisa, back3: UnitCatalog.Borg)),
-        ("クグ×シガ", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kugu, center: UnitCatalog.Shiga,
+        ("クグ×シガ", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kugu, center: UnitCatalog.ShigaG3K,
             back1: UnitCatalog.Borg, back3: UnitCatalog.Dolga)),
     };
 

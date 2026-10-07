@@ -21,7 +21,7 @@ static partial class DebuffDiag
     /// <summary>Q0-1 で名指しする同席の相手（指示書の並び）。毒の駒は書き手・増幅・吐き戻し・うつし。</summary>
     static readonly UnitDef[] Partners =
     {
-        UnitCatalog.Utsu, UnitCatalog.Mudo, UnitCatalog.Yomi, UnitCatalog.Shio, UnitCatalog.Hisa, UnitCatalog.Shiga,
+        UnitCatalog.Utsu, UnitCatalog.Mudo, UnitCatalog.Yomi, UnitCatalog.Shio, UnitCatalog.Hisa, UnitCatalog.ShigaG3K,
         UnitCatalog.Guza, UnitCatalog.Sid, UnitCatalog.Mio, UnitCatalog.Rau, UnitCatalog.Vio, UnitCatalog.Beni,
     };
 

@@ -357,6 +357,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.LiveWire]        = (HcPlusL,  "電気鞭（第217期）: 感電していれば怖気づかず、当たった敵に感電を移して自分の感電を使い切る（追記でシガの規定）"),
         [TraitId.LiveWireGuard]   = (HcBothL,  "感電の痺れのハメ防止（第217期・G3H）: 痺れが明けた駒は次の自分の手番まで感電で痺れない。敵味方を問わない（保持者 0 枚）"),
         [TraitId.ScourgeShock]    = (HcPlusL,  "感電している敵も2倍に数える札（第217期・G3K・追記でシガの規定）"),
+        [TraitId.StoredCharge]    = (HcPlusL,  "蓄電（第288期・SG-a）: 自分に感電が付くたび蓄電 +1（上限 4）、蓄電1つにつき攻撃力 +3（第289期からシガの規定）"),
         [TraitId.MireSlam]        = (HcPlusL,  "濃縮の手番の最後に寄せ先（感電している敵を優先）へ攻撃力ぶんの一撃（第218期・M1・保持者 0 枚）"),
         [TraitId.MireConduct]     = (HcPlusL,  "叩きつける相手が感電していれば、同じ一撃が印を持つ敵すべてへ走る（第218期・M2・保持者 0 枚）"),
         [TraitId.MireDull]        = (HcPlusL,  "印を持つ敵の与ダメが印1つにつき −10%（上限 −40%）（第218期・M3・保持者 0 枚）"),

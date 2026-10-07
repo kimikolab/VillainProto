@@ -648,6 +648,11 @@ public enum TraitId
     StoredCharge,    // 蓄電（SG-a〜）: 自分に感電が新しく付くたび蓄電 +1（上限 4・口は `MarkShock` の1箇所）。蓄電1つにつき攻撃力 +3。電気鞭で感電を消しても減らない
     Thunderclap,     // 雷霆（SG-b〜）: 蓄電 4 で迎えた手番の鞭は、当たったとき感電していた敵それぞれに追加で 攻撃力 × 4（`ApplyDamage` の直呼び・起爆しない）。撃ち終えたら蓄電 0
     ThunderclapLone, // 孤立への雷霆（SG-c）: 雷霆で打った敵に隣の味方が1体もいなければ、その敵への追加は2倍（**札そのものは挙動を持たない**・`BattleContext.Thunderclap` が読む）
+    // --- 第289期で足した札（シガの割り込みの版 `UnitCatalog.ShigaSIa` ／ `ShigaSIb`、カタの雷雲の版 `KataKRa` ／ `KataKRb` だけが持つ） ---
+    ShockWhipBolt,   // 雷霆の割り込み（SI-a）: 敵の感電が弾けた連鎖の直後、蓄電 4 なら割り込んで鞭を振り、その連鎖で弾けた生きている敵それぞれに 攻 × 4（起爆しない）。蓄電 0（判定は engine の `AfterChain` → `ShockWhip`）
+    ShockWhipFlurry, // 振りまくる（SI-b）: 敵の感電が弾けた連鎖の直後、蓄電 1 以上なら割り込んで鞭を振る。蓄電 −1（判定は engine の `AfterChain` → `ShockWhip`）
+    Thundercloud,    // 雷雲（KR-a〜）: 敵の感電が1体弾けるたび雷雲 +1（`AfterChain`）。雷の1発 ＝ 攻 × (1 ＋ 帯びた種類 ＋ 雷雲)。雷を落とすと雷雲 0（KR-a）
+    ThundercloudKeep, // 雷雲が残る（KR-b）: 雷を落としても雷雲は減らない・上限 8（**札そのものは挙動を持たない**・`AfterChain` と `ThunderTrait` が読む）
     ThunderclapAny,  // 参考（SG-c′・指示書に無い）: 雷霆の的を「当たった敵すべて」にする（感電を問わない）（**札そのものは挙動を持たない**・engine の `WhipAmount` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -12913,6 +12918,7 @@ public sealed class ThunderTrait : Trait
         var pool = ctx.TargetPool(self);
         if (pool.Count == 0) return;
 
+        int cloud = ThundercloudTrait.Of(self);                                 // 第289期（雷雲・保持者でなければ 0）
         bool hopOnly = self.HasTrait(TraitId.ThunderPathHop);                   // 第215期（T1′・参考）
         bool path = hopOnly || self.HasTrait(TraitId.ThunderPath);             // 第215期（T1）
         var struck = new HashSet<UnitState>();
@@ -12924,7 +12930,7 @@ public sealed class ThunderTrait : Trait
             if (t is not null)
             {
                 int k = KindsOf(t);
-                ctx.StrikeThunder(self, t, self.CurrentAttack * (1 + k), 1, k);
+                ctx.StrikeThunder(self, t, self.CurrentAttack * (1 + k + cloud), 1, k);
                 hits = 1;
             }
             ctx.NoteThunderCast(self, hits, fallback: true);
@@ -12936,13 +12942,15 @@ public sealed class ThunderTrait : Trait
                 int k = KindsOf(cur);
                 struck.Add(cur);
                 hits++;
-                ctx.StrikeThunder(self, cur, self.CurrentAttack * (1 + k), hits, k);
+                ctx.StrikeThunder(self, cur, self.CurrentAttack * (1 + k + cloud), hits, k);
                 UnitState from = cur;
                 var team = ctx.LivingMembers(from.TeamId);
                 cur = Pick(team.Where(u => !struck.Contains(u) && FormationRules.AreAdjacent(from, u)), team, struck, path);
             }
             ctx.NoteThunderCast(self, hits, fallback: false);
         }
+        // 第289期（KR-a）: 雷を落とすと雷雲は 0（KR-b は残す）。保持者でなければ何もしない。
+        if (cloud > 0 && self.HasTrait(TraitId.Thundercloud) && !self.HasTrait(TraitId.ThundercloudKeep)) self.SetCounter(ThundercloudTrait.Key, 0);
 
         // マイナス（雷は敵味方を選ばない）: 落とすたび、隣の味方すべてに感電。
         if (self.HasTrait(TraitId.ThunderLeak))
@@ -13106,6 +13114,7 @@ public sealed class ScourgeTrait : Trait
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
         if (TormentTrait.IsBound(ctx, target)) return;
+        if (ctx.Whip is { NoCower: true } nc && nc.Actor == self) return;   // 第289期: 割り込みの鞭では怖気づかない（SI-a ／ SI-b の保持者だけ）
         if (ctx.Whip is { Wired: true } w && w.Actor == self)
         {
             ctx.NoteWhipSpared(self);
@@ -13230,6 +13239,51 @@ public sealed class ThunderclapLoneTrait : Trait
 public sealed class ThunderclapAnyTrait : Trait
 {
     public override TraitId Id => TraitId.ThunderclapAny;
+}
+
+// =====================================================================================
+// 第289期 —— シガの割り込み（SI-a ／ SI-b・SG-a の上に足す）とカタの雷雲（KR-a ／ KR-b）
+//
+// **合図は engine の `AfterChain` の1箇所**（`ShockTrigger` の外側の1回が終わった直後・連鎖ごとに1回）。
+// 割り込みの本体は `BattleContext.ShockWhip`、雷雲の帳簿も `AfterChain`。**乱数を引かない。**
+// =====================================================================================
+
+/// <summary>
+/// シガの割り込み（第289期・SI-a ＝ <see cref="TraitId.ShockWhipBolt"/> ／ SI-b ＝ <see cref="TraitId.ShockWhipFlurry"/>）。
+/// <b>札そのものは挙動を持たない</b>——敵の感電が弾けた連鎖の直後に engine（<c>BattleContext.ShockWhip</c>）が保持を読む。
+/// 割り込みの鞭は通常の一振り（薙ぎ・責め鞭の2倍・電気鞭）で、主目標は「その連鎖で弾けた生きている敵」から動けない敵を優先。<b>割り込みでは怖気づかない。</b>
+/// </summary>
+public sealed class ShockWhipTrait : Trait
+{
+    readonly TraitId _id;
+    public ShockWhipTrait(TraitId id) => _id = id;
+    public override TraitId Id => _id;
+}
+
+/// <summary>
+/// 雷雲（第289期・KR-a ／ KR-b）。私有キー <see cref="Key"/>（<c>StatusKeys.All</c> に入れない・<see cref="OnCarryOver"/> で 0）。
+/// 敵の感電が1体弾けるたび +1（engine の <c>AfterChain</c>・書き手と起点を問わない）。雷の1発は 攻 × (1 ＋ 帯びた種類 ＋ 雷雲)（<see cref="ThunderTrait"/>・跳ねる先も同じ雷雲）。
+/// 雷を落とすと 0（KR-a）。<see cref="TraitId.ThundercloudKeep"/> の保持者は減らない・上限 <see cref="KeepCap"/>（KR-b）。
+/// </summary>
+public sealed class ThundercloudTrait : Trait
+{
+    /// <summary>雷雲の私有キー。</summary>
+    public const string Key = "thundercloud";
+
+    /// <summary>KR-b の上限。</summary>
+    public const int KeepCap = 8;
+
+    public override TraitId Id => TraitId.Thundercloud;
+
+    public static int Of(UnitState u) => u.RawCounter(Key);
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(Key, 0);
+}
+
+/// <summary>雷雲が残る（第289期・KR-b）。<b>札そのものは挙動を持たない</b>（engine の <c>AfterChain</c> と <see cref="ThunderTrait"/> が読む）。</summary>
+public sealed class ThundercloudKeepTrait : Trait
+{
+    public override TraitId Id => TraitId.ThundercloudKeep;
 }
 
 // =====================================================================================
@@ -16387,6 +16441,10 @@ public static class TraitCatalog
         new ThunderclapTrait(),        // 第288期（SG-b ／ SG-c）
         new ThunderclapLoneTrait(),    // 第288期（SG-c）
         new ThunderclapAnyTrait(),     // 第288期（参考 SG-c′）
+        new ShockWhipTrait(TraitId.ShockWhipBolt),    // 第289期（SI-a）
+        new ShockWhipTrait(TraitId.ShockWhipFlurry),  // 第289期（SI-b）
+        new ThundercloudTrait(),       // 第289期（KR-a ／ KR-b）
+        new ThundercloudKeepTrait(),   // 第289期（KR-b）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

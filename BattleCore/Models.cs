@@ -2017,6 +2017,17 @@ public sealed class UnitTally
     public long[]? ChargeBySrc;
 
     /// <summary>
+    /// 第289期（<b>計数専用</b>）。<b>蓄電の保持者（シガ）の側</b>: <c>ChainIniHist</c>[起点] 敵の感電の連鎖（自分の一撃で起きたものを除く・0 トウ ／ 1 カタ ／ 3 ほかの味方 ／ 4 刻み・出どころ無し ／ 5 敵）／
+    /// <c>ChainChargeHist</c>[蓄電] その時点の蓄電 ／ <c>ChainAliveHist</c>[数] 連鎖の後に生きていた弾けた敵 ／ <c>ChainOwn</c> 自分の一撃で起きた連鎖。
+    /// <b>割り込み（SI）</b>: <c>SwAsked</c> 問うた ／ <c>SwNoCharge</c> 蓄電が足りない ／ <c>SwNoTarget</c> 弾けた敵が全員倒れた ／ <c>SwNested</c> 別の割り込みの中 ／
+    /// <c>SwHushed</c> 粛で止まった ／ <c>SwBlocked</c> 痺れ・組み付きほかで止まった ／ <c>SwFires</c> 割り込んだ ／ <c>SwWhipDealt</c>・<c>SwBoltDealt</c> 割り込みの鞭・雷霆で減らした HP。
+    /// <b>雷の保持者（カタ）の側</b>: <c>ThunderPopsPending</c> 前の雷から弾けた敵（雷で 0）／ <c>ThunderPopsHist</c>[数] 雷を落とした時点のその値 ／ <c>CloudAtCastSum</c>・<c>CloudAtCastMax</c> 落とした時点の雷雲 ／ <c>ThunderNominal</c> 雷の名目の合計。
+    /// </summary>
+    public long ChainOwn, SwAsked, SwNoCharge, SwNoTarget, SwNested, SwHushed, SwBlocked, SwFires, SwWhipDealt, SwBoltDealt,
+                ThunderPopsPending, CloudAtCastSum, CloudAtCastMax, ThunderNominal;
+    public long[]? ChainIniHist, ChainChargeHist, ChainAliveHist, ThunderPopsHist;
+
+    /// <summary>
     /// 第218期（<b>計数専用</b>・澱みのミオ）。<b>ミオの側</b>: <c>MireSlams</c> 叩きつけた ／ <c>MireSlamDry</c> 寄せ先が無くて叩けなかった ／
     /// <c>MireSlamOnShocked</c> 叩きつける相手が感電していた ／ <c>MireSlamPops</c>・<c>MireConductPops</c> その一撃で感電が弾けた（叩きつけ／通電）／
     /// <c>MireSlamDealt</c>・<c>MireSlamKills</c> 叩きつけと通電で与えた量・倒した数 ／ <c>MireConducts</c> 通電が中心の外へ走った回数 ／
@@ -3064,6 +3075,13 @@ public sealed class UnitTally
         BoltCasts += o.BoltCasts; BoltDry += o.BoltDry; BoltHits += o.BoltHits; BoltLoneHits += o.BoltLoneHits; BoltNominal += o.BoltNominal;
         BoltLoneNominal += o.BoltLoneNominal; BoltDealt += o.BoltDealt; BoltKills += o.BoltKills; BoltOnShocked += o.BoltOnShocked; BoltMuted += o.BoltMuted;
         AddHist(ref ChargeBySrc, o.ChargeBySrc);
+        // 第289期
+        ChainOwn += o.ChainOwn; SwAsked += o.SwAsked; SwNoCharge += o.SwNoCharge; SwNoTarget += o.SwNoTarget; SwNested += o.SwNested;
+        SwHushed += o.SwHushed; SwBlocked += o.SwBlocked; SwFires += o.SwFires; SwWhipDealt += o.SwWhipDealt; SwBoltDealt += o.SwBoltDealt;
+        ThunderPopsPending += o.ThunderPopsPending; CloudAtCastSum += o.CloudAtCastSum; if (o.CloudAtCastMax > CloudAtCastMax) CloudAtCastMax = o.CloudAtCastMax;
+        ThunderNominal += o.ThunderNominal;
+        AddHist(ref ChainIniHist, o.ChainIniHist); AddHist(ref ChainChargeHist, o.ChainChargeHist);
+        AddHist(ref ChainAliveHist, o.ChainAliveHist); AddHist(ref ThunderPopsHist, o.ThunderPopsHist);
         // 第218期
         MireSlams += o.MireSlams; MireSlamDry += o.MireSlamDry; MireSlamOnShocked += o.MireSlamOnShocked; MireSlamPops += o.MireSlamPops;
         MireConductPops += o.MireConductPops; MireSlamDealt += o.MireSlamDealt; MireSlamKills += o.MireSlamKills;

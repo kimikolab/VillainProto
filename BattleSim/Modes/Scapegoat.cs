@@ -359,7 +359,7 @@ public static void Phase0(string[] args, int stageIndex)
             back1: UnitCatalog.Hisa, back3: UnitCatalog.Guza)),
         ("A26 標痺燃 (カド×ヒサ×シガ×ボルグ)", Formation.Build(
             front1: UnitCatalog.Kado, front3: UnitCatalog.Borg, center: UnitCatalog.Hisa,
-            back1: SgPlain, back3: UnitCatalog.Shiga)),
+            back1: SgPlain, back3: UnitCatalog.ShigaG3K)),
         // --- 反撃台（カド×ヒサ×ボルグ）を固定し、5枚目だけを振る ---
         // **痺は使えない種類**（引き取ると手番が飛んで転写できない）ので、
         // 閾値 3 に届くには 毒・標・燃 の3つが要る。
@@ -900,12 +900,12 @@ public static void Run(string[] args, int stageIndex)
         {
             ("痺台 (カド×ヒサ×ボルグ×シガ)", Formation.Build(
                 front1: UnitCatalog.Kado, front3: UnitCatalog.Borg, center: UnitCatalog.Hisa,
-                back1: UnitCatalog.Gou, back3: UnitCatalog.Shiga)),
+                back1: UnitCatalog.Gou, back3: UnitCatalog.ShigaG3K)),
             ("痺台・素体", Formation.Build(
                 front1: UnitCatalog.Kado, front3: UnitCatalog.Borg, center: UnitCatalog.Hisa,
-                back1: SgPlainDef, back3: UnitCatalog.Shiga)),
+                back1: SgPlainDef, back3: UnitCatalog.ShigaG3K)),
             ("毒痺台 (グザ×シガ×ボルグ×ゴウ)", Formation.Build(
-                front1: UnitCatalog.Shiga, front3: UnitCatalog.Borg, center: UnitCatalog.Hisa,
+                front1: UnitCatalog.ShigaG3K, front3: UnitCatalog.Borg, center: UnitCatalog.Hisa,
                 back1: UnitCatalog.Gou, back3: UnitCatalog.Guza)),
         };
         Console.WriteLine("| 台 | 平均勝率 | 引き取り | 内訳 | 種類数 | 到達 | 未達 | 成立率 | 転写/振り | **自傷(手番)** | 寿命 |");

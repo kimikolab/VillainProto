@@ -472,7 +472,7 @@ static class EliteDiag
             ("耐久 (ガルド×リリ)", 0, 0),
         };
         // 第287期: §7 は第284期の記録なので、規定のトウ（第287期から T3）を旧の規定 `TouT0` に戻して照合する。
-        var sel = expect.Select(e => rows.First(r => r.Name == e.Row)).Select(r => (r.Name, F: FvSwap(r.F, UnitCatalog.Tou, UnitCatalog.TouT0))).ToArray();
+        var sel = expect.Select(e => rows.First(r => r.Name == e.Row)).Select(r => (r.Name, F: FvSwap(FvSwap(r.F, UnitCatalog.Tou, UnitCatalog.TouT0), UnitCatalog.Shiga, UnitCatalog.ShigaG3K))).ToArray();
         var gb = Cells(Grid(sel, new[] { NineRecruit, Nine }, Elite, 0, 50));
         Console.WriteLine();
         Console.WriteLine("| 行 | 九・新兵 §7 | 実測 | 九・農兵 §7 | 実測 |");
