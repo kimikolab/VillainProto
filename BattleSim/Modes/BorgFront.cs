@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using BA = BurnAuditDiag;
 using BG = BorgGuardDiag;
@@ -84,12 +84,12 @@ static partial class BorgFrontDiag
     internal static UnitDef VerBorg(string name) => name == "H1b" ? H1b : Versions.First(v => v.Name == name || v.Key == name).Borg;
 
     /// <summary>雷＋ボルグの芯（ベニ・ミオ・カタ・ボルグ）と、相方の候補（T3 と同じ 47 枚からベニ・ミオ・カタを除く 44 枚）。</summary>
-    internal static UnitDef[] ThunderCore(UnitDef borg) => new[] { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, borg };
+    internal static UnitDef[] ThunderCore(UnitDef borg) => new[] { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, borg };
     internal static List<UnitDef> ThunderCandidates => BA.Candidates.Where(u => u.Id is not ("beni" or "mio" or "kata")).ToList();
     /// <summary>雷＋ボルグ（置き換え）: ポンの席の前1 シガ → ボルグ ／ 前3 ツギ → ボルグ。</summary>
     internal static Formation ThunderSwap(UnitDef borg, bool front1) => front1
-        ? Formation.Build(front1: borg, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)
-        : Formation.Build(front1: UnitCatalog.ShigaG3K, front3: borg, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio);
+        ? Formation.Build(front1: borg, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: UnitCatalog.Mio)
+        : Formation.Build(front1: UnitCatalog.ShigaG3K, front3: borg, center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: UnitCatalog.Mio);
 
     static void LogOne(string ver, string seats, int seed, int wave, int sc)
     {

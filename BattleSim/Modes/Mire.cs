@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -39,17 +39,17 @@ static partial class MireDiag
     /// <summary>M台1〜M台4 の顔ぶれ（席は総当たりで選ぶ）。<paramref name="mio"/> に版のミオを渡す。</summary>
     internal static readonly (string Tag, string Aim, Func<UnitDef, List<UnitDef>> Members)[] Rigs =
     {
-        ("M台1", "トウが殴る", m => new() { UnitCatalog.Beni, m, UnitCatalog.Kata, UnitCatalog.Kubi, UnitCatalog.TouT0 }),
-        ("M台2", "殴る駒が少ない（スィド）", m => new() { UnitCatalog.Beni, m, UnitCatalog.Kata, UnitCatalog.Kubi, UnitCatalog.Sid }),
-        ("M台3", "ポンの X字（グザ・クビ）", m => new() { UnitCatalog.Beni, m, UnitCatalog.Kata, UnitCatalog.Guza, UnitCatalog.Kubi }),
-        ("M台4", "ポンのパターン2（グザ・スィド）", m => new() { UnitCatalog.Beni, m, UnitCatalog.Kata, UnitCatalog.Guza, UnitCatalog.Sid }),
+        ("M台1", "トウが殴る", m => new() { UnitCatalog.Beni, m, UnitCatalog.KataS3, UnitCatalog.Kubi, UnitCatalog.TouT0 }),
+        ("M台2", "殴る駒が少ない（スィド）", m => new() { UnitCatalog.Beni, m, UnitCatalog.KataS3, UnitCatalog.Kubi, UnitCatalog.Sid }),
+        ("M台3", "ポンの X字（グザ・クビ）", m => new() { UnitCatalog.Beni, m, UnitCatalog.KataS3, UnitCatalog.Guza, UnitCatalog.Kubi }),
+        ("M台4", "ポンのパターン2（グザ・スィド）", m => new() { UnitCatalog.Beni, m, UnitCatalog.KataS3, UnitCatalog.Guza, UnitCatalog.Sid }),
     };
 
     /// <summary>ポンの席（第216期の台A・台B）。ミオを差し替える。</summary>
     internal static Formation PonX(UnitDef mio) => Formation.Build(
-        front1: UnitCatalog.Kubi, front3: UnitCatalog.Guza, center: UnitCatalog.Beni, back1: mio, back3: UnitCatalog.Kata);
+        front1: UnitCatalog.Kubi, front3: UnitCatalog.Guza, center: UnitCatalog.Beni, back1: mio, back3: UnitCatalog.KataS3);
     internal static Formation PonP2(UnitDef mio) => Formation.BuildDiamond(
-        a: UnitCatalog.Kata, b: UnitCatalog.Guza, c: UnitCatalog.Beni, d: UnitCatalog.Sid, e: mio);
+        a: UnitCatalog.KataS3, b: UnitCatalog.Guza, c: UnitCatalog.Beni, d: UnitCatalog.Sid, e: mio);
 
     /// <summary>M台5 ＝ `compare` でミオのいる行（元の席のまま）。</summary>
     internal static List<(string Name, Formation F)> M5Rows()
@@ -202,7 +202,7 @@ static partial class MireDiag
         Console.WriteLine("- ミオ: HP" + mio.MaxHp + "・攻" + mio.Attack + "・速" + mio.Speed + "・札 " + string.Join(", ", mio.Traits) + "・手番 " + string.Join(", ", mio.Actions!.Select(a => a.Kind + "「" + a.Label + "」")));
         Console.WriteLine("- シガ: " + UnitCatalog.ShigaG3K.Name + "・" + UnitCatalog.ShigaG3K.Pattern + "・札 " + string.Join(", ", UnitCatalog.ShigaG3K.Traits));
         Console.WriteLine("- ベニの札: " + string.Join(", ", UnitCatalog.Beni.Traits) + "（O4 " + (UnitCatalog.Beni.Traits.Contains(TraitId.GurenOpeningBurn) ? "**あり**" : "なし") + "）");
-        Console.WriteLine("- カタの札: " + string.Join(", ", UnitCatalog.Kata.Traits) + "（S2 " + (UnitCatalog.Kata.Traits.Contains(TraitId.ShockStunAll) ? "**あり**" : "なし") + "）");
+        Console.WriteLine("- カタの札: " + string.Join(", ", UnitCatalog.KataS3.Traits) + "（S2 " + (UnitCatalog.KataS3.Traits.Contains(TraitId.ShockStunAll) ? "**あり**" : "なし") + "）");
         Console.WriteLine();
 
         // ---- Q0-6（先に席を決める：Q0-1・Q0-4 はこの席で読む） ----

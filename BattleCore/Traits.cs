@@ -654,6 +654,10 @@ public enum TraitId
     Thundercloud,    // 雷雲（KR-a〜）: 敵の感電が1体弾けるたび雷雲 +1（`AfterChain`）。雷の1発 ＝ 攻 × (1 ＋ 帯びた種類 ＋ 雷雲)。雷を落とすと雷雲 0（KR-a）
     ThundercloudKeep, // 雷雲が残る（KR-b）: 雷を落としても雷雲は減らない・上限 8（**札そのものは挙動を持たない**・`AfterChain` と `ThunderTrait` が読む）
     ThunderclapAny,  // 参考（SG-c′・指示書に無い）: 雷霆の的を「当たった敵すべて」にする（感電を問わない）（**札そのものは挙動を持たない**・engine の `WhipAmount` が読む）
+    // --- 第290期で足した札（シガの直し `UnitCatalog.ShigaSIc`、クグの糸の版 `KuguKGa` ／ `KuguKGb` だけが持つ） ---
+    ShockWhipKeep,   // 割り込みの鞭は感電を残す（SI-c）: 割り込みの鞭の電気鞭では自分の感電を消さない（手番の電気鞭はいまどおり使い切る）（**札そのものは挙動を持たない**・`BattleContext.LiveWire` が読む）
+    Thread,          // 糸（KG-a〜）: 組み付いている敵とは糸で繋がる。自分の感電が弾けた放電と、隣の味方からの放電は、糸を伝ってその敵へ流れる（移す・量は放電のまま）（**札そのものは挙動を持たない**・engine の `ShockTrigger` ／ `Discharge` が読む）
+    ThreadCharge,    // 糸が帯電させる（KG-b）: 糸を伝った放電を浴びた敵は、感電していなければ感電する（**札そのものは挙動を持たない**・engine の `Discharge` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -12567,6 +12571,8 @@ public sealed class GrappleTrait : Trait
     public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
     {
         if (source is null || source.TeamId == self.TeamId || dmg <= 0) return;   // 殴られたときだけ
+        // 第290期（糸・KG-a〜）: ほどける前に糸の先を控える——この一撃で弾けた電気は切れる前の糸を伝う（engine が起爆の段の後で消す）。
+        if (self.RawCounter(TargetKey) > 0 && self.HasTrait(TraitId.Thread)) self.SetCounter(ThreadTrait.MemoKey, self.RawCounter(TargetKey));
         Release(ctx, self, "殴られて");
     }
 
@@ -13284,6 +13290,34 @@ public sealed class ThundercloudTrait : Trait
 public sealed class ThundercloudKeepTrait : Trait
 {
     public override TraitId Id => TraitId.ThundercloudKeep;
+}
+
+// =====================================================================================
+// 第290期 —— シガの直し（SI-c）とクグの糸（KG-a ／ KG-b）。どれも札そのものは挙動を持たない（engine が保持を読む）。**乱数を引かない。**
+// =====================================================================================
+
+/// <summary>割り込みの鞭は感電を残す（第290期・SI-c）。割り込みの鞭（<c>BattleContext.ShockWhip</c>）の電気鞭では自分の感電を消さない。<b>札そのものは挙動を持たない</b>（<c>BattleContext.LiveWire</c> が読む）。</summary>
+public sealed class ShockWhipKeepTrait : Trait
+{
+    public override TraitId Id => TraitId.ShockWhipKeep;
+}
+
+/// <summary>
+/// 糸（第290期・KG-a ＝ <see cref="TraitId.Thread"/> ／ KG-b ＝ ＋ <see cref="TraitId.ThreadCharge"/>）。組み付いている敵（<see cref="GrappleTrait.TargetKey"/> が指す生きている敵）と糸で繋がる。
+/// ① 自分の感電が弾けた放電は、隣の味方ではなく糸の先の敵へ1本流れる ／ ② 隣の味方の放電が自分に来るときは、受けずに糸の先の敵へ流れる（量は放電のまま・移す）。
+/// <b>殴られてほどける一撃で弾けた電気は、切れる前の糸を伝う</b>——ほどけるとき（<see cref="GrappleTrait"/> の <c>OnDamaged</c>）に糸の先を <see cref="MemoKey"/> に控え、
+/// engine がその一撃の起爆の段の後で消す。<b>札そのものは挙動を持たない</b>（engine の <c>ShockTrigger</c> ／ <c>Discharge</c> が読む）。
+/// </summary>
+public sealed class ThreadTrait : Trait
+{
+    readonly TraitId _id;
+    public ThreadTrait(TraitId id) => _id = id;
+    public override TraitId Id => _id;
+
+    /// <summary>ほどけた一撃の間だけ控える糸の先（<c>InstanceId + 1</c>）。<b>保持者の私有カウンタ</b>（<c>StatusKeys.All</c> に入れない）。</summary>
+    public const string MemoKey = "threadMemo";
+
+    public override void OnCarryOver(UnitState self) { if (_id == TraitId.Thread) self.SetCounter(MemoKey, 0); }
 }
 
 // =====================================================================================
@@ -16445,6 +16479,9 @@ public static class TraitCatalog
         new ShockWhipTrait(TraitId.ShockWhipFlurry),  // 第289期（SI-b）
         new ThundercloudTrait(),       // 第289期（KR-a ／ KR-b）
         new ThundercloudKeepTrait(),   // 第289期（KR-b）
+        new ShockWhipKeepTrait(),      // 第290期（SI-c）
+        new ThreadTrait(TraitId.Thread),        // 第290期（KG-a）
+        new ThreadTrait(TraitId.ThreadCharge),  // 第290期（KG-b）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

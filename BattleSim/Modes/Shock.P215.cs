@@ -9,7 +9,7 @@ using static Common;
 
 static partial class ShockDiag
 {
-    internal static readonly UnitDef KataT1 = WithTraits(UnitCatalog.Kata, TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath);
+    internal static readonly UnitDef KataT1 = WithTraits(UnitCatalog.KataS3, TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath);
 
     /// <summary>
     /// 版の並び。<b>静的フィールドにしない</b>——`KataT0` は別のファイル（`Shock.Run.cs`）の静的フィールドで、
@@ -18,7 +18,7 @@ static partial class ShockDiag
     static (string Tag, UnitDef Def)[] PathVersions => new[] { ("T0", KataT0), ("T1", KataT1), ("T1′", KataT1Hop) };
 
     /// <summary>T1′（参考）: その先の鍵を跳ねにだけ使う。最初の一発は T0 と同じ。</summary>
-    internal static readonly UnitDef KataT1Hop = WithTraits(UnitCatalog.Kata, TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPathHop);
+    internal static readonly UnitDef KataT1Hop = WithTraits(UnitCatalog.KataS3, TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPathHop);
 
     /// <summary>表E' の1セル（雷が跳ねた回のうち、全員に当たった／1体だけ取り残した・取り残した席）。</summary>
     /// <summary>

@@ -50,7 +50,7 @@ static partial class ShockDiag
                 }
 
         // 破片の台（板を貼るツギの隣で、カタの感電を浴びた味方が殴られる）と、ベニの台（台1）
-        Formation armorBench = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Tsugi, center: UnitCatalog.Kata,
+        Formation armorBench = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Tsugi, center: UnitCatalog.KataS3,
                                                back1: UnitCatalog.Guza, back3: UnitCatalog.Borg);
         var totArmor = new UnitTally();
         for (int st = 1; st < 5; st++)

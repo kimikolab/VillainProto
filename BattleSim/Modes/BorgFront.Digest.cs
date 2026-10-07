@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using BA = BurnAuditDiag;
 
@@ -11,7 +11,7 @@ static partial class BorgFrontDiag
         BA.Seat(new[] { borg, UnitCatalog.HotaL0, UnitCatalog.HiyoF0, UnitCatalog.Shio, UnitCatalog.Sasa }),
         BA.Seat(new[] { UnitCatalog.HotaL0, UnitCatalog.HiyoF0, UnitCatalog.Shio, UnitCatalog.Sasa, borg }),
         BA.Seat(new[] { UnitCatalog.Golm, borg, UnitCatalog.HotaL0, UnitCatalog.HiyoF0, UnitCatalog.Beni }),
-        BA.Seat(new[] { borg, UnitCatalog.Tsugi, UnitCatalog.Beni, UnitCatalog.Kata, UnitCatalog.Mio }),
+        BA.Seat(new[] { borg, UnitCatalog.Tsugi, UnitCatalog.Beni, UnitCatalog.KataS3, UnitCatalog.Mio }),
     };
 
     static void Digest()

@@ -52,7 +52,10 @@ static class Shiga288Diag
     static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n);
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
-    static Formation Seat(UnitDef[] o) => B283.Seat(o);
+    /// <summary>第290期: 名前で引く台のカタ（規定は第290期から KR-b）を旧の規定 `KataS3` に固定する（第288期の台を再現するため）。</summary>
+    static Formation Seat(UnitDef[] o) => FvSwap(B283.Seat(o), UnitCatalog.Kata, UnitCatalog.KataS3);
+    /// <summary>第290期: `compare` の行のカタを旧の規定 `KataS3` に固定した行（シガは版で差し替えるので触らない）。</summary>
+    static (string Name, Formation F)[] Rows288() => CompareBuilds().Select(r => (r.Name, FvSwap(r.F, UnitCatalog.Kata, UnitCatalog.KataS3))).ToArray();
     static Formation SwapShiga(Formation f, UnitDef ver) => ReferenceEquals(ver, UnitCatalog.Shiga) ? f : FvSwap(f, UnitCatalog.Shiga, ver);
 
     /// <summary>
@@ -64,7 +67,7 @@ static class Shiga288Diag
     /// </summary>
     internal static (string Name, string Wave, Func<Formation> Make, bool Kata)[] Boards()
     {
-        Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+        Formation Row(string n) => Rows288().First(r => r.Name == n).F;
         var l = new List<(string, string, Func<Formation>, bool)>
         {
             ("R4 ボス1", "ボス", () => Seat(Order("シガ・トウ・ベニ・クビ・バン")), false),
@@ -132,7 +135,7 @@ static class Shiga288Diag
             if (st.ChargeFulls > 0) { d.FullN = 1; d.FullT = st.ChargeFullTurn; }
             d.Recv = st.ShockReceived; d.Popped = st.ShockSpent; d.ShigaDmg = st.DamageToEnemy;
         }
-        if (r.TallyByUnit.TryGetValue(UnitCatalog.Kata.Id, out var kt)) d.KataThunder = kt.ThunderDealt;
+        if (r.TallyByUnit.TryGetValue(UnitCatalog.KataS3.Id, out var kt)) d.KataThunder = kt.ThunderDealt;
         if (shiga is not null)
         {
             d.ChargeEnd = shiga.RawCounter(StoredChargeTrait.Key);
@@ -249,7 +252,7 @@ static class Shiga288Diag
 
     static double[,] CompareGrid(UnitDef ver)
     {
-        var rows = CompareBuilds();
+        var rows = Rows288();
         int nw = EnemyCatalog.Stages.Count;
         var g = new double[rows.Length, nw];
         Parallel.For(0, rows.Length * nw, k =>
@@ -265,7 +268,7 @@ static class Shiga288Diag
 
     static void CompareAll()
     {
-        var rows = CompareBuilds();
+        var rows = Rows288();
         int nw = EnemyCatalog.Stages.Count;
         var grids = Vers.ToDictionary(v => v.Name, v => CompareGrid(v.Def));
         var basis = grids["G3K"];
@@ -334,7 +337,7 @@ static class Shiga288Diag
                 var d = MeasureDeep(f, w, 0, Seeds);
                 int dt = WinsPar(FvSwap(f, UnitCatalog.Tou, UnitCatalog.Dolga), w, Seeds);
                 int ds = WinsPar(FvSwap(f, v.Def, UnitCatalog.Dolga), w, Seeds);
-                int dk = bs[bi].Kata ? WinsPar(FvSwap(f, UnitCatalog.Kata, UnitCatalog.Dolga), w, Seeds) : -1;
+                int dk = bs[bi].Kata ? WinsPar(FvSwap(f, UnitCatalog.KataS3, UnitCatalog.Dolga), w, Seeds) : -1;
                 res[(bi, v.Name)] = (d, dt, ds, dk);
             }
 
@@ -478,7 +481,7 @@ static class Shiga288Diag
             string kind = S287.ShockPool.Contains(d) ? "感電" : IsHeal(d) ? "ヒーラー" : "寿命側";
             var mine = reached.Where(r => r.Order.Contains(d)).ToList();
             int denom = boards.Count(o => o.Contains(d));
-            Console.WriteLine($"| {(d == UnitCatalog.Kata ? "**" + d.Name + "**" : d.Name)} | {kind} | {mine.Count:N0} | {mine.Select(r => Key(r.Order)).Distinct().Count()} | {denom:N0} | {(denom == 0 ? "—" : (100.0 * mine.Count / denom).ToString("F1") + "%")} |");
+            Console.WriteLine($"| {(d == UnitCatalog.KataS3 ? "**" + d.Name + "**" : d.Name)} | {kind} | {mine.Count:N0} | {mine.Select(r => Key(r.Order)).Distinct().Count()} | {denom:N0} | {(denom == 0 ? "—" : (100.0 * mine.Count / denom).ToString("F1") + "%")} |");
         }
         Console.WriteLine();
 
@@ -539,15 +542,15 @@ static class Shiga288Diag
         Console.WriteLine("# shiga288 check");
         Console.WriteLine();
         var g3k = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock };
-        Expect("(a) 旧の規定 `ShigaG3K` は G3K のまま（蓄電の札を持たない）・規定（第289期から）は SG-a・版は G3K の札の末尾に足しただけ",
-            UnitCatalog.ShigaG3K.Traits.SequenceEqual(g3k) && ReferenceEquals(UnitCatalog.Shiga, UnitCatalog.ShigaSGa)
+        Expect("(a) 旧の規定 `ShigaG3K` は G3K のまま（蓄電の札を持たない）・規定（第289期から）は SG-a の上に足した版（第290期から SI-b）・版は G3K の札の末尾に足しただけ",
+            UnitCatalog.ShigaG3K.Traits.SequenceEqual(g3k) && UnitCatalog.Shiga.Traits.Take(6).SequenceEqual(UnitCatalog.ShigaSGa.Traits)
             && UnitCatalog.ShigaSGa.Traits.SequenceEqual(g3k.Append(TraitId.StoredCharge))
             && UnitCatalog.ShigaSGb.Traits.SequenceEqual(g3k.Append(TraitId.StoredCharge).Append(TraitId.Thunderclap))
             && UnitCatalog.ShigaSGc.Traits.SequenceEqual(g3k.Append(TraitId.StoredCharge).Append(TraitId.Thunderclap).Append(TraitId.ThunderclapLone))
             && UnitCatalog.ShigaSGcAny.Traits.SequenceEqual(UnitCatalog.ShigaSGc.Traits.Append(TraitId.ThunderclapAny)));
         Expect("(b) 版は体・Id・マイナス・フレーバーが G3K と同じ・SG-a（規定）のほかは `All` ／ `Retired` に入っていない",
             Vers.Skip(1).All(v => v.Def.Id == "shiga" && v.Def.MaxHp == 52 && v.Def.Attack == 9 && v.Def.Speed == 3 && v.Def.Pattern == AttackPattern.Sweep
-                && v.Def.MinusText == UnitCatalog.ShigaG3K.MinusText && v.Def.Flavor == UnitCatalog.ShigaG3K.Flavor && (v.Name == "SG-a" || !UnitCatalog.Everyone.Contains(v.Def))));
+                && v.Def.MinusText == UnitCatalog.ShigaG3K.MinusText && v.Def.Flavor == UnitCatalog.ShigaG3K.Flavor && !UnitCatalog.Everyone.Contains(v.Def)));   // 第290期: SG-a も規定でなくなった
         Expect("(c) 蓄電の保持者は `All` に規定のシガ1枚・雷霆の札の保持者は 0 枚",
             UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.StoredCharge)) == 1 && UnitCatalog.Shiga.Traits.Contains(TraitId.StoredCharge)
             && !UnitCatalog.All.Any(u => u.Traits.Any(t => t is TraitId.Thunderclap or TraitId.ThunderclapLone or TraitId.ThunderclapAny)));
@@ -558,7 +561,7 @@ static class Shiga288Diag
         foreach (var (rn, wn) in rows)
         {
             var w = WaveOf(wn);
-            var f0 = CompareBuilds().First(r => r.Name == rn).F;
+            var f0 = Rows288().First(r => r.Name == rn).F;
             foreach (var v in Vers)
                 for (int s = 0; s < 40; s++)
                 {

@@ -39,7 +39,7 @@ static class Shock287Diag
     internal static readonly UnitDef[] Fixed = { UnitCatalog.Tou, UnitCatalog.ShigaG3K };
 
     /// <summary>感電の駒（カタ・クグ・ソム）。</summary>
-    internal static readonly UnitDef[] ShockPool = { UnitCatalog.Kata, UnitCatalog.Kugu, UnitCatalog.Som };
+    internal static readonly UnitDef[] ShockPool = { UnitCatalog.KataS3, UnitCatalog.Kugu, UnitCatalog.Som };
 
     /// <summary>ヒーラー（第283期 Phase 0 の機械的定義）。`Boss283Diag.HealPool` は呼ぶたびにソースを走査するので、1度だけ引いて持つ。</summary>
     internal static readonly UnitDef[] Heal = B283.HealPool;
@@ -186,7 +186,7 @@ static class Shock287Diag
 
         Console.WriteLine("## §2 ボスに対する感電（放電先が無いとき）——ログ1本");
         Console.WriteLine();
-        var basis = Seat(new[] { UnitCatalog.Tou, UnitCatalog.Gald, UnitCatalog.Kata, UnitCatalog.ShigaG3K, UnitCatalog.Hisa });
+        var basis = Seat(new[] { UnitCatalog.Tou, UnitCatalog.Gald, UnitCatalog.KataS3, UnitCatalog.ShigaG3K, UnitCatalog.Hisa });
         var bp = BattleEngine.Materialize(basis, BattleContext.PlayerTeam);
         var br = BattleEngine.Run(bp, WaveOf("ボス").Make(), 0, verbose: true);
         Console.WriteLine($"台 ＝ {BA.SeatsNamed(basis)} × ボス × seed 0 → {(br.PlayerWon ? "勝ち" : "負け")} T{br.Turns}");

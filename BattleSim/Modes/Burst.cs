@@ -42,15 +42,15 @@ static partial class BurstDiag
 
     internal static readonly (string Tag, string Aim, Func<List<UnitDef>> Members)[] Rigs =
     {
-        ("R1", "ラウが殴る駒・毒の運び手", () => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, UnitCatalog.Rau, UnitCatalog.Kubi }),
-        ("R2", "毒が最も濃い", () => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, UnitCatalog.Rau, UnitCatalog.Guza }),
-        ("R3", "前段の基準（ポンの X字の顔ぶれ）", () => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, UnitCatalog.Guza, UnitCatalog.Kubi }),
-        ("R4", "毒の少ない雷の台", () => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, UnitCatalog.TouT0, UnitCatalog.Kugu }),
+        ("R1", "ラウが殴る駒・毒の運び手", () => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, UnitCatalog.Rau, UnitCatalog.Kubi }),
+        ("R2", "毒が最も濃い", () => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, UnitCatalog.Rau, UnitCatalog.Guza }),
+        ("R3", "前段の基準（ポンの X字の顔ぶれ）", () => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, UnitCatalog.Guza, UnitCatalog.Kubi }),
+        ("R4", "毒の少ない雷の台", () => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, UnitCatalog.TouT0, UnitCatalog.Kugu }),
     };
 
     /// <summary>R3 のポンの X字の席（第216期の台A）。</summary>
     internal static Formation PonX(UnitDef? mio = null) => Formation.Build(
-        front1: UnitCatalog.Kubi, front3: UnitCatalog.Guza, center: UnitCatalog.Beni, back1: mio ?? UnitCatalog.Mio, back3: UnitCatalog.Kata);
+        front1: UnitCatalog.Kubi, front3: UnitCatalog.Guza, center: UnitCatalog.Beni, back1: mio ?? UnitCatalog.Mio, back3: UnitCatalog.KataS3);
 
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
 

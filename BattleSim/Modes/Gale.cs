@@ -37,7 +37,7 @@ static partial class GaleDiag
         center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.HaneG0);
     /// <summary>参考: ポンの席（前1 シガ ／ 前3 ツギ ／ 中央 ベニ ／ 後1 カタ ／ 後3 ミオ）。</summary>
     internal static Formation Thunder => Formation.Build(front1: UnitCatalog.ShigaG3K, front3: UnitCatalog.Tsugi,
-        center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio);
+        center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: UnitCatalog.Mio);
 
     // 波: 本編の第2〜5波 ＋ 検証・九 / 新兵（主判定）＋ 検証・九 / 農兵
     internal static readonly string[] WaveNames = DriftDiag.WaveNames;

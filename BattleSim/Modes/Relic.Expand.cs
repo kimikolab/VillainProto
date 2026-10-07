@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -153,7 +153,7 @@ static partial class RelicDiag
         }
         // (f) 帯電の足: 感電の供給（カタの漏れ＝カタの隣の味方に感電）がある検証台では発火する（`compare` の行にカタは居ない）
         {
-            var bench = Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Basa, center: UnitCatalog.Kata, back1: UnitCatalog.Sero, back3: UnitCatalog.Hane);
+            var bench = Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Basa, center: UnitCatalog.KataS3, back1: UnitCatalog.Sero, back3: UnitCatalog.Hane);
             long fires = 0, marks = 0;
             for (int fr = 0; fr < FormationRules.PlayableSlotCount; fr++)
                 foreach (int w in MainWaves)

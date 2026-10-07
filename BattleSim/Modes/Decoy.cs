@@ -94,7 +94,7 @@ static partial class DecoyDiag
     /// 報告の最初の版は記録が無かったので後1 ミオ ／ 後3 カタ の仮の席で測っていた（`shockdigest k226` の台もこの席に替えた）。
     /// </summary>
     internal static Formation Thunder => Formation.Build(front1: UnitCatalog.ShigaG3K, front3: UnitCatalog.Tsugi,
-        center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio);
+        center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: UnitCatalog.Mio);
 
     // 波: 本編の第2〜5波 ＋ 検証・九 / 新兵（主判定）＋ 検証・九 / 農兵（`DriftDiag.WaveOf` の 0..5）
     internal static readonly string[] WaveNames = DriftDiag.WaveNames;

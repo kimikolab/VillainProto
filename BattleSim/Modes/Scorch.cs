@@ -39,15 +39,15 @@ static partial class ScorchDiag
     // 台（指示書 §6.2）
     // =================================================================================
 
-    internal static List<UnitDef> H1Members() => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, UnitCatalog.Guza, UnitCatalog.Kubi };
-    internal static List<UnitDef> H2Members() => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, UnitCatalog.TouT0, UnitCatalog.Kugu };
+    internal static List<UnitDef> H1Members() => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, UnitCatalog.Guza, UnitCatalog.Kubi };
+    internal static List<UnitDef> H2Members() => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, UnitCatalog.TouT0, UnitCatalog.Kugu };
 
     /// <summary>ポンの X字の席（第216期の台A・H1 の顔ぶれ）。</summary>
     internal static Formation PonX() => Formation.Build(
-        front1: UnitCatalog.Kubi, front3: UnitCatalog.Guza, center: UnitCatalog.Beni, back1: UnitCatalog.Mio, back3: UnitCatalog.Kata);
+        front1: UnitCatalog.Kubi, front3: UnitCatalog.Guza, center: UnitCatalog.Beni, back1: UnitCatalog.Mio, back3: UnitCatalog.KataS3);
     /// <summary>ポンのパターン2の席（第216期の台B・<b>クビではなくスィド</b>——H1 と顔ぶれが1枚違う参考）。</summary>
     internal static Formation PonP2() => Formation.BuildDiamond(
-        a: UnitCatalog.Kata, b: UnitCatalog.Guza, c: UnitCatalog.Beni, d: UnitCatalog.Sid, e: UnitCatalog.Mio);
+        a: UnitCatalog.KataS3, b: UnitCatalog.Guza, c: UnitCatalog.Beni, d: UnitCatalog.Sid, e: UnitCatalog.Mio);
 
     static bool Has(Formation f, string id) => f.Occupied().Any(o => o.Def.Id == id);
 
@@ -241,7 +241,7 @@ static partial class ScorchDiag
         Console.WriteLine();
         Console.WriteLine("- ミオの札: " + string.Join(", ", UnitCatalog.Mio.Traits));
         Console.WriteLine("- ベニの札: " + string.Join(", ", UnitCatalog.Beni.Traits));
-        Console.WriteLine("- カタの札: " + string.Join(", ", UnitCatalog.Kata.Traits));
+        Console.WriteLine("- カタの札: " + string.Join(", ", UnitCatalog.KataS3.Traits));
         Console.WriteLine();
 
         // ---- Q0-1 ----

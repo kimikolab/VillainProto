@@ -1189,6 +1189,57 @@ public sealed class BattleContext
     /// <summary>第289期: いま割り込みの鞭を振っている駒（怖気の判定から外す・<see cref="ShockWhip"/> の中だけ）。</summary>
     UnitState? _shockWhipActor;
 
+    /// <summary>第290期: 組み付きの保持者（クグ）が戦闘に出たか（<b>計数</b>の口を短絡させる）。</summary>
+    bool _grappleLive;
+    /// <summary>第290期: 糸（<see cref="TraitId.Thread"/>・KG-a〜）の保持者が戦闘に出たか。<b>いなければ放電は比較1つで従来どおり。</b></summary>
+    bool _threadLive;
+
+    /// <summary>
+    /// 糸の先（第290期）。<paramref name="k"/> が糸の保持者で、組み付いている（<see cref="GrappleTrait.TargetKey"/>）か、
+    /// この一撃でほどけた（<see cref="ThreadTrait.MemoKey"/>）相手が<b>生きている敵</b>ならその駒、ほかは null。<b>乱数を引かない。</b>
+    /// </summary>
+    UnitState? ThreadTarget(UnitState k)
+    {
+        if (!k.HasTrait(TraitId.Thread)) return null;
+        int id = k.RawCounter(GrappleTrait.TargetKey) - 1;
+        if (id < 0) id = k.RawCounter(ThreadTrait.MemoKey) - 1;
+        if (id < 0) return null;
+        foreach (UnitState u in _units)
+            if (u.InstanceId == id) return u.IsAlive && u.TeamId != k.TeamId ? u : null;
+        return null;
+    }
+
+    /// <summary>糸が帯電させた敵の印（第290期・KG-b・<b>計数専用</b>の私有キー・どの規則も読まない）。その敵が起点で弾けたら 0 に戻す。</summary>
+    public const string ThreadMarkKey = "threadMarked";
+
+    /// <summary>組み付いている相手が生きているか（第290期・<b>計数専用</b>）。</summary>
+    bool KuguHeld(UnitState k)
+    {
+        int id = k.RawCounter(GrappleTrait.TargetKey) - 1;
+        if (id < 0) return false;
+        foreach (UnitState u in _units) if (u.InstanceId == id) return u.IsAlive;
+        return false;
+    }
+
+    /// <summary>直近に糸を伝わせたクグ（第290期・<b>計数の帰属先だけ</b>）。</summary>
+    UnitState? _lastThreadKugu;
+
+    /// <summary>手番の頭のクグの帳簿（第290期・<b>計数のみ</b>・盤面は読むだけ）: 生きている手番・帯電していた・組み付いていた・両方・組んだ相手に組み付きが立っていた。</summary>
+    public void NoteKuguCensus()
+    {
+        if (!_grappleLive) return;
+        foreach (UnitState k in _units)
+        {
+            if (!k.IsAlive || !k.HasTrait(TraitId.Grapple)) continue;
+            UnitTally t = TallyOf(k);
+            t.KuguTurns++;
+            bool sh = k.RawCounter(StatusKeys.Shock) > 0, held = KuguHeld(k);
+            if (sh) t.KuguShockTurns++;
+            if (held) { t.KuguHeldTurns++; if (GrappleTrait.Held(this, k) is { } h && h.RawCounter(StatusKeys.Grappled) > 0) t.KuguHeldGrappled++; }
+            if (sh && held) t.KuguBothTurns++;
+        }
+    }
+
     WhipSwing? _whip;
 
     /// <summary>いま振っている鞭の枠（無ければ null）。札が <c>OnAfterAttack</c> で読む。</summary>
@@ -1233,6 +1284,8 @@ public sealed class BattleContext
         Log($"    {self.Name} の鞭が身の雷を移す（{targets.Count} 体）", LogKind.Trigger);   // 見せ場の出来事は LiveWire（Highlight にすると間に1件挟まる）
         foreach (UnitState u in targets)
             if (MarkShock(u, self)) t.WiredMarked++;
+        // 第290期（SI-c）: 割り込みの鞭では自分の感電を残す（手番の電気鞭はいまどおり使い切る）。
+        if (_shockWhipActor == self && self.HasTrait(TraitId.ShockWhipKeep)) { t.SwKeptShock++; return; }
         self.SetCounter(StatusKeys.Shock, 0);   // 弾けさせずに消す（ShockTrigger を通さない）
     }
 
@@ -1273,6 +1326,8 @@ public sealed class BattleContext
         TallyOf(target).ShockReceived++;   // 第217期（計数のみ）
         EmitStatusGain(target, StatusKeys.Shock, 1, writer);   // 表示専用
         if (_chargeLive && target.HasTrait(TraitId.StoredCharge)) GainCharge(target, writer);   // 第288期（蓄電の口・ここ1箇所）
+        if (_grappleLive && target.HasTrait(TraitId.Grapple))   // 第290期・計数のみ（クグが帯電した書き手）
+            (TallyOf(target).KuguShockBySrc ??= new long[5])[writer.TeamId != target.TeamId ? 4 : writer.Def.Id == "tou" ? 0 : writer.Def.Id == "kata" ? 1 : writer.Def.Id == "som" ? 2 : 3]++;
         return true;
     }
 
@@ -1397,6 +1452,7 @@ public sealed class BattleContext
         int cloud = ThundercloudTrait.Of(kata);
         kt.CloudAtCastSum += cloud;
         if (cloud > kt.CloudAtCastMax) kt.CloudAtCastMax = cloud;
+        if (cloud > 0) (kt.CloudByCast ??= new long[8])[(int)Math.Min(kt.ThunderCasts, 8) - 1] += cloud;   // 第290期・計数のみ（雷雲の推移・何回目の雷か）
     }
 
     /// <summary>
@@ -1413,7 +1469,8 @@ public sealed class BattleContext
         _shockChaining = true;
         _shockQueue.Clear();
         _shockQueue.Enqueue((u, 0, initiator));
-        int size = 0, deepest = 0;
+        int size = 0, deepest = 0, cross = 0;
+        bool threadRoot = false;
         List<UnitState>? popped = _chainReaders.Count > 0 ? new List<UnitState>() : null;   // 第289期（連鎖の後の口）
         try
         {
@@ -1434,8 +1491,15 @@ public sealed class BattleContext
                 });
                 Log($"    {x.Name} の感電が弾けた（{(d == 0 ? "起点" : d + " 段目")}）", LogKind.Trigger);
                 if (_shockStun != 0) StunByShock(x, d, ini);   // 第216期（S1〜S3・保持者がいなければ比較1つで抜ける）
-                foreach (UnitState n in LivingMembers(x.TeamId))
-                    if (n != x && FormationRules.AreAdjacent(x, n)) Discharge(x, n, d, ini);
+                if (x.TeamId != u.TeamId) cross++;                // 第290期・計数のみ（糸を伝って敵の陣で弾けた）
+                if (_grappleLive && d > 0 && x.HasTrait(TraitId.Grapple)) { UnitTally kt = TallyOf(x); kt.KuguPopChain++; if (KuguHeld(x)) kt.KuguPopChainHeld++; }   // 第290期・計数のみ
+                if (_threadLive && d == 0 && x.RawCounter(ThreadMarkKey) > 0) { x.SetCounter(ThreadMarkKey, 0); threadRoot = true; }   // 第290期・計数のみ（KG-b の印の駒が起点）
+                // 第290期（糸 ①）: 糸の保持者の放電は、隣の味方ではなく糸の先の敵へ1本流れる。保持者がいなければ比較1つで従来どおり。
+                UnitState? th = _threadLive ? ThreadTarget(x) : null;
+                if (th is not null) Discharge(x, th, d, ini);
+                else
+                    foreach (UnitState n in LivingMembers(x.TeamId))
+                        if (n != x && FormationRules.AreAdjacent(x, n)) Discharge(x, n, d, ini);
             }
         }
         finally { _shockChaining = false; _shockDepth = 0; }
@@ -1449,7 +1513,18 @@ public sealed class BattleContext
         else if (initiator is not null) { UnitTally it = TallyOf(initiator); it.ShockTriggered++; it.ShockTriggeredUnits += size; }   // 第217期: 大きさも
         else rt.ShockTriggeredOther++;
 
-        if (popped is not null) AfterChain(u.TeamId, popped, rootKind == 1 ? null : initiator);
+        if (cross > 0 && _lastThreadKugu is not null) TallyOf(_lastThreadKugu).ThreadCrossPops += cross;   // 第290期・計数のみ
+        if (threadRoot && _lastThreadKugu is not null) { UnitTally kt = TallyOf(_lastThreadKugu); kt.ThreadMarkRoots++; kt.ThreadMarkChainUnits += size; }   // 第290期・計数のみ
+
+        if (popped is not null)
+        {
+            // 第290期: 糸を伝うと1つの連鎖に両陣営の駒が入る——陣営ごとに分けて渡す（糸が無ければ1陣営だけで、従来と同じ1回）。
+            UnitState? ini2 = rootKind == 1 ? null : initiator;
+            if (cross == 0) AfterChain(u.TeamId, popped, ini2);
+            else
+                foreach (int team in popped.Select(q => q.TeamId).Distinct().ToList())
+                    AfterChain(team, popped.Where(q => q.TeamId == team).ToList(), ini2);
+        }
     }
 
     /// <summary>
@@ -1563,6 +1638,17 @@ public sealed class BattleContext
     void Discharge(UnitState from, UnitState to, int depth, UnitState? ini)
     {
         int amt = ShockRule.Discharge;
+        // 第290期・計数のみ: 隣の味方の放電がクグに来た（糸の ② の発火見込み）。
+        if (_grappleLive && to.TeamId == from.TeamId && to.HasTrait(TraitId.Grapple)) { UnitTally kt = TallyOf(to); kt.KuguDisIn++; if (KuguHeld(to)) kt.KuguDisInHeld++; }
+        // 第290期（糸）: ① 糸の保持者の放電は糸の先の敵へ（呼び出し側が to に敵を渡す）／ ② 隣の味方の放電が糸の保持者に来たら、受けずに糸の先の敵へ移す。
+        // 出どころはクグ（味方の刃ではない）・量は放電のまま。**保持者がいなければ比較1つで抜ける。**
+        if (_threadLive)
+        {
+            UnitState? via = null;
+            if (to.TeamId != from.TeamId) via = from;
+            else if (ThreadTarget(to) is { } th) { via = to; to = th; }
+            if (via is not null) { ThreadDischarge(from, via, to, amt, depth, ini); return; }
+        }
         UnitTally ft = TallyOf(from), tt = TallyOf(to);
         ft.DischargeHits++;
         UnitState? inv = InvertsTick(to);
@@ -1599,6 +1685,49 @@ public sealed class BattleContext
         tt.DischargeTaken += removed;
         if (before > 0 && !to.IsAlive) tt.DischargeDeaths++;
         if (carry) MireCarryTo(to, from);
+    }
+
+    /// <summary>
+    /// 糸を伝った放電（第290期・<see cref="Discharge"/> だけが呼ぶ）。<paramref name="via"/> ＝ 糸の保持者（クグ）、<paramref name="to"/> ＝ 糸の先の敵。
+    /// <c>ApplyDamage(敵, 放電, クグ)</c>（味方の刃ではない・撃破者は連鎖を起こした一撃の主）。敵が感電していればこの一撃で弾けて連鎖に入る（敵の陣へ放電が広がる）。
+    /// KG-b（<see cref="TraitId.ThreadCharge"/>）は、浴びる前に感電していなかった敵が生きていれば感電させる。<b>乱数を引かない。</b>
+    /// </summary>
+    void ThreadDischarge(UnitState from, UnitState via, UnitState to, int amt, int depth, UnitState? ini)
+    {
+        UnitTally vt = TallyOf(via), tt = TallyOf(to);
+        _lastThreadKugu = via;
+        if (from == via) vt.ThreadSelf++; else vt.ThreadRelay++;
+        TallyOf(from).DischargeHits++;
+        if (_mireDull != 0) amt = MireCut(from, amt, 2);
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Discharge, Turn = _turn, ActorId = via.InstanceId, TargetId = to.InstanceId,
+            Amount = amt, Slot = depth + 1, Team = to.TeamId, SourceTrait = TraitId.Thread,
+        });
+        Log($"    {(from == via ? "" : from.Name + " の電気が ")}{via.Name} の糸を伝って {to.Name} へ放電（{amt}）", LogKind.Trigger);
+        bool wasShocked = to.RawCounter(StatusKeys.Shock) > 0;
+        int before = to.Hp;
+        _shockNext = 3;
+        _shockKillerSet = true;
+        _shockKiller = ini;
+        _dischargeDepth++;
+        ApplyDamage(to, amt, via);
+        _dischargeDepth--;
+        _shockNext = 0;
+        _shockKillerSet = false;
+        _shockKiller = null;
+        int removed = before - Math.Max(0, to.Hp);
+        vt.ThreadDealt += removed;
+        TallyOf(from).DischargeDealt += removed;
+        tt.DischargeTaken += removed;
+        if (before > 0 && !to.IsAlive) { tt.DischargeDeaths++; vt.ThreadKills++; }
+        if (wasShocked && to.RawCounter(StatusKeys.Shock) <= 0) vt.ThreadPopped++;
+        if (!wasShocked && to.IsAlive && via.HasTrait(TraitId.ThreadCharge) && MarkShock(to, via))
+        {
+            vt.ThreadCharged++;
+            to.SetCounter(ThreadMarkKey, 1);   // 計数専用（そこから起きた連鎖）
+            Log($"    {to.Name} は糸の電気を浴びて帯電した", LogKind.Status);
+        }
     }
 
     /// <summary>決着時に残っていた感電を数える（第214期・<b>計数のみ</b>）。</summary>
@@ -7267,6 +7396,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Scourge)) _whipLive = true;                 // 第217期（鞭の枠と2倍）
         if (u.HasTrait(TraitId.StoredCharge)) _chargeLive = true;          // 第288期（蓄電の口・雷霆の枠）
         if (u.HasTrait(TraitId.StoredCharge) || u.HasTrait(TraitId.Thunder)) _chainReaders.Add(u);   // 第289期（連鎖の後の口）
+        if (u.HasTrait(TraitId.Grapple)) _grappleLive = true;              // 第290期（クグの計数・糸の口の手前）
+        if (u.HasTrait(TraitId.Thread)) _threadLive = true;                // 第290期（糸・KG-a〜）
         if (u.HasTrait(TraitId.LiveWireGuard)) _shockStunGuard = true;     // 第217期（G3H）
         // 第218期（澱みのミオの版・M3〜M5）。**保持者がいなければ比較1つで抜ける。**
         if (u.HasTrait(TraitId.MireDull) || u.HasTrait(TraitId.MireDullAll))
@@ -10844,6 +10975,7 @@ public sealed class BattleContext
         // 第214期: 感電の札（1回の呼び出しにだけ効く）。**ここで読んで消す**（逸らしの札と同じ作法）。
         byte shockNote = _shockNext;
         _shockNext = 0;
+        bool kuguHeldAtEntry = _grappleLive && target.HasTrait(TraitId.Grapple) && KuguHeld(target);   // 第290期・計数のみ
         bool shockKillerSet = _shockKillerSet;
         UnitState? shockKiller = _shockKiller;
         _shockKillerSet = false;
@@ -11787,8 +11919,21 @@ public sealed class BattleContext
             if (shockNote == 4) { }                                                            // 第288期: 雷霆は起爆しない（計数は `Thunderclap` の側）
             else if (shockNote == 1 && !thunderPop) TallyOf(target).ShockThunderMuted++;          // 計数のみ（自己検査: 雷は起爆しない）
             else if (tick && !_shockTickLive) TallyOf(target).ShockTickMuted++; // 計数のみ（自己検査: K1 の刻みは起爆しない）
-            else ShockTrigger(target, shockKillerSet ? shockKiller : tick ? null : source, tick ? 1 : source is null ? 2 : 0);
+            else
+            {
+                // 第290期・計数のみ: クグの感電が一撃で弾けた（敵に殴られた ／ そのとき組み付いていた）。
+                if (_grappleLive && target.HasTrait(TraitId.Grapple))
+                {
+                    UnitTally kt = TallyOf(target);
+                    kt.KuguPopHit++;
+                    if (source is not null && source.TeamId != target.TeamId) kt.KuguPopHitFoe++;
+                    if (kuguHeldAtEntry) kt.KuguPopHitHeld++;
+                }
+                ShockTrigger(target, shockKillerSet ? shockKiller : tick ? null : source, tick ? 1 : source is null ? 2 : 0);
+            }
         }
+        // 第290期（糸）: ほどけた一撃の間だけ控えた糸の先を消す（起爆の段の後）。保持者がいなければ比較1つで抜ける。
+        if (_threadLive && target.RawCounter(ThreadTrait.MemoKey) > 0) target.SetCounter(ThreadTrait.MemoKey, 0);
 
         // 巻き込み則（第85期・W2・SpillWoundRule）。**味方の刃**が通って対象が生きていれば傷 1。
         // 「味方の刃」＝ isFriendlyFire かつ source が同陣営。転嫁の代金・深追いの反動（source は null）はこれで外れるが、
@@ -13908,6 +14053,7 @@ public static class BattleEngine
             ctx.NoteWardCensus();       // 重りの在庫（第154期）。**盤面は読むだけ**
             ctx.NoteBraceCensus();      // 身構えの保持者の板（第213期）。**盤面は読むだけ**
             ctx.NoteFireLevelCensus();  // 火勢（第242期）。**盤面は読むだけ**
+            ctx.NoteKuguCensus();       // クグの帯電と組み付き（第290期）。**盤面は読むだけ**
 
             foreach (UnitState u in ctx.AllUnits.Where(x => x.IsAlive).ToList())
                 foreach (Trait t in u.Traits.ToList())

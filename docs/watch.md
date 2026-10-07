@@ -427,7 +427,7 @@ seed 0..199 の 200 試行（`compare` と同じ帯）。**盤面は1ビット�
 
 ## 1-b. 出来事の種類 × 「誰がやったか」（`ActorId`）
 
-`BattleEventKind` 72 種 ／ `BattleEngine.cs` の初期化子 89 箇所。
+`BattleEventKind` 72 種 ／ `BattleEngine.cs` の初期化子 90 箇所。
 
 | 種類 | `ActorId` | 意味 |
 |---|:-:|---|

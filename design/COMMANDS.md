@@ -890,6 +890,15 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 shock289 beni     # 第289期 段3: ベニの札を1枚ずつ外した版（＋ 組の版 −③ ／ −②③）× 台 × 波 ＋ ベニ → ドルガ（4 秒）
     dotnet run --project BattleSim -c Release 0 shock289 check    # 第289期 自己検査（規定 ＝ SG-a・版の札・連鎖1つに1回・蓄電の帳簿・怖気・雷雲・粛・軽い口と詳しい口・決定性・乱数の走査）
     dotnet run --project BattleSim -c Release 0 shock289 log <boss|guard|bat> <版> <短い名前を ・ で5つ> [seed]   # 第289期 1戦のログ
+    dotnet run --project BattleSim -c Release 0 shock290 p0       # 第290期 Phase 0: 規定のクグの帯電と組み付きの重なり・弾けの経路・隣の放電・ボスの組み付き・第287期の格子のクグの台（部分集合を回し直す・約 5 分）。本体は `Modes/Shock290.cs`
+    dotnet run --project BattleSim -c Release 0 shock290 boards   # 第290期: 代表台 21 台 × シガ SG-a ／ SI-b ／ SI-c・クグ 旧 ／ KG-a ／ KG-b（糸 ① ／ ②・糸の与ダメ・帯電させた敵の連鎖・対照）（7 秒）
+    dotnet run --project BattleSim -c Release 0 shock290 duo      # 第290期 段2: シガ SG-a ／ SI-b ／ SI-c × カタ 旧 ／ KR-b の6通り × 同居の台（精鋭・ボス・本編第2〜5波）（5 秒）
+    dotnet run --project BattleSim -c Release 0 shock290 grid3 <guard|bat> <sga|sib|sic> <old|krb>   # 第290期 段2 の小さな格子（固定枠 トウ ＋ シガ ＋ カタ・探索枠2・対照 3 枚 → ドルガ）
+    dotnet run --project BattleSim -c Release 0 shock290 gridk <guard|bat> <kold|kga|kgb>           # 第290期 段3 の格子（固定枠 トウ ＋ クグ・探索枠3・候補はクグ → 規定のシガ・カタは規定）
+    dotnet run --project BattleSim -c Release 0 shock290 grids <guard|bat> <sga|sib|sic>            # 第290期 シガの精鋭の格子（第289期の `shock289 grid … shiga` と同じ台）
+    dotnet run --project BattleSim -c Release 0 shock290 compare  # 第290期: `compare` 64 行 × 規定 ／ SI-c ／ KG-a ／ KG-b（その駒のいない行のずれ・主判定・情報セル）（15 秒）
+    dotnet run --project BattleSim -c Release 0 shock290 check    # 第290期 自己検査（規定 ＝ SI-b ／ KR-b・文面・版の札・SI-c の感電・糸の帳簿・控えの後始末・軽い口と詳しい口・決定性・乱数の走査・第289期の器具の固定）
+    dotnet run --project BattleSim -c Release 0 shock290 log <boss|guard|bat> <短い名前を ・ で5つ> [seed] [版…]   # 第290期 1戦のログ
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

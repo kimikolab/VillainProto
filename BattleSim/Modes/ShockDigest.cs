@@ -41,13 +41,13 @@ static class ShockDigestDiag
     /// 第287期: `compare` の行の規定のトウ（第287期から T3）を旧の規定 `TouT0` に戻した行。指紋の台は規定化の前（第286期まで）の台本を写すので、
     /// トウの在席する行（責め苦・毒+耐久）を旧に固定する（第282〜283期のミサの `CompareT0` と同じ作法）。トウのいない行は1ビットも変わらない。
     /// </summary>
-    static (string Name, Formation F)[] CompareTou0() => Common.CompareBuilds().Select(r => (r.Name, Common.FvSwap(Common.FvSwap(r.F, UnitCatalog.Tou, UnitCatalog.TouT0), UnitCatalog.Shiga, UnitCatalog.ShigaG3K))).ToArray();
+    static (string Name, Formation F)[] CompareTou0() => Common.CompareBuilds().Select(r => (r.Name, Common.FvSwap(Common.FvSwap(Common.FvSwap(r.F, UnitCatalog.Tou, UnitCatalog.TouT0), UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Kata, UnitCatalog.KataS3))).ToArray();
 
     static (string, Formation)[] MireBenches(UnitDef mio) => new (string, Formation)[]
     {
-        ("M台1 X", Formation.Build(front1: mio, front3: UnitCatalog.Kubi, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.TouT0)),
-        ("M台2 X", Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Kubi, center: mio, back1: UnitCatalog.Kata, back3: UnitCatalog.Sid)),
-        ("M台2 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: mio, c: UnitCatalog.Kata, d: UnitCatalog.Sid, e: UnitCatalog.Kubi)),
+        ("M台1 X", Formation.Build(front1: mio, front3: UnitCatalog.Kubi, center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: UnitCatalog.TouT0)),
+        ("M台2 X", Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Kubi, center: mio, back1: UnitCatalog.KataS3, back3: UnitCatalog.Sid)),
+        ("M台2 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: mio, c: UnitCatalog.KataS3, d: UnitCatalog.Sid, e: UnitCatalog.Kubi)),
         ("M台3 ポンX", MireDiag.PonX(mio)),
         ("M台4 ポンP2", MireDiag.PonP2(mio)),
         ("M台5 毒", MireDiag.WithMio(CompareTou0().First(r => r.Name == "毒 (グザ×ミオ×ラウ)").F, mio)),
@@ -159,12 +159,12 @@ static class ShockDigestDiag
             ? new (string, Formation)[]
             {
                 // 第217期（受け入れ 1）: G0（今のシガ）の台本が実装の前後で一致すること。席は Phase 0 で G0 に選んだ参考の席。
-                ("W1 X", Formation.Build(front1: UnitCatalog.Mio, front3: WhipDiag.G0Def, center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.TouT0)),
-                ("W1 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Kata, c: WhipDiag.G0Def, d: UnitCatalog.TouT0, e: UnitCatalog.Mio)),
-                ("W2 X", Formation.Build(front1: UnitCatalog.Beni, front3: WhipDiag.G0Def, center: UnitCatalog.Mio, back1: UnitCatalog.Kata, back3: UnitCatalog.Kugu)),
-                ("W2 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.Kata, d: WhipDiag.G0Def, e: UnitCatalog.Kugu)),
-                ("W3 X", Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Mio, center: UnitCatalog.Kata, back1: WhipDiag.G0Def, back3: UnitCatalog.Guza)),
-                ("W3 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.Kata, d: WhipDiag.G0Def, e: UnitCatalog.Guza)),
+                ("W1 X", Formation.Build(front1: UnitCatalog.Mio, front3: WhipDiag.G0Def, center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: UnitCatalog.TouT0)),
+                ("W1 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.KataS3, c: WhipDiag.G0Def, d: UnitCatalog.TouT0, e: UnitCatalog.Mio)),
+                ("W2 X", Formation.Build(front1: UnitCatalog.Beni, front3: WhipDiag.G0Def, center: UnitCatalog.Mio, back1: UnitCatalog.KataS3, back3: UnitCatalog.Kugu)),
+                ("W2 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.KataS3, d: WhipDiag.G0Def, e: UnitCatalog.Kugu)),
+                ("W3 X", Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Mio, center: UnitCatalog.KataS3, back1: WhipDiag.G0Def, back3: UnitCatalog.Guza)),
+                ("W3 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.KataS3, d: WhipDiag.G0Def, e: UnitCatalog.Guza)),
                 ("W4 責め苦", WhipDiag.AsG0(CompareTou0().First(r => r.Name == "責め苦 (トウ×シガ)").F)),
                 ("W4 裂き×責め苦", WhipDiag.AsG0(CompareTou0().First(r => r.Name == "裂き×責め苦 (キリ×エグ×シガ)").F)),
             }
@@ -172,10 +172,10 @@ static class ShockDigestDiag
             ? new (string, Formation)[]
             {
                 // 第216期（受け入れ 1）: O0・S0 の台本が第215期と一致すること。台C は Phase 0 で O0 に選んだ参考の席。
-                ("台A", ShockDiag.TableA216(UnitCatalog.Beni, UnitCatalog.Kata)),
-                ("台B", ShockDiag.TableB216(UnitCatalog.Beni, UnitCatalog.Kata)),
-                ("台C X", Formation.Build(front1: UnitCatalog.Mio, front3: UnitCatalog.Kubi, center: UnitCatalog.Beni, back1: UnitCatalog.TouT0, back3: UnitCatalog.Kata)),
-                ("台C P2", Formation.BuildDiamond(a: UnitCatalog.Mio, b: UnitCatalog.Kata, c: UnitCatalog.Beni, d: UnitCatalog.TouT0, e: UnitCatalog.Kubi)),
+                ("台A", ShockDiag.TableA216(UnitCatalog.Beni, UnitCatalog.KataS3)),
+                ("台B", ShockDiag.TableB216(UnitCatalog.Beni, UnitCatalog.KataS3)),
+                ("台C X", Formation.Build(front1: UnitCatalog.Mio, front3: UnitCatalog.Kubi, center: UnitCatalog.Beni, back1: UnitCatalog.TouT0, back3: UnitCatalog.KataS3)),
+                ("台C P2", Formation.BuildDiamond(a: UnitCatalog.Mio, b: UnitCatalog.KataS3, c: UnitCatalog.Beni, d: UnitCatalog.TouT0, e: UnitCatalog.Kubi)),
                 ("台1 X", ShockDiag.Tables()[0].Seats[FormationShape.X]),
                 ("台3 X", ShockDiag.Tables()[2].Seats[FormationShape.X]),
             }

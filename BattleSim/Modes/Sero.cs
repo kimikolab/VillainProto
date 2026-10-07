@@ -51,7 +51,7 @@ static partial class SeroDiag
 
     /// <summary>S3: 状態の矢の台（席は E1 × 九/新兵 × 150/115 で総当たり。これは仮の並び）。</summary>
     internal static Formation BenchS3Raw => Formation.Build(front1: UnitCatalog.Kubi, front3: UnitCatalog.Beni,
-        center: UnitCatalog.Kata, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Mio);
+        center: UnitCatalog.KataS3, back1: UnitCatalog.SeroOld, back3: UnitCatalog.Mio);
 
     /// <summary>S4: セロのいる `compare` の既存の行（席はそのまま）。</summary>
     internal static List<(string Name, Formation F)> CompareRowsWithSero() =>

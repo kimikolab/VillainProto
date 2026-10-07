@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // =====================================================================================
@@ -24,7 +24,7 @@ static partial class ShockDiag
     /// ——`UnitCatalog.Beni` / `Kata` をそのまま O0 / S0 に使うと、規定の札の上に版の札が重なる。
     /// </summary>
     static UnitDef BeniBase => _beniBase ??= WithTraits(UnitCatalog.Beni, UnitCatalog.Beni.Traits.Where(t => !OpeningCards.Contains(t)).ToArray());
-    static UnitDef KataBase => _kataBase ??= WithTraits(UnitCatalog.Kata, UnitCatalog.Kata.Traits.Where(t => !StunCards.Contains(t)).ToArray());
+    static UnitDef KataBase => _kataBase ??= WithTraits(UnitCatalog.KataS3, UnitCatalog.KataS3.Traits.Where(t => !StunCards.Contains(t)).ToArray());
     static UnitDef? _beniBase, _kataBase;
 
     /// <summary>
@@ -51,7 +51,7 @@ static partial class ShockDiag
 
     /// <summary>台の中のベニ・カタ（規定の定義）を版に差し替える。</summary>
     static Formation Versioned(Formation f, string o, string sv)
-        => SwapDef(SwapDef(f, UnitCatalog.Beni, BeniOf(o)), UnitCatalog.Kata, KataOf(sv));
+        => SwapDef(SwapDef(f, UnitCatalog.Beni, BeniOf(o)), UnitCatalog.KataS3, KataOf(sv));
 
     internal sealed record Bench216(string Tag, Formation F, bool Opening);
 
@@ -63,15 +63,15 @@ static partial class ShockDiag
         if (_benches216 is not null) return _benches216;
         var list = new List<Bench216>
         {
-            new("台A", TableA216(UnitCatalog.Beni, UnitCatalog.Kata), true),
-            new("台B", TableB216(UnitCatalog.Beni, UnitCatalog.Kata), true),
+            new("台A", TableA216(UnitCatalog.Beni, UnitCatalog.KataS3), true),
+            new("台B", TableB216(UnitCatalog.Beni, UnitCatalog.KataS3), true),
         };
         foreach (FormationShape sh in Shapes)
         {
             // 席は O2・S0 で選ぶ（第216期の追記: 規定のカタが S2 になったので、S0 の版を明示して差し込む）。
-            var members = TableCMembers.Select(d => d == UnitCatalog.Beni ? BeniOf("O2") : d == UnitCatalog.Kata ? KataOf("S0") : d).ToList();
+            var members = TableCMembers.Select(d => d == UnitCatalog.Beni ? BeniOf("O2") : d == UnitCatalog.KataS3 ? KataOf("S0") : d).ToList();
             Formation picked = PickSeats216(members, sh, Scale115);
-            list.Add(new("台C", SwapDef(SwapDef(picked, BeniOf("O2"), UnitCatalog.Beni), KataOf("S0"), UnitCatalog.Kata), true));
+            list.Add(new("台C", SwapDef(SwapDef(picked, BeniOf("O2"), UnitCatalog.Beni), KataOf("S0"), UnitCatalog.KataS3), true));
         }
         var tables = Tables();
         foreach (int i in new[] { 0, 2 })
@@ -262,7 +262,7 @@ static partial class ShockDiag
             {
                 var members = new List<UnitDef> { BeniOf("O2"), UnitCatalog.Mio, KataOf("S2"), pa, pb };
                 Formation cand = PickSeats216(members, sh, Scale115);
-                Formation seats = SwapDef(SwapDef(cand, BeniOf("O2"), UnitCatalog.Beni), KataOf("S2"), UnitCatalog.Kata);
+                Formation seats = SwapDef(SwapDef(cand, BeniOf("O2"), UnitCatalog.Beni), KataOf("S2"), UnitCatalog.KataS3);
                 var d = new Dictionary<string, Agg216>();
                 foreach (var (sc, rule) in Scales216)
                 {

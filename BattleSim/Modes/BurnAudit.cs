@@ -77,7 +77,7 @@ static partial class BurnAuditDiag
     internal static Formation RefBurn => CompareBuilds().First(r => r.Name.StartsWith("燃焼 (ボルグ×ホタ)")).F;
     /// <summary>参考 雷: ポンの席（前1 シガ ／ 前3 ツギ ／ 中央 ベニ ／ 後1 カタ ／ 後3 ミオ）。</summary>
     internal static Formation RefThunder => Formation.Build(front1: UnitCatalog.ShigaG3K, front3: UnitCatalog.Tsugi,
-        center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio);
+        center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: UnitCatalog.Mio);
     /// <summary>参考 移動: 第228期 H3 の1位の席（前1 バサ ／ 前3 セロ ／ 中央 ヨミ ／ 後1 シオ ／ 後3 ハネ）。駒は第232期の規定。</summary>
     internal static Formation RefMove => Formation.Build(front1: UnitCatalog.Basa, front3: UnitCatalog.SeroS0,   // 第256期: 状態の矢ありの旧セロに固定
         center: UnitCatalog.Yomi, back1: UnitCatalog.Shio, back3: UnitCatalog.HaneR0);

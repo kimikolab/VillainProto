@@ -20,20 +20,20 @@ static partial class ShockDiag
         PlusText = d.PlusText, MinusText = d.MinusText, Flavor = d.Flavor,
     };
 
-    // 第215期に T1（`ThunderPath`）が規定になったので、K2 と K1− も同じ跳ね方に揃えた（K1 ＝ `UnitCatalog.Kata`）。
+    // 第215期に T1（`ThunderPath`）が規定になったので、K2 と K1− も同じ跳ね方に揃えた（K1 ＝ `UnitCatalog.KataS3`）。
     // 第214期の数字（T0 の跳ね方）は `KataT0` と design/PHASE214_KATA_SHOCK.md に残っている。
-    internal static readonly UnitDef KataK2 = WithTraits(UnitCatalog.Kata, TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockTick);
-    internal static readonly UnitDef KataK1m = WithTraits(UnitCatalog.Kata, TraitId.Thunder, TraitId.ThunderPath);
+    internal static readonly UnitDef KataK2 = WithTraits(UnitCatalog.KataS3, TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockTick);
+    internal static readonly UnitDef KataK1m = WithTraits(UnitCatalog.KataS3, TraitId.Thunder, TraitId.ThunderPath);
 
     /// <summary>
     /// 第214期の K1（跳ねの同点は席番号の順＝第215期の T0）。<b>台の席はこれで選ぶ</b>——第215期に規定の札が変わっても、
     /// 台の席は第214期と同じまま（指示書 §6「第214期の台・席をそのまま使う」）。
     /// </summary>
-    internal static readonly UnitDef KataT0 = WithTraits(UnitCatalog.Kata, TraitId.Thunder, TraitId.ThunderLeak);
+    internal static readonly UnitDef KataT0 = WithTraits(UnitCatalog.KataS3, TraitId.Thunder, TraitId.ThunderLeak);
 
     internal static readonly (string Tag, UnitDef Def)[] Versions =
     {
-        ("K1", UnitCatalog.Kata), ("K2", KataK2), ("K1−", KataK1m), ("K0", UnitCatalog.KataOld),
+        ("K1", UnitCatalog.KataS3), ("K2", KataK2), ("K1−", KataK1m), ("K0", UnitCatalog.KataOld),
     };
 
     internal static readonly FormationShape[] Shapes = { FormationShape.X, FormationShape.Diamond };
@@ -58,12 +58,12 @@ static partial class ShockDiag
             if (i == 3)
             {
                 members[members.IndexOf(rep[0].Def)] = UnitCatalog.Susu;   // 血詠みのアカ
-                members[members.IndexOf(rep[1].Def)] = UnitCatalog.Kata;
+                members[members.IndexOf(rep[1].Def)] = UnitCatalog.KataS3;
             }
             else
             {
                 original = rep[0].Def;
-                members[members.IndexOf(rep[0].Def)] = UnitCatalog.Kata;
+                members[members.IndexOf(rep[0].Def)] = UnitCatalog.KataS3;
             }
             var seats = new Dictionary<FormationShape, Formation>();
             foreach (FormationShape sh in Shapes) seats[sh] = PickSeats(members, sh);
@@ -159,7 +159,7 @@ static partial class ShockDiag
 
     static readonly int[] Waves25 = { 1, 2, 3, 4 };
 
-    static Formation WithKata(Formation f, UnitDef kata) => SwapDef(f, UnitCatalog.Kata, kata);
+    static Formation WithKata(Formation f, UnitDef kata) => SwapDef(f, UnitCatalog.KataS3, kata);
 
     static string F1(double x) => double.IsNaN(x) ? "—" : x.ToString("F1");
     static string F2(double x) => double.IsNaN(x) ? "—" : x.ToString("F2");

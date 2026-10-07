@@ -749,6 +749,12 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **第289期: 規定のシガを SG-a にした**（旧の規定は `ShigaG3K`）。**連鎖の後の口 `BattleContext.AfterChain` を足した**——`ShockTrigger` の外側の1回（＝1つの連鎖）が終わった直後に1度だけ呼ぶ。弾けた駒の列を作るのは蓄電・雷の保持者（`_chainReaders`）がいる戦だけ。
   読み手は3つ: カタの雷雲（札 `Thundercloud` ／ `ThundercloudKeep`・KR-a ／ KR-b）、シガの割り込み（札 `ShockWhipBolt` ／ `ShockWhipFlurry`・SI-a ／ SI-b → `BattleContext.ShockWhip`）、計数だけの帳簿（連鎖の起点・その時点の蓄電・生き残り・雷までに弾けた数）。
   割り込みは `CanActOutOfTurn` の**新しい経路 `OutOfTurnRoute.ShockWhip`**（粛で止まる）→ `Interrupt` → 的を固定した `PerformAttack`。鞭の枠に `NoCower` を立て、`ScourgeTrait` は割り込みの鞭では怖気づかない。雷雲の読みは `ThunderTrait.OnAction` の打点の式（攻 × (1 ＋ 種類 ＋ 雷雲)）だけ。
+- **第290期: 規定のシガを SI-b（`ShockWhipFlurry`）・規定のカタを KR-b（`Thundercloud` ／ `ThundercloudKeep`）にした**（旧の規定は `ShigaSGa` ／ `KataS3`・過去の器具はそちらに固定）。
+  **SI-c の札 `ShockWhipKeep`** は `BattleContext.LiveWire` の最後の1行だけを読む——割り込みの鞭（`_shockWhipActor == self`）なら自分の感電を消さない。
+  **糸（札 `Thread` ／ `ThreadCharge`・KG-a ／ KG-b・保持者は `KuguKGa` ／ `KuguKGb` だけ）**: 糸の先は `BattleContext.ThreadTarget`（`GrappleTrait.TargetKey` → ほどけた一撃の間だけの控え `ThreadTrait.MemoKey`）。
+  **曲げるのは2箇所**: ① `ShockTrigger` の放電の段（糸の保持者が弾けたら、隣の味方の代わりに糸の先へ1本）／ ② `Discharge` の入口（隣の味方の放電が糸の保持者に来たら、糸の先へ移す）→ どちらも `ThreadDischarge`（出どころはクグ・味方の刃ではない・撃破者は連鎖を起こした一撃の主）。
+  糸の先が感電していればその一撃で弾けて**同じ連鎖に敵の駒が入る**——連鎖の後の口は陣営ごとに分けて `AfterChain` を呼ぶ（糸が無ければ従来どおり1回）。
+  控えは `GrappleTrait.OnDamaged` がほどく前に書き、`ApplyDamageBody` の起爆の段の直後で消す（`ApplyDamageBody` の順は `OnDamaged` → 死亡 → 起爆なので、そのままだと糸が先に切れる）。**`_threadLive` の比較1つで抜ける。**
 - **第218期の澱みのミオの版（札 `MireSlam` / `MireConduct` / `MireDull` / `MireDullAll` / `MireCarry` / `MireHandoff`・**第219期に M5 ＝ `MireDullAll` 以外の5枚をミオの規定にした**（ポンの判断・札の並びは `MireDiag.VerOf("M5")` と同じ）・M0 は `mire` の診断のローカル）**——
   **叩きつけ・通電は `ConcentrateTrait` の最後から `BattleContext.MireSlam`**（寄せ先は「感電している敵がいればその中から」・`ApplyDamage` を直に呼ぶ＝標的の鎖を通らない・撃破はミオ）。
   **澱みのデバフは `MireCut` の1本を4口**（`PerformAttackBody` の**痺れ毒の直後** ／ `StrikeThunder` ／ `Discharge`（反転しない側）／ 叩きつけ・通電）で、出どころの印 × 10%（上限 40%）を切り捨てで引く。

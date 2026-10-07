@@ -49,7 +49,7 @@ static class Tou279Diag
         ("T3n", "対称の粉・漏れなし（漏れの代金の対照）＋ S3（第286期）", UnitCatalog.TouT3n),
     };
 
-    static Formation Row(string prefix) => FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K);   // 第289期: シガを旧の規定（G3K）に固定
+    static Formation Row(string prefix) => FvSwap(FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Kata, UnitCatalog.KataS3);   // 第289期: シガを旧の規定（G3K）に固定・第290期: カタも旧の規定（S3）に
     static Formation ShockRow => Row("感電 (シガ×カタ×ソム)");
     /// <summary>第273期の帯電の足の検証台（`relic check273` (f)）。</summary>
     static Formation Bench273(UnitDef center) => Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Basa, center: center, back1: UnitCatalog.Sero, back3: UnitCatalog.Hane);
@@ -278,7 +278,7 @@ static class Tou279Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var benches = new (string Name, Func<UnitDef, Formation> Make)[]
         {
-            ("M0 第273期の検証台（中央 カタ・トウなし・版に依らない）", _ => Bench273(UnitCatalog.Kata)),
+            ("M0 第273期の検証台（中央 カタ・トウなし・版に依らない）", _ => Bench273(UnitCatalog.KataS3)),
             ("M1 隊列崩しの中央 ガルド → トウ", Boards[4].Make),
             ("M2 第273期の検証台の中央 カタ → トウ", Boards[5].Make),
             ("E1 感電の行の後3 ミオ → トウ", Boards[2].Make),

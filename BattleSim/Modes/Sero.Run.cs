@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 
 // sero run —— 表A〜F（第223期）。台 S1〜S4 × 波（第2〜5波 ＋ 九/新兵）× 版 × 倍率（115/115・150/115）・seed 0..199。
@@ -236,7 +236,7 @@ static partial class SeroDiag
         // 参考: S3 は天井で 120 通りが同値（R276）。状態の矢を見るため、セロを中央（隣 4 ＝ カタ・ベニの両方の隣）に置いた並びも測る
         //（`PickSeats` の3位と同じ並び・測る前に固定）。
         benches.Add(("S3 中央（参考）", Formation.Build(front1: UnitCatalog.Kubi, front3: UnitCatalog.Beni, center: UnitCatalog.SeroOld,
-                                                       back1: UnitCatalog.Kata, back3: UnitCatalog.Mio)));
+                                                       back1: UnitCatalog.KataS3, back3: UnitCatalog.Mio)));
         foreach (var r in CompareRowsWithSero()) benches.Add(("S4 " + r.Name, r.F));
         foreach (var (n, f) in benches) Console.WriteLine($"- {n}: {SeatsNamed(f)}");
         Console.WriteLine();

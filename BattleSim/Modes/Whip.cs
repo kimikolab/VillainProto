@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 
@@ -40,9 +40,9 @@ static partial class WhipDiag
     /// <summary>W1〜W3 の顔ぶれ（席は総当たりで選ぶ）。</summary>
     internal static readonly (string Tag, string Aim, Func<UnitDef, List<UnitDef>> Members)[] Rigs =
     {
-        ("W1", "弾く役（トウ）", s => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, s, UnitCatalog.TouT0 }),
-        ("W2", "止める役（クグ）", s => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, s, UnitCatalog.Kugu }),
-        ("W3", "台A の枠（グザ）", s => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, s, UnitCatalog.Guza }),
+        ("W1", "弾く役（トウ）", s => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, s, UnitCatalog.TouT0 }),
+        ("W2", "止める役（クグ）", s => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, s, UnitCatalog.Kugu }),
+        ("W3", "台A の枠（グザ）", s => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, s, UnitCatalog.Guza }),
     };
 
     /// <summary>W4 ＝ `compare` でシガのいる行（元の席のまま）。</summary>
@@ -93,8 +93,8 @@ static partial class WhipDiag
         Console.WriteLine();
         Console.WriteLine("- ベニの札: " + string.Join(", ", UnitCatalog.Beni.Traits) + " → O4（`GurenOpeningBurn`）"
                           + (UnitCatalog.Beni.Traits.Contains(TraitId.GurenOpeningBurn) ? " **あり**" : " **なし**"));
-        Console.WriteLine("- カタの札: " + string.Join(", ", UnitCatalog.Kata.Traits) + " → S2（`ShockStunAll`）"
-                          + (UnitCatalog.Kata.Traits.Contains(TraitId.ShockStunAll) ? " **あり**" : " **なし**"));
+        Console.WriteLine("- カタの札: " + string.Join(", ", UnitCatalog.KataS3.Traits) + " → S2（`ShockStunAll`）"
+                          + (UnitCatalog.KataS3.Traits.Contains(TraitId.ShockStunAll) ? " **あり**" : " **なし**"));
         Console.WriteLine("- シガ: HP" + UnitCatalog.ShigaG3K.MaxHp + "・攻" + UnitCatalog.ShigaG3K.Attack + "・速" + UnitCatalog.ShigaG3K.Speed + "・" + UnitCatalog.ShigaG3K.Pattern
                           + "・札 " + string.Join(", ", UnitCatalog.ShigaG3K.Traits));
         Console.WriteLine();

@@ -230,10 +230,10 @@ static class Som276Diag
 
     /// <summary>検証・雷ソムA: ポンの席の中央（ベニ）をソムに（攻め寄り）。</summary>
     internal static Formation RowA(UnitDef som) => Formation.Build(front1: UnitCatalog.ShigaG3K, front3: UnitCatalog.Tsugi,
-        center: som, back1: UnitCatalog.Kata, back3: UnitCatalog.Mio);
+        center: som, back1: UnitCatalog.KataS3, back3: UnitCatalog.Mio);
     /// <summary>検証・雷ソムB: ポンの席の後3（ミオ）をソムに。</summary>
     internal static Formation RowB(UnitDef som) => Formation.Build(front1: UnitCatalog.ShigaG3K, front3: UnitCatalog.Tsugi,
-        center: UnitCatalog.Beni, back1: UnitCatalog.Kata, back3: som);
+        center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: som);
 
     /// <summary>旧ソム（背かれ）を含む戦の台本の指紋。本編の5波 ＋ ボス規定形 ＋ チェック波の規定の組 × seed 0..49。</summary>
     static void Digest()

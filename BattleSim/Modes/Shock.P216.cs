@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using BattleCore;
 using static Common;
 
@@ -25,7 +25,7 @@ static partial class ShockDiag
         a: kata, b: UnitCatalog.Guza, c: beni, d: UnitCatalog.Sid, e: UnitCatalog.Mio);
 
     /// <summary>台C（3体で完結の試し・グザ無し）の顔ぶれ。席は総当たりで選ぶ。</summary>
-    internal static List<UnitDef> TableCMembers => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, UnitCatalog.Kubi, UnitCatalog.TouT0 };
+    internal static List<UnitDef> TableCMembers => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, UnitCatalog.Kubi, UnitCatalog.TouT0 };
 
     /// <summary>その陣形で「前衛」にあたる枠（X字 ＝ 前1・前3 ／ パターン2 ＝ 前衛）。</summary>
     static int[] FrontFrames(FormationShape s) => s == FormationShape.X ? new[] { 0, 1 } : new[] { 3 };
@@ -176,7 +176,7 @@ static partial class ShockDiag
         Console.WriteLine();
         Console.WriteLine("`BattleEngine.Run` は開戦の通知を**速さの降順**で回し、同速の群だけを `ctx.Shuffle` で混ぜる（行動順と同じ）。");
         Console.WriteLine();
-        var pool = new List<UnitDef> { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.Kata, UnitCatalog.Guza, UnitCatalog.Kubi, UnitCatalog.Sid,
+        var pool = new List<UnitDef> { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, UnitCatalog.Guza, UnitCatalog.Kubi, UnitCatalog.Sid,
                                        UnitCatalog.TouT0, UnitCatalog.Nel, UnitCatalog.Kugu };
         Console.WriteLine("| 駒 | 速 | `OnBattleStart` を上書きする札 |");
         Console.WriteLine("|---|--:|---|");
@@ -227,8 +227,8 @@ static partial class ShockDiag
         foreach (FormationShape sh in Shapes) cSeats[sh] = PickSeats216(TableCMembers, sh, Scale115);
         var tabs = new List<(string Tag, Formation F)>
         {
-            ("台A", TableA216(UnitCatalog.Beni, UnitCatalog.Kata)),
-            ("台B", TableB216(UnitCatalog.Beni, UnitCatalog.Kata)),
+            ("台A", TableA216(UnitCatalog.Beni, UnitCatalog.KataS3)),
+            ("台B", TableB216(UnitCatalog.Beni, UnitCatalog.KataS3)),
             ("台C（参考・O0 で選んだ席）", cSeats[FormationShape.X]),
             ("台C（参考・O0 で選んだ席）", cSeats[FormationShape.Diamond]),
         };

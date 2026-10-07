@@ -2028,6 +2028,23 @@ public sealed class UnitTally
     public long[]? ChainIniHist, ChainChargeHist, ChainAliveHist, ThunderPopsHist;
 
     /// <summary>
+    /// 第290期（<b>計数専用</b>）。<b>シガ（SI-c）</b>: <c>SwKeptShock</c> 割り込みの鞭で感電を残した。
+    /// <b>クグ（組み付きの保持者）</b>: <c>KuguTurns</c>・<c>KuguShockTurns</c>・<c>KuguHeldTurns</c>・<c>KuguBothTurns</c> 手番の頭で生きていた・帯電していた・組み付いていた・両方 ／
+    /// <c>KuguHeldGrappled</c> 組んだ相手に組み付きが立っていた ／ <c>KuguShockBySrc</c>[書き手] 帯電した（0 トウ ／ 1 カタ ／ 2 ソム ／ 3 ほかの味方 ／ 4 自分・敵）／
+    /// <c>KuguPopHit</c>（<c>KuguPopHitFoe</c> 敵に殴られて ／ <c>KuguPopHitHeld</c> そのとき組み付いていた）一撃で弾けた ／ <c>KuguPopChain</c>（<c>KuguPopChainHeld</c>）隣の放電の連鎖で弾けた ／
+    /// <c>KuguDisIn</c>（<c>KuguDisInHeld</c>）隣の味方の放電が来た。
+    /// <b>糸（KG-a ／ KG-b）</b>: <c>ThreadSelf</c> ① 自分の弾けが糸を伝った ／ <c>ThreadRelay</c> ② 隣の放電を移した ／ <c>ThreadDealt</c>・<c>ThreadKills</c> 糸の放電で減らした HP・倒した ／
+    /// <c>ThreadPopped</c> 糸の放電で敵の感電が弾けた ／ <c>ThreadCrossPops</c> 糸を伝って敵の陣で弾けた延べ ／ <c>ThreadCharged</c> KG-b で帯電させた ／
+    /// <c>ThreadMarkRoots</c>・<c>ThreadMarkChainUnits</c> 帯電させた敵が起点で弾けた連鎖の数と大きさ。
+    /// </summary>
+    public long SwKeptShock, KuguTurns, KuguShockTurns, KuguHeldTurns, KuguBothTurns, KuguHeldGrappled,
+                KuguPopHit, KuguPopHitFoe, KuguPopHitHeld, KuguPopChain, KuguPopChainHeld, KuguDisIn, KuguDisInHeld,
+                ThreadSelf, ThreadRelay, ThreadDealt, ThreadKills, ThreadPopped, ThreadCrossPops, ThreadCharged, ThreadMarkRoots, ThreadMarkChainUnits;
+    public long[]? KuguShockBySrc;
+    /// <summary>第290期（<b>計数専用</b>・カタ）: <c>CloudByCast</c>[n] n+1 回目の雷を落とした時点の雷雲の合計（8 回目以降は最後の枠）。</summary>
+    public long[]? CloudByCast;
+
+    /// <summary>
     /// 第218期（<b>計数専用</b>・澱みのミオ）。<b>ミオの側</b>: <c>MireSlams</c> 叩きつけた ／ <c>MireSlamDry</c> 寄せ先が無くて叩けなかった ／
     /// <c>MireSlamOnShocked</c> 叩きつける相手が感電していた ／ <c>MireSlamPops</c>・<c>MireConductPops</c> その一撃で感電が弾けた（叩きつけ／通電）／
     /// <c>MireSlamDealt</c>・<c>MireSlamKills</c> 叩きつけと通電で与えた量・倒した数 ／ <c>MireConducts</c> 通電が中心の外へ走った回数 ／
@@ -3082,6 +3099,13 @@ public sealed class UnitTally
         ThunderNominal += o.ThunderNominal;
         AddHist(ref ChainIniHist, o.ChainIniHist); AddHist(ref ChainChargeHist, o.ChainChargeHist);
         AddHist(ref ChainAliveHist, o.ChainAliveHist); AddHist(ref ThunderPopsHist, o.ThunderPopsHist);
+        // 第290期
+        SwKeptShock += o.SwKeptShock; KuguTurns += o.KuguTurns; KuguShockTurns += o.KuguShockTurns; KuguHeldTurns += o.KuguHeldTurns; KuguBothTurns += o.KuguBothTurns;
+        KuguHeldGrappled += o.KuguHeldGrappled; KuguPopHit += o.KuguPopHit; KuguPopHitFoe += o.KuguPopHitFoe; KuguPopHitHeld += o.KuguPopHitHeld;
+        KuguPopChain += o.KuguPopChain; KuguPopChainHeld += o.KuguPopChainHeld; KuguDisIn += o.KuguDisIn; KuguDisInHeld += o.KuguDisInHeld;
+        ThreadSelf += o.ThreadSelf; ThreadRelay += o.ThreadRelay; ThreadDealt += o.ThreadDealt; ThreadKills += o.ThreadKills; ThreadPopped += o.ThreadPopped;
+        ThreadCrossPops += o.ThreadCrossPops; ThreadCharged += o.ThreadCharged; ThreadMarkRoots += o.ThreadMarkRoots; ThreadMarkChainUnits += o.ThreadMarkChainUnits;
+        AddHist(ref KuguShockBySrc, o.KuguShockBySrc); AddHist(ref CloudByCast, o.CloudByCast);
         // 第218期
         MireSlams += o.MireSlams; MireSlamDry += o.MireSlamDry; MireSlamOnShocked += o.MireSlamOnShocked; MireSlamPops += o.MireSlamPops;
         MireConductPops += o.MireConductPops; MireSlamDealt += o.MireSlamDealt; MireSlamKills += o.MireSlamKills;
