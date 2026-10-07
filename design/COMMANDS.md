@@ -877,6 +877,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 shock287 grid <ボス|近衛|大隊>   # 第287期 段2: 感電軸の格子（トウ T3 ＋ シガ ＋ 探索枠3・候補 21 枚・ヒーラー ≦ 1 × 席 120 ＝ 120,120 台）→ 足切り seed 0..19 → seed 0..199 → ドルガ対照（各 3〜18 分）
     dotnet run --project BattleSim -c Release 0 shock287 check    # 第287期 自己検査（固定枠・組・席・軽い口と詳しい口・ドルガ対照・決定性）
     dotnet run --project BattleSim -c Release 0 shock287 log <波> <短い名前を ・ で5つ（前1・前3・中央・後1・後3）> [seed]   # 第287期 1戦のログ
+    dotnet run --project BattleSim -c Release 0 shiga288 p0       # 第288期 Phase 0: 規定のシガの感電の出入り（書き手ごとの付与・弾け・電気鞭）・振り数・0 → 4 の手番（代表台 15 台・2 秒）。本体は `Modes/Shiga288.cs`
+    dotnet run --project BattleSim -c Release 0 shiga288 compare  # 第288期: `compare` 64 行 × 5 波 × シガの版 規定 ／ SG-a ／ SG-b ／ SG-c ／ 参考 SG-c′（シガのいない 305 セルのずれ・主判定・情報セル・−10pt の行）
+    dotnet run --project BattleSim -c Release 0 shiga288 boards   # 第288期: 代表台 15 台 × 版（勝率・振・怖気・蓄電・雷霆・与ダメの内訳・供給源・手数の判定材料・トウ ／ シガ ／ カタ → ドルガ）（10 秒）
+    dotnet run --project BattleSim -c Release 0 shiga288 grid <ボス|近衛|大隊|boss|guard|bat> <規定|SG-a|SG-b|SG-c|SG-c′|def|a|b|c|cp>   # 第288期: 第287期の格子（トウ ＋ シガの版 ＋ 探索枠3）・届いた台のシガ → ドルガ（ボス 約 85 秒・精鋭 12〜15 分）
+    dotnet run --project BattleSim -c Release 0 shiga288 check    # 第288期 自己検査（規定は不変・版の札・蓄電の帳簿と上限・電気鞭で減らない・雷霆は 4 のときだけ／起爆しない・孤立・軽い口と詳しい口・決定性・乱数の走査）
+    dotnet run --project BattleSim -c Release 0 shiga288 log <波> <版> <短い名前を ・ で5つ> [seed]   # 第288期 1戦のログ
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

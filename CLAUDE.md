@@ -185,13 +185,13 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 
 **本文と索引は `design/RULES_*.md`**（`RULES_001_097.md` / `RULES_098_173.md` / `RULES_174_242.md` / `RULES_243_.md`・索引の表は `design/RULES_INDEX.md`）。
 **ID（`R001`〜）で grep すること。ID は永続で、欠番になっても再利用しない。**
-新しい則は `RULES_243_.md` の末尾に次の ID（`R384` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
+新しい則は `RULES_243_.md` の末尾に次の ID（`R385` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
 
 ## 現状値
 
 **期ごとの報告は `design/HISTORY_PHASES.md`**（この節から逐語で移した。以後の期はそちらの冒頭に足し、ここのブロックは差し替える）。
 
-**最後に動かした期: 第287期**（**トウを T3（対称の粉・漏れあり）に規定化・A6 ＋ シガの怖気の確認 ＋ 感電軸の台探索（ボス・近衛・大隊・`shock287`）**。報告は `design/PHASE287_SHOCK_AXIS_GRID.md`）。第286期のミサ M-b の規定化とトウ T3 の測定は `design/PHASE286_TOU_SPREAD.md`、第285期の改名・羽・`CLAUDE.md` の圧縮は `design/PHASE285_MISA_FEATHERS.md`、第284期の精鋭波は `design/PHASE284_ELITE_WAVE.md`、第283期のボスの標台（標軸の格子）は `design/PHASE283_BOSS_MARK_SQUAD.md`、第279期のトウの転生と凍結庫は `design/PHASE279_TOU_REBIRTH.md`、第280期の sweep 現役網は `design/PHASE280_SWEEP_REBUILD.md`。転生段の棚卸しは `design/PHASE275_ROSTER_INVENTORY.md`、レリック段のまとめは `design/RELIC_SUMMARY.md`。
+**最後に動かした期: 第288期**（**シガの蓄電の版 SG-a ／ SG-b ／ SG-c を測定・規定のシガは G3K のまま**。報告は `design/PHASE288_SHIGA_CHARGE.md`）。第287期のトウの規定化（T3）と感電軸の台探索は `design/PHASE287_SHOCK_AXIS_GRID.md`、第286期のミサ M-b の規定化とトウ T3 の測定は `design/PHASE286_TOU_SPREAD.md`、第285期の改名・羽・`CLAUDE.md` の圧縮は `design/PHASE285_MISA_FEATHERS.md`、第284期の精鋭波は `design/PHASE284_ELITE_WAVE.md`、第283期のボスの標台（標軸の格子）は `design/PHASE283_BOSS_MARK_SQUAD.md`、第279期のトウの転生と凍結庫は `design/PHASE279_TOU_REBIRTH.md`、第280期の sweep 現役網は `design/PHASE280_SWEEP_REBUILD.md`。転生段の棚卸しは `design/PHASE275_ROSTER_INVENTORY.md`、レリック段のまとめは `design/RELIC_SUMMARY.md`。
 **改名の対応（第285期）**: 止めのトメ → 見境なしのミサ（`Id = "tome"`・識別子 `UnitCatalog.Tome` ほかは据え置き）／ 行名 `止め (トメ×ソラ)` → `見境 (ミサ×ソラ)`・`止め改 (トメ×薙ぎ)` → `見境改 (ミサ×薙ぎ)`・`標経済 (ヒサ×ザン×トメ)` → `標経済 (ヒサ×ザン×ミサ)` ／ 精鋭の波 `精鋭・五` → `近衛`・`精鋭・九` → `大隊`。過去の `design/` は旧名のまま（名前で引く器具は `Common.UnitRenames`）。
 **最後に `compare` が動いた期: 第287期**（規定のトウ T0 → T3。動いたのは 責め苦 第2波 100 → 96.0・第5波 91.0 → 85.0 と 毒+耐久 第5波 100 → 99.5 だけ・ほかの 62 行 310 セルは 0 件）。
 

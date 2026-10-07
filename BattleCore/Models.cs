@@ -2006,6 +2006,17 @@ public sealed class UnitTally
     public long[]? WhipHitsHist, WhipPopsHist;
 
     /// <summary>
+    /// 第288期（<b>計数専用</b>・シガの蓄電の版）。<b>蓄電の保持者の側</b>: <c>ChargeGains</c> 蓄電が増えた ／ <c>ChargeCapped</c> 上限で溜まらなかった新しい感電 ／
+    /// <c>ChargeBySrc</c>[書き手] 増えた蓄電の書き手（0 トウ ／ 1 カタ ／ 2 ソム ／ 3 ほかの味方 ／ 4 自分・敵）／ <c>ChargeFulls</c> 上限に達した回数 ／ <c>ChargeFullTurn</c> 初めて上限に達したT（0 は未到達）／
+    /// <c>ChargeAtSwing</c> 鞭を振り始めたときの蓄電の合計 ／ <c>WhipBase</c> 鞭の名目（2倍の前・当たる駒ごと）。
+    /// <b>雷霆</b>: <c>BoltCasts</c> 雷霆の手番 ／ <c>BoltDry</c> そのうち感電していた敵に当たらなかった ／ <c>BoltHits</c> 雷霆の追加を当てた延べ ／ <c>BoltLoneHits</c> うち孤立の2倍 ／
+    /// <c>BoltNominal</c> 追加の名目 ／ <c>BoltLoneNominal</c> そのうち孤立の上乗せ ／ <c>BoltDealt</c> 追加で実際に減った HP ／ <c>BoltKills</c> 追加で倒した ／ <c>BoltOnShocked</c> 追加が感電している駒に当たった ／ <c>BoltMuted</c> そのうち当てた後も感電が残っていた（起爆しなかった）。
+    /// </summary>
+    public long ChargeGains, ChargeCapped, ChargeFulls, ChargeFullTurn, ChargeAtSwing, WhipBase,
+                BoltCasts, BoltDry, BoltHits, BoltLoneHits, BoltNominal, BoltLoneNominal, BoltDealt, BoltKills, BoltOnShocked, BoltMuted;
+    public long[]? ChargeBySrc;
+
+    /// <summary>
     /// 第218期（<b>計数専用</b>・澱みのミオ）。<b>ミオの側</b>: <c>MireSlams</c> 叩きつけた ／ <c>MireSlamDry</c> 寄せ先が無くて叩けなかった ／
     /// <c>MireSlamOnShocked</c> 叩きつける相手が感電していた ／ <c>MireSlamPops</c>・<c>MireConductPops</c> その一撃で感電が弾けた（叩きつけ／通電）／
     /// <c>MireSlamDealt</c>・<c>MireSlamKills</c> 叩きつけと通電で与えた量・倒した数 ／ <c>MireConducts</c> 通電が中心の外へ走った回数 ／
@@ -3047,6 +3058,12 @@ public sealed class UnitTally
         WhipCheckSplashMovable += o.WhipCheckSplashMovable; WhipCheckWiredLeft += o.WhipCheckWiredLeft; WhipCheckShouldCower += o.WhipCheckShouldCower;
         AddHist(ref WhipHitsHist, o.WhipHitsHist);
         AddHist(ref WhipPopsHist, o.WhipPopsHist);
+        // 第288期
+        ChargeGains += o.ChargeGains; ChargeCapped += o.ChargeCapped; ChargeFulls += o.ChargeFulls; ChargeFullTurn += o.ChargeFullTurn;
+        ChargeAtSwing += o.ChargeAtSwing; WhipBase += o.WhipBase;
+        BoltCasts += o.BoltCasts; BoltDry += o.BoltDry; BoltHits += o.BoltHits; BoltLoneHits += o.BoltLoneHits; BoltNominal += o.BoltNominal;
+        BoltLoneNominal += o.BoltLoneNominal; BoltDealt += o.BoltDealt; BoltKills += o.BoltKills; BoltOnShocked += o.BoltOnShocked; BoltMuted += o.BoltMuted;
+        AddHist(ref ChargeBySrc, o.ChargeBySrc);
         // 第218期
         MireSlams += o.MireSlams; MireSlamDry += o.MireSlamDry; MireSlamOnShocked += o.MireSlamOnShocked; MireSlamPops += o.MireSlamPops;
         MireConductPops += o.MireConductPops; MireSlamDealt += o.MireSlamDealt; MireSlamKills += o.MireSlamKills;

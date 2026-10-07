@@ -742,6 +742,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   **判定の時点が違う**——2倍は当てる前、怖気づき・悲鳴は一撃の後（今の責め苦・見せしめと同じ）。見せしめの「動けない敵を優先」は鞭の保持者だけ薙ぎにも通す（`SelectTargetChain` の同じ段）。
   電気鞭はシガの感電を `SetCounter(Shock, 0)` で**弾けさせずに消す**（`ShockTrigger` を通さない）。G3H の印 `ShockRule.GuardKey` は竦みのハメ防止と同じ形で**敵味方を問わない**。
   表示専用の `BattleEventKind.LiveWire`（直後に敵ごとの感電の `StatusGain`）。**責め鞭の保持者がいなければ `_whipLive` の比較1つで抜ける。**
+- **第288期のシガの蓄電の版（札 `StoredCharge` / `Thunderclap` / `ThunderclapLone` ／ 参考 `ThunderclapAny`・保持者は `ShigaSGa` ／ `SGb` ／ `SGc` ／ `SGcAny` だけ＝`All` に 0 枚）**——
+  **蓄電の口は `MarkShock` の1行**（新しく感電が付いたとき・`_chargeLive` の比較1つで抜ける → `GainCharge`・上限 4・私有キー `StoredChargeTrait.Key`）。攻撃力の上乗せは `ModifyAttack`（自己強化なので窓口を通さない）。
+  **雷霆の枠は `WhipSwing.Bolt`**（振り始めに蓄電 4・手番の鞭だけ）で、的は `WhipAmount` が控える（当たる前に感電していた敵・参考 `ThunderclapAny` なら当たった敵すべて）。撃つのは `BattleContext.Thunderclap`（`ApplyDamage` の直呼び）。
+  **感電の札に 4（雷霆・起爆しない）を足した**——`ApplyDamageBody` の起爆の段で 4 は何もしない（電気鞭が付け直した感電を雷霆が弾かせない）。
 - **第218期の澱みのミオの版（札 `MireSlam` / `MireConduct` / `MireDull` / `MireDullAll` / `MireCarry` / `MireHandoff`・**第219期に M5 ＝ `MireDullAll` 以外の5枚をミオの規定にした**（ポンの判断・札の並びは `MireDiag.VerOf("M5")` と同じ）・M0 は `mire` の診断のローカル）**——
   **叩きつけ・通電は `ConcentrateTrait` の最後から `BattleContext.MireSlam`**（寄せ先は「感電している敵がいればその中から」・`ApplyDamage` を直に呼ぶ＝標的の鎖を通らない・撃破はミオ）。
   **澱みのデバフは `MireCut` の1本を4口**（`PerformAttackBody` の**痺れ毒の直後** ／ `StrikeThunder` ／ `Discharge`（反転しない側）／ 叩きつけ・通電）で、出どころの印 × 10%（上限 40%）を切り捨てで引く。

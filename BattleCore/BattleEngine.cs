@@ -1169,7 +1169,16 @@ public sealed class BattleContext
         /// <summary>当たった駒（主目標が先頭・巻き込みは当てた順）。</summary>
         public readonly List<UnitState> Hits = new();
         public long PopsBefore;
+        /// <summary>第288期: 雷霆の手番（蓄電が上限で振り始めた・<see cref="TraitId.Thunderclap"/> の保持者だけ真）。</summary>
+        public bool Bolt { get; init; }
+        /// <summary>第288期（参考 SG-c′）: 雷霆の的を当たった敵すべてにする。</summary>
+        public bool BoltAny { get; init; }
+        /// <summary>第288期: 当たったとき感電していた敵（雷霆の的・当てた順）。</summary>
+        public readonly List<UnitState> BoltTargets = new();
     }
+
+    /// <summary>蓄電（第288期・<see cref="TraitId.StoredCharge"/>）の保持者が戦闘に出たか。<b>いなければ <c>MarkShock</c> は比較1つで抜ける。</b></summary>
+    bool _chargeLive;
 
     WhipSwing? _whip;
 
@@ -1182,6 +1191,11 @@ public sealed class BattleContext
         w.Hits.Add(t);
         UnitTally wt = TallyOf(w.Actor);
         wt.WhipHits++;
+        if (_chargeLive)
+        {
+            wt.WhipBase += amount;   // 第288期・計数のみ
+            if (w.Bolt && (w.BoltAny || t.RawCounter(StatusKeys.Shock) > 0)) w.BoltTargets.Add(t);   // 当たる前の感電（この一撃で弾ける）
+        }
         bool bound = TormentTrait.IsBound(this, t);
         bool shocked = !bound && w.CountShock && t.RawCounter(StatusKeys.Shock) > 0;
         if (!bound && !shocked) return amount;
@@ -1219,7 +1233,7 @@ public sealed class BattleContext
 
     /// <summary>
     /// 次の <c>ApplyDamage</c> 1回にだけ効く札（逸らしの <c>_deflectFrom</c> と同じ作法・<c>ApplyDamageBody</c> の最初の行で読んで消す）。
-    /// 0 通常 ／ 1 雷（起爆しない）／ 2 刻み（K2 のときだけ起爆する）／ 3 放電。
+    /// 0 通常 ／ 1 雷（起爆しない）／ 2 刻み（K2 のときだけ起爆する）／ 3 放電 ／ 4 雷霆（第288期・起爆しない）。
     /// </summary>
     byte _shockNext;
 
@@ -1249,7 +1263,70 @@ public sealed class BattleContext
         if (writer.TeamId == target.TeamId) wt.ShockOnAlly++; else wt.ShockOnFoe++;
         TallyOf(target).ShockReceived++;   // 第217期（計数のみ）
         EmitStatusGain(target, StatusKeys.Shock, 1, writer);   // 表示専用
+        if (_chargeLive && target.HasTrait(TraitId.StoredCharge)) GainCharge(target, writer);   // 第288期（蓄電の口・ここ1箇所）
         return true;
+    }
+
+    /// <summary>
+    /// 蓄電が1つ増える（第288期・<see cref="MarkShock"/> だけが呼ぶ）。上限 <see cref="StoredChargeTrait.Cap"/>。<b>乱数を引かない。</b>
+    /// </summary>
+    void GainCharge(UnitState u, UnitState writer)
+    {
+        UnitTally t = TallyOf(u);
+        int c = StoredChargeTrait.Of(u);
+        if (c >= StoredChargeTrait.Cap) { t.ChargeCapped++; return; }
+        u.SetCounter(StoredChargeTrait.Key, c + 1);
+        t.ChargeGains++;
+        int src = writer == u || writer.TeamId != u.TeamId ? 4
+                : writer.Def.Id == "tou" ? 0 : writer.Def.Id == "kata" ? 1 : writer.Def.Id == "som" ? 2 : 3;
+        (t.ChargeBySrc ??= new long[5])[src]++;
+        if (c + 1 == StoredChargeTrait.Cap)
+        {
+            t.ChargeFulls++;
+            if (t.ChargeFullTurn == 0) t.ChargeFullTurn = _turn;
+            Log($"    {u.Name} の身に雷が溜まりきった（蓄電 {c + 1}）", LogKind.Trigger);
+        }
+        else Log($"    {u.Name} に電気が溜まる（蓄電 {c + 1}）", LogKind.Status);
+    }
+
+    /// <summary>
+    /// 雷霆（第288期・<see cref="ThunderclapTrait"/> が呼ぶ）。枠に控えた「当たったとき感電していた敵」のうち生きている駒それぞれに、
+    /// 攻撃力 × <see cref="ThunderclapTrait.Multiplier"/>（孤立への雷霆の保持者なら、隣の味方が1体もいない敵には ×<see cref="ThunderclapLoneTrait.Factor"/>）を
+    /// <c>ApplyDamage</c> の直呼びで足す（<b>起爆しない</b>・札 4）。撃ち終えたら蓄電 0。<b>乱数を引かない。</b>
+    /// </summary>
+    public void Thunderclap(UnitState self, WhipSwing w)
+    {
+        UnitTally t = TallyOf(self);
+        t.BoltCasts++;
+        int atk = self.CurrentAttack;   // 蓄電 4 の攻撃力（0 に戻す前）
+        bool loneRule = self.HasTrait(TraitId.ThunderclapLone);
+        var targets = w.BoltTargets.Distinct().Where(h => h.IsAlive && h.TeamId != self.TeamId).ToList();
+        if (targets.Count == 0) t.BoltDry++;
+        else Log($"    {self.Name} の溜めた雷が鞭から迸る——雷霆（{targets.Count} 体）", LogKind.Highlight, self);
+        foreach (UnitState u in targets)
+        {
+            if (!u.IsAlive) continue;
+            int amt = atk * ThunderclapTrait.Multiplier;
+            if (loneRule && !LivingMembers(u.TeamId).Any(n => n != u && FormationRules.AreAdjacent(u, n)))
+            {
+                t.BoltLoneHits++;
+                t.BoltLoneNominal += amt * (ThunderclapLoneTrait.Factor - 1);
+                amt *= ThunderclapLoneTrait.Factor;
+                Log($"    孤立した {u.Name} を雷霆が深く焼く（{amt}）", LogKind.Damage);
+            }
+            else Log($"    雷霆が {u.Name} を焼く（{amt}）", LogKind.Damage);
+            t.BoltHits++;
+            t.BoltNominal += amt;
+            int before = u.Hp;
+            bool shocked = u.RawCounter(StatusKeys.Shock) > 0;   // 計数のみ（自己検査: 雷霆は起爆しない）
+            _shockNext = 4;
+            ApplyDamage(u, amt, self);
+            _shockNext = 0;
+            if (shocked) { t.BoltOnShocked++; if (u.RawCounter(StatusKeys.Shock) > 0) t.BoltMuted++; }
+            t.BoltDealt += before - Math.Max(0, u.Hp);
+            if (before > 0 && !u.IsAlive) t.BoltKills++;
+        }
+        self.SetCounter(StoredChargeTrait.Key, 0);
     }
 
     /// <summary>帯電の粉が新しく感電を付けた（第286期・<see cref="ChargedPowderTrait"/> だけが呼ぶ・<b>計数のみ</b>）。</summary>
@@ -7092,6 +7169,7 @@ public sealed class BattleContext
         // 据えた足（入れ替えの空振り）。**保持者がいなければ比較1つで抜ける**——既存の行が 0 件差分であることの根拠。
         if (u.HasTrait(TraitId.Grapple) || u.HasTrait(TraitId.Shame)) _restrainLive = true;
         if (u.HasTrait(TraitId.Scourge)) _whipLive = true;                 // 第217期（鞭の枠と2倍）
+        if (u.HasTrait(TraitId.StoredCharge)) _chargeLive = true;          // 第288期（蓄電の口・雷霆の枠）
         if (u.HasTrait(TraitId.LiveWireGuard)) _shockStunGuard = true;     // 第217期（G3H）
         // 第218期（澱みのミオの版・M3〜M5）。**保持者がいなければ比較1つで抜ける。**
         if (u.HasTrait(TraitId.MireDull) || u.HasTrait(TraitId.MireDullAll))
@@ -10333,9 +10411,13 @@ public sealed class BattleContext
                 Wired = actor.HasTrait(TraitId.LiveWire) && actor.RawCounter(StatusKeys.Shock) > 0,
                 CountShock = actor.HasTrait(TraitId.ScourgeShock),
                 PopsBefore = TallyOf(actor).ShockTriggeredUnits,
+                // 第288期: 雷霆は手番の鞭だけ（反撃・割り込みの一振りでは撃たない）。保持者がいなければ比較1つで抜ける。
+                Bolt = _chargeLive && actor.HasTrait(TraitId.Thunderclap) && StoredChargeTrait.Of(actor) >= StoredChargeTrait.Cap && !InReaction && !InInterrupt,
+                BoltAny = _chargeLive && actor.HasTrait(TraitId.ThunderclapAny),
             };
             _whip = whip;
             TallyOf(actor).WhipSwings++;
+            if (_chargeLive) TallyOf(actor).ChargeAtSwing += actor.RawCounter(StoredChargeTrait.Key);   // 第288期・計数のみ
         }
 
         // 範囲の盾（第185期・バン）。**この一撃が盾の持ち主にも当たるか**を、振る前の盤面で決める
@@ -11604,7 +11686,8 @@ public sealed class BattleContext
         {
             bool tick = shockNote == 2 || burnTick;
             bool thunderPop = shockNote == 1 && _thunderPopLive && target.RawCounter(BetrayedShockTrait.ThunderPopKey) > 0;   // 第276期（S1p）
-            if (shockNote == 1 && !thunderPop) TallyOf(target).ShockThunderMuted++;          // 計数のみ（自己検査: 雷は起爆しない）
+            if (shockNote == 4) { }                                                            // 第288期: 雷霆は起爆しない（計数は `Thunderclap` の側）
+            else if (shockNote == 1 && !thunderPop) TallyOf(target).ShockThunderMuted++;          // 計数のみ（自己検査: 雷は起爆しない）
             else if (tick && !_shockTickLive) TallyOf(target).ShockTickMuted++; // 計数のみ（自己検査: K1 の刻みは起爆しない）
             else ShockTrigger(target, shockKillerSet ? shockKiller : tick ? null : source, tick ? 1 : source is null ? 2 : 0);
         }

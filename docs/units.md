@@ -427,6 +427,10 @@
 | `Spray` | - |
 | `Feathers` | 見境なしのミサ |
 | `FeatherLoss` | 見境なしのミサ |
+| `StoredCharge` | - |
+| `Thunderclap` | - |
+| `ThunderclapLone` | - |
+| `ThunderclapAny` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

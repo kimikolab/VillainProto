@@ -1704,6 +1704,73 @@ public static class UnitCatalog
         Flavor = "縛られた的しか殴れない臆病者。雷に打たれている間だけは、怖さも痺れて感じない。"
     };
 
+    // 第288期 —— シガの蓄電の版（指示書 design/PHASE288_SHIGA_CHARGE_SPEC.md）。**規定のシガは触らない**（採否はポン）。
+    // 体・札の並び・マイナス・フレーバーは規定のまま、末尾に札を足すだけ。`All` にも `Retired` にも入れない。
+
+    /// <summary>第288期 SG-a（育つだけ）。規定 ＋ <see cref="TraitId.StoredCharge"/>（帯電するたび蓄電 +1・上限 4・蓄電1つにつき攻撃力 +3）。</summary>
+    public static readonly UnitDef ShigaSGa = new()
+    {
+        Id = "shiga",
+        Name = "電気鞭のシガ",
+        MaxHp = 52,
+        Attack = 9,
+        Speed = 3,
+        Pattern = AttackPattern.Sweep,
+        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge },
+        PlusText = "動けない敵を優先して鞭で薙ぐ。動けない敵には2倍で入り、その悲鳴で隣の敵を竦ませる（1手番に1回）。感電しているあいだは怖気づかず、打った敵に感電を移す。"
+                 + "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる",
+        MinusText = Shiga.MinusText,
+        Flavor = Shiga.Flavor
+    };
+
+    /// <summary>第288期 SG-b（育てて放つ）。SG-a ＋ <see cref="TraitId.Thunderclap"/>（蓄電 4 で迎えた手番の鞭が雷霆になる・撃ち終えたら蓄電 0）。</summary>
+    public static readonly UnitDef ShigaSGb = new()
+    {
+        Id = "shiga",
+        Name = "電気鞭のシガ",
+        MaxHp = 52,
+        Attack = 9,
+        Speed = 3,
+        Pattern = AttackPattern.Sweep,
+        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.Thunderclap },
+        PlusText = ShigaSGa.PlusText + "。溜まりきると、次の鞭は雷霆になる——感電した敵を雷で焼き、溜めた電気を使い果たす",
+        MinusText = Shiga.MinusText,
+        Flavor = Shiga.Flavor
+    };
+
+    /// <summary>第288期 SG-c（一点への答え）。SG-b ＋ <see cref="TraitId.ThunderclapLone"/>（隣の味方が1体もいない敵への雷霆は2倍）。</summary>
+    public static readonly UnitDef ShigaSGc = new()
+    {
+        Id = "shiga",
+        Name = "電気鞭のシガ",
+        MaxHp = 52,
+        Attack = 9,
+        Speed = 3,
+        Pattern = AttackPattern.Sweep,
+        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.Thunderclap, TraitId.ThunderclapLone },
+        PlusText = ShigaSGb.PlusText + "。孤立した敵ほど深く焼く",
+        MinusText = Shiga.MinusText,
+        Flavor = Shiga.Flavor
+    };
+
+    /// <summary>
+    /// 第288期 参考 SG-c′（指示書に無い）。SG-c ＋ <see cref="TraitId.ThunderclapAny"/>（雷霆の的を「当たった敵すべて」にする・感電を問わない）。
+    /// SG-b ／ SG-c の雷霆が空振りする理由（速さ3 のシガが振る頃には感電が弾けている）を外した上限の対照。<b>採否の候補ではない。</b>
+    /// </summary>
+    public static readonly UnitDef ShigaSGcAny = new()
+    {
+        Id = "shiga",
+        Name = "電気鞭のシガ",
+        MaxHp = 52,
+        Attack = 9,
+        Speed = 3,
+        Pattern = AttackPattern.Sweep,
+        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.Thunderclap, TraitId.ThunderclapLone, TraitId.ThunderclapAny },
+        PlusText = ShigaSGc.PlusText + "（参考: 雷霆は当たった敵すべてを焼く）",
+        MinusText = Shiga.MinusText,
+        Flavor = Shiga.Flavor
+    };
+
     /// <summary>
     /// 仇討ちのザン。標的（Marked）に初めて付いた読み手。
     ///

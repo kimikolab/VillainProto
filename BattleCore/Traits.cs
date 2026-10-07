@@ -644,6 +644,12 @@ public enum TraitId
     Feathers,    // 羽: 手番は羽の枚数だけ1発ずつ撃つ（1発 ＝ 攻 × `FinisherRule.Multiplier`・標持ちを層の深い順に追う・尽きたら残りは乱射）。羽は初期 1・味方が敵に標を書くたび +1（判定は engine の `FeatherVolley` ／ `LayerMark`）
     FeatherLoss, // 羽を失う（M-b）: 乱射した羽の数だけ羽を失う・下限 1（**札そのものは挙動を持たない**・`FeatherVolley` が読む・外せば M-a）
 
+    // --- 第288期で足した札（シガの蓄電の版。`UnitCatalog.ShigaSGa` ／ `ShigaSGb` ／ `ShigaSGc` だけが持つ） ---
+    StoredCharge,    // 蓄電（SG-a〜）: 自分に感電が新しく付くたび蓄電 +1（上限 4・口は `MarkShock` の1箇所）。蓄電1つにつき攻撃力 +3。電気鞭で感電を消しても減らない
+    Thunderclap,     // 雷霆（SG-b〜）: 蓄電 4 で迎えた手番の鞭は、当たったとき感電していた敵それぞれに追加で 攻撃力 × 4（`ApplyDamage` の直呼び・起爆しない）。撃ち終えたら蓄電 0
+    ThunderclapLone, // 孤立への雷霆（SG-c）: 雷霆で打った敵に隣の味方が1体もいなければ、その敵への追加は2倍（**札そのものは挙動を持たない**・`BattleContext.Thunderclap` が読む）
+    ThunderclapAny,  // 参考（SG-c′・指示書に無い）: 雷霆の的を「当たった敵すべて」にする（感電を問わない）（**札そのものは挙動を持たない**・engine の `WhipAmount` が読む）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -13154,6 +13160,79 @@ public sealed class ScourgeShockTrait : Trait
 }
 
 // =====================================================================================
+// 第288期 —— シガの蓄電（感電軸のアタッカー化・札の差し替えで版を作る・規定のシガは触らない）
+//
+//     規定 ＝ [Scourge, Shame, Lash, LiveWire, ScourgeShock]（G3K）
+//     SG-a ＝ 規定 ＋ StoredCharge                          育つだけ（蓄電1つにつき攻撃力 +3）
+//     SG-b ＝ SG-a ＋ Thunderclap                           ＋ 蓄電 4 で迎えた手番の鞭が雷霆になる
+//     SG-c ＝ SG-b ＋ ThunderclapLone                       ＋ 孤立した敵への雷霆は2倍
+//
+// 蓄電は私有キー（火勢 `FireLevelRule.LvKey` と同じ作り・`StatusKeys.All` に入れない・`OnCarryOver` で消す）。
+// **増えるのは `BattleContext.MarkShock` の1箇所**（新しく感電が付いたとき・書き手を問わない）。**減るのは雷霆だけ**。
+// 雷霆の枠は engine（`WhipSwing.Bolt`・振り始めに決める）、撃つのは `BattleContext.Thunderclap`。**乱数を引かない。**
+// =====================================================================================
+
+/// <summary>
+/// 蓄電（第288期・SG-a〜）。自分に感電が新しく付くたび +1（上限 <see cref="Cap"/>・engine の <c>MarkShock</c> → <c>GainCharge</c>）。
+/// 蓄電1つにつき攻撃力 +<see cref="AtkPer"/>（<see cref="ModifyAttack"/>・自己強化なので窓口を通さない）。
+/// <b>電気鞭で自分の感電を消しても減らない</b>（感電は二値の弾、蓄電は溜まった量）。
+/// </summary>
+public sealed class StoredChargeTrait : Trait
+{
+    /// <summary>蓄電の私有キー（<c>StatusKeys.All</c> に入れない）。</summary>
+    public const string Key = "storedCharge";
+
+    /// <summary>蓄電の上限。</summary>
+    public const int Cap = 4;
+
+    /// <summary>蓄電1つあたりの攻撃力。</summary>
+    public const int AtkPer = 3;
+
+    public override TraitId Id => TraitId.StoredCharge;
+
+    public static int Of(UnitState u) => u.RawCounter(Key);
+
+    public override int ModifyAttack(UnitState self, int atk) => atk + AtkPer * Of(self);
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(Key, 0);
+}
+
+/// <summary>
+/// 雷霆（第288期・SG-b〜）。蓄電が <see cref="StoredChargeTrait.Cap"/> で手番の鞭を振り始めたら（engine が枠の <c>Bolt</c> に控える）、
+/// その鞭が<b>当たったとき感電していた敵</b>それぞれに、打ち終えた後で 攻撃力 × <see cref="Multiplier"/> を足す（<c>ApplyDamage</c> の直呼び・
+/// <c>OnAfterAttack</c> を再帰させない・<b>起爆しない</b>——電気鞭が付け直した感電は次の一撃のために残す）。撃ち終えたら蓄電 0。本体は <c>BattleContext.Thunderclap</c>。
+/// <b>札の並びで電気鞭・責め鞭の後に走る</b>（怖気の判定は雷霆の前の盤面で決まる）。
+/// </summary>
+public sealed class ThunderclapTrait : Trait
+{
+    /// <summary>雷霆の追加 ＝ 攻撃力 × この値。</summary>
+    public const int Multiplier = 4;
+
+    public override TraitId Id => TraitId.Thunderclap;
+
+    public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
+    {
+        if (ctx.Whip is { Bolt: true } w && w.Actor == self) ctx.Thunderclap(self, w);
+    }
+}
+
+/// <summary>孤立への雷霆（第288期・SG-c）。<b>札そのものは挙動を持たない</b>（<c>BattleContext.Thunderclap</c> が保持を読む）。隣の味方が1体もいない敵への追加は ×<see cref="Factor"/>。</summary>
+public sealed class ThunderclapLoneTrait : Trait
+{
+    /// <summary>孤立した敵への追加の倍率（攻撃力 × 4 × この値）。</summary>
+    public const int Factor = 2;
+
+    public override TraitId Id => TraitId.ThunderclapLone;
+}
+
+/// <summary>参考（第288期・SG-c′・指示書に無い）: 雷霆の的を「当たった敵すべて」にする。<b>札そのものは挙動を持たない</b>（engine の <c>WhipAmount</c> が読む）。
+/// SG-b ／ SG-c の雷霆は「当たったとき感電していた敵」だけを打つので、速さ3 のシガが振る頃には速い味方が感電を弾かせていて空振りが多い——その条件を外した上限を見る対照。</summary>
+public sealed class ThunderclapAnyTrait : Trait
+{
+    public override TraitId Id => TraitId.ThunderclapAny;
+}
+
+// =====================================================================================
 // 第218期 —— 澱みのミオの版（札の差し替えだけで作る・`Run` の引数は増やさない）
 //
 //     M0 ＝ [Concentrate, ConcentrateLeak]（今のミオ・規定のまま）
@@ -16304,6 +16383,10 @@ public static class TraitCatalog
         new RuptureKeepTrait(),        // 第282期（T1n）
         new FeathersTrait(),           // 第285期（M-a ／ M-b）
         new FeatherLossTrait(),        // 第285期（M-b）
+        new StoredChargeTrait(),       // 第288期（SG-a ／ SG-b ／ SG-c）
+        new ThunderclapTrait(),        // 第288期（SG-b ／ SG-c）
+        new ThunderclapLoneTrait(),    // 第288期（SG-c）
+        new ThunderclapAnyTrait(),     // 第288期（参考 SG-c′）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),
