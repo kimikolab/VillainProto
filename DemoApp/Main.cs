@@ -1215,6 +1215,7 @@ public partial class Main : Control
         _firePresentation = new FirePresentation(_result.Events);
         IndexFireHits(_result.Events);
         _fireFastEvent = false;
+        _misaFastEvent = false;
         int token = ++_playToken;
         _comboEnds.Clear();
         _hexMarksShown = _hexSharePlays = _hexShareHits = 0;
@@ -1248,6 +1249,7 @@ public partial class Main : Control
             else await ApplyEvent(e, eventIndex);
             _tickDelayBudget = null;
             _fireFastEvent = false;
+            _misaFastEvent = false;
             foreach (var combo in _comboEnds.Where(pair => _eventIndex >= pair.Value).ToArray())
             {
                 combo.Key.ReturnFromAttack();
@@ -1263,6 +1265,7 @@ public partial class Main : Control
         _playing = false;
         string verdict = _result.PlayerWon ? "VICTORY" : "DEFEAT";
         _battleField.ResetBindings();
+        _battleField.EndShockMarkPresentation();
         foreach (var pawn in _battleField.Pawns.Values) pawn.SetFrightened(false);
         foreach (var pawn in _battleField.Pawns.Values) pawn.SetStatusIcon(StatusKeys.Cowed, false);
         foreach (var pawn in _battleField.Pawns.Values)
@@ -1359,6 +1362,7 @@ public partial class Main : Control
         _tickDelayBudget = _collectingTurnTicks is not null ? 0
             : _ticks.Budgets.TryGetValue(eventIndex, out double tickBudget) ? tickBudget : null;
         _fireFastEvent = _firePresentation.FastEvents.Contains(eventIndex);
+        _misaFastEvent = _misa.FastEvents.Contains(eventIndex);
         if (PlayFireHitSource(e, eventIndex, actor, target)) return;
         _fireFastEvent |= e.Kind == BattleEventKind.Attack && _fireHits.Contacts.ContainsKey(eventIndex);
         if (e.Kind == BattleEventKind.Spring)
@@ -1368,6 +1372,7 @@ public partial class Main : Control
                 if (contactToken == _playToken && _battleMode) FireHitContact(eventIndex, pawn);
             };
         }
+        if (await PlayShockMark(e, actor, target)) return;
         if (await PlayMisa(e, eventIndex, actor, target)) return;
         if (await PlayFire(e, eventIndex, actor, target)) return;
         if (await PlayMovement(e, eventIndex, actor, target)) return;
@@ -1444,12 +1449,12 @@ public partial class Main : Control
                 bool continuingCombo = actor is not null && _comboEnds.ContainsKey(actor);
                 _movement.Attacks.TryGetValue(eventIndex, out var movementCue);
                 bool misaAttack = _misa.Attacks.Contains(eventIndex);
-                bool flowingAttack = misaAttack || movementCue is not null || actor?.UnitId == "sero"
+                bool flowingAttack = misaAttack || actor?.InterruptWhip == true || movementCue is not null || actor?.UnitId == "sero"
                     || actor?.UnitId == "basa" && e.Pattern == AttackPattern.Sweep;
                 if (e.Reaction && !continuingCombo && !flowingAttack)
                     await _battleField.ShowBonusAttack(actor);
                 // 責め苦も位置保持だけを共用する。Attackの回数・連撃の計数は増やさない。
-                int? holdEnd = FindComboEnd(eventIndex, e)
+                int? holdEnd = misaAttack ? null : FindComboEnd(eventIndex, e)
                     ?? (actor?.UnitId == "shiga" && _result is not null ? FindTormentEnd(_result.Events, eventIndex) : null);
                 if (!continuingCombo && actor is not null && holdEnd is { } comboEnd)
                 {
@@ -2415,7 +2420,7 @@ public partial class Main : Control
 
     private async Task Delay(double seconds, bool raw = false)
     {
-        if (!raw && _fireFastEvent) return;
+        if (!raw && (_fireFastEvent || _misaFastEvent)) return;
         if (!raw && _tickDelayBudget is double budget)
         {
             seconds = Math.Min(seconds, budget);

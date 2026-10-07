@@ -78,7 +78,8 @@ public partial class PartyBar : PanelContainer
             back.SetAnchorsPreset(LayoutPreset.FullRect);
             track.AddChild(back);
             var fill = new ColorRect { Color = UiKit.Heal, MouseFilter = MouseFilterEnum.Ignore };
-            fill.SetAnchorsPreset(LayoutPreset.LeftWide);
+            // HP量に応じて毎回実寸を設定するため、縦のストレッチと二重管理しない。
+            fill.SetAnchorsPreset(LayoutPreset.TopLeft);
             fill.Size = new Vector2(168, 9);
             track.AddChild(fill);
             cell.AddChild(track);

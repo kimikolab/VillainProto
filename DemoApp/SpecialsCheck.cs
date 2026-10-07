@@ -25,8 +25,22 @@ public partial class SpecialsCheck : Control
     {
         var poison = Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Rau,
             center: UnitCatalog.Beni, back1: UnitCatalog.Mio, back3: UnitCatalog.Kata);
-        // 第220期B2: 第一波は早く決着するため、四つの演出が残る第四波 seed 0 を使う。
-        await Replay(poison, EnemyCatalog.Stages[3].Enemy, 0, false);
+        // 数値調整で短くなった戦では四つの演出が揃わない。陽性条件を満たす実台本を選ぶ。
+        bool poisonFound = false;
+        for (int stage = 0; stage < EnemyCatalog.Stages.Count && !poisonFound; stage++)
+        for (int seed = 0; seed < 40 && !poisonFound; seed++)
+        {
+            var result = BattleEngine.Run(BattleEngine.Materialize(poison, 0),
+                BattleEngine.Materialize(EnemyCatalog.Stages[stage].Enemy, 1), seed, verbose: true);
+            if (!result.Events.Any(e => e.Kind == BattleEventKind.GurenRelease && e.TargetId is null)
+                || !result.Events.Any(e => e.Kind == BattleEventKind.Attack && e.NumbPercent > 0)
+                || !result.Events.Any(e => e.Kind == BattleEventKind.StatusGain && e.PoisonRoute == PoisonRoute.Venom)
+                || !result.Events.Any(e => e.Kind == BattleEventKind.StatusGain && e.PoisonRoute == PoisonRoute.Spew)) continue;
+            GD.Print($"SPECIALS_POISON_FIXTURE stage={stage} seed={seed}");
+            await Replay(poison, EnemyCatalog.Stages[stage].Enemy, seed, false);
+            poisonFound = true;
+        }
+        Require(poisonFound, "毒系四種の陽性対照が見つかる");
         // 実際の代表編成から相打ち勝ちを探す。演出専用の偽イベントは作らない。
         foreach (var entry in Presets.Compare.Where(p => Enumerable.Range(0, 5).Any(i => p.F[i]?.Id == "gald")))
         for (int stage = 1; stage < EnemyCatalog.Stages.Count; stage++)

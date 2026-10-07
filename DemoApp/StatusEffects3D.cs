@@ -8,6 +8,9 @@ public partial class StatusEffects3D : Node3D
     private Node3D _shards = null!;
     private readonly MeshInstance3D[] _pieces = new MeshInstance3D[6];
     private float _time;
+    private bool _layeredMark;
+    private int _markedAmount;
+    public void SetLayeredMark(bool active) { _layeredMark = active; _mark.Visible = !active && _markedAmount > 0; }
 
     public void Configure(float height, float phase)
     {
@@ -67,7 +70,8 @@ void fragment() {" + fragment + "}" };
 
     public void SetAmounts(int marked, int stunned, int armor)
     {
-        _mark.Visible = marked > 0;
+        _markedAmount = marked;
+        _mark.Visible = marked > 0 && !_layeredMark;
         _stun.Visible = stunned > 0;
         _shards.Visible = armor > 0;
         // 欠片の数は装飾。正確な残量は画面下の状態一覧が表示する。

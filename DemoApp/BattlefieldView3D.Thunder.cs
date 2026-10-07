@@ -17,15 +17,36 @@ public partial class BattlefieldView3D
         tween.TweenCallback(Callable.From(stake.QueueFree));
     }
 
-    public void StrikeThunder(BattlePawn3D? previous, BattlePawn3D? target, int hop, int kinds, double speed)
+    public void StrikeThunder(BattlePawn3D? previous, BattlePawn3D? target, int hop, int kinds, double speed, BattlePawn3D? actor = null)
     {
         if (target is null) return;
         ThunderPlays++;
         float power = Math.Clamp(kinds, 0, 4);
+        int cloud = actor?.Thundercloud ?? 0;
+        actor?.ShowMovementPortrait("kata_thunder", 0.8);
+        Color tint = ThunderFx.Cyan;
+        if (target.HasStatusIcon(BattleCore.StatusKeys.Poison)) tint = tint.Lerp(new Color("8ce9a1"), 0.35f);
+        if (target.HasStatusIcon(BattleCore.StatusKeys.Burn)) tint = tint.Lerp(new Color("ffbb77"), 0.30f);
         var to = target.FxPoint;
         ThunderFx.Arc(_fxRoot, previous?.FxPoint ?? to + Vector3.Up * 5.5f, to,
-            0.022f + power * 0.014f, 0.30 / speed);
-        ThunderFx.Burst(_fxRoot, to, 0.45f + power * 0.15f, 0.26 / speed);
+            0.022f + power * 0.014f + cloud * 0.019f, 0.36 / speed, color: tint);
+        if (cloud > 0)
+        {
+            ShockMarkFx.Glow(_fxRoot, to, tint, 1.2f + cloud * 0.17f, 0.36 / speed);
+            MakeGroundRing(target.Home, tint, 0.7f + cloud * 0.12f, 0.38 / speed);
+            for (int i = 0; i < 2 + cloud / 2; i++)
+            {
+                var origin = to + Vector3.Up * (1.4f + i * 0.5f);
+                ThunderFx.Arc(_fxRoot, origin, origin + _camera.GlobalBasis.X * (i % 2 == 0 ? -1 : 1) * (0.45f + cloud * 0.10f)
+                    - Vector3.Up * 0.65f, 0.025f, 0.26 / speed, color: tint);
+            }
+            if (hop == 1)
+            {
+                CameraPunch(to, cloud >= 6 ? BattleCore.AttackPattern.All : BattleCore.AttackPattern.Sweep);
+                _attackAudio.PlayShockMark(ShockMarkSound.ThunderHeavy);
+            }
+        }
+        ThunderFx.Burst(_fxRoot, to, 0.45f + power * 0.15f + cloud * 0.08f, 0.26 / speed);
         _attackAudio.PlayElectric(hop == 1, hop - 1, kinds);
     }
 

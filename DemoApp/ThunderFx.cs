@@ -19,7 +19,7 @@ public static class ThunderFx
         }
     }
 
-    public static void Arc(Node3D parent, Vector3 from, Vector3 to, float width, double seconds, bool ground = false)
+    public static void Arc(Node3D parent, Vector3 from, Vector3 to, float width, double seconds, bool ground = false, Color? color = null)
     {
         var root = new Node3D(); parent.AddChild(root);
         var points = new Vector3[10];
@@ -30,7 +30,7 @@ public static class ThunderFx
             if (i > 0 && i < 9) points[i] += new Vector3((float)GD.RandRange(-0.18, 0.18),
                 (float)GD.RandRange(-0.13, 0.13), (float)GD.RandRange(-0.12, 0.12));
         }
-        foreach (var layer in new[] { (width * 3, Cyan, 0.28f), (width, new Color("e4fbff"), 0.95f) })
+        foreach (var layer in new[] { (width * 3, color ?? Cyan, 0.28f), (width, Colors.White.Lerp(color ?? Cyan, 0.15f), 0.95f) })
         {
             var mesh = new ImmediateMesh();
             var material = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,

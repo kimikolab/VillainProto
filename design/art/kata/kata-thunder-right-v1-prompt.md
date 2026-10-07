@@ -1,0 +1,10 @@
+# kata-thunder-right-v1
+
+生成: 2026-10-07、内蔵 image_gen。透過PNG。既存の戦闘立ち絵を参照した別ポーズ。
+ゲームへの接続は未実施。
+
+```text
+Use case: identity-preserve. Asset: Kata thunder-command full-body battle action sprite for existing Japanese fantasy RPG. Image 1 authoritative approved adult FEMALE character, face, costume, style reference. Preserve her slender adult feminine proportions, short tousled ash-gray hair, narrow gray-brown eyes with clean light sclera, calm calculating face, small gold spiked ornament at far side of head, long gold drop earring, high-neck black and ivory/taupe long coat with pale-gold geometric filigree and chains, fingerless black gloves, fitted black trousers and heeled black-gold boots. Exact costume construction, palette and amount of ornamentation; smooth refined anime painterly rendering, clean readable folds, no noisy metallic faceting.
+NEW POSE: a commanding lightning release, full body in three-quarter stance facing SCREEN RIGHT with cool focused gaze toward enemy at right. One arm raised diagonally upward toward upper right with an open five-finger hand calling down a strike; the other hand extended toward the right at waist height, index and middle fingers aligned to designate where lightning lands. Distinct from the reference's horizontal idle pointing. Head slightly tilted toward the target, composed closed lips. Coat sleeves and long panels flare backward toward screen left in a grand controlled arc. Both boots firmly planted, elegant upright stance and natural coherent anatomy. Two arms only. Full fingertips of raised hand, hair, coat tips and boots within portrait canvas with comfortable clear margins, preferably 1024x1536.
+CHARACTER BODY ONLY: no floating stakes, no staff, no lightning, no clouds, no electrical aura, no particles, no ground circles. Keep small attached gold hair ornaments and hanging coat ornaments. Stakes and thunder are separate runtime effects. Genuine transparent RGBA background, opaque interior, no brown or black backdrop, no glow or floor or ground shadow, no text, no watermark.
+```

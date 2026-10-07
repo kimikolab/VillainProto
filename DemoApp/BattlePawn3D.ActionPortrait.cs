@@ -83,6 +83,7 @@ public partial class BattlePawn3D
             if (key is "hane_rescue" or "hane_bump_rebound") height *= 1024f / 1536f;
             // 右向き待機絵は頭〜足が1488px、攻撃絵は1371px。同じ身長へ揃える。
             if (key == "tome_attack") height *= 1488f / 1371f;
+            if (key == "kata_thunder") height *= 1.05f; // 掲げた手より頭身で合わせる。
         }
         Texture2D portrait = UiKit.BattlePortrait(_atlas, key, _burning);
         _portraitGroundDistance = height * (0.5f - padding);

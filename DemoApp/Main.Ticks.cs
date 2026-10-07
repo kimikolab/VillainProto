@@ -45,7 +45,7 @@ public partial class Main
                 await ApplyEvent(events[i], i);
             }
         }
-        finally { _collectingTurnTicks = null; _tickDelayBudget = null; _fireFastEvent = false; }
+        finally { _collectingTurnTicks = null; _tickDelayBudget = null; _fireFastEvent = false; _misaFastEvent = false; }
         while (_paused && token == _playToken && _battleMode) await Delay(0.06, raw: true);
         if (token != _playToken || !_battleMode) return;
         // 敵味方とも同じフレームで反映する。人数分の待ちを積まず、最長の演出だけ待つ。

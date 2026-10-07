@@ -22,6 +22,9 @@ public partial class PawnHud2D : Control
     private readonly float _barHeight;
     private readonly ColorRect _barTrail;
     private readonly ColorRect _barFill;
+    private readonly ColorRect _scar;
+    private int _openingMaxHp;
+    internal float ScarFraction => _openingMaxHp == 0 ? 0 : 1f - _maxHp / (float)_openingMaxHp;
     private readonly PanelContainer _detail;
     private readonly Label _name;
     private readonly Label _numbers;
@@ -65,6 +68,11 @@ public partial class PawnHud2D : Control
         Rect(new Color(0.015f, 0.025f, 0.02f, 0.82f), -_barWidth * 0.5f - 1, -_barHeight - 1, _barWidth + 2, _barHeight + 2);
         _barTrail = Rect(new Color(1, 0.93f, 0.82f, 0.85f), -_barWidth * 0.5f, -_barHeight, _barWidth, _barHeight);
         _barFill = Rect(team.Lightened(0.08f), -_barWidth * 0.5f, -_barHeight, _barWidth, _barHeight);
+        _scar = Rect(new Color("5f355f"), _barWidth * 0.5f, -_barHeight, 0, _barHeight);
+        _scar.Draw += () => {
+            for (float x = 1; x < _scar.Size.X; x += 5)
+                _scar.DrawLine(new Vector2(x, 0), new Vector2(Mathf.Min(x + 3, _scar.Size.X), _barHeight), new Color("b384bd"), 1);
+        };
 
         _detail = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore, Visible = false };
         StyleBoxFlat box = UiKit.Box(new Color(0.02f, 0.035f, 0.03f, 0.82f), new Color(team, 0.55f), 1, 4);
@@ -181,10 +189,16 @@ public partial class PawnHud2D : Control
 
     public void SetHp(int hp, int maxHp)
     {
+        if (_openingMaxHp == 0) _openingMaxHp = System.Math.Max(1, maxHp);
         _hp = hp;
         _maxHp = maxHp;
         RefreshNumbers();
-        float ratio = Mathf.Clamp(hp / (float)System.Math.Max(1, maxHp), 0f, 1f);
+        float capacity = Mathf.Clamp(maxHp / (float)_openingMaxHp, 0f, 1f);
+        _scar.Position = new Vector2(_barWidth * (capacity - 0.5f), -_barHeight);
+        _scar.Size = new Vector2(_barWidth * (1 - capacity), _barHeight);
+        _scar.QueueRedraw();
+        QueueRedraw();
+        float ratio = Mathf.Clamp(hp / (float)_openingMaxHp, 0f, capacity);
         _barFill.Size = new Vector2(_barWidth * ratio, _barHeight);
         // 削れた分を一瞬だけ白く残して、どれだけ減ったかを目で追えるようにする。
         _trailTween?.Kill();

@@ -1,0 +1,10 @@
+# misa-control-right-v1
+
+生成: 2026-10-07、内蔵 image_gen。透過PNG。既存の戦闘立ち絵を参照した別ポーズ。
+ゲームへの接続は未実施。
+
+```text
+Use case: identity-preserve. Asset: Misa / internal unit id tome, FUNNEL CONTROL full-body action sprite for a Japanese fantasy game. Image 1 is the authoritative body/costume identity, image 2 the existing attack pose reference. Preserve the exact adult female character, lavender-pink eyes, very long flowing silver hair, dark navy hood, ornate navy-and-white layered lace dress and wide sleeves, delicate silver filigree and blue-violet crystal ornaments, black corset belt, existing leg strap and elegant matching short heeled boots. Maintain exact face, body proportions, amount of clothing coverage, refined polished anime rendering and beautiful silver ornament craftsmanship. No redesign.
+NEW POSE: full body, three-quarter turned toward SCREEN RIGHT, gaze at the enemy to the right rather than viewer. Calm focused expression with a subtle knowing smile. Both arms held outward in an elegant asymmetrical conducting pose: forward hand at shoulder height with naturally separated fingers pointing to firing positions offscreen right, rear hand lower at waist height with open palm controlling another floating unit. The gesture should clearly read remote control of several autonomous feather drones. Hair, sleeve ribbons and skirt layers gently sweep toward screen left, majestic but readable; feet remain in poised balanced stance. Keep whole hood, hair, fingers, cloth and boots inside portrait frame with comfortable transparent margins. Prefer 1024x1536 portrait. One single character body ONLY.
+CRITICAL: draw NO floating feathers, no drones, no beams, no magic circle, no aura, no particles. Attached costume jewels and ornaments stay. Separate feather sprites and laser VFX will be animated in-engine. Genuine transparent RGBA background and all gaps; opaque character interior. Discard any dark/gray/lavender backdrop from references, no floor or ground shadow, no vignette, no painted checkerboard, no text or watermark.
+```

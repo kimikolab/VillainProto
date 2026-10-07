@@ -6,6 +6,7 @@ public partial class BattlefieldView3D
 {
     // 台本の書き手と対象を保持するだけ。被弾や戦闘規則から解除を推測しない。
     private readonly Dictionary<int, (BattlePawn3D Source, BattlePawn3D Target, BindingSilk3D Silk)> _bindings = new();
+    private readonly Dictionary<int, (BattlePawn3D Target, BindingSilk3D Silk)> _releasingBindings = new();
     public int ActiveBindingCount => _bindings.Count;
 
     public void SetBinding(BattlePawn3D? source, BattlePawn3D target, bool active)
@@ -27,7 +28,13 @@ public partial class BattlefieldView3D
         binding.Source.SetBinding(false);
         if (!GodotObject.IsInstanceValid(binding.Silk)) return;
         if (immediate) { binding.Silk.Visible = false; binding.Silk.QueueFree(); }
-        else binding.Silk.Release();
+        else
+        {
+            foreach (var old in _releasingBindings.ToArray())
+                if (!GodotObject.IsInstanceValid(old.Value.Silk)) _releasingBindings.Remove(old.Key);
+            _releasingBindings[id] = (binding.Target, binding.Silk);
+            binding.Silk.Release();
+        }
     }
 
     public void ClearBindingsFor(BattlePawn3D? pawn)
@@ -40,5 +47,8 @@ public partial class BattlefieldView3D
     public void ResetBindings()
     {
         foreach (int id in _bindings.Keys.ToArray()) EndBinding(id, true);
+        foreach (var old in _releasingBindings.Values)
+            if (GodotObject.IsInstanceValid(old.Silk)) { old.Silk.Visible = false; old.Silk.QueueFree(); }
+        _releasingBindings.Clear();
     }
 }

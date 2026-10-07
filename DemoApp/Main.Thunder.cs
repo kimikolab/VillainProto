@@ -14,7 +14,8 @@ public partial class Main
     private static bool ElectricBoundary(BattleEvent e) => e.Kind is BattleEventKind.Attack
         or BattleEventKind.Skill or BattleEventKind.TurnStart or BattleEventKind.StatusSnapshot
         or BattleEventKind.StatSnapshot or BattleEventKind.Thunder or BattleEventKind.Charge or BattleEventKind.Status
-        or BattleEventKind.MireSlam or BattleEventKind.MireConduct or BattleEventKind.MireBurst or BattleEventKind.LiveWire;
+        or BattleEventKind.MireSlam or BattleEventKind.MireConduct or BattleEventKind.MireBurst or BattleEventKind.LiveWire
+        or BattleEventKind.ShockGauge or BattleEventKind.Feather or BattleEventKind.MarkLayer or BattleEventKind.Scar;
 
     private void IndexThunder(IReadOnlyList<BattleEvent> events)
     {
@@ -53,6 +54,7 @@ public partial class Main
         int token = _playToken;
         if (e.Kind == BattleEventKind.Skill && e.Text == "雷を落とした")
         {
+            actor?.ShowMovementPortrait("kata_thunder", 1.2);
             AppendLog($"{NameOf(e.ActorId)} — {e.Text}");
             return true;
         }
@@ -62,7 +64,7 @@ public partial class Main
             await Delay(0.18);
             if (token != _playToken || !_battleMode) return true;
             _battleField.StrikeThunder(_battleField.FindPawn(_thunderPrevious.GetValueOrDefault(index)),
-                target, e.Slot, e.StatusRemaining ?? 0, _speed);
+                target, e.Slot, e.StatusRemaining ?? 0, _speed, actor);
             if (target is not null) FireHitContact(index, target);
             _fireFastEvent |= _fireHits.Contacts.ContainsKey(index);
             await Delay(0.12);
@@ -75,7 +77,7 @@ public partial class Main
             {
                 var item = _result!.Events[j];
                 if (item.Kind == BattleEventKind.Discharge)
-                    _battleField.ShowDischarge(_battleField.FindPawn(item.ActorId), _battleField.FindPawn(item.TargetId), _speed);
+                    ShowScriptDischarge(item);
             }
             // 同じ段の電弧は一斉に走らせ、HP・死亡・副作用は元の台本順で処理する。
             _tickDelayBudget = null;
@@ -94,7 +96,7 @@ public partial class Main
         {
             if (!_shockStageMembers.Contains(index))
             {
-                _battleField.ShowDischarge(actor, target, _speed);
+                ShowScriptDischarge(e);
                 await Delay(0.16);
                 if (token != _playToken || !_battleMode) return true;
             }
@@ -103,7 +105,12 @@ public partial class Main
         }
         if (e.Kind == BattleEventKind.StatusGain && e.Text == StatusKeys.Shock)
         {
-            if (e.Amount > 0 && actor is not null && target is not null && actor.Team == target.Team)
+            if (e.Amount > 0 && e.PowderRoute is { } powder)
+            {
+                await _battleField.ShowPowder(actor, _battleField.FindPawn(e.SpreadFromId), target, powder, _speed);
+                if (token != _playToken || !_battleMode) return true;
+            }
+            else if (e.Amount > 0 && actor is not null && target is not null && actor.Team == target.Team)
             {
                 _battleField.ShowDischarge(actor, target, _speed, leak: true);
                 await Delay(0.18);
@@ -121,5 +128,13 @@ public partial class Main
             if (token != _playToken || !_battleMode) return true;
         }
         return false;
+    }
+
+    private void ShowScriptDischarge(BattleEvent e)
+    {
+        if (e.SourceTrait == TraitId.Thread)
+            _battleField.ShowThreadDischarge(_battleField.FindPawn(e.ActorId), _battleField.FindPawn(e.TargetId),
+                _battleField.FindPawn(e.PartnerId), e.Text == ThreadLabels.Release, _speed);
+        else _battleField.ShowDischarge(_battleField.FindPawn(e.ActorId), _battleField.FindPawn(e.TargetId), _speed);
     }
 }

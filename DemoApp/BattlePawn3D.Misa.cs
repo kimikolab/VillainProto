@@ -19,7 +19,8 @@ public partial class BattlePawn3D
     private void BuildMisaFeathers(DemoOpening opening)
     {
         if (_unitId != "tome" || opening.Traits?.Contains(TraitId.Feathers) == false) return;
-        _ = UiKit.BattlePortrait(_atlas, "tome_attack");
+        _ = UiKit.BattlePortrait(_atlas, "tome_control");
+        _ = UiKit.BattlePortrait(_atlas, "tome_spray");
         _misaFeathers = new MisaFeathers3D();
         AddChild(_misaFeathers);
         _misaFeathers.Configure(this, _portraitHeight);

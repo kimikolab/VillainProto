@@ -1,0 +1,72 @@
+[
+  {
+    "File": "tou/tou-powder-right-v1.png",
+    "Width": 1024,
+    "Height": 1536,
+    "Format": "Format32bppArgb",
+    "MinAlpha": 0,
+    "MaxAlpha": 254,
+    "ClearSamplePct": 52.17,
+    "PartialSamplePct": 47.83
+  },
+  {
+    "File": "misa/misa-control-right-v1.png",
+    "Width": 1024,
+    "Height": 1536,
+    "Format": "Format32bppArgb",
+    "MinAlpha": 0,
+    "MaxAlpha": 253,
+    "ClearSamplePct": 32.36,
+    "PartialSamplePct": 67.64
+  },
+  {
+    "File": "misa/misa-spray-right-v1.png",
+    "Width": 1024,
+    "Height": 1536,
+    "Format": "Format32bppArgb",
+    "MinAlpha": 0,
+    "MaxAlpha": 253,
+    "ClearSamplePct": 31.74,
+    "PartialSamplePct": 68.26
+  },
+  {
+    "File": "shiga/shiga-interrupt-right-v1.png",
+    "Width": 1024,
+    "Height": 1536,
+    "Format": "Format32bppArgb",
+    "MinAlpha": 0,
+    "MaxAlpha": 254,
+    "ClearSamplePct": 56.04,
+    "PartialSamplePct": 43.96
+  },
+  {
+    "File": "kata/kata-thunder-right-v1.png",
+    "Width": 1024,
+    "Height": 1536,
+    "Format": "Format32bppArgb",
+    "MinAlpha": 0,
+    "MaxAlpha": 254,
+    "ClearSamplePct": 51.6,
+    "PartialSamplePct": 48.4
+  },
+  {
+    "File": "kata/kata-thundercloud-v1.png",
+    "Width": 1536,
+    "Height": 1024,
+    "Format": "Format32bppArgb",
+    "MinAlpha": 0,
+    "MaxAlpha": 254,
+    "ClearSamplePct": 64.24,
+    "PartialSamplePct": 35.76
+  },
+  {
+    "File": "tou/tou-powder-puff-v1.png",
+    "Width": 1254,
+    "Height": 1254,
+    "Format": "Format32bppArgb",
+    "MinAlpha": 0,
+    "MaxAlpha": 253,
+    "ClearSamplePct": 58.16,
+    "PartialSamplePct": 41.84
+  }
+]

@@ -7,6 +7,8 @@ internal sealed class MisaPresentation
     internal readonly Dictionary<int, int> HitsByCue = new();
     internal readonly HashSet<int> Attacks = new();
     internal readonly HashSet<int> LosingSprays = new();
+    internal readonly HashSet<int> FastEvents = new();
+    internal readonly HashSet<int> LastShots = new();
 
     internal static MisaPresentation Build(IReadOnlyList<BattleEvent> events)
     {
@@ -42,6 +44,29 @@ internal sealed class MisaPresentation
                 // 別の攻撃の的を借りない。
                 if (e.Kind == BattleEventKind.Attack) break;
             }
+        }
+        // 続く羽が台本にある区間だけ、着弾・HP・死亡などの表示待ちを省く。
+        // イベント自体は元の順で通し、次の手番や通常攻撃へ早送りを持ち越さない。
+        int previous = -1;
+        for (int i = 0; i < events.Count; i++)
+        {
+            var e = events[i];
+            if (result.HitsByCue.ContainsKey(i))
+            {
+                if (previous >= 0 && events[previous].ActorId == e.ActorId
+                    && events[previous].Turn == e.Turn && events[previous].Slot + 1 == e.Slot)
+                {
+                    for (int j = previous + 1; j < i; j++) result.FastEvents.Add(j);
+                    result.LastShots.Remove(previous);
+                }
+                result.LastShots.Add(i);
+                previous = i;
+            }
+            else if (e.Kind == BattleEventKind.TurnStart
+                || e.Kind == BattleEventKind.Feather && e.Text is FeatherLabels.Volley or FeatherLabels.Lost
+                || !e.Reaction && (e.Kind is BattleEventKind.Skill or BattleEventKind.Charge
+                    || e.Kind == BattleEventKind.Attack && !result.Attacks.Contains(i)))
+                previous = -1;
         }
         return result;
     }

@@ -16,7 +16,7 @@ public partial class BattlefieldView3D
         if (targets.Count == 0) return;
         WhipSweeps++;
         var hits = targets.OrderBy(p => p.FxPoint.Z).ToArray();
-        bool electric = from.HasShockAura;
+        bool electric = from.HasShockAura || from.InterruptWhip;
         if (electric) ElectricWhipSweeps++;
         double speed = Math.Max(0.1, from.AnimationSpeed);
         var material = MakeMaterial(new Color("936447"), true, true);
@@ -31,7 +31,7 @@ public partial class BattlefieldView3D
             float sweep = Mathf.Clamp((t - 0.22f) / 0.55f, 0, 1) * Math.Max(1, hits.Length - 1);
             int n = Math.Min((int)sweep, hits.Length - 1);
             Vector3 end = hits[n].FxPoint.Lerp(hits[Math.Min(n + 1, hits.Length - 1)].FxPoint, sweep - n);
-            Vector3 start = from.FxPoint;
+            Vector3 start = from.WhipOrigin(_camera);
             float reach = Mathf.Clamp(t / 0.22f, 0, 1) * (t > 0.82f ? (1 - t) / 0.18f : 1);
             Vector3 Point(float u) => start.Lerp(end, u * reach)
                 + Vector3.Up * Mathf.Sin(u * Mathf.Pi) * (0.25f + (1 - reach) * 1.5f)
@@ -51,7 +51,7 @@ public partial class BattlefieldView3D
                 if (electric)
                 {
                     for (int k = 0; k < 6; k++)
-                        ThunderFx.Arc(_fxRoot, Point(k / 6f), Point((k + 1) / 6f), 0.018f, 0.20 / speed);
+                        ThunderFx.Arc(_fxRoot, Point(k / 6f), Point((k + 1) / 6f), from.InterruptWhip ? 0.048f : 0.018f, 0.20 / speed);
                     ThunderFx.Burst(_fxRoot, hit.FxPoint, 0.5f, 0.22 / speed);
                 }
                 impact?.Invoke(hit);
@@ -85,7 +85,7 @@ public partial class BattlefieldView3D
     private async Task ShowWhipAttack(BattlePawn3D from, BattlePawn3D target)
     {
         Vector3 direction = (target.FxPoint - from.FxPoint).Normalized();
-        Vector3 start = from.FxPoint + direction * 0.22f;
+        Vector3 start = from.WhipOrigin(_camera) + direction * 0.08f;
         Vector3 end = target.FxPoint;
         Vector3 sideways = direction.Cross(Vector3.Up).Normalized();
         Vector3 view = _camera.GlobalPosition - (start + end) * 0.5f;
@@ -121,6 +121,12 @@ public partial class BattlefieldView3D
             if (!cracked && t >= 0.62f)
             {
                 cracked = true;
+                if (from.HasShockAura || from.InterruptWhip)
+                {
+                    for (int k = 0; k < 7; k++) ThunderFx.Arc(_fxRoot, Point(k / 7f), Point((k + 1) / 7f),
+                        from.InterruptWhip ? 0.045f : 0.02f, 0.22 / from.AnimationSpeed);
+                    ThunderFx.Burst(_fxRoot, end, 0.65f, 0.22 / from.AnimationSpeed);
+                }
                 NotifyAttackContact(target);
                 Color flash = new("ffe0ba");
                 for (int i = 0; i < 5; i++)

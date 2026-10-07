@@ -29,11 +29,28 @@ public partial class DischargeCheck : Control
         AddChild(main);
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         var formation = inverse
-            ? Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Beni,
-                center: UnitCatalog.Kata, back1: UnitCatalog.Mio, back3: UnitCatalog.Guza)
+            ? Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Gald,
+                center: UnitCatalog.Beni, back1: UnitCatalog.Tou, back3: UnitCatalog.Kata)
             : Formation.Build(front1: UnitCatalog.Sid, front3: UnitCatalog.Beni,
                 center: UnitCatalog.Mio, back1: UnitCatalog.Guza, back3: UnitCatalog.Kata);
         int stage = inverse ? 1 : 4, seed = inverse ? 0 : 4;
+        if (inverse)
+        {
+            bool found = false;
+            for (int s = 0; s < EnemyCatalog.Stages.Count && !found; s++)
+            for (int roll = 0; roll < 40 && !found; roll++)
+            {
+                var candidate = BattleEngine.Run(BattleEngine.Materialize(formation, 0),
+                    BattleEngine.Materialize(EnemyCatalog.Stages[s].Enemy, 1), roll, verbose: true);
+                if (!candidate.Events.Select((e, i) => (e, i)).Any(x => x.e.Kind == BattleEventKind.Heal
+                    && DischargePresentation.Cause(candidate.Events, x.i) is not null)) continue;
+                if (!candidate.Events.Select((e, i) => (e, i)).Any(x => x.e.Kind == BattleEventKind.Damage
+                    && DischargePresentation.Cause(candidate.Events, x.i) is not null)) continue;
+                stage = s; seed = roll; found = true;
+            }
+            Require(found, "実台本に放電の反転回復がある対戦を選ぶ");
+            GD.Print($"DISCHARGE_INVERSE_FIXTURE stage={stage} seed={seed}");
+        }
         var players = BattleEngine.Materialize(formation, 0);
         var enemies = BattleEngine.Materialize(EnemyCatalog.Stages[stage].Enemy, 1);
         ((OptionButton)typeof(Main).GetField("_stagePicker", Flags)!.GetValue(main)!).Selected = stage;
@@ -45,8 +62,10 @@ public partial class DischargeCheck : Control
         int kata = players.Single(u => u.Def.Id == "kata").InstanceId;
         var result = (BattleResult)typeof(Main).GetField("_result", Flags)!.GetValue(main)!;
         var credits = DischargePresentation.Count(result.Events, teams);
-        if (!inverse) Require(result.TallyByUnit["kata"].DamageToEnemy == 167 && credits[kata].Enemy == 114,
-            $"第220期B2・第五波 seed4 放電(敵)={credits[kata].Enemy}");
+        var kataCredit = credits.GetValueOrDefault(kata);
+        // 戦闘調整で実ダメージは変わる。帰属の厳密値はCheckAttributionで、ここは実戦と画面の一致で確認する。
+        if (!inverse) Require(result.TallyByUnit["kata"].DamageToEnemy > 0 && kataCredit.Enemy > 0,
+            $"落雷と放電の陽性対照 放電(敵)={kataCredit.Enemy}");
         int hits = 0, heals = 0;
         for (int i = 0; i < result.Events.Count; i++)
         {
@@ -69,8 +88,8 @@ public partial class DischargeCheck : Control
         var cells = grid.GetChildren().OfType<Label>().Select(l => l.Text).ToList();
         int enemyCol = cells.IndexOf("放電(敵)"), allyCol = cells.IndexOf("放電(味)");
         int row = cells.IndexOf(UnitCatalog.Kata.Name);
-        Require(enemyCol > 0 && allyCol > 0 && row >= grid.Columns && cells[row + enemyCol] == credits[kata].Enemy.ToString(), "戦績のカタ行に実台本の集計");
-        Require(cells[row + allyCol] == credits[kata].Ally.ToString(), "味方への放電を別欄に表示");
+        Require(enemyCol > 0 && allyCol > 0 && row >= grid.Columns && cells[row + enemyCol] == kataCredit.Enemy.ToString(), "戦績のカタ行に実台本の集計");
+        Require(cells[row + allyCol] == kataCredit.Ally.ToString(), "味方への放電を別欄に表示");
         if (OS.GetCmdlineUserArgs().Contains("--capture"))
         {
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
@@ -81,7 +100,7 @@ public partial class DischargeCheck : Control
             BattleEngine.Materialize(EnemyCatalog.Stages[0].Enemy, 1), 0, verbose: true);
         Require(DischargePresentation.Count(quiet.Events, teams).Count == 0
             && !Enumerable.Range(0, quiet.Events.Count).Any(i => DischargePresentation.Cause(quiet.Events, i) is not null), "放電なしの陰性対照");
-        GD.Print($"DISCHARGE_CHECK_COMPLETE ok=True enemy={credits[kata].Enemy} ally={credits[kata].Ally} hits={hits} heals={heals}");
+        GD.Print($"DISCHARGE_CHECK_COMPLETE ok=True enemy={kataCredit.Enemy} ally={kataCredit.Ally} hits={hits} heals={heals}");
         main.QueueFree();
         await ToSignal(GetTree().CreateTimer(0.1), SceneTreeTimer.SignalName.Timeout);
     }

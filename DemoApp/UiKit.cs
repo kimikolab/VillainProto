@@ -159,7 +159,7 @@ public static class UiKit
         {
             if (!BattlePortraitCache.TryGetValue(key, out Texture2D? portrait))
             {
-                portrait = LoadTexture(path, mipmaps: key is "tome" or "tome_attack");
+                portrait = LoadTexture(path, mipmaps: key == "tome" || key.StartsWith("tome_"));
                 BattlePortraitCache[key] = portrait;
             }
             return portrait;
@@ -260,6 +260,11 @@ public static class UiKit
         "sasa" => 0.0267f,
         "tome" => 0.02083f, // 右向き待機絵。1536px の下端に32px。
         "tome_attack" => 0.05859f, // 攻撃絵の足元は1446px。
+        "tome_control" => 0.008f,
+        "tome_spray" => 0.019f,
+        "tou_powder" => 0.034f,
+        "shiga_interrupt" => 0.021f,
+        "kata_thunder" => 0.018f,
         "sora" => 0.0951f,
         "egu" => 0.1139f,
         "nomi" => 0.0430f,

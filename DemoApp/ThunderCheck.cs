@@ -18,8 +18,9 @@ public partial class ThunderCheck : Control
                 await Preview(); GD.Print("THUNDER_PREVIEW_OK"); GetTree().Quit(); return;
             }
             int hits = 0, arcs = 0, inverse = 0, depth = 0;
-            var formation = Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Rau,
-                center: UnitCatalog.Mio, back1: UnitCatalog.Kata, back3: UnitCatalog.Gald);
+            // カタの雷だけでは短い戦で連鎖しない。トウの粉と漏れがある実編成で放電も確認する。
+            var formation = Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Gald,
+                center: UnitCatalog.Beni, back1: UnitCatalog.Tou, back3: UnitCatalog.Kata);
             for (int stage = 0; stage < 2; stage++)
             {
                 var main = GD.Load<PackedScene>("res://Main.tscn").Instantiate<Main>(); AddChild(main);
@@ -111,6 +112,7 @@ public partial class ThunderCheck : Control
     }
     private async Task Capture(string name)
     {
+        if (DisplayServer.GetName() == "headless") return;
         await ToSignal(RenderingServer.Singleton,RenderingServer.SignalName.FramePostDraw);
         GetViewport().GetTexture().GetImage().SavePng(ProjectSettings.GlobalizePath($"res://../design/art/kata/{name}-fx-check.png"));
     }

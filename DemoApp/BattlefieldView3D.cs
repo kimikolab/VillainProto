@@ -90,7 +90,7 @@ public partial class BattlefieldView3D : Control
         BuildOverlay();
         _attackAudio = new BattleAttackAudio();
         AddChild(_attackAudio);
-        VisibilityChanged += () => { if (!IsVisibleInTree()) { _attackAudio.StopAll(); ResetLiliRite(); ResetFire(); } };
+        VisibilityChanged += () => { if (!IsVisibleInTree()) { _attackAudio.StopAll(); ResetLiliRite(); ResetFire(); EndShockMarkPresentation(); } };
     }
 
     private void BuildWorld()
@@ -291,6 +291,7 @@ public partial class BattlefieldView3D : Control
         ResetFire();
         ResetMovement();
         MisaShots = MisaSprays = MisaFlows = 0;
+        ResetShockMarkCounts();
         YomiIaiPlays = YomiIaiExtraPlays = 0;
         YomiSweepPlays = HaneBlastPlays = HanePinPlays = 0;
         ResetLiliRite();
@@ -617,6 +618,8 @@ public partial class BattlefieldView3D : Control
         if (advance && from.UnitId != "sero") await from.AdvanceToAttack(to.RestPosition);
         if (attackGeneration != _specialGeneration || !IsInstanceValid(from) || !IsInstanceValid(to)) return;
         if (holdPosition) from.HoldComboPosition();
+        if (from.UnitId == "tou") BeginPowderAttack(from);
+        if (from.InterruptWhip) from.ShowMovementPortrait("shiga_interrupt", 1.1);
         if (numbPercent > 0)
         {
             NumbSwings++;
@@ -645,7 +648,7 @@ public partial class BattlefieldView3D : Control
         if (!stagedThrust)
         {
             if (thrustCharge is int soundCharge) _attackAudio.PlayThrust(from.UnitId, from.Team, soundCharge);
-            else if (movementCue?.Kind != BattleEventKind.Blast || shieldImpact is not null)
+            else if (from.UnitId != "tou" && (movementCue?.Kind != BattleEventKind.Blast || shieldImpact is not null))
                 _attackAudio.PlayAttack(from.UnitId, from.Team, pattern, reaction, charged,
                     barrage: movementCue?.Kind == BattleEventKind.Barrage);
             CameraPunch((from.GlobalPosition + to.GlobalPosition) * 0.5f, pattern);
@@ -659,6 +662,11 @@ public partial class BattlefieldView3D : Control
             await ShowThrust(from, hits, stacks, thrustImpact);
         else if (await MovementAttack(from, to, hits, pattern, movementCue, arrowStates, blastDestination)) { }
         else if (from.SwordDrawn) ShowSwordSlash(from, hits, from.AnimationSpeed, playSound: false);
+        else if (from.UnitId == "tou")
+        {
+            // 散粉の予備動作。帯電の成功は後続のPowderRouteだけが出す。
+            ShockMarkFx.Sparks(_fxRoot, from.MovementPortraitPoint(new Vector2(957, 454), _camera), ShockMarkFx.Gold, 12, 0.45f, 0.32 / from.AnimationSpeed);
+        }
         else switch (pattern)
         {
             case AttackPattern.Sweep:
