@@ -908,6 +908,14 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 kugu292 grid <boss|guard|bat>   # 第292期 格子: 固定枠 トウ ＋ クグ ＋ カタ・探索枠2 × 席 120 × 4 版（KG-b ／ 糸玉（ボス KB-a ・精鋭 KB-b）× KR-b ／ KR-∞）
     dotnet run --project BattleSim -c Release 0 kugu292 check     # 第292期 自己検査（規定は動かない・版の札・糸玉は列の外で狙われず倒れず勝敗に数えない・戦を跨がない・KB-a × 精鋭 ＝ 規定・決定性・乱数の走査）
     dotnet run --project BattleSim -c Release 0 kugu292 log <boss|guard|bat> <短い名前を ・ で5つ> [seed] [kgb|kba|kbb|krb|krinf…]   # 第292期 1戦のログ
+    dotnet run --project BattleSim -c Release 0 kugu292 deep <boss|guard|bat> <短い名前を ・ で5つ>   # 第292期 1台 × 4 版（KG-b ／ 糸玉 × KR-b ／ KR-∞）のターンごとの推移
+    dotnet run --project BattleSim -c Release 0 shock293 p0        # 第293期 Phase 0: 精鋭でクグが組み付いていた手番・敵陣の隣の敵の数・シガの割り込みの合図の連鎖の大きさ（数秒）。本体は `Modes/Shock293.cs`
+    dotnet run --project BattleSim -c Release 0 shock293 compare   # 第293期: `compare` 64 行 × 規定 ／ KW-a ／ KW-b ／ SW-a ／ SW-b（その駒の在席行だけ・在席しない行が動いていないこと）
+    dotnet run --project BattleSim -c Release 0 shock293 boards    # 第293期: 代表台 9 台 × ボス ／ 近衛 ／ 大隊 × クグ 4 版 × シガ 3 版（網・糸玉・割り込みの倍率・雷雲・勇者の HP・対照）
+    dotnet run --project BattleSim -c Release 0 shock293 gridboss  # 第293期 ボスの格子: 固定枠 クグ（KW-a）＋ カタ ＋ シガ（SI-b ／ SW-a ／ SW-b）・探索枠2（第287期の候補 ＋ トウ）× 席 120
+    dotnet run --project BattleSim -c Release 0 shock293 grid <guard|bat> <kugu|shiga> <版>   # 第293期 精鋭の格子: 固定枠 トウ ＋ クグ ／ シガ・探索枠3・規定と版の2つを同じ台で
+    dotnet run --project BattleSim -c Release 0 shock293 deep <boss|guard|bat> <短い名前を ・ で5つ> [版…]   # 第293期 1台 × 版（省略で全版）
+    dotnet run --project BattleSim -c Release 0 shock293 check     # 第293期 自己検査（規定のカタ ＝ KR-∞・版の札と文面・網の張り方 ／ 帯電し直し ／ 倒れたら消える・ボスで KW-a ＝ KB-a・SW-a の倍率・SW-b の蓄電・決定性・乱数の走査）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

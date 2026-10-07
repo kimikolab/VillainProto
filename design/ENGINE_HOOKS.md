@@ -767,6 +767,12 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   張るのは `GrappleTrait.Act` の組み付きの直後 → `BattleContext.PlaceSilkBall`（隣の空き席＝生きている駒も糸玉もいない席を席番号の若い順・無ければほかの空き席・番号は `_nextInstanceId` から振るが列には入れない）。
   弾けた糸玉は `AfterChain` の `popped` に入る（雷雲・割り込みの燃料）が、**シガの割り込みの主目標・雷霆の的・`ChainAliveHist` からは外す**。感電の痺れ（`StunByShock`）は糸玉に掛けない（S3 の乱数も引かない）。
   **糸玉が1つも無い戦は `_silkBalls.Count == 0` の比較1つで従来どおり**（`compare` 0 件）。表示専用の出来事 `SilkBall`（`SilkBallLabels` 張る ／ 弾け ／ 帯電）を足し、`shockdigest` の `SkipAlways` と `CheckWave.Dig` は外す。
+- **第293期: 規定のカタを KR-∞（`ThundercloudUncapped`）にした**（旧の規定 KR-b は `KataKRb`・過去の器具はそちらに固定）。**クグの網（KW-a `WebCharge` ／ KW-b `WebSnare`）とシガの連鎖の鞭（SW-a `ShockWhipChain` ／ SW-b ＋ `StoredChargeEvery`）を版として足した**（規定には入れていない）。
+  網: `GrappleTrait.Act` が組み付いている手番（組み付いたまま ／ 新しく組み付いた）ごとに `BattleContext.SpinWeb` を呼ぶ——糸は新しいキー `StatusKeys.Web`（値 ＝ 張ったクグの番号 + 1・`All` に入れた・カタの雷の `CountedKeys` には入れない）。
+  張る先は ① 組み付いた敵の隣の敵 ② ほかの敵（組み付いた敵そのものは除く）③ 糸玉（`PlaceSilkBall`）。止められない相手には KB-a と同じく糸玉を1つ張り、③ は張らない（1手番に糸玉1つ）。
+  KW-a は `RechargeSilkBalls` の頭の `RechargeWebs`（`MarkShock` を通す）でターンの頭に帯電し直す。KW-b は `Run` の並べ替えの速さを `BattleContext.TurnSpeed`（−3）に替えた——**網の無い戦は `Def.Speed` のままなので群の分け方も乱数も同じ**。倒れたら `HandleDeath` で糸を消す。
+  連鎖の鞭: `ShockWhip` が割り込みの間だけ `_shockWhipMult` ＝ 1 ＋ 合図の連鎖で弾けた数（糸玉を含む）を立て、`WhipAmount` が2倍の後に掛ける。SW-b は `MarkShock` の「すでに帯電している」枝で蓄電 +1。
+  表示専用: 出来事 `Web`（`WebLabels` 張る ／ 糸玉 ／ 帯電）と `ShockGaugeLabels.WhipChain`（割り込み・倍率）。`shockdigest` の `SkipAlways` と `CheckWave.Dig` は `Web` を外す（`ShockGauge` は元から外している）。
 - **第218期の澱みのミオの版（札 `MireSlam` / `MireConduct` / `MireDull` / `MireDullAll` / `MireCarry` / `MireHandoff`・**第219期に M5 ＝ `MireDullAll` 以外の5枚をミオの規定にした**（ポンの判断・札の並びは `MireDiag.VerOf("M5")` と同じ）・M0 は `mire` の診断のローカル）**——
   **叩きつけ・通電は `ConcentrateTrait` の最後から `BattleContext.MireSlam`**（寄せ先は「感電している敵がいればその中から」・`ApplyDamage` を直に呼ぶ＝標的の鎖を通らない・撃破はミオ）。
   **澱みのデバフは `MireCut` の1本を4口**（`PerformAttackBody` の**痺れ毒の直後** ／ `StrikeThunder` ／ `Discharge`（反転しない側）／ 叩きつけ・通電）で、出どころの印 × 10%（上限 40%）を切り捨てで引く。

@@ -610,7 +610,7 @@ static class Shock289Diag
             && UnitCatalog.KataKRb.Traits.SequenceEqual(s3.Append(TraitId.Thundercloud).Append(TraitId.ThundercloudKeep))
             && new[] { UnitCatalog.ShigaSIa, UnitCatalog.ShigaSIb }.All(d => d.MaxHp == 52 && d.Attack == 9 && d.Speed == 3 && d.Id == "shiga")
             && new[] { UnitCatalog.KataKRa, UnitCatalog.KataKRb }.All(d => d.MaxHp == UnitCatalog.KataS3.MaxHp && d.Attack == UnitCatalog.KataS3.Attack && d.Speed == UnitCatalog.KataS3.Speed && d.Id == "kata")
-            && ReferenceEquals(UnitCatalog.ShigaSIb, UnitCatalog.Shiga) && ReferenceEquals(UnitCatalog.KataKRb, UnitCatalog.Kata)
+            && ReferenceEquals(UnitCatalog.ShigaSIb, UnitCatalog.Shiga) && UnitCatalog.Kata.Traits.SequenceEqual(UnitCatalog.KataKRb.Traits.Append(TraitId.ThundercloudUncapped))   /* 第293期: 規定は KR-∞・KR-b は KataKRb */
             && !new[] { UnitCatalog.ShigaSIa, UnitCatalog.KataKRa }.Any(UnitCatalog.Everyone.Contains));
         Expect("(c) 割り込み・雷雲の札の保持者は `All` に 規定のシガ ／ カタの1枚ずつ（雷霆の割り込み・KR-a だけの札は 0 枚）",
             UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.ShockWhipFlurry)) == 1 && UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.ThundercloudKeep)) == 1

@@ -440,7 +440,11 @@
 | `ThreadCharge` | 縛めのクグ |
 | `SilkBallSteadfast` | - |
 | `SilkBallEvery` | - |
-| `ThundercloudUncapped` | - |
+| `ThundercloudUncapped` | 禍導のカタ |
+| `WebCharge` | - |
+| `WebSnare` | - |
+| `ShockWhipChain` | - |
+| `StoredChargeEvery` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

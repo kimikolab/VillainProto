@@ -662,6 +662,11 @@ public enum TraitId
     SilkBallSteadfast, // 糸玉（KB-a）: 組み付いた相手が動じない（`Grappled` が付かない）とき、その相手の隣の空き席に帯電した糸玉を1つ張る（**札そのものは挙動を持たない**・`GrappleTrait` が読み、engine の `PlaceSilkBall` が張る）
     SilkBallEvery,     // 糸玉（KB-b）: 新しく組み付くたび（止められる相手にも）、その相手の隣の空き席に帯電した糸玉を1つ張る（**札そのものは挙動を持たない**・同上）
     ThundercloudUncapped, // 雷雲の上限なし（KR-∞）: 雷雲が残る（KR-b）の上限 8 を外す（**札そのものは挙動を持たない**・engine の `AfterChain` が読む）
+    // --- 第293期で足した札（クグの網の版 `UnitCatalog.KuguKWa` ／ `KuguKWb`、シガの直し `ShigaSWa` ／ `ShigaSWb` だけが持つ） ---
+    WebCharge,       // 帯電の網（KW-a）: 組み付いている間、手番ごとに糸を1本張る（隣の敵 → ほかの敵 → 糸玉）。糸の敵は毎ターン頭に帯電し直す。止められない相手には代わりに糸玉（**札そのものは挙動を持たない**・`GrappleTrait` → engine の `SpinWeb`）
+    WebSnare,        // 絡まる網（KW-b）: 同じく糸を張る。糸の敵は速さ −3（行動順だけ・重ならない）。帯電はしない（同上・速さは engine の `TurnSpeed`）
+    ShockWhipChain,  // 連鎖の鞭（SW-a）: 割り込みの鞭が × (1 ＋ 合図の連鎖で弾けた数)（糸玉を含む・2倍の後）（**札そのものは挙動を持たない**・engine の `ShockWhip` ／ `WhipAmount`）
+    StoredChargeEvery, // 浴びるたびの蓄電（SW-b）: すでに帯電していても感電を付けられようとしたら蓄電 +1（上限 4 のまま）（**札そのものは挙動を持たない**・engine の `MarkShock`）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -12542,10 +12547,12 @@ public sealed class GrappleTrait : Trait
     {
         if (!self.IsAlive) return;
         UnitState? held = Held(ctx, self);
+        bool web = self.HasTrait(TraitId.WebCharge) || self.HasTrait(TraitId.WebSnare);   // 第293期（網の版）
         if (held is not null && held.IsAlive && held.RawCounter(StatusKeys.Grappled) > 0)
         {
             ctx.NoteGrappleHold(self);
             ctx.Log($"    {self.Name} は {held.Name} に組み付いたまま離さない", LogKind.Action);
+            if (web) ctx.SpinWeb(self, held, noBall: false);   // 第293期: 組み付いている間、手番ごとに糸を1本
             return;
         }
         self.SetCounter(TargetKey, 0);
@@ -12562,6 +12569,14 @@ public sealed class GrappleTrait : Trait
         if (self.HasTrait(TraitId.SilkBallEvery)
             || (self.HasTrait(TraitId.SilkBallSteadfast) && pick.RawCounter(StatusKeys.Grappled) <= 0))
             ctx.PlaceSilkBall(self, pick);
+        // 第293期（網）: 組み付いた手番にも糸を1本張る。止められない相手には組み付きの代わりに糸玉を1つ張り（KB-a と同じ）、
+        // ほかに糸の掛かっていない敵がいればその敵にも糸を張る（敵がすべて糸の中でも、糸玉は1手番に1つまで）。
+        if (web)
+        {
+            bool steadfast = pick.RawCounter(StatusKeys.Grappled) <= 0;
+            if (steadfast) ctx.PlaceSilkBall(self, pick);
+            ctx.SpinWeb(self, pick, noBall: steadfast);
+        }
     }
 
     /// <summary>ほどく。<b>殴られた・倒れた</b>ときに呼ぶ。相手の <c>Grappled</c> を 0 に戻す。</summary>
@@ -16507,6 +16522,10 @@ public static class TraitCatalog
         new MarkerOnlyTrait(TraitId.SilkBallSteadfast),     // 第292期（KB-a）
         new MarkerOnlyTrait(TraitId.SilkBallEvery),         // 第292期（KB-b）
         new MarkerOnlyTrait(TraitId.ThundercloudUncapped),  // 第292期（KR-∞）
+        new MarkerOnlyTrait(TraitId.WebCharge),             // 第293期（KW-a）
+        new MarkerOnlyTrait(TraitId.WebSnare),              // 第293期（KW-b）
+        new MarkerOnlyTrait(TraitId.ShockWhipChain),        // 第293期（SW-a ／ SW-b）
+        new MarkerOnlyTrait(TraitId.StoredChargeEvery),     // 第293期（SW-b）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

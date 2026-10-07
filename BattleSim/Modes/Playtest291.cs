@@ -29,7 +29,7 @@ static class Playtest291Diag
 
     static EnemyCatalog.PlaytestStage WaveOf(string n) => EnemyCatalog.PlaytestStages[n switch { "boss" => 0, "guard" => 1, "bat" => 2, _ => int.Parse(n) }];
     static (List<UnitState> P, List<UnitState> E) Make(Formation f, EnemyCatalog.PlaytestStage w)
-        => (BattleEngine.Materialize(f, BattleContext.PlayerTeam), BattleEngine.MaterializeEnemy(w.Enemy, w.Scale));
+        => (BattleEngine.Materialize(FvSwap(f, UnitCatalog.Kata, UnitCatalog.KataKRb), BattleContext.PlayerTeam), BattleEngine.MaterializeEnemy(w.Enemy, w.Scale));   // 第293期: カタは第291期の規定（KR-b）に固定
 
     /// <summary>第291期に足した表示専用の種類。</summary>
     static readonly BattleEventKind[] NewKinds = { BattleEventKind.ShockGauge, BattleEventKind.Feather, BattleEventKind.Scar, BattleEventKind.MarkLayer };
@@ -196,7 +196,7 @@ static class Playtest291Diag
         var battles = new List<(string Name, Func<(List<UnitState>, List<UnitState>)> Make, int Seed)>();
         foreach (var (name, f) in pl) foreach (var w in ps) for (int s = 0; s < 20; s++) { var ff = f; var ww = w; battles.Add(($"{name}×{w.Name}", () => Make(ff, ww), s)); }
         foreach (var (name, f) in Presets.Compare) for (int wi = 0; wi < EnemyCatalog.Stages.Count; wi++) for (int s = 0; s < 4; s++)
-                { var ff = f; int wj = wi; battles.Add(($"{name}×第{wi + 1}波", () => (BattleEngine.Materialize(ff, BattleContext.PlayerTeam), BattleEngine.Materialize(EnemyCatalog.Stages[wj].Enemy, BattleContext.EnemyTeam, EnemyScaleRule.Default)), s)); }
+                { var ff = FvSwap(f, UnitCatalog.Kata, UnitCatalog.KataKRb);   /* 第293期: カタは第291期の規定（KR-b）に固定 */ int wj = wi; battles.Add(($"{name}×第{wi + 1}波", () => (BattleEngine.Materialize(ff, BattleContext.PlayerTeam), BattleEngine.Materialize(EnemyCatalog.Stages[wj].Enemy, BattleContext.EnemyTeam, EnemyScaleRule.Default)), s)); }
         long diff = 0, holderLess = 0, interruptBad = 0, volleyBad = 0, scarBad = 0, layerBad = 0, powderBad = 0, threadBad = 0, gaugeBad = 0;
         var kindsSeen = new Dictionary<string, long>();
         var lockObj = new object();

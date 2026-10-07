@@ -182,8 +182,8 @@ static partial class CheckWaveDiag
     {
         var l = new List<string> { $"won={r.PlayerWon} T={r.Turns}" };
         l.AddRange(r.Log.Select(x => x.Text));
-        // 第291期: 表示専用の4種（`ShockGauge` ／ `Feather` ／ `Scar` ／ `MarkLayer`）は外す（第292期に糸玉 `SilkBall` も）——前の期の台本の指紋と並べるため（盤面は読むだけの種類）。
-        l.AddRange(r.Events.Where(ev => ev.Kind is not (BattleEventKind.ShockGauge or BattleEventKind.Feather or BattleEventKind.Scar or BattleEventKind.MarkLayer or BattleEventKind.SilkBall)).Select(ev => $"E {ev.Kind} {ev.Turn} {ev.ActorId} {ev.TargetId} {ev.Amount} {ev.HpAfter} {ev.Slot} {ev.Text} {ev.TickIndex} {ev.TickCount} {ev.BrittleExtra}"));
+        // 第291期: 表示専用の4種（`ShockGauge` ／ `Feather` ／ `Scar` ／ `MarkLayer`）は外す（第292期に糸玉 `SilkBall`・第293期に網 `Web` も）——前の期の台本の指紋と並べるため（盤面は読むだけの種類）。
+        l.AddRange(r.Events.Where(ev => ev.Kind is not (BattleEventKind.ShockGauge or BattleEventKind.Feather or BattleEventKind.Scar or BattleEventKind.MarkLayer or BattleEventKind.SilkBall or BattleEventKind.Web)).Select(ev => $"E {ev.Kind} {ev.Turn} {ev.ActorId} {ev.TargetId} {ev.Amount} {ev.HpAfter} {ev.Slot} {ev.Text} {ev.TickIndex} {ev.TickCount} {ev.BrittleExtra}"));
         return l;
     }
 

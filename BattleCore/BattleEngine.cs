@@ -350,7 +350,14 @@ public static class StatusKeys
     /// </summary>
     public const string Shock = "shock";
 
-    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted, Concentrated, Numbed, Guren, Stigma, Plank, Shock };
+    /// <summary>
+    /// 糸（第293期・クグの網 KW-a ／ KW-b）。値は張ったクグの <c>InstanceId + 1</c>（0 ＝ 糸なし）。書き手は <see cref="BattleContext.SpinWeb"/> の1箇所。
+    /// 戦の終わりまで残る（組み付きがほどけても残る）・倒れたら消える。KW-a はターンの頭に帯電し直し、KW-b は速さ −3（行動順だけ・重ならない）。
+    /// <b>カタの雷の「帯びた種類」には数えない</b>（<c>ThunderTrait.CountedKeys</c> に入れない）。<see cref="All"/> に入れてあるので会戦の境界で消える。
+    /// </summary>
+    public const string Web = "web";
+
+    public static readonly string[] All = { Poison, Marked, Stun, Burn, IdleTurn, Armor, Wound, Deep, Curse, Stagger, Confused, Ward, Debt, Ash, Grappled, Cowed, Footing, Daunted, Concentrated, Numbed, Guren, Stigma, Plank, Shock, Web };
 
     /// <summary>
     /// 手番を奪う状態（第261期）: 痺れ・転倒・組み付き・竦み・混乱。<see cref="Trait.BlocksControl"/> の保持者には付かない（<c>UnitState.SetCounter</c> の入口）。
@@ -390,6 +397,7 @@ public static class StatusKeys
         Stigma => "聖",
         Plank => "板",
         Shock => "雷",
+        Web => "糸",
         _ => key
     };
 }
@@ -1188,6 +1196,8 @@ public sealed class BattleContext
     readonly List<UnitState> _chainReaders = new();
     /// <summary>第289期: いま割り込みの鞭を振っている駒（怖気の判定から外す・<see cref="ShockWhip"/> の中だけ）。</summary>
     UnitState? _shockWhipActor;
+    /// <summary>第293期（SW-a）: いま振っている割り込みの鞭の倍率（1 ＝ 掛けない・<see cref="ShockWhip"/> の中だけ）。</summary>
+    int _shockWhipMult = 1;
 
     /// <summary>第290期: 組み付きの保持者（クグ）が戦闘に出たか（<b>計数</b>の口を短絡させる）。</summary>
     bool _grappleLive;
@@ -1291,6 +1301,7 @@ public sealed class BattleContext
     /// <summary>ターンの頭に糸玉を帯電し直す（第292期・<c>Run</c> の <c>TickStatuses</c> の直後）。糸玉が無ければ比較1つで抜ける。</summary>
     public void RechargeSilkBalls()
     {
+        if (_webLive) RechargeWebs();   // 第293期（KW-a の糸の敵・網が無ければ比較1つ）
         if (_silkBalls.Count == 0) return;
         int n = 0;
         foreach (UnitState b in _silkBalls)
@@ -1299,6 +1310,84 @@ public sealed class BattleContext
         Log($"    糸玉が帯電し直した（{n} 個）", LogKind.Status);
         if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.SilkBall, Turn = _turn, Amount = n, Text = SilkBallLabels.Recharge });
     }
+
+    // =================================================================================
+    // 第293期 —— クグの網（KW-a 帯電の網 ／ KW-b 絡まる網・design/PHASE293_SHOCK_WEB_SPEC.md §3）
+    //
+    // 組み付いている間、クグの手番ごとに糸を1本張る（`GrappleTrait` が呼ぶ）。糸は `StatusKeys.Web`（値 ＝ 張ったクグの番号 + 1）。
+    // KW-a はターンの頭に帯電し直す（`RechargeSilkBalls` の中・`MarkShock` を通す）、KW-b は行動順の速さ −3（`TurnSpeed`）。
+    // **網の保持者がいなければ `_webLive` の比較1つで従来どおり。** 乱数を引かない。
+    // =================================================================================
+
+    bool _webLive;
+
+    /// <summary>糸の持ち主（張ったクグ・倒れていても引く）。無ければ null。</summary>
+    UnitState? WebOwner(UnitState u)
+    {
+        int id = u.RawCounter(StatusKeys.Web) - 1;
+        if (id < 0) return null;
+        foreach (UnitState k in _units) if (k.InstanceId == id) return k;
+        return null;
+    }
+
+    /// <summary>
+    /// 糸を1本張る（第293期・<see cref="GrappleTrait"/> だけが呼ぶ）。張る先: ① 組み付いた敵（<paramref name="held"/>）の隣の敵で糸の掛かっていない駒（席番号の若い順）
+    /// ② いなければほかの敵で糸の掛かっていない駒（組み付いた敵そのものは除く）③ すべて糸の中なら組み付いた敵の隣の空き席に糸玉（<paramref name="noBall"/> なら張らない）。
+    /// KW-a の糸は張った瞬間にも帯電させる（糸玉と同じ）。<b>乱数を引かない。</b>
+    /// </summary>
+    public void SpinWeb(UnitState kugu, UnitState held, bool noBall)
+    {
+        _webLive = true;
+        UnitTally kt = TallyOf(kugu);
+        UnitState? pick = null;
+        foreach (UnitState u in LivingMembers(held.TeamId).OrderBy(x => x.Slot))
+            if (u != held && u.RawCounter(StatusKeys.Web) <= 0 && FormationRules.AreAdjacent(held, u)) { pick = u; break; }
+        if (pick is null)
+            foreach (UnitState u in LivingMembers(held.TeamId).OrderBy(x => x.Slot))
+                if (u != held && u.RawCounter(StatusKeys.Web) <= 0) { pick = u; break; }
+        if (pick is null)
+        {
+            if (noBall) { kt.WebNone++; return; }
+            UnitState? ball = PlaceSilkBall(kugu, held);
+            if (ball is null) { kt.WebNone++; return; }
+            kt.WebBalls++;
+            if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Web, Turn = _turn, ActorId = kugu.InstanceId, TargetId = ball.InstanceId, PartnerId = held.InstanceId, Slot = ball.Slot, Team = ball.TeamId, Text = WebLabels.Ball });
+            return;
+        }
+        pick.SetCounter(StatusKeys.Web, kugu.InstanceId + 1);
+        kt.WebSpun++;
+        if (FormationRules.AreAdjacent(held, pick)) kt.WebAdjacent++;
+        Log($"    {kugu.Name} が {pick.Name} に糸を張った", LogKind.Trigger);
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Web, Turn = _turn, ActorId = kugu.InstanceId, TargetId = pick.InstanceId, PartnerId = held.InstanceId, Slot = pick.Slot, Team = pick.TeamId, Text = WebLabels.Spin });
+        if (kugu.HasTrait(TraitId.WebCharge) && MarkShock(pick, kugu)) kt.WebCharged++;
+    }
+
+    /// <summary>ターンの頭に KW-a の糸の敵を帯電し直す（第293期・<see cref="RechargeSilkBalls"/> の中）。</summary>
+    void RechargeWebs()
+    {
+        foreach (UnitState u in _units.ToList())
+        {
+            if (!u.IsAlive || u.RawCounter(StatusKeys.Web) <= 0) continue;
+            UnitState? k = WebOwner(u);
+            if (k is null || !k.HasTrait(TraitId.WebCharge)) continue;
+            if (!MarkShock(u, k)) continue;
+            TallyOf(k).WebRecharged++;
+            if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Web, Turn = _turn, ActorId = k.InstanceId, TargetId = u.InstanceId, Slot = u.Slot, Team = u.TeamId, Text = WebLabels.Recharge });
+        }
+    }
+
+    /// <summary>
+    /// 行動順の速さ（第293期）。KW-b の糸の掛かった駒は −3（重ならない）。<b>網が張られていない戦は <c>Def.Speed</c> のまま</b>（`Run` の並べ替えだけが読む）。
+    /// </summary>
+    public int TurnSpeed(UnitState u)
+    {
+        if (!_webLive || u.RawCounter(StatusKeys.Web) <= 0) return u.Def.Speed;
+        UnitState? k = WebOwner(u);
+        return k is not null && k.HasTrait(TraitId.WebSnare) ? u.Def.Speed - WebSnareSlow : u.Def.Speed;
+    }
+
+    /// <summary>KW-b の速さの減り。</summary>
+    public const int WebSnareSlow = 3;
 
     /// <summary>
     /// 糸玉に届いた放電（第292期・<see cref="Discharge"/> だけが呼ぶ）。<b>HP は減らない</b>（<c>ApplyDamage</c> を通さない・<c>Damage</c> も出さない）。
@@ -1353,12 +1442,24 @@ public sealed class BattleContext
         }
         bool bound = TormentTrait.IsBound(this, t);
         bool shocked = !bound && w.CountShock && t.RawCounter(StatusKeys.Shock) > 0;
-        if (!bound && !shocked) return amount;
-        wt.WhipDoubled++;
-        if (shocked) wt.WhipDoubledShock++;
-        wt.WhipBonus += amount;
-        Log($"    {w.Actor.Name} の鞭が動けない {t.Name} に二重に入る（{amount} → {amount + amount}）", LogKind.Highlight, w.Actor);
-        return amount + amount;
+        int result = amount;
+        if (bound || shocked)
+        {
+            wt.WhipDoubled++;
+            if (shocked) wt.WhipDoubledShock++;
+            wt.WhipBonus += amount;
+            Log($"    {w.Actor.Name} の鞭が動けない {t.Name} に二重に入る（{amount} → {amount + amount}）", LogKind.Highlight, w.Actor);
+            result = amount + amount;
+        }
+        // 第293期（SW-a）: 割り込みの鞭の倍率（2倍の後）。割り込みの外・保持者のいない戦では 1 のまま。
+        if (_shockWhipMult > 1 && _shockWhipActor == w.Actor)
+        {
+            int m = result * _shockWhipMult;
+            wt.SwMultBonus += m - result;
+            Log($"    弾けた電気をまとった鞭が {t.Name} を打つ（{result} → {m}）", LogKind.Damage);
+            result = m;
+        }
+        return result;
     }
 
     /// <summary>
@@ -1414,7 +1515,12 @@ public sealed class BattleContext
     {
         if (!target.IsAlive) return false;
         _shockLive = true;
-        if (target.RawCounter(StatusKeys.Shock) > 0) return false;
+        if (target.RawCounter(StatusKeys.Shock) > 0)
+        {
+            // 第293期（SW-b）: 感電を浴びるたび蓄電 +1（すでに帯電していても）。保持者がいなければ比較1つで抜ける。
+            if (_chargeLive && target.HasTrait(TraitId.StoredChargeEvery)) { TallyOf(target).ChargeOnShocked++; GainCharge(target, writer); }
+            return false;
+        }
         target.SetCounter(StatusKeys.Shock, 1);
         UnitTally wt = TallyOf(writer);
         if (writer.TeamId == target.TeamId) wt.ShockOnAlly++; else wt.ShockOnFoe++;
@@ -1589,6 +1695,7 @@ public sealed class BattleContext
                 });
                 Log($"    {x.Name} の感電が弾けた（{(d == 0 ? "起点" : d + " 段目")}）", LogKind.Trigger);
                 bool ball = _silkBalls.Count > 0 && IsSilkBall(x);   // 第292期（糸玉が無ければ比較1つ）
+                if (_webLive && x.RawCounter(StatusKeys.Web) > 0 && WebOwner(x) is { } wo) TallyOf(wo).WebPops++;   // 第293期・計数のみ
                 if (ball)
                 {
                     UnitTally ot = TallyOf(_silkOwner[x]);
@@ -1701,10 +1808,19 @@ public sealed class BattleContext
             Log($"    そばで弾けた電気に、{h.Name} の鞭が割り込む", LogKind.Highlight, h);
             long before = t.DamageToEnemy;
             UnitState? prevActor = _shockWhipActor;
+            int prevMult = _shockWhipMult;
             _shockWhipActor = h;
+            // 第293期（SW-a ／ SW-b）: 割り込みの鞭は合図の連鎖で弾けた数（糸玉を含む）だけ重くなる（× (1 ＋ 数)・2倍の後）。
+            _shockWhipMult = h.HasTrait(TraitId.ShockWhipChain) ? 1 + popped.Count : 1;
+            if (_shockWhipMult > 1)
+            {
+                t.SwMultSum += _shockWhipMult; t.SwMultN++;
+                (t.SwChainHist ??= new long[12])[Math.Min(popped.Count, 11)]++;
+                EmitShockGauge(ShockGaugeLabels.WhipChain, h, target, _shockWhipMult, popped.Count);   // 表示専用（倍率）
+            }
             _forcedTarget = target;
             try { PerformAttack(h); }
-            finally { _forcedTarget = null; _shockWhipActor = prevActor; }
+            finally { _forcedTarget = null; _shockWhipActor = prevActor; _shockWhipMult = prevMult; }
             t.SwWhipDealt += t.DamageToEnemy - before;
             if (bolt)
             {
@@ -12855,6 +12971,7 @@ public sealed class BattleContext
     private void HandleDeath(UnitState dead, UnitState? killer)
     {
         dead.Hp = 0;
+        if (_webLive && dead.RawCounter(StatusKeys.Web) > 0) dead.SetCounter(StatusKeys.Web, 0);   // 第293期: 糸の掛かった敵が倒れたら糸は消える
         NoteBurnLink(dead, killer);   // 第233期・**計数のみ**（燃焼の繋ぎの見込み）
         if (_evadeLive && dead.HasTrait(TraitId.Evade))   // 第223期・**計数のみ**（倒れた一撃の種類）
         {
@@ -14286,7 +14403,7 @@ public static class BattleEngine
 
             var speedGroups = ctx.AllUnits
                 .Where(u => u.IsAlive)
-                .GroupBy(u => (u.Def.Speed, u.TeamId));
+                .GroupBy(u => (Speed: ctx.TurnSpeed(u), u.TeamId));   // 第293期: KW-b の糸で −3（網の無い戦は Def.Speed のまま）
 
             var order = (inverted
                     ? speedGroups.OrderBy(g => g.Key.Speed)

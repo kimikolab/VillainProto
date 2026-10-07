@@ -30,7 +30,7 @@
 | 3 | 駆り立てのカリ | -6.38 | +1.94 | 残す | 2 | 0 | 32.0 | ノイズ | 上（単独で強い） |  | Goad |
 | 4 | 据えのバン | -1.16 | +1.44 | 転生 | 4 | 2 | 33.0 | 化ける | 左下（送り先を選べば働く） |  | Footing / Planted |
 | 5 | 痺れ粉のトウ | -0.25 | +3.87 | 残す | 2 | 0 | 38.0 | ノイズ | 上（単独で強い） |  | ChargedPowder / ChargedPowderLeak / ShockStunHalf / ChargedPowderSpread |
-| 6 | 背かれのソム | -0.12 | -13.43 | 転生 | 1 | 1 | 33.0 | ノイズ | 左下（送り先を選べば働く） |  | BetrayedShockNoThunder |
+| 6 | 背かれのソム | -0.12 | -13.43 | 転生 | 1 | 1 | 32.0 | ノイズ | 左下（送り先を選べば働く） |  | BetrayedShockNoThunder |
 | 7 | 尾灯のトモ | +0.00 | +17.75 | 残す | 1 | 0 | 18.0 | 化ける | 上（単独で強い） |  | Taillight |
 | 8 | 引き受けのウケ | +0.00 | +1.96 | 残す | 1 | 0 | 36.0 | 化ける | 上（単独で強い） |  | Bear |
 | 9 | 渡しのワタ | +0.00 | +2.05 | 残す | 1 | 0 | 42.0 | 化ける | 上（単独で強い） |  | Relay |
@@ -57,7 +57,7 @@
 | 30 | 突き返しのハネ | +8.88 | -3.59 | 転生 | 1 | 0 | 42.0 | 化ける | 左下（送り先を選べば働く） | 対照 0.0pt | Rebound / Overrun / Disarray / Blast / Spring / Tailwind / TailwindFighter / SpringGuard / SpringStay / SpringRow / Landing / SpringStrike / SpringDaunt / BlastReach / BlastStay |
 | 31 | 刻みのノミ | +11.36 | +12.05 | 残す | 7 | 2 | 9.0 | どこでも同じ | 上（単独で強い） |  | Pellet / Carve / CarveOnce / Fixate |
 | 32 | 瘴気袋のグザ | +12.64 | +21.36 | 残す | 8 | 0 | 17.0 | 化ける | 上（単独で強い） |  | Miasma |
-| 33 | 禍導のカタ | +12.88 | — | — | 1 | 1 | 43.0 | 化ける | — |  | Thunder / ThunderLeak / ThunderPath / ShockStunHalf / Thundercloud / ThundercloudKeep |
+| 33 | 禍導のカタ | +12.88 | — | — | 1 | 1 | 44.0 | 化ける | — |  | Thunder / ThunderLeak / ThunderPath / ShockStunHalf / Thundercloud / ThundercloudKeep / ThundercloudUncapped |
 | 34 | 焼け残りのボルグ | +13.83 | -4.51 | 転生 | 13 | 0 | 52.0 | 化ける | 左下（送り先を選べば働く） | 0.0pt | Splash / FireFeed / Cinder / FireArmor / FireSplash / SelfKindle / FireMend / FireWardAll / FireLevel / CinderWide / FireKeep / FireSpreadCap / FireUnleash / FoeFireLevel / FoeFireTick / FoeFireBrittle / FoeFireSpread / AllyFireTick / RadiateCall / CallFull / UnleashBlaze / BlazeSolo / KindleGuard / BlazeHoard / KindleOpen / BlazeFoeSurgeMax |
 | 35 | 砕け盾のヒビ | +14.75 | +4.64 | 残す | 4 | 0 | 14.0 | どこでも同じ | 上（単独で強い） |  | Shatter / Frail |
 | 36 | 棘鎧のカド | +15.54 | +32.59 | 残す | 10 | 2 | 34.0 | 化ける | 上（単独で強い） |  | ThornGuard / Thorns / Immobile / Havoc / ThornsArmored |
@@ -84,4 +84,4 @@
 - `checkup ideal` が値を返した駒: 51 / 52 （返さないのは `CompareBuilds()` に在席 0 枠の駒だけ）
 - `stage catalog` が引けた駒: 51 / 52
 
-所要 479.4 秒（うち `stage catalog` が 443.6 秒）。
+所要 599.7 秒（うち `stage catalog` が 554.3 秒）。

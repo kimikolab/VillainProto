@@ -2047,6 +2047,13 @@ public sealed class UnitTally
     /// <c>SilkDealt</c> 糸玉の放電が駒から削った HP ／ <c>SilkPopsHeroRoot</c> 敵の駒が起点の連鎖で弾けた糸玉。
     /// </summary>
     public long SilkPlaced, SilkNoRoom, SilkFar, SilkPops, SilkDisIn, SilkDisOut, SilkDisToUnit, SilkDealt, SilkPopsHeroRoot;
+    /// <summary>
+    /// 第293期（<b>計数専用</b>）: クグの網 ＝ <c>WebSpun</c> 敵に張った糸 ／ <c>WebAdjacent</c> そのうち組み付いた敵の隣 ／ <c>WebBalls</c> 敵がすべて糸の中で糸玉にした ／ <c>WebNone</c> 張れなかった ／
+    /// <c>WebCharged</c> 張った瞬間に帯電させた（KW-a）／ <c>WebRecharged</c> ターンの頭に帯電し直した（KW-a）／ <c>WebPops</c> 糸の敵の感電が弾けた。
+    /// シガ ＝ <c>SwMultSum</c> ／ <c>SwMultN</c> 割り込みの鞭の倍率の合計と回数 ／ <c>SwMultBonus</c> 倍率で足した量（打つ前）／ <c>SwChainHist</c>[n] 合図の連鎖で弾けた数 ／ <c>ChargeOnShocked</c> 帯電中に感電を浴びた（SW-b）。
+    /// </summary>
+    public long WebSpun, WebAdjacent, WebBalls, WebNone, WebCharged, WebRecharged, WebPops, SwMultSum, SwMultN, SwMultBonus, ChargeOnShocked;
+    public long[]? SwChainHist;
     /// <summary>第290期（<b>計数専用</b>・カタ）: <c>CloudByCast</c>[n] n+1 回目の雷を落とした時点の雷雲の合計（8 回目以降は最後の枠）。</summary>
     public long[]? CloudByCast;
 
@@ -3114,6 +3121,8 @@ public sealed class UnitTally
         AddHist(ref KuguShockBySrc, o.KuguShockBySrc); AddHist(ref CloudByCast, o.CloudByCast);
         SilkPlaced += o.SilkPlaced; SilkNoRoom += o.SilkNoRoom; SilkFar += o.SilkFar; SilkPops += o.SilkPops; SilkDisIn += o.SilkDisIn; SilkDisOut += o.SilkDisOut;
         SilkDisToUnit += o.SilkDisToUnit; SilkDealt += o.SilkDealt; SilkPopsHeroRoot += o.SilkPopsHeroRoot;
+        WebSpun += o.WebSpun; WebAdjacent += o.WebAdjacent; WebBalls += o.WebBalls; WebNone += o.WebNone; WebCharged += o.WebCharged; WebRecharged += o.WebRecharged; WebPops += o.WebPops;
+        SwMultSum += o.SwMultSum; SwMultN += o.SwMultN; SwMultBonus += o.SwMultBonus; ChargeOnShocked += o.ChargeOnShocked; AddHist(ref SwChainHist, o.SwChainHist);
         // 第218期
         MireSlams += o.MireSlams; MireSlamDry += o.MireSlamDry; MireSlamOnShocked += o.MireSlamOnShocked; MireSlamPops += o.MireSlamPops;
         MireConductPops += o.MireConductPops; MireSlamDealt += o.MireSlamDealt; MireSlamKills += o.MireSlamKills;
@@ -3770,6 +3779,21 @@ public enum BattleEventKind
     /// 糸玉に届いた放電は <c>Discharge</c>（<c>TargetId</c> ＝ 糸玉・<c>SourceTrait = SilkBallEvery</c>）で出し、<c>Damage</c> は出さない。<b>どの規則も読まない。</b>
     /// </summary>
     SilkBall,
+
+    /// <summary>
+    /// クグの網（第293期・KW-a ／ KW-b・<b>表示専用</b>）。<c>Text</c> は <see cref="WebLabels"/>。「張る」: <c>ActorId</c> ＝ クグ ／ <c>TargetId</c> ＝ 糸を張った敵 ／ <c>PartnerId</c> ＝ 組み付いた敵 ／ <c>Slot</c> ＝ 張った敵の席
+    /// （KW-a は直後にその敵の感電の <c>StatusGain</c>）。「糸玉」: 敵がすべて糸の中で糸玉にした（直前に <c>SilkBall</c> の「張る」・<c>TargetId</c> ＝ 糸玉）。
+    /// 「帯電」: ターンの頭に KW-a の糸の敵が帯電し直した（直前にその敵の感電の <c>StatusGain</c>）。<b>どの規則も読まない。</b>
+    /// </summary>
+    Web,
+}
+
+/// <summary>クグの網の札（第293期・<see cref="BattleEventKind.Web"/> の <c>Text</c>）。<b>表示専用。</b></summary>
+public static class WebLabels
+{
+    public const string Spin = "張る";
+    public const string Ball = "糸玉";
+    public const string Recharge = "帯電";
 }
 
 /// <summary>糸玉の札（第292期・<see cref="BattleEventKind.SilkBall"/> の <c>Text</c>）。<b>表示専用。</b></summary>
@@ -3801,6 +3825,8 @@ public static class ShockGaugeLabels
     public const string Cloud = "雷雲";
     /// <summary>雷雲を乗せて雷を落とす（カタの手番の頭・雷雲 ≧ 1 のときだけ）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ カタ ／ <c>Amount</c> ＝ その手番の雷雲（1発に足す量 ＝ 攻 × 雷雲）。直前に「雷を落とした」の <c>Skill</c>、直後に <c>Thunder</c> が並ぶ（<c>Thunder</c> の <c>Amount</c> は雷雲を足した後の1発）。</summary>
     public const string CloudStrike = "雷雲の雷";
+    /// <summary>第293期（SW-a ／ SW-b）: 割り込みの鞭の倍率。<c>ActorId</c> ＝ シガ ／ <c>TargetId</c> ＝ 鞭の主目標 ／ <c>Amount</c> ＝ 倍率（1 ＋ 弾けた数）／ <c>Slot</c> ＝ 合図の連鎖で弾けた数（糸玉を含む）。「割り込み」の見出しの直後・鞭の <c>Attack</c> の前。</summary>
+    public const string WhipChain = "割り込み・倍率";
 }
 
 /// <summary>ミサの羽の札（第291期・<see cref="BattleEventKind.Feather"/> の <c>Text</c>）。<b>表示専用。</b>羽の枚数 ＝ 1 ＋ 増えた分。</summary>

@@ -33,7 +33,7 @@ static class ShockDigestDiag
 
     static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff", "MireBurst", "Regroup", "Evade", "EvadeRiposte", "EvadeStage", "Barrage", "StatusArrow", "Retreat", "ShioStage", "Decoy", "Disarray", "DisarrayStage", "Squall", "LastDodge", "Blast", "Spring", "Tailwind", "StaggerBreach", "KillImpact", "Overflow" };
     /// <summary>第231期以後に足した出来事の種類（<b>どのモードでも外す</b>——挑発の表示は規定のセロにも出るので、前の期の台本と揃えるには必ず外す）。</summary>
-    static readonly HashSet<string> SkipAlways = new() { "DecoyShow", "SpringGuard", "MoveShot", "Landing", "ShockGauge", "Feather", "Scar", "MarkLayer", "SilkBall" };   // 第291期: 表示専用の4種を足した・第292期: 糸玉
+    static readonly HashSet<string> SkipAlways = new() { "DecoyShow", "SpringGuard", "MoveShot", "Landing", "ShockGauge", "Feather", "Scar", "MarkLayer", "SilkBall", "Web" };   // 第291期: 表示専用の4種を足した・第292期: 糸玉・第293期: 網
     /// <summary>後の期に足した <c>BattleEvent</c> の欄。</summary>
     static readonly HashSet<string> SkipProps = new() { "BrittleExtra", "PartnerId", "PowderRoute" };   // 第291期: 粉の経路の欄
 

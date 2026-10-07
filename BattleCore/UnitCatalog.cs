@@ -961,6 +961,38 @@ public static class UnitCatalog
         Flavor = Kugu.Flavor
     };
 
+    /// <summary>第293期 KW-a（帯電の網）。規定 ＋ <see cref="TraitId.WebCharge"/>（組み付いている間、手番ごとに糸を1本張る・糸の敵は帯電し続ける・止められない相手には糸玉）。</summary>
+    public static readonly UnitDef KuguKWa = new()
+    {
+        Id = "kugu",
+        Name = Kugu.Name,
+        MaxHp = Kugu.MaxHp,
+        Attack = Kugu.Attack,
+        Speed = Kugu.Speed,
+        Advances = false,
+        Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge, TraitId.WebCharge },
+        Actions = Kugu.Actions,
+        PlusText = Kugu.PlusText + "。組み付いている間、手番ごとに糸を1本張る。糸の掛かった敵は帯電し続ける。止められない相手には、代わりにその周りへ帯電した糸玉を張る",
+        MinusText = Kugu.MinusText,
+        Flavor = Kugu.Flavor
+    };
+
+    /// <summary>第293期 KW-b（絡まる網）。規定 ＋ <see cref="TraitId.WebSnare"/>（同じく糸を張る・糸の敵は速さ −3・止められない相手には糸玉）。</summary>
+    public static readonly UnitDef KuguKWb = new()
+    {
+        Id = "kugu",
+        Name = Kugu.Name,
+        MaxHp = Kugu.MaxHp,
+        Attack = Kugu.Attack,
+        Speed = Kugu.Speed,
+        Advances = false,
+        Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge, TraitId.WebSnare },
+        Actions = Kugu.Actions,
+        PlusText = Kugu.PlusText + "。組み付いている間、手番ごとに糸を1本張る。糸の掛かった敵は動きが鈍る。止められない相手には、代わりにその周りへ帯電した糸玉を張る",
+        MinusText = Kugu.MinusText,
+        Flavor = Kugu.Flavor
+    };
+
     /// <summary>第292期 KB-b（新しく組み付くたび）。規定 ＋ <see cref="TraitId.SilkBallEvery"/>（組み付くたび、その周りへ帯電した糸玉を張る）。</summary>
     public static readonly UnitDef KuguKBb = new()
     {
@@ -1689,7 +1721,8 @@ public static class UnitCatalog
         // 第216期: 感電が弾けた駒すべてが痺れる（S2・`ShockStunAll`）をポンの判断で規定にした。敵味方を問わない。
         // 第221期の後: 弾けた駒それぞれが 50% で痺れる（S3・`ShockStunHalf`）へ差し替えた（ポンの判断）。乱数を引く。
         // 第290期: ポンの判断（第289期の案 K8b）で KR-b（雷雲が育ち続ける・`Thundercloud` ／ `ThundercloudKeep`）を規定にした。旧の規定は `KataS3`。
-        Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockStunHalf, TraitId.Thundercloud, TraitId.ThundercloudKeep },
+        // 第293期: 雷雲の上限を外した KR-∞（`ThundercloudUncapped`・第292期の版）を規定にした（指示書 design/PHASE293_SHOCK_WEB_SPEC.md §2）。旧の規定は `KataKRb`。
+        Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockStunHalf, TraitId.Thundercloud, TraitId.ThundercloudKeep, TraitId.ThundercloudUncapped },
         // **[Skill] 1要素にする**（`ActionIndex++` は `CanAct` 通過後。第138期 Q0-4）。通常攻撃は出ない。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "雷を落とした") },
         PlusText = "状態異常を帯びた敵に雷を落とし、帯びた隣の敵へ跳ねる（帯びた種類が多いほど重い）。当たった敵には感電が残り、感電した敵は仲間の一撃で弾けて隣へ放電し、弾けた駒は半々の確率で痺れて次の手番を失う"
@@ -1736,11 +1769,12 @@ public static class UnitCatalog
         Flavor = Kata.Flavor
     };
 
-    /// <summary>第289期 KR-b（育ち続ける）。KR-a ＋ <see cref="TraitId.ThundercloudKeep"/>（雷雲は落としても減らない・上限 8）。<b>第290期に規定にした</b>——規定の <see cref="Kata"/> と同じ物。</summary>
-    public static readonly UnitDef KataKRb = Kata;
-
-    /// <summary>第292期 KR-∞（上限なし）。規定（KR-b）＋ <see cref="TraitId.ThundercloudUncapped"/>（雷雲は減らない・上限なし）。文面は規定のまま（上限の数字を書かない）。</summary>
-    public static readonly UnitDef KataKRinf = new()
+    /// <summary>第289期 KR-b（育ち続ける）。KR-a ＋ <see cref="TraitId.ThundercloudKeep"/>（雷雲は落としても減らない・上限 8）。第290〜292期の規定。</summary>
+    /// <remarks>
+    /// <b>第293期に KR-∞ を規定にしたので、旧の規定（第290〜292期・上限 8）の定義を明示的に持つ。</b>
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。過去の器具はこちらに固定する（第290期の `KataS3` と同じ作法）。
+    /// </remarks>
+    public static readonly UnitDef KataKRb = new()
     {
         Id = "kata",
         Name = Kata.Name,
@@ -1748,12 +1782,15 @@ public static class UnitCatalog
         Attack = Kata.Attack,
         Speed = Kata.Speed,
         Advances = false,
-        Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockStunHalf, TraitId.Thundercloud, TraitId.ThundercloudKeep, TraitId.ThundercloudUncapped },
+        Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockStunHalf, TraitId.Thundercloud, TraitId.ThundercloudKeep },
         Actions = Kata.Actions,
         PlusText = Kata.PlusText,
         MinusText = Kata.MinusText,
         Flavor = Kata.Flavor
     };
+
+    /// <summary>第292期 KR-∞（上限なし）。KR-b ＋ <see cref="TraitId.ThundercloudUncapped"/>（雷雲は減らない・上限なし）。<b>第293期に規定にした</b>——規定の <see cref="Kata"/> と同じ物。</summary>
+    public static readonly UnitDef KataKRinf = Kata;
 
     /// <summary>
     /// 継ぎ当てのツギ（第207期・置き去りのナラの転生）。<b>数値（HP62／攻9／速8）はナラのまま</b>で、
@@ -1862,6 +1899,38 @@ public static class UnitCatalog
                  + "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう",
         MinusText = "感電していないとき、動ける敵を主目標に打つと、怖気づいて自分が1ターン動けなくなる",
         Flavor = "縛られた的しか殴れない臆病者。雷に打たれている間だけは、怖さも痺れて感じない。"
+    };
+
+    // 第293期 —— シガの直し（指示書 design/PHASE293_SHOCK_WEB_SPEC.md §4）。規定（SI-b）の末尾に札を足すだけ。`All` にも `Retired` にも入れない。
+
+    /// <summary>第293期 SW-a（連鎖の鞭）。規定 ＋ <see cref="TraitId.ShockWhipChain"/>（割り込みの鞭が × (1 ＋ 合図の連鎖で弾けた数)）。</summary>
+    public static readonly UnitDef ShigaSWa = new()
+    {
+        Id = "shiga",
+        Name = Shiga.Name,
+        MaxHp = Shiga.MaxHp,
+        Attack = Shiga.Attack,
+        Speed = Shiga.Speed,
+        Pattern = Shiga.Pattern,
+        Traits = Shiga.Traits.Append(TraitId.ShockWhipChain).ToArray(),
+        PlusText = Shiga.PlusText + "。割り込みの鞭は、弾けた電気をまとってそのぶん重くなる",
+        MinusText = Shiga.MinusText,
+        Flavor = Shiga.Flavor
+    };
+
+    /// <summary>第293期 SW-b（浴びるたび溜まる）。SW-a ＋ <see cref="TraitId.StoredChargeEvery"/>（すでに帯電していても感電を浴びるたび蓄電 +1）。</summary>
+    public static readonly UnitDef ShigaSWb = new()
+    {
+        Id = "shiga",
+        Name = Shiga.Name,
+        MaxHp = Shiga.MaxHp,
+        Attack = Shiga.Attack,
+        Speed = Shiga.Speed,
+        Pattern = Shiga.Pattern,
+        Traits = Shiga.Traits.Append(TraitId.ShockWhipChain).Append(TraitId.StoredChargeEvery).ToArray(),
+        PlusText = (Shiga.PlusText + "。割り込みの鞭は、弾けた電気をまとってそのぶん重くなる").Replace("帯電するたび電気が溜まり", "感電を浴びるたび電気が溜まり"),
+        MinusText = Shiga.MinusText,
+        Flavor = Shiga.Flavor
     };
 
     /// <summary>

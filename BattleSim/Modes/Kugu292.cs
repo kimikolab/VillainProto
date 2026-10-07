@@ -44,7 +44,7 @@ static class Kugu292Diag
     };
     internal static readonly Ver[] KataVers =
     {
-        new("KR-b", "krb", UnitCatalog.Kata, UnitCatalog.Kata), new("KR-∞", "krinf", UnitCatalog.Kata, UnitCatalog.KataKRinf),
+        new("KR-b", "krb", UnitCatalog.Kata, UnitCatalog.KataKRb), new("KR-∞", "krinf", UnitCatalog.Kata, UnitCatalog.KataKRinf),   // 第293期: 規定は KR-∞（KR-b は `KataKRb`）——台は同じ
     };
     static Ver AnyVer(string n) => KuguVers.Concat(KataVers).First(v => v.Ascii == n || v.Name == n);
     static Formation Apply(Formation f, params Ver[] vs) { foreach (var v in vs) if (!ReferenceEquals(v.From, v.To)) f = FvSwap(f, v.From, v.To); return f; }
@@ -296,7 +296,7 @@ static class Kugu292Diag
         Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|");
         foreach (var (name, f) in Boards())
         {
-            var a = MeasureDeep(f, S287.Waves[0], Seeds);
+            var a = MeasureDeep(Apply(f, KataVers[0]), S287.Waves[0], Seeds);   // 第293期: 第292期の規定のカタ（KR-b）に固定
             Console.WriteLine($"| {name} | {F1(a.Win)} | {Per0(a.HeroDmg, a.N)} ／ {Per0(a.HeroHeal, a.N)} | {Per1(a.OverTurns, a.N)} ／ {Pct(a.OverTurns, a.HeroTurns)} | {Per0(a.KDmg, a.KN)} | {Per0(a.ShDmg, a.ShN)} | "
                 + $"{Avg(a.CloudAt[2], a.N)} ／ {Avg(a.CloudAt[3], a.N)} ／ {Avg(a.CloudAt[5], a.N)} |");
         }
@@ -550,15 +550,15 @@ static class Kugu292Diag
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
         // (a) 規定は動かない・版の札
-        Expect("(a) 規定のクグ・カタは第291期のまま（KG-b ／ KR-b）", UnitCatalog.Kugu.Traits.SequenceEqual(new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge })
-            && UnitCatalog.Kata.Traits.Last() == TraitId.ThundercloudKeep && !UnitCatalog.Kata.Traits.Contains(TraitId.ThundercloudUncapped));
+        Expect("(a) 規定のクグは KG-b・カタの KR-b は `KataKRb`（第293期から規定は KR-∞）", UnitCatalog.Kugu.Traits.SequenceEqual(new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge })
+            && UnitCatalog.KataKRb.Traits.Last() == TraitId.ThundercloudKeep && !UnitCatalog.KataKRb.Traits.Contains(TraitId.ThundercloudUncapped) && ReferenceEquals(UnitCatalog.KataKRinf, UnitCatalog.Kata));
         Expect("(b) 版は規定の末尾に札を1枚足しただけ", UnitCatalog.KuguKBa.Traits.SequenceEqual(UnitCatalog.Kugu.Traits.Append(TraitId.SilkBallSteadfast))
             && UnitCatalog.KuguKBb.Traits.SequenceEqual(UnitCatalog.Kugu.Traits.Append(TraitId.SilkBallEvery))
-            && UnitCatalog.KataKRinf.Traits.SequenceEqual(UnitCatalog.Kata.Traits.Append(TraitId.ThundercloudUncapped))
+            && UnitCatalog.KataKRinf.Traits.SequenceEqual(UnitCatalog.KataKRb.Traits.Append(TraitId.ThundercloudUncapped))
             && UnitCatalog.KuguKBa.MaxHp == UnitCatalog.Kugu.MaxHp && UnitCatalog.KataKRinf.Attack == UnitCatalog.Kata.Attack);
         Expect("(c) 糸玉は編成に選べない（All ／ Retired ／ Everyone のどれにも無い）", !UnitCatalog.All.Contains(UnitCatalog.SilkBall) && !UnitCatalog.Retired.Contains(UnitCatalog.SilkBall)
             && !UnitCatalog.Everyone.Contains(UnitCatalog.SilkBall));
-        Expect("(d) KR-∞ の文面は規定のまま", UnitCatalog.KataKRinf.PlusText == UnitCatalog.Kata.PlusText && !UnitCatalog.KataKRinf.PlusText.Contains('8'));
+        Expect("(d) KR-∞ の文面は KR-b のまま", UnitCatalog.KataKRinf.PlusText == UnitCatalog.KataKRb.PlusText && !UnitCatalog.KataKRinf.PlusText.Contains('8'));
 
         var boss = S287.Waves[0];
         var f0 = Presets.Playtest.First(r => r.Name == "試遊・感電 糸").F;
