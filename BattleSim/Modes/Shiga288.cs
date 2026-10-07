@@ -53,9 +53,9 @@ static class Shiga288Diag
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     /// <summary>第290期: 名前で引く台のカタ（規定は第290期から KR-b）を旧の規定 `KataS3` に固定する（第288期の台を再現するため）。</summary>
-    static Formation Seat(UnitDef[] o) => FvSwap(B283.Seat(o), UnitCatalog.Kata, UnitCatalog.KataS3);
+    static Formation Seat(UnitDef[] o) => FvSwap(FvSwap(B283.Seat(o), UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0);   // 第291期: クグも旧の規定へ
     /// <summary>第290期: `compare` の行のカタを旧の規定 `KataS3` に固定した行（シガは版で差し替えるので触らない）。</summary>
-    static (string Name, Formation F)[] Rows288() => CompareBuilds().Select(r => (r.Name, FvSwap(r.F, UnitCatalog.Kata, UnitCatalog.KataS3))).ToArray();
+    static (string Name, Formation F)[] Rows288() => CompareBuilds().Select(r => (r.Name, FvSwap(FvSwap(r.F, UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0))).ToArray();
     static Formation SwapShiga(Formation f, UnitDef ver) => ReferenceEquals(ver, UnitCatalog.Shiga) ? f : FvSwap(f, UnitCatalog.Shiga, ver);
 
     /// <summary>

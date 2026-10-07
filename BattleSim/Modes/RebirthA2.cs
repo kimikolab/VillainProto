@@ -50,7 +50,7 @@ static class RebirthA2Diag
     };
 
     /// <summary>第184期のクグ（開戦時に大縛り・第2ターン以降は毎ターン味方1体を縛って攻+16・手番は攻3）。</summary>
-    static readonly UnitDef KuguOld = Remake(UnitCatalog.Kugu, new[] { TraitId.Bind }, null,
+    static readonly UnitDef KuguOld = Remake(UnitCatalog.KuguKG0, new[] { TraitId.Bind }, null,
         "開戦時に大縛りで最も速い敵1体を縛る。第2ターン以降は毎ターン味方1体を縛り、その味方の攻撃+16",
         "縛る味方は選べない。縛られた味方はそのターン動けない。第1ターンは味方の縛りが起きない");
 
@@ -85,7 +85,7 @@ static class RebirthA2Diag
     static Formation Apply(Formation f, Version v)
     {
         Formation g = f;
-        g = Swap(g, "kugu", v.NewKugu ? UnitCatalog.Kugu : KuguOld);
+        g = Swap(g, "kugu", v.NewKugu ? UnitCatalog.KuguKG0 : KuguOld);
         g = Swap(g, "shiga", v.NewShiga ? UnitCatalog.ShigaG3K : ShigaOld);
         g = Swap(g, "ban", v.BanAs ?? (v.NewBan ? UnitCatalog.Ban : BanOld));
         return g;
@@ -108,7 +108,7 @@ static class RebirthA2Diag
     /// <summary>診断台（**`Presets` には足さない**）。</summary>
     static readonly (string Name, Formation F)[] Benches =
     {
-        ("台1 クグ×シガ", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kugu, center: UnitCatalog.ShigaG3K,
+        ("台1 クグ×シガ", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.KuguKG0, center: UnitCatalog.ShigaG3K,
                                           back1: UnitCatalog.Borg, back3: UnitCatalog.Dolga)),
         ("台2 シガ×ガン（クグ無し）", Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.ShigaG3K, center: UnitCatalog.Gan,
                                                  back1: UnitCatalog.Borg, back3: UnitCatalog.Dolga)),

@@ -94,10 +94,16 @@ public partial class Main : Control
 
     // 区切りの1項目を飛ばして、検証の波だけ別のカタログを引く。
     private EnemyCatalog.TestStage? SelectedTestStage =>
-        _stagePicker.Selected > EnemyCatalog.Stages.Count
+        _stagePicker.Selected > EnemyCatalog.Stages.Count && _stagePicker.Selected < PlaytestStageBase - 1
             ? EnemyCatalog.TestStages[_stagePicker.Selected - EnemyCatalog.Stages.Count - 1]
             : null;
-    private string SelectedStageName => SelectedTestStage?.Name
+    // 第291期: 試遊の波（ボス規定形・精鋭）。検証の波の後ろに区切りをもう1つ置いて並べる。倍率は波ごとに固定。
+    private static int PlaytestStageBase => EnemyCatalog.Stages.Count + 1 + EnemyCatalog.TestStages.Count + 1;
+    private EnemyCatalog.PlaytestStage? SelectedPlaytestStage =>
+        _stagePicker.Selected >= PlaytestStageBase
+            ? EnemyCatalog.PlaytestStages[_stagePicker.Selected - PlaytestStageBase]
+            : null;
+    private string SelectedStageName => SelectedPlaytestStage?.Name ?? SelectedTestStage?.Name
         ?? EnemyCatalog.Stages[_stagePicker.Selected].Name;
     private HBoxContainer _setupActions = null!;
     private HBoxContainer _battleActions = null!;
@@ -128,7 +134,7 @@ public partial class Main : Control
     private static (string Name, Formation F)[]? _presetRows;
 
     private static (string Name, Formation F)[] PresetRows() =>
-        _presetRows ??= Presets.Compare.Concat(Presets.Cross).ToArray();
+        _presetRows ??= Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).ToArray();   // 第291期: 試遊の行を末尾に
 
     private int _presetIndex;
     private bool _presetDirty;
@@ -354,6 +360,15 @@ public partial class Main : Control
             && !CampaignSession.HasPendingEncounter && !CampaignSession.HasCarriedBattle)
             _stagePicker.Selected = EnemyCatalog.Stages.Count + 1 + requestedTestStage;
 
+        // 第291期: 試遊の波（0 ボス規定形 ／ 1 精鋭・近衛 ／ 2 精鋭・大隊）。
+        string? playtestStageArg = userArgs.FirstOrDefault(arg => arg.StartsWith("--demo-playtest-stage=", StringComparison.Ordinal));
+        if (playtestStageArg is not null
+            && int.TryParse(playtestStageArg["--demo-playtest-stage=".Length..], out int requestedPlaytestStage)
+            && requestedPlaytestStage >= 0
+            && requestedPlaytestStage < EnemyCatalog.PlaytestStages.Count
+            && !CampaignSession.HasPendingEncounter && !CampaignSession.HasCarriedBattle)
+            _stagePicker.Selected = PlaytestStageBase + requestedPlaytestStage;
+
         // 行と seed をコマンドラインからも指定できるようにする（第124期 段1）。
         // **`docs/watch.md` の推奨12戦をそのまま再現するため**——行名は部分一致で、
         // `Presets.Compare` ＋ `Presets.Cross` の並び（＝プリセットの一覧）から先頭の一致を採る。
@@ -531,6 +546,8 @@ public partial class Main : Control
         for (int i = 0; i < EnemyCatalog.Stages.Count; i++) _stagePicker.AddItem(EnemyCatalog.Stages[i].Name, i);
         _stagePicker.AddSeparator("── 検証 ──");
         foreach (var stage in EnemyCatalog.TestStages) _stagePicker.AddItem(stage.Name);
+        _stagePicker.AddSeparator("── 試遊 ──");   // 第291期
+        foreach (var stage in EnemyCatalog.PlaytestStages) _stagePicker.AddItem(stage.Name);
         _stagePicker.ItemSelected += index =>
         {
             UpdateStageHeader();
@@ -908,7 +925,9 @@ public partial class Main : Control
         var rows = PresetRows();
         string band = _presetIndex < Presets.Compare.Length
             ? $"compare {_presetIndex + 1}/{Presets.Compare.Length}"
-            : $"交差帯 {_presetIndex - Presets.Compare.Length + 1}/{Presets.Cross.Length}";
+            : _presetIndex < Presets.Compare.Length + Presets.Cross.Length
+            ? $"交差帯 {_presetIndex - Presets.Compare.Length + 1}/{Presets.Cross.Length}"
+            : $"試遊 {_presetIndex - Presets.Compare.Length - Presets.Cross.Length + 1}/{Presets.Playtest.Length}";   // 第291期
         _presetState.Text = _presetDirty
             ? $"{band}・プリセットから変更あり"
             : $"{band}・プリセット通り（全 {rows.Length} 行）";
@@ -1025,14 +1044,16 @@ public partial class Main : Control
 
     private void ShowEnemyDetails()
     {
-        var occupied = SelectedTestStage is { } testStage
+        var occupied = SelectedPlaytestStage is { } playtest
+            ? playtest.Enemy.Occupied().Select(x => (Slot: x.Seat, Def: playtest.Scale.Apply(x.Def)))   // 第291期: 倍率を掛けた後の値を見せる
+            : SelectedTestStage is { } testStage
             ? testStage.Enemy.Occupied().Select(x => (Slot: x.Seat, x.Def))
             : EnemyCatalog.Stages[_stagePicker.Selected].Enemy.Occupied();
         string rows = string.Join("\n", occupied.Select(x =>
             $"[color=#ee7962]◆[/color] [b]{FormationRules.SeatNames[x.Slot]}[/b]  {x.Def.Name}\n" +
             $"   [color=#a9b3a8]HP {x.Def.MaxHp} / 攻 {x.Def.Attack} / 速 {x.Def.Speed} / {UiKit.PatternLabel(x.Def.Pattern)}[/color]"));
         _detail.Text =
-            $"[color=#ee7962][font_size=11]{(SelectedTestStage is null ? $"ENEMY WAVE {_stagePicker.Selected + 1}" : "TEST WAVE")}[/font_size][/color]\n" +
+            $"[color=#ee7962][font_size=11]{(SelectedPlaytestStage is not null ? "PLAYTEST WAVE" : SelectedTestStage is null ? $"ENEMY WAVE {_stagePicker.Selected + 1}" : "TEST WAVE")}[/font_size][/color]\n" +
             $"[font_size=22][b]{SelectedStageName}[/b][/font_size]\n\n{rows}\n\n" +
             "[color=#6f7f76]敵の編成と戦闘ルールは、元の GodotApp が参照する EnemyCatalog と同じです。[/color]";
     }
@@ -1069,7 +1090,15 @@ public partial class Main : Control
         _battleEnemyScale = new EnemyScaleRule((int)_enemyHp.Value, (int)_enemyAttack.Value);
         List<UnitState> enemies;
         string enemyName;
-        if (SelectedTestStage is { } testStage)
+        if (SelectedPlaytestStage is { } playtest)
+        {
+            // 第291期: 試遊の波は倍率を波ごとに固定する（ボス ＝ 素の値・精鋭 ＝ HP 1000% ／ 攻 300%）。画面の倍率の欄は読まない。
+            _battleEnemyScale = playtest.Scale;
+            enemies = BattleEngine.MaterializeEnemy(playtest.Enemy, playtest.Scale);
+            enemyName = playtest.Name;
+            stageIndex = playtest.Name.StartsWith("ボス", StringComparison.Ordinal) ? EnemyCatalog.Stages.Count - 1 : 0;   // ボスは最終波の背景・精鋭は第一波の背景
+        }
+        else if (SelectedTestStage is { } testStage)
         {
             enemies = BattleEngine.MaterializeEnemy(testStage.Enemy, _battleEnemyScale.Value);
             enemyName = testStage.Name;

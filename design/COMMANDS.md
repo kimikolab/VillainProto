@@ -899,6 +899,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 shock290 compare  # 第290期: `compare` 64 行 × 規定 ／ SI-c ／ KG-a ／ KG-b（その駒のいない行のずれ・主判定・情報セル）（15 秒）
     dotnet run --project BattleSim -c Release 0 shock290 check    # 第290期 自己検査（規定 ＝ SI-b ／ KR-b・文面・版の札・SI-c の感電・糸の帳簿・控えの後始末・軽い口と詳しい口・決定性・乱数の走査・第289期の器具の固定）
     dotnet run --project BattleSim -c Release 0 shock290 log <boss|guard|bat> <短い名前を ・ で5つ> [seed] [版…]   # 第290期 1戦のログ
+    dotnet run --project BattleSim -c Release 0 playtest291 rates    # 第291期 Phase 0: 試遊の5台（`Presets.Playtest`）× 試遊の波（ボス規定形 ／ 精鋭・近衛 ／ 大隊）× seed 0..49 の勝率（目安）（2 秒）。本体は `Modes/Playtest291.cs`
+    dotnet run --project BattleSim -c Release 0 playtest291 events   # 第291期 段2: 試遊の5台 × 試遊の波 × seed 0..49 の表示専用の出来事の件数（札ごと・1戦あたり）（5 秒）
+    dotnet run --project BattleSim -c Release 0 playtest291 memo <行名の一部> <boss|guard|bat> <seed> [上限]   # 第291期 段3: 台本の並びの例（新しい出来事と前後1件・`PHASE291_CODEX_MEMO.md` §4 の元）
+    dotnet run --project BattleSim -c Release 0 playtest291 check    # 第291期 自己検査（規定のクグ ＝ KG-b・試遊の波と行・表示専用（verbose の有無で同じ）・保持者のいない戦で 0 件・値の向き・割り込みの見出しと Reaction・連射の発の並び・乱数の走査）（10 秒）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

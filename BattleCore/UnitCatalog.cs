@@ -892,17 +892,38 @@ public static class UnitCatalog
         // **第185期に転生**（旧 `Bind` は定義だけ残す）。味方を縛るのをやめ、敵の主力に組み付く。
         // 開戦時の大縛りは組み付きの札の中に残してある（`GrappleTrait.OnBattleStart`）。
         // 組み付きが手番そのもの（攻撃3 は出なくなる）。`[Skill]` の1要素で毎手番組み付く／維持する。
-        Traits = new[] { TraitId.Grapple },
+        // 第291期: ポンの判断（第290期の案 G9b）で KG-b（糸 `Thread` ・導線 `ThreadCharge`）を規定にした。旧の規定は `KuguKG0`。
+        Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge },
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "組み付いている") },
-        PlusText = "開戦時に大縛りで最も速い敵1体を縛る。手番でいちばん手強い敵に組み付き、動けなくする",
+        PlusText = "開戦時に大縛りで最も速い敵1体を縛る。手番でいちばん手強い敵に組み付き、動けなくする"
+                 + "。組み付いた敵とは糸で繋がっている。自分に流れ込む電気は、糸を伝ってその敵へ流れ、浴びた敵は帯電する",
         MinusText = "組み付いている間は自分も何もできない。殴られるとほどける",
         Flavor = "縛る相手を味方から敵に変えただけで、しがみついたら離さない癖は抜けていない。"
     };
 
-    // 第290期 —— クグの糸の版（指示書 design/PHASE290_SHOCK_SQUAD_SPEC.md §5）。規定のクグの末尾に札を足すだけ。
-    // 体・速さ・組み付き・マイナス・フレーバーは規定のまま。<b>規定のクグは本期中に切り替えない</b>。`All` にも `Retired` にも入れない。
+    /// <summary>
+    /// 旧クグ（第185期〜第290期の規定・組み付きだけ・糸なし）。第291期に KG-b を規定にしたので、旧の規定の定義を明示的に持つ。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。過去の器具はこちらに固定する（第290期のカタ `KataS3` と同じ作法）。
+    /// </summary>
+    public static readonly UnitDef KuguKG0 = new()
+    {
+        Id = "kugu",
+        Name = Kugu.Name,
+        MaxHp = Kugu.MaxHp,
+        Attack = Kugu.Attack,
+        Speed = Kugu.Speed,
+        Advances = false,
+        Traits = new[] { TraitId.Grapple },
+        Actions = Kugu.Actions,
+        PlusText = "開戦時に大縛りで最も速い敵1体を縛る。手番でいちばん手強い敵に組み付き、動けなくする",
+        MinusText = Kugu.MinusText,
+        Flavor = Kugu.Flavor
+    };
 
-    /// <summary>第290期 KG-a（避雷針）。規定 ＋ <see cref="TraitId.Thread"/>（自分に流れ込む電気は、糸を伝って組み付いた敵へ流れる）。</summary>
+    // 第290期 —— クグの糸の版（指示書 design/PHASE290_SHOCK_SQUAD_SPEC.md §5）。旧の規定（`KuguKG0`）の末尾に札を足すだけ。
+    // 体・速さ・組み付き・マイナス・フレーバーは規定のまま。`All` にも `Retired` にも入れない。
+
+    /// <summary>第290期 KG-a（避雷針）。旧の規定 ＋ <see cref="TraitId.Thread"/>（自分に流れ込む電気は、糸を伝って組み付いた敵へ流れる）。</summary>
     public static readonly UnitDef KuguKGa = new()
     {
         Id = "kugu",
@@ -913,26 +934,13 @@ public static class UnitCatalog
         Advances = false,
         Traits = new[] { TraitId.Grapple, TraitId.Thread },
         Actions = Kugu.Actions,
-        PlusText = Kugu.PlusText + "。組み付いた敵とは糸で繋がっている。自分に流れ込む電気は、糸を伝ってその敵へ流れる",
+        PlusText = KuguKG0.PlusText + "。組み付いた敵とは糸で繋がっている。自分に流れ込む電気は、糸を伝ってその敵へ流れる",
         MinusText = Kugu.MinusText,
         Flavor = Kugu.Flavor
     };
 
-    /// <summary>第290期 KG-b（導線）。KG-a ＋ <see cref="TraitId.ThreadCharge"/>（糸を伝った放電を浴びた敵は、感電していなければ帯電する）。</summary>
-    public static readonly UnitDef KuguKGb = new()
-    {
-        Id = "kugu",
-        Name = Kugu.Name,
-        MaxHp = Kugu.MaxHp,
-        Attack = Kugu.Attack,
-        Speed = Kugu.Speed,
-        Advances = false,
-        Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge },
-        Actions = Kugu.Actions,
-        PlusText = KuguKGa.PlusText + "。電気を浴びた敵は帯電する",
-        MinusText = Kugu.MinusText,
-        Flavor = Kugu.Flavor
-    };
+    /// <summary>第290期 KG-b（導線）。KG-a ＋ <see cref="TraitId.ThreadCharge"/>（糸を伝った放電を浴びた敵は、感電していなければ帯電する）。<b>第291期に規定にした</b>——規定の <see cref="Kugu"/> と同じ物。</summary>
+    public static readonly UnitDef KuguKGb = Kugu;
 
     public static readonly UnitDef Ban = new()
     {
@@ -4043,6 +4051,32 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
     };
     /// <summary>ボスの規定形の波（第269期・中央に1体）。</summary>
     public static EnemyWave BossRegularWave => EnemyWave.Of((2, BossRegular));
+
+    // ---------------------------------------------------------------------------------
+    // 第284期 —— **精鋭の波**（評価軸・design/PHASE284_ELITE_WAVE.md）。第291期に `BattleSim/Modes/Elite.cs` の中から移した（DemoApp の試遊から引くため）。
+    // 素の構成 × 倍率（HP 1000% ／ 攻 300%）・波ルールなし。倍率は既定の 115/115 の<b>代わりに</b>掛ける（相乗しない）。
+    // **`Stages` にも `TestStages` にも載せない**（`nine check` が `TestStages` の本数 3 を門にしている・第284期の判断）。
+    // ---------------------------------------------------------------------------------
+    /// <summary>精鋭の倍率（第284期 §2-2）。HP 1000% ／ 攻 300%。</summary>
+    public static readonly EnemyScaleRule EliteScale = new(1000, 300);
+    /// <summary>近衛 ＝ 討伐隊の新兵（45/11/6）× 5・X 字。素の構成は <c>TestStages[2]</c>（検証・五 / 新兵）と同じ。</summary>
+    public static readonly EnemyWave EliteGuardWave = EnemyWave.FillX(Recruit);
+    /// <summary>大隊 ＝ 駆り出された農兵（30/8/6）× 9・全席。素の構成は <c>TestStages[1]</c>（検証・九 / 農兵）と同じ。</summary>
+    public static readonly EnemyWave EliteBattalionWave = EnemyWave.FillAll(Levy);
+
+    /// <summary>試遊の波（第291期）。倍率は波ごとに固定（画面の倍率の欄は使わない）。</summary>
+    public sealed record PlaytestStage(string Name, EnemyWave Enemy, EnemyScaleRule Scale);
+
+    /// <summary>
+    /// <b>第291期</b> —— DemoApp の試遊で選べる波（ボスの規定形・精鋭の近衛 ／ 大隊）。<b>表示と試遊のためだけの一覧</b>で、BattleSim の器具は数えない。
+    /// ボスは <c>EnemyScaleRule.None</c>（第269期以降の器具と同じ・ボスの数値は素の値で決めてある）、精鋭は <see cref="EliteScale"/>。
+    /// </summary>
+    public static IReadOnlyList<PlaytestStage> PlaytestStages { get; } = new[]
+    {
+        new PlaytestStage("ボス・勇者（規定形）", BossRegularWave, EnemyScaleRule.None),
+        new PlaytestStage("精鋭・近衛", EliteGuardWave, EliteScale),
+        new PlaytestStage("精鋭・大隊", EliteBattalionWave, EliteScale),
+    };
 
     /// <summary><paramref name="stageIndex"/>（0 始まり）のパターン3の写し。定義が無い波は null。</summary>
     public static Formation? Pattern3Of(int stageIndex) => stageIndex switch

@@ -717,7 +717,7 @@ static class GradeDiag
             {
                 UnitDef rd = Reader(benches[bi].Reader, g);
                 Formation f = benches[bi].Supply
-                    ? Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kugu,
+                    ? Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.KuguKG0,
                                       center: UnitCatalog.Gan, back1: rd, back3: UnitCatalog.Dolga)
                     : Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg,
                                       center: UnitCatalog.Dolga, back1: rd, back3: UnitCatalog.Hagi);

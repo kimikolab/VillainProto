@@ -5548,7 +5548,7 @@ public sealed class ChargedPowderTrait : Trait
 
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
-        if (ctx.MarkShock(target, self))
+        if (ctx.MarkShock(target, self, PowderRoute.Main))   // 第291期: 経路の印は表示専用
         {
             ctx.Log($"    {target.Name} に帯電の粉が付いた", LogKind.Status);
             ctx.NotePowder(self, spread: false);
@@ -5556,14 +5556,14 @@ public sealed class ChargedPowderTrait : Trait
         // 第286期（T3 ／ T3n）: 粉は殴った相手の周りにも舞う。主目標が倒れていても隣には付く（席は残る）。乱数を引かない。
         if (self.HasTrait(TraitId.ChargedPowderSpread))
             foreach (UnitState n in ctx.LivingMembers(target.TeamId))
-                if (n != target && FormationRules.AreAdjacent(target, n) && ctx.MarkShock(n, self))
+                if (n != target && FormationRules.AreAdjacent(target, n) && ctx.MarkShock(n, self, PowderRoute.Spread, target))
                 {
                     ctx.Log($"    粉が舞って {n.Name} にも付いた", LogKind.Status);
                     ctx.NotePowder(self, spread: true);
                 }
         if (!self.HasTrait(TraitId.ChargedPowderLeak)) return;
         foreach (UnitState a in ctx.LivingMembers(self.TeamId))
-            if (a != self && FormationRules.AreAdjacent(self, a) && ctx.MarkShock(a, self))
+            if (a != self && FormationRules.AreAdjacent(self, a) && ctx.MarkShock(a, self, PowderRoute.Leak))
                 ctx.Log($"    粉が漏れて {a.Name} も帯電した", LogKind.FriendlyFire);
     }
 }
@@ -12925,6 +12925,7 @@ public sealed class ThunderTrait : Trait
         if (pool.Count == 0) return;
 
         int cloud = ThundercloudTrait.Of(self);                                 // 第289期（雷雲・保持者でなければ 0）
+        if (cloud > 0) ctx.EmitShockGauge(ShockGaugeLabels.CloudStrike, self, self, cloud);   // 第291期・表示専用（雷雲を乗せた雷の見出し）
         bool hopOnly = self.HasTrait(TraitId.ThunderPathHop);                   // 第215期（T1′・参考）
         bool path = hopOnly || self.HasTrait(TraitId.ThunderPath);             // 第215期（T1）
         var struck = new HashSet<UnitState>();
@@ -13130,6 +13131,7 @@ public sealed class ScourgeTrait : Trait
         self.SetCounter(StatusKeys.Stun, 1);
         ctx.NoteWhipCowered(self);
         ctx.Log($"    {self.Name} は動ける {target.Name} に怖気づいた", LogKind.FriendlyFire);
+        ctx.EmitShockGauge(ShockGaugeLabels.Cower, self, self, 0, partner: target);   // 第291期・表示専用
     }
 }
 

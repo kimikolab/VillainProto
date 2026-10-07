@@ -755,6 +755,11 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   **曲げるのは2箇所**: ① `ShockTrigger` の放電の段（糸の保持者が弾けたら、隣の味方の代わりに糸の先へ1本）／ ② `Discharge` の入口（隣の味方の放電が糸の保持者に来たら、糸の先へ移す）→ どちらも `ThreadDischarge`（出どころはクグ・味方の刃ではない・撃破者は連鎖を起こした一撃の主）。
   糸の先が感電していればその一撃で弾けて**同じ連鎖に敵の駒が入る**——連鎖の後の口は陣営ごとに分けて `AfterChain` を呼ぶ（糸が無ければ従来どおり1回）。
   控えは `GrappleTrait.OnDamaged` がほどく前に書き、`ApplyDamageBody` の起爆の段の直後で消す（`ApplyDamageBody` の順は `OnDamaged` → 死亡 → 起爆なので、そのままだと糸が先に切れる）。**`_threadLive` の比較1つで抜ける。**
+- **第291期: 規定のクグを KG-b（`Thread` ／ `ThreadCharge`）にした**（旧の規定は `KuguKG0`・過去の器具はそちらに固定）。
+  **表示専用の出来事を4種足した**（`BattleEventKind` の末尾・`ShockGauge` ／ `Feather` ／ `Scar` ／ `MarkLayer`・札は `ShockGaugeLabels` ／ `FeatherLabels`）。口は `BattleEngine.cs` の「第291期 —— 表示専用の口」の区間（`EmitShockGauge` ／ `EmitFeather` ／ `EmitScar` ／ `EmitMarkLayer`）で、
+  呼ぶのは `GainCharge`・`Thunderclap` の後・`AfterChain` の雷雲・`ShockWhip`（見出しと「使った」）・`ThunderTrait.OnAction`（雷雲の雷）・`ScourgeTrait`（怖気）・`GainFeathers` ／ `FeatherVolley`・`RuptureAfter`（爪痕）・`LayerMark`（層・**`_ruptureLive` の戦だけ**）。
+  **既存の出来事に足した印**: `MarkShock` に省略可の引数（`PowderRoute` ／ `spreadFrom`）→ `EmitStatusGain` が `BattleEvent.PowderRoute`（新しい欄）・`SpreadFromId`・`FriendlyFire` を立てる（トウの粉だけが渡す）。糸の `Discharge` に `PartnerId`（② の元の駒）と `Text = "ほどけ"`（`ThreadLabels.Release`）。
+  **前の期の台本の指紋**: `shockdigest` は新しい4種と `PowderRoute` を外す（`SkipAlways` ／ `SkipProps`）、`CheckWave.Dig`（`som276 digest` ほか）は新しい4種を外す。
 - **第218期の澱みのミオの版（札 `MireSlam` / `MireConduct` / `MireDull` / `MireDullAll` / `MireCarry` / `MireHandoff`・**第219期に M5 ＝ `MireDullAll` 以外の5枚をミオの規定にした**（ポンの判断・札の並びは `MireDiag.VerOf("M5")` と同じ）・M0 は `mire` の診断のローカル）**——
   **叩きつけ・通電は `ConcentrateTrait` の最後から `BattleContext.MireSlam`**（寄せ先は「感電している敵がいればその中から」・`ApplyDamage` を直に呼ぶ＝標的の鎖を通らない・撃破はミオ）。
   **澱みのデバフは `MireCut` の1本を4口**（`PerformAttackBody` の**痺れ毒の直後** ／ `StrikeThunder` ／ `Discharge`（反転しない側）／ 叩きつけ・通電）で、出どころの印 × 10%（上限 40%）を切り捨てで引く。

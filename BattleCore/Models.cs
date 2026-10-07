@@ -3724,7 +3724,96 @@ public enum BattleEventKind
     /// <c>TargetId</c> ＝ 駒 ／ <c>Amount</c> ＝ 変化の後の火勢 ／ <c>Slot</c> ＝ 変化の前の火勢 ／ <c>ActorId</c> ＝ 原因（着火した駒・燃え広がりの本人・煽ったヒヨ）。
     /// 燃え広がり・煽り・ギフト・ギフトの手番・段は見出し（<see cref="FireLevelLabels"/> の各札の doc）。
     /// </summary>
-    FireLevel
+    FireLevel,
+
+    // ---- 第291期（試遊の準備・`design/PHASE291_CODEX_MEMO.md`）。**4つとも表示専用**——盤面に触らず乱数を引かない。保持者がいない戦では1件も出ない。 ----
+
+    /// <summary>
+    /// 感電軸のゲージ（第291期・<b>表示専用</b>）。<c>Text</c> は <see cref="ShockGaugeLabels"/>。
+    /// シガの蓄電（増えた ／ 使った ／ 使い果たした）・割り込みの見出し・怖気、カタの雷雲（湧いた ／ 雷に乗った）を1つの種類にまとめた。
+    /// 各札の欄は <see cref="ShockGaugeLabels"/> の doc。<b>どの規則も読まない。</b>
+    /// </summary>
+    ShockGauge,
+
+    /// <summary>
+    /// ミサの羽（第291期・<b>表示専用</b>）。<c>Text</c> は <see cref="FeatherLabels"/>。羽の在庫の増減と、連射の見出し・1発ごとの札（追う ／ 流れた ／ 乱射）。
+    /// 1発ごとの札の直後に、その1発の出来事（追う・流れた ＝ <c>Attack</c> と <c>Damage</c> ／ 乱射 ＝ <c>Damage</c> だけ）が続く。<b>どの規則も読まない。</b>
+    /// </summary>
+    Feather,
+
+    /// <summary>
+    /// 爪痕（第291期・ミサの <see cref="TraitId.RuptureScar"/>・<b>表示専用</b>）。炸裂で削った分だけ最大HPが恒久的に縮んだ瞬間（直前に炸裂の <c>Damage</c>）。
+    /// <c>ActorId</c> ＝ ミサ ／ <c>TargetId</c> ＝ 刻まれた敵 ／ <c>Amount</c> ＝ 縮んだ量 ／ <c>Slot</c> ＝ 新しい最大HP ／ <c>HpAfter</c> ＝ そのときの HP。<b>どの規則も読まない。</b>
+    /// </summary>
+    Scar,
+
+    /// <summary>
+    /// 標の層（第291期・<b>表示専用</b>）。敵に付いた標が1層積み増された瞬間（ロックオンの数）。<b>層が意味を持つ戦（炸裂の保持者がいる戦）だけ</b>出る。
+    /// <c>ActorId</c> ＝ 書き手（ソラ・ザン ほか <c>LayerMark</c> を通る駒）／ <c>TargetId</c> ＝ 標の付いた敵 ／ <c>Amount</c> ＝ 新しい層 ／ <c>Slot</c> ＝ 前の層。
+    /// 新しく付いた（0 → 1）も <c>Slot = 0</c> で出る。<c>LayerMark</c> を通らない書き手（ヒサの付け替え・カリ）と、消える瞬間は出ない（PHASE291_CODEX_MEMO.md §2）。<b>どの規則も読まない。</b>
+    /// </summary>
+    MarkLayer,
+}
+
+/// <summary>感電軸のゲージの札（第291期・<see cref="BattleEventKind.ShockGauge"/> の <c>Text</c>）。<b>表示専用。</b></summary>
+public static class ShockGaugeLabels
+{
+    /// <summary>蓄電が1つ増えた（シガに感電が新しく付いた）。<c>ActorId</c> ＝ 感電を付けた駒 ／ <c>TargetId</c> ＝ シガ ／ <c>Amount</c> ＝ 新しい蓄電（1〜4）／ <c>Slot</c> ＝ 前の蓄電。直前にシガの感電の <c>StatusGain</c>。</summary>
+    public const string ChargeGain = "蓄電・増えた";
+    /// <summary>割り込みの鞭を振り終えて蓄電を1つ使った（SI-b）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ シガ ／ <c>Amount</c> ＝ 新しい蓄電 ／ <c>Slot</c> ＝ 前の蓄電。</summary>
+    public const string ChargeSpent = "蓄電・使った";
+    /// <summary>雷霆で溜めた電気を使い果たした（SG-b ／ SI-a・規定のシガには無い）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ シガ ／ <c>Amount</c> ＝ 0 ／ <c>Slot</c> ＝ 前の蓄電。</summary>
+    public const string ChargeDrained = "蓄電・使い果たした";
+    /// <summary>
+    /// 割り込みの見出し（SI-a ／ SI-b）。そばで敵の感電が弾けた連鎖の直後、シガが割り込む。<c>ActorId</c> ＝ シガ ／ <c>TargetId</c> ＝ 鞭の主目標 ／
+    /// <c>PartnerId</c> ＝ その連鎖で最初に弾けた敵（合図）／ <c>Amount</c> ＝ 振る前の蓄電 ／ <c>Slot</c> ＝ その連鎖で弾けた敵の数 ／ <c>ActorId</c> の陣営の <c>Team</c>。
+    /// 直後にシガの <c>Attack</c>（<c>Reaction = true</c>・的 ＝ <c>TargetId</c>）と <c>Damage</c>、振り終えて「蓄電・使った」。
+    /// </summary>
+    public const string Interrupt = "割り込み";
+    /// <summary>シガが動ける主目標に怖気づいた（次の手番を失う）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ シガ ／ <c>PartnerId</c> ＝ 動けた主目標。直前にシガの鞭の <c>Attack</c> ／ <c>Damage</c>。</summary>
+    public const string Cower = "怖気";
+    /// <summary>雷雲が湧いた（盤上で敵の感電が弾けた連鎖の後）。<c>ActorId</c> ＝ その連鎖で最初に弾けた敵 ／ <c>TargetId</c> ＝ カタ ／ <c>Amount</c> ＝ 新しい雷雲（上限 8）／ <c>Slot</c> ＝ 前の雷雲 ／ <c>StatusRemaining</c> ＝ その連鎖で弾けた敵の数。</summary>
+    public const string Cloud = "雷雲";
+    /// <summary>雷雲を乗せて雷を落とす（カタの手番の頭・雷雲 ≧ 1 のときだけ）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ カタ ／ <c>Amount</c> ＝ その手番の雷雲（1発に足す量 ＝ 攻 × 雷雲）。直前に「雷を落とした」の <c>Skill</c>、直後に <c>Thunder</c> が並ぶ（<c>Thunder</c> の <c>Amount</c> は雷雲を足した後の1発）。</summary>
+    public const string CloudStrike = "雷雲の雷";
+}
+
+/// <summary>ミサの羽の札（第291期・<see cref="BattleEventKind.Feather"/> の <c>Text</c>）。<b>表示専用。</b>羽の枚数 ＝ 1 ＋ 増えた分。</summary>
+public static class FeatherLabels
+{
+    /// <summary>羽が1枚増えた（味方が敵に標を書いた）。<c>ActorId</c> ＝ 標の書き手 ／ <c>TargetId</c> ＝ ミサ ／ <c>PartnerId</c> ＝ 標を書かれた敵 ／ <c>Amount</c> ＝ 新しい枚数。</summary>
+    public const string Gain = "増えた";
+    /// <summary>撃ち出した羽が戻らなかった（M-b・乱射した数だけ・下限 1 枚）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ミサ ／ <c>Amount</c> ＝ 新しい枚数 ／ <c>Slot</c> ＝ 失った枚数。連射の最後の1発の後に出る。</summary>
+    public const string Lost = "失った";
+    /// <summary>連射の見出し（ミサの手番の頭）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ ミサ ／ <c>Amount</c> ＝ 発数（＝ そのときの羽の枚数）。</summary>
+    public const string Volley = "連射";
+    /// <summary>標を追う1発。<c>ActorId</c> ＝ ミサ ／ <c>Slot</c> ＝ 何発目（1 始まり）／ <c>Amount</c> ＝ 発数。直後に単体の <c>Attack</c>（的 ＝ 標の段で選ばれた敵）と <c>Damage</c>。</summary>
+    public const string Chase = "追う";
+    /// <summary>前の1発が的を倒し、次の標へ流れた1発（中身は「追う」と同じ）。<c>PartnerId</c> ＝ 倒れた前の的。</summary>
+    public const string Flow = "流れた";
+    /// <summary>
+    /// 標が尽きて（または初めから無く）敵味方構わず飛ぶ1発。<c>ActorId</c> ＝ ミサ ／ <c>Slot</c> ＝ 何発目 ／ <c>Amount</c> ＝ 発数 ／
+    /// <c>StatusRemaining</c> ＝ その連射で何発目の乱射か（1 ＝ 標が尽きた瞬間）。直後に <c>Damage</c>（的は乱数・<c>FriendlyFire</c> なら味方）。
+    /// </summary>
+    public const string Spray = "乱射";
+}
+
+/// <summary>クグの糸の放電の札（第291期・<see cref="BattleEventKind.Discharge"/> のうち <c>SourceTrait = Thread</c> の <c>Text</c>）。<b>表示専用。</b></summary>
+public static class ThreadLabels
+{
+    /// <summary>殴られてほどける一撃の中で、切れる直前の糸を伝った放電（それ以外の糸の放電は <c>Text = null</c>）。</summary>
+    public const string Release = "ほどけ";
+}
+
+/// <summary>トウの粉の感電の経路（第291期・感電の <c>StatusGain</c> の <see cref="BattleEvent.PowderRoute"/>）。<b>表示専用。</b></summary>
+public enum PowderRoute
+{
+    /// <summary>殴った主目標に付いた。</summary>
+    Main,
+    /// <summary>主目標の隣の敵へ舞った（<c>SpreadFromId</c> ＝ 主目標）。</summary>
+    Spread,
+    /// <summary>トウの隣の味方へ漏れた（<c>FriendlyFire = true</c>）。</summary>
+    Leak,
 }
 
 /// <summary>火勢の台本の札（第242期・<see cref="BattleEventKind.FireLevel"/> の <c>Text</c>）。<b>表示専用。</b></summary>
@@ -4446,6 +4535,12 @@ public sealed class BattleEvent
     /// 毒以外の <c>StatusGain</c> と他の種類では <c>null</c>。<b>どの規則も読まない。</b>
     /// </summary>
     public PoisonRoute? PoisonRoute { get; init; }
+
+    /// <summary>
+    /// トウの粉（<see cref="TraitId.ChargedPowder"/>）で付いた感電の <c>StatusGain</c> のときだけ、<b>経路</b>（主目標 ／ 隣の敵 ／ 漏れ）が入る
+    /// （第291期・<b>表示専用</b>）。隣の敵では <c>SpreadFromId</c> ＝ 主目標、漏れでは <c>FriendlyFire = true</c>。それ以外では <c>null</c>。<b>どの規則も読まない。</b>
+    /// </summary>
+    public PowderRoute? PowderRoute { get; init; }
 
     /// <summary>
     /// 伝染（<see cref="PoisonRoute.Touch"/>・疫みのラウ）の <c>StatusGain</c> のときだけ、

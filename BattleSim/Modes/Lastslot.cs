@@ -199,7 +199,7 @@ public static void Run(string[] args, int stageIndex)
     //        測れる組が無ければ受け取り最大の組を採り、床であることを報告する。
     // 配置:  単騎・軸あり は規則配置 H を出発点に `lastslot seats` で reseat → confirm（閾値 5.0pt）。
     var lsSoloPool = new[] { UnitCatalog.Dolga, UnitCatalog.Rica, UnitCatalog.Mug, UnitCatalog.Tsugi, UnitCatalog.Lili, UnitCatalog.Sasa, UnitCatalog.Vel };
-    var lsTrapPool = new[] { UnitCatalog.Golm, UnitCatalog.Gan, UnitCatalog.Kugu, UnitCatalog.Shio, UnitCatalog.Kari, UnitCatalog.Hiyo,
+    var lsTrapPool = new[] { UnitCatalog.Golm, UnitCatalog.Gan, UnitCatalog.KuguKG0, UnitCatalog.Shio, UnitCatalog.Kari, UnitCatalog.Hiyo,
                              UnitCatalog.Lili, UnitCatalog.Rica, UnitCatalog.Hari, UnitCatalog.Beni, UnitCatalog.Tsugi };
     const int LsPickSeeds = 50;
     IEnumerable<UnitDef[]> LsCombos4(UnitDef[] pool)

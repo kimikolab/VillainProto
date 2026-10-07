@@ -40,7 +40,7 @@
 | 13 | 錯乱のササ | +0.00 | +10.02 | 残す | 1 | 0 | 28.0 | 化ける | 上（単独で強い） |  | Brace |
 | 14 | 泥人形ムド | +0.02 | +16.35 | 残す | 8 | 0 | 17.0 | ノイズ | 上（単独で強い） |  | Erupt / Smear / Hex |
 | 15 | 見境なしのミサ | +0.12 | +1.55 | 残す | 3 | 0 | 20.0 | 化ける | 上（単独で強い） |  | Rupture / RuptureScar / RuptureKeep / Feathers / FeatherLoss |
-| 16 | 縛めのクグ | +3.33 | +5.91 | 残す | 3 | 1 | 20.0 | 化ける | 上（単独で強い） |  | Grapple |
+| 16 | 縛めのクグ | +3.33 | +5.91 | 残す | 3 | 1 | 20.0 | 化ける | 上（単独で強い） |  | Grapple / Thread / ThreadCharge |
 | 17 | 逃亡兵セロ | +4.58 | +1.42 | 転生 | 12 | 0 | 18.0 | 化ける | 左下（送り先を選べば働く） | +0.3pt | Evade / EvadeSwap / EvadeQuick / EvadeDrift / LastDodge / Decoy / EvadeMoveShot |
 | 18 | 喧噪のバサ | +4.67 | +34.83 | 残す | 3 | 0 | 36.0 | 化ける | 上（単独で強い） |  | Shuffler / Disarray / Squall / Gale / Tailwind / TailwindFighter |
 | 19 | 後備えのセッキ | +4.79 | +13.02 | 残す | 3 | 1 | 15.0 | どこでも同じ | 上（単独で強い） | −4.6pt | RearGuard / Rage |
@@ -84,4 +84,4 @@
 - `checkup ideal` が値を返した駒: 51 / 52 （返さないのは `CompareBuilds()` に在席 0 枠の駒だけ）
 - `stage catalog` が引けた駒: 51 / 52
 
-所要 540.6 秒（うち `stage catalog` が 505.3 秒）。
+所要 348.2 秒（うち `stage catalog` が 326.8 秒）。

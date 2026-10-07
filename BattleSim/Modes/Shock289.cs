@@ -65,7 +65,7 @@ static class Shock289Diag
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     static Formation Seat(UnitDef[] o) => Pin(B283.Seat(o));
     /// <summary>第290期: 規定のシガ（第290期から SI-b）・カタ（KR-b）を、第289期の規定（SG-a ／ S3）に固定する。第289期の数字を再現するため。</summary>
-    internal static Formation Pin(Formation f) => FvSwap(FvSwap(f, UnitCatalog.Shiga, UnitCatalog.ShigaSGa), UnitCatalog.Kata, UnitCatalog.KataS3);
+    internal static Formation Pin(Formation f) => FvSwap(FvSwap(FvSwap(f, UnitCatalog.Shiga, UnitCatalog.ShigaSGa), UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0);   // 第291期: クグも旧の規定へ
     internal static (string Name, Formation F)[] Rows289() => CompareBuilds().Select(r => (r.Name, Pin(r.F))).ToArray();
 
     /// <summary>

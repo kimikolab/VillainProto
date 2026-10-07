@@ -32,14 +32,14 @@ static class EliteDiag
     // 定義（指示書 §2・測る前に固定）
     // ---------------------------------------------------------------------------------
     /// <summary>近衛 ＝ 討伐隊の新兵（45/11/6）× 5・X 字。素の構成は `TestStages[2]`（検証・五 / 新兵）と同じ。</summary>
-    internal static readonly EnemyWave Five = EnemyWave.FillX(EnemyCatalog.Recruit);
+    internal static readonly EnemyWave Five = EnemyCatalog.EliteGuardWave;   // 第291期: 定義は BattleCore（`EnemyCatalog.EliteGuardWave`）へ移した
     /// <summary>大隊 ＝ 駆り出された農兵（30/8/6）× 9・全席。素の構成は `TestStages[1]`（検証・九 / 農兵）と同じ。</summary>
-    internal static readonly EnemyWave Nine = EnemyWave.FillAll(EnemyCatalog.Levy);
+    internal static readonly EnemyWave Nine = EnemyCatalog.EliteBattalionWave;   // 第291期: 同上（`EnemyCatalog.EliteBattalionWave`）
     /// <summary>照合用（§7 の「九・新兵」列）。主表には出さない。</summary>
     internal static readonly EnemyWave NineRecruit = EnemyWave.FillAll(EnemyCatalog.Recruit);
 
     /// <summary>採否に使う倍率（§2-2）。</summary>
-    internal static readonly EnemyScaleRule Elite = new(1000, 300);
+    internal static readonly EnemyScaleRule Elite = EnemyCatalog.EliteScale;   // 第291期: 同上（`EnemyCatalog.EliteScale`）
     /// <summary>参考の刻み（§5-2・**採否に使わない**）。</summary>
     static readonly EnemyScaleRule[] Ref = { new(1000, 200), new(1000, 250) };
 
@@ -472,7 +472,7 @@ static class EliteDiag
             ("耐久 (ガルド×リリ)", 0, 0),
         };
         // 第287期: §7 は第284期の記録なので、規定のトウ（第287期から T3）を旧の規定 `TouT0` に戻して照合する。
-        var sel = expect.Select(e => rows.First(r => r.Name == e.Row)).Select(r => (r.Name, F: FvSwap(FvSwap(FvSwap(r.F, UnitCatalog.Tou, UnitCatalog.TouT0), UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Kata, UnitCatalog.KataS3))).ToArray();   // 第290期: カタも旧の規定（S3）へ
+        var sel = expect.Select(e => rows.First(r => r.Name == e.Row)).Select(r => (r.Name, F: FvSwap(FvSwap(FvSwap(FvSwap(r.F, UnitCatalog.Tou, UnitCatalog.TouT0), UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0))).ToArray();   // 第290期: カタも旧の規定（S3）へ・第291期: クグも
         var gb = Cells(Grid(sel, new[] { NineRecruit, Nine }, Elite, 0, 50));
         Console.WriteLine();
         Console.WriteLine("| 行 | 九・新兵 §7 | 実測 | 九・農兵 §7 | 実測 |");

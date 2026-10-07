@@ -840,4 +840,24 @@ public static class Presets
         // セロの逃亡（3分の1削られると後列の味方を突き飛ばす）が2本目の供給。
         ("被弾×移動 (カド×ヨミ×セロ)", Formation.Build(front1: UnitCatalog.Sero, front3: UnitCatalog.Gald, center: UnitCatalog.Kado, back1: UnitCatalog.Yomi, back3: UnitCatalog.Basa)),
     };
+
+    /// <summary>
+    /// <b>試遊の行（第291期・design/PHASE291_PLAYTEST_PREP_SPEC.md §3）。</b> DemoApp のプリセットの末尾に連結するだけの一覧。
+    ///
+    /// <para><b><see cref="Compare"/> には入れない</b>（<c>compare</c> の行が増えると全器具が動く）。BattleSim の器具はこの一覧を数えない。
+    /// 駒はすべて規定（版の駒は使わない）。席は出典の並び（前1・前3・中央・後1・後3 の順＝ <c>boss283</c> の <c>Seat</c> と同じ）をそのまま写した。</para>
+    /// </summary>
+    public static (string Name, Formation F)[] Playtest => new (string, Formation)[]
+    {
+        // 第287期 `PHASE287_SHOCK_AXIS_GRID.md` R4 近衛1（シガ・ガルド・ベニ・トウ・ソラ）。トウの粉 ＋ ベニの火で敵陣を帯電させ、シガが鞭で弾けさせる。
+        ("試遊・感電 火の型", Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Gald, center: UnitCatalog.Beni, back1: UnitCatalog.Tou, back3: UnitCatalog.Sora)),
+        // 第290期 `shock290 grid3`（近衛・SI-b ＋ KR-b）の1位（トウ・ソラ・シガ・カタ・ドハ・97.5%）。ベニのいない台——カタの漏れがシガの蓄電を育てる。
+        ("試遊・感電 雷の型", Formation.Build(front1: UnitCatalog.Tou, front3: UnitCatalog.Sora, center: UnitCatalog.Shiga, back1: UnitCatalog.Kata, back3: UnitCatalog.Doha)),
+        // 第290期 `shock290 gridk`（近衛・KG-b）で糸が働いた上位台（ソラ・ガルド・クグ・トウ・カタ・100%・糸 ② 3.00 ／戦）。カタの漏れで弾けた隣の放電が、クグの糸を伝って組み付いた敵へ流れる。
+        ("試遊・感電 糸", Formation.Build(front1: UnitCatalog.Sora, front3: UnitCatalog.Gald, center: UnitCatalog.Kugu, back1: UnitCatalog.Tou, back3: UnitCatalog.Kata)),
+        // 第283期 `BOSS_SUMMARY.md` §6-1 のボスの標準の標台（前1 ザン ／ 前3 ゴルム ／ 中央 ミサ ／ 後1 バン ／ 後3 ヒサ）。ミサは規定（第286期から M-b）。
+        ("試遊・標 ボス台", Formation.Build(front1: UnitCatalog.Zan, front3: UnitCatalog.Golm, center: UnitCatalog.Tome, back1: UnitCatalog.Ban, back3: UnitCatalog.Hisa)),
+        // `compare` の行 `見境改 (ミサ×薙ぎ)` と同じ台（道中の標）。写しを持たず <see cref="Compare"/> から引く。
+        ("試遊・標 道中", Compare.First(r => r.Name == "見境改 (ミサ×薙ぎ)").F),
+    };
 }

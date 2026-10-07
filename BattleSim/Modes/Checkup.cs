@@ -361,6 +361,8 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.ShockWhipFlurry] = (HcPlusL,  "振りまくる（第289期・SI-b）: 敵の感電が弾けた連鎖の直後、蓄電 1 以上なら割り込んで鞭を振る・蓄電 −1（第290期からシガの規定）"),
         [TraitId.Thundercloud]    = (HcPlusL,  "雷雲（第289期・KR-a）: 敵の感電が1体弾けるたび雷雲 +1・雷の1発に雷雲を足す（第290期からカタの規定）"),
         [TraitId.ThundercloudKeep]= (HcPlusL,  "雷雲が残る（第289期・KR-b）: 雷を落としても雷雲は減らない・上限 8（第290期からカタの規定）"),
+        [TraitId.Thread]          = (HcPlusL,  "糸（第290期・KG-a）: 自分に流れ込む電気（自分の弾け・隣の味方の放電）を、組み付いた敵へ糸で流す（第291期からクグの規定）"),
+        [TraitId.ThreadCharge]    = (HcPlusL,  "導線（第290期・KG-b）: 糸を伝った放電を浴びた敵は、感電していなければ帯電する（第291期からクグの規定）"),
         [TraitId.MireSlam]        = (HcPlusL,  "濃縮の手番の最後に寄せ先（感電している敵を優先）へ攻撃力ぶんの一撃（第218期・M1・保持者 0 枚）"),
         [TraitId.MireConduct]     = (HcPlusL,  "叩きつける相手が感電していれば、同じ一撃が印を持つ敵すべてへ走る（第218期・M2・保持者 0 枚）"),
         [TraitId.MireDull]        = (HcPlusL,  "印を持つ敵の与ダメが印1つにつき −10%（上限 −40%）（第218期・M3・保持者 0 枚）"),

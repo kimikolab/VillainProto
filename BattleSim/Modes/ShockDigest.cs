@@ -33,15 +33,15 @@ static class ShockDigestDiag
 
     static readonly HashSet<string> SkipKinds = new() { "MireCarried", "MireHandedOff", "MireBurst", "Regroup", "Evade", "EvadeRiposte", "EvadeStage", "Barrage", "StatusArrow", "Retreat", "ShioStage", "Decoy", "Disarray", "DisarrayStage", "Squall", "LastDodge", "Blast", "Spring", "Tailwind", "StaggerBreach", "KillImpact", "Overflow" };
     /// <summary>第231期以後に足した出来事の種類（<b>どのモードでも外す</b>——挑発の表示は規定のセロにも出るので、前の期の台本と揃えるには必ず外す）。</summary>
-    static readonly HashSet<string> SkipAlways = new() { "DecoyShow", "SpringGuard", "MoveShot", "Landing" };
+    static readonly HashSet<string> SkipAlways = new() { "DecoyShow", "SpringGuard", "MoveShot", "Landing", "ShockGauge", "Feather", "Scar", "MarkLayer" };   // 第291期: 表示専用の4種を足した
     /// <summary>後の期に足した <c>BattleEvent</c> の欄。</summary>
-    static readonly HashSet<string> SkipProps = new() { "BrittleExtra", "PartnerId" };
+    static readonly HashSet<string> SkipProps = new() { "BrittleExtra", "PartnerId", "PowderRoute" };   // 第291期: 粉の経路の欄
 
     /// <summary>
     /// 第287期: `compare` の行の規定のトウ（第287期から T3）を旧の規定 `TouT0` に戻した行。指紋の台は規定化の前（第286期まで）の台本を写すので、
     /// トウの在席する行（責め苦・毒+耐久）を旧に固定する（第282〜283期のミサの `CompareT0` と同じ作法）。トウのいない行は1ビットも変わらない。
     /// </summary>
-    static (string Name, Formation F)[] CompareTou0() => Common.CompareBuilds().Select(r => (r.Name, Common.FvSwap(Common.FvSwap(Common.FvSwap(r.F, UnitCatalog.Tou, UnitCatalog.TouT0), UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Kata, UnitCatalog.KataS3))).ToArray();
+    static (string Name, Formation F)[] CompareTou0() => Common.CompareBuilds().Select(r => (r.Name, Common.FvSwap(Common.FvSwap(Common.FvSwap(Common.FvSwap(r.F, UnitCatalog.Tou, UnitCatalog.TouT0), UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0))).ToArray();   // 第291期: クグも旧の規定へ
 
     static (string, Formation)[] MireBenches(UnitDef mio) => new (string, Formation)[]
     {
@@ -161,8 +161,8 @@ static class ShockDigestDiag
                 // 第217期（受け入れ 1）: G0（今のシガ）の台本が実装の前後で一致すること。席は Phase 0 で G0 に選んだ参考の席。
                 ("W1 X", Formation.Build(front1: UnitCatalog.Mio, front3: WhipDiag.G0Def, center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: UnitCatalog.TouT0)),
                 ("W1 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.KataS3, c: WhipDiag.G0Def, d: UnitCatalog.TouT0, e: UnitCatalog.Mio)),
-                ("W2 X", Formation.Build(front1: UnitCatalog.Beni, front3: WhipDiag.G0Def, center: UnitCatalog.Mio, back1: UnitCatalog.KataS3, back3: UnitCatalog.Kugu)),
-                ("W2 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.KataS3, d: WhipDiag.G0Def, e: UnitCatalog.Kugu)),
+                ("W2 X", Formation.Build(front1: UnitCatalog.Beni, front3: WhipDiag.G0Def, center: UnitCatalog.Mio, back1: UnitCatalog.KataS3, back3: UnitCatalog.KuguKG0)),
+                ("W2 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.KataS3, d: WhipDiag.G0Def, e: UnitCatalog.KuguKG0)),
                 ("W3 X", Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Mio, center: UnitCatalog.KataS3, back1: WhipDiag.G0Def, back3: UnitCatalog.Guza)),
                 ("W3 P2", Formation.BuildDiamond(a: UnitCatalog.Beni, b: UnitCatalog.Mio, c: UnitCatalog.KataS3, d: WhipDiag.G0Def, e: UnitCatalog.Guza)),
                 ("W4 責め苦", WhipDiag.AsG0(CompareTou0().First(r => r.Name == "責め苦 (トウ×シガ)").F)),

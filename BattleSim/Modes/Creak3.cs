@@ -35,7 +35,7 @@ public static void Run(string[] args, int stageIndex)
     // `HaulOutPair(Opponent)` なので**敵陣**を動かす——味方のヨミは動かない。
     var c3Movers = new[] { UnitCatalog.Sero.Id, UnitCatalog.Kado.Id, UnitCatalog.Basa.Id };
     // `Whet` 窓口の供給者6枚（`WhetRoute` の7経路の持ち主。号令は開戦と毎Tの2経路で1枚）。
-    var c3Feeders = new[] { UnitCatalog.Kari.Id, UnitCatalog.Gan.Id, UnitCatalog.Kugu.Id,
+    var c3Feeders = new[] { UnitCatalog.Kari.Id, UnitCatalog.Gan.Id, UnitCatalog.KuguKG0.Id,
                             UnitCatalog.Shio.Id, UnitCatalog.Golm.Id, UnitCatalog.Hiyo.Id };
 
     // ---- 版（**測る前に固定**・指示書 §2-2）------------------------------------------------

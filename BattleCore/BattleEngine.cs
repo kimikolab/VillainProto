@@ -1315,7 +1315,7 @@ public sealed class BattleContext
     /// <paramref name="writer"/> は計数と台本の書き手だけに使う。<b>乱数を引かない。</b>
     /// </summary>
     /// <returns>新しく付いたか。</returns>
-    public bool MarkShock(UnitState target, UnitState writer)
+    public bool MarkShock(UnitState target, UnitState writer, PowderRoute? powder = null, UnitState? spreadFrom = null)
     {
         if (!target.IsAlive) return false;
         _shockLive = true;
@@ -1324,7 +1324,7 @@ public sealed class BattleContext
         UnitTally wt = TallyOf(writer);
         if (writer.TeamId == target.TeamId) wt.ShockOnAlly++; else wt.ShockOnFoe++;
         TallyOf(target).ShockReceived++;   // 第217期（計数のみ）
-        EmitStatusGain(target, StatusKeys.Shock, 1, writer);   // 表示専用
+        EmitStatusGain(target, StatusKeys.Shock, 1, writer, spreadFrom: spreadFrom, powder: powder);   // 表示専用（第291期: トウの粉は経路の印つき）
         if (_chargeLive && target.HasTrait(TraitId.StoredCharge)) GainCharge(target, writer);   // 第288期（蓄電の口・ここ1箇所）
         if (_grappleLive && target.HasTrait(TraitId.Grapple))   // 第290期・計数のみ（クグが帯電した書き手）
             (TallyOf(target).KuguShockBySrc ??= new long[5])[writer.TeamId != target.TeamId ? 4 : writer.Def.Id == "tou" ? 0 : writer.Def.Id == "kata" ? 1 : writer.Def.Id == "som" ? 2 : 3]++;
@@ -1340,6 +1340,7 @@ public sealed class BattleContext
         int c = StoredChargeTrait.Of(u);
         if (c >= StoredChargeTrait.Cap) { t.ChargeCapped++; return; }
         u.SetCounter(StoredChargeTrait.Key, c + 1);
+        EmitShockGauge(ShockGaugeLabels.ChargeGain, writer, u, c + 1, c);   // 第291期・表示専用
         t.ChargeGains++;
         int src = writer == u || writer.TeamId != u.TeamId ? 4
                 : writer.Def.Id == "tou" ? 0 : writer.Def.Id == "kata" ? 1 : writer.Def.Id == "som" ? 2 : 3;
@@ -1393,7 +1394,9 @@ public sealed class BattleContext
             t.BoltDealt += before - Math.Max(0, u.Hp);
             if (before > 0 && !u.IsAlive) t.BoltKills++;
         }
+        int drained = StoredChargeTrait.Of(self);
         self.SetCounter(StoredChargeTrait.Key, 0);
+        if (drained > 0) EmitShockGauge(ShockGaugeLabels.ChargeDrained, self, self, 0, drained);   // 第291期・表示専用
     }
 
     /// <summary>帯電の粉が新しく感電を付けた（第286期・<see cref="ChargedPowderTrait"/> だけが呼ぶ・<b>計数のみ</b>）。</summary>
@@ -1542,9 +1545,11 @@ public sealed class BattleContext
                 ht.ThunderPopsPending += popped.Count;   // 計数のみ（雷を落とすまでに弾けた敵の数）
                 if (h.HasTrait(TraitId.Thundercloud))
                 {
-                    int c = ThundercloudTrait.Of(h) + popped.Count;
+                    int c0 = ThundercloudTrait.Of(h);
+                    int c = c0 + popped.Count;
                     if (h.HasTrait(TraitId.ThundercloudKeep)) c = Math.Min(ThundercloudTrait.KeepCap, c);
                     h.SetCounter(ThundercloudTrait.Key, c);
+                    if (c != c0) EmitShockGauge(ShockGaugeLabels.Cloud, popped.Count > 0 ? popped[0] : null, h, c, c0, remaining: popped.Count);   // 第291期・表示専用
                 }
                 continue;
             }
@@ -1582,6 +1587,7 @@ public sealed class BattleContext
         Interrupt(() =>
         {
             t.SwFires++;
+            EmitShockGauge(ShockGaugeLabels.Interrupt, h, target, c, popped.Count, partner: popped.Count > 0 ? popped[0] : null);   // 第291期・表示専用（見出し）
             Log($"    そばで弾けた電気に、{h.Name} の鞭が割り込む", LogKind.Highlight, h);
             long before = t.DamageToEnemy;
             UnitState? prevActor = _shockWhipActor;
@@ -1596,7 +1602,12 @@ public sealed class BattleContext
                 Thunderclap(h, popped);
                 t.SwBoltDealt += t.DamageToEnemy - b2;
             }
-            else h.SetCounter(StoredChargeTrait.Key, Math.Max(0, StoredChargeTrait.Of(h) - 1));
+            else
+            {
+                int c1 = StoredChargeTrait.Of(h);
+                h.SetCounter(StoredChargeTrait.Key, Math.Max(0, c1 - 1));
+                if (c1 > 0) EmitShockGauge(ShockGaugeLabels.ChargeSpent, h, h, c1 - 1, c1);   // 第291期・表示専用
+            }
         });
     }
 
@@ -1703,6 +1714,8 @@ public sealed class BattleContext
         {
             Kind = BattleEventKind.Discharge, Turn = _turn, ActorId = via.InstanceId, TargetId = to.InstanceId,
             Amount = amt, Slot = depth + 1, Team = to.TeamId, SourceTrait = TraitId.Thread,
+            PartnerId = from == via ? null : from.InstanceId,   // 第291期・表示専用（② 隣の味方の放電を移したときの元の駒）
+            Text = via.RawCounter(GrappleTrait.TargetKey) == 0 && via.RawCounter(ThreadTrait.MemoKey) > 0 ? ThreadLabels.Release : null,   // 第291期・表示専用（ほどける一撃の中）
         });
         Log($"    {(from == via ? "" : from.Name + " の電気が ")}{via.Name} の糸を伝って {to.Name} へ放電（{amt}）", LogKind.Trigger);
         bool wasShocked = to.RawCounter(StatusKeys.Shock) > 0;
@@ -7797,7 +7810,7 @@ public sealed class BattleContext
     /// </summary>
     /// <param name="writer">書いた駒。engine の規則が足したぶんは null。</param>
     internal void EmitStatusGain(UnitState target, string key, int amount, UnitState? writer,
-                                 PoisonRoute? route = null, UnitState? spreadFrom = null)
+                                 PoisonRoute? route = null, UnitState? spreadFrom = null, PowderRoute? powder = null)
     {
         if (!_verbose || amount <= 0) return;
         Emit(new BattleEvent
@@ -7810,8 +7823,59 @@ public sealed class BattleContext
             Text = key,
             PoisonRoute = route,                     // 第183期 追補2・表示専用（毒の窓口を通ったときだけ）
             SpreadFromId = spreadFrom?.InstanceId,   // 第183期 追補2・表示専用（伝染のときだけ）
+            PowderRoute = powder,                    // 第291期・表示専用（トウの粉のときだけ）
+            FriendlyFire = powder == BattleCore.PowderRoute.Leak,   // 第291期・表示専用（粉の漏れ）
         });
     }
+
+    // 第291期 —— 表示専用の口（`ShockGauge` ／ `Feather` ／ `Scar` ／ `MarkLayer`）。**盤面を読むだけで書かない・乱数を引かない。**
+    // verbose でなければ最初の比較で抜ける。呼び出し側は保持者の札（`_chargeLive` ／ `_featherLive` ／ `_ruptureLive` ほか）の後ろに置く。
+    // 自己検査（`playtest291 check` (k)）はこの区間に乱数の口とカウンタ ／ HP の書き込みが無いことを見る。
+
+    /// <summary>感電軸のゲージ（<see cref="ShockGaugeLabels"/>）を台本に打つ。</summary>
+    internal void EmitShockGauge(string label, UnitState? actor, UnitState target, int amount, int slot = 0, UnitState? partner = null, int? remaining = null)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.ShockGauge, Turn = _turn, Text = label, ActorId = actor?.InstanceId, TargetId = target.InstanceId,
+            Amount = amount, Slot = slot, PartnerId = partner?.InstanceId, StatusRemaining = remaining, Team = target.TeamId, HpAfter = target.Hp,
+        });
+    }
+
+    /// <summary>ミサの羽（<see cref="FeatherLabels"/>）を台本に打つ。</summary>
+    void EmitFeather(string label, UnitState? actor, UnitState? target, int amount, int slot = 0, UnitState? partner = null, int? remaining = null)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Feather, Turn = _turn, Text = label, ActorId = actor?.InstanceId, TargetId = target?.InstanceId,
+            Amount = amount, Slot = slot, PartnerId = partner?.InstanceId, StatusRemaining = remaining, Team = actor?.TeamId,
+        });
+    }
+
+    /// <summary>爪痕（最大HPが縮んだ）を台本に打つ。</summary>
+    void EmitScar(UnitState misa, UnitState target, int lost)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Scar, Turn = _turn, ActorId = misa.InstanceId, TargetId = target.InstanceId,
+            Amount = lost, Slot = target.MaxHp, HpAfter = target.Hp, Team = target.TeamId,
+        });
+    }
+
+    /// <summary>標の層（前の層 → 新しい層）を台本に打つ。</summary>
+    void EmitMarkLayer(UnitState writer, UnitState target, int before, int after)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.MarkLayer, Turn = _turn, ActorId = writer.InstanceId, TargetId = target.InstanceId,
+            Amount = after, Slot = before, Team = target.TeamId,
+        });
+    }
+    // 第291期 —— 表示専用の口（ここまで）
 
     /// <summary>
     /// 転倒を台本に打つ（第145期・<b>表示専用</b>）。呼び口は2つだけ——
@@ -12431,9 +12495,11 @@ public sealed class BattleContext
         {
             u.SetCounter(StatusKeys.Marked, cur + 1);
             TallyOf(writer).MarkLayerAdds++;   // 計数のみ
+            EmitMarkLayer(writer, u, cur, cur + 1);   // 第291期・表示専用
             return;
         }
         u.SetCounter(StatusKeys.Marked, 1);
+        if (_ruptureLive && u.TeamId != PlayerTeam && cur == 0) EmitMarkLayer(writer, u, 0, 1);   // 第291期・表示専用（層が意味を持つ戦だけ）
     }
 
     bool AnyMarkedFoe(UnitState actor)
@@ -12475,6 +12541,7 @@ public sealed class BattleContext
             t.RuptureScar += maxBefore - target.MaxHp;
             (t.RuptureScarByTurn ??= new long[21])[Math.Clamp(_turn, 0, 20)] += maxBefore - target.MaxHp;
             Log($"    {target.Name} に塞がらない爪痕が残った（最大HP {maxBefore} → {target.MaxHp}）", LogKind.Trigger);
+            if (maxBefore > target.MaxHp) EmitScar(self, target, maxBefore - target.MaxHp);   // 第291期・表示専用
         }
         if (!Finisher.Consume || self.HasTrait(TraitId.RuptureKeep)) return;   // 第282期: 層を残す札（T1n）
         target.SetCounter(StatusKeys.Marked, 0);
@@ -12561,6 +12628,7 @@ public sealed class BattleContext
             int f = FeathersTrait.Count(h);
             if (f > t.FeatherMax) t.FeatherMax = f;
             Log($"    {h.Name} の羽が1枚増えた（{f} 枚）", LogKind.Trigger);
+            EmitFeather(FeatherLabels.Gain, writer, h, f, partner: marked);   // 第291期・表示専用
         }
     }
 
@@ -12581,6 +12649,7 @@ public sealed class BattleContext
         _volley = v;
         int chased = 0, sprayed = 0, dmg = 0;
         _featherLast = null;
+        EmitFeather(FeatherLabels.Volley, actor, actor, f);   // 第291期・表示専用（見出し）
         try
         {
             for (int i = 0; i < f; i++)
@@ -12591,6 +12660,9 @@ public sealed class BattleContext
                 if (AnyMarkedFoe(actor))
                 {
                     if (_featherLast is { IsAlive: false }) t.FeatherFlow++;
+                    // 第291期・表示専用: 1発ごとの札（前の的が倒れていれば「流れた」）。直後にこの1発の Attack ／ Damage。
+                    if (_featherLast is { IsAlive: false } fell) EmitFeather(FeatherLabels.Flow, actor, null, f, i + 1, partner: fell);
+                    else EmitFeather(FeatherLabels.Chase, actor, null, f, i + 1);
                     PerformAttack(actor);
                     chased++;
                     continue;
@@ -12607,6 +12679,7 @@ public sealed class BattleContext
                     dmg = Math.Max(1, actor.CurrentAttack * SprayTrait.Percent / 100);
                     NoteAttackRead(actor);
                 }
+                EmitFeather(FeatherLabels.Spray, actor, null, f, i + 1, remaining: sprayed + 1);   // 第291期・表示専用（直後に Damage）
                 if (!SprayShot(actor, i + 1, dmg, t)) break;
                 sprayed++;
             }
@@ -12622,6 +12695,7 @@ public sealed class BattleContext
             {
                 actor.SetCounter(FeathersTrait.ExtraKey, extra - lost);
                 t.FeatherLost += lost;
+                EmitFeather(FeatherLabels.Lost, actor, actor, FeathersTrait.Count(actor), lost);   // 第291期・表示専用
                 Log($"    {actor.Name} の羽が {lost} 枚戻らなかった（{FeathersTrait.Count(actor)} 枚）", LogKind.Trigger);
             }
         }

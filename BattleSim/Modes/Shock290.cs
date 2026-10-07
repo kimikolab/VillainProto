@@ -57,7 +57,7 @@ static class Shock290Diag
     };
     internal static readonly Ver[] KuguVers =
     {
-        new("旧", "kold", UnitCatalog.Kugu, UnitCatalog.Kugu), new("KG-a", "kga", UnitCatalog.Kugu, UnitCatalog.KuguKGa), new("KG-b", "kgb", UnitCatalog.Kugu, UnitCatalog.KuguKGb),
+        new("旧", "kold", UnitCatalog.KuguKG0, UnitCatalog.KuguKG0), new("KG-a", "kga", UnitCatalog.KuguKG0, UnitCatalog.KuguKGa), new("KG-b", "kgb", UnitCatalog.KuguKG0, UnitCatalog.KuguKGb),
     };
     static Ver VerOf(string n, Ver[] set) => set.First(v => v.Name == n || v.Ascii == n);
     static Ver AnyVer(string n) => ShigaVers.Concat(KataVers).Concat(KuguVers).First(v => v.Ascii == n || v.Name == n);
@@ -71,7 +71,10 @@ static class Shock290Diag
     const int Seeds = 200, CutSeeds = 20;
 
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
-    static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n);
+    /// <summary>第291期: 名前で引くクグ（規定は第291期から KG-b）を第290期の規定 `KuguKG0` に固定する（第290期の台を再現するため）。</summary>
+    static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n) is var d0 && ReferenceEquals(d0, UnitCatalog.Kugu) ? UnitCatalog.KuguKG0 : d0;
+    /// <summary>第291期: `compare` の行のクグを第290期の規定 `KuguKG0` に固定した行。</summary>
+    static (string Name, Formation F)[] Rows290() => CompareBuilds().Select(r => (r.Name, FvSwap(r.F, UnitCatalog.Kugu, UnitCatalog.KuguKG0))).ToArray();
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     static Formation Seat(UnitDef[] o) => B283.Seat(o);
@@ -221,7 +224,7 @@ static class Shock290Diag
         Console.WriteLine("# 第290期 Phase 0 —— 規定のクグ（組み付き）・規定のシガ（SI-b）・規定のカタ（KR-b）（seed 0..199・verbose・計数だけ）");
         Console.WriteLine();
         var bs = new List<(string Name, string Wave, Formation F)>();
-        foreach (var b in Boards().Where(b => Has(b.Make(), UnitCatalog.Kugu))) bs.Add((b.Name, b.Wave, b.Make()));
+        foreach (var b in Boards().Where(b => Has(b.Make(), UnitCatalog.KuguKG0))) bs.Add((b.Name, b.Wave, b.Make()));
         // §5-4 の 4（ボス）: クグの台をそのままボスへ
         foreach (var b in Boards().Where(b => b.Name is "クグ隣 近衛" or "R4 近衛3")) bs.Add((b.Name + " → ボス", "ボス", b.Make()));
         var res = bs.Select(b => MeasureDeep(b.F, WaveOf(b.Wave), Seeds)).ToArray();
@@ -302,7 +305,7 @@ static class Shock290Diag
     /// <summary>第287期の格子（`shock287 grid`）のうち、探索枠にクグを含む台だけを同じ切り方で回し直す（固定枠は第287期と同じ トウ ＋ シガ G3K）。</summary>
     static (List<UnitDef[]> All, List<SubRes> Reached) KuguSubset287(S287.Wave w)
     {
-        var lu = S287.Lineups().Where(t => t.Contains(UnitCatalog.Kugu)).ToList();
+        var lu = S287.Lineups().Where(t => t.Contains(UnitCatalog.KuguKG0)).ToList();
         var boards = new List<UnitDef[]>();
         foreach (var t in lu) boards.AddRange(B283.Perms(S287.Fixed.Concat(t).ToArray()));
         var res = new SubRes?[boards.Count];
@@ -355,7 +358,7 @@ static class Shock290Diag
         Console.WriteLine("|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
         foreach (var b in bs)
         {
-            if (!Has(b.Make(), UnitCatalog.Kugu)) continue;
+            if (!Has(b.Make(), UnitCatalog.KuguKG0)) continue;
             foreach (var wn in new[] { b.Wave }.Concat(b.Wave == "近衛" && b.Name.StartsWith("クグ隣") ? new[] { "ボス" } : Array.Empty<string>()))
             {
                 var w = WaveOf(wn);
@@ -566,7 +569,7 @@ static class Shock290Diag
     // ---------------------------------------------------------------------------------
     static double[,] CompareGrid(params Ver[] vs)
     {
-        var rows = CompareBuilds();
+        var rows = Rows290();
         int nw = EnemyCatalog.Stages.Count;
         var g = new double[rows.Length, nw];
         Parallel.For(0, rows.Length * nw, k =>
@@ -582,7 +585,7 @@ static class Shock290Diag
 
     static void CompareAll()
     {
-        var rows = CompareBuilds();
+        var rows = Rows290();
         int nw = EnemyCatalog.Stages.Count;
         Console.WriteLine("# 第290期 `compare` 64 行 × 版（seed 0..199・その駒の在席行だけ差し替える）");
         var prim = Baseline.PrimaryRows.Select(n => Array.FindIndex(rows, r => r.Name == n)).ToArray();
@@ -671,13 +674,14 @@ static class Shock290Diag
             UnitCatalog.Shiga.PlusText == UnitCatalog.ShigaSGa.PlusText + "。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう"
             && UnitCatalog.Kata.PlusText == UnitCatalog.KataS3.PlusText + "。盤上で感電が弾けるたび雷雲が湧き、雷は戦が進むほど重くなる"
             && UnitCatalog.ShigaSIc.PlusText == UnitCatalog.Shiga.PlusText);
-        Expect("(d) SI-c ＝ SI-b ＋ `ShockWhipKeep`・KG-a ＝ 規定のクグ ＋ `Thread`・KG-b ＝ KG-a ＋ `ThreadCharge`・規定のクグは触っていない・版は `All` ／ `Retired` に入っていない",
+        Expect("(d) SI-c ＝ SI-b ＋ `ShockWhipKeep`・KG-a ＝ 規定のクグ ＋ `Thread`・KG-b ＝ KG-a ＋ `ThreadCharge`・旧のクグ（`KuguKG0`）は組み付きだけ・版は `All` ／ `Retired` に入っていない（第291期から KG-b ＝ 規定）",
             UnitCatalog.ShigaSIc.Traits.SequenceEqual(UnitCatalog.Shiga.Traits.Append(TraitId.ShockWhipKeep))
-            && UnitCatalog.Kugu.Traits.SequenceEqual(new[] { TraitId.Grapple })
+            && UnitCatalog.KuguKG0.Traits.SequenceEqual(new[] { TraitId.Grapple })
             && UnitCatalog.KuguKGa.Traits.SequenceEqual(new[] { TraitId.Grapple, TraitId.Thread }) && UnitCatalog.KuguKGb.Traits.SequenceEqual(new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge })
-            && new[] { UnitCatalog.KuguKGa, UnitCatalog.KuguKGb }.All(d => d.MaxHp == UnitCatalog.Kugu.MaxHp && d.Attack == UnitCatalog.Kugu.Attack && d.Speed == UnitCatalog.Kugu.Speed && d.Id == "kugu")
-            && !new[] { UnitCatalog.ShigaSIc, UnitCatalog.KuguKGa, UnitCatalog.KuguKGb }.Any(UnitCatalog.Everyone.Contains)
-            && !UnitCatalog.All.Any(u => u.Traits.Any(t => t is TraitId.ShockWhipKeep or TraitId.Thread or TraitId.ThreadCharge)));
+            && new[] { UnitCatalog.KuguKGa, UnitCatalog.KuguKGb }.All(d => d.MaxHp == UnitCatalog.KuguKG0.MaxHp && d.Attack == UnitCatalog.KuguKG0.Attack && d.Speed == UnitCatalog.KuguKG0.Speed && d.Id == "kugu")
+            && !new[] { UnitCatalog.ShigaSIc, UnitCatalog.KuguKGa, UnitCatalog.KuguKG0 }.Any(UnitCatalog.Everyone.Contains)
+            && !UnitCatalog.All.Any(u => u.Traits.Contains(TraitId.ShockWhipKeep))
+            && UnitCatalog.All.Where(u => u.Traits.Any(t => t is TraitId.Thread or TraitId.ThreadCharge)).SequenceEqual(new[] { UnitCatalog.KuguKGb }));   // 第291期: KG-b が規定になった
 
         // 帳簿の検査: 代表台 × 版 × seed 0..39
         var bs = Boards();
@@ -695,7 +699,7 @@ static class Shock290Diag
                         if (v.Name == "SI-b") keptB += t.SwKeptShock;
                         else { keptC += t.SwKeptShock; firesC += t.SwFires; }
                     }
-                if (!Has(b.Make(), UnitCatalog.Kugu)) continue;
+                if (!Has(b.Make(), UnitCatalog.KuguKG0)) continue;
                 foreach (var wn in new[] { b.Wave, "ボス" })
                 {
                     var ww = WaveOf(wn);
@@ -723,7 +727,7 @@ static class Shock290Diag
         Expect("(h) ほどけた一撃の間だけの糸の控え（`threadMemo`）は戦の終わりに残っていない", memoLeft == 0, $"{memoLeft} 戦");
 
         // (i) 軽い口と詳しい口・決定性（版すべて × クグ・同居の台）
-        foreach (var b in bs.Where(b => Has(b.Make(), UnitCatalog.Kugu) || b.Name.StartsWith("トウ+シガ+カタ")))
+        foreach (var b in bs.Where(b => Has(b.Make(), UnitCatalog.KuguKG0) || b.Name.StartsWith("トウ+シガ+カタ")))
             foreach (var v in ShigaVers.Concat(KataVers).Concat(KuguVers))
                 for (int s = 0; s < 10; s++)
                 {

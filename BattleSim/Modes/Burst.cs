@@ -45,7 +45,7 @@ static partial class BurstDiag
         ("R1", "ラウが殴る駒・毒の運び手", () => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, UnitCatalog.Rau, UnitCatalog.Kubi }),
         ("R2", "毒が最も濃い", () => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, UnitCatalog.Rau, UnitCatalog.Guza }),
         ("R3", "前段の基準（ポンの X字の顔ぶれ）", () => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, UnitCatalog.Guza, UnitCatalog.Kubi }),
-        ("R4", "毒の少ない雷の台", () => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, UnitCatalog.TouT0, UnitCatalog.Kugu }),
+        ("R4", "毒の少ない雷の台", () => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, UnitCatalog.TouT0, UnitCatalog.KuguKG0 }),
     };
 
     /// <summary>R3 のポンの X字の席（第216期の台A）。</summary>

@@ -256,8 +256,8 @@ public static void Run(string[] args, int stageIndex)
             Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Borg, center: UnitCatalog.Dolga, back1: UnitCatalog.Rica, back3: UnitCatalog.Hibi)),
         // 第148期 段0。帯A 46.3 → 66.3（+20.0）・狙 ○・情報セル 3 → 4・粗順 2。
         ("縛め非収入型 (クグ×速攻)",
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Kugu, center: UnitCatalog.Sero, back1: UnitCatalog.Mudo, back3: UnitCatalog.Borg),
-            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.Kugu, back1: UnitCatalog.Sero, back3: UnitCatalog.Borg)),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.KuguKG0, center: UnitCatalog.Sero, back1: UnitCatalog.Mudo, back3: UnitCatalog.Borg),
+            Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Mudo, center: UnitCatalog.KuguKG0, back1: UnitCatalog.Sero, back3: UnitCatalog.Borg)),
         // 第148期 段0。帯A 58.7 → 70.4（+11.7）・狙 ○・情報セル 3 → 3・粗順 1。
         ("追撃×据え (ハギ×バン)",
             Formation.Build(front1: UnitCatalog.Hagi, front3: UnitCatalog.Ban, center: UnitCatalog.Golm, back1: UnitCatalog.Rica, back3: UnitCatalog.Vel),

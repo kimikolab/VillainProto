@@ -41,7 +41,7 @@ static partial class WhipDiag
     internal static readonly (string Tag, string Aim, Func<UnitDef, List<UnitDef>> Members)[] Rigs =
     {
         ("W1", "弾く役（トウ）", s => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, s, UnitCatalog.TouT0 }),
-        ("W2", "止める役（クグ）", s => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, s, UnitCatalog.Kugu }),
+        ("W2", "止める役（クグ）", s => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, s, UnitCatalog.KuguKG0 }),
         ("W3", "台A の枠（グザ）", s => new() { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, s, UnitCatalog.Guza }),
     };
 

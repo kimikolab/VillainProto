@@ -49,13 +49,13 @@ public static void Run(string[] args, int stageIndex)
 
         ("S2 守り（削り2 / 回復2・主判定）", "ノノ",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald,
-                            center: UnitCatalog.Lili, back1: UnitCatalog.TouT0, back3: UnitCatalog.Kugu)),
+                            center: UnitCatalog.Lili, back1: UnitCatalog.TouT0, back3: UnitCatalog.KuguKG0)),
         ("S2 守り（削り2 / 回復2・主判定）", "ナラ",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald,
-                            center: UnitCatalog.Tsugi, back1: UnitCatalog.TouT0, back3: UnitCatalog.Kugu)),
+                            center: UnitCatalog.Tsugi, back1: UnitCatalog.TouT0, back3: UnitCatalog.KuguKG0)),
         ("S2 守り（削り2 / 回復2・主判定）", "4体（中央 空）",
             Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Gald,
-                            back1: UnitCatalog.TouT0, back3: UnitCatalog.Kugu)),
+                            back1: UnitCatalog.TouT0, back3: UnitCatalog.KuguKG0)),
 
         // S3/S4 は S2 が床（全版 100/0/0/0/0）に落ちたので足した差し替え台。
         // 割れ方は S2 と同じ 削り2 / 回復2 のまま、**出力を持つ駒に入れ替えて余地を作る**

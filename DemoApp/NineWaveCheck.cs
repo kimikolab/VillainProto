@@ -24,15 +24,19 @@ public partial class NineWaveCheck : Control
             typeof(Main).GetField("_speed", Flags)!.SetValue(main, 1000.0);
             var picker = Read<OptionButton>("_stagePicker");
             int count = EnemyCatalog.Stages.Count;
-            Require(picker.ItemCount == count + 1 + EnemyCatalog.TestStages.Count, "波の項目数");
+            // 第291期: 検証の波の後ろに試遊の波（区切り ＋ `EnemyCatalog.PlaytestStages`）が並ぶ。試遊の波は倍率が波ごとに固定。
+            int playBase = count + 1 + EnemyCatalog.TestStages.Count + 1;
+            Require(picker.ItemCount == playBase + EnemyCatalog.PlaytestStages.Count, "波の項目数");
             Require(picker.GetPopup().IsItemSeparator(count), "選べない見出し");
+            Require(picker.GetPopup().IsItemSeparator(playBase - 1), "選べない見出し（試遊）");
             for (int index = 0; index < picker.ItemCount; index++)
             {
-                if (index == count) continue;
+                if (index == count || index == playBase - 1) continue;
                 picker.Select(index);
                 picker.EmitSignal(OptionButton.SignalName.ItemSelected, index);
-                var test = index > count ? EnemyCatalog.TestStages[index - count - 1] : null;
-                string title = test?.Name ?? EnemyCatalog.Stages[index].Name;
+                var play = index >= playBase ? EnemyCatalog.PlaytestStages[index - playBase] : null;
+                var test = index > count && play is null ? EnemyCatalog.TestStages[index - count - 1] : null;
+                string title = play?.Name ?? test?.Name ?? EnemyCatalog.Stages[index].Name;
                 Require(Read<RichTextLabel>("_detail").Text.Contains(title), "選択した波の説明");
                 // 既定以外の倍率も、本編と同じ入力欄から渡す。
                 Read<SpinBox>("_enemyHp").GetLineEdit().Text = "130";
@@ -41,13 +45,14 @@ public partial class NineWaveCheck : Control
                 await Finished(main);
                 var opening = Read<List<DemoOpening>>("_battleOpening");
                 var enemies = opening.Where(o => o.Team == BattleContext.EnemyTeam).ToArray();
-                var scale = new EnemyScaleRule(130, 125);
-                var expected = test is not null ? BattleEngine.MaterializeEnemy(test.Enemy, scale)
+                var scale = play?.Scale ?? new EnemyScaleRule(130, 125);
+                var expected = play is not null ? BattleEngine.MaterializeEnemy(play.Enemy, scale)
+                    : test is not null ? BattleEngine.MaterializeEnemy(test.Enemy, scale)
                     : BattleEngine.Materialize(EnemyCatalog.Stages[index].Enemy, BattleContext.EnemyTeam, scale);
                 Require(enemies.Select(o => (o.Slot, o.Hp, o.Attack)).SequenceEqual(
                     expected.Select(u => (u.Slot, u.Hp, u.CurrentAttack))), "敵の人数・席・倍率");
                 Require(enemies.Select(o => o.InstanceId).Distinct().Count() == enemies.Length, "同名の敵の識別");
-                Require(Read<int>("_battleStageIndex") == (test is null ? index : 0), "背景の番号");
+                Require(Read<int>("_battleStageIndex") == (play is not null ? (play.Name.StartsWith("ボス", StringComparison.Ordinal) ? count - 1 : 0) : test is null ? index : 0), "背景の番号");
                 Call("SetScoreVisible", true);
                 var score = Read<ScorePanel>("_scorePanel");
                 var body = (VBoxContainer)typeof(ScorePanel).GetField("_body", Flags)!.GetValue(score)!;

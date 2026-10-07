@@ -177,7 +177,7 @@ static partial class ShockDiag
         Console.WriteLine("`BattleEngine.Run` は開戦の通知を**速さの降順**で回し、同速の群だけを `ctx.Shuffle` で混ぜる（行動順と同じ）。");
         Console.WriteLine();
         var pool = new List<UnitDef> { UnitCatalog.Beni, UnitCatalog.Mio, UnitCatalog.KataS3, UnitCatalog.Guza, UnitCatalog.Kubi, UnitCatalog.Sid,
-                                       UnitCatalog.TouT0, UnitCatalog.Nel, UnitCatalog.Kugu };
+                                       UnitCatalog.TouT0, UnitCatalog.Nel, UnitCatalog.KuguKG0 };
         Console.WriteLine("| 駒 | 速 | `OnBattleStart` を上書きする札 |");
         Console.WriteLine("|---|--:|---|");
         foreach (UnitDef d in pool.OrderByDescending(d => d.Speed))

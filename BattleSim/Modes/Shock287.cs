@@ -39,7 +39,7 @@ static class Shock287Diag
     internal static readonly UnitDef[] Fixed = { UnitCatalog.Tou, UnitCatalog.ShigaG3K };
 
     /// <summary>感電の駒（カタ・クグ・ソム）。</summary>
-    internal static readonly UnitDef[] ShockPool = { UnitCatalog.KataS3, UnitCatalog.Kugu, UnitCatalog.Som };
+    internal static readonly UnitDef[] ShockPool = { UnitCatalog.KataS3, UnitCatalog.KuguKG0, UnitCatalog.Som };
 
     /// <summary>ヒーラー（第283期 Phase 0 の機械的定義）。`Boss283Diag.HealPool` は呼ぶたびにソースを走査するので、1度だけ引いて持つ。</summary>
     internal static readonly UnitDef[] Heal = B283.HealPool;
@@ -128,7 +128,7 @@ static class Shock287Diag
             else { d.FoeDis += t.DischargeTaken; d.Chains += t.ChainRoots; d.ChainUnits += t.ChainUnits; d.FoeStall += t.StallStun + t.StallGrappled; }
         }
         if (r.TallyByUnit.TryGetValue(UnitCatalog.ShigaG3K.Id, out var st)) { d.Cower += st.WhipCowered; d.Swings += st.WhipSwings; d.Wired += st.WiredSwings; }
-        if (r.TallyByUnit.TryGetValue(UnitCatalog.Kugu.Id, out var kt)) { d.Grapple += kt.GrappleFires; d.GrappleStall += kt.GrappleStalled; }
+        if (r.TallyByUnit.TryGetValue(UnitCatalog.KuguKG0.Id, out var kt)) { d.Grapple += kt.GrappleFires; d.GrappleStall += kt.GrappleStalled; }
         UnitState? tou = p.FirstOrDefault(u => u.Def.Id == UnitCatalog.Tou.Id), shiga = p.FirstOrDefault(u => u.Def.Id == UnitCatalog.ShigaG3K.Id);
         foreach (var ev in r.Events.Where(ev => ev.Kind == BattleEventKind.Death))
         {
@@ -212,14 +212,14 @@ static class Shock287Diag
         Console.WriteLine();
         Console.WriteLine("| 波 | 組み付いた（1戦） | 組んだまま維持 | 止めた敵の手番 | ほどけた |");
         Console.WriteLine("|---|--:|--:|--:|--:|");
-        var kRow = FvSwap(FvSwap(CompareBuilds().First(r => r.Name == "責め苦 (トウ×シガ)").F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Dolga, UnitCatalog.Kugu);
+        var kRow = FvSwap(FvSwap(CompareBuilds().First(r => r.Name == "責め苦 (トウ×シガ)").F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Dolga, UnitCatalog.KuguKG0);
         foreach (var w in Waves)
         {
             long f = 0, h = 0, s = 0, b = 0;
             for (int seed = 0; seed < 50; seed++)
             {
                 var r = BattleEngine.Run(BattleEngine.Materialize(kRow, BattleContext.PlayerTeam), w.Make(), seed, verbose: false);
-                if (r.TallyByUnit.TryGetValue(UnitCatalog.Kugu.Id, out var t)) { f += t.GrappleFires; h += t.GrappleHolds; s += t.GrappleStalled; b += t.GrappleBreaks; }
+                if (r.TallyByUnit.TryGetValue(UnitCatalog.KuguKG0.Id, out var t)) { f += t.GrappleFires; h += t.GrappleHolds; s += t.GrappleStalled; b += t.GrappleBreaks; }
             }
             Console.WriteLine($"| {w.Name} | {Per(f, 50)} | {Per(h, 50)} | {Per(s, 50)} | {Per(b, 50)} |");
         }
@@ -319,7 +319,7 @@ static class Shock287Diag
             string kind = ShockPool.Contains(d) ? "感電" : IsHeal(d) ? "ヒーラー" : "寿命側";
             var mine = reached.Where(r => r.Order.Contains(d)).ToList();
             int denom = boards.Count(o => o.Contains(d));
-            Console.WriteLine($"| {(d == UnitCatalog.Kugu ? "**" + d.Name + "**" : d.Name)} | {kind} | {mine.Count:N0} | {mine.Select(r => Key(r.Order)).Distinct().Count()} | {denom:N0} | {(denom == 0 ? "—" : (100.0 * mine.Count / denom).ToString("F1") + "%")} |");
+            Console.WriteLine($"| {(d == UnitCatalog.KuguKG0 ? "**" + d.Name + "**" : d.Name)} | {kind} | {mine.Count:N0} | {mine.Select(r => Key(r.Order)).Distinct().Count()} | {denom:N0} | {(denom == 0 ? "—" : (100.0 * mine.Count / denom).ToString("F1") + "%")} |");
         }
         Console.WriteLine();
 

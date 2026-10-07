@@ -49,7 +49,7 @@ static class Tou279Diag
         ("T3n", "対称の粉・漏れなし（漏れの代金の対照）＋ S3（第286期）", UnitCatalog.TouT3n),
     };
 
-    static Formation Row(string prefix) => FvSwap(FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Kata, UnitCatalog.KataS3);   // 第289期: シガを旧の規定（G3K）に固定・第290期: カタも旧の規定（S3）に
+    static Formation Row(string prefix) => FvSwap(FvSwap(FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0);   // 第291期: クグも旧の規定へ・第289期: シガを旧の規定（G3K）に固定・第290期: カタも旧の規定（S3）に
     static Formation ShockRow => Row("感電 (シガ×カタ×ソム)");
     /// <summary>第273期の帯電の足の検証台（`relic check273` (f)）。</summary>
     static Formation Bench273(UnitDef center) => Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Basa, center: center, back1: UnitCatalog.Sero, back3: UnitCatalog.Hane);
