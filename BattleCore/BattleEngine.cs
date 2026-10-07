@@ -1224,6 +1224,101 @@ public sealed class BattleContext
     /// <summary>直近に糸を伝わせたクグ（第290期・<b>計数の帰属先だけ</b>）。</summary>
     UnitState? _lastThreadKugu;
 
+    // =================================================================================
+    // 第292期 —— 糸玉（クグの KB-a ／ KB-b・design/PHASE292_KUGU_SILKBALL_SPEC.md §2-1）
+    //
+    // **糸玉は盤面の駒の列 `_units` に入れない**（別の列 `_silkBalls`）。だから標的・巻き込み・貫き・全体・庇い・前列の判定・勝敗・手番・
+    // 生存数・撃破の数・会戦の持ち越しのどれにも現れない——「外す口」を1つも書かずに済む形にした（`AllUnits` ／ `LivingMembers` を読む箇所は全部素通り）。
+    // 糸玉を読むのは感電の連鎖だけ: ① 弾けた駒の隣の放電の走査（`ShockTrigger`）② 糸玉に届いた放電（`Discharge` → `SilkBallDischarge`）
+    // ③ ターンの頭の帯電し直し（`RechargeSilkBalls`）。連鎖の後の口（`AfterChain`）には弾けた糸玉が入る（雷雲・割り込みの燃料）が、
+    // 割り込みの鞭と雷霆の的からは外す。**糸玉が1つも無い戦は `_silkBalls.Count == 0` の比較1つで従来どおり。** 乱数を引かない。
+    // =================================================================================
+
+    readonly List<UnitState> _silkBalls = new();
+    readonly Dictionary<UnitState, UnitState> _silkOwner = new();
+
+    /// <summary>いま盤上にある糸玉（第292期・置物・<see cref="AllUnits"/> には入らない）。</summary>
+    public IReadOnlyList<UnitState> SilkBalls => _silkBalls;
+
+    /// <summary>糸玉か（第292期）。</summary>
+    public static bool IsSilkBall(UnitState u) => ReferenceEquals(u.Def, UnitCatalog.SilkBall);
+
+    /// <summary>
+    /// 糸玉を張る（第292期・<see cref="GrappleTrait"/> だけが呼ぶ）。<paramref name="near"/> の陣営の、<paramref name="near"/> の隣の空き席（生きている駒も糸玉もいない席）を
+    /// 席番号の若い順に探し、無ければその陣営のほかの空き席（席番号の若い順）、それも無ければ張らない。<b>置いた瞬間から帯電している。乱数を引かない。</b>
+    /// </summary>
+    public UnitState? PlaceSilkBall(UnitState kugu, UnitState near)
+    {
+        UnitTally kt = TallyOf(kugu);
+        int team = near.TeamId;
+        FormationShape shape = ShapeOfTeam(team);
+        bool Free(int s)
+        {
+            foreach (UnitState u in _units) if (u.TeamId == team && u.Slot == s && u.IsAlive) return false;
+            foreach (UnitState b in _silkBalls) if (b.TeamId == team && b.Slot == s) return false;
+            return true;
+        }
+        int slot = -1;
+        for (int s = 0; s < FormationRules.TotalSlots && slot < 0; s++) if (shape.AreAdjacent(near.Slot, s) && Free(s)) slot = s;
+        if (slot < 0)
+        {
+            for (int s = 0; s < FormationRules.TotalSlots && slot < 0; s++) if (Free(s)) slot = s;
+            if (slot >= 0) kt.SilkFar++;
+        }
+        if (slot < 0) { kt.SilkNoRoom++; return null; }
+        var ball = new UnitState
+        {
+            Def = UnitCatalog.SilkBall, TeamId = team, Shape = shape, Slot = slot,
+            Hp = UnitCatalog.SilkBall.MaxHp, MaxHp = UnitCatalog.SilkBall.MaxHp,
+            Traits = TraitCatalog.Resolve(UnitCatalog.SilkBall.Traits),
+        };
+        ball.InstanceId = _nextInstanceId++;   // 台本の番号だけ（`_units` には入れない）
+        ball.Board = this;
+        ball.SetCounter(StatusKeys.Shock, 1);
+        _shockLive = true;
+        _silkBalls.Add(ball);
+        _silkOwner[ball] = kugu;
+        kt.SilkPlaced++;
+        Log($"    {kugu.Name} が {near.Name} のそばに帯電した糸玉を張った（{FormationRules.SeatNames[slot]}）", LogKind.Trigger);
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.SilkBall, Turn = _turn, ActorId = kugu.InstanceId, TargetId = ball.InstanceId, PartnerId = near.InstanceId,
+            Slot = slot, Team = team, Amount = _silkBalls.Count, Text = SilkBallLabels.Place,
+        });
+        return ball;
+    }
+
+    /// <summary>ターンの頭に糸玉を帯電し直す（第292期・<c>Run</c> の <c>TickStatuses</c> の直後）。糸玉が無ければ比較1つで抜ける。</summary>
+    public void RechargeSilkBalls()
+    {
+        if (_silkBalls.Count == 0) return;
+        int n = 0;
+        foreach (UnitState b in _silkBalls)
+            if (b.RawCounter(StatusKeys.Shock) <= 0) { b.SetCounter(StatusKeys.Shock, 1); n++; }
+        if (n == 0) return;
+        Log($"    糸玉が帯電し直した（{n} 個）", LogKind.Status);
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.SilkBall, Turn = _turn, Amount = n, Text = SilkBallLabels.Recharge });
+    }
+
+    /// <summary>
+    /// 糸玉に届いた放電（第292期・<see cref="Discharge"/> だけが呼ぶ）。<b>HP は減らない</b>（<c>ApplyDamage</c> を通さない・<c>Damage</c> も出さない）。
+    /// 糸玉が帯電していれば、この連鎖の列に積む（通常の起爆と同じ深さ・1つの連鎖で1回）。
+    /// </summary>
+    void SilkBallDischarge(UnitState from, UnitState ball, int depth, UnitState? ini)
+    {
+        UnitTally ot = TallyOf(_silkOwner[ball]);
+        ot.SilkDisIn++;
+        if (IsSilkBall(from)) ot.SilkDisOut++;
+        TallyOf(from).DischargeHits++;
+        if (_verbose) Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.Discharge, Turn = _turn, ActorId = from.InstanceId, TargetId = ball.InstanceId,
+            Amount = ShockRule.Discharge, Slot = depth + 1, Team = ball.TeamId, SourceTrait = TraitId.SilkBallEvery,
+        });
+        Log($"    {from.Name} から糸玉へ放電", LogKind.Status);
+        if (ball.RawCounter(StatusKeys.Shock) > 0) _shockQueue.Enqueue((ball, depth + 1, ini));
+    }
+
     /// <summary>手番の頭のクグの帳簿（第290期・<b>計数のみ</b>・盤面は読むだけ）: 生きている手番・帯電していた・組み付いていた・両方・組んだ相手に組み付きが立っていた。</summary>
     public void NoteKuguCensus()
     {
@@ -1368,7 +1463,7 @@ public sealed class BattleContext
         t.BoltCasts++;
         int atk = self.CurrentAttack;   // 蓄電 4 の攻撃力（0 に戻す前）
         bool loneRule = self.HasTrait(TraitId.ThunderclapLone);
-        var targets = boltTargets.Distinct().Where(h => h.IsAlive && h.TeamId != self.TeamId).ToList();
+        var targets = boltTargets.Distinct().Where(h => h.IsAlive && h.TeamId != self.TeamId && !IsSilkBall(h)).ToList();   // 第292期: 糸玉は的にしない
         if (targets.Count == 0) t.BoltDry++;
         else Log($"    {self.Name} の溜めた雷が鞭から迸る——雷霆（{targets.Count} 体）", LogKind.Highlight, self);
         foreach (UnitState u in targets)
@@ -1493,7 +1588,15 @@ public sealed class BattleContext
                     Slot = d, HpAfter = Math.Max(0, x.Hp), Team = x.TeamId,
                 });
                 Log($"    {x.Name} の感電が弾けた（{(d == 0 ? "起点" : d + " 段目")}）", LogKind.Trigger);
-                if (_shockStun != 0) StunByShock(x, d, ini);   // 第216期（S1〜S3・保持者がいなければ比較1つで抜ける）
+                bool ball = _silkBalls.Count > 0 && IsSilkBall(x);   // 第292期（糸玉が無ければ比較1つ）
+                if (ball)
+                {
+                    UnitTally ot = TallyOf(_silkOwner[x]);
+                    ot.SilkPops++;
+                    if (u.TeamId == x.TeamId) ot.SilkPopsHeroRoot++;
+                    if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.SilkBall, Turn = _turn, ActorId = ini?.InstanceId, TargetId = x.InstanceId, Slot = x.Slot, Team = x.TeamId, Text = SilkBallLabels.Pop });
+                }
+                if (_shockStun != 0 && !ball) StunByShock(x, d, ini);   // 第216期（S1〜S3・保持者がいなければ比較1つで抜ける）。第292期: 糸玉は痺れない（乱数も引かない）
                 if (x.TeamId != u.TeamId) cross++;                // 第290期・計数のみ（糸を伝って敵の陣で弾けた）
                 if (_grappleLive && d > 0 && x.HasTrait(TraitId.Grapple)) { UnitTally kt = TallyOf(x); kt.KuguPopChain++; if (KuguHeld(x)) kt.KuguPopChainHeld++; }   // 第290期・計数のみ
                 if (_threadLive && d == 0 && x.RawCounter(ThreadMarkKey) > 0) { x.SetCounter(ThreadMarkKey, 0); threadRoot = true; }   // 第290期・計数のみ（KG-b の印の駒が起点）
@@ -1501,8 +1604,14 @@ public sealed class BattleContext
                 UnitState? th = _threadLive ? ThreadTarget(x) : null;
                 if (th is not null) Discharge(x, th, d, ini);
                 else
+                {
                     foreach (UnitState n in LivingMembers(x.TeamId))
                         if (n != x && FormationRules.AreAdjacent(x, n)) Discharge(x, n, d, ini);
+                    // 第292期: 隣の糸玉へも放電する（駒の後・張った順）。糸玉が無ければ比較1つで抜ける。
+                    if (_silkBalls.Count > 0)
+                        foreach (UnitState b in _silkBalls.ToList())
+                            if (b != x && b.TeamId == x.TeamId && FormationRules.AreAdjacent(x, b)) Discharge(x, b, d, ini);
+                }
             }
         }
         finally { _shockChaining = false; _shockDepth = 0; }
@@ -1547,7 +1656,7 @@ public sealed class BattleContext
                 {
                     int c0 = ThundercloudTrait.Of(h);
                     int c = c0 + popped.Count;
-                    if (h.HasTrait(TraitId.ThundercloudKeep)) c = Math.Min(ThundercloudTrait.KeepCap, c);
+                    if (h.HasTrait(TraitId.ThundercloudKeep) && !h.HasTrait(TraitId.ThundercloudUncapped)) c = Math.Min(ThundercloudTrait.KeepCap, c);   // 第292期: KR-∞ は上限なし
                     h.SetCounter(ThundercloudTrait.Key, c);
                     if (c != c0) EmitShockGauge(ShockGaugeLabels.Cloud, popped.Count > 0 ? popped[0] : null, h, c, c0, remaining: popped.Count);   // 第291期・表示専用
                 }
@@ -1559,7 +1668,7 @@ public sealed class BattleContext
             (ht.ChainIniHist ??= new long[6])[cat]++;
             (ht.ChainChargeHist ??= new long[StoredChargeTrait.Cap + 1])[Math.Min(StoredChargeTrait.Cap, StoredChargeTrait.Of(h))]++;
             int alive = 0;
-            foreach (UnitState x in popped) if (x.IsAlive) alive++;
+            foreach (UnitState x in popped) if (x.IsAlive && !IsSilkBall(x)) alive++;
             (ht.ChainAliveHist ??= new long[10])[Math.Min(alive, 9)]++;
             if (h.HasTrait(TraitId.ShockWhipBolt) || h.HasTrait(TraitId.ShockWhipFlurry)) ShockWhip(h, popped);
         }
@@ -1578,8 +1687,9 @@ public sealed class BattleContext
         int c = StoredChargeTrait.Of(h);
         if (bolt ? c < StoredChargeTrait.Cap : c < 1) { t.SwNoCharge++; return; }
         UnitState? target = null;
-        foreach (UnitState x in popped) if (x.IsAlive && TormentTrait.IsBound(this, x)) { target = x; break; }
-        if (target is null) foreach (UnitState x in popped) if (x.IsAlive) { target = x; break; }
+        // 第292期: 糸玉は的にしない（狙われない置物）。
+        foreach (UnitState x in popped) if (x.IsAlive && !IsSilkBall(x) && TormentTrait.IsBound(this, x)) { target = x; break; }
+        if (target is null) foreach (UnitState x in popped) if (x.IsAlive && !IsSilkBall(x)) { target = x; break; }
         if (target is null) { t.SwNoTarget++; return; }
         if (InInterrupt) { t.SwNested++; return; }
         bool hush = Hush.Active && HushHolderAlive;
@@ -1648,6 +1758,13 @@ public sealed class BattleContext
     /// </summary>
     void Discharge(UnitState from, UnitState to, int depth, UnitState? ini)
     {
+        // 第292期: 糸玉に届いた放電は HP を減らさず、帯電していれば連鎖に積むだけ。糸玉が無ければ比較1つで抜ける。
+        bool fromBall = false;
+        if (_silkBalls.Count > 0)
+        {
+            if (IsSilkBall(to)) { SilkBallDischarge(from, to, depth, ini); return; }
+            if (IsSilkBall(from)) { fromBall = true; UnitTally ot = TallyOf(_silkOwner[from]); ot.SilkDisOut++; ot.SilkDisToUnit++; }
+        }
         int amt = ShockRule.Discharge;
         // 第290期・計数のみ: 隣の味方の放電がクグに来た（糸の ② の発火見込み）。
         if (_grappleLive && to.TeamId == from.TeamId && to.HasTrait(TraitId.Grapple)) { UnitTally kt = TallyOf(to); kt.KuguDisIn++; if (KuguHeld(to)) kt.KuguDisInHeld++; }
@@ -1694,6 +1811,7 @@ public sealed class BattleContext
         int removed = before - Math.Max(0, to.Hp);
         ft.DischargeDealt += removed;
         tt.DischargeTaken += removed;
+        if (fromBall) TallyOf(_silkOwner[from]).SilkDealt += removed;   // 第292期・計数のみ
         if (before > 0 && !to.IsAlive) tt.DischargeDeaths++;
         if (carry) MireCarryTo(to, from);
     }
@@ -14118,6 +14236,7 @@ public static class BattleEngine
             ctx.Log($"--- ターン {turn} ---", LogKind.Turn);
             ctx.EmitTurnStart();
             ctx.TickStatuses();
+            ctx.RechargeSilkBalls();    // 第292期: 糸玉の帯電し直し（糸玉が無ければ比較1つで抜ける）
             ctx.EmitStatusSnapshot();   // 削った後の残量を写す。表示用で、盤面には触らない
             ctx.NoteHexCensus();        // 呪い（第96期）の門の 2。**盤面は読むだけ**
             ctx.NoteReaderCensus();     // 積み過ぎ（第115期）の門の 1。**盤面は読むだけ**

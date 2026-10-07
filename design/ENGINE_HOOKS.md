@@ -760,6 +760,13 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   呼ぶのは `GainCharge`・`Thunderclap` の後・`AfterChain` の雷雲・`ShockWhip`（見出しと「使った」）・`ThunderTrait.OnAction`（雷雲の雷）・`ScourgeTrait`（怖気）・`GainFeathers` ／ `FeatherVolley`・`RuptureAfter`（爪痕）・`LayerMark`（層・**`_ruptureLive` の戦だけ**）。
   **既存の出来事に足した印**: `MarkShock` に省略可の引数（`PowderRoute` ／ `spreadFrom`）→ `EmitStatusGain` が `BattleEvent.PowderRoute`（新しい欄）・`SpreadFromId`・`FriendlyFire` を立てる（トウの粉だけが渡す）。糸の `Discharge` に `PartnerId`（② の元の駒）と `Text = "ほどけ"`（`ThreadLabels.Release`）。
   **前の期の台本の指紋**: `shockdigest` は新しい4種と `PowderRoute` を外す（`SkipAlways` ／ `SkipProps`）、`CheckWave.Dig`（`som276 digest` ほか）は新しい4種を外す。
+- **第292期: 糸玉（クグの版 KB-a `SilkBallSteadfast` ／ KB-b `SilkBallEvery`・規定には入れていない）と雷雲の上限なし（カタの版 KR-∞ `ThundercloudUncapped`）を足した。**
+  **糸玉は盤面の駒の列 `_units` に入れない**——engine の別の列 `_silkBalls`（`BattleContext.SilkBalls`・`Def = UnitCatalog.SilkBall`・`All` ／ `Retired` ／ `Everyone` の外）。
+  だから `AllUnits` ／ `LivingMembers` ／ `TeamAlive` を読む箇所（標的・巻き込み・貫き・全体・庇い・前列・勝敗・手番・撃破・会戦の持ち越し・DemoApp）は**1行も触らずに糸玉を見ない**。
+  糸玉を読む口は3つ: ① `ShockTrigger` の隣の放電の走査（駒の後に隣の糸玉）② `Discharge` の頭 → `SilkBallDischarge`（**HP を減らさず `ApplyDamage` を通さない**・帯電していれば連鎖の列に深さ +1 で積む）③ `Run` の `TickStatuses` の直後の `RechargeSilkBalls`（帯電し直し）。
+  張るのは `GrappleTrait.Act` の組み付きの直後 → `BattleContext.PlaceSilkBall`（隣の空き席＝生きている駒も糸玉もいない席を席番号の若い順・無ければほかの空き席・番号は `_nextInstanceId` から振るが列には入れない）。
+  弾けた糸玉は `AfterChain` の `popped` に入る（雷雲・割り込みの燃料）が、**シガの割り込みの主目標・雷霆の的・`ChainAliveHist` からは外す**。感電の痺れ（`StunByShock`）は糸玉に掛けない（S3 の乱数も引かない）。
+  **糸玉が1つも無い戦は `_silkBalls.Count == 0` の比較1つで従来どおり**（`compare` 0 件）。表示専用の出来事 `SilkBall`（`SilkBallLabels` 張る ／ 弾け ／ 帯電）を足し、`shockdigest` の `SkipAlways` と `CheckWave.Dig` は外す。
 - **第218期の澱みのミオの版（札 `MireSlam` / `MireConduct` / `MireDull` / `MireDullAll` / `MireCarry` / `MireHandoff`・**第219期に M5 ＝ `MireDullAll` 以外の5枚をミオの規定にした**（ポンの判断・札の並びは `MireDiag.VerOf("M5")` と同じ）・M0 は `mire` の診断のローカル）**——
   **叩きつけ・通電は `ConcentrateTrait` の最後から `BattleContext.MireSlam`**（寄せ先は「感電している敵がいればその中から」・`ApplyDamage` を直に呼ぶ＝標的の鎖を通らない・撃破はミオ）。
   **澱みのデバフは `MireCut` の1本を4口**（`PerformAttackBody` の**痺れ毒の直後** ／ `StrikeThunder` ／ `Discharge`（反転しない側）／ 叩きつけ・通電）で、出どころの印 × 10%（上限 40%）を切り捨てで引く。

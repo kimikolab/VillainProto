@@ -438,6 +438,9 @@
 | `ShockWhipKeep` | - |
 | `Thread` | 縛めのクグ |
 | `ThreadCharge` | 縛めのクグ |
+| `SilkBallSteadfast` | - |
+| `SilkBallEvery` | - |
+| `ThundercloudUncapped` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

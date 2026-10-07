@@ -2041,6 +2041,12 @@ public sealed class UnitTally
                 KuguPopHit, KuguPopHitFoe, KuguPopHitHeld, KuguPopChain, KuguPopChainHeld, KuguDisIn, KuguDisInHeld,
                 ThreadSelf, ThreadRelay, ThreadDealt, ThreadKills, ThreadPopped, ThreadCrossPops, ThreadCharged, ThreadMarkRoots, ThreadMarkChainUnits;
     public long[]? KuguShockBySrc;
+    /// <summary>
+    /// 第292期（<b>計数専用</b>・張ったクグの帳簿）: <c>SilkPlaced</c> 張った糸玉 ／ <c>SilkNoRoom</c> 張ろうとして空き席が無かった ／ <c>SilkFar</c> 隣に空きが無くほかの空き席へ張った ／
+    /// <c>SilkPops</c> 糸玉が弾けた ／ <c>SilkDisIn</c> 糸玉に届いた放電 ／ <c>SilkDisOut</c> 糸玉が流した放電（駒へ・糸玉へ）／ <c>SilkDisToUnit</c> そのうち駒へ ／
+    /// <c>SilkDealt</c> 糸玉の放電が駒から削った HP ／ <c>SilkPopsHeroRoot</c> 敵の駒が起点の連鎖で弾けた糸玉。
+    /// </summary>
+    public long SilkPlaced, SilkNoRoom, SilkFar, SilkPops, SilkDisIn, SilkDisOut, SilkDisToUnit, SilkDealt, SilkPopsHeroRoot;
     /// <summary>第290期（<b>計数専用</b>・カタ）: <c>CloudByCast</c>[n] n+1 回目の雷を落とした時点の雷雲の合計（8 回目以降は最後の枠）。</summary>
     public long[]? CloudByCast;
 
@@ -3106,6 +3112,8 @@ public sealed class UnitTally
         ThreadSelf += o.ThreadSelf; ThreadRelay += o.ThreadRelay; ThreadDealt += o.ThreadDealt; ThreadKills += o.ThreadKills; ThreadPopped += o.ThreadPopped;
         ThreadCrossPops += o.ThreadCrossPops; ThreadCharged += o.ThreadCharged; ThreadMarkRoots += o.ThreadMarkRoots; ThreadMarkChainUnits += o.ThreadMarkChainUnits;
         AddHist(ref KuguShockBySrc, o.KuguShockBySrc); AddHist(ref CloudByCast, o.CloudByCast);
+        SilkPlaced += o.SilkPlaced; SilkNoRoom += o.SilkNoRoom; SilkFar += o.SilkFar; SilkPops += o.SilkPops; SilkDisIn += o.SilkDisIn; SilkDisOut += o.SilkDisOut;
+        SilkDisToUnit += o.SilkDisToUnit; SilkDealt += o.SilkDealt; SilkPopsHeroRoot += o.SilkPopsHeroRoot;
         // 第218期
         MireSlams += o.MireSlams; MireSlamDry += o.MireSlamDry; MireSlamOnShocked += o.MireSlamOnShocked; MireSlamPops += o.MireSlamPops;
         MireConductPops += o.MireConductPops; MireSlamDealt += o.MireSlamDealt; MireSlamKills += o.MireSlamKills;
@@ -3753,6 +3761,23 @@ public enum BattleEventKind
     /// 新しく付いた（0 → 1）も <c>Slot = 0</c> で出る。<c>LayerMark</c> を通らない書き手（ヒサの付け替え・カリ）と、消える瞬間は出ない（PHASE291_CODEX_MEMO.md §2）。<b>どの規則も読まない。</b>
     /// </summary>
     MarkLayer,
+
+    /// <summary>
+    /// 糸玉（第292期・クグの KB-a ／ KB-b・<b>表示専用</b>）。<c>Text</c> は <see cref="SilkBallLabels"/>。糸玉は盤面の駒の列に入らない置物で、
+    /// <c>TargetId</c> はこの出来事でだけ現れる番号（<c>AllUnits</c> と重ならない）。「張る」: <c>ActorId</c> ＝ 張ったクグ ／ <c>PartnerId</c> ＝ 組み付いた相手 ／
+    /// <c>Slot</c> ＝ 席 ／ <c>Team</c> ＝ 陣営 ／ <c>Amount</c> ＝ 張った後の糸玉の数。「弾け」: 糸玉の <c>ShockSpent</c> の直後・<c>ActorId</c> ＝ 連鎖を起こした一撃の主 ／ <c>Slot</c> ＝ 席。
+    /// 「帯電」: ターンの頭に帯電し直した（<c>Amount</c> ＝ 帯電し直した数・<c>TargetId</c> なし）。
+    /// 糸玉に届いた放電は <c>Discharge</c>（<c>TargetId</c> ＝ 糸玉・<c>SourceTrait = SilkBallEvery</c>）で出し、<c>Damage</c> は出さない。<b>どの規則も読まない。</b>
+    /// </summary>
+    SilkBall,
+}
+
+/// <summary>糸玉の札（第292期・<see cref="BattleEventKind.SilkBall"/> の <c>Text</c>）。<b>表示専用。</b></summary>
+public static class SilkBallLabels
+{
+    public const string Place = "張る";
+    public const string Pop = "弾け";
+    public const string Recharge = "帯電";
 }
 
 /// <summary>感電軸のゲージの札（第291期・<see cref="BattleEventKind.ShockGauge"/> の <c>Text</c>）。<b>表示専用。</b></summary>

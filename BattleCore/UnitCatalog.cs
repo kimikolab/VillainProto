@@ -942,6 +942,61 @@ public static class UnitCatalog
     /// <summary>第290期 KG-b（導線）。KG-a ＋ <see cref="TraitId.ThreadCharge"/>（糸を伝った放電を浴びた敵は、感電していなければ帯電する）。<b>第291期に規定にした</b>——規定の <see cref="Kugu"/> と同じ物。</summary>
     public static readonly UnitDef KuguKGb = Kugu;
 
+    // 第292期 —— クグの糸玉の版（指示書 design/PHASE292_KUGU_SILKBALL_SPEC.md §2-2）。規定のクグ（KG-b・糸と導線）の末尾に札を足すだけ。
+    // 体・速さ・組み付き・マイナス・フレーバーは規定のまま。`All` にも `Retired` にも入れない。
+
+    /// <summary>第292期 KB-a（止められない相手にだけ）。規定 ＋ <see cref="TraitId.SilkBallSteadfast"/>（組み付いても止められない相手には、代わりにその周りへ帯電した糸玉を張る）。</summary>
+    public static readonly UnitDef KuguKBa = new()
+    {
+        Id = "kugu",
+        Name = Kugu.Name,
+        MaxHp = Kugu.MaxHp,
+        Attack = Kugu.Attack,
+        Speed = Kugu.Speed,
+        Advances = false,
+        Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge, TraitId.SilkBallSteadfast },
+        Actions = Kugu.Actions,
+        PlusText = Kugu.PlusText + "。組み付いても止められない相手には、代わりにその周りへ帯電した糸玉を張る",
+        MinusText = Kugu.MinusText,
+        Flavor = Kugu.Flavor
+    };
+
+    /// <summary>第292期 KB-b（新しく組み付くたび）。規定 ＋ <see cref="TraitId.SilkBallEvery"/>（組み付くたび、その周りへ帯電した糸玉を張る）。</summary>
+    public static readonly UnitDef KuguKBb = new()
+    {
+        Id = "kugu",
+        Name = Kugu.Name,
+        MaxHp = Kugu.MaxHp,
+        Attack = Kugu.Attack,
+        Speed = Kugu.Speed,
+        Advances = false,
+        Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge, TraitId.SilkBallEvery },
+        Actions = Kugu.Actions,
+        PlusText = Kugu.PlusText + "。組み付くたび、その周りへ帯電した糸玉を張る",
+        MinusText = Kugu.MinusText,
+        Flavor = Kugu.Flavor
+    };
+
+    /// <summary>
+    /// 糸玉（第292期・<b>置物</b>）。クグ（KB-a ／ KB-b）が敵陣の空き席に張る。<b>編成には選べない</b>（<see cref="All"/> にも <see cref="Retired"/> にも入れない）。
+    /// <b>盤面の駒の列（<c>BattleContext.AllUnits</c>）には入らない</b>——engine の別の列（<c>BattleContext.SilkBalls</c>）に立つので、
+    /// 標的・巻き込み・貫き・全体・庇い・前列の判定・勝敗・手番のどれにも現れない。読むのは感電の連鎖（隣の放電）と、毎ターン頭の帯電し直しだけ。
+    /// 手番を持たず、ダメージを受けず（放電も HP を減らさない）、戦の終わりに消える。
+    /// </summary>
+    public static readonly UnitDef SilkBall = new()
+    {
+        Id = "silkball",
+        Name = "糸玉",
+        MaxHp = 1,
+        Attack = 0,
+        Speed = 0,
+        Advances = false,
+        Traits = Array.Empty<TraitId>(),
+        PlusText = "帯電した糸の玉。隣で感電が弾けると自分も弾け、隣の駒へ放電を返す。毎ターン帯電し直す",
+        MinusText = "何もしない。狙われず、倒れない",
+        Flavor = "しがみつく手が足りないときは、糸を置いていく。"
+    };
+
     public static readonly UnitDef Ban = new()
     {
         Id = "ban",
@@ -1683,6 +1738,22 @@ public static class UnitCatalog
 
     /// <summary>第289期 KR-b（育ち続ける）。KR-a ＋ <see cref="TraitId.ThundercloudKeep"/>（雷雲は落としても減らない・上限 8）。<b>第290期に規定にした</b>——規定の <see cref="Kata"/> と同じ物。</summary>
     public static readonly UnitDef KataKRb = Kata;
+
+    /// <summary>第292期 KR-∞（上限なし）。規定（KR-b）＋ <see cref="TraitId.ThundercloudUncapped"/>（雷雲は減らない・上限なし）。文面は規定のまま（上限の数字を書かない）。</summary>
+    public static readonly UnitDef KataKRinf = new()
+    {
+        Id = "kata",
+        Name = Kata.Name,
+        MaxHp = Kata.MaxHp,
+        Attack = Kata.Attack,
+        Speed = Kata.Speed,
+        Advances = false,
+        Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockStunHalf, TraitId.Thundercloud, TraitId.ThundercloudKeep, TraitId.ThundercloudUncapped },
+        Actions = Kata.Actions,
+        PlusText = Kata.PlusText,
+        MinusText = Kata.MinusText,
+        Flavor = Kata.Flavor
+    };
 
     /// <summary>
     /// 継ぎ当てのツギ（第207期・置き去りのナラの転生）。<b>数値（HP62／攻9／速8）はナラのまま</b>で、

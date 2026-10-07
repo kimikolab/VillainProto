@@ -658,6 +658,10 @@ public enum TraitId
     ShockWhipKeep,   // 割り込みの鞭は感電を残す（SI-c）: 割り込みの鞭の電気鞭では自分の感電を消さない（手番の電気鞭はいまどおり使い切る）（**札そのものは挙動を持たない**・`BattleContext.LiveWire` が読む）
     Thread,          // 糸（KG-a〜）: 組み付いている敵とは糸で繋がる。自分の感電が弾けた放電と、隣の味方からの放電は、糸を伝ってその敵へ流れる（移す・量は放電のまま）（**札そのものは挙動を持たない**・engine の `ShockTrigger` ／ `Discharge` が読む）
     ThreadCharge,    // 糸が帯電させる（KG-b）: 糸を伝った放電を浴びた敵は、感電していなければ感電する（**札そのものは挙動を持たない**・engine の `Discharge` が読む）
+    // --- 第292期で足した札（クグの糸玉の版 `UnitCatalog.KuguKBa` ／ `KuguKBb`、カタの雷雲の版 `KataKRinf` だけが持つ） ---
+    SilkBallSteadfast, // 糸玉（KB-a）: 組み付いた相手が動じない（`Grappled` が付かない）とき、その相手の隣の空き席に帯電した糸玉を1つ張る（**札そのものは挙動を持たない**・`GrappleTrait` が読み、engine の `PlaceSilkBall` が張る）
+    SilkBallEvery,     // 糸玉（KB-b）: 新しく組み付くたび（止められる相手にも）、その相手の隣の空き席に帯電した糸玉を1つ張る（**札そのものは挙動を持たない**・同上）
+    ThundercloudUncapped, // 雷雲の上限なし（KR-∞）: 雷雲が残る（KR-b）の上限 8 を外す（**札そのものは挙動を持たない**・engine の `AfterChain` が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -12553,6 +12557,11 @@ public sealed class GrappleTrait : Trait
         ctx.NoteGrapple(self, pick);
         ctx.EmitStatusGain(pick, StatusKeys.Grappled, 1, self);   // 表示専用（組み付いた瞬間）
         ctx.Log($"    {self.Name} が {pick.Name} に組み付いた（動けない）", LogKind.Trigger);
+        // 第292期（糸玉）: KB-a は止められない相手（動じない＝`Grappled` が付かなかった）にだけ、KB-b は組み付くたび、その相手の隣の空き席に糸玉を張る。
+        // 保持者がいなければ札の問い2つで抜ける（乱数を引かない）。
+        if (self.HasTrait(TraitId.SilkBallEvery)
+            || (self.HasTrait(TraitId.SilkBallSteadfast) && pick.RawCounter(StatusKeys.Grappled) <= 0))
+            ctx.PlaceSilkBall(self, pick);
     }
 
     /// <summary>ほどく。<b>殴られた・倒れた</b>ときに呼ぶ。相手の <c>Grappled</c> を 0 に戻す。</summary>
@@ -13320,6 +13329,17 @@ public sealed class ThreadTrait : Trait
     public const string MemoKey = "threadMemo";
 
     public override void OnCarryOver(UnitState self) { if (_id == TraitId.Thread) self.SetCounter(MemoKey, 0); }
+}
+
+/// <summary>
+/// 第292期 —— 挙動を持たない札（糸玉 KB-a ＝ <see cref="TraitId.SilkBallSteadfast"/> ／ KB-b ＝ <see cref="TraitId.SilkBallEvery"/>・雷雲の上限なし KR-∞ ＝ <see cref="TraitId.ThundercloudUncapped"/>）。
+/// 糸玉を張るのは <see cref="GrappleTrait"/> の組み付きの直後（engine の <c>BattleContext.PlaceSilkBall</c>）、上限を外すのは engine の <c>AfterChain</c>。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class MarkerOnlyTrait : Trait
+{
+    readonly TraitId _id;
+    public MarkerOnlyTrait(TraitId id) => _id = id;
+    public override TraitId Id => _id;
 }
 
 // =====================================================================================
@@ -16484,6 +16504,9 @@ public static class TraitCatalog
         new ShockWhipKeepTrait(),      // 第290期（SI-c）
         new ThreadTrait(TraitId.Thread),        // 第290期（KG-a）
         new ThreadTrait(TraitId.ThreadCharge),  // 第290期（KG-b）
+        new MarkerOnlyTrait(TraitId.SilkBallSteadfast),     // 第292期（KB-a）
+        new MarkerOnlyTrait(TraitId.SilkBallEvery),         // 第292期（KB-b）
+        new MarkerOnlyTrait(TraitId.ThundercloudUncapped),  // 第292期（KR-∞）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

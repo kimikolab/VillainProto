@@ -185,15 +185,15 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 
 **本文と索引は `design/RULES_*.md`**（`RULES_001_097.md` / `RULES_098_173.md` / `RULES_174_242.md` / `RULES_243_.md`・索引の表は `design/RULES_INDEX.md`）。
 **ID（`R001`〜）で grep すること。ID は永続で、欠番になっても再利用しない。**
-新しい則は `RULES_243_.md` の末尾に次の ID（`R387` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
+新しい則は `RULES_243_.md` の末尾に次の ID（`R388` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
 
 ## 現状値
 
 **期ごとの報告は `design/HISTORY_PHASES.md`**（この節から逐語で移した。以後の期はそちらの冒頭に足し、ここのブロックは差し替える）。
 
-**最後に動かした期: 第291期**（**クグを KG-b（糸 ＋ 導線）に規定化 ＋ 試遊の準備（デモの波にボス規定形・近衛・大隊／試遊プリセット5行 `Presets.Playtest`／表示専用の出来事 `ShockGauge` ／ `Feather` ／ `Scar` ／ `MarkLayer`）**。報告は `design/PHASE291_PLAYTEST_PREP.md`・台本は `design/PHASE291_CODEX_MEMO.md`）。第290期のシガ SI-b ／ カタ KR-b の規定化とクグの糸の測定は `design/PHASE290_SHOCK_SQUAD.md`、第289期のシガの割り込み・カタの雷雲・ベニ×トウの切り分けは `design/PHASE289_SHOCK_ATTACKERS.md`、第288期のシガの蓄電の版の測定は `design/PHASE288_SHIGA_CHARGE.md`、第287期のトウの規定化（T3）と感電軸の台探索は `design/PHASE287_SHOCK_AXIS_GRID.md`、第286期のミサ M-b の規定化とトウ T3 の測定は `design/PHASE286_TOU_SPREAD.md`、第285期の改名・羽・`CLAUDE.md` の圧縮は `design/PHASE285_MISA_FEATHERS.md`、第284期の精鋭波は `design/PHASE284_ELITE_WAVE.md`、第283期のボスの標台（標軸の格子）は `design/PHASE283_BOSS_MARK_SQUAD.md`、第279期のトウの転生と凍結庫は `design/PHASE279_TOU_REBIRTH.md`、第280期の sweep 現役網は `design/PHASE280_SWEEP_REBUILD.md`。転生段の棚卸しは `design/PHASE275_ROSTER_INVENTORY.md`、レリック段のまとめは `design/RELIC_SUMMARY.md`。
+**最後に動かした期: 第292期**（**クグの糸玉 KB-a ／ KB-b とカタの雷雲の上限なし KR-∞ の測定（規定は動かしていない・採否はポン）**。糸玉は盤面の駒の列の外の置物 `BattleContext.SilkBalls`。報告は `design/PHASE292_KUGU_SILKBALL.md`）。第291期のクグ KG-b の規定化と試遊の準備は `design/PHASE291_PLAYTEST_PREP.md`（台本は `design/PHASE291_CODEX_MEMO.md`）。第290期のシガ SI-b ／ カタ KR-b の規定化とクグの糸の測定は `design/PHASE290_SHOCK_SQUAD.md`、第289期のシガの割り込み・カタの雷雲・ベニ×トウの切り分けは `design/PHASE289_SHOCK_ATTACKERS.md`、第288期のシガの蓄電の版の測定は `design/PHASE288_SHIGA_CHARGE.md`、第287期のトウの規定化（T3）と感電軸の台探索は `design/PHASE287_SHOCK_AXIS_GRID.md`、第286期のミサ M-b の規定化とトウ T3 の測定は `design/PHASE286_TOU_SPREAD.md`、第285期の改名・羽・`CLAUDE.md` の圧縮は `design/PHASE285_MISA_FEATHERS.md`、第284期の精鋭波は `design/PHASE284_ELITE_WAVE.md`、第283期のボスの標台（標軸の格子）は `design/PHASE283_BOSS_MARK_SQUAD.md`、第279期のトウの転生と凍結庫は `design/PHASE279_TOU_REBIRTH.md`、第280期の sweep 現役網は `design/PHASE280_SWEEP_REBUILD.md`。転生段の棚卸しは `design/PHASE275_ROSTER_INVENTORY.md`、レリック段のまとめは `design/RELIC_SUMMARY.md`。
 **改名の対応（第285期）**: 止めのトメ → 見境なしのミサ（`Id = "tome"`・識別子 `UnitCatalog.Tome` ほかは据え置き）／ 行名 `止め (トメ×ソラ)` → `見境 (ミサ×ソラ)`・`止め改 (トメ×薙ぎ)` → `見境改 (ミサ×薙ぎ)`・`標経済 (ヒサ×ザン×トメ)` → `標経済 (ヒサ×ザン×ミサ)` ／ 精鋭の波 `精鋭・五` → `近衛`・`精鋭・九` → `大隊`。過去の `design/` は旧名のまま（名前で引く器具は `Common.UnitRenames`）。
-**最後に `compare` が動いた期: 第290期**（規定のシガ SG-a → SI-b・カタ S3 → KR-b。動いたのは 責め苦 第5波 87.0 → 89.0 と 感電 第2波 62.0 → 67.5・第3波 80.5 → 82.5・第5波 86.5 → 87.5 だけ・ほかの 62 行 310 セルは 0 件）。第291期のクグの規定化（KG-b）は 0 件。過去の器具のシガは `ShigaG3K` ／ `ShigaSGa`、カタは `KataS3`、トウは `TouT0`、クグは `KuguKG0` に固定してある。
+**最後に `compare` が動いた期: 第290期**（規定のシガ SG-a → SI-b・カタ S3 → KR-b。動いたのは 責め苦 第5波 87.0 → 89.0 と 感電 第2波 62.0 → 67.5・第3波 80.5 → 82.5・第5波 86.5 → 87.5 だけ・ほかの 62 行 310 セルは 0 件）。第291期のクグの規定化（KG-b）・第292期の糸玉の版は 0 件。過去の器具のシガは `ShigaG3K` ／ `ShigaSGa`、カタは `KataS3`、トウは `TouT0`、クグは `KuguKG0` に固定してある。
 
     編成:       64 行（`CompareBuilds()`・第281期に 63 → 64）＋ 交差帯 12 行（`CrossBuilds()`）
     全64行:     100 / 88.0 / 89.2 / 83.3 / 82.6     （第1〜5波の平均勝率・seed 0..199・`spread` §4・第290期。第289期は 88.0 ／ 82.5）

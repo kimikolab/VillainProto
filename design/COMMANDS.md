@@ -903,6 +903,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 playtest291 events   # 第291期 段2: 試遊の5台 × 試遊の波 × seed 0..49 の表示専用の出来事の件数（札ごと・1戦あたり）（5 秒）
     dotnet run --project BattleSim -c Release 0 playtest291 memo <行名の一部> <boss|guard|bat> <seed> [上限]   # 第291期 段3: 台本の並びの例（新しい出来事と前後1件・`PHASE291_CODEX_MEMO.md` §4 の元）
     dotnet run --project BattleSim -c Release 0 playtest291 check    # 第291期 自己検査（規定のクグ ＝ KG-b・試遊の波と行・表示専用（verbose の有無で同じ）・保持者のいない戦で 0 件・値の向き・割り込みの見出しと Reaction・連射の発の並び・乱数の走査）（10 秒）
+    dotnet run --project BattleSim -c Release 0 kugu292 p0        # 第292期 Phase 0: 敵陣の空き席と勇者の隣・糸玉を張る順と連鎖の見込み・規定のクグ（KG-b）× ボスの代表台（数秒）。本体は `Modes/Kugu292.cs`
+    dotnet run --project BattleSim -c Release 0 kugu292 boards    # 第292期: 代表台 5 台 × ボス ／ 近衛 ／ 大隊 × クグ KG-b ／ KB-a ／ KB-b × カタ KR-b ／ KR-∞（糸玉・雷雲の推移・勇者の HP・対照）（seed 0..199・verbose・約 5 秒）
+    dotnet run --project BattleSim -c Release 0 kugu292 grid <boss|guard|bat>   # 第292期 格子: 固定枠 トウ ＋ クグ ＋ カタ・探索枠2 × 席 120 × 4 版（KG-b ／ 糸玉（ボス KB-a ・精鋭 KB-b）× KR-b ／ KR-∞）
+    dotnet run --project BattleSim -c Release 0 kugu292 check     # 第292期 自己検査（規定は動かない・版の札・糸玉は列の外で狙われず倒れず勝敗に数えない・戦を跨がない・KB-a × 精鋭 ＝ 規定・決定性・乱数の走査）
+    dotnet run --project BattleSim -c Release 0 kugu292 log <boss|guard|bat> <短い名前を ・ で5つ> [seed] [kgb|kba|kbb|krb|krinf…]   # 第292期 1戦のログ
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）
