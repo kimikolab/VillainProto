@@ -29,7 +29,7 @@ static class Playtest291Diag
 
     static EnemyCatalog.PlaytestStage WaveOf(string n) => EnemyCatalog.PlaytestStages[n switch { "boss" => 0, "guard" => 1, "bat" => 2, _ => int.Parse(n) }];
     static (List<UnitState> P, List<UnitState> E) Make(Formation f, EnemyCatalog.PlaytestStage w)
-        => (BattleEngine.Materialize(FvSwap(f, UnitCatalog.Kata, UnitCatalog.KataKRb), BattleContext.PlayerTeam), BattleEngine.MaterializeEnemy(w.Enemy, w.Scale));   // 第293期: カタは第291期の規定（KR-b）に固定
+        => (BattleEngine.Materialize(Kugu292Diag.Pin294(FvSwap(f, UnitCatalog.Kata, UnitCatalog.KataKRb)), BattleContext.PlayerTeam), BattleEngine.MaterializeEnemy(w.Enemy, w.Scale));   // 第293期: カタは第291期の規定（KR-b）に固定・第294期: クグ ／ シガも（KG-b ／ SI-b）
 
     /// <summary>第291期に足した表示専用の種類。</summary>
     static readonly BattleEventKind[] NewKinds = { BattleEventKind.ShockGauge, BattleEventKind.Feather, BattleEventKind.Scar, BattleEventKind.MarkLayer };
@@ -171,11 +171,12 @@ static class Playtest291Diag
         Console.WriteLine("# 第291期 自己検査（playtest291 check）");
         Console.WriteLine();
         // (a) 規定のクグ ＝ KG-b
-        Expect("(a) 規定のクグ ＝ KG-b（組み付き ＋ 糸 ＋ 導線）・`KuguKGb` ＝ 規定・旧の規定 `KuguKG0` は組み付きだけ（`All` ／ `Retired` に入っていない）・文面",
-            UnitCatalog.Kugu.Traits.SequenceEqual(new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge }) && ReferenceEquals(UnitCatalog.KuguKGb, UnitCatalog.Kugu)
-            && UnitCatalog.KuguKG0.Traits.SequenceEqual(new[] { TraitId.Grapple }) && !UnitCatalog.Everyone.Contains(UnitCatalog.KuguKG0) && UnitCatalog.All.Contains(UnitCatalog.Kugu)
-            && UnitCatalog.KuguKG0.MaxHp == UnitCatalog.Kugu.MaxHp && UnitCatalog.KuguKG0.Attack == UnitCatalog.Kugu.Attack && UnitCatalog.KuguKG0.Speed == UnitCatalog.Kugu.Speed
-            && UnitCatalog.Kugu.PlusText == UnitCatalog.KuguKG0.PlusText + "。組み付いた敵とは糸で繋がっている。自分に流れ込む電気は、糸を伝ってその敵へ流れ、浴びた敵は帯電する");
+        Expect("(a) 第291期の規定のクグ ＝ KG-b（組み付き ＋ 糸 ＋ 導線）・`KuguKGb`（第294期から規定は KW-a）・旧の規定 `KuguKG0` は組み付きだけ（`All` ／ `Retired` に入っていない）・文面",
+            // 第294期: 規定は KW-a になった——第291期の規定（KG-b）は `KuguKGb` に固定してあることを確かめる
+            UnitCatalog.KuguKGb.Traits.SequenceEqual(new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge }) && UnitCatalog.Kugu.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.WebCharge))
+            && UnitCatalog.KuguKG0.Traits.SequenceEqual(new[] { TraitId.Grapple }) && !UnitCatalog.Everyone.Contains(UnitCatalog.KuguKG0) && !UnitCatalog.Everyone.Contains(UnitCatalog.KuguKGb)
+            && UnitCatalog.KuguKG0.MaxHp == UnitCatalog.KuguKGb.MaxHp && UnitCatalog.KuguKG0.Attack == UnitCatalog.KuguKGb.Attack && UnitCatalog.KuguKG0.Speed == UnitCatalog.KuguKGb.Speed
+            && UnitCatalog.KuguKGb.PlusText == UnitCatalog.KuguKG0.PlusText + "。組み付いた敵とは糸で繋がっている。自分に流れ込む電気は、糸を伝ってその敵へ流れ、浴びた敵は帯電する");
         // (b) 試遊の波
         var ps = EnemyCatalog.PlaytestStages;
         static bool SameWave(EnemyWave a, EnemyWave b) => Enumerable.Range(0, 9).All(i => ReferenceEquals(a[i], b[i]));
@@ -196,7 +197,7 @@ static class Playtest291Diag
         var battles = new List<(string Name, Func<(List<UnitState>, List<UnitState>)> Make, int Seed)>();
         foreach (var (name, f) in pl) foreach (var w in ps) for (int s = 0; s < 20; s++) { var ff = f; var ww = w; battles.Add(($"{name}×{w.Name}", () => Make(ff, ww), s)); }
         foreach (var (name, f) in Presets.Compare) for (int wi = 0; wi < EnemyCatalog.Stages.Count; wi++) for (int s = 0; s < 4; s++)
-                { var ff = FvSwap(f, UnitCatalog.Kata, UnitCatalog.KataKRb);   /* 第293期: カタは第291期の規定（KR-b）に固定 */ int wj = wi; battles.Add(($"{name}×第{wi + 1}波", () => (BattleEngine.Materialize(ff, BattleContext.PlayerTeam), BattleEngine.Materialize(EnemyCatalog.Stages[wj].Enemy, BattleContext.EnemyTeam, EnemyScaleRule.Default)), s)); }
+                { var ff = Kugu292Diag.Pin294(FvSwap(f, UnitCatalog.Kata, UnitCatalog.KataKRb));   /* 第293期: カタは第291期の規定（KR-b）に固定・第294期: クグ ／ シガも */ int wj = wi; battles.Add(($"{name}×第{wi + 1}波", () => (BattleEngine.Materialize(ff, BattleContext.PlayerTeam), BattleEngine.Materialize(EnemyCatalog.Stages[wj].Enemy, BattleContext.EnemyTeam, EnemyScaleRule.Default)), s)); }
         long diff = 0, holderLess = 0, interruptBad = 0, volleyBad = 0, scarBad = 0, layerBad = 0, powderBad = 0, threadBad = 0, gaugeBad = 0;
         var kindsSeen = new Dictionary<string, long>();
         var lockObj = new object();

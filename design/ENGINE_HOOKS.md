@@ -773,6 +773,14 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   KW-a は `RechargeSilkBalls` の頭の `RechargeWebs`（`MarkShock` を通す）でターンの頭に帯電し直す。KW-b は `Run` の並べ替えの速さを `BattleContext.TurnSpeed`（−3）に替えた——**網の無い戦は `Def.Speed` のままなので群の分け方も乱数も同じ**。倒れたら `HandleDeath` で糸を消す。
   連鎖の鞭: `ShockWhip` が割り込みの間だけ `_shockWhipMult` ＝ 1 ＋ 合図の連鎖で弾けた数（糸玉を含む）を立て、`WhipAmount` が2倍の後に掛ける。SW-b は `MarkShock` の「すでに帯電している」枝で蓄電 +1。
   表示専用: 出来事 `Web`（`WebLabels` 張る ／ 糸玉 ／ 帯電）と `ShockGaugeLabels.WhipChain`（割り込み・倍率）。`shockdigest` の `SkipAlways` と `CheckWave.Dig` は `Web` を外す（`ShockGauge` は元から外している）。
+- **第294期: 規定のクグを KW-a（`WebCharge`）、シガを SW-a（`ShockWhipChain`）にした**（旧の規定は `KuguKGb` ／ `ShigaSIb`・過去の器具は `Kugu292Diag.Pin294` で固定）。**守りの版を足した**（規定には入れていない）:
+  踏みとどまり（HS 土台 `BeckonHold`）は `ApplyDamageBody` の出口・**猶予の直後**（不死・軛の前）の `BattleContext.Hold`——ヒサの標（`BeckonGuardOf`）を持つ味方への敵の攻撃（相手陣営の出どころ・刻み／徴収／中継／共有／同士討ちではない）の倒れる一撃を HP 1 に切り、標と**ヒサの記憶（`BeckonTrait.TargetKey`）**を消す。
+  猶予（HS-d `BeckonGrace`）は `_graceFrom`（駒 → 期限の手番のターン・`TakenTurn` と `TurnActor` で読む）・1体1戦1度。参考の HS-a′（`BeckonHoldOnce`）は `_holdOnce`。
+  橋（HS-c `BeckonBridge`）は HP を引いた後・味方への通知（`OnAllyDamaged`）の後の `BeckonBridgeFire`——癒し手（`Plank` ／ `KissTrait.Holds`・席番号の若い方）を **`OutOfTurnRoute.Bridge`（新しい経路）**の `CanActOutOfTurn` で問い、`Interrupt` の中で板を1枚（`PlankTrait.Paste`）か口づけ（`KissTrait.Act`・受け手は `_bridgePatient` で `MostHurtAlly` を固定）。1ターン1度（`_bridgeTurn`）。
+  肩代わり（SR-a `DeflectWide`）は**肩代わりの族の先頭**（軽減の族の後・巨躯の手前）——単体以外の敵の攻撃でソラ以外の味方の一撃の半分を `ApplyDamage(ソラ, …, relayed: true)` で渡し、1回の呼び出しにだけ効く札 `_wideNext` で逸らしの入口を開ける（範囲の一撃も逸らす）。
+  重圧（SR-b `DivertPressure`）は `PerformAttackBody` の**澱みのデバフの直後**（打点・切り捨て）——標を持つ攻め手の一撃を 層 × 15%（上限 45%）引く。
+  静電気の膜（SM `StaticMembraneTrait.OnTurnStart`・喚び出しの後）は自分と隣の味方を `MarkShock`、半分の段は**軽減の族・矢面の直後**（層の手前）。SM-b（`MembraneNoStun`）は `StunByShock` の乱数の前で抜ける。
+  保持者が盤上にいなければ、どの口も `_holdLive` ／ リストの件数の比較1つで抜ける（`compare` 全セルが段0 の後の値と一致）。
 - **第218期の澱みのミオの版（札 `MireSlam` / `MireConduct` / `MireDull` / `MireDullAll` / `MireCarry` / `MireHandoff`・**第219期に M5 ＝ `MireDullAll` 以外の5枚をミオの規定にした**（ポンの判断・札の並びは `MireDiag.VerOf("M5")` と同じ）・M0 は `mire` の診断のローカル）**——
   **叩きつけ・通電は `ConcentrateTrait` の最後から `BattleContext.MireSlam`**（寄せ先は「感電している敵がいればその中から」・`ApplyDamage` を直に呼ぶ＝標的の鎖を通らない・撃破はミオ）。
   **澱みのデバフは `MireCut` の1本を4口**（`PerformAttackBody` の**痺れ毒の直後** ／ `StrikeThunder` ／ `Discharge`（反転しない側）／ 叩きつけ・通電）で、出どころの印 × 10%（上限 40%）を切り捨てで引く。

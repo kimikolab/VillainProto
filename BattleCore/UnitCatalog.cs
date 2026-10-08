@@ -516,6 +516,79 @@ public static class UnitCatalog
         Flavor = "味方を矢面に立たせて生き延びた男。誰も隣に立ちたがらない。"
     };
 
+    // 第294期 —— ヒサの守りの版（指示書 design/PHASE294_GUARD_SPEC.md §3-1）。規定の末尾に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
+
+    /// <summary>第294期 HS-a（踏みとどまり・土台）。規定 ＋ <see cref="TraitId.BeckonHold"/>（標の味方は敵の攻撃の倒れる一撃を HP 1 で止め、標が剥がれる）。</summary>
+    public static readonly UnitDef HisaHSa = new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Append(TraitId.BeckonHold).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる",
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
+    };
+
+    /// <summary>
+    /// 第294期 HS-a′（参考・指示書に無い）。HS-a ＋ <see cref="TraitId.BeckonHoldOnce"/>（同じ味方は1戦に1度しか踏みとどまらない）。
+    /// HS-a は「止める → 標が剥がれる → ヒサが指差し直す → また止める」が回り、1ターン1発しか来ない盤面で 30 ターンの上限まで倒れなくなる——その対照。
+    /// </summary>
+    public static readonly UnitDef HisaHSa1 = new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Append(TraitId.BeckonHold).Append(TraitId.BeckonHoldOnce).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる（同じ味方は1戦に1度）",
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
+    };
+
+    /// <summary>第294期 HS-c（橋）。HS-a ＋ <see cref="TraitId.BeckonBridge"/>（踏みとどまった瞬間、癒し手（リリ ／ ツギ）が手番の外で1度動いてその味方へ向ける・1ターンに1度）。</summary>
+    public static readonly UnitDef HisaHSc = new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Append(TraitId.BeckonHold).Append(TraitId.BeckonBridge).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる" + "。踏みとどまった味方へ、仲間の癒し手がすぐ駆けつける",
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
+    };
+
+    /// <summary>第294期 HS-d（猶予）。HS-a ＋ <see cref="TraitId.BeckonGrace"/>（踏みとどまった味方は次の自分の手番の終わりまで倒れない・1体につき1戦1度）。</summary>
+    public static readonly UnitDef HisaHSd = new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Append(TraitId.BeckonHold).Append(TraitId.BeckonGrace).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる" + "。踏みとどまった味方は、次に動き終えるまで倒れない",
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
+    };
+
     /// <summary>
     /// 施しのリリ（第204期・継ぎ当てのノノの転生）。<b>数値（HP78／攻3／速6）と <c>[Skill]</c> の周期はノノのまま</b>で、
     /// 手番の繕いを口づけ（<see cref="TraitId.Kiss"/>）に差し替えた。代金は状態を移すこと（<see cref="TraitId.KissSpill"/>・外せば「移さない」）。
@@ -893,10 +966,12 @@ public static class UnitCatalog
         // 開戦時の大縛りは組み付きの札の中に残してある（`GrappleTrait.OnBattleStart`）。
         // 組み付きが手番そのもの（攻撃3 は出なくなる）。`[Skill]` の1要素で毎手番組み付く／維持する。
         // 第291期: ポンの判断（第290期の案 G9b）で KG-b（糸 `Thread` ・導線 `ThreadCharge`）を規定にした。旧の規定は `KuguKG0`。
-        Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge },
+        // 第294期: ポンの判断（第293期の案 W1）で KW-a（帯電の網 `WebCharge`）を規定にした。旧の規定（KG-b）は `KuguKGb`。
+        Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge, TraitId.WebCharge },
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "組み付いている") },
         PlusText = "開戦時に大縛りで最も速い敵1体を縛る。手番でいちばん手強い敵に組み付き、動けなくする"
-                 + "。組み付いた敵とは糸で繋がっている。自分に流れ込む電気は、糸を伝ってその敵へ流れ、浴びた敵は帯電する",
+                 + "。組み付いた敵とは糸で繋がっている。自分に流れ込む電気は、糸を伝ってその敵へ流れ、浴びた敵は帯電する"
+                 + "。組み付いている間、手番ごとに糸を1本張る。糸の掛かった敵は帯電し続ける。止められない相手には、代わりにその周りへ帯電した糸玉を張る",
         MinusText = "組み付いている間は自分も何もできない。殴られるとほどける",
         Flavor = "縛る相手を味方から敵に変えただけで、しがみついたら離さない癖は抜けていない。"
     };
@@ -939,13 +1014,30 @@ public static class UnitCatalog
         Flavor = Kugu.Flavor
     };
 
-    /// <summary>第290期 KG-b（導線）。KG-a ＋ <see cref="TraitId.ThreadCharge"/>（糸を伝った放電を浴びた敵は、感電していなければ帯電する）。<b>第291期に規定にした</b>——規定の <see cref="Kugu"/> と同じ物。</summary>
-    public static readonly UnitDef KuguKGb = Kugu;
+    /// <summary>第290期 KG-b（導線）。KG-a ＋ <see cref="TraitId.ThreadCharge"/>（糸を伝った放電を浴びた敵は、感電していなければ帯電する）。第291〜293期の規定。</summary>
+    /// <remarks>
+    /// <b>第294期に KW-a を規定にしたので、旧の規定（第291〜293期）の定義を明示的に持つ。</b>
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。過去の器具はこちらに固定する（第293期のカタ `KataKRb` と同じ作法）。
+    /// </remarks>
+    public static readonly UnitDef KuguKGb = new()
+    {
+        Id = "kugu",
+        Name = Kugu.Name,
+        MaxHp = Kugu.MaxHp,
+        Attack = Kugu.Attack,
+        Speed = Kugu.Speed,
+        Advances = false,
+        Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge },
+        Actions = Kugu.Actions,
+        PlusText = KuguKG0.PlusText + "。組み付いた敵とは糸で繋がっている。自分に流れ込む電気は、糸を伝ってその敵へ流れ、浴びた敵は帯電する",
+        MinusText = Kugu.MinusText,
+        Flavor = Kugu.Flavor
+    };
 
     // 第292期 —— クグの糸玉の版（指示書 design/PHASE292_KUGU_SILKBALL_SPEC.md §2-2）。規定のクグ（KG-b・糸と導線）の末尾に札を足すだけ。
     // 体・速さ・組み付き・マイナス・フレーバーは規定のまま。`All` にも `Retired` にも入れない。
 
-    /// <summary>第292期 KB-a（止められない相手にだけ）。規定 ＋ <see cref="TraitId.SilkBallSteadfast"/>（組み付いても止められない相手には、代わりにその周りへ帯電した糸玉を張る）。</summary>
+    /// <summary>第292期 KB-a（止められない相手にだけ）。KG-b ＋ <see cref="TraitId.SilkBallSteadfast"/>（組み付いても止められない相手には、代わりにその周りへ帯電した糸玉を張る）。</summary>
     public static readonly UnitDef KuguKBa = new()
     {
         Id = "kugu",
@@ -956,28 +1048,15 @@ public static class UnitCatalog
         Advances = false,
         Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge, TraitId.SilkBallSteadfast },
         Actions = Kugu.Actions,
-        PlusText = Kugu.PlusText + "。組み付いても止められない相手には、代わりにその周りへ帯電した糸玉を張る",
+        PlusText = KuguKGb.PlusText + "。組み付いても止められない相手には、代わりにその周りへ帯電した糸玉を張る",
         MinusText = Kugu.MinusText,
         Flavor = Kugu.Flavor
     };
 
-    /// <summary>第293期 KW-a（帯電の網）。規定 ＋ <see cref="TraitId.WebCharge"/>（組み付いている間、手番ごとに糸を1本張る・糸の敵は帯電し続ける・止められない相手には糸玉）。</summary>
-    public static readonly UnitDef KuguKWa = new()
-    {
-        Id = "kugu",
-        Name = Kugu.Name,
-        MaxHp = Kugu.MaxHp,
-        Attack = Kugu.Attack,
-        Speed = Kugu.Speed,
-        Advances = false,
-        Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge, TraitId.WebCharge },
-        Actions = Kugu.Actions,
-        PlusText = Kugu.PlusText + "。組み付いている間、手番ごとに糸を1本張る。糸の掛かった敵は帯電し続ける。止められない相手には、代わりにその周りへ帯電した糸玉を張る",
-        MinusText = Kugu.MinusText,
-        Flavor = Kugu.Flavor
-    };
+    /// <summary>第293期 KW-a（帯電の網）。KG-b ＋ <see cref="TraitId.WebCharge"/>（組み付いている間、手番ごとに糸を1本張る・糸の敵は帯電し続ける・止められない相手には糸玉）。<b>第294期に規定にした</b>——規定の <see cref="Kugu"/> と同じ物。</summary>
+    public static readonly UnitDef KuguKWa = Kugu;
 
-    /// <summary>第293期 KW-b（絡まる網）。規定 ＋ <see cref="TraitId.WebSnare"/>（同じく糸を張る・糸の敵は速さ −3・止められない相手には糸玉）。</summary>
+    /// <summary>第293期 KW-b（絡まる網）。KG-b ＋ <see cref="TraitId.WebSnare"/>（同じく糸を張る・糸の敵は速さ −3・止められない相手には糸玉）。</summary>
     public static readonly UnitDef KuguKWb = new()
     {
         Id = "kugu",
@@ -988,12 +1067,12 @@ public static class UnitCatalog
         Advances = false,
         Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge, TraitId.WebSnare },
         Actions = Kugu.Actions,
-        PlusText = Kugu.PlusText + "。組み付いている間、手番ごとに糸を1本張る。糸の掛かった敵は動きが鈍る。止められない相手には、代わりにその周りへ帯電した糸玉を張る",
+        PlusText = KuguKGb.PlusText + "。組み付いている間、手番ごとに糸を1本張る。糸の掛かった敵は動きが鈍る。止められない相手には、代わりにその周りへ帯電した糸玉を張る",
         MinusText = Kugu.MinusText,
         Flavor = Kugu.Flavor
     };
 
-    /// <summary>第292期 KB-b（新しく組み付くたび）。規定 ＋ <see cref="TraitId.SilkBallEvery"/>（組み付くたび、その周りへ帯電した糸玉を張る）。</summary>
+    /// <summary>第292期 KB-b（新しく組み付くたび）。KG-b ＋ <see cref="TraitId.SilkBallEvery"/>（組み付くたび、その周りへ帯電した糸玉を張る）。</summary>
     public static readonly UnitDef KuguKBb = new()
     {
         Id = "kugu",
@@ -1004,7 +1083,7 @@ public static class UnitCatalog
         Advances = false,
         Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge, TraitId.SilkBallEvery },
         Actions = Kugu.Actions,
-        PlusText = Kugu.PlusText + "。組み付くたび、その周りへ帯電した糸玉を張る",
+        PlusText = KuguKGb.PlusText + "。組み付くたび、その周りへ帯電した糸玉を張る",
         MinusText = Kugu.MinusText,
         Flavor = Kugu.Flavor
     };
@@ -1281,6 +1360,42 @@ public static class UnitCatalog
         PlusText = "毎ターン、敵陣に喚び出す。喚ばれたものは雷を纏って立ち、雷はそこへは落ちない",
         MinusText = "喚ばれたものは背いて敵につく。敵の前列が埋まる",
         Flavor = "喚ばれたものは背いて敵につく。ただし、雷を纏ったまま。"
+    };
+
+    // 第294期 —— ソムの守りの版（指示書 design/PHASE294_GUARD_SPEC.md §3-3）。規定（喚び出し）の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
+
+    /// <summary>第294期 SM-a（静電気の膜・土台）。規定 ＋ <see cref="TraitId.StaticMembrane"/>（喚び出しの後に自分と隣の味方を帯電させ、帯電した味方への敵の攻撃は半分）。</summary>
+    public static readonly UnitDef SomSMa = new()
+    {
+        Id = Som.Id,
+        Name = Som.Name,
+        MaxHp = Som.MaxHp,
+        Attack = Som.Attack,
+        Speed = Som.Speed,
+        Advances = Som.Advances,
+        Pattern = Som.Pattern,
+        Traits = Som.Traits.Append(TraitId.StaticMembrane).ToArray(),
+        Actions = Som.Actions,
+        PlusText = Som.PlusText + "。自分と隣の仲間に静電気の膜を張る。帯電した仲間は、敵の一撃を半分しか受けない",
+        MinusText = Som.MinusText,
+        Flavor = Som.Flavor
+    };
+
+    /// <summary>第294期 SM-b（痺れない膜）。SM-a ＋ <see cref="TraitId.MembraneNoStun"/>（ソムが生きている間、味方は弾けても痺れない・放電は流れる）。</summary>
+    public static readonly UnitDef SomSMb = new()
+    {
+        Id = Som.Id,
+        Name = Som.Name,
+        MaxHp = Som.MaxHp,
+        Attack = Som.Attack,
+        Speed = Som.Speed,
+        Advances = Som.Advances,
+        Pattern = Som.Pattern,
+        Traits = Som.Traits.Append(TraitId.StaticMembrane).Append(TraitId.MembraneNoStun).ToArray(),
+        Actions = Som.Actions,
+        PlusText = Som.PlusText + "。自分と隣の仲間に静電気の膜を張る。帯電した仲間は、敵の一撃を半分しか受けない" + "。膜の内側では、弾けても痺れない",
+        MinusText = Som.MinusText,
+        Flavor = Som.Flavor
     };
 
     /// <summary>
@@ -1894,17 +2009,22 @@ public static class UnitCatalog
         // 第185期に見せしめ（`Shame`）を足した。第217期の追記で G3K（責め鞭・鞭・電気鞭・感電も2倍）に。
         // 第289期: ポンの判断（第288期の案 A7a）で SG-a（蓄電・`StoredCharge`）を規定にした。旧の規定（G3K）は `ShigaG3K`。
         // 第290期: ポンの判断（第289期の案 A8b）で SI-b（振りまくる・`ShockWhipFlurry`）を規定にした。旧の規定（SG-a）は `ShigaSGa`。
-        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.ShockWhipFlurry },
+        // 第294期: ポンの判断（第293期の案 C1）で SW-a（連鎖の鞭・`ShockWhipChain`）を規定にした。旧の規定（SI-b）は `ShigaSIb`。
+        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.ShockWhipFlurry, TraitId.ShockWhipChain },
         PlusText = "動けない敵を優先して鞭で薙ぐ。動けない敵には2倍で入り、その悲鳴で隣の敵を竦ませる（1手番に1回）。感電しているあいだは怖気づかず、打った敵に感電を移す。"
-                 + "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう",
+                 + "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう"
+                 + "。割り込みの鞭は、弾けた電気をまとってそのぶん重くなる",
         MinusText = "感電していないとき、動ける敵を主目標に打つと、怖気づいて自分が1ターン動けなくなる",
         Flavor = "縛られた的しか殴れない臆病者。雷に打たれている間だけは、怖さも痺れて感じない。"
     };
 
-    // 第293期 —— シガの直し（指示書 design/PHASE293_SHOCK_WEB_SPEC.md §4）。規定（SI-b）の末尾に札を足すだけ。`All` にも `Retired` にも入れない。
-
-    /// <summary>第293期 SW-a（連鎖の鞭）。規定 ＋ <see cref="TraitId.ShockWhipChain"/>（割り込みの鞭が × (1 ＋ 合図の連鎖で弾けた数)）。</summary>
-    public static readonly UnitDef ShigaSWa = new()
+    /// <summary>第289期 SI-b（振りまくる）。SG-a ＋ <see cref="TraitId.ShockWhipFlurry"/>（敵の感電の連鎖の直後・蓄電 1 以上で割り込み、鞭を1振り・蓄電 −1）。第290〜293期の規定。</summary>
+    /// <remarks>
+    /// <b>第294期に SW-a を規定にしたので、旧の規定（第290〜293期）の定義を明示的に持つ。</b>
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。過去の器具はこちらに固定する（第293期のカタ `KataKRb` と同じ作法）。
+    /// 版（SW-b ／ SI-c）より前に置く（静的な初期化は書いた順）。
+    /// </remarks>
+    public static readonly UnitDef ShigaSIb = new()
     {
         Id = "shiga",
         Name = Shiga.Name,
@@ -1912,11 +2032,17 @@ public static class UnitCatalog
         Attack = Shiga.Attack,
         Speed = Shiga.Speed,
         Pattern = Shiga.Pattern,
-        Traits = Shiga.Traits.Append(TraitId.ShockWhipChain).ToArray(),
-        PlusText = Shiga.PlusText + "。割り込みの鞭は、弾けた電気をまとってそのぶん重くなる",
+        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.ShockWhipFlurry },
+        PlusText = "動けない敵を優先して鞭で薙ぐ。動けない敵には2倍で入り、その悲鳴で隣の敵を竦ませる（1手番に1回）。感電しているあいだは怖気づかず、打った敵に感電を移す。"
+                 + "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう",
         MinusText = Shiga.MinusText,
         Flavor = Shiga.Flavor
     };
+
+    // 第293期 —— シガの直し（指示書 design/PHASE293_SHOCK_WEB_SPEC.md §4）。SI-b の末尾に札を足すだけ。`All` にも `Retired` にも入れない。
+
+    /// <summary>第293期 SW-a（連鎖の鞭）。SI-b ＋ <see cref="TraitId.ShockWhipChain"/>（割り込みの鞭が × (1 ＋ 合図の連鎖で弾けた数)）。<b>第294期に規定にした</b>——規定の <see cref="Shiga"/> と同じ物。</summary>
+    public static readonly UnitDef ShigaSWa = Shiga;
 
     /// <summary>第293期 SW-b（浴びるたび溜まる）。SW-a ＋ <see cref="TraitId.StoredChargeEvery"/>（すでに帯電していても感電を浴びるたび蓄電 +1）。</summary>
     public static readonly UnitDef ShigaSWb = new()
@@ -1927,8 +2053,8 @@ public static class UnitCatalog
         Attack = Shiga.Attack,
         Speed = Shiga.Speed,
         Pattern = Shiga.Pattern,
-        Traits = Shiga.Traits.Append(TraitId.ShockWhipChain).Append(TraitId.StoredChargeEvery).ToArray(),
-        PlusText = (Shiga.PlusText + "。割り込みの鞭は、弾けた電気をまとってそのぶん重くなる").Replace("帯電するたび電気が溜まり", "感電を浴びるたび電気が溜まり"),
+        Traits = ShigaSIb.Traits.Append(TraitId.ShockWhipChain).Append(TraitId.StoredChargeEvery).ToArray(),
+        PlusText = (ShigaSIb.PlusText + "。割り込みの鞭は、弾けた電気をまとってそのぶん重くなる").Replace("帯電するたび電気が溜まり", "感電を浴びるたび電気が溜まり"),
         MinusText = Shiga.MinusText,
         Flavor = Shiga.Flavor
     };
@@ -2020,9 +2146,6 @@ public static class UnitCatalog
         Flavor = Shiga.Flavor
     };
 
-    /// <summary>第289期 SI-b（振りまくる）。SG-a ＋ <see cref="TraitId.ShockWhipFlurry"/>（敵の感電の連鎖の直後・蓄電 1 以上で割り込み、鞭を1振り・蓄電 −1）。<b>第290期に規定にした</b>——規定の <see cref="Shiga"/> と同じ物。</summary>
-    public static readonly UnitDef ShigaSIb = Shiga;
-
     /// <summary>
     /// 第290期 SI-c（直し）。SI-b ＋ <see cref="TraitId.ShockWhipKeep"/>（割り込みの鞭の電気鞭では自分の感電を消さない・手番の電気鞭はいまどおり使い切る）。
     /// 文面は SI-b のまま（直しは挙動の内側）。<see cref="All"/> にも <see cref="Retired"/> にも入れない。
@@ -2036,7 +2159,7 @@ public static class UnitCatalog
         Speed = 3,
         Pattern = AttackPattern.Sweep,
         Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.ShockWhipFlurry, TraitId.ShockWhipKeep },
-        PlusText = Shiga.PlusText,
+        PlusText = ShigaSIb.PlusText,
         MinusText = Shiga.MinusText,
         Flavor = Shiga.Flavor
     };
@@ -2789,6 +2912,42 @@ public static class UnitCatalog
                    + "逸らした数だけ鋭くなる突きで指差した敵の列を突き抜く",
         MinusText = "引き受けた視線は自分に刺さり、毎ターン狙われ続ける",
         Flavor = "誰かが見られている限り、代わりに見られてやる。それしか取り柄がない。"
+    };
+
+    // 第294期 —— ソラの守りの版（指示書 design/PHASE294_GUARD_SPEC.md §3-2）。規定の末尾に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
+
+    /// <summary>第294期 SR-a（肩代わり）。規定 ＋ <see cref="TraitId.DeflectWide"/>（単体以外の敵の攻撃で、ソラ以外の味方の一撃の半分をソラが受け、受けた分の半分を指差した敵へ逸らす）。</summary>
+    public static readonly UnitDef SoraSRa = new()
+    {
+        Id = Sora.Id,
+        Name = Sora.Name,
+        MaxHp = Sora.MaxHp,
+        Attack = Sora.Attack,
+        Speed = Sora.Speed,
+        Advances = Sora.Advances,
+        Pattern = Sora.Pattern,
+        Traits = Sora.Traits.Append(TraitId.DeflectWide).ToArray(),
+        Actions = Sora.Actions,
+        PlusText = Sora.PlusText + "。仲間に降りかかる広い攻撃も、半分は自分が代わりに浴びて逸らす",
+        MinusText = Sora.MinusText,
+        Flavor = Sora.Flavor
+    };
+
+    /// <summary>第294期 SR-b（重圧）。規定 ＋ <see cref="TraitId.DivertPressure"/>（ソラが生きている間、標を持つ敵の与えるダメージが 層 × 15%・上限 45% 下がる）。</summary>
+    public static readonly UnitDef SoraSRb = new()
+    {
+        Id = Sora.Id,
+        Name = Sora.Name,
+        MaxHp = Sora.MaxHp,
+        Attack = Sora.Attack,
+        Speed = Sora.Speed,
+        Advances = Sora.Advances,
+        Pattern = Sora.Pattern,
+        Traits = Sora.Traits.Append(TraitId.DivertPressure).ToArray(),
+        Actions = Sora.Actions,
+        PlusText = Sora.PlusText + "。指差された敵は手元が狂う。深く指差されるほど、その一撃は軽くなる",
+        MinusText = Sora.MinusText,
+        Flavor = Sora.Flavor
     };
 
 

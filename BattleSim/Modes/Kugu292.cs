@@ -40,7 +40,8 @@ static class Kugu292Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef From, UnitDef To);
     internal static readonly Ver[] KuguVers =
     {
-        new("KG-b", "kgb", UnitCatalog.Kugu, UnitCatalog.Kugu), new("KB-a", "kba", UnitCatalog.Kugu, UnitCatalog.KuguKBa), new("KB-b", "kbb", UnitCatalog.Kugu, UnitCatalog.KuguKBb),
+        // 第294期: 規定のクグは KW-a になった——台は `Pin294` で第292期の規定（KG-b ＝ `KuguKGb`）に固定してあるので、版の差し替えも `KuguKGb` から
+        new("KG-b", "kgb", UnitCatalog.KuguKGb, UnitCatalog.KuguKGb), new("KB-a", "kba", UnitCatalog.KuguKGb, UnitCatalog.KuguKBa), new("KB-b", "kbb", UnitCatalog.KuguKGb, UnitCatalog.KuguKBb),
     };
     internal static readonly Ver[] KataVers =
     {
@@ -57,7 +58,15 @@ static class Kugu292Diag
     static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n);
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
-    static Formation Seat(UnitDef[] o) => B283.Seat(o);
+    static Formation Seat(UnitDef[] o) => Pin294(B283.Seat(o));
+    /// <summary>第294期: クグ ／ シガを第292期の規定（KG-b ＝ `KuguKGb` ／ SI-b ＝ `ShigaSIb`）に固定する。</summary>
+    internal static Formation Pin294(Formation f)
+    {
+        var g = f.Clone();   // 陣形・レリックを保つ（`Common.OldFire` と同じ作法）
+        foreach (var (slot, d) in f.Occupied())
+            g[slot] = ReferenceEquals(d, UnitCatalog.Kugu) ? UnitCatalog.KuguKGb : ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaSIb : d;
+        return g;
+    }
 
     /// <summary>
     /// 代表台（指示書 §4-2）。席は測る前に固定した（決めたこと）:
@@ -66,7 +75,7 @@ static class Kugu292Diag
     /// </summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
     {
-        ("試遊・感電 糸", Presets.Playtest.First(r => r.Name == "試遊・感電 糸").F),
+        ("試遊・感電 糸", Pin294(Presets.Playtest.First(r => r.Name == "試遊・感電 糸").F)),
         ("雷の型 ソラ→クグ", Seat(Order("トウ・クグ・シガ・カタ・ドハ"))),
         ("雷の型 ドハ→クグ", Seat(Order("トウ・ソラ・シガ・カタ・クグ"))),
         ("四枚 ＋ ソラ", Seat(Order("トウ・クグ・シガ・カタ・ソラ"))),
@@ -550,18 +559,18 @@ static class Kugu292Diag
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
         // (a) 規定は動かない・版の札
-        Expect("(a) 規定のクグは KG-b・カタの KR-b は `KataKRb`（第293期から規定は KR-∞）", UnitCatalog.Kugu.Traits.SequenceEqual(new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge })
+        Expect("(a) 第292期の規定のクグ（KG-b）は `KuguKGb`（第294期から規定は KW-a）・カタの KR-b は `KataKRb`（第293期から規定は KR-∞）", UnitCatalog.KuguKGb.Traits.SequenceEqual(new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge })
             && UnitCatalog.KataKRb.Traits.Last() == TraitId.ThundercloudKeep && !UnitCatalog.KataKRb.Traits.Contains(TraitId.ThundercloudUncapped) && ReferenceEquals(UnitCatalog.KataKRinf, UnitCatalog.Kata));
-        Expect("(b) 版は規定の末尾に札を1枚足しただけ", UnitCatalog.KuguKBa.Traits.SequenceEqual(UnitCatalog.Kugu.Traits.Append(TraitId.SilkBallSteadfast))
-            && UnitCatalog.KuguKBb.Traits.SequenceEqual(UnitCatalog.Kugu.Traits.Append(TraitId.SilkBallEvery))
+        Expect("(b) 版は規定の末尾に札を1枚足しただけ", UnitCatalog.KuguKBa.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.SilkBallSteadfast))
+            && UnitCatalog.KuguKBb.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.SilkBallEvery))
             && UnitCatalog.KataKRinf.Traits.SequenceEqual(UnitCatalog.KataKRb.Traits.Append(TraitId.ThundercloudUncapped))
-            && UnitCatalog.KuguKBa.MaxHp == UnitCatalog.Kugu.MaxHp && UnitCatalog.KataKRinf.Attack == UnitCatalog.Kata.Attack);
+            && UnitCatalog.KuguKBa.MaxHp == UnitCatalog.KuguKGb.MaxHp && UnitCatalog.KataKRinf.Attack == UnitCatalog.Kata.Attack);
         Expect("(c) 糸玉は編成に選べない（All ／ Retired ／ Everyone のどれにも無い）", !UnitCatalog.All.Contains(UnitCatalog.SilkBall) && !UnitCatalog.Retired.Contains(UnitCatalog.SilkBall)
             && !UnitCatalog.Everyone.Contains(UnitCatalog.SilkBall));
         Expect("(d) KR-∞ の文面は KR-b のまま", UnitCatalog.KataKRinf.PlusText == UnitCatalog.KataKRb.PlusText && !UnitCatalog.KataKRinf.PlusText.Contains('8'));
 
         var boss = S287.Waves[0];
-        var f0 = Presets.Playtest.First(r => r.Name == "試遊・感電 糸").F;
+        var f0 = Pin294(Presets.Playtest.First(r => r.Name == "試遊・感電 糸").F);
         // (e)〜(j) ボス × KB-a × KR-∞ を 40 seed・verbose で
         int balls = 0, ballDamage = 0, ballAttacked = 0, ballWhip = 0, winsWithBalls = 0, dupSlots = 0, cloudOver8Inf = 0, cloudOver8B = 0, recharge = 0, ballPops = 0, ballInUnits = 0;
         // ボス × KB-a × KR-∞ ／ ボス × KB-b × KR-b ／ 近衛 × KB-b × KR-b（勝てる波で「糸玉が残った勝ち」を見る）

@@ -49,7 +49,7 @@ static class Shock290Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef From, UnitDef To);
     internal static readonly Ver[] ShigaVers =
     {
-        new("SG-a", "sga", UnitCatalog.Shiga, UnitCatalog.ShigaSGa), new("SI-b", "sib", UnitCatalog.Shiga, UnitCatalog.Shiga), new("SI-c", "sic", UnitCatalog.Shiga, UnitCatalog.ShigaSIc),
+        new("SG-a", "sga", UnitCatalog.ShigaSIb, UnitCatalog.ShigaSGa), new("SI-b", "sib", UnitCatalog.ShigaSIb, UnitCatalog.ShigaSIb), new("SI-c", "sic", UnitCatalog.ShigaSIb, UnitCatalog.ShigaSIc),
     };
     internal static readonly Ver[] KataVers =
     {
@@ -72,14 +72,14 @@ static class Shock290Diag
 
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
     /// <summary>第291期: 名前で引くクグ（規定は第291期から KG-b）を第290期の規定 `KuguKG0` に固定する（第290期の台を再現するため）。</summary>
-    static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n) is var d0 && ReferenceEquals(d0, UnitCatalog.Kugu) ? UnitCatalog.KuguKG0 : ReferenceEquals(d0, UnitCatalog.Kata) ? UnitCatalog.KataKRb : d0;   // 第293期: カタも第290期の規定（KR-b）へ
+    static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n) is var d0 && ReferenceEquals(d0, UnitCatalog.Kugu) ? UnitCatalog.KuguKG0 : ReferenceEquals(d0, UnitCatalog.Kata) ? UnitCatalog.KataKRb : ReferenceEquals(d0, UnitCatalog.ShigaSWa) ? UnitCatalog.ShigaSIb : d0;   // 第293期: カタも第290期の規定（KR-b）へ・第294期: シガも（SI-b）
     /// <summary>第291期: `compare` の行のクグを第290期の規定 `KuguKG0` に固定した行。</summary>
-    static (string Name, Formation F)[] Rows290() => CompareBuilds().Select(r => (r.Name, FvSwap(FvSwap(r.F, UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Kata, UnitCatalog.KataKRb))).ToArray();   // 第293期: カタも KR-b へ
+    static (string Name, Formation F)[] Rows290() => CompareBuilds().Select(r => (r.Name, FvSwap(FvSwap(FvSwap(r.F, UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Kata, UnitCatalog.KataKRb), UnitCatalog.ShigaSWa, UnitCatalog.ShigaSIb))).ToArray();   // 第293期: カタも KR-b へ
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     static Formation Seat(UnitDef[] o) => B283.Seat(o);
     /// <summary>第289期の台（`shock289` は第289期の規定 SG-a ／ S3 に固定してある）を第290期の規定の駒に戻す。</summary>
-    static Formation Unpin(Formation f) => FvSwap(FvSwap(f, UnitCatalog.ShigaSGa, UnitCatalog.Shiga), UnitCatalog.KataS3, UnitCatalog.KataKRb);
+    static Formation Unpin(Formation f) => FvSwap(FvSwap(f, UnitCatalog.ShigaSGa, UnitCatalog.ShigaSIb), UnitCatalog.KataS3, UnitCatalog.KataKRb);
 
     /// <summary>
     /// 代表台（指示書 §6-2）: 第289期の代表台 17 台 ＋ クグをトウの隣に置いた台（近衛 ／ 大隊 各1台）＋ クグ入りの届いた台（第287期・近衛の上位から2台）。
@@ -338,7 +338,7 @@ static class Shock290Diag
         Console.WriteLine("|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
         foreach (var b in bs)
         {
-            if (!Has(b.Make(), UnitCatalog.Shiga)) continue;
+            if (!Has(b.Make(), UnitCatalog.ShigaSIb)) continue;
             var w = WaveOf(b.Wave);
             foreach (var v in ShigaVers)
             {
@@ -549,7 +549,7 @@ static class Shock290Diag
     {
         var w = WaveOf(waveName);
         var v = VerOf(kuguVer, KuguVers);
-        var pool = S287.Pool.Select(d => d.Id == "kugu" ? UnitCatalog.Shiga : d.Id == "kata" ? UnitCatalog.KataKRb : d).ToArray();
+        var pool = S287.Pool.Select(d => d.Id == "kugu" ? UnitCatalog.ShigaSIb : d.Id == "kata" ? UnitCatalog.KataKRb : d).ToArray();
         GridCore($"固定枠 トウ ＋ クグ（{v.Name}）", w, new[] { UnitCatalog.Tou, v.To }, pool, 3, new[] { v.To });
     }
 
@@ -644,7 +644,7 @@ static class Shock290Diag
         Console.WriteLine("| 行 | " + string.Join(" | ", Enumerable.Range(1, nw).Select(w => $"第{w}波")) + " |");
         Console.WriteLine("|---|" + string.Concat(Enumerable.Range(0, nw).Select(_ => "--:|")));
         for (int ri = 0; ri < rows.Length; ri++)
-            if (Has(rows[ri].F, UnitCatalog.Shiga) || Has(rows[ri].F, UnitCatalog.KataKRb))
+            if (Has(rows[ri].F, UnitCatalog.ShigaSIb) || Has(rows[ri].F, UnitCatalog.KataKRb))
                 Console.WriteLine($"| {rows[ri].Name} | " + string.Join(" | ", Enumerable.Range(0, nw).Select(w => F1(basis[ri, w]))) + " |");
     }
 
@@ -664,25 +664,25 @@ static class Shock290Diag
         var sga = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge };
         var s3 = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockStunHalf };
         Expect("(a) 規定のシガ ＝ SI-b（SG-a ＋ 振りまくる）・`ShigaSIb` ＝ 規定・`ShigaSGa` ＝ 第289期の規定（`All` ／ `Retired` に入っていない）",
-            UnitCatalog.Shiga.Traits.SequenceEqual(sga.Append(TraitId.ShockWhipFlurry)) && ReferenceEquals(UnitCatalog.ShigaSIb, UnitCatalog.Shiga)
-            && UnitCatalog.ShigaSGa.Traits.SequenceEqual(sga) && UnitCatalog.All.Contains(UnitCatalog.Shiga) && !UnitCatalog.Everyone.Contains(UnitCatalog.ShigaSGa));
+            UnitCatalog.ShigaSIb.Traits.SequenceEqual(sga.Append(TraitId.ShockWhipFlurry)) && ReferenceEquals(UnitCatalog.ShigaSIb, UnitCatalog.ShigaSIb)
+            && UnitCatalog.ShigaSGa.Traits.SequenceEqual(sga) && UnitCatalog.Shiga.Traits.SequenceEqual(UnitCatalog.ShigaSIb.Traits.Append(TraitId.ShockWhipChain)) /* 第294期: 規定は SW-a・SI-b は ShigaSIb */ && !UnitCatalog.Everyone.Contains(UnitCatalog.ShigaSGa));
         Expect("(b) 規定のカタ ＝ KR-b（S3 ＋ 雷雲 ＋ 雷雲が残る）・`KataKRb` ＝ 規定・`KataS3` ＝ 第289期の規定（`All` ／ `Retired` に入っていない）",
             // 第293期: 規定は KR-∞ になった——第290期の規定（KR-b）は `KataKRb` に固定してあることを確かめる
             UnitCatalog.KataKRb.Traits.SequenceEqual(s3.Append(TraitId.Thundercloud).Append(TraitId.ThundercloudKeep)) && UnitCatalog.Kata.Traits.SequenceEqual(UnitCatalog.KataKRb.Traits.Append(TraitId.ThundercloudUncapped))
             && UnitCatalog.KataS3.Traits.SequenceEqual(s3) && !UnitCatalog.Everyone.Contains(UnitCatalog.KataKRb) && !UnitCatalog.Everyone.Contains(UnitCatalog.KataS3)
             && UnitCatalog.KataS3.MaxHp == UnitCatalog.KataKRb.MaxHp && UnitCatalog.KataS3.Attack == UnitCatalog.KataKRb.Attack && UnitCatalog.KataS3.Speed == UnitCatalog.KataKRb.Speed);
         Expect("(c) 規定の文面 ＝ 第289期の版の追記（シガ ＝ SG-a の文面 ＋ 割り込み・カタ ＝ S3 の文面 ＋ 雷雲）・SI-c の文面は SI-b のまま",
-            UnitCatalog.Shiga.PlusText == UnitCatalog.ShigaSGa.PlusText + "。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう"
+            UnitCatalog.ShigaSIb.PlusText == UnitCatalog.ShigaSGa.PlusText + "。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう"
             && UnitCatalog.KataKRb.PlusText == UnitCatalog.KataS3.PlusText + "。盤上で感電が弾けるたび雷雲が湧き、雷は戦が進むほど重くなる"
-            && UnitCatalog.ShigaSIc.PlusText == UnitCatalog.Shiga.PlusText);
+            && UnitCatalog.ShigaSIc.PlusText == UnitCatalog.ShigaSIb.PlusText);
         Expect("(d) SI-c ＝ SI-b ＋ `ShockWhipKeep`・KG-a ＝ 規定のクグ ＋ `Thread`・KG-b ＝ KG-a ＋ `ThreadCharge`・旧のクグ（`KuguKG0`）は組み付きだけ・版は `All` ／ `Retired` に入っていない（第291期から KG-b ＝ 規定）",
-            UnitCatalog.ShigaSIc.Traits.SequenceEqual(UnitCatalog.Shiga.Traits.Append(TraitId.ShockWhipKeep))
+            UnitCatalog.ShigaSIc.Traits.SequenceEqual(UnitCatalog.ShigaSIb.Traits.Append(TraitId.ShockWhipKeep))
             && UnitCatalog.KuguKG0.Traits.SequenceEqual(new[] { TraitId.Grapple })
             && UnitCatalog.KuguKGa.Traits.SequenceEqual(new[] { TraitId.Grapple, TraitId.Thread }) && UnitCatalog.KuguKGb.Traits.SequenceEqual(new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge })
             && new[] { UnitCatalog.KuguKGa, UnitCatalog.KuguKGb }.All(d => d.MaxHp == UnitCatalog.KuguKG0.MaxHp && d.Attack == UnitCatalog.KuguKG0.Attack && d.Speed == UnitCatalog.KuguKG0.Speed && d.Id == "kugu")
             && !new[] { UnitCatalog.ShigaSIc, UnitCatalog.KuguKGa, UnitCatalog.KuguKG0 }.Any(UnitCatalog.Everyone.Contains)
             && !UnitCatalog.All.Any(u => u.Traits.Contains(TraitId.ShockWhipKeep))
-            && UnitCatalog.All.Where(u => u.Traits.Any(t => t is TraitId.Thread or TraitId.ThreadCharge)).SequenceEqual(new[] { UnitCatalog.KuguKGb }));   // 第291期: KG-b が規定になった
+            && UnitCatalog.All.Where(u => u.Traits.Any(t => t is TraitId.Thread or TraitId.ThreadCharge)).SequenceEqual(new[] { UnitCatalog.Kugu }) && UnitCatalog.Kugu.Traits.Take(3).SequenceEqual(UnitCatalog.KuguKGb.Traits));   // 第291期: KG-b が規定になった
 
         // 帳簿の検査: 代表台 × 版 × seed 0..39
         var bs = Boards();
@@ -692,7 +692,7 @@ static class Shock290Diag
             for (int s = 0; s < 40; s++)
             {
                 var w = WaveOf(b.Wave);
-                if (Has(b.Make(), UnitCatalog.Shiga))
+                if (Has(b.Make(), UnitCatalog.ShigaSIb))
                     foreach (var v in ShigaVers.Skip(1))
                     {
                         var r = BattleEngine.Run(BattleEngine.Materialize(Apply(b.Make(), v), BattleContext.PlayerTeam), w.Make(), s, verbose: false);
@@ -750,7 +750,7 @@ static class Shock290Diag
         Expect("(k) 糸の本体は `PickOne` ／ `Roll` を呼ばない（ソースの走査）", scanned && !en[j0..j1].Contains("PickOne") && !en[j0..j1].Contains("Roll(") && !en[k0..k1].Contains("PickOne") && !en[k0..k1].Contains("Roll("));
         // (l) 第289期の器具が第289期の規定に固定されている（`shock289` の台に規定の駒が残っていない）
         Expect("(l) `shock289` の台は第289期の規定（SG-a ／ S3）に固定されている",
-            S289.Boards().All(b => !Has(b.Make(), UnitCatalog.Shiga) && !Has(b.Make(), UnitCatalog.KataKRb)) && S289.Rows289().All(r => !Has(r.F, UnitCatalog.Shiga) && !Has(r.F, UnitCatalog.KataKRb)));
+            S289.Boards().All(b => !Has(b.Make(), UnitCatalog.ShigaSIb) && !Has(b.Make(), UnitCatalog.KataKRb)) && S289.Rows289().All(r => !Has(r.F, UnitCatalog.ShigaSIb) && !Has(r.F, UnitCatalog.KataKRb)));
         Console.WriteLine();
         Console.WriteLine(fail == 0 ? "すべて ○。" : $"× が {fail} 件。");
         Environment.ExitCode = fail == 0 ? 0 : 1;

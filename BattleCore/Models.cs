@@ -2054,6 +2054,23 @@ public sealed class UnitTally
     /// </summary>
     public long WebSpun, WebAdjacent, WebBalls, WebNone, WebCharged, WebRecharged, WebPops, SwMultSum, SwMultN, SwMultBonus, ChargeOnShocked;
     public long[]? SwChainHist;
+    /// <summary>
+    /// 第294期（<b>計数専用</b>）: 守りの版。ヒサ（保持者）＝ <c>HoldFires</c> 踏みとどまらせた ／ <c>GraceGranted</c> 猶予を与えた ／ <c>GraceStops</c> 猶予の間に倒れる一撃を止めた ／
+    /// <c>BridgeFired</c> 橋が架かった（うち <c>BridgeByPlank</c> ツギ ／ <c>BridgeByKiss</c> リリ）／ <c>BridgeGain</c> 橋で増えた (HP＋破片) ／ <c>BridgeSpent</c> そのターンは架け済み ／
+    /// <c>BridgeNoHealer</c> 癒し手がいない ／ <c>BridgeNested</c> 割り込み・反撃の中 ／ <c>BridgeBlocked</c> 癒し手が動けない ／ <c>BridgeHushed</c> 粛で止まった。
+    /// 受けた側 ＝ <c>HoldReceived</c>。ソラ ＝ <c>WideShoulders</c> ／ <c>WideShoulderAmt</c> 肩代わりした回数と量 ／ <c>WideDeflects</c> 単体以外の一撃（肩代わりを含む）を逸らした回数 ／
+    /// <c>PressureHits</c> ／ <c>PressureCut</c> 重圧で軽くした回数と量 ／ <c>PressureByLayer</c>[n] 層 n の敵の一撃で軽くした量。
+    /// ソム ＝ <c>MembraneSpread</c> 膜で新しく帯電させた ／ <c>MembraneHits</c> ／ <c>MembraneSaved</c> 膜で半分にした回数と量 ／ <c>MembraneBySrc</c>[n] 半分にした一撃の帯電の書き手（0 トウ ／ 1 カタ ／ 2 ソム ／ 3 ほかの味方 ／ 4 敵・不明）／
+    /// <c>MembraneStunSkipped</c> 痺れない膜で痺れなかった（弾けた側に積む）。
+    /// </summary>
+    public long HoldFires, HoldReceived, GraceGranted, GraceStops, BridgeFired, BridgeByPlank, BridgeByKiss, BridgeGain, BridgeSpent, BridgeNoHealer, BridgeNested, BridgeBlocked, BridgeHushed;
+    public long WideShoulders, WideShoulderAmt, WideDeflects, PressureHits, PressureCut, MembraneSpread, MembraneHits, MembraneSaved, MembraneStunSkipped;
+    public long[]? PressureByLayer, PressureHitsByLayer, MembraneBySrc;
+    /// <summary>
+    /// 第294期（<b>計数専用</b>・ヒサ）: <c>HoldLostStripped</c> 標が剥がされていて止められなかった倒れる一撃 ／ <c>HoldHealerLeft</c> 踏みとどまったターンに手番の残る癒し手がいた ／
+    /// <c>HoldNoHealer</c> 癒し手がいない ／ <c>HoldAided</c> 同じ一撃でツギの応急処置が先に届いた ／ <c>HoldNextHit</c> 次の敵の一撃を受けた（うち <c>HoldNextHealed</c> その前に癒やされていた・<c>HoldNextKilled</c> その一撃で倒れた）。
+    /// </summary>
+    public long HoldLostStripped, HoldHealerLeft, HoldNoHealer, HoldAided, HoldNextHit, HoldNextHealed, HoldNextKilled, HoldOnceSpent;
     /// <summary>第290期（<b>計数専用</b>・カタ）: <c>CloudByCast</c>[n] n+1 回目の雷を落とした時点の雷雲の合計（8 回目以降は最後の枠）。</summary>
     public long[]? CloudByCast;
 
@@ -3123,6 +3140,13 @@ public sealed class UnitTally
         SilkDisToUnit += o.SilkDisToUnit; SilkDealt += o.SilkDealt; SilkPopsHeroRoot += o.SilkPopsHeroRoot;
         WebSpun += o.WebSpun; WebAdjacent += o.WebAdjacent; WebBalls += o.WebBalls; WebNone += o.WebNone; WebCharged += o.WebCharged; WebRecharged += o.WebRecharged; WebPops += o.WebPops;
         SwMultSum += o.SwMultSum; SwMultN += o.SwMultN; SwMultBonus += o.SwMultBonus; ChargeOnShocked += o.ChargeOnShocked; AddHist(ref SwChainHist, o.SwChainHist);
+        HoldFires += o.HoldFires; HoldReceived += o.HoldReceived; GraceGranted += o.GraceGranted; GraceStops += o.GraceStops; BridgeFired += o.BridgeFired; BridgeByPlank += o.BridgeByPlank;   // 第294期
+        BridgeByKiss += o.BridgeByKiss; BridgeGain += o.BridgeGain; BridgeSpent += o.BridgeSpent; BridgeNoHealer += o.BridgeNoHealer; BridgeNested += o.BridgeNested; BridgeBlocked += o.BridgeBlocked; BridgeHushed += o.BridgeHushed;
+        WideShoulders += o.WideShoulders; WideShoulderAmt += o.WideShoulderAmt; WideDeflects += o.WideDeflects; PressureHits += o.PressureHits; PressureCut += o.PressureCut;
+        MembraneSpread += o.MembraneSpread; MembraneHits += o.MembraneHits; MembraneSaved += o.MembraneSaved; MembraneStunSkipped += o.MembraneStunSkipped;
+        AddHist(ref PressureByLayer, o.PressureByLayer); AddHist(ref PressureHitsByLayer, o.PressureHitsByLayer); AddHist(ref MembraneBySrc, o.MembraneBySrc);
+        HoldLostStripped += o.HoldLostStripped; HoldHealerLeft += o.HoldHealerLeft; HoldNoHealer += o.HoldNoHealer; HoldAided += o.HoldAided;
+        HoldNextHit += o.HoldNextHit; HoldNextHealed += o.HoldNextHealed; HoldNextKilled += o.HoldNextKilled; HoldOnceSpent += o.HoldOnceSpent;
         // 第218期
         MireSlams += o.MireSlams; MireSlamDry += o.MireSlamDry; MireSlamOnShocked += o.MireSlamOnShocked; MireSlamPops += o.MireSlamPops;
         MireConductPops += o.MireConductPops; MireSlamDealt += o.MireSlamDealt; MireSlamKills += o.MireSlamKills;

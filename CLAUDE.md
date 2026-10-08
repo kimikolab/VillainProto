@@ -185,21 +185,21 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 
 **本文と索引は `design/RULES_*.md`**（`RULES_001_097.md` / `RULES_098_173.md` / `RULES_174_242.md` / `RULES_243_.md`・索引の表は `design/RULES_INDEX.md`）。
 **ID（`R001`〜）で grep すること。ID は永続で、欠番になっても再利用しない。**
-新しい則は `RULES_243_.md` の末尾に次の ID（`R389` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
+新しい則は `RULES_243_.md` の末尾に次の ID（`R391` から）で本文を書き、`RULES_INDEX.md` に1行足す。既存の則が再発したときは新しい ID を作らず、本文側に `#### R0nn の再発（第nn期）` の段落を足して索引の `期` 欄に期番号を足す。**`CLAUDE.md` に本文を書かない。**
 
 ## 現状値
 
 **期ごとの報告は `design/HISTORY_PHASES.md`**（この節から逐語で移した。以後の期はそちらの冒頭に足し、ここのブロックは差し替える）。
 
-**最後に動かした期: 第293期**（**カタを KR-∞（雷雲の上限なし）に規定化 ＋ クグの網 KW-a ／ KW-b とシガの連鎖の鞭 SW-a ／ SW-b の測定（クグ・シガの規定は動かしていない・採否はポン）**。報告は `design/PHASE293_SHOCK_WEB.md`）。第292期のクグの糸玉（盤面の駒の列の外の置物 `BattleContext.SilkBalls`）は `design/PHASE292_KUGU_SILKBALL.md`。第291期のクグ KG-b の規定化と試遊の準備は `design/PHASE291_PLAYTEST_PREP.md`（台本は `design/PHASE291_CODEX_MEMO.md`）。第290期のシガ SI-b ／ カタ KR-b の規定化とクグの糸の測定は `design/PHASE290_SHOCK_SQUAD.md`、第289期のシガの割り込み・カタの雷雲・ベニ×トウの切り分けは `design/PHASE289_SHOCK_ATTACKERS.md`、第288期のシガの蓄電の版の測定は `design/PHASE288_SHIGA_CHARGE.md`、第287期のトウの規定化（T3）と感電軸の台探索は `design/PHASE287_SHOCK_AXIS_GRID.md`、第286期のミサ M-b の規定化とトウ T3 の測定は `design/PHASE286_TOU_SPREAD.md`、第285期の改名・羽・`CLAUDE.md` の圧縮は `design/PHASE285_MISA_FEATHERS.md`、第284期の精鋭波は `design/PHASE284_ELITE_WAVE.md`、第283期のボスの標台（標軸の格子）は `design/PHASE283_BOSS_MARK_SQUAD.md`、第279期のトウの転生と凍結庫は `design/PHASE279_TOU_REBIRTH.md`、第280期の sweep 現役網は `design/PHASE280_SWEEP_REBUILD.md`。転生段の棚卸しは `design/PHASE275_ROSTER_INVENTORY.md`、レリック段のまとめは `design/RELIC_SUMMARY.md`。
+**最後に動かした期: 第294期**（**クグを KW-a（帯電の網）・シガを SW-a（連鎖の鞭）に規定化 ＋ 守りの版 ヒサ HS-a ／ HS-c ／ HS-d（参考 HS-a′）・ソラ SR-a ／ SR-b・ソム SM-a ／ SM-b の測定（ヒサ・ソラ・ソムの規定は動かしていない・採否はポン）**。報告は `design/PHASE294_GUARD.md`）。第293期のカタ KR-∞ の規定化と網 ／ 連鎖の鞭の版は `design/PHASE293_SHOCK_WEB.md`。第292期のクグの糸玉（盤面の駒の列の外の置物 `BattleContext.SilkBalls`）は `design/PHASE292_KUGU_SILKBALL.md`。第291期のクグ KG-b の規定化と試遊の準備は `design/PHASE291_PLAYTEST_PREP.md`（台本は `design/PHASE291_CODEX_MEMO.md`）。第290期のシガ SI-b ／ カタ KR-b の規定化とクグの糸の測定は `design/PHASE290_SHOCK_SQUAD.md`、第289期のシガの割り込み・カタの雷雲・ベニ×トウの切り分けは `design/PHASE289_SHOCK_ATTACKERS.md`、第288期のシガの蓄電の版の測定は `design/PHASE288_SHIGA_CHARGE.md`、第287期のトウの規定化（T3）と感電軸の台探索は `design/PHASE287_SHOCK_AXIS_GRID.md`、第286期のミサ M-b の規定化とトウ T3 の測定は `design/PHASE286_TOU_SPREAD.md`、第285期の改名・羽・`CLAUDE.md` の圧縮は `design/PHASE285_MISA_FEATHERS.md`、第284期の精鋭波は `design/PHASE284_ELITE_WAVE.md`、第283期のボスの標台（標軸の格子）は `design/PHASE283_BOSS_MARK_SQUAD.md`、第279期のトウの転生と凍結庫は `design/PHASE279_TOU_REBIRTH.md`、第280期の sweep 現役網は `design/PHASE280_SWEEP_REBUILD.md`。転生段の棚卸しは `design/PHASE275_ROSTER_INVENTORY.md`、レリック段のまとめは `design/RELIC_SUMMARY.md`。
 **改名の対応（第285期）**: 止めのトメ → 見境なしのミサ（`Id = "tome"`・識別子 `UnitCatalog.Tome` ほかは据え置き）／ 行名 `止め (トメ×ソラ)` → `見境 (ミサ×ソラ)`・`止め改 (トメ×薙ぎ)` → `見境改 (ミサ×薙ぎ)`・`標経済 (ヒサ×ザン×トメ)` → `標経済 (ヒサ×ザン×ミサ)` ／ 精鋭の波 `精鋭・五` → `近衛`・`精鋭・九` → `大隊`。過去の `design/` は旧名のまま（名前で引く器具は `Common.UnitRenames`）。
-**最後に `compare` が動いた期: 第290期**（規定のシガ SG-a → SI-b・カタ S3 → KR-b。動いたのは 責め苦 第5波 87.0 → 89.0 と 感電 第2波 62.0 → 67.5・第3波 80.5 → 82.5・第5波 86.5 → 87.5 だけ・ほかの 62 行 310 セルは 0 件）。第291期のクグの規定化（KG-b）・第292期の糸玉の版・第293期のカタの規定化（KR-∞）は 0 件。過去の器具のシガは `ShigaG3K` ／ `ShigaSGa`、カタは `KataS3` ／ `KataKRb`、トウは `TouT0`、クグは `KuguKG0` に固定してある。
+**最後に `compare` が動いた期: 第294期**（規定のクグ KG-b → KW-a・シガ SI-b → SW-a。動いたのは 溜め改 第2波 28.0 → 89.0・第3波 99.0 → 100・第5波 60.0 → 73.0 ／ 縛め収入型 第5波 98.5 → 100 ／ 責め苦 第5波 89.0 → 92.5 ／ 感電 第2波 67.5 → 68.0・第3波 82.5 → 83.5 だけ）。過去の器具のシガは `ShigaG3K` ／ `ShigaSGa` ／ `ShigaSIb`、カタは `KataS3` ／ `KataKRb`、トウは `TouT0`、クグは `KuguKG0` ／ `KuguKGb` に固定してある（第294期の固定は `Kugu292Diag.Pin294`）。
 
     編成:       64 行（`CompareBuilds()`・第281期に 63 → 64）＋ 交差帯 12 行（`CrossBuilds()`）
-    全64行:     100 / 88.0 / 89.2 / 83.3 / 82.6     （第1〜5波の平均勝率・seed 0..199・`spread` §4・第290期。第289期は 88.0 ／ 82.5）
-    主判定19行: 100 / 82.5 / 89.1 / 82.4 / 79.7     （第277期・`spread` §4。第276期の HEAD は 100 / 82.5 / 88.8 / 82.4 / 79.5）
-    歯止め:     主判定の第五波 33.2%                 ← 余裕 +46.5pt
-    情報セル:   全64行 83 / 主判定 30                （第2〜5波の 0 < x < 100 のセル数・第287期にトウの規定化で 81 ／ 29 から）
+    全64行:     100 / 89.0 / 89.3 / 83.3 / 82.8     （第1〜5波の平均勝率・seed 0..199・`spread` §4・第294期。第293期は 88.0 ／ 82.6）
+    主判定19行: 100 / 85.7 / 89.1 / 82.4 / 80.5     （第294期・`spread` §4。`溜め改` が主判定行。第293期の HEAD は 100 / 82.5 / 89.1 / 82.4 / 79.7）
+    歯止め:     主判定の第五波 33.2%                 ← 余裕 +47.3pt
+    情報セル:   全64行 81 / 主判定 28                （第2〜5波の 0 < x < 100 のセル数・第294期に溜め改 ／ 縛め収入型が 100 に張り付いて 83 ／ 30 から）
     ロスター:   52 枚（上限 52・第103期に確定）。残り枠 0。入れ替えは 4 度（ハリ→トモ・エグ→ガレ・キリ→スス・ナタ→カタ）
     敵の倍率:   115 / 115（第187期）
 

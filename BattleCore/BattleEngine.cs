@@ -494,6 +494,8 @@ public enum OutOfTurnRoute
     MoveShot,
     /// <summary>感電の割り込み（<c>ShockWhipTrait</c>・第289期。<b>問う相手はシガ</b>）。</summary>
     ShockWhip,
+    /// <summary>橋（<c>BeckonBridge</c>・第294期 HS-c。<b>問う相手は癒し手</b>——踏みとどまった味方ではない）。</summary>
+    Bridge,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -503,7 +505,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -1522,6 +1524,9 @@ public sealed class BattleContext
             return false;
         }
         target.SetCounter(StatusKeys.Shock, 1);
+        // 第294期（計数のみ）: 膜の保持者がいる戦だけ、いまの帯電の書き手の種類を控える（0 トウ ／ 1 カタ ／ 2 ソム ／ 3 ほかの味方 ／ 4 敵）。
+        if (_membraneHolders.Count > 0)
+            _shockWriterCat[target.InstanceId] = writer.TeamId != target.TeamId ? 4 : writer.Def.Id == "tou" ? 0 : writer.Def.Id == "kata" ? 1 : writer.Def.Id == "som" ? 2 : 3;
         UnitTally wt = TallyOf(writer);
         if (writer.TeamId == target.TeamId) wt.ShockOnAlly++; else wt.ShockOnFoe++;
         TallyOf(target).ShockReceived++;   // 第217期（計数のみ）
@@ -1847,6 +1852,8 @@ public sealed class BattleContext
         UnitTally t = TallyOf(x);
         if (!x.IsAlive) { t.ShockStunDead++; return; }
         if (_shockStun == 1 && depth != 0) return;
+        // 第294期（SM-b・痺れない膜）: ソムが生きている間、その陣営の駒は弾けても痺れない（乱数も引かない）。保持者がいなければ件数の比較1つで抜ける。
+        if (_membraneHolders.Count > 0 && MembraneOf(x.TeamId, noStun: true) is not null) { t.MembraneStunSkipped++; return; }
         // 第217期（G3H）: 痺れが明けた駒は、次の自分の手番まで感電で痺れない。保持者がいなければ比較1つで抜ける。
         if (_shockStunGuard && x.RawCounter(ShockRule.GuardKey) > 0) { t.ShockStunGuarded++; return; }
         if (_shockStun == 3 && Roll(100) >= ShockRule.StunHalfPercent) { t.ShockStunMissed++; return; }
@@ -7607,6 +7614,10 @@ public sealed class BattleContext
             || u.HasTrait(TraitId.Beckon) || u.HasTrait(TraitId.Vendetta)) MarkActive = true;   // 第184期に2本
         if (u.HasTrait(TraitId.Beckon)) _beckonHolders.Add(u);   // 第184期（半減の判定の短絡）
         if (u.HasTrait(TraitId.Deflect)) _deflectHolders.Add(u); // 第186期（逸らしの判定の短絡）
+        if (u.HasTrait(TraitId.BeckonHold)) _holdLive = true;              // 第294期（踏みとどまり・猶予・橋）
+        if (u.HasTrait(TraitId.DeflectWide)) _wideHolders.Add(u);          // 第294期（SR-a・肩代わりと範囲の逸らし）
+        if (u.HasTrait(TraitId.DivertPressure)) _pressureHolders.Add(u);   // 第294期（SR-b・重圧）
+        if (u.HasTrait(TraitId.StaticMembrane)) _membraneHolders.Add(u);   // 第294期（SM・静電気の膜）
         if (u.HasTrait(TraitId.Thrust) || u.HasTrait(TraitId.ThrustPlain)) _thrustLive = true;   // 第186期 追補
         if (HeroShieldTrait.Holds(u)) _heroShieldLive = true;   // 第267期（勇者の庇い）
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
@@ -7791,6 +7802,8 @@ public sealed class BattleContext
     /// </summary>
     public UnitState? MostHurtAlly(UnitState self, Func<UnitState, bool>? filter)
     {
+        // 第294期（HS-c・橋）: 橋の割り込みの中だけ、受け手を踏みとどまった味方に固定する（`BeckonBridgeFire` が立てて消す）。橋が無ければ比較1つで抜ける。
+        if (_bridgePatient is { } bp && bp.IsAlive && bp.TeamId == self.TeamId && bp != self) return bp;
         var hurt = LivingMembers(self.TeamId)
             .Where(a => a != self && a.AcceptsSupport && a.Hp < a.MaxHp)
             .Where(a => filter is null || filter(a)).ToList();
@@ -10834,6 +10847,27 @@ public sealed class BattleContext
         // 反撃・割り込み・追い打ち・再行動もここを通る。**保持者がいなければ比較1つで抜ける。**
         if (_mireDull != 0) atk = MireCut(actor, atk, 0);
 
+        // 重圧（第294期・SR-b・`DivertPressureTrait`）。**澱みの直後・同じ段**（出どころの側の修正・切り捨て）。標を持つ敵（書き手を問わない）の一撃が
+        // 層 × 15%（上限 45%）軽くなる——相手陣営に生きている保持者がいる間だけ。**保持者がいなければ件数の比較1つで抜ける。乱数を引かない。**
+        if (_pressureHolders.Count > 0 && atk > 0 && actor.RawCounter(StatusKeys.Marked) > 0)
+        {
+            UnitState? pr = null;
+            foreach (UnitState h in _pressureHolders) if (h.IsAlive && h.TeamId != actor.TeamId) { pr = h; break; }
+            if (pr is not null)
+            {
+                int layers = actor.RawCounter(StatusKeys.Marked);
+                int pct = Math.Min(layers * DivertPressureTrait.PercentPerLayer, DivertPressureTrait.MaxPercent);
+                int cut = atk * pct / 100;
+                atk -= cut;
+                UnitTally pt = TallyOf(pr);
+                pt.PressureHits++;
+                pt.PressureCut += cut;
+                (pt.PressureByLayer ??= new long[4])[Math.Min(layers, 3)] += cut;
+                (pt.PressureHitsByLayer ??= new long[4])[Math.Min(layers, 3)]++;
+                if (cut > 0) Log($"    指差された {actor.Name} は手元が狂った（-{pct}%・この一撃 -{cut}）", LogKind.Status);
+            }
+        }
+
         string label = pattern switch
         {
             AttackPattern.Sweep => " 薙ぎ",
@@ -11285,8 +11319,20 @@ public sealed class BattleContext
         _brittleSlamNext = false;
         bool burstHit = _burstHitNext;   // 第220期（計数の経路だけ）
         _burstHitNext = false;
+        bool wideRelay = _wideNext;      // 第294期（SR-a の肩代わりの段・1回の呼び出しにだけ効く・ここで読んで消す）
+        _wideNext = false;
 
         if (!target.IsAlive || amount <= 0) return;
+
+        // 第294期（計数のみ）: 踏みとどまった駒が次に受けた敵の攻撃（癒やされていたか・その一撃で倒れたか）。踏みとどまりの保持者がいなければ比較1つで抜ける。
+        UnitState? holdWatchBy = null;
+        if (_holdLive && _holdWatch.Count > 0 && source is not null && source.TeamId != target.TeamId && !burnTick && !levy && !relayed && !hexShare && !isFriendlyFire
+            && _holdWatch.Remove(target.InstanceId, out holdWatchBy))
+        {
+            UnitTally wt = TallyOf(holdWatchBy);
+            wt.HoldNextHit++;
+            if (target.Hp > 1 || target.RawCounter(StatusKeys.Armor) > 0) wt.HoldNextHealed++;
+        }
 
         // 回避（第223期・逃げ上手のセロ・`EvadeTrait`）。**札を読んで消した直後・逸らしより前**——避けて返っても次の呼び出しに札が漏れず、
         // 破片・受け流し・軛・`OnDamaged` はすべて後ろなので、避けた一撃は破片も減らさない。
@@ -11314,8 +11360,13 @@ public sealed class BattleContext
         // 対象は「敵陣営の出どころを持つ主目標への一撃」だけ（`pattern == Single` は PerformAttack の主目標にしか立たない）。
         // 刻み・徴収・中継・共有・同士討ちは逸らさない。**保持者がいなければリストが空で比較1つで抜ける。**
         bool deflectedHere = false;
-        if (_deflectHolders.Count > 0 && pattern == AttackPattern.Single && source is not null
-            && source.TeamId != target.TeamId && !burnTick && !levy && !relayed && !hexShare && !isFriendlyFire
+        // 第294期（SR-a）: 肩代わりの保持者は、単体以外の敵の一撃（主目標・巻き込み・貫き・全体）と、自分が肩代わりで受けた段も逸らす。
+        // 保持者がいなければ `wideOk` は偽で、条件は第186期のまま（評価の順も変えない）。
+        bool wideOk = _wideHolders.Count > 0 && source is not null && source.TeamId != target.TeamId && !burnTick && !levy && !hexShare
+            && (wideRelay || (pattern is not null && pattern != AttackPattern.Single && !relayed && !isFriendlyFire))
+            && target.HasTrait(TraitId.DeflectWide);
+        if (_deflectHolders.Count > 0 && (wideOk || (pattern == AttackPattern.Single && source is not null
+            && source.TeamId != target.TeamId && !burnTick && !levy && !relayed && !hexShare && !isFriendlyFire))
             && target.HasTrait(TraitId.Deflect) && !HoleSkip(target))   // 第229期: 転倒の穴
         {
             UnitTally dt = TallyOf(target);
@@ -11336,6 +11387,7 @@ public sealed class BattleContext
                 amount -= moved;
                 deflectedHere = true;
                 dt.DeflectHits++;
+                if (wideOk) dt.WideDeflects++;   // 第294期（計数のみ）
                 dt.DeflectMoved += moved;
                 if (route == 0) dt.DeflectToPointed++; else if (route == 1) dt.DeflectToOtherMarked++; else dt.DeflectToFallback++;
                 // 突き（第186期 追補）の回数。**逸らしが実際に起きたときだけ**積む（Q0-8）。
@@ -11551,6 +11603,25 @@ public sealed class BattleContext
             }
         }
 
+        // 静電気の膜（第294期・SM・`StaticMembraneTrait`）: ソムが生きている間、帯電している味方への敵の攻撃は半分。**軽減の族**（矢面の直後・層の手前）。
+        // 矢面と同じ条件（相手陣営の出どころ・刻み／徴収／中継／共有ではない）に同士討ちの除外を足す——放電・トウの漏れ・カタの雷の漏れは半分にしない。
+        // HP に届けば感電は普段どおり弾ける（起爆の段は下のまま）。**保持者がいなければ件数の比較1つで抜ける。乱数を引かない。**
+        if (_membraneHolders.Count > 0 && source is not null && source.TeamId != target.TeamId
+            && !burnTick && !levy && !relayed && !hexShare && !isFriendlyFire
+            && target.RawCounter(StatusKeys.Shock) > 0 && MembraneOf(target.TeamId) is UnitState mem)
+        {
+            int saved = amount * StaticMembraneTrait.GuardPercent / 100;
+            if (saved > 0)
+            {
+                amount -= saved;
+                UnitTally mt = TallyOf(mem);
+                mt.MembraneHits++;
+                mt.MembraneSaved += saved;
+                (mt.MembraneBySrc ??= new long[5])[_shockWriterCat.TryGetValue(target.InstanceId, out int wc) ? wc : 4]++;
+                Log($"    帯電した {target.Name} の膜が一撃を半分に抑えた（-{saved}）", LogKind.Trigger);
+            }
+        }
+
         // 据えの層（第185期・FootingTrait）: 1層ごとに被ダメ −10%。**軽減の族**（矢面の直後、肩代わり・破片・軛より前）。
         // 範囲の盾で代わりに受けた分にもここで乗る（盾はこの駒への ApplyDamage として入ってくる）。
         // **保持者がいなければ比較1つで抜ける。**
@@ -11615,6 +11686,32 @@ public sealed class BattleContext
         }
 
         if (amount <= 0) return;
+
+        // 肩代わり（第294期・SR-a・`DeflectWideTrait`）。**肩代わりの族の先頭**（巨躯・分かちの手前・軽減の族の後）——ソラが受けるのは
+        // 味方の側の軽減（矢面・膜・層など）を通った後の量の半分。単体以外の敵の攻撃（相手陣営の出どころ・刻み／徴収／中継／共有／同士討ちではない）だけ。
+        // **`u != source`**（敵の出どころなので自明だが作法として入れる）・ソラ自身・倒れたソラは除く。受けた段はソラの側で逸らし（入口）が掛かる。
+        // **保持者がいなければ件数の比較1つで抜ける。乱数を引かない**（保持者が複数なら席番号の若い方）。
+        if (_wideHolders.Count > 0 && source is not null && source.TeamId != target.TeamId
+            && pattern is not null && pattern != AttackPattern.Single
+            && !burnTick && !levy && !relayed && !hexShare && !isFriendlyFire && !target.HasTrait(TraitId.DeflectWide))
+        {
+            UnitState? sora = null;
+            foreach (UnitState w in _wideHolders)
+                if (w.IsAlive && w.TeamId == target.TeamId && w != target && w != source && (sora is null || w.Slot < sora.Slot)) sora = w;
+            int taken = sora is null ? 0 : amount * DeflectWideTrait.Percent / 100;
+            if (sora is not null && taken > 0)
+            {
+                amount -= taken;
+                UnitTally wt = TallyOf(sora);
+                wt.WideShoulders++;
+                wt.WideShoulderAmt += taken;
+                Log($"    {sora.Name} が {target.Name} への一撃を半分引き受けた（{taken}）", LogKind.Trigger);
+                _wideNext = true;
+                ApplyDamage(sora, taken, source, isFriendlyFire: true, burnTick: burnTick, relayed: true, levy: levy, pattern: pattern);
+                _wideNext = false;
+                if (!target.IsAlive || amount <= 0) return;
+            }
+        }
 
         // 巨躯: 自分より前の列に立つ壁が、後ろの味方への攻撃を引き受ける。
         // 標的選択（庇う・後備え）と違って damage の層なので、薙ぎ・全体・貫きの一発ずつを拾える。
@@ -11930,6 +12027,20 @@ public sealed class BattleContext
             Log($"    {target.Name} は倒れるはずの一撃を堪えた（残り 1）", LogKind.Trigger);
         }
 
+        // 踏みとどまり（第294期・HS・`BeckonHoldTrait`）。**猶予の直後・同じ出口**（「殺さない」制約の族・軛より前）。
+        // 敵の攻撃（相手陣営の出どころ・刻み／徴収／中継／共有／同士討ちではない）の倒れる一撃だけ。HS-d の猶予の間は標が無くても止まる。
+        // 標で止めたら標を剥がす。**保持者がいなければ比較1つで抜ける。乱数を引かない。**
+        UnitState? holdBy = null;
+        if (_holdLive && amount >= target.Hp && source is not null && source.TeamId != target.TeamId
+            && !burnTick && !levy && !relayed && !hexShare && !isFriendlyFire)
+            holdBy = Hold(target, source);
+        if (holdBy is not null) amount = Math.Max(0, target.Hp - 1);
+        if (holdBy is not null && amount <= 0)
+        {
+            if (holdBy.HasTrait(TraitId.BeckonBridge)) BeckonBridgeFire(holdBy, target);
+            return;
+        }
+
         // 不死（UndyingTrait・第129期）: **器具であって機構ではない。**
         // 「守れたら起動するのか」を測る延命台（段2）のための札で、`UnitCatalog.All` には
         // 保持者が1枚もいない。**猶予の直後・同じ出口**に置く——`lethal: false` のクランプの
@@ -12199,6 +12310,14 @@ public sealed class BattleContext
                 this.EndTrait(m);
             }
         }
+
+        // 第294期（HS-c・橋）: 踏みとどまった一撃の通知が済んだ後に、癒し手を手番の外で1度動かす（応急処置など既存の反応の後）。
+        if (holdBy is not null)
+        {
+            if (TallyOf(target).FirstAidReceived > _holdAidBase) TallyOf(holdBy).HoldAided++;   // 計数のみ（同じ一撃でツギの応急処置が先に届いた）
+            if (holdBy.HasTrait(TraitId.BeckonBridge)) BeckonBridgeFire(holdBy, target);
+        }
+        if (holdWatchBy is not null && target.Hp <= 0) TallyOf(holdWatchBy).HoldNextKilled++;   // 計数のみ
 
         if (target.Hp <= 0)
         {
@@ -12698,6 +12817,138 @@ public sealed class BattleContext
                                patternOverride: act.PatternOverride);
         }
     }
+
+    // =====================================================================================
+    // 第294期 —— 守りの版（指示書 design/PHASE294_GUARD_SPEC.md §3）。ヒサの踏みとどまり（HS 土台）・橋（HS-c）・猶予（HS-d）／
+    // ソラの肩代わり（SR-a）・重圧（SR-b）／ ソムの静電気の膜（SM 土台）・痺れない膜（SM-b）。
+    // **保持者がいなければどの口も比較1つで抜ける。乱数を引かない**（`PickOne` ／ `Roll` を新たに呼ばない）。
+    // 1戦の中だけの状態（猶予の期限・橋のターン・帯電の書き手）は `BattleContext` の辞書に置く——戦ごとに作り直されるので会戦の境界で消す手間が要らない。
+    // =====================================================================================
+    bool _holdLive;
+    readonly List<UnitState> _wideHolders = new(), _pressureHolders = new(), _membraneHolders = new();
+    /// <summary>次の <c>ApplyDamage</c> 1回にだけ効く札: SR-a の肩代わりでソラが受ける段（`ApplyDamageBody` の最初で読んで消す）。</summary>
+    bool _wideNext;
+    /// <summary>計数のみ: いまの帯電の書き手の種類（膜の保持者がいる戦だけ書く）。</summary>
+    readonly Dictionary<int, int> _shockWriterCat = new();
+    /// <summary>橋の割り込みの中だけ立つ受け手（<see cref="MostHurtAlly(UnitState, Func{UnitState, bool}?)"/> が読む）。</summary>
+    UnitState? _bridgePatient;
+    /// <summary>HS-d の猶予: 駒の <c>InstanceId</c> → 猶予が続く「自分の手番」のターン（その手番を終えるまで）。与えた駒は <see cref="_graceUsed"/>（1戦1度）。</summary>
+    readonly Dictionary<int, int> _graceFrom = new();
+    readonly HashSet<int> _graceUsed = new();
+    /// <summary>HS-a′（参考）: 一度踏みとどまった駒の <c>InstanceId</c>。</summary>
+    readonly HashSet<int> _holdOnce = new();
+    /// <summary>HS-c の橋: ヒサの <c>InstanceId</c> → 最後に架けたターン（1ターンに1度）。</summary>
+    readonly Dictionary<int, int> _bridgeTurn = new();
+    /// <summary>計数のみ: 踏みとどまった駒 → 与えたヒサ（次の敵の一撃まで見張る）／ 踏みとどまった瞬間の応急処置の受け取り数。</summary>
+    readonly Dictionary<int, UnitState> _holdWatch = new();
+    long _holdAidBase;
+
+    /// <summary>
+    /// 踏みとどまりの判定（<c>ApplyDamageBody</c> の出口・敵の攻撃の倒れる一撃でだけ呼ばれる）。止めるなら与えたヒサを返す（呼び出し側が HP 1 に切る）。
+    /// ① HS-d の猶予の間なら標を問わず止める ／ ② ヒサの標（矢面）を持ち、そのヒサが <see cref="TraitId.BeckonHold"/> を持てば止めて標を剥がす
+    /// （HS-d のヒサなら、まだ与えていない駒に猶予を与える）。
+    /// </summary>
+    UnitState? Hold(UnitState target, UnitState source)
+    {
+        if (_graceFrom.TryGetValue(target.InstanceId, out int from) && GraceActive(target, from))
+        {
+            UnitState? gby = null;
+            foreach (UnitState h in _beckonHolders) if (h.TeamId == target.TeamId && h.HasTrait(TraitId.BeckonGrace)) { gby = h; break; }
+            if (gby is not null)
+            {
+                TallyOf(gby).GraceStops++;
+                Log($"    {target.Name} は猶予の中で踏みとどまる（残り 1）", LogKind.Trigger);
+                return gby;
+            }
+        }
+        UnitState? holder = BeckonGuardOf(target);
+        if (holder is null)
+        {
+            // 計数のみ: ヒサの記憶はこの駒を指しているが、標が剥がされていて止められなかった（ソラの逸らしなど）。
+            foreach (UnitState h in _beckonHolders)
+                if (h.TeamId == target.TeamId && h.HasTrait(TraitId.BeckonHold) && h.RawCounter(BeckonTrait.TargetKey) == target.InstanceId + 1) { TallyOf(h).HoldLostStripped++; break; }
+            return null;
+        }
+        if (!holder.HasTrait(TraitId.BeckonHold)) return null;
+        // HS-a′（参考）: 同じ味方は1戦に1度だけ（指差し直されても2度目は止めない）。
+        if (holder.HasTrait(TraitId.BeckonHoldOnce) && !_holdOnce.Add(target.InstanceId)) { TallyOf(holder).HoldOnceSpent++; return null; }
+        target.SetCounter(StatusKeys.Marked, 0);
+        // ヒサの記憶も消す（決めたこと）: 記憶が残ると、標を自分で書き直す駒（ソラの逸らしの「自分に付ける」）がヒサの次の手番を待たずに踏みとどまりを
+        // 張り直し、1ターン1発の敵（ボス）に対して倒れなくなる（30 ターンの上限まで続く）。標を張り直せるのはヒサの次の指差しだけ。
+        holder.SetCounter(BeckonTrait.TargetKey, 0);
+        NoteMarkStrip(target);
+        UnitTally ht = TallyOf(holder);
+        ht.HoldFires++;
+        TallyOf(target).HoldReceived++;
+        // 計数のみ: このターンに手番の残っている癒し手がいたか（HS-a のまま橋が架かる見込み）・同じ一撃の応急処置の控え・次の一撃の見張り。
+        bool left = false, any = false;
+        foreach (UnitState u in LivingMembers(target.TeamId))
+            if (u.HasTrait(TraitId.Plank) || KissTrait.Holds(u)) { any = true; if (u.TakenTurn < _turn) left = true; }
+        if (left) ht.HoldHealerLeft++; else if (!any) ht.HoldNoHealer++;
+        _holdAidBase = TallyOf(target).FirstAidReceived;
+        _holdWatch[target.InstanceId] = holder;
+        Log($"    矢面の {target.Name} は倒れる一撃に踏みとどまった（残り 1・標が剥がれた）", LogKind.Highlight);
+        if (holder.HasTrait(TraitId.BeckonGrace) && _graceUsed.Add(target.InstanceId))
+        {
+            // 次の自分の手番: このターンにまだ動いていなければこのターンの手番、動いた後（か動いている最中）なら次のターンの手番。
+            _graceFrom[target.InstanceId] = target.TakenTurn < _turn ? _turn : _turn + 1;
+            ht.GraceGranted++;
+            Log($"    {target.Name} は次に動き終えるまで倒れない", LogKind.Trigger);
+        }
+        return holder;
+    }
+
+    /// <summary>HS-d の猶予が続いているか: 期限の手番をまだ迎えていない、または期限の手番の最中。</summary>
+    bool GraceActive(UnitState u, int from) => u.TakenTurn < from || (u.TakenTurn == from && ReferenceEquals(TurnActor, u));
+
+    /// <summary>
+    /// HS-c の橋（<see cref="TraitId.BeckonBridge"/>）。踏みとどまった直後に、味方の癒し手（ツギ ＝ 板を貼る ／ リリ ＝ 施す・席番号の若い方）が手番の外で1度動き、
+    /// その味方へ向ける。<b>1ターンに1度</b>（架かったときだけ数える）。割り込みの作法は応急処置と同じ: 割り込み・反撃の中では出ない ／
+    /// <c>CanActOutOfTurn(癒し手, Bridge)</c> を通す（痺れ・組み付き・粛で止まる）／ 本体は <c>Interrupt</c> で包む。<b>乱数を引かない</b>（リリの吸う相手の選び方は手番と同じ）。
+    /// </summary>
+    void BeckonBridgeFire(UnitState hisa, UnitState held)
+    {
+        UnitTally t = TallyOf(hisa);
+        if (!held.IsAlive) return;
+        if (_bridgeTurn.TryGetValue(hisa.InstanceId, out int bt) && bt == _turn) { t.BridgeSpent++; return; }
+        UnitState? healer = null;
+        foreach (UnitState u in LivingMembers(held.TeamId))
+            if ((u.HasTrait(TraitId.Plank) || KissTrait.Holds(u)) && (healer is null || u.Slot < healer.Slot)) healer = u;
+        if (healer is null) { t.BridgeNoHealer++; return; }
+        if (InInterrupt || InReaction) { t.BridgeNested++; return; }
+        var foes = LivingMembers(Opponent(held.TeamId));
+        if (foes.Count == 0) return;
+        if (!CanActOutOfTurn(healer, OutOfTurnRoute.Bridge)) { if (HushBindingNow) t.BridgeHushed++; else t.BridgeBlocked++; return; }
+        _bridgeTurn[hisa.InstanceId] = _turn;
+        t.BridgeFired++;
+        int before = held.Hp + held.RawCounter(StatusKeys.Armor);
+        bool plank = healer.HasTrait(TraitId.Plank);
+        if (plank) t.BridgeByPlank++; else t.BridgeByKiss++;
+        Log($"    踏みとどまった {held.Name} へ {healer.Name} が駆けつける", LogKind.Highlight, healer);
+        Interrupt(() =>
+        {
+            if (plank) PlankTrait.Paste(this, healer, held, foes, firstAid: false);
+            else
+            {
+                UnitState? prev = _bridgePatient;
+                _bridgePatient = held;
+                try { KissTrait.Act(this, healer, KissTrait.DrainPercent, rite: true); }
+                finally { _bridgePatient = prev; }
+            }
+        });
+        t.BridgeGain += Math.Max(0, held.Hp + held.RawCounter(StatusKeys.Armor) - before);
+    }
+
+    /// <summary>その陣営の生きている膜の保持者（<paramref name="noStun"/> なら痺れない膜を持つ者だけ）。いなければ null。</summary>
+    UnitState? MembraneOf(int team, bool noStun = false)
+    {
+        foreach (UnitState h in _membraneHolders)
+            if (h.IsAlive && h.TeamId == team && (!noStun || h.HasTrait(TraitId.MembraneNoStun))) return h;
+        return null;
+    }
+
+    /// <summary>膜で新しく帯電させた数（<see cref="StaticMembraneTrait"/> だけが呼ぶ・<b>計数のみ</b>）。</summary>
+    public void NoteMembraneSpread(UnitState som, int n) => TallyOf(som).MembraneSpread += n;
 
     // =====================================================================================
     // 第277期 —— 豆鉄砲（`PelletTrait`・ノミの転生の版 N1 ／ N2）。**保持者がいなければ `_pelletLive` の比較1つで全部抜ける。乱数を引かない。**

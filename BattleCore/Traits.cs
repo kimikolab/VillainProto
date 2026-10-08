@@ -662,11 +662,20 @@ public enum TraitId
     SilkBallSteadfast, // 糸玉（KB-a）: 組み付いた相手が動じない（`Grappled` が付かない）とき、その相手の隣の空き席に帯電した糸玉を1つ張る（**札そのものは挙動を持たない**・`GrappleTrait` が読み、engine の `PlaceSilkBall` が張る）
     SilkBallEvery,     // 糸玉（KB-b）: 新しく組み付くたび（止められる相手にも）、その相手の隣の空き席に帯電した糸玉を1つ張る（**札そのものは挙動を持たない**・同上）
     ThundercloudUncapped, // 雷雲の上限なし（KR-∞）: 雷雲が残る（KR-b）の上限 8 を外す（**札そのものは挙動を持たない**・engine の `AfterChain` が読む）
-    // --- 第293期で足した札（クグの網の版 `UnitCatalog.KuguKWa` ／ `KuguKWb`、シガの直し `ShigaSWa` ／ `ShigaSWb` だけが持つ） ---
+    // --- 第293期で足した札（クグの網の版 `UnitCatalog.KuguKWa` ／ `KuguKWb`、シガの直し `ShigaSWa` ／ `ShigaSWb` だけが持つ。第294期に KW-a ／ SW-a が規定になった） ---
     WebCharge,       // 帯電の網（KW-a）: 組み付いている間、手番ごとに糸を1本張る（隣の敵 → ほかの敵 → 糸玉）。糸の敵は毎ターン頭に帯電し直す。止められない相手には代わりに糸玉（**札そのものは挙動を持たない**・`GrappleTrait` → engine の `SpinWeb`）
     WebSnare,        // 絡まる網（KW-b）: 同じく糸を張る。糸の敵は速さ −3（行動順だけ・重ならない）。帯電はしない（同上・速さは engine の `TurnSpeed`）
     ShockWhipChain,  // 連鎖の鞭（SW-a）: 割り込みの鞭が × (1 ＋ 合図の連鎖で弾けた数)（糸玉を含む・2倍の後）（**札そのものは挙動を持たない**・engine の `ShockWhip` ／ `WhipAmount`）
     StoredChargeEvery, // 浴びるたびの蓄電（SW-b）: すでに帯電していても感電を付けられようとしたら蓄電 +1（上限 4 のまま）（**札そのものは挙動を持たない**・engine の `MarkShock`）
+    // --- 第294期で足した札（守りの版: ヒサ `UnitCatalog.HisaHSa` ／ `HisaHSc` ／ `HisaHSd`、ソラ `SoraSRa` ／ `SoraSRb`、ソム `SomSMa` ／ `SomSMb` だけが持つ） ---
+    BeckonHold,      // 踏みとどまり（HS 土台）: ヒサの標を持つ味方は、敵の攻撃の倒れる一撃を HP 1 で止める。止めたら標は剥がれる（**札そのものは挙動を持たない**・engine の `ApplyDamageBody` の出口）
+    BeckonBridge,    // 橋（HS-c）: 踏みとどまった瞬間、味方の癒し手（リリ ／ ツギ）が手番の外で1度動き、その味方へ向ける・1ターンに1度（同上・engine の `BeckonBridgeFire`）
+    BeckonGrace,     // 猶予（HS-d）: 踏みとどまった味方は、次の自分の手番の終わりまで倒れない（敵の攻撃は HP 1 で止まる）・1体につき1戦1度（同上）
+    DeflectWide,     // 肩代わり（SR-a）: 単体以外の敵の攻撃で、ソラ以外の味方が受ける一撃の半分をソラが代わりに受ける。ソラが受けた範囲の一撃・肩代わりの分も逸らす（同上・engine の肩代わりの族と逸らしの入口）
+    DivertPressure,  // 重圧（SR-b）: ソラが生きている間、標を持つ敵の与えるダメージが 層 × 15%（上限 45%）下がる（同上・engine の `PerformAttackBody`）
+    StaticMembrane,  // 静電気の膜（SM 土台）: 手番の頭（喚び出しの後）に自分と隣の味方を帯電させる。ソムが生きている間、帯電した味方への敵の攻撃は半分（`StaticMembraneTrait`・半分は engine の軽減の族）
+    BeckonHoldOnce,  // 一度きりの踏みとどまり（HS-a′・参考・指示書に無い）: 同じ味方は1戦に1度しか踏みとどまらない（ヒサが指差し直しても）（**札そのものは挙動を持たない**・engine の `Hold`）
+    MembraneNoStun,  // 痺れない膜（SM-b）: ソムが生きている間、味方は弾けても痺れない（放電は流れる）（**札そのものは挙動を持たない**・engine の `StunByShock`）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -13319,6 +13328,73 @@ public sealed class ThundercloudKeepTrait : Trait
 }
 
 // =====================================================================================
+// 第294期 —— 守りの版（指示書 design/PHASE294_GUARD_SPEC.md §3）。ヒサ（踏みとどまり・橋・猶予）／ ソラ（肩代わり・重圧）／ ソム（静電気の膜・痺れない膜）。
+// 判定はどれも engine 側（`ApplyDamageBody` ／ `PerformAttackBody` ／ `StunByShock`）で、札は定数と発火口だけを持つ。
+// **保持者がいなければ engine の比較1つで抜ける。乱数を引かない**（新しい口に `PickOne` ／ `Roll` を置かない）。
+// =====================================================================================
+
+/// <summary>
+/// 踏みとどまり（第294期・HS 土台）／ 橋（HS-c）／ 猶予（HS-d）。<b>札そのものは挙動を持たない</b>——engine の <c>ApplyDamageBody</c> の出口
+/// （猶予 <see cref="ReprieveTrait"/> の直後・軛より前）が保持を読む。
+/// <para>ヒサの標（<see cref="BeckonTrait"/>）を持つ味方が、<b>敵の攻撃</b>（相手陣営の出どころ・刻み／徴収／中継／共有／同士討ちではない）で
+/// 倒れる一撃を受けたら HP 1 で止め、その味方の標を剥がす（ヒサは次の手番でまた指差す）。型は問わない（全体・薙ぎ・貫き・単体）。
+/// 刻み・放電・徴収・同士討ちでは止めない。</para>
+/// </summary>
+public sealed class BeckonHoldTrait : Trait
+{
+    readonly TraitId _id;
+    public BeckonHoldTrait(TraitId id) => _id = id;
+    public override TraitId Id => _id;
+}
+
+/// <summary>
+/// 肩代わり（第294期・SR-a・ソラ）。単体以外の敵の攻撃（薙ぎの巻き込み・貫き・全体）で、<b>ソラ以外の味方が受ける一撃の <see cref="Percent"/>% を
+/// ソラが代わりに受ける</b>（肩代わりの族・巨躯の手前）。ソラが受けた分（自分への範囲の一撃を含む）は、単体の一撃と同じく半分を指差した敵へ逸らし、
+/// 逸らした数に数える（逸らしの入口がこの札の保持を読む）。<b>ソラが倒れたら肩代わりしない。</b> 判定は engine。
+/// </summary>
+public sealed class DeflectWideTrait : Trait
+{
+    /// <summary>ソラが代わりに受ける割合（%）。指示書が<b>測る前に固定</b>した値。</summary>
+    public const int Percent = 50;
+    public override TraitId Id => TraitId.DeflectWide;
+}
+
+/// <summary>
+/// 重圧（第294期・SR-b・ソラ）。<b>ソラが生きている間、標を持つ敵（書き手を問わない）の与えるダメージが下がる</b>——
+/// 層 × <see cref="PercentPerLayer"/>%（上限 <see cref="MaxPercent"/>%）。層はミサのいない戦では 1（<c>BattleContext.MarkLayers</c> の規則のまま）。
+/// 置き場所はミオの澱みのデバフと同じ段（<c>PerformAttackBody</c> が打点を作った後・出どころの側の修正）。判定は engine。
+/// </summary>
+public sealed class DivertPressureTrait : Trait
+{
+    public const int PercentPerLayer = 15, MaxPercent = 45;
+    public override TraitId Id => TraitId.DivertPressure;
+}
+
+/// <summary>
+/// 静電気の膜（第294期・SM 土台・ソム）。<b>手番の頭（喚び出しの後）に、自分と隣の味方を帯電させる</b>（<see cref="BattleContext.MarkShock"/>・書き手はソム）。
+/// ソムが生きている間、<b>帯電している味方への敵の攻撃の一撃は <see cref="GuardPercent"/>%</b> に減る（engine の軽減の族・矢面の直後）。
+/// その一撃が HP に届けば感電は普段どおり弾ける（膜は一撃で破れる）。放電・刻み・同士討ち（トウの漏れ・カタの雷の漏れ）は半分にしない。
+/// <para>札の並びが実行順——ソムの札は <c>[BetrayedShockNoThunder, StaticMembrane]</c> なので、喚んでから膜を張る。</para>
+/// </summary>
+public sealed class StaticMembraneTrait : Trait
+{
+    /// <summary>膜が抑える割合（%）。指示書が<b>測る前に固定</b>した値。</summary>
+    public const int GuardPercent = 50;
+    public override TraitId Id => TraitId.StaticMembrane;
+
+    public override void OnTurnStart(BattleContext ctx, UnitState self)
+    {
+        if (!self.IsAlive) return;
+        int n = 0;
+        if (ctx.MarkShock(self, self)) n++;
+        foreach (UnitState a in ctx.LivingMembers(self.TeamId))
+            if (a != self && FormationRules.AreAdjacent(self, a) && ctx.MarkShock(a, self)) n++;
+        ctx.NoteMembraneSpread(self, n);
+        ctx.Log($"    {self.Name} が自分と隣の仲間に静電気の膜を張った（{n} 体）", LogKind.Trigger);
+    }
+}
+
+// =====================================================================================
 // 第290期 —— シガの直し（SI-c）とクグの糸（KG-a ／ KG-b）。どれも札そのものは挙動を持たない（engine が保持を読む）。**乱数を引かない。**
 // =====================================================================================
 
@@ -16526,6 +16602,14 @@ public static class TraitCatalog
         new MarkerOnlyTrait(TraitId.WebSnare),              // 第293期（KW-b）
         new MarkerOnlyTrait(TraitId.ShockWhipChain),        // 第293期（SW-a ／ SW-b）
         new MarkerOnlyTrait(TraitId.StoredChargeEvery),     // 第293期（SW-b）
+        new BeckonHoldTrait(TraitId.BeckonHold),            // 第294期（HS 土台）
+        new BeckonHoldTrait(TraitId.BeckonBridge),          // 第294期（HS-c）
+        new BeckonHoldTrait(TraitId.BeckonGrace),           // 第294期（HS-d）
+        new DeflectWideTrait(),                             // 第294期（SR-a）
+        new DivertPressureTrait(),                          // 第294期（SR-b）
+        new StaticMembraneTrait(),                          // 第294期（SM 土台）
+        new MarkerOnlyTrait(TraitId.MembraneNoStun),        // 第294期（SM-b）
+        new BeckonHoldTrait(TraitId.BeckonHoldOnce),        // 第294期（HS-a′・参考）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),
