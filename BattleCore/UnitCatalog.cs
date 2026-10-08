@@ -1305,6 +1305,61 @@ public static class UnitCatalog
         Flavor = "他人の痛みを勝手に引き受ける。感謝はされず、ただ先に倒れる。"
     };
 
+    // 第297期（指示書 design/PHASE297_DOHA_SHARE_SPEC.md §3）—— ドハの版。変えるのは「溜まる力（痛み ÷ 2）の行き先」だけ。規定のドハは動かしていない（採否はポン）。
+    const string DohaSharePlus = "味方が受けるダメージの4割を肩代わりする（薙ぎでも全体でも効く・味方の破片が受け止めた残りから取る）";
+    const string DohaShareMinus = "自分は強くならず、味方が多いほど早く尽きる";
+
+    /// <summary>第297期 DH-a（痛みをくれた相手へ）。規定 ＋ <see cref="TraitId.ShareBack"/>（肩代わりするたび、痛み ÷ 2 を肩代わりした相手の攻撃力に足す・自分への直接の一撃の分は配らない）。肩代わり（4割）は規定のまま・ドハ自身の攻撃力は上がらない。対照（<see cref="All"/> に入れない）。</summary>
+    public static readonly UnitDef DohaDHa = new()
+    {
+        Id = Doha.Id,
+        Name = Doha.Name,
+        MaxHp = Doha.MaxHp,
+        Attack = Doha.Attack,
+        Speed = Doha.Speed,
+        Advances = Doha.Advances,
+        Pattern = Doha.Pattern,
+        Traits = Doha.Traits.Append(TraitId.ShareBack).ToArray(),
+        Actions = Doha.Actions,
+        PlusText = DohaSharePlus + "。引き受けた痛みは、その相手の力に変えて返す",
+        MinusText = DohaShareMinus,
+        Flavor = Doha.Flavor
+    };
+
+    /// <summary>第297期 DH-b（アタッカーへ集める）。規定 ＋ <see cref="TraitId.ShareTop"/>（被弾のたび、痛み ÷ 2 を味方で攻撃力が最も高い1体（ドハを除く・同値は席番号）に足す）。肩代わり（4割）は規定のまま・ドハ自身の攻撃力は上がらない。対照（<see cref="All"/> に入れない）。</summary>
+    public static readonly UnitDef DohaDHb = new()
+    {
+        Id = Doha.Id,
+        Name = Doha.Name,
+        MaxHp = Doha.MaxHp,
+        Attack = Doha.Attack,
+        Speed = Doha.Speed,
+        Advances = Doha.Advances,
+        Pattern = Doha.Pattern,
+        Traits = Doha.Traits.Append(TraitId.ShareTop).ToArray(),
+        Actions = Doha.Actions,
+        PlusText = DohaSharePlus + "。引き受けた痛みは、いちばん腕の立つ仲間の力に変えて渡す",
+        MinusText = DohaShareMinus,
+        Flavor = Doha.Flavor
+    };
+
+    /// <summary>第297期 DH-t（ターンギフト）。規定 ＋ <see cref="TraitId.ShareGift"/>（肩代わりの累計が最大HPの半分（52）に達するたび、攻撃力が最も高い味方1体がすぐにもう一度動く・1ターン1回・端数は持ち越す）。肩代わり（4割）は規定のまま・ドハ自身の攻撃力は上がらない。対照（<see cref="All"/> に入れない）。</summary>
+    public static readonly UnitDef DohaDHt = new()
+    {
+        Id = Doha.Id,
+        Name = Doha.Name,
+        MaxHp = Doha.MaxHp,
+        Attack = Doha.Attack,
+        Speed = Doha.Speed,
+        Advances = Doha.Advances,
+        Pattern = Doha.Pattern,
+        Traits = Doha.Traits.Append(TraitId.ShareGift).ToArray(),
+        Actions = Doha.Actions,
+        PlusText = DohaSharePlus + "。痛みが積もるたび、いちばん腕の立つ仲間を先に行かせる",
+        MinusText = DohaShareMinus,
+        Flavor = Doha.Flavor
+    };
+
     // 第143期に転生させた。旧「散開のササ」（HP58・`TraitId.Loose` ＝ 隣が空いた駒の被ダメ −35%
     // ＋ 被弾で隣を弾く）は `compare` 61 行のうち**在席1行**で、
     // **弾きの受け皿（移動軸）が無い編成では −35% しか働いていなかった**。

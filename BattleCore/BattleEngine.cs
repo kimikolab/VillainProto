@@ -9804,6 +9804,19 @@ public sealed class BattleContext
             while (_giftQueue.Count > 0)
             {
                 var (giver, to, ord) = _giftQueue.Dequeue();
+                // 第297期（DH-t）: ドハが控えた手番。口（キュー・再入の止め）だけを共有し、火の帳簿・火のギフトの手番（大技の条件）には数えない。
+                if (giver.HasTrait(TraitId.ShareGift))
+                {
+                    if (!to.IsAlive) { TallyOf(giver).ShareGiftSkipped++; continue; }
+                    if (!TeamAlive(Opponent(to.TeamId))) { TallyOf(giver).ShareGiftSkipped += 1 + _giftQueue.Count; _giftQueue.Clear(); break; }
+                    if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.ShareGive, Turn = _turn, ActorId = giver.InstanceId, TargetId = to.InstanceId, Amount = 0, Slot = 1, Text = ShareGiveLabels.GiftTurn, Team = to.TeamId });
+                    Log($"  {to.Name} は {giver.Name} に背を押されて動く", LogKind.Highlight, to);
+                    TurnOutcome so = TakeTurn(to);
+                    UnitTally gt = TallyOf(to);
+                    gt.ShareGiftTurns++;
+                    if (so == TurnOutcome.Attack) gt.ShareGiftAttacks++;
+                    continue;
+                }
                 if (!to.IsAlive) { FireBook.GiftTurnsSkipped++; continue; }
                 if (!TeamAlive(Opponent(to.TeamId))) { FireBook.GiftTurnsSkipped += 1 + _giftQueue.Count; _giftQueue.Clear(); break; }
                 FireBook.GiftTurns++;
@@ -11306,6 +11319,9 @@ public sealed class BattleContext
         // 別の ApplyDamage（中継・死亡トリガー）に札を漏らさないため。
         UnitState? deflectFrom = _deflectFrom;
         _deflectFrom = null;
+        // 第297期: 分かちの中継の札（「誰の痛みを引き受けた一撃か」）。**ここで読んで消す**（逸らしの札と同じ作法）。
+        UnitState? shareFrom = _shareFrom;
+        _shareFrom = null;
         int? deflectCharge = _deflectCharge;
         _deflectCharge = null;
         // 第214期: 感電の札（1回の呼び出しにだけ効く）。**ここで読んで消す**（逸らしの札と同じ作法）。
@@ -11824,7 +11840,9 @@ public sealed class BattleContext
                     amount -= taken;
                     Log($"    {sharer.Name} が {target.Name} の痛みを引き受けた", LogKind.Trigger);
                     if (deepBite) TallyOf(target).DeepBiteRelayed++;   // 第93期 §1-2 の 3（計数のみ）
+                    _shareFrom = target;   // 第297期（中継の札・呼び出しの頭で読んで消す）
                     ApplyDamage(sharer, taken, source, isFriendlyFire: true, burnTick: burnTick, relayed: true, levy: levy);
+                    _shareFrom = null;
 
                     // 痛みを取り上げられた者は腕がなまる。肩代わり量に比例させているので、
                     // 代金はドハのHPという有限プールから払われる（SharerTrait.DullDivisor 参照）。
@@ -11960,7 +11978,9 @@ public sealed class BattleContext
                 TallyOf(lateSharer).SharerLate++;
                 Log($"    {lateSharer.Name} が {target.Name} の痛みを引き受けた", LogKind.Trigger);
                 if (deepBite) TallyOf(target).DeepBiteRelayed++;
+                _shareFrom = target;   // 第297期（中継の札・呼び出しの頭で読んで消す）
                 ApplyDamage(lateSharer, taken, source, isFriendlyFire: true, burnTick: burnTick, relayed: true, levy: levy);
+                _shareFrom = null;
                 int dull = taken / SharerTrait.DullDivisor;
                 if (dull > 0)
                 {
@@ -12197,6 +12217,8 @@ public sealed class BattleContext
         // 第125期 段1。**中継の段が実際に削った量**（巨躯・分かち）。`Swallowed`（名目量）とは別物。
         // **誰も読んで分岐しない。**
         if (relayed) TallyOf(target).Shouldered += amount;
+        // 第297期（**計数のみ**）: 分かちが引き受けた実額を、痛みをくれた相手の側に（相手ごとの内訳）。
+        if (shareFrom is not null) { TallyOf(shareFrom).SharedAway += amount; TallyOf(target).ShareTakenHits++; }
         // 第179期。**味方が味方から受けたダメージを灰として溜める**（拾い屋のスス）。
         // **HP を引いた直後・死亡判定より手前**——実額で溜め、最後の一撃も落とさない。
         // 保持者が盤上にいなければ `AshBinding` の比較1つで抜ける。
@@ -12283,12 +12305,16 @@ public sealed class BattleContext
         // 第210期（計数のみ）: 応急処置の出番（札が貼る前に数える）。**瓦礫拾いの保持者がいなければ比較1つで抜ける。**
         if (_scrapHolders.Count > 0 && amount > 0) NoteFirstAidChance(target, amount);
 
+        // 第297期: 分かちの版（`ShareBack` ／ `ShareTop` ／ `ShareGift`）が「誰の痛みを引き受けた一撃か」を読む口（`ShareFrom`）。入れ子に備えて退避して戻す。
+        UnitState? prevSharerFrom = ShareFrom;
+        ShareFrom = shareFrom;
         foreach (Trait t in target.Traits.ToList())
         {
             TraitMark m = this.BeginTrait(t.Id, target);   // 第94期 (T2) の印
             t.OnDamaged(this, target, amount, source);
             this.EndTrait(m);
         }
+        ShareFrom = prevSharerFrom;
 
         // 弾き返し（第228期・突き返しのハネの版 H2/H3・`SpringTrait`）。**敵の攻撃が HP に届いたとき**（入口の回避と同じ条件の攻撃・
         // 状態異常の刻み・徴収・中継・呪いの共有・味方からのダメージは外れる）。ハネが倒れる一撃では弾かない。**保持者がいなければ比較1つで抜ける。**
@@ -12997,8 +13023,13 @@ public sealed class BattleContext
         UnitState? second = wide ? RallyNeediest(hisa, marked: false) : null;
         if (first is null && second is null) { ht.RallyNone++; return; }
         Log($"    {hisa.Name} が叫ぶ——「あいつを狙え！ まだ倒れるな！」", LogKind.Trigger);
+        // 第297期 段0: 回復(与) の帰属。`Heal` は配り手を「いま実行中の特性の持ち主」（第94期の印）で数えるので、
+        // 印を立てないとザンの仇討ち（反撃の枠）の中で閉じたまとまりの回復がザンに、手番の枠なら誰のものでもない回復に入っていた。
+        // **印は観測専用**（盤面・乱数・台本の順は変わらない）。
+        TraitMark rm = BeginTrait(wide ? TraitId.MarkRallyWide : TraitId.MarkRally, hisa);
         if (first is not null) RallyHeal(hisa, first, amt, b.Owner, b.Layer, ht, attacker: wide);
         if (second is not null && !ReferenceEquals(second, first)) RallyHeal(hisa, second, amt, b.Owner, b.Layer, ht, attacker: false);
+        EndTrait(rm);
     }
 
     /// <summary>最も傷ついた味方（割合・同値は席番号の若い方・回復を受け付ける・満タンでない）。<paramref name="marked"/> なら標を持つ駒だけ。ヒサ自身は除く。<b>乱数を引かない</b>（`MostHurtAlly` は同値で `PickOne` を引くので使わない）。</summary>
@@ -13025,6 +13056,65 @@ public sealed class BattleContext
         int cat = to.Def.Id == "sora" ? 0 : hisa.RawCounter(BeckonTrait.TargetKey) == to.InstanceId + 1 ? 1 : to.Def.Id == "zan" ? 2 : attacker ? 3 : 4;
         (ht.RallyTo ??= new long[5])[cat] += got;
         if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.MarkRally, Turn = _turn, ActorId = hisa.InstanceId, TargetId = to.InstanceId, Amount = got, PartnerId = owner.InstanceId, Slot = layer, HpAfter = to.Hp, Team = to.TeamId });
+    }
+
+    // ---- 第297期 —— 分かちのドハの版（DH-a `ShareBack` ／ DH-b `ShareTop` ／ DH-t `ShareGift`・指示書 design/PHASE297_DOHA_SHARE_SPEC.md §3）。
+    // 肩代わり（4割）は規定と1ビットも違わない。変わるのは「溜まる力（痛み ÷ 2）の行き先」だけで、本体は `SharerTrait.OnDamaged`。
+    // **乱数を引かない**（相手選びは攻撃力 → 席番号）。版の札を持つ駒がいない戦では、ここは1行も走らない。
+    UnitState? _shareFrom;
+
+    /// <summary>いま <c>OnDamaged</c> を受けている一撃が分かちの中継なら、その痛みをくれた相手（それ以外は null）。<c>ApplyDamage</c> の <c>OnDamaged</c> の走査の間だけ立つ。</summary>
+    public UnitState? ShareFrom { get; private set; }
+
+    /// <summary>味方で現在の攻撃力が最も高い1体（<paramref name="doha"/> を除く・支援を拒む駒を除く・同値は席番号の若い方）。<b>乱数を引かない。</b></summary>
+    public UnitState? ShareTopAlly(UnitState doha)
+    {
+        UnitState? best = null;
+        foreach (UnitState u in LivingMembers(doha.TeamId))
+        {
+            if (u == doha || !u.AcceptsSupport) continue;
+            if (best is null || u.CurrentAttack > best.CurrentAttack || (u.CurrentAttack == best.CurrentAttack && u.Slot < best.Slot)) best = u;
+        }
+        return best;
+    }
+
+    /// <summary>力を配る（DH-a ／ DH-b）。<b>他者強化の窓口 <see cref="Whet"/> を通す。</b> 支援を拒む駒かどうかは呼び出し側で見る。</summary>
+    public void ShareGive(UnitState doha, UnitState to, int gain)
+    {
+        int before = to.AtkBonus;
+        TraitMark m = BeginTrait(TraitId.Sharer, doha);
+        Whet(to, gain, WhetRoute.Share);
+        EndTrait(m);
+        UnitTally dt = TallyOf(doha);
+        dt.ShareGives++; dt.ShareGiven += gain;
+        TallyOf(to).ShareGot += gain;
+        Log($"    {doha.Name} が引き受けた痛みを {to.Name} の力に変えた（攻撃 +{gain} → {to.CurrentAttack}）", LogKind.Trigger);
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.ShareGive, Turn = _turn, ActorId = doha.InstanceId, TargetId = to.InstanceId, Amount = gain, Slot = to.AtkBonus - before, Text = ShareGiveLabels.Power, Team = to.TeamId });
+    }
+
+    /// <summary>
+    /// DH-t: 肩代わりした実額 <paramref name="dmg"/> を累計し、<see cref="SharerTrait.GiftEvery"/>（最大HPの半分）に達するたび、
+    /// 攻撃力の最も高い味方（ドハを除く）へ手番を1回控える（ヒヨの火を渡すと同じ口 `_giftQueue`）。1ターンに1回まで・端数は持ち越す
+    /// （上限で止まった回は累計を減らさず、次のターンの最初の肩代わりで撃つ）。
+    /// </summary>
+    public void ShareGiftAccrue(UnitState doha, int dmg)
+    {
+        int every = SharerTrait.GiftEvery(doha);
+        int pool = doha.RawCounter(SharerTrait.GiftPoolKey) + dmg;
+        doha.SetCounter(SharerTrait.GiftPoolKey, pool);
+        UnitTally dt = TallyOf(doha);
+        dt.ShareGiftAccrued += dmg;
+        if (pool < every) return;
+        if (doha.RawCounter(SharerTrait.GiftTurnKey) == _turn + 1) { dt.ShareGiftCapped++; return; }
+        UnitState? to = ShareTopAlly(doha);
+        if (to is null) { dt.ShareGiftNoTarget++; return; }
+        doha.SetCounter(SharerTrait.GiftPoolKey, pool - every);
+        doha.SetCounter(SharerTrait.GiftTurnKey, _turn + 1);
+        dt.ShareGifts++;
+        TallyOf(to).ShareGiftGot++;
+        _giftQueue.Enqueue((doha, to, 1));
+        Log($"    {doha.Name} の痛みが積もった——{to.Name} を先に行かせる", LogKind.Highlight, doha);
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.ShareGive, Turn = _turn, ActorId = doha.InstanceId, TargetId = to.InstanceId, Amount = every, Slot = 0, Text = ShareGiveLabels.Gift, Team = to.TeamId });
     }
 
     /// <summary>膜で新しく帯電させた数（<see cref="StaticMembraneTrait"/> だけが呼ぶ・<b>計数のみ</b>）。</summary>

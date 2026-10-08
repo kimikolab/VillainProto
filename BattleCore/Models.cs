@@ -2078,6 +2078,14 @@ public sealed class UnitTally
     /// </summary>
     public long BundleTurn, BundleOut, RallyFires, RallyHeals, RallyHealed, RallyOver, RallyNone;
     public long[]? RallyTo;
+    /// <summary>
+    /// 第297期（<b>計数専用</b>・分かち）: <c>SharedAway</c> この駒の痛みを分かちが引き受けた実額（相手ごとの内訳・痛みをくれた側に付く）／ <c>ShareTakenHits</c> ドハが中継の一撃を受けた回数（ドハの側）。
+    /// 版（DH-a ／ DH-b ／ DH-t）: ドハ ＝ <c>ShareGives</c> ／ <c>ShareGiven</c> 力を配った回数・量 ／ <c>ShareGiftAccrued</c> 累計に入れた量 ／ <c>ShareGifts</c> 控えた手番 ／
+    /// <c>ShareGiftCapped</c> 1ターン1回で止まった ／ <c>ShareGiftNoTarget</c> 相手がいない ／ <c>ShareGiftSkipped</c> 控えた相手が倒れていた ／
+    /// 受け手 ＝ <c>ShareGot</c> 配られた攻撃力 ／ <c>ShareGiftGot</c> 控えられた手番 ／ <c>ShareGiftTurns</c> ／ <c>ShareGiftAttacks</c> 実際に動いた手番 ／ うち攻撃した手番。
+    /// </summary>
+    public long SharedAway, ShareTakenHits, ShareGives, ShareGiven, ShareGiftAccrued, ShareGifts, ShareGiftCapped, ShareGiftNoTarget, ShareGiftSkipped,
+                ShareGot, ShareGiftGot, ShareGiftTurns, ShareGiftAttacks;
     /// <summary>第290期（<b>計数専用</b>・カタ）: <c>CloudByCast</c>[n] n+1 回目の雷を落とした時点の雷雲の合計（8 回目以降は最後の枠）。</summary>
     public long[]? CloudByCast;
 
@@ -3156,6 +3164,9 @@ public sealed class UnitTally
         HoldNextHit += o.HoldNextHit; HoldNextHealed += o.HoldNextHealed; HoldNextKilled += o.HoldNextKilled; HoldOnceSpent += o.HoldOnceSpent;
         BundleTurn += o.BundleTurn; BundleOut += o.BundleOut; RallyFires += o.RallyFires; RallyHeals += o.RallyHeals; RallyHealed += o.RallyHealed; RallyOver += o.RallyOver; RallyNone += o.RallyNone;   // 第295期
         AddHist(ref RallyTo, o.RallyTo);
+        SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
+        ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;
+        ShareGot += o.ShareGot; ShareGiftGot += o.ShareGiftGot; ShareGiftTurns += o.ShareGiftTurns; ShareGiftAttacks += o.ShareGiftAttacks;
         // 第218期
         MireSlams += o.MireSlams; MireSlamDry += o.MireSlamDry; MireSlamOnShocked += o.MireSlamOnShocked; MireSlamPops += o.MireSlamPops;
         MireConductPops += o.MireConductPops; MireSlamDealt += o.MireSlamDealt; MireSlamKills += o.MireSlamKills;
@@ -3833,6 +3844,22 @@ public enum BattleEventKind
     /// 直前に同じ回復の `Heal`。<b>どの規則も読まない。</b>
     /// </summary>
     MarkRally,
+
+    /// <summary>
+    /// 分かちのドハの版（第297期・DH-a ／ DH-b ／ DH-t・<b>表示専用</b>）。<c>Text</c> で3種（<see cref="ShareGiveLabels"/>）:
+    /// 「力」＝ 引き受けた痛みを味方の攻撃力に変えた瞬間（<c>ActorId</c> ＝ ドハ ／ <c>TargetId</c> ＝ 配った相手 ／ <c>Amount</c> ＝ 配った量 ／ <c>Slot</c> ＝ 相手の攻撃力が実際に上がった量・直前に `Whet`）、
+    /// 「手番」＝ DH-t の再行動のきっかけ（<c>Amount</c> ＝ 使った累計・控えた時点）、「手番の頭」＝ 控えた手番が始まる瞬間（<c>ActorId</c> ＝ ドハ ／ <c>TargetId</c> ＝ 動く味方）。
+    /// 版の札を持つ駒がいない戦では1件も出ない。<b>どの規則も読まない。</b>
+    /// </summary>
+    ShareGive,
+}
+
+/// <summary>`ShareGive`（第297期）の <c>Text</c>。</summary>
+public static class ShareGiveLabels
+{
+    public const string Power = "力";
+    public const string Gift = "手番";
+    public const string GiftTurn = "手番の頭";
 }
 
 /// <summary>クグの網の札（第293期・<see cref="BattleEventKind.Web"/> の <c>Text</c>）。<b>表示専用。</b></summary>

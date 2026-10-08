@@ -935,6 +935,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 rally296 events       # 第296期: 同じ台 × 試遊の波の出来事の件数（見切り・叫び・回復・仇討ち・返り血・ミサの味方の刃）
     dotnet run --project BattleSim -c Release 0 rally296 memo <行名の一部> <boss|guard|bat> <seed> [T から] [T まで]   # 第296期 Codex 向け: 台本の並び（全件 ＋ ログ）
     dotnet run --project BattleSim -c Release 0 rally296 check        # 第296期 自己検査（規定のヒサ ＝ HK-b の札と文面・`HisaHK0`・ヒーラーの一覧・試遊の行 8 行と席・第295期の測定との一致・verbose の有無・出来事）
+    dotnet run --project BattleSim -c Release 0 doha297 p0            # 第297期 Phase 0: ザンの仇討ちのきっかけ（中継 ／ ドハへ直接 ／ ほかの味方）・ドハの肩代わりの量（相手ごと）と倒れたT・規定のドハの攻撃力の使われ方・配り先が飛ぶ駒（数秒）。本体は `Modes/Doha297.cs`
+    dotnet run --project BattleSim -c Release 0 doha297 rates [seeds]  # 第297期: 代表台10台（守り型 ／ `compare` と交差帯のドハの行 ／ 雷の型 ／ 燃焼＋ドハ）× 本編 第1〜5波 ／ 近衛 ／ 大隊 ／ ボス規定形 × ドハの版（規定 ／ DH-a ／ DH-b ／ DH-t ／ ドルガ）（seed 0..199 で 7 秒）
+    dotnet run --project BattleSim -c Release 0 doha297 atk <台の一部>  # 第297期: 配られた駒の攻撃力の推移（ターンごと）と与ダメ（第5波 ／ 近衛 ／ 大隊 ／ ボス × seed 0..49・verbose）
+    dotnet run --project BattleSim -c Release 0 doha297 memo <台の一部> <boss|guard|bat|1..5> <seed> <規定|a|b|t>   # 第297期 Codex 向け: 台本の並び（`ShareGive` ／ `Whet` ／ 仇討ち ／ 中継）
+    dotnet run --project BattleSim -c Release 0 doha297 grid <guard|bat|boss> <a|b|t> [席=6] [seed=10] [アタッカー]   # 第297期 格子（R386）: 固定枠 ドハ ＋ アタッカー1枚（ミサ ／ ザン ／ カタ ／ シガ）× 探索枠3 × 席6・規定と版を同じ台で・ドルガの対照（1波 10 分前後）
+    dotnet run --project BattleSim -c Release 0 doha297 check         # 第297期 自己検査（版の札と文面・肩代わりの量が規定と同じ・ドハ自身は強くならない・DH-a は相手だけ ／ DH-b は最上位（支援を拒む駒を飛ばす）・`Whet` を通る・DH-t は1ターン1回で端数を持ち越す・PickOne・段0 の回復(与)・verbose・出来事）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

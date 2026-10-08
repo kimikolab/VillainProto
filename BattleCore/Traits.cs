@@ -679,6 +679,11 @@ public enum TraitId
     BeckonHoldOnce,  // 一度きりの踏みとどまり（HS-a′・参考・指示書に無い）: 同じ味方は1戦に1度しか踏みとどまらない（ヒサが指差し直しても）（**札そのものは挙動を持たない**・engine の `Hold`）
     MembraneNoStun,  // 痺れない膜（SM-b）: ソムが生きている間、味方は弾けても痺れない（放電は流れる）（**札そのものは挙動を持たない**・engine の `StunByShock`）
 
+    // --- 第297期で足した札（ドハの版: `UnitCatalog.DohaDHa` ／ `DohaDHb` ／ `DohaDHt` だけが持つ。肩代わり（4割）はそのまま・ドハ自身の攻撃力は上がらない） ---
+    ShareBack,       // 痛みをくれた相手へ（DH-a）: 肩代わりするたび、痛み ÷ 2 を肩代わりした相手の攻撃力に足す（`Whet`・自分への直接の一撃の分は配らない）（**札そのものは挙動を持たない**・`SharerTrait.OnDamaged` が読む）
+    ShareTop,        // アタッカーへ集める（DH-b）: 被弾のたび、痛み ÷ 2 を味方で攻撃力が最も高い1体（ドハを除く）に足す（自分への直接の一撃の分も配る）（同上）
+    ShareGift,       // ターンギフト（DH-t）: 肩代わりした実額の累計が最大HPの半分に達するたび、攻撃力が最も高い味方1体がすぐにもう一度動く（1ターン1回・端数は持ち越す）（同上・口は engine の `_giftQueue`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -3668,16 +3673,18 @@ public enum WhetRoute
     Taillight,     // 尾灯: トモ → **自分を除いて最も遅い味方1体**・毎ターン。**位置を問わない**。
                     // 候補を自前で AcceptsSupport 濾しする（隣へ漏らさない＝駆り立て・火選りと同じ側）。
                     // **配ったぶんを後から引き上げる初めての強化経路**（第108期。灯は1体にしか灯らない）
-    Nourish        // 糧: タンク → **自分にダメージを通した者**・被弾のたび。
+    Nourish,       // 糧: タンク → **自分にダメージを通した者**・被弾のたび。
                     // **陣営をまたぐ初めての強化経路**（第118期。他の8本はすべて味方から味方へ）。
                     // **位置を問わない**し、**AcceptsSupport を見ない**——支援として配るのではなく、
                     // 殴った側が持っていくため（強化側で初めての無検査経路。第56期の「無検査 0」が破れる）
+    Share          // 分かち（第297期・ドハの版 DH-a ／ DH-b だけ）: ドハ → 肩代わりした相手（DH-a）／ 攻撃力が最も高い味方（DH-b）・被弾のたび。
+                    // 候補を自前で AcceptsSupport 濾しする（駆り立てと同じ側）。**規定のドハは通らない**（自己強化の直叩きのまま）
 }
 
 /// <summary>経路の名前と本数。診断の表の見出しと配列長をここ1箇所から引く。</summary>
 public static class WhetRoutes
 {
-    public static readonly string[] Names = { "その他", "駆り立て", "号令開戦", "号令毎T", "縛め", "移り木", "吐き戻し", "火選り", "尾灯", "糧" };
+    public static readonly string[] Names = { "その他", "駆り立て", "号令開戦", "号令毎T", "縛め", "移り木", "吐き戻し", "火選り", "尾灯", "糧", "分かち" };
     public static int Count => Names.Length;
 }
 
@@ -8836,12 +8843,44 @@ public sealed class SharerTrait : Trait
 
     public override TraitId Id => TraitId.Sharer;
 
+    /// <summary>DH-t の累計（実額）。<b>保持者の私有カウンタ</b>（`StatusKeys.All` に入れない・会戦の境界で <see cref="OnCarryOver"/> が消す）。</summary>
+    public const string GiftPoolKey = "shareGiftPool";
+    /// <summary>DH-t が最後に手番を控えたターン（<c>_turn + 1</c>。0 は「まだ」）。私有。</summary>
+    public const string GiftTurnKey = "shareGiftTurn";
+    /// <summary>DH-t: 累計がこの量に達するたびに1回（最大HPの半分・指示書が<b>測る前に固定</b>した値・規定のドハで 52）。</summary>
+    public static int GiftEvery(UnitState self) => Math.Max(1, self.Def.MaxHp / 2);
+
     public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
     {
         if (dmg <= 0 || !self.IsAlive) return;
         int gain = Math.Max(1, dmg / DamagePerGain);
+        // 第297期: 版（DH-a ／ DH-b ／ DH-t）は溜まる力の行き先だけを変える。肩代わり（engine の `ApplyDamage`）は規定のまま。**どの版でもドハ自身の攻撃力は上がらない。**
+        if (self.HasTrait(TraitId.ShareBack))
+        {
+            // 肩代わりした相手へ。自分への直接の一撃の分は配らない。支援を拒む相手には配らない（その分は消える）。
+            if (ctx.ShareFrom is UnitState from && from.IsAlive && from.AcceptsSupport) ctx.ShareGive(self, from, gain);
+            return;
+        }
+        if (self.HasTrait(TraitId.ShareTop))
+        {
+            // 攻撃力が最も高い味方（ドハを除く・支援を拒む駒を飛ばして次へ）。直接の一撃の分も配る。
+            if (ctx.ShareTopAlly(self) is UnitState to) ctx.ShareGive(self, to, gain);
+            return;
+        }
+        if (self.HasTrait(TraitId.ShareGift))
+        {
+            if (ctx.ShareFrom is not null) ctx.ShareGiftAccrue(self, dmg);
+            return;
+        }
         self.AtkBonus += gain;
         ctx.Log($"    {self.Name} が痛みを飲み込んだ（攻撃 +{gain} → {self.CurrentAttack}）", LogKind.Trigger);
+    }
+
+    public override void OnCarryOver(UnitState self)
+    {
+        // 第297期: DH-t の私有の帳簿は戦ごと（規定のドハは何も持たないので 0 のまま）。
+        if (self.RawCounter(GiftPoolKey) != 0) self.SetCounter(GiftPoolKey, 0);
+        if (self.RawCounter(GiftTurnKey) != 0) self.SetCounter(GiftTurnKey, 0);
     }
 }
 
@@ -12434,6 +12473,8 @@ public sealed class VendettaTrait : Trait
     {
         if (ally == self) return;
         if (ally.Counter(StatusKeys.Marked) <= 0) return;               // 標を持つ味方だけ
+        // 第297期: 分かちの中継（`relayed`）の一撃でも出る——中継の `ApplyDamage` は出どころ（敵）をそのまま渡し、`OnAllyDamaged` は中継を区別しない。
+        // 標を持つドハは「誰への一撃も仇討ちの合図に変える駒」になる（試遊・標 守り型）。**意図して残す**（ポンの決め・design/PHASE297_DOHA_SHARE.md §2-1）。
         if (source is null || source.TeamId == self.TeamId) return;     // 味方の事故には出ない
         if (!source.IsAlive) return;
         if (ctx.InReaction) return;                                     // 反撃の連鎖を止める
@@ -16614,6 +16655,9 @@ public static class TraitCatalog
         new BeckonHoldTrait(TraitId.BeckonHoldOnce),        // 第294期（HS-a′・参考）
         new MarkerOnlyTrait(TraitId.MarkRally),             // 第295期（HK-a）
         new MarkerOnlyTrait(TraitId.MarkRallyWide),         // 第295期（HK-b）
+        new MarkerOnlyTrait(TraitId.ShareBack),             // 第297期（DH-a）
+        new MarkerOnlyTrait(TraitId.ShareTop),              // 第297期（DH-b）
+        new MarkerOnlyTrait(TraitId.ShareGift),             // 第297期（DH-t）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

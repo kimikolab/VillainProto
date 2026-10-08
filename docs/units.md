@@ -455,6 +455,9 @@
 | `MarkRallyWide` | 囃し立てのヒサ |
 | `BeckonHoldOnce` | - |
 | `MembraneNoStun` | - |
+| `ShareBack` | - |
+| `ShareTop` | - |
+| `ShareGift` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
