@@ -43,11 +43,11 @@ public partial class BattlefieldView3D
             if (hop == 1)
             {
                 CameraPunch(to, cloud >= 6 ? BattleCore.AttackPattern.All : BattleCore.AttackPattern.Sweep);
-                _attackAudio.PlayShockMark(ShockMarkSound.ThunderHeavy);
+                _attackAudio.PlayShockMark(ShockMarkSound.ThunderHeavy, speed: speed);
             }
         }
         ThunderFx.Burst(_fxRoot, to, 0.45f + power * 0.15f + cloud * 0.08f, 0.26 / speed);
-        _attackAudio.PlayElectric(hop == 1, hop - 1, kinds);
+        if (cloud == 0 || hop != 1) _attackAudio.PlayElectric(hop == 1, hop - 1, kinds);
     }
 
     public void ShockStage(int depth)

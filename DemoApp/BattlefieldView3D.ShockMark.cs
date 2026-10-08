@@ -34,7 +34,7 @@ public partial class BattlefieldView3D
         if (pawn is null) return;
         pawn.ShowMovementPortrait("tome_control", 0.8);
         ShockMarkFx.Ring(_fxRoot, pawn.FxPoint, ShockMarkFx.Feather, 2.3f, 0.38 / speed);
-        _attackAudio.PlayShockMark(ShockMarkSound.Deploy);
+        _attackAudio.PlayShockMark(ShockMarkSound.Deploy, speed: speed);
     }
     internal void ShowMarkLayer(BattlePawn3D? target, int amount, double speed)
     {

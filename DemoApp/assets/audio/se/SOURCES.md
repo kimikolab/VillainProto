@@ -279,3 +279,42 @@
 ギフトの手番・残り火・火の雨は毎件鳴る。停止・再戦時は大技のフェードと遅延再生も破棄する。
 `res://FireCheck.tscn -- --audio` で全音源の復号、1/2倍速の着弾・3層の重なり、
 原音ピッチ、連続着弾で余韻が切れないこと、停止時の予約破棄と5連撃を確認する。
+
+## ミサ・シガ・カタの指定SE（2026-10-08）
+
+ユーザー指定の11ファイルを無加工でコピー。すべて元素材とSHA-256が一致する。
+同日の追加指定でカタの大落雷を「雷魔法4」のみに変更。雷魔法1は未使用で、使用音源は10ファイル。
+音量・再生尺・左右定位は実行時に調整し、音程と原本を維持する。
+
+| アプリ内ファイル | 元素材 |
+|---|---|
+| `misa_beam_1.wav` | `D:/Assets/SE/Helton Yan's Pixel Combat - Single Files/DSGNTonl_SKILL IMPACT-Retro Laser 2_HY_PC-001.wav` |
+| `misa_beam_2.wav` | `D:/Assets/SE/Helton Yan's Pixel Combat - Single Files/DSGNTonl_SKILL IMPACT-Retro Laser 2_HY_PC-002.wav` |
+| `misa_beam_3.wav` | `D:/Assets/SE/Helton Yan's Pixel Combat - Single Files/DSGNTonl_SKILL IMPACT-Retro Laser 2_HY_PC-003.wav` |
+| `misa_beam_hit.wav` | `D:/Assets/SE/Helton Yan's Pixel Combat - Single Files/DSGNMisc_HIT-Zap Laser_HY_PC-003.wav` |
+| `misa_deploy.wav` | `D:/Assets/SE/Helton Yan's Pixel Combat - Single Files/WHSH_MOVEMENT-Windy Passby_HY_PC-005.wav` |
+| `misa_funnel_move.mp3` | `D:/Assets/SE/効果音ラボ/戦闘/高速移動.mp3` |
+| `misa_feather_lost.mp3` | `D:/Assets/SE/効果音ラボ/戦闘/石が砕ける.mp3` |
+| `shiga_electric_whip.mp3` | `D:/Assets/SE/効果音ラボ/戦闘/鞭で攻撃5.mp3` |
+| `shiga_electric_hit.wav` | `D:/Assets/SE/Helton Yan's Pixel Combat - Single Files/DSGNImpt_EXPLOSION-Electric Hit_HY_PC-006.wav` |
+| `kata_thunder_heavy_1.mp3` | `D:/Assets/SE/効果音ラボ/戦闘/雷魔法1.mp3` |
+| `kata_thunder_heavy_4.mp3` | `D:/Assets/SE/効果音ラボ/戦闘/雷魔法4.mp3` |
+
+| 使用箇所 | 基準音量 | 1倍速の再生上限・鳴らし方 |
+|---|---|---|
+| ミサ・発射 | -17 dB | 3種類を順に使用。0.24秒、発射8枠。毎発鳴らす |
+| ミサ・着弾 | -14 dB | 0.20秒、発射と別の6枠。毎発鳴らす |
+| ミサ・全域展開 | -13 dB | 0.65秒、展開開始に1回 |
+| ミサ・旋回／帰還 | -17 dB | 0.38秒。次の標的へ移る時と実際の帰還開始に1回 |
+| ミサ・羽の消失 | -18 dB | 0.32秒。粒子へ変わる時に鳴らし、85ms以内の密集はまとめる |
+| シガ・電撃鞭 | 鞭 -10 dB／電撃 -15 dB | 接触で2音同時。鞭0.55秒・電撃0.65秒。薙ぎは最初の接触に1組 |
+| カタ・大落雷 | 雷魔法4 -15 dB | 1.50秒。雷雲ありの主雷で単独再生し、後続の跳ねで重複しない |
+
+末尾28%をフェードし、長さは再生速度に追従する。高速連射の発射は最低0.08秒、着弾は最低0.06秒を確保する。
+発射位置と命中位置から左右定位を付ける。展開／移動2枠・消失2枠・電撃鞭4枠・大落雷2枠を分離し、指定音源は最大24枠。
+従来の合成光線・合成展開・合成の重い雷は指定音に差し替え。電撃鞭に通常の鞭SE、大落雷に従来の主雷SEを重複再生しない。
+蓄電・乱射移行・粉・糸など未指定の合成音は継続する。
+終了・画面離脱・再戦では全音とフェードを停止し、破棄時には左右定位用のバスも取り除く。
+
+`res://ShockMarkAudioCheck.tscn` で使用する10音源の復号、左右・1倍／2倍の発射／着弾／帰還／消失、
+鞭の2層と雷魔法4の単独再生、倍速時の音程、死亡・再戦・画面離脱・終了での停止を検査する。

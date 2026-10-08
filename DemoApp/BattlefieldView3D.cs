@@ -649,7 +649,8 @@ public partial class BattlefieldView3D : Control
         if (!stagedThrust)
         {
             if (thrustCharge is int soundCharge) _attackAudio.PlayThrust(from.UnitId, from.Team, soundCharge);
-            else if (from.UnitId != "tou" && (movementCue?.Kind != BattleEventKind.Blast || shieldImpact is not null))
+            else if (from.UnitId != "tou" && !(from.UnitId == "shiga" && (from.HasShockAura || from.InterruptWhip))
+                && (movementCue?.Kind != BattleEventKind.Blast || shieldImpact is not null))
                 _attackAudio.PlayAttack(from.UnitId, from.Team, pattern, reaction, charged,
                     barrage: movementCue?.Kind == BattleEventKind.Barrage);
             CameraPunch((from.GlobalPosition + to.GlobalPosition) * 0.5f, pattern);

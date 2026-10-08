@@ -56,7 +56,11 @@ public partial class BattlefieldView3D
             while (landed < hits.Length && t >= 0.22f + 0.55f * landed / Math.Max(1, hits.Length - 1))
             {
                 var hit = hits[landed++];
-                if (landed == 1) WhipChainContact(from, speed);
+                if (landed == 1)
+                {
+                    WhipChainContact(from, speed);
+                    if (electric) _attackAudio.PlayShockMark(ShockMarkSound.ElectricWhip, speed: speed);
+                }
                 if (electric)
                 {
                     for (int k = 0; k < 6; k++)
@@ -85,7 +89,8 @@ public partial class BattlefieldView3D
     public async Task ShowTormentHit(BattlePawn3D from, BattlePawn3D target)
     {
         TormentHitPlays++;
-        _attackAudio.PlayAttack(from.UnitId, from.Team, BattleCore.AttackPattern.Single, false, false);
+        if (!from.HasShockAura && !from.InterruptWhip)
+            _attackAudio.PlayAttack(from.UnitId, from.Team, BattleCore.AttackPattern.Single, false, false);
         await ShowWhipAttack(from, target);
     }
 
@@ -140,6 +145,7 @@ public partial class BattlefieldView3D
             if (!cracked && t >= 0.62f)
             {
                 cracked = true;
+                if (electric) _attackAudio.PlayShockMark(ShockMarkSound.ElectricWhip, speed: from.AnimationSpeed);
                 WhipChainContact(from, Math.Max(0.1, from.AnimationSpeed));
                 if (from.HasShockAura || from.InterruptWhip)
                 {

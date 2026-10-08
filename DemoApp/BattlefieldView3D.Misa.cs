@@ -11,6 +11,12 @@ public partial class BattlefieldView3D
     internal async Task BeginMisaVolley(BattlePawn3D? actor, int count, double speed)
     {
         if (actor?.MisaFeathers is not { } feathers) return;
+        int generation = _specialGeneration;
+        feathers.PresentationSound = cue => {
+            if (generation == _specialGeneration && IsVisibleInTree() && IsInstanceValid(actor)
+                && actor.IsInsideTree() && actor.Hp > 0)
+                _attackAudio.PlayShockMark(cue, speed: actor.AnimationSpeed);
+        };
         Vector3 left = PawnPosition(0, 3), right = PawnPosition(1, 4);
         feathers.SetField((left + right) * 0.5f,
             new Vector2((right.X - left.X) * 0.5f + 0.35f, (right.Z - left.Z) * 0.5f + 0.70f));
@@ -36,7 +42,10 @@ public partial class BattlefieldView3D
         if (cue.Text == FeatherLabels.Flow) MisaFlows++;
         // 羽は戦場に散開した射撃位置に留まり、その先端から光線を撃つ。
         if (cue.Text == FeatherLabels.Flow)
+        {
             ShockMarkFx.Ring(_fxRoot, target.FxPoint, MisaLight, 1.6f, 0.32 / speed);
+            _attackAudio.PlayShockMark(ShockMarkSound.FeatherMove, speed: speed);
+        }
         if (spray && cue.StatusRemaining == 1)
         {
             ShockMarkFx.Sparks(_fxRoot, actor.FxPoint, MisaLight, 18, 1.8f, 0.45 / speed);
@@ -54,7 +63,10 @@ public partial class BattlefieldView3D
         ShockMarkFx.Glow(_fxRoot, target.FxPoint, MisaLight, 1.0f, 0.27 / speed);
         ShockMarkFx.Sparks(_fxRoot, target.FxPoint, MisaLight, 11, 0.85f, 0.35 / speed);
         MakeGroundRing(target.Home, MisaLight, 0.75f, 0.28 / speed);
-        _attackAudio.PlayShockMark(ShockMarkSound.Beam, pan: Math.Clamp(dx / 10f, -0.7f, 0.7f));
+        float muzzlePan = Math.Clamp((_camera.UnprojectPosition(muzzle).X / _viewport.Size.X - 0.5f) * 1.4f, -0.7f, 0.7f);
+        float hitPan = Math.Clamp((_camera.UnprojectPosition(target.FxPoint).X / _viewport.Size.X - 0.5f) * 1.4f, -0.7f, 0.7f);
+        _attackAudio.PlayShockMark(ShockMarkSound.Beam, pan: muzzlePan, speed: speed);
+        _attackAudio.PlayShockMark(ShockMarkSound.BeamHit, pan: hitPan, speed: speed);
         if (cue.Slot == 1 || cue.Slot == cue.Amount) CameraPunch(target.FxPoint, AttackPattern.Single);
         if (lastShot)
         {

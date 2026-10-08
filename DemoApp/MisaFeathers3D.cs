@@ -37,6 +37,7 @@ public partial class MisaFeathers3D : Node3D
     public int InFlight => _feathers.Count(f => f.Stage is 1 or 2 or 3 or 5);
     internal Vector3[] VisiblePositions => _feathers.Where(f => f.Sprite.Visible).Select(f => f.Sprite.GlobalPosition).ToArray();
     internal bool IsDeployed => _deployed;
+    internal Action<ShockMarkSound>? PresentationSound;
     internal void SetField(Vector3 center, Vector2 radius) { _fieldCenter = center; _fieldRadius = radius; }
 
     public void Configure(BattlePawn3D owner, float height)
@@ -122,9 +123,11 @@ public partial class MisaFeathers3D : Node3D
     // 発数や命中では在庫を減らさず、残っている羽だけを手元へ帰す。
     internal void ReturnVolley()
     {
+        bool returning = _active && _deployed && _feathers.Any(f => f.Stage != 4 && f.Sprite.Visible);
         _deployed = false; _returnAfter = -1; _aim = null;
         foreach (var f in _feathers.Where(f => f.Stage != 4 && f.Sprite.Visible))
         { f.From = f.Sprite.Position; f.Time = 0; f.Stage = 3; }
+        if (returning) PresentationSound?.Invoke(ShockMarkSound.FeatherMove);
     }
 
     public void AimAt(Vector3 point) => _aim = point;
@@ -277,6 +280,7 @@ public partial class MisaFeathers3D : Node3D
                 f.Time = 0; f.From = f.Sprite.Position;
                 if (f.Stage == 4)
                 {
+                    PresentationSound?.Invoke(ShockMarkSound.FeatherLost);
                     ShockMarkFx.Sparks(this, f.Sprite.GlobalPosition, ShockMarkFx.Feather, 9, 0.55f, 0.35 / _owner.AnimationSpeed);
                     f.Sprite.Visible = false;
                 }

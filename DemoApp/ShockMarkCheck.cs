@@ -59,7 +59,8 @@ public partial class ShockMarkCheck : Control
             audio.PlayShockMark(cue);
             Require(audio.GetChildren().OfType<AudioStreamPlayer>().Any(p => p.Stream?.GetLength() > 0), "専用SEを生成して再生");
         }
-        Require(audio.GetChildren().OfType<AudioStreamPlayer>().Count() <= existingVoices + 6, "専用SEの同時発音を制限");
+        Require(audio.GetChildren().OfType<AudioStreamPlayer>().Count() <= existingVoices + 6 + BattleAttackAudio.ShockMarkAssetVoiceLimit,
+            "合成SEと指定音源それぞれの同時発音を制限");
         audio.StopAll();
         Require(audio.GetChildren().OfType<AudioStreamPlayer>().All(p => !p.Playing), "終了時にSEを止める");
         audio.QueueFree();

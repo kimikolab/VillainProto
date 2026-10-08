@@ -145,6 +145,7 @@ public partial class BattleAttackAudio : Node
         LoadSound(YomiBonus[0]);
         LoadSound(YomiAttack[0]);
         foreach (string path in MovementPaths.Values) LoadSound(path);
+        foreach (string file in ShockMarkAssetFiles) LoadSound("res://assets/audio/se/" + file);
         foreach (string path in UtsuAttack) LoadSound(path);
         foreach (string path in MudoAttack) LoadSound(path);
         foreach (string path in ShigaAttack) LoadSound(path);
