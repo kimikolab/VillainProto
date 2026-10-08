@@ -13,9 +13,11 @@ public partial class BattlefieldView3D
         ChargePlays = InterruptPlays = CloudPlays = PowderMainPlays = PowderSpreadPlays = PowderLeakPlays = 0;
         ThreadPlays = ThreadReleasePlays = ScarPlays = MarkLayerPlays = CowerPlays = 0;
         ResetShockWebCounts();
+        ResetMarkRallyCounts();
     }
     internal void EndShockMarkPresentation()
     {
+        EndMarkRallyPresentation();
         foreach (var pawn in _pawns.Values) pawn.EndShockMark();
         ResetShockWeb();
         _attackAudio.StopShockMarkPresentation();

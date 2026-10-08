@@ -1151,6 +1151,7 @@ public partial class Main : Control
         IndexBeniMio(_result.Events);
         IndexThunder(_result.Events);
         _misa = MisaPresentation.Build(_result.Events);
+        _markRally = MarkRallyPresentation.Build(_result.Events);
         _mireBurstsShown.Clear();
         IndexTimeline(_result.Events);
         _battleOpening = pending.Select(x => new DemoOpening(
@@ -1372,6 +1373,7 @@ public partial class Main : Control
                 if (contactToken == _playToken && _battleMode) FireHitContact(eventIndex, pawn);
             };
         }
+        if (await PlayMarkRally(e, eventIndex, actor, target)) return;
         if (await PlayShockMark(e, eventIndex, actor, target)) return;
         if (await PlayMisa(e, eventIndex, actor, target)) return;
         if (await PlayFire(e, eventIndex, actor, target)) return;
@@ -1431,9 +1433,6 @@ public partial class Main : Control
             case BattleEventKind.Attack:
             {
                 int attackToken = _playToken;
-                _battleField.AttackContact = pawn => {
-                    if (attackToken == _playToken && _battleMode) FireHitContact(eventIndex, pawn);
-                };
                 AttackPattern pattern = e.Pattern ?? AttackPattern.Single;
                 IReadOnlyList<BattlePawn3D> impactTargets = FindAttackTargets(eventIndex, e);
                 IndexNumbDamage(eventIndex, e);
@@ -1445,6 +1444,19 @@ public partial class Main : Control
                 if (_fireHits.Contacts.TryGetValue(eventIndex, out var fireContacts))
                     impactTargets = impactTargets.Concat(fireContacts.Select(c => _battleField.FindPawn(c.Target))
                         .OfType<BattlePawn3D>()).Distinct().ToArray();
+                bool insightShown = false;
+                void InsightContact()
+                {
+                    if (insightShown || attackToken != _playToken || !_battleMode) return;
+                    insightShown = true;
+                    if (_markRally.Insights.TryGetValue(eventIndex, out var insights))
+                        foreach (var cue in insights) _battleField.ShowInsightImpact(cue, impactTargets, _speed);
+                }
+                _battleField.AttackContact = pawn => {
+                    if (attackToken != _playToken || !_battleMode) return;
+                    FireHitContact(eventIndex, pawn);
+                    InsightContact();
+                };
                 // 溜めの解放は踏み込み後の着弾で行う。手番外の攻撃では消費しない。
                 bool continuingCombo = actor is not null && _comboEnds.ContainsKey(actor);
                 _movement.Attacks.TryGetValue(eventIndex, out var movementCue);
@@ -1482,6 +1494,7 @@ public partial class Main : Control
                     attackPower: e.Amount, blastDestination: movementCue?.TargetId == target?.InstanceId
                         ? _movement.BlastDestinations.GetValueOrDefault(eventIndex) : null);
                 if (attackToken != _playToken || !_battleMode) return;
+                InsightContact();
                 // 第178期 自己検査 (e)。**計数だけ**（上の1行が「1発ぶんの絵と音」なので、ここで数える）。
                 _attackPlays++;
                 _attackRun = e.ActorId == _attackRunActor ? _attackRun + 1 : 1;
@@ -1510,8 +1523,18 @@ public partial class Main : Control
                 await PlayTormentHit(eventIndex, actor, target);
                 if (e.Reaction && !_riposteDamage.Contains(eventIndex) && StartsDirectReaction(eventIndex, e))
                 {
-                    await _battleField.ShowBonusAttack(actor);
-                    _battleField.PlayDirectReactionSound(actor);
+                    int reactionToken = _playToken;
+                    if (actor?.UnitId == "zan" && target is not null && !e.FriendlyFire)
+                    {
+                        _battleField.ShowVengeance(actor, target, _speed);
+                        await Delay(0.18);
+                    }
+                    else
+                    {
+                        await _battleField.ShowBonusAttack(actor);
+                        _battleField.PlayDirectReactionSound(actor);
+                    }
+                    if (reactionToken != _playToken || !_battleMode) return;
                 }
                 ShowParry(e);
                 await Delay(0.30);
@@ -1545,8 +1568,18 @@ public partial class Main : Control
                 // ヨミのように Reaction 付き Attack を持つ段は上で既にカットイン済みなので二重に出さない。
                 if (e.Reaction && !_riposteDamage.Contains(eventIndex) && StartsDirectReaction(eventIndex, e))
                 {
-                    await _battleField.ShowBonusAttack(actor);
-                    _battleField.PlayDirectReactionSound(actor);
+                    int reactionToken = _playToken;
+                    if (actor?.UnitId == "zan" && target is not null && !e.FriendlyFire)
+                    {
+                        _battleField.ShowVengeance(actor, target, _speed);
+                        await Delay(0.18);
+                    }
+                    else
+                    {
+                        await _battleField.ShowBonusAttack(actor);
+                        _battleField.PlayDirectReactionSound(actor);
+                    }
+                    if (reactionToken != _playToken || !_battleMode) return;
                 }
                 await PlayTormentHit(eventIndex, actor, target);
                 ShowDamage(eventIndex, e, actor, target);

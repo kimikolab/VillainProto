@@ -15,12 +15,20 @@ public partial class ShockMarkCheck : Control
         {
             CheckSounds();
             bool web = OS.GetCmdlineUserArgs().Contains("--web");
+            bool rally = OS.GetCmdlineUserArgs().Contains("--rally");
             if (!OS.GetCmdlineUserArgs().Contains("--replay-only"))
             {
-                if (web) await CheckWebVisuals();
+                if (rally) await CheckRallyVisuals();
+                else if (web) await CheckWebVisuals();
                 else await CheckVisuals();
             }
-            if (web && OS.GetCmdlineUserArgs().Contains("--verify"))
+            if (rally && OS.GetCmdlineUserArgs().Contains("--verify"))
+            {
+                foreach (string preset in new[] { "試遊・標 循環", "試遊・標 三人組", "試遊・標 守り型" })
+                    for (int stage = 0; stage < 2; stage++) await Replay(preset, stage, 0);
+                await Replay("試遊・標 三人組", 1, 2);
+            }
+            else if (web && OS.GetCmdlineUserArgs().Contains("--verify"))
             {
                 foreach (string preset in new[] { "試遊・感電 糸", "試遊・感電 雷の型" })
                 {
@@ -168,6 +176,17 @@ public partial class ShockMarkCheck : Control
             Require(field.ThreadReleasePlays == result.Events.Count(e => e.Kind == BattleEventKind.Discharge && e.SourceTrait == TraitId.Thread && e.Text == ThreadLabels.Release), "解除時の放電件数");
             Require(field.MarkLayerPlays == Count(BattleEventKind.MarkLayer) && field.ScarPlays == Count(BattleEventKind.Scar), "標と爪痕の件数");
             Require(field.MisaShots == MisaPresentation.Build(result.Events).HitsByCue.Count, "光線の発数");
+            var rallyPlan = MarkRallyPresentation.Build(result.Events);
+            Require(field.MarkRallyCues == Count(BattleEventKind.MarkRally), "叫びの回復台本件数");
+            Require(field.MarkRallyPlays == rallyPlan.Starts.Count, "回復先が2人でも1声・続く仇討ちは別の声");
+            Require(field.MarkRallyPlays == result.TallyByUnit.Values.Sum(t => t.RallyFires - t.RallyNone),
+                "engineの独立した叫び回数と一致");
+            Require(field.MarkRallyLights == result.Events.Count(e => e.Kind == BattleEventKind.MarkRally && e.Amount > 0), "量0では光を飛ばさない");
+            Require(field.InsightPlays == Count(BattleEventKind.Insight), "見切りの件数");
+            var zanIds = field.Pawns.Values.Where(p => p.UnitId == "zan").Select(p => (int?)p.InstanceId).ToHashSet();
+            Require(field.VengeancePlays == result.Events.Count(e => e.Kind is BattleEventKind.Damage or BattleEventKind.Parry
+                && e.Reaction && !e.FriendlyFire && !e.Relayed && zanIds.Contains(e.ActorId)), "仇討ちだけに予告・返り血には付けない");
+            GD.Print($"MARK_RALLY_REPLAY_OK {name} stage={stage} seed={seed} pass={pass} shout={field.MarkRallyPlays} heal={field.MarkRallyLights} insight={field.InsightPlays} guards={field.InsightGuards} vengeance={field.VengeancePlays}");
             foreach (var pawn in field.Pawns.Values)
             {
                 var lastHp = result.Events.LastOrDefault(e => e.TargetId == pawn.InstanceId && e.Kind is BattleEventKind.Damage

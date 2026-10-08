@@ -2,7 +2,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
-internal enum ShockMarkSound { Beam, FeatherGain, Deploy, Spray, Lock, Scar, Charge, Interrupt, Cloud, ThunderHeavy, Powder, Thread, Snap }
+internal enum ShockMarkSound { Beam, FeatherGain, Deploy, Spray, Lock, Scar, Charge, Interrupt, Cloud, ThunderHeavy, Powder, Thread, Snap, RallyHeal, Insight }
 
 public partial class BattleAttackAudio
 {
@@ -59,6 +59,8 @@ public partial class BattleAttackAudio
                 ShockMarkSound.Lock => 1850,
                 ShockMarkSound.Scar => 2800 * Math.Exp(-u * 4) + 120,
                 ShockMarkSound.Thread => 600 + u * 2200,
+                ShockMarkSound.RallyHeal => 320 + u * 780,
+                ShockMarkSound.Insight => 2100 * Math.Exp(-u * 2) + 650,
                 _ => 120 + (1 - u) * 380,
             };
             phase += Math.Tau * freq / rate;

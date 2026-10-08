@@ -275,6 +275,7 @@ public static class UiKit
         "yomi" => 0.0286f,
         "hota" => 0.0120f,
         "hisa" => 0.0150f,
+        "hisa_rally" => 0.019f,
         "zan" => 0.0078f,
         "kugu" => 0.02995f,
         "shiga" => 0.03125f,
