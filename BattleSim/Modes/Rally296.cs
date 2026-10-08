@@ -28,7 +28,7 @@ static class Rally296Diag
     }
 
     /// <summary>試遊・標の行（既存の2行 ＋ 第296期の3行）。規定の駒のまま（固定しない）。</summary>
-    static (string Name, Formation F)[] MarkRows => Presets.Playtest.Where(r => r.Name.StartsWith("試遊・標", StringComparison.Ordinal)).Select(r => (r.Name, FvSwap(r.F, UnitCatalog.Doha, UnitCatalog.DohaD0))).ToArray();   // 第298期: ドハは旧（`DohaD0`）に固定
+    static (string Name, Formation F)[] MarkRows => Presets.Playtest.Where(r => r.Name.StartsWith("試遊・標", StringComparison.Ordinal)).Select(r => (r.Name, Pin299(FvSwap(r.F, UnitCatalog.Doha, UnitCatalog.DohaD0)))).ToArray();   // 第298期: ドハは旧（`DohaD0`）に固定・第299期: ミサ ／ ザン ／ ヒサも（`Pin299`）
     static readonly string[] NewRows = { "試遊・標 循環", "試遊・標 三人組", "試遊・標 守り型" };
     static EnemyCatalog.PlaytestStage WaveOf(string n) => EnemyCatalog.PlaytestStages[n switch { "boss" => 0, "guard" => 1, "bat" => 2, _ => int.Parse(n) }];
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
@@ -180,8 +180,9 @@ static class Rally296Diag
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
         var hisa = UnitCatalog.Hisa; var hk0 = UnitCatalog.HisaHK0;
-        Expect("(a) 規定のヒサ ＝ HK-b の札（旧の規定 `HisaHK0` ＋ `MarkRallyWide`）・`HisaHKb` と同じ札・数値と手番は旧と同じ",
-            hisa.Traits.SequenceEqual(hk0.Traits.Append(TraitId.MarkRallyWide)) && hisa.Traits.SequenceEqual(UnitCatalog.HisaHKb.Traits)
+        // 第299期: 規定のヒサは HK-b ＋ `MarkRallySelf`（叫びは自分も癒す）になった。HK-b そのものは `HisaHKb`。
+        Expect("(a) 規定のヒサ ＝ HK-b の札（旧の規定 `HisaHK0` ＋ `MarkRallyWide`）＋ 第299期の `MarkRallySelf`・`HisaHKb` ＋ `MarkRallySelf` と同じ札・数値と手番は旧と同じ",
+            hisa.Traits.SequenceEqual(hk0.Traits.Append(TraitId.MarkRallyWide).Append(TraitId.MarkRallySelf)) && hisa.Traits.SequenceEqual(UnitCatalog.HisaHKb.Traits.Append(TraitId.MarkRallySelf))
             && hk0.Traits.SequenceEqual(new[] { TraitId.Beckon, TraitId.Flee })
             && hisa.MaxHp == hk0.MaxHp && hisa.Attack == hk0.Attack && hisa.Speed == hk0.Speed && hisa.Pattern == hk0.Pattern && ReferenceEquals(hisa.Actions, hk0.Actions));
         Expect("(b) 文面: プラスの末尾が指示書の文・フレーバーは今のまま・マイナスは旧と同じ",
@@ -202,7 +203,8 @@ static class Rally296Diag
             && pl.Skip(5).Select(r => r.Name).SequenceEqual(NewRows) && Presets.Compare.Length == 64 && Presets.Cross.Length == 12
             && pl.All(r => !compareNames.Contains(r.Name) && !Presets.Cross.Any(c => c.Name == r.Name))
             && pl.All(r => r.F.Occupied().Count() == 5 && r.F.Occupied().All(o => UnitCatalog.All.Contains(o.Def))));
-        Formation Row(string n) => FvSwap(pl.First(r => r.Name == n).F, UnitCatalog.Doha, UnitCatalog.DohaD0);   // 第298期: ドハは旧に固定
+        Formation RowRaw(string n) => FvSwap(pl.First(r => r.Name == n).F, UnitCatalog.Doha, UnitCatalog.DohaD0);   // 第298期: ドハは旧に固定
+        Formation Row(string n) => Pin299(RowRaw(n));   // 第299期: ミサ ／ ザン ／ ヒサも第298期の規定に
         var boss = Row("試遊・標 ボス台");
         Expect("(f) 循環 ＝ 試遊・標 ボス台の 後1 バン → ソラ（席はそのまま）・三人組 ＝ 循環の ソラ → ドルガ・守り型 ＝ ゴルム・ザン・ドハ・ミサ・ヒサ",
             Row("試遊・標 循環").Occupied().SequenceEqual(FvSwap(boss, UnitCatalog.Ban, UnitCatalog.Sora).Occupied())
@@ -217,7 +219,7 @@ static class Rally296Diag
             return res.Count(x => x.W);
         }
         int cyc = Wins(Row("試遊・標 循環"), EnemyCatalog.PlaytestStages[0], out _);
-        int cyc0 = Wins(MarkHeal295Diag.Pin296(Row("試遊・標 循環")), EnemyCatalog.PlaytestStages[0], out _);
+        int cyc0 = Wins(MarkHeal295Diag.Pin296(RowRaw("試遊・標 循環")), EnemyCatalog.PlaytestStages[0], out _);
         int trio = Wins(Row("試遊・標 三人組"), EnemyCatalog.PlaytestStages[0], out _);
         int guard = Wins(Row("試遊・標 守り型"), EnemyCatalog.PlaytestStages[1], out double gt);
         Expect("(g) 第295期の測定と一致: 循環 × ボス（seed 0..199）HK-b 100.0% ／ 旧の規定 47.0%・三人組 × ボス 100.0%（§4-2 の対照）・守り型 × 近衛 100.0%・倒しT 3.0（§4-4）",

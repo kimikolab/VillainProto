@@ -7635,6 +7635,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.StaticMembrane)) _membraneHolders.Add(u);   // 第294期（SM・静電気の膜）
         if (u.HasTrait(TraitId.MarkRally) || u.HasTrait(TraitId.MarkRallyWide)) { _rallyLive = true; _rallyHolders.Add(u); }   // 第295期（HK・攻撃のひとまとまり）
         if (u.HasTrait(TraitId.FeatherMark) || u.HasTrait(TraitId.FeatherMarkLayer)) { _mfLive = true; _mfHolders.Add(u); }   // 第298期（MF・標が付いた瞬間の羽）
+        if (u.HasTrait(TraitId.Vendetta)) _vendettaTurnLive = true;   // 第299期（ザンの手番の計数・仇巡り）
         if (u.HasTrait(TraitId.Thrust) || u.HasTrait(TraitId.ThrustPlain)) _thrustLive = true;   // 第186期 追補
         if (HeroShieldTrait.Holds(u)) _heroShieldLive = true;   // 第267期（勇者の庇い）
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
@@ -12885,6 +12886,14 @@ public sealed class BattleContext
         // 第281期: 炸裂の保持者の手番で、敵に標持ちが 0 なら乱射（札 `Spray` の保持者だけ）。**保持者がいなければ比較1つで抜ける。**
         if (_ruptureLive && actor.HasTrait(TraitId.Spray) && !AnyMarkedFoe(actor)) { Spray(actor); return; }
 
+        // 第299期: 仇指し（ザン）の手番。規定では数えるだけで、下の `SwingTurnHits` をそのまま振る。仇巡り（ZM）の札があり標の敵がいれば仇巡り。**保持者がいなければ比較1つで抜ける。**
+        if (_vendettaTurnLive && actor.HasTrait(TraitId.Vendetta)) { VendettaTurn(actor, act); return; }
+
+        SwingTurnHits(actor, act);
+    }
+
+    private void SwingTurnHits(UnitState actor, UnitAction? act)
+    {
         int hits = 1;
         foreach (Trait t in actor.Traits) hits = t.ModifyHitCount(actor, hits);
         if (hits < 1) hits = 1;   // 上限は特性の側。engine が保証するのは「1発は振る」だけ
@@ -13091,13 +13100,15 @@ public sealed class BattleContext
         EndTrait(rm);
     }
 
-    /// <summary>最も傷ついた味方（割合・同値は席番号の若い方・回復を受け付ける・満タンでない）。<paramref name="marked"/> なら標を持つ駒だけ。ヒサ自身は除く。<b>乱数を引かない</b>（`MostHurtAlly` は同値で `PickOne` を引くので使わない）。</summary>
+    /// <summary>最も傷ついた味方（割合・同値は席番号の若い方・回復を受け付ける・満タンでない）。<paramref name="marked"/> なら標を持つ駒だけ。ヒサ自身は除く
+    /// ——<b>第299期: <see cref="TraitId.MarkRallySelf"/>（規定のヒサ）の「最も傷ついた味方」（<paramref name="marked"/> が偽の側）ではヒサ自身も含める</b>。<b>乱数を引かない</b>（`MostHurtAlly` は同値で `PickOne` を引くので使わない）。</summary>
     UnitState? RallyNeediest(UnitState hisa, bool marked)
     {
         UnitState? best = null;
+        bool self = !marked && hisa.HasTrait(TraitId.MarkRallySelf);
         foreach (UnitState u in LivingMembers(hisa.TeamId))
         {
-            if (u == hisa || !u.AcceptsSupport || u.Hp >= u.MaxHp) continue;
+            if ((u == hisa && !self) || !u.AcceptsSupport || u.Hp >= u.MaxHp) continue;
             if (marked && u.RawCounter(StatusKeys.Marked) <= 0) continue;
             if (best is null || (long)u.Hp * best.MaxHp < (long)best.Hp * u.MaxHp || ((long)u.Hp * best.MaxHp == (long)best.Hp * u.MaxHp && u.Slot < best.Slot)) best = u;
         }
@@ -13112,6 +13123,7 @@ public sealed class BattleContext
         ht.RallyHeals++;
         ht.RallyHealed += got;
         ht.RallyOver += amt - got;
+        if (ReferenceEquals(to, hisa)) { ht.RallySelfHeals++; ht.RallySelfHealed += got; }   // 第299期（計数のみ・`MarkRallySelf`）
         int cat = to.Def.Id == "sora" ? 0 : hisa.RawCounter(BeckonTrait.TargetKey) == to.InstanceId + 1 ? 1 : to.Def.Id == "zan" ? 2 : attacker ? 3 : 4;
         (ht.RallyTo ??= new long[5])[cat] += got;
         if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.MarkRally, Turn = _turn, ActorId = hisa.InstanceId, TargetId = to.InstanceId, Amount = got, PartnerId = owner.InstanceId, Slot = layer, HpAfter = to.Hp, Team = to.TeamId });
@@ -13242,6 +13254,94 @@ public sealed class BattleContext
     }
 
     public void NoteFrameDealt(UnitState zan, int dealt) => TallyOf(zan).FrameDealt += dealt;
+
+    // ---- 第299期 段1 —— ザンの手番「仇巡り」（ZM-a `VendettaRound` ／ ZM-1 `VendettaRoundOne`・指示書 design/PHASE299_ZAN_ROUND_SPEC.md §4）。
+    // 手番で、標を持つ敵が1体でも生きていれば、普通の攻撃の代わりに、標を持つ敵を**層の深い順（同じなら席番号）**に巡って、
+    // ZM-a はその敵の層の数だけ・ZM-1 は1太刀ずつ斬る。合計は `VendettaTrait.RoundCap`（8）まで・2周目はしない・的が倒れたら次の敵へ。
+    // 1太刀 ＝ 的を固定した単体の `PerformAttack`（**介入の鎖を通さない**＝庇う・後備え・挑発が掛からない・前列の制限も受けない）。
+    // 太刀の数は `ModifyHitCount` を通さない（あの窓口は「回数」しか返さず、的を巡れない）——手番の外の連鎖を増やさないのは同じ（手番の中だけ）。
+    // 標を消費しない・新しい標を書かない（太刀は普通の攻撃）・返り血は付かない（仇討ちの代金のまま）。手番の枠（`TakeTurnFramed`）の中なので、叫びは1手番に1回。
+    // 巡る順と的は手番の頭で決める（層は手番の頭の値）。**乱数を引かない。** 規定（札なし）は数えるだけ。
+    bool _vendettaTurnLive;
+
+    long FoeHpLeft(UnitState actor)
+    {
+        long s = 0;
+        int opp = Opponent(actor.TeamId);
+        foreach (UnitState u in _units) if (u.TeamId == opp && u.Hp > 0) s += u.Hp;
+        return s;
+    }
+
+    void VendettaTurn(UnitState actor, UnitAction? act)
+    {
+        UnitTally t = TallyOf(actor);
+        var marked = new List<(UnitState Foe, int Layer)>();
+        foreach (UnitState f in LivingMembers(Opponent(actor.TeamId)))
+        {
+            int l = f.RawCounter(StatusKeys.Marked);
+            if (l > 0) marked.Add((f, l));
+        }
+        marked.Sort((a, b) => a.Layer != b.Layer ? b.Layer.CompareTo(a.Layer) : a.Foe.Slot.CompareTo(b.Foe.Slot));
+        int cap = VendettaTrait.RoundCap, layers = 0;
+        foreach (var m in marked) layers += m.Layer;
+        t.ZanTurns++;
+        if (marked.Count == 0) t.ZanTurnNoMarked++;
+        t.ZanTurnMarkedFoes += marked.Count; t.ZanTurnLayers += layers;
+        t.ZanPlanA += Math.Min(cap, layers); t.ZanPlan1 += Math.Min(cap, marked.Count);
+        if (layers >= cap) t.ZanPlanACapped++;
+        if (marked.Count >= cap) t.ZanPlan1Capped++;
+
+        long hp0 = FoeHpLeft(actor);
+        bool roundA = actor.HasTrait(TraitId.VendettaRound), round1 = !roundA && actor.HasTrait(TraitId.VendettaRoundOne);
+        if (marked.Count == 0 || (!roundA && !round1))
+        {
+            SwingTurnHits(actor, act);
+            t.ZanTurnDealt += hp0 - FoeHpLeft(actor);
+            return;
+        }
+
+        int planned = 0, foes = 0;
+        foreach (var m in marked)
+        {
+            if (planned >= cap) break;
+            planned += Math.Min(cap - planned, roundA ? m.Layer : 1);
+            foes++;
+        }
+        t.RoundTurns++;
+        Log($"  {actor.Name} が仇を巡る（{foes} 体・{planned} 太刀）", LogKind.Trigger);
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.VendettaRound, Turn = _turn, ActorId = actor.InstanceId, Amount = planned, Slot = foes, Text = VendettaRoundLabels.Start, Team = actor.TeamId });
+
+        int n = 0, visited = 0;
+        int opp = Opponent(actor.TeamId);
+        foreach (var (foe, layer) in marked)
+        {
+            if (n >= cap || !actor.IsAlive || !TeamAlive(opp)) break;
+            if (!foe.IsAlive) continue;   // 的が倒れていたら次の敵へ
+            int k = roundA ? layer : 1;
+            bool any = false;
+            for (int j = 0; j < k && n < cap; j++)
+            {
+                if (!actor.IsAlive || !foe.IsAlive || !TeamAlive(opp)) break;
+                n++; any = true;
+                t.RoundSlashes++;
+                if (!TargetPool(actor).Contains(foe)) t.RoundCrossed++;
+                if (foe.Row == Row.Back) t.RoundBack++;
+                if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.VendettaRound, Turn = _turn, ActorId = actor.InstanceId, TargetId = foe.InstanceId, Amount = planned, Slot = n, Text = VendettaRoundLabels.Slash, Team = foe.TeamId });
+                _forcedTarget = foe;
+                try
+                {
+                    if (act is null) PerformAttack(actor, patternOverride: AttackPattern.Single);
+                    else PerformAttack(actor, attackPercent: act.AttackPercent, patternOverride: AttackPattern.Single);
+                }
+                finally { _forcedTarget = null; _forcedLane = -1; }
+            }
+            if (any) visited++;
+        }
+        if (n >= cap) t.RoundCapped++;
+        t.RoundFoes += visited;
+        (t.RoundSlashHist ??= new long[cap + 1])[Math.Min(cap, n)]++;
+        t.RoundDealt += hp0 - FoeHpLeft(actor);
+    }
 
     // ---- 第298期 段0-2 —— 戦績の帰属のずれ（第297期 §2-3 の 8 群）。engine の中から別の駒のために回復・強化・弱体・破片を出す所で、
     // 本当の出どころの印を立てる（`BeginTrait` ／ `EndTrait`・**観測専用**）。`AttrEnd` は印を戻し、包む前の印が別の駒（か誰でもない）を

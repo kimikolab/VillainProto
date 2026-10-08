@@ -42,7 +42,9 @@ static class Doha297Diag
     static UnitDef Ver(string s) => s switch { "a" or "DH-a" => UnitCatalog.DohaDHa, "b" or "DH-b" => UnitCatalog.DohaDHb, "t" or "DH-t" => UnitCatalog.DohaDHt, _ => UnitCatalog.DohaD0 };
     static string VerTag(UnitDef d) => Versions.First(v => ReferenceEquals(v.Def, d)).Tag;
 
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
+    static Formation Playtest(string n) => Pin299(Presets.Playtest.First(r => r.Name == n).F);   // 第299期: ミサ ／ ザン ／ ヒサは第298期の規定に固定
+    static (string Name, Formation F)[] CompareBuilds() => Common.CompareBuilds().Select(r => (r.Name, Pin299(r.F))).ToArray();
+    static (string Name, Formation F)[] CrossBuilds() => Common.CrossBuilds().Select(r => (r.Name, Pin299(r.F))).ToArray();
 
     /// <summary>代表台（§5-2）。守り型 ／ `compare` と交差帯のドハの行すべて ／ 試遊・感電 雷の型 ／ 火の軸の台（燃焼 (ボルグ×ホタ) の ガルド → ドハ）。</summary>
     internal static (string Name, Formation F)[] Boards()
@@ -401,7 +403,7 @@ static class Doha297Diag
     // ---------------------------------------------------------------------------------
     // §5-2 の格子（固定枠 ドハ ＋ アタッカー1枚 × 探索枠3 × 席）
     // ---------------------------------------------------------------------------------
-    internal static readonly UnitDef[] Attackers = { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.Kata, UnitCatalog.Shiga };
+    internal static readonly UnitDef[] Attackers = { UnitCatalog.TomeMb, UnitCatalog.ZanZN0, UnitCatalog.Kata, UnitCatalog.Shiga };
 
     /// <summary>
     /// §5-2 の格子（R386）。固定枠 ドハ ＋ アタッカー1枚（<see cref="Attackers"/>）× 探索枠3（`All` の残り 50 枚から3枚）× 席。
@@ -549,7 +551,7 @@ static class Doha297Diag
                 && v.Item1.MinusText == "自分は強くならず、味方が多いほど早く尽きる" && v.Item1.Flavor == d0.Flavor));
 
         // (c)〜(j) 盤面を直に組んで1発ずつ: 前1 ドルガ（札なし）／ 前3 ミサ ／ 中央 ドハ ／ 後1 カタ ／ 後3 ガルド（支援を拒む）。ゴルム（巨躯・吐き戻し）のような中継と強化を持つ駒は置かない
-        Formation Board(UnitDef dv) => Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Tome, center: dv, back1: UnitCatalog.Kata, back3: UnitCatalog.Gald);
+        Formation Board(UnitDef dv) => Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.TomeMb, center: dv, back1: UnitCatalog.Kata, back3: UnitCatalog.Gald);
         var res = new List<(string Tag, int DohaLoss, int GolmLoss, int DohaAtk, int GolmAtk, int TopAtk, string Top, int Given, int Whet)>();
         foreach (var (tag, dv) in Versions)
         {

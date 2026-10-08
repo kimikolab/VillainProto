@@ -49,7 +49,7 @@ static class Tome281Diag
     };
     static Ver VerOf(string n) => Vers.First(v => v.Name == n);
 
-    static Formation Row(string prefix) => FvSwap(FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Hisa, UnitCatalog.HisaHK0);   // 第295期: ソラを旧の規定（SR0）に固定・第296期: ヒサも（HK0）
+    static Formation Row(string prefix) => FvSwap(FvSwap(FvSwap(FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Hisa, UnitCatalog.HisaHK0), UnitCatalog.Tome, UnitCatalog.TomeMb), UnitCatalog.Zan, UnitCatalog.ZanZN0);   // 第295期: ソラを旧の規定（SR0）に固定・第296期: ヒサも（HK0）・第299期: ミサ ／ ザンも（`TomeMb` ／ `ZanZN0`）
 
     /// <summary>新行（`compare` 64 行目）。席は `seat` で選んだもの（`Presets` の定義をそのまま引く）。</summary>
     static Formation MarkEconomyRow => Row("標経済 (ヒサ×ザン×ミサ)");
@@ -57,10 +57,10 @@ static class Tome281Diag
     /// <summary>台（規定のトメ＝T0 で定義し、版はトメだけを差し替える）。</summary>
     internal static readonly (string Name, string Group, Func<UnitDef, Formation> Make)[] Boards =
     {
-        ("見境 (ミサ×ソラ)", "compare", d => FvSwap(Row("見境 (ミサ×ソラ)"), UnitCatalog.Tome, d)),
-        ("見境改 (ミサ×薙ぎ)", "compare", d => FvSwap(Row("見境改 (ミサ×薙ぎ)"), UnitCatalog.Tome, d)),
-        ("標経済 (ヒサ×ザン×ミサ)", "compare", d => FvSwap(MarkEconomyRow, UnitCatalog.Tome, d)),
-        ("標台S 止めの中央 ノミ → ザン", "ボス台", d => FvSwap(FvSwap(Row("見境 (ミサ×ソラ)"), UnitCatalog.Nomi, UnitCatalog.Zan), UnitCatalog.Tome, d)),
+        ("見境 (ミサ×ソラ)", "compare", d => FvSwap(Row("見境 (ミサ×ソラ)"), UnitCatalog.TomeMb, d)),
+        ("見境改 (ミサ×薙ぎ)", "compare", d => FvSwap(Row("見境改 (ミサ×薙ぎ)"), UnitCatalog.TomeMb, d)),
+        ("標経済 (ヒサ×ザン×ミサ)", "compare", d => FvSwap(MarkEconomyRow, UnitCatalog.TomeMb, d)),
+        ("標台S 止めの中央 ノミ → ザン", "ボス台", d => FvSwap(FvSwap(Row("見境 (ミサ×ソラ)"), UnitCatalog.Nomi, UnitCatalog.ZanZN0), UnitCatalog.TomeMb, d)),
         ("読み手台 毒→被弾強化の後3 セロ → トメ", "検証", d => FvSwap(Row("毒→被弾強化 (グザ×ムド)"), UnitCatalog.Sero, d)),
     };
 
@@ -218,7 +218,7 @@ static class Tome281Diag
         Console.WriteLine("# 第281期 トメの転生 —— 台 × 版 × 波（seed 0..199）");
         Console.WriteLine();
         for (int bi = 0; bi < Boards.Length; bi++)
-            Console.WriteLine($"- 台{bi}（{Boards[bi].Group}）{Boards[bi].Name} ＝ " + BA.SeatsNamed(Boards[bi].Make(UnitCatalog.Tome)));
+            Console.WriteLine($"- 台{bi}（{Boards[bi].Group}）{Boards[bi].Name} ＝ " + BA.SeatsNamed(Boards[bi].Make(UnitCatalog.TomeMb)));
         foreach (var v in Vers) Console.WriteLine($"- {v.Name}: {v.What}");
         Console.WriteLine("- 波: 本編第2〜5波（`compare` と同じ口・倍率 115/115）／ ボス ＝ 規定形（倍率なし）");
         Console.WriteLine();
@@ -332,7 +332,7 @@ static class Tome281Diag
         Console.WriteLine();
         for (int bi = 0; bi < Boards.Length; bi++)
         {
-            Console.WriteLine($"## 台{bi} {Boards[bi].Name} ＝ {BA.SeatsNamed(Boards[bi].Make(UnitCatalog.Tome))}");
+            Console.WriteLine($"## 台{bi} {Boards[bi].Name} ＝ {BA.SeatsNamed(Boards[bi].Make(UnitCatalog.TomeMb))}");
             Console.WriteLine();
             Console.WriteLine("| 版 | 勝率 | 崩れ始め | トメの死亡T | 炸裂（層） | 爪痕累計 | 最後の最大HP | 勇者の回復（総） | 隊の与ダメ（20T） | トメの与ダメ |");
             Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
@@ -435,9 +435,9 @@ static class Tome281Diag
     /// <summary>新行の顔ぶれの候補。a ＝ 第184期の診断台1（ムド・ボルグ）／ b ＝ `仇討ち (ヒサ×ザン)` のドルガ → トメ（1枚だけ違う）／ c ＝ ヒサ・ザン・トメ・ガルド・ムド。</summary>
     static readonly Dictionary<string, (string What, UnitDef[] M)> SeatSets = new()
     {
-        ["a"] = ("第184期の診断台1（ヒサ・ザン・トメ・ムド・ボルグ）", new[] { UnitCatalog.HisaHK0, UnitCatalog.Zan, UnitCatalog.TomeT1, UnitCatalog.Mudo, UnitCatalog.Borg }),
-        ["b"] = ("`仇討ち (ヒサ×ザン)` のドルガ → トメ（ガン・ヒサ・ガルド・トメ・ザン）", new[] { UnitCatalog.Gan, UnitCatalog.HisaHK0, UnitCatalog.Gald, UnitCatalog.TomeT1, UnitCatalog.Zan }),
-        ["c"] = ("ヒサ・ザン・トメ・ガルド・ムド", new[] { UnitCatalog.HisaHK0, UnitCatalog.Zan, UnitCatalog.TomeT1, UnitCatalog.Gald, UnitCatalog.Mudo }),
+        ["a"] = ("第184期の診断台1（ヒサ・ザン・トメ・ムド・ボルグ）", new[] { UnitCatalog.HisaHK0, UnitCatalog.ZanZN0, UnitCatalog.TomeT1, UnitCatalog.Mudo, UnitCatalog.Borg }),
+        ["b"] = ("`仇討ち (ヒサ×ザン)` のドルガ → トメ（ガン・ヒサ・ガルド・トメ・ザン）", new[] { UnitCatalog.Gan, UnitCatalog.HisaHK0, UnitCatalog.Gald, UnitCatalog.TomeT1, UnitCatalog.ZanZN0 }),
+        ["c"] = ("ヒサ・ザン・トメ・ガルド・ムド", new[] { UnitCatalog.HisaHK0, UnitCatalog.ZanZN0, UnitCatalog.TomeT1, UnitCatalog.Gald, UnitCatalog.Mudo }),
     };
 
     static void Seat(string key)
@@ -557,7 +557,7 @@ static class Tome281Diag
             for (int w = 1; w <= 4; w++)
             {
                 int ww = w, wa = 0, wb = 0;
-                var f = Boards[bi].Make(UnitCatalog.Tome);
+                var f = Boards[bi].Make(UnitCatalog.TomeMb);
                 for (int s = 0; s < Seeds; s++)
                 {
                     if (BattleEngine.Run(f, EnemyCatalog.Stages[ww].Enemy, s, verbose: false).PlayerWon) wa++;

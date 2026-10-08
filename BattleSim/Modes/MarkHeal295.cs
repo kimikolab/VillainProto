@@ -61,6 +61,8 @@ static class MarkHeal295Diag
         var g = f.Clone();
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Hisa)) g[slot] = UnitCatalog.HisaHK0;
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Doha)) g[slot] = UnitCatalog.DohaD0;   // 第298期
+        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Tome)) g[slot] = UnitCatalog.TomeMb;   // 第299期: ミサ ／ ザンも旧の規定に
+        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Zan)) g[slot] = UnitCatalog.ZanZN0;
         return g;
     }
     static (string Name, Formation F)[] CompareBuilds() => Common.CompareBuilds().Select(r => (r.Name, Pin296(r.F))).ToArray();
@@ -479,10 +481,10 @@ static class MarkHeal295Diag
     /// <summary>ボスの格子（§5-2）: 固定枠 ミサ ＋ ザン ＋ ソラ ＋ ヒサ・探索枠1 ＝ 第294期のソラの格子の候補（第283期の寿命側 ＋ ヒーラーからソラを除いた枠）からヒサを除いた枠。</summary>
     static UnitDef[] BossPool => B283.LifePool.Concat(B283.HealPool295.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id is not ("sora" or "hisa")).ToArray();
 
-    static void GridBoss() => GridCore("固定枠 ミサ・ザン・ソラ・ヒサ（ヒサ: 規定 ／ HK-a ／ HK-b）", S287.Waves[0], new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.Sora, UnitCatalog.HisaHK0 }, BossPool, 1);
+    static void GridBoss() => GridCore("固定枠 ミサ・ザン・ソラ・ヒサ（ヒサ: 規定 ／ HK-a ／ HK-b）", S287.Waves[0], new[] { UnitCatalog.TomeMb, UnitCatalog.ZanZN0, UnitCatalog.Sora, UnitCatalog.HisaHK0 }, BossPool, 1);   // 第299期: ミサ ／ ザンは旧の規定
 
     static void GridElite(string wave, string ver) =>
-        GridCore($"固定枠 ミサ・ヒサ・ザン（第294期 §4-5 の作り・探索枠2）", WaveOf(wave), new[] { UnitCatalog.Tome, UnitCatalog.HisaHK0, UnitCatalog.Zan },
+        GridCore($"固定枠 ミサ・ヒサ・ザン（第294期 §4-5 の作り・探索枠2）", WaveOf(wave), new[] { UnitCatalog.TomeMb, UnitCatalog.HisaHK0, UnitCatalog.ZanZN0 },   // 第299期: ミサ ／ ザンは旧の規定
             S287.Pool.Select(d => d.Id switch { "kata" => UnitCatalog.Kata, "kugu" => UnitCatalog.Kugu, _ => d }).Where(d => d.Id is not ("tome" or "hisa" or "zan")).Distinct().ToArray(), 2);
 
     // ---------------------------------------------------------------------------------

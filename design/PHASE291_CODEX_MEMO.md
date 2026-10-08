@@ -348,3 +348,30 @@ T1 の勇者の全体攻撃から、ミサの羽の後の叫びまで（`rally29
 | ザンの返り血 | `Damage`（`ActorId` ＝ `TargetId` ＝ ザン・`Reaction`・`FriendlyFire`） | 仇討ちの `Damage` の直後（羽 ／ 標の出来事を挟む）。量は 3 |
 | ミサの乱射が味方に当たる | `Feather 乱射` の直後の `Damage`（`ActorId` ＝ ミサ・`TargetId` ＝ 味方・`FriendlyFire`・`Pattern` ＝ Single） | 乱射の一撃には `Attack` が無い（`Feather 乱射` が代わり）。例: 三人組 × 近衛 × seed 2 の #21 → #22（ミサ → ゴルム 6）。HK-b の台では乱射が少ない（循環 × ボス 0・近衛 ／ 大隊で 1戦 0.0〜0.6 回）——標が尽きにくいため |
 | 味方の刃を味方の声が塞ぐ | 乱射の `Damage` と、その後の `MarkRally`（最も傷ついた味方への2件目） | 直接は結ばれていない（叫びは標の敵に当たった攻撃のひとまとまりにだけ出る）。乱射で傷ついた味方が「最も傷ついた味方」になれば、次の叫びの2件目がそこへ行く |
+
+### 7-8. 第299期: 羽と濡れ衣が規定になった（試遊・標 循環 × 近衛 × seed 0・`zan299 memo 循環 guard 0 規定`）
+
+第299期にミサ（MF-b）とザン（ZN-b）を規定にしたので、`FeatherMark` ／ `Framed` は試遊でも出る。ヒサの叫びは自分も癒す（`MarkRally` の `ActorId` ＝ `TargetId` ＝ ヒサ）。
+
+```
+--- T0（開戦: ヒサの矢面の標がゴルムに付いた瞬間）
+FeatherMark 味方  ミサ#2 → ゴルム#1  Amount 1  Slot 1        標が付いた瞬間の羽（味方へ）
+Damage      ミサ#2 → ゴルム#1  24  Reaction ff                 羽の一撃（同士討ち・矢面の半減なし）
+Framed あいつがやった  ヒサ#4 → 新兵#5  Partner=ゴルム#1       ヒサが敵を指差す（撃たれた味方 ＝ Partner）
+Framed 濡れ衣         ザン#0 → 新兵#5  Partner=ミサ#2          ザンの濡れ衣の仇討ちの印（本当に撃った味方 ＝ Partner）
+Damage      ザン#0 → 新兵#5  20  Reaction                      濡れ衣の仇討ち（倍の刃）
+Feather 増えた  ザン#0 → ミサ#2  Amount 2  Partner=新兵#5       仇の標でミサの羽が増える
+Damage      ザン#0 → ザン#0  3  Reaction ff                    返り血
+--- T1
+FeatherMark 味方  ミサ#2 → ソラ#3  Amount 1  Slot 1          ソラが自分に付けた標へ羽
+…（濡れ衣がもう1回）…
+FeatherMark 敵    ミサ#2 → 新兵#7  Amount 1  Slot 1          敵に新しい標が付いた瞬間の羽
+Attack / Damage   ミサ#2 → 新兵#7  24 → 36  Reaction           標の +50%
+MarkRally   ヒサ#4 → ミサ#2 ／ ゴルム#1                         羽の1発は攻撃のひとまとまり1つ → 叫び
+…
+MarkRally   ヒサ#4 → ヒサ#4  Amount 4  Slot 3                  叫びがヒサ自身を癒す（第299期・最も傷ついた味方 ＝ ヒサ）
+```
+
+- 並びの型: **標が付いた瞬間の羽（`FeatherMark`）→ 味方への羽の `Damage`（`FriendlyFire`）→「あいつがやった！」（`Framed` Accuse）→ 濡れ衣（`Framed` Vendetta）→ 仇討ちの `Damage`（`Reaction`）→ 返り血**。`Framed` の2件は必ず対で、直後に仇討ちの `Damage` が来る。
+- 羽の `FeatherMark` の `Slot` は 1 ＝ 新しい標・0 ＝ 層の追加（MF-b は層の追加でも飛ぶ）。`Amount` ＝ 的の標の層。
+- **版だけの出来事（規定では出ない）**: ザンの仇巡り（ZM-a ／ ZM-1）の `VendettaRound`。`Text` ＝「仇巡り」（始まり・`Slot` ＝ 巡る敵の数 ／ `Amount` ＝ 太刀の合計）と「太刀」（1太刀ごと・`Slot` ＝ 何太刀目か・直後にその太刀の `Attack` ／ `Damage`）。仇巡りの太刀は手番の攻撃（`Reaction` でない）。例: `zan299 memo 循環 boss 0 ZM-a`（T2 から毎手番 勇者へ 8 太刀）。

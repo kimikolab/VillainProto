@@ -950,6 +950,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 feather298 grid <guard|bat|boss> <C1..C4> [seed=10] <a|b>   # 第298期 格子（R386）: 固定枠 ヒサ ＋ ザン ＋ ミサ・探索枠2 × 席 120・C0 と組で同じ台・ソラが自由枠に入る台とソラ → ドルガ
     dotnet run --project BattleSim -c Release 0 feather298 memo <台の一部> <boss|guard|bat|1..5> <seed> <C0..C4> <a|b>   # 第298期 Codex 向け: 台本の並び（`FeatherMark` ／ `Framed` ／ 羽 ／ 叫び）
     dotnet run --project BattleSim -c Release 0 feather298 check          # 第298期 自己検査（規定のドハの札と文面・なまりが規定で 0・帰属の群 1 ／ 6 を直に・MF の在庫 ／ 層 ／ 同士討ち ／ 再入・ZN-a のヒサ ／ 羽以外 ／ ZN-b・指差しの順・PickOne・verbose・出来事・版の文面）
+    dotnet run --project BattleSim -c Release 0 zan299 p0                 # 第299期 Phase 0: ザンの手番（規定・段0 の後）の回数・手番の時点の標の敵の数 ／ 層の合計・仇巡りの見込み（ZM-a ／ ZM-1・8 に達する手番）・手番の与ダメ（3 秒）。本体は `Modes/Zan299.cs`
+    dotnet run --project BattleSim -c Release 0 zan299 hisa [seeds]       # 第299期 段0-2: ヒサ（旧 `HisaHKb` ／ 規定 ＝ 叫びは自分も癒す）× 標の代表台4 × 第2〜5波 ／ 精鋭 ／ ボス・ヒサが倒れた T・ヒサへの回復・自分への叫び（2 秒）
+    dotnet run --project BattleSim -c Release 0 zan299 rates [seeds]      # 第299期: 代表台 7 台 × 本編 第1〜5波 ／ 近衛 ／ 大隊 ／ ボス × ザンの版（規定 ／ ZM-a ／ ZM-1）・1手番の太刀と分布・巡った敵・列越え ／ 後列・手番の与ダメ（4 秒）
+    dotnet run --project BattleSim -c Release 0 zan299 compare            # 第299期: `compare` 64 行 × ザンの版（ザン在席の4行）・主判定19行の第五波・(G2)
+    dotnet run --project BattleSim -c Release 0 zan299 grid <guard|bat|boss> [seeds=10]   # 第299期 格子（R386）: 固定枠 ヒサ ＋ ザン ＋ ミサ・探索枠2 × 席 120・規定と ZM-a で同じ台・上位 12 台の対照（R383・固定枠の駒それぞれ → ドルガ）。**第299期は条件（代表台の精鋭かボスで +10pt）を満たさず回していない**
+    dotnet run --project BattleSim -c Release 0 zan299 memo <台の一部> <boss|guard|bat|1..5> <seed> <規定|ZM-a|ZM-1>   # 第299期 Codex 向け: 台本の並び（`FeatherMark` ／ `Framed` ／ `VendettaRound` ／ 羽 ／ 叫び）
+    dotnet run --project BattleSim -c Release 0 zan299 check              # 第299期 自己検査（規定のミサ ／ ザン ／ ヒサの札と文面・叫びがヒサ自身を癒す・仇巡りの太刀 ＝ 層 ／ 上限 8 ／ 2周目なし ／ 標を消費しない ／ 羽を呼ばない ／ 返り血なし ／ 叫び1回 ／ 的が倒れたら次・PickOne・verbose・出来事・版の文面）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

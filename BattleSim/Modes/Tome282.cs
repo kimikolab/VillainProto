@@ -44,7 +44,7 @@ static class Tome282Diag
     };
     static Ver VerOf(string n) => Vers.First(v => v.Name == n);
 
-    static Formation Row(string prefix) => FvSwap(FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Hisa, UnitCatalog.HisaHK0);   // 第295期: ソラを旧の規定（SR0）に固定・第296期: ヒサも（HK0）
+    static Formation Row(string prefix) => FvSwap(FvSwap(FvSwap(FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Hisa, UnitCatalog.HisaHK0), UnitCatalog.Tome, UnitCatalog.TomeMb), UnitCatalog.Zan, UnitCatalog.ZanZN0);   // 第295期: ソラを旧の規定（SR0）に固定・第296期: ヒサも（HK0）・第299期: ミサ ／ ザンも（`TomeMb` ／ `ZanZN0`）
 
     /// <summary>新台の壁（`wall` で選んだもの・指示書 §3-1）。標経済の前3 ガルドをこの駒に替える。</summary>
     internal static UnitDef NewWall => UnitCatalog.DohaD0;
@@ -54,11 +54,11 @@ static class Tome282Diag
     /// <summary>台（規定のトメ＝T1 で定義し、版はトメだけを差し替える）。</summary>
     static readonly (string Name, string Group, Func<UnitDef, Formation> Make)[] Boards =
     {
-        ("見境 (ミサ×ソラ)", "compare", d => FvSwap(Row("見境 (ミサ×ソラ)"), UnitCatalog.Tome, d)),
-        ("見境改 (ミサ×薙ぎ)", "compare", d => FvSwap(Row("見境改 (ミサ×薙ぎ)"), UnitCatalog.Tome, d)),
-        ("標経済 (ヒサ×ザン×ミサ)", "compare", d => FvSwap(Row("標経済 (ヒサ×ザン×ミサ)"), UnitCatalog.Tome, d)),
-        ("標台S 止めの中央 ノミ → ザン", "ボス台", d => FvSwap(FvSwap(Row("見境 (ミサ×ソラ)"), UnitCatalog.Nomi, UnitCatalog.Zan), UnitCatalog.Tome, d)),
-        ("新台 標経済の前3 ガルド → 壁", "ボス台", d => FvSwap(EconomyWith(NewWall), UnitCatalog.Tome, d)),
+        ("見境 (ミサ×ソラ)", "compare", d => FvSwap(Row("見境 (ミサ×ソラ)"), UnitCatalog.TomeMb, d)),
+        ("見境改 (ミサ×薙ぎ)", "compare", d => FvSwap(Row("見境改 (ミサ×薙ぎ)"), UnitCatalog.TomeMb, d)),
+        ("標経済 (ヒサ×ザン×ミサ)", "compare", d => FvSwap(Row("標経済 (ヒサ×ザン×ミサ)"), UnitCatalog.TomeMb, d)),
+        ("標台S 止めの中央 ノミ → ザン", "ボス台", d => FvSwap(FvSwap(Row("見境 (ミサ×ソラ)"), UnitCatalog.Nomi, UnitCatalog.ZanZN0), UnitCatalog.TomeMb, d)),
+        ("新台 標経済の前3 ガルド → 壁", "ボス台", d => FvSwap(EconomyWith(NewWall), UnitCatalog.TomeMb, d)),
     };
 
     static readonly (string Name, string Group, Func<List<UnitState>> Make)[] Waves = BuildWaves();
@@ -210,7 +210,7 @@ static class Tome282Diag
         Console.WriteLine("# 第282期 段1 —— 消費の廃止（T1n）× 台 × 波（seed 0..199）");
         Console.WriteLine();
         for (int bi = 0; bi < Boards.Length; bi++)
-            Console.WriteLine($"- 台{bi}（{Boards[bi].Group}）{Boards[bi].Name} ＝ " + BA.SeatsNamed(Boards[bi].Make(UnitCatalog.Tome)));
+            Console.WriteLine($"- 台{bi}（{Boards[bi].Group}）{Boards[bi].Name} ＝ " + BA.SeatsNamed(Boards[bi].Make(UnitCatalog.TomeMb)));
         foreach (var v in Vers) Console.WriteLine($"- {v.Name}: {v.What}");
         Console.WriteLine();
         Console.WriteLine("## 表1 勝率（%）と差");
@@ -308,10 +308,10 @@ static class Tome282Diag
         Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
         foreach (var wall in WallCands)
         {
-            var b1 = Measure(FvSwap(EconomyWith(wall), UnitCatalog.Tome, UnitCatalog.TomeT1), BossWave.Make);
-            var bn = Measure(FvSwap(EconomyWith(wall), UnitCatalog.Tome, UnitCatalog.TomeT1n), BossWave.Make);
-            double main1 = Waves.Where(w => w.Group == "本編").Average(w => Measure(FvSwap(EconomyWith(wall), UnitCatalog.Tome, UnitCatalog.TomeT1), w.Make).Win);
-            double mainN = Waves.Where(w => w.Group == "本編").Average(w => Measure(FvSwap(EconomyWith(wall), UnitCatalog.Tome, UnitCatalog.TomeT1n), w.Make).Win);
+            var b1 = Measure(FvSwap(EconomyWith(wall), UnitCatalog.TomeMb, UnitCatalog.TomeT1), BossWave.Make);
+            var bn = Measure(FvSwap(EconomyWith(wall), UnitCatalog.TomeMb, UnitCatalog.TomeT1n), BossWave.Make);
+            double main1 = Waves.Where(w => w.Group == "本編").Average(w => Measure(FvSwap(EconomyWith(wall), UnitCatalog.TomeMb, UnitCatalog.TomeT1), w.Make).Win);
+            double mainN = Waves.Where(w => w.Group == "本編").Average(w => Measure(FvSwap(EconomyWith(wall), UnitCatalog.TomeMb, UnitCatalog.TomeT1n), w.Make).Win);
             Console.WriteLine($"| {wall.Name} | {wall.MaxHp} | {Per(b1.Vend, b1.N)} | {Per(b1.LayerAdds, b1.N)} | {AvgT(b1.FirstDeathT, b1.FirstDeath)} | {AvgT(b1.TomeDeathT, b1.TomeDied)} | {Per1(b1.RScar, b1.N)} | {Per1(bn.RScar, bn.N)} | {Per1(bn.BossMaxEnd, bn.N)} | {F1(main1)} | {F1(mainN)} |");
         }
         Console.WriteLine();
@@ -335,9 +335,9 @@ static class Tome282Diag
         };
         Console.WriteLine($"# 第282期 段2 —— ボスの到達度（規定形・HP {EnemyCatalog.BossRegular.MaxHp}・回復は最大HPの 40%・seed 0..199・倍率なし）");
         Console.WriteLine();
-        Console.WriteLine($"- 新台 ＝ {BA.SeatsNamed(Boards[4].Make(UnitCatalog.Tome))}");
-        Console.WriteLine($"- 旧台 ＝ {BA.SeatsNamed(Boards[2].Make(UnitCatalog.Tome))}");
-        Console.WriteLine($"- 標台S ＝ {BA.SeatsNamed(Boards[3].Make(UnitCatalog.Tome))}");
+        Console.WriteLine($"- 新台 ＝ {BA.SeatsNamed(Boards[4].Make(UnitCatalog.TomeMb))}");
+        Console.WriteLine($"- 旧台 ＝ {BA.SeatsNamed(Boards[2].Make(UnitCatalog.TomeMb))}");
+        Console.WriteLine($"- 標台S ＝ {BA.SeatsNamed(Boards[3].Make(UnitCatalog.TomeMb))}");
         Console.WriteLine();
         Console.WriteLine("s ＝ 炸裂1回あたりの平均層（T1）／ 1ターンあたりの層の供給（層足 ＋ 新しく付いた標・T1n は炸裂の層の伸びで読む）。");
         Console.WriteLine();
@@ -442,7 +442,7 @@ static class Tome282Diag
         Expect("(a) `TomeT1n` は T1n（炸裂・爪痕・乱射・層を残す）を明示的に持つ・規定（第286期から M-b）とも `TomeT1` とも別の物",
             UnitCatalog.TomeT1n.Traits.SequenceEqual(new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.Spray, TraitId.RuptureKeep })
             && !ReferenceEquals(UnitCatalog.TomeT1n, UnitCatalog.Tome) && !ReferenceEquals(UnitCatalog.TomeT1, UnitCatalog.Tome)
-            && ReferenceEquals(UnitCatalog.TomeMb, UnitCatalog.Tome));
+            && UnitCatalog.Tome.Traits.SequenceEqual(UnitCatalog.TomeMb.Traits.Append(TraitId.FeatherMarkLayer)));   // 第299期: 規定は M-b ＋ MF-b（`TomeMb` は M-b の明示の定義）
         Expect("(b) T0 は旧トメ（止め）・T1n は T1 ＋ 層を残す の1札だけが違う",
             UnitCatalog.TomeT0.Traits.SequenceEqual(new[] { TraitId.Finisher })
             && UnitCatalog.TomeT1n.Traits.Except(UnitCatalog.TomeT1.Traits).SequenceEqual(new[] { TraitId.RuptureKeep })

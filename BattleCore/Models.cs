@@ -2078,6 +2078,19 @@ public sealed class UnitTally
     /// </summary>
     public long BundleTurn, BundleOut, RallyFires, RallyHeals, RallyHealed, RallyOver, RallyNone;
     public long[]? RallyTo;
+    /// <summary>第299期（<b>計数のみ</b>・規定のヒサ `MarkRallySelf`）: 叫びでヒサ自身を癒した回数 ／ 量（ヒサの側）。</summary>
+    public long RallySelfHeals, RallySelfHealed;
+    /// <summary>
+    /// 第299期（<b>計数のみ</b>・ザンの手番）。仇指し（<see cref="TraitId.Vendetta"/>）の保持者が手番で振ったとき（規定でも数える）:
+    /// <c>ZanTurns</c> 手番 ／ <c>ZanTurnNoMarked</c> 標を持つ敵が 0 ／ <c>ZanTurnMarkedFoes</c> ／ <c>ZanTurnLayers</c> 手番の時点の標を持つ敵の数 ／ 層の合計 ／
+    /// <c>ZanPlanA</c> ／ <c>ZanPlan1</c> 仇巡りの見込みの太刀（ZM-a ＝ 層の合計・ZM-1 ＝ 敵の数・上限で切る）／ <c>ZanPlanACapped</c> ／ <c>ZanPlan1Capped</c> 上限に達した手番 ／
+    /// <c>ZanTurnDealt</c> 普通の手番で敵陣の HP が減った量（手番の中の連鎖を含む）。
+    /// 仇巡り: <c>RoundTurns</c> ／ <c>RoundFoes</c> 巡った敵 ／ <c>RoundSlashes</c> ／ <c>RoundCapped</c> 上限で止まった手番 ／ <c>RoundCrossed</c> 普通なら狙えない敵（前列の制限の外）への太刀 ／
+    /// <c>RoundBack</c> 後列の敵への太刀 ／ <c>RoundDealt</c> 仇巡りの手番で敵陣の HP が減った量 ／ <c>RoundSlashHist</c>[n] 1手番の太刀が n の手番（n = 0..8）。
+    /// </summary>
+    public long ZanTurns, ZanTurnNoMarked, ZanTurnMarkedFoes, ZanTurnLayers, ZanPlanA, ZanPlan1, ZanPlanACapped, ZanPlan1Capped, ZanTurnDealt,
+                RoundTurns, RoundFoes, RoundSlashes, RoundCapped, RoundCrossed, RoundBack, RoundDealt;
+    public long[]? RoundSlashHist;
     /// <summary>
     /// 第297期（<b>計数専用</b>・分かち）: <c>SharedAway</c> この駒の痛みを分かちが引き受けた実額（相手ごとの内訳・痛みをくれた側に付く）／ <c>ShareTakenHits</c> ドハが中継の一撃を受けた回数（ドハの側）。
     /// 版（DH-a ／ DH-b ／ DH-t）: ドハ ＝ <c>ShareGives</c> ／ <c>ShareGiven</c> 力を配った回数・量 ／ <c>ShareGiftAccrued</c> 累計に入れた量 ／ <c>ShareGifts</c> 控えた手番 ／
@@ -3180,6 +3193,11 @@ public sealed class UnitTally
         HoldNextHit += o.HoldNextHit; HoldNextHealed += o.HoldNextHealed; HoldNextKilled += o.HoldNextKilled; HoldOnceSpent += o.HoldOnceSpent;
         BundleTurn += o.BundleTurn; BundleOut += o.BundleOut; RallyFires += o.RallyFires; RallyHeals += o.RallyHeals; RallyHealed += o.RallyHealed; RallyOver += o.RallyOver; RallyNone += o.RallyNone;   // 第295期
         AddHist(ref RallyTo, o.RallyTo);
+        RallySelfHeals += o.RallySelfHeals; RallySelfHealed += o.RallySelfHealed;   // 第299期
+        ZanTurns += o.ZanTurns; ZanTurnNoMarked += o.ZanTurnNoMarked; ZanTurnMarkedFoes += o.ZanTurnMarkedFoes; ZanTurnLayers += o.ZanTurnLayers;
+        ZanPlanA += o.ZanPlanA; ZanPlan1 += o.ZanPlan1; ZanPlanACapped += o.ZanPlanACapped; ZanPlan1Capped += o.ZanPlan1Capped; ZanTurnDealt += o.ZanTurnDealt;
+        RoundTurns += o.RoundTurns; RoundFoes += o.RoundFoes; RoundSlashes += o.RoundSlashes; RoundCapped += o.RoundCapped; RoundCrossed += o.RoundCrossed;
+        RoundBack += o.RoundBack; RoundDealt += o.RoundDealt; AddHist(ref RoundSlashHist, o.RoundSlashHist);
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;
         ShareGot += o.ShareGot; ShareGiftGot += o.ShareGiftGot; ShareGiftTurns += o.ShareGiftTurns; ShareGiftAttacks += o.ShareGiftAttacks;
@@ -3888,6 +3906,20 @@ public enum BattleEventKind
     /// 「濡れ衣」＝ 仇討ちの印（<c>ActorId</c> ＝ ザン ／ <c>TargetId</c> ＝ 斬る敵 ／ <c>PartnerId</c> ＝ 本当に撃った味方）。直後に仇討ちの `Reaction` の `Damage`。
     /// </summary>
     Framed,
+
+    /// <summary>
+    /// ザンの仇巡り（第299期・ZM-a ／ ZM-1・<b>表示専用</b>）。<c>Text</c> で2種（<see cref="VendettaRoundLabels"/>）:
+    /// 「仇巡り」＝ 始まり（<c>ActorId</c> ＝ ザン ／ <c>Slot</c> ＝ 巡る敵の数 ／ <c>Amount</c> ＝ 太刀の合計（上限で切った後））、
+    /// 「太刀」＝ 1太刀の印（<c>ActorId</c> ＝ ザン ／ <c>TargetId</c> ＝ 的 ／ <c>Slot</c> ＝ 仇巡りの何太刀目か ／ <c>Amount</c> ＝ 太刀の合計）。直後にその太刀の `Attack` ／ `Damage`。
+    /// </summary>
+    VendettaRound,
+}
+
+/// <summary>`VendettaRound`（第299期）の <c>Text</c>。</summary>
+public static class VendettaRoundLabels
+{
+    public const string Start = "仇巡り";
+    public const string Slash = "太刀";
 }
 
 /// <summary>`FeatherMark`（第298期）の <c>Text</c>。</summary>

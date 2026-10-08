@@ -508,8 +508,9 @@ public static class UnitCatalog
         Advances = false,
         // **第184期に転生**（旧 `Marker` は定義だけ残す）。矢面（`Beckon`）と、その代金の逃げ回る（`Flee`）。
         // **札の並びが実行順**——矢面が標を付けてから、逃げ回るが標の相手以外と入れ替わる（どちらも `OnAction`）。
-        Traits = new[] { TraitId.Beckon, TraitId.Flee, TraitId.MarkRallyWide },
+        Traits = new[] { TraitId.Beckon, TraitId.Flee, TraitId.MarkRallyWide, TraitId.MarkRallySelf },
         // 第296期: ポンの判断（第295期の案 K2）で HK-b（あいつを狙え！・`MarkRallyWide`）を規定にした。旧の規定は `HisaHK0`（指示書 design/PHASE296_HISA_RALLY_PLAYTEST_SPEC.md §1）。
+        // 第299期: ポンの決めで「最も傷ついた味方」にヒサ自身を含めた（`MarkRallySelf`・文面は変えない）。第296〜298期の規定は `HisaHKb`（指示書 design/PHASE299_ZAN_ROUND_SPEC.md §3）。
         // 指差すのが手番そのもの（攻撃2 は出なくなる）。`[Skill]` の1要素で毎手番指差して逃げる。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "隣の味方を指差した") },
         PlusText = "手番で、隣でいちばん元気な味方1体に標を付けて矢面に立たせる。標を付けられた味方は、攻撃から受ける痛みが半分になる"
@@ -597,7 +598,8 @@ public static class UnitCatalog
         Flavor = HisaHK0.Flavor
     };
 
-    /// <summary>第295期 HK-b（攻撃した駒 ＋ 傷ついた味方）。規定 ＋ <see cref="TraitId.MarkRallyWide"/>（同じ条件で、攻撃した駒と最も傷ついた味方を 層 × 6 ずつ癒す・同じ駒なら1回）。</summary>
+    /// <summary>第295期 HK-b（攻撃した駒 ＋ 傷ついた味方）。規定 ＋ <see cref="TraitId.MarkRallyWide"/>（同じ条件で、攻撃した駒と最も傷ついた味方を 層 × 6 ずつ癒す・同じ駒なら1回）。
+    /// <b>第296〜298期の規定と同じ物</b>（札・数値・文面・手番）。第299期に規定へ <see cref="TraitId.MarkRallySelf"/> を足したので、旧の規定のヒサを使う過去の器具はこちらに固定する。</summary>
     public static readonly UnitDef HisaHKb = new()
     {
         Id = HisaHK0.Id,
@@ -2338,6 +2340,21 @@ public static class UnitCatalog
         Attack = 10,
         Speed = 5,
         // **第184期に転生**（旧 `Avenge` は定義だけ残す）。仇指し（倍返し＋敵に標）と、その代金の返り血。
+        // 第299期: ポンの判断（第298期の案 Z2）で ZN-b（濡れ衣の仇討ち・同士討ち全般）を規定にした。旧の規定は `ZanZN0`（指示書 design/PHASE299_ZAN_ROUND_SPEC.md §2）。
+        Traits = new[] { TraitId.Vendetta, TraitId.Recoil, TraitId.VendettaFrameAll },
+        PlusText = "標を付けられた味方が殴られるたび、殴った者へ割り込んで倍の刃を返し、仇として標を付ける（標を付けられた敵は受けるダメージが5割増える）。仲間を撃った者が誰であれ、指差された敵を斬る",
+        MinusText = "刃を返すたびに自分も傷つく（それで倒れはしない）",
+        Flavor = "仲間が傷つくと、刃を抜かずにはいられない。返した刃は、いつも自分の手も裂いている。"
+    };
+
+    /// <summary>第184〜298期の規定のザン（仇指し ＋ 返り血）。第299期に ZN-b を規定にしたので、旧の規定の定義を明示的に持つ。<see cref="All"/> にも <see cref="Retired"/> にも入れない。過去の器具はこちらに固定する。第298期の版（ZN-a ／ ZN-b）と第299期の版（ZM）はこの旧から作る。</summary>
+    public static readonly UnitDef ZanZN0 = new()
+    {
+        Id = "zan",
+        Name = "仇討ちのザン",
+        MaxHp = 56,
+        Attack = 10,
+        Speed = 5,
         Traits = new[] { TraitId.Vendetta, TraitId.Recoil },
         PlusText = "標を付けられた味方が殴られるたび、殴った者へ割り込んで倍の刃を返し、仇として標を付ける（標を付けられた敵は受けるダメージが5割増える）",
         MinusText = "刃を返すたびに自分も傷つく（それで倒れはしない）",
@@ -2345,27 +2362,47 @@ public static class UnitCatalog
     };
 
     // 第298期（指示書 §4-2）—— ザンの「濡れ衣の仇討ち」。ヒサの指差しはザンの札の中の動作として書く（ヒサの文面は変えない）。
+    // 第299期: 旧の規定 `ZanZN0` から作る（ZN-b は規定の `Zan` と同じ札の並び）。
 
     /// <summary>第298期 ZN-a（ミサの羽だけ）。規定 ＋ <see cref="TraitId.VendettaFrame"/>（標の付いた味方がミサの羽に撃たれたら、ヒサが生きていれば敵を指差し、その敵へ仇討ちする）。対照（<see cref="All"/> に入れない・採否はポン）。</summary>
     public static readonly UnitDef ZanZNa = new()
     {
-        Id = Zan.Id,
-        Name = Zan.Name,
-        MaxHp = Zan.MaxHp,
-        Attack = Zan.Attack,
-        Speed = Zan.Speed,
-        Advances = Zan.Advances,
-        Pattern = Zan.Pattern,
-        Traits = Zan.Traits.Append(TraitId.VendettaFrame).ToArray(),
-        Actions = Zan.Actions,
-        PlusText = Zan.PlusText + "。仲間を撃った者が誰であれ、指差された敵を斬る",
-        MinusText = Zan.MinusText,
-        Flavor = Zan.Flavor
+        Id = ZanZN0.Id,
+        Name = ZanZN0.Name,
+        MaxHp = ZanZN0.MaxHp,
+        Attack = ZanZN0.Attack,
+        Speed = ZanZN0.Speed,
+        Advances = ZanZN0.Advances,
+        Pattern = ZanZN0.Pattern,
+        Traits = ZanZN0.Traits.Append(TraitId.VendettaFrame).ToArray(),
+        Actions = ZanZN0.Actions,
+        PlusText = ZanZN0.PlusText + "。仲間を撃った者が誰であれ、指差された敵を斬る",
+        MinusText = ZanZN0.MinusText,
+        Flavor = ZanZN0.Flavor
     };
 
     /// <summary>第298期 ZN-b（同士討ち全般）。規定 ＋ <see cref="TraitId.VendettaFrameAll"/>（ZN-a の「ミサの羽」を味方による同士討ち全般に広げる（徴収・中継は除く））。対照（<see cref="All"/> に入れない・採否はポン）。</summary>
     public static readonly UnitDef ZanZNb = new()
     {
+        Id = ZanZN0.Id,
+        Name = ZanZN0.Name,
+        MaxHp = ZanZN0.MaxHp,
+        Attack = ZanZN0.Attack,
+        Speed = ZanZN0.Speed,
+        Advances = ZanZN0.Advances,
+        Pattern = ZanZN0.Pattern,
+        Traits = ZanZN0.Traits.Append(TraitId.VendettaFrameAll).ToArray(),
+        Actions = ZanZN0.Actions,
+        PlusText = ZanZN0.PlusText + "。仲間を撃った者が誰であれ、指差された敵を斬る",
+        MinusText = ZanZN0.MinusText,
+        Flavor = ZanZN0.Flavor
+    };
+
+    // 第299期（指示書 design/PHASE299_ZAN_ROUND_SPEC.md §4）—— ザンの手番「仇巡り」。規定のザン（ZN-b）の上に足す。対照（`All` ／ `Retired` ／ `Presets` に入れない・採否はポン）。
+
+    /// <summary>第299期 ZM-a（層の数）。規定 ＋ <see cref="TraitId.VendettaRound"/>（手番で、標を持つ敵を層の深い順に巡り、その敵の層の数だけ斬る・1手番 8 太刀まで）。</summary>
+    public static readonly UnitDef ZanZMa = new()
+    {
         Id = Zan.Id,
         Name = Zan.Name,
         MaxHp = Zan.MaxHp,
@@ -2373,9 +2410,26 @@ public static class UnitCatalog
         Speed = Zan.Speed,
         Advances = Zan.Advances,
         Pattern = Zan.Pattern,
-        Traits = Zan.Traits.Append(TraitId.VendettaFrameAll).ToArray(),
+        Traits = Zan.Traits.Append(TraitId.VendettaRound).ToArray(),
         Actions = Zan.Actions,
-        PlusText = Zan.PlusText + "。仲間を撃った者が誰であれ、指差された敵を斬る",
+        PlusText = Zan.PlusText + "。手番では、仇を巡って斬る。深く指差された仇ほど、何度も斬る",
+        MinusText = Zan.MinusText,
+        Flavor = Zan.Flavor
+    };
+
+    /// <summary>第299期 ZM-1（対照・1体に1太刀）。規定 ＋ <see cref="TraitId.VendettaRoundOne"/>（層を見ない）。層の数が何を足したかを分けるための対照（R385）——採否の候補ではない。</summary>
+    public static readonly UnitDef ZanZM1 = new()
+    {
+        Id = Zan.Id,
+        Name = Zan.Name,
+        MaxHp = Zan.MaxHp,
+        Attack = Zan.Attack,
+        Speed = Zan.Speed,
+        Advances = Zan.Advances,
+        Pattern = Zan.Pattern,
+        Traits = Zan.Traits.Append(TraitId.VendettaRoundOne).ToArray(),
+        Actions = Zan.Actions,
+        PlusText = Zan.PlusText + "。手番では、仇を巡って斬る",
         MinusText = Zan.MinusText,
         Flavor = Zan.Flavor
     };
@@ -3228,46 +3282,63 @@ public static class UnitCatalog
         // 第283期: ポンの判断（第282期の案 A2）で T1n を規定にした（T1 ＋ 層を残す＝消費の廃止）。T1 は `TomeT1`（対照として残置）。
         // 第285期: 止めのトメ → 見境なしのミサ（名前とフレーバーだけ・Id と識別子は据え置き）。
         // 第286期: ポンの判断（第285期の案 A5b）で M-b を規定にした（羽の連射・乱射した羽は失う）。T1n は `TomeT1n`（対照として残置）。
+        // 第299期: ポンの判断（第298期の案 F2）で MF-b（指差されたものは、全部撃つ・層も）を規定にした。旧の規定（M-b）は `TomeMb`（指示書 design/PHASE299_ZAN_ROUND_SPEC.md §2）。
+        Traits = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.RuptureKeep, TraitId.Feathers, TraitId.FeatherLoss, TraitId.FeatherMarkLayer },
+        PlusText = "指差されるたび羽が1枚増える。羽は1枚ずつ最も深く指差された敵を追って撃ち、倒れれば次の標へ流れる。どの列にも届き、抉った傷は塞がらない。指差されたものは、全部撃つ",
+        MinusText = "追う標が無い羽は、敵味方構わず飛んで、戻ってこない。味方が指差されても、撃つ",
+        Flavor = "狙うのは得意。見分けるのが苦手。"
+    };
+
+    /// <summary>第285期 M-b（乱射した数だけ羽を失う・下限 1）。<see cref="TomeMa"/> ＋ <see cref="TraitId.FeatherLoss"/> の1札だけが違う。<b>第286〜298期の規定</b>。
+    /// 第299期に MF-b を規定にしたので、旧の規定の定義を明示的に持つ（第298期までは <c>TomeMb = Tome</c> の別名だった）。過去の器具はこちらに固定する。
+    /// 第298期の版（MF-a ／ MF-b）はこちらから作る（静的初期化の順で、版より前に置く）。</summary>
+    public static readonly UnitDef TomeMb = new()
+    {
+        Id = "tome",
+        Name = "見境なしのミサ",
+        MaxHp = 58,
+        Attack = 12,
+        Speed = 6,
         Traits = new[] { TraitId.Rupture, TraitId.RuptureScar, TraitId.RuptureKeep, TraitId.Feathers, TraitId.FeatherLoss },
         PlusText = "指差されるたび羽が1枚増える。羽は1枚ずつ最も深く指差された敵を追って撃ち、倒れれば次の標へ流れる。どの列にも届き、抉った傷は塞がらない",
         MinusText = "追う標が無い羽は、敵味方構わず飛んで、戻ってこない",
         Flavor = "狙うのは得意。見分けるのが苦手。"
     };
 
-    // 第298期（指示書 design/PHASE298_MARK_FEATHER_SPEC.md §4-1）—— ミサの「指差されたものは、全部撃つ」。規定のミサ（M-b）の上に足す。
+    // 第298期（指示書 design/PHASE298_MARK_FEATHER_SPEC.md §4-1）—— ミサの「指差されたものは、全部撃つ」。旧の規定のミサ（M-b・`TomeMb`）の上に足す。
 
     /// <summary>第298期 MF-a（新しい標）。規定 ＋ <see cref="TraitId.FeatherMark"/>（標の無かった駒に新しく標が付いたとき、羽が1発その駒へ飛ぶ・敵でも味方でも・在庫は減らない）。対照（<see cref="All"/> に入れない・採否はポン）。</summary>
     public static readonly UnitDef MisaMFa = new()
     {
-        Id = Tome.Id,
-        Name = Tome.Name,
-        MaxHp = Tome.MaxHp,
-        Attack = Tome.Attack,
-        Speed = Tome.Speed,
-        Advances = Tome.Advances,
-        Pattern = Tome.Pattern,
-        Traits = Tome.Traits.Append(TraitId.FeatherMark).ToArray(),
-        Actions = Tome.Actions,
-        PlusText = Tome.PlusText + "。指差されたものは、全部撃つ",
-        MinusText = Tome.MinusText + "。味方が指差されても、撃つ",
-        Flavor = Tome.Flavor
+        Id = TomeMb.Id,
+        Name = TomeMb.Name,
+        MaxHp = TomeMb.MaxHp,
+        Attack = TomeMb.Attack,
+        Speed = TomeMb.Speed,
+        Advances = TomeMb.Advances,
+        Pattern = TomeMb.Pattern,
+        Traits = TomeMb.Traits.Append(TraitId.FeatherMark).ToArray(),
+        Actions = TomeMb.Actions,
+        PlusText = TomeMb.PlusText + "。指差されたものは、全部撃つ",
+        MinusText = TomeMb.MinusText + "。味方が指差されても、撃つ",
+        Flavor = TomeMb.Flavor
     };
 
     /// <summary>第298期 MF-b（層も）。規定 ＋ <see cref="TraitId.FeatherMarkLayer"/>（MF-a ＋ 層が1つ増えるたび）。対照（<see cref="All"/> に入れない・採否はポン）。</summary>
     public static readonly UnitDef MisaMFb = new()
     {
-        Id = Tome.Id,
-        Name = Tome.Name,
-        MaxHp = Tome.MaxHp,
-        Attack = Tome.Attack,
-        Speed = Tome.Speed,
-        Advances = Tome.Advances,
-        Pattern = Tome.Pattern,
-        Traits = Tome.Traits.Append(TraitId.FeatherMarkLayer).ToArray(),
-        Actions = Tome.Actions,
-        PlusText = Tome.PlusText + "。指差されたものは、全部撃つ",
-        MinusText = Tome.MinusText + "。味方が指差されても、撃つ",
-        Flavor = Tome.Flavor
+        Id = TomeMb.Id,
+        Name = TomeMb.Name,
+        MaxHp = TomeMb.MaxHp,
+        Attack = TomeMb.Attack,
+        Speed = TomeMb.Speed,
+        Advances = TomeMb.Advances,
+        Pattern = TomeMb.Pattern,
+        Traits = TomeMb.Traits.Append(TraitId.FeatherMarkLayer).ToArray(),
+        Actions = TomeMb.Actions,
+        PlusText = TomeMb.PlusText + "。指差されたものは、全部撃つ",
+        MinusText = TomeMb.MinusText + "。味方が指差されても、撃つ",
+        Flavor = TomeMb.Flavor
     };
 
 
@@ -3357,8 +3428,7 @@ public static class UnitCatalog
         Flavor = Tome.Flavor,
     };
 
-    /// <summary>第285期 M-b（乱射した数だけ羽を失う・下限 1）。M-a ＋ <see cref="TraitId.FeatherLoss"/> の1札だけが違う。<b>第286期に規定にした</b>——規定の <see cref="Tome"/> と同じ物。</summary>
-    public static readonly UnitDef TomeMb = Tome;
+    // 第285期 M-b は第299期から明示の定義（`TomeMb`・規定の `Tome` の直後に置いた）。
 
     /// <summary>
     /// 火選りのヒヨ。<b>ロスターで初めて「味方に付いた燃焼」を読む駒</b>（第58期）。

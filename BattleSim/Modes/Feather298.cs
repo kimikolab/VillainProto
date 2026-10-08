@@ -44,11 +44,15 @@ static class Feather298Diag
     static Doha297Diag.Wave WaveOf(string k) => Waves().First(w => w.Key == k);
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
     static string Seats(Formation f) => string.Join("・", Enumerable.Range(0, 5).Select(i => f[i] is { } d ? Short(d) : "—"));
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
+    static Formation Playtest(string n) => Pin299(Presets.Playtest.First(r => r.Name == n).F);
+    // 第299期: ミサ ／ ザン ／ ヒサの規定化の前（第298期の規定 `TomeMb` ／ `ZanZN0` ／ `HisaHKb`）に固定する。この器具の中の駒の名指しも旧に替えた。
+    static (string Name, Formation F)[] CompareBuilds() => Common.CompareBuilds().Select(r => (r.Name, Pin299(r.F))).ToArray();
+    static (string Name, Formation F)[] CrossBuilds() => Common.CrossBuilds().Select(r => (r.Name, Pin299(r.F))).ToArray();
+    static (string Name, Formation F)[] PlaytestRows => Presets.Playtest.Select(r => (r.Name, Pin299(r.F))).ToArray();
     static Formation CompareRow(string n) => CompareBuilds().First(r => r.Name == n).F;
 
     /// <summary>濡れ衣編成（§6-2・`seat` で決めた席）: 前1 ザン ／ 前3 ボルグ ／ 中央 カド ／ 後1 ヒサ ／ 後3 ミサ。席 120 通りの勝率はすべて同じ（C0 ＝ C4 ＝ 85.7）なので、C4 の濡れ衣が最も多い席（2.12 回 ／ 戦）を採った（決めたこと）。</summary>
-    internal static Formation FrameSquad => Formation.Build(front1: UnitCatalog.Zan, front3: UnitCatalog.Borg, center: UnitCatalog.Kado, back1: UnitCatalog.Hisa, back3: UnitCatalog.Tome);
+    internal static Formation FrameSquad => Formation.Build(front1: UnitCatalog.ZanZN0, front3: UnitCatalog.Borg, center: UnitCatalog.Kado, back1: UnitCatalog.HisaHKb, back3: UnitCatalog.TomeMb);
 
     internal static (string Name, Formation F)[] Boards() => new[]
     {
@@ -68,15 +72,15 @@ static class Feather298Diag
         string m = best == "b" ? "MF-b" : "MF-a";
         return new[]
         {
-            new Combo("C0", UnitCatalog.Tome, UnitCatalog.Zan),
-            new Combo("C1", UnitCatalog.MisaMFa, UnitCatalog.Zan),
-            new Combo("C2", UnitCatalog.MisaMFb, UnitCatalog.Zan),
+            new Combo("C0", UnitCatalog.TomeMb, UnitCatalog.ZanZN0),
+            new Combo("C1", UnitCatalog.MisaMFa, UnitCatalog.ZanZN0),
+            new Combo("C2", UnitCatalog.MisaMFb, UnitCatalog.ZanZN0),
             new Combo($"C3（{m}＋ZN-a）", mf, UnitCatalog.ZanZNa),
             new Combo($"C4（{m}＋ZN-b）", mf, UnitCatalog.ZanZNb),
         };
     }
     static Combo ComboOf(string tag, string best) => Combos(best).First(c => c.Tag.StartsWith(tag, StringComparison.Ordinal));
-    internal static Formation Apply(Formation f, Combo c) => FvSwap(FvSwap(f, UnitCatalog.Tome, c.Misa), UnitCatalog.Zan, c.Zan);
+    internal static Formation Apply(Formation f, Combo c) => FvSwap(FvSwap(f, UnitCatalog.TomeMb, c.Misa), UnitCatalog.ZanZN0, c.Zan);
 
     // ---------------------------------------------------------------------------------
     // 1戦の集計
@@ -261,7 +265,7 @@ static class Feather298Diag
     static (string Name, Formation F)[] AttrBoards()
     {
         var l = new List<(string, Formation)>();
-        l.AddRange(CompareBuilds()); l.AddRange(CrossBuilds()); l.AddRange(Presets.Playtest);
+        l.AddRange(CompareBuilds()); l.AddRange(CrossBuilds()); l.AddRange(PlaytestRows);
         // 旧のドハ（なまりあり）の行
         foreach (var (n, f) in CompareBuilds().Concat(CrossBuilds()))
             if (f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Doha))) l.Add(($"{n}（旧のドハ）", FvSwap(f, UnitCatalog.Doha, UnitCatalog.DohaD0)));
@@ -270,8 +274,8 @@ static class Feather298Diag
             l.Add(($"{n}（ヒヨ ＋ 癒しの灯）", FvSwap(f, UnitCatalog.Hiyo, With(UnitCatalog.Hiyo, TraitId.MendGlow))));
         // 橋（HS-c・保持者は版だけ）: 試遊・標 ボス台のヒサ → HS-c・バン → ツギ ／ リリ
         var bossRow = Playtest("試遊・標 ボス台");
-        l.Add(("標 ボス台（ヒサ → HS-c・バン → ツギ）", FvSwap(FvSwap(bossRow, UnitCatalog.Hisa, UnitCatalog.HisaHSc), UnitCatalog.Ban, UnitCatalog.Tsugi)));
-        l.Add(("標 ボス台（ヒサ → HS-c・バン → リリ）", FvSwap(FvSwap(bossRow, UnitCatalog.Hisa, UnitCatalog.HisaHSc), UnitCatalog.Ban, UnitCatalog.Lili)));
+        l.Add(("標 ボス台（ヒサ → HS-c・バン → ツギ）", FvSwap(FvSwap(bossRow, UnitCatalog.HisaHKb, UnitCatalog.HisaHSc), UnitCatalog.Ban, UnitCatalog.Tsugi)));
+        l.Add(("標 ボス台（ヒサ → HS-c・バン → リリ）", FvSwap(FvSwap(bossRow, UnitCatalog.HisaHKb, UnitCatalog.HisaHSc), UnitCatalog.Ban, UnitCatalog.Lili)));
         return l.ToArray();
     }
 
@@ -413,7 +417,7 @@ static class Feather298Diag
     // ---------------------------------------------------------------------------------
     static void Seat()
     {
-        var five = new[] { UnitCatalog.Zan, UnitCatalog.Tome, UnitCatalog.Hisa, UnitCatalog.Borg, UnitCatalog.Kado };
+        var five = new[] { UnitCatalog.ZanZN0, UnitCatalog.TomeMb, UnitCatalog.HisaHKb, UnitCatalog.Borg, UnitCatalog.Kado };
         var waves = Waves().Where(w => w.Key is "2" or "3" or "4" or "5" or "guard" or "bat" or "boss").ToArray();
         var c0 = Combos("a")[0]; var c4 = Combos("a")[4];
         const int seeds = 20;
@@ -497,10 +501,10 @@ static class Feather298Diag
             Console.WriteLine("</details>");
             Console.WriteLine();
             // 対照（R383）: 固定枠の駒それぞれ → ドルガ（C0 と C1 と C3）
-            Console.WriteLine("対照（R383・ドルガ）: " + string.Join(" ／ ", new[] { UnitCatalog.Sora, UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.Hisa }
+            Console.WriteLine("対照（R383・ドルガ）: " + string.Join(" ／ ", new[] { UnitCatalog.Sora, UnitCatalog.TomeMb, UnitCatalog.ZanZN0, UnitCatalog.HisaHKb }
                 .Where(d => f.Occupied().Any(o => ReferenceEquals(o.Def, d)))
                 .Select(d => $"{Short(d)} → ドルガ: " + string.Join("・", new[] { combos[0], combos[1], combos[3] }.Select(c =>
-                    $"{c.Tag.Split('（')[0]} {waves.Where(w => w.Key is "guard" or "bat" or "boss").Select(w => Many(FvSwap(Apply(f, c), d == UnitCatalog.Tome ? c.Misa : d == UnitCatalog.Zan ? c.Zan : d, UnitCatalog.Dolga), w.Make, seeds).Win.ToString("F0")).Aggregate((x, y) => x + "/" + y)}")))));
+                    $"{c.Tag.Split('（')[0]} {waves.Where(w => w.Key is "guard" or "bat" or "boss").Select(w => Many(FvSwap(Apply(f, c), d == UnitCatalog.TomeMb ? c.Misa : d == UnitCatalog.ZanZN0 ? c.Zan : d, UnitCatalog.Dolga), w.Make, seeds).Win.ToString("F0")).Aggregate((x, y) => x + "/" + y)}")))));
             Console.WriteLine("（近衛 ／ 大隊 ／ ボスの勝率）");
             Console.WriteLine();
         }
@@ -564,8 +568,8 @@ static class Feather298Diag
     {
         var w = WaveOf(waveKey);
         var c0 = Combos(best)[0]; var cv = ComboOf(comboTag, best);
-        var fixedDefs = new[] { UnitCatalog.Hisa, UnitCatalog.Zan, UnitCatalog.Tome };
-        var pool = UnitCatalog.All.Where(d => !fixedDefs.Contains(d)).ToArray();
+        var fixedDefs = new[] { UnitCatalog.HisaHKb, UnitCatalog.ZanZN0, UnitCatalog.TomeMb };
+        var pool = UnitCatalog.All.Where(d => !fixedDefs.Any(x => x.Id == d.Id)).ToArray();   // 第299期: 固定枠が旧の定義になったので Id で外す
         var perms = Perms(5).ToArray();
         var sw = System.Diagnostics.Stopwatch.StartNew();
         Console.WriteLine($"# 第298期 格子 —— {w.Name} × C0 ／ {cv.Tag}（固定枠 ヒサ ＋ ザン ＋ ミサ・探索枠2 × 席 120・seed 0..{seeds - 1}）");
@@ -575,7 +579,7 @@ static class Feather298Diag
         for (int i = 0; i < pool.Length; i++) for (int j = i + 1; j < pool.Length; j++) pairs.Add((pool[i], pool[j]));
         Parallel.ForEach(pairs, pr =>
         {
-            var five = new[] { UnitCatalog.Hisa, UnitCatalog.Zan, UnitCatalog.Tome, pr.Item1, pr.Item2 };
+            var five = new[] { UnitCatalog.HisaHKb, UnitCatalog.ZanZN0, UnitCatalog.TomeMb, pr.Item1, pr.Item2 };
             double Best(Combo c, out int[] seat)
             {
                 int bw = -1; seat = perms[0];
@@ -705,7 +709,7 @@ static class Feather298Diag
             // (b) 規定のドハはなまりを持たない ／ 旧と DH-a は持つ（ドルガへ 30 の一撃でドルガの攻撃力）
             int Dull(UnitDef dv)
             {
-                var ctx = Ctx(Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Tome, center: dv, back1: UnitCatalog.Kata, back3: UnitCatalog.Gald), Formation.Build(front1: UnitCatalog.Dolga), out var p, out var e);
+                var ctx = Ctx(Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.TomeMb, center: dv, back1: UnitCatalog.Kata, back3: UnitCatalog.Gald), Formation.Build(front1: UnitCatalog.Dolga), out var p, out var e);
                 var dol = p.First(u => u.Def.Id == "dolga");
                 ctx.ApplyDamage(dol, 30, e[0]);
                 return ctx.DullByRoute[(int)DullRoute.Sharer];
@@ -715,7 +719,7 @@ static class Feather298Diag
         }
         // (c) 段0-2: 直した群の量が本当の出どころに入る（なまり・橋・くべられる火・反転の4群を盤面を直に組んで）
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Tome, center: d0, back1: UnitCatalog.Kata, back3: UnitCatalog.Gald), Formation.Build(front1: UnitCatalog.Dolga), out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.TomeMb, center: d0, back1: UnitCatalog.Kata, back3: UnitCatalog.Gald), Formation.Build(front1: UnitCatalog.Dolga), out var p, out var e);
             var dol = p.First(u => u.Def.Id == "dolga");
             // 敵のフックの印の中で起きた分かちのなまり（印 ＝ 敵のドルガ）
             var prev = ctx.BeginTrait(TraitId.Thorns, e[0]);
@@ -755,7 +759,7 @@ static class Feather298Diag
         Formation Sq(UnitDef misa, UnitDef zan, UnitDef hisa) => Formation.Build(front1: UnitCatalog.Dolga, front3: zan, center: misa, back1: UnitCatalog.Kata, back3: hisa);
         var foeF = Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald);
         {
-            var ctx = Ctx(Sq(UnitCatalog.MisaMFa, UnitCatalog.Zan, UnitCatalog.Hisa), foeF, out var p, out var e);
+            var ctx = Ctx(Sq(UnitCatalog.MisaMFa, UnitCatalog.ZanZN0, UnitCatalog.HisaHKb), foeF, out var p, out var e);
             var misa = p.First(u => u.Def.Id == "tome");
             int stock0 = FeathersTrait.Count(misa);
             int h0 = e[0].Hp;
@@ -769,7 +773,7 @@ static class Feather298Diag
                 $"在庫 {stock0} → {afterNew} → {FeathersTrait.Count(misa)}・羽 {tm.MfShotsFoe}・削り {hit1}");
         }
         {
-            var ctx = Ctx(Sq(UnitCatalog.MisaMFb, UnitCatalog.Zan, UnitCatalog.Hisa), foeF, out var p, out var e);
+            var ctx = Ctx(Sq(UnitCatalog.MisaMFb, UnitCatalog.ZanZN0, UnitCatalog.HisaHKb), foeF, out var p, out var e);
             var zan = p.First(u => u.Def.Id == "zan");
             ctx.LayerMark(e[0], zan); Drain.Invoke(ctx, null);
             ctx.LayerMark(e[0], zan); Drain.Invoke(ctx, null);
@@ -778,7 +782,7 @@ static class Feather298Diag
         }
         {
             // (g) 味方への羽は同士討ち: 矢面の標（ヒサの記憶 ＋ 標）の付いた味方へ・半減は掛からない（量 ＝ 攻 × 倍率）
-            var ctx = Ctx(Sq(UnitCatalog.MisaMFa, UnitCatalog.Zan, UnitCatalog.Hisa), foeF, out var p, out var e);
+            var ctx = Ctx(Sq(UnitCatalog.MisaMFa, UnitCatalog.ZanZN0, UnitCatalog.HisaHKb), foeF, out var p, out var e);
             var misa = p.First(u => u.Def.Id == "tome"); var hisa = p.First(u => u.Def.Id == "hisa"); var dol = p.First(u => u.Def.Id == "dolga");
             hisa.SetCounter(BeckonTrait.TargetKey, dol.InstanceId + 1);
             int h0 = dol.Hp;
@@ -792,7 +796,7 @@ static class Feather298Diag
         }
         {
             // (i) ZN-a: ミサの羽が標の付いた味方に当たる → ヒサが指差し → ザンが仇討ち（その中で書かれた敵の標は羽を呼ばない）
-            var ctx = Ctx(Sq(UnitCatalog.MisaMFb, UnitCatalog.ZanZNa, UnitCatalog.Hisa), foeF, out var p, out var e);
+            var ctx = Ctx(Sq(UnitCatalog.MisaMFb, UnitCatalog.ZanZNa, UnitCatalog.HisaHKb), foeF, out var p, out var e);
             var dol = p.First(u => u.Def.Id == "dolga");
             e[1].SetCounter(StatusKeys.Marked, 1);   // 敵に層 → ガルドが深い（指差しの先）
             Drain.Invoke(ctx, null);
@@ -817,7 +821,7 @@ static class Feather298Diag
             // (k) ZN-a はミサの羽以外の同士討ちでは出ない ／ ZN-b は出る（カタの同士討ちを直に）
             int F(UnitDef zan)
             {
-                var ctx = Ctx(Sq(UnitCatalog.Tome, zan, UnitCatalog.Hisa), foeF, out var p, out var e);
+                var ctx = Ctx(Sq(UnitCatalog.TomeMb, zan, UnitCatalog.HisaHKb), foeF, out var p, out var e);
                 var dol = p.First(u => u.Def.Id == "dolga"); var kata = p.First(u => u.Def.Id == "kata");
                 dol.SetCounter(StatusKeys.Marked, 1);
                 ctx.ApplyDamage(dol, 5, kata, isFriendlyFire: true);
@@ -827,7 +831,7 @@ static class Feather298Diag
         }
         {
             // (l) ヒサの指差しは乱数を引かない: 層 → 攻撃力 → 席
-            var ctx = Ctx(Sq(UnitCatalog.Tome, UnitCatalog.ZanZNa, UnitCatalog.Hisa), Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.Kado), out var p, out var e);
+            var ctx = Ctx(Sq(UnitCatalog.TomeMb, UnitCatalog.ZanZNa, UnitCatalog.HisaHKb), Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald, center: UnitCatalog.Kado), out var p, out var e);
             var zan = p.First(u => u.Def.Id == "zan");
             var top = e.OrderByDescending(u => u.CurrentAttack).ThenBy(u => u.Slot).First();
             bool a1 = ctx.FramePick(zan) == top;
@@ -855,10 +859,10 @@ static class Feather298Diag
         // (p) 版の駒は `All` ／ `Everyone` ／ `Presets` の外・文面
         var vers = new[] { UnitCatalog.MisaMFa, UnitCatalog.MisaMFb, UnitCatalog.ZanZNa, UnitCatalog.ZanZNb };
         Expect("(p) 版の札と文面（ミサ: プラス末尾「指差されたものは、全部撃つ」・マイナス末尾「味方が指差されても、撃つ」／ ザン: プラス末尾）・`All` ／ `Everyone` ／ `Presets` の外",
-            UnitCatalog.MisaMFa.Traits.SequenceEqual(UnitCatalog.Tome.Traits.Append(TraitId.FeatherMark)) && UnitCatalog.MisaMFb.Traits.SequenceEqual(UnitCatalog.Tome.Traits.Append(TraitId.FeatherMarkLayer))
-            && UnitCatalog.ZanZNa.Traits.SequenceEqual(UnitCatalog.Zan.Traits.Append(TraitId.VendettaFrame)) && UnitCatalog.ZanZNb.Traits.SequenceEqual(UnitCatalog.Zan.Traits.Append(TraitId.VendettaFrameAll))
+            UnitCatalog.MisaMFa.Traits.SequenceEqual(UnitCatalog.TomeMb.Traits.Append(TraitId.FeatherMark)) && UnitCatalog.MisaMFb.Traits.SequenceEqual(UnitCatalog.TomeMb.Traits.Append(TraitId.FeatherMarkLayer))
+            && UnitCatalog.ZanZNa.Traits.SequenceEqual(UnitCatalog.ZanZN0.Traits.Append(TraitId.VendettaFrame)) && UnitCatalog.ZanZNb.Traits.SequenceEqual(UnitCatalog.ZanZN0.Traits.Append(TraitId.VendettaFrameAll))
             && UnitCatalog.MisaMFa.PlusText.EndsWith("。指差されたものは、全部撃つ", StringComparison.Ordinal) && UnitCatalog.MisaMFa.MinusText.EndsWith("。味方が指差されても、撃つ", StringComparison.Ordinal)
-            && UnitCatalog.ZanZNa.PlusText.EndsWith("。仲間を撃った者が誰であれ、指差された敵を斬る", StringComparison.Ordinal) && UnitCatalog.ZanZNa.MinusText == UnitCatalog.Zan.MinusText
+            && UnitCatalog.ZanZNa.PlusText.EndsWith("。仲間を撃った者が誰であれ、指差された敵を斬る", StringComparison.Ordinal) && UnitCatalog.ZanZNa.MinusText == UnitCatalog.ZanZN0.MinusText
             && vers.All(v => !UnitCatalog.Everyone.Contains(v)) && Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).All(r => r.F.Occupied().All(o => !vers.Contains(o.Def))));
         Console.WriteLine();
         Console.WriteLine(_fail == 0 ? "すべて ○" : $"**× {_fail} 件**");

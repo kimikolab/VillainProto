@@ -51,6 +51,7 @@ static class Misa285Diag
     {
         var g = f.Clone();   // 陣形・レリックを保つ
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Hisa)) g[slot] = UnitCatalog.HisaHK0;
+        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Zan)) g[slot] = UnitCatalog.ZanZN0;   // 第299期: ザンも旧の規定（ZN-b の前・`ZanZN0`）に
         return g;
     }
     static Formation With(Formation f, Ver v) => FvSwap(f, UnitCatalog.Tome, v.D);
@@ -368,14 +369,15 @@ static class Misa285Diag
         // 第286期に M-b を規定にしたので、(b)(c) は「規定 ＝ M-b」の形に直した（第285期の版は「規定 ＝ T1n・羽の保持者 0」を確かめていた）。
         bool onlyDefault = UnitCatalog.Everyone.Where(d => d.Traits.Contains(TraitId.Feathers) || d.Traits.Contains(TraitId.FeatherLoss)).All(d => ReferenceEquals(d, UnitCatalog.Tome))
                            && Rows.All(r => r.F.Occupied().All(o => !o.Def.Traits.Contains(TraitId.Feathers) || ReferenceEquals(o.Def, UnitCatalog.Tome)));
-        Expect("(b) 羽の札の保持者は `Everyone` ／ `compare` で規定のミサだけ・規定 ＝ M-b（`TomeMb`）・T1n は `TomeT1n` が明示的に持つ",
-            onlyDefault && ReferenceEquals(UnitCatalog.Tome, UnitCatalog.TomeMb) && !ReferenceEquals(UnitCatalog.Tome, UnitCatalog.TomeT1n));
+        // 第299期: 規定は M-b ＋ MF-b（`FeatherMarkLayer`）になり、M-b は `TomeMb` が明示的に持つ（別名ではなくなった）。
+        Expect("(b) 羽の札の保持者は `Everyone` ／ `compare` で規定のミサだけ・規定 ＝ M-b（`TomeMb`）＋ MF-b（第299期）・T1n は `TomeT1n` が明示的に持つ",
+            onlyDefault && UnitCatalog.Tome.Traits.SequenceEqual(UnitCatalog.TomeMb.Traits.Append(TraitId.FeatherMarkLayer)) && !ReferenceEquals(UnitCatalog.Tome, UnitCatalog.TomeT1n));
         Expect("(b) M-b は M-a ＋ 羽を失う の1札だけが違う",
             UnitCatalog.TomeMb.Traits.SequenceEqual(UnitCatalog.TomeMa.Traits.Append(TraitId.FeatherLoss)));
 
         // (c) 規定（M-b）の `compare` が docs/balance.md と一致
         var bal = ReadBalance();
-        var g0 = CompareGrid(VerOf("Mb"));
+        var g0 = CompareGrid(new Ver("規定", "規定のミサ（第299期から M-b ＋ MF-b）", UnitCatalog.Tome));   // 第299期: 規定は `TomeMb` ではなくなった
         int bad = 0, cells = 0;
         var rows = Rows;
         for (int ri = 0; ri < rows.Length; ri++)
@@ -383,7 +385,7 @@ static class Misa285Diag
             if (!bal.TryGetValue(rows[ri].Name, out var cellsRow)) { bad++; continue; }
             for (int w = 0; w < Main.Length; w++) { cells++; if (Math.Abs(cellsRow[w] - g0[ri, w]) > 0.05) bad++; }
         }
-        Expect("(c) 規定（M-b）の `compare` 64 行 × 5 波が `docs/balance.md` と一致", bad == 0, $"{cells} セル中 {bad} 件ずれ");
+        Expect("(c) 規定（第299期から M-b ＋ MF-b）の `compare` 64 行 × 5 波が `docs/balance.md` と一致", bad == 0, $"{cells} セル中 {bad} 件ずれ");
 
         // (d) 羽の帳簿: 初期 1・下限 1・増えるのは敵への書き込みだけ
         long minEnd = long.MaxValue, gainNoWriter = 0, shotsOver = 0, sprayLostOver = 0, logGain = 0, tallyGain = 0;

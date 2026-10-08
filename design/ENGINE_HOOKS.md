@@ -1092,3 +1092,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   **再入の止め**: 羽の発射の中（`_mfFiring`）で書かれた標は控えない（`MfChainSkipped`）。割り込みの中（`InInterrupt`）では吐かずに外の枠に任せる。敵への羽は的を固定した `PerformAttack`（手番の羽と同じ打点・爪痕）、味方への羽は同士討ちの `ApplyDamage`（矢面の半減は掛からない）。
 - **濡れ衣の仇討ち（ZN-a ／ ZN-b・`VendettaFrame` ／ `VendettaFrameAll`）は `VendettaTrait` の中の枝**（`Frame` → `Avenge`）。味方による同士討ち（ZN-a は羽の保持者・ZN-b は全般・徴収 ／ 中継は除く——`ctx.Hit`）が標の付いた味方に当たり、
   ヒサ（矢面 `Beckon` の保持者）が生きていれば、`FramePick`（層 → 攻撃力 → 席・乱数なし）の敵へ仇討ちする。経路は今の仇討ちと同じ `Reaction`（`CanActOutOfTurn(…, Avenge)`）。
+
+## 第299期 —— 規定のミサ ／ ザン（MF-b ／ ZN-b）・叫びは自分も癒す・ザンの手番「仇巡り」
+
+- **規定のミサ ＝ M-b ＋ `FeatherMarkLayer`、規定のザン ＝ 旧 ＋ `VendettaFrameAll`**（窓口は第298期のまま・札の差し替えだけ）。旧の規定は `UnitCatalog.TomeMb`（第298期までは `TomeMb = Tome` の別名だった——**明示の定義にして `Tome` の直後に置いた**。版 `MisaMFa` ／ `MisaMFb` はそれより後ろで旧から作る＝静的初期化の順）と `UnitCatalog.ZanZN0`。
+- **叫び（`BundlePop`）の「最も傷ついた味方」（`RallyNeediest(hisa, marked: false)`）は、ヒサが `MarkRallySelf` を持てばヒサ自身も候補に入れる**（規定のヒサ）。基準は今のまま（割合 → 席・回復を受け付ける・満タンでない・乱数なし）。HK-a の「標を持つ味方」側（`marked: true`）は変えていない。計数 `UnitTally.RallySelfHeals` ／ `RallySelfHealed`。旧の規定は `HisaHKb`（第295期の版の定義と同じ物）。
+- **ザン（仇指し `Vendetta` の保持者）の手番は `SwingTurnBody` の分岐 `VendettaTurn`**（羽 ／ 乱射の分岐の後ろ・`ModifyHitCount` の前）。**保持者がいなければ `_vendettaTurnLive` の比較1つで抜ける。** 規定（札なし）は数えるだけで `SwingTurnHits`（旧 `SwingTurnBody` の残り＝手番の回数の窓口 `ModifyHitCount` を問う場所）をそのまま呼ぶ（計数 `ZanTurns` ／ `ZanPlanA` ほか）。
+  仇巡りの版（ZM-a `VendettaRound` ／ ZM-1 `VendettaRoundOne`）: 手番の頭で標を持つ敵を層の深い順（同じなら席番号）に並べ、ZM-a は層の数・ZM-1 は 1 太刀ずつ、合計 `VendettaTrait.RoundCap`（8）まで・2周目はしない。**1太刀 ＝ 的を固定した単体の `PerformAttack`（`_forcedTarget`）**——介入の鎖（庇う・後備え・挑発・標の引き）を通らず、前列の制限も受けない。太刀の数は `ModifyHitCount` を通さない（あの窓口は回数しか返さず的を巡れない）。手番の枠の中なので叫びは1手番に1回・標を消費しない・新しい標を書かない・返り血なし。表示専用の出来事 `BattleEventKind.VendettaRound`（`VendettaRoundLabels.Start` ／ `Slash`）。

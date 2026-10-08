@@ -67,7 +67,8 @@ static class Kugu292Diag
             g[slot] = ReferenceEquals(d, UnitCatalog.Kugu) ? UnitCatalog.KuguKGb : ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaSIb
                     : ReferenceEquals(d, UnitCatalog.Sora) ? UnitCatalog.SoraSR0   // 第295期: ソラも（規定は SR-b・旧は `SoraSR0`）
                     : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHK0   // 第296期: ヒサも（規定は HK-b・旧は `HisaHK0`）
-                    : ReferenceEquals(d, UnitCatalog.Doha) ? UnitCatalog.DohaD0 : d;   // 第298期: ドハも（規定は DH-a なまりなし・旧は `DohaD0`）
+                    : ReferenceEquals(d, UnitCatalog.Doha) ? UnitCatalog.DohaD0   // 第298期: ドハも（規定は DH-a なまりなし・旧は `DohaD0`）
+                    : ReferenceEquals(d, UnitCatalog.Tome) ? UnitCatalog.TomeMb : ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanZN0 : d;   // 第299期: ミサ ／ ザンも（規定は MF-b ／ ZN-b・旧は `TomeMb` ／ `ZanZN0`）
         return g;
     }
 

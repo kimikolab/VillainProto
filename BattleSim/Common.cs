@@ -176,6 +176,18 @@ public static UnitDef FvPlainDef() => new()
     Traits = Array.Empty<TraitId>(), Pattern = UnitCatalog.Hiyo.Pattern
 };
 public static int FvCountTrait(Formation f, TraitId id) => f.Occupied().Count(o => o.Def.Traits.Contains(id));
+/// <summary>
+/// 第299期: ミサ（MF-b）／ ザン（ZN-b）／ ヒサ（叫びは自分も癒す）を規定にする前の規定に固定する（`TomeMb` ／ `ZanZN0` ／ `HisaHKb`）。陣形・レリックは保つ。
+/// 第298期までの規定の駒で測った器具（`feather298` ／ `doha297` ／ `rally296` の台）はこれを通す。ヒサを第295期の規定（`HisaHK0`）に固定する器具は自分の固定（`Pin294` ／ `Pin295` ／ `Pin296`）を使う。
+/// </summary>
+public static Formation Pin299(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Tome) ? UnitCatalog.TomeMb : ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanZN0 : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHKb : d;
+    return g;
+}
+
 public static Formation FvSwap(Formation f, UnitDef from, UnitDef to)
 {
     var g = new Formation();

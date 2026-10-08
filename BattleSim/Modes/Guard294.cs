@@ -80,6 +80,8 @@ static class Guard294Diag
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Sora)) g[slot] = UnitCatalog.SoraSR0;
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Hisa)) g[slot] = UnitCatalog.HisaHK0;   // 第296期: ヒサも旧の規定（`HisaHK0`）に
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Doha)) g[slot] = UnitCatalog.DohaD0;   // 第298期: ドハも旧の規定（`DohaD0`）に
+        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Tome)) g[slot] = UnitCatalog.TomeMb;   // 第299期: ミサ ／ ザンも旧の規定（`TomeMb` ／ `ZanZN0`）に
+        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Zan)) g[slot] = UnitCatalog.ZanZN0;
         return g;
     }
 
@@ -433,7 +435,7 @@ static class Guard294Diag
             {
                 var d = MeasureDeep(Apply(f, SoraVers[2]), w, Seeds);
                 long n = d.PressHitsByLayer.Sum();
-                Console.WriteLine($"| {name} | {w.Name} | {(Has(f, UnitCatalog.Tome) ? "○" : "")} | {Per(d.PressHits, d.RN)} | {Pct(d.PressHitsByLayer[1], n)} ／ {Pct(d.PressHitsByLayer[2], n)} ／ {Pct(d.PressHitsByLayer[3], n)} |");
+                Console.WriteLine($"| {name} | {w.Name} | {(f.Occupied().Any(o => o.Def.Id == UnitCatalog.Tome.Id) ? "○" : "")} | {Per(d.PressHits, d.RN)} | {Pct(d.PressHitsByLayer[1], n)} ／ {Pct(d.PressHitsByLayer[2], n)} ／ {Pct(d.PressHitsByLayer[3], n)} |");
             }
         Console.WriteLine();
 
