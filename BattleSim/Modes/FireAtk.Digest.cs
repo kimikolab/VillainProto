@@ -12,7 +12,7 @@ static class FireAtkDigestDiag
         string outPath = args.Length > 3 ? args[3] : "fireatk_digest.txt";
         var boards = new (string Name, Formation F)[]
         {
-            ("T3-244", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hisa, center: UnitCatalog.BorgK4, back1: UnitCatalog.HotaK4, back3: UnitCatalog.HiyoM0)),
+            ("T3-244", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.HisaHK0, center: UnitCatalog.BorgK4, back1: UnitCatalog.HotaK4, back3: UnitCatalog.HiyoM0)),
             ("T3-238", Formation.Build(front1: UnitCatalog.HiyoM0, front3: UnitCatalog.HotaK4, center: UnitCatalog.BorgK4, back1: UnitCatalog.Doha, back3: UnitCatalog.SoraSR0)),
             ("雷＋ボルグ", Formation.Build(front1: UnitCatalog.BorgK4, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: UnitCatalog.Mio)),
         };

@@ -45,7 +45,14 @@ static class Misa285Diag
 
     static bool HasMisa(Formation f) => f.Occupied().Any(o => o.Def.Id == UnitCatalog.Tome.Id);
     static (string Name, Formation F)[] Rows => CompareBuilds();
-    static (string Name, Formation F)[] MisaRows => Rows.Where(r => HasMisa(r.F)).ToArray();
+    // 第296期: 規定のヒサが HK-b になった——ミサの行（`標経済` にヒサがいる）は第295期の規定のヒサ（`HisaHK0`）に固定する。`Rows`（(c) の `docs/balance.md` との照合）は規定のまま。
+    static (string Name, Formation F)[] MisaRows => Rows.Where(r => HasMisa(r.F)).Select(r => (r.Name, PinHisa(r.F))).ToArray();
+    static Formation PinHisa(Formation f)
+    {
+        var g = f.Clone();   // 陣形・レリックを保つ
+        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Hisa)) g[slot] = UnitCatalog.HisaHK0;
+        return g;
+    }
     static Formation With(Formation f, Ver v) => FvSwap(f, UnitCatalog.Tome, v.D);
 
     // ---------------------------------------------------------------------------------
@@ -380,7 +387,7 @@ static class Misa285Diag
 
         // (d) 羽の帳簿: 初期 1・下限 1・増えるのは敵への書き込みだけ
         long minEnd = long.MaxValue, gainNoWriter = 0, shotsOver = 0, sprayLostOver = 0, logGain = 0, tallyGain = 0;
-        var noWriter = Seat(new[] { UnitCatalog.Golm, UnitCatalog.Tome, UnitCatalog.Ban, UnitCatalog.Doha, UnitCatalog.Hisa });   // 敵に標を書く駒（ソラ・ザン）がいない台
+        var noWriter = Seat(new[] { UnitCatalog.Golm, UnitCatalog.Tome, UnitCatalog.Ban, UnitCatalog.Doha, UnitCatalog.HisaHK0 });   // 敵に標を書く駒（ソラ・ザン）がいない台
         foreach (var v in Vers.Skip(1))
             foreach (var (name, f) in MisaRows.Append(("書き手なし", noWriter)))
                 foreach (var w in Main.Skip(1).Append(BossW))

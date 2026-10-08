@@ -508,18 +508,22 @@ public static class UnitCatalog
         Advances = false,
         // **第184期に転生**（旧 `Marker` は定義だけ残す）。矢面（`Beckon`）と、その代金の逃げ回る（`Flee`）。
         // **札の並びが実行順**——矢面が標を付けてから、逃げ回るが標の相手以外と入れ替わる（どちらも `OnAction`）。
-        Traits = new[] { TraitId.Beckon, TraitId.Flee },
+        Traits = new[] { TraitId.Beckon, TraitId.Flee, TraitId.MarkRallyWide },
+        // 第296期: ポンの判断（第295期の案 K2）で HK-b（あいつを狙え！・`MarkRallyWide`）を規定にした。旧の規定は `HisaHK0`（指示書 design/PHASE296_HISA_RALLY_PLAYTEST_SPEC.md §1）。
         // 指差すのが手番そのもの（攻撃2 は出なくなる）。`[Skill]` の1要素で毎手番指差して逃げる。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "隣の味方を指差した") },
-        PlusText = "手番で、隣でいちばん元気な味方1体に標を付けて矢面に立たせる。標を付けられた味方は、攻撃から受ける痛みが半分になる",
+        PlusText = "手番で、隣でいちばん元気な味方1体に標を付けて矢面に立たせる。標を付けられた味方は、攻撃から受ける痛みが半分になる"
+                   + "。指差された敵が攻撃されるたび、『あいつを狙え！ まだ倒れるな！』と叫んで、攻撃した味方と最も傷ついた味方を癒す",
         MinusText = "自分では攻撃しない。指差したら、標の相手以外の隣の味方と入れ替わって逃げる（入れ替わった味方は前へ押し出される）",
         Flavor = "味方を矢面に立たせて生き延びた男。誰も隣に立ちたがらない。"
     };
 
-    // 第294期 —— ヒサの守りの版（指示書 design/PHASE294_GUARD_SPEC.md §3-1）。規定の末尾に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
-
-    /// <summary>第294期 HS-a（踏みとどまり・土台）。規定 ＋ <see cref="TraitId.BeckonHold"/>（標の味方は敵の攻撃の倒れる一撃を HP 1 で止め、標が剥がれる）。</summary>
-    public static readonly UnitDef HisaHSa = new()
+    /// <summary>
+    /// 旧ヒサ（第184〜295期の規定・矢面 ＋ 逃げ回る）。第296期に HK-b（あいつを狙え！）を規定にしたので、旧の規定の定義を明示的に持つ。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。過去の器具はこちらに固定する（第295期のソラ `SoraSR0` と同じ作法）。
+    /// 第294期・第295期の版（HS ／ HK）はこの旧の規定から作る。
+    /// </summary>
+    public static readonly UnitDef HisaHK0 = new()
     {
         Id = Hisa.Id,
         Name = Hisa.Name,
@@ -528,11 +532,30 @@ public static class UnitCatalog
         Speed = Hisa.Speed,
         Advances = Hisa.Advances,
         Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Append(TraitId.BeckonHold).ToArray(),
+        Traits = new[] { TraitId.Beckon, TraitId.Flee },
         Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる",
+        PlusText = "手番で、隣でいちばん元気な味方1体に標を付けて矢面に立たせる。標を付けられた味方は、攻撃から受ける痛みが半分になる",
         MinusText = Hisa.MinusText,
         Flavor = Hisa.Flavor
+    };
+
+    // 第294期 —— ヒサの守りの版（指示書 design/PHASE294_GUARD_SPEC.md §3-1）。規定の末尾に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
+
+    /// <summary>第294期 HS-a（踏みとどまり・土台）。規定 ＋ <see cref="TraitId.BeckonHold"/>（標の味方は敵の攻撃の倒れる一撃を HP 1 で止め、標が剥がれる）。</summary>
+    public static readonly UnitDef HisaHSa = new()
+    {
+        Id = HisaHK0.Id,
+        Name = HisaHK0.Name,
+        MaxHp = HisaHK0.MaxHp,
+        Attack = HisaHK0.Attack,
+        Speed = HisaHK0.Speed,
+        Advances = HisaHK0.Advances,
+        Pattern = HisaHK0.Pattern,
+        Traits = HisaHK0.Traits.Append(TraitId.BeckonHold).ToArray(),
+        Actions = HisaHK0.Actions,
+        PlusText = HisaHK0.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる",
+        MinusText = HisaHK0.MinusText,
+        Flavor = HisaHK0.Flavor
     };
 
     /// <summary>
@@ -541,18 +564,18 @@ public static class UnitCatalog
     /// </summary>
     public static readonly UnitDef HisaHSa1 = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Append(TraitId.BeckonHold).Append(TraitId.BeckonHoldOnce).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる（同じ味方は1戦に1度）",
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaHK0.Id,
+        Name = HisaHK0.Name,
+        MaxHp = HisaHK0.MaxHp,
+        Attack = HisaHK0.Attack,
+        Speed = HisaHK0.Speed,
+        Advances = HisaHK0.Advances,
+        Pattern = HisaHK0.Pattern,
+        Traits = HisaHK0.Traits.Append(TraitId.BeckonHold).Append(TraitId.BeckonHoldOnce).ToArray(),
+        Actions = HisaHK0.Actions,
+        PlusText = HisaHK0.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる（同じ味方は1戦に1度）",
+        MinusText = HisaHK0.MinusText,
+        Flavor = HisaHK0.Flavor
     };
 
     // 第295期 —— ヒサの「あいつを狙え！」の版（指示書 design/PHASE295_MARK_HEAL_SPEC.md §3）。規定の末尾に札を1枚足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
@@ -560,69 +583,69 @@ public static class UnitCatalog
     /// <summary>第295期 HK-a（標を背負う味方）。規定 ＋ <see cref="TraitId.MarkRally"/>（味方の攻撃のひとまとまりが標の敵に当たるたび、標を持つ味方のうち最も傷ついた1体を 層 × 6 癒す）。</summary>
     public static readonly UnitDef HisaHKa = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Append(TraitId.MarkRally).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。指差された敵が攻撃されるたび、『あいつを狙え！ まだ倒れるな！』と叫んで、標を背負う味方を癒す",
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaHK0.Id,
+        Name = HisaHK0.Name,
+        MaxHp = HisaHK0.MaxHp,
+        Attack = HisaHK0.Attack,
+        Speed = HisaHK0.Speed,
+        Advances = HisaHK0.Advances,
+        Pattern = HisaHK0.Pattern,
+        Traits = HisaHK0.Traits.Append(TraitId.MarkRally).ToArray(),
+        Actions = HisaHK0.Actions,
+        PlusText = HisaHK0.PlusText + "。指差された敵が攻撃されるたび、『あいつを狙え！ まだ倒れるな！』と叫んで、標を背負う味方を癒す",
+        MinusText = HisaHK0.MinusText,
+        Flavor = HisaHK0.Flavor
     };
 
     /// <summary>第295期 HK-b（攻撃した駒 ＋ 傷ついた味方）。規定 ＋ <see cref="TraitId.MarkRallyWide"/>（同じ条件で、攻撃した駒と最も傷ついた味方を 層 × 6 ずつ癒す・同じ駒なら1回）。</summary>
     public static readonly UnitDef HisaHKb = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Append(TraitId.MarkRallyWide).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。指差された敵が攻撃されるたび、『あいつを狙え！ まだ倒れるな！』と叫んで、攻撃した味方と最も傷ついた味方を癒す",
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaHK0.Id,
+        Name = HisaHK0.Name,
+        MaxHp = HisaHK0.MaxHp,
+        Attack = HisaHK0.Attack,
+        Speed = HisaHK0.Speed,
+        Advances = HisaHK0.Advances,
+        Pattern = HisaHK0.Pattern,
+        Traits = HisaHK0.Traits.Append(TraitId.MarkRallyWide).ToArray(),
+        Actions = HisaHK0.Actions,
+        PlusText = HisaHK0.PlusText + "。指差された敵が攻撃されるたび、『あいつを狙え！ まだ倒れるな！』と叫んで、攻撃した味方と最も傷ついた味方を癒す",
+        MinusText = HisaHK0.MinusText,
+        Flavor = HisaHK0.Flavor
     };
 
     /// <summary>第294期 HS-c（橋）。HS-a ＋ <see cref="TraitId.BeckonBridge"/>（踏みとどまった瞬間、癒し手（リリ ／ ツギ）が手番の外で1度動いてその味方へ向ける・1ターンに1度）。</summary>
     public static readonly UnitDef HisaHSc = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Append(TraitId.BeckonHold).Append(TraitId.BeckonBridge).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる" + "。踏みとどまった味方へ、仲間の癒し手がすぐ駆けつける",
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaHK0.Id,
+        Name = HisaHK0.Name,
+        MaxHp = HisaHK0.MaxHp,
+        Attack = HisaHK0.Attack,
+        Speed = HisaHK0.Speed,
+        Advances = HisaHK0.Advances,
+        Pattern = HisaHK0.Pattern,
+        Traits = HisaHK0.Traits.Append(TraitId.BeckonHold).Append(TraitId.BeckonBridge).ToArray(),
+        Actions = HisaHK0.Actions,
+        PlusText = HisaHK0.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる" + "。踏みとどまった味方へ、仲間の癒し手がすぐ駆けつける",
+        MinusText = HisaHK0.MinusText,
+        Flavor = HisaHK0.Flavor
     };
 
     /// <summary>第294期 HS-d（猶予）。HS-a ＋ <see cref="TraitId.BeckonGrace"/>（踏みとどまった味方は次の自分の手番の終わりまで倒れない・1体につき1戦1度）。</summary>
     public static readonly UnitDef HisaHSd = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Append(TraitId.BeckonHold).Append(TraitId.BeckonGrace).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる" + "。踏みとどまった味方は、次に動き終えるまで倒れない",
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaHK0.Id,
+        Name = HisaHK0.Name,
+        MaxHp = HisaHK0.MaxHp,
+        Attack = HisaHK0.Attack,
+        Speed = HisaHK0.Speed,
+        Advances = HisaHK0.Advances,
+        Pattern = HisaHK0.Pattern,
+        Traits = HisaHK0.Traits.Append(TraitId.BeckonHold).Append(TraitId.BeckonGrace).ToArray(),
+        Actions = HisaHK0.Actions,
+        PlusText = HisaHK0.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる" + "。踏みとどまった味方は、次に動き終えるまで倒れない",
+        MinusText = HisaHK0.MinusText,
+        Flavor = HisaHK0.Flavor
     };
 
     /// <summary>

@@ -45,9 +45,9 @@ static class Guard294Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef From, UnitDef To);
     internal static readonly Ver[] HisaVers =
     {
-        new("規定", "hs0", UnitCatalog.Hisa, UnitCatalog.Hisa), new("HS-a", "hsa", UnitCatalog.Hisa, UnitCatalog.HisaHSa),
-        new("HS-c", "hsc", UnitCatalog.Hisa, UnitCatalog.HisaHSc), new("HS-d", "hsd", UnitCatalog.Hisa, UnitCatalog.HisaHSd),
-        new("HS-a′", "hsa1", UnitCatalog.Hisa, UnitCatalog.HisaHSa1),   // 参考（指示書に無い・1体1戦1度）
+        new("規定", "hs0", UnitCatalog.HisaHK0, UnitCatalog.HisaHK0), new("HS-a", "hsa", UnitCatalog.HisaHK0, UnitCatalog.HisaHSa),
+        new("HS-c", "hsc", UnitCatalog.HisaHK0, UnitCatalog.HisaHSc), new("HS-d", "hsd", UnitCatalog.HisaHK0, UnitCatalog.HisaHSd),
+        new("HS-a′", "hsa1", UnitCatalog.HisaHK0, UnitCatalog.HisaHSa1),   // 参考（指示書に無い・1体1戦1度）
     };
     internal static readonly Ver[] SoraVers =
     {
@@ -78,6 +78,7 @@ static class Guard294Diag
     {
         var g = f.Clone();
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Sora)) g[slot] = UnitCatalog.SoraSR0;
+        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Hisa)) g[slot] = UnitCatalog.HisaHK0;   // 第296期: ヒサも旧の規定（`HisaHK0`）に
         return g;
     }
 
@@ -106,13 +107,13 @@ static class Guard294Diag
     /// <summary>台の版の組（その駒がいる版だけ・ヒサ × ソラ × ソム）。</summary>
     static IEnumerable<(string Name, Formation F)> Variants(Formation f)
     {
-        var hs = Has(f, UnitCatalog.Hisa) ? HisaVers : new Ver[] { HisaVers[0] };
+        var hs = Has(f, UnitCatalog.HisaHK0) ? HisaVers : new Ver[] { HisaVers[0] };
         var rs = Has(f, UnitCatalog.SoraSR0) ? SoraVers : new Ver[] { SoraVers[0] };
         var ms = Has(f, UnitCatalog.Som) ? SomVers : new Ver[] { SomVers[0] };
         foreach (var h in hs) foreach (var r in rs) foreach (var m in ms)
         {
             var parts = new List<string>();
-            if (Has(f, UnitCatalog.Hisa)) parts.Add(h.Name == "規定" ? "ヒサ規定" : h.Name);
+            if (Has(f, UnitCatalog.HisaHK0)) parts.Add(h.Name == "規定" ? "ヒサ規定" : h.Name);
             if (Has(f, UnitCatalog.SoraSR0)) parts.Add(r.Name == "規定" ? "ソラ規定" : r.Name);
             if (Has(f, UnitCatalog.Som)) parts.Add(m.Name == "規定" ? "ソム規定" : m.Name);
             if (parts.Count == 0) parts.Add("規定");
@@ -729,8 +730,8 @@ static class Guard294Diag
     static (UnitDef[] Fixed, UnitDef[] Pool) BossFrame(string who) => who switch
     {
         "som" => (new[] { UnitCatalog.Kugu, UnitCatalog.Kata, UnitCatalog.Som }, S293.BossPool.Where(d => d.Id != "som").Append(UnitCatalog.Shiga).ToArray()),
-        "hisa" => (new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.Hisa }, B283.LifePool.Concat(B283.HealPool.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id != "hisa").ToArray()),
-        "sora" => (new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.SoraSR0 }, B283.LifePool.Concat(B283.HealPool.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id != "sora").ToArray()),
+        "hisa" => (new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.HisaHK0 }, B283.LifePool.Concat(B283.HealPool295.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id != "hisa").ToArray()),
+        "sora" => (new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.SoraSR0 }, B283.LifePool.Concat(B283.HealPool295.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id != "sora").ToArray()),
         _ => throw new ArgumentException(who),
     };
 
@@ -783,7 +784,8 @@ static class Guard294Diag
     // ---------------------------------------------------------------------------------
     static void Memo(string rowPart, string wave, int seed, string kind, int limit)
     {
-        var (name, f) = Presets.Playtest.First(r => r.Name.Contains(rowPart, StringComparison.Ordinal));
+        var (name, f0) = Presets.Playtest.First(r => r.Name.Contains(rowPart, StringComparison.Ordinal));
+        var f = Pin295(f0);   // 第296期: ヒサも旧の規定に
         var w = EnemyCatalog.PlaytestStages[wave switch { "boss" => 0, "guard" => 1, "bat" => 2, _ => int.Parse(wave) }];
         var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
         var e = BattleEngine.MaterializeEnemy(w.Enemy, w.Scale);
@@ -858,7 +860,7 @@ static class Guard294Diag
         // (b) 版は規定の末尾に札を足しただけ・`All` ／ `Retired` の外・文面
         var vers = new[] { UnitCatalog.HisaHSa, UnitCatalog.HisaHSc, UnitCatalog.HisaHSd, UnitCatalog.HisaHSa1, UnitCatalog.SoraSRa, UnitCatalog.SoraSRb, UnitCatalog.SomSMa, UnitCatalog.SomSMb };
         Expect("(b) 版は規定の末尾に札を足しただけ（体・型・行動は同じ）・`All` ／ `Retired` の外・規定は動いていない",
-            UnitCatalog.HisaHSa.Traits.SequenceEqual(UnitCatalog.Hisa.Traits.Append(TraitId.BeckonHold))
+            UnitCatalog.HisaHSa.Traits.SequenceEqual(UnitCatalog.HisaHK0.Traits.Append(TraitId.BeckonHold))
             && UnitCatalog.HisaHSc.Traits.SequenceEqual(UnitCatalog.HisaHSa.Traits.Append(TraitId.BeckonBridge))
             && UnitCatalog.HisaHSd.Traits.SequenceEqual(UnitCatalog.HisaHSa.Traits.Append(TraitId.BeckonGrace))
             && UnitCatalog.HisaHSa1.Traits.SequenceEqual(UnitCatalog.HisaHSa.Traits.Append(TraitId.BeckonHoldOnce))
@@ -869,7 +871,7 @@ static class Guard294Diag
             && vers.All(v => { var b = UnitCatalog.Everyone.First(x => x.Id == v.Id); return v.MaxHp == b.MaxHp && v.Attack == b.Attack && v.Speed == b.Speed && v.Pattern == b.Pattern && ReferenceEquals(v.Actions, b.Actions); })
             && !UnitCatalog.All.Any(u => u.Traits.Any(t => t is TraitId.BeckonHold or TraitId.BeckonBridge or TraitId.BeckonGrace or TraitId.BeckonHoldOnce or TraitId.DeflectWide or TraitId.StaticMembrane or TraitId.MembraneNoStun)));
         Expect("(c) 文面: 指示書 §3 の追記",
-            UnitCatalog.HisaHSa.PlusText == UnitCatalog.Hisa.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる"
+            UnitCatalog.HisaHSa.PlusText == UnitCatalog.HisaHK0.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる"
             && UnitCatalog.HisaHSc.PlusText == UnitCatalog.HisaHSa.PlusText + "。踏みとどまった味方へ、仲間の癒し手がすぐ駆けつける"
             && UnitCatalog.HisaHSd.PlusText == UnitCatalog.HisaHSa.PlusText + "。踏みとどまった味方は、次に動き終えるまで倒れない"
             && UnitCatalog.SoraSRa.PlusText == UnitCatalog.SoraSR0.PlusText + "。仲間に降りかかる広い攻撃も、半分は自分が代わりに浴びて逸らす"

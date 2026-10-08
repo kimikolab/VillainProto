@@ -49,7 +49,7 @@ static class Tome281Diag
     };
     static Ver VerOf(string n) => Vers.First(v => v.Name == n);
 
-    static Formation Row(string prefix) => FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Sora, UnitCatalog.SoraSR0);   // 第295期: ソラを旧の規定（SR0）に固定
+    static Formation Row(string prefix) => FvSwap(FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Hisa, UnitCatalog.HisaHK0);   // 第295期: ソラを旧の規定（SR0）に固定・第296期: ヒサも（HK0）
 
     /// <summary>新行（`compare` 64 行目）。席は `seat` で選んだもの（`Presets` の定義をそのまま引く）。</summary>
     static Formation MarkEconomyRow => Row("標経済 (ヒサ×ザン×ミサ)");
@@ -435,9 +435,9 @@ static class Tome281Diag
     /// <summary>新行の顔ぶれの候補。a ＝ 第184期の診断台1（ムド・ボルグ）／ b ＝ `仇討ち (ヒサ×ザン)` のドルガ → トメ（1枚だけ違う）／ c ＝ ヒサ・ザン・トメ・ガルド・ムド。</summary>
     static readonly Dictionary<string, (string What, UnitDef[] M)> SeatSets = new()
     {
-        ["a"] = ("第184期の診断台1（ヒサ・ザン・トメ・ムド・ボルグ）", new[] { UnitCatalog.Hisa, UnitCatalog.Zan, UnitCatalog.TomeT1, UnitCatalog.Mudo, UnitCatalog.Borg }),
-        ["b"] = ("`仇討ち (ヒサ×ザン)` のドルガ → トメ（ガン・ヒサ・ガルド・トメ・ザン）", new[] { UnitCatalog.Gan, UnitCatalog.Hisa, UnitCatalog.Gald, UnitCatalog.TomeT1, UnitCatalog.Zan }),
-        ["c"] = ("ヒサ・ザン・トメ・ガルド・ムド", new[] { UnitCatalog.Hisa, UnitCatalog.Zan, UnitCatalog.TomeT1, UnitCatalog.Gald, UnitCatalog.Mudo }),
+        ["a"] = ("第184期の診断台1（ヒサ・ザン・トメ・ムド・ボルグ）", new[] { UnitCatalog.HisaHK0, UnitCatalog.Zan, UnitCatalog.TomeT1, UnitCatalog.Mudo, UnitCatalog.Borg }),
+        ["b"] = ("`仇討ち (ヒサ×ザン)` のドルガ → トメ（ガン・ヒサ・ガルド・トメ・ザン）", new[] { UnitCatalog.Gan, UnitCatalog.HisaHK0, UnitCatalog.Gald, UnitCatalog.TomeT1, UnitCatalog.Zan }),
+        ["c"] = ("ヒサ・ザン・トメ・ガルド・ムド", new[] { UnitCatalog.HisaHK0, UnitCatalog.Zan, UnitCatalog.TomeT1, UnitCatalog.Gald, UnitCatalog.Mudo }),
     };
 
     static void Seat(string key)
@@ -488,8 +488,8 @@ static class Tome281Diag
         static bool Aim(Formation f)
         {
             var occ = f.Occupied().ToList();
-            int hs = occ.First(o => o.Def.Id == UnitCatalog.Hisa.Id).Slot;
-            var wall = occ.Where(o => o.Def.Id != UnitCatalog.Hisa.Id).OrderByDescending(o => o.Def.MaxHp).First();
+            int hs = occ.First(o => o.Def.Id == UnitCatalog.HisaHK0.Id).Slot;
+            var wall = occ.Where(o => o.Def.Id != UnitCatalog.HisaHK0.Id).OrderByDescending(o => o.Def.MaxHp).First();
             return FormationRules.AreAdjacent(hs, wall.Slot);
         }
     }

@@ -28,6 +28,8 @@ static class Playtest291Diag
     }
 
     static EnemyCatalog.PlaytestStage WaveOf(string n) => EnemyCatalog.PlaytestStages[n switch { "boss" => 0, "guard" => 1, "bat" => 2, _ => int.Parse(n) }];
+    /// <summary>第296期: 試遊の行が8行になった——この器具は第291期の5行（先頭の5行）だけを読む（ヒサは `Make` の `Pin294` で旧の規定に固定される）。</summary>
+    static (string Name, Formation F)[] Rows291 => Presets.Playtest.Take(5).ToArray();
     static (List<UnitState> P, List<UnitState> E) Make(Formation f, EnemyCatalog.PlaytestStage w)
         => (BattleEngine.Materialize(Kugu292Diag.Pin294(FvSwap(f, UnitCatalog.Kata, UnitCatalog.KataKRb)), BattleContext.PlayerTeam), BattleEngine.MaterializeEnemy(w.Enemy, w.Scale));   // 第293期: カタは第291期の規定（KR-b）に固定・第294期: クグ ／ シガも（KG-b ／ SI-b）
 
@@ -40,7 +42,7 @@ static class Playtest291Diag
     static void Rates()
     {
         const int seeds = 50;
-        var rows = Presets.Playtest;
+        var rows = Rows291;
         var waves = EnemyCatalog.PlaytestStages;
         Console.WriteLine("# 第291期 試遊の目安 —— 試遊の5台 × 試遊の波（seed 0..49・規定の駒）");
         Console.WriteLine();
@@ -79,7 +81,7 @@ static class Playtest291Diag
         Console.WriteLine();
         var labels = new SortedSet<string>(StringComparer.Ordinal);
         var table = new Dictionary<(string Row, string Wave), Dictionary<string, long>>();
-        foreach (var (name, f) in Presets.Playtest)
+        foreach (var (name, f) in Rows291)
             foreach (var w in EnemyCatalog.PlaytestStages)
             {
                 var d = new Dictionary<string, long>();
@@ -121,7 +123,7 @@ static class Playtest291Diag
     // ---------------------------------------------------------------------------------
     static void Memo(string rowPart, string wave, int seed, int limit)
     {
-        var (name, f) = Presets.Playtest.First(r => r.Name.Contains(rowPart, StringComparison.Ordinal));
+        var (name, f) = Rows291.First(r => r.Name.Contains(rowPart, StringComparison.Ordinal));
         var w = WaveOf(wave);
         var (p, e) = Make(f, w);
         var r = BattleEngine.Run(p, e, seed, verbose: true);
@@ -186,7 +188,7 @@ static class Playtest291Diag
             && EliteDiag.Elite == new EnemyScaleRule(1000, 300) && SameWave(EliteDiag.Five, EnemyCatalog.TestStages[2].Enemy) && SameWave(EliteDiag.Nine, EnemyCatalog.TestStages[1].Enemy)
             && EnemyCatalog.TestStages.Count == 3 && EnemyCatalog.Stages.Count == 5);
         // (c) 試遊の行
-        var pl = Presets.Playtest;
+        var pl = Rows291;
         var compareNames = Presets.Compare.Select(r => r.Name).ToHashSet();
         Expect("(c) 試遊の行は5行・`Compare`（64 行）／ `Cross`（12 行）に入っていない・駒はすべて規定（`All`）・5枠が埋まっている・`試遊・標 道中` は `見境改 (ミサ×薙ぎ)` と同じ台",
             pl.Length == 5 && Presets.Compare.Length == 64 && Presets.Cross.Length == 12 && pl.All(r => !compareNames.Contains(r.Name) && !Presets.Cross.Any(c => c.Name == r.Name))

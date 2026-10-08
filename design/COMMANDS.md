@@ -931,6 +931,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 markheal295 grid <guard|bat>   # 第295期 精鋭の格子: 固定枠 ミサ ＋ ヒサ ＋ ザン・探索枠2 × 3 版
     dotnet run --project BattleSim -c Release 0 markheal295 memo <boss|guard|bat> <seed> <insight|rally> [hk0|hka|hkb]   # 第295期 Codex 向け: 見切り（`Insight`）／ あいつを狙え（`MarkRally`）の並び（循環の台）
     dotnet run --project BattleSim -c Release 0 markheal295 check     # 第295期 自己検査（段0 の札と文面・HK の札と文面・羽が何枚でも1回・仇討ちは1回ごと・ヒサが倒れたら止まる・量 ＝ 層 × 6・HK-b の同じ駒は1回・標の敵が無ければ0・見切りの出来事・決定性・PickOne ／ Roll・規定の行で口が働かない）
+    dotnet run --project BattleSim -c Release 0 rally296 rates        # 第296期 Phase 0: 試遊・標の5台（既存2 ＋ 循環 ／ 三人組 ／ 守り型）× 本編 第1〜5波 ／ 近衛 ／ 大隊 ／ ボス規定形 × seed 0..49 の勝率の目安（数秒）。本体は `Modes/Rally296.cs`
+    dotnet run --project BattleSim -c Release 0 rally296 events       # 第296期: 同じ台 × 試遊の波の出来事の件数（見切り・叫び・回復・仇討ち・返り血・ミサの味方の刃）
+    dotnet run --project BattleSim -c Release 0 rally296 memo <行名の一部> <boss|guard|bat> <seed> [T から] [T まで]   # 第296期 Codex 向け: 台本の並び（全件 ＋ ログ）
+    dotnet run --project BattleSim -c Release 0 rally296 check        # 第296期 自己検査（規定のヒサ ＝ HK-b の札と文面・`HisaHK0`・ヒーラーの一覧・試遊の行 8 行と席・第295期の測定との一致・verbose の有無・出来事）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

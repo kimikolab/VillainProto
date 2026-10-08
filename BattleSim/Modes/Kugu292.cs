@@ -59,13 +59,14 @@ static class Kugu292Diag
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     static Formation Seat(UnitDef[] o) => Pin294(B283.Seat(o));
-    /// <summary>第294期: クグ ／ シガを第292期の規定（KG-b ＝ `KuguKGb` ／ SI-b ＝ `ShigaSIb`）に固定する。第295期: ソラも旧の規定（`SoraSR0`）に。</summary>
+    /// <summary>第294期: クグ ／ シガを第292期の規定（KG-b ＝ `KuguKGb` ／ SI-b ＝ `ShigaSIb`）に固定する。第295期: ソラも旧の規定（`SoraSR0`）に。第296期: ヒサも旧の規定（`HisaHK0`）に。</summary>
     internal static Formation Pin294(Formation f)
     {
         var g = f.Clone();   // 陣形・レリックを保つ（`Common.OldFire` と同じ作法）
         foreach (var (slot, d) in f.Occupied())
             g[slot] = ReferenceEquals(d, UnitCatalog.Kugu) ? UnitCatalog.KuguKGb : ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaSIb
-                    : ReferenceEquals(d, UnitCatalog.Sora) ? UnitCatalog.SoraSR0 : d;   // 第295期: ソラも（規定は SR-b・旧は `SoraSR0`）
+                    : ReferenceEquals(d, UnitCatalog.Sora) ? UnitCatalog.SoraSR0   // 第295期: ソラも（規定は SR-b・旧は `SoraSR0`）
+                    : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHK0 : d;   // 第296期: ヒサも（規定は HK-b・旧は `HisaHK0`）
         return g;
     }
 

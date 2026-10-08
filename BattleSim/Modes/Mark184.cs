@@ -53,7 +53,7 @@ static class Mark184Diag
     };
 
     /// <summary>第183期のヒサ（開戦時に1回だけ標・手番は攻2の素の攻撃）。</summary>
-    static readonly UnitDef HisaOld = Remake(UnitCatalog.Hisa, new[] { TraitId.Marker }, null,
+    static readonly UnitDef HisaOld = Remake(UnitCatalog.HisaHK0, new[] { TraitId.Marker }, null,
         "隣接する味方1体に標を付け、敵の攻撃を集中させる", "自分では何もできない。押し出された味方は普通は死ぬ");
 
     /// <summary>第183期のザン（仇討ち＝等倍の割り込み・殴られると怯む）。</summary>
@@ -62,7 +62,7 @@ static class Mark184Diag
         "自分が殴られると怖気づき、次の手番を失う。怯んでいる間は刃も返せない");
 
     /// <summary>矢面だけ・逃げない（`yP`）。</summary>
-    static readonly UnitDef HisaNoFlee = Remake(UnitCatalog.Hisa, new[] { TraitId.Beckon }, UnitCatalog.Hisa.Actions);
+    static readonly UnitDef HisaNoFlee = Remake(UnitCatalog.HisaHK0, new[] { TraitId.Beckon }, UnitCatalog.HisaHK0.Actions);
 
     /// <summary>仇指しだけ・返り血なし（`yP`）。</summary>
     static readonly UnitDef ZanNoRecoil = Remake(UnitCatalog.Zan, new[] { TraitId.Vendetta }, null);
@@ -88,7 +88,7 @@ static class Mark184Diag
     static Formation Apply(Formation f, Version v)
     {
         Formation g = f;
-        g = Swap(g, "hisa", v.HisaAs ?? (v.NewHisa ? UnitCatalog.Hisa : HisaOld));
+        g = Swap(g, "hisa", v.HisaAs ?? (v.NewHisa ? UnitCatalog.HisaHK0 : HisaOld));
         g = Swap(g, "zan", v.ZanAs ?? (v.NewZan ? UnitCatalog.Zan : ZanOld));
         return g;
     }
@@ -539,9 +539,9 @@ static class Mark184Diag
     static readonly (string Name, Formation F)[] Benches =
     {
         ("台1 ヒサ中央（ムド・ボルグ・トメ・ザン）", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Borg,
-            center: UnitCatalog.Hisa, back1: UnitCatalog.TomeT0, back3: UnitCatalog.Zan)),
+            center: UnitCatalog.HisaHK0, back1: UnitCatalog.TomeT0, back3: UnitCatalog.Zan)),
         ("台2 ヒサ後列（ムド・トメ・ザン・ボルグ）", Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.TomeT0,
-            center: UnitCatalog.Zan, back1: UnitCatalog.Hisa, back3: UnitCatalog.Borg)),
+            center: UnitCatalog.Zan, back1: UnitCatalog.HisaHK0, back3: UnitCatalog.Borg)),
     };
 
     static void Bench()

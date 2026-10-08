@@ -41,12 +41,18 @@ static class Boss283Diag
     /// </summary>
     internal static readonly UnitDef[] LifePool =
     {
-        UnitCatalog.Hisa, UnitCatalog.Sora, UnitCatalog.Doha, UnitCatalog.Golm, UnitCatalog.Ban, UnitCatalog.Kubi,
+        UnitCatalog.HisaHK0, UnitCatalog.Sora, UnitCatalog.Doha, UnitCatalog.Golm, UnitCatalog.Ban, UnitCatalog.Kubi,
         UnitCatalog.Sekki, UnitCatalog.Gald, UnitCatalog.Kado, UnitCatalog.Uke, UnitCatalog.Gan,
     };
 
     /// <summary>ヒーラー（Phase 0 §1 の機械的定義 ＝ 味方に回復または破片を2回以上書ける駒）。台に最大1枚。</summary>
     internal static UnitDef[] HealPool => Healers().Select(h => h.Def).ToArray();
+
+    /// <summary>
+    /// 第296期より前の一覧（規定のヒサを数えない）。<b>過去の器具（第283〜295期）はこちらを読む</b>——規定のヒサを HK-b にして
+    /// <see cref="HealPool"/> にヒサを足したので、過去の器具の出力が動かないよう固定する。
+    /// </summary>
+    internal static UnitDef[] HealPool295 => Healers(hisa: false).Select(h => h.Def).ToArray();
 
     /// <summary>
     /// Phase 0 §1 の境界の判定（ソースの走査結果に人が付ける列）。
@@ -126,7 +132,7 @@ static class Boss283Diag
     static List<Writer> AllyMarkWriters() => Scan("標", s => s.Contains("SetCounter(StatusKeys.Marked, 1)"));
 
     /// <summary>ヒーラーの機械的定義（Phase 0 §1）: 「味方へ」かつ「繰り返し」の回復・破片の書き手を持つ `All` の駒。</summary>
-    static List<HealerRow> Healers()
+    static List<HealerRow> Healers(bool hisa = true)
     {
         var w = HealWriters().Concat(ArmorWriters())
             .Where(x => WriterKind.TryGetValue(x.Cls, out var k) && k.To == "味方" && k.Repeat).ToList();
@@ -139,6 +145,9 @@ static class Boss283Diag
         // engine 側の書き手（`ctx.Heal` を通らない・Traits.cs の外）: ベニの反転（毒・燃焼を癒しに変える）は隣の味方を癒すので、ここで足す。
         if (!rows.Any(r => ReferenceEquals(r.Def, UnitCatalog.Beni)))
             rows.Add(new HealerRow(UnitCatalog.Beni, "（engine）`InverseHeal`——隣の味方の毒・燃焼を癒しに変える"));
+        // 第296期: 規定のヒサ（HK-b）の「あいつを狙え！」も engine 側の書き手（`MarkRallyWide`・Traits.cs の外）。ポンの決めでヒーラーに数える。
+        if (hisa && UnitCatalog.Hisa.Traits.Contains(TraitId.MarkRallyWide) && !rows.Any(r => ReferenceEquals(r.Def, UnitCatalog.Hisa)))
+            rows.Add(new HealerRow(UnitCatalog.Hisa, "（engine）`MarkRallyWide`——標の敵が攻撃されるたび、攻撃した味方と最も傷ついた味方を癒す"));
         return rows;
     }
 
@@ -261,7 +270,7 @@ static class Boss283Diag
     /// <summary>探索枠3 の組（ヒーラーは 0 ／ 1 枚。2 枚は作らない＝ポンの制約）。</summary>
     static List<UnitDef[]> Lineups()
     {
-        var heal = HealPool;
+        var heal = HealPool295;
         var pool = LifePool.Concat(heal.Where(h => !LifePool.Contains(h))).ToArray();
         var l = new List<UnitDef[]>();
         for (int a = 0; a < pool.Length; a++)
@@ -298,7 +307,7 @@ static class Boss283Diag
         Console.WriteLine();
         Console.WriteLine("| ヒーラー | HP | 書き手 |");
         Console.WriteLine("|---|--:|---|");
-        foreach (var h in Healers()) Console.WriteLine($"| {h.Def.Name} | {h.Def.MaxHp} | {h.Classes} |");
+        foreach (var h in Healers(hisa: false)) Console.WriteLine($"| {h.Def.Name} | {h.Def.MaxHp} | {h.Classes} |");
         Console.WriteLine();
 
         Console.WriteLine("## §2 味方に標を書く札（ザンの仇指しの入口）");
@@ -316,13 +325,13 @@ static class Boss283Diag
         Console.WriteLine();
         Console.WriteLine("| 後1 | 勝率 | 倒しT | 崩れ | ト死 | 仇 | 爪 | 味方回復 | 勇者の回復 | ドルガ |");
         Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
-        var basis = Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.Doha, center: UnitCatalog.Zan, back1: UnitCatalog.Gan, back3: UnitCatalog.Hisa);
-        foreach (var c in new[] { UnitCatalog.Gan }.Concat(LifePool.Where(d => d != UnitCatalog.Gan && d != UnitCatalog.Doha && d != UnitCatalog.Hisa)).Concat(HealPool).Distinct())
+        var basis = Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.Doha, center: UnitCatalog.Zan, back1: UnitCatalog.Gan, back3: UnitCatalog.HisaHK0);
+        foreach (var c in new[] { UnitCatalog.Gan }.Concat(LifePool.Where(d => d != UnitCatalog.Gan && d != UnitCatalog.Doha && d != UnitCatalog.HisaHK0)).Concat(HealPool295).Distinct())
         {
             var f = Swap(basis, UnitCatalog.Gan, c);
             var d = MeasureDeep(f, 0, 100);
             var dg = MeasureLite(Swap(f, UnitCatalog.Tome, UnitCatalog.Dolga), 0, 100);
-            Console.WriteLine($"| {c.Name}{(HealPool.Contains(c) ? "（癒）" : "")} | {F1(d.Win)} | {Per2(d.WinT, d.Wins)} | {Per1(d.FirstDeathT, d.FirstDeath)} | {Per1(d.TomeDeathT, d.TomeDied)} | {Per1(d.Vend, d.N)} | {Per1(d.Scar, d.N)} | {Per1(d.AllyHeal, d.N)} | {Per1(d.BossHeal, d.N)} | {F1(dg.Win)} |");
+            Console.WriteLine($"| {c.Name}{(HealPool295.Contains(c) ? "（癒）" : "")} | {F1(d.Win)} | {Per2(d.WinT, d.Wins)} | {Per1(d.FirstDeathT, d.FirstDeath)} | {Per1(d.TomeDeathT, d.TomeDied)} | {Per1(d.Vend, d.N)} | {Per1(d.Scar, d.N)} | {Per1(d.AllyHeal, d.N)} | {Per1(d.BossHeal, d.N)} | {F1(dg.Win)} |");
         }
         Console.WriteLine();
 
@@ -336,8 +345,8 @@ static class Boss283Diag
         long gridFights = (long)lu.Count * 120 * 20;
         Console.WriteLine("## §5 格子の大きさと所要");
         Console.WriteLine();
-        Console.WriteLine($"- 候補: 寿命側 {LifePool.Length} 枚（{Names(LifePool)}）＋ ヒーラー {HealPool.Length} 枚（{Names(HealPool)}）");
-        Console.WriteLine($"- 探索枠3 の組（ヒーラー ≦ 1）: {lu.Count} 組（ヒーラー 0 枚 {lu.Count(t => !t.Any(HealPool.Contains))} ／ 1 枚 {lu.Count(t => t.Any(HealPool.Contains))}）× 席 120 通り ＝ {lu.Count * 120:N0} 台");
+        Console.WriteLine($"- 候補: 寿命側 {LifePool.Length} 枚（{Names(LifePool)}）＋ ヒーラー {HealPool295.Length} 枚（{Names(HealPool295)}）");
+        Console.WriteLine($"- 探索枠3 の組（ヒーラー ≦ 1）: {lu.Count} 組（ヒーラー 0 枚 {lu.Count(t => !t.Any(HealPool295.Contains))} ／ 1 枚 {lu.Count(t => t.Any(HealPool295.Contains))}）× 席 120 通り ＝ {lu.Count * 120:N0} 台");
         Console.WriteLine($"- 1戦（ボス・verbose なし・並列）: {perFight * 1e6:F1} µs → 足切り段（seed 0..19）{gridFights:N0} 戦 ≈ {gridFights * perFight:F0} 秒");
         Console.WriteLine();
         Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F0} 秒。");
@@ -368,7 +377,7 @@ static class Boss283Diag
     }
 
     static string SeatText(UnitDef[] order) => $"前1 {Short(order[0])} ／ 前3 {Short(order[1])} ／ 中 {Short(order[2])} ／ 後1 {Short(order[3])} ／ 後3 {Short(order[4])}";
-    static string HealOf(UnitDef[] trio) => trio.FirstOrDefault(HealPool.Contains) is { } h ? Short(h) : "—";
+    static string HealOf(UnitDef[] trio) => trio.FirstOrDefault(HealPool295.Contains) is { } h ? Short(h) : "—";
 
     static void Grid()
     {
@@ -377,7 +386,7 @@ static class Boss283Diag
         Console.WriteLine("# 第283期 段1 —— ボスの標台の寿命探索（固定枠 トメ T1n ＋ ザン・探索枠3・ヒーラー ≦ 1）");
         Console.WriteLine();
         Console.WriteLine($"- 寿命側 {LifePool.Length} 枚: {Names(LifePool)}");
-        Console.WriteLine($"- ヒーラー {HealPool.Length} 枚: {Names(HealPool)}");
+        Console.WriteLine($"- ヒーラー {HealPool295.Length} 枚: {Names(HealPool295)}");
         Console.WriteLine($"- 組 {lu.Count} × 席 120 ＝ {lu.Count * 120:N0} 台。ボスは規定形（勇者 HP {EnemyCatalog.BossRegular.MaxHp}・倍率なし）");
         Console.WriteLine();
         Console.WriteLine("**足切りの基準（測る前に固定）**: 段A は全台 × seed 0..19。段B（seed 0..199）へ送るのは");
@@ -441,7 +450,7 @@ static class Boss283Diag
         Console.WriteLine();
         Console.WriteLine("| ヒーラー | 届いた台 | うち爪痕由来 | 爪痕由来の組 | 爪痕由来で帯A・帯B とも 100% の台 | 組の数（全体） |");
         Console.WriteLine("|---|--:|--:|--:|--:|--:|");
-        foreach (var h in new[] { "—" }.Concat(HealPool.Select(Short)))
+        foreach (var h in new[] { "—" }.Concat(HealPool295.Select(Short)))
         {
             var v = verdicts.Where(x => HealOf(x.B.Trio) == h).ToList();
             int trios = lu.Count(t => HealOf(t) == h);
@@ -477,7 +486,7 @@ static class Boss283Diag
         foreach (var x in miss.Take(10))
             Console.WriteLine($"| {HealOf(x.B.Trio)} | {Names(x.B.Trio)} | {SeatText(x.B.Order)} | {F1(x.C.Win)} | {F1(x.C.ScarAvg)} | {Per1(x.C.Vend, x.C.N)} | {Per2(x.C.Turns, x.C.N)} |");
         Console.WriteLine();
-        Console.WriteLine($"供給の入口（ヒサ ／ ソラ）を持たない組 {lu.Count(t => !t.Contains(UnitCatalog.Hisa) && !t.Contains(UnitCatalog.Sora))} のうち、爪痕由来で届いた組: {reachedTrios.Count(n => !n.Contains("ヒサ") && !n.Contains("ソラ"))}");
+        Console.WriteLine($"供給の入口（ヒサ ／ ソラ）を持たない組 {lu.Count(t => !t.Contains(UnitCatalog.HisaHK0) && !t.Contains(UnitCatalog.Sora))} のうち、爪痕由来で届いた組: {reachedTrios.Count(n => !n.Contains("ヒサ") && !n.Contains("ソラ"))}");
         Console.WriteLine();
 
         // 表4: ヒサ・ドハの在不在と、組の全体分布
@@ -486,13 +495,13 @@ static class Boss283Diag
         Console.WriteLine("| 駒 | 含む組の数 | 含む組の最良の爪痕 | 含む組の爪痕の中央値 | 含まない組の最良の爪痕 | 最良の勝率 |");
         Console.WriteLine("|---|--:|--:|--:|--:|--:|");
         var bestPerTrio = stageB.GroupBy(x => Names(x.B.Trio)).Select(g => g.OrderByDescending(x => x.C.Wins).ThenByDescending(x => x.C.Scar).First()).ToList();
-        foreach (var d in LifePool.Concat(HealPool))
+        foreach (var d in LifePool.Concat(HealPool295))
         {
             var with = bestPerTrio.Where(x => x.B.Trio.Contains(d)).ToList();
             var without = bestPerTrio.Where(x => !x.B.Trio.Contains(d)).ToList();
             if (with.Count == 0) continue;
             var sc = with.Select(x => x.C.ScarAvg).OrderBy(v => v).ToList();
-            Console.WriteLine($"| {d.Name}{(HealPool.Contains(d) ? "（癒）" : "")} | {with.Count} | {F1(sc[^1])} | {F1(sc[sc.Count / 2])} | {F1(without.Count == 0 ? double.NaN : without.Max(x => x.C.ScarAvg))} | {F1(with.Max(x => x.C.Win))} |");
+            Console.WriteLine($"| {d.Name}{(HealPool295.Contains(d) ? "（癒）" : "")} | {with.Count} | {F1(sc[^1])} | {F1(sc[sc.Count / 2])} | {F1(without.Count == 0 ? double.NaN : without.Max(x => x.C.ScarAvg))} | {F1(with.Max(x => x.C.Win))} |");
         }
         Console.WriteLine();
         Console.WriteLine($"所要 {sw.Elapsed.TotalSeconds:F0} 秒。");
@@ -514,14 +523,14 @@ static class Boss283Diag
     /// </summary>
     internal static readonly (string Label, UnitDef[] Order)[] CtlBoards =
     {
-        ("第282期の新台", new[] { UnitCatalog.Tome, UnitCatalog.Doha, UnitCatalog.Zan, UnitCatalog.Gan, UnitCatalog.Hisa }),
-        ("新台のガン → バン（席はそのまま）", new[] { UnitCatalog.Tome, UnitCatalog.Doha, UnitCatalog.Zan, UnitCatalog.Ban, UnitCatalog.Hisa }),
-        ("0枚: ヒサ・ドハ・バン（新台の組み替え）", new[] { UnitCatalog.Hisa, UnitCatalog.Doha, UnitCatalog.Ban, UnitCatalog.Zan, UnitCatalog.Tome }),
-        ("0枚: ヒサ・ドハ・ゴルム（標準の候補）", new[] { UnitCatalog.Golm, UnitCatalog.Tome, UnitCatalog.Doha, UnitCatalog.Zan, UnitCatalog.Hisa }),
-        ("0枚: ヒサ・ゴルム・バン", new[] { UnitCatalog.Zan, UnitCatalog.Golm, UnitCatalog.Tome, UnitCatalog.Ban, UnitCatalog.Hisa }),
-        ("シオ: ヒサ・ドハ・シオ", new[] { UnitCatalog.Doha, UnitCatalog.Zan, UnitCatalog.Hisa, UnitCatalog.Tome, UnitCatalog.Shio }),
-        ("シオ: ヒサ・クビ・シオ（120 席すべて届く）", new[] { UnitCatalog.Hisa, UnitCatalog.Shio, UnitCatalog.Kubi, UnitCatalog.Tome, UnitCatalog.Zan }),
-        ("ツギ: ヒサ・バン・ツギ", new[] { UnitCatalog.Tome, UnitCatalog.Hisa, UnitCatalog.Ban, UnitCatalog.Tsugi, UnitCatalog.Zan }),
+        ("第282期の新台", new[] { UnitCatalog.Tome, UnitCatalog.Doha, UnitCatalog.Zan, UnitCatalog.Gan, UnitCatalog.HisaHK0 }),
+        ("新台のガン → バン（席はそのまま）", new[] { UnitCatalog.Tome, UnitCatalog.Doha, UnitCatalog.Zan, UnitCatalog.Ban, UnitCatalog.HisaHK0 }),
+        ("0枚: ヒサ・ドハ・バン（新台の組み替え）", new[] { UnitCatalog.HisaHK0, UnitCatalog.Doha, UnitCatalog.Ban, UnitCatalog.Zan, UnitCatalog.Tome }),
+        ("0枚: ヒサ・ドハ・ゴルム（標準の候補）", new[] { UnitCatalog.Golm, UnitCatalog.Tome, UnitCatalog.Doha, UnitCatalog.Zan, UnitCatalog.HisaHK0 }),
+        ("0枚: ヒサ・ゴルム・バン", new[] { UnitCatalog.Zan, UnitCatalog.Golm, UnitCatalog.Tome, UnitCatalog.Ban, UnitCatalog.HisaHK0 }),
+        ("シオ: ヒサ・ドハ・シオ", new[] { UnitCatalog.Doha, UnitCatalog.Zan, UnitCatalog.HisaHK0, UnitCatalog.Tome, UnitCatalog.Shio }),
+        ("シオ: ヒサ・クビ・シオ（120 席すべて届く）", new[] { UnitCatalog.HisaHK0, UnitCatalog.Shio, UnitCatalog.Kubi, UnitCatalog.Tome, UnitCatalog.Zan }),
+        ("ツギ: ヒサ・バン・ツギ", new[] { UnitCatalog.Tome, UnitCatalog.HisaHK0, UnitCatalog.Ban, UnitCatalog.Tsugi, UnitCatalog.Zan }),
     };
 
     static Formation Tough(Formation f, int x10)
@@ -603,11 +612,11 @@ static class Boss283Diag
         var unk = HealWriters().Concat(ArmorWriters()).Where(w => !WriterKind.ContainsKey(w.Cls)).Select(w => w.Cls).Distinct().ToList();
         Expect("(a) 回復・破片の書き手はすべて境界の表に載っている（未分類 0）", unk.Count == 0, string.Join("・", unk));
         var lu = Lineups();
-        Expect("(b) 探索枠の組にヒーラー 2 枚以上の組は 0（ポンの制約）", lu.All(t => t.Count(HealPool.Contains) <= 1), $"{lu.Count} 組");
+        Expect("(b) 探索枠の組にヒーラー 2 枚以上の組は 0（ポンの制約）", lu.All(t => t.Count(HealPool295.Contains) <= 1), $"{lu.Count} 組");
         Expect("(c) ツギとリリはどちらもヒーラーに数えられている（同時編成の禁止が組に効く）",
-            HealPool.Contains(UnitCatalog.Tsugi) && HealPool.Contains(UnitCatalog.Lili) && !lu.Any(t => t.Contains(UnitCatalog.Tsugi) && t.Contains(UnitCatalog.Lili)));
+            HealPool295.Contains(UnitCatalog.Tsugi) && HealPool295.Contains(UnitCatalog.Lili) && !lu.Any(t => t.Contains(UnitCatalog.Tsugi) && t.Contains(UnitCatalog.Lili)));
         Expect("(d) 固定枠と探索枠は重ならない・ドルガは候補に無い（対照の駒）",
-            !LifePool.Concat(HealPool).Any(Fixed.Contains) && !LifePool.Concat(HealPool).Contains(UnitCatalog.Dolga));
+            !LifePool.Concat(HealPool295).Any(Fixed.Contains) && !LifePool.Concat(HealPool295).Contains(UnitCatalog.Dolga));
         Expect("(e) 席の並べ方は 120 通りで重複なし", Perms(Fixed.Concat(lu[0]).ToArray()).Select(o => string.Join(",", o.Select(d => d.Id))).Distinct().Count() == 120);
         // 第286期に M-b を規定にしたので、(f)(h) は T1n を `TomeT1n` で明示して読む（第283期の測定は T1n で行った）。
         Expect("(f) `TomeT1n` は層を残す札を持つ・規定（第286期から M-b）も層を残す", UnitCatalog.TomeT1n.Traits.Contains(TraitId.RuptureKeep) && UnitCatalog.Tome.Traits.Contains(TraitId.RuptureKeep));

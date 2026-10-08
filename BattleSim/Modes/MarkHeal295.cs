@@ -43,10 +43,10 @@ static class MarkHeal295Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef To);
     internal static readonly Ver[] Vers =
     {
-        new("規定", "hk0", UnitCatalog.Hisa), new("HK-a", "hka", UnitCatalog.HisaHKa), new("HK-b", "hkb", UnitCatalog.HisaHKb),
+        new("規定", "hk0", UnitCatalog.HisaHK0), new("HK-a", "hka", UnitCatalog.HisaHKa), new("HK-b", "hkb", UnitCatalog.HisaHKb),
     };
     static Ver VerOf(string n) => Vers.First(v => v.Ascii == n || v.Name == n);
-    static Formation Apply(Formation f, Ver v) => ReferenceEquals(v.To, UnitCatalog.Hisa) ? f : FvSwap(f, UnitCatalog.Hisa, v.To);
+    static Formation Apply(Formation f, Ver v) => ReferenceEquals(v.To, UnitCatalog.HisaHK0) ? f : FvSwap(f, UnitCatalog.HisaHK0, v.To);
     static bool Has(Formation f, UnitDef d) => f.Occupied().Any(o => ReferenceEquals(o.Def, d));
     static S287.Wave WaveOf(string n) => S287.Waves.First(w => w.Name == (n switch { "boss" => "ボス", "guard" => "近衛", "bat" => "大隊", _ => n }));
     const int Seeds = 200, CutSeeds = 20;
@@ -54,7 +54,15 @@ static class MarkHeal295Diag
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     static string Seats(Formation f) => string.Join("・", Enumerable.Range(0, 5).Select(i => f[i] is { } d ? Short(d) : "—"));
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
+    static Formation Playtest(string n) => Pin296(Presets.Playtest.First(r => r.Name == n).F);
+    /// <summary>第296期: 規定のヒサが HK-b になった——この器具の「規定」は第295期の規定（`HisaHK0`）に固定する（台・`compare` の行とも）。</summary>
+    internal static Formation Pin296(Formation f)
+    {
+        var g = f.Clone();
+        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Hisa)) g[slot] = UnitCatalog.HisaHK0;
+        return g;
+    }
+    static (string Name, Formation F)[] CompareBuilds() => Common.CompareBuilds().Select(r => (r.Name, Pin296(r.F))).ToArray();
     static Formation Cycle => FvSwap(Playtest("試遊・標 ボス台"), UnitCatalog.Ban, UnitCatalog.Sora);
 
     /// <summary>代表台（§5-2）。循環の台 ＝ 試遊・標 ボス台の バン → ソラ（ザン・ゴルム・ミサ・ソラ・ヒサ）。</summary>
@@ -261,7 +269,7 @@ static class MarkHeal295Diag
         Console.WriteLine();
         Console.WriteLine("| 行 | 駒 | 標の敵に当たったまとまり 手番 ／ 外（1戦） |");
         Console.WriteLine("|---|---|---|");
-        foreach (var (n, f) in CompareBuilds().Where(r => Has(r.F, UnitCatalog.Hisa)))
+        foreach (var (n, f) in CompareBuilds().Where(r => Has(r.F, UnitCatalog.HisaHK0)))
         {
             var acc = new Dictionary<string, (long T, long O)>();
             long N = 0;
@@ -310,7 +318,7 @@ static class MarkHeal295Diag
         int moved = 0;
         for (int ri = 0; ri < rows.Length; ri++)
         {
-            if (!Has(rows[ri].F, UnitCatalog.Hisa))
+            if (!Has(rows[ri].F, UnitCatalog.HisaHK0))
             {
                 for (int v = 1; v < Vers.Length; v++) for (int w = 0; w < nw; w++) if (res[v].G[ri, w] != res[0].G[ri, w]) moved++;
                 continue;
@@ -378,14 +386,14 @@ static class MarkHeal295Diag
     // 格子
     // ---------------------------------------------------------------------------------
     static readonly UnitDef[] Guards = { UnitCatalog.Golm, UnitCatalog.Gald, UnitCatalog.Doha, UnitCatalog.Ban, UnitCatalog.Kubi, UnitCatalog.Kado, UnitCatalog.Uke, UnitCatalog.Sekki };
-    static string TypeOf(UnitDef d) => B283.HealPool.Contains(d) ? "ヒーラー" : Guards.Contains(d) ? "守り" : d.Id is "gan" or "veru" or "hibi" or "sasa" ? "支え" : "火力・その他";
+    static string TypeOf(UnitDef d) => B283.HealPool295.Contains(d) ? "ヒーラー" : Guards.Contains(d) ? "守り" : d.Id is "gan" or "veru" or "hibi" or "sasa" ? "支え" : "火力・その他";
 
     sealed record GridRes(UnitDef[] Order, int[] Wins, long[] WinT, int[][] Ctl);
 
     static void GridCore(string title, S287.Wave w, UnitDef[] fixedU, UnitDef[] pool, int k)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var heal = B283.HealPool.ToHashSet();
+        var heal = B283.HealPool295.ToHashSet();
         var lu = S293.Combos(pool, k);
         var boards = new List<UnitDef[]>();
         foreach (var t in lu) boards.AddRange(B283.Perms(fixedU.Concat(t).ToArray()));
@@ -468,12 +476,12 @@ static class MarkHeal295Diag
     }
 
     /// <summary>ボスの格子（§5-2）: 固定枠 ミサ ＋ ザン ＋ ソラ ＋ ヒサ・探索枠1 ＝ 第294期のソラの格子の候補（第283期の寿命側 ＋ ヒーラーからソラを除いた枠）からヒサを除いた枠。</summary>
-    static UnitDef[] BossPool => B283.LifePool.Concat(B283.HealPool.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id is not ("sora" or "hisa")).ToArray();
+    static UnitDef[] BossPool => B283.LifePool.Concat(B283.HealPool295.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id is not ("sora" or "hisa")).ToArray();
 
-    static void GridBoss() => GridCore("固定枠 ミサ・ザン・ソラ・ヒサ（ヒサ: 規定 ／ HK-a ／ HK-b）", S287.Waves[0], new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.Sora, UnitCatalog.Hisa }, BossPool, 1);
+    static void GridBoss() => GridCore("固定枠 ミサ・ザン・ソラ・ヒサ（ヒサ: 規定 ／ HK-a ／ HK-b）", S287.Waves[0], new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.Sora, UnitCatalog.HisaHK0 }, BossPool, 1);
 
     static void GridElite(string wave, string ver) =>
-        GridCore($"固定枠 ミサ・ヒサ・ザン（第294期 §4-5 の作り・探索枠2）", WaveOf(wave), new[] { UnitCatalog.Tome, UnitCatalog.Hisa, UnitCatalog.Zan },
+        GridCore($"固定枠 ミサ・ヒサ・ザン（第294期 §4-5 の作り・探索枠2）", WaveOf(wave), new[] { UnitCatalog.Tome, UnitCatalog.HisaHK0, UnitCatalog.Zan },
             S287.Pool.Select(d => d.Id switch { "kata" => UnitCatalog.Kata, "kugu" => UnitCatalog.Kugu, _ => d }).Where(d => d.Id is not ("tome" or "hisa" or "zan")).Distinct().ToArray(), 2);
 
     // ---------------------------------------------------------------------------------
@@ -532,11 +540,13 @@ static class MarkHeal295Diag
             && UnitCatalog.Sora.PlusText == UnitCatalog.SoraSR0.PlusText + "。指差した敵の動きは読める。深く指差された敵の一撃ほど、仲間への分まで受け流す"
             && !UnitCatalog.Sora.PlusText.Contains("手元が狂う") && !new[] { UnitCatalog.SoraSR0, UnitCatalog.SoraSRb }.Any(UnitCatalog.Everyone.Contains) && UnitCatalog.All.Contains(UnitCatalog.Sora));
         Expect("(b) HK-a ／ HK-b は規定のヒサの末尾に札を1枚足しただけ・文面・`All` ／ `Retired` の外",
-            UnitCatalog.HisaHKa.Traits.SequenceEqual(UnitCatalog.Hisa.Traits.Append(TraitId.MarkRally)) && UnitCatalog.HisaHKb.Traits.SequenceEqual(UnitCatalog.Hisa.Traits.Append(TraitId.MarkRallyWide))
+            UnitCatalog.HisaHKa.Traits.SequenceEqual(UnitCatalog.HisaHK0.Traits.Append(TraitId.MarkRally)) && UnitCatalog.HisaHKb.Traits.SequenceEqual(UnitCatalog.HisaHK0.Traits.Append(TraitId.MarkRallyWide))
             && UnitCatalog.HisaHKa.PlusText.EndsWith("『あいつを狙え！ まだ倒れるな！』と叫んで、標を背負う味方を癒す")
             && UnitCatalog.HisaHKb.PlusText.EndsWith("『あいつを狙え！ まだ倒れるな！』と叫んで、攻撃した味方と最も傷ついた味方を癒す")
             && !new[] { UnitCatalog.HisaHKa, UnitCatalog.HisaHKb }.Any(UnitCatalog.Everyone.Contains)
-            && !UnitCatalog.All.Any(u => u.Traits.Any(t => t is TraitId.MarkRally or TraitId.MarkRallyWide)));
+            // 第296期: 規定のヒサが HK-b になった——`All` で札を持つのは規定のヒサ（`MarkRallyWide`）だけ（第295期の版は「保持者 0」を確かめていた）
+            && UnitCatalog.All.Where(u => u.Traits.Any(t => t is TraitId.MarkRally or TraitId.MarkRallyWide)).SequenceEqual(new[] { UnitCatalog.Hisa })
+            && !UnitCatalog.Hisa.Traits.Contains(TraitId.MarkRally));
 
         // (c)〜(h) 循環の台 × 3 波 × 40 seed の台本で、まとまりと回復を突き合わせる
         int multiPerBundle = 0, badAmount = 0, bDup = 0, afterHisaDeath = 0, misaTurnHeals = 0, misaFeatherTurns = 0, vendettaRallies = 0, vendettas = 0, rallies = 0;

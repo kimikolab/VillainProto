@@ -859,5 +859,12 @@ public static class Presets
         ("試遊・標 ボス台", Formation.Build(front1: UnitCatalog.Zan, front3: UnitCatalog.Golm, center: UnitCatalog.Tome, back1: UnitCatalog.Ban, back3: UnitCatalog.Hisa)),
         // `compare` の行 `見境改 (ミサ×薙ぎ)` と同じ台（道中の標）。写しを持たず <see cref="Compare"/> から引く。
         ("試遊・標 道中", Compare.First(r => r.Name == "見境改 (ミサ×薙ぎ)").F),
+        // 第296期（design/PHASE296_HISA_RALLY_PLAYTEST_SPEC.md §2）—— ソラの見切り・ヒサの「あいつを狙え！」・ヒサ×ザン×ミサの循環を触る3台。
+        // 第294期 `PHASE294_GUARD.md` §4-2 の「標 ボス台 バン → ソラ」（上の「試遊・標 ボス台」の後1 をソラに・席はそのまま）。第295期の循環の台。
+        ("試遊・標 循環", Formation.Build(front1: UnitCatalog.Zan, front3: UnitCatalog.Golm, center: UnitCatalog.Tome, back1: UnitCatalog.Sora, back3: UnitCatalog.Hisa)),
+        // 第295期 `PHASE295_MARK_HEAL.md` §4-2 の対照（循環の台の ソラ → ドルガ・席はそのまま）。ヒサ・ザン・ミサの三人組だけで循環が回ることを見る台。
+        ("試遊・標 三人組", Formation.Build(front1: UnitCatalog.Zan, front3: UnitCatalog.Golm, center: UnitCatalog.Tome, back1: UnitCatalog.Dolga, back3: UnitCatalog.Hisa)),
+        // 第295期 `PHASE295_MARK_HEAL.md` §4-4 の近衛の格子（`markheal295 grid guard`）の HK-b の上位（ゴルム・ザン・ドハ・ミサ・ヒサ・倒しT 3.0・100%）。席は格子の並び（前1・前3・中央・後1・後3）。
+        ("試遊・標 守り型", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Zan, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
     };
 }
