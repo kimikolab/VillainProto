@@ -321,6 +321,7 @@ public partial class BattlefieldView3D : Control
         }
         ResetSuperFlash();
         ResetBindings();
+        ResetShockWeb();
         ResetSeals();
         ResetPopups();
         ResetTurnLabel();
@@ -615,11 +616,11 @@ public partial class BattlefieldView3D : Control
 
         // Advances は表示専用。踏み込む駒だけが標的の手前まで移動し、
         // 到着後に攻撃エフェクトを出してから元の席へ戻る。
-        if (advance && from.UnitId != "sero") await from.AdvanceToAttack(to.RestPosition);
+        if (advance && from.UnitId is not ("sero" or "shiga")) await from.AdvanceToAttack(to.RestPosition);
         if (attackGeneration != _specialGeneration || !IsInstanceValid(from) || !IsInstanceValid(to)) return;
         if (holdPosition) from.HoldComboPosition();
         if (from.UnitId == "tou") BeginPowderAttack(from);
-        if (from.InterruptWhip) from.ShowMovementPortrait("shiga_interrupt", 1.1);
+        if (from.UnitId == "shiga") from.ShowMovementPortrait("shiga_interrupt", 1.1);
         if (numbPercent > 0)
         {
             NumbSwings++;

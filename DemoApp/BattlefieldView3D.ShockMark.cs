@@ -12,10 +12,12 @@ public partial class BattlefieldView3D
     {
         ChargePlays = InterruptPlays = CloudPlays = PowderMainPlays = PowderSpreadPlays = PowderLeakPlays = 0;
         ThreadPlays = ThreadReleasePlays = ScarPlays = MarkLayerPlays = CowerPlays = 0;
+        ResetShockWebCounts();
     }
     internal void EndShockMarkPresentation()
     {
         foreach (var pawn in _pawns.Values) pawn.EndShockMark();
+        ResetShockWeb();
         _attackAudio.StopShockMarkPresentation();
     }
     internal void ShowFeatherGain(BattlePawn3D? pawn, double speed)
@@ -58,6 +60,7 @@ public partial class BattlefieldView3D
         ChargePlays++;
         target.SetStoredCharge(amount);
         target.InterruptWhip = false;
+        target.WhipChainSize = 0;
         if (gain) target.SetFrightened(false);
         ShockMarkFx.Ring(_fxRoot, target.FxPoint, ThunderFx.Cyan, 0.75f + amount * 0.22f, 0.25 / speed);
         if (gain) _attackAudio.PlayShockMark(ShockMarkSound.Charge);
@@ -67,6 +70,7 @@ public partial class BattlefieldView3D
         if (actor is null) return;
         InterruptPlays++;
         actor.InterruptWhip = true;
+        actor.WhipChainSize = 0;
         actor.SetFrightened(false);
         actor.ShowMovementPortrait("shiga_interrupt", 1.8);
         if (signal is not null) ThunderFx.Arc(_fxRoot, signal.DischargePoint, actor.WhipOrigin(_camera), 0.06f, 0.25 / speed);

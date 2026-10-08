@@ -15,7 +15,8 @@ public partial class Main
         or BattleEventKind.Skill or BattleEventKind.TurnStart or BattleEventKind.StatusSnapshot
         or BattleEventKind.StatSnapshot or BattleEventKind.Thunder or BattleEventKind.Charge or BattleEventKind.Status
         or BattleEventKind.MireSlam or BattleEventKind.MireConduct or BattleEventKind.MireBurst or BattleEventKind.LiveWire
-        or BattleEventKind.ShockGauge or BattleEventKind.Feather or BattleEventKind.MarkLayer or BattleEventKind.Scar;
+        or BattleEventKind.ShockGauge or BattleEventKind.Feather or BattleEventKind.MarkLayer or BattleEventKind.Scar
+        or BattleEventKind.Web || e.Kind == BattleEventKind.SilkBall && e.Text != SilkBallLabels.Pop;
 
     private void IndexThunder(IReadOnlyList<BattleEvent> events)
     {
@@ -87,6 +88,7 @@ public partial class Main
         if (_shockStageMembers.Contains(index)) _tickDelayBudget = 0;
         if (e.Kind == BattleEventKind.ShockSpent)
         {
+            _battleField.RememberShockPoint(e.TargetId);
             target?.SetShocked(false);
             target?.SetStatusIcon(StatusKeys.Shock, false);
             if (target is not null) SetDisplayedStatus(target, DisplayStatusKey(StatusKeys.Shock), 0);
@@ -132,6 +134,7 @@ public partial class Main
 
     private void ShowScriptDischarge(BattleEvent e)
     {
+        if (_battleField.ShowSilkBallDischarge(e.ActorId, e.TargetId, _speed)) return;
         if (e.SourceTrait == TraitId.Thread)
             _battleField.ShowThreadDischarge(_battleField.FindPawn(e.ActorId), _battleField.FindPawn(e.TargetId),
                 _battleField.FindPawn(e.PartnerId), e.Text == ThreadLabels.Release, _speed);

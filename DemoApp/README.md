@@ -402,3 +402,15 @@ Godot_console.exe --path DemoApp res://StagingEffectCheck.tscn -- --effect=fire-
 
 `--effect=fire-thunder --verify` は同じ器具の「雷＋ボルグ」で、カタの雷の着弾と被弾燃焼・再戦を確認する。
 起爆の `Skill` 見出しがある区間は、ActorId付きの燃焼でも従来の刻み演出を保つ。
+
+## 網と連鎖の鞭の確認
+
+シガは通常攻撃・割り込みとも席に留まり、手元から鞭を振るう。割り込みの連鎖数で集まる電気の本数と鞭の太さを変え、4連鎖以上で一振りに一度だけ白く光る。
+クグの網は拘束解除・書き手の死亡後も残り、糸の先の敵の死亡で切れる。再帯電は `Web`、糸玉の生成・弾け・再帯電は `SilkBall` の台本だけから再生する。
+
+```powershell
+Godot_console.exe --headless --path DemoApp res://ShockMarkCheck.tscn -- --web --verify
+Godot_console.exe --path DemoApp res://ShockMarkCheck.tscn -- --web --capture-dir=D:/src/VillainProto/.tmp/shock-web/images
+```
+
+`--web --verify` は左右・1倍／2倍速・糸玉・据え置き動作に加え、「試遊・感電 糸」「試遊・感電 雷の型」× 本編第一波／ボス／近衛／大隊を再戦まで照合する。実戦照合だけなら `--replay-only` を加える。完了の印は `SHOCK_MARK_CHECK_OK`。

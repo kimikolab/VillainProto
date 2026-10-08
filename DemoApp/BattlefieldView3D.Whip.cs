@@ -17,10 +17,17 @@ public partial class BattlefieldView3D
         WhipSweeps++;
         var hits = targets.OrderBy(p => p.FxPoint.Z).ToArray();
         bool electric = from.HasShockAura || from.InterruptWhip;
+        int chain = from.InterruptWhip ? from.WhipChainSize : 0;
+        float thickness = 1 + Math.Min(chain, 8) * 0.42f;
         if (electric) ElectricWhipSweeps++;
         double speed = Math.Max(0.1, from.AnimationSpeed);
-        var material = MakeMaterial(new Color("936447"), true, true);
+        int generation = _specialGeneration;
+        from.ShowMovementPortrait("shiga_interrupt", 0.82);
+        from.BeginWhipFlurry();
+        var material = MakeMaterial(electric ? new Color("c4f8ff") : new Color("936447"), true, true,
+            0.35f, electric ? ThunderFx.Cyan : Colors.Black);
         material.CullMode = BaseMaterial3D.CullModeEnum.Disabled;
+        if (electric) material.EmissionEnergyMultiplier = 1.2f + chain * 0.3f;
         var mesh = new ImmediateMesh();
         var whip = new MeshInstance3D { Mesh = mesh, MaterialOverride = material,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
@@ -28,6 +35,7 @@ public partial class BattlefieldView3D
         int landed = 0;
         var tween = whip.CreateTween();
         tween.TweenMethod(Callable.From<float>(t => {
+            if (generation != _specialGeneration || !IsInstanceValid(from)) return;
             float sweep = Mathf.Clamp((t - 0.22f) / 0.55f, 0, 1) * Math.Max(1, hits.Length - 1);
             int n = Math.Min((int)sweep, hits.Length - 1);
             Vector3 end = hits[n].FxPoint.Lerp(hits[Math.Min(n + 1, hits.Length - 1)].FxPoint, sweep - n);
@@ -35,12 +43,12 @@ public partial class BattlefieldView3D
             float reach = Mathf.Clamp(t / 0.22f, 0, 1) * (t > 0.82f ? (1 - t) / 0.18f : 1);
             Vector3 Point(float u) => start.Lerp(end, u * reach)
                 + Vector3.Up * Mathf.Sin(u * Mathf.Pi) * (0.25f + (1 - reach) * 1.5f)
-                + Vector3.Forward * Mathf.Sin(u * 8 - t * 12) * Mathf.Sin(u * Mathf.Pi) * 0.26f;
+                + Vector3.Forward * Mathf.Sin(u * 9 - t * 24) * Mathf.Sin(u * Mathf.Pi) * 0.65f;
             mesh.ClearSurfaces(); mesh.SurfaceBegin(Mesh.PrimitiveType.Triangles);
             for (int i = 0; i < 40; i++)
             {
                 Vector3 a = Point(i / 40f), b = Point((i + 1) / 40f);
-                Vector3 w = (b - a).Cross(_camera.GlobalPosition - a).Normalized() * 0.035f;
+                Vector3 w = (b - a).Cross(_camera.GlobalPosition - a).Normalized() * 0.035f * thickness * (1 - i / 40f * 0.6f);
                 foreach (var p in new[] { a-w, b-w, a+w, a+w, b-w, b+w })
                     mesh.SurfaceAddVertex(_fxRoot.ToLocal(p));
             }
@@ -48,11 +56,12 @@ public partial class BattlefieldView3D
             while (landed < hits.Length && t >= 0.22f + 0.55f * landed / Math.Max(1, hits.Length - 1))
             {
                 var hit = hits[landed++];
+                if (landed == 1) WhipChainContact(from, speed);
                 if (electric)
                 {
                     for (int k = 0; k < 6; k++)
-                        ThunderFx.Arc(_fxRoot, Point(k / 6f), Point((k + 1) / 6f), from.InterruptWhip ? 0.048f : 0.018f, 0.20 / speed);
-                    ThunderFx.Burst(_fxRoot, hit.FxPoint, 0.5f, 0.22 / speed);
+                        ThunderFx.Arc(_fxRoot, Point(k / 6f), Point((k + 1) / 6f), (from.InterruptWhip ? 0.020f : 0.018f) * thickness, 0.20 / speed);
+                    ThunderFx.Burst(_fxRoot, hit.FxPoint, 0.5f + chain * 0.10f, 0.22 / speed);
                 }
                 impact?.Invoke(hit);
                 NotifyAttackContact(hit);
@@ -84,27 +93,37 @@ public partial class BattlefieldView3D
     // 戦闘の乱数やダメージには触れず、戻りの動作もこの表示の完了を待つ。
     private async Task ShowWhipAttack(BattlePawn3D from, BattlePawn3D target)
     {
+        int generation = _specialGeneration;
+        int chain = from.InterruptWhip ? from.WhipChainSize : 0;
+        bool electric = from.HasShockAura || from.InterruptWhip;
+        float thickness = 1 + Math.Min(chain, 8) * 0.42f;
+        from.ShowMovementPortrait("shiga_interrupt", 0.82);
+        from.BeginWhipFlurry();
         Vector3 direction = (target.FxPoint - from.FxPoint).Normalized();
         Vector3 start = from.WhipOrigin(_camera) + direction * 0.08f;
         Vector3 end = target.FxPoint;
         Vector3 sideways = direction.Cross(Vector3.Up).Normalized();
         Vector3 view = _camera.GlobalPosition - (start + end) * 0.5f;
-        var material = MakeMaterial(new Color("b84e69"), true, true, 0.35f, new Color("682239"));
+        var material = MakeMaterial(electric ? new Color("c4f8ff") : new Color("b84e69"), true, true,
+            0.35f, electric ? ThunderFx.Cyan : new Color("682239"));
         material.CullMode = BaseMaterial3D.CullModeEnum.Disabled;
+        if (electric) material.EmissionEnergyMultiplier = 1.2f + chain * 0.3f;
         var mesh = new ImmediateMesh();
         var whip = new MeshInstance3D { Mesh = mesh, MaterialOverride = material,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         _fxRoot.AddChild(whip);
-        double duration = Math.Max(0.30, 0.60 / Math.Max(0.1, from.AnimationSpeed));
+        double duration = 0.60 / Math.Max(0.1, from.AnimationSpeed);
         bool cracked = false;
         var tween = whip.CreateTween();
         tween.TweenMethod(Callable.From<float>(t =>
         {
+            if (generation != _specialGeneration || !IsInstanceValid(from) || !IsInstanceValid(target)) return;
+            start = from.WhipOrigin(_camera) + direction * 0.08f;
             float reach = t < 0.62f ? Mathf.Pow(t / 0.62f, 0.55f) : 1 - (t - 0.62f) / 0.38f * 0.7f;
             float curl = t < 0.62f ? (1 - t / 0.62f) : (t - 0.62f) * 1.5f;
             Vector3 Point(float u) => start.Lerp(end, u * reach)
                 + Vector3.Up * (Mathf.Sin(u * Mathf.Pi) * curl * 1.6f)
-                + sideways * (Mathf.Sin(u * Mathf.Tau - t * 9) * Mathf.Sin(u * Mathf.Pi) * curl * 0.85f);
+                + sideways * (Mathf.Sin(u * Mathf.Tau - t * 24) * Mathf.Sin(u * Mathf.Pi) * (curl + 0.18f) * 0.85f);
             mesh.ClearSurfaces();
             mesh.SurfaceBegin(Mesh.PrimitiveType.Triangles);
             for (int i = 0; i < 48; i++)
@@ -112,8 +131,8 @@ public partial class BattlefieldView3D
                 float u = i / 48f, v = (i + 1) / 48f;
                 Vector3 a = Point(u), b = Point(v);
                 Vector3 normal = (b - a).Cross(view).Normalized();
-                Vector3 wa = normal * Mathf.Lerp(0.048f, 0.012f, u);
-                Vector3 wb = normal * Mathf.Lerp(0.048f, 0.012f, v);
+                Vector3 wa = normal * Mathf.Lerp(0.048f, 0.012f, u) * thickness;
+                Vector3 wb = normal * Mathf.Lerp(0.048f, 0.012f, v) * thickness;
                 mesh.SurfaceAddVertex(a - wa); mesh.SurfaceAddVertex(b - wb); mesh.SurfaceAddVertex(a + wa);
                 mesh.SurfaceAddVertex(a + wa); mesh.SurfaceAddVertex(b - wb); mesh.SurfaceAddVertex(b + wb);
             }
@@ -121,11 +140,12 @@ public partial class BattlefieldView3D
             if (!cracked && t >= 0.62f)
             {
                 cracked = true;
+                WhipChainContact(from, Math.Max(0.1, from.AnimationSpeed));
                 if (from.HasShockAura || from.InterruptWhip)
                 {
                     for (int k = 0; k < 7; k++) ThunderFx.Arc(_fxRoot, Point(k / 7f), Point((k + 1) / 7f),
-                        from.InterruptWhip ? 0.045f : 0.02f, 0.22 / from.AnimationSpeed);
-                    ThunderFx.Burst(_fxRoot, end, 0.65f, 0.22 / from.AnimationSpeed);
+                        0.02f * thickness, 0.22 / from.AnimationSpeed);
+                    ThunderFx.Burst(_fxRoot, end, 0.65f + chain * 0.10f, 0.22 / from.AnimationSpeed);
                 }
                 NotifyAttackContact(target);
                 Color flash = new("ffe0ba");

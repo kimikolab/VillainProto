@@ -1372,7 +1372,7 @@ public partial class Main : Control
                 if (contactToken == _playToken && _battleMode) FireHitContact(eventIndex, pawn);
             };
         }
-        if (await PlayShockMark(e, actor, target)) return;
+        if (await PlayShockMark(e, eventIndex, actor, target)) return;
         if (await PlayMisa(e, eventIndex, actor, target)) return;
         if (await PlayFire(e, eventIndex, actor, target)) return;
         if (await PlayMovement(e, eventIndex, actor, target)) return;
@@ -1449,7 +1449,7 @@ public partial class Main : Control
                 bool continuingCombo = actor is not null && _comboEnds.ContainsKey(actor);
                 _movement.Attacks.TryGetValue(eventIndex, out var movementCue);
                 bool misaAttack = _misa.Attacks.Contains(eventIndex);
-                bool flowingAttack = misaAttack || actor?.InterruptWhip == true || movementCue is not null || actor?.UnitId == "sero"
+                bool flowingAttack = misaAttack || actor?.UnitId == "shiga" || movementCue is not null || actor?.UnitId == "sero"
                     || actor?.UnitId == "basa" && e.Pattern == AttackPattern.Sweep;
                 if (e.Reaction && !continuingCombo && !flowingAttack)
                     await _battleField.ShowBonusAttack(actor);
@@ -1681,6 +1681,7 @@ public partial class Main : Control
 
             case BattleEventKind.Death:
                 target?.SetFrightened(false);
+                _battleField.CutWebFor(target);
                 _battleField.ClearBindingsFor(target);
                 _battleField.PlayDeath(target, eventIndex == _finishSoundIndex);
                 if (target is not null && _plankKnockouts.Remove(target.InstanceId))

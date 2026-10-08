@@ -14,8 +14,21 @@ public partial class ShockMarkCheck : Control
         try
         {
             CheckSounds();
-            if (!OS.GetCmdlineUserArgs().Contains("--replay-only")) await CheckVisuals();
-            if (OS.GetCmdlineUserArgs().Contains("--verify"))
+            bool web = OS.GetCmdlineUserArgs().Contains("--web");
+            if (!OS.GetCmdlineUserArgs().Contains("--replay-only"))
+            {
+                if (web) await CheckWebVisuals();
+                else await CheckVisuals();
+            }
+            if (web && OS.GetCmdlineUserArgs().Contains("--verify"))
+            {
+                foreach (string preset in new[] { "試遊・感電 糸", "試遊・感電 雷の型" })
+                {
+                    await Replay(preset, 0, 0, campaign: true);
+                    for (int stage = 0; stage < 3; stage++) await Replay(preset, stage, 0);
+                }
+            }
+            else if (OS.GetCmdlineUserArgs().Contains("--verify"))
             {
                 await Replay("試遊・感電 火の型", 1, 0);
                 await Replay("試遊・感電 雷の型", 1, 0);
@@ -111,16 +124,17 @@ public partial class ShockMarkCheck : Control
         field.QueueFree(); await Wait(0.2);
     }
 
-    private async Task Replay(string name, int stage, int seed)
+    private async Task Replay(string name, int stage, int seed, bool campaign = false)
     {
         var main = GD.Load<PackedScene>("res://Main.tscn").Instantiate<Main>(); AddChild(main);
         object? Read(string key) => typeof(Main).GetField(key, Flags)!.GetValue(main);
         typeof(Main).GetField("_fastSmoke", Flags)!.SetValue(main, true);
         typeof(Main).GetField("_speed", Flags)!.SetValue(main, 1000.0);
         var formation = Presets.Playtest.First(p => p.Name == name).F;
-        var enemy = EnemyCatalog.PlaytestStages[stage];
+        var enemy = campaign ? BattleEngine.Materialize(EnemyCatalog.Stages[stage].Enemy, 1)
+            : BattleEngine.MaterializeEnemy(EnemyCatalog.PlaytestStages[stage].Enemy, EnemyCatalog.PlaytestStages[stage].Scale);
         typeof(Main).GetMethod("EnterBattle", Flags)!.Invoke(main, new object[] {
-            BattleEngine.Materialize(formation, 0), BattleEngine.MaterializeEnemy(enemy.Enemy, enemy.Scale), seed, stage, name });
+            BattleEngine.Materialize(formation, 0), enemy, seed, stage, name });
         var result = (BattleResult)Read("_result")!;
         var field = (BattlefieldView3D)Read("_battleField")!;
         int Count(BattleEventKind kind, string? label = null) => result.Events.Count(e => e.Kind == kind && (label is null || e.Text == label));
@@ -129,6 +143,20 @@ public partial class ShockMarkCheck : Control
             for (int k = 0; k < 1200 && (bool)Read("_playing")!; k++) await Wait(0.05);
             Require(!(bool)Read("_playing")!, "実戦の再生完走");
             Require(field.InterruptPlays == Count(BattleEventKind.ShockGauge, ShockGaugeLabels.Interrupt), "割り込み件数");
+            Require(field.WhipChainPlays == Count(BattleEventKind.ShockGauge, ShockGaugeLabels.WhipChain), "連鎖鞭の件数");
+            Require(field.WhipGatherStrands == result.Events.Where(e => e.Kind == BattleEventKind.ShockGauge
+                && e.Text == ShockGaugeLabels.WhipChain).Sum(e => e.Slot), "弾けた数と集まる電気の本数");
+            Require(field.WebSpinPlays == Count(BattleEventKind.Web, WebLabels.Spin)
+                && field.WebRechargePlays == Count(BattleEventKind.Web, WebLabels.Recharge)
+                && field.WebBallPlays == Count(BattleEventKind.Web, WebLabels.Ball), "網の台本件数");
+            Require(field.SilkPlacePlays == Count(BattleEventKind.SilkBall, SilkBallLabels.Place)
+                && field.SilkPopPlays == Count(BattleEventKind.SilkBall, SilkBallLabels.Pop)
+                && field.SilkRechargePlays == Count(BattleEventKind.SilkBall, SilkBallLabels.Recharge), "糸玉の台本件数");
+            var ballIds = result.Events.Where(e => e.Kind == BattleEventKind.SilkBall && e.Text == SilkBallLabels.Place)
+                .Select(e => e.TargetId).ToHashSet();
+            Require(field.SilkDischargePlays == result.Events.Count(e => e.Kind == BattleEventKind.Discharge
+                && (ballIds.Contains(e.ActorId) || ballIds.Contains(e.TargetId))), "糸玉の往復放電");
+            Require(field.ActiveWebCount == 0 && field.SilkBallCount == 0, "終了後に網と糸玉を残さない");
             Require(field.CloudPlays == Count(BattleEventKind.ShockGauge, ShockGaugeLabels.Cloud), "雷雲件数");
             Require(field.CowerPlays == Count(BattleEventKind.ShockGauge, ShockGaugeLabels.Cower), "怖気件数");
             Require(field.ChargePlays == result.Events.Count(e => e.Kind == BattleEventKind.ShockGauge
@@ -150,13 +178,14 @@ public partial class ShockMarkCheck : Control
                 var mark = result.Events.LastOrDefault(e => e.TargetId == pawn.InstanceId && e.Kind == BattleEventKind.MarkLayer);
                 Require(pawn.MarkLayers == (mark?.Amount ?? 0), "最終標層数");
                 var cloud = result.Events.LastOrDefault(e => e.TargetId == pawn.InstanceId && e.Kind == BattleEventKind.ShockGauge && e.Text == ShockGaugeLabels.Cloud);
-                Require(pawn.Thundercloud == (cloud?.Amount ?? 0), "最終雷雲");
+                Require(pawn.Thundercloud == Math.Clamp(cloud?.Amount ?? 0, 0, 8), "最終雷雲の描画段階（上限8）");
                 var charge = result.Events.LastOrDefault(e => e.TargetId == pawn.InstanceId && e.Kind == BattleEventKind.ShockGauge
                     && e.Text is ShockGaugeLabels.ChargeGain or ShockGaugeLabels.ChargeSpent or ShockGaugeLabels.ChargeDrained);
                 Require(pawn.StoredCharge == (charge?.Amount ?? 0), "最終蓄電");
                 Require(!pawn.ShockMarkActive, "終了で常駐効果を止める");
             }
             GD.Print($"SHOCK_MARK_REPLAY_OK {name} pass={pass} interrupt={field.InterruptPlays} cloud={field.CloudPlays} powder={field.PowderMainPlays}/{field.PowderSpreadPlays}/{field.PowderLeakPlays} thread={field.ThreadPlays}/{field.ThreadReleasePlays} beam={field.MisaShots} scar={field.ScarPlays} mark={field.MarkLayerPlays}");
+            GD.Print($"SHOCK_WEB_REPLAY_OK {name} campaign={campaign} stage={stage} pass={pass} web={field.WebSpinPlays}/{field.WebRechargePlays}/{field.WebBallPlays} silk={field.SilkPlacePlays}/{field.SilkPopPlays}/{field.SilkDischargePlays} chain={field.WhipChainPlays} gather={field.WhipGatherStrands} flash={field.WhipWhiteFlashes}");
             if (pass == 0) typeof(Main).GetMethod("ReplayBattle", Flags)!.Invoke(main, null);
         }
         main.QueueFree(); await Wait(0.2);

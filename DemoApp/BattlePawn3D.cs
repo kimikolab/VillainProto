@@ -637,6 +637,7 @@ void fragment() {
         float shadowSpread = fall * 0.28f;
         ProcessShieldCowed(animationDelta);
         ProcessMovementPose(animationDelta);
+        ProcessWhipFlurry(animationDelta);
         ProcessBlastPose();
         ProcessBasaFlight(animationDelta);
         ProcessWindCarry();
