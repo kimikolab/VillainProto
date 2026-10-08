@@ -44,7 +44,7 @@ static class Tome282Diag
     };
     static Ver VerOf(string n) => Vers.First(v => v.Name == n);
 
-    static Formation Row(string prefix) => CompareBuilds().First(r => r.Name.StartsWith(prefix)).F;
+    static Formation Row(string prefix) => FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Sora, UnitCatalog.SoraSR0);   // 第295期: ソラを旧の規定（SR0）に固定
 
     /// <summary>新台の壁（`wall` で選んだもの・指示書 §3-1）。標経済の前3 ガルドをこの駒に替える。</summary>
     internal static UnitDef NewWall => UnitCatalog.Doha;

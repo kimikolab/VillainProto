@@ -781,6 +781,9 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   重圧（SR-b `DivertPressure`）は `PerformAttackBody` の**澱みのデバフの直後**（打点・切り捨て）——標を持つ攻め手の一撃を 層 × 15%（上限 45%）引く。
   静電気の膜（SM `StaticMembraneTrait.OnTurnStart`・喚び出しの後）は自分と隣の味方を `MarkShock`、半分の段は**軽減の族・矢面の直後**（層の手前）。SM-b（`MembraneNoStun`）は `StunByShock` の乱数の前で抜ける。
   保持者が盤上にいなければ、どの口も `_holdLive` ／ リストの件数の比較1つで抜ける（`compare` 全セルが段0 の後の値と一致）。
+- **第295期: 規定のソラを SR-b（`DivertPressure`・文面は「見切り」）にした**（旧の規定は `SoraSR0`・過去の器具は `Kugu292Diag.Pin294` ／ `Guard294Diag.Pin295` ／ 各器具の台の差し替えで固定）。見切りのログは「〜の一撃を見切った」・表示専用の出来事 `Insight`（`PerformAttackBody` の重圧の段・verbose だけ）。
+  **攻撃のひとまとまり**（ヒサの HK-a `MarkRally` ／ HK-b `MarkRallyWide`）: `TakeTurnFramed`・`Reaction`・`Interrupt` がそれぞれ枠を積む（`BundlePush` ／ `BundlePop`・try／finally）。`ApplyDamageBody` の入口（生死の判定の直後）の `BundleHit` が「開いている枠の中で標を持つ敵に当たった最も深い層」を控える（主の決まっていない枠は最初の出どころを主にする）。
+  枠を閉じたとき、標の敵に当たっていれば HK のヒサ（主と同じ陣営・生きている）が 層 × 6 を `Heal`（HK-a ＝ 標を持つ味方のうち最も傷ついた1体・HK-b ＝ 主 ＋ 最も傷ついた味方）。最も傷ついたの選び方は `RallyNeediest`（割合・同値は席番号・`PickOne` を引かない）。表示専用の出来事 `MarkRally`。**HK の保持者がいなければ `_rallyLive` の比較1つで枠も積まない。**
 - **第218期の澱みのミオの版（札 `MireSlam` / `MireConduct` / `MireDull` / `MireDullAll` / `MireCarry` / `MireHandoff`・**第219期に M5 ＝ `MireDullAll` 以外の5枚をミオの規定にした**（ポンの判断・札の並びは `MireDiag.VerOf("M5")` と同じ）・M0 は `mire` の診断のローカル）**——
   **叩きつけ・通電は `ConcentrateTrait` の最後から `BattleContext.MireSlam`**（寄せ先は「感電している敵がいればその中から」・`ApplyDamage` を直に呼ぶ＝標的の鎖を通らない・撃破はミオ）。
   **澱みのデバフは `MireCut` の1本を4口**（`PerformAttackBody` の**痺れ毒の直後** ／ `StrikeThunder` ／ `Discharge`（反転しない側）／ 叩きつけ・通電）で、出どころの印 × 10%（上限 40%）を切り捨てで引く。

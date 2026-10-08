@@ -51,7 +51,7 @@ static class Guard294Diag
     };
     internal static readonly Ver[] SoraVers =
     {
-        new("規定", "sr0", UnitCatalog.Sora, UnitCatalog.Sora), new("SR-a", "sra", UnitCatalog.Sora, UnitCatalog.SoraSRa), new("SR-b", "srb", UnitCatalog.Sora, UnitCatalog.SoraSRb),
+        new("規定", "sr0", UnitCatalog.SoraSR0, UnitCatalog.SoraSR0), new("SR-a", "sra", UnitCatalog.SoraSR0, UnitCatalog.SoraSRa), new("SR-b", "srb", UnitCatalog.SoraSR0, UnitCatalog.SoraSRb),
     };
     internal static readonly Ver[] SomVers =
     {
@@ -70,9 +70,16 @@ static class Guard294Diag
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     static string Seats(Formation f) => string.Join("・", Enumerable.Range(0, 5).Select(i => f[i] is { } d ? Short(d) : "—"));
-    static Formation Seat(UnitDef[] o) => B283.Seat(o);
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Seat(UnitDef[] o) => Pin295(B283.Seat(o));
+    static Formation Playtest(string n) => Pin295(Presets.Playtest.First(r => r.Name == n).F);
+    static Formation Row(string n) => Pin295(CompareBuilds().First(r => r.Name == n).F);
+    /// <summary>第295期: ソラを第294期の規定（`SoraSR0`）に固定する（規定のソラは SR-b になった）。陣形とレリックは保つ。</summary>
+    internal static Formation Pin295(Formation f)
+    {
+        var g = f.Clone();
+        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Sora)) g[slot] = UnitCatalog.SoraSR0;
+        return g;
+    }
 
     /// <summary>
     /// 代表台（指示書 §5-2）。席は出典のまま、差し替えは同じ席で（`FvSwap`）。ヒサ ／ ソラが同じ台にいる場合として「標 ボス台 バン → ソラ」を足した（決めたこと）。
@@ -83,7 +90,7 @@ static class Guard294Diag
         ("標 ボス台 バン→ツギ", "hisa", FvSwap(Playtest("試遊・標 ボス台"), UnitCatalog.Ban, UnitCatalog.Tsugi)),
         ("標 ボス台 バン→リリ", "hisa", FvSwap(Playtest("試遊・標 ボス台"), UnitCatalog.Ban, UnitCatalog.Lili)),
         ("標経済", "hisa", Row("標経済 (ヒサ×ザン×ミサ)")),
-        ("標 ボス台 バン→ソラ", "hisa+sora", FvSwap(Playtest("試遊・標 ボス台"), UnitCatalog.Ban, UnitCatalog.Sora)),
+        ("標 ボス台 バン→ソラ", "hisa+sora", FvSwap(Playtest("試遊・標 ボス台"), UnitCatalog.Ban, UnitCatalog.SoraSR0)),
         ("標 道中（見境改）", "sora", Playtest("試遊・標 道中")),
         ("見境", "sora", Row("見境 (ミサ×ソラ)")),
         ("感電 糸", "sora", Playtest("試遊・感電 糸")),
@@ -100,13 +107,13 @@ static class Guard294Diag
     static IEnumerable<(string Name, Formation F)> Variants(Formation f)
     {
         var hs = Has(f, UnitCatalog.Hisa) ? HisaVers : new Ver[] { HisaVers[0] };
-        var rs = Has(f, UnitCatalog.Sora) ? SoraVers : new Ver[] { SoraVers[0] };
+        var rs = Has(f, UnitCatalog.SoraSR0) ? SoraVers : new Ver[] { SoraVers[0] };
         var ms = Has(f, UnitCatalog.Som) ? SomVers : new Ver[] { SomVers[0] };
         foreach (var h in hs) foreach (var r in rs) foreach (var m in ms)
         {
             var parts = new List<string>();
             if (Has(f, UnitCatalog.Hisa)) parts.Add(h.Name == "規定" ? "ヒサ規定" : h.Name);
-            if (Has(f, UnitCatalog.Sora)) parts.Add(r.Name == "規定" ? "ソラ規定" : r.Name);
+            if (Has(f, UnitCatalog.SoraSR0)) parts.Add(r.Name == "規定" ? "ソラ規定" : r.Name);
             if (Has(f, UnitCatalog.Som)) parts.Add(m.Name == "規定" ? "ソム規定" : m.Name);
             if (parts.Count == 0) parts.Add("規定");
             yield return (string.Join(" × ", parts), Apply(f, h, r, m));
@@ -475,7 +482,7 @@ static class Guard294Diag
     static int[] _capsBasis = Array.Empty<int>();
     static double[,] CompareGrid(Ver? v)
     {
-        var rows = CompareBuilds();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin295(r.F))).ToArray();
         int nw = EnemyCatalog.Stages.Count;
         var g = new double[rows.Length, nw];
         var caps = new int[rows.Length];
@@ -494,7 +501,7 @@ static class Guard294Diag
 
     static void CompareAll()
     {
-        var rows = CompareBuilds();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin295(r.F))).ToArray();
         int nw = EnemyCatalog.Stages.Count;
         Console.WriteLine("# 第294期 `compare` 64 行 × 版（seed 0..199・その駒の在席行だけ差し替える・基準は段0 の後の規定）");
         var basis = CompareGrid(null);
@@ -723,7 +730,7 @@ static class Guard294Diag
     {
         "som" => (new[] { UnitCatalog.Kugu, UnitCatalog.Kata, UnitCatalog.Som }, S293.BossPool.Where(d => d.Id != "som").Append(UnitCatalog.Shiga).ToArray()),
         "hisa" => (new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.Hisa }, B283.LifePool.Concat(B283.HealPool.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id != "hisa").ToArray()),
-        "sora" => (new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.Sora }, B283.LifePool.Concat(B283.HealPool.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id != "sora").ToArray()),
+        "sora" => (new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.SoraSR0 }, B283.LifePool.Concat(B283.HealPool.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id != "sora").ToArray()),
         _ => throw new ArgumentException(who),
     };
 
@@ -855,17 +862,18 @@ static class Guard294Diag
             && UnitCatalog.HisaHSc.Traits.SequenceEqual(UnitCatalog.HisaHSa.Traits.Append(TraitId.BeckonBridge))
             && UnitCatalog.HisaHSd.Traits.SequenceEqual(UnitCatalog.HisaHSa.Traits.Append(TraitId.BeckonGrace))
             && UnitCatalog.HisaHSa1.Traits.SequenceEqual(UnitCatalog.HisaHSa.Traits.Append(TraitId.BeckonHoldOnce))
-            && UnitCatalog.SoraSRa.Traits.SequenceEqual(UnitCatalog.Sora.Traits.Append(TraitId.DeflectWide)) && UnitCatalog.SoraSRb.Traits.SequenceEqual(UnitCatalog.Sora.Traits.Append(TraitId.DivertPressure))
+            && UnitCatalog.SoraSRa.Traits.SequenceEqual(UnitCatalog.SoraSR0.Traits.Append(TraitId.DeflectWide)) && UnitCatalog.SoraSRb.Traits.SequenceEqual(UnitCatalog.SoraSR0.Traits.Append(TraitId.DivertPressure))
             && UnitCatalog.SomSMa.Traits.SequenceEqual(UnitCatalog.Som.Traits.Append(TraitId.StaticMembrane)) && UnitCatalog.SomSMb.Traits.SequenceEqual(UnitCatalog.SomSMa.Traits.Append(TraitId.MembraneNoStun))
             && !vers.Any(UnitCatalog.Everyone.Contains)
+            && UnitCatalog.All.Where(u => u.Traits.Contains(TraitId.DivertPressure)).SequenceEqual(new[] { UnitCatalog.Sora })   /* 第295期: SR-b の札は規定のソラが持つ */
             && vers.All(v => { var b = UnitCatalog.Everyone.First(x => x.Id == v.Id); return v.MaxHp == b.MaxHp && v.Attack == b.Attack && v.Speed == b.Speed && v.Pattern == b.Pattern && ReferenceEquals(v.Actions, b.Actions); })
-            && !UnitCatalog.All.Any(u => u.Traits.Any(t => t is TraitId.BeckonHold or TraitId.BeckonBridge or TraitId.BeckonGrace or TraitId.BeckonHoldOnce or TraitId.DeflectWide or TraitId.DivertPressure or TraitId.StaticMembrane or TraitId.MembraneNoStun)));
+            && !UnitCatalog.All.Any(u => u.Traits.Any(t => t is TraitId.BeckonHold or TraitId.BeckonBridge or TraitId.BeckonGrace or TraitId.BeckonHoldOnce or TraitId.DeflectWide or TraitId.StaticMembrane or TraitId.MembraneNoStun)));
         Expect("(c) 文面: 指示書 §3 の追記",
             UnitCatalog.HisaHSa.PlusText == UnitCatalog.Hisa.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる"
             && UnitCatalog.HisaHSc.PlusText == UnitCatalog.HisaHSa.PlusText + "。踏みとどまった味方へ、仲間の癒し手がすぐ駆けつける"
             && UnitCatalog.HisaHSd.PlusText == UnitCatalog.HisaHSa.PlusText + "。踏みとどまった味方は、次に動き終えるまで倒れない"
-            && UnitCatalog.SoraSRa.PlusText == UnitCatalog.Sora.PlusText + "。仲間に降りかかる広い攻撃も、半分は自分が代わりに浴びて逸らす"
-            && UnitCatalog.SoraSRb.PlusText == UnitCatalog.Sora.PlusText + "。指差された敵は手元が狂う。深く指差されるほど、その一撃は軽くなる"
+            && UnitCatalog.SoraSRa.PlusText == UnitCatalog.SoraSR0.PlusText + "。仲間に降りかかる広い攻撃も、半分は自分が代わりに浴びて逸らす"
+            && UnitCatalog.SoraSRb.PlusText == UnitCatalog.SoraSR0.PlusText + "。指差された敵は手元が狂う。深く指差されるほど、その一撃は軽くなる"
             && UnitCatalog.SomSMa.PlusText == UnitCatalog.Som.PlusText + "。自分と隣の仲間に静電気の膜を張る。帯電した仲間は、敵の一撃を半分しか受けない"
             && UnitCatalog.SomSMb.PlusText == UnitCatalog.SomSMa.PlusText + "。膜の内側では、弾けても痺れない");
 
@@ -980,7 +988,7 @@ static class Guard294Diag
         // (j) SR-a: 肩代わりは ソラ以外・ソラが倒れた後は肩代わりしない・`u != source`
         {
             long sh = 0, afterDeath = 0, onSora = 0;
-            var fs = Apply(FvSwap(hb, UnitCatalog.Ban, UnitCatalog.Sora), SoraVers[1]);
+            var fs = Apply(FvSwap(hb, UnitCatalog.Ban, UnitCatalog.SoraSR0), SoraVers[1]);
             foreach (var w in S287.Waves)
                 for (int s = 0; s < 40; s++)
                 {
@@ -1004,7 +1012,7 @@ static class Guard294Diag
         // (j2) SR-a: 範囲の一撃（ソラ自身への範囲・肩代わりの段）も逸らす——ボス（勇者1体・殴った本人には返さない）と精鋭（単体だけ）では起きないので、本編の波のソラの行で見る
         {
             long wide = 0, all = 0, shoulders = 0;
-            foreach (var (n, f) in CompareBuilds().Where(r => Has(r.F, UnitCatalog.Sora)))
+            foreach (var (n, f) in CompareBuilds().Select(r => (r.Name, F: Pin295(r.F))).Where(r => Has(r.F, UnitCatalog.SoraSR0)))
                 for (int wi = 1; wi < EnemyCatalog.Stages.Count; wi++)
                     for (int sd = 0; sd < 20; sd++)
                     {
@@ -1027,7 +1035,7 @@ static class Guard294Diag
                     foreach (var l in r.Log)
                     {
                         if (l.Text.Contains($"{so.Name} は倒れた")) dead = true;
-                        var m = System.Text.RegularExpressions.Regex.Match(l.Text, @"手元が狂った（-(\d+)%");
+                        var m = System.Text.RegularExpressions.Regex.Match(l.Text, @"(?:手元が狂った|の一撃を見切った)（-(\d+)%");
                         if (!m.Success) continue;
                         n++;
                         if (int.Parse(m.Groups[1].Value) > DivertPressureTrait.MaxPercent) over++;
@@ -1087,7 +1095,7 @@ static class Guard294Diag
             var cases = new (Formation F, S287.Wave W)[]
             {
                 (Apply(hl, HisaVers[2]), S287.Waves[2]), (Apply(hl, HisaVers[3]), S287.Waves[1]), (Apply(hbT, HisaVers[2]), boss),
-                (Apply(FvSwap(hb, UnitCatalog.Ban, UnitCatalog.Sora), SoraVers[1]), boss), (Apply(Playtest("試遊・標 道中"), SoraVers[2]), S287.Waves[2]),
+                (Apply(FvSwap(hb, UnitCatalog.Ban, UnitCatalog.SoraSR0), SoraVers[1]), boss), (Apply(Playtest("試遊・標 道中"), SoraVers[2]), S287.Waves[2]),
                 (Apply(Row("感電 (シガ×カタ×ソム)"), SomVers[2]), S287.Waves[1]),
             };
             foreach (var (fv, w) in cases)
@@ -1134,7 +1142,7 @@ static class Guard294Diag
         // (p) 規定は動かない: 規定の駒だけの台で、版の札の保持者がいないので第294期の計数は 0
         {
             long any = 0;
-            foreach (var (n, f) in CompareBuilds().Take(64))
+            foreach (var (n, f) in CompareBuilds().Select(r => (r.Name, F: Pin295(r.F))).Take(64))
                 for (int s = 0; s < 2; s++)
                 {
                     var r = BattleEngine.Run(f, EnemyCatalog.Stages[1].Enemy, s, verbose: false);
@@ -1157,7 +1165,7 @@ static class Guard294Diag
         }
         // (r) 踏みとどまったらヒサの記憶も消える: ソラの「自分に付ける」標で踏みとどまりが張り直されない（標 ボス台 バン → ソラ × ボスで 30 ターンの上限まで続く戦が無い）
         {
-            var fs = Apply(FvSwap(hb, UnitCatalog.Ban, UnitCatalog.Sora), HisaVers[1]);
+            var fs = Apply(FvSwap(hb, UnitCatalog.Ban, UnitCatalog.SoraSR0), HisaVers[1]);
             int caps2 = 0;
             for (int sd = 0; sd < 40; sd++) { var r = BattleEngine.Run(BattleEngine.Materialize(fs, BattleContext.PlayerTeam), boss.Make(), sd, verbose: false); if (!r.PlayerWon && r.Turns >= BattleEngine.MaxTurns) caps2++; }
             Expect("(r) ソラの自分への標が踏みとどまりを張り直さない（標 ボス台 バン → ソラ × HS-a × ボスで 30T 上限の負け 0）", caps2 == 0, $"{caps2} 戦（40 戦）");

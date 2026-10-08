@@ -19,7 +19,7 @@ static class FireTriDigestDiag
         var boards = new (string Name, Formation F)[]
         {
             ("T3-244", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Hisa, center: UnitCatalog.BorgU0, back1: hota, back3: UnitCatalog.HiyoU0)),
-            ("T3-238", Formation.Build(front1: UnitCatalog.HiyoU0, front3: hota, center: UnitCatalog.BorgU0, back1: UnitCatalog.Doha, back3: UnitCatalog.Sora)),
+            ("T3-238", Formation.Build(front1: UnitCatalog.HiyoU0, front3: hota, center: UnitCatalog.BorgU0, back1: UnitCatalog.Doha, back3: UnitCatalog.SoraSR0)),
             ("雷＋ボルグ", Formation.Build(front1: UnitCatalog.BorgU0, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: UnitCatalog.Mio)),
         };
         var target = new UnitDef { Id = "mato", Name = "的", MaxHp = 9999, Attack = 1, Speed = 5, Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Single };

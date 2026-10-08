@@ -72,12 +72,12 @@ static class Shock290Diag
 
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
     /// <summary>第291期: 名前で引くクグ（規定は第291期から KG-b）を第290期の規定 `KuguKG0` に固定する（第290期の台を再現するため）。</summary>
-    static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n) is var d0 && ReferenceEquals(d0, UnitCatalog.Kugu) ? UnitCatalog.KuguKG0 : ReferenceEquals(d0, UnitCatalog.Kata) ? UnitCatalog.KataKRb : ReferenceEquals(d0, UnitCatalog.ShigaSWa) ? UnitCatalog.ShigaSIb : d0;   // 第293期: カタも第290期の規定（KR-b）へ・第294期: シガも（SI-b）
+    static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n) is var d0 && ReferenceEquals(d0, UnitCatalog.Kugu) ? UnitCatalog.KuguKG0 : ReferenceEquals(d0, UnitCatalog.Kata) ? UnitCatalog.KataKRb : ReferenceEquals(d0, UnitCatalog.ShigaSWa) ? UnitCatalog.ShigaSIb : ReferenceEquals(d0, UnitCatalog.Sora) ? UnitCatalog.SoraSR0 : d0;   // 第293期: カタも第290期の規定（KR-b）へ・第294期: シガも（SI-b）
     /// <summary>第291期: `compare` の行のクグを第290期の規定 `KuguKG0` に固定した行。</summary>
-    static (string Name, Formation F)[] Rows290() => CompareBuilds().Select(r => (r.Name, FvSwap(FvSwap(FvSwap(r.F, UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Kata, UnitCatalog.KataKRb), UnitCatalog.ShigaSWa, UnitCatalog.ShigaSIb))).ToArray();   // 第293期: カタも KR-b へ
+    static (string Name, Formation F)[] Rows290() => CompareBuilds().Select(r => (r.Name, FvSwap(FvSwap(FvSwap(FvSwap(r.F, UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Kata, UnitCatalog.KataKRb), UnitCatalog.ShigaSWa, UnitCatalog.ShigaSIb), UnitCatalog.Sora, UnitCatalog.SoraSR0))).ToArray();   // 第293期: カタも KR-b へ
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
-    static Formation Seat(UnitDef[] o) => B283.Seat(o);
+    static Formation Seat(UnitDef[] o) => FvSwap(B283.Seat(o), UnitCatalog.Sora, UnitCatalog.SoraSR0);   // 第295期: ソラを旧の規定（SR0）に固定（第287期の候補 `S287.Pool` は規定のソラを持つ）
     /// <summary>第289期の台（`shock289` は第289期の規定 SG-a ／ S3 に固定してある）を第290期の規定の駒に戻す。</summary>
     static Formation Unpin(Formation f) => FvSwap(FvSwap(f, UnitCatalog.ShigaSGa, UnitCatalog.ShigaSIb), UnitCatalog.KataS3, UnitCatalog.KataKRb);
 

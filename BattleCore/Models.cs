@@ -2071,6 +2071,13 @@ public sealed class UnitTally
     /// <c>HoldNoHealer</c> 癒し手がいない ／ <c>HoldAided</c> 同じ一撃でツギの応急処置が先に届いた ／ <c>HoldNextHit</c> 次の敵の一撃を受けた（うち <c>HoldNextHealed</c> その前に癒やされていた・<c>HoldNextKilled</c> その一撃で倒れた）。
     /// </summary>
     public long HoldLostStripped, HoldHealerLeft, HoldNoHealer, HoldAided, HoldNextHit, HoldNextHealed, HoldNextKilled, HoldOnceSpent;
+    /// <summary>
+    /// 第295期（<b>計数専用</b>）: 攻撃のひとまとまり（手番 ／ 反撃 ／ 割り込み・ヒサの HK の保持者がいる戦だけ数える）。攻撃の主 ＝ <c>BundleTurn</c> ／ <c>BundleOut</c> 標の敵に当たったまとまり（手番 ／ 手番の外）。
+    /// ヒサ ＝ <c>RallyFires</c> 回復を出したまとまり ／ <c>RallyHeals</c> ／ <c>RallyHealed</c> ／ <c>RallyOver</c> 回復の回数・癒えた量・溢れた量 ／ <c>RallyNone</c> 回復先がいなかった ／
+    /// <c>RallyTo</c>[n] 癒えた量の回復先（0 ソラ ／ 1 矢面の相手 ／ 2 ザン ／ 3 攻撃の主（HK-b の1体目でソラ・ザン以外）／ 4 その他）。
+    /// </summary>
+    public long BundleTurn, BundleOut, RallyFires, RallyHeals, RallyHealed, RallyOver, RallyNone;
+    public long[]? RallyTo;
     /// <summary>第290期（<b>計数専用</b>・カタ）: <c>CloudByCast</c>[n] n+1 回目の雷を落とした時点の雷雲の合計（8 回目以降は最後の枠）。</summary>
     public long[]? CloudByCast;
 
@@ -3147,6 +3154,8 @@ public sealed class UnitTally
         AddHist(ref PressureByLayer, o.PressureByLayer); AddHist(ref PressureHitsByLayer, o.PressureHitsByLayer); AddHist(ref MembraneBySrc, o.MembraneBySrc);
         HoldLostStripped += o.HoldLostStripped; HoldHealerLeft += o.HoldHealerLeft; HoldNoHealer += o.HoldNoHealer; HoldAided += o.HoldAided;
         HoldNextHit += o.HoldNextHit; HoldNextHealed += o.HoldNextHealed; HoldNextKilled += o.HoldNextKilled; HoldOnceSpent += o.HoldOnceSpent;
+        BundleTurn += o.BundleTurn; BundleOut += o.BundleOut; RallyFires += o.RallyFires; RallyHeals += o.RallyHeals; RallyHealed += o.RallyHealed; RallyOver += o.RallyOver; RallyNone += o.RallyNone;   // 第295期
+        AddHist(ref RallyTo, o.RallyTo);
         // 第218期
         MireSlams += o.MireSlams; MireSlamDry += o.MireSlamDry; MireSlamOnShocked += o.MireSlamOnShocked; MireSlamPops += o.MireSlamPops;
         MireConductPops += o.MireConductPops; MireSlamDealt += o.MireSlamDealt; MireSlamKills += o.MireSlamKills;
@@ -3810,6 +3819,20 @@ public enum BattleEventKind
     /// 「帯電」: ターンの頭に KW-a の糸の敵が帯電し直した（直前にその敵の感電の <c>StatusGain</c>）。<b>どの規則も読まない。</b>
     /// </summary>
     Web,
+
+    /// <summary>
+    /// ソラの見切り（第295期・規定のソラ SR-b・<b>表示専用</b>）。標を持つ敵の攻撃の打点を見切りで削った瞬間（`PerformAttack` の打点を作った後）。
+    /// <c>ActorId</c> ＝ ソラ ／ <c>TargetId</c> ＝ 攻撃の主（標を持つ敵）／ <c>Amount</c> ＝ 削った量 ／ <c>Slot</c> ＝ その敵の標の層 ／ <c>StatusRemaining</c> ＝ 削った割合（%）。
+    /// 直後にその攻撃の `Attack` ／ `Damage`（量は削った後）。<b>どの規則も読まない。</b>
+    /// </summary>
+    Insight,
+
+    /// <summary>
+    /// ヒサの「あいつを狙え！」（第295期・HK-a ／ HK-b・<b>表示専用</b>）。味方の攻撃のひとまとまりが標を持つ敵に当たった後の回復1回。
+    /// <c>ActorId</c> ＝ ヒサ ／ <c>TargetId</c> ＝ 癒やした味方 ／ <c>Amount</c> ＝ 実際に癒えた量 ／ <c>PartnerId</c> ＝ きっかけの攻撃の主 ／ <c>Slot</c> ＝ 標の層 ／ <c>HpAfter</c> ＝ 癒えた後の HP。
+    /// 直前に同じ回復の `Heal`。<b>どの規則も読まない。</b>
+    /// </summary>
+    MarkRally,
 }
 
 /// <summary>クグの網の札（第293期・<see cref="BattleEventKind.Web"/> の <c>Text</c>）。<b>表示専用。</b></summary>

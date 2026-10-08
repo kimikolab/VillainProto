@@ -537,8 +537,9 @@ public sealed class BattleContext
     {
         if (InReaction) return;
         InReaction = true;
+        if (_rallyLive) BundlePush(null, outOfTurn: true);   // 第295期（攻撃のひとまとまり・HK の保持者がいなければ比較1つで抜ける）
         try { body(); }
-        finally { InReaction = false; }
+        finally { InReaction = false; if (_rallyLive) BundlePop(); }
     }
 
     /// <summary>
@@ -643,8 +644,9 @@ public sealed class BattleContext
     {
         if (InInterrupt) return;
         InInterrupt = true;
+        if (_rallyLive) BundlePush(null, outOfTurn: true);   // 第295期（攻撃のひとまとまり）
         try { body(); }
-        finally { InInterrupt = false; }   // 例外で立ちっぱなしになると以後の割り込みが永久に止まる
+        finally { InInterrupt = false; if (_rallyLive) BundlePop(); }   // 例外で立ちっぱなしになると以後の割り込みが永久に止まる
     }
 
     /// <summary>
@@ -7618,6 +7620,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.DeflectWide)) _wideHolders.Add(u);          // 第294期（SR-a・肩代わりと範囲の逸らし）
         if (u.HasTrait(TraitId.DivertPressure)) _pressureHolders.Add(u);   // 第294期（SR-b・重圧）
         if (u.HasTrait(TraitId.StaticMembrane)) _membraneHolders.Add(u);   // 第294期（SM・静電気の膜）
+        if (u.HasTrait(TraitId.MarkRally) || u.HasTrait(TraitId.MarkRallyWide)) { _rallyLive = true; _rallyHolders.Add(u); }   // 第295期（HK・攻撃のひとまとまり）
         if (u.HasTrait(TraitId.Thrust) || u.HasTrait(TraitId.ThrustPlain)) _thrustLive = true;   // 第186期 追補
         if (HeroShieldTrait.Holds(u)) _heroShieldLive = true;   // 第267期（勇者の庇い）
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
@@ -10864,7 +10867,8 @@ public sealed class BattleContext
                 pt.PressureCut += cut;
                 (pt.PressureByLayer ??= new long[4])[Math.Min(layers, 3)] += cut;
                 (pt.PressureHitsByLayer ??= new long[4])[Math.Min(layers, 3)]++;
-                if (cut > 0) Log($"    指差された {actor.Name} は手元が狂った（-{pct}%・この一撃 -{cut}）", LogKind.Status);
+                if (cut > 0) Log($"    {pr.Name} が {actor.Name} の一撃を見切った（-{pct}%・この一撃 -{cut}）", LogKind.Status);
+                if (_verbose && cut > 0) Emit(new BattleEvent { Kind = BattleEventKind.Insight, Turn = _turn, ActorId = pr.InstanceId, TargetId = actor.InstanceId, Amount = cut, Slot = layers, StatusRemaining = pct, Team = actor.TeamId });   // 第295期・表示専用
             }
         }
 
@@ -11323,6 +11327,10 @@ public sealed class BattleContext
         _wideNext = false;
 
         if (!target.IsAlive || amount <= 0) return;
+
+        // 第295期（HK）: いま開いている攻撃のひとまとまりの中で、標を持つ敵に当たった（最も深い層を控える）。主が決まっていない枠（反撃・割り込み）は最初の出どころを主にする。
+        // HK の保持者がいなければ比較1つで抜ける。盤面は読むだけ。
+        if (_rallyLive && _bundles.Count > 0) BundleHit(target, source);
 
         // 第294期（計数のみ）: 踏みとどまった駒が次に受けた敵の攻撃（癒やされていたか・その一撃で倒れたか）。踏みとどまりの保持者がいなければ比較1つで抜ける。
         UnitState? holdWatchBy = null;
@@ -12505,6 +12513,7 @@ public sealed class BattleContext
         UnitState? prevActor = TurnActor;
         TurnActor = actor;
         actor.TakenTurn = _turn;   // 第218期・**計数のみ**（感電の痺れが「動く前」だったか）
+        if (_rallyLive) BundlePush(actor, outOfTurn: false);   // 第295期（手番の攻撃 ＝ 1つのまとまり・羽が何枚でも1回）
         UnitTally tt = TallyOf(actor);
         tt.TurnsTaken++;
         int handEv0 = _events.Count;   // 第239期・**計数のみ**（手番の枠。verbose のときだけ `Hands` に積む）
@@ -12539,7 +12548,7 @@ public sealed class BattleContext
             }
             return outcome;
         }
-        finally { TurnActor = prevActor; }
+        finally { TurnActor = prevActor; if (_rallyLive) BundlePop(); }
     }
 
     /// <summary>手番の中身（第104期に切り出した本体。第105期に枠を被せた）。</summary>
@@ -12945,6 +12954,77 @@ public sealed class BattleContext
         foreach (UnitState h in _membraneHolders)
             if (h.IsAlive && h.TeamId == team && (!noStun || h.HasTrait(TraitId.MembraneNoStun))) return h;
         return null;
+    }
+
+    // ---- 第295期 —— ヒサの「あいつを狙え！」（HK-a `MarkRally` ／ HK-b `MarkRallyWide`・指示書 design/PHASE295_MARK_HEAL_SPEC.md §3）。
+    // **攻撃のひとまとまり**は枠で数える: 手番（`TakeTurnFramed`）・反撃（`Reaction`）・割り込み（`Interrupt`）がそれぞれ1つの枠を開いて閉じる。
+    // 枠の中で起きたダメージ（巻き込み・貫きの2体目・放電・刻みを含む）は新しい枠を作らず、「標を持つ敵に当たったか」にだけ数える。
+    // 枠が閉じたとき、標の敵に当たっていて、その枠の主と同じ陣営に生きている HK のヒサがいれば、最も深い層 × 6 を癒す。**乱数を引かない。**
+    bool _rallyLive;
+    readonly List<UnitState> _rallyHolders = new();
+    sealed class Bundle { public UnitState? Owner; public bool OutOfTurn; public int Layer; }
+    readonly List<Bundle> _bundles = new();
+
+    /// <summary>回復の量（層 1 あたり・指示書が<b>測る前に固定</b>した値）。</summary>
+    public const int RallyPerLayer = 6;
+
+    void BundlePush(UnitState? owner, bool outOfTurn) => _bundles.Add(new Bundle { Owner = owner, OutOfTurn = outOfTurn });
+
+    void BundleHit(UnitState target, UnitState? source)
+    {
+        Bundle b = _bundles[^1];
+        if (b.Owner is null && source is not null && source.TeamId != target.TeamId) b.Owner = source;
+        if (b.Owner is null || b.Owner.TeamId == target.TeamId) return;
+        int layer = target.RawCounter(StatusKeys.Marked);
+        if (layer > b.Layer) b.Layer = layer;
+    }
+
+    void BundlePop()
+    {
+        Bundle b = _bundles[^1];
+        _bundles.RemoveAt(_bundles.Count - 1);
+        if (b.Layer <= 0 || b.Owner is null) return;
+        UnitTally ot = TallyOf(b.Owner);
+        if (b.OutOfTurn) ot.BundleOut++; else ot.BundleTurn++;
+        UnitState? hisa = null;
+        foreach (UnitState h in _rallyHolders) if (h.IsAlive && h.TeamId == b.Owner.TeamId) { hisa = h; break; }
+        if (hisa is null) return;
+        UnitTally ht = TallyOf(hisa);
+        ht.RallyFires++;
+        int amt = b.Layer * RallyPerLayer;
+        bool wide = hisa.HasTrait(TraitId.MarkRallyWide);
+        UnitState? first = wide ? (b.Owner.IsAlive ? b.Owner : null) : RallyNeediest(hisa, marked: true);
+        UnitState? second = wide ? RallyNeediest(hisa, marked: false) : null;
+        if (first is null && second is null) { ht.RallyNone++; return; }
+        Log($"    {hisa.Name} が叫ぶ——「あいつを狙え！ まだ倒れるな！」", LogKind.Trigger);
+        if (first is not null) RallyHeal(hisa, first, amt, b.Owner, b.Layer, ht, attacker: wide);
+        if (second is not null && !ReferenceEquals(second, first)) RallyHeal(hisa, second, amt, b.Owner, b.Layer, ht, attacker: false);
+    }
+
+    /// <summary>最も傷ついた味方（割合・同値は席番号の若い方・回復を受け付ける・満タンでない）。<paramref name="marked"/> なら標を持つ駒だけ。ヒサ自身は除く。<b>乱数を引かない</b>（`MostHurtAlly` は同値で `PickOne` を引くので使わない）。</summary>
+    UnitState? RallyNeediest(UnitState hisa, bool marked)
+    {
+        UnitState? best = null;
+        foreach (UnitState u in LivingMembers(hisa.TeamId))
+        {
+            if (u == hisa || !u.AcceptsSupport || u.Hp >= u.MaxHp) continue;
+            if (marked && u.RawCounter(StatusKeys.Marked) <= 0) continue;
+            if (best is null || (long)u.Hp * best.MaxHp < (long)best.Hp * u.MaxHp || ((long)u.Hp * best.MaxHp == (long)best.Hp * u.MaxHp && u.Slot < best.Slot)) best = u;
+        }
+        return best;
+    }
+
+    void RallyHeal(UnitState hisa, UnitState to, int amt, UnitState owner, int layer, UnitTally ht, bool attacker)
+    {
+        int before = to.Hp;
+        Heal(to, amt, hisa);
+        int got = Math.Max(0, to.Hp - before);
+        ht.RallyHeals++;
+        ht.RallyHealed += got;
+        ht.RallyOver += amt - got;
+        int cat = to.Def.Id == "sora" ? 0 : hisa.RawCounter(BeckonTrait.TargetKey) == to.InstanceId + 1 ? 1 : to.Def.Id == "zan" ? 2 : attacker ? 3 : 4;
+        (ht.RallyTo ??= new long[5])[cat] += got;
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.MarkRally, Turn = _turn, ActorId = hisa.InstanceId, TargetId = to.InstanceId, Amount = got, PartnerId = owner.InstanceId, Slot = layer, HpAfter = to.Hp, Team = to.TeamId });
     }
 
     /// <summary>膜で新しく帯電させた数（<see cref="StaticMembraneTrait"/> だけが呼ぶ・<b>計数のみ</b>）。</summary>

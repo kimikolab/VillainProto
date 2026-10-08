@@ -56,7 +56,7 @@ static partial class FireScaleDiag
     // ---------------------------------------------------------------------------------
     /// <summary>T3: 第238期の最良（A+D2+V1 の T3′-1・前1 ヒヨ ／ 前3 ホタ ／ 中央 ボルグ ／ 後1 ドハ ／ 後3 ソラ）。</summary>
     internal static Formation T3 => Formation.Build(front1: UnitCatalog.HiyoL0, front3: UnitCatalog.HotaL0, center: UnitCatalog.BorgL0,
-        back1: UnitCatalog.Doha, back3: UnitCatalog.Sora);
+        back1: UnitCatalog.Doha, back3: UnitCatalog.SoraSR0);
     /// <summary>雷＋ボルグ: ポンの席の前1 シガ → ボルグ（席はそのまま）。</summary>
     internal static Formation ThunderBorg => Formation.Build(front1: UnitCatalog.BorgL0, front3: UnitCatalog.Tsugi,
         center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: UnitCatalog.Mio);

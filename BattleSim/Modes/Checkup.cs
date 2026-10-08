@@ -366,6 +366,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.ThreadCharge]    = (HcPlusL,  "導線（第290期・KG-b）: 糸を伝った放電を浴びた敵は、感電していなければ帯電する（第291期からクグの規定）"),
         [TraitId.WebCharge]       = (HcPlusL,  "帯電の網（第293期・KW-a）: 組み付いている間、手番ごとに糸を1本張る・糸の敵は毎ターン帯電し直す・止められない相手には糸玉（第294期からクグの規定）"),
         [TraitId.ShockWhipChain]  = (HcPlusL,  "連鎖の鞭（第293期・SW-a）: 割り込みの鞭が × (1 ＋ 合図の連鎖で弾けた数)（第294期からシガの規定）"),
+        [TraitId.DivertPressure]  = (HcPlusL,  "見切り（第294期・SR-b）: ソラが生きている間、標を持つ敵の攻撃の打点が 層 × 15%（上限 45%）下がる（第295期からソラの規定）"),
         [TraitId.MireSlam]        = (HcPlusL,  "濃縮の手番の最後に寄せ先（感電している敵を優先）へ攻撃力ぶんの一撃（第218期・M1・保持者 0 枚）"),
         [TraitId.MireConduct]     = (HcPlusL,  "叩きつける相手が感電していれば、同じ一撃が印を持つ敵すべてへ走る（第218期・M2・保持者 0 枚）"),
         [TraitId.MireDull]        = (HcPlusL,  "印を持つ敵の与ダメが印1つにつき −10%（上限 −40%）（第218期・M3・保持者 0 枚）"),

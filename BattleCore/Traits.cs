@@ -674,6 +674,8 @@ public enum TraitId
     DeflectWide,     // 肩代わり（SR-a）: 単体以外の敵の攻撃で、ソラ以外の味方が受ける一撃の半分をソラが代わりに受ける。ソラが受けた範囲の一撃・肩代わりの分も逸らす（同上・engine の肩代わりの族と逸らしの入口）
     DivertPressure,  // 重圧（SR-b）: ソラが生きている間、標を持つ敵の与えるダメージが 層 × 15%（上限 45%）下がる（同上・engine の `PerformAttackBody`）
     StaticMembrane,  // 静電気の膜（SM 土台）: 手番の頭（喚び出しの後）に自分と隣の味方を帯電させる。ソムが生きている間、帯電した味方への敵の攻撃は半分（`StaticMembraneTrait`・半分は engine の軽減の族）
+    MarkRally,       // あいつを狙え！（HK-a・第295期）: ヒサが生きている間、味方の攻撃のひとまとまりが標を持つ敵に当たったら、標を持つ味方のうち最も傷ついた1体を 層 × 6 癒す（**札そのものは挙動を持たない**・engine のまとまりの枠 `BundlePop`）
+    MarkRallyWide,   // あいつを狙え！（HK-b・第295期）: 同じ条件で、攻撃した駒と最も傷ついた味方の2体を 層 × 6 ずつ癒す（同じ駒なら1回）（同上）
     BeckonHoldOnce,  // 一度きりの踏みとどまり（HS-a′・参考・指示書に無い）: 同じ味方は1戦に1度しか踏みとどまらない（ヒサが指差し直しても）（**札そのものは挙動を持たない**・engine の `Hold`）
     MembraneNoStun,  // 痺れない膜（SM-b）: ソムが生きている間、味方は弾けても痺れない（放電は流れる）（**札そのものは挙動を持たない**・engine の `StunByShock`）
 
@@ -16610,6 +16612,8 @@ public static class TraitCatalog
         new StaticMembraneTrait(),                          // 第294期（SM 土台）
         new MarkerOnlyTrait(TraitId.MembraneNoStun),        // 第294期（SM-b）
         new BeckonHoldTrait(TraitId.BeckonHoldOnce),        // 第294期（HS-a′・参考）
+        new MarkerOnlyTrait(TraitId.MarkRally),             // 第295期（HK-a）
+        new MarkerOnlyTrait(TraitId.MarkRallyWide),         // 第295期（HK-b）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

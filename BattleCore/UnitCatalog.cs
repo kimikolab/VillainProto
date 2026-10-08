@@ -555,6 +555,42 @@ public static class UnitCatalog
         Flavor = Hisa.Flavor
     };
 
+    // 第295期 —— ヒサの「あいつを狙え！」の版（指示書 design/PHASE295_MARK_HEAL_SPEC.md §3）。規定の末尾に札を1枚足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
+
+    /// <summary>第295期 HK-a（標を背負う味方）。規定 ＋ <see cref="TraitId.MarkRally"/>（味方の攻撃のひとまとまりが標の敵に当たるたび、標を持つ味方のうち最も傷ついた1体を 層 × 6 癒す）。</summary>
+    public static readonly UnitDef HisaHKa = new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Append(TraitId.MarkRally).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText + "。指差された敵が攻撃されるたび、『あいつを狙え！ まだ倒れるな！』と叫んで、標を背負う味方を癒す",
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
+    };
+
+    /// <summary>第295期 HK-b（攻撃した駒 ＋ 傷ついた味方）。規定 ＋ <see cref="TraitId.MarkRallyWide"/>（同じ条件で、攻撃した駒と最も傷ついた味方を 層 × 6 ずつ癒す・同じ駒なら1回）。</summary>
+    public static readonly UnitDef HisaHKb = new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Append(TraitId.MarkRallyWide).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText + "。指差された敵が攻撃されるたび、『あいつを狙え！ まだ倒れるな！』と叫んで、攻撃した味方と最も傷ついた味方を癒す",
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
+    };
+
     /// <summary>第294期 HS-c（橋）。HS-a ＋ <see cref="TraitId.BeckonBridge"/>（踏みとどまった瞬間、癒し手（リリ ／ ツギ）が手番の外で1度動いてその味方へ向ける・1ターンに1度）。</summary>
     public static readonly UnitDef HisaHSc = new()
     {
@@ -2907,11 +2943,34 @@ public static class UnitCatalog
         // 第186期: 逸らし（`Deflect`）を足した——自分への単体の一撃は半分を指差した敵へ逸らす。
         // 第186期 追補: 突き（`Thrust`）——攻撃型を貫きにし、指差した敵の列を 攻撃力 ×（1＋逸らした回数）で突き抜く。
         Pattern = AttackPattern.Pierce,
-        Traits = new[] { TraitId.Divert, TraitId.Deflect, TraitId.Thrust },
+        // 第295期: ポンの判断（第294期の案 R2）で SR-b（見切り・`DivertPressure`）を規定にした。旧の規定は `SoraSR0`。文面は「見切り」に替えた（指示書 design/PHASE295_MARK_HEAL_SPEC.md §2）。
+        Traits = new[] { TraitId.Divert, TraitId.Deflect, TraitId.Thrust, TraitId.DivertPressure },
         PlusText = "毎ターン、味方への狙いを自分に引き受け、代わりに一番手強い敵を指差す。自分への一撃は半分をその敵へ逸らし、"
-                   + "逸らした数だけ鋭くなる突きで指差した敵の列を突き抜く",
+                   + "逸らした数だけ鋭くなる突きで指差した敵の列を突き抜く"
+                   + "。指差した敵の動きは読める。深く指差された敵の一撃ほど、仲間への分まで受け流す",
         MinusText = "引き受けた視線は自分に刺さり、毎ターン狙われ続ける",
         Flavor = "誰かが見られている限り、代わりに見られてやる。それしか取り柄がない。"
+    };
+
+    /// <summary>
+    /// 旧ソラ（第186〜294期の規定・逸らし ＋ 突き）。第295期に SR-b（見切り）を規定にしたので、旧の規定の定義を明示的に持つ。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。過去の器具はこちらに固定する（第294期のクグ `KuguKGb` と同じ作法）。
+    /// </summary>
+    public static readonly UnitDef SoraSR0 = new()
+    {
+        Id = Sora.Id,
+        Name = Sora.Name,
+        MaxHp = Sora.MaxHp,
+        Attack = Sora.Attack,
+        Speed = Sora.Speed,
+        Advances = Sora.Advances,
+        Pattern = Sora.Pattern,
+        Traits = new[] { TraitId.Divert, TraitId.Deflect, TraitId.Thrust },
+        Actions = Sora.Actions,
+        PlusText = "毎ターン、味方への狙いを自分に引き受け、代わりに一番手強い敵を指差す。自分への一撃は半分をその敵へ逸らし、"
+                   + "逸らした数だけ鋭くなる突きで指差した敵の列を突き抜く",
+        MinusText = Sora.MinusText,
+        Flavor = Sora.Flavor
     };
 
     // 第294期 —— ソラの守りの版（指示書 design/PHASE294_GUARD_SPEC.md §3-2）。規定の末尾に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
@@ -2926,14 +2985,15 @@ public static class UnitCatalog
         Speed = Sora.Speed,
         Advances = Sora.Advances,
         Pattern = Sora.Pattern,
-        Traits = Sora.Traits.Append(TraitId.DeflectWide).ToArray(),
+        Traits = SoraSR0.Traits.Append(TraitId.DeflectWide).ToArray(),
         Actions = Sora.Actions,
-        PlusText = Sora.PlusText + "。仲間に降りかかる広い攻撃も、半分は自分が代わりに浴びて逸らす",
+        PlusText = SoraSR0.PlusText + "。仲間に降りかかる広い攻撃も、半分は自分が代わりに浴びて逸らす",
         MinusText = Sora.MinusText,
         Flavor = Sora.Flavor
     };
 
-    /// <summary>第294期 SR-b（重圧）。規定 ＋ <see cref="TraitId.DivertPressure"/>（ソラが生きている間、標を持つ敵の与えるダメージが 層 × 15%・上限 45% 下がる）。</summary>
+    /// <summary>第294期 SR-b（重圧）。旧の規定 ＋ <see cref="TraitId.DivertPressure"/>（ソラが生きている間、標を持つ敵の与えるダメージが 層 × 15%・上限 45% 下がる）。
+    /// <b>第295期に札はそのまま規定にした</b>（規定の <see cref="Sora"/> は文面を「見切り」に替えた別の定義・札は同じ）。この定義は第294期の文面のまま残す（`guard294` が読む）。</summary>
     public static readonly UnitDef SoraSRb = new()
     {
         Id = Sora.Id,
@@ -2943,9 +3003,9 @@ public static class UnitCatalog
         Speed = Sora.Speed,
         Advances = Sora.Advances,
         Pattern = Sora.Pattern,
-        Traits = Sora.Traits.Append(TraitId.DivertPressure).ToArray(),
+        Traits = SoraSR0.Traits.Append(TraitId.DivertPressure).ToArray(),
         Actions = Sora.Actions,
-        PlusText = Sora.PlusText + "。指差された敵は手元が狂う。深く指差されるほど、その一撃は軽くなる",
+        PlusText = SoraSR0.PlusText + "。指差された敵は手元が狂う。深く指差されるほど、その一撃は軽くなる",
         MinusText = Sora.MinusText,
         Flavor = Sora.Flavor
     };
