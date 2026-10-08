@@ -79,6 +79,7 @@ static class Guard294Diag
         var g = f.Clone();
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Sora)) g[slot] = UnitCatalog.SoraSR0;
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Hisa)) g[slot] = UnitCatalog.HisaHK0;   // 第296期: ヒサも旧の規定（`HisaHK0`）に
+        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Doha)) g[slot] = UnitCatalog.DohaD0;   // 第298期: ドハも旧の規定（`DohaD0`）に
         return g;
     }
 
@@ -97,7 +98,7 @@ static class Guard294Diag
         ("感電 糸", "sora", Playtest("試遊・感電 糸")),
         ("293 四枚 ＋ ソラ", "sora", Seat(Order("トウ・クグ・シガ・カタ・ソラ"))),
         ("感電 (シガ×カタ×ソム)", "som", Row("感電 (シガ×カタ×ソム)")),
-        ("雷の型 ドハ→ソム", "som", FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, UnitCatalog.Som)),
+        ("雷の型 ドハ→ソム", "som", FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.DohaD0, UnitCatalog.Som)),   // 第298期: `Pin295` が先にドハを旧に替える
         ("感電 糸 ガルド→ソム", "som", FvSwap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, UnitCatalog.Som)),
         ("293 ボスの勝ち台", "base", Seat(Order("シガ・ゴルム・クグ・カタ・ツギ"))),
         ("勝ち台 ゴルム→ソム", "som", FvSwap(Seat(Order("シガ・ゴルム・クグ・カタ・ツギ")), UnitCatalog.Golm, UnitCatalog.Som)),
@@ -1073,7 +1074,7 @@ static class Guard294Diag
         // (m) 膜は放電・刻み・同士討ちを半分にしない: 帯電した味方への「出どころが味方」の一撃で膜の行が出ない（ログの並びで直前の行を見る）
         {
             int bad = 0, n = 0;
-            var fm = Apply(FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, UnitCatalog.Som), SomVers[1]);
+            var fm = Apply(FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.DohaD0, UnitCatalog.Som), SomVers[1]);
             foreach (var w in S287.Waves)
                 for (int s = 0; s < 40; s++)
                 {

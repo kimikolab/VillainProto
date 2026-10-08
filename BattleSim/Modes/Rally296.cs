@@ -28,7 +28,7 @@ static class Rally296Diag
     }
 
     /// <summary>試遊・標の行（既存の2行 ＋ 第296期の3行）。規定の駒のまま（固定しない）。</summary>
-    static (string Name, Formation F)[] MarkRows => Presets.Playtest.Where(r => r.Name.StartsWith("試遊・標", StringComparison.Ordinal)).ToArray();
+    static (string Name, Formation F)[] MarkRows => Presets.Playtest.Where(r => r.Name.StartsWith("試遊・標", StringComparison.Ordinal)).Select(r => (r.Name, FvSwap(r.F, UnitCatalog.Doha, UnitCatalog.DohaD0))).ToArray();   // 第298期: ドハは旧（`DohaD0`）に固定
     static readonly string[] NewRows = { "試遊・標 循環", "試遊・標 三人組", "試遊・標 守り型" };
     static EnemyCatalog.PlaytestStage WaveOf(string n) => EnemyCatalog.PlaytestStages[n switch { "boss" => 0, "guard" => 1, "bat" => 2, _ => int.Parse(n) }];
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
@@ -202,7 +202,7 @@ static class Rally296Diag
             && pl.Skip(5).Select(r => r.Name).SequenceEqual(NewRows) && Presets.Compare.Length == 64 && Presets.Cross.Length == 12
             && pl.All(r => !compareNames.Contains(r.Name) && !Presets.Cross.Any(c => c.Name == r.Name))
             && pl.All(r => r.F.Occupied().Count() == 5 && r.F.Occupied().All(o => UnitCatalog.All.Contains(o.Def))));
-        Formation Row(string n) => pl.First(r => r.Name == n).F;
+        Formation Row(string n) => FvSwap(pl.First(r => r.Name == n).F, UnitCatalog.Doha, UnitCatalog.DohaD0);   // 第298期: ドハは旧に固定
         var boss = Row("試遊・標 ボス台");
         Expect("(f) 循環 ＝ 試遊・標 ボス台の 後1 バン → ソラ（席はそのまま）・三人組 ＝ 循環の ソラ → ドルガ・守り型 ＝ ゴルム・ザン・ドハ・ミサ・ヒサ",
             Row("試遊・標 循環").Occupied().SequenceEqual(FvSwap(boss, UnitCatalog.Ban, UnitCatalog.Sora).Occupied())

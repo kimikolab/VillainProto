@@ -13,7 +13,7 @@ static class FireFinishDigestDiag
         var boards = new (string Name, Formation F)[]
         {
             ("T3-244", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.HisaHK0, center: UnitCatalog.BorgK0, back1: UnitCatalog.HotaK0, back3: UnitCatalog.HiyoK0)),
-            ("T3-238", Formation.Build(front1: UnitCatalog.HiyoK0, front3: UnitCatalog.HotaK0, center: UnitCatalog.BorgK0, back1: UnitCatalog.Doha, back3: UnitCatalog.SoraSR0)),
+            ("T3-238", Formation.Build(front1: UnitCatalog.HiyoK0, front3: UnitCatalog.HotaK0, center: UnitCatalog.BorgK0, back1: UnitCatalog.DohaD0, back3: UnitCatalog.SoraSR0)),
             ("雷＋ボルグ", Formation.Build(front1: UnitCatalog.BorgK0, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: UnitCatalog.Mio)),
         };
         var target = new UnitDef { Id = "mato", Name = "的", MaxHp = 9999, Attack = 1, Speed = 5, Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Single };

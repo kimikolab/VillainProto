@@ -941,6 +941,15 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 doha297 memo <台の一部> <boss|guard|bat|1..5> <seed> <規定|a|b|t>   # 第297期 Codex 向け: 台本の並び（`ShareGive` ／ `Whet` ／ 仇討ち ／ 中継）
     dotnet run --project BattleSim -c Release 0 doha297 grid <guard|bat|boss> <a|b|t> [席=6] [seed=10] [アタッカー]   # 第297期 格子（R386）: 固定枠 ドハ ＋ アタッカー1枚（ミサ ／ ザン ／ カタ ／ シガ）× 探索枠3 × 席6・規定と版を同じ台で・ドルガの対照（1波 10 分前後）
     dotnet run --project BattleSim -c Release 0 doha297 check         # 第297期 自己検査（版の札と文面・肩代わりの量が規定と同じ・ドハ自身は強くならない・DH-a は相手だけ ／ DH-b は最上位（支援を拒む駒を飛ばす）・`Whet` を通る・DH-t は1ターン1回で端数を持ち越す・PickOne・段0 の回復(与)・verbose・出来事）
+    dotnet run --project BattleSim -c Release 0 feather298 doha           # 第298期 段0-1: `compare` 64 行 ＋ 交差帯 12 行 × ドハ（旧 `DohaD0` ／ 規定 DH-a なまりなし）・(G2)・弱体の軸の行の供給源（`DullByRoute`）・doha297 の代表台（DH-a なまりあり ／ 規定）（16 秒）。本体は `Modes/Feather298.cs`
+    dotnet run --project BattleSim -c Release 0 feather298 attr           # 第298期 段0-2: 戦績の帰属のずれ 8 群（直す前に別の駒 ／ 誰でもないに入っていた量 → 本当の出どころ・`UnitTally.AttrFixed` ほか）
+    dotnet run --project BattleSim -c Release 0 feather298 p0             # 第298期 Phase 0: 標の書き込み（書き手ごと・新しい標 ／ 層 ／ 味方へ）・MF-a ／ MF-b の羽の見込みと実測・ZN-a の濡れ衣・同士討ちの出どころ（`FfOnMarked`）
+    dotnet run --project BattleSim -c Release 0 feather298 seat           # 第298期: 濡れ衣編成（ザン・ミサ・ヒサ・ボルグ・カド）の席 120 通り × C0 ／ C4
+    dotnet run --project BattleSim -c Release 0 feather298 rates <a|b> [seeds]   # 第298期: 代表台 7 台 × 本編 第1〜5波 ／ 近衛 ／ 大隊 ／ ボス × 組 C0〜C4（C3 ／ C4 のミサは引数）＋ 対照（ソラ ／ ミサ ／ ザン ／ ヒサ → ドルガ）（10 秒）
+    dotnet run --project BattleSim -c Release 0 feather298 compare <a|b>  # 第298期: `compare` 64 行 × 組 C1〜C4・主判定19行の第五波・(G2)
+    dotnet run --project BattleSim -c Release 0 feather298 grid <guard|bat|boss> <C1..C4> [seed=10] <a|b>   # 第298期 格子（R386）: 固定枠 ヒサ ＋ ザン ＋ ミサ・探索枠2 × 席 120・C0 と組で同じ台・ソラが自由枠に入る台とソラ → ドルガ
+    dotnet run --project BattleSim -c Release 0 feather298 memo <台の一部> <boss|guard|bat|1..5> <seed> <C0..C4> <a|b>   # 第298期 Codex 向け: 台本の並び（`FeatherMark` ／ `Framed` ／ 羽 ／ 叫び）
+    dotnet run --project BattleSim -c Release 0 feather298 check          # 第298期 自己検査（規定のドハの札と文面・なまりが規定で 0・帰属の群 1 ／ 6 を直に・MF の在庫 ／ 層 ／ 同士討ち ／ 再入・ZN-a のヒサ ／ 羽以外 ／ ZN-b・指差しの順・PickOne・verbose・出来事・版の文面）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

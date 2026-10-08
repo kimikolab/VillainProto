@@ -47,7 +47,7 @@ static class Tome282Diag
     static Formation Row(string prefix) => FvSwap(FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Hisa, UnitCatalog.HisaHK0);   // 第295期: ソラを旧の規定（SR0）に固定・第296期: ヒサも（HK0）
 
     /// <summary>新台の壁（`wall` で選んだもの・指示書 §3-1）。標経済の前3 ガルドをこの駒に替える。</summary>
-    internal static UnitDef NewWall => UnitCatalog.Doha;
+    internal static UnitDef NewWall => UnitCatalog.DohaD0;
 
     static Formation EconomyWith(UnitDef wall) => FvSwap(Row("標経済 (ヒサ×ザン×ミサ)"), UnitCatalog.Gald, wall);
 
@@ -126,7 +126,7 @@ static class Tome282Diag
                     else if (tome is not null && ev.ActorId == tome.InstanceId && mine.TryGetValue(t, out string? id))
                     {
                         if (id == UnitCatalog.Mudo.Id) SprayOnMudo++;
-                        else if (id == UnitCatalog.Doha.Id) SprayOnDoha++;
+                        else if (id == UnitCatalog.DohaD0.Id) SprayOnDoha++;
                     }
                 }
                 else if (ev.Kind == BattleEventKind.Heal && ev.TargetId is int h && foeIds.Contains(h))
@@ -158,7 +158,7 @@ static class Tome282Diag
             if (p.Any(u => u.Def.Id == UnitCatalog.Zan.Id) && r.TallyByUnit.TryGetValue(UnitCatalog.Zan.Id, out var zt)) { Vend += zt.VendettaFires; VendMarks += zt.VendettaMarks; }
             if (p.Any(u => u.Def.Id == UnitCatalog.Mudo.Id) && r.TallyByUnit.TryGetValue(UnitCatalog.Mudo.Id, out var mt)) { Erupts += mt.EruptFires; EruptFuel += mt.EruptFuel; EruptFuelAlly += mt.EruptFuelFromAlly; }
             if (p.Any(u => u.Def.Id == UnitCatalog.Utsu.Id) && r.TallyByUnit.TryGetValue(UnitCatalog.Utsu.Id, out var ut)) UtsuExtra += ut.ExtraSwings;
-            if (p.Any(u => u.Def.Id == UnitCatalog.Doha.Id))
+            if (p.Any(u => u.Def.Id == UnitCatalog.DohaD0.Id))
                 foreach (var l in r.Log) if (l.Text.Contains("が痛みを飲み込んだ", StringComparison.Ordinal)) DohaGains++;
             var boss = e.FirstOrDefault(u => u.Def.Id == EnemyCatalog.BossRegular.Id);
             if (boss is not null) BossMaxEnd += boss.MaxHp;
@@ -294,7 +294,7 @@ static class Tome282Diag
     // ---------------------------------------------------------------------------------
     // 段2 の Phase 0: 壁の選別（指示書 §3-1）
     // ---------------------------------------------------------------------------------
-    static readonly UnitDef[] WallCands = { UnitCatalog.Gald, UnitCatalog.Golm, UnitCatalog.Ban, UnitCatalog.Doha, UnitCatalog.Uke, UnitCatalog.Kado, UnitCatalog.Sasa, UnitCatalog.Dolga };
+    static readonly UnitDef[] WallCands = { UnitCatalog.Gald, UnitCatalog.Golm, UnitCatalog.Ban, UnitCatalog.DohaD0, UnitCatalog.Uke, UnitCatalog.Kado, UnitCatalog.Sasa, UnitCatalog.Dolga };
 
     static void Wall()
     {
@@ -397,7 +397,7 @@ static class Tome282Diag
     // 段3: 乱射の餌化（帯B）
     // ---------------------------------------------------------------------------------
     /// <summary>餌台: 前1 ムド ／ 前3 ドハ ／ 中央 ウツ ／ 後1 トメ ／ 後3 ソラ。標の供給はソラの焦点だけで、ソラが倒れると断たれる（以後トメは乱射）。</summary>
-    static Formation FeedBoard(UnitDef tome) => Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.Doha, center: UnitCatalog.Utsu, back1: tome, back3: UnitCatalog.Sora);
+    static Formation FeedBoard(UnitDef tome) => Formation.Build(front1: UnitCatalog.Mudo, front3: UnitCatalog.DohaD0, center: UnitCatalog.Utsu, back1: tome, back3: UnitCatalog.Sora);
 
     static void Feed()
     {

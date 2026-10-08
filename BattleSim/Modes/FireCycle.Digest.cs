@@ -12,7 +12,7 @@ static class FireCycleDigestDiag
         var boards = new (string Name, Formation F)[]
         {
             ("T3-244", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.HisaHK0, center: UnitCatalog.BorgU0, back1: UnitCatalog.HotaQ0, back3: UnitCatalog.HiyoU0)),
-            ("T3-238", Formation.Build(front1: UnitCatalog.HiyoU0, front3: UnitCatalog.HotaQ0, center: UnitCatalog.BorgU0, back1: UnitCatalog.Doha, back3: UnitCatalog.SoraSR0)),
+            ("T3-238", Formation.Build(front1: UnitCatalog.HiyoU0, front3: UnitCatalog.HotaQ0, center: UnitCatalog.BorgU0, back1: UnitCatalog.DohaD0, back3: UnitCatalog.SoraSR0)),
             ("雷＋ボルグ", Formation.Build(front1: UnitCatalog.BorgU0, front3: UnitCatalog.Tsugi, center: UnitCatalog.Beni, back1: UnitCatalog.KataS3, back3: UnitCatalog.Mio)),
         };
         var target = new UnitDef { Id = "mato", Name = "的", MaxHp = 9999, Attack = 1, Speed = 5, Traits = Array.Empty<TraitId>(), Pattern = AttackPattern.Single };

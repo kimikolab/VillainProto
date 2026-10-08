@@ -496,6 +496,8 @@ public enum OutOfTurnRoute
     ShockWhip,
     /// <summary>橋（<c>BeckonBridge</c>・第294期 HS-c。<b>問う相手は癒し手</b>——踏みとどまった味方ではない）。</summary>
     Bridge,
+    /// <summary>ミサの羽が標の付いた駒へ飛ぶ（第298期・MF-a ／ MF-b・`DrainFeatherMarks`）。</summary>
+    FeatherMark,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -505,7 +507,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "羽の標撃ち", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -540,6 +542,7 @@ public sealed class BattleContext
         if (_rallyLive) BundlePush(null, outOfTurn: true);   // 第295期（攻撃のひとまとまり・HK の保持者がいなければ比較1つで抜ける）
         try { body(); }
         finally { InReaction = false; if (_rallyLive) BundlePop(); }
+        if (_mfLive) DrainFeatherMarks();   // 第298期（MF・まとまりが閉じた後に、控えた羽を撃つ）
     }
 
     /// <summary>
@@ -647,6 +650,7 @@ public sealed class BattleContext
         if (_rallyLive) BundlePush(null, outOfTurn: true);   // 第295期（攻撃のひとまとまり）
         try { body(); }
         finally { InInterrupt = false; if (_rallyLive) BundlePop(); }   // 例外で立ちっぱなしになると以後の割り込みが永久に止まる
+        if (_mfLive) DrainFeatherMarks();   // 第298期（MF）
     }
 
     /// <summary>
@@ -890,7 +894,7 @@ public sealed class BattleContext
                 Log($"    {u.Name} は燃えているが焼かれない（残り {left - 1}）", LogKind.Status);
                 // ノブ（既定 0 ＝ 1ビットも動かない）。**`ctx.Heal` を通す**ので、
                 // 渇き（盤面ルール）にも支援拒否（`Stoic`）にも素直に課税される。
-                if (Ember.TickHeal > 0) Heal(u, Ember.TickHeal);
+                if (Ember.TickHeal > 0) TickHealAttr(u);
                 return;
             }
 
@@ -1081,7 +1085,7 @@ public sealed class BattleContext
                 if (!foe && _fireConvertHolders.Count > 0) NoteConvertPrec(u, ScorchTick(u, BurnRules.Damage), MendsFire(u) ? 1 : 0);   // 第238期・**計数のみ**
                 // 火には焼かれない（刻みと同じ枝）。第235期: 火の癒しなら刻みの量だけ回復（倍は掛けない＝刻みと同じ量）。第249期: ホタの火の癒しも。
                 if (MendsFire(u)) FireHeal(u, ScorchTick(u, BurnRules.Damage), FireArmorLabels.Mend, tick: true);
-                else if (Ember.TickHeal > 0) Heal(u, Ember.TickHeal);
+                else if (Ember.TickHeal > 0) TickHealAttr(u);
             }
             else if ((foe ? null : InvertsTick(u)) is UnitState inverterB)
             {
@@ -3528,7 +3532,7 @@ public sealed class BattleContext
             // 第147期（表示専用）: 混乱が付いた瞬間。**計数（NoteCarry）は足していない**
             // ——`UnitTally.CarryKeys` を増やすと過去の期の帳簿が動く。書き手は Mark.Owner。
             case StatusKeys.Confused: EmitConfused(u, ConfusedLabels.Lost, Mark.Owner); break;
-            case StatusKeys.Marked: NoteCarry(u, UnitTally.CarryMark, 1); break;
+            case StatusKeys.Marked: NoteCarry(u, UnitTally.CarryMark, 1); NoteMarkWrite(u, delta); if (_mfLive) QueueFeatherMark(u, delta); break;   // 第298期（MF・保持者がいなければ比較1つで抜ける）
             case StatusKeys.Wound: NoteCarry(u, UnitTally.CarryWound, 1); break;
             case StatusKeys.IdleTurn: NoteCarry(u, UnitTally.CarryIdle, 1); break;
         }
@@ -6249,6 +6253,15 @@ public sealed class BattleContext
     /// <summary>反転の回復を1段行う（<c>kind</c>: 0 刻みの毒 ／ 1 刻みの燃焼 ／ 2 起爆）。渇き・支援拒否は <see cref="Heal"/> がそのまま掛ける。</summary>
     void InverseHeal(UnitState beni, UnitState u, int amount, int kind, string what)
     {
+        // 第298期 段0-2（群1）: 反転の回復（と中の啜り）はベニの出力。印をベニに立てる（観測専用）。
+        int h0 = HealOutOf(beni);
+        TraitMark am = BeginTrait(TraitId.Inverse, beni);
+        try { InverseHealCore(beni, u, amount, kind, what); }
+        finally { AttrEnd(am, 1, beni, HealOutOf(beni) - h0); }
+    }
+
+    void InverseHealCore(UnitState beni, UnitState u, int amount, int kind, string what)
+    {
         // 第219期: 燃焼の脆さ（F3・F4）。**伸びた量をそのまま回復に反転する**。燃焼の刻み（kind 1）は刻みそのものなので燃えていると数える。
         if (Ember.Brittle > 0 && amount > 0 && BrittleApplies(u) && (kind == 1 || u.RawCounter(StatusKeys.Burn) > 0))
         {
@@ -7621,6 +7634,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.DivertPressure)) _pressureHolders.Add(u);   // 第294期（SR-b・重圧）
         if (u.HasTrait(TraitId.StaticMembrane)) _membraneHolders.Add(u);   // 第294期（SM・静電気の膜）
         if (u.HasTrait(TraitId.MarkRally) || u.HasTrait(TraitId.MarkRallyWide)) { _rallyLive = true; _rallyHolders.Add(u); }   // 第295期（HK・攻撃のひとまとまり）
+        if (u.HasTrait(TraitId.FeatherMark) || u.HasTrait(TraitId.FeatherMarkLayer)) { _mfLive = true; _mfHolders.Add(u); }   // 第298期（MF・標が付いた瞬間の羽）
         if (u.HasTrait(TraitId.Thrust) || u.HasTrait(TraitId.ThrustPlain)) _thrustLive = true;   // 第186期 追補
         if (HeroShieldTrait.Holds(u)) _heroShieldLive = true;   // 第267期（勇者の庇い）
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
@@ -9916,6 +9930,15 @@ public sealed class BattleContext
     /// <summary>癒しの灯（H2）: 燃えている味方全員（自分を含む・席番号の順）を 4 回復（火の回復——ベニの反転の裏は通らず、渇きは素通り）。</summary>
     void MendGlow(UnitState hiyo)
     {
+        // 第298期 段0-2（群3）: 癒しの灯はヒヨの出力（同じ関数の鎧の火は第252期から印を立てている）。
+        int h0 = HealOutOf(hiyo);
+        TraitMark am = BeginTrait(TraitId.MendGlow, hiyo);
+        try { MendGlowCore(hiyo); }
+        finally { AttrEnd(am, 3, hiyo, HealOutOf(hiyo) - h0); }
+    }
+
+    void MendGlowCore(UnitState hiyo)
+    {
         var allies = LivingMembers(hiyo.TeamId).Where(a => a.RawCounter(StatusKeys.Burn) > 0).ToList();
         FireBook.MendGlowN++;
         EmitFireLevel(hiyo, hiyo, FireLevelLabels.MendGlow, FireKindleRule.MendGlow, allies.Count);
@@ -10147,7 +10170,10 @@ public sealed class BattleContext
     void FeedAtk(UnitState hota, UnitState? cause, int amount, bool overflow)
     {
         if (!hota.IsAlive) return;
+        // 第298期 段0-2（群8）: 自己強化の直叩き（`NoteAtkMove` が印の主に数える）。印をホタの札に立てる。
+        TraitMark am = BeginTrait(overflow ? TraitId.PyreOverflow : TraitId.PyreFed, hota);
         hota.AtkBonus += amount;
+        AttrEnd(am, 8, hota, amount);
         string id = cause?.Def.Id ?? "—";
         long sum;
         if (overflow) { FireBook.OverflowN++; sum = FireBook.OverflowAtk += amount; FireBook.OverflowBy[id] = FireBook.OverflowBy.GetValueOrDefault(id) + 1; }
@@ -10492,6 +10518,15 @@ public sealed class BattleContext
     /// </summary>
     void FireConvert(UnitState hiyo, UnitState u, int amount, bool tick)
     {
+        // 第298期 段0-2（群2）: 火の変換の回復はヒヨの出力。
+        int h0 = HealOutOf(hiyo);
+        TraitMark am = BeginTrait(TraitId.FireConvert, hiyo);
+        try { FireConvertCore(hiyo, u, amount, tick); }
+        finally { AttrEnd(am, 2, hiyo, HealOutOf(hiyo) - h0); }
+    }
+
+    void FireConvertCore(UnitState hiyo, UnitState u, int amount, bool tick)
+    {
         UnitTally t = TallyOf(hiyo);
         t.FireConvPrecV += amount;
         EmitFireArmor(hiyo, u, FireArmorLabels.Convert, amount);
@@ -10569,6 +10604,16 @@ public sealed class BattleContext
     /// <b>渇きは <see cref="TraitId.FireMendDry"/> を持たなければ素通り</b>（H1a）。上限は <c>Heal</c> がそのまま守る。
     /// </summary>
     public void FireHeal(UnitState u, int amount, string label, bool tick)
+    {
+        // 第298期 段0-2（群4）: 火の癒し（焼き返し・熾の癒し）は本人の札の出力。
+        if (!u.IsAlive || amount <= 0) return;
+        int h0 = HealOutOf(u);
+        TraitMark am = BeginTrait(label == FireArmorLabels.Feed ? TraitId.FireFeed : u.HasTrait(TraitId.PyreMend) ? TraitId.PyreMend : TraitId.FireMend, u);
+        try { FireHealCore(u, amount, label, tick); }
+        finally { AttrEnd(am, 4, u, HealOutOf(u) - h0); }
+    }
+
+    void FireHealCore(UnitState u, int amount, string label, bool tick)
     {
         if (!u.IsAlive || amount <= 0) return;
         UnitTally t = TallyOf(u);
@@ -11849,9 +11894,11 @@ public sealed class BattleContext
                     // 切り捨てのままにしてあるのは、Math.Max(1, ...) にすると小さいダメージの
                     // 連打で比例関係が崩れ、下げ幅が肩代わり量から切り離されるため。
                     int dull = taken / SharerTrait.DullDivisor;
-                    if (dull > 0)
+                    if (dull > 0 && !sharer.HasTrait(TraitId.SharerNoDull))
                     {
+                        TraitMark dm = BeginTrait(TraitId.Sharer, sharer);   // 第298期 段0-2（群6）
                         Dull(target, dull, DullRoute.Sharer, sharer);
+                        AttrEnd(dm, 6, sharer, dull);
                         Log($"    痛みを取り上げられた {target.Name} の腕がなまる（攻撃 -{dull}）",
                             LogKind.FriendlyFire);
                     }
@@ -11982,9 +12029,11 @@ public sealed class BattleContext
                 ApplyDamage(lateSharer, taken, source, isFriendlyFire: true, burnTick: burnTick, relayed: true, levy: levy);
                 _shareFrom = null;
                 int dull = taken / SharerTrait.DullDivisor;
-                if (dull > 0)
+                if (dull > 0 && !lateSharer.HasTrait(TraitId.SharerNoDull))
                 {
+                    TraitMark dm = BeginTrait(TraitId.Sharer, lateSharer);   // 第298期 段0-2（群6）
                     Dull(target, dull, DullRoute.Sharer, lateSharer);
+                    AttrEnd(dm, 6, lateSharer, dull);
                     Log($"    痛みを取り上げられた {target.Name} の腕がなまる（攻撃 -{dull}）", LogKind.FriendlyFire);
                 }
             }
@@ -12295,6 +12344,9 @@ public sealed class BattleContext
         NoteMarkHit(target, source);
         if (source is not null && (isFriendlyFire || source.TeamId == target.TeamId))
             tt.TakenFromAlly += amount;
+        // 第298期（**計数のみ**・ZN-b の対象）: 味方による同士討ち（徴収・中継・自分は除く）が標の付いた駒に当たった回数を、撃った側に。
+        if (source is not null && source.TeamId == target.TeamId && source != target && !levy && !relayed && target.RawCounter(StatusKeys.Marked) > 0)
+            TallyOf(source).FfOnMarked++;
 
         // 殴られて据えの層が積もる（第185期 追補4・FootingTrait.StackOnHit）。**攻撃によるダメージが HP に届いたときだけ**。
         // ここでは積まずに控える（攻撃の枠が閉じたときに1層だけ積む）。**保持者がいなければ比較1つで抜ける。**
@@ -12529,6 +12581,7 @@ public sealed class BattleContext
         finally { _embersNow = prevEmbers; }
         // 第242期: ヒヨのターンギフト。手番（と手番の枠）が閉じた後に、控えた相手へ通常の手番を1回ずつ渡す。**控えが無ければ比較1つで返る。**
         if (_giftQueue.Count > 0 && !_inGift) DrainGifts();
+        if (_mfLive) DrainFeatherMarks();   // 第298期（MF・手番の枠が閉じた後に、控えた羽を撃つ）
         return o;
     }
 
@@ -12960,17 +13013,23 @@ public sealed class BattleContext
         bool plank = healer.HasTrait(TraitId.Plank);
         if (plank) t.BridgeByPlank++; else t.BridgeByKiss++;
         Log($"    踏みとどまった {held.Name} へ {healer.Name} が駆けつける", LogKind.Highlight, healer);
-        Interrupt(() =>
+        // 第298期 段0-2（群7）: 橋の中の板 ／ 口づけはツギ ／ リリの出力。印を立てる（跳ね返りの「混ぜ板」の計数 `Mark.Id != Plank` も正しくなる）。
+        TraitMark am = BeginTrait(plank ? TraitId.Plank : TraitId.Kiss, healer);
+        try
         {
-            if (plank) PlankTrait.Paste(this, healer, held, foes, firstAid: false);
-            else
+            Interrupt(() =>
             {
-                UnitState? prev = _bridgePatient;
-                _bridgePatient = held;
-                try { KissTrait.Act(this, healer, KissTrait.DrainPercent, rite: true); }
-                finally { _bridgePatient = prev; }
-            }
-        });
+                if (plank) PlankTrait.Paste(this, healer, held, foes, firstAid: false);
+                else
+                {
+                    UnitState? prev = _bridgePatient;
+                    _bridgePatient = held;
+                    try { KissTrait.Act(this, healer, KissTrait.DrainPercent, rite: true); }
+                    finally { _bridgePatient = prev; }
+                }
+            });
+        }
+        finally { AttrEnd(am, 7, healer, Math.Max(0, held.Hp + held.RawCounter(StatusKeys.Armor) - before)); }
         t.BridgeGain += Math.Max(0, held.Hp + held.RawCounter(StatusKeys.Armor) - before);
     }
 
@@ -13056,6 +13115,158 @@ public sealed class BattleContext
         int cat = to.Def.Id == "sora" ? 0 : hisa.RawCounter(BeckonTrait.TargetKey) == to.InstanceId + 1 ? 1 : to.Def.Id == "zan" ? 2 : attacker ? 3 : 4;
         (ht.RallyTo ??= new long[5])[cat] += got;
         if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.MarkRally, Turn = _turn, ActorId = hisa.InstanceId, TargetId = to.InstanceId, Amount = got, PartnerId = owner.InstanceId, Slot = layer, HpAfter = to.Hp, Team = to.TeamId });
+    }
+
+    // ---- 第298期 段1 —— ミサの「指差されたものは、全部撃つ」（MF-a `FeatherMark` ／ MF-b `FeatherMarkLayer`）と
+    // ザンの「濡れ衣の仇討ち」（ZN-a `VendettaFrame` ／ ZN-b `VendettaFrameAll`・本体は `VendettaTrait.Frame`）。指示書 design/PHASE298_MARK_FEATHER_SPEC.md §4。
+    // 標が増えた瞬間（`UnitState.SetCounter` → `NoteStatusGain` の1点）に控え、手番 ／ 反撃 ／ 割り込みの枠が閉じた後（とターンの頭・開戦の後）に、
+    // **割り込み（`Interrupt`・経路 `FeatherMark`・粛で止まる）**として1発ずつ撃つ。羽の発射の中で書かれた標は控えない（同じ連鎖で羽が羽を呼ばない）。
+    // **保持者がいなければ `_mfLive` の比較1つで全部抜ける。** 相手選びは乱数を引かない（敵への発は的を固定した `PerformAttack`）。
+    bool _mfLive;
+    readonly List<UnitState> _mfHolders = new();
+    readonly Queue<(UnitState Misa, UnitState Target, bool Fresh)> _mfQueue = new();
+    bool _mfFiring;
+
+    /// <summary>標の書き込み（第298期・<b>計数のみ</b>）。書き手 ＝ 第94期の印（`Mark.Owner`）。新しい標か層の追加か、相手が書き手の味方か敵かで分ける。印が無ければ書かれた駒の側の `MarkWriteNoOwner`。</summary>
+    void NoteMarkWrite(UnitState u, int delta)
+    {
+        bool fresh = u.RawCounter(StatusKeys.Marked) - delta <= 0;
+        UnitState? w = Mark.Owner;
+        if (w is null) { TallyOf(u).MarkWriteNoOwner++; return; }
+        UnitTally t = TallyOf(w);
+        if (w.TeamId == u.TeamId) { if (fresh) t.MarkWriteAllyFresh++; else t.MarkWriteAllyLayer++; }
+        else { if (fresh) t.MarkWriteFoeFresh++; else t.MarkWriteFoeLayer++; }
+    }
+
+    void QueueFeatherMark(UnitState u, int delta)
+    {
+        bool fresh = u.RawCounter(StatusKeys.Marked) - delta <= 0;
+        foreach (UnitState misa in _mfHolders)
+        {
+            if (!misa.IsAlive || ReferenceEquals(misa, u)) continue;
+            if (!fresh && !misa.HasTrait(TraitId.FeatherMarkLayer)) continue;
+            UnitTally t = TallyOf(misa);
+            if (_mfFiring) { t.MfChainSkipped++; continue; }
+            if (fresh) t.MfQueuedFresh++; else t.MfQueuedLayer++;
+            _mfQueue.Enqueue((misa, u, fresh));
+        }
+    }
+
+    internal void DrainFeatherMarksPublic() { if (_mfLive) DrainFeatherMarks(); }
+
+    void DrainFeatherMarks()
+    {
+        if (_mfQueue.Count == 0 || _mfFiring || InInterrupt) return;
+        while (_mfQueue.Count > 0)
+        {
+            var (misa, tgt, fresh) = _mfQueue.Dequeue();
+            UnitTally t = TallyOf(misa);
+            if (!misa.IsAlive || !tgt.IsAlive) { t.MfDropped++; continue; }
+            if (!TeamAlive(PlayerTeam) || !TeamAlive(EnemyTeam)) { t.MfDropped += 1 + _mfQueue.Count; _mfQueue.Clear(); break; }
+            if (!CanActOutOfTurn(misa, OutOfTurnRoute.FeatherMark)) { if (HushBindingNow) t.MfHushed++; else t.MfBlocked++; continue; }
+            _mfFiring = true;
+            try { Interrupt(() => FeatherMarkShot(misa, tgt, fresh, t)); }
+            finally { _mfFiring = false; }
+        }
+    }
+
+    /// <summary>標が付いた駒への羽の1発。敵 ＝ 的を固定した単体の `PerformAttack`（手番の羽と同じ打点・爪痕）／ 味方 ＝ 同士討ちの `ApplyDamage`（攻 × 倍率・爪痕なし・矢面の半減は掛からない）。在庫は減らない。</summary>
+    void FeatherMarkShot(UnitState misa, UnitState tgt, bool fresh, UnitTally t)
+    {
+        if (!misa.IsAlive || !tgt.IsAlive) { t.MfDropped++; return; }
+        bool ally = tgt.TeamId == misa.TeamId;
+        int before = tgt.Hp;
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.FeatherMark, Turn = _turn, ActorId = misa.InstanceId, TargetId = tgt.InstanceId, Amount = tgt.RawCounter(StatusKeys.Marked), Slot = fresh ? 1 : 0, Text = ally ? FeatherMarkLabels.Ally : FeatherMarkLabels.Foe, Team = tgt.TeamId });
+        if (t.FeatherVolleys == 0) t.MfBeforeFirstTurn++;
+        if (fresh) t.MfFresh++; else t.MfLayer++;
+        if (!ally)
+        {
+            Log($"  {misa.Name} の羽が、指差された {tgt.Name} へ飛ぶ", LogKind.Trigger);
+            _forcedTarget = tgt;
+            try { PerformAttack(misa, patternOverride: AttackPattern.Single); }
+            finally { _forcedTarget = null; _forcedLane = -1; }
+            t.MfShotsFoe++;
+            t.MfDealtFoe += Math.Max(0, before - Math.Max(0, tgt.Hp));
+        }
+        else
+        {
+            int dmg = Math.Max(1, misa.CurrentAttack * Finisher.Multiplier);
+            NoteAttackRead(misa);
+            Log($"  {misa.Name} の羽が、指差された味方の {tgt.Name} へ飛ぶ（{dmg}）", LogKind.FriendlyFire);
+            ApplyDamage(tgt, dmg, misa, isFriendlyFire: true, pattern: AttackPattern.Single);
+            int lost = Math.Max(0, before - Math.Max(0, tgt.Hp));
+            t.MfShotsAlly++;
+            t.MfDealtAlly += lost;
+            UnitTally vt = TallyOf(tgt);
+            vt.MfTaken += lost; vt.MfTakenHits++;
+            if (!tgt.IsAlive) t.MfAllyKills++;
+        }
+    }
+
+    /// <summary>濡れ衣の仇討ちで指差すヒサ（ザンと同じ陣営に生きている矢面の保持者・席番号の若い方）。いなければ null。</summary>
+    public UnitState? FrameAccuser(UnitState zan)
+    {
+        UnitState? best = null;
+        foreach (UnitState u in LivingMembers(zan.TeamId))
+            if (u.HasTrait(TraitId.Beckon) && (best is null || u.Slot < best.Slot)) best = u;
+        return best;
+    }
+
+    /// <summary>ヒサが指差す敵: 標の層が最も深い → 現在の攻撃力が最も高い → 席番号の若い方。<b>乱数を引かない。</b></summary>
+    public UnitState? FramePick(UnitState zan)
+    {
+        UnitState? best = null;
+        foreach (UnitState f in LivingMembers(Opponent(zan.TeamId)))
+        {
+            if (best is null) { best = f; continue; }
+            int a = f.RawCounter(StatusKeys.Marked), b = best.RawCounter(StatusKeys.Marked);
+            if (a > b || (a == b && (f.CurrentAttack > best.CurrentAttack || (f.CurrentAttack == best.CurrentAttack && f.Slot < best.Slot)))) best = f;
+        }
+        return best;
+    }
+
+    public void NoteFrameNoAccuser(UnitState zan) => TallyOf(zan).FrameNoAccuser++;
+
+    public void NoteFramed(UnitState hisa, UnitState zan, UnitState foe, UnitState ally, UnitState shooter)
+    {
+        TallyOf(hisa).FrameAccuses++;
+        UnitTally zt = TallyOf(zan);
+        zt.FrameVendettas++;
+        if (shooter.HasTrait(TraitId.Feathers)) zt.FrameByFeather++;
+        Log($"    {hisa.Name} が叫ぶ——「あいつがやった！」（{foe.Name} を指差す）", LogKind.Trigger);
+        if (_verbose)
+        {
+            Emit(new BattleEvent { Kind = BattleEventKind.Framed, Turn = _turn, ActorId = hisa.InstanceId, TargetId = foe.InstanceId, PartnerId = ally.InstanceId, Text = FramedLabels.Accuse, Team = foe.TeamId });
+            Emit(new BattleEvent { Kind = BattleEventKind.Framed, Turn = _turn, ActorId = zan.InstanceId, TargetId = foe.InstanceId, PartnerId = shooter.InstanceId, Text = FramedLabels.Vendetta, Team = foe.TeamId });
+        }
+    }
+
+    public void NoteFrameDealt(UnitState zan, int dealt) => TallyOf(zan).FrameDealt += dealt;
+
+    // ---- 第298期 段0-2 —— 戦績の帰属のずれ（第297期 §2-3 の 8 群）。engine の中から別の駒のために回復・強化・弱体・破片を出す所で、
+    // 本当の出どころの印を立てる（`BeginTrait` ／ `EndTrait`・**観測専用**）。`AttrEnd` は印を戻し、包む前の印が別の駒（か誰でもない）を
+    // 指していた量を**計数だけ**する（`UnitTally.AttrFixed` ／ `AttrFromNone` ／ `AttrStolen`・群の番号 1〜8）。
+    int HealOutOf(UnitState u) { UnitTally t = TallyOf(u); return t.HealOutInTurn + t.HealOutOffTurn; }
+
+    void AttrEnd(TraitMark prev, int g, UnitState src, long amount)
+    {
+        EndTrait(prev);
+        if (amount <= 0) return;
+        UnitTally t = TallyOf(src);
+        (t.AttrTotal ??= new long[9])[g] += amount;
+        if (ReferenceEquals(prev.Owner, src)) return;
+        (t.AttrFixed ??= new long[9])[g] += amount;
+        if (prev.Owner is null) (t.AttrFromNone ??= new long[9])[g] += amount;
+        else (TallyOf(prev.Owner).AttrStolen ??= new long[9])[g] += amount;
+    }
+
+    void TickHealAttr(UnitState u)
+    {
+        // 第298期 段0-2（群5）: 耐火の枝の回復（ノブ `Ember.TickHeal`・既定 0 で不活性）は本人の札の出力。
+        int h0 = HealOutOf(u);
+        TraitMark am = BeginTrait(u.HasTrait(TraitId.Pyre) ? TraitId.Pyre : TraitId.FireArmor, u);
+        Heal(u, Ember.TickHeal);
+        AttrEnd(am, 5, u, HealOutOf(u) - h0);
     }
 
     // ---- 第297期 —— 分かちのドハの版（DH-a `ShareBack` ／ DH-b `ShareTop` ／ DH-t `ShareGift`・指示書 design/PHASE297_DOHA_SHARE_SPEC.md §3）。
@@ -14763,6 +14974,7 @@ public static class BattleEngine
                 ctx.EndTrait(m);
             }
         }
+        ctx.DrainFeatherMarksPublic();   // 第298期（MF・開戦時に書かれた標の羽。保持者がいなければ比較1つで抜ける）
 
         int turn = 1;
         for (; turn <= MaxTurns; turn++)
@@ -14793,6 +15005,7 @@ public static class BattleEngine
                     t.OnTurnStart(ctx, u);
                     ctx.EndTrait(m);
                 }
+            ctx.DrainFeatherMarksPublic();   // 第298期（MF・ターンの頭に書かれた標の羽——ソラの自分への標など）
 
             // 止め（第53期）の遊休（標が付いてから殴られるまで）を測るための印。
             // 標の書き手（逸らし・駆り立て・囃し立て）はここまでに全部書き終わっている。

@@ -41,7 +41,7 @@ static class Boss283Diag
     /// </summary>
     internal static readonly UnitDef[] LifePool =
     {
-        UnitCatalog.HisaHK0, UnitCatalog.Sora, UnitCatalog.Doha, UnitCatalog.Golm, UnitCatalog.Ban, UnitCatalog.Kubi,
+        UnitCatalog.HisaHK0, UnitCatalog.Sora, UnitCatalog.DohaD0, UnitCatalog.Golm, UnitCatalog.Ban, UnitCatalog.Kubi,
         UnitCatalog.Sekki, UnitCatalog.Gald, UnitCatalog.Kado, UnitCatalog.Uke, UnitCatalog.Gan,
     };
 
@@ -325,8 +325,8 @@ static class Boss283Diag
         Console.WriteLine();
         Console.WriteLine("| 後1 | 勝率 | 倒しT | 崩れ | ト死 | 仇 | 爪 | 味方回復 | 勇者の回復 | ドルガ |");
         Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
-        var basis = Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.Doha, center: UnitCatalog.Zan, back1: UnitCatalog.Gan, back3: UnitCatalog.HisaHK0);
-        foreach (var c in new[] { UnitCatalog.Gan }.Concat(LifePool.Where(d => d != UnitCatalog.Gan && d != UnitCatalog.Doha && d != UnitCatalog.HisaHK0)).Concat(HealPool295).Distinct())
+        var basis = Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.DohaD0, center: UnitCatalog.Zan, back1: UnitCatalog.Gan, back3: UnitCatalog.HisaHK0);
+        foreach (var c in new[] { UnitCatalog.Gan }.Concat(LifePool.Where(d => d != UnitCatalog.Gan && d != UnitCatalog.DohaD0 && d != UnitCatalog.HisaHK0)).Concat(HealPool295).Distinct())
         {
             var f = Swap(basis, UnitCatalog.Gan, c);
             var d = MeasureDeep(f, 0, 100);
@@ -523,12 +523,12 @@ static class Boss283Diag
     /// </summary>
     internal static readonly (string Label, UnitDef[] Order)[] CtlBoards =
     {
-        ("第282期の新台", new[] { UnitCatalog.Tome, UnitCatalog.Doha, UnitCatalog.Zan, UnitCatalog.Gan, UnitCatalog.HisaHK0 }),
-        ("新台のガン → バン（席はそのまま）", new[] { UnitCatalog.Tome, UnitCatalog.Doha, UnitCatalog.Zan, UnitCatalog.Ban, UnitCatalog.HisaHK0 }),
-        ("0枚: ヒサ・ドハ・バン（新台の組み替え）", new[] { UnitCatalog.HisaHK0, UnitCatalog.Doha, UnitCatalog.Ban, UnitCatalog.Zan, UnitCatalog.Tome }),
-        ("0枚: ヒサ・ドハ・ゴルム（標準の候補）", new[] { UnitCatalog.Golm, UnitCatalog.Tome, UnitCatalog.Doha, UnitCatalog.Zan, UnitCatalog.HisaHK0 }),
+        ("第282期の新台", new[] { UnitCatalog.Tome, UnitCatalog.DohaD0, UnitCatalog.Zan, UnitCatalog.Gan, UnitCatalog.HisaHK0 }),
+        ("新台のガン → バン（席はそのまま）", new[] { UnitCatalog.Tome, UnitCatalog.DohaD0, UnitCatalog.Zan, UnitCatalog.Ban, UnitCatalog.HisaHK0 }),
+        ("0枚: ヒサ・ドハ・バン（新台の組み替え）", new[] { UnitCatalog.HisaHK0, UnitCatalog.DohaD0, UnitCatalog.Ban, UnitCatalog.Zan, UnitCatalog.Tome }),
+        ("0枚: ヒサ・ドハ・ゴルム（標準の候補）", new[] { UnitCatalog.Golm, UnitCatalog.Tome, UnitCatalog.DohaD0, UnitCatalog.Zan, UnitCatalog.HisaHK0 }),
         ("0枚: ヒサ・ゴルム・バン", new[] { UnitCatalog.Zan, UnitCatalog.Golm, UnitCatalog.Tome, UnitCatalog.Ban, UnitCatalog.HisaHK0 }),
-        ("シオ: ヒサ・ドハ・シオ", new[] { UnitCatalog.Doha, UnitCatalog.Zan, UnitCatalog.HisaHK0, UnitCatalog.Tome, UnitCatalog.Shio }),
+        ("シオ: ヒサ・ドハ・シオ", new[] { UnitCatalog.DohaD0, UnitCatalog.Zan, UnitCatalog.HisaHK0, UnitCatalog.Tome, UnitCatalog.Shio }),
         ("シオ: ヒサ・クビ・シオ（120 席すべて届く）", new[] { UnitCatalog.HisaHK0, UnitCatalog.Shio, UnitCatalog.Kubi, UnitCatalog.Tome, UnitCatalog.Zan }),
         ("ツギ: ヒサ・バン・ツギ", new[] { UnitCatalog.Tome, UnitCatalog.HisaHK0, UnitCatalog.Ban, UnitCatalog.Tsugi, UnitCatalog.Zan }),
     };

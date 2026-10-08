@@ -175,6 +175,8 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   版は「溜まる力の行き先」を他者に変えたので、他者強化として窓口を通す（`BattleContext.ShareGive`）。配り先の選び方（`ShareTopAlly`・攻撃力 → 席番号・乱数なし・支援を拒む駒を飛ばす）は呼び出し側。
   中継の一撃が「誰の痛みか」は **`BattleContext.ShareFrom`**（`ApplyDamage` の `OnDamaged` の走査の間だけ立つ・札 `_shareFrom` は `ApplyDamageBody` の頭で読んで消す）。
   DH-t（`ShareGift`）の再行動はヒヨのターンギフトと同じ口（`_giftQueue` ／ `DrainGifts`）を使い、**火の帳簿・火のギフトの手番（大技の条件）には数えない**。
+  **第298期: 規定のドハが DH-a（`ShareBack`）になり、なまりを外した**（札 `SharerNoDull`——分かちの2段の `Dull(…, DullRoute.Sharer, …)` の条件に `!HasTrait(SharerNoDull)` を足しただけ・`SharerTrait.DullDivisor` の既定は 4 のまま）。旧は `UnitCatalog.DohaD0`。
+  **ドハは弱体の軸から抜けて強化の駒になった**——`compare` の弱体の軸の行（分かち×逆しま ／ 引き受け ／ 渡し）で、なまりは唯一の（渡しではワタの転嫁と並ぶ）弱体の供給源だった。
 - **陣営をまたぐ強化経路は糧（`WhetRoute.Nourish`・第118期）が初めて。測って採用しなかった。**
   他の8本はすべて味方から味方へで、**`AcceptsSupport` を見ない初めての強化経路**でもある
   （第56期の「強化側は無検査 0・弱体側は3通りに割れている」がここで破れる）——**支援として配るのではなく
@@ -1079,3 +1081,14 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 `AttackPattern` は Single / Sweep / Pierce / All の4つで、**増やしても4つまで**。1つ増えるたびに庇う・標的・巻き込みなど既存の全特性との相互作用を監査する必要がある。庇う・標的の介入は Single にしか効かない（薙ぎ・全体は止められず、貫きはレーン単位で解決されて割り込めない）という非対称が設計の中核。編成の定義は `Formation.Build`（名前付き引数）で書く。
 
 配置を決めるときは人手の勘ではなく `layout` モードで測る。編成の狙い（隣接ペア・後列必須など）と探索1位が食い違ったら狙いを優先し、理由をコメントに残す。
+
+## 第298期 —— 戦績の帰属（印）・標が付いた瞬間の羽・濡れ衣の仇討ち
+
+- **`Heal` ／ `Whet` ／ `Dull` ／ 破片 ／ `AtkBonus` の直叩きは、出どころを第94期の印（`Mark.Owner`）で数える**（`Heal` の引数 `by` ではない）。engine の中から別の駒のために出す所は、**本当の出どころで `BeginTrait` ／ `EndTrait` を包む**。
+  第297期の叫び（`BundlePop`）に続き、第298期に 8 群を包んだ: 反転（`InverseHeal` → `InverseHealCore`・中の `InverseSip` も）・火の変換（`FireConvert`）・癒しの灯（`MendGlow`）・火の癒し（`FireHeal`）・耐火の枝（`TickHealAttr`）・分かちのなまり・橋（`BeckonBridgeFire` の板 ／ 口づけ）・くべられる火（`FeedAtk`）。
+  包むときは `AttrEnd(prev, 群, 出どころ, 量)` で印を戻し、包む前の印が別の駒か誰でもないを指していた量を**計数だけ**する（`UnitTally.AttrTotal` ／ `AttrFixed` ／ `AttrFromNone` ／ `AttrStolen`）。**印は観測専用**（盤面・乱数・台本の順は変わらない・`compare` 0 件）。表示専用の出来事のうち印を読む欄（`HealBlocked.SourceTrait` など）だけは値が変わる。
+- **標が増えた瞬間の通知は `UnitState.SetCounter` → `NoteStatusGain` の1点**（標の書き手は7か所あるが、ここを通る）。ミサの版 MF-a ／ MF-b（`FeatherMark` ／ `FeatherMarkLayer`）はここで控え、
+  手番（`TakeTurn` の最後）／ 反撃（`Reaction`）／ 割り込み（`Interrupt`）の枠が閉じた後と、ターンの頭（`OnTurnStart` の後）・開戦の後に、**割り込み（経路 `OutOfTurnRoute.FeatherMark`・粛で止まる）**として1発ずつ撃つ（`DrainFeatherMarks`）。
+  **再入の止め**: 羽の発射の中（`_mfFiring`）で書かれた標は控えない（`MfChainSkipped`）。割り込みの中（`InInterrupt`）では吐かずに外の枠に任せる。敵への羽は的を固定した `PerformAttack`（手番の羽と同じ打点・爪痕）、味方への羽は同士討ちの `ApplyDamage`（矢面の半減は掛からない）。
+- **濡れ衣の仇討ち（ZN-a ／ ZN-b・`VendettaFrame` ／ `VendettaFrameAll`）は `VendettaTrait` の中の枝**（`Frame` → `Avenge`）。味方による同士討ち（ZN-a は羽の保持者・ZN-b は全般・徴収 ／ 中継は除く——`ctx.Hit`）が標の付いた味方に当たり、
+  ヒサ（矢面 `Beckon` の保持者）が生きていれば、`FramePick`（層 → 攻撃力 → 席・乱数なし）の敵へ仇討ちする。経路は今の仇討ちと同じ `Reaction`（`CanActOutOfTurn(…, Avenge)`）。

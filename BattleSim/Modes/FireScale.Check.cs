@@ -91,7 +91,7 @@ static partial class FireScaleDiag
                 "旧（`BorgF0` / `HiyoF0`）は `All` に入れていない");
             // 同じ席・同じ seed で規定の駒と版の駒の台本が一致
             var fa = T3;
-            var fb = Formation.Build(front1: v1, front3: UnitCatalog.HotaL0, center: d2, back1: UnitCatalog.Doha, back3: UnitCatalog.SoraSR0);
+            var fb = Formation.Build(front1: v1, front3: UnitCatalog.HotaL0, center: d2, back1: UnitCatalog.DohaD0, back3: UnitCatalog.SoraSR0);
             int bad = 0;
             for (int s = 0; s < 40; s++)
                 foreach (int sc in new[] { 0, 1 })

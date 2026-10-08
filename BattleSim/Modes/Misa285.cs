@@ -387,7 +387,7 @@ static class Misa285Diag
 
         // (d) 羽の帳簿: 初期 1・下限 1・増えるのは敵への書き込みだけ
         long minEnd = long.MaxValue, gainNoWriter = 0, shotsOver = 0, sprayLostOver = 0, logGain = 0, tallyGain = 0;
-        var noWriter = Seat(new[] { UnitCatalog.Golm, UnitCatalog.Tome, UnitCatalog.Ban, UnitCatalog.Doha, UnitCatalog.HisaHK0 });   // 敵に標を書く駒（ソラ・ザン）がいない台
+        var noWriter = Seat(new[] { UnitCatalog.Golm, UnitCatalog.Tome, UnitCatalog.Ban, UnitCatalog.DohaD0, UnitCatalog.HisaHK0 });   // 敵に標を書く駒（ソラ・ザン）がいない台
         foreach (var v in Vers.Skip(1))
             foreach (var (name, f) in MisaRows.Append(("書き手なし", noWriter)))
                 foreach (var w in Main.Skip(1).Append(BossW))

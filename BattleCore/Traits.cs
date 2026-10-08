@@ -682,7 +682,14 @@ public enum TraitId
     // --- 第297期で足した札（ドハの版: `UnitCatalog.DohaDHa` ／ `DohaDHb` ／ `DohaDHt` だけが持つ。肩代わり（4割）はそのまま・ドハ自身の攻撃力は上がらない） ---
     ShareBack,       // 痛みをくれた相手へ（DH-a）: 肩代わりするたび、痛み ÷ 2 を肩代わりした相手の攻撃力に足す（`Whet`・自分への直接の一撃の分は配らない）（**札そのものは挙動を持たない**・`SharerTrait.OnDamaged` が読む）
     ShareTop,        // アタッカーへ集める（DH-b）: 被弾のたび、痛み ÷ 2 を味方で攻撃力が最も高い1体（ドハを除く）に足す（自分への直接の一撃の分も配る）（同上）
+    SharerNoDull,    // なまりを外す（第298期・規定のドハ）: 分かちで守られた味方の攻撃力を下げない（なまり `SharerTrait.DullDivisor` を掛けない）（**札そのものは挙動を持たない**・engine の分かちの段が読む）
     ShareGift,       // ターンギフト（DH-t）: 肩代わりした実額の累計が最大HPの半分に達するたび、攻撃力が最も高い味方1体がすぐにもう一度動く（1ターン1回・端数は持ち越す）（同上・口は engine の `_giftQueue`）
+
+    // --- 第298期で足した札（ミサの版 `UnitCatalog.MisaMFa` ／ `MisaMFb`、ザンの版 `ZanZNa` ／ `ZanZNb` だけが持つ） ---
+    FeatherMark,      // 指差されたものは、全部撃つ（MF-a）: 標の無かった駒（敵でも味方でも・自分以外）に新しく標が付いたとき、羽が1発その駒へ飛ぶ（手番の外・割り込み・在庫は減らない）（**札そのものは挙動を持たない**・engine の `QueueFeatherMark` ／ `DrainFeatherMarks`）
+    FeatherMarkLayer, // 同（MF-b）: MF-a ＋ 敵の標の層が1つ増えるたび（同上）
+    VendettaFrame,    // 濡れ衣の仇討ち（ZN-a）: 標の付いた味方がミサの羽（羽の保持者の同士討ち）に撃たれたら、ヒサ（矢面の保持者）が生きていれば敵を指差し、その敵へ仇討ちする（**札そのものは挙動を持たない**・`VendettaTrait` が読む）
+    VendettaFrameAll, // 同（ZN-b）: 「ミサの羽」を味方による同士討ち全般に広げる（徴収・中継は除く）（同上）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -12473,19 +12480,48 @@ public sealed class VendettaTrait : Trait
     {
         if (ally == self) return;
         if (ally.Counter(StatusKeys.Marked) <= 0) return;               // 標を持つ味方だけ
+        // 第298期（ZN-a ／ ZN-b）: 味方による同士討ち。ヒサが敵を指差し、その敵へ仇討ちする（濡れ衣）。札が無ければ下の行で今までどおり返る。
+        if (source is not null && source.TeamId == self.TeamId && source != self
+            && (self.HasTrait(TraitId.VendettaFrame) || self.HasTrait(TraitId.VendettaFrameAll)))
+        {
+            Frame(ctx, self, ally, source);
+            return;
+        }
         // 第297期: 分かちの中継（`relayed`）の一撃でも出る——中継の `ApplyDamage` は出どころ（敵）をそのまま渡し、`OnAllyDamaged` は中継を区別しない。
         // 標を持つドハは「誰への一撃も仇討ちの合図に変える駒」になる（試遊・標 守り型）。**意図して残す**（ポンの決め・design/PHASE297_DOHA_SHARE.md §2-1）。
         if (source is null || source.TeamId == self.TeamId) return;     // 味方の事故には出ない
         if (!source.IsAlive) return;
         if (ctx.InReaction) return;                                     // 反撃の連鎖を止める
         if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Avenge)) return;  // 粛・痺れで止まる
+        Avenge(ctx, self, ally, source, framed: false);
+    }
 
+    /// <summary>
+    /// 濡れ衣の仇討ち（第298期・ZN-a ／ ZN-b）。ZN-a は撃った味方が羽の保持者（ミサ）のときだけ、ZN-b は味方による同士討ち全般（徴収・中継は除く）。
+    /// ヒサ（矢面の保持者）が生きていなければ何もしない。指差す敵は `BattleContext.FramePick`（層 → 攻撃力 → 席番号・乱数を引かない）。
+    /// </summary>
+    static void Frame(BattleContext ctx, UnitState self, UnitState ally, UnitState shooter)
+    {
+        if (ctx.Hit.Levy || ctx.Hit.Relayed) return;
+        if (!self.HasTrait(TraitId.VendettaFrameAll) && !shooter.HasTrait(TraitId.Feathers)) return;
+        if (ctx.InReaction) return;
+        UnitState? hisa = ctx.FrameAccuser(self);
+        if (hisa is null) { ctx.NoteFrameNoAccuser(self); return; }
+        UnitState? foe = ctx.FramePick(self);
+        if (foe is null) return;
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Avenge)) return;
+        ctx.NoteFramed(hisa, self, foe, ally, shooter);
+        Avenge(ctx, self, ally, foe, framed: true);
+    }
+
+    static void Avenge(BattleContext ctx, UnitState self, UnitState ally, UnitState source, bool framed)
+    {
         ctx.Reaction(() =>
         {
             int atk = Math.Max(1, self.CurrentAttack * AvengeMultiplier);
             int before = source.Hp;
             bool alreadyMarked = source.RawCounter(StatusKeys.Marked) > 0;
-            ctx.Log($"    {self.Name} が {ally.Name} の仇へ倍の刃を返す", LogKind.Trigger);
+            ctx.Log(framed ? $"    {self.Name} が指差された {source.Name} へ、{ally.Name} の仇の刃を返す" : $"    {self.Name} が {ally.Name} の仇へ倍の刃を返す", LogKind.Trigger);
             ctx.NoteAttackRead(self);   // 攻撃力を出力に変換した（第64期・死蔵の判定）
             ctx.ApplyDamage(source, atk, self);
             int dealt = Math.Max(0, before - Math.Max(0, source.Hp));
@@ -12507,6 +12543,7 @@ public sealed class VendettaTrait : Trait
                 ctx.Log($"    {self.Name} が {source.Name} をさらに指差した（層 {source.RawCounter(StatusKeys.Marked)}）", LogKind.Trigger);
             }
             ctx.NoteVendetta(self, dealt, marked);
+            if (framed) ctx.NoteFrameDealt(self, dealt);
 
             if (self.HasTrait(TraitId.Recoil) && self.IsAlive)
             {
@@ -16658,6 +16695,11 @@ public static class TraitCatalog
         new MarkerOnlyTrait(TraitId.ShareBack),             // 第297期（DH-a）
         new MarkerOnlyTrait(TraitId.ShareTop),              // 第297期（DH-b）
         new MarkerOnlyTrait(TraitId.ShareGift),             // 第297期（DH-t）
+        new MarkerOnlyTrait(TraitId.SharerNoDull),          // 第298期（規定のドハ・なまりを外す）
+        new MarkerOnlyTrait(TraitId.FeatherMark),           // 第298期（MF-a）
+        new MarkerOnlyTrait(TraitId.FeatherMarkLayer),      // 第298期（MF-b）
+        new MarkerOnlyTrait(TraitId.VendettaFrame),         // 第298期（ZN-a）
+        new MarkerOnlyTrait(TraitId.VendettaFrameAll),      // 第298期（ZN-b）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

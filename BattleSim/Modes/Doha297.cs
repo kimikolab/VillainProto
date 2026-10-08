@@ -37,9 +37,9 @@ static class Doha297Diag
     // ---------------------------------------------------------------------------------
     internal static readonly (string Tag, UnitDef Def)[] Versions =
     {
-        ("規定", UnitCatalog.Doha), ("DH-a", UnitCatalog.DohaDHa), ("DH-b", UnitCatalog.DohaDHb), ("DH-t", UnitCatalog.DohaDHt),
+        ("規定", UnitCatalog.DohaD0), ("DH-a", UnitCatalog.DohaDHa), ("DH-b", UnitCatalog.DohaDHb), ("DH-t", UnitCatalog.DohaDHt),
     };
-    static UnitDef Ver(string s) => s switch { "a" or "DH-a" => UnitCatalog.DohaDHa, "b" or "DH-b" => UnitCatalog.DohaDHb, "t" or "DH-t" => UnitCatalog.DohaDHt, _ => UnitCatalog.Doha };
+    static UnitDef Ver(string s) => s switch { "a" or "DH-a" => UnitCatalog.DohaDHa, "b" or "DH-b" => UnitCatalog.DohaDHb, "t" or "DH-t" => UnitCatalog.DohaDHt, _ => UnitCatalog.DohaD0 };
     static string VerTag(UnitDef d) => Versions.First(v => ReferenceEquals(v.Def, d)).Tag;
 
     static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
@@ -47,12 +47,12 @@ static class Doha297Diag
     /// <summary>代表台（§5-2）。守り型 ／ `compare` と交差帯のドハの行すべて ／ 試遊・感電 雷の型 ／ 火の軸の台（燃焼 (ボルグ×ホタ) の ガルド → ドハ）。</summary>
     internal static (string Name, Formation F)[] Boards()
     {
-        var l = new List<(string, Formation)> { ("試遊・標 守り型", Playtest("試遊・標 守り型")) };
+        var l = new List<(string, Formation)> { ("試遊・標 守り型", FvSwap(Playtest("試遊・標 守り型"), UnitCatalog.Doha, UnitCatalog.DohaD0)) };
         foreach (var (n, f) in CompareBuilds().Concat(CrossBuilds()))
-            if (f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Doha))) l.Add((n, f));
-        l.Add(("試遊・感電 雷の型", Playtest("試遊・感電 雷の型")));
+            if (f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Doha))) l.Add((n, FvSwap(f, UnitCatalog.Doha, UnitCatalog.DohaD0)));   // 第298期: 旧の規定に固定
+        l.Add(("試遊・感電 雷の型", FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, UnitCatalog.DohaD0)));
         var burn = CompareBuilds().First(r => r.Name == "燃焼 (ボルグ×ホタ)").F;
-        l.Add(("燃焼＋ドハ（燃焼 (ボルグ×ホタ) の ガルド → ドハ）", FvSwap(burn, UnitCatalog.Gald, UnitCatalog.Doha)));
+        l.Add(("燃焼＋ドハ（燃焼 (ボルグ×ホタ) の ガルド → ドハ）", FvSwap(burn, UnitCatalog.Gald, UnitCatalog.DohaD0)));
         return l.ToArray();
     }
 
@@ -151,7 +151,7 @@ static class Doha297Diag
         Console.WriteLine();
         Console.WriteLine("| 波 | seed | 勝敗 | 仇討ち | 中継（ドハの分け前） | ドハへ直接 | ほかの味方 | きっかけ不明 |");
         Console.WriteLine("|---|---|---|--:|--:|--:|---|--:|");
-        var f = Playtest("試遊・標 守り型");
+        var f = FvSwap(Playtest("試遊・標 守り型"), UnitCatalog.Doha, UnitCatalog.DohaD0);   // 第298期: 旧の規定に固定
         void Line(Wave w, IEnumerable<int> seeds, string label)
         {
             long n = 0, vend = 0, relay = 0, direct = 0, none = 0, wins = 0;
@@ -298,8 +298,8 @@ static class Doha297Diag
             var detail = new List<string>();
             foreach (var w in waves)
             {
-                var res = Versions.Select(v => Many(FvSwap(f, UnitCatalog.Doha, v.Def), w, seeds)).ToArray();
-                var dolga = Many(FvSwap(f, UnitCatalog.Doha, UnitCatalog.Dolga), w, seeds);
+                var res = Versions.Select(v => Many(FvSwap(f, UnitCatalog.DohaD0, v.Def), w, seeds)).ToArray();
+                var dolga = Many(FvSwap(f, UnitCatalog.DohaD0, UnitCatalog.Dolga), w, seeds);
                 double b = 100.0 * res[0].Wins / seeds;
                 int best = Enumerable.Range(1, 3).OrderByDescending(i => Math.Abs(100.0 * res[i].Wins / seeds - b)).First();
                 double d = 100.0 * res[best].Wins / seeds - b;
@@ -348,7 +348,7 @@ static class Doha297Diag
             Console.WriteLine("|---|---|" + string.Concat(Enumerable.Repeat("--:|", maxT + 1)));
             foreach (var v in Versions)
             {
-                var g = FvSwap(f, UnitCatalog.Doha, v.Def);
+                var g = FvSwap(f, UnitCatalog.DohaD0, v.Def);
                 var order = g.Occupied().Select(o => o.Def.Id).ToList();
                 var nameOf = g.Occupied().ToDictionary(o => o.Def.Id, o => Short(o.Def));
                 var sum = order.ToDictionary(id => id, _ => new double[maxT + 1]);
@@ -378,7 +378,7 @@ static class Doha297Diag
     static void Memo(string boardPart, string wave, int seed, string ver)
     {
         var (name, f0) = Boards().First(b => b.Name.Contains(boardPart, StringComparison.Ordinal));
-        var f = FvSwap(f0, UnitCatalog.Doha, Ver(ver));
+        var f = FvSwap(f0, UnitCatalog.DohaD0, Ver(ver));
         var w = WaveOf(wave);
         var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
         var e = w.Make();
@@ -436,7 +436,7 @@ static class Doha297Diag
                     foreach (var perm in seatSet) { int x = Wins(Seat(five, perm)); if (x > best) { best = x; seat = perm; } if (best == seeds) break; }
                     return 100.0 * best / seeds;
                 }
-                double b = Best(UnitCatalog.Doha, out var sb), v = Best(dv, out var sv);
+                double b = Best(UnitCatalog.DohaD0, out var sb), v = Best(dv, out var sv);
                 if (Math.Max(b, v) < 50) return;
                 var seat = v >= b ? sv : sb;
                 double dolga = 100.0 * Wins(Seat(new[] { UnitCatalog.Dolga, atk, c[0], c[1], c[2] }, seat)) / seeds;
@@ -534,12 +534,12 @@ static class Doha297Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        var d0 = UnitCatalog.Doha;
+        var d0 = UnitCatalog.DohaD0;   // 第298期: 規定のドハが DH-a（なまりなし）になったので、第297期の「規定」は旧（`DohaD0`）に固定
         var vers = new[] { (UnitCatalog.DohaDHa, TraitId.ShareBack), (UnitCatalog.DohaDHb, TraitId.ShareTop), (UnitCatalog.DohaDHt, TraitId.ShareGift) };
         Expect("(a) 版の札 ＝ 規定のドハ ＋ 版の札1枚・数値と手番は規定のまま・版は `All` ／ `Everyone` の外・規定のドハは版の札を持たない",
             vers.All(v => v.Item1.Traits.SequenceEqual(d0.Traits.Append(v.Item2)) && v.Item1.MaxHp == d0.MaxHp && v.Item1.Attack == d0.Attack && v.Item1.Speed == d0.Speed
                 && v.Item1.Pattern == d0.Pattern && v.Item1.Id == d0.Id && !UnitCatalog.Everyone.Contains(v.Item1))
-            && UnitCatalog.All.Contains(d0) && !d0.Traits.Any(t => t is TraitId.ShareBack or TraitId.ShareTop or TraitId.ShareGift));
+            && UnitCatalog.All.Contains(UnitCatalog.Doha) && !UnitCatalog.Everyone.Contains(d0) && !d0.Traits.Any(t => t is TraitId.ShareBack or TraitId.ShareTop or TraitId.ShareGift));
         Expect("(b) 文面: プラスは肩代わりの文 ＋ 版の一文・マイナスは共通の文・フレーバーは規定のまま",
             UnitCatalog.DohaDHa.PlusText.EndsWith("。引き受けた痛みは、その相手の力に変えて返す", StringComparison.Ordinal)
             && UnitCatalog.DohaDHb.PlusText.EndsWith("。引き受けた痛みは、いちばん腕の立つ仲間の力に変えて渡す", StringComparison.Ordinal)
@@ -620,7 +620,7 @@ static class Doha297Diag
 
         // (l) 段0: `MarkRally` の回復(与) がヒサに入る（守り型 × 近衛 × seed 7）・ザンは 0
         var guard = WaveOf("guard");
-        var r7 = BattleEngine.Run(BattleEngine.Materialize(Playtest("試遊・標 守り型"), BattleContext.PlayerTeam), guard.Make(), 7, verbose: false);
+        var r7 = BattleEngine.Run(BattleEngine.Materialize(FvSwap(Playtest("試遊・標 守り型"), UnitCatalog.Doha, d0), BattleContext.PlayerTeam), guard.Make(), 7, verbose: false);
         var hisa = r7.TallyByUnit["hisa"]; var zan = r7.TallyByUnit["zan"];
         Expect("(l) 段0: 守り型 × 近衛 × seed 7 の回復(与) がヒサに入る（＝ 叫びの癒えた量）・ザンは 0",
             hisa.HealOutInTurn + hisa.HealOutOffTurn == hisa.RallyHealed && hisa.RallyHealed > 0 && zan.HealOutInTurn + zan.HealOutOffTurn == 0,

@@ -1291,7 +1291,26 @@ public static class UnitCatalog
         Flavor = "褒められると腕が落ちる。呪われている間だけまともに戦う。"
     };
 
+    /// <summary>
+    /// 分かちのドハ（第298期の規定）。第297期の DH-a（`ShareBack`・痛みをくれた相手の攻撃力に 痛み ÷ 2）から、**なまり**（守られた味方の攻撃力 −肩代わり ÷ 4）を外した
+    /// （札 `SharerNoDull` の差し替え・ノブ `SharerTrait.DullDivisor` の既定は動かさない）。ポンの判断（第297期の案 D1・指示書 design/PHASE298_MARK_FEATHER_SPEC.md §2）。
+    /// 旧の規定は <see cref="DohaD0"/>。
+    /// </summary>
     public static readonly UnitDef Doha = new()
+    {
+        Id = "doha",
+        Name = "分かちのドハ",
+        MaxHp = 104,
+        Attack = 4,
+        Speed = 3,
+        Traits = new[] { TraitId.Sharer, TraitId.SharerArmored, TraitId.ShareBack, TraitId.SharerNoDull },
+        PlusText = "味方が受けるダメージの4割を肩代わりする（薙ぎでも全体でも効く・味方の破片が受け止めた残りから取る）。引き受けた痛みは、その相手の力に変えて返す",
+        MinusText = "自分は強くならず、味方が多いほど早く尽きる",
+        Flavor = "頼まれてもいない痛みを喰う。礼を言われたことは、一度もない。"
+    };
+
+    /// <summary>第297期までの規定のドハ（分かち ＋ 破片の後ろ・自分の攻撃力が上がる・なまりあり）。対照（<see cref="All"/> に入れない）。第297期の版（<see cref="DohaDHa"/> ほか）はこちらから作る。</summary>
+    public static readonly UnitDef DohaD0 = new()
     {
         Id = "doha",
         Name = "分かちのドハ",
@@ -1312,52 +1331,52 @@ public static class UnitCatalog
     /// <summary>第297期 DH-a（痛みをくれた相手へ）。規定 ＋ <see cref="TraitId.ShareBack"/>（肩代わりするたび、痛み ÷ 2 を肩代わりした相手の攻撃力に足す・自分への直接の一撃の分は配らない）。肩代わり（4割）は規定のまま・ドハ自身の攻撃力は上がらない。対照（<see cref="All"/> に入れない）。</summary>
     public static readonly UnitDef DohaDHa = new()
     {
-        Id = Doha.Id,
-        Name = Doha.Name,
-        MaxHp = Doha.MaxHp,
-        Attack = Doha.Attack,
-        Speed = Doha.Speed,
-        Advances = Doha.Advances,
-        Pattern = Doha.Pattern,
-        Traits = Doha.Traits.Append(TraitId.ShareBack).ToArray(),
-        Actions = Doha.Actions,
+        Id = DohaD0.Id,
+        Name = DohaD0.Name,
+        MaxHp = DohaD0.MaxHp,
+        Attack = DohaD0.Attack,
+        Speed = DohaD0.Speed,
+        Advances = DohaD0.Advances,
+        Pattern = DohaD0.Pattern,
+        Traits = DohaD0.Traits.Append(TraitId.ShareBack).ToArray(),
+        Actions = DohaD0.Actions,
         PlusText = DohaSharePlus + "。引き受けた痛みは、その相手の力に変えて返す",
         MinusText = DohaShareMinus,
-        Flavor = Doha.Flavor
+        Flavor = DohaD0.Flavor
     };
 
     /// <summary>第297期 DH-b（アタッカーへ集める）。規定 ＋ <see cref="TraitId.ShareTop"/>（被弾のたび、痛み ÷ 2 を味方で攻撃力が最も高い1体（ドハを除く・同値は席番号）に足す）。肩代わり（4割）は規定のまま・ドハ自身の攻撃力は上がらない。対照（<see cref="All"/> に入れない）。</summary>
     public static readonly UnitDef DohaDHb = new()
     {
-        Id = Doha.Id,
-        Name = Doha.Name,
-        MaxHp = Doha.MaxHp,
-        Attack = Doha.Attack,
-        Speed = Doha.Speed,
-        Advances = Doha.Advances,
-        Pattern = Doha.Pattern,
-        Traits = Doha.Traits.Append(TraitId.ShareTop).ToArray(),
-        Actions = Doha.Actions,
+        Id = DohaD0.Id,
+        Name = DohaD0.Name,
+        MaxHp = DohaD0.MaxHp,
+        Attack = DohaD0.Attack,
+        Speed = DohaD0.Speed,
+        Advances = DohaD0.Advances,
+        Pattern = DohaD0.Pattern,
+        Traits = DohaD0.Traits.Append(TraitId.ShareTop).ToArray(),
+        Actions = DohaD0.Actions,
         PlusText = DohaSharePlus + "。引き受けた痛みは、いちばん腕の立つ仲間の力に変えて渡す",
         MinusText = DohaShareMinus,
-        Flavor = Doha.Flavor
+        Flavor = DohaD0.Flavor
     };
 
     /// <summary>第297期 DH-t（ターンギフト）。規定 ＋ <see cref="TraitId.ShareGift"/>（肩代わりの累計が最大HPの半分（52）に達するたび、攻撃力が最も高い味方1体がすぐにもう一度動く・1ターン1回・端数は持ち越す）。肩代わり（4割）は規定のまま・ドハ自身の攻撃力は上がらない。対照（<see cref="All"/> に入れない）。</summary>
     public static readonly UnitDef DohaDHt = new()
     {
-        Id = Doha.Id,
-        Name = Doha.Name,
-        MaxHp = Doha.MaxHp,
-        Attack = Doha.Attack,
-        Speed = Doha.Speed,
-        Advances = Doha.Advances,
-        Pattern = Doha.Pattern,
-        Traits = Doha.Traits.Append(TraitId.ShareGift).ToArray(),
-        Actions = Doha.Actions,
+        Id = DohaD0.Id,
+        Name = DohaD0.Name,
+        MaxHp = DohaD0.MaxHp,
+        Attack = DohaD0.Attack,
+        Speed = DohaD0.Speed,
+        Advances = DohaD0.Advances,
+        Pattern = DohaD0.Pattern,
+        Traits = DohaD0.Traits.Append(TraitId.ShareGift).ToArray(),
+        Actions = DohaD0.Actions,
         PlusText = DohaSharePlus + "。痛みが積もるたび、いちばん腕の立つ仲間を先に行かせる",
         MinusText = DohaShareMinus,
-        Flavor = Doha.Flavor
+        Flavor = DohaD0.Flavor
     };
 
     // 第143期に転生させた。旧「散開のササ」（HP58・`TraitId.Loose` ＝ 隣が空いた駒の被ダメ −35%
@@ -2325,6 +2344,42 @@ public static class UnitCatalog
         Flavor = "仲間が傷つくと、刃を抜かずにはいられない。返した刃は、いつも自分の手も裂いている。"
     };
 
+    // 第298期（指示書 §4-2）—— ザンの「濡れ衣の仇討ち」。ヒサの指差しはザンの札の中の動作として書く（ヒサの文面は変えない）。
+
+    /// <summary>第298期 ZN-a（ミサの羽だけ）。規定 ＋ <see cref="TraitId.VendettaFrame"/>（標の付いた味方がミサの羽に撃たれたら、ヒサが生きていれば敵を指差し、その敵へ仇討ちする）。対照（<see cref="All"/> に入れない・採否はポン）。</summary>
+    public static readonly UnitDef ZanZNa = new()
+    {
+        Id = Zan.Id,
+        Name = Zan.Name,
+        MaxHp = Zan.MaxHp,
+        Attack = Zan.Attack,
+        Speed = Zan.Speed,
+        Advances = Zan.Advances,
+        Pattern = Zan.Pattern,
+        Traits = Zan.Traits.Append(TraitId.VendettaFrame).ToArray(),
+        Actions = Zan.Actions,
+        PlusText = Zan.PlusText + "。仲間を撃った者が誰であれ、指差された敵を斬る",
+        MinusText = Zan.MinusText,
+        Flavor = Zan.Flavor
+    };
+
+    /// <summary>第298期 ZN-b（同士討ち全般）。規定 ＋ <see cref="TraitId.VendettaFrameAll"/>（ZN-a の「ミサの羽」を味方による同士討ち全般に広げる（徴収・中継は除く））。対照（<see cref="All"/> に入れない・採否はポン）。</summary>
+    public static readonly UnitDef ZanZNb = new()
+    {
+        Id = Zan.Id,
+        Name = Zan.Name,
+        MaxHp = Zan.MaxHp,
+        Attack = Zan.Attack,
+        Speed = Zan.Speed,
+        Advances = Zan.Advances,
+        Pattern = Zan.Pattern,
+        Traits = Zan.Traits.Append(TraitId.VendettaFrameAll).ToArray(),
+        Actions = Zan.Actions,
+        PlusText = Zan.PlusText + "。仲間を撃った者が誰であれ、指差された敵を斬る",
+        MinusText = Zan.MinusText,
+        Flavor = Zan.Flavor
+    };
+
     /// <summary>
     /// 裂きのキリ。傷（Wound）の**供給源**。物理側に初めて置いた「盤面に残る汚れ」の書き手。
     ///
@@ -3178,6 +3233,43 @@ public static class UnitCatalog
         MinusText = "追う標が無い羽は、敵味方構わず飛んで、戻ってこない",
         Flavor = "狙うのは得意。見分けるのが苦手。"
     };
+
+    // 第298期（指示書 design/PHASE298_MARK_FEATHER_SPEC.md §4-1）—— ミサの「指差されたものは、全部撃つ」。規定のミサ（M-b）の上に足す。
+
+    /// <summary>第298期 MF-a（新しい標）。規定 ＋ <see cref="TraitId.FeatherMark"/>（標の無かった駒に新しく標が付いたとき、羽が1発その駒へ飛ぶ・敵でも味方でも・在庫は減らない）。対照（<see cref="All"/> に入れない・採否はポン）。</summary>
+    public static readonly UnitDef MisaMFa = new()
+    {
+        Id = Tome.Id,
+        Name = Tome.Name,
+        MaxHp = Tome.MaxHp,
+        Attack = Tome.Attack,
+        Speed = Tome.Speed,
+        Advances = Tome.Advances,
+        Pattern = Tome.Pattern,
+        Traits = Tome.Traits.Append(TraitId.FeatherMark).ToArray(),
+        Actions = Tome.Actions,
+        PlusText = Tome.PlusText + "。指差されたものは、全部撃つ",
+        MinusText = Tome.MinusText + "。味方が指差されても、撃つ",
+        Flavor = Tome.Flavor
+    };
+
+    /// <summary>第298期 MF-b（層も）。規定 ＋ <see cref="TraitId.FeatherMarkLayer"/>（MF-a ＋ 層が1つ増えるたび）。対照（<see cref="All"/> に入れない・採否はポン）。</summary>
+    public static readonly UnitDef MisaMFb = new()
+    {
+        Id = Tome.Id,
+        Name = Tome.Name,
+        MaxHp = Tome.MaxHp,
+        Attack = Tome.Attack,
+        Speed = Tome.Speed,
+        Advances = Tome.Advances,
+        Pattern = Tome.Pattern,
+        Traits = Tome.Traits.Append(TraitId.FeatherMarkLayer).ToArray(),
+        Actions = Tome.Actions,
+        PlusText = Tome.PlusText + "。指差されたものは、全部撃つ",
+        MinusText = Tome.MinusText + "。味方が指差されても、撃つ",
+        Flavor = Tome.Flavor
+    };
+
 
     // ---------------------------------------------------------------------------------
     // 第281期 —— トメの転生の版（指示書 design/PHASE281_TOME_REBIRTH_SPEC.md・報告 design/PHASE281_TOME_REBIRTH.md）。

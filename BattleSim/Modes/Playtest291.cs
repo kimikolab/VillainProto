@@ -29,7 +29,7 @@ static class Playtest291Diag
 
     static EnemyCatalog.PlaytestStage WaveOf(string n) => EnemyCatalog.PlaytestStages[n switch { "boss" => 0, "guard" => 1, "bat" => 2, _ => int.Parse(n) }];
     /// <summary>第296期: 試遊の行が8行になった——この器具は第291期の5行（先頭の5行）だけを読む（ヒサは `Make` の `Pin294` で旧の規定に固定される）。</summary>
-    static (string Name, Formation F)[] Rows291 => Presets.Playtest.Take(5).ToArray();
+    static (string Name, Formation F)[] Rows291 => Presets.Playtest.Take(5).Select(r => (r.Name, FvSwap(r.F, UnitCatalog.Doha, UnitCatalog.DohaD0))).ToArray();   // 第298期: ドハは旧（`DohaD0`）に固定
     static (List<UnitState> P, List<UnitState> E) Make(Formation f, EnemyCatalog.PlaytestStage w)
         => (BattleEngine.Materialize(Kugu292Diag.Pin294(FvSwap(f, UnitCatalog.Kata, UnitCatalog.KataKRb)), BattleContext.PlayerTeam), BattleEngine.MaterializeEnemy(w.Enemy, w.Scale));   // 第293期: カタは第291期の規定（KR-b）に固定・第294期: クグ ／ シガも（KG-b ／ SI-b）
 
@@ -192,7 +192,7 @@ static class Playtest291Diag
         var compareNames = Presets.Compare.Select(r => r.Name).ToHashSet();
         Expect("(c) 試遊の行は5行・`Compare`（64 行）／ `Cross`（12 行）に入っていない・駒はすべて規定（`All`）・5枠が埋まっている・`試遊・標 道中` は `見境改 (ミサ×薙ぎ)` と同じ台",
             pl.Length == 5 && Presets.Compare.Length == 64 && Presets.Cross.Length == 12 && pl.All(r => !compareNames.Contains(r.Name) && !Presets.Cross.Any(c => c.Name == r.Name))
-            && pl.All(r => r.F.Occupied().Count() == 5 && r.F.Occupied().All(o => UnitCatalog.All.Contains(o.Def)))
+            && Presets.Playtest.Take(5).All(r => r.F.Occupied().Count() == 5 && r.F.Occupied().All(o => UnitCatalog.All.Contains(o.Def)))   // 第298期: 固定（`DohaD0`）の前の行で見る
             && pl[4].F.Occupied().SequenceEqual(Presets.Compare.First(c => c.Name == "見境改 (ミサ×薙ぎ)").F.Occupied()));
 
         // (d)〜(h) 台本: 試遊の台 × 試遊の波 ＋ `compare` 64 行 × 本編5波（seed は下）

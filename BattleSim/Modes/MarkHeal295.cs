@@ -60,6 +60,7 @@ static class MarkHeal295Diag
     {
         var g = f.Clone();
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Hisa)) g[slot] = UnitCatalog.HisaHK0;
+        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Doha)) g[slot] = UnitCatalog.DohaD0;   // 第298期
         return g;
     }
     static (string Name, Formation F)[] CompareBuilds() => Common.CompareBuilds().Select(r => (r.Name, Pin296(r.F))).ToArray();

@@ -2086,6 +2086,22 @@ public sealed class UnitTally
     /// </summary>
     public long SharedAway, ShareTakenHits, ShareGives, ShareGiven, ShareGiftAccrued, ShareGifts, ShareGiftCapped, ShareGiftNoTarget, ShareGiftSkipped,
                 ShareGot, ShareGiftGot, ShareGiftTurns, ShareGiftAttacks;
+    /// <summary>
+    /// 第298期 段0-2（<b>計数専用</b>・戦績の帰属のずれ 8 群）。群 g（1 反転 ／ 2 火の変換 ／ 3 癒しの灯 ／ 4 火の癒し ／ 5 耐火の枝 ／ 6 分かちのなまり ／ 7 橋 ／ 8 くべられる火）ごとに、
+    /// 本当の出どころの側: <c>AttrTotal</c>[g] 出した量 ／ <c>AttrFixed</c>[g] そのうち包む前の印が別の駒か誰でもないを指していた量 ／ <c>AttrFromNone</c>[g] うち誰でもない。
+    /// 印が指していた駒の側: <c>AttrStolen</c>[g]（直す前に、その駒の戦績に入っていた量）。量は回復なら回復(与) の増分、なまり ／ くべられる火は攻撃力、橋は HP ＋ 破片の増分。
+    /// </summary>
+    public long[]? AttrTotal, AttrFixed, AttrFromNone, AttrStolen;
+    /// <summary>
+    /// 第298期 段1（<b>計数専用</b>）。ミサ（MF）: <c>MfQueuedFresh</c> ／ <c>MfQueuedLayer</c> 控えた羽（新しい標 ／ 層）・<c>MfShotsFoe</c> ／ <c>MfShotsAlly</c> 撃った羽・
+    /// <c>MfDealtFoe</c> ／ <c>MfDealtAlly</c> 削った量・<c>MfAllyKills</c>・<c>MfFresh</c> ／ <c>MfLayer</c>・<c>MfChainSkipped</c> 羽の連鎖の中で控えなかった標・
+    /// <c>MfDropped</c> 撃つ前に的か自分が倒れた ／ <c>MfHushed</c> 粛 ／ <c>MfBlocked</c> 痺れなど・<c>MfBeforeFirstTurn</c> 自分の最初の手番より前の発。
+    /// 撃たれた味方: <c>MfTaken</c> ／ <c>MfTakenHits</c>。ザン（ZN）: <c>FrameVendettas</c>（うち <c>FrameByFeather</c>）・<c>FrameDealt</c>・<c>FrameNoAccuser</c> ヒサがいなくて出なかった。ヒサ: <c>FrameAccuses</c>。
+    /// </summary>
+    public long MfQueuedFresh, MfQueuedLayer, MfShotsFoe, MfShotsAlly, MfDealtFoe, MfDealtAlly, MfAllyKills, MfFresh, MfLayer, MfChainSkipped, MfDropped, MfHushed, MfBlocked,
+                MfBeforeFirstTurn, MfTaken, MfTakenHits, FrameVendettas, FrameByFeather, FrameDealt, FrameNoAccuser, FrameAccuses;
+    /// <summary>第298期（<b>計数のみ</b>）: 標の書き込み（書き手の側・新しい標 ／ 層 × 敵へ ／ 味方へ）・印の無い書き込み（書かれた側）・標の付いた味方への同士討ち（撃った側）。</summary>
+    public long MarkWriteFoeFresh, MarkWriteFoeLayer, MarkWriteAllyFresh, MarkWriteAllyLayer, MarkWriteNoOwner, FfOnMarked;
     /// <summary>第290期（<b>計数専用</b>・カタ）: <c>CloudByCast</c>[n] n+1 回目の雷を落とした時点の雷雲の合計（8 回目以降は最後の枠）。</summary>
     public long[]? CloudByCast;
 
@@ -3167,6 +3183,13 @@ public sealed class UnitTally
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;
         ShareGot += o.ShareGot; ShareGiftGot += o.ShareGiftGot; ShareGiftTurns += o.ShareGiftTurns; ShareGiftAttacks += o.ShareGiftAttacks;
+        AddHist(ref AttrTotal, o.AttrTotal); AddHist(ref AttrFixed, o.AttrFixed); AddHist(ref AttrFromNone, o.AttrFromNone); AddHist(ref AttrStolen, o.AttrStolen);   // 第298期
+        MfQueuedFresh += o.MfQueuedFresh; MfQueuedLayer += o.MfQueuedLayer; MfShotsFoe += o.MfShotsFoe; MfShotsAlly += o.MfShotsAlly; MfDealtFoe += o.MfDealtFoe; MfDealtAlly += o.MfDealtAlly;
+        MfAllyKills += o.MfAllyKills; MfFresh += o.MfFresh; MfLayer += o.MfLayer; MfChainSkipped += o.MfChainSkipped; MfDropped += o.MfDropped; MfHushed += o.MfHushed; MfBlocked += o.MfBlocked;
+        MfBeforeFirstTurn += o.MfBeforeFirstTurn; MfTaken += o.MfTaken; MfTakenHits += o.MfTakenHits; FrameVendettas += o.FrameVendettas; FrameByFeather += o.FrameByFeather;
+        FrameDealt += o.FrameDealt; FrameNoAccuser += o.FrameNoAccuser; FrameAccuses += o.FrameAccuses;
+        MarkWriteFoeFresh += o.MarkWriteFoeFresh; MarkWriteFoeLayer += o.MarkWriteFoeLayer; MarkWriteAllyFresh += o.MarkWriteAllyFresh; MarkWriteAllyLayer += o.MarkWriteAllyLayer;
+        MarkWriteNoOwner += o.MarkWriteNoOwner; FfOnMarked += o.FfOnMarked;
         // 第218期
         MireSlams += o.MireSlams; MireSlamDry += o.MireSlamDry; MireSlamOnShocked += o.MireSlamOnShocked; MireSlamPops += o.MireSlamPops;
         MireConductPops += o.MireConductPops; MireSlamDealt += o.MireSlamDealt; MireSlamKills += o.MireSlamKills;
@@ -3852,6 +3875,33 @@ public enum BattleEventKind
     /// 版の札を持つ駒がいない戦では1件も出ない。<b>どの規則も読まない。</b>
     /// </summary>
     ShareGive,
+
+    /// <summary>
+    /// ミサの「指差されたものは、全部撃つ」（第298期・MF-a ／ MF-b・<b>表示専用</b>）。標が付いた駒へ羽が飛ぶ瞬間（直後にその1発の `Attack` ／ `Damage`）。
+    /// <c>ActorId</c> ＝ ミサ ／ <c>TargetId</c> ＝ 的 ／ <c>Text</c> ＝ 「敵」か「味方」（<see cref="FeatherMarkLabels"/>）／ <c>Amount</c> ＝ 的の標の層 ／ <c>Slot</c> ＝ 1 新しい標 ・0 層の追加。
+    /// </summary>
+    FeatherMark,
+
+    /// <summary>
+    /// 濡れ衣の仇討ち（第298期・ZN-a ／ ZN-b・<b>表示専用</b>）。<c>Text</c> で2種（<see cref="FramedLabels"/>）:
+    /// 「あいつがやった」＝ ヒサの指差し（<c>ActorId</c> ＝ ヒサ ／ <c>TargetId</c> ＝ 指差した敵 ／ <c>PartnerId</c> ＝ 撃たれた味方）、
+    /// 「濡れ衣」＝ 仇討ちの印（<c>ActorId</c> ＝ ザン ／ <c>TargetId</c> ＝ 斬る敵 ／ <c>PartnerId</c> ＝ 本当に撃った味方）。直後に仇討ちの `Reaction` の `Damage`。
+    /// </summary>
+    Framed,
+}
+
+/// <summary>`FeatherMark`（第298期）の <c>Text</c>。</summary>
+public static class FeatherMarkLabels
+{
+    public const string Foe = "敵";
+    public const string Ally = "味方";
+}
+
+/// <summary>`Framed`（第298期）の <c>Text</c>。</summary>
+public static class FramedLabels
+{
+    public const string Accuse = "あいつがやった";
+    public const string Vendetta = "濡れ衣";
 }
 
 /// <summary>`ShareGive`（第297期）の <c>Text</c>。</summary>
