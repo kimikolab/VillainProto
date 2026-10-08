@@ -6,36 +6,32 @@ using System.Collections.Generic;
 public partial class ShockMarkAura3D : Node3D
 {
     private BattlePawn3D _owner = null!;
-    private readonly List<Sprite3D> _marks = new();
+    private Sprite3D? _mark;
+    private readonly List<Sprite3D> _satelliteMarks = new();
     private readonly List<Sprite3D> _clouds = new();
     private float _time, _sparkAt;
-    private Label3D? _layerNumber;
     internal void Configure(BattlePawn3D owner) => _owner = owner;
 
     internal void Refresh()
     {
-        // 深い層も値は丸めない。密集した分は数値を併記して描画物だけ抑える。
-        int visibleMarks = Math.Min(_owner.MarkLayers, 32);
-        while (_marks.Count < visibleMarks)
+        // 中心を主照準、周囲を積み重なった狙いにする。実数はHUD、描画は最大7個。
+        if (_owner.MarkLayers > 0 && _mark is null)
         {
-            var marker = ShockMarkFx.Sprite(this, _owner.FxPoint, ShockMarkFx.Reticle, 0.64f, new Color("ff5579"));
-            marker.NoDepthTest = true;
-            marker.RenderPriority = 7;
-            _marks.Add(marker);
+            _mark = ShockMarkFx.Sprite(this, _owner.FxPoint, ShockMarkFx.BoldMark, 1.10f, Colors.White);
+            _mark.NoDepthTest = true;
+            _mark.RenderPriority = 7;
         }
-        for (int i = 0; i < _marks.Count; i++) _marks[i].Visible = i < visibleMarks;
-        if (_owner.MarkLayers > 0)
+        if (_mark is not null) _mark.Visible = _owner.MarkLayers > 0;
+        int satellites = Math.Clamp(_owner.MarkLayers - 1, 0, 6);
+        while (_satelliteMarks.Count < satellites)
         {
-            if (_layerNumber is null)
-            {
-                _layerNumber = new Label3D { FontSize = 34, OutlineSize = 8, PixelSize = 0.009f,
-                    Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, Modulate = new Color("ffd4db"),
-                    NoDepthTest = true, RenderPriority = 8 };
-                AddChild(_layerNumber);
-            }
-            _layerNumber.Text = "×" + _owner.MarkLayers;
+            var mark = ShockMarkFx.Sprite(this, _owner.FxPoint, ShockMarkFx.BoldMark, 0.44f,
+                new Color(1, 0.64f, 0.74f, 0.90f));
+            mark.NoDepthTest = true;
+            mark.RenderPriority = 6;
+            _satelliteMarks.Add(mark);
         }
-        if (_layerNumber is not null) _layerNumber.Visible = _owner.MarkLayers > 0;
+        for (int i = 0; i < _satelliteMarks.Count; i++) _satelliteMarks[i].Visible = i < satellites;
         int clouds = _owner.Thundercloud == 0 ? 0 : 1 + (_owner.Thundercloud + 1) / 3;
         while (_clouds.Count < clouds)
             _clouds.Add(ShockMarkFx.Sprite(this, _owner.FxPoint, ShockMarkFx.Cloud, 1.55f, Colors.White));
@@ -52,16 +48,20 @@ public partial class ShockMarkAura3D : Node3D
         var right = camera?.GlobalBasis.X ?? Vector3.Right;
         var up = camera?.GlobalBasis.Y ?? Vector3.Up;
         var front = camera?.GlobalBasis.Z ?? Vector3.Back;
-        for (int i = 0; i < _marks.Count; i++)
+        if (_mark is not null)
         {
-            int ring = i / 8;
-            float a = i % 8 * Mathf.Tau / Math.Min(8, Math.Max(1, _owner.MarkLayers - ring * 8)) + _time * (ring % 2 == 0 ? 0.25f : -0.18f);
-            float radius = _owner.MarkLayers == 1 ? 0 : 0.82f + ring * 0.21f;
-            _marks[i].GlobalPosition = _owner.FxPoint + front * 0.25f
-                + (right * Mathf.Cos(a) + up * Mathf.Sin(a)) * radius;
-            _marks[i].Modulate = new Color("ff5579") { A = 0.87f + 0.12f * Mathf.Sin(_time * 3 + i) };
+            _mark.GlobalPosition = _owner.FxPoint + front * 0.30f;
+            _mark.Scale = Vector3.One * (1 + 0.035f * Mathf.Sin(_time * 2.5f));
         }
-        if (_layerNumber is not null) _layerNumber.GlobalPosition = _owner.FxPoint + front * 0.30f + up * 0.72f + right * 0.98f;
+        int satellites = Math.Clamp(_owner.MarkLayers - 1, 0, 6);
+        for (int i = 0; i < satellites; i++)
+        {
+            // 横へ広げすぎず、体を囲む縦長の軌道。層が深くても外周は増やさない。
+            float angle = i * Mathf.Tau / satellites - Mathf.Pi * 0.5f + _time * 0.18f;
+            _satelliteMarks[i].GlobalPosition = _owner.FxPoint + front * 0.26f
+                + right * (Mathf.Cos(angle) * 0.78f) + up * (Mathf.Sin(angle) * 0.97f);
+            _satelliteMarks[i].Scale = Vector3.One * (1 + 0.04f * Mathf.Sin(_time * 2 + i));
+        }
         for (int i = 0; i < _clouds.Count; i++)
         {
             var cloud = _clouds[i];

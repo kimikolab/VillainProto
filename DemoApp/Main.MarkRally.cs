@@ -7,7 +7,7 @@ public partial class Main
 
     private async Task<bool> PlayMarkRally(BattleEvent e, int index, BattlePawn3D? actor, BattlePawn3D? target)
     {
-        if (_markRally.Starts.TryGetValue(index, out var rally))
+        if (!_zan.RallyStarts.Contains(index) && _markRally.Starts.TryGetValue(index, out var rally))
         {
             int token = _playToken;
             _battleField.ShowMarkRally(rally, _speed);
@@ -29,7 +29,7 @@ public partial class Main
         if (!_markRally.Heals.Contains(index)) return false;
         // HPはHealの本来の位置でだけ反映する。後続MarkRallyで二重に癒さない。
         target?.SetHp(e.HpAfter);
-        _battleField.HealPopup(target, e.Amount);
+        if (!_zan.RallyHeals.Contains(index)) _battleField.HealPopup(target, e.Amount);
         AppendLog($"  [color=#ffbb63]【号令】＋{e.Amount} 回復  {NameOf(e.TargetId)}{WriterSuffix(e.ActorId, e.TargetId)}[/color]");
         return true;
     }

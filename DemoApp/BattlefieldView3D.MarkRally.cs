@@ -16,6 +16,7 @@ public partial class BattlefieldView3D
         MarkRallyPlays = MarkRallyCues = MarkRallyLights = InsightPlays = InsightGuards = VengeancePlays = 0;
         _rallyCaptions.Clear();
         _markRallyEnded = false;
+        ResetZanPresentation();
     }
 
     private void EndMarkRallyPresentation()
@@ -24,6 +25,7 @@ public partial class BattlefieldView3D
         foreach (var caption in _rallyCaptions.Values)
             if (LivePopup(caption)) { caption.Hide(); caption.QueueFree(); }
         _rallyCaptions.Clear();
+        EndZanPresentation();
     }
 
     internal void ShowMarkRally(MarkRallyPresentation.Rally rally, double speed)

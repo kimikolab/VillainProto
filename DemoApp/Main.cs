@@ -1173,6 +1173,7 @@ public partial class Main : Control
 
         _openingById.Clear();
         foreach (DemoOpening opening in _battleOpening) _openingById[opening.InstanceId] = opening;
+        _zan = ZanPresentation.Build(_result.Events, _battleOpening, _markRally);
 
         _battleMode = true;
         _rosterPanel.Visible = false;
@@ -1217,6 +1218,7 @@ public partial class Main : Control
         IndexFireHits(_result.Events);
         _fireFastEvent = false;
         _misaFastEvent = false;
+        _zanFastEvent = false;
         int token = ++_playToken;
         _comboEnds.Clear();
         _hexMarksShown = _hexSharePlays = _hexShareHits = 0;
@@ -1248,9 +1250,13 @@ public partial class Main : Control
             if (_turnTicks.Starts.TryGetValue(eventIndex, out var ticks))
                 await PlayTurnTicks(ticks, token);
             else await ApplyEvent(e, eventIndex);
+            if (token != _playToken || !_battleMode) return;
+            await FinishZan(eventIndex);
+            if (token != _playToken || !_battleMode) return;
             _tickDelayBudget = null;
             _fireFastEvent = false;
             _misaFastEvent = false;
+            _zanFastEvent = false;
             foreach (var combo in _comboEnds.Where(pair => _eventIndex >= pair.Value).ToArray())
             {
                 combo.Key.ReturnFromAttack();
@@ -1364,6 +1370,8 @@ public partial class Main : Control
             : _ticks.Budgets.TryGetValue(eventIndex, out double tickBudget) ? tickBudget : null;
         _fireFastEvent = _firePresentation.FastEvents.Contains(eventIndex);
         _misaFastEvent = _misa.FastEvents.Contains(eventIndex);
+        _zanFastEvent = _zan.FastEvents.Contains(eventIndex);
+        if (await PlayZan(e, eventIndex, actor, target)) return;
         if (PlayFireHitSource(e, eventIndex, actor, target)) return;
         _fireFastEvent |= e.Kind == BattleEventKind.Attack && _fireHits.Contacts.ContainsKey(eventIndex);
         if (e.Kind == BattleEventKind.Spring)
@@ -2454,7 +2462,7 @@ public partial class Main : Control
 
     private async Task Delay(double seconds, bool raw = false)
     {
-        if (!raw && (_fireFastEvent || _misaFastEvent)) return;
+        if (!raw && (_fireFastEvent || _misaFastEvent || _zanFastEvent)) return;
         if (!raw && _tickDelayBudget is double budget)
         {
             seconds = Math.Min(seconds, budget);

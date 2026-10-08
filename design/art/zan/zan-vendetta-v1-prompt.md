@@ -1,0 +1,6 @@
+# ザン・仇討ち差分 v1
+
+内蔵 image_gen で生成。参照画像は `DemoApp/assets/portraits/battle/zan_idle_right.png`。
+出力は `DemoApp/assets/portraits/battle/zan_vendetta_idle_right.png`。透過背景を指定。
+
+Use case: identity-preserve. Create one transparent full-body production game attack sprite of Zan, exact character identity and drawing style of reference image. Adult lean male assassin, navy hood UP, silver-gray shoulder length hair, same troubled serious handsome face, indigo long sleeved armor and split hip cloth, black leather straps and boots, slim metal guards on both hands, TWO SHORT SLENDER steel daggers (not swords). Change pose into a stylish low forward lunge toward SCREEN RIGHT: torso pitched forward, right-facing head with composed intent, front knee bent, back leg extended toward left, one short dagger sweeping forward right at chest level and second reverse-grip dagger trailing near left hip. Strong clear silhouette, whole body, blade tips and cloth tails inside frame with safe margins. Anatomically clear hands. Keep the restrained navy palette and detailed anime cel shading. Single character, no text, no duplicates, no effects, no blood, no backdrop or cast shadow. Genuinely transparent RGBA background.

@@ -7,6 +7,9 @@ internal static class ShockMarkFx
     internal static readonly Color Feather = new("c2acff");
     internal static readonly Color Gold = new("ffd685");
     private static Texture2D? _halo, _reticle, _cloud, _powder;
+    private static Texture2D? _boldMark;
+    // 黒い下線＋朱色＋象牙色の芯。鎧・石壁・暗い服のどれにも輪郭を残す。
+    internal static Texture2D BoldMark => _boldMark ??= Svg("<defs><g id='m' fill='none'><circle cx='64' cy='64' r='37'/><path d='M64 9v25M64 94v25M9 64h25M94 64h25M20 39V20h19M89 20h19v19M108 89v19H89M39 108H20V89'/><circle cx='64' cy='64' r='5'/></g></defs><use href='#m' stroke='#200917' stroke-width='12'/><use href='#m' stroke='#ff4269' stroke-width='7'/><use href='#m' stroke='#fff0d6' stroke-width='2'/>");
     private static Texture2D Svg(string body)
     {
         using var image = new Image();

@@ -87,6 +87,7 @@ public partial class BattleAttackAudio
     }
     private void StopShockMarkSounds()
     {
+        StopZanSounds();
         StopShockMarkAssets();
         foreach (var voice in _shockMarkVoices) voice.Stop();
         _shockMarkLast.Clear(); _shockMarkVoice = 0;

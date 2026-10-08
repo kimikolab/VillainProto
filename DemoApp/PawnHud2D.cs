@@ -30,6 +30,9 @@ public partial class PawnHud2D : Control
     private readonly Label _numbers;
     private readonly Label _delta;
     private readonly Label _forecast;
+    private readonly Label _markBadge;
+    internal string MarkBadgeText => _markBadge.Text;
+    internal bool MarkBadgeVisible => _markBadge.Visible;
     private int _hp, _maxHp, _attack;
     private string _pattern = "";
     private float _ratio = 1;
@@ -104,6 +107,21 @@ public partial class PawnHud2D : Control
         _forecast.HorizontalAlignment = HorizontalAlignment.Center;
         _forecast.Visible = false;
 
+        _markBadge = MakeLabel("", 16, new Color("fff3df"));
+        _markBadge.HorizontalAlignment = HorizontalAlignment.Center;
+        _markBadge.Visible = false;
+        var markBox = UiKit.Box(new Color("240b18"), new Color("ff6283"), 2, 4);
+        markBox.ContentMarginLeft = markBox.ContentMarginRight = 9;
+        markBox.ContentMarginTop = markBox.ContentMarginBottom = 2;
+        _markBadge.AddThemeStyleboxOverride("normal", markBox);
+
+        Layout();
+    }
+
+    internal void SetMarkLayers(int layers)
+    {
+        _markBadge.Text = $"標 {layers}層";
+        _markBadge.Visible = layers > 0;
         Layout();
     }
 
@@ -129,6 +147,11 @@ public partial class PawnHud2D : Control
             {
                 half = Mathf.Max(half, _detail.Size.X * 0.5f);
                 top = _detail.Position.Y;
+            }
+            if (_markBadge.Visible)
+            {
+                half = Mathf.Max(half, _markBadge.Size.X * 0.5f);
+                top = _markBadge.Position.Y;
             }
             if (Icons.Rows > 0)
             {
@@ -171,7 +194,7 @@ public partial class PawnHud2D : Control
         DrawCircle(-_nudge, 2.6f, line);
     }
 
-    /// <summary>下から バー → 詳細 → 状態アイコン → 予告 の順に積む。</summary>
+    /// <summary>下から バー → 詳細 → 標の層数 → 状態アイコン → 予告 の順に積む。</summary>
     private void Layout()
     {
         float top = -_barHeight - 2;
@@ -181,6 +204,12 @@ public partial class PawnHud2D : Control
             _detail.Size = size;
             _detail.Position = new Vector2(-size.X * 0.5f, top - 2 - size.Y).Round();
             top = _detail.Position.Y;
+        }
+        if (_markBadge.Visible)
+        {
+            _markBadge.Size = _markBadge.GetCombinedMinimumSize();
+            _markBadge.Position = new Vector2(-_markBadge.Size.X * 0.5f, top - 2 - _markBadge.Size.Y).Round();
+            top = _markBadge.Position.Y;
         }
         Icons.Position = new Vector2(0, top - 3);
         if (_forecast.Visible)

@@ -277,6 +277,7 @@ public static class UiKit
         "hisa" => 0.0150f,
         "hisa_rally" => 0.019f,
         "zan" => 0.0078f,
+        "zan_vendetta" => 0.120f,
         "kugu" => 0.02995f,
         "shiga" => 0.03125f,
         "tou" => 0.0201823f, // 1536px の下端から足元まで31px。

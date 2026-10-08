@@ -29,6 +29,7 @@ public partial class BattlePawn3D
     internal void SetMarkLayers(int amount)
     {
         MarkLayers = Math.Max(0, amount);
+        Hud.SetMarkLayers(MarkLayers);
         ShockMark.Refresh();
         // 層の照準と従来の単一照準を重ねない。
         _statusEffects.SetLayeredMark(MarkLayers > 0);
@@ -41,6 +42,7 @@ public partial class BattlePawn3D
     internal void EndShockMark()
     {
         _shockMarkEnded = true;
+        Hud.SetMarkLayers(0);
         InterruptWhip = false;
         WhipChainSize = 0;
         _misaFeathers?.SetActive(false);

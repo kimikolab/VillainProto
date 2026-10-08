@@ -14,11 +14,14 @@ public partial class ShockMarkCheck : Control
         try
         {
             CheckSounds();
+            CheckZanPlan();
             bool web = OS.GetCmdlineUserArgs().Contains("--web");
             bool rally = OS.GetCmdlineUserArgs().Contains("--rally");
             if (!OS.GetCmdlineUserArgs().Contains("--replay-only"))
             {
-                if (rally) await CheckRallyVisuals();
+                if (OS.GetCmdlineUserArgs().Contains("--mark-readability")) await CheckMarkReadability();
+                else if (OS.GetCmdlineUserArgs().Contains("--zan-tiers")) await CheckZanTiers();
+                else if (rally) await CheckRallyVisuals();
                 else if (web) await CheckWebVisuals();
                 else await CheckVisuals();
             }
@@ -27,6 +30,7 @@ public partial class ShockMarkCheck : Control
                 foreach (string preset in new[] { "試遊・標 循環", "試遊・標 三人組", "試遊・標 守り型" })
                     for (int stage = 0; stage < 2; stage++) await Replay(preset, stage, 0);
                 await Replay("試遊・標 三人組", 1, 2);
+                await Replay("試遊・標 守り型", 1, 7);
             }
             else if (web && OS.GetCmdlineUserArgs().Contains("--verify"))
             {
@@ -44,6 +48,10 @@ public partial class ShockMarkCheck : Control
                 await Replay("試遊・標 ボス台", 0, 0);
                 await Replay("試遊・標 道中", 1, 4);
             }
+            // 大量の演出を破棄した直後にMonoを終了させず、Resourceの解放をGodotへ流す。
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            await Wait(0.3);
             GD.Print("SHOCK_MARK_CHECK_OK");
             GetTree().Quit();
         }
@@ -61,6 +69,16 @@ public partial class ShockMarkCheck : Control
         }
         Require(audio.GetChildren().OfType<AudioStreamPlayer>().Count() <= existingVoices + 6 + BattleAttackAudio.ShockMarkAssetVoiceLimit,
             "合成SEと指定音源それぞれの同時発音を制限");
+        foreach (var cue in Enum.GetValues<ZanSound>()) audio.PlayZan(cue);
+        var zanVoices = (System.Collections.Generic.Dictionary<ZanSound, AudioStreamPlayer>)
+            typeof(BattleAttackAudio).GetField("_zanVoices", Flags)!.GetValue(audio)!;
+        Require(zanVoices.Count == 4 && zanVoices.Values.All(p => p.Stream is AudioStreamMP3 && p.Stream.GetLength() > 0),
+            "ザンの指定MP3を4種類とも読み込む（仮音ではない）");
+        for (int i = 0; i < 4; i++) audio.PlayZan(ZanSound.Slash);
+        Require(zanVoices.Count == 4 && zanVoices.Values.All(p => p.MaxPolyphony == 2 && p.PitchScale == 1),
+            "連打しても音程と同時発音上限を保つ");
+        foreach (var cue in zanVoices)
+            GD.Print($"ZAN_SOUND_OK {cue.Key} seconds={cue.Value.Stream.GetLength():0.000}");
         audio.StopAll();
         Require(audio.GetChildren().OfType<AudioStreamPlayer>().All(p => !p.Playing), "終了時にSEを止める");
         audio.QueueFree();
@@ -178,15 +196,28 @@ public partial class ShockMarkCheck : Control
             Require(field.MarkLayerPlays == Count(BattleEventKind.MarkLayer) && field.ScarPlays == Count(BattleEventKind.Scar), "標と爪痕の件数");
             Require(field.MisaShots == MisaPresentation.Build(result.Events).HitsByCue.Count, "光線の発数");
             var rallyPlan = MarkRallyPresentation.Build(result.Events);
+            var zanPlan = (ZanPresentation)Read("_zan")!;
             Require(field.MarkRallyCues == Count(BattleEventKind.MarkRally), "叫びの回復台本件数");
-            Require(field.MarkRallyPlays == rallyPlan.Starts.Count, "回復先が2人でも1声・続く仇討ちは別の声");
-            Require(field.MarkRallyPlays == result.TallyByUnit.Values.Sum(t => t.RallyFires - t.RallyNone),
+            int mergedVoices = zanPlan.Starts.Values.Sum(g => g.Rallies.GroupBy(r => r.Cues[0].ActorId).Count());
+            Require(field.MarkRallyPlays == rallyPlan.Starts.Count - zanPlan.RallyStarts.Count + mergedVoices,
+                "仇討ちの束の叫びだけを1声にまとめる");
+            Require(rallyPlan.Starts.Count == result.TallyByUnit.Values.Sum(t => t.RallyFires - t.RallyNone),
                 "engineの独立した叫び回数と一致");
-            Require(field.MarkRallyLights == result.Events.Count(e => e.Kind == BattleEventKind.MarkRally && e.Amount > 0), "量0では光を飛ばさない");
+            int ordinaryLights = rallyPlan.Starts.Where(p => !zanPlan.RallyStarts.Contains(p.Key)).Sum(p => p.Value.Cues.Count(e => e.Amount > 0));
+            int mergedLights = zanPlan.Starts.Values.Sum(g => g.Rallies.SelectMany(r => r.Cues)
+                .GroupBy(e => (e.ActorId, e.TargetId)).Count(c => c.Sum(e => e.Amount) > 0));
+            Require(field.MarkRallyLights == ordinaryLights + mergedLights, "回復先ごとの光・量0では飛ばさない");
             Require(field.InsightPlays == Count(BattleEventKind.Insight), "見切りの件数");
             var zanIds = field.Pawns.Values.Where(p => p.UnitId == "zan").Select(p => (int?)p.InstanceId).ToHashSet();
             Require(field.VengeancePlays == result.Events.Count(e => e.Kind is BattleEventKind.Damage or BattleEventKind.Parry
                 && e.Reaction && !e.FriendlyFire && !e.Relayed && zanIds.Contains(e.ActorId)), "仇討ちだけに予告・返り血には付けない");
+            Require(field.ZanFlurries == zanPlan.Starts.Count && field.ZanHudCount == 0, "束ごとの斬撃・終了時HUD消去");
+            Require(field.VengeancePlays == result.TallyByUnit.Values.Sum(t => t.VendettaFires), "仇討ち回数がengineの独立集計と一致");
+            Require(field.ZanDamage == result.Events.Where(e => e.Kind == BattleEventKind.Damage
+                && e.Reaction && !e.FriendlyFire && !e.Relayed && zanIds.Contains(e.ActorId)).Sum(e => e.Amount),
+                "合計表示が台本のダメージと一致（通常の数字と同じくオーバーキルを含む）");
+            Require(field.ZanRecoilPlays == zanPlan.Starts.Values.Count(g => g.Recoils.Count > 0), "返り血は束ごとに1回");
+            GD.Print($"ZAN_REPLAY_OK {name} stage={stage} seed={seed} pass={pass} hits={field.VengeancePlays} flurries={field.ZanFlurries} damage={field.ZanDamage} blood={field.ZanRecoilPlays} links={field.ZanLinks}");
             GD.Print($"MARK_RALLY_REPLAY_OK {name} stage={stage} seed={seed} pass={pass} shout={field.MarkRallyPlays} heal={field.MarkRallyLights} insight={field.InsightPlays} guards={field.InsightGuards} vengeance={field.VengeancePlays}");
             foreach (var pawn in field.Pawns.Values)
             {

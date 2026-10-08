@@ -34,6 +34,7 @@ public partial class BattlefieldView3D
     {
         if (_hudLayer is null || _pawns.Count == 0) return;
         foreach (BattlePawn3D pawn in _pawns.Values) PlaceHud(pawn);
+        PlaceZanTotals();
 
         HoveredPawn = PawnUnderMouse();
         bool showAll = IsVisibleInTree() && Input.IsKeyPressed(Key.Alt);

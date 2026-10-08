@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="128" viewBox="0 0 256 128">
+  <defs><linearGradient id="edge" x1="0" x2="1" y1="1" y2="0"><stop stop-color="#790d33" stop-opacity="0"/><stop offset=".45" stop-color="#d51945"/><stop offset=".8" stop-color="#ff536c"/><stop offset="1" stop-color="#fff1f2"/></linearGradient></defs>
+  <path d="M6 117C84 77 178 76 249 10C213 68 103 112 6 117Z" fill="#160b20" opacity=".75"/>
+  <path d="M5 110C92 69 187 67 251 4C206 67 113 100 5 110Z" fill="url(#edge)"/>
+  <path d="M64 95C148 66 209 48 251 4C212 57 137 87 64 95Z" fill="#fff4ed"/>
+  <path d="M37 124C113 97 186 94 226 56C177 104 107 115 37 124Z" fill="#ff3459" opacity=".5"/>
+</svg>
