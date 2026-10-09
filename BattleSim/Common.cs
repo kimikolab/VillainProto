@@ -249,6 +249,16 @@ public static Formation Pin304(Formation f)
     return g;
 }
 
+/// <summary>
+/// 第306期: 第二波を HCD15（騎士の斬り返し ＋ 15 回で砕ける粛）に規定化した。第305期までの第二波で測った器具はこれを通す
+/// （`Stages` の第二波だけを旧の波 `EnemyCatalog.Wave2H305` に差し替えた並び・ほかの波は同じ物）。
+/// </summary>
+public static readonly IReadOnlyList<EnemyCatalog.Stage> StagesH305 =
+    EnemyCatalog.Stages.Select((s, i) => i == 1 ? EnemyCatalog.Wave2H305 : s).ToArray();
+
+/// <summary>第306期: 敵の編成が規定の第二波（`Stages[1].Enemy`）なら旧の第二波（`Wave2H305`）に差し替える。ほかの編成はそのまま返す。</summary>
+public static Formation PinWave305(Formation enemy) => ReferenceEquals(enemy, EnemyCatalog.Stages[1].Enemy) ? EnemyCatalog.Wave2H305.Enemy : enemy;
+
 public static Formation FvSwap(Formation f, UnitDef from, UnitDef to)
 {
     var g = new Formation();

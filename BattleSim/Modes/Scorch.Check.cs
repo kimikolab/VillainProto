@@ -45,7 +45,7 @@ static partial class ScorchDiag
         // ---------------------------------------------------------------- (4a)
         Console.WriteLine("## (4a) 盤面を直に組んで1発ずつ");
         Console.WriteLine();
-        var knight = EnemyCatalog.Stages[1].Enemy.Occupied().Select(o => o.Def).First(d => d.Traits.Count == 0);
+        var knight = EnemyCatalog.KnightG;   // 第306期: 第二波の騎士に斬り返しが付いたので、特性の無い巡礼騎士を名指しで引く（第305期までの `Stages[1]` の特性なしの1体目と同じ物）
         Formation P1f = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.TouT0);
         Formation E1f = Formation.Build(front1: knight, front3: knight);
         foreach (var (ver, pct) in new[] { ("F0", 0), ("F1", 25), ("F2", 50), ("F3", 25), ("F4", 50) })

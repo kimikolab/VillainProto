@@ -50,7 +50,7 @@ static partial class SeroShioDiag
         Console.WriteLine("# 第224期 seroshio check");
         Console.WriteLine();
         if (F1 is null || F2 is null || F3 is null || H1 is null || H2 is null) { Console.WriteLine("版の札が見つからない（Phase 0 のコミット）。"); return; }
-        var knight = EnemyCatalog.Stages[1].Enemy.Occupied().Select(o => o.Def).First(d => d.Traits.Count == 0);
+        var knight = EnemyCatalog.KnightG;   // 第306期: 第二波の騎士に斬り返しが付いたので、特性の無い巡礼騎士を名指しで引く（第305期までの `Stages[1]` の特性なしの1体目と同じ物）
         Formation E5 = Formation.Build(front1: knight, front3: knight, center: knight, back1: knight, back3: knight);
 
         Console.WriteLine("## (3a) 盤面を直に組んで");

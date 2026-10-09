@@ -1160,3 +1160,7 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 ## 第305期 —— 粛の版 HD15
 
 - 札 `HushShatter15`（`HushVariantTrait.Shatter15 = 15`・`Add` で `_hushShatterAt` に入れる1行）。粛の伝令の版 `EnemyCatalog.HusherHD15`。判定は第304期の `HushCrack` のまま。
+
+## 第306期 —— 第2波の規定が HCD15 に
+
+- `EnemyCatalog.Stages[1]` ＝ `KnightGR` ×2 ・`HusherHD15`（engine は変えていない——第304〜305期の `HushCrack` ／ `KnightRiposteTrait` がそのまま規定の戦で働く）。旧の第2波は `EnemyCatalog.Wave2H305`。過去の器具の固定は `Common.StagesH305` ／ `Common.PinWave305`。

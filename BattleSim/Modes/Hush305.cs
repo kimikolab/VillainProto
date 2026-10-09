@@ -80,10 +80,10 @@ static class Hush305Diag
         Console.WriteLine("|---|---|---|---|---|---|---|");
         foreach (var (n, f) in Boards())
         {
-            var s0 = Enumerable.Range(0, EnemyCatalog.Stages.Count).Select(i => Many(f, WaveOf((i + 1).ToString()).Make, seeds)).ToArray();
+            var s0 = Enumerable.Range(0, StagesH305.Count).Select(i => Many(f, WaveOf((i + 1).ToString()).Make, seeds)).ToArray();
             foreach (var v in Vers)
             {
-                var a = Enumerable.Range(0, EnemyCatalog.Stages.Count).Select(i => i == 1 ? Many(f, Wave2Of(v), seeds) : v == VS ? s0[i] : Many(f, WaveOf((i + 1).ToString()).Make, seeds)).ToArray();
+                var a = Enumerable.Range(0, StagesH305.Count).Select(i => i == 1 ? Many(f, Wave2Of(v), seeds) : v == VS ? s0[i] : Many(f, WaveOf((i + 1).ToString()).Make, seeds)).ToArray();
                 Console.WriteLine($"| {n} | {v.Key} | " + string.Join(" | ", a.Select((x, i) => v != VS && Math.Abs(x.Win - s0[i].Win) >= 10 ? $"**{Cell(x)}**" : Cell(x))) + " |");
             }
         }
@@ -230,9 +230,9 @@ static class Hush305Diag
         Expect("(a) 定義: HD15 は粛に札を1枚足しただけ（数値・Id は既定のまま）・`Stages` に無い・HCD15 ／ HCD20 の第2波は粛の伝令と巡礼騎士の席だけを差し替える",
             EnemyCatalog.HusherHD15.Traits.SequenceEqual(new[] { TraitId.Hush, TraitId.HushShatter15 }) && EnemyCatalog.HusherHD15.Id == EnemyCatalog.Husher.Id
             && EnemyCatalog.HusherHD15.MaxHp == EnemyCatalog.Husher.MaxHp && EnemyCatalog.HusherHD15.Attack == EnemyCatalog.Husher.Attack && EnemyCatalog.HusherHD15.Speed == EnemyCatalog.Husher.Speed
-            && !EnemyCatalog.Stages.Any(s => s.Enemy.Occupied().Any(o => o.Def == EnemyCatalog.HusherHD15))
+            && !StagesH305.Any(s => s.Enemy.Occupied().Any(o => o.Def == EnemyCatalog.HusherHD15))
             && EnemyOf(VHCD15).Occupied().Count(o => o.Def == EnemyCatalog.KnightGR) == 2 && EnemyOf(VHCD15).Occupied().Count(o => o.Def == EnemyCatalog.HusherHD15) == 1
-            && EnemyOf(VHCD20).Occupied().Count(o => o.Def == EnemyCatalog.HusherHD20) == 1 && EnemyOf(VHCD15).Occupied().Count() == EnemyCatalog.Stages[1].Enemy.Occupied().Count());
+            && EnemyOf(VHCD20).Occupied().Count(o => o.Def == EnemyCatalog.HusherHD20) == 1 && EnemyOf(VHCD15).Occupied().Count() == StagesH305[1].Enemy.Occupied().Count());
 
         (bool Before, bool Last, bool After, int Cracks, bool Alive) Shatter(UnitDef herald, int n)
         {

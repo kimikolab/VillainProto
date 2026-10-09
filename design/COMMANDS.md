@@ -1001,6 +1001,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 hush305 wave2 [seeds]     # 第305期 標軸の行 × 第2波 × 5列（帯 50〜80% に ◎）と、砕けた戦 ／ T ／ ひびの内訳（味方 ／ 騎士）／ 砕けた後に通った行動
     dotnet run --project BattleSim -c Release 0 hush305 cmp [seeds]       # 第305期 `compare` 64 行 × 第2波 × 5列・分布・帯に入った行・(G2)
     dotnet run --project BattleSim -c Release 0 hush305 check             # 第305期 自己検査（HD15 の定義・14 ／ 15 回・止められた斬り返しのひび・第304期の数字の一致・PickOne・verbose）
+    dotnet run --project BattleSim -c Release 0 hush306 play [seeds=50]   # 第306期 試遊の標の行 ＋ 標経済 × 規定の第2波（旧 → 規定・砕けた ／ 倒れた T・騎士の斬り返し・第305期の HCD15 との一致）。本体は `Modes/Hush306.cs`
+    dotnet run --project BattleSim -c Release 0 hush306 cmp [seeds=200]   # 第306期 `compare` 64 行の第2波（旧 → 規定）と第305期の HCD15 との一致・(G2)
+    dotnet run --project BattleSim -c Release 0 hush306 find [seeds=50]   # 第306期 Codex 向け: ひび 15 → 砕けた → 割り込み ／ 騎士を殴るひび ／ 砕けた後の斬り返し が揃った最初の seed
+    dotnet run --project BattleSim -c Release 0 hush306 memo <台の一部> <seed> [最後のT]   # 第306期 Codex 向け: 規定の第2波の台本の並び
+    dotnet run --project BattleSim -c Release 0 hush306 check             # 第306期 自己検査（規定の第2波 ＝ HCD15・旧の波の固定・先遣・PickOne・verbose）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

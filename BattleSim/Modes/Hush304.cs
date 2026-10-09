@@ -63,8 +63,8 @@ static class Hush304Diag
 
     internal static Formation EnemyOf(V v)
     {
-        var g = EnemyCatalog.Stages[1].Enemy.Clone();
-        foreach ((int slot, UnitDef d) in EnemyCatalog.Stages[1].Enemy.Occupied())
+        var g = StagesH305[1].Enemy.Clone();
+        foreach ((int slot, UnitDef d) in StagesH305[1].Enemy.Occupied())
             g[slot] = ReferenceEquals(d, EnemyCatalog.Husher) ? v.Herald : ReferenceEquals(d, EnemyCatalog.KnightG) ? v.Knight : d;
         return g;
     }
@@ -274,10 +274,10 @@ static class Hush304Diag
         Console.WriteLine("|---|---|---|---|---|---|---|");
         foreach (var (n, f) in Boards())
         {
-            var s0 = Enumerable.Range(0, EnemyCatalog.Stages.Count).Select(i => Many(f, WaveOf((i + 1).ToString()).Make, seeds)).ToArray();
+            var s0 = Enumerable.Range(0, StagesH305.Count).Select(i => Many(f, WaveOf((i + 1).ToString()).Make, seeds)).ToArray();
             foreach (var v in vers)
             {
-                var a = Enumerable.Range(0, EnemyCatalog.Stages.Count).Select(i => i == 1 ? Many(f, Wave2Of(v), seeds) : v == VS ? s0[i] : Many(f, WaveOf((i + 1).ToString()).Make, seeds)).ToArray();
+                var a = Enumerable.Range(0, StagesH305.Count).Select(i => i == 1 ? Many(f, Wave2Of(v), seeds) : v == VS ? s0[i] : Many(f, WaveOf((i + 1).ToString()).Make, seeds)).ToArray();
                 Console.WriteLine($"| {n} | {v.Key} | " + string.Join(" | ", a.Select((x, i) => v != VS && Math.Abs(x.Win - s0[i].Win) >= 10 ? $"**{Cell(x)}**" : Cell(x))) + " |");
             }
         }
@@ -573,9 +573,9 @@ static class Hush304Diag
             && EnemyCatalog.HusherHD20.Traits.SequenceEqual(new[] { TraitId.Hush, TraitId.HushShatter20 }) && EnemyCatalog.KnightGR.Traits.SequenceEqual(new[] { TraitId.KnightRiposte })
             && new[] { EnemyCatalog.HusherHB, EnemyCatalog.HusherHD10, EnemyCatalog.HusherHD20 }.All(d => d.Id == EnemyCatalog.Husher.Id && d.MaxHp == EnemyCatalog.Husher.MaxHp && d.Attack == EnemyCatalog.Husher.Attack && d.Speed == EnemyCatalog.Husher.Speed)
             && EnemyCatalog.KnightGR.Id == EnemyCatalog.KnightG.Id && EnemyCatalog.KnightGR.MaxHp == EnemyCatalog.KnightG.MaxHp && EnemyCatalog.KnightGR.Attack == EnemyCatalog.KnightG.Attack
-            && !EnemyCatalog.Stages.Any(s => s.Enemy.Occupied().Any(o => o.Def == EnemyCatalog.HusherHB || o.Def == EnemyCatalog.HusherHD10 || o.Def == EnemyCatalog.HusherHD20 || o.Def == EnemyCatalog.KnightGR))
+            && !StagesH305.Any(s => s.Enemy.Occupied().Any(o => o.Def == EnemyCatalog.HusherHB || o.Def == EnemyCatalog.HusherHD10 || o.Def == EnemyCatalog.HusherHD20 || o.Def == EnemyCatalog.KnightGR))
             && EnemyOf(VHC).Occupied().Count(o => o.Def == EnemyCatalog.KnightGR) == 2 && EnemyOf(VHB).Occupied().Count(o => o.Def == EnemyCatalog.HusherHB) == 1
-            && EnemyOf(VHB).Occupied().Count() == EnemyCatalog.Stages[1].Enemy.Occupied().Count());
+            && EnemyOf(VHB).Occupied().Count() == StagesH305[1].Enemy.Occupied().Count());
 
         // (d) S の第2波 ＝ `Stages[1]` そのまま（器具の組み立てが既定の波と同じ戦を回す）
         {
@@ -583,7 +583,7 @@ static class Hush304Diag
             foreach (var (_, f) in Boards()) for (int s = 0; s < 20; s++)
                 {
                     var a = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), Wave2Of(VS)(), s, verbose: false);
-                    var b = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BattleEngine.Materialize(EnemyCatalog.Stages[1].Enemy, BattleContext.EnemyTeam), s, verbose: false);
+                    var b = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BattleEngine.Materialize(StagesH305[1].Enemy, BattleContext.EnemyTeam), s, verbose: false);
                     if (a.PlayerWon != b.PlayerWon || a.Turns != b.Turns) diff++;
                 }
             Expect("(d) S の第2波は `Stages[1]` と同じ戦（代表台 × seed 0..19）", diff == 0, $"違い {diff}");

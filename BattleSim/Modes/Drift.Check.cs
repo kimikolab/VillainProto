@@ -20,7 +20,7 @@ static partial class DriftDiag
     {
         var ctx = new BattleContext(0, false);
         p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
-        var knight = EnemyCatalog.Stages[1].Enemy.Occupied().Select(o => o.Def).First(d => d.Traits.Count == 0);
+        var knight = EnemyCatalog.KnightG;   // 第306期: 第二波の騎士に斬り返しが付いたので、特性の無い巡礼騎士を名指しで引く（第305期までの `Stages[1]` の特性なしの1体目と同じ物）
         var e = BattleEngine.Materialize(Formation.Build(front1: knight, front3: knight), BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
         foreach (var u in e) AddUnit.Invoke(ctx, new object[] { u });

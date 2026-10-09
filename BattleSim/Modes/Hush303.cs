@@ -64,7 +64,7 @@ static class Hush303Diag
 
     static Doha297Diag.Wave[] Waves() => Doha297Diag.Waves();
     static Doha297Diag.Wave WaveOf(string k) => Waves().First(w => w.Key == k);
-    static Doha297Diag.Wave[] AllWaves() => Enumerable.Range(1, EnemyCatalog.Stages.Count).Select(i => WaveOf(i.ToString())).Concat(new[] { "guard", "bat", "boss" }.Select(WaveOf)).ToArray();
+    static Doha297Diag.Wave[] AllWaves() => Enumerable.Range(1, StagesH305.Count).Select(i => WaveOf(i.ToString())).Concat(new[] { "guard", "bat", "boss" }.Select(WaveOf)).ToArray();
     static Doha297Diag.Wave[] MainWaves() => new[] { "2", "3", "4", "5", "guard", "bat", "boss" }.Select(WaveOf).ToArray();
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
     static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
@@ -189,7 +189,7 @@ static class Hush303Diag
     static void Phase0(int seeds)
     {
         var w2 = WaveOf("2");
-        var en = BattleEngine.Materialize(EnemyCatalog.Stages[1].Enemy, BattleContext.EnemyTeam);
+        var en = BattleEngine.Materialize(StagesH305[1].Enemy, BattleContext.EnemyTeam);
         var herald = en.First(u => u.Def.Traits.Contains(TraitId.Hush));
         Console.WriteLine($"# 第303期 Phase 0（seed 0..{seeds - 1}・規定 S ＝ HV-s・第2波）");
         Console.WriteLine();
@@ -357,12 +357,12 @@ static class Hush303Diag
     // ---------------------------------------------------------------------------------
     static double[] Rates(Formation f, int seeds)
     {
-        var w = new double[EnemyCatalog.Stages.Count];
+        var w = new double[StagesH305.Count];
         for (int i = 0; i < w.Length; i++)
         {
             int ii = i;
             var wins = new bool[seeds];
-            Parallel.For(0, seeds, s => wins[s] = BattleEngine.Run(BattleEngine.Materialize(Pin304(f), BattleContext.PlayerTeam), BattleEngine.Materialize(EnemyCatalog.Stages[ii].Enemy, BattleContext.EnemyTeam), s, verbose: false).PlayerWon);
+            Parallel.For(0, seeds, s => wins[s] = BattleEngine.Run(BattleEngine.Materialize(Pin304(f), BattleContext.PlayerTeam), BattleEngine.Materialize(StagesH305[ii].Enemy, BattleContext.EnemyTeam), s, verbose: false).PlayerWon);
             w[i] = 100.0 * wins.Count(x => x) / seeds;
         }
         return w;

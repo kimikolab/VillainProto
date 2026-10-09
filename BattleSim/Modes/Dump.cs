@@ -114,7 +114,8 @@ public static void Run(string[] args, int stageIndex)
     {
         var e = st.Enemy.Occupied().Select(x => (Raw: x.Def, Def: esc.Apply(x.Def))).Select(x =>
             $"{x.Def.Name}(HP{Stat(x.Def.MaxHp, x.Raw.MaxHp)}/攻{Stat(x.Def.Attack, x.Raw.Attack)}/{Pat(x.Def.Pattern)}/{Adv(x.Def)}"
-            + (x.Def.Actions is null ? "" : $"/{Acts(x.Def)}") + ")");
+            + (x.Def.Actions is null ? "" : $"/{Acts(x.Def)}")
+            + (x.Def.Traits.Count == 0 ? "" : "/札 " + string.Join("・", x.Def.Traits.Select(t => $"`{t}`"))) + ")");   // 第306期: 札を読めるように
         Console.WriteLine($"- **{st.Name}**: {string.Join("、", e)}");
     }
     return;

@@ -56,7 +56,7 @@ static partial class RetreatDiag
         Console.WriteLine("# 第225期 retreat check");
         Console.WriteLine();
         if (J1 is null || J2 is null || J3 is null || J4 is null) { Console.WriteLine("版の札が見つからない（Phase 0 のコミット）。"); return; }
-        var knight = EnemyCatalog.Stages[1].Enemy.Occupied().Select(o => o.Def).First(d => d.Traits.Count == 0);
+        var knight = EnemyCatalog.KnightG;   // 第306期: 第二波の騎士に斬り返しが付いたので、特性の無い巡礼騎士を名指しで引く（第305期までの `Stages[1]` の特性なしの1体目と同じ物）
         Formation E1 = Formation.Build(front1: knight);
         // 前1 トウ ／ 前3 ハネ ／ 中央 クビ ／ 後1 シオ ／ 後3 ネル（前1 の後ろ側の隣は 中央（席 2）・前3 も 中央）
         Formation B(UnitDef shio, UnitDef? center = null) => Formation.Build(front1: UnitCatalog.TouT0, front3: UnitCatalog.HaneK0,

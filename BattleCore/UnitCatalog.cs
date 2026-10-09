@@ -4414,9 +4414,10 @@ public static class EnemyCatalog
     // 調整は Attack のみ。HP を触ると決着ターン数が変わり、積み上げ系の成立可否まで動く。
     public static readonly UnitDef KnightG = Make("knight_g", "巡礼騎士", 75, 24, 7,
         "毎ターン、目の前の1体を重く殴る（攻24）。特性は1つも持たない——数値だけの歩兵");
-    /// <summary>第304期 HC（諸刃）。第二波の巡礼騎士 ＋ <see cref="TraitId.KnightRiposte"/>（斬り返し・ターン外の経路）。測るだけ（`Stages` に載せない）。Id は既定と同じ。</summary>
+    /// <summary>第304期 HC（諸刃）。第二波の巡礼騎士 ＋ <see cref="TraitId.KnightRiposte"/>（斬り返し・ターン外の経路）。Id は既定と同じ。
+    /// <b>第306期に第二波（`Stages[1]`）の規定</b>（HCD15・指示書 design/PHASE306_HUSH_REGULATE_SPEC.md）。第305期までの第二波の騎士は <see cref="KnightG"/>（旧の波 <see cref="Wave2H305"/>）。</summary>
     public static readonly UnitDef KnightGR = Make("knight_g", "巡礼騎士", 75, 24, 7,
-        "毎ターン、目の前の1体を重く殴る（攻24）。殴られると、攻撃してきた相手を斬り返す（攻撃力の半分・1ターンに1回。粛の下では止まる）",
+        "毎ターン、目の前の1体を重く殴る（攻24）。斬られても倒れなければ、斬り返す（攻撃力の半分・1ターンに1回）。粛の下では、その怒りも封じられる",
         TraitId.KnightRiposte);
     // 第二波から外した（2026-08-28）。回復役という設定コメントだけで何も回復しないので、
     // 実際に回復する Chaplain に差し替えた。第二波の性格を戻すときの対照として定義は残す。
@@ -4791,9 +4792,10 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
     public static readonly UnitDef HusherHD20 = Make("husher", "粛の伝令", 45, 11, 6,
         "ターン外の行動が止まる（粛）—— 両軍とも、反撃・追撃・割り込みが出なくなる。黙らせきれないほど騒がれると、沈黙が砕ける（20 回止めたら粛が消える）",
         TraitId.Hush, TraitId.HushShatter20);
-    /// <summary>第305期 HD15（同・15 回）。粛 ＋ <see cref="TraitId.HushShatter15"/>。HC（<see cref="KnightGR"/>）と組んで HCD15 として測る（指示書 design/PHASE305_HUSH_CRACK_SPEC.md）。</summary>
+    /// <summary>第305期 HD15（同・15 回）。粛 ＋ <see cref="TraitId.HushShatter15"/>。HC（<see cref="KnightGR"/>）と組んで HCD15 として測った（指示書 design/PHASE305_HUSH_CRACK_SPEC.md）。
+    /// <b>第306期に第二波（`Stages[1]`）の規定</b>（指示書 design/PHASE306_HUSH_REGULATE_SPEC.md）。第305期までの第二波の粛の伝令は <see cref="Husher"/>（旧の波 <see cref="Wave2H305"/>）。</summary>
     public static readonly UnitDef HusherHD15 = Make("husher", "粛の伝令", 45, 11, 6,
-        "ターン外の行動が止まる（粛）—— 両軍とも、反撃・追撃・割り込みが出なくなる。黙らせきれないほど騒がれると、沈黙が砕ける（15 回止めたら粛が消える）",
+        "盤面を鎮め、両陣営のターン外の行動（反撃・追撃・割り込み）を封じる。だが黙らせきれないほど騒がれると（15 回）、沈黙は砕け散る（その戦の間は戻らない）",
         TraitId.Hush, TraitId.HushShatter15);
 
     // 逆位の異端審問官: 第五波の後1に置く候補として作り、**測って採らなかった**（2026-08-31・第32期）。
@@ -4855,6 +4857,13 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
 
     public sealed record Stage(string Name, Formation Enemy);
 
+    /// <summary>
+    /// 第305期までの第二波（巡礼騎士 <see cref="KnightG"/> ×2 ・粛の伝令 <see cref="Husher"/>）。第306期に第二波を HCD15（<see cref="KnightGR"/> ×2 ・<see cref="HusherHD15"/>）に
+    /// 規定化したので、旧の波を明示の定義で残す。<b>`Stages` には載せない</b>。過去の器具はこちらに固定する（`Common.StagesH305` ／ `Common.PinWave305`）。
+    /// </summary>
+    public static readonly Stage Wave2H305 = new("第二波 / 巡礼騎士団",
+        Formation.Build(front1: KnightG, front3: KnightG, center: Husher, back1: Almoner, back3: ArcherG));
+
     public static IReadOnlyList<Stage> Stages { get; } = new[]
     {
         // 前列に固まると斧の薙ぎに巻かれる。範囲攻撃の存在をここで教える。
@@ -4885,7 +4894,9 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
         // 自己言及的に立つ（軛と同じ狙い）。ただしカド軸は自分の手番を持たないため
         // 割りに行けず、実測で 100% → 0% に張り付いた——詳細は Husher の宣言。
         new Stage("第二波 / 巡礼騎士団",
-            Formation.Build(front1: KnightG, front3: KnightG, center: Husher, back1: Almoner, back3: ArcherG)),
+            // 第306期: ポンの決め（第305期 §6 の K2）で HCD15 を規定にした——騎士は斬り返し（`KnightGR`）・粛は 15 回止めたら砕ける（`HusherHD15`）。
+            // 席・数値・Id は第305期のまま。旧の波は `Wave2H305`（指示書 design/PHASE306_HUSH_REGULATE_SPEC.md）。
+            Formation.Build(front1: KnightGR, front3: KnightGR, center: HusherHD15, back1: Almoner, back3: ArcherG)),
 
         // 貫きは強烈なので1枚まで。2枚置くと後列に支援を置く編成が全滅する。
         // 勇者候補（断罪持ち・攻20）は前3。旧盤面の前2と同じく最初から狙える位置に置く。

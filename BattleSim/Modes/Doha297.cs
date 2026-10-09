@@ -64,7 +64,7 @@ static class Doha297Diag
     internal static Wave[] Waves()
     {
         var l = new List<Wave>();
-        for (int i = 0; i < EnemyCatalog.Stages.Count; i++) { int ii = i; l.Add(new($"第{i + 1}波", (i + 1).ToString(), () => BattleEngine.Materialize(EnemyCatalog.Stages[ii].Enemy, BattleContext.EnemyTeam))); }
+        for (int i = 0; i < StagesH305.Count; i++) { int ii = i; l.Add(new($"第{i + 1}波", (i + 1).ToString(), () => BattleEngine.Materialize(StagesH305[ii].Enemy, BattleContext.EnemyTeam))); }
         foreach (var (i, k) in new[] { (1, "guard"), (2, "bat"), (0, "boss") }) { var w = EnemyCatalog.PlaytestStages[i]; l.Add(new(w.Name, k, () => BattleEngine.MaterializeEnemy(w.Enemy, w.Scale))); }
         return l.ToArray();
     }
