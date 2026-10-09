@@ -51,7 +51,8 @@ internal static class ShockMarkFx
         tween.Finished += sprite.QueueFree;
     }
 
-    internal static void Beam(Node3D parent, Vector3 from, Vector3 to, Color tint, float width, double seconds)
+    internal static void Beam(Node3D parent, Vector3 from, Vector3 to, Color tint, float width, double seconds,
+        double hold = 0)
     {
         var delta = to - from;
         if (delta.LengthSquared() < 0.00001f) return;
@@ -73,8 +74,10 @@ internal static class ShockMarkFx
             var x = y.Cross(Math.Abs(y.Dot(Vector3.Up)) > 0.95f ? Vector3.Forward : Vector3.Up).Normalized();
             beam.GlobalBasis = new Basis(x, y, x.Cross(y));
             var tween = beam.CreateTween().SetParallel();
-            tween.TweenProperty(beam, "scale", new Vector3(0.05f, 1, 0.05f), seconds).SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
-            tween.TweenProperty(material, "albedo_color:a", 0f, seconds);
+            // 光線は全長を瞬時に出す。保持中は芯を細らせず、着弾が読めてから消す。
+            tween.TweenProperty(beam, "scale", new Vector3(0.05f, 1, 0.05f), seconds).SetDelay(hold)
+                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+            tween.TweenProperty(material, "albedo_color:a", 0f, seconds).SetDelay(hold);
             tween.Finished += beam.QueueFree;
         }
     }

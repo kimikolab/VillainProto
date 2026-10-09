@@ -21,6 +21,12 @@ public partial class ShockMarkAudioCheck : Control
                 .Invoke(audio, new object[] { "res://assets/audio/se/" + file })!;
             bool Playing(string file) => audio.GetChildren().OfType<AudioStreamPlayer>().Any(v => v.Playing && v.Stream == Sound(file));
             int Count(ShockMarkSound cue) => audio.ShockAssetPlays.GetValueOrDefault(cue);
+            if (OS.GetCmdlineUserArgs().Contains("--mark-mix"))
+            {
+                await CheckMarkMix(field, audio);
+                field.QueueFree(); await Wait(.1);
+                GD.Print("MARK_AUDIO_MIX_OK"); GetTree().Quit(); return;
+            }
             foreach (string file in BattleAttackAudio.ShockMarkAssetFiles)
             {
                 var stream = Sound(file);

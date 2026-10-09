@@ -18,16 +18,25 @@ public partial class ShockMarkCheck : Control
             bool web = OS.GetCmdlineUserArgs().Contains("--web");
             bool rally = OS.GetCmdlineUserArgs().Contains("--rally");
             bool loop = OS.GetCmdlineUserArgs().Contains("--mark-loop");
+            bool hisa = OS.GetCmdlineUserArgs().Contains("--hisa");
             if (!OS.GetCmdlineUserArgs().Contains("--replay-only"))
             {
-                if (loop) await CheckMarkLoopVisuals();
+                if (hisa) await CheckHisaVisuals();
+                else if (loop) await CheckMarkLoopVisuals();
                 else if (OS.GetCmdlineUserArgs().Contains("--mark-readability")) await CheckMarkReadability();
                 else if (OS.GetCmdlineUserArgs().Contains("--zan-tiers")) await CheckZanTiers();
                 else if (rally) await CheckRallyVisuals();
                 else if (web) await CheckWebVisuals();
                 else await CheckVisuals();
             }
-            if (loop && OS.GetCmdlineUserArgs().Contains("--verify"))
+            if (hisa && OS.GetCmdlineUserArgs().Contains("--verify"))
+            {
+                foreach (string preset in new[] { "試遊・標 循環", "試遊・標 三人組" })
+                    for (int stage = 0; stage < 3; stage++) await Replay(preset, stage, 0);
+                await Replay("試遊・標 三人組", 1, 0, campaign: true);
+                await Replay("試遊・標 三人組", 2, 5);
+            }
+            else if (loop && OS.GetCmdlineUserArgs().Contains("--verify"))
             {
                 foreach (string preset in new[] { "試遊・標 循環", "試遊・標 三人組", "試遊・標 守り型" })
                     for (int stage = 0; stage < 3; stage++) await Replay(preset, stage, 0);
@@ -176,6 +185,38 @@ public partial class ShockMarkCheck : Control
         {
             for (int k = 0; k < 1200 && (bool)Read("_playing")!; k++) await Wait(0.05);
             Require(!(bool)Read("_playing")!, "実戦の再生完走");
+            Require(field.CommandPlays == Count(BattleEventKind.Command)
+                && field.CommandBallPlays == Count(BattleEventKind.CommandBall)
+                && field.CoverPlays == Count(BattleEventKind.Cover), "号令・玉・庇いが台本件数と一致");
+            var hisaPlan = HisaCommandPresentation.Build(result.Events);
+            foreach (int missing in Enumerable.Range(0, result.Events.Count)
+                .Where(i => result.Events[i].Kind == BattleEventKind.Command && !hisaPlan.Layers.ContainsKey(i)))
+                GD.Print("HISA_UNMATCHED " + string.Join(" / ", result.Events.Skip(Math.Max(0, missing - 12)).Take(13)
+                    .Select(e => $"{e.Kind}:{e.Text} {e.ActorId}>{e.TargetId} n={e.Amount}")));
+            Require(hisaPlan.Layers.Count == Count(BattleEventKind.Command), "実戦の号令の直前の層を全件結べる");
+            if (OS.GetCmdlineUserArgs().Contains("--hisa"))
+            {
+                // この検証の編成は全てミサ入り。敵の初回付与もMarkLayerに記録される。
+                int expectedMarkSounds = result.Events.Where((e, i) => e.Kind == BattleEventKind.MarkLayer
+                    && e.Amount > e.Slot && !hisaPlan.DeferredLayers.Contains(i)).Count()
+                    + hisaPlan.Layers.Count;
+                Require(field.MarkAddPlays == expectedMarkSounds, $"実戦の敵への標SE: {field.MarkAddPlays}/{expectedMarkSounds}");
+                GD.Print($"HISA_MARK_AUDIO_OK pass={pass} plays={field.MarkAddPlays}");
+            }
+            Require(hisaPlan.CoverEnds.Count == Count(BattleEventKind.Cover), "実戦の庇いと被弾を全件結べる");
+            if (campaign && name == "試遊・標 三人組" && stage == 1)
+            {
+                var openings = (System.Collections.Generic.List<DemoOpening>)Read("_battleOpening")!;
+                var hushers = openings.Where(o => o.Traits?.Contains(TraitId.Hush) == true).Select(o => o.InstanceId).ToHashSet();
+                foreach (var e in result.Events)
+                {
+                    if (e.Kind == BattleEventKind.Death && e.TargetId is int id) hushers.Remove(id);
+                    if (hushers.Count > 0) Require(e.Kind is not (BattleEventKind.Cover or BattleEventKind.MarkRally),
+                        "粛の保持者が生きている間は庇いと叫びが出ない");
+                }
+                Require(field.QuietPlays > 0, "第2波の止められた通知で黙る");
+            }
+            GD.Print($"HISA_REPLAY_OK {name} stage={stage} seed={seed} campaign={campaign} pass={pass} command={field.CommandPlays} balls={field.CommandBallPlays} spill={field.CommandSpills} cover={field.CoverPlays} quiet={field.QuietPlays}");
             Require(field.InterruptPlays == Count(BattleEventKind.ShockGauge, ShockGaugeLabels.Interrupt), "割り込み件数");
             Require(field.WhipChainPlays == Count(BattleEventKind.ShockGauge, ShockGaugeLabels.WhipChain), "連鎖鞭の件数");
             Require(field.WhipGatherStrands == result.Events.Where(e => e.Kind == BattleEventKind.ShockGauge

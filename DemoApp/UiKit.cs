@@ -110,7 +110,7 @@ public static class UiKit
 
     public static Texture2D LoadTexture(string path, bool mipmaps = false)
     {
-        Image image = Image.LoadFromFile(ProjectSettings.GlobalizePath(path));
+        using Image image = Image.LoadFromFile(ProjectSettings.GlobalizePath(path));
         if (image.IsEmpty())
             throw new InvalidOperationException($"画像を読み込めません: {path}");
         // 細かい銀の装飾は戦場で縮小するとちらつくため、縮小用の画像も持つ。
@@ -276,6 +276,8 @@ public static class UiKit
         "hota" => 0.0120f,
         "hisa" => 0.0150f,
         "hisa_rally" => 0.019f,
+        "hisa_command" => 0.0078125f, // 1536pxの下端から靴底まで12px。
+        "hisa_cover" => 0.0240885f, // v3：右向き。1536pxの下端から靴底まで37px。
         "zan" => 0.0078f,
         "zan_vendetta" => 0.120f,
         "kugu" => 0.02995f,

@@ -2,7 +2,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
-internal enum ShockMarkSound { Beam, FeatherGain, Deploy, Spray, Lock, Scar, Charge, Interrupt, Cloud, ThunderHeavy, Powder, Thread, Snap, RallyHeal, Insight, BeamHit, FeatherMove, FeatherLost, ElectricWhip }
+internal enum ShockMarkSound { Beam, FeatherGain, Deploy, Spray, Lock, Scar, Charge, Interrupt, Cloud, ThunderHeavy, Powder, Thread, Snap, RallyHeal, Insight, BeamHit, FeatherMove, FeatherLost, ElectricWhip, MarkAdd }
 
 public partial class BattleAttackAudio
 {
@@ -92,6 +92,6 @@ public partial class BattleAttackAudio
         foreach (var voice in _shockMarkVoices) voice.Stop();
         _shockMarkLast.Clear(); _shockMarkVoice = 0;
     }
-    internal void StopShockMarkPresentation() => StopShockMarkSounds();
+    internal void StopShockMarkPresentation() { StopShockMarkSounds(); StopHisaSounds(); }
 
 }

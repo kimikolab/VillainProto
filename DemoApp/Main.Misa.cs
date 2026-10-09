@@ -19,6 +19,7 @@ public partial class Main
                 target?.MisaFeathers?.ConfirmLoss(e.Amount);
                 break;
             case FeatherLabels.Volley:
+                await Delay(0.24);
                 await _battleField.BeginMisaVolley(actor, e.Amount, _speed);
                 break;
             case FeatherLabels.Chase:

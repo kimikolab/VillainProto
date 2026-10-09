@@ -30,19 +30,40 @@ public partial class BattlefieldView3D
             await BeginMisaVolley(actor, feathers.Count, speed);
             if (!MarkLoopLive(generation, actor, target)) return;
         }
-        if (!feathers.AimMark(target.FxPoint)) return;
         bool ally = cue.Text == FeatherMarkLabels.Ally;
+        if (!feathers.AimMark(target.FxPoint, crossfire: !ally)) return;
         actor.ShowMovementPortrait(ally ? "tome_spray" : "tome_control", 0.4,
             flip: (target.FxPoint - actor.FxPoint).Dot(_camera.GlobalBasis.X) < 0);
-        await ToSignal(GetTree().CreateTimer(0.075 / speed), SceneTreeTimer.SignalName.Timeout);
+        await ToSignal(GetTree().CreateTimer((ally ? 0.075 : 0.045) / speed), SceneTreeTimer.SignalName.Timeout);
         if (!MarkLoopLive(generation, actor, target) || feathers.FireMark() is not { } muzzle) return;
         FeatherMarkPlays++;
         if (ally) FeatherMarkAllyPlays++;
         Color tint = ally ? new Color("f9b0c8") : MisaLight;
-        ShockMarkFx.Glow(_fxRoot, muzzle, tint, 0.48f, 0.16 / speed);
-        ShockMarkFx.Beam(_fxRoot, muzzle, target.FxPoint, tint, 0.055f, 0.18 / speed);
-        ShockMarkFx.Sparks(_fxRoot, target.FxPoint, tint, 5, 0.4f, 0.18 / speed);
-        _attackAudio.PlayShockMark(ShockMarkSound.Beam, speed: speed);
+        if (ally)
+        {
+            ShockMarkFx.Glow(_fxRoot, muzzle, tint, 0.48f, 0.16 / speed);
+            ShockMarkFx.Beam(_fxRoot, muzzle, target.FxPoint, tint, 0.055f, 0.18 / speed);
+            ShockMarkFx.Sparks(_fxRoot, target.FxPoint, tint, 5, 0.4f, 0.18 / speed);
+            _attackAudio.PlayShockMark(ShockMarkSound.Beam, speed: speed);
+            return;
+        }
+        // 敵への標撃ちは、細い点滅ではなく白い芯を持つ瞬発レーザー。
+        // 倍速でも保持と残光を数フレーム残し、着弾表示より先に消えないようにする。
+        double hold = Math.Max(0.045, 0.07 / speed), decay = Math.Max(0.10, 0.18 / speed);
+        ShockMarkFx.Glow(_fxRoot, muzzle, Colors.White, 0.8f, hold + decay);
+        ShockMarkFx.Beam(_fxRoot, muzzle, target.FxPoint, tint, 0.13f, decay, hold);
+        ShockMarkFx.Beam(_fxRoot, muzzle, target.FxPoint, new Color(tint, 0.45f), 0.035f,
+            Math.Max(0.18, 0.38 / speed), hold);
+        ShockMarkFx.Glow(_fxRoot, target.FxPoint, tint, 1.15f, Math.Max(0.16, 0.28 / speed));
+        ShockMarkFx.Sparks(_fxRoot, target.FxPoint, tint, 10, 0.8f, Math.Max(0.16, 0.30 / speed));
+        MakeGroundRing(target.Home, tint, 0.7f, Math.Max(0.14, 0.24 / speed));
+        float muzzlePan = Math.Clamp((_camera.UnprojectPosition(muzzle).X / _viewport.Size.X - 0.5f) * 1.4f, -0.7f, 0.7f);
+        float hitPan = Math.Clamp((_camera.UnprojectPosition(target.FxPoint).X / _viewport.Size.X - 0.5f) * 1.4f, -0.7f, 0.7f);
+        // 音程を変えず、倍速でも発射音と着弾音の胴を切り詰めすぎない。
+        double soundSpeed = Math.Min(speed, 1.25);
+        _attackAudio.PlayShockMark(ShockMarkSound.Beam, pan: muzzlePan, speed: soundSpeed);
+        _attackAudio.PlayShockMark(ShockMarkSound.BeamHit, pan: hitPan, speed: soundSpeed);
+        CameraPunch(target.FxPoint, AttackPattern.Single);
     }
 
     internal void ShowFramed(BattlePawn3D? actor, BattlePawn3D? target, BattleEvent cue, double speed)

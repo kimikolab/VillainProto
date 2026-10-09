@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 public partial class BattlefieldView3D
 {
     internal int ChargePlays, InterruptPlays, CloudPlays, PowderMainPlays, PowderSpreadPlays, PowderLeakPlays;
-    internal int ThreadPlays, ThreadReleasePlays, ScarPlays, MarkLayerPlays, CowerPlays;
+    internal int ThreadPlays, ThreadReleasePlays, ScarPlays, MarkLayerPlays, MarkAddPlays, CowerPlays;
 
     private void ResetShockMarkCounts()
     {
         ChargePlays = InterruptPlays = CloudPlays = PowderMainPlays = PowderSpreadPlays = PowderLeakPlays = 0;
-        ThreadPlays = ThreadReleasePlays = ScarPlays = MarkLayerPlays = CowerPlays = 0;
+        ThreadPlays = ThreadReleasePlays = ScarPlays = MarkLayerPlays = MarkAddPlays = CowerPlays = 0;
         ResetShockWebCounts();
         ResetMarkRallyCounts();
     }
@@ -40,10 +40,17 @@ public partial class BattlefieldView3D
     {
         if (target is null) return;
         MarkLayerPlays++;
+        bool added = amount > target.MarkLayers;
         target.SetMarkLayers(amount);
         target.SetStatusIcon(StatusKeys.Marked, amount > 0);
         ShockMarkFx.Ring(_fxRoot, target.FxPoint, new Color("ff8199"), 1.8f, 0.32 / speed);
-        _attackAudio.PlayShockMark(ShockMarkSound.Lock);
+        if (added) PlayMarkAdded(target);
+    }
+    internal void PlayMarkAdded(BattlePawn3D target)
+    {
+        MarkAddPlays++;
+        float pan = Math.Clamp((_camera.UnprojectPosition(target.FxPoint).X / _viewport.Size.X - .5f) * 1.4f, -.7f, .7f);
+        _attackAudio.PlayShockMark(ShockMarkSound.MarkAdd, pan: pan);
     }
     internal void ShowScar(BattlePawn3D? target, int maxHp, int hp, double speed)
     {

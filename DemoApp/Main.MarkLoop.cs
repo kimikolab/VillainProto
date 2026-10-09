@@ -27,7 +27,7 @@ public partial class Main
                 if (e.Text == VendettaRoundLabels.Start)
                 {
                     _battleField.ShowRoundStart(actor, e, _speed);
-                    await Delay(0.18);
+                    await Delay(0.30);
                 }
                 else if (e.Text == VendettaRoundLabels.Slash)
                     await _battleField.ShowRoundSlash(actor, target, e, _markLoop.LastSlashes.Contains(index), _speed);

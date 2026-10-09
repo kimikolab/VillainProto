@@ -4,13 +4,14 @@ using System.Collections.Generic;
 
 public partial class BattleAttackAudio
 {
-    // 発射8・着弾6・移動2・消失2・電撃鞭4・大落雷2。別の音に余韻を切らせない。
-    internal const int ShockMarkAssetVoiceLimit = 24;
+    // 発射8・着弾6・移動2・消失2・電撃鞭4・大落雷2・標3。別の音に余韻を切らせない。
+    internal const int ShockMarkAssetVoiceLimit = 27;
     internal static readonly string[] ShockMarkAssetFiles = {
         "misa_beam_1.wav", "misa_beam_2.wav", "misa_beam_3.wav", "misa_beam_hit.wav",
         "misa_deploy.wav", "misa_funnel_move.mp3", "misa_feather_lost.mp3",
         "shiga_electric_whip.mp3", "shiga_electric_hit.wav",
         "kata_thunder_heavy_4.mp3",
+        "mark_add.wav",
     };
     private readonly AudioStreamPlayer?[] _shockAssetVoices = new AudioStreamPlayer?[ShockMarkAssetVoiceLimit];
     private readonly Tween?[] _shockAssetFades = new Tween?[ShockMarkAssetVoiceLimit];
@@ -57,6 +58,11 @@ public partial class BattleAttackAudio
                 break;
             case ShockMarkSound.ThunderHeavy:
                 ShockAssetLayer(22, 2, "kata_thunder_heavy_4.mp3", -15, 1.50 / speed, pan);
+                break;
+            case ShockMarkSound.MarkAdd:
+                // 短い電子音の胴が攻撃音に埋もれない音量。原音・音程・余韻は保持する。
+                // 号令による同時加算は表示側で1回にまとめる。
+                ShockAssetLayer(24, 3, "mark_add.wav", -4, 2.5, pan);
                 break;
             default: return false;
         }

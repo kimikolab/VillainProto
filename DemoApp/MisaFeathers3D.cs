@@ -26,9 +26,12 @@ public partial class MisaFeathers3D : Node3D
     private float _phase, _direction = 1;
     private bool _active = true;
     private Vector3? _aim;
+    private float _commandAimTime;
+    internal void AimCommand(Vector3 point) { _aim = point; _commandAimTime = 1.2f; }
     private bool _deployed;
     internal bool Persistent { get; set; }
     private Feather? _markShot;
+    private int _markGun;
     private float _returnAfter = -1;
     private Vector3 _fieldCenter;
     private Vector2 _fieldRadius = new(5.55f, 2.85f);
@@ -144,15 +147,29 @@ public partial class MisaFeathers3D : Node3D
 
     public void AimAt(Vector3 point) => _aim = point;
 
-    // 近い「羽」を選ぶだけ。命中先と在庫は台本が決める。
-    internal bool AimMark(Vector3 destination)
+    // 味方への誤射は近い羽。敵へは軌道が見える羽を順に使う。命中先と在庫は台本のまま。
+    internal bool AimMark(Vector3 destination, bool crossfire = false)
     {
         if (!_active || _feathers.Count == 0) return false;
-        _markShot = _feathers.Where(f => f.Sprite.Visible)
-            .OrderBy(f => f.Sprite.GlobalPosition.DistanceSquaredTo(destination)).FirstOrDefault();
+        var visible = _feathers.Where(f => f.Sprite.Visible).ToArray();
+        if (crossfire && visible.Length > 0)
+        {
+            var guns = visible;
+            if (GetViewport().GetCamera3D() is { } camera)
+            {
+                Vector2 hit = camera.UnprojectPosition(destination);
+                float reach = GetViewport().GetVisibleRect().Size.X * 0.18f;
+                var readable = visible.Where(f => camera.UnprojectPosition(f.Sprite.GlobalPosition)
+                    .DistanceSquaredTo(hit) >= reach * reach).ToArray();
+                if (readable.Length > 0) guns = readable;
+            }
+            _markShot = guns[_markGun % guns.Length];
+            _markGun = (_markGun + 1) % guns.Length;
+        }
+        else _markShot = visible.OrderBy(f => f.Sprite.GlobalPosition.DistanceSquaredTo(destination)).FirstOrDefault();
         if (_markShot is null) return false;
         var f = _markShot;
-        _aim = null;
+        if (_commandAimTime <= 0) _aim = null;
         f.From = f.Sprite.Position; f.To = destination; f.Time = 0;
         f.Stage = 1; f.Spray = false; f.WillLose = false;
         return true;
@@ -224,6 +241,7 @@ public partial class MisaFeathers3D : Node3D
         _deployed = false; _returnAfter = -1;
         _volley = Array.Empty<Feather>();
         _markShot = null;
+        _markGun = 0;
         foreach (var f in _feathers)
         {
             f.Stage = 0; f.Spray = false; f.Sprite.Visible = active;
@@ -259,6 +277,11 @@ public partial class MisaFeathers3D : Node3D
         if (!_active) return;
         if (GetViewport().GetCamera3D() is { } camera) GlobalBasis = camera.GlobalBasis;
         float dt = (float)(delta * _owner.AnimationSpeed);
+        if (_commandAimTime > 0)
+        {
+            _commandAimTime -= dt;
+            if (_commandAimTime <= 0) _aim = null;
+        }
         _phase += dt;
         if (_returnAfter >= 0)
         {

@@ -353,6 +353,7 @@ public partial class BattlefieldView3D : Control
                     new Vector2((right.X - left.X) * 0.5f + 0.35f, (right.Z - left.Z) * 0.5f + 0.70f));
             }
             _pawns[opening.InstanceId] = pawn;
+            if (opening.Traits?.Contains(TraitId.CommandBall) == true) Orbs(pawn);
             AdoptHud(pawn);
             RegisterSealHolder(opening);
             RegisterInverse(opening);

@@ -18,6 +18,7 @@ public partial class BattlefieldView3D
         _markRallyEnded = false;
         ResetZanPresentation();
         ResetMarkLoop();
+        ResetHisaCommand();
     }
 
     private void EndMarkRallyPresentation()
@@ -27,6 +28,7 @@ public partial class BattlefieldView3D
             if (LivePopup(caption)) { caption.Hide(); caption.QueueFree(); }
         _rallyCaptions.Clear();
         EndZanPresentation();
+        EndHisaCommand();
     }
 
     internal void ShowMarkRally(MarkRallyPresentation.Rally rally, double speed)

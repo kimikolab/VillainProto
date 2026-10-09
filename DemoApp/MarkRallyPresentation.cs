@@ -36,14 +36,22 @@ internal sealed class MarkRallyPresentation
             }
             if (e.Kind != BattleEventKind.MarkRally) continue;
             int start = i;
-            if (i > 0 && events[i - 1] is { Kind: BattleEventKind.Heal } heal
+            int before = i - 1;
+            // 第302期以降は回復と叫びの間にも玉の通知が入る。音声の区切りにはしない。
+            while (before >= 0 && events[before].Kind == BattleEventKind.CommandBall
+                && events[before].ActorId == e.ActorId && events[before].Turn == e.Turn) before--;
+            if (before >= 0 && events[before] is { Kind: BattleEventKind.Heal } heal
                 && heal.ActorId == e.ActorId && heal.TargetId == e.TargetId && heal.Turn == e.Turn
                 && heal.Amount == e.Amount && heal.HpAfter == e.HpAfter)
             {
-                start--;
+                start = before;
                 plan.Heals.Add(start);
             }
-            if (group is null || start != previous + 1 || events[previous].ActorId != e.ActorId
+            bool adjacent = previous >= 0;
+            for (int j = previous + 1; adjacent && j < start; j++)
+                adjacent = events[j].Kind == BattleEventKind.CommandBall && events[j].ActorId == e.ActorId
+                    && events[j].Turn == e.Turn;
+            if (group is null || !adjacent || events[previous].ActorId != e.ActorId
                 || events[previous].PartnerId != e.PartnerId || events[previous].Turn != e.Turn)
             {
                 group = new Rally();

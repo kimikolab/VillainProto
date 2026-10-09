@@ -1153,6 +1153,7 @@ public partial class Main : Control
         _misa = MisaPresentation.Build(_result.Events);
         _markRally = MarkRallyPresentation.Build(_result.Events);
         _markLoop = MarkLoopPresentation.Build(_result.Events);
+        _hisaCommand = HisaCommandPresentation.Build(_result.Events);
         _mireBurstsShown.Clear();
         IndexTimeline(_result.Events);
         _battleOpening = pending.Select(x => new DemoOpening(
@@ -1255,6 +1256,8 @@ public partial class Main : Control
             await FinishZan(eventIndex);
             if (token != _playToken || !_battleMode) return;
             await FinishMarkLoop(eventIndex);
+            if (_hisaCommand.CoverEnds.TryGetValue(eventIndex, out int coverId))
+                _battleField.FindPawn(coverId)?.ReturnFromHisaCover();
             if (token != _playToken || !_battleMode) return;
             _tickDelayBudget = null;
             _fireFastEvent = false;
@@ -1318,7 +1321,7 @@ public partial class Main : Control
                      + $" poisonDrains={_poisonDrainPlays} poisonDrainHits={_poisonDrainHits}"
                      + $" shieldShares={_shieldShown.Count} cowedGains={_cowedShown.Count} cowedLost={_cowedLostPlays} cowedAbsorbed={_cowedAbsorbed}"
                      + $" whetLogs={_whetLogs} whetRelayed={_whetRelayedLogs} healBlocked={_healBlockedLogs} reveille={_reveilleLogs}");
-            GetTree().Quit();
+            await QuitAfterPresentation();
         }
     }
 
@@ -1374,6 +1377,7 @@ public partial class Main : Control
         _fireFastEvent = _firePresentation.FastEvents.Contains(eventIndex);
         _misaFastEvent = _misa.FastEvents.Contains(eventIndex);
         _zanFastEvent = _zan.FastEvents.Contains(eventIndex);
+        if (await PlayHisaCommand(e, eventIndex, actor, target)) return;
         if (await PlayMarkLoop(e, eventIndex, actor, target)) return;
         if (await PlayZan(e, eventIndex, actor, target)) return;
         if (PlayFireHitSource(e, eventIndex, actor, target)) return;
@@ -1516,7 +1520,9 @@ public partial class Main : Control
                 // 第125期 段2: 手番の外の一撃（棘・仇討ち・軋み）は**流れを一度止める**。
                 // **手番の中は詰めてある**（0.16 → 0.14）ので、合計はほぼ動かない（§5-2）。
                 if (e.Reaction && !continuingCombo && !IsMudoCombo(actor) && !flowingAttack && actor?.UnitId != "yomi") await Delay(0.24);
-                await Delay(actor?.UnitId == "yomi" ? 0.045 : flowingAttack ? 0.045 : IsMudoCombo(actor) ? 0.08 : 0.14);
+                // 標撃ちの光線は既に着弾している。HP表示との間に通常攻撃の待ちを挟まない。
+                if (!_markLoop.FeatherAttacks.Contains(eventIndex))
+                    await Delay(actor?.UnitId == "yomi" ? 0.045 : flowingAttack ? 0.045 : IsMudoCombo(actor) ? 0.08 : 0.14);
 
                 // 第124期 3-a: 「薙ぎやゾトの全体攻撃は一斉に入ったほうが爽快感ある」への直答。
                 // **範囲の巻き込みだけを同時着弾にする。単体は現状のまま**
@@ -1549,7 +1555,7 @@ public partial class Main : Control
                     if (reactionToken != _playToken || !_battleMode) return;
                 }
                 ShowParry(e);
-                await Delay(0.30);
+                await Delay(_markLoop.FeatherHits.Contains(eventIndex) ? 0.10 : 0.30);
                 _battleField.EndGuards();
                 break;
 
@@ -1595,7 +1601,7 @@ public partial class Main : Control
                 }
                 await PlayTormentHit(eventIndex, actor, target);
                 ShowDamage(eventIndex, e, actor, target);
-                await Delay(IsMudoCombo(actor) ? 0.10 : 0.16);
+                await Delay(_markLoop.FeatherHits.Contains(eventIndex) ? 0.09 : IsMudoCombo(actor) ? 0.10 : 0.16);
                 if (!e.Relayed && target?.IsGuarding == true)
                 {
                     await Delay(0.10);
@@ -1848,6 +1854,10 @@ public partial class Main : Control
                         }
                     }
                     if (e.Amount > 0) _battleField.PlayStatusGainSound(statusKey);
+                    // 層で鳴った初回付与は重ねず、味方・自分への標はこの音の対象外。
+                    if (statusKey == StatusKeys.Marked && e.Amount > 0 && target.MarkLayers == 0
+                        && actor is not null && actor.Team != target.Team)
+                        _battleField.PlayMarkAdded(target);
                     if (statusKey == StatusKeys.Poison)
                     {
                         target.AddPoisonIconAmount(e.Amount);
