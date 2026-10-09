@@ -980,6 +980,15 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 hisa302 find [seeds=50]   # 第302期 Codex 向け: 玉（`CommandBall`）／ 黙る（`Framed`）／ 庇い ／ 鼓舞（`Rouse`）の件数と最初に出る seed ／ T
     dotnet run --project BattleSim -c Release 0 hisa302 memo <台の一部> <1..5|guard|bat|boss> <seed> [S0|S1|S2|S3|HVs|HBt|HBp] [最後のT]   # 第302期 Codex 向け: 台本の並び
     dotnet run --project BattleSim -c Release 0 hisa302 check             # 第302期 自己検査（定義・粛 ／ 痺れで黙る・叫びは出る・溜まり 60 ／ 捨てる ／ 端数・庇い・鼓舞の期限 ／ 重ね・PickOne・verbose・出来事 ／ 順・経路の名前）
+    dotnet run --project BattleSim -c Release 0 hush303 p0 [seeds]        # 第303期 Phase 0: 粛の伝令（席・倒れたT・倒した駒・受けた攻撃の内訳）／ 粛が倒れた後に決着した割合 ／ 第2波の手番の順。本体は `Modes/Hush303.cs`
+    dotnet run --project BattleSim -c Release 0 hush303 cover [seeds]     # 第303期 §4 庇いの落ちの分解（庇いなし ／ 規定 ／ 空の庇い × 4 帯）と HC-d ／ HC-s（`docs/elite.md` のヒサ在席の行 × 近衛 ／ 大隊・seed 0..799）
+    dotnet run --project BattleSim -c Release 0 hush303 hunt [seeds]      # 第303期 段1-A: 規定 ／ Q1 ／ Q3 ／ QA × 代表台 × 全波 ＋ 第2波の粛の伝令・身振り・戻った割り込み（台本）
+    dotnet run --project BattleSim -c Release 0 hush303 wave2 [seeds]     # 第303期 標軸の行 × 第2波（第302期の規定 → 規定 → Q1 → Q3 → QA）と、粛が止めた動作
+    dotnet run --project BattleSim -c Release 0 hush303 ver [seeds]       # 第303期 段1-B: HC-d ／ HC-s × 代表台 × 全波
+    dotnet run --project BattleSim -c Release 0 hush303 cmp [seeds]       # 第303期 `compare` のヒサ在席の 10 行 × 版と (G2)
+    dotnet run --project BattleSim -c Release 0 hush303 find [seeds=50]   # 第303期 Codex 向け: 身振り → 仇巡り ／ 一斉射撃 → 粛が倒れる → 声が戻る が揃った最初の seed
+    dotnet run --project BattleSim -c Release 0 hush303 memo <台の一部> <1..5|guard|bat|boss> <seed> [S|Q1|Q3|QA|HCd|HCs|HCp|NC|P302] [最後のT]   # 第303期 Codex 向け: 台本の並び
+    dotnet run --project BattleSim -c Release 0 hush303 check             # 第303期 自己検査（定義・粛で叫ばない ／ 倒れた後は叫ぶ・身振りの条件 ／ 層 ／ 羽・QA の最優先・HC-d ／ HC-s ／ 空の庇い・PickOne・verbose）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

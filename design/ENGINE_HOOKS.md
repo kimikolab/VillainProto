@@ -1139,3 +1139,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - 計数のみ: ミサの `AccuseFeathers`（指差しの標が呼んだ羽・羽の控え `_mfQueue` に印 `Acc`）。
 - **`OutOfTurnRoutes.Names` に第301期の「庇い」が抜けていた**（名前 18 ／ 列挙 19）。「庇い」「指差し」「叫び」を足して列挙とそろえた（`hisa302 check` (k)）。
 - 第301期の規定のヒサで測った器具は `Common.Pin302`（ヒサ → `HisaH301`）。第301期の版（`HisaHLi` ／ `HisaHLt3` ／ `HisaHLt8` ／ `HisaHC*`）は `HisaH301` から作る。
+
+## 第303期 —— 叫びも粛で黙る（規定）／ 身振りと粛を最優先（版）／ 庇いの版
+
+- **規定のヒサに `RallyQuiet`**（第302期の HV-s の札そのまま・`BundlePop` が叫ぶ前に `CanActOutOfTurn(hisa, OutOfTurnRoute.Rally)`）。旧の規定は `HisaH302`（`Common.Pin303`）。マイナスの第184〜302期の文面は定数 `UnitCatalog.HisaMinus301`（`HisaHK0` が `Hisa.MinusText` を参照していた）。
+- **身振り（版 Q1 ／ Q3 ／ QA・札 `HushGestureTrait`）。** ヒサの `OnAction`（号令の札の直前に並べる）が `BattleContext.HushGesture` を呼び、相手陣営の生きている粛の保持者（`_hushHolders`・席番号の若い方 `HushHolderOf`）に `LayerMark` で 1 ／ 3 層（`CanCarve` と同じ条件）。**`CanActOutOfTurn` を通さない**（手番の中）。計数 `GestureFires` ／ `GestureLayers`。表示専用 `Framed`「身振り」（層より先に出す）。
+- **QA の最優先（`HushFocusTarget`・`_hushFocusLive` ／ `_hushFocusTeams`）。** ザンの `VendettaTurn` の並び（標の敵の先頭へ）・`SelectTargetChain` の炸裂の段（`RuptureTrait.Preferred` の前）・`DivertTrait.OnTurnStart` の1体目（同値の `PickOne` の前）だけが読む。札の持ち主がいなければ比較1つで抜ける。
+- **庇いの版（`TryCover` の `CanActOutOfTurn` の後ろ）。** HC-d `CoverSkipShoulder`: 庇う相手が `CoverTrait.Shoulders`（分かち・巨躯・SR-a・庇う・殉教・後備え・棘守り）なら見送る。HC-s `CoverSkipLethal`: `CoverEstimate`（元の一撃にヒサの被ダメ修正と味方の惨禍を掛け、軛で切る・軽減の族は見積もらない）がヒサの HP ＋ 破片以上なら見送る。どちらも1戦1度を使わない。空の庇い `CoverPlacebo`（対照）: 判定と1戦1度は本物と同じで `Roll(100)` を1つ引き、一撃は元の相手が受ける。計数 `CoverSkipShoulder` ／ `CoverSkipLethal` ／ `CoverPlacebos` ／ `CoverEstLethalWrong`。印だけの札の器は `MarkOnlyTrait`。

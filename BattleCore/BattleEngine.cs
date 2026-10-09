@@ -7659,6 +7659,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.CommandNow)) _commandNowLive = true;    // 第301期（HL-i・まとまりで叩かれた標の敵を控える）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
         if (CommandTrait.IsRouse(u)) _rouseLive = true;                // 第302期（HB・鼓舞の受け手の計数）
+        if (u.HasTrait(TraitId.HushGestureFocus)) { _hushFocusLive = true; _hushFocusTeams.Add(u.TeamId); }   // 第303期（QA・粛の保持者を最優先）
+        if (u.HasTrait(TraitId.CoverPlacebo)) _coverHolders.Add(u);    // 第303期（空の庇い・対照）
         if (u.HasTrait(TraitId.Thrust) || u.HasTrait(TraitId.ThrustPlain)) _thrustLive = true;   // 第186期 追補
         if (HeroShieldTrait.Holds(u)) _heroShieldLive = true;   // 第267期（勇者の庇い）
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
@@ -8903,7 +8905,7 @@ public sealed class BattleContext
         bool rupture = _ruptureLive && attacker.HasTrait(TraitId.Rupture);
         bool finisher = rupture || attacker.HasTrait(TraitId.Finisher);
         UnitState? marked = rupture
-            ? RuptureTrait.Preferred(this, foes)
+            ? (_hushFocusLive && HushFocusTarget(attacker, needMark: true) is { } hfr && foes.Contains(hfr) ? hfr : RuptureTrait.Preferred(this, foes))   // 第303期（QA）
             : finisher
             ? FinisherTrait.Preferred(this, foes)
             : PickOne(foes.Where(f => f.RawCounter(StatusKeys.Marked) > 0).ToList());
@@ -13610,6 +13612,22 @@ public sealed class BattleContext
         if (hisa is null) return false;
         UnitTally ht = TallyOf(hisa);
         if (!CanActOutOfTurn(hisa, OutOfTurnRoute.Cover)) { if (HushBindingNow) ht.CoverHushed++; else ht.CoverBlocked++; return false; }
+        // 第303期 段1-B（版）: HC-d は肩代わりの札の持ち主を庇わない。HC-s はヒサが倒れる見積もりの一撃を庇わない（どちらも1戦1度を使わない）。
+        if (hisa.HasTrait(TraitId.CoverSkipShoulder) && CoverTrait.Shoulders(target)) { ht.CoverSkipShoulder++; return false; }
+        bool estSafe = false;
+        if (hisa.HasTrait(TraitId.CoverSkipLethal))
+        {
+            if (CoverEstimate(hisa, raw) >= hisa.Hp + hisa.RawCounter(StatusKeys.Armor)) { ht.CoverSkipLethal++; return false; }
+            estSafe = true;
+        }
+        // 空の庇い（対照）: 判定と1戦1度は本物と同じ・乱数を1つ引く・一撃は元の相手が受ける。
+        if (hisa.HasTrait(TraitId.CoverPlacebo))
+        {
+            hisa.SetCounter(CoverTrait.UsedKey, 1);
+            ht.CoverPlacebos++;
+            Roll(100);
+            return false;
+        }
         hisa.SetCounter(CoverTrait.UsedKey, 1);
         ht.CoverFires++;
         ht.CoverRaw += raw;
@@ -13630,7 +13648,74 @@ public sealed class BattleContext
         _coverHitNext = false;
         ht.CoverTaken += Math.Max(0, before - Math.Max(0, hisa.Hp));
         if (!hisa.IsAlive) ht.CoverDied++;
+        if (!hisa.IsAlive && estSafe) ht.CoverEstLethalWrong++;   // 第303期（計数のみ・HC-s の見積もりの外れ）
         return true;
+    }
+
+    /// <summary>
+    /// 第303期 HC-s: 庇ったヒサが受ける量の見積もり。<b>入口の族の増減</b>（ヒサの札の被ダメ修正 `ModifyIncomingDamage`・味方の惨禍）を元の一撃に掛け、軛が効いていれば上限で切る。
+    /// ヒサは味方なので標の +50% は乗らない。<b>軽減の族（据え・散開・萎縮・矢面・層・火の鎧）は見積もらない</b>（倒れると見なしやすい側）。盤面は読むだけ。
+    /// </summary>
+    int CoverEstimate(UnitState hisa, int raw)
+    {
+        int amount = raw;
+        foreach (Trait t in hisa.Traits) amount = t.ModifyIncomingDamage(hisa, amount);
+        foreach (UnitState u in LivingMembers(hisa.TeamId))
+            if (u != hisa && u.HasTrait(TraitId.Havoc)) { amount += amount * HavocTrait.Percent / 100; break; }
+        return YokeBinding ? Math.Min(amount, YokeTrait.Cap) : amount;
+    }
+
+    // ---- 第303期 段1-A —— 身振り（ヒサの版 Q1 ／ Q3 ／ QA・札 `HushGestureTrait`）と、QA の「粛の保持者を最優先」（`HushFocusTarget`）。
+    // 粛の保持者（`_hushHolders`）が相手陣営に生きている間だけ。**保持者がいなければ件数の比較で抜ける。乱数を引かない。**
+    bool _hushFocusLive;
+    readonly HashSet<int> _hushFocusTeams = new();
+
+    /// <summary>相手陣営の生きている粛の保持者（席番号の若い方）。いなければ null。</summary>
+    UnitState? HushHolderOf(int opp)
+    {
+        UnitState? best = null;
+        foreach (UnitState h in _hushHolders)
+            if (h.IsAlive && h.TeamId == opp && (best is null || h.Slot < best.Slot)) best = h;
+        return best;
+    }
+
+    /// <summary>
+    /// QA: <paramref name="attacker"/> の陣営に身振り（QA）の札の持ち主がいる戦で、相手陣営の粛の保持者（<paramref name="needMark"/> なら標を持つときだけ）。
+    /// 標を読む駒の手番の的選び（ザンの仇巡りの順・ミサの炸裂の段・ソラの手番の頭の標）だけが呼ぶ。いなければ null。
+    /// </summary>
+    public UnitState? HushFocusTarget(UnitState attacker, bool needMark)
+    {
+        if (!_hushFocusLive || !_hushFocusTeams.Contains(attacker.TeamId)) return null;
+        UnitState? h = HushHolderOf(Opponent(attacker.TeamId));
+        if (h is null || (needMark && h.RawCounter(StatusKeys.Marked) <= 0)) return null;
+        return h;
+    }
+
+    /// <summary>身振り: 粛の保持者に標を <paramref name="n"/> 層まで付ける（ミサがいない戦では標の無いときに1回「付ける」だけ）。<see cref="HushGestureTrait"/> だけが呼ぶ。</summary>
+    public void HushGesture(UnitState hisa, int n)
+    {
+        if (_hushHolders.Count == 0) return;
+        UnitState? foe = HushHolderOf(Opponent(hisa.TeamId));
+        if (foe is null) return;
+        int done = 0;
+        // 表示専用: 指差す身振りを層より先に出す（`Amount` ＝ 付ける予定の層・`Slot` ＝ 付ける前の層）。盤面は読むだけ。
+        if (_verbose)
+        {
+            int planned = MarkLayers && foe.TeamId != PlayerTeam ? n : foe.RawCounter(StatusKeys.Marked) <= 0 ? 1 : 0;
+            Emit(new BattleEvent { Kind = BattleEventKind.Framed, Turn = _turn, ActorId = hisa.InstanceId, TargetId = foe.InstanceId, Amount = planned, Slot = foe.RawCounter(StatusKeys.Marked), Text = FramedLabels.Gesture, Team = foe.TeamId });
+        }
+        TraitMark m = BeginTrait(hisa.HasTrait(TraitId.HushGesture1) ? TraitId.HushGesture1 : hisa.HasTrait(TraitId.HushGesture3) ? TraitId.HushGesture3 : TraitId.HushGestureFocus, hisa);
+        for (int i = 0; i < n && CanCarve(foe); i++)
+        {
+            bool fresh = foe.RawCounter(StatusKeys.Marked) <= 0;
+            LayerMark(foe, hisa);
+            if (fresh) EmitStatusGain(foe, StatusKeys.Marked, 1, hisa);   // 表示専用
+            done++;
+        }
+        EndTrait(m);
+        UnitTally ht = TallyOf(hisa);
+        ht.GestureFires++; ht.GestureLayers += done;
+        Log($"    {hisa.Name} は声を奪われたまま、黙って {foe.Name} を指差した（層 {done} を刻む・層 {foe.RawCounter(StatusKeys.Marked)}）", LogKind.Trigger, hisa);
     }
 
     // ---- 第299期 段1 —— ザンの手番「仇巡り」（ZM-a `VendettaRound` ／ ZM-1 `VendettaRoundOne`・指示書 design/PHASE299_ZAN_ROUND_SPEC.md §4）。
@@ -13660,6 +13745,12 @@ public sealed class BattleContext
             if (l > 0) marked.Add((f, l));
         }
         marked.Sort((a, b) => a.Layer != b.Layer ? b.Layer.CompareTo(a.Layer) : a.Foe.Slot.CompareTo(b.Foe.Slot));
+        // 第303期（QA）: 粛の保持者を層に関わらず先頭に（版の札を持つ味方がいる戦だけ・乱数を引かない）。
+        if (_hushFocusLive && HushFocusTarget(actor, needMark: true) is { } hf)
+        {
+            int hi = marked.FindIndex(x => x.Foe == hf);
+            if (hi > 0) { var x = marked[hi]; marked.RemoveAt(hi); marked.Insert(0, x); }
+        }
         int cap = VendettaTrait.RoundCap, layers = 0;
         foreach (var m in marked) layers += m.Layer;
         t.ZanTurns++;

@@ -715,6 +715,14 @@ public enum TraitId
     CommandRouse,     // 号令・重い玉＋鼓舞（第302期・HB-t）: 溢れ 40 で玉1つ・3つまで（120）。手番に玉を全部使い、玉1つにつき層 +1 ＋ 味方全員の攻撃力 +5（ヒサの次の手番の始まりまで・上書き）（同上・engine の `CommandTurnFire`）
     CommandRouseStay, // 同（HB-p）: 鼓舞が戦の終わりまで続き、号令ごとに重なる（同上）
 
+    // --- 第303期で足した札（ヒサの版 `UnitCatalog.HisaQ1` ／ `HisaQ3` ／ `HisaQA` ／ `HisaHCd` ／ `HisaHCs` ／ `HisaHCp` だけが持つ） ---
+    HushGesture1,     // 身振り（Q1）: 粛の保持者が生きている間、ヒサの手番（号令の前）に粛の保持者を指差して標 +1 層。手番の中の動作なので粛では止まらない（`HushGestureTrait`・engine の `HushGesture`）
+    HushGesture3,     // 同（Q3）: 標 +3 層
+    HushGestureFocus, // 同（QA）: Q3 ＋ 標を読む駒の手番の的選び（ザンの仇巡り・ミサの一斉射撃・ソラの手番の頭の標）で粛の保持者を最優先（engine の `HushFocusTarget`）
+    CoverSkipShoulder,// 庇いの版（HC-d）: 肩代わりの札（分かち・巨躯・SR-a・庇う・殉教・後備え・棘守り）を持つ味方は庇わない（**札そのものは挙動を持たない**・engine の `TryCover`）
+    CoverSkipLethal,  // 庇いの版（HC-s）: 受けるとヒサ自身が倒れる一撃（見積もり）では庇わない（同上）
+    CoverPlacebo,     // 空の庇い（対照）: 庇いの判定だけ通し（1戦1度を使う）、乱数を1つ引いて、一撃は元の相手が受ける（同上・**診断の対照だけ**）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -4489,7 +4497,9 @@ public sealed class DivertTrait : Trait
         for (int i = 0; i < ctx.Divert.TargetCount && foes.Count > 0; i++)
         {
             int top = foes.Max(f => f.Hp);
-            UnitState? pick = ctx.PickOne(foes.Where(f => f.Hp == top).ToList());
+            // 第303期（QA）: 粛の保持者を最初に指差す（版の札を持つ味方がいる戦だけ・乱数を引かない）。
+            UnitState? hf = i == 0 ? ctx.HushFocusTarget(self, needMark: false) : null;
+            UnitState? pick = hf is not null && foes.Contains(hf) ? hf : ctx.PickOne(foes.Where(f => f.Hp == top).ToList());
             if (pick is null) break;
             foes.Remove(pick);   // 同じ相手に2回付けない（TargetCount は「体数」）
             if (remember && i == 0) self.SetCounter(DeflectTrait.TargetKey, pick.InstanceId + 1);
@@ -12689,6 +12699,36 @@ public sealed class CommandTrait : Trait
 }
 
 /// <summary>
+/// 身振り（第303期・ヒサの版 Q1 ／ Q3 ／ QA）。<b>粛の保持者（敵）が生きている間、ヒサの手番に（矢面 ／ 逃げ回るの後・号令の前）粛の保持者を指差して標を付ける。</b>
+/// 手番の中の動作なので <see cref="BattleContext.CanActOutOfTurn"/> を通さない（粛では止まらない・痺れで手番が潰れたら出ない）。
+/// 層の書き込みは <see cref="BattleContext.LayerMark"/>（ミサがいる戦では層が積もり羽が控えられる——標撃ちの羽は割り込みなので粛の下では飛ばない）。
+/// QA（<see cref="TraitId.HushGestureFocus"/>）は Q3 に加えて、標を読む駒の手番の的選びで粛の保持者を最優先にする（engine の <c>HushFocusTarget</c>）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class HushGestureTrait : Trait
+{
+    readonly TraitId _id;
+    public HushGestureTrait(TraitId id) => _id = id;
+    public override TraitId Id => _id;
+
+    /// <summary>1回の身振りで付ける層。</summary>
+    public static int Layers(TraitId id) => id == TraitId.HushGesture1 ? 1 : 3;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        ctx.HushGesture(self, Layers(_id));
+    }
+}
+
+/// <summary>第303期: 挙動を持たない印だけの札（engine が <c>HasTrait</c> で読む）。</summary>
+public sealed class MarkOnlyTrait : Trait
+{
+    readonly TraitId _id;
+    public MarkOnlyTrait(TraitId id) => _id = id;
+    public override TraitId Id => _id;
+}
+
+/// <summary>
 /// 叫びも粛で黙る（第302期・ヒサの版 HV-s）。<b>印だけの札</b>——engine の <c>BundlePop</c> が「叫ぶ前に <see cref="BattleContext.CanActOutOfTurn"/> を問う」かを読む（経路 <see cref="OutOfTurnRoute.Rally"/>）。
 /// </summary>
 public sealed class RallyQuietTrait : Trait
@@ -12706,6 +12746,10 @@ public sealed class CoverTrait : Trait
 {
     /// <summary>1戦に1度の印（ヒサの私有・<c>OnCarryOver</c> で消す）。</summary>
     public const string UsedKey = "coverUsed";
+
+    /// <summary>第303期 HC-d: 味方のダメージを引き受ける札（肩代わりの族 ＝ 分かち・巨躯・SR-a と、標的選択で引き受ける 庇う・殉教・後備え・棘守り）を持つか。</summary>
+    public static bool Shoulders(UnitState u) => u.HasTrait(TraitId.Sharer) || u.HasTrait(TraitId.Colossus) || u.HasTrait(TraitId.DeflectWide)
+        || u.HasTrait(TraitId.Guardian) || u.HasTrait(TraitId.Martyr) || u.HasTrait(TraitId.RearGuard) || u.HasTrait(TraitId.ThornGuard);
 
     public override TraitId Id => TraitId.HisaCover;
 
@@ -16899,6 +16943,12 @@ public static class TraitCatalog
         new RallyQuietTrait(),                              // 第302期（HV-s・叫びも粛で黙る・印だけ）
         new CommandTrait(TraitId.CommandRouse),             // 第302期（HB-t）
         new CommandTrait(TraitId.CommandRouseStay),         // 第302期（HB-p）
+        new HushGestureTrait(TraitId.HushGesture1),         // 第303期（Q1）
+        new HushGestureTrait(TraitId.HushGesture3),         // 第303期（Q3）
+        new HushGestureTrait(TraitId.HushGestureFocus),     // 第303期（QA）
+        new MarkOnlyTrait(TraitId.CoverSkipShoulder),         // 第303期（HC-d・印だけ）
+        new MarkOnlyTrait(TraitId.CoverSkipLethal),           // 第303期（HC-s・印だけ）
+        new MarkOnlyTrait(TraitId.CoverPlacebo),              // 第303期（空の庇い・対照・印だけ）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

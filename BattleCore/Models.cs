@@ -2118,6 +2118,12 @@ public sealed class UnitTally
     public int RousePeakAtk;
     public long[]? CommandBallHist;
     /// <summary>
+    /// 第303期（<b>計数のみ</b>）。ヒサ ＝ <c>GestureFires</c> ／ <c>GestureLayers</c> 身振り（粛の保持者を指差した回数 ／ 付けた層）・
+    /// <c>CoverSkipShoulder</c> ／ <c>CoverSkipLethal</c> 庇いの版で庇わなかった倒れる一撃（肩代わりの札 ／ ヒサが倒れる見積もり）・<c>CoverPlacebos</c> 空の庇い（対照）・
+    /// <c>CoverEstLethalWrong</c> HC-s で「倒れない」と見積もって庇ったのに倒れた回数。
+    /// </summary>
+    public long GestureFires, GestureLayers, CoverSkipShoulder, CoverSkipLethal, CoverPlacebos, CoverEstLethalWrong;
+    /// <summary>
     /// 第299期（<b>計数のみ</b>・ザンの手番）。仇指し（<see cref="TraitId.Vendetta"/>）の保持者が手番で振ったとき（規定でも数える）:
     /// <c>ZanTurns</c> 手番 ／ <c>ZanTurnNoMarked</c> 標を持つ敵が 0 ／ <c>ZanTurnMarkedFoes</c> ／ <c>ZanTurnLayers</c> 手番の時点の標を持つ敵の数 ／ 層の合計 ／
     /// <c>ZanPlanA</c> ／ <c>ZanPlan1</c> 仇巡りの見込みの太刀（ZM-a ＝ 層の合計・ZM-1 ＝ 敵の数・上限で切る）／ <c>ZanPlanACapped</c> ／ <c>ZanPlan1Capped</c> 上限に達した手番 ／
@@ -3243,6 +3249,8 @@ public sealed class UnitTally
         AccuseSilenced += o.AccuseSilenced; AccuseSilencedHush += o.AccuseSilencedHush; RallyHushed += o.RallyHushed; RallyBlocked += o.RallyBlocked; CommandDropped += o.CommandDropped;   // 第302期
         CommandDropEvents += o.CommandDropEvents; CommandPoolLow += o.CommandPoolLow; RouseFires += o.RouseFires; RouseGiven += o.RouseGiven; AccuseFeathers += o.AccuseFeathers;
         RousedReads += o.RousedReads; RousedBonus += o.RousedBonus; RousePeakAtk = Math.Max(RousePeakAtk, o.RousePeakAtk); AddHist(ref CommandBallHist, o.CommandBallHist);
+        GestureFires += o.GestureFires; GestureLayers += o.GestureLayers; CoverSkipShoulder += o.CoverSkipShoulder; CoverSkipLethal += o.CoverSkipLethal;   // 第303期
+        CoverPlacebos += o.CoverPlacebos; CoverEstLethalWrong += o.CoverEstLethalWrong;
         ZanTurns += o.ZanTurns; ZanTurnNoMarked += o.ZanTurnNoMarked; ZanTurnMarkedFoes += o.ZanTurnMarkedFoes; ZanTurnLayers += o.ZanTurnLayers;
         ZanPlanA += o.ZanPlanA; ZanPlan1 += o.ZanPlan1; ZanPlanACapped += o.ZanPlanACapped; ZanPlan1Capped += o.ZanPlan1Capped; ZanTurnDealt += o.ZanTurnDealt;
         RoundTurns += o.RoundTurns; RoundFoes += o.RoundFoes; RoundSlashes += o.RoundSlashes; RoundCapped += o.RoundCapped; RoundCrossed += o.RoundCrossed;
@@ -4040,6 +4048,8 @@ public static class FramedLabels
     public const string Vendetta = "濡れ衣";
     /// <summary>第302期: 規定のヒサの「あいつがやった！」が粛 ／ 痺れで止まった瞬間（<c>ActorId</c> ＝ ヒサ ／ <c>TargetId</c> ＝ 撃たれた味方 ／ <c>PartnerId</c> ＝ 撃った味方・<b>表示専用</b>）。</summary>
     public const string Silenced = "黙る";
+    /// <summary>第303期（版 Q1 ／ Q3 ／ QA）: 声を奪われたヒサが粛の保持者を黙って指差した（<c>ActorId</c> ＝ ヒサ ／ <c>TargetId</c> ＝ 粛の保持者 ／ <c>Amount</c> ＝ 付ける層 ／ <c>Slot</c> ＝ 付ける前の層・<b>表示専用</b>）。直後に層の `MarkLayer`（ミサがいれば層ごとに `Feather`「増えた」）。</summary>
+    public const string Gesture = "身振り";
 }
 
 /// <summary>`ShareGive`（第297期）の <c>Text</c>。</summary>

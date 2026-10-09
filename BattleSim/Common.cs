@@ -227,6 +227,17 @@ public static Formation Pin302(Formation f)
     return g;
 }
 
+/// <summary>
+/// 第303期: ヒサ ＝ 叫びも粛で黙る（`RallyQuiet`）を規定にした。第302期の規定のヒサで測った器具（`hisa302` の台）はこれを通す（ヒサ → `HisaH302`）。
+/// </summary>
+public static Formation Pin303(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH302 : d;
+    return g;
+}
+
 public static Formation FvSwap(Formation f, UnitDef from, UnitDef to)
 {
     var g = new Formation();
