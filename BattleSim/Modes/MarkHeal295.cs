@@ -603,7 +603,7 @@ static class MarkHeal295Diag
         // (h) 量 ＝ 最も深い層 × 6: エンジンの1回の回復を ApplyDamage の外から再現する——ログの叫びの直後の Heal の名目量（溢れ前）を見る代わりに、層 1 の戦（ミサがいない）で癒えた量 ≦ 6
         {
             int over = 0, n = 0;
-            var f = B283.Seat(new[] { UnitCatalog.Zan, UnitCatalog.Golm, UnitCatalog.Dolga, UnitCatalog.Sora, UnitCatalog.HisaHKa });   // ミサがいない＝層 1
+            var f = B283.Seat(new[] { UnitCatalog.ZanZNb, UnitCatalog.Golm, UnitCatalog.Dolga, UnitCatalog.Sora, UnitCatalog.HisaHKa });   // ミサがいない＝層 1・第300期: ザンは第299期の規定（`ZanZNb`）に固定
             foreach (var w in S287.Waves) for (int s = 0; s < 20; s++)
                 foreach (var x in BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), w.Make(), s, verbose: true).Events.Where(x => x.Kind == BattleEventKind.MarkRally)) { n++; if (x.Slot != 1 || x.Amount > 6) over++; }
             Expect("(h) ミサのいない戦では層 1・1回の回復は 6 以下", n > 0 && over == 0, $"{n} 回・外れ {over}");

@@ -1099,3 +1099,12 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **叫び（`BundlePop`）の「最も傷ついた味方」（`RallyNeediest(hisa, marked: false)`）は、ヒサが `MarkRallySelf` を持てばヒサ自身も候補に入れる**（規定のヒサ）。基準は今のまま（割合 → 席・回復を受け付ける・満タンでない・乱数なし）。HK-a の「標を持つ味方」側（`marked: true`）は変えていない。計数 `UnitTally.RallySelfHeals` ／ `RallySelfHealed`。旧の規定は `HisaHKb`（第295期の版の定義と同じ物）。
 - **ザン（仇指し `Vendetta` の保持者）の手番は `SwingTurnBody` の分岐 `VendettaTurn`**（羽 ／ 乱射の分岐の後ろ・`ModifyHitCount` の前）。**保持者がいなければ `_vendettaTurnLive` の比較1つで抜ける。** 規定（札なし）は数えるだけで `SwingTurnHits`（旧 `SwingTurnBody` の残り＝手番の回数の窓口 `ModifyHitCount` を問う場所）をそのまま呼ぶ（計数 `ZanTurns` ／ `ZanPlanA` ほか）。
   仇巡りの版（ZM-a `VendettaRound` ／ ZM-1 `VendettaRoundOne`）: 手番の頭で標を持つ敵を層の深い順（同じなら席番号）に並べ、ZM-a は層の数・ZM-1 は 1 太刀ずつ、合計 `VendettaTrait.RoundCap`（8）まで・2周目はしない。**1太刀 ＝ 的を固定した単体の `PerformAttack`（`_forcedTarget`）**——介入の鎖（庇う・後備え・挑発・標の引き）を通らず、前列の制限も受けない。太刀の数は `ModifyHitCount` を通さない（あの窓口は回数しか返さず的を巡れない）。手番の枠の中なので叫びは1手番に1回・標を消費しない・新しい標を書かない・返り血なし。表示専用の出来事 `BattleEventKind.VendettaRound`（`VendettaRoundLabels.Start` ／ `Slash`）。
+
+## 第300期 —— 規定のザン（ZM-a）・矢面は羽も半分
+
+- **規定のザン ＝ 第299期の規定 ＋ `VendettaRound`**（窓口は第299期の `VendettaTurn` のまま・札の差し替えだけ）。第299期の規定は `UnitCatalog.ZanZNb`（第298期の版 ZN-b と同じ札・文面だったので新しい定義は作らない）。版 `ZanZMa` ／ `ZanZM1` は `ZanZNb` から作る（規定から作ると札が二重になる）。
+- **矢面の半減（`ApplyDamageBody` の軽減の族・矢面の段）に、ミサの羽の枝を足した**（規定のヒサの札 `BeckonFeather`・印だけの札）。条件は敵の矢面と同じ「刻み・徴収・中継・共有ではない」に、**出どころが同じ陣営の羽（`Feathers`）の保持者・自分ではない・標を付けたヒサが `BeckonFeather` を持つ**を足しただけ。敵の矢面の `if` の `else if` なので両方は掛からない。
+  ボルグの巻き込み・カドの反撃など、ほかの同士討ちには掛けない。**札の保持者がいなければ `_beckonFeatherLive` の比較1つで抜ける。乱数を引かない。** 第298期の節の「味方への羽は同士討ちの `ApplyDamage`（矢面の半減は掛からない）」は、第300期から規定のヒサがいる戦では掛かる。
+  計数（**計数のみ**）: ヒサ `BeckonFeatherHits` ／ `BeckonFeatherSaved`・受け手 `BeckonFeatherTaken`。ミサの羽で味方が受けた実額 `FeatherFfBeckonTaken` ／ `FeatherFfOtherTaken`（と回数）は HP を引いた後の帳簿の段で、ヒサの札に依らず数える。
+  表示専用の出来事 **`BattleEventKind.BeckonFeather`**（`ActorId` ＝ ヒサ ／ `TargetId` ＝ 撃たれた味方 ／ `PartnerId` ＝ ミサ ／ `Amount` ＝ 防いだ量・直後にその一撃の `Damage`）。
+- 第299期の規定の駒で測った器具は `Common.Pin300`（ザン → `ZanZNb`・ヒサ → 新しい旧の定義 `HisaHKs` ＝ `HisaHKb` ＋ `MarkRallySelf`）。

@@ -508,12 +508,13 @@ public static class UnitCatalog
         Advances = false,
         // **第184期に転生**（旧 `Marker` は定義だけ残す）。矢面（`Beckon`）と、その代金の逃げ回る（`Flee`）。
         // **札の並びが実行順**——矢面が標を付けてから、逃げ回るが標の相手以外と入れ替わる（どちらも `OnAction`）。
-        Traits = new[] { TraitId.Beckon, TraitId.Flee, TraitId.MarkRallyWide, TraitId.MarkRallySelf },
+        Traits = new[] { TraitId.Beckon, TraitId.Flee, TraitId.MarkRallyWide, TraitId.MarkRallySelf, TraitId.BeckonFeather },
         // 第296期: ポンの判断（第295期の案 K2）で HK-b（あいつを狙え！・`MarkRallyWide`）を規定にした。旧の規定は `HisaHK0`（指示書 design/PHASE296_HISA_RALLY_PLAYTEST_SPEC.md §1）。
         // 第299期: ポンの決めで「最も傷ついた味方」にヒサ自身を含めた（`MarkRallySelf`・文面は変えない）。第296〜298期の規定は `HisaHKb`（指示書 design/PHASE299_ZAN_ROUND_SPEC.md §3）。
+        // 第300期: ポンの決めで矢面の半減をミサの羽にも掛けた（`BeckonFeather`・ヒサの札）。第299期の規定は `HisaHKs`（指示書 design/PHASE300_ROUND_GUARD_SPEC.md §3）。
         // 指差すのが手番そのもの（攻撃2 は出なくなる）。`[Skill]` の1要素で毎手番指差して逃げる。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "隣の味方を指差した") },
-        PlusText = "手番で、隣でいちばん元気な味方1体に標を付けて矢面に立たせる。標を付けられた味方は、攻撃から受ける痛みが半分になる"
+        PlusText = "手番で、隣でいちばん元気な味方1体に標を付けて矢面に立たせる。標を付けられた味方は、攻撃から受ける痛みが半分になる（ミサの羽でも）"
                    + "。指差された敵が攻撃されるたび、『あいつを狙え！ まだ倒れるな！』と叫んで、攻撃した味方と最も傷ついた味方を癒す",
         MinusText = "自分では攻撃しない。指差したら、標の相手以外の隣の味方と入れ替わって逃げる（入れ替わった味方は前へ押し出される）",
         Flavor = "味方を矢面に立たせて生き延びた男。誰も隣に立ちたがらない。"
@@ -612,6 +613,24 @@ public static class UnitCatalog
         Traits = HisaHK0.Traits.Append(TraitId.MarkRallyWide).ToArray(),
         Actions = HisaHK0.Actions,
         PlusText = HisaHK0.PlusText + "。指差された敵が攻撃されるたび、『あいつを狙え！ まだ倒れるな！』と叫んで、攻撃した味方と最も傷ついた味方を癒す",
+        MinusText = HisaHK0.MinusText,
+        Flavor = HisaHK0.Flavor
+    };
+
+    /// <summary>第299期の規定のヒサ（HK-b ＋ <see cref="TraitId.MarkRallySelf"/>）。第300期に規定へ <see cref="TraitId.BeckonFeather"/>（矢面は羽も半分）を足したので、旧の規定の定義を明示的に持つ。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第299期の規定のヒサを使う過去の器具はこちらに固定する（`Common.Pin300`）。</summary>
+    public static readonly UnitDef HisaHKs = new()
+    {
+        Id = HisaHK0.Id,
+        Name = HisaHK0.Name,
+        MaxHp = HisaHK0.MaxHp,
+        Attack = HisaHK0.Attack,
+        Speed = HisaHK0.Speed,
+        Advances = HisaHK0.Advances,
+        Pattern = HisaHK0.Pattern,
+        Traits = HisaHKb.Traits.Append(TraitId.MarkRallySelf).ToArray(),
+        Actions = HisaHK0.Actions,
+        PlusText = HisaHKb.PlusText,
         MinusText = HisaHK0.MinusText,
         Flavor = HisaHK0.Flavor
     };
@@ -2341,8 +2360,9 @@ public static class UnitCatalog
         Speed = 5,
         // **第184期に転生**（旧 `Avenge` は定義だけ残す）。仇指し（倍返し＋敵に標）と、その代金の返り血。
         // 第299期: ポンの判断（第298期の案 Z2）で ZN-b（濡れ衣の仇討ち・同士討ち全般）を規定にした。旧の規定は `ZanZN0`（指示書 design/PHASE299_ZAN_ROUND_SPEC.md §2）。
-        Traits = new[] { TraitId.Vendetta, TraitId.Recoil, TraitId.VendettaFrameAll },
-        PlusText = "標を付けられた味方が殴られるたび、殴った者へ割り込んで倍の刃を返し、仇として標を付ける（標を付けられた敵は受けるダメージが5割増える）。仲間を撃った者が誰であれ、指差された敵を斬る",
+        // 第300期: ポンの判断（第299期の案 R1）で ZM-a（手番の仇巡り・`VendettaRound`）を規定にした。第299期の規定は `ZanZNb`（同じ札・文面）（指示書 design/PHASE300_ROUND_GUARD_SPEC.md §2）。
+        Traits = new[] { TraitId.Vendetta, TraitId.Recoil, TraitId.VendettaFrameAll, TraitId.VendettaRound },
+        PlusText = "標を付けられた味方が殴られるたび、殴った者へ割り込んで倍の刃を返し、仇として標を付ける（標を付けられた敵は受けるダメージが5割増える）。仲間を撃った者が誰であれ、指差された敵を斬る。手番では、仇を巡って斬る。深く指差された仇ほど、何度も斬る",
         MinusText = "刃を返すたびに自分も傷つく（それで倒れはしない）",
         Flavor = "仲間が傷つくと、刃を抜かずにはいられない。返した刃は、いつも自分の手も裂いている。"
     };
@@ -2381,7 +2401,8 @@ public static class UnitCatalog
         Flavor = ZanZN0.Flavor
     };
 
-    /// <summary>第298期 ZN-b（同士討ち全般）。規定 ＋ <see cref="TraitId.VendettaFrameAll"/>（ZN-a の「ミサの羽」を味方による同士討ち全般に広げる（徴収・中継は除く））。対照（<see cref="All"/> に入れない・採否はポン）。</summary>
+    /// <summary>第298期 ZN-b（同士討ち全般）。規定 ＋ <see cref="TraitId.VendettaFrameAll"/>（ZN-a の「ミサの羽」を味方による同士討ち全般に広げる（徴収・中継は除く））。
+    /// <b>第299期の規定と同じ物</b>（札・数値・文面）。第300期に規定へ <see cref="TraitId.VendettaRound"/> を足したので、第299期の規定のザンを使う過去の器具はこちらに固定する。第299期の版（ZM）もこちらから作る。</summary>
     public static readonly UnitDef ZanZNb = new()
     {
         Id = ZanZN0.Id,
@@ -2399,39 +2420,40 @@ public static class UnitCatalog
     };
 
     // 第299期（指示書 design/PHASE299_ZAN_ROUND_SPEC.md §4）—— ザンの手番「仇巡り」。規定のザン（ZN-b）の上に足す。対照（`All` ／ `Retired` ／ `Presets` に入れない・採否はポン）。
+    // 第300期: ZM-a を規定にした。版は第299期の規定（`ZanZNb`）から作る（規定から作ると札が二重になる）。ZM-a は規定の `Zan` と同じ札の並び。
 
     /// <summary>第299期 ZM-a（層の数）。規定 ＋ <see cref="TraitId.VendettaRound"/>（手番で、標を持つ敵を層の深い順に巡り、その敵の層の数だけ斬る・1手番 8 太刀まで）。</summary>
     public static readonly UnitDef ZanZMa = new()
     {
-        Id = Zan.Id,
-        Name = Zan.Name,
-        MaxHp = Zan.MaxHp,
-        Attack = Zan.Attack,
-        Speed = Zan.Speed,
-        Advances = Zan.Advances,
-        Pattern = Zan.Pattern,
-        Traits = Zan.Traits.Append(TraitId.VendettaRound).ToArray(),
-        Actions = Zan.Actions,
-        PlusText = Zan.PlusText + "。手番では、仇を巡って斬る。深く指差された仇ほど、何度も斬る",
-        MinusText = Zan.MinusText,
-        Flavor = Zan.Flavor
+        Id = ZanZNb.Id,
+        Name = ZanZNb.Name,
+        MaxHp = ZanZNb.MaxHp,
+        Attack = ZanZNb.Attack,
+        Speed = ZanZNb.Speed,
+        Advances = ZanZNb.Advances,
+        Pattern = ZanZNb.Pattern,
+        Traits = ZanZNb.Traits.Append(TraitId.VendettaRound).ToArray(),
+        Actions = ZanZNb.Actions,
+        PlusText = ZanZNb.PlusText + "。手番では、仇を巡って斬る。深く指差された仇ほど、何度も斬る",
+        MinusText = ZanZNb.MinusText,
+        Flavor = ZanZNb.Flavor
     };
 
     /// <summary>第299期 ZM-1（対照・1体に1太刀）。規定 ＋ <see cref="TraitId.VendettaRoundOne"/>（層を見ない）。層の数が何を足したかを分けるための対照（R385）——採否の候補ではない。</summary>
     public static readonly UnitDef ZanZM1 = new()
     {
-        Id = Zan.Id,
-        Name = Zan.Name,
-        MaxHp = Zan.MaxHp,
-        Attack = Zan.Attack,
-        Speed = Zan.Speed,
-        Advances = Zan.Advances,
-        Pattern = Zan.Pattern,
-        Traits = Zan.Traits.Append(TraitId.VendettaRoundOne).ToArray(),
-        Actions = Zan.Actions,
-        PlusText = Zan.PlusText + "。手番では、仇を巡って斬る",
-        MinusText = Zan.MinusText,
-        Flavor = Zan.Flavor
+        Id = ZanZNb.Id,
+        Name = ZanZNb.Name,
+        MaxHp = ZanZNb.MaxHp,
+        Attack = ZanZNb.Attack,
+        Speed = ZanZNb.Speed,
+        Advances = ZanZNb.Advances,
+        Pattern = ZanZNb.Pattern,
+        Traits = ZanZNb.Traits.Append(TraitId.VendettaRoundOne).ToArray(),
+        Actions = ZanZNb.Actions,
+        PlusText = ZanZNb.PlusText + "。手番では、仇を巡って斬る",
+        MinusText = ZanZNb.MinusText,
+        Flavor = ZanZNb.Flavor
     };
 
     /// <summary>

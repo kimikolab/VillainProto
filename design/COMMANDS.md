@@ -957,6 +957,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 zan299 grid <guard|bat|boss> [seeds=10]   # 第299期 格子（R386）: 固定枠 ヒサ ＋ ザン ＋ ミサ・探索枠2 × 席 120・規定と ZM-a で同じ台・上位 12 台の対照（R383・固定枠の駒それぞれ → ドルガ）。**第299期は条件（代表台の精鋭かボスで +10pt）を満たさず回していない**
     dotnet run --project BattleSim -c Release 0 zan299 memo <台の一部> <boss|guard|bat|1..5> <seed> <規定|ZM-a|ZM-1>   # 第299期 Codex 向け: 台本の並び（`FeatherMark` ／ `Framed` ／ `VendettaRound` ／ 羽 ／ 叫び）
     dotnet run --project BattleSim -c Release 0 zan299 check              # 第299期 自己検査（規定のミサ ／ ザン ／ ヒサの札と文面・叫びがヒサ自身を癒す・仇巡りの太刀 ＝ 層 ／ 上限 8 ／ 2周目なし ／ 標を消費しない ／ 羽を呼ばない ／ 返り血なし ／ 叫び1回 ／ 的が倒れたら次・PickOne・verbose・出来事・版の文面）
+    dotnet run --project BattleSim -c Release 0 round300 ref [seeds]      # 第300期 段0-2: 矢面の半減をミサの羽にも（段0-1 の後 ＝ ヒサ `HisaHKs` → 規定）× 標経済 ／ 試遊・標 循環 ／ 三人組 ／ 守り型 × 第2〜5波 ／ 精鋭 ／ ボス・誤射で受けた量（矢面 ／ ほか）・防いだ量。本体は `Modes/Round300.cs`
+    dotnet run --project BattleSim -c Release 0 round300 play [seeds=50]  # 第300期 §4-1 試遊の目安: 試遊・標の5行 × 第1〜5波 ／ 近衛 ／ 大隊 ／ ボス・第296期の規定 → 第300期の規定を1段ずつ（勝率と倒しT）
+    dotnet run --project BattleSim -c Release 0 round300 find [seeds=50]  # 第300期 §4-2 Codex 向け: 見せ場ごとの出来事の件数と最初に出る seed ／ T（`ShareGive` ／ `FeatherMark` ／ `Framed` ／ `VendettaRound` ／ 叫びの自分 ／ `BeckonFeather`）
+    dotnet run --project BattleSim -c Release 0 round300 memo <台の一部> <1..5|guard|bat|boss> <seed> [最後のT]   # 第300期 Codex 向け: 台本の並び（規定の駒）
+    dotnet run --project BattleSim -c Release 0 round300 check            # 第300期 自己検査（規定のザン ／ ヒサの札と文面・羽が矢面の味方に半分 ／ 矢面でない味方に満額 ／ ほかの同士討ちは満額 ／ 敵の矢面は今のまま・PickOne・verbose・出来事・計数の対）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

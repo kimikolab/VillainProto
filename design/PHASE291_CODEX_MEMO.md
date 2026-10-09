@@ -375,3 +375,73 @@ MarkRally   ヒサ#4 → ヒサ#4  Amount 4  Slot 3                  叫びが�
 - 並びの型: **標が付いた瞬間の羽（`FeatherMark`）→ 味方への羽の `Damage`（`FriendlyFire`）→「あいつがやった！」（`Framed` Accuse）→ 濡れ衣（`Framed` Vendetta）→ 仇討ちの `Damage`（`Reaction`）→ 返り血**。`Framed` の2件は必ず対で、直後に仇討ちの `Damage` が来る。
 - 羽の `FeatherMark` の `Slot` は 1 ＝ 新しい標・0 ＝ 層の追加（MF-b は層の追加でも飛ぶ）。`Amount` ＝ 的の標の層。
 - **版だけの出来事（規定では出ない）**: ザンの仇巡り（ZM-a ／ ZM-1）の `VendettaRound`。`Text` ＝「仇巡り」（始まり・`Slot` ＝ 巡る敵の数 ／ `Amount` ＝ 太刀の合計）と「太刀」（1太刀ごと・`Slot` ＝ 何太刀目か・直後にその太刀の `Attack` ／ `Damage`）。仇巡りの太刀は手番の攻撃（`Reaction` でない）。例: `zan299 memo 循環 boss 0 ZM-a`（T2 から毎手番 勇者へ 8 太刀）。
+
+## 8. 第300期の追記 —— ザンの仇巡りが規定に・矢面が羽を半分にする（`BeckonFeather`・新しい表示専用の出来事）
+
+第300期にザンの仇巡り（ZM-a）を規定にしたので、`VendettaRound` は試遊でも出る。ヒサの矢面の半減がミサの羽にも効くようになった（規定のヒサの札 `BeckonFeather`）。
+例はすべて規定の駒・`round300 memo <台> <波> <seed>` で再現できる（件数の一覧は `round300 find`）。
+
+### 8-1. 種類と欄（足したのは1種類）
+
+| 出来事 | 欄 | いつ出るか |
+|---|---|---|
+| `BeckonFeather`（新・表示専用） | `ActorId` ＝ 標を付けたヒサ ／ `TargetId` ＝ 撃たれた味方 ／ `PartnerId` ＝ 撃ったミサ ／ `Amount` ＝ 矢面で防いだ量 | ヒサの標を持つ味方にミサの羽が当たり、半分にした瞬間。**直後にその一撃の `Damage`**（`Amount` は半分にした後の量・`FriendlyFire`）。敵の攻撃の矢面の半減には出ない（第184期から台本に出ていない——ログの行だけ） |
+
+既存の出来事だけでは読めなかった（羽の `Damage` の量は半分にした後の値で、半分にしたかどうかの印が無い）ので足した。DemoApp は知らない種類を素通りする。
+
+### 8-2. 見せ場ごとの例（seed 0..49 の件数は `round300 find`）
+
+| 見せ場 | 出来事 | 例にする戦 | 1戦あたり | seed 0 で最初に出る T |
+|---|---|---|--:|---|
+| ドハの力配り | `ShareGive`「力」 | 試遊・標 守り型 × ボス × seed 0（勝ち T3） | 31.0 | T0（`ShareGive 力 ドハ#2 → ゴルム#0 Amount 1 Slot 1`、直後に中継の `Damage`） |
+| ミサの標撃ち・敵 | `FeatherMark`「敵」 | 試遊・標 循環 × 近衛 × seed 0（勝ち T4） | 12.8 | T1 |
+| ミサの標撃ち・味方 | `FeatherMark`「味方」 | 同上 | 4.0 | T0（矢面の標がゴルムに付いた瞬間） |
+| 「あいつがやった！」と濡れ衣の仇討ち | `Framed`「あいつがやった」→「濡れ衣」 | 同上 | 4.0 ／ 4.0 | T0（味方への羽の直後） |
+| 仇巡り・ボスの連撃 | `VendettaRound` | 試遊・標 循環 × ボス × seed 0（勝ち T6） | 4.0 手番 | T1（勇者1体へ 5 太刀・T2 から 8 太刀） |
+| 仇巡り・精鋭の巡り | `VendettaRound`（`Slot` ≧ 2） | 試遊・標 三人組 × 大隊 × seed 0（勝ち T5） | 2.1 手番 | T1（7体を巡って 8 太刀）・T2（4体）・T3（2体） |
+| ヒサの叫びがヒサ自身を癒す | `MarkRally`（`TargetId` ＝ `ActorId` ＝ ヒサ） | 試遊・標 三人組 × 近衛 × seed 0（勝ち T5） | 3.9 | T1 |
+| 矢面の半減が羽に効いた | `BeckonFeather` | 標経済 (ヒサ×ザン×ミサ) × 大隊 × seed 0（勝ち T4） | 1.2 | T0（`BeckonFeather ヒサ#4 → ガルド#1 Amount 16 Partner=ミサ#0`、直後に `Damage ミサ#0 → ガルド#1 16 ff`） |
+
+精鋭の巡り（三人組 × 大隊 × seed 0 × T1）:
+
+```
+VendettaRound 仇巡り  ザン#0           Amount 8  Slot 7      始まり（太刀の合計 8 ／ 巡る敵 7）
+VendettaRound 太刀    ザン#0 → 農兵#5   Slot 1 → Attack / Damage 15
+VendettaRound 太刀    ザン#0 → 農兵#5   Slot 2 → Attack / Damage 15   層 2 の敵には 2 太刀
+VendettaRound 太刀    ザン#0 → 農兵#6   Slot 3 → …                    以下 農兵#7 ／ #8 ／ #9 ／ #10 ／ #12 へ1太刀ずつ
+VendettaRound 太刀    ザン#0 → 農兵#12  Slot 8 → Attack / Damage 15
+MarkRally             ヒサ#4 → ザン#0   Amount 12                     叫びは手番に1回
+```
+
+### 8-3. 1つの循環の並び（試遊・標 循環 × ボス・勇者（規定形）× seed 0・勝ち T6・`round300 memo 循環 boss 0 1`）
+
+```
+--- T0（開戦: ヒサの矢面の標がゴルムに付いた瞬間）
+FeatherMark 味方      ミサ#2 → ゴルム#1  Amount 1 Slot 1     標撃ちの羽（味方へ・誤射）
+BeckonFeather         ヒサ#4 → ゴルム#1  Amount 12 Partner=ミサ#2   矢面が羽を半分にした（第300期）
+Damage                ミサ#2 → ゴルム#1  12  Reaction ff      半分になった羽の一撃
+Framed あいつがやった  ヒサ#4 → 勇者#5  Partner=ゴルム#1     ヒサが勇者を指差す
+Framed 濡れ衣          ザン#0 → 勇者#5  Partner=ミサ#2       濡れ衣の仇討ちの印
+Damage                ザン#0 → 勇者#5   20  Reaction         仇討ち（倍の刃）
+Feather 増えた         ザン#0 → ミサ#2   Amount 2             仇の標でミサの羽が増える
+MarkLayer             ザン#0 → 勇者#5   Amount 1             勇者の標の層
+Damage                ザン#0 → ザン#0   3  Reaction ff        返り血
+--- T1
+（ソラが勇者に標を足す → FeatherMark 味方 ミサ#2 → ソラ#3（ソラが自分に付けた標）→ Framed ×2 → 仇討ち → 叫び）
+FeatherMark 敵        ミサ#2 → 勇者#5   Amount 3             勇者の層が増えた瞬間の羽
+Attack / Damage       ミサ#2 → 勇者#5   24 → 36  Reaction     標の +50%
+MarkRally             ヒサ#4 → ミサ#2 ／ ゴルム#1            叫び（攻撃した味方と最も傷ついた味方）
+Attack / Damage       勇者#5 → ザン#0 …（全体攻撃）
+Damage                ザン#0 → 勇者#5   30  Reaction         標の付いた味方が殴られた → 仇討ち
+…
+MarkRally             ヒサ#4 → ヒサ#4   Amount 5             叫びがヒサ自身を癒す
+FeatherMark 味方 → BeckonFeather → Damage 13 → Framed ×2 → 仇討ち   （ヒサが指差し直した矢面の味方へまた羽）
+Feather 連射          ミサ#2           Amount 6              ミサの手番: 羽 6 枚が勇者を追う（Attack / Damage 39 × 6）
+VendettaRound 仇巡り  ザン#0           Amount 5 Slot 1       ザンの手番: 勇者1体へ 5 太刀（層 5）
+VendettaRound 太刀    ザン#0 → 勇者#5  Slot 1..5 → Attack / Damage 15 × 5
+--- T2 以降は同じ循環（勇者はターンの頭に大きく癒える——Heal 198）。T2 からの仇巡りは 8 太刀
+```
+
+- 並びの型: **被弾（または標が付く）→ 標撃ちの羽 →（味方なら）矢面の半減 → 誤射の `Damage` →「あいつがやった！」→ 濡れ衣の仇討ち → 標の層 → 羽が増える → 叫び → … → ミサの手番の連射 → ザンの手番の仇巡り**。
+- `BeckonFeather` は必ず `FeatherMark 味方`（または味方に流れた手番の羽）の直後・その一撃の `Damage` の直前に1件。
+- 仇巡りの太刀は手番の攻撃（`Reaction` でない）。仇討ち（割り込み・`Reaction`）とは別の絵にする（ブリーフ §3）。

@@ -188,6 +188,18 @@ public static Formation Pin299(Formation f)
     return g;
 }
 
+/// <summary>
+/// 第300期: ザン ＝ ZM-a（仇巡り）・ヒサ ＝ 矢面は羽も半分 を規定にした。第299期の規定の駒で測った器具（`zan299` の台）はこれを通す
+/// （ザン → `ZanZNb`・ヒサ → `HisaHKs`）。第298期までの規定に固定する器具は `Pin299` のまま（どちらの駒も旧に替わるので、第300期の規定化は届かない）。
+/// </summary>
+public static Formation Pin300(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanZNb : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHKs : d;
+    return g;
+}
+
 public static Formation FvSwap(Formation f, UnitDef from, UnitDef to)
 {
     var g = new Formation();

@@ -179,7 +179,8 @@ static class Rally296Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        var hisa = UnitCatalog.Hisa; var hk0 = UnitCatalog.HisaHK0;
+        // 第300期: 規定のヒサに `BeckonFeather`（矢面は羽も半分）を足した——ここでは第299期の規定（`HisaHKs`）を見る。
+        var hisa = UnitCatalog.HisaHKs; var hk0 = UnitCatalog.HisaHK0;
         // 第299期: 規定のヒサは HK-b ＋ `MarkRallySelf`（叫びは自分も癒す）になった。HK-b そのものは `HisaHKb`。
         Expect("(a) 規定のヒサ ＝ HK-b の札（旧の規定 `HisaHK0` ＋ `MarkRallyWide`）＋ 第299期の `MarkRallySelf`・`HisaHKb` ＋ `MarkRallySelf` と同じ札・数値と手番は旧と同じ",
             hisa.Traits.SequenceEqual(hk0.Traits.Append(TraitId.MarkRallyWide).Append(TraitId.MarkRallySelf)) && hisa.Traits.SequenceEqual(UnitCatalog.HisaHKb.Traits.Append(TraitId.MarkRallySelf))
@@ -190,12 +191,12 @@ static class Rally296Diag
             && hisa.Flavor == "味方を矢面に立たせて生き延びた男。誰も隣に立ちたがらない。" && hisa.MinusText == hk0.MinusText);
         Expect("(c) `HisaHK0` と版（HS ／ HK）は `All` ／ `Retired` の外・規定のヒサは `All`・版は旧の規定から作る",
             !new[] { hk0, UnitCatalog.HisaHKa, UnitCatalog.HisaHKb, UnitCatalog.HisaHSa, UnitCatalog.HisaHSa1, UnitCatalog.HisaHSc, UnitCatalog.HisaHSd }.Any(UnitCatalog.Everyone.Contains)
-            && UnitCatalog.All.Contains(hisa)
+            && UnitCatalog.All.Contains(UnitCatalog.Hisa)
             && UnitCatalog.HisaHKa.Traits.SequenceEqual(hk0.Traits.Append(TraitId.MarkRally)) && UnitCatalog.HisaHSa.Traits.SequenceEqual(hk0.Traits.Append(TraitId.BeckonHold))
             && UnitCatalog.HisaHSa.PlusText.StartsWith(hk0.PlusText + "。標を付けられた", StringComparison.Ordinal));
         var heal = Boss283Diag.HealPool; var heal0 = Boss283Diag.HealPool295;
         Expect("(d) ヒーラーの一覧（`Boss283Diag.HealPool`）に規定のヒサが入る・旧の一覧（`HealPool295`）は入らない・ほかの顔ぶれは同じ",
-            heal.Contains(hisa) && !heal0.Contains(hisa) && heal.Where(d => !ReferenceEquals(d, hisa)).SequenceEqual(heal0), $"{heal.Length} 枚 ／ 旧 {heal0.Length} 枚");
+            heal.Contains(UnitCatalog.Hisa) && !heal0.Contains(UnitCatalog.Hisa) && heal.Where(d => !ReferenceEquals(d, UnitCatalog.Hisa)).SequenceEqual(heal0), $"{heal.Length} 枚 ／ 旧 {heal0.Length} 枚");
         var pl = Presets.Playtest;
         var compareNames = Presets.Compare.Select(r => r.Name).ToHashSet();
         Expect("(e) 試遊の行は8行（第291期の5行 ＋ 3行・既存の5行は名前も並びもそのまま）・`Compare` ／ `Cross` に入っていない・駒はすべて規定（`All`）・5枠",

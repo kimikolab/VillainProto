@@ -2081,6 +2081,11 @@ public sealed class UnitTally
     /// <summary>第299期（<b>計数のみ</b>・規定のヒサ `MarkRallySelf`）: 叫びでヒサ自身を癒した回数 ／ 量（ヒサの側）。</summary>
     public long RallySelfHeals, RallySelfHealed;
     /// <summary>
+    /// 第300期（<b>計数のみ</b>・規定のヒサ `BeckonFeather`）: ヒサ ＝ <c>BeckonFeatherHits</c> ／ <c>BeckonFeatherSaved</c> 羽の一撃を矢面で半分にした回数 ／ 防いだ量・受け手 ＝ <c>BeckonFeatherTaken</c> 防いでもらった量。
+    /// ミサの羽（羽の保持者が出どころ・同じ陣営・徴収 ／ 中継は除く）で受けた実額（受け手の側・ヒサの札に依らず数える）: <c>FeatherFfBeckonTaken</c> ／ <c>FeatherFfBeckonHits</c> 矢面の味方（ヒサの標を持つ）・<c>FeatherFfOtherTaken</c> ／ <c>FeatherFfOtherHits</c> それ以外。
+    /// </summary>
+    public long BeckonFeatherHits, BeckonFeatherSaved, BeckonFeatherTaken, FeatherFfBeckonTaken, FeatherFfBeckonHits, FeatherFfOtherTaken, FeatherFfOtherHits;
+    /// <summary>
     /// 第299期（<b>計数のみ</b>・ザンの手番）。仇指し（<see cref="TraitId.Vendetta"/>）の保持者が手番で振ったとき（規定でも数える）:
     /// <c>ZanTurns</c> 手番 ／ <c>ZanTurnNoMarked</c> 標を持つ敵が 0 ／ <c>ZanTurnMarkedFoes</c> ／ <c>ZanTurnLayers</c> 手番の時点の標を持つ敵の数 ／ 層の合計 ／
     /// <c>ZanPlanA</c> ／ <c>ZanPlan1</c> 仇巡りの見込みの太刀（ZM-a ＝ 層の合計・ZM-1 ＝ 敵の数・上限で切る）／ <c>ZanPlanACapped</c> ／ <c>ZanPlan1Capped</c> 上限に達した手番 ／
@@ -3194,6 +3199,8 @@ public sealed class UnitTally
         BundleTurn += o.BundleTurn; BundleOut += o.BundleOut; RallyFires += o.RallyFires; RallyHeals += o.RallyHeals; RallyHealed += o.RallyHealed; RallyOver += o.RallyOver; RallyNone += o.RallyNone;   // 第295期
         AddHist(ref RallyTo, o.RallyTo);
         RallySelfHeals += o.RallySelfHeals; RallySelfHealed += o.RallySelfHealed;   // 第299期
+        BeckonFeatherHits += o.BeckonFeatherHits; BeckonFeatherSaved += o.BeckonFeatherSaved; BeckonFeatherTaken += o.BeckonFeatherTaken;   // 第300期
+        FeatherFfBeckonTaken += o.FeatherFfBeckonTaken; FeatherFfBeckonHits += o.FeatherFfBeckonHits; FeatherFfOtherTaken += o.FeatherFfOtherTaken; FeatherFfOtherHits += o.FeatherFfOtherHits;   // 第300期
         ZanTurns += o.ZanTurns; ZanTurnNoMarked += o.ZanTurnNoMarked; ZanTurnMarkedFoes += o.ZanTurnMarkedFoes; ZanTurnLayers += o.ZanTurnLayers;
         ZanPlanA += o.ZanPlanA; ZanPlan1 += o.ZanPlan1; ZanPlanACapped += o.ZanPlanACapped; ZanPlan1Capped += o.ZanPlan1Capped; ZanTurnDealt += o.ZanTurnDealt;
         RoundTurns += o.RoundTurns; RoundFoes += o.RoundFoes; RoundSlashes += o.RoundSlashes; RoundCapped += o.RoundCapped; RoundCrossed += o.RoundCrossed;
@@ -3913,6 +3920,13 @@ public enum BattleEventKind
     /// 「太刀」＝ 1太刀の印（<c>ActorId</c> ＝ ザン ／ <c>TargetId</c> ＝ 的 ／ <c>Slot</c> ＝ 仇巡りの何太刀目か ／ <c>Amount</c> ＝ 太刀の合計）。直後にその太刀の `Attack` ／ `Damage`。
     /// </summary>
     VendettaRound,
+
+    /// <summary>
+    /// 矢面は羽も半分（第300期・規定のヒサ `BeckonFeather`・<b>表示専用</b>）。ヒサの標を持つ味方にミサの羽が当たり、矢面で半分にした瞬間（直後にその一撃の `Damage`・<c>Amount</c> は半分にした後の量）。
+    /// <c>ActorId</c> ＝ 標を付けたヒサ ／ <c>TargetId</c> ＝ 撃たれた味方 ／ <c>PartnerId</c> ＝ 撃ったミサ ／ <c>Amount</c> ＝ 防いだ量。<b>どの規則も読まない。</b>
+    /// 敵の攻撃の矢面の半減には出ない（第184期から台本に出ていない——ログの行だけ）。
+    /// </summary>
+    BeckonFeather,
 }
 
 /// <summary>`VendettaRound`（第299期）の <c>Text</c>。</summary>

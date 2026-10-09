@@ -33,7 +33,7 @@ static class Boss283Diag
     // 候補（Phase 0 で決めた・測る前に固定）
     // ---------------------------------------------------------------------------------
     /// <summary>固定枠（指示書 §2-1）。トメは規定（第283期 T1n）。</summary>
-    static readonly UnitDef[] Fixed = { UnitCatalog.Tome, UnitCatalog.Zan };
+    static readonly UnitDef[] Fixed = { UnitCatalog.Tome, UnitCatalog.ZanZNb };   // 第300期: ザンは第299期の規定（`ZanZNb`）に固定（規定は ZM-a になった）
 
     /// <summary>
     /// 寿命側の候補（ヒーラー以外）。Phase 0 §2 の棚卸し: 被ダメを減らす・肩代わりする・逸らす駒 ＋ 味方に標を書く駒（ザンの供給の入口）。
@@ -325,7 +325,7 @@ static class Boss283Diag
         Console.WriteLine();
         Console.WriteLine("| 後1 | 勝率 | 倒しT | 崩れ | ト死 | 仇 | 爪 | 味方回復 | 勇者の回復 | ドルガ |");
         Console.WriteLine("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
-        var basis = Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.DohaD0, center: UnitCatalog.Zan, back1: UnitCatalog.Gan, back3: UnitCatalog.HisaHK0);
+        var basis = Formation.Build(front1: UnitCatalog.Tome, front3: UnitCatalog.DohaD0, center: UnitCatalog.ZanZNb, back1: UnitCatalog.Gan, back3: UnitCatalog.HisaHK0);
         foreach (var c in new[] { UnitCatalog.Gan }.Concat(LifePool.Where(d => d != UnitCatalog.Gan && d != UnitCatalog.DohaD0 && d != UnitCatalog.HisaHK0)).Concat(HealPool295).Distinct())
         {
             var f = Swap(basis, UnitCatalog.Gan, c);
@@ -523,14 +523,14 @@ static class Boss283Diag
     /// </summary>
     internal static readonly (string Label, UnitDef[] Order)[] CtlBoards =
     {
-        ("第282期の新台", new[] { UnitCatalog.Tome, UnitCatalog.DohaD0, UnitCatalog.Zan, UnitCatalog.Gan, UnitCatalog.HisaHK0 }),
-        ("新台のガン → バン（席はそのまま）", new[] { UnitCatalog.Tome, UnitCatalog.DohaD0, UnitCatalog.Zan, UnitCatalog.Ban, UnitCatalog.HisaHK0 }),
-        ("0枚: ヒサ・ドハ・バン（新台の組み替え）", new[] { UnitCatalog.HisaHK0, UnitCatalog.DohaD0, UnitCatalog.Ban, UnitCatalog.Zan, UnitCatalog.Tome }),
-        ("0枚: ヒサ・ドハ・ゴルム（標準の候補）", new[] { UnitCatalog.Golm, UnitCatalog.Tome, UnitCatalog.DohaD0, UnitCatalog.Zan, UnitCatalog.HisaHK0 }),
-        ("0枚: ヒサ・ゴルム・バン", new[] { UnitCatalog.Zan, UnitCatalog.Golm, UnitCatalog.Tome, UnitCatalog.Ban, UnitCatalog.HisaHK0 }),
-        ("シオ: ヒサ・ドハ・シオ", new[] { UnitCatalog.DohaD0, UnitCatalog.Zan, UnitCatalog.HisaHK0, UnitCatalog.Tome, UnitCatalog.Shio }),
-        ("シオ: ヒサ・クビ・シオ（120 席すべて届く）", new[] { UnitCatalog.HisaHK0, UnitCatalog.Shio, UnitCatalog.Kubi, UnitCatalog.Tome, UnitCatalog.Zan }),
-        ("ツギ: ヒサ・バン・ツギ", new[] { UnitCatalog.Tome, UnitCatalog.HisaHK0, UnitCatalog.Ban, UnitCatalog.Tsugi, UnitCatalog.Zan }),
+        ("第282期の新台", new[] { UnitCatalog.Tome, UnitCatalog.DohaD0, UnitCatalog.ZanZNb, UnitCatalog.Gan, UnitCatalog.HisaHK0 }),
+        ("新台のガン → バン（席はそのまま）", new[] { UnitCatalog.Tome, UnitCatalog.DohaD0, UnitCatalog.ZanZNb, UnitCatalog.Ban, UnitCatalog.HisaHK0 }),
+        ("0枚: ヒサ・ドハ・バン（新台の組み替え）", new[] { UnitCatalog.HisaHK0, UnitCatalog.DohaD0, UnitCatalog.Ban, UnitCatalog.ZanZNb, UnitCatalog.Tome }),
+        ("0枚: ヒサ・ドハ・ゴルム（標準の候補）", new[] { UnitCatalog.Golm, UnitCatalog.Tome, UnitCatalog.DohaD0, UnitCatalog.ZanZNb, UnitCatalog.HisaHK0 }),
+        ("0枚: ヒサ・ゴルム・バン", new[] { UnitCatalog.ZanZNb, UnitCatalog.Golm, UnitCatalog.Tome, UnitCatalog.Ban, UnitCatalog.HisaHK0 }),
+        ("シオ: ヒサ・ドハ・シオ", new[] { UnitCatalog.DohaD0, UnitCatalog.ZanZNb, UnitCatalog.HisaHK0, UnitCatalog.Tome, UnitCatalog.Shio }),
+        ("シオ: ヒサ・クビ・シオ（120 席すべて届く）", new[] { UnitCatalog.HisaHK0, UnitCatalog.Shio, UnitCatalog.Kubi, UnitCatalog.Tome, UnitCatalog.ZanZNb }),
+        ("ツギ: ヒサ・バン・ツギ", new[] { UnitCatalog.Tome, UnitCatalog.HisaHK0, UnitCatalog.Ban, UnitCatalog.Tsugi, UnitCatalog.ZanZNb }),
     };
 
     static Formation Tough(Formation f, int x10)

@@ -7628,6 +7628,7 @@ public sealed class BattleContext
             || u.HasTrait(TraitId.Goad) || u.HasTrait(TraitId.Scapegoat)
             || u.HasTrait(TraitId.Beckon) || u.HasTrait(TraitId.Vendetta)) MarkActive = true;   // 第184期に2本
         if (u.HasTrait(TraitId.Beckon)) _beckonHolders.Add(u);   // 第184期（半減の判定の短絡）
+        if (u.HasTrait(TraitId.BeckonFeather)) _beckonFeatherLive = true;   // 第300期（矢面は羽も半分）
         if (u.HasTrait(TraitId.Deflect)) _deflectHolders.Add(u); // 第186期（逸らしの判定の短絡）
         if (u.HasTrait(TraitId.BeckonHold)) _holdLive = true;              // 第294期（踏みとどまり・猶予・橋）
         if (u.HasTrait(TraitId.DeflectWide)) _wideHolders.Add(u);          // 第294期（SR-a・肩代わりと範囲の逸らし）
@@ -11672,6 +11673,26 @@ public sealed class BattleContext
                 }
             }
         }
+        // 第300期（規定のヒサ・`BeckonFeather`）: **ミサの羽**（羽の保持者が出どころの一撃——手番の羽 ／ 乱射 ／ 標撃ち）が矢面の味方に当たったときも、同じ量を半分にする。
+        // 上の矢面と同じ段・同じ「刻み・徴収・中継・共有ではない」に、出どころが**同じ陣営の羽の保持者**であることを足しただけ（ボルグの巻き込み・カドの反撃の巻き込みなど、ほかの同士討ちには掛けない）。
+        // 半分にするかどうかは標を付けたヒサの札で決める（旧の規定のヒサ `HisaHKs` は掛けない）。**札の保持者がいなければ比較1つで抜ける。乱数を引かない。**
+        else if (_beckonFeatherLive && source is not null && source.TeamId == target.TeamId && source != target
+            && !burnTick && !levy && !relayed && !hexShare && source.HasTrait(TraitId.Feathers)
+            && BeckonGuardOf(target) is UnitState fholder && fholder.HasTrait(TraitId.BeckonFeather))
+        {
+            int saved = amount * BeckonTrait.GuardPercent / 100;
+            if (saved > 0)
+            {
+                amount -= saved;
+                UnitTally ht = TallyOf(fholder);
+                ht.BeckonFeatherHits++;
+                ht.BeckonFeatherSaved += saved;
+                TallyOf(target).BeckonFeatherTaken += saved;
+                Log($"    矢面の {target.Name} は羽の痛みも半分に抑えた（-{saved}）", LogKind.Trigger);
+                // 表示専用（直後にこの一撃の `Damage`）。
+                if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.BeckonFeather, Turn = _turn, ActorId = fholder.InstanceId, TargetId = target.InstanceId, PartnerId = source.InstanceId, Amount = saved, Team = target.TeamId });
+            }
+        }
 
         // 静電気の膜（第294期・SM・`StaticMembraneTrait`）: ソムが生きている間、帯電している味方への敵の攻撃は半分。**軽減の族**（矢面の直後・層の手前）。
         // 矢面と同じ条件（相手陣営の出どころ・刻み／徴収／中継／共有ではない）に同士討ちの除外を足す——放電・トウの漏れ・カタの雷の漏れは半分にしない。
@@ -12345,6 +12366,12 @@ public sealed class BattleContext
         NoteMarkHit(target, source);
         if (source is not null && (isFriendlyFire || source.TeamId == target.TeamId))
             tt.TakenFromAlly += amount;
+        // 第300期（**計数のみ**）: ミサの羽（羽の保持者が出どころ・同じ陣営・徴収 ／ 中継は除く）で受けた実額。矢面の味方（ヒサの標を持つ）かどうかで分ける。羽の保持者がいなければ比較1つで抜ける。
+        if (_featherLive && source is not null && source.TeamId == target.TeamId && source != target && !levy && !relayed && source.HasTrait(TraitId.Feathers))
+        {
+            if (_beckonHolders.Count > 0 && BeckonGuardOf(target) is not null) { tt.FeatherFfBeckonTaken += amount; tt.FeatherFfBeckonHits++; }
+            else { tt.FeatherFfOtherTaken += amount; tt.FeatherFfOtherHits++; }
+        }
         // 第298期（**計数のみ**・ZN-b の対象）: 味方による同士討ち（徴収・中継・自分は除く）が標の付いた駒に当たった回数を、撃った側に。
         if (source is not null && source.TeamId == target.TeamId && source != target && !levy && !relayed && target.RawCounter(StatusKeys.Marked) > 0)
             TallyOf(source).FfOnMarked++;
@@ -12922,6 +12949,8 @@ public sealed class BattleContext
     // 1戦の中だけの状態（猶予の期限・橋のターン・帯電の書き手）は `BattleContext` の辞書に置く——戦ごとに作り直されるので会戦の境界で消す手間が要らない。
     // =====================================================================================
     bool _holdLive;
+    /// <summary>第300期: 矢面は羽も半分（<see cref="TraitId.BeckonFeather"/>）の保持者が盤上にいるか（判定の短絡）。</summary>
+    bool _beckonFeatherLive;
     readonly List<UnitState> _wideHolders = new(), _pressureHolders = new(), _membraneHolders = new();
     /// <summary>次の <c>ApplyDamage</c> 1回にだけ効く札: SR-a の肩代わりでソラが受ける段（`ApplyDamageBody` の最初で読んで消す）。</summary>
     bool _wideNext;

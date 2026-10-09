@@ -691,10 +691,13 @@ public enum TraitId
     VendettaFrame,    // 濡れ衣の仇討ち（ZN-a）: 標の付いた味方がミサの羽（羽の保持者の同士討ち）に撃たれたら、ヒサ（矢面の保持者）が生きていれば敵を指差し、その敵へ仇討ちする（**札そのものは挙動を持たない**・`VendettaTrait` が読む）
     VendettaFrameAll, // 同（ZN-b）: 「ミサの羽」を味方による同士討ち全般に広げる（徴収・中継は除く）（同上）
 
-    // --- 第299期で足した札（規定のヒサ、ザンの版 `UnitCatalog.ZanZMa` ／ `ZanZM1` だけが持つ） ---
+    // --- 第299期で足した札（規定のヒサ、ザンの版 `UnitCatalog.ZanZMa` ／ `ZanZM1` だけが持つ・第300期から `VendettaRound` は規定のザン） ---
     MarkRallySelf,    // 叫びは自分も癒す（第299期・規定のヒサ）: HK-b の「最も傷ついた味方」にヒサ自身を含める（**札そのものは挙動を持たない**・engine の `RallyNeediest` が読む）
     VendettaRound,    // 仇巡り（ZM-a）: 手番で、標を持つ敵が1体でも生きていれば、層の深い順に巡って、その敵の標の層の数だけ斬る（1手番 `VendettaRoundRule.Cap` 太刀まで・2周目はしない）（**札そのものは挙動を持たない**・engine の `VendettaRound`）
     VendettaRoundOne, // 同（ZM-1・対照）: 1体に1太刀（層を見ない）（同上）
+
+    // --- 第300期で足した札（規定のヒサだけが持つ） ---
+    BeckonFeather,    // 矢面は羽も半分（第300期・規定のヒサ）: ヒサの標を持つ味方にミサの羽（羽の保持者の一撃）が当たったときも矢面の半減を掛ける（**札そのものは挙動を持たない**・engine の矢面の段が読む）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -16711,6 +16714,7 @@ public static class TraitCatalog
         new MarkerOnlyTrait(TraitId.MarkRallySelf),         // 第299期（規定のヒサ・叫びは自分も癒す）
         new MarkerOnlyTrait(TraitId.VendettaRound),         // 第299期（ZM-a）
         new MarkerOnlyTrait(TraitId.VendettaRoundOne),      // 第299期（ZM-1・対照）
+        new MarkerOnlyTrait(TraitId.BeckonFeather),         // 第300期（規定のヒサ・矢面は羽も半分）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

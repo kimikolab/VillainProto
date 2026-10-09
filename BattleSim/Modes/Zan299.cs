@@ -40,8 +40,9 @@ static class Zan299Diag
     static Doha297Diag.Wave WaveOf(string k) => Waves().First(w => w.Key == k);
     static Doha297Diag.Wave[] MainWaves() => new[] { "2", "3", "4", "5", "guard", "bat", "boss" }.Select(WaveOf).ToArray();
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation CompareRow(string n) => CompareBuilds().First(r => r.Name == n).F;
+    // 第300期: ザン（ZM-a）・ヒサ（矢面は羽も半分）を規定にした——台は `Pin300` で第299期の規定（ザン `ZanZNb` ／ ヒサ `HisaHKs`）に固定する。
+    static Formation Playtest(string n) => Pin300(Presets.Playtest.First(r => r.Name == n).F);
+    static Formation CompareRow(string n) => Pin300(CompareBuilds().First(r => r.Name == n).F);
     static bool Has(Formation f, UnitDef d) => f.Occupied().Any(o => ReferenceEquals(o.Def, d));
 
     /// <summary>代表台（§6-2）。段0 の後の規定で組む。最後の2台はミサのいない ザンの行（ZM-a ＝ ZM-1 の確認）。</summary>
@@ -59,9 +60,9 @@ static class Zan299Diag
     static (string Name, Formation F)[] HisaBoards() => Boards().Take(4).ToArray();
 
     internal sealed record Ver(string Tag, UnitDef Zan);
-    internal static Ver[] Versions() => new[] { new Ver("規定", UnitCatalog.Zan), new Ver("ZM-a", UnitCatalog.ZanZMa), new Ver("ZM-1", UnitCatalog.ZanZM1) };
+    internal static Ver[] Versions() => new[] { new Ver("規定", UnitCatalog.ZanZNb), new Ver("ZM-a", UnitCatalog.ZanZMa), new Ver("ZM-1", UnitCatalog.ZanZM1) };
     static Ver VerOf(string tag) => Versions().First(v => v.Tag == tag);
-    internal static Formation Apply(Formation f, Ver v) => FvSwap(f, UnitCatalog.Zan, v.Zan);
+    internal static Formation Apply(Formation f, Ver v) => FvSwap(f, UnitCatalog.ZanZNb, v.Zan);
 
     // ---------------------------------------------------------------------------------
     // 1戦の集計
@@ -156,7 +157,7 @@ static class Zan299Diag
         foreach (var (n, f) in HisaBoards())
             foreach (var w in MainWaves())
             {
-                var a = Many(FvSwap(f, UnitCatalog.Hisa, UnitCatalog.HisaHKb), w.Make, seeds);
+                var a = Many(FvSwap(f, UnitCatalog.HisaHKs, UnitCatalog.HisaHKb), w.Make, seeds);
                 var b = Many(f, w.Make, seeds);
                 string Bold(double x, double y, string s) => Math.Abs(y - x) >= 10 ? $"**{s}**" : s;
                 Console.WriteLine($"| {n} | {w.Name} | {Bold(a.Win, b.Win, $"{a.Win:F1} → {b.Win:F1}")} | {a.P(a.Turns):F1} → {b.P(b.Turns):F1} | {FirstDeath(a)} → {FirstDeath(b)} | {HisaDeath(a)} → {HisaDeath(b)} | {a.P(a.HisaHealed):F0} → {b.P(b.HisaHealed):F0} | {b.P(b.HisaSelfN):F2} ・ {b.P(b.HisaSelfAmt):F0} | {a.P(a.Rally):F1} ／ {a.P(a.RallyHealed):F0} → {b.P(b.Rally):F1} ／ {b.P(b.RallyHealed):F0} |");
@@ -235,9 +236,9 @@ static class Zan299Diag
     {
         Console.WriteLine("# 第299期 `compare` 64 行 × 版（seed 0..199・第1〜5波）");
         Console.WriteLine();
-        var rows = CompareBuilds();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin300(r.F))).ToArray();   // 第300期: 第299期の規定に固定
         var baseR = rows.ToDictionary(r => r.Name, r => CompareRates(r.F));
-        Console.WriteLine($"ザンのいる行: {string.Join(" ／ ", rows.Where(r => Has(r.F, UnitCatalog.Zan)).Select(r => r.Name))}");
+        Console.WriteLine($"ザンのいる行: {string.Join(" ／ ", rows.Where(r => Has(r.F, UnitCatalog.ZanZNb)).Select(r => r.Name))}");
         Console.WriteLine();
         foreach (var v in Versions().Skip(1))
         {
@@ -249,8 +250,8 @@ static class Zan299Diag
             foreach (var (n, f) in rows)
             {
                 var g = Apply(f, v);
-                newR[n] = Has(f, UnitCatalog.Zan) ? CompareRates(g) : baseR[n];
-                if (!Has(f, UnitCatalog.Zan)) continue;
+                newR[n] = Has(f, UnitCatalog.ZanZNb) ? CompareRates(g) : baseR[n];
+                if (!Has(f, UnitCatalog.ZanZNb)) continue;
                 double d = Enumerable.Range(1, 4).Select(i => newR[n][i] - baseR[n][i]).OrderByDescending(Math.Abs).First();
                 Console.WriteLine($"| {n} | {Row(baseR[n])} | {Row(newR[n])} | {d:+0.0;-0.0} |");
             }
@@ -299,7 +300,7 @@ static class Zan299Diag
     {
         var w = WaveOf(waveKey);
         Ver v0 = Versions()[0], va = VerOf("ZM-a");
-        var fixedDefs = new[] { UnitCatalog.Hisa, UnitCatalog.Zan, UnitCatalog.Tome };
+        var fixedDefs = new[] { UnitCatalog.Hisa, UnitCatalog.Zan, UnitCatalog.Tome };   // 探索枠から外す駒（`All` の規定の定義）
         var pool = UnitCatalog.All.Where(d => !fixedDefs.Contains(d)).ToArray();
         var perms = Perms(5).ToArray();
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -317,7 +318,7 @@ static class Zan299Diag
         Formation At(int[] perm, UnitDef[] five) { var g = new Formation(); for (int s = 0; s < 5; s++) g[perm[s]] = five[s]; return g; }
         Parallel.ForEach(pairs, pr =>
         {
-            var five = new[] { UnitCatalog.Hisa, UnitCatalog.Zan, UnitCatalog.Tome, pr.Item1, pr.Item2 };
+            var five = new[] { UnitCatalog.HisaHKs, UnitCatalog.ZanZNb, UnitCatalog.Tome, pr.Item1, pr.Item2 };   // 第300期: 第299期の規定に固定
             double Best(Ver c, out int[] seat)
             {
                 int bw = -1; seat = perms[0];
@@ -433,7 +434,7 @@ static class Zan299Diag
         Console.WriteLine("|---|---|---|");
 
         // (a) 段0-1: 規定のミサ ＝ 旧（M-b `TomeMb`）＋ MF-b の札 ／ 規定のザン ＝ 旧（`ZanZN0`）＋ ZN-b の札・文面・旧は `All` の外
-        var misa = UnitCatalog.Tome; var zan = UnitCatalog.Zan;
+        var misa = UnitCatalog.Tome; var zan = UnitCatalog.ZanZNb;   // 第300期: 規定のザンは ZM-a になった——第299期の規定（`ZanZNb`）を見る
         Expect("(a) 段0-1: 規定のミサ ＝ `TomeMb` ＋ `FeatherMarkLayer`（＝ 第298期の MF-b）・規定のザン ＝ `ZanZN0` ＋ `VendettaFrameAll`（＝ ZN-b）・文面は第298期の版のまま・旧は `All` ／ `Everyone` の外・第298期の版は旧から作る",
             misa.Traits.SequenceEqual(UnitCatalog.TomeMb.Traits.Append(TraitId.FeatherMarkLayer)) && misa.Traits.SequenceEqual(UnitCatalog.MisaMFb.Traits)
             && misa.PlusText == UnitCatalog.MisaMFb.PlusText && misa.MinusText == UnitCatalog.MisaMFb.MinusText && misa.Flavor == UnitCatalog.TomeMb.Flavor
@@ -441,10 +442,10 @@ static class Zan299Diag
             && zan.Traits.SequenceEqual(UnitCatalog.ZanZN0.Traits.Append(TraitId.VendettaFrameAll)) && zan.Traits.SequenceEqual(UnitCatalog.ZanZNb.Traits)
             && zan.PlusText == UnitCatalog.ZanZNb.PlusText && zan.PlusText.EndsWith("。仲間を撃った者が誰であれ、指差された敵を斬る", StringComparison.Ordinal) && zan.MinusText == UnitCatalog.ZanZN0.MinusText
             && misa.MaxHp == 58 && misa.Attack == 12 && misa.Speed == 6 && zan.MaxHp == 56 && zan.Attack == 10 && zan.Speed == 5
-            && UnitCatalog.All.Contains(misa) && UnitCatalog.All.Contains(zan) && !UnitCatalog.Everyone.Contains(UnitCatalog.TomeMb) && !UnitCatalog.Everyone.Contains(UnitCatalog.ZanZN0)
+            && UnitCatalog.All.Contains(misa) && UnitCatalog.All.Contains(UnitCatalog.Zan) && !UnitCatalog.Everyone.Contains(UnitCatalog.TomeMb) && !UnitCatalog.Everyone.Contains(UnitCatalog.ZanZN0)
             && UnitCatalog.MisaMFa.Traits.SequenceEqual(UnitCatalog.TomeMb.Traits.Append(TraitId.FeatherMark)) && UnitCatalog.ZanZNa.Traits.SequenceEqual(UnitCatalog.ZanZN0.Traits.Append(TraitId.VendettaFrame)));
         // (b) 段0-2: 規定のヒサ ＝ 旧（`HisaHKb`）＋ `MarkRallySelf`・文面は変えない
-        var hisa = UnitCatalog.Hisa;
+        var hisa = UnitCatalog.HisaHKs;   // 第300期: 規定のヒサは矢面が羽も半分になった——第299期の規定（`HisaHKs`）を見る
         Expect("(b) 段0-2: 規定のヒサ ＝ `HisaHKb` ＋ `MarkRallySelf`・文面 ／ 数値 ／ 手番は旧のまま・旧は `All` ／ `Everyone` の外",
             hisa.Traits.SequenceEqual(UnitCatalog.HisaHKb.Traits.Append(TraitId.MarkRallySelf)) && hisa.PlusText == UnitCatalog.HisaHKb.PlusText && hisa.MinusText == UnitCatalog.HisaHKb.MinusText
             && hisa.Flavor == UnitCatalog.HisaHKb.Flavor && hisa.MaxHp == UnitCatalog.HisaHKb.MaxHp && hisa.Speed == UnitCatalog.HisaHKb.Speed && hisa.Actions!.SequenceEqual(UnitCatalog.HisaHKb.Actions!)
@@ -465,7 +466,7 @@ static class Zan299Diag
                 return (Tal(ctx, "hisa").RallySelfHeals, hi.Hp);
             }
             var (s0, h0) = Shout(UnitCatalog.HisaHKb);
-            var (s1, h1) = Shout(UnitCatalog.Hisa);
+            var (s1, h1) = Shout(UnitCatalog.HisaHKs);
             Expect("(c) 段0-2: 仲間が満タンでヒサだけ傷ついているとき、叫びの「最も傷ついた味方」はヒサ（旧 `HisaHKb` は癒さない）", s0 == 0 && s1 == 1 && h1 > h0, $"旧: 自分への叫び {s0}・HP {h0} ／ 規定: {s1}・HP {h1}");
         }
 
@@ -502,7 +503,7 @@ static class Zan299Diag
         {
             // (h) 返り血が付かない・羽を呼ばない（ミサは MF-b の規定）・叫びは1手番に1回
             var en = Formation.Build(front1: UnitCatalog.Gald, front3: UnitCatalog.Dolga, back1: UnitCatalog.Dolga);
-            var ctx = Ctx(Sq(UnitCatalog.Tome, UnitCatalog.ZanZMa, UnitCatalog.Hisa), en, out var p, out var e);
+            var ctx = Ctx(Sq(UnitCatalog.Tome, UnitCatalog.ZanZMa, UnitCatalog.HisaHKs), en, out var p, out var e);
             foreach (var u in e) { u.MaxHp = u.Hp = 10000; }
             e[0].SetCounter(StatusKeys.Marked, 2); e[2].SetCounter(StatusKeys.Marked, 3);
             var zz = p.First(u => u.Def.Id == "zan");
@@ -519,7 +520,7 @@ static class Zan299Diag
         }
         {
             // (i) 規定のザン（札なし）は標の敵がいても普通の攻撃1回
-            var (zt, _, _, _) = Round(UnitCatalog.Zan, new[] { 2, 0, 3 });
+            var (zt, _, _, _) = Round(UnitCatalog.ZanZNb, new[] { 2, 0, 3 });
             Expect("(i) 規定のザンは標の敵がいても普通の攻撃（仇巡りしない・計数だけ）", zt.RoundTurns == 0 && zt.ZanTurns == 1 && zt.ZanPlanA == 5 && zt.ZanPlan1 == 2, $"見込み ZM-a {zt.ZanPlanA} ／ ZM-1 {zt.ZanPlan1}");
         }
         {
