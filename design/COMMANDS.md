@@ -962,6 +962,15 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 round300 find [seeds=50]  # 第300期 §4-2 Codex 向け: 見せ場ごとの出来事の件数と最初に出る seed ／ T（`ShareGive` ／ `FeatherMark` ／ `Framed` ／ `VendettaRound` ／ 叫びの自分 ／ `BeckonFeather`）
     dotnet run --project BattleSim -c Release 0 round300 memo <台の一部> <1..5|guard|bat|boss> <seed> [最後のT]   # 第300期 Codex 向け: 台本の並び（規定の駒）
     dotnet run --project BattleSim -c Release 0 round300 check            # 第300期 自己検査（規定のザン ／ ヒサの札と文面・羽が矢面の味方に半分 ／ 矢面でない味方に満額 ／ ほかの同士討ちは満額 ／ 敵の矢面は今のまま・PickOne・verbose・出来事・計数の対）
+    dotnet run --project BattleSim -c Release 0 hisa301 seat [seeds=50]   # 第301期 §2-4 ザンのいない台（ヒサ・ミサ・ボルグ・カド・ゴルム）の席 120 通り（得点 ＝ 第2〜5波 ＋ 精鋭 ＋ ボスの平均・同値はヒサ単独の指差しで割る）。本体は `Modes/Hisa301.cs`
+    dotnet run --project BattleSim -c Release 0 hisa301 p0 [seeds]        # 第301期 Phase 0: 叫びの溢れと号令の層の見込み ／ 倒れる一撃とヒサの生存 ／ ソラが剥がした標の内訳 ／ 同士討ちが標の味方に当たった数 ／ 層の膨張
+    dotnet run --project BattleSim -c Release 0 hisa301 stage [seeds]     # 第301期 段0 の参考の数字（第300期の規定 → ソラ → ザン → ヒサを1段ずつ）× 循環 ／ 三人組 ／ 守り型 ／ 標経済 ／ ザンなし × 第2〜5波 ／ 精鋭 ／ ボス
+    dotnet run --project BattleSim -c Release 0 hisa301 ver [seeds]       # 第301期 段1: ヒサの版 K0〜K5（号令 HL-i ／ HL-t3 ／ HL-t8・庇い HC・K5 は得点で決まる）× 代表台 7 × 全波（勝率・決着T・号令・庇い）
+    dotnet run --project BattleSim -c Release 0 hisa301 four [seeds=50]   # 第301期 §5-3 手番版の「4段」（号令 → 羽の割り込み → ミサの一斉射撃 → ザンの仇巡り）が揃ったターン（verbose の台本）
+    dotnet run --project BattleSim -c Release 0 hisa301 cmp [seeds]       # 第301期 §5-2 `compare` 64 行 × 組（ヒサ在席の行）と (G2) の分解
+    dotnet run --project BattleSim -c Release 0 hisa301 find [seeds=50]   # 第301期 Codex 向け: 見せ場ごとの出来事の件数と最初に出る seed ／ T（`Framed` ／ `Command` ／ `Cover`・4段の最初の seed）
+    dotnet run --project BattleSim -c Release 0 hisa301 memo <台の一部> <1..5|guard|bat|boss> <seed> [K0..K5] [最後のT]   # 第301期 Codex 向け: 台本の並び（版を選べる）
+    dotnet run --project BattleSim -c Release 0 hisa301 check             # 第301期 自己検査（段0 の3つ・号令の溢れ ／ 20 ごと ／ 上限 ／ 持ち越し ／ 羽1発・庇いの敵だけ ／ 1戦1度 ／ 羽なし ／ 粛・PickOne・verbose・出来事）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

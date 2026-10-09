@@ -508,14 +508,16 @@ public static class UnitCatalog
         Advances = false,
         // **第184期に転生**（旧 `Marker` は定義だけ残す）。矢面（`Beckon`）と、その代金の逃げ回る（`Flee`）。
         // **札の並びが実行順**——矢面が標を付けてから、逃げ回るが標の相手以外と入れ替わる（どちらも `OnAction`）。
-        Traits = new[] { TraitId.Beckon, TraitId.Flee, TraitId.MarkRallyWide, TraitId.MarkRallySelf, TraitId.BeckonFeather },
+        Traits = new[] { TraitId.Beckon, TraitId.Flee, TraitId.MarkRallyWide, TraitId.MarkRallySelf, TraitId.BeckonFeather, TraitId.FrameAccuse },
         // 第296期: ポンの判断（第295期の案 K2）で HK-b（あいつを狙え！・`MarkRallyWide`）を規定にした。旧の規定は `HisaHK0`（指示書 design/PHASE296_HISA_RALLY_PLAYTEST_SPEC.md §1）。
         // 第299期: ポンの決めで「最も傷ついた味方」にヒサ自身を含めた（`MarkRallySelf`・文面は変えない）。第296〜298期の規定は `HisaHKb`（指示書 design/PHASE299_ZAN_ROUND_SPEC.md §3）。
         // 第300期: ポンの決めで矢面の半減をミサの羽にも掛けた（`BeckonFeather`・ヒサの札）。第299期の規定は `HisaHKs`（指示書 design/PHASE300_ROUND_GUARD_SPEC.md §3）。
+        // 第301期: ポンの決めで「あいつがやった！」をヒサ自身の札にした（`FrameAccuse`・ザンがいなくても敵に標を付ける）。第300期の規定は `HisaHKf`（指示書 design/PHASE301_HISA_COMMAND_SPEC.md §2-3）。
         // 指差すのが手番そのもの（攻撃2 は出なくなる）。`[Skill]` の1要素で毎手番指差して逃げる。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "隣の味方を指差した") },
         PlusText = "手番で、隣でいちばん元気な味方1体に標を付けて矢面に立たせる。標を付けられた味方は、攻撃から受ける痛みが半分になる（ミサの羽でも）"
-                   + "。指差された敵が攻撃されるたび、『あいつを狙え！ まだ倒れるな！』と叫んで、攻撃した味方と最も傷ついた味方を癒す",
+                   + "。指差された敵が攻撃されるたび、『あいつを狙え！ まだ倒れるな！』と叫んで、攻撃した味方と最も傷ついた味方を癒す"
+                   + "。標を付けられた味方が仲間に撃たれたら、敵を指差して『あいつがやった！』と叫び、その敵に標を付ける",
         MinusText = "自分では攻撃しない。指差したら、標の相手以外の隣の味方と入れ替わって逃げる（入れ替わった味方は前へ押し出される）",
         Flavor = "味方を矢面に立たせて生き延びた男。誰も隣に立ちたがらない。"
     };
@@ -633,6 +635,146 @@ public static class UnitCatalog
         PlusText = HisaHKb.PlusText,
         MinusText = HisaHK0.MinusText,
         Flavor = HisaHK0.Flavor
+    };
+
+    /// <summary>第300期の規定のヒサ（<see cref="HisaHKs"/> ＋ <see cref="TraitId.BeckonFeather"/>・矢面は羽も半分）。第301期に規定へ <see cref="TraitId.FrameAccuse"/>（あいつがやった！）を足したので、旧の規定の定義を明示的に持つ。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第300期の規定のヒサを使う過去の器具はこちらに固定する（`Common.Pin301`）。</summary>
+    public static readonly UnitDef HisaHKf = new()
+    {
+        Id = HisaHK0.Id,
+        Name = HisaHK0.Name,
+        MaxHp = HisaHK0.MaxHp,
+        Attack = HisaHK0.Attack,
+        Speed = HisaHK0.Speed,
+        Advances = HisaHK0.Advances,
+        Pattern = HisaHK0.Pattern,
+        Traits = HisaHKs.Traits.Append(TraitId.BeckonFeather).ToArray(),
+        Actions = HisaHK0.Actions,
+        PlusText = HisaHKs.PlusText.Replace("痛みが半分になる。", "痛みが半分になる（ミサの羽でも）。"),
+        MinusText = HisaHK0.MinusText,
+        Flavor = HisaHK0.Flavor
+    };
+
+    // 第301期 段1（指示書 design/PHASE301_HISA_COMMAND_SPEC.md §3）—— ヒサの号令（叫びの溢れ → 敵の層）と庇い。段0 の後の規定のヒサの末尾に札を足すだけ。
+    // `All` ／ `Retired` ／ `Presets` に入れない（採否はポン）。K5 は K1〜K3 で代表台がいちばんよかった号令 ＋ 庇い（3つとも定義だけ置く）。
+
+    /// <summary>第301期 HL-i（号令・即時）。規定 ＋ <see cref="TraitId.CommandNow"/>（溢れが 20 たまるたびその場で、そのまとまりで叩かれた標の敵のうち層が最も深い敵に層を1つ・1ターンに 2 層まで）。</summary>
+    public static readonly UnitDef HisaHLi = new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Append(TraitId.CommandNow).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText + "。余った声援は、敵を指差す号令に変わる",
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
+    };
+
+    /// <summary>第301期 HL-t3（号令・手番・上限 3）。規定 ＋ <see cref="TraitId.CommandTurn3"/>（ヒサの手番に溜まった溢れを 20 ごとに層に換え、ヒサの指差しの選び方の敵へ・1手番に 3 層まで・端数は持ち越し）。</summary>
+    public static readonly UnitDef HisaHLt3 = new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Append(TraitId.CommandTurn3).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText + "。余った声援は、自分の手番に敵を指差す号令に変わる",
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
+    };
+
+    /// <summary>第301期 HL-t8（号令・手番・上限 8）。規定 ＋ <see cref="TraitId.CommandTurn8"/>（HL-t3 の上限を 8 に）。</summary>
+    public static readonly UnitDef HisaHLt8 = new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Append(TraitId.CommandTurn8).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText + "。余った声援は、自分の手番に敵を指差す号令に変わる",
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
+    };
+
+    /// <summary>第301期 HC（庇い）。規定 ＋ <see cref="TraitId.HisaCover"/>（味方への敵の倒れる一撃を、ヒサが自分に標を付けて代わりに受ける・1戦に1度）。</summary>
+    public static readonly UnitDef HisaHC = new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Append(TraitId.HisaCover).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText + "。一度だけ、倒れそうな仲間の前に立つ",
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
+    };
+
+    /// <summary>第301期 K5 の候補（HL-i ＋ HC）。</summary>
+    public static readonly UnitDef HisaHCi = new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Append(TraitId.CommandNow).Append(TraitId.HisaCover).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText + "。余った声援は、敵を指差す号令に変わる" + "。一度だけ、倒れそうな仲間の前に立つ",
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
+    };
+
+    /// <summary>第301期 K5 の候補（HL-t3 ＋ HC）。</summary>
+    public static readonly UnitDef HisaHCt3 = new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Append(TraitId.CommandTurn3).Append(TraitId.HisaCover).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText + "。余った声援は、自分の手番に敵を指差す号令に変わる" + "。一度だけ、倒れそうな仲間の前に立つ",
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
+    };
+
+    /// <summary>第301期 K5 の候補（HL-t8 ＋ HC）。</summary>
+    public static readonly UnitDef HisaHCt8 = new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Append(TraitId.CommandTurn8).Append(TraitId.HisaCover).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText + "。余った声援は、自分の手番に敵を指差す号令に変わる" + "。一度だけ、倒れそうな仲間の前に立つ",
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
     };
 
     /// <summary>第294期 HS-c（橋）。HS-a ＋ <see cref="TraitId.BeckonBridge"/>（踏みとどまった瞬間、癒し手（リリ ／ ツギ）が手番の外で1度動いてその味方へ向ける・1ターンに1度）。</summary>
@@ -2361,8 +2503,10 @@ public static class UnitCatalog
         // **第184期に転生**（旧 `Avenge` は定義だけ残す）。仇指し（倍返し＋敵に標）と、その代金の返り血。
         // 第299期: ポンの判断（第298期の案 Z2）で ZN-b（濡れ衣の仇討ち・同士討ち全般）を規定にした。旧の規定は `ZanZN0`（指示書 design/PHASE299_ZAN_ROUND_SPEC.md §2）。
         // 第300期: ポンの判断（第299期の案 R1）で ZM-a（手番の仇巡り・`VendettaRound`）を規定にした。第299期の規定は `ZanZNb`（同じ札・文面）（指示書 design/PHASE300_ROUND_GUARD_SPEC.md §2）。
-        Traits = new[] { TraitId.Vendetta, TraitId.Recoil, TraitId.VendettaFrameAll, TraitId.VendettaRound },
-        PlusText = "標を付けられた味方が殴られるたび、殴った者へ割り込んで倍の刃を返し、仇として標を付ける（標を付けられた敵は受けるダメージが5割増える）。仲間を撃った者が誰であれ、指差された敵を斬る。手番では、仇を巡って斬る。深く指差された仇ほど、何度も斬る",
+        // 第301期: ポンの決めで仇討ち（濡れ衣を含む）は仇の標を付けてから斬る（`VendettaMarkFirst`）。第300期の規定は `ZanZMa`（同じ札・文面）（指示書 design/PHASE301_HISA_COMMAND_SPEC.md §2-2）。
+        // 第301期 段0-3: 「あいつがやった！」をヒサの札（`FrameAccuse`）に移した。文面は「仇の標を付けてから斬る」「ヒサが指差した敵を斬る」に合わせた（札は段0-2 のまま）。
+        Traits = new[] { TraitId.Vendetta, TraitId.Recoil, TraitId.VendettaFrameAll, TraitId.VendettaRound, TraitId.VendettaMarkFirst },
+        PlusText = "標を付けられた味方が殴られるたび、殴った者を仇として指差し（標を付けられた敵は受けるダメージが5割増える）、割り込んで倍の刃を返す。仲間を撃った者が誰であれ、ヒサが指差した敵を斬る。手番では、仇を巡って斬る。深く指差された仇ほど、何度も斬る",
         MinusText = "刃を返すたびに自分も傷つく（それで倒れはしない）",
         Flavor = "仲間が傷つくと、刃を抜かずにはいられない。返した刃は、いつも自分の手も裂いている。"
     };
@@ -2420,7 +2564,8 @@ public static class UnitCatalog
     };
 
     // 第299期（指示書 design/PHASE299_ZAN_ROUND_SPEC.md §4）—— ザンの手番「仇巡り」。規定のザン（ZN-b）の上に足す。対照（`All` ／ `Retired` ／ `Presets` に入れない・採否はポン）。
-    // 第300期: ZM-a を規定にした。版は第299期の規定（`ZanZNb`）から作る（規定から作ると札が二重になる）。ZM-a は規定の `Zan` と同じ札の並び。
+    // 第300期: ZM-a を規定にした。版は第299期の規定（`ZanZNb`）から作る（規定から作ると札が二重になる）。ZM-a は第300期の規定の `Zan` と同じ札の並び。
+    // 第301期: 規定のザンに `VendettaMarkFirst`（標を付けてから斬る）を足し、文面を替えた。**ZM-a は第300期の規定と同じ物**（札・文面）なので、第300期の規定のザンを使う過去の器具はこちらに固定する（`Common.Pin301`）。
 
     /// <summary>第299期 ZM-a（層の数）。規定 ＋ <see cref="TraitId.VendettaRound"/>（手番で、標を持つ敵を層の深い順に巡り、その敵の層の数だけ斬る・1手番 8 太刀まで）。</summary>
     public static readonly UnitDef ZanZMa = new()
@@ -3153,7 +3298,8 @@ public static class UnitCatalog
         // 第186期 追補: 突き（`Thrust`）——攻撃型を貫きにし、指差した敵の列を 攻撃力 ×（1＋逸らした回数）で突き抜く。
         Pattern = AttackPattern.Pierce,
         // 第295期: ポンの判断（第294期の案 R2）で SR-b（見切り・`DivertPressure`）を規定にした。旧の規定は `SoraSR0`。文面は「見切り」に替えた（指示書 design/PHASE295_MARK_HEAL_SPEC.md §2）。
-        Traits = new[] { TraitId.Divert, TraitId.Deflect, TraitId.Thrust, TraitId.DivertPressure },
+        // 第301期: ポンの決めでヒサの矢面の標を剥がさない（`DivertKeepBeckon`・文面は変えない）。第295〜300期の規定は `SoraSRs`（指示書 design/PHASE301_HISA_COMMAND_SPEC.md §2-1）。
+        Traits = new[] { TraitId.Divert, TraitId.Deflect, TraitId.Thrust, TraitId.DivertPressure, TraitId.DivertKeepBeckon },
         PlusText = "毎ターン、味方への狙いを自分に引き受け、代わりに一番手強い敵を指差す。自分への一撃は半分をその敵へ逸らし、"
                    + "逸らした数だけ鋭くなる突きで指差した敵の列を突き抜く"
                    + "。指差した敵の動きは読める。深く指差された敵の一撃ほど、仲間への分まで受け流す",
@@ -3178,6 +3324,24 @@ public static class UnitCatalog
         Actions = Sora.Actions,
         PlusText = "毎ターン、味方への狙いを自分に引き受け、代わりに一番手強い敵を指差す。自分への一撃は半分をその敵へ逸らし、"
                    + "逸らした数だけ鋭くなる突きで指差した敵の列を突き抜く",
+        MinusText = Sora.MinusText,
+        Flavor = Sora.Flavor
+    };
+
+    /// <summary>第295〜300期の規定のソラ（SR-b の札・「見切り」の文面）。第301期に規定へ <see cref="TraitId.DivertKeepBeckon"/>（矢面は剥がさない）を足したので、旧の規定の定義を明示的に持つ。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第300期までの規定のソラを使う過去の器具はこちらに固定する（`Common.Pin301`）。</summary>
+    public static readonly UnitDef SoraSRs = new()
+    {
+        Id = Sora.Id,
+        Name = Sora.Name,
+        MaxHp = Sora.MaxHp,
+        Attack = Sora.Attack,
+        Speed = Sora.Speed,
+        Advances = Sora.Advances,
+        Pattern = Sora.Pattern,
+        Traits = new[] { TraitId.Divert, TraitId.Deflect, TraitId.Thrust, TraitId.DivertPressure },
+        Actions = Sora.Actions,
+        PlusText = Sora.PlusText,
         MinusText = Sora.MinusText,
         Flavor = Sora.Flavor
     };

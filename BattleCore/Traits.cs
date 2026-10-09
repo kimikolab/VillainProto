@@ -699,6 +699,15 @@ public enum TraitId
     // --- 第300期で足した札（規定のヒサだけが持つ） ---
     BeckonFeather,    // 矢面は羽も半分（第300期・規定のヒサ）: ヒサの標を持つ味方にミサの羽（羽の保持者の一撃）が当たったときも矢面の半減を掛ける（**札そのものは挙動を持たない**・engine の矢面の段が読む）
 
+    // --- 第301期で足した札（段0: 規定のソラ ／ ザン ／ ヒサ。段1: ヒサの版 `UnitCatalog.HisaHLi` ／ `HisaHLt3` ／ `HisaHLt8` ／ `HisaHC` ／ `HisaHC*` だけが持つ） ---
+    DivertKeepBeckon, // 矢面は剥がさない（第301期・規定のソラ）: 逸らしがターンの頭に味方の標を剥がすとき、ヒサの矢面の標（矢面の保持者の記憶が指す味方の標）は残す（**札そのものは挙動を持たない**・`DivertTrait` が読む）
+    VendettaMarkFirst, // 標を付けてから斬る（第301期・規定のザン）: 仇討ち（濡れ衣を含む）で、仇の標（層）を付けてから倍の刃を返す（**札そのものは挙動を持たない**・`VendettaTrait.Avenge` が読む）
+    FrameAccuse,      // あいつがやった！（第301期・規定のヒサ）: 標の付いた味方が味方の攻撃に当たったら（徴収 ／ 中継 ／ 本人の一撃を除く）、ヒサが敵を指差してその敵に標（層）を1つ付ける。ザン（濡れ衣の札）がいればその敵へ濡れ衣の仇討ち（`FrameAccuseTrait`）
+    CommandNow,       // 号令・即時（HL-i）: 叫びの溢れが 20 たまるたび、その場で、そのまとまりで叩かれた標の敵のうち層が最も深い敵に層を1つ刻む（1ターンに 2 層まで）（**札そのものは挙動を持たない**・engine の `BundlePop` ／ `CommandNowFire`）
+    CommandTurn3,     // 号令・手番（HL-t3）: ヒサの手番（指差しの後）に、溜まった溢れを 20 ごとに層に換え、ヒサの指差しの選び方の敵に刻む（1手番に 3 層まで・端数は持ち越し）（同上・engine の `CommandTurnFire`）
+    CommandTurn8,     // 同（HL-t8）: 1手番に 8 層まで（同上）
+    HisaCover,        // 庇い（HC）: 味方（ヒサ以外）が敵の攻撃で倒れる一撃を受けるとき、ヒサが生きていれば自分に標を付けてその一撃を代わりに受ける（1戦に1度・手番の外の動作）（**札そのものは挙動を持たない**・engine の `ApplyDamage` の入口）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -4431,9 +4440,18 @@ public sealed class DivertTrait : Trait
 
         // --- 外す（味方から。自分は除く）--------------------------------------------------
         int stripped = 0;
+        // 第301期（規定のソラ・`DivertKeepBeckon`）: ヒサの矢面の標（矢面の保持者の記憶が指す味方の標）は剥がさない。ほかの味方の標は今までどおり剥がす。
+        bool keepBeckon = self.HasTrait(TraitId.DivertKeepBeckon);
         foreach (UnitState ally in ctx.LivingMembers(self.TeamId))
         {
             if (ally == self || ally.Counter(StatusKeys.Marked) <= 0) continue;
+            bool beckon = ctx.BeckonHolderOf(ally) is not null;
+            ctx.NoteDivertStripKind(self, beckon, keepBeckon);   // 第301期（計数のみ・矢面 ／ それ以外）
+            if (beckon && keepBeckon)
+            {
+                ctx.Log($"    {self.Name} は {ally.Name} の矢面の標には触れなかった", LogKind.Trigger);
+                continue;
+            }
             ally.SetCounter(StatusKeys.Marked, 0);
             ctx.NoteDivertStrip(ally.Def.Name);
             ctx.NoteMarkStrip(ally);   // 第150期 段A（計数のみ）
@@ -12495,7 +12513,8 @@ public sealed class VendettaTrait : Trait
         if (source is not null && source.TeamId == self.TeamId && source != self
             && (self.HasTrait(TraitId.VendettaFrame) || self.HasTrait(TraitId.VendettaFrameAll)))
         {
-            Frame(ctx, self, ally, source);
+            // 第301期: 「あいつがやった！」の札（`FrameAccuse`）を持つヒサが生きていれば、指差しも濡れ衣の仇討ちもヒサの札が起こす（`BattleContext.FrameAccuse`）。ここでは何もしない。
+            if (ctx.FrameAccuseHolder(self.TeamId, ally) is null) Frame(ctx, self, ally, source);
             return;
         }
         // 第297期: 分かちの中継（`relayed`）の一撃でも出る——中継の `ApplyDamage` は出どころ（敵）をそのまま渡し、`OnAllyDamaged` は中継を区別しない。
@@ -12525,6 +12544,19 @@ public sealed class VendettaTrait : Trait
         Avenge(ctx, self, ally, foe, framed: true);
     }
 
+    /// <summary>
+    /// 濡れ衣の仇討ち（第301期・規定のヒサの「あいつがやった！」から呼ばれる）。ヒサが指差して標を付けた <paramref name="foe"/> へ斬る。
+    /// 条件は第298期の <c>Frame</c> と同じ（ZN-a はミサの羽だけ・反撃の連鎖の中では出ない・粛 ／ 痺れで止まる）。徴収 ／ 中継はヒサの側で除いてある。
+    /// </summary>
+    public static void FrameAvenge(BattleContext ctx, UnitState self, UnitState ally, UnitState foe, UnitState shooter)
+    {
+        if (!self.HasTrait(TraitId.VendettaFrameAll) && !shooter.HasTrait(TraitId.Feathers)) return;
+        if (!foe.IsAlive || ctx.InReaction) return;
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.Avenge)) return;
+        ctx.NoteFramedVendetta(self, foe, shooter);
+        Avenge(ctx, self, ally, foe, framed: true);
+    }
+
     static void Avenge(BattleContext ctx, UnitState self, UnitState ally, UnitState source, bool framed)
     {
         ctx.Reaction(() =>
@@ -12533,26 +12565,17 @@ public sealed class VendettaTrait : Trait
             int before = source.Hp;
             bool alreadyMarked = source.RawCounter(StatusKeys.Marked) > 0;
             ctx.Log(framed ? $"    {self.Name} が指差された {source.Name} へ、{ally.Name} の仇の刃を返す" : $"    {self.Name} が {ally.Name} の仇へ倍の刃を返す", LogKind.Trigger);
+            // 第301期（規定のザン・`VendettaMarkFirst`）: 仇の標（層）を付けてから斬る——初回の仇討ちも「標の敵への攻撃」になる（叫びが出る・標の +50% が乗る）。
+            bool markFirst = self.HasTrait(TraitId.VendettaMarkFirst);
+            bool marked = false;
+            if (!alreadyMarked) ctx.NoteVendettaFresh(self);   // 第301期（計数のみ・標の無い仇への仇討ち。叫びが出たかはまとまりの枠が数える）
+            if (markFirst) marked = MarkFoe(ctx, self, source, alreadyMarked);
             ctx.NoteAttackRead(self);   // 攻撃力を出力に変換した（第64期・死蔵の判定）
             ctx.ApplyDamage(source, atk, self);
             int dealt = Math.Max(0, before - Math.Max(0, source.Hp));
 
             // 殴ってから付ける（Q0-6）。倒れた相手には付けない。
-            bool marked = false;
-            if (source.IsAlive && !alreadyMarked)
-            {
-                ctx.LayerMark(source, self);   // 第285期: 新規の標も口を通す（標が 0 なので `SetCounter(Marked, 1)` と同じ・羽の書き込みを数えるため）
-                ctx.NoteMarkOrigin(source, MarkOrigin.Vendetta);
-                ctx.EmitStatusGain(source, StatusKeys.Marked, 1, self);   // 表示専用
-                ctx.Log($"    {self.Name} が {source.Name} を仇として指差した", LogKind.Trigger);
-                marked = true;
-            }
-            // 第281期: 炸裂の保持者がいる戦だけ、既に標のある仇にも層を1つ足す（いなければ何もしない＝従来どおり）。
-            else if (source.IsAlive && ctx.MarkLayers)
-            {
-                ctx.LayerMark(source, self);
-                ctx.Log($"    {self.Name} が {source.Name} をさらに指差した（層 {source.RawCounter(StatusKeys.Marked)}）", LogKind.Trigger);
-            }
+            if (!markFirst) marked = MarkFoe(ctx, self, source, alreadyMarked);
             ctx.NoteVendetta(self, dealt, marked);
             if (framed) ctx.NoteFrameDealt(self, dealt);
 
@@ -12563,6 +12586,107 @@ public sealed class VendettaTrait : Trait
                 ctx.NoteRecoil(self, Math.Max(0, before2 - self.Hp));
             }
         });
+    }
+
+    /// <summary>仇の標を書く（第301期に本体を切り出した・中身は第184期〜のまま）。倒れた相手には付けない。新しい標なら真を返す。</summary>
+    static bool MarkFoe(BattleContext ctx, UnitState self, UnitState source, bool alreadyMarked)
+    {
+        if (source.IsAlive && !alreadyMarked)
+        {
+            ctx.LayerMark(source, self);   // 第285期: 新規の標も口を通す（標が 0 なので `SetCounter(Marked, 1)` と同じ・羽の書き込みを数えるため）
+            ctx.NoteMarkOrigin(source, MarkOrigin.Vendetta);
+            ctx.EmitStatusGain(source, StatusKeys.Marked, 1, self);   // 表示専用
+            ctx.Log($"    {self.Name} が {source.Name} を仇として指差した", LogKind.Trigger);
+            return true;
+        }
+        // 第281期: 炸裂の保持者がいる戦だけ、既に標のある仇にも層を1つ足す（いなければ何もしない＝従来どおり）。
+        if (source.IsAlive && ctx.MarkLayers)
+        {
+            ctx.LayerMark(source, self);
+            ctx.Log($"    {self.Name} が {source.Name} をさらに指差した（層 {source.RawCounter(StatusKeys.Marked)}）", LogKind.Trigger);
+        }
+        return false;
+    }
+}
+
+/// <summary>
+/// 号令（第301期・ヒサの版 HL-i ／ HL-t3 ／ HL-t8）。<b>叫び（<see cref="TraitId.MarkRallyWide"/>）の過剰回復（溢れ）を、敵の標の層に換える。</b>
+/// 溢れ ＝ 叫びの回復のうち満タンで入らなかった量（攻撃した味方が満タンのときの 0 回復を含む）。ヒサの私有の帳簿 <see cref="PoolKey"/> に溜める。
+///
+/// <para>HL-i（<see cref="TraitId.CommandNow"/>）は溢れが <see cref="Every"/> たまるたびその場で、そのまとまりで叩かれた標の敵のうち層が最も深い敵に刻む（1ターンに <see cref="NowCap"/> 層まで）。
+/// HL-t（<see cref="TraitId.CommandTurn3"/> ／ <see cref="TraitId.CommandTurn8"/>）はヒサの手番（指差しと逃げ回るの後）に、溜まった溢れを <see cref="Every"/> ごとに
+/// ヒサの指差しの選び方（層 → 攻撃力 → 席・<see cref="BattleContext.FramePick"/>）の敵へ一度に刻む（1手番に 3 ／ 8 層まで・端数は持ち越す）。</para>
+///
+/// <para>層の書き込みは <see cref="BattleContext.LayerMark"/>（ミサがいる戦では層が積もり、層1つにつき羽が1発・在庫 +1。いなければ標が付くだけ——標の敵には刻めない）。
+/// 本体は engine（<c>CommandNowFire</c> ／ <c>CommandTurnFire</c>）。<b>乱数を引かない。</b></para>
+/// </summary>
+public sealed class CommandTrait : Trait
+{
+    /// <summary>溢れ何点で層1つか（指示書が<b>測る前に固定</b>した値）。</summary>
+    public const int Every = 20;
+    /// <summary>HL-i の1ターンの上限（層）。</summary>
+    public const int NowCap = 2;
+    /// <summary>溜まった溢れ（ヒサの私有の帳簿・<c>OnCarryOver</c> で消す）。</summary>
+    public const string PoolKey = "cmdPool";
+    /// <summary>HL-i: 最後に刻んだターン（<c>Turn + 1</c>）と、そのターンに刻んだ層の数。</summary>
+    public const string TurnKey = "cmdTurn", TurnCountKey = "cmdTurnN";
+
+    readonly TraitId _id;
+    public CommandTrait(TraitId id) => _id = id;
+    public override TraitId Id => _id;
+
+    /// <summary>手番版の上限（HL-i なら 0）。</summary>
+    public static int TurnCap(UnitState u) => u.HasTrait(TraitId.CommandTurn8) ? 8 : u.HasTrait(TraitId.CommandTurn3) ? 3 : 0;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (_id == TraitId.CommandNow || !self.IsAlive) return;
+        ctx.CommandTurnFire(self, TurnCap(self));
+    }
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(PoolKey, 0);
+        self.SetCounter(TurnKey, 0);
+        self.SetCounter(TurnCountKey, 0);
+    }
+}
+
+/// <summary>
+/// 庇い（第301期・ヒサの版 HC）。<b>味方（ヒサ以外）が敵の攻撃で倒れる一撃を受けるとき、ヒサが生きていれば、その一撃をヒサが代わりに受ける</b>（1戦に1度）。
+/// 受ける前にヒサが自分に標を付ける（ザンの仇討ちが攻撃の主へ向かう・この標にはミサの羽を撃たせない）。ヒサが受ける量は元の一撃のまま（ヒサの側の軽減は掛かる）。
+/// 手番の外の動作として <see cref="BattleContext.CanActOutOfTurn"/> を通す（経路 <see cref="OutOfTurnRoute.Cover"/>・粛 ／ 痺れで止まる）。
+/// 刻み・徴収・中継・共有・同士討ちでは庇わない。判定は engine（<c>ApplyDamageBody</c> の HP を引く直前・「殺さない」制約の族の後ろ）。
+/// </summary>
+public sealed class CoverTrait : Trait
+{
+    /// <summary>1戦に1度の印（ヒサの私有・<c>OnCarryOver</c> で消す）。</summary>
+    public const string UsedKey = "coverUsed";
+
+    public override TraitId Id => TraitId.HisaCover;
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(UsedKey, 0);
+}
+
+/// <summary>
+/// あいつがやった！（第301期・規定のヒサ）。<b>標の付いた味方が味方の攻撃に当たったら</b>（徴収 ／ 中継 ／ 撃たれた本人の一撃を除く・第298期 ZN-b と同じ線）、
+/// ヒサが敵を指差し（<see cref="BattleContext.FramePick"/>: 層 → 攻撃力 → 席番号・乱数を引かない）、<b>その敵に標（層）を1つ付ける</b>。
+/// 濡れ衣の札を持つザンがいれば、続けてその敵へ濡れ衣の仇討ち（<see cref="VendettaTrait.FrameAvenge"/>）——標が先に付いているので仇討ちに叫びが出る。
+/// <b>敵の攻撃では何もしない</b>（犯人が敵なら濡れ衣は要らない）。反撃の連鎖の中では出ない（第298期の <c>Frame</c> と同じ）。
+/// 第300期までの指差しはザンの札（ZN-b）の中の動作で、ザンがいなければ出なかった。本体は engine の <see cref="BattleContext.FrameAccuse"/>。
+/// </summary>
+public sealed class FrameAccuseTrait : Trait
+{
+    public override TraitId Id => TraitId.FrameAccuse;
+
+    public override void OnAllyDamaged(BattleContext ctx, UnitState self, UnitState ally, int dmg, UnitState? source)
+    {
+        if (!self.IsAlive || ally == self) return;
+        if (ally.Counter(StatusKeys.Marked) <= 0) return;                         // 標の付いた味方だけ
+        if (source is null || source.TeamId != self.TeamId || source == ally) return;   // 味方の攻撃だけ（本人の一撃は除く）
+        if (ctx.Hit.Levy || ctx.Hit.Relayed) return;
+        if (ctx.InReaction) return;
+        ctx.FrameAccuse(self, ally, source);
     }
 }
 
@@ -16715,6 +16839,13 @@ public static class TraitCatalog
         new MarkerOnlyTrait(TraitId.VendettaRound),         // 第299期（ZM-a）
         new MarkerOnlyTrait(TraitId.VendettaRoundOne),      // 第299期（ZM-1・対照）
         new MarkerOnlyTrait(TraitId.BeckonFeather),         // 第300期（規定のヒサ・矢面は羽も半分）
+        new MarkerOnlyTrait(TraitId.DivertKeepBeckon),      // 第301期（規定のソラ・矢面は剥がさない）
+        new MarkerOnlyTrait(TraitId.VendettaMarkFirst),     // 第301期（規定のザン・標を付けてから斬る）
+        new FrameAccuseTrait(),                             // 第301期（規定のヒサ・あいつがやった！）
+        new CommandTrait(TraitId.CommandNow),               // 第301期（HL-i）
+        new CommandTrait(TraitId.CommandTurn3),             // 第301期（HL-t3）
+        new CommandTrait(TraitId.CommandTurn8),             // 第301期（HL-t8）
+        new CoverTrait(),                                   // 第301期（HC）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

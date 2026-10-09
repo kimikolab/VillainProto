@@ -498,6 +498,8 @@ public enum OutOfTurnRoute
     Bridge,
     /// <summary>ミサの羽が標の付いた駒へ飛ぶ（第298期・MF-a ／ MF-b・`DrainFeatherMarks`）。</summary>
     FeatherMark,
+    /// <summary>庇い（第301期・HC・`TryCover`。<b>問う相手はヒサ</b>——庇われる味方ではない）。</summary>
+    Cover,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -6901,6 +6903,18 @@ public sealed class BattleContext
     /// 矢面の半減が掛かる相手か。<b>標がある かつ 同じ陣営の矢面の保持者の記憶がこの駒を指している</b>
     /// （保持者の生死は問わない——標が残る限り守りも残る）。
     /// </summary>
+    /// <summary>第301期: 矢面の半減が掛かる相手なら、その標を付けた矢面の保持者（<see cref="BeckonGuardOf"/> と同じ判定・規則の外から読む口）。</summary>
+    public UnitState? BeckonHolderOf(UnitState target) => _beckonHolders.Count == 0 ? null : BeckonGuardOf(target);
+
+    /// <summary>第301期（<b>計数のみ</b>）: 逸らしが剥がそうとした味方の標の内訳（<paramref name="beckon"/> ＝ ヒサの矢面の標）。<paramref name="kept"/> は規定のソラ（矢面は残す）。</summary>
+    public void NoteDivertStripKind(UnitState sora, bool beckon, bool kept)
+    {
+        UnitTally t = TallyOf(sora);
+        if (!beckon) t.DivertStripOther++;
+        else if (kept) t.DivertKeptBeckon++;
+        else t.DivertStripBeckon++;
+    }
+
     UnitState? BeckonGuardOf(UnitState target)
     {
         if (target.RawCounter(StatusKeys.Marked) <= 0) return null;
@@ -7637,6 +7651,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.MarkRally) || u.HasTrait(TraitId.MarkRallyWide)) { _rallyLive = true; _rallyHolders.Add(u); }   // 第295期（HK・攻撃のひとまとまり）
         if (u.HasTrait(TraitId.FeatherMark) || u.HasTrait(TraitId.FeatherMarkLayer)) { _mfLive = true; _mfHolders.Add(u); }   // 第298期（MF・標が付いた瞬間の羽）
         if (u.HasTrait(TraitId.Vendetta)) _vendettaTurnLive = true;   // 第299期（ザンの手番の計数・仇巡り）
+        if (u.HasTrait(TraitId.CommandNow)) _commandNowLive = true;    // 第301期（HL-i・まとまりで叩かれた標の敵を控える）
+        if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
         if (u.HasTrait(TraitId.Thrust) || u.HasTrait(TraitId.ThrustPlain)) _thrustLive = true;   // 第186期 追補
         if (HeroShieldTrait.Holds(u)) _heroShieldLive = true;   // 第267期（勇者の庇い）
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
@@ -11388,8 +11404,11 @@ public sealed class BattleContext
         _burstHitNext = false;
         bool wideRelay = _wideNext;      // 第294期（SR-a の肩代わりの段・1回の呼び出しにだけ効く・ここで読んで消す）
         _wideNext = false;
+        bool coverHit = _coverHitNext;   // 第301期（HC）: ヒサが庇って受ける一撃。肩代わりの族（SR-a・巨躯・分かち）を通さない（ここで読んで消す）
+        _coverHitNext = false;
 
         if (!target.IsAlive || amount <= 0) return;
+        int rawAmount301 = amount;   // 第301期（HC）: 庇いでヒサが受ける「元の一撃」の量（この駒の側の増減の前）
 
         // 第295期（HK）: いま開いている攻撃のひとまとまりの中で、標を持つ敵に当たった（最も深い層を控える）。主が決まっていない枠（反撃・割り込み）は最初の出どころを主にする。
         // HK の保持者がいなければ比較1つで抜ける。盤面は読むだけ。
@@ -11660,6 +11679,7 @@ public sealed class BattleContext
             if (holder is null) NoteBeckonStripped(target, amount);   // 計数のみ（剥がされて守りが無かった被弾）
             if (holder is not null)
             {
+                TallyOf(holder).BeckonGuardHitN++;   // 第301期（計数のみ・標が残っていた被弾）
                 int saved = amount * BeckonTrait.GuardPercent / 100;
                 if (saved > 0)
                 {
@@ -11784,7 +11804,7 @@ public sealed class BattleContext
         // **保持者がいなければ件数の比較1つで抜ける。乱数を引かない**（保持者が複数なら席番号の若い方）。
         if (_wideHolders.Count > 0 && source is not null && source.TeamId != target.TeamId
             && pattern is not null && pattern != AttackPattern.Single
-            && !burnTick && !levy && !relayed && !hexShare && !isFriendlyFire && !target.HasTrait(TraitId.DeflectWide))
+            && !burnTick && !levy && !relayed && !hexShare && !isFriendlyFire && !target.HasTrait(TraitId.DeflectWide) && !coverHit)
         {
             UnitState? sora = null;
             foreach (UnitState w in _wideHolders)
@@ -11811,7 +11831,7 @@ public sealed class BattleContext
         // （横に並んでいるだけの駒を守れると、前列に3枚並べるだけで壁が3重になる）。
         // 壁自身への攻撃は自分より前に自分がいないので自然に外れ、
         // 壁が複数いても HasTrait(Colossus) で受け側を除外しているため多段の肩代わりは起きない。
-        if (!target.HasTrait(TraitId.Colossus))
+        if (!target.HasTrait(TraitId.Colossus) && !coverHit)
         {
             int targetDepth = FormationRules.DepthOf(target.Row);
             // **壁自身が出どころのダメージは肩代わりしない。** 自分で殴っておいて
@@ -11892,7 +11912,7 @@ public sealed class BattleContext
         // ドハはカドの代金（敵からの被弾）だけを4割肩代わりして守り、収入源（味方への巻き込み）は
         // 満額通していた。都合のいい側だけを助ける形になっていたので条件を外した。
         // 肩代わり先が自分自身になる再帰は下の HasTrait(Sharer) で止まる。
-        if (!target.HasTrait(TraitId.Sharer))
+        if (!target.HasTrait(TraitId.Sharer) && !coverHit)
         {
             UnitState? sharer = PickOne(
                 teammates.Where(u => u.HasTrait(TraitId.Sharer) && u != target).ToList());
@@ -12252,6 +12272,16 @@ public sealed class BattleContext
         {
             _evadedNow = target;
             return;
+        }
+
+        // 庇い（第301期・HC・`CoverTrait`）。**HP を引く直前**（破片・受け流し・身構え・軛・猶予・踏みとどまり・逃げ足はすべて上で済み、量は確定している）。
+        // 敵の攻撃（相手陣営の出どころ・刻み／徴収／中継／共有／同士討ちではない）の倒れる一撃を、ヒサ（札の保持者・この駒以外）が元の量のまま代わりに受ける。
+        // この駒には入れずに返る。**保持者がいなければ件数の比較1つで抜ける。**（第301期 Phase 0 の計数: ヒサ（矢面の保持者）がいる戦の倒れる一撃も同じ所で数える）
+        if (amount >= target.Hp && _beckonHolders.Count > 0 && source is not null && source.TeamId != target.TeamId
+            && !burnTick && !levy && !relayed && !hexShare && !isFriendlyFire && !target.HasTrait(TraitId.Beckon))
+        {
+            NoteLethalOnAlly(target);   // 計数のみ
+            if (_coverHolders.Count > 0 && TryCover(target, source, rawAmount301, pattern)) return;
         }
 
         int hpBefore120 = target.Hp;   // 第120期の計数（オーバーキルを除いた実額を取るため）
@@ -13085,7 +13115,7 @@ public sealed class BattleContext
     // 枠が閉じたとき、標の敵に当たっていて、その枠の主と同じ陣営に生きている HK のヒサがいれば、最も深い層 × 6 を癒す。**乱数を引かない。**
     bool _rallyLive;
     readonly List<UnitState> _rallyHolders = new();
-    sealed class Bundle { public UnitState? Owner; public bool OutOfTurn; public int Layer; }
+    sealed class Bundle { public UnitState? Owner; public bool OutOfTurn; public int Layer; public UnitState? FreshVendetta; public List<UnitState>? MarkedHit; }
     readonly List<Bundle> _bundles = new();
 
     /// <summary>回復の量（層 1 あたり・指示書が<b>測る前に固定</b>した値）。</summary>
@@ -13100,6 +13130,8 @@ public sealed class BattleContext
         if (b.Owner is null || b.Owner.TeamId == target.TeamId) return;
         int layer = target.RawCounter(StatusKeys.Marked);
         if (layer > b.Layer) b.Layer = layer;
+        // 第301期（HL-i）: このまとまりで叩かれた標の敵を控える（号令の刻む先）。札の保持者がいなければ比較1つで抜ける。
+        if (_commandNowLive && layer > 0 && !(b.MarkedHit ??= new()).Contains(target)) b.MarkedHit.Add(target);
     }
 
     void BundlePop()
@@ -13114,6 +13146,7 @@ public sealed class BattleContext
         if (hisa is null) return;
         UnitTally ht = TallyOf(hisa);
         ht.RallyFires++;
+        if (b.FreshVendetta is not null) TallyOf(b.FreshVendetta).VendettaFreshShouts++;   // 第301期（計数のみ・初回の仇討ちで叫びが出た）
         int amt = b.Layer * RallyPerLayer;
         bool wide = hisa.HasTrait(TraitId.MarkRallyWide);
         UnitState? first = wide ? (b.Owner.IsAlive ? b.Owner : null) : RallyNeediest(hisa, marked: true);
@@ -13127,6 +13160,7 @@ public sealed class BattleContext
         if (first is not null) RallyHeal(hisa, first, amt, b.Owner, b.Layer, ht, attacker: wide);
         if (second is not null && !ReferenceEquals(second, first)) RallyHeal(hisa, second, amt, b.Owner, b.Layer, ht, attacker: false);
         EndTrait(rm);
+        if (_commandNowLive && hisa.HasTrait(TraitId.CommandNow)) CommandNowFire(hisa, b);   // 第301期（HL-i）
     }
 
     /// <summary>最も傷ついた味方（割合・同値は席番号の若い方・回復を受け付ける・満タンでない）。<paramref name="marked"/> なら標を持つ駒だけ。ヒサ自身は除く
@@ -13147,8 +13181,13 @@ public sealed class BattleContext
     void RallyHeal(UnitState hisa, UnitState to, int amt, UnitState owner, int layer, UnitTally ht, bool attacker)
     {
         int before = to.Hp;
+        int over = Math.Max(0, amt - Math.Max(0, to.MaxHp - before));   // 第301期: 溢れ ＝ 満タンで入らなかった量（渇き・支援拒否で入らなかった分は数えない）
         Heal(to, amt, hisa);
         int got = Math.Max(0, to.Hp - before);
+        ht.RallyOverflow += over;
+        (ht.RallyOverByTurn ??= new long[21])[Math.Clamp(_turn, 0, 20)] += over;   // 計数のみ
+        if (over > 0 && (hisa.HasTrait(TraitId.CommandNow) || hisa.HasTrait(TraitId.CommandTurn3) || hisa.HasTrait(TraitId.CommandTurn8)))
+            hisa.SetCounter(CommandTrait.PoolKey, hisa.RawCounter(CommandTrait.PoolKey) + over);
         ht.RallyHeals++;
         ht.RallyHealed += got;
         ht.RallyOver += amt - got;
@@ -13165,7 +13204,7 @@ public sealed class BattleContext
     // **保持者がいなければ `_mfLive` の比較1つで全部抜ける。** 相手選びは乱数を引かない（敵への発は的を固定した `PerformAttack`）。
     bool _mfLive;
     readonly List<UnitState> _mfHolders = new();
-    readonly Queue<(UnitState Misa, UnitState Target, bool Fresh)> _mfQueue = new();
+    readonly Queue<(UnitState Misa, UnitState Target, bool Fresh, bool Cmd)> _mfQueue = new();   // 第301期: `Cmd` ＝ 号令が刻んだ層（計数のみ）
     bool _mfFiring;
 
     /// <summary>標の書き込み（第298期・<b>計数のみ</b>）。書き手 ＝ 第94期の印（`Mark.Owner`）。新しい標か層の追加か、相手が書き手の味方か敵かで分ける。印が無ければ書かれた駒の側の `MarkWriteNoOwner`。</summary>
@@ -13181,6 +13220,7 @@ public sealed class BattleContext
 
     void QueueFeatherMark(UnitState u, int delta)
     {
+        if (_coverMarking) { TallyOf(u).CoverFeatherSkipped++; return; }   // 第301期（HC）: ヒサが庇いで自分に付けた標には羽を撃たせない
         bool fresh = u.RawCounter(StatusKeys.Marked) - delta <= 0;
         foreach (UnitState misa in _mfHolders)
         {
@@ -13189,7 +13229,7 @@ public sealed class BattleContext
             UnitTally t = TallyOf(misa);
             if (_mfFiring) { t.MfChainSkipped++; continue; }
             if (fresh) t.MfQueuedFresh++; else t.MfQueuedLayer++;
-            _mfQueue.Enqueue((misa, u, fresh));
+            _mfQueue.Enqueue((misa, u, fresh, _commandCarving));
         }
     }
 
@@ -13200,12 +13240,13 @@ public sealed class BattleContext
         if (_mfQueue.Count == 0 || _mfFiring || InInterrupt) return;
         while (_mfQueue.Count > 0)
         {
-            var (misa, tgt, fresh) = _mfQueue.Dequeue();
+            var (misa, tgt, fresh, cmd) = _mfQueue.Dequeue();
             UnitTally t = TallyOf(misa);
             if (!misa.IsAlive || !tgt.IsAlive) { t.MfDropped++; continue; }
             if (!TeamAlive(PlayerTeam) || !TeamAlive(EnemyTeam)) { t.MfDropped += 1 + _mfQueue.Count; _mfQueue.Clear(); break; }
             if (!CanActOutOfTurn(misa, OutOfTurnRoute.FeatherMark)) { if (HushBindingNow) t.MfHushed++; else t.MfBlocked++; continue; }
             _mfFiring = true;
+            if (cmd) t.CommandFeathers++;   // 第301期（計数のみ・号令の層が呼んだ羽）
             try { Interrupt(() => FeatherMarkShot(misa, tgt, fresh, t)); }
             finally { _mfFiring = false; }
         }
@@ -13283,6 +13324,192 @@ public sealed class BattleContext
     }
 
     public void NoteFrameDealt(UnitState zan, int dealt) => TallyOf(zan).FrameDealt += dealt;
+
+    // ---- 第301期 段0 —— ヒサ単独の「あいつがやった！」（`FrameAccuse`・本体の条件は `FrameAccuseTrait`）と、ザンの「標を付けてから斬る」（`VendettaMarkFirst`）の計数。
+    // 第300期までの指差しはザンの札の中（`NoteFramed` が「あいつがやった」と「濡れ衣」を続けて出す）。ヒサが札を持てば、指差しと標はヒサが、仇討ちはザンが出す（出来事も分かれる）。
+    // **保持者がいなければ札の問いで抜ける**（`FrameAccuseHolder` は規定のヒサが盤にいない戦では null）。乱数を引かない。
+
+    /// <summary>「あいつがやった！」の札を持つ生きているヒサ（<paramref name="victim"/> 自身を除く・席番号の若い方）。いなければ null（ザンの札が第300期までの指差しをする）。</summary>
+    public UnitState? FrameAccuseHolder(int team, UnitState victim)
+    {
+        UnitState? best = null;
+        foreach (UnitState u in _beckonHolders)
+            if (u.IsAlive && u.TeamId == team && u != victim && u.HasTrait(TraitId.FrameAccuse) && (best is null || u.Slot < best.Slot)) best = u;
+        return best;
+    }
+
+    /// <summary>
+    /// ヒサが敵を指差して標（層）を1つ付け、濡れ衣の札を持つザンがいればその敵へ仇討ちさせる（第301期・<see cref="FrameAccuseTrait"/> だけが呼ぶ）。
+    /// 標は <see cref="LayerMark"/> を通す（ミサがいる戦では層が積もり、羽が呼ばれる）。
+    /// </summary>
+    public void FrameAccuse(UnitState hisa, UnitState ally, UnitState shooter)
+    {
+        UnitState? foe = FramePick(hisa);
+        if (foe is null) return;
+        bool zan = false;
+        foreach (UnitState z in LivingMembers(hisa.TeamId))
+            if (z != ally && z != shooter && z.HasTrait(TraitId.Vendetta) && (z.HasTrait(TraitId.VendettaFrameAll) || z.HasTrait(TraitId.VendettaFrame))) { zan = true; break; }
+        UnitTally ht = TallyOf(hisa);
+        ht.FrameAccuses++;
+        if (zan) ht.AccuseWithZan++; else ht.AccuseSolo++;
+        Log($"    {hisa.Name} が叫ぶ——「あいつがやった！」（{foe.Name} を指差す）", LogKind.Trigger);
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Framed, Turn = _turn, ActorId = hisa.InstanceId, TargetId = foe.InstanceId, PartnerId = ally.InstanceId, Text = FramedLabels.Accuse, Team = foe.TeamId });
+        bool fresh = foe.RawCounter(StatusKeys.Marked) <= 0;
+        LayerMark(foe, hisa);
+        if (fresh) EmitStatusGain(foe, StatusKeys.Marked, 1, hisa);   // 表示専用（標が付いた瞬間）
+        Log($"    {hisa.Name} が {foe.Name} に標を付けた（層 {foe.RawCounter(StatusKeys.Marked)}）", LogKind.Trigger);
+        if (!zan) return;
+        foreach (UnitState z in LivingMembers(hisa.TeamId))
+        {
+            if (z == ally || z == shooter || !z.HasTrait(TraitId.Vendetta) || !(z.HasTrait(TraitId.VendettaFrameAll) || z.HasTrait(TraitId.VendettaFrame))) continue;
+            if (!foe.IsAlive) break;
+            TraitMark m = BeginTrait(TraitId.Vendetta, z);   // 印はザンへ（回復(与)・標の書き手の帰属）
+            VendettaTrait.FrameAvenge(this, z, ally, foe, shooter);
+            EndTrait(m);
+        }
+    }
+
+    /// <summary>濡れ衣の仇討ち（第301期・ヒサの札から）の計数と「濡れ衣」の出来事。第300期までの <see cref="NoteFramed"/> のザンの側だけ。</summary>
+    /// <summary>第301期 Phase 0（<b>計数のみ</b>）: ヒサ（矢面の保持者）のいる戦で、ヒサ以外の味方が敵の攻撃の倒れる一撃を受けた（その時点でヒサが生きていたか）。</summary>
+    void NoteLethalOnAlly(UnitState target)
+    {
+        UnitTally t = TallyOf(target);
+        t.LethalOnAlly++;
+        foreach (UnitState h in _beckonHolders) if (h.IsAlive && h.TeamId == target.TeamId) { t.LethalHisaAlive++; break; }
+    }
+
+    public void NoteFramedVendetta(UnitState zan, UnitState foe, UnitState shooter)
+    {
+        UnitTally zt = TallyOf(zan);
+        zt.FrameVendettas++;
+        if (shooter.HasTrait(TraitId.Feathers)) zt.FrameByFeather++;
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Framed, Turn = _turn, ActorId = zan.InstanceId, TargetId = foe.InstanceId, PartnerId = shooter.InstanceId, Text = FramedLabels.Vendetta, Team = foe.TeamId });
+    }
+
+    /// <summary>第301期（<b>計数のみ</b>）: 標の無かった仇への仇討ち（初回）。いま開いているまとまりに印を立て、叫びが出たかは <see cref="BundlePop"/> が数える。</summary>
+    public void NoteVendettaFresh(UnitState zan)
+    {
+        TallyOf(zan).VendettaFresh++;
+        if (_rallyLive && _bundles.Count > 0) _bundles[^1].FreshVendetta = zan;
+    }
+
+    // ---- 第301期 段1 —— ヒサの号令（HL-i `CommandNow` ／ HL-t `CommandTurn3` ／ `CommandTurn8`・札は `CommandTrait`）と庇い（HC `HisaCover`・札は `CoverTrait`）。
+    // 指示書 design/PHASE301_HISA_COMMAND_SPEC.md §3。号令は叫びの溢れ（`RallyHeal` が `CommandTrait.PoolKey` に溜める）を 20 ごとに敵の層1つに換える。
+    // 層は `LayerMark` を通す（ミサの羽 ／ 在庫は今の規則のまま）。**保持者がいなければ札の問い（`_commandNowLive` ／ 手番の札）と `_coverHolders.Count` で抜ける。乱数を引かない。**
+    bool _commandNowLive;
+    readonly List<UnitState> _coverHolders = new();
+    bool _coverMarking;
+    bool _coverHitNext;
+    bool _commandCarving;
+
+    /// <summary>層を1つ刻めるか（ミサがいない戦では、標の無い敵にだけ「標を付ける」1回）。</summary>
+    bool CanCarve(UnitState foe) => foe.IsAlive && (MarkLayers && foe.TeamId != PlayerTeam || foe.RawCounter(StatusKeys.Marked) <= 0);
+
+    /// <summary>号令の層を <paramref name="foe"/> に <paramref name="n"/> 個まで刻み、刻んだ数を返す。溢れは刻んだ分だけ減らす。</summary>
+    int CommandCarve(UnitState hisa, UnitState foe, int n, string label)
+    {
+        int done = 0;
+        TraitMark m = BeginTrait(label == CommandLabels.Now ? TraitId.CommandNow : hisa.HasTrait(TraitId.CommandTurn8) ? TraitId.CommandTurn8 : TraitId.CommandTurn3, hisa);
+        for (int i = 0; i < n && CanCarve(foe); i++)
+        {
+            bool fresh = foe.RawCounter(StatusKeys.Marked) <= 0;
+            _commandCarving = true;
+            try { LayerMark(foe, hisa); }
+            finally { _commandCarving = false; }
+            if (fresh) EmitStatusGain(foe, StatusKeys.Marked, 1, hisa);   // 表示専用（標が付いた瞬間）
+            done++;
+        }
+        EndTrait(m);
+        if (done == 0) return 0;
+        int used = done * CommandTrait.Every;
+        hisa.SetCounter(CommandTrait.PoolKey, hisa.RawCounter(CommandTrait.PoolKey) - used);
+        UnitTally ht = TallyOf(hisa);
+        ht.CommandFires++; ht.CommandLayers += done;
+        int peak = foe.RawCounter(StatusKeys.Marked);
+        if (peak > ht.CommandPeak) ht.CommandPeak = peak;
+        Log($"    {hisa.Name} が号令——「{foe.Name} だ！」（層 {done} を刻む・層 {peak}）", LogKind.Highlight, hisa);
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Command, Turn = _turn, ActorId = hisa.InstanceId, TargetId = foe.InstanceId, Amount = done, Slot = used, Text = label, Team = foe.TeamId });
+        return done;
+    }
+
+    /// <summary>HL-i: 叫びのまとまりが閉じた直後（回復の後）、溢れが 20 たまっていれば、そのまとまりで叩かれた標の敵のうち層が最も深い敵（同値は席番号）に刻む。1ターンに 2 層まで。</summary>
+    void CommandNowFire(UnitState hisa, Bundle b)
+    {
+        int pool = hisa.RawCounter(CommandTrait.PoolKey);
+        if (pool < CommandTrait.Every) return;
+        UnitTally ht = TallyOf(hisa);
+        if (hisa.RawCounter(CommandTrait.TurnKey) != _turn + 1) { hisa.SetCounter(CommandTrait.TurnKey, _turn + 1); hisa.SetCounter(CommandTrait.TurnCountKey, 0); }
+        int used = hisa.RawCounter(CommandTrait.TurnCountKey);
+        int room = CommandTrait.NowCap - used;
+        // 上限に達したターン: 張り付きは1ターンに1回だけ数える（`NowCap + 1` を印にする・刻めないのは同じ）。
+        if (room <= 0) { if (room == 0) { ht.CommandCapped++; hisa.SetCounter(CommandTrait.TurnCountKey, CommandTrait.NowCap + 1); } return; }
+        UnitState? foe = null;
+        if (b.MarkedHit is not null)
+            foreach (UnitState f in b.MarkedHit)
+            {
+                if (!f.IsAlive || f.RawCounter(StatusKeys.Marked) <= 0 || !CanCarve(f)) continue;
+                if (foe is null || f.RawCounter(StatusKeys.Marked) > foe.RawCounter(StatusKeys.Marked)
+                    || (f.RawCounter(StatusKeys.Marked) == foe.RawCounter(StatusKeys.Marked) && f.Slot < foe.Slot)) foe = f;
+            }
+        if (foe is null) { ht.CommandNoTarget++; return; }
+        int want = Math.Min(room, pool / CommandTrait.Every);
+        int done = CommandCarve(hisa, foe, want, CommandLabels.Now);
+        if (used == 0 && done > 0) ht.CommandNowTurns++;   // 計数のみ（号令が出たターン）
+        hisa.SetCounter(CommandTrait.TurnCountKey, used + done);
+        if (used + done == CommandTrait.NowCap && hisa.RawCounter(CommandTrait.PoolKey) >= CommandTrait.Every)
+        { ht.CommandCapped++; hisa.SetCounter(CommandTrait.TurnCountKey, CommandTrait.NowCap + 1); }
+    }
+
+    /// <summary>HL-t: ヒサの手番（指差し ／ 逃げ回るの後）に、溜まった溢れを 20 ごとに層に換えて、ヒサの指差しの選び方の敵に刻む（1手番に <paramref name="cap"/> 層まで・端数は持ち越す）。</summary>
+    public void CommandTurnFire(UnitState hisa, int cap)
+    {
+        if (cap <= 0) return;
+        UnitTally ht = TallyOf(hisa);
+        ht.CommandTurns++;
+        int pool = hisa.RawCounter(CommandTrait.PoolKey);
+        int want = Math.Min(cap, pool / CommandTrait.Every);
+        if (want <= 0) return;
+        UnitState? foe = FramePick(hisa);
+        if (foe is null || !CanCarve(foe)) { ht.CommandNoTarget++; return; }
+        int done = CommandCarve(hisa, foe, want, CommandLabels.Turn);
+        (ht.CommandTurnHist ??= new long[9])[Math.Min(8, done)]++;
+        if (pool / CommandTrait.Every > cap) ht.CommandCapped++;
+    }
+
+    /// <summary>
+    /// HC: 倒れる一撃を、ヒサが代わりに受けるか（<c>ApplyDamageBody</c> の HP を引く直前だけが呼ぶ）。条件: 敵の攻撃・相手はヒサ以外の味方・ヒサが生きている・1戦にまだ使っていない・
+    /// ヒサが手番の外で動ける（粛 ／ 痺れ）。庇ったら真を返す（呼び出し側はこの一撃をその味方に入れずに返る——その一撃で既に減った破片などは戻さない）。
+    /// </summary>
+    bool TryCover(UnitState target, UnitState source, int raw, AttackPattern? pattern)
+    {
+        UnitState? hisa = null;
+        foreach (UnitState h in _coverHolders)
+            if (h.IsAlive && h.TeamId == target.TeamId && h != target && h.RawCounter(CoverTrait.UsedKey) == 0) { hisa = h; break; }
+        if (hisa is null) return false;
+        UnitTally ht = TallyOf(hisa);
+        if (!CanActOutOfTurn(hisa, OutOfTurnRoute.Cover)) { if (HushBindingNow) ht.CoverHushed++; else ht.CoverBlocked++; return false; }
+        hisa.SetCounter(CoverTrait.UsedKey, 1);
+        ht.CoverFires++;
+        ht.CoverRaw += raw;
+        TallyOf(target).CoverSaved++;
+        Log($"  {hisa.Name} が {target.Name} の前に飛び出した——「どけ、こいつは俺の獲物だ！」", LogKind.Highlight, hisa);
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Cover, Turn = _turn, ActorId = hisa.InstanceId, TargetId = target.InstanceId, PartnerId = source.InstanceId, Amount = raw, Team = target.TeamId });
+        // 受ける前に自分に標を付ける（ザンの仇討ちが攻撃の主へ向かう）。この標にはミサの羽を撃たせない（`_coverMarking` が `QueueFeatherMark` を止める）。
+        if (hisa.RawCounter(StatusKeys.Marked) <= 0)
+        {
+            _coverMarking = true;
+            try { hisa.SetCounter(StatusKeys.Marked, 1); }
+            finally { _coverMarking = false; }
+            EmitStatusGain(hisa, StatusKeys.Marked, 1, hisa);   // 表示専用
+        }
+        int before = hisa.Hp;
+        _coverHitNext = true;   // ヒサが自分で受ける（巨躯・分かちに渡さない——庇った味方の巨躯がこの一撃を取り返すと庇いが打ち消しになる）
+        ApplyDamage(hisa, raw, source, pattern: pattern);
+        _coverHitNext = false;
+        ht.CoverTaken += Math.Max(0, before - Math.Max(0, hisa.Hp));
+        if (!hisa.IsAlive) ht.CoverDied++;
+        return true;
+    }
 
     // ---- 第299期 段1 —— ザンの手番「仇巡り」（ZM-a `VendettaRound` ／ ZM-1 `VendettaRoundOne`・指示書 design/PHASE299_ZAN_ROUND_SPEC.md §4）。
     // 手番で、標を持つ敵が1体でも生きていれば、普通の攻撃の代わりに、標を持つ敵を**層の深い順（同じなら席番号）**に巡って、
@@ -13488,6 +13715,7 @@ public sealed class BattleContext
         int cur = u.RawCounter(StatusKeys.Marked);
         if (_ruptureLive && u.TeamId != PlayerTeam && cur > 0)
         {
+            if (cur + 1 > TallyOf(u).MarkPeak) TallyOf(u).MarkPeak = cur + 1;   // 第301期（計数のみ・敵ごとの層の最大）
             u.SetCounter(StatusKeys.Marked, cur + 1);
             TallyOf(writer).MarkLayerAdds++;   // 計数のみ
             EmitMarkLayer(writer, u, cur, cur + 1);   // 第291期・表示専用

@@ -445,3 +445,78 @@ VendettaRound 太刀    ザン#0 → 勇者#5  Slot 1..5 → Attack / Damage 15 
 - 並びの型: **被弾（または標が付く）→ 標撃ちの羽 →（味方なら）矢面の半減 → 誤射の `Damage` →「あいつがやった！」→ 濡れ衣の仇討ち → 標の層 → 羽が増える → 叫び → … → ミサの手番の連射 → ザンの手番の仇巡り**。
 - `BeckonFeather` は必ず `FeatherMark 味方`（または味方に流れた手番の羽）の直後・その一撃の `Damage` の直前に1件。
 - 仇巡りの太刀は手番の攻撃（`Reaction` でない）。仇討ち（割り込み・`Reaction`）とは別の絵にする（ブリーフ §3）。
+
+## 9. 第301期の追記 —— ヒサ単独の「あいつがやった！」（規定）・号令（`Command`・版）・庇い（`Cover`・版）
+
+第301期にソラ（矢面の標を剥がさない）・ザン（標を付けてから斬る）・ヒサ（「あいつがやった！」をヒサの札に）を規定にした。号令と庇いは版で、採否はポン（第301期の報告 §7）。
+例は `hisa301 memo <台> <波> <seed> <版> [最後のT]` で再現できる（件数の一覧は `hisa301 find`）。
+
+### 9-1. 種類と欄（足したのは2種類・どちらも版でしか出ない）
+
+| 出来事 | 欄 | いつ出るか |
+|---|---|---|
+| `Command`（新・表示専用） | `ActorId` ＝ ヒサ ／ `TargetId` ＝ 的 ／ `Amount` ＝ 刻んだ層の数 ／ `Slot` ＝ 使った溢れ（層 × 20）／ `Text` ＝ 「即時」（HL-i）か「手番」（HL-t3 ／ HL-t8） | 叫びの溢れを層に換えた瞬間。**層は先に全部刻まれる**（`Command` の直前にその数だけ `MarkLayer` と、層ごとの `Feather`「増えた」）。**羽はその後に層1つにつき1発**（`FeatherMark`「敵」が `Amount` 本・どれも同じ的・`Amount` は刻んだ後の層）。手番版はヒサの手番の中（指差し ／ 逃げ回るの後）、即時版は叫び（`MarkRally`）の直後 |
+| `Cover`（新・表示専用） | `ActorId` ＝ ヒサ ／ `TargetId` ＝ 庇った味方 ／ `PartnerId` ＝ 攻撃の主 ／ `Amount` ＝ 元の一撃の量 | 味方への敵の倒れる一撃をヒサが代わりに受ける瞬間。**直後にヒサの標の `StatusGain`（`ActorId` ＝ `TargetId` ＝ ヒサ）と、攻撃の主 → ヒサの `Damage`**。続いて（ザンがいれば）攻撃の主への仇討ち。庇われた味方には `Damage` が出ない。1戦に1度 |
+
+**「あいつがやった！」は既存の `Framed`「あいつがやった」のまま**（種類は足していない）。第300期までは必ず直後に「濡れ衣」（ザン）が続いたが、**第301期からはヒサだけで出る**——直後に `Feather`「増えた」（ミサがいれば）・`MarkLayer` ／ `StatusGain marked`（ヒサ → 指差した敵）が続き、ザンがいればその後に「濡れ衣」と仇討ちの `MarkLayer` → `Damage`（**仇討ちは標を付けてから斬る**）。
+
+### 9-2. 見せ場ごとの例（seed 0..49 の件数は `hisa301 find`）
+
+| 見せ場 | 出来事 | 例にする戦 | 1戦あたり | seed 0 で最初に出る T |
+|---|---|---|--:|---|
+| ヒサ単独の「あいつがやった！」（規定） | `Framed`「あいつがやった」（「濡れ衣」が続かない） | ザンなし (ヒサ×ミサ×ボルグ×カド) × 近衛 × seed 0（勝ち T6） | 2.94 | T0（ミサの標撃ちがゴルムに当たった直後） |
+| あいつがやった！ → 濡れ衣（規定） | `Framed`「あいつがやった」→「濡れ衣」 | 試遊・標 循環 × 近衛 × seed 0 | 2.00 | T0 |
+| 号令・即時（HL-i） | `Command`「即時」 | 試遊・標 循環 × ボス × seed 0 | 3.00 | T1 |
+| 号令・手番（HL-t3） | `Command`「手番」 | 試遊・標 循環 × ボス × seed 0（勝ち T4） | 3.00 | T1 |
+| 号令・手番（HL-t8） | `Command`「手番」 | 同上 | 2.00 | T1 |
+| 庇い（HC） | `Cover` | 試遊・標 三人組 × 大隊 × seed 4（`hisa301 memo 三人組 bat 4 K4 3`） | 0.08 | seed 0 では出ない（seed 4 の T2） |
+
+ザンのいない台の T0（`hisa301 memo ザンなし guard 0 K0 1`）:
+
+```
+StatusGain marked     ヒサ#3 → ゴルム#2              矢面の標
+FeatherMark 味方      ミサ#4 → ゴルム#2  Amount 1     標撃ちの羽（味方へ）
+BeckonFeather         ヒサ#3 → ゴルム#2  Amount 18 Partner=ミサ#4   矢面が羽を半分に
+Damage                ミサ#4 → ゴルム#2  18  Reaction ff
+Framed あいつがやった  ヒサ#3 → 新兵#5   Partner=ゴルム#2   ヒサが敵を指差す（ザンはいない）
+Feather 増えた        ヒサ#3 → ミサ#4    Amount 2 Partner=新兵#5
+MarkLayer             ヒサ#3 → 新兵#5    Amount 1          ヒサが付けた標
+StatusGain marked     ヒサ#3 → 新兵#5
+```
+
+庇い（三人組 × 大隊 × seed 4 × HC の T2）:
+
+```
+Attack                農兵#11 → ザン#0   Amount 24          倒れる一撃
+Cover                 ヒサ#4 → ザン#0    Amount 24 Partner=農兵#11   ヒサが前に飛び出す
+StatusGain marked     ヒサ#4 → ヒサ#4                       自分に標（ミサの羽は飛ばない）
+Damage                農兵#11 → ヒサ#4   24                 ヒサが受ける（ザンへの Damage は出ない）
+Feather 増えた        ザン#0 → ミサ#2    Amount 13 Partner=農兵#11
+MarkLayer             ザン#0 → 農兵#11   Amount 2           ザンの仇討ち（標を付けてから）
+Damage                ザン#0 → 農兵#11   30  Reaction
+Damage                ザン#0 → ザン#0    3  Reaction ff     返り血
+MarkRally             ヒサ#4 → ザン#0    Amount 12          叫び
+FeatherMark 敵        ミサ#2 → 農兵#11   Amount 2           層が増えたので羽
+```
+
+### 9-3. 手番版の「4段」（試遊・標 循環 × ボス・勇者（規定形）× seed 0 × HL-t3・勝ち T4・`hisa301 memo 循環 boss 0 K2 2` の T2）
+
+ヒサ（速 10）の号令 → 層の数だけミサの羽が割り込みで撃つ → ミサ（速 6）の一斉射撃（在庫も増えている）→ ザン（速 5）の仇巡り。
+
+```
+MarkLayer             ヒサ#4 → 勇者#5   Amount 20 / 21 / 22    号令の3層（直前に Feather 増えた ×3）
+Command 手番          ヒサ#4 → 勇者#5   Amount 3  Slot 60      ① 号令（溢れ 60 → 層 3）
+FeatherMark 敵        ミサ#2 → 勇者#5   Amount 22              ② 羽の割り込み 1本目
+Attack / Damage       ミサ#2 → 勇者#5   42  Reaction
+MarkRally             ヒサ#4 → ミサ#2   Amount 0               （羽ごとに叫び——溢れがまた溜まる）
+FeatherMark 敵        ミサ#2 → 勇者#5   Amount 22              ② 2本目
+FeatherMark 敵        ミサ#2 → 勇者#5   Amount 22              ② 3本目
+Attack / Damage       ソラ#3 → 勇者#5   19                     （ソラの突き）
+Feather 連射          ミサ#2 → ミサ#2   Amount 23              ③ ミサの一斉射撃（23 枚）
+Feather 追う ×23 → Attack / Damage …
+VendettaRound 仇巡り  ザン#0           Amount 8 Slot 1         ④ ザンの仇巡り（勇者1体へ 8 太刀）
+VendettaRound 太刀    ザン#0 → 勇者#5   Slot 1 → Attack / Damage 15 …
+```
+
+- 4段が揃ったターンは `hisa301 four` で数える（同じ台本の順を見る: `Command` → その後の `FeatherMark`「敵」→ その後の `Feather`「連射」→ その後の `VendettaRound`「仇巡り」）。HL-t3 で循環 × 近衛 ／ 大隊は 1戦 1.9 ／ 1.7 回（揃った戦 98 ／ 100%）、ボスは 2.0 回（100%）。
+- 号令の層は**先に全部刻んでから**羽が飛ぶので、`FeatherMark` の `Amount`（的の層）は3本とも 22 で同じ（1本ごとに増えるのではない）。

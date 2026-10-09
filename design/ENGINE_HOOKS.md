@@ -1108,3 +1108,21 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   計数（**計数のみ**）: ヒサ `BeckonFeatherHits` ／ `BeckonFeatherSaved`・受け手 `BeckonFeatherTaken`。ミサの羽で味方が受けた実額 `FeatherFfBeckonTaken` ／ `FeatherFfOtherTaken`（と回数）は HP を引いた後の帳簿の段で、ヒサの札に依らず数える。
   表示専用の出来事 **`BattleEventKind.BeckonFeather`**（`ActorId` ＝ ヒサ ／ `TargetId` ＝ 撃たれた味方 ／ `PartnerId` ＝ ミサ ／ `Amount` ＝ 防いだ量・直後にその一撃の `Damage`）。
 - 第299期の規定の駒で測った器具は `Common.Pin300`（ザン → `ZanZNb`・ヒサ → 新しい旧の定義 `HisaHKs` ＝ `HisaHKb` ＋ `MarkRallySelf`）。
+
+## 第301期 —— ソラ・ザン・ヒサの小修正（規定）／ ヒサの号令と庇い（版）
+
+- **ソラの逸らし（`DivertTrait.OnTurnStart`）が味方の標を剥がすとき、ヒサの矢面の標は残す**（規定のソラの札 `DivertKeepBeckon`・印だけの札）。矢面の標かどうかは `BattleContext.BeckonHolderOf`（＝ 矢面の半減の判定 `BeckonGuardOf` と同じ・規則の外から読む口）。ほかの味方の標は今までどおり剥がす。
+  計数（**計数のみ**）: ソラ `DivertStripBeckon` ／ `DivertKeptBeckon` ／ `DivertStripOther`・ヒサ `BeckonGuardHitN`（敵の攻撃が矢面の味方に当たったとき標が残っていた回数・剥がされていた回数は第294期の `BeckonStrippedHits`）。
+- **ザンの仇討ち（`VendettaTrait.Avenge`・濡れ衣を含む）は、規定のザンの札 `VendettaMarkFirst` があれば仇の標（層）を付けてから斬る**（本体は切り出した `MarkFoe`・中身は第184期〜のまま）。初回の仇討ちも標の敵への攻撃になる（叫びが出る・標の +50% が乗る）。
+  計数: ザン `VendettaFresh` ／ `VendettaFreshShouts`（標の無い仇への仇討ち ／ そのうち叫びが出た——まとまり `Bundle.FreshVendetta` の印を `BundlePop` が読む）。
+- **「あいつがやった！」をヒサの札 `FrameAccuse`（`FrameAccuseTrait.OnAllyDamaged`）に移した。** 標の付いた味方が味方の攻撃に当たったら（徴収 ／ 中継 ／ 本人の一撃・反撃の連鎖の中を除く——第298期 ZN-b と同じ線）、`BattleContext.FrameAccuse` がヒサの指差し（`FramePick`）の敵に `LayerMark` で標（層）を1つ付け、濡れ衣の札を持つザンがいれば `VendettaTrait.FrameAvenge` で仇討ちさせる（印はザンへ立て直す）。
+  ザンの札（`VendettaTrait.OnAllyDamaged`）は、`FrameAccuseHolder`（札を持つ生きているヒサ・撃たれた本人を除く）がいれば何もしない（指差しも仇討ちもヒサの札から）。いなければ第300期までの `Frame`（標を付けない指差し）。
+  **粛 ／ 痺れはヒサの指差しを止めない**（叫びと同じく `CanActOutOfTurn` を通さない）。仇討ちは今までどおりザンの `CanActOutOfTurn` を通す。出来事は「あいつがやった」（ヒサ）と「濡れ衣」（ザン）が別々に出る（`NoteFramedVendetta`）。計数: ヒサ `AccuseWithZan` ／ `AccuseSolo`（`FrameAccuses` はその和）。
+- **号令（版 HL-i ／ HL-t3 ／ HL-t8・札 `CommandTrait`）。** 叫びの回復（`RallyHeal`）が溢れ（満タンで入らなかった量 ＝ `max(0, 量 − (最大HP − HP))`・渇き ／ 支援拒否で入らなかった分は数えない）をヒサの私有の帳簿 `CommandTrait.PoolKey` に溜める（`OnCarryOver` で消す）。
+  HL-i はまとまりが閉じた直後（`BundlePop` の回復の後・`CommandNowFire`）に、そのまとまりで叩かれた標の敵（`Bundle.MarkedHit`・`_commandNowLive` のときだけ控える）のうち層が最も深い敵へ 20 ごとに層1つ（1ターン 2 層まで）。
+  HL-t はヒサの手番（`CommandTrait.OnAction`・矢面 ／ 逃げ回るの後）に `CommandTurnFire` が `FramePick` の敵へ 20 ごとに層1つ（1手番 3 ／ 8 層まで・端数は持ち越し）。層は `LayerMark`（ミサがいない戦では標の無い敵に1回「付ける」だけ）。号令の層が呼んだ羽はミサの `CommandFeathers`（羽の控え `_mfQueue` に号令の印 `Cmd`）。
+  **号令の羽の割り込みも叫びを呼び、その溢れがまた溜まる**（循環は1手番の上限で止まる）。表示専用の出来事 **`BattleEventKind.Command`**（`ActorId` ＝ ヒサ ／ `TargetId` ＝ 的 ／ `Amount` ＝ 層 ／ `Slot` ＝ 使った溢れ ／ `Text` ＝ 「即時」「手番」）。
+- **庇い（版 HC・札 `CoverTrait`）。** `ApplyDamageBody` の **HP を引く直前**（「殺さない」制約の族・軛・逃げ足の後ろ）で、敵の攻撃（刻み ／ 徴収 ／ 中継 ／ 共有 ／ 同士討ちではない）の倒れる一撃を、札を持つヒサ（この駒以外・1戦に1度 `CoverTrait.UsedKey`）が `TryCover` で代わりに受ける。
+  手番の外の動作として `CanActOutOfTurn`（**経路 `OutOfTurnRoute.Cover` を足した**）。受ける前にヒサが自分に標を付ける（`_coverMarking` が `QueueFeatherMark` を止める——ミサの羽を撃たせない）。ヒサへの一撃は元の量（`rawAmount301` ＝ この駒の側の増減の前）で、**肩代わりの族（SR-a・巨躯・分かち）を通さない**（`_coverHitNext`——ゴルムの巨躯が庇った一撃を取り返すと庇いが打ち消しになる）。その一撃で既に減った破片などは戻さない（逃げ足と同じ）。
+  表示専用の出来事 **`BattleEventKind.Cover`**（`ActorId` ＝ ヒサ ／ `TargetId` ＝ 庇った味方 ／ `PartnerId` ＝ 攻撃の主 ／ `Amount` ＝ 元の一撃）。Phase 0 の計数 `LethalOnAlly` ／ `LethalHisaAlive` は同じ所で矢面の保持者がいる戦だけ数える。
+- 第300期の規定の駒で測った器具は `Common.Pin301`（ソラ → `SoraSRs`・ザン → `ZanZMa`（第300期の規定と同じ物）・ヒサ → `HisaHKf`）。`Pin299` ／ `Pin300` もソラを `SoraSRs` に替える。

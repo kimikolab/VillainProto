@@ -64,7 +64,8 @@ static class Round300Diag
     /// 3 ＋ヒサが自分も癒す（第299期 段0-2）／ 4 ＋ザン ZM-a（第300期 段0-1）／ 5 ＋矢面は羽も半分（第300期 段0-2 ＝ 今の規定）。
     /// </summary>
     static readonly string[] StepNames = { "第296期", "＋ドハ DH-a（第298期）", "＋ミサ MF-b ・ザン ZN-b（第299期）", "＋ヒサが自分も癒す（第299期）", "＋ザン ZM-a（第300期）", "＋矢面は羽も半分（第300期）" };
-    static Formation Step(Formation f, int k) => k switch
+    // 第301期: ソラ ／ ザン ／ ヒサの規定が動いた——どの段も最後に `Pin301` で第300期の規定（ソラ `SoraSRs`・ザン `ZanZMa`・ヒサ `HisaHKf`）に固定する（段5 ＝ 第300期の規定）。
+    static Formation Step(Formation f, int k) => Pin301(k switch
     {
         0 => Map(f, (UnitCatalog.Doha, UnitCatalog.DohaD0), (UnitCatalog.Tome, UnitCatalog.TomeMb), (UnitCatalog.Zan, UnitCatalog.ZanZN0), (UnitCatalog.Hisa, UnitCatalog.HisaHKb)),
         1 => Map(f, (UnitCatalog.Tome, UnitCatalog.TomeMb), (UnitCatalog.Zan, UnitCatalog.ZanZN0), (UnitCatalog.Hisa, UnitCatalog.HisaHKb)),
@@ -72,7 +73,7 @@ static class Round300Diag
         3 => Map(f, (UnitCatalog.Zan, UnitCatalog.ZanZNb), (UnitCatalog.Hisa, UnitCatalog.HisaHKs)),
         4 => Map(f, (UnitCatalog.Hisa, UnitCatalog.HisaHKs)),
         _ => f,
-    };
+    });
 
     // ---------------------------------------------------------------------------------
     // 1戦の集計
@@ -134,7 +135,7 @@ static class Round300Diag
             foreach (var w in MainWaves())
             {
                 var a = Many(Step(f, 4), w.Make, seeds);
-                var b = Many(f, w.Make, seeds);
+                var b = Many(Step(f, 5), w.Make, seeds);
                 string Bold(string s) => Math.Abs(b.Win - a.Win) >= 10 ? $"**{s}**" : s;
                 Console.WriteLine($"| {n} | {w.Name} | {Bold($"{a.Win:F1} → {b.Win:F1}")} | {a.P(a.Turns):F1} → {b.P(b.Turns):F1} | {FirstDeath(a)} → {FirstDeath(b)} | {a.P(a.FfBeckon):F1}（{a.P(a.FfBeckonHits):F2}）→ {b.P(b.FfBeckon):F1}（{b.P(b.FfBeckonHits):F2}） | {a.P(a.FfOther):F1}（{a.P(a.FfOtherHits):F2}）→ {b.P(b.FfOther):F1}（{b.P(b.FfOtherHits):F2}） | {b.P(b.Saved):F1}（{b.P(b.SavedHits):F2}） | {b.P(b.MfAlly):F2} | {a.P(a.Framed):F2} → {b.P(b.Framed):F2} |");
             }
@@ -197,7 +198,7 @@ static class Round300Diag
         new("矢面の半減が羽に効いた（`BeckonFeather`）", "標経済 (ヒサ×ザン×ミサ)", "bat", (x, _) => x.Kind == BattleEventKind.BeckonFeather),
     };
 
-    static Formation RowOf(string n) => n.StartsWith("試遊", StringComparison.Ordinal) ? Playtest(n) : CompareRow(n);
+    static Formation RowOf(string n) => Pin301(n.StartsWith("試遊", StringComparison.Ordinal) ? Playtest(n) : CompareRow(n));   // 第301期: 第300期の規定に固定
 
     static void Find(int seeds)
     {
@@ -223,7 +224,8 @@ static class Round300Diag
 
     static void Memo(string rowPart, string wave, int seed, int lastTurn)
     {
-        var (name, f) = MarkRows().Concat(CompareBuilds()).First(b => b.Name.Contains(rowPart, StringComparison.Ordinal));
+        var (name, f0) = MarkRows().Concat(CompareBuilds()).First(b => b.Name.Contains(rowPart, StringComparison.Ordinal));
+        var f = Pin301(f0);   // 第301期: 第300期の規定に固定
         var w = WaveOf(wave);
         var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
         var e = w.Make();
@@ -289,19 +291,19 @@ static class Round300Diag
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
 
-        var zan = UnitCatalog.Zan; var hisa = UnitCatalog.Hisa;
+        var zan = UnitCatalog.ZanZMa; var hisa = UnitCatalog.HisaHKf;   // 第301期: 第300期の規定は `ZanZMa` ／ `HisaHKf`（`Pin301`）
         Expect("(a) 段0-1: 規定のザン ＝ `ZanZNb`（第299期の規定）＋ `VendettaRound`（＝ 第299期の ZM-a）・文面は ZM-a のまま・旧は `All` ／ `Everyone` の外・第299期の版は旧から作る",
             zan.Traits.SequenceEqual(UnitCatalog.ZanZNb.Traits.Append(TraitId.VendettaRound)) && zan.Traits.SequenceEqual(UnitCatalog.ZanZMa.Traits)
             && zan.PlusText == UnitCatalog.ZanZMa.PlusText && zan.PlusText.EndsWith("。手番では、仇を巡って斬る。深く指差された仇ほど、何度も斬る", StringComparison.Ordinal)
             && zan.MinusText == UnitCatalog.ZanZNb.MinusText && zan.Flavor == UnitCatalog.ZanZNb.Flavor && zan.MaxHp == 56 && zan.Attack == 10 && zan.Speed == 5
-            && UnitCatalog.All.Contains(zan) && !UnitCatalog.Everyone.Contains(UnitCatalog.ZanZNb)
+            && UnitCatalog.All.Contains(UnitCatalog.Zan) && !UnitCatalog.Everyone.Contains(zan) && !UnitCatalog.Everyone.Contains(UnitCatalog.ZanZNb)
             && UnitCatalog.ZanZNb.Traits.SequenceEqual(UnitCatalog.ZanZN0.Traits.Append(TraitId.VendettaFrameAll))
             && UnitCatalog.ZanZM1.Traits.SequenceEqual(UnitCatalog.ZanZNb.Traits.Append(TraitId.VendettaRoundOne)) && VendettaTrait.RoundCap == 8);
         Expect("(b) 段0-2: 規定のヒサ ＝ `HisaHKs`（第299期の規定）＋ `BeckonFeather`・プラスの文面は「（ミサの羽でも）」を足しただけ・数値 ／ 手番は旧のまま・旧は `All` ／ `Everyone` の外",
             hisa.Traits.SequenceEqual(UnitCatalog.HisaHKs.Traits.Append(TraitId.BeckonFeather)) && UnitCatalog.HisaHKs.Traits.SequenceEqual(UnitCatalog.HisaHKb.Traits.Append(TraitId.MarkRallySelf))
             && hisa.PlusText == UnitCatalog.HisaHKs.PlusText.Replace("痛みが半分になる。", "痛みが半分になる（ミサの羽でも）。") && hisa.PlusText != UnitCatalog.HisaHKs.PlusText
             && hisa.MinusText == UnitCatalog.HisaHKs.MinusText && hisa.Flavor == UnitCatalog.HisaHKs.Flavor && hisa.MaxHp == UnitCatalog.HisaHKs.MaxHp && hisa.Speed == UnitCatalog.HisaHKs.Speed
-            && hisa.Actions!.SequenceEqual(UnitCatalog.HisaHKs.Actions!) && UnitCatalog.All.Contains(hisa) && !UnitCatalog.Everyone.Contains(UnitCatalog.HisaHKs));
+            && hisa.Actions!.SequenceEqual(UnitCatalog.HisaHKs.Actions!) && UnitCatalog.All.Contains(UnitCatalog.Hisa) && !UnitCatalog.Everyone.Contains(hisa) && !UnitCatalog.Everyone.Contains(UnitCatalog.HisaHKs));
 
         // 盤面を直に組む: 前1 ドルガ（矢面の相手）／ 前3 ゴルム（標だけ・矢面でない）／ 中央 ミサ ／ 後1 ボルグ ／ 後3 ヒサ。敵は ガルド1体。
         // 一撃を直に `ApplyDamage` して HP の減りを旧（`HisaHKs`）と規定で比べる（他の軽減の段は両方に同じだけ掛かる）。
@@ -345,13 +347,13 @@ static class Round300Diag
 
         // (i) 出来事: 規定の標経済 × 大隊で `BeckonFeather` が出る・旧（`HisaHKs`）では 0・規定の循環 × ボスで `VendettaRound` が出る
         long Ev(Formation f, string wave, BattleEventKind k) { long x = 0; for (int s = 0; s < 10; s++) x += BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), WaveOf(wave).Make(), s, verbose: true).Events.Count(e => e.Kind == k); return x; }
-        var econ = CompareRow("標経済 (ヒサ×ザン×ミサ)");
-        long bf0 = Ev(Step(econ, 4), "bat", BattleEventKind.BeckonFeather), bf1 = Ev(econ, "bat", BattleEventKind.BeckonFeather);
-        long vr0 = Ev(Step(Playtest("試遊・標 循環"), 3), "boss", BattleEventKind.VendettaRound), vr1 = Ev(Playtest("試遊・標 循環"), "boss", BattleEventKind.VendettaRound);
+        var econR = CompareRow("標経済 (ヒサ×ザン×ミサ)"); var econ = Step(econR, 5);
+        long bf0 = Ev(Step(econR, 4), "bat", BattleEventKind.BeckonFeather), bf1 = Ev(econ, "bat", BattleEventKind.BeckonFeather);
+        long vr0 = Ev(Step(Playtest("試遊・標 循環"), 3), "boss", BattleEventKind.VendettaRound), vr1 = Ev(Step(Playtest("試遊・標 循環"), 5), "boss", BattleEventKind.VendettaRound);
         Expect("(i) 出来事: 規定の標経済 × 大隊で `BeckonFeather` が出る（旧 0）・規定の循環 × ボスで `VendettaRound` が出る（第299期の規定 0）（seed 0..9）", bf0 == 0 && bf1 > 0 && vr0 == 0 && vr1 > 0, $"羽の半減 {bf0} → {bf1}・仇巡り {vr0} → {vr1}");
 
         // (j) 防いだ量 ＝ 受け手の防いでもらった量（計数の対）・誤射の計数はヒサの札に依らない（段0-1 の後でも数える）
-        var aa = Many(Step(econ, 4), WaveOf("bat").Make, 20); var bb = Many(econ, WaveOf("bat").Make, 20);
+        var aa = Many(Step(econR, 4), WaveOf("bat").Make, 20); var bb = Many(econ, WaveOf("bat").Make, 20);
         long taken = 0; for (int s = 0; s < 20; s++) { var p = BattleEngine.Materialize(econ, BattleContext.PlayerTeam); var r = BattleEngine.Run(p, WaveOf("bat").Make(), s, verbose: false); var ids = p.Select(u => u.Def.Id).ToHashSet(); taken += r.TallyByUnit.Where(kv => ids.Contains(kv.Key)).Sum(kv => kv.Value.BeckonFeatherTaken); }
         Expect("(j) 計数: ヒサの防いだ量 ＝ 受け手の防いでもらった量・段0-1 の後でも誤射（矢面）を数える", bb.Saved == taken && bb.Saved > 0 && aa.Saved == 0 && aa.FfBeckonHits > 0, $"防いだ {bb.Saved} ／ もらった {taken}・段0-1 の後の誤射（矢面）{aa.FfBeckonHits} 回");
 

@@ -208,8 +208,8 @@ static class Rally296Diag
         Formation Row(string n) => Pin299(RowRaw(n));   // 第299期: ミサ ／ ザン ／ ヒサも第298期の規定に
         var boss = Row("試遊・標 ボス台");
         Expect("(f) 循環 ＝ 試遊・標 ボス台の 後1 バン → ソラ（席はそのまま）・三人組 ＝ 循環の ソラ → ドルガ・守り型 ＝ ゴルム・ザン・ドハ・ミサ・ヒサ",
-            Row("試遊・標 循環").Occupied().SequenceEqual(FvSwap(boss, UnitCatalog.Ban, UnitCatalog.Sora).Occupied())
-            && Row("試遊・標 三人組").Occupied().SequenceEqual(FvSwap(Row("試遊・標 循環"), UnitCatalog.Sora, UnitCatalog.Dolga).Occupied())
+            Row("試遊・標 循環").Occupied().SequenceEqual(FvSwap(boss, UnitCatalog.Ban, UnitCatalog.SoraSRs).Occupied())   // 第301期: `Pin299` がソラを `SoraSRs` に替える
+            && Row("試遊・標 三人組").Occupied().SequenceEqual(FvSwap(Row("試遊・標 循環"), UnitCatalog.SoraSRs, UnitCatalog.Dolga).Occupied())
             && Seats(Row("試遊・標 守り型")) == "ゴルム・ザン・ドハ・ミサ・ヒサ", $"{Seats(Row("試遊・標 循環"))} ／ {Seats(Row("試遊・標 三人組"))} ／ {Seats(Row("試遊・標 守り型"))}");
         // (g) 第295期の測定との一致: 循環の台 × ボス × seed 0..199 が HK-b で 100%（第295期 §4-2）・守り型 × 近衛が 100%・倒しT 3.0（§4-4）
         int Wins(Formation f, EnemyCatalog.PlaytestStage w, out double t)

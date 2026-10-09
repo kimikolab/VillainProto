@@ -2086,6 +2086,28 @@ public sealed class UnitTally
     /// </summary>
     public long BeckonFeatherHits, BeckonFeatherSaved, BeckonFeatherTaken, FeatherFfBeckonTaken, FeatherFfBeckonHits, FeatherFfOtherTaken, FeatherFfOtherHits;
     /// <summary>
+    /// 第301期（<b>計数のみ</b>）: ソラ ＝ <c>DivertStripBeckon</c> ／ <c>DivertKeptBeckon</c> ／ <c>DivertStripOther</c> 逸らしが剥がした矢面の標 ／ 剥がさずに残した矢面の標（規定）／ 剥がしたそれ以外の味方の標・
+    /// ヒサ ＝ <c>BeckonGuardHitN</c> 敵の攻撃が矢面の味方に当たったとき標が残っていた回数（剥がされていた回数は <c>BeckonStrippedHits</c>）。
+    /// </summary>
+    public long DivertStripBeckon, DivertKeptBeckon, DivertStripOther, BeckonGuardHitN;
+    /// <summary>
+    /// 第301期（<b>計数のみ</b>）: ザン ＝ <c>VendettaFresh</c> 標の無い仇への仇討ち（初回）／ <c>VendettaFreshShouts</c> そのうちヒサの叫びが出た数・
+    /// ヒサ ＝ <c>AccuseWithZan</c> ／ <c>AccuseSolo</c> 「あいつがやった！」で敵に標を付けた数（濡れ衣の札を持つザンがいる ／ いない・`FrameAccuses` はその和）。
+    /// </summary>
+    public long VendettaFresh, VendettaFreshShouts, AccuseWithZan, AccuseSolo;
+    /// <summary>
+    /// 第301期 段1（<b>計数のみ</b>）。ヒサ ＝ <c>RallyOverflow</c> 叫びの溢れ（満タンで入らなかった量・版に依らず数える）／ <c>RallyOverByTurn</c>[T] そのターン別 ／
+    /// 号令（HL）: <c>CommandFires</c> ／ <c>CommandLayers</c> 号令の回数 ／ 刻んだ層 ／ <c>CommandPeak</c> 号令の直後の的の層の最大 ／ <c>CommandCapped</c> 上限で止まった ／ <c>CommandNoTarget</c> 刻む先が無かった ／
+    /// <c>CommandNowTurns</c> 即時版で号令が出たターン（張り付きの分母）／ <c>CommandTurns</c> 手番版の手番 ／ <c>CommandTurnHist</c>[n] 1手番に刻んだ層 ／
+    /// 庇い（HC）: <c>CoverFires</c> ／ <c>CoverRaw</c> ／ <c>CoverTaken</c> 庇った回数 ／ 元の一撃の量 ／ ヒサが実際に失った HP ／ <c>CoverDied</c> 庇った一撃でヒサが倒れた ／ <c>CoverHushed</c> ／ <c>CoverBlocked</c> 粛 ／ 痺れで庇えなかった。
+    /// 受け手 ＝ <c>CoverSaved</c> 庇われた回数 ／ <c>CoverFeatherSkipped</c> 庇いの標に羽を撃たせなかった ／ <c>LethalOnAlly</c> ／ <c>LethalHisaAlive</c> 敵の攻撃の倒れる一撃（ヒサのいる戦）／ うちヒサが生きていた。
+    /// 敵 ＝ <c>MarkPeak</c> 標の層の最大（層の書き込みの瞬間・合算は最大）。
+    /// </summary>
+    public long RallyOverflow, CommandFires, CommandLayers, CommandCapped, CommandNoTarget, CommandTurns, CoverFires, CoverRaw, CoverTaken, CoverDied, CoverHushed, CoverBlocked,
+                CoverSaved, CoverFeatherSkipped, LethalOnAlly, LethalHisaAlive, CommandFeathers, CommandNowTurns;
+    public int CommandPeak, MarkPeak;
+    public long[]? RallyOverByTurn, CommandTurnHist;
+    /// <summary>
     /// 第299期（<b>計数のみ</b>・ザンの手番）。仇指し（<see cref="TraitId.Vendetta"/>）の保持者が手番で振ったとき（規定でも数える）:
     /// <c>ZanTurns</c> 手番 ／ <c>ZanTurnNoMarked</c> 標を持つ敵が 0 ／ <c>ZanTurnMarkedFoes</c> ／ <c>ZanTurnLayers</c> 手番の時点の標を持つ敵の数 ／ 層の合計 ／
     /// <c>ZanPlanA</c> ／ <c>ZanPlan1</c> 仇巡りの見込みの太刀（ZM-a ＝ 層の合計・ZM-1 ＝ 敵の数・上限で切る）／ <c>ZanPlanACapped</c> ／ <c>ZanPlan1Capped</c> 上限に達した手番 ／
@@ -3201,6 +3223,13 @@ public sealed class UnitTally
         RallySelfHeals += o.RallySelfHeals; RallySelfHealed += o.RallySelfHealed;   // 第299期
         BeckonFeatherHits += o.BeckonFeatherHits; BeckonFeatherSaved += o.BeckonFeatherSaved; BeckonFeatherTaken += o.BeckonFeatherTaken;   // 第300期
         FeatherFfBeckonTaken += o.FeatherFfBeckonTaken; FeatherFfBeckonHits += o.FeatherFfBeckonHits; FeatherFfOtherTaken += o.FeatherFfOtherTaken; FeatherFfOtherHits += o.FeatherFfOtherHits;   // 第300期
+        DivertStripBeckon += o.DivertStripBeckon; DivertKeptBeckon += o.DivertKeptBeckon; DivertStripOther += o.DivertStripOther; BeckonGuardHitN += o.BeckonGuardHitN;   // 第301期
+        VendettaFresh += o.VendettaFresh; VendettaFreshShouts += o.VendettaFreshShouts; AccuseWithZan += o.AccuseWithZan; AccuseSolo += o.AccuseSolo;
+        RallyOverflow += o.RallyOverflow; CommandFires += o.CommandFires; CommandLayers += o.CommandLayers; CommandCapped += o.CommandCapped; CommandNoTarget += o.CommandNoTarget;
+        CommandTurns += o.CommandTurns; CoverFires += o.CoverFires; CoverRaw += o.CoverRaw; CoverTaken += o.CoverTaken; CoverDied += o.CoverDied; CoverHushed += o.CoverHushed;
+        CoverBlocked += o.CoverBlocked; CoverSaved += o.CoverSaved; CoverFeatherSkipped += o.CoverFeatherSkipped; LethalOnAlly += o.LethalOnAlly; LethalHisaAlive += o.LethalHisaAlive; CommandFeathers += o.CommandFeathers; CommandNowTurns += o.CommandNowTurns;
+        CommandPeak = Math.Max(CommandPeak, o.CommandPeak); MarkPeak = Math.Max(MarkPeak, o.MarkPeak);
+        AddHist(ref RallyOverByTurn, o.RallyOverByTurn); AddHist(ref CommandTurnHist, o.CommandTurnHist);
         ZanTurns += o.ZanTurns; ZanTurnNoMarked += o.ZanTurnNoMarked; ZanTurnMarkedFoes += o.ZanTurnMarkedFoes; ZanTurnLayers += o.ZanTurnLayers;
         ZanPlanA += o.ZanPlanA; ZanPlan1 += o.ZanPlan1; ZanPlanACapped += o.ZanPlanACapped; ZanPlan1Capped += o.ZanPlan1Capped; ZanTurnDealt += o.ZanTurnDealt;
         RoundTurns += o.RoundTurns; RoundFoes += o.RoundFoes; RoundSlashes += o.RoundSlashes; RoundCapped += o.RoundCapped; RoundCrossed += o.RoundCrossed;
@@ -3927,6 +3956,25 @@ public enum BattleEventKind
     /// 敵の攻撃の矢面の半減には出ない（第184期から台本に出ていない——ログの行だけ）。
     /// </summary>
     BeckonFeather,
+
+    /// <summary>
+    /// ヒサの号令（第301期・HL-i ／ HL-t・<b>表示専用</b>）。叫びの溢れを敵の標の層に換えた瞬間（直後に層の `MarkLayer` ／ ミサの羽の `FeatherMark`）。
+    /// <c>ActorId</c> ＝ ヒサ ／ <c>TargetId</c> ＝ 的 ／ <c>Amount</c> ＝ 刻んだ層の数 ／ <c>Slot</c> ＝ 使った溢れ ／ <c>Text</c> ＝ 「即時」か「手番」（<see cref="CommandLabels"/>）。<b>どの規則も読まない。</b>
+    /// </summary>
+    Command,
+
+    /// <summary>
+    /// ヒサの庇い（第301期・HC・<b>表示専用</b>）。味方への倒れる一撃をヒサが代わりに受ける瞬間（直後にヒサの標の `StatusGain` と、ヒサへの一撃の `Damage`）。
+    /// <c>ActorId</c> ＝ ヒサ ／ <c>TargetId</c> ＝ 庇った味方 ／ <c>PartnerId</c> ＝ 攻撃の主 ／ <c>Amount</c> ＝ 元の一撃の量。<b>どの規則も読まない。</b>
+    /// </summary>
+    Cover,
+}
+
+/// <summary>`Command`（第301期）の <c>Text</c>。</summary>
+public static class CommandLabels
+{
+    public const string Now = "即時";
+    public const string Turn = "手番";
 }
 
 /// <summary>`VendettaRound`（第299期）の <c>Text</c>。</summary>

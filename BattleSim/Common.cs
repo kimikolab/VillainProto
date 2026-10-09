@@ -184,7 +184,8 @@ public static Formation Pin299(Formation f)
 {
     var g = f.Clone();
     foreach ((int slot, UnitDef d) in f.Occupied())
-        g[slot] = ReferenceEquals(d, UnitCatalog.Tome) ? UnitCatalog.TomeMb : ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanZN0 : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHKb : d;
+        g[slot] = ReferenceEquals(d, UnitCatalog.Tome) ? UnitCatalog.TomeMb : ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanZN0 : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHKb
+                  : ReferenceEquals(d, UnitCatalog.Sora) ? UnitCatalog.SoraSRs : d;   // 第301期: ソラも（矢面は剥がさない の前）
     return g;
 }
 
@@ -196,7 +197,21 @@ public static Formation Pin300(Formation f)
 {
     var g = f.Clone();
     foreach ((int slot, UnitDef d) in f.Occupied())
-        g[slot] = ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanZNb : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHKs : d;
+        g[slot] = ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanZNb : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHKs
+                  : ReferenceEquals(d, UnitCatalog.Sora) ? UnitCatalog.SoraSRs : d;   // 第301期: ソラも（矢面は剥がさない の前）
+    return g;
+}
+
+/// <summary>
+/// 第301期: ソラ ＝ 矢面は剥がさない・ザン ＝ 標を付けてから斬る・ヒサ ＝ あいつがやった！ を規定にした。第300期の規定の駒で測った器具（`round300` の台）はこれを通す
+/// （ソラ → `SoraSRs`・ザン → `ZanZMa`（第300期の規定と同じ物）・ヒサ → `HisaHKf`）。`Pin299` ／ `Pin300` も第301期からソラを `SoraSRs` に替える。
+/// </summary>
+public static Formation Pin301(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Zan) ? UnitCatalog.ZanZMa : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHKf
+                  : ReferenceEquals(d, UnitCatalog.Sora) ? UnitCatalog.SoraSRs : d;
     return g;
 }
 

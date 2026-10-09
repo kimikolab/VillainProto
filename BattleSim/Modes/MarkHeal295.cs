@@ -63,10 +63,11 @@ static class MarkHeal295Diag
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Doha)) g[slot] = UnitCatalog.DohaD0;   // 第298期
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Tome)) g[slot] = UnitCatalog.TomeMb;   // 第299期: ミサ ／ ザンも旧の規定に
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Zan)) g[slot] = UnitCatalog.ZanZN0;
+        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Sora)) g[slot] = UnitCatalog.SoraSRs;   // 第301期: ソラも旧の規定（矢面は剥がさない の前）に
         return g;
     }
     static (string Name, Formation F)[] CompareBuilds() => Common.CompareBuilds().Select(r => (r.Name, Pin296(r.F))).ToArray();
-    static Formation Cycle => FvSwap(Playtest("試遊・標 ボス台"), UnitCatalog.Ban, UnitCatalog.Sora);
+    static Formation Cycle => FvSwap(Playtest("試遊・標 ボス台"), UnitCatalog.Ban, UnitCatalog.SoraSRs);   // 第301期: ソラは第300期までの規定（`SoraSRs`）
 
     /// <summary>代表台（§5-2）。循環の台 ＝ 試遊・標 ボス台の バン → ソラ（ザン・ゴルム・ミサ・ソラ・ヒサ）。</summary>
     internal static (string Name, Formation F, bool Ref)[] Boards() => new (string, Formation, bool)[]
@@ -481,7 +482,7 @@ static class MarkHeal295Diag
     /// <summary>ボスの格子（§5-2）: 固定枠 ミサ ＋ ザン ＋ ソラ ＋ ヒサ・探索枠1 ＝ 第294期のソラの格子の候補（第283期の寿命側 ＋ ヒーラーからソラを除いた枠）からヒサを除いた枠。</summary>
     static UnitDef[] BossPool => B283.LifePool.Concat(B283.HealPool295.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id is not ("sora" or "hisa")).ToArray();
 
-    static void GridBoss() => GridCore("固定枠 ミサ・ザン・ソラ・ヒサ（ヒサ: 規定 ／ HK-a ／ HK-b）", S287.Waves[0], new[] { UnitCatalog.TomeMb, UnitCatalog.ZanZN0, UnitCatalog.Sora, UnitCatalog.HisaHK0 }, BossPool, 1);   // 第299期: ミサ ／ ザンは旧の規定
+    static void GridBoss() => GridCore("固定枠 ミサ・ザン・ソラ・ヒサ（ヒサ: 規定 ／ HK-a ／ HK-b）", S287.Waves[0], new[] { UnitCatalog.TomeMb, UnitCatalog.ZanZN0, UnitCatalog.SoraSRs, UnitCatalog.HisaHK0 }, BossPool, 1);   // 第299期: ミサ ／ ザンは旧の規定
 
     static void GridElite(string wave, string ver) =>
         GridCore($"固定枠 ミサ・ヒサ・ザン（第294期 §4-5 の作り・探索枠2）", WaveOf(wave), new[] { UnitCatalog.TomeMb, UnitCatalog.HisaHK0, UnitCatalog.ZanZN0 },   // 第299期: ミサ ／ ザンは旧の規定
@@ -538,10 +539,13 @@ static class MarkHeal295Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        Expect("(a) 規定のソラ ＝ SR-b の札（旧の規定 `SoraSR0` ＋ `DivertPressure`）・文面は「見切り」・`SoraSR0` ／ `SoraSRb` は `All` ／ `Retired` の外",
-            UnitCatalog.Sora.Traits.SequenceEqual(UnitCatalog.SoraSR0.Traits.Append(TraitId.DivertPressure)) && UnitCatalog.Sora.Traits.SequenceEqual(UnitCatalog.SoraSRb.Traits)
-            && UnitCatalog.Sora.PlusText == UnitCatalog.SoraSR0.PlusText + "。指差した敵の動きは読める。深く指差された敵の一撃ほど、仲間への分まで受け流す"
-            && !UnitCatalog.Sora.PlusText.Contains("手元が狂う") && !new[] { UnitCatalog.SoraSR0, UnitCatalog.SoraSRb }.Any(UnitCatalog.Everyone.Contains) && UnitCatalog.All.Contains(UnitCatalog.Sora));
+        // 第301期: 規定のソラに `DivertKeepBeckon`（矢面は剥がさない）を足した。この器具が見るのは第295〜300期の規定（`SoraSRs`）。
+        var sora = UnitCatalog.SoraSRs;
+        Expect("(a) 規定のソラ（第301期からは `SoraSRs`）＝ SR-b の札（旧の規定 `SoraSR0` ＋ `DivertPressure`）・文面は「見切り」・`SoraSR0` ／ `SoraSRb` は `All` ／ `Retired` の外",
+            sora.Traits.SequenceEqual(UnitCatalog.SoraSR0.Traits.Append(TraitId.DivertPressure)) && sora.Traits.SequenceEqual(UnitCatalog.SoraSRb.Traits)
+            && sora.PlusText == UnitCatalog.SoraSR0.PlusText + "。指差した敵の動きは読める。深く指差された敵の一撃ほど、仲間への分まで受け流す"
+            && !sora.PlusText.Contains("手元が狂う") && !new[] { UnitCatalog.SoraSR0, UnitCatalog.SoraSRb, sora }.Any(UnitCatalog.Everyone.Contains) && UnitCatalog.All.Contains(UnitCatalog.Sora)
+            && UnitCatalog.Sora.Traits.SequenceEqual(sora.Traits.Append(TraitId.DivertKeepBeckon)) && UnitCatalog.Sora.PlusText == sora.PlusText);
         Expect("(b) HK-a ／ HK-b は規定のヒサの末尾に札を1枚足しただけ・文面・`All` ／ `Retired` の外",
             UnitCatalog.HisaHKa.Traits.SequenceEqual(UnitCatalog.HisaHK0.Traits.Append(TraitId.MarkRally)) && UnitCatalog.HisaHKb.Traits.SequenceEqual(UnitCatalog.HisaHK0.Traits.Append(TraitId.MarkRallyWide))
             && UnitCatalog.HisaHKa.PlusText.EndsWith("『あいつを狙え！ まだ倒れるな！』と叫んで、標を背負う味方を癒す")
@@ -603,7 +607,7 @@ static class MarkHeal295Diag
         // (h) 量 ＝ 最も深い層 × 6: エンジンの1回の回復を ApplyDamage の外から再現する——ログの叫びの直後の Heal の名目量（溢れ前）を見る代わりに、層 1 の戦（ミサがいない）で癒えた量 ≦ 6
         {
             int over = 0, n = 0;
-            var f = B283.Seat(new[] { UnitCatalog.ZanZNb, UnitCatalog.Golm, UnitCatalog.Dolga, UnitCatalog.Sora, UnitCatalog.HisaHKa });   // ミサがいない＝層 1・第300期: ザンは第299期の規定（`ZanZNb`）に固定
+            var f = B283.Seat(new[] { UnitCatalog.ZanZNb, UnitCatalog.Golm, UnitCatalog.Dolga, UnitCatalog.SoraSRs, UnitCatalog.HisaHKa });   // ミサがいない＝層 1・第300期: ザンは第299期の規定（`ZanZNb`）に固定
             foreach (var w in S287.Waves) for (int s = 0; s < 20; s++)
                 foreach (var x in BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), w.Make(), s, verbose: true).Events.Where(x => x.Kind == BattleEventKind.MarkRally)) { n++; if (x.Slot != 1 || x.Amount > 6) over++; }
             Expect("(h) ミサのいない戦では層 1・1回の回復は 6 以下", n > 0 && over == 0, $"{n} 回・外れ {over}");

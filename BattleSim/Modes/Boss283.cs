@@ -41,7 +41,8 @@ static class Boss283Diag
     /// </summary>
     internal static readonly UnitDef[] LifePool =
     {
-        UnitCatalog.HisaHK0, UnitCatalog.Sora, UnitCatalog.DohaD0, UnitCatalog.Golm, UnitCatalog.Ban, UnitCatalog.Kubi,
+        UnitCatalog.HisaHK0, UnitCatalog.SoraSRs, UnitCatalog.DohaD0,   // 第301期: ソラは第300期までの規定（`SoraSRs`）に固定
+        UnitCatalog.Golm, UnitCatalog.Ban, UnitCatalog.Kubi,
         UnitCatalog.Sekki, UnitCatalog.Gald, UnitCatalog.Kado, UnitCatalog.Uke, UnitCatalog.Gan,
     };
 
@@ -486,7 +487,7 @@ static class Boss283Diag
         foreach (var x in miss.Take(10))
             Console.WriteLine($"| {HealOf(x.B.Trio)} | {Names(x.B.Trio)} | {SeatText(x.B.Order)} | {F1(x.C.Win)} | {F1(x.C.ScarAvg)} | {Per1(x.C.Vend, x.C.N)} | {Per2(x.C.Turns, x.C.N)} |");
         Console.WriteLine();
-        Console.WriteLine($"供給の入口（ヒサ ／ ソラ）を持たない組 {lu.Count(t => !t.Contains(UnitCatalog.HisaHK0) && !t.Contains(UnitCatalog.Sora))} のうち、爪痕由来で届いた組: {reachedTrios.Count(n => !n.Contains("ヒサ") && !n.Contains("ソラ"))}");
+        Console.WriteLine($"供給の入口（ヒサ ／ ソラ）を持たない組 {lu.Count(t => !t.Contains(UnitCatalog.HisaHK0) && !t.Contains(UnitCatalog.SoraSRs))} のうち、爪痕由来で届いた組: {reachedTrios.Count(n => !n.Contains("ヒサ") && !n.Contains("ソラ"))}");
         Console.WriteLine();
 
         // 表4: ヒサ・ドハの在不在と、組の全体分布
