@@ -17,6 +17,7 @@ public partial class BattlefieldView3D
         _rallyCaptions.Clear();
         _markRallyEnded = false;
         ResetZanPresentation();
+        ResetMarkLoop();
     }
 
     private void EndMarkRallyPresentation()

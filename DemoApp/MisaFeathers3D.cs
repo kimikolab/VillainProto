@@ -27,11 +27,15 @@ public partial class MisaFeathers3D : Node3D
     private bool _active = true;
     private Vector3? _aim;
     private bool _deployed;
+    internal bool Persistent { get; set; }
+    private Feather? _markShot;
     private float _returnAfter = -1;
     private Vector3 _fieldCenter;
     private Vector2 _fieldRadius = new(5.55f, 2.85f);
     internal Vector3 LastMuzzle { get; private set; }
     internal int BeamCount { get; private set; }
+    internal int MarkBeamCount { get; private set; }
+    internal int VolleyBeamCount => BeamCount - MarkBeamCount;
     public int Count => _feathers.Count;
     public int VisibleCount => _feathers.Count(f => f.Sprite.Visible);
     public int InFlight => _feathers.Count(f => f.Stage is 1 or 2 or 3 or 5);
@@ -102,6 +106,13 @@ public partial class MisaFeathers3D : Node3D
 
     public void BeginVolley(int count)
     {
+        if (Persistent && _deployed)
+        {
+            SetCount(count);
+            _volley = _feathers.ToArray();
+            _aim = null;
+            return;
+        }
         _deployed = false;
         _returnAfter = -1;
         // 直前の演出が倍速で終わり切っていなくても、台本の在庫から次の一振りを始める。
@@ -123,6 +134,7 @@ public partial class MisaFeathers3D : Node3D
     // 発数や命中では在庫を減らさず、残っている羽だけを手元へ帰す。
     internal void ReturnVolley()
     {
+        if (Persistent && _active) { _aim = null; return; }
         bool returning = _active && _deployed && _feathers.Any(f => f.Stage != 4 && f.Sprite.Visible);
         _deployed = false; _returnAfter = -1; _aim = null;
         foreach (var f in _feathers.Where(f => f.Stage != 4 && f.Sprite.Visible))
@@ -131,6 +143,31 @@ public partial class MisaFeathers3D : Node3D
     }
 
     public void AimAt(Vector3 point) => _aim = point;
+
+    // 近い「羽」を選ぶだけ。命中先と在庫は台本が決める。
+    internal bool AimMark(Vector3 destination)
+    {
+        if (!_active || _feathers.Count == 0) return false;
+        _markShot = _feathers.Where(f => f.Sprite.Visible)
+            .OrderBy(f => f.Sprite.GlobalPosition.DistanceSquaredTo(destination)).FirstOrDefault();
+        if (_markShot is null) return false;
+        var f = _markShot;
+        _aim = null;
+        f.From = f.Sprite.Position; f.To = destination; f.Time = 0;
+        f.Stage = 1; f.Spray = false; f.WillLose = false;
+        return true;
+    }
+
+    internal Vector3? FireMark()
+    {
+        if (!_active || _markShot is not { Stage: 1 } f || !_feathers.Contains(f)) return null;
+        LastMuzzle = f.Sprite.GlobalPosition + (f.To - f.Sprite.GlobalPosition).Normalized() * 0.30f;
+        BeamCount++;
+        MarkBeamCount++;
+        f.Stage = 2; f.Time = 0;
+        _markShot = null;
+        return LastMuzzle;
+    }
 
     public bool Launch(int shot, Vector3 destination, bool spray, bool willLose)
     {
@@ -156,7 +193,7 @@ public partial class MisaFeathers3D : Node3D
         LastMuzzle = f.Sprite.GlobalPosition + direction * 0.30f;
         BeamCount++;
         f.Stage = 2; f.Time = 0;
-        if (shot == _volley.Length) _returnAfter = 0.25f;
+        if (!Persistent && shot == _volley.Length) _returnAfter = 0.25f;
         return LastMuzzle;
     }
 
@@ -186,6 +223,7 @@ public partial class MisaFeathers3D : Node3D
         _active = active; Visible = active; _aim = null;
         _deployed = false; _returnAfter = -1;
         _volley = Array.Empty<Feather>();
+        _markShot = null;
         foreach (var f in _feathers)
         {
             f.Stage = 0; f.Spray = false; f.Sprite.Visible = active;
@@ -193,6 +231,7 @@ public partial class MisaFeathers3D : Node3D
             foreach (var trail in f.Trail) trail.Hide();
         }
         LayoutResting();
+        if (active && Persistent) BeginVolley(Count);
     }
 
     private Vector3 Home(int index)
@@ -269,7 +308,8 @@ public partial class MisaFeathers3D : Node3D
             }
             else if (f.Stage == 1)
             {
-                f.Sprite.Position = f.From.Lerp(GunPosition(i, f.Spray), Mathf.Sin(t * Mathf.Pi * 0.5f));
+                if (f != _markShot)
+                    f.Sprite.Position = f.From.Lerp(GunPosition(i, f.Spray), Mathf.Sin(t * Mathf.Pi * 0.5f));
                 f.Sprite.Modulate = Colors.White.Lerp(new Color("dfcdff"), t * 0.5f);
             }
             else if (f.Stage == 2)

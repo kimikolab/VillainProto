@@ -20,9 +20,10 @@ public partial class BattlefieldView3D
         Vector3 left = PawnPosition(0, 3), right = PawnPosition(1, 4);
         feathers.SetField((left + right) * 0.5f,
             new Vector2((right.X - left.X) * 0.5f + 0.35f, (right.Z - left.Z) * 0.5f + 0.70f));
+        bool deployed = feathers.IsDeployed;
         feathers.BeginVolley(count);
         ShowFeatherVolley(actor, speed);
-        await ToSignal(GetTree().CreateTimer(MisaFeathers3D.DeploySeconds / Math.Max(0.1, speed)), SceneTreeTimer.SignalName.Timeout);
+        await ToSignal(GetTree().CreateTimer((deployed ? 0.12 : MisaFeathers3D.DeploySeconds) / Math.Max(0.1, speed)), SceneTreeTimer.SignalName.Timeout);
     }
 
     internal async Task PlayMisaShot(BattlePawn3D? actor, BattlePawn3D? target, BattleEvent cue, double speed,

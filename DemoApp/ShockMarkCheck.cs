@@ -17,15 +17,22 @@ public partial class ShockMarkCheck : Control
             CheckZanPlan();
             bool web = OS.GetCmdlineUserArgs().Contains("--web");
             bool rally = OS.GetCmdlineUserArgs().Contains("--rally");
+            bool loop = OS.GetCmdlineUserArgs().Contains("--mark-loop");
             if (!OS.GetCmdlineUserArgs().Contains("--replay-only"))
             {
-                if (OS.GetCmdlineUserArgs().Contains("--mark-readability")) await CheckMarkReadability();
+                if (loop) await CheckMarkLoopVisuals();
+                else if (OS.GetCmdlineUserArgs().Contains("--mark-readability")) await CheckMarkReadability();
                 else if (OS.GetCmdlineUserArgs().Contains("--zan-tiers")) await CheckZanTiers();
                 else if (rally) await CheckRallyVisuals();
                 else if (web) await CheckWebVisuals();
                 else await CheckVisuals();
             }
-            if (rally && OS.GetCmdlineUserArgs().Contains("--verify"))
+            if (loop && OS.GetCmdlineUserArgs().Contains("--verify"))
+            {
+                foreach (string preset in new[] { "試遊・標 循環", "試遊・標 三人組", "試遊・標 守り型" })
+                    for (int stage = 0; stage < 3; stage++) await Replay(preset, stage, 0);
+            }
+            else if (rally && OS.GetCmdlineUserArgs().Contains("--verify"))
             {
                 foreach (string preset in new[] { "試遊・標 循環", "試遊・標 三人組", "試遊・標 守り型" })
                     for (int stage = 0; stage < 2; stage++) await Replay(preset, stage, 0);
@@ -195,6 +202,17 @@ public partial class ShockMarkCheck : Control
             Require(field.ThreadReleasePlays == result.Events.Count(e => e.Kind == BattleEventKind.Discharge && e.SourceTrait == TraitId.Thread && e.Text == ThreadLabels.Release), "解除時の放電件数");
             Require(field.MarkLayerPlays == Count(BattleEventKind.MarkLayer) && field.ScarPlays == Count(BattleEventKind.Scar), "標と爪痕の件数");
             Require(field.MisaShots == MisaPresentation.Build(result.Events).HitsByCue.Count, "光線の発数");
+            Require(field.FeatherMarkPlays == Count(BattleEventKind.FeatherMark)
+                && field.FeatherMarkAllyPlays == Count(BattleEventKind.FeatherMark, FeatherMarkLabels.Ally), "標撃ちの全発と誤射");
+            Require(field.FramedAccusations == Count(BattleEventKind.Framed, FramedLabels.Accuse)
+                && field.FramedVendettas == Count(BattleEventKind.Framed, FramedLabels.Vendetta), "濡れ衣の対");
+            Require(field.RoundStarts == Count(BattleEventKind.VendettaRound, VendettaRoundLabels.Start)
+                && field.RoundSlashes == Count(BattleEventKind.VendettaRound, VendettaRoundLabels.Slash), "仇巡りの手番数と太刀数");
+            Require(field.RoundFinishes == MarkLoopPresentation.Build(result.Events).LastSlashes.Count, "最後の実在する太刀で締める");
+            Require(field.SharePowerPlays == Count(BattleEventKind.ShareGive, ShareGiveLabels.Power)
+                && field.BeckonFeatherPlays == Count(BattleEventKind.BeckonFeather), "力配りと矢面の半減");
+            Require(field.Pawns.Values.All(p => !p.RoundMoving), "終了後に仇巡りを残さない");
+            GD.Print($"MARK_LOOP_REPLAY_OK {name} stage={stage} seed={seed} pass={pass} feather={field.FeatherMarkPlays}/{field.FeatherMarkAllyPlays} framed={field.FramedAccusations}/{field.FramedVendettas} round={field.RoundStarts}/{field.RoundSlashes}/{field.RoundTravels} share={field.SharePowerPlays} beckon={field.BeckonFeatherPlays}");
             var rallyPlan = MarkRallyPresentation.Build(result.Events);
             var zanPlan = (ZanPresentation)Read("_zan")!;
             Require(field.MarkRallyCues == Count(BattleEventKind.MarkRally), "叫びの回復台本件数");

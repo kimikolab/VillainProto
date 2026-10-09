@@ -1152,6 +1152,7 @@ public partial class Main : Control
         IndexThunder(_result.Events);
         _misa = MisaPresentation.Build(_result.Events);
         _markRally = MarkRallyPresentation.Build(_result.Events);
+        _markLoop = MarkLoopPresentation.Build(_result.Events);
         _mireBurstsShown.Clear();
         IndexTimeline(_result.Events);
         _battleOpening = pending.Select(x => new DemoOpening(
@@ -1252,6 +1253,8 @@ public partial class Main : Control
             else await ApplyEvent(e, eventIndex);
             if (token != _playToken || !_battleMode) return;
             await FinishZan(eventIndex);
+            if (token != _playToken || !_battleMode) return;
+            await FinishMarkLoop(eventIndex);
             if (token != _playToken || !_battleMode) return;
             _tickDelayBudget = null;
             _fireFastEvent = false;
@@ -1371,6 +1374,7 @@ public partial class Main : Control
         _fireFastEvent = _firePresentation.FastEvents.Contains(eventIndex);
         _misaFastEvent = _misa.FastEvents.Contains(eventIndex);
         _zanFastEvent = _zan.FastEvents.Contains(eventIndex);
+        if (await PlayMarkLoop(e, eventIndex, actor, target)) return;
         if (await PlayZan(e, eventIndex, actor, target)) return;
         if (PlayFireHitSource(e, eventIndex, actor, target)) return;
         _fireFastEvent |= e.Kind == BattleEventKind.Attack && _fireHits.Contacts.ContainsKey(eventIndex);
@@ -1468,7 +1472,7 @@ public partial class Main : Control
                 // 溜めの解放は踏み込み後の着弾で行う。手番外の攻撃では消費しない。
                 bool continuingCombo = actor is not null && _comboEnds.ContainsKey(actor);
                 _movement.Attacks.TryGetValue(eventIndex, out var movementCue);
-                bool misaAttack = _misa.Attacks.Contains(eventIndex);
+                bool misaAttack = _misa.Attacks.Contains(eventIndex) || _markLoop.FeatherAttacks.Contains(eventIndex);
                 bool flowingAttack = misaAttack || actor?.UnitId == "shiga" || movementCue is not null || actor?.UnitId == "sero"
                     || actor?.UnitId == "basa" && e.Pattern == AttackPattern.Sweep;
                 if (e.Reaction && !continuingCombo && !flowingAttack)
@@ -1529,7 +1533,7 @@ public partial class Main : Control
                 if (_batchedDamageIndices.Contains(eventIndex)) break;
                 if (_burstDamageIndices.Contains(eventIndex)) break;
                 await PlayTormentHit(eventIndex, actor, target);
-                if (e.Reaction && !_riposteDamage.Contains(eventIndex) && StartsDirectReaction(eventIndex, e))
+                if (e.Reaction && !_markLoop.FeatherHits.Contains(eventIndex) && !_riposteDamage.Contains(eventIndex) && StartsDirectReaction(eventIndex, e))
                 {
                     int reactionToken = _playToken;
                     if (actor?.UnitId == "zan" && target is not null && !e.FriendlyFire)
@@ -1574,7 +1578,7 @@ public partial class Main : Control
                 }
                 // 棘（カド）・仇討ちは PerformAttack を通らず、Reaction 付き Damage から始まる。
                 // ヨミのように Reaction 付き Attack を持つ段は上で既にカットイン済みなので二重に出さない。
-                if (e.Reaction && !_riposteDamage.Contains(eventIndex) && StartsDirectReaction(eventIndex, e))
+                if (e.Reaction && !_markLoop.FeatherHits.Contains(eventIndex) && !_riposteDamage.Contains(eventIndex) && StartsDirectReaction(eventIndex, e))
                 {
                     int reactionToken = _playToken;
                     if (actor?.UnitId == "zan" && target is not null && !e.FriendlyFire)

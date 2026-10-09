@@ -37,7 +37,8 @@ public partial class ShockMarkAudioCheck : Control
             void Reset(int team, double speed)
             {
                 DemoOpening[] opening = [
-                    new(1, team, "tome", "ミサ", 2, 100, 100, 10, AttackPattern.Single, false, UnitCatalog.Tome.Traits),
+                    // 帰還音は旧版の羽で検証。規定の常駐羽には帰還音を出さない。
+                    new(1, team, "tome", "ミサ", 2, 100, 100, 10, AttackPattern.Single, false, UnitCatalog.TomeMb.Traits),
                     new(2, team, "shiga", "シガ", 0, 100, 100, 10, AttackPattern.Single, false, UnitCatalog.Shiga.Traits),
                     new(3, team, "kata", "カタ", 4, 100, 100, 10, AttackPattern.Single, false, UnitCatalog.Kata.Traits),
                     new(4, 1 - team, "knight", "標的", 0, 100, 100, 10, AttackPattern.Single, false),

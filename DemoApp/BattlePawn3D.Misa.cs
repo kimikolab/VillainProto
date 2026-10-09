@@ -24,5 +24,7 @@ public partial class BattlePawn3D
         _misaFeathers = new MisaFeathers3D();
         AddChild(_misaFeathers);
         _misaFeathers.Configure(this, _portraitHeight);
+        _misaFeathers.Persistent = opening.Traits?.Any(t => t is TraitId.FeatherMark or TraitId.FeatherMarkLayer) == true;
+        if (_misaFeathers.Persistent) _misaFeathers.BeginVolley(1);
     }
 }

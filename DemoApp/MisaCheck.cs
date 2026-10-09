@@ -98,7 +98,8 @@ public partial class MisaCheck : Control
         foreach (double speed in new[] { 1.0, 2.0 })
         {
             DemoOpening[] openings = [
-                new(1, team, "tome", "見境なしのミサ", 2, 100, 100, 10, AttackPattern.Single, false, UnitCatalog.Tome.Traits),
+                // 帰還する旧版の回帰検査。規定の常駐羽はShockMarkCheck --mark-loopで検証する。
+                new(1, team, "tome", "見境なしのミサ", 2, 100, 100, 10, AttackPattern.Single, false, UnitCatalog.TomeMb.Traits),
                 new(2, 1 - team, "knight", "標のある敵", 0, 100, 100, 10, AttackPattern.Single, false),
                 new(3, 1 - team, "axeman", "次の標", 4, 100, 100, 10, AttackPattern.Single, false),
                 new(4, team, "sora", "味方", 4, 100, 100, 10, AttackPattern.Single, false),
@@ -212,7 +213,7 @@ public partial class MisaCheck : Control
                 foreach (var pawn in field.Pawns.Values.Where(p => p.MisaFeathers is not null))
                 {
                     if (!timings.TryGetValue(pawn.InstanceId, out var times)) timings[pawn.InstanceId] = times = new();
-                    if (pawn.MisaFeathers!.BeamCount > times.Count) times.Add(Time.GetTicksUsec());
+                    if (pawn.MisaFeathers!.VolleyBeamCount > times.Count) times.Add(Time.GetTicksUsec());
                 }
             }
             Require(!(bool)Read("_playing")!, "実台本が完走");

@@ -31,7 +31,8 @@ internal sealed class MisaPresentation
             for (int j = i + 1; j < events.Count; j++)
             {
                 var e = events[j];
-                if (e.Kind is BattleEventKind.Feather or BattleEventKind.TurnStart or BattleEventKind.Skill) break;
+                if (e.Kind is BattleEventKind.Feather or BattleEventKind.FeatherMark
+                    or BattleEventKind.Framed or BattleEventKind.TurnStart or BattleEventKind.Skill) break;
                 bool hit = spray
                     ? (e.Kind is BattleEventKind.Damage or BattleEventKind.Parry) && !e.Relayed && e.ShareFromId is null
                     : e.Kind == BattleEventKind.Attack;
@@ -62,7 +63,7 @@ internal sealed class MisaPresentation
                 result.LastShots.Add(i);
                 previous = i;
             }
-            else if (e.Kind == BattleEventKind.TurnStart
+            else if (e.Kind is BattleEventKind.TurnStart or BattleEventKind.FeatherMark or BattleEventKind.Framed
                 || e.Kind == BattleEventKind.Feather && e.Text is FeatherLabels.Volley or FeatherLabels.Lost
                 || !e.Reaction && (e.Kind is BattleEventKind.Skill or BattleEventKind.Charge
                     || e.Kind == BattleEventKind.Attack && !result.Attacks.Contains(i)))

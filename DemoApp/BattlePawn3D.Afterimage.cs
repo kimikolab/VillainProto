@@ -4,7 +4,7 @@ using Godot;
 public partial class BattlePawn3D
 {
     /// <summary>本体の透過処理を共有する青い残像。判定・本体の移動には触れない。</summary>
-    public void BeginBonusAfterimage(Color color, double duration, bool interrupted, float opacity = 1)
+    public Node3D BeginBonusAfterimage(Color color, double duration, bool interrupted, float opacity = 1)
     {
         var root = new Node3D();
         AddChild(root);
@@ -81,5 +81,6 @@ public partial class BattlePawn3D
             }
         }), 0.0f, 1.0f, duration);
         tween.Finished += root.QueueFree;
+        return root;
     }
 }

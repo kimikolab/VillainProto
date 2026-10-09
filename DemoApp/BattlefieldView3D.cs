@@ -346,6 +346,12 @@ public partial class BattlefieldView3D : Control
             pawn.Configure(opening, _atlas);
             pawn.SetHome(PawnPosition(opening.Team, opening.Slot));
             _actorRoot.AddChild(pawn);
+            if (pawn.MisaFeathers is { } feathers)
+            {
+                Vector3 left = PawnPosition(0, 3), right = PawnPosition(1, 4);
+                feathers.SetField((left + right) * 0.5f,
+                    new Vector2((right.X - left.X) * 0.5f + 0.35f, (right.Z - left.Z) * 0.5f + 0.70f));
+            }
             _pawns[opening.InstanceId] = pawn;
             AdoptHud(pawn);
             RegisterSealHolder(opening);

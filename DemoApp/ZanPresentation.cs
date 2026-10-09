@@ -39,6 +39,7 @@ internal sealed class ZanPresentation
             if (e.Kind == BattleEventKind.Summon && e.TargetId is int summoned && e.Team is int side)
                 teams[summoned] = side;
             if (e.Kind is BattleEventKind.Attack or BattleEventKind.TurnStart or BattleEventKind.Death
+                or BattleEventKind.FeatherMark or BattleEventKind.Framed or BattleEventKind.VendettaRound
                 or BattleEventKind.Revive or BattleEventKind.Move or BattleEventKind.Skill or BattleEventKind.Charge)
             {
                 Finish();
@@ -61,6 +62,11 @@ internal sealed class ZanPresentation
                 for (int j = i - 1; j >= 0 && events[j].Turn == e.Turn; j--)
                 {
                     var hurtEvent = events[j];
+                    if (hurtEvent.Kind == BattleEventKind.Framed && hurtEvent.Text == FramedLabels.Accuse)
+                    {
+                        if (hurtEvent.PartnerId is int framedAlly) group.Allies.Add(framedAlly);
+                        break;
+                    }
                     if (hurtEvent.Kind == BattleEventKind.Damage && hurtEvent.Amount > 0
                         && hurtEvent.ActorId == group.Enemy && hurtEvent.TargetId is int ally && ally != group.Actor
                         && teams.TryGetValue(ally, out int allyTeam) && allyTeam == units[group.Actor].Team)
