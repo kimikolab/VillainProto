@@ -1146,3 +1146,13 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **身振り（版 Q1 ／ Q3 ／ QA・札 `HushGestureTrait`）。** ヒサの `OnAction`（号令の札の直前に並べる）が `BattleContext.HushGesture` を呼び、相手陣営の生きている粛の保持者（`_hushHolders`・席番号の若い方 `HushHolderOf`）に `LayerMark` で 1 ／ 3 層（`CanCarve` と同じ条件）。**`CanActOutOfTurn` を通さない**（手番の中）。計数 `GestureFires` ／ `GestureLayers`。表示専用 `Framed`「身振り」（層より先に出す）。
 - **QA の最優先（`HushFocusTarget`・`_hushFocusLive` ／ `_hushFocusTeams`）。** ザンの `VendettaTurn` の並び（標の敵の先頭へ）・`SelectTargetChain` の炸裂の段（`RuptureTrait.Preferred` の前）・`DivertTrait.OnTurnStart` の1体目（同値の `PickOne` の前）だけが読む。札の持ち主がいなければ比較1つで抜ける。
 - **庇いの版（`TryCover` の `CanActOutOfTurn` の後ろ）。** HC-d `CoverSkipShoulder`: 庇う相手が `CoverTrait.Shoulders`（分かち・巨躯・SR-a・庇う・殉教・後備え・棘守り）なら見送る。HC-s `CoverSkipLethal`: `CoverEstimate`（元の一撃にヒサの被ダメ修正と味方の惨禍を掛け、軛で切る・軽減の族は見積もらない）がヒサの HP ＋ 破片以上なら見送る。どちらも1戦1度を使わない。空の庇い `CoverPlacebo`（対照）: 判定と1戦1度は本物と同じで `Roll(100)` を1つ引き、一撃は元の相手が受ける。計数 `CoverSkipShoulder` ／ `CoverSkipLethal` ／ `CoverPlacebos` ／ `CoverEstLethalWrong`。印だけの札の器は `MarkOnlyTrait`。
+
+## 第304期 —— 庇い HC-s（規定）／ 粛の版（HB ／ HD）と騎士の斬り返し（HC）
+
+- **規定のヒサに `CoverSkipLethal`**（第303期の HC-s の札そのまま・`TryCover` の `CoverEstimate`）。旧の規定は `HisaH303`（`Common.Pin304`）。第302〜303期のプラスの文面は定数 `UnitCatalog.HisaPlus302`、第303期のマイナスは `HisaMinus303`（`HisaH302` が `Hisa.PlusText` を参照していた）。
+- **粛が「いま黙らせているか」の窓口は `BattleContext.HushSilencing`**（第303期までの `HushHolderAlive` の代わり）。`CanActOutOfTurn`・`ShockWhip` の計数・`HushBindingNow`・ヒヨのギフトの計数（`GiftHushTurns` ／ `GiftHushAttacks`）がこれを読む。**版の保持者がいない戦では `HushHolderAlive` と同値**（`_hushVarLive` の比較1つ）。`HushHolderAlive`（保持者が生きているか）は残す——「粛が倒れた」と「粛が黙らせていない」は別の量。
+- **HB（`HushBreak`・粛の伝令の札）。** `ApplyDamage` の HP を引いた直後に `HushWound`（HP が 1 以上減った・保持者が生きている・まだ破れていない）→ 保持者の私有キー `HushVariantTrait.OpenKey` を 1。**`TakeTurn` の入口（ギフトの手番を除く）で保持者のキーが立っていれば `HushClose`** で 0 に戻す。
+- **HD（`HushShatter10` ／ `HushShatter20`）。** `NoteHushBlocked` の `sole` の合流点で `HushCrack`（両陣営・経路を問わない）。`_hushShatterAt` 回目の後に `_hushShattered`（その戦の間は戻らない・保持者は残る）。痺れ ／ 組み付き ／ `CanReact` で落ちた問い合わせは数えない。
+- **騎士の斬り返し（`KnightRiposte`・`KnightRiposteTrait`・敵の札）。** `OnDamaged` で `CanActOutOfTurn(self, OutOfTurnRoute.KnightRiposte)`（経路を1本足した・名前「騎士の斬り返し」）。止められた機会もそのターンの1回を使う（私有キー `knightRiposteTurn`）。
+- 計数のみ（保持者 ／ 騎士の `UnitTally`）: `HushBreaks` ／ `HushCloses` ／ `HushOpenPassOpp` ／ `HushOpenPassOwn` ／ `HushShatterPassOpp` ／ `HushShatterPassOwn` ／ `HushPassKnight` ／ `HushShatterTurn`・`KnightAsked` ／ `KnightRipostes` ／ `KnightHushed` ／ `KnightHeld` ／ `KnightDealt`。窓を通った行動は `CanActOutOfTurn` の `NoteHushPassed`（版の保持者がいる戦だけ）。
+- 表示専用の出来事 `HushState`（`HushStateLabels`:「破れた」「戻った」「ひび」「砕けた」）。

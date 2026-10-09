@@ -989,6 +989,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 hush303 find [seeds=50]   # 第303期 Codex 向け: 身振り → 仇巡り ／ 一斉射撃 → 粛が倒れる → 声が戻る が揃った最初の seed
     dotnet run --project BattleSim -c Release 0 hush303 memo <台の一部> <1..5|guard|bat|boss> <seed> [S|Q1|Q3|QA|HCd|HCs|HCp|NC|P302] [最後のT]   # 第303期 Codex 向け: 台本の並び
     dotnet run --project BattleSim -c Release 0 hush303 check             # 第303期 自己検査（定義・粛で叫ばない ／ 倒れた後は叫ぶ・身振りの条件 ／ 層 ／ 羽・QA の最優先・HC-d ／ HC-s ／ 空の庇い・PickOne・verbose）
+    dotnet run --project BattleSim -c Release 0 hush304 p0 [seeds]        # 第304期 Phase 0: 粛が単独の原因で止めた数（ターンごと）と HD10 ／ HD20 で砕けるT の見込み ／ 粛の保持者が受けた傷 ／ 騎士の斬り返しの機会。本体は `Modes/Hush304.cs`
+    dotnet run --project BattleSim -c Release 0 hush304 ver [seeds]       # 第304期 代表台 × 本編 第1〜5波 × 粛の版（S ／ HB ／ HD10 ／ HD20 ／ HC ／ HCD・第2波の敵だけを差し替える）
+    dotnet run --project BattleSim -c Release 0 hush304 wave2 [seeds]     # 第304期 標軸の行 × 第2波 × 版と、版ごとの中身（破れていたターン ／ 砕けたT と止めた内訳 ／ 騎士の斬り返し）
+    dotnet run --project BattleSim -c Release 0 hush304 cmp [seeds]       # 第304期 `compare` 64 行 × 第2波 × 版・分布・§7 の得点・(G2)
+    dotnet run --project BattleSim -c Release 0 hush304 find [seeds=50]   # 第304期 Codex 向け: 「ひび → 砕けた → 割り込みが戻る」（HD10）／「破れた → 割り込み → 戻った」（HB）が揃った最初の seed
+    dotnet run --project BattleSim -c Release 0 hush304 memo <台の一部> <seed> [S|HB|HD10|HD20|HC|HCD] [最後のT]   # 第304期 Codex 向け: 第2波の台本の並び
+    dotnet run --project BattleSim -c Release 0 hush304 check             # 第304期 自己検査（段0 の定義と庇いの見送り・版の定義・HB の破れ ／ 戻り・HD の 9 ／ 10 回・HC の止まる ／ 出る・PickOne・verbose）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

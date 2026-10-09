@@ -5,6 +5,7 @@ using static Common;
 // =====================================================================================
 // hush303 —— 第303期「粛でヒサが完全に黙る（HV-s）の規定化 ＋ 標軸の『粛を狩る』版（Q1 ／ Q3 ／ QA）＋ 庇いの版（HC-d ／ HC-s）」。
 // 指示書は design/PHASE303_HUSH_HUNT_SPEC.md ／ 報告は design/PHASE303_HUSH_HUNT.md。
+// 第304期: ヒサの規定が動いた（HC-s）ので、台は第303期の規定のヒサ（`HisaH303`）に固定する（`Common.Pin304`・版の駒は替えない）。
 //
 //     dotnet run --project BattleSim -c Release 0 hush303 p0 [seeds]       # §5 Phase 0（粛の伝令の席・倒れたT・倒した駒・受けた攻撃 ／ 倒れた後に決まった割合 ／ 手番の順）
 //     dotnet run --project BattleSim -c Release 0 hush303 cover [seeds]    # §4 ／ §5-4 庇いの落ちの分解（庇いなし ／ 規定 ／ 空の庇い × 4 帯）と HC-d ／ HC-s（`docs/elite.md` のヒサ在席の行）
@@ -46,11 +47,11 @@ static class Hush303Diag
         Traits = traits.ToArray(), Actions = b.Actions, PlusText = b.PlusText, MinusText = b.MinusText, Flavor = b.Flavor,
     };
     /// <summary>庇いなし（対照）＝ 規定から `HisaCover` を外しただけ。</summary>
-    static readonly UnitDef NoCover = Def(UnitCatalog.Hisa, UnitCatalog.Hisa.Traits.Where(t => t != TraitId.HisaCover));
+    static readonly UnitDef NoCover = Def(UnitCatalog.HisaH303, UnitCatalog.HisaH303.Traits.Where(t => t != TraitId.HisaCover));
 
     internal sealed record Ver(string Key, string Name, UnitDef D);
     static readonly Ver VP = new("P302", "第302期の規定", UnitCatalog.HisaH302);
-    static readonly Ver VS = new("S", "規定（HV-s）", UnitCatalog.Hisa);
+    static readonly Ver VS = new("S", "規定（HV-s）", UnitCatalog.HisaH303);   // 第304期: 第303期の規定に固定（`Pin304`）
     static readonly Ver VQ1 = new("Q1", "Q1 身振り +1", UnitCatalog.HisaQ1);
     static readonly Ver VQ3 = new("Q3", "Q3 身振り +3", UnitCatalog.HisaQ3);
     static readonly Ver VQA = new("QA", "QA 身振り +3 ＋ 粛を最優先", UnitCatalog.HisaQA);
@@ -107,7 +108,7 @@ static class Hush303Diag
 
     static Agg One(Formation f, Func<List<UnitState>> enemy, int seed, bool verbose)
     {
-        var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
+        var p = BattleEngine.Materialize(Pin304(f), BattleContext.PlayerTeam);
         var e = enemy();
         var r = BattleEngine.Run(p, e, seed, verbose: verbose);
         var a = new Agg { N = 1, Turns = r.Turns };
@@ -219,7 +220,7 @@ static class Hush303Diag
         Console.WriteLine();
         foreach (var (n, f) in Boards())
         {
-            var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
+            var p = BattleEngine.Materialize(Pin304(f), BattleContext.PlayerTeam);
             var all = p.Concat(en).OrderByDescending(u => u.Def.Speed).ThenBy(u => u.TeamId).ThenBy(u => u.Slot)
                        .Select(u => $"{Short(u.Def)}{(u.TeamId == BattleContext.PlayerTeam ? "" : "（敵）")} {u.Def.Speed}");
             Console.WriteLine($"- {n}: " + string.Join(" → ", all));
@@ -361,7 +362,7 @@ static class Hush303Diag
         {
             int ii = i;
             var wins = new bool[seeds];
-            Parallel.For(0, seeds, s => wins[s] = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BattleEngine.Materialize(EnemyCatalog.Stages[ii].Enemy, BattleContext.EnemyTeam), s, verbose: false).PlayerWon);
+            Parallel.For(0, seeds, s => wins[s] = BattleEngine.Run(BattleEngine.Materialize(Pin304(f), BattleContext.PlayerTeam), BattleEngine.Materialize(EnemyCatalog.Stages[ii].Enemy, BattleContext.EnemyTeam), s, verbose: false).PlayerWon);
             w[i] = 100.0 * wins.Count(x => x) / seeds;
         }
         return w;
@@ -425,7 +426,7 @@ static class Hush303Diag
                 long g = 0, dead = 0; int first = -1, ft = 0;
                 for (int s = 0; s < seeds; s++)
                 {
-                    var p = BattleEngine.Materialize(With(f, v.D), BattleContext.PlayerTeam);
+                    var p = BattleEngine.Materialize(Pin304(With(f, v.D)), BattleContext.PlayerTeam);
                     var e = WaveOf("2").Make();
                     var r = BattleEngine.Run(p, e, s, verbose: true);
                     var ev = r.Events.ToList();
@@ -450,7 +451,7 @@ static class Hush303Diag
         var (name, f0) = Boards().First(b => b.Name.Contains(rowPart, StringComparison.Ordinal));
         var v = AllVers.First(b => b.Key == ver);
         var w = WaveOf(wave);
-        var p = BattleEngine.Materialize(With(f0, v.D), BattleContext.PlayerTeam);
+        var p = BattleEngine.Materialize(Pin304(With(f0, v.D)), BattleContext.PlayerTeam);
         var e = w.Make();
         var r = BattleEngine.Run(p, e, seed, verbose: true);
         var names = p.Concat(e).ToDictionary(u => u.InstanceId, u => Short(u.Def));
@@ -494,7 +495,7 @@ static class Hush303Diag
     static BattleContext Ctx(Formation pl, Formation en, out List<UnitState> p, out List<UnitState> e)
     {
         var ctx = new BattleContext(0, true);
-        p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
+        p = BattleEngine.Materialize(Pin304(pl), BattleContext.PlayerTeam);
         e = BattleEngine.Materialize(en, BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
         foreach (var u in e) AddUnit.Invoke(ctx, new object[] { u });
@@ -517,11 +518,11 @@ static class Hush303Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        var hisa = UnitCatalog.Hisa; var old = UnitCatalog.HisaH302;
+        var hisa = UnitCatalog.HisaH303; var old = UnitCatalog.HisaH302;   // 第304期: 第303期の規定に固定
         Expect("(a) 定義: 規定のヒサ ＝ `HisaH302` ＋ `RallyQuiet`（＝ 第302期の HV-s と同じ札）・旧は `All` ／ `Everyone` の外・数値と手番は旧のまま・マイナスの末尾に「粛の下では声が出ない」",
             hisa.Traits.SequenceEqual(old.Traits.Append(TraitId.RallyQuiet)) && hisa.Traits.SequenceEqual(UnitCatalog.HisaHVs.Traits) && hisa.PlusText == old.PlusText
             && hisa.MinusText.StartsWith(old.MinusText, StringComparison.Ordinal) && hisa.MinusText.Contains("粛の下では声が出ない") && hisa.MaxHp == old.MaxHp && hisa.Speed == old.Speed
-            && UnitCatalog.All.Contains(hisa) && !UnitCatalog.Everyone.Contains(old) && UnitCatalog.HisaHK0.MinusText == old.MinusText && UnitCatalog.HisaH301.MinusText == old.MinusText);
+            && UnitCatalog.All.Contains(UnitCatalog.Hisa) && !UnitCatalog.Everyone.Contains(hisa) && !UnitCatalog.Everyone.Contains(old) && UnitCatalog.HisaHK0.MinusText == old.MinusText && UnitCatalog.HisaH301.MinusText == old.MinusText);
         bool order(UnitDef d, TraitId g) { var l = d.Traits.ToList(); return l.IndexOf(g) >= 0 && l.IndexOf(g) + 1 == l.IndexOf(TraitId.CommandBall) && l.Count == hisa.Traits.Count + 1; }
         Expect("(b) 版: Q1 ／ Q3 ／ QA は身振りの札を号令の直前に挟んだだけ・HC-d ／ HC-s は末尾に札・空の庇いは `HisaCover` を差し替え・どれも `All` ／ `Everyone` の外",
             order(UnitCatalog.HisaQ1, TraitId.HushGesture1) && order(UnitCatalog.HisaQ3, TraitId.HushGesture3) && order(UnitCatalog.HisaQA, TraitId.HushGestureFocus)
@@ -569,7 +570,7 @@ static class Hush303Diag
             long bad = 0, n = 0;
             foreach (var (_, f) in Boards()) for (int s = 0; s < 10; s++)
                 {
-                    var p = BattleEngine.Materialize(With(f, UnitCatalog.HisaQ3), BattleContext.PlayerTeam);
+                    var p = BattleEngine.Materialize(Pin304(With(f, UnitCatalog.HisaQ3)), BattleContext.PlayerTeam);
                     var r = BattleEngine.Run(p, WaveOf("2").Make(), s, verbose: true);
                     var hid = p.First(u => u.Def.Id == "hisa").InstanceId;
                     foreach (var x in r.Events.Where(x => x.Kind == BattleEventKind.Framed && x.Text == FramedLabels.Gesture)) { n++; if (x.ActorId != hid) bad++; }
@@ -650,8 +651,8 @@ static class Hush303Diag
                 foreach (var (_, f) in Boards()) foreach (var w in new[] { "2", "guard", "bat", "boss" }.Select(WaveOf)) for (int s = 0; s < 5; s++)
                         {
                             var g = With(f, d);
-                            var a = BattleEngine.Run(BattleEngine.Materialize(g, BattleContext.PlayerTeam), w.Make(), s, verbose: false);
-                            var b = BattleEngine.Run(BattleEngine.Materialize(g, BattleContext.PlayerTeam), w.Make(), s, verbose: true);
+                            var a = BattleEngine.Run(BattleEngine.Materialize(Pin304(g), BattleContext.PlayerTeam), w.Make(), s, verbose: false);
+                            var b = BattleEngine.Run(BattleEngine.Materialize(Pin304(g), BattleContext.PlayerTeam), w.Make(), s, verbose: true);
                             n2++; if (a.PlayerWon != b.PlayerWon || a.Turns != b.Turns) diff++;
                         }
             Expect("(h) verbose の有無で勝敗・決着T が同じ（規定と版 6 つ × 代表台 × 第2波 ／ 精鋭 ／ ボス × seed 0..4）", diff == 0, $"{n2} 戦・違い {diff}");

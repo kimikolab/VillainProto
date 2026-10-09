@@ -238,6 +238,17 @@ public static Formation Pin303(Formation f)
     return g;
 }
 
+/// <summary>
+/// 第304期: ヒサ ＝ 庇い HC-s（自分が倒れる一撃では庇わない）を規定にした。第303期の規定のヒサで測った器具（`hush303` の台）はこれを通す（ヒサ → `HisaH303`）。
+/// </summary>
+public static Formation Pin304(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH303 : d;
+    return g;
+}
+
 public static Formation FvSwap(Formation f, UnitDef from, UnitDef to)
 {
     var g = new Formation();

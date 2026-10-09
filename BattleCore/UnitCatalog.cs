@@ -506,6 +506,14 @@ public static class UnitCatalog
     /// <summary>第302期までの規定のヒサのマイナスの文面（第303期の規定 <see cref="Hisa"/> と旧の規定が共有する）。</summary>
     const string HisaMinus301 = "自分では攻撃しない。指差したら、標の相手以外の隣の味方と入れ替わって逃げる（入れ替わった味方は前へ押し出される）";
 
+    /// <summary>第302〜303期の規定のヒサのプラスの文面（旧の規定 <see cref="HisaH302"/> ／ <see cref="HisaH303"/> が共有する・第304期に定数へ）。</summary>
+    const string HisaPlus302 = HisaPlus301
+                   + "。余った声援は玉になって溜まり（3つまで）、自分の手番に敵を指差す号令に変わる"
+                   + "。一度だけ、倒れそうな仲間の前に立つ";
+
+    /// <summary>第303期の規定のヒサのマイナスの文面（第304期の規定 <see cref="Hisa"/> と旧の規定 <see cref="HisaH303"/> が共有する）。</summary>
+    const string HisaMinus303 = HisaMinus301 + "。粛の下では声が出ない（叫びも指差しも庇いも止まる）";
+
     public static readonly UnitDef Hisa = new()
     {
         Id = "hisa",
@@ -516,7 +524,7 @@ public static class UnitCatalog
         Advances = false,
         // **第184期に転生**（旧 `Marker` は定義だけ残す）。矢面（`Beckon`）と、その代金の逃げ回る（`Flee`）。
         // **札の並びが実行順**——矢面が標を付けてから、逃げ回るが標の相手以外と入れ替わる（どちらも `OnAction`）。
-        Traits = new[] { TraitId.Beckon, TraitId.Flee, TraitId.MarkRallyWide, TraitId.MarkRallySelf, TraitId.BeckonFeather, TraitId.FrameAccuseQuiet, TraitId.CommandBall, TraitId.HisaCover, TraitId.RallyQuiet },
+        Traits = new[] { TraitId.Beckon, TraitId.Flee, TraitId.MarkRallyWide, TraitId.MarkRallySelf, TraitId.BeckonFeather, TraitId.FrameAccuseQuiet, TraitId.CommandBall, TraitId.HisaCover, TraitId.RallyQuiet, TraitId.CoverSkipLethal },
         // 第296期: ポンの判断（第295期の案 K2）で HK-b（あいつを狙え！・`MarkRallyWide`）を規定にした。旧の規定は `HisaHK0`（指示書 design/PHASE296_HISA_RALLY_PLAYTEST_SPEC.md §1）。
         // 第299期: ポンの決めで「最も傷ついた味方」にヒサ自身を含めた（`MarkRallySelf`・文面は変えない）。第296〜298期の規定は `HisaHKb`（指示書 design/PHASE299_ZAN_ROUND_SPEC.md §3）。
         // 第300期: ポンの決めで矢面の半減をミサの羽にも掛けた（`BeckonFeather`・ヒサの札）。第299期の規定は `HisaHKs`（指示書 design/PHASE300_ROUND_GUARD_SPEC.md §3）。
@@ -524,12 +532,13 @@ public static class UnitCatalog
         // 第302期: ポンの決めで ①「あいつがやった！」を粛 ／ 痺れで止める（`FrameAccuseQuiet` に差し替え）②号令 HL-t3 ＋ 溜まりの上限 60（`CommandBall`）③庇い HC（`HisaCover`）を規定にした。
         //          第301期の規定は `HisaH301`（指示書 design/PHASE302_HISA_REGULATE_SPEC.md §2）。
         // 第303期: ポンの決め（第302期 §7 の V2）で叫びも粛 ／ 痺れで止めた（`RallyQuiet`・HV-s）。第302期の規定は `HisaH302`（指示書 design/PHASE303_HUSH_HUNT_SPEC.md §2）。
+        // 第304期: ポンの決め（第303期 §8 の D2）で庇い HC-s（受けるとヒサ自身が倒れる一撃では庇わない・`CoverSkipLethal`）を規定にした。第303期の規定は `HisaH303`（指示書 design/PHASE304_HUSH_REWORK_SPEC.md §2）。
         // 指差すのが手番そのもの（攻撃2 は出なくなる）。`[Skill]` の1要素で毎手番指差して逃げる。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "隣の味方を指差した") },
         PlusText = HisaPlus301
                    + "。余った声援は玉になって溜まり（3つまで）、自分の手番に敵を指差す号令に変わる"
-                   + "。一度だけ、倒れそうな仲間の前に立つ",
-        MinusText = HisaMinus301 + "。粛の下では声が出ない（叫びも指差しも庇いも止まる）",
+                   + "。一度だけ、倒れそうな仲間の前に立つ（自分まで倒れる一撃なら立たない）",
+        MinusText = HisaMinus303,
         Flavor = "味方を矢面に立たせて生き延びた男。誰も隣に立ちたがらない。"
     };
 
@@ -821,9 +830,27 @@ public static class UnitCatalog
         Pattern = HisaH301.Pattern,
         Traits = HisaH301.Traits.Select(t => t == TraitId.FrameAccuse ? TraitId.FrameAccuseQuiet : t).Append(TraitId.CommandBall).Append(TraitId.HisaCover).ToArray(),
         Actions = HisaH301.Actions,
-        PlusText = Hisa.PlusText,
+        PlusText = HisaPlus302,   // 第304期: 規定の文面が動いたので定数に（中身は第302〜303期のまま）
         MinusText = HisaMinus301,
         Flavor = HisaH301.Flavor
+    };
+
+    /// <summary>第303期の規定のヒサ（<see cref="HisaH302"/> ＋ 叫びも粛で黙る）。第304期に規定へ <see cref="TraitId.CoverSkipLethal"/>（HC-s）を足したので、旧の規定の定義を明示的に持つ。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第303期の規定のヒサを使う過去の器具はこちらに固定する（`Common.Pin304`）。第303期の版（Q1 ／ Q3 ／ QA ／ HC-d ／ HC-s ／ 空の庇い）もこの定義から作る。</summary>
+    public static readonly UnitDef HisaH303 = new()
+    {
+        Id = HisaH302.Id,
+        Name = HisaH302.Name,
+        MaxHp = HisaH302.MaxHp,
+        Attack = HisaH302.Attack,
+        Speed = HisaH302.Speed,
+        Advances = HisaH302.Advances,
+        Pattern = HisaH302.Pattern,
+        Traits = HisaH302.Traits.Append(TraitId.RallyQuiet).ToArray(),
+        Actions = HisaH302.Actions,
+        PlusText = HisaPlus302,
+        MinusText = HisaMinus303,
+        Flavor = HisaH302.Flavor
     };
 
     // 第302期 段1（指示書 design/PHASE302_HISA_REGULATE_SPEC.md §3）—— ヒサの版。測るだけ。第303期: 規定が動いたので第302期の規定（`HisaH302`）から作るように替えた（中身は第302期のまま）（`All` ／ `Retired` ／ `Presets` に入れない・採否はポン）。
@@ -881,109 +908,109 @@ public static class UnitCatalog
         Flavor = HisaH302.Flavor
     };
 
-    // 第303期 段1（指示書 design/PHASE303_HUSH_HUNT_SPEC.md §3 ／ §4）—— 粛を狩る（身振り）と庇いの版。測るだけ（`All` ／ `Retired` ／ `Presets` に入れない・採否はポン）。
+    // 第303期 段1（指示書 design/PHASE303_HUSH_HUNT_SPEC.md §3 ／ §4）—— 粛を狩る（身振り）と庇いの版。測るだけ（`All` ／ `Retired` ／ `Presets` に入れない・採否はポン）。第304期: 規定が動いたので第303期の規定（`HisaH303`）から作るように替えた（中身は第303期のまま）。
     // 身振りの札は号令（`CommandBall`）の直前に挟む（ヒサの手番の動作の後・号令の前）。
 
     /// <summary>第303期 Q1。規定 ＋ <see cref="TraitId.HushGesture1"/>（粛の保持者が生きている間、ヒサの手番に粛の保持者へ標 +1 層）。</summary>
     public static readonly UnitDef HisaQ1 = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.SelectMany(t => t == TraitId.CommandBall ? new[] { TraitId.HushGesture1, t } : new[] { t }).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。声を奪われると、黙って粛を指差す",
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaH303.Id,
+        Name = HisaH303.Name,
+        MaxHp = HisaH303.MaxHp,
+        Attack = HisaH303.Attack,
+        Speed = HisaH303.Speed,
+        Advances = HisaH303.Advances,
+        Pattern = HisaH303.Pattern,
+        Traits = HisaH303.Traits.SelectMany(t => t == TraitId.CommandBall ? new[] { TraitId.HushGesture1, t } : new[] { t }).ToArray(),
+        Actions = HisaH303.Actions,
+        PlusText = HisaH303.PlusText + "。声を奪われると、黙って粛を指差す",
+        MinusText = HisaH303.MinusText,
+        Flavor = HisaH303.Flavor
     };
 
     /// <summary>第303期 Q3。規定 ＋ <see cref="TraitId.HushGesture3"/>（同・標 +3 層）。</summary>
     public static readonly UnitDef HisaQ3 = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.SelectMany(t => t == TraitId.CommandBall ? new[] { TraitId.HushGesture3, t } : new[] { t }).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。声を奪われると、黙って粛を指差す（深く）",
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaH303.Id,
+        Name = HisaH303.Name,
+        MaxHp = HisaH303.MaxHp,
+        Attack = HisaH303.Attack,
+        Speed = HisaH303.Speed,
+        Advances = HisaH303.Advances,
+        Pattern = HisaH303.Pattern,
+        Traits = HisaH303.Traits.SelectMany(t => t == TraitId.CommandBall ? new[] { TraitId.HushGesture3, t } : new[] { t }).ToArray(),
+        Actions = HisaH303.Actions,
+        PlusText = HisaH303.PlusText + "。声を奪われると、黙って粛を指差す（深く）",
+        MinusText = HisaH303.MinusText,
+        Flavor = HisaH303.Flavor
     };
 
     /// <summary>第303期 QA。規定 ＋ <see cref="TraitId.HushGestureFocus"/>（Q3 ＋ 標を読む仲間の手番の的選びで粛の保持者を最優先）。</summary>
     public static readonly UnitDef HisaQA = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.SelectMany(t => t == TraitId.CommandBall ? new[] { TraitId.HushGestureFocus, t } : new[] { t }).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。声を奪われると、黙って粛を指差し、仲間の狙いを粛へ集める",
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaH303.Id,
+        Name = HisaH303.Name,
+        MaxHp = HisaH303.MaxHp,
+        Attack = HisaH303.Attack,
+        Speed = HisaH303.Speed,
+        Advances = HisaH303.Advances,
+        Pattern = HisaH303.Pattern,
+        Traits = HisaH303.Traits.SelectMany(t => t == TraitId.CommandBall ? new[] { TraitId.HushGestureFocus, t } : new[] { t }).ToArray(),
+        Actions = HisaH303.Actions,
+        PlusText = HisaH303.PlusText + "。声を奪われると、黙って粛を指差し、仲間の狙いを粛へ集める",
+        MinusText = HisaH303.MinusText,
+        Flavor = HisaH303.Flavor
     };
 
     /// <summary>第303期 HC-d。規定 ＋ <see cref="TraitId.CoverSkipShoulder"/>（肩代わりの札を持つ味方は庇わない）。</summary>
     public static readonly UnitDef HisaHCd = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Append(TraitId.CoverSkipShoulder).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText.Replace("一度だけ、倒れそうな仲間の前に立つ", "一度だけ、倒れそうな仲間の前に立つ（仲間をかばう者はかばわない）"),
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaH303.Id,
+        Name = HisaH303.Name,
+        MaxHp = HisaH303.MaxHp,
+        Attack = HisaH303.Attack,
+        Speed = HisaH303.Speed,
+        Advances = HisaH303.Advances,
+        Pattern = HisaH303.Pattern,
+        Traits = HisaH303.Traits.Append(TraitId.CoverSkipShoulder).ToArray(),
+        Actions = HisaH303.Actions,
+        PlusText = HisaH303.PlusText.Replace("一度だけ、倒れそうな仲間の前に立つ", "一度だけ、倒れそうな仲間の前に立つ（仲間をかばう者はかばわない）"),
+        MinusText = HisaH303.MinusText,
+        Flavor = HisaH303.Flavor
     };
 
     /// <summary>第303期 HC-s。規定 ＋ <see cref="TraitId.CoverSkipLethal"/>（受けるとヒサ自身が倒れる一撃では庇わない・見積もり）。</summary>
     public static readonly UnitDef HisaHCs = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Append(TraitId.CoverSkipLethal).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText.Replace("一度だけ、倒れそうな仲間の前に立つ", "一度だけ、倒れそうな仲間の前に立つ（自分が倒れる一撃なら立たない）"),
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaH303.Id,
+        Name = HisaH303.Name,
+        MaxHp = HisaH303.MaxHp,
+        Attack = HisaH303.Attack,
+        Speed = HisaH303.Speed,
+        Advances = HisaH303.Advances,
+        Pattern = HisaH303.Pattern,
+        Traits = HisaH303.Traits.Append(TraitId.CoverSkipLethal).ToArray(),
+        Actions = HisaH303.Actions,
+        PlusText = HisaH303.PlusText.Replace("一度だけ、倒れそうな仲間の前に立つ", "一度だけ、倒れそうな仲間の前に立つ（自分が倒れる一撃なら立たない）"),
+        MinusText = HisaH303.MinusText,
+        Flavor = HisaH303.Flavor
     };
 
     /// <summary>第303期 空の庇い（対照）。規定の <see cref="TraitId.HisaCover"/> を <see cref="TraitId.CoverPlacebo"/> に差し替え（判定と1戦1度は本物と同じ・乱数を1つ引いて一撃は元の相手が受ける）。診断の対照だけ。</summary>
     public static readonly UnitDef HisaHCp = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Select(t => t == TraitId.HisaCover ? TraitId.CoverPlacebo : t).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText,
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaH303.Id,
+        Name = HisaH303.Name,
+        MaxHp = HisaH303.MaxHp,
+        Attack = HisaH303.Attack,
+        Speed = HisaH303.Speed,
+        Advances = HisaH303.Advances,
+        Pattern = HisaH303.Pattern,
+        Traits = HisaH303.Traits.Select(t => t == TraitId.HisaCover ? TraitId.CoverPlacebo : t).ToArray(),
+        Actions = HisaH303.Actions,
+        PlusText = HisaH303.PlusText,
+        MinusText = HisaH303.MinusText,
+        Flavor = HisaH303.Flavor
     };
 
     /// <summary>第294期 HS-c（橋）。HS-a ＋ <see cref="TraitId.BeckonBridge"/>（踏みとどまった瞬間、癒し手（リリ ／ ツギ）が手番の外で1度動いてその味方へ向ける・1ターンに1度）。</summary>
@@ -4387,6 +4414,10 @@ public static class EnemyCatalog
     // 調整は Attack のみ。HP を触ると決着ターン数が変わり、積み上げ系の成立可否まで動く。
     public static readonly UnitDef KnightG = Make("knight_g", "巡礼騎士", 75, 24, 7,
         "毎ターン、目の前の1体を重く殴る（攻24）。特性は1つも持たない——数値だけの歩兵");
+    /// <summary>第304期 HC（諸刃）。第二波の巡礼騎士 ＋ <see cref="TraitId.KnightRiposte"/>（斬り返し・ターン外の経路）。測るだけ（`Stages` に載せない）。Id は既定と同じ。</summary>
+    public static readonly UnitDef KnightGR = Make("knight_g", "巡礼騎士", 75, 24, 7,
+        "毎ターン、目の前の1体を重く殴る（攻24）。殴られると、攻撃してきた相手を斬り返す（攻撃力の半分・1ターンに1回。粛の下では止まる）",
+        TraitId.KnightRiposte);
     // 第二波から外した（2026-08-28）。回復役という設定コメントだけで何も回復しないので、
     // 実際に回復する Chaplain に差し替えた。第二波の性格を戻すときの対照として定義は残す。
     public static readonly UnitDef PriestG = MakeStill("priest_g", "従軍司祭", 40, 9, 8);
@@ -4745,6 +4776,21 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
     public static readonly UnitDef Husher = Make("husher", "粛の伝令", 45, 11, 6,
         "ターン外の行動が止まる（粛）—— 両軍とも、反撃・追撃・割り込みが出なくなる。数値は討伐隊の新兵と同じ",
         TraitId.Hush);
+
+    // 第304期 段1（指示書 design/PHASE304_HUSH_REWORK_SPEC.md §3）—— 粛の作り直しの版。測るだけ（`Stages` に載せない・採否はポン）。
+    // **Id は既定と同じ "husher"**（帳簿と台本の名前で引く器具がそのまま読める）。数値・席は既定のまま、札を1枚足しただけ。
+    /// <summary>第304期 HB（叩けば破れる）。粛 ＋ <see cref="TraitId.HushBreak"/>。</summary>
+    public static readonly UnitDef HusherHB = Make("husher", "粛の伝令", 45, 11, 6,
+        "ターン外の行動が止まる（粛）—— 両軍とも、反撃・追撃・割り込みが出なくなる。傷を受けると、祈りが途切れる（次の手番まで粛が破れる）",
+        TraitId.Hush, TraitId.HushBreak);
+    /// <summary>第304期 HD10（抑えきれず砕ける・10 回）。粛 ＋ <see cref="TraitId.HushShatter10"/>。</summary>
+    public static readonly UnitDef HusherHD10 = Make("husher", "粛の伝令", 45, 11, 6,
+        "ターン外の行動が止まる（粛）—— 両軍とも、反撃・追撃・割り込みが出なくなる。黙らせきれないほど騒がれると、沈黙が砕ける（10 回止めたら粛が消える）",
+        TraitId.Hush, TraitId.HushShatter10);
+    /// <summary>第304期 HD20（同・20 回）。粛 ＋ <see cref="TraitId.HushShatter20"/>。</summary>
+    public static readonly UnitDef HusherHD20 = Make("husher", "粛の伝令", 45, 11, 6,
+        "ターン外の行動が止まる（粛）—— 両軍とも、反撃・追撃・割り込みが出なくなる。黙らせきれないほど騒がれると、沈黙が砕ける（20 回止めたら粛が消える）",
+        TraitId.Hush, TraitId.HushShatter20);
 
     // 逆位の異端審問官: 第五波の後1に置く候補として作り、**測って採らなかった**（2026-08-31・第32期）。
     // 差し戻し済み（Stages[4] の後1 は審問官に戻してある）。**定義は対照として残す**

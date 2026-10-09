@@ -504,6 +504,8 @@ public enum OutOfTurnRoute
     Accuse,
     /// <summary>あいつを狙え！の叫び（第302期・ヒサの版 HV-s `RallyQuiet`・`BundlePop`。<b>問う相手はヒサ</b>）。</summary>
     Rally,
+    /// <summary>巡礼騎士の斬り返し（第304期・第2波の版 HC `KnightRiposte`・`KnightRiposteTrait`。<b>問う相手は騎士</b>）。</summary>
+    KnightRiposte,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -513,7 +515,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "羽の標撃ち", "庇い", "指差し", "叫び", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "羽の標撃ち", "庇い", "指差し", "叫び", "騎士の斬り返し", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -597,10 +599,11 @@ public sealed class BattleContext
                      && u.RawCounter(StatusKeys.Stun) == 0
                      && (!_restrainLive || u.RawCounter(StatusKeys.Grappled) == 0)   // 第185期: 組み付かれた駒
                      && u.Traits.All(t => CanReactProbed(t, u));
-        bool hushed = Hush.Active && HushHolderAlive;
+        bool hushed = Hush.Active && HushSilencing;
 
         HushAskedSide[SideOf(u)]++;
         if (hushed) NoteHushBlocked(u, route, sole: basic);
+        else if (_hushVarLive && basic && Hush.Active && HushHolderAlive) NoteHushPassed(u, route);   // 第304期（計数のみ）: 版が開けた窓を通った
 
         return basic && !hushed;
     }
@@ -1816,7 +1819,7 @@ public sealed class BattleContext
         if (target is null) foreach (UnitState x in popped) if (x.IsAlive && !IsSilkBall(x)) { target = x; break; }
         if (target is null) { t.SwNoTarget++; return; }
         if (InInterrupt) { t.SwNested++; return; }
-        bool hush = Hush.Active && HushHolderAlive;
+        bool hush = Hush.Active && HushSilencing;
         if (!CanActOutOfTurn(h, OutOfTurnRoute.ShockWhip)) { if (hush) t.SwHushed++; else t.SwBlocked++; return; }
         Interrupt(() =>
         {
@@ -4810,6 +4813,12 @@ public sealed class BattleContext
     public bool HushHolderAlive => AnyAlive(_hushHolders);
 
     /// <summary>
+    /// 粛がいま黙らせているか（<c>Hush.Active</c> は呼び出し側で見る）。第304期: 粛の版（HB 叩けば破れる ／ HD 抑えきれず砕ける）の保持者がいる戦だけ
+    /// <see cref="HushSilencingVar"/> を引く。<b>版の保持者がいなければ <see cref="HushHolderAlive"/> と同値</b>（比較1つで抜ける）。
+    /// </summary>
+    public bool HushSilencing => _hushVarLive ? HushSilencingVar() : AnyAlive(_hushHolders);
+
+    /// <summary>
     /// 保持者が落ちたターンを控える（第134期 段2）。<b>ターン頭に1度だけ</b>呼ぶ。
     /// <b>盤面には触らない。</b> 「保持者を割れば解除できる」設計（第110期の粛・第118期の渇き）が
     /// 実際に何ターン目に解除されているかを出すためだけにある。
@@ -4872,6 +4881,8 @@ public sealed class BattleContext
         // 第171期・**表示専用**。ここが「粛が単独の原因で止めた」の唯一の合流点なので、
         // 台本へ出すのもここ1行で足りる（計数には1ビットも触らない）。
         EmitSealed(u, SealedLabels.Hush, 0);
+        // 第304期（HD）: 「単独の原因で止めた」はここが唯一の合流点なので、ひびもここで数える。**版の保持者がいなければ比較1つで抜ける。**
+        if (_hushShatterAt > 0) HushCrack(u);
     }
 
     /// <summary>
@@ -7747,6 +7758,10 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Burden)) _burdenHolders.Add(u);
         if (u.HasTrait(TraitId.Laden)) _ladenHolders.Add(u);
         if (u.HasTrait(TraitId.Hush)) _hushHolders.Add(u);
+        // 第304期: 粛の版（保持者の札）。**既定の粛の伝令は持たない**ので、既定の戦ではこの3行は1度も真にならない。
+        if (u.HasTrait(TraitId.HushBreak)) { _hushVarLive = true; _hushBreakLive = true; }
+        if (u.HasTrait(TraitId.HushShatter10)) { _hushVarLive = true; _hushShatterAt = HushVariantTrait.Shatter10; }
+        if (u.HasTrait(TraitId.HushShatter20)) { _hushVarLive = true; _hushShatterAt = HushVariantTrait.Shatter20; }
         if (u.HasTrait(TraitId.Inversion)) _inversionHolders.Add(u);
         u.InstanceId = _nextInstanceId++;
         u.Board = this;          // 「隣に誰がいるか」を読む特性のため（UnitState.Board の doc 参照）
@@ -8570,7 +8585,7 @@ public sealed class BattleContext
     }
 
     /// <summary>粛がいま効いているか（<b>表示専用の読み口</b>。盤面の判断に使わないこと）。</summary>
-    public bool HushBindingNow => Hush.Active && HushHolderAlive;
+    public bool HushBindingNow => Hush.Active && HushSilencing;
 
     internal void EmitSealed(UnitState target, string rule, int amount, UnitState? by = null)
     {
@@ -9860,7 +9875,7 @@ public sealed class BattleContext
                 if (!to.IsAlive) { FireBook.GiftTurnsSkipped++; continue; }
                 if (!TeamAlive(Opponent(to.TeamId))) { FireBook.GiftTurnsSkipped += 1 + _giftQueue.Count; _giftQueue.Clear(); break; }
                 FireBook.GiftTurns++;
-                if (HushHolderAlive) FireBook.GiftHushTurns++;
+                if (HushSilencing) FireBook.GiftHushTurns++;
                 if (_verbose) Emit(new BattleEvent
                 {
                     Kind = BattleEventKind.FireLevel, Turn = _turn, ActorId = giver.InstanceId, TargetId = to.InstanceId,
@@ -9879,7 +9894,7 @@ public sealed class BattleContext
                         if (FireBook.Moves[k].Id == to.InstanceId && FireBook.Moves[k].Kind is 1 or 2) { FireBook.GiftHoardBig++; break; }
                 FireBook.GiftOutcome[(int)o]++;
                 if (o == TurnOutcome.Stalled) FireBook.GiftStalled++;
-                if (o == TurnOutcome.Attack && HushHolderAlive) FireBook.GiftHushAttacks++;
+                if (o == TurnOutcome.Attack && HushSilencing) FireBook.GiftHushAttacks++;
             }
         }
         finally { _inGift = false; _giftLifted.Clear(); }
@@ -12313,6 +12328,8 @@ public sealed class BattleContext
         }
 
         target.Hp -= amount;
+        // 第304期（HB）: 粛の保持者が傷を受けたら、その保持者の次の手番の始まりまで沈黙が破れる。**版の保持者がいなければ比較1つで抜ける。**
+        if (_hushBreakLive && amount > 0) HushWound(target);
         // 第120期。**盤面から実際に減った HP**（過剰分を除く）。誰も読んで分岐しない。
         HpRemoved += hpBefore120 - Math.Max(0, target.Hp);
         // 第205期。陣営ごとの痛み（同じ実額）。読むのはリリの痛みの版だけ。
@@ -12642,6 +12659,8 @@ public sealed class BattleContext
         }
         // 第246期（放熱）: 印は「ギフトでない次の手番」の頭で使う（火勢 +1 してから動く）。**印が無ければ比較1つで抜ける。**
         if (_fireLvLive && !_inGift && actor.RawCounter(FireCycleRule.RadiateKey) > 0) UseRadiate(actor);
+        // 第304期（HB）: 粛の保持者の手番の始まりで、破れていた沈黙が戻る（痺れで潰れる手番でも戻る）。**版の保持者がいなければ比較1つで抜ける。**
+        if (_hushBreakLive && !_inGift && actor.RawCounter(HushVariantTrait.OpenKey) > 0) HushClose(actor);
         TurnOutcome o;
         try { o = TakeTurnFramed(actor); }
         finally { _embersNow = prevEmbers; }
@@ -13663,6 +13682,92 @@ public sealed class BattleContext
         foreach (UnitState u in LivingMembers(hisa.TeamId))
             if (u != hisa && u.HasTrait(TraitId.Havoc)) { amount += amount * HavocTrait.Percent / 100; break; }
         return YokeBinding ? Math.Min(amount, YokeTrait.Cap) : amount;
+    }
+
+    // ---- 第304期 段1 —— 粛の作り直しの版（HB 叩けば破れる ／ HD 抑えきれず砕ける）。版は粛の保持者の札（`HushBreak` ／ `HushShatter10` ／ `HushShatter20`）で切り替える。
+    // 判定は全部ここ（盤面ルールの判定は engine 側）。**どの版の保持者もいない戦では `_hushVarLive` が偽で、`HushSilencing` は第303期までの `HushHolderAlive` と同値。**
+    bool _hushVarLive, _hushBreakLive, _hushShattered;
+    int _hushShatterAt, _hushCracks;
+
+    /// <summary>HD でこの戦に数えたひび（粛が単独の原因で止めた回数）。<b>計数・表示のため</b>。</summary>
+    public int HushCracks => _hushCracks;
+    /// <summary>HD で沈黙が砕けたか。</summary>
+    public bool HushShattered => _hushShattered;
+
+    bool HushSilencingVar()
+    {
+        if (_hushShattered) return false;
+        for (int i = 0; i < _hushHolders.Count; i++)
+        {
+            var h = _hushHolders[i];
+            if (h.IsAlive && h.RawCounter(HushVariantTrait.OpenKey) == 0) return true;
+        }
+        return false;
+    }
+
+    /// <summary>HB: 粛の保持者が傷を受けた（<c>ApplyDamage</c> の HP を引いた直後）。破れている間に受けた傷は何もしない。</summary>
+    void HushWound(UnitState target)
+    {
+        if (!target.IsAlive || !target.HasTrait(TraitId.HushBreak) || target.RawCounter(HushVariantTrait.OpenKey) > 0) return;
+        target.SetCounter(HushVariantTrait.OpenKey, 1);
+        TallyOf(target).HushBreaks++;
+        Log($"    {target.Name} の祈りが途切れた（次の手番まで、ターン外の行動が通る）", LogKind.Trigger, target);
+        EmitHushState(target, HushStateLabels.Break, 0);
+    }
+
+    /// <summary>HB: 保持者の手番の始まりで沈黙が戻る。</summary>
+    void HushClose(UnitState holder)
+    {
+        holder.SetCounter(HushVariantTrait.OpenKey, 0);
+        if (!holder.IsAlive) return;
+        TallyOf(holder).HushCloses++;
+        Log($"    {holder.Name} が祈り直した（ターン外の行動がまた止まる）", LogKind.Trigger, holder);
+        EmitHushState(holder, HushStateLabels.Close, 0);
+    }
+
+    /// <summary>HD: 粛が単独の原因で止めた1回（両陣営・経路を問わない）。<see cref="_hushShatterAt"/> 回目の後に砕ける（その戦の間、戻らない・保持者は生きたまま）。</summary>
+    void HushCrack(UnitState blocked)
+    {
+        if (_hushShattered) return;
+        UnitState? holder = null;
+        for (int i = 0; i < _hushHolders.Count; i++) if (_hushHolders[i].IsAlive) { holder = _hushHolders[i]; break; }
+        if (holder is null) return;
+        _hushCracks++;
+        EmitHushState(holder, HushStateLabels.Crack, _hushCracks, blocked);
+        if (_hushCracks < _hushShatterAt) return;
+        _hushShattered = true;
+        TallyOf(holder).HushShatterTurn = _turn;
+        Log($"    {holder.Name} の沈黙が砕けた（黙らせきれないほど騒がれた・ターン外の行動が戻る）", LogKind.Highlight, holder);
+        EmitHushState(holder, HushStateLabels.Shatter, _hushCracks);
+    }
+
+    /// <summary>第304期（計数のみ）: 粛の保持者が生きているのに、版が開けた窓（HB の破れ ／ HD の砕け）を通ったターン外の行動。<b>盤面には触らない。</b></summary>
+    void NoteHushPassed(UnitState u, OutOfTurnRoute route)
+    {
+        UnitState? holder = null;
+        for (int i = 0; i < _hushHolders.Count; i++) if (_hushHolders[i].IsAlive) { holder = _hushHolders[i]; break; }
+        if (holder is null) return;
+        var t = TallyOf(holder);
+        bool own = u.TeamId == holder.TeamId;
+        if (_hushShattered) { if (own) t.HushShatterPassOwn++; else t.HushShatterPassOpp++; }
+        else { if (own) t.HushOpenPassOwn++; else t.HushOpenPassOpp++; }
+        if (route == OutOfTurnRoute.KnightRiposte) t.HushPassKnight++;
+    }
+
+    void EmitHushState(UnitState holder, string label, int amount, UnitState? blocked = null)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent
+        {
+            Kind = BattleEventKind.HushState,
+            Turn = _turn,
+            ActorId = holder.InstanceId,
+            TargetId = blocked?.InstanceId,
+            Amount = amount,
+            Slot = _hushShatterAt,
+            Team = holder.TeamId,
+            Text = label,
+        });
     }
 
     // ---- 第303期 段1-A —— 身振り（ヒサの版 Q1 ／ Q3 ／ QA・札 `HushGestureTrait`）と、QA の「粛の保持者を最優先」（`HushFocusTarget`）。

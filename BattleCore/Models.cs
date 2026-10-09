@@ -2124,6 +2124,16 @@ public sealed class UnitTally
     /// </summary>
     public long GestureFires, GestureLayers, CoverSkipShoulder, CoverSkipLethal, CoverPlacebos, CoverEstLethalWrong;
     /// <summary>
+    /// 第304期（<b>計数のみ</b>・粛の保持者 ／ 巡礼騎士）。粛の版: <c>HushBreaks</c> ／ <c>HushCloses</c> HB で沈黙が破れた ／ 戻った回数・
+    /// <c>HushOpenPassOpp</c> ／ <c>HushOpenPassOwn</c> 破れている間に通ったターン外の行動（保持者の相手 ／ 保持者の陣営）・
+    /// <c>HushShatterPassOpp</c> ／ <c>HushShatterPassOwn</c> HD で砕けた後（保持者が生きている間）に通った同・<c>HushPassKnight</c> そのうち騎士の斬り返し・
+    /// <c>HushShatterTurn</c> HD で砕けたターン（0 ＝ 砕けなかった）。
+    /// 騎士の斬り返し（HC）: <c>KnightAsked</c> 斬り返しの機会 ／ <c>KnightRipostes</c> 斬り返した ／ <c>KnightHushed</c> 粛で止まった ／ <c>KnightHeld</c> 痺れほかで止まった ／ <c>KnightDealt</c> 斬り返しで減らした HP。
+    /// </summary>
+    public long HushBreaks, HushCloses, HushOpenPassOpp, HushOpenPassOwn, HushShatterPassOpp, HushShatterPassOwn, HushPassKnight,
+                KnightAsked, KnightRipostes, KnightHushed, KnightHeld, KnightDealt;
+    public int HushShatterTurn;
+    /// <summary>
     /// 第299期（<b>計数のみ</b>・ザンの手番）。仇指し（<see cref="TraitId.Vendetta"/>）の保持者が手番で振ったとき（規定でも数える）:
     /// <c>ZanTurns</c> 手番 ／ <c>ZanTurnNoMarked</c> 標を持つ敵が 0 ／ <c>ZanTurnMarkedFoes</c> ／ <c>ZanTurnLayers</c> 手番の時点の標を持つ敵の数 ／ 層の合計 ／
     /// <c>ZanPlanA</c> ／ <c>ZanPlan1</c> 仇巡りの見込みの太刀（ZM-a ＝ 層の合計・ZM-1 ＝ 敵の数・上限で切る）／ <c>ZanPlanACapped</c> ／ <c>ZanPlan1Capped</c> 上限に達した手番 ／
@@ -3251,6 +3261,9 @@ public sealed class UnitTally
         RousedReads += o.RousedReads; RousedBonus += o.RousedBonus; RousePeakAtk = Math.Max(RousePeakAtk, o.RousePeakAtk); AddHist(ref CommandBallHist, o.CommandBallHist);
         GestureFires += o.GestureFires; GestureLayers += o.GestureLayers; CoverSkipShoulder += o.CoverSkipShoulder; CoverSkipLethal += o.CoverSkipLethal;   // 第303期
         CoverPlacebos += o.CoverPlacebos; CoverEstLethalWrong += o.CoverEstLethalWrong;
+        HushBreaks += o.HushBreaks; HushCloses += o.HushCloses; HushOpenPassOpp += o.HushOpenPassOpp; HushOpenPassOwn += o.HushOpenPassOwn;   // 第304期
+        HushShatterPassOpp += o.HushShatterPassOpp; HushShatterPassOwn += o.HushShatterPassOwn; HushPassKnight += o.HushPassKnight; HushShatterTurn = Math.Max(HushShatterTurn, o.HushShatterTurn);
+        KnightAsked += o.KnightAsked; KnightRipostes += o.KnightRipostes; KnightHushed += o.KnightHushed; KnightHeld += o.KnightHeld; KnightDealt += o.KnightDealt;
         ZanTurns += o.ZanTurns; ZanTurnNoMarked += o.ZanTurnNoMarked; ZanTurnMarkedFoes += o.ZanTurnMarkedFoes; ZanTurnLayers += o.ZanTurnLayers;
         ZanPlanA += o.ZanPlanA; ZanPlan1 += o.ZanPlan1; ZanPlanACapped += o.ZanPlanACapped; ZanPlan1Capped += o.ZanPlan1Capped; ZanTurnDealt += o.ZanTurnDealt;
         RoundTurns += o.RoundTurns; RoundFoes += o.RoundFoes; RoundSlashes += o.RoundSlashes; RoundCapped += o.RoundCapped; RoundCrossed += o.RoundCrossed;
@@ -4002,9 +4015,27 @@ public enum BattleEventKind
     /// <c>ActorId</c> ＝ ヒサ ／ <c>Amount</c> ＝ 1体あたりの量（解けるときは引き上げた量）／ <c>Slot</c> ＝ 受けた体数 ／ <c>Text</c> ＝ <see cref="RouseLabels"/>。<b>どの規則も読まない。</b>
     /// </summary>
     Rouse,
+
+    /// <summary>
+    /// 粛の版の状態（第304期・粛の伝令の版 HB ／ HD・<b>表示専用</b>）。<c>Text</c> で4種（<see cref="HushStateLabels"/>）:
+    /// 「破れた」＝ HB で保持者が傷を受け、次の手番まで沈黙が破れた（直前にその一撃の `Damage`）／ 「戻った」＝ 保持者の手番の始まりで沈黙が戻った ／
+    /// 「ひび」＝ HD で粛が単独の原因で行動を止めた（直前にその行動の `Sealed`「粛」・<c>Amount</c> ＝ ひびの数・<c>TargetId</c> ＝ 止められた駒）／
+    /// 「砕けた」＝ HD でひびが <c>Slot</c> に達して沈黙が砕けた（直前に最後の「ひび」・以後、その戦の間は戻らない）。
+    /// <c>ActorId</c> ＝ 粛の保持者 ／ <c>Slot</c> ＝ 砕けるまでの数（HB では 0）。<b>どの規則も読まない。</b> 既定の粛の伝令には出ない。
+    /// </summary>
+    HushState,
 }
 
 /// <summary>`CommandBall`（第302期）の <c>Text</c>。</summary>
+/// <summary>`HushState`（第304期）の <c>Text</c>。</summary>
+public static class HushStateLabels
+{
+    public const string Break = "破れた";
+    public const string Close = "戻った";
+    public const string Crack = "ひび";
+    public const string Shatter = "砕けた";
+}
+
 public static class CommandBallLabels
 {
     public const string Gain = "溜まる";

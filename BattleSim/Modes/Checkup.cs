@@ -393,7 +393,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.HushGesture3]    = (HcPlusL,  "身振り（第303期・ヒサ Q3）: 同、標 +3 層"),
         [TraitId.HushGestureFocus]= (HcPlusL,  "身振り（第303期・ヒサ QA）: Q3 ＋ 仇巡り ／ ミサの炸裂の段 ／ ソラの手番の頭の標が粛の保持者を最優先"),
         [TraitId.CoverSkipShoulder]= (HcPlusL, "庇いの版（第303期・ヒサ HC-d）: 肩代わりの札（分かち・巨躯・SR-a・庇う・殉教・後備え・棘守り）の持ち主は庇わない"),
-        [TraitId.CoverSkipLethal] = (HcPlusL,  "庇いの版（第303期・ヒサ HC-s）: 受けるとヒサが倒れる見積もりの一撃は庇わない"),
+        [TraitId.CoverSkipLethal] = (HcPlusL,  "庇いの版（第303期・ヒサ HC-s）: 受けるとヒサが倒れる見積もりの一撃は庇わない（第304期からヒサの規定）"),
         [TraitId.CoverPlacebo]    = (HcPlusL,  "空の庇い（第303期・対照）: 庇いの判定だけ通し、乱数を1つ引いて一撃は元の相手が受ける"),
         [TraitId.CommandRouse]    = (HcPlusL,  "号令・重い玉＋鼓舞（第302期・ヒサ HB-t）: 溢れ 40 で玉1つ・3つまで。手番に全部使い、玉1つにつき層 +1 ＋ 味方全員の攻撃力 +5（次の手番の始まりまで）"),
         [TraitId.CommandRouseStay]= (HcPlusL,  "号令・重い玉＋鼓舞（第302期・ヒサ HB-p）: 同、鼓舞が戦の終わりまで続き号令ごとに重なる"),

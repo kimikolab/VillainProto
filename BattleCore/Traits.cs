@@ -723,6 +723,12 @@ public enum TraitId
     CoverSkipLethal,  // 庇いの版（HC-s）: 受けるとヒサ自身が倒れる一撃（見積もり）では庇わない（同上）
     CoverPlacebo,     // 空の庇い（対照）: 庇いの判定だけ通し（1戦1度を使う）、乱数を1つ引いて、一撃は元の相手が受ける（同上・**診断の対照だけ**）
 
+    // --- 第304期で足した札（粛の伝令の版 `UnitCatalog.HusherHB` ／ `HusherHD10` ／ `HusherHD20` と、巡礼騎士の版 `KnightGR` だけが持つ） ---
+    HushBreak,        // 叩けば破れる（HB）: 粛の保持者が傷を受けると、その保持者の次の手番の始まりまで沈黙が破れる（`HushVariantTrait`・判定は engine の `HushWound` ／ `HushClose`）
+    HushShatter10,    // 抑えきれず砕ける（HD10）: 粛が単独の原因で止めたターン外の行動（両陣営・経路を問わない）が 10 回に達したら沈黙が砕ける（その戦の間は戻らない・保持者は残る）（同上・engine の `HushCrack`）
+    HushShatter20,    // 同（HD20）: 20 回
+    KnightRiposte,    // 斬り返し（HC・巡礼騎士）: 敵の攻撃で傷を受けると、攻撃してきた駒へ攻撃力の半分で斬り返す（1ターンに1回・手番の外の動作で `CanActOutOfTurn` を通す）（`KnightRiposteTrait`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -12731,6 +12737,66 @@ public sealed class MarkOnlyTrait : Trait
 /// <summary>
 /// 叫びも粛で黙る（第302期・ヒサの版 HV-s）。<b>印だけの札</b>——engine の <c>BundlePop</c> が「叫ぶ前に <see cref="BattleContext.CanActOutOfTurn"/> を問う」かを読む（経路 <see cref="OutOfTurnRoute.Rally"/>）。
 /// </summary>
+/// <summary>
+/// 粛の版（第304期・粛の伝令の版 HB ／ HD10 ／ HD20）。<b>札そのものは判定を持たない</b>——盤面ルールなので判定は engine
+/// （<c>HushSilencing</c> ／ <c>HushWound</c> ／ <c>HushClose</c> ／ <c>HushCrack</c>）。この札は私有キーを開戦と会戦の境界で消すだけ。
+/// </summary>
+public sealed class HushVariantTrait : Trait
+{
+    /// <summary>HB: 沈黙が破れている印（保持者の <c>Counters</c> の私有キー。1 ＝ 破れている）。</summary>
+    public const string OpenKey = "hushOpen";
+    /// <summary>HD10 ／ HD20 の砕けるまでの数（粛が単独の原因で止めた回数）。</summary>
+    public const int Shatter10 = 10, Shatter20 = 20;
+
+    readonly TraitId _id;
+    public HushVariantTrait(TraitId id) => _id = id;
+    public override TraitId Id => _id;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self) => self.SetCounter(OpenKey, 0);
+    public override void OnCarryOver(UnitState self) => self.SetCounter(OpenKey, 0);
+}
+
+/// <summary>
+/// 斬り返し（第304期・巡礼騎士の版 HC・第2波の「諸刃」）。<b>敵の攻撃で傷を受けると、攻撃してきた駒へ攻撃力の <see cref="Percent"/>% で斬り返す</b>（単体・1ターンに1回）。
+/// 剣の段（<see cref="LastStandTrait"/>）の斬り返しの形（攻撃してきた駒へ単体で返す）から、剣の段そのもの（薙ぎ・攻撃力 ×2）を外して1ターン1回に絞った。
+/// 手番の外の動作なので <see cref="BattleContext.CanActOutOfTurn"/> を通す（経路 <see cref="OutOfTurnRoute.KnightRiposte"/>・粛 ／ 痺れで止まる）。
+/// <b>止められた機会もそのターンの1回を使う</b>（同じターンに何度殴られても、止められるのは1回まで——HD のひびを騎士の被弾の数で水増ししない）。
+/// 反撃の中（<c>InReaction</c>）・味方からの傷・倒れた後は返さない。
+/// </summary>
+public sealed class KnightRiposteTrait : Trait
+{
+    /// <summary>斬り返しの強さ（現在の攻撃力に対する %）。</summary>
+    public const int Percent = 50;
+    /// <summary>そのターンの1回を使ったターン番号（<c>Counters</c> の私有キー）。</summary>
+    public const string TurnKey = "knightRiposteTurn";
+
+    public override TraitId Id => TraitId.KnightRiposte;
+
+    public override void OnBattleStart(BattleContext ctx, UnitState self) => self.SetCounter(TurnKey, 0);
+    public override void OnCarryOver(UnitState self) => self.SetCounter(TurnKey, 0);
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source)
+    {
+        if (source is null || source.TeamId == self.TeamId || !source.IsAlive || !self.IsAlive) return;
+        if (ctx.InReaction) return;   // 反撃の連鎖を止める
+        if (self.RawCounter(TurnKey) == ctx.Turn) return;   // 1ターンに1回まで
+        var t = ctx.TallyOf(self);
+        t.KnightAsked++;
+        self.SetCounter(TurnKey, ctx.Turn);
+        if (!ctx.CanActOutOfTurn(self, OutOfTurnRoute.KnightRiposte)) { if (ctx.HushBindingNow) t.KnightHushed++; else t.KnightHeld++; return; }
+        int back = Math.Max(1, self.CurrentAttack * Percent / 100);
+        t.KnightRipostes++;
+        ctx.NoteAttackRead(self);
+        ctx.Reaction(() =>
+        {
+            ctx.Log($"    {self.Name} が {source.Name} を斬り返す", LogKind.Trigger, self);
+            int before = source.Hp;
+            ctx.ApplyDamage(source, back, self);
+            t.KnightDealt += Math.Max(0, before - Math.Max(0, source.Hp));
+        });
+    }
+}
+
 public sealed class RallyQuietTrait : Trait
 {
     public override TraitId Id => TraitId.RallyQuiet;
@@ -16949,6 +17015,10 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.CoverSkipShoulder),         // 第303期（HC-d・印だけ）
         new MarkOnlyTrait(TraitId.CoverSkipLethal),           // 第303期（HC-s・印だけ）
         new MarkOnlyTrait(TraitId.CoverPlacebo),              // 第303期（空の庇い・対照・印だけ）
+        new HushVariantTrait(TraitId.HushBreak),              // 第304期（粛の版 HB）
+        new HushVariantTrait(TraitId.HushShatter10),          // 第304期（粛の版 HD10）
+        new HushVariantTrait(TraitId.HushShatter20),          // 第304期（粛の版 HD20）
+        new KnightRiposteTrait(),                             // 第304期（巡礼騎士の版 HC）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),
