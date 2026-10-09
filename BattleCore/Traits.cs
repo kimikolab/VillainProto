@@ -727,6 +727,7 @@ public enum TraitId
     HushBreak,        // 叩けば破れる（HB）: 粛の保持者が傷を受けると、その保持者の次の手番の始まりまで沈黙が破れる（`HushVariantTrait`・判定は engine の `HushWound` ／ `HushClose`）
     HushShatter10,    // 抑えきれず砕ける（HD10）: 粛が単独の原因で止めたターン外の行動（両陣営・経路を問わない）が 10 回に達したら沈黙が砕ける（その戦の間は戻らない・保持者は残る）（同上・engine の `HushCrack`）
     HushShatter20,    // 同（HD20）: 20 回
+    HushShatter15,    // 同（HD15・第305期）: 15 回（`UnitCatalog.HusherHD15` だけが持つ）
     KnightRiposte,    // 斬り返し（HC・巡礼騎士）: 敵の攻撃で傷を受けると、攻撃してきた駒へ攻撃力の半分で斬り返す（1ターンに1回・手番の外の動作で `CanActOutOfTurn` を通す）（`KnightRiposteTrait`）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
@@ -12746,7 +12747,7 @@ public sealed class HushVariantTrait : Trait
     /// <summary>HB: 沈黙が破れている印（保持者の <c>Counters</c> の私有キー。1 ＝ 破れている）。</summary>
     public const string OpenKey = "hushOpen";
     /// <summary>HD10 ／ HD20 の砕けるまでの数（粛が単独の原因で止めた回数）。</summary>
-    public const int Shatter10 = 10, Shatter20 = 20;
+    public const int Shatter10 = 10, Shatter20 = 20, Shatter15 = 15;   // 15 は第305期
 
     readonly TraitId _id;
     public HushVariantTrait(TraitId id) => _id = id;
@@ -17018,6 +17019,7 @@ public static class TraitCatalog
         new HushVariantTrait(TraitId.HushBreak),              // 第304期（粛の版 HB）
         new HushVariantTrait(TraitId.HushShatter10),          // 第304期（粛の版 HD10）
         new HushVariantTrait(TraitId.HushShatter20),          // 第304期（粛の版 HD20）
+        new HushVariantTrait(TraitId.HushShatter15),          // 第305期（粛の版 HD15）
         new KnightRiposteTrait(),                             // 第304期（巡礼騎士の版 HC）
         new AmplifierTrait(),
         new ContagionTrait(),

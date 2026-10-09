@@ -4791,6 +4791,10 @@ public static readonly UnitDef Inverter = MakeStill("inverter", "逆位の祭司
     public static readonly UnitDef HusherHD20 = Make("husher", "粛の伝令", 45, 11, 6,
         "ターン外の行動が止まる（粛）—— 両軍とも、反撃・追撃・割り込みが出なくなる。黙らせきれないほど騒がれると、沈黙が砕ける（20 回止めたら粛が消える）",
         TraitId.Hush, TraitId.HushShatter20);
+    /// <summary>第305期 HD15（同・15 回）。粛 ＋ <see cref="TraitId.HushShatter15"/>。HC（<see cref="KnightGR"/>）と組んで HCD15 として測る（指示書 design/PHASE305_HUSH_CRACK_SPEC.md）。</summary>
+    public static readonly UnitDef HusherHD15 = Make("husher", "粛の伝令", 45, 11, 6,
+        "ターン外の行動が止まる（粛）—— 両軍とも、反撃・追撃・割り込みが出なくなる。黙らせきれないほど騒がれると、沈黙が砕ける（15 回止めたら粛が消える）",
+        TraitId.Hush, TraitId.HushShatter15);
 
     // 逆位の異端審問官: 第五波の後1に置く候補として作り、**測って採らなかった**（2026-08-31・第32期）。
     // 差し戻し済み（Stages[4] の後1 は審問官に戻してある）。**定義は対照として残す**

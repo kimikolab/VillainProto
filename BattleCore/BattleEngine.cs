@@ -7762,6 +7762,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.HushBreak)) { _hushVarLive = true; _hushBreakLive = true; }
         if (u.HasTrait(TraitId.HushShatter10)) { _hushVarLive = true; _hushShatterAt = HushVariantTrait.Shatter10; }
         if (u.HasTrait(TraitId.HushShatter20)) { _hushVarLive = true; _hushShatterAt = HushVariantTrait.Shatter20; }
+        if (u.HasTrait(TraitId.HushShatter15)) { _hushVarLive = true; _hushShatterAt = HushVariantTrait.Shatter15; }   // 第305期
         if (u.HasTrait(TraitId.Inversion)) _inversionHolders.Add(u);
         u.InstanceId = _nextInstanceId++;
         u.Board = this;          // 「隣に誰がいるか」を読む特性のため（UnitState.Board の doc 参照）

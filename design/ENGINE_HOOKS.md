@@ -1156,3 +1156,7 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **騎士の斬り返し（`KnightRiposte`・`KnightRiposteTrait`・敵の札）。** `OnDamaged` で `CanActOutOfTurn(self, OutOfTurnRoute.KnightRiposte)`（経路を1本足した・名前「騎士の斬り返し」）。止められた機会もそのターンの1回を使う（私有キー `knightRiposteTurn`）。
 - 計数のみ（保持者 ／ 騎士の `UnitTally`）: `HushBreaks` ／ `HushCloses` ／ `HushOpenPassOpp` ／ `HushOpenPassOwn` ／ `HushShatterPassOpp` ／ `HushShatterPassOwn` ／ `HushPassKnight` ／ `HushShatterTurn`・`KnightAsked` ／ `KnightRipostes` ／ `KnightHushed` ／ `KnightHeld` ／ `KnightDealt`。窓を通った行動は `CanActOutOfTurn` の `NoteHushPassed`（版の保持者がいる戦だけ）。
 - 表示専用の出来事 `HushState`（`HushStateLabels`:「破れた」「戻った」「ひび」「砕けた」）。
+
+## 第305期 —— 粛の版 HD15
+
+- 札 `HushShatter15`（`HushVariantTrait.Shatter15 = 15`・`Add` で `_hushShatterAt` に入れる1行）。粛の伝令の版 `EnemyCatalog.HusherHD15`。判定は第304期の `HushCrack` のまま。

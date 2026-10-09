@@ -38,11 +38,11 @@ static class Hush304Diag
     // 版（第2波の敵）と台
     // ---------------------------------------------------------------------------------
     internal sealed record V(string Key, string Name, UnitDef Herald, UnitDef Knight);
-    static readonly V VS = new("S", "規定（段0 の後）", EnemyCatalog.Husher, EnemyCatalog.KnightG);
-    static readonly V VHB = new("HB", "叩けば破れる", EnemyCatalog.HusherHB, EnemyCatalog.KnightG);
-    static readonly V VHD10 = new("HD10", "抑えきれず砕ける（10）", EnemyCatalog.HusherHD10, EnemyCatalog.KnightG);
-    static readonly V VHD20 = new("HD20", "抑えきれず砕ける（20）", EnemyCatalog.HusherHD20, EnemyCatalog.KnightG);
-    static readonly V VHC = new("HC", "諸刃（騎士の斬り返し）", EnemyCatalog.Husher, EnemyCatalog.KnightGR);
+    internal static readonly V VS = new("S", "規定（段0 の後）", EnemyCatalog.Husher, EnemyCatalog.KnightG);
+    internal static readonly V VHB = new("HB", "叩けば破れる", EnemyCatalog.HusherHB, EnemyCatalog.KnightG);
+    internal static readonly V VHD10 = new("HD10", "抑えきれず砕ける（10）", EnemyCatalog.HusherHD10, EnemyCatalog.KnightG);
+    internal static readonly V VHD20 = new("HD20", "抑えきれず砕ける（20）", EnemyCatalog.HusherHD20, EnemyCatalog.KnightG);
+    internal static readonly V VHC = new("HC", "諸刃（騎士の斬り返し）", EnemyCatalog.Husher, EnemyCatalog.KnightGR);
 
     /// <summary>
     /// HCD の HD は §7 の得点で選ぶ（**測る前に決めた線**・報告書 §1）: `compare` 64 行の第2波で 20% 未満の行が少ない方。
@@ -61,34 +61,34 @@ static class Hush304Diag
     }
     static V[] Vers => new[] { VS, VHB, VHD10, VHD20, VHC, HCD };
 
-    static Formation EnemyOf(V v)
+    internal static Formation EnemyOf(V v)
     {
         var g = EnemyCatalog.Stages[1].Enemy.Clone();
         foreach ((int slot, UnitDef d) in EnemyCatalog.Stages[1].Enemy.Occupied())
             g[slot] = ReferenceEquals(d, EnemyCatalog.Husher) ? v.Herald : ReferenceEquals(d, EnemyCatalog.KnightG) ? v.Knight : d;
         return g;
     }
-    static Func<List<UnitState>> Wave2Of(V v) { var f = EnemyOf(v); return () => BattleEngine.Materialize(f, BattleContext.EnemyTeam); }
+    internal static Func<List<UnitState>> Wave2Of(V v) { var f = EnemyOf(v); return () => BattleEngine.Materialize(f, BattleContext.EnemyTeam); }
 
     static Doha297Diag.Wave[] Waves() => Doha297Diag.Waves();
-    static Doha297Diag.Wave WaveOf(string k) => Waves().First(w => w.Key == k);
-    static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
+    internal static Doha297Diag.Wave WaveOf(string k) => Waves().First(w => w.Key == k);
+    internal static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
     static Formation CompareRow(string n) => CompareBuilds().First(r => r.Name == n).F;
     const string Econ = "標経済 (ヒサ×ザン×ミサ)";
-    static (string Name, Formation F)[] Boards() =>
+    internal static (string Name, Formation F)[] Boards() =>
         Presets.Playtest.Where(r => r.Name.StartsWith("試遊・標", StringComparison.Ordinal) && r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hisa))).Select(r => (r.Name, r.F))
             .Append((Econ, CompareRow(Econ)))
             .Append((Hisa301Diag.NoZanName, Hisa301Diag.NoZan)).ToArray();
-    static (string Name, Formation F)[] HisaRows() => CompareBuilds().Where(r => r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hisa))).ToArray();
-    static (string Name, Formation F)[] MarkRows() => Boards().Concat(HisaRows().Where(r => r.Name != Econ)).ToArray();
+    internal static (string Name, Formation F)[] HisaRows() => CompareBuilds().Where(r => r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Hisa))).ToArray();
+    internal static (string Name, Formation F)[] MarkRows() => Boards().Concat(HisaRows().Where(r => r.Name != Econ)).ToArray();
 
     /// <summary>範囲 ／ 貫きの駒（手番の攻撃型が単体でない駒）がいる編成か。§7 の「楽すぎる台」の候補。</summary>
-    static bool HasArea(Formation f) => BattleEngine.Materialize(f, BattleContext.PlayerTeam).Any(u => u.CurrentPattern != AttackPattern.Single);
+    internal static bool HasArea(Formation f) => BattleEngine.Materialize(f, BattleContext.PlayerTeam).Any(u => u.CurrentPattern != AttackPattern.Single);
 
     // ---------------------------------------------------------------------------------
     // 1戦の集計
     // ---------------------------------------------------------------------------------
-    sealed class Agg
+    internal sealed class Agg
     {
         public long N, Wins, WinT, Turns, HeraldDeadN, HeraldDeadT, HeraldAliveTurns,
             Breaks, OpenTurns, OpenPassOpp, OpenPassOwn, ShatterN, ShatterT, ShatterPassOpp, ShatterPassOwn, PassKnight,
@@ -97,7 +97,7 @@ static class Hush304Diag
         public readonly long[] BlocksByTurn = new long[12], ShatterByTurn = new long[12];
         public readonly long[][] ByRoute = Enumerable.Range(0, OutOfTurnRoutes.Count).Select(_ => new long[2]).ToArray();
         public readonly Dictionary<string, long> RipTaken = new();
-        public readonly List<int> Est10 = new(), Est20 = new();
+        public readonly List<int> Est10 = new(), Est20 = new(), Est15 = new();   // Est15 は第305期
         public void Add(Agg o)
         {
             foreach (var f in typeof(Agg).GetFields())
@@ -105,14 +105,14 @@ static class Hush304Diag
             for (int i = 0; i < BlocksByTurn.Length; i++) { BlocksByTurn[i] += o.BlocksByTurn[i]; ShatterByTurn[i] += o.ShatterByTurn[i]; }
             for (int i = 0; i < ByRoute.Length; i++) { ByRoute[i][0] += o.ByRoute[i][0]; ByRoute[i][1] += o.ByRoute[i][1]; }
             foreach (var (k, v) in o.RipTaken) RipTaken[k] = RipTaken.GetValueOrDefault(k) + v;
-            Est10.AddRange(o.Est10); Est20.AddRange(o.Est20);
+            Est10.AddRange(o.Est10); Est20.AddRange(o.Est20); Est15.AddRange(o.Est15);
         }
         public double P(long x) => N == 0 ? 0 : (double)x / N;
         public double Win => N == 0 ? 0 : 100.0 * Wins / N;
         public double WinTurns => Wins == 0 ? 0 : (double)WinT / Wins;
     }
 
-    static Agg One(Formation f, Func<List<UnitState>> enemy, int seed, bool verbose)
+    internal static Agg One(Formation f, Func<List<UnitState>> enemy, int seed, bool verbose)
     {
         var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
         var e = enemy();
@@ -143,7 +143,7 @@ static class Hush304Diag
         var players = p.Select(u => u.InstanceId).ToHashSet();
         var knights = e.Where(u => u.Def.Id == "knight_g").Select(u => u.InstanceId).ToHashSet();
         var names = p.Concat(e).ToDictionary(u => u.InstanceId, u => u.Def.Id);
-        bool died = false; int cum = 0, est10 = 0, est20 = 0;
+        bool died = false; int cum = 0, est10 = 0, est20 = 0, est15 = 0;
         var hitTurns = new HashSet<int>(); var chance = new HashSet<(int, int)>(); var openTurns = new HashSet<int>(); int openFrom = -1;
         int? lastRipKnight = null;
         foreach (var x in r.Events)
@@ -154,6 +154,7 @@ static class Hush304Diag
                 cum++;
                 if (cum == HushVariantTrait.Shatter10) est10 = x.Turn;
                 if (cum == HushVariantTrait.Shatter20) est20 = x.Turn;
+                if (cum == HushVariantTrait.Shatter15) est15 = x.Turn;
             }
             if (x.Kind == BattleEventKind.HushState && x.Text == HushStateLabels.Break) openFrom = x.Turn;
             if (x.Kind == BattleEventKind.HushState && x.Text == HushStateLabels.Close && openFrom > 0) { for (int t = openFrom; t <= x.Turn; t++) openTurns.Add(t); openFrom = -1; }
@@ -175,11 +176,11 @@ static class Hush304Diag
         a.OpenTurns = openTurns.Count(t => t <= a.HeraldAliveTurns);
         a.HeraldHitTurns = hitTurns.Count;
         a.KnightChance = chance.Count;
-        a.Est10.Add(est10); a.Est20.Add(est20);
+        a.Est10.Add(est10); a.Est20.Add(est20); a.Est15.Add(est15);
         return a;
     }
 
-    static Agg Many(Formation f, Func<List<UnitState>> enemy, int seeds, bool verbose = false, int from = 0)
+    internal static Agg Many(Formation f, Func<List<UnitState>> enemy, int seeds, bool verbose = false, int from = 0)
     {
         var parts = new Agg[seeds];
         Parallel.For(0, seeds, s => parts[s] = One(f, enemy, from + s, verbose));
@@ -188,10 +189,10 @@ static class Hush304Diag
         return a;
     }
 
-    static string Pct(long x, long n) => n == 0 ? "—" : $"{100.0 * x / n:F0}%";
-    static string Avg(long s, long n) => n == 0 ? "—" : $"{(double)s / n:F1}";
-    static string Cell(Agg a) => a.Wins == 0 ? $"{a.Win:F1}" : $"{a.Win:F1}（{a.WinTurns:F1}）";
-    static string Est(List<int> l) { var hit = l.Where(t => t > 0).OrderBy(t => t).ToList(); return hit.Count == 0 ? $"—（届かない {100:F0}%）" : $"中央 T{hit[hit.Count / 2]}・平均 T{hit.Average():F1}（届かない {100.0 * (l.Count - hit.Count) / l.Count:F0}%）"; }
+    internal static string Pct(long x, long n) => n == 0 ? "—" : $"{100.0 * x / n:F0}%";
+    internal static string Avg(long s, long n) => n == 0 ? "—" : $"{(double)s / n:F1}";
+    internal static string Cell(Agg a) => a.Wins == 0 ? $"{a.Win:F1}" : $"{a.Win:F1}（{a.WinTurns:F1}）";
+    internal static string Est(List<int> l) { var hit = l.Where(t => t > 0).OrderBy(t => t).ToList(); return hit.Count == 0 ? $"—（届かない {100:F0}%）" : $"中央 T{hit[hit.Count / 2]}・平均 T{hit.Average():F1}（届かない {100.0 * (l.Count - hit.Count) / l.Count:F0}%）"; }
 
     // ---------------------------------------------------------------------------------
     // §4 Phase 0
@@ -253,7 +254,7 @@ static class Hush304Diag
         Console.WriteLine($"- 範囲 ／ 貫きのある行: {cmpRows.Count(x => HasArea(x.F))} 行（第2波の平均 {cmpRows.Where(x => HasArea(x.F)).Average(x => x.A.Win):F1}）・ない行: {cmpRows.Count(x => !HasArea(x.F))} 行（{cmpRows.Where(x => !HasArea(x.F)).Average(x => x.A.Win):F1}）");
     }
 
-    static string Bins(IEnumerable<double> xs)
+    internal static string Bins(IEnumerable<double> xs)
     {
         var l = xs.ToList();
         return $"0〜20 {l.Count(x => x < 20)} ／ 20〜50 {l.Count(x => x >= 20 && x < 50)} ／ 50〜80 {l.Count(x => x >= 50 && x < 80)} ／ 80〜100 {l.Count(x => x >= 80)}（行の数・平均 {l.Average():F1}）";
@@ -356,7 +357,7 @@ static class Hush304Diag
     // ---------------------------------------------------------------------------------
     // §5-2 `compare` 64 行 × 第2波 × 版・(G2)・§7 の得点
     // ---------------------------------------------------------------------------------
-    static double Rate2(Formation f, V v, int seeds)
+    internal static double Rate2(Formation f, V v, int seeds)
     {
         var mk = Wave2Of(v);
         var wins = new bool[seeds];
@@ -503,13 +504,13 @@ static class Hush304Diag
         Console.WriteLine($"| {label} | {(ok ? "○" : "**×**")} | {note} |");
     }
 
-    static readonly MethodInfo AddUnit = typeof(BattleContext).GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic, new[] { typeof(UnitState) })
+    internal static readonly MethodInfo AddUnit = typeof(BattleContext).GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic, new[] { typeof(UnitState) })
                                          ?? throw new InvalidOperationException("BattleContext.Add が見つからない");
-    static readonly PropertyInfo TurnProp = typeof(BattleContext).GetProperty("Turn") ?? throw new InvalidOperationException("Turn が見つからない");
+    internal static readonly PropertyInfo TurnProp = typeof(BattleContext).GetProperty("Turn") ?? throw new InvalidOperationException("Turn が見つからない");
     static readonly PropertyInfo TallyProp = typeof(BattleContext).GetProperty("TallyByUnit", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new InvalidOperationException("TallyByUnit");
-    static UnitTally Tal(BattleContext ctx, string id) => ((Dictionary<string, UnitTally>)TallyProp.GetValue(ctx)!).GetValueOrDefault(id) ?? new UnitTally();
+    internal static UnitTally Tal(BattleContext ctx, string id) => ((Dictionary<string, UnitTally>)TallyProp.GetValue(ctx)!).GetValueOrDefault(id) ?? new UnitTally();
 
-    static BattleContext Ctx(Formation pl, Formation en, out List<UnitState> p, out List<UnitState> e)
+    internal static BattleContext Ctx(Formation pl, Formation en, out List<UnitState> p, out List<UnitState> e)
     {
         var ctx = new BattleContext(0, true);
         p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);

@@ -488,6 +488,7 @@
 | `HushBreak` | - |
 | `HushShatter10` | - |
 | `HushShatter20` | - |
+| `HushShatter15` | - |
 | `KnightRiposte` | - |
 | `Inversion` | - |
 | `Drought` | - |
