@@ -708,6 +708,13 @@ public enum TraitId
     CommandTurn8,     // 同（HL-t8）: 1手番に 8 層まで（同上）
     HisaCover,        // 庇い（HC）: 味方（ヒサ以外）が敵の攻撃で倒れる一撃を受けるとき、ヒサが生きていれば自分に標を付けてその一撃を代わりに受ける（1戦に1度・手番の外の動作）（**札そのものは挙動を持たない**・engine の `ApplyDamage` の入口）
 
+    // --- 第302期で足した札（段0: 規定のヒサ。段1: ヒサの版 `UnitCatalog.HisaHVs` ／ `HisaHBt` ／ `HisaHBp` だけが持つ） ---
+    FrameAccuseQuiet, // あいつがやった！・粛で黙る（第302期・規定のヒサ）: `FrameAccuse` と同じ ＋ 手番の外の動作として `CanActOutOfTurn` を通す（経路 `Accuse`・粛 ／ 痺れで止まる）（`FrameAccuseTrait`）
+    CommandBall,      // 号令・玉（第302期・規定のヒサ）: HL-t3（`CommandTurn3`）と同じ ＋ 溜まりは `CommandTrait.BallCap` 玉（60）まで・超えて入る溢れは捨てる（**札そのものは挙動を持たない**・engine の `RallyHeal` ／ `CommandTurnFire`）
+    RallyQuiet,       // 叫びも粛で黙る（第302期・HV-s）: 叫び（あいつを狙え！の回復）が `CanActOutOfTurn` を通る（経路 `Rally`）（**札そのものは挙動を持たない**・engine の `BundlePop`）
+    CommandRouse,     // 号令・重い玉＋鼓舞（第302期・HB-t）: 溢れ 40 で玉1つ・3つまで（120）。手番に玉を全部使い、玉1つにつき層 +1 ＋ 味方全員の攻撃力 +5（ヒサの次の手番の始まりまで・上書き）（同上・engine の `CommandTurnFire`）
+    CommandRouseStay, // 同（HB-p）: 鼓舞が戦の終わりまで続き、号令ごとに重なる（同上）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -3701,14 +3708,16 @@ public enum WhetRoute
                     // **陣営をまたぐ初めての強化経路**（第118期。他の8本はすべて味方から味方へ）。
                     // **位置を問わない**し、**AcceptsSupport を見ない**——支援として配るのではなく、
                     // 殴った側が持っていくため（強化側で初めての無検査経路。第56期の「無検査 0」が破れる）
-    Share          // 分かち（第297期・ドハの版 DH-a ／ DH-b だけ）: ドハ → 肩代わりした相手（DH-a）／ 攻撃力が最も高い味方（DH-b）・被弾のたび。
+    Share,         // 分かち（第297期・ドハの版 DH-a ／ DH-b だけ）: ドハ → 肩代わりした相手（DH-a）／ 攻撃力が最も高い味方（DH-b）・被弾のたび。
                     // 候補を自前で AcceptsSupport 濾しする（駆り立てと同じ側）。**規定のドハは通らない**（自己強化の直叩きのまま）
+    Rouse          // 鼓舞（第302期・ヒサの版 HB-t ／ HB-p だけ）: ヒサ → 味方全員（自分を含む・AcceptsSupport を自前で濾す）・号令のたび。
+                    // **期限で引き上げる**（HB-t はヒサの次の手番の始まり・尾灯の消灯と同じ直叩き）
 }
 
 /// <summary>経路の名前と本数。診断の表の見出しと配列長をここ1箇所から引く。</summary>
 public static class WhetRoutes
 {
-    public static readonly string[] Names = { "その他", "駆り立て", "号令開戦", "号令毎T", "縛め", "移り木", "吐き戻し", "火選り", "尾灯", "糧", "分かち" };
+    public static readonly string[] Names = { "その他", "駆り立て", "号令開戦", "号令毎T", "縛め", "移り木", "吐き戻し", "火選り", "尾灯", "糧", "分かち", "鼓舞" };
     public static int Count => Names.Length;
 }
 
@@ -12619,24 +12628,50 @@ public sealed class VendettaTrait : Trait
 ///
 /// <para>層の書き込みは <see cref="BattleContext.LayerMark"/>（ミサがいる戦では層が積もり、層1つにつき羽が1発・在庫 +1。いなければ標が付くだけ——標の敵には刻めない）。
 /// 本体は engine（<c>CommandNowFire</c> ／ <c>CommandTurnFire</c>）。<b>乱数を引かない。</b></para>
+///
+/// <para>第302期: 規定の玉（<see cref="TraitId.CommandBall"/>）は HL-t3 と同じ刻み方で、<b>溜まりを <see cref="BallCap"/> 玉（60）で頭打ち</b>にする（超えて入る溢れは捨てる・手番の後の端数は持ち越す）。
+/// 版 HB-t ／ HB-p（<see cref="TraitId.CommandRouse"/> ／ <see cref="TraitId.CommandRouseStay"/>）は玉が重く（<see cref="HeavyEvery"/>）、手番に玉を全部使い、
+/// 玉1つにつき層 +1（刻めなくても玉は使う）と味方全員の攻撃力 +<see cref="RousePerBall"/>（鼓舞・<see cref="BattleContext.Whet"/> の経路 <see cref="WhetRoute.Rouse"/>）。</para>
 /// </summary>
 public sealed class CommandTrait : Trait
 {
-    /// <summary>溢れ何点で層1つか（指示書が<b>測る前に固定</b>した値）。</summary>
+    /// <summary>溢れ何点で層1つか（指示書が<b>測る前に固定</b>した値）。第302期の規定の玉（<see cref="TraitId.CommandBall"/>）も同じ 20 で玉1つ。</summary>
     public const int Every = 20;
     /// <summary>HL-i の1ターンの上限（層）。</summary>
     public const int NowCap = 2;
+    /// <summary>第302期: 玉の上限（規定の玉 ／ HB の重い玉）。溜まりは <c>BallCap × 玉1つの溢れ</c> まで・超えて入る溢れは捨てる。</summary>
+    public const int BallCap = 3;
+    /// <summary>第302期 HB-t ／ HB-p: 溢れ何点で重い玉1つか（指示書が<b>測る前に固定</b>した値）。</summary>
+    public const int HeavyEvery = 40;
+    /// <summary>第302期 HB-t ／ HB-p: 玉1つにつき味方全員の攻撃力を上げる量（指示書が<b>測る前に固定</b>した値）。</summary>
+    public const int RousePerBall = 5;
     /// <summary>溜まった溢れ（ヒサの私有の帳簿・<c>OnCarryOver</c> で消す）。</summary>
     public const string PoolKey = "cmdPool";
     /// <summary>HL-i: 最後に刻んだターン（<c>Turn + 1</c>）と、そのターンに刻んだ層の数。</summary>
     public const string TurnKey = "cmdTurn", TurnCountKey = "cmdTurnN";
+    /// <summary>第302期 HB-t: いま配っている鼓舞の量（ヒサの私有・計数と表示のため。配った先は engine の帳簿 <c>_rouseGot</c>）。</summary>
+    public const string RouseKey = "cmdRouse";
 
     readonly TraitId _id;
     public CommandTrait(TraitId id) => _id = id;
     public override TraitId Id => _id;
 
-    /// <summary>手番版の上限（HL-i なら 0）。</summary>
-    public static int TurnCap(UnitState u) => u.HasTrait(TraitId.CommandTurn8) ? 8 : u.HasTrait(TraitId.CommandTurn3) ? 3 : 0;
+    /// <summary>手番版の上限（HL-i なら 0）。第302期の玉（規定 ／ HB）は玉の数（3）。</summary>
+    public static int TurnCap(UnitState u) => u.HasTrait(TraitId.CommandTurn8) ? 8
+        : u.HasTrait(TraitId.CommandTurn3) || u.HasTrait(TraitId.CommandBall) || IsRouse(u) ? 3 : 0;
+
+    /// <summary>第302期: 鼓舞の版（HB-t ／ HB-p）か。</summary>
+    public static bool IsRouse(UnitState u) => u.HasTrait(TraitId.CommandRouse) || u.HasTrait(TraitId.CommandRouseStay);
+
+    /// <summary>叫びの溢れを溜める札を持つか（HL-i ／ HL-t ／ 第302期の玉 ／ HB）。</summary>
+    public static bool Pools(UnitState u) => u.HasTrait(TraitId.CommandNow) || u.HasTrait(TraitId.CommandTurn3) || u.HasTrait(TraitId.CommandTurn8)
+        || u.HasTrait(TraitId.CommandBall) || IsRouse(u);
+
+    /// <summary>玉1つ（層1つ）の溢れ。HB は <see cref="HeavyEvery"/>、ほかは <see cref="Every"/>。</summary>
+    public static int EveryOf(UnitState u) => IsRouse(u) ? HeavyEvery : Every;
+
+    /// <summary>第302期: 溜まりの上限（0 ＝ 上限なし・第301期の HL-i ／ HL-t）。規定の玉は 60・HB は 120。</summary>
+    public static int PoolCapOf(UnitState u) => u.HasTrait(TraitId.CommandBall) || IsRouse(u) ? BallCap * EveryOf(u) : 0;
 
     public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
     {
@@ -12649,7 +12684,16 @@ public sealed class CommandTrait : Trait
         self.SetCounter(PoolKey, 0);
         self.SetCounter(TurnKey, 0);
         self.SetCounter(TurnCountKey, 0);
+        self.SetCounter(RouseKey, 0);
     }
+}
+
+/// <summary>
+/// 叫びも粛で黙る（第302期・ヒサの版 HV-s）。<b>印だけの札</b>——engine の <c>BundlePop</c> が「叫ぶ前に <see cref="BattleContext.CanActOutOfTurn"/> を問う」かを読む（経路 <see cref="OutOfTurnRoute.Rally"/>）。
+/// </summary>
+public sealed class RallyQuietTrait : Trait
+{
+    public override TraitId Id => TraitId.RallyQuiet;
 }
 
 /// <summary>
@@ -12677,7 +12721,10 @@ public sealed class CoverTrait : Trait
 /// </summary>
 public sealed class FrameAccuseTrait : Trait
 {
-    public override TraitId Id => TraitId.FrameAccuse;
+    readonly TraitId _id;
+    /// <summary>第302期: <see cref="TraitId.FrameAccuseQuiet"/>（規定）は手番の外の動作として <see cref="BattleContext.CanActOutOfTurn"/> を通す（粛 ／ 痺れで黙る）。<see cref="TraitId.FrameAccuse"/>（第301期の規定）は通さない。</summary>
+    public FrameAccuseTrait(TraitId id = TraitId.FrameAccuse) => _id = id;
+    public override TraitId Id => _id;
 
     public override void OnAllyDamaged(BattleContext ctx, UnitState self, UnitState ally, int dmg, UnitState? source)
     {
@@ -12686,6 +12733,7 @@ public sealed class FrameAccuseTrait : Trait
         if (source is null || source.TeamId != self.TeamId || source == ally) return;   // 味方の攻撃だけ（本人の一撃は除く）
         if (ctx.Hit.Levy || ctx.Hit.Relayed) return;
         if (ctx.InReaction) return;
+        if (_id == TraitId.FrameAccuseQuiet && !ctx.CanActOutOfTurn(self, OutOfTurnRoute.Accuse)) { ctx.NoteAccuseSilenced(self, ally, source); return; }   // 第302期
         ctx.FrameAccuse(self, ally, source);
     }
 }
@@ -16842,10 +16890,15 @@ public static class TraitCatalog
         new MarkerOnlyTrait(TraitId.DivertKeepBeckon),      // 第301期（規定のソラ・矢面は剥がさない）
         new MarkerOnlyTrait(TraitId.VendettaMarkFirst),     // 第301期（規定のザン・標を付けてから斬る）
         new FrameAccuseTrait(),                             // 第301期（規定のヒサ・あいつがやった！）
+        new FrameAccuseTrait(TraitId.FrameAccuseQuiet),     // 第302期（規定のヒサ・あいつがやった！・粛で黙る）
         new CommandTrait(TraitId.CommandNow),               // 第301期（HL-i）
         new CommandTrait(TraitId.CommandTurn3),             // 第301期（HL-t3）
         new CommandTrait(TraitId.CommandTurn8),             // 第301期（HL-t8）
         new CoverTrait(),                                   // 第301期（HC）
+        new CommandTrait(TraitId.CommandBall),              // 第302期（規定のヒサ・号令の玉）
+        new RallyQuietTrait(),                              // 第302期（HV-s・叫びも粛で黙る・印だけ）
+        new CommandTrait(TraitId.CommandRouse),             // 第302期（HB-t）
+        new CommandTrait(TraitId.CommandRouseStay),         // 第302期（HB-p）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

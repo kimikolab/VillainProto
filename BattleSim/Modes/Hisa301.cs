@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 
@@ -40,6 +40,8 @@ static class Hisa301Diag
     // ---------------------------------------------------------------------------------
     // 共通
     // ---------------------------------------------------------------------------------
+    /// <summary>第302期: ヒサの規定が動いたので、この器具の台は第301期の規定のヒサ（`HisaH301`）に固定する（`Common.Pin302`・版の駒は替えない）。</summary>
+    static List<UnitState> Mat(Formation f) => BattleEngine.Materialize(Pin302(f), BattleContext.PlayerTeam);
     static Doha297Diag.Wave[] Waves() => Doha297Diag.Waves();
     static Doha297Diag.Wave WaveOf(string k) => Waves().First(w => w.Key == k);
     static Doha297Diag.Wave[] MainWaves() => new[] { "2", "3", "4", "5", "guard", "bat", "boss" }.Select(WaveOf).ToArray();
@@ -128,7 +130,7 @@ static class Hisa301Diag
 
     static Agg One(Formation f, Func<List<UnitState>> enemy, int seed)
     {
-        var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
+        var p = Mat(f);
         var e = enemy();
         var r = BattleEngine.Run(p, e, seed, verbose: false);
         var a = new Agg { N = 1, Turns = r.Turns };
@@ -561,7 +563,7 @@ static class Hisa301Diag
                     var four = new int[seeds]; var ct = new int[seeds];
                     Parallel.For(0, seeds, s =>
                     {
-                        var p = BattleEngine.Materialize(With(f, v.D), BattleContext.PlayerTeam);
+                        var p = Mat(With(f, v.D));
                         var r = BattleEngine.Run(p, w.Make(), s, verbose: true);
                         four[s] = FourCount(r, p, out ct[s]);
                     });
@@ -579,7 +581,7 @@ static class Hisa301Diag
         {
             int ii = i; int k = 0;
             var wins = new bool[seeds];
-            Parallel.For(0, seeds, s => wins[s] = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), BattleEngine.Materialize(EnemyCatalog.Stages[ii].Enemy, BattleContext.EnemyTeam), s, verbose: false).PlayerWon);
+            Parallel.For(0, seeds, s => wins[s] = BattleEngine.Run(Mat(f), BattleEngine.Materialize(EnemyCatalog.Stages[ii].Enemy, BattleContext.EnemyTeam), s, verbose: false).PlayerWon);
             k = wins.Count(x => x);
             w[i] = 100.0 * k / seeds;
         }
@@ -661,7 +663,7 @@ static class Hisa301Diag
             var cnt = new int[seeds]; var first = new int[seeds];
             Parallel.For(0, seeds, sd =>
             {
-                var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
+                var p = Mat(f);
                 var r = BattleEngine.Run(p, w.Make(), sd, verbose: true);
                 var hits = r.Events.Where(x => s.Hit(x, p)).ToList();
                 cnt[sd] = hits.Count; first[sd] = hits.Count > 0 ? hits[0].Turn : -1;
@@ -675,7 +677,7 @@ static class Hisa301Diag
             var f = With(Playtest("試遊・標 循環"), v.D); var w = WaveOf("boss");
             for (int sd = 0; sd < seeds; sd++)
             {
-                var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
+                var p = Mat(f);
                 var r = BattleEngine.Run(p, w.Make(), sd, verbose: true);
                 if (FourCount(r, p, out _) > 0) { Console.WriteLine(); Console.WriteLine($"4段（{v.Name}・試遊・標 循環 × ボス）が最初に揃う seed: {sd}"); break; }
             }
@@ -688,7 +690,7 @@ static class Hisa301Diag
         var v = ver == "K5" ? K5Of("K2") : Base.First(b => b.Key == ver);
         var f = With(f0, v.D);
         var w = WaveOf(wave);
-        var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
+        var p = Mat(f);
         var e = w.Make();
         var r = BattleEngine.Run(p, e, seed, verbose: true);
         var names = p.Concat(e).ToDictionary(u => u.InstanceId, u => Short(u.Def));
@@ -738,7 +740,7 @@ static class Hisa301Diag
     static BattleContext Ctx(Formation pl, Formation en, out List<UnitState> p, out List<UnitState> e)
     {
         var ctx = new BattleContext(0, true);
-        p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
+        p = Mat(pl);
         e = BattleEngine.Materialize(en, BattleContext.EnemyTeam, EnemyScaleRule.None);
         foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
         foreach (var u in e) AddUnit.Invoke(ctx, new object[] { u });
@@ -762,7 +764,7 @@ static class Hisa301Diag
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
 
-        var sora = UnitCatalog.Sora; var zan = UnitCatalog.Zan; var hisa = UnitCatalog.Hisa;
+        var sora = UnitCatalog.Sora; var zan = UnitCatalog.Zan; var hisa = UnitCatalog.HisaH301;   // 第302期: ヒサは第301期の規定に固定
         Expect("(a) 定義: ソラ ＝ `SoraSRs` ＋ `DivertKeepBeckon`・ザン ＝ `ZanZMa` ＋ `VendettaMarkFirst`・ヒサ ＝ `HisaHKf` ＋ `FrameAccuse`・旧はすべて `All` ／ `Everyone` の外・数値と手番は旧のまま",
             sora.Traits.SequenceEqual(UnitCatalog.SoraSRs.Traits.Append(TraitId.DivertKeepBeckon)) && sora.PlusText == UnitCatalog.SoraSRs.PlusText
             && zan.Traits.SequenceEqual(UnitCatalog.ZanZMa.Traits.Append(TraitId.VendettaMarkFirst)) && zan.MinusText == UnitCatalog.ZanZMa.MinusText && zan.MaxHp == 56 && zan.Attack == 10 && zan.Speed == 5
@@ -770,7 +772,7 @@ static class Hisa301Diag
             && hisa.Traits.SequenceEqual(UnitCatalog.HisaHKf.Traits.Append(TraitId.FrameAccuse)) && hisa.PlusText.StartsWith(UnitCatalog.HisaHKf.PlusText, StringComparison.Ordinal)
             && hisa.PlusText.Contains("あいつがやった！") && hisa.MinusText == UnitCatalog.HisaHKf.MinusText && hisa.MaxHp == 44 && hisa.Speed == 10 && hisa.Actions!.SequenceEqual(UnitCatalog.HisaHKf.Actions!)
             && UnitCatalog.HisaHKf.Traits.SequenceEqual(UnitCatalog.HisaHKs.Traits.Append(TraitId.BeckonFeather))
-            && new[] { sora, zan, hisa }.All(UnitCatalog.All.Contains) && !new[] { UnitCatalog.SoraSRs, UnitCatalog.ZanZMa, UnitCatalog.HisaHKf }.Any(UnitCatalog.Everyone.Contains));
+            && new[] { sora, zan, UnitCatalog.Hisa }.All(UnitCatalog.All.Contains) && !new[] { UnitCatalog.SoraSRs, UnitCatalog.ZanZMa, UnitCatalog.HisaHKf }.Any(UnitCatalog.Everyone.Contains));
         Expect("(b) 段1 の版は規定のヒサの末尾に札を足しただけ・`All` ／ `Everyone` の外・文面は末尾に足しただけ",
             UnitCatalog.HisaHLi.Traits.SequenceEqual(hisa.Traits.Append(TraitId.CommandNow)) && UnitCatalog.HisaHLt3.Traits.SequenceEqual(hisa.Traits.Append(TraitId.CommandTurn3))
             && UnitCatalog.HisaHLt8.Traits.SequenceEqual(hisa.Traits.Append(TraitId.CommandTurn8)) && UnitCatalog.HisaHC.Traits.SequenceEqual(hisa.Traits.Append(TraitId.HisaCover))
@@ -861,7 +863,7 @@ static class Hisa301Diag
             foreach (var w in new[] { "guard", "bat", "boss" }.Select(WaveOf))
                 for (int s = 0; s < 10; s++)
                 {
-                    var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
+                    var p = Mat(f);
                     var r = BattleEngine.Run(p, w.Make(), s, verbose: true);
                     foreach (var g in r.Events.Where(x => x.Kind == BattleEventKind.Command).GroupBy(x => x.Turn))
                     {
@@ -898,7 +900,7 @@ static class Hisa301Diag
             long maxPer = 0, battles = 0;
             foreach (var w in MainWaves()) for (int s = 0; s < 20; s++)
                 {
-                    var r = BattleEngine.Run(BattleEngine.Materialize(With(Playtest("試遊・標 三人組"), UnitCatalog.HisaHC), BattleContext.PlayerTeam), w.Make(), s, verbose: false);
+                    var r = BattleEngine.Run(Mat(With(Playtest("試遊・標 三人組"), UnitCatalog.HisaHC)), w.Make(), s, verbose: false);
                     long c = r.TallyByUnit.TryGetValue("hisa", out var ht) ? ht.CoverFires : 0;
                     maxPer = Math.Max(maxPer, c); if (c > 0) battles++;
                 }
@@ -915,15 +917,15 @@ static class Hisa301Diag
             foreach (var d in vs) foreach (var (_, f) in Boards()) foreach (var w in new[] { "guard", "bat", "boss" }.Select(WaveOf)) for (int s = 0; s < 5; s++)
                         {
                             var g = With(f, d);
-                            var a = BattleEngine.Run(BattleEngine.Materialize(g, BattleContext.PlayerTeam), w.Make(), s, verbose: false);
-                            var b = BattleEngine.Run(BattleEngine.Materialize(g, BattleContext.PlayerTeam), w.Make(), s, verbose: true);
+                            var a = BattleEngine.Run(Mat(g), w.Make(), s, verbose: false);
+                            var b = BattleEngine.Run(Mat(g), w.Make(), s, verbose: true);
                             n2++; if (a.PlayerWon != b.PlayerWon || a.Turns != b.Turns) diff++;
                         }
             Expect("(m) verbose の有無で勝敗・決着T が同じ（K0〜K4 ＋ K5 の候補3つ × 代表台 7 × 試遊の波 × seed 0..4）", diff == 0, $"{n2} 戦・違い {diff}");
         }
 
         // (n) 出来事: 号令・庇い・ヒサ単独の指差しが台本に出る（規定 K0 では号令 ／ 庇いは 0）
-        long Ev(Formation f, string wave, BattleEventKind k, string? text = null) { long x = 0; for (int s = 0; s < 10; s++) x += BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), WaveOf(wave).Make(), s, verbose: true).Events.Count(e => e.Kind == k && (text is null || e.Text == text)); return x; }
+        long Ev(Formation f, string wave, BattleEventKind k, string? text = null) { long x = 0; for (int s = 0; s < 10; s++) x += BattleEngine.Run(Mat(f), WaveOf(wave).Make(), s, verbose: true).Events.Count(e => e.Kind == k && (text is null || e.Text == text)); return x; }
         var cyc = Playtest("試遊・標 循環");
         long cm0 = Ev(cyc, "boss", BattleEventKind.Command), cm1 = Ev(With(cyc, UnitCatalog.HisaHLt3), "boss", BattleEventKind.Command, CommandLabels.Turn), cm2 = Ev(With(cyc, UnitCatalog.HisaHLi), "boss", BattleEventKind.Command, CommandLabels.Now);
         long cv0 = Ev(Playtest("試遊・標 三人組"), "bat", BattleEventKind.Cover), cv1 = Ev(With(Playtest("試遊・標 三人組"), UnitCatalog.HisaHC), "bat", BattleEventKind.Cover);

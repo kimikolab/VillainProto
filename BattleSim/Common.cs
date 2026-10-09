@@ -215,6 +215,18 @@ public static Formation Pin301(Formation f)
     return g;
 }
 
+/// <summary>
+/// 第302期: ヒサ ＝ あいつがやった！は粛で黙る ＋ 号令の玉（HL-t3 ＋ 溜まり 60）＋ 庇い を規定にした。第301期の規定の駒で測った器具（`hisa301` の台）はこれを通す（ヒサ → `HisaH301`）。
+/// 第300期までの規定に固定する器具は `Pin299` ／ `Pin300` ／ `Pin301` のまま（ヒサはどれも旧に替わるので、第302期の規定化は届かない）。
+/// </summary>
+public static Formation Pin302(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH301 : d;
+    return g;
+}
+
 public static Formation FvSwap(Formation f, UnitDef from, UnitDef to)
 {
     var g = new Formation();

@@ -1126,3 +1126,16 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
   手番の外の動作として `CanActOutOfTurn`（**経路 `OutOfTurnRoute.Cover` を足した**）。受ける前にヒサが自分に標を付ける（`_coverMarking` が `QueueFeatherMark` を止める——ミサの羽を撃たせない）。ヒサへの一撃は元の量（`rawAmount301` ＝ この駒の側の増減の前）で、**肩代わりの族（SR-a・巨躯・分かち）を通さない**（`_coverHitNext`——ゴルムの巨躯が庇った一撃を取り返すと庇いが打ち消しになる）。その一撃で既に減った破片などは戻さない（逃げ足と同じ）。
   表示専用の出来事 **`BattleEventKind.Cover`**（`ActorId` ＝ ヒサ ／ `TargetId` ＝ 庇った味方 ／ `PartnerId` ＝ 攻撃の主 ／ `Amount` ＝ 元の一撃）。Phase 0 の計数 `LethalOnAlly` ／ `LethalHisaAlive` は同じ所で矢面の保持者がいる戦だけ数える。
 - 第300期の規定の駒で測った器具は `Common.Pin301`（ソラ → `SoraSRs`・ザン → `ZanZMa`（第300期の規定と同じ物）・ヒサ → `HisaHKf`）。`Pin299` ／ `Pin300` もソラを `SoraSRs` に替える。
+
+## 第302期 —— ヒサの仕上げ（指差しは粛で黙る・号令の玉・庇いを規定）／ 叫び ／ 鼓舞の版
+
+- **規定のヒサの指差しは札 `FrameAccuseQuiet`**（`FrameAccuseTrait` が札の id を持つ）。`ctx.FrameAccuse` の手前で **`CanActOutOfTurn(self, OutOfTurnRoute.Accuse)`** を問う（**経路 `Accuse` を足した**）。止まったら `NoteAccuseSilenced`（計数 `AccuseSilenced` ／ `AccuseSilencedHush`・表示専用 `Framed`「黙る」）。`FrameAccuseHolder` は `FrameAccuse` ／ `FrameAccuseQuiet` の両方を見る——黙ったヒサがいればザンの濡れ衣も出ない。第301期の `FrameAccuse`（粛で止まらない）は旧の規定 `HisaH301` が持つ。
+- **号令の玉（規定・札 `CommandBall`）。** 刻み方は HL-t3（`CommandTurnFire`・20 ごとに層1つ・1手番 3 層）。**溜まりの上限は溜める側**——`RallyHeal` の溢れは `CommandPoolAdd` を通り、`CommandTrait.PoolCapOf`（`CommandBall` 60 ／ HB 120 ／ 第301期の版 0 ＝ 上限なし）を超えた分を捨てる（`CommandDropped` ／ `CommandDropEvents`）。札の判定は `CommandTrait.Pools` ／ `TurnCap` ／ `EveryOf` ／ `PoolCapOf` ／ `IsRouse` に集めた。
+  表示専用の出来事 **`BattleEventKind.CommandBall`**（`Amount` ＝ その後の玉の数 ／ `Slot` ＝ 溜まり ／ `Text` ＝ 溜まる ／ 使う ／ 捨てる）——上限のある札だけが出す。計数 `CommandPoolLow`（手番の時点で 3 玉ぶん未満）／ `CommandBallHist`（1手番に使った玉）。
+- **庇い（規定・札 `HisaCover`）** は第301期の `TryCover` のまま。
+- **叫びも粛で黙る（版 HV-s・札 `RallyQuiet`）。** `BundlePop` が叫ぶ前に `CanActOutOfTurn(hisa, OutOfTurnRoute.Rally)` を問う（**経路 `Rally` を足した**・計数 `RallyHushed` ／ `RallyBlocked`）。
+- **鼓舞（版 HB-t `CommandRouse` ／ HB-p `CommandRouseStay`）。** `CommandTurnFire` → `RouseTurnFire`: 重い玉（`CommandTrait.HeavyEvery` 40）を全部使い（3つまで・刻めなくても使う）、`CommandCarve(…, usePool: false)` で層を刻んだ後、味方全員（支援を受け付ける駒）に **`Whet`（経路 `WhetRoute.Rouse` を足した）** で玉 × `RousePerBall`（+5）。
+  配った量は戦ごとの帳簿 `_rouseGot`（受け手 → 量 ／ 配ったときの `LastDeathTurn`）。HB-t は手番の頭に `RouseEnd` が引き上げる（**尾灯の消灯と同じ直叩き** `AtkBonus -=`・倒れた ／ 蘇生された駒からは引かない）。HB-p は引き上げない。計数 `RouseFires` ／ `RouseGiven` ／ `RousePeakAtk`・受け手の `RousedReads` ／ `RousedBonus`（`NoteAttackRead` で `_rouseLive` のときだけ）。表示専用 **`BattleEventKind.Rouse`**（次の手番まで ／ 戦の終わりまで ／ 解ける）。
+- 計数のみ: ミサの `AccuseFeathers`（指差しの標が呼んだ羽・羽の控え `_mfQueue` に印 `Acc`）。
+- **`OutOfTurnRoutes.Names` に第301期の「庇い」が抜けていた**（名前 18 ／ 列挙 19）。「庇い」「指差し」「叫び」を足して列挙とそろえた（`hisa302 check` (k)）。
+- 第301期の規定のヒサで測った器具は `Common.Pin302`（ヒサ → `HisaH301`）。第301期の版（`HisaHLi` ／ `HisaHLt3` ／ `HisaHLt8` ／ `HisaHC*`）は `HisaH301` から作る。

@@ -498,6 +498,11 @@ public static class UnitCatalog
         Flavor = "命令しても動かない。庇われた者は、庇われたことを後で悔やむ。"
     };
 
+    /// <summary>第301期の規定のヒサのプラスの文面（第302期の規定 <see cref="Hisa"/> と旧の規定 <see cref="HisaH301"/> が共有する・初期化の順に依らないよう定数で持つ）。</summary>
+    const string HisaPlus301 = "手番で、隣でいちばん元気な味方1体に標を付けて矢面に立たせる。標を付けられた味方は、攻撃から受ける痛みが半分になる（ミサの羽でも）"
+                   + "。指差された敵が攻撃されるたび、『あいつを狙え！ まだ倒れるな！』と叫んで、攻撃した味方と最も傷ついた味方を癒す"
+                   + "。標を付けられた味方が仲間に撃たれたら、敵を指差して『あいつがやった！』と叫び、その敵に標を付ける";
+
     public static readonly UnitDef Hisa = new()
     {
         Id = "hisa",
@@ -508,16 +513,18 @@ public static class UnitCatalog
         Advances = false,
         // **第184期に転生**（旧 `Marker` は定義だけ残す）。矢面（`Beckon`）と、その代金の逃げ回る（`Flee`）。
         // **札の並びが実行順**——矢面が標を付けてから、逃げ回るが標の相手以外と入れ替わる（どちらも `OnAction`）。
-        Traits = new[] { TraitId.Beckon, TraitId.Flee, TraitId.MarkRallyWide, TraitId.MarkRallySelf, TraitId.BeckonFeather, TraitId.FrameAccuse },
+        Traits = new[] { TraitId.Beckon, TraitId.Flee, TraitId.MarkRallyWide, TraitId.MarkRallySelf, TraitId.BeckonFeather, TraitId.FrameAccuseQuiet, TraitId.CommandBall, TraitId.HisaCover },
         // 第296期: ポンの判断（第295期の案 K2）で HK-b（あいつを狙え！・`MarkRallyWide`）を規定にした。旧の規定は `HisaHK0`（指示書 design/PHASE296_HISA_RALLY_PLAYTEST_SPEC.md §1）。
         // 第299期: ポンの決めで「最も傷ついた味方」にヒサ自身を含めた（`MarkRallySelf`・文面は変えない）。第296〜298期の規定は `HisaHKb`（指示書 design/PHASE299_ZAN_ROUND_SPEC.md §3）。
         // 第300期: ポンの決めで矢面の半減をミサの羽にも掛けた（`BeckonFeather`・ヒサの札）。第299期の規定は `HisaHKs`（指示書 design/PHASE300_ROUND_GUARD_SPEC.md §3）。
         // 第301期: ポンの決めで「あいつがやった！」をヒサ自身の札にした（`FrameAccuse`・ザンがいなくても敵に標を付ける）。第300期の規定は `HisaHKf`（指示書 design/PHASE301_HISA_COMMAND_SPEC.md §2-3）。
+        // 第302期: ポンの決めで ①「あいつがやった！」を粛 ／ 痺れで止める（`FrameAccuseQuiet` に差し替え）②号令 HL-t3 ＋ 溜まりの上限 60（`CommandBall`）③庇い HC（`HisaCover`）を規定にした。
+        //          第301期の規定は `HisaH301`（指示書 design/PHASE302_HISA_REGULATE_SPEC.md §2）。
         // 指差すのが手番そのもの（攻撃2 は出なくなる）。`[Skill]` の1要素で毎手番指差して逃げる。
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "隣の味方を指差した") },
-        PlusText = "手番で、隣でいちばん元気な味方1体に標を付けて矢面に立たせる。標を付けられた味方は、攻撃から受ける痛みが半分になる（ミサの羽でも）"
-                   + "。指差された敵が攻撃されるたび、『あいつを狙え！ まだ倒れるな！』と叫んで、攻撃した味方と最も傷ついた味方を癒す"
-                   + "。標を付けられた味方が仲間に撃たれたら、敵を指差して『あいつがやった！』と叫び、その敵に標を付ける",
+        PlusText = HisaPlus301
+                   + "。余った声援は玉になって溜まり（3つまで）、自分の手番に敵を指差す号令に変わる"
+                   + "。一度だけ、倒れそうな仲間の前に立つ",
         MinusText = "自分では攻撃しない。指差したら、標の相手以外の隣の味方と入れ替わって逃げる（入れ替わった味方は前へ押し出される）",
         Flavor = "味方を矢面に立たせて生き延びた男。誰も隣に立ちたがらない。"
     };
@@ -655,113 +662,152 @@ public static class UnitCatalog
         Flavor = HisaHK0.Flavor
     };
 
+    /// <summary>第301期の規定のヒサ（<see cref="HisaHKf"/> ＋ <see cref="TraitId.FrameAccuse"/>・あいつがやった！）。第302期に規定の指差しを粛 ／ 痺れで止め（<see cref="TraitId.FrameAccuseQuiet"/>）、
+    /// 号令の玉（<see cref="TraitId.CommandBall"/>）と庇い（<see cref="TraitId.HisaCover"/>）を足したので、旧の規定の定義を明示的に持つ。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第301期の規定のヒサを使う過去の器具はこちらに固定する（`Common.Pin302`）。第301期の版（HL ／ HC）もこの定義から作る。</summary>
+    public static readonly UnitDef HisaH301 = new()
+    {
+        Id = HisaHK0.Id,
+        Name = HisaHK0.Name,
+        MaxHp = HisaHK0.MaxHp,
+        Attack = HisaHK0.Attack,
+        Speed = HisaHK0.Speed,
+        Advances = HisaHK0.Advances,
+        Pattern = HisaHK0.Pattern,
+        Traits = HisaHKf.Traits.Append(TraitId.FrameAccuse).ToArray(),
+        Actions = HisaHK0.Actions,
+        PlusText = HisaPlus301,
+        MinusText = HisaHK0.MinusText,
+        Flavor = HisaHK0.Flavor
+    };
+
     // 第301期 段1（指示書 design/PHASE301_HISA_COMMAND_SPEC.md §3）—— ヒサの号令（叫びの溢れ → 敵の層）と庇い。段0 の後の規定のヒサの末尾に札を足すだけ。
+    // 第302期: 規定が動いたので、第301期の規定（`HisaH301`）から作るように替えた（中身は第301期のまま）。
     // `All` ／ `Retired` ／ `Presets` に入れない（採否はポン）。K5 は K1〜K3 で代表台がいちばんよかった号令 ＋ 庇い（3つとも定義だけ置く）。
 
     /// <summary>第301期 HL-i（号令・即時）。規定 ＋ <see cref="TraitId.CommandNow"/>（溢れが 20 たまるたびその場で、そのまとまりで叩かれた標の敵のうち層が最も深い敵に層を1つ・1ターンに 2 層まで）。</summary>
     public static readonly UnitDef HisaHLi = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Append(TraitId.CommandNow).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。余った声援は、敵を指差す号令に変わる",
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaH301.Id,
+        Name = HisaH301.Name,
+        MaxHp = HisaH301.MaxHp,
+        Attack = HisaH301.Attack,
+        Speed = HisaH301.Speed,
+        Advances = HisaH301.Advances,
+        Pattern = HisaH301.Pattern,
+        Traits = HisaH301.Traits.Append(TraitId.CommandNow).ToArray(),
+        Actions = HisaH301.Actions,
+        PlusText = HisaH301.PlusText + "。余った声援は、敵を指差す号令に変わる",
+        MinusText = HisaH301.MinusText,
+        Flavor = HisaH301.Flavor
     };
 
     /// <summary>第301期 HL-t3（号令・手番・上限 3）。規定 ＋ <see cref="TraitId.CommandTurn3"/>（ヒサの手番に溜まった溢れを 20 ごとに層に換え、ヒサの指差しの選び方の敵へ・1手番に 3 層まで・端数は持ち越し）。</summary>
     public static readonly UnitDef HisaHLt3 = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Append(TraitId.CommandTurn3).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。余った声援は、自分の手番に敵を指差す号令に変わる",
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaH301.Id,
+        Name = HisaH301.Name,
+        MaxHp = HisaH301.MaxHp,
+        Attack = HisaH301.Attack,
+        Speed = HisaH301.Speed,
+        Advances = HisaH301.Advances,
+        Pattern = HisaH301.Pattern,
+        Traits = HisaH301.Traits.Append(TraitId.CommandTurn3).ToArray(),
+        Actions = HisaH301.Actions,
+        PlusText = HisaH301.PlusText + "。余った声援は、自分の手番に敵を指差す号令に変わる",
+        MinusText = HisaH301.MinusText,
+        Flavor = HisaH301.Flavor
     };
 
     /// <summary>第301期 HL-t8（号令・手番・上限 8）。規定 ＋ <see cref="TraitId.CommandTurn8"/>（HL-t3 の上限を 8 に）。</summary>
     public static readonly UnitDef HisaHLt8 = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Append(TraitId.CommandTurn8).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。余った声援は、自分の手番に敵を指差す号令に変わる",
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaH301.Id,
+        Name = HisaH301.Name,
+        MaxHp = HisaH301.MaxHp,
+        Attack = HisaH301.Attack,
+        Speed = HisaH301.Speed,
+        Advances = HisaH301.Advances,
+        Pattern = HisaH301.Pattern,
+        Traits = HisaH301.Traits.Append(TraitId.CommandTurn8).ToArray(),
+        Actions = HisaH301.Actions,
+        PlusText = HisaH301.PlusText + "。余った声援は、自分の手番に敵を指差す号令に変わる",
+        MinusText = HisaH301.MinusText,
+        Flavor = HisaH301.Flavor
     };
 
     /// <summary>第301期 HC（庇い）。規定 ＋ <see cref="TraitId.HisaCover"/>（味方への敵の倒れる一撃を、ヒサが自分に標を付けて代わりに受ける・1戦に1度）。</summary>
     public static readonly UnitDef HisaHC = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Append(TraitId.HisaCover).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。一度だけ、倒れそうな仲間の前に立つ",
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaH301.Id,
+        Name = HisaH301.Name,
+        MaxHp = HisaH301.MaxHp,
+        Attack = HisaH301.Attack,
+        Speed = HisaH301.Speed,
+        Advances = HisaH301.Advances,
+        Pattern = HisaH301.Pattern,
+        Traits = HisaH301.Traits.Append(TraitId.HisaCover).ToArray(),
+        Actions = HisaH301.Actions,
+        PlusText = HisaH301.PlusText + "。一度だけ、倒れそうな仲間の前に立つ",
+        MinusText = HisaH301.MinusText,
+        Flavor = HisaH301.Flavor
     };
 
     /// <summary>第301期 K5 の候補（HL-i ＋ HC）。</summary>
     public static readonly UnitDef HisaHCi = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Append(TraitId.CommandNow).Append(TraitId.HisaCover).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。余った声援は、敵を指差す号令に変わる" + "。一度だけ、倒れそうな仲間の前に立つ",
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaH301.Id,
+        Name = HisaH301.Name,
+        MaxHp = HisaH301.MaxHp,
+        Attack = HisaH301.Attack,
+        Speed = HisaH301.Speed,
+        Advances = HisaH301.Advances,
+        Pattern = HisaH301.Pattern,
+        Traits = HisaH301.Traits.Append(TraitId.CommandNow).Append(TraitId.HisaCover).ToArray(),
+        Actions = HisaH301.Actions,
+        PlusText = HisaH301.PlusText + "。余った声援は、敵を指差す号令に変わる" + "。一度だけ、倒れそうな仲間の前に立つ",
+        MinusText = HisaH301.MinusText,
+        Flavor = HisaH301.Flavor
     };
 
     /// <summary>第301期 K5 の候補（HL-t3 ＋ HC）。</summary>
     public static readonly UnitDef HisaHCt3 = new()
     {
-        Id = Hisa.Id,
-        Name = Hisa.Name,
-        MaxHp = Hisa.MaxHp,
-        Attack = Hisa.Attack,
-        Speed = Hisa.Speed,
-        Advances = Hisa.Advances,
-        Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Append(TraitId.CommandTurn3).Append(TraitId.HisaCover).ToArray(),
-        Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。余った声援は、自分の手番に敵を指差す号令に変わる" + "。一度だけ、倒れそうな仲間の前に立つ",
-        MinusText = Hisa.MinusText,
-        Flavor = Hisa.Flavor
+        Id = HisaH301.Id,
+        Name = HisaH301.Name,
+        MaxHp = HisaH301.MaxHp,
+        Attack = HisaH301.Attack,
+        Speed = HisaH301.Speed,
+        Advances = HisaH301.Advances,
+        Pattern = HisaH301.Pattern,
+        Traits = HisaH301.Traits.Append(TraitId.CommandTurn3).Append(TraitId.HisaCover).ToArray(),
+        Actions = HisaH301.Actions,
+        PlusText = HisaH301.PlusText + "。余った声援は、自分の手番に敵を指差す号令に変わる" + "。一度だけ、倒れそうな仲間の前に立つ",
+        MinusText = HisaH301.MinusText,
+        Flavor = HisaH301.Flavor
     };
 
     /// <summary>第301期 K5 の候補（HL-t8 ＋ HC）。</summary>
     public static readonly UnitDef HisaHCt8 = new()
+    {
+        Id = HisaH301.Id,
+        Name = HisaH301.Name,
+        MaxHp = HisaH301.MaxHp,
+        Attack = HisaH301.Attack,
+        Speed = HisaH301.Speed,
+        Advances = HisaH301.Advances,
+        Pattern = HisaH301.Pattern,
+        Traits = HisaH301.Traits.Append(TraitId.CommandTurn8).Append(TraitId.HisaCover).ToArray(),
+        Actions = HisaH301.Actions,
+        PlusText = HisaH301.PlusText + "。余った声援は、自分の手番に敵を指差す号令に変わる" + "。一度だけ、倒れそうな仲間の前に立つ",
+        MinusText = HisaH301.MinusText,
+        Flavor = HisaH301.Flavor
+    };
+
+    // 第302期 段1（指示書 design/PHASE302_HISA_REGULATE_SPEC.md §3）—— ヒサの版。測るだけ（`All` ／ `Retired` ／ `Presets` に入れない・採否はポン）。
+
+    /// <summary>第302期 HV-s。規定 ＋ <see cref="TraitId.RallyQuiet"/>（叫び（あいつを狙え！の回復）も粛 ／ 痺れで黙る）。</summary>
+    public static readonly UnitDef HisaHVs = new()
     {
         Id = Hisa.Id,
         Name = Hisa.Name,
@@ -770,9 +816,45 @@ public static class UnitCatalog
         Speed = Hisa.Speed,
         Advances = Hisa.Advances,
         Pattern = Hisa.Pattern,
-        Traits = Hisa.Traits.Append(TraitId.CommandTurn8).Append(TraitId.HisaCover).ToArray(),
+        Traits = Hisa.Traits.Append(TraitId.RallyQuiet).ToArray(),
         Actions = Hisa.Actions,
-        PlusText = Hisa.PlusText + "。余った声援は、自分の手番に敵を指差す号令に変わる" + "。一度だけ、倒れそうな仲間の前に立つ",
+        PlusText = Hisa.PlusText,
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
+    };
+
+    /// <summary>第302期 HB-t。規定の玉（<see cref="TraitId.CommandBall"/>）を <see cref="TraitId.CommandRouse"/> に差し替え（溢れ 40 で玉1つ・3つまで・手番に全部使い、玉1つにつき層 +1 ＋ 味方全員の攻撃力 +5・ヒサの次の手番の始まりまで）。</summary>
+    public static readonly UnitDef HisaHBt = new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Select(t => t == TraitId.CommandBall ? TraitId.CommandRouse : t).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText.Replace("余った声援は玉になって溜まり（3つまで）、自分の手番に敵を指差す号令に変わる",
+                                         "余った声援は重い玉になって溜まり（3つまで）、自分の手番に敵を指差す号令と、次の手番まで仲間の攻撃力を上げる鼓舞に変わる"),
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
+    };
+
+    /// <summary>第302期 HB-p。HB-t の鼓舞を戦の終わりまで（号令ごとに重なる・<see cref="TraitId.CommandRouseStay"/>）。</summary>
+    public static readonly UnitDef HisaHBp = new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Select(t => t == TraitId.CommandBall ? TraitId.CommandRouseStay : t).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText.Replace("余った声援は玉になって溜まり（3つまで）、自分の手番に敵を指差す号令に変わる",
+                                         "余った声援は重い玉になって溜まり（3つまで）、自分の手番に敵を指差す号令と、戦の終わりまで重なって仲間の攻撃力を上げる鼓舞に変わる"),
         MinusText = Hisa.MinusText,
         Flavor = Hisa.Flavor
     };

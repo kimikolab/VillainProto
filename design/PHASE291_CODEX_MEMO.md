@@ -520,3 +520,78 @@ VendettaRound 太刀    ザン#0 → 勇者#5   Slot 1 → Attack / Damage 15 �
 
 - 4段が揃ったターンは `hisa301 four` で数える（同じ台本の順を見る: `Command` → その後の `FeatherMark`「敵」→ その後の `Feather`「連射」→ その後の `VendettaRound`「仇巡り」）。HL-t3 で循環 × 近衛 ／ 大隊は 1戦 1.9 ／ 1.7 回（揃った戦 98 ／ 100%）、ボスは 2.0 回（100%）。
 - 号令の層は**先に全部刻んでから**羽が飛ぶので、`FeatherMark` の `Amount`（的の層）は3本とも 22 で同じ（1本ごとに増えるのではない）。
+
+## 10. 第302期の追記 —— 号令の玉（`CommandBall`・規定）・粛で黙る（`Framed`「黙る」・規定）・庇い（`Cover`・規定）・鼓舞（`Rouse`・版）
+
+第302期に、ヒサの「あいつがやった！」を粛 ／ 痺れで止め（段0-1）、号令 HL-t3 に溜まりの上限 60（玉3つ）を付けて規定にし（段0-2）、庇い HC を規定にした（段0-3）。**`Command`「手番」と `Cover` は規定で出る**ようになった（第301期は版だけ）。鼓舞（HB-t ／ HB-p）は版で、採否はポン（第302期の報告 §7）。
+例は `hisa302 memo <台> <波> <seed> <版 S3|HVs|HBt|HBp> [最後のT]` で再現できる（件数の一覧は `hisa302 find`）。Web 側の意図は `design/CODEX_BRIEF_HISA_COMMAND.md`。
+
+### 10-1. 種類と欄（足したのは2種類・`Framed` に1ラベル）
+
+| 出来事 | 欄 | いつ出るか |
+|---|---|---|
+| `CommandBall`（新・表示専用） | `ActorId` ＝ ヒサ ／ `Amount` ＝ **その後の玉の数（0〜3）** ／ `Slot` ＝ その後の溜まり（溢れの量・0〜60）／ `Text` ＝ 「溜まる」「使う」「捨てる」（`CommandBallLabels`） | 「溜まる」＝ 叫びの溢れで玉が増えた瞬間（**その叫びの `MarkRally` より前**に出る・1回で 0 → 3 に飛ぶこともある）。「使う」＝ 号令で玉を使った瞬間（**`Command` の直後**・`Amount` は使った後の玉）。「捨てる」＝ 満杯（60）で溢れを捨てた瞬間（玉の数は変わらない）。**上限の無い第301期の版（HL-i ／ HL-t3 ／ HL-t8）には出ない** |
+| `Rouse`（新・表示専用・**版 HB-t ／ HB-p だけ**） | `ActorId` ＝ ヒサ ／ `Amount` ＝ 1体あたりの攻撃力の上げ幅（玉1つ ＝ +5）／ `Slot` ＝ 受けた体数 ／ `Text` ＝ 「次の手番まで」（HB-t）・「戦の終わりまで」（HB-p）・「解ける」（`RouseLabels`） | 号令の `Command` → `CommandBall`「使う」の直後・**羽の `FeatherMark` より前**（号令 → 鼓舞 → 羽 → 一斉射撃 → 仇巡り）。HB-t は**ヒサの次の手番の頭**に「解ける」（`Amount` ＝ 引き上げた量）→ 新しい号令 → 「次の手番まで」の順。ヒサが倒れたら解けない |
+| `Framed`「黙る」（ラベルを足した・表示専用） | `ActorId` ＝ ヒサ ／ `TargetId` ＝ 撃たれた味方 ／ `PartnerId` ＝ 撃った味方（ミサなど） | 規定のヒサの「あいつがやった！」が粛 ／ 痺れで止まった瞬間。**直前にヒサへの `Sealed`「粛」**（粛が単独の原因のとき）が出る。「あいつがやった」も「濡れ衣」も続かない |
+
+- **台本で玉の数（0〜3）を追うには `CommandBall` の `Amount` を読むだけでよい**（増える ／ 減る ／ 満杯のどの瞬間にも出る）。
+- **「捨てる」は多い**: ボスでは溜まりがほぼずっと満杯なので、叫び（`MarkRally`）のたびに出る（循環 × ボス × seed 0..49 で 1戦 74.6 件）。演出は間引くか、満杯になった最初の1回だけ光らせるのがよい（ブリーフ §1 の「うるさくしない」）。
+- 叫びの回復の溢れは「最も傷ついた味方」が満タンのときにも出る（`MarkRally` の `Amount` が 0 の行）——玉はそこでも増える。
+
+### 10-2. 見せ場ごとの例（seed 0..49 の件数は `hisa302 find`）
+
+| 見せ場 | 出来事 | 例にする戦 | 1戦あたり | seed 0 で最初に出る T |
+|---|---|---|--:|---|
+| 玉が溜まる | `CommandBall`「溜まる」 | 試遊・標 循環 × ボス × seed 0（勝ち T4） | 6.00 | T1 |
+| 号令で玉を使う | `Command`「手番」→ `CommandBall`「使う」 | 同上 | 3.00 | T1 |
+| 満杯で捨てる | `CommandBall`「捨てる」 | 同上 | 74.60 | T1 |
+| 粛で黙る | `Sealed`「粛」→ `Framed`「黙る」 | 試遊・標 三人組 × 第2波 × seed 0（負け T9） | 1.28 | T2 |
+| 庇い（規定） | `Cover` | 試遊・標 三人組 × 大隊 × seed 5 | 0.06 | seed 0 では出ない（seed 5 の T1） |
+| 鼓舞（HB-t） | `Rouse`「次の手番まで」／「解ける」 | 試遊・標 循環 × ボス × seed 0 × HB-t（勝ち T3） | 2.00 ／ 1.00 | T1 ／ T2 |
+| 鼓舞（HB-p） | `Rouse`「戦の終わりまで」 | 同上 × HB-p | 2.00 | T1 |
+
+玉が溜まって、号令で使う（`hisa302 memo 循環 boss 0 S3 2` の T1・ダメージの行は省いた）:
+
+```
+CommandBall 溜まる   ヒサ#4  Amount 1  Slot 32        叫びの溢れで玉 1
+MarkRally            ヒサ#4 → ザン#0  Amount 7       （その叫び）
+CommandBall 溜まる   ヒサ#4  Amount 2  Slot 41        玉 2
+MarkRally            ヒサ#4 → ゴルム#1  Amount 21
+FeatherMark 敵       ミサ#2 → 勇者#5  Amount 5
+CommandBall 溜まる   ヒサ#4  Amount 3  Slot 60        玉 3（満杯）
+CommandBall 捨てる   ヒサ#4  Amount 3  Slot 60        満杯で溢れを捨てた
+MarkRally            ヒサ#4 → ミサ#2  Amount 4
+CommandBall 捨てる   ヒサ#4  Amount 3  Slot 60        （以後、叫びのたびに）
+…
+Feather 増えた ×3    ヒサ#4 → ミサ#2  Amount 12 / 13 / 14   号令の3層（羽の在庫が増える）
+Command 手番         ヒサ#4 → 勇者#5  Amount 3  Slot 60     号令（玉3つ → 層 3）
+CommandBall 使う     ヒサ#4  Amount 0  Slot 0               玉を使い切った
+FeatherMark 敵       ミサ#2 → 勇者#5  Amount 13             層の数だけ羽が飛ぶ（1本目）
+CommandBall 溜まる   ヒサ#4  Amount 3  Slot 60              羽の叫びの溢れで、すぐまた満杯
+```
+
+粛で黙る（`hisa302 memo 三人組 2 0 S3 2` の T2）:
+
+```
+Sealed 粛            — → ヒサ#4                              粛がヒサを止めた
+Framed 黙る          ヒサ#4 → ゴルム#1  Partner=ミサ#2      ミサの羽が矢面のゴルムに当たったが、ヒサは指差さない
+```
+
+鼓舞（`hisa302 memo 循環 boss 0 HBt 2`・T1 の号令と T2 の頭）:
+
+```
+--- T1
+Command 手番         ヒサ#4 → 勇者#5  Amount 3  Slot 120    号令（重い玉3つ ＝ 溢れ 120 → 層 3）
+CommandBall 使う     ヒサ#4  Amount 0  Slot 0
+Rouse 次の手番まで   ヒサ#4  Amount 15  Slot 5              仲間が奮い立つ（5 体に +15）
+FeatherMark 敵       ミサ#2 → 勇者#5  Amount 13             羽（攻撃力 +15 が乗る）
+…
+Feather 連射         ミサ#2  Amount 14                       ミサの一斉射撃
+VendettaRound 仇巡り ザン#0  Amount 8                        ザンの仇巡り
+--- T2
+Rouse 解ける         ヒサ#4  Amount 15  Slot 5              ヒサの手番の頭で解ける
+Feather 増えた ×3 → Command 手番 → CommandBall 使う → Rouse 次の手番まで（同じ並び）
+```
+
+- 庇いの並びは §9-2 のまま（規定になっただけ）。粛（第2波）では庇いも出ない（`Cover` が出ず、倒れる一撃の `Damage` がそのまま出る）。
+- **叫び（`MarkRally`）は規定では粛でも止まらない**（版 HV-s だけが止める。採否はポン）。

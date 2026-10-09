@@ -2108,6 +2108,16 @@ public sealed class UnitTally
     public int CommandPeak, MarkPeak;
     public long[]? RallyOverByTurn, CommandTurnHist;
     /// <summary>
+    /// 第302期（<b>計数のみ</b>）。ヒサ ＝ <c>AccuseSilenced</c> ／ <c>AccuseSilencedHush</c> 「あいつがやった！」が粛 ／ 痺れで止まった（うち粛が単独の原因）・
+    /// <c>RallyHushed</c> ／ <c>RallyBlocked</c> 叫び（HV-s）が粛 ／ 痺れで止まった・<c>CommandDropped</c> 溜まりの上限で捨てた溢れ・<c>CommandDropEvents</c> 捨てた回数・
+    /// <c>CommandPoolLow</c> 手番の時点で溜まりが上限（玉3つ ＝ 60）未満だった手番（分母は <c>CommandTurns</c>・上限なしの版でも 60 で数える）・
+    /// <c>CommandBallHist</c>[n] 1手番に使った玉（HB は重い玉）・<c>RouseFires</c> ／ <c>RouseGiven</c> 鼓舞の回数 ／ 配った攻撃力の合計（1体あたり × 受けた体数）・<c>RousePeakAtk</c> 鼓舞の直後の味方の攻撃力の最大。
+    /// ミサ ＝ <c>AccuseFeathers</c> 「あいつがやった！」の標が呼んだ羽（撃った数）。受け手 ＝ <c>RousedReads</c> ／ <c>RousedBonus</c> 鼓舞が乗った攻撃（攻撃力を出力に変えた回数）／ そのとき乗っていた鼓舞の合計。
+    /// </summary>
+    public long AccuseSilenced, AccuseSilencedHush, RallyHushed, RallyBlocked, CommandDropped, CommandDropEvents, CommandPoolLow, RouseFires, RouseGiven, AccuseFeathers, RousedReads, RousedBonus;
+    public int RousePeakAtk;
+    public long[]? CommandBallHist;
+    /// <summary>
     /// 第299期（<b>計数のみ</b>・ザンの手番）。仇指し（<see cref="TraitId.Vendetta"/>）の保持者が手番で振ったとき（規定でも数える）:
     /// <c>ZanTurns</c> 手番 ／ <c>ZanTurnNoMarked</c> 標を持つ敵が 0 ／ <c>ZanTurnMarkedFoes</c> ／ <c>ZanTurnLayers</c> 手番の時点の標を持つ敵の数 ／ 層の合計 ／
     /// <c>ZanPlanA</c> ／ <c>ZanPlan1</c> 仇巡りの見込みの太刀（ZM-a ＝ 層の合計・ZM-1 ＝ 敵の数・上限で切る）／ <c>ZanPlanACapped</c> ／ <c>ZanPlan1Capped</c> 上限に達した手番 ／
@@ -3230,6 +3240,9 @@ public sealed class UnitTally
         CoverBlocked += o.CoverBlocked; CoverSaved += o.CoverSaved; CoverFeatherSkipped += o.CoverFeatherSkipped; LethalOnAlly += o.LethalOnAlly; LethalHisaAlive += o.LethalHisaAlive; CommandFeathers += o.CommandFeathers; CommandNowTurns += o.CommandNowTurns;
         CommandPeak = Math.Max(CommandPeak, o.CommandPeak); MarkPeak = Math.Max(MarkPeak, o.MarkPeak);
         AddHist(ref RallyOverByTurn, o.RallyOverByTurn); AddHist(ref CommandTurnHist, o.CommandTurnHist);
+        AccuseSilenced += o.AccuseSilenced; AccuseSilencedHush += o.AccuseSilencedHush; RallyHushed += o.RallyHushed; RallyBlocked += o.RallyBlocked; CommandDropped += o.CommandDropped;   // 第302期
+        CommandDropEvents += o.CommandDropEvents; CommandPoolLow += o.CommandPoolLow; RouseFires += o.RouseFires; RouseGiven += o.RouseGiven; AccuseFeathers += o.AccuseFeathers;
+        RousedReads += o.RousedReads; RousedBonus += o.RousedBonus; RousePeakAtk = Math.Max(RousePeakAtk, o.RousePeakAtk); AddHist(ref CommandBallHist, o.CommandBallHist);
         ZanTurns += o.ZanTurns; ZanTurnNoMarked += o.ZanTurnNoMarked; ZanTurnMarkedFoes += o.ZanTurnMarkedFoes; ZanTurnLayers += o.ZanTurnLayers;
         ZanPlanA += o.ZanPlanA; ZanPlan1 += o.ZanPlan1; ZanPlanACapped += o.ZanPlanACapped; ZanPlan1Capped += o.ZanPlan1Capped; ZanTurnDealt += o.ZanTurnDealt;
         RoundTurns += o.RoundTurns; RoundFoes += o.RoundFoes; RoundSlashes += o.RoundSlashes; RoundCapped += o.RoundCapped; RoundCrossed += o.RoundCrossed;
@@ -3968,6 +3981,35 @@ public enum BattleEventKind
     /// <c>ActorId</c> ＝ ヒサ ／ <c>TargetId</c> ＝ 庇った味方 ／ <c>PartnerId</c> ＝ 攻撃の主 ／ <c>Amount</c> ＝ 元の一撃の量。<b>どの規則も読まない。</b>
     /// </summary>
     Cover,
+
+    /// <summary>
+    /// ヒサの号令の玉（第302期・規定の玉 `CommandBall` ／ HB・<b>表示専用</b>）。溜まり（玉の数 0〜3）が変わった瞬間。<c>Text</c> で3種（<see cref="CommandBallLabels"/>）:
+    /// 「溜まる」＝ 叫びの溢れで玉が増えた（**その叫びの `MarkRally` より前**に出る——回復の量を決めた所で溜める）／ 「使う」＝ 号令で玉を使った（直前に `Command`）／ 「捨てる」＝ 満杯で溢れを捨てた（玉の数は変わらない・ボスでは叫びのたびに出る——1戦 70 件を超える）。
+    /// <c>ActorId</c> ＝ ヒサ ／ <c>Amount</c> ＝ その後の玉の数 ／ <c>Slot</c> ＝ その後の溜まり（溢れの量）。<b>どの規則も読まない。</b> 上限の無い第301期の版（HL-i ／ HL-t）には出ない。
+    /// </summary>
+    CommandBall,
+
+    /// <summary>
+    /// ヒサの鼓舞（第302期・ヒサの版 HB-t ／ HB-p・<b>表示専用</b>）。号令の直後・羽より前に、味方全員の攻撃力を上げた瞬間（<c>Text</c> ＝ 続く長さ）と、期限で解けた瞬間（「解ける」）。
+    /// <c>ActorId</c> ＝ ヒサ ／ <c>Amount</c> ＝ 1体あたりの量（解けるときは引き上げた量）／ <c>Slot</c> ＝ 受けた体数 ／ <c>Text</c> ＝ <see cref="RouseLabels"/>。<b>どの規則も読まない。</b>
+    /// </summary>
+    Rouse,
+}
+
+/// <summary>`CommandBall`（第302期）の <c>Text</c>。</summary>
+public static class CommandBallLabels
+{
+    public const string Gain = "溜まる";
+    public const string Use = "使う";
+    public const string Spill = "捨てる";
+}
+
+/// <summary>`Rouse`（第302期）の <c>Text</c>。</summary>
+public static class RouseLabels
+{
+    public const string Until = "次の手番まで";
+    public const string Stay = "戦の終わりまで";
+    public const string End = "解ける";
 }
 
 /// <summary>`Command`（第301期）の <c>Text</c>。</summary>
@@ -3996,6 +4038,8 @@ public static class FramedLabels
 {
     public const string Accuse = "あいつがやった";
     public const string Vendetta = "濡れ衣";
+    /// <summary>第302期: 規定のヒサの「あいつがやった！」が粛 ／ 痺れで止まった瞬間（<c>ActorId</c> ＝ ヒサ ／ <c>TargetId</c> ＝ 撃たれた味方 ／ <c>PartnerId</c> ＝ 撃った味方・<b>表示専用</b>）。</summary>
+    public const string Silenced = "黙る";
 }
 
 /// <summary>`ShareGive`（第297期）の <c>Text</c>。</summary>

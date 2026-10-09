@@ -500,6 +500,10 @@ public enum OutOfTurnRoute
     FeatherMark,
     /// <summary>庇い（第301期・HC・`TryCover`。<b>問う相手はヒサ</b>——庇われる味方ではない）。</summary>
     Cover,
+    /// <summary>あいつがやった！（第302期・規定のヒサ `FrameAccuseQuiet`・`FrameAccuseTrait`。<b>問う相手はヒサ</b>）。</summary>
+    Accuse,
+    /// <summary>あいつを狙え！の叫び（第302期・ヒサの版 HV-s `RallyQuiet`・`BundlePop`。<b>問う相手はヒサ</b>）。</summary>
+    Rally,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -509,7 +513,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "羽の標撃ち", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "羽の標撃ち", "庇い", "指差し", "叫び", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -3544,6 +3548,7 @@ public sealed class BattleContext
     {
         UnitTally t = TallyOf(u);
         t.AttackReads++;
+        if (_rouseLive && _rouseGot.TryGetValue(u, out var rg) && rg.Amount > 0) { t.RousedReads++; t.RousedBonus += rg.Amount; }   // 第302期（計数のみ・鼓舞が乗った攻撃）
 
         // 到着と使用（第65期）。**受け取った後に1度でも攻撃力を出力へ変換したか**を、
         // 経路ごとに「保留 → 使用済み」へ移して数える。**盤面には一切影響しない。**
@@ -7653,6 +7658,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Vendetta)) _vendettaTurnLive = true;   // 第299期（ザンの手番の計数・仇巡り）
         if (u.HasTrait(TraitId.CommandNow)) _commandNowLive = true;    // 第301期（HL-i・まとまりで叩かれた標の敵を控える）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
+        if (CommandTrait.IsRouse(u)) _rouseLive = true;                // 第302期（HB・鼓舞の受け手の計数）
         if (u.HasTrait(TraitId.Thrust) || u.HasTrait(TraitId.ThrustPlain)) _thrustLive = true;   // 第186期 追補
         if (HeroShieldTrait.Holds(u)) _heroShieldLive = true;   // 第267期（勇者の庇い）
         if (u.HasTrait(TraitId.Evade)) _evadeLive = true;   // 第223期（回避の判定・的の固定・乱れ撃ちの短絡）
@@ -13145,6 +13151,8 @@ public sealed class BattleContext
         foreach (UnitState h in _rallyHolders) if (h.IsAlive && h.TeamId == b.Owner.TeamId) { hisa = h; break; }
         if (hisa is null) return;
         UnitTally ht = TallyOf(hisa);
+        // 第302期（HV-s・`RallyQuiet`）: 叫びも手番の外の動作として `CanActOutOfTurn` を通す（粛 ／ 痺れで黙る）。札が無ければ問わない。
+        if (hisa.HasTrait(TraitId.RallyQuiet) && !CanActOutOfTurn(hisa, OutOfTurnRoute.Rally)) { if (HushBindingNow) ht.RallyHushed++; else ht.RallyBlocked++; return; }
         ht.RallyFires++;
         if (b.FreshVendetta is not null) TallyOf(b.FreshVendetta).VendettaFreshShouts++;   // 第301期（計数のみ・初回の仇討ちで叫びが出た）
         int amt = b.Layer * RallyPerLayer;
@@ -13186,8 +13194,7 @@ public sealed class BattleContext
         int got = Math.Max(0, to.Hp - before);
         ht.RallyOverflow += over;
         (ht.RallyOverByTurn ??= new long[21])[Math.Clamp(_turn, 0, 20)] += over;   // 計数のみ
-        if (over > 0 && (hisa.HasTrait(TraitId.CommandNow) || hisa.HasTrait(TraitId.CommandTurn3) || hisa.HasTrait(TraitId.CommandTurn8)))
-            hisa.SetCounter(CommandTrait.PoolKey, hisa.RawCounter(CommandTrait.PoolKey) + over);
+        if (over > 0 && CommandTrait.Pools(hisa)) CommandPoolAdd(hisa, over, ht);
         ht.RallyHeals++;
         ht.RallyHealed += got;
         ht.RallyOver += amt - got;
@@ -13204,7 +13211,7 @@ public sealed class BattleContext
     // **保持者がいなければ `_mfLive` の比較1つで全部抜ける。** 相手選びは乱数を引かない（敵への発は的を固定した `PerformAttack`）。
     bool _mfLive;
     readonly List<UnitState> _mfHolders = new();
-    readonly Queue<(UnitState Misa, UnitState Target, bool Fresh, bool Cmd)> _mfQueue = new();   // 第301期: `Cmd` ＝ 号令が刻んだ層（計数のみ）
+    readonly Queue<(UnitState Misa, UnitState Target, bool Fresh, bool Cmd, bool Acc)> _mfQueue = new();   // 第301期: `Cmd` ＝ 号令が刻んだ層・第302期: `Acc` ＝ 指差しの標（どちらも計数のみ）
     bool _mfFiring;
 
     /// <summary>標の書き込み（第298期・<b>計数のみ</b>）。書き手 ＝ 第94期の印（`Mark.Owner`）。新しい標か層の追加か、相手が書き手の味方か敵かで分ける。印が無ければ書かれた駒の側の `MarkWriteNoOwner`。</summary>
@@ -13229,7 +13236,7 @@ public sealed class BattleContext
             UnitTally t = TallyOf(misa);
             if (_mfFiring) { t.MfChainSkipped++; continue; }
             if (fresh) t.MfQueuedFresh++; else t.MfQueuedLayer++;
-            _mfQueue.Enqueue((misa, u, fresh, _commandCarving));
+            _mfQueue.Enqueue((misa, u, fresh, _commandCarving, _accuseMarking));
         }
     }
 
@@ -13240,13 +13247,14 @@ public sealed class BattleContext
         if (_mfQueue.Count == 0 || _mfFiring || InInterrupt) return;
         while (_mfQueue.Count > 0)
         {
-            var (misa, tgt, fresh, cmd) = _mfQueue.Dequeue();
+            var (misa, tgt, fresh, cmd, acc) = _mfQueue.Dequeue();
             UnitTally t = TallyOf(misa);
             if (!misa.IsAlive || !tgt.IsAlive) { t.MfDropped++; continue; }
             if (!TeamAlive(PlayerTeam) || !TeamAlive(EnemyTeam)) { t.MfDropped += 1 + _mfQueue.Count; _mfQueue.Clear(); break; }
             if (!CanActOutOfTurn(misa, OutOfTurnRoute.FeatherMark)) { if (HushBindingNow) t.MfHushed++; else t.MfBlocked++; continue; }
             _mfFiring = true;
             if (cmd) t.CommandFeathers++;   // 第301期（計数のみ・号令の層が呼んだ羽）
+            if (acc) t.AccuseFeathers++;    // 第302期（計数のみ・指差しの標が呼んだ羽）
             try { Interrupt(() => FeatherMarkShot(misa, tgt, fresh, t)); }
             finally { _mfFiring = false; }
         }
@@ -13334,7 +13342,7 @@ public sealed class BattleContext
     {
         UnitState? best = null;
         foreach (UnitState u in _beckonHolders)
-            if (u.IsAlive && u.TeamId == team && u != victim && u.HasTrait(TraitId.FrameAccuse) && (best is null || u.Slot < best.Slot)) best = u;
+            if (u.IsAlive && u.TeamId == team && u != victim && (u.HasTrait(TraitId.FrameAccuse) || u.HasTrait(TraitId.FrameAccuseQuiet)) && (best is null || u.Slot < best.Slot)) best = u;
         return best;
     }
 
@@ -13355,7 +13363,9 @@ public sealed class BattleContext
         Log($"    {hisa.Name} が叫ぶ——「あいつがやった！」（{foe.Name} を指差す）", LogKind.Trigger);
         if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Framed, Turn = _turn, ActorId = hisa.InstanceId, TargetId = foe.InstanceId, PartnerId = ally.InstanceId, Text = FramedLabels.Accuse, Team = foe.TeamId });
         bool fresh = foe.RawCounter(StatusKeys.Marked) <= 0;
-        LayerMark(foe, hisa);
+        _accuseMarking = true;   // 第302期（計数のみ・この標が呼んだ羽を数える）
+        try { LayerMark(foe, hisa); }
+        finally { _accuseMarking = false; }
         if (fresh) EmitStatusGain(foe, StatusKeys.Marked, 1, hisa);   // 表示専用（標が付いた瞬間）
         Log($"    {hisa.Name} が {foe.Name} に標を付けた（層 {foe.RawCounter(StatusKeys.Marked)}）", LogKind.Trigger);
         if (!zan) return;
@@ -13401,15 +13411,19 @@ public sealed class BattleContext
     bool _coverMarking;
     bool _coverHitNext;
     bool _commandCarving;
+    bool _accuseMarking;   // 第302期（計数のみ）
+    bool _rouseLive;       // 第302期（HB の保持者がいる戦だけ・鼓舞の受け手の計数）
+    /// <summary>第302期 HB: 鼓舞で上げた量（受け手ごと・<c>Death</c> ＝ 配ったときの <c>LastDeathTurn</c>——倒れて蘇生された駒からは引き上げない）。戦ごと（会戦の境界は `AtkBonus` ごと消える）。</summary>
+    readonly Dictionary<UnitState, (int Amount, int Death)> _rouseGot = new();
 
     /// <summary>層を1つ刻めるか（ミサがいない戦では、標の無い敵にだけ「標を付ける」1回）。</summary>
     bool CanCarve(UnitState foe) => foe.IsAlive && (MarkLayers && foe.TeamId != PlayerTeam || foe.RawCounter(StatusKeys.Marked) <= 0);
 
     /// <summary>号令の層を <paramref name="foe"/> に <paramref name="n"/> 個まで刻み、刻んだ数を返す。溢れは刻んだ分だけ減らす。</summary>
-    int CommandCarve(UnitState hisa, UnitState foe, int n, string label)
+    int CommandCarve(UnitState hisa, UnitState foe, int n, string label, bool usePool = true)
     {
         int done = 0;
-        TraitMark m = BeginTrait(label == CommandLabels.Now ? TraitId.CommandNow : hisa.HasTrait(TraitId.CommandTurn8) ? TraitId.CommandTurn8 : TraitId.CommandTurn3, hisa);
+        TraitMark m = BeginTrait(label == CommandLabels.Now ? TraitId.CommandNow : CommandTraitId(hisa), hisa);
         for (int i = 0; i < n && CanCarve(foe); i++)
         {
             bool fresh = foe.RawCounter(StatusKeys.Marked) <= 0;
@@ -13421,8 +13435,8 @@ public sealed class BattleContext
         }
         EndTrait(m);
         if (done == 0) return 0;
-        int used = done * CommandTrait.Every;
-        hisa.SetCounter(CommandTrait.PoolKey, hisa.RawCounter(CommandTrait.PoolKey) - used);
+        int used = done * CommandTrait.EveryOf(hisa);
+        if (usePool) hisa.SetCounter(CommandTrait.PoolKey, hisa.RawCounter(CommandTrait.PoolKey) - used);
         UnitTally ht = TallyOf(hisa);
         ht.CommandFires++; ht.CommandLayers += done;
         int peak = foe.RawCounter(StatusKeys.Marked);
@@ -13466,14 +13480,122 @@ public sealed class BattleContext
         if (cap <= 0) return;
         UnitTally ht = TallyOf(hisa);
         ht.CommandTurns++;
+        int every = CommandTrait.EveryOf(hisa);
         int pool = hisa.RawCounter(CommandTrait.PoolKey);
-        int want = Math.Min(cap, pool / CommandTrait.Every);
-        if (want <= 0) return;
+        if (pool < CommandTrait.BallCap * every) ht.CommandPoolLow++;   // 第302期（計数のみ・手番の時点で溜まりが満杯でなかった）
+        if (CommandTrait.IsRouse(hisa)) { RouseTurnFire(hisa, cap, every, pool, ht); return; }
+        bool balls = CommandTrait.PoolCapOf(hisa) > 0;   // 第302期の玉（計数と表示だけがこれを読む）
+        int want = Math.Min(cap, pool / every);
+        if (want <= 0) { if (balls) (ht.CommandBallHist ??= new long[4])[0]++; return; }
         UnitState? foe = FramePick(hisa);
-        if (foe is null || !CanCarve(foe)) { ht.CommandNoTarget++; return; }
+        if (foe is null || !CanCarve(foe)) { ht.CommandNoTarget++; if (balls) (ht.CommandBallHist ??= new long[4])[0]++; return; }
         int done = CommandCarve(hisa, foe, want, CommandLabels.Turn);
         (ht.CommandTurnHist ??= new long[9])[Math.Min(8, done)]++;
-        if (pool / CommandTrait.Every > cap) ht.CommandCapped++;
+        if (pool / every > cap) ht.CommandCapped++;
+        if (balls)
+        {
+            (ht.CommandBallHist ??= new long[4])[Math.Min(3, done)]++;
+            EmitCommandBall(hisa, CommandBallLabels.Use);
+        }
+    }
+
+    /// <summary>第302期: いま使っている号令の札（印の帰属）。</summary>
+    static TraitId CommandTraitId(UnitState hisa) => hisa.HasTrait(TraitId.CommandTurn8) ? TraitId.CommandTurn8 : hisa.HasTrait(TraitId.CommandBall) ? TraitId.CommandBall
+        : hisa.HasTrait(TraitId.CommandRouse) ? TraitId.CommandRouse : hisa.HasTrait(TraitId.CommandRouseStay) ? TraitId.CommandRouseStay : TraitId.CommandTurn3;
+
+    /// <summary>
+    /// 第302期: 叫びの溢れを溜める（`RallyHeal` だけが呼ぶ）。上限のある札（規定の玉 ／ HB）は上限で頭打ちにし、超えて入る溢れは捨てる。
+    /// 玉の数が変わった ／ 捨てた瞬間は表示専用の `CommandBall`（上限の無い第301期の版には出さない）。
+    /// </summary>
+    void CommandPoolAdd(UnitState hisa, int over, UnitTally ht)
+    {
+        int pool = hisa.RawCounter(CommandTrait.PoolKey);
+        int next = pool + over;
+        int capPool = CommandTrait.PoolCapOf(hisa);
+        if (capPool > 0 && next > capPool)
+        {
+            ht.CommandDropped += next - capPool;
+            ht.CommandDropEvents++;
+            next = capPool;
+        }
+        hisa.SetCounter(CommandTrait.PoolKey, next);
+        if (capPool <= 0 || !_verbose) return;
+        int every = CommandTrait.EveryOf(hisa);
+        if (next / every > pool / every) EmitCommandBall(hisa, CommandBallLabels.Gain);
+        if (pool + over > capPool) EmitCommandBall(hisa, CommandBallLabels.Spill);
+    }
+
+    void EmitCommandBall(UnitState hisa, string label)
+    {
+        if (!_verbose) return;
+        int pool = hisa.RawCounter(CommandTrait.PoolKey);
+        Emit(new BattleEvent { Kind = BattleEventKind.CommandBall, Turn = _turn, ActorId = hisa.InstanceId, Amount = pool / CommandTrait.EveryOf(hisa), Slot = pool, Text = label, Team = hisa.TeamId });
+    }
+
+    /// <summary>
+    /// 第302期 HB-t ／ HB-p: ヒサの手番に、重い玉（40）を全部使う（3つまで）。玉1つにつき、指差しの選び方の敵に層 +1（刻めなくても玉は使う）と、味方全員の攻撃力 +5（鼓舞）。
+    /// HB-t の鼓舞は<b>ヒサの次の手番の始まりまで</b>（手番の頭に引き上げてから、新しい号令で配り直す・重ねない）。HB-p は戦の終わりまで続き、号令ごとに重なる。<b>乱数を引かない。</b>
+    /// </summary>
+    void RouseTurnFire(UnitState hisa, int cap, int every, int pool, UnitTally ht)
+    {
+        bool stay = hisa.HasTrait(TraitId.CommandRouseStay);
+        if (!stay) RouseEnd(hisa);   // HB-t: 前の号令の鼓舞は、ヒサの手番の始まりで解ける
+        int balls = Math.Min(cap, pool / every);
+        (ht.CommandBallHist ??= new long[4])[Math.Min(3, balls)]++;
+        if (balls <= 0) return;
+        hisa.SetCounter(CommandTrait.PoolKey, pool - balls * every);
+        UnitState? foe = FramePick(hisa);
+        int done = 0;
+        if (foe is not null && CanCarve(foe)) done = CommandCarve(hisa, foe, balls, CommandLabels.Turn, usePool: false);
+        else ht.CommandNoTarget++;
+        (ht.CommandTurnHist ??= new long[9])[Math.Min(8, done)]++;
+        if (pool / every > cap) ht.CommandCapped++;
+        EmitCommandBall(hisa, CommandBallLabels.Use);
+        // 鼓舞（号令の直後・羽より前——羽は手番の枠が閉じた後に撃つ）。味方全員（ヒサ自身を含む・支援を受け付ける駒）。窓口は `Whet`（経路 `Rouse`）。
+        int amt = balls * CommandTrait.RousePerBall;
+        int got = 0, peak = 0;
+        foreach (UnitState a in LivingMembers(hisa.TeamId))
+        {
+            if (!a.AcceptsSupport) continue;
+            Whet(a, amt, WhetRoute.Rouse);
+            int prev = _rouseGot.TryGetValue(a, out var g) && g.Death == a.LastDeathTurn ? g.Amount : 0;
+            _rouseGot[a] = (prev + amt, a.LastDeathTurn);
+            got++;
+            if (a.CurrentAttack > peak) peak = a.CurrentAttack;
+        }
+        hisa.SetCounter(CommandTrait.RouseKey, stay ? hisa.RawCounter(CommandTrait.RouseKey) + amt : amt);
+        ht.RouseFires++; ht.RouseGiven += (long)amt * got;
+        if (peak > ht.RousePeakAtk) ht.RousePeakAtk = peak;
+        Log($"    {hisa.Name} の号令に仲間が奮い立つ（攻撃 +{amt}・{got} 体{(stay ? "・戦の終わりまで" : "・次の手番まで")}）", LogKind.Trigger, hisa);
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Rouse, Turn = _turn, ActorId = hisa.InstanceId, Amount = amt, Slot = got, Text = stay ? RouseLabels.Stay : RouseLabels.Until, Team = hisa.TeamId });
+    }
+
+    /// <summary>第302期 HB-t: 配った鼓舞を引き上げる（尾灯の消灯と同じ直叩き——他人が横取りする形にしない）。倒れた ／ 蘇生された駒からは引き上げない。</summary>
+    void RouseEnd(UnitState hisa)
+    {
+        int lvl = hisa.RawCounter(CommandTrait.RouseKey);
+        if (lvl <= 0 || _rouseGot.Count == 0) return;
+        int n = 0;
+        foreach (var (u, g) in _rouseGot.ToList())
+        {
+            if (u.TeamId != hisa.TeamId) continue;
+            _rouseGot.Remove(u);
+            if (!u.IsAlive || u.LastDeathTurn != g.Death || g.Amount <= 0) continue;
+            u.AtkBonus -= g.Amount;
+            n++;
+        }
+        hisa.SetCounter(CommandTrait.RouseKey, 0);
+        Log($"    {hisa.Name} の鼓舞が解けた（攻撃 -{lvl}）", LogKind.Status);
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Rouse, Turn = _turn, ActorId = hisa.InstanceId, Amount = lvl, Slot = n, Text = RouseLabels.End, Team = hisa.TeamId });
+    }
+
+    /// <summary>第302期: 規定のヒサの「あいつがやった！」が粛 ／ 痺れで止まった（<see cref="FrameAccuseTrait"/> だけが呼ぶ・計数と表示のみ）。</summary>
+    public void NoteAccuseSilenced(UnitState hisa, UnitState ally, UnitState shooter)
+    {
+        UnitTally ht = TallyOf(hisa);
+        ht.AccuseSilenced++;
+        if (HushBindingNow && hisa.RawCounter(StatusKeys.Stun) == 0) ht.AccuseSilencedHush++;
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.Framed, Turn = _turn, ActorId = hisa.InstanceId, TargetId = ally.InstanceId, PartnerId = shooter.InstanceId, Text = FramedLabels.Silenced, Team = hisa.TeamId });
     }
 
     /// <summary>
