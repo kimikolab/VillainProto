@@ -508,7 +508,7 @@ static partial class Som307Diag
                 && Vers.Skip(1).Concat(Sens).All(v => !UnitCatalog.Everyone.Contains(v.To)) && !UnitCatalog.Everyone.Contains(som)
                 // 第308期: 規定のソムが SH-a（`SparkRain`）になった——光の札を持つ `All` の駒は規定のソムだけで、中身は版の SH-a と同じ
                 && !UnitCatalog.All.Any(d => !ReferenceEquals(d, UnitCatalog.Som) && d.Traits.Any(t => t is TraitId.SparkRain or TraitId.SparkStore or TraitId.SparkHalf or TraitId.SparkDouble))
-                && UnitCatalog.Som.Traits.SequenceEqual(a.Traits) && UnitCatalog.Som.PlusText == a.PlusText && UnitCatalog.Som.Flavor == a.Flavor;
+                && UnitCatalog.SomH308.Traits.SequenceEqual(a.Traits) && UnitCatalog.SomH308.PlusText == a.PlusText && UnitCatalog.SomH308.Flavor == a.Flavor;   // 第309期: 第308期の規定（SH-a）は `SomH308` に残した
             Expect("(a) 定義: 版 ＝ 規定のソム ＋ 札（数値・マイナス・喚び出しは規定のまま）・SH-b は術の手番・`All` ／ `Everyone` の外・光の札の保持者は `All` に 0 枚", ok, $"量 {SparkTrait.Amount}");
         }
 

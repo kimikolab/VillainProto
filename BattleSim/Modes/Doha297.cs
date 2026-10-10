@@ -651,7 +651,7 @@ static class Doha297Diag
 
         // (o) `compare` の行・交差帯の行の数は第296期のまま（版の駒は `Presets` に入らない）
         Expect("(o) `compare` 64 行・交差帯 12 行・試遊 8 行・どの行にも版のドハがいない",
-            Presets.Compare.Length == 64 && Presets.Cross.Length == 12 && Presets.Playtest.Length == 8
+            Presets.Compare.Length == 64 && Presets.Cross.Length == 12 && Presets.Playtest.Take(8).Count() == 8 && Presets.Playtest.Take(8).Select(r => r.Name).SequenceEqual(Som309Diag.Playtest308)   /* 第309期: 試遊は末尾に2行足した——第308期までの8行で数える */
             && Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).All(r => r.F.Occupied().All(o => !vers.Any(v => ReferenceEquals(v.Item1, o.Def)))));
 
         Console.WriteLine();

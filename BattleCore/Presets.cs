@@ -866,5 +866,11 @@ public static class Presets
         ("試遊・標 三人組", Formation.Build(front1: UnitCatalog.Zan, front3: UnitCatalog.Golm, center: UnitCatalog.Tome, back1: UnitCatalog.Dolga, back3: UnitCatalog.Hisa)),
         // 第295期 `PHASE295_MARK_HEAL.md` §4-4 の近衛の格子（`markheal295 grid guard`）の HK-b の上位（ゴルム・ザン・ドハ・ミサ・ヒサ・倒しT 3.0・100%）。席は格子の並び（前1・前3・中央・後1・後3）。
         ("試遊・標 守り型", Formation.Build(front1: UnitCatalog.Golm, front3: UnitCatalog.Zan, center: UnitCatalog.Doha, back1: UnitCatalog.Tome, back3: UnitCatalog.Hisa)),
+        // 第309期（design/PHASE309_SOM_REGULATE_SPEC.md §3-1）—— ソムの光の衣（LV-a・規定）でツギのいない感電の台がボスに勝つ2台。
+        // 第308期のボスの格子（固定枠 クグ ＋ カタ ＋ ソム）で 100% の組から、`som309 pick`（ボス・120 席・勝率 → 倒しT → 残った味方 → 席の名前の順）の1位。席は格子の並び。
+        // 組 トウ ＋ クビ: 120 席すべて 100%・倒しT 29.2（同じ倒しT の席が 24・名前の順で決めた）。光と衣が主役の長い戦。
+        ("試遊・感電 光の盾", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Kugu, center: UnitCatalog.Tou, back1: UnitCatalog.Kubi, back3: UnitCatalog.Som)),
+        // 組 クビ ＋ ガン: 120 席のうち 77 が 100%・倒しT 22.0（同じ倒しT の席が 48・名前の順で決めた）。違う組での勝ち方。
+        ("試遊・感電 光の盾 重", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Gan, center: UnitCatalog.Kugu, back1: UnitCatalog.Kubi, back3: UnitCatalog.Som)),
     };
 }

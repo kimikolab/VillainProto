@@ -402,7 +402,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.SparkStore]      = (HcBothL,  "溜める光（第307期・ソム SH-b）: 同じ数だけ光を溜め、手番で全部放つ（その手番は攻撃しない・光が 0 なら殴る）"),
         [TraitId.SparkHalf]       = (HcPlusL,  "光の量 × 0.5（第307期・対照）。保持者 0 枚"),
         [TraitId.SparkDouble]     = (HcPlusL,  "光の量 × 2（第307期・対照）。保持者 0 枚"),
-        [TraitId.SparkVeil]       = (HcPlusL,  "光の衣（第308期・ソム LV-a）: 降る光の溢れを、その味方の破片に足す（上限なし）。保持者 0 枚"),
+        [TraitId.SparkVeil]       = (HcPlusL,  "光の衣（第308期・ソム LV-a）: 降る光の溢れを、その味方の破片に足す（上限なし）（第309期からソムの規定）"),
         [TraitId.SparkVeilCap]    = (HcPlusL,  "光の衣の上限（第308期・ソム LV-c）: 衣で足せるのは、その味方の破片が最大HPの 4 割になるまで。保持者 0 枚"),
         [TraitId.SparkFocus]      = (HcPlusL,  "寄せる光（第308期・ソム FO・参考）: 光1つにつき 35 を最も傷ついた味方1体に・光ごとに選び直す。保持者 0 枚"),
         [TraitId.MireSlam]        = (HcPlusL,  "濃縮の手番の最後に寄せ先（感電している敵を優先）へ攻撃力ぶんの一撃（第218期・M1・保持者 0 枚）"),

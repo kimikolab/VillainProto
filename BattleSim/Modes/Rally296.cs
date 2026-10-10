@@ -197,7 +197,7 @@ static class Rally296Diag
         var heal = Boss283Diag.HealPool306; var heal0 = Boss283Diag.HealPool295;   // 第308期: 規定のソム（SH-a）を数えない第307期までの一覧に固定
         Expect("(d) ヒーラーの一覧（`Boss283Diag.HealPool`）に規定のヒサが入る・旧の一覧（`HealPool295`）は入らない・ほかの顔ぶれは同じ",
             heal.Contains(UnitCatalog.Hisa) && !heal0.Contains(UnitCatalog.Hisa) && heal.Where(d => !ReferenceEquals(d, UnitCatalog.Hisa)).SequenceEqual(heal0), $"{heal.Length} 枚 ／ 旧 {heal0.Length} 枚");
-        var pl = Presets.Playtest;
+        var pl = Presets.Playtest.Take(8).ToArray();   // 第309期: 試遊の末尾に2行（光の盾）を足した——第308期までの8行で見る
         var compareNames = Presets.Compare.Select(r => r.Name).ToHashSet();
         Expect("(e) 試遊の行は8行（第291期の5行 ＋ 3行・既存の5行は名前も並びもそのまま）・`Compare` ／ `Cross` に入っていない・駒はすべて規定（`All`）・5枠",
             pl.Length == 8 && pl.Take(5).Select(r => r.Name).SequenceEqual(new[] { "試遊・感電 火の型", "試遊・感電 雷の型", "試遊・感電 糸", "試遊・標 ボス台", "試遊・標 道中" })

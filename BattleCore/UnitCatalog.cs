@@ -1897,12 +1897,11 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 背かれのソム（規定）。<b>第308期に SH-a（降る光）を規定にした</b>（ポンの判断 S1・design/PHASE308_SOM_VEIL_SPEC.md §2-1）——
-    /// 第276〜307期の規定（喚び出しだけ・<see cref="SomH307"/>）に <see cref="TraitId.SparkRain"/> を足した。中身は第307期の <see cref="SomSHa"/> と同じ。
-    /// 敵の側で感電が弾けた連鎖の直後、弾けた数 × 7 を味方全員にその場で癒す（手番の外の動作・粛 ／ 痺れで止まる）。<b>ヒーラーに数える</b>（`Boss283Diag.HealPool`）。
-    /// 旧の規定を使う過去の器具は <see cref="SomH307"/> に固定した。
+    /// 背かれのソム（第308期の規定・SH-a ＝ 降る光）。<b>第309期: 第308期の規定を明示の定義で残したもの</b>（規定の <see cref="Som"/> は LV-a ＝ 光の衣になった）。`All` ／ `Retired` の外。
+    /// 第276〜307期の規定（<see cref="SomH307"/>）に <see cref="TraitId.SparkRain"/> を足した。中身は第307期の <see cref="SomSHa"/> と同じ。
+    /// 第308期の規定を測った器具（`som308`）と、第308期の版（<see cref="SomLVa"/> ／ <see cref="SomLVc"/> ／ <see cref="SomFO"/>）はこれから作る。
     /// </summary>
-    public static readonly UnitDef Som = new()
+    public static readonly UnitDef SomH308 = new()
     {
         Id = SomH307.Id,
         Name = SomH307.Name,
@@ -1915,6 +1914,31 @@ public static class UnitCatalog
         Actions = SomH307.Actions,
         PlusText = SomH307.PlusText + SomSparkRainText,
         MinusText = SomH307.MinusText,
+        Flavor = SomSparkFlavor
+    };
+
+    /// <summary>第309期の衣の文面（指示書 design/PHASE309_SOM_REGULATE_SPEC.md §2 の叩き台・最終はポン）。</summary>
+    public const string SomSparkVeilText = "。満ちた仲間に降った光は、光の衣になって次の一撃を受け止める";
+
+    /// <summary>
+    /// 背かれのソム（規定）。<b>第309期に LV-a（光の衣・上限なし）を規定にした</b>（ポンの判断 V1・design/PHASE309_SOM_REGULATE_SPEC.md §2）——
+    /// 第308期の規定（SH-a ＝ 降る光・<see cref="SomH308"/>）に <see cref="TraitId.SparkVeil"/> を足した。札は第308期の <see cref="SomLVa"/> と同じ（文面だけ叩き台に替えた）。
+    /// 敵の側で感電が弾けた連鎖の直後、弾けた数 × 7 を味方全員にその場で癒し、満タンで溢れた分はその味方の破片（衣）になる。<b>ヒーラーに数える</b>（`Boss283Diag.HealPool`）。
+    /// 第308期の規定を使う過去の器具は <see cref="SomH308"/>（`Common.Pin309`）に、第307期までの規定を使う器具は <see cref="SomH307"/>（`Common.Pin308`）に固定した。
+    /// </summary>
+    public static readonly UnitDef Som = new()
+    {
+        Id = SomH308.Id,
+        Name = SomH308.Name,
+        MaxHp = SomH308.MaxHp,
+        Attack = SomH308.Attack,
+        Speed = SomH308.Speed,
+        Advances = SomH308.Advances,
+        Pattern = SomH308.Pattern,
+        Traits = SomH308.Traits.Append(TraitId.SparkVeil).ToArray(),
+        Actions = SomH308.Actions,
+        PlusText = SomH308.PlusText + SomSparkVeilText,
+        MinusText = SomH308.MinusText,
         Flavor = SomSparkFlavor
     };
 
@@ -2064,57 +2088,57 @@ public static class UnitCatalog
         Flavor = SomSparkFlavor
     };
 
-    // 第308期 —— 光の衣の版（指示書 design/PHASE308_SOM_VEIL_SPEC.md §3）。規定（SH-a）の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。文面は叩き台。
+    // 第308期 —— 光の衣の版（指示書 design/PHASE308_SOM_VEIL_SPEC.md §3）。規定（SH-a・第309期からは <see cref="SomH308"/>）の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。文面は叩き台。
 
     /// <summary>第308期 LV-a（光の衣）。規定（SH-a）＋ <see cref="TraitId.SparkVeil"/>（降る光の溢れを、その味方の破片に足す・上限なし）。</summary>
     public static readonly UnitDef SomLVa = new()
     {
-        Id = Som.Id,
-        Name = Som.Name,
-        MaxHp = Som.MaxHp,
-        Attack = Som.Attack,
-        Speed = Som.Speed,
-        Advances = Som.Advances,
-        Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(TraitId.SparkVeil).ToArray(),
-        Actions = Som.Actions,
-        PlusText = Som.PlusText + "。満ちた仲間に降った光は、その仲間の衣（破片）になる",
-        MinusText = Som.MinusText,
-        Flavor = Som.Flavor
+        Id = SomH308.Id,
+        Name = SomH308.Name,
+        MaxHp = SomH308.MaxHp,
+        Attack = SomH308.Attack,
+        Speed = SomH308.Speed,
+        Advances = SomH308.Advances,
+        Pattern = SomH308.Pattern,
+        Traits = SomH308.Traits.Append(TraitId.SparkVeil).ToArray(),
+        Actions = SomH308.Actions,
+        PlusText = SomH308.PlusText + "。満ちた仲間に降った光は、その仲間の衣（破片）になる",
+        MinusText = SomH308.MinusText,
+        Flavor = SomH308.Flavor
     };
 
     /// <summary>第308期 LV-c（光の衣・上限あり）。LV-a ＋ <see cref="TraitId.SparkVeilCap"/>（衣で足せるのは、その味方の破片が最大HPの 4 割になるまで）。</summary>
     public static readonly UnitDef SomLVc = new()
     {
-        Id = Som.Id,
-        Name = Som.Name,
-        MaxHp = Som.MaxHp,
-        Attack = Som.Attack,
-        Speed = Som.Speed,
-        Advances = Som.Advances,
-        Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(TraitId.SparkVeil).Append(TraitId.SparkVeilCap).ToArray(),
-        Actions = Som.Actions,
-        PlusText = Som.PlusText + "。満ちた仲間に降った光は、その仲間の衣（破片）になる（衣は最大HPの4割まで）",
-        MinusText = Som.MinusText,
-        Flavor = Som.Flavor
+        Id = SomH308.Id,
+        Name = SomH308.Name,
+        MaxHp = SomH308.MaxHp,
+        Attack = SomH308.Attack,
+        Speed = SomH308.Speed,
+        Advances = SomH308.Advances,
+        Pattern = SomH308.Pattern,
+        Traits = SomH308.Traits.Append(TraitId.SparkVeil).Append(TraitId.SparkVeilCap).ToArray(),
+        Actions = SomH308.Actions,
+        PlusText = SomH308.PlusText + "。満ちた仲間に降った光は、その仲間の衣（破片）になる（衣は最大HPの4割まで）",
+        MinusText = SomH308.MinusText,
+        Flavor = SomH308.Flavor
     };
 
     /// <summary>第308期 FO（寄せる光・参考）。規定（SH-a）＋ <see cref="TraitId.SparkFocus"/>（衣は無し・光1つにつき 量 × 5 を最も傷ついた味方1体に・光ごとに選び直す）。</summary>
     public static readonly UnitDef SomFO = new()
     {
-        Id = Som.Id,
-        Name = Som.Name,
-        MaxHp = Som.MaxHp,
-        Attack = Som.Attack,
-        Speed = Som.Speed,
-        Advances = Som.Advances,
-        Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(TraitId.SparkFocus).ToArray(),
-        Actions = Som.Actions,
+        Id = SomH308.Id,
+        Name = SomH308.Name,
+        MaxHp = SomH308.MaxHp,
+        Attack = SomH308.Attack,
+        Speed = SomH308.Speed,
+        Advances = SomH308.Advances,
+        Pattern = SomH308.Pattern,
+        Traits = SomH308.Traits.Append(TraitId.SparkFocus).ToArray(),
+        Actions = SomH308.Actions,
         PlusText = SomH307.PlusText + "。敵の側で感電が弾けるたび、その光が最も傷ついた仲間に集まり、傷を癒す",
-        MinusText = Som.MinusText,
-        Flavor = Som.Flavor
+        MinusText = SomH308.MinusText,
+        Flavor = SomH308.Flavor
     };
 
     /// <summary>

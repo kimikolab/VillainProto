@@ -267,6 +267,18 @@ public static Formation Pin308(Formation f)
     return g;
 }
 
+/// <summary>
+/// 第309期: ソム ＝ LV-a（光の衣）を規定にした。第308期の規定のソム（SH-a）で測った器具（`som308`）はこれを通す（ソム → `SomH308`）。陣形とレリックは保つ。
+/// 第307期までの規定に固定する器具は `Pin308` のまま（規定のソムはどれも `SomH307` に替わるので、第309期の規定化は届かない）。
+/// </summary>
+public static Formation Pin309(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH308 : d;
+    return g;
+}
+
 /// <summary>第306期: 敵の編成が規定の第二波（`Stages[1].Enemy`）なら旧の第二波（`Wave2H305`）に差し替える。ほかの編成はそのまま返す。</summary>
 public static Formation PinWave305(Formation enemy) => ReferenceEquals(enemy, EnemyCatalog.Stages[1].Enemy) ? EnemyCatalog.Wave2H305.Enemy : enemy;
 
