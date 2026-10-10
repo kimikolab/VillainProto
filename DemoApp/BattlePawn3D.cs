@@ -524,15 +524,15 @@ void fragment() {
         tween.TweenProperty(_sprite, "modulate:a", 1.0f, 0.30);
     }
 
-    public void AnimateAppear()
+    public void AnimateAppear(double speed = 1)
     {
         ShowLifeTransition(LifeTransition3D.Kind.Summon);
         Scale = new Vector3(0.2f, 0.2f, 0.2f);
         _sprite.Modulate = new Color(1, 1, 1, 0);
         var tween = BeginMotion().SetParallel();
-        tween.TweenProperty(this, "scale", Vector3.One, 0.35)
+        tween.TweenProperty(this, "scale", Vector3.One, 0.35 / speed)
             .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
-        tween.TweenProperty(_sprite, "modulate:a", 1.0f, 0.24);
+        tween.TweenProperty(_sprite, "modulate:a", 1.0f, 0.24 / speed);
     }
 
     public void AnimateVictory()

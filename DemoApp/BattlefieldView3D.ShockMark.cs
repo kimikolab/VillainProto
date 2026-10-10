@@ -17,6 +17,7 @@ public partial class BattlefieldView3D
     }
     internal void EndShockMarkPresentation()
     {
+        EndSomPresentation();
         EndHushPresentation();
         EndMarkRallyPresentation();
         foreach (var pawn in _pawns.Values) pawn.EndShockMark();

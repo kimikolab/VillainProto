@@ -322,6 +322,7 @@ public partial class BattlefieldView3D : Control
         ResetSuperFlash();
         ResetBindings();
         ResetShockWeb();
+        ResetSomPresentation();
         ResetSeals();
         ResetPopups();
         ResetTurnLabel();
@@ -568,7 +569,7 @@ public partial class BattlefieldView3D : Control
         pawn.AnimateDeath();
     }
 
-    public void AddSummon(DemoOpening opening)
+    public void AddSummon(DemoOpening opening, bool ordinaryEffect = true, double appearanceSpeed = 1)
     {
         var pawn = new BattlePawn3D();
         pawn.ArmorDepleted += _attackAudio.PlayArmorBreak;
@@ -580,9 +581,9 @@ public partial class BattlefieldView3D : Control
         RegisterSealHolder(opening);
         RegisterInverse(opening);
         ConnectSeals();
-        _attackAudio.PlaySummon();
-        pawn.AnimateAppear();
-        MakeGroundRing(pawn.Home, UiKit.Violet, 0.9f, 0.50);
+        if (ordinaryEffect) _attackAudio.PlaySummon();
+        pawn.AnimateAppear(appearanceSpeed);
+        if (ordinaryEffect) MakeGroundRing(pawn.Home, UiKit.Violet, 0.9f, 0.50);
     }
 
     public void RevivePawn(BattlePawn3D pawn)

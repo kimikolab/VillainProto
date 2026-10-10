@@ -1237,6 +1237,7 @@ public partial class Main : Control
         _liliGiven.Clear(); _liliTransfers = _liliDrains = _liliGifts = 0;
         ResetLiliRitePlayback();
         ResetPlankPlayback();
+        ResetSomPlayback();
         _beniGiftGains.Clear();
         _playing = true;
         _paused = false;
@@ -1372,6 +1373,7 @@ public partial class Main : Control
         if (actor is not null) actor.AnimationSpeed = Math.Max(0.1, _speed);
         if (target is not null) target.AnimationSpeed = Math.Max(0.1, _speed);
         // 第125期 段2: 拍の境目でだけ画面を変える。**ここでは待たない**（間は下の switch の中だけ）。
+        ObserveSomEvent(e, eventIndex);
         EnterBeat(eventIndex, e);
         if (_collectingTurnTicks is { } collecting && collecting.Primary.ContainsKey(eventIndex))
         {
@@ -1384,6 +1386,7 @@ public partial class Main : Control
         _misaFastEvent = _misa.FastEvents.Contains(eventIndex);
         _zanFastEvent = _zan.FastEvents.Contains(eventIndex);
         int hushToken = _playToken;
+        if (await PlaySom(e, eventIndex, actor, target) || hushToken != _playToken || !_battleMode) return;
         if (await PlayHush(e, eventIndex, actor, target) || hushToken != _playToken || !_battleMode) return;
         if (await PlayHisaCommand(e, eventIndex, actor, target)) return;
         if (await PlayMarkLoop(e, eventIndex, actor, target)) return;
@@ -1469,6 +1472,7 @@ public partial class Main : Control
                     impactTargets = impactTargets.Concat(fireContacts.Select(c => _battleField.FindPawn(c.Target))
                         .OfType<BattlePawn3D>()).Distinct().ToArray();
                 bool insightShown = false;
+                impactTargets = SomImpactTargets(e, impactTargets);
                 void InsightContact()
                 {
                     if (insightShown || attackToken != _playToken || !_battleMode) return;
@@ -1479,6 +1483,7 @@ public partial class Main : Control
                 _battleField.AttackContact = pawn => {
                     if (attackToken != _playToken || !_battleMode) return;
                     FireHitContact(eventIndex, pawn);
+                    SomAttackContact(eventIndex, pawn);
                     InsightContact();
                 };
                 // 溜めの解放は踏み込み後の着弾で行う。手番外の攻撃では消費しない。
@@ -1519,6 +1524,7 @@ public partial class Main : Control
                         ? _movement.BlastDestinations.GetValueOrDefault(eventIndex) : null);
                 if (attackToken != _playToken || !_battleMode) return;
                 InsightContact();
+                foreach (var hit in impactTargets) SomAttackContact(eventIndex, hit);
                 // 第178期 自己検査 (e)。**計数だけ**（上の1行が「1発ぶんの絵と音」なので、ここで数える）。
                 _attackPlays++;
                 _attackRun = e.ActorId == _attackRunActor ? _attackRun + 1 : 1;

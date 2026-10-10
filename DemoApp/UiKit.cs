@@ -193,6 +193,8 @@ public static class UiKit
         "zoto" => 1.58f,
         "susu" => 2.50f, // 血詠みのアカ（内部IDは旧ススのまま）
         "kata" => 2.50f,
+        "som" => 2.50f,
+        "fodder" => 0.95f, // 背いた獣はソムの膝下ほどの小型召喚獣。
         "kado" => 2.40f,
         "sid" => 2.55f,
         "borg" => 2.65f,
@@ -288,6 +290,10 @@ public static class UiKit
         "zan_vendetta" => 0.120f,
         "kugu" => 0.02995f,
         "shiga" => 0.03125f,
+        "som" => 0.01953125f, // 1536px の下端から靴底まで30px。
+        "som_summon" or "som_stunned" => 0.01953125f,
+        "fodder_lookback" or "fodder_snub" => 0.0135566f,
+        "fodder" => 0.0135566f, // v2：1254px の下端から前足まで17px。
         "tou" => 0.0201823f, // 1536px の下端から足元まで31px。
         "shio" => 0.0182f,
         "shio_retreat" => 0.0546875f,
