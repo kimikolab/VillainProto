@@ -8,6 +8,7 @@ public partial class BattleAttackAudio
         ["raise"] = "fire_hota_raise.wav", ["slam"] = "fire_sword_slam.mp3",
         ["explosion"] = "fire_explosion.mp3", ["inferno"] = "fire_inferno.mp3",
         ["jet"] = "fire_jet.mp3", ["projectile"] = "fire_projectile.mp3",
+        ["strong_pierce"] = "fire_hota_strong_pierce.mp3",
         ["aura"] = "fire_aura.mp3", ["gift"] = "fire_gift.mp3",
         ["gift_turn"] = "fire_gift_turn.mp3", ["overflow"] = "fire_condense.mp3",
         ["heal"] = "fire_heal.mp3", ["charge"] = "fire_charge.mp3",
@@ -51,10 +52,10 @@ public partial class BattleAttackAudio
             FireLayer(3, "jet", -12, 0.85 / speed);
             return;
         }
-        if (cue is "jet" or "projectile")
+        if (cue is "jet" or "projectile" or "strong_pierce")
         {
             StopFireCharge();
-            FireLayer(1, cue, cue == "jet" ? -11 : -13, seconds / speed);
+            FireLayer(1, cue, cue == "projectile" ? -13 : -11, seconds / speed);
             return;
         }
         string path = FireSounds.TryGetValue(cue, out var file) ? FireAudioRoot + file : cue switch {

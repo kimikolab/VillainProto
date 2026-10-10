@@ -47,7 +47,7 @@ public partial class BattlefieldView3D
             if (variant == 2)
                 AssetFirePierceFx.Coat(_fxRoot, from, end, _camera.GlobalBasis.Z, grand, speed);
         }
-        _attackAudio.PlayFireSound(grand ? "jet" : "projectile", speed, grand ? 0.65 : 0.34);
+        _attackAudio.PlayFireSound(grand ? "strong_pierce" : "projectile", speed, grand ? 0.65 : 0.34);
         await Wait(grand ? 0.17 : 0.20);
         if (!Live()) return;
         if (grand) FireImpactCamera(far.GlobalPosition, speed, 0.48f);

@@ -258,7 +258,8 @@
 | fire_sword_slam.mp3 | 大剣で斬る.mp3 | 炎剣の着弾／-10 dB |
 | fire_explosion.mp3 | 爆発2.mp3 | 上記と同時／-12 dB |
 | fire_inferno.mp3 | 火炎魔法3.mp3 | 着弾の0.07秒後に火柱／-16 dB |
-| fire_jet.mp3 | 火炎魔法2.mp3 | ボルグ爆炎／-12 dB、ホタ段3・臨界／-11 dB |
+| fire_jet.mp3 | 火炎魔法2.mp3 | ボルグ爆炎／-12 dB |
+| fire_hota_strong_pierce.mp3 | D:/Assets/SE/Springin/炎の風2.mp3 | ホタ段3・強貫通の発射時／-11 dB（共通補正+3 dB）、原音ピッチ、0.65秒を再生速度で調整し末尾をフェード |
 | fire_projectile.mp3 | 火炎魔法1.mp3 | ホタ段1・2の発射／-13 dB |
 | fire_aura.mp3 | オーラ2.mp3 | 爆炎の解放／-12 dB、火勢4到達／-15 dB |
 | fire_gift.mp3 | 魔法陣を展開.mp3 | ギフトの受け渡し／-13 dB |
