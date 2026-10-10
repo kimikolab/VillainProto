@@ -293,6 +293,7 @@ public static class UiKit
         "som" => 0.01953125f, // 1536px の下端から靴底まで30px。
         "som_summon" or "som_stunned" => 0.01953125f,
         "fodder_lookback" or "fodder_snub" => 0.0135566f,
+        "fodder_run" => 0.1116427f, // 1254px の下端から走る差分の足先まで140px。
         "fodder" => 0.0135566f, // v2：1254px の下端から前足まで17px。
         "tou" => 0.0201823f, // 1536px の下端から足元まで31px。
         "shio" => 0.0182f,

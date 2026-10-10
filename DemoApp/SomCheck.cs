@@ -116,18 +116,30 @@ public partial class SomCheck : Control
             field.BeginBattle(units, "ソム — 召喚・光の雨・光の衣", 0);
             foreach (var pawn in field.Pawns.Values) pawn.AnimationSpeed = speed;
             var som = field.FindPawn(1)!;
-            field.BeginSomSummon(som, 1 - team, 7, speed, true);
+            field.BeginSomSummon(som, speed, true);
             await Wait(.18 / speed);
             await Capture($"team{team}-speed{speed}-summon");
             field.AddSummon(Open(UnitCatalog.Fodder, 4, 1 - team, 7), false, speed);
             var beast = field.FindPawn(4)!; beast.AnimationSpeed = speed;
+            Vector3 enemySeat = beast.Home;
             field.SomBeastLooksBack(som, beast);
-            await Wait(.25 / speed);
+            Require(beast.Position.IsEqualApprox(BattlefieldView3D.SomBeastOrigin(som))
+                && beast.Home.IsEqualApprox(enemySeat) && beast.Team == 1 - team && beast.Slot == 7,
+                "見た目はソムの側、所属と席は最初から敵陣");
+            Require(beast.HasShockAura, "出現から雷をまとう");
+            await Wait(.38 / speed);
             await Capture($"team{team}-speed{speed}-lookback");
             field.SomBeastSnubs(som, beast, true);
-            await Wait(.12 / speed);
+            await Wait(.20 / speed);
+            Require(beast.SomBetraying && beast.Position.DistanceTo(enemySeat) > .1f
+                && beast.Position.DistanceTo(BattlefieldView3D.SomBeastOrigin(som)) > .1f,
+                "敵陣へ走る途中の位置を通る");
             await Capture($"team{team}-speed{speed}-snub");
-            await Wait(.6);
+            await Wait((SomFx.BeastRunSeconds - .20 + .05) / speed);
+            field.SomBeastArrives(beast, speed);
+            Require(!beast.SomBetraying && beast.Position.IsEqualApprox(enemySeat)
+                && beast.MovementPortrait is null && beast.HasShockAura, "敵の席へ着地して通常の向きに戻る");
+            await Capture($"team{team}-speed{speed}-arrived");
             beast.SetShocked(true);
             field.ShowSilkBall(new() { Turn = 1, Kind = BattleEventKind.SilkBall, Text = SilkBallLabels.Place,
                 ActorId = 2, TargetId = 20, Team = 1 - team, Slot = 6 }, speed);
@@ -151,8 +163,12 @@ public partial class SomCheck : Control
             for (int i = 10; i < 13; i++) field.RaiseSomLight(i, 4, speed);
             field.GatherSomLight(som, new[] { 10, 11, 12 }, true, speed);
             await Wait(.13 / speed); await Capture($"team{team}-speed{speed}-stopped");
-            field.EndSomPresentation(); await Wait(.05);
+            field.SomBeastLooksBack(som, beast);
+            field.SomBeastSnubs(som, beast, false);
+            field.EndSomPresentation(); await Wait((SomFx.BeastRunSeconds + .05) / speed);
             Require(field.SomRisingCount == 0 && field.SomVeilCount == 0, "描画終了の消去");
+            Require(!beast.SomBetraying && beast.Position.IsEqualApprox(enemySeat)
+                && beast.MovementPortrait is null && !beast.HasShockAura, "走る途中の中断で位置・差分・電気を残さない");
             Require(som.Hp == som.MaxHp && beast.Hp == beast.MaxHp, "演出だけでHPを変えない");
             field.BeginBattle(units, "再戦", 0);
             Require(field.SomRains == 0 && field.SomStops == 0 && field.SomVeilCount == 0, "再戦の初期化");
@@ -164,10 +180,19 @@ public partial class SomCheck : Control
     private async Task Capture(string name)
     {
         if (DisplayServer.GetName() == "headless") return;
-        string path = ProjectSettings.GlobalizePath("res://../design/art/som/fx-check");
+        string path = ProjectSettings.GlobalizePath("res://../design/art/som/run-check");
         DirAccess.MakeDirRecursiveAbsolute(path);
-        await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-        using var image = GetViewport().GetTexture().GetImage();
-        Require(image.SavePng(System.IO.Path.Combine(path, name + ".png")) == Error.Ok, "画像の保存");
+        double priorScale = Engine.TimeScale;
+        Engine.TimeScale = 0;
+        try
+        {
+            await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
+            using var image = GetViewport().GetTexture().GetImage();
+            Require(image.SavePng(System.IO.Path.Combine(path, name + ".png")) == Error.Ok, "画像の保存");
+            // PNG保存の実時間を次の短い倍速アニメーションに持ち込まない。
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        }
+        finally { Engine.TimeScale = priorScale; }
     }
 }

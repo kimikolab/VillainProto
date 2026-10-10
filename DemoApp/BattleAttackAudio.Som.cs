@@ -10,7 +10,7 @@ public partial class BattleAttackAudio
     internal static string SomSoundFile(SomSound cue) => cue switch
     {
         SomSound.Summon => "som_summon.mp3",
-        SomSound.Snub => "som_snub.mp3",
+        SomSound.Snub => "som_run.mp3",
         SomSound.Break => "som_break.mp3",
         // 渇きの回復無効と同じ音源を参照し、複製を持たない。
         SomSound.Stop => System.IO.Path.GetFileName(Drought[0]),

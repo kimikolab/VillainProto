@@ -6,8 +6,8 @@
 
 | ファイル名 | 鳴る場面 | 長さ | 採用音源 |
 |---|---|---|---|
-| `som_summon.mp3` | ソムが腕を掲げ、敵陣に魔法陣が開く | 2.325秒 | Springin／モンスター召喚から出現.mp3 |
-| `som_snub.mp3` | 獣がそっぽを向き、ソムが固まる | 0.289秒 | 効果音ラボ／演出／ニュッ2.mp3 |
+| `som_summon.mp3` | ソムが腕を掲げ、その足元の前に魔法陣が開く | 2.325秒 | Springin／モンスター召喚から出現.mp3 |
+| `som_run.mp3` | 獣が敵陣へ走り出し、ソムが固まる | 1.488秒 | 効果音ラボ／演出／ピューンと逃げる.mp3 |
 | `som_gather.wav` | 連鎖で弾けた粒がソムの頭上へ集まる | 3.182秒 | Helton Yan／MAGAngl_BUFF-Metallic Plus Damage_HY_PC-002.wav |
 | `som_rain.wav` | 集まった光が味方全員へ降る | 3.687秒 | Helton Yan／MAGAngl_BUFF-Healing Gusts_HY_PC-001.wav |
 | `som_veil.wav` | 溢れた回復が光の衣になる | 2.795秒 | Helton Yan／MAGAngl_BUFF-Simple Heal_HY_PC-003.wav |

@@ -71,7 +71,7 @@ public partial class Main
             int token = _playToken;
             bool first = _somIntroduced.Add(actor.InstanceId);
             int team = e.Team ?? BattleContext.EnemyTeam;
-            _battleField.BeginSomSummon(actor, team, e.Slot, _speed, first);
+            _battleField.BeginSomSummon(actor, _speed, first);
             await Delay(.18);
             if (token != _playToken || !_battleMode) return true;
             var def = UnitCatalog.Fodder;
@@ -83,11 +83,14 @@ public partial class Main
             var beast = _battleField.FindPawn(summoned)!;
             beast.AnimationSpeed = Math.Max(.1, _speed);
             _battleField.SomBeastLooksBack(actor, beast);
-            await Delay(.28);
+            await Delay(.38);
             if (token != _playToken || !_battleMode) return true;
             _battleField.SomBeastSnubs(actor, beast, first);
+            await Delay(SomFx.BeastRunSeconds + .02);
+            if (token != _playToken || !_battleMode) return true;
+            _battleField.SomBeastArrives(beast, Math.Max(.1, _speed));
             AppendLog($"  [color=#{SomFx.Violet.ToHtml(false)}]{actor.UnitName} が喚んだ {def.Name} は敵の側に立った[/color]");
-            await Delay(.42);
+            await Delay(.06);
             return true;
         }
         if (_som.Heals.Contains(index) && e.Kind == BattleEventKind.Heal)

@@ -4,12 +4,14 @@
 
 ## ゲーム内の動き
 
-1. ソムが腕を掲げると敵陣の召喚枠に魔法陣が開く。獣はソムを一度振り返り、そっぽを向いて敵の側に立つ。ソムは呆然とした差分へ切り替わる。初回のみ大げさな召喚の台詞と「……え？」を表示する。
+1. ソムが腕を掲げると、その足元の少し前に魔法陣が開く。獣はソムの側に現れ、一度振り返ってから、雷をまとって敵陣へ小走りに寝返る。到着すると敵側の足元の輪と通常の待機姿に戻る。ソムは呆然とした差分へ切り替わる。初回のみ大げさな召喚の台詞と「……え？」を表示する。
 2. 敵側の感電が弾けた地点から粒が浮き、連鎖の終了時にソムの頭上へ集まる。敵・獣・糸玉を出どころとして扱う。味方全員へ短い光の雨を降らせ、回復の数字と同期する。
 3. 回復の溢れは各駒の周囲に薄い衣として残る。量に応じて明るくなるが、常駐時の不透明度は0.38までに抑える。攻撃が当たると短い波紋と粒が出て、衣が尽きると散る。
 4. `Spark 止まる` では帰る粒を途中で消す。粛のひびは既存の `HushState` に任せ、重複して描かない。反転回復の相手へは紫に濁った光を送る。
 
 浮かび上がる粒は台本の弾けた数と一致させる。雨は1人あたり最大18粒とし、巨大な連鎖でも白く塗り潰さない。召喚と雨の待ちは再生速度に従う。再戦・戦闘終了・編成への帰還では専用の粒、衣、差分、音を消す。
+
+獣の走る時間は等速で0.62秒。所属・席・帰着位置は最初から台本の敵陣のまま、描画位置だけをソムの側から移動させる。走る途中に戦闘イベントや味方への放電は発生させない。第310期のE1／E2は実装時点で未採用なので、現行規定では到着後に敵陣へ残る。空席なしでの即時起爆は、採用時の台本に合わせて別途接続する。
 
 ## 衣の残量を扱う範囲
 
@@ -24,7 +26,8 @@
 | ソムの召喚 | `som_summon-right-v1.png` | `DemoApp/assets/portraits/battle/som_summon_idle_right.png` |
 | ソムの呆然 | `som_stunned-right-v1.png` | `DemoApp/assets/portraits/battle/som_stunned_idle_right.png` |
 | 獣の振り返り | `fodder_lookback-right-v1.png` | `DemoApp/assets/portraits/battle/fodder_lookback_idle_right.png` |
-| 獣のそっぽ向き | 瞳を修正済みの `fodder-idle-right-v2.png` を再利用 | `DemoApp/assets/portraits/battle/fodder_snub_idle_right.png` |
+| 獣の走る姿 | `fodder-run-right-v1.png` | `DemoApp/assets/portraits/battle/fodder_run_idle_right.png` |
+| 旧版のそっぽ向き | 瞳を修正済みの `fodder-idle-right-v2.png` を再利用。素材は保持 | `DemoApp/assets/portraits/battle/fodder_snub_idle_right.png` |
 | 魔法陣 | SVG | `DemoApp/assets/fx/som_circle.svg` |
 | 光の粒 | SVG | `DemoApp/assets/fx/som_light.svg` |
 | 薄い衣 | SVG | `DemoApp/assets/fx/som_veil.svg` |
@@ -54,6 +57,10 @@
 雷の型にはソムが含まれないので、専用演出が出ない回帰確認として使用した。ベニ入りの台では濁った光の対象が実際の反転イベントに対応することを確認した。板と衣の混在時の優先消費、再戦・終了・編成帰還の消去も検証した。
 
 左右両陣営・等速と4倍速の描画を `fx-check/` に保存。召喚、振り返り、そっぽ向き、収束、雨、衣の7・70・7000の濃さ、命中、消失を撮影した。GodotのCompatibility描画で確認した。
+
+走る演出への更新後の描画は `run-check/` に保存。左右・等速／4倍速で、出現位置、敵の所属と席の維持、途中の移動位置、雷の追従、敵陣への着地、途中中断時の消去を検証した。撮影時にはPNG保存の実時間が次の倍速アニメーションを飛ばさないよう、検証シーンの時間を一時停止する。走る差分の生成指示は `fodder-run-right-v1-prompt.md`。
+
+現行規定で上表の実戦台本・再戦を再確認し、各件数と最終HPは一致した。更新作業中、別作業のBattleCoreで一時的に `NoteBeastCall`／`BurstBeast` が未定義となり、描画確認は `-p:BuildProjectReferences=false` で最後にビルド済みのエンジンを参照して行った。その後、エンジン側の更新が揃って通常のDemoAppビルドも成功した（エラー0、BattleCoreの既存警告2件）。DemoApp単独ビルドは警告0・エラー0。
 
 実行コマンド：
 

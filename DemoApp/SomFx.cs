@@ -4,6 +4,7 @@ using System;
 // 魔法陣・光滴・衣の共通素材。白く塗り潰さず輪郭と薄布だけを重ねる。
 internal static class SomFx
 {
+    internal const double BeastRunSeconds = .62;
     internal static readonly Color Gold = new("ffedbd"), Violet = new("bc9de9"), Murky = new("b176c9");
     private static Texture2D? _circle, _light, _veil;
     internal static Texture2D Circle => _circle ??= UiKit.LoadTexture("res://assets/fx/som_circle.svg");
