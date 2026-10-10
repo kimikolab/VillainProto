@@ -1200,3 +1200,13 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **萎縮の規則の版**: `StunByShock` の痺れを付ける直前（半々の乱数の後）に、`_shockDauntLive` かつ痺れが入口で塞がれる駒（`UnitState.ControlBlockedAtEntry`・読むだけ）なら萎縮（`StatusKeys.Daunted`・二値）を付けて戻る。保持者がいれば `_dauntLive` も立てる（萎縮の消費）。
 - 表示専用: `BeastBurstLabels.Emergency`（「緊急」・`PartnerId` ＝ 危なかった味方）／ `Swarm`（「群れ」・`StatusRemaining` ＝ 群れの数）。`Spark 降る` の `TargetId` ＝ K-a の集まる先。
 - 計数のみ（ソムの帳簿）: `EmergNeed` ／ `EmergSpent` ／ `EmergHeld` ／ `EmergHushed` ／ `EmergBlocked` ／ `EmergFired` ／ `EmergFront` ／ `EmergBack` ／ `EmergFocusLights` ／ `EmergFocusHealed` ／ `EmergFocusVeil` ／ `SwarmHist` ／ `SwarmBeasts`、（痺れない駒の側）`ShockDaunted` ／ `ShockDauntAlready`。
+
+## 第313期 —— ドハの手番の版（背を押す ／ 上乗せを渡す ／ 罪の在り処・規定は動かさない）
+
+- 札 `SharePush`（DP-a）／ `SharePushPower`（DP-b・印）／ `ShareSin`（DP-c）。手番の本体は `SharePushTrait`（`OnAction` → 偽なら `PerformAttack`）。版は `UnitCatalog.DohaDPa` ／ `DohaDPb` ／ `DohaDPc`（規定の末尾に札・手番は術・`All` の外）。私有キー `sharePushTurn`（1ターン1回・`OnCarryOver` で 0）。
+- **窓**: `ApplyDamage` の分かちの帳簿の行（`shareFrom` が立つ一撃）で `AccruePush(ドハ, 痛みをくれた味方, 実額)`、敵から味方への一撃で `AccrueSin(味方, 敵, 実額)`。ドハ自身の手番の枠の中（`TurnActor == ドハ`）は入れない（`PushWinInTurn` に数える）。保持者がいなければ `_pushAccrue` の比較1つで抜ける。
+- **`BattleContext.SharePushTurn(doha)`**: ギフトの中（`_inGift`）・同じターンの2回目なら偽。窓で最多の味方（支援を拒む駒を除く・同額は攻撃力 → 席・乱数なし）に `_giftQueue` で手番を1回控える。DP-b は `PassPower`（`AtkBonus` の正の分を `Whet`・経路 `Share`、ドハは直叩きで素に戻す）。送り出された手番は `DrainGifts` の DH-t と同じ枝（`ShareGift || SharePush`）。
+- **`BattleContext.ShareSinTurn(doha)`**: 窓で味方に最も多く与えた敵（同額は席）に `LayerMark`（書き手はドハ）。標が変わらなければ `SinNoop`。
+- **計数器 `BattleContext.PushCensus`**（静的・既定は偽）: 立っていれば規定のドハ（`Sharer`）でも窓を数え、`TakeTurnCore` の素の振りの直前（`CensusPushWindow`）で「選んだはずの相手」を数えて閉じる。盤面は動かない。
+- 計数のみ: 巨躯の段で `NoteWallOnSharer`（ゴルムがドハへの一撃を飲んだ・中継かどうか）、`WhetCore` で `WhetGotRegurg`（吐き戻しで受け取った量）、分かちの帳簿で `ShareAllyOrigin`（肩代わりのうち味方由来）、`DrainGifts` で `ShareGiftDealt`（送り出された手番の与ダメ）、DP-c の標の敵への一撃 `SinMarkHits` ／ `SinMarkDealt`。
+- 表示専用: `ShareGiveLabels.Pass`「上乗せ」（種類は増やしていない）。並びは `design/PHASE291_CODEX_MEMO.md` §15。

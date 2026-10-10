@@ -7982,6 +7982,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Daunt)) _dauntLive = true;   // 第189期（萎縮の消費を短絡させる）
         if (u.HasTrait(TraitId.ShockDaunt)) { _shockDauntLive = true; _dauntLive = true; }   // 第311期（萎縮の規則の版）
         if (u.HasTrait(TraitId.SwarmCall)) _swarmLive = true;   // 第311期（群れ）
+        NotePushHolder(u);                                  // 第313期（背を押す ／ 罪の在り処の窓・計数器 `PushCensus`）
         if (u.HasTrait(TraitId.Numb)) _numbLive = true;     // 第195期（痺れ毒の減少を短絡させる）
         if (u.HasTrait(TraitId.Scrap)) _scrapHolders.Add(u); // 第207期（破片の減りを拾う口を短絡させる）
         if (u.HasTrait(TraitId.Thorns)) _thornsLive = true;
@@ -10117,16 +10118,19 @@ public sealed class BattleContext
             {
                 var (giver, to, ord) = _giftQueue.Dequeue();
                 // 第297期（DH-t）: ドハが控えた手番。口（キュー・再入の止め）だけを共有し、火の帳簿・火のギフトの手番（大技の条件）には数えない。
-                if (giver.HasTrait(TraitId.ShareGift))
+                // 第313期（DP-a ／ DP-b）: 背を押した手番も同じ枝（帳簿は DH-t と共有・送り出された手番の与ダメを足した）。
+                if (giver.HasTrait(TraitId.ShareGift) || giver.HasTrait(TraitId.SharePush))
                 {
                     if (!to.IsAlive) { TallyOf(giver).ShareGiftSkipped++; continue; }
                     if (!TeamAlive(Opponent(to.TeamId))) { TallyOf(giver).ShareGiftSkipped += 1 + _giftQueue.Count; _giftQueue.Clear(); break; }
                     if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.ShareGive, Turn = _turn, ActorId = giver.InstanceId, TargetId = to.InstanceId, Amount = 0, Slot = 1, Text = ShareGiveLabels.GiftTurn, Team = to.TeamId });
                     Log($"  {to.Name} は {giver.Name} に背を押されて動く", LogKind.Highlight, to);
+                    long sd0 = TallyOf(to).DamageToEnemy;
                     TurnOutcome so = TakeTurn(to);
                     UnitTally gt = TallyOf(to);
                     gt.ShareGiftTurns++;
                     if (so == TurnOutcome.Attack) gt.ShareGiftAttacks++;
+                    gt.ShareGiftDealt += gt.DamageToEnemy - sd0;   // 第313期（計数のみ）
                     continue;
                 }
                 if (!to.IsAlive) { FireBook.GiftTurnsSkipped++; continue; }
@@ -12130,6 +12134,7 @@ public sealed class BattleContext
                     amount -= blocked;
                     Log($"    {wall.Name} が {target.Name} の前に立ちはだかる", LogKind.Trigger);
                     NoteGuardPick(GuardKind.Colossus, wall, target);   // 第120期・§2-5 の材料
+                    if (target.HasTrait(TraitId.Sharer)) NoteWallOnSharer(wall, blocked, shareFrom is not null);   // 第313期 Phase 0（**計数のみ**・ゴルムがドハへの一撃を飲んだ）
 
                     // 腹（第36期）。**吐き戻しと同じ場所・同じ量を積む**ので、
                     // 「返した先の増分」と「腹に溜まった量」が定義上ずれない。
@@ -12602,6 +12607,14 @@ public sealed class BattleContext
         if (relayed) TallyOf(target).Shouldered += amount;
         // 第297期（**計数のみ**）: 分かちが引き受けた実額を、痛みをくれた相手の側に（相手ごとの内訳）。
         if (shareFrom is not null) { TallyOf(shareFrom).SharedAway += amount; TallyOf(target).ShareTakenHits++; }
+        // 第313期（**計数のみ**）: 肩代わりした痛みのうち、元の一撃が味方由来だった分（ドハの側）。
+        if (shareFrom is not null && source is not null && source.TeamId == target.TeamId) TallyOf(target).ShareAllyOrigin += amount;
+        // 第313期: 背を押すの窓（ドハ → 痛みをくれた味方 → 実額）・罪の在り処の窓（味方に与えた敵 → 実額）。**保持者がいなければ比較1つで抜ける。**
+        if (_pushAccrue)
+        {
+            if (shareFrom is not null) AccruePush(target, shareFrom, amount);
+            if (source is not null && source.TeamId != target.TeamId && amount > 0) AccrueSin(target, source, amount);
+        }
         // 第179期。**味方が味方から受けたダメージを灰として溜める**（拾い屋のスス）。
         // **HP を引いた直後・死亡判定より手前**——実額で溜め、最後の一撃も落とさない。
         // 保持者が盤上にいなければ `AshBinding` の比較1つで抜ける。
@@ -12676,6 +12689,12 @@ public sealed class BattleContext
         NoteCarry(target, UnitTally.CarryHit, 1);
         // 第150期 段A。標が立っている駒への一撃（**計数専用**。継続ダメージは source が null なので外れる）。
         NoteMarkHit(target, source);
+        // 第313期（**計数のみ**）: DP-c が標を付けた敵への一撃（中継・刻み・徴収は除く）。標が消えていたら帳簿から外す。
+        if (_sinMarked.Count > 0 && source is not null && source.TeamId != target.TeamId && !relayed && !burnTick && !levy && _sinMarked.Contains(target.InstanceId))
+        {
+            if (target.RawCounter(StatusKeys.Marked) > 0) { UnitTally sm = TallyOf(source); sm.SinMarkHits++; sm.SinMarkDealt += amount; }
+            else _sinMarked.Remove(target.InstanceId);
+        }
         if (source is not null && (isFriendlyFire || source.TeamId == target.TeamId))
             tt.TakenFromAlly += amount;
         // 第300期（**計数のみ**）: ミサの羽（羽の保持者が出どころ・同じ陣営・徴収 ／ 中継は除く）で受けた実額。矢面の味方（ヒサの標を持つ）かどうかで分ける。羽の保持者がいなければ比較1つで抜ける。
@@ -13123,6 +13142,8 @@ public sealed class BattleContext
 
         if (act is null)
         {
+            // 第313期 Phase 0（**計数のみ**・計数器 `PushCensus` が立っている戦だけ）: 規定のドハの手番の頭で、背を押すなら誰を選んだかを数えて窓を閉じる。
+            if (_pushAccrue && !_inGift && actor.HasTrait(TraitId.Sharer) && !IsPushHolder(actor)) CensusPushWindow(actor);
             SwingTurn(actor, null);   // 従来経路。Actions を持たない駒はここしか通らない
             if (DeepWatch) NoteDeepAction(actor);    // 第93期 §2-3: 実際に行動した直後
             return TurnOutcome.Attack;
@@ -14259,6 +14280,180 @@ public sealed class BattleContext
         if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.ShareGive, Turn = _turn, ActorId = doha.InstanceId, TargetId = to.InstanceId, Amount = every, Slot = 0, Text = ShareGiveLabels.Gift, Team = to.TeamId });
     }
 
+    // ---- 第313期 —— 背を押す ／ 罪の在り処（ドハの版 DP-a `SharePush` ／ DP-b `SharePushPower` ／ DP-c `ShareSin`・指示書 design/PHASE313_DOHA_PUSH_SPEC.md §2）。
+    // 窓 ＝ ドハの前の手番の終わりから今の手番の頭まで。帳簿はドハごと（ドハ → 相手 → 実額）で、**ドハ自身の手番の枠の中（`TurnActor == ドハ`）の量は数えない**。
+    // 窓を閉じるのは、窓を読んだ手番（背を押した ／ 肩代わり 0 で殴った ／ 標を付けた）だけ——ギフトの手番・上限で止まった手番では閉じない。
+    // **保持者がいなければ `_pushAccrue` の比較1つで全部抜ける。乱数を引かない。**
+    // 計数器 `PushCensus`（既定は偽）が立っていれば、規定のドハ（`Sharer`）でも窓を数え、手番の頭で「選んだはずの相手」を数えて閉じる（盤面は1ビットも動かさない）。
+    bool _pushAccrue;
+    readonly List<UnitState> _pushHolders = new();
+    readonly Dictionary<int, Dictionary<int, int>> _pushWin = new();   // ドハ → 痛みをくれた味方 → 肩代わりの実額
+    readonly Dictionary<int, Dictionary<int, int>> _sinWin = new();    // ドハ → 味方（ドハを含む）に与えた敵 → 実額
+    readonly HashSet<int> _sinMarked = new();                         // DP-c が標を付けた敵（**計数のみ**）
+
+    /// <summary>
+    /// 第313期の計数器（診断が測る前に立てる・<b>既定は偽</b>）。立っていれば規定のドハ（<see cref="TraitId.Sharer"/>）でも背を押すの窓と罪の在り処の窓を数える。
+    /// 読むのは帳簿（<see cref="UnitTally.PushTurns"/> ほか）だけで、<b>盤面は1ビットも動かさない</b>（`compare` 差分ゼロ）。
+    /// </summary>
+    public static bool PushCensus { get; set; }
+
+    static bool IsPushHolder(UnitState u) => u.HasTrait(TraitId.SharePush) || u.HasTrait(TraitId.ShareSin);
+
+    void NotePushHolder(UnitState u)
+    {
+        if (!IsPushHolder(u) && !(PushCensus && u.HasTrait(TraitId.Sharer))) return;
+        _pushAccrue = true;
+        _pushHolders.Add(u);
+    }
+
+    /// <summary>ドハ <paramref name="doha"/> が <paramref name="from"/> の痛みを <paramref name="amount"/> 肩代わりした（`ApplyDamage` の中継の段から）。</summary>
+    void AccruePush(UnitState doha, UnitState from, int amount)
+    {
+        if (amount <= 0 || !_pushHolders.Contains(doha) || doha.HasTrait(TraitId.ShareSin)) return;
+        if (TurnActor == doha) { TallyOf(doha).PushWinInTurn += amount; return; }
+        if (!_pushWin.TryGetValue(doha.InstanceId, out var w)) _pushWin[doha.InstanceId] = w = new Dictionary<int, int>();
+        w[from.InstanceId] = w.GetValueOrDefault(from.InstanceId) + amount;
+    }
+
+    /// <summary>敵 <paramref name="source"/> が味方 <paramref name="target"/> に <paramref name="amount"/> を与えた。同じ陣営の罪の在り処の保持者（と計数器のドハ）の窓に足す。</summary>
+    void AccrueSin(UnitState target, UnitState source, int amount)
+    {
+        foreach (UnitState h in _pushHolders)
+        {
+            if (h.TeamId != target.TeamId || !h.IsAlive || h.HasTrait(TraitId.SharePush) || TurnActor == h) continue;
+            if (!_sinWin.TryGetValue(h.InstanceId, out var w)) _sinWin[h.InstanceId] = w = new Dictionary<int, int>();
+            w[source.InstanceId] = w.GetValueOrDefault(source.InstanceId) + amount;
+        }
+    }
+
+    /// <summary>
+    /// 窓で肩代わりが最も多かった味方（ドハを除く・生きている・支援を拒む駒を除く）。同じ額なら攻撃力の高い方、さらに同じなら席の若い方。<b>乱数を引かない。</b>
+    /// 窓は読んだら閉じる（呼び出し側が閉じてよいときだけ呼ぶ）。
+    /// </summary>
+    UnitState? PushPick(UnitState doha, out int amt, out long total, out bool tie)
+    {
+        amt = 0; total = 0; tie = false;
+        if (!_pushWin.TryGetValue(doha.InstanceId, out var w) || w.Count == 0) return null;
+        UnitState? best = null;
+        foreach (UnitState u in LivingMembers(doha.TeamId))
+        {
+            if (u == doha || !u.AcceptsSupport) continue;
+            int a = w.GetValueOrDefault(u.InstanceId);
+            if (a <= 0) continue;
+            total += a;
+            if (best is null || a > amt) { best = u; amt = a; tie = false; continue; }
+            if (a < amt) continue;
+            tie = true;
+            if (u.CurrentAttack > best.CurrentAttack || (u.CurrentAttack == best.CurrentAttack && u.Slot < best.Slot)) best = u;
+        }
+        w.Clear();
+        return best;
+    }
+
+    /// <summary>窓で味方に最も多く与えた敵（生きている）。同じ額なら席の若い方。<b>乱数を引かない。</b> 窓は読んだら閉じる。</summary>
+    UnitState? SinPick(UnitState doha, out int amt, out bool tie)
+    {
+        amt = 0; tie = false;
+        if (!_sinWin.TryGetValue(doha.InstanceId, out var w) || w.Count == 0) return null;
+        UnitState? best = null;
+        foreach (UnitState u in LivingMembers(Opponent(doha.TeamId)))
+        {
+            int a = w.GetValueOrDefault(u.InstanceId);
+            if (a <= 0) continue;
+            if (best is null || a > amt) { best = u; amt = a; tie = false; continue; }
+            if (a < amt) continue;
+            tie = true;
+            if (u.Slot < best.Slot) best = u;
+        }
+        w.Clear();
+        return best;
+    }
+
+    /// <summary>
+    /// 背を押す（DP-a ／ DP-b・<see cref="SharePushTrait"/> の手番から）。窓で肩代わりが最も多かった味方に手番を1回控える（<c>_giftQueue</c>・手番はドハの <c>TakeTurn</c> が返った後）。
+    /// 偽を返したら呼び出し側が殴る: ギフトの手番の中（連鎖させない）／ このターン既に押した ／ 窓の肩代わりが 0。
+    /// </summary>
+    public bool SharePushTurn(UnitState doha)
+    {
+        UnitTally dt = TallyOf(doha);
+        if (_inGift) { dt.PushInGift++; return false; }
+        if (doha.RawCounter(SharePushTrait.PushTurnKey) == _turn + 1) { dt.PushCapped++; return false; }
+        dt.PushTurns++;
+        UnitState? to = PushPick(doha, out int amt, out long total, out bool tie);
+        if (to is null) { dt.PushZero++; return false; }
+        dt.Pushes++; dt.PushShoulder += amt; dt.PushWindow += total;
+        if (tie) dt.PushTies++;
+        TallyOf(to).PushGot++;
+        doha.SetCounter(SharePushTrait.PushTurnKey, _turn + 1);
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.ShareGive, Turn = _turn, ActorId = doha.InstanceId, TargetId = to.InstanceId, Amount = amt, Slot = 0, Text = ShareGiveLabels.Gift, Team = to.TeamId });
+        Log($"    {doha.Name} が、いちばん痛みを引き受けた {to.Name} の背を押す（肩代わり {amt}）", LogKind.Highlight, doha);
+        if (doha.HasTrait(TraitId.SharePushPower)) PassPower(doha, to);
+        _giftQueue.Enqueue((doha, to, 1));
+        return true;
+    }
+
+    /// <summary>DP-b: ドハの攻撃力の上乗せ（<c>AtkBonus</c> の正の分）をすべて <paramref name="to"/> に移す（<see cref="Whet"/>・経路 <see cref="WhetRoute.Share"/>）。ドハは素の攻撃力に戻る（持ち替え＝直叩き）。</summary>
+    void PassPower(UnitState doha, UnitState to)
+    {
+        UnitTally dt = TallyOf(doha);
+        int surplus = doha.AtkBonus;
+        if (surplus <= 0) { dt.PushPassNone++; return; }
+        doha.AtkBonus -= surplus;
+        int before = to.AtkBonus;
+        TraitMark m = BeginTrait(TraitId.SharePushPower, doha);
+        Whet(to, surplus, WhetRoute.Share);
+        EndTrait(m);
+        dt.PushPasses++; dt.PushPassed += surplus;
+        if (to.CurrentAttack > dt.PushPassPeak) dt.PushPassPeak = to.CurrentAttack;
+        TallyOf(to).PushPassGot += surplus;
+        Log($"    {doha.Name} が宿った力を {to.Name} に渡した（攻撃 +{surplus} → {to.CurrentAttack}）", LogKind.Trigger);
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.ShareGive, Turn = _turn, ActorId = doha.InstanceId, TargetId = to.InstanceId, Amount = surplus, Slot = to.AtkBonus - before, Text = ShareGiveLabels.Pass, Team = to.TeamId });
+    }
+
+    /// <summary>
+    /// 罪の在り処（DP-c・<see cref="SharePushTrait"/> の手番から）。窓で味方に最も多く与えた敵に標を1層（<see cref="LayerMark"/>・書き手はドハ）。
+    /// 偽を返したら呼び出し側が殴る（窓の量が 0）。
+    /// </summary>
+    public bool ShareSinTurn(UnitState doha)
+    {
+        UnitTally dt = TallyOf(doha);
+        dt.SinTurns++;
+        UnitState? foe = SinPick(doha, out int amt, out bool tie);
+        if (foe is null) { dt.SinZero++; return false; }
+        if (tie) dt.SinTies++;
+        int before = foe.RawCounter(StatusKeys.Marked);
+        LayerMark(foe, doha);
+        int after = foe.RawCounter(StatusKeys.Marked);
+        if (before <= 0) { dt.SinFresh++; EmitStatusGain(foe, StatusKeys.Marked, 1, doha); }
+        else if (after > before) dt.SinLayer++;
+        else dt.SinNoop++;
+        _sinMarked.Add(foe.InstanceId);
+        Log($"    {doha.Name} が、仲間をいちばん傷つけた {foe.Name} を指差した（{amt}・標 {after}）", LogKind.Trigger, doha);
+        return true;
+    }
+
+    /// <summary>計数器（<see cref="PushCensus"/>）: 規定のドハの手番の頭で、背を押すなら選んだはずの相手 ／ 罪の在り処なら選んだはずの敵を数えて、窓を閉じる。<b>盤面は1ビットも動かさない。</b></summary>
+    void CensusPushWindow(UnitState doha)
+    {
+        UnitTally dt = TallyOf(doha);
+        dt.PushTurns++;
+        UnitState? to = PushPick(doha, out int amt, out long total, out bool tie);
+        if (to is null) dt.PushZero++;
+        else { dt.Pushes++; dt.PushShoulder += amt; dt.PushWindow += total; if (tie) dt.PushTies++; TallyOf(to).PushGot++; }
+        dt.SinTurns++;
+        UnitState? foe = SinPick(doha, out _, out bool stie);
+        if (foe is null) dt.SinZero++;
+        else if (stie) dt.SinTies++;
+    }
+
+    /// <summary>第313期 Phase 0（<b>計数のみ</b>）: 巨躯 <paramref name="wall"/> が分かちの持ち主への一撃を <paramref name="blocked"/> 飲んだ。<paramref name="relay"/> はその一撃がドハの肩代わりの中継だったか。</summary>
+    void NoteWallOnSharer(UnitState wall, int blocked, bool relay)
+    {
+        UnitTally t = TallyOf(wall);
+        t.WallOnSharer++; t.WallOnSharerAmt += blocked;
+        if (relay) { t.WallOnSharerRelay++; t.WallOnSharerRelayAmt += blocked; }
+    }
+
     /// <summary>膜で新しく帯電させた数（<see cref="StaticMembraneTrait"/> だけが呼ぶ・<b>計数のみ</b>）。</summary>
     public void NoteMembraneSpread(UnitState som, int n) => TallyOf(som).MembraneSpread += n;
 
@@ -15151,6 +15346,7 @@ public sealed class BattleContext
 
         UnitTally rt = TallyOf(receiver);
         rt.Whetted += amount;
+        if (route == WhetRoute.Regurgitate) rt.WhetGotRegurg += amount;   // 第313期 Phase 0（**計数のみ**・吐き戻しで受け取った量）
         // 火選り（第58期）の受け手の内訳。強化側にはまだ横取りが無いので receiver == target だが、
         // 立ち位置は Dull と揃えてある（横取りができたらそのまま正しく数える）。
         if (route == WhetRoute.Favor) NoteFavorReceiver(receiver, amount, whet: true);

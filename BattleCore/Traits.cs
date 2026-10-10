@@ -752,6 +752,11 @@ public enum TraitId
     SwarmCall,         // 群れ: 手番の頭の喚び出しで、1 ＋（前のターンにソムの敵の側で弾けた数 ÷ 3）体（上限 5）を一斉に弾けさせる（**札そのものは挙動を持たない**・`BetrayedTrait.Call` と engine の `SwarmCount` が読む）
     ShockDaunt,        // 萎縮の規則の版: 痺れが付かない駒（動じない など）は、感電の弾けで痺れの判定に当たったとき、痺れる代わりに萎縮する（二値）。保持者が戦にいれば両陣営に（**札そのものは挙動を持たない**・engine の `StunByShock`）
 
+    // --- 第313期で足した札（ドハの版 `UnitCatalog.DohaDPa` ／ `DohaDPb` ／ `DohaDPc` だけが持つ。手番は術 `Actions = [Skill]`・条件を満たさない手番は殴る） ---
+    SharePush,         // 背を押す（DP-a）: 手番で、前の手番の終わりから今の手番の頭までに肩代わりが最も多かった味方（ドハを除く）に手番を1回控える（口は engine の `_giftQueue`・1手番1回・送り出された手番の中ではもう押さない）。肩代わり 0 なら殴る（`SharePushTrait`）
+    SharePushPower,    // 上乗せを渡す（DP-b）: 背を押すとき、ドハの攻撃力の上乗せ（`AtkBonus` の正の分）をすべてその味方に移し、ドハは素の攻撃力に戻る（`Whet`・経路 `Share`）（**札そのものは挙動を持たない**・`SharePush` と組む）
+    ShareSin,          // 罪の在り処（DP-c・対照）: 手番で、同じ窓に味方（ドハを含む）へ最も多くダメージを与えた敵に標を1層（書き手はドハ・口は `LayerMark`）。0 なら殴る（`SharePushTrait`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -8898,6 +8903,30 @@ public sealed class AshTrait : Trait
     /// <b>捨てるのは周期のカウンタだけ</b>（私有のキーは境界の掃除を通らない）。
     /// </summary>
     public override void OnCarryOver(UnitState self) => self.SetCounter(CycleKey, 0);
+}
+
+/// <summary>
+/// 背を押す ／ 罪の在り処（第313期・ドハの版 DP-a ／ DP-b ／ DP-c・指示書 design/PHASE313_DOHA_PUSH_SPEC.md §2）。手番は術（<c>Actions = [Skill]</c>）。
+/// 窓（前の手番の終わりから今の手番の頭まで）の帳簿と相手選びは engine（<see cref="BattleContext.SharePushTurn"/> ／ <see cref="BattleContext.ShareSinTurn"/>）。
+/// 条件を満たさない手番は <c>PerformAttack</c> を直に呼んで殴る（第307期のソム SH-b と同じ作法）。<b>乱数を引かない。</b>
+/// </summary>
+public sealed class SharePushTrait : Trait
+{
+    /// <summary>最後に背を押したターン（<c>_turn + 1</c>。0 は「まだ」）。私有（<c>StatusKeys.All</c> に入れない・<see cref="OnCarryOver"/> で 0）。</summary>
+    public const string PushTurnKey = "sharePushTurn";
+
+    readonly TraitId _id;
+    public SharePushTrait(TraitId id) => _id = id;
+    public override TraitId Id => _id;
+
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (!self.IsAlive) return;
+        bool acted = _id == TraitId.SharePush ? ctx.SharePushTurn(self) : ctx.ShareSinTurn(self);
+        if (!acted) ctx.PerformAttack(self, "    ");
+    }
+
+    public override void OnCarryOver(UnitState self) { if (self.RawCounter(PushTurnKey) != 0) self.SetCounter(PushTurnKey, 0); }
 }
 
 public sealed class SharerTrait : Trait
@@ -17310,6 +17339,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.EmergencyFocus),            // 第311期（K-a・印だけ）
         new SwarmCallTrait(),                                 // 第311期（群れ・印 ＋ 持ち越しの掃除）
         new MarkOnlyTrait(TraitId.ShockDaunt),                // 第311期（萎縮の規則の版・印だけ）
+        new SharePushTrait(TraitId.SharePush),                // 第313期（ドハ DP-a ／ DP-b の手番）
+        new MarkOnlyTrait(TraitId.SharePushPower),            // 第313期（DP-b・印だけ）
+        new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

@@ -390,7 +390,7 @@ seed 0..199 の 200 試行（`compare` と同じ帯）。**盤面は1ビット�
 
 ## 1. `StatusKeys.All` × 「付いた瞬間」の窓口（`StatusGain`）
 
-`StatusKeys.All` 25 キー ／ `EmitStatusGain` の呼び出し元 14 箇所（うち `StatusKeys.*` でないもの 1 件）。
+`StatusKeys.All` 25 キー ／ `EmitStatusGain` の呼び出し元 15 箇所（うち `StatusKeys.*` でないもの 1 件）。
 
 | キー | 表示名 | 付いた瞬間（`StatusGain`） | 専用の種類 | 残量（`StatusSnapshot`） |
 |---|---|:-:|:-:|:-:|
@@ -428,7 +428,7 @@ seed 0..199 の 200 試行（`compare` と同じ帯）。**盤面は1ビット�
 
 ## 1-b. 出来事の種類 × 「誰がやったか」（`ActorId`）
 
-`BattleEventKind` 92 種 ／ `BattleEngine.cs` の初期化子 125 箇所。
+`BattleEventKind` 92 種 ／ `BattleEngine.cs` の初期化子 127 箇所。
 
 | 種類 | `ActorId` | 意味 |
 |---|:-:|---|

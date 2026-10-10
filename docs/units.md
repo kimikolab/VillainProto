@@ -504,6 +504,9 @@
 | `EmergencyFocus` | 背かれのソム |
 | `SwarmCall` | 背かれのソム |
 | `ShockDaunt` | 痺れ粉のトウ、禍導のカタ |
+| `SharePush` | - |
+| `SharePushPower` | - |
+| `ShareSin` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

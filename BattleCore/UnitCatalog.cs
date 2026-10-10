@@ -1825,6 +1825,62 @@ public static class UnitCatalog
         Flavor = DohaD0.Flavor
     };
 
+    // 第313期（指示書 design/PHASE313_DOHA_PUSH_SPEC.md §2）—— ドハの版。規定のドハ（DH-a ＋ なまりなし）の上に、手番の札を足すだけ（肩代わり 4 割・痛み ÷ 2 の返しはそのまま）。
+    // 手番は術（`Actions = [Skill]`）。条件を満たさない手番は殴る。規定のドハは動かしていない（採否はポン）。
+    static readonly UnitAction[] DohaPushActions = { new(ActionKind.Skill, Label: "仲間の背中を見た") };
+    const string DohaPushText = "。手番で、いちばん痛みを肩代わりした仲間の背を押し、もう一度動かす（肩代わりが無ければ殴る）";
+
+    /// <summary>第313期 DP-a（背を押す）。規定 ＋ <see cref="TraitId.SharePush"/>。対照（<see cref="All"/> に入れない）。</summary>
+    public static readonly UnitDef DohaDPa = new()
+    {
+        Id = Doha.Id,
+        Name = Doha.Name,
+        MaxHp = Doha.MaxHp,
+        Attack = Doha.Attack,
+        Speed = Doha.Speed,
+        Advances = Doha.Advances,
+        Pattern = Doha.Pattern,
+        Traits = Doha.Traits.Append(TraitId.SharePush).ToArray(),
+        Actions = DohaPushActions,
+        PlusText = Doha.PlusText + DohaPushText,
+        MinusText = Doha.MinusText,
+        Flavor = Doha.Flavor
+    };
+
+    /// <summary>第313期 DP-b（背を押す ＋ 上乗せを渡す）。DP-a ＋ <see cref="TraitId.SharePushPower"/>（背を押すとき、ドハの攻撃力の上乗せをすべてその仲間に移し、ドハは素の攻撃力に戻る）。対照。</summary>
+    public static readonly UnitDef DohaDPb = new()
+    {
+        Id = Doha.Id,
+        Name = Doha.Name,
+        MaxHp = Doha.MaxHp,
+        Attack = Doha.Attack,
+        Speed = Doha.Speed,
+        Advances = Doha.Advances,
+        Pattern = Doha.Pattern,
+        Traits = Doha.Traits.Append(TraitId.SharePush).Append(TraitId.SharePushPower).ToArray(),
+        Actions = DohaPushActions,
+        PlusText = Doha.PlusText + DohaPushText + "。自分に宿った力も、その仲間に渡す",
+        MinusText = Doha.MinusText,
+        Flavor = Doha.Flavor
+    };
+
+    /// <summary>第313期 DP-c（罪の在り処・対照）。規定 ＋ <see cref="TraitId.ShareSin"/>（手番で、仲間をいちばん傷つけた敵に標を1層・0 なら殴る）。対照。</summary>
+    public static readonly UnitDef DohaDPc = new()
+    {
+        Id = Doha.Id,
+        Name = Doha.Name,
+        MaxHp = Doha.MaxHp,
+        Attack = Doha.Attack,
+        Speed = Doha.Speed,
+        Advances = Doha.Advances,
+        Pattern = Doha.Pattern,
+        Traits = Doha.Traits.Append(TraitId.ShareSin).ToArray(),
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "仲間の傷を数えた") },
+        PlusText = Doha.PlusText + "。手番で、仲間をいちばん傷つけた敵を指差して標を付ける（誰も傷ついていなければ殴る）",
+        MinusText = Doha.MinusText,
+        Flavor = Doha.Flavor
+    };
+
     // 第143期に転生させた。旧「散開のササ」（HP58・`TraitId.Loose` ＝ 隣が空いた駒の被ダメ −35%
     // ＋ 被弾で隣を弾く）は `compare` 61 行のうち**在席1行**で、
     // **弾きの受け皿（移動軸）が無い編成では −35% しか働いていなかった**。

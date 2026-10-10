@@ -2189,6 +2189,21 @@ public sealed class UnitTally
     public long SharedAway, ShareTakenHits, ShareGives, ShareGiven, ShareGiftAccrued, ShareGifts, ShareGiftCapped, ShareGiftNoTarget, ShareGiftSkipped,
                 ShareGot, ShareGiftGot, ShareGiftTurns, ShareGiftAttacks;
     /// <summary>
+    /// 第313期（<b>計数専用</b>・ドハの版 DP-a ／ DP-b ／ DP-c と Phase 0）。誰も読んで分岐しない。
+    /// ドハ ＝ <c>PushTurns</c> 窓を読んだ手番 ／ <c>Pushes</c> 背を押した ／ <c>PushZero</c> 窓の肩代わりが 0（殴った）／ <c>PushInGift</c> ギフトの手番の中（殴った）／
+    /// <c>PushCapped</c> このターン既に押した（殴った）／ <c>PushTies</c> 最多が同額 ／ <c>PushShoulder</c> 選んだ相手の窓の量の和 ／ <c>PushWindow</c> 窓の量の総和（押した手番）／
+    /// <c>PushWinInTurn</c> ドハ自身の手番の中の肩代わり（窓に入れない）／ <c>PushPasses</c>・<c>PushPassed</c> 上乗せを渡した回数・量（DP-b）／ <c>PushPassNone</c> 渡す上乗せが無かった ／
+    /// <c>PushPassPeak</c> 渡した直後の受け手の攻撃力の最大 ／ <c>SinTurns</c>・<c>SinZero</c>・<c>SinTies</c>・<c>SinFresh</c>・<c>SinLayer</c>・<c>SinNoop</c> 罪の在り処（DP-c）の手番・0・同額・新しい標・層・変化なし ／
+    /// <c>ShareAllyOrigin</c> 肩代わりのうち元の一撃が味方由来だった実額。
+    /// 受け手 ＝ <c>PushGot</c> 背を押された（計数器では「選ばれたはず」）／ <c>PushPassGot</c> 渡された上乗せ ／ <c>ShareGiftDealt</c> 控えられた手番の敵への与ダメ。
+    /// 攻め手 ＝ <c>SinMarkHits</c>・<c>SinMarkDealt</c> DP-c が標を付けた敵への一撃（標が残っている間）。
+    /// 巨躯 ＝ <c>WallOnSharer</c>・<c>WallOnSharerAmt</c> 分かちの持ち主への一撃を飲んだ回数・量 ／ うち <c>WallOnSharerRelay</c>・<c>WallOnSharerRelayAmt</c> その一撃がドハの肩代わりの中継だった分。
+    /// 全員 ＝ <c>WhetGotRegurg</c> 吐き戻しで受け取った攻撃力。
+    /// </summary>
+    public long PushTurns, Pushes, PushZero, PushInGift, PushCapped, PushTies, PushShoulder, PushWindow, PushWinInTurn, PushPasses, PushPassed, PushPassNone, PushPassPeak,
+                SinTurns, SinZero, SinTies, SinFresh, SinLayer, SinNoop, ShareAllyOrigin, PushGot, PushPassGot, ShareGiftDealt, SinMarkHits, SinMarkDealt,
+                WallOnSharer, WallOnSharerAmt, WallOnSharerRelay, WallOnSharerRelayAmt, WhetGotRegurg;
+    /// <summary>
     /// 第298期 段0-2（<b>計数専用</b>・戦績の帰属のずれ 8 群）。群 g（1 反転 ／ 2 火の変換 ／ 3 癒しの灯 ／ 4 火の癒し ／ 5 耐火の枝 ／ 6 分かちのなまり ／ 7 橋 ／ 8 くべられる火）ごとに、
     /// 本当の出どころの側: <c>AttrTotal</c>[g] 出した量 ／ <c>AttrFixed</c>[g] そのうち包む前の印が別の駒か誰でもないを指していた量 ／ <c>AttrFromNone</c>[g] うち誰でもない。
     /// 印が指していた駒の側: <c>AttrStolen</c>[g]（直す前に、その駒の戦績に入っていた量）。量は回復なら回復(与) の増分、なまり ／ くべられる火は攻撃力、橋は HP ＋ 破片の増分。
@@ -3318,6 +3333,11 @@ public sealed class UnitTally
         SharedAway += o.SharedAway; ShareTakenHits += o.ShareTakenHits; ShareGives += o.ShareGives; ShareGiven += o.ShareGiven; ShareGiftAccrued += o.ShareGiftAccrued;   // 第297期
         ShareGifts += o.ShareGifts; ShareGiftCapped += o.ShareGiftCapped; ShareGiftNoTarget += o.ShareGiftNoTarget; ShareGiftSkipped += o.ShareGiftSkipped;
         ShareGot += o.ShareGot; ShareGiftGot += o.ShareGiftGot; ShareGiftTurns += o.ShareGiftTurns; ShareGiftAttacks += o.ShareGiftAttacks;
+        PushTurns += o.PushTurns; Pushes += o.Pushes; PushZero += o.PushZero; PushInGift += o.PushInGift; PushCapped += o.PushCapped; PushTies += o.PushTies;   // 第313期
+        PushShoulder += o.PushShoulder; PushWindow += o.PushWindow; PushWinInTurn += o.PushWinInTurn; PushPasses += o.PushPasses; PushPassed += o.PushPassed; PushPassNone += o.PushPassNone;
+        PushPassPeak = Math.Max(PushPassPeak, o.PushPassPeak); SinTurns += o.SinTurns; SinZero += o.SinZero; SinTies += o.SinTies; SinFresh += o.SinFresh; SinLayer += o.SinLayer; SinNoop += o.SinNoop;
+        ShareAllyOrigin += o.ShareAllyOrigin; PushGot += o.PushGot; PushPassGot += o.PushPassGot; ShareGiftDealt += o.ShareGiftDealt; SinMarkHits += o.SinMarkHits; SinMarkDealt += o.SinMarkDealt;
+        WallOnSharer += o.WallOnSharer; WallOnSharerAmt += o.WallOnSharerAmt; WallOnSharerRelay += o.WallOnSharerRelay; WallOnSharerRelayAmt += o.WallOnSharerRelayAmt; WhetGotRegurg += o.WhetGotRegurg;
         AddHist(ref AttrTotal, o.AttrTotal); AddHist(ref AttrFixed, o.AttrFixed); AddHist(ref AttrFromNone, o.AttrFromNone); AddHist(ref AttrStolen, o.AttrStolen);   // 第298期
         MfQueuedFresh += o.MfQueuedFresh; MfQueuedLayer += o.MfQueuedLayer; MfShotsFoe += o.MfShotsFoe; MfShotsAlly += o.MfShotsAlly; MfDealtFoe += o.MfDealtFoe; MfDealtAlly += o.MfDealtAlly;
         MfAllyKills += o.MfAllyKills; MfFresh += o.MfFresh; MfLayer += o.MfLayer; MfChainSkipped += o.MfChainSkipped; MfDropped += o.MfDropped; MfHushed += o.MfHushed; MfBlocked += o.MfBlocked;
@@ -4175,6 +4195,8 @@ public static class ShareGiveLabels
     public const string Power = "力";
     public const string Gift = "手番";
     public const string GiftTurn = "手番の頭";
+    /// <summary>第313期（DP-b・版のみ）: 背を押すときにドハの攻撃力の上乗せを渡した（<c>Amount</c> ＝ 渡した量・<c>Slot</c> ＝ 受け手の <c>AtkBonus</c> の実際の増分）。</summary>
+    public const string Pass = "上乗せ";
 }
 
 /// <summary>クグの網の札（第293期・<see cref="BattleEventKind.Web"/> の <c>Text</c>）。<b>表示専用。</b></summary>

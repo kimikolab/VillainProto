@@ -1046,6 +1046,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 som312 find        # 第312期 ベニ対策で集めなかった連鎖のある seed（台本の例を探す）
     dotnet run --project BattleSim -c Release 0 som312 memo <台の一部|火の型> <boss|guard|bat|nine|nine2|1..5> <seed> <最初のT> <最後のT>   # 第312期 台本の抜粋（`PHASE291_CODEX_MEMO.md` §14-8 ／ §14-9）
     dotnet run --project BattleSim -c Release 0 som312 check       # 第312期 自己検査（規定のソム ／ カタ ／ トウ ＝ 第311期の重ね・ベニ対策を盤で直に・実戦・試遊の2台・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 doha313 p0          # 第313期 Phase 0: 規定のドハで計数器 `PushCensus` を立てて、守り型 ／ 雷の型 × 8 波（ゴルムとドハの重なり・ドハの攻撃力の T2 と最大・ドハの手番・窓の肩代わりの分布・味方由来の割合）（1 秒）。本体は `Modes/Doha313.cs`
+    dotnet run --project BattleSim -c Release 0 doha313 boards [seeds]   # 第313期 §4-2: 代表台 10 台 × 8 波 × 版（規定 ／ DP-a ／ DP-b ／ DP-c ／ ドルガ）・背を押した相手 ／ 上乗せ ／ 標の一撃・格子の門（7 秒）。**予測のファイル `.tmp/p313/predict.md` が無ければ走らない**
+    dotnet run --project BattleSim -c Release 0 doha313 compare     # 第313期 §4-3: `compare` 64 行 × 版・(G2)（17 秒・同上）
+    dotnet run --project BattleSim -c Release 0 doha313 grid <guard|boss> <a|b|c> [席=6] [seed=10]   # 第313期 §4-4: 第297期の「ドハが要る台」の格子（基準は規定のドハ・アタッカー ミサ ／ ザン ／ カタ ／ シガ）。第313期は門に届かず回していない
+    dotnet run --project BattleSim -c Release 0 doha313 memo <台の一部> <boss|guard|bat|1..5> <seed> <規定|a|b|c>   # 第313期 台本の並び（`PHASE291_CODEX_MEMO.md` §15）
+    dotnet run --project BattleSim -c Release 0 doha313 check       # 第313期 自己検査（最も肩代わりした味方に1回・同額は攻撃力 → 席・ドハ自身は選ばない・DP-b の上乗せ・DP-c の標・ギフトの中で押さない・連鎖の帳尻・verbose・計数器・PickOne ／ Roll なし・版の定義）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）
