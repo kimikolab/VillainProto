@@ -1179,3 +1179,12 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - 札 `SparkVeil`（LV-a）／ `SparkVeilCap`（LV-c・`SparkTrait.VeilCapPercent = 40`）／ `SparkFocus`（FO）。判定は `SparkTrait.Rain` の中だけ: 衣 ＝ `Heal` が `Healed` ／ `Full` を返したときの溢れを、その味方の破片（`StatusKeys.Armor`）に足す（リリの溢れ `KissTrait.Give` と同じ作法）。寄せ ＝ `RainFocus`（光1つにつき `AmountOf × 5` を `MostHurtAlly` へ・光ごとに選び直す）。
 - 計数のみ: 受けた味方の `SparkOverRecvFull` ／ `SparkOverRecvTop` ／ `SparkOverRecvT`（溢れの内訳・規定の SH-a でも数える）、衣の帳簿の私有キー `SparkTrait.VeilKey`（`sparkVeil`・受けた味方の側）。**`NoteArmorLost` が衣から先に減らして `SparkVeilSoaked` ／ `SparkVeilSoakedT` に数える**（`_veilLive` の比較1つで抜ける）。ソムの側 `SparkVeilAdded` ／ `SparkVeilCapped` ／ `SparkFocusPicks` ／ `SparkFocusNone`。
 - 表示専用: `Spark` に「衣」（`SparkLabels.Veil`・`TargetId` ＝ 受けた味方・`Slot` ＝ その後の破片）。`EmitSpark` に受け手の引数を足した。
+
+## 第310期 —— 弾ける獣（ソムの版 E1 ／ E2）とシガの的の対照（SG-f）
+
+- 札 `BeastBurstCharged`（E1）／ `BeastBurstAlways`（E2）／ `ShameSkipFodder`（SG-f）。どれも `MarkOnlyTrait`（札そのものは挙動を持たない）。版は `UnitCatalog.SomE1` ／ `SomE2` ／ `ShigaSGf`（規定の末尾に札1枚・`All` の外）。
+- **`BattleContext.BurstBeast(som, team, slot)`**: 獣を盤面の駒の列 `_units` に入れずに作り（第292期の糸玉と同じ置物・`Add` を通さない・`InstanceId` だけ振る）、帯電させて HP 0 にしてから `ShockTrigger(獣, ソム, 0)` を呼ぶ。`HandleDeath` を通らないので**死亡の読み手は1つも起きない**。起点 ＝ ソム（撃破の帰属・シガの割り込みは「自分の一撃で起きた連鎖」に当たらない）。光の燃料は `SparkAfterChain` の `IsFodder` がそのまま数える。HP 0 なので割り込みの鞭 ／ 雷霆の的にならない。呼ぶのは `BetrayedTrait.Call` の札の判定の後ろだけ（「同時に1体」の判定の後・`Summon` の前）。席が塞がっていても弾ける。
+- **`BattleContext.NoteBeastCall(som, team, slot)`**（計数のみ・規定のソムでも数える）: 湧く席の隣の生きている敵に帯電した駒がいるかを返す（E1 の判定はこれ）。席が塞がっているか（`Summon` と同じ判定）も数える。乱数を引かない。
+- SG-f: 見せしめの標的の段は `ShameTrait.PreferredSkipFodder`（`Preferred` と中身を共有する `PreferredCore`・乱数の引き方は同じ）、割り込みの鞭の「動けない敵を優先」の1段目は獣を飛ばす（2段目＝生きている弾けた敵の先頭には残る）。
+- 計数のみ（ソムの帳簿）: `BeastCalls` ／ `BeastCharged` ／ `BeastSeatTaken` ／ `BeastCallT` ／ `BeastChargedT`（規定でも数える）、`BeastBursts` ／ `BeastBurstSeatTaken` ／ `BeastBurstUnits` ／ `BeastBurstKills`（版だけ）。
+- 表示専用の出来事 `BeastBurst`（`BeastBurstLabels`:「帯電に弾ける」「弾ける」）。並びは `Summon` → `BeastBurst` → `ShockSpent`（深さ 0）→ `Discharge` …（`design/PHASE291_CODEX_MEMO.md` §14-6）。

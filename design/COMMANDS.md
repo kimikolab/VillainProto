@@ -1026,6 +1026,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 som309 grid <boss|guard|bat>   # 第309期 固定枠の3枚目（ソム ／ ツギ）だけを入れ替えた格子（ボス 約 3 分・精鋭 約 15 分）
     dotnet run --project BattleSim -c Release 0 som309 memo [台の一部] [boss|guard|bat|1..5] [seed] [最初のT] [最後のT]   # 第309期 試遊の台の台本の抜粋（`PHASE291_CODEX_MEMO.md` §14）
     dotnet run --project BattleSim -c Release 0 som309 check       # 第309期 自己検査（段0 の定義・ヒーラーの一覧・試遊の2台と選び方の1位・同じ席の入れ替え・衣の有無・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 som310 p0          # 第310期 Phase 0: 規定のまま、シガの主目標が獣だった割合・獣の1戦・喚んだときの隣の帯電（T1〜T5）・ボスの火力の帳簿（数秒）。本体は `Modes/Som310.cs`
+    dotnet run --project BattleSim -c Release 0 som310 boards      # 第310期 代表台 6 × 10 波（ボス ／ 近衛 ／ 大隊 ／ 九体 新兵 ／ 農兵 ／ 本編の5波）× 版（規定 ／ E1 ／ E2 ／ SG-f）・対照 ソム → ドルガ・格子を回す版の門（約 10 秒）
+    dotnet run --project BattleSim -c Release 0 som310 compare     # 第310期 `compare` 64 行 × 版・動いた行と (G2)（約 20 秒）
+    dotnet run --project BattleSim -c Release 0 som310 swap        # 第310期 ソム ↔ ツギ（第309期と同じ入れ替え・8 波）× 版・目安（約 10 秒）
+    dotnet run --project BattleSim -c Release 0 som310 grid <E1|E2> <boss|guard|bat>   # 第310期 ソムの格子（第309期と同じ作り・ソムの側だけ・ボス 約 1 分・精鋭 約 10 分）
+    dotnet run --project BattleSim -c Release 0 som310 memo [版] [台の一部] [boss|guard|bat|nine|1..5] [seed] [最初のT] [最後のT]   # 第310期 台本の抜粋（`PHASE291_CODEX_MEMO.md` §14-6）
+    dotnet run --project BattleSim -c Release 0 som310 check       # 第310期 自己検査（版の定義・E1 ／ E2 の弾け・倒れた扱いにしない・起点 ＝ ソム・光・席で弾ける・SG-f・規定の不動・verbose・PickOne）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

@@ -1866,6 +1866,78 @@ public sealed class BattleContext
     /// <summary>光の衣の保持者（LV-a ／ LV-c）が戦闘に出たか（第308期・<b>計数</b>の口を短絡させる）。</summary>
     bool _veilLive;
 
+    // =================================================================================
+    // 第310期 —— 弾ける獣（ソムの版 E1 ／ E2・design/PHASE310_SOM_BURST_SPEC.md §2-1）。
+    // **獣は盤面の駒の列 `_units` に入れない**（第292期の糸玉と同じ置物の作り・`Add` を通さない）。湧く席に置いた瞬間に帯電した起点として弾け、HP 0 で消える
+    // ——`HandleDeath` を通らないので死亡の読み手（追い打ち・飛散・層・墓守・蘇生・撃破の数）は1つも起きない。撃破と連鎖の起点はソム（`ShockTrigger` の initiator）。
+    // 獣の弾けは敵の側の弾けなので光の燃料に入る（`SparkAfterChain` が `IsFodder` で数える）。HP 0 なので割り込みの鞭・雷霆の的にはならない。
+    // 呼ぶのは `BetrayedTrait.Call` の札の判定の後ろだけ（保持者がいなければ1度も走らない）。**乱数を引かない。**
+    // =================================================================================
+
+    /// <summary>
+    /// 喚ぼうとした（第310期・<b>計数のみ</b>・規定のソムでも数える）。湧く席 <paramref name="slot"/> の隣に帯電した敵（<paramref name="team"/> の生きている駒）がいたかを返す。盤面は読むだけ。
+    /// </summary>
+    public bool NoteBeastCall(UnitState som, int team, int slot)
+    {
+        UnitTally t = TallyOf(som);
+        FormationShape shape = ShapeOfTeam(team);
+        bool charged = false, taken = !shape.IsSummonSlot(slot);
+        foreach (UnitState u in _units)
+        {
+            if (u.TeamId != team) continue;
+            if (u.Slot == slot) { if (u.IsAlive || !Betray.Respawn) taken = true; continue; }   // `Summon` の「席が空いているか」と同じ判定
+            if (u.IsAlive && u.RawCounter(StatusKeys.Shock) > 0 && shape.AreAdjacent(slot, u.Slot)) charged = true;
+        }
+        t.BeastCalls++;
+        if (charged) t.BeastCharged++;
+        if (taken) t.BeastSeatTaken++;
+        int k = Math.Min(_turn, 8);
+        (t.BeastCallT ??= new long[9])[k]++;
+        if (charged) (t.BeastChargedT ??= new long[9])[k]++;
+        return charged;
+    }
+
+    /// <summary>
+    /// 獣がその場で弾けて消える（第310期・E1 ／ E2）。席が空いていても塞がっていても、<paramref name="slot"/> に置いた置物の獣を起点に連鎖を回す
+    /// （隣の敵へ放電 8・幅優先・1体1回は既存の規則のまま）。表示は `Summon` → `BeastBurst` → `ShockSpent` → `Discharge` …の並び（表示専用）。
+    /// </summary>
+    public void BurstBeast(UnitState som, int team, int slot)
+    {
+        UnitTally t = TallyOf(som);
+        UnitDef def = UnitCatalog.Fodder;
+        bool taken = _units.Any(u => u.TeamId == team && u.Slot == slot && u.IsAlive);
+        var beast = new UnitState
+        {
+            Def = def, TeamId = team, Shape = ShapeOfTeam(team), Slot = slot,
+            Hp = def.MaxHp, MaxHp = def.MaxHp, Traits = TraitCatalog.Resolve(def.Traits),
+        };
+        beast.InstanceId = _nextInstanceId++;   // 台本の番号だけ（`_units` には入れない）
+        beast.Board = this;
+        t.BeastBursts++;
+        if (taken) t.BeastBurstSeatTaken++;
+        Log($"    {som.Name} が喚んだものは向こう側へ駆け、その場で弾けた", LogKind.Trigger, som);
+        if (_verbose)
+        {
+            Emit(new BattleEvent { Kind = BattleEventKind.Summon, Turn = _turn, ActorId = som.InstanceId, TargetId = beast.InstanceId, Slot = slot, HpAfter = beast.Hp, Team = team, Text = def.Name });
+            Emit(new BattleEvent
+            {
+                Kind = BattleEventKind.BeastBurst, Turn = _turn, ActorId = som.InstanceId, TargetId = beast.InstanceId, Slot = slot, Team = team, Amount = taken ? 1 : 0,
+                Text = som.HasTrait(TraitId.BeastBurstAlways) ? BeastBurstLabels.Always : BeastBurstLabels.Charged,
+            });
+        }
+        beast.Hp = 0;   // 消える（倒れた扱いにしない・`HandleDeath` を通さない）
+        beast.SetCounter(StatusKeys.Shock, 1);
+        _shockLive = true;
+        long units0 = t.ShockTriggeredUnits;
+        int alive0 = 0;
+        foreach (UnitState u in _units) if (u.TeamId == team && u.IsAlive) alive0++;
+        ShockTrigger(beast, som, 0);
+        t.BeastBurstUnits += t.ShockTriggeredUnits - units0;
+        int alive1 = 0;
+        foreach (UnitState u in _units) if (u.TeamId == team && u.IsAlive) alive1++;
+        t.BeastBurstKills += alive0 - alive1;
+    }
+
     /// <summary>
     /// シガの割り込み（第289期・SI-a ／ SI-b）。連鎖で弾けた生きている敵から主目標を選び（動けない敵を優先・弾けた順）、
     /// <see cref="Interrupt"/> の中で的を固定した鞭を1振り。SI-a はその後、弾けた生きている敵それぞれに雷霆（蓄電 0）、
@@ -1880,7 +1952,8 @@ public sealed class BattleContext
         if (bolt ? c < StoredChargeTrait.Cap : c < 1) { t.SwNoCharge++; return; }
         UnitState? target = null;
         // 第292期: 糸玉は的にしない（狙われない置物）。
-        foreach (UnitState x in popped) if (x.IsAlive && !IsSilkBall(x) && TormentTrait.IsBound(this, x)) { target = x; break; }
+        bool skipFodder = h.HasTrait(TraitId.ShameSkipFodder);   // 第310期（SG-f）: 動けない敵の優先から背いた獣を外す（無作為ではない2段目の候補には残る）
+        foreach (UnitState x in popped) if (x.IsAlive && !IsSilkBall(x) && !(skipFodder && BetrayedTrait.IsFodder(x)) && TormentTrait.IsBound(this, x)) { target = x; break; }
         if (target is null) foreach (UnitState x in popped) if (x.IsAlive && !IsSilkBall(x)) { target = x; break; }
         if (target is null) { t.SwNoTarget++; return; }
         if (InInterrupt) { t.SwNested++; return; }
@@ -8932,7 +9005,7 @@ public sealed class BattleContext
         UnitState? shamed = _restrainLive && fixated is null && severed is null
                             && (pattern == AttackPattern.Single || (_whipLive && pattern == AttackPattern.Sweep && attacker.HasTrait(TraitId.Lash)))   // 第217期: 鞭は薙ぎにも
                             && attacker.HasTrait(TraitId.Shame)
-            ? ShameTrait.Preferred(this, pool)
+            ? (attacker.HasTrait(TraitId.ShameSkipFodder) ? ShameTrait.PreferredSkipFodder(this, pool) : ShameTrait.Preferred(this, pool))   // 第310期: SG-f は獣を外す
             : null;
         if (shamed is not null) TallyOf(attacker).ShamePicks++;
 

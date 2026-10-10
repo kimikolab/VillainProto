@@ -2141,6 +2141,42 @@ public static class UnitCatalog
         Flavor = SomH308.Flavor
     };
 
+    // 第310期 —— 弾ける獣の版（指示書 design/PHASE310_SOM_BURST_SPEC.md §2-1）。規定（LV-a・<see cref="Som"/>）の末尾に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。文面は叩き台。
+
+    /// <summary>第310期 E1（ポン案）。規定 ＋ <see cref="TraitId.BeastBurstCharged"/>（喚んだとき、湧く席の隣に帯電した敵がいれば、獣は立たずにその場で弾けて消える）。</summary>
+    public static readonly UnitDef SomE1 = new()
+    {
+        Id = Som.Id,
+        Name = Som.Name,
+        MaxHp = Som.MaxHp,
+        Attack = Som.Attack,
+        Speed = Som.Speed,
+        Advances = Som.Advances,
+        Pattern = Som.Pattern,
+        Traits = Som.Traits.Append(TraitId.BeastBurstCharged).ToArray(),
+        Actions = Som.Actions,
+        PlusText = Som.PlusText + "。喚んだとき、隣の敵が帯電していれば、喚ばれたものはその場で弾ける",
+        MinusText = Som.MinusText,
+        Flavor = Som.Flavor
+    };
+
+    /// <summary>第310期 E2。規定 ＋ <see cref="TraitId.BeastBurstAlways"/>（獣はいつも喚んだ瞬間に弾けて消える）。</summary>
+    public static readonly UnitDef SomE2 = new()
+    {
+        Id = Som.Id,
+        Name = Som.Name,
+        MaxHp = Som.MaxHp,
+        Attack = Som.Attack,
+        Speed = Som.Speed,
+        Advances = Som.Advances,
+        Pattern = Som.Pattern,
+        Traits = Som.Traits.Append(TraitId.BeastBurstAlways).ToArray(),
+        Actions = Som.Actions,
+        PlusText = Som.PlusText + "。喚ばれたものは、向こう側に着いた瞬間に弾ける",
+        MinusText = "喚ばれたものは背いて敵につくが、立つことはない",
+        Flavor = Som.Flavor
+    };
+
     /// <summary>
     /// 旧ソム（第103〜275期の規定・背かれのみ）。<b>第276期の転生の対照</b>（S0）。<see cref="All"/> には入れない。
     /// 旧ソムを使う過去の器具（<c>betray</c> ／ <c>encore</c> ／ <c>tomo</c> ／ <c>lit</c> ／ <c>tumult</c> ／ <c>form2</c> ／ <c>ep3</c> ／ <c>stage map</c>）はこれに固定してある。
@@ -2786,6 +2822,24 @@ public static class UnitCatalog
 
     /// <summary>第293期 SW-a（連鎖の鞭）。SI-b ＋ <see cref="TraitId.ShockWhipChain"/>（割り込みの鞭が × (1 ＋ 合図の連鎖で弾けた数)）。<b>第294期に規定にした</b>——規定の <see cref="Shiga"/> と同じ物。</summary>
     public static readonly UnitDef ShigaSWa = Shiga;
+
+    /// <summary>
+    /// 第310期 SG-f（対照・指示書 design/PHASE310_SOM_BURST_SPEC.md §2-2）。規定（SW-a）＋ <see cref="TraitId.ShameSkipFodder"/>
+    /// （見せしめ ／ 割り込みの鞭の「動けない敵を優先」から背いた獣を外す・獣はそのまま立つ）。文面は規定のまま（直しは挙動の内側）。`All` にも `Retired` にも入れない。
+    /// </summary>
+    public static readonly UnitDef ShigaSGf = new()
+    {
+        Id = Shiga.Id,
+        Name = Shiga.Name,
+        MaxHp = Shiga.MaxHp,
+        Attack = Shiga.Attack,
+        Speed = Shiga.Speed,
+        Pattern = Shiga.Pattern,
+        Traits = Shiga.Traits.Append(TraitId.ShameSkipFodder).ToArray(),
+        PlusText = Shiga.PlusText,
+        MinusText = Shiga.MinusText,
+        Flavor = Shiga.Flavor
+    };
 
     /// <summary>第293期 SW-b（浴びるたび溜まる）。SW-a ＋ <see cref="TraitId.StoredChargeEvery"/>（すでに帯電していても感電を浴びるたび蓄電 +1）。</summary>
     public static readonly UnitDef ShigaSWb = new()

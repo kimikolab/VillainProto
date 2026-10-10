@@ -497,6 +497,9 @@
 | `SparkVeil` | 背かれのソム |
 | `SparkVeilCap` | - |
 | `SparkFocus` | - |
+| `BeastBurstCharged` | - |
+| `BeastBurstAlways` | - |
+| `ShameSkipFodder` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

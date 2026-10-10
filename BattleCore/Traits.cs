@@ -741,6 +741,11 @@ public enum TraitId
     SparkVeilCap,     // 光の衣・上限あり（LV-c）: LV-a ＋ 衣で足せるのは、その味方の破片（ほかの書き手の破片も合算）が最大HPの 4 割になるまで（超えた分は捨てる）（同上）
     SparkFocus,       // 寄せる光（FO・参考）: 衣は無し。光1つにつき 量 × 5 を、最も傷ついた味方1体（`MostHurtAlly`）に癒す。光ごとに選び直す（同上）
 
+    // --- 第310期で足した札（ソムの版 `UnitCatalog.SomE1` ／ `SomE2` とシガの版 `UnitCatalog.ShigaSGf` だけが持つ） ---
+    BeastBurstCharged, // 弾ける獣（E1）: 喚んだとき、湧く席と隣り合う敵に帯電した駒が1体でもいれば、獣は立たずにその場で弾けて消える（倒れた扱いにしない・起点 ＝ ソム）。いなければ今までどおり立つ（**札そのものは挙動を持たない**・`BetrayedTrait.Call` → engine の `BurstBeast` が読む）
+    BeastBurstAlways,  // 弾ける獣（E2）: 獣はいつも喚んだ瞬間に弾けて消える（同上）
+    ShameSkipFodder,   // 獣を外す（SG-f）: 見せしめの「動けない敵を優先」と割り込みの鞭の「動けない敵を優先」から背いた獣を外す（獣は無作為の候補には残る）（**札そのものは挙動を持たない**・engine の標的の段と `ShockWhip` が読む）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -10799,6 +10804,16 @@ public sealed class BetrayedTrait : Trait
             return null;
         }
 
+        // 第310期（E1 ／ E2・design/PHASE310_SOM_BURST_SPEC.md §2-1）: 湧く席の隣に帯電した敵がいるか（**計数は保持者を問わず数える**・盤面は読むだけ・乱数を引かない）。
+        // 弾ける版は、席が空いていても塞がっていても立たずにその場で弾ける（`BurstBeast`・倒れた扱いにしない）。
+        int seat = FodderSlotOf(ctx.ShapeOfTeam(foe));
+        bool charged = ctx.NoteBeastCall(self, foe, seat);
+        if (self.HasTrait(TraitId.BeastBurstAlways) || (charged && self.HasTrait(TraitId.BeastBurstCharged)))
+        {
+            ctx.BurstBeast(self, foe, seat);
+            return null;
+        }
+
         UnitState? f = ctx.Summon(UnitCatalog.Fodder, foe, FodderSlotOf(ctx.ShapeOfTeam(foe)),
                                   overCorpse: ctx.Betray.Respawn, by: self);
         ctx.NoteBetraySummon(self, f);
@@ -13186,11 +13201,16 @@ public sealed class ShameTrait : Trait
     /// 優先して狙う相手（<c>pool</c> の中の動けない敵）。<b>0 体なら null</b>（通常の無作為に戻る）、
     /// <b>1 体なら乱数を引かない</b>、2 体以上なら <c>Roll</c> で割る（pool の無作為と同じ作法。<c>PickOne</c> は増やさない）。
     /// </summary>
-    public static UnitState? Preferred(BattleContext ctx, List<UnitState> pool)
+    /// <summary>第310期（SG-f・<see cref="TraitId.ShameSkipFodder"/>）: <see cref="Preferred"/> から背いた獣を外した版（獣は pool に残り、無作為の候補には入る）。</summary>
+    public static UnitState? PreferredSkipFodder(BattleContext ctx, List<UnitState> pool) => PreferredCore(ctx, pool, skipFodder: true);
+
+    public static UnitState? Preferred(BattleContext ctx, List<UnitState> pool) => PreferredCore(ctx, pool, skipFodder: false);
+
+    static UnitState? PreferredCore(BattleContext ctx, List<UnitState> pool, bool skipFodder)
     {
         List<UnitState>? c = null;
         foreach (UnitState u in pool)
-            if (TormentTrait.IsBound(ctx, u)) (c ??= new()).Add(u);
+            if (!(skipFodder && BetrayedTrait.IsFodder(u)) && TormentTrait.IsBound(ctx, u)) (c ??= new()).Add(u);
         if (c is null) return null;
         return c.Count == 1 ? c[0] : c[ctx.Roll(c.Count)];
     }
@@ -17188,6 +17208,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.SparkVeil),                 // 第308期（光の衣 LV-a・印だけ）
         new MarkOnlyTrait(TraitId.SparkVeilCap),              // 第308期（光の衣・上限 LV-c・印だけ）
         new MarkOnlyTrait(TraitId.SparkFocus),                // 第308期（寄せる光 FO・印だけ）
+        new MarkOnlyTrait(TraitId.BeastBurstCharged),         // 第310期（弾ける獣 E1・印だけ）
+        new MarkOnlyTrait(TraitId.BeastBurstAlways),          // 第310期（弾ける獣 E2・印だけ）
+        new MarkOnlyTrait(TraitId.ShameSkipFodder),           // 第310期（シガ SG-f・印だけ）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

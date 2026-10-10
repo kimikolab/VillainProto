@@ -2150,6 +2150,13 @@ public sealed class UnitTally
     public long SparkVeilAdded, SparkVeilCapped, SparkFocusPicks, SparkFocusNone, SparkOverRecvFull, SparkOverRecvTop, SparkVeilSoaked;
     public long[]? SparkOverRecvT, SparkVeilSoakedT;
     /// <summary>
+    /// 第310期（<b>計数のみ</b>・ソムの側・規定でも数える）。<c>BeastCalls</c> 喚ぼうとした回数（立っている獣がいて喚ばなかった回は数えない）／ <c>BeastCharged</c> そのとき湧く席の隣に帯電した敵がいた ／
+    /// <c>BeastSeatTaken</c> そのとき湧く席が塞がっていた ／ <c>BeastCallT</c> ／ <c>BeastChargedT</c>[ターン] 同じ量のターンごと ／
+    /// 弾ける版（E1 ／ E2）: <c>BeastBursts</c> その場で弾けた ／ <c>BeastBurstSeatTaken</c> うち席が塞がっていて立たずに弾けた ／ <c>BeastBurstUnits</c> その連鎖で弾けた駒（獣を含む）／ <c>BeastBurstKills</c> その連鎖で倒れた敵。
+    /// </summary>
+    public long BeastCalls, BeastCharged, BeastSeatTaken, BeastBursts, BeastBurstSeatTaken, BeastBurstUnits, BeastBurstKills;
+    public long[]? BeastCallT, BeastChargedT;
+    /// <summary>
     /// 第299期（<b>計数のみ</b>・ザンの手番）。仇指し（<see cref="TraitId.Vendetta"/>）の保持者が手番で振ったとき（規定でも数える）:
     /// <c>ZanTurns</c> 手番 ／ <c>ZanTurnNoMarked</c> 標を持つ敵が 0 ／ <c>ZanTurnMarkedFoes</c> ／ <c>ZanTurnLayers</c> 手番の時点の標を持つ敵の数 ／ 層の合計 ／
     /// <c>ZanPlanA</c> ／ <c>ZanPlan1</c> 仇巡りの見込みの太刀（ZM-a ＝ 層の合計・ZM-1 ＝ 敵の数・上限で切る）／ <c>ZanPlanACapped</c> ／ <c>ZanPlan1Capped</c> 上限に達した手番 ／
@@ -3286,6 +3293,8 @@ public sealed class UnitTally
         SparkReleases += o.SparkReleases; SparkSwings += o.SparkSwings; SparkStorePeak = Math.Max(SparkStorePeak, o.SparkStorePeak);
         SparkVeilAdded += o.SparkVeilAdded; SparkVeilCapped += o.SparkVeilCapped; SparkFocusPicks += o.SparkFocusPicks; SparkFocusNone += o.SparkFocusNone;   // 第308期
         SparkOverRecvFull += o.SparkOverRecvFull; SparkOverRecvTop += o.SparkOverRecvTop; SparkVeilSoaked += o.SparkVeilSoaked; AddHist(ref SparkOverRecvT, o.SparkOverRecvT); AddHist(ref SparkVeilSoakedT, o.SparkVeilSoakedT);
+        BeastCalls += o.BeastCalls; BeastCharged += o.BeastCharged; BeastSeatTaken += o.BeastSeatTaken; BeastBursts += o.BeastBursts; BeastBurstSeatTaken += o.BeastBurstSeatTaken;   // 第310期
+        BeastBurstUnits += o.BeastBurstUnits; BeastBurstKills += o.BeastBurstKills; AddHist(ref BeastCallT, o.BeastCallT); AddHist(ref BeastChargedT, o.BeastChargedT);
         ZanTurns += o.ZanTurns; ZanTurnNoMarked += o.ZanTurnNoMarked; ZanTurnMarkedFoes += o.ZanTurnMarkedFoes; ZanTurnLayers += o.ZanTurnLayers;
         ZanPlanA += o.ZanPlanA; ZanPlan1 += o.ZanPlan1; ZanPlanACapped += o.ZanPlanACapped; ZanPlan1Capped += o.ZanPlan1Capped; ZanTurnDealt += o.ZanTurnDealt;
         RoundTurns += o.RoundTurns; RoundFoes += o.RoundFoes; RoundSlashes += o.RoundSlashes; RoundCapped += o.RoundCapped; RoundCrossed += o.RoundCrossed;
@@ -4054,6 +4063,23 @@ public enum BattleEventKind
     /// <c>ActorId</c> ＝ ソム ／ <c>Amount</c> ＝ 光の数（降る ／ 止まる）・増えた光の数（溜まる）／ <c>Slot</c> ＝ その後の溜まり（SH-b・SH-a は 0）。<b>どの規則も読まない。</b> 規定のソムには出ない。
     /// </summary>
     Spark,
+
+    /// <summary>
+    /// 背いた獣がその場で弾けて消えた（第310期・ソムの版 E1 ／ E2・<b>表示専用</b>）。並び: 獣の <c>Summon</c>（<c>ActorId</c> ＝ 喚んだソム）→ この出来事 →
+    /// 獣の <c>ShockSpent</c>（起点・深さ 0）→ 隣の敵への <c>Discharge</c> ……（連鎖）→ 光（<c>Spark</c>）・割り込み。獣は<b>倒れない</b>（<c>Death</c> は出ない）——この出来事で盤から消す。
+    /// <c>ActorId</c> ＝ ソム ／ <c>TargetId</c> ＝ 獣（台本の番号だけ・盤面の駒の列には入らない）／ <c>Slot</c> ＝ 弾けた席 ／ <c>Team</c> ＝ 獣の陣営 ／
+    /// <c>Amount</c> ＝ 1 なら席が塞がっていて立たずに弾けた（その席には別の駒が立っている）・0 なら空いた席で。<c>Text</c> ＝ <see cref="BeastBurstLabels"/>。<b>どの規則も読まない。</b> 規定のソムには出ない。
+    /// </summary>
+    BeastBurst,
+}
+
+/// <summary>`BeastBurst`（第310期）の <c>Text</c>。</summary>
+public static class BeastBurstLabels
+{
+    /// <summary>E1: 隣に帯電した敵がいたので弾けた。</summary>
+    public const string Charged = "帯電に弾ける";
+    /// <summary>E2: いつも弾ける。</summary>
+    public const string Always = "弾ける";
 }
 
 /// <summary>`Spark`（第307期）の <c>Text</c>。</summary>
