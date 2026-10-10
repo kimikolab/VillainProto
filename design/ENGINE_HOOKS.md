@@ -1188,3 +1188,15 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - SG-f: 見せしめの標的の段は `ShameTrait.PreferredSkipFodder`（`Preferred` と中身を共有する `PreferredCore`・乱数の引き方は同じ）、割り込みの鞭の「動けない敵を優先」の1段目は獣を飛ばす（2段目＝生きている弾けた敵の先頭には残る）。
 - 計数のみ（ソムの帳簿）: `BeastCalls` ／ `BeastCharged` ／ `BeastSeatTaken` ／ `BeastCallT` ／ `BeastChargedT`（規定でも数える）、`BeastBursts` ／ `BeastBurstSeatTaken` ／ `BeastBurstUnits` ／ `BeastBurstKills`（版だけ）。
 - 表示専用の出来事 `BeastBurst`（`BeastBurstLabels`:「帯電に弾ける」「弾ける」）。並びは `Summon` → `BeastBurst` → `ShockSpent`（深さ 0）→ `Discharge` …（`design/PHASE291_CODEX_MEMO.md` §14-6）。
+
+## 第311期 —— ソム E2 の規定化 ／ 緊急の喚び出し（K-a ／ K-b）・群れ・萎縮の規則の版
+
+- **規定のソム ＝ E2**（`UnitCatalog.Som` ＝ 旧の規定 `SomH310`（LV-a）＋ `BeastBurstAlways`）。第310期の版 `SomE1` ／ `SomE2` は `SomH310` から作る。過去の器具は `Common.Pin310`（ソム → `SomH310`）で固定（`som309` ／ `som310`）。`Common.Pin309` は `SomH310` も `SomH308` に替える。`elite check` (b) は §7 の記録（第284期）に合わせてソムも `SomH307` へ。
+- 経路 **`OutOfTurnRoute.Emergency`**（「緊急の喚び出し」・`Other` の前・経路の名前は 24 本に）。
+- 札 `EmergencyCall`（`EmergencyCallTrait`・`OnDamaged` ／ `OnAllyDamaged`・ツギの応急処置と同じ作法: 1ターン1回・割り込み ／ 反撃 ／ **感電の連鎖の中では出ない**（`BattleContext.ShockChaining`）・`CanActOutOfTurn`）／ `EmergencyFocus`（印）／ `SwarmCall`（`SwarmCallTrait`・私有キーの掃除だけ）／ `ShockDaunt`（印・規則の札）。
+- **`BurstBeast(som, team, slot, count, emergencyFor)`** に数と緊急を足した: 2体目からは召喚枠を順に（湧く席を除いた `SummonSlots`・足りなければ先頭から重ねる）、全部を1つの連鎖の深さ 0 に並べる（`ShockTrigger` に `moreRoots` を足した・既存の呼び出しは引数なしで同じ）。1体・緊急なしは第310期と1文字も変わらない（台本の指紋で確認）。
+- **緊急**: `EmergencyBurst(som, ally)` → `BurstBeast(…, ally)`。連鎖の間だけ `_emergencyBeast` ／ `_emergencyAlly` を立て、`SparkAfterChain` が「その獣を含む連鎖」の光を K-a なら `SparkTrait.RainOn`（光 × 量 × 5 を1体に・溢れは衣）へ。
+- **群れ**: `AfterChain` が保持者の「そのターンの敵の側の弾け」を数え（`NoteSwarmPops`・私有キー `swarmTurn` ／ `swarmCur` ／ `swarmPrev`）、`SwarmCount` が 1 ＋ 前のターン ÷ 3（上限 5）を返す。
+- **萎縮の規則の版**: `StunByShock` の痺れを付ける直前（半々の乱数の後）に、`_shockDauntLive` かつ痺れが入口で塞がれる駒（`UnitState.ControlBlockedAtEntry`・読むだけ）なら萎縮（`StatusKeys.Daunted`・二値）を付けて戻る。保持者がいれば `_dauntLive` も立てる（萎縮の消費）。
+- 表示専用: `BeastBurstLabels.Emergency`（「緊急」・`PartnerId` ＝ 危なかった味方）／ `Swarm`（「群れ」・`StatusRemaining` ＝ 群れの数）。`Spark 降る` の `TargetId` ＝ K-a の集まる先。
+- 計数のみ（ソムの帳簿）: `EmergNeed` ／ `EmergSpent` ／ `EmergHeld` ／ `EmergHushed` ／ `EmergBlocked` ／ `EmergFired` ／ `EmergFront` ／ `EmergBack` ／ `EmergFocusLights` ／ `EmergFocusHealed` ／ `EmergFocusVeil` ／ `SwarmHist` ／ `SwarmBeasts`、（痺れない駒の側）`ShockDaunted` ／ `ShockDauntAlready`。

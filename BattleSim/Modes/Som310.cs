@@ -43,7 +43,7 @@ static class Som310Diag
     // 版・台・波（測る前に固定）
     // ---------------------------------------------------------------------------------
     const int Seeds = S307.Seeds;
-    static UnitDef Som => UnitCatalog.Som;
+    static UnitDef Som => UnitCatalog.SomH310;   // 第311期: 第310期の規定（LV-a）に固定（`Common.Pin310`）
     static UnitDef Shiga => UnitCatalog.Shiga;
     static string Short(UnitDef d) => S307.Short(d);
     static string Seats(Formation f) => S307.Seats(f);
@@ -58,8 +58,8 @@ static class Som310Diag
     internal static readonly Ver[] Vers =
     {
         new("規定", f => f, false),
-        new("E1", f => S309.Swap(f, UnitCatalog.Som, UnitCatalog.SomE1), false),
-        new("E2", f => S309.Swap(f, UnitCatalog.Som, UnitCatalog.SomE2), false),
+        new("E1", f => S309.Swap(f, UnitCatalog.SomH310, UnitCatalog.SomE1), false),
+        new("E2", f => S309.Swap(f, UnitCatalog.SomH310, UnitCatalog.SomE2), false),
         new("SG-f", f => S309.Swap(f, UnitCatalog.Shiga, UnitCatalog.ShigaSGf), true),
     };
     static Ver V(string n) => Vers.First(v => v.Name == n);
@@ -74,7 +74,7 @@ static class Som310Diag
     static bool IsNine(S287.Wave w) => w.Name.StartsWith("九体", StringComparison.Ordinal);
 
     static Formation Playtest(string n) => S309.Playtest(n);
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Row(string n) => Pin310(CompareBuilds().First(r => r.Name == n).F);
     static Formation WinSeat() => B283.Seat(S307.Order(S307.WinBoard));
 
     /// <summary>§4-1 の代表台（規定の駒・ソムの席は出典のまま）。</summary>
@@ -388,7 +388,7 @@ static class Som310Diag
     static void CompareAll()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().Select(r => (r.Name, r.F)).ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin310(r.F))).ToArray();   // 第311期: ソムは第310期の規定に
         int nw = EnemyCatalog.Stages.Count;
         var grids = Vers.Select(v =>
         {
@@ -630,6 +630,19 @@ static class Som310Diag
         return c;
     }
 
+    static string? GitShow(string spec)
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("git", $"show {spec}") { RedirectStandardOutput = true, UseShellExecute = false, StandardOutputEncoding = System.Text.Encoding.UTF8 };
+            using var pr = System.Diagnostics.Process.Start(psi)!;
+            string o = pr.StandardOutput.ReadToEnd();
+            pr.WaitForExit();
+            return pr.ExitCode == 0 ? o : null;
+        }
+        catch { return null; }
+    }
+
     static Ck CheckMany(Formation f, S287.Wave w, int n)
     {
         var parts = new Ck[n];
@@ -646,7 +659,7 @@ static class Som310Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        var som = UnitCatalog.Som;
+        var som = UnitCatalog.SomH310;   // 第311期: 第310期の規定は `SomH310`
 
         // (a) 版の定義
         {
@@ -655,7 +668,7 @@ static class Som310Diag
                 && new[] { UnitCatalog.SomE1, UnitCatalog.SomE2 }.All(d => d.Id == som.Id && d.MaxHp == som.MaxHp && d.Attack == som.Attack && d.Speed == som.Speed && d.Advances == som.Advances && d.Pattern == som.Pattern)
                 && UnitCatalog.ShigaSGf.Id == "shiga" && UnitCatalog.ShigaSGf.MaxHp == UnitCatalog.Shiga.MaxHp && UnitCatalog.ShigaSGf.Attack == UnitCatalog.Shiga.Attack && UnitCatalog.ShigaSGf.Speed == UnitCatalog.Shiga.Speed
                 && !UnitCatalog.Everyone.Contains(UnitCatalog.SomE1) && !UnitCatalog.Everyone.Contains(UnitCatalog.SomE2) && !UnitCatalog.Everyone.Contains(UnitCatalog.ShigaSGf)
-                && UnitCatalog.All.Contains(som) && UnitCatalog.All.Contains(UnitCatalog.Shiga)
+                && UnitCatalog.All.Contains(UnitCatalog.Som) && !UnitCatalog.Everyone.Contains(som) && UnitCatalog.All.Contains(UnitCatalog.Shiga)
                 && UnitCatalog.Fodder.MaxHp == 12 && UnitCatalog.Fodder.Speed == 1;
             Expect("(a) 版 ＝ 規定の末尾に札1枚（E1 `BeastBurstCharged` ／ E2 `BeastBurstAlways` ／ SG-f `ShameSkipFodder`）・数値は規定のまま・版は `Everyone` の外・獣の定義は触らない", ok);
         }
@@ -729,8 +742,9 @@ static class Som310Diag
         }
         // (h) 規定は動かない（`compare` の規定の列 ＝ docs/balance.md の一部を抜き取りで）
         {
-            var rows = CompareBuilds().Select(r => (r.Name, r.F)).ToArray();
-            var bal = File.Exists("docs/balance.md") ? File.ReadAllLines("docs/balance.md") : Array.Empty<string>();
+            var rows = CompareBuilds().Select(r => (r.Name, F: Pin310(r.F))).ToArray();
+            // 第311期: 第310期の `docs/balance.md`（コミット e8c8821）と照らす（段0 で `感電` 行が動いたので、いまの docs とは照らさない）
+            var bal = GitShow("e8c8821:docs/balance.md")?.Split('\n').Select(l => l.TrimEnd('\r')).ToArray() ?? Array.Empty<string>();
             int checkedRows = 0, bad = 0;
             foreach (var (n, f) in rows.Where(r => Has(r.F, som) || Has(r.F, UnitCatalog.Shiga)))
             {

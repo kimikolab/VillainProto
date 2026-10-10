@@ -707,7 +707,7 @@ Damage               巡礼騎士#5 → ゴルム#1 ／ ミサ#2  Reaction    �
 - 規定の第2波 × seed 0..49 で、①は ボス台 ／ 循環 ／ 守り型 50 戦・三人組 41 戦・標経済 47 戦、②はどの台も 15〜50 戦、③は 37〜49 戦に出る（`hush306 find`）。
 - DemoApp の頭なしの起動口で、試遊・標 ボス台 × 第2波 × seed 0 は `DEMO_SMOKE_COMPLETE events=276 turns=4 won=True`、標経済 × seed 0 は `events=260 turns=7 won=False`（どちらも BattleSim の台本と同じ決着・完走）。
 
-## 14. 第307〜310期の追記 —— ソムの光と衣（第310期: 弾ける獣の版は §14-6）
+## 14. 第307〜311期の追記 —— ソムの光と衣（第310期: 弾ける獣の版は §14-6・第311期: 規定が E2 に・緊急 ／ 群れ ／ 萎縮の版は §14-7）
 
 第307期に出来事 `Spark`（表示専用）を足し、第308期に規定のソムが **降る光**（SH-a・`SparkRain`）に、第309期に **光の衣**（LV-a・`SparkVeil`）になった。
 **規定のソム ＝ 喚び出し ＋ 降る光 ＋ 光の衣**（`UnitCatalog.Som`）。意図とトーンは `design/CODEX_BRIEF_SOM_SPARK.md`。例は `som309 memo <台の一部> <boss|guard|bat|1..5> <seed> <最初のT> <最後のT>`（`Presets.Playtest` の台を引く）。
@@ -837,3 +837,51 @@ Spark 降る             ソム#4  Amount n                          ⑦ 光（�
 - **連鎖で敵が倒れたとき、`Death` の `ActorId` はソム**（撃破の帰属）。
 - 演出の案（ポン）: 獣はソムの側に現れ、敵陣へ走って寝返り、着いた瞬間に弾ける。**盤面は変わらない**——エンジンは最初から敵陣の召喚枠（`Slot`）で弾けさせている。走る途中に味方へ放電はしない。
 - E1 では、隣が帯電していないターンは今までどおり立つ（`Summon` → `StatusGain shock` → 殴られて `ShockSpent` → `Death`・§14-2）。立った獣が生きている間は次の喚び出しが無い。
+
+### 14-7. 第311期 —— 規定のソムは E2（獣はいつも弾ける）・緊急の喚び出し ／ 群れ ／ 萎縮（**版のみ**）
+
+**第311期から規定のソムは E2**（§14-6 の「弾ける」が規定の台本に出る）。試遊の台（光の盾 ／ 光の盾 重）の獣は、毎ターンの手番の頭に `Summon` → `BeastBurst 弾ける` → `ShockSpent` の並びで弾ける。`StatusGain shock`（獣が帯電して立つ）と獣の `Death` は、規定ではもう出ない。
+例は `som311 memo <版> <台の一部> <boss|guard|bat|nine|1..5> <seed> <最初のT> <最後のT>`（版 ＝ 規定 ／ K-a ／ K-b ／ 群れ ／ 萎縮 ／ 重ね・台は `som311` の `Boards()`）。
+
+**緊急の喚び出し（K-a ／ K-b・版のみ）** —— 味方が削られて HP（＋破片）が 4 割を切ると、ソムが手番の外で喚ぶ（1ターン1回）。`BeastBurst` の `Text` ＝ **「緊急」**、**`PartnerId` ＝ 危なかった味方**（ソムの「得意げ → 驚き」の差分の切り替えに使う・表示専用）。
+
+```
+Attack / Damage   駆り出された農兵#9 → ガン#1  hp=8              ① 危ない一撃（ガンが 4 割を切った）
+Highlight         「鬨の号令ガンを守れ！」——背かれのソム が慌てて喚んだ   ② ソムが慌てる（ログの見せ場）
+Summon 背いた獣    ソム#4 → 背いた獣#15  Slot 7
+BeastBurst 緊急    ソム#4 → 背いた獣#15  Amount 1  Slot 7  partner ガン#1   ③ やっぱり逃げて弾ける（Amount 1 ＝ 席が塞がっていた）
+ShockSpent        ソム#4 → 背いた獣#15  Slot 0                    ④ 連鎖（いつもどおり・`Reaction` の付いた `Damage` が並ぶ）
+Discharge ／ Damage …
+Spark 降る        ソム#4 → ガン#1  Amount 3                       ⑤ K-a: 光は危ない味方に集まる（`TargetId` ＝ その味方）
+Heal              ソム#4 → ガン#1  Amount 44  hp=52
+Spark 衣          ソム#4 → ガン#1  Amount 61  Slot 61              ⑥ 溢れは衣
+```
+
+（`som311 memo K-a 重 bat 0 1 2`・光の盾 重 × 大隊 × seed 0・#61〜#98。K-b は ⑤ が `TargetId` 無しの「降る」＝ いつもどおり全員。ベニの隣の味方に集まると、⑤ の直後が `HealInverted` ＋ `Damage`（反転で傷になる）。）
+
+**群れ（版のみ）** —— 手番の頭に 1 ＋（前のターンに敵の側で弾けた数 ÷ 3）体（上限 5）を一斉に喚ぶ。`BeastBurst` の `Text` ＝ **「群れ」**・**`StatusRemaining` ＝ 群れの数**。獣ごとに `Summon` → `BeastBurst` が並び、そのあと獣の数だけ `ShockSpent`（深さ 0・`Slot` 0）が続く——**1つの連鎖**（雷雲 ／ 割り込みの合図は1回）。席は ○前2（7）→ 召喚枠の順（X 字は ○中1（5）→ ○中3（6）→ ○後2（8））→ 足りなければ ○前2 から重ねる。
+
+```
+Summon 背いた獣    ソム#4 → 背いた獣#14  Slot 7
+BeastBurst 群れ    ソム#4 → 背いた獣#14  Slot 7  rem 3
+Summon 背いた獣    ソム#4 → 背いた獣#15  Slot 5
+BeastBurst 群れ    ソム#4 → 背いた獣#15  Slot 5  rem 3
+Summon 背いた獣    ソム#4 → 背いた獣#16  Slot 6
+BeastBurst 群れ    ソム#4 → 背いた獣#16  Slot 6  rem 3
+ShockSpent        ソム#4 → 背いた獣#14  Slot 0      ← 3体がまとめて起点
+Discharge …
+ShockSpent        ソム#4 → 背いた獣#15  Slot 0
+…
+```
+
+（`som311 memo 群れ 光の盾 boss 0 4 4`・光の盾 × ボス × seed 0・T4 の #238〜。）
+
+**萎縮（規則の版・版のみ）** —— 痺れが付かない駒（動じない勇者など）は、感電が弾けて痺れの判定に当たると、痺れる代わりに萎縮する。台本は `ShockSpent` の直後の **`StatusGain daunted`**（クビの萎縮と同じ種類・既存の出来事）。次の勇者の攻撃で消える（クビの萎縮と同じ）。
+
+```
+ShockSpent        シガ#3 → 勇者#5
+StatusGain daunted  シガ#3 → 勇者#5  Amount 1        ← 痺れの代わり（`stun` は出ない）
+Discharge         勇者#5 → 糸玉#7 …
+```
+
+（`som311 memo 萎縮 クビ→シガ boss 0 2 3`・光の盾 クビ→シガ × ボス × seed 0・#227〜。）

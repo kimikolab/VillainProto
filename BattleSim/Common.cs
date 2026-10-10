@@ -275,7 +275,18 @@ public static Formation Pin309(Formation f)
 {
     var g = f.Clone();
     foreach ((int slot, UnitDef d) in f.Occupied())
-        g[slot] = ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH308 : d;
+        g[slot] = ReferenceEquals(d, UnitCatalog.Som) || ReferenceEquals(d, UnitCatalog.SomH310) ? UnitCatalog.SomH308 : d;   // 第311期: 第309〜310期の規定（`SomH310`）も
+    return g;
+}
+
+/// <summary>
+/// 第311期: ソム ＝ E2（喚んだ獣はその場で弾ける）を規定にした。第309〜310期の規定のソム（LV-a）で測った器具（`som309` ／ `som310`）はこれを通す（ソム → `SomH310`）。陣形とレリックは保つ。
+/// </summary>
+public static Formation Pin310(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH310 : d;
     return g;
 }
 

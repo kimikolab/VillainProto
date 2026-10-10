@@ -262,6 +262,9 @@ public sealed class UnitState
     /// <summary>第266期: 手番を奪う状態が上がったことを知らせる札（<see cref="Trait.TaxesControl"/>・不屈）を持つ駒か。<see cref="SetCounter"/> の熱い経路は保持者がいなければ bool 1つで抜ける。</summary>
     public bool ControlTaxed { get; private init; }
 
+    /// <summary>第311期: いま手番を奪う状態（痺れなど）が付かない駒か（<see cref="SetCounter"/> の入口と同じ判定・読むだけ）。</summary>
+    public bool ControlBlockedAtEntry => ControlProof && ControlBlockedNow();
+
     /// <summary>第265期: 塞ぐ札のどれかが<b>いま</b>塞いでいるか。<see cref="ControlProof"/> の駒でしか呼ばれない。</summary>
     private bool ControlBlockedNow()
     {
@@ -2157,6 +2160,14 @@ public sealed class UnitTally
     public long BeastCalls, BeastCharged, BeastSeatTaken, BeastBursts, BeastBurstSeatTaken, BeastBurstUnits, BeastBurstKills;
     public long[]? BeastCallT, BeastChargedT;
     /// <summary>
+    /// 第311期（<b>計数のみ</b>・ソムの側）。緊急の喚び出し（K-a ／ K-b）: <c>EmergNeed</c> 味方の HP＋破片が 4 割を切った被弾 ／ <c>EmergSpent</c> そのターンは使い終えていた ／ <c>EmergHeld</c> 割り込み・反撃・連鎖の中だった ／
+    /// <c>EmergHushed</c> 粛で止まった ／ <c>EmergBlocked</c> 痺れほかで止まった ／ <c>EmergFired</c> 喚んだ ／ <c>EmergFront</c> ／ <c>EmergBack</c> 喚んだときの危ない味方の列（前 ／ 中・後）／
+    /// <c>EmergFocusLights</c> ／ <c>EmergFocusHealed</c> ／ <c>EmergFocusVeil</c> K-a で危ない味方1体に集めた光・HP に入った量・衣になった量。
+    /// 群れ: <c>SwarmHist</c>[数] 喚んだ数の分布 ／ <c>SwarmBeasts</c> 喚んだ獣の合計。萎縮（規則の版・痺れが付かない駒の側）: <c>ShockDaunted</c> 痺れの代わりに萎縮した ／ <c>ShockDauntAlready</c> 既に萎縮していた。
+    /// </summary>
+    public long EmergNeed, EmergSpent, EmergHeld, EmergHushed, EmergBlocked, EmergFired, EmergFront, EmergBack, EmergFocusLights, EmergFocusHealed, EmergFocusVeil, SwarmBeasts, ShockDaunted, ShockDauntAlready;
+    public long[]? SwarmHist;
+    /// <summary>
     /// 第299期（<b>計数のみ</b>・ザンの手番）。仇指し（<see cref="TraitId.Vendetta"/>）の保持者が手番で振ったとき（規定でも数える）:
     /// <c>ZanTurns</c> 手番 ／ <c>ZanTurnNoMarked</c> 標を持つ敵が 0 ／ <c>ZanTurnMarkedFoes</c> ／ <c>ZanTurnLayers</c> 手番の時点の標を持つ敵の数 ／ 層の合計 ／
     /// <c>ZanPlanA</c> ／ <c>ZanPlan1</c> 仇巡りの見込みの太刀（ZM-a ＝ 層の合計・ZM-1 ＝ 敵の数・上限で切る）／ <c>ZanPlanACapped</c> ／ <c>ZanPlan1Capped</c> 上限に達した手番 ／
@@ -3295,6 +3306,9 @@ public sealed class UnitTally
         SparkOverRecvFull += o.SparkOverRecvFull; SparkOverRecvTop += o.SparkOverRecvTop; SparkVeilSoaked += o.SparkVeilSoaked; AddHist(ref SparkOverRecvT, o.SparkOverRecvT); AddHist(ref SparkVeilSoakedT, o.SparkVeilSoakedT);
         BeastCalls += o.BeastCalls; BeastCharged += o.BeastCharged; BeastSeatTaken += o.BeastSeatTaken; BeastBursts += o.BeastBursts; BeastBurstSeatTaken += o.BeastBurstSeatTaken;   // 第310期
         BeastBurstUnits += o.BeastBurstUnits; BeastBurstKills += o.BeastBurstKills; AddHist(ref BeastCallT, o.BeastCallT); AddHist(ref BeastChargedT, o.BeastChargedT);
+        EmergNeed += o.EmergNeed; EmergSpent += o.EmergSpent; EmergHeld += o.EmergHeld; EmergHushed += o.EmergHushed; EmergBlocked += o.EmergBlocked; EmergFired += o.EmergFired;   // 第311期
+        EmergFront += o.EmergFront; EmergBack += o.EmergBack; EmergFocusLights += o.EmergFocusLights; EmergFocusHealed += o.EmergFocusHealed; EmergFocusVeil += o.EmergFocusVeil;
+        SwarmBeasts += o.SwarmBeasts; ShockDaunted += o.ShockDaunted; ShockDauntAlready += o.ShockDauntAlready; AddHist(ref SwarmHist, o.SwarmHist);
         ZanTurns += o.ZanTurns; ZanTurnNoMarked += o.ZanTurnNoMarked; ZanTurnMarkedFoes += o.ZanTurnMarkedFoes; ZanTurnLayers += o.ZanTurnLayers;
         ZanPlanA += o.ZanPlanA; ZanPlan1 += o.ZanPlan1; ZanPlanACapped += o.ZanPlanACapped; ZanPlan1Capped += o.ZanPlan1Capped; ZanTurnDealt += o.ZanTurnDealt;
         RoundTurns += o.RoundTurns; RoundFoes += o.RoundFoes; RoundSlashes += o.RoundSlashes; RoundCapped += o.RoundCapped; RoundCrossed += o.RoundCrossed;
@@ -4080,6 +4094,10 @@ public static class BeastBurstLabels
     public const string Charged = "帯電に弾ける";
     /// <summary>E2: いつも弾ける。</summary>
     public const string Always = "弾ける";
+    /// <summary>第311期: 緊急の喚び出し（K-a ／ K-b）で喚んだ獣が弾けた（<c>PartnerId</c> ＝ 危なかった味方・表示専用）。</summary>
+    public const string Emergency = "緊急";
+    /// <summary>第311期: 群れ（手番の頭に2体以上を喚んで一斉に弾けた・<c>StatusRemaining</c> ＝ 群れの数・何体目か は <c>Slot</c> の並びで）。</summary>
+    public const string Swarm = "群れ";
 }
 
 /// <summary>`Spark`（第307期）の <c>Text</c>。</summary>

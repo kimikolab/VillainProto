@@ -472,7 +472,7 @@ static class EliteDiag
             ("耐久 (ガルド×リリ)", 0, 0),
         };
         // 第287期: §7 は第284期の記録なので、規定のトウ（第287期から T3）を旧の規定 `TouT0` に戻して照合する。
-        var sel = expect.Select(e => rows.First(r => r.Name == e.Row)).Select(r => (r.Name, F: FvSwap(FvSwap(FvSwap(FvSwap(r.F, UnitCatalog.Tou, UnitCatalog.TouT0), UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0))).ToArray();   // 第290期: カタも旧の規定（S3）へ・第291期: クグも
+        var sel = expect.Select(e => rows.First(r => r.Name == e.Row)).Select(r => (r.Name, F: FvSwap(FvSwap(FvSwap(FvSwap(FvSwap(r.F, UnitCatalog.Tou, UnitCatalog.TouT0), UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Som, UnitCatalog.SomH307))).ToArray();   // 第290期: カタも旧の規定（S3）へ・第291期: クグも・第311期: ソムも第284期の規定（S1x・`SomH307`）へ
         var gb = Cells(Grid(sel, new[] { NineRecruit, Nine }, Elite, 0, 50));
         Console.WriteLine();
         Console.WriteLine("| 行 | 九・新兵 §7 | 実測 | 九・農兵 §7 | 実測 |");

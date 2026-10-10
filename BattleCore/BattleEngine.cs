@@ -508,6 +508,8 @@ public enum OutOfTurnRoute
     KnightRiposte,
     /// <summary>ソムの光（第307期・ソムの版 SH-a `SparkRain`・`SparkAfterChain`。<b>問う相手はソム</b>——癒される味方ではない）。</summary>
     Spark,
+    /// <summary>緊急の喚び出し（第311期・ソムの版 K-a ／ K-b `EmergencyCall`・`EmergencyCallTrait`。<b>問う相手はソム</b>——危ない味方ではない）。</summary>
+    Emergency,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -517,7 +519,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "羽の標撃ち", "庇い", "指差し", "叫び", "騎士の斬り返し", "光", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "羽の標撃ち", "庇い", "指差し", "叫び", "騎士の斬り返し", "光", "緊急の喚び出し", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -1688,13 +1690,19 @@ public sealed class BattleContext
     /// </summary>
     /// <param name="initiator">連鎖を起こした一撃の主（撃破の帰属先）。刻みが起こした連鎖は null。</param>
     /// <param name="rootKind">根の種類（計数のみ）: 0 攻撃などの一撃 ／ 1 刻み ／ 2 出どころの無い削り。</param>
-    internal void ShockTrigger(UnitState u, UnitState? initiator, int rootKind)
+    internal void ShockTrigger(UnitState u, UnitState? initiator, int rootKind, IReadOnlyList<UnitState>? moreRoots = null)
     {
-        if (_shockChaining) { _shockQueue.Enqueue((u, _shockDepth + 1, initiator)); return; }
+        if (_shockChaining)
+        {
+            _shockQueue.Enqueue((u, _shockDepth + 1, initiator));
+            if (moreRoots is not null) foreach (UnitState r in moreRoots) _shockQueue.Enqueue((r, _shockDepth + 1, initiator));
+            return;
+        }
 
         _shockChaining = true;
         _shockQueue.Clear();
         _shockQueue.Enqueue((u, 0, initiator));
+        if (moreRoots is not null) foreach (UnitState r in moreRoots) _shockQueue.Enqueue((r, 0, initiator));   // 第311期（群れ）: 同じ連鎖の起点として並べる
         int size = 0, deepest = 0, cross = 0;
         bool threadRoot = false;
         List<UnitState>? popped = _chainReaders.Count > 0 ? new List<UnitState>() : null;   // 第289期（連鎖の後の口）
@@ -1781,6 +1789,7 @@ public sealed class BattleContext
                 if (_sparkLive && IsSparkHolder(h)) TallyOf(h).SparkAllyPops += popped.Count;   // 第307期・計数のみ（味方の側の弾けは光にならない）
                 continue;
             }
+            if (_swarmLive && h.HasTrait(TraitId.SwarmCall)) NoteSwarmPops(h, popped.Count);   // 第311期（群れ・保持者がいなければ比較1つ）
             if (_sparkLive && IsSparkHolder(h)) { SparkAfterChain(h, popped); continue; }   // 第307期（ソムの光）
             UnitTally ht = TallyOf(h);
             if (h.HasTrait(TraitId.Thunder))
@@ -1849,10 +1858,13 @@ public sealed class BattleContext
             EmitSpark(h, SparkLabels.Silenced, n, 0);   // 表示専用
             return;
         }
-        EmitSpark(h, SparkLabels.Release, n, 0);   // 表示専用（見出し・直後に各味方の `Heal`）
-        Log($"    弾けた光（{n}）が {h.Name} のもとへ帰り、仲間に降り注ぐ", LogKind.Trigger, h);
+        // 第311期（K-a）: 緊急の喚び出しの連鎖（その獣を含む連鎖）の光は、危ない味方1体に集まる。保持者がいなければ比較1つで抜ける。
+        UnitState? focus = _emergencyBeast is not null && h.HasTrait(TraitId.EmergencyFocus) && _emergencyAlly is { IsAlive: true } && popped.Contains(_emergencyBeast) ? _emergencyAlly : null;
+        EmitSpark(h, SparkLabels.Release, n, 0, focus);   // 表示専用（見出し・直後に各味方の `Heal`・K-a は集まる先）
+        Log(focus is null ? $"    弾けた光（{n}）が {h.Name} のもとへ帰り、仲間に降り注ぐ" : $"    弾けた光（{n}）が {focus.Name} に集まる", LogKind.Trigger, h);
         TraitMark m = BeginTrait(TraitId.SparkRain, h);   // 回復(与) の帰属（観測専用）
-        SparkTrait.Rain(this, h, n);
+        if (focus is null) SparkTrait.Rain(this, h, n);
+        else SparkTrait.RainOn(this, h, n, focus);
         EndTrait(m);
     }
 
@@ -1901,41 +1913,114 @@ public sealed class BattleContext
     /// 獣がその場で弾けて消える（第310期・E1 ／ E2）。席が空いていても塞がっていても、<paramref name="slot"/> に置いた置物の獣を起点に連鎖を回す
     /// （隣の敵へ放電 8・幅優先・1体1回は既存の規則のまま）。表示は `Summon` → `BeastBurst` → `ShockSpent` → `Discharge` …の並び（表示専用）。
     /// </summary>
-    public void BurstBeast(UnitState som, int team, int slot)
+    public void BurstBeast(UnitState som, int team, int slot, int count = 1, UnitState? emergencyFor = null)
     {
         UnitTally t = TallyOf(som);
         UnitDef def = UnitCatalog.Fodder;
-        bool taken = _units.Any(u => u.TeamId == team && u.Slot == slot && u.IsAlive);
-        var beast = new UnitState
+        FormationShape shape = ShapeOfTeam(team);
+        // 第311期（群れ）: 2体目からは召喚枠を順に（湧く席を除いた `SummonSlots` の順）、足りなければ先頭の席から重ねる。1体なら第310期と同じ1席。
+        var seats = new List<int> { slot };
+        if (count > 1)
         {
-            Def = def, TeamId = team, Shape = ShapeOfTeam(team), Slot = slot,
-            Hp = def.MaxHp, MaxHp = def.MaxHp, Traits = TraitCatalog.Resolve(def.Traits),
-        };
-        beast.InstanceId = _nextInstanceId++;   // 台本の番号だけ（`_units` には入れない）
-        beast.Board = this;
-        t.BeastBursts++;
-        if (taken) t.BeastBurstSeatTaken++;
-        Log($"    {som.Name} が喚んだものは向こう側へ駆け、その場で弾けた", LogKind.Trigger, som);
-        if (_verbose)
-        {
-            Emit(new BattleEvent { Kind = BattleEventKind.Summon, Turn = _turn, ActorId = som.InstanceId, TargetId = beast.InstanceId, Slot = slot, HpAfter = beast.Hp, Team = team, Text = def.Name });
-            Emit(new BattleEvent
-            {
-                Kind = BattleEventKind.BeastBurst, Turn = _turn, ActorId = som.InstanceId, TargetId = beast.InstanceId, Slot = slot, Team = team, Amount = taken ? 1 : 0,
-                Text = som.HasTrait(TraitId.BeastBurstAlways) ? BeastBurstLabels.Always : BeastBurstLabels.Charged,
-            });
+            var ring = new List<int> { slot };
+            foreach (int s in shape.SummonSlots) if (s != slot) ring.Add(s);
+            for (int k = 1; k < count; k++) seats.Add(ring[k % ring.Count]);
         }
-        beast.Hp = 0;   // 消える（倒れた扱いにしない・`HandleDeath` を通さない）
-        beast.SetCounter(StatusKeys.Shock, 1);
+        var beasts = new List<UnitState>(seats.Count);
+        foreach (int seat in seats)
+        {
+            bool taken = _units.Any(u => u.TeamId == team && u.Slot == seat && u.IsAlive);
+            var beast = new UnitState
+            {
+                Def = def, TeamId = team, Shape = shape, Slot = seat,
+                Hp = def.MaxHp, MaxHp = def.MaxHp, Traits = TraitCatalog.Resolve(def.Traits),
+            };
+            beast.InstanceId = _nextInstanceId++;   // 台本の番号だけ（`_units` には入れない）
+            beast.Board = this;
+            t.BeastBursts++;
+            if (taken) t.BeastBurstSeatTaken++;
+            if (_verbose)
+            {
+                Emit(new BattleEvent { Kind = BattleEventKind.Summon, Turn = _turn, ActorId = som.InstanceId, TargetId = beast.InstanceId, Slot = seat, HpAfter = beast.Hp, Team = team, Text = def.Name });
+                Emit(new BattleEvent
+                {
+                    Kind = BattleEventKind.BeastBurst, Turn = _turn, ActorId = som.InstanceId, TargetId = beast.InstanceId, Slot = seat, Team = team, Amount = taken ? 1 : 0,
+                    PartnerId = emergencyFor?.InstanceId,   // 第311期・表示専用（緊急の喚び出しなら危なかった味方）
+                    StatusRemaining = count > 1 ? count : null,   // 第311期・表示専用（群れの数）
+                    Text = emergencyFor is not null ? BeastBurstLabels.Emergency : count > 1 ? BeastBurstLabels.Swarm
+                         : som.HasTrait(TraitId.BeastBurstAlways) ? BeastBurstLabels.Always : BeastBurstLabels.Charged,
+                });
+            }
+            beast.Hp = 0;   // 消える（倒れた扱いにしない・`HandleDeath` を通さない）
+            beast.SetCounter(StatusKeys.Shock, 1);
+            beasts.Add(beast);
+        }
+        Log(emergencyFor is not null ? $"    {som.Name} が {emergencyFor.Name} を守らせようと喚んだものは、向こう側へ逃げて弾けた"
+            : count > 1 ? $"    {som.Name} が喚んだ群れ（{count}）は向こう側へ駆け、一斉に弾けた"
+            : $"    {som.Name} が喚んだものは向こう側へ駆け、その場で弾けた", LogKind.Trigger, som);
         _shockLive = true;
         long units0 = t.ShockTriggeredUnits;
         int alive0 = 0;
         foreach (UnitState u in _units) if (u.TeamId == team && u.IsAlive) alive0++;
-        ShockTrigger(beast, som, 0);
+        UnitState? prevBeast = _emergencyBeast, prevAlly = _emergencyAlly;
+        if (emergencyFor is not null) { _emergencyBeast = beasts[0]; _emergencyAlly = emergencyFor; }
+        try { ShockTrigger(beasts[0], som, 0, beasts.Count > 1 ? beasts.Skip(1).ToList() : null); }
+        finally { _emergencyBeast = prevBeast; _emergencyAlly = prevAlly; }
         t.BeastBurstUnits += t.ShockTriggeredUnits - units0;
         int alive1 = 0;
         foreach (UnitState u in _units) if (u.TeamId == team && u.IsAlive) alive1++;
         t.BeastBurstKills += alive0 - alive1;
+    }
+
+    // 第311期 —— 緊急の喚び出し（K-a ／ K-b）・群れ・萎縮の規則の版（design/PHASE311_SOM_SUMMONER_SPEC.md §3）。どれも保持者がいなければ比較1つで抜ける。乱数を引かない。
+
+    /// <summary>いま回している連鎖が、緊急の喚び出しの獣を含むか（K-a の光の行き先）。<see cref="BurstBeast"/> の中だけ。</summary>
+    UnitState? _emergencyBeast, _emergencyAlly;
+    /// <summary>萎縮の規則の版（`ShockDaunt`）の保持者が戦にいるか。</summary>
+    bool _shockDauntLive;
+    /// <summary>群れ（`SwarmCall`）の保持者が戦にいるか。</summary>
+    bool _swarmLive;
+
+    /// <summary>いま感電の連鎖を回しているか（第311期・緊急の喚び出しは連鎖の中では起きない）。</summary>
+    internal bool ShockChaining => _shockChaining;
+
+    /// <summary>群れ: そのターンにソムの敵の側で弾けた数（私有キー・`OnCarryOver` で消すのは札の側）。</summary>
+    public const string SwarmTurnKey = "swarmTurn", SwarmCurKey = "swarmCur", SwarmPrevKey = "swarmPrev";
+    /// <summary>群れの上限と割る数（指示書 §3-2）。</summary>
+    public const int SwarmCap = 5, SwarmPer = 3;
+
+    void NoteSwarmPops(UnitState h, int n)
+    {
+        RollSwarm(h);
+        h.SetCounter(SwarmCurKey, h.RawCounter(SwarmCurKey) + n);
+    }
+
+    /// <summary>ターンが変わっていたら、いまのターンの数を「前のターン」へ送る（前のターンに1つも弾けていなければ 0）。</summary>
+    void RollSwarm(UnitState h)
+    {
+        int tk = h.RawCounter(SwarmTurnKey);
+        if (tk == _turn + 1) return;
+        h.SetCounter(SwarmPrevKey, tk == _turn ? h.RawCounter(SwarmCurKey) : 0);
+        h.SetCounter(SwarmCurKey, 0);
+        h.SetCounter(SwarmTurnKey, _turn + 1);
+    }
+
+    /// <summary>群れの数 ＝ 1 ＋（前のターンにソムの敵の側で弾けた数 ÷ 3 の切り捨て）・上限 5（第311期）。計数も立てる。</summary>
+    public int SwarmCount(UnitState som)
+    {
+        RollSwarm(som);
+        int n = Math.Min(SwarmCap, 1 + som.RawCounter(SwarmPrevKey) / SwarmPer);
+        UnitTally t = TallyOf(som);
+        t.SwarmBeasts += n;
+        (t.SwarmHist ??= new long[SwarmCap + 1])[n]++;
+        return n;
+    }
+
+    /// <summary>緊急の喚び出し（第311期・<see cref="EmergencyCallTrait"/> が割り込みの中で呼ぶ）。湧く席で獣を弾けさせ、光の行き先を危ない味方にする（K-a）。</summary>
+    public void EmergencyBurst(UnitState som, UnitState ally)
+    {
+        int foe = Opponent(som.TeamId);
+        BurstBeast(som, foe, BetrayedTrait.FodderSlotOf(ShapeOfTeam(foe)), 1, ally);
     }
 
     /// <summary>
@@ -2010,6 +2095,16 @@ public sealed class BattleContext
         // 第217期（G3H）: 痺れが明けた駒は、次の自分の手番まで感電で痺れない。保持者がいなければ比較1つで抜ける。
         if (_shockStunGuard && x.RawCounter(ShockRule.GuardKey) > 0) { t.ShockStunGuarded++; return; }
         if (_shockStun == 3 && Roll(100) >= ShockRule.StunHalfPercent) { t.ShockStunMissed++; return; }
+        // 第311期（萎縮の規則の版・`ShockDaunt`）: 痺れが付かない駒（動じない など）は、痺れの代わりに萎縮する（二値）。札の保持者がいなければ比較1つで抜ける。
+        if (_shockDauntLive && x.ControlBlockedAtEntry)
+        {
+            if (x.RawCounter(StatusKeys.Daunted) > 0) { t.ShockDauntAlready++; return; }
+            t.ShockDaunted++;
+            x.SetCounter(StatusKeys.Daunted, 1);
+            EmitStatusGain(x, StatusKeys.Daunted, 1, ini);   // 表示専用（ShockSpent の直後）
+            Log($"    {x.Name} は痺れない——代わりに腕が縮んだ（萎縮）", LogKind.Status);
+            return;
+        }
         if (x.RawCounter(StatusKeys.Stun) > 0) { t.ShockStunAlready++; return; }
         t.ShockStunned++;
         // 第218期・**計数のみ**: そのターンの手番をまだ終えていなかったか（＝動く前に止めた）。ミオの一撃が起こした連鎖はミオの帳簿にも。
@@ -7875,6 +7970,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Footing)) _shieldHolders.Add(u);
         if (u.HasTrait(TraitId.Planted)) _plantedLive = true;
         if (u.HasTrait(TraitId.Daunt)) _dauntLive = true;   // 第189期（萎縮の消費を短絡させる）
+        if (u.HasTrait(TraitId.ShockDaunt)) { _shockDauntLive = true; _dauntLive = true; }   // 第311期（萎縮の規則の版）
+        if (u.HasTrait(TraitId.SwarmCall)) _swarmLive = true;   // 第311期（群れ）
         if (u.HasTrait(TraitId.Numb)) _numbLive = true;     // 第195期（痺れ毒の減少を短絡させる）
         if (u.HasTrait(TraitId.Scrap)) _scrapHolders.Add(u); // 第207期（破片の減りを拾う口を短絡させる）
         if (u.HasTrait(TraitId.Thorns)) _thornsLive = true;

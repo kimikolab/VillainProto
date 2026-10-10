@@ -746,6 +746,12 @@ public enum TraitId
     BeastBurstAlways,  // 弾ける獣（E2）: 獣はいつも喚んだ瞬間に弾けて消える（同上）
     ShameSkipFodder,   // 獣を外す（SG-f）: 見せしめの「動けない敵を優先」と割り込みの鞭の「動けない敵を優先」から背いた獣を外す（獣は無作為の候補には残る）（**札そのものは挙動を持たない**・engine の標的の段と `ShockWhip` が読む）
 
+    // --- 第311期で足した札（ソムの版 `UnitCatalog.SomKa` ／ `SomKb` ／ `SomSW` と、萎縮の規則の版 `UnitCatalog.KataDT` ／ `TouDT` だけが持つ） ---
+    EmergencyCall,     // 緊急の喚び出し（K-b）: 味方（ソム自身を含む）の HP＋破片が最大HPの 4 割を切る被弾があると、手番の外で獣を喚び、その場で弾けさせる（1ターン1回・粛 ／ 痺れで止まる・経路 `OutOfTurnRoute.Emergency`）（`EmergencyCallTrait`）
+    EmergencyFocus,    // 危ない味方に集める（K-a）: 緊急の喚び出しの連鎖の光は、危なかった味方1体に 光 × 量 × 5 で集まる（溢れは衣）（**札そのものは挙動を持たない**・engine の `SparkAfterChain` が読む）
+    SwarmCall,         // 群れ: 手番の頭の喚び出しで、1 ＋（前のターンにソムの敵の側で弾けた数 ÷ 3）体（上限 5）を一斉に弾けさせる（**札そのものは挙動を持たない**・`BetrayedTrait.Call` と engine の `SwarmCount` が読む）
+    ShockDaunt,        // 萎縮の規則の版: 痺れが付かない駒（動じない など）は、感電の弾けで痺れの判定に当たったとき、痺れる代わりに萎縮する（二値）。保持者が戦にいれば両陣営に（**札そのものは挙動を持たない**・engine の `StunByShock`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -10810,7 +10816,7 @@ public sealed class BetrayedTrait : Trait
         bool charged = ctx.NoteBeastCall(self, foe, seat);
         if (self.HasTrait(TraitId.BeastBurstAlways) || (charged && self.HasTrait(TraitId.BeastBurstCharged)))
         {
-            ctx.BurstBeast(self, foe, seat);
+            ctx.BurstBeast(self, foe, seat, self.HasTrait(TraitId.SwarmCall) ? ctx.SwarmCount(self) : 1);   // 第311期: 群れ
             return null;
         }
 
@@ -10868,6 +10874,62 @@ public sealed class BetrayedShockTrait : Trait
             foreach (UnitState n in ctx.LivingMembers(f.TeamId))
                 if (n != f && FormationRules.AreAdjacent(f, n)) ctx.MarkShock(n, self);
         ctx.Log(!_self ? "    喚ばれたものの隣に雷が落ちた" : _spread ? "    喚ばれたものは雷を纏っていた。雷は隣の敵にも移った" : "    喚ばれたものは雷を纏っていた", LogKind.Trigger);
+    }
+}
+
+/// <summary>
+/// 緊急の喚び出し（第311期・ソムの版 K-a ／ K-b・design/PHASE311_SOM_SUMMONER_SPEC.md §3-1）。
+/// <b>味方（ソム自身を含む）が HP を削られて、HP＋破片が最大HPの <see cref="Percent"/>% を切っていたら</b>、ソムは手番の外で獣を喚ぶ——獣はやはり逃げ出し、敵陣の湧く席で
+/// その場で弾ける（engine の <see cref="BattleContext.EmergencyBurst"/>・倒れた扱いにしない・起点はソム）。K-a（<see cref="TraitId.EmergencyFocus"/>）ならその連鎖の光は危ない味方1体に集まる。
+/// <para>作法はツギの応急処置（<see cref="FirstAidTrait"/>）と同じ: 判定は被弾ごと（<c>OnDamaged</c> ／ <c>OnAllyDamaged</c>・HP が減った被弾だけ）・<b>1ターン1回</b>・
+/// 割り込み ／ 反撃の中と、感電の連鎖の中では出ない・<see cref="BattleContext.CanActOutOfTurn"/>（経路 <see cref="OutOfTurnRoute.Emergency"/>）で粛 ／ 痺れに止まる・ソムが倒れていれば出ない。
+/// 毎ターンの喚び出し（手番の頭）とは別に数える。<b>乱数を引かない。</b></para>
+/// </summary>
+public sealed class EmergencyCallTrait : Trait
+{
+    /// <summary>線（HP＋破片が最大HPの何%を切ったら・ツギの応急処置と同じ 40）。</summary>
+    public const int Percent = FirstAidTrait.Percent;
+    /// <summary>その戦で最後に喚んだターン ＋ 1（私有キー・0 ＝ まだ）。</summary>
+    public const string TurnKey = "somEmergTurn";
+
+    public override TraitId Id => TraitId.EmergencyCall;
+
+    public static bool Needs(UnitState u) => u.IsAlive && (u.Hp + u.RawCounter(StatusKeys.Armor)) * 100 < u.MaxHp * Percent;
+
+    public override void OnDamaged(BattleContext ctx, UnitState self, int dmg, UnitState? source) => Try(ctx, self, self, dmg);
+
+    public override void OnAllyDamaged(BattleContext ctx, UnitState self, UnitState ally, int dmg, UnitState? source) => Try(ctx, self, ally, dmg);
+
+    public override void OnCarryOver(UnitState self) => self.SetCounter(TurnKey, 0);
+
+    static void Try(BattleContext ctx, UnitState som, UnitState to, int dmg)
+    {
+        if (dmg <= 0 || !som.IsAlive || !Needs(to)) return;
+        UnitTally t = ctx.TallyOf(som);
+        t.EmergNeed++;
+        if (som.RawCounter(TurnKey) == ctx.Turn + 1) { t.EmergSpent++; return; }
+        if (ctx.InInterrupt || ctx.InReaction || ctx.ShockChaining) { t.EmergHeld++; return; }
+        if (ctx.LivingMembers(ctx.Opponent(som.TeamId)).Count == 0) return;
+        bool hush = ctx.HushBindingNow;   // 問う前に読む（問うと粛が砕けることがある）
+        if (!ctx.CanActOutOfTurn(som, OutOfTurnRoute.Emergency)) { if (hush) t.EmergHushed++; else t.EmergBlocked++; return; }
+        som.SetCounter(TurnKey, ctx.Turn + 1);
+        t.EmergFired++;
+        if (to.Row == Row.Front) t.EmergFront++; else t.EmergBack++;
+        ctx.Log($"    「{to.Name}を守れ！」——{som.Name} が慌てて喚んだ", LogKind.Highlight, som);
+        ctx.Interrupt(() => ctx.EmergencyBurst(som, to));
+    }
+}
+
+/// <summary>群れ（第311期・ソムの版 SW）。<b>札そのものは挙動を持たない</b>（`BetrayedTrait.Call` が数を、engine が前のターンの弾けを数える）。持ち越しで私有キーを消す。</summary>
+public sealed class SwarmCallTrait : Trait
+{
+    public override TraitId Id => TraitId.SwarmCall;
+
+    public override void OnCarryOver(UnitState self)
+    {
+        self.SetCounter(BattleContext.SwarmTurnKey, 0);
+        self.SetCounter(BattleContext.SwarmCurKey, 0);
+        self.SetCounter(BattleContext.SwarmPrevKey, 0);
     }
 }
 
@@ -12914,6 +12976,39 @@ public sealed class SparkTrait : Trait
                     if (veil && over > 0) Veil(ctx, som, a, over, cap);
                     break;
             }
+        }
+    }
+
+    /// <summary>
+    /// 危ない味方に集める光（第311期・K-a）。光 <paramref name="lights"/> 個 × 量 × 5 を <paramref name="a"/> 1体に1度に癒し、溢れは光の衣と同じ口でその味方の破片に（ソムが衣の札を持つとき）。
+    /// </summary>
+    public static void RainOn(BattleContext ctx, UnitState som, int lights, UnitState a)
+    {
+        int amt = AmountOf(som, lights) * 5;
+        UnitTally t = ctx.TallyOf(som);
+        t.SparkRains++;
+        t.SparkRainLights += lights;
+        t.EmergFocusLights += lights;
+        int before = a.Hp;
+        HealOutcome res = ctx.Heal(a, amt, som);
+        switch (res)
+        {
+            case HealOutcome.Inverted: t.SparkInverted += amt; break;
+            case HealOutcome.Blocked or HealOutcome.Drought: t.SparkRefused += amt; break;
+            case HealOutcome.Healed or HealOutcome.Full:
+                int got = Math.Max(0, a.Hp - before);
+                int over = amt - got;
+                t.SparkHealed += got;
+                t.EmergFocusHealed += got;
+                t.SparkOverflow += over;
+                if (over > 0) NoteOver(ctx, a, over, before >= a.MaxHp);
+                if (over > 0 && som.HasTrait(TraitId.SparkVeil))
+                {
+                    long v0 = t.SparkVeilAdded;
+                    Veil(ctx, som, a, over, som.HasTrait(TraitId.SparkVeilCap));
+                    t.EmergFocusVeil += t.SparkVeilAdded - v0;
+                }
+                break;
         }
     }
 
@@ -17211,6 +17306,10 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.BeastBurstCharged),         // 第310期（弾ける獣 E1・印だけ）
         new MarkOnlyTrait(TraitId.BeastBurstAlways),          // 第310期（弾ける獣 E2・印だけ）
         new MarkOnlyTrait(TraitId.ShameSkipFodder),           // 第310期（シガ SG-f・印だけ）
+        new EmergencyCallTrait(),                             // 第311期（ソム K-a ／ K-b）
+        new MarkOnlyTrait(TraitId.EmergencyFocus),            // 第311期（K-a・印だけ）
+        new SwarmCallTrait(),                                 // 第311期（群れ・印 ＋ 持ち越しの掃除）
+        new MarkOnlyTrait(TraitId.ShockDaunt),                // 第311期（萎縮の規則の版・印だけ）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

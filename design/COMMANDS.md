@@ -1033,6 +1033,14 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 som310 grid <E1|E2> <boss|guard|bat>   # 第310期 ソムの格子（第309期と同じ作り・ソムの側だけ・ボス 約 1 分・精鋭 約 10 分）
     dotnet run --project BattleSim -c Release 0 som310 memo [版] [台の一部] [boss|guard|bat|nine|1..5] [seed] [最初のT] [最後のT]   # 第310期 台本の抜粋（`PHASE291_CODEX_MEMO.md` §14-6）
     dotnet run --project BattleSim -c Release 0 som310 check       # 第310期 自己検査（版の定義・E1 ／ E2 の弾け・倒れた扱いにしない・起点 ＝ ソム・光・席で弾ける・SG-f・規定の不動・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 som311 p0          # 第311期 Phase 0: 規定（E2）のまま、4 割を切る被弾・前のターンの弾け（群れの見込み）・ボスの痺れの判定・動じない敵の有無（数秒）。本体は `Modes/Som311.cs`
+    dotnet run --project BattleSim -c Release 0 som311 boards [版,…]   # 第311期 代表台 8 × 10 波 × 版（規定 ／ K-a ／ K-b ／ 群れ ／ 萎縮 ／ 重ね）・対照・格子の門（約 20 秒）。**予測のファイル `.tmp/p311/predict.md` が無いと走らない**（R397）
+    dotnet run --project BattleSim -c Release 0 som311 compare     # 第311期 `compare` 64 行 × 版・(G2)（約 20 秒・同上）
+    dotnet run --project BattleSim -c Release 0 som311 swap        # 第311期 ソム ↔ ツギ（第309期の入れ替え）× 版（約 10 秒・同上）
+    dotnet run --project BattleSim -c Release 0 som311 grid <版> <boss|guard|bat>   # 第311期 ソムの格子（第310期と同じ作り）＋ 90% 以上の台の倒しT の分布（ボス 約 3 分・精鋭 約 12 分・同上）
+    dotnet run --project BattleSim -c Release 0 som311 kubi        # 第311期 段2: クビの3つの守り（被ダメ −30% ／ 萎縮 ／ 漏れ）を1つずつ外した台・クビ → ドルガ ／ シガ（数秒・同上）
+    dotnet run --project BattleSim -c Release 0 som311 memo <版> <台の一部> <boss|guard|bat|nine|1..5> <seed> <最初のT> <最後のT>   # 第311期 台本の抜粋（`PHASE291_CODEX_MEMO.md` §14-7）
+    dotnet run --project BattleSim -c Release 0 som311 check       # 第311期 自己検査（段0 の定義・版の定義・緊急の線と1ターン1回・粛 ／ 痺れ・K-a の行き先・群れの式と1つの連鎖・萎縮・verbose・PickOne）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）
