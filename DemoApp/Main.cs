@@ -1153,6 +1153,7 @@ public partial class Main : Control
         _misa = MisaPresentation.Build(_result.Events);
         _markRally = MarkRallyPresentation.Build(_result.Events);
         _markLoop = MarkLoopPresentation.Build(_result.Events);
+        _dohaShares = DohaSharePresentation.Build(_result.Events);
         _hisaCommand = HisaCommandPresentation.Build(_result.Events);
         _mireBurstsShown.Clear();
         IndexTimeline(_result.Events);
@@ -1223,6 +1224,7 @@ public partial class Main : Control
         _fireFastEvent = false;
         _misaFastEvent = false;
         _zanFastEvent = false;
+        _dohaFastEvent = false;
         int token = ++_playToken;
         _comboEnds.Clear();
         _hexMarksShown = _hexSharePlays = _hexShareHits = 0;
@@ -1259,6 +1261,7 @@ public partial class Main : Control
             if (_turnTicks.Starts.TryGetValue(eventIndex, out var ticks))
                 await PlayTurnTicks(ticks, token);
             else await ApplyEvent(e, eventIndex);
+            _dohaFastEvent = false;
             if (token != _playToken || !_battleMode) return;
             await FinishZan(eventIndex);
             if (token != _playToken || !_battleMode) return;
@@ -1368,6 +1371,7 @@ public partial class Main : Control
 
     private async Task ApplyEvent(BattleEvent e, int eventIndex)
     {
+        _dohaFastEvent = _dohaShares.FastEvents.Contains(eventIndex);
         BattlePawn3D? actor = _battleField.FindPawn(e.ActorId);
         BattlePawn3D? target = _battleField.FindPawn(e.TargetId);
         if (actor is not null) actor.AnimationSpeed = Math.Max(0.1, _speed);
@@ -2491,6 +2495,7 @@ public partial class Main : Control
 
     private async Task Delay(double seconds, bool raw = false)
     {
+        if (!raw && _dohaFastEvent) seconds = Math.Min(seconds, 0.04);
         if (!raw && (_fireFastEvent || _misaFastEvent || _zanFastEvent)) return;
         if (!raw && _tickDelayBudget is double budget)
         {

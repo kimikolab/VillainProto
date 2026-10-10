@@ -17,7 +17,7 @@ public partial class ShockMarkAura3D : Node3D
         // 中心を主照準、周囲を積み重なった狙いにする。実数はHUD、描画は最大7個。
         if (_owner.MarkLayers > 0 && _mark is null)
         {
-            _mark = ShockMarkFx.Sprite(this, _owner.FxPoint, ShockMarkFx.BoldMark, 1.10f, Colors.White);
+            _mark = ShockMarkFx.Sprite(this, _owner.FxPoint, ShockMarkFx.MarkTexture(_owner.Team), 1.10f, Colors.White);
             _mark.NoDepthTest = true;
             _mark.RenderPriority = 7;
         }
@@ -25,8 +25,8 @@ public partial class ShockMarkAura3D : Node3D
         int satellites = Math.Clamp(_owner.MarkLayers - 1, 0, 6);
         while (_satelliteMarks.Count < satellites)
         {
-            var mark = ShockMarkFx.Sprite(this, _owner.FxPoint, ShockMarkFx.BoldMark, 0.44f,
-                new Color(1, 0.64f, 0.74f, 0.90f));
+            var mark = ShockMarkFx.Sprite(this, _owner.FxPoint, ShockMarkFx.MarkTexture(_owner.Team), 0.44f,
+                _owner.Team == 0 ? Colors.White : new Color(1, 0.64f, 0.74f, 0.90f));
             mark.NoDepthTest = true;
             mark.RenderPriority = 6;
             _satelliteMarks.Add(mark);

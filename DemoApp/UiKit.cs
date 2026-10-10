@@ -205,6 +205,7 @@ public static class UiKit
         "sasa" => 1.90f,
         "tome" => 2.45f,
         "sora" => 2.65f,
+        "doha" => 2.65f,
         "egu" => 2.80f,
         "nomi" => 2.30f,
         "hagi" => 2.55f,
@@ -288,6 +289,9 @@ public static class UiKit
         "hisa_cover" => 0.0240885f, // v3：右向き。1536pxの下端から靴底まで37px。
         "zan" => 0.0078f,
         "zan_vendetta" => 0.120f,
+        "doha" => 0.0032552f, // 1536px の下端から足先まで5px。
+        "doha_receive" => 0.015625f, // 受け止め：下端24px。
+        "doha_give" => 0.0162760f, // 力返し：下端25px。
         "kugu" => 0.02995f,
         "shiga" => 0.03125f,
         "som" => 0.01953125f, // 1536px の下端から靴底まで30px。

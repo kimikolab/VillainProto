@@ -76,6 +76,7 @@ public partial class BattlePawn3D
         if (_alive && StatusIconArt.KeyOf(keyOrLabel) is { } key)
         {
             _statusIcons.Set(key, active);
+            if (key == StatusKeys.Marked && !active) _markLock?.Stop();
             if (key == StatusKeys.Shock) SetShocked(active);
             if (key == StatusKeys.Confused) _confusion.SetActive(active && !_victory);
             if (key == StatusKeys.Curse) SetCurseStain(active && !_victory);

@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 public partial class Main
 {
     private MarkLoopPresentation _markLoop = new();
+    private DohaSharePresentation _dohaShares = new();
+    private bool _dohaFastEvent;
 
     private async Task<bool> PlayMarkLoop(BattleEvent e, int index, BattlePawn3D? actor, BattlePawn3D? target)
     {
@@ -21,7 +23,8 @@ public partial class Main
                 await Delay(0.09);
                 return true;
             case BattleEventKind.ShareGive when e.Text == ShareGiveLabels.Power:
-                await _battleField.ShowSharePower(actor, target, e, _speed);
+                if (_dohaShares.Ends.TryGetValue(index, out var shares))
+                    await _battleField.ShowSharePowers(shares, _speed);
                 return true;
             case BattleEventKind.VendettaRound:
                 if (e.Text == VendettaRoundLabels.Start)

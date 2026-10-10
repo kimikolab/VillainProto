@@ -8,6 +8,18 @@ internal static class ShockMarkFx
     internal static readonly Color Gold = new("ffd685");
     private static Texture2D? _halo, _reticle, _cloud, _powder;
     private static Texture2D? _boldMark;
+    private static Texture2D? _allyMark, _lockFrame, _allyLockFrame;
+    internal static Texture2D MarkTexture(int team) => team == 0 ? AllyMark : BoldMark;
+    // 味方の白い服にも暗い鎧にも残る三重線。敵の四角い角とは菱形で区別する。
+    internal static Texture2D AllyMark => _allyMark ??= Svg("<defs><g id='a' fill='none' stroke-linejoin='round'><circle cx='64' cy='64' r='34'/><path d='M64 6L75 17L64 28L53 17ZM64 100L75 111L64 122L53 111ZM6 64L17 53L28 64L17 75ZM100 64L111 53L122 64L111 75Z'/><circle cx='64' cy='64' r='4'/></g></defs><use href='#a' stroke='#20121e' stroke-width='13'/><use href='#a' stroke='#ff702e' stroke-width='8'/><use href='#a' stroke='#ffe0c2' stroke-width='2.5'/>");
+    internal static Texture2D LockFrame(int team)
+    {
+        if (team == 0 && _allyLockFrame is not null) return _allyLockFrame;
+        if (team != 0 && _lockFrame is not null) return _lockFrame;
+        var texture = Svg("<defs><path id='f' fill='none' stroke-linejoin='round' d='M12 42V12H42M86 12H116V42M116 86V116H86M42 116H12V86'/></defs><use href='#f' stroke='#200917' stroke-width='14'/><use href='#f' stroke='" + (team == 0 ? "#ff702e" : "#ff4269") + "' stroke-width='9'/><use href='#f' stroke='#fff3dc' stroke-width='3'/>");
+        if (team == 0) _allyLockFrame = texture; else _lockFrame = texture;
+        return texture;
+    }
     // 黒い下線＋朱色＋象牙色の芯。鎧・石壁・暗い服のどれにも輪郭を残す。
     internal static Texture2D BoldMark => _boldMark ??= Svg("<defs><g id='m' fill='none'><circle cx='64' cy='64' r='37'/><path d='M64 9v25M64 94v25M9 64h25M94 64h25M20 39V20h19M89 20h19v19M108 89v19H89M39 108H20V89'/><circle cx='64' cy='64' r='5'/></g></defs><use href='#m' stroke='#200917' stroke-width='12'/><use href='#m' stroke='#ff4269' stroke-width='7'/><use href='#m' stroke='#fff0d6' stroke-width='2'/>");
     private static Texture2D Svg(string body)

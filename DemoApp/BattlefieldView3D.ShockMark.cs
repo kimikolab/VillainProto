@@ -45,12 +45,12 @@ public partial class BattlefieldView3D
         bool added = amount > target.MarkLayers;
         target.SetMarkLayers(amount);
         target.SetStatusIcon(StatusKeys.Marked, amount > 0);
-        ShockMarkFx.Ring(_fxRoot, target.FxPoint, new Color("ff8199"), 1.8f, 0.32 / speed);
-        if (added) PlayMarkAdded(target);
+        if (added) PlayMarkAdded(target, speed);
     }
-    internal void PlayMarkAdded(BattlePawn3D target)
+    internal void PlayMarkAdded(BattlePawn3D target, double? speed = null)
     {
         MarkAddPlays++;
+        target.PulseMark(speed ?? target.AnimationSpeed);
         float pan = Math.Clamp((_camera.UnprojectPosition(target.FxPoint).X / _viewport.Size.X - .5f) * 1.4f, -.7f, .7f);
         _attackAudio.PlayShockMark(ShockMarkSound.MarkAdd, pan: pan);
     }

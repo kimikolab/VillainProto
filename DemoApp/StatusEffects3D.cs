@@ -3,7 +3,9 @@ using Godot;
 /// <summary>標・痺・破片の表示。残量の判断は再生側に任せ、戦闘ルールを持たない。</summary>
 public partial class StatusEffects3D : Node3D
 {
-    private MeshInstance3D _mark = null!;
+    private Sprite3D _mark = null!;
+    internal Vector3 MarkPoint => _mark.GlobalPosition;
+    internal Texture2D MarkTexture => _mark.Texture;
     private MeshInstance3D _stun = null!;
     private Node3D _shards = null!;
     private readonly MeshInstance3D[] _pieces = new MeshInstance3D[6];
@@ -12,18 +14,17 @@ public partial class StatusEffects3D : Node3D
     private int _markedAmount;
     public void SetLayeredMark(bool active) { _layeredMark = active; _mark.Visible = !active && _markedAmount > 0; }
 
-    public void Configure(float height, float phase)
+    public void Configure(float height, float phase, int team = 1)
     {
         _time = phase;
-        _mark = Billboard(new Vector2(1.15f,1.15f), new Vector3(0,height*0.73f,0.55f), @"
-    vec2 p = UV-vec2(0.5);
-    float d = length(p);
-    float ring = 1.0-smoothstep(0.013,0.023,abs(d-0.31));
-    float arms = (1.0-smoothstep(0.012,0.022,min(abs(p.x),abs(p.y)))) * step(0.22,max(abs(p.x),abs(p.y))) * (1.0-step(0.45,max(abs(p.x),abs(p.y))));
-    ALBEDO = vec3(1.0,0.24,0.22);
-    EMISSION = ALBEDO*0.65;
-    ALPHA = max(ring,arms)*(0.65+0.22*sin(TIME*3.0));
-");
+        var texture = ShockMarkFx.MarkTexture(team);
+        _mark = new Sprite3D { Texture = texture, PixelSize = 1.15f / texture.GetWidth(),
+            Position = new Vector3(0, height * 0.73f, 0.55f), Shaded = false,
+            Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
+            NoDepthTest = true, RenderPriority = 7,
+            TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmaps,
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+        AddChild(_mark);
         _stun = Billboard(new Vector2(2.1f,height*0.9f), new Vector3(0,height*0.5f,0.5f), @"
     float tick = floor(TIME*11.0);
     float zig = abs(fract(UV.y*5.0+tick*0.17)*2.0-1.0);

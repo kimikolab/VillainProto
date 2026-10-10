@@ -349,3 +349,16 @@ EffectBlocksには展示用の `source_files/meshes/props/wall.tres` と `FirePi
 - 接続検証は `res://FireCheck.tscn -- --assets`、実台本の再生・再戦は `res://FireCheck.tscn -- --replay`。比較用の `--pierce-capture` / `--hota-capture` も引き続き利用できる。
 
 確認結果: DemoAppビルド成功。接続検証は `PURCHASED_ASSETS_CHECK_OK`、実台本は初戦・再戦とも `FIRE_REPLAY_OK`（通知202件・攻撃19件・火の雨10発・爆炎1回・残り火5発）と `FIRE_CHECK_OK`。最終HP一致も確認。実台本検証の終了時にはCanvasItem／ObjectDB／Fontの解放警告が残る。`audit` はずれているファイル0件。購入素材未配置時の代替描画はコードに用意しているが、素材を外した実行確認は未実施。
+
+### ドハ・痛みを引き受ける煙（2026-10-10）
+
+DemoAppの力配りにEffectBlocks v4の `assets/smoke/smoke_light.tscn` を採用。
+配置は `DemoApp/PolyBlocks/EffectBlocks/`、原本は `D:/Assets/GodotAssets/EffectBlocks v4/`。
+既存の導入スクリプトで配置する。購入素材本体はGitに追加しない。
+
+- `DohaShareFx.cs` が発動ごとにインスタンス化し、粒子処理材・色の勾配・描画材を複製して調整。共有リソースと原本は変更しない。
+- 18粒、寿命0.24秒、紫から暗紫へ消える煙。移動する痛みの塊へ追従させ、0.24幅の暗い帯で方向を示す。
+- `smoke_toxic` も確認したが、毒との混同を避けて無彩色のlightを採用。`sparkles` は札の金色と役割が重なり、光線・稲妻は攻撃に見えるため今回使わない。
+- 購入素材がない環境でも帯・移動する塊・胸の反応・札・音は同じ入口で再生する。
+- 一時停止は移動と音の予約を同じ時計で止める。死亡・中断・非表示・再戦で発動単位のノードを破棄。倍速にも対応。
+- 実行と検証の記録は `design/art/doha/integration.md`。戦闘規則・対象・件数は変更しない。

@@ -94,3 +94,30 @@ $shockMarkGodot = 'C:/tools/Godot_v4.7.2-stable_mono_win64/Godot_v4.7.2-stable_m
 & $shockMarkGodot --headless --path DemoApp --log-file C:/works/VillainProto/output/shock-mark-check.log res://ShockMarkCheck.tscn -- --verify
 & $shockMarkGodot --path DemoApp --log-file C:/works/VillainProto/output/shock-mark-visual.log res://ShockMarkCheck.tscn -- --capture-dir=C:/works/VillainProto/output/shock-mark-captures
 ```
+
+## 味方の標と付与瞬間の識別（2026-10-11）
+
+ユーザー画像ではドハの服と単一標の細い赤線が重なり、敵の常駐照準から新規付与を見分けにくかった。
+単一標をシェーダーの半透明線から、層の標と共通の縁取り付きSpriteへ変更。
+味方（Team 0）は暗い外縁・赤寄りのオレンジ（#ff702e）・淡い桃色の芯と四方の菱形、敵は従来の朱桃色と四角い角。
+単一標と層の主照準の両方に適用し、服や鎧への深度遮蔽を無効にする。層の実数・発生条件は変更しない。
+
+`PlayMarkAdded` の実際の付与／増加通知でだけ、対象の `MarkLockOn3D` を再生。
+四隅が1.65倍から0.22秒で収束し、二回の明暗を挟んで合計0.70秒で常駐表示へ戻る。
+速度は描画側で追従し、2倍以上でも約0.50秒を残す。台本の待ち時間は追加しない。
+同値更新・減少・ターン頭の写しでは再生しない。同じ対象への連続付与は一つの枠を再利用する。
+除去・死亡・終了・画面離脱では停止し、再戦へ持ち越さない。指定SEの音量は前回調整の−7 dBを維持。
+
+購入済みEffectBlocks v4のother/shockwave.tscnとother/sparkles.tscnを確認。
+衝撃波の広がりや粒子は常駐する標との識別を曖昧にするため、今回は追加採用せず、コードの照準図形を動かす。
+原本・共有素材に変更なし。
+
+確認：DemoAppビルド警告0・エラー0。草原の農兵／城塞の重装兵、左右、1倍／2倍を描画確認。
+単一標・深い層・対象限定の付与・同値／減少・再付与・ツリー一時停止・除去・死亡・画面離脱・再戦の検証を通過。
+添付画像の「試遊・標 守り型」大隊seed 7と「試遊・標 三人組」近衛seed 0を初戦・再戦とも完走し、
+付与件数・層数・最終HPが台本と一致。比較差分0、auditずれ0件。
+Forward+は標準エラー0バイト。頭なし検証は成功・終了コード0、終了時の既存RID／ObjectDB警告は残る。
+ログ・12枚の画像は `output/mark-lock-check/`。再実行は `ShockMarkCheck.tscn -- --mark-readability --verify`。
+
+味方の標も敵に狙われるリスクを表すため、ユーザー指定により琥珀色から赤寄りのオレンジへ変更。
+常駐照準・衛星・付与時の収束枠を同色に揃える（2026-10-11）。

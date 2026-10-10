@@ -11,6 +11,7 @@ public partial class BattlefieldView3D
     {
         FeatherMarkPlays = FeatherMarkAllyPlays = FramedAccusations = FramedVendettas = 0;
         RoundStarts = RoundSlashes = RoundTravels = RoundFinishes = SharePowerPlays = BeckonFeatherPlays = 0;
+        SharePowerBatches = SharePowerLinks = SharePowerAmount = 0;
     }
 
     private bool MarkLoopLive(int generation, BattlePawn3D actor, BattlePawn3D target) =>
@@ -108,35 +109,6 @@ public partial class BattlefieldView3D
         ShockMarkFx.Sparks(_fxRoot, contact, RallyAmber, 7, 0.5f, 0.22 / speed);
         Float(target, $"矢面 −{prevented}", RallyAmber, false, 2.8f);
         _attackAudio.PlayShockMark(ShockMarkSound.Insight);
-    }
-
-    internal async Task ShowSharePower(BattlePawn3D? doha, BattlePawn3D? ally, BattleEvent cue, double speed)
-    {
-        if (doha is null || ally is null) return;
-        int generation = _specialGeneration;
-        SharePowerPlays++;
-        speed = Math.Max(0.1, speed);
-        Vector3 from = ally.FxPoint, to = doha.FxPoint;
-        var pain = new Color("845685");
-        ShockMarkFx.Beam(_fxRoot, from, to, pain, 0.055f, 0.18 / speed);
-        var mote = ShockMarkFx.Sprite(_fxRoot, from, ShockMarkFx.Halo, 0.45f, pain);
-        var inward = mote.CreateTween();
-        inward.TweenProperty(mote, "global_position", to, 0.10 / speed);
-        inward.TweenCallback(Callable.From(mote.QueueFree));
-        await ToSignal(GetTree().CreateTimer(0.10 / speed), SceneTreeTimer.SignalName.Timeout);
-        if (!MarkLoopLive(generation, doha, ally)) return;
-        ShockMarkFx.Glow(_fxRoot, to, ShockMarkFx.Gold, 0.65f, 0.20 / speed);
-        var tag = ShockMarkFx.Sprite(_fxRoot, to, UiKit.LoadTexture("res://assets/fx/doha_power_tag.svg"), 0.48f, Colors.White);
-        var outward = tag.CreateTween();
-        outward.TweenMethod(Callable.From<float>(p => {
-            tag.GlobalPosition = to.Lerp(from, p) + Vector3.Up * Mathf.Sin(p * Mathf.Pi) * 0.45f;
-        }), 0f, 1f, 0.14 / speed);
-        outward.TweenCallback(Callable.From(() => {
-            if (!MarkLoopLive(generation, doha, ally)) return;
-            ShockMarkFx.Sparks(_fxRoot, from, ShockMarkFx.Gold, 5, 0.4f, 0.2 / speed);
-            Float(ally, $"力 +{cue.Amount}", ShockMarkFx.Gold, false, 2.65f);
-        }));
-        outward.TweenCallback(Callable.From(tag.QueueFree));
     }
 
     internal void ShowRoundStart(BattlePawn3D? actor, BattleEvent cue, double speed)

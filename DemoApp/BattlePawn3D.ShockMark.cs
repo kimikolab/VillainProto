@@ -4,6 +4,22 @@ using System;
 public partial class BattlePawn3D
 {
     private ShockMarkAura3D? _shockMark;
+    private MarkLockOn3D? _markLock;
+    internal bool HasVisibleMark => MarkLayers > 0 || HasStatusIcon(BattleCore.StatusKeys.Marked);
+    internal bool MarkLockActive => _markLock?.Active == true;
+    internal int MarkLockPlays => _markLock?.Plays ?? 0;
+    internal Vector3 MarkFocusPoint => MarkLayers > 0
+        ? FxPoint + (GetViewport().GetCamera3D()?.GlobalBasis.Z ?? Vector3.Back) * 0.32f
+        : _statusEffects.MarkPoint;
+    internal void PulseMark(double speed)
+    {
+        if (!ShockMarkActive) return;
+        if (_markLock is null)
+        {
+            _markLock = new MarkLockOn3D(); AddChild(_markLock); _markLock.Configure(this);
+        }
+        _markLock.Play(speed);
+    }
     internal int StoredCharge { get; private set; }
     internal int Thundercloud { get; private set; }
     internal int MarkLayers { get; private set; }
@@ -29,6 +45,7 @@ public partial class BattlePawn3D
     internal void SetMarkLayers(int amount)
     {
         MarkLayers = Math.Max(0, amount);
+        if (MarkLayers == 0) _markLock?.Stop();
         Hud.SetMarkLayers(MarkLayers);
         ShockMark.Refresh();
         // 層の照準と従来の単一照準を重ねない。
@@ -42,6 +59,8 @@ public partial class BattlePawn3D
     internal void EndShockMark()
     {
         _shockMarkEnded = true;
+        _markLock?.Stop();
+        EndSharePortrait();
         Hud.SetMarkLayers(0);
         InterruptWhip = false;
         WhipChainSize = 0;

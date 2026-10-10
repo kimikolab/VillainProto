@@ -102,6 +102,7 @@ public partial class BattlePawn3D : Node3D
     public void SetStatusEffects(int marked, int stunned, int armor)
     {
         bool active = _alive && !_victory;
+        if (!active || marked == 0 && MarkLayers == 0) _markLock?.Stop();
         ObserveArmor(active ? armor : 0);
         _statusEffects.SetAmounts(active ? marked : 0, active ? stunned : 0, active ? armor : 0);
     }
@@ -206,7 +207,7 @@ public partial class BattlePawn3D : Node3D
         _confusion.Configure(_portraitHeight, _phase);
         AddChild(_confusion);
         _statusEffects = new StatusEffects3D();
-        _statusEffects.Configure(_portraitHeight, _phase);
+        _statusEffects.Configure(_portraitHeight, _phase, Team);
         AddChild(_statusEffects);
         float bottomPadding = UiKit.HasCustomBattlePortrait(opening.UnitId)
             ? UiKit.BattlePortraitBottomPaddingRatio(opening.UnitId)

@@ -4,8 +4,8 @@ using System.Collections.Generic;
 
 public partial class BattleAttackAudio
 {
-    // 発射8・着弾6・移動2・消失2・電撃鞭4・大落雷2・標3・伝令の悲鳴1・粛展開1。別の音に余韻を切らせない。
-    internal const int ShockMarkAssetVoiceLimit = 29;
+    // 発射8・着弾6・移動2・消失2・電撃鞭4・大落雷2・標3・伝令の悲鳴1・粛展開1・ドハ受け2・返し2。別の音に余韻を切らせない。
+    internal const int ShockMarkAssetVoiceLimit = 33;
     internal static readonly string[] ShockMarkAssetFiles = {
         "misa_beam_1.wav", "misa_beam_2.wav", "misa_beam_3.wav", "misa_beam_hit.wav",
         "misa_deploy.wav", "misa_funnel_move.mp3", "misa_feather_lost.mp3",
@@ -14,6 +14,7 @@ public partial class BattleAttackAudio
         "mark_add.wav",
         "husher_shatter_cry.mp3",
         "hush_opening.mp3",
+        "doha_pain.wav", "doha_give.wav",
     };
     private readonly AudioStreamPlayer?[] _shockAssetVoices = new AudioStreamPlayer?[ShockMarkAssetVoiceLimit];
     private readonly Tween?[] _shockAssetFades = new Tween?[ShockMarkAssetVoiceLimit];
@@ -62,9 +63,9 @@ public partial class BattleAttackAudio
                 ShockAssetLayer(22, 2, "kata_thunder_heavy_4.mp3", -15, 1.50 / speed, pan);
                 break;
             case ShockMarkSound.MarkAdd:
-                // 短い電子音の胴が攻撃音に埋もれない音量。原音・音程・余韻は保持する。
+                // 付与・層加算の電子音を一段抑える。原音・音程・余韻は保持する。
                 // 号令による同時加算は表示側で1回にまとめる。
-                ShockAssetLayer(24, 3, "mark_add.wav", -4, 2.5, pan);
+                ShockAssetLayer(24, 3, "mark_add.wav", -7, 2.5, pan);
                 break;
             case ShockMarkSound.HushCry:
                 // 指定の悲鳴は専用枠で最後まで鳴らし、倍速でも声の高さと長さを保つ。
@@ -73,6 +74,12 @@ public partial class BattleAttackAudio
             case ShockMarkSound.HushOpening:
                 // 粛を作る音そのものはこもらせず、倍速でも原音の余韻を保つ。
                 ShockAssetLayer(28, 1, "hush_opening.mp3", -10, double.PositiveInfinity, 0, fadeOut: false, bypassHush: true);
+                break;
+            case ShockMarkSound.DohaPain:
+                ShockAssetLayer(29, 2, "doha_pain.wav", -13, Math.Max(0.24, 0.45 / speed), pan);
+                break;
+            case ShockMarkSound.DohaGive:
+                ShockAssetLayer(31, 2, "doha_give.wav", -14, Math.Max(0.30, 0.60 / speed), pan);
                 break;
             default: return false;
         }

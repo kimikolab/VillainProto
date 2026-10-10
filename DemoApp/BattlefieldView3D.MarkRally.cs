@@ -24,6 +24,7 @@ public partial class BattlefieldView3D
     private void EndMarkRallyPresentation()
     {
         _markRallyEnded = true;
+        EndDohaShares();
         foreach (var caption in _rallyCaptions.Values)
             if (LivePopup(caption)) { caption.Hide(); caption.QueueFree(); }
         _rallyCaptions.Clear();

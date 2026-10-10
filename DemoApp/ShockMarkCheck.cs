@@ -20,9 +20,11 @@ public partial class ShockMarkCheck : Control
             bool loop = OS.GetCmdlineUserArgs().Contains("--mark-loop");
             bool hisa = OS.GetCmdlineUserArgs().Contains("--hisa");
             bool hush = OS.GetCmdlineUserArgs().Contains("--hush");
+            bool doha = OS.GetCmdlineUserArgs().Contains("--doha");
             if (!OS.GetCmdlineUserArgs().Contains("--replay-only"))
             {
-                if (hush) await CheckHushVisuals();
+                if (doha) { await CheckDohaPortraits(); await CheckDohaBatches(); }
+                else if (hush) await CheckHushVisuals();
                 else if (hisa) await CheckHisaVisuals();
                 else if (loop) await CheckMarkLoopVisuals();
                 else if (OS.GetCmdlineUserArgs().Contains("--mark-readability")) await CheckMarkReadability();
@@ -31,7 +33,18 @@ public partial class ShockMarkCheck : Control
                 else if (web) await CheckWebVisuals();
                 else await CheckVisuals();
             }
-            if (hush && OS.GetCmdlineUserArgs().Contains("--verify"))
+            if (doha && OS.GetCmdlineUserArgs().Contains("--verify"))
+            {
+                for (int stage = 0; stage < 3; stage++) await Replay("試遊・標 守り型", stage, 0);
+                // 添付ログと同じ勇者候補・審問官・槍騎兵を含む第五波でも、ゴルムとの連鎖を追う。
+                await Replay("試遊・標 守り型", 4, 0, campaign: true);
+            }
+            else if (OS.GetCmdlineUserArgs().Contains("--mark-readability") && OS.GetCmdlineUserArgs().Contains("--verify"))
+            {
+                await Replay("試遊・標 守り型", 2, 7);
+                await Replay("試遊・標 三人組", 1, 0);
+            }
+            else if (hush && OS.GetCmdlineUserArgs().Contains("--verify"))
             {
                 foreach (string preset in new[] { "試遊・標 ボス台", "標経済 (ヒサ×ザン×ミサ)", "試遊・標 三人組" })
                     await Replay(preset, 1, 0, campaign: true);
@@ -267,6 +280,12 @@ public partial class ShockMarkCheck : Control
             Require(field.RoundFinishes == MarkLoopPresentation.Build(result.Events).LastSlashes.Count, "最後の実在する太刀で締める");
             Require(field.SharePowerPlays == Count(BattleEventKind.ShareGive, ShareGiveLabels.Power)
                 && field.BeckonFeatherPlays == Count(BattleEventKind.BeckonFeather), "力配りと矢面の半減");
+            var sharePlan = DohaSharePresentation.Build(result.Events);
+            Require(field.SharePowerBatches == sharePlan.Ends.Values.Sum(cues => cues.Select(e => e.ActorId).Distinct().Count())
+                && field.SharePowerLinks == sharePlan.Ends.Values.Sum(cues => cues.Select(e => (e.ActorId, e.TargetId)).Distinct().Count())
+                && field.SharePowerAmount == result.Events.Where(e => e.Kind == BattleEventKind.ShareGive
+                    && e.Text == ShareGiveLabels.Power).Sum(e => e.Amount), "束ねても相手と強化量を失わない");
+            GD.Print($"DOHA_BATCH_REPLAY cues={field.SharePowerPlays} batches={field.SharePowerBatches} links={field.SharePowerLinks} amount={field.SharePowerAmount}");
             Require(field.Pawns.Values.All(p => !p.RoundMoving), "終了後に仇巡りを残さない");
             GD.Print($"MARK_LOOP_REPLAY_OK {name} stage={stage} seed={seed} pass={pass} feather={field.FeatherMarkPlays}/{field.FeatherMarkAllyPlays} framed={field.FramedAccusations}/{field.FramedVendettas} round={field.RoundStarts}/{field.RoundSlashes}/{field.RoundTravels} share={field.SharePowerPlays} beckon={field.BeckonFeatherPlays}");
             var rallyPlan = MarkRallyPresentation.Build(result.Events);

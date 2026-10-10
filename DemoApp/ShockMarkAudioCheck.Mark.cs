@@ -33,8 +33,8 @@ public partial class ShockMarkAudioCheck
                     float peak = frames.Length == 0 ? 0 : frames.Max(v => Math.Max(Math.Abs(v.X), Math.Abs(v.Y)));
                     double rms = frames.Length == 0 ? 0 : Math.Sqrt(frames.Average(v => ((double)v.X * v.X + (double)v.Y * v.Y) / 2));
                     GD.Print($"MARK_AUDIO_MIX team={team} speed={speed} layers={layers} frames={frames.Length} peak={peak:F4} rmsDb={20 * Math.Log10(Math.Max(rms, 1e-9)):F1}");
-                    Require(frames.Length > 1000 && peak > .35f && rms > .05,
-                        "標SEが最終出力まで届き、通常攻撃に埋もれない音量を保つ");
+                    Require(frames.Length > 1000 && peak > .24f && peak < .40f && rms > .035,
+                        "標SEが最終出力まで届き、従来より3 dB低い音量に収まる");
                     field.ShowMarkLayer(target, layers, 1);
                     field.ShowMarkLayer(target, 0, 1);
                     Require(audio.ShockAssetPlays.GetValueOrDefault(ShockMarkSound.MarkAdd) == 1, "同値・除去で重ねない");
@@ -48,7 +48,7 @@ public partial class ShockMarkAudioCheck
                 await Wait(.12);
                 var commandFrames = capture.GetBuffer(capture.GetFramesAvailable());
                 float commandPeak = commandFrames.Length == 0 ? 0 : commandFrames.Max(v => Math.Max(Math.Abs(v.X), Math.Abs(v.Y)));
-                Require(commandPeak > .35f && audio.ShockAssetPlays.GetValueOrDefault(ShockMarkSound.MarkAdd) == 1,
+                Require(commandPeak > .24f && audio.ShockAssetPlays.GetValueOrDefault(ShockMarkSound.MarkAdd) == 1,
                     "号令の着弾で指定音が最終出力まで1回届く");
                 GD.Print($"MARK_COMMAND_MIX team={team} speed={speed} peak={commandPeak:F4}");
             }
