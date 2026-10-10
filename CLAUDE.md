@@ -40,6 +40,7 @@ engine の窓口に足したものは `design/ENGINE_HOOKS.md` へ、新しい�
 - **BattleCore に UI の参照を足さない**。`INotifyPropertyChanged` も `ObservableCollection` も不可。本番を Godot / Unity にする場合にそのまま持っていくため。
 - **PrototypeApp / DemoApp に戦闘ルールを書かない**。ViewModel やコードビハインドにダメージ計算が漏れた瞬間に移植できなくなる。
 - **`Def.Pattern` を直接読まない**。必ず `UnitState.CurrentPattern` を経由する（特性が状況でパターンを書き換えるため）。
+- **GodotApp / DemoAppで背景・演出を追加・改修するときは、購入済み素材を先に確認し、適合するものを活用する。** 判断基準と手順は [CONTRIBUTING.md の「GodotApp / DemoApp の背景・演出開発」](CONTRIBUTING.md#godotapp--demoapp-の背景演出開発) を参照。
 
 ## アーキテクチャ
 
