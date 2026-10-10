@@ -730,6 +730,12 @@ public enum TraitId
     HushShatter15,    // 同（HD15・第305期）: 15 回（`UnitCatalog.HusherHD15` だけが持つ）
     KnightRiposte,    // 斬り返し（HC・巡礼騎士）: 敵の攻撃で傷を受けると、攻撃してきた駒へ攻撃力の半分で斬り返す（1ターンに1回・手番の外の動作で `CanActOutOfTurn` を通す）（`KnightRiposteTrait`）
 
+    // --- 第307期で足した札（ソムの版 `UnitCatalog.SomSHa` ／ `SomSHb` と量の対照 `SomSHa05` ／ `SomSHa2` ／ `SomSHb05` ／ `SomSHb2` だけが持つ） ---
+    SparkRain,        // 降る光（SH-a）: 感電の連鎖が1つ終わるたび、その連鎖でソムの敵の側で弾けた駒の数（喚ばれたもの・糸玉を含む）× 量 を味方全員（ソム自身を含む）にその場で癒す（手番の外の動作・粛 ／ 痺れで止まり、止まった光は捨てる）（`SparkTrait`・合図は engine の `AfterChain`）
+    SparkStore,       // 溜める光（SH-b）: 同じ数だけ光を溜め（上限なし）、ソムの手番で光が 1 以上なら全部放って 光 × 量 を味方全員に癒す（その手番は攻撃しない）。光が 0 なら殴る（`SparkTrait`）
+    SparkHalf,        // 光の量 × 0.5（対照・SH-a ／ SH-b の量の感度）（**札そのものは挙動を持たない**・`SparkTrait.AmountOf` が読む）
+    SparkDouble,      // 光の量 × 2（対照・同上）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -12798,6 +12804,86 @@ public sealed class KnightRiposteTrait : Trait
     }
 }
 
+// =====================================================================================
+// 第307期 —— ソムの光（SH-a ／ SH-b・指示書 design/PHASE307_SOM_SPARK_SPEC.md §2）。
+// 燃料は「感電の連鎖でソムの敵の側に弾けた駒の数」（喚ばれたもの・糸玉を含む）で、数えるのは engine の `AfterChain`（連鎖の後の口）の1箇所。
+// 癒しは味方全員（ソム自身を含む）へ1体ずつ `ctx.Heal`——支援拒否・渇き・ベニの反転はいまの規則のまま効く。**乱数を引かない。**
+// =====================================================================================
+
+/// <summary>
+/// 光（第307期・SH-a ＝ <see cref="TraitId.SparkRain"/> ／ SH-b ＝ <see cref="TraitId.SparkStore"/>）。
+/// SH-a: 連鎖が終わるたび、弾けた敵の数 × 量 を味方全員にその場で癒す（engine の <c>SparkAfterChain</c>・手番の外の動作で経路 <see cref="OutOfTurnRoute.Spark"/>・止まった光は捨てる）。
+/// SH-b: 弾けた敵の数だけ光を溜め（私有キー <see cref="LightKey"/>・上限なし）、手番で光が 1 以上なら全部放つ（その手番は攻撃しない）・0 なら殴る（<see cref="OnAction"/>）。
+/// 量は <see cref="Amount"/>（光1つ・味方1体あたり）。<see cref="TraitId.SparkHalf"/> ／ <see cref="TraitId.SparkDouble"/> は量の感度の対照。
+/// </summary>
+public sealed class SparkTrait : Trait
+{
+    /// <summary>光1つ・味方1体あたりの癒し。指示書 §3 の 1 で<b>測る前に固定</b>した値（ツギの1ターン平均 91.62 ÷（弾けの1ターン平均 2.66 × 5）＝ 6.89 → 7）。</summary>
+    public const int Amount = 7;
+    /// <summary>SH-b の溜めた光（私有キー・<c>StatusKeys.All</c> に入れない・<see cref="OnCarryOver"/> で 0）。</summary>
+    public const string LightKey = "sparkLight";
+
+    readonly TraitId _id;
+    public SparkTrait(TraitId id) => _id = id;
+    public override TraitId Id => _id;
+
+    public static int Of(UnitState u) => u.RawCounter(LightKey);
+
+    /// <summary>光 <paramref name="lights"/> 個の、味方1体あたりの癒し（× 0.5 は切り上げ）。</summary>
+    public static int AmountOf(UnitState som, int lights)
+    {
+        int x = lights * Amount;
+        if (som.HasTrait(TraitId.SparkHalf)) x = (x + 1) / 2;
+        if (som.HasTrait(TraitId.SparkDouble)) x *= 2;
+        return x;
+    }
+
+    public override void OnCarryOver(UnitState self) { if (_id == TraitId.SparkStore) self.SetCounter(LightKey, 0); }
+
+    /// <summary>SH-b の手番（<c>Actions = [Skill]</c>）。光が 0 なら殴る（<c>PerformAttack</c> を直に呼ぶ）、1 以上なら全部放つ。</summary>
+    public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
+    {
+        if (_id != TraitId.SparkStore || !self.IsAlive) return;
+        int l = Of(self);
+        UnitTally t = ctx.TallyOf(self);
+        if (l <= 0)
+        {
+            t.SparkSwings++;
+            ctx.PerformAttack(self, "    ");
+            return;
+        }
+        self.SetCounter(LightKey, 0);
+        t.SparkReleases++;
+        ctx.EmitSpark(self, SparkLabels.Release, l, 0);
+        ctx.Log($"    {self.Name} が溜めた光（{l}）を仲間に降らせた", LogKind.Trigger, self);
+        Rain(ctx, self, l);
+    }
+
+    /// <summary>光 × 量 を味方全員（ソム自身を含む・<c>LivingMembers</c> の順）に1体ずつ癒す。印（第94期）は呼ぶ側が立てる。</summary>
+    public static void Rain(BattleContext ctx, UnitState som, int lights)
+    {
+        int amt = AmountOf(som, lights);
+        UnitTally t = ctx.TallyOf(som);
+        t.SparkRains++;
+        t.SparkRainLights += lights;
+        foreach (UnitState a in ctx.LivingMembers(som.TeamId))
+        {
+            int before = a.Hp;
+            HealOutcome res = ctx.Heal(a, amt, som);
+            switch (res)
+            {
+                case HealOutcome.Inverted: t.SparkInverted += amt; break;
+                case HealOutcome.Blocked or HealOutcome.Drought: t.SparkRefused += amt; break;
+                case HealOutcome.Healed or HealOutcome.Full:
+                    int got = Math.Max(0, a.Hp - before);
+                    t.SparkHealed += got;
+                    t.SparkOverflow += amt - got;
+                    break;
+            }
+        }
+    }
+}
+
 public sealed class RallyQuietTrait : Trait
 {
     public override TraitId Id => TraitId.RallyQuiet;
@@ -17021,6 +17107,10 @@ public static class TraitCatalog
         new HushVariantTrait(TraitId.HushShatter20),          // 第304期（粛の版 HD20）
         new HushVariantTrait(TraitId.HushShatter15),          // 第305期（粛の版 HD15）
         new KnightRiposteTrait(),                             // 第304期（巡礼騎士の版 HC）
+        new SparkTrait(TraitId.SparkRain),                    // 第307期（ソムの版 SH-a）
+        new SparkTrait(TraitId.SparkStore),                   // 第307期（ソムの版 SH-b）
+        new MarkOnlyTrait(TraitId.SparkHalf),                 // 第307期（量 × 0.5・対照・印だけ）
+        new MarkOnlyTrait(TraitId.SparkDouble),               // 第307期（量 × 2・対照・印だけ）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

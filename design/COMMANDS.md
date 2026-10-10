@@ -1006,6 +1006,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 hush306 find [seeds=50]   # 第306期 Codex 向け: ひび 15 → 砕けた → 割り込み ／ 騎士を殴るひび ／ 砕けた後の斬り返し が揃った最初の seed
     dotnet run --project BattleSim -c Release 0 hush306 memo <台の一部> <seed> [最後のT]   # 第306期 Codex 向け: 規定の第2波の台本の並び
     dotnet run --project BattleSim -c Release 0 hush306 check             # 第306期 自己検査（規定の第2波 ＝ HCD15・旧の波の固定・先遣・PickOne・verbose）
+    dotnet run --project BattleSim -c Release 0 som307 p0          # 第307期 Phase 0: 光の量の決め方（ツギの1ターン平均 ÷ 弾け × 5）・光の燃料の内訳（敵の駒 ／ 喚ばれたもの ／ 糸玉）と T1〜T8 の推移・粛の第2波で止まる見込み・ベニの台（数秒）。本体は `Modes/Som307.cs` ／ `Som307.Run.cs`
+    dotnet run --project BattleSim -c Release 0 som307 compare     # 第307期 `compare` 64 行 × ソムの版 SH-a ／ SH-b（ソムの在席行だけ差し替える・規定の列と `docs/balance.md` の照合つき）
+    dotnet run --project BattleSim -c Release 0 som307 boards      # 第307期 代表台 5 台 × ボス ／ 近衛 ／ 大隊 ／ 本編の5波 × 規定 ／ SH-a ／ SH-b（光の内訳・溢れ・ボスのターンごとの光・粛のひび・量の感度・元の勝ち台・対照 ソム → ドルガ）（数秒）
+    dotnet run --project BattleSim -c Release 0 som307 gridboss <sha|shb>          # 第307期 ボスの格子（固定枠 クグ ＋ カタ ＋ ソム・探索枠2・ヒーラーを除く・規定 ／ 版を同じ台で・約 1 分）
+    dotnet run --project BattleSim -c Release 0 som307 grid <guard|bat> <sha|shb>  # 第307期 精鋭の格子（固定枠 トウ ＋ ソム・探索枠3・ヒーラーを除く）
+    dotnet run --project BattleSim -c Release 0 som307 log <台の名前の一部> <boss|guard|bat|1..5> <seed> <sh0|sha|shb|sha05|sha2|shb05|shb2> [件数]   # 第307期 1戦の光（`Spark`）と弾け・癒しの並び
+    dotnet run --project BattleSim -c Release 0 som307 check       # 第307期 自己検査（定義・敵の側だけ・喚ばれたもの ／ 糸玉・倒れた後・粛 ／ 痺れ・SH-b の手番・ベニの反転・ヒーラーの一覧・規定で無風・verbose・PickOne・経路）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

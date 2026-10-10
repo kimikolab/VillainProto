@@ -1930,6 +1930,116 @@ public static class UnitCatalog
         Flavor = Som.Flavor
     };
 
+    // 第307期 —— ソムの光の版（指示書 design/PHASE307_SOM_SPARK_SPEC.md §2）。規定（喚び出し）の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
+    // 文面とフレーバーは指示書 §2-3 の叩き台（最終はポン）。量の対照（× 0.5 ／ × 2）は量の札を足すだけで文面は同じ。
+
+    /// <summary>SH-a ／ SH-b の文面（第307期・叩き台）。</summary>
+    public const string SomSparkRainText = "。敵の側で感電が弾けるたび、その光が仲間に降り注ぎ、傷を癒す";
+    public const string SomSparkStoreText = "。敵の側で感電が弾けるたび、その光を溜め、手番で仲間に降らせる";
+    public const string SomSparkFlavor = "喚んだものは、みな背いた。弾けた光だけが、帰ってくる。";
+
+    /// <summary>第307期 SH-a（降る光）。規定 ＋ <see cref="TraitId.SparkRain"/>（連鎖が終わるたび、弾けた敵の数 × 量 を味方全員にその場で癒す・粛 ／ 痺れで止まる）。</summary>
+    public static readonly UnitDef SomSHa = new()
+    {
+        Id = Som.Id,
+        Name = Som.Name,
+        MaxHp = Som.MaxHp,
+        Attack = Som.Attack,
+        Speed = Som.Speed,
+        Advances = Som.Advances,
+        Pattern = Som.Pattern,
+        Traits = Som.Traits.Append(TraitId.SparkRain).ToArray(),
+        Actions = Som.Actions,
+        PlusText = Som.PlusText + SomSparkRainText,
+        MinusText = Som.MinusText,
+        Flavor = SomSparkFlavor
+    };
+
+    /// <summary>第307期 SH-b（溜める光）。規定 ＋ <see cref="TraitId.SparkStore"/>（光を溜め、手番で全部放つ・その手番は攻撃しない・光が 0 なら殴る）。手番は術（<c>Actions = [Skill]</c>）。</summary>
+    public static readonly UnitDef SomSHb = new()
+    {
+        Id = Som.Id,
+        Name = Som.Name,
+        MaxHp = Som.MaxHp,
+        Attack = Som.Attack,
+        Speed = Som.Speed,
+        Advances = Som.Advances,
+        Pattern = Som.Pattern,
+        Traits = Som.Traits.Append(TraitId.SparkStore).ToArray(),
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "手のひらの光を確かめた") },
+        PlusText = Som.PlusText + SomSparkStoreText,
+        MinusText = Som.MinusText,
+        Flavor = SomSparkFlavor
+    };
+
+    /// <summary>第307期 SH-a の量 × 0.5（対照・量の感度）。</summary>
+    public static readonly UnitDef SomSHa05 = new()
+    {
+        Id = Som.Id,
+        Name = Som.Name,
+        MaxHp = Som.MaxHp,
+        Attack = Som.Attack,
+        Speed = Som.Speed,
+        Advances = Som.Advances,
+        Pattern = Som.Pattern,
+        Traits = Som.Traits.Append(TraitId.SparkRain).Append(TraitId.SparkHalf).ToArray(),
+        Actions = Som.Actions,
+        PlusText = Som.PlusText + SomSparkRainText,
+        MinusText = Som.MinusText,
+        Flavor = SomSparkFlavor
+    };
+
+    /// <summary>第307期 SH-a の量 × 2（対照・量の感度）。</summary>
+    public static readonly UnitDef SomSHa2 = new()
+    {
+        Id = Som.Id,
+        Name = Som.Name,
+        MaxHp = Som.MaxHp,
+        Attack = Som.Attack,
+        Speed = Som.Speed,
+        Advances = Som.Advances,
+        Pattern = Som.Pattern,
+        Traits = Som.Traits.Append(TraitId.SparkRain).Append(TraitId.SparkDouble).ToArray(),
+        Actions = Som.Actions,
+        PlusText = Som.PlusText + SomSparkRainText,
+        MinusText = Som.MinusText,
+        Flavor = SomSparkFlavor
+    };
+
+    /// <summary>第307期 SH-b の量 × 0.5（対照・量の感度）。</summary>
+    public static readonly UnitDef SomSHb05 = new()
+    {
+        Id = Som.Id,
+        Name = Som.Name,
+        MaxHp = Som.MaxHp,
+        Attack = Som.Attack,
+        Speed = Som.Speed,
+        Advances = Som.Advances,
+        Pattern = Som.Pattern,
+        Traits = Som.Traits.Append(TraitId.SparkStore).Append(TraitId.SparkHalf).ToArray(),
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "手のひらの光を確かめた") },
+        PlusText = Som.PlusText + SomSparkStoreText,
+        MinusText = Som.MinusText,
+        Flavor = SomSparkFlavor
+    };
+
+    /// <summary>第307期 SH-b の量 × 2（対照・量の感度）。</summary>
+    public static readonly UnitDef SomSHb2 = new()
+    {
+        Id = Som.Id,
+        Name = Som.Name,
+        MaxHp = Som.MaxHp,
+        Attack = Som.Attack,
+        Speed = Som.Speed,
+        Advances = Som.Advances,
+        Pattern = Som.Pattern,
+        Traits = Som.Traits.Append(TraitId.SparkStore).Append(TraitId.SparkDouble).ToArray(),
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "手のひらの光を確かめた") },
+        PlusText = Som.PlusText + SomSparkStoreText,
+        MinusText = Som.MinusText,
+        Flavor = SomSparkFlavor
+    };
+
     /// <summary>
     /// 旧ソム（第103〜275期の規定・背かれのみ）。<b>第276期の転生の対照</b>（S0）。<see cref="All"/> には入れない。
     /// 旧ソムを使う過去の器具（<c>betray</c> ／ <c>encore</c> ／ <c>tomo</c> ／ <c>lit</c> ／ <c>tumult</c> ／ <c>form2</c> ／ <c>ep3</c> ／ <c>stage map</c>）はこれに固定してある。

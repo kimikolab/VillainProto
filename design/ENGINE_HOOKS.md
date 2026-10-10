@@ -1164,3 +1164,11 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 ## 第306期 —— 第2波の規定が HCD15 に
 
 - `EnemyCatalog.Stages[1]` ＝ `KnightGR` ×2 ・`HusherHD15`（engine は変えていない——第304〜305期の `HushCrack` ／ `KnightRiposteTrait` がそのまま規定の戦で働く）。旧の第2波は `EnemyCatalog.Wave2H305`。過去の器具の固定は `Common.StagesH305` ／ `Common.PinWave305`。
+
+## 第307期 —— ソムの光の版（SH-a ／ SH-b・規定は動かさない）
+
+- 札 `SparkRain`（SH-a）／ `SparkStore`（SH-b）と量の対照 `SparkHalf` ／ `SparkDouble`（印だけ）。本体は `SparkTrait`（量 `Amount = 7`・SH-b の私有キー `sparkLight`・`OnCarryOver` で 0・癒しは `Rain` が `LivingMembers` の順に `ctx.Heal`）。版の駒は `UnitCatalog.SomSHa` ／ `SomSHb`（`Actions = [Skill]`・光が 0 なら `PerformAttack` を直に呼ぶ）／ `SomSHa05` ／ `SomSHa2` ／ `SomSHb05` ／ `SomSHb2`。`All` ／ `Retired` の外。
+- **燃料の口は連鎖の後の口（`AfterChain`）の1箇所**: `Add` で光の保持者を `_chainReaders` に入れ（`_sparkLive`）、ソムと陣営の違う連鎖の `popped`（喚ばれたもの・糸玉を含む・生死を問わない）を `SparkAfterChain` に渡す。同じ陣営の連鎖は計数だけ（`SparkAllyPops`）。**保持者がいない戦は `_chainReaders` に入らず、`popped` の列も作られない**（規定の戦は従来どおり）。
+- SH-a は手番の外の動作——`CanActOutOfTurn(h, OutOfTurnRoute.Spark)`（経路を1本足した・名前「光」・`Other` の手前）。止まった光は捨てる（粛なら `NoteHushBlocked` → `HushCrack` に入る）。癒しの帰属は `BeginTrait(TraitId.SparkRain, h)`（観測専用）。
+- 計数のみ（ソムの `UnitTally`）: `SparkLightFoe` ／ `SparkLightSummon` ／ `SparkLightBall` ／ `SparkChains` ／ `SparkDeadPops` ／ `SparkAllyPops` ／ `SparkHushed(Lights)` ／ `SparkBlocked(Lights)` ／ `SparkRains` ／ `SparkRainLights` ／ `SparkHealed` ／ `SparkOverflow` ／ `SparkInverted` ／ `SparkRefused` ／ `SparkReleases` ／ `SparkSwings` ／ `SparkStorePeak`。
+- 表示専用の出来事 `Spark`（`SparkLabels`:「降る」「溜まる」「止まる」・`EmitSpark`）。`Boss283Diag.WriterKind` に `SparkTrait` を「味方・繰り返し」で足した（規定のソムは持たないので `HealPool` は動かない）。

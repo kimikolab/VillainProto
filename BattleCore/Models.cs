@@ -2134,6 +2134,16 @@ public sealed class UnitTally
                 KnightAsked, KnightRipostes, KnightHushed, KnightHeld, KnightDealt;
     public int HushShatterTurn;
     /// <summary>
+    /// 第307期（<b>計数のみ</b>・ソムの光 SH-a ／ SH-b）。生まれた光（ソムが生きている間に敵の側で弾けた駒）: <c>SparkLightFoe</c> 敵の駒 ／ <c>SparkLightSummon</c> 喚ばれたもの ／ <c>SparkLightBall</c> 糸玉・
+    /// <c>SparkChains</c> 光を生んだ連鎖・<c>SparkDeadPops</c> ソムが倒れた後に敵の側で弾けた数（光にならない）・<c>SparkAllyPops</c> 味方の側で弾けた数（光にならない）・
+    /// SH-a で止まった連鎖 ／ 光: <c>SparkHushed</c> ／ <c>SparkHushedLights</c> 粛 ・<c>SparkBlocked</c> ／ <c>SparkBlockedLights</c> 痺れほか・
+    /// 降らせた: <c>SparkRains</c> 回 ／ <c>SparkRainLights</c> 光の数 ／ <c>SparkHealed</c> 増えた HP ／ <c>SparkOverflow</c> 溢れた量 ／ <c>SparkInverted</c> ベニの反転で傷に変わった量 ／ <c>SparkRefused</c> 支援拒否・渇きで通らなかった量・
+    /// SH-b: <c>SparkReleases</c> 放った手番 ／ <c>SparkSwings</c> 光が 0 で殴った手番 ／ <c>SparkStorePeak</c> 溜まった光の最大（合算は最大）。
+    /// </summary>
+    public long SparkLightFoe, SparkLightSummon, SparkLightBall, SparkChains, SparkDeadPops, SparkAllyPops, SparkHushed, SparkHushedLights, SparkBlocked, SparkBlockedLights,
+                SparkRains, SparkRainLights, SparkHealed, SparkOverflow, SparkInverted, SparkRefused, SparkReleases, SparkSwings;
+    public int SparkStorePeak;
+    /// <summary>
     /// 第299期（<b>計数のみ</b>・ザンの手番）。仇指し（<see cref="TraitId.Vendetta"/>）の保持者が手番で振ったとき（規定でも数える）:
     /// <c>ZanTurns</c> 手番 ／ <c>ZanTurnNoMarked</c> 標を持つ敵が 0 ／ <c>ZanTurnMarkedFoes</c> ／ <c>ZanTurnLayers</c> 手番の時点の標を持つ敵の数 ／ 層の合計 ／
     /// <c>ZanPlanA</c> ／ <c>ZanPlan1</c> 仇巡りの見込みの太刀（ZM-a ＝ 層の合計・ZM-1 ＝ 敵の数・上限で切る）／ <c>ZanPlanACapped</c> ／ <c>ZanPlan1Capped</c> 上限に達した手番 ／
@@ -3264,6 +3274,10 @@ public sealed class UnitTally
         HushBreaks += o.HushBreaks; HushCloses += o.HushCloses; HushOpenPassOpp += o.HushOpenPassOpp; HushOpenPassOwn += o.HushOpenPassOwn;   // 第304期
         HushShatterPassOpp += o.HushShatterPassOpp; HushShatterPassOwn += o.HushShatterPassOwn; HushPassKnight += o.HushPassKnight; HushShatterTurn = Math.Max(HushShatterTurn, o.HushShatterTurn);
         KnightAsked += o.KnightAsked; KnightRipostes += o.KnightRipostes; KnightHushed += o.KnightHushed; KnightHeld += o.KnightHeld; KnightDealt += o.KnightDealt;
+        SparkLightFoe += o.SparkLightFoe; SparkLightSummon += o.SparkLightSummon; SparkLightBall += o.SparkLightBall; SparkChains += o.SparkChains; SparkDeadPops += o.SparkDeadPops;   // 第307期
+        SparkAllyPops += o.SparkAllyPops; SparkHushed += o.SparkHushed; SparkHushedLights += o.SparkHushedLights; SparkBlocked += o.SparkBlocked; SparkBlockedLights += o.SparkBlockedLights;
+        SparkRains += o.SparkRains; SparkRainLights += o.SparkRainLights; SparkHealed += o.SparkHealed; SparkOverflow += o.SparkOverflow; SparkInverted += o.SparkInverted; SparkRefused += o.SparkRefused;
+        SparkReleases += o.SparkReleases; SparkSwings += o.SparkSwings; SparkStorePeak = Math.Max(SparkStorePeak, o.SparkStorePeak);
         ZanTurns += o.ZanTurns; ZanTurnNoMarked += o.ZanTurnNoMarked; ZanTurnMarkedFoes += o.ZanTurnMarkedFoes; ZanTurnLayers += o.ZanTurnLayers;
         ZanPlanA += o.ZanPlanA; ZanPlan1 += o.ZanPlan1; ZanPlanACapped += o.ZanPlanACapped; ZanPlan1Capped += o.ZanPlan1Capped; ZanTurnDealt += o.ZanTurnDealt;
         RoundTurns += o.RoundTurns; RoundFoes += o.RoundFoes; RoundSlashes += o.RoundSlashes; RoundCapped += o.RoundCapped; RoundCrossed += o.RoundCrossed;
@@ -4024,6 +4038,22 @@ public enum BattleEventKind
     /// <c>ActorId</c> ＝ 粛の保持者 ／ <c>Slot</c> ＝ 砕けるまでの数（HB では 0）。<b>どの規則も読まない。</b> 既定の粛の伝令には出ない。
     /// </summary>
     HushState,
+
+    /// <summary>
+    /// ソムの光（第307期・ソムの版 SH-a ／ SH-b・<b>表示専用</b>）。<c>Text</c> で3種（<see cref="SparkLabels"/>）:
+    /// 「降る」＝ 光が味方全員に降った（SH-a は連鎖の後・SH-b は手番で放ったとき。直後に各味方の `Heal`（ベニの隣では `Damage`））／
+    /// 「溜まる」＝ SH-b で光が溜まった（連鎖の後）／ 「止まる」＝ SH-a の光が粛 ／ 痺れで止まって捨てられた（粛なら直前に `Sealed`「粛」）。
+    /// <c>ActorId</c> ＝ ソム ／ <c>Amount</c> ＝ 光の数（降る ／ 止まる）・増えた光の数（溜まる）／ <c>Slot</c> ＝ その後の溜まり（SH-b・SH-a は 0）。<b>どの規則も読まない。</b> 規定のソムには出ない。
+    /// </summary>
+    Spark,
+}
+
+/// <summary>`Spark`（第307期）の <c>Text</c>。</summary>
+public static class SparkLabels
+{
+    public const string Release = "降る";
+    public const string Store = "溜まる";
+    public const string Silenced = "止まる";
 }
 
 /// <summary>`CommandBall`（第302期）の <c>Text</c>。</summary>

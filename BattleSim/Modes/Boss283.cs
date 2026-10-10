@@ -82,6 +82,7 @@ static class Boss283Diag
         ["BossMendTrait"] = ("自分", true, "ボスの札"),
         ["HeroMendTrait"] = ("味方", true, "敵の札（勇者）"),
         ["KissTrait"] = ("味方", true, ""),
+        ["SparkTrait"] = ("味方", true, "第307期 ソムの光（版 SH-a ／ SH-b だけ・規定のソムは持たない）"),
         // 破片（`StatusKeys.Armor`・HP の前に削られる別資源）の書き手
         ["ScaleTrait"] = ("自分", true, "破片"),
         ["ShatterTrait"] = ("味方", true, "破片（範囲を受けると味方全員へ）"),

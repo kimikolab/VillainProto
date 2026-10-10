@@ -490,6 +490,10 @@
 | `HushShatter20` | - |
 | `HushShatter15` | - |
 | `KnightRiposte` | - |
+| `SparkRain` | - |
+| `SparkStore` | - |
+| `SparkHalf` | - |
+| `SparkDouble` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

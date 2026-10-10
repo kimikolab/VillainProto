@@ -506,6 +506,8 @@ public enum OutOfTurnRoute
     Rally,
     /// <summary>巡礼騎士の斬り返し（第304期・第2波の版 HC `KnightRiposte`・`KnightRiposteTrait`。<b>問う相手は騎士</b>）。</summary>
     KnightRiposte,
+    /// <summary>ソムの光（第307期・ソムの版 SH-a `SparkRain`・`SparkAfterChain`。<b>問う相手はソム</b>——癒される味方ではない）。</summary>
+    Spark,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -515,7 +517,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "羽の標撃ち", "庇い", "指差し", "叫び", "騎士の斬り返し", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "羽の標撃ち", "庇い", "指差し", "叫び", "騎士の斬り返し", "光", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -1774,7 +1776,12 @@ public sealed class BattleContext
     {
         foreach (UnitState h in _chainReaders.ToList())
         {
-            if (h.TeamId == team) continue;
+            if (h.TeamId == team)
+            {
+                if (_sparkLive && IsSparkHolder(h)) TallyOf(h).SparkAllyPops += popped.Count;   // 第307期・計数のみ（味方の側の弾けは光にならない）
+                continue;
+            }
+            if (_sparkLive && IsSparkHolder(h)) { SparkAfterChain(h, popped); continue; }   // 第307期（ソムの光）
             UnitTally ht = TallyOf(h);
             if (h.HasTrait(TraitId.Thunder))
             {
@@ -1799,6 +1806,61 @@ public sealed class BattleContext
             (ht.ChainAliveHist ??= new long[10])[Math.Min(alive, 9)]++;
             if (h.HasTrait(TraitId.ShockWhipBolt) || h.HasTrait(TraitId.ShockWhipFlurry)) ShockWhip(h, popped);
         }
+    }
+
+    // =================================================================================
+    // 第307期 —— ソムの光（SH-a ／ SH-b・design/PHASE307_SOM_SPARK_SPEC.md §2）。
+    // 燃料は連鎖の後の口（`AfterChain`）が渡す「ソムの敵の側で弾けた駒」の数だけ（喚ばれたもの・糸玉を含む・生死を問わない）。
+    // **保持者がいなければ `_sparkLive` の比較1つで抜ける**（保持者がいる戦だけ `_chainReaders` に入り、`popped` の列が作られる）。乱数を引かない。
+    // =================================================================================
+
+    /// <summary>光の保持者（SH-a ／ SH-b）が戦闘に出たか（第307期）。</summary>
+    bool _sparkLive;
+
+    static bool IsSparkHolder(UnitState u) => u.HasTrait(TraitId.SparkRain) || u.HasTrait(TraitId.SparkStore);
+
+    /// <summary>
+    /// 連鎖の後の光（第307期）。<paramref name="popped"/> はその連鎖でソムの敵の側に弾けた駒。ソムが倒れていれば光は生まれない。
+    /// SH-b は溜める（上限なし）。SH-a は手番の外の動作として <see cref="CanActOutOfTurn"/> を問い（経路 <see cref="OutOfTurnRoute.Spark"/>）、
+    /// 通れば 弾けた数 × 量 を味方全員にその場で癒す（<see cref="SparkTrait.Rain"/>）。止まった光は捨てる（粛なら粛のひびに入る）。
+    /// </summary>
+    void SparkAfterChain(UnitState h, List<UnitState> popped)
+    {
+        UnitTally t = TallyOf(h);
+        int n = popped.Count;
+        if (n == 0) return;
+        if (!h.IsAlive) { t.SparkDeadPops += n; return; }
+        int balls = 0, fodder = 0;
+        foreach (UnitState x in popped) { if (IsSilkBall(x)) balls++; else if (BetrayedTrait.IsFodder(x)) fodder++; }
+        t.SparkLightBall += balls; t.SparkLightSummon += fodder; t.SparkLightFoe += n - balls - fodder;
+        t.SparkChains++;
+        if (h.HasTrait(TraitId.SparkStore))
+        {
+            int c = SparkTrait.Of(h) + n;
+            h.SetCounter(SparkTrait.LightKey, c);
+            if (c > t.SparkStorePeak) t.SparkStorePeak = c;
+            EmitSpark(h, SparkLabels.Store, n, c);   // 表示専用
+            return;
+        }
+        bool hush = HushBindingNow;   // 問う前に読む（問うと粛が砕けることがある）
+        if (!CanActOutOfTurn(h, OutOfTurnRoute.Spark))
+        {
+            if (hush) { t.SparkHushed++; t.SparkHushedLights += n; } else { t.SparkBlocked++; t.SparkBlockedLights += n; }
+            EmitSpark(h, SparkLabels.Silenced, n, 0);   // 表示専用
+            return;
+        }
+        EmitSpark(h, SparkLabels.Release, n, 0);   // 表示専用（見出し・直後に各味方の `Heal`）
+        Log($"    弾けた光（{n}）が {h.Name} のもとへ帰り、仲間に降り注ぐ", LogKind.Trigger, h);
+        TraitMark m = BeginTrait(TraitId.SparkRain, h);   // 回復(与) の帰属（観測専用）
+        SparkTrait.Rain(this, h, n);
+        EndTrait(m);
+    }
+
+    /// <summary>ソムの光の表示専用の出来事（第307期・<see cref="BattleEventKind.Spark"/>）。<b>盤面には触らない。</b></summary>
+    public void EmitSpark(UnitState som, string label, int amount, int stored)
+    {
+        if (!_verbose) return;
+        Emit(new BattleEvent { Kind = BattleEventKind.Spark, Turn = _turn, ActorId = som.InstanceId, Amount = amount, Slot = stored, Team = som.TeamId, Text = label });
     }
 
     /// <summary>
@@ -7708,6 +7770,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Scourge)) _whipLive = true;                 // 第217期（鞭の枠と2倍）
         if (u.HasTrait(TraitId.StoredCharge)) _chargeLive = true;          // 第288期（蓄電の口・雷霆の枠）
         if (u.HasTrait(TraitId.StoredCharge) || u.HasTrait(TraitId.Thunder)) _chainReaders.Add(u);   // 第289期（連鎖の後の口）
+        if (IsSparkHolder(u)) { _sparkLive = true; _chainReaders.Add(u); }   // 第307期（ソムの光・連鎖の後の口）
         if (u.HasTrait(TraitId.Grapple)) _grappleLive = true;              // 第290期（クグの計数・糸の口の手前）
         if (u.HasTrait(TraitId.Thread)) _threadLive = true;                // 第290期（糸・KG-a〜）
         if (u.HasTrait(TraitId.LiveWireGuard)) _shockStunGuard = true;     // 第217期（G3H）
