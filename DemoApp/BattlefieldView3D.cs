@@ -60,7 +60,7 @@ public partial class BattlefieldView3D : Control
         MouseFilter = MouseFilterEnum.Ignore;
         _atlas = UiKit.LoadTexture("res://assets/outcast_atlas.png");
 
-        var container = new SubViewportContainer
+        var container = _battleImage = new SubViewportContainer
         {
             Stretch = true,
             MouseFilter = MouseFilterEnum.Ignore,
@@ -359,6 +359,8 @@ public partial class BattlefieldView3D : Control
             RegisterInverse(opening);
         }
         RefreshInverseBarriers();
+        PlaceHushGauges();
+        BeginHushOpening();
     }
 
     public void SetTurn(int turn)
@@ -650,13 +652,14 @@ public partial class BattlefieldView3D : Control
             foreach (var hit in hits) NotifyAttackContact(hit);
         }
         bool charged = !reaction && from.IsCharging;
+        bool hushSlap = from.UnitId == "husher" && from.HushShattered;
         if (!reaction) from.ReleaseCharge();
         from.AnimateBowAttack();
         bool stagedThrust = thrustCharge is not null && pattern == AttackPattern.Pierce && shieldImpact is null;
         if (!stagedThrust)
         {
             if (thrustCharge is int soundCharge) _attackAudio.PlayThrust(from.UnitId, from.Team, soundCharge);
-            else if (from.UnitId != "tou" && !(from.UnitId == "shiga" && (from.HasShockAura || from.InterruptWhip))
+            else if (!hushSlap && from.UnitId != "tou" && !(from.UnitId == "shiga" && (from.HasShockAura || from.InterruptWhip))
                 && (movementCue?.Kind != BattleEventKind.Blast || shieldImpact is not null))
                 _attackAudio.PlayAttack(from.UnitId, from.Team, pattern, reaction, charged,
                     barrage: movementCue?.Kind == BattleEventKind.Barrage);
@@ -666,6 +669,7 @@ public partial class BattlefieldView3D : Control
         if (thrustCharge is not null && (shieldImpact is not null || pattern != AttackPattern.Pierce))
             from.SetThrustCharge(0);
         if (shieldImpact is not null) await shieldImpact();
+        else if (hushSlap) await ShowHushSlap(from, hits);
         else if (from.UnitId == "yomi") { } // 居合の剣閃は上で1回だけ出す。
         else if (thrustCharge is int stacks && pattern == AttackPattern.Pierce)
             await ShowThrust(from, hits, stacks, thrustImpact);

@@ -22,8 +22,9 @@ public partial class BattleMusic : Node
 
     public override void _Ready()
     {
+        BattleAudioRouting.EnsureFieldBus();
         // SEは短い瞬間音なので、BGMは常時聞こえる基準まで上げる。曲ごとの差は試聴後に個別調整する。
-        _player = new AudioStreamPlayer { VolumeDb = -12, MaxPolyphony = 1 };
+        _player = new AudioStreamPlayer { VolumeDb = -12, MaxPolyphony = 1, Bus = BattleAudioRouting.FieldBus };
         AddChild(_player);
     }
 

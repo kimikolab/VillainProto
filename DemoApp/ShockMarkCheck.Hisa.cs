@@ -114,13 +114,14 @@ public partial class ShockMarkCheck
                 "前の号令が再戦へ漏れない");
             field.EndShockMarkPresentation();
             Require(field.CommandOrbCount(1) == 0, "終了で玉を片付ける");
-            field.BeginBattle(opening, "庇って倒れる", 3);
+            field.BeginBattle(opening, "庇いの直後に終了", 3);
             hisa = field.FindPawn(1)!; ally = field.FindPawn(3)!; enemy = field.FindPawn(10)!;
             hisa.AnimationSpeed = speed;
             await field.ShowHisaCover(hisa, ally, enemy, speed);
-            hisa.SetHp(0); hisa.AnimateDeath(); hisa.ReturnFromHisaCover();
-            Require(!hisa.PresentationAlive && ally.Hp == 60, "庇った本人だけが倒れる");
             field.EndShockMarkPresentation();
+            await Wait(.3 / speed);
+            Require(hisa.PresentationAlive && ally.Hp == 60 && !hisa.IsGuarding,
+                "庇いの途中終了はHPを変えず帰還する");
             GD.Print($"HISA_VISUAL_OK team={team} speed={speed}");
         }
         field.QueueFree(); await Wait(.2);

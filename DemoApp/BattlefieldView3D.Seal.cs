@@ -16,6 +16,7 @@ public partial class BattlefieldView3D
 
     private void ResetSeals()
     {
+        ResetHushPresentation();
         _sealGeneration++;
         foreach (var chain in _hushChains.Values) chain.QueueFree();
         _hushChains.Clear();
@@ -28,11 +29,12 @@ public partial class BattlefieldView3D
     {
         if (opening.Traits?.Contains(TraitId.Hush) == true)
             _hushHolders.Add(opening.InstanceId);
+        RegisterHushGauge(opening);
     }
 
     private void ConnectSeals()
     {
-        foreach (int holderId in _hushHolders.Where(id => !_fallenForSeal.Contains(id)))
+        foreach (int holderId in _hushHolders.Where(HushActive))
         foreach (int targetId in _hushTargets.Where(id => !_fallenForSeal.Contains(id)))
         {
             var key = (holderId, targetId);
@@ -50,6 +52,14 @@ public partial class BattlefieldView3D
     public async Task ShowHushSeal(BattlePawn3D? target)
     {
         if (target is null) return;
+        if (target.UnitId == "knight_g")
+        {
+            target.BraceUnderHush();
+            Vector3 hand = target.FxPoint + _camera.GlobalBasis.X * .45f;
+            ShockMarkFx.Beam(_fxRoot, hand, hand + Vector3.Up * 1.2f - _camera.GlobalBasis.X * .3f,
+                new Color("c7deee"), .045f, .52);
+            Float(target, "封", new Color("b8deea"), false, 3.4f);
+        }
         // 能力の一覧から対象を推測しない。一度実際に止められた駒だけに薄い鎖を残す。
         _hushTargets.Add(target.InstanceId);
         ConnectSeals();
@@ -82,11 +92,13 @@ public partial class BattlefieldView3D
         }
         // 一人の保持者から複数本伸びていても、死亡一回につき破砕音は一音だけ。
         if (shattered) _attackAudio.PlayHushBreak();
+        if (_hushHolders.Contains(pawn.InstanceId)) ReleaseHush(pawn.InstanceId);
     }
 
     public void SealPawnRevived(BattlePawn3D pawn)
     {
         _fallenForSeal.Remove(pawn.InstanceId);
         ConnectSeals();
+        SetHushAtmosphere(_hushHolders.Any(HushActive));
     }
 }

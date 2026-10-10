@@ -40,6 +40,7 @@ internal sealed class ZanPresentation
                 teams[summoned] = side;
             if (e.Kind is BattleEventKind.Attack or BattleEventKind.TurnStart or BattleEventKind.Death
                 or BattleEventKind.FeatherMark or BattleEventKind.Framed or BattleEventKind.VendettaRound
+                or BattleEventKind.HushState
                 or BattleEventKind.Revive or BattleEventKind.Move or BattleEventKind.Skill or BattleEventKind.Charge)
             {
                 Finish();

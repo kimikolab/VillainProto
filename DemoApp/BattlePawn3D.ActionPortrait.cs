@@ -85,6 +85,13 @@ public partial class BattlePawn3D
             if (key == "tome_attack") height *= 1488f / 1371f;
             if (key == "kata_thunder") height *= 1.05f; // 掲げた手より頭身で合わせる。
         }
+        if (HushShattered && _unitId == "husher")
+        {
+            key = _alive && _movementPortrait == "husher_shatter_burst"
+                ? "husher_shatter_burst" : "husher_shattered";
+            // 破砕後も立ち続ける差分。通常時の身長を保ち、足元だけ合わせる。
+            padding = key == "husher_shatter_burst" ? .0195f : .0234f;
+        }
         Texture2D portrait = UiKit.BattlePortrait(_atlas, key, _burning);
         _portraitGroundDistance = height * (0.5f - padding);
         _portraitBaseY = PortraitGroundY + _portraitGroundDistance;

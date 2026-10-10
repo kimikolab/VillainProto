@@ -1176,6 +1176,7 @@ public partial class Main : Control
         _openingById.Clear();
         foreach (DemoOpening opening in _battleOpening) _openingById[opening.InstanceId] = opening;
         _zan = ZanPresentation.Build(_result.Events, _battleOpening, _markRally);
+        _hush = HushPresentation.Build(_result.Events, _battleOpening);
 
         _battleMode = true;
         _rosterPanel.Visible = false;
@@ -1192,6 +1193,7 @@ public partial class Main : Control
         _field.Visible = false;
         _battleField.Visible = true;
         _battleField.BeginBattle(_battleOpening, title, stageIndex);
+        _battleField.SetHushLimits(_result.Events);
         if (_quitAfterPlayback) PrintSeats("start");
         _battleMusic.PlayWave(stageIndex);
         _partyBar.Begin(_battleOpening);
@@ -1242,6 +1244,10 @@ public partial class Main : Control
         _battleField.PlayBattleStartSound();
         _battleField.ShowBanner("BATTLE START", UiKit.Gold, 0.8);
         await Delay(0.62);
+
+        // T0の封印通知より先に、誰が沈黙を広げたのかを見せる。
+        if (token != _playToken || !_battleMode) return;
+        await _battleField.WaitForHushOpening();
 
         while (token == _playToken && _battleMode && _eventIndex < _result.Events.Count)
         {
@@ -1377,6 +1383,8 @@ public partial class Main : Control
         _fireFastEvent = _firePresentation.FastEvents.Contains(eventIndex);
         _misaFastEvent = _misa.FastEvents.Contains(eventIndex);
         _zanFastEvent = _zan.FastEvents.Contains(eventIndex);
+        int hushToken = _playToken;
+        if (await PlayHush(e, eventIndex, actor, target) || hushToken != _playToken || !_battleMode) return;
         if (await PlayHisaCommand(e, eventIndex, actor, target)) return;
         if (await PlayMarkLoop(e, eventIndex, actor, target)) return;
         if (await PlayZan(e, eventIndex, actor, target)) return;
@@ -1539,7 +1547,7 @@ public partial class Main : Control
                 if (_batchedDamageIndices.Contains(eventIndex)) break;
                 if (_burstDamageIndices.Contains(eventIndex)) break;
                 await PlayTormentHit(eventIndex, actor, target);
-                if (e.Reaction && !_markLoop.FeatherHits.Contains(eventIndex) && !_riposteDamage.Contains(eventIndex) && StartsDirectReaction(eventIndex, e))
+                if (e.Reaction && actor?.UnitId != "knight_g" && !_markLoop.FeatherHits.Contains(eventIndex) && !_riposteDamage.Contains(eventIndex) && StartsDirectReaction(eventIndex, e))
                 {
                     int reactionToken = _playToken;
                     if (actor?.UnitId == "zan" && target is not null && !e.FriendlyFire)
@@ -1584,7 +1592,7 @@ public partial class Main : Control
                 }
                 // 棘（カド）・仇討ちは PerformAttack を通らず、Reaction 付き Damage から始まる。
                 // ヨミのように Reaction 付き Attack を持つ段は上で既にカットイン済みなので二重に出さない。
-                if (e.Reaction && !_markLoop.FeatherHits.Contains(eventIndex) && !_riposteDamage.Contains(eventIndex) && StartsDirectReaction(eventIndex, e))
+                if (e.Reaction && actor?.UnitId != "knight_g" && !_markLoop.FeatherHits.Contains(eventIndex) && !_riposteDamage.Contains(eventIndex) && StartsDirectReaction(eventIndex, e))
                 {
                     int reactionToken = _playToken;
                     if (actor?.UnitId == "zan" && target is not null && !e.FriendlyFire)
@@ -2068,7 +2076,7 @@ public partial class Main : Control
         for (int i = attackIndex + 1; i < _result.Events.Count; i++)
         {
             BattleEvent candidate = _result.Events[i];
-            if (candidate.Kind == BattleEventKind.TurnStart) break;
+            if (candidate.Kind is BattleEventKind.TurnStart or BattleEventKind.HushState) break;
             if (candidate.Kind == BattleEventKind.Attack && candidate.ActorId == attack.ActorId) break;
             if (candidate.Kind is not (BattleEventKind.Damage or BattleEventKind.Parry)) continue;
             if (candidate.DeflectFromId is not null) continue; // 逸らしはマントからの飛行を待つ。
@@ -2110,7 +2118,8 @@ public partial class Main : Control
         for (int i = highlightIndex + 1; i < _result.Events.Count; i++)
         {
             BattleEvent candidate = _result.Events[i];
-            if (candidate.Kind is BattleEventKind.TurnStart or BattleEventKind.Attack or BattleEventKind.Highlight) break;
+            if (candidate.Kind is BattleEventKind.TurnStart or BattleEventKind.Attack or BattleEventKind.Highlight
+                or BattleEventKind.HushState) break;
             if (candidate.Kind is not (BattleEventKind.Damage or BattleEventKind.Parry)) continue;
             if (candidate.ActorId != highlight.ActorId) continue;
             bool bloodRelease = _battleField.FindPawn(highlight.ActorId)?.IsAshReleasing == true;
@@ -2521,6 +2530,7 @@ public partial class Main : Control
         _battleLog.Clear();
         SetBattleLogVisible(false);
         _battleField.BeginBattle(_battleOpening, _battleTitle, _battleStageIndex);
+        _battleField.SetHushLimits(_result.Events);
         _battleMusic.PlayWave(_battleStageIndex);
         _partyBar.Begin(_battleOpening);
         _partyBar.Sync(_battleField, -1);

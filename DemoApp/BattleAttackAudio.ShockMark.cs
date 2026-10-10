@@ -2,7 +2,7 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
-internal enum ShockMarkSound { Beam, FeatherGain, Deploy, Spray, Lock, Scar, Charge, Interrupt, Cloud, ThunderHeavy, Powder, Thread, Snap, RallyHeal, Insight, BeamHit, FeatherMove, FeatherLost, ElectricWhip, MarkAdd }
+internal enum ShockMarkSound { Beam, FeatherGain, Deploy, Spray, Lock, Scar, Charge, Interrupt, Cloud, ThunderHeavy, Powder, Thread, Snap, RallyHeal, Insight, BeamHit, FeatherMove, FeatherLost, ElectricWhip, MarkAdd, HushCry, HushSlap, HushOpening }
 
 public partial class BattleAttackAudio
 {
@@ -34,6 +34,7 @@ public partial class BattleAttackAudio
             ShockMarkSound.Cloud => -20,
             ShockMarkSound.Powder => -17,
             ShockMarkSound.ThunderHeavy => -10,
+            ShockMarkSound.HushSlap => -9,
             _ => -14,
         };
         voice.Play();
@@ -43,7 +44,8 @@ public partial class BattleAttackAudio
     {
         const int rate = 22050;
         double duration = cue switch { ShockMarkSound.Cloud => 1.15, ShockMarkSound.ThunderHeavy => 0.8,
-            ShockMarkSound.Deploy or ShockMarkSound.Powder => 0.48, ShockMarkSound.Spray => 0.36, _ => 0.21 };
+            ShockMarkSound.Deploy or ShockMarkSound.Powder => 0.48, ShockMarkSound.Spray => 0.36,
+            ShockMarkSound.HushSlap => .13, _ => 0.21 };
         int count = (int)(duration * rate);
         var bytes = new byte[count * 4];
         var random = new Random(291 + (int)cue);
@@ -70,6 +72,8 @@ public partial class BattleAttackAudio
                 ShockMarkSound.Cloud or ShockMarkSound.ThunderHeavy => low * 4 + Math.Sin(t * Math.Tau * 54) * 0.18,
                 ShockMarkSound.Powder => (noise - low) * 0.16 + Math.Sin(t * 9700) * Math.Pow(Math.Max(0, Math.Sin(t * 61)), 14) * 0.08,
                 ShockMarkSound.Charge or ShockMarkSound.Interrupt or ShockMarkSound.Snap => noise * 0.42 + tonal * 0.5,
+                // 平手の乾いた破裂音。金属の倍音や長い余韻を付けない。
+                ShockMarkSound.HushSlap => (noise - low) * .85 + Math.Sin(t * Math.Tau * 180) * Math.Exp(-t * 70) * .30,
                 _ => tonal + noise * 0.06,
             };
             double envelope = Math.Min(1, t * 500) * Math.Pow(1 - u, cue == ShockMarkSound.Powder ? 1.5 : 2.5);

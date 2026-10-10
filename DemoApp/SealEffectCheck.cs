@@ -21,6 +21,7 @@ public partial class SealEffectCheck : Control
                 new(3, BattleContext.EnemyTeam, "seal-check", "粛の伝令", 4, 100, 100, 10, AttackPattern.Single, true, [TraitId.Hush]),
             ];
             field.BeginBattle(openings, "演出確認", 1);
+            Require(field.HushOpeningSourceCount == 2, "複数の保持者それぞれを開戦の波の起点にする");
             var target = field.FindPawn(1)!;
             var holder = field.FindPawn(2)!;
             var second = field.FindPawn(3)!;

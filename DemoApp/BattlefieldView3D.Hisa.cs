@@ -78,8 +78,8 @@ public partial class BattlefieldView3D
             for (int i = 0; i < Math.Min(3, cue.Amount); i++)
                 ShockMarkFx.Ring(_fxRoot, stock.BallPoint(i), RallyAmber, .6f, .35 / speed);
         }
-        HisaCaption(pawn, "ほら、あいつだよ", RallyAmber, speed);
-        _attackAudio.PlayHisa(HisaSound.Command);
+        HisaCaption(pawn, HushMuted ? "…" : "ほら、あいつだよ", RallyAmber, speed);
+        if (!HushMuted) _attackAudio.PlayHisa(HisaSound.Command);
         await ToSignal(GetTree().CreateTimer(.24 / speed), SceneTreeTimer.SignalName.Timeout);
         if (!MarkLoopLive(generation, pawn, target)) return;
         Vector3 finger = pawn.MovementPortraitPoint(new Vector2(1007, 204), _camera);

@@ -4,14 +4,16 @@ using System.Collections.Generic;
 
 public partial class BattleAttackAudio
 {
-    // 発射8・着弾6・移動2・消失2・電撃鞭4・大落雷2・標3。別の音に余韻を切らせない。
-    internal const int ShockMarkAssetVoiceLimit = 27;
+    // 発射8・着弾6・移動2・消失2・電撃鞭4・大落雷2・標3・伝令の悲鳴1・粛展開1。別の音に余韻を切らせない。
+    internal const int ShockMarkAssetVoiceLimit = 29;
     internal static readonly string[] ShockMarkAssetFiles = {
         "misa_beam_1.wav", "misa_beam_2.wav", "misa_beam_3.wav", "misa_beam_hit.wav",
         "misa_deploy.wav", "misa_funnel_move.mp3", "misa_feather_lost.mp3",
         "shiga_electric_whip.mp3", "shiga_electric_hit.wav",
         "kata_thunder_heavy_4.mp3",
         "mark_add.wav",
+        "husher_shatter_cry.mp3",
+        "hush_opening.mp3",
     };
     private readonly AudioStreamPlayer?[] _shockAssetVoices = new AudioStreamPlayer?[ShockMarkAssetVoiceLimit];
     private readonly Tween?[] _shockAssetFades = new Tween?[ShockMarkAssetVoiceLimit];
@@ -64,13 +66,23 @@ public partial class BattleAttackAudio
                 // 号令による同時加算は表示側で1回にまとめる。
                 ShockAssetLayer(24, 3, "mark_add.wav", -4, 2.5, pan);
                 break;
+            case ShockMarkSound.HushCry:
+                // 指定の悲鳴は専用枠で最後まで鳴らし、倍速でも声の高さと長さを保つ。
+                ShockAssetLayer(27, 1, "husher_shatter_cry.mp3", -8, double.PositiveInfinity, pan, fadeOut: false);
+                break;
+            case ShockMarkSound.HushOpening:
+                // 粛を作る音そのものはこもらせず、倍速でも原音の余韻を保つ。
+                ShockAssetLayer(28, 1, "hush_opening.mp3", -10, double.PositiveInfinity, 0, fadeOut: false, bypassHush: true);
+                break;
             default: return false;
         }
         ShockAssetPlays[cue] = ShockAssetPlays.GetValueOrDefault(cue) + 1;
         return true;
     }
 
-    private void ShockAssetLayer(int first, int count, string file, float volume, double seconds, float pan)
+    internal void StopHushOpeningSound() => _shockAssetVoices[28]?.Stop();
+
+    private void ShockAssetLayer(int first, int count, string file, float volume, double seconds, float pan, bool fadeOut = true, bool bypassHush = false)
     {
         int slot = first;
         if (count > 1)
@@ -80,6 +92,7 @@ public partial class BattleAttackAudio
             _shockAssetNext[first] = next + 1;
         }
         _shockAssetFades[slot]?.Kill();
+        _shockAssetFades[slot] = null;
         var voice = _shockAssetVoices[slot];
         if (voice is null)
         {
@@ -88,11 +101,12 @@ public partial class BattleAttackAudio
         }
         voice.Stop();
         voice.Stream = LoadSound("res://assets/audio/se/" + file);
-        voice.Bus = ShockPanBus(pan);
+        voice.Bus = bypassHush ? "Master" : ShockPanBus(pan);
         voice.VolumeDb = volume;
         voice.PitchScale = 1; // 倍速でも原音を保ち、末尾の尺だけ縮める。
         double length = Math.Max(0.025, Math.Min(seconds, voice.Stream.GetLength()));
         voice.Play();
+        if (!fadeOut) return;
         var fade = _shockAssetFades[slot] = voice.CreateTween();
         fade.TweenInterval(length * 0.72);
         fade.TweenProperty(voice, "volume_db", -60f, length * 0.28);
@@ -102,14 +116,14 @@ public partial class BattleAttackAudio
     private StringName ShockPanBus(float pan)
     {
         int side = Math.Clamp((int)Math.Round(pan * 3), -2, 2);
-        if (side == 0) return "Master";
+        if (side == 0) return BattleAudioRouting.FieldBus;
         if (_shockPanBuses.TryGetValue(side, out var bus)) return bus;
         if (_shockPanBuses.Count == 0) TreeExiting += ReleaseShockPanBuses;
         int index = AudioServer.BusCount;
         AudioServer.AddBus();
         bus = new StringName($"ShockMark_{GetInstanceId()}_{side}");
         AudioServer.SetBusName(index, bus);
-        AudioServer.SetBusSend(index, "Master");
+        AudioServer.SetBusSend(index, BattleAudioRouting.FieldBus);
         AudioServer.AddBusEffect(index, new AudioEffectPanner { Pan = side / 3f });
         _shockPanBuses[side] = bus;
         return bus;

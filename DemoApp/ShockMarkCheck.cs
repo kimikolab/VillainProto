@@ -19,9 +19,11 @@ public partial class ShockMarkCheck : Control
             bool rally = OS.GetCmdlineUserArgs().Contains("--rally");
             bool loop = OS.GetCmdlineUserArgs().Contains("--mark-loop");
             bool hisa = OS.GetCmdlineUserArgs().Contains("--hisa");
+            bool hush = OS.GetCmdlineUserArgs().Contains("--hush");
             if (!OS.GetCmdlineUserArgs().Contains("--replay-only"))
             {
-                if (hisa) await CheckHisaVisuals();
+                if (hush) await CheckHushVisuals();
+                else if (hisa) await CheckHisaVisuals();
                 else if (loop) await CheckMarkLoopVisuals();
                 else if (OS.GetCmdlineUserArgs().Contains("--mark-readability")) await CheckMarkReadability();
                 else if (OS.GetCmdlineUserArgs().Contains("--zan-tiers")) await CheckZanTiers();
@@ -29,7 +31,12 @@ public partial class ShockMarkCheck : Control
                 else if (web) await CheckWebVisuals();
                 else await CheckVisuals();
             }
-            if (hisa && OS.GetCmdlineUserArgs().Contains("--verify"))
+            if (hush && OS.GetCmdlineUserArgs().Contains("--verify"))
+            {
+                foreach (string preset in new[] { "試遊・標 ボス台", "標経済 (ヒサ×ザン×ミサ)", "試遊・標 三人組" })
+                    await Replay(preset, 1, 0, campaign: true);
+            }
+            else if (hisa && OS.GetCmdlineUserArgs().Contains("--verify"))
             {
                 foreach (string preset in new[] { "試遊・標 循環", "試遊・標 三人組" })
                     for (int stage = 0; stage < 3; stage++) await Replay(preset, stage, 0);
@@ -173,7 +180,7 @@ public partial class ShockMarkCheck : Control
         object? Read(string key) => typeof(Main).GetField(key, Flags)!.GetValue(main);
         typeof(Main).GetField("_fastSmoke", Flags)!.SetValue(main, true);
         typeof(Main).GetField("_speed", Flags)!.SetValue(main, 1000.0);
-        var formation = Presets.Playtest.First(p => p.Name == name).F;
+        var formation = Presets.Playtest.Concat(Presets.Compare).First(p => p.Name == name).F;
         var enemy = campaign ? BattleEngine.Materialize(EnemyCatalog.Stages[stage].Enemy, 1)
             : BattleEngine.MaterializeEnemy(EnemyCatalog.PlaytestStages[stage].Enemy, EnemyCatalog.PlaytestStages[stage].Scale);
         typeof(Main).GetMethod("EnterBattle", Flags)!.Invoke(main, new object[] {
@@ -211,12 +218,20 @@ public partial class ShockMarkCheck : Control
                 foreach (var e in result.Events)
                 {
                     if (e.Kind == BattleEventKind.Death && e.TargetId is int id) hushers.Remove(id);
+                    if (e.Kind == BattleEventKind.HushState && e.Text == HushStateLabels.Shatter && e.ActorId is int broken)
+                        hushers.Remove(broken);
                     if (hushers.Count > 0) Require(e.Kind is not (BattleEventKind.Cover or BattleEventKind.MarkRally),
-                        "粛の保持者が生きている間は庇いと叫びが出ない");
+                        "有効な粛が残っている間は庇いと叫びが出ない");
                 }
                 Require(field.QuietPlays > 0, "第2波の止められた通知で黙る");
             }
             GD.Print($"HISA_REPLAY_OK {name} stage={stage} seed={seed} campaign={campaign} pass={pass} command={field.CommandPlays} balls={field.CommandBallPlays} spill={field.CommandSpills} cover={field.CoverPlays} quiet={field.QuietPlays}");
+            Require(field.HushCracks == Count(BattleEventKind.HushState, HushStateLabels.Crack)
+                && field.HushShatters == Count(BattleEventKind.HushState, HushStateLabels.Shatter), "ひび・砕けが台本と一致");
+            var hushPlan = HushPresentation.Build(result.Events, (System.Collections.Generic.List<DemoOpening>)Read("_battleOpening")!);
+            Require(field.KnightRipostes == hushPlan.Ripostes.Count, "騎士の肩代わりを含む反撃を一度だけ再生");
+            Require(!field.HushMuted && field.HushGaugeCount == 0 && !field.HushOpeningActive, "戦闘終了で粛の常駐と開戦演出を消す");
+            GD.Print($"HUSH_REPLAY_OK {name} pass={pass} cracks={field.HushCracks} shatters={field.HushShatters} ripostes={field.KnightRipostes} first={field.KnightFirstRipostes}");
             Require(field.InterruptPlays == Count(BattleEventKind.ShockGauge, ShockGaugeLabels.Interrupt), "割り込み件数");
             Require(field.WhipChainPlays == Count(BattleEventKind.ShockGauge, ShockGaugeLabels.WhipChain), "連鎖鞭の件数");
             Require(field.WhipGatherStrands == result.Events.Where(e => e.Kind == BattleEventKind.ShockGauge

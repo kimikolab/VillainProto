@@ -165,6 +165,12 @@ public static class UiKit
             return portrait;
         }
 
+        if (key == "husher_shattered")
+        {
+            if (!BattlePortraitCache.TryGetValue(key, out var placeholder))
+                BattlePortraitCache[key] = placeholder = LoadTexture("res://assets/fx/husher_shattered_placeholder.svg");
+            return placeholder;
+        }
         return Portrait(atlas, key);
     }
 

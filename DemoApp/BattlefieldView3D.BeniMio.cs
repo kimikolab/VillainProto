@@ -20,6 +20,7 @@ public partial class BattlefieldView3D
     {
         RefreshInverseBarriers();
         PlacePawnHuds(delta);
+        PlaceHushGauges();
     }
 
     // 既存の隣接表に現在の表示席を当てるだけ。HPや状態の判定・書き換えはしない。

@@ -14,6 +14,8 @@ public partial class ShockMarkAudioCheck : Control
     {
         try
         {
+            // 戦場用の共有バスは常設。左右定位用の一時バスだけを解放数で検査する。
+            BattleAudioRouting.EnsureFieldBus();
             int initialBuses = AudioServer.BusCount;
             var field = new BattlefieldView3D(); field.SetAnchorsPreset(LayoutPreset.FullRect); AddChild(field);
             var audio = (BattleAttackAudio)typeof(BattlefieldView3D).GetField("_attackAudio", Flags)!.GetValue(field)!;

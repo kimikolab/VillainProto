@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="400" viewBox="0 0 320 400">
+<!-- 正式な砕けた後の立ち絵が届くまでの、うずくまる成人の仮シルエット。 -->
+<g stroke="#343349" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+<path fill="#e8adb0" d="M104 205Q58 251 58 329Q66 368 127 355L160 326L194 359Q257 372 264 330Q256 253 215 203Z"/>
+<path fill="#fff0dc" d="M97 238Q160 219 226 240L226 302L183 315L159 292L128 315L85 296Z"/>
+<path fill="#f2bdba" d="M115 219Q78 196 74 241L96 288L155 255L213 290L243 243Q248 201 213 211L159 241Z"/>
+<path fill="#f5c5bd" d="M89 108Q89 57 156 55Q226 54 232 113L216 182Q187 216 143 206Q90 192 89 108Z"/>
+<path fill="#b4b2cb" d="M84 124Q62 67 102 35Q172-9 217 39Q261 81 230 143L211 94L191 106L169 66L140 110L116 87L105 141Z"/>
+<path fill="none" d="M110 140l23 7-22 9m90-14-24 5 25 10"/>
+<ellipse fill="#753e5b" cx="158" cy="178" rx="14" ry="18"/>
+<path fill="#a4e8ff" stroke-width="3" d="M108 155Q81 184 101 188Q115 187 108 155m104 0q27 29 7 33q-14-1-7-33"/>
+</g>
+<g fill="#ec607b" opacity=".65"><ellipse cx="118" cy="172" rx="18" ry="9"/><ellipse cx="201" cy="172" rx="18" ry="9"/></g>
+<g fill="#afb7ce" stroke="#52576f" stroke-width="3"><path d="M12 226l33 8-15 30Z"/><path d="M275 194l34 7-22 33Z"/><path d="M27 338l21-15 1 34Z"/><path d="M270 349l33-15-12 33Z"/></g>
+</svg>

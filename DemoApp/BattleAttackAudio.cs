@@ -115,6 +115,11 @@ public partial class BattleAttackAudio : Node
 
     public override void _Ready()
     {
+        BattleAudioRouting.EnsureFieldBus();
+        ChildEnteredTree += child => {
+            if (child is AudioStreamPlayer voice && System.Array.IndexOf(_hushVoices, voice) < 0)
+                voice.Bus = BattleAudioRouting.FieldBus;
+        };
         _random.Randomize();
         for (int i = 0; i < _voices.Length; i++)
         {
@@ -130,7 +135,7 @@ public partial class BattleAttackAudio : Node
         AddChild(_yokeVoice);
         for (int i = 0; i < _hushVoices.Length; i++)
         {
-            _hushVoices[i] = new AudioStreamPlayer { VolumeDb = -6, MaxPolyphony = 1 };
+            _hushVoices[i] = new AudioStreamPlayer { VolumeDb = -6, MaxPolyphony = 1, Bus = "Master" };
             AddChild(_hushVoices[i]);
         }
         foreach (string path in Common) LoadSound(path);

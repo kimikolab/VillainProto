@@ -637,6 +637,7 @@ void fragment() {
         float shadowSpread = fall * 0.28f;
         ProcessShieldCowed(animationDelta);
         ProcessMovementPose(animationDelta);
+        ProcessHushBrace((float)delta);
         ProcessWhipFlurry(animationDelta);
         ProcessBlastPose();
         ProcessBasaFlight(animationDelta);
@@ -652,6 +653,7 @@ void fragment() {
     private void ResetStaggerPose()
     {
         _movementPoseTime = 0;
+        _hushBrace = 0;
         _basaFlightTime = 0;
         ClearWindCarry();
         ClearAllyBounce();
