@@ -1172,3 +1172,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - SH-a は手番の外の動作——`CanActOutOfTurn(h, OutOfTurnRoute.Spark)`（経路を1本足した・名前「光」・`Other` の手前）。止まった光は捨てる（粛なら `NoteHushBlocked` → `HushCrack` に入る）。癒しの帰属は `BeginTrait(TraitId.SparkRain, h)`（観測専用）。
 - 計数のみ（ソムの `UnitTally`）: `SparkLightFoe` ／ `SparkLightSummon` ／ `SparkLightBall` ／ `SparkChains` ／ `SparkDeadPops` ／ `SparkAllyPops` ／ `SparkHushed(Lights)` ／ `SparkBlocked(Lights)` ／ `SparkRains` ／ `SparkRainLights` ／ `SparkHealed` ／ `SparkOverflow` ／ `SparkInverted` ／ `SparkRefused` ／ `SparkReleases` ／ `SparkSwings` ／ `SparkStorePeak`。
 - 表示専用の出来事 `Spark`（`SparkLabels`:「降る」「溜まる」「止まる」・`EmitSpark`）。`Boss283Diag.WriterKind` に `SparkTrait` を「味方・繰り返し」で足した（規定のソムは持たないので `HealPool` は動かない）。
+
+## 第308期 —— ソム SH-a の規定化 ／ 光の衣（LV-a ／ LV-c）と寄せる光（FO）
+
+- **規定のソム ＝ SH-a**（`UnitCatalog.Som` ＝ 旧の規定 `SomH307` ＋ `SparkRain`）。第294期 ／ 第307期の版は `SomH307` から作る。過去の器具は `Common.Pin308`（ソム → `SomH307`）で固定し、`Boss283Diag.Healers(hisa, som)` を分けた——`HealPool`（規定のソムを含む）／ `HealPool306`（第296〜307期の器具）／ `HealPool295`（第283〜295期の器具）。
+- 札 `SparkVeil`（LV-a）／ `SparkVeilCap`（LV-c・`SparkTrait.VeilCapPercent = 40`）／ `SparkFocus`（FO）。判定は `SparkTrait.Rain` の中だけ: 衣 ＝ `Heal` が `Healed` ／ `Full` を返したときの溢れを、その味方の破片（`StatusKeys.Armor`）に足す（リリの溢れ `KissTrait.Give` と同じ作法）。寄せ ＝ `RainFocus`（光1つにつき `AmountOf × 5` を `MostHurtAlly` へ・光ごとに選び直す）。
+- 計数のみ: 受けた味方の `SparkOverRecvFull` ／ `SparkOverRecvTop` ／ `SparkOverRecvT`（溢れの内訳・規定の SH-a でも数える）、衣の帳簿の私有キー `SparkTrait.VeilKey`（`sparkVeil`・受けた味方の側）。**`NoteArmorLost` が衣から先に減らして `SparkVeilSoaked` ／ `SparkVeilSoakedT` に数える**（`_veilLive` の比較1つで抜ける）。ソムの側 `SparkVeilAdded` ／ `SparkVeilCapped` ／ `SparkFocusPicks` ／ `SparkFocusNone`。
+- 表示専用: `Spark` に「衣」（`SparkLabels.Veil`・`TargetId` ＝ 受けた味方・`Slot` ＝ その後の破片）。`EmitSpark` に受け手の引数を足した。

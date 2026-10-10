@@ -1857,11 +1857,14 @@ public sealed class BattleContext
     }
 
     /// <summary>ソムの光の表示専用の出来事（第307期・<see cref="BattleEventKind.Spark"/>）。<b>盤面には触らない。</b></summary>
-    public void EmitSpark(UnitState som, string label, int amount, int stored)
+    public void EmitSpark(UnitState som, string label, int amount, int stored, UnitState? target = null)
     {
         if (!_verbose) return;
-        Emit(new BattleEvent { Kind = BattleEventKind.Spark, Turn = _turn, ActorId = som.InstanceId, Amount = amount, Slot = stored, Team = som.TeamId, Text = label });
+        Emit(new BattleEvent { Kind = BattleEventKind.Spark, Turn = _turn, ActorId = som.InstanceId, TargetId = target?.InstanceId, Amount = amount, Slot = stored, Team = som.TeamId, Text = label });
     }
+
+    /// <summary>光の衣の保持者（LV-a ／ LV-c）が戦闘に出たか（第308期・<b>計数</b>の口を短絡させる）。</summary>
+    bool _veilLive;
 
     /// <summary>
     /// シガの割り込み（第289期・SI-a ／ SI-b）。連鎖で弾けた生きている敵から主目標を選び（動けない敵を優先・弾けた順）、
@@ -5938,6 +5941,15 @@ public sealed class BattleContext
     /// </summary>
     internal void NoteArmorLost(UnitState u, int lost, int after)
     {
+        // 第308期・**計数のみ**（光の衣）: 破片が減ったら衣の帳簿から先に減らし、減った分を「衣が受け止めた量」に数える。保持者がいなければ比較1つで抜ける。
+        if (_veilLive && u.RawCounter(SparkTrait.VeilKey) is int vk and > 0)
+        {
+            int soak = Math.Min(vk, lost);
+            UnitTally vt = TallyOf(u);
+            vt.SparkVeilSoaked += soak;
+            (vt.SparkVeilSoakedT ??= new long[12])[Math.Min(_turn, 11)] += soak;
+            u.SetCounter(SparkTrait.VeilKey, Math.Min(vk - soak, after));
+        }
         if (u.RawCounter(StatusKeys.Plank) > 0)
         {
             TallyOf(u).PlankSoaked += lost;
@@ -7771,6 +7783,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.StoredCharge)) _chargeLive = true;          // 第288期（蓄電の口・雷霆の枠）
         if (u.HasTrait(TraitId.StoredCharge) || u.HasTrait(TraitId.Thunder)) _chainReaders.Add(u);   // 第289期（連鎖の後の口）
         if (IsSparkHolder(u)) { _sparkLive = true; _chainReaders.Add(u); }   // 第307期（ソムの光・連鎖の後の口）
+        if (u.HasTrait(TraitId.SparkVeil)) _veilLive = true;              // 第308期（光の衣の計数）
         if (u.HasTrait(TraitId.Grapple)) _grappleLive = true;              // 第290期（クグの計数・糸の口の手前）
         if (u.HasTrait(TraitId.Thread)) _threadLive = true;                // 第290期（糸・KG-a〜）
         if (u.HasTrait(TraitId.LiveWireGuard)) _shockStunGuard = true;     // 第217期（G3H）

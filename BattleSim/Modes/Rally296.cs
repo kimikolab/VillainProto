@@ -194,7 +194,7 @@ static class Rally296Diag
             && UnitCatalog.All.Contains(UnitCatalog.Hisa)
             && UnitCatalog.HisaHKa.Traits.SequenceEqual(hk0.Traits.Append(TraitId.MarkRally)) && UnitCatalog.HisaHSa.Traits.SequenceEqual(hk0.Traits.Append(TraitId.BeckonHold))
             && UnitCatalog.HisaHSa.PlusText.StartsWith(hk0.PlusText + "。標を付けられた", StringComparison.Ordinal));
-        var heal = Boss283Diag.HealPool; var heal0 = Boss283Diag.HealPool295;
+        var heal = Boss283Diag.HealPool306; var heal0 = Boss283Diag.HealPool295;   // 第308期: 規定のソム（SH-a）を数えない第307期までの一覧に固定
         Expect("(d) ヒーラーの一覧（`Boss283Diag.HealPool`）に規定のヒサが入る・旧の一覧（`HealPool295`）は入らない・ほかの顔ぶれは同じ",
             heal.Contains(UnitCatalog.Hisa) && !heal0.Contains(UnitCatalog.Hisa) && heal.Where(d => !ReferenceEquals(d, UnitCatalog.Hisa)).SequenceEqual(heal0), $"{heal.Length} 枚 ／ 旧 {heal0.Length} 枚");
         var pl = Presets.Playtest;

@@ -39,7 +39,7 @@ static class Shock287Diag
     internal static readonly UnitDef[] Fixed = { UnitCatalog.Tou, UnitCatalog.ShigaG3K };
 
     /// <summary>感電の駒（カタ・クグ・ソム）。</summary>
-    internal static readonly UnitDef[] ShockPool = { UnitCatalog.KataS3, UnitCatalog.KuguKG0, UnitCatalog.Som };
+    internal static readonly UnitDef[] ShockPool = { UnitCatalog.KataS3, UnitCatalog.KuguKG0, UnitCatalog.SomH307 };
 
     /// <summary>ヒーラー（第283期 Phase 0 の機械的定義）。`Boss283Diag.HealPool` は呼ぶたびにソースを走査するので、1度だけ引いて持つ。</summary>
     internal static readonly UnitDef[] Heal = B283.HealPool295;

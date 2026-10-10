@@ -736,6 +736,11 @@ public enum TraitId
     SparkHalf,        // 光の量 × 0.5（対照・SH-a ／ SH-b の量の感度）（**札そのものは挙動を持たない**・`SparkTrait.AmountOf` が読む）
     SparkDouble,      // 光の量 × 2（対照・同上）
 
+    // --- 第308期で足した札（ソムの版 `UnitCatalog.SomLVa` ／ `SomLVc` ／ `SomFO` だけが持つ・第308期から規定のソムは `SparkRain`） ---
+    SparkVeil,        // 光の衣（LV-a）: 降る光の溢れ（光の量 − 実際に増えた HP・`Healed` ／ `Full` のときだけ）を、その味方の破片に足す。上限なし（**札そのものは挙動を持たない**・`SparkTrait.Rain` が読む）
+    SparkVeilCap,     // 光の衣・上限あり（LV-c）: LV-a ＋ 衣で足せるのは、その味方の破片（ほかの書き手の破片も合算）が最大HPの 4 割になるまで（超えた分は捨てる）（同上）
+    SparkFocus,       // 寄せる光（FO・参考）: 衣は無し。光1つにつき 量 × 5 を、最も傷ついた味方1体（`MostHurtAlly`）に癒す。光ごとに選び直す（同上）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -12859,10 +12864,21 @@ public sealed class SparkTrait : Trait
         Rain(ctx, self, l);
     }
 
-    /// <summary>光 × 量 を味方全員（ソム自身を含む・<c>LivingMembers</c> の順）に1体ずつ癒す。印（第94期）は呼ぶ側が立てる。</summary>
+    /// <summary>光の衣（LV-c）の上限: その味方の破片（ほかの書き手を合算）が最大HPのこの割合（%）まで。指示書が<b>測る前に固定</b>した値。</summary>
+    public const int VeilCapPercent = 40;
+    /// <summary>光の衣の帳簿（第308期・<b>計数専用</b>の私有キー・受けた味方の側）: 破片のうち衣が足した分の残り。破片が減ったら衣から先に減らす（engine の <c>NoteArmorLost</c>）。どの規則も読まない。</summary>
+    public const string VeilKey = "sparkVeil";
+
+    /// <summary>
+    /// 光 × 量 を味方全員（ソム自身を含む・<c>LivingMembers</c> の順）に1体ずつ癒す。印（第94期）は呼ぶ側が立てる。
+    /// <para>第308期: 寄せる光（<see cref="TraitId.SparkFocus"/>）なら <see cref="RainFocus"/> へ。光の衣（<see cref="TraitId.SparkVeil"/>）なら、溢れ（`Healed` ／ `Full` のときの 量 − 増えた HP）を
+    /// その味方の破片に足す（<see cref="TraitId.SparkVeilCap"/> なら破片が最大HPの <see cref="VeilCapPercent"/>% まで・超えた分は捨てる）。</para>
+    /// </summary>
     public static void Rain(BattleContext ctx, UnitState som, int lights)
     {
+        if (som.HasTrait(TraitId.SparkFocus)) { RainFocus(ctx, som, lights); return; }
         int amt = AmountOf(som, lights);
+        bool veil = som.HasTrait(TraitId.SparkVeil), cap = som.HasTrait(TraitId.SparkVeilCap);
         UnitTally t = ctx.TallyOf(som);
         t.SparkRains++;
         t.SparkRainLights += lights;
@@ -12876,8 +12892,66 @@ public sealed class SparkTrait : Trait
                 case HealOutcome.Blocked or HealOutcome.Drought: t.SparkRefused += amt; break;
                 case HealOutcome.Healed or HealOutcome.Full:
                     int got = Math.Max(0, a.Hp - before);
+                    int over = amt - got;
                     t.SparkHealed += got;
-                    t.SparkOverflow += amt - got;
+                    t.SparkOverflow += over;
+                    if (over > 0) NoteOver(ctx, a, over, before >= a.MaxHp);
+                    if (veil && over > 0) Veil(ctx, som, a, over, cap);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>溢れの内訳（第308期・<b>計数のみ</b>・受けた味方の帳簿）: 満タンの味方に降った ／ 満タンに届いて余った・ターンごと。</summary>
+    static void NoteOver(BattleContext ctx, UnitState a, int over, bool wasFull)
+    {
+        UnitTally at = ctx.TallyOf(a);
+        if (wasFull) at.SparkOverRecvFull += over; else at.SparkOverRecvTop += over;
+        (at.SparkOverRecvT ??= new long[12])[Math.Min(ctx.Turn, 11)] += over;
+    }
+
+    /// <summary>光の衣（第308期・LV-a ／ LV-c）。溢れ <paramref name="over"/> を <paramref name="a"/> の破片に足す。<b>乱数を引かない。</b></summary>
+    static void Veil(BattleContext ctx, UnitState som, UnitState a, int over, bool cap)
+    {
+        UnitTally t = ctx.TallyOf(som);
+        int armor = a.RawCounter(StatusKeys.Armor);
+        int add = over;
+        if (cap) add = Math.Min(over, Math.Max(0, a.MaxHp * VeilCapPercent / 100 - armor));
+        t.SparkVeilCapped += over - add;
+        if (add <= 0) return;
+        t.SparkVeilAdded += add;
+        a.SetCounter(StatusKeys.Armor, armor + add);
+        a.SetCounter(VeilKey, a.RawCounter(VeilKey) + add);
+        ctx.EmitSpark(som, SparkLabels.Veil, add, armor + add, a);   // 表示専用（衣になった量・その後の破片）
+        ctx.Log($"    余った光が {a.Name} の衣になった（破片 +{add}）", LogKind.Status);
+    }
+
+    /// <summary>
+    /// 寄せる光（第308期・FO・参考）。光1つにつき 量 × 5 を、最も傷ついた味方1体（<c>BattleContext.MostHurtAlly</c>・ソム自身は含まない）に癒す。光ごとに選び直す。
+    /// 傷ついた味方がいなければその光は溢れ（<c>SparkFocusNone</c>）。<b>同じ傷の深さが並ぶと `MostHurtAlly` の中で乱数を引く</b>（版だけ・新しい口は足していない）。
+    /// </summary>
+    static void RainFocus(BattleContext ctx, UnitState som, int lights)
+    {
+        int per = AmountOf(som, 1) * 5;
+        UnitTally t = ctx.TallyOf(som);
+        t.SparkRains++;
+        t.SparkRainLights += lights;
+        for (int i = 0; i < lights; i++)
+        {
+            UnitState? a = ctx.MostHurtAlly(som);
+            if (a is null) { t.SparkFocusNone++; t.SparkOverflow += per; continue; }
+            t.SparkFocusPicks++;
+            int before = a.Hp;
+            HealOutcome res = ctx.Heal(a, per, som);
+            switch (res)
+            {
+                case HealOutcome.Inverted: t.SparkInverted += per; break;
+                case HealOutcome.Blocked or HealOutcome.Drought: t.SparkRefused += per; break;
+                case HealOutcome.Healed or HealOutcome.Full:
+                    int got = Math.Max(0, a.Hp - before);
+                    t.SparkHealed += got;
+                    t.SparkOverflow += per - got;
+                    if (per - got > 0) NoteOver(ctx, a, per - got, before >= a.MaxHp);
                     break;
             }
         }
@@ -17111,6 +17185,9 @@ public static class TraitCatalog
         new SparkTrait(TraitId.SparkStore),                   // 第307期（ソムの版 SH-b）
         new MarkOnlyTrait(TraitId.SparkHalf),                 // 第307期（量 × 0.5・対照・印だけ）
         new MarkOnlyTrait(TraitId.SparkDouble),               // 第307期（量 × 2・対照・印だけ）
+        new MarkOnlyTrait(TraitId.SparkVeil),                 // 第308期（光の衣 LV-a・印だけ）
+        new MarkOnlyTrait(TraitId.SparkVeilCap),              // 第308期（光の衣・上限 LV-c・印だけ）
+        new MarkOnlyTrait(TraitId.SparkFocus),                // 第308期（寄せる光 FO・印だけ）
         new AmplifierTrait(),
         new ContagionTrait(),
         new MiasmaTrait(),

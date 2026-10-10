@@ -53,7 +53,13 @@ static class Boss283Diag
     /// 第296期より前の一覧（規定のヒサを数えない）。<b>過去の器具（第283〜295期）はこちらを読む</b>——規定のヒサを HK-b にして
     /// <see cref="HealPool"/> にヒサを足したので、過去の器具の出力が動かないよう固定する。
     /// </summary>
-    internal static UnitDef[] HealPool295 => Healers(hisa: false).Select(h => h.Def).ToArray();
+    internal static UnitDef[] HealPool295 => Healers(hisa: false, som: false).Select(h => h.Def).ToArray();
+
+    /// <summary>
+    /// 第308期より前の一覧（規定のソムを数えない）。規定のソムを SH-a（降る光・<see cref="TraitId.SparkRain"/>）にしてソムがヒーラーになったので、
+    /// <b>第296〜307期の器具（規定のヒサを数える側）はこちらを読む</b>。<see cref="HealPool295"/> もソムを数えない。
+    /// </summary>
+    internal static UnitDef[] HealPool306 => Healers(som: false).Select(h => h.Def).ToArray();
 
     /// <summary>
     /// Phase 0 §1 の境界の判定（ソースの走査結果に人が付ける列）。
@@ -134,13 +140,14 @@ static class Boss283Diag
     static List<Writer> AllyMarkWriters() => Scan("標", s => s.Contains("SetCounter(StatusKeys.Marked, 1)"));
 
     /// <summary>ヒーラーの機械的定義（Phase 0 §1）: 「味方へ」かつ「繰り返し」の回復・破片の書き手を持つ `All` の駒。</summary>
-    static List<HealerRow> Healers(bool hisa = true)
+    static List<HealerRow> Healers(bool hisa = true, bool som = true)
     {
         var w = HealWriters().Concat(ArmorWriters())
             .Where(x => WriterKind.TryGetValue(x.Cls, out var k) && k.To == "味方" && k.Repeat).ToList();
         var rows = new List<HealerRow>();
         foreach (var d in UnitCatalog.All)
         {
+            if (!som && ReferenceEquals(d, UnitCatalog.Som)) continue;   // 第308期: 規定のソム（SH-a）は第307期までの一覧に入れない
             var cls = w.Where(x => x.Ids.Any(d.Traits.Contains)).Select(x => x.Cls).Distinct().ToList();
             if (cls.Count > 0) rows.Add(new HealerRow(d, string.Join(" ／ ", cls)));
         }

@@ -10,7 +10,8 @@ using S293 = Shock293Diag;
 //
 //     dotnet run --project BattleSim -c Release 0 som307 p0          # Phase 0（§3）: 量の決め方・光の燃料の内訳と推移・粛の第2波で止まる見込み・ベニの台
 //
-// 規定の駒（第306期の HEAD）のまま組む（固定しない）。ソムの版は規定のソム（`UnitCatalog.Som`）と同じ席で差し替える。
+// 規定の駒（第306期の HEAD）のまま組む。ソムの版は旧の規定のソム（`UnitCatalog.SomH307`）と同じ席で差し替える。
+// 第308期: 規定のソムが SH-a になったので、台のソムは旧の規定（`SomH307`・`Common.Pin308`）に固定した。
 // =====================================================================================
 static partial class Som307Diag
 {
@@ -50,8 +51,8 @@ static partial class Som307Diag
     internal static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     internal static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     internal static string Seats(Formation f) => string.Join("・", Enumerable.Range(0, 5).Select(i => f[i] is { } d ? Short(d) : "—"));
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Playtest(string n) => Pin308(Presets.Playtest.First(r => r.Name == n).F);
+    static Formation Row(string n) => Pin308(CompareBuilds().First(r => r.Name == n).F);   // 第308期: 規定のソム（SH-a）は旧（`SomH307`）に固定
 
     internal const string WinBoard = "シガ・ゴルム・クグ・カタ・ツギ";
 
@@ -59,10 +60,10 @@ static partial class Som307Diag
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
     {
         ("感電 (シガ×カタ×ソム)", Row("感電 (シガ×カタ×ソム)")),
-        ("雷の型 ドハ→ソム", FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, UnitCatalog.Som)),
-        ("感電 糸 ガルド→ソム", FvSwap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, UnitCatalog.Som)),
-        ("勝ち台 ゴルム→ソム", FvSwap(B283.Seat(Order(WinBoard)), UnitCatalog.Golm, UnitCatalog.Som)),
-        ("勝ち台 ツギ→ソム", FvSwap(B283.Seat(Order(WinBoard)), UnitCatalog.Tsugi, UnitCatalog.Som)),
+        ("雷の型 ドハ→ソム", FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, UnitCatalog.SomH307)),
+        ("感電 糸 ガルド→ソム", FvSwap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, UnitCatalog.SomH307)),
+        ("勝ち台 ゴルム→ソム", FvSwap(B283.Seat(Order(WinBoard)), UnitCatalog.Golm, UnitCatalog.SomH307)),
+        ("勝ち台 ツギ→ソム", FvSwap(B283.Seat(Order(WinBoard)), UnitCatalog.Tsugi, UnitCatalog.SomH307)),
     };
 
     internal static string F1(double x) => double.IsNaN(x) ? "—" : x.ToString("F1");
@@ -219,7 +220,7 @@ static partial class Som307Diag
         foreach (var (n, f) in Boards())
             if (f.Occupied().Any(o => o.Def.Id == "beni")) { any = true; Console.WriteLine($"- {n}: ベニあり"); }
         if (!any) Console.WriteLine("- 代表台 5 台にベニはいない（反転は代表台では起きない）。");
-        var fire = FvSwap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, UnitCatalog.Som);
+        var fire = FvSwap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, UnitCatalog.SomH307);
         var bf = BattleEngine.Materialize(fire, BattleContext.PlayerTeam);
         var beni = bf.First(u => u.Def.Id == "beni");
         int adj = bf.Count(u => u != beni && FormationRules.AreAdjacent(u, beni));

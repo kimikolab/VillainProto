@@ -38,7 +38,7 @@ static partial class Som307Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef To);
     internal static readonly Ver[] Vers =
     {
-        new("規定", "sh0", UnitCatalog.Som), new("SH-a", "sha", UnitCatalog.SomSHa), new("SH-b", "shb", UnitCatalog.SomSHb),
+        new("規定", "sh0", UnitCatalog.SomH307), new("SH-a", "sha", UnitCatalog.SomSHa), new("SH-b", "shb", UnitCatalog.SomSHb),
     };
     /// <summary>量の感度の対照（指示書 §2-2・ボスの ツギ → ソム だけ）。</summary>
     internal static readonly Ver[] Sens =
@@ -47,8 +47,8 @@ static partial class Som307Diag
         new("SH-b × 0.5", "shb05", UnitCatalog.SomSHb05), new("SH-b × 2", "shb2", UnitCatalog.SomSHb2),
     };
     static Ver AnyVer(string n) => Vers.Concat(Sens).First(v => v.Ascii == n || v.Name == n);
-    internal static Formation Apply(Formation f, Ver v) => ReferenceEquals(v.To, UnitCatalog.Som) ? f : FvSwap(f, UnitCatalog.Som, v.To);
-    static bool HasSom(Formation f) => f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Som));
+    internal static Formation Apply(Formation f, Ver v) => ReferenceEquals(v.To, UnitCatalog.SomH307) ? f : FvSwap(f, UnitCatalog.SomH307, v.To);
+    static bool HasSom(Formation f) => f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.SomH307));
 
     // ---------------------------------------------------------------------------------
     // 1戦の計数
@@ -150,7 +150,7 @@ static partial class Som307Diag
     // ---------------------------------------------------------------------------------
     static double[,] CompareGrid(Ver v, int[] caps)
     {
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin308(r.F))).ToArray();   // 第308期: ソムは旧の規定（`SomH307`）に
         int nw = EnemyCatalog.Stages.Count;
         var g = new double[rows.Length, nw];
         Parallel.For(0, rows.Length * nw, k =>
@@ -167,7 +167,7 @@ static partial class Som307Diag
 
     static void CompareAll()
     {
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin308(r.F))).ToArray();   // 第308期: ソムは旧の規定（`SomH307`）に
         int nw = EnemyCatalog.Stages.Count;
         var prim = Baseline.PrimaryRows.ToHashSet();
         Console.WriteLine("# 第307期 `compare` 64 行 × ソムの版（seed 0..199・ソムの在席行だけ差し替える・基準は第306期の規定）");
@@ -330,11 +330,11 @@ static partial class Som307Diag
 
     static UnitDef[]? _heal;
     /// <summary>いまのヒーラー（第283期の機械的定義・規定のヒサを含む）。走査は1度だけ。</summary>
-    internal static UnitDef[] Healers => _heal ??= B283.HealPool;
+    internal static UnitDef[] Healers => _heal ??= B283.HealPool306;   // 第308期: 規定のソム（SH-a）を数えない第307期の一覧に固定
     /// <summary>候補を規定の駒に揃える（過去の器具が固定した旧の版 → 同じ Id の `All` の駒）。</summary>
     static UnitDef Cur(UnitDef d) => UnitCatalog.All.First(x => x.Id == d.Id);
 
-    static void GridCore(string title, S287.Wave w, UnitDef[] fixedU, UnitDef[] pool, int k, (string Name, Func<Formation, Formation> Apply)[] vars)
+    internal static void GridCore(string title, S287.Wave w, UnitDef[] fixedU, UnitDef[] pool, int k, (string Name, Func<Formation, Formation> Apply)[] vars, string phase = "第307期")
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var lu = S293.Combos(pool, k);
@@ -369,7 +369,7 @@ static partial class Som307Diag
         bool Need(GridRes r, int v, int c) => Half(r, v) && r.Ctl[v][c] * 2 <= r.Wins[v];
         string Key(UnitDef[] o) => string.Join(",", o.Select(d => d.Id).OrderBy(s => s, StringComparer.Ordinal));
 
-        Console.WriteLine($"# 第307期 格子 × {w.Name} × {title}");
+        Console.WriteLine($"# {phase} 格子 × {w.Name} × {title}");
         Console.WriteLine();
         Console.WriteLine($"探索枠{k}（候補 {pool.Length} 枚: {OrderName(pool)}・**ヒーラーを除いた**）＝ {lu.Count} 組 × 席 120 ＝ {boards.Count:N0} 台 × 版 {vars.Length}（{string.Join(" ／ ", vars.Select(v => v.Name))}）。");
         Console.WriteLine($"足切り seed 0..{CutSeeds - 1}（どれかの版で {(w.Boss ? 1 : 5)} 勝以上・{cutPass:N0} 台が通った）→ 全版 seed 0..{Seeds - 1} → 勝率 50% 以上の版で固定枠の駒それぞれ → ドルガ。");
@@ -429,14 +429,14 @@ static partial class Som307Diag
     {
         var v = AnyVer(ver);
         var vars = new (string, Func<Formation, Formation>)[] { ("規定", f => f), (v.Name, f => Apply(f, v)) };
-        GridCore($"固定枠 クグ ＋ カタ ＋ ソム（規定 ／ {v.Name}）", Waves[0], new[] { UnitCatalog.Kugu, UnitCatalog.Kata, UnitCatalog.Som }, BossPool, 2, vars);
+        GridCore($"固定枠 クグ ＋ カタ ＋ ソム（規定 ／ {v.Name}）", Waves[0], new[] { UnitCatalog.Kugu, UnitCatalog.Kata, UnitCatalog.SomH307 }, BossPool, 2, vars);
     }
 
     static void GridElite(string waveName, string ver)
     {
         var v = AnyVer(ver);
         var vars = new (string, Func<Formation, Formation>)[] { ("規定", f => f), (v.Name, f => Apply(f, v)) };
-        GridCore($"固定枠 トウ ＋ ソム（規定 ／ {v.Name}）", WaveOf(waveName), new[] { UnitCatalog.Tou, UnitCatalog.Som }, ElitePool, 3, vars);
+        GridCore($"固定枠 トウ ＋ ソム（規定 ／ {v.Name}）", WaveOf(waveName), new[] { UnitCatalog.Tou, UnitCatalog.SomH307 }, ElitePool, 3, vars);
     }
 
     // ---------------------------------------------------------------------------------
@@ -492,7 +492,7 @@ static partial class Som307Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        var som = UnitCatalog.Som;
+        var som = UnitCatalog.SomH307;
 
         // (a) 定義
         {
@@ -505,8 +505,10 @@ static partial class Som307Diag
                 && UnitCatalog.SomSHb05.Traits.SequenceEqual(b.Traits.Append(TraitId.SparkHalf)) && UnitCatalog.SomSHb2.Traits.SequenceEqual(b.Traits.Append(TraitId.SparkDouble))
                 && a.Actions == som.Actions && b.Actions is { Count: 1 } && b.Actions[0].Kind == ActionKind.Skill
                 && a.PlusText == som.PlusText + "。敵の側で感電が弾けるたび、その光が仲間に降り注ぎ、傷を癒す" && b.PlusText.EndsWith("光を溜め、手番で仲間に降らせる")
-                && Vers.Skip(1).Concat(Sens).All(v => !UnitCatalog.Everyone.Contains(v.To)) && UnitCatalog.All.Contains(som)
-                && !UnitCatalog.All.Any(d => d.Traits.Any(t => t is TraitId.SparkRain or TraitId.SparkStore or TraitId.SparkHalf or TraitId.SparkDouble));
+                && Vers.Skip(1).Concat(Sens).All(v => !UnitCatalog.Everyone.Contains(v.To)) && !UnitCatalog.Everyone.Contains(som)
+                // 第308期: 規定のソムが SH-a（`SparkRain`）になった——光の札を持つ `All` の駒は規定のソムだけで、中身は版の SH-a と同じ
+                && !UnitCatalog.All.Any(d => !ReferenceEquals(d, UnitCatalog.Som) && d.Traits.Any(t => t is TraitId.SparkRain or TraitId.SparkStore or TraitId.SparkHalf or TraitId.SparkDouble))
+                && UnitCatalog.Som.Traits.SequenceEqual(a.Traits) && UnitCatalog.Som.PlusText == a.PlusText && UnitCatalog.Som.Flavor == a.Flavor;
             Expect("(a) 定義: 版 ＝ 規定のソム ＋ 札（数値・マイナス・喚び出しは規定のまま）・SH-b は術の手番・`All` ／ `Everyone` の外・光の札の保持者は `All` に 0 枚", ok, $"量 {SparkTrait.Amount}");
         }
 
@@ -634,7 +636,7 @@ static partial class Som307Diag
 
         // (h) ヒーラーの一覧
         {
-            var hp = B283.HealPool.Select(Short).ToArray();
+            var hp = B283.HealPool306.Select(Short).ToArray();   // 第308期: 第307期の一覧（`HealPool306`）に固定
             var hp295 = B283.HealPool295.Select(Short).ToArray();
             Expect("(h) `HealPool` ／ `HealPool295` の中身が第306期と同じ（版のソムは `All` の外）", hp.SequenceEqual(HealPool306) && hp295.SequenceEqual(HealPool295At306),
                 $"{string.Join("・", hp)} ／ {string.Join("・", hp295)}");

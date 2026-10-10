@@ -256,6 +256,17 @@ public static Formation Pin304(Formation f)
 public static readonly IReadOnlyList<EnemyCatalog.Stage> StagesH305 =
     EnemyCatalog.Stages.Select((s, i) => i == 1 ? EnemyCatalog.Wave2H305 : s).ToArray();
 
+/// <summary>
+/// 第308期: ソム ＝ SH-a（降る光）を規定にした。第276〜307期の規定のソムで測った器具はこれを通す（ソム → `SomH307`）。陣形とレリックは保つ。
+/// </summary>
+public static Formation Pin308(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH307 : d;
+    return g;
+}
+
 /// <summary>第306期: 敵の編成が規定の第二波（`Stages[1].Enemy`）なら旧の第二波（`Wave2H305`）に差し替える。ほかの編成はそのまま返す。</summary>
 public static Formation PinWave305(Formation enemy) => ReferenceEquals(enemy, EnemyCatalog.Stages[1].Enemy) ? EnemyCatalog.Wave2H305.Enemy : enemy;
 

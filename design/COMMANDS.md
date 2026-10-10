@@ -1012,7 +1012,13 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 som307 gridboss <sha|shb>          # 第307期 ボスの格子（固定枠 クグ ＋ カタ ＋ ソム・探索枠2・ヒーラーを除く・規定 ／ 版を同じ台で・約 1 分）
     dotnet run --project BattleSim -c Release 0 som307 grid <guard|bat> <sha|shb>  # 第307期 精鋭の格子（固定枠 トウ ＋ ソム・探索枠3・ヒーラーを除く）
     dotnet run --project BattleSim -c Release 0 som307 log <台の名前の一部> <boss|guard|bat|1..5> <seed> <sh0|sha|shb|sha05|sha2|shb05|shb2> [件数]   # 第307期 1戦の光（`Spark`）と弾け・癒しの並び
-    dotnet run --project BattleSim -c Release 0 som307 check       # 第307期 自己検査（定義・敵の側だけ・喚ばれたもの ／ 糸玉・倒れた後・粛 ／ 痺れ・SH-b の手番・ベニの反転・ヒーラーの一覧・規定で無風・verbose・PickOne・経路）
+    dotnet run --project BattleSim -c Release 0 som307 check       # 第307期 自己検査（定義・敵の側だけ・喚ばれたもの ／ 糸玉・倒れた後・粛 ／ 痺れ・SH-b の手番・ベニの反転・ヒーラーの一覧・規定で無風・verbose・PickOne・経路）。第308期からソムは旧の規定（`SomH307`）に固定
+    dotnet run --project BattleSim -c Release 0 som308 p0          # 第308期 Phase 0: 規定（SH-a）の溢れの内訳（満タンに降った ／ 届いて余った・ターン・席）・衣の見込み（ターンの頭）と 4 割で捨てる見込み・ツギの板（数秒）。本体は `Modes/Som308.cs`
+    dotnet run --project BattleSim -c Release 0 som308 compare     # 第308期 `compare` 64 行 × LV-a ／ LV-c ／ FO（ソムの在席行だけ差し替える）
+    dotnet run --project BattleSim -c Release 0 som308 boards      # 第308期 代表台 5 台 × 8 波 × 規定 ／ LV-a ／ LV-c ／ FO（衣になった ／ 受け止めた ／ 捨てた・戦の終わりの衣・寄せ・ボスのターンごとの効き・元の勝ち台・対照 ソム → ドルガ）
+    dotnet run --project BattleSim -c Release 0 som308 gridboss [lva|lvc|fo]       # 第308期 ボスの格子（第307期 `GridCore` ・候補も同じ・規定 ＋ 版）
+    dotnet run --project BattleSim -c Release 0 som308 grid <guard|bat> <lva|lvc|fo>  # 第308期 精鋭の格子（固定枠 トウ ＋ ソム・探索枠3・ヒーラーを除く）
+    dotnet run --project BattleSim -c Release 0 som308 check       # 第308期 自己検査（段0 の定義・ヒーラーの一覧・溢れだけが衣・通らない光は衣にならない・4割の上限・寄せの選び直し・衣の受け止め・規定で衣 0・verbose・PickOne）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

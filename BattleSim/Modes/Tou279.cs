@@ -50,7 +50,7 @@ static class Tou279Diag
     };
 
     static Formation Row(string prefix) => FvSwap(FvSwap(FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0);   // 第291期: クグも旧の規定へ・第289期: シガを旧の規定（G3K）に固定・第290期: カタも旧の規定（S3）に
-    static Formation ShockRow => Row("感電 (シガ×カタ×ソム)");
+    static Formation ShockRow => Pin308(Row("感電 (シガ×カタ×ソム)"));   // 第308期: ソムは旧の規定（`SomH307`）に
     /// <summary>第273期の帯電の足の検証台（`relic check273` (f)）。</summary>
     static Formation Bench273(UnitDef center) => Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Basa, center: center, back1: UnitCatalog.Sero, back3: UnitCatalog.Hane);
 
@@ -60,7 +60,7 @@ static class Tou279Diag
         ("毒+耐久 (ベニ×トウ)", "compare", d => FvSwap(Row("毒+耐久 (ベニ×トウ)"), UnitCatalog.Tou, d)),
         ("責め苦 (トウ×シガ)", "compare", d => FvSwap(Row("責め苦 (トウ×シガ)"), UnitCatalog.Tou, d)),
         ("E1 感電の行の後3 ミオ → トウ", "検証", d => FvSwap(ShockRow, UnitCatalog.Mio, d)),
-        ("E2 感電の行の中央 ソム → トウ", "検証", d => FvSwap(ShockRow, UnitCatalog.Som, d)),
+        ("E2 感電の行の中央 ソム → トウ", "検証", d => FvSwap(ShockRow, UnitCatalog.SomH307, d)),
         ("M1 隊列崩しの中央 ガルド → トウ", "検証", d => FvSwap(Row("隊列崩し (バサ×ヨミ×セロ)"), UnitCatalog.Gald, d)),
         ("M2 第273期の検証台の中央 カタ → トウ", "検証", d => Bench273(d)),
         ("感電の行（ソムのまま・参照）", "参照", _ => ShockRow),

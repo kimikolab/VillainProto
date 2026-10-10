@@ -2144,6 +2144,12 @@ public sealed class UnitTally
                 SparkRains, SparkRainLights, SparkHealed, SparkOverflow, SparkInverted, SparkRefused, SparkReleases, SparkSwings;
     public int SparkStorePeak;
     /// <summary>
+    /// 第308期（<b>計数のみ</b>）。ソムの側: <c>SparkVeilAdded</c> 衣になった量 ／ <c>SparkVeilCapped</c> 上限で捨てた量（LV-c）／ <c>SparkFocusPicks</c> ／ <c>SparkFocusNone</c> 寄せる光が選んだ回数 ／ 傷ついた味方がいなかった回数（FO）。
+    /// 受けた味方の側: <c>SparkOverRecvFull</c> 満タンで降った溢れ ／ <c>SparkOverRecvTop</c> 満タンに届いて余った溢れ ／ <c>SparkOverRecvT</c>[ターン] 溢れ ／ <c>SparkVeilSoaked</c> ／ <c>SparkVeilSoakedT</c>[ターン] 衣が減った量（＝受け止めた量・衣から先に減らす）。
+    /// </summary>
+    public long SparkVeilAdded, SparkVeilCapped, SparkFocusPicks, SparkFocusNone, SparkOverRecvFull, SparkOverRecvTop, SparkVeilSoaked;
+    public long[]? SparkOverRecvT, SparkVeilSoakedT;
+    /// <summary>
     /// 第299期（<b>計数のみ</b>・ザンの手番）。仇指し（<see cref="TraitId.Vendetta"/>）の保持者が手番で振ったとき（規定でも数える）:
     /// <c>ZanTurns</c> 手番 ／ <c>ZanTurnNoMarked</c> 標を持つ敵が 0 ／ <c>ZanTurnMarkedFoes</c> ／ <c>ZanTurnLayers</c> 手番の時点の標を持つ敵の数 ／ 層の合計 ／
     /// <c>ZanPlanA</c> ／ <c>ZanPlan1</c> 仇巡りの見込みの太刀（ZM-a ＝ 層の合計・ZM-1 ＝ 敵の数・上限で切る）／ <c>ZanPlanACapped</c> ／ <c>ZanPlan1Capped</c> 上限に達した手番 ／
@@ -3278,6 +3284,8 @@ public sealed class UnitTally
         SparkAllyPops += o.SparkAllyPops; SparkHushed += o.SparkHushed; SparkHushedLights += o.SparkHushedLights; SparkBlocked += o.SparkBlocked; SparkBlockedLights += o.SparkBlockedLights;
         SparkRains += o.SparkRains; SparkRainLights += o.SparkRainLights; SparkHealed += o.SparkHealed; SparkOverflow += o.SparkOverflow; SparkInverted += o.SparkInverted; SparkRefused += o.SparkRefused;
         SparkReleases += o.SparkReleases; SparkSwings += o.SparkSwings; SparkStorePeak = Math.Max(SparkStorePeak, o.SparkStorePeak);
+        SparkVeilAdded += o.SparkVeilAdded; SparkVeilCapped += o.SparkVeilCapped; SparkFocusPicks += o.SparkFocusPicks; SparkFocusNone += o.SparkFocusNone;   // 第308期
+        SparkOverRecvFull += o.SparkOverRecvFull; SparkOverRecvTop += o.SparkOverRecvTop; SparkVeilSoaked += o.SparkVeilSoaked; AddHist(ref SparkOverRecvT, o.SparkOverRecvT); AddHist(ref SparkVeilSoakedT, o.SparkVeilSoakedT);
         ZanTurns += o.ZanTurns; ZanTurnNoMarked += o.ZanTurnNoMarked; ZanTurnMarkedFoes += o.ZanTurnMarkedFoes; ZanTurnLayers += o.ZanTurnLayers;
         ZanPlanA += o.ZanPlanA; ZanPlan1 += o.ZanPlan1; ZanPlanACapped += o.ZanPlanACapped; ZanPlan1Capped += o.ZanPlan1Capped; ZanTurnDealt += o.ZanTurnDealt;
         RoundTurns += o.RoundTurns; RoundFoes += o.RoundFoes; RoundSlashes += o.RoundSlashes; RoundCapped += o.RoundCapped; RoundCrossed += o.RoundCrossed;
@@ -4054,6 +4062,8 @@ public static class SparkLabels
     public const string Release = "降る";
     public const string Store = "溜まる";
     public const string Silenced = "止まる";
+    /// <summary>第308期: 光の衣（LV-a ／ LV-c）——溢れた光がその味方の破片になった（<c>TargetId</c> ＝ 受けた味方・<c>Amount</c> ＝ 衣になった量・<c>Slot</c> ＝ その後の破片）。</summary>
+    public const string Veil = "衣";
 }
 
 /// <summary>`CommandBall`（第302期）の <c>Text</c>。</summary>

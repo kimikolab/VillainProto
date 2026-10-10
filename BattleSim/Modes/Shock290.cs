@@ -74,7 +74,7 @@ static class Shock290Diag
     /// <summary>第291期: 名前で引くクグ（規定は第291期から KG-b）を第290期の規定 `KuguKG0` に固定する（第290期の台を再現するため）。</summary>
     static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n) is var d0 && ReferenceEquals(d0, UnitCatalog.Kugu) ? UnitCatalog.KuguKG0 : ReferenceEquals(d0, UnitCatalog.Kata) ? UnitCatalog.KataKRb : ReferenceEquals(d0, UnitCatalog.ShigaSWa) ? UnitCatalog.ShigaSIb : ReferenceEquals(d0, UnitCatalog.Sora) ? UnitCatalog.SoraSR0 : ReferenceEquals(d0, UnitCatalog.Doha) ? UnitCatalog.DohaD0 : d0;   // 第298期: ドハも   // 第293期: カタも第290期の規定（KR-b）へ・第294期: シガも（SI-b）
     /// <summary>第291期: `compare` の行のクグを第290期の規定 `KuguKG0` に固定した行。</summary>
-    static (string Name, Formation F)[] Rows290() => CompareBuilds().Select(r => (r.Name, FvSwap(FvSwap(FvSwap(FvSwap(FvSwap(r.F, UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Kata, UnitCatalog.KataKRb), UnitCatalog.ShigaSWa, UnitCatalog.ShigaSIb), UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Doha, UnitCatalog.DohaD0))).ToArray();   // 第298期: ドハも   // 第293期: カタも KR-b へ
+    static (string Name, Formation F)[] Rows290() => CompareBuilds().Select(r => (r.Name, Pin308(FvSwap(FvSwap(FvSwap(FvSwap(FvSwap(r.F, UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Kata, UnitCatalog.KataKRb), UnitCatalog.ShigaSWa, UnitCatalog.ShigaSIb), UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Doha, UnitCatalog.DohaD0)))).ToArray();   // 第308期: ソムも（`Pin308`）   // 第298期: ドハも   // 第293期: カタも KR-b へ
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     static Formation Seat(UnitDef[] o) => FvSwap(FvSwap(B283.Seat(o), UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Doha, UnitCatalog.DohaD0);   // 第298期: ドハも   // 第295期: ソラを旧の規定（SR0）に固定（第287期の候補 `S287.Pool` は規定のソラを持つ）
@@ -391,7 +391,7 @@ static class Shock290Diag
         Console.WriteLine();
         Console.WriteLine("| 台 | 波 | シガ | カタ | 勝率 | 倒しT | 振（手番 ／ 割） | 怖 | シガの与 | 雷 | 1発 | 雷雲（1 ／ 2 ／ 3 ／ 4 回目） | カタの与 | 敵の連鎖（大きさ） | 放電 敵 ／ 味方 | シガ → ドルガ | カタ → ドルガ |");
         Console.WriteLine("|---|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
-        var row = CompareBuilds().First(r => r.Name == "感電 (シガ×カタ×ソム)").F;
+        var row = Pin308(CompareBuilds().First(r => r.Name == "感電 (シガ×カタ×ソム)").F);   // 第308期: ソムは旧の規定（`SomH307`）に
         var items = new List<(string Name, string Wave, Formation F)>();
         foreach (var b in Boards().Where(b => b.Name.StartsWith("トウ+シガ+カタ"))) items.Add((b.Name, b.Wave, b.Make()));
         foreach (var wn in new[] { "近衛", "大隊", "ボス" }.Concat(Main.Select(m => m.Name))) items.Add(("感電 (シガ×カタ×ソム)", wn, row));

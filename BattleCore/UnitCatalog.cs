@@ -1879,8 +1879,10 @@ public static class UnitCatalog
     /// 旧ソム（背かれのみ）は <see cref="SomS0"/> に対照として残し、旧ソムを使う過去の器具はそちらに固定した。
     /// 経緯は design/PHASE276_SOM_REBIRTH.md。<b>名前・フレーバーの最終はポン</b>（フレーバーは指示書の叩き台）。
     /// <para>数値は第103期のまま（振らない）。</para>
+    /// <para><b>第308期: 第276〜307期の規定を明示の定義で残したもの</b>（規定の <see cref="Som"/> は SH-a になった）。`All` ／ `Retired` の外。
+    /// 旧の規定を測った過去の器具と、第294期 ／ 第307期の版（<see cref="SomSMa"/> ／ <see cref="SomSHa"/> ほか）はこれから作る。</para>
     /// </summary>
-    public static readonly UnitDef Som = new()
+    public static readonly UnitDef SomH307 = new()
     {
         Id = "som",
         Name = "背かれのソム",
@@ -1894,40 +1896,62 @@ public static class UnitCatalog
         Flavor = "喚ばれたものは背いて敵につく。ただし、雷を纏ったまま。"
     };
 
+    /// <summary>
+    /// 背かれのソム（規定）。<b>第308期に SH-a（降る光）を規定にした</b>（ポンの判断 S1・design/PHASE308_SOM_VEIL_SPEC.md §2-1）——
+    /// 第276〜307期の規定（喚び出しだけ・<see cref="SomH307"/>）に <see cref="TraitId.SparkRain"/> を足した。中身は第307期の <see cref="SomSHa"/> と同じ。
+    /// 敵の側で感電が弾けた連鎖の直後、弾けた数 × 7 を味方全員にその場で癒す（手番の外の動作・粛 ／ 痺れで止まる）。<b>ヒーラーに数える</b>（`Boss283Diag.HealPool`）。
+    /// 旧の規定を使う過去の器具は <see cref="SomH307"/> に固定した。
+    /// </summary>
+    public static readonly UnitDef Som = new()
+    {
+        Id = SomH307.Id,
+        Name = SomH307.Name,
+        MaxHp = SomH307.MaxHp,
+        Attack = SomH307.Attack,
+        Speed = SomH307.Speed,
+        Advances = SomH307.Advances,
+        Pattern = SomH307.Pattern,
+        Traits = SomH307.Traits.Append(TraitId.SparkRain).ToArray(),
+        Actions = SomH307.Actions,
+        PlusText = SomH307.PlusText + SomSparkRainText,
+        MinusText = SomH307.MinusText,
+        Flavor = SomSparkFlavor
+    };
+
     // 第294期 —— ソムの守りの版（指示書 design/PHASE294_GUARD_SPEC.md §3-3）。規定（喚び出し）の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
 
     /// <summary>第294期 SM-a（静電気の膜・土台）。規定 ＋ <see cref="TraitId.StaticMembrane"/>（喚び出しの後に自分と隣の味方を帯電させ、帯電した味方への敵の攻撃は半分）。</summary>
     public static readonly UnitDef SomSMa = new()
     {
-        Id = Som.Id,
-        Name = Som.Name,
-        MaxHp = Som.MaxHp,
-        Attack = Som.Attack,
-        Speed = Som.Speed,
-        Advances = Som.Advances,
-        Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(TraitId.StaticMembrane).ToArray(),
-        Actions = Som.Actions,
-        PlusText = Som.PlusText + "。自分と隣の仲間に静電気の膜を張る。帯電した仲間は、敵の一撃を半分しか受けない",
-        MinusText = Som.MinusText,
-        Flavor = Som.Flavor
+        Id = SomH307.Id,
+        Name = SomH307.Name,
+        MaxHp = SomH307.MaxHp,
+        Attack = SomH307.Attack,
+        Speed = SomH307.Speed,
+        Advances = SomH307.Advances,
+        Pattern = SomH307.Pattern,
+        Traits = SomH307.Traits.Append(TraitId.StaticMembrane).ToArray(),
+        Actions = SomH307.Actions,
+        PlusText = SomH307.PlusText + "。自分と隣の仲間に静電気の膜を張る。帯電した仲間は、敵の一撃を半分しか受けない",
+        MinusText = SomH307.MinusText,
+        Flavor = SomH307.Flavor
     };
 
     /// <summary>第294期 SM-b（痺れない膜）。SM-a ＋ <see cref="TraitId.MembraneNoStun"/>（ソムが生きている間、味方は弾けても痺れない・放電は流れる）。</summary>
     public static readonly UnitDef SomSMb = new()
     {
-        Id = Som.Id,
-        Name = Som.Name,
-        MaxHp = Som.MaxHp,
-        Attack = Som.Attack,
-        Speed = Som.Speed,
-        Advances = Som.Advances,
-        Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(TraitId.StaticMembrane).Append(TraitId.MembraneNoStun).ToArray(),
-        Actions = Som.Actions,
-        PlusText = Som.PlusText + "。自分と隣の仲間に静電気の膜を張る。帯電した仲間は、敵の一撃を半分しか受けない" + "。膜の内側では、弾けても痺れない",
-        MinusText = Som.MinusText,
-        Flavor = Som.Flavor
+        Id = SomH307.Id,
+        Name = SomH307.Name,
+        MaxHp = SomH307.MaxHp,
+        Attack = SomH307.Attack,
+        Speed = SomH307.Speed,
+        Advances = SomH307.Advances,
+        Pattern = SomH307.Pattern,
+        Traits = SomH307.Traits.Append(TraitId.StaticMembrane).Append(TraitId.MembraneNoStun).ToArray(),
+        Actions = SomH307.Actions,
+        PlusText = SomH307.PlusText + "。自分と隣の仲間に静電気の膜を張る。帯電した仲間は、敵の一撃を半分しか受けない" + "。膜の内側では、弾けても痺れない",
+        MinusText = SomH307.MinusText,
+        Flavor = SomH307.Flavor
     };
 
     // 第307期 —— ソムの光の版（指示書 design/PHASE307_SOM_SPARK_SPEC.md §2）。規定（喚び出し）の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
@@ -1941,90 +1965,109 @@ public static class UnitCatalog
     /// <summary>第307期 SH-a（降る光）。規定 ＋ <see cref="TraitId.SparkRain"/>（連鎖が終わるたび、弾けた敵の数 × 量 を味方全員にその場で癒す・粛 ／ 痺れで止まる）。</summary>
     public static readonly UnitDef SomSHa = new()
     {
-        Id = Som.Id,
-        Name = Som.Name,
-        MaxHp = Som.MaxHp,
-        Attack = Som.Attack,
-        Speed = Som.Speed,
-        Advances = Som.Advances,
-        Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(TraitId.SparkRain).ToArray(),
-        Actions = Som.Actions,
-        PlusText = Som.PlusText + SomSparkRainText,
-        MinusText = Som.MinusText,
+        Id = SomH307.Id,
+        Name = SomH307.Name,
+        MaxHp = SomH307.MaxHp,
+        Attack = SomH307.Attack,
+        Speed = SomH307.Speed,
+        Advances = SomH307.Advances,
+        Pattern = SomH307.Pattern,
+        Traits = SomH307.Traits.Append(TraitId.SparkRain).ToArray(),
+        Actions = SomH307.Actions,
+        PlusText = SomH307.PlusText + SomSparkRainText,
+        MinusText = SomH307.MinusText,
         Flavor = SomSparkFlavor
     };
 
     /// <summary>第307期 SH-b（溜める光）。規定 ＋ <see cref="TraitId.SparkStore"/>（光を溜め、手番で全部放つ・その手番は攻撃しない・光が 0 なら殴る）。手番は術（<c>Actions = [Skill]</c>）。</summary>
     public static readonly UnitDef SomSHb = new()
     {
-        Id = Som.Id,
-        Name = Som.Name,
-        MaxHp = Som.MaxHp,
-        Attack = Som.Attack,
-        Speed = Som.Speed,
-        Advances = Som.Advances,
-        Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(TraitId.SparkStore).ToArray(),
+        Id = SomH307.Id,
+        Name = SomH307.Name,
+        MaxHp = SomH307.MaxHp,
+        Attack = SomH307.Attack,
+        Speed = SomH307.Speed,
+        Advances = SomH307.Advances,
+        Pattern = SomH307.Pattern,
+        Traits = SomH307.Traits.Append(TraitId.SparkStore).ToArray(),
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "手のひらの光を確かめた") },
-        PlusText = Som.PlusText + SomSparkStoreText,
-        MinusText = Som.MinusText,
+        PlusText = SomH307.PlusText + SomSparkStoreText,
+        MinusText = SomH307.MinusText,
         Flavor = SomSparkFlavor
     };
 
     /// <summary>第307期 SH-a の量 × 0.5（対照・量の感度）。</summary>
     public static readonly UnitDef SomSHa05 = new()
     {
-        Id = Som.Id,
-        Name = Som.Name,
-        MaxHp = Som.MaxHp,
-        Attack = Som.Attack,
-        Speed = Som.Speed,
-        Advances = Som.Advances,
-        Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(TraitId.SparkRain).Append(TraitId.SparkHalf).ToArray(),
-        Actions = Som.Actions,
-        PlusText = Som.PlusText + SomSparkRainText,
-        MinusText = Som.MinusText,
+        Id = SomH307.Id,
+        Name = SomH307.Name,
+        MaxHp = SomH307.MaxHp,
+        Attack = SomH307.Attack,
+        Speed = SomH307.Speed,
+        Advances = SomH307.Advances,
+        Pattern = SomH307.Pattern,
+        Traits = SomH307.Traits.Append(TraitId.SparkRain).Append(TraitId.SparkHalf).ToArray(),
+        Actions = SomH307.Actions,
+        PlusText = SomH307.PlusText + SomSparkRainText,
+        MinusText = SomH307.MinusText,
         Flavor = SomSparkFlavor
     };
 
     /// <summary>第307期 SH-a の量 × 2（対照・量の感度）。</summary>
     public static readonly UnitDef SomSHa2 = new()
     {
-        Id = Som.Id,
-        Name = Som.Name,
-        MaxHp = Som.MaxHp,
-        Attack = Som.Attack,
-        Speed = Som.Speed,
-        Advances = Som.Advances,
-        Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(TraitId.SparkRain).Append(TraitId.SparkDouble).ToArray(),
-        Actions = Som.Actions,
-        PlusText = Som.PlusText + SomSparkRainText,
-        MinusText = Som.MinusText,
+        Id = SomH307.Id,
+        Name = SomH307.Name,
+        MaxHp = SomH307.MaxHp,
+        Attack = SomH307.Attack,
+        Speed = SomH307.Speed,
+        Advances = SomH307.Advances,
+        Pattern = SomH307.Pattern,
+        Traits = SomH307.Traits.Append(TraitId.SparkRain).Append(TraitId.SparkDouble).ToArray(),
+        Actions = SomH307.Actions,
+        PlusText = SomH307.PlusText + SomSparkRainText,
+        MinusText = SomH307.MinusText,
         Flavor = SomSparkFlavor
     };
 
     /// <summary>第307期 SH-b の量 × 0.5（対照・量の感度）。</summary>
     public static readonly UnitDef SomSHb05 = new()
     {
-        Id = Som.Id,
-        Name = Som.Name,
-        MaxHp = Som.MaxHp,
-        Attack = Som.Attack,
-        Speed = Som.Speed,
-        Advances = Som.Advances,
-        Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(TraitId.SparkStore).Append(TraitId.SparkHalf).ToArray(),
+        Id = SomH307.Id,
+        Name = SomH307.Name,
+        MaxHp = SomH307.MaxHp,
+        Attack = SomH307.Attack,
+        Speed = SomH307.Speed,
+        Advances = SomH307.Advances,
+        Pattern = SomH307.Pattern,
+        Traits = SomH307.Traits.Append(TraitId.SparkStore).Append(TraitId.SparkHalf).ToArray(),
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "手のひらの光を確かめた") },
-        PlusText = Som.PlusText + SomSparkStoreText,
-        MinusText = Som.MinusText,
+        PlusText = SomH307.PlusText + SomSparkStoreText,
+        MinusText = SomH307.MinusText,
         Flavor = SomSparkFlavor
     };
 
     /// <summary>第307期 SH-b の量 × 2（対照・量の感度）。</summary>
     public static readonly UnitDef SomSHb2 = new()
+    {
+        Id = SomH307.Id,
+        Name = SomH307.Name,
+        MaxHp = SomH307.MaxHp,
+        Attack = SomH307.Attack,
+        Speed = SomH307.Speed,
+        Advances = SomH307.Advances,
+        Pattern = SomH307.Pattern,
+        Traits = SomH307.Traits.Append(TraitId.SparkStore).Append(TraitId.SparkDouble).ToArray(),
+        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "手のひらの光を確かめた") },
+        PlusText = SomH307.PlusText + SomSparkStoreText,
+        MinusText = SomH307.MinusText,
+        Flavor = SomSparkFlavor
+    };
+
+    // 第308期 —— 光の衣の版（指示書 design/PHASE308_SOM_VEIL_SPEC.md §3）。規定（SH-a）の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。文面は叩き台。
+
+    /// <summary>第308期 LV-a（光の衣）。規定（SH-a）＋ <see cref="TraitId.SparkVeil"/>（降る光の溢れを、その味方の破片に足す・上限なし）。</summary>
+    public static readonly UnitDef SomLVa = new()
     {
         Id = Som.Id,
         Name = Som.Name,
@@ -2033,11 +2076,45 @@ public static class UnitCatalog
         Speed = Som.Speed,
         Advances = Som.Advances,
         Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(TraitId.SparkStore).Append(TraitId.SparkDouble).ToArray(),
-        Actions = new UnitAction[] { new(ActionKind.Skill, Label: "手のひらの光を確かめた") },
-        PlusText = Som.PlusText + SomSparkStoreText,
+        Traits = Som.Traits.Append(TraitId.SparkVeil).ToArray(),
+        Actions = Som.Actions,
+        PlusText = Som.PlusText + "。満ちた仲間に降った光は、その仲間の衣（破片）になる",
         MinusText = Som.MinusText,
-        Flavor = SomSparkFlavor
+        Flavor = Som.Flavor
+    };
+
+    /// <summary>第308期 LV-c（光の衣・上限あり）。LV-a ＋ <see cref="TraitId.SparkVeilCap"/>（衣で足せるのは、その味方の破片が最大HPの 4 割になるまで）。</summary>
+    public static readonly UnitDef SomLVc = new()
+    {
+        Id = Som.Id,
+        Name = Som.Name,
+        MaxHp = Som.MaxHp,
+        Attack = Som.Attack,
+        Speed = Som.Speed,
+        Advances = Som.Advances,
+        Pattern = Som.Pattern,
+        Traits = Som.Traits.Append(TraitId.SparkVeil).Append(TraitId.SparkVeilCap).ToArray(),
+        Actions = Som.Actions,
+        PlusText = Som.PlusText + "。満ちた仲間に降った光は、その仲間の衣（破片）になる（衣は最大HPの4割まで）",
+        MinusText = Som.MinusText,
+        Flavor = Som.Flavor
+    };
+
+    /// <summary>第308期 FO（寄せる光・参考）。規定（SH-a）＋ <see cref="TraitId.SparkFocus"/>（衣は無し・光1つにつき 量 × 5 を最も傷ついた味方1体に・光ごとに選び直す）。</summary>
+    public static readonly UnitDef SomFO = new()
+    {
+        Id = Som.Id,
+        Name = Som.Name,
+        MaxHp = Som.MaxHp,
+        Attack = Som.Attack,
+        Speed = Som.Speed,
+        Advances = Som.Advances,
+        Pattern = Som.Pattern,
+        Traits = Som.Traits.Append(TraitId.SparkFocus).ToArray(),
+        Actions = Som.Actions,
+        PlusText = SomH307.PlusText + "。敵の側で感電が弾けるたび、その光が最も傷ついた仲間に集まり、傷を癒す",
+        MinusText = Som.MinusText,
+        Flavor = Som.Flavor
     };
 
     /// <summary>
