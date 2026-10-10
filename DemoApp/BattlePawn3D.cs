@@ -90,6 +90,7 @@ public partial class BattlePawn3D : Node3D
     {
         bool active = burning && _alive && !_victory;
         _fire.Visible = active;
+        UpdatePurchasedBurn(active);
         if (!active) ClearFireVisual();
         if (_burning == active) return;
         _burning = active;

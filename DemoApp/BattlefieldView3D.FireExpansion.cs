@@ -100,13 +100,28 @@ public partial class BattlefieldView3D
         // 台本1件につき1発だけ。対象も台本に従い、1体への5発も同じ入口を通る。
         Vector3 from = actor.FxPoint + Vector3.Up * (1.0f + ordinal % 2 * 0.45f)
             + _camera.GlobalBasis.X * ((ordinal % 3 - 1) * 0.45f);
-        FireFx.Fireball(_fxRoot, from, target.FxPoint, new("ff9141"), 0.11 / speed);
-        FireFx.Ribbon(_fxRoot, from, target.FxPoint, new("ffd189"), 0.11f, 0.15f, 0.16 / speed, _camera.GlobalBasis.Z);
-        await ToSignal(GetTree().CreateTimer(Math.Max(0.001, 0.11 / speed)), SceneTreeTimer.SignalName.Timeout);
+        bool previewFireball = PurchasedAssets.EffectsAvailable && (AssetPreviewFireballs ?? true);
+        Vector3 impactPoint = target.FxPoint + _camera.GlobalBasis.Z * 0.4f;
+        if (previewFireball)
+            AssetFireballFx.Launch(_fxRoot, from, impactPoint, 0.11 / speed, ordinal);
+        else
+        {
+            FireFx.Fireball(_fxRoot, from, target.FxPoint, new("ff9141"), 0.11 / speed);
+            FireFx.Ribbon(_fxRoot, from, target.FxPoint, new("ffd189"), 0.11f, 0.15f, 0.16 / speed, _camera.GlobalBasis.Z);
+        }
+        await ToSignal(GetTree().CreateTimer(Math.Max(0.001, 0.11 / speed), processAlways: false), SceneTreeTimer.SignalName.Timeout);
         if (generation != _fireGeneration || soundGeneration != _attackAudio.FireSoundGeneration
             || !IsInstanceValid(actor) || actor.Hp <= 0 || !IsInstanceValid(target)) return;
-        FireFx.Bloom(_fxRoot, target.FxPoint, new("ffae59"), 2.6f, 0.24 / speed);
-        FireFx.Bloom(_fxRoot, target.FxPoint, new("fff0bc"), 2.2f, 0.13 / speed, 7);
+        if (previewFireball)
+        {
+            AssetFireballFx.Impact(_fxRoot, impactPoint, speed, ordinal);
+            AssetPreviewFireballImpacts++;
+        }
+        else
+        {
+            FireFx.Bloom(_fxRoot, target.FxPoint, new("ffae59"), 2.6f, 0.24 / speed);
+            FireFx.Bloom(_fxRoot, target.FxPoint, new("fff0bc"), 2.2f, 0.13 / speed, 7);
+        }
         _attackAudio.PlayFireSound("embers");
         NotifyAttackContact(target);
     }

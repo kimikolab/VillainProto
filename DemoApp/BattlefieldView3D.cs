@@ -144,8 +144,9 @@ public partial class BattlefieldView3D : Control
         _world.AddChild(_camera);
         _camera.LookAt(CameraFocus, Vector3.Up);
 
-        _scenery = new MeadowEnvironment3D();
+        _scenery = CreateMeadowScenery();
         _world.AddChild(_scenery);
+        SetMeadowSky(!LegacySceneryForComparison && PurchasedAssets.NatureAvailable);
 
         _actorRoot = new Node3D();
         _world.AddChild(_actorRoot);
@@ -315,9 +316,10 @@ public partial class BattlefieldView3D : Control
         {
             _world.RemoveChild(_scenery);
             _scenery.QueueFree();
-            _scenery = fortress ? new FortressEnvironment3D() : new MeadowEnvironment3D();
+            _scenery = fortress ? new FortressEnvironment3D() : CreateMeadowScenery();
             _world.AddChild(_scenery);
             _fortress = fortress;
+            SetMeadowSky(!fortress && !LegacySceneryForComparison && PurchasedAssets.NatureAvailable);
         }
         ResetSuperFlash();
         ResetBindings();

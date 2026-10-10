@@ -5,17 +5,18 @@ using System;
 public partial class MeadowEnvironment3D : Node3D
 {
     private readonly Random _random = new(7319);
+    internal bool IncludeWoodland { get; init; } = true;
 
     public override void _Ready()
     {
         BuildGround();
         BuildGrass();
-        BuildWoodland();
+        if (IncludeWoodland) BuildWoodland();
     }
 
     private float Range(float min, float max) => min + (float)_random.NextDouble() * (max - min);
 
-    private static float Height(float x, float z)
+    internal static float Height(float x, float z)
     {
         float edge = Mathf.SmoothStep(0, 1, Mathf.Clamp(Mathf.Max(Mathf.Abs(x) - 7, Mathf.Abs(z) - 4.8f) / 6, 0, 1));
         // 観戦側は平地へ開く。水平視点のカメラと戦場の間に丘を作らない。

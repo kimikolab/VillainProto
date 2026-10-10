@@ -14,7 +14,8 @@ public partial class FireCheck : Control
         try
         {
             CheckIndex();
-            if (OS.GetCmdlineUserArgs().Contains("--audio")) await CheckFireAudio();
+            if (OS.GetCmdlineUserArgs().Contains("--assets")) await CheckPurchasedAssets();
+            else if (OS.GetCmdlineUserArgs().Contains("--audio")) await CheckFireAudio();
             else if (OS.GetCmdlineUserArgs().Contains("--replay")) await Replay();
             else await Preview();
             GD.Print("FIRE_CHECK_OK");

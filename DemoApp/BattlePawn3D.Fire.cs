@@ -16,6 +16,28 @@ public partial class BattlePawn3D
     internal bool FireMarkActive { get; private set; }
     internal bool FireInvasive { get; private set; }
     internal int FireRemaining => _fireRemaining;
+    internal bool UsePurchasedBurn { get; set; } = true;
+    private AssetBurnPreview? _purchasedBurn;
+
+    private void UpdatePurchasedBurn(bool active)
+    {
+        bool purchased = active && Team == BattleContext.EnemyTeam && UsePurchasedBurn && PurchasedAssets.EffectsAvailable;
+        if (purchased)
+        {
+            _fire.Hide();
+            if (_purchasedBurn == null)
+            {
+                _purchasedBurn = new AssetBurnPreview();
+                AddChild(_purchasedBurn);
+            }
+        }
+        else if (_purchasedBurn != null)
+        {
+            RemoveChild(_purchasedBurn);
+            _purchasedBurn.QueueFree();
+            _purchasedBurn = null;
+        }
+    }
 
     private void BuildFireVisual()
     {
@@ -113,6 +135,7 @@ public partial class BattlePawn3D
     {
         if (_fireBodyMaterial is null) return;
         float dt = delta * (float)Math.Clamp(AnimationSpeed, 0.1, 8);
+        _purchasedBurn?.SetPlaybackSpeed(AnimationSpeed);
         _fireClock += dt;
         UpdateFireGrowth();
         _firePulse = Math.Max(0, _firePulse - dt * 2);

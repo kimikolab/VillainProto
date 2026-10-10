@@ -11,8 +11,10 @@ public partial class BattlefieldView3D
         int soundGeneration = _attackAudio.FireSoundGeneration;
         bool Live() => generation == _fireGeneration && soundGeneration == _attackAudio.FireSoundGeneration
             && IsInstanceValid(actor) && actor.IsInsideTree() && actor.Hp > 0;
-        async Task Wait(double s) => await ToSignal(GetTree().CreateTimer(Math.Max(0.001, s / speed)), SceneTreeTimer.SignalName.Timeout);
+        async Task Wait(double s) => await ToSignal(GetTree().CreateTimer(Math.Max(0.001, s / speed), processAlways: false), SceneTreeTimer.SignalName.Timeout);
         bool grand = level == 3;
+        int variant = PurchasedAssets.EffectsAvailable ? AssetPreviewFirePierceVariant ?? 2 : 0;
+        bool preview = variant != 0;
         double charge = grand ? 0.48 : 0.12;
         var color = new Color(grand ? "ffd044" : "ff6320");
         actor.ShowMovementPortrait("hota_charge", charge + 0.10);
@@ -36,8 +38,15 @@ public partial class BattlefieldView3D
         Vector3 from = actor.FxPoint;
         Vector3 direction = (far.FxPoint - from).Normalized();
         Vector3 end = far.FxPoint + direction * (grand ? 0.9f : 0.45f);
-        FireUltimateFx.Lance(_fxRoot, from, end, _camera, grand, (grand ? 0.60 : 0.33) / speed);
-        FireFx.Bloom(_fxRoot, from, color, grand ? 4.0f : 2.1f, 0.24 / speed, 7);
+        if (variant == 1)
+            AssetFirePierceFx.Shoot(_fxRoot, from, end, grand, speed);
+        else
+        {
+            FireUltimateFx.Lance(_fxRoot, from, end, _camera, grand, (grand ? 0.60 : 0.33) / speed);
+            FireFx.Bloom(_fxRoot, from, color, grand ? 4.0f : 2.1f, 0.24 / speed, 7);
+            if (variant == 2)
+                AssetFirePierceFx.Coat(_fxRoot, from, end, _camera.GlobalBasis.Z, grand, speed);
+        }
         _attackAudio.PlayFireSound(grand ? "jet" : "projectile", speed, grand ? 0.65 : 0.34);
         await Wait(grand ? 0.17 : 0.20);
         if (!Live()) return;
@@ -45,6 +54,14 @@ public partial class BattlefieldView3D
         foreach (var hit in hits)
         {
             if (!IsInstanceValid(hit)) continue;
+            if (preview)
+            {
+                AssetFireballFx.Impact(_fxRoot, hit.FxPoint + _camera.GlobalBasis.Z * 0.4f,
+                    speed, hit.InstanceId, grand ? 1.0f : 0.72f);
+                AssetPreviewPierceImpacts++;
+                NotifyAttackContact(hit);
+                continue;
+            }
             FireFx.Bloom(_fxRoot, hit.FxPoint, color, grand ? 3.8f : 2.5f, (grand ? 0.48 : 0.3) / speed);
             FireFx.Bloom(_fxRoot, hit.GlobalPosition + Vector3.Up * 0.08f, color, grand ? 4.0f : 2.5f, 0.4 / speed, 2, true);
             if (grand)
