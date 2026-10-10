@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using B283 = Boss283Diag;
 using S287 = Shock287Diag;
@@ -150,7 +150,7 @@ static partial class Som307Diag
     // ---------------------------------------------------------------------------------
     static double[,] CompareGrid(Ver v, int[] caps)
     {
-        var rows = CompareBuilds().Select(r => (r.Name, F: Pin308(r.F))).ToArray();   // 第308期: ソムは旧の規定（`SomH307`）に
+        var rows = CompareBuildsH311().Select(r => (r.Name, F: Pin308(r.F))).ToArray();   // 第308期: ソムは旧の規定（`SomH307`）に
         int nw = EnemyCatalog.Stages.Count;
         var g = new double[rows.Length, nw];
         Parallel.For(0, rows.Length * nw, k =>
@@ -167,7 +167,7 @@ static partial class Som307Diag
 
     static void CompareAll()
     {
-        var rows = CompareBuilds().Select(r => (r.Name, F: Pin308(r.F))).ToArray();   // 第308期: ソムは旧の規定（`SomH307`）に
+        var rows = CompareBuildsH311().Select(r => (r.Name, F: Pin308(r.F))).ToArray();   // 第308期: ソムは旧の規定（`SomH307`）に
         int nw = EnemyCatalog.Stages.Count;
         var prim = Baseline.PrimaryRows.ToHashSet();
         Console.WriteLine("# 第307期 `compare` 64 行 × ソムの版（seed 0..199・ソムの在席行だけ差し替える・基準は第306期の規定）");
@@ -223,7 +223,7 @@ static partial class Som307Diag
         {
             foreach (var (name, f) in Boards())
                 foreach (var v in Vers) cells.Add((name, w, v, Apply(f, v)));
-            cells.Add(("元の勝ち台（ツギ）", w, Vers[0], B283.Seat(Order(WinBoard))));
+            cells.Add(("元の勝ち台（ツギ）", w, Vers[0], PinKT311(B283.Seat(Order(WinBoard)))));
         }
         var tsBoard = Boards().First(b => b.Name == "勝ち台 ツギ→ソム").F;
         foreach (var v in Sens) cells.Add(("勝ち台 ツギ→ソム", Waves[0], v, Apply(tsBoard, v)));
@@ -233,7 +233,7 @@ static partial class Som307Diag
         Console.WriteLine($"# 第307期 代表台 × 波 × 版（規定 ／ SH-a ／ SH-b・量 {SparkTrait.Amount}・seed 0..199・verbose）");
         Console.WriteLine();
         foreach (var (name, f) in Boards()) Console.WriteLine($"- {name}: {Seats(f)}（前1・前3・中央・後1・後3）");
-        Console.WriteLine($"- 元の勝ち台（ツギ）: {Seats(B283.Seat(Order(WinBoard)))}（比べる相手・ソムはいない）");
+        Console.WriteLine($"- 元の勝ち台（ツギ）: {Seats(PinKT311(B283.Seat(Order(WinBoard))))}（比べる相手・ソムはいない）");
         Console.WriteLine();
         Console.WriteLine("差 ＝ 同じ台・同じ波の規定との勝率の差。寿命 ＝ 味方が初めて倒れたT（倒れた戦だけの平均・括弧は倒れた戦の割合）。光は1戦あたり。");
 
@@ -344,7 +344,7 @@ static partial class Som307Diag
         int cutPass = 0;
         Parallel.For(0, boards.Count, i =>
         {
-            var f0 = B283.Seat(boards[i]);
+            var f0 = PinKT311(B283.Seat(boards[i]));
             var fs = vars.Select(v => v.Apply(f0)).ToArray();
             if (!fs.Any(f => Wins(f, w, CutSeeds, out _) >= (w.Boss ? 1 : 5))) return;
             Interlocked.Increment(ref cutPass);
@@ -429,14 +429,14 @@ static partial class Som307Diag
     {
         var v = AnyVer(ver);
         var vars = new (string, Func<Formation, Formation>)[] { ("規定", f => f), (v.Name, f => Apply(f, v)) };
-        GridCore($"固定枠 クグ ＋ カタ ＋ ソム（規定 ／ {v.Name}）", Waves[0], new[] { UnitCatalog.Kugu, UnitCatalog.Kata, UnitCatalog.SomH307 }, BossPool, 2, vars);
+        GridCore($"固定枠 クグ ＋ カタ ＋ ソム（規定 ／ {v.Name}）", Waves[0], new[] { UnitCatalog.Kugu, UnitCatalog.KataH311, UnitCatalog.SomH307 }, BossPool, 2, vars);
     }
 
     static void GridElite(string waveName, string ver)
     {
         var v = AnyVer(ver);
         var vars = new (string, Func<Formation, Formation>)[] { ("規定", f => f), (v.Name, f => Apply(f, v)) };
-        GridCore($"固定枠 トウ ＋ ソム（規定 ／ {v.Name}）", WaveOf(waveName), new[] { UnitCatalog.Tou, UnitCatalog.SomH307 }, ElitePool, 3, vars);
+        GridCore($"固定枠 トウ ＋ ソム（規定 ／ {v.Name}）", WaveOf(waveName), new[] { UnitCatalog.TouH311, UnitCatalog.SomH307 }, ElitePool, 3, vars);
     }
 
     // ---------------------------------------------------------------------------------

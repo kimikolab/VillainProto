@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using B283 = Boss283Diag;
 using S287 = Shock287Diag;
@@ -21,6 +21,8 @@ using S310 = Som310Diag;
 //     dotnet run --project BattleSim -c Release 0 som311 check       # 自己検査
 //
 // **予測のファイルが無ければ本測定（boards ／ compare ／ swap ／ grid ／ kubi）を走らせない**（R397・`.tmp/p311/predict.md`）。
+// 第312期: 規定のソム ／ カタ ／ トウが重ね（群れ ＋ 緊急 K-a ＋ 萎縮）になったので、台の駒は第311期の規定（`SomH311` ／ `KataH311` ／ `TouH311`・`Common.Pin311`）に固定した。
+// K-a のベニ対策（engine の規則）は固定できないので、`火の型 ソラ→ソム` の K-a ／ 重ねの列だけは第312期から動く（報告書 design/PHASE312_SOM_REGULATE2.md §1）。
 // =====================================================================================
 static class Som311Diag
 {
@@ -79,30 +81,30 @@ static class Som311Diag
     };
 
     internal sealed record Ver(string Name, Func<Formation, Formation> Apply);
-    static Formation DT(Formation f) => S309.Swap(S309.Swap(f, UnitCatalog.Kata, UnitCatalog.KataDT), UnitCatalog.Tou, UnitCatalog.TouDT);
+    static Formation DT(Formation f) => S309.Swap(S309.Swap(f, UnitCatalog.KataH311, UnitCatalog.KataDT), UnitCatalog.TouH311, UnitCatalog.TouDT);
 
     internal static readonly Ver[] Singles =
     {
         new("規定", f => f),
-        new("K-a", f => S309.Swap(f, UnitCatalog.Som, UnitCatalog.SomKa)),
-        new("K-b", f => S309.Swap(f, UnitCatalog.Som, UnitCatalog.SomKb)),
-        new("群れ", f => S309.Swap(f, UnitCatalog.Som, UnitCatalog.SomSW)),
+        new("K-a", f => S309.Swap(f, UnitCatalog.SomH311, UnitCatalog.SomKa)),
+        new("K-b", f => S309.Swap(f, UnitCatalog.SomH311, UnitCatalog.SomKb)),
+        new("群れ", f => S309.Swap(f, UnitCatalog.SomH311, UnitCatalog.SomSW)),
         new("萎縮", DT),
     };
     internal static Ver[] Vers => Singles.Concat(Combos).ToArray();
     /// <summary>重ね（段1 §3-4）。単独の結果を見てから足す（空なら重ねは測らない）。</summary>
     internal static readonly Ver[] Combos =
     {
-        new("重ね", f => DT(S309.Swap(f, UnitCatalog.Som, UnitCatalog.SomSWKa))),   // 単独の4版を測った後に決めた（報告書 §5）: K-a ＋ 群れ ＋ 萎縮
+        new("重ね", f => DT(S309.Swap(f, UnitCatalog.SomH311, UnitCatalog.SomSWKa))),   // 単独の4版を測った後に決めた（報告書 §5）: K-a ＋ 群れ ＋ 萎縮
     };
     static Ver V(string n) => Vers.First(v => v.Name == n);
 
     internal static readonly S287.Wave[] Waves = S310.Waves;
     static S287.Wave WaveOf(string n) => n switch { "nine" => Waves[3], "nine2" => Waves[4], _ => S307.WaveOf(n) };
     static bool IsNine(S287.Wave w) => w.Name.StartsWith("九体", StringComparison.Ordinal);
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
-    static Formation WinSeat() => B283.Seat(S307.Order(S307.WinBoard));
+    static Formation Playtest(string n) => Pin311(Presets.Playtest.First(r => r.Name == n).F);   // 第312期: 第311期の規定の駒に固定（`Pin311`）
+    static Formation Row(string n) => Pin311(CompareBuilds().First(r => r.Name == n).F);
+    static Formation WinSeat() => Pin311(B283.Seat(S307.Order(S307.WinBoard)));
 
     /// <summary>§6-2 の代表台（規定の駒・席は出典のまま）。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
@@ -112,9 +114,9 @@ static class Som311Diag
         ("光の盾 クビ→シガ", S309.Swap(Playtest(S309.Shield), UnitCatalog.Kubi, UnitCatalog.Shiga)),
         ("光の盾 重 クビ→シガ", S309.Swap(Playtest(S309.ShieldHeavy), UnitCatalog.Kubi, UnitCatalog.Shiga)),
         ("感電 行", Row("感電 (シガ×カタ×ソム)")),
-        ("雷の型 ドハ→ソム", S309.Swap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, UnitCatalog.Som)),
-        ("勝ち台 ツギ→ソム", S309.Swap(WinSeat(), UnitCatalog.Tsugi, UnitCatalog.Som)),
-        ("火の型 ソラ→ソム", S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, UnitCatalog.Som)),
+        ("雷の型 ドハ→ソム", S309.Swap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, UnitCatalog.SomH311)),
+        ("勝ち台 ツギ→ソム", S309.Swap(WinSeat(), UnitCatalog.Tsugi, UnitCatalog.SomH311)),
+        ("火の型 ソラ→ソム", S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, UnitCatalog.SomH311)),
     };
 
     // ---------------------------------------------------------------------------------
@@ -372,7 +374,7 @@ static class Som311Diag
     static void CompareAll()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().Select(r => (r.Name, r.F)).ToArray();
+        var rows = CompareBuilds().Select(r => (r.Name, F: Pin311(r.F))).ToArray();   // 第312期: 第311期の規定の駒に固定
         int nw = EnemyCatalog.Stages.Count;
         var grids = Vers.Select(v =>
         {
@@ -444,7 +446,7 @@ static class Som311Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var waves = S307.Waves;
         // 第309期の入れ替え（`S309.Pairs` は第311期から `SomH310` に固定）を、規定のソム（E2）で組み直す。
-        var pairs = S309.Pairs().Select(p => (p.Name, S: S309.Swap(p.Som, UnitCatalog.SomH310, UnitCatalog.Som), T: p.Tsugi)).ToArray();
+        var pairs = S309.Pairs().Select(p => (p.Name, S: Pin311(S309.Swap(p.Som, UnitCatalog.SomH310, UnitCatalog.SomH311)), T: p.Tsugi is null ? null! : Pin311(p.Tsugi))).ToArray();
         Console.WriteLine("# 第311期 §6-4 ソム ↔ ツギ × 版（第309期 §5-1 と同じ台・同じ席・同じ 8 波・seed 0..199）");
         Console.WriteLine();
         Console.WriteLine("ソムの側は版を当てた台（規定 ＝ E2）。ツギの側は規定（萎縮 ／ 重ねはツギの側のカタ ／ トウも替えて回し直す）。差 ＝ ソム − ツギ。");
@@ -489,12 +491,12 @@ static class Som311Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var v = V(ver);
         var w = S307.WaveOf(wave);
-        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.Kugu, UnitCatalog.Kata } : new[] { UnitCatalog.Tou };
+        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.Kugu, UnitCatalog.KataH311 } : new[] { UnitCatalog.TouH311 };
         var pool = w.Boss ? S307.BossPool : S307.ElitePool;
         int k = w.Boss ? 2 : 3, need = w.Boss ? 1 : 5;
         var lu = S293.Combos(pool, k);
         var boards = new List<UnitDef[]>();
-        foreach (var t in lu) boards.AddRange(B283.Perms(fixedBase.Append(UnitCatalog.Som).Concat(t).ToArray()));
+        foreach (var t in lu) boards.AddRange(B283.Perms(fixedBase.Append(UnitCatalog.SomH311).Concat(t).ToArray()));
         var res = new (int Wins, long WinT, int Ctl)?[boards.Count];
         int cutPass = 0;
         static int W(Formation f, S287.Wave w, int n, out long wt)
@@ -505,7 +507,7 @@ static class Som311Diag
         }
         Parallel.For(0, boards.Count, i =>
         {
-            var f = v.Apply(B283.Seat(boards[i]));
+            var f = v.Apply(Pin311(B283.Seat(boards[i])));
             if (W(f, w, S307.CutSeeds, out _) < need) return;
             Interlocked.Increment(ref cutPass);
             int wins = W(f, w, Seeds, out long wt);
@@ -631,7 +633,7 @@ static class Som311Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        var som = UnitCatalog.Som;
+        var som = UnitCatalog.SomH311;
 
         // (a) 段0 の定義
         {
@@ -639,7 +641,7 @@ static class Som311Diag
                 && som.PlusText == UnitCatalog.SomE2.PlusText && som.PlusText.EndsWith("。喚ばれたものは、向こう側に着いた瞬間に弾ける", StringComparison.Ordinal)
                 && som.MinusText == "喚ばれたものは背いて敵につくが、立つことはない" && som.Name == UnitCatalog.SomH310.Name && som.Flavor == UnitCatalog.SomH310.Flavor
                 && som.MaxHp == UnitCatalog.SomH310.MaxHp && som.Attack == UnitCatalog.SomH310.Attack && som.Speed == UnitCatalog.SomH310.Speed && ReferenceEquals(som.Actions, UnitCatalog.SomH310.Actions)
-                && UnitCatalog.All.Contains(som) && !UnitCatalog.Everyone.Contains(UnitCatalog.SomH310)
+                && !UnitCatalog.Everyone.Contains(som) /* 第312期: 第311期の規定は `SomH311`（`All` の外）になった */ && !UnitCatalog.Everyone.Contains(UnitCatalog.SomH310)
                 && UnitCatalog.SomH310.Traits.SequenceEqual(UnitCatalog.SomLVa.Traits)
                 && UnitCatalog.SomE1.Traits.SequenceEqual(UnitCatalog.SomH310.Traits.Append(TraitId.BeastBurstCharged));
             Expect("(a) 段0: 規定のソム ＝ 第310期の `SomE2`（LV-a ＋ `BeastBurstAlways`・文面は叩き台・名前とフレーバーはそのまま）・旧は `SomH310`（`All` の外・`SomLVa` と同じ札）・第310期の版は旧から作る", ok);
@@ -649,7 +651,7 @@ static class Som311Diag
             bool ok = UnitCatalog.SomKb.Traits.SequenceEqual(som.Traits.Append(TraitId.EmergencyCall))
                 && UnitCatalog.SomKa.Traits.SequenceEqual(som.Traits.Append(TraitId.EmergencyCall).Append(TraitId.EmergencyFocus))
                 && UnitCatalog.SomSW.Traits.SequenceEqual(som.Traits.Append(TraitId.SwarmCall))
-                && UnitCatalog.KataDT.Traits.SequenceEqual(UnitCatalog.Kata.Traits.Append(TraitId.ShockDaunt)) && UnitCatalog.TouDT.Traits.SequenceEqual(UnitCatalog.Tou.Traits.Append(TraitId.ShockDaunt))
+                && UnitCatalog.KataDT.Traits.SequenceEqual(UnitCatalog.KataH311.Traits.Append(TraitId.ShockDaunt)) && UnitCatalog.TouDT.Traits.SequenceEqual(UnitCatalog.TouH311.Traits.Append(TraitId.ShockDaunt))
                 && UnitCatalog.SomSWKa.Traits.SequenceEqual(som.Traits.Append(TraitId.SwarmCall).Append(TraitId.EmergencyCall).Append(TraitId.EmergencyFocus))
                 && new[] { UnitCatalog.SomKa, UnitCatalog.SomKb, UnitCatalog.SomSW, UnitCatalog.SomSWKa, UnitCatalog.KataDT, UnitCatalog.TouDT }.All(d => !UnitCatalog.Everyone.Contains(d));
             Expect("(b) 版 ＝ 規定の末尾に札（K-b `EmergencyCall` ／ K-a ＋ `EmergencyFocus` ／ 群れ `SwarmCall` ／ 萎縮 カタ ／ トウ ＋ `ShockDaunt` ／ 重ね `SomSWKa`）・`Everyone` の外", ok);

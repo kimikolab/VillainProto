@@ -17,6 +17,7 @@ using BA = BurnAuditDiag;
 //     dotnet run --project BattleSim -c Release 0 shock289 log <boss|guard|bat> <版> <席の並び（短い名前を ・ で5つ）> [seed]
 //
 // 版の名前: シガ SG-a（規定）／ SI-a ／ SI-b、カタ old（規定）／ KR-a ／ KR-b（ASCII の別名 sga ／ sia ／ sib ／ old ／ kra ／ krb）。
+// 第312期: 規定のカタ ／ トウに萎縮の規則が付いたので、カタ ／ トウは第311期までの規定（`KataH311` ／ `TouH311`）に固定した（`Common.PinKT311` ／ `CompareBuildsH311` ／ `PlaytestH311`）。
 // =====================================================================================
 static class Shock289Diag
 {
@@ -63,10 +64,10 @@ static class Shock289Diag
     static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n);
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
-    static Formation Seat(UnitDef[] o) => Pin(B283.Seat(o));
+    static Formation Seat(UnitDef[] o) => Pin(PinKT311(B283.Seat(o)));
     /// <summary>第290期: 規定のシガ（第290期から SI-b）・カタ（KR-b）を、第289期の規定（SG-a ／ S3）に固定する。第289期の数字を再現するため。</summary>
-    internal static Formation Pin(Formation f) => Pin308(FvSwap(FvSwap(FvSwap(FvSwap(FvSwap(f, UnitCatalog.Shiga, UnitCatalog.ShigaSGa), UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Doha, UnitCatalog.DohaD0));   // 第308期: ソムも（`Pin308`）   // 第298期: ドハも   // 第295期: ソラも   // 第291期: クグも旧の規定へ
-    internal static (string Name, Formation F)[] Rows289() => CompareBuilds().Select(r => (r.Name, Pin(r.F))).ToArray();
+    internal static Formation Pin(Formation f) => Pin308(FvSwap(FvSwap(FvSwap(FvSwap(FvSwap(f, UnitCatalog.Shiga, UnitCatalog.ShigaSGa), UnitCatalog.KataH311, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Doha, UnitCatalog.DohaD0));   // 第308期: ソムも（`Pin308`）   // 第298期: ドハも   // 第295期: ソラも   // 第291期: クグも旧の規定へ
+    internal static (string Name, Formation F)[] Rows289() => CompareBuildsH311().Select(r => (r.Name, Pin(r.F))).ToArray();
 
     /// <summary>
     /// 代表台（指示書 §6-2）: 第288期の 15 台 ＋ トウ ＋ シガ ＋ カタの台（近衛 ／ 大隊 各1台）。
@@ -355,11 +356,11 @@ static class Shock289Diag
             {
                 var f = Apply(b.Make(), v);
                 var a = MeasureDeep(f, w, Seeds);
-                int dt = WinsPar(FvSwap(f, UnitCatalog.Tou, UnitCatalog.Dolga), w, Seeds), ds = WinsPar(FvSwap(f, v.To, UnitCatalog.Dolga), w, Seeds);
+                int dt = WinsPar(FvSwap(f, UnitCatalog.TouH311, UnitCatalog.Dolga), w, Seeds), ds = WinsPar(FvSwap(f, v.To, UnitCatalog.Dolga), w, Seeds);
                 long turnDmg = a.ShDmg - a.SwWhip - a.SwBolt;
                 Console.WriteLine($"| {b.Name} | {b.Wave} | {v.Name} | {F1(a.Win)} | {Per(a.WinT, a.Wins)} | {Per(a.Swings, a.N)}（{Per(a.Swings - a.SwFires, a.N)} ／ {Per(a.SwFires, a.N)}） | {Per(a.Cower, a.N)} | "
                     + $"{Per(a.SwHushed, a.N)} ／ {Per(a.SwBlocked, a.N)} | {Per(a.BoltHits, a.N)} | {Per1(a.ShDmg, a.N)}（{Per1(turnDmg, a.N)} ／ {Per1(a.SwWhip, a.N)} ／ {Per1(a.SwBolt, a.N)}） | {Per(a.ChargeEnd, a.N)} | "
-                    + $"{Per1(a.FoeDis, a.N)} ／ {Per1(a.AllyDis, a.N)} | {Per1(a.ShDeathT, a.ShDied)}（{F1(100.0 * a.ShDied / a.N)}%） | {(Has(f, UnitCatalog.Tou) ? F1(100.0 * dt / Seeds) : "—")} | {F1(100.0 * ds / Seeds)} |");
+                    + $"{Per1(a.FoeDis, a.N)} ／ {Per1(a.AllyDis, a.N)} | {Per1(a.ShDeathT, a.ShDied)}（{F1(100.0 * a.ShDied / a.N)}%） | {(Has(f, UnitCatalog.TouH311) ? F1(100.0 * dt / Seeds) : "—")} | {F1(100.0 * ds / Seeds)} |");
             }
         }
         Console.WriteLine();
@@ -377,9 +378,9 @@ static class Shock289Diag
             {
                 var f = Apply(b.Make(), v);
                 var a = MeasureDeep(f, w, Seeds);
-                int dt = WinsPar(FvSwap(f, UnitCatalog.Tou, UnitCatalog.Dolga), w, Seeds), dk = WinsPar(FvSwap(f, v.To, UnitCatalog.Dolga), w, Seeds);
+                int dt = WinsPar(FvSwap(f, UnitCatalog.TouH311, UnitCatalog.Dolga), w, Seeds), dk = WinsPar(FvSwap(f, v.To, UnitCatalog.Dolga), w, Seeds);
                 Console.WriteLine($"| {b.Name} | {b.Wave} | {v.Name} | {F1(a.Win)} | {Per(a.WinT, a.Wins)} | {Per(a.Casts, a.N)} | {Per(a.Hits, a.Casts)} | {Per(a.CloudSum, a.Casts)} ／ {a.CloudMax} | {Per1(a.KNom, a.Hits)} | {Per1(a.KDmg, a.N)} | "
-                    + $"{Per1(a.FoeDis, a.N)} ／ {Per1(a.AllyDis, a.N)} | {Per1(a.KDeathT, a.KDied)}（{F1(100.0 * a.KDied / a.N)}%） | {(Has(f, UnitCatalog.Tou) ? F1(100.0 * dt / Seeds) : "—")} | {F1(100.0 * dk / Seeds)} |");
+                    + $"{Per1(a.FoeDis, a.N)} ／ {Per1(a.AllyDis, a.N)} | {Per1(a.KDeathT, a.KDied)}（{F1(100.0 * a.KDied / a.N)}%） | {(Has(f, UnitCatalog.TouH311) ? F1(100.0 * dt / Seeds) : "—")} | {F1(100.0 * dk / Seeds)} |");
             }
         }
         Console.WriteLine();
@@ -423,7 +424,7 @@ static class Shock289Diag
         var v = VerOf(verName);
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var x = v.To;
-        var fixedU = new[] { UnitCatalog.Tou, x };
+        var fixedU = new[] { UnitCatalog.TouH311, x };
         var pool = PoolFor(fix);
         var lu = LineupsFor(pool);
         var boards = new List<UnitDef[]>();
@@ -440,7 +441,7 @@ static class Shock289Diag
             if (WinLine(w, wins))
             {
                 Interlocked.Increment(ref winPass);
-                dg = Wins(FvSwap(f, UnitCatalog.Tou, UnitCatalog.Dolga), w, Seeds, out _);
+                dg = Wins(FvSwap(f, UnitCatalog.TouH311, UnitCatalog.Dolga), w, Seeds, out _);
                 dx = Wins(FvSwap(f, x, UnitCatalog.Dolga), w, Seeds, out _);
             }
             res[i] = new BoardRes(boards[i], wins, wt, dg, dx, dg >= 0 && Reached(w, wins, dg));
@@ -610,7 +611,7 @@ static class Shock289Diag
             && UnitCatalog.KataKRb.Traits.SequenceEqual(s3.Append(TraitId.Thundercloud).Append(TraitId.ThundercloudKeep))
             && new[] { UnitCatalog.ShigaSIa, UnitCatalog.ShigaSIb }.All(d => d.MaxHp == 52 && d.Attack == 9 && d.Speed == 3 && d.Id == "shiga")
             && new[] { UnitCatalog.KataKRa, UnitCatalog.KataKRb }.All(d => d.MaxHp == UnitCatalog.KataS3.MaxHp && d.Attack == UnitCatalog.KataS3.Attack && d.Speed == UnitCatalog.KataS3.Speed && d.Id == "kata")
-            && UnitCatalog.Shiga.Traits.SequenceEqual(UnitCatalog.ShigaSIb.Traits.Append(TraitId.ShockWhipChain)) /* 第294期: 規定は SW-a・SI-b は ShigaSIb */ && UnitCatalog.Kata.Traits.SequenceEqual(UnitCatalog.KataKRb.Traits.Append(TraitId.ThundercloudUncapped))   /* 第293期: 規定は KR-∞・KR-b は KataKRb */
+            && UnitCatalog.Shiga.Traits.SequenceEqual(UnitCatalog.ShigaSIb.Traits.Append(TraitId.ShockWhipChain)) /* 第294期: 規定は SW-a・SI-b は ShigaSIb */ && UnitCatalog.KataH311.Traits.SequenceEqual(UnitCatalog.KataKRb.Traits.Append(TraitId.ThundercloudUncapped))   /* 第293期: 規定は KR-∞・KR-b は KataKRb */
             && !new[] { UnitCatalog.ShigaSIa, UnitCatalog.KataKRa }.Any(UnitCatalog.Everyone.Contains));
         Expect("(c) 割り込み・雷雲の札の保持者は `All` に 規定のシガ ／ カタの1枚ずつ（雷霆の割り込み・KR-a だけの札は 0 枚）",
             UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.ShockWhipFlurry)) == 1 && UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.ThundercloudKeep)) == 1

@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using B283 = Boss283Diag;
 using S287 = Shock287Diag;
@@ -18,6 +18,7 @@ using S293 = Shock293Diag;
 //
 // 版の名前（ASCII）: ヒサ hs0（規定）／ hsa ／ hsc ／ hsd、ソラ sr0（規定）／ sra ／ srb、ソム sm0（規定）／ sma ／ smb。
 // 規定のクグ・シガ・カタは段0 の後（KW-a ・ SW-a ・ KR-∞）のまま組む（固定しない）。
+// 第312期: 規定のカタ ／ トウに萎縮の規則が付いたので、カタ ／ トウは第311期までの規定（`KataH311` ／ `TouH311`）に固定した（`Common.PinKT311` ／ `CompareBuildsH311` ／ `PlaytestH311`）。
 // =====================================================================================
 static class Guard294Diag
 {
@@ -70,9 +71,9 @@ static class Guard294Diag
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     static string Seats(Formation f) => string.Join("・", Enumerable.Range(0, 5).Select(i => f[i] is { } d ? Short(d) : "—"));
-    static Formation Seat(UnitDef[] o) => Pin295(B283.Seat(o));
-    static Formation Playtest(string n) => Pin295(Presets.Playtest.First(r => r.Name == n).F);
-    static Formation Row(string n) => Pin295(CompareBuilds().First(r => r.Name == n).F);
+    static Formation Seat(UnitDef[] o) => Pin295(PinKT311(B283.Seat(o)));
+    static Formation Playtest(string n) => Pin295(PlaytestH311.First(r => r.Name == n).F);
+    static Formation Row(string n) => Pin295(CompareBuildsH311().First(r => r.Name == n).F);
     /// <summary>第295期: ソラを第294期の規定（`SoraSR0`）に固定する（規定のソラは SR-b になった）。陣形とレリックは保つ。</summary>
     internal static Formation Pin295(Formation f)
     {
@@ -487,7 +488,7 @@ static class Guard294Diag
     static int[] _capsBasis = Array.Empty<int>();
     static double[,] CompareGrid(Ver? v)
     {
-        var rows = CompareBuilds().Select(r => (r.Name, F: Pin295(r.F))).ToArray();
+        var rows = CompareBuildsH311().Select(r => (r.Name, F: Pin295(r.F))).ToArray();
         int nw = EnemyCatalog.Stages.Count;
         var g = new double[rows.Length, nw];
         var caps = new int[rows.Length];
@@ -506,7 +507,7 @@ static class Guard294Diag
 
     static void CompareAll()
     {
-        var rows = CompareBuilds().Select(r => (r.Name, F: Pin295(r.F))).ToArray();
+        var rows = CompareBuildsH311().Select(r => (r.Name, F: Pin295(r.F))).ToArray();
         int nw = EnemyCatalog.Stages.Count;
         Console.WriteLine("# 第294期 `compare` 64 行 × 版（seed 0..199・その駒の在席行だけ差し替える・基準は段0 の後の規定）");
         var basis = CompareGrid(null);
@@ -733,7 +734,7 @@ static class Guard294Diag
     /// </summary>
     static (UnitDef[] Fixed, UnitDef[] Pool) BossFrame(string who) => who switch
     {
-        "som" => (new[] { UnitCatalog.Kugu, UnitCatalog.Kata, UnitCatalog.SomH307 }, S293.BossPool.Where(d => d.Id != "som").Append(UnitCatalog.Shiga).ToArray()),
+        "som" => (new[] { UnitCatalog.Kugu, UnitCatalog.KataH311, UnitCatalog.SomH307 }, S293.BossPool.Where(d => d.Id != "som").Append(UnitCatalog.Shiga).ToArray()),
         "hisa" => (new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.HisaHK0 }, B283.LifePool.Concat(B283.HealPool295.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id != "hisa").ToArray()),
         "sora" => (new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.SoraSR0 }, B283.LifePool.Concat(B283.HealPool295.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id != "sora").ToArray()),
         _ => throw new ArgumentException(who),
@@ -756,10 +757,10 @@ static class Guard294Diag
         var v = AnyVer(ver);
         var set = SetOf(who);
         UnitDef fixed2 = set[0].From;
-        var pool = S287.Pool.Select(d => d.Id switch { "kata" => UnitCatalog.Kata, "kugu" => UnitCatalog.Kugu, _ => d })
+        var pool = S287.Pool.Select(d => d.Id switch { "kata" => UnitCatalog.KataH311, "kugu" => UnitCatalog.Kugu, _ => d })
                             .Where(d => d.Id != fixed2.Id && d.Id != "tou").Distinct().ToArray();
         var vars = new (string, Func<Formation, Formation>)[] { ("規定", f => f), (v.Name, f => Apply(f, v)) };
-        GridCore($"固定枠 トウ ＋ {Short(fixed2)}（規定 ／ {v.Name}）", w, new[] { UnitCatalog.Tou, fixed2 }, pool, 3, vars);
+        GridCore($"固定枠 トウ ＋ {Short(fixed2)}（規定 ／ {v.Name}）", w, new[] { UnitCatalog.TouH311, fixed2 }, pool, 3, vars);
     }
 
     // ---------------------------------------------------------------------------------
@@ -788,7 +789,7 @@ static class Guard294Diag
     // ---------------------------------------------------------------------------------
     static void Memo(string rowPart, string wave, int seed, string kind, int limit)
     {
-        var (name, f0) = Presets.Playtest.First(r => r.Name.Contains(rowPart, StringComparison.Ordinal));
+        var (name, f0) = PlaytestH311.First(r => r.Name.Contains(rowPart, StringComparison.Ordinal));
         var f = Pin295(f0);   // 第296期: ヒサも旧の規定に
         var w = EnemyCatalog.PlaytestStages[wave switch { "boss" => 0, "guard" => 1, "bat" => 2, _ => int.Parse(wave) }];
         var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
@@ -1019,7 +1020,7 @@ static class Guard294Diag
         // (j2) SR-a: 範囲の一撃（ソラ自身への範囲・肩代わりの段）も逸らす——ボス（勇者1体・殴った本人には返さない）と精鋭（単体だけ）では起きないので、本編の波のソラの行で見る
         {
             long wide = 0, all = 0, shoulders = 0;
-            foreach (var (n, f) in CompareBuilds().Select(r => (r.Name, F: Pin295(r.F))).Where(r => Has(r.F, UnitCatalog.SoraSR0)))
+            foreach (var (n, f) in CompareBuildsH311().Select(r => (r.Name, F: Pin295(r.F))).Where(r => Has(r.F, UnitCatalog.SoraSR0)))
                 for (int wi = 1; wi < EnemyCatalog.Stages.Count; wi++)
                     for (int sd = 0; sd < 20; sd++)
                     {
@@ -1149,7 +1150,7 @@ static class Guard294Diag
         // (p) 規定は動かない: 規定の駒だけの台で、版の札の保持者がいないので第294期の計数は 0
         {
             long any = 0;
-            foreach (var (n, f) in CompareBuilds().Select(r => (r.Name, F: Pin295(r.F))).Take(64))
+            foreach (var (n, f) in CompareBuildsH311().Select(r => (r.Name, F: Pin295(r.F))).Take(64))
                 for (int s = 0; s < 2; s++)
                 {
                     var r = BattleEngine.Run(f, EnemyCatalog.Stages[1].Enemy, s, verbose: false);

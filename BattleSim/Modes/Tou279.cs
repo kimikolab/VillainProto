@@ -18,6 +18,7 @@ using CW = CheckWaveDiag;
 //
 // **規定のトウは動かさない**（T0 のまま）。T1 ／ T2 は `UnitCatalog.TouT1` ／ `TouT2`（`All` ／ `Retired` ／ `Presets` に入れない）。採否はポン。
 // 第286期: 対称の粉 T3 ／ T3n（`UnitCatalog.TouT3` ／ `TouT3n`）を版に足した（指示書 design/PHASE286_TOU_SPREAD_SPEC.md）。
+// 第312期: 規定のカタ ／ トウに萎縮の規則が付いたので、カタ ／ トウは第311期までの規定（`KataH311` ／ `TouH311`）に固定した（`Common.PinKT311` ／ `CompareBuildsH311` ／ `PlaytestH311`）。
 // =====================================================================================
 static class Tou279Diag
 {
@@ -49,7 +50,7 @@ static class Tou279Diag
         ("T3n", "対称の粉・漏れなし（漏れの代金の対照）＋ S3（第286期）", UnitCatalog.TouT3n),
     };
 
-    static Formation Row(string prefix) => FvSwap(FvSwap(FvSwap(CompareBuilds().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0);   // 第291期: クグも旧の規定へ・第289期: シガを旧の規定（G3K）に固定・第290期: カタも旧の規定（S3）に
+    static Formation Row(string prefix) => FvSwap(FvSwap(FvSwap(CompareBuildsH311().First(r => r.Name.StartsWith(prefix)).F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.KataH311, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0);   // 第291期: クグも旧の規定へ・第289期: シガを旧の規定（G3K）に固定・第290期: カタも旧の規定（S3）に
     static Formation ShockRow => Pin308(Row("感電 (シガ×カタ×ソム)"));   // 第308期: ソムは旧の規定（`SomH307`）に
     /// <summary>第273期の帯電の足の検証台（`relic check273` (f)）。</summary>
     static Formation Bench273(UnitDef center) => Formation.Build(front1: UnitCatalog.Yomi, front3: UnitCatalog.Basa, center: center, back1: UnitCatalog.Sero, back3: UnitCatalog.Hane);
@@ -57,8 +58,8 @@ static class Tou279Diag
     /// <summary>台（規定のトウ＝T0 で定義し、版はトウだけを差し替える）。群 ＝ compare ／ 検証 ／ 参照（トウがいない・版に依らない）。</summary>
     static readonly (string Name, string Group, Func<UnitDef, Formation> Make)[] Boards =
     {
-        ("毒+耐久 (ベニ×トウ)", "compare", d => FvSwap(Row("毒+耐久 (ベニ×トウ)"), UnitCatalog.Tou, d)),
-        ("責め苦 (トウ×シガ)", "compare", d => FvSwap(Row("責め苦 (トウ×シガ)"), UnitCatalog.Tou, d)),
+        ("毒+耐久 (ベニ×トウ)", "compare", d => FvSwap(Row("毒+耐久 (ベニ×トウ)"), UnitCatalog.TouH311, d)),
+        ("責め苦 (トウ×シガ)", "compare", d => FvSwap(Row("責め苦 (トウ×シガ)"), UnitCatalog.TouH311, d)),
         ("E1 感電の行の後3 ミオ → トウ", "検証", d => FvSwap(ShockRow, UnitCatalog.Mio, d)),
         ("E2 感電の行の中央 ソム → トウ", "検証", d => FvSwap(ShockRow, UnitCatalog.SomH307, d)),
         ("M1 隊列崩しの中央 ガルド → トウ", "検証", d => FvSwap(Row("隊列崩し (バサ×ヨミ×セロ)"), UnitCatalog.Gald, d)),
@@ -131,7 +132,7 @@ static class Tou279Diag
                     if (t.ChainSizeHist is { } ch) for (int k = 2; k < ch.Length; k++) FoeChains2 += ch[k];
                 }
             }
-            if (r.TallyByUnit.TryGetValue(UnitCatalog.Tou.Id, out var tt)) { TouAttacks += tt.Attacks; PowderFoe += tt.ShockOnFoe; PowderAlly += tt.ShockOnAlly; TouRoots += tt.ShockTriggered; PowderMain += tt.PowderMain; PowderSpread += tt.PowderSpread; }
+            if (r.TallyByUnit.TryGetValue(UnitCatalog.TouH311.Id, out var tt)) { TouAttacks += tt.Attacks; PowderFoe += tt.ShockOnFoe; PowderAlly += tt.ShockOnAlly; TouRoots += tt.ShockTriggered; PowderMain += tt.PowderMain; PowderSpread += tt.PowderSpread; }
             if (r.TallyByUnit.TryGetValue(UnitCatalog.Fodder.Id, out var ft)) BaitPops += ft.ShockSpent;
             if (r.TallyByUnit.TryGetValue(UnitCatalog.ShigaG3K.Id, out var st)) { Wired += st.WiredSwings; Cowered += st.WhipCowered; ShigaSwings += st.Attacks; }
             foreach (var l in r.Log)
@@ -175,7 +176,7 @@ static class Tou279Diag
         Console.WriteLine("# 第279期 トウの転生 —— トウ在席の行 × 版 × 波（seed 0..199）");
         Console.WriteLine();
         for (int bi = 0; bi < Boards.Length; bi++)
-            Console.WriteLine($"- 台{bi}（{Boards[bi].Group}）{Boards[bi].Name} ＝ " + BA.SeatsNamed(Boards[bi].Make(UnitCatalog.Tou)));
+            Console.WriteLine($"- 台{bi}（{Boards[bi].Group}）{Boards[bi].Name} ＝ " + BA.SeatsNamed(Boards[bi].Make(UnitCatalog.TouH311)));
         foreach (var v in Vers) Console.WriteLine($"- {v.Name}: {v.What}");
         Console.WriteLine("- 波: 本編第2〜5波（`compare` と同じ口・倍率 115/115）／ ボス ＝ 規定形（倍率なし）／ B3 ＝ チェック波 B3-桁 ／ W3 ＝ チェック波 W3-割合");
         Console.WriteLine();
@@ -341,13 +342,13 @@ static class Tou279Diag
         // 第287期に T3 を規定にしたので、(a)(b)(b2)(c) は「規定 ＝ T3・旧の規定は `TouT0`」の形に直した（第279〜286期の版は「規定 ＝ T0」を確かめていた）。
         Ok("(a) 帯電の粉 ／ 粉の漏れ ／ 舞う粉の保持者は `UnitCatalog.Everyone` で規定のトウ1枚だけ",
            UnitCatalog.Everyone.Where(d => d.Traits.Contains(TraitId.ChargedPowder) || d.Traits.Contains(TraitId.ChargedPowderLeak) || d.Traits.Contains(TraitId.ChargedPowderSpread))
-               .All(d => ReferenceEquals(d, UnitCatalog.Tou)));
+               .All(d => ReferenceEquals(d, UnitCatalog.Tou)));   // 第312期: `Everyone` にいるのは規定のトウ（萎縮の規則つき）
         Ok("(b) 規定のトウは T3（`TouT3` と同じ物）・`TouT0` は旧の規定（痺れ粉）を明示的に持ち、体は同じ",
-           ReferenceEquals(UnitCatalog.TouT3, UnitCatalog.Tou) && UnitCatalog.TouT0.Traits.SequenceEqual(new[] { TraitId.Paralyze })
-           && UnitCatalog.TouT0.MaxHp == UnitCatalog.Tou.MaxHp && UnitCatalog.TouT0.Attack == UnitCatalog.Tou.Attack && UnitCatalog.TouT0.Speed == UnitCatalog.Tou.Speed
-           && UnitCatalog.TouT0.Pattern == UnitCatalog.Tou.Pattern && UnitCatalog.TouT0.Advances == UnitCatalog.Tou.Advances);
+           ReferenceEquals(UnitCatalog.TouT3, UnitCatalog.TouH311) && UnitCatalog.TouT0.Traits.SequenceEqual(new[] { TraitId.Paralyze })
+           && UnitCatalog.TouT0.MaxHp == UnitCatalog.TouH311.MaxHp && UnitCatalog.TouT0.Attack == UnitCatalog.TouH311.Attack && UnitCatalog.TouT0.Speed == UnitCatalog.TouH311.Speed
+           && UnitCatalog.TouT0.Pattern == UnitCatalog.TouH311.Pattern && UnitCatalog.TouT0.Advances == UnitCatalog.TouH311.Advances);
         Ok("(b2) T1 ／ T2 ／ T3 ／ T3n の体・型は T0 と同じで、違うのは札だけ（T2 ＝ T1 − 漏れ ／ T3 ＝ T1 ＋ 舞う ／ T3n ＝ T2 ＋ 舞う）",
-           new[] { UnitCatalog.TouT1, UnitCatalog.TouT2, UnitCatalog.TouT3, UnitCatalog.TouT3n }.All(d => d.MaxHp == 46 && d.Attack == 3 && d.Speed == 11 && d.Pattern == UnitCatalog.Tou.Pattern && d.Advances == UnitCatalog.Tou.Advances)
+           new[] { UnitCatalog.TouT1, UnitCatalog.TouT2, UnitCatalog.TouT3, UnitCatalog.TouT3n }.All(d => d.MaxHp == 46 && d.Attack == 3 && d.Speed == 11 && d.Pattern == UnitCatalog.TouH311.Pattern && d.Advances == UnitCatalog.TouH311.Advances)
            && UnitCatalog.TouT1.Traits.Except(new[] { TraitId.ChargedPowderLeak }).SequenceEqual(UnitCatalog.TouT2.Traits)
            && UnitCatalog.TouT3.Traits.SequenceEqual(UnitCatalog.TouT1.Traits.Append(TraitId.ChargedPowderSpread))
            && UnitCatalog.TouT3n.Traits.SequenceEqual(UnitCatalog.TouT2.Traits.Append(TraitId.ChargedPowderSpread)));
@@ -357,7 +358,7 @@ static class Tou279Diag
         foreach (var b in Boards.Where(b => b.Group != "参照"))
             foreach (var w in Waves.Where(w => w.Group == "本編"))
                 for (int s = 0; s < 50 && same; s++)
-                    same &= CW.Dig(CW.Fight(b.Make(UnitCatalog.Tou), w.Make, s).R).SequenceEqual(CW.Dig(CW.Fight(b.Make(UnitCatalog.TouT3), w.Make, s).R));
+                    same &= CW.Dig(CW.Fight(b.Make(UnitCatalog.TouH311), w.Make, s).R).SequenceEqual(CW.Dig(CW.Fight(b.Make(UnitCatalog.TouT3), w.Make, s).R));
         Ok("(c) 規定のトウの台本が `TouT3` と一致（6 台 × 本編第2〜5波 × seed 0..49）", same);
 
         // (d)〜(g) 粉の付与・漏れ・痺れの出どころ（6 台 × 本編4波 × seed 0..19）。
@@ -444,16 +445,16 @@ static class Tou279Diag
     // ---------------------------------------------------------------------------------
     // 第286期: `compare` 64 行 × 版 ／ 精鋭 × トウ在席の行 × 版
     // ---------------------------------------------------------------------------------
-    static bool HasTou(Formation f) => f.Occupied().Any(o => o.Def.Id == UnitCatalog.Tou.Id);
+    static bool HasTou(Formation f) => f.Occupied().Any(o => o.Def.Id == UnitCatalog.TouH311.Id);
 
     static double[,] Grid(UnitDef d)
     {
-        var rows = CompareBuilds();
+        var rows = CompareBuildsH311();
         var g = new double[rows.Length, EnemyCatalog.Stages.Count];
         Parallel.For(0, rows.Length * EnemyCatalog.Stages.Count, k =>
         {
             int ri = k / EnemyCatalog.Stages.Count, wi = k % EnemyCatalog.Stages.Count;
-            var f = FvSwap(rows[ri].F, UnitCatalog.Tou, d);
+            var f = FvSwap(rows[ri].F, UnitCatalog.TouH311, d);
             int wins = 0;
             for (int s = 0; s < Seeds; s++) if (BattleEngine.Run(f, EnemyCatalog.Stages[wi].Enemy, s, verbose: false).PlayerWon) wins++;
             g[ri, wi] = 100.0 * wins / Seeds;
@@ -463,7 +464,7 @@ static class Tou279Diag
 
     static void CompareAll()
     {
-        var rows = CompareBuilds();
+        var rows = CompareBuildsH311();
         int nw = EnemyCatalog.Stages.Count;
         var grids = Vers.ToDictionary(v => v.Name, v => Grid(v.Tou));
         var basis = grids["T0"];
@@ -508,7 +509,7 @@ static class Tou279Diag
 
     static void EliteRows()
     {
-        var rows = CompareBuilds().Where(r => HasTou(r.F)).ToArray();
+        var rows = CompareBuildsH311().Where(r => HasTou(r.F)).ToArray();
         var waves = new (string Name, Func<List<UnitState>> Make)[]
         {
             ("近衛", () => BattleEngine.MaterializeEnemy(EliteDiag.Five, EliteDiag.Elite)),
@@ -522,7 +523,7 @@ static class Tou279Diag
             foreach (var (wn, mk) in waves)
                 foreach (var v in Vers)
                 {
-                    var a = Measure(FvSwap(f, UnitCatalog.Tou, v.Tou), mk);
+                    var a = Measure(FvSwap(f, UnitCatalog.TouH311, v.Tou), mk);
                     Console.WriteLine($"| {name} | {wn} | {v.Name} | {F1(a.Win)} | {WinT(a)} | {Per(a.PowderFoe, a.N)}（{Per(a.PowderMain, a.N)}・{Per(a.PowderSpread, a.N)}）| {Per(a.PowderAlly, a.N)} | {Per(a.FoePops, a.N)} | {Per(a.AllyPops, a.N)} | "
                         + $"{(a.FoeChains == 0 ? "—" : ((double)a.FoeChainUnits / a.FoeChains).ToString("F2"))}（{Per(a.FoeChains2, a.N)}）| {Per(a.FoeStall, a.N)}（{Per(a.FoeStallShock, a.N)}）| {Per(a.AllyStall, a.N)}（{Per(a.AllyStallShock, a.N)}）| {Per(a.FoeDischarge, a.N)} | {Per(a.AllyDischarge, a.N)} |");
                 }

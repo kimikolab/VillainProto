@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using B283 = Boss283Diag;
 using S287 = Shock287Diag;
@@ -19,6 +19,7 @@ using S309 = Som309Diag;
 //     dotnet run --project BattleSim -c Release 0 som310 check       # 自己検査
 //
 // 規定の駒のまま組む（固定しない）。版は台の中のソム（SG-f はシガ）を同じ席で替えるだけ（`S309.Swap`・陣形とレリックを保つ）。
+// 第312期: 規定のカタ ／ トウに萎縮の規則が付いたので、カタ ／ トウは第311期までの規定（`KataH311` ／ `TouH311`）に固定した（`Common.PinKT311` ／ `CompareBuildsH311` ／ `PlaytestH311`）。
 // =====================================================================================
 static class Som310Diag
 {
@@ -74,8 +75,8 @@ static class Som310Diag
     static bool IsNine(S287.Wave w) => w.Name.StartsWith("九体", StringComparison.Ordinal);
 
     static Formation Playtest(string n) => S309.Playtest(n);
-    static Formation Row(string n) => Pin310(CompareBuilds().First(r => r.Name == n).F);
-    static Formation WinSeat() => B283.Seat(S307.Order(S307.WinBoard));
+    static Formation Row(string n) => Pin310(CompareBuildsH311().First(r => r.Name == n).F);
+    static Formation WinSeat() => PinKT311(B283.Seat(S307.Order(S307.WinBoard)));
 
     /// <summary>§4-1 の代表台（規定の駒・ソムの席は出典のまま）。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
@@ -388,7 +389,7 @@ static class Som310Diag
     static void CompareAll()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().Select(r => (r.Name, F: Pin310(r.F))).ToArray();   // 第311期: ソムは第310期の規定に
+        var rows = CompareBuildsH311().Select(r => (r.Name, F: Pin310(r.F))).ToArray();   // 第311期: ソムは第310期の規定に
         int nw = EnemyCatalog.Stages.Count;
         var grids = Vers.Select(v =>
         {
@@ -513,7 +514,7 @@ static class Som310Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var v = V(ver);
         var w = S307.WaveOf(wave);
-        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.Kugu, UnitCatalog.Kata } : new[] { UnitCatalog.Tou };
+        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.Kugu, UnitCatalog.KataH311 } : new[] { UnitCatalog.TouH311 };
         var pool = w.Boss ? S307.BossPool : S307.ElitePool;
         int k = w.Boss ? 2 : 3;
         int need = w.Boss ? 1 : 5;
@@ -530,7 +531,7 @@ static class Som310Diag
         }
         Parallel.For(0, boards.Count, i =>
         {
-            var f = v.Apply(B283.Seat(boards[i]));
+            var f = v.Apply(PinKT311(B283.Seat(boards[i])));
             if (W(f, w, S307.CutSeeds) < need) return;
             Interlocked.Increment(ref cutPass);
             int wins = W(f, w, Seeds);
@@ -742,7 +743,7 @@ static class Som310Diag
         }
         // (h) 規定は動かない（`compare` の規定の列 ＝ docs/balance.md の一部を抜き取りで）
         {
-            var rows = CompareBuilds().Select(r => (r.Name, F: Pin310(r.F))).ToArray();
+            var rows = CompareBuildsH311().Select(r => (r.Name, F: Pin310(r.F))).ToArray();
             // 第311期: 第310期の `docs/balance.md`（コミット e8c8821）と照らす（段0 で `感電` 行が動いたので、いまの docs とは照らさない）
             var bal = GitShow("e8c8821:docs/balance.md")?.Split('\n').Select(l => l.TrimEnd('\r')).ToArray() ?? Array.Empty<string>();
             int checkedRows = 0, bad = 0;

@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using B283 = Boss283Diag;
 using S287 = Shock287Diag;
@@ -18,6 +18,7 @@ using H304 = Hush304Diag;
 //
 // 規定の駒（段0 の後・ソム ＝ SH-a）のまま組む（固定しない）。版は規定のソムと同じ席で差し替える。
 // 第309期: 規定のソムが LV-a になったので、規定の列（SH-a）は第308期の規定 `SomH308`（`Common.Pin309`）に固定した。
+// 第312期: 規定のカタ ／ トウに萎縮の規則が付いたので、カタ ／ トウは第311期までの規定（`KataH311` ／ `TouH311`）に固定した（`Common.PinKT311` ／ `CompareBuildsH311` ／ `PlaytestH311`）。
 // =====================================================================================
 static class Som308Diag
 {
@@ -59,9 +60,9 @@ static class Som308Diag
     static string Per0(long a, long n) => S307.Per0(a, n);
     static string Pct(long a, long n) => S307.Pct(a, n);
     static string Dt(long died, long t, long n) => died == 0 ? "—" : $"{Per1(t, died)}（{Pct(died, n)}）";
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation Row(string n) => Pin309(CompareBuilds().First(r => r.Name == n).F);   // 第309期: 規定のソム（LV-a）は第308期の規定（`SomH308`）に固定
-    static Formation WinSeat() => B283.Seat(S307.Order(S307.WinBoard));
+    static Formation Playtest(string n) => PlaytestH311.First(r => r.Name == n).F;
+    static Formation Row(string n) => Pin309(CompareBuildsH311().First(r => r.Name == n).F);   // 第309期: 規定のソム（LV-a）は第308期の規定（`SomH308`）に固定
+    static Formation WinSeat() => PinKT311(B283.Seat(S307.Order(S307.WinBoard)));
 
     /// <summary>代表台（第307期 §4-1 と同じ5台・規定のソム ＝ SH-a で組む）。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
@@ -276,7 +277,7 @@ static class Som308Diag
     // ---------------------------------------------------------------------------------
     static void CompareAll()
     {
-        var rows = CompareBuilds().Select(r => (r.Name, F: Pin309(r.F))).ToArray();   // 第309期: 規定のソム（LV-a）は第308期の規定（`SomH308`）に固定
+        var rows = CompareBuildsH311().Select(r => (r.Name, F: Pin309(r.F))).ToArray();   // 第309期: 規定のソム（LV-a）は第308期の規定（`SomH308`）に固定
         int nw = EnemyCatalog.Stages.Count;
         Console.WriteLine("# 第308期 `compare` 64 行 × ソムの版（seed 0..199・ソムの在席行だけ差し替える・基準は段0 の規定 ＝ SH-a）");
         Console.WriteLine();
@@ -409,14 +410,14 @@ static class Som308Diag
     {
         var vars = new List<(string, Func<Formation, Formation>)> { ("規定（SH-a）", f => f) };
         if (ver != "") { var v = AnyVer(ver); vars.Add((v.Name, f => Apply(f, v))); }
-        S307.GridCore($"固定枠 クグ ＋ カタ ＋ ソム（{string.Join(" ／ ", vars.Select(x => x.Item1))}）", Waves[0], new[] { UnitCatalog.Kugu, UnitCatalog.Kata, UnitCatalog.SomH308 }, S307.BossPool, 2, vars.ToArray(), "第308期");
+        S307.GridCore($"固定枠 クグ ＋ カタ ＋ ソム（{string.Join(" ／ ", vars.Select(x => x.Item1))}）", Waves[0], new[] { UnitCatalog.Kugu, UnitCatalog.KataH311, UnitCatalog.SomH308 }, S307.BossPool, 2, vars.ToArray(), "第308期");
     }
 
     static void GridElite(string waveName, string ver)
     {
         var v = AnyVer(ver);
         var vars = new (string, Func<Formation, Formation>)[] { ("規定（SH-a）", f => f), (v.Name, f => Apply(f, v)) };
-        S307.GridCore($"固定枠 トウ ＋ ソム（規定 ／ {v.Name}）", S307.WaveOf(waveName), new[] { UnitCatalog.Tou, UnitCatalog.SomH308 }, S307.ElitePool, 3, vars, "第308期");
+        S307.GridCore($"固定枠 トウ ＋ ソム（規定 ／ {v.Name}）", S307.WaveOf(waveName), new[] { UnitCatalog.TouH311, UnitCatalog.SomH308 }, S307.ElitePool, 3, vars, "第308期");
     }
 
     // ---------------------------------------------------------------------------------

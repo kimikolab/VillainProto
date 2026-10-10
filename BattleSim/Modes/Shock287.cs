@@ -15,6 +15,7 @@ using BA = BurnAuditDiag;
 //     dotnet run --project BattleSim -c Release 0 shock287 log <波> <席の並び（短い名前を ・ で5つ）> [seed]
 //
 // 駒・札・数値・波は1つも変えない（器具だけ）。トウは規定（第287期から T3）。
+// 第312期: 規定のカタ ／ トウに萎縮の規則が付いたので、カタ ／ トウは第311期までの規定（`KataH311` ／ `TouH311`）に固定した（`Common.PinKT311` ／ `CompareBuildsH311` ／ `PlaytestH311`）。
 // =====================================================================================
 static class Shock287Diag
 {
@@ -36,7 +37,7 @@ static class Shock287Diag
     // 候補と波（測る前に固定・指示書 §4-1）
     // ---------------------------------------------------------------------------------
     /// <summary>固定枠: トウ（規定 T3）＋ シガ。</summary>
-    internal static readonly UnitDef[] Fixed = { UnitCatalog.Tou, UnitCatalog.ShigaG3K };
+    internal static readonly UnitDef[] Fixed = { UnitCatalog.TouH311, UnitCatalog.ShigaG3K };
 
     /// <summary>感電の駒（カタ・クグ・ソム）。</summary>
     internal static readonly UnitDef[] ShockPool = { UnitCatalog.KataS3, UnitCatalog.KuguKG0, UnitCatalog.SomH307 };
@@ -82,7 +83,7 @@ static class Shock287Diag
     /// <summary>勝率の線だけ（ドルガ対照を回すかどうか）。</summary>
     static bool WinLine(Wave w, int wins) => w.Boss ? wins > 0 : wins * 2 >= Seeds;
 
-    static Formation Seat(UnitDef[] order) => B283.Seat(order);
+    static Formation Seat(UnitDef[] order) => PinKT311(B283.Seat(order));
     static Formation ToDolga(Formation f, UnitDef from) => FvSwap(f, from, UnitCatalog.Dolga);
 
     static bool FightLite(Formation f, Wave w, int seed, out int turns)
@@ -129,7 +130,7 @@ static class Shock287Diag
         }
         if (r.TallyByUnit.TryGetValue(UnitCatalog.ShigaG3K.Id, out var st)) { d.Cower += st.WhipCowered; d.Swings += st.WhipSwings; d.Wired += st.WiredSwings; }
         if (r.TallyByUnit.TryGetValue(UnitCatalog.KuguKG0.Id, out var kt)) { d.Grapple += kt.GrappleFires; d.GrappleStall += kt.GrappleStalled; }
-        UnitState? tou = p.FirstOrDefault(u => u.Def.Id == UnitCatalog.Tou.Id), shiga = p.FirstOrDefault(u => u.Def.Id == UnitCatalog.ShigaG3K.Id);
+        UnitState? tou = p.FirstOrDefault(u => u.Def.Id == UnitCatalog.TouH311.Id), shiga = p.FirstOrDefault(u => u.Def.Id == UnitCatalog.ShigaG3K.Id);
         foreach (var ev in r.Events.Where(ev => ev.Kind == BattleEventKind.Death))
         {
             if (tou is not null && ev.TargetId == tou.InstanceId && d.ToumDied == 0) { d.ToumDied = 1; d.ToumDeathT = ev.Turn; }
@@ -186,7 +187,7 @@ static class Shock287Diag
 
         Console.WriteLine("## §2 ボスに対する感電（放電先が無いとき）——ログ1本");
         Console.WriteLine();
-        var basis = Seat(new[] { UnitCatalog.Tou, UnitCatalog.Gald, UnitCatalog.KataS3, UnitCatalog.ShigaG3K, UnitCatalog.HisaHK0 });
+        var basis = Seat(new[] { UnitCatalog.TouH311, UnitCatalog.Gald, UnitCatalog.KataS3, UnitCatalog.ShigaG3K, UnitCatalog.HisaHK0 });
         var bp = BattleEngine.Materialize(basis, BattleContext.PlayerTeam);
         var br = BattleEngine.Run(bp, WaveOf("ボス").Make(), 0, verbose: true);
         Console.WriteLine($"台 ＝ {BA.SeatsNamed(basis)} × ボス × seed 0 → {(br.PlayerWon ? "勝ち" : "負け")} T{br.Turns}");
@@ -212,7 +213,7 @@ static class Shock287Diag
         Console.WriteLine();
         Console.WriteLine("| 波 | 組み付いた（1戦） | 組んだまま維持 | 止めた敵の手番 | ほどけた |");
         Console.WriteLine("|---|--:|--:|--:|--:|");
-        var kRow = FvSwap(FvSwap(CompareBuilds().First(r => r.Name == "責め苦 (トウ×シガ)").F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Dolga, UnitCatalog.KuguKG0);
+        var kRow = FvSwap(FvSwap(CompareBuildsH311().First(r => r.Name == "責め苦 (トウ×シガ)").F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K), UnitCatalog.Dolga, UnitCatalog.KuguKG0);
         foreach (var w in Waves)
         {
             long f = 0, h = 0, s = 0, b = 0;
@@ -241,11 +242,11 @@ static class Shock287Diag
         Console.WriteLine();
         Console.WriteLine("| 波 | 版 | 勝率 | 振 | 電 | 怖 | 縛 | 帯電率 | 怖 ÷ 振 | シガが倒れたT（倒れた戦の割合） | 潰れた敵の手番 |");
         Console.WriteLine("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
-        var row = FvSwap(CompareBuilds().First(r => r.Name == "責め苦 (トウ×シガ)").F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K);   // 第289期: シガを旧の規定（G3K）に固定
+        var row = FvSwap(CompareBuildsH311().First(r => r.Name == "責め苦 (トウ×シガ)").F, UnitCatalog.Shiga, UnitCatalog.ShigaG3K);   // 第289期: シガを旧の規定（G3K）に固定
         foreach (var w in Waves.Where(w => !w.Boss))
             foreach (var (vn, d) in new[] { ("T3", UnitCatalog.TouT3), ("T3n", UnitCatalog.TouT3n) })
             {
-                var a = MeasureDeep(FvSwap(row, UnitCatalog.Tou, d), w, 0, Seeds);
+                var a = MeasureDeep(FvSwap(row, UnitCatalog.TouH311, d), w, 0, Seeds);
                 long bound = a.Swings - a.Wired - a.Cower;
                 Console.WriteLine($"| {w.Name} | {vn} | {F1(a.Win)} | {Per(a.Swings, a.N)} | {Per(a.Wired, a.N)} | {Per(a.Cower, a.N)} | {Per(bound, a.N)} | {(a.Swings == 0 ? "—" : (100.0 * a.Wired / a.Swings).ToString("F1") + "%")} | "
                     + $"{(a.Swings == 0 ? "—" : (100.0 * a.Cower / a.Swings).ToString("F1") + "%")} | {Per1(a.ShigaDeathT, a.ShigaDied)}（{F1(100.0 * a.ShigaDied / a.N)}%） | {Per(a.FoeStall, a.N)} |");
@@ -279,7 +280,7 @@ static class Shock287Diag
             if (WinLine(w, wins))
             {
                 Interlocked.Increment(ref winPass);
-                dg = Wins(ToDolga(f, UnitCatalog.Tou), w, 0, Seeds, out _);
+                dg = Wins(ToDolga(f, UnitCatalog.TouH311), w, 0, Seeds, out _);
             }
             res[i] = new BoardRes(boards[i], cw, wins, wt, dg, dg >= 0 && Reached(w, wins, dg));
         });
@@ -356,7 +357,7 @@ static class Shock287Diag
         {
             var f = Seat(r.Order);
             var d = MeasureDeep(f, w, 0, Seeds);
-            int dt = Wins(ToDolga(f, UnitCatalog.Tou), w, 0, Seeds, out _);
+            int dt = Wins(ToDolga(f, UnitCatalog.TouH311), w, 0, Seeds, out _);
             int ds = Wins(ToDolga(f, UnitCatalog.ShigaG3K), w, 0, Seeds, out _);
             Console.WriteLine($"| {Order(r.Order)} | {F1(d.Win)} | {Per(d.WinT, d.Wins)} | {Per1(d.FoeDis, d.N)} | {Per1(d.AllyDis, d.N)} | {Per(d.ChainUnits, d.Chains)} | {Per(d.FoeStall, d.N)} | {Per(d.Cower, d.N)}（{Per(d.Swings, d.N)}） | "
                 + $"{Per1(d.ToumDeathT, d.ToumDied)}（{F1(100.0 * d.ToumDied / d.N)}%） | {Per1(d.ShigaDeathT, d.ShigaDied)}（{F1(100.0 * d.ShigaDied / d.N)}%） | {Per(d.Grapple, d.N)} | {F1(100.0 * dt / Seeds)} | {F1(100.0 * ds / Seeds)} |");
@@ -378,7 +379,7 @@ static class Shock287Diag
         }
         Console.WriteLine("# shock287 check");
         Console.WriteLine();
-        Expect("(a) 固定枠のトウは規定（T3）", ReferenceEquals(Fixed[0], UnitCatalog.Tou) && ReferenceEquals(UnitCatalog.Tou, UnitCatalog.TouT3));
+        Expect("(a) 固定枠のトウは規定（T3）", ReferenceEquals(Fixed[0], UnitCatalog.TouH311) && ReferenceEquals(UnitCatalog.TouH311, UnitCatalog.TouT3));
         var lu = Lineups();
         Expect("(b) 組にヒーラー 2 枚以上は 0・ツギ × リリは 0・固定枠と候補は重ならない",
             lu.All(t => t.Count(Heal.Contains) <= 1) && !lu.Any(t => t.Contains(UnitCatalog.Tsugi) && t.Contains(UnitCatalog.Lili))
@@ -397,9 +398,9 @@ static class Shock287Diag
         Expect("(d) 軽い口（verbose なし）と詳しい口（verbose）で勝敗と決着T が一致", bad == 0, $"{bad} 件");
         // (e) ドルガ対照はトウだけを差し替える
         var f0 = Seat(Fixed.Concat(lu[0]).ToArray());
-        var fd = ToDolga(f0, UnitCatalog.Tou);
+        var fd = ToDolga(f0, UnitCatalog.TouH311);
         Expect("(e) ドルガ対照はトウの席だけがドルガに替わる",
-            Enumerable.Range(0, 5).Count(i => !ReferenceEquals(f0[i], fd[i])) == 1 && fd.Occupied().Any(o => o.Def == UnitCatalog.Dolga) && !fd.Occupied().Any(o => o.Def.Id == UnitCatalog.Tou.Id));
+            Enumerable.Range(0, 5).Count(i => !ReferenceEquals(f0[i], fd[i])) == 1 && fd.Occupied().Any(o => o.Def == UnitCatalog.Dolga) && !fd.Occupied().Any(o => o.Def.Id == UnitCatalog.TouH311.Id));
         // (f) 決定性
         int nd = 0;
         for (int s = 0; s < 20; s++) if (FightLite(f0, Waves[1], s, out int t1) != FightLite(f0, Waves[1], s, out int t2) || t1 != t2) nd++;

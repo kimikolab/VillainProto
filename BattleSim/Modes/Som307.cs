@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using B283 = Boss283Diag;
 using S287 = Shock287Diag;
@@ -12,6 +12,7 @@ using S293 = Shock293Diag;
 //
 // 規定の駒（第306期の HEAD）のまま組む。ソムの版は旧の規定のソム（`UnitCatalog.SomH307`）と同じ席で差し替える。
 // 第308期: 規定のソムが SH-a になったので、台のソムは旧の規定（`SomH307`・`Common.Pin308`）に固定した。
+// 第312期: 規定のカタ ／ トウに萎縮の規則が付いたので、カタ ／ トウは第311期までの規定（`KataH311` ／ `TouH311`）に固定した（`Common.PinKT311` ／ `CompareBuildsH311` ／ `PlaytestH311`）。
 // =====================================================================================
 static partial class Som307Diag
 {
@@ -51,8 +52,8 @@ static partial class Som307Diag
     internal static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     internal static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     internal static string Seats(Formation f) => string.Join("・", Enumerable.Range(0, 5).Select(i => f[i] is { } d ? Short(d) : "—"));
-    static Formation Playtest(string n) => Pin308(Presets.Playtest.First(r => r.Name == n).F);
-    static Formation Row(string n) => Pin308(CompareBuilds().First(r => r.Name == n).F);   // 第308期: 規定のソム（SH-a）は旧（`SomH307`）に固定
+    static Formation Playtest(string n) => Pin308(PlaytestH311.First(r => r.Name == n).F);
+    static Formation Row(string n) => Pin308(CompareBuildsH311().First(r => r.Name == n).F);   // 第308期: 規定のソム（SH-a）は旧（`SomH307`）に固定
 
     internal const string WinBoard = "シガ・ゴルム・クグ・カタ・ツギ";
 
@@ -62,8 +63,8 @@ static partial class Som307Diag
         ("感電 (シガ×カタ×ソム)", Row("感電 (シガ×カタ×ソム)")),
         ("雷の型 ドハ→ソム", FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, UnitCatalog.SomH307)),
         ("感電 糸 ガルド→ソム", FvSwap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, UnitCatalog.SomH307)),
-        ("勝ち台 ゴルム→ソム", FvSwap(B283.Seat(Order(WinBoard)), UnitCatalog.Golm, UnitCatalog.SomH307)),
-        ("勝ち台 ツギ→ソム", FvSwap(B283.Seat(Order(WinBoard)), UnitCatalog.Tsugi, UnitCatalog.SomH307)),
+        ("勝ち台 ゴルム→ソム", FvSwap(PinKT311(B283.Seat(Order(WinBoard))), UnitCatalog.Golm, UnitCatalog.SomH307)),
+        ("勝ち台 ツギ→ソム", FvSwap(PinKT311(B283.Seat(Order(WinBoard))), UnitCatalog.Tsugi, UnitCatalog.SomH307)),
     };
 
     internal static string F1(double x) => double.IsNaN(x) ? "—" : x.ToString("F1");
@@ -161,11 +162,11 @@ static partial class Som307Diag
         Console.WriteLine("# 第307期 Phase 0（指示書 §3・規定の駒・seed 0..199・verbose）");
         Console.WriteLine();
         foreach (var (n, f) in Boards()) Console.WriteLine($"- {n}: {Seats(f)}（前1・前3・中央・後1・後3）");
-        Console.WriteLine($"- 元の勝ち台: {Seats(B283.Seat(Order(WinBoard)))}");
+        Console.WriteLine($"- 元の勝ち台: {Seats(PinKT311(B283.Seat(Order(WinBoard))))}");
 
         // 1. 量の決め方
         var boss = Waves[0];
-        var baseA = MeasureP0(B283.Seat(Order(WinBoard)), boss, Seeds);
+        var baseA = MeasureP0(PinKT311(B283.Seat(Order(WinBoard))), boss, Seeds);
         var swapA = MeasureP0(Boards().First(b => b.Name == "勝ち台 ツギ→ソム").F, boss, Seeds);
         double tsugi = (double)baseA.TsugiOut5 / baseA.Turns5, pops = (double)swapA.Fuel5 / swapA.Turns5;
         Console.WriteLine();

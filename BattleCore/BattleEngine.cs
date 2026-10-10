@@ -1860,7 +1860,11 @@ public sealed class BattleContext
         }
         // 第311期（K-a）: 緊急の喚び出しの連鎖（その獣を含む連鎖）の光は、危ない味方1体に集まる。保持者がいなければ比較1つで抜ける。
         UnitState? focus = _emergencyBeast is not null && h.HasTrait(TraitId.EmergencyFocus) && _emergencyAlly is { IsAlive: true } && popped.Contains(_emergencyBeast) ? _emergencyAlly : null;
-        EmitSpark(h, SparkLabels.Release, n, 0, focus);   // 表示専用（見出し・直後に各味方の `Heal`・K-a は集まる先）
+        // 第312期（K-a のベニ対策）: 集める先への回復が反転する（ベニの結界の内側）なら、集めずにいつもどおり全員に降らせる（K-b と同じ降り方）。
+        // 判定は回復の入口（`Heal`）の反転の裏と同じ式を読むだけ。保持者がいなければ比較1つで抜ける。
+        UnitState? unfocused = null;
+        if (focus is not null && HealInverts(focus)) { unfocused = focus; focus = null; t.SparkFocusInverted++; }
+        EmitSpark(h, SparkLabels.Release, n, 0, focus, unfocused);   // 表示専用（見出し・直後に各味方の `Heal`・K-a は集まる先・集めなかったときは `PartnerId` ＝ 危なかった味方）
         Log(focus is null ? $"    弾けた光（{n}）が {h.Name} のもとへ帰り、仲間に降り注ぐ" : $"    弾けた光（{n}）が {focus.Name} に集まる", LogKind.Trigger, h);
         TraitMark m = BeginTrait(TraitId.SparkRain, h);   // 回復(与) の帰属（観測専用）
         if (focus is null) SparkTrait.Rain(this, h, n);
@@ -1869,10 +1873,10 @@ public sealed class BattleContext
     }
 
     /// <summary>ソムの光の表示専用の出来事（第307期・<see cref="BattleEventKind.Spark"/>）。<b>盤面には触らない。</b></summary>
-    public void EmitSpark(UnitState som, string label, int amount, int stored, UnitState? target = null)
+    public void EmitSpark(UnitState som, string label, int amount, int stored, UnitState? target = null, UnitState? partner = null)
     {
         if (!_verbose) return;
-        Emit(new BattleEvent { Kind = BattleEventKind.Spark, Turn = _turn, ActorId = som.InstanceId, TargetId = target?.InstanceId, Amount = amount, Slot = stored, Team = som.TeamId, Text = label });
+        Emit(new BattleEvent { Kind = BattleEventKind.Spark, Turn = _turn, ActorId = som.InstanceId, TargetId = target?.InstanceId, PartnerId = partner?.InstanceId, Amount = amount, Slot = stored, Team = som.TeamId, Text = label });
     }
 
     /// <summary>光の衣の保持者（LV-a ／ LV-c）が戦闘に出たか（第308期・<b>計数</b>の口を短絡させる）。</summary>
@@ -6453,6 +6457,12 @@ public sealed class BattleContext
     /// <b>保持者がいなければ比較1つで抜ける。</b>
     /// </summary>
     public UnitState? InvertsTick(UnitState u) => _inverseHolders.Count == 0 ? null : AdjacentHolder(_inverseHolders, u);
+
+    /// <summary>
+    /// 第312期（K-a のベニ対策）。<paramref name="u"/> への回復が反転の裏（<see cref="Heal"/> の「隣にベニがいれば傷にする」）に掛かるか。<b>`Heal` の判定と同じ式を読むだけ</b>（新しい判定を作らない）。
+    /// 保持者がいなければ比較1つで抜ける。盤面に触らず、乱数も引かない。
+    /// </summary>
+    public bool HealInverts(UnitState u) => _inverseLeakHolders.Count > 0 && AdjacentHolder(_inverseLeakHolders, u) is not null;
 
     /// <summary>
     /// 啜り（第193期）。反転で隣の味方に入った回復のうち<b>満タンで溢れた分</b>を、その反転を起こしたベニに流す。

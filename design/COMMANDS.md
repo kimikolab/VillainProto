@@ -1041,6 +1041,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 som311 kubi        # 第311期 段2: クビの3つの守り（被ダメ −30% ／ 萎縮 ／ 漏れ）を1つずつ外した台・クビ → ドルガ ／ シガ（数秒・同上）
     dotnet run --project BattleSim -c Release 0 som311 memo <版> <台の一部> <boss|guard|bat|nine|1..5> <seed> <最初のT> <最後のT>   # 第311期 台本の抜粋（`PHASE291_CODEX_MEMO.md` §14-7）
     dotnet run --project BattleSim -c Release 0 som311 check       # 第311期 自己検査（段0 の定義・版の定義・緊急の線と1ターン1回・粛 ／ 痺れ・K-a の行き先・群れの式と1つの連鎖・萎縮・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 som312 beni        # 第312期 K-a のベニ対策: 火の型 ソラ→ソム × 10 波（勝率・倒しT・緊急・集めなかった連鎖・ソムの回復が反転した傷）（数秒）。本体は `Modes/Som312.cs`。**予測のファイル `.tmp/p312/predict.md` が無いと走らない**（R397）
+    dotnet run --project BattleSim -c Release 0 som312 playtest    # 第312期 試遊の感電の台（7 台）× ボス ／ 近衛 ／ 大隊 ／ 九体 ／ 本編の5波・勝率と倒しT（数秒・同上）
+    dotnet run --project BattleSim -c Release 0 som312 find        # 第312期 ベニ対策で集めなかった連鎖のある seed（台本の例を探す）
+    dotnet run --project BattleSim -c Release 0 som312 memo <台の一部|火の型> <boss|guard|bat|nine|nine2|1..5> <seed> <最初のT> <最後のT>   # 第312期 台本の抜粋（`PHASE291_CODEX_MEMO.md` §14-8 ／ §14-9）
+    dotnet run --project BattleSim -c Release 0 som312 check       # 第312期 自己検査（規定のソム ／ カタ ／ トウ ＝ 第311期の重ね・ベニ対策を盤で直に・実戦・試遊の2台・verbose・PickOne）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

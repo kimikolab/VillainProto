@@ -2145,6 +2145,8 @@ public sealed class UnitTally
     /// </summary>
     public long SparkLightFoe, SparkLightSummon, SparkLightBall, SparkChains, SparkDeadPops, SparkAllyPops, SparkHushed, SparkHushedLights, SparkBlocked, SparkBlockedLights,
                 SparkRains, SparkRainLights, SparkHealed, SparkOverflow, SparkInverted, SparkRefused, SparkReleases, SparkSwings;
+    /// <summary>第312期（<b>計数のみ</b>・K-a のベニ対策）。緊急の光を集める先がベニの結界の内側で、集めずに全員に降らせた連鎖の数。</summary>
+    public long SparkFocusInverted;
     public int SparkStorePeak;
     /// <summary>
     /// 第308期（<b>計数のみ</b>）。ソムの側: <c>SparkVeilAdded</c> 衣になった量 ／ <c>SparkVeilCapped</c> 上限で捨てた量（LV-c）／ <c>SparkFocusPicks</c> ／ <c>SparkFocusNone</c> 寄せる光が選んだ回数 ／ 傷ついた味方がいなかった回数（FO）。
@@ -3301,7 +3303,7 @@ public sealed class UnitTally
         SparkLightFoe += o.SparkLightFoe; SparkLightSummon += o.SparkLightSummon; SparkLightBall += o.SparkLightBall; SparkChains += o.SparkChains; SparkDeadPops += o.SparkDeadPops;   // 第307期
         SparkAllyPops += o.SparkAllyPops; SparkHushed += o.SparkHushed; SparkHushedLights += o.SparkHushedLights; SparkBlocked += o.SparkBlocked; SparkBlockedLights += o.SparkBlockedLights;
         SparkRains += o.SparkRains; SparkRainLights += o.SparkRainLights; SparkHealed += o.SparkHealed; SparkOverflow += o.SparkOverflow; SparkInverted += o.SparkInverted; SparkRefused += o.SparkRefused;
-        SparkReleases += o.SparkReleases; SparkSwings += o.SparkSwings; SparkStorePeak = Math.Max(SparkStorePeak, o.SparkStorePeak);
+        SparkReleases += o.SparkReleases; SparkSwings += o.SparkSwings; SparkStorePeak = Math.Max(SparkStorePeak, o.SparkStorePeak); SparkFocusInverted += o.SparkFocusInverted;   // 第312期
         SparkVeilAdded += o.SparkVeilAdded; SparkVeilCapped += o.SparkVeilCapped; SparkFocusPicks += o.SparkFocusPicks; SparkFocusNone += o.SparkFocusNone;   // 第308期
         SparkOverRecvFull += o.SparkOverRecvFull; SparkOverRecvTop += o.SparkOverRecvTop; SparkVeilSoaked += o.SparkVeilSoaked; AddHist(ref SparkOverRecvT, o.SparkOverRecvT); AddHist(ref SparkVeilSoakedT, o.SparkVeilSoakedT);
         BeastCalls += o.BeastCalls; BeastCharged += o.BeastCharged; BeastSeatTaken += o.BeastSeatTaken; BeastBursts += o.BeastBursts; BeastBurstSeatTaken += o.BeastBurstSeatTaken;   // 第310期

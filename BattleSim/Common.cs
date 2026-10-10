@@ -263,7 +263,7 @@ public static Formation Pin308(Formation f)
 {
     var g = f.Clone();
     foreach ((int slot, UnitDef d) in f.Occupied())
-        g[slot] = ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH307 : d;
+        g[slot] = ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH307 : PinKataTou311(d);   // 第312期: カタ ／ トウも第311期までの規定に
     return g;
 }
 
@@ -275,7 +275,7 @@ public static Formation Pin309(Formation f)
 {
     var g = f.Clone();
     foreach ((int slot, UnitDef d) in f.Occupied())
-        g[slot] = ReferenceEquals(d, UnitCatalog.Som) || ReferenceEquals(d, UnitCatalog.SomH310) ? UnitCatalog.SomH308 : d;   // 第311期: 第309〜310期の規定（`SomH310`）も
+        g[slot] = ReferenceEquals(d, UnitCatalog.Som) || ReferenceEquals(d, UnitCatalog.SomH310) ? UnitCatalog.SomH308 : PinKataTou311(d);   // 第311期: 第309〜310期の規定（`SomH310`）も
     return g;
 }
 
@@ -286,9 +286,39 @@ public static Formation Pin310(Formation f)
 {
     var g = f.Clone();
     foreach ((int slot, UnitDef d) in f.Occupied())
-        g[slot] = ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH310 : d;
+        g[slot] = ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH310 : PinKataTou311(d);
     return g;
 }
+
+/// <summary>
+/// 第312期: ソム ＝ 重ね（群れ ＋ 緊急 K-a）・カタ ／ トウ ＝ 萎縮の規則つき を規定にした。第311期の規定の駒で測った器具（`som311` ほか）はこれを通す
+/// （ソム → `SomH311`・カタ → `KataH311`・トウ → `TouH311`）。陣形とレリックは保つ。
+/// </summary>
+public static Formation Pin311(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied())
+        g[slot] = ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH311 : PinKataTou311(d);
+    return g;
+}
+
+/// <summary>第312期: 規定のカタ ／ トウ（萎縮の規則つき）を第311期までの規定（`KataH311` ／ `TouH311`）に替える。ほかの駒はそのまま返す。`Pin308`〜`Pin311` が使う。</summary>
+public static UnitDef PinKataTou311(UnitDef d) =>
+    ReferenceEquals(d, UnitCatalog.Kata) ? UnitCatalog.KataH311 : ReferenceEquals(d, UnitCatalog.Tou) ? UnitCatalog.TouH311 : d;
+
+/// <summary>第312期: 編成のカタ ／ トウだけを第311期までの規定（`KataH311` ／ `TouH311`）に替える（ソムは替えない）。陣形とレリックは保つ。萎縮の規則が届かないように、第311期までの器具が台を作る口に挟む。</summary>
+public static Formation PinKT311(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinKataTou311(d);
+    return g;
+}
+
+/// <summary>第312期: `CompareBuilds()` のカタ ／ トウを第311期までの規定に替えた写し（第311期までの器具が使う）。</summary>
+public static (string Name, Formation F)[] CompareBuildsH311() => CompareBuilds().Select(r => (r.Name, PinKT311(r.F))).ToArray();
+
+/// <summary>第312期: `Presets.Playtest` のカタ ／ トウを第311期までの規定に替えた写し（行の数と並びはそのまま・第311期までの器具が使う）。</summary>
+public static (string Name, Formation F)[] PlaytestH311 => Presets.Playtest.Select(r => (r.Name, PinKT311(r.F))).ToArray();
 
 /// <summary>第306期: 敵の編成が規定の第二波（`Stages[1].Enemy`）なら旧の第二波（`Wave2H305`）に差し替える。ほかの編成はそのまま返す。</summary>
 public static Formation PinWave305(Formation enemy) => ReferenceEquals(enemy, EnemyCatalog.Stages[1].Enemy) ? EnemyCatalog.Wave2H305.Enemy : enemy;

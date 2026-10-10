@@ -1,4 +1,4 @@
-using BattleCore;
+﻿using BattleCore;
 using static Common;
 using B283 = Boss283Diag;
 using S287 = Shock287Diag;
@@ -19,6 +19,7 @@ using H304 = Hush304Diag;
 //     dotnet run --project BattleSim -c Release 0 som309 check       # 自己検査
 //
 // 規定の駒（段0 の後・ソム ＝ LV-a）のまま組む（固定しない）。ツギとの入れ替えは同じ席・同じ陣形・同じレリックで（`Swap`）。
+// 第312期: 規定のカタ ／ トウに萎縮の規則が付いたので、カタ ／ トウは第311期までの規定（`KataH311` ／ `TouH311`）に固定した（`Common.PinKT311` ／ `CompareBuildsH311` ／ `PlaytestH311`）。
 // =====================================================================================
 static class Som309Diag
 {
@@ -54,9 +55,9 @@ static class Som309Diag
     static string Sg(double x) => x.ToString("+0.0;-0.0;0.0");
     static UnitDef Som => UnitCatalog.SomH310;   // 第311期: 第309〜310期の規定（LV-a）に固定
     static UnitDef Tsugi => UnitCatalog.Tsugi;
-    internal static Formation Playtest(string n) => Pin310(Presets.Playtest.First(r => r.Name == n).F);   // 第311期: ソムは旧の規定（`SomH310`）に
-    static Formation Row(string n) => Pin310(CompareBuilds().First(r => r.Name == n).F);
-    static Formation WinSeat() => B283.Seat(S307.Order(S307.WinBoard));
+    internal static Formation Playtest(string n) => Pin310(PlaytestH311.First(r => r.Name == n).F);   // 第311期: ソムは旧の規定（`SomH310`）に
+    static Formation Row(string n) => Pin310(CompareBuildsH311().First(r => r.Name == n).F);
+    static Formation WinSeat() => PinKT311(B283.Seat(S307.Order(S307.WinBoard)));
 
     /// <summary>同じ席・同じ陣形・同じレリックのまま、<paramref name="from"/> を <paramref name="to"/> に替える（`FvSwap` は陣形とレリックを落とすので使わない）。</summary>
     internal static Formation Swap(Formation f, UnitDef from, UnitDef to)
@@ -70,7 +71,7 @@ static class Som309Diag
     internal const string Shield = "試遊・感電 光の盾", ShieldHeavy = "試遊・感電 光の盾 重";
     internal static readonly (string Name, string Pair)[] PickPairs = { (Shield, "トウ・クビ"), (ShieldHeavy, "クビ・ガン") };
     /// <summary>第308期のボスの格子の固定枠（クグ ＋ カタ ＋ ソム）。</summary>
-    static UnitDef[] BossFixed(UnitDef h) => new[] { UnitCatalog.Kugu, UnitCatalog.Kata, h };
+    static UnitDef[] BossFixed(UnitDef h) => new[] { UnitCatalog.Kugu, UnitCatalog.KataH311, h };
 
     /// <summary>
     /// §4-1 の比べる台。どれも (ソムの台, ツギの台) の対で、同じ席・同じ陣形・同じレリック。
@@ -89,8 +90,8 @@ static class Som309Diag
             ("勝ち台 ゴルム→H", "代表台", Swap(win, UnitCatalog.Golm, Som), null),
             ("感電 行（もう片方 → ドルガ）", "compare", Swap(shock, Tsugi, UnitCatalog.Dolga), Swap(shock, Som, UnitCatalog.Dolga)),
         };
-        if (Presets.Playtest.Any(r => r.Name == Shield)) list.Add(("光の盾", "試遊（§3-1）", Playtest(Shield), Swap(Playtest(Shield), Som, Tsugi)));
-        if (Presets.Playtest.Any(r => r.Name == ShieldHeavy)) list.Add(("光の盾 重", "試遊（§3-1）", Playtest(ShieldHeavy), Swap(Playtest(ShieldHeavy), Som, Tsugi)));
+        if (PlaytestH311.Any(r => r.Name == Shield)) list.Add(("光の盾", "試遊（§3-1）", Playtest(Shield), Swap(Playtest(Shield), Som, Tsugi)));
+        if (PlaytestH311.Any(r => r.Name == ShieldHeavy)) list.Add(("光の盾 重", "試遊（§3-1）", Playtest(ShieldHeavy), Swap(Playtest(ShieldHeavy), Som, Tsugi)));
         return list.ToArray();
     }
 
@@ -209,7 +210,7 @@ static class Som309Diag
         var res = new Cand[perms.Count];
         for (int i = 0; i < perms.Count; i++)
         {
-            var f = B283.Seat(perms[i]);
+            var f = PinKT311(B283.Seat(perms[i]));
             int wins = 0; long wt = 0, alive = 0;
             Parallel.For(0, Seeds, s =>
             {
@@ -242,7 +243,7 @@ static class Som309Diag
             Console.WriteLine("| # | 席（前1・前3・中央・後1・後3） | 勝率 | 倒しT | 残った味方 ／ 戦 |");
             Console.WriteLine("|--:|---|--:|--:|--:|");
             for (int i = 0; i < Math.Min(12, l.Count); i++) Console.WriteLine($"| {i + 1} | {S307.OrderName(l[i].Order)} | {F1(100.0 * l[i].Wins / Seeds)} | {l[i].MeanT:F2} | {(double)l[i].Alive / Seeds:F2} |");
-            var inPreset = Presets.Playtest.FirstOrDefault(r => r.Name == name);
+            var inPreset = PlaytestH311.FirstOrDefault(r => r.Name == name);
             Console.WriteLine();
             Console.WriteLine(inPreset.F is null ? "- `Presets.Playtest` にまだ無い。" : $"- `Presets.Playtest` の {name}: {Seats(inPreset.F)}（1位と{(Seats(inPreset.F) == S307.OrderName(top.Order) ? "一致" : "**不一致**")}）");
         }
@@ -352,7 +353,7 @@ static class Som309Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var w = S307.WaveOf(wave);
-        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.Kugu, UnitCatalog.Kata } : new[] { UnitCatalog.Tou };
+        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.Kugu, UnitCatalog.KataH311 } : new[] { UnitCatalog.TouH311 };
         var pool = w.Boss ? S307.BossPool : S307.ElitePool;
         int k = w.Boss ? 2 : 3;
         var hs = new[] { Som, Tsugi };
@@ -365,7 +366,7 @@ static class Som309Diag
         int need = w.Boss ? 1 : 5;
         Parallel.For(0, boards.Count, i =>
         {
-            var f0 = B283.Seat(boards[i]);
+            var f0 = PinKT311(B283.Seat(boards[i]));
             var fs = new[] { f0, Swap(f0, Som, Tsugi) };
             static int W(Formation f, S287.Wave w, int n, out long wt)
             {
@@ -474,7 +475,7 @@ static class Som309Diag
     // ---------------------------------------------------------------------------------
     static void Memo(string part, string wave, int seed, int t0, int t1)
     {
-        var (name, f0) = Presets.Playtest.First(r => r.Name.Contains(part, StringComparison.Ordinal));
+        var (name, f0) = PlaytestH311.First(r => r.Name.Contains(part, StringComparison.Ordinal));
         var f = Pin310(f0);   // 第311期
         var w = S307.WaveOf(wave);
         var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
@@ -541,9 +542,9 @@ static class Som309Diag
         }
         // (c) 試遊の2台・`compare` の行数
         {
-            var pl = Presets.Playtest;
+            var pl = Presets.Playtest.Take(10).ToArray();   // 第312期: 試遊の末尾に2行（光の盾 鞭）を足した——第311期までの10行で見る
             bool shape = pl.Length == 10 && pl.Take(8).Select(r => r.Name).SequenceEqual(Playtest308) && pl.Skip(8).Select(r => r.Name).SequenceEqual(new[] { Shield, ShieldHeavy })
-                && Presets.Compare.Length == 64 && CompareBuilds().Count() == 64 && Presets.Cross.Length == 12
+                && Presets.Compare.Length == 64 && CompareBuildsH311().Count() == 64 && Presets.Cross.Length == 12
                 && pl.All(r => !Presets.Compare.Any(c => c.Name == r.Name) && r.F.Occupied().Count() == 5 && r.F.Occupied().All(o => UnitCatalog.All.Contains(o.Def)))
                 && pl.Skip(8).All(r => r.F.Shape == FormationShape.X && !r.F.HasRelics && r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Som)) && r.F.Occupied().All(o => o.Slot < 5));
             var picks = PickPairs.Select(pp => (pp.Name, Top: S307.OrderName(Rank(pp.Pair)[0].Order))).ToList();

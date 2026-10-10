@@ -872,5 +872,9 @@ public static class Presets
         ("試遊・感電 光の盾", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Kugu, center: UnitCatalog.Tou, back1: UnitCatalog.Kubi, back3: UnitCatalog.Som)),
         // 組 クビ ＋ ガン: 120 席のうち 77 が 100%・倒しT 22.0（同じ倒しT の席が 48・名前の順で決めた）。違う組での勝ち方。
         ("試遊・感電 光の盾 重", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Gan, center: UnitCatalog.Kugu, back1: UnitCatalog.Kubi, back3: UnitCatalog.Som)),
+        // 第312期（design/PHASE312_SOM_REGULATE2_SPEC.md §4）—— ポンが試遊で見つけた「クビ → シガ」の2台。上の2台の後1（クビ）をシガにしただけ（席はそのまま）。
+        // 第311期の重ね（群れ ＋ 緊急 K-a ＋ 萎縮）を規定にして、クビ抜きでボスに勝てるようになった（`som311 boards` の「光の盾 クビ→シガ」）。
+        ("試遊・感電 光の盾 鞭", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Kugu, center: UnitCatalog.Tou, back1: UnitCatalog.Shiga, back3: UnitCatalog.Som)),
+        ("試遊・感電 光の盾 重 鞭", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Gan, center: UnitCatalog.Kugu, back1: UnitCatalog.Shiga, back3: UnitCatalog.Som)),
     };
 }

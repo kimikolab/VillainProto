@@ -1161,7 +1161,11 @@ public static class UnitCatalog
         Flavor = "近くにいるだけで具合が悪くなるので、天幕にすら入れてもらえない。"
     };
 
-    public static readonly UnitDef Tou = new()
+    /// <summary>
+    /// 旧トウ（第287〜311期の規定・T3・萎縮の規則なし）。<b>第312期に萎縮の規則（<see cref="TraitId.ShockDaunt"/>）を規定の <see cref="Tou"/> に足したので、名前を付けて残した</b>。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第311期までの規定のトウで測った過去の器具はこれに固定する（`Common.Pin311`）。
+    /// </summary>
+    public static readonly UnitDef TouH311 = new()
     {
         Id = "tou",
         Name = "痺れ粉のトウ",
@@ -1176,23 +1180,47 @@ public static class UnitCatalog
         Flavor = "粉のせいで、捨てられた。最近は、触れると痛い。それでも、どこかで…誰かと、並んで歩きたいのに。"
     };
 
-    // 第311期 —— 萎縮の規則の版（§3-3）。痺れの規則の札（`ShockStunHalf`）を持つ駒に規則の札 <see cref="TraitId.ShockDaunt"/> を足すだけ。`All` にも `Retired` にも入れない。
+    /// <summary>第312期の萎縮の規則の文面（カタ ／ トウの PlusText の末尾・指示書 design/PHASE312_SOM_REGULATE2_SPEC.md §2 の叩き台・最終はポン）。</summary>
+    public const string ShockDauntText = "。痺れない相手は、感電が弾けると萎縮する（次の一撃が半分）";
 
-    /// <summary>第311期 萎縮の規則の版のトウ。規定 ＋ <see cref="TraitId.ShockDaunt"/>。</summary>
+    /// <summary>
+    /// 痺れ粉のトウ（規定）。<b>第312期に萎縮の規則（<see cref="TraitId.ShockDaunt"/>）を足した</b>（ポンの判断 C4・design/PHASE312_SOM_REGULATE2_SPEC.md §2）——
+    /// 第287〜311期の規定（T3・<see cref="TouH311"/>）の末尾に札1枚。札は第311期の <see cref="TouDT"/> と同じ。
+    /// </summary>
+    public static readonly UnitDef Tou = new()
+    {
+        Id = TouH311.Id,
+        Name = TouH311.Name,
+        MaxHp = TouH311.MaxHp,
+        Attack = TouH311.Attack,
+        Speed = TouH311.Speed,
+        Advances = TouH311.Advances,
+        Pattern = TouH311.Pattern,
+        Traits = TouH311.Traits.Append(TraitId.ShockDaunt).ToArray(),
+        Actions = TouH311.Actions,
+        PlusText = TouH311.PlusText + ShockDauntText,
+        MinusText = TouH311.MinusText,
+        Flavor = TouH311.Flavor
+    };
+
+    // 第311期 —— 萎縮の規則の版（§3-3）。痺れの規則の札（`ShockStunHalf`）を持つ駒に規則の札 <see cref="TraitId.ShockDaunt"/> を足すだけ。`All` にも `Retired` にも入れない。
+    // 第312期に規定にした（規定の <see cref="Tou"/> と同じ札）。版の定義は第311期のまま旧の規定（<see cref="TouH311"/>）から作る。
+
+    /// <summary>第311期 萎縮の規則の版のトウ。第311期の規定（<see cref="TouH311"/>）＋ <see cref="TraitId.ShockDaunt"/>。</summary>
     public static readonly UnitDef TouDT = new()
     {
-        Id = Tou.Id,
-        Name = Tou.Name,
-        MaxHp = Tou.MaxHp,
-        Attack = Tou.Attack,
-        Speed = Tou.Speed,
-        Advances = Tou.Advances,
-        Pattern = Tou.Pattern,
-        Traits = Tou.Traits.Append(TraitId.ShockDaunt).ToArray(),
-        Actions = Tou.Actions,
-        PlusText = Tou.PlusText + "。痺れない敵は、代わりに腕が縮む",
-        MinusText = Tou.MinusText,
-        Flavor = Tou.Flavor
+        Id = TouH311.Id,
+        Name = TouH311.Name,
+        MaxHp = TouH311.MaxHp,
+        Attack = TouH311.Attack,
+        Speed = TouH311.Speed,
+        Advances = TouH311.Advances,
+        Pattern = TouH311.Pattern,
+        Traits = TouH311.Traits.Append(TraitId.ShockDaunt).ToArray(),
+        Actions = TouH311.Actions,
+        PlusText = TouH311.PlusText + "。痺れない敵は、代わりに腕が縮む",
+        MinusText = TouH311.MinusText,
+        Flavor = TouH311.Flavor
     };
 
     /// <summary>
@@ -1251,7 +1279,7 @@ public static class UnitCatalog
     /// 第286期 T3（対称の粉）。T1 ＋ <see cref="TraitId.ChargedPowderSpread"/>——粉は殴った敵の周り（主目標の隣の敵すべて）にも、自分の周りの味方にも舞う。
     /// 体は T0 のまま。名前・文面・フレーバーはポン確定（指示書 design/PHASE286_TOU_SPREAD_SPEC.md §3-2）。<b>第287期に規定にした</b>——規定の <see cref="Tou"/> と同じ物。
     /// </summary>
-    public static readonly UnitDef TouT3 = Tou;
+    public static readonly UnitDef TouT3 = TouH311;   // 第312期: 規定のトウは萎縮の規則を足した——T3 は第287〜311期の規定（`TouH311`）と同じ物
 
     /// <summary>第286期 T3n（漏れの代金の対照）。T2 ＋ <see cref="TraitId.ChargedPowderSpread"/>（T3 から漏れだけを抜いた形）。</summary>
     public static readonly UnitDef TouT3n = new()
@@ -1966,12 +1994,13 @@ public static class UnitCatalog
     public const string SomBurstText = "。喚ばれたものは、向こう側に着いた瞬間に弾ける";
 
     /// <summary>
+    /// 背かれのソム（第311期の規定・E2）。<b>第312期: 規定の <see cref="Som"/> が重ね（群れ ＋ 緊急 K-a）になったので、名前を付けて残した</b>（`All` ／ `Retired` の外・過去の器具は `Common.Pin311` でこれに固定）。以下は第311期の記述のまま——
     /// 背かれのソム（規定）。<b>第311期に E2（喚んだ獣はその場で弾ける・`BeastBurstAlways`）を規定にした</b>（ポンの判断 B2・design/PHASE311_SOM_SUMMONER_SPEC.md §2）——
     /// 第309〜310期の規定（LV-a ＝ 光の衣・<see cref="SomH310"/>）に <see cref="TraitId.BeastBurstAlways"/> を足した。札は第310期の <see cref="SomE2"/> と同じ。
     /// 獣は盤に立たず、敵陣の湧く席でその場で弾けて消える（倒れた扱いにしない・連鎖の起点はソム・光になる）。<b>ヒーラーに数える</b>（`Boss283Diag.HealPool`）。
     /// 第309〜310期の規定を使う過去の器具は <see cref="SomH310"/>（`Common.Pin310`）に固定した。
     /// </summary>
-    public static readonly UnitDef Som = new()
+    public static readonly UnitDef SomH311 = new()
     {
         Id = SomH310.Id,
         Name = SomH310.Name,
@@ -1985,6 +2014,31 @@ public static class UnitCatalog
         PlusText = SomH310.PlusText + SomBurstText,
         MinusText = "喚ばれたものは背いて敵につくが、立つことはない",
         Flavor = SomH310.Flavor
+    };
+
+    /// <summary>第312期の重ねの文面（指示書 design/PHASE312_SOM_REGULATE2_SPEC.md §2 の叩き台・最終はポン）。</summary>
+    public const string SomSwarmText = "。喚ぶ数は、前のターンに弾けた数だけ増える（5体まで）。仲間が危なくなると、手番の外でも喚ぶ。そのとき弾けた光は、危ない仲間に集まる";
+
+    /// <summary>
+    /// 背かれのソム（規定）。<b>第312期に重ね（群れ ＋ 緊急の喚び出し K-a）を規定にした</b>（ポンの判断 C4・design/PHASE312_SOM_REGULATE2_SPEC.md §2）——
+    /// 第311期の規定（E2・<see cref="SomH311"/>）に <see cref="TraitId.SwarmCall"/> ／ <see cref="TraitId.EmergencyCall"/> ／ <see cref="TraitId.EmergencyFocus"/> を足した。札は第311期の <see cref="SomSWKa"/> と同じ。
+    /// 萎縮の規則（第311期の重ねの残り半分）はカタ ／ トウの札（<see cref="Kata"/> ／ <see cref="Tou"/>）。
+    /// 第312期: 緊急の光を集める先がベニの結界の内側（回復が反転する）なら、集めずにいつもどおり全員に降らせる（engine の `SparkAfterChain`）。<b>ヒーラーに数える</b>（`Boss283Diag.HealPool`）。
+    /// </summary>
+    public static readonly UnitDef Som = new()
+    {
+        Id = SomH311.Id,
+        Name = SomH311.Name,
+        MaxHp = SomH311.MaxHp,
+        Attack = SomH311.Attack,
+        Speed = SomH311.Speed,
+        Advances = SomH311.Advances,
+        Pattern = SomH311.Pattern,
+        Traits = SomH311.Traits.Append(TraitId.SwarmCall).Append(TraitId.EmergencyCall).Append(TraitId.EmergencyFocus).ToArray(),
+        Actions = SomH311.Actions,
+        PlusText = SomH311.PlusText + SomSwarmText,
+        MinusText = SomH311.MinusText,
+        Flavor = SomH311.Flavor
     };
 
     // 第294期 —— ソムの守りの版（指示書 design/PHASE294_GUARD_SPEC.md §3-3）。規定（喚び出し）の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
@@ -2222,57 +2276,57 @@ public static class UnitCatalog
         Flavor = SomH310.Flavor
     };
 
-    // 第311期 —— 段1 の版（指示書 design/PHASE311_SOM_SUMMONER_SPEC.md §3）。規定（E2・<see cref="Som"/>）の末尾に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。文面は叩き台。
+    // 第311期 —— 段1 の版（指示書 design/PHASE311_SOM_SUMMONER_SPEC.md §3）。第311期の規定（E2・第312期からは <see cref="SomH311"/>）の末尾に札を足すだけ。第312期に重ね（<see cref="SomSWKa"/>）を規定（<see cref="Som"/>）にした。`All` にも `Retired` にも入れない（採否はポン）。文面は叩き台。
 
     /// <summary>第311期 K-b（緊急の喚び出し・対照）。規定 ＋ <see cref="TraitId.EmergencyCall"/>（味方の HP＋破片が 4 割を切ると手番の外で喚び、光はいつもどおり全員に）。</summary>
     public static readonly UnitDef SomKb = new()
     {
-        Id = Som.Id,
-        Name = Som.Name,
-        MaxHp = Som.MaxHp,
-        Attack = Som.Attack,
-        Speed = Som.Speed,
-        Advances = Som.Advances,
-        Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(TraitId.EmergencyCall).ToArray(),
-        Actions = Som.Actions,
-        PlusText = Som.PlusText + "。仲間が危ないと、慌ててもう1体を喚ぶ（やはり逃げて弾ける）",
-        MinusText = Som.MinusText,
-        Flavor = Som.Flavor
+        Id = SomH311.Id,
+        Name = SomH311.Name,
+        MaxHp = SomH311.MaxHp,
+        Attack = SomH311.Attack,
+        Speed = SomH311.Speed,
+        Advances = SomH311.Advances,
+        Pattern = SomH311.Pattern,
+        Traits = SomH311.Traits.Append(TraitId.EmergencyCall).ToArray(),
+        Actions = SomH311.Actions,
+        PlusText = SomH311.PlusText + "。仲間が危ないと、慌ててもう1体を喚ぶ（やはり逃げて弾ける）",
+        MinusText = SomH311.MinusText,
+        Flavor = SomH311.Flavor
     };
 
     /// <summary>第311期 K-a（緊急の喚び出し・光は危ない味方に）。<see cref="SomKb"/> ＋ <see cref="TraitId.EmergencyFocus"/>。</summary>
     public static readonly UnitDef SomKa = new()
     {
-        Id = Som.Id,
-        Name = Som.Name,
-        MaxHp = Som.MaxHp,
-        Attack = Som.Attack,
-        Speed = Som.Speed,
-        Advances = Som.Advances,
-        Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(TraitId.EmergencyCall).Append(TraitId.EmergencyFocus).ToArray(),
-        Actions = Som.Actions,
-        PlusText = Som.PlusText + "。仲間が危ないと、慌ててもう1体を喚ぶ。逃げて弾けた光は、その仲間に集まる",
-        MinusText = Som.MinusText,
-        Flavor = Som.Flavor
+        Id = SomH311.Id,
+        Name = SomH311.Name,
+        MaxHp = SomH311.MaxHp,
+        Attack = SomH311.Attack,
+        Speed = SomH311.Speed,
+        Advances = SomH311.Advances,
+        Pattern = SomH311.Pattern,
+        Traits = SomH311.Traits.Append(TraitId.EmergencyCall).Append(TraitId.EmergencyFocus).ToArray(),
+        Actions = SomH311.Actions,
+        PlusText = SomH311.PlusText + "。仲間が危ないと、慌ててもう1体を喚ぶ。逃げて弾けた光は、その仲間に集まる",
+        MinusText = SomH311.MinusText,
+        Flavor = SomH311.Flavor
     };
 
     /// <summary>第311期 群れ。規定 ＋ <see cref="TraitId.SwarmCall"/>（手番の頭に 1 ＋ 前のターンに敵の側で弾けた数 ÷ 3 体・上限 5 を一斉に弾けさせる）。</summary>
     public static readonly UnitDef SomSW = new()
     {
-        Id = Som.Id,
-        Name = Som.Name,
-        MaxHp = Som.MaxHp,
-        Attack = Som.Attack,
-        Speed = Som.Speed,
-        Advances = Som.Advances,
-        Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(TraitId.SwarmCall).ToArray(),
-        Actions = Som.Actions,
-        PlusText = Som.PlusText + "。弾けるほど、次に喚ぶ群れが増える",
-        MinusText = Som.MinusText,
-        Flavor = Som.Flavor
+        Id = SomH311.Id,
+        Name = SomH311.Name,
+        MaxHp = SomH311.MaxHp,
+        Attack = SomH311.Attack,
+        Speed = SomH311.Speed,
+        Advances = SomH311.Advances,
+        Pattern = SomH311.Pattern,
+        Traits = SomH311.Traits.Append(TraitId.SwarmCall).ToArray(),
+        Actions = SomH311.Actions,
+        PlusText = SomH311.PlusText + "。弾けるほど、次に喚ぶ群れが増える",
+        MinusText = SomH311.MinusText,
+        Flavor = SomH311.Flavor
     };
 
     /// <summary>
@@ -2281,18 +2335,18 @@ public static class UnitCatalog
     /// </summary>
     public static readonly UnitDef SomSWKa = new()
     {
-        Id = Som.Id,
-        Name = Som.Name,
-        MaxHp = Som.MaxHp,
-        Attack = Som.Attack,
-        Speed = Som.Speed,
-        Advances = Som.Advances,
-        Pattern = Som.Pattern,
-        Traits = Som.Traits.Append(TraitId.SwarmCall).Append(TraitId.EmergencyCall).Append(TraitId.EmergencyFocus).ToArray(),
-        Actions = Som.Actions,
-        PlusText = Som.PlusText + "。弾けるほど、次に喚ぶ群れが増える。仲間が危ないと、慌ててもう1体を喚ぶ。逃げて弾けた光は、その仲間に集まる",
-        MinusText = Som.MinusText,
-        Flavor = Som.Flavor
+        Id = SomH311.Id,
+        Name = SomH311.Name,
+        MaxHp = SomH311.MaxHp,
+        Attack = SomH311.Attack,
+        Speed = SomH311.Speed,
+        Advances = SomH311.Advances,
+        Pattern = SomH311.Pattern,
+        Traits = SomH311.Traits.Append(TraitId.SwarmCall).Append(TraitId.EmergencyCall).Append(TraitId.EmergencyFocus).ToArray(),
+        Actions = SomH311.Actions,
+        PlusText = SomH311.PlusText + "。弾けるほど、次に喚ぶ群れが増える。仲間が危ないと、慌ててもう1体を喚ぶ。逃げて弾けた光は、その仲間に集まる",
+        MinusText = SomH311.MinusText,
+        Flavor = SomH311.Flavor
     };
 
     /// <summary>
@@ -2710,6 +2764,7 @@ public static class UnitCatalog
     };
 
     /// <summary>
+    /// 旧カタ（第293〜311期の規定・KR-∞・萎縮の規則なし）。<b>第312期に規定の <see cref="Kata"/> へ萎縮の規則を足したので、名前を付けて残した</b>（`All` ／ `Retired` の外・過去の器具は `Common.Pin311` でこれに固定）。以下は第311期までの記述のまま——
     /// 禍導のカタ（第214期・触媒のカタの作り直し。仮の名「雷のカタ」から<b>名前とフレーバーをポンが決めた</b>——第215期の後）。
     /// 旧カタ（起爆）は <see cref="KataOld"/> に対照として残す（<see cref="All"/> には入れない・K0）。
     ///
@@ -2721,7 +2776,7 @@ public static class UnitCatalog
     ///
     /// <para><b>攻 3 → 6（仮）</b>・HP48・速6 は旧カタのまま。<c>Id</c> も旧カタと同じ <c>kata</c>（再生側の立ち絵のキー）。</para>
     /// </summary>
-    public static readonly UnitDef Kata = new()
+    public static readonly UnitDef KataH311 = new()
     {
         Id = "kata",
         Name = "禍導のカタ",
@@ -2743,23 +2798,44 @@ public static class UnitCatalog
         Flavor = "雷を呼ぶのではない。落ちる場所を選んでいるだけ。"
     };
 
+    /// <summary>
+    /// 禍導のカタ（規定）。<b>第312期に萎縮の規則（<see cref="TraitId.ShockDaunt"/>）を足した</b>（ポンの判断 C4・design/PHASE312_SOM_REGULATE2_SPEC.md §2）——
+    /// 第293〜311期の規定（KR-∞・<see cref="KataH311"/>）の末尾に札1枚。札は第311期の <see cref="KataDT"/> と同じ。
+    /// 第311期までの規定のカタで測った過去の器具は <see cref="KataH311"/>（`Common.Pin311`）に固定した。
+    /// </summary>
+    public static readonly UnitDef Kata = new()
+    {
+        Id = KataH311.Id,
+        Name = KataH311.Name,
+        MaxHp = KataH311.MaxHp,
+        Attack = KataH311.Attack,
+        Speed = KataH311.Speed,
+        Advances = KataH311.Advances,
+        Pattern = KataH311.Pattern,
+        Traits = KataH311.Traits.Append(TraitId.ShockDaunt).ToArray(),
+        Actions = KataH311.Actions,
+        PlusText = KataH311.PlusText + ShockDauntText,
+        MinusText = KataH311.MinusText,
+        Flavor = KataH311.Flavor
+    };
+
     // 第311期 —— 萎縮の規則の版（§3-3）。痺れの規則の札（`ShockStunHalf`）を持つ駒に規則の札 <see cref="TraitId.ShockDaunt"/> を足すだけ。`All` にも `Retired` にも入れない。
 
-    /// <summary>第311期 萎縮の規則の版のカタ。規定 ＋ <see cref="TraitId.ShockDaunt"/>。</summary>
+    /// <summary>第311期 萎縮の規則の版のカタ。第311期の規定（<see cref="KataH311"/>）＋ <see cref="TraitId.ShockDaunt"/>。第312期に規定にした（規定の <see cref="Kata"/> と同じ札）。</summary>
     public static readonly UnitDef KataDT = new()
     {
-        Id = Kata.Id,
-        Name = Kata.Name,
-        MaxHp = Kata.MaxHp,
-        Attack = Kata.Attack,
-        Speed = Kata.Speed,
-        Advances = Kata.Advances,
-        Pattern = Kata.Pattern,
-        Traits = Kata.Traits.Append(TraitId.ShockDaunt).ToArray(),
-        Actions = Kata.Actions,
-        PlusText = Kata.PlusText + "。痺れない敵は、代わりに腕が縮む",
-        MinusText = Kata.MinusText,
-        Flavor = Kata.Flavor
+        Id = KataH311.Id,
+        Name = KataH311.Name,
+        MaxHp = KataH311.MaxHp,
+        Attack = KataH311.Attack,
+        Speed = KataH311.Speed,
+        Advances = KataH311.Advances,
+        Pattern = KataH311.Pattern,
+        Traits = KataH311.Traits.Append(TraitId.ShockDaunt).ToArray(),
+        Actions = KataH311.Actions,
+        PlusText = KataH311.PlusText + "。痺れない敵は、代わりに腕が縮む",
+        MinusText = KataH311.MinusText,
+        Flavor = KataH311.Flavor
     };
 
     /// <summary>
@@ -2776,10 +2852,10 @@ public static class UnitCatalog
         Speed = 6,
         Advances = false,
         Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockStunHalf },
-        Actions = Kata.Actions,
+        Actions = KataH311.Actions,
         PlusText = "状態異常を帯びた敵に雷を落とし、帯びた隣の敵へ跳ねる（帯びた種類が多いほど重い）。当たった敵には感電が残り、感電した敵は仲間の一撃で弾けて隣へ放電し、弾けた駒は半々の確率で痺れて次の手番を失う",
-        MinusText = Kata.MinusText,
-        Flavor = Kata.Flavor
+        MinusText = KataH311.MinusText,
+        Flavor = KataH311.Flavor
     };
 
     // 第289期 —— カタの雷雲の版（指示書 §4）。旧の規定（S3）の末尾に札を足すだけ。体・速さ・跳ね方・マイナスは規定のまま。`All` にも `Retired` にも入れない。
@@ -2788,16 +2864,16 @@ public static class UnitCatalog
     public static readonly UnitDef KataKRa = new()
     {
         Id = "kata",
-        Name = Kata.Name,
-        MaxHp = Kata.MaxHp,
-        Attack = Kata.Attack,
-        Speed = Kata.Speed,
+        Name = KataH311.Name,
+        MaxHp = KataH311.MaxHp,
+        Attack = KataH311.Attack,
+        Speed = KataH311.Speed,
         Advances = false,
         Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockStunHalf, TraitId.Thundercloud },
-        Actions = Kata.Actions,
+        Actions = KataH311.Actions,
         PlusText = KataS3.PlusText + "。盤上で感電が弾けるたび雷雲が湧き、次の雷はそのぶん重くなる",
-        MinusText = Kata.MinusText,
-        Flavor = Kata.Flavor
+        MinusText = KataH311.MinusText,
+        Flavor = KataH311.Flavor
     };
 
     /// <summary>第289期 KR-b（育ち続ける）。KR-a ＋ <see cref="TraitId.ThundercloudKeep"/>（雷雲は落としても減らない・上限 8）。第290〜292期の規定。</summary>
@@ -2808,20 +2884,20 @@ public static class UnitCatalog
     public static readonly UnitDef KataKRb = new()
     {
         Id = "kata",
-        Name = Kata.Name,
-        MaxHp = Kata.MaxHp,
-        Attack = Kata.Attack,
-        Speed = Kata.Speed,
+        Name = KataH311.Name,
+        MaxHp = KataH311.MaxHp,
+        Attack = KataH311.Attack,
+        Speed = KataH311.Speed,
         Advances = false,
         Traits = new[] { TraitId.Thunder, TraitId.ThunderLeak, TraitId.ThunderPath, TraitId.ShockStunHalf, TraitId.Thundercloud, TraitId.ThundercloudKeep },
-        Actions = Kata.Actions,
-        PlusText = Kata.PlusText,
-        MinusText = Kata.MinusText,
-        Flavor = Kata.Flavor
+        Actions = KataH311.Actions,
+        PlusText = KataH311.PlusText,
+        MinusText = KataH311.MinusText,
+        Flavor = KataH311.Flavor
     };
 
-    /// <summary>第292期 KR-∞（上限なし）。KR-b ＋ <see cref="TraitId.ThundercloudUncapped"/>（雷雲は減らない・上限なし）。<b>第293期に規定にした</b>——規定の <see cref="Kata"/> と同じ物。</summary>
-    public static readonly UnitDef KataKRinf = Kata;
+    /// <summary>第292期 KR-∞（上限なし）。KR-b ＋ <see cref="TraitId.ThundercloudUncapped"/>（雷雲は減らない・上限なし）。<b>第293期に規定にした</b>——第293〜311期の規定 <see cref="KataH311"/> と同じ物（第312期に規定のカタは萎縮の規則を足した）。</summary>
+    public static readonly UnitDef KataKRinf = KataH311;
 
     /// <summary>
     /// 継ぎ当てのツギ（第207期・置き去りのナラの転生）。<b>数値（HP62／攻9／速8）はナラのまま</b>で、
