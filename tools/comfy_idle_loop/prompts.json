@@ -1,0 +1,65 @@
+{
+  "_readme": "④b（キャラごとの文）。組み立ては idle_loop.py の compose(): HEAD + char + motion + 共通の縛り（sway を含む）。neg は共通の負のプロンプトの後ろに足す。新しいキャラは既存の項目を写して char / motion / sway を書き換える。motion には『膝がはっきり曲がって伸びる・弾む』を必ず入れる（『ゆっくり重く』『わずかに』と書くと止まる）。",
+  "hane": {
+    "still": "DemoApp/assets/portraits/battle/hane_idle_right.png",
+    "full": "A 2D anime fighting game character idle animation, like a Street Fighter or Guilty Gear idle loop. The rabbit-eared martial artist keeps the same right-facing fighting stance with both fists raised in guard. She makes a steady rhythmic springy bounce in place: her knees bend and straighten, her hips and torso dip down and rise back up, her shoulders rise and fall with her breathing, and her fists bob slightly in time. Both boots stay flat on the ground in exactly the same spots; she never jumps and never steps. Her body keeps facing right and does not turn toward the camera. Her ponytail, loose hair strands, rabbit ears and the red waist cloth sway and follow through with the bounce. Same face, same costume, same colors. Fixed camera, no zoom, full body always visible, flat plain green background.",
+    "note": "最初の試作（640×960・81・seed 2022 で継ぎ目 0.43x）。ゲームには未接続。full は旧スクリプトの文をそのまま持つ"
+  },
+  "borg": {
+    "still": "DemoApp/assets/portraits/battle/borg_idle_right.png",
+    "pronoun": "he",
+    "char": "The long-black-haired armored swordsman in dark spiked plate armor keeps the same right-facing low stance, holding his huge cracked greatsword in both hands with the blade angled down toward the ground. ",
+    "motion": "Like a heavy fighting game character, he makes a steady rhythmic bouncing idle motion in place: his knees clearly bend and straighten, his hips and torso dip down and rise back up, his armored shoulders rise and fall with deep breathing, and the greatsword rises and dips in time while both hands keep their grip. ",
+    "sway": "His long black hair and the red loincloth sway and follow through with the bounce. The red glowing cracks stay on the sword.",
+    "note": "重量級。『ゆっくり重く・わずかに』では止まった（borg 版）。この書き方で seed 2022 が採用",
+    "adopted": {
+      "seed": 2022,
+      "crossfade": 0,
+      "frames": 44,
+      "loop": "borg"
+    }
+  },
+  "hota": {
+    "still": "DemoApp/assets/portraits/battle/hota_idle_right.png",
+    "pronoun": "she",
+    "char": "The long-orange-haired swordswoman in dark armor and a torn red skirt keeps the same right-facing stance, holding a slender sword low in her right hand with the blade pointing down and forward, her left hand held at her chest. ",
+    "motion": "Like a fighting game character, she makes a steady rhythmic bouncing idle motion in place: her knees clearly bend and straighten, her hips and torso dip down and rise back up, her shoulders rise and fall with her breathing, and the sword tip rises and dips in time. ",
+    "sway": "Her very long orange hair and the torn red cloth panels sway and follow through with the bounce.",
+    "note": "透過なし・緑背景の元絵でもそのまま通る。長い髪で周期が閉じにくい → 09 で crossfade 6",
+    "adopted": {
+      "seed": 2022,
+      "crossfade": 6,
+      "frames": 36,
+      "loop": "hota"
+    }
+  },
+  "hota_burning": {
+    "still": "DemoApp/assets/portraits/battle/hota_burning_idle_right.png",
+    "pronoun": "she",
+    "char": "The long-orange-haired swordswoman in dark armor and a torn red skirt stands tall and proud in the same right-facing stance with a confident, fearless smile, holding a slender sword low in her right hand with the blade pointing down and forward, her left arm relaxed at her side with an open hand. ",
+    "motion": "Like a confident fighting game heroine, she keeps her back perfectly straight, chest out and chin up the whole time. Only her knees give a light rhythmic springy bounce, so her whole upright body rises and sinks a little without leaning forward. Her shoulders rise and fall with calm breathing and the sword tip rises and dips in time. ",
+    "sway": "Her very long orange hair and the torn red cloth panels sway and follow through with the bounce. No fire, no flames, no glow.",
+    "neg": "hunched back, slouching, stooping, leaning forward, bending at the waist, looking down, head drooping, tired, weak",
+    "note": "燃焼差分。膝で弾む書き方（hotab）は猫背になった。背筋・胸を張る・顎を上げる＋neg に猫背で直した",
+    "adopted": {
+      "seed": 2022,
+      "crossfade": 6,
+      "frames": 34,
+      "loop": "hota_burning"
+    }
+  },
+  "hiyo": {
+    "still": "DemoApp/assets/portraits/battle/hiyo_ready_right.png",
+    "pronoun": "she",
+    "char": "The blonde elf support mage with a ponytail and red hair bow, a red and gold cape and a layered red and white dress keeps the same right-facing ready stance, holding her long ornate staff diagonally in front of her body with both hands. ",
+    "motion": "Like a fighting game character, she makes a steady rhythmic springy idle motion in place: her knees clearly bend and straighten, her hips and torso dip down and rise back up, her shoulders rise and fall with her breathing, and the staff rises and dips in time while both hands keep their grip. ",
+    "sway": "Her ponytail, the red hair ribbons, the cape and the layered skirt sway and follow through with the bounce. The staff stays straight and rigid with the same gold finial and red gem.",
+    "note": "支援役の構え。落ち着いた立ち姿の書き方（別セッション v3/v4）は止まった。seed 2022 が採用（3033 は部位がばらばら、5055 は屈伸が大きすぎ）",
+    "adopted": {
+      "seed": 2022,
+      "crossfade": 0,
+      "frames": 19,
+      "loop": "hiyo"
+    }
+  }
+}
