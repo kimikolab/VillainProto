@@ -62,13 +62,13 @@ static class Som308Diag
     static string Dt(long died, long t, long n) => died == 0 ? "—" : $"{Per1(t, died)}（{Pct(died, n)}）";
     static Formation Playtest(string n) => PlaytestH311.First(r => r.Name == n).F;
     static Formation Row(string n) => Pin309(CompareBuildsH311().First(r => r.Name == n).F);   // 第309期: 規定のソム（LV-a）は第308期の規定（`SomH308`）に固定
-    static Formation WinSeat() => PinKT311(B283.Seat(S307.Order(S307.WinBoard)));
+    static Formation WinSeat() => PinKT311(Pin316(B283.Seat(S307.Order(S307.WinBoard))));
 
     /// <summary>代表台（第307期 §4-1 と同じ5台・規定のソム ＝ SH-a で組む）。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
     {
         ("感電 (シガ×カタ×ソム)", Row("感電 (シガ×カタ×ソム)")),
-        ("雷の型 ドハ→ソム", FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, UnitCatalog.SomH308)),
+        ("雷の型 ドハ→ソム", FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.DohaH316, UnitCatalog.SomH308)),
         ("感電 糸 ガルド→ソム", FvSwap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, UnitCatalog.SomH308)),
         ("勝ち台 ゴルム→ソム", FvSwap(WinSeat(), UnitCatalog.Golm, UnitCatalog.SomH308)),
         ("勝ち台 ツギ→ソム", FvSwap(WinSeat(), UnitCatalog.Tsugi, UnitCatalog.SomH308)),
@@ -443,7 +443,7 @@ static class Som308Diag
         {
             bool ok = som.Traits.SequenceEqual(old.Traits.Append(TraitId.SparkRain)) && som.Traits.SequenceEqual(sha.Traits) && som.PlusText == sha.PlusText && som.Flavor == sha.Flavor
                 && som.MinusText == old.MinusText && som.MaxHp == old.MaxHp && som.Attack == old.Attack && som.Speed == old.Speed && som.Name == old.Name
-                && UnitCatalog.All.Contains(UnitCatalog.Som) && !UnitCatalog.Everyone.Contains(som) && !UnitCatalog.Everyone.Contains(old)   /* 第309期: SH-a は `SomH308`（`All` の外）に */ && old.Traits.SequenceEqual(new[] { TraitId.BetrayedShockNoThunder })
+                && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.Som) && !UnitCatalog.Everyone.Contains(som) && !UnitCatalog.Everyone.Contains(old)   /* 第309期: SH-a は `SomH308`（`All` の外）に */ && old.Traits.SequenceEqual(new[] { TraitId.BetrayedShockNoThunder })
                 && UnitCatalog.SomSMa.Traits.SequenceEqual(old.Traits.Append(TraitId.StaticMembrane)) && UnitCatalog.SomSHb.Traits.SequenceEqual(old.Traits.Append(TraitId.SparkStore))
                 && Vers.Skip(1).All(v => !UnitCatalog.Everyone.Contains(v.To) && v.To.MaxHp == som.MaxHp && v.To.MinusText == som.MinusText)
                 && UnitCatalog.SomLVa.Traits.SequenceEqual(som.Traits.Append(TraitId.SparkVeil)) && UnitCatalog.SomLVc.Traits.SequenceEqual(som.Traits.Append(TraitId.SparkVeil).Append(TraitId.SparkVeilCap))

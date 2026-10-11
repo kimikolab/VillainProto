@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 
@@ -42,18 +42,18 @@ static class Doha297Diag
     static UnitDef Ver(string s) => s switch { "a" or "DH-a" => UnitCatalog.DohaDHa, "b" or "DH-b" => UnitCatalog.DohaDHb, "t" or "DH-t" => UnitCatalog.DohaDHt, _ => UnitCatalog.DohaD0 };
     static string VerTag(UnitDef d) => Versions.First(v => ReferenceEquals(v.Def, d)).Tag;
 
-    static Formation Playtest(string n) => Pin299(Presets.Playtest.First(r => r.Name == n).F);   // 第299期: ミサ ／ ザン ／ ヒサは第298期の規定に固定
-    static (string Name, Formation F)[] CompareBuilds() => Common.CompareBuilds().Select(r => (r.Name, Pin299(r.F))).ToArray();
+    static Formation Playtest(string n) => Pin299(PlaytestH316.First(r => r.Name == n).F);   // 第299期: ミサ ／ ザン ／ ヒサは第298期の規定に固定
+    static (string Name, Formation F)[] CompareBuildsH316() => Common.CompareBuildsH316().Select(r => (r.Name, Pin299(r.F))).ToArray();
     static (string Name, Formation F)[] CrossBuilds() => Common.CrossBuilds().Select(r => (r.Name, Pin299(r.F))).ToArray();
 
     /// <summary>代表台（§5-2）。守り型 ／ `compare` と交差帯のドハの行すべて ／ 試遊・感電 雷の型 ／ 火の軸の台（燃焼 (ボルグ×ホタ) の ガルド → ドハ）。</summary>
     internal static (string Name, Formation F)[] Boards()
     {
-        var l = new List<(string, Formation)> { ("試遊・標 守り型", FvSwap(Playtest("試遊・標 守り型"), UnitCatalog.Doha, UnitCatalog.DohaD0)) };
-        foreach (var (n, f) in CompareBuilds().Concat(CrossBuilds()))
-            if (f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Doha))) l.Add((n, FvSwap(f, UnitCatalog.Doha, UnitCatalog.DohaD0)));   // 第298期: 旧の規定に固定
-        l.Add(("試遊・感電 雷の型", FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, UnitCatalog.DohaD0)));
-        var burn = CompareBuilds().First(r => r.Name == "燃焼 (ボルグ×ホタ)").F;
+        var l = new List<(string, Formation)> { ("試遊・標 守り型", FvSwap(Playtest("試遊・標 守り型"), UnitCatalog.DohaH316, UnitCatalog.DohaD0)) };
+        foreach (var (n, f) in CompareBuildsH316().Concat(CrossBuilds()))
+            if (f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.DohaH316))) l.Add((n, FvSwap(f, UnitCatalog.DohaH316, UnitCatalog.DohaD0)));   // 第298期: 旧の規定に固定
+        l.Add(("試遊・感電 雷の型", FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.DohaH316, UnitCatalog.DohaD0)));
+        var burn = CompareBuildsH316().First(r => r.Name == "燃焼 (ボルグ×ホタ)").F;
         l.Add(("燃焼＋ドハ（燃焼 (ボルグ×ホタ) の ガルド → ドハ）", FvSwap(burn, UnitCatalog.Gald, UnitCatalog.DohaD0)));
         return l.ToArray();
     }
@@ -153,7 +153,7 @@ static class Doha297Diag
         Console.WriteLine();
         Console.WriteLine("| 波 | seed | 勝敗 | 仇討ち | 中継（ドハの分け前） | ドハへ直接 | ほかの味方 | きっかけ不明 |");
         Console.WriteLine("|---|---|---|--:|--:|--:|---|--:|");
-        var f = FvSwap(Playtest("試遊・標 守り型"), UnitCatalog.Doha, UnitCatalog.DohaD0);   // 第298期: 旧の規定に固定
+        var f = FvSwap(Playtest("試遊・標 守り型"), UnitCatalog.DohaH316, UnitCatalog.DohaD0);   // 第298期: 旧の規定に固定
         void Line(Wave w, IEnumerable<int> seeds, string label)
         {
             long n = 0, vend = 0, relay = 0, direct = 0, none = 0, wins = 0;
@@ -264,7 +264,7 @@ static class Doha297Diag
     {
         Console.WriteLine("## §4-4 配り先が飛ぶ駒（`All` の 52 枚）");
         Console.WriteLine();
-        var all = UnitCatalog.All.Select(d => (D: d, U: BattleEngine.Materialize(Formation.Build(front1: d), BattleContext.PlayerTeam)[0])).ToList();
+        var all = UnitCatalog.All.Select(PinDS316).Select(d => (D: d, U: BattleEngine.Materialize(Formation.Build(front1: d), BattleContext.PlayerTeam)[0])).ToList();
         Console.WriteLine("- 支援を拒む（`AcceptsSupport` が偽・DH-a は配らない ／ DH-b ／ DH-t は次の駒へ）: " + string.Join("・", all.Where(x => !x.U.AcceptsSupport).Select(x => x.D.Name)));
         Console.WriteLine("- 強化で弱る（逆しま `Perverse`・配ると攻撃力が半減する）: " + string.Join("・", all.Where(x => x.D.Traits.Contains(TraitId.Perverse)).Select(x => x.D.Name)));
         Console.WriteLine("- 強化を横取りする（横流し `Funnel`・隣の強化を最も遅い味方へ回す）: " + string.Join("・", all.Where(x => x.D.Traits.Contains(TraitId.Funnel)).Select(x => x.D.Name)));
@@ -403,7 +403,7 @@ static class Doha297Diag
     // ---------------------------------------------------------------------------------
     // §5-2 の格子（固定枠 ドハ ＋ アタッカー1枚 × 探索枠3 × 席）
     // ---------------------------------------------------------------------------------
-    internal static readonly UnitDef[] Attackers = { UnitCatalog.TomeMb, UnitCatalog.ZanZN0, UnitCatalog.Kata, UnitCatalog.Shiga };
+    internal static readonly UnitDef[] Attackers = { UnitCatalog.TomeMb, UnitCatalog.ZanZN0, UnitCatalog.Kata, UnitCatalog.ShigaSWa };
 
     /// <summary>
     /// §5-2 の格子（R386）。固定枠 ドハ ＋ アタッカー1枚（<see cref="Attackers"/>）× 探索枠3（`All` の残り 50 枚から3枚）× 席。
@@ -414,7 +414,7 @@ static class Doha297Diag
     {
         var w = WaveOf(waveKey);
         var dv = Ver(ver);
-        var pool = UnitCatalog.All.Where(d => !ReferenceEquals(d, UnitCatalog.Doha)).ToArray();
+        var pool = UnitCatalog.All.Select(PinDS316).Where(d => !ReferenceEquals(d, UnitCatalog.DohaH316)).ToArray();
         int step = Math.Max(1, 120 / Math.Max(1, seats));
         var seatSet = Perms(5).Where((_, i) => i % step == 0).Take(seats).ToArray();
         var atks = Attackers.Where(a => atkFilter == "" || Short(a).Contains(atkFilter, StringComparison.Ordinal)).ToArray();
@@ -541,7 +541,7 @@ static class Doha297Diag
         Expect("(a) 版の札 ＝ 規定のドハ ＋ 版の札1枚・数値と手番は規定のまま・版は `All` ／ `Everyone` の外・規定のドハは版の札を持たない",
             vers.All(v => v.Item1.Traits.SequenceEqual(d0.Traits.Append(v.Item2)) && v.Item1.MaxHp == d0.MaxHp && v.Item1.Attack == d0.Attack && v.Item1.Speed == d0.Speed
                 && v.Item1.Pattern == d0.Pattern && v.Item1.Id == d0.Id && !UnitCatalog.Everyone.Contains(v.Item1))
-            && UnitCatalog.All.Contains(UnitCatalog.Doha) && !UnitCatalog.Everyone.Contains(d0) && !d0.Traits.Any(t => t is TraitId.ShareBack or TraitId.ShareTop or TraitId.ShareGift));
+            && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.DohaH316) && !UnitCatalog.Everyone.Contains(d0) && !d0.Traits.Any(t => t is TraitId.ShareBack or TraitId.ShareTop or TraitId.ShareGift));
         Expect("(b) 文面: プラスは肩代わりの文 ＋ 版の一文・マイナスは共通の文・フレーバーは規定のまま",
             UnitCatalog.DohaDHa.PlusText.EndsWith("。引き受けた痛みは、その相手の力に変えて返す", StringComparison.Ordinal)
             && UnitCatalog.DohaDHb.PlusText.EndsWith("。引き受けた痛みは、いちばん腕の立つ仲間の力に変えて渡す", StringComparison.Ordinal)
@@ -622,7 +622,7 @@ static class Doha297Diag
 
         // (l) 段0: `MarkRally` の回復(与) がヒサに入る（守り型 × 近衛 × seed 7）・ザンは 0
         var guard = WaveOf("guard");
-        var r7 = BattleEngine.Run(BattleEngine.Materialize(FvSwap(Playtest("試遊・標 守り型"), UnitCatalog.Doha, d0), BattleContext.PlayerTeam), guard.Make(), 7, verbose: false);
+        var r7 = BattleEngine.Run(BattleEngine.Materialize(FvSwap(Playtest("試遊・標 守り型"), UnitCatalog.DohaH316, d0), BattleContext.PlayerTeam), guard.Make(), 7, verbose: false);
         var hisa = r7.TallyByUnit["hisa"]; var zan = r7.TallyByUnit["zan"];
         Expect("(l) 段0: 守り型 × 近衛 × seed 7 の回復(与) がヒサに入る（＝ 叫びの癒えた量）・ザンは 0",
             hisa.HealOutInTurn + hisa.HealOutOffTurn == hisa.RallyHealed && hisa.RallyHealed > 0 && zan.HealOutInTurn + zan.HealOutOffTurn == 0,
@@ -635,7 +635,7 @@ static class Doha297Diag
                 foreach (var w in Waves().Where(w => w.Key is "guard" or "bat" or "boss"))
                     for (int s = 0; s < 20; s++)
                     {
-                        var g = FvSwap(Playtest(bn), UnitCatalog.Doha, dv);
+                        var g = FvSwap(Playtest(bn), UnitCatalog.DohaH316, dv);
                         var a = BattleEngine.Run(BattleEngine.Materialize(g, BattleContext.PlayerTeam), w.Make(), s, verbose: false);
                         var b = BattleEngine.Run(BattleEngine.Materialize(g, BattleContext.PlayerTeam), w.Make(), s, verbose: true);
                         n++; if (a.PlayerWon != b.PlayerWon || a.Turns != b.Turns) diff++;
@@ -643,7 +643,7 @@ static class Doha297Diag
         Expect("(m) verbose の有無で勝敗・決着T が同じ（版3つ × 守り型・雷の型 × 試遊の波 × seed 0..19）", diff == 0, $"{n} 戦・違い {diff}");
 
         // (n) 表示専用の出来事: 版で `ShareGive` が出る（DH-a ／ DH-b は「力」・DH-t は「手番」と「手番の頭」）・規定では 0
-        long Ev(UnitDef dv, string label) { long c = 0; for (int s = 0; s < 10; s++) c += BattleEngine.Run(BattleEngine.Materialize(FvSwap(Playtest("試遊・標 守り型"), UnitCatalog.Doha, dv), BattleContext.PlayerTeam), WaveOf("boss").Make(), s, verbose: true).Events.Count(x => x.Kind == BattleEventKind.ShareGive && x.Text == label); return c; }
+        long Ev(UnitDef dv, string label) { long c = 0; for (int s = 0; s < 10; s++) c += BattleEngine.Run(BattleEngine.Materialize(FvSwap(Playtest("試遊・標 守り型"), UnitCatalog.DohaH316, dv), BattleContext.PlayerTeam), WaveOf("boss").Make(), s, verbose: true).Events.Count(x => x.Kind == BattleEventKind.ShareGive && x.Text == label); return c; }
         long e0 = Ev(d0, ShareGiveLabels.Power) + Ev(d0, ShareGiveLabels.Gift), ea2 = Ev(UnitCatalog.DohaDHa, ShareGiveLabels.Power), eb2 = Ev(UnitCatalog.DohaDHb, ShareGiveLabels.Power),
              et1 = Ev(UnitCatalog.DohaDHt, ShareGiveLabels.Gift), et2 = Ev(UnitCatalog.DohaDHt, ShareGiveLabels.GiftTurn);
         Expect("(n) `ShareGive`: 規定 0・DH-a ／ DH-b に「力」・DH-t に「手番」と「手番の頭」（守り型 × ボス × seed 0..9）",
@@ -651,8 +651,8 @@ static class Doha297Diag
 
         // (o) `compare` の行・交差帯の行の数は第296期のまま（版の駒は `Presets` に入らない）
         Expect("(o) `compare` 64 行・交差帯 12 行・試遊 8 行・どの行にも版のドハがいない",
-            Presets.Compare.Length == 64 && Presets.Cross.Length == 12 && Presets.Playtest.Take(8).Count() == 8 && Presets.Playtest.Take(8).Select(r => r.Name).SequenceEqual(Som309Diag.Playtest308)   /* 第309期: 試遊は末尾に2行足した——第308期までの8行で数える */
-            && Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).All(r => r.F.Occupied().All(o => !vers.Any(v => ReferenceEquals(v.Item1, o.Def)))));
+            Presets.Compare.Length == 64 && Presets.Cross.Length == 12 && PlaytestH316.Take(8).Count() == 8 && PlaytestH316.Take(8).Select(r => r.Name).SequenceEqual(Som309Diag.Playtest308)   /* 第309期: 試遊は末尾に2行足した——第308期までの8行で数える */
+            && Presets.Compare.Concat(Presets.Cross).Concat(PlaytestH316).All(r => r.F.Occupied().All(o => !vers.Any(v => ReferenceEquals(v.Item1, o.Def)))));
 
         Console.WriteLine();
         Console.WriteLine(_fail == 0 ? "すべて ○" : $"**× {_fail} 件**");

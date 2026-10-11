@@ -510,6 +510,8 @@ public enum OutOfTurnRoute
     Spark,
     /// <summary>緊急の喚び出し（第311期・ソムの版 K-a ／ K-b `EmergencyCall`・`EmergencyCallTrait`。<b>問う相手はソム</b>——危ない味方ではない）。</summary>
     Emergency,
+    /// <summary>避雷針（第317期・カタの版 BT-b ／ BT-c `LightningRod`・`BeastThrow`。<b>問う相手はカタ</b>——狙われた味方ではない）。</summary>
+    LightningRod,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -519,7 +521,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "羽の標撃ち", "庇い", "指差し", "叫び", "騎士の斬り返し", "光", "緊急の喚び出し", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "羽の標撃ち", "庇い", "指差し", "叫び", "騎士の斬り返し", "光", "緊急の喚び出し", "避雷針", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -1789,6 +1791,7 @@ public sealed class BattleContext
         int size = 0, deepest = 0, cross = 0;
         bool threadRoot = false;
         List<UnitState>? popped = _chainReaders.Count > 0 ? new List<UnitState>() : null;   // 第289期（連鎖の後の口）
+        List<(UnitState Beast, UnitState? Ini, UnitState Som)>? bdPopped = null;   // 第317期（BD・立っている獣が弾けた）
         try
         {
             while (_shockQueue.Count > 0)
@@ -1808,6 +1811,13 @@ public sealed class BattleContext
                     Slot = d, HpAfter = Math.Max(0, x.Hp), Team = x.TeamId,
                 });
                 Log($"    {x.Name} の感電が弾けた（{(d == 0 ? "起点" : d + " 段目")}）", LogKind.Trigger);
+                // 第317期（BD）: 立っている獣の感電が弾けたら、獣は消えて敵の死に数える（連鎖の後に読み手へ渡す）。保持者がいなければ比較1つで抜ける。
+                if (_bdLive && x.IsAlive && BetrayedTrait.IsFodder(x) && StandOwnerOf(x) is { } bso && bso.HasTrait(TraitId.BeastDeathCount))
+                {
+                    if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.BeastBurst, Turn = _turn, ActorId = ini?.InstanceId, TargetId = x.InstanceId, Slot = x.Slot, Team = x.TeamId, Amount = 0, Text = BeastBurstLabels.Popped });
+                    x.Hp = 0;   // 消える（倒れた扱いにしない）
+                    (bdPopped ??= new List<(UnitState, UnitState?, UnitState)>()).Add((x, ini, bso));
+                }
                 bool ball = _silkBalls.Count > 0 && IsSilkBall(x);   // 第292期（糸玉が無ければ比較1つ）
                 if (_webLive && x.RawCounter(StatusKeys.Web) > 0 && WebOwner(x) is { } wo) TallyOf(wo).WebPops++;   // 第293期・計数のみ
                 if (ball)
@@ -1858,6 +1868,7 @@ public sealed class BattleContext
                 foreach (int team in popped.Select(q => q.TeamId).Distinct().ToList())
                     AfterChain(team, popped.Where(q => q.TeamId == team).ToList(), ini2);
         }
+        if (bdPopped is not null) foreach (var (bx, bi, bs) in bdPopped) CountBeastDeaths(bs, new List<UnitState> { bx }, bi, 2);   // 第317期（BD）
     }
 
     /// <summary>
@@ -2075,6 +2086,7 @@ public sealed class BattleContext
         int alive1 = 0;
         foreach (UnitState u in _units) if (u.TeamId == team && u.IsAlive) alive1++;
         t.BeastBurstKills += alive0 - alive1;
+        if (_bdLive) CountBeastDeaths(som, beasts, som, emergencyFor is not null ? 1 : 0);   // 第317期（BD・保持者がいなければ比較1つ）
     }
 
     // 第311期 —— 緊急の喚び出し（K-a ／ K-b）・群れ・萎縮の規則の版（design/PHASE311_SOM_SUMMONER_SPEC.md §3）。どれも保持者がいなければ比較1つで抜ける。乱数を引かない。
@@ -2235,6 +2247,8 @@ public sealed class BattleContext
                 BurstBeastsAt(som, team, stand, stand.Count > 1 ? BeastBurstLabels.Swarm : BeastBurstLabels.Always);
             }
             else
+            {
+                List<UnitState>? stoodNow = null;
                 foreach (int seat in stand)
                 {
                     UnitState? f = Summon(UnitCatalog.Fodder, team, seat, overCorpse: Betray.Respawn, by: som);
@@ -2243,7 +2257,13 @@ public sealed class BattleContext
                     t.StandStood++;
                     Log($"    {som.Name} が喚んだものは向こう側で振り返り、牙を剥いて立った", LogKind.Trigger, som);
                     dress?.Invoke(f);
+                    (stoodNow ??= new List<UnitState>()).Add(f);
+                    if (ThrowCensus && !som.HasTrait(TraitId.BeastBetray)) NoteThrowCensus(som, f);   // 第317期 Phase 0（**計数のみ**・計数器が立っている戦だけ）
                 }
+                // 第317期（BT-a・`BeastBetray`）: 立った獣は、立った直後にこちらへ雷を投げる（立った順＝湧く席の順に1体ずつ）。札が無ければ比較1つで素通り。
+                if (stoodNow is not null && som.HasTrait(TraitId.BeastBetray))
+                    foreach (UnitState f in stoodNow) BeastThrow(som, f);
+            }
         }
         int alive = 0;
         foreach (UnitState u in _units) if (u.TeamId == team && u.IsAlive && u.RawCounter(StandOwnerKey) == som.InstanceId + 1) alive++;
@@ -2273,6 +2293,175 @@ public sealed class BattleContext
         Log($"    立っていたもの（{roots.Count}）は纏いきれなかった雷に耐えきれず、暴発した", LogKind.Trigger, som);
         _shockLive = true;
         ShockTrigger(roots[0], som, 0, roots.Count > 1 ? roots.Skip(1).ToList() : null);
+        if (_bdLive) CountBeastDeaths(som, roots, som, 0);   // 第317期（BD）
+    }
+
+    // =================================================================================
+    // 第317期 —— 背いた獣の「裏切りの一撃」・カタの「避雷針」・獣の弾けを敵の死に数える（ソムの版 BT-a ／ BT-b ／ BT-c ／ BD・design/PHASE317_SOM_BETRAY_SPEC.md §3）。
+    // 投げるのは `StandBeasts` の後ろだけ（`BeastBetray` の保持者がいなければ1度も走らない）。避雷針 ／ 獣の死は保持者がいなければ `_rodLive` ／ `_bdLive` の比較1つで抜ける。
+    // 投げる相手の選び方は敵の普通の攻撃と同じ口（`SelectTarget`・単体）——乱数はその口が引くぶんだけ（新しい乱数の口は足していない）。
+    // =================================================================================
+
+    /// <summary>Phase 0 の計数器（第317期・既定は偽）。立っていれば SB-a の立った獣ごとに、裏切りの一撃の相手の見込み（狙える味方 <see cref="TargetPool"/> に等分）を<b>数えるだけ</b>（乱数を引かない・盤面は動かさない）。</summary>
+    public static bool ThrowCensus { get; set; }
+
+    /// <summary>
+    /// Phase 0（第317期・<b>計数のみ</b>）: 立った獣の席から狙える味方（<see cref="TargetPool"/>・前列が生きていれば前列）に 60 を等分して席ごとに足す（`ThrowCensusW`[席]）。
+    /// そのうちカタ自身（`ThrowCensusKataW`）・カタ自身か隣（`ThrowCensusRodW`）。庇い ／ 標 ／ 挑発などの介入は数えない（無作為の pool の見込み）。
+    /// </summary>
+    void NoteThrowCensus(UnitState som, UnitState beast)
+    {
+        UnitTally t = TallyOf(som);
+        List<UnitState> pool = TargetPool(beast);
+        t.ThrowCensusN++;
+        if (pool.Count == 0) return;
+        long w = 60 / pool.Count;
+        UnitState? kata = null;
+        foreach (UnitState u in _units) if (u.IsAlive && u.TeamId == som.TeamId && u.HasTrait(TraitId.Thunder)) { kata = u; break; }
+        foreach (UnitState x in pool)
+        {
+            (t.ThrowCensusW ??= new long[9])[Math.Clamp(x.Slot, 0, 8)] += w;
+            if (kata is null) continue;
+            if (x == kata) t.ThrowCensusKataW += w;
+            if (x == kata || FormationRules.AreAdjacent(kata, x)) t.ThrowCensusRodW += w;
+        }
+    }
+
+    /// <summary>避雷針（`LightningRod` ／ `LightningRodAll`）の保持者が戦にいるか。</summary>
+    bool _rodLive;
+    /// <summary>獣の死（`BeastDeathCount`）の保持者が戦にいるか。</summary>
+    bool _bdLive;
+
+    /// <summary>
+    /// 立った獣 <paramref name="beast"/> がこちらへ雷を投げる（第317期・BT-a）。相手は獣の席から敵の普通の攻撃と同じ選び方（<see cref="SelectTarget"/>・単体）。
+    /// ① 狙われた味方がカタ（避雷針）の範囲なら、カタが受け止めて獣の上に落とし直す——獣はその場で弾けて消える（起こし手はカタ）／
+    /// ② 狙われた味方がクグ（糸の保持者・糸の先の敵が生きている）なら、受けずに糸を伝って敵へ流れ、その敵に感電を付ける ／
+    /// ③ ほかは狙われた味方に感電を付ける（<see cref="MarkShock"/>・ダメージ 0・既に感電していれば何も起きない）。
+    /// </summary>
+    void BeastThrow(UnitState som, UnitState beast)
+    {
+        if (!beast.IsAlive) return;
+        UnitTally t = TallyOf(som);
+        UnitState? target = SelectTarget(beast, AttackPattern.Single);
+        if (target is null || target.TeamId == beast.TeamId || !target.IsAlive) { t.BtNoTarget++; return; }
+        t.BtThrown++;
+        (t.BtSlotHist ??= new long[9])[Math.Clamp(target.Slot, 0, 8)]++;
+        // ① 避雷針
+        if (_rodLive)
+        {
+            UnitState? rod = null; bool anyHolder = false;
+            foreach (UnitState u in _units)
+            {
+                if (!u.IsAlive || u.TeamId != target.TeamId) continue;
+                bool all = u.HasTrait(TraitId.LightningRodAll);
+                if (!all && !u.HasTrait(TraitId.LightningRod)) continue;
+                anyHolder = true;
+                if (all || u == target || FormationRules.AreAdjacent(u, target)) { rod = u; break; }
+            }
+            if (rod is not null)
+            {
+                bool hush = HushBindingNow;   // 問う前に読む（問うと粛が砕けることがある）
+                if (CanActOutOfTurn(rod, OutOfTurnRoute.LightningRod)) { RodCatch(som, beast, target, rod); return; }
+                t.BtRodBlocked++;   // 痺れ ／ 粛ほか
+                if (hush) t.BtRodHushed++;
+            }
+            else if (anyHolder) t.BtRodOut++;
+        }
+        // ② クグの糸
+        if (_threadLive && ThreadTarget(target) is { } th)
+        {
+            t.BtThread++;
+            bool fresh = th.RawCounter(StatusKeys.Shock) <= 0;
+            if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.BeastThrow, Turn = _turn, ActorId = beast.InstanceId, TargetId = target.InstanceId, PartnerId = th.InstanceId, Amount = fresh ? 1 : 0, Team = target.TeamId, Text = BeastThrowLabels.Thread });
+            Log($"    {beast.Name} が {target.Name} に雷を投げた——雷は糸を伝って {th.Name} へ流れる", LogKind.Trigger, beast);
+            if (fresh && MarkShock(th, target)) t.BtThreadShocked++;
+            return;
+        }
+        // ③ 当たる
+        bool already = target.RawCounter(StatusKeys.Shock) > 0;
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.BeastThrow, Turn = _turn, ActorId = beast.InstanceId, TargetId = target.InstanceId, Amount = already ? 0 : 1, Team = target.TeamId, Text = BeastThrowLabels.Hit });
+        Log($"    {beast.Name} が振り返り、{target.Name} に雷を投げた{(already ? "（既に感電している）" : "")}", LogKind.Trigger, beast);
+        if (already) { t.BtAlready++; return; }
+        if (MarkShock(target, beast)) t.BtShocked++;
+    }
+
+    /// <summary>避雷針（第317期・BT-b ／ BT-c）: カタ <paramref name="rod"/> が雷を受け止め、投げた獣の上に落とし直す。獣は盤から消え（倒れた扱いにしない）、帯電していれば連鎖の起点になる（起こし手はカタ）。</summary>
+    void RodCatch(UnitState som, UnitState beast, UnitState target, UnitState rod)
+    {
+        UnitTally t = TallyOf(som), rt = TallyOf(rod);
+        t.BtRodCaught++; rt.RodCaught++;
+        if (_verbose)
+        {
+            Emit(new BattleEvent { Kind = BattleEventKind.BeastThrow, Turn = _turn, ActorId = beast.InstanceId, TargetId = target.InstanceId, PartnerId = rod.InstanceId, Amount = 0, Team = target.TeamId, Text = BeastThrowLabels.Rod });
+            Emit(new BattleEvent { Kind = BattleEventKind.BeastBurst, Turn = _turn, ActorId = rod.InstanceId, TargetId = beast.InstanceId, Slot = beast.Slot, Team = beast.TeamId, Amount = 0, Text = BeastBurstLabels.Rod });
+        }
+        Log($"    {beast.Name} が {target.Name} に雷を投げた——{rod.Name} が受け止め、投げた者の上に落とし直す", LogKind.Highlight, rod);
+        bool charged = beast.RawCounter(StatusKeys.Shock) > 0;
+        beast.Hp = 0;   // 消える（倒れた扱いにしない・SB-b の暴発と同じ）
+        if (!charged) rt.RodDry++;
+        else
+        {
+            _shockLive = true;
+            long u0 = rt.ShockTriggeredUnits;
+            ShockTrigger(beast, rod, 0);
+            rt.RodChainUnits += rt.ShockTriggeredUnits - u0;
+        }
+        if (_bdLive) CountBeastDeaths(som, new List<UnitState> { beast }, rod, 3);
+    }
+
+    /// <summary>
+    /// 獣の死（第317期・BD）で外す読み手——撃破数で際限なく育つ札（処刑 `Executioner` の攻撃力 ＋7 ／ 墓守 `Necro` の敵の死の攻撃力）。
+    /// 獣は1手番に最大 5 体弾ける（群れ）ので、数えると攻撃力が手番ごとに数十ずつ積み上がる（指示書 §3-5 の「数えて困るもの」）。
+    /// </summary>
+    public static readonly TraitId[] BeastDeathSkips = { TraitId.Executioner, TraitId.Necro };
+
+    /// <summary>
+    /// 弾けた獣を「味方が敵を倒した」として死の読み手に渡す（第317期・BD・<paramref name="som"/> が <see cref="TraitId.BeastDeathCount"/> を持つときだけ）。
+    /// 渡すのは 倒した駒（<paramref name="killer"/> ＝ 起こし手・獣の敵の側で生きていれば）の <c>OnKill</c> → ソムの側の生きている駒すべての <c>OnAnyDeath</c>（`HandleDeath` と同じ順）。
+    /// <b>渡さないもの</b>: 獣の側（敵陣）の <c>OnAnyDeath</c> ／ <c>OnAllyDeath</c>（蘇生など）・獣自身の <c>OnDeath</c>・撃破の数（`Kills`）・`Death` の出来事・波の終わりの判定・<see cref="BeastDeathSkips"/>。
+    /// <paramref name="kind"/> は計数のみ（0 喚び出しの場 ／ 1 緊急 ／ 2 立った獣が弾けた ／ 3 避雷針）。上限の版（<see cref="TraitId.BeastDeathCap"/>）は先頭の1体だけ。
+    /// </summary>
+    void CountBeastDeaths(UnitState som, List<UnitState> beasts, UnitState? killer, int kind)
+    {
+        if (!som.HasTrait(TraitId.BeastDeathCount) || beasts.Count == 0) return;
+        UnitTally t = TallyOf(som);
+        int n = beasts.Count;
+        if (som.HasTrait(TraitId.BeastDeathCap) && n > 1) { t.BdCapped += n - 1; n = 1; }
+        for (int i = 0; i < n; i++)
+        {
+            UnitState beast = beasts[i];
+            t.BdCounted++;
+            (t.BdKind ??= new long[4])[kind]++;
+            int foe = beast.TeamId;
+            if (killer is not null && killer.IsAlive && killer.TeamId != foe)
+                foreach (Trait tr in killer.Traits.ToList())
+                {
+                    if (Array.IndexOf(BeastDeathSkips, tr.Id) >= 0) { t.BdSkipped++; continue; }
+                    t.BdOnKill++;
+                    TraitMark m = BeginTrait(tr.Id, killer);
+                    tr.OnKill(this, killer, beast);
+                    EndTrait(m);
+                }
+            foreach (UnitState u in _units.Where(u => u.IsAlive && u.TeamId != foe).ToList())
+                foreach (Trait tr in u.Traits.ToList())
+                {
+                    if (!u.IsAlive) break;
+                    if (Array.IndexOf(BeastDeathSkips, tr.Id) >= 0) { t.BdSkipped++; continue; }
+                    t.BdOnAnyDeath++;
+                    TraitMark m = BeginTrait(tr.Id, u);
+                    tr.OnAnyDeath(this, u, beast);
+                    EndTrait(m);
+                }
+        }
+    }
+
+    /// <summary>立っている獣を喚んだソム（<see cref="StandOwnerKey"/>）。いなければ null。</summary>
+    UnitState? StandOwnerOf(UnitState beast)
+    {
+        int id = beast.RawCounter(StandOwnerKey) - 1;
+        if (id < 0) return null;
+        foreach (UnitState u in _units) if (u.InstanceId == id) return u;
+        return null;
     }
 
     /// <summary>
@@ -8214,6 +8403,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.Scourge)) _whipLive = true;                 // 第217期（鞭の枠と2倍）
         if (u.HasTrait(TraitId.FearNoStun)) _fearNoStunLive = true;        // 第316期（SF-A）
         if (u.HasTrait(TraitId.ScourgeDaunt)) _dauntBoundLive = true;      // 第316期（SF-C）
+        if (u.HasTrait(TraitId.LightningRod) || u.HasTrait(TraitId.LightningRodAll)) _rodLive = true;   // 第317期（避雷針）
+        if (u.HasTrait(TraitId.BeastDeathCount)) _bdLive = true;           // 第317期（獣の死）
         if (u.HasTrait(TraitId.StoredCharge)) _chargeLive = true;          // 第288期（蓄電の口・雷霆の枠）
         if (u.HasTrait(TraitId.StoredCharge) || u.HasTrait(TraitId.Thunder)) _chainReaders.Add(u);   // 第289期（連鎖の後の口）
         if (IsSparkHolder(u)) { _sparkLive = true; _chainReaders.Add(u); }   // 第307期（ソムの光・連鎖の後の口）

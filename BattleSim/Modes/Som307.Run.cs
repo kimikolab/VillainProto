@@ -223,7 +223,7 @@ static partial class Som307Diag
         {
             foreach (var (name, f) in Boards())
                 foreach (var v in Vers) cells.Add((name, w, v, Apply(f, v)));
-            cells.Add(("元の勝ち台（ツギ）", w, Vers[0], PinKT311(B283.Seat(Order(WinBoard)))));
+            cells.Add(("元の勝ち台（ツギ）", w, Vers[0], PinKT311(Pin316(B283.Seat(Order(WinBoard))))));
         }
         var tsBoard = Boards().First(b => b.Name == "勝ち台 ツギ→ソム").F;
         foreach (var v in Sens) cells.Add(("勝ち台 ツギ→ソム", Waves[0], v, Apply(tsBoard, v)));
@@ -233,7 +233,7 @@ static partial class Som307Diag
         Console.WriteLine($"# 第307期 代表台 × 波 × 版（規定 ／ SH-a ／ SH-b・量 {SparkTrait.Amount}・seed 0..199・verbose）");
         Console.WriteLine();
         foreach (var (name, f) in Boards()) Console.WriteLine($"- {name}: {Seats(f)}（前1・前3・中央・後1・後3）");
-        Console.WriteLine($"- 元の勝ち台（ツギ）: {Seats(PinKT311(B283.Seat(Order(WinBoard))))}（比べる相手・ソムはいない）");
+        Console.WriteLine($"- 元の勝ち台（ツギ）: {Seats(PinKT311(Pin316(B283.Seat(Order(WinBoard)))))}（比べる相手・ソムはいない）");
         Console.WriteLine();
         Console.WriteLine("差 ＝ 同じ台・同じ波の規定との勝率の差。寿命 ＝ 味方が初めて倒れたT（倒れた戦だけの平均・括弧は倒れた戦の割合）。光は1戦あたり。");
 
@@ -332,7 +332,7 @@ static partial class Som307Diag
     /// <summary>いまのヒーラー（第283期の機械的定義・規定のヒサを含む）。走査は1度だけ。</summary>
     internal static UnitDef[] Healers => _heal ??= B283.HealPool306;   // 第308期: 規定のソム（SH-a）を数えない第307期の一覧に固定
     /// <summary>候補を規定の駒に揃える（過去の器具が固定した旧の版 → 同じ Id の `All` の駒）。</summary>
-    static UnitDef Cur(UnitDef d) => UnitCatalog.All.First(x => x.Id == d.Id);
+    static UnitDef Cur(UnitDef d) => UnitCatalog.All.Select(PinDS316).First(x => x.Id == d.Id);
 
     internal static void GridCore(string title, S287.Wave w, UnitDef[] fixedU, UnitDef[] pool, int k, (string Name, Func<Formation, Formation> Apply)[] vars, string phase = "第307期")
     {
@@ -344,7 +344,7 @@ static partial class Som307Diag
         int cutPass = 0;
         Parallel.For(0, boards.Count, i =>
         {
-            var f0 = PinKT311(B283.Seat(boards[i]));
+            var f0 = PinKT311(Pin316(B283.Seat(boards[i])));
             var fs = vars.Select(v => v.Apply(f0)).ToArray();
             if (!fs.Any(f => Wins(f, w, CutSeeds, out _) >= (w.Boss ? 1 : 5))) return;
             Interlocked.Increment(ref cutPass);
@@ -420,7 +420,7 @@ static partial class Som307Diag
     }
 
     /// <summary>ボスの格子の候補: 第293期のボスの格子の候補（`Shock293Diag.BossPool`）からソムを除き、シガを足し、規定の駒に揃え、ヒーラーを除く。</summary>
-    internal static UnitDef[] BossPool => S293.BossPool.Where(d => d.Id != "som").Append(UnitCatalog.Shiga).Select(Cur).DistinctBy(d => d.Id)
+    internal static UnitDef[] BossPool => S293.BossPool.Where(d => d.Id != "som").Append(UnitCatalog.ShigaSWa).Select(Cur).DistinctBy(d => d.Id)
                                          .Where(d => !Healers.Contains(d) && d.Id is not ("kugu" or "kata")).ToArray();
     /// <summary>精鋭の格子の候補: 第287期の候補（`Shock287Diag.Pool`）を規定の駒に揃え、トウ ／ ソムとヒーラーを除く。</summary>
     internal static UnitDef[] ElitePool => S287.Pool.Select(Cur).DistinctBy(d => d.Id).Where(d => d.Id is not ("tou" or "som") && !Healers.Contains(d)).ToArray();
@@ -507,7 +507,7 @@ static partial class Som307Diag
                 && a.PlusText == som.PlusText + "。敵の側で感電が弾けるたび、その光が仲間に降り注ぎ、傷を癒す" && b.PlusText.EndsWith("光を溜め、手番で仲間に降らせる")
                 && Vers.Skip(1).Concat(Sens).All(v => !UnitCatalog.Everyone.Contains(v.To)) && !UnitCatalog.Everyone.Contains(som)
                 // 第308期: 規定のソムが SH-a（`SparkRain`）になった——光の札を持つ `All` の駒は規定のソムだけで、中身は版の SH-a と同じ
-                && !UnitCatalog.All.Any(d => !ReferenceEquals(d, UnitCatalog.Som) && d.Traits.Any(t => t is TraitId.SparkRain or TraitId.SparkStore or TraitId.SparkHalf or TraitId.SparkDouble))
+                && !UnitCatalog.All.Select(PinDS316).Any(d => !ReferenceEquals(d, UnitCatalog.Som) && d.Traits.Any(t => t is TraitId.SparkRain or TraitId.SparkStore or TraitId.SparkHalf or TraitId.SparkDouble))
                 && UnitCatalog.SomH308.Traits.SequenceEqual(a.Traits) && UnitCatalog.SomH308.PlusText == a.PlusText && UnitCatalog.SomH308.Flavor == a.Flavor;   // 第309期: 第308期の規定（SH-a）は `SomH308` に残した
             Expect("(a) 定義: 版 ＝ 規定のソム ＋ 札（数値・マイナス・喚び出しは規定のまま）・SH-b は術の手番・`All` ／ `Everyone` の外・光の札の保持者は `All` に 0 枚", ok, $"量 {SparkTrait.Amount}");
         }

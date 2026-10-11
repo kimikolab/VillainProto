@@ -102,19 +102,19 @@ static class Som311Diag
     internal static readonly S287.Wave[] Waves = S310.Waves;
     static S287.Wave WaveOf(string n) => n switch { "nine" => Waves[3], "nine2" => Waves[4], _ => S307.WaveOf(n) };
     static bool IsNine(S287.Wave w) => w.Name.StartsWith("九体", StringComparison.Ordinal);
-    static Formation Playtest(string n) => Pin311(Presets.Playtest.First(r => r.Name == n).F);   // 第312期: 第311期の規定の駒に固定（`Pin311`）
-    static Formation Row(string n) => Pin311(CompareBuilds().First(r => r.Name == n).F);
-    static Formation WinSeat() => Pin311(B283.Seat(S307.Order(S307.WinBoard)));
+    static Formation Playtest(string n) => Pin311(PlaytestH316.First(r => r.Name == n).F);   // 第312期: 第311期の規定の駒に固定（`Pin311`）
+    static Formation Row(string n) => Pin311(CompareBuildsH316().First(r => r.Name == n).F);
+    static Formation WinSeat() => Pin311(Pin316(B283.Seat(S307.Order(S307.WinBoard))));
 
     /// <summary>§6-2 の代表台（規定の駒・席は出典のまま）。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
     {
         ("光の盾", Playtest(S309.Shield)),
         ("光の盾 重", Playtest(S309.ShieldHeavy)),
-        ("光の盾 クビ→シガ", S309.Swap(Playtest(S309.Shield), UnitCatalog.Kubi, UnitCatalog.Shiga)),
-        ("光の盾 重 クビ→シガ", S309.Swap(Playtest(S309.ShieldHeavy), UnitCatalog.Kubi, UnitCatalog.Shiga)),
+        ("光の盾 クビ→シガ", S309.Swap(Playtest(S309.Shield), UnitCatalog.Kubi, UnitCatalog.ShigaSWa)),
+        ("光の盾 重 クビ→シガ", S309.Swap(Playtest(S309.ShieldHeavy), UnitCatalog.Kubi, UnitCatalog.ShigaSWa)),
         ("感電 行", Row("感電 (シガ×カタ×ソム)")),
-        ("雷の型 ドハ→ソム", S309.Swap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, UnitCatalog.SomH311)),
+        ("雷の型 ドハ→ソム", S309.Swap(Playtest("試遊・感電 雷の型"), UnitCatalog.DohaH316, UnitCatalog.SomH311)),
         ("勝ち台 ツギ→ソム", S309.Swap(WinSeat(), UnitCatalog.Tsugi, UnitCatalog.SomH311)),
         ("火の型 ソラ→ソム", S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, UnitCatalog.SomH311)),
     };
@@ -374,7 +374,7 @@ static class Som311Diag
     static void CompareAll()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().Select(r => (r.Name, F: Pin311(r.F))).ToArray();   // 第312期: 第311期の規定の駒に固定
+        var rows = CompareBuildsH316().Select(r => (r.Name, F: Pin311(r.F))).ToArray();   // 第312期: 第311期の規定の駒に固定
         int nw = EnemyCatalog.Stages.Count;
         var grids = Vers.Select(v =>
         {
@@ -507,7 +507,7 @@ static class Som311Diag
         }
         Parallel.For(0, boards.Count, i =>
         {
-            var f = v.Apply(Pin311(B283.Seat(boards[i])));
+            var f = v.Apply(Pin311(Pin316(B283.Seat(boards[i]))));
             if (W(f, w, S307.CutSeeds, out _) < need) return;
             Interlocked.Increment(ref cutPass);
             int wins = W(f, w, Seeds, out long wt);
@@ -557,7 +557,7 @@ static class Som311Diag
                 ("萎縮（`Daunt`）", S309.Swap(f, UnitCatalog.Kubi, Without(UnitCatalog.Kubi, TraitId.Daunt))),
                 ("漏れ（`DauntLeak`）", S309.Swap(f, UnitCatalog.Kubi, Without(UnitCatalog.Kubi, TraitId.DauntLeak))),
                 ("クビ → ドルガ", S309.Swap(f, UnitCatalog.Kubi, UnitCatalog.Dolga)),
-                ("クビ → シガ", S309.Swap(f, UnitCatalog.Kubi, UnitCatalog.Shiga)),
+                ("クビ → シガ", S309.Swap(f, UnitCatalog.Kubi, UnitCatalog.ShigaSWa)),
             })
             {
                 var a = Measure(g, boss);

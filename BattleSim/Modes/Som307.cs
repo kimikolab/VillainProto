@@ -48,7 +48,7 @@ static partial class Som307Diag
     internal const int Seeds = 200, CutSeeds = 20;
 
     internal static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
-    internal static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n);
+    internal static UnitDef ByShort(string n) => UnitCatalog.All.Select(PinDS316).First(d => Short(d) == n);
     internal static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     internal static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     internal static string Seats(Formation f) => string.Join("・", Enumerable.Range(0, 5).Select(i => f[i] is { } d ? Short(d) : "—"));
@@ -61,10 +61,10 @@ static partial class Som307Diag
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
     {
         ("感電 (シガ×カタ×ソム)", Row("感電 (シガ×カタ×ソム)")),
-        ("雷の型 ドハ→ソム", FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, UnitCatalog.SomH307)),
+        ("雷の型 ドハ→ソム", FvSwap(Playtest("試遊・感電 雷の型"), UnitCatalog.DohaH316, UnitCatalog.SomH307)),
         ("感電 糸 ガルド→ソム", FvSwap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, UnitCatalog.SomH307)),
-        ("勝ち台 ゴルム→ソム", FvSwap(PinKT311(B283.Seat(Order(WinBoard))), UnitCatalog.Golm, UnitCatalog.SomH307)),
-        ("勝ち台 ツギ→ソム", FvSwap(PinKT311(B283.Seat(Order(WinBoard))), UnitCatalog.Tsugi, UnitCatalog.SomH307)),
+        ("勝ち台 ゴルム→ソム", FvSwap(PinKT311(Pin316(B283.Seat(Order(WinBoard)))), UnitCatalog.Golm, UnitCatalog.SomH307)),
+        ("勝ち台 ツギ→ソム", FvSwap(PinKT311(Pin316(B283.Seat(Order(WinBoard)))), UnitCatalog.Tsugi, UnitCatalog.SomH307)),
     };
 
     internal static string F1(double x) => double.IsNaN(x) ? "—" : x.ToString("F1");
@@ -162,11 +162,11 @@ static partial class Som307Diag
         Console.WriteLine("# 第307期 Phase 0（指示書 §3・規定の駒・seed 0..199・verbose）");
         Console.WriteLine();
         foreach (var (n, f) in Boards()) Console.WriteLine($"- {n}: {Seats(f)}（前1・前3・中央・後1・後3）");
-        Console.WriteLine($"- 元の勝ち台: {Seats(PinKT311(B283.Seat(Order(WinBoard))))}");
+        Console.WriteLine($"- 元の勝ち台: {Seats(PinKT311(Pin316(B283.Seat(Order(WinBoard)))))}");
 
         // 1. 量の決め方
         var boss = Waves[0];
-        var baseA = MeasureP0(PinKT311(B283.Seat(Order(WinBoard))), boss, Seeds);
+        var baseA = MeasureP0(PinKT311(Pin316(B283.Seat(Order(WinBoard)))), boss, Seeds);
         var swapA = MeasureP0(Boards().First(b => b.Name == "勝ち台 ツギ→ソム").F, boss, Seeds);
         double tsugi = (double)baseA.TsugiOut5 / baseA.Turns5, pops = (double)swapA.Fuel5 / swapA.Turns5;
         Console.WriteLine();

@@ -79,9 +79,9 @@ static class Som314Diag
     internal static readonly S287.Wave[] Waves = S310.Waves;
     static S287.Wave WaveOf(string n) => n switch { "nine" => Waves[3], "nine2" => Waves[4], _ => S307.WaveOf(n) };
 
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation RowF(string n) => CompareBuilds().First(r => r.Name == n).F;
-    static Formation WinSeat() => B283.Seat(S307.Order(S307.WinBoard));
+    static Formation Playtest(string n) => PlaytestH316.First(r => r.Name == n).F;
+    static Formation RowF(string n) => CompareBuildsH316().First(r => r.Name == n).F;
+    static Formation WinSeat() => Pin316(B283.Seat(S307.Order(S307.WinBoard)));
 
     /// <summary>§4-2 の代表台（規定の駒・席は出典のまま）。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
@@ -421,7 +421,7 @@ static class Som314Diag
     static void CompareAll()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuildsH316().ToArray();
         int nw = EnemyCatalog.Stages.Count;
         var grids = Vers.Select(v =>
         {
@@ -496,7 +496,7 @@ static class Som314Diag
         var shock = RowF("感電 (シガ×カタ×ソム)");
         return new (string, Formation, Formation?)[]
         {
-            ("雷の型 ドハ→H", S309.Swap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, som), S309.Swap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, tsugi)),
+            ("雷の型 ドハ→H", S309.Swap(Playtest("試遊・感電 雷の型"), UnitCatalog.DohaH316, som), S309.Swap(Playtest("試遊・感電 雷の型"), UnitCatalog.DohaH316, tsugi)),
             ("感電 糸 ガルド→H", S309.Swap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, som), S309.Swap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, tsugi)),
             ("火の型 ソラ→H", S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, som), S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, tsugi)),
             ("勝ち台 ツギの席（元の勝ち台）", S309.Swap(win, tsugi, som), win),
@@ -574,7 +574,7 @@ static class Som314Diag
         }
         Parallel.For(0, boards.Count, i =>
         {
-            var f = Apply(B283.Seat(boards[i]), v);
+            var f = Apply(Pin316(B283.Seat(boards[i])), v);
             if (W(f, w, S307.CutSeeds, out _) < need) return;
             Interlocked.Increment(ref cutPass);
             int wins = W(f, w, Seeds, out long wt);
@@ -751,7 +751,7 @@ static class Som314Diag
             bool defs = sba.Traits.SequenceEqual(som.Traits.Append(TraitId.BeastStand)) && sbb.Traits.SequenceEqual(sba.Traits.Append(TraitId.BeastStandBrief))
                 && new[] { sba, sbb }.All(d => d.Id == som.Id && d.Name == som.Name && d.MaxHp == som.MaxHp && d.Attack == som.Attack && d.Speed == som.Speed && ReferenceEquals(d.Actions, som.Actions))
                 && new[] { sba, sbb }.All(d => !UnitCatalog.Everyone.Contains(d));
-            bool dflt = som.Traits.SequenceEqual(UnitCatalog.SomSWKa.Traits) && UnitCatalog.All.Contains(som) && UnitCatalog.All.Count == 52
+            bool dflt = som.Traits.SequenceEqual(UnitCatalog.SomSWKa.Traits) && UnitCatalog.All.Select(PinDS316).Contains(som) && UnitCatalog.All.Count == 52
                 && !som.Traits.Contains(TraitId.BeastStand) && UnitCatalog.Fodder.MaxHp == 12 && UnitCatalog.Fodder.Attack == 0 && UnitCatalog.Fodder.Speed == 1;
             bool text = sba.MinusText == UnitCatalog.SomStandMinusText && sbb.MinusText == UnitCatalog.SomStandMinusText + "。立っていられるのは、ひととき" && !sba.PlusText.Contains("着いた瞬間に弾ける");
             Expect("(a) 版: SB-a ＝ 規定 ＋ `BeastStand`・SB-b ＝ SB-a ＋ `BeastStandBrief`（数値・行動は規定のまま・`Everyone` の外）・規定のソムは第312期の重ねのまま・獣は HP 12 ／ 攻 0 ／ 速 1・文面は叩き台",

@@ -1737,10 +1737,17 @@ public static class UnitCatalog
         Flavor = "褒められると腕が落ちる。呪われている間だけまともに戦う。"
     };
 
+    // 第313期（指示書 design/PHASE313_DOHA_PUSH_SPEC.md §2）—— ドハの手番の札（背を押す）。手番は術（`Actions = [Skill]`）。条件を満たさない手番は殴る。
+    // 第317期に DP-s を規定にしたので、規定の <see cref="Doha"/> より前に置く（静的な初期化は書いた順）。
+    static readonly UnitAction[] DohaPushActions = { new(ActionKind.Skill, Label: "仲間の背中を見た") };
+    const string DohaPushText = "。手番で、いちばん痛みを肩代わりした仲間の背を押し、もう一度動かす（肩代わりが無ければ殴る）";
+    /// <summary>第298〜316期の規定のドハ（DH-a ＋ なまりなし）の文面（第317期に規定を DP-s にしたので定数で持つ）。</summary>
+    const string DohaPlusH316 = "味方が受けるダメージの4割を肩代わりする（薙ぎでも全体でも効く・味方の破片が受け止めた残りから取る）。引き受けた痛みは、その相手の力に変えて返す";
+
     /// <summary>
-    /// 分かちのドハ（第298期の規定）。第297期の DH-a（`ShareBack`・痛みをくれた相手の攻撃力に 痛み ÷ 2）から、**なまり**（守られた味方の攻撃力 −肩代わり ÷ 4）を外した
-    /// （札 `SharerNoDull` の差し替え・ノブ `SharerTrait.DullDivisor` の既定は動かさない）。ポンの判断（第297期の案 D1・指示書 design/PHASE298_MARK_FEATHER_SPEC.md §2）。
-    /// 旧の規定は <see cref="DohaD0"/>。
+    /// 分かちのドハ（規定）。<b>第317期に DP-s（殴る仲間の背を押す・第316期の版）を規定にした</b>（ポンの判断・指示書 design/PHASE317_SOM_BETRAY_SPEC.md §2-1）——
+    /// 第298〜316期の規定（DH-a ＋ なまりなし・<see cref="DohaH316"/>）に <see cref="TraitId.SharePush"/> ／ <see cref="TraitId.SharePushPower"/> ／ <see cref="TraitId.SharePushStrikers"/> を足し、手番を術にした。札は第316期の <see cref="DohaDPs"/> と同じ。
+    /// 第316期までの規定のドハで測った過去の器具は <see cref="DohaH316"/>（`Common.Pin316`）に固定した。
     /// </summary>
     public static readonly UnitDef Doha = new()
     {
@@ -1749,10 +1756,30 @@ public static class UnitCatalog
         MaxHp = 104,
         Attack = 4,
         Speed = 3,
-        Traits = new[] { TraitId.Sharer, TraitId.SharerArmored, TraitId.ShareBack, TraitId.SharerNoDull },
-        PlusText = "味方が受けるダメージの4割を肩代わりする（薙ぎでも全体でも効く・味方の破片が受け止めた残りから取る）。引き受けた痛みは、その相手の力に変えて返す",
+        Traits = new[] { TraitId.Sharer, TraitId.SharerArmored, TraitId.ShareBack, TraitId.SharerNoDull, TraitId.SharePush, TraitId.SharePushPower, TraitId.SharePushStrikers },
+        Actions = DohaPushActions,
+        PlusText = DohaPlusH316 + "。手番で、いちばん痛みを肩代わりした仲間（殴る仲間だけ）の背を押してもう一度動かし、自分に宿った力も渡す",
         MinusText = "自分は強くならず、味方が多いほど早く尽きる",
         Flavor = "頼まれてもいない痛みを喰う。礼を言われたことは、一度もない。"
+    };
+
+    /// <summary>
+    /// 分かちのドハ（第298〜316期の規定）。第297期の DH-a（`ShareBack`・痛みをくれた相手の攻撃力に 痛み ÷ 2）から、**なまり**（守られた味方の攻撃力 −肩代わり ÷ 4）を外した
+    /// （札 `SharerNoDull` の差し替え・ノブ `SharerTrait.DullDivisor` の既定は動かさない）。ポンの判断（第297期の案 D1・指示書 design/PHASE298_MARK_FEATHER_SPEC.md §2）。
+    /// <b>第317期に DP-s を規定にしたので、旧の規定の定義を明示的に持つ</b>。<see cref="All"/> にも <see cref="Retired"/> にも入れない。過去の器具はこちらに固定する（`Common.Pin316`）。
+    /// 第313〜316期の版（DP-a ／ DP-b ／ DP-c ／ DQ-a ／ DQ-b ／ DP-s）はこちらから作る。旧の規定（第297期まで）は <see cref="DohaD0"/>。
+    /// </summary>
+    public static readonly UnitDef DohaH316 = new()
+    {
+        Id = "doha",
+        Name = Doha.Name,
+        MaxHp = Doha.MaxHp,
+        Attack = Doha.Attack,
+        Speed = Doha.Speed,
+        Traits = new[] { TraitId.Sharer, TraitId.SharerArmored, TraitId.ShareBack, TraitId.SharerNoDull },
+        PlusText = DohaPlusH316,
+        MinusText = Doha.MinusText,
+        Flavor = Doha.Flavor
     };
 
     /// <summary>第297期までの規定のドハ（分かち ＋ 破片の後ろ・自分の攻撃力が上がる・なまりあり）。対照（<see cref="All"/> に入れない）。第297期の版（<see cref="DohaDHa"/> ほか）はこちらから作る。</summary>
@@ -1825,60 +1852,58 @@ public static class UnitCatalog
         Flavor = DohaD0.Flavor
     };
 
-    // 第313期（指示書 design/PHASE313_DOHA_PUSH_SPEC.md §2）—— ドハの版。規定のドハ（DH-a ＋ なまりなし）の上に、手番の札を足すだけ（肩代わり 4 割・痛み ÷ 2 の返しはそのまま）。
-    // 手番は術（`Actions = [Skill]`）。条件を満たさない手番は殴る。規定のドハは動かしていない（採否はポン）。
-    static readonly UnitAction[] DohaPushActions = { new(ActionKind.Skill, Label: "仲間の背中を見た") };
-    const string DohaPushText = "。手番で、いちばん痛みを肩代わりした仲間の背を押し、もう一度動かす（肩代わりが無ければ殴る）";
+    // 第313期（指示書 design/PHASE313_DOHA_PUSH_SPEC.md §2）—— ドハの版。第313期の規定のドハ（DH-a ＋ なまりなし・第317期からは <see cref="DohaH316"/>）の上に、手番の札を足すだけ（肩代わり 4 割・痛み ÷ 2 の返しはそのまま）。
+    // 手番の札（`DohaPushActions`）は規定の <see cref="Doha"/> より前に移した（第317期）。
 
     /// <summary>第313期 DP-a（背を押す）。規定 ＋ <see cref="TraitId.SharePush"/>。対照（<see cref="All"/> に入れない）。</summary>
     public static readonly UnitDef DohaDPa = new()
     {
-        Id = Doha.Id,
-        Name = Doha.Name,
-        MaxHp = Doha.MaxHp,
-        Attack = Doha.Attack,
-        Speed = Doha.Speed,
-        Advances = Doha.Advances,
-        Pattern = Doha.Pattern,
-        Traits = Doha.Traits.Append(TraitId.SharePush).ToArray(),
+        Id = DohaH316.Id,
+        Name = DohaH316.Name,
+        MaxHp = DohaH316.MaxHp,
+        Attack = DohaH316.Attack,
+        Speed = DohaH316.Speed,
+        Advances = DohaH316.Advances,
+        Pattern = DohaH316.Pattern,
+        Traits = DohaH316.Traits.Append(TraitId.SharePush).ToArray(),
         Actions = DohaPushActions,
-        PlusText = Doha.PlusText + DohaPushText,
-        MinusText = Doha.MinusText,
-        Flavor = Doha.Flavor
+        PlusText = DohaH316.PlusText + DohaPushText,
+        MinusText = DohaH316.MinusText,
+        Flavor = DohaH316.Flavor
     };
 
     /// <summary>第313期 DP-b（背を押す ＋ 上乗せを渡す）。DP-a ＋ <see cref="TraitId.SharePushPower"/>（背を押すとき、ドハの攻撃力の上乗せをすべてその仲間に移し、ドハは素の攻撃力に戻る）。対照。</summary>
     public static readonly UnitDef DohaDPb = new()
     {
-        Id = Doha.Id,
-        Name = Doha.Name,
-        MaxHp = Doha.MaxHp,
-        Attack = Doha.Attack,
-        Speed = Doha.Speed,
-        Advances = Doha.Advances,
-        Pattern = Doha.Pattern,
-        Traits = Doha.Traits.Append(TraitId.SharePush).Append(TraitId.SharePushPower).ToArray(),
+        Id = DohaH316.Id,
+        Name = DohaH316.Name,
+        MaxHp = DohaH316.MaxHp,
+        Attack = DohaH316.Attack,
+        Speed = DohaH316.Speed,
+        Advances = DohaH316.Advances,
+        Pattern = DohaH316.Pattern,
+        Traits = DohaH316.Traits.Append(TraitId.SharePush).Append(TraitId.SharePushPower).ToArray(),
         Actions = DohaPushActions,
-        PlusText = Doha.PlusText + DohaPushText + "。自分に宿った力も、その仲間に渡す",
-        MinusText = Doha.MinusText,
-        Flavor = Doha.Flavor
+        PlusText = DohaH316.PlusText + DohaPushText + "。自分に宿った力も、その仲間に渡す",
+        MinusText = DohaH316.MinusText,
+        Flavor = DohaH316.Flavor
     };
 
     /// <summary>第313期 DP-c（罪の在り処・対照）。規定 ＋ <see cref="TraitId.ShareSin"/>（手番で、仲間をいちばん傷つけた敵に標を1層・0 なら殴る）。対照。</summary>
     public static readonly UnitDef DohaDPc = new()
     {
-        Id = Doha.Id,
-        Name = Doha.Name,
-        MaxHp = Doha.MaxHp,
-        Attack = Doha.Attack,
-        Speed = Doha.Speed,
-        Advances = Doha.Advances,
-        Pattern = Doha.Pattern,
-        Traits = Doha.Traits.Append(TraitId.ShareSin).ToArray(),
+        Id = DohaH316.Id,
+        Name = DohaH316.Name,
+        MaxHp = DohaH316.MaxHp,
+        Attack = DohaH316.Attack,
+        Speed = DohaH316.Speed,
+        Advances = DohaH316.Advances,
+        Pattern = DohaH316.Pattern,
+        Traits = DohaH316.Traits.Append(TraitId.ShareSin).ToArray(),
         Actions = new UnitAction[] { new(ActionKind.Skill, Label: "仲間の傷を数えた") },
-        PlusText = Doha.PlusText + "。手番で、仲間をいちばん傷つけた敵を指差して標を付ける（誰も傷ついていなければ殴る）",
-        MinusText = Doha.MinusText,
-        Flavor = Doha.Flavor
+        PlusText = DohaH316.PlusText + "。手番で、仲間をいちばん傷つけた敵を指差して標を付ける（誰も傷ついていなければ殴る）",
+        MinusText = DohaH316.MinusText,
+        Flavor = DohaH316.Flavor
     };
 
     // 第315期（指示書 design/PHASE315_DOHA_PUSH2_SPEC.md §2）—— 背を押す改。DP-a ／ DP-b の手番の形はそのままで、相手の選び方だけを
@@ -1888,55 +1913,55 @@ public static class UnitCatalog
     /// <summary>第315期 DQ-a（狙われた仲間の背を押す）。規定 ＋ <see cref="TraitId.SharePush"/> ＋ <see cref="TraitId.SharePushAimed"/>。対照（<see cref="All"/> に入れない）。</summary>
     public static readonly UnitDef DohaDQa = new()
     {
-        Id = Doha.Id,
-        Name = Doha.Name,
-        MaxHp = Doha.MaxHp,
-        Attack = Doha.Attack,
-        Speed = Doha.Speed,
-        Advances = Doha.Advances,
-        Pattern = Doha.Pattern,
-        Traits = Doha.Traits.Append(TraitId.SharePush).Append(TraitId.SharePushAimed).ToArray(),
+        Id = DohaH316.Id,
+        Name = DohaH316.Name,
+        MaxHp = DohaH316.MaxHp,
+        Attack = DohaH316.Attack,
+        Speed = DohaH316.Speed,
+        Advances = DohaH316.Advances,
+        Pattern = DohaH316.Pattern,
+        Traits = DohaH316.Traits.Append(TraitId.SharePush).Append(TraitId.SharePushAimed).ToArray(),
         Actions = DohaPushActions,
-        PlusText = Doha.PlusText + DohaAimText,
-        MinusText = Doha.MinusText,
-        Flavor = Doha.Flavor
+        PlusText = DohaH316.PlusText + DohaAimText,
+        MinusText = DohaH316.MinusText,
+        Flavor = DohaH316.Flavor
     };
 
     /// <summary>第315期 DQ-b（DQ-a ＋ 上乗せを渡す）。DQ-a ＋ <see cref="TraitId.SharePushPower"/>（第313期 DP-b と同じ移し方）。対照。</summary>
     public static readonly UnitDef DohaDQb = new()
     {
-        Id = Doha.Id,
-        Name = Doha.Name,
-        MaxHp = Doha.MaxHp,
-        Attack = Doha.Attack,
-        Speed = Doha.Speed,
-        Advances = Doha.Advances,
-        Pattern = Doha.Pattern,
-        Traits = Doha.Traits.Append(TraitId.SharePush).Append(TraitId.SharePushAimed).Append(TraitId.SharePushPower).ToArray(),
+        Id = DohaH316.Id,
+        Name = DohaH316.Name,
+        MaxHp = DohaH316.MaxHp,
+        Attack = DohaH316.Attack,
+        Speed = DohaH316.Speed,
+        Advances = DohaH316.Advances,
+        Pattern = DohaH316.Pattern,
+        Traits = DohaH316.Traits.Append(TraitId.SharePush).Append(TraitId.SharePushAimed).Append(TraitId.SharePushPower).ToArray(),
         Actions = DohaPushActions,
-        PlusText = Doha.PlusText + DohaAimText + "。自分に宿った力も、その仲間に渡す",
-        MinusText = Doha.MinusText,
-        Flavor = Doha.Flavor
+        PlusText = DohaH316.PlusText + DohaAimText + "。自分に宿った力も、その仲間に渡す",
+        MinusText = DohaH316.MinusText,
+        Flavor = DohaH316.Flavor
     };
 
     // 第316期（指示書 design/PHASE316_SHIGA_FEAR_SPEC.md §2-1）—— DP-s ＝ 第313期の DP-b（肩代わりの窓 ＋ 上乗せを渡す）＋ 殴る仲間だけ（`SharePushStrikers`）。
-    // 段0 の門のうち G-c（近衛の格子）が届かなかったので**規定にはしていない**（採否はポン・報告 design/PHASE316_SHIGA_FEAR.md §1）。
+    // 段0 の門のうち G-c（近衛の格子）が届かなかったので第316期には規定にしなかった（報告 design/PHASE316_SHIGA_FEAR.md §1）。**第317期に規定にした**（規定の <see cref="Doha"/>・ポンの判断）。
 
     /// <summary>第316期 DP-s（殴る仲間の背を押す）。規定 ＋ <see cref="TraitId.SharePush"/> ＋ <see cref="TraitId.SharePushPower"/> ＋ <see cref="TraitId.SharePushStrikers"/>。対照（<see cref="All"/> に入れない）。</summary>
     public static readonly UnitDef DohaDPs = new()
     {
-        Id = Doha.Id,
-        Name = Doha.Name,
-        MaxHp = Doha.MaxHp,
-        Attack = Doha.Attack,
-        Speed = Doha.Speed,
-        Advances = Doha.Advances,
-        Pattern = Doha.Pattern,
-        Traits = Doha.Traits.Append(TraitId.SharePush).Append(TraitId.SharePushPower).Append(TraitId.SharePushStrikers).ToArray(),
+        Id = DohaH316.Id,
+        Name = DohaH316.Name,
+        MaxHp = DohaH316.MaxHp,
+        Attack = DohaH316.Attack,
+        Speed = DohaH316.Speed,
+        Advances = DohaH316.Advances,
+        Pattern = DohaH316.Pattern,
+        Traits = DohaH316.Traits.Append(TraitId.SharePush).Append(TraitId.SharePushPower).Append(TraitId.SharePushStrikers).ToArray(),
         Actions = DohaPushActions,
-        PlusText = Doha.PlusText + "。手番で、いちばん痛みを肩代わりした仲間（殴る仲間だけ）の背を押してもう一度動かし、自分に宿った力も渡す",
-        MinusText = Doha.MinusText,
-        Flavor = Doha.Flavor
+        PlusText = DohaH316.PlusText + "。手番で、いちばん痛みを肩代わりした仲間（殴る仲間だけ）の背を押してもう一度動かし、自分に宿った力も渡す",
+        MinusText = DohaH316.MinusText,
+        Flavor = DohaH316.Flavor
     };
 
     // 第143期に転生させた。旧「散開のササ」（HP58・`TraitId.Loose` ＝ 隣が空いた駒の被ダメ −35%
@@ -2505,6 +2530,40 @@ public static class UnitCatalog
         Flavor = Som.Flavor
     };
 
+    // 第317期 —— 背いた獣の「裏切りの一撃」と獣の死の版（指示書 design/PHASE317_SOM_BETRAY_SPEC.md §3）。規定（第312期の重ね）の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
+    // 避雷針はカタの版（<see cref="KataLR"/> ／ <see cref="KataLRall"/>）で、BT-b ／ BT-c は「ソム BT-a ＋ カタの版」の組。
+
+    /// <summary>第317期 BT-a の文面（指示書 §3-2 の叩き台・最終はポン）。</summary>
+    public const string SomBetrayMinusText = "喚ばれたものは背いて敵につき、こちらに雷を投げる。隣の敵が帯電していれば、纏った雷が暴発する";
+    /// <summary>第317期 BD の文面の足し（叩き台）。</summary>
+    public const string SomBeastDeathText = "。弾けたものは、倒れた敵として数える";
+
+    /// <summary>
+    /// 第317期 BT-a（裏切りの一撃）。SB-a ＋ <see cref="TraitId.BeastBetray"/>——立った獣は立った直後に、獣の席から敵の普通の攻撃と同じ選び方で選んだ味方1体に雷を投げて感電させる（ダメージ 0）。
+    /// クグに向かった雷は糸を伝って組み付いた敵へ流れる。投げた後も獣は立ったまま（味方の一撃で弾ける）。
+    /// </summary>
+    public static readonly UnitDef SomBTa = SomWith(new[] { TraitId.BeastStand, TraitId.BeastBetray }, SomSBa.PlusText, SomBetrayMinusText);
+
+    /// <summary>第317期 BD-E2（獣の弾けを敵の死に数える・規定の上）。規定 ＋ <see cref="TraitId.BeastDeathCount"/>。</summary>
+    public static readonly UnitDef SomBD = SomWith(new[] { TraitId.BeastDeathCount }, Som.PlusText + SomBeastDeathText, Som.MinusText);
+
+    /// <summary>第317期: 規定のソム（<see cref="Som"/>）の末尾に札を足した版（数値・行動・フレーバーは規定のまま）。BD-BTx ／ 上限の版はこれで作る。</summary>
+    public static UnitDef SomWith(TraitId[] add, string plus, string minus) => new()
+    {
+        Id = Som.Id,
+        Name = Som.Name,
+        MaxHp = Som.MaxHp,
+        Attack = Som.Attack,
+        Speed = Som.Speed,
+        Advances = Som.Advances,
+        Pattern = Som.Pattern,
+        Traits = Som.Traits.Concat(add).ToArray(),
+        Actions = Som.Actions,
+        PlusText = plus,
+        MinusText = minus,
+        Flavor = Som.Flavor
+    };
+
     /// <summary>
     /// 旧ソム（第103〜275期の規定・背かれのみ）。<b>第276期の転生の対照</b>（S0）。<see cref="All"/> には入れない。
     /// 旧ソムを使う過去の器具（<c>betray</c> ／ <c>encore</c> ／ <c>tomo</c> ／ <c>lit</c> ／ <c>tumult</c> ／ <c>form2</c> ／ <c>ep3</c> ／ <c>stage map</c>）はこれに固定してある。
@@ -2994,6 +3053,31 @@ public static class UnitCatalog
         Flavor = KataH311.Flavor
     };
 
+    // 第317期 —— カタの避雷針（指示書 design/PHASE317_SOM_BETRAY_SPEC.md §3-3 ／ §3-4）。規定のカタの末尾に札を1枚足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
+    // 読むのは背いた獣の裏切りの一撃（ソムの版 BT-a の `BeastBetray`）だけ——ほかの雷（カタ自身の漏れ ／ 敵の雷）は受け止めない。
+
+    /// <summary>第317期 BT-b の避雷針（隣だけ）。規定 ＋ <see cref="TraitId.LightningRod"/>（獣の雷がカタ自身か隣の味方に向かったら、受け止めて投げた獣の上に落とし直す）。</summary>
+    public static readonly UnitDef KataLR = KataWith(TraitId.LightningRod, "。隣の仲間に落ちる雷は、受け止めて撃ち手に落とし直す");
+
+    /// <summary>第317期 BT-c の避雷針（全員・対照）。規定 ＋ <see cref="TraitId.LightningRodAll"/>。</summary>
+    public static readonly UnitDef KataLRall = KataWith(TraitId.LightningRodAll, "。仲間に落ちる雷は、受け止めて撃ち手に落とし直す");
+
+    static UnitDef KataWith(TraitId add, string plus) => new()
+    {
+        Id = Kata.Id,
+        Name = Kata.Name,
+        MaxHp = Kata.MaxHp,
+        Attack = Kata.Attack,
+        Speed = Kata.Speed,
+        Advances = Kata.Advances,
+        Pattern = Kata.Pattern,
+        Traits = Kata.Traits.Append(add).ToArray(),
+        Actions = Kata.Actions,
+        PlusText = Kata.PlusText + plus,
+        MinusText = Kata.MinusText,
+        Flavor = Kata.Flavor
+    };
+
     /// <summary>
     /// 旧カタ（第221期の後〜第289期の規定・S3・雷雲なし）。第290期に KR-b を規定にしたので、旧の規定の定義を明示的に持つ。
     /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。過去の器具はこちらに固定する（第289期のシガ `ShigaG3K` と同じ作法）。
@@ -3158,13 +3242,20 @@ public static class UnitCatalog
         // 第289期: ポンの判断（第288期の案 A7a）で SG-a（蓄電・`StoredCharge`）を規定にした。旧の規定（G3K）は `ShigaG3K`。
         // 第290期: ポンの判断（第289期の案 A8b）で SI-b（振りまくる・`ShockWhipFlurry`）を規定にした。旧の規定（SG-a）は `ShigaSGa`。
         // 第294期: ポンの判断（第293期の案 C1）で SW-a（連鎖の鞭・`ShockWhipChain`）を規定にした。旧の規定（SI-b）は `ShigaSIb`。
-        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.ShockWhipFlurry, TraitId.ShockWhipChain },
-        PlusText = "動けない敵を優先して鞭で薙ぐ。動けない敵には2倍で入り、その悲鳴で隣の敵を竦ませる（1手番に1回）。感電しているあいだは怖気づかず、打った敵に感電を移す。"
-                 + "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう"
-                 + "。割り込みの鞭は、弾けた電気をまとってそのぶん重くなる",
-        MinusText = "感電していないとき、動ける敵を主目標に打つと、怖気づいて自分が1ターン動けなくなる",
+        // 第317期: ポンの判断（第316期の参考の組み合わせ SF-AC）で、痺れない（`FearNoStun`）＋ 萎縮も縛られた的（`ScourgeDaunt`）を規定にした。旧の規定（SW-a）は `ShigaSWa`。
+        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.ShockWhipFlurry, TraitId.ShockWhipChain,
+                         TraitId.FearNoStun, TraitId.ScourgeDaunt },
+        PlusText = ShigaPlusH316 + "。自分の雷では痺れない",
+        MinusText = "感電していないとき、動ける敵を主目標に打つと、怖気づいて自分が1ターン動けなくなる（萎縮した敵は動けない敵とみなす）",
         Flavor = "縛られた的しか殴れない臆病者。雷に打たれている間だけは、怖さも痺れて感じない。"
     };
+
+    /// <summary>第294〜316期の規定のシガ（SW-a）の文面。第317期に規定を SF-AC にしたので、旧の規定の文面を定数で持つ（版の文面はこれから作る）。</summary>
+    public const string ShigaPlusH316 = "動けない敵を優先して鞭で薙ぐ。動けない敵には2倍で入り、その悲鳴で隣の敵を竦ませる（1手番に1回）。感電しているあいだは怖気づかず、打った敵に感電を移す。"
+                 + "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう"
+                 + "。割り込みの鞭は、弾けた電気をまとってそのぶん重くなる";
+    /// <summary>第217〜316期の規定のシガのマイナスの文面（第317期に「萎縮した敵は動けない敵とみなす」を足した）。</summary>
+    public const string ShigaMinusH316 = "感電していないとき、動ける敵を主目標に打つと、怖気づいて自分が1ターン動けなくなる";
 
     /// <summary>第289期 SI-b（振りまくる）。SG-a ＋ <see cref="TraitId.ShockWhipFlurry"/>（敵の感電の連鎖の直後・蓄電 1 以上で割り込み、鞭を1振り・蓄電 −1）。第290〜293期の規定。</summary>
     /// <remarks>
@@ -3183,14 +3274,30 @@ public static class UnitCatalog
         Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.ShockWhipFlurry },
         PlusText = "動けない敵を優先して鞭で薙ぐ。動けない敵には2倍で入り、その悲鳴で隣の敵を竦ませる（1手番に1回）。感電しているあいだは怖気づかず、打った敵に感電を移す。"
                  + "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう",
-        MinusText = Shiga.MinusText,
+        MinusText = ShigaMinusH316,
         Flavor = Shiga.Flavor
     };
 
     // 第293期 —— シガの直し（指示書 design/PHASE293_SHOCK_WEB_SPEC.md §4）。SI-b の末尾に札を足すだけ。`All` にも `Retired` にも入れない。
 
-    /// <summary>第293期 SW-a（連鎖の鞭）。SI-b ＋ <see cref="TraitId.ShockWhipChain"/>（割り込みの鞭が × (1 ＋ 合図の連鎖で弾けた数)）。<b>第294期に規定にした</b>——規定の <see cref="Shiga"/> と同じ物。</summary>
-    public static readonly UnitDef ShigaSWa = Shiga;
+    /// <summary>
+    /// 第293期 SW-a（連鎖の鞭）。SI-b ＋ <see cref="TraitId.ShockWhipChain"/>（割り込みの鞭が × (1 ＋ 合図の連鎖で弾けた数)）。第294〜316期の規定。
+    /// <b>第317期に SF-AC を規定にしたので、旧の規定（第294〜316期）の定義を明示的に持つ</b>（第316期まで規定の <see cref="Shiga"/> と同じ物だった）。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。過去の器具はこちらに固定する（`Common.Pin316`）。第310期 SG-f ・第316期 SF-A 〜 SF-D はこちらから作る。
+    /// </summary>
+    public static readonly UnitDef ShigaSWa = new()
+    {
+        Id = "shiga",
+        Name = Shiga.Name,
+        MaxHp = Shiga.MaxHp,
+        Attack = Shiga.Attack,
+        Speed = Shiga.Speed,
+        Pattern = Shiga.Pattern,
+        Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.ShockWhipFlurry, TraitId.ShockWhipChain },
+        PlusText = ShigaPlusH316,
+        MinusText = ShigaMinusH316,
+        Flavor = Shiga.Flavor
+    };
 
     /// <summary>
     /// 第310期 SG-f（対照・指示書 design/PHASE310_SOM_BURST_SPEC.md §2-2）。規定（SW-a）＋ <see cref="TraitId.ShameSkipFodder"/>
@@ -3204,28 +3311,28 @@ public static class UnitCatalog
         Attack = Shiga.Attack,
         Speed = Shiga.Speed,
         Pattern = Shiga.Pattern,
-        Traits = Shiga.Traits.Append(TraitId.ShameSkipFodder).ToArray(),
-        PlusText = Shiga.PlusText,
-        MinusText = Shiga.MinusText,
+        Traits = ShigaSWa.Traits.Append(TraitId.ShameSkipFodder).ToArray(),
+        PlusText = ShigaSWa.PlusText,
+        MinusText = ShigaMinusH316,
         Flavor = Shiga.Flavor
     };
 
-    // 第316期 —— シガが手番を失わない版（指示書 design/PHASE316_SHIGA_FEAR_SPEC.md §3）。規定（SW-a）の末尾に札を1枚足すだけ。`All` にも `Retired` にも入れない。
+    // 第316期 —— シガが手番を失わない版（指示書 design/PHASE316_SHIGA_FEAR_SPEC.md §3）。第316期の規定（SW-a・`ShigaSWa`）の末尾に札を1枚足すだけ。第317期に SF-AC を規定にした（規定の <see cref="Shiga"/>）。`All` にも `Retired` にも入れない。
     // 組み合わせ（§3-1）は <see cref="ShigaSF"/> で札を重ねて作る。
 
     /// <summary>第316期 SF-A（痺れない）。規定 ＋ <see cref="TraitId.FearNoStun"/>（自分の感電が弾けても痺れない・放電はする・感電は消える）。</summary>
-    public static readonly UnitDef ShigaSFa = ShigaSF(new[] { TraitId.FearNoStun }, Shiga.PlusText + "。自分の雷では痺れない", Shiga.MinusText);
+    public static readonly UnitDef ShigaSFa = ShigaSF(new[] { TraitId.FearNoStun }, ShigaSWa.PlusText + "。自分の雷では痺れない", ShigaMinusH316);
 
     /// <summary>第316期 SF-B（感電を残す）。規定 ＋ <see cref="TraitId.LiveWireHold"/>（電気鞭でも自分の感電を消さない・移す方はいまどおり）。</summary>
-    public static readonly UnitDef ShigaSFb = ShigaSF(new[] { TraitId.LiveWireHold }, Shiga.PlusText + "。手番の鞭でも、身の雷を手放さない", Shiga.MinusText);
+    public static readonly UnitDef ShigaSFb = ShigaSF(new[] { TraitId.LiveWireHold }, ShigaSWa.PlusText + "。手番の鞭でも、身の雷を手放さない", ShigaMinusH316);
 
     /// <summary>第316期 SF-C（萎縮も縛られた的）。規定 ＋ <see cref="TraitId.ScourgeDaunt"/>（萎縮した敵も「動けない敵」——優先・2倍・怖気づかない・悲鳴）。</summary>
-    public static readonly UnitDef ShigaSFc = ShigaSF(new[] { TraitId.ScourgeDaunt }, Shiga.PlusText, "感電していないとき、動ける敵を主目標に打つと怖気づく（萎縮した敵は動けない敵とみなす）");
+    public static readonly UnitDef ShigaSFc = ShigaSF(new[] { TraitId.ScourgeDaunt }, ShigaSWa.PlusText, "感電していないとき、動ける敵を主目標に打つと怖気づく（萎縮した敵は動けない敵とみなす）");
 
     /// <summary>第316期 SF-D（感電した敵は怖くない）。規定 ＋ <see cref="TraitId.ScourgeShockSpare"/>（当たる前に感電していた敵を主目標に打っても怖気づかない・悲鳴は広げない）。</summary>
-    public static readonly UnitDef ShigaSFd = ShigaSF(new[] { TraitId.ScourgeShockSpare }, Shiga.PlusText, "感電していないとき、感電もしていない動ける敵を主目標に打つと怖気づく");
+    public static readonly UnitDef ShigaSFd = ShigaSF(new[] { TraitId.ScourgeShockSpare }, ShigaSWa.PlusText, "感電していないとき、感電もしていない動ける敵を主目標に打つと怖気づく");
 
-    /// <summary>第316期: 規定のシガ（<see cref="Shiga"/>）の末尾に札を足した版（数値・攻撃型・フレーバーは規定のまま）。組み合わせの版もこれで作る。</summary>
+    /// <summary>第316期: 第316期の規定のシガ（<see cref="ShigaSWa"/>・第317期からは旧の規定）の末尾に札を足した版（数値・攻撃型・フレーバーは規定のまま）。組み合わせの版もこれで作る。</summary>
     public static UnitDef ShigaSF(TraitId[] add, string plus, string minus) => new()
     {
         Id = Shiga.Id,
@@ -3234,7 +3341,7 @@ public static class UnitCatalog
         Attack = Shiga.Attack,
         Speed = Shiga.Speed,
         Pattern = Shiga.Pattern,
-        Traits = Shiga.Traits.Concat(add).ToArray(),
+        Traits = ShigaSWa.Traits.Concat(add).ToArray(),
         PlusText = plus,
         MinusText = minus,
         Flavor = Shiga.Flavor
@@ -3251,7 +3358,7 @@ public static class UnitCatalog
         Pattern = Shiga.Pattern,
         Traits = ShigaSIb.Traits.Append(TraitId.ShockWhipChain).Append(TraitId.StoredChargeEvery).ToArray(),
         PlusText = (ShigaSIb.PlusText + "。割り込みの鞭は、弾けた電気をまとってそのぶん重くなる").Replace("帯電するたび電気が溜まり", "感電を浴びるたび電気が溜まり"),
-        MinusText = Shiga.MinusText,
+        MinusText = ShigaMinusH316,
         Flavor = Shiga.Flavor
     };
 
@@ -3269,7 +3376,7 @@ public static class UnitCatalog
         Pattern = AttackPattern.Sweep,
         Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock },
         PlusText = "動けない敵を優先して鞭で薙ぐ。動けない敵には2倍で入り、その悲鳴で隣の敵を竦ませる（1手番に1回）。感電しているあいだは怖気づかず、打った敵に感電を移す",
-        MinusText = Shiga.MinusText,
+        MinusText = ShigaMinusH316,
         Flavor = Shiga.Flavor
     };
 
@@ -3291,7 +3398,7 @@ public static class UnitCatalog
         Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge },
         PlusText = "動けない敵を優先して鞭で薙ぐ。動けない敵には2倍で入り、その悲鳴で隣の敵を竦ませる（1手番に1回）。感電しているあいだは怖気づかず、打った敵に感電を移す。"
                  + "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる",
-        MinusText = Shiga.MinusText,
+        MinusText = ShigaMinusH316,
         Flavor = Shiga.Flavor
     };
 
@@ -3306,7 +3413,7 @@ public static class UnitCatalog
         Pattern = AttackPattern.Sweep,
         Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.Thunderclap },
         PlusText = ShigaSGa.PlusText + "。溜まりきると、次の鞭は雷霆になる——感電した敵を雷で焼き、溜めた電気を使い果たす",
-        MinusText = Shiga.MinusText,
+        MinusText = ShigaMinusH316,
         Flavor = Shiga.Flavor
     };
 
@@ -3321,7 +3428,7 @@ public static class UnitCatalog
         Pattern = AttackPattern.Sweep,
         Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.Thunderclap, TraitId.ThunderclapLone },
         PlusText = ShigaSGb.PlusText + "。孤立した敵ほど深く焼く",
-        MinusText = Shiga.MinusText,
+        MinusText = ShigaMinusH316,
         Flavor = Shiga.Flavor
     };
 
@@ -3338,7 +3445,7 @@ public static class UnitCatalog
         Pattern = AttackPattern.Sweep,
         Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.ShockWhipBolt },
         PlusText = ShigaSGa.PlusText + "。溜まりきると、そばで感電が弾けた瞬間に割り込み、雷霆の鞭を叩き込む",
-        MinusText = Shiga.MinusText,
+        MinusText = ShigaMinusH316,
         Flavor = Shiga.Flavor
     };
 
@@ -3356,7 +3463,7 @@ public static class UnitCatalog
         Pattern = AttackPattern.Sweep,
         Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.ShockWhipFlurry, TraitId.ShockWhipKeep },
         PlusText = ShigaSIb.PlusText,
-        MinusText = Shiga.MinusText,
+        MinusText = ShigaMinusH316,
         Flavor = Shiga.Flavor
     };
 
@@ -3374,7 +3481,7 @@ public static class UnitCatalog
         Pattern = AttackPattern.Sweep,
         Traits = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock, TraitId.StoredCharge, TraitId.Thunderclap, TraitId.ThunderclapLone, TraitId.ThunderclapAny },
         PlusText = ShigaSGc.PlusText + "（参考: 雷霆は当たった敵すべてを焼く）",
-        MinusText = Shiga.MinusText,
+        MinusText = ShigaMinusH316,
         Flavor = Shiga.Flavor
     };
 

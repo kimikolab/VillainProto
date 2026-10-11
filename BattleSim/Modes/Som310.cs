@@ -45,7 +45,7 @@ static class Som310Diag
     // ---------------------------------------------------------------------------------
     const int Seeds = S307.Seeds;
     static UnitDef Som => UnitCatalog.SomH310;   // 第311期: 第310期の規定（LV-a）に固定（`Common.Pin310`）
-    static UnitDef Shiga => UnitCatalog.Shiga;
+    static UnitDef Shiga => UnitCatalog.ShigaSWa;
     static string Short(UnitDef d) => S307.Short(d);
     static string Seats(Formation f) => S307.Seats(f);
     static string F1(double x) => S307.F1(x);
@@ -61,7 +61,7 @@ static class Som310Diag
         new("規定", f => f, false),
         new("E1", f => S309.Swap(f, UnitCatalog.SomH310, UnitCatalog.SomE1), false),
         new("E2", f => S309.Swap(f, UnitCatalog.SomH310, UnitCatalog.SomE2), false),
-        new("SG-f", f => S309.Swap(f, UnitCatalog.Shiga, UnitCatalog.ShigaSGf), true),
+        new("SG-f", f => S309.Swap(f, UnitCatalog.ShigaSWa, UnitCatalog.ShigaSGf), true),
     };
     static Ver V(string n) => Vers.First(v => v.Name == n);
     static bool Has(Formation f, UnitDef d) => f.Occupied().Any(o => ReferenceEquals(o.Def, d));
@@ -76,7 +76,7 @@ static class Som310Diag
 
     static Formation Playtest(string n) => S309.Playtest(n);
     static Formation Row(string n) => Pin310(CompareBuildsH311().First(r => r.Name == n).F);
-    static Formation WinSeat() => PinKT311(B283.Seat(S307.Order(S307.WinBoard)));
+    static Formation WinSeat() => PinKT311(Pin316(B283.Seat(S307.Order(S307.WinBoard))));
 
     /// <summary>§4-1 の代表台（規定の駒・ソムの席は出典のまま）。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
@@ -84,7 +84,7 @@ static class Som310Diag
         ("光の盾", Playtest(S309.Shield)),
         ("光の盾 重", Playtest(S309.ShieldHeavy)),
         ("感電 行", Row("感電 (シガ×カタ×ソム)")),
-        ("雷の型 ドハ→ソム", S309.Swap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, Som)),
+        ("雷の型 ドハ→ソム", S309.Swap(Playtest("試遊・感電 雷の型"), UnitCatalog.DohaH316, Som)),
         ("感電 糸 ガルド→ソム", S309.Swap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, Som)),
         ("勝ち台 ツギ→ソム", S309.Swap(WinSeat(), UnitCatalog.Tsugi, Som)),
     };
@@ -354,7 +354,7 @@ static class Som310Diag
                 var a = c.S;
                 string beast = $"{Per1(a.Calls, a.N)} ／ {Per1(a.Bursts, a.N)}（{Per1(a.BurstSeat, a.N)}）／ {Per1(a.Stood, a.N)}";
                 string burst = a.Bursts == 0 ? "—" : $"{Per1(a.BurstUnits, a.Bursts)} ・ {Per1(a.BurstKills, a.N)}";
-                string sh = Has(c.V.Apply(c.F0), UnitCatalog.Shiga) || Has(c.V.Apply(c.F0), UnitCatalog.ShigaSGf)
+                string sh = Has(c.V.Apply(c.F0), UnitCatalog.ShigaSWa) || Has(c.V.Apply(c.F0), UnitCatalog.ShigaSGf)
                     ? $"{Per1(a.SwFires, a.N)} ・ ×{Per1(a.SwMultSum, a.SwMultN)} ・ {Pct(a.ShigaOwnBeast + a.ShigaIntBeast, a.ShigaOwn + a.ShigaInt)} ・ {Per0(a.ShigaDmg, a.N)}" : "—";
                 string ka = a.KataN > 0 ? $"{Per1(a.KataCloud, a.KataN)} ・ {Per0(a.KataDmg, a.N)}" : "—";
                 Console.WriteLine($"| {c.B} | {c.V.Name} | {F1(a.Win)} | {Per1(a.WinT, a.Wins)} | {Per1(a.LoseT, a.N - a.Wins)}{(a.Caps > 0 ? $"（{Pct(a.Caps, a.N)}）" : "")} | {Dt(a.FirstDeathN, a.FirstDeathT, a.N)} | {Dt(a.SomDied, a.SomDeathT, a.N)} | {beast} | {burst} | "
@@ -531,7 +531,7 @@ static class Som310Diag
         }
         Parallel.For(0, boards.Count, i =>
         {
-            var f = v.Apply(PinKT311(B283.Seat(boards[i])));
+            var f = v.Apply(PinKT311(Pin316(B283.Seat(boards[i]))));
             if (W(f, w, S307.CutSeeds) < need) return;
             Interlocked.Increment(ref cutPass);
             int wins = W(f, w, Seeds);
@@ -665,11 +665,11 @@ static class Som310Diag
         // (a) 版の定義
         {
             bool ok = UnitCatalog.SomE1.Traits.SequenceEqual(som.Traits.Append(TraitId.BeastBurstCharged)) && UnitCatalog.SomE2.Traits.SequenceEqual(som.Traits.Append(TraitId.BeastBurstAlways))
-                && UnitCatalog.ShigaSGf.Traits.SequenceEqual(UnitCatalog.Shiga.Traits.Append(TraitId.ShameSkipFodder))
+                && UnitCatalog.ShigaSGf.Traits.SequenceEqual(UnitCatalog.ShigaSWa.Traits.Append(TraitId.ShameSkipFodder))
                 && new[] { UnitCatalog.SomE1, UnitCatalog.SomE2 }.All(d => d.Id == som.Id && d.MaxHp == som.MaxHp && d.Attack == som.Attack && d.Speed == som.Speed && d.Advances == som.Advances && d.Pattern == som.Pattern)
-                && UnitCatalog.ShigaSGf.Id == "shiga" && UnitCatalog.ShigaSGf.MaxHp == UnitCatalog.Shiga.MaxHp && UnitCatalog.ShigaSGf.Attack == UnitCatalog.Shiga.Attack && UnitCatalog.ShigaSGf.Speed == UnitCatalog.Shiga.Speed
+                && UnitCatalog.ShigaSGf.Id == "shiga" && UnitCatalog.ShigaSGf.MaxHp == UnitCatalog.ShigaSWa.MaxHp && UnitCatalog.ShigaSGf.Attack == UnitCatalog.ShigaSWa.Attack && UnitCatalog.ShigaSGf.Speed == UnitCatalog.ShigaSWa.Speed
                 && !UnitCatalog.Everyone.Contains(UnitCatalog.SomE1) && !UnitCatalog.Everyone.Contains(UnitCatalog.SomE2) && !UnitCatalog.Everyone.Contains(UnitCatalog.ShigaSGf)
-                && UnitCatalog.All.Contains(UnitCatalog.Som) && !UnitCatalog.Everyone.Contains(som) && UnitCatalog.All.Contains(UnitCatalog.Shiga)
+                && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.Som) && !UnitCatalog.Everyone.Contains(som) && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.ShigaSWa)
                 && UnitCatalog.Fodder.MaxHp == 12 && UnitCatalog.Fodder.Speed == 1;
             Expect("(a) 版 ＝ 規定の末尾に札1枚（E1 `BeastBurstCharged` ／ E2 `BeastBurstAlways` ／ SG-f `ShameSkipFodder`）・数値は規定のまま・版は `Everyone` の外・獣の定義は触らない", ok);
         }
@@ -747,7 +747,7 @@ static class Som310Diag
             // 第311期: 第310期の `docs/balance.md`（コミット e8c8821）と照らす（段0 で `感電` 行が動いたので、いまの docs とは照らさない）
             var bal = GitShow("e8c8821:docs/balance.md")?.Split('\n').Select(l => l.TrimEnd('\r')).ToArray() ?? Array.Empty<string>();
             int checkedRows = 0, bad = 0;
-            foreach (var (n, f) in rows.Where(r => Has(r.F, som) || Has(r.F, UnitCatalog.Shiga)))
+            foreach (var (n, f) in rows.Where(r => Has(r.F, som) || Has(r.F, UnitCatalog.ShigaSWa)))
             {
                 var line = bal.FirstOrDefault(l => l.StartsWith($"| {n} |", StringComparison.Ordinal));
                 if (line is null) continue;
@@ -768,7 +768,7 @@ static class Som310Diag
             int nd = 0, n = 0;
             foreach (var v in Vers) foreach (var (_, f) in Boards())
                 {
-                    if (v.ShigaOnly && !Has(f, UnitCatalog.Shiga)) continue;
+                    if (v.ShigaOnly && !Has(f, UnitCatalog.ShigaSWa)) continue;
                     foreach (var w in Waves)
                         for (int sd = 0; sd < 2; sd++)
                         {

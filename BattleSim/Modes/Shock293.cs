@@ -64,11 +64,11 @@ static class Shock293Diag
     const int Seeds = 200, CutSeeds = 20;
 
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
-    static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n);
+    static UnitDef ByShort(string n) => UnitCatalog.All.Select(PinDS316).First(d => Short(d) == n);
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     static string Seats(Formation f) => string.Join("・", Enumerable.Range(0, 5).Select(i => f[i] is { } d ? Short(d) : "—"));
-    static Formation Seat(UnitDef[] o) => K292.Pin294(PinKT311(B283.Seat(o)));   // 第294期: クグ ／ シガを第293期の規定（KG-b ／ SI-b）に固定
+    static Formation Seat(UnitDef[] o) => K292.Pin294(PinKT311(Pin316(B283.Seat(o))));   // 第294期: クグ ／ シガを第293期の規定（KG-b ／ SI-b）に固定
 
     /// <summary>代表台（指示書 §6-2）: 試遊プリセット3台 ＋ 第292期の代表台5台 ＋ 第292期のボスの勝ち台。</summary>
     internal static (string Name, Formation F)[] Boards()
@@ -576,7 +576,7 @@ static class Shock293Diag
         Expect("(a) 規定のカタ ＝ KR-∞（`KataKRinf` ＝ 規定）・旧の規定 KR-b は `KataKRb`（`All` ／ `Retired` の外）・文面は同じ",
             UnitCatalog.KataH311.Traits.Contains(TraitId.ThundercloudUncapped) && ReferenceEquals(UnitCatalog.KataKRinf, UnitCatalog.KataH311)
             && UnitCatalog.KataH311.Traits.SequenceEqual(UnitCatalog.KataKRb.Traits.Append(TraitId.ThundercloudUncapped)) && !UnitCatalog.Everyone.Contains(UnitCatalog.KataKRb)
-            && UnitCatalog.KataKRb.PlusText == UnitCatalog.KataH311.PlusText && UnitCatalog.All.Contains(UnitCatalog.Kata) /* 第312期: 規定のカタは萎縮の規則つき・KR-∞ は `KataH311` */);
+            && UnitCatalog.KataKRb.PlusText == UnitCatalog.KataH311.PlusText && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.Kata) /* 第312期: 規定のカタは萎縮の規則つき・KR-∞ は `KataH311` */);
         Expect("(b) 第293期の規定のクグ（KG-b）・シガ（SI-b）は `KuguKGb` ／ `ShigaSIb`・版は規定の末尾に札を足しただけ・`All` ／ `Retired` の外",
             UnitCatalog.KuguKGb.Traits.SequenceEqual(new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge })
             && UnitCatalog.KuguKWa.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.WebCharge)) && UnitCatalog.KuguKWb.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.WebSnare))

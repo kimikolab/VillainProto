@@ -50,11 +50,11 @@ static class Doha313Diag
     // ---------------------------------------------------------------------------------
     internal static readonly (string Tag, UnitDef Def)[] Versions =
     {
-        ("規定", UnitCatalog.Doha), ("DP-a", UnitCatalog.DohaDPa), ("DP-b", UnitCatalog.DohaDPb), ("DP-c", UnitCatalog.DohaDPc),
+        ("規定", UnitCatalog.DohaH316), ("DP-a", UnitCatalog.DohaDPa), ("DP-b", UnitCatalog.DohaDPb), ("DP-c", UnitCatalog.DohaDPc),
     };
     static UnitDef Ver(string s) => s switch
     {
-        "a" or "DP-a" => UnitCatalog.DohaDPa, "b" or "DP-b" => UnitCatalog.DohaDPb, "c" or "DP-c" => UnitCatalog.DohaDPc, _ => UnitCatalog.Doha,
+        "a" or "DP-a" => UnitCatalog.DohaDPa, "b" or "DP-b" => UnitCatalog.DohaDPb, "c" or "DP-c" => UnitCatalog.DohaDPc, _ => UnitCatalog.DohaH316,
     };
     static string VerTag(UnitDef d) => Versions.First(v => ReferenceEquals(v.Def, d)).Tag;
 
@@ -80,7 +80,7 @@ static class Doha313Diag
         return g;
     }
 
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
+    static Formation Playtest(string n) => PlaytestH316.First(r => r.Name == n).F;
     internal const string Guard = "試遊・標 守り型", Thunder = "試遊・感電 雷の型";
 
     /// <summary>§4-2 の代表台: 守り型 ／ 守り型のゴルム ↔ ドハ ／ 雷の型 ／ `compare` と交差帯のドハのいる行（規定の駒）。</summary>
@@ -90,11 +90,11 @@ static class Doha313Diag
         var l = new List<(string, Formation)>
         {
             ("守り型", g),
-            ("守り型 ゴルム↔ドハ", SwapSeats(g, UnitCatalog.Golm, UnitCatalog.Doha)),
+            ("守り型 ゴルム↔ドハ", SwapSeats(g, UnitCatalog.Golm, UnitCatalog.DohaH316)),
             ("雷の型", Playtest(Thunder)),
         };
-        foreach (var (n, f) in CompareBuilds().Concat(CrossBuilds()))
-            if (f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Doha)) && !l.Any(x => x.Item1 == n)) l.Add((n, f));
+        foreach (var (n, f) in CompareBuildsH316().Concat(CrossBuilds().Select(r => (r.Name, Pin316(r.F)))))
+            if (f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.DohaH316)) && !l.Any(x => x.Item1 == n)) l.Add((n, f));
         return l.ToArray();
     }
 
@@ -286,9 +286,9 @@ static class Doha313Diag
             var detail = new List<(S287.Wave W, St[] V)>();
             foreach (var w in Waves)
             {
-                var v = Versions.Select(x => Measure(Swap(bf, UnitCatalog.Doha, x.Def), w, seeds)).ToArray();
+                var v = Versions.Select(x => Measure(Swap(bf, UnitCatalog.DohaH316, x.Def), w, seeds)).ToArray();
                 detail.Add((w, v));
-                string dolga = v.Any(x => x.WinRate >= 50) ? Measure(Swap(bf, UnitCatalog.Doha, UnitCatalog.Dolga), w, seeds).Win : "—";
+                string dolga = v.Any(x => x.WinRate >= 50) ? Measure(Swap(bf, UnitCatalog.DohaH316, UnitCatalog.Dolga), w, seeds).Win : "—";
                 string Cell(int i) => i == 0 ? v[0].Win : $"{v[i].Win}（{Sg(v[i].WinRate - v[0].WinRate)}）";
                 Console.WriteLine($"| {w.Name} | {Cell(0)} | {Cell(1)} | {Cell(2)} | {Cell(3)} | {dolga} | {string.Join(" ／ ", v.Select(x => x.WinTurn))} | {string.Join(" ／ ", v.Select(x => x.LossTurn))} | "
                     + $"{string.Join(" ／ ", v.Select(x => x.Avg(x.FirstDeathT, x.FirstDeathN)))} | {string.Join(" ／ ", v.Select(x => x.Avg(x.DohaDeathT, x.DohaDeathN)))} |");
@@ -332,7 +332,7 @@ static class Doha313Diag
     static void CompareAll()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds();
+        var rows = CompareBuildsH316();
         int nw = EnemyCatalog.Stages.Count;
         var grids = Versions.Select(v =>
         {
@@ -340,7 +340,7 @@ static class Doha313Diag
             Parallel.For(0, rows.Length * nw, k =>
             {
                 int ri = k / nw, wi = k % nw;
-                var f = Swap(rows[ri].F, UnitCatalog.Doha, v.Def);
+                var f = Swap(rows[ri].F, UnitCatalog.DohaH316, v.Def);
                 int wins = 0;
                 for (int s = 0; s < Seeds; s++) if (BattleEngine.Run(f, EnemyCatalog.Stages[wi].Enemy, s, verbose: false).PlayerWon) wins++;
                 g[ri, wi] = 100.0 * wins / Seeds;
@@ -362,7 +362,7 @@ static class Doha313Diag
             for (int ri = 0; ri < rows.Length; ri++)
             {
                 bool any = Enumerable.Range(0, nw).Any(w => g[ri, w] != b[ri, w]);
-                bool holds = rows[ri].F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Doha));
+                bool holds = rows[ri].F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.DohaH316));
                 if (any && !holds) outside++;
                 if (!any) continue;
                 movedRows++;
@@ -399,13 +399,13 @@ static class Doha313Diag
     // ---------------------------------------------------------------------------------
     // §4-4 格子（第297期 `doha297 grid` と同じ作り・基準は規定のドハ）
     // ---------------------------------------------------------------------------------
-    internal static readonly UnitDef[] Attackers = { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.Kata, UnitCatalog.Shiga };
+    internal static readonly UnitDef[] Attackers = { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.Kata, UnitCatalog.ShigaSWa };
 
     static void Grid(string waveKey, string ver, int seats, int seeds)
     {
         var w = WaveOf(waveKey);
         var dv = Ver(ver);
-        var pool = UnitCatalog.All.Where(d => !ReferenceEquals(d, UnitCatalog.Doha)).ToArray();
+        var pool = UnitCatalog.All.Select(PinDS316).Where(d => !ReferenceEquals(d, UnitCatalog.DohaH316)).ToArray();
         int step = Math.Max(1, 120 / Math.Max(1, seats));
         var seatSet = Perms(5).Where((_, i) => i % step == 0).Take(seats).ToArray();
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -428,7 +428,7 @@ static class Doha313Diag
                     foreach (var perm in seatSet) { int x = Wins(Seat(five, perm)); if (x > best) { best = x; seat = perm; } if (best == seeds) break; }
                     return 100.0 * best / seeds;
                 }
-                double b = Best(UnitCatalog.Doha, out var sb), v = Best(dv, out var sv);
+                double b = Best(UnitCatalog.DohaH316, out var sb), v = Best(dv, out var sv);
                 if (Math.Max(b, v) < 50) return;
                 var seat = v >= b ? sv : sb;
                 double dolga = 100.0 * Wins(Seat(new[] { UnitCatalog.Dolga, atk, c[0], c[1], c[2] }, seat)) / seeds;
@@ -486,7 +486,7 @@ static class Doha313Diag
     static void Memo(string boardPart, string wave, int seed, string ver)
     {
         var (name, f0) = Boards().First(b => b.Name.Contains(boardPart, StringComparison.Ordinal));
-        var f = Swap(f0, UnitCatalog.Doha, Ver(ver));
+        var f = Swap(f0, UnitCatalog.DohaH316, Ver(ver));
         var w = WaveOf(wave);
         var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
         var e = w.Make();
@@ -632,7 +632,7 @@ static class Doha313Diag
             foreach (var w in Waves)
                 for (int sd = 0; sd < 40; sd++)
                 {
-                    var p = BattleEngine.Materialize(Swap(Playtest(Guard), UnitCatalog.Doha, UnitCatalog.DohaDPa), BattleContext.PlayerTeam);
+                    var p = BattleEngine.Materialize(Swap(Playtest(Guard), UnitCatalog.DohaH316, UnitCatalog.DohaDPa), BattleContext.PlayerTeam);
                     var r = BattleEngine.Run(p, w.Make(), sd, verbose: false);
                     foreach (var (id, t) in r.TallyByUnit) { pushes += t.Pushes; turns += t.ShareGiftTurns; skipped += t.ShareGiftSkipped; ingift += t.PushInGift; }
                 }
@@ -646,7 +646,7 @@ static class Doha313Diag
                     foreach (var w in Waves)
                         for (int sd = 0; sd < 20; sd++)
                         {
-                            var f = Swap(b, UnitCatalog.Doha, v.Def);
+                            var f = Swap(b, UnitCatalog.DohaH316, v.Def);
                             var r0 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), w.Make(), sd, verbose: false);
                             var r1 = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), w.Make(), sd, verbose: true);
                             n++;
@@ -657,7 +657,7 @@ static class Doha313Diag
         // (h) 計数器（PushCensus）を立てても規定のドハの戦は1ビットも動かない
         {
             int diff = 0, n = 0;
-            var rows = CompareBuilds().Where(r => r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Doha))).Select(r => r.F).Append(Playtest(Guard)).Append(Playtest(Thunder)).ToArray();
+            var rows = CompareBuildsH316().Where(r => r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.DohaH316))).Select(r => r.F).Append(Playtest(Guard)).Append(Playtest(Thunder)).ToArray();
             var off = new List<(bool, int)>();
             foreach (var f in rows) foreach (var w in Waves) for (int sd = 0; sd < 20; sd++) { var r = BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), w.Make(), sd, verbose: false); off.Add((r.PlayerWon, r.Turns)); }
             BattleContext.PushCensus = true;
@@ -686,9 +686,9 @@ static class Doha313Diag
         }
         // (j) 版の定義: 規定の上に札を足しただけ・All に入っていない
         {
-            bool same(UnitDef d) => d.MaxHp == UnitCatalog.Doha.MaxHp && d.Attack == UnitCatalog.Doha.Attack && d.Speed == UnitCatalog.Doha.Speed && UnitCatalog.Doha.Traits.All(d.Traits.Contains);
+            bool same(UnitDef d) => d.MaxHp == UnitCatalog.DohaH316.MaxHp && d.Attack == UnitCatalog.DohaH316.Attack && d.Speed == UnitCatalog.DohaH316.Speed && UnitCatalog.DohaH316.Traits.All(d.Traits.Contains);
             Expect("(j) DP-a ／ DP-b ／ DP-c は規定のドハの数値と札をそのまま持ち、手番は術・`All` に入っていない",
-                new[] { UnitCatalog.DohaDPa, UnitCatalog.DohaDPb, UnitCatalog.DohaDPc }.All(d => same(d) && d.Actions is { Count: 1 } && d.Actions[0].Kind == ActionKind.Skill && !UnitCatalog.All.Contains(d)),
+                new[] { UnitCatalog.DohaDPa, UnitCatalog.DohaDPb, UnitCatalog.DohaDPc }.All(d => same(d) && d.Actions is { Count: 1 } && d.Actions[0].Kind == ActionKind.Skill && !UnitCatalog.All.Select(PinDS316).Contains(d)),
                 "");
         }
         Console.WriteLine();

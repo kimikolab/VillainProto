@@ -49,14 +49,14 @@ static class Shiga288Diag
     const int Seeds = 200, CutSeeds = 20;
 
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
-    static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n);
+    static UnitDef ByShort(string n) => UnitCatalog.All.Select(PinDS316).First(d => Short(d) == n);
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     /// <summary>第290期: 名前で引く台のカタ（規定は第290期から KR-b）を旧の規定 `KataS3` に固定する（第288期の台を再現するため）。</summary>
-    static Formation Seat(UnitDef[] o) => FvSwap(FvSwap(FvSwap(FvSwap(B283.Seat(o), UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Doha, UnitCatalog.DohaD0);   // 第298期: ドハも   // 第295期: ソラも   // 第291期: クグも旧の規定へ
+    static Formation Seat(UnitDef[] o) => FvSwap(FvSwap(FvSwap(FvSwap(Pin316(B283.Seat(o)), UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.DohaH316, UnitCatalog.DohaD0);   // 第298期: ドハも   // 第295期: ソラも   // 第291期: クグも旧の規定へ
     /// <summary>第290期: `compare` の行のカタを旧の規定 `KataS3` に固定した行（シガは版で差し替えるので触らない）。</summary>
-    static (string Name, Formation F)[] Rows288() => CompareBuilds().Select(r => (r.Name, FvSwap(FvSwap(FvSwap(FvSwap(r.F, UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Doha, UnitCatalog.DohaD0))).ToArray();   // 第298期: ドハも   // 第295期: ソラも
-    static Formation SwapShiga(Formation f, UnitDef ver) => ReferenceEquals(ver, UnitCatalog.Shiga) ? f : FvSwap(f, UnitCatalog.Shiga, ver);
+    static (string Name, Formation F)[] Rows288() => CompareBuildsH316().Select(r => (r.Name, FvSwap(FvSwap(FvSwap(FvSwap(r.F, UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.DohaH316, UnitCatalog.DohaD0))).ToArray();   // 第298期: ドハも   // 第295期: ソラも
+    static Formation SwapShiga(Formation f, UnitDef ver) => ReferenceEquals(ver, UnitCatalog.ShigaSWa) ? f : FvSwap(f, UnitCatalog.ShigaSWa, ver);
 
     /// <summary>
     /// 代表台（指示書 §4-2）: 第287期 R4 の 7 台 ＋ `責め苦` ／ `感電` の2行（3 波）＋ カタをシガの隣に置いた台（近衛 ／ 大隊 各1台）。
@@ -126,8 +126,8 @@ static class Shiga288Diag
             if (mine.Contains(id)) { d.AllyDis += t.DischargeTaken; teamDmg += t.DamageToEnemy; }
             else d.FoeDis += t.DischargeTaken;
         }
-        UnitState? shiga = p.FirstOrDefault(u => u.Def.Id == UnitCatalog.Shiga.Id);
-        if (r.TallyByUnit.TryGetValue(UnitCatalog.Shiga.Id, out var st))
+        UnitState? shiga = p.FirstOrDefault(u => u.Def.Id == UnitCatalog.ShigaSWa.Id);
+        if (r.TallyByUnit.TryGetValue(UnitCatalog.ShigaSWa.Id, out var st))
         {
             d.Swings = st.WhipSwings; d.Cower = st.WhipCowered; d.Wired = st.WiredSwings;
             d.Bolts = st.BoltCasts; d.BoltDry = st.BoltDry; d.BoltHits = st.BoltHits; d.BoltLone = st.BoltLoneHits;
@@ -222,7 +222,7 @@ static class Shiga288Diag
                 var d = FightDeep(f, w, i);
                 var p = BattleEngine.Materialize(f, BattleContext.PlayerTeam);
                 var r = BattleEngine.Run(p, w.Make(), i, verbose: true);
-                var sh = p.First(u => u.Def.Id == UnitCatalog.Shiga.Id);
+                var sh = p.First(u => u.Def.Id == UnitCatalog.ShigaSWa.Id);
                 int cum = 0, t4 = 0;
                 foreach (var ev in r.Events)
                     if (ev.Kind == BattleEventKind.StatusGain && ev.TargetId == sh.InstanceId && ev.Text == StatusKeys.Shock && ++cum == 4) { t4 = ev.Turn; break; }
@@ -248,7 +248,7 @@ static class Shiga288Diag
     // ---------------------------------------------------------------------------------
     // `compare` 64 行 × 版
     // ---------------------------------------------------------------------------------
-    static bool HasShiga(Formation f) => f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Shiga));
+    static bool HasShiga(Formation f) => f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.ShigaSWa));
 
     static double[,] CompareGrid(UnitDef ver)
     {
@@ -543,7 +543,7 @@ static class Shiga288Diag
         Console.WriteLine();
         var g3k = new[] { TraitId.Scourge, TraitId.Shame, TraitId.Lash, TraitId.LiveWire, TraitId.ScourgeShock };
         Expect("(a) 旧の規定 `ShigaG3K` は G3K のまま（蓄電の札を持たない）・規定（第289期から）は SG-a の上に足した版（第290期から SI-b）・版は G3K の札の末尾に足しただけ",
-            UnitCatalog.ShigaG3K.Traits.SequenceEqual(g3k) && UnitCatalog.Shiga.Traits.Take(6).SequenceEqual(UnitCatalog.ShigaSGa.Traits)
+            UnitCatalog.ShigaG3K.Traits.SequenceEqual(g3k) && UnitCatalog.ShigaSWa.Traits.Take(6).SequenceEqual(UnitCatalog.ShigaSGa.Traits)
             && UnitCatalog.ShigaSGa.Traits.SequenceEqual(g3k.Append(TraitId.StoredCharge))
             && UnitCatalog.ShigaSGb.Traits.SequenceEqual(g3k.Append(TraitId.StoredCharge).Append(TraitId.Thunderclap))
             && UnitCatalog.ShigaSGc.Traits.SequenceEqual(g3k.Append(TraitId.StoredCharge).Append(TraitId.Thunderclap).Append(TraitId.ThunderclapLone))
@@ -552,8 +552,8 @@ static class Shiga288Diag
             Vers.Skip(1).All(v => v.Def.Id == "shiga" && v.Def.MaxHp == 52 && v.Def.Attack == 9 && v.Def.Speed == 3 && v.Def.Pattern == AttackPattern.Sweep
                 && v.Def.MinusText == UnitCatalog.ShigaG3K.MinusText && v.Def.Flavor == UnitCatalog.ShigaG3K.Flavor && !UnitCatalog.Everyone.Contains(v.Def)));   // 第290期: SG-a も規定でなくなった
         Expect("(c) 蓄電の保持者は `All` に規定のシガ1枚・雷霆の札の保持者は 0 枚",
-            UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.StoredCharge)) == 1 && UnitCatalog.Shiga.Traits.Contains(TraitId.StoredCharge)
-            && !UnitCatalog.All.Any(u => u.Traits.Any(t => t is TraitId.Thunderclap or TraitId.ThunderclapLone or TraitId.ThunderclapAny)));
+            UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.StoredCharge)) == 1 && UnitCatalog.ShigaSWa.Traits.Contains(TraitId.StoredCharge)
+            && !UnitCatalog.All.Select(PinDS316).Any(u => u.Traits.Any(t => t is TraitId.Thunderclap or TraitId.ThunderclapLone or TraitId.ThunderclapAny)));
 
         // (d)〜(h): 責め苦 × 近衛 ／ 大隊 ／ ボス と 感電 × 近衛 × seed 0..39 で、版ごとの帳簿を突き合わせる
         var rows = new[] { ("責め苦 (トウ×シガ)", "近衛"), ("責め苦 (トウ×シガ)", "大隊"), ("責め苦 (トウ×シガ)", "ボス"), ("感電 (シガ×カタ×ソム)", "近衛"), ("感電 (シガ×カタ×ソム)", "ボス") };

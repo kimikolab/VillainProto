@@ -57,7 +57,7 @@ static class Som309Diag
     static UnitDef Tsugi => UnitCatalog.Tsugi;
     internal static Formation Playtest(string n) => Pin310(PlaytestH311.First(r => r.Name == n).F);   // 第311期: ソムは旧の規定（`SomH310`）に
     static Formation Row(string n) => Pin310(CompareBuildsH311().First(r => r.Name == n).F);
-    static Formation WinSeat() => PinKT311(B283.Seat(S307.Order(S307.WinBoard)));
+    static Formation WinSeat() => PinKT311(Pin316(B283.Seat(S307.Order(S307.WinBoard))));
 
     /// <summary>同じ席・同じ陣形・同じレリックのまま、<paramref name="from"/> を <paramref name="to"/> に替える（`FvSwap` は陣形とレリックを落とすので使わない）。</summary>
     internal static Formation Swap(Formation f, UnitDef from, UnitDef to)
@@ -83,7 +83,7 @@ static class Som309Diag
         var shock = Row("感電 (シガ×カタ×ソム)");
         var list = new List<(string, string, Formation, Formation?)>
         {
-            ("雷の型 ドハ→H", "代表台 ／ 試遊", Swap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, Som), Swap(Playtest("試遊・感電 雷の型"), UnitCatalog.Doha, Tsugi)),
+            ("雷の型 ドハ→H", "代表台 ／ 試遊", Swap(Playtest("試遊・感電 雷の型"), UnitCatalog.DohaH316, Som), Swap(Playtest("試遊・感電 雷の型"), UnitCatalog.DohaH316, Tsugi)),
             ("感電 糸 ガルド→H", "代表台 ／ 試遊", Swap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, Som), Swap(Playtest("試遊・感電 糸"), UnitCatalog.Gald, Tsugi)),
             ("火の型 ソラ→H", "試遊", Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, Som), Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, Tsugi)),
             ("勝ち台 ツギの席（元の勝ち台）", "代表台 ／ 元の勝ち台", Swap(win, Tsugi, Som), win),
@@ -210,7 +210,7 @@ static class Som309Diag
         var res = new Cand[perms.Count];
         for (int i = 0; i < perms.Count; i++)
         {
-            var f = PinKT311(B283.Seat(perms[i]));
+            var f = PinKT311(Pin316(B283.Seat(perms[i])));
             int wins = 0; long wt = 0, alive = 0;
             Parallel.For(0, Seeds, s =>
             {
@@ -366,7 +366,7 @@ static class Som309Diag
         int need = w.Boss ? 1 : 5;
         Parallel.For(0, boards.Count, i =>
         {
-            var f0 = PinKT311(B283.Seat(boards[i]));
+            var f0 = PinKT311(Pin316(B283.Seat(boards[i])));
             var fs = new[] { f0, Swap(f0, Som, Tsugi) };
             static int W(Formation f, S287.Wave w, int n, out long wt)
             {
@@ -529,7 +529,7 @@ static class Som309Diag
                 && som.Name == old.Name && som.MinusText == old.MinusText && som.Flavor == old.Flavor && som.Flavor == "喚んだものは、みな背いた。弾けた光だけが、帰ってくる。"
                 && som.PlusText == old.PlusText + "。満ちた仲間に降った光は、光の衣になって次の一撃を受け止める"
                 && old.Traits.SequenceEqual(UnitCatalog.SomSHa.Traits) && old.PlusText == UnitCatalog.SomSHa.PlusText && old.Traits.SequenceEqual(UnitCatalog.SomH307.Traits.Append(TraitId.SparkRain))
-                && UnitCatalog.All.Contains(UnitCatalog.Som) && !UnitCatalog.Everyone.Contains(som) && !UnitCatalog.Everyone.Contains(old) && !UnitCatalog.Everyone.Contains(lva)   /* 第311期: LV-a は `SomH310`（`All` の外）に */
+                && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.Som) && !UnitCatalog.Everyone.Contains(som) && !UnitCatalog.Everyone.Contains(old) && !UnitCatalog.Everyone.Contains(lva)   /* 第311期: LV-a は `SomH310`（`All` の外）に */
                 && UnitCatalog.SomLVc.Traits.SequenceEqual(old.Traits.Append(TraitId.SparkVeil).Append(TraitId.SparkVeilCap)) && UnitCatalog.SomFO.Traits.SequenceEqual(old.Traits.Append(TraitId.SparkFocus));
             Expect("(a) 段0: 規定のソム ＝ `SomLVa` と同じ中身（札・数値・行動）＝ 旧の規定（`SomH308` ＝ SH-a）＋ `SparkVeil`・名前とフレーバーはそのまま・文面に衣・旧は `All` ／ `Everyone` の外・第308期の版は旧から作る", ok);
         }
@@ -542,10 +542,10 @@ static class Som309Diag
         }
         // (c) 試遊の2台・`compare` の行数
         {
-            var pl = Presets.Playtest.Take(10).ToArray();   // 第312期: 試遊の末尾に2行（光の盾 鞭）を足した——第311期までの10行で見る
+            var pl = PlaytestH316.Take(10).ToArray();   // 第312期: 試遊の末尾に2行（光の盾 鞭）を足した——第311期までの10行で見る
             bool shape = pl.Length == 10 && pl.Take(8).Select(r => r.Name).SequenceEqual(Playtest308) && pl.Skip(8).Select(r => r.Name).SequenceEqual(new[] { Shield, ShieldHeavy })
                 && Presets.Compare.Length == 64 && CompareBuildsH311().Count() == 64 && Presets.Cross.Length == 12
-                && pl.All(r => !Presets.Compare.Any(c => c.Name == r.Name) && r.F.Occupied().Count() == 5 && r.F.Occupied().All(o => UnitCatalog.All.Contains(o.Def)))
+                && pl.All(r => !Presets.Compare.Any(c => c.Name == r.Name) && r.F.Occupied().Count() == 5 && r.F.Occupied().All(o => UnitCatalog.All.Select(PinDS316).Contains(o.Def)))
                 && pl.Skip(8).All(r => r.F.Shape == FormationShape.X && !r.F.HasRelics && r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Som)) && r.F.Occupied().All(o => o.Slot < 5));
             var picks = PickPairs.Select(pp => (pp.Name, Top: S307.OrderName(Rank(pp.Pair)[0].Order))).ToList();
             bool same = picks.All(x => Seats(Playtest(x.Name)) == x.Top);

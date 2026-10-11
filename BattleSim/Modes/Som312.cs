@@ -56,10 +56,10 @@ static class Som312Diag
     static S287.Wave WaveOf(string n) => n switch { "nine" => Waves[3], "nine2" => Waves[4], _ => S307.WaveOf(n) };
 
     internal const string Whip = "試遊・感電 光の盾 鞭", WhipHeavy = "試遊・感電 光の盾 重 鞭";
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
+    static Formation Playtest(string n) => PlaytestH316.First(r => r.Name == n).F;
     /// <summary>§3 の台: 試遊・感電 火の型 の ソラ → ソム（第311期の代表台と同じ・ベニのいる台）。規定の駒。</summary>
     static Formation FireSom() => S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, UnitCatalog.Som);
-    static (string Name, Formation F)[] ShockRows() => Presets.Playtest.Where(r => r.Name.StartsWith("試遊・感電", StringComparison.Ordinal)).ToArray();
+    static (string Name, Formation F)[] ShockRows() => PlaytestH316.Where(r => r.Name.StartsWith("試遊・感電", StringComparison.Ordinal)).ToArray();
 
     // ---------------------------------------------------------------------------------
     // 1戦の計数
@@ -226,7 +226,7 @@ static class Som312Diag
             bool old = UnitCatalog.SomH311.Traits.SequenceEqual(UnitCatalog.SomE2.Traits) && UnitCatalog.SomH311.PlusText == UnitCatalog.SomE2.PlusText
                 && UnitCatalog.KataH311.Traits.SequenceEqual(UnitCatalog.KataKRb.Traits.Append(TraitId.ThundercloudUncapped)) && ReferenceEquals(UnitCatalog.KataKRinf, UnitCatalog.KataH311)
                 && UnitCatalog.TouH311.Traits.SequenceEqual(new[] { TraitId.ChargedPowder, TraitId.ChargedPowderLeak, TraitId.ShockStunHalf, TraitId.ChargedPowderSpread });
-            bool roster = UnitCatalog.All.Contains(som) && UnitCatalog.All.Contains(kata) && UnitCatalog.All.Contains(tou) && UnitCatalog.All.Count == 52
+            bool roster = UnitCatalog.All.Select(PinDS316).Contains(som) && UnitCatalog.All.Select(PinDS316).Contains(kata) && UnitCatalog.All.Select(PinDS316).Contains(tou) && UnitCatalog.All.Count == 52
                 && new[] { UnitCatalog.SomH311, UnitCatalog.KataH311, UnitCatalog.TouH311 }.All(d => !UnitCatalog.Everyone.Contains(d));
             bool text = som.PlusText == UnitCatalog.SomH311.PlusText + UnitCatalog.SomSwarmText && kata.PlusText == UnitCatalog.KataH311.PlusText + UnitCatalog.ShockDauntText
                 && tou.PlusText == UnitCatalog.TouH311.PlusText + UnitCatalog.ShockDauntText && som.Name == "背かれのソム";
@@ -237,7 +237,7 @@ static class Som312Diag
         {
             // 火の型 ソラ→ソムの駒を、ベニの隣でない味方ができる席に並べ替えた盤（シガ・トウ・ガルド・ベニ・ソム——ベニは後1・隣は前1 ／ 中央）。
             // ベニの隣の味方 ／ 隣でない味方 を1体ずつ選び、4 割を切らせて緊急を起こす。
-            var f = Formation.Build(front1: UnitCatalog.Shiga, front3: UnitCatalog.Tou, center: UnitCatalog.Gald, back1: UnitCatalog.Beni, back3: UnitCatalog.Som);
+            var f = Formation.Build(front1: UnitCatalog.ShigaSWa, front3: UnitCatalog.Tou, center: UnitCatalog.Gald, back1: UnitCatalog.Beni, back3: UnitCatalog.Som);
             string Run1(bool inside, out long inv, out long healedOthers, out int? target, out int? partner, out long focusHp)
             {
                 var (ctx, p, e) = Board(f, BattleEngine.MaterializeEnemy(EnemyCatalog.BossRegularWave, EnemyScaleRule.None));
@@ -288,14 +288,14 @@ static class Som312Diag
         }
         // (d) 試遊の2台・`compare` の行数
         {
-            var pl = Presets.Playtest;
+            var pl = PlaytestH316;
             var shield = Playtest(S309.Shield); var heavy = Playtest(S309.ShieldHeavy);
-            bool SameBut(Formation a, Formation b) => Enumerable.Range(0, 5).All(i => ReferenceEquals(a[i], b[i]) || ReferenceEquals(a[i], UnitCatalog.Kubi) && ReferenceEquals(b[i], UnitCatalog.Shiga));
+            bool SameBut(Formation a, Formation b) => Enumerable.Range(0, 5).All(i => ReferenceEquals(a[i], b[i]) || ReferenceEquals(a[i], UnitCatalog.Kubi) && ReferenceEquals(b[i], UnitCatalog.ShigaSWa));
             bool ok = pl.Length == 12 && pl.Take(10).Select(r => r.Name).SequenceEqual(S309.Playtest308.Concat(new[] { S309.Shield, S309.ShieldHeavy }))
                 && pl.Skip(10).Select(r => r.Name).SequenceEqual(new[] { Whip, WhipHeavy })
                 && SameBut(shield, Playtest(Whip)) && SameBut(heavy, Playtest(WhipHeavy)) && Playtest(Whip).Occupied().Count() == 5 && Playtest(WhipHeavy).Occupied().Count() == 5
-                && pl.Skip(10).All(r => r.F.Shape == FormationShape.X && !r.F.HasRelics && r.F.Occupied().All(o => o.Slot < 5 && UnitCatalog.All.Contains(o.Def)) && !r.F.Occupied().Any(o => o.Def.Id == "kubi"))
-                && Presets.Compare.Length == 64 && CompareBuilds().Count() == 64 && Presets.Cross.Length == 12 && pl.All(r => !Presets.Compare.Any(c => c.Name == r.Name));
+                && pl.Skip(10).All(r => r.F.Shape == FormationShape.X && !r.F.HasRelics && r.F.Occupied().All(o => o.Slot < 5 && UnitCatalog.All.Select(PinDS316).Contains(o.Def)) && !r.F.Occupied().Any(o => o.Def.Id == "kubi"))
+                && Presets.Compare.Length == 64 && CompareBuildsH316().Count() == 64 && Presets.Cross.Length == 12 && pl.All(r => !Presets.Compare.Any(c => c.Name == r.Name));
             Expect("(d) 試遊の2台（光の盾 ／ 重 の クビ → シガ・同じ席）が `Presets.Playtest` の末尾・`compare` は 64 行のまま", ok, $"試遊 {pl.Length} 行・末尾 {string.Join(" ／ ", pl.Skip(10).Select(r => Seats(r.F)))}");
         }
         // (e) 決定的・verbose の有無で勝敗と決着T が同じ

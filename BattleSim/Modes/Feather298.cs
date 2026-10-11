@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using BattleCore;
 using static Common;
 
@@ -44,12 +44,12 @@ static class Feather298Diag
     static Doha297Diag.Wave WaveOf(string k) => Waves().First(w => w.Key == k);
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
     static string Seats(Formation f) => string.Join("・", Enumerable.Range(0, 5).Select(i => f[i] is { } d ? Short(d) : "—"));
-    static Formation Playtest(string n) => Pin299(Presets.Playtest.First(r => r.Name == n).F);
+    static Formation Playtest(string n) => Pin299(PlaytestH316.First(r => r.Name == n).F);
     // 第299期: ミサ ／ ザン ／ ヒサの規定化の前（第298期の規定 `TomeMb` ／ `ZanZN0` ／ `HisaHKb`）に固定する。この器具の中の駒の名指しも旧に替えた。
-    static (string Name, Formation F)[] CompareBuilds() => Common.CompareBuilds().Select(r => (r.Name, Pin299(r.F))).ToArray();
+    static (string Name, Formation F)[] CompareBuildsH316() => Common.CompareBuildsH316().Select(r => (r.Name, Pin299(r.F))).ToArray();
     static (string Name, Formation F)[] CrossBuilds() => Common.CrossBuilds().Select(r => (r.Name, Pin299(r.F))).ToArray();
-    static (string Name, Formation F)[] PlaytestRows => Presets.Playtest.Select(r => (r.Name, Pin299(r.F))).ToArray();
-    static Formation CompareRow(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static (string Name, Formation F)[] PlaytestRows => PlaytestH316.Select(r => (r.Name, Pin299(r.F))).ToArray();
+    static Formation CompareRow(string n) => CompareBuildsH316().First(r => r.Name == n).F;
 
     /// <summary>濡れ衣編成（§6-2・`seat` で決めた席）: 前1 ザン ／ 前3 ボルグ ／ 中央 カド ／ 後1 ヒサ ／ 後3 ミサ。席 120 通りの勝率はすべて同じ（C0 ＝ C4 ＝ 85.7）なので、C4 の濡れ衣が最も多い席（2.12 回 ／ 戦）を採った（決めたこと）。</summary>
     internal static Formation FrameSquad => Formation.Build(front1: UnitCatalog.ZanZN0, front3: UnitCatalog.Borg, center: UnitCatalog.Kado, back1: UnitCatalog.HisaHKb, back3: UnitCatalog.TomeMb);
@@ -154,10 +154,10 @@ static class Feather298Diag
     {
         Console.WriteLine("# 第298期 段0-1 —— ドハ ＝ DH-a（なまりを外す）");
         Console.WriteLine();
-        var rows = CompareBuilds().Select(r => (r.Name, F: r.F, Cross: false)).Concat(CrossBuilds().Select(r => (r.Name, F: r.F, Cross: true))).ToArray();
+        var rows = CompareBuildsH316().Select(r => (r.Name, F: r.F, Cross: false)).Concat(CrossBuilds().Select(r => (r.Name, F: r.F, Cross: true))).ToArray();
         // 旧 ＝ 規定のドハを `DohaD0` に（ドハのいない行は同じ）
         var oldR = new Dictionary<string, double[]>(); var newR = new Dictionary<string, double[]>();
-        foreach (var (n, f, _) in rows) { newR[n] = CompareRates(f); oldR[n] = CompareRates(FvSwap(f, UnitCatalog.Doha, UnitCatalog.DohaD0)); }
+        foreach (var (n, f, _) in rows) { newR[n] = CompareRates(f); oldR[n] = CompareRates(FvSwap(f, UnitCatalog.DohaH316, UnitCatalog.DohaD0)); }
         Console.WriteLine("## 動いた行（`compare` 64 行 ＋ 交差帯 12 行・seed 0..199・第1〜5波）");
         Console.WriteLine();
         Console.WriteLine("| 行 | 帯 | 旧（`DohaD0`） | 規定（DH-a・なまりなし） | 最大の差（第2〜5波） |");
@@ -211,7 +211,7 @@ static class Feather298Diag
         foreach (var n in axis)
         {
             var f = rows.First(r => r.Name == n).F;
-            foreach (var (tag, g) in new[] { ("旧", FvSwap(f, UnitCatalog.Doha, UnitCatalog.DohaD0)), ("規定", f) })
+            foreach (var (tag, g) in new[] { ("旧", FvSwap(f, UnitCatalog.DohaH316, UnitCatalog.DohaD0)), ("規定", f) })
             {
                 var sum = new double[DullRoutes.Count]; int wins = 0, cnt = 0;
                 for (int w = 1; w < EnemyCatalog.Stages.Count; w++)
@@ -232,7 +232,7 @@ static class Feather298Diag
         Console.WriteLine("|---|---|---|---|---|");
         foreach (var d in new[] { UnitCatalog.Utsu, UnitCatalog.Uke, UnitCatalog.Wata, UnitCatalog.Kubi })
             foreach (var (n, f, _) in rows.Where(r => r.F.Occupied().Any(o => ReferenceEquals(o.Def, d))))
-                Console.WriteLine($"| {Short(d)} | {n} | {(f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Doha)) ? "○" : "—")} | {Row(oldR[n])} | {Row(newR[n])} |");
+                Console.WriteLine($"| {Short(d)} | {n} | {(f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.DohaH316)) ? "○" : "—")} | {Row(oldR[n])} | {Row(newR[n])} |");
         Console.WriteLine();
 
         // 参考: doha297 の代表台 × DH-a（なまりあり）／ 規定（なまりなし）
@@ -243,7 +243,7 @@ static class Feather298Diag
         foreach (var (name, f) in Doha297Diag.Boards())
             foreach (var w in Waves().Where(w => w.Key != "1"))
             {
-                double o = Many(f, w.Make, 200).Win, a = Many(FvSwap(f, UnitCatalog.DohaD0, UnitCatalog.DohaDHa), w.Make, 200).Win, nw = Many(FvSwap(f, UnitCatalog.DohaD0, UnitCatalog.Doha), w.Make, 200).Win;
+                double o = Many(f, w.Make, 200).Win, a = Many(FvSwap(f, UnitCatalog.DohaD0, UnitCatalog.DohaDHa), w.Make, 200).Win, nw = Many(FvSwap(f, UnitCatalog.DohaD0, UnitCatalog.DohaH316), w.Make, 200).Win;
                 if (o == a && a == nw) continue;
                 Console.WriteLine($"| {name} | {w.Name} | {o:F1} | {a:F1} | {nw:F1} | {nw - a:+0.0;-0.0} |");
             }
@@ -265,12 +265,12 @@ static class Feather298Diag
     static (string Name, Formation F)[] AttrBoards()
     {
         var l = new List<(string, Formation)>();
-        l.AddRange(CompareBuilds()); l.AddRange(CrossBuilds()); l.AddRange(PlaytestRows);
+        l.AddRange(CompareBuildsH316()); l.AddRange(CrossBuilds()); l.AddRange(PlaytestRows);
         // 旧のドハ（なまりあり）の行
-        foreach (var (n, f) in CompareBuilds().Concat(CrossBuilds()))
-            if (f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Doha))) l.Add(($"{n}（旧のドハ）", FvSwap(f, UnitCatalog.Doha, UnitCatalog.DohaD0)));
+        foreach (var (n, f) in CompareBuildsH316().Concat(CrossBuilds()))
+            if (f.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.DohaH316))) l.Add(($"{n}（旧のドハ）", FvSwap(f, UnitCatalog.DohaH316, UnitCatalog.DohaD0)));
         // 癒しの灯（保持者 0 枚）: 火選りの行のヒヨに札を足す
-        foreach (var (n, f) in CompareBuilds().Where(r => r.Name.StartsWith("火選り", StringComparison.Ordinal)))
+        foreach (var (n, f) in CompareBuildsH316().Where(r => r.Name.StartsWith("火選り", StringComparison.Ordinal)))
             l.Add(($"{n}（ヒヨ ＋ 癒しの灯）", FvSwap(f, UnitCatalog.Hiyo, With(UnitCatalog.Hiyo, TraitId.MendGlow))));
         // 橋（HS-c・保持者は版だけ）: 試遊・標 ボス台のヒサ → HS-c・バン → ツギ ／ リリ
         var bossRow = Playtest("試遊・標 ボス台");
@@ -390,7 +390,7 @@ static class Feather298Diag
         Console.WriteLine();
         var ff = new Dictionary<string, (long N, HashSet<string> Rows)>();
         long battles = 0;
-        foreach (var (n, f) in CompareBuilds())
+        foreach (var (n, f) in CompareBuildsH316())
             for (int w = 1; w < EnemyCatalog.Stages.Count; w++)
                 for (int s = 0; s < 50; s++)
                 {
@@ -521,7 +521,7 @@ static class Feather298Diag
         var combos = Combos(best);
         Console.WriteLine($"# 第298期 `compare` 64 行 × 組（seed 0..199・第1〜5波）");
         Console.WriteLine();
-        var rows = CompareBuilds();
+        var rows = CompareBuildsH316();
         var baseR = rows.ToDictionary(r => r.Name, r => CompareRates(r.F));
         foreach (var c in combos.Skip(1))
         {
@@ -569,7 +569,7 @@ static class Feather298Diag
         var w = WaveOf(waveKey);
         var c0 = Combos(best)[0]; var cv = ComboOf(comboTag, best);
         var fixedDefs = new[] { UnitCatalog.HisaHKb, UnitCatalog.ZanZN0, UnitCatalog.TomeMb };
-        var pool = UnitCatalog.All.Where(d => !fixedDefs.Any(x => x.Id == d.Id)).ToArray();   // 第299期: 固定枠が旧の定義になったので Id で外す
+        var pool = UnitCatalog.All.Select(PinDS316).Where(d => !fixedDefs.Any(x => x.Id == d.Id)).ToArray();   // 第299期: 固定枠が旧の定義になったので Id で外す
         var perms = Perms(5).ToArray();
         var sw = System.Diagnostics.Stopwatch.StartNew();
         Console.WriteLine($"# 第298期 格子 —— {w.Name} × C0 ／ {cv.Tag}（固定枠 ヒサ ＋ ザン ＋ ミサ・探索枠2 × 席 120・seed 0..{seeds - 1}）");
@@ -698,12 +698,12 @@ static class Feather298Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        var d = UnitCatalog.Doha; var d0 = UnitCatalog.DohaD0;
+        var d = UnitCatalog.DohaH316; var d0 = UnitCatalog.DohaD0;
         Expect("(a) 段0-1: 規定のドハ ＝ 旧（`DohaD0`）＋ `ShareBack` ＋ `SharerNoDull`・数値は旧のまま・文面とフレーバーは指示書のまま・旧は `All` ／ `Everyone` の外・版（DH-a ／ b ／ t）は旧から作る",
             d.Traits.SequenceEqual(d0.Traits.Append(TraitId.ShareBack).Append(TraitId.SharerNoDull)) && d.MaxHp == d0.MaxHp && d.Attack == d0.Attack && d.Speed == d0.Speed && d.Id == d0.Id
             && d.PlusText == "味方が受けるダメージの4割を肩代わりする（薙ぎでも全体でも効く・味方の破片が受け止めた残りから取る）。引き受けた痛みは、その相手の力に変えて返す"
             && d.MinusText == "自分は強くならず、味方が多いほど早く尽きる" && d.Flavor == "頼まれてもいない痛みを喰う。礼を言われたことは、一度もない。"
-            && UnitCatalog.All.Contains(d) && !UnitCatalog.Everyone.Contains(d0)
+            && UnitCatalog.All.Select(PinDS316).Contains(d) && !UnitCatalog.Everyone.Contains(d0)
             && UnitCatalog.DohaDHa.Traits.SequenceEqual(d0.Traits.Append(TraitId.ShareBack)) && SharerTrait.DullDivisor == 4);
         {
             // (b) 規定のドハはなまりを持たない ／ 旧と DH-a は持つ（ドルガへ 30 の一撃でドルガの攻撃力）
@@ -863,7 +863,7 @@ static class Feather298Diag
             && UnitCatalog.ZanZNa.Traits.SequenceEqual(UnitCatalog.ZanZN0.Traits.Append(TraitId.VendettaFrame)) && UnitCatalog.ZanZNb.Traits.SequenceEqual(UnitCatalog.ZanZN0.Traits.Append(TraitId.VendettaFrameAll))
             && UnitCatalog.MisaMFa.PlusText.EndsWith("。指差されたものは、全部撃つ", StringComparison.Ordinal) && UnitCatalog.MisaMFa.MinusText.EndsWith("。味方が指差されても、撃つ", StringComparison.Ordinal)
             && UnitCatalog.ZanZNa.PlusText.EndsWith("。仲間を撃った者が誰であれ、指差された敵を斬る", StringComparison.Ordinal) && UnitCatalog.ZanZNa.MinusText == UnitCatalog.ZanZN0.MinusText
-            && vers.All(v => !UnitCatalog.Everyone.Contains(v)) && Presets.Compare.Concat(Presets.Cross).Concat(Presets.Playtest).All(r => r.F.Occupied().All(o => !vers.Contains(o.Def))));
+            && vers.All(v => !UnitCatalog.Everyone.Contains(v)) && Presets.Compare.Concat(Presets.Cross).Concat(PlaytestH316).All(r => r.F.Occupied().All(o => !vers.Contains(o.Def))));
         Console.WriteLine();
         Console.WriteLine(_fail == 0 ? "すべて ○" : $"**× {_fail} 件**");
     }

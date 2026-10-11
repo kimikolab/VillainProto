@@ -773,6 +773,13 @@ public enum TraitId
     ScourgeDaunt,      // 萎縮も縛られた的（SF-C）: 保持者が戦にいる間、萎縮した駒（`StatusKeys.Daunted`）も「動けない敵」に数える——優先して狙う・2倍で入る・主目標でも怖気づかない・悲鳴の出どころにもなる（`TormentTrait.IsBound` の1本）
     ScourgeShockSpare, // 感電した敵は怖くない（SF-D）: 当たる前に感電していた敵を主目標に打っても怖気づかない（`ScourgeTrait`・見せしめの悲鳴は広げない）
 
+    // --- 第317期で足した札（ソムの版 `UnitCatalog.SomBTa` ／ `SomBD` ほか・カタの版 `KataLR` ／ `KataLRall`・指示書 design/PHASE317_SOM_BETRAY_SPEC.md §3）。保持者 0 枚。どれも**札そのものは挙動を持たない** ---
+    BeastBetray,       // 裏切りの一撃（BT-a・ソム）: 立った獣は、立った直後に、獣の席から敵の普通の攻撃と同じ選び方（`SelectTarget`・単体）で選んだ味方1体に雷を投げ、感電を付ける（ダメージ 0・既に感電していれば何も起きない）。クグ（糸の保持者・組み付いた敵が生きている）に向かった雷は、受けずに糸の先の敵へ流れて感電させる（engine の `BeastThrow`・`StandBeasts` の後ろ）
+    LightningRod,      // 避雷針（BT-b・カタ）: 獣の裏切りの一撃がカタ自身か隣の味方に向かったら、受け止めて投げた獣の上に落とし直す——狙われた味方に感電は付かず、獣はその場で弾けて消える（起こし手はカタ・倒れた扱いにしない）。痺れ ／ 粛 ／ 倒れていれば働かない（手番の外・経路 `OutOfTurnRoute.LightningRod`）
+    LightningRodAll,   // 避雷針・全員（BT-c・カタ・対照）: `LightningRod` の範囲を味方全員に広げたもの
+    BeastDeathCount,   // 獣の弾けを敵の死に数える（BD・ソム）: 背いた獣が弾けたとき（喚び出しの場 ／ 群れ ／ 緊急 ／ 立った獣が弾けた ／ 避雷針）、起こし手を倒した駒として死の読み手（倒した駒の `OnKill`・ソムの側の `OnAnyDeath`）に渡す。外す読み手は engine の `BeastDeathSkips`（撃破数で際限なく育つ札）。立った獣は弾けたら消える（engine の `CountBeastDeath`）
+    BeastDeathCap,     // 獣の死は1回に1体（BD の上限の版・`BeastDeathCount` と組む）: 1回の喚び出し（群れの一斉の弾け）で死に数えるのは先頭の1体だけ
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -17402,6 +17409,11 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.LiveWireHold),              // 第316期（SF-B・印だけ）
         new MarkOnlyTrait(TraitId.ScourgeDaunt),              // 第316期（SF-C・印だけ）
         new MarkOnlyTrait(TraitId.ScourgeShockSpare),         // 第316期（SF-D・印だけ）
+        new MarkOnlyTrait(TraitId.BeastBetray),               // 第317期（裏切りの一撃 BT-a・印だけ）
+        new MarkOnlyTrait(TraitId.LightningRod),              // 第317期（避雷針 BT-b・印だけ）
+        new MarkOnlyTrait(TraitId.LightningRodAll),           // 第317期（避雷針・全員 BT-c・印だけ）
+        new MarkOnlyTrait(TraitId.BeastDeathCount),           // 第317期（獣の死 BD・印だけ）
+        new MarkOnlyTrait(TraitId.BeastDeathCap),             // 第317期（獣の死は1回に1体・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

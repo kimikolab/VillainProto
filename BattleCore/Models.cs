@@ -2180,6 +2180,18 @@ public sealed class UnitTally
     public int StandAlivePeak;
     public long[]? CensusBeasts, CensusCharged, CensusNoSeat, CensusFreeHist, CensusFreeT;
     /// <summary>
+    /// 第317期（<b>計数のみ</b>）。裏切りの一撃（BT-a 〜・ソムの側）: <c>BtThrown</c> 投げた ／ <c>BtNoTarget</c> 投げる相手がいなかった ／ <c>BtShocked</c> 当たって感電が付いた ／ <c>BtAlready</c> 既に感電していた ／
+    /// <c>BtThread</c> クグの糸を伝って敵へ流れた ／ <c>BtThreadShocked</c> うち糸の先の敵に感電が付いた ／ <c>BtRodCaught</c> 避雷針が受け止めた ／ <c>BtRodOut</c> 避雷針の保持者が生きていたが範囲の外 ／
+    /// <c>BtRodBlocked</c> 範囲の内だが痺れ ／ 粛ほかで止まった（<c>BtRodHushed</c> うち粛）／ <c>BtSlotHist</c>[席] 狙われた味方の席。
+    /// 避雷針（カタの側）: <c>RodCaught</c> 受け止めた ／ <c>RodChainUnits</c> 落とし直しの弾けから広がった連鎖の駒（獣を含む）／ <c>RodDry</c> 獣が帯電していなかった。
+    /// 獣の死（BD・ソムの側）: <c>BdCounted</c> 死に数えた獣 ／ <c>BdKind</c>[0 喚び出しの場（群れ・暴発を含む）／ 1 緊急 ／ 2 立った獣が弾けた ／ 3 避雷針] ／ <c>BdCapped</c> 上限で数えなかった獣 ／
+    /// <c>BdOnKill</c> ／ <c>BdOnAnyDeath</c> 渡した読み手の札の数 ／ <c>BdSkipped</c> 外した読み手の札の数。
+    /// Phase 0 の計数器（`BattleContext.ThrowCensus`・SB-a で立った獣）: <c>ThrowCensusN</c> 立った獣 ／ <c>ThrowCensusW</c>[席] 狙える味方に 60 を等分した重み ／ <c>ThrowCensusKataW</c> うちカタ自身 ／ <c>ThrowCensusRodW</c> うちカタ自身か隣。
+    /// </summary>
+    public long BtThrown, BtNoTarget, BtShocked, BtAlready, BtThread, BtThreadShocked, BtRodCaught, BtRodOut, BtRodBlocked, BtRodHushed, RodCaught, RodChainUnits, RodDry,
+                BdCounted, BdCapped, BdOnKill, BdOnAnyDeath, BdSkipped, ThrowCensusN, ThrowCensusKataW, ThrowCensusRodW;
+    public long[]? BtSlotHist, BdKind, ThrowCensusW;
+    /// <summary>
     /// 第299期（<b>計数のみ</b>・ザンの手番）。仇指し（<see cref="TraitId.Vendetta"/>）の保持者が手番で振ったとき（規定でも数える）:
     /// <c>ZanTurns</c> 手番 ／ <c>ZanTurnNoMarked</c> 標を持つ敵が 0 ／ <c>ZanTurnMarkedFoes</c> ／ <c>ZanTurnLayers</c> 手番の時点の標を持つ敵の数 ／ 層の合計 ／
     /// <c>ZanPlanA</c> ／ <c>ZanPlan1</c> 仇巡りの見込みの太刀（ZM-a ＝ 層の合計・ZM-1 ＝ 敵の数・上限で切る）／ <c>ZanPlanACapped</c> ／ <c>ZanPlan1Capped</c> 上限に達した手番 ／
@@ -3366,6 +3378,10 @@ public sealed class UnitTally
         StandBeasts += o.StandBeasts; StandStood += o.StandStood; StandCharged += o.StandCharged; StandNoSeat += o.StandNoSeat; StandNoFoe += o.StandNoFoe;   // 第314期
         StandOverflow += o.StandOverflow; StandOverflowDry += o.StandOverflowDry; StandAliveSum += o.StandAliveSum; StandAliveN += o.StandAliveN; StandAlivePeak = Math.Max(StandAlivePeak, o.StandAlivePeak);
         AddHist(ref CensusBeasts, o.CensusBeasts); AddHist(ref CensusCharged, o.CensusCharged); AddHist(ref CensusNoSeat, o.CensusNoSeat); AddHist(ref CensusFreeHist, o.CensusFreeHist); AddHist(ref CensusFreeT, o.CensusFreeT);
+        BtThrown += o.BtThrown; BtNoTarget += o.BtNoTarget; BtShocked += o.BtShocked; BtAlready += o.BtAlready; BtThread += o.BtThread; BtThreadShocked += o.BtThreadShocked;   // 第317期
+        BtRodCaught += o.BtRodCaught; BtRodOut += o.BtRodOut; BtRodBlocked += o.BtRodBlocked; BtRodHushed += o.BtRodHushed; RodCaught += o.RodCaught; RodChainUnits += o.RodChainUnits; RodDry += o.RodDry;
+        BdCounted += o.BdCounted; BdCapped += o.BdCapped; BdOnKill += o.BdOnKill; BdOnAnyDeath += o.BdOnAnyDeath; BdSkipped += o.BdSkipped; AddHist(ref BtSlotHist, o.BtSlotHist); AddHist(ref BdKind, o.BdKind);
+        ThrowCensusN += o.ThrowCensusN; ThrowCensusKataW += o.ThrowCensusKataW; ThrowCensusRodW += o.ThrowCensusRodW; AddHist(ref ThrowCensusW, o.ThrowCensusW);
         ZanTurns += o.ZanTurns; ZanTurnNoMarked += o.ZanTurnNoMarked; ZanTurnMarkedFoes += o.ZanTurnMarkedFoes; ZanTurnLayers += o.ZanTurnLayers;
         ZanPlanA += o.ZanPlanA; ZanPlan1 += o.ZanPlan1; ZanPlanACapped += o.ZanPlanACapped; ZanPlan1Capped += o.ZanPlan1Capped; ZanTurnDealt += o.ZanTurnDealt;
         RoundTurns += o.RoundTurns; RoundFoes += o.RoundFoes; RoundSlashes += o.RoundSlashes; RoundCapped += o.RoundCapped; RoundCrossed += o.RoundCrossed;
@@ -4156,6 +4172,25 @@ public enum BattleEventKind
     /// <c>Amount</c> ＝ 1 なら席が塞がっていて立たずに弾けた（その席には別の駒が立っている）・0 なら空いた席で。<c>Text</c> ＝ <see cref="BeastBurstLabels"/>。<b>どの規則も読まない。</b> 規定のソムには出ない。
     /// </summary>
     BeastBurst,
+
+    /// <summary>
+    /// 立った獣がこちらへ雷を投げた（第317期・ソムの版 BT-a ／ BT-b ／ BT-c・<b>表示専用</b>）。並び: 獣の <c>Summon</c> → この出来事 →（当たれば）味方の <c>StatusGain</c>（感電）→（シガなら蓄電の <c>ShockGauge</c>）。
+    /// 避雷針なら → 獣の <c>BeastBurst 避雷針</c>（獣を盤から消す）→ 獣の <c>ShockSpent</c>（起点・起こし手はカタ）→ 隣の敵への <c>Discharge</c> ……。
+    /// <c>ActorId</c> ＝ 投げた獣（盤面の駒）／ <c>TargetId</c> ＝ 狙われた味方 ／ <c>PartnerId</c> ＝ 受け止めたカタ（避雷針）・糸の先の敵（糸）／ <c>Amount</c> ＝ 1 なら新しく感電が付いた ／
+    /// <c>Text</c> ＝ <see cref="BeastThrowLabels"/>。<b>どの規則も読まない。</b> 規定のソムには出ない。
+    /// </summary>
+    BeastThrow,
+}
+
+/// <summary>`BeastThrow`（第317期）の <c>Text</c>。</summary>
+public static class BeastThrowLabels
+{
+    /// <summary>当たった（<c>Amount</c> 1 ＝ 感電が付いた ／ 0 ＝ 既に感電していて何も起きなかった）。</summary>
+    public const string Hit = "投げた";
+    /// <summary>クグに向かった雷が糸を伝って組み付いた敵へ流れた（<c>PartnerId</c> ＝ 糸の先の敵・<c>Amount</c> 1 ＝ その敵に感電が付いた）。</summary>
+    public const string Thread = "糸";
+    /// <summary>カタが受け止めて、投げた獣の上に落とし直した（<c>PartnerId</c> ＝ カタ）。</summary>
+    public const string Rod = "避雷針";
 }
 
 /// <summary>`BeastBurst`（第310期）の <c>Text</c>。</summary>
@@ -4171,6 +4206,10 @@ public static class BeastBurstLabels
     public const string Swarm = "群れ";
     /// <summary>第314期（SB-b・版のみ）: 立っていた獣が、次のソムの手番の頭に暴発した（<c>TargetId</c> ＝ 立っていた獣・盤面の駒の列にいる番号。<b>この出来事で盤から消す</b>・<c>Death</c> は出ない）。</summary>
     public const string Overflow = "暴発";
+    /// <summary>第317期（BT-b ／ BT-c・版のみ）: カタの避雷針で、立っていた獣の上に雷が落ち直して弾けた（<c>ActorId</c> ＝ カタ ／ <c>TargetId</c> ＝ 立っていた獣。<b>この出来事で盤から消す</b>・<c>Death</c> は出ない）。</summary>
+    public const string Rod = "避雷針";
+    /// <summary>第317期（BD・版のみ）: 立っていた獣の感電が弾けて、獣が消えた（敵の死に数える・<c>ActorId</c> ＝ 連鎖の起こし手 ／ <c>TargetId</c> ＝ 立っていた獣。<b>この出来事で盤から消す</b>・<c>Death</c> は出ない）。</summary>
+    public const string Popped = "弾けて消えた";
 }
 
 /// <summary>`Spark`（第307期）の <c>Text</c>。</summary>

@@ -78,9 +78,9 @@ static class Shiga316Diag
     // =====================================================================================
     internal static readonly (string Tag, UnitDef Def)[] DVers =
     {
-        ("規定", UnitCatalog.Doha), ("DP-b", UnitCatalog.DohaDPb), ("DQ-b", UnitCatalog.DohaDQb), ("DP-s", UnitCatalog.DohaDPs),
+        ("規定", UnitCatalog.DohaH316), ("DP-b", UnitCatalog.DohaDPb), ("DQ-b", UnitCatalog.DohaDQb), ("DP-s", UnitCatalog.DohaDPs),
     };
-    static UnitDef DVer(string s) => s switch { "pb" => UnitCatalog.DohaDPb, "qb" => UnitCatalog.DohaDQb, "ps" => UnitCatalog.DohaDPs, _ => UnitCatalog.Doha };
+    static UnitDef DVer(string s) => s switch { "pb" => UnitCatalog.DohaDPb, "qb" => UnitCatalog.DohaDQb, "ps" => UnitCatalog.DohaDPs, _ => UnitCatalog.DohaH316 };
     static string DTag(UnitDef d) => DVers.First(v => ReferenceEquals(v.Def, d)).Tag;
 
     /// <summary>第315期の DQ-b の格子の「ドハが要る台」（`design/PHASE315_DOHA_PUSH2.md` §6・規定 → DQ-b）。G-c の基準。</summary>
@@ -172,7 +172,7 @@ static class Shiga316Diag
     static void DCompare()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds();
+        var rows = CompareBuildsH316();
         int nw = EnemyCatalog.Stages.Count;
         double[,] Grid(UnitDef d)
         {
@@ -187,7 +187,7 @@ static class Shiga316Diag
             });
             return g;
         }
-        var b = Grid(UnitCatalog.Doha);
+        var b = Grid(UnitCatalog.DohaH316);
         Console.WriteLine("# 第316期 段0 G-a —— `compare` 64 行 × DP-s（seed 0..199・基準は規定のドハ）");
         foreach (var (tag, d) in new[] { ("DP-b（第313期・参考）", UnitCatalog.DohaDPb), ("DP-s", UnitCatalog.DohaDPs) })
         {
@@ -258,8 +258,8 @@ static class Shiga316Diag
     {
         var w = D315.MakeWaves(100, 100).First(x => x.Name == (waveKey == "boss" ? "ボス" : "近衛"));
         var dv = DVer(ver);
-        var basis = UnitCatalog.Doha;
-        var pool = UnitCatalog.All.Where(d => d.Id != "doha").ToArray();
+        var basis = UnitCatalog.DohaH316;
+        var pool = UnitCatalog.All.Select(PinDS316).Where(d => d.Id != "doha").ToArray();
         const int seats = 6, seeds = 10;
         int step = Math.Max(1, 120 / seats);
         var seatSet = IntPerms(5).Where((_, i) => i % step == 0).Take(seats).ToArray();
@@ -338,7 +338,7 @@ static class Shiga316Diag
     internal static SVer SV(string n)
     {
         n = n.ToLowerInvariant().Replace("sf-", "").Replace("-", "");
-        if (n is "base" or "規定" or "") return new("規定", UnitCatalog.Shiga);
+        if (n is "base" or "規定" or "") return new("規定", UnitCatalog.ShigaSWa);
         if (n == "a") return new("SF-A", UnitCatalog.ShigaSFa);
         if (n == "b") return new("SF-B", UnitCatalog.ShigaSFb);
         if (n == "c") return new("SF-C", UnitCatalog.ShigaSFc);
@@ -347,8 +347,8 @@ static class Shiga316Diag
         {
             if (_combo.TryGetValue(n, out var v)) return v;
             var keys = n.Distinct().OrderBy(c => c).ToArray();
-            string plus = UnitCatalog.Shiga.PlusText + string.Concat(keys.Select(c => Cards[c].Plus));
-            string minus = keys.Contains('d') ? Cards['d'].Minus! : keys.Contains('c') ? Cards['c'].Minus! : UnitCatalog.Shiga.MinusText;
+            string plus = UnitCatalog.ShigaSWa.PlusText + string.Concat(keys.Select(c => Cards[c].Plus));
+            string minus = keys.Contains('d') ? Cards['d'].Minus! : keys.Contains('c') ? Cards['c'].Minus! : UnitCatalog.ShigaSWa.MinusText;
             if (keys.Contains('c') && keys.Contains('d')) minus = "感電していないとき、感電もしていない動ける敵を主目標に打つと怖気づく（萎縮した敵は動けない敵とみなす）";
             v = new("SF-" + new string(keys).ToUpperInvariant(), UnitCatalog.ShigaSF(keys.Select(c => Cards[c].Id).ToArray(), plus, minus));
             _combo[n] = v;
@@ -361,8 +361,8 @@ static class Shiga316Diag
     static S287.Wave[] Waves => Som310Diag.Waves;
     static S287.Wave WaveOf(string n) => n switch { "nine" => Waves[3], "nine2" => Waves[4], _ => S307.WaveOf(n) };
 
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation RowF(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Playtest(string n) => PlaytestH316.First(r => r.Name == n).F;
+    static Formation RowF(string n) => CompareBuildsH316().First(r => r.Name == n).F;
     internal const string ThunderBoard = "試遊・感電 雷の型";
 
     /// <summary>§5-2 の代表台（規定の駒・席は出典のまま）。「光の盾 鞭」は光の盾 の クビ → シガ そのもの（第312期のプリセット）。</summary>
@@ -609,7 +609,7 @@ static class Shiga316Diag
     static void CompareAll(string[] extra)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds();
+        var rows = CompareBuildsH316();
         int nw = EnemyCatalog.Stages.Count;
         var vers = Single.Concat(extra.Select(SV)).ToArray();
         double[,] Grid(UnitDef d)
@@ -647,9 +647,9 @@ static class Shiga316Diag
     {
         var w = WaveOf(waveKey);
         var v = SV(ver);
-        var fixedU = new[] { UnitCatalog.Shiga, UnitCatalog.Kata, UnitCatalog.Som };
+        var fixedU = new[] { UnitCatalog.ShigaSWa, UnitCatalog.Kata, UnitCatalog.Som };
         // 候補 ＝ 第287期の候補（感電の駒 ＋ 第283期の寿命側 ＋ ヒーラー）＋ トウ。固定してあった過去の版はすべていまの規定に替える（Id で引く）。ヒーラーは組に 1 枚まで（ポンの憲法）。
-        UnitDef Now(UnitDef d) => UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d;
+        UnitDef Now(UnitDef d) => UnitCatalog.All.Select(PinDS316).FirstOrDefault(x => x.Id == d.Id) ?? d;
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();
         var pool = S287.Pool.Select(Now).Append(UnitCatalog.Tou).Where(d => d.Id is not ("shiga" or "kata" or "som")).GroupBy(d => d.Id).Select(g => g.First()).ToArray();
         var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -665,7 +665,7 @@ static class Shiga316Diag
         int Wins(Formation f, int n) { int c = 0; for (int sd = 0; sd < n; sd++) if (BattleEngine.Run(BattleEngine.Materialize(f, BattleContext.PlayerTeam), w.Make(), sd, verbose: false).PlayerWon) c++; return c; }
         Parallel.For(0, boards.Count, i =>
         {
-            var f0 = B283.Seat(boards[i]);
+            var f0 = Pin316(B283.Seat(boards[i]));
             var fv = SwapId(f0, "shiga", v.Def);
             if (Wins(f0, cut) < 5 && Wins(fv, cut) < 5) return;
             int wb = Wins(f0, Seeds), wv = Wins(fv, Seeds);
@@ -824,16 +824,16 @@ static class Shiga316Diag
             Expect("DP-s: 送り出された手番（ギフト）の中では背を押さない（窓は閉じない）", !inGift && Tal(ctx, "doha").PushInGift == 1, $"ギフト中 {Tal(ctx, "doha").PushInGift}");
         }
         {
-            bool same = UnitCatalog.DohaDPs.Traits.SequenceEqual(UnitCatalog.Doha.Traits.Concat(new[] { TraitId.SharePush, TraitId.SharePushPower, TraitId.SharePushStrikers }))
-                && UnitCatalog.DohaDPs.MaxHp == UnitCatalog.Doha.MaxHp && UnitCatalog.DohaDPs.Attack == UnitCatalog.Doha.Attack && UnitCatalog.DohaDPs.Speed == UnitCatalog.Doha.Speed
-                && UnitCatalog.DohaDPs.Actions is { Count: 1 } && UnitCatalog.DohaDPs.Actions[0].Kind == ActionKind.Skill && !UnitCatalog.All.Contains(UnitCatalog.DohaDPs);
+            bool same = UnitCatalog.DohaDPs.Traits.SequenceEqual(UnitCatalog.DohaH316.Traits.Concat(new[] { TraitId.SharePush, TraitId.SharePushPower, TraitId.SharePushStrikers }))
+                && UnitCatalog.DohaDPs.MaxHp == UnitCatalog.DohaH316.MaxHp && UnitCatalog.DohaDPs.Attack == UnitCatalog.DohaH316.Attack && UnitCatalog.DohaDPs.Speed == UnitCatalog.DohaH316.Speed
+                && UnitCatalog.DohaDPs.Actions is { Count: 1 } && UnitCatalog.DohaDPs.Actions[0].Kind == ActionKind.Skill && !UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.DohaDPs);
             Expect("DP-s の定義（規定 ＋ 背を押す ＋ 上乗せを渡す ＋ 殴る仲間だけ・手番は術・`All` の外）", same, "");
         }
 
         // ---- 本体: SF-A 〜 SF-D
         // SF-A: 自分の感電が弾けても痺れない（放電はする）。カタ（S3 の痺れの保持者）を置き、シガの感電を弾けさせる。
         {
-            foreach (var (tag, sdef, expectStun) in new[] { ("規定", UnitCatalog.Shiga, true), ("SF-A", UnitCatalog.ShigaSFa, false) })
+            foreach (var (tag, sdef, expectStun) in new[] { ("規定", UnitCatalog.ShigaSWa, true), ("SF-A", UnitCatalog.ShigaSFa, false) })
             {
                 int stunned = 0, popped = 0, dis = 0, n = 0;
                 for (int sd = 0; sd < 40; sd++)
@@ -859,7 +859,7 @@ static class Shiga316Diag
         }
         // SF-B: 手番の鞭の後も自分の感電が残る・移す方は今のまま
         {
-            foreach (var (tag, sdef, keep) in new[] { ("規定", UnitCatalog.Shiga, false), ("SF-B", UnitCatalog.ShigaSFb, true) })
+            foreach (var (tag, sdef, keep) in new[] { ("規定", UnitCatalog.ShigaSWa, false), ("SF-B", UnitCatalog.ShigaSFb, true) })
             {
                 var ctx = Ctx(Formation.Build(front1: sdef), Formation.Build(front1: Wall, front3: Wall), out var p, out var e);
                 var sh = p[0];
@@ -877,7 +877,7 @@ static class Shiga316Diag
         }
         // SF-C: 萎縮した敵を優先し、2倍で入り、主目標でも怖気づかない
         {
-            foreach (var (tag, sdef, isC) in new[] { ("規定", UnitCatalog.Shiga, false), ("SF-C", UnitCatalog.ShigaSFc, true) })
+            foreach (var (tag, sdef, isC) in new[] { ("規定", UnitCatalog.ShigaSWa, false), ("SF-C", UnitCatalog.ShigaSFc, true) })
             {
                 int prefer = 0, n = 0, doubled = 0, cowered = 0, spared = 0;
                 for (int sd = 0; sd < 20; sd++)
@@ -903,7 +903,7 @@ static class Shiga316Diag
         }
         // SF-D: 感電した敵を主目標にしても怖気づかない・見せしめの悲鳴は広げない
         {
-            foreach (var (tag, sdef, isD) in new[] { ("規定", UnitCatalog.Shiga, false), ("SF-D", UnitCatalog.ShigaSFd, true) })
+            foreach (var (tag, sdef, isD) in new[] { ("規定", UnitCatalog.ShigaSWa, false), ("SF-D", UnitCatalog.ShigaSFd, true) })
             {
                 var ctx = Ctx(Formation.Build(front1: sdef), Formation.Build(front1: Wall, front3: Wall, center: Wall), out var p, out var e);
                 var sh = p[0];
@@ -922,7 +922,7 @@ static class Shiga316Diag
         }
         // 計数: 失った手番の原因（怖気 → 次の手番が飛ぶ）
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Shiga), Formation.Build(front1: Wall), out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.ShigaSWa), Formation.Build(front1: Wall), out var p, out var e);
             var sh = p[0];
             ctx.TakeTurn(sh);   // 動ける敵を打って怖気づく
             TurnProp.SetValue(ctx, 2);
@@ -963,7 +963,7 @@ static class Shiga316Diag
         {
             var vs = new[] { UnitCatalog.ShigaSFa, UnitCatalog.ShigaSFb, UnitCatalog.ShigaSFc, UnitCatalog.ShigaSFd };
             var ids = new[] { TraitId.FearNoStun, TraitId.LiveWireHold, TraitId.ScourgeDaunt, TraitId.ScourgeShockSpare };
-            bool ok = vs.Select((d, i) => d.Traits.SequenceEqual(UnitCatalog.Shiga.Traits.Append(ids[i])) && d.MaxHp == 52 && d.Attack == 9 && d.Speed == 3 && !UnitCatalog.All.Contains(d)).All(x => x);
+            bool ok = vs.Select((d, i) => d.Traits.SequenceEqual(UnitCatalog.ShigaSWa.Traits.Append(ids[i])) && d.MaxHp == 52 && d.Attack == 9 && d.Speed == 3 && !UnitCatalog.All.Select(PinDS316).Contains(d)).All(x => x);
             Expect("SF-A 〜 SF-D は規定のシガ（52 ／ 9 ／ 3）の末尾に札を1枚足しただけ・`All` の外", ok, "");
         }
         Console.WriteLine();

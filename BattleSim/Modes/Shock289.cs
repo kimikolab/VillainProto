@@ -61,12 +61,12 @@ static class Shock289Diag
     const int Seeds = 200, CutSeeds = 20;
 
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
-    static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n);
+    static UnitDef ByShort(string n) => UnitCatalog.All.Select(PinDS316).First(d => Short(d) == n);
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
-    static Formation Seat(UnitDef[] o) => Pin(PinKT311(B283.Seat(o)));
+    static Formation Seat(UnitDef[] o) => Pin(PinKT311(Pin316(B283.Seat(o))));
     /// <summary>第290期: 規定のシガ（第290期から SI-b）・カタ（KR-b）を、第289期の規定（SG-a ／ S3）に固定する。第289期の数字を再現するため。</summary>
-    internal static Formation Pin(Formation f) => Pin308(FvSwap(FvSwap(FvSwap(FvSwap(FvSwap(f, UnitCatalog.Shiga, UnitCatalog.ShigaSGa), UnitCatalog.KataH311, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.Doha, UnitCatalog.DohaD0));   // 第308期: ソムも（`Pin308`）   // 第298期: ドハも   // 第295期: ソラも   // 第291期: クグも旧の規定へ
+    internal static Formation Pin(Formation f) => Pin308(FvSwap(FvSwap(FvSwap(FvSwap(FvSwap(f, UnitCatalog.ShigaSWa, UnitCatalog.ShigaSGa), UnitCatalog.KataH311, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.DohaH316, UnitCatalog.DohaD0));   // 第308期: ソムも（`Pin308`）   // 第298期: ドハも   // 第295期: ソラも   // 第291期: クグも旧の規定へ
     internal static (string Name, Formation F)[] Rows289() => CompareBuildsH311().Select(r => (r.Name, Pin(r.F))).ToArray();
 
     /// <summary>
@@ -611,11 +611,11 @@ static class Shock289Diag
             && UnitCatalog.KataKRb.Traits.SequenceEqual(s3.Append(TraitId.Thundercloud).Append(TraitId.ThundercloudKeep))
             && new[] { UnitCatalog.ShigaSIa, UnitCatalog.ShigaSIb }.All(d => d.MaxHp == 52 && d.Attack == 9 && d.Speed == 3 && d.Id == "shiga")
             && new[] { UnitCatalog.KataKRa, UnitCatalog.KataKRb }.All(d => d.MaxHp == UnitCatalog.KataS3.MaxHp && d.Attack == UnitCatalog.KataS3.Attack && d.Speed == UnitCatalog.KataS3.Speed && d.Id == "kata")
-            && UnitCatalog.Shiga.Traits.SequenceEqual(UnitCatalog.ShigaSIb.Traits.Append(TraitId.ShockWhipChain)) /* 第294期: 規定は SW-a・SI-b は ShigaSIb */ && UnitCatalog.KataH311.Traits.SequenceEqual(UnitCatalog.KataKRb.Traits.Append(TraitId.ThundercloudUncapped))   /* 第293期: 規定は KR-∞・KR-b は KataKRb */
+            && UnitCatalog.ShigaSWa.Traits.SequenceEqual(UnitCatalog.ShigaSIb.Traits.Append(TraitId.ShockWhipChain)) /* 第294期: 規定は SW-a・SI-b は ShigaSIb */ && UnitCatalog.KataH311.Traits.SequenceEqual(UnitCatalog.KataKRb.Traits.Append(TraitId.ThundercloudUncapped))   /* 第293期: 規定は KR-∞・KR-b は KataKRb */
             && !new[] { UnitCatalog.ShigaSIa, UnitCatalog.KataKRa }.Any(UnitCatalog.Everyone.Contains));
         Expect("(c) 割り込み・雷雲の札の保持者は `All` に 規定のシガ ／ カタの1枚ずつ（雷霆の割り込み・KR-a だけの札は 0 枚）",
             UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.ShockWhipFlurry)) == 1 && UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.ThundercloudKeep)) == 1
-            && UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.Thundercloud)) == 1 && !UnitCatalog.All.Any(u => u.Traits.Contains(TraitId.ShockWhipBolt)));
+            && UnitCatalog.All.Count(u => u.Traits.Contains(TraitId.Thundercloud)) == 1 && !UnitCatalog.All.Select(PinDS316).Any(u => u.Traits.Contains(TraitId.ShockWhipBolt)));
 
         // 帳簿の検査: 代表台 17 台 × 版 × seed 0..39
         var bs = Boards();

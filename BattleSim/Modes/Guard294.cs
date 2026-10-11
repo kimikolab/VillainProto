@@ -67,11 +67,11 @@ static class Guard294Diag
     const int Seeds = 200, CutSeeds = 20;
 
     static string Short(UnitDef d) { var m = System.Text.RegularExpressions.Regex.Match(d.Name, @"[ァ-ヴー]+$"); return m.Success ? m.Value : d.Name; }
-    static UnitDef ByShort(string n) => UnitCatalog.All.First(d => Short(d) == n);
+    static UnitDef ByShort(string n) => UnitCatalog.All.Select(PinDS316).First(d => Short(d) == n);
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     static string Seats(Formation f) => string.Join("・", Enumerable.Range(0, 5).Select(i => f[i] is { } d ? Short(d) : "—"));
-    static Formation Seat(UnitDef[] o) => Pin295(PinKT311(B283.Seat(o)));
+    static Formation Seat(UnitDef[] o) => Pin295(PinKT311(Pin316(B283.Seat(o))));
     static Formation Playtest(string n) => Pin295(PlaytestH311.First(r => r.Name == n).F);
     static Formation Row(string n) => Pin295(CompareBuildsH311().First(r => r.Name == n).F);
     /// <summary>第295期: ソラを第294期の規定（`SoraSR0`）に固定する（規定のソラは SR-b になった）。陣形とレリックは保つ。</summary>
@@ -80,7 +80,7 @@ static class Guard294Diag
         var g = f.Clone();
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Sora)) g[slot] = UnitCatalog.SoraSR0;
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Hisa)) g[slot] = UnitCatalog.HisaHK0;   // 第296期: ヒサも旧の規定（`HisaHK0`）に
-        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Doha)) g[slot] = UnitCatalog.DohaD0;   // 第298期: ドハも旧の規定（`DohaD0`）に
+        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.DohaH316)) g[slot] = UnitCatalog.DohaD0;   // 第298期: ドハも旧の規定（`DohaD0`）に
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Tome)) g[slot] = UnitCatalog.TomeMb;   // 第299期: ミサ ／ ザンも旧の規定（`TomeMb` ／ `ZanZN0`）に
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Zan)) g[slot] = UnitCatalog.ZanZN0;
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Som)) g[slot] = UnitCatalog.SomH307;   // 第308期: ソムも旧の規定（`SomH307`）に
@@ -734,7 +734,7 @@ static class Guard294Diag
     /// </summary>
     static (UnitDef[] Fixed, UnitDef[] Pool) BossFrame(string who) => who switch
     {
-        "som" => (new[] { UnitCatalog.Kugu, UnitCatalog.KataH311, UnitCatalog.SomH307 }, S293.BossPool.Where(d => d.Id != "som").Append(UnitCatalog.Shiga).ToArray()),
+        "som" => (new[] { UnitCatalog.Kugu, UnitCatalog.KataH311, UnitCatalog.SomH307 }, S293.BossPool.Where(d => d.Id != "som").Append(UnitCatalog.ShigaSWa).ToArray()),
         "hisa" => (new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.HisaHK0 }, B283.LifePool.Concat(B283.HealPool295.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id != "hisa").ToArray()),
         "sora" => (new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.SoraSR0 }, B283.LifePool.Concat(B283.HealPool295.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id != "sora").ToArray()),
         _ => throw new ArgumentException(who),
@@ -856,12 +856,12 @@ static class Guard294Diag
         Console.WriteLine("|---|---|---|");
         // (a) 段0
         Expect("(a) 規定のクグ ＝ KW-a（`KuguKWa` ＝ 規定）・シガ ＝ SW-a（`ShigaSWa` ＝ 規定）・旧の規定 `KuguKGb` ／ `ShigaSIb` は `All` ／ `Retired` の外・文面は第293期の版のまま",
-            ReferenceEquals(UnitCatalog.KuguKWa, UnitCatalog.Kugu) && ReferenceEquals(UnitCatalog.ShigaSWa, UnitCatalog.Shiga)
-            && UnitCatalog.Kugu.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.WebCharge)) && UnitCatalog.Shiga.Traits.SequenceEqual(UnitCatalog.ShigaSIb.Traits.Append(TraitId.ShockWhipChain))
-            && !new[] { UnitCatalog.KuguKGb, UnitCatalog.ShigaSIb }.Any(UnitCatalog.Everyone.Contains) && UnitCatalog.All.Contains(UnitCatalog.Kugu) && UnitCatalog.All.Contains(UnitCatalog.Shiga)
+            ReferenceEquals(UnitCatalog.KuguKWa, UnitCatalog.Kugu) && ReferenceEquals(UnitCatalog.ShigaSWa, UnitCatalog.ShigaSWa)
+            && UnitCatalog.Kugu.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.WebCharge)) && UnitCatalog.ShigaSWa.Traits.SequenceEqual(UnitCatalog.ShigaSIb.Traits.Append(TraitId.ShockWhipChain))
+            && !new[] { UnitCatalog.KuguKGb, UnitCatalog.ShigaSIb }.Any(UnitCatalog.Everyone.Contains) && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.Kugu) && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.ShigaSWa)
             && UnitCatalog.Kugu.PlusText == UnitCatalog.KuguKGb.PlusText + "。組み付いている間、手番ごとに糸を1本張る。糸の掛かった敵は帯電し続ける。止められない相手には、代わりにその周りへ帯電した糸玉を張る"
-            && UnitCatalog.Shiga.PlusText == UnitCatalog.ShigaSIb.PlusText + "。割り込みの鞭は、弾けた電気をまとってそのぶん重くなる"
-            && UnitCatalog.KuguKWb.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.WebSnare)) && UnitCatalog.ShigaSWb.Traits.SequenceEqual(UnitCatalog.Shiga.Traits.Append(TraitId.StoredChargeEvery)));
+            && UnitCatalog.ShigaSWa.PlusText == UnitCatalog.ShigaSIb.PlusText + "。割り込みの鞭は、弾けた電気をまとってそのぶん重くなる"
+            && UnitCatalog.KuguKWb.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.WebSnare)) && UnitCatalog.ShigaSWb.Traits.SequenceEqual(UnitCatalog.ShigaSWa.Traits.Append(TraitId.StoredChargeEvery)));
         // (b) 版は規定の末尾に札を足しただけ・`All` ／ `Retired` の外・文面
         var vers = new[] { UnitCatalog.HisaHSa, UnitCatalog.HisaHSc, UnitCatalog.HisaHSd, UnitCatalog.HisaHSa1, UnitCatalog.SoraSRa, UnitCatalog.SoraSRb, UnitCatalog.SomSMa, UnitCatalog.SomSMb };
         Expect("(b) 版は規定の末尾に札を足しただけ（体・型・行動は同じ）・`All` ／ `Retired` の外・規定は動いていない",
@@ -872,9 +872,9 @@ static class Guard294Diag
             && UnitCatalog.SoraSRa.Traits.SequenceEqual(UnitCatalog.SoraSR0.Traits.Append(TraitId.DeflectWide)) && UnitCatalog.SoraSRb.Traits.SequenceEqual(UnitCatalog.SoraSR0.Traits.Append(TraitId.DivertPressure))
             && UnitCatalog.SomSMa.Traits.SequenceEqual(UnitCatalog.SomH307.Traits.Append(TraitId.StaticMembrane)) && UnitCatalog.SomSMb.Traits.SequenceEqual(UnitCatalog.SomSMa.Traits.Append(TraitId.MembraneNoStun))
             && !vers.Any(UnitCatalog.Everyone.Contains)
-            && UnitCatalog.All.Where(u => u.Traits.Contains(TraitId.DivertPressure)).SequenceEqual(new[] { UnitCatalog.Sora })   /* 第295期: SR-b の札は規定のソラが持つ */
+            && UnitCatalog.All.Select(PinDS316).Where(u => u.Traits.Contains(TraitId.DivertPressure)).SequenceEqual(new[] { UnitCatalog.Sora })   /* 第295期: SR-b の札は規定のソラが持つ */
             && vers.All(v => { var b = UnitCatalog.Everyone.First(x => x.Id == v.Id); return v.MaxHp == b.MaxHp && v.Attack == b.Attack && v.Speed == b.Speed && v.Pattern == b.Pattern && ReferenceEquals(v.Actions, b.Actions); })
-            && !UnitCatalog.All.Any(u => u.Traits.Any(t => t is TraitId.BeckonHold or TraitId.BeckonBridge or TraitId.BeckonGrace or TraitId.BeckonHoldOnce or TraitId.DeflectWide or TraitId.StaticMembrane or TraitId.MembraneNoStun)));
+            && !UnitCatalog.All.Select(PinDS316).Any(u => u.Traits.Any(t => t is TraitId.BeckonHold or TraitId.BeckonBridge or TraitId.BeckonGrace or TraitId.BeckonHoldOnce or TraitId.DeflectWide or TraitId.StaticMembrane or TraitId.MembraneNoStun)));
         Expect("(c) 文面: 指示書 §3 の追記",
             UnitCatalog.HisaHSa.PlusText == UnitCatalog.HisaHK0.PlusText + "。標を付けられた味方は、倒れる一撃を受けても一度だけ踏みとどまる"
             && UnitCatalog.HisaHSc.PlusText == UnitCatalog.HisaHSa.PlusText + "。踏みとどまった味方へ、仲間の癒し手がすぐ駆けつける"
