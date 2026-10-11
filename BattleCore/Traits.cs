@@ -764,6 +764,15 @@ public enum TraitId
     // --- 第315期で足した札（ドハの版 `UnitCatalog.DohaDQa` ／ `DohaDQb`・指示書 design/PHASE315_DOHA_PUSH2_SPEC.md §2）。保持者 0 枚
     SharePushAimed,    // 狙われた仲間の背を押す（DQ-a ／ DQ-b）: 背を押す相手を、窓で敵の攻撃の主目標に最も多く選ばれた味方（量 → 回数 → 攻撃力 → 席）にする。手番で殴らない駒（`BattleContext.StrikesOnTurn`）・支援を拒む駒は飛ばす（**札そのものは挙動を持たない**・`SharePush` と組む・窓は engine）
 
+    // --- 第316期で足した札（ドハの版 `UnitCatalog.DohaDPs`・指示書 design/PHASE316_SHIGA_FEAR_SPEC.md §2） ---
+    SharePushStrikers, // 殴る仲間だけ（DP-s）: 背を押す相手（肩代わりの窓の最多）から、手番で殴らない駒（`BattleContext.StrikesOnTurn`）を飛ばして次に多く肩代わりした味方へ。相手がいなければ殴る（**札そのものは挙動を持たない**・`SharePush` と組む・窓は engine の `PushPick`）
+
+    // --- 第316期で足した札（シガの版 `UnitCatalog.ShigaSFa` 〜 `ShigaSFd`・指示書 design/PHASE316_SHIGA_FEAR_SPEC.md §3）。保持者 0 枚。どれも**札そのものは挙動を持たない** ---
+    FearNoStun,        // 痺れない（SF-A）: 自分の感電が弾けても痺れない（放電はする・感電は消える・乱数も引かない）（engine の `StunByShock`）
+    LiveWireHold,      // 感電を残す（SF-B）: 電気鞭（手番 ／ 割り込み）で敵に感電を移しても、自分の感電を消さない（engine の `LiveWire`）
+    ScourgeDaunt,      // 萎縮も縛られた的（SF-C）: 保持者が戦にいる間、萎縮した駒（`StatusKeys.Daunted`）も「動けない敵」に数える——優先して狙う・2倍で入る・主目標でも怖気づかない・悲鳴の出どころにもなる（`TormentTrait.IsBound` の1本）
+    ScourgeShockSpare, // 感電した敵は怖くない（SF-D）: 当たる前に感電していた敵を主目標に打っても怖気づかない（`ScourgeTrait`・見せしめの悲鳴は広げない）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -5799,6 +5808,11 @@ public sealed class TormentTrait : Trait
     /// 第184期までの盤面では答えが1ビットも変わらない（旧シガの行が 0 件差分であることが検算）。</para>
     /// </summary>
     public static bool IsBound(BattleContext ctx, UnitState target)
+        => IsBoundCore(ctx, target)
+           || (ctx.DauntBoundLive && target.Counter(StatusKeys.Daunted) > 0);   // 第316期（SF-C）: 萎縮も縛られた的の保持者がいる戦だけ、萎縮も数える
+
+    /// <summary>第316期: 萎縮を数えない「動けない敵」（第315期までの <see cref="IsBound"/> そのもの）。SF-C が「萎縮だけで縛られた」を数えるのに使う。</summary>
+    public static bool IsBoundCore(BattleContext ctx, UnitState target)
         => target.Counter(StatusKeys.Stun) > 0
            || target.Counter(StatusKeys.IdleTurn) == ctx.Turn
            || target.Counter(StatusKeys.Grappled) > 0
@@ -13858,12 +13872,24 @@ public sealed class ScourgeTrait : Trait
 
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
-        if (TormentTrait.IsBound(ctx, target)) return;
+        if (TormentTrait.IsBound(ctx, target))
+        {
+            // 第316期（SF-C）: 萎縮だけで縛られた的で、ほかに怖気づかない理由（割り込み ／ 感電している）が無ければ「怖くない」を数えて台本に打つ（表示専用）。保持者がいなければ比較1つで抜ける。
+            if (ctx.DauntBoundLive && ctx.Whip is { NoCower: false, Wired: false } wd && wd.Actor == self && !TormentTrait.IsBoundCore(ctx, target)) ctx.NoteWhipDauntSpared(self, target);
+            return;
+        }
         if (ctx.Whip is { NoCower: true } nc && nc.Actor == self) return;   // 第289期: 割り込みの鞭では怖気づかない（SI-a ／ SI-b の保持者だけ）
         if (ctx.Whip is { Wired: true } w && w.Actor == self)
         {
             ctx.NoteWhipSpared(self);
             ctx.Log($"    {self.Name} は雷に打たれていて、動ける {target.Name} にも怖気づかない", LogKind.Trigger, self);
+            return;
+        }
+        // 第316期（SF-D）: 当たる前に感電していた主目標には怖気づかない（2倍は `ScourgeShock` のまま・悲鳴は広げない）。保持者でなければ札の比較1つで抜ける。
+        if (self.HasTrait(TraitId.ScourgeShockSpare) && ctx.Whip is { PrimShocked: true } ws && ws.Actor == self)
+        {
+            ctx.NoteWhipShockSpared(self, target);
+            ctx.Log($"    {self.Name} は感電した {target.Name} なら怖くない", LogKind.Trigger, self);
             return;
         }
         self.SetCounter(StatusKeys.Stun, 1);
@@ -17371,6 +17397,11 @@ public static class TraitCatalog
         new SharePushTrait(TraitId.SharePush),                // 第313期（ドハ DP-a ／ DP-b の手番）
         new MarkOnlyTrait(TraitId.SharePushPower),            // 第313期（DP-b・印だけ）
         new MarkOnlyTrait(TraitId.SharePushAimed),            // 第315期（DQ-a ／ DQ-b・印だけ）
+        new MarkOnlyTrait(TraitId.SharePushStrikers),         // 第316期（DP-s・印だけ）
+        new MarkOnlyTrait(TraitId.FearNoStun),                // 第316期（SF-A・印だけ）
+        new MarkOnlyTrait(TraitId.LiveWireHold),              // 第316期（SF-B・印だけ）
+        new MarkOnlyTrait(TraitId.ScourgeDaunt),              // 第316期（SF-C・印だけ）
+        new MarkOnlyTrait(TraitId.ScourgeShockSpare),         // 第316期（SF-D・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

@@ -1048,3 +1048,39 @@ StatusGain marked  ドハ#4 → 駆り出された農兵#10  Amount 1
 
 `UnitCatalog.DohaDQa` ／ `DohaDQb`（報告 `design/PHASE315_DOHA_PUSH2.md`）は、出来事の並びも `Text` も §15-2 と同じ（DQ-b は DP-b と同じく「上乗せ」が挟まる）。違うのは**相手の選び方だけ**——窓で**敵の攻撃が主目標に選んだ回数と量**が最も多い味方（手番で殴らない駒・支援を拒む駒は飛ばす）で、「手番」の `Amount` は**その味方を狙った一撃の打点の和**（肩代わりの量ではない）。送り出せる相手がいない手番は `Skill` の直後にいつもの `Attack`（殴る）。
 （`doha313 memo 雷の型 bat 0 c`・試遊・感電 雷の型 × 大隊 × seed 0・DP-c・勝ち T5・抜粋）
+
+### 15-5. 第316期の追記 —— 殴る仲間だけを押す版（DP-s・**版のみ**）
+
+`UnitCatalog.DohaDPs`（報告 `design/PHASE316_SHIGA_FEAR.md` §1）。第316期の段0 で規定にする予定だったが、門の1つ（近衛の格子）に届かなかったので**版のまま**（採否はポン）。
+出来事の並びも `Text` も §15-2 の DP-b と同じ（「手番」→「上乗せ」→「手番の頭」）。違うのは**相手から手番で殴らない駒（バン・カド・ヒサ など 17 枚）を飛ばす**ことだけで、「手番」の `Amount` は §15-2 と同じく肩代わりの量。送り出せる相手がいない手番は `Skill` の直後にいつもの `Attack`（殴る）。
+
+## 16. 第316期の追記 —— シガが怖気づかなかった（「怖くない」・**版のみ**・規定のシガには出ない）
+
+シガの版 SF-C（萎縮も縛られた的）／ SF-D（感電した敵は怖くない）（報告 `design/PHASE316_SHIGA_FEAR.md`）。**新しい出来事の種類は足していない**。`ShockGauge` の `Text` を1つ足した（`ShockGaugeLabels.Unafraid`「怖くない」）。
+
+| `Text` | `ActorId` ＝ `TargetId` | `PartnerId` | `Amount` | 意味 |
+|---|---|---|---|---|
+| 「怖くない」 | シガ | 鞭の主目標 | 1 ＝ 萎縮していたから（SF-C）／ 2 ＝ 当たる前に感電していたから（SF-D） | いつもなら「怖気」（`ShockGaugeLabels.Cower`・次の手番を失う）が出る場面で、怖気づかなかった。直前にシガの鞭の `Attack` ／ `Damage`（主目標が感電していれば `ShockSpent`） |
+
+- 「怖気」の代わりに並ぶので、絵は「怖気」と同じ場所で、竦まない（震えない）シガを見せる想定。
+- SF-C の「怖くない」は、割り込みの鞭（もともと怖気づかない）・シガが感電している振り（電気鞭・もともと怖気づかない）では出ない。萎縮だけが理由で怖気づかなかった振りだけ。
+- 第316期の時点で、規定のシガ（SW-a）の台本には出ない。
+
+**1本の並び**（`shiga316 memo 鞭 boss 0 d`・試遊・感電 光の盾 鞭 × ボス・勇者（規定形）× seed 0・SF-D・勝ち T22・抜粋）:
+
+```
+--- T1
+StatusGain shock  トウ#2 → シガ#3  Amount 1  Slot 0
+ShockGauge 蓄電・増えた  トウ#2 → シガ#3  Amount 1  Slot 0
+ShockGauge 割り込み  シガ#3 → 勇者#5  Amount 1  Slot 2  相手 勇者#5
+ShockGauge 割り込み・倍率  シガ#3 → 勇者#5  Amount 3  Slot 2
+Attack   シガ#3 → 勇者#5  Amount 12  Slot 0  Reaction
+LiveWire   シガ#3 → シガ#3  Amount 1  Slot 0
+StatusGain shock  シガ#3 → 勇者#5  Amount 1  Slot 0
+ShockGauge 蓄電・使った  シガ#3 → シガ#3  Amount 0  Slot 1
+Attack   シガ#3 → 勇者#5  Amount 9  Slot 0
+ShockSpent   シガ#3 → 勇者#5  Amount 0  Slot 0
+ShockGauge 怖くない  シガ#3 → シガ#3  Amount 2  Slot 0  相手 勇者#5
+```
+
+規定のシガの同じ場面は、最後の行が `Stun 痺れ`（シガ自身）と `ShockGauge 怖気` になり、次のターンの頭に `Stun 手番喪失` が出る。**画面の「痺れた」はこの怖気**（第316期 Phase 0: ポンのログの形の 95% が怖気・感電の痺れは 5%）。

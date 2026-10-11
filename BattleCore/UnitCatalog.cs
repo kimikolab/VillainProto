@@ -1919,6 +1919,26 @@ public static class UnitCatalog
         Flavor = Doha.Flavor
     };
 
+    // 第316期（指示書 design/PHASE316_SHIGA_FEAR_SPEC.md §2-1）—— DP-s ＝ 第313期の DP-b（肩代わりの窓 ＋ 上乗せを渡す）＋ 殴る仲間だけ（`SharePushStrikers`）。
+    // 段0 の門のうち G-c（近衛の格子）が届かなかったので**規定にはしていない**（採否はポン・報告 design/PHASE316_SHIGA_FEAR.md §1）。
+
+    /// <summary>第316期 DP-s（殴る仲間の背を押す）。規定 ＋ <see cref="TraitId.SharePush"/> ＋ <see cref="TraitId.SharePushPower"/> ＋ <see cref="TraitId.SharePushStrikers"/>。対照（<see cref="All"/> に入れない）。</summary>
+    public static readonly UnitDef DohaDPs = new()
+    {
+        Id = Doha.Id,
+        Name = Doha.Name,
+        MaxHp = Doha.MaxHp,
+        Attack = Doha.Attack,
+        Speed = Doha.Speed,
+        Advances = Doha.Advances,
+        Pattern = Doha.Pattern,
+        Traits = Doha.Traits.Append(TraitId.SharePush).Append(TraitId.SharePushPower).Append(TraitId.SharePushStrikers).ToArray(),
+        Actions = DohaPushActions,
+        PlusText = Doha.PlusText + "。手番で、いちばん痛みを肩代わりした仲間（殴る仲間だけ）の背を押してもう一度動かし、自分に宿った力も渡す",
+        MinusText = Doha.MinusText,
+        Flavor = Doha.Flavor
+    };
+
     // 第143期に転生させた。旧「散開のササ」（HP58・`TraitId.Loose` ＝ 隣が空いた駒の被ダメ −35%
     // ＋ 被弾で隣を弾く）は `compare` 61 行のうち**在席1行**で、
     // **弾きの受け皿（移動軸）が無い編成では −35% しか働いていなかった**。
@@ -3187,6 +3207,36 @@ public static class UnitCatalog
         Traits = Shiga.Traits.Append(TraitId.ShameSkipFodder).ToArray(),
         PlusText = Shiga.PlusText,
         MinusText = Shiga.MinusText,
+        Flavor = Shiga.Flavor
+    };
+
+    // 第316期 —— シガが手番を失わない版（指示書 design/PHASE316_SHIGA_FEAR_SPEC.md §3）。規定（SW-a）の末尾に札を1枚足すだけ。`All` にも `Retired` にも入れない。
+    // 組み合わせ（§3-1）は <see cref="ShigaSF"/> で札を重ねて作る。
+
+    /// <summary>第316期 SF-A（痺れない）。規定 ＋ <see cref="TraitId.FearNoStun"/>（自分の感電が弾けても痺れない・放電はする・感電は消える）。</summary>
+    public static readonly UnitDef ShigaSFa = ShigaSF(new[] { TraitId.FearNoStun }, Shiga.PlusText + "。自分の雷では痺れない", Shiga.MinusText);
+
+    /// <summary>第316期 SF-B（感電を残す）。規定 ＋ <see cref="TraitId.LiveWireHold"/>（電気鞭でも自分の感電を消さない・移す方はいまどおり）。</summary>
+    public static readonly UnitDef ShigaSFb = ShigaSF(new[] { TraitId.LiveWireHold }, Shiga.PlusText + "。手番の鞭でも、身の雷を手放さない", Shiga.MinusText);
+
+    /// <summary>第316期 SF-C（萎縮も縛られた的）。規定 ＋ <see cref="TraitId.ScourgeDaunt"/>（萎縮した敵も「動けない敵」——優先・2倍・怖気づかない・悲鳴）。</summary>
+    public static readonly UnitDef ShigaSFc = ShigaSF(new[] { TraitId.ScourgeDaunt }, Shiga.PlusText, "感電していないとき、動ける敵を主目標に打つと怖気づく（萎縮した敵は動けない敵とみなす）");
+
+    /// <summary>第316期 SF-D（感電した敵は怖くない）。規定 ＋ <see cref="TraitId.ScourgeShockSpare"/>（当たる前に感電していた敵を主目標に打っても怖気づかない・悲鳴は広げない）。</summary>
+    public static readonly UnitDef ShigaSFd = ShigaSF(new[] { TraitId.ScourgeShockSpare }, Shiga.PlusText, "感電していないとき、感電もしていない動ける敵を主目標に打つと怖気づく");
+
+    /// <summary>第316期: 規定のシガ（<see cref="Shiga"/>）の末尾に札を足した版（数値・攻撃型・フレーバーは規定のまま）。組み合わせの版もこれで作る。</summary>
+    public static UnitDef ShigaSF(TraitId[] add, string plus, string minus) => new()
+    {
+        Id = Shiga.Id,
+        Name = Shiga.Name,
+        MaxHp = Shiga.MaxHp,
+        Attack = Shiga.Attack,
+        Speed = Shiga.Speed,
+        Pattern = Shiga.Pattern,
+        Traits = Shiga.Traits.Concat(add).ToArray(),
+        PlusText = plus,
+        MinusText = minus,
         Flavor = Shiga.Flavor
     };
 

@@ -1232,3 +1232,13 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **`AimPick`**: 量 → 回数 → 攻撃力 → 席の若い方。`BattleContext.StrikesOnTurn(UnitDef)`（`Actions` が無いか `Attack` を含む・追い打ち `Pursuer` ／ 不動 `Immobile` は除く・術だけの駒はカタ ／ ハネ ／ リリ ／ ミオ）を満たさない駒と支援を拒む駒は飛ばす。窓の最多が飛ばされたら `AimSkipNoStrike` ／ `AimSkipStoic` と飛ばされた駒の `AimSkipped`。相手がいなければ `AimNoEligible`（ドハは殴る）。
 - **計数器 `PushCensus`**: 立っていれば規定のドハでも狙われの窓を数え、`CensusPushWindow` の最後で `CensusAimWindow`（`AimTurns` ／ `Aims` ／ `AimZero` ／ `AimTies` ／ `AimWindow`、選ばれたはずの味方の `AimGot`）。盤面は動かない。
 - 計数のみ: 味方の `AimedHits` ／ `AimedAmt`（主目標に選ばれた回数・量・窓の外も含む）。表示専用の追加は無い（「手番」の `Amount` が狙われの量になるだけ）。並びは `design/PHASE291_CODEX_MEMO.md` §15-4。
+
+## 第316期 —— 殴る仲間だけを押す（ドハ DP-s）／ シガが手番を失わない版（SF-A 〜 SF-D）・規定は動かさない
+
+- **ドハ DP-s**: 札 `SharePushStrikers`（`MarkOnlyTrait`）。版は `UnitCatalog.DohaDPs`（規定 ＋ `SharePush` ＋ `SharePushPower` ＋ `SharePushStrikers`）。`PushPick`（第313期の肩代わりの窓）が、札の保持者だけ `StrikesOnTurn` を満たさない駒も飛ばす。窓の最多が飛ばされたら `PushSkipNoStrike` ／ `PushSkipStoic` と飛ばされた駒の `PushSkipped`、相手がいなければ `PushNoEligible`（ドハは殴る）。**札が無ければ従来どおり**（支援を拒む駒だけ飛ばす・計数もしない）。段0 の門 G-c に届かず規定にはしていない。
+- **SF-A `FearNoStun`**: `StunByShock` の膜の分岐の直後で、保持者なら痺れを付けずに `FearStunSkipped`（放電・感電の消費はそのまま・**S3 の乱数も引かない**）。保持者がいなければ `_fearNoStunLive` の比較1つ。
+- **SF-B `LiveWireHold`**: `LiveWire` の最後（SI-c の分岐の後）で、保持者なら自分の感電を消さずに `WireHeld`（手番の鞭は `WireHeldTurn` も）。移す方はいまどおり。
+- **SF-C `ScourgeDaunt`**: `TormentTrait.IsBound` を `IsBoundCore`（第315期までの判定そのもの）と「`ctx.DauntBoundLive` かつ `Daunted`」の和にした。**保持者が戦にいる間だけ**萎縮も「動けない敵」——読み手（見せしめの優先 ／ 鞭の2倍 ／ 怖気 ／ 悲鳴 ／ 割り込みの鞭の的）すべてに効く。`ScourgeTrait` は萎縮だけで縛られた主目標で、割り込みでも電気鞭でもない振りなら `NoteWhipDauntSpared`（「怖くない」`Amount` 1）。
+- **SF-D `ScourgeShockSpare`**: `WhipSwing.PrimShocked`（`WhipAmount` の最初の1回 ＝ 主目標の当たる前の感電）を `ScourgeTrait` が電気鞭の分岐の後で読み、保持者なら怖気づかずに `NoteWhipShockSpared`（「怖くない」`Amount` 2）。見せしめの悲鳴は広げない。
+- **表示専用**: `ShockGaugeLabels.Unafraid`「怖くない」（`ActorId` ＝ `TargetId` ＝ シガ・`PartnerId` ＝ 主目標・`Amount` 1 萎縮 ／ 2 感電）。並びは `design/PHASE291_CODEX_MEMO.md` §16。
+- **計数のみ（手番を失った原因・`_whipLive` の比較1つで抜ける）**: `TakeTurnFramed` が鞭の保持者の手番の頭で `FearHead`（痺れ ／ 怖気づいた印 `_fearCowered` ／ 感電の痺れの印 `ShockRule.StunKey` ／ 感電 ／ 転倒・組み付き・竦みの帳簿）を控え、`FearTail` が失った手番を原因（`FearLostCause`[7]）と直前の怖気づきうる鞭の形（`_fearPrev`: 名目・蓄電・振り始めの感電・主目標のビット `WhipSwing.PrimBits`）に分ける。鞭の枠の最後で `NoteFearSwing`（割り込みでない鞭・手番の鞭は `FearSwings` ／ `FearPrimHist`、手番の外は `FearOutSwings`）。号令で叩き起こされた鞭で怖気づいたら `FearCowerOut`。SF-B の見込みの印 `_fearSpent`（電気鞭で自分の感電を使い切った・`MarkShock` ／ 弾けで消す）。

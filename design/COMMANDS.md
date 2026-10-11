@@ -1060,6 +1060,16 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 doha315 memo <台の一部> <boss|guard|bat|1..5> <seed> <規定|pa|pb|qa|qb> [strong]   # 第315期 台本の並び（`PHASE291_CODEX_MEMO.md` §15-4）
     dotnet run --project BattleSim -c Release 0 doha315 diff <台の一部> <boss|guard|bat|1..5> <版A> <版B> [strong]   # 第315期 2つの版で勝敗が割れた seed と、その seed の押した相手 ／ 送り出された手番の与ダメ ／ 上乗せ
     dotnet run --project BattleSim -c Release 0 doha315 check       # 第315期 自己検査（主目標の量で最多・中継 ／ 味方由来は数えない・庇いの前の主目標・殴らない駒 ／ 支援拒否を飛ばす・相手なしで殴る・DQ-b の上乗せ・ギフトの中で押さない・帳尻・verbose・計数器・PickOne ／ Roll なし・版の定義）
+    dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
+    dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）
+    dotnet run --project BattleSim -c Release 0 shiga316 dgrid <boss|guard> [ps]   # 第316期 段0 G-c: 第297期の「ドハが要る台」の格子（第315期と同じ作り・基準は規定のドハ・1本 6〜9 分）
+    dotnet run --project BattleSim -c Release 0 shiga316 p0          # 第316期 Phase 0: 規定のシガ × 代表台 5 × 10 波・手番を失った原因（怖気 ／ 感電の痺れ ／ ほか）・直前の手番の形・各版で消える見込み・ボスでのシガ
+    dotnet run --project BattleSim -c Release 0 shiga316 boards [版…]  # 第316期 §5-2: 代表台 5 × 10 波 × 版（規定 ／ SF-A ／ SF-B ／ SF-C ／ SF-D ＋ 組み合わせ ad など）・シガの手番の内訳・対照（シガ → ドルガ）。**予測のファイル `.tmp/p316/predict.md` が無ければ走らない**（R397）
+    dotnet run --project BattleSim -c Release 0 shiga316 compare [版…] # 第316期 §5-3: `compare` 64 行 × 版・(G2)（同上）
+    dotnet run --project BattleSim -c Release 0 shiga316 grid <boss|guard> <版> [<Id>|no<Id>]   # 第316期 §5-4: シガの格子（固定枠 シガ ＋ カタ ＋ ソム・探索枠2・席 120・規定 ／ 版・3つ目はその駒を含む ／ 含まない組だけ）（ボス 7〜9 分・近衛 15〜21 分・同上）
+    dotnet run --project BattleSim -c Release 0 shiga316 memo <台の一部> <boss|guard|bat|nine|nine2|1..5> <seed> <版> [log]   # 第316期 シガの台本の並び（怖気 ／ 怖くない ／ 痺れ）
+    dotnet run --project BattleSim -c Release 0 shiga316 find [noprev]   # 第316期 台本の例を探す（noprev ＝ 怖気で失った手番の直前が手番の鞭でなかった戦——号令で叩き起こされた鞭）
+    dotnet run --project BattleSim -c Release 0 shiga316 check       # 第316期 自己検査（DP-s の飛ばし ／ 相手なし ／ 上乗せ ／ ギフト・SF-A 〜 SF-D の挙動・失った手番の計数・verbose・PickOne ／ Roll なし・版の定義）
     dotnet run --project BattleSim -c Release 0 som314 p0          # 第314期 Phase 0: 規定のソム（E2 ＋ 群れ ＋ 緊急 K-a）で計数器 `StandCensus` を立て、SB-a なら獣ごとに立つ ／ 隣が帯電で弾ける ／ 枠なしで弾けるか・空いた召喚枠・いまの弾けの回数（代表台 7 × 10 波・3 秒）。本体は `Modes/Som314.cs`
     dotnet run --project BattleSim -c Release 0 som314 boards [版,…]  # 第314期 §4-2: 代表台 7 × 10 波 × 版（規定 ／ SB-a ／ SB-b）・獣（立った ／ 同時に立つ最大と平均 ／ 立っていたT ／ 一撃 ／ 弾けさせた駒 ／ 暴発）・シガ ・光・ボスの火力・格子の門（10 秒）。**予測のファイル `.tmp/p314/predict.md` が無ければ走らない**（R397）
     dotnet run --project BattleSim -c Release 0 som314 compare     # 第314期 §4-3: `compare` 64 行 × 版・(G2)（15 秒・同上）

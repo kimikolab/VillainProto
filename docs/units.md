@@ -510,6 +510,11 @@
 | `BeastStand` | - |
 | `BeastStandBrief` | - |
 | `SharePushAimed` | - |
+| `SharePushStrikers` | - |
+| `FearNoStun` | - |
+| `LiveWireHold` | - |
+| `ScourgeDaunt` | - |
+| `ScourgeShockSpare` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

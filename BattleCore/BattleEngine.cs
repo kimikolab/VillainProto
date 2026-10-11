@@ -1208,6 +1208,10 @@ public sealed class BattleContext
         public bool NoCower { get; init; }
         /// <summary>第288期: 当たったとき感電していた敵（雷霆の的・当てた順）。</summary>
         public readonly List<UnitState> BoltTargets = new();
+        /// <summary>第316期: 主目標が当たる前に感電していた（SF-D の怖気の判定が読む・<see cref="WhipAmount"/> の最初の1回で控える）。</summary>
+        public bool PrimShocked { get; set; }
+        /// <summary>第316期（<b>計数のみ</b>）: 主目標の当たる前の種類（1 動けない ／ 2 感電 ／ 4 萎縮 ／ 8 ボス・ビットの和）。</summary>
+        public int PrimBits { get; set; }
     }
 
     /// <summary>蓄電（第288期・<see cref="TraitId.StoredCharge"/>）の保持者が戦闘に出たか。<b>いなければ <c>MarkShock</c> は比較1つで抜ける。</b></summary>
@@ -1453,6 +1457,11 @@ public sealed class BattleContext
     /// <summary>当てる前の2倍（当たる駒ごと・加算で「量＋量」）。当たった駒を枠に控える。</summary>
     int WhipAmount(WhipSwing w, UnitState t, int amount)
     {
+        if (w.Hits.Count == 0)   // 第316期: 主目標（最初の1回）の当たる前の状態を控える（乱数を引かない・盤面を変えない）
+        {
+            w.PrimShocked = t.RawCounter(StatusKeys.Shock) > 0;
+            w.PrimBits = (TormentTrait.IsBound(this, t) ? 1 : 0) | (w.PrimShocked ? 2 : 0) | (t.RawCounter(StatusKeys.Daunted) > 0 ? 4 : 0) | (t.HasTrait(TraitId.BossSteadfast) ? 8 : 0);
+        }
         w.Hits.Add(t);
         UnitTally wt = TallyOf(w.Actor);
         wt.WhipHits++;
@@ -1503,11 +1512,84 @@ public sealed class BattleContext
             if (MarkShock(u, self)) t.WiredMarked++;
         // 第290期（SI-c）: 割り込みの鞭では自分の感電を残す（手番の電気鞭はいまどおり使い切る）。
         if (_shockWhipActor == self && self.HasTrait(TraitId.ShockWhipKeep)) { t.SwKeptShock++; return; }
+        // 第316期（SF-B）: 電気鞭（手番 ／ 割り込み）でも自分の感電を残す（移す方はいまどおり）。保持者でなければ札の比較1つで抜ける。
+        if (self.HasTrait(TraitId.LiveWireHold)) { t.WireHeld++; if (_shockWhipActor != self) t.WireHeldTurn++; return; }
         self.SetCounter(StatusKeys.Shock, 0);   // 弾けさせずに消す（ShockTrigger を通さない）
+        _fearSpent.Add(self.InstanceId);         // 第316期・計数のみ（SF-B の見込み: 自分の感電を電気鞭で使い切った）
     }
 
-    public void NoteWhipCowered(UnitState u) => TallyOf(u).WhipCowered++;
+    public void NoteWhipCowered(UnitState u)
+    {
+        UnitTally t = TallyOf(u);
+        t.WhipCowered++;
+        if (!(TurnActor == u && !InReaction && !InInterrupt)) t.FearCowerOut++;   // 第316期・計数のみ（手番の外の鞭で怖気づいた——号令で叩き起こされた など）
+        _fearCowered.Add(u.InstanceId);
+    }
     public void NoteWhipSpared(UnitState u) => TallyOf(u).WhipWiredSpared++;
+
+    /// <summary>第316期（SF-D）: 感電していた主目標に怖気づかなかった。台本は「怖くない」（表示専用・<c>Amount</c> 2 ＝ 感電）。</summary>
+    public void NoteWhipShockSpared(UnitState u, UnitState target)
+    {
+        TallyOf(u).WhipShockSpared++;
+        EmitShockGauge(ShockGaugeLabels.Unafraid, u, u, 2, partner: target);
+    }
+
+    /// <summary>第316期（SF-C）: 萎縮だけで「動けない敵」に数えた主目標に怖気づかなかった。台本は「怖くない」（表示専用・<c>Amount</c> 1 ＝ 萎縮）。</summary>
+    public void NoteWhipDauntSpared(UnitState u, UnitState target)
+    {
+        TallyOf(u).WhipDauntSpared++;
+        EmitShockGauge(ShockGaugeLabels.Unafraid, u, u, 1, partner: target);
+    }
+
+    // ---- 第316期 —— シガの手番を失った原因（<b>計数のみ</b>・指示書 design/PHASE316_SHIGA_FEAR_SPEC.md §4）。鞭の保持者がいなければ `_whipLive` の比較1つで抜ける。
+    readonly HashSet<int> _fearCowered = new();   // 怖気づいて、まだ次の手番の頭を迎えていない
+    readonly HashSet<int> _fearSpent = new();     // 自分の感電を電気鞭で使い切ってから、新しく感電していない（弾けてもいない）
+    readonly Dictionary<int, (long Index, int Atk, int Charge, bool Wired, int Bits, bool Spent)> _fearPrev = new();   // 最後の手番の鞭（何番目の手番か・名目・蓄電・振り始めの感電・主目標・使い切り）
+
+    /// <summary>怖気づきうる鞭（割り込みでない）を振り終えた（<see cref="PerformAttackBody"/> の鞭の枠の最後）。<paramref name="own"/> は手番の鞭か。<b>計数のみ。</b></summary>
+    void NoteFearSwing(UnitState a, WhipSwing w, int atk, bool own)
+    {
+        UnitTally t = TallyOf(a);
+        int b = w.PrimBits;
+        if (own) { t.FearSwings++; (t.FearPrimHist ??= new long[16])[b & 15]++; }
+        else t.FearOutSwings++;
+        int charge = a.RawCounter(StoredChargeTrait.Key);
+        bool spent = _fearSpent.Contains(a.InstanceId);
+        _fearPrev[a.InstanceId] = (t.TurnsTaken, atk, charge, w.Wired, b, spent && !w.Wired);
+    }
+
+    /// <summary>手番の頭（<see cref="TakeTurnFramed"/>・中身の前）で、失う原因の印を読む。<b>計数のみ。</b></summary>
+    FearMark FearHead(UnitState a)
+    {
+        UnitTally t = TallyOf(a);
+        return new FearMark(a.RawCounter(StatusKeys.Stun) > 0, _fearCowered.Remove(a.InstanceId), a.RawCounter(ShockRule.StunKey) > 0, a.RawCounter(StatusKeys.Shock) > 0,
+                            t.StallStagger, t.StallGrappled, t.StallCowed);
+    }
+    readonly record struct FearMark(bool Stun, bool Cow, bool Shock, bool Wired, long Stagger, long Grappled, long Cowed);
+
+    /// <summary>手番の終わりに、失った手番の原因と直前の手番の形を数える。<b>計数のみ。</b></summary>
+    void FearTail(UnitState a, FearMark h, TurnOutcome o)
+    {
+        UnitTally t = TallyOf(a);
+        if (h.Wired) t.FearTurnsWired++;
+        if (o != TurnOutcome.Stalled) return;
+        // 原因 0 怖気づき ／ 1 自分の感電の痺れ ／ 2 ほかの痺れ ／ 3 転倒 ／ 4 組み付き ／ 5 竦み ／ 6 そのほか（まどろみ など）
+        int c = h.Stun ? (h.Cow ? 0 : h.Shock ? 1 : 2)
+              : t.StallStagger != h.Stagger ? 3 : t.StallGrappled != h.Grappled ? 4 : t.StallCowed != h.Cowed ? 5 : 6;
+        (t.FearLostCause ??= new long[7])[c]++;
+        int k = Math.Min(c, 2);   // 直前の形は 怖気 ／ 感電の痺れ ／ そのほか の3つに丸める
+        if (_fearPrev.TryGetValue(a.InstanceId, out var p) && p.Index == t.TurnsTaken - 1)
+        {
+            (t.FearLostPrevBits ??= new long[48])[k * 16 + (p.Bits & 15)]++;
+            (t.FearLostPrevN ??= new long[3])[k]++;
+            (t.FearLostPrevAtk ??= new long[3])[k] += p.Atk;
+            if (p.Wired) (t.FearLostPrevWired ??= new long[3])[k]++;
+            if (p.Charge == 0) (t.FearLostPrevCharge0 ??= new long[3])[k]++;
+            if (p.Atk == a.Def.Attack && p.Charge == 0) (t.FearLostNine ??= new long[3])[k]++;
+            if (k == 0 && p.Spent) t.FearCowerSpent++;
+        }
+        else (t.FearLostNoPrev ??= new long[3])[k]++;
+    }
     public void NoteWhipScream(UnitState u, bool fromSplash) { if (fromSplash) TallyOf(u).WhipScreamSplash++; }
 
     /// <summary>
@@ -1543,6 +1625,7 @@ public sealed class BattleContext
             return false;
         }
         target.SetCounter(StatusKeys.Shock, 1);
+        if (_fearSpent.Count > 0) _fearSpent.Remove(target.InstanceId);   // 第316期・計数のみ（新しく感電した）
         // 第294期（計数のみ）: 膜の保持者がいる戦だけ、いまの帯電の書き手の種類を控える（0 トウ ／ 1 カタ ／ 2 ソム ／ 3 ほかの味方 ／ 4 敵）。
         if (_membraneHolders.Count > 0)
             _shockWriterCat[target.InstanceId] = writer.TeamId != target.TeamId ? 4 : writer.Def.Id == "tou" ? 0 : writer.Def.Id == "kata" ? 1 : writer.Def.Id == "som" ? 2 : 3;
@@ -1715,6 +1798,7 @@ public sealed class BattleContext
                 x.SetCounter(StatusKeys.Shock, 0);
                 size++;
                 popped?.Add(x);
+                if (_fearSpent.Count > 0) _fearSpent.Remove(x.InstanceId);   // 第316期・計数のみ
                 if (d > deepest) deepest = d;
                 _shockDepth = d;
                 TallyOf(x).ShockSpent++;
@@ -2260,6 +2344,8 @@ public sealed class BattleContext
         if (_shockStun == 1 && depth != 0) return;
         // 第294期（SM-b・痺れない膜）: ソムが生きている間、その陣営の駒は弾けても痺れない（乱数も引かない）。保持者がいなければ件数の比較1つで抜ける。
         if (_membraneHolders.Count > 0 && MembraneOf(x.TeamId, noStun: true) is not null) { t.MembraneStunSkipped++; return; }
+        // 第316期（SF-A）: 自分の感電が弾けても痺れない（放電はした・乱数も引かない）。保持者がいなければ比較1つで抜ける。
+        if (_fearNoStunLive && x.HasTrait(TraitId.FearNoStun)) { t.FearStunSkipped++; return; }
         // 第217期（G3H）: 痺れが明けた駒は、次の自分の手番まで感電で痺れない。保持者がいなければ比較1つで抜ける。
         if (_shockStunGuard && x.RawCounter(ShockRule.GuardKey) > 0) { t.ShockStunGuarded++; return; }
         if (_shockStun == 3 && Roll(100) >= ShockRule.StunHalfPercent) { t.ShockStunMissed++; return; }
@@ -5831,6 +5917,10 @@ public sealed class BattleContext
     readonly int[] _disorder = new int[2];
     /// <summary>敵の乱れの札の保持者が戦にいるか（転倒を「動けない敵」に数えるかを <see cref="TormentTrait.IsBound"/> が読む）。</summary>
     public bool DisarrayLive => _disarrayLive;
+
+    /// <summary>第316期（SF-C・<see cref="TraitId.ScourgeDaunt"/>）の保持者が戦にいるか（萎縮を「動けない敵」に数えるかを <see cref="TormentTrait.IsBound"/> が読む）。</summary>
+    public bool DauntBoundLive => _dauntBoundLive;
+    bool _dauntBoundLive, _fearNoStunLive;
     /// <summary>その陣営が隊列を動かされた累計（第226期・保持者がいない戦では 0 のまま）。</summary>
     public int DisorderOf(int teamId) => _disorder[teamId];
     /// <summary>次の標的選択1回にだけ効く「的の固定」（追い撃ち・乱れ撃ち）。`SelectTargetChain` の頭で読んで消す。</summary>
@@ -8122,6 +8212,8 @@ public sealed class BattleContext
         // 据えた足（入れ替えの空振り）。**保持者がいなければ比較1つで抜ける**——既存の行が 0 件差分であることの根拠。
         if (u.HasTrait(TraitId.Grapple) || u.HasTrait(TraitId.Shame)) _restrainLive = true;
         if (u.HasTrait(TraitId.Scourge)) _whipLive = true;                 // 第217期（鞭の枠と2倍）
+        if (u.HasTrait(TraitId.FearNoStun)) _fearNoStunLive = true;        // 第316期（SF-A）
+        if (u.HasTrait(TraitId.ScourgeDaunt)) _dauntBoundLive = true;      // 第316期（SF-C）
         if (u.HasTrait(TraitId.StoredCharge)) _chargeLive = true;          // 第288期（蓄電の口・雷霆の枠）
         if (u.HasTrait(TraitId.StoredCharge) || u.HasTrait(TraitId.Thunder)) _chainReaders.Add(u);   // 第289期（連鎖の後の口）
         if (IsSparkHolder(u)) { _sparkLive = true; _chainReaders.Add(u); }   // 第307期（ソムの光・連鎖の後の口）
@@ -11581,6 +11673,7 @@ public sealed class BattleContext
             if (!whipPrimBound && !whip.Wired) wt.WhipCheckShouldCower++;
             (wt.WhipHitsHist ??= new long[8])[Math.Min(hits, 7)]++;
             (wt.WhipPopsHist ??= new long[8])[Math.Min(pops, 7)]++;
+            if (!whip.NoCower) NoteFearSwing(actor, whip, dealt, actor == TurnActor && !InReaction && !InInterrupt);   // 第316期・計数のみ（怖気づきうる鞭）
             _whip = prevWhip;
         }
     }
@@ -13133,7 +13226,10 @@ public sealed class BattleContext
         int handEv0 = _events.Count;   // 第239期・**計数のみ**（手番の枠。verbose のときだけ `Hands` に積む）
         try
         {
+            bool fear = _whipLive && actor.HasTrait(TraitId.Scourge);   // 第316期・計数のみ（手番を失った原因）
+            FearMark fm = fear ? FearHead(actor) : default;
             TurnOutcome outcome = TakeTurnCore(actor);
+            if (fear) FearTail(actor, fm, outcome);
             if (_verbose) Hands.Add(new HandRecord(_turn, actor.InstanceId, actor.TeamId, outcome, handEv0, _events.Count));
             // 第217期（**計数のみ**）: 手番を続けて失った数。見せしめか感電がある戦闘でだけ数える（私有キー・誰も読んで分岐しない）。
             if (_restrainLive || _shockLive)
@@ -14509,12 +14605,21 @@ public sealed class BattleContext
     {
         amt = 0; total = 0; tie = false;
         if (!_pushWin.TryGetValue(doha.InstanceId, out var w) || w.Count == 0) return null;
-        UnitState? best = null;
+        // 第316期（DP-s・`SharePushStrikers`）: 手番で殴らない駒（`StrikesOnTurn`）も飛ばす。窓の最多が飛ばされたら理由を数える（**計数のみ**）。札が無ければ従来どおり。
+        bool strikers = doha.HasTrait(TraitId.SharePushStrikers);
+        UnitState? best = null, top = null;
+        int topA = 0;
         foreach (UnitState u in LivingMembers(doha.TeamId))
         {
-            if (u == doha || !u.AcceptsSupport) continue;
+            if (u == doha) continue;
+            if (!strikers && !u.AcceptsSupport) continue;
             int a = w.GetValueOrDefault(u.InstanceId);
             if (a <= 0) continue;
+            if (strikers)
+            {
+                if (top is null || a > topA || (a == topA && (u.CurrentAttack > top.CurrentAttack || (u.CurrentAttack == top.CurrentAttack && u.Slot < top.Slot)))) { top = u; topA = a; }
+                if (!u.AcceptsSupport || !StrikesOnTurn(u.Def)) continue;
+            }
             total += a;
             if (best is null || a > amt) { best = u; amt = a; tie = false; continue; }
             if (a < amt) continue;
@@ -14522,6 +14627,13 @@ public sealed class BattleContext
             if (u.CurrentAttack > best.CurrentAttack || (u.CurrentAttack == best.CurrentAttack && u.Slot < best.Slot)) best = u;
         }
         w.Clear();
+        if (strikers && top is not null && top != best)
+        {
+            UnitTally dt = TallyOf(doha);
+            if (!top.AcceptsSupport) dt.PushSkipStoic++; else dt.PushSkipNoStrike++;
+            TallyOf(top).PushSkipped++;
+            if (best is null) dt.PushNoEligible++;
+        }
         return best;
     }
 

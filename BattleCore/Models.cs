@@ -2224,6 +2224,23 @@ public sealed class UnitTally
     public long AimTurns, Aims, AimZero, AimNoEligible, AimTies, AimAmt, AimCnt, AimWindow, AimSkipNoStrike, AimSkipStoic, AimSelf, AimSelfAmt, AimWinInTurn,
                 AimGot, AimSkipped, AimedHits, AimedAmt;
     /// <summary>
+    /// 第316期（<b>計数専用</b>・ドハの版 DP-s）。誰も読んで分岐しない。ドハ ＝ <c>PushSkipNoStrike</c>・<c>PushSkipStoic</c> 肩代わりの窓の最多が殴らない駒 ／ 支援を拒む駒で飛ばした ／
+    /// <c>PushNoEligible</c> 窓はあるが送り出せる相手がいない（ドハは殴る）。味方 ＝ <c>PushSkipped</c> 最多だったが飛ばされた。
+    /// </summary>
+    public long PushSkipNoStrike, PushSkipStoic, PushNoEligible, PushSkipped;
+    /// <summary>
+    /// 第316期（<b>計数専用</b>・シガの手番を失った原因と版 SF-A 〜 SF-D）。誰も読んで分岐しない。<b>シガ（鞭の保持者）の側</b>:
+    /// <c>FearSwings</c> 手番の鞭（反撃 ／ 割り込みでない）／ <c>FearOutSwings</c> 手番の外で怖気づきうる鞭（号令で叩き起こされた など・割り込みは除く）／ <c>FearCowerOut</c> そのうち怖気づいた ／ <c>FearPrimHist</c>[ビット] その主目標の当たる前の種類（1 動けない ／ 2 感電 ／ 4 萎縮 ／ 8 ボス・ビットの和）／
+    /// <c>FearTurnsWired</c> 感電して手番を迎えた ／ <c>FearLostCause</c>[原因] 失った手番（0 怖気づき ／ 1 自分の感電の痺れ ／ 2 ほかの痺れ ／ 3 転倒 ／ 4 組み付き ／ 5 竦み ／ 6 そのほか）／
+    /// 直前の手番が鞭だった失った手番の <c>FearLostPrevN</c>[k]・<c>FearLostPrevBits</c>[k × 16 ＋ ビット]・<c>FearLostPrevAtk</c>[k] 名目の和・<c>FearLostPrevWired</c>[k] 振り始めに感電・
+    /// <c>FearLostPrevCharge0</c>[k] 蓄電 0・<c>FearLostNine</c>[k] 名目 ＝ 素の攻撃力かつ蓄電 0（k ＝ 0 怖気 ／ 1 感電の痺れ ／ 2 そのほか）／ <c>FearLostNoPrev</c>[k] 直前の手番が鞭でなかった ／
+    /// <c>FearCowerSpent</c> 怖気の手番で、自分の感電を電気鞭で使い切ったまま新しく感電していなかった（SF-B の見込み）。
+    /// <b>版</b>: <c>FearStunSkipped</c> SF-A で痺れなかった ／ <c>WireHeld</c>（<c>WireHeldTurn</c> 手番の鞭）SF-B で感電を残した ／ <c>WhipDauntSpared</c> SF-C で萎縮だけで縛られた的に怖気づかなかった ／
+    /// <c>WhipShockSpared</c> SF-D で感電していた主目標に怖気づかなかった。
+    /// </summary>
+    public long FearSwings, FearOutSwings, FearCowerOut, FearTurnsWired, FearCowerSpent, FearStunSkipped, WireHeld, WireHeldTurn, WhipDauntSpared, WhipShockSpared;
+    public long[]? FearPrimHist, FearLostCause, FearLostPrevBits, FearLostPrevN, FearLostPrevAtk, FearLostPrevWired, FearLostPrevCharge0, FearLostNine, FearLostNoPrev;
+    /// <summary>
     /// 第298期 段0-2（<b>計数専用</b>・戦績の帰属のずれ 8 群）。群 g（1 反転 ／ 2 火の変換 ／ 3 癒しの灯 ／ 4 火の癒し ／ 5 耐火の枝 ／ 6 分かちのなまり ／ 7 橋 ／ 8 くべられる火）ごとに、
     /// 本当の出どころの側: <c>AttrTotal</c>[g] 出した量 ／ <c>AttrFixed</c>[g] そのうち包む前の印が別の駒か誰でもないを指していた量 ／ <c>AttrFromNone</c>[g] うち誰でもない。
     /// 印が指していた駒の側: <c>AttrStolen</c>[g]（直す前に、その駒の戦績に入っていた量）。量は回復なら回復(与) の増分、なまり ／ くべられる火は攻撃力、橋は HP ＋ 破片の増分。
@@ -3364,6 +3381,12 @@ public sealed class UnitTally
         AimTurns += o.AimTurns; Aims += o.Aims; AimZero += o.AimZero; AimNoEligible += o.AimNoEligible; AimTies += o.AimTies; AimAmt += o.AimAmt; AimCnt += o.AimCnt; AimWindow += o.AimWindow;   // 第315期
         AimSkipNoStrike += o.AimSkipNoStrike; AimSkipStoic += o.AimSkipStoic; AimSelf += o.AimSelf; AimSelfAmt += o.AimSelfAmt; AimWinInTurn += o.AimWinInTurn;
         AimGot += o.AimGot; AimSkipped += o.AimSkipped; AimedHits += o.AimedHits; AimedAmt += o.AimedAmt;
+        PushSkipNoStrike += o.PushSkipNoStrike; PushSkipStoic += o.PushSkipStoic; PushNoEligible += o.PushNoEligible; PushSkipped += o.PushSkipped;   // 第316期
+        FearSwings += o.FearSwings; FearOutSwings += o.FearOutSwings; FearCowerOut += o.FearCowerOut; FearTurnsWired += o.FearTurnsWired; FearCowerSpent += o.FearCowerSpent; FearStunSkipped += o.FearStunSkipped;
+        WireHeld += o.WireHeld; WireHeldTurn += o.WireHeldTurn; WhipDauntSpared += o.WhipDauntSpared; WhipShockSpared += o.WhipShockSpared;
+        AddHist(ref FearPrimHist, o.FearPrimHist); AddHist(ref FearLostCause, o.FearLostCause); AddHist(ref FearLostPrevBits, o.FearLostPrevBits); AddHist(ref FearLostPrevN, o.FearLostPrevN);
+        AddHist(ref FearLostPrevAtk, o.FearLostPrevAtk); AddHist(ref FearLostPrevWired, o.FearLostPrevWired); AddHist(ref FearLostPrevCharge0, o.FearLostPrevCharge0);
+        AddHist(ref FearLostNine, o.FearLostNine); AddHist(ref FearLostNoPrev, o.FearLostNoPrev);
         AddHist(ref AttrTotal, o.AttrTotal); AddHist(ref AttrFixed, o.AttrFixed); AddHist(ref AttrFromNone, o.AttrFromNone); AddHist(ref AttrStolen, o.AttrStolen);   // 第298期
         MfQueuedFresh += o.MfQueuedFresh; MfQueuedLayer += o.MfQueuedLayer; MfShotsFoe += o.MfShotsFoe; MfShotsAlly += o.MfShotsAlly; MfDealtFoe += o.MfDealtFoe; MfDealtAlly += o.MfDealtAlly;
         MfAllyKills += o.MfAllyKills; MfFresh += o.MfFresh; MfLayer += o.MfLayer; MfChainSkipped += o.MfChainSkipped; MfDropped += o.MfDropped; MfHushed += o.MfHushed; MfBlocked += o.MfBlocked;
@@ -4266,6 +4289,9 @@ public static class ShockGaugeLabels
     public const string CloudStrike = "雷雲の雷";
     /// <summary>第293期（SW-a ／ SW-b）: 割り込みの鞭の倍率。<c>ActorId</c> ＝ シガ ／ <c>TargetId</c> ＝ 鞭の主目標 ／ <c>Amount</c> ＝ 倍率（1 ＋ 弾けた数）／ <c>Slot</c> ＝ 合図の連鎖で弾けた数（糸玉を含む）。「割り込み」の見出しの直後・鞭の <c>Attack</c> の前。</summary>
     public const string WhipChain = "割り込み・倍率";
+    /// <summary>第316期（SF-C ／ SF-D・<b>版のみ</b>）: シガが動ける主目標に怖気づかなかった。<c>ActorId</c> ＝ <c>TargetId</c> ＝ シガ ／ <c>PartnerId</c> ＝ 主目標 ／
+    /// <c>Amount</c> 1 ＝ 萎縮していたから（SF-C）／ 2 ＝ 感電していたから（SF-D）。直前にシガの鞭の <c>Attack</c> ／ <c>Damage</c>（「怖気」の代わりに並ぶ）。</summary>
+    public const string Unafraid = "怖くない";
 }
 
 /// <summary>ミサの羽の札（第291期・<see cref="BattleEventKind.Feather"/> の <c>Text</c>）。<b>表示専用。</b>羽の枚数 ＝ 1 ＋ 増えた分。</summary>
