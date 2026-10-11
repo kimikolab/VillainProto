@@ -42,13 +42,17 @@ public partial class IdleLoopCheck : Node3D
                 Require(pawn.IdleLoopPlaying && BattlePawn3D.IdleLoopFramesOf(key).Contains(s.Texture), $"{key} も開戦から連番");
                 Require(Math.Abs(s.Texture.GetHeight() * s.PixelSize - UiKit.PortraitWorldHeight(key)) < 1e-4f, $"{key} も待機絵と同じ高さ");
             }
-            // ホタは燃焼の差分絵を持つ。燃えているあいだは差分の静止絵、消えたら連番へ戻る。
+            // ホタは燃焼の差分絵を持つ。燃えているあいだは差分の連番（hota_burning）、消えたら通常の連番へ戻る。
+            var burnFrames = BattlePawn3D.IdleLoopFramesOf("hota_burning");
+            Require(burnFrames.Length > 0 && !burnFrames.Intersect(BattlePawn3D.IdleLoopFramesOf("hota")).Any(), "ホタの燃焼差分の連番");
             hota.SetBurning(true);
-            Require(!hota.IdleLoopPlaying && SpriteOf(hota).Texture == UiKit.BattlePortrait(atlas, "hota", true), "ホタの燃焼差分を優先");
-            hota.ProcessIdleLoop(0.5);
-            Require(SpriteOf(hota).Texture == UiKit.BattlePortrait(atlas, "hota", true), "燃焼中は連番で上書きしない");
+            Require(hota.IdleLoopPlaying && burnFrames.Contains(SpriteOf(hota).Texture) && Shader(SpriteOf(hota)) == SpriteOf(hota).Texture, "燃焼中は差分の連番");
+            Require(CountDistinct(hota, 0.6) >= 6, "燃焼中の連番も進む");
+            Require(burnFrames.Contains(SpriteOf(hota).Texture), "燃焼中に通常の連番へ戻さない");
+            Require(Math.Abs(SpriteOf(hota).Texture.GetHeight() * SpriteOf(hota).PixelSize - UiKit.PortraitWorldHeight("hota")) < 1e-4f, "燃焼差分も同じ高さ");
             hota.SetBurning(false);
-            Require(hota.IdleLoopPlaying, "鎮火で連番へ戻る");
+            Require(hota.IdleLoopPlaying && BattlePawn3D.IdleLoopFramesOf("hota").Contains(SpriteOf(hota).Texture), "鎮火で通常の連番へ戻る");
+            Require(BattlePawn3D.IdleLoopFramesOf("borg_burning").Length == 0, "差分の連番が無い駒は空");
             // ボルグは燃焼差分を持たないので、燃えていても回る。
             borg.SetBurning(true);
             Require(borg.IdleLoopPlaying, "ボルグは燃焼中も回る");
@@ -97,7 +101,7 @@ public partial class IdleLoopCheck : Node3D
             Require(!hiyo.IdleLoopPlaying && sprite.Texture == UiKit.Portrait(atlas, "hiyo"), "勝利絵を保つ");
             Require(still != frames[0], "静止絵と連番は別の画像");
 
-            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota start advance speed gift burning burning-variant death revive victory enemy fallback");
+            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota hota_burning start advance speed gift burning burning-variant death revive victory enemy fallback");
             GetTree().Quit();
         }
         catch (Exception e)

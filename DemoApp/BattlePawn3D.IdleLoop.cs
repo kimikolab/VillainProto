@@ -18,6 +18,7 @@ public partial class BattlePawn3D
     private int _idleLoopFrame = -1;
     private float _idleLoopHeight;
     private BattleIdleLoopDriver? _idleLoopDriver;
+    private bool _idleLoopWarmed;
 
     internal bool IdleLoopPlaying => _idleLoopActive;
     internal int IdleLoopFrame => _idleLoopFrame;
@@ -43,10 +44,15 @@ public partial class BattlePawn3D
     // RefreshBattlePortrait の最後に呼ぶ。通常の待機絵のときだけ連番へ差し替える。
     private void UpdateIdleLoop(string key, float height)
     {
-        if (_idleLoopFrames.Length == 0) _idleLoopFrames = IdleLoopFramesOf(_unitId);
-        // 燃焼の差分絵を持つ駒（ホタ）は、燃えているあいだ差分の静止絵を優先する。
-        bool burningVariant = _burning && UiKit.HasCustomBattlePortrait(_unitId + "_burning");
-        bool active = key == _unitId && _alive && !_victory && !burningVariant && _idleLoopFrames.Length > 0;
+        // 燃焼の差分絵を持つ駒（ホタ）は、燃えているあいだ差分の連番（idle_loop/<駒ID>_burning/）を回す。
+        // 差分の連番が無ければ、差分の静止絵をそのまま出す（連番を空にして止める）。
+        bool hasBurningVariant = UiKit.HasCustomBattlePortrait(_unitId + "_burning");
+        // 戦闘の途中で初めて燃えたときに PNG の読み込みで止まらないよう、開戦時に差分の連番も読んでおく。
+        if (!_idleLoopWarmed && hasBurningVariant) _ = IdleLoopFramesOf(_unitId + "_burning");
+        _idleLoopWarmed = true;
+        bool burningVariant = _burning && hasBurningVariant;
+        _idleLoopFrames = IdleLoopFramesOf(burningVariant ? _unitId + "_burning" : _unitId);
+        bool active = key == _unitId && _alive && !_victory && _idleLoopFrames.Length > 0;
         _idleLoopActive = active;
         _idleLoopFrame = -1;
         if (!active) return;

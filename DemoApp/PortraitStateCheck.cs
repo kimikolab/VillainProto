@@ -30,11 +30,11 @@ public partial class PortraitStateCheck : Node3D
             Require(UiKit.BattlePortrait(atlas, "yomi", true) == UiKit.BattlePortrait(atlas, "yomi"), "差分なしの駒");
             var left = MakePawn(atlas, 1, BattleContext.PlayerTeam, -1.6f);
             var right = MakePawn(atlas, 2, BattleContext.EnemyTeam, 1.6f);
-            CheckIdle(left, normal);
+            CheckIdle(left, normal, "hota");
             left.SetBurning(true);
-            Check(left, burning);
+            CheckIdle(left, burning, "hota_burning");
             left.SetBurning(false);
-            CheckIdle(left, normal);
+            CheckIdle(left, normal, "hota");
             left.SetBurning(true);
             left.AnimateDeath();
             Check(left, normal);
@@ -42,7 +42,7 @@ public partial class PortraitStateCheck : Node3D
             Check(left, normal);
             left.AnimateRevive();
             left.SetBurning(true);
-            Check(left, burning);
+            CheckIdle(left, burning, "hota_burning");
             left.AnimateVictory();
             await ToSignal(GetTree().CreateTimer(0.7), SceneTreeTimer.SignalName.Timeout);
             Check(left, UiKit.Portrait(atlas, "hota"));
@@ -51,7 +51,7 @@ public partial class PortraitStateCheck : Node3D
             left.QueueFree();
             MakePawn(atlas, 3, BattleContext.PlayerTeam, -1.6f);
             right.SetBurning(true);
-            Check(right, burning);
+            CheckIdle(right, burning, "hota_burning");
             Require(right.GetChildren().OfType<Sprite3D>().Single().FlipH, "敵側の左右反転");
             var camera = new Camera3D { Projection = Camera3D.ProjectionType.Orthogonal, Size = 5.4f, Position = new Vector3(0, 1.5f, 8), Current = true };
             AddChild(camera);
@@ -87,12 +87,12 @@ public partial class PortraitStateCheck : Node3D
         Require(((ShaderMaterial)sprite.MaterialOverride).GetShaderParameter("portrait_texture").AsGodotObject() == expected, "シェーダーの画像");
     }
 
-    // 待機ループ（idle_loop/<駒ID>/）を持つ駒は、通常時に静止絵の代わりに連番のどれかを出す。
-    private static void CheckIdle(BattlePawn3D pawn, Texture2D still)
+    // 待機ループ（idle_loop/<連番名>/）を持つ駒は、静止絵の代わりに連番のどれかを出す。
+    private static void CheckIdle(BattlePawn3D pawn, Texture2D still, string loopKey)
     {
         if (!pawn.IdleLoopPlaying) { Check(pawn, still); return; }
         var sprite = pawn.GetChildren().OfType<Sprite3D>().Single();
-        Require(BattlePawn3D.IdleLoopFramesOf("hota").Contains(sprite.Texture), "Sprite3D の画像（待機ループ）");
+        Require(BattlePawn3D.IdleLoopFramesOf(loopKey).Contains(sprite.Texture), $"Sprite3D の画像（待機ループ {loopKey}）");
         Require(((ShaderMaterial)sprite.MaterialOverride).GetShaderParameter("portrait_texture").AsGodotObject() == sprite.Texture, "シェーダーの画像（待機ループ）");
     }
 
