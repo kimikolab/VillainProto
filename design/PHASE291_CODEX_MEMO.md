@@ -707,7 +707,7 @@ Damage               巡礼騎士#5 → ゴルム#1 ／ ミサ#2  Reaction    �
 - 規定の第2波 × seed 0..49 で、①は ボス台 ／ 循環 ／ 守り型 50 戦・三人組 41 戦・標経済 47 戦、②はどの台も 15〜50 戦、③は 37〜49 戦に出る（`hush306 find`）。
 - DemoApp の頭なしの起動口で、試遊・標 ボス台 × 第2波 × seed 0 は `DEMO_SMOKE_COMPLETE events=276 turns=4 won=True`、標経済 × seed 0 は `events=260 turns=7 won=False`（どちらも BattleSim の台本と同じ決着・完走）。
 
-## 14. 第307〜312期の追記 —— ソムの光と衣（第310期: 弾ける獣の版は §14-6・第311期: 規定が E2 に・緊急 ／ 群れ ／ 萎縮は §14-7（第312期に規定）・第312期: ベニ対策と試遊の2台は §14-8 ／ §14-9）
+## 14. 第307〜312期の追記 —— ソムの光と衣（第310期: 弾ける獣の版は §14-6・第311期: 規定が E2 に・緊急 ／ 群れ ／ 萎縮は §14-7（第312期に規定）・第312期: ベニ対策と試遊の2台は §14-8 ／ §14-9・第314期: 獣が立つ版（版のみ）は §14-10）
 
 第307期に出来事 `Spark`（表示専用）を足し、第308期に規定のソムが **降る光**（SH-a・`SparkRain`）に、第309期に **光の衣**（LV-a・`SparkVeil`）になった。
 **規定のソム ＝ 喚び出し ＋ 降る光 ＋ 光の衣**（`UnitCatalog.Som`）。意図とトーンは `design/CODEX_BRIEF_SOM_SPARK.md`。例は `som309 memo <台の一部> <boss|guard|bat|1..5> <seed> <最初のT> <最後のT>`（`Presets.Playtest` の台を引く）。
@@ -935,6 +935,70 @@ HealInverted … → トウ#3 ／ ソム#4  Amount 14                     ⑤ �
 
 - DemoApp の頭なしの起動口で、光の盾 鞭 × ボス × seed 0 は `DEMO_SMOKE_COMPLETE events=2820 turns=20 won=True`、光の盾 重 鞭 × ボス × seed 0 は `events=1475 turns=13 won=True`（どちらも BattleSim の台本と同じ決着・完走）。
 - 萎縮（`StatusGain daunted` が勇者に）と群れ（`BeastBurst 群れ`）の例は、この台の × ボスで `som312 memo 鞭 boss <seed> <T0> <T1>` で引ける。
+
+### 14-10. 第314期 —— 獣が「牙を剥いて立つ」版 SB-a ／ SB-b（**版のみ**・規定のソムには出ない）
+
+ソムの版 `UnitCatalog.SomSBa` ／ `SomSBb`（報告 `design/PHASE314_SOM_STANCE.md`・採否はポン）。**規定のソム（E2 ＋ 群れ ＋ 緊急 K-a）の台本は1件も変わっていない。**
+新しい出来事の種類は足していない。足したのは `BeastBurst` の `Text` 1つ（`BeastBurstLabels.Overflow`「暴発」・SB-b のみ）だけ。
+例は `som314 memo <SB-a|SB-b> <台の一部> <boss|guard|bat|nine|nine2|1..5> <seed> <最初のT> <最後のT>`（台は `som314` の `Boards()`）・seed は `som314 find`。
+
+**「立った」と「その場で弾けた」の見分け方**（`design/CODEX_BRIEF_SOM_STANCE.md` §2 の「2〜3拍目と4拍目を分けて作る」に対応）:
+
+| 獣の運命 | 並び | 盤から消すのは |
+|---|---|---|
+| **立った**（2〜3拍目で止まる） | `Summon 背いた獣`（`ActorId` ＝ ソム）→ **`StatusGain shock`**（ソム → 獣）。`BeastBurst` は来ない | 後の `Death`（味方の一撃で倒れた）か、SB-b の `BeastBurst 暴発` |
+| **その場で弾けた**（4拍目まで） | `Summon 背いた獣` → **`BeastBurst`**（同じ `TargetId`）→ `ShockSpent`（深さ 0・`ActorId` ＝ ソム） | その `BeastBurst`（今までどおり） |
+
+- 同じ手番の頭に**両方が並ぶ**ことがある（群れのうち、隣の敵が帯電している席の獣は弾け、そうでない席の獣は立つ）。並びは**弾けるものが先**: 弾ける獣の `Summon` → `BeastBurst` の組（群れなら `BeastBurst 群れ`・1体なら「帯電に弾ける」・枠が無ければ `Amount 1`）→ その連鎖（`ShockSpent` ／ `Discharge` …）→ 光（`Spark 降る`）→ **そのあと**立つ獣の `Summon` → `StatusGain shock` の組。
+- 立った獣は**倒されるまで（SB-a）／ 次のソムの手番の頭まで（SB-b）盤に残る**。味方の一撃で弾けると `ShockSpent`（`ActorId` ＝ 弾けさせた一撃の主）が出る。HP 12 なので弾けても倒れないことがある（帯電を使い切って立ち続ける——そのあとトウの粉で `StatusGain shock` がまた付くことがある）。
+- **カタの雷は立った獣に落ちない**（第276期と同じ印・第314期に「帯びた敵がいないときの代わりの一撃」でも外した）。
+- 緊急の喚び出し（`BeastBurst 緊急`）は版でも今のまま——いつもその場で弾ける。
+- 枠: X 字の召喚枠（○前2 ＝ 7 → ○中1 ＝ 5 → ○中3 ＝ 6 → ○後2 ＝ 8）に1体ずつ。**同時に立つのは最大 4 体**（ボスの台では 4 体並ぶ戦が多い・`som314 boards` の「同時に立つ」列）。
+
+**SB-a の例**（`som314 memo SB-a 光の盾 boss 0 1 3`・試遊・感電 光の盾 × ボス × seed 0・勝ち T28・抜粋）:
+
+```
+--- T1
+#7    Summon 背いた獣    ソム#4 → 背いた獣#6  hp=12  Slot 7        ① 立つ（○前2）
+#8    StatusGain shock   ソム#4 → 背いた獣#6  Amount 1             ② 雷を纏う（BeastBurst は来ない）
+…
+#17   ShockSpent         トウ#2 → 背いた獣#6  hp=9                 ③ 味方（トウ）の一撃で弾ける——倒れずに立ち続ける
+…
+#55   Death              ソム#4 → 背いた獣#6  Slot 7                ④ 後でソム自身の一撃で倒れる
+--- T2
+#94   Summon 背いた獣    ソム#4 → 背いた獣#8  Slot 7               群れ 2 体が両方立つ（○前2 ／ ○中1）
+#95   StatusGain shock   ソム#4 → 背いた獣#8
+#96   Summon 背いた獣    ソム#4 → 背いた獣#9  Slot 5
+#97   StatusGain shock   ソム#4 → 背いた獣#9
+--- T3
+#183  Summon 背いた獣    ソム#4 → 背いた獣#11  Slot 7              群れ 2 体がその場で弾ける（勇者が帯電していた）
+#184  BeastBurst 群れ    ソム#4 → 背いた獣#11  Slot 7  rem 2
+#185  Summon 背いた獣    ソム#4 → 背いた獣#12  Slot 8
+#186  BeastBurst 群れ    ソム#4 → 背いた獣#12  Slot 8  rem 2
+#187  ShockSpent         ソム#4 → 背いた獣#11  Slot 0              （以下いつもの連鎖）
+…
+#202  Discharge          糸玉#7 → 背いた獣#9  Amount 8              連鎖の放電が、立っていた獣#9 にも届いて倒す
+#204  Death              ソム#4 → 背いた獣#9  Slot 5
+#210  Spark 降る         ソム#4  Amount 5
+```
+
+**SB-b の暴発**（`som314 memo SB-b 光の盾 boss 0 2 3`・同じ台 × seed 0・T3 の頭）:
+
+```
+--- T3
+#183  BeastBurst 暴発       ソム#4 → 背いた獣#9  Slot 5   ① T2 に立った獣が暴発して消える（Death は出ない・この行で盤から消す）
+                                                          この獣は T2 に帯電を使い切っていたので連鎖は起きない（乾いた暴発）
+#184  Summon 背いた獣       ソム#4 → 背いた獣#11  Slot 7  ② そのあといつもの喚び出し
+#185  BeastBurst 帯電に弾ける ソム#4 → 背いた獣#11  Slot 7
+#186  ShockSpent            ソム#4 → 背いた獣#11  Slot 0
+…
+#203  Spark 降る            ソム#4  Amount 4
+#209  Summon 背いた獣       ソム#4 → 背いた獣#12  Slot 5  ③ 隣が帯電していない席の獣は立つ
+#211  Summon 背いた獣       ソム#4 → 背いた獣#13  Slot 6
+```
+
+- 暴発した獣に帯電が残っていれば、`BeastBurst 暴発` の直後にその獣を起点（深さ 0・`ActorId` ＝ ソム）とする `ShockSpent` → `Discharge` …が続き、光（`Spark 降る`）になる。暴発が2体以上なら、`BeastBurst 暴発` が獣の数だけ並んでから1つの連鎖になる。
+- `BeastBurst 暴発` の `TargetId` は**盤に立っていた獣の番号**（直前のターンの `Summon` の `TargetId`）——ほかの `BeastBurst` と違い、置物ではなく盤の駒を消す。
 
 ## 15. 第313期の追記 —— ドハの手番「背を押す」／「上乗せを渡す」／「罪の在り処」（**版のみ**・規定のドハには出ない）
 

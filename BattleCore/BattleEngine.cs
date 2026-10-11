@@ -1919,17 +1919,35 @@ public sealed class BattleContext
     /// </summary>
     public void BurstBeast(UnitState som, int team, int slot, int count = 1, UnitState? emergencyFor = null)
     {
-        UnitTally t = TallyOf(som);
-        UnitDef def = UnitCatalog.Fodder;
-        FormationShape shape = ShapeOfTeam(team);
         // 第311期（群れ）: 2体目からは召喚枠を順に（湧く席を除いた `SummonSlots` の順）、足りなければ先頭の席から重ねる。1体なら第310期と同じ1席。
         var seats = new List<int> { slot };
         if (count > 1)
         {
-            var ring = new List<int> { slot };
-            foreach (int s in shape.SummonSlots) if (s != slot) ring.Add(s);
+            List<int> ring = BeastRing(ShapeOfTeam(team), slot);
             for (int k = 1; k < count; k++) seats.Add(ring[k % ring.Count]);
         }
+        BurstBeastsAt(som, team, seats, emergencyFor is not null ? BeastBurstLabels.Emergency : count > 1 ? BeastBurstLabels.Swarm
+                      : som.HasTrait(TraitId.BeastBurstAlways) ? BeastBurstLabels.Always : BeastBurstLabels.Charged, emergencyFor);
+    }
+
+    /// <summary>群れの席の順（第311期）: 湧く席 → 湧く席を除いた召喚枠の順（X 字は ○前2 → ○中1 → ○中3 → ○後2）。</summary>
+    static List<int> BeastRing(FormationShape shape, int slot)
+    {
+        var ring = new List<int> { slot };
+        foreach (int s in shape.SummonSlots) if (s != slot) ring.Add(s);
+        return ring;
+    }
+
+    /// <summary>
+    /// 獣を並べた席でまとめて弾けさせる本体（第314期に <see cref="BurstBeast"/> から切り出した。<b>中身は1文字も変えていない</b>——席の並びと表示の札を引数にしただけ）。
+    /// 1つの連鎖（先頭の獣が起点・残りは同じ連鎖の起点として並べる）。<paramref name="label"/> は表示専用（`BeastBurst` の <c>Text</c>）。
+    /// </summary>
+    void BurstBeastsAt(UnitState som, int team, List<int> seats, string label, UnitState? emergencyFor = null)
+    {
+        UnitTally t = TallyOf(som);
+        UnitDef def = UnitCatalog.Fodder;
+        FormationShape shape = ShapeOfTeam(team);
+        int count = seats.Count;
         var beasts = new List<UnitState>(seats.Count);
         foreach (int seat in seats)
         {
@@ -1951,8 +1969,7 @@ public sealed class BattleContext
                     Kind = BattleEventKind.BeastBurst, Turn = _turn, ActorId = som.InstanceId, TargetId = beast.InstanceId, Slot = seat, Team = team, Amount = taken ? 1 : 0,
                     PartnerId = emergencyFor?.InstanceId,   // 第311期・表示専用（緊急の喚び出しなら危なかった味方）
                     StatusRemaining = count > 1 ? count : null,   // 第311期・表示専用（群れの数）
-                    Text = emergencyFor is not null ? BeastBurstLabels.Emergency : count > 1 ? BeastBurstLabels.Swarm
-                         : som.HasTrait(TraitId.BeastBurstAlways) ? BeastBurstLabels.Always : BeastBurstLabels.Charged,
+                    Text = label,
                 });
             }
             beast.Hp = 0;   // 消える（倒れた扱いにしない・`HandleDeath` を通さない）
@@ -2025,6 +2042,153 @@ public sealed class BattleContext
     {
         int foe = Opponent(som.TeamId);
         BurstBeast(som, foe, BetrayedTrait.FodderSlotOf(ShapeOfTeam(foe)), 1, ally);
+    }
+
+    // =================================================================================
+    // 第314期 —— 背いた獣が「牙を剥いて立つ」（ソムの版 SB-a ／ SB-b・design/PHASE314_SOM_STANCE_SPEC.md §2）。
+    // 呼ぶのは `BetrayedTrait.Call` の札の判定（`BeastStand`）の後ろだけ（保持者がいなければ1度も走らない）。**乱数を引かない。**
+    // 獣ごとの判定（席 ／ 隣の帯電）は `PlanBeasts` の1箇所で、Phase 0 の計数器（`StandCensus`・規定のソムで「SB-a ならどうしたか」を数える）と共有する。
+    // =================================================================================
+
+    /// <summary>Phase 0 の計数器（第314期・既定は偽）。立っていれば規定のソムの喚び出しで、SB-a の判定を<b>数えるだけ</b>（盤面は1ビットも動かさない）。</summary>
+    public static bool StandCensus { get; set; }
+
+    /// <summary>立った獣を喚んだソム（私有キー・`InstanceId` ＋ 1）。獣は `Ephemeral` で会戦を跨がないので持ち越しの掃除は要らない。</summary>
+    public const string StandOwnerKey = "somStandBy";
+
+    /// <summary>獣1体の行き先（<see cref="PlanBeasts"/>）。</summary>
+    public enum BeastFate { Stand, Charged, NoSeat }
+
+    /// <summary>
+    /// 獣 <paramref name="n"/> 体の席と行き先を決める（第314期・<b>盤面は読むだけ</b>）。獣ごとに、群れの席の順（<see cref="BeastRing"/>）で
+    /// まだ誰も立っていない（生きている駒がいない）召喚枠の最初の1つに置く——同じ喚び出しの獣どうしは席を分け合わない。
+    /// 置いた席の隣の敵（駒のみ・<b>背いた獣と糸玉は数えない</b>）に帯電した駒が1体でもいれば <see cref="BeastFate.Charged"/>、いなければ <see cref="BeastFate.Stand"/>。
+    /// 空いた枠が無ければ <see cref="BeastFate.NoSeat"/>（席は第311期の群れと同じ <c>ring[k % 数]</c>）。
+    /// </summary>
+    public List<(int Seat, BeastFate Fate)> PlanBeasts(int team, int slot, int n)
+    {
+        FormationShape shape = ShapeOfTeam(team);
+        List<int> ring = BeastRing(shape, slot);
+        var plan = new List<(int, BeastFate)>(n);
+        var claimed = new HashSet<int>();
+        for (int k = 0; k < n; k++)
+        {
+            int seat = -1;
+            foreach (int s in ring)
+            {
+                if (claimed.Contains(s) || !shape.IsSummonSlot(s)) continue;
+                bool free = true;
+                foreach (UnitState u in _units) if (u.TeamId == team && u.Slot == s && (u.IsAlive || !Betray.Respawn)) { free = false; break; }   // `Summon` の「席が空いているか」と同じ判定
+                if (free) { seat = s; break; }
+            }
+            if (seat < 0) { plan.Add((ring[k % ring.Count], BeastFate.NoSeat)); continue; }
+            claimed.Add(seat);
+            bool charged = false;
+            foreach (UnitState u in _units)
+                if (u.TeamId == team && u.IsAlive && u.Slot != seat && !BetrayedTrait.IsFodder(u) && u.RawCounter(StatusKeys.Shock) > 0 && shape.AreAdjacent(seat, u.Slot)) { charged = true; break; }
+            plan.Add((seat, charged ? BeastFate.Charged : BeastFate.Stand));
+        }
+        return plan;
+    }
+
+    /// <summary>空いた召喚枠の数（計数のみ）。</summary>
+    int FreeSummonSlots(int team)
+    {
+        FormationShape shape = ShapeOfTeam(team);
+        int free = 0;
+        foreach (int s in shape.SummonSlots)
+            if (!_units.Any(u => u.TeamId == team && u.Slot == s && (u.IsAlive || !Betray.Respawn))) free++;
+        return free;
+    }
+
+    /// <summary>Phase 0（第314期・<b>計数のみ</b>）: 規定のソム（E2）の手番の頭の喚び出しで、SB-a なら獣ごとにどうなったかを数える。</summary>
+    public void NoteStandCensus(UnitState som, int team, int slot, int n)
+    {
+        UnitTally t = TallyOf(som);
+        int k = Math.Min(_turn, 8);
+        int free = FreeSummonSlots(team);
+        (t.CensusFreeHist ??= new long[10])[Math.Min(free, 9)]++;
+        if (_turn >= 1 && _turn <= 5) (t.CensusFreeT ??= new long[30])[_turn * 5 + Math.Min(free, 4)]++;
+        foreach (var (_, fate) in PlanBeasts(team, slot, n))
+        {
+            (t.CensusBeasts ??= new long[9])[k]++;
+            if (fate == BeastFate.Charged) (t.CensusCharged ??= new long[9])[k]++;
+            else if (fate == BeastFate.NoSeat) (t.CensusNoSeat ??= new long[9])[k]++;
+        }
+    }
+
+    /// <summary>
+    /// 手番の頭の喚び出し（第314期・SB-a ／ SB-b）。SB-b はまず立っている自分の獣を暴発させる（<see cref="OverflowBeasts"/>）。
+    /// 次に群れの数を引き（群れの札が無ければ1）、獣ごとに <see cref="PlanBeasts"/> で弾ける ／ 立つを分ける。<b>弾けるものを先に1つの連鎖で回し</b>（第311期の群れと同じ作り）、
+    /// そのあと立つものを立たせる（`Summon`・帯電と雷の印は <paramref name="dress"/>）。連鎖の後で敵の側に獣のほかの駒が1体も生きていなければ、立つはずの獣もその場で弾ける（もう1つの連鎖）。
+    /// 緊急の喚び出し（<see cref="EmergencyBurst"/>）は通らない——今のまま。
+    /// </summary>
+    public void StandBeasts(UnitState som, int team, int slot, Action<UnitState>? dress)
+    {
+        UnitTally t = TallyOf(som);
+        if (som.HasTrait(TraitId.BeastStandBrief)) OverflowBeasts(som, team);
+        NoteBeastCall(som, team, slot);   // 第310期の計数（規定と同じ口・盤面は読むだけ）
+        int n = som.HasTrait(TraitId.SwarmCall) ? SwarmCount(som) : 1;
+        var plan = PlanBeasts(team, slot, n);
+        t.StandBeasts += n;
+        var burst = new List<int>(); var stand = new List<int>();
+        bool anyCharged = false;
+        foreach (var (seat, fate) in plan)
+        {
+            if (fate == BeastFate.Stand) { stand.Add(seat); continue; }
+            burst.Add(seat);
+            if (fate == BeastFate.NoSeat) t.StandNoSeat++; else { t.StandCharged++; anyCharged = true; }
+        }
+        if (burst.Count > 0)
+            BurstBeastsAt(som, team, burst, burst.Count > 1 ? BeastBurstLabels.Swarm : anyCharged ? BeastBurstLabels.Charged : BeastBurstLabels.Always);
+        if (stand.Count > 0)
+        {
+            bool foeLeft = false;
+            foreach (UnitState u in _units) if (u.TeamId == team && u.IsAlive && !BetrayedTrait.IsFodder(u)) { foeLeft = true; break; }
+            if (!foeLeft)
+            {
+                t.StandNoFoe += stand.Count;
+                BurstBeastsAt(som, team, stand, stand.Count > 1 ? BeastBurstLabels.Swarm : BeastBurstLabels.Always);
+            }
+            else
+                foreach (int seat in stand)
+                {
+                    UnitState? f = Summon(UnitCatalog.Fodder, team, seat, overCorpse: Betray.Respawn, by: som);
+                    if (f is null) continue;
+                    f.SetCounter(StandOwnerKey, som.InstanceId + 1);
+                    t.StandStood++;
+                    Log($"    {som.Name} が喚んだものは向こう側で振り返り、牙を剥いて立った", LogKind.Trigger, som);
+                    dress?.Invoke(f);
+                }
+        }
+        int alive = 0;
+        foreach (UnitState u in _units) if (u.TeamId == team && u.IsAlive && u.RawCounter(StandOwnerKey) == som.InstanceId + 1) alive++;
+        t.StandAliveSum += alive; t.StandAliveN++;
+        if (alive > t.StandAlivePeak) t.StandAlivePeak = alive;
+    }
+
+    /// <summary>
+    /// SB-b（第314期）: 立っている自分の獣が暴発する。<b>倒れた扱いにしない</b>（HP 0 にして消す・`HandleDeath` を通さない——第310期の弾ける獣と同じ）。
+    /// 帯電が残っている獣はまとめて1つの連鎖の起点になる（起こし手はソム・光になる）。帯電を使い切っていた獣は弾けずに消える。表示は獣ごとに `BeastBurst 暴発`（表示専用）。
+    /// </summary>
+    void OverflowBeasts(UnitState som, int team)
+    {
+        UnitTally t = TallyOf(som);
+        List<UnitState>? roots = null;
+        foreach (UnitState u in _units.ToList())
+        {
+            if (u.TeamId != team || !u.IsAlive || u.RawCounter(StandOwnerKey) != som.InstanceId + 1) continue;
+            t.StandOverflow++;
+            bool charged = u.RawCounter(StatusKeys.Shock) > 0;
+            if (!charged) t.StandOverflowDry++;
+            if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.BeastBurst, Turn = _turn, ActorId = som.InstanceId, TargetId = u.InstanceId, Slot = u.Slot, Team = team, Amount = 0, Text = BeastBurstLabels.Overflow });
+            u.Hp = 0;   // 消える（倒れた扱いにしない）
+            if (charged) (roots ??= new List<UnitState>()).Add(u);
+        }
+        if (roots is null) return;
+        Log($"    立っていたもの（{roots.Count}）は纏いきれなかった雷に耐えきれず、暴発した", LogKind.Trigger, som);
+        _shockLive = true;
+        ShockTrigger(roots[0], som, 0, roots.Count > 1 ? roots.Skip(1).ToList() : null);
     }
 
     /// <summary>

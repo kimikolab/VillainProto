@@ -507,6 +507,8 @@
 | `SharePush` | - |
 | `SharePushPower` | - |
 | `ShareSin` | - |
+| `BeastStand` | - |
+| `BeastStandBrief` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

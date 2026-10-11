@@ -2405,6 +2405,48 @@ public static class UnitCatalog
         Flavor = SomH311.Flavor
     };
 
+    // 第314期 —— 背いた獣が「牙を剥いて立つ」版（指示書 design/PHASE314_SOM_STANCE_SPEC.md §2）。規定（第312期の重ね）の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
+
+    /// <summary>第314期 SB-a の文面（指示書 §2-3 の叩き台・最終はポン）。</summary>
+    public const string SomStandMinusText = "喚ばれたものは背いて敵につき、こちらに牙を剥く。隣の敵が帯電していれば、纏った雷が暴発する";
+
+    /// <summary>
+    /// 第314期 SB-a（牙を剥いて立つ・ポン案）。規定 ＋ <see cref="TraitId.BeastStand"/>——手番の頭の喚び出し（群れを含む）で、獣ごとに空いた召喚枠に置き、
+    /// 隣の敵に帯電した駒がいればその場で弾け（1つの連鎖）、いなければ帯電したまま敵として立つ（雷は落ちない・味方の一撃で弾ける）。空き枠が無ければ弾ける。「同時に1体」は外す。緊急の喚び出しは今のまま。
+    /// </summary>
+    public static readonly UnitDef SomSBa = new()
+    {
+        Id = Som.Id,
+        Name = Som.Name,
+        MaxHp = Som.MaxHp,
+        Attack = Som.Attack,
+        Speed = Som.Speed,
+        Advances = Som.Advances,
+        Pattern = Som.Pattern,
+        Traits = Som.Traits.Append(TraitId.BeastStand).ToArray(),
+        Actions = Som.Actions,
+        PlusText = SomH310.PlusText + SomSwarmText,   // 「着いた瞬間に弾ける」（E2 の文面）を外した
+        MinusText = SomStandMinusText,
+        Flavor = Som.Flavor
+    };
+
+    /// <summary>第314期 SB-b（立つのは1ターンだけ）。<see cref="SomSBa"/> ＋ <see cref="TraitId.BeastStandBrief"/>（立っている獣は、次のソムの手番の頭に暴発する）。</summary>
+    public static readonly UnitDef SomSBb = new()
+    {
+        Id = Som.Id,
+        Name = Som.Name,
+        MaxHp = Som.MaxHp,
+        Attack = Som.Attack,
+        Speed = Som.Speed,
+        Advances = Som.Advances,
+        Pattern = Som.Pattern,
+        Traits = SomSBa.Traits.Append(TraitId.BeastStandBrief).ToArray(),
+        Actions = Som.Actions,
+        PlusText = SomSBa.PlusText,
+        MinusText = SomStandMinusText + "。立っていられるのは、ひととき",
+        Flavor = Som.Flavor
+    };
+
     /// <summary>
     /// 旧ソム（第103〜275期の規定・背かれのみ）。<b>第276期の転生の対照</b>（S0）。<see cref="All"/> には入れない。
     /// 旧ソムを使う過去の器具（<c>betray</c> ／ <c>encore</c> ／ <c>tomo</c> ／ <c>lit</c> ／ <c>tumult</c> ／ <c>form2</c> ／ <c>ep3</c> ／ <c>stage map</c>）はこれに固定してある。

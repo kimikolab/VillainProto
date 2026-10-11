@@ -1210,3 +1210,16 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **計数器 `BattleContext.PushCensus`**（静的・既定は偽）: 立っていれば規定のドハ（`Sharer`）でも窓を数え、`TakeTurnCore` の素の振りの直前（`CensusPushWindow`）で「選んだはずの相手」を数えて閉じる。盤面は動かない。
 - 計数のみ: 巨躯の段で `NoteWallOnSharer`（ゴルムがドハへの一撃を飲んだ・中継かどうか）、`WhetCore` で `WhetGotRegurg`（吐き戻しで受け取った量）、分かちの帳簿で `ShareAllyOrigin`（肩代わりのうち味方由来）、`DrainGifts` で `ShareGiftDealt`（送り出された手番の与ダメ）、DP-c の標の敵への一撃 `SinMarkHits` ／ `SinMarkDealt`。
 - 表示専用: `ShareGiveLabels.Pass`「上乗せ」（種類は増やしていない）。並びは `design/PHASE291_CODEX_MEMO.md` §15。
+
+## 第314期 —— 背いた獣が「牙を剥いて立つ」版（SB-a ／ SB-b・規定は動かさない）
+
+- 札 `BeastStand`（SB-a）／ `BeastStandBrief`（SB-b）。どちらも `MarkOnlyTrait`（札そのものは挙動を持たない）。版は `UnitCatalog.SomSBa` ／ `SomSBb`（規定のソムの末尾に札・`All` の外）。
+- **口**: `BetrayedTrait.Call(ctx, self, dress)` の頭で `BeastStand` を見て `BattleContext.StandBeasts(som, team, slot, dress)` へ（「同時に1体」の判定より前・保持者でなければ札の比較1つ）。立った獣の帯電と雷の印は `BetrayedShockTrait.Dress`（第276期の本体を切り出しただけ・中身は同じ）が `dress` として付ける。
+- **`BattleContext.PlanBeasts(team, slot, n)`**（盤面は読むだけ・乱数なし）: 獣ごとに群れの席の順（`BeastRing`・湧く席 → 召喚枠の順）で空いた召喚枠（生きている駒がいない・同じ喚び出しの獣どうしは分け合わない）に置き、隣の敵（駒のみ・**背いた獣と糸玉は数えない**——X 字の召喚枠どうしは隣り合わないので、獣を数えるかどうかは判定に効かない）に帯電した駒がいれば `Charged`、いなければ `Stand`、空き枠が無ければ `NoSeat`（席は `ring[k % 数]`）。
+- **`StandBeasts`**: SB-b なら先に `OverflowBeasts`。`NoteBeastCall` → 群れの数 → `PlanBeasts`。弾けるもの（`Charged` ／ `NoSeat`）を先に `BurstBeastsAt` で1つの連鎖にまとめ、そのあと立つものを `Summon`（私有キー `StandOwnerKey` ＝ ソムの `InstanceId` ＋ 1）。連鎖の後に敵の側に獣のほかの駒が1体も生きていなければ、立つはずの獣もその場で弾ける（`StandNoFoe`）。
+- **`OverflowBeasts`**（SB-b）: 立っている自分の獣を HP 0 にして消す（`HandleDeath` を通さない）。帯電が残っていた獣をまとめて `ShockTrigger` の起点に（起こし手はソム）。
+- **`BurstBeastsAt(som, team, seats, label, emergencyFor)`**: 第310〜311期の `BurstBeast` の本体を、席の並びと表示の札を引数にして切り出したもの（中身は1文字も変えていない・`BurstBeast` ／ `EmergencyBurst` は今までどおりこれを呼ぶ）。
+- **雷の代わりの一撃**（`ThunderTrait.OnAction` の帯びた敵がいないときの `SelectTarget`）: 選ばれたのが立った獣（`StandOwnerKey`）なら、候補のうち立った獣でない最初の駒（席の順）に落とす。第276期の S1x からの穴（雷を纏った餌でもこの一撃には選ばれていた）を、旧のソムの台本を動かさないよう SB の獣にだけ塞いだ。
+- **計数器 `BattleContext.StandCensus`**（静的・既定は偽）: 立っていれば規定のソム（E2）の手番の頭の喚び出しで `NoteStandCensus`（`PlanBeasts` を当てて数えるだけ）。
+- 計数のみ（ソムの帳簿）: `StandBeasts` ／ `StandStood` ／ `StandCharged` ／ `StandNoSeat` ／ `StandNoFoe` ／ `StandOverflow` ／ `StandOverflowDry` ／ `StandAliveSum` ／ `StandAliveN` ／ `StandAlivePeak`、Phase 0 の `CensusBeasts` ／ `CensusCharged` ／ `CensusNoSeat` ／ `CensusFreeHist` ／ `CensusFreeT`。
+- 表示専用: `BeastBurstLabels.Overflow`「暴発」（`TargetId` ＝ 盤にいた立っている獣・この出来事で盤から消す・`Death` は出ない）。種類は増やしていない。並びは `design/PHASE291_CODEX_MEMO.md` §14-10。

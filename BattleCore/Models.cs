@@ -2170,6 +2170,16 @@ public sealed class UnitTally
     public long EmergNeed, EmergSpent, EmergHeld, EmergHushed, EmergBlocked, EmergFired, EmergFront, EmergBack, EmergFocusLights, EmergFocusHealed, EmergFocusVeil, SwarmBeasts, ShockDaunted, ShockDauntAlready;
     public long[]? SwarmHist;
     /// <summary>
+    /// 第314期（<b>計数のみ</b>・ソムの側）。立つ版（SB-a ／ SB-b）: <c>StandBeasts</c> 手番の頭に喚んだ獣 ／ <c>StandStood</c> 敵として立った ／ <c>StandCharged</c> 隣に帯電した敵がいて弾けた ／
+    /// <c>StandNoSeat</c> 空いた召喚枠が無くて弾けた ／ <c>StandNoFoe</c> 敵の側に獣のほかの駒が残っていなくて弾けた ／ <c>StandOverflow</c> SB-b で暴発した立っている獣 ／ <c>StandOverflowDry</c> うち帯電を使い切っていて弾けずに消えた ／
+    /// <c>StandAliveSum</c> ／ <c>StandAliveN</c> ／ <c>StandAlivePeak</c> 喚び出しの後に立っていたそのソムの獣（合計 ／ 標本 ／ 最大）。
+    /// Phase 0 の計数器（`BattleContext.StandCensus`・規定のソムで SB-a ならどうしたか）: <c>CensusBeasts</c> ／ <c>CensusCharged</c> ／ <c>CensusNoSeat</c>[ターン] 獣 ／ うち隣に帯電した敵 ／ うち空いた枠なし ／
+    /// <c>CensusFreeHist</c>[空いた召喚枠の数] 喚び出しの時点の空いた召喚枠（ターン 1〜5 は <c>CensusFreeT</c>[ターン × 5 ＋ 数]）。
+    /// </summary>
+    public long StandBeasts, StandStood, StandCharged, StandNoSeat, StandNoFoe, StandOverflow, StandOverflowDry, StandAliveSum, StandAliveN;
+    public int StandAlivePeak;
+    public long[]? CensusBeasts, CensusCharged, CensusNoSeat, CensusFreeHist, CensusFreeT;
+    /// <summary>
     /// 第299期（<b>計数のみ</b>・ザンの手番）。仇指し（<see cref="TraitId.Vendetta"/>）の保持者が手番で振ったとき（規定でも数える）:
     /// <c>ZanTurns</c> 手番 ／ <c>ZanTurnNoMarked</c> 標を持つ敵が 0 ／ <c>ZanTurnMarkedFoes</c> ／ <c>ZanTurnLayers</c> 手番の時点の標を持つ敵の数 ／ 層の合計 ／
     /// <c>ZanPlanA</c> ／ <c>ZanPlan1</c> 仇巡りの見込みの太刀（ZM-a ＝ 層の合計・ZM-1 ＝ 敵の数・上限で切る）／ <c>ZanPlanACapped</c> ／ <c>ZanPlan1Capped</c> 上限に達した手番 ／
@@ -3326,6 +3336,9 @@ public sealed class UnitTally
         EmergNeed += o.EmergNeed; EmergSpent += o.EmergSpent; EmergHeld += o.EmergHeld; EmergHushed += o.EmergHushed; EmergBlocked += o.EmergBlocked; EmergFired += o.EmergFired;   // 第311期
         EmergFront += o.EmergFront; EmergBack += o.EmergBack; EmergFocusLights += o.EmergFocusLights; EmergFocusHealed += o.EmergFocusHealed; EmergFocusVeil += o.EmergFocusVeil;
         SwarmBeasts += o.SwarmBeasts; ShockDaunted += o.ShockDaunted; ShockDauntAlready += o.ShockDauntAlready; AddHist(ref SwarmHist, o.SwarmHist);
+        StandBeasts += o.StandBeasts; StandStood += o.StandStood; StandCharged += o.StandCharged; StandNoSeat += o.StandNoSeat; StandNoFoe += o.StandNoFoe;   // 第314期
+        StandOverflow += o.StandOverflow; StandOverflowDry += o.StandOverflowDry; StandAliveSum += o.StandAliveSum; StandAliveN += o.StandAliveN; StandAlivePeak = Math.Max(StandAlivePeak, o.StandAlivePeak);
+        AddHist(ref CensusBeasts, o.CensusBeasts); AddHist(ref CensusCharged, o.CensusCharged); AddHist(ref CensusNoSeat, o.CensusNoSeat); AddHist(ref CensusFreeHist, o.CensusFreeHist); AddHist(ref CensusFreeT, o.CensusFreeT);
         ZanTurns += o.ZanTurns; ZanTurnNoMarked += o.ZanTurnNoMarked; ZanTurnMarkedFoes += o.ZanTurnMarkedFoes; ZanTurnLayers += o.ZanTurnLayers;
         ZanPlanA += o.ZanPlanA; ZanPlan1 += o.ZanPlan1; ZanPlanACapped += o.ZanPlanACapped; ZanPlan1Capped += o.ZanPlan1Capped; ZanTurnDealt += o.ZanTurnDealt;
         RoundTurns += o.RoundTurns; RoundFoes += o.RoundFoes; RoundSlashes += o.RoundSlashes; RoundCapped += o.RoundCapped; RoundCrossed += o.RoundCrossed;
@@ -4120,6 +4133,8 @@ public static class BeastBurstLabels
     public const string Emergency = "緊急";
     /// <summary>第311期: 群れ（手番の頭に2体以上を喚んで一斉に弾けた・<c>StatusRemaining</c> ＝ 群れの数・何体目か は <c>Slot</c> の並びで）。</summary>
     public const string Swarm = "群れ";
+    /// <summary>第314期（SB-b・版のみ）: 立っていた獣が、次のソムの手番の頭に暴発した（<c>TargetId</c> ＝ 立っていた獣・盤面の駒の列にいる番号。<b>この出来事で盤から消す</b>・<c>Death</c> は出ない）。</summary>
+    public const string Overflow = "暴発";
 }
 
 /// <summary>`Spark`（第307期）の <c>Text</c>。</summary>

@@ -98,7 +98,7 @@
 | `ExposeRule` | `ExposeRule { MaxPerBattle = 3 }` | ○ | `expose` / `creak3` / `ledger` | 第40期 |
 | `FavorRule` | `FavorRule { Gain = 4, Loss = 2 }` | ○ | `curse` / `favor` / `turn` / `ledger` / `burnaudit` | 第58期 |
 | `FinisherRule` | `FinisherRule { Multiplier = 2, Consume = True }` | ○ | `finisher` / `ledger` / `survive` / `wildfire` / `mark` / `tome281` / `tome282` / `feather298` | 第53期 |
-| `FormationShape` | `BattleCore.FormationShape` |  | `whip` / `mire` / `scorch` / `burst` / `nine` / `drift` / `sero` / `hush303` / `som309` / `som312` / `shock` / `shockdigest` / `form2` / `ep3` | 第200期 |
+| `FormationShape` | `BattleCore.FormationShape` |  | `whip` / `mire` / `scorch` / `burst` / `nine` / `drift` / `sero` / `hush303` / `som309` / `som312` / `som314` / `shock` / `shockdigest` / `form2` / `ep3` | 第200期 |
 | `FunnelRule` | `FunnelRule { Slowest = True, Both = False }` | ○ | `funnel` / `cross` | 第62期 |
 | `GatherRule` | `GatherRule { Enabled = False }` | ○ | `derive` / `curse` / `hex` / `encore` / `gather` / `deep` / `soak` / `ledger` / `wound2` / `parry` / `wall` / `cross` / `demo` | 第89期 |
 | `GoadRule` | `GoadRule { Boost = 4, Mark = True }` | ○ | `derive` / `whet` / `goad` / `ledger` / `mark` | 第52期 |

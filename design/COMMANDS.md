@@ -1052,6 +1052,15 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 doha313 grid <guard|boss> <a|b|c> [席=6] [seed=10]   # 第313期 §4-4: 第297期の「ドハが要る台」の格子（基準は規定のドハ・アタッカー ミサ ／ ザン ／ カタ ／ シガ）。第313期は門に届かず回していない
     dotnet run --project BattleSim -c Release 0 doha313 memo <台の一部> <boss|guard|bat|1..5> <seed> <規定|a|b|c>   # 第313期 台本の並び（`PHASE291_CODEX_MEMO.md` §15）
     dotnet run --project BattleSim -c Release 0 doha313 check       # 第313期 自己検査（最も肩代わりした味方に1回・同額は攻撃力 → 席・ドハ自身は選ばない・DP-b の上乗せ・DP-c の標・ギフトの中で押さない・連鎖の帳尻・verbose・計数器・PickOne ／ Roll なし・版の定義）
+    dotnet run --project BattleSim -c Release 0 som314 p0          # 第314期 Phase 0: 規定のソム（E2 ＋ 群れ ＋ 緊急 K-a）で計数器 `StandCensus` を立て、SB-a なら獣ごとに立つ ／ 隣が帯電で弾ける ／ 枠なしで弾けるか・空いた召喚枠・いまの弾けの回数（代表台 7 × 10 波・3 秒）。本体は `Modes/Som314.cs`
+    dotnet run --project BattleSim -c Release 0 som314 boards [版,…]  # 第314期 §4-2: 代表台 7 × 10 波 × 版（規定 ／ SB-a ／ SB-b）・獣（立った ／ 同時に立つ最大と平均 ／ 立っていたT ／ 一撃 ／ 弾けさせた駒 ／ 暴発）・シガ ・光・ボスの火力・格子の門（10 秒）。**予測のファイル `.tmp/p314/predict.md` が無ければ走らない**（R397）
+    dotnet run --project BattleSim -c Release 0 som314 compare     # 第314期 §4-3: `compare` 64 行 × 版・(G2)（15 秒・同上）
+    dotnet run --project BattleSim -c Release 0 som314 swap        # 第314期 §4-4: ソム ↔ ツギ（第309期の入れ替えを規定の駒で組み直した 8 台 × 8 波）× 版（同上）
+    dotnet run --project BattleSim -c Release 0 som314 grid <規定|base|SB-a|SB-b> <boss|guard|bat>   # 第314期 §4-4: ソムの格子（第311期と同じ作り・駒は規定・`base` ＝ 規定）（ボス 数分・精鋭 10〜20 分・同上）
+    dotnet run --project BattleSim -c Release 0 som314 find        # 第314期 立った獣 ／ 暴発のある seed（台本の例）
+    dotnet run --project BattleSim -c Release 0 som314 hole        # 第314期 雷の代わりの一撃が、雷を纏って立つ獣に落ちていた回数（第309〜310期の規定 `SomH310` の台・R402）
+    dotnet run --project BattleSim -c Release 0 som314 memo <版> <台の一部> <boss|guard|bat|nine|nine2|1..5> <seed> <最初のT> <最後のT>   # 第314期 台本の抜粋（`PHASE291_CODEX_MEMO.md` §14-10）
+    dotnet run --project BattleSim -c Release 0 som314 check       # 第314期 自己検査（版の定義・SB-a の立つ ／ 弾ける ／ 枠なし ／ 2体目・群れの1つの連鎖・SB-b の暴発・緊急は弾ける・雷は落ちない・計数器・verbose・PickOne ／ Roll なし）
     dotnet run --project BattleSim -c Release 0 tome281 run       # 第281期 トメの転生: 台5つ（止めの2行・64 行目 標経済・標台S＝止めの中央 ノミ → ザン・読み手台＝毒→被弾強化の後3 セロ → トメ）× 版 T0 ／ T1 ／ T2 ／ T1-s ／ T1-c × 本編第2〜5波・ボス × seed 0..199。本体は `Modes/Tome281.cs`
     dotnet run --project BattleSim -c Release 0 tome281 bandb     # 第281期 帯B（seed 200..599）の追試: 台 × 版 × 本編第2〜5波の勝率
     dotnet run --project BattleSim -c Release 0 tome281 boss      # 第281期 ボスの到達度（ターン別の爪痕・回復・与ダメ・生存）と律速の分解（倍率 × 寿命の格子）

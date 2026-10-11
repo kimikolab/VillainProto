@@ -757,6 +757,10 @@ public enum TraitId
     SharePushPower,    // 上乗せを渡す（DP-b）: 背を押すとき、ドハの攻撃力の上乗せ（`AtkBonus` の正の分）をすべてその味方に移し、ドハは素の攻撃力に戻る（`Whet`・経路 `Share`）（**札そのものは挙動を持たない**・`SharePush` と組む）
     ShareSin,          // 罪の在り処（DP-c・対照）: 手番で、同じ窓に味方（ドハを含む）へ最も多くダメージを与えた敵に標を1層（書き手はドハ・口は `LayerMark`）。0 なら殴る（`SharePushTrait`）
 
+    // --- 第314期で足した札（ソムの版 `UnitCatalog.SomSBa` ／ `SomSBb` だけが持つ。どちらも**札そのものは挙動を持たない**・`BetrayedTrait.Call` → engine の `StandBeasts` が読む） ---
+    BeastStand,        // 牙を剥いて立つ（SB-a）: 手番の頭の喚び出し（群れを含む）で、獣ごとに空いた召喚枠（○前2 → 召喚枠の順）に置き、隣の敵（駒のみ・背いた獣と糸玉は数えない）に帯電した駒がいればその場で弾ける（1つの連鎖）。いなければ帯電したまま敵として立つ。空き枠が無ければ弾ける。「同時に1体」は外す。緊急の喚び出しは今のまま
+    BeastStandBrief,   // 立つのは1ターンだけ（SB-b）: SB-a ＋ 立っている獣は、次のソムの手番の頭（喚び出しの前）に暴発する（起こし手はソム・倒れた扱いにしない）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -10824,11 +10828,19 @@ public sealed class BetrayedTrait : Trait
     /// ——旧ソムを含む戦の台本の指紋が切り出しの前後で一致することが門）。湧いた餌を返す（湧かなければ null）。
     /// <see cref="BetrayedShockTrait"/> が同じ口を呼んでから感電を付ける。
     /// </summary>
-    internal static UnitState? Call(BattleContext ctx, UnitState self)
+    internal static UnitState? Call(BattleContext ctx, UnitState self, Action<UnitState>? dress = null)
     {
         if (!ctx.Betray.Enabled) return null;
 
         int foe = ctx.Opponent(self.TeamId);
+
+        // 第314期（SB-a ／ SB-b・design/PHASE314_SOM_STANCE_SPEC.md §2）: 「同時に1体」の判定を外し、獣ごとに席を決めて弾ける ／ 立つを分ける（engine の `StandBeasts`）。
+        // 立った獣の帯電と雷の印は呼び手（`BetrayedShockTrait`）の `dress` が付ける。保持者でなければ札の比較1つで素通り。
+        if (self.HasTrait(TraitId.BeastStand))
+        {
+            ctx.StandBeasts(self, foe, FodderSlotOf(ctx.ShapeOfTeam(foe)), dress);
+            return null;
+        }
 
         // **同時に1体**（§1-3）。席の判定だけでも現状は足りる（餌は動かないし、
         // 敵陣を動かす駒＝曝きは後列しか引き出さない）が、**構造として書いておく**
@@ -10845,7 +10857,9 @@ public sealed class BetrayedTrait : Trait
         bool charged = ctx.NoteBeastCall(self, foe, seat);
         if (self.HasTrait(TraitId.BeastBurstAlways) || (charged && self.HasTrait(TraitId.BeastBurstCharged)))
         {
-            ctx.BurstBeast(self, foe, seat, self.HasTrait(TraitId.SwarmCall) ? ctx.SwarmCount(self) : 1);   // 第311期: 群れ
+            int n = self.HasTrait(TraitId.SwarmCall) ? ctx.SwarmCount(self) : 1;   // 第311期: 群れ
+            if (BattleContext.StandCensus) ctx.NoteStandCensus(self, foe, seat, n);   // 第314期 Phase 0（**計数のみ**・計数器が立っている戦だけ）
+            ctx.BurstBeast(self, foe, seat, n);
             return null;
         }
 
@@ -10895,8 +10909,14 @@ public sealed class BetrayedShockTrait : Trait
 
     public override void OnTurnStart(BattleContext ctx, UnitState self)
     {
-        UnitState? f = BetrayedTrait.Call(ctx, self);
+        UnitState? f = BetrayedTrait.Call(ctx, self, g => Dress(ctx, self, g));   // 第314期: 立つ版（SB-a ／ SB-b）は `Call` の中で立った獣ごとに `Dress` を呼び、null を返す
         if (f is null) return;
+        Dress(ctx, self, f);
+    }
+
+    /// <summary>立った餌に雷を纏わせる（第276期の本体・第314期に切り出した。<b>中身は1文字も変えていない</b>）。</summary>
+    void Dress(BattleContext ctx, UnitState self, UnitState f)
+    {
         if (_key is not null) f.SetCounter(_key, 1);
         if (_self) ctx.MarkShock(f, self);
         if (_spread)
@@ -13645,6 +13665,10 @@ public sealed class ThunderTrait : Trait
         if (cur is null)
         {
             UnitState? t = ctx.SelectTarget(self);
+            // 第314期（SB-a ／ SB-b）: 立った獣（`StandOwnerKey`）が代わりの一撃の的に選ばれたら、候補のうち立った獣でない最初の駒（席の順・乱数を引かない）に落とす。いなければ落とさない。
+            // 第276期の S1x からの穴（雷を纏った餌でも、この代わりの一撃には選ばれていた）は、旧のソムの台本を動かさないように SB の獣にだけ塞ぐ。印の無い戦では比較1つで素通り。
+            if (t is not null && t.RawCounter(BattleContext.StandOwnerKey) > 0)
+                t = pool.Where(u => u.RawCounter(BattleContext.StandOwnerKey) <= 0).OrderBy(u => u.Slot).FirstOrDefault();
             if (t is not null)
             {
                 int k = KindsOf(t);
@@ -17338,6 +17362,8 @@ public static class TraitCatalog
         new EmergencyCallTrait(),                             // 第311期（ソム K-a ／ K-b）
         new MarkOnlyTrait(TraitId.EmergencyFocus),            // 第311期（K-a・印だけ）
         new SwarmCallTrait(),                                 // 第311期（群れ・印 ＋ 持ち越しの掃除）
+        new MarkOnlyTrait(TraitId.BeastStand),                // 第314期（牙を剥いて立つ SB-a・印だけ）
+        new MarkOnlyTrait(TraitId.BeastStandBrief),           // 第314期（立つのは1ターンだけ SB-b・印だけ）
         new MarkOnlyTrait(TraitId.ShockDaunt),                // 第311期（萎縮の規則の版・印だけ）
         new SharePushTrait(TraitId.SharePush),                // 第313期（ドハ DP-a ／ DP-b の手番）
         new MarkOnlyTrait(TraitId.SharePushPower),            // 第313期（DP-b・印だけ）
