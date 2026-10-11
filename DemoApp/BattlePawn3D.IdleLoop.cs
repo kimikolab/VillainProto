@@ -6,7 +6,7 @@ using System.Linq;
 // 待機ループ: ComfyUI（VillainProto/08_戦闘待機ループ）で作った透過PNGの連番を、通常の待機絵の代わりに回す。
 // 連番は res://assets/portraits/battle/idle_loop/<駒ID>/ に置くだけで使われる（.cs に駒を書かない）。
 // 元の待機絵と同じキャンバスを縮小した連番なので、足元の余白比はそのまま使える。
-// 動作差分・勝利・死亡のあいだは止め、通常の待機絵へ戻ったところで再開する。
+// 動作差分・燃焼差分・勝利・死亡のあいだは止め、通常の待機絵へ戻ったところで再開する。
 public partial class BattlePawn3D
 {
     private const double IdleLoopFps = 16.0;
@@ -44,7 +44,9 @@ public partial class BattlePawn3D
     private void UpdateIdleLoop(string key, float height)
     {
         if (_idleLoopFrames.Length == 0) _idleLoopFrames = IdleLoopFramesOf(_unitId);
-        bool active = key == _unitId && _alive && !_victory && _idleLoopFrames.Length > 0;
+        // 燃焼の差分絵を持つ駒（ホタ）は、燃えているあいだ差分の静止絵を優先する。
+        bool burningVariant = _burning && UiKit.HasCustomBattlePortrait(_unitId + "_burning");
+        bool active = key == _unitId && _alive && !_victory && !burningVariant && _idleLoopFrames.Length > 0;
         _idleLoopActive = active;
         _idleLoopFrame = -1;
         if (!active) return;

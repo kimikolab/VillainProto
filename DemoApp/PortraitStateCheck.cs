@@ -30,11 +30,11 @@ public partial class PortraitStateCheck : Node3D
             Require(UiKit.BattlePortrait(atlas, "yomi", true) == UiKit.BattlePortrait(atlas, "yomi"), "差分なしの駒");
             var left = MakePawn(atlas, 1, BattleContext.PlayerTeam, -1.6f);
             var right = MakePawn(atlas, 2, BattleContext.EnemyTeam, 1.6f);
-            Check(left, normal);
+            CheckIdle(left, normal);
             left.SetBurning(true);
             Check(left, burning);
             left.SetBurning(false);
-            Check(left, normal);
+            CheckIdle(left, normal);
             left.SetBurning(true);
             left.AnimateDeath();
             Check(left, normal);
@@ -85,6 +85,15 @@ public partial class PortraitStateCheck : Node3D
         var sprite = pawn.GetChildren().OfType<Sprite3D>().Single();
         Require(sprite.Texture == expected, "Sprite3D の画像");
         Require(((ShaderMaterial)sprite.MaterialOverride).GetShaderParameter("portrait_texture").AsGodotObject() == expected, "シェーダーの画像");
+    }
+
+    // 待機ループ（idle_loop/<駒ID>/）を持つ駒は、通常時に静止絵の代わりに連番のどれかを出す。
+    private static void CheckIdle(BattlePawn3D pawn, Texture2D still)
+    {
+        if (!pawn.IdleLoopPlaying) { Check(pawn, still); return; }
+        var sprite = pawn.GetChildren().OfType<Sprite3D>().Single();
+        Require(BattlePawn3D.IdleLoopFramesOf("hota").Contains(sprite.Texture), "Sprite3D の画像（待機ループ）");
+        Require(((ShaderMaterial)sprite.MaterialOverride).GetShaderParameter("portrait_texture").AsGodotObject() == sprite.Texture, "シェーダーの画像（待機ループ）");
     }
 
     private static void Require(bool condition, string label)

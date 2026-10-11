@@ -16,14 +16,18 @@ public partial class IdleLoopCheck : Node3D
             var atlas = UiKit.LoadTexture("res://assets/outcast_atlas.png");
             var frames = BattlePawn3D.IdleLoopFramesOf("hiyo");
             Require(frames.Length == 19, $"ヒヨの連番 19 コマ（{frames.Length}）");
-            Require(BattlePawn3D.IdleLoopFramesOf("hota").Length == 0, "連番の無い駒は空");
+            Require(BattlePawn3D.IdleLoopFramesOf("borg").Length == 44, "ボルグの連番 44 コマ");
+            Require(BattlePawn3D.IdleLoopFramesOf("hota").Length == 36, "ホタの連番 36 コマ");
+            Require(BattlePawn3D.IdleLoopFramesOf("golm").Length == 0, "連番の無い駒は空");
             var still = UiKit.BattlePortrait(atlas, "hiyo");
 
             var camera = new Camera3D { Projection = Camera3D.ProjectionType.Orthogonal, Size = 3.0f, Position = new Vector3(0, 1.1f, 8), Current = true };
             AddChild(camera);
             var hiyo = MakePawn(atlas, 1, BattleContext.PlayerTeam, -0.9f, "hiyo");
             var enemy = MakePawn(atlas, 2, BattleContext.EnemyTeam, 1.4f, "hiyo");
-            var hota = MakePawn(atlas, 3, BattleContext.PlayerTeam, 3.6f, "hota");
+            var golm = MakePawn(atlas, 3, BattleContext.PlayerTeam, 3.6f, "golm");
+            var borg = MakePawn(atlas, 4, BattleContext.PlayerTeam, -2.6f, "borg");
+            var hota = MakePawn(atlas, 5, BattleContext.PlayerTeam, 2.4f, "hota");
             var sprite = SpriteOf(hiyo);
 
             // 開戦直後から連番。待機絵と同じ高さ（=同じ足元）で描く。
@@ -31,7 +35,24 @@ public partial class IdleLoopCheck : Node3D
             Require(Shader(sprite) == sprite.Texture, "シェーダーも連番");
             float worldHeight = sprite.Texture.GetHeight() * sprite.PixelSize;
             Require(Math.Abs(worldHeight - UiKit.PortraitWorldHeight("hiyo")) < 1e-4f, "待機絵と同じ高さ");
-            Require(!hota.IdleLoopPlaying && SpriteOf(hota).Texture == UiKit.BattlePortrait(atlas, "hota"), "連番の無い駒は静止絵のまま");
+            Require(!golm.IdleLoopPlaying && SpriteOf(golm).Texture == UiKit.BattlePortrait(atlas, "golm"), "連番の無い駒は静止絵のまま");
+            foreach (var (pawn, key) in new[] { (borg, "borg"), (hota, "hota") })
+            {
+                var s = SpriteOf(pawn);
+                Require(pawn.IdleLoopPlaying && BattlePawn3D.IdleLoopFramesOf(key).Contains(s.Texture), $"{key} も開戦から連番");
+                Require(Math.Abs(s.Texture.GetHeight() * s.PixelSize - UiKit.PortraitWorldHeight(key)) < 1e-4f, $"{key} も待機絵と同じ高さ");
+            }
+            // ホタは燃焼の差分絵を持つ。燃えているあいだは差分の静止絵、消えたら連番へ戻る。
+            hota.SetBurning(true);
+            Require(!hota.IdleLoopPlaying && SpriteOf(hota).Texture == UiKit.BattlePortrait(atlas, "hota", true), "ホタの燃焼差分を優先");
+            hota.ProcessIdleLoop(0.5);
+            Require(SpriteOf(hota).Texture == UiKit.BattlePortrait(atlas, "hota", true), "燃焼中は連番で上書きしない");
+            hota.SetBurning(false);
+            Require(hota.IdleLoopPlaying, "鎮火で連番へ戻る");
+            // ボルグは燃焼差分を持たないので、燃えていても回る。
+            borg.SetBurning(true);
+            Require(borg.IdleLoopPlaying, "ボルグは燃焼中も回る");
+            borg.SetBurning(false);
             Require(SpriteOf(enemy).FlipH && enemy.IdleLoopPlaying, "敵側も反転して回る");
 
             // 時間とともにコマが進む（16fps）。倍速では倍進む。
@@ -76,7 +97,7 @@ public partial class IdleLoopCheck : Node3D
             Require(!hiyo.IdleLoopPlaying && sprite.Texture == UiKit.Portrait(atlas, "hiyo"), "勝利絵を保つ");
             Require(still != frames[0], "静止絵と連番は別の画像");
 
-            GD.Print("IDLE_LOOP_CHECK_OK start advance speed gift burning death revive victory enemy fallback");
+            GD.Print("IDLE_LOOP_CHECK_OK hiyo borg hota start advance speed gift burning burning-variant death revive victory enemy fallback");
             GetTree().Quit();
         }
         catch (Exception e)
