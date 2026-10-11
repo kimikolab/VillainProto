@@ -210,7 +210,7 @@ public static class UiKit
         "nomi" => 2.30f,
         "hagi" => 2.55f,
         "vel" => 2.45f,
-        "hiyo" => 1.89f, // 自然な待機絵は頭上の杖の余白がない。旧絵と本体の身長を揃える。
+        "hiyo" => 1.89f, // 支援の構え。旧動作絵と本体の身長を揃える。
         "gan" => 2.85f,
         "yomi" => 2.35f,
         "basa" => 2.55f,
@@ -280,7 +280,7 @@ public static class UiKit
         "nomi" => 0.0430f,
         "hagi" => 0.0534f,
         "vel" => 0.0130f,
-        "hiyo" => 0.0163f,
+        "hiyo" => 0.0215f,
         "gan" => 0.0384f,
         "yomi" => 0.0286f,
         "hota" => 0.0120f,
