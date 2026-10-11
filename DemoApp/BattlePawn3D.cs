@@ -284,6 +284,7 @@ void fragment() {
             FlipH = Team == BattleContext.EnemyTeam,
         };
         AddChild(_sprite);
+        UpdateIdleLoop(_unitId, _portraitHeight);
         AlignMisaPortrait(_unitId);
         BuildKataStakes();
         BuildMisaFeathers(opening);

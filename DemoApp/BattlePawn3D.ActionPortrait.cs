@@ -103,6 +103,7 @@ public partial class BattlePawn3D
         _sprite.PixelSize = height / Math.Max(1, portrait.GetHeight());
         _sprite.Position = new Vector3(_portraitOffsetX, _portraitBaseY, 0);
         _portraitMaterial.SetShaderParameter("portrait_texture", portrait);
+        UpdateIdleLoop(key, height);
     }
 
     public void BeginAshRelease()
