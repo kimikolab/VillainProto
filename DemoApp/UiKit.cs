@@ -210,7 +210,7 @@ public static class UiKit
         "nomi" => 2.30f,
         "hagi" => 2.55f,
         "vel" => 2.45f,
-        "hiyo" => 2.10f,
+        "hiyo" => 1.89f, // 自然な待機絵は頭上の杖の余白がない。旧絵と本体の身長を揃える。
         "gan" => 2.85f,
         "yomi" => 2.35f,
         "basa" => 2.55f,
@@ -241,6 +241,7 @@ public static class UiKit
         "hota_sword_raise" => 0.010f,
         "hota_sword_slam" => 0.055f,
         "hiyo_fan" => 0.015f,
+        "hiyo_stoke" => 0.015f,
         "hiyo_gift" => 0.004f,
         "hiyo_collect" => 0.012f,
         "zoto" => 0.0f, // 鉱石の浮遊体。画像下端の透明な空間を残して地面から浮かせる。
@@ -279,7 +280,7 @@ public static class UiKit
         "nomi" => 0.0430f,
         "hagi" => 0.0534f,
         "vel" => 0.0130f,
-        "hiyo" => 0.0150f,
+        "hiyo" => 0.0163f,
         "gan" => 0.0384f,
         "yomi" => 0.0286f,
         "hota" => 0.0120f,

@@ -131,7 +131,7 @@ void fragment(){
                     actor?.PulseFireGift();
                     return 0.16;
                 case FireLevelLabels.Stoke:
-                    actor?.ShowMovementPortrait("hiyo_fan", 0.65);
+                    actor?.ShowMovementPortrait("hiyo_stoke", 0.65);
                     FireFlow(actor, target, new("ffb44c"), speed);
                     _attackAudio.PlayFireSound("flow");
                     return 0.28;
