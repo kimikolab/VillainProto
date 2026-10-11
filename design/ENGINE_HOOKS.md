@@ -1223,3 +1223,12 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **計数器 `BattleContext.StandCensus`**（静的・既定は偽）: 立っていれば規定のソム（E2）の手番の頭の喚び出しで `NoteStandCensus`（`PlanBeasts` を当てて数えるだけ）。
 - 計数のみ（ソムの帳簿）: `StandBeasts` ／ `StandStood` ／ `StandCharged` ／ `StandNoSeat` ／ `StandNoFoe` ／ `StandOverflow` ／ `StandOverflowDry` ／ `StandAliveSum` ／ `StandAliveN` ／ `StandAlivePeak`、Phase 0 の `CensusBeasts` ／ `CensusCharged` ／ `CensusNoSeat` ／ `CensusFreeHist` ／ `CensusFreeT`。
 - 表示専用: `BeastBurstLabels.Overflow`「暴発」（`TargetId` ＝ 盤にいた立っている獣・この出来事で盤から消す・`Death` は出ない）。種類は増やしていない。並びは `design/PHASE291_CODEX_MEMO.md` §14-10。
+
+## 第315期 —— 狙われた仲間の背を押す（DQ-a ／ DQ-b・規定は動かさない）
+
+- 札 `SharePushAimed`（`MarkOnlyTrait`・札そのものは挙動を持たない）。版は `UnitCatalog.DohaDQa`（規定 ＋ `SharePush` ＋ `SharePushAimed`）／ `DohaDQb`（＋ `SharePushPower`）。手番の形・`_giftQueue`・上乗せの移し方は第313期のまま（`SharePushTurn` の相手選びだけが `AimPick` に替わる）。
+- **口（主目標）**: `SelectTargetChain` の頭で `_aimPre` を落とし、介入の鎖の前の相手（的の固定 `_forcedTarget` ／ 突きの列の先頭 ／ 貫きの入口 ／ `pool` から選んだ `target`）を `_aimPre` に控える。`PerformAttackBody` が `SelectTargetCore` の直後に読み、打点 `atk` が決まった所（萎縮 ／ 痺れ毒 ／ 澱み ／ 重圧の後・`label` の前）で `AccrueAim(敵, 主目標, atk)`。**保持者（と計数器のドハ）がいなければ `_aimLive` の比較1つで抜ける。乱数を引かない。**
+- **窓**: `_aimWin`（ドハ → 味方 → 量・回数）。味方由来（同じ陣営の攻撃）は入れない。ドハ自身が主目標なら `AimSelf`、ドハ自身の手番の枠の中なら `AimWinInTurn`（どちらも窓に入れない）。巨躯 ／ 分かちの中継・刻み・吸いは主目標の選択を通らないので入らない。DQ の保持者は第313期の肩代わりの窓（`AccruePush`）を数えない。
+- **`AimPick`**: 量 → 回数 → 攻撃力 → 席の若い方。`BattleContext.StrikesOnTurn(UnitDef)`（`Actions` が無いか `Attack` を含む・追い打ち `Pursuer` ／ 不動 `Immobile` は除く・術だけの駒はカタ ／ ハネ ／ リリ ／ ミオ）を満たさない駒と支援を拒む駒は飛ばす。窓の最多が飛ばされたら `AimSkipNoStrike` ／ `AimSkipStoic` と飛ばされた駒の `AimSkipped`。相手がいなければ `AimNoEligible`（ドハは殴る）。
+- **計数器 `PushCensus`**: 立っていれば規定のドハでも狙われの窓を数え、`CensusPushWindow` の最後で `CensusAimWindow`（`AimTurns` ／ `Aims` ／ `AimZero` ／ `AimTies` ／ `AimWindow`、選ばれたはずの味方の `AimGot`）。盤面は動かない。
+- 計数のみ: 味方の `AimedHits` ／ `AimedAmt`（主目標に選ばれた回数・量・窓の外も含む）。表示専用の追加は無い（「手番」の `Amount` が狙われの量になるだけ）。並びは `design/PHASE291_CODEX_MEMO.md` §15-4。

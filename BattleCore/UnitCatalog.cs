@@ -1881,6 +1881,44 @@ public static class UnitCatalog
         Flavor = Doha.Flavor
     };
 
+    // 第315期（指示書 design/PHASE315_DOHA_PUSH2_SPEC.md §2）—— 背を押す改。DP-a ／ DP-b の手番の形はそのままで、相手の選び方だけを
+    // 「窓で敵の攻撃の主目標に最も多く選ばれた味方（手番で殴る駒だけ）」に替える（`SharePushAimed`・窓は engine）。規定のドハは動かしていない（採否はポン）。
+    const string DohaAimText = "。手番で、いちばん狙われた仲間の背を押し、もう一度動かす（殴らない仲間は押さない）";
+
+    /// <summary>第315期 DQ-a（狙われた仲間の背を押す）。規定 ＋ <see cref="TraitId.SharePush"/> ＋ <see cref="TraitId.SharePushAimed"/>。対照（<see cref="All"/> に入れない）。</summary>
+    public static readonly UnitDef DohaDQa = new()
+    {
+        Id = Doha.Id,
+        Name = Doha.Name,
+        MaxHp = Doha.MaxHp,
+        Attack = Doha.Attack,
+        Speed = Doha.Speed,
+        Advances = Doha.Advances,
+        Pattern = Doha.Pattern,
+        Traits = Doha.Traits.Append(TraitId.SharePush).Append(TraitId.SharePushAimed).ToArray(),
+        Actions = DohaPushActions,
+        PlusText = Doha.PlusText + DohaAimText,
+        MinusText = Doha.MinusText,
+        Flavor = Doha.Flavor
+    };
+
+    /// <summary>第315期 DQ-b（DQ-a ＋ 上乗せを渡す）。DQ-a ＋ <see cref="TraitId.SharePushPower"/>（第313期 DP-b と同じ移し方）。対照。</summary>
+    public static readonly UnitDef DohaDQb = new()
+    {
+        Id = Doha.Id,
+        Name = Doha.Name,
+        MaxHp = Doha.MaxHp,
+        Attack = Doha.Attack,
+        Speed = Doha.Speed,
+        Advances = Doha.Advances,
+        Pattern = Doha.Pattern,
+        Traits = Doha.Traits.Append(TraitId.SharePush).Append(TraitId.SharePushAimed).Append(TraitId.SharePushPower).ToArray(),
+        Actions = DohaPushActions,
+        PlusText = Doha.PlusText + DohaAimText + "。自分に宿った力も、その仲間に渡す",
+        MinusText = Doha.MinusText,
+        Flavor = Doha.Flavor
+    };
+
     // 第143期に転生させた。旧「散開のササ」（HP58・`TraitId.Loose` ＝ 隣が空いた駒の被ダメ −35%
     // ＋ 被弾で隣を弾く）は `compare` 61 行のうち**在席1行**で、
     // **弾きの受け皿（移動軸）が無い編成では −35% しか働いていなかった**。

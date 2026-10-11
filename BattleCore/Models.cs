@@ -2214,6 +2214,16 @@ public sealed class UnitTally
                 SinTurns, SinZero, SinTies, SinFresh, SinLayer, SinNoop, ShareAllyOrigin, PushGot, PushPassGot, ShareGiftDealt, SinMarkHits, SinMarkDealt,
                 WallOnSharer, WallOnSharerAmt, WallOnSharerRelay, WallOnSharerRelayAmt, WhetGotRegurg;
     /// <summary>
+    /// 第315期（<b>計数専用</b>・ドハの版 DQ-a ／ DQ-b と Phase 0 の計数器）。誰も読んで分岐しない。
+    /// ドハ ＝ <c>AimTurns</c> 狙われの窓を読んだ手番（計数器）／ <c>Aims</c> 選んだ（計数器）／ <c>AimZero</c> 窓が空 ／ <c>AimNoEligible</c> 窓はあるが送り出せる相手がいない ／
+    /// <c>AimTies</c> 最多が量・回数とも同じ ／ <c>AimAmt</c>・<c>AimCnt</c> 選んだ相手の窓の量・回数の和 ／ <c>AimWindow</c> 窓の量の総和（選んだ手番）／
+    /// <c>AimSkipNoStrike</c>・<c>AimSkipStoic</c> 窓の最多が殴らない駒 ／ 支援を拒む駒で、次に多く狙われた味方へ回した ／
+    /// <c>AimSelf</c>・<c>AimSelfAmt</c> ドハ自身が主目標に選ばれた回数・量（窓に入れない）／ <c>AimWinInTurn</c> ドハ自身の手番の中で選ばれた量（窓に入れない）。
+    /// 味方 ＝ <c>AimGot</c> 計数器で「選ばれたはず」／ <c>AimSkipped</c> 最多だったが飛ばされた ／ <c>AimedHits</c>・<c>AimedAmt</c> 敵の攻撃の主目標に選ばれた回数・量（窓の外も含む全部）。
+    /// </summary>
+    public long AimTurns, Aims, AimZero, AimNoEligible, AimTies, AimAmt, AimCnt, AimWindow, AimSkipNoStrike, AimSkipStoic, AimSelf, AimSelfAmt, AimWinInTurn,
+                AimGot, AimSkipped, AimedHits, AimedAmt;
+    /// <summary>
     /// 第298期 段0-2（<b>計数専用</b>・戦績の帰属のずれ 8 群）。群 g（1 反転 ／ 2 火の変換 ／ 3 癒しの灯 ／ 4 火の癒し ／ 5 耐火の枝 ／ 6 分かちのなまり ／ 7 橋 ／ 8 くべられる火）ごとに、
     /// 本当の出どころの側: <c>AttrTotal</c>[g] 出した量 ／ <c>AttrFixed</c>[g] そのうち包む前の印が別の駒か誰でもないを指していた量 ／ <c>AttrFromNone</c>[g] うち誰でもない。
     /// 印が指していた駒の側: <c>AttrStolen</c>[g]（直す前に、その駒の戦績に入っていた量）。量は回復なら回復(与) の増分、なまり ／ くべられる火は攻撃力、橋は HP ＋ 破片の増分。
@@ -3351,6 +3361,9 @@ public sealed class UnitTally
         PushPassPeak = Math.Max(PushPassPeak, o.PushPassPeak); SinTurns += o.SinTurns; SinZero += o.SinZero; SinTies += o.SinTies; SinFresh += o.SinFresh; SinLayer += o.SinLayer; SinNoop += o.SinNoop;
         ShareAllyOrigin += o.ShareAllyOrigin; PushGot += o.PushGot; PushPassGot += o.PushPassGot; ShareGiftDealt += o.ShareGiftDealt; SinMarkHits += o.SinMarkHits; SinMarkDealt += o.SinMarkDealt;
         WallOnSharer += o.WallOnSharer; WallOnSharerAmt += o.WallOnSharerAmt; WallOnSharerRelay += o.WallOnSharerRelay; WallOnSharerRelayAmt += o.WallOnSharerRelayAmt; WhetGotRegurg += o.WhetGotRegurg;
+        AimTurns += o.AimTurns; Aims += o.Aims; AimZero += o.AimZero; AimNoEligible += o.AimNoEligible; AimTies += o.AimTies; AimAmt += o.AimAmt; AimCnt += o.AimCnt; AimWindow += o.AimWindow;   // 第315期
+        AimSkipNoStrike += o.AimSkipNoStrike; AimSkipStoic += o.AimSkipStoic; AimSelf += o.AimSelf; AimSelfAmt += o.AimSelfAmt; AimWinInTurn += o.AimWinInTurn;
+        AimGot += o.AimGot; AimSkipped += o.AimSkipped; AimedHits += o.AimedHits; AimedAmt += o.AimedAmt;
         AddHist(ref AttrTotal, o.AttrTotal); AddHist(ref AttrFixed, o.AttrFixed); AddHist(ref AttrFromNone, o.AttrFromNone); AddHist(ref AttrStolen, o.AttrStolen);   // 第298期
         MfQueuedFresh += o.MfQueuedFresh; MfQueuedLayer += o.MfQueuedLayer; MfShotsFoe += o.MfShotsFoe; MfShotsAlly += o.MfShotsAlly; MfDealtFoe += o.MfDealtFoe; MfDealtAlly += o.MfDealtAlly;
         MfAllyKills += o.MfAllyKills; MfFresh += o.MfFresh; MfLayer += o.MfLayer; MfChainSkipped += o.MfChainSkipped; MfDropped += o.MfDropped; MfHushed += o.MfHushed; MfBlocked += o.MfBlocked;

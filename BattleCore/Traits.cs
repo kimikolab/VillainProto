@@ -761,6 +761,9 @@ public enum TraitId
     BeastStand,        // 牙を剥いて立つ（SB-a）: 手番の頭の喚び出し（群れを含む）で、獣ごとに空いた召喚枠（○前2 → 召喚枠の順）に置き、隣の敵（駒のみ・背いた獣と糸玉は数えない）に帯電した駒がいればその場で弾ける（1つの連鎖）。いなければ帯電したまま敵として立つ。空き枠が無ければ弾ける。「同時に1体」は外す。緊急の喚び出しは今のまま
     BeastStandBrief,   // 立つのは1ターンだけ（SB-b）: SB-a ＋ 立っている獣は、次のソムの手番の頭（喚び出しの前）に暴発する（起こし手はソム・倒れた扱いにしない）
 
+    // --- 第315期で足した札（ドハの版 `UnitCatalog.DohaDQa` ／ `DohaDQb`・指示書 design/PHASE315_DOHA_PUSH2_SPEC.md §2）。保持者 0 枚
+    SharePushAimed,    // 狙われた仲間の背を押す（DQ-a ／ DQ-b）: 背を押す相手を、窓で敵の攻撃の主目標に最も多く選ばれた味方（量 → 回数 → 攻撃力 → 席）にする。手番で殴らない駒（`BattleContext.StrikesOnTurn`）・支援を拒む駒は飛ばす（**札そのものは挙動を持たない**・`SharePush` と組む・窓は engine）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -17367,6 +17370,7 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.ShockDaunt),                // 第311期（萎縮の規則の版・印だけ）
         new SharePushTrait(TraitId.SharePush),                // 第313期（ドハ DP-a ／ DP-b の手番）
         new MarkOnlyTrait(TraitId.SharePushPower),            // 第313期（DP-b・印だけ）
+        new MarkOnlyTrait(TraitId.SharePushAimed),            // 第315期（DQ-a ／ DQ-b・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

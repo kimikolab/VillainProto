@@ -9176,6 +9176,7 @@ public sealed class BattleContext
         // 破片が全額吸って `NoteHarm` に届かなかった介入が、無関係な被弾を「引き受けたぶん」に化けさせる。
         _interceptedInto = null;
         _decoyPicked = null;
+        _aimPre = null;   // 第315期（狙われの窓・保持者がいなければ書かれない）
 
         // 第223期: 的の固定（追い撃ち・乱れ撃ち）。**介入の鎖を通さない**——撃ち返す相手・矢の的は決まっている。読んで消す。
         if (_forcedTarget is not null)
@@ -9186,6 +9187,7 @@ public sealed class BattleContext
             _forcedLane = -1;
             if (!ft.IsAlive) return null;
             if ((patternOverride ?? attacker.CurrentPattern) == AttackPattern.Pierce) lane = fl >= 0 ? fl : ForcedLane(ft);
+            if (_aimLive) _aimPre = ft;   // 第315期
             return ft;
         }
 
@@ -9227,11 +9229,15 @@ public sealed class BattleContext
                     {
                         lane = best;
                         TallyOf(attacker).ThrustForced++;
-                        return LaneOccupants(foes, lane, aim.Shape)[0];
+                        UnitState thrustEntry = LaneOccupants(foes, lane, aim.Shape)[0];
+                        if (_aimLive) _aimPre = thrustEntry;   // 第315期
+                        return thrustEntry;
                     }
                 }
             }
-            return SelectPierceEntry(attacker, foes, out lane);
+            UnitState? entry = SelectPierceEntry(attacker, foes, out lane);
+            if (_aimLive) _aimPre = entry;   // 第315期
+            return entry;
         }
 
         // 前から順に、生き残っている最も前の列を狙う。
@@ -9290,6 +9296,7 @@ public sealed class BattleContext
         _decoyPicked = decoy;
 
         UnitState target = fixated ?? severed ?? shamed ?? decoy ?? pool[Roll(pool.Count)];
+        if (_aimLive) _aimPre = target;   // 第315期: 主目標（以下の介入の鎖の前）
 
         // 第229期（転倒の穴）: 転倒した列が立っていれば狙えなかった駒を選んだ（計数 ＋ 表示専用の出来事）。**規則が偽なら比較1つで抜ける。**
         if (Shuffler.StaggerHole && !PoolOfPlain(foes).Contains(target))
@@ -11173,6 +11180,7 @@ public sealed class BattleContext
 
         UnitState? target = SelectTargetCore(actor, patternOverride, out int pierceLane);
         if (target is null) return;
+        UnitState? aimPre = _aimLive ? _aimPre : null;   // 第315期（狙われの窓・打点が決まってから足す）
 
         // 積み過ぎ（第115期）の門の 2。**盤面には一切影響しない。**
         // ここで数えるのは「実際に振った型」なので、`patternOverride` を渡す経路
@@ -11395,6 +11403,8 @@ public sealed class BattleContext
                 if (_verbose && cut > 0) Emit(new BattleEvent { Kind = BattleEventKind.Insight, Turn = _turn, ActorId = pr.InstanceId, TargetId = actor.InstanceId, Amount = cut, Slot = layers, StatusRemaining = pct, Team = actor.TeamId });   // 第295期・表示専用
             }
         }
+
+        if (aimPre is not null) AccrueAim(actor, aimPre, atk);   // 第315期
 
         string label = pattern switch
         {
@@ -14468,12 +14478,13 @@ public sealed class BattleContext
         if (!IsPushHolder(u) && !(PushCensus && u.HasTrait(TraitId.Sharer))) return;
         _pushAccrue = true;
         _pushHolders.Add(u);
+        if (u.HasTrait(TraitId.SharePushAimed) || (PushCensus && u.HasTrait(TraitId.Sharer))) _aimLive = true;   // 第315期（狙われの窓）
     }
 
     /// <summary>ドハ <paramref name="doha"/> が <paramref name="from"/> の痛みを <paramref name="amount"/> 肩代わりした（`ApplyDamage` の中継の段から）。</summary>
     void AccruePush(UnitState doha, UnitState from, int amount)
     {
-        if (amount <= 0 || !_pushHolders.Contains(doha) || doha.HasTrait(TraitId.ShareSin)) return;
+        if (amount <= 0 || !_pushHolders.Contains(doha) || doha.HasTrait(TraitId.ShareSin) || doha.HasTrait(TraitId.SharePushAimed)) return;   // 第315期: DQ は狙われの窓だけを読む
         if (TurnActor == doha) { TallyOf(doha).PushWinInTurn += amount; return; }
         if (!_pushWin.TryGetValue(doha.InstanceId, out var w)) _pushWin[doha.InstanceId] = w = new Dictionary<int, int>();
         w[from.InstanceId] = w.GetValueOrDefault(from.InstanceId) + amount;
@@ -14543,14 +14554,17 @@ public sealed class BattleContext
         if (_inGift) { dt.PushInGift++; return false; }
         if (doha.RawCounter(SharePushTrait.PushTurnKey) == _turn + 1) { dt.PushCapped++; return false; }
         dt.PushTurns++;
-        UnitState? to = PushPick(doha, out int amt, out long total, out bool tie);
+        bool aimed = doha.HasTrait(TraitId.SharePushAimed);   // 第315期（DQ-a ／ DQ-b）: 相手は狙われの窓から
+        int amt, cnt = 0; long total; bool tie;
+        UnitState? to = aimed ? AimPick(doha, out amt, out cnt, out total, out tie) : PushPick(doha, out amt, out total, out tie);
         if (to is null) { dt.PushZero++; return false; }
         dt.Pushes++; dt.PushShoulder += amt; dt.PushWindow += total;
         if (tie) dt.PushTies++;
         TallyOf(to).PushGot++;
         doha.SetCounter(SharePushTrait.PushTurnKey, _turn + 1);
         if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.ShareGive, Turn = _turn, ActorId = doha.InstanceId, TargetId = to.InstanceId, Amount = amt, Slot = 0, Text = ShareGiveLabels.Gift, Team = to.TeamId });
-        Log($"    {doha.Name} が、いちばん痛みを引き受けた {to.Name} の背を押す（肩代わり {amt}）", LogKind.Highlight, doha);
+        if (aimed) Log($"    {doha.Name} が、いちばん狙われた {to.Name} の背を押す（狙われ {cnt} 回・{amt}）", LogKind.Highlight, doha);
+        else Log($"    {doha.Name} が、いちばん痛みを引き受けた {to.Name} の背を押す（肩代わり {amt}）", LogKind.Highlight, doha);
         if (doha.HasTrait(TraitId.SharePushPower)) PassPower(doha, to);
         _giftQueue.Enqueue((doha, to, 1));
         return true;
@@ -14608,6 +14622,97 @@ public sealed class BattleContext
         UnitState? foe = SinPick(doha, out _, out bool stie);
         if (foe is null) dt.SinZero++;
         else if (stie) dt.SinTies++;
+        if (_aimLive) CensusAimWindow(doha);   // 第315期
+    }
+
+    // ---- 第315期 —— 狙われた仲間の背を押す（ドハの版 DQ-a `SharePush` ＋ `SharePushAimed` ／ DQ-b ＋ `SharePushPower`・指示書 design/PHASE315_DOHA_PUSH2_SPEC.md §2）。
+    // 窓は第313期と同じ（ドハの前の手番の終わりから今の手番の頭まで・ドハ自身の手番の枠の中は数えない・窓を読んだ手番だけが閉じる）。
+    // 数えるのは**敵の攻撃（`PerformAttack` を通る一撃）が主目標に選んだ味方**——介入の鎖（標・後備え・庇う・殉教・棘守り）の前の相手（`SelectTargetChain` の `target`）で、
+    // 量はその一撃の打点（`atk`・`ApplyDamage` の入口の族・軽減・肩代わり・破片の前）。巨躯 ／ 分かちの中継・味方由来（同士討ち・吸い・羽）は主目標の選択を通らないので入らない。
+    // **保持者（と計数器のドハ）がいなければ `_aimLive` の比較1つで全部抜ける。乱数を引かない。**
+    bool _aimLive;
+    UnitState? _aimPre;                                                       // いまの標的選択の主目標（鎖の前）。`SelectTargetChain` の頭で落とし、`PerformAttackBody` が読む
+    readonly Dictionary<int, Dictionary<int, (long Amt, int Cnt)>> _aimWin = new();   // ドハ → 狙われた味方 → （量, 回数）
+
+    /// <summary>
+    /// 手番で殴る駒か（第315期 Phase 0 §3-1 の一覧・<b>定義だけで決まる</b>）。`Actions` が無いか `Attack` を含む駒は殴る——ただし手番が必ず潰れる駒
+    /// （追い打ち `Pursuer` ／ 不動 `Immobile`）は殴らない。術だけの駒は、術の手番の過半で殴る駒（カタ ／ ハネ ／ リリ ／ ミオ）だけが殴る。
+    /// </summary>
+    public static bool StrikesOnTurn(UnitDef d)
+    {
+        if (d.Traits.Contains(TraitId.Pursuer) || d.Traits.Contains(TraitId.Immobile)) return false;
+        if (d.Actions is null || d.Actions.Count == 0 || d.Actions.Any(a => a.Kind == ActionKind.Attack)) return true;
+        return SkillStrikers.Contains(d.Id);
+    }
+    static readonly HashSet<string> SkillStrikers = new() { "kata", "hane", "lili", "mio" };
+
+    /// <summary>敵 <paramref name="actor"/> の一撃が味方 <paramref name="aim"/> を主目標に選んだ（打点 <paramref name="atk"/>）。同じ陣営の DQ の保持者（と計数器のドハ）の窓に足す。</summary>
+    void AccrueAim(UnitState actor, UnitState aim, int atk)
+    {
+        if (aim.TeamId == actor.TeamId) return;   // 味方由来（混乱した同士討ち）は数えない
+        bool any = false;
+        foreach (UnitState h in _pushHolders)
+        {
+            if (h.TeamId != aim.TeamId || !h.IsAlive) continue;
+            if (!h.HasTrait(TraitId.SharePushAimed) && !(PushCensus && h.HasTrait(TraitId.Sharer) && !IsPushHolder(h))) continue;
+            any = true;
+            UnitTally ht = TallyOf(h);
+            if (aim == h) { ht.AimSelf++; ht.AimSelfAmt += atk; continue; }   // ドハ自身は数えない
+            if (TurnActor == h) { ht.AimWinInTurn += atk; continue; }
+            if (!_aimWin.TryGetValue(h.InstanceId, out var w)) _aimWin[h.InstanceId] = w = new Dictionary<int, (long, int)>();
+            var c = w.GetValueOrDefault(aim.InstanceId);
+            w[aim.InstanceId] = (c.Amt + atk, c.Cnt + 1);
+        }
+        if (any) { UnitTally at = TallyOf(aim); at.AimedHits++; at.AimedAmt += atk; }
+    }
+
+    /// <summary>
+    /// 窓で敵の攻撃の主目標に最も多く選ばれた味方（ドハを除く・生きている）。順は 量 → 回数 → 攻撃力 → 席の若い方。<b>乱数を引かない。</b>
+    /// 手番で殴らない駒（<see cref="StrikesOnTurn"/>）・支援を拒む駒は飛ばして次に多く狙われた味方へ（窓の最多が飛ばされたら理由を数える）。窓は読んだら閉じる。
+    /// </summary>
+    UnitState? AimPick(UnitState doha, out int amt, out int cnt, out long total, out bool tie)
+    {
+        amt = 0; cnt = 0; total = 0; tie = false;
+        UnitTally dt = TallyOf(doha);
+        if (!_aimWin.TryGetValue(doha.InstanceId, out var w) || w.Count == 0) return null;
+        static bool Above((long Amt, int Cnt) a, UnitState u, (long Amt, int Cnt) b, UnitState v)
+            => a.Amt != b.Amt ? a.Amt > b.Amt : a.Cnt != b.Cnt ? a.Cnt > b.Cnt : u.CurrentAttack != v.CurrentAttack ? u.CurrentAttack > v.CurrentAttack : u.Slot < v.Slot;
+        UnitState? top = null, best = null;
+        (long Amt, int Cnt) topV = default, bestV = default;
+        foreach (UnitState u in LivingMembers(doha.TeamId))
+        {
+            if (u == doha || !w.TryGetValue(u.InstanceId, out var v) || v.Cnt <= 0) continue;
+            if (top is null || Above(v, u, topV, top)) { top = u; topV = v; }
+            if (!u.AcceptsSupport || !StrikesOnTurn(u.Def)) continue;
+            total += v.Amt;
+            if (best is null) { best = u; bestV = v; tie = false; continue; }
+            bool above = Above(v, u, bestV, best);
+            if (v.Amt == bestV.Amt && v.Cnt == bestV.Cnt) tie = true;
+            else if (above) tie = false;
+            if (above) { best = u; bestV = v; }
+        }
+        w.Clear();
+        if (top is not null && top != best)
+        {
+            if (!top.AcceptsSupport) dt.AimSkipStoic++; else dt.AimSkipNoStrike++;
+            TallyOf(top).AimSkipped++;
+        }
+        if (best is null) { if (top is not null) dt.AimNoEligible++; return null; }
+        amt = (int)Math.Min(int.MaxValue, bestV.Amt); cnt = bestV.Cnt;
+        dt.AimAmt += bestV.Amt; dt.AimCnt += bestV.Cnt;
+        return best;
+    }
+
+    /// <summary>計数器（<see cref="PushCensus"/>）: 規定のドハの手番の頭で、狙われの窓なら選んだはずの相手を数えて窓を閉じる。<b>盤面は1ビットも動かさない。</b></summary>
+    void CensusAimWindow(UnitState doha)
+    {
+        UnitTally dt = TallyOf(doha);
+        dt.AimTurns++;
+        UnitState? to = AimPick(doha, out _, out _, out long total, out bool tie);
+        if (to is null) { dt.AimZero++; return; }
+        dt.Aims++; dt.AimWindow += total;
+        if (tie) dt.AimTies++;
+        TallyOf(to).AimGot++;
     }
 
     /// <summary>第313期 Phase 0（<b>計数のみ</b>）: 巨躯 <paramref name="wall"/> が分かちの持ち主への一撃を <paramref name="blocked"/> 飲んだ。<paramref name="relay"/> はその一撃がドハの肩代わりの中継だったか。</summary>

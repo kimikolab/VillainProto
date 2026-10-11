@@ -1052,6 +1052,14 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 doha313 grid <guard|boss> <a|b|c> [席=6] [seed=10]   # 第313期 §4-4: 第297期の「ドハが要る台」の格子（基準は規定のドハ・アタッカー ミサ ／ ザン ／ カタ ／ シガ）。第313期は門に届かず回していない
     dotnet run --project BattleSim -c Release 0 doha313 memo <台の一部> <boss|guard|bat|1..5> <seed> <規定|a|b|c>   # 第313期 台本の並び（`PHASE291_CODEX_MEMO.md` §15）
     dotnet run --project BattleSim -c Release 0 doha313 check       # 第313期 自己検査（最も肩代わりした味方に1回・同額は攻撃力 → 席・ドハ自身は選ばない・DP-b の上乗せ・DP-c の標・ギフトの中で押さない・連鎖の帳尻・verbose・計数器・PickOne ／ Roll なし・版の定義）
+    dotnet run --project BattleSim -c Release 0 doha315 strikers    # 第315期 Phase 0 §3-1: 手番で殴る駒 ／ 殴らない駒（ロスター 52 枚・実測と定義 `BattleContext.StrikesOnTurn` の突き合わせ）（3 秒）。本体は `Modes/Doha315.cs`
+    dotnet run --project BattleSim -c Release 0 doha315 p0          # 第315期 Phase 0: 規定のドハで計数器 `PushCensus` を立てて、窓の最多（狙われ ／ 第313期の肩代わり）と主目標の内訳・敵を強くした条件の段（3 秒）
+    dotnet run --project BattleSim -c Release 0 doha315 boards [seeds]   # 第315期 §4-2: 代表台 5 × 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-a ／ DP-b ／ DQ-a ／ DQ-b ／ ドルガ）（7 秒）。**予測のファイル `.tmp/p315/predict.md` が無ければ走らない**
+    dotnet run --project BattleSim -c Release 0 doha315 compare     # 第315期 §4-3: `compare` 64 行 × DQ-a ／ DQ-b・(G2)（13 秒・同上）
+    dotnet run --project BattleSim -c Release 0 doha315 grid <guard|boss> <a|b|pa|pb> [strong] [席=6] [seed=10]   # 第315期 §4-4: 第297期の「ドハが要る台」の格子（基準は規定のドハ・pa ／ pb は第313期の DP-a ／ DP-b・1本 8〜14 分）
+    dotnet run --project BattleSim -c Release 0 doha315 memo <台の一部> <boss|guard|bat|1..5> <seed> <規定|pa|pb|qa|qb> [strong]   # 第315期 台本の並び（`PHASE291_CODEX_MEMO.md` §15-4）
+    dotnet run --project BattleSim -c Release 0 doha315 diff <台の一部> <boss|guard|bat|1..5> <版A> <版B> [strong]   # 第315期 2つの版で勝敗が割れた seed と、その seed の押した相手 ／ 送り出された手番の与ダメ ／ 上乗せ
+    dotnet run --project BattleSim -c Release 0 doha315 check       # 第315期 自己検査（主目標の量で最多・中継 ／ 味方由来は数えない・庇いの前の主目標・殴らない駒 ／ 支援拒否を飛ばす・相手なしで殴る・DQ-b の上乗せ・ギフトの中で押さない・帳尻・verbose・計数器・PickOne ／ Roll なし・版の定義）
     dotnet run --project BattleSim -c Release 0 som314 p0          # 第314期 Phase 0: 規定のソム（E2 ＋ 群れ ＋ 緊急 K-a）で計数器 `StandCensus` を立て、SB-a なら獣ごとに立つ ／ 隣が帯電で弾ける ／ 枠なしで弾けるか・空いた召喚枠・いまの弾けの回数（代表台 7 × 10 波・3 秒）。本体は `Modes/Som314.cs`
     dotnet run --project BattleSim -c Release 0 som314 boards [版,…]  # 第314期 §4-2: 代表台 7 × 10 波 × 版（規定 ／ SB-a ／ SB-b）・獣（立った ／ 同時に立つ最大と平均 ／ 立っていたT ／ 一撃 ／ 弾けさせた駒 ／ 暴発）・シガ ・光・ボスの火力・格子の門（10 秒）。**予測のファイル `.tmp/p314/predict.md` が無ければ走らない**（R397）
     dotnet run --project BattleSim -c Release 0 som314 compare     # 第314期 §4-3: `compare` 64 行 × 版・(G2)（15 秒・同上）

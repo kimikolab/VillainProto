@@ -509,6 +509,7 @@
 | `ShareSin` | - |
 | `BeastStand` | - |
 | `BeastStandBrief` | - |
+| `SharePushAimed` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |
