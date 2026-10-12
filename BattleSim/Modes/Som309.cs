@@ -529,7 +529,7 @@ static class Som309Diag
                 && som.Name == old.Name && som.MinusText == old.MinusText && som.Flavor == old.Flavor && som.Flavor == "喚んだものは、みな背いた。弾けた光だけが、帰ってくる。"
                 && som.PlusText == old.PlusText + "。満ちた仲間に降った光は、光の衣になって次の一撃を受け止める"
                 && old.Traits.SequenceEqual(UnitCatalog.SomSHa.Traits) && old.PlusText == UnitCatalog.SomSHa.PlusText && old.Traits.SequenceEqual(UnitCatalog.SomH307.Traits.Append(TraitId.SparkRain))
-                && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.Som) && !UnitCatalog.Everyone.Contains(som) && !UnitCatalog.Everyone.Contains(old) && !UnitCatalog.Everyone.Contains(lva)   /* 第311期: LV-a は `SomH310`（`All` の外）に */
+                && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.SomH317) && !UnitCatalog.Everyone.Contains(som) && !UnitCatalog.Everyone.Contains(old) && !UnitCatalog.Everyone.Contains(lva)   /* 第311期: LV-a は `SomH310`（`All` の外）に */
                 && UnitCatalog.SomLVc.Traits.SequenceEqual(old.Traits.Append(TraitId.SparkVeil).Append(TraitId.SparkVeilCap)) && UnitCatalog.SomFO.Traits.SequenceEqual(old.Traits.Append(TraitId.SparkFocus));
             Expect("(a) 段0: 規定のソム ＝ `SomLVa` と同じ中身（札・数値・行動）＝ 旧の規定（`SomH308` ＝ SH-a）＋ `SparkVeil`・名前とフレーバーはそのまま・文面に衣・旧は `All` ／ `Everyone` の外・第308期の版は旧から作る", ok);
         }
@@ -546,7 +546,7 @@ static class Som309Diag
             bool shape = pl.Length == 10 && pl.Take(8).Select(r => r.Name).SequenceEqual(Playtest308) && pl.Skip(8).Select(r => r.Name).SequenceEqual(new[] { Shield, ShieldHeavy })
                 && Presets.Compare.Length == 64 && CompareBuildsH311().Count() == 64 && Presets.Cross.Length == 12
                 && pl.All(r => !Presets.Compare.Any(c => c.Name == r.Name) && r.F.Occupied().Count() == 5 && r.F.Occupied().All(o => UnitCatalog.All.Select(PinDS316).Contains(o.Def)))
-                && pl.Skip(8).All(r => r.F.Shape == FormationShape.X && !r.F.HasRelics && r.F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Som)) && r.F.Occupied().All(o => o.Slot < 5));
+                && pl.Skip(8).All(r => r.F.Shape == FormationShape.X && !r.F.HasRelics && r.F.Occupied().Any(o => IsSomNow(o.Def)) && r.F.Occupied().All(o => o.Slot < 5));
             var picks = PickPairs.Select(pp => (pp.Name, Top: S307.OrderName(Rank(pp.Pair)[0].Order))).ToList();
             bool same = picks.All(x => Seats(Playtest(x.Name)) == x.Top);
             Expect("(c) 試遊の2台が `Presets.Playtest` の末尾にある（既存の8行は名前も並びもそのまま）・`compare` の行数は 64 のまま・2台は §3-1 の選び方の1位（ボス・120 席を回し直して一致）",

@@ -647,7 +647,7 @@ static class Shiga316Diag
     {
         var w = WaveOf(waveKey);
         var v = SV(ver);
-        var fixedU = new[] { UnitCatalog.ShigaSWa, UnitCatalog.Kata, UnitCatalog.Som };
+        var fixedU = new[] { UnitCatalog.ShigaSWa, UnitCatalog.Kata, UnitCatalog.SomH317 };
         // 候補 ＝ 第287期の候補（感電の駒 ＋ 第283期の寿命側 ＋ ヒーラー）＋ トウ。固定してあった過去の版はすべていまの規定に替える（Id で引く）。ヒーラーは組に 1 枚まで（ポンの憲法）。
         UnitDef Now(UnitDef d) => UnitCatalog.All.Select(PinDS316).FirstOrDefault(x => x.Id == d.Id) ?? d;
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();

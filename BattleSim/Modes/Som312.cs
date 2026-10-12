@@ -58,7 +58,7 @@ static class Som312Diag
     internal const string Whip = "試遊・感電 光の盾 鞭", WhipHeavy = "試遊・感電 光の盾 重 鞭";
     static Formation Playtest(string n) => PlaytestH316.First(r => r.Name == n).F;
     /// <summary>§3 の台: 試遊・感電 火の型 の ソラ → ソム（第311期の代表台と同じ・ベニのいる台）。規定の駒。</summary>
-    static Formation FireSom() => S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, UnitCatalog.Som);
+    static Formation FireSom() => S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, UnitCatalog.SomH317);
     static (string Name, Formation F)[] ShockRows() => PlaytestH316.Where(r => r.Name.StartsWith("試遊・感電", StringComparison.Ordinal)).ToArray();
 
     // ---------------------------------------------------------------------------------
@@ -215,7 +215,7 @@ static class Som312Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef som = UnitCatalog.Som, kata = UnitCatalog.Kata, tou = UnitCatalog.Tou;
+        UnitDef som = UnitCatalog.SomH317, kata = UnitCatalog.Kata, tou = UnitCatalog.Tou;
 
         // (a) 段0-1: 規定のソム ／ カタ ／ トウ ＝ 第311期の重ねの駒・旧は H311（`Everyone` の外）
         {
@@ -237,7 +237,7 @@ static class Som312Diag
         {
             // 火の型 ソラ→ソムの駒を、ベニの隣でない味方ができる席に並べ替えた盤（シガ・トウ・ガルド・ベニ・ソム——ベニは後1・隣は前1 ／ 中央）。
             // ベニの隣の味方 ／ 隣でない味方 を1体ずつ選び、4 割を切らせて緊急を起こす。
-            var f = Formation.Build(front1: UnitCatalog.ShigaSWa, front3: UnitCatalog.Tou, center: UnitCatalog.Gald, back1: UnitCatalog.Beni, back3: UnitCatalog.Som);
+            var f = Formation.Build(front1: UnitCatalog.ShigaSWa, front3: UnitCatalog.Tou, center: UnitCatalog.Gald, back1: UnitCatalog.Beni, back3: UnitCatalog.SomH317);
             string Run1(bool inside, out long inv, out long healedOthers, out int? target, out int? partner, out long focusHp)
             {
                 var (ctx, p, e) = Board(f, BattleEngine.MaterializeEnemy(EnemyCatalog.BossRegularWave, EnemyScaleRule.None));

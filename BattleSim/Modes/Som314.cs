@@ -69,12 +69,12 @@ static class Som314Diag
     internal sealed record Ver(string Name, UnitDef Som);
     internal static readonly Ver[] Vers =
     {
-        new("規定", UnitCatalog.Som),
+        new("規定", UnitCatalog.SomH317),
         new("SB-a", UnitCatalog.SomSBa),
         new("SB-b", UnitCatalog.SomSBb),
     };
     static Ver V(string n) => Vers.First(v => v.Name == n || (n == "base" && v.Name == "規定"));   // "base" ＝ 規定（コンソールの文字コードを避ける別名）
-    internal static Formation Apply(Formation f, Ver v) => ReferenceEquals(v.Som, UnitCatalog.Som) ? f : S309.Swap(f, UnitCatalog.Som, v.Som);
+    internal static Formation Apply(Formation f, Ver v) => ReferenceEquals(v.Som, UnitCatalog.SomH317) ? f : S309.Swap(f, UnitCatalog.SomH317, v.Som);
 
     internal static readonly S287.Wave[] Waves = S310.Waves;
     static S287.Wave WaveOf(string n) => n switch { "nine" => Waves[3], "nine2" => Waves[4], _ => S307.WaveOf(n) };
@@ -91,8 +91,8 @@ static class Som314Diag
         ("光の盾 鞭", Playtest(Som312Diag.Whip)),
         ("光の盾 重 鞭", Playtest(Som312Diag.WhipHeavy)),
         ("感電 行", RowF("感電 (シガ×カタ×ソム)")),
-        ("勝ち台 ツギ→ソム", S309.Swap(WinSeat(), UnitCatalog.Tsugi, UnitCatalog.Som)),
-        ("火の型 ソラ→ソム", S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, UnitCatalog.Som)),
+        ("勝ち台 ツギ→ソム", S309.Swap(WinSeat(), UnitCatalog.Tsugi, UnitCatalog.SomH317)),
+        ("火の型 ソラ→ソム", S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, UnitCatalog.SomH317)),
     };
 
     // ---------------------------------------------------------------------------------
@@ -451,7 +451,7 @@ static class Som314Diag
             for (int ri = 0; ri < rows.Length; ri++)
             {
                 bool any = Enumerable.Range(0, nw).Any(w => g[ri, w] != b[ri, w]);
-                bool holds = rows[ri].F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Som));
+                bool holds = rows[ri].F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.SomH317));
                 if (any && !holds) outside++;
                 if (!any) continue;
                 movedRows++;
@@ -491,7 +491,7 @@ static class Som314Diag
     /// <summary>第309期 §4-1 の入れ替えと同じ台・同じ席を、規定の駒で組み直したもの（(名前, ソムの台, ツギの台)）。</summary>
     static (string Name, Formation S, Formation? T)[] Pairs()
     {
-        UnitDef som = UnitCatalog.Som, tsugi = UnitCatalog.Tsugi;
+        UnitDef som = UnitCatalog.SomH317, tsugi = UnitCatalog.Tsugi;
         var win = WinSeat();
         var shock = RowF("感電 (シガ×カタ×ソム)");
         return new (string, Formation, Formation?)[]
@@ -563,7 +563,7 @@ static class Som314Diag
         int k = w.Boss ? 2 : 3, need = w.Boss ? 1 : 5;
         var lu = S293.Combos(pool, k);
         var boards = new List<UnitDef[]>();
-        foreach (var t in lu) boards.AddRange(B283.Perms(fixedBase.Append(UnitCatalog.Som).Concat(t).ToArray()));
+        foreach (var t in lu) boards.AddRange(B283.Perms(fixedBase.Append(UnitCatalog.SomH317).Concat(t).ToArray()));
         var res = new (int Wins, long WinT, int Ctl)?[boards.Count];
         int cutPass = 0;
         static int W(Formation f, S287.Wave w, int n, out long wt)
@@ -728,7 +728,7 @@ static class Som314Diag
     /// <summary>規定の駒の盤（光の盾のソムを版に替え）＋ 本編 第3波の敵（前列 ／ 中央に駒が立ち、召喚枠は空）。</summary>
     static (BattleContext Ctx, UnitState Som, List<UnitState> P, List<UnitState> E) StandBoard(UnitDef somDef)
     {
-        var f = S309.Swap(Playtest(S309.Shield), UnitCatalog.Som, somDef);
+        var f = S309.Swap(Playtest(S309.Shield), UnitCatalog.SomH317, somDef);
         var (ctx, p, e) = Board(f, BattleEngine.Materialize(EnemyCatalog.Stages[2].Enemy, BattleContext.EnemyTeam));
         return (ctx, p.First(u => u.Def.Id == "som"), p, e);
     }
@@ -744,7 +744,7 @@ static class Som314Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef som = UnitCatalog.Som, sba = UnitCatalog.SomSBa, sbb = UnitCatalog.SomSBb;
+        UnitDef som = UnitCatalog.SomH317, sba = UnitCatalog.SomSBa, sbb = UnitCatalog.SomSBb;
 
         // (a) 版の定義・規定は動かない
         {

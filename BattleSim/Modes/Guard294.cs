@@ -83,7 +83,7 @@ static class Guard294Diag
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.DohaH316)) g[slot] = UnitCatalog.DohaD0;   // 第298期: ドハも旧の規定（`DohaD0`）に
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Tome)) g[slot] = UnitCatalog.TomeMb;   // 第299期: ミサ ／ ザンも旧の規定（`TomeMb` ／ `ZanZN0`）に
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Zan)) g[slot] = UnitCatalog.ZanZN0;
-        foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Som)) g[slot] = UnitCatalog.SomH307;   // 第308期: ソムも旧の規定（`SomH307`）に
+        foreach (var (slot, d) in f.Occupied()) if (IsSomNow(d)) g[slot] = UnitCatalog.SomH307;   // 第308期: ソムも旧の規定（`SomH307`）に
         return g;
     }
 

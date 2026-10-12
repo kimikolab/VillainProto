@@ -512,6 +512,10 @@ public enum OutOfTurnRoute
     Emergency,
     /// <summary>避雷針（第317期・カタの版 BT-b ／ BT-c `LightningRod`・`BeastThrow`。<b>問う相手はカタ</b>——狙われた味方ではない）。</summary>
     LightningRod,
+    /// <summary>共鳴返し（第318期・ソムの版 CR-a ／ CR-b `BeastResonance`・`Resonate`。<b>問う相手は雷を受けた味方</b>。<b>粛だけを問う</b>——痺れ ／ 組み付き ／ 札では止まらない（雷の共鳴は本人の動作ではない））。</summary>
+    Resonance,
+    /// <summary>打ち返し（第318期・シガの版 SG `BetrayBackswing`・`Backswing`。<b>問う相手はシガ</b>）。</summary>
+    Backswing,
     /// <summary>呼び出し口を名乗らなかった問い合わせ（既定値。<b>現状 0 件</b>）。</summary>
     Other
 }
@@ -521,7 +525,7 @@ public static class OutOfTurnRoutes
 {
     /// <summary>経路の名前（<see cref="OutOfTurnRoute"/> の順）。</summary>
     public static readonly string[] Names =
-        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "羽の標撃ち", "庇い", "指差し", "叫び", "騎士の斬り返し", "光", "緊急の喚び出し", "避雷針", "その他" };
+        { "棘", "仇討ち", "軋み", "追い打ち", "譲渡", "暴発", "叩き起こし", "斬り返し", "応急処置", "追い撃ち", "緊急退避", "突風", "弾き返し", "移動の追撃", "感電の割り込み", "橋", "羽の標撃ち", "庇い", "指差し", "叫び", "騎士の斬り返し", "光", "緊急の喚び出し", "避雷針", "共鳴返し", "打ち返し", "その他" };
 
     /// <summary>経路の数。</summary>
     public static int Count => Names.Length;
@@ -2346,7 +2350,9 @@ public sealed class BattleContext
         if (target is null || target.TeamId == beast.TeamId || !target.IsAlive) { t.BtNoTarget++; return; }
         t.BtThrown++;
         (t.BtSlotHist ??= new long[9])[Math.Clamp(target.Slot, 0, 8)]++;
-        // ① 避雷針
+        bool charged0 = target.RawCounter(StatusKeys.Shock) > 0;
+        NoteThrowTarget(t, beast, target, charged0);   // 第318期（計数のみ・盤面は読むだけ）
+        // ① 避雷針（第317期・本期の版では使わない。判定の順は第317期のまま最初）
         if (_rodLive)
         {
             UnitState? rod = null; bool anyHolder = false;
@@ -2367,7 +2373,9 @@ public sealed class BattleContext
             }
             else if (anyHolder) t.BtRodOut++;
         }
-        // ② クグの糸
+        // ② 共鳴返し（第318期・CR-a ／ CR-b `BeastResonance`）: 帯電している味方に向かった雷は付かずに投げた獣へ跳ね返る。**糸より前**（跳ね返らなかったときだけ糸へ）。札が無ければ比較1つで素通り。
+        if (charged0 && som.HasTrait(TraitId.BeastResonance)) { Resonate(som, beast, target); return; }
+        // ③ クグの糸
         if (_threadLive && ThreadTarget(target) is { } th)
         {
             t.BtThread++;
@@ -2377,12 +2385,109 @@ public sealed class BattleContext
             if (fresh && MarkShock(th, target)) t.BtThreadShocked++;
             return;
         }
-        // ③ 当たる
-        bool already = target.RawCounter(StatusKeys.Shock) > 0;
+        // ④ 当たる
+        bool already = charged0;
         if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.BeastThrow, Turn = _turn, ActorId = beast.InstanceId, TargetId = target.InstanceId, Amount = already ? 0 : 1, Team = target.TeamId, Text = BeastThrowLabels.Hit });
         Log($"    {beast.Name} が振り返り、{target.Name} に雷を投げた{(already ? "（既に感電している）" : "")}", LogKind.Trigger, beast);
         if (already) { t.BtAlready++; return; }
         if (MarkShock(target, beast)) t.BtShocked++;
+        // 第318期（SG・`BetrayBackswing`）: 帯電していなかったシガは、感電が付いたうえでその場で投げた獣へ打ち返す。札が無ければ比較1つで素通り。
+        if (target.HasTrait(TraitId.BetrayBackswing)) Backswing(som, beast, target);
+    }
+
+    /// <summary>第318期（<b>計数のみ</b>）: 裏切りの雷が向かった味方が帯電していたか（席 ／ 粛 ／ 糸の保持者）・投げた獣の隣の敵の数とうち帯電していない数。乱数を引かない・盤面を動かさない。</summary>
+    void NoteThrowTarget(UnitTally t, UnitState beast, UnitState target, bool charged)
+    {
+        if (charged)
+        {
+            t.BtAtCharged++;
+            (t.BtAtChargedSlot ??= new long[9])[Math.Clamp(target.Slot, 0, 8)]++;
+            if (Hush.Active && HushSilencing) t.BtAtChargedHush++;
+            if (_threadLive && ThreadTarget(target) is not null) t.BtThreadCharged++;
+        }
+        foreach (UnitState u in _units)
+            if (u.IsAlive && u.TeamId == beast.TeamId && u != beast && !IsSilkBall(u) && FormationRules.AreAdjacent(beast, u))
+            {
+                t.BtAdjFoes++;
+                if (u.RawCounter(StatusKeys.Shock) <= 0) t.BtAdjFoesDry++;
+            }
+    }
+
+    /// <summary>
+    /// 共鳴返し（第318期・CR-a ／ CR-b）: 帯電している味方 <paramref name="target"/> に落ちた雷が共鳴して、投げた獣 <paramref name="beast"/> へ跳ね返る。
+    /// <b>粛だけを問う</b>（経路 <see cref="OutOfTurnRoute.Resonance"/>・痺れ ／ 組み付き ／ 札では止まらない）——止まったら雷は何もせず獣は立ったまま。
+    /// 通れば、CR-b は獣の隣の敵（駒のみ・糸玉は除く）すべてに感電を付け（書き手は <paramref name="target"/>）、そのあと獣を盤から消して（倒れた扱いにしない・避雷針と同じ）
+    /// 帯電していれば <c>ShockTrigger(獣, 受けた味方, 0)</c>——起こし手は受けた味方（シガの割り込み ／ カタの雷雲 ／ 光はいまの規則どおり読む）。獣は獣の死に数える（倒した駒 ＝ 受けた味方）。
+    /// 味方の感電はそのまま残る。<b>乱数を引かない。</b>
+    /// </summary>
+    void Resonate(UnitState som, UnitState beast, UnitState target)
+    {
+        UnitTally t = TallyOf(som), rt = TallyOf(target);
+        bool hushed = Hush.Active && HushSilencing;
+        HushAskedSide[SideOf(target)]++;
+        if (hushed)
+        {
+            NoteHushBlocked(target, OutOfTurnRoute.Resonance, sole: true);
+            t.CrHushed++;
+            if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.BeastThrow, Turn = _turn, ActorId = beast.InstanceId, TargetId = target.InstanceId, Amount = 0, Team = target.TeamId, Text = BeastThrowLabels.Hushed });
+            Log($"    {beast.Name} が {target.Name} に雷を投げた——帯電した身に共鳴しかけたが、粛の沈黙に呑まれた", LogKind.Trigger, beast);
+            return;
+        }
+        if (_hushVarLive && Hush.Active && HushHolderAlive) NoteHushPassed(target, OutOfTurnRoute.Resonance);   // 第304期の計数（版が開けた窓を通った）
+        t.CrFired++;
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.BeastThrow, Turn = _turn, ActorId = beast.InstanceId, TargetId = target.InstanceId, Amount = 0, Team = target.TeamId, Text = BeastThrowLabels.Resonance });
+        Log($"    {beast.Name} が {target.Name} に雷を投げた——帯電した身に共鳴して増幅し、投げた者へ跳ね返る", LogKind.Highlight, target);
+        if (som.HasTrait(TraitId.BeastResonanceArc))
+            foreach (UnitState u in _units.ToList())
+            {
+                if (!u.IsAlive || u.TeamId != beast.TeamId || u == beast || IsSilkBall(u) || !FormationRules.AreAdjacent(beast, u)) continue;
+                t.CrArcFoes++;
+                bool fresh = u.RawCounter(StatusKeys.Shock) <= 0;
+                if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.BeastThrow, Turn = _turn, ActorId = beast.InstanceId, TargetId = u.InstanceId, PartnerId = target.InstanceId, Amount = fresh ? 1 : 0, Team = u.TeamId, Text = BeastThrowLabels.Arc });
+                if (fresh && MarkShock(u, target)) t.CrArcShocked++;
+            }
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.BeastBurst, Turn = _turn, ActorId = target.InstanceId, TargetId = beast.InstanceId, Slot = beast.Slot, Team = beast.TeamId, Amount = 0, Text = BeastBurstLabels.Resonance });
+        bool charged = beast.RawCounter(StatusKeys.Shock) > 0;
+        beast.Hp = 0;   // 消える（倒れた扱いにしない・避雷針と同じ）
+        if (!charged) t.CrDry++;
+        else
+        {
+            _shockLive = true;
+            long u0 = rt.ShockTriggeredUnits;
+            ShockTrigger(beast, target, 0);
+            t.CrChainUnits += rt.ShockTriggeredUnits - u0;
+        }
+        if (_bdLive) CountBeastDeaths(som, new List<UnitState> { beast }, target, 4);
+    }
+
+    /// <summary>
+    /// 打ち返し（第318期・SG）: 帯電していなかったシガ <paramref name="shiga"/> が、雷を投げた獣 <paramref name="beast"/> を主目標に鞭を1回振る。
+    /// 打ち方はシガの割り込みの鞭と同じ（<see cref="Interrupt"/> の中・的を固定・<c>_shockWhipActor</c> ＝ シガで怖気づかない）。倍率は 1、<b>蓄電は使わない</b>。
+    /// 手番の外の動作（<see cref="CanActOutOfTurn"/>・経路 <see cref="OutOfTurnRoute.Backswing"/>・粛 ／ 痺れで止まる）。打ち返しの鞭の連鎖の後の割り込み（`AfterChain` → `ShockWhip`）はいまの規則どおり。<b>乱数を引かない</b>（鞭そのものが引くぶんだけ）。
+    /// </summary>
+    void Backswing(UnitState som, UnitState beast, UnitState shiga)
+    {
+        UnitTally t = TallyOf(som), ht = TallyOf(shiga);
+        if (!beast.IsAlive || !shiga.IsAlive) return;
+        if (InInterrupt) { t.SgNested++; return; }
+        bool hush = Hush.Active && HushSilencing;
+        if (!CanActOutOfTurn(shiga, OutOfTurnRoute.Backswing)) { if (hush) t.SgHushed++; else t.SgBlocked++; return; }
+        Interrupt(() =>
+        {
+            t.SgFired++;
+            if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.BeastThrow, Turn = _turn, ActorId = beast.InstanceId, TargetId = shiga.InstanceId, Amount = 0, Team = shiga.TeamId, Text = BeastThrowLabels.Backswing });
+            Log($"    雷を浴びた {shiga.Name} が、その場で投げた者へ鞭を打ち返す", LogKind.Highlight, shiga);
+            long before = ht.DamageToEnemy, nested0 = ht.SwNested;
+            UnitState? prevActor = _shockWhipActor;
+            int prevMult = _shockWhipMult;
+            _shockWhipActor = shiga;
+            _shockWhipMult = 1;
+            _forcedTarget = beast;
+            try { PerformAttack(shiga); }
+            finally { _forcedTarget = null; _shockWhipActor = prevActor; _shockWhipMult = prevMult; }
+            t.SgDealt += ht.DamageToEnemy - before;
+            t.SgWhipNested += ht.SwNested - nested0;   // 打ち返しの鞭の連鎖の後の割り込み（`ShockWhip`）は、打ち返しが割り込みの中なので入れ子で止まる（いまの規則どおり）
+        });
     }
 
     /// <summary>避雷針（第317期・BT-b ／ BT-c）: カタ <paramref name="rod"/> が雷を受け止め、投げた獣の上に落とし直す。獣は盤から消え（倒れた扱いにしない）、帯電していれば連鎖の起点になる（起こし手はカタ）。</summary>
@@ -2419,7 +2524,7 @@ public sealed class BattleContext
     /// 弾けた獣を「味方が敵を倒した」として死の読み手に渡す（第317期・BD・<paramref name="som"/> が <see cref="TraitId.BeastDeathCount"/> を持つときだけ）。
     /// 渡すのは 倒した駒（<paramref name="killer"/> ＝ 起こし手・獣の敵の側で生きていれば）の <c>OnKill</c> → ソムの側の生きている駒すべての <c>OnAnyDeath</c>（`HandleDeath` と同じ順）。
     /// <b>渡さないもの</b>: 獣の側（敵陣）の <c>OnAnyDeath</c> ／ <c>OnAllyDeath</c>（蘇生など）・獣自身の <c>OnDeath</c>・撃破の数（`Kills`）・`Death` の出来事・波の終わりの判定・<see cref="BeastDeathSkips"/>。
-    /// <paramref name="kind"/> は計数のみ（0 喚び出しの場 ／ 1 緊急 ／ 2 立った獣が弾けた ／ 3 避雷針）。上限の版（<see cref="TraitId.BeastDeathCap"/>）は先頭の1体だけ。
+    /// <paramref name="kind"/> は計数のみ（0 喚び出しの場 ／ 1 緊急 ／ 2 立った獣が弾けた ／ 3 避雷針 ／ 4 共鳴返し（第318期））。上限の版（<see cref="TraitId.BeastDeathCap"/>）は先頭の1体だけ。
     /// </summary>
     void CountBeastDeaths(UnitState som, List<UnitState> beasts, UnitState? killer, int kind)
     {
@@ -2431,7 +2536,7 @@ public sealed class BattleContext
         {
             UnitState beast = beasts[i];
             t.BdCounted++;
-            (t.BdKind ??= new long[4])[kind]++;
+            (t.BdKind ??= new long[5])[kind]++;   // 第318期: 4 共鳴返し
             int foe = beast.TeamId;
             if (killer is not null && killer.IsAlive && killer.TeamId != foe)
                 foreach (Trait tr in killer.Traits.ToList())

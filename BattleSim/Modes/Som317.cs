@@ -73,7 +73,7 @@ static class Som317Diag
 
     internal static readonly Ver[] Vers =
     {
-        new("規定", UnitCatalog.Som),
+        new("規定", UnitCatalog.SomH317),
         new("SB-a", UnitCatalog.SomSBa),
         new("BT-a", UnitCatalog.SomBTa),
         new("BT-b", UnitCatalog.SomBTa, UnitCatalog.KataLR),
@@ -93,15 +93,15 @@ static class Som317Diag
 
     internal static Formation Apply(Formation f, Ver v)
     {
-        var g = ReferenceEquals(v.Som, UnitCatalog.Som) ? f : S309.Swap(f, UnitCatalog.Som, v.Som);
+        var g = ReferenceEquals(v.Som, UnitCatalog.SomH317) ? f : S309.Swap(f, UnitCatalog.SomH317, v.Som);
         return v.Kata is null ? g : S309.Swap(g, UnitCatalog.Kata, v.Kata);
     }
 
     internal static readonly S287.Wave[] Waves = S310.Waves;
     static S287.Wave WaveOf(string n) => n switch { "nine" => Waves[3], "nine2" => Waves[4], _ => S307.WaveOf(n) };
 
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation RowF(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Playtest(string n) => PlaytestH317.First(r => r.Name == n).F;
+    static Formation RowF(string n) => CompareBuildsH317().First(r => r.Name == n).F;
     /// <summary>第316期までの器具（`S307.Order` ／ `S307.BossPool` ほか）は第317期にドハ ／ シガを旧に固定したので、この器具は規定の駒に戻して使う。</summary>
     static UnitDef Cur(UnitDef d) => ReferenceEquals(d, UnitCatalog.ShigaSWa) ? UnitCatalog.Shiga : ReferenceEquals(d, UnitCatalog.DohaH316) ? UnitCatalog.Doha : d;
     static Formation WinSeat() => B283.Seat(S307.Order(S307.WinBoard).Select(Cur).ToArray());
@@ -114,8 +114,8 @@ static class Som317Diag
         ("光の盾 鞭", Playtest(Som312Diag.Whip)),
         ("光の盾 重 鞭", Playtest(Som312Diag.WhipHeavy)),
         ("感電 行", RowF("感電 (シガ×カタ×ソム)")),
-        ("勝ち台 ツギ→ソム", S309.Swap(WinSeat(), UnitCatalog.Tsugi, UnitCatalog.Som)),
-        ("火の型 ソラ→ソム", S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, UnitCatalog.Som)),
+        ("勝ち台 ツギ→ソム", S309.Swap(WinSeat(), UnitCatalog.Tsugi, UnitCatalog.SomH317)),
+        ("火の型 ソラ→ソム", S309.Swap(Playtest("試遊・感電 火の型"), UnitCatalog.Sora, UnitCatalog.SomH317)),
         (HagiBoard, S309.Swap(Playtest(S309.Shield), UnitCatalog.Kubi, UnitCatalog.Hagi)),
     };
 
@@ -579,7 +579,7 @@ static class Som317Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var vers = Pick(only);
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuildsH317().ToArray();
         int nw = EnemyCatalog.Stages.Count;
         var grids = vers.Select(v =>
         {
@@ -609,7 +609,7 @@ static class Som317Diag
             for (int ri = 0; ri < rows.Length; ri++)
             {
                 bool any = Enumerable.Range(0, nw).Any(w => g[ri, w] != b[ri, w]);
-                bool holds = rows[ri].F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Som));
+                bool holds = rows[ri].F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.SomH317));
                 if (any && !holds) outside++;
                 if (!any) continue;
                 movedRows++;
@@ -656,7 +656,7 @@ static class Som317Diag
         int k = w.Boss ? 2 : 3, need = w.Boss ? 1 : 5;
         var lu = S293.Combos(pool, k);
         var boards = new List<UnitDef[]>();
-        foreach (var t in lu) boards.AddRange(B283.Perms(fixedBase.Append(UnitCatalog.Som).Concat(t).ToArray()));
+        foreach (var t in lu) boards.AddRange(B283.Perms(fixedBase.Append(UnitCatalog.SomH317).Concat(t).ToArray()));
         var res = new (int Wins, long WinT, int Ctl)?[boards.Count];
         int cutPass = 0;
         static int W(Formation f, S287.Wave w, int n, out long wt)
@@ -949,7 +949,7 @@ static class Som317Diag
                 long atk = After(ctx, ev0).Count(x => x.Kind == BattleEventKind.Attack && x.ActorId == hagi.InstanceId);
                 return (atk, (nh?.AtkBonus ?? 0) - a0, T(ctx, som).BdCounted);
             }
-            var e2 = One(UnitCatalog.Som); var bd = One(UnitCatalog.SomBD);
+            var e2 = One(UnitCatalog.SomH317); var bd = One(UnitCatalog.SomBD);
             bool ok = e2.Atk == 0 && e2.Counted == 0 && bd.Atk >= 1 && bd.Counted >= 1 && bd.NecroAtk == 0 && necroHolder is not null;
             // 立った獣が弾けたら消えて数える（BD-BTa・獣に感電が残ったまま、味方の一撃 1 で弾けさせる）
             var fb = Formation.Build(front1: UnitCatalog.Golm, center: UnitCatalog.Hagi, back3: BtBd);
@@ -1019,11 +1019,11 @@ static class Som317Diag
         }
         // (k) 版の定義・規定のソム ／ カタは動かない・経路の名前
         {
-            bool defs = bta.Traits.SequenceEqual(UnitCatalog.Som.Traits.Concat(new[] { TraitId.BeastStand, TraitId.BeastBetray })) && UnitCatalog.SomBD.Traits.SequenceEqual(UnitCatalog.Som.Traits.Append(TraitId.BeastDeathCount))
+            bool defs = bta.Traits.SequenceEqual(UnitCatalog.SomH317.Traits.Concat(new[] { TraitId.BeastStand, TraitId.BeastBetray })) && UnitCatalog.SomBD.Traits.SequenceEqual(UnitCatalog.SomH317.Traits.Append(TraitId.BeastDeathCount))
                 && UnitCatalog.KataLR.Traits.SequenceEqual(UnitCatalog.Kata.Traits.Append(TraitId.LightningRod)) && UnitCatalog.KataLRall.Traits.SequenceEqual(UnitCatalog.Kata.Traits.Append(TraitId.LightningRodAll))
                 && new[] { bta, UnitCatalog.SomBD, UnitCatalog.KataLR, UnitCatalog.KataLRall, BtBd }.All(d => !UnitCatalog.Everyone.Contains(d))
                 && bta.MinusText == UnitCatalog.SomBetrayMinusText && UnitCatalog.KataLR.PlusText.EndsWith("隣の仲間に落ちる雷は、受け止めて撃ち手に落とし直す");
-            bool dflt = UnitCatalog.Som.Traits.SequenceEqual(UnitCatalog.SomSWKa.Traits) && !UnitCatalog.Kata.Traits.Contains(TraitId.LightningRod) && UnitCatalog.Fodder.MaxHp == 12 && UnitCatalog.Fodder.Attack == 0 && UnitCatalog.Fodder.Speed == 1;
+            bool dflt = UnitCatalog.SomH317.Traits.SequenceEqual(UnitCatalog.SomSWKa.Traits) && !UnitCatalog.Kata.Traits.Contains(TraitId.LightningRod) && UnitCatalog.Fodder.MaxHp == 12 && UnitCatalog.Fodder.Attack == 0 && UnitCatalog.Fodder.Speed == 1;
             bool route = OutOfTurnRoutes.Names.Length == Enum.GetValues<OutOfTurnRoute>().Length && OutOfTurnRoutes.Names[(int)OutOfTurnRoute.LightningRod] == "避雷針" && OutOfTurnRoutes.Names[^1] == "その他";
             Expect("(k) 版の定義（BT-a ＝ 規定 ＋ 立つ ＋ 投げる・BD ＝ 規定 ＋ 獣の死・避雷針 ＝ 規定のカタ ＋ 札1枚・`Everyone` の外）・規定のソム ／ カタ ／ 獣は動かない・経路 `避雷針`",
                 defs && dflt && route, $"版 {defs}・規定 {dflt}・経路 {route}（{OutOfTurnRoutes.Count}）");

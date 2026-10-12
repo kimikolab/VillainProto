@@ -2184,13 +2184,23 @@ public sealed class UnitTally
     /// <c>BtThread</c> クグの糸を伝って敵へ流れた ／ <c>BtThreadShocked</c> うち糸の先の敵に感電が付いた ／ <c>BtRodCaught</c> 避雷針が受け止めた ／ <c>BtRodOut</c> 避雷針の保持者が生きていたが範囲の外 ／
     /// <c>BtRodBlocked</c> 範囲の内だが痺れ ／ 粛ほかで止まった（<c>BtRodHushed</c> うち粛）／ <c>BtSlotHist</c>[席] 狙われた味方の席。
     /// 避雷針（カタの側）: <c>RodCaught</c> 受け止めた ／ <c>RodChainUnits</c> 落とし直しの弾けから広がった連鎖の駒（獣を含む）／ <c>RodDry</c> 獣が帯電していなかった。
-    /// 獣の死（BD・ソムの側）: <c>BdCounted</c> 死に数えた獣 ／ <c>BdKind</c>[0 喚び出しの場（群れ・暴発を含む）／ 1 緊急 ／ 2 立った獣が弾けた ／ 3 避雷針] ／ <c>BdCapped</c> 上限で数えなかった獣 ／
+    /// 獣の死（BD・ソムの側）: <c>BdCounted</c> 死に数えた獣 ／ <c>BdKind</c>[0 喚び出しの場（群れ・暴発を含む）／ 1 緊急 ／ 2 立った獣が弾けた ／ 3 避雷針 ／ 4 共鳴返し（第318期）] ／ <c>BdCapped</c> 上限で数えなかった獣 ／
     /// <c>BdOnKill</c> ／ <c>BdOnAnyDeath</c> 渡した読み手の札の数 ／ <c>BdSkipped</c> 外した読み手の札の数。
     /// Phase 0 の計数器（`BattleContext.ThrowCensus`・SB-a で立った獣）: <c>ThrowCensusN</c> 立った獣 ／ <c>ThrowCensusW</c>[席] 狙える味方に 60 を等分した重み ／ <c>ThrowCensusKataW</c> うちカタ自身 ／ <c>ThrowCensusRodW</c> うちカタ自身か隣。
     /// </summary>
     public long BtThrown, BtNoTarget, BtShocked, BtAlready, BtThread, BtThreadShocked, BtRodCaught, BtRodOut, BtRodBlocked, BtRodHushed, RodCaught, RodChainUnits, RodDry,
                 BdCounted, BdCapped, BdOnKill, BdOnAnyDeath, BdSkipped, ThrowCensusN, ThrowCensusKataW, ThrowCensusRodW;
     public long[]? BtSlotHist, BdKind, ThrowCensusW;
+    /// <summary>
+    /// 第318期（<b>計数のみ</b>）。裏切りの一撃の相手（ソムの側・BT-a 以降のどの版でも数える）: <c>BtAtCharged</c> 雷が向かった時点で味方が帯電していた（<c>BtAtChargedSlot</c>[席]）／
+    /// <c>BtAtChargedHush</c> うち粛が効いていた ／ <c>BtThreadCharged</c> 糸の保持者（糸の先が生きている）に向かい、その保持者が帯電していた ／
+    /// <c>BtAdjFoes</c> ／ <c>BtAdjFoesDry</c> 投げた獣の隣の敵（駒・糸玉を除く）の数 ／ うち帯電していなかった。
+    /// 共鳴返し（CR-a ／ CR-b・ソムの側）: <c>CrFired</c> 跳ね返った ／ <c>CrHushed</c> 粛で止まった ／ <c>CrDry</c> 獣が帯電していなかった（弾けずに消えた）／
+    /// <c>CrChainUnits</c> 跳ね返りの弾けから広がった連鎖の駒（獣を含む）／ <c>CrArcFoes</c> ／ <c>CrArcShocked</c> CR-b で雷が走った隣の敵 ／ うち新しく感電が付いた。
+    /// 打ち返し（SG・ソムの側）: <c>SgFired</c> 振った ／ <c>SgHushed</c> 粛で止まった ／ <c>SgBlocked</c> 痺れほかで止まった ／ <c>SgNested</c> 割り込みの中だった ／ <c>SgDealt</c> 打ち返しの与ダメ（シガの敵への与ダメの増分）／ <c>SgWhipNested</c> 打ち返しの鞭の連鎖の後の割り込みが入れ子で止まった数。
+    /// </summary>
+    public long BtAtCharged, BtAtChargedHush, BtThreadCharged, BtAdjFoes, BtAdjFoesDry, CrFired, CrHushed, CrDry, CrChainUnits, CrArcFoes, CrArcShocked, SgFired, SgHushed, SgBlocked, SgNested, SgDealt, SgWhipNested;
+    public long[]? BtAtChargedSlot;
     /// <summary>
     /// 第299期（<b>計数のみ</b>・ザンの手番）。仇指し（<see cref="TraitId.Vendetta"/>）の保持者が手番で振ったとき（規定でも数える）:
     /// <c>ZanTurns</c> 手番 ／ <c>ZanTurnNoMarked</c> 標を持つ敵が 0 ／ <c>ZanTurnMarkedFoes</c> ／ <c>ZanTurnLayers</c> 手番の時点の標を持つ敵の数 ／ 層の合計 ／
@@ -3382,6 +3392,9 @@ public sealed class UnitTally
         BtRodCaught += o.BtRodCaught; BtRodOut += o.BtRodOut; BtRodBlocked += o.BtRodBlocked; BtRodHushed += o.BtRodHushed; RodCaught += o.RodCaught; RodChainUnits += o.RodChainUnits; RodDry += o.RodDry;
         BdCounted += o.BdCounted; BdCapped += o.BdCapped; BdOnKill += o.BdOnKill; BdOnAnyDeath += o.BdOnAnyDeath; BdSkipped += o.BdSkipped; AddHist(ref BtSlotHist, o.BtSlotHist); AddHist(ref BdKind, o.BdKind);
         ThrowCensusN += o.ThrowCensusN; ThrowCensusKataW += o.ThrowCensusKataW; ThrowCensusRodW += o.ThrowCensusRodW; AddHist(ref ThrowCensusW, o.ThrowCensusW);
+        BtAtCharged += o.BtAtCharged; BtAtChargedHush += o.BtAtChargedHush; BtThreadCharged += o.BtThreadCharged; BtAdjFoes += o.BtAdjFoes; BtAdjFoesDry += o.BtAdjFoesDry; AddHist(ref BtAtChargedSlot, o.BtAtChargedSlot);   // 第318期
+        CrFired += o.CrFired; CrHushed += o.CrHushed; CrDry += o.CrDry; CrChainUnits += o.CrChainUnits; CrArcFoes += o.CrArcFoes; CrArcShocked += o.CrArcShocked;
+        SgFired += o.SgFired; SgHushed += o.SgHushed; SgBlocked += o.SgBlocked; SgNested += o.SgNested; SgDealt += o.SgDealt; SgWhipNested += o.SgWhipNested;
         ZanTurns += o.ZanTurns; ZanTurnNoMarked += o.ZanTurnNoMarked; ZanTurnMarkedFoes += o.ZanTurnMarkedFoes; ZanTurnLayers += o.ZanTurnLayers;
         ZanPlanA += o.ZanPlanA; ZanPlan1 += o.ZanPlan1; ZanPlanACapped += o.ZanPlanACapped; ZanPlan1Capped += o.ZanPlan1Capped; ZanTurnDealt += o.ZanTurnDealt;
         RoundTurns += o.RoundTurns; RoundFoes += o.RoundFoes; RoundSlashes += o.RoundSlashes; RoundCapped += o.RoundCapped; RoundCrossed += o.RoundCrossed;
@@ -4191,6 +4204,14 @@ public static class BeastThrowLabels
     public const string Thread = "糸";
     /// <summary>カタが受け止めて、投げた獣の上に落とし直した（<c>PartnerId</c> ＝ カタ）。</summary>
     public const string Rod = "避雷針";
+    /// <summary>第318期（CR-a ／ CR-b・版のみ）: 帯電している味方に落ちた雷が共鳴して、投げた獣へ跳ね返った（<c>TargetId</c> ＝ 雷を受けた味方）。直後に（CR-b なら「走る」の並び →）`BeastBurst 共鳴返し`。</summary>
+    public const string Resonance = "共鳴";
+    /// <summary>第318期（CR-a ／ CR-b・版のみ）: 共鳴が粛で止まった（直前に受けた味方の `Sealed`「粛」・雷は何もせず獣は立ったまま）。</summary>
+    public const string Hushed = "共鳴が止まった";
+    /// <summary>第318期（CR-b・版のみ）: 跳ね返った雷が獣の隣の敵に走った（<c>ActorId</c> ＝ 獣 ／ <c>TargetId</c> ＝ 隣の敵 ／ <c>PartnerId</c> ＝ 雷を受けた味方 ／ <c>Amount</c> 1 ＝ 新しく感電が付いた）。</summary>
+    public const string Arc = "走る";
+    /// <summary>第318期（SG・版のみ）: 帯電していなかったシガが、その場で投げた獣へ鞭を打ち返した（<c>TargetId</c> ＝ シガ・直後にシガの `Attack` → 獣の `Damage` → 獣の感電の弾け）。</summary>
+    public const string Backswing = "打ち返し";
 }
 
 /// <summary>`BeastBurst`（第310期）の <c>Text</c>。</summary>
@@ -4208,8 +4229,10 @@ public static class BeastBurstLabels
     public const string Overflow = "暴発";
     /// <summary>第317期（BT-b ／ BT-c・版のみ）: カタの避雷針で、立っていた獣の上に雷が落ち直して弾けた（<c>ActorId</c> ＝ カタ ／ <c>TargetId</c> ＝ 立っていた獣。<b>この出来事で盤から消す</b>・<c>Death</c> は出ない）。</summary>
     public const string Rod = "避雷針";
-    /// <summary>第317期（BD・版のみ）: 立っていた獣の感電が弾けて、獣が消えた（敵の死に数える・<c>ActorId</c> ＝ 連鎖の起こし手 ／ <c>TargetId</c> ＝ 立っていた獣。<b>この出来事で盤から消す</b>・<c>Death</c> は出ない）。</summary>
+    /// <summary>第317期（BD・第318期から規定）: 立っていた獣の感電が弾けて、獣が消えた（敵の死に数える・<c>ActorId</c> ＝ 連鎖の起こし手 ／ <c>TargetId</c> ＝ 立っていた獣。<b>この出来事で盤から消す</b>・<c>Death</c> は出ない）。</summary>
     public const string Popped = "弾けて消えた";
+    /// <summary>第318期（CR-a ／ CR-b・版のみ）: 共鳴返しで、立っていた獣の上に雷が跳ね返って弾けた（<c>ActorId</c> ＝ 雷を受けた味方 ／ <c>TargetId</c> ＝ 立っていた獣。<b>この出来事で盤から消す</b>・<c>Death</c> は出ない）。</summary>
+    public const string Resonance = "共鳴返し";
 }
 
 /// <summary>`Spark`（第307期）の <c>Text</c>。</summary>

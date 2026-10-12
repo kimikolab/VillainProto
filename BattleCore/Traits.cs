@@ -780,6 +780,11 @@ public enum TraitId
     BeastDeathCount,   // 獣の弾けを敵の死に数える（BD・ソム）: 背いた獣が弾けたとき（喚び出しの場 ／ 群れ ／ 緊急 ／ 立った獣が弾けた ／ 避雷針）、起こし手を倒した駒として死の読み手（倒した駒の `OnKill`・ソムの側の `OnAnyDeath`）に渡す。外す読み手は engine の `BeastDeathSkips`（撃破数で際限なく育つ札）。立った獣は弾けたら消える（engine の `CountBeastDeath`）
     BeastDeathCap,     // 獣の死は1回に1体（BD の上限の版・`BeastDeathCount` と組む）: 1回の喚び出し（群れの一斉の弾け）で死に数えるのは先頭の1体だけ
 
+    // --- 第318期で足した札（ソムの版 `UnitCatalog.SomCRa` ／ `SomCRb`・シガの版 `ShigaSG`・指示書 design/PHASE318_SOM_RESONANCE_SPEC.md §3）。保持者 0 枚。どれも**札そのものは挙動を持たない** ---
+    BeastResonance,    // 共鳴返し（CR-a・ソム・`BeastBetray` と組む）: 裏切りの雷が向かった味方がすでに帯電していれば、雷は付かずに投げた獣へ跳ね返り、獣の感電がその場で弾ける（起こし手は雷を受けた味方・獣は消えて獣の死に数える）。手番の外の動作として粛で止まる（痺れでは止まらない・経路 `Resonance`）（engine の `Resonate`・判定は糸より前）
+    BeastResonanceArc, // 共鳴返し・強（CR-b・ソム・`BeastResonance` と組む）: 跳ね返った雷は、獣を弾けさせる前に獣の隣の敵（駒のみ・糸玉は除く）すべてに感電を付ける（書き手は雷を受けた味方）
+    BetrayBackswing,   // 打ち返し（SG・シガ）: 帯電していないシガに裏切りの雷が落ちたら、感電が付いた（蓄電 +1）うえで、その場で投げた獣を主目標に割り込みの鞭と同じ打ち方で1回振る（蓄電は使わない・手番の外の動作・経路 `Backswing`）（engine の `Backswing`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -17414,6 +17419,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.LightningRodAll),           // 第317期（避雷針・全員 BT-c・印だけ）
         new MarkOnlyTrait(TraitId.BeastDeathCount),           // 第317期（獣の死 BD・印だけ）
         new MarkOnlyTrait(TraitId.BeastDeathCap),             // 第317期（獣の死は1回に1体・印だけ）
+        new MarkOnlyTrait(TraitId.BeastResonance),            // 第318期（共鳴返し CR-a・印だけ）
+        new MarkOnlyTrait(TraitId.BeastResonanceArc),         // 第318期（共鳴返し・強 CR-b・印だけ）
+        new MarkOnlyTrait(TraitId.BetrayBackswing),           // 第318期（シガの打ち返し SG・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

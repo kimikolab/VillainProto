@@ -443,7 +443,7 @@ static class Som308Diag
         {
             bool ok = som.Traits.SequenceEqual(old.Traits.Append(TraitId.SparkRain)) && som.Traits.SequenceEqual(sha.Traits) && som.PlusText == sha.PlusText && som.Flavor == sha.Flavor
                 && som.MinusText == old.MinusText && som.MaxHp == old.MaxHp && som.Attack == old.Attack && som.Speed == old.Speed && som.Name == old.Name
-                && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.Som) && !UnitCatalog.Everyone.Contains(som) && !UnitCatalog.Everyone.Contains(old)   /* 第309期: SH-a は `SomH308`（`All` の外）に */ && old.Traits.SequenceEqual(new[] { TraitId.BetrayedShockNoThunder })
+                && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.SomH317) && !UnitCatalog.Everyone.Contains(som) && !UnitCatalog.Everyone.Contains(old)   /* 第309期: SH-a は `SomH308`（`All` の外）に */ && old.Traits.SequenceEqual(new[] { TraitId.BetrayedShockNoThunder })
                 && UnitCatalog.SomSMa.Traits.SequenceEqual(old.Traits.Append(TraitId.StaticMembrane)) && UnitCatalog.SomSHb.Traits.SequenceEqual(old.Traits.Append(TraitId.SparkStore))
                 && Vers.Skip(1).All(v => !UnitCatalog.Everyone.Contains(v.To) && v.To.MaxHp == som.MaxHp && v.To.MinusText == som.MinusText)
                 && UnitCatalog.SomLVa.Traits.SequenceEqual(som.Traits.Append(TraitId.SparkVeil)) && UnitCatalog.SomLVc.Traits.SequenceEqual(som.Traits.Append(TraitId.SparkVeil).Append(TraitId.SparkVeilCap))

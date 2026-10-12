@@ -669,7 +669,7 @@ static class Som310Diag
                 && new[] { UnitCatalog.SomE1, UnitCatalog.SomE2 }.All(d => d.Id == som.Id && d.MaxHp == som.MaxHp && d.Attack == som.Attack && d.Speed == som.Speed && d.Advances == som.Advances && d.Pattern == som.Pattern)
                 && UnitCatalog.ShigaSGf.Id == "shiga" && UnitCatalog.ShigaSGf.MaxHp == UnitCatalog.ShigaSWa.MaxHp && UnitCatalog.ShigaSGf.Attack == UnitCatalog.ShigaSWa.Attack && UnitCatalog.ShigaSGf.Speed == UnitCatalog.ShigaSWa.Speed
                 && !UnitCatalog.Everyone.Contains(UnitCatalog.SomE1) && !UnitCatalog.Everyone.Contains(UnitCatalog.SomE2) && !UnitCatalog.Everyone.Contains(UnitCatalog.ShigaSGf)
-                && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.Som) && !UnitCatalog.Everyone.Contains(som) && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.ShigaSWa)
+                && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.SomH317) && !UnitCatalog.Everyone.Contains(som) && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.ShigaSWa)
                 && UnitCatalog.Fodder.MaxHp == 12 && UnitCatalog.Fodder.Speed == 1;
             Expect("(a) 版 ＝ 規定の末尾に札1枚（E1 `BeastBurstCharged` ／ E2 `BeastBurstAlways` ／ SG-f `ShameSkipFodder`）・数値は規定のまま・版は `Everyone` の外・獣の定義は触らない", ok);
         }
