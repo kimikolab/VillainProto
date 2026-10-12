@@ -33,6 +33,7 @@ public static class UiKit
 
     private static string? FindPortrait(string key)
     {
+        if (IsSomSpirit(key)) return "res://assets/fx/som_spirit_portrait.svg";
         if (PortraitPathCache.TryGetValue(key, out string? cached)) return cached;
         string path = PortraitPathOf(key);
         string? found = Godot.FileAccess.FileExists(path) ? path : null;
@@ -42,6 +43,7 @@ public static class UiKit
 
     private static string? FindBattlePortrait(string key)
     {
+        if (IsSomSpirit(key)) return "res://assets/fx/som_spirit_portrait.svg";
         if (BattlePortraitPathCache.TryGetValue(key, out string? cached)) return cached;
         string path = BattlePortraitPathOf(key);
         // 待機の構え差分を優先し、従来の立ち絵も素材として残す。
@@ -53,6 +55,7 @@ public static class UiKit
     }
 
     private static readonly Dictionary<string, Texture2D> PortraitCache = new(StringComparer.Ordinal);
+    private static bool IsSomSpirit(string key) => key == "fodder" || key.StartsWith("fodder_", StringComparison.Ordinal);
     private static readonly Dictionary<string, Texture2D> BattlePortraitCache = new(StringComparer.Ordinal);
     private static ShaderMaterial? _portraitCutoutMaterial;
 
@@ -194,7 +197,7 @@ public static class UiKit
         "susu" => 2.50f, // 血詠みのアカ（内部IDは旧ススのまま）
         "kata" => 2.50f,
         "som" => 2.50f,
-        "fodder" => 0.95f, // 背いた獣はソムの膝下ほどの小型召喚獣。
+        "fodder" => 0.95f, // 台本名は背いた獣。絵は浮遊する小さな光核。
         "kado" => 2.40f,
         "sid" => 2.55f,
         "borg" => 2.65f,
@@ -297,9 +300,8 @@ public static class UiKit
         "shiga" => 0.03125f,
         "som" => 0.01953125f, // 1536px の下端から靴底まで30px。
         "som_summon" or "som_stunned" => 0.01953125f,
-        "fodder_lookback" or "fodder_snub" => 0.0135566f,
-        "fodder_run" => 0.1116427f, // 1254px の下端から走る差分の足先まで140px。
-        "fodder" => 0.0135566f, // v2：1254px の下端から前足まで17px。
+        "fodder_lookback" or "fodder_snub" or "fodder_run" or "fodder_majestic_lookback"
+            or "fodder_majestic_run" or "fodder_stance" or "fodder_majestic_stance" or "fodder" => 0,
         "tou" => 0.0201823f, // 1536px の下端から足元まで31px。
         "shio" => 0.0182f,
         "shio_retreat" => 0.0546875f,

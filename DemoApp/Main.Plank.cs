@@ -133,7 +133,7 @@ public partial class Main
             case PlankLabels.Scrap:
                 _plankScraps++;
                 var origin = _battleField.FindPawn(e.SpreadFromId ?? e.TargetId);
-                if (actor is not null && origin is not null)
+                if (!_battleField.GatherSomScrap(e, actor, _speed) && actor is not null && origin is not null)
                     _battleField.PlankFlight(origin.FxPoint, actor.ScrapPoint, Math.Max(1, e.Amount), 0.22 / _speed, true);
                 actor?.SetScrapStock(e.StatusRemaining ?? 0);
                 // 回収のために範囲攻撃と反射の間を止めない。

@@ -1,7 +1,7 @@
 using Godot;
 using System.Collections.Generic;
 
-internal enum SomSound { Summon, Snub, Gather, Rain, Veil, Impact, Break, Stop }
+internal enum SomSound { Summon, Snub, Gather, Rain, Veil, Impact, Break, Stop, Throw, Resonance }
 
 public partial class BattleAttackAudio
 {
@@ -36,7 +36,9 @@ public partial class BattleAttackAudio
     }
     internal void StopSomSounds()
     {
-        foreach (var voice in _somVoices.Values) voice.Stop();
+        foreach (var voice in _somVoices.Values) { voice.Stop(); voice.StreamPaused = false; }
         _somLast.Clear();
     }
+    internal void PauseSomSounds(bool paused)
+    { foreach (var voice in _somVoices.Values) voice.StreamPaused = paused; }
 }

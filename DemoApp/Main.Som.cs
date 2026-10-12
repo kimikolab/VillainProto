@@ -1,4 +1,5 @@
 using BattleCore;
+using Godot;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,11 +12,15 @@ public partial class Main
     private readonly Dictionary<int, int> _somArmorSnapshot = new();
     private readonly HashSet<(int Event, int Target)> _somContacts = new();
     private readonly HashSet<int> _somIntroduced = new();
+    private readonly Dictionary<int, int> _somLargestCall = new();
 
     private void ResetSomPlayback()
     {
         _som = SomPresentation.Build(_result!.Events);
         _somArmor.Clear(); _somArmorSnapshot.Clear(); _somContacts.Clear(); _somIntroduced.Clear();
+        _somLargestCall.Clear();
+        _somBackswingActors.Clear();
+        _battleField.SetSomClock(false, _speed);
     }
     private SomVeilLedger SomArmor(int id)
     {
@@ -65,6 +70,53 @@ public partial class Main
 
     private async Task<bool> PlaySom(BattleEvent e, int index, BattlePawn3D? actor, BattlePawn3D? target)
     {
+        if (await PlaySomResonance(e, index, actor, target)) return true;
+        if (e.Kind == BattleEventKind.StatusGain && e.Text == StatusKeys.Daunted && e.Amount > 0 && target is not null)
+            _battleField.ShowSomDaunt(target, _speed);
+        if (e.Kind == BattleEventKind.Sealed && e.Text == SealedLabels.Hush && target?.UnitId == "som")
+            target.ShowSomExpression("som_summon", .3); // 魔法陣を作らず、既存の封印・ひびへ渡す。
+        if (_som.DauntedAttacks.Contains(index) && actor is not null)
+        {
+            _battleField.ShowSomWeakAttack(actor);
+            actor.SetStatusIcon(StatusKeys.Daunted, false);
+            SetDisplayedStatus(actor, DisplayStatusKey(StatusKeys.Daunted), 0);
+        }
+        if (_som.Calls.TryGetValue(index, out var call) && actor is not null)
+        {
+            int token = _playToken;
+            int count = call.Summons.Length;
+            bool speak = call.Emergency || count > _somLargestCall.GetValueOrDefault(actor.InstanceId);
+            if (!call.Emergency) _somLargestCall[actor.InstanceId] = Math.Max(count, _somLargestCall.GetValueOrDefault(actor.InstanceId));
+            var partner = _battleField.FindPawn(call.Partner);
+            // ほかの割り込みの待ち省略を引き継がず、一団につき一度だけ走る。
+            _tickDelayBudget = null; _fireFastEvent = _misaFastEvent = _zanFastEvent = _dohaFastEvent = false;
+            _battleField.BeginSomCall(actor, count, call.Emergency, partner, speak, _speed);
+            await DelaySom(.14);
+            if (token != _playToken || !_battleMode) return true;
+            int[] ids = call.Summons.Select(j => _result!.Events[j].TargetId!.Value).ToArray();
+            for (int n = 0; n < count; n++)
+            {
+                var summon = _result!.Events[call.Summons[n]];
+                var def = UnitCatalog.Fodder; int team = summon.Team ?? 1 - actor.Team;
+                _openingById[ids[n]] = new DemoOpening(ids[n], team, def.Id, def.Name, summon.Slot,
+                    summon.HpAfter, def.MaxHp, def.Attack, def.Pattern, def.Advances, def.Traits);
+                _battleField.PlaceSomBurstBeast(actor, summon, call.Emergency, partner, n, count, _speed);
+            }
+            await DelaySom(call.Emergency ? .32 : speak ? .20 : .07);
+            if (token != _playToken || !_battleMode) return true;
+            _battleField.RunSomBurstBeasts(actor, ids, speak);
+            await DelaySom(SomFx.BeastRunSeconds);
+            if (token != _playToken || !_battleMode) return true;
+            // 空き席がない一団だけは、振り返り・帯電を着地の短い拍へ圧縮する。
+            bool shortened = call.Bursts.All(j => _result!.Events[j].Amount == 1);
+            _battleField.TakeSomStance(actor, ids, shortened);
+            await DelaySom(shortened ? SomFx.BeastShortStanceSeconds : SomFx.BeastStanceSeconds);
+            if (token != _playToken || !_battleMode) return true;
+            _battleField.BurstSomBeasts(ids, _speed);
+            AppendLog($"  [color=#{SomFx.Violet.ToHtml(false)}][{(call.Emergency ? "緊急の喚び出し" : "喚び出し")}] 寝返った{count}体の契約紋が割れ、光核が暴発して散った[/color]");
+            return true;
+        }
+        if (_som.CallMembers.Contains(index)) return true;
         if (e.Kind == BattleEventKind.Summon && actor?.UnitId == "som" && e.Text == UnitCatalog.Fodder.Name
             && e.TargetId is int summoned)
         {
@@ -115,18 +167,36 @@ public partial class Main
             bool blocked = e.Text == SparkLabels.Silenced;
             // 放電段の待ちの省略を引き継がず、連鎖全体で一度だけ光を帰す。
             _tickDelayBudget = null; _fireFastEvent = _misaFastEvent = _zanFastEvent = false;
+            var focused = blocked ? null : _battleField.FindPawn(e.TargetId);
+            var scattered = blocked ? null : _battleField.FindPawn(e.PartnerId);
             _battleField.GatherSomLight(actor, rain.Pops, blocked, _speed);
-            await Delay(.26);
+            await DelaySom(.26);
             if (token != _playToken || !_battleMode) return true;
             if (!blocked)
             {
-                _battleField.RainSomLight(actor, e.Amount, rain.InvertedTargets, _speed);
-                await Delay(.34);
+                _battleField.AbsorbSomBookLight(actor, e.Amount, _speed);
+                await DelaySom(.08);
+                if (token != _playToken || !_battleMode) return true;
+                _battleField.RainSomLight(actor, e.Amount, rain.InvertedTargets, _speed, focused, scattered);
+                await DelaySom(scattered is null ? .34 : .44);
                 if (token != _playToken || !_battleMode) return true;
             }
             AppendLog($"  [color=#{SomFx.Gold.ToHtml(false)}][{(blocked ? "光が消えた" : "降る光")}] {e.Amount}粒[/color]");
         }
         return true;
+    }
+
+    // ソムの4拍は一時停止中に進めない。途中の速度切替も同じ時計で受ける。
+    private async Task DelaySom(double seconds)
+    {
+        if (_fastSmoke) return;
+        int token = _playToken;
+        double elapsed = 0;
+        while (elapsed < seconds && token == _playToken && _battleMode)
+        {
+            await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+            if (!_paused) elapsed += GetProcessDeltaTime() * Math.Max(.1, _speed);
+        }
     }
 
     private IReadOnlyList<BattlePawn3D> SomImpactTargets(BattleEvent attack, IReadOnlyList<BattlePawn3D> targets)

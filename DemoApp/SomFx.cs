@@ -5,22 +5,41 @@ using System;
 internal static class SomFx
 {
     internal const double BeastRunSeconds = .62;
+    internal const double BeastStanceSeconds = .34, BeastShortStanceSeconds = .15;
+    internal const double ThrowSeconds = .24, ReturnSeconds = .20;
     internal static readonly Color Gold = new("ffedbd"), Violet = new("bc9de9"), Murky = new("b176c9");
-    private static Texture2D? _circle, _light, _veil;
+    internal static readonly Color SpiritRebel = new("ffe2a0"), SpiritRed = new("ff8964");
+    private static Texture2D? _spiritCore, _contractCracked, _spiritSpear;
+    internal static Texture2D SpiritCore => _spiritCore ??= UiKit.LoadTexture("res://assets/fx/som_spirit_core.svg");
+    internal static Texture2D ContractCracked => _contractCracked ??= UiKit.LoadTexture("res://assets/fx/som_contract_cracked.svg");
+    internal static Texture2D SpiritSpear => _spiritSpear ??= UiKit.LoadTexture("res://assets/fx/som_spirit_spear.svg");
+    private static Texture2D? _circle, _light, _veil, _danger, _beastCharge, _resonance;
     internal static Texture2D Circle => _circle ??= UiKit.LoadTexture("res://assets/fx/som_circle.svg");
     internal static Texture2D Light => _light ??= UiKit.LoadTexture("res://assets/fx/som_light.svg");
     internal static Texture2D Veil => _veil ??= UiKit.LoadTexture("res://assets/fx/som_veil.svg");
+    internal static Texture2D Danger => _danger ??= UiKit.LoadTexture("res://assets/fx/som_danger.svg");
+    internal static Texture2D BeastCharge => _beastCharge ??= UiKit.LoadTexture("res://assets/fx/som_beast_charge.svg");
+    internal static Texture2D Resonance => _resonance ??= UiKit.LoadTexture("res://assets/fx/som_resonance.svg");
 
-    internal static void Flight(Sprite3D mote, Vector3 to, float arc, double seconds, bool dissolve = false)
+    internal static Tween Flight(Sprite3D mote, Vector3 to, float arc, double seconds, bool dissolve = false,
+        Func<Vector3>? follow = null, Vector3? via = null)
     {
         Vector3 from = mote.GlobalPosition;
         var tween = mote.CreateTween();
         tween.TweenMethod(Callable.From<float>(t => {
-            mote.GlobalPosition = from.Lerp(to, t) + Vector3.Up * MathF.Sin(t * MathF.PI) * arc;
+            Vector3 end = follow?.Invoke() ?? to;
+            if (via is Vector3 stop)
+            {
+                float progress = t < .25f ? t * 4 : (t - .25f) / .75f;
+                mote.GlobalPosition = (t < .25f ? from.Lerp(stop, progress) : stop.Lerp(end, progress))
+                    + Vector3.Up * MathF.Sin(progress * MathF.PI) * (t < .25f ? .15f : arc);
+            }
+            else mote.GlobalPosition = from.Lerp(end, t) + Vector3.Up * MathF.Sin(t * MathF.PI) * arc;
             mote.Modulate = new Color(mote.Modulate, dissolve ? 1 - t : 1 - Math.Max(0, t - .8f) * 5);
             mote.Scale = Vector3.One * (1 - t * .35f);
         }), 0f, 1f, seconds);
         tween.TweenCallback(Callable.From(mote.QueueFree));
+        return tween;
     }
 }
 

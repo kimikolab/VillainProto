@@ -8,6 +8,55 @@ public partial class BattlefieldView3D
 {
     internal int TormentHitPlays { get; private set; }
     internal int WhipSweeps, ElectricWhipSweeps;
+    private readonly List<ElectricWhip3D> _electricWhips = new();
+    private bool _whipPaused;
+    internal ElectricWhipStyle WhipPreviewStyle { get; set; } = ElectricWhipStyle.Flurry;
+
+    internal void SetWhipClock(bool paused, double speed)
+    {
+        _whipPaused = paused;
+        _electricWhips.RemoveAll(fx => !IsInstanceValid(fx) || fx.IsQueuedForDeletion());
+        foreach (var fx in _electricWhips) fx.SetClock(paused, speed);
+        foreach (var pawn in _pawns.Values) pawn.SetWhipClock(paused, speed);
+    }
+
+    private void EndWhipPresentation()
+    {
+        foreach (var fx in _electricWhips)
+            if (IsInstanceValid(fx)) fx.Cancel();
+        _electricWhips.Clear(); _whipPaused = false;
+        foreach (var pawn in _pawns.Values) pawn.EndWhipFlurry();
+    }
+
+    private async Task PlayElectricWhip(BattlePawn3D actor, IReadOnlyList<BattlePawn3D> targets,
+        bool sweep, Action<BattlePawn3D>? impact = null)
+    {
+        int generation = _specialGeneration;
+        int chain = actor.InterruptWhip ? actor.WhipChainSize : 0;
+        actor.ShowMovementPortrait("shiga_interrupt", 0.82);
+        actor.BeginWhipFlurry(electric: true, sweep: sweep, style: WhipPreviewStyle);
+        var fx = new ElectricWhip3D { Style = WhipPreviewStyle }; _fxRoot.AddChild(fx);
+        _electricWhips.RemoveAll(f => !IsInstanceValid(f) || f.IsQueuedForDeletion());
+        _electricWhips.Add(fx);
+        var positions = targets.Select(p => p.FxPoint).ToArray();
+        var points = targets.Select((p, i) => (Func<Vector3>)(() => IsInstanceValid(p) ? p.FxPoint : positions[i])).ToArray();
+        fx.Start(_camera, () => actor.WhipOrigin(_camera), points, sweep, chain, actor.AnimationSpeed,
+            () => generation == _specialGeneration && IsVisibleInTree() && IsInstanceValid(actor)
+                && actor.IsInsideTree() && actor.ShockMarkActive,
+            i => {
+                if (i == 0)
+                {
+                    WhipChainContact(actor, Math.Max(0.1, actor.AnimationSpeed));
+                    _attackAudio.PlayShockMark(ShockMarkSound.ElectricWhip, speed: actor.AnimationSpeed);
+                }
+                var target = targets[i];
+                if (!IsInstanceValid(target) || !target.IsInsideTree()) return;
+                impact?.Invoke(target);
+                NotifyAttackContact(target);
+            });
+        fx.SetClock(_whipPaused, actor.AnimationSpeed);
+        await fx.Completion;
+    }
 
     // 一振りの先端を敵の並びに沿って走らせる。電光は革の鞭の上にだけ乗る。
     public async Task ShowWhipSweep(BattlePawn3D from, IReadOnlyList<BattlePawn3D> targets,
@@ -17,17 +66,18 @@ public partial class BattlefieldView3D
         WhipSweeps++;
         var hits = targets.OrderBy(p => p.FxPoint.Z).ToArray();
         bool electric = from.HasShockAura || from.InterruptWhip;
-        int chain = from.InterruptWhip ? from.WhipChainSize : 0;
-        float thickness = 1 + Math.Min(chain, 8) * 0.42f;
         if (electric) ElectricWhipSweeps++;
+        if (electric)
+        {
+            await PlayElectricWhip(from, hits, sweep: true, impact);
+            return;
+        }
         double speed = Math.Max(0.1, from.AnimationSpeed);
         int generation = _specialGeneration;
         from.ShowMovementPortrait("shiga_interrupt", 0.82);
         from.BeginWhipFlurry();
-        var material = MakeMaterial(electric ? new Color("c4f8ff") : new Color("936447"), true, true,
-            0.35f, electric ? ThunderFx.Cyan : Colors.Black);
+        var material = MakeMaterial(new Color("936447"), true, true, 0.35f, Colors.Black);
         material.CullMode = BaseMaterial3D.CullModeEnum.Disabled;
-        if (electric) material.EmissionEnergyMultiplier = 1.2f + chain * 0.3f;
         var mesh = new ImmediateMesh();
         var whip = new MeshInstance3D { Mesh = mesh, MaterialOverride = material,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
@@ -48,7 +98,7 @@ public partial class BattlefieldView3D
             for (int i = 0; i < 40; i++)
             {
                 Vector3 a = Point(i / 40f), b = Point((i + 1) / 40f);
-                Vector3 w = (b - a).Cross(_camera.GlobalPosition - a).Normalized() * 0.035f * thickness * (1 - i / 40f * 0.6f);
+                Vector3 w = (b - a).Cross(_camera.GlobalPosition - a).Normalized() * 0.035f * (1 - i / 40f * 0.6f);
                 foreach (var p in new[] { a-w, b-w, a+w, a+w, b-w, b+w })
                     mesh.SurfaceAddVertex(_fxRoot.ToLocal(p));
             }
@@ -56,17 +106,6 @@ public partial class BattlefieldView3D
             while (landed < hits.Length && t >= 0.22f + 0.55f * landed / Math.Max(1, hits.Length - 1))
             {
                 var hit = hits[landed++];
-                if (landed == 1)
-                {
-                    WhipChainContact(from, speed);
-                    if (electric) _attackAudio.PlayShockMark(ShockMarkSound.ElectricWhip, speed: speed);
-                }
-                if (electric)
-                {
-                    for (int k = 0; k < 6; k++)
-                        ThunderFx.Arc(_fxRoot, Point(k / 6f), Point((k + 1) / 6f), (from.InterruptWhip ? 0.020f : 0.018f) * thickness, 0.20 / speed);
-                    ThunderFx.Burst(_fxRoot, hit.FxPoint, 0.5f + chain * 0.10f, 0.22 / speed);
-                }
                 impact?.Invoke(hit);
                 NotifyAttackContact(hit);
             }
@@ -99,9 +138,12 @@ public partial class BattlefieldView3D
     private async Task ShowWhipAttack(BattlePawn3D from, BattlePawn3D target)
     {
         int generation = _specialGeneration;
-        int chain = from.InterruptWhip ? from.WhipChainSize : 0;
         bool electric = from.HasShockAura || from.InterruptWhip;
-        float thickness = 1 + Math.Min(chain, 8) * 0.42f;
+        if (electric)
+        {
+            await PlayElectricWhip(from, new[] { target }, sweep: false);
+            return;
+        }
         from.ShowMovementPortrait("shiga_interrupt", 0.82);
         from.BeginWhipFlurry();
         Vector3 direction = (target.FxPoint - from.FxPoint).Normalized();
@@ -109,10 +151,8 @@ public partial class BattlefieldView3D
         Vector3 end = target.FxPoint;
         Vector3 sideways = direction.Cross(Vector3.Up).Normalized();
         Vector3 view = _camera.GlobalPosition - (start + end) * 0.5f;
-        var material = MakeMaterial(electric ? new Color("c4f8ff") : new Color("b84e69"), true, true,
-            0.35f, electric ? ThunderFx.Cyan : new Color("682239"));
+        var material = MakeMaterial(new Color("b84e69"), true, true, 0.35f, new Color("682239"));
         material.CullMode = BaseMaterial3D.CullModeEnum.Disabled;
-        if (electric) material.EmissionEnergyMultiplier = 1.2f + chain * 0.3f;
         var mesh = new ImmediateMesh();
         var whip = new MeshInstance3D { Mesh = mesh, MaterialOverride = material,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
@@ -136,8 +176,8 @@ public partial class BattlefieldView3D
                 float u = i / 48f, v = (i + 1) / 48f;
                 Vector3 a = Point(u), b = Point(v);
                 Vector3 normal = (b - a).Cross(view).Normalized();
-                Vector3 wa = normal * Mathf.Lerp(0.048f, 0.012f, u) * thickness;
-                Vector3 wb = normal * Mathf.Lerp(0.048f, 0.012f, v) * thickness;
+                Vector3 wa = normal * Mathf.Lerp(0.048f, 0.012f, u);
+                Vector3 wb = normal * Mathf.Lerp(0.048f, 0.012f, v);
                 mesh.SurfaceAddVertex(a - wa); mesh.SurfaceAddVertex(b - wb); mesh.SurfaceAddVertex(a + wa);
                 mesh.SurfaceAddVertex(a + wa); mesh.SurfaceAddVertex(b - wb); mesh.SurfaceAddVertex(b + wb);
             }
@@ -145,14 +185,6 @@ public partial class BattlefieldView3D
             if (!cracked && t >= 0.62f)
             {
                 cracked = true;
-                if (electric) _attackAudio.PlayShockMark(ShockMarkSound.ElectricWhip, speed: from.AnimationSpeed);
-                WhipChainContact(from, Math.Max(0.1, from.AnimationSpeed));
-                if (from.HasShockAura || from.InterruptWhip)
-                {
-                    for (int k = 0; k < 7; k++) ThunderFx.Arc(_fxRoot, Point(k / 7f), Point((k + 1) / 7f),
-                        0.02f * thickness, 0.22 / from.AnimationSpeed);
-                    ThunderFx.Burst(_fxRoot, end, 0.65f + chain * 0.10f, 0.22 / from.AnimationSpeed);
-                }
                 NotifyAttackContact(target);
                 Color flash = new("ffe0ba");
                 for (int i = 0; i < 5; i++)

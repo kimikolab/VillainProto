@@ -71,12 +71,49 @@ public partial class BattlePawn3D
         ? MovementPortraitPoint(new Vector2(994, 290), camera) : FxPoint;
 
     private float _whipFlurry;
-    internal void BeginWhipFlurry() => _whipFlurry = 0.64f;
+    private float _whipDuration = 0.64f, _whipContact;
+    private double _whipPortraitSpeed = 1;
+    private bool _electricWhipPose, _whipClockPaused;
+    private ElectricWhipStyle _electricWhipStyle;
+    internal void BeginWhipFlurry(bool electric = false, bool sweep = true, ElectricWhipStyle style = ElectricWhipStyle.Flurry)
+    {
+        _electricWhipPose = electric; _whipDuration = sweep ? 0.64f : 0.60f;
+        _electricWhipStyle = style;
+        _whipContact = sweep ? 0.22f : 0.62f;
+        _whipPortraitSpeed = Math.Max(0.1, AnimationSpeed);
+        _whipFlurry = _whipDuration;
+    }
+    internal void SetWhipClock(bool paused, double speed)
+    {
+        _whipClockPaused = paused;
+        if (_electricWhipPose && _whipFlurry > 0) AnimationSpeed = speed;
+        if (_electricWhipPose && _movementPortrait == "shiga_interrupt" && _movementPortraitTween?.IsValid() == true)
+        {
+            _movementPortraitTween.SetSpeedScale((float)(Math.Max(0.1, speed) / _whipPortraitSpeed));
+            if (paused) _movementPortraitTween.Pause(); else _movementPortraitTween.Play();
+        }
+    }
+    internal void EndWhipFlurry()
+    {
+        _whipFlurry = 0; _whipClockPaused = false; _electricWhipPose = false;
+        if (_movementPortrait == "shiga_interrupt") ClearMovementPortrait();
+    }
     private void ProcessWhipFlurry(float delta)
     {
         if (_whipFlurry <= 0) return;
-        _whipFlurry = Math.Max(0, _whipFlurry - delta);
-        float t = 1 - _whipFlurry / 0.64f;
+        if (!_whipClockPaused) _whipFlurry = Math.Max(0, _whipFlurry - delta);
+        float t = 1 - _whipFlurry / _whipDuration;
+        if (_electricWhipPose)
+        {
+            float snap = Mathf.Clamp((t - Math.Max(0, _whipContact - 0.18f)) / 0.18f, 0, 1);
+            float recover = Mathf.Clamp((t - 0.78f) / 0.22f, 0, 1);
+            float lean = Mathf.Lerp(-0.10f, 0.17f, snap * snap) * (1 - recover);
+            if (_electricWhipStyle == ElectricWhipStyle.Flurry)
+                lean = Mathf.Sin(t * Mathf.Tau * 4.5f) * 0.13f * Mathf.Sin(t * Mathf.Pi);
+            _sprite.Rotation += Vector3.Back * lean * (Team == 0 ? -1 : 1);
+            _sprite.Scale *= new Vector3(1 + snap * 0.07f * (1 - recover), 1, 1);
+            return;
+        }
         float twist = Mathf.Sin(t * Mathf.Tau * 2) * Mathf.Sin(t * Mathf.Pi);
         // 席と足元は固定し、上体のひねりだけを鞭の往復に合わせる。
         _sprite.Rotation += Vector3.Back * twist * (Team == 0 ? -0.07f : 0.07f);

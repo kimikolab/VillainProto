@@ -2516,6 +2516,8 @@ public partial class Main : Control
     {
         if (!_battleMode || !_playing) return;
         _paused = !_paused;
+        _battleField.SetSomClock(_paused, _speed);
+        _battleField.SetWhipClock(_paused, _speed);
         _pause.Text = _paused ? "再開" : "一時停止";
         Notice(_paused ? "一時停止中" : "再生中", _paused ? UiKit.Gold : UiKit.Player);
     }
@@ -2523,6 +2525,8 @@ public partial class Main : Control
     private void SetSpeed(int index)
     {
         _speed = index switch { 0 => 0.5, 2 => 2.0, 3 => 4.0, _ => 1.0 };
+        _battleField.SetSomClock(_paused, _speed);
+        _battleField.SetWhipClock(_paused, _speed);
         _speedPicker.Selected = index;
         Notice($"再生速度 ×{_speed:0.#}", UiKit.Player);
     }

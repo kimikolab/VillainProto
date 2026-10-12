@@ -120,6 +120,7 @@ public partial class BattlefieldView3D
     internal Vector3? ElectricPoint(int? id)
     {
         if (id is not int key) return null;
+        if (_somBeastPoints.TryGetValue(key, out var beast)) return beast;
         if (_silkBalls.TryGetValue(key, out var ball)) return ball.GlobalPosition;
         return FindPawn(key)?.DischargePoint;
     }

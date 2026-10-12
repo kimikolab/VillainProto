@@ -19,7 +19,7 @@ public partial class Main
         or BattleEventKind.FeatherMark or BattleEventKind.Framed or BattleEventKind.VendettaRound
         or BattleEventKind.BeckonFeather or BattleEventKind.ShareGive
         or BattleEventKind.Command or BattleEventKind.CommandBall or BattleEventKind.Cover or BattleEventKind.Rouse
-        or BattleEventKind.HushState or BattleEventKind.Spark
+        or BattleEventKind.HushState or BattleEventKind.Spark or BattleEventKind.BeastThrow or BattleEventKind.BeastBurst
         or BattleEventKind.Web || e.Kind == BattleEventKind.SilkBall && e.Text != SilkBallLabels.Pop;
 
     private void IndexThunder(IReadOnlyList<BattleEvent> events)
@@ -138,6 +138,7 @@ public partial class Main
 
     private void ShowScriptDischarge(BattleEvent e)
     {
+        if (_battleField.ShowSomBeastDischarge(e.ActorId, e.TargetId, _speed)) return;
         if (_battleField.ShowSilkBallDischarge(e.ActorId, e.TargetId, _speed)) return;
         if (e.SourceTrait == TraitId.Thread)
             _battleField.ShowThreadDischarge(_battleField.FindPawn(e.ActorId), _battleField.FindPawn(e.TargetId),

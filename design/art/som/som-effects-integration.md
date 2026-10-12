@@ -1,5 +1,9 @@
 # ソムの演出と素材の実装記録
 
+群れ・緊急の大型下僕・萎縮への追加対応は [som-swarm-integration.md](som-swarm-integration.md)（2026-10-11）。
+
+到着後の威嚇・臨戦態勢・暴発と、魔導書を経由する光への変更は [som-stance-integration.md](som-stance-integration.md)（2026-10-11）。
+
 `CODEX_BRIEF_SOM_SPARK.md` と `PHASE291_CODEX_MEMO.md` の14節を基に、DemoAppへ召喚、降る光、光の衣、光の消失を追加した。BattleCoreと戦闘数値は変更していない。
 
 ## ゲーム内の動き

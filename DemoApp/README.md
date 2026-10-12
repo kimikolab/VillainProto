@@ -406,6 +406,8 @@ Godot_console.exe --path DemoApp res://StagingEffectCheck.tscn -- --effect=fire-
 ## 網と連鎖の鞭の確認
 
 シガは通常攻撃・割り込みとも席に留まり、手元から鞭を振るう。割り込みの連鎖数で集まる電気の本数と鞭の太さを変え、4連鎖以上で一振りに一度だけ白く光る。
+
+強化状態の鞭は縦・横・斜めに鋭い電光が次々走る連続打ち。太い蛇行する芯を出さず、白い光跡と柔らかな青・紫の残光で速度を示す。命中点から電気の破片とEffectBlocks v4の火花が飛び散る。購入素材がない環境でも光跡・破片を描く。観察は `res://ElectricWhipCheck.tscn -- --preview`、`--compare` を足すと大きな円弧を振り回す比較案も再生する。接触時刻・一時停止・倍速・消去の確認は同シーンを `--headless` で実行する。詳細は [組み込み記録](../design/art/shiga/electric-whip-integration.md)。
 クグの網は拘束解除・書き手の死亡後も残り、糸の先の敵の死亡で切れる。再帯電は `Web`、糸玉の生成・弾け・再帯電は `SilkBall` の台本だけから再生する。
 
 ```powershell
@@ -414,3 +416,25 @@ Godot_console.exe --path DemoApp res://ShockMarkCheck.tscn -- --web --capture-di
 ```
 
 `--web --verify` は左右・1倍／2倍速・糸玉・据え置き動作に加え、「試遊・感電 糸」「試遊・感電 雷の型」× 本編第一波／ボス／近衛／大隊を再戦まで照合する。実戦照合だけなら `--replay-only` を加える。完了の印は `SHOCK_MARK_CHECK_OK`。
+
+## ソムの背きの雷・共鳴返し
+
+召喚体は光核と半透明の電弧からなる雷の精霊。ソムの側から菫の光塊が飛び、敵陣で契約紋がひび割れて黄白・赤の雷へ反転する。
+身体の一部を稲妻の槍として放ち、核が割れると光粒に散る。群れ・緊急召喚とも同じ姿で、名前「背いた獣」はBattleCoreの定義を表示する。
+帯電した味方に触れると体表の電気が膨らみ、同じ道を太く戻る。
+隣の敵へ走る枝、シガの打ち返し、クグの糸、粛で共鳴が消える分岐、投げた残りの暴発を台本から再生する。
+群れの往路・共鳴・復路はまとめ、攻撃・帯電・HP・消去は台本の順序で反映する。獣の消えた位置からツギが欠片を拾う。
+素材と検証の記録は [som-resonance-integration.md](../design/art/som/som-resonance-integration.md)。
+精霊への見た目の変更は [som-spirit-integration.md](../design/art/som/som-spirit-integration.md)。
+
+```powershell
+Godot_console.exe --path DemoApp -- --demo-autoplay "--demo-preset=試遊・感電 光の盾" --demo-playtest-stage=0 --demo-seed=0
+Godot_console.exe --path DemoApp -- --demo-autoplay "--demo-preset=試遊・感電 打ち返し" --demo-playtest-stage=0 --demo-seed=0
+Godot_console.exe --headless --path DemoApp res://SomCheck.tscn -- --verify-only
+Godot_console.exe --path DemoApp --windowed --resolution 1440x900 res://SomCheck.tscn -- --visual-only --resonance-only
+Godot_console.exe --path DemoApp --windowed --resolution 1440x900 res://SomCheck.tscn -- --visual-only --resonance-live
+Godot_console.exe --path DemoApp --windowed --resolution 1440x900 res://SomCheck.tscn -- --visual-only --spirit-captures
+```
+
+試遊のチェックポイントは `design/PLAYTEST_GUIDE_SHOCK.md`。
+`--verify-only --som-no-purchased` ではソムの購入火花を無効にして、電弧・SVGだけでも同じ台本を完走することを確かめる。

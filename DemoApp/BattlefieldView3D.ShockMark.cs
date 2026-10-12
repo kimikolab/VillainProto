@@ -10,6 +10,7 @@ public partial class BattlefieldView3D
 
     private void ResetShockMarkCounts()
     {
+        EndWhipPresentation();
         ChargePlays = InterruptPlays = CloudPlays = PowderMainPlays = PowderSpreadPlays = PowderLeakPlays = 0;
         ThreadPlays = ThreadReleasePlays = ScarPlays = MarkLayerPlays = MarkAddPlays = CowerPlays = 0;
         ResetShockWebCounts();
@@ -17,6 +18,7 @@ public partial class BattlefieldView3D
     }
     internal void EndShockMarkPresentation()
     {
+        EndWhipPresentation();
         EndSomPresentation();
         EndHushPresentation();
         EndMarkRallyPresentation();
