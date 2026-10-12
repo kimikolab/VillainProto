@@ -284,6 +284,21 @@ void fragment(){
             await FirePierce(actor, hits, level, speed);
             return;
         }
+        // ボルグは構え→振り抜きの差分の代わりに攻撃の連番を流す（BattlefieldView3D.AttackClip.cs・--borg-attack-clip=none で従来）。
+        if (actor.UnitId == "borg" && !embers && await PlayBorgAttackClip(actor, target, level, speed))
+        {
+            if (!Alive()) return;
+            _attackAudio.PlayFireSound("impact");
+            foreach (var hit in hits)
+            {
+                if (!IsInstanceValid(hit)) continue;
+                FireFx.Bloom(_fxRoot, hit.FxPoint, color, 2.8f, 0.40 / speed, 1);
+                FireFx.Bloom(_fxRoot, hit.GlobalPosition + Vector3.Up * 0.10f, color, 2.6f, 0.55 / speed, 2, true);
+                NotifyAttackContact(hit);
+            }
+            await Wait(0.08);
+            return;
+        }
         double charge = embers ? 0 : level >= 3 ? 0.38 : 0.10;
         if (charge > 0)
         {

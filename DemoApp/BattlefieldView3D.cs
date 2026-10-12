@@ -654,6 +654,9 @@ public partial class BattlefieldView3D : Control
             ShowYomiIai(from, hits, pattern, reaction, attackPower ?? from.AttackValue);
             foreach (var hit in hits) NotifyAttackContact(hit);
         }
+        // ボルグは攻撃の連番を流し、刃が当たるコマで下の剣閃へ続ける（BattlefieldView3D.AttackClip.cs）。
+        if (from.UnitId == "borg" && !reaction && await PlayBorgAttackClipToContact(from)
+            && (attackGeneration != _specialGeneration || !IsInstanceValid(from) || !IsInstanceValid(to) || from.Hp <= 0)) return;
         bool charged = !reaction && from.IsCharging;
         bool hushSlap = from.UnitId == "husher" && from.HushShattered;
         if (!reaction) from.ReleaseCharge();
@@ -731,7 +734,11 @@ public partial class BattlefieldView3D : Control
 
         if (attackGeneration == _specialGeneration)
             foreach (var hit in hits) NotifyAttackContact(hit);
-        if (IsInstanceValid(from) && from.IsInsideTree() && !holdPosition) from.ReturnFromAttack();
+        if (IsInstanceValid(from) && from.IsInsideTree() && !holdPosition)
+        {
+            if (from.AttackClipPlaying) ReturnAfterAttackClip(from); // 攻撃の連番は振り切ってから戻る
+            else from.ReturnFromAttack();
+        }
     }
 
     public void BeginCharge(BattlePawn3D? pawn, int percent)

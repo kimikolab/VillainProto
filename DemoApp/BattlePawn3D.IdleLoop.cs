@@ -52,7 +52,8 @@ public partial class BattlePawn3D
         _idleLoopWarmed = true;
         bool burningVariant = _burning && hasBurningVariant;
         _idleLoopFrames = IdleLoopFramesOf(burningVariant ? _unitId + "_burning" : _unitId);
-        bool active = key == _unitId && _alive && !_victory && _idleLoopFrames.Length > 0;
+        // 攻撃の連番（BattlePawn3D.AttackClip.cs）の再生中は待機ループを止める。
+        bool active = key == _unitId && _alive && !_victory && _idleLoopFrames.Length > 0 && _attackClip is null;
         _idleLoopActive = active;
         _idleLoopFrame = -1;
         if (!active) return;
@@ -61,10 +62,16 @@ public partial class BattlePawn3D
         {
             // 駒ごとに位相をずらし、同じ駒が並んでも揃って弾まないようにする。
             _idleLoopTime = _phase / Mathf.Tau * (_idleLoopFrames.Length / IdleLoopFps);
-            _idleLoopDriver = new BattleIdleLoopDriver { Pawn = this, Name = "IdleLoopDriver" };
-            AddChild(_idleLoopDriver);
+            EnsureLoopDriver();
         }
         ApplyIdleLoopFrame();
+    }
+
+    private void EnsureLoopDriver()
+    {
+        if (_idleLoopDriver is not null) return;
+        _idleLoopDriver = new BattleIdleLoopDriver { Pawn = this, Name = "IdleLoopDriver" };
+        AddChild(_idleLoopDriver);
     }
 
     internal void ProcessIdleLoop(double delta)
@@ -90,9 +97,13 @@ public partial class BattlePawn3D
     }
 }
 
-// BattlePawn3D の _Process を増やさずに待機ループを毎フレーム進めるための小さな子ノード。
+// BattlePawn3D の _Process を増やさずに待機ループと攻撃の連番を毎フレーム進めるための小さな子ノード。
 public partial class BattleIdleLoopDriver : Node
 {
     public BattlePawn3D? Pawn;
-    public override void _Process(double delta) => Pawn?.ProcessIdleLoop(delta);
+    public override void _Process(double delta)
+    {
+        Pawn?.ProcessIdleLoop(delta);
+        Pawn?.ProcessAttackClip(delta);
+    }
 }

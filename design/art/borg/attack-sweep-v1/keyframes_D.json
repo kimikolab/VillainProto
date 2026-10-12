@@ -1,0 +1,26 @@
+{
+  "canvas": [
+    1120,
+    720
+  ],
+  "poses": {
+    "dend": {
+      "source": "attack-sweep-v1/start_from_D2022.png",
+      "scale": 1.0,
+      "offset": [
+        -170,
+        -84
+      ],
+      "input": "vp_borg_key_D_dend.png"
+    },
+    "low": {
+      "source": "attack-keyposes-v2/borg_attack_contact_right.png",
+      "scale": 0.5119,
+      "offset": [
+        142,
+        143
+      ],
+      "input": "vp_borg_key_D_low.png"
+    }
+  }
+}

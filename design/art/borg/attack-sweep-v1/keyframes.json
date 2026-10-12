@@ -1,0 +1,35 @@
+{
+  "canvas": [
+    1920,
+    1472
+  ],
+  "poses": {
+    "windup": {
+      "source": "borg-sweep-windup-v1.png",
+      "scale": 1.0,
+      "offset": [
+        96,
+        322
+      ],
+      "input": "vp_borg_key_windup.png"
+    },
+    "low": {
+      "source": "attack-keyposes-v2/borg_attack_contact_right.png",
+      "scale": 1.0238,
+      "offset": [
+        342,
+        265
+      ],
+      "input": "vp_borg_key_low.png"
+    },
+    "over": {
+      "source": "attack-keyposes-v3/borg_attack_followthrough_arms_v5.png",
+      "scale": 0.8848,
+      "offset": [
+        512,
+        96
+      ],
+      "input": "vp_borg_key_over.png"
+    }
+  }
+}
