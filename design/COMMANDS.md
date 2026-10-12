@@ -1082,6 +1082,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 som319 noise <版> <台の一部|shield|hagi|shock|win|fire> <波> <from> <n>   # 第319期 別の seed の帯で 旧 ／ 規定 ／ 版を並べる
     dotnet run --project BattleSim -c Release 0 som319 memo <版> <台の一部|shield|hagi|shock|win|fire> <boss|guard|bat|nine|nine2|1..5> <seed> <T0> <T1>   # 第319期 台本の並び（投げて暴発 ／ 序盤の弾け）
     dotnet run --project BattleSim -c Release 0 som319 check       # 第319期 自己検査（段0 の規定化と固定・規定の立つ ／ 共鳴 ／ 打ち返し・WS-a の境・WS-b の暴発の並び ／ 二重に弾けない ／ 粛 ／ 糸 ／ 実戦で手番を越えない ／ 群れは1体ずつ・verbose・版の定義・PickOne ／ Roll なし）
+    dotnet run --project BattleSim -c Release 0 som320 cand        # 第320期 §3: 瓦礫の台の候補 4 × 10 波（獣の弾けから拾ったツギの瓦礫 ／ 勝率）・試遊に載せる台を決めた表（数秒）
+    dotnet run --project BattleSim -c Release 0 som320 boards      # 第320期 §3: 足した試遊の台 3（打ち返し ／ 追い打ち ／ 瓦礫）× 10 波・勝率と狙いの出来事 /戦（seed 0..199・数秒）
+    dotnet run --project BattleSim -c Release 0 som320 guide       # 第320期 §4: 既存の試遊の感電の台 × 10 波（`design/PLAYTEST_GUIDE_SHOCK.md` の数字の出どころ）
+    dotnet run --project BattleSim -c Release 0 som320 memo <台の一部> <boss|guard|bat|nine|nine2|1..5> <seed>   # 第320期 試遊の台の1戦から狙いの出来事（投げる ／ 暴発 ／ 打ち返し ／ 追い打ち ／ 瓦礫 ／ 味方の Highlight）だけを抜いた台本
+    dotnet run --project BattleSim -c Release 0 som320 check       # 第320期 自己検査（規定のソム ＝ WS-b と固定 `Pin319`・粛で止まった共鳴返しも暴発・試遊の3台・部分一致・verbose・PickOne）
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）
     dotnet run --project BattleSim -c Release 0 shiga316 dgrid <boss|guard> [ps]   # 第316期 段0 G-c: 第297期の「ドハが要る台」の格子（第315期と同じ作り・基準は規定のドハ・1本 6〜9 分）

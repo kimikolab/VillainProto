@@ -4243,7 +4243,7 @@ public static class BeastBurstLabels
     public const string Popped = "弾けて消えた";
     /// <summary>第318期（CR-a ／ CR-b・版のみ）: 共鳴返しで、立っていた獣の上に雷が跳ね返って弾けた（<c>ActorId</c> ＝ 雷を受けた味方 ／ <c>TargetId</c> ＝ 立っていた獣。<b>この出来事で盤から消す</b>・<c>Death</c> は出ない）。</summary>
     public const string Resonance = "共鳴返し";
-    /// <summary>第319期（WS-b・版のみ）: 投げた雷を誰も受け止めず、立っていた獣が投げた直後にその場で暴発した（<c>ActorId</c> ＝ ソム ／ <c>TargetId</c> ＝ 立っていた獣。<b>この出来事で盤から消す</b>・<c>Death</c> は出ない）。
+    /// <summary>第319期（WS-b・第320期から規定）: 投げた雷を誰も受け止めず、立っていた獣が投げた直後にその場で暴発した（<c>ActorId</c> ＝ ソム ／ <c>TargetId</c> ＝ 立っていた獣。<b>この出来事で盤から消す</b>・<c>Death</c> は出ない）。
     /// 並び: `BeastThrow 投げた` ／ `糸` ／ `共鳴が止まった`（→ 味方の感電 ／ 糸の先の感電）→ この出来事 → 獣の `ShockSpent`（起点・起こし手はソム）→ 隣の敵への `Discharge` ……→ 光。</summary>
     public const string Backfire = "投げて暴発";
 }

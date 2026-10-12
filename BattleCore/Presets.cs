@@ -876,5 +876,12 @@ public static class Presets
         // 第311期の重ね（群れ ＋ 緊急 K-a ＋ 萎縮）を規定にして、クビ抜きでボスに勝てるようになった（`som311 boards` の「光の盾 クビ→シガ」）。
         ("試遊・感電 光の盾 鞭", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Kugu, center: UnitCatalog.Tou, back1: UnitCatalog.Shiga, back3: UnitCatalog.Som)),
         ("試遊・感電 光の盾 重 鞭", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Gan, center: UnitCatalog.Kugu, back1: UnitCatalog.Shiga, back3: UnitCatalog.Som)),
+        // 第320期（design/PHASE320_SOM_SETTLE_SPEC.md §3）—— ソム（WS-b）・シガ（打ち返し）・獣の死の読み手（ハギ ／ ツギ）が画面に出やすい3台。数字は design/PHASE320_SOM_SETTLE.md §3（`som320 boards`）。
+        // 打ち返し: `compare` の行 `感電 (シガ×カタ×ソム)` と同じ台（シガが前1 で獣の雷を浴びる）。写しを持たず <see cref="Compare"/> から引く。
+        ("試遊・感電 打ち返し", Compare.First(r => r.Name == "感電 (シガ×カタ×ソム)").F),
+        // 追い打ち: 第317〜319期の代表台「光の盾 クビ → ハギ」（上の「試遊・感電 光の盾」の後1 をハギに・席はそのまま）。弾けた獣を「倒れた敵」に数えて、ハギが踏み込む。
+        ("試遊・感電 追い打ち", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Kugu, center: UnitCatalog.Tou, back1: UnitCatalog.Hagi, back3: UnitCatalog.Som)),
+        // 瓦礫: 「試遊・感電 光の盾」の後1（クビ）をツギに（席はそのまま）。候補4台のうち獣の弾けから拾う瓦礫がいちばん多い台（`som320 cand`）。
+        ("試遊・感電 瓦礫", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Kugu, center: UnitCatalog.Tou, back1: UnitCatalog.Tsugi, back3: UnitCatalog.Som)),
     };
 }

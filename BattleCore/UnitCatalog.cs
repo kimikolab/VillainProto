@@ -2210,11 +2210,12 @@ public static class UnitCatalog
     public const string SomResonancePlusText319 = "。帯電した仲間に落ちた背きの雷は共鳴して跳ね返り、獣のまわりの敵にも走ってから獣を弾けさせる";
 
     /// <summary>
-    /// 背かれのソム（規定）。<b>第319期に CR-b（裏切りの雷の共鳴返し・強）を規定にした</b>（ポンの判断 R4・design/PHASE319_SOM_THROW_SPEC.md §2-1）——
+    /// 背かれのソム（第319期の規定・第320期から旧の定義）。<b>第319期に CR-b（裏切りの雷の共鳴返し・強）を規定にした</b>（ポンの判断 R4・design/PHASE319_SOM_THROW_SPEC.md §2-1）——
     /// 第318期の規定（<see cref="SomH318"/>）に <see cref="TraitId.BeastStand"/> ／ <see cref="TraitId.BeastBetray"/> ／ <see cref="TraitId.BeastResonance"/> ／ <see cref="TraitId.BeastResonanceArc"/> を足した。
     /// 札は第318期の <see cref="SomCRb"/> と同じ（文面だけ違う）。打ち返しはシガの札（<see cref="Shiga"/>）。
+    /// 第320期: 規定を WS-b（<see cref="Som"/>）にしたので、第319期の規定で測った器具はこれに固定する（`Common.Pin319`）。第319期の版（WS-a ／ WS-a3 ／ WS-b・<see cref="SomOn319"/>）もこれの上に作る。
     /// </summary>
-    public static readonly UnitDef Som = new()
+    public static readonly UnitDef SomH319 = new()
     {
         Id = SomH318.Id,
         Name = SomH318.Name,
@@ -2228,6 +2229,27 @@ public static class UnitCatalog
         PlusText = SomH310.PlusText + SomSwarmText + SomBeastDeathText318 + SomResonancePlusText319,
         MinusText = SomBetrayMinusText,
         Flavor = SomH318.Flavor
+    };
+
+    /// <summary>
+    /// 背かれのソム（規定）。<b>第320期に WS-b（投げて暴発）を規定にした</b>（ポンの判断 W2・design/PHASE320_SOM_SETTLE_SPEC.md §2）——
+    /// 第319期の規定（<see cref="SomH319"/>・CR-b）に <see cref="TraitId.BeastThrowBackfire"/> を足した。札は第319期の <see cref="SomWSb"/> と同じ。
+    /// 立った獣が投げた雷を誰も受け止めなければ（共鳴返し ／ 打ち返しにならなければ）、投げた直後にその場で暴発する——立った獣は投げた手番の中で必ず盤から消える。
+    /// </summary>
+    public static readonly UnitDef Som = new()
+    {
+        Id = SomH319.Id,
+        Name = SomH319.Name,
+        MaxHp = SomH319.MaxHp,
+        Attack = SomH319.Attack,
+        Speed = SomH319.Speed,
+        Advances = SomH319.Advances,
+        Pattern = SomH319.Pattern,
+        Traits = SomH319.Traits.Append(TraitId.BeastThrowBackfire).ToArray(),
+        Actions = SomH319.Actions,
+        PlusText = SomH319.PlusText,
+        MinusText = SomH319.MinusText + SomBackfireText,
+        Flavor = SomH319.Flavor
     };
 
     // 第294期 —— ソムの守りの版（指示書 design/PHASE294_GUARD_SPEC.md §3-3）。規定（喚び出し）の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
@@ -2653,23 +2675,24 @@ public static class UnitCatalog
     /// <summary>第318期 CR-b（共鳴返し・強）。CR-a ＋ <see cref="TraitId.BeastResonanceArc"/>——跳ね返った雷は、獣を弾けさせる前に獣の隣の敵（駒のみ）すべてに感電を付ける。</summary>
     public static readonly UnitDef SomCRb = SomOn(new[] { TraitId.BeastStand, TraitId.BeastBetray, TraitId.BeastResonance, TraitId.BeastResonanceArc }, SomStandPlus318, SomResonanceMinusText + SomResonanceArcText);
 
-    // 第319期 —— 第2波の代金を消す版（指示書 design/PHASE319_SOM_THROW_SPEC.md §3）。<b>新しい規定（CR-b・<see cref="Som"/>）</b>の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。文面は叩き台。
+    // 第319期 —— 第2波の代金を消す版（指示書 design/PHASE319_SOM_THROW_SPEC.md §3）。<b>第319期の規定（CR-b・<see cref="SomH319"/>）</b>の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。文面は叩き台。
+    // 第320期に WS-b を規定（<see cref="Som"/>）にした。版は第319期の規定の上のまま（中身は第319期と同じ）。
 
-    /// <summary>第319期: 規定のソム（<see cref="Som"/>・CR-b）の末尾に札を足した版（数値・行動・フレーバーは規定のまま）。</summary>
+    /// <summary>第319期: 第319期の規定のソム（<see cref="SomH319"/>・CR-b）の末尾に札を足した版（数値・行動・フレーバーは規定のまま）。第320期に規定が動いたので土台を旧の定義に替えた（中身は第319期と同じ）。</summary>
     public static UnitDef SomOn319(TraitId[] add, string plus, string minus) => new()
     {
-        Id = Som.Id,
-        Name = Som.Name,
-        MaxHp = Som.MaxHp,
-        Attack = Som.Attack,
-        Speed = Som.Speed,
-        Advances = Som.Advances,
-        Pattern = Som.Pattern,
-        Traits = Som.Traits.Concat(add).ToArray(),
-        Actions = Som.Actions,
+        Id = SomH319.Id,
+        Name = SomH319.Name,
+        MaxHp = SomH319.MaxHp,
+        Attack = SomH319.Attack,
+        Speed = SomH319.Speed,
+        Advances = SomH319.Advances,
+        Pattern = SomH319.Pattern,
+        Traits = SomH319.Traits.Concat(add).ToArray(),
+        Actions = SomH319.Actions,
         PlusText = plus,
         MinusText = minus,
-        Flavor = Som.Flavor
+        Flavor = SomH319.Flavor
     };
 
     /// <summary>第319期 WS-a の文面の足し（叩き台・指示書に文面の指定は無い）。</summary>
@@ -2680,14 +2703,14 @@ public static class UnitCatalog
     public const string SomBackfireText = "。受け止める者がいなければ、獣は投げた雷の残りで暴発する";
 
     /// <summary>第319期 WS-a（序盤は立たない）。規定 ＋ <see cref="TraitId.BeastStandLate"/>——戦の T1〜T2 の喚び出しでは獣は立たず、E2 のまま湧く席で弾ける（投げない）。T3 から規定のまま。</summary>
-    public static readonly UnitDef SomWSa = SomOn319(new[] { TraitId.BeastStandLate }, Som.PlusText, Som.MinusText + SomStandLateText);
+    public static readonly UnitDef SomWSa = SomOn319(new[] { TraitId.BeastStandLate }, SomH319.PlusText, SomH319.MinusText + SomStandLateText);
     /// <summary>第319期 WS-a3（序盤は立たない・T3 まで）。規定 ＋ <see cref="TraitId.BeastStandLate3"/>——T1〜T3 は立たない。T4 から規定のまま。</summary>
-    public static readonly UnitDef SomWSa3 = SomOn319(new[] { TraitId.BeastStandLate3 }, Som.PlusText, Som.MinusText + SomStandLate3Text);
+    public static readonly UnitDef SomWSa3 = SomOn319(new[] { TraitId.BeastStandLate3 }, SomH319.PlusText, SomH319.MinusText + SomStandLate3Text);
     /// <summary>
     /// 第319期 WS-b（投げて暴発）。規定 ＋ <see cref="TraitId.BeastThrowBackfire"/>——立った獣が投げた雷を誰も受け止めなかったら（共鳴返し ／ 打ち返しにならなかったら）、
     /// 雷を今のまま処理した直後に獣がその場で暴発する（起こし手はソム・光になる・獣の死に数える）。立った獣は投げた手番の中で必ず盤から消える。
     /// </summary>
-    public static readonly UnitDef SomWSb = SomOn319(new[] { TraitId.BeastThrowBackfire }, Som.PlusText, Som.MinusText + SomBackfireText);
+    public static readonly UnitDef SomWSb = SomOn319(new[] { TraitId.BeastThrowBackfire }, SomH319.PlusText, SomH319.MinusText + SomBackfireText);
 
     /// <summary>
     /// 旧ソム（第103〜275期の規定・背かれのみ）。<b>第276期の転生の対照</b>（S0）。<see cref="All"/> には入れない。

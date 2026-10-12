@@ -785,7 +785,7 @@ public enum TraitId
     BeastResonanceArc, // 共鳴返し・強（CR-b・ソム・`BeastResonance` と組む）: 跳ね返った雷は、獣を弾けさせる前に獣の隣の敵（駒のみ・糸玉は除く）すべてに感電を付ける（書き手は雷を受けた味方）
     BetrayBackswing,   // 打ち返し（SG・シガ）: 帯電していないシガに裏切りの雷が落ちたら、感電が付いた（蓄電 +1）うえで、その場で投げた獣を主目標に割り込みの鞭と同じ打ち方で1回振る（蓄電は使わない・手番の外の動作・経路 `Backswing`）（engine の `Backswing`）
 
-    // --- 第319期で足した札（ソムの版 `UnitCatalog.SomWSa` ／ `SomWSa3` ／ `SomWSb`・指示書 design/PHASE319_SOM_THROW_SPEC.md §3）。保持者 0 枚。どれも**札そのものは挙動を持たない** ---
+    // --- 第319期で足した札（ソムの版 `UnitCatalog.SomWSa` ／ `SomWSa3` ／ `SomWSb`・指示書 design/PHASE319_SOM_THROW_SPEC.md §3）。保持者 0 枚（第320期から `BeastThrowBackfire` は規定のソムが持つ）。どれも**札そのものは挙動を持たない** ---
     BeastStandLate,    // 序盤は立たない（WS-a・ソム・`BeastStand` と組む）: 戦のターンが `BetrayedTrait.StandLateTurns`（2）以下の手番の頭の喚び出しでは獣を立たせず、E2 のまま湧く席でその場で弾ける（投げない）。T3 から立つ（`BetrayedTrait.Call`）
     BeastStandLate3,   // 序盤は立たない・T3 まで（WS-a3・ソム・`BeastStand` と組む）: `BeastStandLate` の境を T3 に（T4 から立つ）
     BeastThrowBackfire, // 投げて暴発（WS-b・ソム・`BeastBetray` と組む）: 立った獣が投げた雷を誰も受け止めなかったら（共鳴返し ／ 打ち返し ／ 避雷針のどれにもならなかったら）、雷を今のまま処理した直後に、投げた獣がその場で暴発する（起こし手はソム・光になる・獣の死に数える・倒れた扱いにしない）（engine の `Backfire`）

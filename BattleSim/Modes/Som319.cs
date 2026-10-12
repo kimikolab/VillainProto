@@ -20,7 +20,8 @@ using S318 = Som318Diag;
 //     dotnet run --project BattleSim -c Release 0 som319 check       # 自己検査（§7）
 //
 // **予測のファイルが無ければ本測定（boards ／ compare ／ grid）を走らせない**（R397・`.tmp/p319/predict.md`）。
-// 台の駒は第319期の規定のまま（固定していない）——規定が動いたら、この器具は第319期の規定に固定し直すこと。
+// 第320期: 規定のソムが WS-b になったので、台の駒は第319期の規定（CR-b・`UnitCatalog.SomH319`）に固定した（`compare` は `CompareBuildsH319`）。
+// 検査の手助け（`One` ／ `TurnStart` ／ `T` ／ `Stood` ／ `AfterEv`）は `som320` が借りる（中身は変えていない）。
 // 版の名前はコンソールの文字コードを避けて ASCII で引ける（`old` ＝ 旧 BD-E2・`base` ＝ 規定）。
 // =====================================================================================
 static class Som319Diag
@@ -69,7 +70,7 @@ static class Som319Diag
 
     internal static readonly Ver[] Vers =
     {
-        new("規定", "base", UnitCatalog.Som, UnitCatalog.Shiga),
+        new("規定", "base", UnitCatalog.SomH319, UnitCatalog.Shiga),
         new("旧 BD-E2", "old", UnitCatalog.SomH318, UnitCatalog.ShigaH318),
         new("WS-a", "WS-a", UnitCatalog.SomWSa, UnitCatalog.Shiga),
         new("WS-a3", "WS-a3", UnitCatalog.SomWSa3, UnitCatalog.Shiga),
@@ -81,7 +82,7 @@ static class Som319Diag
     /// <summary>台（規定の駒）を版に替える。</summary>
     internal static Formation Apply(Formation f, Ver v)
     {
-        var g = ReferenceEquals(v.Som, UnitCatalog.Som) ? f : S309.Swap(f, UnitCatalog.Som, v.Som);
+        var g = ReferenceEquals(v.Som, UnitCatalog.SomH319) ? f : S309.Swap(f, UnitCatalog.SomH319, v.Som);
         return ReferenceEquals(v.Shiga, UnitCatalog.Shiga) ? g : S309.Swap(g, UnitCatalog.Shiga, v.Shiga);
     }
 
@@ -90,9 +91,9 @@ static class Som319Diag
     static S287.Wave Wave2 => Waves[6];
 
     /// <summary>第318期の器具の台（第318期の規定に固定してある）を規定の駒に戻す。</summary>
-    static Formation Unpin(Formation f) => S309.Swap(S309.Swap(f, UnitCatalog.SomH318, UnitCatalog.Som), UnitCatalog.ShigaH318, UnitCatalog.Shiga);
+    static Formation Unpin(Formation f) => S309.Swap(S309.Swap(f, UnitCatalog.SomH318, UnitCatalog.SomH319), UnitCatalog.ShigaH318, UnitCatalog.Shiga);
     /// <summary>格子の候補（第317期までの器具が旧に固定した駒）を規定の駒に戻す。</summary>
-    static UnitDef Cur(UnitDef d) => ReferenceEquals(d, UnitCatalog.ShigaSWa) ? UnitCatalog.Shiga : ReferenceEquals(d, UnitCatalog.DohaH316) ? UnitCatalog.Doha : ReferenceEquals(d, UnitCatalog.SomH317) ? UnitCatalog.Som : d;
+    static UnitDef Cur(UnitDef d) => ReferenceEquals(d, UnitCatalog.ShigaSWa) ? UnitCatalog.Shiga : ReferenceEquals(d, UnitCatalog.DohaH316) ? UnitCatalog.Doha : ReferenceEquals(d, UnitCatalog.SomH317) ? UnitCatalog.SomH319 : d;
 
     /// <summary>§5-2 の代表台（第318期と同じ7台・席は同じ・駒は規定）。</summary>
     internal static (string Name, Formation F)[] Boards() => S318.Boards().Select(b => (b.Name, Unpin(b.F))).ToArray();
@@ -501,7 +502,7 @@ static class Som319Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var vers = Pick(only);
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuildsH319().ToArray();   // 第320期: 第319期の規定（CR-b・`SomH319`）に固定
         int nw = EnemyCatalog.Stages.Count;
         var grids = vers.Select(v =>
         {
@@ -531,7 +532,7 @@ static class Som319Diag
             for (int ri = 0; ri < rows.Length; ri++)
             {
                 bool any = Enumerable.Range(0, nw).Any(w => g[ri, w] != b[ri, w]);
-                bool holds = rows[ri].F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.Som));
+                bool holds = rows[ri].F.Occupied().Any(o => ReferenceEquals(o.Def, UnitCatalog.SomH319));
                 if (any && !holds) outside++;
                 if (!any) continue;
                 movedRows++;
@@ -578,7 +579,7 @@ static class Som319Diag
         int k = w.Boss ? 2 : 3, need = w.Boss ? 1 : 5;
         var lu = S293.Combos(pool, k);
         var boards = new List<UnitDef[]>();
-        foreach (var t in lu) boards.AddRange(B283.Perms(fixedBase.Append(UnitCatalog.Som).Concat(t).ToArray()));
+        foreach (var t in lu) boards.AddRange(B283.Perms(fixedBase.Append(UnitCatalog.SomH319).Concat(t).ToArray()));
         var res = new (int Wins, long WinT, int Ctl)?[boards.Count];
         int cutPass = 0;
         static int W(Formation f, S287.Wave w, int n, out long wt)
@@ -674,19 +675,19 @@ static class Som319Diag
         return (ctx, p, enemy);
     }
 
-    static UnitTally T(BattleContext ctx, UnitState u)
+    internal static UnitTally T(BattleContext ctx, UnitState u)
     {
         var d = (Dictionary<string, UnitTally>)typeof(BattleContext).GetProperty("TallyByUnit", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(ctx)!;
         return d.TryGetValue(u.Def.Id, out var t) ? t : new UnitTally();
     }
 
     static List<UnitState> WaveN(int i) => BattleEngine.Materialize(EnemyCatalog.Stages[i].Enemy, BattleContext.EnemyTeam);
-    static void TurnStart(BattleContext ctx, UnitState som) { foreach (var t in som.Traits.ToList()) t.OnTurnStart(ctx, som); }
-    static List<UnitState> Stood(BattleContext ctx, UnitState som) => ctx.AllUnits.Where(u => u.IsAlive && BetrayedTrait.IsFodder(u) && u.RawCounter(BattleContext.StandOwnerKey) == som.InstanceId + 1).ToList();
-    static List<BattleEvent> AfterEv(BattleContext ctx, int ev0) => ctx.Events.Skip(ev0).ToList();
+    internal static void TurnStart(BattleContext ctx, UnitState som) { foreach (var t in som.Traits.ToList()) t.OnTurnStart(ctx, som); }
+    internal static List<UnitState> Stood(BattleContext ctx, UnitState som) => ctx.AllUnits.Where(u => u.IsAlive && BetrayedTrait.IsFodder(u) && u.RawCounter(BattleContext.StandOwnerKey) == som.InstanceId + 1).ToList();
+    internal static List<BattleEvent> AfterEv(BattleContext ctx, int ev0) => ctx.Events.Skip(ev0).ToList();
 
     /// <summary>前1 に味方1体（狙われるのはその1体）・後3 にソムの版・前の味方以外は HP 半分（光が降る先）。<paramref name="charged"/> なら前の味方を先に帯電させる。</summary>
-    static (BattleContext Ctx, UnitState Som, UnitState Ally, List<UnitState> E) One(UnitDef ally, UnitDef som, bool charged, int wave = 2, int turn = 5)
+    internal static (BattleContext Ctx, UnitState Som, UnitState Ally, List<UnitState> E) One(UnitDef ally, UnitDef som, bool charged, int wave = 2, int turn = 5)
     {
         var f = Formation.Build(front1: ally, back3: som);
         var (ctx, p, e) = Board(f, WaveN(wave), turn);
@@ -703,7 +704,7 @@ static class Som319Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef som = UnitCatalog.Som, shiga = UnitCatalog.Shiga, wsa = UnitCatalog.SomWSa, wsa3 = UnitCatalog.SomWSa3, wsb = UnitCatalog.SomWSb;
+        UnitDef som = UnitCatalog.SomH319, shiga = UnitCatalog.Shiga, wsa = UnitCatalog.SomWSa, wsa3 = UnitCatalog.SomWSa3, wsb = UnitCatalog.SomWSb;
 
         // (a) 段0: 規定のソム ＝ CR-b・規定のシガ ＝ SG・旧の定義（`SomH318` ／ `ShigaH318`）が残っている・固定の口
         {
@@ -717,7 +718,7 @@ static class Som319Diag
             bool ds = shiga.Traits.SequenceEqual(UnitCatalog.ShigaSG.Traits) && shiga.Traits.SequenceEqual(hs.Traits.Append(TraitId.BetrayBackswing))
                 && hs.Traits.SequenceEqual(UnitCatalog.ShigaSWa.Traits.Concat(new[] { TraitId.FearNoStun, TraitId.ScourgeDaunt }))
                 && shiga.PlusText == hs.PlusText + "。背いた獣の雷を浴びると、その場で打ち返す" && shiga.MinusText == hs.MinusText && shiga.MaxHp == 52 && shiga.Attack == 9 && shiga.Speed == 3;
-            bool roster = UnitCatalog.All.Contains(som) && UnitCatalog.All.Contains(shiga) && UnitCatalog.All.Count == 52
+            bool roster = UnitCatalog.All.Contains(UnitCatalog.Som) && ReferenceEquals(PinS319(UnitCatalog.Som), som) && UnitCatalog.All.Contains(shiga) && UnitCatalog.All.Count == 52   // 第320期: 規定は WS-b・`som` は第319期の規定（`SomH319`）
                 && new[] { h, hs, UnitCatalog.SomH317, wsa, wsa3, wsb, UnitCatalog.SomCRb, UnitCatalog.ShigaSG }.All(x => !UnitCatalog.Everyone.Contains(x));
             bool pin = ReferenceEquals(PinSS318(som), h) && ReferenceEquals(PinSS318(shiga), hs)
                 && ReferenceEquals(PinS317(som), UnitCatalog.SomH317) && ReferenceEquals(PinS317(h), UnitCatalog.SomH317) && ReferenceEquals(PinS317(shiga), hs)
@@ -862,7 +863,7 @@ static class Som319Diag
                 && BetrayedTrait.StandLateTurns == 2 && BetrayedTrait.StandLateTurns3 == 3;
             bool dflt = !UnitCatalog.Kata.Traits.Contains(TraitId.LightningRod) && UnitCatalog.Fodder.MaxHp == 12 && UnitCatalog.Fodder.Attack == 0 && UnitCatalog.Fodder.Speed == 1
                 && !som.Traits.Any(t => t is TraitId.BeastStandLate or TraitId.BeastStandLate3 or TraitId.BeastThrowBackfire)
-                && UnitCatalog.Everyone.All(d => !d.Traits.Any(t => t is TraitId.BeastStandLate or TraitId.BeastStandLate3 or TraitId.BeastThrowBackfire));
+                && UnitCatalog.Everyone.All(d => !d.Traits.Any(t => t is TraitId.BeastStandLate or TraitId.BeastStandLate3) && (ReferenceEquals(d, UnitCatalog.Som) || !d.Traits.Contains(TraitId.BeastThrowBackfire)));   // 第320期: `BeastThrowBackfire` は規定のソムが持つ
             Expect("(h) 版の定義（WS-a ＝ 規定 ＋ `BeastStandLate`・WS-a3 ＝ 規定 ＋ `BeastStandLate3`・WS-b ＝ 規定 ＋ `BeastThrowBackfire`・文面）・新しい札の保持者は `Everyone` に 0 枚・獣とカタは動かない",
                 defs && dflt, $"版 {defs}・規定 {dflt}");
         }

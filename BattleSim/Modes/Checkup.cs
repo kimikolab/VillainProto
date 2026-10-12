@@ -433,7 +433,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.BetrayBackswing]   = (HcPlusL, "打ち返し（第318期・シガ SG）: 帯電していないシガに裏切りの雷が落ちたら、感電が付いたうえでその場で投げた獣へ鞭を1回振る（蓄電は使わない・手番の外・粛 ／ 痺れで止まる）。第319期からシガの規定"),
         [TraitId.BeastStandLate]    = (HcPlusL, "序盤は立たない（第319期・ソム WS-a）: 戦の T1〜T2 の喚び出しでは獣を立たせず、湧く席でその場で弾けさせる（投げない）。T3 から立つ。保持者 0 枚"),
         [TraitId.BeastStandLate3]   = (HcPlusL, "序盤は立たない・T3 まで（第319期・ソム WS-a3）: WS-a の境を T3 に（T4 から立つ）。保持者 0 枚"),
-        [TraitId.BeastThrowBackfire] = (HcPlusL, "投げて暴発（第319期・ソム WS-b）: 立った獣の雷を誰も受け止めなかったら（共鳴返し ／ 打ち返しにならなかったら）、投げた直後に獣がその場で暴発する（起こし手はソム・光になる・獣の死に数える）。保持者 0 枚"),
+        [TraitId.BeastThrowBackfire] = (HcPlusL, "投げて暴発（第319期・ソム WS-b）: 立った獣の雷を誰も受け止めなかったら（共鳴返し ／ 打ち返しにならなかったら）、投げた直後に獣がその場で暴発する（起こし手はソム・光になる・獣の死に数える）。第320期からソムの規定"),
         [TraitId.MireSlam]        = (HcPlusL,  "濃縮の手番の最後に寄せ先（感電している敵を優先）へ攻撃力ぶんの一撃（第218期・M1・保持者 0 枚）"),
         [TraitId.MireConduct]     = (HcPlusL,  "叩きつける相手が感電していれば、同じ一撃が印を持つ敵すべてへ走る（第218期・M2・保持者 0 枚）"),
         [TraitId.MireDull]        = (HcPlusL,  "印を持つ敵の与ダメが印1つにつき −10%（上限 −40%）（第218期・M3・保持者 0 枚）"),

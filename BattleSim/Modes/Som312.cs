@@ -288,7 +288,7 @@ static class Som312Diag
         }
         // (d) 試遊の2台・`compare` の行数
         {
-            var pl = PlaytestH316;
+            var pl = PlaytestH316.Take(12).ToArray();   // 第320期: 試遊の末尾に3行（打ち返し ／ 追い打ち ／ 瓦礫）を足した——第319期までの12行で見る
             var shield = Playtest(S309.Shield); var heavy = Playtest(S309.ShieldHeavy);
             bool SameBut(Formation a, Formation b) => Enumerable.Range(0, 5).All(i => ReferenceEquals(a[i], b[i]) || ReferenceEquals(a[i], UnitCatalog.Kubi) && ReferenceEquals(b[i], UnitCatalog.ShigaSWa));
             bool ok = pl.Length == 12 && pl.Take(10).Select(r => r.Name).SequenceEqual(S309.Playtest308.Concat(new[] { S309.Shield, S309.ShieldHeavy }))
