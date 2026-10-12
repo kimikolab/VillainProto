@@ -780,10 +780,15 @@ public enum TraitId
     BeastDeathCount,   // 獣の弾けを敵の死に数える（BD・ソム）: 背いた獣が弾けたとき（喚び出しの場 ／ 群れ ／ 緊急 ／ 立った獣が弾けた ／ 避雷針）、起こし手を倒した駒として死の読み手（倒した駒の `OnKill`・ソムの側の `OnAnyDeath`）に渡す。外す読み手は engine の `BeastDeathSkips`（撃破数で際限なく育つ札）。立った獣は弾けたら消える（engine の `CountBeastDeath`）
     BeastDeathCap,     // 獣の死は1回に1体（BD の上限の版・`BeastDeathCount` と組む）: 1回の喚び出し（群れの一斉の弾け）で死に数えるのは先頭の1体だけ
 
-    // --- 第318期で足した札（ソムの版 `UnitCatalog.SomCRa` ／ `SomCRb`・シガの版 `ShigaSG`・指示書 design/PHASE318_SOM_RESONANCE_SPEC.md §3）。保持者 0 枚。どれも**札そのものは挙動を持たない** ---
+    // --- 第318期で足した札（ソムの版 `UnitCatalog.SomCRa` ／ `SomCRb`・シガの版 `ShigaSG`・指示書 design/PHASE318_SOM_RESONANCE_SPEC.md §3）。第319期から規定のソム（CR-b）／ シガ（SG）が持つ。どれも**札そのものは挙動を持たない** ---
     BeastResonance,    // 共鳴返し（CR-a・ソム・`BeastBetray` と組む）: 裏切りの雷が向かった味方がすでに帯電していれば、雷は付かずに投げた獣へ跳ね返り、獣の感電がその場で弾ける（起こし手は雷を受けた味方・獣は消えて獣の死に数える）。手番の外の動作として粛で止まる（痺れでは止まらない・経路 `Resonance`）（engine の `Resonate`・判定は糸より前）
     BeastResonanceArc, // 共鳴返し・強（CR-b・ソム・`BeastResonance` と組む）: 跳ね返った雷は、獣を弾けさせる前に獣の隣の敵（駒のみ・糸玉は除く）すべてに感電を付ける（書き手は雷を受けた味方）
     BetrayBackswing,   // 打ち返し（SG・シガ）: 帯電していないシガに裏切りの雷が落ちたら、感電が付いた（蓄電 +1）うえで、その場で投げた獣を主目標に割り込みの鞭と同じ打ち方で1回振る（蓄電は使わない・手番の外の動作・経路 `Backswing`）（engine の `Backswing`）
+
+    // --- 第319期で足した札（ソムの版 `UnitCatalog.SomWSa` ／ `SomWSa3` ／ `SomWSb`・指示書 design/PHASE319_SOM_THROW_SPEC.md §3）。保持者 0 枚。どれも**札そのものは挙動を持たない** ---
+    BeastStandLate,    // 序盤は立たない（WS-a・ソム・`BeastStand` と組む）: 戦のターンが `BetrayedTrait.StandLateTurns`（2）以下の手番の頭の喚び出しでは獣を立たせず、E2 のまま湧く席でその場で弾ける（投げない）。T3 から立つ（`BetrayedTrait.Call`）
+    BeastStandLate3,   // 序盤は立たない・T3 まで（WS-a3・ソム・`BeastStand` と組む）: `BeastStandLate` の境を T3 に（T4 から立つ）
+    BeastThrowBackfire, // 投げて暴発（WS-b・ソム・`BeastBetray` と組む）: 立った獣が投げた雷を誰も受け止めなかったら（共鳴返し ／ 打ち返し ／ 避雷針のどれにもならなかったら）、雷を今のまま処理した直後に、投げた獣がその場で暴発する（起こし手はソム・光になる・獣の死に数える・倒れた扱いにしない）（engine の `Backfire`）
 
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
@@ -10852,6 +10857,13 @@ public sealed class BetrayedTrait : Trait
 
     public override void OnTurnStart(BattleContext ctx, UnitState self) => Call(ctx, self);
 
+    /// <summary>WS-a の境（第319期）: 戦のターンがこれ以下の喚び出しでは獣を立たせない（`BeastStandLate` は 2・`BeastStandLate3` は 3）。</summary>
+    public const int StandLateTurns = 2, StandLateTurns3 = 3;
+
+    /// <summary>第319期（WS-a ／ WS-a3）: いまの喚び出しが「序盤は立たない」の範囲か。札が無ければ偽（比較2つ）。</summary>
+    static bool StandsLate(BattleContext ctx, UnitState self) =>
+        (self.HasTrait(TraitId.BeastStandLate3) && ctx.Turn <= StandLateTurns3) || (self.HasTrait(TraitId.BeastStandLate) && ctx.Turn <= StandLateTurns);
+
     /// <summary>
     /// 喚び出しの本体（第276期に <see cref="OnTurnStart"/> から切り出した。<b>中身は1文字も変えていない</b>
     /// ——旧ソムを含む戦の台本の指紋が切り出しの前後で一致することが門）。湧いた餌を返す（湧かなければ null）。
@@ -10865,7 +10877,8 @@ public sealed class BetrayedTrait : Trait
 
         // 第314期（SB-a ／ SB-b・design/PHASE314_SOM_STANCE_SPEC.md §2）: 「同時に1体」の判定を外し、獣ごとに席を決めて弾ける ／ 立つを分ける（engine の `StandBeasts`）。
         // 立った獣の帯電と雷の印は呼び手（`BetrayedShockTrait`）の `dress` が付ける。保持者でなければ札の比較1つで素通り。
-        if (self.HasTrait(TraitId.BeastStand))
+        // 第319期（WS-a ／ WS-a3・`BeastStandLate`）: 戦の序盤（T ≦ 境）の喚び出しは立たせず、下の E2 の口（その場で弾ける・投げない）へ落とす。札が無ければ比較1つで素通り。
+        if (self.HasTrait(TraitId.BeastStand) && !StandsLate(ctx, self))
         {
             ctx.StandBeasts(self, foe, FodderSlotOf(ctx.ShapeOfTeam(foe)), dress);
             return null;
@@ -17422,6 +17435,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.BeastResonance),            // 第318期（共鳴返し CR-a・印だけ）
         new MarkOnlyTrait(TraitId.BeastResonanceArc),         // 第318期（共鳴返し・強 CR-b・印だけ）
         new MarkOnlyTrait(TraitId.BetrayBackswing),           // 第318期（シガの打ち返し SG・印だけ）
+        new MarkOnlyTrait(TraitId.BeastStandLate),            // 第319期（序盤は立たない WS-a・印だけ）
+        new MarkOnlyTrait(TraitId.BeastStandLate3),           // 第319期（序盤は立たない・T3 まで WS-a3・印だけ）
+        new MarkOnlyTrait(TraitId.BeastThrowBackfire),        // 第319期（投げて暴発 WS-b・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

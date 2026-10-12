@@ -1872,7 +1872,17 @@ public sealed class BattleContext
                 foreach (int team in popped.Select(q => q.TeamId).Distinct().ToList())
                     AfterChain(team, popped.Where(q => q.TeamId == team).ToList(), ini2);
         }
-        if (bdPopped is not null) foreach (var (bx, bi, bs) in bdPopped) CountBeastDeaths(bs, new List<UnitState> { bx }, bi, 2);   // 第317期（BD）
+        if (bdPopped is not null)
+        {
+            // 第319期（計数のみ）: 立っていた獣が後で弾けた連鎖（打ち返しの鞭の中は除く）の数と大きさ。起こし手がソムの味方（ソム自身を除く）なら「味方の一撃」。
+            if (!_backswingNow)
+            {
+                UnitTally st = TallyOf(bdPopped[0].Som);
+                st.StandPopChains++; st.StandPopChainUnits += size;
+                if (initiator is not null && initiator != bdPopped[0].Som && initiator.TeamId == bdPopped[0].Som.TeamId) { st.StandPopChainsAlly++; st.StandPopChainUnitsAlly += size; }
+            }
+            foreach (var (bx, bi, bs) in bdPopped) CountBeastDeaths(bs, new List<UnitState> { bx }, bi, 2);   // 第317期（BD）
+        }
     }
 
     /// <summary>
@@ -2265,8 +2275,17 @@ public sealed class BattleContext
                     if (ThrowCensus && !som.HasTrait(TraitId.BeastBetray)) NoteThrowCensus(som, f);   // 第317期 Phase 0（**計数のみ**・計数器が立っている戦だけ）
                 }
                 // 第317期（BT-a・`BeastBetray`）: 立った獣は、立った直後にこちらへ雷を投げる（立った順＝湧く席の順に1体ずつ）。札が無ければ比較1つで素通り。
+                // 第319期（WS-b・`BeastThrowBackfire`）: 投げた雷を誰も受け止めず獣が盤に残っていれば、その直後に獣が暴発する（1体ずつ「投げる → 受け止め ／ 暴発」）。札が無ければ比較1つで素通り。
                 if (stoodNow is not null && som.HasTrait(TraitId.BeastBetray))
-                    foreach (UnitState f in stoodNow) BeastThrow(som, f);
+                {
+                    bool backfire = som.HasTrait(TraitId.BeastThrowBackfire);
+                    foreach (UnitState f in stoodNow)
+                    {
+                        bool alive0 = f.IsAlive;
+                        BeastThrow(som, f);
+                        if (backfire && alive0 && f.IsAlive) Backfire(som, f);
+                    }
+                }
             }
         }
         int alive = 0;
@@ -2398,6 +2417,9 @@ public sealed class BattleContext
     /// <summary>第318期（<b>計数のみ</b>）: 裏切りの雷が向かった味方が帯電していたか（席 ／ 粛 ／ 糸の保持者）・投げた獣の隣の敵の数とうち帯電していない数。乱数を引かない・盤面を動かさない。</summary>
     void NoteThrowTarget(UnitTally t, UnitState beast, UnitState target, bool charged)
     {
+        int tk = Math.Clamp(_turn, 0, 8);   // 第319期（計数のみ）: 戦のターンごと
+        (t.BtThrownT ??= new long[9])[tk]++;
+        if (charged) (t.BtAtChargedT ??= new long[9])[tk]++;
         if (charged)
         {
             t.BtAtCharged++;
@@ -2483,11 +2505,41 @@ public sealed class BattleContext
             _shockWhipActor = shiga;
             _shockWhipMult = 1;
             _forcedTarget = beast;
+            bool prevSwing = _backswingNow;
+            _backswingNow = true;   // 第319期（計数のみ）
             try { PerformAttack(shiga); }
-            finally { _forcedTarget = null; _shockWhipActor = prevActor; _shockWhipMult = prevMult; }
+            finally { _forcedTarget = null; _shockWhipActor = prevActor; _shockWhipMult = prevMult; _backswingNow = prevSwing; }
             t.SgDealt += ht.DamageToEnemy - before;
             t.SgWhipNested += ht.SwNested - nested0;   // 打ち返しの鞭の連鎖の後の割り込み（`ShockWhip`）は、打ち返しが割り込みの中なので入れ子で止まる（いまの規則どおり）
         });
+    }
+
+    /// <summary>打ち返しの鞭の中か（第319期・<b>計数のみ</b>——立っていた獣が後で弾けた連鎖から、打ち返しで弾けた分を外す）。</summary>
+    bool _backswingNow;
+
+    /// <summary>
+    /// 投げて暴発（第319期・WS-b `BeastThrowBackfire`）: 雷を投げた獣 <paramref name="beast"/> が、誰にも受け止められずに盤に残っていたら、その場で暴発する。
+    /// 起こし手はソム（光になる）・<b>倒れた扱いにしない</b>（HP 0 にして消す・`HandleDeath` を通さない——SB-b の暴発 ／ 避雷針 ／ 共鳴返しと同じ）。
+    /// 帯電していれば <c>ShockTrigger(獣, ソム, 0)</c>、獣の死に数える（種類 5）。表示は `BeastBurst 投げて暴発`（表示専用）。<b>乱数を引かない。</b>
+    /// </summary>
+    void Backfire(UnitState som, UnitState beast)
+    {
+        UnitTally t = TallyOf(som);
+        t.WsBackfire++;
+        (t.WsBackfireT ??= new long[9])[Math.Clamp(_turn, 0, 8)]++;
+        if (_verbose) Emit(new BattleEvent { Kind = BattleEventKind.BeastBurst, Turn = _turn, ActorId = som.InstanceId, TargetId = beast.InstanceId, Slot = beast.Slot, Team = beast.TeamId, Amount = 0, Text = BeastBurstLabels.Backfire });
+        Log($"    {beast.Name} は受け止める者のいない雷の残りに耐えきれず、暴発した", LogKind.Trigger, som);
+        bool charged = beast.RawCounter(StatusKeys.Shock) > 0;
+        beast.Hp = 0;   // 消える（倒れた扱いにしない）
+        if (!charged) t.WsBackfireDry++;
+        else
+        {
+            _shockLive = true;
+            long u0 = t.ShockTriggeredUnits;
+            ShockTrigger(beast, som, 0);
+            t.WsBackfireUnits += t.ShockTriggeredUnits - u0;
+        }
+        if (_bdLive) CountBeastDeaths(som, new List<UnitState> { beast }, som, 5);
     }
 
     /// <summary>避雷針（第317期・BT-b ／ BT-c）: カタ <paramref name="rod"/> が雷を受け止め、投げた獣の上に落とし直す。獣は盤から消え（倒れた扱いにしない）、帯電していれば連鎖の起点になる（起こし手はカタ）。</summary>
@@ -2524,7 +2576,7 @@ public sealed class BattleContext
     /// 弾けた獣を「味方が敵を倒した」として死の読み手に渡す（第317期・BD・<paramref name="som"/> が <see cref="TraitId.BeastDeathCount"/> を持つときだけ）。
     /// 渡すのは 倒した駒（<paramref name="killer"/> ＝ 起こし手・獣の敵の側で生きていれば）の <c>OnKill</c> → ソムの側の生きている駒すべての <c>OnAnyDeath</c>（`HandleDeath` と同じ順）。
     /// <b>渡さないもの</b>: 獣の側（敵陣）の <c>OnAnyDeath</c> ／ <c>OnAllyDeath</c>（蘇生など）・獣自身の <c>OnDeath</c>・撃破の数（`Kills`）・`Death` の出来事・波の終わりの判定・<see cref="BeastDeathSkips"/>。
-    /// <paramref name="kind"/> は計数のみ（0 喚び出しの場 ／ 1 緊急 ／ 2 立った獣が弾けた ／ 3 避雷針 ／ 4 共鳴返し（第318期））。上限の版（<see cref="TraitId.BeastDeathCap"/>）は先頭の1体だけ。
+    /// <paramref name="kind"/> は計数のみ（0 喚び出しの場 ／ 1 緊急 ／ 2 立った獣が弾けた ／ 3 避雷針 ／ 4 共鳴返し（第318期）／ 5 投げて暴発（第319期））。上限の版（<see cref="TraitId.BeastDeathCap"/>）は先頭の1体だけ。
     /// </summary>
     void CountBeastDeaths(UnitState som, List<UnitState> beasts, UnitState? killer, int kind)
     {
@@ -2536,7 +2588,7 @@ public sealed class BattleContext
         {
             UnitState beast = beasts[i];
             t.BdCounted++;
-            (t.BdKind ??= new long[5])[kind]++;   // 第318期: 4 共鳴返し
+            (t.BdKind ??= new long[6])[kind]++;   // 第318期: 4 共鳴返し ／ 第319期: 5 投げて暴発
             int foe = beast.TeamId;
             if (killer is not null && killer.IsAlive && killer.TeamId != foe)
                 foreach (Trait tr in killer.Traits.ToList())

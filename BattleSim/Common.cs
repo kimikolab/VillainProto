@@ -312,11 +312,31 @@ public static UnitDef PinKataTou311(UnitDef d) =>
 public static UnitDef PinDS316(UnitDef d) =>
     ReferenceEquals(d, UnitCatalog.Doha) ? UnitCatalog.DohaH316 : ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaSWa : PinS317(d);
 
-/// <summary>第318期: 規定のソム（BD-E2）を第312〜317期の規定（`SomH317`）に替える。ほかの駒はそのまま返す。</summary>
-public static UnitDef PinS317(UnitDef d) => ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH317 : d;
+/// <summary>第318期: 規定のソム（BD-E2）を第312〜317期の規定（`SomH317`）に替える。ほかの駒はそのまま返す。
+/// 第319期: 第318期の規定のソム（`SomH318`）も同じ旧へ。規定のシガ（SG）は第317〜318期の規定（`ShigaH318`）へ替える（第316期までの口は `PinDS316` が先に `ShigaSWa` へ替える）。</summary>
+public static UnitDef PinS317(UnitDef d) =>
+    ReferenceEquals(d, UnitCatalog.Som) || ReferenceEquals(d, UnitCatalog.SomH318) ? UnitCatalog.SomH317 : ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaH318 : d;
 
-/// <summary>第318期: 規定のソムか、第312〜317期の規定（`SomH317`・`PinS317` を通った後）か。第311期までに固定する口（`Pin308`〜`Pin311` ほか）が使う。</summary>
-public static bool IsSomNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Som) || ReferenceEquals(d, UnitCatalog.SomH317);
+/// <summary>第318期: 規定のソムか、第312〜317期の規定（`SomH317`・`PinS317` を通った後）か。第311期までに固定する口（`Pin308`〜`Pin311` ほか）が使う。第319期: 第318期の規定（`SomH318`）も。</summary>
+public static bool IsSomNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Som) || ReferenceEquals(d, UnitCatalog.SomH317) || ReferenceEquals(d, UnitCatalog.SomH318);
+
+/// <summary>第319期: 規定のソム（CR-b）／ シガ（SG）を第318期の規定（`SomH318` ／ `ShigaH318`）に替える。ほかの駒はそのまま返す。</summary>
+public static UnitDef PinSS318(UnitDef d) =>
+    ReferenceEquals(d, UnitCatalog.Som) ? UnitCatalog.SomH318 : ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaH318 : d;
+
+/// <summary>第319期: ソム ＝ CR-b・シガ ＝ SG を規定にした。第318期の規定の駒で測った器具（`som318`）はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin318(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinSS318(d);
+    return g;
+}
+
+/// <summary>第319期: `CompareBuilds()` のソム ／ シガを第318期の規定に替えた写し（`som318` が使う）。</summary>
+public static (string Name, Formation F)[] CompareBuildsH318() => CompareBuilds().Select(r => (r.Name, Pin318(r.F))).ToArray();
+
+/// <summary>第319期: `Presets.Playtest` のソム ／ シガを第318期の規定に替えた写し（行の数と並びはそのまま）。</summary>
+public static (string Name, Formation F)[] PlaytestH318 => Presets.Playtest.Select(r => (r.Name, Pin318(r.F))).ToArray();
 
 /// <summary>
 /// 第318期: ソム ＝ BD-E2 を規定にした。第317期の規定の駒で測った器具（`som317`）はこれを通す（ソム → `SomH317`）。陣形とレリックは保つ。

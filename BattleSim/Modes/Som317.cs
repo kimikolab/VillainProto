@@ -103,7 +103,7 @@ static class Som317Diag
     static Formation Playtest(string n) => PlaytestH317.First(r => r.Name == n).F;
     static Formation RowF(string n) => CompareBuildsH317().First(r => r.Name == n).F;
     /// <summary>第316期までの器具（`S307.Order` ／ `S307.BossPool` ほか）は第317期にドハ ／ シガを旧に固定したので、この器具は規定の駒に戻して使う。</summary>
-    static UnitDef Cur(UnitDef d) => ReferenceEquals(d, UnitCatalog.ShigaSWa) ? UnitCatalog.Shiga : ReferenceEquals(d, UnitCatalog.DohaH316) ? UnitCatalog.Doha : d;
+    static UnitDef Cur(UnitDef d) => ReferenceEquals(d, UnitCatalog.ShigaSWa) ? UnitCatalog.ShigaH318 : ReferenceEquals(d, UnitCatalog.DohaH316) ? UnitCatalog.Doha : d;   // 第319期: シガは第317〜318期の規定（`ShigaH318`）へ
     static Formation WinSeat() => B283.Seat(S307.Order(S307.WinBoard).Select(Cur).ToArray());
     internal const string HagiBoard = "光の盾 クビ→ハギ";
 
@@ -799,12 +799,12 @@ static class Som317Diag
                 && dps.Traits.SequenceEqual(h316.Traits.Concat(new[] { TraitId.SharePush, TraitId.SharePushPower, TraitId.SharePushStrikers }))
                 && UnitCatalog.DohaDPb.Traits.SequenceEqual(h316.Traits.Concat(new[] { TraitId.SharePush, TraitId.SharePushPower }))
                 && UnitCatalog.All.Contains(doha) && !UnitCatalog.Everyone.Contains(h316) && !UnitCatalog.Everyone.Contains(dps);
-            var sh = UnitCatalog.Shiga; var swa = UnitCatalog.ShigaSWa;
+            var sh = UnitCatalog.ShigaH318; var swa = UnitCatalog.ShigaSWa;   // 第319期: 第317〜318期の規定のシガは `ShigaH318`
             bool s = sh.Traits.SequenceEqual(swa.Traits.Concat(new[] { TraitId.FearNoStun, TraitId.ScourgeDaunt })) && sh.MaxHp == 52 && sh.Attack == 9 && sh.Speed == 3 && sh.Pattern == AttackPattern.Sweep
                 && sh.PlusText == swa.PlusText + "。自分の雷では痺れない" && sh.MinusText == "感電していないとき、動ける敵を主目標に打つと、怖気づいて自分が1ターン動けなくなる（萎縮した敵は動けない敵とみなす）"
                 && swa.MinusText == UnitCatalog.ShigaMinusH316 && swa.Traits.Count == 8 && swa.Traits[^1] == TraitId.ShockWhipChain
                 && UnitCatalog.ShigaSFa.Traits.SequenceEqual(swa.Traits.Append(TraitId.FearNoStun)) && UnitCatalog.ShigaSGf.Traits.SequenceEqual(swa.Traits.Append(TraitId.ShameSkipFodder))
-                && UnitCatalog.All.Contains(sh) && !UnitCatalog.Everyone.Contains(swa) && UnitCatalog.All.Count == 52;
+                && UnitCatalog.All.Contains(UnitCatalog.Shiga) && !UnitCatalog.Everyone.Contains(swa) && UnitCatalog.All.Count == 52;
             bool pin = ReferenceEquals(PinDS316(UnitCatalog.Doha), h316) && ReferenceEquals(PinDS316(UnitCatalog.Shiga), swa) && ReferenceEquals(PinKataTou311(UnitCatalog.Shiga), swa)
                 && Pin316(Presets.Playtest.First(r => r.Name == "試遊・感電 雷の型").F).Occupied().Any(o => ReferenceEquals(o.Def, h316));
             Expect("(a) 段0: 規定のドハ ＝ DP-s（札 ／ 手番 ／ 文面が `DohaDPs` と同じ）・規定のシガ ＝ SF-AC（SW-a ＋ `FearNoStun` ＋ `ScourgeDaunt`・文面）・旧の定義 `DohaH316` ／ `ShigaSWa` が `Everyone` の外に残り、版はそこから作る・`Pin316` が旧へ替える",
@@ -813,7 +813,7 @@ static class Som317Diag
         // (b) BT-a: 立った獣が直後に1体1回だけ投げる・当たった味方に感電（ダメージ 0）・既に感電していれば何も起きない・シガの蓄電が +1
         {
             // 盤: 前1 シガだけ（狙える味方はシガ1体）・後3 ソム（BT-a）
-            var f = Formation.Build(front1: UnitCatalog.Shiga, back3: bta);
+            var f = Formation.Build(front1: UnitCatalog.ShigaH318, back3: bta);
             var (ctx, p, e) = Board(f, Wave3());
             var som = p.First(u => u.Def.Id == "som"); var sh = p.First(u => u.Def.Id == "shiga");
             int hp0 = sh.Hp, c0 = StoredChargeTrait.Of(sh);

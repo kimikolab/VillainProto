@@ -2185,11 +2185,12 @@ public static class UnitCatalog
     public const string SomBeastDeathText318 = "。弾けた下僕も、倒れた敵に数える";
 
     /// <summary>
-    /// 背かれのソム（規定）。<b>第318期に BD-E2（獣の弾けを敵の死に数える）を規定にした</b>（ポンの判断・design/PHASE318_SOM_RESONANCE_SPEC.md §2）——
+    /// 背かれのソム（第318期の規定・第319期から旧の定義）。<b>第318期に BD-E2（獣の弾けを敵の死に数える）を規定にした</b>（ポンの判断・design/PHASE318_SOM_RESONANCE_SPEC.md §2）——
     /// 第312〜317期の規定（<see cref="SomH317"/>）に <see cref="TraitId.BeastDeathCount"/> を足した。札は第317期の <see cref="SomBD"/> と同じ（文面だけ違う）。
     /// 渡さない読み手（処刑 ／ 墓守 ／ 獣の側の口）は engine の `BeastDeathSkips` ／ `CountBeastDeaths` のまま。
+    /// 第319期: 規定を CR-b（<see cref="Som"/>）にしたので、第318期の規定で測った器具はこれに固定する（`Common.Pin318`）。第318期の版（BT-a ／ CR-a ／ CR-b・<see cref="SomOn"/>）もこれの上に作る。
     /// </summary>
-    public static readonly UnitDef Som = new()
+    public static readonly UnitDef SomH318 = new()
     {
         Id = SomH317.Id,
         Name = SomH317.Name,
@@ -2203,6 +2204,30 @@ public static class UnitCatalog
         PlusText = SomH317.PlusText + SomBeastDeathText318,
         MinusText = SomH317.MinusText,
         Flavor = SomH317.Flavor
+    };
+
+    /// <summary>第319期 段0 の文面の足し（指示書 design/PHASE319_SOM_THROW_SPEC.md §2-1 の叩き台・最終はポン）。</summary>
+    public const string SomResonancePlusText319 = "。帯電した仲間に落ちた背きの雷は共鳴して跳ね返り、獣のまわりの敵にも走ってから獣を弾けさせる";
+
+    /// <summary>
+    /// 背かれのソム（規定）。<b>第319期に CR-b（裏切りの雷の共鳴返し・強）を規定にした</b>（ポンの判断 R4・design/PHASE319_SOM_THROW_SPEC.md §2-1）——
+    /// 第318期の規定（<see cref="SomH318"/>）に <see cref="TraitId.BeastStand"/> ／ <see cref="TraitId.BeastBetray"/> ／ <see cref="TraitId.BeastResonance"/> ／ <see cref="TraitId.BeastResonanceArc"/> を足した。
+    /// 札は第318期の <see cref="SomCRb"/> と同じ（文面だけ違う）。打ち返しはシガの札（<see cref="Shiga"/>）。
+    /// </summary>
+    public static readonly UnitDef Som = new()
+    {
+        Id = SomH318.Id,
+        Name = SomH318.Name,
+        MaxHp = SomH318.MaxHp,
+        Attack = SomH318.Attack,
+        Speed = SomH318.Speed,
+        Advances = SomH318.Advances,
+        Pattern = SomH318.Pattern,
+        Traits = SomH318.Traits.Concat(new[] { TraitId.BeastStand, TraitId.BeastBetray, TraitId.BeastResonance, TraitId.BeastResonanceArc }).ToArray(),
+        Actions = SomH318.Actions,
+        PlusText = SomH310.PlusText + SomSwarmText + SomBeastDeathText318 + SomResonancePlusText319,
+        MinusText = SomBetrayMinusText,
+        Flavor = SomH318.Flavor
     };
 
     // 第294期 —— ソムの守りの版（指示書 design/PHASE294_GUARD_SPEC.md §3-3）。規定（喚び出し）の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。
@@ -2589,7 +2614,7 @@ public static class UnitCatalog
         Flavor = SomH317.Flavor
     };
 
-    // 第318期 —— 裏切りの雷の「共鳴返し」の版（指示書 design/PHASE318_SOM_RESONANCE_SPEC.md §3）。<b>新しい規定（BD-E2・<see cref="Som"/>）</b>の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。文面は叩き台。
+    // 第318期 —— 裏切りの雷の「共鳴返し」の版（指示書 design/PHASE318_SOM_RESONANCE_SPEC.md §3）。<b>第318期の規定（BD-E2・<see cref="SomH318"/>）</b>の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。文面は叩き台。
     // ＋SG はシガの版（<see cref="ShigaSG"/>）で、CR-a＋SG ／ CR-b＋SG は「ソム CR ＋ シガの版」の組。
 
     /// <summary>第318期 CR-a の文面（指示書 §3-2 の叩き台・最終はポン）。</summary>
@@ -2599,8 +2624,39 @@ public static class UnitCatalog
     /// <summary>第318期の版の PlusText（「着いた瞬間に弾ける」（E2 の文面）を外し、段0 の「弾けた下僕も、倒れた敵に数える」を足した）。</summary>
     public static string SomStandPlus318 => SomH310.PlusText + SomSwarmText + SomBeastDeathText318;
 
-    /// <summary>第318期: 規定のソム（<see cref="Som"/>・BD-E2）の末尾に札を足した版（数値・行動・フレーバーは規定のまま）。</summary>
+    /// <summary>第318期: 第318期の規定のソム（<see cref="SomH318"/>・BD-E2）の末尾に札を足した版（数値・行動・フレーバーは規定のまま）。第319期に規定が動いたので土台を旧の定義に替えた（中身は第318期と同じ）。</summary>
     public static UnitDef SomOn(TraitId[] add, string plus, string minus) => new()
+    {
+        Id = SomH318.Id,
+        Name = SomH318.Name,
+        MaxHp = SomH318.MaxHp,
+        Attack = SomH318.Attack,
+        Speed = SomH318.Speed,
+        Advances = SomH318.Advances,
+        Pattern = SomH318.Pattern,
+        Traits = SomH318.Traits.Concat(add).ToArray(),
+        Actions = SomH318.Actions,
+        PlusText = plus,
+        MinusText = minus,
+        Flavor = SomH318.Flavor
+    };
+
+    /// <summary>第318期 BT-a（対照・新しい規定の上）。規定（BD-E2）＋ <see cref="TraitId.BeastStand"/> ＋ <see cref="TraitId.BeastBetray"/>——第317期の BT-a に獣の死を足したもの（第317期の器具の BD-BTa と同じ札）。</summary>
+    public static readonly UnitDef SomBT318 = SomOn(new[] { TraitId.BeastStand, TraitId.BeastBetray }, SomStandPlus318, SomBetrayMinusText);
+
+    /// <summary>
+    /// 第318期 CR-a（共鳴返し）。BT-a ＋ <see cref="TraitId.BeastResonance"/>——帯電している味方に落ちた裏切りの雷は付かずに投げた獣へ跳ね返り、獣はその場で弾けて消える（起こし手は受けた味方・獣の死に数える）。
+    /// 跳ね返りは粛で止まる（痺れでは止まらない）。帯電していない味方には BT-a のまま感電が付き、獣は立つ。
+    /// </summary>
+    public static readonly UnitDef SomCRa = SomOn(new[] { TraitId.BeastStand, TraitId.BeastBetray, TraitId.BeastResonance }, SomStandPlus318, SomResonanceMinusText);
+
+    /// <summary>第318期 CR-b（共鳴返し・強）。CR-a ＋ <see cref="TraitId.BeastResonanceArc"/>——跳ね返った雷は、獣を弾けさせる前に獣の隣の敵（駒のみ）すべてに感電を付ける。</summary>
+    public static readonly UnitDef SomCRb = SomOn(new[] { TraitId.BeastStand, TraitId.BeastBetray, TraitId.BeastResonance, TraitId.BeastResonanceArc }, SomStandPlus318, SomResonanceMinusText + SomResonanceArcText);
+
+    // 第319期 —— 第2波の代金を消す版（指示書 design/PHASE319_SOM_THROW_SPEC.md §3）。<b>新しい規定（CR-b・<see cref="Som"/>）</b>の上に札を足すだけ。`All` にも `Retired` にも入れない（採否はポン）。文面は叩き台。
+
+    /// <summary>第319期: 規定のソム（<see cref="Som"/>・CR-b）の末尾に札を足した版（数値・行動・フレーバーは規定のまま）。</summary>
+    public static UnitDef SomOn319(TraitId[] add, string plus, string minus) => new()
     {
         Id = Som.Id,
         Name = Som.Name,
@@ -2616,17 +2672,22 @@ public static class UnitCatalog
         Flavor = Som.Flavor
     };
 
-    /// <summary>第318期 BT-a（対照・新しい規定の上）。規定（BD-E2）＋ <see cref="TraitId.BeastStand"/> ＋ <see cref="TraitId.BeastBetray"/>——第317期の BT-a に獣の死を足したもの（第317期の器具の BD-BTa と同じ札）。</summary>
-    public static readonly UnitDef SomBT318 = SomOn(new[] { TraitId.BeastStand, TraitId.BeastBetray }, SomStandPlus318, SomBetrayMinusText);
+    /// <summary>第319期 WS-a の文面の足し（叩き台・指示書に文面の指定は無い）。</summary>
+    public const string SomStandLateText = "。ただし戦の始め（2ターン目まで）は、喚ばれたものは向こうに着いた瞬間に弾ける";
+    /// <summary>第319期 WS-a3 の文面の足し（叩き台）。</summary>
+    public const string SomStandLate3Text = "。ただし戦の始め（3ターン目まで）は、喚ばれたものは向こうに着いた瞬間に弾ける";
+    /// <summary>第319期 WS-b の文面の足し（指示書 §3-2 の叩き台）。</summary>
+    public const string SomBackfireText = "。受け止める者がいなければ、獣は投げた雷の残りで暴発する";
 
+    /// <summary>第319期 WS-a（序盤は立たない）。規定 ＋ <see cref="TraitId.BeastStandLate"/>——戦の T1〜T2 の喚び出しでは獣は立たず、E2 のまま湧く席で弾ける（投げない）。T3 から規定のまま。</summary>
+    public static readonly UnitDef SomWSa = SomOn319(new[] { TraitId.BeastStandLate }, Som.PlusText, Som.MinusText + SomStandLateText);
+    /// <summary>第319期 WS-a3（序盤は立たない・T3 まで）。規定 ＋ <see cref="TraitId.BeastStandLate3"/>——T1〜T3 は立たない。T4 から規定のまま。</summary>
+    public static readonly UnitDef SomWSa3 = SomOn319(new[] { TraitId.BeastStandLate3 }, Som.PlusText, Som.MinusText + SomStandLate3Text);
     /// <summary>
-    /// 第318期 CR-a（共鳴返し）。BT-a ＋ <see cref="TraitId.BeastResonance"/>——帯電している味方に落ちた裏切りの雷は付かずに投げた獣へ跳ね返り、獣はその場で弾けて消える（起こし手は受けた味方・獣の死に数える）。
-    /// 跳ね返りは粛で止まる（痺れでは止まらない）。帯電していない味方には BT-a のまま感電が付き、獣は立つ。
+    /// 第319期 WS-b（投げて暴発）。規定 ＋ <see cref="TraitId.BeastThrowBackfire"/>——立った獣が投げた雷を誰も受け止めなかったら（共鳴返し ／ 打ち返しにならなかったら）、
+    /// 雷を今のまま処理した直後に獣がその場で暴発する（起こし手はソム・光になる・獣の死に数える）。立った獣は投げた手番の中で必ず盤から消える。
     /// </summary>
-    public static readonly UnitDef SomCRa = SomOn(new[] { TraitId.BeastStand, TraitId.BeastBetray, TraitId.BeastResonance }, SomStandPlus318, SomResonanceMinusText);
-
-    /// <summary>第318期 CR-b（共鳴返し・強）。CR-a ＋ <see cref="TraitId.BeastResonanceArc"/>——跳ね返った雷は、獣を弾けさせる前に獣の隣の敵（駒のみ）すべてに感電を付ける。</summary>
-    public static readonly UnitDef SomCRb = SomOn(new[] { TraitId.BeastStand, TraitId.BeastBetray, TraitId.BeastResonance, TraitId.BeastResonanceArc }, SomStandPlus318, SomResonanceMinusText + SomResonanceArcText);
+    public static readonly UnitDef SomWSb = SomOn319(new[] { TraitId.BeastThrowBackfire }, Som.PlusText, Som.MinusText + SomBackfireText);
 
     /// <summary>
     /// 旧ソム（第103〜275期の規定・背かれのみ）。<b>第276期の転生の対照</b>（S0）。<see cref="All"/> には入れない。
@@ -3293,8 +3354,10 @@ public static class UnitCatalog
     /// 旧の札 `Torment` は定義だけ残す（保持者 0 枚）。<b>攻撃型は `Def.Pattern` を薙ぎにした</b>——鞭は無条件なので
     /// 窓口（`LashTrait.ModifyPattern`）と同じ答えになる（`Lash` は見せしめの薙ぎの優先と悲鳴の出どころのために残す）。
     /// 経緯は design/PHASE217_SHIGA_WHIP.md。</para>
+    /// <para><b>第317〜318期の規定（SF-AC）・第319期から旧の定義</b>。第319期に打ち返し（SG）を足したものを規定（<see cref="Shiga"/>）にしたので、
+    /// 第318期の規定で測った器具はこれに固定する（`Common.Pin318`）。<see cref="All"/> にも <see cref="Retired"/> にも入れない。</para>
     /// </summary>
-    public static readonly UnitDef Shiga = new()
+    public static readonly UnitDef ShigaH318 = new()
     {
         Id = "shiga",
         Name = "電気鞭のシガ",
@@ -3313,6 +3376,30 @@ public static class UnitCatalog
         MinusText = "感電していないとき、動ける敵を主目標に打つと、怖気づいて自分が1ターン動けなくなる（萎縮した敵は動けない敵とみなす）",
         Flavor = "縛られた的しか殴れない臆病者。雷に打たれている間だけは、怖さも痺れて感じない。"
     };
+
+    /// <summary>
+    /// 電気鞭のシガ（規定）。<b>第319期に SG（打ち返し・<see cref="TraitId.BetrayBackswing"/>）を規定にした</b>（ポンの判断 R4・design/PHASE319_SOM_THROW_SPEC.md §2-2）——
+    /// 第317〜318期の規定（SF-AC・<see cref="ShigaH318"/>）の末尾に札を1枚足した。札は第318期の <see cref="ShigaSG"/> と同じ。
+    /// 打ち返しはソムの立った獣の雷しか読まないので、ソムのいない戦では第318期の規定と1ビットも違わない。
+    /// </summary>
+    public static readonly UnitDef Shiga = new()
+    {
+        Id = ShigaH318.Id,
+        Name = ShigaH318.Name,
+        MaxHp = ShigaH318.MaxHp,
+        Attack = ShigaH318.Attack,
+        Speed = ShigaH318.Speed,
+        Advances = ShigaH318.Advances,
+        Pattern = ShigaH318.Pattern,
+        Traits = ShigaH318.Traits.Append(TraitId.BetrayBackswing).ToArray(),
+        Actions = ShigaH318.Actions,
+        PlusText = ShigaH318.PlusText + ShigaBackswingText,
+        MinusText = ShigaH318.MinusText,
+        Flavor = ShigaH318.Flavor
+    };
+
+    /// <summary>第318期 SG ／ 第319期の規定の文面の足し（叩き台）。</summary>
+    public const string ShigaBackswingText = "。背いた獣の雷を浴びると、その場で打ち返す";
 
     /// <summary>第294〜316期の規定のシガ（SW-a）の文面。第317期に規定を SF-AC にしたので、旧の規定の文面を定数で持つ（版の文面はこれから作る）。</summary>
     public const string ShigaPlusH316 = "動けない敵を優先して鞭で薙ぐ。動けない敵には2倍で入り、その悲鳴で隣の敵を竦ませる（1手番に1回）。感電しているあいだは怖気づかず、打った敵に感電を移す。"
@@ -3412,23 +3499,23 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 第318期 SG（シガの打ち返し・版のみ）。規定のシガ ＋ <see cref="TraitId.BetrayBackswing"/>——帯電していないシガに背いた獣の裏切りの雷が落ちたら、感電が付いたうえで（蓄電 +1）、
+    /// 第318期 SG（シガの打ち返し・版のみ・第319期に規定になった）。第318期の規定のシガ（<see cref="ShigaH318"/>）＋ <see cref="TraitId.BetrayBackswing"/>——帯電していないシガに背いた獣の裏切りの雷が落ちたら、感電が付いたうえで（蓄電 +1）、
     /// その場で投げた獣を主目標に割り込みの鞭と同じ打ち方で1回振る（蓄電は使わない・手番の外の動作）。ソムの CR-a ／ CR-b と組む。
     /// </summary>
     public static readonly UnitDef ShigaSG = new()
     {
-        Id = Shiga.Id,
-        Name = Shiga.Name,
-        MaxHp = Shiga.MaxHp,
-        Attack = Shiga.Attack,
-        Speed = Shiga.Speed,
-        Advances = Shiga.Advances,
-        Pattern = Shiga.Pattern,
-        Traits = Shiga.Traits.Append(TraitId.BetrayBackswing).ToArray(),
-        Actions = Shiga.Actions,
-        PlusText = Shiga.PlusText + "。背いた獣の雷を浴びると、その場で打ち返す",
-        MinusText = Shiga.MinusText,
-        Flavor = Shiga.Flavor
+        Id = ShigaH318.Id,
+        Name = ShigaH318.Name,
+        MaxHp = ShigaH318.MaxHp,
+        Attack = ShigaH318.Attack,
+        Speed = ShigaH318.Speed,
+        Advances = ShigaH318.Advances,
+        Pattern = ShigaH318.Pattern,
+        Traits = ShigaH318.Traits.Append(TraitId.BetrayBackswing).ToArray(),
+        Actions = ShigaH318.Actions,
+        PlusText = ShigaH318.PlusText + "。背いた獣の雷を浴びると、その場で打ち返す",
+        MinusText = ShigaH318.MinusText,
+        Flavor = ShigaH318.Flavor
     };
 
     /// <summary>第293期 SW-b（浴びるたび溜まる）。SW-a ＋ <see cref="TraitId.StoredChargeEvery"/>（すでに帯電していても感電を浴びるたび蓄電 +1）。</summary>

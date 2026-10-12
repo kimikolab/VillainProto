@@ -1260,3 +1260,11 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **表示専用**: `BeastThrowLabels`「共鳴」／「共鳴が止まった」／「走る」／「打ち返し」・`BeastBurstLabels.Resonance`「共鳴返し」（盤に立っていた獣を消す）。並びは `design/PHASE291_CODEX_MEMO.md` §14-12。
 - **計数のみ**: ソムの `BtAtCharged` ／ `BtAtChargedSlot` ／ `BtAtChargedHush` ／ `BtThreadCharged` ／ `BtAdjFoes` ／ `BtAdjFoesDry`（`NoteThrowTarget`・BT-a 以降のどの版でも数える・盤面は読むだけ）・`Cr*`（跳ね返った ／ 粛 ／ 乾いた ／ 連鎖の駒 ／ 走った ／ 新しく感電）・`Sg*`（振った ／ 粛 ／ 痺れほか ／ 入れ子 ／ 与ダメ ／ 後の割り込みの入れ子）。`BdKind` は 5 枠（4 ＝ 共鳴返し）。
 
+
+## 第319期 —— ソム ＝ CR-b・シガ ＝ SG を規定に ／ 投げて暴発（WS-b）・序盤は立たない（WS-a ／ WS-a3）は版
+
+- **段0**: 規定のソム `UnitCatalog.Som` ＝ 第318期の規定（`SomH318`・明示の定義に）＋ `BeastStand` ＋ `BeastBetray` ＋ `BeastResonance` ＋ `BeastResonanceArc`（札は第318期の `SomCRb` と同じ）。規定のシガ `UnitCatalog.Shiga` ＝ 第317〜318期の規定（`ShigaH318`・明示の定義に）＋ `BetrayBackswing`（札は `ShigaSG` と同じ）。engine の窓口は第318期のまま（立つ ／ 投げる ／ 共鳴返し ／ 打ち返しが規定の盤で走るようになっただけ）。第318期の版（`SomBT318` ／ `SomCRa` ／ `SomCRb` ／ `SomOn` ／ `ShigaSG`）は `SomH318` ／ `ShigaH318` の上に作り直した（中身は第318期と同じ）。器具の固定は `Common.Pin318` ／ `PinSS318` ／ `CompareBuildsH318` ／ `PlaytestH318`（`som318` 用）、`PinS317` は `SomH318` もソムの旧へ・規定のシガを `ShigaH318` へ（`som317` ／ `Pin317` の台）、`IsSomNow` は `SomH318` も。
+- **WS-a `BeastStandLate` ／ WS-a3 `BeastStandLate3`**（`MarkOnlyTrait`・ソムの版 `SomWSa` ／ `SomWSa3`）: `BetrayedTrait.Call` の `BeastStand` の判定に `!StandsLate(ctx, self)` を足した——戦のターン（`ctx.Turn`）が `BetrayedTrait.StandLateTurns`（2）／ `StandLateTurns3`（3）以下なら `StandBeasts` を呼ばずに下の E2 の口（`NoteBeastCall` → `BurstBeast`）へ落ちる。札が無ければ比較2つ。
+- **WS-b `BeastThrowBackfire`**（`MarkOnlyTrait`・ソムの版 `SomWSb`）: `StandBeasts` の投げる枝で、獣ごとに `BeastThrow` の後、**投げる前に生きていて投げた後も生きていれば** `Backfire(som, 獣)`——`BeastBurst 投げて暴発`、獣を HP 0 で消し（`HandleDeath` を通さない）、帯電していれば `ShockTrigger(獣, ソム, 0)`、`CountBeastDeaths(som, [獣], ソム, 5)`。共鳴返し ／ 避雷針 ／ 打ち返しで消えた獣は通らない（二重に弾けない）。粛で止まった共鳴返し ／ 糸 ／ 帯電していない味方に付いた ／ 相手がいなかった獣は暴発する。札が無ければ比較1つ。
+- **表示専用**: `BeastBurstLabels.Backfire`「投げて暴発」（盤に立っていた獣を消す）。並びは `design/PHASE291_CODEX_MEMO.md` §14-13。
+- **計数のみ**: ソムの `BtThrownT` ／ `BtAtChargedT`（`NoteThrowTarget`・戦のターンごと）・`WsBackfire` ／ `WsBackfireT` ／ `WsBackfireDry` ／ `WsBackfireUnits`・`StandPopChains` ／ `StandPopChainUnits` ／ `StandPopChainsAlly` ／ `StandPopChainUnitsAlly`（`ShockTrigger` の最後・立っていた獣が後で弾けた連鎖・打ち返しの鞭の中（`_backswingNow`）は除く）。`BdKind` は 6 枠（5 ＝ 投げて暴発）。

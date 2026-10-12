@@ -2184,7 +2184,7 @@ public sealed class UnitTally
     /// <c>BtThread</c> クグの糸を伝って敵へ流れた ／ <c>BtThreadShocked</c> うち糸の先の敵に感電が付いた ／ <c>BtRodCaught</c> 避雷針が受け止めた ／ <c>BtRodOut</c> 避雷針の保持者が生きていたが範囲の外 ／
     /// <c>BtRodBlocked</c> 範囲の内だが痺れ ／ 粛ほかで止まった（<c>BtRodHushed</c> うち粛）／ <c>BtSlotHist</c>[席] 狙われた味方の席。
     /// 避雷針（カタの側）: <c>RodCaught</c> 受け止めた ／ <c>RodChainUnits</c> 落とし直しの弾けから広がった連鎖の駒（獣を含む）／ <c>RodDry</c> 獣が帯電していなかった。
-    /// 獣の死（BD・ソムの側）: <c>BdCounted</c> 死に数えた獣 ／ <c>BdKind</c>[0 喚び出しの場（群れ・暴発を含む）／ 1 緊急 ／ 2 立った獣が弾けた ／ 3 避雷針 ／ 4 共鳴返し（第318期）] ／ <c>BdCapped</c> 上限で数えなかった獣 ／
+    /// 獣の死（BD・ソムの側）: <c>BdCounted</c> 死に数えた獣 ／ <c>BdKind</c>[0 喚び出しの場（群れ・暴発を含む）／ 1 緊急 ／ 2 立った獣が弾けた ／ 3 避雷針 ／ 4 共鳴返し（第318期）／ 5 投げて暴発（第319期）] ／ <c>BdCapped</c> 上限で数えなかった獣 ／
     /// <c>BdOnKill</c> ／ <c>BdOnAnyDeath</c> 渡した読み手の札の数 ／ <c>BdSkipped</c> 外した読み手の札の数。
     /// Phase 0 の計数器（`BattleContext.ThrowCensus`・SB-a で立った獣）: <c>ThrowCensusN</c> 立った獣 ／ <c>ThrowCensusW</c>[席] 狙える味方に 60 を等分した重み ／ <c>ThrowCensusKataW</c> うちカタ自身 ／ <c>ThrowCensusRodW</c> うちカタ自身か隣。
     /// </summary>
@@ -2201,6 +2201,13 @@ public sealed class UnitTally
     /// </summary>
     public long BtAtCharged, BtAtChargedHush, BtThreadCharged, BtAdjFoes, BtAdjFoesDry, CrFired, CrHushed, CrDry, CrChainUnits, CrArcFoes, CrArcShocked, SgFired, SgHushed, SgBlocked, SgNested, SgDealt, SgWhipNested;
     public long[]? BtAtChargedSlot;
+    /// <summary>
+    /// 第319期（<b>計数のみ</b>・ソムの側）。<c>BtThrownT</c> ／ <c>BtAtChargedT</c>[戦のターン・8 以降は 8] 裏切りの雷を投げた ／ うち味方が帯電していた。
+    /// 投げて暴発（WS-b）: <c>WsBackfire</c> 暴発した獣（<c>WsBackfireT</c>[ターン]）／ <c>WsBackfireDry</c> うち帯電していなかった ／ <c>WsBackfireUnits</c> 暴発から広がった連鎖の駒（獣を含む）。
+    /// 立っていた獣が後で弾けた連鎖（打ち返しの鞭の中は除く）: <c>StandPopChains</c> ／ <c>StandPopChainUnits</c> 数 ／ 大きさの和・<c>StandPopChainsAlly</c> ／ <c>StandPopChainUnitsAlly</c> うち起こし手がソム以外の味方。
+    /// </summary>
+    public long WsBackfire, WsBackfireDry, WsBackfireUnits, StandPopChains, StandPopChainUnits, StandPopChainsAlly, StandPopChainUnitsAlly;
+    public long[]? BtThrownT, BtAtChargedT, WsBackfireT;
     /// <summary>
     /// 第299期（<b>計数のみ</b>・ザンの手番）。仇指し（<see cref="TraitId.Vendetta"/>）の保持者が手番で振ったとき（規定でも数える）:
     /// <c>ZanTurns</c> 手番 ／ <c>ZanTurnNoMarked</c> 標を持つ敵が 0 ／ <c>ZanTurnMarkedFoes</c> ／ <c>ZanTurnLayers</c> 手番の時点の標を持つ敵の数 ／ 層の合計 ／
@@ -3395,6 +3402,9 @@ public sealed class UnitTally
         BtAtCharged += o.BtAtCharged; BtAtChargedHush += o.BtAtChargedHush; BtThreadCharged += o.BtThreadCharged; BtAdjFoes += o.BtAdjFoes; BtAdjFoesDry += o.BtAdjFoesDry; AddHist(ref BtAtChargedSlot, o.BtAtChargedSlot);   // 第318期
         CrFired += o.CrFired; CrHushed += o.CrHushed; CrDry += o.CrDry; CrChainUnits += o.CrChainUnits; CrArcFoes += o.CrArcFoes; CrArcShocked += o.CrArcShocked;
         SgFired += o.SgFired; SgHushed += o.SgHushed; SgBlocked += o.SgBlocked; SgNested += o.SgNested; SgDealt += o.SgDealt; SgWhipNested += o.SgWhipNested;
+        WsBackfire += o.WsBackfire; WsBackfireDry += o.WsBackfireDry; WsBackfireUnits += o.WsBackfireUnits;
+        StandPopChains += o.StandPopChains; StandPopChainUnits += o.StandPopChainUnits; StandPopChainsAlly += o.StandPopChainsAlly; StandPopChainUnitsAlly += o.StandPopChainUnitsAlly;
+        AddHist(ref BtThrownT, o.BtThrownT); AddHist(ref BtAtChargedT, o.BtAtChargedT); AddHist(ref WsBackfireT, o.WsBackfireT);
         ZanTurns += o.ZanTurns; ZanTurnNoMarked += o.ZanTurnNoMarked; ZanTurnMarkedFoes += o.ZanTurnMarkedFoes; ZanTurnLayers += o.ZanTurnLayers;
         ZanPlanA += o.ZanPlanA; ZanPlan1 += o.ZanPlan1; ZanPlanACapped += o.ZanPlanACapped; ZanPlan1Capped += o.ZanPlan1Capped; ZanTurnDealt += o.ZanTurnDealt;
         RoundTurns += o.RoundTurns; RoundFoes += o.RoundFoes; RoundSlashes += o.RoundSlashes; RoundCapped += o.RoundCapped; RoundCrossed += o.RoundCrossed;
@@ -4233,6 +4243,9 @@ public static class BeastBurstLabels
     public const string Popped = "弾けて消えた";
     /// <summary>第318期（CR-a ／ CR-b・版のみ）: 共鳴返しで、立っていた獣の上に雷が跳ね返って弾けた（<c>ActorId</c> ＝ 雷を受けた味方 ／ <c>TargetId</c> ＝ 立っていた獣。<b>この出来事で盤から消す</b>・<c>Death</c> は出ない）。</summary>
     public const string Resonance = "共鳴返し";
+    /// <summary>第319期（WS-b・版のみ）: 投げた雷を誰も受け止めず、立っていた獣が投げた直後にその場で暴発した（<c>ActorId</c> ＝ ソム ／ <c>TargetId</c> ＝ 立っていた獣。<b>この出来事で盤から消す</b>・<c>Death</c> は出ない）。
+    /// 並び: `BeastThrow 投げた` ／ `糸` ／ `共鳴が止まった`（→ 味方の感電 ／ 糸の先の感電）→ この出来事 → 獣の `ShockSpent`（起点・起こし手はソム）→ 隣の敵への `Discharge` ……→ 光。</summary>
+    public const string Backfire = "投げて暴発";
 }
 
 /// <summary>`Spark`（第307期）の <c>Text</c>。</summary>
