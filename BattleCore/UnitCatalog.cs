@@ -3546,6 +3546,53 @@ public static class UnitCatalog
     public static readonly UnitDef ShigaSApSD = ShigaOn322(ShigaSAp);
 
     // ---------------------------------------------------------------------------------
+    // 第323期 —— トウの粉の濃さ（TD）と粉の伝染（TP）の版（指示書 design/PHASE323_TOU_POWDER_SPEC.md）。規定のトウ ／ カタ ／ クグの末尾に札を足すだけ。
+    // 文面は叩き台（指示書 §1-2 ／ §1-3 ／ §2-2）。`All` にも `Retired` にも入れない。
+    // ---------------------------------------------------------------------------------
+
+    /// <summary>第323期 TD の文面の足し（叩き台・指示書 §1-3）。</summary>
+    public const string TouDenseText = "。帯電した敵にさらに粉を撒くと濃くなり、弾けたときの放電が重くなる";
+    public const string TouDenseKeepText = "。濃さは倒れるまで消えない";
+    public const string TouDenseBurnText = "。濃い雷は、弾けた本人も焼く";
+    /// <summary>第323期 TD の MinusText（叩き台）: 規定の漏れの句を「味方も帯電し、濃くなる」に。</summary>
+    public const string TouLeakClause = "粉は隣の味方にも漏れ、味方も帯電する";
+    public const string TouLeakDenseClause = "粉は隣の味方にも漏れ、味方も帯電し、濃くなる";
+    /// <summary>第323期 TP の文面の足し（叩き台・指示書 §2-2）。</summary>
+    public const string TouContagionText = "。粉の付いた駒が弾けると、雷が粉を伝って、帯電していない隣にも移る";
+    public const string TouContagionSpreadText = "（移った先にも粉が舞う）";
+    /// <summary>第323期 カタ ／ クグの返す働きの文面の足し（叩き台・指示書 §1-2）。</summary>
+    public const string KataPowderReturnText = "。身に積もった粉も、雷に乗せて落とす";
+    public const string KuguPowderFlowText = "。身に積もった粉も、糸を伝って流れていく";
+
+    static UnitDef On323(UnitDef b, TraitId[] add, string plus, string? minus = null) => new()
+    {
+        Id = b.Id, Name = b.Name, MaxHp = b.MaxHp, Attack = b.Attack, Speed = b.Speed, Advances = b.Advances, Pattern = b.Pattern,
+        Traits = b.Traits.Concat(add).ToArray(), Actions = b.Actions,
+        PlusText = b.PlusText + plus, MinusText = minus ?? b.MinusText, Flavor = b.Flavor
+    };
+
+    static string TouDenseMinus => Tou.MinusText.Replace(TouLeakClause, TouLeakDenseClause);
+
+    /// <summary>第323期 TD-a（使い切り）。規定のトウ ＋ <see cref="TraitId.PowderDense"/>——弾けたら濃さ 0。</summary>
+    public static readonly UnitDef TouTDa = On323(Tou, new[] { TraitId.PowderDense }, TouDenseText, TouDenseMinus);
+    /// <summary>第323期 TD-b（残る・ミオ型）。TD-a ＋ <see cref="TraitId.PowderDenseKeep"/>。TD-0（対照）もこの駒（カタ ／ クグを規定のままにする）。</summary>
+    public static readonly UnitDef TouTDb = On323(Tou, new[] { TraitId.PowderDense, TraitId.PowderDenseKeep }, TouDenseText + TouDenseKeepText, TouDenseMinus);
+    /// <summary>第323期 TD-a焼。TD-a ＋ <see cref="TraitId.PowderDenseBurn"/>。</summary>
+    public static readonly UnitDef TouTDaB = On323(Tou, new[] { TraitId.PowderDense, TraitId.PowderDenseBurn }, TouDenseText + TouDenseBurnText, TouDenseMinus);
+    /// <summary>第323期 TD-b焼。TD-b ＋ <see cref="TraitId.PowderDenseBurn"/>。</summary>
+    public static readonly UnitDef TouTDbB = On323(Tou, new[] { TraitId.PowderDense, TraitId.PowderDenseKeep, TraitId.PowderDenseBurn }, TouDenseText + TouDenseKeepText + TouDenseBurnText, TouDenseMinus);
+    /// <summary>第323期 TP-a（伝染）。規定のトウ ＋ <see cref="TraitId.PowderContagion"/>。</summary>
+    public static readonly UnitDef TouTPa = On323(Tou, new[] { TraitId.PowderContagion }, TouContagionText);
+    /// <summary>第323期 TP-b（伝染・続く）。TP-a ＋ <see cref="TraitId.PowderContagionSpread"/>。</summary>
+    public static readonly UnitDef TouTPb = On323(Tou, new[] { TraitId.PowderContagion, TraitId.PowderContagionSpread }, TouContagionText + TouContagionSpreadText);
+    /// <summary>第323期 TP-a′（参考・指示書に無い版）。TP-a ＋ <see cref="TraitId.PowderContagionDry"/>——同じ連鎖で先に弾けた駒には移らない（弾けたばかりの駒を帯電し直さない）。</summary>
+    public static readonly UnitDef TouTPaDry = On323(Tou, new[] { TraitId.PowderContagion, TraitId.PowderContagionDry }, TouContagionText + "（弾けたばかりの駒には移らない）");
+    /// <summary>第323期 カタの版（返す）。規定のカタ ＋ <see cref="TraitId.ThunderPowderReturn"/>（濃さの保持者がいない戦では何も起きない）。</summary>
+    public static readonly UnitDef KataTDR = On323(Kata, new[] { TraitId.ThunderPowderReturn }, KataPowderReturnText);
+    /// <summary>第323期 クグの版（返す）。規定のクグ ＋ <see cref="TraitId.ThreadPowderFlow"/>。</summary>
+    public static readonly UnitDef KuguTDR = On323(Kugu, new[] { TraitId.ThreadPowderFlow }, KuguPowderFlowText);
+
+    // ---------------------------------------------------------------------------------
     // 第321期 —— ヒサの号令を「溜まったら吐く」版（指示書 §2-2）。規定の号令の玉（`CommandBall`）を差し替えるだけ。`All` にも `Retired` にも入れない。
     // ---------------------------------------------------------------------------------
 

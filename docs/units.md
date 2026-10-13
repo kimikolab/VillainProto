@@ -535,6 +535,14 @@
 | `CommandBurstCap6` | - |
 | `CommandBurstCap9` | 囃し立てのヒサ |
 | `WhipDischarge` | - |
+| `PowderDense` | - |
+| `PowderDenseKeep` | - |
+| `PowderDenseBurn` | - |
+| `ThunderPowderReturn` | - |
+| `ThreadPowderFlow` | - |
+| `PowderContagion` | - |
+| `PowderContagionSpread` | - |
+| `PowderContagionDry` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

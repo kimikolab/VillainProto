@@ -1399,3 +1399,68 @@ ShockGauge 怖くない  シガ#3 → シガ#3  Amount 1  Slot 0
 ```
 
 **DemoApp へ**: `ShockSpent` の弾けの演出のあとで、`Text` が「残る」なら**その敵の帯電の印を消さない**（規定の弾けは印を消す）。版のみなので、演出は採用が決まってからでよい。
+
+## 19. 第323期の追記 —— トウの粉の濃さ（TD）と粉の伝染（TP）（`ShockGauge` に7つの札・**版のみ**）
+
+報告 `design/PHASE323_TOU_POWDER.md`。**新しい出来事の種類は足していない**——`ShockGauge` の `Text` に7つ（`ShockGaugeLabels` の第323期の札）を足し、`Discharge` の `Amount` が濃さで重くなるだけ。**規定のトウの台本には1件も出ない**（`tou323 check` で、規定の台本に第323期の札が 0 件であることを確かめた）。
+
+### 19-1. 濃さ（TD-a ／ TD-b ／ 焼・`PowderDense` の保持者がいる戦だけ）
+
+| 出来事 | 欄 | いつ |
+|---|---|---|
+| `ShockGauge`「**濃さ**」 | `ActorId` ＝ トウ ／ `TargetId` ＝ 濃くなった駒（敵味方を問わない）／ `Amount` ＝ 新しい濃さ ／ `Slot` ＝ 前の濃さ | トウの手番の粉が、**手番の頭に帯電していた駒**に落ちたとき（主目標 ／ 舞う先 ／ 漏れ先）。その駒への粉の `StatusGain`（帯電）の後ろに並ぶ（すでに帯電していれば `StatusGain` は出ない） |
+| `ShockGauge`「**濃さ・流した**」 | `ActorId` ＝ クグ ／ `TargetId` ＝ 組み付いた敵 ／ `PartnerId` ＝ トウ ／ `Amount` ＝ 敵の新しい濃さ ／ `Slot` ＝ 前の濃さ | クグの版（`KuguTDR`）: クグに付くはずの濃さが、糸を伝って組み付いた敵へ流れた（クグには付かない） |
+| `ShockGauge`「**濃さ・移した**」 | `ActorId` ＝ カタ ／ `TargetId` ＝ 雷が最初に当たった敵 ／ `Amount` ＝ 敵の新しい濃さ ／ `Slot` ＝ 移した量 | カタの版（`KataTDR`）: 1発目の `Thunder` ／ `Damage` の直後（その敵への感電の `StatusGain` の前）。カタの濃さは 0 になる |
+| `ShockGauge`「**濃さ・弾けた**」 | `ActorId` ＝ 連鎖を起こした一撃の主 ／ `TargetId` ＝ 弾けた駒 ／ `Amount` ＝ 濃さ n | 濃さ ≧1 の駒の `ShockSpent` の直後・放電の前。**直後の `Discharge` の `Amount` は 8 ×（1 ＋ n）**（糸玉への放電も同じ数を出す・糸玉は HP を減らさない） |
+| `ShockGauge`「**濃さ・焼いた**」 | `ActorId` ＝ `TargetId` ＝ 弾けた駒 ／ `Amount` ＝ 量（8 × n）／ `Slot` ＝ 濃さ n | 焼の版だけ: その駒の放電の後。直後に本人の `Damage`（出どころ ＝ 本人・`FriendlyFire`）。ベニの結界の内側なら `Heal` |
+
+- **濃さの数は台本で読める**: 「濃さ」「流した」「移した」の `Amount` がその駒のいまの濃さ。TD-a は「濃さ・弾けた」の後で 0 に戻る（台本に 0 を打つ出来事は無い——弾けたら 0 と読む）。TD-b は倒れるまで残る（次の「濃さ」の `Slot` が前の値）。
+- 表示の案: 帯電の印に濃さの数字（または印の濃淡）を重ねる。「濃さ・弾けた」の放電は太い稲妻、「焼いた」は弾けた駒自身に小さな稲妻。
+
+### 19-2. 伝染（TP-a ／ TP-b・`PowderContagion` の保持者がいる戦だけ）
+
+| 出来事 | 欄 | いつ |
+|---|---|---|
+| `ShockGauge`「**粉の印**」 | `ActorId` ＝ トウ（TP-b で伝染から付いたときは放電した駒）／ `TargetId` ＝ 印の付いた駒 | 粉が初めて落ちたとき（主目標 ／ 舞う先 ／ 漏れ先）。倒れるまで残る（消す出来事は無い） |
+| `ShockGauge`「**伝染**」 | `ActorId` ＝ 放電した駒（粉の印あり）／ `TargetId` ＝ 新しく帯電した駒 | その駒への `Discharge` ／ `Damage` の直後。直前にその駒の感電の `StatusGain`（`SpreadFromId` ＝ 放電した駒）。**同じ連鎖ではもう弾けない**（同じ連鎖の放電がまた届いても `ShockSpent` は出ない） |
+
+- 同じ連鎖で先に弾けて乾いた駒にも伝染は届く（弾けた直後に帯電し直す）。
+
+**1本の並び**（`tou323 memo 光の盾 boss 0 tdbb`・試遊・感電 光の盾 × ボス × seed 0・TD-b焼・勝ち T18・T2〜T3 の抜粋）:
+
+```
+--- T2
+Damage   トウ#2 → 勇者#5  Amount 2  Slot 0
+StatusGain shock  トウ#2 → 勇者#5  Amount 1  Slot 0  Powder Main
+ShockGauge 濃さ  トウ#2 → カタ#0  Amount 1  Slot 0                  ← 漏れ先のカタは手番の頭に帯電していた
+ShockGauge 濃さ・流した  クグ#1 → 勇者#5  Amount 1  Slot 0  Partner トウ#2   ← クグの分は組み付いた勇者へ
+…
+ShockSpent   ソム#4 → 勇者#5  Amount 0  Slot 0
+ShockGauge 濃さ・弾けた  ソム#4 → 勇者#5  Amount 1  Slot 0
+Discharge   勇者#5 → 獣#7  Amount 16  Slot 1                        ← 8 ×（1 ＋ 1）（獣#7 ／ #10 は糸玉）
+Discharge   勇者#5 → 獣#10  Amount 16  Slot 1
+ShockGauge 濃さ・焼いた  勇者#5 → 勇者#5  Amount 8  Slot 1
+Damage   勇者#5 → 勇者#5  Amount 8  Slot 0
+Thunder   カタ#0 → 勇者#5  Amount 60  Slot 1
+Damage   カタ#0 → 勇者#5  Amount 60  Slot 0
+ShockGauge 濃さ・移した  カタ#0 → 勇者#5  Amount 2  Slot 1           ← カタの濃さ 1 が勇者へ（勇者 1 → 2）
+--- T3
+ShockGauge 濃さ・弾けた  ソム#4 → 勇者#5  Amount 2  Slot 0
+Discharge   勇者#5 → 獣#7  Amount 24  Slot 2
+ShockGauge 濃さ・焼いた  勇者#5 → 勇者#5  Amount 16  Slot 2
+Damage   勇者#5 → 勇者#5  Amount 16  Slot 0
+```
+
+伝染の並び（`tou323 memo 糸 guard 0 tpb`・試遊・感電 糸 × 近衛 × seed 0・TP-b・T1 の抜粋）:
+
+```
+StatusGain shock  トウ#3 → 討伐隊の新兵#9  Amount 1  Slot 0  Powder Main
+ShockGauge 粉の印  トウ#3 → 討伐隊の新兵#9  Amount 1  Slot 0
+…
+Damage   討伐隊の新兵#7 → 討伐隊の新兵#5  Amount 8  Slot 0
+StatusGain shock  討伐隊の新兵#7 → 討伐隊の新兵#5  Amount 1  Slot 0  SpreadFrom 討伐隊の新兵#7
+ShockGauge 伝染  討伐隊の新兵#7 → 討伐隊の新兵#5  Amount 1  Slot 0
+ShockGauge 粉の印  討伐隊の新兵#7 → 討伐隊の新兵#5  Amount 1  Slot 0      ← TP-b: 移った先にも印
+```
+
+**DemoApp へ**: 版のみなので、演出は採用が決まってからでよい。知らない `ShockGauge` の `Text` は今どおり素通りでよい（盤面の判定は1つも台本に依らない）。

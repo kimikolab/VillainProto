@@ -1104,6 +1104,12 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 shiga322 grid <boss|guard> <版>   # 第322期 §5-4: シガのいる台の格子（第321期と同じ作り・固定枠 シガ ＋ カタ ＋ ソム・駒はいまの規定）
     dotnet run --project BattleSim -c Release 0 shiga322 memo <台の一部> <波> <seed> <版>   # 第322期 §6: 鞭 → 弾ける（`ShockSpent 残る`）→ 次のターン頭の `StatusSnapshot 雷`
     dotnet run --project BattleSim -c Release 0 shiga322 check       # 第322期 自己検査（段0 の規定化・旧の定義と固定・SD: 残る ／ 連鎖のほかは消える ／ ほかの一撃では消える ／ 1振り1回 ／ 割り込みの入れ子なし・SA+-SD の各振り・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 tou323 p0            # 第323期 §1-4 ／ §2-3 Phase 0（規定のトウ）: 頭に帯電した駒に粉が落ちた回数・見張りの敵が次に弾けるまで ／ 隣の数・漏れがカタ ／ クグに落ちた回数・味方の弾け・粉の付いた駒の乾いた隣・TP-a の伝染した敵の次の弾け・トウの手番の値打ち（5 秒）
+    dotnet run --project BattleSim -c Release 0 tou323 boards [版,…]  # 第323期 §3-2: 代表台 5 × 10 波 × 版（規定 ／ TD-a ／ TD-b ／ TD-a焼 ／ TD-b焼 ／ TD-0 ／ TP-a ／ TP-b・ASCII は base ／ tda ／ tdb ／ tdab ／ tdbb ／ td0 ／ tpa ／ tpb・重ねた版 tdtp）と対照（トウ → グザ ／ ドルガ）・濃さ ／ 返す働き ／ 伝染 ／ マイナス・強すぎの兆し・格子を回す版（11 秒）。**予測のファイル `.tmp/p323/predict.md` が無ければ走らない**（R397）
+    dotnet run --project BattleSim -c Release 0 tou323 compare [版,…] # 第323期 §3-3: `compare` 64 行 × 版（基準は規定・(G2) つき・30 秒）
+    dotnet run --project BattleSim -c Release 0 tou323 grid <boss|guard> <版>   # 第323期 §3-5: トウのいる台の格子（固定枠 トウ ＋ カタ・ボスはさらにソム・探索枠は残り・近衛は席 30 通り・「トウが要る」＝ 50% 以上かつトウ → グザで半分以下）
+    dotnet run --project BattleSim -c Release 0 tou323 memo <台の一部> <波> <seed> <版>   # 第323期 §4: 濃さ ／ 移した ／ 流した ／ 濃さ・弾けた ／ 焼いた ／ 粉の印 ／ 伝染 の台本の並び
+    dotnet run --project BattleSim -c Release 0 tou323 check         # 第323期 自己検査（版の定義・頭に帯電した駒だけ +1・放電 8 ×（1 ＋ n）・TD-a は 0 ／ TD-b は残る・焼は本人に 8 × n・カタ ／ クグが返す（TD-0 は返さない）・伝染と同じ連鎖では弾けない・TP-b の印・敵味方・verbose・PickOne）
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）
     dotnet run --project BattleSim -c Release 0 shiga316 dgrid <boss|guard> [ps]   # 第316期 段0 G-c: 第297期の「ドハが要る台」の格子（第315期と同じ作り・基準は規定のドハ・1本 6〜9 分）

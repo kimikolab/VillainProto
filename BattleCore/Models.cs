@@ -2031,6 +2031,27 @@ public sealed class UnitTally
     /// <b>どの駒の側でも</b>（鞭の保持者がいる戦だけ）: <c>TurnsDaunted322</c> 萎縮したまま迎えた手番。
     /// </summary>
     public long SdHitShockTurn, SdHitShockInt, SdHitShockBack, SdRootPops, SdKept, SdSkipped, SdWatch, SdWatchOther, SdWatchShiga, TurnsDaunted322;
+    /// <summary>
+    /// 第323期（<b>計数専用</b>・トウの粉の濃さ TD ／ 伝染 TP）。<b>粉の保持者（トウ）の側</b>（規定のトウでも数える）:
+    /// <c>PwFell</c>[主目標 ／ 舞う先 ／ 漏れ先] 粉が生きている駒に落ちた ／ <c>PwFellShocked</c>[同] そのうちトウの手番の頭に帯電していた（濃さが付く見込み）／
+    /// <c>PwLeakKata</c>・<c>PwLeakKataShocked</c>・<c>PwLeakKugu</c>・<c>PwLeakKuguShocked</c>・<c>PwLeakKuguHeld</c> 漏れがカタ ／ クグに落ちた（うち頭に帯電・うちクグが組み付いていた）／
+    /// <c>PwWatch</c> 頭に帯電していて粉が落ちた敵の見張り ／ <c>PwWatchPopped</c>・<c>PwWatchTurnSum</c>・<c>PwWatchNbrSum</c>・<c>PwWatchNbrHist</c> 次に弾けた・それまでのターン・そのときの生きている隣の数 ／
+    /// <c>PwAllyPopsFoeHit</c>・<c>PwAllyPopsOther</c>・<c>PwAllyPopNbrSum</c> 味方が弾けた（敵の一撃 ／ ほか）・そのときの隣の味方 ／
+    /// <c>PwMarkedPops*</c>・<c>PwMarkedPops*Dry</c>・<c>PwMarkedDry*</c> 粉の付いた駒が弾けた・帯電していない隣がいた・その数（敵 ／ 味方）／
+    /// <c>TouTurnPops</c>・<c>TouTurnDisDealt</c> トウの手番の中で弾けた敵・放電が敵に与えたダメージ。
+    /// <b>TD</b>: <c>TdGainFoe</c>・<c>TdGainAlly</c> 濃さが付いた ／ <c>TdPopFoe</c>・<c>TdPopAlly</c>・<c>TdPopHist</c>・<c>TdPopMax</c> 濃さ ≧1 で弾けた・そのときの濃さ ／
+    /// <c>TdHeavy*Dealt</c>・<c>TdHeavy*Extra</c> 濃い放電が敵 ／ 味方に与えた量・名目の上乗せ ／ <c>TdBurn*</c> 本人を焼いた量（と倒した数）／ <c>TdRetNominal</c>・<c>TdRetDealt</c> カタ ／ クグが返した濃さが乗った放電の上乗せ（名目 ／ 与えた量の按分）。
+    /// <b>TP</b>: <c>TpNewFoe</c>・<c>TpNewAlly</c> 伝染で新しく帯電した ／ <c>TpFreshSkip</c> 同じ連鎖で弾けさせなかった ／ <c>TpInfPopsFoe</c>・<c>TpInfPopsAlly</c>・<c>TpInfPopTurnSum</c>・<c>TpInfPopIniHist</c>[0 トウ ／ 1 カタ ／ 2 シガ ／ 3 ほかの味方 ／ 4 出どころ無し ／ 5 敵] 伝染した駒が後で弾けた ／ <c>TpMarkSpread</c> TP-b で印が広がった ／ <c>TpReArm</c> 伝染が同じ連鎖で先に弾けた駒を帯電し直した。
+    /// <b>カタ ／ クグの側</b>: <c>TdKataMoves</c>・<c>TdKataMoved</c>・<c>TdKataDry</c> 雷で濃さを移した回数・量・移す濃さが無かった ／ <c>TdKuguFlowed</c>・<c>TdKuguKept</c> 濃さを糸で流した ／ 組み付いていなくて自分に付いた。
+    /// </summary>
+    public long[]? PwFell, PwFellShocked, PwWatchNbrHist, TdPopHist, TpInfPopIniHist;
+    public long PwLeakKata, PwLeakKataShocked, PwLeakKugu, PwLeakKuguShocked, PwLeakKuguHeld, PwWatch, PwWatchPopped, PwWatchTurnSum, PwWatchNbrSum;
+    public long PwAllyPopsFoeHit, PwAllyPopsOther, PwAllyPopNbrSum, PwMarkedPopsFoe, PwMarkedPopsFoeDry, PwMarkedDryFoe, PwMarkedPopsAlly, PwMarkedPopsAllyDry, PwMarkedDryAlly;
+    public long TouTurnPops, TouTurnDisDealt;
+    public long TdGainFoe, TdGainAlly, TdPopFoe, TdPopAlly, TdPopMax, TdHeavyFoeDealt, TdHeavyAllyDealt, TdHeavyFoeExtra, TdHeavyAllyExtra;
+    public long TdBurnFoe, TdBurnAlly, TdBurnFoeKills, TdBurnAllyKills, TdRetNominal, TdRetDealt;
+    public long TpNewFoe, TpNewAlly, TpFreshSkip, TpInfPopsFoe, TpInfPopsAlly, TpInfPopTurnSum, TpMarkSpread, TpReArm;
+    public long TdKataMoves, TdKataMoved, TdKataDry, TdKuguFlowed, TdKuguKept;
 
     /// <summary>
     /// 第289期（<b>計数専用</b>）。<b>蓄電の保持者（シガ）の側</b>: <c>ChainIniHist</c>[起点] 敵の感電の連鎖（自分の一撃で起きたものを除く・0 トウ ／ 1 カタ ／ 3 ほかの味方 ／ 4 刻み・出どころ無し ／ 5 敵）／
@@ -3359,6 +3380,18 @@ public sealed class UnitTally
         SaSwingMax = Math.Max(SaSwingMax, o.SaSwingMax); SaChargePeak = Math.Max(SaChargePeak, o.SaChargePeak);
         SdHitShockTurn += o.SdHitShockTurn; SdHitShockInt += o.SdHitShockInt; SdHitShockBack += o.SdHitShockBack; SdRootPops += o.SdRootPops; SdKept += o.SdKept; SdSkipped += o.SdSkipped;   // 第322期
         SdWatch += o.SdWatch; SdWatchOther += o.SdWatchOther; SdWatchShiga += o.SdWatchShiga; TurnsDaunted322 += o.TurnsDaunted322;
+        // 第323期
+        AddHist(ref PwFell, o.PwFell); AddHist(ref PwFellShocked, o.PwFellShocked); AddHist(ref PwWatchNbrHist, o.PwWatchNbrHist); AddHist(ref TdPopHist, o.TdPopHist); AddHist(ref TpInfPopIniHist, o.TpInfPopIniHist);
+        PwLeakKata += o.PwLeakKata; PwLeakKataShocked += o.PwLeakKataShocked; PwLeakKugu += o.PwLeakKugu; PwLeakKuguShocked += o.PwLeakKuguShocked; PwLeakKuguHeld += o.PwLeakKuguHeld;
+        PwWatch += o.PwWatch; PwWatchPopped += o.PwWatchPopped; PwWatchTurnSum += o.PwWatchTurnSum; PwWatchNbrSum += o.PwWatchNbrSum;
+        PwAllyPopsFoeHit += o.PwAllyPopsFoeHit; PwAllyPopsOther += o.PwAllyPopsOther; PwAllyPopNbrSum += o.PwAllyPopNbrSum;
+        PwMarkedPopsFoe += o.PwMarkedPopsFoe; PwMarkedPopsFoeDry += o.PwMarkedPopsFoeDry; PwMarkedDryFoe += o.PwMarkedDryFoe; PwMarkedPopsAlly += o.PwMarkedPopsAlly; PwMarkedPopsAllyDry += o.PwMarkedPopsAllyDry; PwMarkedDryAlly += o.PwMarkedDryAlly;
+        TouTurnPops += o.TouTurnPops; TouTurnDisDealt += o.TouTurnDisDealt;
+        TdGainFoe += o.TdGainFoe; TdGainAlly += o.TdGainAlly; TdPopFoe += o.TdPopFoe; TdPopAlly += o.TdPopAlly; TdPopMax = Math.Max(TdPopMax, o.TdPopMax);
+        TdHeavyFoeDealt += o.TdHeavyFoeDealt; TdHeavyAllyDealt += o.TdHeavyAllyDealt; TdHeavyFoeExtra += o.TdHeavyFoeExtra; TdHeavyAllyExtra += o.TdHeavyAllyExtra;
+        TdBurnFoe += o.TdBurnFoe; TdBurnAlly += o.TdBurnAlly; TdBurnFoeKills += o.TdBurnFoeKills; TdBurnAllyKills += o.TdBurnAllyKills; TdRetNominal += o.TdRetNominal; TdRetDealt += o.TdRetDealt;
+        TpNewFoe += o.TpNewFoe; TpNewAlly += o.TpNewAlly; TpFreshSkip += o.TpFreshSkip; TpInfPopsFoe += o.TpInfPopsFoe; TpInfPopsAlly += o.TpInfPopsAlly; TpInfPopTurnSum += o.TpInfPopTurnSum; TpMarkSpread += o.TpMarkSpread; TpReArm += o.TpReArm;
+        TdKataMoves += o.TdKataMoves; TdKataMoved += o.TdKataMoved; TdKataDry += o.TdKataDry; TdKuguFlowed += o.TdKuguFlowed; TdKuguKept += o.TdKuguKept;
         AddHist(ref ChargeBySrc, o.ChargeBySrc);
         // 第289期
         ChainOwn += o.ChainOwn; SwAsked += o.SwAsked; SwNoCharge += o.SwNoCharge; SwNoTarget += o.SwNoTarget; SwNested += o.SwNested;
@@ -4400,6 +4433,22 @@ public static class ShockGaugeLabels
     /// <summary>第316期（SF-C ／ SF-D・<b>版のみ</b>）: シガが動ける主目標に怖気づかなかった。<c>ActorId</c> ＝ <c>TargetId</c> ＝ シガ ／ <c>PartnerId</c> ＝ 主目標 ／
     /// <c>Amount</c> 1 ＝ 萎縮していたから（SF-C）／ 2 ＝ 感電していたから（SF-D）。直前にシガの鞭の <c>Attack</c> ／ <c>Damage</c>（「怖気」の代わりに並ぶ）。</summary>
     public const string Unafraid = "怖くない";
+
+    // ---- 第323期（トウの粉の濃さ TD ／ 伝染 TP・<b>版のみ</b>）。規定のトウでは1件も出ない。
+    /// <summary>粉が濃くなった（TD）。<c>ActorId</c> ＝ トウ ／ <c>TargetId</c> ＝ 濃くなった駒（敵味方を問わない）／ <c>Amount</c> ＝ 新しい濃さ ／ <c>Slot</c> ＝ 前の濃さ。直前にその駒への粉（`StatusGain`）が並ぶことがある。</summary>
+    public const string Dense = "濃さ";
+    /// <summary>クグに付くはずの濃さが糸を伝って組み付いた敵へ流れた（クグの版）。<c>ActorId</c> ＝ クグ ／ <c>TargetId</c> ＝ 組み付いた敵 ／ <c>PartnerId</c> ＝ トウ ／ <c>Amount</c> ＝ 敵の新しい濃さ ／ <c>Slot</c> ＝ 前の濃さ。</summary>
+    public const string DenseFlow = "濃さ・流した";
+    /// <summary>カタが雷に乗せて自分の濃さを敵へ移した（カタの版）。<c>ActorId</c> ＝ カタ ／ <c>TargetId</c> ＝ 雷が最初に当たった敵 ／ <c>Amount</c> ＝ 敵の新しい濃さ ／ <c>Slot</c> ＝ 移した量。直前に1発目の <c>Thunder</c> ／ <c>Damage</c>。</summary>
+    public const string DenseMove = "濃さ・移した";
+    /// <summary>濃さ n（≧1）の駒の感電が弾けた。<c>ActorId</c> ＝ 連鎖を起こした一撃の主 ／ <c>TargetId</c> ＝ 弾けた駒 ／ <c>Amount</c> ＝ 濃さ n。直前に <c>ShockSpent</c>、直後の <c>Discharge</c> の <c>Amount</c> は 8 ×（1 ＋ n）。</summary>
+    public const string DensePop = "濃さ・弾けた";
+    /// <summary>濃い雷が弾けた本人も焼いた（焼の版）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ 弾けた駒 ／ <c>Amount</c> ＝ 量（8 × n）／ <c>Slot</c> ＝ 濃さ n。直後に本人の <c>Damage</c>。</summary>
+    public const string DenseBurn = "濃さ・焼いた";
+    /// <summary>粉の印が付いた（TP の版だけ・倒れるまで残る）。<c>ActorId</c> ＝ トウ（TP-b で伝染から付いたときは放電した駒）／ <c>TargetId</c> ＝ 印の付いた駒。</summary>
+    public const string PowderMark = "粉の印";
+    /// <summary>粉の印のある駒の放電で、帯電していない隣が帯電した（TP）。<c>ActorId</c> ＝ 放電した駒 ／ <c>TargetId</c> ＝ 新しく帯電した駒。直前にその駒の感電の <c>StatusGain</c>（<c>SpreadFromId</c> ＝ 放電した駒）。同じ連鎖ではもう弾けない。</summary>
+    public const string Contagion = "伝染";
 }
 
 /// <summary>第322期（SD・<b>版のみ</b>）: 感電が弾けた（<see cref="BattleEventKind.ShockSpent"/>）の <c>Text</c>。<b>表示専用。</b>規定の弾けは <c>Text</c> ＝ null のまま。</summary>

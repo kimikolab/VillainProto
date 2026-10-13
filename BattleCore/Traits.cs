@@ -803,6 +803,16 @@ public enum TraitId
     // --- 第322期で足した札（シガの版 `UnitCatalog.ShigaSD` ／ `ShigaSApSD`・指示書 design/PHASE322_SHIGA_DISCHARGE_SPEC.md）。保持者 0 枚 ---
     WhipDischarge,     // 放電だけ（SD・シガ・`Scourge` と組む）: 鞭の1振り（手番 ／ 割り込み ／ 打ち返し・連撃の各振り）が当たる前に感電していた敵に入って弾けたら、その敵自身の感電は消さない（放電・連鎖・痺れ ／ 萎縮・連鎖の後の読み手は今のまま・連鎖で弾けたほかの敵は消える・同じ一振りの中ではもう弾けない）（**札そのものは挙動を持たない**・engine の `ShockTrigger`）
 
+    // --- 第323期で足した札（トウ ／ カタ ／ クグの版・指示書 design/PHASE323_TOU_POWDER_SPEC.md）。保持者 0 枚 ---
+    PowderDense,       // 粉の濃さ（TD・トウ・`ChargedPowder` と組む）: トウの手番の頭に帯電していた駒に粉が落ちると濃さ +1（主目標 ／ 舞う先 ／ 漏れ先・敵味方を問わない）。濃さ n の駒の放電は隣1体ずつに 8 ×（1 ＋ n）。弾けたら濃さ 0（TD-a）（**札そのものは挙動を持たない**・engine の `PowderFell` ／ `Discharge`）
+    PowderDenseKeep,   // 濃さは残る（TD-b・`PowderDense` と組む）: 弾けても濃さは 0 に戻らない（倒れるまで溜まる）（**札そのものは挙動を持たない**）
+    PowderDenseBurn,   // 濃い雷は本人も焼く（焼・`PowderDense` と組む）: 濃さ n（≧1）の駒の感電が弾けたら、隣への放電に加えて本人にも 8 × n（放電と同じ扱い）（**札そのものは挙動を持たない**）
+    ThunderPowderReturn, // 粉も雷に乗せる（カタの版・`Thunder` と組む）: 雷を落とすとき、カタ自身の濃さを雷が最初に当たった敵へ全部移す（**札そのものは挙動を持たない**・engine の `StrikeThunder`）
+    ThreadPowderFlow,  // 粉も糸を伝う（クグの版・`Grapple` と組む）: クグに濃さが付くとき、組み付いた敵が生きていればその敵へ流れる（クグには付かない）（**札そのものは挙動を持たない**・engine の `PowderThicken`）
+    PowderContagion,   // 粉の伝染（TP-a・トウ・`ChargedPowder` と組む）: トウの粉が落ちた駒（倒れるまで印が残る）の放電は、帯電していない隣も帯電させる（新しく帯電した駒は同じ連鎖では弾けない）（**札そのものは挙動を持たない**・engine の `Discharge`）
+    PowderContagionSpread, // 伝染は続く（TP-b・`PowderContagion` と組む）: 伝染で新しく帯電した駒にも粉の印が付く（**札そのものは挙動を持たない**）
+    PowderContagionDry, // 弾けたばかりの駒には移らない（TP-a′・参考・`PowderContagion` と組む）: 同じ連鎖で先に弾けた駒には伝染しない（**札そのものは挙動を持たない**）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -5712,18 +5722,27 @@ public sealed class ChargedPowderTrait : Trait
             ctx.Log($"    {target.Name} に帯電の粉が付いた", LogKind.Status);
             ctx.NotePowder(self, spread: false);
         }
+        ctx.PowderFell(self, target, PowderRoute.Main);   // 第323期: 粉が落ちた（濃さ ／ 粉の印・保持者がいなければ計数だけ）
         // 第286期（T3 ／ T3n）: 粉は殴った相手の周りにも舞う。主目標が倒れていても隣には付く（席は残る）。乱数を引かない。
         if (self.HasTrait(TraitId.ChargedPowderSpread))
             foreach (UnitState n in ctx.LivingMembers(target.TeamId))
-                if (n != target && FormationRules.AreAdjacent(target, n) && ctx.MarkShock(n, self, PowderRoute.Spread, target))
+                if (n != target && FormationRules.AreAdjacent(target, n))
                 {
-                    ctx.Log($"    粉が舞って {n.Name} にも付いた", LogKind.Status);
-                    ctx.NotePowder(self, spread: true);
+                    if (ctx.MarkShock(n, self, PowderRoute.Spread, target))
+                    {
+                        ctx.Log($"    粉が舞って {n.Name} にも付いた", LogKind.Status);
+                        ctx.NotePowder(self, spread: true);
+                    }
+                    ctx.PowderFell(self, n, PowderRoute.Spread);   // 第323期
                 }
         if (!self.HasTrait(TraitId.ChargedPowderLeak)) return;
         foreach (UnitState a in ctx.LivingMembers(self.TeamId))
-            if (a != self && FormationRules.AreAdjacent(self, a) && ctx.MarkShock(a, self, PowderRoute.Leak))
-                ctx.Log($"    粉が漏れて {a.Name} も帯電した", LogKind.FriendlyFire);
+            if (a != self && FormationRules.AreAdjacent(self, a))
+            {
+                if (ctx.MarkShock(a, self, PowderRoute.Leak))
+                    ctx.Log($"    粉が漏れて {a.Name} も帯電した", LogKind.FriendlyFire);
+                ctx.PowderFell(self, a, PowderRoute.Leak);   // 第323期
+            }
     }
 }
 
@@ -17484,6 +17503,14 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.CommandBurstCap6),          // 第321期（あふれの上限6・印だけ）
         new MarkOnlyTrait(TraitId.CommandBurstCap9),          // 第321期（あふれの上限9・印だけ）
         new MarkOnlyTrait(TraitId.WhipDischarge),             // 第322期（放電だけ SD・印だけ）
+        new MarkOnlyTrait(TraitId.PowderDense),               // 第323期（粉の濃さ TD・印だけ）
+        new MarkOnlyTrait(TraitId.PowderDenseKeep),           // 第323期（濃さは残る TD-b・印だけ）
+        new MarkOnlyTrait(TraitId.PowderDenseBurn),           // 第323期（濃い雷は本人も焼く・印だけ）
+        new MarkOnlyTrait(TraitId.ThunderPowderReturn),       // 第323期（カタ: 粉も雷に乗せる・印だけ）
+        new MarkOnlyTrait(TraitId.ThreadPowderFlow),          // 第323期（クグ: 粉も糸を伝う・印だけ）
+        new MarkOnlyTrait(TraitId.PowderContagion),           // 第323期（粉の伝染 TP-a・印だけ）
+        new MarkOnlyTrait(TraitId.PowderContagionSpread),     // 第323期（伝染は続く TP-b・印だけ）
+        new MarkOnlyTrait(TraitId.PowderContagionDry),        // 第323期（弾けたばかりの駒には移らない TP-a′・参考・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

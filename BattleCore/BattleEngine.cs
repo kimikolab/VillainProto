@@ -1470,7 +1470,7 @@ public sealed class BattleContext
         if (_verbose) Emit(new BattleEvent
         {
             Kind = BattleEventKind.Discharge, Turn = _turn, ActorId = from.InstanceId, TargetId = ball.InstanceId,
-            Amount = ShockRule.Discharge, Slot = depth + 1, Team = ball.TeamId, SourceTrait = TraitId.SilkBallEvery,
+            Amount = ShockRule.Discharge * (1 + DensityOf(from)), Slot = depth + 1, Team = ball.TeamId, SourceTrait = TraitId.SilkBallEvery,   // 第323期: 濃さ n の駒からは 8 ×（1 ＋ n）（表示だけ・糸玉は HP を減らさない）
         });
         Log($"    {from.Name} から糸玉へ放電", LogKind.Status);
         if (ball.RawCounter(StatusKeys.Shock) > 0) _shockQueue.Enqueue((ball, depth + 1, ini));
@@ -1796,6 +1796,8 @@ public sealed class BattleContext
         _shockNext = 0;
         kt.ThunderDealt += before - Math.Max(0, target.Hp);
         if (before > 0 && !target.IsAlive) kt.ThunderKills++;
+        // 第323期（カタの版）: 雷が最初に当たった敵へ、カタ自身の濃さを全部移す（的が倒れていれば移さない）。保持者がいなければ比較1つで抜ける。
+        if (_tdLive && hop == 1 && target.IsAlive && kata.HasTrait(TraitId.ThunderPowderReturn)) PowderReturn(kata, target);
         MarkShock(target, kata);
     }
 
@@ -1848,6 +1850,8 @@ public sealed class BattleContext
             {
                 var (x, d, ini) = _shockQueue.Dequeue();
                 if (x.RawCounter(StatusKeys.Shock) <= 0) continue;   // 既に放電した（1つの駒は1回しか放電しない）
+                // 第323期（TP）: 伝染でこの連鎖の中で新しく帯電した駒は、同じ連鎖では弾けない（次の一撃を待つ）。保持者がいなければ件数の比較1つで抜ける。
+                if (_tpFresh.Count > 0 && _tpFresh.Contains(x.InstanceId)) { TallyOf(_powderHolder!).TpFreshSkip++; continue; }
                 // 第322期（SD）: この鞭の一振りで感電を残して弾けた敵は、同じ一振りの中ではもう弾けない（放電が届いても受けるだけ）。保持者がいなければ比較1つで抜ける。
                 if (_sdLive && _whip?.Kept is { } sdk && sdk.Contains(x)) { TallyOf(_whip.Actor).SdSkipped++; continue; }
                 bool sdKept = sdKeep is not null && d == 0 && x == sdKeep && _whip is not null;
@@ -1887,6 +1891,8 @@ public sealed class BattleContext
                 if (_grappleLive && d > 0 && x.HasTrait(TraitId.Grapple)) { UnitTally kt = TallyOf(x); kt.KuguPopChain++; if (KuguHeld(x)) kt.KuguPopChainHeld++; }   // 第290期・計数のみ
                 if (_threadLive && d == 0 && x.RawCounter(ThreadMarkKey) > 0) { x.SetCounter(ThreadMarkKey, 0); threadRoot = true; }   // 第290期・計数のみ（KG-b の印の駒が起点）
                 // 第290期（糸 ①）: 糸の保持者の放電は、隣の味方ではなく糸の先の敵へ1本流れる。保持者がいなければ比較1つで従来どおり。
+                if (_tpLive) _tpPopped.Add(x.InstanceId);   // 第323期・計数のみ（この連鎖で先に弾けた駒）
+                int tdN = _powderLive ? PowderPop(x, ini) : 0;   // 第323期（濃さ n の駒の放電は 8 ×（1 ＋ n）・ほかは計数だけ）
                 UnitState? th = _threadLive ? ThreadTarget(x) : null;
                 if (th is not null) Discharge(x, th, d, ini);
                 else
@@ -1898,9 +1904,10 @@ public sealed class BattleContext
                         foreach (UnitState b in _silkBalls.ToList())
                             if (b != x && b.TeamId == x.TeamId && FormationRules.AreAdjacent(x, b)) Discharge(x, b, d, ini);
                 }
+                if (tdN > 0) PowderPopAfter(x, tdN, ini);   // 第323期（焼 ／ TD-a は濃さ 0）
             }
         }
-        finally { _shockChaining = false; _shockDepth = 0; }
+        finally { _shockChaining = false; _shockDepth = 0; if (_tpFresh.Count > 0) _tpFresh.Clear(); if (_tpPopped.Count > 0) _tpPopped.Clear(); }
 
         UnitTally rt = TallyOf(u);
         rt.ChainRoots++;
@@ -2800,6 +2807,8 @@ public sealed class BattleContext
             if (IsSilkBall(from)) { fromBall = true; UnitTally ot = TallyOf(_silkOwner[from]); ot.SilkDisOut++; ot.SilkDisToUnit++; }
         }
         int amt = ShockRule.Discharge;
+        int tdN = _tdLive ? DensityOf(from) : 0;   // 第323期（TD）: 濃さ n の駒の放電は 8 ×（1 ＋ n）。保持者がいなければ比較1つで抜ける
+        if (tdN > 0) amt *= 1 + tdN;
         // 第290期・計数のみ: 隣の味方の放電がクグに来た（糸の ② の発火見込み）。
         if (_grappleLive && to.TeamId == from.TeamId && to.HasTrait(TraitId.Grapple)) { UnitTally kt = TallyOf(to); kt.KuguDisIn++; if (KuguHeld(to)) kt.KuguDisInHeld++; }
         // 第290期（糸）: ① 糸の保持者の放電は糸の先の敵へ（呼び出し側が to に敵を渡す）／ ② 隣の味方の放電が糸の保持者に来たら、受けずに糸の先の敵へ移す。
@@ -2832,6 +2841,8 @@ public sealed class BattleContext
             return;
         }
         Log($"    {from.Name} から {to.Name} へ放電（{amt}）", LogKind.Status);
+        bool tpFrom = _tpLive && _pwTouched.Contains(from.InstanceId);   // 第323期（TP）: 粉の印のある駒の放電
+        bool tpWas = tpFrom && to.RawCounter(StatusKeys.Shock) > 0;
         int before = to.Hp;
         _shockNext = 3;
         _shockKillerSet = true;
@@ -2847,6 +2858,8 @@ public sealed class BattleContext
         tt.DischargeTaken += removed;
         if (fromBall) TallyOf(_silkOwner[from]).SilkDealt += removed;   // 第292期・計数のみ
         if (before > 0 && !to.IsAlive) tt.DischargeDeaths++;
+        if (_powderLive) NoteDischargeDealt(from, to, removed, tdN);   // 第323期・計数のみ
+        if (tpFrom && !tpWas && to.IsAlive && !(_tpDry && _tpPopped.Contains(to.InstanceId))) PowderInfect(from, to);   // 第323期（TP）: 帯電していない隣も帯電させる（TP-a′ は同じ連鎖で先に弾けた駒を除く）
         if (carry) MireCarryTo(to, from);
     }
 
@@ -2886,12 +2899,265 @@ public sealed class BattleContext
         TallyOf(from).DischargeDealt += removed;
         tt.DischargeTaken += removed;
         if (before > 0 && !to.IsAlive) { tt.DischargeDeaths++; vt.ThreadKills++; }
+        if (_powderLive) NoteDischargeDealt(from, to, removed, _tdLive ? DensityOf(from) : 0);   // 第323期・計数のみ
         if (wasShocked && to.RawCounter(StatusKeys.Shock) <= 0) vt.ThreadPopped++;
         if (!wasShocked && to.IsAlive && via.HasTrait(TraitId.ThreadCharge) && MarkShock(to, via))
         {
             vt.ThreadCharged++;
             to.SetCounter(ThreadMarkKey, 1);   // 計数専用（そこから起きた連鎖）
             Log($"    {to.Name} は糸の電気を浴びて帯電した", LogKind.Status);
+        }
+    }
+
+    // =================================================================================
+    // 第323期 —— トウの粉の濃さ（TD）と粉の伝染（TP）（指示書 design/PHASE323_TOU_POWDER_SPEC.md）。
+    // 濃さ ／ 粉の印は**この戦の中だけ**の状態で、駒の `Counters` ではなくこの盤面の辞書に置く（戦ごとに作り直される ＝ 戦をまたいで持ち越さない）。
+    // 粉が落ちた（`PowderFell`）と弾けた（`PowderPop`）は規定のトウでも計数のために走る（Phase 0）。**規則が読むのは保持者がいるときだけ**
+    // （`_tdLive` ／ `_tpLive`・保持者がいなければ比較1つで抜ける）。**乱数を引かない。**
+    // =================================================================================
+
+    /// <summary>帯電の粉（`ChargedPowder`）の保持者が戦に出たか（第323期・計数の口を短絡させる）。</summary>
+    bool _powderLive;
+    /// <summary>濃さ（TD）／ 濃さは残る（TD-b）／ 本人も焼く（焼）／ 伝染（TP）／ 伝染は続く（TP-b）の保持者が戦に出たか。</summary>
+    bool _tdLive, _tdKeep, _tdBurn, _tpLive, _tpSpread, _tpDry;
+    /// <summary>最初に出た粉の保持者（計数の帰属先・トウ）。</summary>
+    UnitState? _powderHolder;
+    /// <summary>トウの手番の頭に帯電していた駒（<see cref="PowderHead"/> が控える・<see cref="PowderFell"/> が読む）。</summary>
+    UnitState? _pwHeadActor;
+    readonly HashSet<int> _pwHead = new();
+    /// <summary>粉の印（トウの粉が落ちた駒・倒れるまで残る）。TP の規則が読む。規定のトウでは計数だけ。</summary>
+    readonly HashSet<int> _pwTouched = new();
+    /// <summary>濃さ（駒 → n）と、そのうちカタ ／ クグが返して乗った分（計数のみ）。</summary>
+    readonly Dictionary<int, int> _density = new(), _densityRet = new();
+    /// <summary>計数のみ: 手番の頭に帯電していて粉が落ちた敵 → 落ちたターン（次に弾けるまで見張る）。</summary>
+    readonly Dictionary<int, int> _pwWatch = new();
+    /// <summary>TP: いまの連鎖の中で伝染して新しく帯電した駒（同じ連鎖では弾けない・連鎖の外側の1回の終わりで空にする）。</summary>
+    readonly HashSet<int> _tpFresh = new();
+    /// <summary>いまの連鎖で弾けた駒（TP の保持者がいる戦だけ）。規定の TP では計数のみ（伝染がこの連鎖で弾けた駒を帯電し直したか）、TP-a′ の規則はここを読んで伝染させない。</summary>
+    readonly HashSet<int> _tpPopped = new();
+    /// <summary>計数のみ: 伝染で帯電した駒 → 帯電したターン（次に弾けるまで見張る）。</summary>
+    readonly Dictionary<int, int> _tpInfected = new();
+
+    /// <summary>濃さ（第323期・読むだけ）。</summary>
+    public int DensityOf(UnitState u) => _density.Count > 0 && _density.TryGetValue(u.InstanceId, out int n) ? n : 0;
+    /// <summary>粉の印があるか（第323期・読むだけ・規定のトウでも計数のために付く）。</summary>
+    public bool PowderMarked(UnitState u) => _pwTouched.Contains(u.InstanceId);
+
+    void NotePowderHolder(UnitState u)
+    {
+        if (u.HasTrait(TraitId.ChargedPowder)) { _powderLive = true; _powderHolder ??= u; }
+        if (u.HasTrait(TraitId.PowderDense)) _tdLive = true;
+        if (u.HasTrait(TraitId.PowderDenseKeep)) _tdKeep = true;
+        if (u.HasTrait(TraitId.PowderDenseBurn)) _tdBurn = true;
+        if (u.HasTrait(TraitId.PowderContagion)) _tpLive = true;
+        if (u.HasTrait(TraitId.PowderContagionSpread)) _tpSpread = true;
+        if (u.HasTrait(TraitId.PowderContagionDry)) _tpDry = true;
+    }
+
+    /// <summary>トウの手番の頭（<c>TakeTurnFramed</c>）: 帯電している生きている駒を控える。<b>読むだけ。</b></summary>
+    void PowderHead(UnitState tou)
+    {
+        _pwHead.Clear();
+        _pwHeadActor = tou;
+        foreach (UnitState u in _units) if (u.IsAlive && u.RawCounter(StatusKeys.Shock) > 0) _pwHead.Add(u.InstanceId);
+    }
+
+    /// <summary>組み付いている生きている敵（第323期・クグの濃さの流れ先）。<see cref="GrappleTrait.TargetKey"/> だけを読む（ほどけた相手は含めない）。</summary>
+    UnitState? GrappledFoe(UnitState k)
+    {
+        int id = k.RawCounter(GrappleTrait.TargetKey) - 1;
+        if (id < 0) return null;
+        foreach (UnitState u in _units)
+            if (u.InstanceId == id) return u.IsAlive && u.TeamId != k.TeamId ? u : null;
+        return null;
+    }
+
+    /// <summary>生きている隣の味方（同じ陣営）の数（第323期・計数のみ）。<paramref name="dryOnly"/> なら帯電していない駒だけ。</summary>
+    int Neighbors(UnitState x, bool dryOnly)
+    {
+        int n = 0;
+        foreach (UnitState v in _units)
+            if (v != x && v.IsAlive && v.TeamId == x.TeamId && FormationRules.AreAdjacent(x, v) && (!dryOnly || v.RawCounter(StatusKeys.Shock) <= 0)) n++;
+        return n;
+    }
+
+    /// <summary>
+    /// トウの粉が駒に落ちた（第323期・<see cref="ChargedPowderTrait"/> だけが呼ぶ・主目標 ／ 舞う先 ／ 漏れ先それぞれ、<c>MarkShock</c> の直後）。
+    /// 粉の印を付け、**トウの手番の頭に帯電していた駒**なら濃さ +1（TD の保持者のときだけ）。<b>乱数を引かない。</b>
+    /// </summary>
+    public void PowderFell(UnitState tou, UnitState u, PowderRoute route)
+    {
+        if (!_powderLive || !u.IsAlive) return;
+        UnitTally t = TallyOf(tou);
+        bool head = _pwHeadActor == tou && TurnActor == tou && _pwHead.Contains(u.InstanceId);
+        int r = route == PowderRoute.Main ? 0 : route == PowderRoute.Spread ? 1 : 2;
+        (t.PwFell ??= new long[3])[r]++;
+        if (head) (t.PwFellShocked ??= new long[3])[r]++;
+        if (route == PowderRoute.Leak)
+        {
+            if (u.Def.Id == "kata") { t.PwLeakKata++; if (head) t.PwLeakKataShocked++; }
+            else if (u.Def.Id == "kugu") { t.PwLeakKugu++; if (head) t.PwLeakKuguShocked++; if (GrappledFoe(u) is not null) t.PwLeakKuguHeld++; }
+        }
+        if (head && u.TeamId != tou.TeamId && _pwWatch.TryAdd(u.InstanceId, _turn)) t.PwWatch++;
+        if (_pwTouched.Add(u.InstanceId) && _tpLive) EmitShockGauge(ShockGaugeLabels.PowderMark, tou, u, 1);   // 表示専用（TP の版だけ）
+        if (_tdLive && head && tou.HasTrait(TraitId.PowderDense)) PowderThicken(tou, u);
+    }
+
+    /// <summary>濃さ +1（第323期・<see cref="PowderFell"/> だけが呼ぶ）。クグの版（<see cref="TraitId.ThreadPowderFlow"/>）は組み付いた敵が生きていればそちらへ流す。</summary>
+    void PowderThicken(UnitState tou, UnitState u)
+    {
+        UnitTally t = TallyOf(tou);
+        UnitState dest = u;
+        if (u.HasTrait(TraitId.ThreadPowderFlow))
+        {
+            if (GrappledFoe(u) is { } g) { dest = g; TallyOf(u).TdKuguFlowed++; }
+            else TallyOf(u).TdKuguKept++;
+        }
+        int n0 = DensityOf(dest);
+        _density[dest.InstanceId] = n0 + 1;
+        if (dest != u) _densityRet[dest.InstanceId] = _densityRet.GetValueOrDefault(dest.InstanceId) + 1;
+        if (dest.TeamId == tou.TeamId) t.TdGainAlly++; else t.TdGainFoe++;
+        if (dest != u)
+        {
+            EmitShockGauge(ShockGaugeLabels.DenseFlow, u, dest, n0 + 1, n0, tou);   // 表示専用（クグ → 組み付いた敵）
+            Log($"    {u.Name} に積もった粉は、糸を伝って {dest.Name} へ流れた（濃さ {n0 + 1}）", LogKind.Trigger);
+        }
+        else
+        {
+            EmitShockGauge(ShockGaugeLabels.Dense, tou, dest, n0 + 1, n0);   // 表示専用
+            Log($"    {dest.Name} の粉が濃くなった（濃さ {n0 + 1}）", dest.TeamId == tou.TeamId ? LogKind.FriendlyFire : LogKind.Status);
+        }
+    }
+
+    /// <summary>カタの版（第323期・<see cref="StrikeThunder"/> の1発目だけ）: カタ自身の濃さを雷の的へ全部移す。</summary>
+    void PowderReturn(UnitState kata, UnitState target)
+    {
+        int n = DensityOf(kata);
+        UnitTally kt = TallyOf(kata);
+        if (n <= 0) { kt.TdKataDry++; return; }
+        _density.Remove(kata.InstanceId);
+        _densityRet.Remove(kata.InstanceId);
+        int n0 = DensityOf(target);
+        _density[target.InstanceId] = n0 + n;
+        _densityRet[target.InstanceId] = _densityRet.GetValueOrDefault(target.InstanceId) + n;
+        kt.TdKataMoves++;
+        kt.TdKataMoved += n;
+        EmitShockGauge(ShockGaugeLabels.DenseMove, kata, target, n0 + n, n);   // 表示専用（Amount ＝ 的の新しい濃さ ／ Slot ＝ 移した量）
+        Log($"    {kata.Name} の身に積もった粉が、雷に乗って {target.Name} へ落ちた（濃さ {n0 + n}）", LogKind.Trigger);
+    }
+
+    /// <summary>
+    /// 感電が弾けた（第323期・<see cref="ShockTrigger"/> の列の中・放電の直前）。計数（見張り ／ 味方の弾け ／ 粉の印の駒の弾け ／ 伝染した駒の弾け ／ トウの手番の弾け）と、
+    /// 濃さ n を返す（TD の保持者がいなければ 0）。<b>盤面は読むだけ。</b>
+    /// </summary>
+    int PowderPop(UnitState x, UnitState? ini)
+    {
+        UnitTally t = TallyOf(_powderHolder!);
+        int team = _powderHolder!.TeamId;
+        bool ally = x.TeamId == team;
+        if (_pwWatch.Count > 0 && _pwWatch.Remove(x.InstanceId, out int t0))
+        {
+            int nb = Neighbors(x, false);
+            t.PwWatchPopped++; t.PwWatchTurnSum += _turn - t0; t.PwWatchNbrSum += nb;
+            (t.PwWatchNbrHist ??= new long[6])[Math.Min(nb, 5)]++;
+        }
+        if (ally)
+        {
+            if (ini is not null && ini.TeamId != team) t.PwAllyPopsFoeHit++; else t.PwAllyPopsOther++;
+            t.PwAllyPopNbrSum += Neighbors(x, false);
+        }
+        if (_pwTouched.Contains(x.InstanceId))
+        {
+            int dry = Neighbors(x, true);
+            if (ally) { t.PwMarkedPopsAlly++; if (dry > 0) t.PwMarkedPopsAllyDry++; t.PwMarkedDryAlly += dry; }
+            else { t.PwMarkedPopsFoe++; if (dry > 0) t.PwMarkedPopsFoeDry++; t.PwMarkedDryFoe += dry; }
+        }
+        if (_tpInfected.Count > 0 && _tpInfected.Remove(x.InstanceId, out int ti))
+        {
+            if (ally) t.TpInfPopsAlly++;
+            else
+            {
+                t.TpInfPopsFoe++; t.TpInfPopTurnSum += _turn - ti;
+                int cat = ini is null ? 4 : ini.TeamId != team ? 5 : ini.Def.Id == "tou" ? 0 : ini.Def.Id == "kata" ? 1 : ini.Def.Id == "shiga" ? 2 : 3;
+                (t.TpInfPopIniHist ??= new long[6])[cat]++;
+            }
+        }
+        if (!ally && TurnActor == _powderHolder) t.TouTurnPops++;
+        if (!_tdLive) return 0;
+        int n = DensityOf(x);
+        if (n <= 0) return 0;
+        if (ally) t.TdPopAlly++; else t.TdPopFoe++;
+        (t.TdPopHist ??= new long[9])[Math.Min(n, 8)]++;
+        if (n > t.TdPopMax) t.TdPopMax = n;
+        EmitShockGauge(ShockGaugeLabels.DensePop, ini, x, n);   // 表示専用（直後の放電は 8 ×（1 ＋ n））
+        Log($"    濃い粉の雷（濃さ {n}）——放電は {ShockRule.Discharge * (1 + n)}", LogKind.Trigger);
+        return n;
+    }
+
+    /// <summary>濃さ n の駒が放電し終えた（第323期）: 焼の版は本人にも 8 × n、TD-a は濃さを 0 に戻す。</summary>
+    void PowderPopAfter(UnitState x, int n, UnitState? ini)
+    {
+        if (_tdBurn && x.IsAlive) PowderSelfBurn(x, n, ini);
+        if (!_tdKeep) { _density.Remove(x.InstanceId); _densityRet.Remove(x.InstanceId); }
+    }
+
+    /// <summary>濃い雷は本人も焼く（第323期・焼）。放電と同じ扱いのダメージ（出どころは本人・撃破者は連鎖を起こした一撃の主・ベニの結界の内側なら回復に反転）。</summary>
+    void PowderSelfBurn(UnitState x, int n, UnitState? ini)
+    {
+        int amt = ShockRule.Discharge * n;
+        UnitTally t = TallyOf(_powderHolder!);
+        bool ally = x.TeamId == _powderHolder!.TeamId;
+        EmitShockGauge(ShockGaugeLabels.DenseBurn, x, x, amt, n);   // 表示専用（Amount ＝ 量 ／ Slot ＝ 濃さ・直後に本人の `Damage`）
+        UnitState? inv = InvertsTick(x);
+        if (inv is not null) { InverseHeal(inv, x, amt, 3, "放電"); return; }
+        Log($"    濃い雷が {x.Name} 自身も焼く（{amt}）", ally ? LogKind.FriendlyFire : LogKind.Damage);
+        int before = x.Hp;
+        _shockNext = 3;
+        _shockKillerSet = true;
+        _shockKiller = ini;
+        _dischargeDepth++;
+        ApplyDamage(x, amt, x, isFriendlyFire: true);
+        _dischargeDepth--;
+        _shockNext = 0;
+        _shockKillerSet = false;
+        _shockKiller = null;
+        int removed = before - Math.Max(0, x.Hp);
+        if (ally) { t.TdBurnAlly += removed; if (before > 0 && !x.IsAlive) t.TdBurnAllyKills++; }
+        else { t.TdBurnFoe += removed; if (before > 0 && !x.IsAlive) t.TdBurnFoeKills++; }
+    }
+
+    /// <summary>放電1本の与ダメの計数（第323期・<b>計数のみ</b>）: 濃い放電の分（敵 ／ 味方の側）・返した濃さが乗った分・トウの手番の放電。</summary>
+    void NoteDischargeDealt(UnitState from, UnitState to, int removed, int n)
+    {
+        UnitTally t = TallyOf(_powderHolder!);
+        int team = _powderHolder!.TeamId;
+        if (to.TeamId != team && TurnActor == _powderHolder) t.TouTurnDisDealt += removed;
+        if (n <= 0) return;
+        if (to.TeamId == team) { t.TdHeavyAllyDealt += removed; t.TdHeavyAllyExtra += ShockRule.Discharge * n; }
+        else { t.TdHeavyFoeDealt += removed; t.TdHeavyFoeExtra += ShockRule.Discharge * n; }
+        int ret = _densityRet.Count > 0 ? Math.Min(_densityRet.GetValueOrDefault(from.InstanceId), n) : 0;
+        if (ret > 0) { t.TdRetNominal += ShockRule.Discharge * ret; t.TdRetDealt += removed * ret / (1 + n); }
+    }
+
+    /// <summary>
+    /// 粉の伝染（第323期・TP・<see cref="Discharge"/> だけが呼ぶ）。粉の印のある駒の放電が、浴びる前に帯電していなかった生きている隣に届いたら帯電させる。
+    /// 新しく帯電した駒は同じ連鎖では弾けない（<see cref="_tpFresh"/>）。TP-b は新しく帯電した駒にも粉の印を付ける。
+    /// </summary>
+    void PowderInfect(UnitState from, UnitState to)
+    {
+        if (!MarkShock(to, from, spreadFrom: from)) return;
+        _tpFresh.Add(to.InstanceId);
+        _tpInfected[to.InstanceId] = _turn;
+        UnitTally t = TallyOf(_powderHolder!);
+        bool ally = to.TeamId == _powderHolder!.TeamId;
+        if (ally) t.TpNewAlly++; else t.TpNewFoe++;
+        if (_tpPopped.Contains(to.InstanceId)) t.TpReArm++;   // 計数のみ: この連鎖で先に弾けた駒を帯電し直した
+        EmitShockGauge(ShockGaugeLabels.Contagion, from, to, 1);   // 表示専用（直前に `to` の感電の `StatusGain`・`SpreadFromId` ＝ 放電した駒）
+        Log($"    雷が粉を伝って {to.Name} にも移った（帯電）", ally ? LogKind.FriendlyFire : LogKind.Status);
+        if (_tpSpread && _pwTouched.Add(to.InstanceId))
+        {
+            t.TpMarkSpread++;
+            EmitShockGauge(ShockGaugeLabels.PowderMark, from, to, 1);   // 表示専用（TP-b: 移った先にも粉が舞う）
         }
     }
 
@@ -8628,6 +8894,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.BeastDeathCount)) _bdLive = true;           // 第317期（獣の死）
         if (u.HasTrait(TraitId.StoredCharge)) _chargeLive = true;          // 第288期（蓄電の口・雷霆の枠）
         if (u.HasTrait(TraitId.WhipDischarge)) _sdLive = true;             // 第322期（SD・放電だけ）
+        NotePowderHolder(u);                                               // 第323期（粉の濃さ TD ／ 伝染 TP・規定のトウは計数だけ）
         if (u.HasTrait(TraitId.StoredCharge) || u.HasTrait(TraitId.Thunder)) _chainReaders.Add(u);   // 第289期（連鎖の後の口）
         if (IsSparkHolder(u)) { _sparkLive = true; _chainReaders.Add(u); }   // 第307期（ソムの光・連鎖の後の口）
         if (u.HasTrait(TraitId.SparkVeil)) _veilLive = true;              // 第308期（光の衣の計数）
@@ -13678,6 +13945,7 @@ public sealed class BattleContext
         UnitTally tt = TallyOf(actor);
         tt.TurnsTaken++;
         if (_whipLive && actor.RawCounter(StatusKeys.Daunted) > 0) tt.TurnsDaunted322++;   // 第322期・計数のみ（萎縮したまま迎えた手番）
+        if (_powderLive && actor == _powderHolder) PowderHead(actor);   // 第323期（手番の頭に帯電していた駒を控える・読むだけ）
         int handEv0 = _events.Count;   // 第239期・**計数のみ**（手番の枠。verbose のときだけ `Hands` に積む）
         try
         {
