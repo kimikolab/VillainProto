@@ -175,7 +175,7 @@ static class Playtest291Diag
         // (a) 規定のクグ ＝ KG-b
         Expect("(a) 第291期の規定のクグ ＝ KG-b（組み付き ＋ 糸 ＋ 導線）・`KuguKGb`（第294期から規定は KW-a）・旧の規定 `KuguKG0` は組み付きだけ（`All` ／ `Retired` に入っていない）・文面",
             // 第294期: 規定は KW-a になった——第291期の規定（KG-b）は `KuguKGb` に固定してあることを確かめる
-            UnitCatalog.KuguKGb.Traits.SequenceEqual(new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge }) && UnitCatalog.Kugu.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.WebCharge))
+            UnitCatalog.KuguKGb.Traits.SequenceEqual(new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge }) && UnitCatalog.KuguH324.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.WebCharge))
             && UnitCatalog.KuguKG0.Traits.SequenceEqual(new[] { TraitId.Grapple }) && !UnitCatalog.Everyone.Contains(UnitCatalog.KuguKG0) && !UnitCatalog.Everyone.Contains(UnitCatalog.KuguKGb)
             && UnitCatalog.KuguKG0.MaxHp == UnitCatalog.KuguKGb.MaxHp && UnitCatalog.KuguKG0.Attack == UnitCatalog.KuguKGb.Attack && UnitCatalog.KuguKG0.Speed == UnitCatalog.KuguKGb.Speed
             && UnitCatalog.KuguKGb.PlusText == UnitCatalog.KuguKG0.PlusText + "。組み付いた敵とは糸で繋がっている。自分に流れ込む電気は、糸を伝ってその敵へ流れ、浴びた敵は帯電する");

@@ -283,7 +283,7 @@ static class Som320Diag
         {
             bool d = som.Traits.SequenceEqual(h.Traits.Append(TraitId.BeastThrowBackfire)) && som.Traits.SequenceEqual(UnitCatalog.SomWSb.Traits)
                 && h.Traits.SequenceEqual(UnitCatalog.SomCRb.Traits) && h.Traits.SequenceEqual(UnitCatalog.SomH318.Traits.Concat(new[] { TraitId.BeastStand, TraitId.BeastBetray, TraitId.BeastResonance, TraitId.BeastResonanceArc }))
-                && som.MinusText == h.MinusText + "。受け止める者がいなければ、獣は投げた雷の残りで暴発する" && som.MinusText == UnitCatalog.SomWSb.MinusText && som.PlusText == h.PlusText
+                && som.MinusText == h.MinusText + "。受け止める者がいなければ、召喚獣は投げた雷の残りで暴発する" && som.MinusText == UnitCatalog.SomWSb.MinusText && som.PlusText == h.PlusText
                 && som.MaxHp == h.MaxHp && som.Attack == h.Attack && som.Speed == h.Speed && ReferenceEquals(som.Actions, h.Actions) && som.Id == h.Id && som.Name == h.Name
                 && UnitCatalog.SomWSa.Traits.SequenceEqual(h.Traits.Append(TraitId.BeastStandLate)) && UnitCatalog.SomWSa3.Traits.SequenceEqual(h.Traits.Append(TraitId.BeastStandLate3));
             bool roster = UnitCatalog.All.Contains(som) && UnitCatalog.All.Count == 52 && !UnitCatalog.Everyone.Contains(h) && !UnitCatalog.Everyone.Contains(UnitCatalog.SomWSb)
@@ -322,7 +322,7 @@ static class Som320Diag
         }
         // (c) 試遊の台: 既存の12行は名前も並びもそのまま・末尾に3行・規定の駒・`compare` ／ 交差帯の行数はそのまま・DemoApp の部分一致で自分に当たる
         {
-            var pl = Presets.Playtest;
+            var pl = Presets.Playtest.Take(15).ToArray();   // 第325期: 試遊の末尾に2行（粉 隣あり ／ 隣なし）を足した——第324期までの15行で見る
             var old12 = S309.Playtest308.Concat(new[] { S309.Shield, S309.ShieldHeavy, S312.Whip, S312.WhipHeavy }).ToArray();
             bool shape = pl.Length == 15 && pl.Take(12).Select(r => r.Name).SequenceEqual(old12) && pl.Skip(12).Select(r => r.Name).SequenceEqual(Added)
                 && pl.Skip(12).All(r => r.F.Shape == FormationShape.X && !r.F.HasRelics && r.F.Occupied().Count() == 5 && r.F.Occupied().All(o => o.Slot < 5 && UnitCatalog.All.Contains(o.Def)) && r.F.Occupied().Any(o => ReferenceEquals(o.Def, som)))

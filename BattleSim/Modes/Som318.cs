@@ -536,7 +536,7 @@ static class Som318Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var v = V(ver);
         var w = S307.WaveOf(wave);
-        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.Kugu, UnitCatalog.Kata } : new[] { UnitCatalog.Tou };
+        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.KuguH324, UnitCatalog.KataH324 } : new[] { UnitCatalog.TouH324 };
         var pool = (w.Boss ? S307.BossPool : S307.ElitePool).Select(Cur).ToArray();
         int k = w.Boss ? 2 : 3, need = w.Boss ? 1 : 5;
         var lu = S293.Combos(pool, k);
@@ -822,7 +822,7 @@ static class Som318Diag
         {
             (string Text, bool KuguCharged, bool FoeCharged) Kugu(bool charged)
             {
-                var (ctx, som, kugu, e) = One(UnitCatalog.Kugu, cra, charged);
+                var (ctx, som, kugu, e) = One(UnitCatalog.KuguH324, cra, charged);
                 var foe = e.First(u => u.IsAlive && FormationRules.RowOf(u.Slot) == Row.Front);
                 kugu.SetCounter(GrappleTrait.TargetKey, foe.InstanceId + 1);
                 int ev0 = ctx.Events.Count;
@@ -878,11 +878,11 @@ static class Som318Diag
             bool defs = UnitCatalog.SomBT318.Traits.SequenceEqual(som.Traits.Concat(new[] { TraitId.BeastStand, TraitId.BeastBetray }))
                 && cra.Traits.SequenceEqual(som.Traits.Concat(new[] { TraitId.BeastStand, TraitId.BeastBetray, TraitId.BeastResonance }))
                 && crb.Traits.SequenceEqual(cra.Traits.Append(TraitId.BeastResonanceArc))
-                && sg.Traits.SequenceEqual(UnitCatalog.ShigaH318.Traits.Append(TraitId.BetrayBackswing)) && sg.PlusText == UnitCatalog.ShigaH318.PlusText + "。背いた獣の雷を浴びると、その場で打ち返す"
+                && sg.Traits.SequenceEqual(UnitCatalog.ShigaH318.Traits.Append(TraitId.BetrayBackswing)) && sg.PlusText == UnitCatalog.ShigaH318.PlusText + "。背いた召喚獣の雷を浴びると、その場で打ち返す"
                 && cra.MinusText == UnitCatalog.SomResonanceMinusText && crb.MinusText == UnitCatalog.SomResonanceMinusText + UnitCatalog.SomResonanceArcText
                 && new[] { UnitCatalog.SomBT318, cra, crb, sg }.All(d => !UnitCatalog.Everyone.Contains(d));
             bool dflt = !som.Traits.Any(t => t is TraitId.BeastStand or TraitId.BeastBetray or TraitId.BeastResonance or TraitId.BeastResonanceArc)
-                && !UnitCatalog.ShigaH318.Traits.Contains(TraitId.BetrayBackswing) && !UnitCatalog.Kata.Traits.Contains(TraitId.LightningRod)
+                && !UnitCatalog.ShigaH318.Traits.Contains(TraitId.BetrayBackswing) && !UnitCatalog.KataH324.Traits.Contains(TraitId.LightningRod)
                 && UnitCatalog.Fodder.MaxHp == 12 && UnitCatalog.Fodder.Attack == 0 && UnitCatalog.Fodder.Speed == 1;
             bool route = OutOfTurnRoutes.Names.Length == Enum.GetValues<OutOfTurnRoute>().Length && OutOfTurnRoutes.Names[(int)OutOfTurnRoute.Resonance] == "共鳴返し"
                 && OutOfTurnRoutes.Names[(int)OutOfTurnRoute.Backswing] == "打ち返し" && OutOfTurnRoutes.Names[^1] == "その他";

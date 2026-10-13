@@ -410,7 +410,7 @@ static class Som308Diag
     {
         var vars = new List<(string, Func<Formation, Formation>)> { ("規定（SH-a）", f => f) };
         if (ver != "") { var v = AnyVer(ver); vars.Add((v.Name, f => Apply(f, v))); }
-        S307.GridCore($"固定枠 クグ ＋ カタ ＋ ソム（{string.Join(" ／ ", vars.Select(x => x.Item1))}）", Waves[0], new[] { UnitCatalog.Kugu, UnitCatalog.KataH311, UnitCatalog.SomH308 }, S307.BossPool, 2, vars.ToArray(), "第308期");
+        S307.GridCore($"固定枠 クグ ＋ カタ ＋ ソム（{string.Join(" ／ ", vars.Select(x => x.Item1))}）", Waves[0], new[] { UnitCatalog.KuguH324, UnitCatalog.KataH311, UnitCatalog.SomH308 }, S307.BossPool, 2, vars.ToArray(), "第308期");
     }
 
     static void GridElite(string waveName, string ver)

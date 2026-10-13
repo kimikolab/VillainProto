@@ -53,9 +53,9 @@ static class Shiga288Diag
     static UnitDef[] Order(string s) => s.Split('・', StringSplitOptions.RemoveEmptyEntries).Select(ByShort).ToArray();
     static string OrderName(UnitDef[] o) => string.Join("・", o.Select(Short));
     /// <summary>第290期: 名前で引く台のカタ（規定は第290期から KR-b）を旧の規定 `KataS3` に固定する（第288期の台を再現するため）。</summary>
-    static Formation Seat(UnitDef[] o) => FvSwap(FvSwap(FvSwap(FvSwap(Pin316(B283.Seat(o)), UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.DohaH316, UnitCatalog.DohaD0);   // 第298期: ドハも   // 第295期: ソラも   // 第291期: クグも旧の規定へ
+    static Formation Seat(UnitDef[] o) => FvSwap(FvSwap(FvSwap(FvSwap(Pin316(B283.Seat(o)), UnitCatalog.KataH324, UnitCatalog.KataS3), UnitCatalog.KuguH324, UnitCatalog.KuguKG0), UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.DohaH316, UnitCatalog.DohaD0);   // 第298期: ドハも   // 第295期: ソラも   // 第291期: クグも旧の規定へ
     /// <summary>第290期: `compare` の行のカタを旧の規定 `KataS3` に固定した行（シガは版で差し替えるので触らない）。</summary>
-    static (string Name, Formation F)[] Rows288() => CompareBuildsH316().Select(r => (r.Name, FvSwap(FvSwap(FvSwap(FvSwap(r.F, UnitCatalog.Kata, UnitCatalog.KataS3), UnitCatalog.Kugu, UnitCatalog.KuguKG0), UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.DohaH316, UnitCatalog.DohaD0))).ToArray();   // 第298期: ドハも   // 第295期: ソラも
+    static (string Name, Formation F)[] Rows288() => CompareBuildsH316().Select(r => (r.Name, FvSwap(FvSwap(FvSwap(FvSwap(r.F, UnitCatalog.KataH324, UnitCatalog.KataS3), UnitCatalog.KuguH324, UnitCatalog.KuguKG0), UnitCatalog.Sora, UnitCatalog.SoraSR0), UnitCatalog.DohaH316, UnitCatalog.DohaD0))).ToArray();   // 第298期: ドハも   // 第295期: ソラも
     static Formation SwapShiga(Formation f, UnitDef ver) => ReferenceEquals(ver, UnitCatalog.ShigaSWa) ? f : FvSwap(f, UnitCatalog.ShigaSWa, ver);
 
     /// <summary>
@@ -335,7 +335,7 @@ static class Shiga288Diag
                 var w = WaveOf(bs[bi].Wave);
                 var f = SwapShiga(bs[bi].Make(), v.Def);
                 var d = MeasureDeep(f, w, 0, Seeds);
-                int dt = WinsPar(FvSwap(f, UnitCatalog.Tou, UnitCatalog.Dolga), w, Seeds);
+                int dt = WinsPar(FvSwap(f, UnitCatalog.TouH324, UnitCatalog.Dolga), w, Seeds);
                 int ds = WinsPar(FvSwap(f, v.Def, UnitCatalog.Dolga), w, Seeds);
                 int dk = bs[bi].Kata ? WinsPar(FvSwap(f, UnitCatalog.KataS3, UnitCatalog.Dolga), w, Seeds) : -1;
                 res[(bi, v.Name)] = (d, dt, ds, dk);
@@ -416,7 +416,7 @@ static class Shiga288Diag
         var ver = VerOf(verName);
         verName = VerName(verName);
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var fixedU = new[] { UnitCatalog.Tou, ver };
+        var fixedU = new[] { UnitCatalog.TouH324, ver };
         var lu = S287.Lineups();
         var boards = new List<UnitDef[]>();
         foreach (var t in lu) boards.AddRange(B283.Perms(fixedU.Concat(t).ToArray()));
@@ -433,7 +433,7 @@ static class Shiga288Diag
             if (WinLine(w, wins))
             {
                 Interlocked.Increment(ref winPass);
-                dg = Wins(FvSwap(f, UnitCatalog.Tou, UnitCatalog.Dolga), w, 0, Seeds, out _);
+                dg = Wins(FvSwap(f, UnitCatalog.TouH324, UnitCatalog.Dolga), w, 0, Seeds, out _);
                 ds = Wins(FvSwap(f, ver, UnitCatalog.Dolga), w, 0, Seeds, out _);
             }
             res[i] = new BoardRes(boards[i], wins, wt, dg, ds, dg >= 0 && Reached(w, wins, dg));

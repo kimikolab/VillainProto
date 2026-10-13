@@ -84,6 +84,7 @@ static class Guard294Diag
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Tome)) g[slot] = UnitCatalog.TomeMb;   // 第299期: ミサ ／ ザンも旧の規定（`TomeMb` ／ `ZanZN0`）に
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Zan)) g[slot] = UnitCatalog.ZanZN0;
         foreach (var (slot, d) in f.Occupied()) if (IsSomNow(d)) g[slot] = UnitCatalog.SomH307;   // 第308期: ソムも旧の規定（`SomH307`）に
+        foreach (var (slot, d) in g.Occupied().ToList()) g[slot] = PinTKK324(d);   // 第325期: トウ ／ カタ ／ クグも第324期までの規定に
         return g;
     }
 
@@ -734,7 +735,7 @@ static class Guard294Diag
     /// </summary>
     static (UnitDef[] Fixed, UnitDef[] Pool) BossFrame(string who) => who switch
     {
-        "som" => (new[] { UnitCatalog.Kugu, UnitCatalog.KataH311, UnitCatalog.SomH307 }, S293.BossPool.Where(d => d.Id != "som").Append(UnitCatalog.ShigaSWa).ToArray()),
+        "som" => (new[] { UnitCatalog.KuguH324, UnitCatalog.KataH311, UnitCatalog.SomH307 }, S293.BossPool.Where(d => d.Id != "som").Append(UnitCatalog.ShigaSWa).ToArray()),
         "hisa" => (new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.HisaHK0 }, B283.LifePool.Concat(B283.HealPool295.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id != "hisa").ToArray()),
         "sora" => (new[] { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.SoraSR0 }, B283.LifePool.Concat(B283.HealPool295.Where(h => !B283.LifePool.Contains(h))).Where(d => d.Id != "sora").ToArray()),
         _ => throw new ArgumentException(who),
@@ -757,7 +758,7 @@ static class Guard294Diag
         var v = AnyVer(ver);
         var set = SetOf(who);
         UnitDef fixed2 = set[0].From;
-        var pool = S287.Pool.Select(d => d.Id switch { "kata" => UnitCatalog.KataH311, "kugu" => UnitCatalog.Kugu, _ => d })
+        var pool = S287.Pool.Select(d => d.Id switch { "kata" => UnitCatalog.KataH311, "kugu" => UnitCatalog.KuguH324, _ => d })
                             .Where(d => d.Id != fixed2.Id && d.Id != "tou").Distinct().ToArray();
         var vars = new (string, Func<Formation, Formation>)[] { ("規定", f => f), (v.Name, f => Apply(f, v)) };
         GridCore($"固定枠 トウ ＋ {Short(fixed2)}（規定 ／ {v.Name}）", w, new[] { UnitCatalog.TouH311, fixed2 }, pool, 3, vars);
@@ -856,10 +857,10 @@ static class Guard294Diag
         Console.WriteLine("|---|---|---|");
         // (a) 段0
         Expect("(a) 規定のクグ ＝ KW-a（`KuguKWa` ＝ 規定）・シガ ＝ SW-a（`ShigaSWa` ＝ 規定）・旧の規定 `KuguKGb` ／ `ShigaSIb` は `All` ／ `Retired` の外・文面は第293期の版のまま",
-            ReferenceEquals(UnitCatalog.KuguKWa, UnitCatalog.Kugu) && ReferenceEquals(UnitCatalog.ShigaSWa, UnitCatalog.ShigaSWa)
-            && UnitCatalog.Kugu.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.WebCharge)) && UnitCatalog.ShigaSWa.Traits.SequenceEqual(UnitCatalog.ShigaSIb.Traits.Append(TraitId.ShockWhipChain))
-            && !new[] { UnitCatalog.KuguKGb, UnitCatalog.ShigaSIb }.Any(UnitCatalog.Everyone.Contains) && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.Kugu) && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.ShigaSWa)
-            && UnitCatalog.Kugu.PlusText == UnitCatalog.KuguKGb.PlusText + "。組み付いている間、手番ごとに糸を1本張る。糸の掛かった敵は帯電し続ける。止められない相手には、代わりにその周りへ帯電した糸玉を張る"
+            ReferenceEquals(UnitCatalog.KuguKWa, UnitCatalog.KuguH324) && ReferenceEquals(UnitCatalog.ShigaSWa, UnitCatalog.ShigaSWa)
+            && UnitCatalog.KuguH324.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.WebCharge)) && UnitCatalog.ShigaSWa.Traits.SequenceEqual(UnitCatalog.ShigaSIb.Traits.Append(TraitId.ShockWhipChain))
+            && !new[] { UnitCatalog.KuguKGb, UnitCatalog.ShigaSIb }.Any(UnitCatalog.Everyone.Contains) && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.KuguH324) && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.ShigaSWa)
+            && UnitCatalog.KuguH324.PlusText == UnitCatalog.KuguKGb.PlusText + "。組み付いている間、手番ごとに糸を1本張る。糸の掛かった敵は帯電し続ける。止められない相手には、代わりにその周りへ帯電した糸玉を張る"
             && UnitCatalog.ShigaSWa.PlusText == UnitCatalog.ShigaSIb.PlusText + "。割り込みの鞭は、弾けた電気をまとってそのぶん重くなる"
             && UnitCatalog.KuguKWb.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.WebSnare)) && UnitCatalog.ShigaSWb.Traits.SequenceEqual(UnitCatalog.ShigaSWa.Traits.Append(TraitId.StoredChargeEvery)));
         // (b) 版は規定の末尾に札を足しただけ・`All` ／ `Retired` の外・文面

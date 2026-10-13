@@ -215,7 +215,7 @@ static class Som312Diag
         Console.WriteLine();
         Console.WriteLine("| 項目 | 結果 | 備考 |");
         Console.WriteLine("|---|---|---|");
-        UnitDef som = UnitCatalog.SomH317, kata = UnitCatalog.Kata, tou = UnitCatalog.Tou;
+        UnitDef som = UnitCatalog.SomH317, kata = UnitCatalog.KataH324, tou = UnitCatalog.TouH324;
 
         // (a) 段0-1: 規定のソム ／ カタ ／ トウ ＝ 第311期の重ねの駒・旧は H311（`Everyone` の外）
         {
@@ -237,7 +237,7 @@ static class Som312Diag
         {
             // 火の型 ソラ→ソムの駒を、ベニの隣でない味方ができる席に並べ替えた盤（シガ・トウ・ガルド・ベニ・ソム——ベニは後1・隣は前1 ／ 中央）。
             // ベニの隣の味方 ／ 隣でない味方 を1体ずつ選び、4 割を切らせて緊急を起こす。
-            var f = Formation.Build(front1: UnitCatalog.ShigaSWa, front3: UnitCatalog.Tou, center: UnitCatalog.Gald, back1: UnitCatalog.Beni, back3: UnitCatalog.SomH317);
+            var f = Formation.Build(front1: UnitCatalog.ShigaSWa, front3: UnitCatalog.TouH324, center: UnitCatalog.Gald, back1: UnitCatalog.Beni, back3: UnitCatalog.SomH317);
             string Run1(bool inside, out long inv, out long healedOthers, out int? target, out int? partner, out long focusHp)
             {
                 var (ctx, p, e) = Board(f, BattleEngine.MaterializeEnemy(EnemyCatalog.BossRegularWave, EnemyScaleRule.None));

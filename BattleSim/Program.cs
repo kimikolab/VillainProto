@@ -600,6 +600,7 @@ if (focusId == "hisa321") { Hisa321Diag.Run(args, stageIndex); return; }   // �
 if (focusId == "shiga322") { Shiga322Diag.Run(args, stageIndex); return; }   // 第322期
 if (focusId == "tou323") { Tou323Diag.Run(args, stageIndex); return; }   // 第323期
 if (focusId == "tou324") { Tou324Diag.Run(args, stageIndex); return; }   // 第324期
+if (focusId == "tou325") { Tou325Diag.Run(args, stageIndex); return; }   // 第325期
 if (focusId == "shiga316") { Shiga316Diag.Run(args, stageIndex); return; }   // 第316期
 if (focusId == "som314") { Som314Diag.Run(args, stageIndex); return; }   // 第314期
 if (focusId == "shock") { ShockDiag.Run(args.Length > 2 ? args[2] : "phase0", string.Join(" ", args.Skip(3))); return; }

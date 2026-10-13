@@ -374,10 +374,10 @@ static class Shiga321Diag
     {
         var w = WaveOf(waveKey);
         var v = V(ver);
-        var fixedU = new[] { UnitCatalog.ShigaH321, UnitCatalog.Kata, UnitCatalog.Som };
+        var fixedU = new[] { UnitCatalog.ShigaH321, UnitCatalog.KataH324, UnitCatalog.Som };
         UnitDef Now(UnitDef d) => PinSH321(UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d);   // 第322期: 第321期の規定に固定
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();
-        var pool = S287.Pool.Select(Now).Append(UnitCatalog.Tou).Where(d => d.Id is not ("shiga" or "kata" or "som")).GroupBy(d => d.Id).Select(g => g.First()).ToArray();
+        var pool = S287.Pool.Select(Now).Append(UnitCatalog.TouH324).Where(d => d.Id is not ("shiga" or "kata" or "som")).GroupBy(d => d.Id).Select(g => g.First()).ToArray();
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var combos = new List<UnitDef[]>();
         for (int i = 0; i < pool.Length; i++) for (int j = i + 1; j < pool.Length; j++)

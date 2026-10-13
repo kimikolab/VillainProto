@@ -1117,6 +1117,10 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 tou324 grid <boss|guard> <版>   # 第324期 §4-4: 第323期と同じ作りの格子
     dotnet run --project BattleSim -c Release 0 tou324 memo <台の一部> <波> <seed> <版>   # 第324期 §5: 伝染 ／ 濃さ ／ 返す ／ 焼の並び
     dotnet run --project BattleSim -c Release 0 tou324 check         # 第324期 自己検査（版の定義・TP-e の印は敵にだけ ／ 漏れ先は帯電する ／ 味方が弾けても伝染しない・TP-e′ は弾けたばかりに移らない・重ねた版の4つが同じ盤で働く・戦の中で味方への伝染 ／ 印が 0・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 tou325 cand          # 第325期 §4: 試遊の2台の候補（トウ・カタ・クグ ＋ 2枚 × 席の2組（隣あり ／ 隣なし）× 近衛 ／ 大隊 ／ ボス・seed 0..39・同じ席の第324期の規定の差も）（約 1〜2 分）
+    dotnet run --project BattleSim -c Release 0 tou325 boards        # 第325期 §4: 足した2台（試遊・感電 粉 隣あり ／ 隣なし）× 10 波・勝率と第324期の規定の勝率・伝染 ／ 返す ／ 味方の濃さ ／ 焼（seed 0..199・4 秒）
+    dotnet run --project BattleSim -c Release 0 tou325 guide         # 第325期 §5: 試遊の感電の台 × 10 波（規定 ／ 第324期の規定の勝率の差・決着T）——手引きの数字（7 秒）
+    dotnet run --project BattleSim -c Release 0 tou325 check         # 第325期 自己検査（規定 ＝ E3 の札と文面・旧の定義の固定と古い口・召喚獣の名前・足した2台・verbose）
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）
     dotnet run --project BattleSim -c Release 0 shiga316 dgrid <boss|guard> [ps]   # 第316期 段0 G-c: 第297期の「ドハが要る台」の格子（第315期と同じ作り・基準は規定のドハ・1本 6〜9 分）

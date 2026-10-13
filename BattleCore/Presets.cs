@@ -883,5 +883,12 @@ public static class Presets
         ("試遊・感電 追い打ち", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Kugu, center: UnitCatalog.Tou, back1: UnitCatalog.Hagi, back3: UnitCatalog.Som)),
         // 瓦礫: 「試遊・感電 光の盾」の後1（クビ）をツギに（席はそのまま）。候補4台のうち獣の弾けから拾う瓦礫がいちばん多い台（`som320 cand`）。
         ("試遊・感電 瓦礫", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Kugu, center: UnitCatalog.Tou, back1: UnitCatalog.Tsugi, back3: UnitCatalog.Som)),
+        // 第325期（design/PHASE325_TOU_SETTLE_SPEC.md §4）—— トウ（E3: 濃さ ＋ 焼 ＋ 伝染）の隣にカタ ／ クグを置くかを比べる2台。駒は同じ5体（トウ・カタ・クグ・ソム・ベニ）で席だけ違う。
+        // 組と席は `tou325 cand`（トウ・カタ・クグ ＋ 2枚 × 席の2組・近衛 ／ 大隊 ／ ボス）で、精鋭とボスの両方で差が出たただ1つの組（ソム ＋ ベニ）の、それぞれいちばん勝つ席。数字は design/PHASE325_TOU_SETTLE.md §4。
+        // トウが中央だと四隅がすべて隣になるので、隣なしはトウを隅に置くしかない——ボスの差の大半は席そのものの差（第324期の規定でも 69.5 ／ 33.5）。
+        // 隣あり: トウが中央——漏れた粉がカタ ／ クグに落ち、カタは雷で、クグは糸で濃さを敵へ返す（ボスで1戦 22 回・敵の焼 2,805）。
+        ("試遊・感電 粉 隣あり", Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Beni, center: UnitCatalog.Tou, back1: UnitCatalog.Som, back3: UnitCatalog.Kugu)),
+        // 隣なし: トウが後3（隣はベニとソム）——漏れた濃さは返す駒に落ちないので、敵の濃さが育たない（ボスの敵の焼 202・近衛 74.5%）。
+        ("試遊・感電 粉 隣なし", Formation.Build(front1: UnitCatalog.Kugu, front3: UnitCatalog.Beni, center: UnitCatalog.Som, back1: UnitCatalog.Kata, back3: UnitCatalog.Tou)),
     };
 }

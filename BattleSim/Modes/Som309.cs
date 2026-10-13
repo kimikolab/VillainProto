@@ -71,7 +71,7 @@ static class Som309Diag
     internal const string Shield = "試遊・感電 光の盾", ShieldHeavy = "試遊・感電 光の盾 重";
     internal static readonly (string Name, string Pair)[] PickPairs = { (Shield, "トウ・クビ"), (ShieldHeavy, "クビ・ガン") };
     /// <summary>第308期のボスの格子の固定枠（クグ ＋ カタ ＋ ソム）。</summary>
-    static UnitDef[] BossFixed(UnitDef h) => new[] { UnitCatalog.Kugu, UnitCatalog.KataH311, h };
+    static UnitDef[] BossFixed(UnitDef h) => new[] { UnitCatalog.KuguH324, UnitCatalog.KataH311, h };
 
     /// <summary>
     /// §4-1 の比べる台。どれも (ソムの台, ツギの台) の対で、同じ席・同じ陣形・同じレリック。
@@ -353,7 +353,7 @@ static class Som309Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var w = S307.WaveOf(wave);
-        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.Kugu, UnitCatalog.KataH311 } : new[] { UnitCatalog.TouH311 };
+        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.KuguH324, UnitCatalog.KataH311 } : new[] { UnitCatalog.TouH311 };
         var pool = w.Boss ? S307.BossPool : S307.ElitePool;
         int k = w.Boss ? 2 : 3;
         var hs = new[] { Som, Tsugi };

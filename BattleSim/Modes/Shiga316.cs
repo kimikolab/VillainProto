@@ -647,11 +647,11 @@ static class Shiga316Diag
     {
         var w = WaveOf(waveKey);
         var v = SV(ver);
-        var fixedU = new[] { UnitCatalog.ShigaSWa, UnitCatalog.Kata, UnitCatalog.SomH317 };
+        var fixedU = new[] { UnitCatalog.ShigaSWa, UnitCatalog.KataH324, UnitCatalog.SomH317 };
         // 候補 ＝ 第287期の候補（感電の駒 ＋ 第283期の寿命側 ＋ ヒーラー）＋ トウ。固定してあった過去の版はすべていまの規定に替える（Id で引く）。ヒーラーは組に 1 枚まで（ポンの憲法）。
         UnitDef Now(UnitDef d) => UnitCatalog.All.Select(PinDS316).FirstOrDefault(x => x.Id == d.Id) ?? d;
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();
-        var pool = S287.Pool.Select(Now).Append(UnitCatalog.Tou).Where(d => d.Id is not ("shiga" or "kata" or "som")).GroupBy(d => d.Id).Select(g => g.First()).ToArray();
+        var pool = S287.Pool.Select(Now).Append(UnitCatalog.TouH324).Where(d => d.Id is not ("shiga" or "kata" or "som")).GroupBy(d => d.Id).Select(g => g.First()).ToArray();
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var combos = new List<UnitDef[]>();
         for (int i = 0; i < pool.Length; i++) for (int j = i + 1; j < pool.Length; j++)
@@ -839,7 +839,7 @@ static class Shiga316Diag
                 for (int sd = 0; sd < 40; sd++)
                 {
                     var ctx = new BattleContext(sd, false);
-                    var p = BattleEngine.Materialize(Formation.Build(front1: sdef, front3: UnitCatalog.Kata, center: UnitCatalog.Golm), BattleContext.PlayerTeam);
+                    var p = BattleEngine.Materialize(Formation.Build(front1: sdef, front3: UnitCatalog.KataH324, center: UnitCatalog.Golm), BattleContext.PlayerTeam);
                     var e = BattleEngine.Materialize(Formation.Build(front1: Wall), BattleContext.EnemyTeam, EnemyScaleRule.None);
                     foreach (var u in p) AddUnit.Invoke(ctx, new object[] { u });
                     foreach (var u in e) AddUnit.Invoke(ctx, new object[] { u });

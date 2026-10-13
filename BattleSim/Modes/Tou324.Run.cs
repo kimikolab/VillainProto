@@ -8,7 +8,7 @@ static partial class Tou324Diag
 {
     internal static readonly T323.Ver[] Vers =
     {
-        new("規定", "base", UnitCatalog.Tou, false),
+        new("規定", "base", UnitCatalog.TouH324, false),
         new("TP-a", "tpa", UnitCatalog.TouTPa, false),
         new("TD-b焼", "tdbb", UnitCatalog.TouTDbB, true),
         new("TP-e", "tpe", UnitCatalog.TouTPe, false),
@@ -98,7 +98,7 @@ static partial class Tou324Diag
 
         // ---- 版の定義
         {
-            var T = UnitCatalog.Tou;
+            var T = UnitCatalog.TouH324;
             bool tpe = UnitCatalog.TouTPe.Traits.SequenceEqual(UnitCatalog.TouTPa.Traits.Append(TraitId.PowderMarkFoeOnly));
             bool tped = UnitCatalog.TouTPeDry.Traits.SequenceEqual(UnitCatalog.TouTPe.Traits.Append(TraitId.PowderContagionDry));
             bool x = UnitCatalog.TouTDbBTPe.Traits.SequenceEqual(UnitCatalog.TouTDbB.Traits.Concat(new[] { TraitId.PowderContagion, TraitId.PowderMarkFoeOnly }));
@@ -107,7 +107,7 @@ static partial class Tou324Diag
             bool stats = defs.All(d => d.Id == "tou" && d.MaxHp == T.MaxHp && d.Attack == T.Attack && d.Speed == T.Speed);
             bool text = UnitCatalog.TouTPe.PlusText == T.PlusText + UnitCatalog.TouContagionFoeText && UnitCatalog.TouTDbBTPe.PlusText == UnitCatalog.TouStackText
                 && UnitCatalog.TouTDbBTPe.MinusText == UnitCatalog.TouTDbB.MinusText;
-            bool outside = defs.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.Everyone.All(d => !d.Traits.Contains(TraitId.PowderMarkFoeOnly)) && UnitCatalog.All.Count == 52;
+            bool outside = defs.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.Everyone.Select(PinTKK324).All(d => !d.Traits.Contains(TraitId.PowderMarkFoeOnly)) && UnitCatalog.All.Count == 52;   // 第325期: 規定のトウが札を持つようになった——第324期の規定（`PinTKK324`）で見る
             bool ret = Vers.Where(v => v.Tou.Traits.Contains(TraitId.PowderDense)).All(v => v.Return) && Vers.Where(v => !v.Tou.Traits.Contains(TraitId.PowderDense)).All(v => !v.Return);
             Expect("版: TP-e ＝ TP-a ＋ 印は敵にだけ ／ TP-e′ ＝ TP-e ＋ 弾けたばかりには移らない ／ 重ねた版 ＝ TD-b焼 ＋ TP-e（′）・カタ ／ クグは返す版・文面（叩き台）・数値は規定のまま・`Everyone` の外",
                 tpe && tped && x && xd && stats && text && outside && ret, $"TP-e {tpe}・TP-e′ {tped}・重ね {x}/{xd}・数値 {stats}・文面 {text}・外 {outside}・返す {ret}");

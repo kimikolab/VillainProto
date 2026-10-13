@@ -75,8 +75,8 @@ static class Shiga322Diag
     static S287.Wave WaveOf(string n) => S321.WaveOf(n);
     static bool IsElite(S287.Wave w) => w.Name is "近衛" or "大隊" || w.Name.StartsWith("九体", StringComparison.Ordinal);
 
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    static Formation Playtest(string n) => Pin324(Presets.Playtest.First(r => r.Name == n).F);   // 第325期: トウ ／ カタ ／ クグを第324期の規定に固定
+    static Formation Row(string n) => CompareBuildsH324().First(r => r.Name == n).F;   // 第325期: トウ ／ カタ ／ クグを第324期の規定に固定
 
     /// <summary>§5-2 の代表台（第321期 段1 と同じ5台・駒はいまの規定）。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
@@ -368,7 +368,7 @@ static class Shiga322Diag
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var vers = Pick(only);
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuildsH324().ToArray();   // 第325期: トウ ／ カタ ／ クグを第324期の規定に固定
         int nw = EnemyCatalog.Stages.Count;
         double[,] Grid(UnitDef d)
         {
@@ -405,10 +405,10 @@ static class Shiga322Diag
     {
         var w = WaveOf(waveKey);
         var v = V(ver);
-        var fixedU = new[] { UnitCatalog.Shiga, UnitCatalog.Kata, UnitCatalog.Som };
-        UnitDef Now(UnitDef d) => UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d;
+        var fixedU = new[] { UnitCatalog.Shiga, UnitCatalog.KataH324, UnitCatalog.Som };
+        UnitDef Now(UnitDef d) => PinTKK324(UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d);   // 第325期: トウ ／ カタ ／ クグを第324期の規定に固定
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();
-        var pool = S287.Pool.Select(Now).Append(UnitCatalog.Tou).Where(d => d.Id is not ("shiga" or "kata" or "som")).GroupBy(d => d.Id).Select(g => g.First()).ToArray();
+        var pool = S287.Pool.Select(Now).Append(UnitCatalog.TouH324).Where(d => d.Id is not ("shiga" or "kata" or "som")).GroupBy(d => d.Id).Select(g => g.First()).ToArray();
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var combos = new List<UnitDef[]>();
         for (int i = 0; i < pool.Length; i++) for (int j = i + 1; j < pool.Length; j++)

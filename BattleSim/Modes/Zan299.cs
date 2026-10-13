@@ -452,7 +452,7 @@ static class Zan299Diag
             && !UnitCatalog.Everyone.Contains(UnitCatalog.HisaHKb));
 
         // 盤面を直に組む: 前1 ドルガ ／ 前3 ザン ／ 中央 ミサ ／ 後1 カタ ／ 後3 ヒサ
-        Formation Sq(UnitDef m, UnitDef z, UnitDef h) => Formation.Build(front1: UnitCatalog.Dolga, front3: z, center: m, back1: UnitCatalog.Kata, back3: h);
+        Formation Sq(UnitDef m, UnitDef z, UnitDef h) => Formation.Build(front1: UnitCatalog.Dolga, front3: z, center: m, back1: UnitCatalog.KataH324, back3: h);
         {
             // (c) 段0-2: 仲間が満タンでヒサだけ傷ついているとき、叫びの「最も傷ついた味方」はヒサ（旧ならヒサは癒されない）
             (long self, int hp) Shout(UnitDef h)

@@ -403,7 +403,7 @@ static class Doha297Diag
     // ---------------------------------------------------------------------------------
     // §5-2 の格子（固定枠 ドハ ＋ アタッカー1枚 × 探索枠3 × 席）
     // ---------------------------------------------------------------------------------
-    internal static readonly UnitDef[] Attackers = { UnitCatalog.TomeMb, UnitCatalog.ZanZN0, UnitCatalog.Kata, UnitCatalog.ShigaSWa };
+    internal static readonly UnitDef[] Attackers = { UnitCatalog.TomeMb, UnitCatalog.ZanZN0, UnitCatalog.KataH324, UnitCatalog.ShigaSWa };
 
     /// <summary>
     /// §5-2 の格子（R386）。固定枠 ドハ ＋ アタッカー1枚（<see cref="Attackers"/>）× 探索枠3（`All` の残り 50 枚から3枚）× 席。
@@ -551,7 +551,7 @@ static class Doha297Diag
                 && v.Item1.MinusText == "自分は強くならず、味方が多いほど早く尽きる" && v.Item1.Flavor == d0.Flavor));
 
         // (c)〜(j) 盤面を直に組んで1発ずつ: 前1 ドルガ（札なし）／ 前3 ミサ ／ 中央 ドハ ／ 後1 カタ ／ 後3 ガルド（支援を拒む）。ゴルム（巨躯・吐き戻し）のような中継と強化を持つ駒は置かない
-        Formation Board(UnitDef dv) => Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.TomeMb, center: dv, back1: UnitCatalog.Kata, back3: UnitCatalog.Gald);
+        Formation Board(UnitDef dv) => Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.TomeMb, center: dv, back1: UnitCatalog.KataH324, back3: UnitCatalog.Gald);
         var res = new List<(string Tag, int DohaLoss, int GolmLoss, int DohaAtk, int GolmAtk, int TopAtk, string Top, int Given, int Whet)>();
         foreach (var (tag, dv) in Versions)
         {

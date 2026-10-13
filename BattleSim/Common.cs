@@ -305,7 +305,7 @@ public static Formation Pin311(Formation f)
 /// <summary>第312期: 規定のカタ ／ トウ（萎縮の規則つき）を第311期までの規定（`KataH311` ／ `TouH311`）に替える。ほかの駒はそのまま返す。`Pin308`〜`Pin311` が使う。
 /// 第317期: ドハ ／ シガも第316期までの規定（`DohaH316` ／ `ShigaSWa`）に替える（`PinDS316`・第311期までの規定は第316期までの規定でもある）。</summary>
 public static UnitDef PinKataTou311(UnitDef d) =>
-    ReferenceEquals(d, UnitCatalog.Kata) ? UnitCatalog.KataH311 : ReferenceEquals(d, UnitCatalog.Tou) ? UnitCatalog.TouH311 : PinDS316(d);
+    ReferenceEquals(d, UnitCatalog.Kata) || ReferenceEquals(d, UnitCatalog.KataH324) ? UnitCatalog.KataH311 : ReferenceEquals(d, UnitCatalog.Tou) || ReferenceEquals(d, UnitCatalog.TouH324) ? UnitCatalog.TouH311 : PinDS316(d);   // 第325期: `Pin316` などが先に第324期までの規定（`KataH324` ／ `TouH324`）へ替えた駒も
 
 /// <summary>第317期: 規定のドハ（DP-s）／ シガ（SF-AC）を第316期までの規定（`DohaH316` ／ `ShigaSWa`）に替える。ほかの駒はそのまま返す。
 /// 第318期: ソムも第317期までの規定（`SomH317`）に替える（`PinS317`・第316期までの規定のソムは第317期の規定と同じ物）。</summary>
@@ -315,22 +315,44 @@ public static UnitDef PinDS316(UnitDef d) =>
 /// <summary>第318期: 規定のソム（BD-E2）を第312〜317期の規定（`SomH317`）に替える。ほかの駒はそのまま返す。
 /// 第319期: 第318期の規定のソム（`SomH318`）も同じ旧へ。規定のシガ（SG）は第317〜318期の規定（`ShigaH318`）へ替える（第316期までの口は `PinDS316` が先に `ShigaSWa` へ替える）。
 /// 第320期: 第319期の規定のソム（`SomH319`）も同じ旧へ。
-/// 第322期: 規定のヒサ（HQ-a9）を第304〜321期の規定（`HisaH321`）へ替える（第316〜317期の器具の台のヒサ・`PinDS316` ／ `Pin316` を通る口も）。</summary>
+/// 第322期: 規定のヒサ（HQ-a9）を第304〜321期の規定（`HisaH321`）へ替える（第316〜317期の器具の台のヒサ・`PinDS316` ／ `Pin316` を通る口も）。
+/// 第325期: 規定のトウ ／ カタ ／ クグ（E3）を第324期までの規定へ替える（`PinTKK324`）。</summary>
 public static UnitDef PinS317(UnitDef d) =>
     ReferenceEquals(d, UnitCatalog.Som) || ReferenceEquals(d, UnitCatalog.SomH318) || ReferenceEquals(d, UnitCatalog.SomH319) ? UnitCatalog.SomH317 : ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaH318
-    : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH321 : d;
+    : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH321 : PinTKK324(d);
 
 /// <summary>第318期: 規定のソムか、第312〜317期の規定（`SomH317`・`PinS317` を通った後）か。第311期までに固定する口（`Pin308`〜`Pin311` ほか）が使う。第319期: 第318期の規定（`SomH318`）も。第320期: 第319期の規定（`SomH319`）も。</summary>
 public static bool IsSomNow(UnitDef d) => ReferenceEquals(d, UnitCatalog.Som) || ReferenceEquals(d, UnitCatalog.SomH317) || ReferenceEquals(d, UnitCatalog.SomH318) || ReferenceEquals(d, UnitCatalog.SomH319);
 
 /// <summary>第319期: 規定のソム（CR-b）／ シガ（SG）を第318期の規定（`SomH318` ／ `ShigaH318`）に替える。ほかの駒はそのまま返す。
-/// 第320期: 第319期の規定のソム（`SomH319`）も同じ旧へ。第322期: 規定のヒサ（HQ-a9）を `HisaH321` へ。</summary>
+/// 第320期: 第319期の規定のソム（`SomH319`）も同じ旧へ。第322期: 規定のヒサ（HQ-a9）を `HisaH321` へ。第325期: トウ ／ カタ ／ クグも（`PinTKK324`）。</summary>
 public static UnitDef PinSS318(UnitDef d) =>
     ReferenceEquals(d, UnitCatalog.Som) || ReferenceEquals(d, UnitCatalog.SomH319) ? UnitCatalog.SomH318 : ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaH318
-    : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH321 : d;
+    : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH321 : PinTKK324(d);
 
-/// <summary>第322期: 規定のシガ（SA）／ ヒサ（HQ-a9）を第321期の規定（`ShigaH321` ／ `HisaH321`）に替える。ほかの駒はそのまま返す。</summary>
-public static UnitDef PinSH321(UnitDef d) => ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaH321 : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH321 : d;
+/// <summary>第322期: 規定のシガ（SA）／ ヒサ（HQ-a9）を第321期の規定（`ShigaH321` ／ `HisaH321`）に替える。ほかの駒はそのまま返す。第325期: トウ ／ カタ ／ クグも（`PinTKK324`）。</summary>
+public static UnitDef PinSH321(UnitDef d) => ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaH321 : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaH321 : PinTKK324(d);
+
+/// <summary>
+/// 第325期: 規定のトウ ／ カタ ／ クグ（E3・濃さ ＋ 焼 ＋ 伝染 ／ 返す）を第324期までの規定（`TouH324` ／ `KataH324` ／ `KuguH324`）に替える。ほかの駒はそのまま返す。
+/// 古い固定の口（`PinS317` ／ `PinSS318` ／ `PinSH321`）の最後もここを通すので、第324期までのどの器具の台も3体とも旧の規定になる（第322期の `guard294` の漏れの再発を防ぐ）。
+/// </summary>
+public static UnitDef PinTKK324(UnitDef d) =>
+    ReferenceEquals(d, UnitCatalog.Tou) ? UnitCatalog.TouH324 : ReferenceEquals(d, UnitCatalog.Kata) ? UnitCatalog.KataH324 : ReferenceEquals(d, UnitCatalog.Kugu) ? UnitCatalog.KuguH324 : d;
+
+/// <summary>第325期: トウ ／ カタ ／ クグ ＝ E3 を規定にした。第324期の規定の駒で測った器具（`tou323` ／ `tou324` ／ `shiga322`）はこれを通す。陣形とレリックは保つ。</summary>
+public static Formation Pin324(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinTKK324(d);
+    return g;
+}
+
+/// <summary>第325期: `CompareBuilds()` のトウ ／ カタ ／ クグを第324期の規定に替えた写し。</summary>
+public static (string Name, Formation F)[] CompareBuildsH324() => CompareBuilds().Select(r => (r.Name, Pin324(r.F))).ToArray();
+
+/// <summary>第325期: `Presets.Playtest` のトウ ／ カタ ／ クグを第324期の規定に替えた写し（行の数と並びはそのまま）。</summary>
+public static (string Name, Formation F)[] PlaytestH324 => Presets.Playtest.Select(r => (r.Name, Pin324(r.F))).ToArray();
 
 /// <summary>第322期: シガ ＝ SA・ヒサ ＝ HQ-a9 を規定にした。第321期の規定の駒で測った器具（`shiga321` ／ `hisa321` ／ `som320`）はこれを通す。陣形とレリックは保つ。</summary>
 public static Formation Pin321(Formation f)

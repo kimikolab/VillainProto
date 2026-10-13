@@ -429,7 +429,7 @@ static partial class Som307Diag
     {
         var v = AnyVer(ver);
         var vars = new (string, Func<Formation, Formation>)[] { ("規定", f => f), (v.Name, f => Apply(f, v)) };
-        GridCore($"固定枠 クグ ＋ カタ ＋ ソム（規定 ／ {v.Name}）", Waves[0], new[] { UnitCatalog.Kugu, UnitCatalog.KataH311, UnitCatalog.SomH307 }, BossPool, 2, vars);
+        GridCore($"固定枠 クグ ＋ カタ ＋ ソム（規定 ／ {v.Name}）", Waves[0], new[] { UnitCatalog.KuguH324, UnitCatalog.KataH311, UnitCatalog.SomH307 }, BossPool, 2, vars);
     }
 
     static void GridElite(string waveName, string ver)
@@ -551,7 +551,7 @@ static partial class Som307Diag
             if (fod is not null) ctx.ApplyDamage(fod, 1, p.First(u => u.Def.Id == "dolga"));
             var t = H304.Tal(ctx, "som");
             // 糸玉: クグの組の盤面で、敵 e[0] の隣に糸玉を張り、e[0] を弾けさせる
-            var ctx2 = Ctx(UnitCatalog.SomSHa, out var p2, out var e2, pl: Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Kugu, center: UnitCatalog.SomSHa));
+            var ctx2 = Ctx(UnitCatalog.SomSHa, out var p2, out var e2, pl: Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.KuguH324, center: UnitCatalog.SomSHa));
             var ball = ctx2.PlaceSilkBall(p2.First(u => u.Def.Id == "kugu"), e2[0]);
             ctx2.MarkShock(e2[0], SomOf(p2));
             ctx2.ApplyDamage(e2[0], 10, p2.First(u => u.Def.Id == "dolga"));

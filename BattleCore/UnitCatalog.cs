@@ -1215,10 +1215,12 @@ public static class UnitCatalog
     public const string ShockDauntText = "。痺れない相手は、感電が弾けると萎縮する（次の一撃が半分）";
 
     /// <summary>
-    /// 痺れ粉のトウ（規定）。<b>第312期に萎縮の規則（<see cref="TraitId.ShockDaunt"/>）を足した</b>（ポンの判断 C4・design/PHASE312_SOM_REGULATE2_SPEC.md §2）——
+    /// 痺れ粉のトウ（第312〜324期の規定）。<b>第312期に萎縮の規則（<see cref="TraitId.ShockDaunt"/>）を足した</b>（ポンの判断 C4・design/PHASE312_SOM_REGULATE2_SPEC.md §2）——
     /// 第287〜311期の規定（T3・<see cref="TouH311"/>）の末尾に札1枚。札は第311期の <see cref="TouDT"/> と同じ。
+    /// <para><b>第325期に E3（濃さ ＋ 焼 ＋ 伝染・<see cref="Tou"/>）を規定にしたので、旧の規定の定義を明示的に持つ</b>（第324期まで <see cref="Tou"/> と同じ物だった）。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第324期までの規定のトウで測った器具はこれに固定する（`Common.PinTKK324`）。第323〜324期の版もこれから作る。</para>
     /// </summary>
-    public static readonly UnitDef Tou = new()
+    public static readonly UnitDef TouH324 = new()
     {
         Id = TouH311.Id,
         Name = TouH311.Name,
@@ -1232,6 +1234,31 @@ public static class UnitCatalog
         PlusText = TouH311.PlusText + ShockDauntText,
         MinusText = TouH311.MinusText,
         Flavor = TouH311.Flavor
+    };
+
+    /// <summary>第325期 規定のトウの PlusText の末尾（指示書 design/PHASE325_TOU_SETTLE_SPEC.md §2）: 第324期の重ねた版の叩き台（<see cref="TouStackText"/>）から落ちていた痺れ ／ 萎縮の句を戻す。</summary>
+    public const string TouStunDauntText = "。弾けた駒は半々の確率で痺れて次の手番を失う" + ShockDauntText;
+
+    /// <summary>
+    /// 痺れ粉のトウ（規定）。<b>第325期に E3（TD-b焼 × TP-e）を規定にした</b>（ポンの判断・design/PHASE325_TOU_SETTLE_SPEC.md §2）——
+    /// 第312〜324期の規定（<see cref="TouH324"/>）＋ 濃さ（<see cref="TraitId.PowderDense"/>・倒れるまで残る <see cref="TraitId.PowderDenseKeep"/>）＋ 焼（<see cref="TraitId.PowderDenseBurn"/>）
+    /// ＋ 伝染（<see cref="TraitId.PowderContagion"/>・印は敵にだけ <see cref="TraitId.PowderMarkFoeOnly"/>）。札は第324期の <see cref="TouTDbBTPe"/> と同じ。
+    /// 文面は第324期の叩き台（<see cref="TouStackText"/>）の末尾に痺れ ／ 萎縮の句（<see cref="TouStunDauntText"/>）を戻したもの。カタ ／ クグは返す働きつき（<see cref="Kata"/> ／ <see cref="Kugu"/>）。
+    /// </summary>
+    public static readonly UnitDef Tou = new()
+    {
+        Id = TouH324.Id,
+        Name = TouH324.Name,
+        MaxHp = TouH324.MaxHp,
+        Attack = TouH324.Attack,
+        Speed = TouH324.Speed,
+        Advances = TouH324.Advances,
+        Pattern = TouH324.Pattern,
+        Traits = TouH324.Traits.Concat(new[] { TraitId.PowderDense, TraitId.PowderDenseKeep, TraitId.PowderDenseBurn, TraitId.PowderContagion, TraitId.PowderMarkFoeOnly }).ToArray(),
+        Actions = TouH324.Actions,
+        PlusText = TouStackText + TouStunDauntText,
+        MinusText = TouH324.MinusText.Replace(TouLeakClause, TouLeakDenseClause),
+        Flavor = TouH324.Flavor
     };
 
     // 第311期 —— 萎縮の規則の版（§3-3）。痺れの規則の札（`ShockStunHalf`）を持つ駒に規則の札 <see cref="TraitId.ShockDaunt"/> を足すだけ。`All` にも `Retired` にも入れない。
@@ -1490,7 +1517,11 @@ public static class UnitCatalog
         Flavor = "隊列を整えている横で騒ぎ立て、二度と行軍に加えられなかった。"
     };
 
-    public static readonly UnitDef Kugu = new()
+    /// <summary>
+    /// 縛めのクグ（第294〜324期の規定・KW-a）。<b>第325期に返す働き（<see cref="Kugu"/>）を規定にしたので、旧の規定の定義を明示的に持つ</b>（第324期まで <see cref="Kugu"/> と同じ物だった）。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第324期までの規定のクグで測った器具はこれに固定する（`Common.PinTKK324`）。
+    /// </summary>
+    public static readonly UnitDef KuguH324 = new()
     {
         Id = "kugu",
         Name = "縛めのクグ",
@@ -1513,22 +1544,42 @@ public static class UnitCatalog
     };
 
     /// <summary>
+    /// 縛めのクグ（規定）。<b>第325期に返す働き（<see cref="TraitId.ThreadPowderFlow"/>）を足した</b>（ポンの判断 E3・design/PHASE325_TOU_SETTLE_SPEC.md §2）——
+    /// 第294〜324期の規定（<see cref="KuguH324"/>）の末尾に札1枚。札は第323期の <see cref="KuguTDR"/> と同じ。濃さの保持者（トウ）がいない戦では何も起きない。
+    /// </summary>
+    public static readonly UnitDef Kugu = new()
+    {
+        Id = KuguH324.Id,
+        Name = KuguH324.Name,
+        MaxHp = KuguH324.MaxHp,
+        Attack = KuguH324.Attack,
+        Speed = KuguH324.Speed,
+        Advances = KuguH324.Advances,
+        Pattern = KuguH324.Pattern,
+        Traits = KuguH324.Traits.Append(TraitId.ThreadPowderFlow).ToArray(),
+        Actions = KuguH324.Actions,
+        PlusText = KuguH324.PlusText + KuguPowderFlowText,
+        MinusText = KuguH324.MinusText,
+        Flavor = KuguH324.Flavor
+    };
+
+    /// <summary>
     /// 旧クグ（第185期〜第290期の規定・組み付きだけ・糸なし）。第291期に KG-b を規定にしたので、旧の規定の定義を明示的に持つ。
     /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。過去の器具はこちらに固定する（第290期のカタ `KataS3` と同じ作法）。
     /// </summary>
     public static readonly UnitDef KuguKG0 = new()
     {
         Id = "kugu",
-        Name = Kugu.Name,
-        MaxHp = Kugu.MaxHp,
-        Attack = Kugu.Attack,
-        Speed = Kugu.Speed,
+        Name = KuguH324.Name,
+        MaxHp = KuguH324.MaxHp,
+        Attack = KuguH324.Attack,
+        Speed = KuguH324.Speed,
         Advances = false,
         Traits = new[] { TraitId.Grapple },
-        Actions = Kugu.Actions,
+        Actions = KuguH324.Actions,
         PlusText = "開戦時に大縛りで最も速い敵1体を縛る。手番でいちばん手強い敵に組み付き、動けなくする",
-        MinusText = Kugu.MinusText,
-        Flavor = Kugu.Flavor
+        MinusText = KuguH324.MinusText,
+        Flavor = KuguH324.Flavor
     };
 
     // 第290期 —— クグの糸の版（指示書 design/PHASE290_SHOCK_SQUAD_SPEC.md §5）。旧の規定（`KuguKG0`）の末尾に札を足すだけ。
@@ -1538,16 +1589,16 @@ public static class UnitCatalog
     public static readonly UnitDef KuguKGa = new()
     {
         Id = "kugu",
-        Name = Kugu.Name,
-        MaxHp = Kugu.MaxHp,
-        Attack = Kugu.Attack,
-        Speed = Kugu.Speed,
+        Name = KuguH324.Name,
+        MaxHp = KuguH324.MaxHp,
+        Attack = KuguH324.Attack,
+        Speed = KuguH324.Speed,
         Advances = false,
         Traits = new[] { TraitId.Grapple, TraitId.Thread },
-        Actions = Kugu.Actions,
+        Actions = KuguH324.Actions,
         PlusText = KuguKG0.PlusText + "。組み付いた敵とは糸で繋がっている。自分に流れ込む電気は、糸を伝ってその敵へ流れる",
-        MinusText = Kugu.MinusText,
-        Flavor = Kugu.Flavor
+        MinusText = KuguH324.MinusText,
+        Flavor = KuguH324.Flavor
     };
 
     /// <summary>第290期 KG-b（導線）。KG-a ＋ <see cref="TraitId.ThreadCharge"/>（糸を伝った放電を浴びた敵は、感電していなければ帯電する）。第291〜293期の規定。</summary>
@@ -1558,16 +1609,16 @@ public static class UnitCatalog
     public static readonly UnitDef KuguKGb = new()
     {
         Id = "kugu",
-        Name = Kugu.Name,
-        MaxHp = Kugu.MaxHp,
-        Attack = Kugu.Attack,
-        Speed = Kugu.Speed,
+        Name = KuguH324.Name,
+        MaxHp = KuguH324.MaxHp,
+        Attack = KuguH324.Attack,
+        Speed = KuguH324.Speed,
         Advances = false,
         Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge },
-        Actions = Kugu.Actions,
+        Actions = KuguH324.Actions,
         PlusText = KuguKG0.PlusText + "。組み付いた敵とは糸で繋がっている。自分に流れ込む電気は、糸を伝ってその敵へ流れ、浴びた敵は帯電する",
-        MinusText = Kugu.MinusText,
-        Flavor = Kugu.Flavor
+        MinusText = KuguH324.MinusText,
+        Flavor = KuguH324.Flavor
     };
 
     // 第292期 —— クグの糸玉の版（指示書 design/PHASE292_KUGU_SILKBALL_SPEC.md §2-2）。規定のクグ（KG-b・糸と導線）の末尾に札を足すだけ。
@@ -1577,51 +1628,51 @@ public static class UnitCatalog
     public static readonly UnitDef KuguKBa = new()
     {
         Id = "kugu",
-        Name = Kugu.Name,
-        MaxHp = Kugu.MaxHp,
-        Attack = Kugu.Attack,
-        Speed = Kugu.Speed,
+        Name = KuguH324.Name,
+        MaxHp = KuguH324.MaxHp,
+        Attack = KuguH324.Attack,
+        Speed = KuguH324.Speed,
         Advances = false,
         Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge, TraitId.SilkBallSteadfast },
-        Actions = Kugu.Actions,
+        Actions = KuguH324.Actions,
         PlusText = KuguKGb.PlusText + "。組み付いても止められない相手には、代わりにその周りへ帯電した糸玉を張る",
-        MinusText = Kugu.MinusText,
-        Flavor = Kugu.Flavor
+        MinusText = KuguH324.MinusText,
+        Flavor = KuguH324.Flavor
     };
 
     /// <summary>第293期 KW-a（帯電の網）。KG-b ＋ <see cref="TraitId.WebCharge"/>（組み付いている間、手番ごとに糸を1本張る・糸の敵は帯電し続ける・止められない相手には糸玉）。<b>第294期に規定にした</b>——規定の <see cref="Kugu"/> と同じ物。</summary>
-    public static readonly UnitDef KuguKWa = Kugu;
+    public static readonly UnitDef KuguKWa = KuguH324;
 
     /// <summary>第293期 KW-b（絡まる網）。KG-b ＋ <see cref="TraitId.WebSnare"/>（同じく糸を張る・糸の敵は速さ −3・止められない相手には糸玉）。</summary>
     public static readonly UnitDef KuguKWb = new()
     {
         Id = "kugu",
-        Name = Kugu.Name,
-        MaxHp = Kugu.MaxHp,
-        Attack = Kugu.Attack,
-        Speed = Kugu.Speed,
+        Name = KuguH324.Name,
+        MaxHp = KuguH324.MaxHp,
+        Attack = KuguH324.Attack,
+        Speed = KuguH324.Speed,
         Advances = false,
         Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge, TraitId.WebSnare },
-        Actions = Kugu.Actions,
+        Actions = KuguH324.Actions,
         PlusText = KuguKGb.PlusText + "。組み付いている間、手番ごとに糸を1本張る。糸の掛かった敵は動きが鈍る。止められない相手には、代わりにその周りへ帯電した糸玉を張る",
-        MinusText = Kugu.MinusText,
-        Flavor = Kugu.Flavor
+        MinusText = KuguH324.MinusText,
+        Flavor = KuguH324.Flavor
     };
 
     /// <summary>第292期 KB-b（新しく組み付くたび）。KG-b ＋ <see cref="TraitId.SilkBallEvery"/>（組み付くたび、その周りへ帯電した糸玉を張る）。</summary>
     public static readonly UnitDef KuguKBb = new()
     {
         Id = "kugu",
-        Name = Kugu.Name,
-        MaxHp = Kugu.MaxHp,
-        Attack = Kugu.Attack,
-        Speed = Kugu.Speed,
+        Name = KuguH324.Name,
+        MaxHp = KuguH324.MaxHp,
+        Attack = KuguH324.Attack,
+        Speed = KuguH324.Speed,
         Advances = false,
         Traits = new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge, TraitId.SilkBallEvery },
-        Actions = Kugu.Actions,
+        Actions = KuguH324.Actions,
         PlusText = KuguKGb.PlusText + "。組み付くたび、その周りへ帯電した糸玉を張る",
-        MinusText = Kugu.MinusText,
-        Flavor = Kugu.Flavor
+        MinusText = KuguH324.MinusText,
+        Flavor = KuguH324.Flavor
     };
 
     /// <summary>
@@ -2238,7 +2289,7 @@ public static class UnitCatalog
     };
 
     /// <summary>第319期 段0 の文面の足し（指示書 design/PHASE319_SOM_THROW_SPEC.md §2-1 の叩き台・最終はポン）。</summary>
-    public const string SomResonancePlusText319 = "。帯電した仲間に落ちた背きの雷は共鳴して跳ね返り、獣のまわりの敵にも走ってから獣を弾けさせる";
+    public const string SomResonancePlusText319 = "。帯電した仲間に落ちた背きの雷は共鳴して跳ね返り、召喚獣のまわりの敵にも走ってから召喚獣を弾けさせる";
 
     /// <summary>
     /// 背かれのソム（第319期の規定・第320期から旧の定義）。<b>第319期に CR-b（裏切りの雷の共鳴返し・強）を規定にした</b>（ポンの判断 R4・design/PHASE319_SOM_THROW_SPEC.md §2-1）——
@@ -2671,9 +2722,9 @@ public static class UnitCatalog
     // ＋SG はシガの版（<see cref="ShigaSG"/>）で、CR-a＋SG ／ CR-b＋SG は「ソム CR ＋ シガの版」の組。
 
     /// <summary>第318期 CR-a の文面（指示書 §3-2 の叩き台・最終はポン）。</summary>
-    public const string SomResonanceMinusText = "喚ばれたものは背いて敵につき、こちらに雷を投げる。帯電した仲間に落ちた雷は共鳴して跳ね返り、投げた獣を弾けさせる";
+    public const string SomResonanceMinusText = "喚ばれたものは背いて敵につき、こちらに雷を投げる。帯電した仲間に落ちた雷は共鳴して跳ね返り、投げた召喚獣を弾けさせる";
     /// <summary>第318期 CR-b の文面の足し（叩き台）。</summary>
-    public const string SomResonanceArcText = "。跳ね返った雷は、獣のまわりの敵にも走る";
+    public const string SomResonanceArcText = "。跳ね返った雷は、召喚獣のまわりの敵にも走る";
     /// <summary>第318期の版の PlusText（「着いた瞬間に弾ける」（E2 の文面）を外し、段0 の「弾けた下僕も、倒れた敵に数える」を足した）。</summary>
     public static string SomStandPlus318 => SomH310.PlusText + SomSwarmText + SomBeastDeathText318;
 
@@ -2731,7 +2782,7 @@ public static class UnitCatalog
     /// <summary>第319期 WS-a3 の文面の足し（叩き台）。</summary>
     public const string SomStandLate3Text = "。ただし戦の始め（3ターン目まで）は、喚ばれたものは向こうに着いた瞬間に弾ける";
     /// <summary>第319期 WS-b の文面の足し（指示書 §3-2 の叩き台）。</summary>
-    public const string SomBackfireText = "。受け止める者がいなければ、獣は投げた雷の残りで暴発する";
+    public const string SomBackfireText = "。受け止める者がいなければ、召喚獣は投げた雷の残りで暴発する";
 
     /// <summary>第319期 WS-a（序盤は立たない）。規定 ＋ <see cref="TraitId.BeastStandLate"/>——戦の T1〜T2 の喚び出しでは獣は立たず、E2 のまま湧く席で弾ける（投げない）。T3 から規定のまま。</summary>
     public static readonly UnitDef SomWSa = SomOn319(new[] { TraitId.BeastStandLate }, SomH319.PlusText, SomH319.MinusText + SomStandLateText);
@@ -2860,7 +2911,7 @@ public static class UnitCatalog
     public static readonly UnitDef Fodder = new()
     {
         Id = "fodder",
-        Name = "背いた獣",
+        Name = "背いた召喚獣",   // 第325期: 画面の名前だけ「背いた獣」から（`Id` ＝ "fodder" ・札 ・出来事の名前は据え置き）
         MaxHp = 12,
         Attack = 0,
         Speed = 1,
@@ -3196,8 +3247,10 @@ public static class UnitCatalog
     /// 禍導のカタ（規定）。<b>第312期に萎縮の規則（<see cref="TraitId.ShockDaunt"/>）を足した</b>（ポンの判断 C4・design/PHASE312_SOM_REGULATE2_SPEC.md §2）——
     /// 第293〜311期の規定（KR-∞・<see cref="KataH311"/>）の末尾に札1枚。札は第311期の <see cref="KataDT"/> と同じ。
     /// 第311期までの規定のカタで測った過去の器具は <see cref="KataH311"/>（`Common.Pin311`）に固定した。
+    /// <para><b>第325期に返す働き（<see cref="Kata"/>）を規定にしたので、旧の規定の定義を明示的に持つ</b>（第324期まで <see cref="Kata"/> と同じ物だった）。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第324期までの規定のカタで測った器具はこれに固定する（`Common.PinTKK324`）。第317期 ／ 第323期の版もこれから作る。</para>
     /// </summary>
-    public static readonly UnitDef Kata = new()
+    public static readonly UnitDef KataH324 = new()
     {
         Id = KataH311.Id,
         Name = KataH311.Name,
@@ -3211,6 +3264,26 @@ public static class UnitCatalog
         PlusText = KataH311.PlusText + ShockDauntText,
         MinusText = KataH311.MinusText,
         Flavor = KataH311.Flavor
+    };
+
+    /// <summary>
+    /// 禍導のカタ（規定）。<b>第325期に返す働き（<see cref="TraitId.ThunderPowderReturn"/>）を足した</b>（ポンの判断 E3・design/PHASE325_TOU_SETTLE_SPEC.md §2）——
+    /// 第312〜324期の規定（<see cref="KataH324"/>）の末尾に札1枚。札は第323期の <see cref="KataTDR"/> と同じ。濃さの保持者（トウ）がいない戦では何も起きない。
+    /// </summary>
+    public static readonly UnitDef Kata = new()
+    {
+        Id = KataH324.Id,
+        Name = KataH324.Name,
+        MaxHp = KataH324.MaxHp,
+        Attack = KataH324.Attack,
+        Speed = KataH324.Speed,
+        Advances = KataH324.Advances,
+        Pattern = KataH324.Pattern,
+        Traits = KataH324.Traits.Append(TraitId.ThunderPowderReturn).ToArray(),
+        Actions = KataH324.Actions,
+        PlusText = KataH324.PlusText + KataPowderReturnText,
+        MinusText = KataH324.MinusText,
+        Flavor = KataH324.Flavor
     };
 
     // 第311期 —— 萎縮の規則の版（§3-3）。痺れの規則の札（`ShockStunHalf`）を持つ駒に規則の札 <see cref="TraitId.ShockDaunt"/> を足すだけ。`All` にも `Retired` にも入れない。
@@ -3243,18 +3316,18 @@ public static class UnitCatalog
 
     static UnitDef KataWith(TraitId add, string plus) => new()
     {
-        Id = Kata.Id,
-        Name = Kata.Name,
-        MaxHp = Kata.MaxHp,
-        Attack = Kata.Attack,
-        Speed = Kata.Speed,
-        Advances = Kata.Advances,
-        Pattern = Kata.Pattern,
-        Traits = Kata.Traits.Append(add).ToArray(),
-        Actions = Kata.Actions,
-        PlusText = Kata.PlusText + plus,
-        MinusText = Kata.MinusText,
-        Flavor = Kata.Flavor
+        Id = KataH324.Id,
+        Name = KataH324.Name,
+        MaxHp = KataH324.MaxHp,
+        Attack = KataH324.Attack,
+        Speed = KataH324.Speed,
+        Advances = KataH324.Advances,
+        Pattern = KataH324.Pattern,
+        Traits = KataH324.Traits.Append(add).ToArray(),
+        Actions = KataH324.Actions,
+        PlusText = KataH324.PlusText + plus,
+        MinusText = KataH324.MinusText,
+        Flavor = KataH324.Flavor
     };
 
     /// <summary>
@@ -3481,7 +3554,7 @@ public static class UnitCatalog
     public const string ShigaChargeClause322 = "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる（使っても減らない）。そばで感電が弾けるたび、割り込んで鞭を振るう";
 
     /// <summary>第318期 SG ／ 第319期の規定の文面の足し（叩き台）。</summary>
-    public const string ShigaBackswingText = "。背いた獣の雷を浴びると、その場で打ち返す";
+    public const string ShigaBackswingText = "。背いた召喚獣の雷を浴びると、その場で打ち返す";
 
     // ---------------------------------------------------------------------------------
     // 第321期 —— シガの蓄電が育つ版（指示書 design/PHASE321_SHIGA_CHARGE_HISA_BURST_SPEC.md §1-2）。規定（SF-AC ＋ SG・第322期から旧の規定 `ShigaH321`）の末尾に札を足すだけ。
@@ -3571,22 +3644,22 @@ public static class UnitCatalog
         PlusText = b.PlusText + plus, MinusText = minus ?? b.MinusText, Flavor = b.Flavor
     };
 
-    static string TouDenseMinus => Tou.MinusText.Replace(TouLeakClause, TouLeakDenseClause);
+    static string TouDenseMinus => TouH324.MinusText.Replace(TouLeakClause, TouLeakDenseClause);
 
     /// <summary>第323期 TD-a（使い切り）。規定のトウ ＋ <see cref="TraitId.PowderDense"/>——弾けたら濃さ 0。</summary>
-    public static readonly UnitDef TouTDa = On323(Tou, new[] { TraitId.PowderDense }, TouDenseText, TouDenseMinus);
+    public static readonly UnitDef TouTDa = On323(TouH324, new[] { TraitId.PowderDense }, TouDenseText, TouDenseMinus);
     /// <summary>第323期 TD-b（残る・ミオ型）。TD-a ＋ <see cref="TraitId.PowderDenseKeep"/>。TD-0（対照）もこの駒（カタ ／ クグを規定のままにする）。</summary>
-    public static readonly UnitDef TouTDb = On323(Tou, new[] { TraitId.PowderDense, TraitId.PowderDenseKeep }, TouDenseText + TouDenseKeepText, TouDenseMinus);
+    public static readonly UnitDef TouTDb = On323(TouH324, new[] { TraitId.PowderDense, TraitId.PowderDenseKeep }, TouDenseText + TouDenseKeepText, TouDenseMinus);
     /// <summary>第323期 TD-a焼。TD-a ＋ <see cref="TraitId.PowderDenseBurn"/>。</summary>
-    public static readonly UnitDef TouTDaB = On323(Tou, new[] { TraitId.PowderDense, TraitId.PowderDenseBurn }, TouDenseText + TouDenseBurnText, TouDenseMinus);
+    public static readonly UnitDef TouTDaB = On323(TouH324, new[] { TraitId.PowderDense, TraitId.PowderDenseBurn }, TouDenseText + TouDenseBurnText, TouDenseMinus);
     /// <summary>第323期 TD-b焼。TD-b ＋ <see cref="TraitId.PowderDenseBurn"/>。</summary>
-    public static readonly UnitDef TouTDbB = On323(Tou, new[] { TraitId.PowderDense, TraitId.PowderDenseKeep, TraitId.PowderDenseBurn }, TouDenseText + TouDenseKeepText + TouDenseBurnText, TouDenseMinus);
+    public static readonly UnitDef TouTDbB = On323(TouH324, new[] { TraitId.PowderDense, TraitId.PowderDenseKeep, TraitId.PowderDenseBurn }, TouDenseText + TouDenseKeepText + TouDenseBurnText, TouDenseMinus);
     /// <summary>第323期 TP-a（伝染）。規定のトウ ＋ <see cref="TraitId.PowderContagion"/>。</summary>
-    public static readonly UnitDef TouTPa = On323(Tou, new[] { TraitId.PowderContagion }, TouContagionText);
+    public static readonly UnitDef TouTPa = On323(TouH324, new[] { TraitId.PowderContagion }, TouContagionText);
     /// <summary>第323期 TP-b（伝染・続く）。TP-a ＋ <see cref="TraitId.PowderContagionSpread"/>。</summary>
-    public static readonly UnitDef TouTPb = On323(Tou, new[] { TraitId.PowderContagion, TraitId.PowderContagionSpread }, TouContagionText + TouContagionSpreadText);
+    public static readonly UnitDef TouTPb = On323(TouH324, new[] { TraitId.PowderContagion, TraitId.PowderContagionSpread }, TouContagionText + TouContagionSpreadText);
     /// <summary>第323期 TP-a′（参考・指示書に無い版）。TP-a ＋ <see cref="TraitId.PowderContagionDry"/>——同じ連鎖で先に弾けた駒には移らない（弾けたばかりの駒を帯電し直さない）。</summary>
-    public static readonly UnitDef TouTPaDry = On323(Tou, new[] { TraitId.PowderContagion, TraitId.PowderContagionDry }, TouContagionText + "（弾けたばかりの駒には移らない）");
+    public static readonly UnitDef TouTPaDry = On323(TouH324, new[] { TraitId.PowderContagion, TraitId.PowderContagionDry }, TouContagionText + "（弾けたばかりの駒には移らない）");
 
     // ---------------------------------------------------------------------------------
     // 第324期 —— 伝染の印は敵にだけ（TP-e）と、濃さ・焼との重ね（指示書 design/PHASE324_TOU_POWDER2_SPEC.md §2）。`All` にも `Retired` にも入れない。
@@ -3599,23 +3672,23 @@ public static class UnitCatalog
 
     static UnitDef Stack324(TraitId[] add) => new()
     {
-        Id = Tou.Id, Name = Tou.Name, MaxHp = Tou.MaxHp, Attack = Tou.Attack, Speed = Tou.Speed, Advances = Tou.Advances, Pattern = Tou.Pattern,
-        Traits = Tou.Traits.Concat(add).ToArray(), Actions = Tou.Actions,
-        PlusText = TouStackText, MinusText = TouDenseMinus, Flavor = Tou.Flavor
+        Id = TouH324.Id, Name = TouH324.Name, MaxHp = TouH324.MaxHp, Attack = TouH324.Attack, Speed = TouH324.Speed, Advances = TouH324.Advances, Pattern = TouH324.Pattern,
+        Traits = TouH324.Traits.Concat(add).ToArray(), Actions = TouH324.Actions,
+        PlusText = TouStackText, MinusText = TouDenseMinus, Flavor = TouH324.Flavor
     };
 
     /// <summary>第324期 TP-e。TP-a ＋ <see cref="TraitId.PowderMarkFoeOnly"/>——伝染の印は敵にだけ（漏れ先の味方は帯電するが印は付かない）。</summary>
-    public static readonly UnitDef TouTPe = On323(Tou, new[] { TraitId.PowderContagion, TraitId.PowderMarkFoeOnly }, TouContagionFoeText);
+    public static readonly UnitDef TouTPe = On323(TouH324, new[] { TraitId.PowderContagion, TraitId.PowderMarkFoeOnly }, TouContagionFoeText);
     /// <summary>第324期 TP-e′。TP-e ＋ <see cref="TraitId.PowderContagionDry"/>（弾けたばかりの駒には移らない）。</summary>
-    public static readonly UnitDef TouTPeDry = On323(Tou, new[] { TraitId.PowderContagion, TraitId.PowderMarkFoeOnly, TraitId.PowderContagionDry }, TouContagionFoeText + "（弾けたばかりの駒には移らない）");
+    public static readonly UnitDef TouTPeDry = On323(TouH324, new[] { TraitId.PowderContagion, TraitId.PowderMarkFoeOnly, TraitId.PowderContagionDry }, TouContagionFoeText + "（弾けたばかりの駒には移らない）");
     /// <summary>第324期 TD-b焼 × TP-e。カタ ／ クグは返す版（<see cref="KataTDR"/> ／ <see cref="KuguTDR"/>）と組む。</summary>
     public static readonly UnitDef TouTDbBTPe = Stack324(new[] { TraitId.PowderDense, TraitId.PowderDenseKeep, TraitId.PowderDenseBurn, TraitId.PowderContagion, TraitId.PowderMarkFoeOnly });
     /// <summary>第324期 TD-b焼 × TP-e′。</summary>
     public static readonly UnitDef TouTDbBTPeDry = Stack324(new[] { TraitId.PowderDense, TraitId.PowderDenseKeep, TraitId.PowderDenseBurn, TraitId.PowderContagion, TraitId.PowderMarkFoeOnly, TraitId.PowderContagionDry });
     /// <summary>第323期 カタの版（返す）。規定のカタ ＋ <see cref="TraitId.ThunderPowderReturn"/>（濃さの保持者がいない戦では何も起きない）。</summary>
-    public static readonly UnitDef KataTDR = On323(Kata, new[] { TraitId.ThunderPowderReturn }, KataPowderReturnText);
+    public static readonly UnitDef KataTDR = On323(KataH324, new[] { TraitId.ThunderPowderReturn }, KataPowderReturnText);
     /// <summary>第323期 クグの版（返す）。規定のクグ ＋ <see cref="TraitId.ThreadPowderFlow"/>。</summary>
-    public static readonly UnitDef KuguTDR = On323(Kugu, new[] { TraitId.ThreadPowderFlow }, KuguPowderFlowText);
+    public static readonly UnitDef KuguTDR = On323(KuguH324, new[] { TraitId.ThreadPowderFlow }, KuguPowderFlowText);
 
     // ---------------------------------------------------------------------------------
     // 第321期 —— ヒサの号令を「溜まったら吐く」版（指示書 §2-2）。規定の号令の玉（`CommandBall`）を差し替えるだけ。`All` にも `Retired` にも入れない。
@@ -3774,7 +3847,7 @@ public static class UnitCatalog
         Pattern = ShigaH318.Pattern,
         Traits = ShigaH318.Traits.Append(TraitId.BetrayBackswing).ToArray(),
         Actions = ShigaH318.Actions,
-        PlusText = ShigaH318.PlusText + "。背いた獣の雷を浴びると、その場で打ち返す",
+        PlusText = ShigaH318.PlusText + ShigaBackswingText,   // 第325期: 文面の「獣」を「召喚獣」に（定数に寄せた）
         MinusText = ShigaH318.MinusText,
         Flavor = ShigaH318.Flavor
     };

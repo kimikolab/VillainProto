@@ -64,6 +64,7 @@ static class MarkHeal295Diag
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Tome)) g[slot] = UnitCatalog.TomeMb;   // 第299期: ミサ ／ ザンも旧の規定に
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Zan)) g[slot] = UnitCatalog.ZanZN0;
         foreach (var (slot, d) in f.Occupied()) if (ReferenceEquals(d, UnitCatalog.Sora)) g[slot] = UnitCatalog.SoraSRs;   // 第301期: ソラも旧の規定（矢面は剥がさない の前）に
+        foreach (var (slot, d) in g.Occupied().ToList()) g[slot] = PinTKK324(d);   // 第325期: トウ ／ カタ ／ クグも第324期までの規定に
         return g;
     }
     static (string Name, Formation F)[] CompareBuilds() => Common.CompareBuilds().Select(r => (r.Name, Pin296(r.F))).ToArray();
@@ -486,7 +487,7 @@ static class MarkHeal295Diag
 
     static void GridElite(string wave, string ver) =>
         GridCore($"固定枠 ミサ・ヒサ・ザン（第294期 §4-5 の作り・探索枠2）", WaveOf(wave), new[] { UnitCatalog.TomeMb, UnitCatalog.HisaHK0, UnitCatalog.ZanZN0 },   // 第299期: ミサ ／ ザンは旧の規定
-            S287.Pool.Select(d => d.Id switch { "kata" => UnitCatalog.Kata, "kugu" => UnitCatalog.Kugu, _ => d }).Where(d => d.Id is not ("tome" or "hisa" or "zan")).Distinct().ToArray(), 2);
+            S287.Pool.Select(d => d.Id switch { "kata" => UnitCatalog.KataH324, "kugu" => UnitCatalog.KuguH324, _ => d }).Where(d => d.Id is not ("tome" or "hisa" or "zan")).Distinct().ToArray(), 2);
 
     // ---------------------------------------------------------------------------------
     // Codex 向けの並び

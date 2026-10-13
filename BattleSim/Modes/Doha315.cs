@@ -471,7 +471,7 @@ static class Doha315Diag
     // ---------------------------------------------------------------------------------
     // §4-4 格子（第297期 `doha297 grid` ／ 第313期 `doha313 grid` と同じ作り・基準は規定のドハ）
     // ---------------------------------------------------------------------------------
-    internal static readonly UnitDef[] Attackers = { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.Kata, UnitCatalog.ShigaSWa };
+    internal static readonly UnitDef[] Attackers = { UnitCatalog.Tome, UnitCatalog.Zan, UnitCatalog.KataH324, UnitCatalog.ShigaSWa };
 
     static void Grid(string waveKey, string ver, bool strong, int seats, int seeds)
     {

@@ -514,7 +514,7 @@ static class Som310Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var v = V(ver);
         var w = S307.WaveOf(wave);
-        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.Kugu, UnitCatalog.KataH311 } : new[] { UnitCatalog.TouH311 };
+        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.KuguH324, UnitCatalog.KataH311 } : new[] { UnitCatalog.TouH311 };
         var pool = w.Boss ? S307.BossPool : S307.ElitePool;
         int k = w.Boss ? 2 : 3;
         int need = w.Boss ? 1 : 5;

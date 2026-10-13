@@ -65,15 +65,15 @@ static class Tou323Diag
     /// <summary>§3-4 重ねた版（TD-b ＋ TP-a・返す働きあり）。段1 ／ 段2 のいちばん良い版を見てから決める——ここでは候補の組だけ持つ。</summary>
     internal static readonly UnitDef TouTDbTPa = new()
     {
-        Id = UnitCatalog.Tou.Id, Name = UnitCatalog.Tou.Name, MaxHp = UnitCatalog.Tou.MaxHp, Attack = UnitCatalog.Tou.Attack, Speed = UnitCatalog.Tou.Speed,
-        Advances = UnitCatalog.Tou.Advances, Pattern = UnitCatalog.Tou.Pattern, Actions = UnitCatalog.Tou.Actions,
+        Id = UnitCatalog.TouH324.Id, Name = UnitCatalog.TouH324.Name, MaxHp = UnitCatalog.TouH324.MaxHp, Attack = UnitCatalog.TouH324.Attack, Speed = UnitCatalog.TouH324.Speed,
+        Advances = UnitCatalog.TouH324.Advances, Pattern = UnitCatalog.TouH324.Pattern, Actions = UnitCatalog.TouH324.Actions,
         Traits = UnitCatalog.TouTDb.Traits.Append(TraitId.PowderContagion).ToArray(),
-        PlusText = UnitCatalog.TouTDb.PlusText + UnitCatalog.TouContagionText, MinusText = UnitCatalog.TouTDb.MinusText, Flavor = UnitCatalog.Tou.Flavor,
+        PlusText = UnitCatalog.TouTDb.PlusText + UnitCatalog.TouContagionText, MinusText = UnitCatalog.TouTDb.MinusText, Flavor = UnitCatalog.TouH324.Flavor,
     };
 
     internal static readonly Ver[] Vers =
     {
-        new("規定", "base", UnitCatalog.Tou, false),
+        new("規定", "base", UnitCatalog.TouH324, false),
         new("TD-a", "tda", UnitCatalog.TouTDa, true),
         new("TD-b", "tdb", UnitCatalog.TouTDb, true),
         new("TD-a焼", "tdab", UnitCatalog.TouTDaB, true),
@@ -97,8 +97,8 @@ static class Tou323Diag
     internal static S287.Wave WaveOf(string n) => S321.WaveOf(n);
     internal static bool IsElite(S287.Wave w) => w.Name is "近衛" or "大隊" || w.Name.StartsWith("九体", StringComparison.Ordinal);
 
-    internal static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
-    static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
+    internal static Formation Playtest(string n) => Pin324(Presets.Playtest.First(r => r.Name == n).F);   // 第325期: トウ ／ カタ ／ クグを第324期の規定に固定
+    static Formation Row(string n) => CompareBuildsH324().First(r => r.Name == n).F;   // 第325期: トウ ／ カタ ／ クグを第324期の規定に固定
 
     /// <summary>§3-2 の代表台（駒はいまの規定）。</summary>
     internal static (string Name, Formation F)[] Boards() => new (string, Formation)[]
@@ -478,7 +478,7 @@ static class Tou323Diag
     internal static void CompareWith(Ver[] vers, string tag)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var rows = CompareBuilds().ToArray();
+        var rows = CompareBuildsH324().ToArray();   // 第325期: トウ ／ カタ ／ クグを第324期の規定に固定
         int nw = EnemyCatalog.Stages.Count;
         double[,] Grid(Ver v)
         {
@@ -518,9 +518,9 @@ static class Tou323Diag
     internal static void GridWith(string waveKey, Ver v, string tag)
     {
         var w = WaveOf(waveKey);
-        var fixedU = w.Boss ? new[] { UnitCatalog.Tou, UnitCatalog.Kata, UnitCatalog.Som } : new[] { UnitCatalog.Tou, UnitCatalog.Kata };
+        var fixedU = w.Boss ? new[] { UnitCatalog.TouH324, UnitCatalog.KataH324, UnitCatalog.Som } : new[] { UnitCatalog.TouH324, UnitCatalog.KataH324 };
         int free = 5 - fixedU.Length;
-        UnitDef Now(UnitDef d) => UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d;
+        UnitDef Now(UnitDef d) => PinTKK324(UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d);   // 第325期: トウ ／ カタ ／ クグを第324期の規定に固定
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();
         var fixedIds = fixedU.Select(d => d.Id).ToHashSet();
         var pool = S287.Pool.Select(Now).Append(UnitCatalog.Shiga).Where(d => !fixedIds.Contains(d.Id)).GroupBy(d => d.Id).Select(g => g.First()).ToArray();
@@ -663,31 +663,31 @@ static class Tou323Diag
 
         // ---- 版の定義
         {
-            var T = UnitCatalog.Tou;
+            var T = UnitCatalog.TouH324;
             bool tda = UnitCatalog.TouTDa.Traits.SequenceEqual(T.Traits.Append(TraitId.PowderDense));
             bool tdb = UnitCatalog.TouTDb.Traits.SequenceEqual(T.Traits.Concat(new[] { TraitId.PowderDense, TraitId.PowderDenseKeep }));
             bool tdab = UnitCatalog.TouTDaB.Traits.SequenceEqual(T.Traits.Concat(new[] { TraitId.PowderDense, TraitId.PowderDenseBurn }));
             bool tdbb = UnitCatalog.TouTDbB.Traits.SequenceEqual(T.Traits.Concat(new[] { TraitId.PowderDense, TraitId.PowderDenseKeep, TraitId.PowderDenseBurn }));
             bool tpa = UnitCatalog.TouTPa.Traits.SequenceEqual(T.Traits.Append(TraitId.PowderContagion));
             bool tpb = UnitCatalog.TouTPb.Traits.SequenceEqual(T.Traits.Concat(new[] { TraitId.PowderContagion, TraitId.PowderContagionSpread }));
-            bool ret = UnitCatalog.KataTDR.Traits.SequenceEqual(UnitCatalog.Kata.Traits.Append(TraitId.ThunderPowderReturn)) && UnitCatalog.KuguTDR.Traits.SequenceEqual(UnitCatalog.Kugu.Traits.Append(TraitId.ThreadPowderFlow));
+            bool ret = UnitCatalog.KataTDR.Traits.SequenceEqual(UnitCatalog.KataH324.Traits.Append(TraitId.ThunderPowderReturn)) && UnitCatalog.KuguTDR.Traits.SequenceEqual(UnitCatalog.KuguH324.Traits.Append(TraitId.ThreadPowderFlow));
             bool tpad = UnitCatalog.TouTPaDry.Traits.SequenceEqual(T.Traits.Concat(new[] { TraitId.PowderContagion, TraitId.PowderContagionDry }));
             tpb = tpb && tpad;
             var defs = new[] { UnitCatalog.TouTDa, UnitCatalog.TouTDb, UnitCatalog.TouTDaB, UnitCatalog.TouTDbB, UnitCatalog.TouTPa, UnitCatalog.TouTPb, UnitCatalog.TouTPaDry };
             bool stats = defs.All(d => d.Id == "tou" && d.MaxHp == T.MaxHp && d.Attack == T.Attack && d.Speed == T.Speed);
             bool text = UnitCatalog.TouTDa.PlusText == T.PlusText + UnitCatalog.TouDenseText && UnitCatalog.TouTDa.MinusText.Contains(UnitCatalog.TouLeakDenseClause, StringComparison.Ordinal)
                 && T.MinusText.Contains(UnitCatalog.TouLeakClause, StringComparison.Ordinal) && UnitCatalog.TouTPa.MinusText == T.MinusText
-                && UnitCatalog.KataTDR.PlusText == UnitCatalog.Kata.PlusText + UnitCatalog.KataPowderReturnText && UnitCatalog.KuguTDR.PlusText == UnitCatalog.Kugu.PlusText + UnitCatalog.KuguPowderFlowText;
+                && UnitCatalog.KataTDR.PlusText == UnitCatalog.KataH324.PlusText + UnitCatalog.KataPowderReturnText && UnitCatalog.KuguTDR.PlusText == UnitCatalog.KuguH324.PlusText + UnitCatalog.KuguPowderFlowText;
             var cards = new[] { TraitId.PowderDense, TraitId.PowderDenseKeep, TraitId.PowderDenseBurn, TraitId.ThunderPowderReturn, TraitId.ThreadPowderFlow, TraitId.PowderContagion, TraitId.PowderContagionSpread, TraitId.PowderContagionDry };
             bool outside = defs.Append(UnitCatalog.KataTDR).Append(UnitCatalog.KuguTDR).All(d => !UnitCatalog.Everyone.Contains(d))
-                && UnitCatalog.Everyone.All(d => !d.Traits.Intersect(cards).Any()) && UnitCatalog.All.Count == 52;
+                && UnitCatalog.Everyone.Select(PinTKK324).All(d => !d.Traits.Intersect(cards).Any()) && UnitCatalog.All.Count == 52;   // 第325期: 規定のトウ ／ カタ ／ クグが札を持つようになった——第324期の規定（`PinTKK324`）で見る
             Expect("版: TD-a ／ TD-b ／ TD-a焼 ／ TD-b焼 ／ TP-a ／ TP-b ／ TP-a′ ＝ 規定のトウの末尾に札・カタ ／ クグの版 ＝ 規定の末尾に返す札・文面（叩き台）・数値は規定のまま・`Everyone` の外・規定の駒は札を持たない",
                 tda && tdb && tdab && tdbb && tpa && tpb && ret && stats && text && outside, $"TD {tda}/{tdb}/{tdab}/{tdbb}・TP {tpa}/{tpb}・返す {ret}・数値 {stats}・文面 {text}・外 {outside}");
         }
 
         // ---- TD: 手番の頭に帯電していた駒だけ +1（主目標 ／ 舞う先 ／ 漏れ先・敵味方）
         //      敵: 前1（主目標・帯電）・中央（舞う先・帯電）・後1（舞う先・乾いている）／ 味方: 中央 トウ・前1（帯電）・後3（乾いている）
-        foreach (var (def, tag, on) in new[] { (UnitCatalog.Tou, "規定", false), (UnitCatalog.TouTDa, "TD-a", true) })
+        foreach (var (def, tag, on) in new[] { (UnitCatalog.TouH324, "規定", false), (UnitCatalog.TouTDa, "TD-a", true) })
         {
             var ctx = Ctx(Formation.Build(center: def, front1: Mate, back3: Mate), Formation.Build(front1: Wall, center: Wall, back1: Wall), out var p, out var e);
             var tou = Seat(p, 2); var af = Seat(p, 0); var ab = Seat(p, 4);
@@ -745,7 +745,7 @@ static class Tou323Diag
         }
 
         // ---- 返す: カタの雷で濃さが最初の的へ全部移る（TD-0 のカタは返さない）
-        foreach (var (kata, tag, back) in new[] { (UnitCatalog.KataTDR, "カタの版", true), (UnitCatalog.Kata, "規定のカタ（TD-0）", false) })
+        foreach (var (kata, tag, back) in new[] { (UnitCatalog.KataTDR, "カタの版", true), (UnitCatalog.KataH324, "規定のカタ（TD-0）", false) })
         {
             var ctx = Ctx(Formation.Build(center: UnitCatalog.TouTDb, front1: kata), Formation.Build(front1: Wall), out var p, out var e);
             var tou = Seat(p, 2); var k = Seat(p, 0); var ef = e[0];
@@ -761,7 +761,7 @@ static class Tou323Diag
         }
 
         // ---- 返す: クグの濃さは組み付いた敵へ流れる（組み付いていなければクグに付く・TD-0 のクグは流さない）
-        foreach (var (kugu, tag, flow, held) in new[] { (UnitCatalog.KuguTDR, "クグの版・組み付き", true, true), (UnitCatalog.KuguTDR, "クグの版・組み付いていない", true, false), (UnitCatalog.Kugu, "規定のクグ（TD-0）・組み付き", false, true) })
+        foreach (var (kugu, tag, flow, held) in new[] { (UnitCatalog.KuguTDR, "クグの版・組み付き", true, true), (UnitCatalog.KuguTDR, "クグの版・組み付いていない", true, false), (UnitCatalog.KuguH324, "規定のクグ（TD-0）・組み付き", false, true) })
         {
             var ctx = Ctx(Formation.Build(center: UnitCatalog.TouTDb, front1: kugu), Formation.Build(front1: Wall, front3: Wall), out var p, out var e);
             var tou = Seat(p, 2); var k = Seat(p, 0); var g = Seat(e, 1);
@@ -776,7 +776,7 @@ static class Tou323Diag
 
         // ---- TP: 粉の印のある駒の放電は帯電していない隣を帯電させる・新しく帯電した駒は同じ連鎖で弾けない・TP-b は印も付く
         //      敵: 前1（乾いている）・中央（粉の印 ＋ 帯電）・後1（帯電・印なし）。中央 → 前1 に伝染、後1 が弾けて 前1 に放電が戻っても前1 は弾けない。
-        foreach (var (def, tag, on, spread) in new[] { (UnitCatalog.Tou, "規定", false, false), (UnitCatalog.TouTPa, "TP-a", true, false), (UnitCatalog.TouTPb, "TP-b", true, true) })
+        foreach (var (def, tag, on, spread) in new[] { (UnitCatalog.TouH324, "規定", false, false), (UnitCatalog.TouTPa, "TP-a", true, false), (UnitCatalog.TouTPb, "TP-b", true, true) })
         {
             var ctx = Ctx(Formation.Build(back3: def, front1: Mate), Formation.Build(front1: Wall, center: Wall, back1: Wall), out var p, out var e);
             var tou = Seat(p, 4); var ef = Seat(e, 0); var ec = Seat(e, 2); var eb = Seat(e, 3);

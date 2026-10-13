@@ -709,7 +709,7 @@ static class Feather298Diag
             // (b) 規定のドハはなまりを持たない ／ 旧と DH-a は持つ（ドルガへ 30 の一撃でドルガの攻撃力）
             int Dull(UnitDef dv)
             {
-                var ctx = Ctx(Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.TomeMb, center: dv, back1: UnitCatalog.Kata, back3: UnitCatalog.Gald), Formation.Build(front1: UnitCatalog.Dolga), out var p, out var e);
+                var ctx = Ctx(Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.TomeMb, center: dv, back1: UnitCatalog.KataH324, back3: UnitCatalog.Gald), Formation.Build(front1: UnitCatalog.Dolga), out var p, out var e);
                 var dol = p.First(u => u.Def.Id == "dolga");
                 ctx.ApplyDamage(dol, 30, e[0]);
                 return ctx.DullByRoute[(int)DullRoute.Sharer];
@@ -719,7 +719,7 @@ static class Feather298Diag
         }
         // (c) 段0-2: 直した群の量が本当の出どころに入る（なまり・橋・くべられる火・反転の4群を盤面を直に組んで）
         {
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.TomeMb, center: d0, back1: UnitCatalog.Kata, back3: UnitCatalog.Gald), Formation.Build(front1: UnitCatalog.Dolga), out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.TomeMb, center: d0, back1: UnitCatalog.KataH324, back3: UnitCatalog.Gald), Formation.Build(front1: UnitCatalog.Dolga), out var p, out var e);
             var dol = p.First(u => u.Def.Id == "dolga");
             // 敵のフックの印の中で起きた分かちのなまり（印 ＝ 敵のドルガ）
             var prev = ctx.BeginTrait(TraitId.Thorns, e[0]);
@@ -732,7 +732,7 @@ static class Feather298Diag
         }
         {
             // 群1: ベニの反転（毒の刻み）。ベニ隣の毒の駒の刻みが回復に。回復(与) がベニに入る
-            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Mio, center: UnitCatalog.Dolga, back1: UnitCatalog.Kata, back3: UnitCatalog.Gald), Formation.Build(front1: UnitCatalog.Dolga), out var p, out var e);
+            var ctx = Ctx(Formation.Build(front1: UnitCatalog.Beni, front3: UnitCatalog.Mio, center: UnitCatalog.Dolga, back1: UnitCatalog.KataH324, back3: UnitCatalog.Gald), Formation.Build(front1: UnitCatalog.Dolga), out var p, out var e);
             var dol = p.First(u => u.Def.Id == "dolga");
             dol.Hp = dol.MaxHp - 20;
             dol.SetCounter(StatusKeys.Poison, 3);
@@ -756,7 +756,7 @@ static class Feather298Diag
         }
 
         // MF ／ ZN（盤面を直に組む）: 前1 ドルガ ／ 前3 ザン ／ 中央 ミサ ／ 後1 カタ ／ 後3 ヒサ
-        Formation Sq(UnitDef misa, UnitDef zan, UnitDef hisa) => Formation.Build(front1: UnitCatalog.Dolga, front3: zan, center: misa, back1: UnitCatalog.Kata, back3: hisa);
+        Formation Sq(UnitDef misa, UnitDef zan, UnitDef hisa) => Formation.Build(front1: UnitCatalog.Dolga, front3: zan, center: misa, back1: UnitCatalog.KataH324, back3: hisa);
         var foeF = Formation.Build(front1: UnitCatalog.Dolga, front3: UnitCatalog.Gald);
         {
             var ctx = Ctx(Sq(UnitCatalog.MisaMFa, UnitCatalog.ZanZN0, UnitCatalog.HisaHKb), foeF, out var p, out var e);

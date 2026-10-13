@@ -574,7 +574,7 @@ static class Som319Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var v = V(ver);
         var w = S307.WaveOf(wave);
-        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.Kugu, UnitCatalog.Kata } : new[] { UnitCatalog.Tou };
+        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.KuguH324, UnitCatalog.KataH324 } : new[] { UnitCatalog.TouH324 };
         var pool = (w.Boss ? S307.BossPool : S307.ElitePool).Select(Cur).ToArray();
         int k = w.Boss ? 2 : 3, need = w.Boss ? 1 : 5;
         var lu = S293.Combos(pool, k);
@@ -712,12 +712,12 @@ static class Som319Diag
             bool d = som.Traits.SequenceEqual(UnitCatalog.SomCRb.Traits) && som.Traits.SequenceEqual(h.Traits.Concat(new[] { TraitId.BeastStand, TraitId.BeastBetray, TraitId.BeastResonance, TraitId.BeastResonanceArc }))
                 && h.Traits.SequenceEqual(UnitCatalog.SomH317.Traits.Append(TraitId.BeastDeathCount)) && h.PlusText == UnitCatalog.SomH317.PlusText + UnitCatalog.SomBeastDeathText318
                 && som.MinusText == "喚ばれたものは背いて敵につき、こちらに雷を投げる。隣の敵が帯電していれば、纏った雷が暴発する"
-                && som.PlusText.EndsWith("。帯電した仲間に落ちた背きの雷は共鳴して跳ね返り、獣のまわりの敵にも走ってから獣を弾けさせる", StringComparison.Ordinal)
+                && som.PlusText.EndsWith("。帯電した仲間に落ちた背きの雷は共鳴して跳ね返り、召喚獣のまわりの敵にも走ってから召喚獣を弾けさせる", StringComparison.Ordinal)
                 && som.MaxHp == h.MaxHp && som.Attack == h.Attack && som.Speed == h.Speed && ReferenceEquals(som.Actions, h.Actions)
                 && UnitCatalog.SomCRa.Traits.SequenceEqual(h.Traits.Concat(new[] { TraitId.BeastStand, TraitId.BeastBetray, TraitId.BeastResonance })) && UnitCatalog.SomBT318.Traits.SequenceEqual(h.Traits.Concat(new[] { TraitId.BeastStand, TraitId.BeastBetray }));
             bool ds = shiga.Traits.SequenceEqual(UnitCatalog.ShigaSG.Traits) && shiga.Traits.SequenceEqual(hs.Traits.Append(TraitId.BetrayBackswing))
                 && hs.Traits.SequenceEqual(UnitCatalog.ShigaSWa.Traits.Concat(new[] { TraitId.FearNoStun, TraitId.ScourgeDaunt }))
-                && shiga.PlusText == hs.PlusText + "。背いた獣の雷を浴びると、その場で打ち返す" && shiga.MinusText == hs.MinusText && shiga.MaxHp == 52 && shiga.Attack == 9 && shiga.Speed == 3;
+                && shiga.PlusText == hs.PlusText + "。背いた召喚獣の雷を浴びると、その場で打ち返す" && shiga.MinusText == hs.MinusText && shiga.MaxHp == 52 && shiga.Attack == 9 && shiga.Speed == 3;
             bool roster = UnitCatalog.All.Contains(UnitCatalog.Som) && ReferenceEquals(PinS319(UnitCatalog.Som), som) && UnitCatalog.All.Contains(UnitCatalog.Shiga) && ReferenceEquals(PinS319(UnitCatalog.Shiga), shiga) && UnitCatalog.All.Count == 52   // 第320期: 規定は WS-b・`som` は第319期の規定（`SomH319`）
                 && new[] { h, hs, UnitCatalog.SomH317, wsa, wsa3, wsb, UnitCatalog.SomCRb, UnitCatalog.ShigaSG }.All(x => !UnitCatalog.Everyone.Contains(x));
             bool pin = ReferenceEquals(PinSS318(som), h) && ReferenceEquals(PinSS318(UnitCatalog.Shiga), hs)
@@ -792,7 +792,7 @@ static class Som319Diag
             bool hush = hushOn && T(c3, s3).CrHushed == 1 && T(c3, s3).WsBackfire == 1 && Stood(c3, s3).Count == 0
                 && ev3.FindIndex(x => x.Kind == BattleEventKind.BeastThrow && x.Text == BeastThrowLabels.Hushed) < ev3.FindIndex(x => x.Kind == BattleEventKind.BeastBurst && x.Text == BeastBurstLabels.Backfire);
             // クグ: 帯電していないクグ（糸の先が生きている）→ 糸へ流れてから暴発
-            var (c4, s4, k4, e4) = One(UnitCatalog.Kugu, wsb, charged: false);
+            var (c4, s4, k4, e4) = One(UnitCatalog.KuguH324, wsb, charged: false);
             var foe = e4.First(u => u.IsAlive && FormationRules.RowOf(u.Slot) == Row.Front);
             k4.SetCounter(GrappleTrait.TargetKey, foe.InstanceId + 1);
             int q4 = c4.Events.Count; TurnStart(c4, s4);
@@ -859,9 +859,9 @@ static class Som319Diag
         // (h) 版の定義・規定のほかの駒は動かない
         {
             bool defs = wsa.Traits.SequenceEqual(som.Traits.Append(TraitId.BeastStandLate)) && wsa3.Traits.SequenceEqual(som.Traits.Append(TraitId.BeastStandLate3)) && wsb.Traits.SequenceEqual(som.Traits.Append(TraitId.BeastThrowBackfire))
-                && wsb.MinusText == som.MinusText + "。受け止める者がいなければ、獣は投げた雷の残りで暴発する" && wsa.PlusText == som.PlusText
+                && wsb.MinusText == som.MinusText + "。受け止める者がいなければ、召喚獣は投げた雷の残りで暴発する" && wsa.PlusText == som.PlusText
                 && BetrayedTrait.StandLateTurns == 2 && BetrayedTrait.StandLateTurns3 == 3;
-            bool dflt = !UnitCatalog.Kata.Traits.Contains(TraitId.LightningRod) && UnitCatalog.Fodder.MaxHp == 12 && UnitCatalog.Fodder.Attack == 0 && UnitCatalog.Fodder.Speed == 1
+            bool dflt = !UnitCatalog.KataH324.Traits.Contains(TraitId.LightningRod) && UnitCatalog.Fodder.MaxHp == 12 && UnitCatalog.Fodder.Attack == 0 && UnitCatalog.Fodder.Speed == 1
                 && !som.Traits.Any(t => t is TraitId.BeastStandLate or TraitId.BeastStandLate3 or TraitId.BeastThrowBackfire)
                 && UnitCatalog.Everyone.All(d => !d.Traits.Any(t => t is TraitId.BeastStandLate or TraitId.BeastStandLate3) && (ReferenceEquals(d, UnitCatalog.Som) || !d.Traits.Contains(TraitId.BeastThrowBackfire)));   // 第320期: `BeastThrowBackfire` は規定のソムが持つ
             Expect("(h) 版の定義（WS-a ＝ 規定 ＋ `BeastStandLate`・WS-a3 ＝ 規定 ＋ `BeastStandLate3`・WS-b ＝ 規定 ＋ `BeastThrowBackfire`・文面）・新しい札の保持者は `Everyone` に 0 枚・獣とカタは動かない",

@@ -576,7 +576,7 @@ static class Shock293Diag
         Expect("(a) 規定のカタ ＝ KR-∞（`KataKRinf` ＝ 規定）・旧の規定 KR-b は `KataKRb`（`All` ／ `Retired` の外）・文面は同じ",
             UnitCatalog.KataH311.Traits.Contains(TraitId.ThundercloudUncapped) && ReferenceEquals(UnitCatalog.KataKRinf, UnitCatalog.KataH311)
             && UnitCatalog.KataH311.Traits.SequenceEqual(UnitCatalog.KataKRb.Traits.Append(TraitId.ThundercloudUncapped)) && !UnitCatalog.Everyone.Contains(UnitCatalog.KataKRb)
-            && UnitCatalog.KataKRb.PlusText == UnitCatalog.KataH311.PlusText && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.Kata) /* 第312期: 規定のカタは萎縮の規則つき・KR-∞ は `KataH311` */);
+            && UnitCatalog.KataKRb.PlusText == UnitCatalog.KataH311.PlusText && UnitCatalog.All.Select(PinDS316).Contains(UnitCatalog.KataH324) /* 第312期: 規定のカタは萎縮の規則つき・KR-∞ は `KataH311` */);
         Expect("(b) 第293期の規定のクグ（KG-b）・シガ（SI-b）は `KuguKGb` ／ `ShigaSIb`・版は規定の末尾に札を足しただけ・`All` ／ `Retired` の外",
             UnitCatalog.KuguKGb.Traits.SequenceEqual(new[] { TraitId.Grapple, TraitId.Thread, TraitId.ThreadCharge })
             && UnitCatalog.KuguKWa.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.WebCharge)) && UnitCatalog.KuguKWb.Traits.SequenceEqual(UnitCatalog.KuguKGb.Traits.Append(TraitId.WebSnare))

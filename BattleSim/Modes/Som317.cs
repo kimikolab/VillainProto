@@ -94,7 +94,7 @@ static class Som317Diag
     internal static Formation Apply(Formation f, Ver v)
     {
         var g = ReferenceEquals(v.Som, UnitCatalog.SomH317) ? f : S309.Swap(f, UnitCatalog.SomH317, v.Som);
-        return v.Kata is null ? g : S309.Swap(g, UnitCatalog.Kata, v.Kata);
+        return v.Kata is null ? g : S309.Swap(g, UnitCatalog.KataH324, v.Kata);
     }
 
     internal static readonly S287.Wave[] Waves = S310.Waves;
@@ -651,7 +651,7 @@ static class Som317Diag
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var v = V(ver);
         var w = S307.WaveOf(wave);
-        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.Kugu, UnitCatalog.Kata } : new[] { UnitCatalog.Tou };
+        UnitDef[] fixedBase = w.Boss ? new[] { UnitCatalog.KuguH324, UnitCatalog.KataH324 } : new[] { UnitCatalog.TouH324 };
         var pool = (w.Boss ? S307.BossPool : S307.ElitePool).Select(Cur).ToArray();
         int k = w.Boss ? 2 : 3, need = w.Boss ? 1 : 5;
         var lu = S293.Combos(pool, k);
@@ -838,13 +838,13 @@ static class Som317Diag
         }
         // (c) BT-a: 獣の席から敵の普通の攻撃と同じ選び方（前列が生きていれば前列）・クグの糸は糸の先の敵へ流れる
         {
-            var f = Formation.Build(front1: UnitCatalog.Golm, back1: UnitCatalog.Tou, back3: bta);
+            var f = Formation.Build(front1: UnitCatalog.Golm, back1: UnitCatalog.TouH324, back3: bta);
             var (ctx, p, e) = Board(f, Wave3());
             var som = p.First(u => u.Def.Id == "som"); var golm = p.First(u => u.Def.Id == "golm"); var tou = p.First(u => u.Def.Id == "tou");
             TurnStart(ctx, som);
             bool front = golm.RawCounter(StatusKeys.Shock) > 0 && tou.RawCounter(StatusKeys.Shock) == 0;
             // クグ: 前1 クグだけ・組み付いた敵（敵の前列の1体）が生きている
-            var f2 = Formation.Build(front1: UnitCatalog.Kugu, back3: bta);
+            var f2 = Formation.Build(front1: UnitCatalog.KuguH324, back3: bta);
             var (ctx2, p2, e2) = Board(f2, Wave3());
             var som2 = p2.First(u => u.Def.Id == "som"); var kugu = p2.First(u => u.Def.Id == "kugu");
             var foe = e2.First(u => u.IsAlive);
@@ -906,7 +906,7 @@ static class Som317Diag
             TurnStart(c5, s5);
             bool d5 = T(c5, s5).BtRodCaught == 0 && g5.RawCounter(StatusKeys.Shock) > 0;
             // d6 規定のカタ（避雷針なし）は受け止めない
-            var (c6, s6, g6, _, _) = Make(adj, UnitCatalog.Kata);
+            var (c6, s6, g6, _, _) = Make(adj, UnitCatalog.KataH324);
             TurnStart(c6, s6);
             bool d6 = T(c6, s6).BtRodCaught == 0 && g6.RawCounter(StatusKeys.Shock) > 0;
             Expect("(d) BT-b: カタ自身 ／ 隣の味方に向かう雷だけ受け止める（`BeastThrow 避雷針` → `BeastBurst 避雷針` → 獣が起点・起こし手はカタ・`Death` なし・光が降る）・狙われた味方に感電が付かない・範囲の外 ／ 痺れ ／ 倒れていれば働かない・規定のカタは受け止めない",
@@ -938,7 +938,7 @@ static class Som317Diag
             var necroHolder = UnitCatalog.All.FirstOrDefault(d => d.Traits.Contains(TraitId.Necro));
             (long Atk, int NecroAtk, long Counted) One(UnitDef somDef)
             {
-                var f = Formation.Build(front1: UnitCatalog.Golm, center: UnitCatalog.Hagi, back1: necroHolder ?? UnitCatalog.Tou, back3: somDef);
+                var f = Formation.Build(front1: UnitCatalog.Golm, center: UnitCatalog.Hagi, back1: necroHolder ?? UnitCatalog.TouH324, back3: somDef);
                 var (ctx, p, _) = Board(f, Wave3());
                 var som = p.First(u => u.Def.Id == "som");
                 var nh = necroHolder is null ? null : p.First(u => u.Def.Id == necroHolder.Id);
@@ -1020,10 +1020,10 @@ static class Som317Diag
         // (k) 版の定義・規定のソム ／ カタは動かない・経路の名前
         {
             bool defs = bta.Traits.SequenceEqual(UnitCatalog.SomH317.Traits.Concat(new[] { TraitId.BeastStand, TraitId.BeastBetray })) && UnitCatalog.SomBD.Traits.SequenceEqual(UnitCatalog.SomH317.Traits.Append(TraitId.BeastDeathCount))
-                && UnitCatalog.KataLR.Traits.SequenceEqual(UnitCatalog.Kata.Traits.Append(TraitId.LightningRod)) && UnitCatalog.KataLRall.Traits.SequenceEqual(UnitCatalog.Kata.Traits.Append(TraitId.LightningRodAll))
+                && UnitCatalog.KataLR.Traits.SequenceEqual(UnitCatalog.KataH324.Traits.Append(TraitId.LightningRod)) && UnitCatalog.KataLRall.Traits.SequenceEqual(UnitCatalog.KataH324.Traits.Append(TraitId.LightningRodAll))
                 && new[] { bta, UnitCatalog.SomBD, UnitCatalog.KataLR, UnitCatalog.KataLRall, BtBd }.All(d => !UnitCatalog.Everyone.Contains(d))
                 && bta.MinusText == UnitCatalog.SomBetrayMinusText && UnitCatalog.KataLR.PlusText.EndsWith("隣の仲間に落ちる雷は、受け止めて撃ち手に落とし直す");
-            bool dflt = UnitCatalog.SomH317.Traits.SequenceEqual(UnitCatalog.SomSWKa.Traits) && !UnitCatalog.Kata.Traits.Contains(TraitId.LightningRod) && UnitCatalog.Fodder.MaxHp == 12 && UnitCatalog.Fodder.Attack == 0 && UnitCatalog.Fodder.Speed == 1;
+            bool dflt = UnitCatalog.SomH317.Traits.SequenceEqual(UnitCatalog.SomSWKa.Traits) && !UnitCatalog.KataH324.Traits.Contains(TraitId.LightningRod) && UnitCatalog.Fodder.MaxHp == 12 && UnitCatalog.Fodder.Attack == 0 && UnitCatalog.Fodder.Speed == 1;
             bool route = OutOfTurnRoutes.Names.Length == Enum.GetValues<OutOfTurnRoute>().Length && OutOfTurnRoutes.Names[(int)OutOfTurnRoute.LightningRod] == "避雷針" && OutOfTurnRoutes.Names[^1] == "その他";
             Expect("(k) 版の定義（BT-a ＝ 規定 ＋ 立つ ＋ 投げる・BD ＝ 規定 ＋ 獣の死・避雷針 ＝ 規定のカタ ＋ 札1枚・`Everyone` の外）・規定のソム ／ カタ ／ 獣は動かない・経路 `避雷針`",
                 defs && dflt && route, $"版 {defs}・規定 {dflt}・経路 {route}（{OutOfTurnRoutes.Count}）");
