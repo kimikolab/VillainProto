@@ -560,6 +560,7 @@ public sealed class BattleContext
         if (_rallyLive) BundlePush(null, outOfTurn: true);   // 第295期（攻撃のひとまとまり・HK の保持者がいなければ比較1つで抜ける）
         try { body(); }
         finally { InReaction = false; if (_rallyLive) BundlePop(); }
+        if (_burstLive) CommandBurst();     // 第321期（HQ・まとまりが閉じた直後に、溜まった玉を吐き出す・羽より前）
         if (_mfLive) DrainFeatherMarks();   // 第298期（MF・まとまりが閉じた後に、控えた羽を撃つ）
     }
 
@@ -669,6 +670,7 @@ public sealed class BattleContext
         if (_rallyLive) BundlePush(null, outOfTurn: true);   // 第295期（攻撃のひとまとまり）
         try { body(); }
         finally { InInterrupt = false; if (_rallyLive) BundlePop(); }   // 例外で立ちっぱなしになると以後の割り込みが永久に止まる
+        if (_burstLive) CommandBurst();     // 第321期（HQ）
         if (_mfLive) DrainFeatherMarks();   // 第298期（MF）
     }
 
@@ -1218,6 +1220,30 @@ public sealed class BattleContext
         public bool PrimShocked { get; set; }
         /// <summary>第316期（<b>計数のみ</b>）: 主目標の当たる前の種類（1 動けない ／ 2 感電 ／ 4 萎縮 ／ 8 ボス・ビットの和）。</summary>
         public int PrimBits { get; set; }
+        /// <summary>第321期（<b>計数のみ</b>）: 振り始めの与ダメの累計 ／ この振りの中で入れ子に振った同じ駒の鞭の与ダメ（1振りの最大から外す）。</summary>
+        public long Dmg0, Nested;
+    }
+
+    /// <summary>
+    /// 第321期（SA+ ／ SA+k）: 次の鞭の一振りを「2振り目以降」として振る駒（電気鞭を起こさず・怖気の判定もしない）。
+    /// 呼び出し側が立てて、鞭の枠（<c>PerformAttackBody</c>）が最初に読んで消す（呼び出し側も振り終えたら消す）。
+    /// </summary>
+    UnitState? _flurryLater;
+
+    /// <summary>第321期: 割り込み ／ 打ち返しの鞭を何回振るか（溜まった電気は回数に `ChargeFlurry` の保持者だけ 1 ＋ 蓄電（4 まで）・ほかは 1）。</summary>
+    int FlurryHits(UnitState h) => _chargeLive && h.HasTrait(TraitId.ChargeFlurry) ? 1 + ChargeFlurryTrait.ToHits(h) : 1;
+
+    /// <summary>
+    /// 第321期: 割り込み ／ 打ち返しの鞭の2振り目以降の1振り。主目標が生きていれば的を固定し、倒れていれば今の標的選びに任せる（手番の連撃と同じ）。
+    /// 倍率（`_shockWhipMult`）と怖気の免除（`_shockWhipActor`）は呼び出し側の枠のまま。<b>乱数を引かない</b>（鞭そのものが引くぶんだけ）。
+    /// </summary>
+    void FlurryLater(UnitState h, UnitState prim, int i, int n)
+    {
+        EmitShockGauge(ShockGaugeLabels.Flurry, h, prim, i, n);   // 表示専用（何振り目か）
+        if (prim.IsAlive) _forcedTarget = prim;
+        _flurryLater = h;
+        try { PerformAttack(h); }
+        finally { _flurryLater = null; _forcedTarget = null; }
     }
 
     /// <summary>蓄電（第288期・<see cref="TraitId.StoredCharge"/>）の保持者が戦闘に出たか。<b>いなければ <c>MarkShock</c> は比較1つで抜ける。</b></summary>
@@ -1652,8 +1678,9 @@ public sealed class BattleContext
     {
         UnitTally t = TallyOf(u);
         int c = StoredChargeTrait.Of(u);
-        if (c >= StoredChargeTrait.Cap) { t.ChargeCapped++; return; }
+        if (c >= StoredChargeTrait.Cap && !u.HasTrait(TraitId.ChargeUncapped)) { t.ChargeCapped++; return; }   // 第321期（SA〜）: 上限なしの札があれば溜まり続ける（札の問いは上限に着いてから）
         u.SetCounter(StoredChargeTrait.Key, c + 1);
+        if (c + 1 > t.SaChargePeak) t.SaChargePeak = c + 1;   // 第321期・計数のみ
         EmitShockGauge(ShockGaugeLabels.ChargeGain, writer, u, c + 1, c);   // 第291期・表示専用
         t.ChargeGains++;
         int src = writer == u || writer.TeamId != u.TeamId ? 4
@@ -2507,7 +2534,13 @@ public sealed class BattleContext
             _forcedTarget = beast;
             bool prevSwing = _backswingNow;
             _backswingNow = true;   // 第319期（計数のみ）
-            try { PerformAttack(shiga); }
+            int n = FlurryHits(shiga);   // 第321期（SA+ ／ SA+k）: 打ち返しも溜まった電気の分だけ続けて振る
+            if (n > 1) EmitShockGauge(ShockGaugeLabels.Flurry, shiga, beast, 1, n);   // 表示専用
+            try
+            {
+                PerformAttack(shiga);
+                for (int i = 1; i < n && shiga.IsAlive; i++) FlurryLater(shiga, beast, i + 1, n);
+            }
             finally { _forcedTarget = null; _shockWhipActor = prevActor; _shockWhipMult = prevMult; _backswingNow = prevSwing; }
             t.SgDealt += ht.DamageToEnemy - before;
             t.SgWhipNested += ht.SwNested - nested0;   // 打ち返しの鞭の連鎖の後の割り込み（`ShockWhip`）は、打ち返しが割り込みの中なので入れ子で止まる（いまの規則どおり）
@@ -2659,8 +2692,14 @@ public sealed class BattleContext
                 (t.SwChainHist ??= new long[12])[Math.Min(popped.Count, 11)]++;
                 EmitShockGauge(ShockGaugeLabels.WhipChain, h, target, _shockWhipMult, popped.Count);   // 表示専用（倍率）
             }
+            int n = FlurryHits(h);   // 第321期（SA+ ／ SA+k）: 溜まった電気の分だけ続けて振る（数えるのは振り始め）
+            if (n > 1) EmitShockGauge(ShockGaugeLabels.Flurry, h, target, 1, n);   // 表示専用
             _forcedTarget = target;
-            try { PerformAttack(h); }
+            try
+            {
+                PerformAttack(h);
+                for (int i = 1; i < n && h.IsAlive; i++) FlurryLater(h, target, i + 1, n);
+            }
             finally { _forcedTarget = null; _shockWhipActor = prevActor; _shockWhipMult = prevMult; }
             t.SwWhipDealt += t.DamageToEnemy - before;
             if (bolt)
@@ -2669,7 +2708,7 @@ public sealed class BattleContext
                 Thunderclap(h, popped);
                 t.SwBoltDealt += t.DamageToEnemy - b2;
             }
-            else
+            else if (!h.HasTrait(TraitId.ChargeKeep))   // 第321期（SA ／ SA+）: 使わない札があれば蓄電は減らない
             {
                 int c1 = StoredChargeTrait.Of(h);
                 h.SetCounter(StoredChargeTrait.Key, Math.Max(0, c1 - 1));
@@ -8520,6 +8559,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.FeatherMark) || u.HasTrait(TraitId.FeatherMarkLayer)) { _mfLive = true; _mfHolders.Add(u); }   // 第298期（MF・標が付いた瞬間の羽）
         if (u.HasTrait(TraitId.Vendetta)) _vendettaTurnLive = true;   // 第299期（ザンの手番の計数・仇巡り）
         if (u.HasTrait(TraitId.CommandNow)) _commandNowLive = true;    // 第301期（HL-i・まとまりで叩かれた標の敵を控える）
+        if (CommandTrait.BurstUnit(u) > 0) { _burstLive = true; _burstHolders.Add(u); }   // 第321期（HQ-a ／ HQ-b・溜まったら吐く）
         if (u.HasTrait(TraitId.HisaCover)) _coverHolders.Add(u);       // 第301期（HC・庇い）
         if (CommandTrait.IsRouse(u)) _rouseLive = true;                // 第302期（HB・鼓舞の受け手の計数）
         if (u.HasTrait(TraitId.HushGestureFocus)) { _hushFocusLive = true; _hushFocusTeams.Add(u.TeamId); }   // 第303期（QA・粛の保持者を最優先）
@@ -11943,20 +11983,33 @@ public sealed class BattleContext
         WhipSwing? prevWhip = _whip, whip = null;
         if (_whipLive && actor.HasTrait(TraitId.Scourge))
         {
+            // 第321期（SA+ ／ SA+k）: 溜まった電気が増やした2振り目以降は、帯電していないものとして振り（電気鞭なし）、怖気の判定もしない。札は読んで消す。
+            bool later = _flurryLater == actor;
+            _flurryLater = null;
             whip = new WhipSwing
             {
                 Actor = actor,
-                Wired = actor.HasTrait(TraitId.LiveWire) && actor.RawCounter(StatusKeys.Shock) > 0,
+                Wired = !later && actor.HasTrait(TraitId.LiveWire) && actor.RawCounter(StatusKeys.Shock) > 0,
                 CountShock = actor.HasTrait(TraitId.ScourgeShock),
                 PopsBefore = TallyOf(actor).ShockTriggeredUnits,
                 // 第288期: 雷霆は手番の鞭だけ（反撃・割り込みの一振りでは撃たない）。保持者がいなければ比較1つで抜ける。
                 Bolt = _chargeLive && actor.HasTrait(TraitId.Thunderclap) && StoredChargeTrait.Of(actor) >= StoredChargeTrait.Cap && !InReaction && !InInterrupt,
                 BoltAny = _chargeLive && actor.HasTrait(TraitId.ThunderclapAny),
-                NoCower = _shockWhipActor == actor,
+                NoCower = _shockWhipActor == actor || later,
             };
             _whip = whip;
             TallyOf(actor).WhipSwings++;
-            if (_chargeLive) TallyOf(actor).ChargeAtSwing += actor.RawCounter(StoredChargeTrait.Key);   // 第288期・計数のみ
+            if (_chargeLive)
+            {
+                UnitTally ct = TallyOf(actor);
+                ct.ChargeAtSwing += actor.RawCounter(StoredChargeTrait.Key);   // 第288期・計数のみ
+                // 第321期・計数のみ: 振りの種類（打ち返し ／ 割り込み ／ 手番）と2振り目以降、1振りの与ダメの起点。
+                if (_backswingNow && _shockWhipActor == actor) ct.SaBackSwings++;
+                else if (_shockWhipActor == actor) ct.SaIntSwings++;
+                else if (actor == TurnActor && !InReaction && !InInterrupt) ct.SaTurnSwings++;
+                if (later) ct.SaLaterSwings++;
+                whip.Dmg0 = ct.DamageToEnemy;
+            }
         }
 
         // 範囲の盾（第185期・バン）。**この一撃が盾の持ち主にも当たるか**を、振る前の盤面で決める
@@ -12022,6 +12075,12 @@ public sealed class BattleContext
             (wt.WhipHitsHist ??= new long[8])[Math.Min(hits, 7)]++;
             (wt.WhipPopsHist ??= new long[8])[Math.Min(pops, 7)]++;
             if (!whip.NoCower) NoteFearSwing(actor, whip, dealt, actor == TurnActor && !InReaction && !InInterrupt);   // 第316期・計数のみ（怖気づきうる鞭）
+            if (_chargeLive)   // 第321期・計数のみ: 1振りの与ダメ（この振りの中で入れ子に振った自分の鞭の分を除く）
+            {
+                long all = wt.DamageToEnemy - whip.Dmg0, own = all - whip.Nested;
+                if (own > wt.SaSwingMax) wt.SaSwingMax = own;
+                if (prevWhip is not null && prevWhip.Actor == actor) prevWhip.Nested += all;
+            }
             _whip = prevWhip;
         }
     }
@@ -13557,6 +13616,7 @@ public sealed class BattleContext
         finally { _embersNow = prevEmbers; }
         // 第242期: ヒヨのターンギフト。手番（と手番の枠）が閉じた後に、控えた相手へ通常の手番を1回ずつ渡す。**控えが無ければ比較1つで返る。**
         if (_giftQueue.Count > 0 && !_inGift) DrainGifts();
+        if (_burstLive) CommandBurst();     // 第321期（HQ・手番のまとまりが閉じた直後に吐き出す・羽より前）
         if (_mfLive) DrainFeatherMarks();   // 第298期（MF・手番の枠が閉じた後に、控えた羽を撃つ）
         return o;
     }
@@ -13883,15 +13943,20 @@ public sealed class BattleContext
 
         // 第242期（ホタの段3 の 5連撃）: 同じ敵に続けて振る——2発目以降は直前の1発の主目標に的を固定する（倒れていれば通常どおり選び直す）。
         bool burst = _fireLvLive && hits > 1 && actor.HasTrait(TraitId.PyreStage);
+        // 第321期（SA+ ／ SA+k）: 溜まった電気が増やした2振り目以降は電気鞭も怖気の判定もない（鞭の枠が `_flurryLater` を読む）。保持者がいなければ比較1つで抜ける。
+        bool flurry = _chargeLive && hits > 1 && actor.HasTrait(TraitId.ChargeFlurry);
         _burstLock = null;
         for (int i = 0; i < hits; i++)
         {
             if (!actor.IsAlive) break;
             if (i > 0) TallyOf(actor).ExtraSwings++;   // 第178期・**計数専用**
             if (burst && i > 0 && _burstLock is { IsAlive: true } lk) _forcedTarget = lk;
+            if (flurry) EmitShockGauge(ShockGaugeLabels.Flurry, actor, actor, i + 1, hits);   // 表示専用（何振り目か）
+            if (flurry && i > 0) _flurryLater = actor;
             if (act is null) PerformAttack(actor);
             else PerformAttack(actor, attackPercent: act.AttackPercent,
                                patternOverride: act.PatternOverride);
+            _flurryLater = null;
         }
     }
 
@@ -14151,7 +14216,7 @@ public sealed class BattleContext
             if (!misa.IsAlive || ReferenceEquals(misa, u)) continue;
             if (!fresh && !misa.HasTrait(TraitId.FeatherMarkLayer)) continue;
             UnitTally t = TallyOf(misa);
-            if (_mfFiring) { t.MfChainSkipped++; continue; }
+            if (_mfFiring) { t.MfChainSkipped++; if (_commandCarving) t.CmdChainSkipped++; continue; }   // 第321期・計数のみ（号令の層が羽を呼ばなかった）
             if (fresh) t.MfQueuedFresh++; else t.MfQueuedLayer++;
             _mfQueue.Enqueue((misa, u, fresh, _commandCarving, _accuseMarking));
         }
@@ -14418,6 +14483,7 @@ public sealed class BattleContext
 
     /// <summary>第302期: いま使っている号令の札（印の帰属）。</summary>
     static TraitId CommandTraitId(UnitState hisa) => hisa.HasTrait(TraitId.CommandTurn8) ? TraitId.CommandTurn8 : hisa.HasTrait(TraitId.CommandBall) ? TraitId.CommandBall
+        : hisa.HasTrait(TraitId.CommandBurst3) ? TraitId.CommandBurst3 : hisa.HasTrait(TraitId.CommandBurst1) ? TraitId.CommandBurst1
         : hisa.HasTrait(TraitId.CommandRouse) ? TraitId.CommandRouse : hisa.HasTrait(TraitId.CommandRouseStay) ? TraitId.CommandRouseStay : TraitId.CommandTurn3;
 
     /// <summary>
@@ -14436,10 +14502,65 @@ public sealed class BattleContext
             next = capPool;
         }
         hisa.SetCounter(CommandTrait.PoolKey, next);
-        if (capPool <= 0 || !_verbose) return;
+        if ((capPool <= 0 && !_burstLive) || !_verbose) return;   // 第321期: あふれ版（上限なし）も玉が増えた瞬間は表示する
         int every = CommandTrait.EveryOf(hisa);
         if (next / every > pool / every) EmitCommandBall(hisa, CommandBallLabels.Gain);
-        if (pool + over > capPool) EmitCommandBall(hisa, CommandBallLabels.Spill);
+        if (capPool > 0 && pool + over > capPool) EmitCommandBall(hisa, CommandBallLabels.Spill);
+    }
+
+    // ---- 第321期 段2 —— ヒサの号令を「溜まったら吐く」（HQ-a `CommandBurst3` ／ HQ-b `CommandBurst1`・指示書 design/PHASE321_SHIGA_CHARGE_HISA_BURST_SPEC.md §2-2）。
+    // 吐き出すのは**いちばん外の攻撃のまとまり（手番 ／ 反撃 ／ 割り込み・その中の羽 ／ 連鎖を含む）が閉じた直後**で、羽の発射の外（`_mfFiring` が偽）。
+    // そこで刻んだ層は羽を控え、続けて `DrainFeatherMarks` が撃つ。羽のまとまりの叫びがまた玉を溜めたら、吐き出しと羽を往復する（1回の閉じ目に `BurstLoopCap` 回まで）。
+    // **保持者がいなければ `_burstLive` の比較1つで抜ける。乱数を引かない**（的は指差しの選び方 `FramePick`）。
+    bool _burstLive;
+    readonly List<UnitState> _burstHolders = new();
+    /// <summary>1回の閉じ目で「吐き出す → 羽」を往復する上限（壊れの見張り・達したら <c>BurstGuard</c> に数える）。</summary>
+    const int BurstLoopCap = 64;
+
+    void CommandBurst()
+    {
+        if (_bundles.Count > 0 || _mfFiring || InInterrupt || InReaction) return;
+        for (int k = 0; k < BurstLoopCap; k++)
+        {
+            bool any = false;
+            foreach (UnitState h in _burstHolders) if (CommandBurstFire(h)) any = true;
+            if (!any) return;
+            if (_mfLive) DrainFeatherMarks();
+        }
+        foreach (UnitState h in _burstHolders) TallyOf(h).BurstGuard++;
+    }
+
+    /// <summary>1人のヒサの吐き出し。溜まった玉を単位（HQ-a 3 ／ HQ-b 1）の倍数だけ、指差しの選び方の敵1体へまとめて刻む（端数は持ち越す）。刻めたら真。</summary>
+    bool CommandBurstFire(UnitState hisa)
+    {
+        if (!hisa.IsAlive) return false;
+        int unit = CommandTrait.BurstUnit(hisa);
+        int balls = hisa.RawCounter(CommandTrait.PoolKey) / CommandTrait.Every;
+        int want = balls / unit * unit;
+        if (want <= 0) return false;
+        UnitTally ht = TallyOf(hisa);
+        // 上限の版（壊れの兆しを見て足した版）: 1巡に吐き出す層を上限までにする（超えた玉は次の巡へ・張り付きは1巡に1回だけ数える）。
+        int cap = CommandTrait.BurstCap(hisa), used = 0;
+        if (cap > 0)
+        {
+            if (hisa.RawCounter(CommandTrait.TurnKey) != _turn + 1) { hisa.SetCounter(CommandTrait.TurnKey, _turn + 1); hisa.SetCounter(CommandTrait.TurnCountKey, 0); }
+            used = hisa.RawCounter(CommandTrait.TurnCountKey);
+            int room = (cap - used) / unit * unit;
+            if (room <= 0) { if (used <= cap) { ht.BurstCapped++; hisa.SetCounter(CommandTrait.TurnCountKey, cap + 1); } return false; }
+            want = Math.Min(want, room);
+        }
+        UnitState? foe = FramePick(hisa);
+        if (foe is null || !CanCarve(foe)) { ht.BurstNoTarget++; return false; }
+        // 叫びと同じく手番の外の声（経路 `Rally`）——粛 ／ 痺れの下では吐き出さず、玉は持ち越す。
+        bool hush = HushBindingNow;   // 問う前に読む（問うと粛が砕けることがある）
+        if (!CanActOutOfTurn(hisa, OutOfTurnRoute.Rally)) { if (hush) ht.BurstHushed++; else ht.BurstBlocked++; return false; }
+        int done = CommandCarve(hisa, foe, want, CommandLabels.Burst);
+        if (done <= 0) return false;
+        if (cap > 0) hisa.SetCounter(CommandTrait.TurnCountKey, used + done);
+        ht.BurstFires++; ht.BurstLayers += done;
+        (ht.BurstHist ??= new long[13])[Math.Min(12, done)]++;
+        EmitCommandBall(hisa, CommandBallLabels.Use);
+        return true;
     }
 
     void EmitCommandBall(UnitState hisa, string label)

@@ -3424,6 +3424,92 @@ public static class UnitCatalog
     /// <summary>第318期 SG ／ 第319期の規定の文面の足し（叩き台）。</summary>
     public const string ShigaBackswingText = "。背いた獣の雷を浴びると、その場で打ち返す";
 
+    // ---------------------------------------------------------------------------------
+    // 第321期 —— シガの蓄電が育つ版（指示書 design/PHASE321_SHIGA_CHARGE_HISA_BURST_SPEC.md §1-2）。規定（SF-AC ＋ SG）の末尾に札を足すだけ。
+    // 文面は規定の蓄電の句を差し替える（叩き台）。`All` にも `Retired` にも入れない。
+    // ---------------------------------------------------------------------------------
+
+    /// <summary>規定のシガの文面のうち、蓄電と割り込みの句（第321期の版はここを差し替える）。</summary>
+    const string ShigaChargeClause = "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう";
+
+    static UnitDef ShigaOn321(TraitId[] add, string clause) => new()
+    {
+        Id = Shiga.Id,
+        Name = Shiga.Name,
+        MaxHp = Shiga.MaxHp,
+        Attack = Shiga.Attack,
+        Speed = Shiga.Speed,
+        Advances = Shiga.Advances,
+        Pattern = Shiga.Pattern,
+        Traits = Shiga.Traits.Concat(add).ToArray(),
+        Actions = Shiga.Actions,
+        PlusText = Shiga.PlusText.Contains(ShigaChargeClause, StringComparison.Ordinal)
+            ? Shiga.PlusText.Replace(ShigaChargeClause, clause, StringComparison.Ordinal)
+            : throw new InvalidOperationException("第321期: 規定のシガの文面に蓄電の句が見つからない"),
+        MinusText = Shiga.MinusText,
+        Flavor = Shiga.Flavor
+    };
+
+    /// <summary>第321期 SA（育つ）。規定 ＋ <see cref="TraitId.ChargeUncapped"/>（蓄電の上限なし）＋ <see cref="TraitId.ChargeKeep"/>（割り込みで蓄電を使わない）。蓄電1つにつき攻撃力 +3 のまま。</summary>
+    public static readonly UnitDef ShigaSA = ShigaOn321(new[] { TraitId.ChargeUncapped, TraitId.ChargeKeep },
+        "帯電するたび電気が溜まり（上限なし）、溜まった分だけ鞭が重くなる。そばで感電が弾けるたび、割り込んで鞭を振るう（溜めた電気は使っても減らない）");
+
+    /// <summary>
+    /// 第321期 SA+（ポン案）。SA ＋ <see cref="TraitId.ChargeFlurry"/>——蓄電の 1〜4 個目は1つにつき鞭を振る回数 +1（蓄電 4 で 5 回）、5 個目からは1つにつき攻撃力 +3。
+    /// 割り込み ／ 打ち返しの鞭も同じ回数（engine の `FlurryHits`）。2振り目からは電気鞭も怖気の判定もない。
+    /// </summary>
+    public static readonly UnitDef ShigaSAp = ShigaOn321(new[] { TraitId.ChargeUncapped, TraitId.ChargeKeep, TraitId.ChargeFlurry },
+        "帯電するたび電気が溜まる。溜まった電気は、はじめ鞭を振る回数に、溢れたぶんは鞭の重さに変わる（使っても減らない）。そばで感電が弾けるたび、割り込んで鞭を振るう");
+
+    /// <summary>第321期 SA+k（対照）。SA+ から <see cref="TraitId.ChargeKeep"/> を抜いた版——割り込みのたびに蓄電を1つ使う（いまと同じ）。</summary>
+    public static readonly UnitDef ShigaSApk = ShigaOn321(new[] { TraitId.ChargeUncapped, TraitId.ChargeFlurry },
+        "帯電するたび電気が溜まる。溜まった電気は、はじめ鞭を振る回数に、溢れたぶんは鞭の重さに変わる。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう");
+
+    // ---------------------------------------------------------------------------------
+    // 第321期 —— ヒサの号令を「溜まったら吐く」版（指示書 §2-2）。規定の号令の玉（`CommandBall`）を差し替えるだけ。`All` にも `Retired` にも入れない。
+    // ---------------------------------------------------------------------------------
+
+    const string HisaBallClause = "。余った声援は玉になって溜まり（3つまで）、自分の手番に敵を指差す号令に変わる";
+
+    static UnitDef HisaOn321(TraitId burst, string clause) => new()
+    {
+        Id = Hisa.Id,
+        Name = Hisa.Name,
+        MaxHp = Hisa.MaxHp,
+        Attack = Hisa.Attack,
+        Speed = Hisa.Speed,
+        Advances = Hisa.Advances,
+        Pattern = Hisa.Pattern,
+        Traits = Hisa.Traits.Select(t => t == TraitId.CommandBall ? burst : t).ToArray(),
+        Actions = Hisa.Actions,
+        PlusText = Hisa.PlusText.Contains(HisaBallClause, StringComparison.Ordinal)
+            ? Hisa.PlusText.Replace(HisaBallClause, clause, StringComparison.Ordinal)
+            : throw new InvalidOperationException("第321期: 規定のヒサの文面に号令の句が見つからない"),
+        MinusText = Hisa.MinusText,
+        Flavor = Hisa.Flavor
+    };
+
+    /// <summary>第321期 HQ-a（ポン案）。号令の玉を <see cref="TraitId.CommandBurst3"/> に差し替え——玉が3つ溜まった時点で、攻撃のまとまりが閉じた直後に3層まとめて吐き出す（手番の号令はしない・溢れは捨てない）。</summary>
+    public static readonly UnitDef HisaHQa = HisaOn321(TraitId.CommandBurst3, "。余った声援は玉になって溜まり、3つ溜まると敵を指差す号令になってあふれ出す");
+
+    /// <summary>第321期 HQ-b（比べる用）。号令の玉を <see cref="TraitId.CommandBurst1"/> に差し替え——玉が1つ溜まるたびに1層吐き出す。</summary>
+    public static readonly UnitDef HisaHQb = HisaOn321(TraitId.CommandBurst1, "。余った声援は玉になって溜まり、溜まるそばから敵を指差す号令になってあふれ出す");
+
+    // 第321期の追い（指示書 §2-2「壊れの兆しが出たら、上限を付けた版を足して並べる」）: HQ-a ／ HQ-b は羽の叫びの溢れが玉を作り直す往復で、ボスが T2 で倒れ、
+    // 大隊では1巡に数千層を刻んだ。1巡（戦のターン）に吐き出す層の上限を 3 ／ 6 ／ 9（規定の手番の号令の 1 ／ 2 ／ 3 回ぶん）にした版を並べる。超えた玉は次の巡へ持ち越す。
+    static UnitDef HisaCap321(UnitDef b, TraitId cap, string clause) => new()
+    {
+        Id = b.Id, Name = b.Name, MaxHp = b.MaxHp, Attack = b.Attack, Speed = b.Speed, Advances = b.Advances, Pattern = b.Pattern,
+        Traits = b.Traits.Append(cap).ToArray(), Actions = b.Actions,
+        PlusText = b.PlusText.Replace("あふれ出す", "あふれ出す（" + clause + "）", StringComparison.Ordinal), MinusText = b.MinusText, Flavor = b.Flavor
+    };
+    public static readonly UnitDef HisaHQa3 = HisaCap321(HisaHQa, TraitId.CommandBurstCap3, "1ターンに3層まで");
+    public static readonly UnitDef HisaHQa6 = HisaCap321(HisaHQa, TraitId.CommandBurstCap6, "1ターンに6層まで");
+    public static readonly UnitDef HisaHQa9 = HisaCap321(HisaHQa, TraitId.CommandBurstCap9, "1ターンに9層まで");
+    public static readonly UnitDef HisaHQb3 = HisaCap321(HisaHQb, TraitId.CommandBurstCap3, "1ターンに3層まで");
+    public static readonly UnitDef HisaHQb6 = HisaCap321(HisaHQb, TraitId.CommandBurstCap6, "1ターンに6層まで");
+    public static readonly UnitDef HisaHQb9 = HisaCap321(HisaHQb, TraitId.CommandBurstCap9, "1ターンに9層まで");
+
     /// <summary>第294〜316期の規定のシガ（SW-a）の文面。第317期に規定を SF-AC にしたので、旧の規定の文面を定数で持つ（版の文面はこれから作る）。</summary>
     public const string ShigaPlusH316 = "動けない敵を優先して鞭で薙ぐ。動けない敵には2倍で入り、その悲鳴で隣の敵を竦ませる（1手番に1回）。感電しているあいだは怖気づかず、打った敵に感電を移す。"
                  + "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる。そばで感電が弾けるたび、溜めた電気を1つ使って割り込み、鞭を振るう"

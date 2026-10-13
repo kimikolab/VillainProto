@@ -210,7 +210,7 @@ static class Shiga316Diag
     }
 
     /// <summary>`compare` の差を行ごとに書く（動いた行だけ）。(G2) の分解も書く。返り値は（動いたセル, −10pt 以上落ちた行）。</summary>
-    static (int Moved, int Drops) PrintCompare((string Name, Formation F)[] rows, double[,] b, double[,] g, string holderId)
+    internal static (int Moved, int Drops) PrintCompare((string Name, Formation F)[] rows, double[,] b, double[,] g, string holderId)
     {
         int nw = b.GetLength(1);
         double M(double[,] x, int ri) => Enumerable.Range(1, nw - 1).Average(w => x[ri, w]);

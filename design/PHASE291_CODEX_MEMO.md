@@ -1264,3 +1264,92 @@ ShockGauge 怖くない  シガ#3 → シガ#3  Amount 2  Slot 0  相手 勇者#
 ```
 
 規定のシガの同じ場面は、最後の行が `Stun 痺れ`（シガ自身）と `ShockGauge 怖気` になり、次のターンの頭に `Stun 手番喪失` が出る。**画面の「痺れた」はこの怖気**（第316期 Phase 0: ポンのログの形の 95% が怖気・感電の痺れは 5%）。
+
+## 17. 第321期の追記 —— シガの連撃（`ShockGauge`「連撃」・**版のみ**）・ヒサの号令「あふれ」（`Command`「あふれ」・**版のみ**）
+
+第321期の版（報告 `design/PHASE321_SHIGA_CHARGE_HISA_BURST.md`）。**規定のシガ ／ ヒサの台本は1行も変わらない**（どちらの版も採否はポン）。**新しい出来事の種類は足していない**——`ShockGauge` の `Text` を1つ（`ShockGaugeLabels.Flurry`「連撃」）、`Command` の `Text` を1つ（`CommandLabels.Burst`「あふれ」）足しただけ。
+
+### 17-1. シガの連撃（SA+ ／ SA+k・`ChargeFlurry` の保持者だけ）
+
+| `Text` | `ActorId` | `TargetId` | `Amount` | `Slot` | 意味 |
+|---|---|---|---|---|---|
+| 「連撃」 | シガ | 手番の振り ＝ シガ自身 ／ 割り込み ・打ち返しの振り ＝ 固定した主目標 | 何振り目か（1 始まり） | この一続きで振る回数（2〜5 ＝ 1 ＋ 蓄電（4 まで）） | **各振りの `Attack` の直前**に1行。1振りごとに `Attack` → `Damage`（巻き込みの分も）が並ぶ。回数が 1 のとき（蓄電 0）は出ない |
+
+- 回数は振り始めの蓄電で決まる（途中で蓄電が増えても回数は変わらない）。**電気鞭（`LiveWire`）は1振り目だけ**（2振り目からは帯電していないものとして振る）・**「怖気」 ／ 「怖くない」も1振り目だけ**。
+- 割り込みは「割り込み」→「割り込み・倍率」→（「連撃」→ `Attack(Reaction)` → `Damage`）× 回数。倍率は全部の振りに掛かる（1振りごとの `Damage` が倍率込み）。打ち返しも `BeastThrow 打ち返し` の後に同じ形。
+- 主目標が途中で倒れたら、残りの振りは次の的へ（手番は1振りごとに的を選び直す・割り込み ／ 打ち返しは主目標が生きている間は固定）。`Attack` の `TargetId` が途中で替わる。
+- 5 個目からの蓄電は攻撃力に乗る（`Attack` の `Amount` が 9 より大きくなる）。SA（`ChargeUncapped` ＋ `ChargeKeep` だけ）は「連撃」を出さず、`Attack` の `Amount` だけが伸びる（9 ＋ 3 × 蓄電・上限なし）。SA ／ SA+ では「蓄電・使った」が出ない（割り込みで減らない）。
+
+**1本の並び**（`shiga321 memo 鞭 boss 7 sap`・試遊・感電 光の盾 鞭 × ボス・勇者（規定形）× seed 7・SA+・勝ち T8・T1〜T2 の抜粋）:
+
+```
+--- T1
+ShockGauge 蓄電・増えた  トウ#2 → シガ#3  Amount 1  Slot 0
+ShockGauge 割り込み  シガ#3 → 勇者#5  Amount 1  Slot 2
+ShockGauge 割り込み・倍率  シガ#3 → 勇者#5  Amount 3  Slot 2
+ShockGauge 連撃  シガ#3 → 勇者#5  Amount 1  Slot 2          ← 蓄電 1 → 2 振り
+Attack   シガ#3 → 勇者#5  Amount 9  Slot 0  Reaction
+Damage   シガ#3 → 勇者#5  Amount 54  Slot 0  Reaction        （9 × 2倍 × 倍率 3）
+LiveWire   シガ#3 → シガ#3  Amount 1  Slot 0                ← 電気鞭は1振り目だけ
+ShockGauge 連撃  シガ#3 → 勇者#5  Amount 2  Slot 2
+Attack   シガ#3 → 勇者#5  Amount 9  Slot 0  Reaction
+Damage   シガ#3 → 勇者#5  Amount 54  Slot 0  Reaction
+ShockGauge 蓄電・増えた  カタ#0 → シガ#3  Amount 2  Slot 1
+ShockGauge 連撃  シガ#3 → シガ#3  Amount 1  Slot 3          ← 手番（蓄電 2 → 3 振り）
+Attack   シガ#3 → 勇者#5  Amount 9  Slot 0
+Damage   シガ#3 → 勇者#5  Amount 18  Slot 0
+LiveWire   シガ#3 → シガ#3  Amount 1  Slot 0
+ShockGauge 連撃  シガ#3 → シガ#3  Amount 2  Slot 3
+Attack   シガ#3 → 勇者#5  Amount 9  Slot 0
+Damage   シガ#3 → 勇者#5  Amount 18  Slot 0
+ShockGauge 連撃  シガ#3 → シガ#3  Amount 3  Slot 3
+Attack   シガ#3 → 勇者#5  Amount 9  Slot 0
+Damage   シガ#3 → 勇者#5  Amount 18  Slot 0
+--- T2
+ShockGauge 割り込み  シガ#3 → 勇者#5  Amount 2  Slot 4
+ShockGauge 割り込み・倍率  シガ#3 → 勇者#5  Amount 5  Slot 4
+ShockGauge 連撃  シガ#3 → 勇者#5  Amount 1  Slot 3
+Attack   シガ#3 → 勇者#5  Amount 9  Slot 0  Reaction
+Damage   シガ#3 → 勇者#5  Amount 90  Slot 0  Reaction
+Damage   シガ#3 → 獣#10  Amount 50  Slot 0  Reaction       （巻き込み）
+ShockGauge 連撃  シガ#3 → 勇者#5  Amount 2  Slot 3
+…（3振り目まで）
+```
+
+### 17-2. ヒサの号令「あふれ」（HQ-a ／ HQ-b ／ 上限の版 HQ-a3 〜 HQ-b9）
+
+| 出来事 | 欄 | 規定（第302期の玉）との違い |
+|---|---|---|
+| `CommandBall`「溜まる」 | `Amount` ＝ その後の玉の数（**上限なし**・数十になる）／ `Slot` ＝ その後の溜まり（溢れの量） | 規定は 0〜3 で頭打ち・「捨てる」が出る。あふれ版は「捨てる」が出ない |
+| `MarkLayer` ×層 → `Command`「あふれ」 | `Command` の `Amount` ＝ 刻んだ層（HQ-a は 3 の倍数・上限の版は 1巡の上限まで）／ `Slot` ＝ 使った溢れ | 規定は `Command`「手番」がヒサの手番の中に出る。**あふれはヒサの手番に出ない**——攻撃のまとまり（手番 ／ 反撃 ／ 割り込みと、その中の羽 ／ 連鎖）が閉じた直後に出る |
+| `CommandBall`「使う」 | `Amount` ＝ 使った後の玉の数 | 同じ（`Command` の直後） |
+| `FeatherMark` ×層 | ミサの羽（`Amount` ＝ 的の層・層を先に全部刻んでから飛ぶので全部同じ値） | 同じ（羽は号令の後） |
+
+- 並びは **叫び（`MarkRally`・その直前に「溜まる」）→ まとまりが閉じる → `MarkLayer` × 層 → `Command`「あふれ」→ `CommandBall`「使う」→ `FeatherMark` × 層**。羽の叫びでまた玉が溜まると（「溜まる」が羽の間に並ぶ）、羽が撃ち終わった後に次の「あふれ」が続く。
+- 粛 ／ 痺れの下では「あふれ」が出ない（玉は持ち越され、声が戻った次の閉じ目でまとめて出る）。
+- **上限の無い HQ-a ／ HQ-b はボスで T1〜T2 に数十〜数百層を一度に刻む**（下の並び）。上限の版は1ターンに 3 ／ 6 ／ 9 層まで。
+
+**1本の並び**（`hisa321 memo 循環 boss 0 qa6`・試遊・標 循環 × ボス × seed 0・HQ-a6（1ターンに6層まで）・勝ち T3・T1 の抜粋・叫びの行は一部省いた）:
+
+```
+--- T1
+CommandBall 溜まる  ヒサ#4 → —  Amount 1  Slot 32
+MarkRally   ヒサ#4 → ザン#0  Amount 7  Slot 5
+…（叫びのたびに「溜まる」・T1 の最初のまとまりの中で玉は 38 まで溜まる）
+CommandBall 溜まる  ヒサ#4 → —  Amount 38  Slot 771
+MarkRally   ヒサ#4 → ゴルム#1  Amount 3  Slot 10
+MarkLayer   ヒサ#4 → 勇者#5  Amount 11  Slot 10          ← まとまりが閉じた直後に6層
+MarkLayer   ヒサ#4 → 勇者#5  Amount 12  Slot 11
+MarkLayer   ヒサ#4 → 勇者#5  Amount 13  Slot 12
+MarkLayer   ヒサ#4 → 勇者#5  Amount 14  Slot 13
+MarkLayer   ヒサ#4 → 勇者#5  Amount 15  Slot 14
+MarkLayer   ヒサ#4 → 勇者#5  Amount 16  Slot 15
+Command あふれ  ヒサ#4 → 勇者#5  Amount 6  Slot 120
+CommandBall 使う  ヒサ#4 → —  Amount 32  Slot 651
+FeatherMark 敵  ミサ#2 → 勇者#5  Amount 16  Slot 0         ← 羽 ×6
+CommandBall 溜まる  ヒサ#4 → —  Amount 37  Slot 747        ← 羽の叫びでまた溜まる
+MarkRally   ヒサ#4 → ミサ#2  Amount 0  Slot 16
+…
+```
+
+上限の無い HQ-a の同じ場面（`hisa321 memo ボス台 boss 0 qa`・試遊・標 ボス台・勝ち T2）は、T1 の最初の閉じ目で `Command あふれ Amount 21`（玉 21 個 ＝ 21 層）→ 羽 21 本 → 羽の叫びで玉がまた数十個 → 次の「あふれ」… と続き、勇者は T2 に倒れる。

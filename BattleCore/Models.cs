@@ -2018,6 +2018,11 @@ public sealed class UnitTally
     public long ChargeGains, ChargeCapped, ChargeFulls, ChargeFullTurn, ChargeAtSwing, WhipBase,
                 BoltCasts, BoltDry, BoltHits, BoltLoneHits, BoltNominal, BoltLoneNominal, BoltDealt, BoltKills, BoltOnShocked, BoltMuted;
     public long[]? ChargeBySrc;
+    /// <summary>
+    /// 第321期（<b>計数専用</b>・シガの蓄電が育つ版 SA ／ SA+ ／ SA+k）。<c>SaTurnSwings</c> ／ <c>SaIntSwings</c> ／ <c>SaBackSwings</c> 手番 ／ 割り込み ／ 打ち返しの鞭の振り数・
+    /// <c>SaLaterSwings</c> そのうち2振り目以降（溜まった電気が増やした振り・電気鞭も怖気もない）・<c>SaSwingMax</c> 1振りの与ダメの最大（入れ子の鞭の分を除く）・<c>SaChargePeak</c> 蓄電の最大。
+    /// </summary>
+    public long SaTurnSwings, SaIntSwings, SaBackSwings, SaLaterSwings, SaSwingMax, SaChargePeak;
 
     /// <summary>
     /// 第289期（<b>計数専用</b>）。<b>蓄電の保持者（シガ）の側</b>: <c>ChainIniHist</c>[起点] 敵の感電の連鎖（自分の一撃で起きたものを除く・0 トウ ／ 1 カタ ／ 3 ほかの味方 ／ 4 刻み・出どころ無し ／ 5 敵）／
@@ -2120,6 +2125,13 @@ public sealed class UnitTally
     public long AccuseSilenced, AccuseSilencedHush, RallyHushed, RallyBlocked, CommandDropped, CommandDropEvents, CommandPoolLow, RouseFires, RouseGiven, AccuseFeathers, RousedReads, RousedBonus;
     public int RousePeakAtk;
     public long[]? CommandBallHist;
+    /// <summary>
+    /// 第321期（<b>計数のみ</b>・ヒサの号令「溜まったら吐く」HQ-a ／ HQ-b）。ヒサ ＝ <c>BurstFires</c> ／ <c>BurstLayers</c> 吐き出した回数 ／ 刻んだ層・
+    /// <c>BurstHushed</c> ／ <c>BurstBlocked</c> 吐き出せる玉があったのに粛 ／ 痺れで持ち越した回数・<c>BurstNoTarget</c> 刻める敵がいなかった・<c>BurstGuard</c> 1回の閉じ目で吐き出しと羽の往復が上限（64）に達した・
+    /// <c>BurstHist</c>[n] 1回の吐き出しの層・<c>BurstCapped</c> 上限の版で1巡の上限に張り付いて玉を次の巡へ持ち越した巡。ミサ ＝ <c>CmdChainSkipped</c> 号令の層のうち羽の連鎖の中で刻まれて羽を呼ばなかった層（HQ では 0 のはず）。
+    /// </summary>
+    public long BurstFires, BurstLayers, BurstHushed, BurstBlocked, BurstNoTarget, BurstGuard, CmdChainSkipped, BurstCapped;
+    public long[]? BurstHist;
     /// <summary>
     /// 第303期（<b>計数のみ</b>）。ヒサ ＝ <c>GestureFires</c> ／ <c>GestureLayers</c> 身振り（粛の保持者を指差した回数 ／ 付けた層）・
     /// <c>CoverSkipShoulder</c> ／ <c>CoverSkipLethal</c> 庇いの版で庇わなかった倒れる一撃（肩代わりの札 ／ ヒサが倒れる見積もり）・<c>CoverPlacebos</c> 空の庇い（対照）・
@@ -3335,6 +3347,8 @@ public sealed class UnitTally
         ChargeAtSwing += o.ChargeAtSwing; WhipBase += o.WhipBase;
         BoltCasts += o.BoltCasts; BoltDry += o.BoltDry; BoltHits += o.BoltHits; BoltLoneHits += o.BoltLoneHits; BoltNominal += o.BoltNominal;
         BoltLoneNominal += o.BoltLoneNominal; BoltDealt += o.BoltDealt; BoltKills += o.BoltKills; BoltOnShocked += o.BoltOnShocked; BoltMuted += o.BoltMuted;
+        SaTurnSwings += o.SaTurnSwings; SaIntSwings += o.SaIntSwings; SaBackSwings += o.SaBackSwings; SaLaterSwings += o.SaLaterSwings;   // 第321期
+        SaSwingMax = Math.Max(SaSwingMax, o.SaSwingMax); SaChargePeak = Math.Max(SaChargePeak, o.SaChargePeak);
         AddHist(ref ChargeBySrc, o.ChargeBySrc);
         // 第289期
         ChainOwn += o.ChainOwn; SwAsked += o.SwAsked; SwNoCharge += o.SwNoCharge; SwNoTarget += o.SwNoTarget; SwNested += o.SwNested;
@@ -3376,6 +3390,8 @@ public sealed class UnitTally
         AccuseSilenced += o.AccuseSilenced; AccuseSilencedHush += o.AccuseSilencedHush; RallyHushed += o.RallyHushed; RallyBlocked += o.RallyBlocked; CommandDropped += o.CommandDropped;   // 第302期
         CommandDropEvents += o.CommandDropEvents; CommandPoolLow += o.CommandPoolLow; RouseFires += o.RouseFires; RouseGiven += o.RouseGiven; AccuseFeathers += o.AccuseFeathers;
         RousedReads += o.RousedReads; RousedBonus += o.RousedBonus; RousePeakAtk = Math.Max(RousePeakAtk, o.RousePeakAtk); AddHist(ref CommandBallHist, o.CommandBallHist);
+        BurstFires += o.BurstFires; BurstLayers += o.BurstLayers; BurstHushed += o.BurstHushed; BurstBlocked += o.BurstBlocked; BurstNoTarget += o.BurstNoTarget;   // 第321期
+        BurstGuard += o.BurstGuard; CmdChainSkipped += o.CmdChainSkipped; BurstCapped += o.BurstCapped; AddHist(ref BurstHist, o.BurstHist);
         GestureFires += o.GestureFires; GestureLayers += o.GestureLayers; CoverSkipShoulder += o.CoverSkipShoulder; CoverSkipLethal += o.CoverSkipLethal;   // 第303期
         CoverPlacebos += o.CoverPlacebos; CoverEstLethalWrong += o.CoverEstLethalWrong;
         HushBreaks += o.HushBreaks; HushCloses += o.HushCloses; HushOpenPassOpp += o.HushOpenPassOpp; HushOpenPassOwn += o.HushOpenPassOwn;   // 第304期
@@ -4288,6 +4304,8 @@ public static class CommandLabels
 {
     public const string Now = "即時";
     public const string Turn = "手番";
+    /// <summary>第321期（HQ-a ／ HQ-b）: 玉が溜まった時点で、攻撃のまとまりが閉じた直後に吐き出した号令。</summary>
+    public const string Burst = "あふれ";
 }
 
 /// <summary>`VendettaRound`（第299期）の <c>Text</c>。</summary>
@@ -4350,6 +4368,11 @@ public static class ShockGaugeLabels
     public const string ChargeSpent = "蓄電・使った";
     /// <summary>雷霆で溜めた電気を使い果たした（SG-b ／ SI-a・規定のシガには無い）。<c>ActorId</c> ＝ <c>TargetId</c> ＝ シガ ／ <c>Amount</c> ＝ 0 ／ <c>Slot</c> ＝ 前の蓄電。</summary>
     public const string ChargeDrained = "蓄電・使い果たした";
+    /// <summary>
+    /// 第321期（SA+ ／ SA+k の版だけ）: 溜まった電気で鞭を続けて振る、その何振り目か。各振りの <c>Attack</c> の直前に出る。
+    /// <c>ActorId</c> ＝ シガ ／ <c>TargetId</c> ＝ 手番はシガ・割り込み ／ 打ち返しは固定した主目標 ／ <c>Amount</c> ＝ 何振り目か（1 始まり）／ <c>Slot</c> ＝ この一続きで振る回数（2〜5）。
+    /// </summary>
+    public const string Flurry = "連撃";
     /// <summary>
     /// 割り込みの見出し（SI-a ／ SI-b）。そばで敵の感電が弾けた連鎖の直後、シガが割り込む。<c>ActorId</c> ＝ シガ ／ <c>TargetId</c> ＝ 鞭の主目標 ／
     /// <c>PartnerId</c> ＝ その連鎖で最初に弾けた敵（合図）／ <c>Amount</c> ＝ 振る前の蓄電 ／ <c>Slot</c> ＝ その連鎖で弾けた敵の数 ／ <c>ActorId</c> の陣営の <c>Team</c>。

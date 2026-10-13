@@ -8,6 +8,12 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第321期は版だけの期で、規定は動かしていない**（指示書は design/PHASE321_SHIGA_CHARGE_HISA_BURST_SPEC.md・報告は design/PHASE321_SHIGA_CHARGE_HISA_BURST.md）。`compare` の規定の列は第320期と同じ（`docs/balance.md` 差分 0）——全64行 100 / 91.0 / 89.4 / 83.3 / 83.6・主判定19行の第五波 81.6・歯止めの余裕 +48.4pt・情報セル 77 ／ 27 のまま。段1 のシガの版（SA ／ SA+ ／ SA+k）の `compare` は SA 0 セル・SA+ ／ SA+k 2行4セル（上がる向き）、段2 のヒサの版（HQ-a ／ HQ-b ／ 上限の版6つ）はどれも 0 セル。
+
+### 第320期まで `CLAUDE.md` の「現状値」にあった索引の段落（第321期に逐語で移した）
+
+**最後に動かした期: 第320期**（**ソム ＝ WS-b（受け止められなかった獣は投げた直後に暴発・第319期の `SomWSb` と同じ札）を規定化**（旧は `SomH319`・`Common.Pin319` ／ `PinS319` ／ `CompareBuildsH319`・`PinSS318` ／ `PinS317` ／ `IsSomNow` も `SomH319` を旧へ）。試遊の台を3つ足した（`試遊・感電 打ち返し` ／ `追い打ち` ／ `瓦礫`・`Presets.Playtest` の末尾）と、ポン向けの手引き `design/PLAYTEST_GUIDE_SHOCK.md`。測定の期ではない。報告は `design/PHASE320_SOM_SETTLE.md`）。**期ごとの報告ファイルの索引と、第319期までの過去の器具の固定の一覧は `design/HISTORY_PHASES.md` の冒頭**（第319期までこの節にあった2つの段落を第320期に逐語で移した）。
+
 **第320期はソム ＝ WS-b（受け止められなかった獣は投げた直後に暴発・第319期の `SomWSb` と同じ札）を規定にした**（ポンの判断 W2・指示書は design/PHASE320_SOM_SETTLE_SPEC.md・報告は design/PHASE320_SOM_SETTLE.md）。旧の規定は `UnitCatalog.SomH319`（第319期の規定 CR-b を明示の定義に）で、第319期の版もその上に作り直した。過去の器具は `Common.Pin319` ／ `PinS319` ／ `CompareBuildsH319`（`som319`）に固定し、`PinSS318` ／ `PinS317` ／ `IsSomNow` も `SomH319` を旧へ替える。`compare` は `感電 (シガ×カタ×ソム)` の1行2セルだけ動き、第319期の WS-b の列と一致（第2波 73.5 → 90.5・第5波 96.5 → 98.5）。全64行 100 / 91.0 / 89.4 / 83.3 / 83.6・主判定19行 100 / 86.3 / 89.1 / 82.2 / 81.6（動かない）・歯止めの余裕 +48.4pt・情報セル 77 ／ 27 のまま。試遊の台を3つ足し（`試遊・感電 打ち返し` ／ `追い打ち` ／ `瓦礫`・`Presets.Playtest` の末尾・`compare` には入れない）、ポン向けの手引き `design/PLAYTEST_GUIDE_SHOCK.md` を作った。版も測定も無い期。
 
 ### 第319期まで `CLAUDE.md` の「現状値」にあった索引と固定の一覧（第320期に逐語で移した）

@@ -1087,6 +1087,17 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 som320 guide       # 第320期 §4: 既存の試遊の感電の台 × 10 波（`design/PLAYTEST_GUIDE_SHOCK.md` の数字の出どころ）
     dotnet run --project BattleSim -c Release 0 som320 memo <台の一部> <boss|guard|bat|nine|nine2|1..5> <seed>   # 第320期 試遊の台の1戦から狙いの出来事（投げる ／ 暴発 ／ 打ち返し ／ 追い打ち ／ 瓦礫 ／ 味方の Highlight）だけを抜いた台本
     dotnet run --project BattleSim -c Release 0 som320 check       # 第320期 自己検査（規定のソム ＝ WS-b と固定 `Pin319`・粛で止まった共鳴返しも暴発・試遊の3台・部分一致・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 shiga321 p0          # 第321期 段1 Phase 0: 規定のシガ × 代表台 5 × 10 波・蓄電の付き方（書き手別）／ 上限で捨てた ／ 使った ／ T5〜T20 の蓄電・鞭の内訳（手番 ／ 割り込み ／ 打ち返しの振りと与ダメ）・割り込みの蓄電不足（数秒）。本体は `Modes/Shiga321.cs`
+    dotnet run --project BattleSim -c Release 0 shiga321 boards [版,…]   # 第321期 段1 §1-5: 代表台 5 × 10 波 × 版（規定 ／ SA ／ SA+ ／ SA+k・ASCII は base ／ sa ／ sap ／ sapk）・倒しT・シガの与ダメとカタ ／ ソムとの比・蓄電の推移・1振り ／ 1ターンの最大・味方 ÷ 回復・対照（シガ → ドルガ）・格子を回す版（10 秒）。**予測のファイル `.tmp/p321/predict.md` が無ければ走らない**（R397）
+    dotnet run --project BattleSim -c Release 0 shiga321 compare [版,…]  # 第321期 段1 §1-7: `compare` 64 行 × 版（基準は規定のシガ・(G2) つき・25 秒）
+    dotnet run --project BattleSim -c Release 0 shiga321 grid <boss|guard> <版>   # 第321期 段1 §1-7: シガのいる台の格子（第316期と同じ作り・固定枠 シガ ＋ カタ ＋ ソム・探索枠2・席 120・駒はいまの規定・倒しT つき）
+    dotnet run --project BattleSim -c Release 0 shiga321 memo <台の一部> <波> <seed> <版>   # 第321期 段1 §3: シガの連撃の台本（`ShockGauge 連撃` ／ `Attack` ／ `Damage` ／ 電気鞭）
+    dotnet run --project BattleSim -c Release 0 shiga321 check       # 第321期 段1 自己検査（定義・攻撃力と回数・上限なし ／ 使わない ／ 使う・手番 ／ 割り込み ／ 打ち返しの回数・電気鞭は1回目だけ・怖気は1回・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 hisa321 p0           # 第321期 段2 Phase 0: 規定のヒサ × 試遊・標 5 台 × 8 波・溢れ ／ 玉 ／ 捨てた溢れ ／ 手番の号令の層 ／ 羽・叫びが羽の中で起きる割合・吐き出しの口（数秒）。本体は `Modes/Hisa321.cs`
+    dotnet run --project BattleSim -c Release 0 hisa321 boards [版,…]    # 第321期 段2 §2-5: 試遊・標 5 台 × 8 波 × 版（規定 ／ HQ-a ／ HQ-b ／ 上限の版 HQ-a3 ／ a6 ／ a9 ／ b3 ／ b6 ／ b9・ASCII は base ／ qa ／ qb ／ qa3 …）・号令の回数 ／ 層 ／ 羽・1巡の最大・張り付き・対照（ヒサ → ドルガ）（10〜30 秒）。**予測のファイルが無ければ走らない**
+    dotnet run --project BattleSim -c Release 0 hisa321 compare [版,…]   # 第321期 段2 §2-7: `compare` 64 行 × 版（基準は規定のヒサ・(G2) つき・35 秒）
+    dotnet run --project BattleSim -c Release 0 hisa321 memo <台の一部> <波> <seed> <版>   # 第321期 段2 §3: 吐き出しの台本（叫び → 玉 → まとまりが閉じる → 層 → 号令「あふれ」→ 羽）
+    dotnet run --project BattleSim -c Release 0 hisa321 check        # 第321期 段2 自己検査（定義・閉じた直後に吐く ／ 内側では吐かない・羽を呼ぶ・捨てない・手番の号令なし・HQ-b・上限の版・痺れ ／ 粛で持ち越す・verbose）
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）
     dotnet run --project BattleSim -c Release 0 shiga316 dgrid <boss|guard> [ps]   # 第316期 段0 G-c: 第297期の「ドハが要る台」の格子（第315期と同じ作り・基準は規定のドハ・1本 6〜9 分）

@@ -526,6 +526,14 @@
 | `BeastStandLate` | - |
 | `BeastStandLate3` | - |
 | `BeastThrowBackfire` | 背かれのソム |
+| `ChargeUncapped` | - |
+| `ChargeKeep` | - |
+| `ChargeFlurry` | - |
+| `CommandBurst3` | - |
+| `CommandBurst1` | - |
+| `CommandBurstCap3` | - |
+| `CommandBurstCap6` | - |
+| `CommandBurstCap9` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

@@ -790,6 +790,16 @@ public enum TraitId
     BeastStandLate3,   // 序盤は立たない・T3 まで（WS-a3・ソム・`BeastStand` と組む）: `BeastStandLate` の境を T3 に（T4 から立つ）
     BeastThrowBackfire, // 投げて暴発（WS-b・ソム・`BeastBetray` と組む）: 立った獣が投げた雷を誰も受け止めなかったら（共鳴返し ／ 打ち返し ／ 避雷針のどれにもならなかったら）、雷を今のまま処理した直後に、投げた獣がその場で暴発する（起こし手はソム・光になる・獣の死に数える・倒れた扱いにしない）（engine の `Backfire`）
 
+    // --- 第321期で足した札（シガの版 `UnitCatalog.ShigaSA` ／ `ShigaSAp` ／ `ShigaSApk`・ヒサの版 `HisaHQa` ／ `HisaHQb`・指示書 design/PHASE321_SHIGA_CHARGE_HISA_BURST_SPEC.md）。保持者 0 枚 ---
+    ChargeUncapped,    // 蓄電に上限なし（SA〜・シガ・`StoredCharge` と組む）: 蓄電の上限 4 を外す（**札そのものは挙動を持たない**・engine の `GainCharge`）
+    ChargeKeep,        // 割り込みで蓄電を使わない（SA ／ SA+・シガ・`ShockWhipFlurry` と組む）: 割り込みの条件「蓄電 1 以上」はそのまま、振り終えても蓄電を減らさない（**札そのものは挙動を持たない**・engine の `ShockWhip`）
+    ChargeFlurry,      // 溜まった電気は回数に（SA+ ／ SA+k・シガ・`StoredCharge` と組む）: 蓄電の 1〜4 個目は1つにつき鞭を振る回数 +1、5 個目からは1つにつき攻撃力 +3。手番は `ModifyHitCount`、割り込み ／ 打ち返しは engine の `FlurryHits`。2振り目からは電気鞭も怖気の判定もない
+    CommandBurst3,     // 号令・あふれ3（HQ-a・ヒサ・`CommandBall` と差し替え）: 叫びの溢れ 20 で玉1つ。玉が3つ溜まったら、攻撃のまとまりが閉じた直後に3層まとめて指差しの選び方の敵に刻む（手番の号令はしない・溢れは捨てない・粛 ／ 痺れで持ち越す）（engine の `CommandBurst`）
+    CommandBurst1,     // 号令・あふれ1（HQ-b・ヒサ・`CommandBall` と差し替え）: HQ-a の「玉1つごとに1層」版
+    CommandBurstCap3,  // あふれの上限3（HQ-a ／ HQ-b に足す・壊れの兆しを見て足した版）: 1巡（戦のターン）に吐き出す層は 3 まで。超えた玉は次の巡へ持ち越す（**札そのものは挙動を持たない**・engine の `CommandBurstFire`）
+    CommandBurstCap6,  // あふれの上限6: 1巡に 6 層まで
+    CommandBurstCap9,  // あふれの上限9: 1巡に 9 層まで
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -12861,7 +12871,13 @@ public sealed class CommandTrait : Trait
 
     /// <summary>叫びの溢れを溜める札を持つか（HL-i ／ HL-t ／ 第302期の玉 ／ HB）。</summary>
     public static bool Pools(UnitState u) => u.HasTrait(TraitId.CommandNow) || u.HasTrait(TraitId.CommandTurn3) || u.HasTrait(TraitId.CommandTurn8)
-        || u.HasTrait(TraitId.CommandBall) || IsRouse(u);
+        || u.HasTrait(TraitId.CommandBall) || IsRouse(u) || BurstUnit(u) > 0;
+
+    /// <summary>第321期: 「溜まったら吐く」版の1回の吐き出しの単位（HQ-a 3 ／ HQ-b 1 ／ ほか 0）。溜まりに上限は付けない（<see cref="PoolCapOf"/> は 0）。</summary>
+    public static int BurstUnit(UnitState u) => u.HasTrait(TraitId.CommandBurst3) ? 3 : u.HasTrait(TraitId.CommandBurst1) ? 1 : 0;
+
+    /// <summary>第321期: 「溜まったら吐く」版の1巡（戦のターン）の上限（層・0 ＝ 上限なし）。数えるのは <see cref="TurnKey"/> ／ <see cref="TurnCountKey"/>（HL-i と同じ帳簿・同時には持たない）。</summary>
+    public static int BurstCap(UnitState u) => u.HasTrait(TraitId.CommandBurstCap3) ? 3 : u.HasTrait(TraitId.CommandBurstCap6) ? 6 : u.HasTrait(TraitId.CommandBurstCap9) ? 9 : 0;
 
     /// <summary>玉1つ（層1つ）の溢れ。HB は <see cref="HeavyEvery"/>、ほかは <see cref="Every"/>。</summary>
     public static int EveryOf(UnitState u) => IsRouse(u) ? HeavyEvery : Every;
@@ -12871,7 +12887,7 @@ public sealed class CommandTrait : Trait
 
     public override void OnAction(BattleContext ctx, UnitState self, UnitAction action)
     {
-        if (_id == TraitId.CommandNow || !self.IsAlive) return;
+        if (_id is TraitId.CommandNow or TraitId.CommandBurst3 or TraitId.CommandBurst1 || !self.IsAlive) return;   // 第321期: 「溜まったら吐く」版は手番に号令しない
         ctx.CommandTurnFire(self, TurnCap(self));
     }
 
@@ -14001,6 +14017,24 @@ public sealed class StoredChargeTrait : Trait
     public override int ModifyAttack(UnitState self, int atk) => atk + AtkPer * Of(self);
 
     public override void OnCarryOver(UnitState self) => self.SetCounter(Key, 0);
+}
+
+/// <summary>
+/// 溜まった電気は回数に（第321期・SA+ ／ SA+k・指示書 design/PHASE321_SHIGA_CHARGE_HISA_BURST_SPEC.md §1-2）。蓄電（<see cref="StoredChargeTrait"/>）の効きを差し替える:
+/// 1〜<see cref="StoredChargeTrait.Cap"/> 個目は1つにつき鞭を振る回数 +1（手番は <see cref="ModifyHitCount"/>・割り込み ／ 打ち返しは engine の <c>FlurryHits</c>）、
+/// それを超えた分は1つにつき攻撃力 +<see cref="StoredChargeTrait.AtkPer"/>（蓄電の札が足す +3 × 蓄電 から、回数に回した分を引き戻す）。
+/// 2振り目からは電気鞭も怖気の判定も無い（engine の鞭の枠・<c>_flurryLater</c>）。上限を外すのは別の札（<see cref="TraitId.ChargeUncapped"/>）。
+/// </summary>
+public sealed class ChargeFlurryTrait : Trait
+{
+    public override TraitId Id => TraitId.ChargeFlurry;
+
+    /// <summary>回数に回る蓄電（0〜<see cref="StoredChargeTrait.Cap"/>）。</summary>
+    public static int ToHits(UnitState u) => Math.Min(StoredChargeTrait.Cap, StoredChargeTrait.Of(u));
+
+    public override int ModifyHitCount(UnitState self, int hits) => hits + ToHits(self);
+
+    public override int ModifyAttack(UnitState self, int atk) => atk - StoredChargeTrait.AtkPer * ToHits(self);
 }
 
 /// <summary>
@@ -17438,6 +17472,14 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.BeastStandLate),            // 第319期（序盤は立たない WS-a・印だけ）
         new MarkOnlyTrait(TraitId.BeastStandLate3),           // 第319期（序盤は立たない・T3 まで WS-a3・印だけ）
         new MarkOnlyTrait(TraitId.BeastThrowBackfire),        // 第319期（投げて暴発 WS-b・印だけ）
+        new MarkOnlyTrait(TraitId.ChargeUncapped),            // 第321期（蓄電に上限なし SA・印だけ）
+        new MarkOnlyTrait(TraitId.ChargeKeep),                // 第321期（割り込みで蓄電を使わない SA ／ SA+・印だけ）
+        new ChargeFlurryTrait(),                              // 第321期（溜まった電気は回数に SA+ ／ SA+k）
+        new CommandTrait(TraitId.CommandBurst3),              // 第321期（号令・あふれ3 HQ-a）
+        new CommandTrait(TraitId.CommandBurst1),              // 第321期（号令・あふれ1 HQ-b）
+        new MarkOnlyTrait(TraitId.CommandBurstCap3),          // 第321期（あふれの上限3・印だけ）
+        new MarkOnlyTrait(TraitId.CommandBurstCap6),          // 第321期（あふれの上限6・印だけ）
+        new MarkOnlyTrait(TraitId.CommandBurstCap9),          // 第321期（あふれの上限9・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),
