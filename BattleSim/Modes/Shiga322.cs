@@ -62,7 +62,7 @@ static class Shiga322Diag
     internal sealed record Ver(string Name, string Ascii, UnitDef Def);
     internal static readonly Ver[] Vers =
     {
-        new("規定", "base", UnitCatalog.Shiga),
+        new("規定", "base", UnitCatalog.ShigaH325),   // 第326期: 第322〜325期の規定に固定
         new("SA-SD", "sd", UnitCatalog.ShigaSD),
         new("SA+", "sap", UnitCatalog.ShigaSAp),
         new("SA+-SD", "sapsd", UnitCatalog.ShigaSApSD),
@@ -405,7 +405,7 @@ static class Shiga322Diag
     {
         var w = WaveOf(waveKey);
         var v = V(ver);
-        var fixedU = new[] { UnitCatalog.Shiga, UnitCatalog.KataH324, UnitCatalog.Som };
+        var fixedU = new[] { UnitCatalog.ShigaH325, UnitCatalog.KataH324, UnitCatalog.Som };   // 第326期: シガは第325期の規定
         UnitDef Now(UnitDef d) => PinTKK324(UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d);   // 第325期: トウ ／ カタ ／ クグを第324期の規定に固定
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();
         var pool = S287.Pool.Select(Now).Append(UnitCatalog.TouH324).Where(d => d.Id is not ("shiga" or "kata" or "som")).GroupBy(d => d.Id).Select(g => g.First()).ToArray();
@@ -538,11 +538,11 @@ static class Shiga322Diag
 
         // ---- 段0: 規定化
         {
-            bool shiga = UnitCatalog.Shiga.Traits.SequenceEqual(UnitCatalog.ShigaSA.Traits)
-                && UnitCatalog.Shiga.Traits.SequenceEqual(UnitCatalog.ShigaH321.Traits.Concat(new[] { TraitId.ChargeUncapped, TraitId.ChargeKeep }))
+            bool shiga = UnitCatalog.ShigaH325.Traits.SequenceEqual(UnitCatalog.ShigaSA.Traits)
+                && UnitCatalog.ShigaH325.Traits.SequenceEqual(UnitCatalog.ShigaH321.Traits.Concat(new[] { TraitId.ChargeUncapped, TraitId.ChargeKeep }))
                 && UnitCatalog.ShigaH321.Traits.SequenceEqual(UnitCatalog.ShigaH318.Traits.Append(TraitId.BetrayBackswing))
-                && UnitCatalog.Shiga.PlusText.Contains(UnitCatalog.ShigaChargeClause322, StringComparison.Ordinal) && !UnitCatalog.Shiga.PlusText.Contains(UnitCatalog.ShigaChargeClause, StringComparison.Ordinal)
-                && UnitCatalog.ShigaH321.PlusText.Contains(UnitCatalog.ShigaChargeClause, StringComparison.Ordinal) && UnitCatalog.Shiga.MinusText == UnitCatalog.ShigaH321.MinusText;
+                && UnitCatalog.ShigaH325.PlusText.Contains(UnitCatalog.ShigaChargeClause322, StringComparison.Ordinal) && !UnitCatalog.ShigaH325.PlusText.Contains(UnitCatalog.ShigaChargeClause, StringComparison.Ordinal)
+                && UnitCatalog.ShigaH321.PlusText.Contains(UnitCatalog.ShigaChargeClause, StringComparison.Ordinal) && UnitCatalog.ShigaH325.MinusText == UnitCatalog.ShigaH321.MinusText;
             bool hisa = UnitCatalog.Hisa.Traits.SequenceEqual(UnitCatalog.HisaHQa9.Traits)
                 && UnitCatalog.HisaH321.Traits.Contains(TraitId.CommandBall) && !UnitCatalog.Hisa.Traits.Contains(TraitId.CommandBall)
                 && UnitCatalog.Hisa.PlusText.Contains(UnitCatalog.HisaBallClause322, StringComparison.Ordinal) && UnitCatalog.HisaH321.PlusText.Contains(UnitCatalog.HisaBallClause, StringComparison.Ordinal)
@@ -571,9 +571,9 @@ static class Shiga322Diag
 
         // ---- 版の定義
         {
-            bool sd = UnitCatalog.ShigaSD.Traits.SequenceEqual(UnitCatalog.Shiga.Traits.Append(TraitId.WhipDischarge));
+            bool sd = UnitCatalog.ShigaSD.Traits.SequenceEqual(UnitCatalog.ShigaH325.Traits.Append(TraitId.WhipDischarge));
             bool sapsd = UnitCatalog.ShigaSApSD.Traits.SequenceEqual(UnitCatalog.ShigaSAp.Traits.Append(TraitId.WhipDischarge));
-            bool text = UnitCatalog.ShigaSD.PlusText == UnitCatalog.Shiga.PlusText + UnitCatalog.ShigaDischargeText && UnitCatalog.ShigaSApSD.PlusText == UnitCatalog.ShigaSAp.PlusText + UnitCatalog.ShigaDischargeText;
+            bool text = UnitCatalog.ShigaSD.PlusText == UnitCatalog.ShigaH325.PlusText + UnitCatalog.ShigaDischargeText && UnitCatalog.ShigaSApSD.PlusText == UnitCatalog.ShigaSAp.PlusText + UnitCatalog.ShigaDischargeText;
             bool outside = Vers.Skip(1).All(v => !UnitCatalog.Everyone.Contains(v.Def)) && UnitCatalog.Everyone.All(d => !d.Traits.Contains(TraitId.WhipDischarge));
             bool stats = Vers.All(v => v.Def.Id == "shiga" && v.Def.MaxHp == 52 && v.Def.Attack == 9 && v.Def.Speed == 3);
             Expect("版: SA-SD ＝ 規定 ＋ 放電だけ ／ SA+-SD ＝ SA+ ＋ 放電だけ・文面の末尾「鞭で弾けさせた敵の雷は、消えずに残る」・`Everyone` の外・規定の駒は札を持たない・数値は規定のまま", sd && sapsd && text && outside && stats, $"SA-SD {sd}・SA+-SD {sapsd}・文面 {text}・外 {outside}・数値 {stats}");
@@ -581,7 +581,7 @@ static class Shiga322Diag
 
         // ---- SD: 鞭で弾けた的の感電が残る（規定では消える）・台本の札
         {
-            foreach (var (def, tag, keep) in new[] { (UnitCatalog.Shiga, "規定", false), (UnitCatalog.ShigaSD, "SA-SD", true) })
+            foreach (var (def, tag, keep) in new[] { (UnitCatalog.ShigaH325, "規定", false), (UnitCatalog.ShigaSD, "SA-SD", true) })
             {
                 var ctx = Ctx(Formation.Build(front1: def), Formation.Build(front1: Wall), out var p, out var e);
                 var sh = p[0];

@@ -1220,6 +1220,10 @@ public sealed class BattleContext
         public bool PrimShocked { get; set; }
         /// <summary>第316期（<b>計数のみ</b>）: 主目標の当たる前の種類（1 動けない ／ 2 感電 ／ 4 萎縮 ／ 8 ボス・ビットの和）。</summary>
         public int PrimBits { get; set; }
+        /// <summary>第326期（<b>計数のみ</b>）: 主目標の当たる前の「動けない」の中身（<see cref="BoundWhy"/>）。</summary>
+        public int PrimWhy { get; set; }
+        /// <summary>第326期: 主目標に当たる前の2倍が入った（動けない ／ 感電も2倍の札で感電していた・<see cref="WhipAmount"/> の最初の1回で控える）。段0 の札（<see cref="TraitId.ScourgeFearDoubled"/>）が読む。</summary>
+        public bool PrimDoubled { get; set; }
         /// <summary>第321期（<b>計数のみ</b>）: 振り始めの与ダメの累計 ／ この振りの中で入れ子に振った同じ駒の鞭の与ダメ（1振りの最大から外す）。</summary>
         public long Dmg0, Nested;
         /// <summary>第322期（SD）: この一振りで感電を残して弾けた敵（同じ一振りの中ではもう弾けない）。保持者のいない戦では null のまま。</summary>
@@ -1470,7 +1474,7 @@ public sealed class BattleContext
         if (_verbose) Emit(new BattleEvent
         {
             Kind = BattleEventKind.Discharge, Turn = _turn, ActorId = from.InstanceId, TargetId = ball.InstanceId,
-            Amount = ShockRule.Discharge * (1 + DensityOf(from)), Slot = depth + 1, Team = ball.TeamId, SourceTrait = TraitId.SilkBallEvery,   // 第323期: 濃さ n の駒からは 8 ×（1 ＋ n）（表示だけ・糸玉は HP を減らさない）
+            Amount = _drLive ? DrAmount(_drRecvOnly ? 0 : DensityOf(from), ball) : ShockRule.Discharge * (1 + DensityOf(from)), Slot = depth + 1, Team = ball.TeamId, SourceTrait = TraitId.SilkBallEvery,   // 第323期: 濃さ n の駒からは 8 ×（1 ＋ n）（表示だけ・糸玉は HP を減らさない）。第326期（DR）: 受け手（糸玉）の濃さも
         });
         Log($"    {from.Name} から糸玉へ放電", LogKind.Status);
         if (ball.RawCounter(StatusKeys.Shock) > 0) _shockQueue.Enqueue((ball, depth + 1, ini));
@@ -1497,6 +1501,30 @@ public sealed class BattleContext
     /// <summary>いま振っている鞭の枠（無ければ null）。札が <c>OnAfterAttack</c> で読む。</summary>
     public WhipSwing? Whip => _whip;
 
+    /// <summary>
+    /// 第326期（<b>計数のみ・読むだけ</b>）: 「動けない敵」（<see cref="TormentTrait.IsBound"/>）の中身をビットで。
+    /// 1 痺れ ／ 2 その手番を差し出した ／ 4 組み付き ／ 8 竦み ／ 16 転倒（敵の乱れの保持者がいる戦だけ）／ 32 萎縮（SF-C の保持者がいる戦だけ）。0 ＝ 動ける。
+    /// </summary>
+    public int BoundWhy(UnitState t)
+        => (t.RawCounter(StatusKeys.Stun) > 0 ? 1 : 0) | (t.RawCounter(StatusKeys.IdleTurn) == Turn ? 2 : 0) | (t.RawCounter(StatusKeys.Grappled) > 0 ? 4 : 0)
+           | (t.RawCounter(StatusKeys.Cowed) > 0 ? 8 : 0) | (DisarrayLive && t.RawCounter(StatusKeys.Stagger) > 0 ? 16 : 0) | (DauntBoundLive && t.RawCounter(StatusKeys.Daunted) > 0 ? 32 : 0);
+
+    /// <summary>
+    /// 第326期（<b>計数のみ</b>）: 手番の外でも内でも、怖気の判定を受けた鞭（割り込みでない・<see cref="ScourgeTrait"/> の入口）の主目標の当たる前 ／ 当たった後の「動けない」。
+    /// <c>Fear326Judged</c> 判定した ／ <c>Fear326PreOnly</c> 当たる前だけ動けない（いまは怖気づく・段0 のずれ）／ <c>Fear326PostOnly</c> 当たった後だけ動けない（いまは怖気づかない）／
+    /// <c>Fear326Both</c> 両方 ／ <c>Fear326PreWhy</c>[当たる前のビット]・<c>Fear326PostWhy</c>[当たった後のビット]（当たる前だけの振り）。
+    /// </summary>
+    public void NoteFearJudge(UnitState self, UnitState target)
+    {
+        if (_whip is not { } w || w.Actor != self || w.NoCower) return;
+        UnitTally t = TallyOf(self);
+        int pre = w.PrimWhy, post = BoundWhy(target);
+        t.Fear326Judged++;
+        if (pre != 0 && post != 0) t.Fear326Both++;
+        else if (pre != 0) { t.Fear326PreOnly++; (t.Fear326PreWhy ??= new long[64])[pre & 63]++; (t.Fear326PostWhy ??= new long[64])[post & 63]++; }
+        else if (post != 0) t.Fear326PostOnly++;
+    }
+
     /// <summary>当てる前の2倍（当たる駒ごと・加算で「量＋量」）。当たった駒を枠に控える。</summary>
     int WhipAmount(WhipSwing w, UnitState t, int amount)
     {
@@ -1504,6 +1532,7 @@ public sealed class BattleContext
         {
             w.PrimShocked = t.RawCounter(StatusKeys.Shock) > 0;
             w.PrimBits = (TormentTrait.IsBound(this, t) ? 1 : 0) | (w.PrimShocked ? 2 : 0) | (t.RawCounter(StatusKeys.Daunted) > 0 ? 4 : 0) | (t.HasTrait(TraitId.BossSteadfast) ? 8 : 0);
+            if (_whipLive) w.PrimWhy = BoundWhy(t);   // 第326期・計数のみ
         }
         w.Hits.Add(t);
         UnitTally wt = TallyOf(w.Actor);
@@ -1521,6 +1550,7 @@ public sealed class BattleContext
         }
         bool bound = TormentTrait.IsBound(this, t);
         bool shocked = !bound && w.CountShock && t.RawCounter(StatusKeys.Shock) > 0;
+        if (w.Hits.Count == 1) w.PrimDoubled = bound || shocked;   // 第326期: 主目標（最初の1回）に2倍が入ったか（乱数を引かない・盤面を変えない）
         int result = amount;
         if (bound || shocked)
         {
@@ -1571,10 +1601,13 @@ public sealed class BattleContext
     {
         UnitTally t = TallyOf(u);
         t.WhipCowered++;
+        if (_whip is { } w && w.Actor == u && w.PrimDoubled) { t.Fear326CowerDoubled++; if ((w.PrimBits & 1) == 0) t.Fear326CowerDoubledShock++; }   // 第326期・計数のみ（2倍で入れた主目標に怖気づいた ／ うち感電の2倍）
         if (!(TurnActor == u && !InReaction && !InInterrupt)) t.FearCowerOut++;   // 第316期・計数のみ（手番の外の鞭で怖気づいた——号令で叩き起こされた など）
         _fearCowered.Add(u.InstanceId);
     }
     public void NoteWhipSpared(UnitState u) => TallyOf(u).WhipWiredSpared++;
+    /// <summary>第326期（段0）: 当たる前の2倍が入った主目標に怖気づかなかった。<b>計数のみ</b>（台本には何も打たない——「怖気」が出なくなるだけ）。</summary>
+    public void NoteWhipDoubledSpared(UnitState u) => TallyOf(u).Fear326DoubledSpared++;
 
     /// <summary>第316期（SF-D）: 感電していた主目標に怖気づかなかった。台本は「怖くない」（表示専用・<c>Amount</c> 2 ＝ 感電）。</summary>
     public void NoteWhipShockSpared(UnitState u, UnitState target)
@@ -2808,7 +2841,8 @@ public sealed class BattleContext
         }
         int amt = ShockRule.Discharge;
         int tdN = _tdLive ? DensityOf(from) : 0;   // 第323期（TD）: 濃さ n の駒の放電は 8 ×（1 ＋ n）。保持者がいなければ比較1つで抜ける
-        if (tdN > 0) amt *= 1 + tdN;
+        int sendN = _drRecvOnly ? 0 : tdN;         // 第326期（DR-a）: 出し手の濃さは量に効かない
+        if (sendN > 0) amt *= 1 + sendN;
         // 第290期・計数のみ: 隣の味方の放電がクグに来た（糸の ② の発火見込み）。
         if (_grappleLive && to.TeamId == from.TeamId && to.HasTrait(TraitId.Grapple)) { UnitTally kt = TallyOf(to); kt.KuguDisIn++; if (KuguHeld(to)) kt.KuguDisInHeld++; }
         // 第290期（糸）: ① 糸の保持者の放電は糸の先の敵へ（呼び出し側が to に敵を渡す）／ ② 隣の味方の放電が糸の保持者に来たら、受けずに糸の先の敵へ移す。
@@ -2818,8 +2852,9 @@ public sealed class BattleContext
             UnitState? via = null;
             if (to.TeamId != from.TeamId) via = from;
             else if (ThreadTarget(to) is { } th) { via = to; to = th; }
-            if (via is not null) { ThreadDischarge(from, via, to, amt, depth, ini); return; }
+            if (via is not null) { if (_drLive) amt = DrAmount(sendN, to); ThreadDischarge(from, via, to, amt, depth, ini); return; }
         }
+        if (_drLive) amt = DrAmount(sendN, to);   // 第326期（DR）: 受け手の濃さも足す（糸の先へ移したなら糸の先の敵の濃さ）
         UnitTally ft = TallyOf(from), tt = TallyOf(to);
         ft.DischargeHits++;
         UnitState? inv = InvertsTick(to);
@@ -2831,10 +2866,12 @@ public sealed class BattleContext
             Kind = BattleEventKind.Discharge, Turn = _turn, ActorId = from.InstanceId, TargetId = to.InstanceId,
             Amount = amt, Slot = depth + 1, Team = to.TeamId,
             SourceTrait = inv is null ? null : TraitId.Inverse, InverterId = inv?.InstanceId,
+            ReceiverDensity = _drLive && DensityOf(to) > 0 ? DensityOf(to) : null,   // 第326期（DR・表示専用）
         });
         if (inv is not null)
         {
             int hb = to.Hp;
+            if (_powderLive) TallyOf(_powderHolder!).Dr326Inverted++;   // 第326期・計数のみ
             InverseHeal(inv, to, amt, 3, "放電");
             tt.DischargeInvertedIn += to.Hp - hb;
             if (carry) MireCarryTo(to, from);
@@ -2858,7 +2895,7 @@ public sealed class BattleContext
         tt.DischargeTaken += removed;
         if (fromBall) TallyOf(_silkOwner[from]).SilkDealt += removed;   // 第292期・計数のみ
         if (before > 0 && !to.IsAlive) tt.DischargeDeaths++;
-        if (_powderLive) NoteDischargeDealt(from, to, removed, tdN);   // 第323期・計数のみ
+        if (_powderLive) { NoteDischargeDealt(from, to, removed, tdN); NoteDr326(from, to, amt, removed, fromBall ? 1 : BetrayedTrait.IsFodder(from) ? 0 : 3); }   // 第323期 ／ 第326期・計数のみ
         if (tpFrom && !tpWas && to.IsAlive && !(_tpDry && _tpPopped.Contains(to.InstanceId))) PowderInfect(from, to);   // 第323期（TP）: 帯電していない隣も帯電させる（TP-a′ は同じ連鎖で先に弾けた駒を除く）
         if (carry) MireCarryTo(to, from);
     }
@@ -2881,6 +2918,7 @@ public sealed class BattleContext
             Amount = amt, Slot = depth + 1, Team = to.TeamId, SourceTrait = TraitId.Thread,
             PartnerId = from == via ? null : from.InstanceId,   // 第291期・表示専用（② 隣の味方の放電を移したときの元の駒）
             Text = via.RawCounter(GrappleTrait.TargetKey) == 0 && via.RawCounter(ThreadTrait.MemoKey) > 0 ? ThreadLabels.Release : null,   // 第291期・表示専用（ほどける一撃の中）
+            ReceiverDensity = _drLive && DensityOf(to) > 0 ? DensityOf(to) : null,   // 第326期（DR・表示専用）
         });
         Log($"    {(from == via ? "" : from.Name + " の電気が ")}{via.Name} の糸を伝って {to.Name} へ放電（{amt}）", LogKind.Trigger);
         bool wasShocked = to.RawCounter(StatusKeys.Shock) > 0;
@@ -2899,7 +2937,7 @@ public sealed class BattleContext
         TallyOf(from).DischargeDealt += removed;
         tt.DischargeTaken += removed;
         if (before > 0 && !to.IsAlive) { tt.DischargeDeaths++; vt.ThreadKills++; }
-        if (_powderLive) NoteDischargeDealt(from, to, removed, _tdLive ? DensityOf(from) : 0);   // 第323期・計数のみ
+        if (_powderLive) { NoteDischargeDealt(from, to, removed, _tdLive ? DensityOf(from) : 0); NoteDr326(from, to, amt, removed, 2); }   // 第323期 ／ 第326期・計数のみ
         if (wasShocked && to.RawCounter(StatusKeys.Shock) <= 0) vt.ThreadPopped++;
         if (!wasShocked && to.IsAlive && via.HasTrait(TraitId.ThreadCharge) && MarkShock(to, via))
         {
@@ -2920,6 +2958,8 @@ public sealed class BattleContext
     bool _powderLive;
     /// <summary>濃さ（TD）／ 濃さは残る（TD-b）／ 本人も焼く（焼）／ 伝染（TP）／ 伝染は続く（TP-b）の保持者が戦に出たか。</summary>
     bool _tdLive, _tdKeep, _tdBurn, _tpLive, _tpSpread, _tpDry, _tpFoeOnly;
+    /// <summary>第326期: 濃い駒は雷をよく通す（DR-a ＝ 受け手だけ ／ DR-b ＝ 出し手 ＋ 受け手）の保持者が戦に出たか。<b>いなければ放電の量は比較1つで今どおり。</b></summary>
+    bool _drLive, _drRecvOnly;
     /// <summary>最初に出た粉の保持者（計数の帰属先・トウ）。</summary>
     UnitState? _powderHolder;
     /// <summary>トウの手番の頭に帯電していた駒（<see cref="PowderHead"/> が控える・<see cref="PowderFell"/> が読む）。</summary>
@@ -2953,6 +2993,8 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.PowderContagionSpread)) _tpSpread = true;
         if (u.HasTrait(TraitId.PowderContagionDry)) _tpDry = true;
         if (u.HasTrait(TraitId.PowderMarkFoeOnly)) _tpFoeOnly = true;   // 第324期（TP-e）
+        if (u.HasTrait(TraitId.DenseConduct)) { _drLive = true; _drRecvOnly = true; }   // 第326期（DR-a）
+        if (u.HasTrait(TraitId.DenseConductBoth)) _drLive = true;                       // 第326期（DR-b）
     }
 
     /// <summary>トウの手番の頭（<c>TakeTurnFramed</c>）: 帯電している生きている駒を控える。<b>読むだけ。</b></summary>
@@ -3126,6 +3168,24 @@ public sealed class BattleContext
         int removed = before - Math.Max(0, x.Hp);
         if (ally) { t.TdBurnAlly += removed; if (before > 0 && !x.IsAlive) t.TdBurnAllyKills++; }
         else { t.TdBurnFoe += removed; if (before > 0 && !x.IsAlive) t.TdBurnFoeKills++; }
+    }
+
+    /// <summary>第326期（DR）: 放電1本の量 ＝ 8 ×（1 ＋ 出し手の濃さ（DR-a は 0）＋ 受け手の濃さ）。<b>乱数を引かない。</b></summary>
+    int DrAmount(int sendN, UnitState to) => ShockRule.Discharge * (1 + sendN + DensityOf(to));
+
+    /// <summary>放電1本の受け手と出し手（第326期・<b>計数のみ</b>）。<paramref name="sender"/>: 0 背いた召喚獣 ／ 1 糸玉 ／ 2 糸 ／ 3 ほか。添字は <see cref="UnitTally.Dr326N"/>。</summary>
+    void NoteDr326(UnitState from, UnitState to, int nominal, int removed, int sender)
+    {
+        UnitTally t = TallyOf(_powderHolder!);
+        int recv = to.TeamId == _powderHolder!.TeamId ? 0 : BetrayedTrait.IsFodder(to) ? 2 : 1;
+        int i = recv * 4 + sender, rn = DensityOf(to);
+        (t.Dr326N ??= new long[12])[i]++;
+        (t.Dr326Nom ??= new long[12])[i] += nominal;
+        (t.Dr326Dealt ??= new long[12])[i] += removed;
+        (t.Dr326RecvDens ??= new long[12])[i] += rn;
+        if (rn > 0) (t.Dr326RecvDense ??= new long[12])[i]++;
+        (t.Dr326SendDens ??= new long[12])[i] += DensityOf(from);
+        if (nominal > t.Dr326Max) t.Dr326Max = nominal;
     }
 
     /// <summary>放電1本の与ダメの計数（第323期・<b>計数のみ</b>）: 濃い放電の分（敵 ／ 味方の側）・返した濃さが乗った分・トウの手番の放電。</summary>

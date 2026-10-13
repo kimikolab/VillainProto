@@ -2052,6 +2052,14 @@ public sealed class UnitTally
     public long TdBurnFoe, TdBurnAlly, TdBurnFoeKills, TdBurnAllyKills, TdRetNominal, TdRetDealt;
     public long TpNewFoe, TpNewAlly, TpFreshSkip, TpInfPopsFoe, TpInfPopsAlly, TpInfPopTurnSum, TpMarkSpread, TpReArm;
     public long TdKataMoves, TdKataMoved, TdKataDry, TdKuguFlowed, TdKuguKept;
+    /// <summary>
+    /// 第326期（<b>計数専用</b>・粉の保持者（トウ）の側・濃い駒は雷をよく通す DR）。誰も読んで分岐しない。HP を減らす放電1本ごと（糸を伝った分を含む・糸玉に届いた分と反転は除く）に、
+    /// 添字 ＝ 受け手 × 4 ＋ 出し手（受け手 0 味方 ／ 1 敵（喚ばれたもの・糸玉を除く）／ 2 背いた召喚獣・出し手 0 背いた召喚獣 ／ 1 糸玉 ／ 2 糸（クグを伝った）／ 3 ほか）:
+    /// <c>Dr326N</c> 本数 ／ <c>Dr326Nom</c> 名目の量 ／ <c>Dr326Dealt</c> 減らした HP ／ <c>Dr326RecvDens</c> 受け手の濃さの和 ／ <c>Dr326RecvDense</c> 受け手の濃さ ≧1 の本数 ／ <c>Dr326SendDens</c> 出し手の濃さの和。
+    /// <c>Dr326Inverted</c> ベニの反転で回復になった放電 ／ <c>Dr326Max</c> 1本の名目の最大。
+    /// </summary>
+    public long[]? Dr326N, Dr326Nom, Dr326Dealt, Dr326RecvDens, Dr326RecvDense, Dr326SendDens;
+    public long Dr326Inverted, Dr326Max;
 
     /// <summary>
     /// 第289期（<b>計数専用</b>）。<b>蓄電の保持者（シガ）の側</b>: <c>ChainIniHist</c>[起点] 敵の感電の連鎖（自分の一撃で起きたものを除く・0 トウ ／ 1 カタ ／ 3 ほかの味方 ／ 4 刻み・出どころ無し ／ 5 敵）／
@@ -2310,6 +2318,9 @@ public sealed class UnitTally
     /// </summary>
     public long FearSwings, FearOutSwings, FearCowerOut, FearTurnsWired, FearCowerSpent, FearStunSkipped, WireHeld, WireHeldTurn, WhipDauntSpared, WhipShockSpared;
     public long[]? FearPrimHist, FearLostCause, FearLostPrevBits, FearLostPrevN, FearLostPrevAtk, FearLostPrevWired, FearLostPrevCharge0, FearLostNine, FearLostNoPrev;
+    /// <summary>第326期（<b>計数専用</b>・段0 怖気の判定のずれ）。<see cref="BattleContext.NoteFearJudge"/>。誰も読んで分岐しない。</summary>
+    public long Fear326Judged, Fear326PreOnly, Fear326PostOnly, Fear326Both, Fear326CowerDoubled, Fear326CowerDoubledShock, Fear326DoubledSpared;
+    public long[]? Fear326PreWhy, Fear326PostWhy;
     /// <summary>
     /// 第298期 段0-2（<b>計数専用</b>・戦績の帰属のずれ 8 群）。群 g（1 反転 ／ 2 火の変換 ／ 3 癒しの灯 ／ 4 火の癒し ／ 5 耐火の枝 ／ 6 分かちのなまり ／ 7 橋 ／ 8 くべられる火）ごとに、
     /// 本当の出どころの側: <c>AttrTotal</c>[g] 出した量 ／ <c>AttrFixed</c>[g] そのうち包む前の印が別の駒か誰でもないを指していた量 ／ <c>AttrFromNone</c>[g] うち誰でもない。
@@ -3392,6 +3403,8 @@ public sealed class UnitTally
         TdBurnFoe += o.TdBurnFoe; TdBurnAlly += o.TdBurnAlly; TdBurnFoeKills += o.TdBurnFoeKills; TdBurnAllyKills += o.TdBurnAllyKills; TdRetNominal += o.TdRetNominal; TdRetDealt += o.TdRetDealt;
         TpNewFoe += o.TpNewFoe; TpNewAlly += o.TpNewAlly; TpFreshSkip += o.TpFreshSkip; TpInfPopsFoe += o.TpInfPopsFoe; TpInfPopsAlly += o.TpInfPopsAlly; TpInfPopTurnSum += o.TpInfPopTurnSum; TpMarkSpread += o.TpMarkSpread; TpReArm += o.TpReArm;
         TdKataMoves += o.TdKataMoves; TdKataMoved += o.TdKataMoved; TdKataDry += o.TdKataDry; TdKuguFlowed += o.TdKuguFlowed; TdKuguKept += o.TdKuguKept;
+        AddHist(ref Dr326N, o.Dr326N); AddHist(ref Dr326Nom, o.Dr326Nom); AddHist(ref Dr326Dealt, o.Dr326Dealt); AddHist(ref Dr326RecvDens, o.Dr326RecvDens);   // 第326期
+        AddHist(ref Dr326RecvDense, o.Dr326RecvDense); AddHist(ref Dr326SendDens, o.Dr326SendDens); Dr326Inverted += o.Dr326Inverted; Dr326Max = Math.Max(Dr326Max, o.Dr326Max);
         AddHist(ref ChargeBySrc, o.ChargeBySrc);
         // 第289期
         ChainOwn += o.ChainOwn; SwAsked += o.SwAsked; SwNoCharge += o.SwNoCharge; SwNoTarget += o.SwNoTarget; SwNested += o.SwNested;
@@ -3485,6 +3498,9 @@ public sealed class UnitTally
         AddHist(ref FearPrimHist, o.FearPrimHist); AddHist(ref FearLostCause, o.FearLostCause); AddHist(ref FearLostPrevBits, o.FearLostPrevBits); AddHist(ref FearLostPrevN, o.FearLostPrevN);
         AddHist(ref FearLostPrevAtk, o.FearLostPrevAtk); AddHist(ref FearLostPrevWired, o.FearLostPrevWired); AddHist(ref FearLostPrevCharge0, o.FearLostPrevCharge0);
         AddHist(ref FearLostNine, o.FearLostNine); AddHist(ref FearLostNoPrev, o.FearLostNoPrev);
+        Fear326Judged += o.Fear326Judged; Fear326PreOnly += o.Fear326PreOnly; Fear326PostOnly += o.Fear326PostOnly; Fear326Both += o.Fear326Both;   // 第326期
+        Fear326CowerDoubled += o.Fear326CowerDoubled; Fear326CowerDoubledShock += o.Fear326CowerDoubledShock; Fear326DoubledSpared += o.Fear326DoubledSpared;
+        AddHist(ref Fear326PreWhy, o.Fear326PreWhy); AddHist(ref Fear326PostWhy, o.Fear326PostWhy);
         AddHist(ref AttrTotal, o.AttrTotal); AddHist(ref AttrFixed, o.AttrFixed); AddHist(ref AttrFromNone, o.AttrFromNone); AddHist(ref AttrStolen, o.AttrStolen);   // 第298期
         MfQueuedFresh += o.MfQueuedFresh; MfQueuedLayer += o.MfQueuedLayer; MfShotsFoe += o.MfShotsFoe; MfShotsAlly += o.MfShotsAlly; MfDealtFoe += o.MfDealtFoe; MfDealtAlly += o.MfDealtAlly;
         MfAllyKills += o.MfAllyKills; MfFresh += o.MfFresh; MfLayer += o.MfLayer; MfChainSkipped += o.MfChainSkipped; MfDropped += o.MfDropped; MfHushed += o.MfHushed; MfBlocked += o.MfBlocked;
@@ -5093,6 +5109,9 @@ public sealed class BattleEvent
 {
     public required BattleEventKind Kind { get; init; }
     public required int Turn { get; init; }
+
+    /// <summary>第326期（<b>表示専用</b>・DR の版だけ）: `Discharge` の受け手のその時点の濃さ（濃い駒は雷をよく通す `DenseConduct` ／ `DenseConductBoth` の保持者がいる戦だけ・濃さ 0 なら null）。規定の台本では常に null。</summary>
+    public int? ReceiverDensity { get; init; }
 
     /// <summary>行為者の InstanceId。盤面全体に関わる出来事では null。</summary>
     public int? ActorId { get; init; }

@@ -72,7 +72,7 @@ static class Tou325Diag
     {
         const int n = 40;
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var partners = new[] { UnitCatalog.Kubi, UnitCatalog.Som, UnitCatalog.Shiga, UnitCatalog.Hagi, UnitCatalog.Tsugi, UnitCatalog.Gan, UnitCatalog.Sora, UnitCatalog.Gald, UnitCatalog.Beni, UnitCatalog.Doha };
+        var partners = new[] { UnitCatalog.Kubi, UnitCatalog.Som, UnitCatalog.ShigaH325, UnitCatalog.Hagi, UnitCatalog.Tsugi, UnitCatalog.Gan, UnitCatalog.Sora, UnitCatalog.Gald, UnitCatalog.Beni, UnitCatalog.Doha };
         var pairs = new List<(UnitDef A, UnitDef B)>();
         for (int i = 0; i < partners.Length; i++) for (int j = i + 1; j < partners.Length; j++) pairs.Add((partners[i], partners[j]));
         var waves = CandWaves.Select(W).ToArray();
@@ -160,7 +160,7 @@ static class Tou325Diag
     static void Guide()
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var now = Presets.Playtest.Where(r => r.Name.StartsWith("試遊・感電", StringComparison.Ordinal)).ToArray();
+        var now = PlaytestH325.Where(r => r.Name.StartsWith("試遊・感電", StringComparison.Ordinal)).ToArray();   // 第326期: シガを第325期の規定に固定
         var old = PlaytestH324.ToDictionary(r => r.Name, r => r.F);
         Console.WriteLine("# 第325期 §5 試遊の感電の台 × 波（seed 0..199）—— 規定（E3）と第324期の規定");
         Console.WriteLine();

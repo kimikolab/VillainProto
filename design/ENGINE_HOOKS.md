@@ -1305,3 +1305,11 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **口は `PowderFell` の1行だけ**: 粉の印（`_pwTouched`）を付ける条件に「保持者（`_tpFoeOnly`）がいて、落ちた駒がトウの味方なら付けない」を足した。漏れ先の味方の帯電（`MarkShock`）と濃さ（`PowderThicken`）はこの行の外なので今どおり。印の無い味方が弾けても `Discharge` の伝染の条件（`_pwTouched.Contains(from)`）を満たさないので、味方の側の伝染は起きない。保持者がいなければ `_tpFoeOnly` の比較1つ（`&&` の短絡で `_pwTouched.Add` は今どおり走る）。
 - **計数の副作用**: TP-e の版では、味方の「粉の付いた駒が弾けた」（`PwMarkedPopsAlly` ほか）も 0 になる（同じ集合を読むため）。規定 ／ 第323期の版の計数は変わらない。
 - 器具: `tou324`（`tou323` の表の口を `BoardsWith` ／ `CompareWith` ／ `GridWith` ／ `MemoWith` に切り出して、版の列と見出しだけ替えて使う——`tou323` の出力は1文字も変わらない）。乱数の口は足していない。
+
+## 第326期 —— 段0（2倍で入れた的は怖くない・シガの規定）／ 濃い駒は雷をよく通す（DR-a ／ DR-b・版）
+
+- **段0 の札 `ScourgeFearDoubled`**（`MarkOnlyTrait`・規定のシガ `UnitCatalog.Shiga` ＝ `ShigaH325` ＋ この札）: `WhipAmount` が主目標（`Hits.Count == 1`）の2倍の判定（`IsBound` ／ `CountShock` ＆ 感電）を `WhipSwing.PrimDoubled` に控え、`ScourgeTrait.OnAfterAttack` が割り込み ／ 電気鞭 ／ SF-D の免除の後で読む（真なら怖気づかない・`NoteWhipDoubledSpared`・台本には何も打たない）。当たった後に動けない敵は今どおり先に免除（`IsBound` の枝）。**乱数を引かない。**
+- **DR の札 `DenseConduct`（DR-a）／ `DenseConductBoth`（DR-b）**（`MarkOnlyTrait`・トウの版 `TouDRa` ／ `TouDRb`・保持者 0 枚）: `NotePowderHolder` が `_drLive` ／ `_drRecvOnly` を立てる。`Discharge` は出し手の濃さ `sendN`（DR-a は 0）を先に掛け、糸の先を決めた**後**で `_drLive` なら `amt = DrAmount(sendN, to)`（＝ 8 ×（1 ＋ sendN ＋ `DensityOf(to)`））——糸を伝う放電は糸の先の敵の濃さ、ベニの反転も同じ量、糸玉に届いた放電は表示の `Amount` だけ。焼（`PowderSelfBurn`）は今のまま。**保持者がいなければ `_drLive` の比較1つで今どおり**（`compare` の規定の列は 0 セル）。
+- **表示専用**: `BattleEvent.ReceiverDensity`（`Discharge` の受け手の濃さ・`_drLive` のときだけ・0 なら null）。並びは `design/PHASE291_CODEX_MEMO.md` §22。
+- **計数のみ**: シガの `Fear326Judged` ／ `Fear326PreOnly` ／ `Fear326PostOnly` ／ `Fear326Both` ／ `Fear326PreWhy[64]` ／ `Fear326PostWhy[64]`（怖気の判定の入口で、主目標の当たる前 ／ 当たった後の「動けない」の中身 `BoundWhy`）・`Fear326CowerDoubled` ／ `Fear326CowerDoubledShock`（2倍の後に怖気づいた）・`Fear326DoubledSpared`。トウの側の `Dr326N` ／ `Nom` ／ `Dealt` ／ `RecvDens` ／ `RecvDense` ／ `SendDens`［受け手 3 × 出し手 4］・`Dr326Inverted` ／ `Dr326Max`（HP を減らす放電1本ごと・`NoteDr326`・`_powderLive` の戦だけ）。
+- 器具: `dense326`。乱数の口は足していない（`PickOne(` の数は第325期と同じ）。

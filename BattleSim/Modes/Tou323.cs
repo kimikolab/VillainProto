@@ -520,10 +520,10 @@ static class Tou323Diag
         var w = WaveOf(waveKey);
         var fixedU = w.Boss ? new[] { UnitCatalog.TouH324, UnitCatalog.KataH324, UnitCatalog.Som } : new[] { UnitCatalog.TouH324, UnitCatalog.KataH324 };
         int free = 5 - fixedU.Length;
-        UnitDef Now(UnitDef d) => PinTKK324(UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d);   // 第325期: トウ ／ カタ ／ クグを第324期の規定に固定
+        UnitDef Now(UnitDef d) => PinS325(PinTKK324(UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d));   // 第325期: トウ ／ カタ ／ クグを第324期の規定に固定・第326期: シガも第325期の規定に
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();
         var fixedIds = fixedU.Select(d => d.Id).ToHashSet();
-        var pool = S287.Pool.Select(Now).Append(UnitCatalog.Shiga).Where(d => !fixedIds.Contains(d.Id)).GroupBy(d => d.Id).Select(g => g.First()).ToArray();
+        var pool = S287.Pool.Select(Now).Append(UnitCatalog.ShigaH325).Where(d => !fixedIds.Contains(d.Id)).GroupBy(d => d.Id).Select(g => g.First()).ToArray();
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var combos = new List<UnitDef[]>();
         void Rec(int start, List<UnitDef> cur)

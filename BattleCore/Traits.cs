@@ -816,6 +816,11 @@ public enum TraitId
     // --- 第324期で足した札（トウの版・指示書 design/PHASE324_TOU_POWDER2_SPEC.md）。保持者 0 枚 ---
     PowderMarkFoeOnly, // 伝染の印は敵にだけ（TP-e・`PowderContagion` と組む）: 粉の印を漏れ先の味方には付けない（漏れは今どおり帯電させ、TD なら濃さも付ける）（**札そのものは挙動を持たない**・engine の `PowderFell`）
 
+    // --- 第326期で足した札（指示書 design/PHASE326_DENSE_CONDUCT_SPEC.md）。段0 はシガの規定、DR はトウの版（保持者 0 枚） ---
+    ScourgeFearDoubled, // 2倍で入れた的は怖くない（段0・シガの規定・`Scourge` と組む）: 鞭の主目標に当たる前の2倍が入った（動けない敵・感電も2倍の札なら感電していた敵）なら、当たった後に動けても怖気づかない（2倍の判定と同じ時点・同じ条件）（**札そのものは挙動を持たない**・`ScourgeTrait` が読む）
+    DenseConduct,       // 濃い駒は雷をよく通す（DR-a・トウ・`PowderDense` と組む）: 放電1回の量は 8 ×（1 ＋ 受け手の濃さ）——出し手の濃さは量に効かない（焼は今のまま）（**札そのものは挙動を持たない**・engine の `Discharge`）
+    DenseConductBoth,   // 濃さは出し手にも受け手にも（DR-b・トウ・`PowderDense` と組む）: 放電1回の量は 8 ×（1 ＋ 出し手の濃さ ＋ 受け手の濃さ）（**札そのものは挙動を持たない**・engine の `Discharge`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -13938,6 +13943,7 @@ public sealed class ScourgeTrait : Trait
 
     public override void OnAfterAttack(BattleContext ctx, UnitState self, UnitState target, int dealt)
     {
+        ctx.NoteFearJudge(self, target);   // 第326期・計数のみ（当たる前 ／ 当たった後の「動けない」）
         if (TormentTrait.IsBound(ctx, target))
         {
             // 第316期（SF-C）: 萎縮だけで縛られた的で、ほかに怖気づかない理由（割り込み ／ 感電している）が無ければ「怖くない」を数えて台本に打つ（表示専用）。保持者がいなければ比較1つで抜ける。
@@ -13956,6 +13962,13 @@ public sealed class ScourgeTrait : Trait
         {
             ctx.NoteWhipShockSpared(self, target);
             ctx.Log($"    {self.Name} は感電した {target.Name} なら怖くない", LogKind.Trigger, self);
+            return;
+        }
+        // 第326期（段0）: 主目標に当たる前の2倍が入っていれば怖気づかない（2倍の判定と同じ時点・同じ条件——動けない敵・感電も2倍の札なら感電していた敵）。保持者でなければ札の比較1つで抜ける。
+        if (self.HasTrait(TraitId.ScourgeFearDoubled) && ctx.Whip is { PrimDoubled: true } wdb && wdb.Actor == self)
+        {
+            ctx.NoteWhipDoubledSpared(self);
+            ctx.Log($"    {self.Name} は二重に入れた {target.Name} には怖気づかない", LogKind.Trigger, self);
             return;
         }
         self.SetCounter(StatusKeys.Stun, 1);
@@ -17515,6 +17528,9 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.PowderContagionSpread),     // 第323期（伝染は続く TP-b・印だけ）
         new MarkOnlyTrait(TraitId.PowderContagionDry),        // 第323期（弾けたばかりの駒には移らない TP-a′・参考・印だけ）
         new MarkOnlyTrait(TraitId.PowderMarkFoeOnly),         // 第324期（伝染の印は敵にだけ TP-e・印だけ）
+        new MarkOnlyTrait(TraitId.ScourgeFearDoubled),        // 第326期（段0 2倍で入れた的は怖くない・印だけ）
+        new MarkOnlyTrait(TraitId.DenseConduct),              // 第326期（濃い駒は雷をよく通す DR-a・印だけ）
+        new MarkOnlyTrait(TraitId.DenseConductBoth),          // 第326期（濃さは出し手にも受け手にも DR-b・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

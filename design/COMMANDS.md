@@ -1121,6 +1121,14 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 tou325 boards        # 第325期 §4: 足した2台（試遊・感電 粉 隣あり ／ 隣なし）× 10 波・勝率と第324期の規定の勝率・伝染 ／ 返す ／ 味方の濃さ ／ 焼（seed 0..199・4 秒）
     dotnet run --project BattleSim -c Release 0 tou325 guide         # 第325期 §5: 試遊の感電の台 × 10 波（規定 ／ 第324期の規定の勝率の差・決着T）——手引きの数字（7 秒）
     dotnet run --project BattleSim -c Release 0 tou325 check         # 第325期 自己検査（規定 ＝ E3 の札と文面・旧の定義の固定と古い口・召喚獣の名前・足した2台・verbose）
+    dotnet run --project BattleSim -c Release 0 dense326 p0s         # 第326期 §2-1 段0 の Phase 0: ポンの台 × ボス × seed 10 の怖気の抜き書き・シガのいる代表台 × 10 波で怖気の判定の4つ（当たる前 ／ 後の「動けない」）・段0 前 → 後（6 秒）
+    dotnet run --project BattleSim -c Release 0 dense326 p0          # 第326期 §3-2 本体の Phase 0: 勇者が浴びた放電の出し手と濃さ・糸玉・精鋭と味方の受け手の濃さ（5 秒）
+    dotnet run --project BattleSim -c Release 0 dense326 boards [版,…]   # 第326期 §5-1: 代表台 9 × 10 波 × 版（規定 ／ DR-a ／ DR-b ／ DR-b＋SA+）・ボスの1ターンの与ダメ ／ 回復・出どころ（14 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 dense326 compare [版,…]  # 第326期 §5-2: `compare` 64 行 × 版（18 秒）
+    dotnet run --project BattleSim -c Release 0 dense326 grid <boss|guard> <版>   # 第326期 §5-3: 格子（固定枠 トウ ＋ カタ・ボスはさらにソム・いまの規定）（11〜23 分）
+    dotnet run --project BattleSim -c Release 0 dense326 memo [波] [seed] [版]    # 第326期 §6: ポンの台の放電の並び（`ReceiverDensity`）
+    dotnet run --project BattleSim -c Release 0 dense326 log [波] [seed] [版]     # 第326期: ポンの台の1戦のログ
+    dotnet run --project BattleSim -c Release 0 dense326 check       # 第326期 自己検査（段0 の札・固定の口・感電 ／ 萎縮 ／ 動ける主目標の怖気・DR の量（敵 ／ 味方 ／ 糸）と表示の欄・verbose・PickOne）
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）
     dotnet run --project BattleSim -c Release 0 shiga316 dgrid <boss|guard> [ps]   # 第316期 段0 G-c: 第297期の「ドハが要る台」の格子（第315期と同じ作り・基準は規定のドハ・1本 6〜9 分）

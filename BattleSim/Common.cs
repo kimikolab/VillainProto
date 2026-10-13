@@ -340,13 +340,34 @@ public static UnitDef PinSH321(UnitDef d) => ReferenceEquals(d, UnitCatalog.Shig
 public static UnitDef PinTKK324(UnitDef d) =>
     ReferenceEquals(d, UnitCatalog.Tou) ? UnitCatalog.TouH324 : ReferenceEquals(d, UnitCatalog.Kata) ? UnitCatalog.KataH324 : ReferenceEquals(d, UnitCatalog.Kugu) ? UnitCatalog.KuguH324 : d;
 
-/// <summary>第325期: トウ ／ カタ ／ クグ ＝ E3 を規定にした。第324期の規定の駒で測った器具（`tou323` ／ `tou324` ／ `shiga322`）はこれを通す。陣形とレリックは保つ。</summary>
+/// <summary>第325期: トウ ／ カタ ／ クグ ＝ E3 を規定にした。第324期の規定の駒で測った器具（`tou323` ／ `tou324` ／ `shiga322`）はこれを通す。陣形とレリックは保つ。
+/// 第326期: シガも第322〜325期の規定（`ShigaH325`）へ替える（`PinS325`・第324期の規定のシガは第325期の規定と同じ物）。</summary>
 public static Formation Pin324(Formation f)
 {
     var g = f.Clone();
-    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinTKK324(d);
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinS325(PinTKK324(d));
     return g;
 }
+
+/// <summary>
+/// 第326期: 規定のシガ（段0 ＝ 2倍で入れた的は怖くない）を第322〜325期の規定（`ShigaH325`）に替える。ほかの駒はそのまま返す。
+/// 古い固定の口（`PinS317` ／ `PinSS318` ／ `PinSH321` ／ `PinDS316`）は先に `UnitCatalog.Shiga` をもっと古い規定へ替えるので、ここを終端に通す必要はない。
+/// </summary>
+public static UnitDef PinS325(UnitDef d) => ReferenceEquals(d, UnitCatalog.Shiga) ? UnitCatalog.ShigaH325 : d;
+
+/// <summary>第326期: シガの段0 を規定にした。第325期の規定の駒で測った器具（`tou325`）はこれを通す（トウ ／ カタ ／ クグは E3 のまま）。陣形とレリックは保つ。</summary>
+public static Formation Pin325(Formation f)
+{
+    var g = f.Clone();
+    foreach ((int slot, UnitDef d) in f.Occupied()) g[slot] = PinS325(d);
+    return g;
+}
+
+/// <summary>第326期: `CompareBuilds()` のシガを第325期の規定に替えた写し。</summary>
+public static (string Name, Formation F)[] CompareBuildsH325() => CompareBuilds().Select(r => (r.Name, Pin325(r.F))).ToArray();
+
+/// <summary>第326期: `Presets.Playtest` のシガを第325期の規定に替えた写し（行の数と並びはそのまま）。</summary>
+public static (string Name, Formation F)[] PlaytestH325 => Presets.Playtest.Select(r => (r.Name, Pin325(r.F))).ToArray();
 
 /// <summary>第325期: `CompareBuilds()` のトウ ／ カタ ／ クグを第324期の規定に替えた写し。</summary>
 public static (string Name, Formation F)[] CompareBuildsH324() => CompareBuilds().Select(r => (r.Name, Pin324(r.F))).ToArray();

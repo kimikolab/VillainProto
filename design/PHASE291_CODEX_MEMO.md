@@ -1504,3 +1504,33 @@ ShockGauge 伝染  討伐隊の新兵#7 → 討伐隊の新兵#5  Amount 1  Slot
 - **トウのいない台の台本は1件も変わらない**（カタ ／ クグの返す働きは濃さの保持者がいない戦では何も起きない）。
 - **ソムの喚ぶ駒の画面の名前が「背いた獣」→「背いた召喚獣」**（`UnitCatalog.Fodder.Name`）。`Id` は `"fodder"` のまま、出来事の種類（`BeastBurst` ／ `BeastThrow` ほか）と `Text` の札（「弾けて消えた」「暴発」など）も変えていない。**`Summon` の `Text`（＝ 喚ばれた駒の名前）だけが変わる**。DemoApp は `Fodder.Name` と `Id` で引いているので（`SomCheck.Resonance.cs` ／ `UiKit.cs`）、文字列の直書きは無い（第325期に grep で確かめた）。
 - 試遊の台を2つ足した（`試遊・感電 粉 隣あり` ／ `試遊・感電 粉 隣なし`・DemoApp の一覧の末尾）。駒は同じ5体（トウ・カタ・クグ・ソム・ベニ）で席だけ違う——「濃さ・移した」「濃さ・流した」は隣ありの台でだけ出る（隣なしは漏れた粉が返す駒に落ちないので、敵の「濃さ・焼いた」もずっと少ない）。
+
+## 22. 第326期の追記 —— 段0（シガの怖気・**規定**）と、濃い駒は放電をよく通す（DR-a ／ DR-b・**版のみ**）
+
+報告 `design/PHASE326_DENSE_CONDUCT.md`。**新しい出来事の種類も札（`Text`）も足していない。** 表示専用の欄を1つ足した（`BattleEvent.ReceiverDensity`・DR の版だけ）。
+
+- **段0（規定）**: シガの鞭が主目標に「二重に入る」（2倍）と、その鞭の後に**「怖気」（`ShockGauge` の `Cower`）が出なくなった**。2倍の理由が感電（`ScourgeShock`）でも同じ。これまでは感電した勇者に2倍で入った後、弾けて萎縮しなかったとき（半々）だけ「怖気」が続いていた。動ける・感電していない敵を主目標に打った鞭の後には今どおり「怖気」が出る。ログの行は「…は二重に入れた 勇者 には怖気づかない」（台本には何も出ない）。
+- **DR（版のみ・`TouDRa` ／ `TouDRb`）**: 放電1本の `Discharge` の `Amount` が、**受け手の濃さ**で重くなる——DR-a は 8 ×（1 ＋ 受け手の濃さ）、DR-b は 8 ×（1 ＋ 出し手の濃さ ＋ 受け手の濃さ）。直後の `Damage` も同じ量（壁の軽減が無ければ）。濃い勇者のまわりの召喚獣 ／ 糸玉が弾けるたびに、勇者へ 40 → 64 → … と太い雷が集まる。召喚獣 ／ 糸玉の濃さは 0 なので、勇者 → 召喚獣 ／ 糸玉は DR-a では 8、DR-b では今どおり（勇者の濃さで重い）。
+- **表示専用の欄 `ReceiverDensity`**（`int?`）: DR の保持者がいる戦の `Discharge` にだけ、受け手のその時点の濃さを入れる（濃さ 0 なら null）。規定（E3）の台本では常に null——第325期までの台本は1件も変わらない。「太い雷が集まる」を描くなら、`ReceiverDensity` が付いた `Discharge` の線を太く／明るくする。
+
+**1本の並び**（`dense326 memo boss 10 dra`・ポンの台（前1 カタ・前3 シガ・中央 トウ・後1 クグ・後3 ソム）× ボス × seed 10・DR-a・勝ち T8・T4 の抜粋）:
+
+```
+--- T4
+ShockSpent   カタ#0 → 召喚獣#15  Amount 0  Slot 0
+Discharge   召喚獣#15 → 勇者#5  Amount 64  Slot 1  ReceiverDensity 7      ← 8 ×（1 ＋ 勇者の濃さ 7）
+Damage   召喚獣#15 → 勇者#5  Amount 64  Slot 0
+Discharge   召喚獣#15 → 糸玉#7  Amount 8  Slot 1                          ← 糸玉の濃さは 0
+ShockSpent   カタ#0 → 勇者#5  Amount 0  Slot 1
+ShockGauge 濃さ・弾けた  カタ#0 → 勇者#5  Amount 7  Slot 0
+Discharge   勇者#5 → 召喚獣#18  Amount 8  Slot 2                          ← DR-a: 出し手（勇者）の濃さは量に効かない（DR-b なら 64）
+ShockGauge 濃さ・焼いた  勇者#5 → 勇者#5  Amount 56  Slot 7                ← 焼は今のまま 8 × 7
+ShockSpent   カタ#0 → 糸玉#7  Amount 0  Slot 1
+Discharge   糸玉#7 → 勇者#5  Amount 64  Slot 2  ReceiverDensity 7         ← 糸玉からも太い雷
+Damage   糸玉#7 → 勇者#5  Amount 64  Slot 0
+…
+Discharge   召喚獣#18 → 勇者#5  Amount 64  Slot 3  ReceiverDensity 7
+Discharge   糸玉#14 → 勇者#5  Amount 64  Slot 3  ReceiverDensity 7
+```
+
+**DemoApp へ**: 段0 は規定（「怖気」が減るだけ・新しい表示は要らない）。DR は版のみ——ポンが G1〜G3 を選んだら規定になる。

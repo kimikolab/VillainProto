@@ -3528,11 +3528,13 @@ public static class UnitCatalog
     };
 
     /// <summary>
-    /// 電気鞭のシガ（規定）。<b>第322期に SA（育つ）を規定にした</b>（ポンの判断・design/PHASE322_SHIGA_DISCHARGE_SPEC.md §2-1）——
+    /// 電気鞭のシガ（第322〜325期の規定）。<b>第322期に SA（育つ）を規定にした</b>（ポンの判断・design/PHASE322_SHIGA_DISCHARGE_SPEC.md §2-1）——
     /// 第319〜321期の規定（<see cref="ShigaH321"/>）＋ <see cref="TraitId.ChargeUncapped"/>（蓄電の上限なし）＋ <see cref="TraitId.ChargeKeep"/>（割り込みで蓄電を使わない）。
     /// 札は第321期の <see cref="ShigaSA"/> と同じ（文面だけ叩き台に差し替えた）。蓄電1つにつき攻撃力 +3 のまま。
+    /// <para><b>第326期に段0（2倍で入れた的は怖くない）を規定に足したので、旧の規定の定義を明示的に持つ</b>（第325期まで <see cref="Shiga"/> と同じ物だった）。
+    /// <see cref="All"/> にも <see cref="Retired"/> にも入れない。第325期までの規定のシガで測った器具はこれに固定する（`Common.PinS325`）。第322期の版（SA-SD）もこれから作る。</para>
     /// </summary>
-    public static readonly UnitDef Shiga = new()
+    public static readonly UnitDef ShigaH325 = new()
     {
         Id = ShigaH321.Id,
         Name = ShigaH321.Name,
@@ -3549,6 +3551,35 @@ public static class UnitCatalog
         MinusText = ShigaH321.MinusText,
         Flavor = ShigaH321.Flavor
     };
+
+    /// <summary>
+    /// 電気鞭のシガ（規定）。<b>第326期に段0（怖気の判定のずれ）を直した</b>（指示書 design/PHASE326_DENSE_CONDUCT_SPEC.md §2・不具合扱い）——
+    /// 第322〜325期の規定（<see cref="ShigaH325"/>）＋ <see cref="TraitId.ScourgeFearDoubled"/>（鞭の主目標に当たる前の2倍が入っていれば怖気づかない）。
+    /// 2倍の判定は「動けない敵」と「感電している敵」（<see cref="TraitId.ScourgeShock"/>）なので、文面のマイナスの括弧に「感電した敵」を足した。
+    /// </summary>
+    public static readonly UnitDef Shiga = new()
+    {
+        Id = ShigaH325.Id,
+        Name = ShigaH325.Name,
+        MaxHp = ShigaH325.MaxHp,
+        Attack = ShigaH325.Attack,
+        Speed = ShigaH325.Speed,
+        Advances = ShigaH325.Advances,
+        Pattern = ShigaH325.Pattern,
+        Traits = ShigaH325.Traits.Append(TraitId.ScourgeFearDoubled).ToArray(),
+        Actions = ShigaH325.Actions,
+        PlusText = ShigaH325.PlusText,
+        MinusText = ShigaFearFix326(ShigaH325.MinusText),
+        Flavor = ShigaH325.Flavor
+    };
+
+    /// <summary>第317〜325期の規定のシガのマイナスの括弧（第326期に段0 の句へ差し替える）。</summary>
+    public const string ShigaDauntBoundClause = "（萎縮した敵は動けない敵とみなす）";
+    /// <summary>第326期 段0 のマイナスの括弧（叩き台）: 2倍の判定と同じ「動けない」——萎縮した敵と感電した敵。</summary>
+    public const string ShigaDoubledBoundClause = "（萎縮した敵・感電した敵は動けない敵とみなす）";
+    static string ShigaFearFix326(string minus) => minus.Contains(ShigaDauntBoundClause, StringComparison.Ordinal)
+        ? minus.Replace(ShigaDauntBoundClause, ShigaDoubledBoundClause, StringComparison.Ordinal)
+        : throw new InvalidOperationException("第326期: 旧の規定のシガのマイナスの文面に萎縮の括弧が見つからない");
 
     /// <summary>第322期の規定（SA）の蓄電の句（叩き台・指示書 §2-1）。</summary>
     public const string ShigaChargeClause322 = "帯電するたび電気が溜まり、溜まった分だけ鞭が重くなる（使っても減らない）。そばで感電が弾けるたび、割り込んで鞭を振るう";
@@ -3613,10 +3644,18 @@ public static class UnitCatalog
     };
 
     /// <summary>第322期 SA-SD。規定のシガ（SA）＋ <see cref="TraitId.WhipDischarge"/>——鞭で弾けさせた敵の感電は消さない（放電だけ）。</summary>
-    public static readonly UnitDef ShigaSD = ShigaOn322(Shiga);
+    public static readonly UnitDef ShigaSD = ShigaOn322(ShigaH325);   // 第326期: 第322〜325期の規定（旧の規定）から作る（中身は変わらない）
 
     /// <summary>第322期 SA+-SD。第321期の SA+（<see cref="ShigaSAp"/>）＋ <see cref="TraitId.WhipDischarge"/>（連撃の各振りで起きる）。</summary>
     public static readonly UnitDef ShigaSApSD = ShigaOn322(ShigaSAp);
+
+    /// <summary>第326期 SA+（段0 入り）。第321期の SA+（<see cref="ShigaSAp"/>）＋ <see cref="TraitId.ScourgeFearDoubled"/>（DR-b ＋ SA+ の版のシガ）。文面は SA+ のマイナスに段0 の括弧。</summary>
+    public static readonly UnitDef ShigaSApF = new()
+    {
+        Id = ShigaSAp.Id, Name = ShigaSAp.Name, MaxHp = ShigaSAp.MaxHp, Attack = ShigaSAp.Attack, Speed = ShigaSAp.Speed, Advances = ShigaSAp.Advances, Pattern = ShigaSAp.Pattern,
+        Traits = ShigaSAp.Traits.Append(TraitId.ScourgeFearDoubled).ToArray(), Actions = ShigaSAp.Actions,
+        PlusText = ShigaSAp.PlusText, MinusText = ShigaFearFix326(ShigaSAp.MinusText), Flavor = ShigaSAp.Flavor
+    };
 
     // ---------------------------------------------------------------------------------
     // 第323期 —— トウの粉の濃さ（TD）と粉の伝染（TP）の版（指示書 design/PHASE323_TOU_POWDER_SPEC.md）。規定のトウ ／ カタ ／ クグの末尾に札を足すだけ。
@@ -3685,6 +3724,33 @@ public static class UnitCatalog
     public static readonly UnitDef TouTDbBTPe = Stack324(new[] { TraitId.PowderDense, TraitId.PowderDenseKeep, TraitId.PowderDenseBurn, TraitId.PowderContagion, TraitId.PowderMarkFoeOnly });
     /// <summary>第324期 TD-b焼 × TP-e′。</summary>
     public static readonly UnitDef TouTDbBTPeDry = Stack324(new[] { TraitId.PowderDense, TraitId.PowderDenseKeep, TraitId.PowderDenseBurn, TraitId.PowderContagion, TraitId.PowderMarkFoeOnly, TraitId.PowderContagionDry });
+    // ---------------------------------------------------------------------------------
+    // 第326期 —— 濃い駒は放電をよく通す（DR-a ／ DR-b・指示書 design/PHASE326_DENSE_CONDUCT_SPEC.md §3）。規定のトウ（E3）の末尾に札を1枚足し、濃さの句を差し替える（叩き台）。
+    // `All` にも `Retired` にも入れない。
+    // ---------------------------------------------------------------------------------
+
+    /// <summary>規定のトウの濃さの句（第326期の版はここを差し替える）。</summary>
+    public const string TouDenseHeavyClause = "弾けたときの放電が重くなり";
+    /// <summary>第326期 DR-a の濃さの句（叩き台・指示書 §3-1）。</summary>
+    public const string TouDenseRecvClause = "濃い駒は浴びる雷が重くなり";
+    /// <summary>第326期 DR-b の濃さの句（叩き台・指示書 §3-1）。</summary>
+    public const string TouDenseBothClause = "濃い駒は放つ雷も浴びる雷も重くなり";
+
+    static UnitDef TouOn326(TraitId add, string clause) => new()
+    {
+        Id = Tou.Id, Name = Tou.Name, MaxHp = Tou.MaxHp, Attack = Tou.Attack, Speed = Tou.Speed, Advances = Tou.Advances, Pattern = Tou.Pattern,
+        Traits = Tou.Traits.Append(add).ToArray(), Actions = Tou.Actions,
+        PlusText = Tou.PlusText.Contains(TouDenseHeavyClause, StringComparison.Ordinal)
+            ? Tou.PlusText.Replace(TouDenseHeavyClause, clause, StringComparison.Ordinal)
+            : throw new InvalidOperationException("第326期: 規定のトウの文面に濃さの句が見つからない"),
+        MinusText = Tou.MinusText, Flavor = Tou.Flavor
+    };
+
+    /// <summary>第326期 DR-a。規定のトウ（E3）＋ <see cref="TraitId.DenseConduct"/>——放電1回の量は 8 ×（1 ＋ 受け手の濃さ）（出し手の濃さは量に効かない・焼は今のまま）。</summary>
+    public static readonly UnitDef TouDRa = TouOn326(TraitId.DenseConduct, TouDenseRecvClause);
+    /// <summary>第326期 DR-b。規定のトウ（E3）＋ <see cref="TraitId.DenseConductBoth"/>——放電1回の量は 8 ×（1 ＋ 出し手の濃さ ＋ 受け手の濃さ）。</summary>
+    public static readonly UnitDef TouDRb = TouOn326(TraitId.DenseConductBoth, TouDenseBothClause);
+
     /// <summary>第323期 カタの版（返す）。規定のカタ ＋ <see cref="TraitId.ThunderPowderReturn"/>（濃さの保持者がいない戦では何も起きない）。</summary>
     public static readonly UnitDef KataTDR = On323(KataH324, new[] { TraitId.ThunderPowderReturn }, KataPowderReturnText);
     /// <summary>第323期 クグの版（返す）。規定のクグ ＋ <see cref="TraitId.ThreadPowderFlow"/>。</summary>
