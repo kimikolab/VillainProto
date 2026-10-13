@@ -9,23 +9,26 @@ public partial class PowderBurnBurst3D : Node3D
     private Sprite3D _flash = null!;
     private Vector3 _right, _up, _front;
     private bool _drawing;
+    private bool _compact;
     internal int RayCount { get; private set; }
     internal int PulseCount { get; private set; }
     internal float Radius { get; private set; }
     internal float Duration { get; private set; }
+    internal float Brightness { get; set; } = 1;
     internal static float Level(int density) => Math.Min(7, MathF.Log2(1f + Math.Max(0, density)));
     // 火花の連続閃光とSEは同じ小・中・大の段階を使う。
     internal static int SizeTier(int density) => 1 + Math.Min(2, (int)(Level(density) / 2));
     internal static float DurationFor(int density) => .72f + Level(density) * .045f;
 
-    internal void Configure(Camera3D camera, int density)
+    internal void Configure(Camera3D camera, int density, bool compact = false)
     {
+        _compact = compact;
         _right = camera.GlobalBasis.X; _up = camera.GlobalBasis.Y; _front = camera.GlobalBasis.Z;
         float level = Level(density);
-        Radius = .62f + level * .23f;
-        RayCount = 16 + (int)(level * 7);
-        PulseCount = SizeTier(density);
-        Duration = DurationFor(density);
+        Radius = compact ? .20f + level * .055f : .62f + level * .23f;
+        RayCount = compact ? 8 + (int)(level * 3) : 16 + (int)(level * 7);
+        PulseCount = compact ? 1 + Math.Min(3, (int)(level / 1.5f)) : SizeTier(density);
+        Duration = compact ? .15f + (PulseCount - 1) * .045f : DurationFor(density);
         AddChild(new MeshInstance3D {
             Mesh = _mesh,
             MaterialOverride = new StandardMaterial3D {
@@ -36,7 +39,8 @@ public partial class PowderBurnBurst3D : Node3D
                 NoDepthTest = true, RenderPriority = 2,
             }, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
         });
-        _flash = ShockMarkFx.Sprite(this, GlobalPosition, ShockMarkFx.Halo, .72f + level * .10f, Colors.White);
+        _flash = ShockMarkFx.Sprite(this, GlobalPosition, ShockMarkFx.Halo,
+            compact ? .25f + level * .035f : .72f + level * .10f, Colors.White);
         _flash.NoDepthTest = true; _flash.RenderPriority = 3;
     }
 
@@ -49,11 +53,11 @@ public partial class PowderBurnBurst3D : Node3D
         float flash = 0;
         for (int pulse = 0; pulse < PulseCount; pulse++)
         {
-            float elapsed = age - pulse * .16f;
+            float elapsed = age - pulse * (_compact ? .045f : .16f);
             if (elapsed < 0 || elapsed > .68f) continue;
-            float life = .46f + pulse * .035f;
+            float life = _compact ? .15f : .46f + pulse * .035f;
             float fade = Math.Max(0, 1 - elapsed / life);
-            flash += MathF.Exp(-elapsed * 13) * (pulse == 0 ? 1 : .65f);
+            flash += MathF.Exp(-elapsed * (_compact ? 30 : 13)) * (pulse == 0 ? 1 : .65f);
             for (int i = 0; i < RayCount; i++)
             {
                 float rayAge = elapsed - i % 7 * .004f;
@@ -64,11 +68,11 @@ public partial class PowderBurnBurst3D : Node3D
                 float length = Radius * (.38f + varied * .82f) * (i % 9 == 0 ? 1.25f : 1);
                 float head = .08f + length * (1 - MathF.Exp(-rayAge * 15));
                 float tail = Math.Max(.07f, head - length * (.70f - Math.Min(.5f, rayAge * .60f)));
-                float brightness = fade * (.65f + varied * .35f);
+                float brightness = fade * (.65f + varied * .35f) * Brightness;
                 if (brightness <= 0) continue;
                 Vector3 a = center + direction * tail;
                 Vector3 b = center + direction * head;
-                float width = (i % 9 == 0 ? .020f : .008f) * (1 + Radius * .16f);
+                float width = (i % 9 == 0 ? .020f : .008f) * (1 + Radius * .16f) * (_compact ? .65f : 1);
                 // 外縁は深紅、針は朱赤、細い芯は赤みの白。麻痺の黄色と区別する。
                 Needle(a, b, width * 3.0f, new Color(new Color("d81935"), brightness * .24f));
                 Needle(a, b, width, new Color(new Color("ff3045"), brightness));
@@ -81,7 +85,7 @@ public partial class PowderBurnBurst3D : Node3D
             }
             // 薄い衝撃の輪が胴から広がり、発火点と広がりを一緒に読めるようにする。
             float ringRadius = Radius * (.16f + elapsed * .75f);
-            float ringFade = Math.Max(0, 1 - elapsed / .32f) * .48f;
+            float ringFade = Math.Max(0, 1 - elapsed / (_compact ? .12f : .32f)) * .48f * Brightness;
             if (ringFade > 0)
                 for (int i = 0; i < 64; i++)
                 {
@@ -92,7 +96,7 @@ public partial class PowderBurnBurst3D : Node3D
         }
         if (_drawing) _mesh.SurfaceEnd();
         _flash.GlobalPosition = center;
-        _flash.Modulate = new Color(new Color("ffaaa8"), Math.Min(.95f, flash));
+        _flash.Modulate = new Color(new Color("ffaaa8"), Math.Min(.95f, flash) * Brightness);
         _flash.Scale = Vector3.One * (1 + Math.Min(age, .20f) * 1.8f);
     }
 

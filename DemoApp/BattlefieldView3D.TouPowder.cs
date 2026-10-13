@@ -33,6 +33,8 @@ public partial class BattlefieldView3D
     {
         _powderPaused = paused; _powderSpeed = Math.Max(.1, speed);
         _attackAudio.SetPowderBurnClock(paused, speed);
+        _attackAudio.SetDustCrackleClock(paused, speed);
+        DustChain?.SetClock(paused, speed);
         _powderEffects.RemoveAll(f => !IsInstanceValid(f) || f.IsQueuedForDeletion());
         foreach (var fx in _powderEffects) fx.SetClock(paused, _powderSpeed);
         foreach (var aura in _powderAuras.Values)
@@ -42,6 +44,8 @@ public partial class BattlefieldView3D
     private void EndTouPowder()
     {
         _attackAudio.StopPowderBurn();
+        _attackAudio.StopDustCrackle(); DustChain?.Cancel(); _dustChain = null;
+        DustBurstCompletion = Task.FromResult(true); _ballPowder.Clear();
         foreach (var fx in PowderEffects.ToArray()) fx.Cancel();
         if (_touPowderRoot is not null && IsInstanceValid(_touPowderRoot))
         { _touPowderRoot.Hide(); _touPowderRoot.QueueFree(); }
@@ -54,6 +58,7 @@ public partial class BattlefieldView3D
     {
         EndTouPowder();
         PowderDensePlays = PowderFlowPlays = PowderMovePlays = PowderPopPlays = PowderBurnPlays = PowderMarkPlays = PowderContagionPlays = PowderHeavyPlays = 0;
+        DustBurstPlays = DustChainPlays = DustDamageSummaries = 0;
     }
 
     private void PowderAura(BattlePawn3D target)
@@ -79,7 +84,7 @@ public partial class BattlefieldView3D
         PowderEffect(TouPowderFxKind.Lift, actor.FxPoint, actor.FxPoint + Vector3.Up * 4, speed, actor.PowderDensity);
     }
 
-    internal bool ShowTouPowder(BattleEvent e, double speed)
+    internal bool ShowTouPowder(BattleEvent e, double speed, bool scheduledDust = false)
     {
         if (e.Kind != BattleEventKind.ShockGauge) return false;
         if (_powderSpeed != speed) SetTouPowderClock(_powderPaused, speed);
@@ -89,6 +94,7 @@ public partial class BattlefieldView3D
         {
             case ShockGaugeLabels.Dense:
                 PowderDensePlays++;
+                if (e.TargetId is int denseBall) BallPowder(denseBall, e.Amount);
                 if (target is not null)
                 {
                     target.SetPowderDensity(e.Amount); PowderAura(target);
@@ -97,6 +103,7 @@ public partial class BattlefieldView3D
                 break;
             case ShockGaugeLabels.PowderMark:
                 PowderMarkPlays++;
+                if (e.TargetId is int markedBall) BallPowder(markedBall, marked: true);
                 if (target is not null) { target.SetPowderMark(); PowderAura(target); }
                 break;
             case ShockGaugeLabels.DenseFlow:
@@ -120,11 +127,13 @@ public partial class BattlefieldView3D
                 break;
             case ShockGaugeLabels.DensePop:
                 PowderPopPlays++;
+                if (scheduledDust || DustChain is not null) break;
                 if (target is not null)
                     PowderEffect(TouPowderFxKind.Pop, target.DischargePoint, target.DischargePoint, speed, e.Amount);
                 break;
             case ShockGaugeLabels.DenseBurn:
                 PowderBurnPlays++;
+                if (scheduledDust || DustChain is not null) break; // 爆竹の束へ重ねて大きな閃光を出さない。
                 if (target is not null)
                 {
                     // 同じ本人の発火が続いても、古い光と札を重ねて白い塊にしない。
@@ -135,6 +144,16 @@ public partial class BattlefieldView3D
                     PowderArrival = burn.Arrival;
                     float pan = Math.Clamp((_camera.UnprojectPosition(target.DischargePoint).X / _viewport.Size.X - .5f) * 1.4f, -.7f, .7f);
                     _attackAudio.PlayPowderBurn(e.Slot, pan, speed);
+                }
+                break;
+            case ShockGaugeLabels.DustBurst:
+                DustBurstPlays++;
+                if (!scheduledDust && DustChain is null)
+                {
+                    // 単独通知にも同じ演出を出す。連鎖の着弾は先読み側で接続する。
+                    var one = new DustBurstPresentation.Chain(0, 0, Array.Empty<int>(),
+                        new[] { new DustBurstPresentation.Burst(0, Array.Empty<int>()) }, new Dictionary<int, int>());
+                    BeginDustBurstChain(one, new[] { e }, speed);
                 }
                 break;
             case ShockGaugeLabels.Contagion:

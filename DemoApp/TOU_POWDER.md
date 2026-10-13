@@ -1,15 +1,37 @@
 # トウの粉の演出
 
-`design/CODEX_BRIEF_TOU_POWDER.md` と `design/PHASE291_CODEX_MEMO.md` §19〜21 に合わせた再生側の実装。
+`design/CODEX_BRIEF_TOU_POWDER.md`・追補 `design/CODEX_BRIEF_DUST_BURST.md` と `design/PHASE291_CODEX_MEMO.md` §19〜24 に合わせた再生側の実装。
 戦闘ルール・台本・HP計算は変更しない。
 
-- 濃さ：胴の周囲の金色の粒と小さな「粉 n」。数値は台本の実数、常駐粒は最大12粒。帯電が弾けても残り、死亡・終了で消える。
+- 濃さ：胴の周囲の金色の粒と小さな「粉 n」。糸玉の濃さも独立して表示する。数値は台本の実数、常駐粒は最大12粒。帯電が弾けても残り、死亡・終了で消える。
 - 粉の印：台本に印が出た駒に少量の粒を残す。規定の台本では敵だけ。
 - カタ：1発目の雷と「濃さ・移した」を先読みで接続。体の粉を上へ吸い上げ、金色の雷と粉を敵へ落とす。移した通知でカタの濃さを0にする。
 - クグ：トウ→クグの粉と、クグ→組み付いた相手の糸に沿う粉。到着後に相手の濃さを更新し、今回の粉はクグに残さない。以前に積もった濃さがあっても、流す通知だけで消さない。
 - 重い放電：台本の `Discharge.Amount` に応じて青白い芯を重ねる。糸玉・召喚獣の端点にも対応。濃さで太さは増すが、隣の糸玉へ走る短い雷が太い塊にならない上限にする。
 - 粉焼：本人の胴から赤みの白い芯・朱赤の長い針状火花・赤い光の輪が弾け、立ち絵には赤い内光と焦げ色を重ねる。麻痺の黄色と区別する。粉の濃さに応じて火花の本数・半径・残光が増す。濃い粉では最大3回の閃光。残光は約0.77〜1.04秒、点火0.28秒後に台本の本人へのダメージを表示。青白い放電と区別できる色・形にする。隣がいないボス戦でも本人だけに出る。通常の燃焼状態は付けない。
 - 伝染：金色の粒を伝う短い火花が0.20秒で這う。到着してから、対応する `StatusGain` の帯電を表示。普通の放電や味方への漏れ雷と混同しない。
+- 粉塵爆発：`ShockGaugeLabels.DustBurst` の受け手（本人・糸玉）で小さな赤い閃光が破裂し、直後の台本の着弾先へ青白い枝と赤い粒が走る。濃さによって針の数・半径・破裂回数（最大4回）を増す。味方側の火花は明るさ75%。
+
+第328期から粉塵爆発とクグの電池は規定。追補の「版のみ」は§24の追記で更新されており、台本に通知があればプリセット名に関係なく再生する。
+試遊の「試遊・感電 ポンの台」で確認できる。
+
+## 爆竹の連なり（2026-10-14）
+
+`DustBurstPresentation` は行動の境界を越えず、放電連鎖と粉塵爆発の直後の実際の着弾だけを読む。
+一団の放電を0〜0.24秒にずらし、着火は各放電の0.075秒後。細い飛び火は着火の0.02秒後に走る。
+間隔は後半ほど詰まり、全体0.60秒で終了する。HP・死亡・回復・帯電・糸玉の再帯電は元の通知順で処理する。
+この一団では古い大きな粉焼の閃光・重複SEを重ねず、爆竹の束で表す。通常の粉焼の台本は従来の赤い演出を使う。
+
+爆発ダメージは台本の `Damage.Amount` を同じ相手ごとに合計し、連鎖の0.44秒時点で各相手に1つだけ表示。
+通常攻撃の数字へ足し込まず、500以上だけ大きくする。数字は0.8秒で消える。
+戦闘上の隣接・濃さ・ダメージは計算しない。存在しない相手への飛び火も追加しない。
+時計は一時停止・途中の速度変更と共通。離脱・再戦では予約した破裂・音・数字と終了待ちを取り消す。
+
+音は指定済みのPhoenix Spark 001〜003の冒頭を軽く短く重ねる。小-13 / 中-11 / 大-9 dB、4枠まで。
+最低35msの実時間間隔と同フレームの集約で密集を抑え、音程は維持する。追加のSE素材は不要。
+購入済み `electric_sparks_2.tscn` を短い補助火花として複製し、一団に最大8 emitter。
+`impact_1.tscn` は複数の衝撃面・光源を持ち、一発が大きくなるため採用しない。
+赤い小破裂と青白い枝は既存の専用メッシュを使い、素材を外しても再生できる。
 
 粉の移動・常駐・焼の時計は本編の一時停止と途中の倍速変更に接続。
 クグの糸・伝染の到着と粉焼の点火は演出の時計で待ち、画面離脱・再戦では待ちをキャンセルする。
@@ -58,6 +80,9 @@ Godot_console.exe --headless --path DemoApp res://ShockMarkCheck.tscn -- --powde
 Godot_console.exe --headless --path DemoApp res://ShockMarkCheck.tscn -- --powder --verify --replay-only --powder-live
 Godot_console.exe --path DemoApp res://ShockMarkCheck.tscn -- --powder --capture-dir=C:/works/VillainProto/output/tou-powder-check
 Godot_console.exe --path DemoApp res://ShockMarkCheck.tscn -- --powder-readability --capture-dir=C:/works/VillainProto/output/tou-powder-readable
+Godot_console.exe --headless --path DemoApp res://ShockMarkCheck.tscn -- --dust-burst --verify
+Godot_console.exe --headless --path DemoApp res://ShockMarkCheck.tscn -- --dust-burst --verify --replay-only --dust-live
+Godot_console.exe --path DemoApp res://ShockMarkCheck.tscn -- --dust-burst --dust-clip --capture-dir=C:/works/VillainProto/output/dust-burst
 ```
 
 確認対象は「試遊・感電 粉 隣あり／隣なし」× ボス／近衛／大隊 × seed 0、初戦・再戦。
@@ -67,6 +92,10 @@ Godot_console.exe --path DemoApp res://ShockMarkCheck.tscn -- --powder-readabili
 左右・1倍／2倍、途中の速度変更、死亡・離脱・再戦、購入火花を外した代替描画も確認する。
 `--powder-mix` は小・中・大×左右×1・2・4倍速でMasterの実出力を採取する。
 音量を10 dB上げた設定では単発のピーク約0.35〜0.62を確認し、全18条件で無音・単発のクリップなし。
+
+粉塵爆発は濃さ1・12・30、8つの糸玉からの飛び火、合計表示、一時停止、倍速、離脱・再戦を確認。
+連続SEは1・2・4倍速でMasterの実出力を測る。「ポンの台」×ボス／近衛／大隊×seed 0、初戦・再戦では
+粉塵爆発がそれぞれ78／22／1回、連鎖は17／15／1組。通知件数と最終HPを照合した。
 
 `compare` は全セル一致、`audit` はずれているファイル0件。`BattleCore` と `docs/` の変更はない。
 頭なしの複数戦再生は完了後に既存のCanvasItem／Font／ObjectDB解放警告が残ることがある。

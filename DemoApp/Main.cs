@@ -1263,6 +1263,7 @@ public partial class Main : Control
             if (_turnTicks.Starts.TryGetValue(eventIndex, out var ticks))
                 await PlayTurnTicks(ticks, token);
             else await ApplyEvent(e, eventIndex);
+            await FinishDustBurst(eventIndex);
             _dohaFastEvent = false;
             if (token != _playToken || !_battleMode) return;
             await FinishZan(eventIndex);
@@ -1373,6 +1374,7 @@ public partial class Main : Control
 
     private async Task ApplyEvent(BattleEvent e, int eventIndex)
     {
+        StartDustBurst(eventIndex);
         _dohaFastEvent = _dohaShares.FastEvents.Contains(eventIndex);
         BattlePawn3D? actor = _battleField.FindPawn(e.ActorId);
         BattlePawn3D? target = _battleField.FindPawn(e.TargetId);
@@ -2031,6 +2033,7 @@ public partial class Main : Control
             break;
         }
         target?.SetHp(e.HpAfter);
+        if (ShowDustDamage(eventIndex, e)) return;
         bool poison = _statusCauseByDamageIndex.TryGetValue(eventIndex, out string? status)
             && status == StatusKeys.LabelOf(StatusKeys.Poison);
         target?.AnimateHit(poison, _numbDamage.GetValueOrDefault(eventIndex, 1f));
@@ -2497,6 +2500,7 @@ public partial class Main : Control
 
     private async Task Delay(double seconds, bool raw = false)
     {
+        if (!raw && _dustChainFastEvent) return;
         if (!raw && _dohaFastEvent) seconds = Math.Min(seconds, 0.04);
         if (!raw && (_fireFastEvent || _misaFastEvent || _zanFastEvent)) return;
         if (!raw && _tickDelayBudget is double budget)

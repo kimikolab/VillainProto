@@ -25,6 +25,7 @@ public partial class Main
     private void IndexThunder(IReadOnlyList<BattleEvent> events)
     {
         _touPowder = TouPowderPresentation.Build(events);
+        _dustBurst = DustBurstPresentation.Build(events);
         _shockStages.Clear(); _shockStageMembers.Clear(); _electricDeaths.Clear(); _thunderPrevious.Clear();
         int? previous = null;
         for (int i = 0; i < events.Count; i++)
@@ -78,7 +79,7 @@ public partial class Main
             await Delay(0.12);
             return true;
         }
-        if (_shockStages.TryGetValue(index, out var stage))
+        if (!_dustChainFastEvent && _shockStages.TryGetValue(index, out var stage))
         {
             _battleField.ShockStage(e.Slot);
             foreach (int j in stage)
@@ -103,6 +104,7 @@ public partial class Main
         }
         if (e.Kind == BattleEventKind.Discharge)
         {
+            if (_dustChainFastEvent) return true; // 一団の時計で既に予約した電弧。
             if (!_shockStageMembers.Contains(index))
             {
                 ShowScriptDischarge(e);

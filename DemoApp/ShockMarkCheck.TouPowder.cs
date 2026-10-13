@@ -97,17 +97,18 @@ public partial class ShockMarkCheck
     {
         var main = GD.Load<PackedScene>("res://Main.tscn").Instantiate<Main>(); AddChild(main);
         object? Read(string key) => typeof(Main).GetField(key, Flags)!.GetValue(main);
-        bool live = OS.GetCmdlineUserArgs().Contains("--powder-live");
+        bool dustLive = OS.GetCmdlineUserArgs().Contains("--dust-live");
+        bool live = dustLive || OS.GetCmdlineUserArgs().Contains("--powder-live");
         typeof(Main).GetField("_fastSmoke", Flags)!.SetValue(main, !live);
         typeof(Main).GetField("_speed", Flags)!.SetValue(main, live ? 4.0 : 1000.0);
-        var formation = Presets.Playtest.Single(p => p.Name == name).F;
+        var formation = Presets.Playtest.Concat(Presets.Versions).Single(p => p.Name == name).F;
         typeof(Main).GetMethod("EnterBattle", Flags)!.Invoke(main, new object[] {
             BattleEngine.Materialize(formation, 0),
             BattleEngine.MaterializeEnemy(EnemyCatalog.PlaytestStages[stage].Enemy, EnemyCatalog.PlaytestStages[stage].Scale),
             seed, stage, name });
         var result = (BattleResult)Read("_result")!;
         var field = (BattlefieldView3D)Read("_battleField")!;
-        bool adjacent = name.EndsWith("隣あり");
+        bool adjacent = name.EndsWith("隣あり") || name == "試遊・感電 ポンの台";
         if (stage == 0)
         {
             if (adjacent) Require(result.Events.Any(e => e.Text == ShockGaugeLabels.DenseBurn), "隣あり・単体ボスで粉焼の陽性対照");
@@ -120,9 +121,9 @@ public partial class ShockMarkCheck
         {
             for (int k = 0; k < 2400 && (bool)Read("_playing")!; k++)
             {
-                if (live && !checkedPause && !field.PowderArrival.IsCompleted)
+                if (live && !checkedPause && (dustLive ? field.DustChain is not null && !field.DustBurstCompletion.IsCompleted : !field.PowderArrival.IsCompleted))
                 {
-                    var arrival = field.PowderArrival;
+                    var arrival = dustLive ? field.DustBurstCompletion : field.PowderArrival;
                     typeof(Main).GetMethod("TogglePause", Flags)!.Invoke(main, null);
                     int pausedIndex = (int)Read("_eventIndex")!;
                     await Wait(.15);
@@ -133,7 +134,7 @@ public partial class ShockMarkCheck
                     await Capture("tou-live-paused");
                     typeof(Main).GetMethod("TogglePause", Flags)!.Invoke(main, null);
                     checkedPause = true;
-                    GD.Print("TOU_POWDER_LIVE_PAUSE_OK");
+                    GD.Print(dustLive ? "DUST_BURST_LIVE_PAUSE_OK" : "TOU_POWDER_LIVE_PAUSE_OK");
                 }
                 await Wait(.05);
             }
@@ -162,10 +163,13 @@ public partial class ShockMarkCheck
         Require(field.PowderBurnPlays == Count(ShockGaugeLabels.DenseBurn), "粉焼の件数");
         Require(field.PowderMarkPlays == Count(ShockGaugeLabels.PowderMark), "粉の印の件数");
         Require(field.PowderContagionPlays == Count(ShockGaugeLabels.Contagion), "伝染の件数");
+        Require(field.DustBurstPlays == Count(ShockGaugeLabels.DustBurst), "糸玉を含む粉塵爆発の件数");
+        int dustChains = DustBurstPresentation.Build(result.Events).Starts.Count;
+        Require(field.DustChainPlays == dustChains, $"爆竹の連鎖の束ね件数 {field.DustChainPlays}/{dustChains}");
         var plan = TouPowderPresentation.Build(result.Events);
         Require(plan.ThunderReturns.Count == Count(ShockGaugeLabels.DenseMove), "雷の1発目と粉返しを全件接続");
         Require(plan.ContagionGains.Count == Count(ShockGaugeLabels.Contagion), "伝染の付与だけを移動に接続");
         Require(field.ActivePowderEffects == 0 && field.Pawns.Values.All(p => !p.PowderMarked && p.PowderDensity == 0), "終了で粉を残さない");
-        GD.Print($"TOU_POWDER_REPLAY_OK dense={field.PowderDensePlays} return={field.PowderMovePlays}/{field.PowderFlowPlays} burn={field.PowderBurnPlays} contagion={field.PowderContagionPlays} heavy={field.PowderHeavyPlays}");
+        GD.Print($"TOU_POWDER_REPLAY_OK dense={field.PowderDensePlays} return={field.PowderMovePlays}/{field.PowderFlowPlays} burn={field.PowderBurnPlays} contagion={field.PowderContagionPlays} heavy={field.PowderHeavyPlays} dust={field.DustBurstPlays}/{field.DustChainPlays}");
     }
 }
