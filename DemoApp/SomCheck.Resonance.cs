@@ -46,11 +46,16 @@ public partial class SomCheck
     {
         var labels = new HashSet<string>();
         int battles = 0, grouped = 0;
-        foreach (string name in new[] { "試遊・感電 光の盾", "試遊・感電 打ち返し", "試遊・感電 追い打ち", "試遊・感電 瓦礫" })
+        // 粉の現行版ではクグ自身が帯電し、糸より先に共鳴の枝へ入る。
+        // 糸は粉のいない台も使って実台本で検査する（ロスターの採用札は変えない）。
+        var formations = new[] { "試遊・感電 光の盾", "試遊・感電 打ち返し", "試遊・感電 追い打ち", "試遊・感電 瓦礫" }
+            .Select(name => (Name: name, F: Presets.Playtest.First(p => p.Name == name).F))
+            .Append((Name: "糸の確認", F: Formation.Build(front1: UnitCatalog.Kugu, front3: UnitCatalog.Kado,
+                center: UnitCatalog.Tsugi, back1: UnitCatalog.Gald, back3: UnitCatalog.Som)));
+        foreach (var (name, formation) in formations)
         foreach (bool campaign in new[] { false, true })
         for (int seed = 0; seed < 12; seed++)
         {
-            var formation = Presets.Playtest.First(p => p.Name == name).F;
             var enemy = campaign ? BattleEngine.Materialize(EnemyCatalog.Stages[1].Enemy, 1)
                 : BattleEngine.MaterializeEnemy(EnemyCatalog.PlaytestStages[0].Enemy, EnemyCatalog.PlaytestStages[0].Scale);
             var events = BattleEngine.Run(BattleEngine.Materialize(formation, 0), enemy, seed, verbose: true).Events;
@@ -68,7 +73,8 @@ public partial class SomCheck
             foreach (var e in events.Where(e => e.Kind == BattleEventKind.BeastThrow && e.Text is not null)) labels.Add(e.Text!);
         }
         Require(grouped > 0 && new[] { BeastThrowLabels.Hit, BeastThrowLabels.Thread, BeastThrowLabels.Resonance,
-            BeastThrowLabels.Hushed, BeastThrowLabels.Arc, BeastThrowLabels.Backswing }.All(labels.Contains), "実台本で群れと全分岐を確認");
+            BeastThrowLabels.Hushed, BeastThrowLabels.Arc, BeastThrowLabels.Backswing }.All(labels.Contains),
+            $"実台本で群れと全分岐を確認 grouped={grouped} labels={string.Join(",", labels)}");
         GD.Print($"SOM_RESONANCE_PLAN_OK battles={battles} grouped={grouped}");
     }
 

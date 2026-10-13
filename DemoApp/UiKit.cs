@@ -33,7 +33,7 @@ public static class UiKit
 
     private static string? FindPortrait(string key)
     {
-        if (IsSomSpirit(key)) return "res://assets/fx/som_spirit_portrait.svg";
+        if (IsSomSpirit(key)) return SomSpiritPortrait(key);
         if (PortraitPathCache.TryGetValue(key, out string? cached)) return cached;
         string path = PortraitPathOf(key);
         string? found = Godot.FileAccess.FileExists(path) ? path : null;
@@ -43,7 +43,7 @@ public static class UiKit
 
     private static string? FindBattlePortrait(string key)
     {
-        if (IsSomSpirit(key)) return "res://assets/fx/som_spirit_portrait.svg";
+        if (IsSomSpirit(key)) return SomSpiritPortrait(key);
         if (BattlePortraitPathCache.TryGetValue(key, out string? cached)) return cached;
         string path = BattlePortraitPathOf(key);
         // 待機の構え差分を優先し、従来の立ち絵も素材として残す。
@@ -56,6 +56,8 @@ public static class UiKit
 
     private static readonly Dictionary<string, Texture2D> PortraitCache = new(StringComparer.Ordinal);
     private static bool IsSomSpirit(string key) => key == "fodder" || key.StartsWith("fodder_", StringComparison.Ordinal);
+    private static string SomSpiritPortrait(string key)
+        => key.StartsWith("fodder_majestic", StringComparison.Ordinal) ? SomSpiritArt.InterruptPath : SomSpiritArt.TurnPath;
     private static readonly Dictionary<string, Texture2D> BattlePortraitCache = new(StringComparer.Ordinal);
     private static ShaderMaterial? _portraitCutoutMaterial;
 
@@ -197,7 +199,7 @@ public static class UiKit
         "susu" => 2.50f, // 血詠みのアカ（内部IDは旧ススのまま）
         "kata" => 2.50f,
         "som" => 2.50f,
-        "fodder" => 0.95f, // 台本名は背いた獣。絵は浮遊する小さな光核。
+        "fodder" => 1.72f, // 手番の雷人形。割り込みは専用ノードで小柄な雷精を描く。
         "kado" => 2.40f,
         "sid" => 2.55f,
         "borg" => 2.65f,

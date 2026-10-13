@@ -25,6 +25,22 @@ public partial class SomCheck
         events.Add(new() { Turn = 1, Kind = BattleEventKind.Attack, ActorId = 20 });
         plan = SomPresentation.Build(events);
         Require(plan.DauntedAttacks.SetEquals(new[] { 18 }), "萎縮は次の攻撃1回のみ");
+        foreach (int originalCount in new[] { 1, 3 })
+        {
+            var nested = Enumerable.Range(0, originalCount).Select(n => new BattleEvent {
+                Turn = 1, Kind = BattleEventKind.ShockSpent, TargetId = 50 + n, Team = 1, Slot = n }).ToList();
+            nested.Add(new() { Turn = 1, Kind = BattleEventKind.ShockGauge, ActorId = 2, Text = ShockGaugeLabels.Interrupt });
+            nested.Add(new() { Turn = 1, Kind = BattleEventKind.Attack, ActorId = 2, Reaction = true });
+            nested.Add(new() { Turn = 1, Kind = BattleEventKind.ShockSpent, TargetId = 60, Team = 1, Slot = 0 });
+            int inner = nested.Count;
+            nested.Add(new() { Turn = 1, Kind = BattleEventKind.Spark, ActorId = 1, Team = 0, Amount = 1, Text = SparkLabels.Release });
+            int outer = nested.Count;
+            nested.Add(new() { Turn = 1, Kind = BattleEventKind.Spark, ActorId = 1, Team = 0, Amount = originalCount, Text = SparkLabels.Release });
+            var nestedPlan = SomPresentation.Build(nested);
+            Require(nestedPlan.Rains[inner].Pops.Single() == originalCount + 2
+                && nestedPlan.Rains[outer].Pops.SequenceEqual(Enumerable.Range(0, originalCount)),
+                "蓄電を消費しない鞭の後も、元の光の出どころへ戻る（同数の連鎖も区別）");
+        }
         GD.Print("SOM_SWARM_PLAN_OK");
     }
 
@@ -48,6 +64,9 @@ public partial class SomCheck
                 new() { Turn = 1, Kind = BattleEventKind.Summon, TargetId = ids[i], Team = 1 - team, Slot = seats[i] }, false, null, i, 5, speed);
             Require(field.SomBeastCount == 5 && field.Pawns.Count == units.Length, "群れの5匹は駒を増やさない");
             Require(field.SomBeasts.All(b => b.EnergyColor == SomFx.Violet && !b.ContractCracked), "召喚直後は菫の光と契約紋");
+            Require(field.SomBeasts.All(b => b.FigureTexture == SomSpiritArt.Texture(false)
+                && b.FigureFlipped == (team == 1)), "手番の一団は雷人形で敵陣を向く");
+            await Wait(.20 / speed);
             await Capture($"swarm-team{team}-speed{speed}-appear");
             field.RunSomBurstBeasts(som, ids, true); await Wait(.18 / speed);
             field.SetSomClock(true, speed);
@@ -62,6 +81,7 @@ public partial class SomCheck
             await Wait(.14 / speed);
             Require(field.SomBeasts.All(b => b.InStance && b.FacingSummoner), "群れが一斉にこちらへ牙を剥く");
             Require(field.SomBeasts.All(b => b.ContractCracked && b.EnergyColor == SomFx.SpiritRebel), "反転した拍で紋がひび割れ黄白の雷になる");
+            Require(field.SomBeasts.All(b => b.FigureFlipped == (team == 0)), "寝返った雷人形の顔と手がソム側へ向く");
             await Capture($"stance-team{team}-speed{speed}-threat");
             field.SetSomClock(true, speed);
             var charge = field.SomBeasts.Select(b => b.Charge).ToArray();
@@ -96,6 +116,9 @@ public partial class SomCheck
             field.BeginSomCall(som, 1, true, partner, true, speed);
             await Wait(.12 / speed);
             field.PlaceSomBurstBeast(som, new() { Turn = 1, Kind = BattleEventKind.Summon, TargetId = 40, Team = 1 - team, Slot = 7 }, true, partner, 0, 1, speed);
+            Require(field.SomBeasts.Single().FigureTexture == SomSpiritArt.Texture(true)
+                && field.SomBeasts.Single().FigureTexture != SomSpiritArt.Texture(false), "緊急だけは顔・手足のある別種の雷精");
+            await Wait(.13 / speed);
             await Capture($"emergency-team{team}-speed{speed}-lookback");
             field.RunSomBurstBeasts(som, new[] { 40 }, true); await Wait(.2 / speed);
             await Capture($"emergency-team{team}-speed{speed}-run");

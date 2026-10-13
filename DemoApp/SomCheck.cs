@@ -14,13 +14,15 @@ public partial class SomCheck : Control
     {
         try
         {
+            string[] args = OS.GetCmdlineUserArgs();
             CheckLedger();
             CheckSwarmPlan();
-            CheckResonancePlan();
-            string[] args = OS.GetCmdlineUserArgs();
+            // 描画だけの確認は、現行ロスターの分岐頻度に依存せず実行できる。
+            if (!args.Contains("--visual-only")) CheckResonancePlan();
             if (!args.Contains("--verify-only"))
             {
-                if (args.Contains("--resonance-live")) await ResonanceLive();
+                if (args.Contains("--roles-only")) await SpiritRoles();
+                else if (args.Contains("--resonance-live")) await ResonanceLive();
                 else if (args.Contains("--resonance-only")) await ResonanceVisuals();
                 else { await SwarmVisuals(); if (!args.Contains("--swarm-only")) await Visuals(); }
             }
@@ -218,7 +220,8 @@ public partial class SomCheck : Control
     private async Task Capture(string name)
     {
         if (DisplayServer.GetName() == "headless") return;
-        string path = ProjectSettings.GlobalizePath(OS.GetCmdlineUserArgs().Contains("--spirit-captures")
+        string path = ProjectSettings.GlobalizePath(OS.GetCmdlineUserArgs().Contains("--roles-captures")
+            ? "res://../design/art/som/game-check/roles" : OS.GetCmdlineUserArgs().Contains("--spirit-captures")
             ? "res://../design/art/som/game-check/spirit" : OS.GetCmdlineUserArgs().Any(a => a is "--resonance-only" or "--resonance-live")
             ? "res://../design/art/som/game-check/resonance" : "res://../design/art/som/game-check/stance");
         DirAccess.MakeDirRecursiveAbsolute(path);

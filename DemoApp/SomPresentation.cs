@@ -45,7 +45,8 @@ internal sealed partial class SomPresentation
         var chain = new List<int>();
         int? rootGroup = null;
         var daunted = new HashSet<int>();
-        var interrupted = new Stack<(int? Actor, List<int> Chain)>();
+        var interrupted = new Stack<(int? Actor, List<int> Chain, int? RootGroup)>();
+        var paid = new HashSet<(int? Holder, List<int> Chain)>();
         for (int i = 0; i < events.Count; i++)
         {
             var e = events[i];
@@ -54,7 +55,8 @@ internal sealed partial class SomPresentation
             if (e.Kind == BattleEventKind.Attack && e.ActorId is int attacker && daunted.Remove(attacker))
                 plan.DauntedAttacks.Add(i);
             if (e.Kind == BattleEventKind.Death && e.TargetId is int dead) daunted.Remove(dead);
-            if (e.Kind == BattleEventKind.TurnStart) { chain = new(); rootGroup = null; interrupted.Clear(); }
+            if (e.Kind == BattleEventKind.TurnStart) { chain = new(); rootGroup = null; interrupted.Clear(); paid.Clear(); }
+            if (e.Kind == BattleEventKind.Attack && !e.Reaction) interrupted.Clear();
             if (e.Kind == BattleEventKind.ShockSpent)
             {
                 int? group = e.TargetId is int beast && beastGroups.TryGetValue(beast, out int owner) ? owner : null;
@@ -64,13 +66,25 @@ internal sealed partial class SomPresentation
             }
             if (e.Kind == BattleEventKind.ShockGauge)
             {
-                if (e.Text == ShockGaugeLabels.Interrupt) interrupted.Push((e.ActorId, chain));
+                if (e.Text == ShockGaugeLabels.Interrupt) interrupted.Push((e.ActorId, chain, rootGroup));
                 if (e.Text is ShockGaugeLabels.ChargeSpent or ShockGaugeLabels.ChargeDrained
                     && interrupted.TryPeek(out var prior) && prior.Actor == e.ActorId)
-                    chain = interrupted.Pop().Chain;
+                { var restored = interrupted.Pop(); chain = restored.Chain; rootGroup = restored.RootGroup; }
             }
             if (e.Kind != BattleEventKind.Spark || e.Text is not (SparkLabels.Release or SparkLabels.Silenced)) continue;
+            // 蓄電を保持する鞭には「蓄電・使った」が無い。割り込み中の光を払い終えた後は、
+            // 未払いの元の連鎖へ戻す。同じ数の光でも、直前の雨の出どころを再利用しない。
+            if (paid.Contains((e.ActorId, chain)) || chain.Count(j => events[j].Team != e.Team) < e.Amount)
+            {
+                while (interrupted.TryPop(out var restored))
+                {
+                    if (paid.Contains((e.ActorId, restored.Chain))
+                        || restored.Chain.Count(j => events[j].Team != e.Team) != e.Amount) continue;
+                    chain = restored.Chain; rootGroup = restored.RootGroup; break;
+                }
+            }
             int[] pops = chain.Where(j => events[j].Team != e.Team).Take(Math.Max(0, e.Amount)).ToArray();
+            paid.Add((e.ActorId, chain));
             var inverted = new HashSet<int>();
             if (e.Text == SparkLabels.Release)
                 for (int j = i + 1; j < events.Count; j++)

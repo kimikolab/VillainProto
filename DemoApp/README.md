@@ -419,18 +419,20 @@ Godot_console.exe --path DemoApp res://ShockMarkCheck.tscn -- --web --capture-di
 
 ## ソムの背きの雷・共鳴返し
 
-召喚体は光核と半透明の電弧からなる雷の精霊。ソムの側から菫の光塊が飛び、敵陣で契約紋がひび割れて黄白・赤の雷へ反転する。
-身体の一部を稲妻の槍として放ち、核が割れると光粒に散る。群れ・緊急召喚とも同じ姿で、名前「背いた獣」はBattleCoreの定義を表示する。
+召喚体は顔と手足を持ち、身体の半分が電気でできた精霊。手番の群れは細身の雷人形、緊急の割り込みは小柄で跳ねる雷精として描く。
+ソムの側から紫白の精霊が飛び、敵陣で顔をソムへ向け、契約紋がひび割れる。仮面と身体の断片は紫白を保ち、電気だけが黄白へ変わる。
+身体の一部を稲妻の槍として放ち、光粒へ散る。画面の名前はBattleCoreの定義を表示する。
 帯電した味方に触れると体表の電気が膨らみ、同じ道を太く戻る。
 隣の敵へ走る枝、シガの打ち返し、クグの糸、粛で共鳴が消える分岐、投げた残りの暴発を台本から再生する。
 群れの往路・共鳴・復路はまとめ、攻撃・帯電・HP・消去は台本の順序で反映する。獣の消えた位置からツギが欠片を拾う。
 素材と検証の記録は [som-resonance-integration.md](../design/art/som/som-resonance-integration.md)。
-精霊への見た目の変更は [som-spirit-integration.md](../design/art/som/som-spirit-integration.md)。
+二種の精霊の素材・プロンプト・検証は [som-spirit-roles-integration.md](../design/art/som/som-spirit-roles-integration.md)。
 
 ```powershell
 Godot_console.exe --path DemoApp -- --demo-autoplay "--demo-preset=試遊・感電 光の盾" --demo-playtest-stage=0 --demo-seed=0
 Godot_console.exe --path DemoApp -- --demo-autoplay "--demo-preset=試遊・感電 打ち返し" --demo-playtest-stage=0 --demo-seed=0
 Godot_console.exe --headless --path DemoApp res://SomCheck.tscn -- --verify-only
+Godot_console.exe --path DemoApp res://SomCheck.tscn -- --visual-only --roles-only --roles-captures
 Godot_console.exe --path DemoApp --windowed --resolution 1440x900 res://SomCheck.tscn -- --visual-only --resonance-only
 Godot_console.exe --path DemoApp --windowed --resolution 1440x900 res://SomCheck.tscn -- --visual-only --resonance-live
 Godot_console.exe --path DemoApp --windowed --resolution 1440x900 res://SomCheck.tscn -- --visual-only --spirit-captures

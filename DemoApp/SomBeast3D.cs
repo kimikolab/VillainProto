@@ -1,12 +1,13 @@
 using Godot;
 using System;
 
-// 台本の「背いた獣」の絵。身体を持たない雷の精霊として光核と電弧だけを描く。
+// 台本の召喚体の絵。手番は細身の雷人形、緊急の割り込みは跳ねる雷精。
 public partial class SomBeast3D : Node3D
 {
     private readonly ImmediateMesh _glowMesh = new(), _arcMesh = new();
     private StandardMaterial3D _glowMaterial = null!, _arcMaterial = null!;
-    private Sprite3D _core = null!, _halo = null!, _contract = null!, _eye = null!;
+    private Sprite3D _figure = null!, _core = null!, _contract = null!;
+    private ShaderMaterial _figureMaterial = null!;
     private GpuParticles3D? _sparks;
     private Vector3 _origin, _destination;
     private float _radius, _height, _direction;
@@ -17,6 +18,8 @@ public partial class SomBeast3D : Node3D
     internal bool Paused;
     internal bool InStance { get; private set; }
     internal bool Emergency => _emergency;
+    internal Texture2D FigureTexture => _figure.Texture;
+    internal bool FigureFlipped => _figure.FlipH;
     internal bool FacingSummoner => InStance && _betrayed;
     internal bool ContractCracked => _betrayed;
     internal Color EnergyColor => _betrayed ? SomFx.SpiritRebel : SomFx.Violet;
@@ -34,13 +37,17 @@ public partial class SomBeast3D : Node3D
     {
         _origin = origin; _destination = destination; _emergency = emergency; _flip = flip;
         Speed = Math.Max(.1, speed); _direction = flip ? -1 : 1;
-        _radius = emergency ? .51f : .30f; _height = emergency ? .85f : .45f;
+        _radius = emergency ? .43f : .34f; _height = emergency ? .85f : .98f;
         GlobalPosition = origin;
         _glowMaterial = Layer(_glowMesh, .23f); _arcMaterial = Layer(_arcMesh, .86f);
-        _halo = ShockMarkFx.Sprite(this, Point, ShockMarkFx.Halo, _radius * 2.8f, SomFx.Violet);
-        _core = ShockMarkFx.Sprite(this, Point, SomFx.SpiritCore, _radius * 1.05f, Colors.White);
-        _contract = ShockMarkFx.Sprite(this, Point, SomFx.Circle, _radius * 1.05f, Colors.White);
-        _eye = ShockMarkFx.Sprite(this, Point, ShockMarkFx.Halo, _radius * .14f, Colors.White);
+        var texture = SomSpiritArt.Texture(emergency);
+        float figureHeight = emergency ? 1.40f : 1.72f;
+        _figure = ShockMarkFx.Sprite(this, Point, texture,
+            figureHeight * texture.GetWidth() / texture.GetHeight(), Colors.White);
+        _figureMaterial = SomSpiritArt.Material(texture, emergency);
+        _figure.MaterialOverride = _figureMaterial;
+        _core = ShockMarkFx.Sprite(this, Point, SomFx.SpiritCore, .09f, Colors.White);
+        _contract = ShockMarkFx.Sprite(this, Point, SomFx.Circle, .24f, Colors.White);
         Draw();
     }
     private StandardMaterial3D Layer(ImmediateMesh mesh, float alpha)
@@ -96,9 +103,9 @@ public partial class SomBeast3D : Node3D
         {
             _flightAge += step;
             Progress = Math.Clamp((float)(_flightAge / SomFx.BeastRunSeconds), 0, 1);
-            // 足踏みはしない。光塊が一つの放物線で敵陣へ滑る。
+            // 雷人形は静かに滑り、緊急の雷精は膝を畳んだ姿で高く跳ねる。
             GlobalPosition = _origin.Lerp(_destination, Progress)
-                + Vector3.Up * MathF.Sin(Progress * MathF.PI) * (_emergency ? .48f : .28f);
+                + Vector3.Up * MathF.Sin(Progress * MathF.PI) * (_emergency ? .68f : .20f);
             if (Progress >= 1) Arrive();
         }
         if (InStance)
@@ -127,22 +134,30 @@ public partial class SomBeast3D : Node3D
         Vector3 right = camera?.GlobalBasis.X ?? Vector3.Right, up = camera?.GlobalBasis.Y ?? Vector3.Up;
         Vector3 front = camera?.GlobalBasis.Z ?? Vector3.Back;
         float age = (float)_age, radius = _radius * _body * (1 + Charge * .22f);
-        Vector3 center = Point + up * (MathF.Sin(age * 5) * .025f);
+        float reveal = Math.Clamp(age / (_emergency ? .11f : .18f), 0, 1);
+        float floatHeight = MathF.Sin(age * (_emergency ? 9 : 3.5f)) * (_emergency ? .045f : .023f);
+        Vector3 center = Point + up * floatHeight;
         Color color = EnergyColor;
         _glowMaterial.AlbedoColor = new Color(color, .20f); _glowMaterial.Emission = color;
         _arcMaterial.AlbedoColor = new Color(Colors.White.Lerp(color, .40f), .76f);
         _arcMaterial.Emission = color;
-        _halo.GlobalPosition = center; _halo.Scale = Vector3.One * (_body * (1 + Charge * .18f));
-        _halo.Modulate = new Color(color, .15f + Charge * .07f);
-        _core.GlobalPosition = center + front * .012f;
-        _core.Scale = Vector3.One * (_body * (1 + Charge * .42f + MathF.Sin(age * 17) * .05f));
-        _core.Modulate = new Color(Colors.White.Lerp(color, .16f), .88f);
-        _contract.GlobalPosition = center + right * (_direction * radius * .32f) + front * .08f;
+        _figure.GlobalPosition = center;
+        _figure.FlipH = _direction < 0;
+        float tilt = _flying ? MathF.Sin(Progress * MathF.PI) * (_emergency ? .23f : .08f) : MathF.Sin(age * 3) * .025f;
+        _figure.Rotation = new Vector3(0, 0, -_direction * tilt);
+        _figure.Scale = Vector3.One * (_body * (.90f + reveal * .10f) * (1 + Charge * .05f));
+        _figureMaterial.SetShaderParameter("clock", age);
+        _figureMaterial.SetShaderParameter("reveal", reveal);
+        _figureMaterial.SetShaderParameter("rebel", _betrayed ? 1f : 0f);
+        _figureMaterial.SetShaderParameter("charge", Charge);
+        Vector3 chest = center + up * (_emergency ? -.12f : .20f) * _body;
+        _core.GlobalPosition = chest + front * .018f;
+        _core.Scale = Vector3.One * (_body * (1 + Charge * .55f + MathF.Sin(age * 17) * .05f));
+        _core.Modulate = new Color(Colors.White.Lerp(color, .16f), reveal * .75f);
+        _contract.GlobalPosition = chest + front * .07f;
         _contract.Scale = Vector3.One * (_body * (_betrayed ? 1.10f : 1));
-        _contract.Modulate = new Color(_betrayed ? SomFx.SpiritRed : SomFx.Violet, _betrayed ? .90f : .78f);
+        _contract.Modulate = new Color(_betrayed ? SomFx.SpiritRed : SomFx.Violet, reveal * (_betrayed ? .90f : .78f));
         _contract.Rotation = new Vector3(0, 0, MathF.Sin(age * 3) * .07f);
-        _eye.GlobalPosition = center + right * (_direction * radius * .80f) + up * radius * .15f + front * .06f;
-        _eye.Modulate = new Color(Colors.White, .85f); // 向きを示す光点1つ。顔・口・牙を作らない。
 
         foreach (var mesh in new[] { _glowMesh, _arcMesh })
         {
@@ -154,32 +169,43 @@ public partial class SomBeast3D : Node3D
                 mesh.SurfaceSetColor(new Color(1, 1, 1, alpha));
                 foreach (var p in new[] { a - side, a + side, b + side, a - side, b + side, b - side }) mesh.SurfaceAddVertex(ToLocal(p));
             }
-            // 閉じた動物の輪郭にしない。切れ目と位相の違う弧が入れ替わり続ける。
-            for (int arc = 0; arc < 4 + (int)(Charge * 2); arc++)
+            // 円形の光輪ではなく、電気の肩・腕・脚をつなぐ細い稲妻を重ねる。
+            // 顔を横切らず、身体の穴が見える密度に抑える。
+            Vector2[][] limbs = _emergency ? new[] {
+                new[] { new Vector2(.02f, .13f), new Vector2(.37f, .05f), new Vector2(.70f, .25f) },
+                new[] { new Vector2(-.06f, -.18f), new Vector2(-.40f, -.36f), new Vector2(-.20f, -.83f) },
+                new[] { new Vector2(.12f, -.22f), new Vector2(.45f, -.44f), new Vector2(.25f, -.90f) },
+            } : new[] {
+                new[] { new Vector2(.12f, .31f), new Vector2(.43f, -.01f), new Vector2(.67f, -.38f) },
+                new[] { new Vector2(.08f, -.20f), new Vector2(.24f, -.61f), new Vector2(.12f, -1.02f) },
+                new[] { new Vector2(-.08f, .16f), new Vector2(.03f, -.04f), new Vector2(-.04f, -.35f) },
+            };
+            for (int limb = 0; limb < limbs.Length; limb++)
             {
-                float start = age * (.7f + arc * .08f) + arc * 2.51f;
-                Vector3 previous = Vector3.Zero;
-                for (int n = 0; n < 15; n++)
+                for (int segment = 0; segment < 2; segment++)
                 {
-                    float angle = start + n * .070f;
-                    float jitter = MathF.Sin(n * 1.35f + arc * 5 + MathF.Floor(age * 24)) * (.06f + Charge * .07f);
-                    float r = radius * (.76f + arc % 3 * .16f + jitter);
-                    Vector3 p = center + right * (MathF.Cos(angle) * r * 1.12f)
-                        + up * (MathF.Sin(angle) * r * .78f);
-                    if (n > 0) Line(previous, p, .52f + .38f * MathF.Sin(n / 14f * MathF.PI));
-                    previous = p;
+                    Vector3 previous = Vector3.Zero;
+                    for (int n = 0; n <= 5; n++)
+                    {
+                        Vector2 p = limbs[limb][segment].Lerp(limbs[limb][segment + 1], n / 5f);
+                        float jitter = n is 0 or 5 ? 0 : MathF.Sin(n * 2.7f + limb * 5 + MathF.Floor(age * 24)) * (.022f + Charge * .016f);
+                        Vector3 point = center + front * .035f + right * ((p.X + jitter) * _direction * radius)
+                            + up * p.Y * radius * 1.8f;
+                        if (n > 0) Line(previous, point, reveal * (.48f + Charge * .28f));
+                        previous = point;
+                    }
                 }
             }
-            // 四足の気配は一瞬の放電の枝だけ。接地する脚・耳・毛並みは持たない。
+            // 帯電時の枝は胴体から外へ。生物の脚を描き足さない。
             for (int k = 0; k < 4; k++)
             {
                 float flicker = MathF.Sin(age * (7 + k) + k * 1.8f);
-                if (flicker < .15f) continue;
+                if (flicker < .15f || Charge == 0) continue;
                 Vector3 a = center + right * ((k % 2 == 0 ? -1 : 1) * radius * .55f)
                     + up * ((k < 2 ? -.35f : .25f) * radius);
                 Vector3 b = a + right * ((k % 2 == 0 ? -.35f : .35f) * radius) + up * (-radius * .35f);
                 Vector3 c = b + right * ((k % 2 == 0 ? .18f : -.18f) * radius) + up * (-radius * .20f);
-                Line(a, b, flicker * .65f); Line(b, c, flicker * .5f);
+                Line(a, b, flicker * Charge * .65f); Line(b, c, flicker * Charge * .5f);
             }
             if (_flying)
             {
