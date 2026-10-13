@@ -56,7 +56,9 @@ $Cmds = @(
     "tou324 p0", "tou324 boards", "tou324 compare", "tou324 check", "tou324 memo",
     "tou325 boards", "tou325 guide", "tou325 check",
     # 第327期に足した（第326期の器具）
-    "dense326 p0s", "dense326 p0", "dense326 check"
+    "dense326 p0s", "dense326 p0", "dense326 check",
+    # 第327期に足した（この期の器具・保存 772f48c から入っている）
+    "dust327 p0", "dust327 check"
 )
 # ソースの行番号などを出す（差は「ずれ」と数えない）
 $Volatile = @("derive check")
@@ -209,7 +211,7 @@ switch ($Mode) {
         New-Item -ItemType Directory -Force $dir | Out-Null
         Copy-Item (Join-Path $cacheRoot "$base\*.txt") $dir -Force
         Copy-Item (Join-Path $work "*.txt") $dir -Force
-        $ran = @(Get-ChildItem (Join-Path $work "*.txt")).Count
+        $ran = @(Get-ChildItem (Join-Path $work "*.txt") | Where-Object { $_.Name -ne 'manifest.txt' }).Count
         [System.IO.File]::WriteAllText((Join-Path $dir "manifest.txt"), "commit $sha`nsaved $(Get-Date -Format s)`nfrom $base（この期に回した $ran 本で上書き・残りは $base の保存を引き継いだ）`n", $utf8)
         Write-Output "DONE $dir（$base ＋ $ran 本）"
     }
