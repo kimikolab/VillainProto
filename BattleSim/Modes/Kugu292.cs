@@ -65,7 +65,7 @@ static class Kugu292Diag
     {
         var g = f.Clone();   // 陣形・レリックを保つ（`Common.OldFire` と同じ作法）
         foreach (var (slot, d) in f.Occupied())
-            g[slot] = ReferenceEquals(d, UnitCatalog.KuguH324) || ReferenceEquals(d, UnitCatalog.Kugu) ? UnitCatalog.KuguKGb : ReferenceEquals(PinDS316(d), UnitCatalog.ShigaSWa) ? UnitCatalog.ShigaSIb
+            g[slot] = ReferenceEquals(d, UnitCatalog.KuguH324) || ReferenceEquals(d, UnitCatalog.KuguH327) || ReferenceEquals(d, UnitCatalog.Kugu) ? UnitCatalog.KuguKGb : ReferenceEquals(PinDS316(d), UnitCatalog.ShigaSWa) ? UnitCatalog.ShigaSIb
                     : ReferenceEquals(d, UnitCatalog.Sora) ? UnitCatalog.SoraSR0   // 第295期: ソラも（規定は SR-b・旧は `SoraSR0`）
                     : ReferenceEquals(d, UnitCatalog.Hisa) ? UnitCatalog.HisaHK0   // 第296期: ヒサも（規定は HK-b・旧は `HisaHK0`）
                     : ReferenceEquals(PinDS316(d), UnitCatalog.DohaH316) ? UnitCatalog.DohaD0   // 第298期: ドハも（規定は DH-a なまりなし・旧は `DohaD0`）・第317期: 規定 ／ 第316期までの規定のどちらでも

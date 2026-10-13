@@ -138,7 +138,7 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 
 **器具の規約 (G1)〜(G17)。以後の指示書はここを引く。** ここには規則だけを置く——経緯と実例つきの全文（第285期まで `CLAUDE.md` にあった節を逐語で移した）は `design/CONVENTIONS_G.md`。
 
-**期の種類（軽い ／ 重い）は `design/MEASURE_LIGHT.md`**（第327期から・書いていなければ軽い期）。過去の器具の照合は `tools/digest_cache.ps1`（期の最後に `promote` で新しいビルドの指紋を保存し、次の期は HEAD の保存と比べる・HEAD を建て直さない）。版を試遊で触る台は `Presets.Versions`（名前の頭は「版・」・DemoApp の一覧の末尾・BattleSim の器具は数えないので期ごとに入れ替えてよい）。
+**期の種類（軽い ／ 重い）は `design/MEASURE_LIGHT.md`**（第327期から・書いていなければ軽い期）。過去の器具の照合は `tools/digest_cache.ps1`（期の最後に `promote` で新しいビルドの指紋を保存し、次の期は HEAD の保存と比べる・HEAD を建て直さない）。版を試遊で触る台（名前の頭は「版・」）と、`Playtest` に足すと器具の出力が動く試遊の台は `Presets.Versions`（DemoApp の一覧の末尾・BattleSim の器具は数えないので期ごとに入れ替えてよい）。
 
 - **(G1)** 壊れを見る拒否権の分母は `compare` 全行（規約を作ったときは 61 行）。主判定19行に限らない——19行は軸の代表で、組み合わせの行を含まない。
 - **(G2)** 拒否権3（全行版）は「壊れ」と「制約」に分ける。いずれかの波で **−10.0pt 以上**落ちた行について、その行の駒それぞれの「その駒を含む<u>他の</u>行」の全波平均の変化を出す。どの駒も |変化| < 3.0pt → **編成上の制約**（拒否しない。報告書に「この組み合わせは成立しなくなった」と書く）／ いずれかの駒で ≤ −3.0pt → **壊れ**（拒否する）。**駒が使えなくなるのは壊れ。組み合わせが使えなくなるのは設計。** 「他の行」が 0 行の駒は分解が成立しないと書く。
@@ -194,9 +194,9 @@ engine は駒を受け取る版（`FormationRules.AreAdjacent(UnitState, UnitSta
 
 **期ごとの報告は `design/HISTORY_PHASES.md`**（この節から逐語で移した。以後の期はそちらの冒頭に足し、ここのブロックは差し替える）。
 
-**最後に動かした期: 第327期**（**軽い期**。段0: **トウ ＝ 第326期の DR-a を規定に**（受け手の濃さで放電が重くなる・旧の規定は `TouH326`）・作法の切り替え（期の種類は `design/MEASURE_LIGHT.md`・過去の器具の照合の保存と使い回し `tools/digest_cache.ps1`・版の台 `Presets.Versions`）。本体の粉塵爆発（DX ／ DX ＋ 電池 ／ DX ＋ 隣帯電 ／ DX ＋ 全部・`TouDX` ／ `KuguBat` ／ `SomBc`）は版だけ（ポンの台 × ボス 8.3T → 6.9T ／ 5.0T ／ 6.8T ／ 5.0T）。器具 `dust327`・報告は `design/PHASE327_DUST_BURST.md`）。**期ごとの報告ファイルの索引と、第319期までの過去の器具の固定の一覧は `design/HISTORY_PHASES.md` の冒頭**（第320期までこの節にあった段落を第321期に逐語で移した・第326期までの2段落は第327期に移した）。
+**最後に動かした期: 第328期**（**重い期・規定化だけ**。**トウ ＝ 粉塵爆発（DX）・クグ ＝ 電池を規定にした**（ポンの判断 X2・旧の規定は `TouH327` ／ `KuguH327`・隣帯電 `SomBc` は版のまま残置）。ポンの台 × ボス 8.3T → 5.0T・精鋭 ／ 本編 ±0.5pt・強すぎの兆しなし。試遊の台「試遊・感電 ポンの台」は `Presets.Versions` に置いた（第327期の「版・」の4台は外した）。器具 `settle328`・報告は `design/PHASE328_DUST_BATTERY_SETTLE.md`）。**期ごとの報告ファイルの索引と、第319期までの過去の器具の固定の一覧は `design/HISTORY_PHASES.md` の冒頭**（第320期までこの節にあった段落を第321期に逐語で移した・第327期までの2段落は第328期に移した）。
 **改名の対応（第285期）**: 止めのトメ → 見境なしのミサ（`Id = "tome"`・識別子 `UnitCatalog.Tome` ほかは据え置き）／ 行名 `止め (トメ×ソラ)` → `見境 (ミサ×ソラ)`・`止め改 (トメ×薙ぎ)` → `見境改 (ミサ×薙ぎ)`・`標経済 (ヒサ×ザン×トメ)` → `標経済 (ヒサ×ザン×ミサ)` ／ 精鋭の波 `精鋭・五` → `近衛`・`精鋭・九` → `大隊`。過去の `design/` は旧名のまま（名前で引く器具は `Common.UnitRenames`）。
-**最後に `compare` が動いた期: 第326期**（段0 で1行1セル: `感電 (シガ×カタ×ソム)` 第3波 90.5 → 91.0。第327期の段0（DR-a の規定化）は 0 セル）。**過去の器具の固定**: 第326期までのトウは `TouH326`（`Common.PinT326` ／ `Pin326` ／ `CompareBuildsH326` ／ `PlaytestH326`・`dense326`。`Pin325` もトウを `TouH326` へ・`tou325`。`PinTKK324` は規定のトウも `TouH326` も `TouH324` へ替えるので、古い口の終端はそのまま）。第325期までのシガは `ShigaH325`（`Common.PinS325` ／ `Pin325` ／ `CompareBuildsH325` ／ `PlaytestH325`。`Pin324` ／ `CompareBuildsH324` ／ `PlaytestH324` もシガを `ShigaH325` へ）。第324期までのトウ ／ カタ ／ クグは `TouH324` ／ `KataH324` ／ `KuguH324`（`Common.PinTKK324` ／ `Pin324`・古い口の最後も `PinTKK324`）。それより前の固定は `design/HISTORY_PHASES.md`。
+**最後に `compare` が動いた期: 第326期**（段0 で1行1セル: `感電 (シガ×カタ×ソム)` 第3波 90.5 → 91.0。第327期の DR-a ／ 第328期の DX ＋ 電池の規定化はどちらも 0 セル）。**過去の器具の固定**: 第327期までのトウ ／ クグは `TouH327` ／ `KuguH327`（`Common.PinTK327` ／ `Pin327` ／ `CompareBuildsH327` ／ `PlaytestH327`・`dust327`）。第326期までのトウは `TouH326`（`Common.PinT326` ／ `Pin326` ／ `CompareBuildsH326` ／ `PlaytestH326`・`dense326`。`Pin325` も・`tou325`。`PinT326` は `TouH327` も `TouH326` へ、規定のクグを `KuguH327` へ）。`PinTKK324` は規定のトウ ／ `TouH326` ／ `TouH327` を `TouH324` へ、規定のクグ ／ `KuguH327` を `KuguH324` へ替えるので、古い口の終端はそのまま。第325期までのシガは `ShigaH325`（`Common.PinS325` ／ `Pin325` ／ `CompareBuildsH325` ／ `PlaytestH325`）。それより前の固定は `design/HISTORY_PHASES.md`。
 
     編成:       64 行（`CompareBuilds()`・第281期に 63 → 64）＋ 交差帯 12 行（`CrossBuilds()`）
     全64行:     100 / 91.1 / 89.4 / 83.3 / 83.6     （第1〜5波の平均勝率・seed 0..199・`spread` §4・第325〜326期。第320〜324期は第2波 91.0）

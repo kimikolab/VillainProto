@@ -8,6 +8,14 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第328期は重い期で、規定化だけ: トウ ＝ 第327期の DX（粉塵爆発）・クグ ＝ 電池を規定にした**（ポンの判断 X2・指示書は design/PHASE328_DUST_BATTERY_SETTLE_SPEC.md・報告は design/PHASE328_DUST_BATTERY_SETTLE.md）。規定のトウ ＝ 第327期の規定（`TouH327`）＋ `DustBurst`、規定のクグ ＝ 第325〜327期の規定（`KuguH327`）＋ `SilkBattery`。`compare` の規定の列は 0 セル（`docs/balance.md` 差分 0・第327期の X2 の列と一致）——全64行 100 / 91.1 / 89.4 / 83.3 / 83.6・主判定19行の第五波 81.6・歯止めの余裕 +48.4pt・情報セル 74 ／ 26 のまま。
+
+### 第327期まで `CLAUDE.md` の「現状値」にあった索引の段落（第328期に逐語で移した）
+
+**最後に動かした期: 第327期**（**軽い期**。段0: **トウ ＝ 第326期の DR-a を規定に**（受け手の濃さで放電が重くなる・旧の規定は `TouH326`）・作法の切り替え（期の種類は `design/MEASURE_LIGHT.md`・過去の器具の照合の保存と使い回し `tools/digest_cache.ps1`・版の台 `Presets.Versions`）。本体の粉塵爆発（DX ／ DX ＋ 電池 ／ DX ＋ 隣帯電 ／ DX ＋ 全部・`TouDX` ／ `KuguBat` ／ `SomBc`）は版だけ（ポンの台 × ボス 8.3T → 6.9T ／ 5.0T ／ 6.8T ／ 5.0T）。器具 `dust327`・報告は `design/PHASE327_DUST_BURST.md`）。**期ごとの報告ファイルの索引と、第319期までの過去の器具の固定の一覧は `design/HISTORY_PHASES.md` の冒頭**（第320期までこの節にあった段落を第321期に逐語で移した・第326期までの2段落は第327期に移した）。
+
+**最後に `compare` が動いた期: 第326期**（段0 で1行1セル: `感電 (シガ×カタ×ソム)` 第3波 90.5 → 91.0。第327期の段0（DR-a の規定化）は 0 セル）。**過去の器具の固定**: 第326期までのトウは `TouH326`（`Common.PinT326` ／ `Pin326` ／ `CompareBuildsH326` ／ `PlaytestH326`・`dense326`。`Pin325` もトウを `TouH326` へ・`tou325`。`PinTKK324` は規定のトウも `TouH326` も `TouH324` へ替えるので、古い口の終端はそのまま）。第325期までのシガは `ShigaH325`（`Common.PinS325` ／ `Pin325` ／ `CompareBuildsH325` ／ `PlaytestH325`。`Pin324` ／ `CompareBuildsH324` ／ `PlaytestH324` もシガを `ShigaH325` へ）。第324期までのトウ ／ カタ ／ クグは `TouH324` ／ `KataH324` ／ `KuguH324`（`Common.PinTKK324` ／ `Pin324`・古い口の最後も `PinTKK324`）。それより前の固定は `design/HISTORY_PHASES.md`。
+
 **第327期は軽い期で、段0 でトウ ＝ 第326期の DR-a を規定にした**（指示書は design/PHASE327_DUST_BURST_SPEC.md・報告は design/PHASE327_DUST_BURST.md）。規定のトウ ＝ 第325〜326期の規定（`TouH326`・明示の定義に）＋ `DenseConduct`（札と文面は第326期の `TouDRa` と同じ）。`compare` の規定の列は 0 セル（`docs/balance.md` 差分 0・第326期の DR-a の列と一致）——全64行 100 / 91.1 / 89.4 / 83.3 / 83.6・主判定19行の第五波 81.6・歯止めの余裕 +48.4pt・情報セル 74 ／ 26 のまま。本体の粉塵爆発の版の `compare` は DX ／ DX ＋ 電池 0 セル、DX ＋ 隣帯電 ／ DX ＋ 全部 1行3セル（`感電 (シガ×カタ×ソム)` 第2波 +9.5 ／ 第3波 +9.0 ／ 第5波 +1.5・全波 100 に張り付く）。
 
 ### 第326期まで `CLAUDE.md` の「現状値」にあった索引の段落（第327期に逐語で移した）

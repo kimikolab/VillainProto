@@ -1134,6 +1134,11 @@ description: 第259期に `CLAUDE.md` の「コマンド」節を**逐語で**�
     dotnet run --project BattleSim -c Release 0 dust327 compare [版,…]  # 第327期 §5: `compare` 64 行 × 版（基準は規定 ＝ DR-a・21 秒）
     dotnet run --project BattleSim -c Release 0 dust327 log [波] [seed] [版]     # 第327期: ポンの台の1戦のログ（版 base ／ dx ／ dxb ／ dxn ／ dxall）
     dotnet run --project BattleSim -c Release 0 dust327 check        # 第327期 自己検査（定義と固定の口・爆発の量と行き先（敵 ／ 味方 ／ 糸玉）・爆発で弾けない ／ 爆発は爆発を呼ばない・糸玉に粉・電池・隣帯電・verbose・PickOne）
+    dotnet run --project BattleSim -c Release 0 settle328 p0          # 第328期 §3 Phase 0: 糸の台がボスに勝てない理由（旧 ／ 新・決着T の分布・勇者の残り HP・倒れた駒の順）（1 秒）
+    dotnet run --project BattleSim -c Release 0 settle328 boards      # 第328期 §5: 代表台 7 × 10 波 × 旧（第327期の規定）／ 新・seed 0..199・ボスの内訳・強すぎの兆し（15 秒）。予測のファイルが無ければ走らない
+    dotnet run --project BattleSim -c Release 0 settle328 grid        # 第328期 §5: 格子1本（ボス・固定枠 トウ ＋ クグ・探索枠3・席 30）・4T 未満の台
+    dotnet run --project BattleSim -c Release 0 settle328 log [台] [波] [seed] [old|new]   # 第328期: 1戦のログ（台 pon ／ whip ／ shield ／ near ／ ito ／ torment ／ shock）
+    dotnet run --project BattleSim -c Release 0 settle328 check       # 第328期 自己検査（定義と固定の口・規定のトウで爆発 ／ 糸玉に粉・規定のクグで電池・旧では起きない・試遊の台・verbose・PickOne）
     powershell -File tools/digest_cache.ps1 list|save|light|full|promote [-Units tou,kata]   # 第327期: 過去の器具の照合（台本の指紋）の保存と使い回し（design/MEASURE_LIGHT.md §2）。light は変えた駒が名前で出てくる器具だけ（器具 → 駒の対応はソースから自動）・期の最後（コミットの後）に promote
     dotnet run --project BattleSim -c Release 0 shiga316 dboards     # 第316期 段0 G-b: ドハ DP-s × 代表台（第315期の5台）× 8 波（守り型2台は【強】500/300 × 4 波も）× 版（規定 ／ DP-b ／ DQ-b ／ DP-s ／ ドルガ）（6 秒）。本体は `Modes/Shiga316.cs`
     dotnet run --project BattleSim -c Release 0 shiga316 dcompare    # 第316期 段0 G-a: `compare` 64 行 × DP-b ／ DP-s（基準は規定のドハ）・(G2)（14 秒）

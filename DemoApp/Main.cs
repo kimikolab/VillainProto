@@ -929,7 +929,7 @@ public partial class Main : Control
             ? $"交差帯 {_presetIndex - Presets.Compare.Length + 1}/{Presets.Cross.Length}"
             : _presetIndex < Presets.Compare.Length + Presets.Cross.Length + Presets.Playtest.Length
             ? $"試遊 {_presetIndex - Presets.Compare.Length - Presets.Cross.Length + 1}/{Presets.Playtest.Length}"   // 第291期
-            : $"版 {_presetIndex - Presets.Compare.Length - Presets.Cross.Length - Presets.Playtest.Length + 1}/{Presets.Versions.Length}";   // 第327期
+            : $"追加 {_presetIndex - Presets.Compare.Length - Presets.Cross.Length - Presets.Playtest.Length + 1}/{Presets.Versions.Length}";   // 第327期（版の台）・第328期: 試遊の台も置くので「追加」
         _presetState.Text = _presetDirty
             ? $"{band}・プリセットから変更あり"
             : $"{band}・プリセット通り（全 {rows.Length} 行）";

@@ -82,7 +82,7 @@ static partial class Dense326Diag
     internal static Formation Apply(Formation f, Ver v) => S316.SwapId(S316.SwapId(f, "tou", v.Tou), "shiga", v.Shiga);
 
     /// <summary>ポンの台（指示書 §0 ／ §5-1）: 前1 カタ・前3 シガ・中央 トウ・後1 クグ・後3 ソム（試遊・感電 光の盾 鞭 を改変）。駒はいまの規定。試遊には足さない（決めたこと）。</summary>
-    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.TouH326, back1: UnitCatalog.Kugu, back3: UnitCatalog.Som);   // 第327期: トウは第326期の規定
+    internal static Formation PonBoard() => Formation.Build(front1: UnitCatalog.Kata, front3: UnitCatalog.Shiga, center: UnitCatalog.TouH326, back1: UnitCatalog.KuguH327, back3: UnitCatalog.Som);   // 第327期: トウは第326期の規定
 
     static Formation Playtest(string n) => PlaytestH326.First(r => r.Name == n).F;   // 第327期: トウを第326期の規定に固定
     static Formation Row(string n) => CompareBuildsH326().First(r => r.Name == n).F;   // 第327期

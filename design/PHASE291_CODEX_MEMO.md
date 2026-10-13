@@ -1546,3 +1546,7 @@ Discharge   糸玉#14 → 勇者#5  Amount 64  Slot 3  ReceiverDensity 7
 - **隣帯電（版のみ・`SomBc`）**: 背いた召喚獣の `Discharge` の後に、浴びた敵の `StatusGain`（感電・書き手 ＝ ソム）。その敵は同じ連鎖では `ShockSpent` が出ない。
 
 **DemoApp へ**: 段0 は規定（`ReceiverDensity` が規定の台本に出る・第326期の DR の表示をそのまま使える）。DX ／ 電池 ／ 隣帯電は版のみ——試遊の一覧の「版・」の4台（`Presets.Versions`・93〜96 番）で触れる。ポンが X1〜X4 を選んだら規定になる。
+
+## 24. 第328期の追記 —— 粉塵爆発と電池は規定
+
+**第328期から、粉塵爆発（`ShockGauge 粉塵爆発` と隣の `Damage`・糸玉に粉）と電池（連鎖の後の `SilkBall 帯電し直した`）は規定の台本に出る**——トウ ／ クグのいる試遊のすべての台で、爆竹の演出（`design/CODEX_BRIEF_DUST_BURST.md`）が出るようになる。並びは §23 のまま（隣帯電は版のみ・規定の台本には出ない）。試遊の一覧の末尾に「試遊・感電 ポンの台」（`Presets.Versions`・93 番）。

@@ -79,7 +79,7 @@ static class Tou325Diag
         var rows = new List<(string Pair, Formation N, int[] Nw, double NbT, Formation F, int[] Fw, double FbT, int[] On, int[] Of)>();
         foreach (var (a, b) in pairs)
         {
-            var five = new[] { UnitCatalog.TouH326, UnitCatalog.Kata, UnitCatalog.Kugu, a, b };   // 第327期: トウを第325〜326期の規定に固定
+            var five = new[] { UnitCatalog.TouH326, UnitCatalog.Kata, UnitCatalog.KuguH327, a, b };   // 第327期: トウを第325〜326期の規定に固定・第328期: クグも（電池の前）
             var seats = B283.Perms(five).Select(B283.Seat).Where(f => NearCount(f) is 0 or 2).ToList();
             var res = new (int[] W, double BossT)[seats.Count];
             for (int s = 0; s < seats.Count; s++)
@@ -191,7 +191,7 @@ static class Tou325Diag
     {
         int bad = 0;
         void Ok(string what, bool ok) { Console.WriteLine($"{(ok ? "○" : "×")} {what}"); if (!ok) bad++; }
-        UnitDef T = UnitCatalog.TouH326, K = UnitCatalog.Kata, G = UnitCatalog.Kugu;   // 第327期: 第325期の規定のトウ（DR-a の前）
+        UnitDef T = UnitCatalog.TouH326, K = UnitCatalog.Kata, G = UnitCatalog.KuguH327;   // 第327期: 第325期の規定のトウ（DR-a の前）・第328期: クグも（電池の前）
         bool Body(UnitDef a, UnitDef b) => a.Id == b.Id && a.Name == b.Name && a.MaxHp == b.MaxHp && a.Attack == b.Attack && a.Speed == b.Speed && a.Advances == b.Advances && a.Pattern == b.Pattern && a.Flavor == b.Flavor;
         Console.WriteLine("# 第325期 tou325 check");
         Console.WriteLine();
@@ -205,7 +205,7 @@ static class Tou325Diag
             && K.PlusText == UnitCatalog.KataH324.PlusText + "。身に積もった粉も、雷に乗せて落とす" && G.PlusText == UnitCatalog.KuguH324.PlusText + "。身に積もった粉も、糸を伝って流れていく"
             && K.MinusText == UnitCatalog.KataH324.MinusText && G.MinusText == UnitCatalog.KuguH324.MinusText);
         Ok("(c) 旧の規定 `TouH324` ／ `KataH324` ／ `KuguH324` は `All` ／ `Retired` の外・`All` は規定の3体を持ち 52 枚・第323〜324期の版は旧の規定から作る",
-            !new[] { UnitCatalog.TouH324, UnitCatalog.KataH324, UnitCatalog.KuguH324 }.Any(UnitCatalog.Everyone.Contains) && new[] { UnitCatalog.Tou, K, G }.All(UnitCatalog.All.Contains) && UnitCatalog.All.Count == 52   // 第327期: `All` は規定（DR-a）のトウ
+            !new[] { UnitCatalog.TouH324, UnitCatalog.KataH324, UnitCatalog.KuguH324 }.Any(UnitCatalog.Everyone.Contains) && new[] { UnitCatalog.Tou, K, UnitCatalog.Kugu }.All(UnitCatalog.All.Contains) && UnitCatalog.All.Count == 52   // 第327期: `All` は規定（DR-a）のトウ
             && UnitCatalog.TouTPe.Traits.SequenceEqual(UnitCatalog.TouH324.Traits.Concat(new[] { TraitId.PowderContagion, TraitId.PowderMarkFoeOnly }))
             && UnitCatalog.KataTDR.Traits.SequenceEqual(UnitCatalog.KataH324.Traits.Append(TraitId.ThunderPowderReturn)) && UnitCatalog.KuguTDR.Traits.SequenceEqual(UnitCatalog.KuguH324.Traits.Append(TraitId.ThreadPowderFlow))
             && ReferenceEquals(UnitCatalog.KuguKWa, UnitCatalog.KuguH324) && UnitCatalog.KataLR.Traits.SequenceEqual(UnitCatalog.KataH324.Traits.Append(TraitId.LightningRod)));

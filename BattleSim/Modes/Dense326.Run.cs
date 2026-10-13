@@ -324,7 +324,7 @@ static partial class Dense326Diag
         var w = WaveOf(waveKey);
         var fixedU = w.Boss ? new[] { UnitCatalog.TouH326, UnitCatalog.Kata, UnitCatalog.Som } : new[] { UnitCatalog.TouH326, UnitCatalog.Kata };   // 第327期: 第326期の規定のトウ
         int free = 5 - fixedU.Length;
-        UnitDef Now(UnitDef d) => UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d;
+        UnitDef Now(UnitDef d) => PinT326(UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d);   // 第328期: クグ（とトウ）を第326期の規定に
         var heal = S287.Heal.Select(d => d.Id).ToHashSet();
         var fixedIds = fixedU.Select(d => d.Id).ToHashSet();
         var pool = S287.Pool.Select(Now).Append(UnitCatalog.Shiga).Where(d => !fixedIds.Contains(d.Id)).GroupBy(d => d.Id).Select(g => g.First()).ToArray();

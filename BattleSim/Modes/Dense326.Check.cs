@@ -123,7 +123,7 @@ static partial class Dense326Diag
             // 糸: クグ（帯電・濃さ s）の放電は糸の先の敵（濃さ r）へ——DR では糸の先の敵の濃さが乗る
             foreach (var (def, tag, want) in new[] { (UnitCatalog.TouH326, "規定", 8 * (1 + s)), (UnitCatalog.TouDRa, "DR-a", 8 * (1 + r)), (UnitCatalog.TouDRb, "DR-b", 8 * (1 + s + r)) })
             {
-                var ctx = T323.Ctx(Formation.Build(back3: def, front1: UnitCatalog.Kugu), Formation.Build(front1: Wall, front3: Wall), out var p, out var e);
+                var ctx = T323.Ctx(Formation.Build(back3: def, front1: UnitCatalog.KuguH327), Formation.Build(front1: Wall, front3: Wall), out var p, out var e);
                 var kugu = T323.Seat(p, 0); var e3 = T323.Seat(e, 1);
                 kugu.SetCounter(GrappleTrait.TargetKey, e3.InstanceId + 1);
                 ctx.MarkShock(kugu, kugu);

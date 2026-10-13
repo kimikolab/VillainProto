@@ -31,16 +31,16 @@ static partial class Dust327Diag
 
         // ---- 定義と固定の口
         {
-            var T = UnitCatalog.Tou; var O = UnitCatalog.TouH326;
+            var T = UnitCatalog.TouH327; var O = UnitCatalog.TouH326;   // 第328期: 第327期の規定のトウ（DX の前）
             bool tou = T.Traits.SequenceEqual(O.Traits.Append(TraitId.DenseConduct)) && T.Traits.SequenceEqual(UnitCatalog.TouDRa.Traits) && T.PlusText == UnitCatalog.TouDRa.PlusText
                 && T.PlusText.Contains("濃い駒は浴びる雷が重くなり", StringComparison.Ordinal) && T.MinusText == O.MinusText && T.Id == O.Id && T.MaxHp == O.MaxHp && T.Attack == O.Attack && T.Speed == O.Speed;
             bool old = O.Traits.SequenceEqual(UnitCatalog.TouH324.Traits.Concat(new[] { TraitId.PowderDense, TraitId.PowderDenseKeep, TraitId.PowderDenseBurn, TraitId.PowderContagion, TraitId.PowderMarkFoeOnly }))
                 && UnitCatalog.TouDRb.Traits.SequenceEqual(O.Traits.Append(TraitId.DenseConductBoth));
             bool vers = UnitCatalog.TouDX.Traits.SequenceEqual(T.Traits.Append(TraitId.DustBurst)) && UnitCatalog.TouDX.PlusText == T.PlusText + UnitCatalog.TouDustText
-                && UnitCatalog.KuguBat.Traits.SequenceEqual(UnitCatalog.Kugu.Traits.Append(TraitId.SilkBattery)) && UnitCatalog.SomBc.Traits.SequenceEqual(UnitCatalog.Som.Traits.Append(TraitId.BeastChargeSpread));
+                && UnitCatalog.KuguBat.Traits.SequenceEqual(UnitCatalog.KuguH327.Traits.Append(TraitId.SilkBattery)) && UnitCatalog.SomBc.Traits.SequenceEqual(UnitCatalog.Som.Traits.Append(TraitId.BeastChargeSpread));
             var vs = new[] { O, UnitCatalog.TouDX, UnitCatalog.KuguBat, UnitCatalog.SomBc };
-            bool outside = vs.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.All.Contains(T) && UnitCatalog.All.Count == 52
-                && UnitCatalog.Everyone.All(d => !d.Traits.Contains(TraitId.DustBurst) && !d.Traits.Contains(TraitId.SilkBattery) && !d.Traits.Contains(TraitId.BeastChargeSpread));
+            bool outside = vs.All(d => !UnitCatalog.Everyone.Contains(d)) && UnitCatalog.All.Contains(UnitCatalog.Tou) && !UnitCatalog.Everyone.Contains(T) && UnitCatalog.All.Count == 52
+                && UnitCatalog.Everyone.All(d => (d == UnitCatalog.Tou || !d.Traits.Contains(TraitId.DustBurst)) && (d == UnitCatalog.Kugu || !d.Traits.Contains(TraitId.SilkBattery)) && !d.Traits.Contains(TraitId.BeastChargeSpread));   // 第328期: 規定のトウ ／ クグが DX ／ 電池の札を持つ
             Expect("定義: 規定のトウ ＝ 第326期の規定（`TouH326`）＋ DR-a の札（札と文面は第326期の `TouDRa` と同じ）・DR-b は旧の規定から・DX ／ 電池 ／ 隣帯電 ＝ 規定 ＋ 札1枚（文面の末尾に句）・版は `Everyone` の外・`All` 52 枚",
                 tou && old && vers && outside, $"トウ {tou}・旧 {old}・版 {vers}・外 {outside}");
             bool pin = ReferenceEquals(PinT326(T), O) && ReferenceEquals(PinTKK324(O), UnitCatalog.TouH324) && ReferenceEquals(PinTKK324(T), UnitCatalog.TouH324)
@@ -54,7 +54,7 @@ static partial class Dust327Diag
         // ---- 爆発（敵の側）: 前1（出し手・帯電）が弾けて、中央（受け手・濃さ 3・乾いている）へ放電。中央の隣（前1 ／ 前3（帯電）／ 後3（濃さ 2））に 8 × 3。
         {
             const int n = 3;
-            foreach (var (def, tag) in new[] { (UnitCatalog.Tou, "規定"), (UnitCatalog.TouDX, "DX") })
+            foreach (var (def, tag) in new[] { (UnitCatalog.TouH327, "規定"), (UnitCatalog.TouDX, "DX") })
             {
                 var ctx = T323.Ctx(Formation.Build(back3: def, front1: T323.Mate), Formation.Build(front1: Wall, center: Wall, front3: Wall, back3: Wall), out var p, out var e);
                 var ef = T323.Seat(e, 0); var ec = T323.Seat(e, 2); var e3 = T323.Seat(e, 1); var eb = T323.Seat(e, 4);
@@ -93,9 +93,9 @@ static partial class Dust327Diag
 
         // ---- 糸玉の粉が爆ぜる: 敵の前1（帯電）の隣に糸玉（濃さ 4・乾いている）。前1 が弾けて糸玉へ放電 → 糸玉の隣（前1 ／ 中央）に 32 ずつ・糸玉は HP を減らさない
         {
-            foreach (var (def, tag) in new[] { (UnitCatalog.Tou, "規定"), (UnitCatalog.TouDX, "DX") })
+            foreach (var (def, tag) in new[] { (UnitCatalog.TouH327, "規定"), (UnitCatalog.TouDX, "DX") })
             {
-                var ctx = T323.Ctx(Formation.Build(back3: def, back1: UnitCatalog.Kugu), Formation.Build(front1: Wall, center: Wall), out var p, out var e);
+                var ctx = T323.Ctx(Formation.Build(back3: def, back1: UnitCatalog.KuguH327), Formation.Build(front1: Wall, center: Wall), out var p, out var e);
                 var ef = T323.Seat(e, 0); var ec = T323.Seat(e, 2);
                 var ball = ctx.PlaceSilkBall(T323.Seat(p, 3), ef)!;
                 ball.SetCounter(StatusKeys.Shock, 0);
@@ -115,9 +115,9 @@ static partial class Dust327Diag
 
         // ---- 糸玉に粉が積もる: トウ（前1）が敵の前1 を殴る。敵の前1 の隣（中央）に帯電した糸玉。DX は濃さ +1・粉の印（敵の側）・規定は何も起きない
         {
-            foreach (var (def, tag) in new[] { (UnitCatalog.Tou, "規定"), (UnitCatalog.TouDX, "DX") })
+            foreach (var (def, tag) in new[] { (UnitCatalog.TouH327, "規定"), (UnitCatalog.TouDX, "DX") })
             {
-                var ctx = T323.Ctx(Formation.Build(front1: def, back1: UnitCatalog.Kugu), Formation.Build(front1: Wall), out var p, out var e);
+                var ctx = T323.Ctx(Formation.Build(front1: def, back1: UnitCatalog.KuguH327), Formation.Build(front1: Wall), out var p, out var e);
                 var ef = e[0];
                 var ball = ctx.PlaceSilkBall(T323.Seat(p, 3), ef)!;
                 ctx.TakeTurn(T323.Seat(p, 0));
@@ -132,9 +132,9 @@ static partial class Dust327Diag
 
         // ---- 電池: 敵の前1（帯電）の隣に帯電した糸玉。前1 が弾けて糸玉も弾ける → 連鎖の後に、クグ（電池）が帯電していれば帯電し直す
         {
-            foreach (var (def, charged, tag, want) in new[] { (UnitCatalog.KuguBat, true, "電池・クグ帯電", 1), (UnitCatalog.KuguBat, false, "電池・クグ乾いている", 0), (UnitCatalog.Kugu, true, "規定のクグ・帯電", 0) })
+            foreach (var (def, charged, tag, want) in new[] { (UnitCatalog.KuguBat, true, "電池・クグ帯電", 1), (UnitCatalog.KuguBat, false, "電池・クグ乾いている", 0), (UnitCatalog.KuguH327, true, "規定のクグ・帯電", 0) })
             {
-                var ctx = T323.Ctx(Formation.Build(back3: UnitCatalog.Tou, back1: def), Formation.Build(front1: Wall), out var p, out var e);
+                var ctx = T323.Ctx(Formation.Build(back3: UnitCatalog.TouH327, back1: def), Formation.Build(front1: Wall), out var p, out var e);
                 var ef = e[0]; var kugu = T323.Seat(p, 3);
                 var ball = ctx.PlaceSilkBall(kugu, ef)!;
                 if (charged) ctx.MarkShock(kugu, kugu);

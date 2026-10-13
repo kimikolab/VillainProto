@@ -1325,3 +1325,8 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **表示専用**: `ShockGaugeLabels.DustBurst`（「粉塵爆発」）。電池の帯電し直しは既存の `SilkBall` ／ `SilkBallLabels.Recharge`（`ActorId` ＝ クグ・`TargetId` なし）。並びは `design/PHASE291_CODEX_MEMO.md` §23。
 - **計数のみ**: トウの `Dx327N[4]` ／ `Dx327Dens[4]` ／ `Dx327Dealt[12]` ／ `Dx327Hits[12]` ／ `Dx327Kills[3]` ／ `Dx327Max` ／ `Dx327Inverted` ／ `Dx327BallPowder` ／ `Dx327BallThick` ／ `Dx327BallCharged` ／ `Dx327BallDensMax`・クグの `Bat327Recharged` ／ `Bat327Chains` ／ `Bat327Dry`・ソムの `Bc327New[3]` ／ `Bc327FreshSkip` ／ `Bc327Popped`。
 - 器具: `dust327`。乱数の口は足していない（`PickOne(` の数は第326期と同じ）。
+
+## 第328期 —— 粉塵爆発 ＋ 電池の規定化（engine は変えていない）
+
+- 規定のトウ `UnitCatalog.Tou` ＝ `TouH327` ＋ `DustBurst`、規定のクグ `UnitCatalog.Kugu` ＝ `KuguH327` ＋ `SilkBattery`。第327期の口（`_dxLive` ／ `DustExplode` ／ `PowderOnBalls` ／ `_batLive` ／ `SilkBatteryRecharge`）がそのまま規定の戦で立つ。隣帯電（`BeastChargeSpread` ／ `_bcHolder`）は版のまま（`SomBc`）。
+- 版の定義 `TouDX` ／ `KuguBat` は旧の規定から作り直した（中身は規定と同じ）。器具: `settle328`。
