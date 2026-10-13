@@ -8,6 +8,8 @@ description: 第259期に `CLAUDE.md` の「現状値」節を**逐語で**移�
 
 ## 現状値
 
+**第324期は版だけの期で、規定は動かしていない**（指示書は design/PHASE324_TOU_POWDER2_SPEC.md・報告は design/PHASE324_TOU_POWDER2.md）。`compare` の規定の列は第323期と同じ（`docs/balance.md` 差分 0）——全64行 100 / 91.0 / 89.4 / 83.3 / 83.6・主判定19行の第五波 81.6・歯止めの余裕 +48.4pt・情報セル 77 ／ 27 のまま。トウの版 TP-e ／ TP-e′ ／ TD-b焼 × TP-e ／ TD-b焼 × TP-e′ の `compare` はどれも2行3セル（`責め苦 (トウ×シガ)` 第2波 +1.5〜+2.0・第5波 +1.0・`毒+耐久 (ベニ×トウ)` 第5波 +0.5・落ちるセル 0）。
+
 **第323期は版だけの期で、規定は動かしていない**（指示書は design/PHASE323_TOU_POWDER_SPEC.md・報告は design/PHASE323_TOU_POWDER.md）。`compare` の規定の列は第322期と同じ（`docs/balance.md` 差分 0）——全64行 100 / 91.0 / 89.4 / 83.3 / 83.6・主判定19行の第五波 81.6・歯止めの余裕 +48.4pt・情報セル 77 ／ 27 のまま。段1 のトウの粉の濃さの版（TD-a ／ TD-b ／ TD-a焼 ／ TD-b焼 ／ 対照 TD-0）の `compare` はどれも 0 セル、段2 の伝染の版（TP-a ／ TP-b ／ 参考 TP-a′ ／ 重ねた TD-b×TP-a）はどれも2行3セル（`責め苦 (トウ×シガ)` の第5波が落ちる・TP-b は第2波 −17.0 も・(G2) は編成上の制約）。
 
 **第322期は段0 でシガ ＝ SA・ヒサ ＝ HQ-a9 を規定にした**（指示書は design/PHASE322_SHIGA_DISCHARGE_SPEC.md・報告は design/PHASE322_SHIGA_DISCHARGE.md）。`compare` の規定の列は 0 セル（`docs/balance.md` 差分 0・第321期の SA ／ HQ-a9 の列と一致）——全64行 100 / 91.0 / 89.4 / 83.3 / 83.6・主判定19行の第五波 81.6・歯止めの余裕 +48.4pt・情報セル 77 ／ 27 のまま。旧の規定は `ShigaH321` ／ `HisaH321`（`Common.Pin321` ／ `PinSH321`）。本体のシガの鞭は感電を消さずに放電させる版（SA-SD ／ SA+-SD・`WhipDischarge`）の `compare` は SA-SD 1行2セル・SA+-SD 2行5セル（どれも上がる向き）。

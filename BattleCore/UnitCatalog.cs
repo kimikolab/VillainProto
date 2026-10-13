@@ -3587,6 +3587,31 @@ public static class UnitCatalog
     public static readonly UnitDef TouTPb = On323(Tou, new[] { TraitId.PowderContagion, TraitId.PowderContagionSpread }, TouContagionText + TouContagionSpreadText);
     /// <summary>第323期 TP-a′（参考・指示書に無い版）。TP-a ＋ <see cref="TraitId.PowderContagionDry"/>——同じ連鎖で先に弾けた駒には移らない（弾けたばかりの駒を帯電し直さない）。</summary>
     public static readonly UnitDef TouTPaDry = On323(Tou, new[] { TraitId.PowderContagion, TraitId.PowderContagionDry }, TouContagionText + "（弾けたばかりの駒には移らない）");
+
+    // ---------------------------------------------------------------------------------
+    // 第324期 —— 伝染の印は敵にだけ（TP-e）と、濃さ・焼との重ね（指示書 design/PHASE324_TOU_POWDER2_SPEC.md §2）。`All` にも `Retired` にも入れない。
+    // ---------------------------------------------------------------------------------
+
+    /// <summary>第324期 TP-e の文面の足し（叩き台・指示書 §2-1）。</summary>
+    public const string TouContagionFoeText = "。粉の付いた敵が弾けると、雷が粉を伝って、帯電していない隣の敵にも移る";
+    /// <summary>第324期 重ねた版の PlusText（叩き台・指示書 §2-2・規定の PlusText を置き換える）。</summary>
+    public const string TouStackText = "攻撃した相手とその隣の敵に帯電の粉を付ける。粉の付いた敵が弾けると、雷が粉を伝って帯電していない隣の敵にも移る。帯電した駒にさらに粉が落ちると濃くなり（倒れるまで消えない）、弾けたときの放電が重くなり、弾けた本人も焼く";
+
+    static UnitDef Stack324(TraitId[] add) => new()
+    {
+        Id = Tou.Id, Name = Tou.Name, MaxHp = Tou.MaxHp, Attack = Tou.Attack, Speed = Tou.Speed, Advances = Tou.Advances, Pattern = Tou.Pattern,
+        Traits = Tou.Traits.Concat(add).ToArray(), Actions = Tou.Actions,
+        PlusText = TouStackText, MinusText = TouDenseMinus, Flavor = Tou.Flavor
+    };
+
+    /// <summary>第324期 TP-e。TP-a ＋ <see cref="TraitId.PowderMarkFoeOnly"/>——伝染の印は敵にだけ（漏れ先の味方は帯電するが印は付かない）。</summary>
+    public static readonly UnitDef TouTPe = On323(Tou, new[] { TraitId.PowderContagion, TraitId.PowderMarkFoeOnly }, TouContagionFoeText);
+    /// <summary>第324期 TP-e′。TP-e ＋ <see cref="TraitId.PowderContagionDry"/>（弾けたばかりの駒には移らない）。</summary>
+    public static readonly UnitDef TouTPeDry = On323(Tou, new[] { TraitId.PowderContagion, TraitId.PowderMarkFoeOnly, TraitId.PowderContagionDry }, TouContagionFoeText + "（弾けたばかりの駒には移らない）");
+    /// <summary>第324期 TD-b焼 × TP-e。カタ ／ クグは返す版（<see cref="KataTDR"/> ／ <see cref="KuguTDR"/>）と組む。</summary>
+    public static readonly UnitDef TouTDbBTPe = Stack324(new[] { TraitId.PowderDense, TraitId.PowderDenseKeep, TraitId.PowderDenseBurn, TraitId.PowderContagion, TraitId.PowderMarkFoeOnly });
+    /// <summary>第324期 TD-b焼 × TP-e′。</summary>
+    public static readonly UnitDef TouTDbBTPeDry = Stack324(new[] { TraitId.PowderDense, TraitId.PowderDenseKeep, TraitId.PowderDenseBurn, TraitId.PowderContagion, TraitId.PowderMarkFoeOnly, TraitId.PowderContagionDry });
     /// <summary>第323期 カタの版（返す）。規定のカタ ＋ <see cref="TraitId.ThunderPowderReturn"/>（濃さの保持者がいない戦では何も起きない）。</summary>
     public static readonly UnitDef KataTDR = On323(Kata, new[] { TraitId.ThunderPowderReturn }, KataPowderReturnText);
     /// <summary>第323期 クグの版（返す）。規定のクグ ＋ <see cref="TraitId.ThreadPowderFlow"/>。</summary>

@@ -94,10 +94,10 @@ static class Tou323Diag
     }
 
     internal static readonly S287.Wave[] Waves = S321.Waves;
-    static S287.Wave WaveOf(string n) => S321.WaveOf(n);
-    static bool IsElite(S287.Wave w) => w.Name is "近衛" or "大隊" || w.Name.StartsWith("九体", StringComparison.Ordinal);
+    internal static S287.Wave WaveOf(string n) => S321.WaveOf(n);
+    internal static bool IsElite(S287.Wave w) => w.Name is "近衛" or "大隊" || w.Name.StartsWith("九体", StringComparison.Ordinal);
 
-    static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
+    internal static Formation Playtest(string n) => Presets.Playtest.First(r => r.Name == n).F;
     static Formation Row(string n) => CompareBuilds().First(r => r.Name == n).F;
 
     /// <summary>§3-2 の代表台（駒はいまの規定）。</summary>
@@ -201,7 +201,7 @@ static class Tou323Diag
         return wins;
     }
 
-    static long H(long[]? h, int i) => h is null || h.Length <= i ? 0 : h[i];
+    internal static long H(long[]? h, int i) => h is null || h.Length <= i ? 0 : h[i];
     static string Fell(Z z) => $"{Per(H(z.T.PwFellShocked, 0), z.N)} ／ {Per(H(z.T.PwFellShocked, 1), z.N)} ／ {Per(H(z.T.PwFellShocked, 2), z.N)}";
     static string FellAll(Z z) => $"{Per(H(z.T.PwFell, 0), z.N)} ／ {Per(H(z.T.PwFell, 1), z.N)} ／ {Per(H(z.T.PwFell, 2), z.N)}";
     static string Chain(Z z) => z.FoeRoots == 0 ? "—" : (z.FoePops / (double)z.FoeRoots).ToString("F2");
@@ -313,10 +313,12 @@ static class Tou323Diag
     // ---------------------------------------------------------------------------------
     // §3-2 代表台 × 波 × 版
     // ---------------------------------------------------------------------------------
-    static void BoardsAll(string only)
+    static void BoardsAll(string only) => BoardsWith(Pick(only), "第323期");
+
+    /// <summary>代表台 × 波 × 版（第324期: 版の列と見出しを引数にした——`tou324` が同じ表を出す。第323期の出力は1文字も変わらない）。</summary>
+    internal static void BoardsWith(Ver[] vers, string tag)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var vers = Pick(only);
         var boards = Boards();
         var res = new Dictionary<(string, string, string), Z>();
         foreach (var (bn, bf) in boards) foreach (var v in vers) foreach (var w in Waves) res[(bn, v.Name, w.Name)] = Measure(Apply(bf, v), w);
@@ -327,7 +329,7 @@ static class Tou323Diag
                 guza[(bn, w.Name)] = WinsLite(S316.SwapId(bf, "tou", UnitCatalog.Guza), w);
                 dolga[(bn, w.Name)] = WinsLite(S316.SwapId(bf, "tou", UnitCatalog.Dolga), w);
             }
-        Console.WriteLine($"# 第323期 §3-2 代表台 {boards.Length} × {Waves.Length} 波 × 版（{string.Join(" ／ ", vers.Select(v => v.Name))}）・seed 0..{Seeds - 1}");
+        Console.WriteLine($"# {tag} §3-2 代表台 {boards.Length} × {Waves.Length} 波 × 版（{string.Join(" ／ ", vers.Select(v => v.Name))}）・seed 0..{Seeds - 1}");
         Console.WriteLine();
         Console.WriteLine("版の駒: TD-a ／ TD-b ／ 焼 ／ 重ねた版はカタ ／ クグも返す働きの版（`KataTDR` ／ `KuguTDR`）に替える。TD-0 ／ TP はカタ ／ クグを規定のまま。");
         Console.WriteLine();
@@ -471,10 +473,11 @@ static class Tou323Diag
     // ---------------------------------------------------------------------------------
     // §3-3 `compare` × 版
     // ---------------------------------------------------------------------------------
-    static void CompareAll(string only)
+    static void CompareAll(string only) => CompareWith(Pick(only), "第323期");
+
+    internal static void CompareWith(Ver[] vers, string tag)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
-        var vers = Pick(only);
         var rows = CompareBuilds().ToArray();
         int nw = EnemyCatalog.Stages.Count;
         double[,] Grid(Ver v)
@@ -491,7 +494,7 @@ static class Tou323Diag
             return g;
         }
         var b = Grid(vers[0]);
-        Console.WriteLine($"# 第323期 §3-3 `compare` {rows.Length} 行 × 版（seed 0..{Seeds - 1}・基準は規定）");
+        Console.WriteLine($"# {tag} §3-3 `compare` {rows.Length} 行 × 版（seed 0..{Seeds - 1}・基準は規定）");
         Console.WriteLine();
         Console.WriteLine($"トウのいる行: {string.Join("・", rows.Where(r => r.F.Occupied().Any(o => o.Def.Id == "tou")).Select(r => r.Name))}");
         Console.WriteLine();
@@ -510,10 +513,11 @@ static class Tou323Diag
     // ---------------------------------------------------------------------------------
     // §3-5 格子（固定枠 トウ ＋ カタ（ボスはさらにソム）・探索枠は残り・駒はいまの規定）
     // ---------------------------------------------------------------------------------
-    static void Grid(string waveKey, string ver)
+    static void Grid(string waveKey, string ver) => GridWith(waveKey, V(ver), "第323期");
+
+    internal static void GridWith(string waveKey, Ver v, string tag)
     {
         var w = WaveOf(waveKey);
-        var v = V(ver);
         var fixedU = w.Boss ? new[] { UnitCatalog.Tou, UnitCatalog.Kata, UnitCatalog.Som } : new[] { UnitCatalog.Tou, UnitCatalog.Kata };
         int free = 5 - fixedU.Length;
         UnitDef Now(UnitDef d) => UnitCatalog.All.FirstOrDefault(x => x.Id == d.Id) ?? d;
@@ -556,7 +560,7 @@ static class Tou323Diag
         var all = res.Where(r => r is not null).Select(r => r!.Value).ToList();
         bool Half(int x) => x * 2 >= Seeds;
         bool Need(int x, int g) => Half(x) && g >= 0 && g * 2 <= x;
-        Console.WriteLine($"# 第323期 §3-5 格子 —— {w.Name} × 規定 ／ {v.Name}（固定枠 {string.Join(" ＋ ", fixedU.Select(Short))}・探索枠{free}（候補 {pool.Length} 枚: {string.Join("・", pool.Select(Short))}・ヒーラーは 1 枚まで）{combos.Count} 組・席 {120 / step} ＝ {boards.Count:N0} 台）");
+        Console.WriteLine($"# {tag} §3-5 格子 —— {w.Name} × 規定 ／ {v.Name}（固定枠 {string.Join(" ＋ ", fixedU.Select(Short))}・探索枠{free}（候補 {pool.Length} 枚: {string.Join("・", pool.Select(Short))}・ヒーラーは 1 枚まで）{combos.Count} 組・席 {120 / step} ＝ {boards.Count:N0} 台）");
         Console.WriteLine();
         Console.WriteLine($"足切り seed 0..{cut - 1}（どちらかで 5 勝以上・{all.Count:N0} 台）→ seed 0..{Seeds - 1}。**トウが要る台** ＝ 50% 以上 かつ トウ → グザで半分以下。所要 {sw.Elapsed.TotalSeconds:F0} 秒。");
         Console.WriteLine();
@@ -581,17 +585,18 @@ static class Tou323Diag
         ShockGaugeLabels.DenseBurn, ShockGaugeLabels.PowderMark, ShockGaugeLabels.Contagion,
     };
 
-    static void Memo(string boardPart, string wave, int seed, string ver)
+    static void Memo(string boardPart, string wave, int seed, string ver) => MemoWith(boardPart, wave, seed, V(ver), "tou323");
+
+    internal static void MemoWith(string boardPart, string wave, int seed, Ver v, string tool)
     {
         var (name, f0) = Boards().First(b => b.Name.Contains(boardPart, StringComparison.Ordinal));
-        var v = V(ver);
         var w = WaveOf(wave);
         var p = BattleEngine.Materialize(Apply(f0, v), BattleContext.PlayerTeam);
         var e = w.Make();
         var r = BattleEngine.Run(p, e, seed, verbose: true);
         var names = p.Concat(e).ToDictionary(u => u.InstanceId, u => Short(u.Def));
         string N(int? id) => id is int i ? (names.TryGetValue(i, out var s) ? $"{s}#{i}" : $"獣#{i}") : "—";
-        Console.WriteLine($"# tou323 memo —— {name} × {v.Name} × {w.Name} × seed {seed} → {(r.PlayerWon ? "勝ち" : "負け")} T{r.Turns}");
+        Console.WriteLine($"# {tool} memo —— {name} × {v.Name} × {w.Name} × seed {seed} → {(r.PlayerWon ? "勝ち" : "負け")} T{r.Turns}");
         Console.WriteLine();
         Console.WriteLine("第323期の `ShockGauge`（濃さ ／ 濃さ・流した ／ 濃さ・移した ／ 濃さ・弾けた ／ 濃さ・焼いた ／ 粉の印 ／ 伝染）と、その前後の `ShockSpent` ／ `Discharge` ／ 感電の `StatusGain`。");
         Console.WriteLine();
@@ -626,11 +631,11 @@ static class Tou323Diag
 
     static readonly MethodInfo AddUnit = typeof(BattleContext).GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic, new[] { typeof(UnitState) })
                                          ?? throw new InvalidOperationException("BattleContext.Add が見つからない");
-    static readonly PropertyInfo TurnProp = typeof(BattleContext).GetProperty("Turn") ?? throw new InvalidOperationException("Turn が見つからない");
+    internal static readonly PropertyInfo TurnProp = typeof(BattleContext).GetProperty("Turn") ?? throw new InvalidOperationException("Turn が見つからない");
     static readonly PropertyInfo TallyProp = typeof(BattleContext).GetProperty("TallyByUnit", BindingFlags.Instance | BindingFlags.NonPublic) ?? throw new InvalidOperationException("TallyByUnit が見つからない");
-    static UnitTally Tal(BattleContext ctx, string id) => ((Dictionary<string, UnitTally>)TallyProp.GetValue(ctx)!).GetValueOrDefault(id) ?? new UnitTally();
+    internal static UnitTally Tal(BattleContext ctx, string id) => ((Dictionary<string, UnitTally>)TallyProp.GetValue(ctx)!).GetValueOrDefault(id) ?? new UnitTally();
 
-    static BattleContext Ctx(Formation pl, Formation foes, out List<UnitState> p, out List<UnitState> e, bool verbose = true, int seed = 0)
+    internal static BattleContext Ctx(Formation pl, Formation foes, out List<UnitState> p, out List<UnitState> e, bool verbose = true, int seed = 0)
     {
         var ctx = new BattleContext(seed, verbose);
         p = BattleEngine.Materialize(pl, BattleContext.PlayerTeam);
@@ -640,13 +645,13 @@ static class Tou323Diag
         TurnProp.SetValue(ctx, 1);
         return ctx;
     }
-    static UnitDef Wall => UnitCatalog.Dolga.WithStats(5000, 1);
-    static UnitDef Mate => UnitCatalog.Dolga.WithStats(5000, 1);
-    static int Shock(UnitState u) => u.RawCounter(StatusKeys.Shock);
-    static int Spent(BattleContext ctx, UnitState u, int from) => ctx.Events.Skip(from).Count(x => x.Kind == BattleEventKind.ShockSpent && x.TargetId == u.InstanceId);
+    internal static UnitDef Wall => UnitCatalog.Dolga.WithStats(5000, 1);
+    internal static UnitDef Mate => UnitCatalog.Dolga.WithStats(5000, 1);
+    internal static int Shock(UnitState u) => u.RawCounter(StatusKeys.Shock);
+    internal static int Spent(BattleContext ctx, UnitState u, int from) => ctx.Events.Skip(from).Count(x => x.Kind == BattleEventKind.ShockSpent && x.TargetId == u.InstanceId);
     static List<int> DisAmounts(BattleContext ctx, UnitState src, int from) => ctx.Events.Skip(from).Where(x => x.Kind == BattleEventKind.Discharge && x.ActorId == src.InstanceId).Select(x => x.Amount).ToList();
-    static UnitState Seat(List<UnitState> l, int slot) => l.First(u => u.Slot == slot);
-    static int Burned(BattleContext ctx, UnitState u, int from) => ctx.Events.Skip(from).Where(x => x.Kind == BattleEventKind.ShockGauge && x.Text == ShockGaugeLabels.DenseBurn && x.TargetId == u.InstanceId).Sum(x => x.Amount);
+    internal static UnitState Seat(List<UnitState> l, int slot) => l.First(u => u.Slot == slot);
+    internal static int Burned(BattleContext ctx, UnitState u, int from) => ctx.Events.Skip(from).Where(x => x.Kind == BattleEventKind.ShockGauge && x.Text == ShockGaugeLabels.DenseBurn && x.TargetId == u.InstanceId).Sum(x => x.Amount);
 
     static void Check()
     {

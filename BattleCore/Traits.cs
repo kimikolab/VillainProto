@@ -813,6 +813,9 @@ public enum TraitId
     PowderContagionSpread, // 伝染は続く（TP-b・`PowderContagion` と組む）: 伝染で新しく帯電した駒にも粉の印が付く（**札そのものは挙動を持たない**）
     PowderContagionDry, // 弾けたばかりの駒には移らない（TP-a′・参考・`PowderContagion` と組む）: 同じ連鎖で先に弾けた駒には伝染しない（**札そのものは挙動を持たない**）
 
+    // --- 第324期で足した札（トウの版・指示書 design/PHASE324_TOU_POWDER2_SPEC.md）。保持者 0 枚 ---
+    PowderMarkFoeOnly, // 伝染の印は敵にだけ（TP-e・`PowderContagion` と組む）: 粉の印を漏れ先の味方には付けない（漏れは今どおり帯電させ、TD なら濃さも付ける）（**札そのものは挙動を持たない**・engine の `PowderFell`）
+
     // --- 盤面ルール（プラスでもマイナスでもない。敵側の語彙） ---
     // 保持者の損得ではなく、盤面の読み方そのものを書き換える。だからどちらのブロックにも入らない。
     Inversion,   // 逆位: 保持者が生きている間、行動順が速さ昇順になる。**両陣営に等しくかかる**
@@ -17511,6 +17514,7 @@ public static class TraitCatalog
         new MarkOnlyTrait(TraitId.PowderContagion),           // 第323期（粉の伝染 TP-a・印だけ）
         new MarkOnlyTrait(TraitId.PowderContagionSpread),     // 第323期（伝染は続く TP-b・印だけ）
         new MarkOnlyTrait(TraitId.PowderContagionDry),        // 第323期（弾けたばかりの駒には移らない TP-a′・参考・印だけ）
+        new MarkOnlyTrait(TraitId.PowderMarkFoeOnly),         // 第324期（伝染の印は敵にだけ TP-e・印だけ）
         new SharePushTrait(TraitId.ShareSin),                 // 第313期（ドハ DP-c の手番）
         new AmplifierTrait(),
         new ContagionTrait(),

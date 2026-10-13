@@ -1298,3 +1298,10 @@ description: 第259期に `CLAUDE.md` の「特性 = イベントハンドラ」
 - **短絡**: 規定のトウ（`ChargedPowder` の保持者）がいる戦は `_powderLive` で `PowderFell` ／ `PowderPop` ／ `PowderHead` の**計数だけ**が走る（Phase 0 のため・盤面は読むだけ）。規則は `_tdLive` ／ `_tpLive` の比較1つで抜ける。`compare` の規定の列は 0 セル。
 - **表示専用**: `ShockGaugeLabels.Dense`「濃さ」／ `DenseFlow`「濃さ・流した」／ `DenseMove`「濃さ・移した」／ `DensePop`「濃さ・弾けた」／ `DenseBurn`「濃さ・焼いた」／ `PowderMark`「粉の印」（TP の版だけ）／ `Contagion`「伝染」。並びは `design/PHASE291_CODEX_MEMO.md` §19。
 - **計数のみ**（トウの側）: `PwFell[3]` ／ `PwFellShocked[3]`・`PwLeakKata*` ／ `PwLeakKugu*`・`PwWatch*`（頭に帯電して粉が落ちた敵が次に弾けるまで）・`PwAllyPops*`・`PwMarkedPops*` ／ `PwMarkedDry*`（粉の付いた駒が弾けたときの乾いた隣）・`TouTurnPops` ／ `TouTurnDisDealt`・`Td*`・`Tp*`（`TpReArm` を含む）。カタ ／ クグの側: `TdKataMoves` ／ `TdKataMoved` ／ `TdKataDry`・`TdKuguFlowed` ／ `TdKuguKept`。乱数の口は足していない（`PickOne(` の数は HEAD と同じ）。
+
+## 第324期 —— 伝染の印は敵にだけ（TP-e）と、濃さ・焼との重ねは版（規定は動かしていない）
+
+- **札** `PowderMarkFoeOnly`（`MarkOnlyTrait`・保持者 0 枚）。駒は `UnitCatalog.TouTPe`（TP-a ＋ この札）／ `TouTPeDry`（＋ `PowderContagionDry`）／ `TouTDbBTPe`（TD-b焼 ＋ `PowderContagion` ＋ この札・PlusText は重ねた版の叩き台に置き換え）／ `TouTDbBTPeDry`。重ねた版はカタ ／ クグの返す版（`KataTDR` ／ `KuguTDR`）と組む（器具の `Ver.Return`）。
+- **口は `PowderFell` の1行だけ**: 粉の印（`_pwTouched`）を付ける条件に「保持者（`_tpFoeOnly`）がいて、落ちた駒がトウの味方なら付けない」を足した。漏れ先の味方の帯電（`MarkShock`）と濃さ（`PowderThicken`）はこの行の外なので今どおり。印の無い味方が弾けても `Discharge` の伝染の条件（`_pwTouched.Contains(from)`）を満たさないので、味方の側の伝染は起きない。保持者がいなければ `_tpFoeOnly` の比較1つ（`&&` の短絡で `_pwTouched.Add` は今どおり走る）。
+- **計数の副作用**: TP-e の版では、味方の「粉の付いた駒が弾けた」（`PwMarkedPopsAlly` ほか）も 0 になる（同じ集合を読むため）。規定 ／ 第323期の版の計数は変わらない。
+- 器具: `tou324`（`tou323` の表の口を `BoardsWith` ／ `CompareWith` ／ `GridWith` ／ `MemoWith` に切り出して、版の列と見出しだけ替えて使う——`tou323` の出力は1文字も変わらない）。乱数の口は足していない。

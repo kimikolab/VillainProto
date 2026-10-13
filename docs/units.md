@@ -543,6 +543,7 @@
 | `PowderContagion` | - |
 | `PowderContagionSpread` | - |
 | `PowderContagionDry` | - |
+| `PowderMarkFoeOnly` | - |
 | `Inversion` | - |
 | `Drought` | - |
 | `Yoke` | - |

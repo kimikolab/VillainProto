@@ -2919,7 +2919,7 @@ public sealed class BattleContext
     /// <summary>帯電の粉（`ChargedPowder`）の保持者が戦に出たか（第323期・計数の口を短絡させる）。</summary>
     bool _powderLive;
     /// <summary>濃さ（TD）／ 濃さは残る（TD-b）／ 本人も焼く（焼）／ 伝染（TP）／ 伝染は続く（TP-b）の保持者が戦に出たか。</summary>
-    bool _tdLive, _tdKeep, _tdBurn, _tpLive, _tpSpread, _tpDry;
+    bool _tdLive, _tdKeep, _tdBurn, _tpLive, _tpSpread, _tpDry, _tpFoeOnly;
     /// <summary>最初に出た粉の保持者（計数の帰属先・トウ）。</summary>
     UnitState? _powderHolder;
     /// <summary>トウの手番の頭に帯電していた駒（<see cref="PowderHead"/> が控える・<see cref="PowderFell"/> が読む）。</summary>
@@ -2952,6 +2952,7 @@ public sealed class BattleContext
         if (u.HasTrait(TraitId.PowderContagion)) _tpLive = true;
         if (u.HasTrait(TraitId.PowderContagionSpread)) _tpSpread = true;
         if (u.HasTrait(TraitId.PowderContagionDry)) _tpDry = true;
+        if (u.HasTrait(TraitId.PowderMarkFoeOnly)) _tpFoeOnly = true;   // 第324期（TP-e）
     }
 
     /// <summary>トウの手番の頭（<c>TakeTurnFramed</c>）: 帯電している生きている駒を控える。<b>読むだけ。</b></summary>
@@ -2999,7 +3000,8 @@ public sealed class BattleContext
             else if (u.Def.Id == "kugu") { t.PwLeakKugu++; if (head) t.PwLeakKuguShocked++; if (GrappledFoe(u) is not null) t.PwLeakKuguHeld++; }
         }
         if (head && u.TeamId != tou.TeamId && _pwWatch.TryAdd(u.InstanceId, _turn)) t.PwWatch++;
-        if (_pwTouched.Add(u.InstanceId) && _tpLive) EmitShockGauge(ShockGaugeLabels.PowderMark, tou, u, 1);   // 表示専用（TP の版だけ）
+        // 第324期（TP-e）: 伝染の印は敵にだけ——漏れ先の味方には付けない（帯電 ／ 濃さはこの口の外と下で今どおり）。保持者がいなければ比較1つで抜ける。
+        if (!(_tpFoeOnly && u.TeamId == tou.TeamId) && _pwTouched.Add(u.InstanceId) && _tpLive) EmitShockGauge(ShockGaugeLabels.PowderMark, tou, u, 1);   // 表示専用（TP の版だけ）
         if (_tdLive && head && tou.HasTrait(TraitId.PowderDense)) PowderThicken(tou, u);
     }
 

@@ -1464,3 +1464,34 @@ ShockGauge 粉の印  討伐隊の新兵#7 → 討伐隊の新兵#5  Amount 1  S
 ```
 
 **DemoApp へ**: 版のみなので、演出は採用が決まってからでよい。知らない `ShockGauge` の `Text` は今どおり素通りでよい（盤面の判定は1つも台本に依らない）。
+
+## 20. 第324期の追記 —— 伝染の印は敵にだけ（TP-e）・濃さ ／ 焼との重ね（**版のみ**）
+
+報告 `design/PHASE324_TOU_POWDER2.md`。**新しい出来事の種類も札（`Text`）も足していない**——§19 の札がそのまま並ぶ。
+
+- **TP-e は TP-a と並びが同じで、味方の側に「粉の印」「伝染」が1件も出ない**（漏れ先の味方は今どおり感電の `StatusGain`（`Powder Leak`）を受けるが、その後ろに「粉の印」が付かない）。`tou324 check` で、代表台 × 近衛 ／ ボス ／ 第5波 × seed 0..19 の台本に味方への「伝染」「粉の印」が 0 件であることを確かめた。
+- **重ねた版（TD-b焼 × TP-e）では、1つの手番の中に4つが続けて並ぶ**: トウの粉（敵に「粉の印」・漏れ先の味方に「濃さ」）→ カタの雷の1発目の直後に「濃さ・移した」→ その敵が弾けて「濃さ・弾けた」→ 重い `Discharge`（8 ×（1 ＋ n））→「濃さ・焼いた」と本人の `Damage` → 連鎖の中で、印の付いた敵の放電が乾いた隣の敵に届くと `StatusGain`（`SpreadFromId`）＋「伝染」。
+
+**1本の並び**（`tou324 memo 光の盾 guard 0 x`・試遊・感電 光の盾 × 近衛 × seed 0・TD-b焼 × TP-e・勝ち T5・T1 の抜粋）:
+
+```
+--- T1
+StatusGain shock  トウ#2 → 討伐隊の新兵#5  Amount 1  Slot 0  Powder Main
+ShockGauge 粉の印  トウ#2 → 討伐隊の新兵#5  Amount 1  Slot 0             ← 印は敵にだけ
+ShockGauge 濃さ  トウ#2 → カタ#0  Amount 1  Slot 0                        ← 漏れ先のカタは濃くなる（印は付かない）
+StatusGain shock  トウ#2 → クグ#1  Amount 1  Slot 0  Powder Leak         ← 漏れ先の味方は帯電するだけ
+Thunder 組,雷  カタ#0 → 討伐隊の新兵#5  Amount 24  Slot 1
+Damage   カタ#0 → 討伐隊の新兵#5  Amount 24  Slot 0
+ShockGauge 濃さ・移した  カタ#0 → 討伐隊の新兵#5  Amount 1  Slot 1       ← カタの濃さが雷に乗って敵へ
+…
+ShockGauge 濃さ・弾けた  討伐隊の新兵#8 → 討伐隊の新兵#5  Amount 1  Slot 0
+Discharge   討伐隊の新兵#5 → 討伐隊の新兵#7  Amount 16  Slot 2              ← 8 ×（1 ＋ 1）
+ShockGauge 濃さ・焼いた  討伐隊の新兵#5 → 討伐隊の新兵#5  Amount 8  Slot 1
+Damage   討伐隊の新兵#5 → 討伐隊の新兵#5  Amount 8  Slot 0
+…
+Discharge   討伐隊の新兵#7 → 討伐隊の新兵#5  Amount 8  Slot 3
+StatusGain shock  討伐隊の新兵#7 → 討伐隊の新兵#5  Amount 1  Slot 0  SpreadFrom 討伐隊の新兵#7
+ShockGauge 伝染  討伐隊の新兵#7 → 討伐隊の新兵#5  Amount 1  Slot 0          ← 弾けたばかりの #5 にも移る（TP-e′ では移らない）
+```
+
+**DemoApp へ**: 版のみなので、演出は採用が決まってからでよい。TP-e を採るなら、§19-2 の「粉の印」の表示は敵の側だけに出る。

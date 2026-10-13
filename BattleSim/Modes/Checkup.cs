@@ -451,6 +451,7 @@ public static void Run(string[] args, int stageIndex)
         [TraitId.PowderContagion]   = (HcBothL, "粉の伝染（第323期・トウ TP-a）: トウの粉が落ちた駒（倒れるまで印）の放電は、帯電していない隣も帯電させる（新しく帯電した駒は同じ連鎖では弾けない・敵味方を問わない）。保持者 0 枚"),
         [TraitId.PowderContagionSpread] = (HcBothL, "伝染は続く（第323期・トウ TP-b）: 伝染で新しく帯電した駒にも粉の印が付く。保持者 0 枚"),
         [TraitId.PowderContagionDry] = (HcBothL, "弾けたばかりの駒には移らない（第323期・トウ TP-a′・参考）: 同じ連鎖で先に弾けた駒には伝染しない。保持者 0 枚"),
+        [TraitId.PowderMarkFoeOnly] = (HcPlusL, "伝染の印は敵にだけ（第324期・トウ TP-e）: 粉の印を漏れ先の味方には付けない（帯電 ／ 濃さは今どおり）。保持者 0 枚"),
         [TraitId.MireSlam]        = (HcPlusL,  "濃縮の手番の最後に寄せ先（感電している敵を優先）へ攻撃力ぶんの一撃（第218期・M1・保持者 0 枚）"),
         [TraitId.MireConduct]     = (HcPlusL,  "叩きつける相手が感電していれば、同じ一撃が印を持つ敵すべてへ走る（第218期・M2・保持者 0 枚）"),
         [TraitId.MireDull]        = (HcPlusL,  "印を持つ敵の与ダメが印1つにつき −10%（上限 −40%）（第218期・M3・保持者 0 枚）"),
